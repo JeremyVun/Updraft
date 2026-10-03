@@ -5,7 +5,7 @@ import { ATMO_GLSL, atmo } from './atmosphere';
 import { mulberry32, smoothstep } from './noise';
 import { heightAt } from './island';
 import { glsl, tuning } from '../tuning';
-import { CURTAINS, curtainLift } from './lines-passage';
+import { CURTAINS, curtainLift, curtainOver } from './lines-passage';
 
 /** Washing hung out on a line: pegged along its top edge, swinging up and fluttering in the live wind. */
 const CLOTH_VERT = /* glsl */ `
@@ -18,6 +18,7 @@ in float aKind;
 in float aRole;
 in float aCurtain;
 uniform vec3 uCurtains;
+uniform vec3 uCurtainOver;
 uniform vec2 uFamily;
 uniform float uFamilyFlutter;
 out vec3 vWorld;
@@ -125,11 +126,23 @@ void main() {
    * grows down the cloth and the position is the integral of that, which for a linear angle is a circular arc.
    */
   float full = swing * 1.5708 * lean;
+  float stream = 0.0;
+  float gust = 0.0;
   if (aCurtain > -0.5) {
-    float lifted = uCurtains[int(aCurtain)];
-    // Wind curls a sheet overhead, away from the waiting pair. The belly stays between pegs and hem.
-    full = mix(full * 0.28, 2.28, lifted);
-    lean = mix(lean, 1.0, lifted);
+    /**
+     * The breeze the player lets through the gap keeps the sheet streaming out from its pegs toward the waiting pair,
+     * high over them, where nothing else hangs; once they are through it is tossed higher, so the camera following
+     * them passes beneath. Its height rises and falls with the gusts and it is never still while it is held up.
+     */
+    stream = uCurtains[int(aCurtain)];
+    float t = uTime + aShape.w * 3.0;
+    gust = 0.55 * sin(t * 0.83) + 0.3 * sin(t * 1.91 + 1.3) + 0.15 * sin(t * 3.7 + 0.4);
+    // One corner flies higher, then the other: the sheet twists on its pegs as the gusts come through.
+    float twist = max(0.0, position.x * sin(t * 1.37 + 0.8)) * 2.0 * ${glsl(tuning.linesPassage.twist)} * hang;
+    float reach = mix(${glsl(tuning.linesPassage.streamAngle)}, ${glsl(tuning.linesPassage.overAngle)}, uCurtainOver[int(aCurtain)]);
+    // The hem kicks up first, so even a half-lifted sheet clears the small bird waiting in front of it.
+    full = mix(full * 0.28, -(reach + ${glsl(tuning.linesPassage.streamGust)} * gust + twist), sqrt(stream));
+    lean = mix(lean, -1.0, stream);
   }
   // The family keeps its upright silhouette while the sleeves reach.
   if (aRole > -0.5) full *= 0.22;
@@ -150,12 +163,27 @@ void main() {
   vWorld = pegged - up * (dropDown * aShape.y) + side * (dropSide * aShape.y);
   vWorld += side * lean * ripple * shake * 1.2 * aShape.y * hang;
 
+  vNormal = normalize(cross(down, along));
   if (aCurtain > -0.5) {
     float belly = sin(uv.x * 3.14159) * sin(hang * 3.14159);
-    vWorld += side * belly * (0.14 + 0.06 * sin(uTime * 0.7 + aShape.w));
-    vWorld.y += sin(uv.x * 15.0 + uTime * 0.8) * 0.045 * hang;
+    vWorld -= vNormal * belly * (0.14 + 0.06 * sin(uTime * 0.7 + aShape.w) + 0.3 * stream * (0.7 + 0.3 * gust));
+    vWorld.y += sin(uv.x * 15.0 + uTime * 0.8) * 0.045 * hang * (1.0 - stream);
+    /**
+     * Flapping: waves run from the pegs to the free hem, growing as they go and at the side edges, harder in the
+     * gusts, and the hem whips. Tilting the normal with the waves lets the ripples catch the light.
+     */
+    float power = stream * stream * (0.75 + 0.35 * gust);
+    float edges = 1.0 + 2.4 * position.x * position.x;
+    float a = ${glsl(tuning.linesPassage.flap)} * power * pow(hang, 1.4) * edges;
+    float p1 = hang * 7.5 - uTime * 6.1 + position.x * 2.4 + aShape.w;
+    float p2 = hang * 13.0 - uTime * 10.3 - position.x * 3.1 + aShape.w * 1.7;
+    float hemWhip = ${glsl(tuning.linesPassage.whip)} * smoothstep(0.7, 1.0, hang);
+    float p3 = hang * 25.0 - uTime * 16.0 + position.x * 5.0 + aShape.w;
+    float wave = sin(p1) + 0.45 * sin(p2) + hemWhip * sin(p3);
+    float slope = a * (7.5 * cos(p1) + 5.85 * cos(p2) + 25.0 * hemWhip * cos(p3)) / aShape.y;
+    vWorld += vNormal * a * wave;
+    vNormal = normalize(vNormal - down * slope);
   }
-  vNormal = normalize(cross(down, along));
   if (aRole > -0.5) family(along, side, up, hang);
   if (aRole > -0.5 && uFamilyFlutter > 0.0) {
     // A distant domestic line still catches a little sea air outside the local wind texture.
@@ -490,7 +518,8 @@ export class WashingLines {
     this.clothMat = new THREE.ShaderMaterial({
       uniforms: { ...atmo.uniforms, uSubject: { value: this.subject },
         uFamily: { value: familyStyle.gesture ?? family },
-        uFamilyFlutter: { value: familyStyle.flutter ?? 0 }, uCurtains: { value: curtainLift } },
+        uFamilyFlutter: { value: familyStyle.flutter ?? 0 }, uCurtains: { value: curtainLift },
+        uCurtainOver: { value: curtainOver } },
       vertexShader: CLOTH_VERT,
       fragmentShader: CLOTH_FRAG,
       side: THREE.DoubleSide,

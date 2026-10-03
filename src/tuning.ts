@@ -1088,6 +1088,13 @@ export const tuning = {
     speedFrom: 0.4, speedFull: 3,
     fillSeconds: 1.8,
     billowSpeed: 6, rise: 3.5, settle: 1.2,
+    /**
+     * Held open, a sheet streams out from its pegs in the breeze through the gap: `streamAngle` radians from
+     * hanging at its hem, rising and falling `streamGust` with the gusts, a corner at a time lifting `twist` more.
+     * Waves of up to `flap` metres run down it to the hem, which whips by `whip` more. Once both travellers are
+     * through a gust tosses it up to `overAngle` over `tossSeconds`, clear of the camera following them.
+     */
+    streamAngle: 1.75, overAngle: 2.6, tossSeconds: 2.5, streamGust: 0.2, twist: 0.6, flap: 0.4, whip: 0.45,
     brushFrom: 0.8, brushRadius: 0.27,
     /** A warm sideways trace on the first sheet demonstrates a sweep, without generating any wind. */
     inviteAfter: 1.2, inviteSweep: 1.8, invitePause: 1.1, inviteResume: 2.2,

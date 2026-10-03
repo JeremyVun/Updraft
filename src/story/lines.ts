@@ -219,6 +219,7 @@ export class LinesChapter implements Chapter {
     const { child: c, cygnet } = this.cast;
     c.lean = 0;
     cygnet.stay = false; cygnet.errand = null; cygnet.pace = 1;
+    CURTAINS[this.gate].through = true;
     this.gate++;
     if (this.gate < CURTAINS.length) this.approach();
     else {
