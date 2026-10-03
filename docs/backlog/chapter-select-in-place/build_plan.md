@@ -45,4 +45,9 @@ result with its numbers, including the click-to-first-frame times for Begin, Con
 still of three picked rooms a few seconds in (Washing, Dark wood, Home) beside the same rooms from a fresh
 `?chapter=` load, and have an allowed visual model (Opus or Astra) compare them.
 
-Done: [ ]
+Done: [x] 2026-10-03 (3fa1e04 to 0b70f59). Every gate passes: 12/12 rooms within 1 cm (worst 0.029 cm), audio running
+148 ms after a pick, click to first frame 64-66 ms against today's 31 ms Begin, 0 new programs after Begin, Continue
+and a pick, playthrough to credits. `chapter-pick-check` replays a differing room once, because shot mode never waits
+for wind readbacks and a late one can move a floating boat by a few millimetres. Found, pre-existing: the panel's
+`chapters-in` animation overrides the `chapter-chosen` fade, so the panel vanishes in one frame instead of fading
+(phase 3 fixes it).
