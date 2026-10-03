@@ -13,8 +13,8 @@ const FLEET = [0, 1, 2];
  * of the frame; where it keeps company with the swimmer; and where it bears away to, astern and out.
  */
 const FROM = [[22, 42], [30, 50], [16, 36]];
-const BESIDE = [[1, 3.6], [-3.2, 5.4], [3.8, 6.2]];
-const AWAY = [[-34, 24], [-42, 30], [-28, 20]];
+const BESIDE = [[0.8, 4], [-1.2, 5.6], [2.6, 5.4]];
+const AWAY = [[-6, 26], [-12, 32], [-2, 22]];
 
 interface SeaToy {
   group: THREE.Group;
@@ -62,6 +62,7 @@ export class ToyFleet {
     const boom = new THREE.CylinderGeometry(0.022, 0.022, 1, 6).rotateZ(Math.PI / 2).translate(-0.45, 0.34, 0);
     for (const i of FLEET) {
       const g = new THREE.Group();
+      g.scale.setScalar(tuning.seaToys.scale);
       g.add(new THREE.Mesh(shell, material(TOY_PAINTS[i])));
       const deck = new THREE.Mesh(shell, rim);
       deck.scale.set(0.89, 0.24, 0.91);
@@ -197,7 +198,7 @@ export class ToyFleet {
       u.uDroop.value = 1 - THREE.MathUtils.smoothstep(toy.fill, 0.025, 0.65);
       u.uPhase.value = (u.uPhase.value + dt * (3 + toy.fill * 7)) % (Math.PI * 2);
       swellAt(p.x, p.z, time, this.swell);
-      p.y = this.swell.height + k.toyDraft + Math.sin(time * 2.1 + toy.seed) * 0.03;
+      p.y = this.swell.height + k.toyDraft * s.scale + Math.sin(time * 2.1 + toy.seed) * 0.03;
       const yaw = toy.yaw;
       toy.group.rotation.set(
         -this.swell.slopeX * Math.sin(yaw) - this.swell.slopeZ * Math.cos(yaw) + Math.sin(time * 1.6 + toy.seed) * 0.04,

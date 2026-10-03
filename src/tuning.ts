@@ -1218,6 +1218,8 @@ export const tuning = {
   },
   /** The little boats' toys met again on the open sea (`fx/sealife/toys.ts`). */
   seaToys: {
+    /** Smaller than in their own room beside the boat they are now so much smaller than. */
+    scale: 0.65,
     /** Seconds to come in from off the side of the frame to alongside, and to bear away astern after the swim. */
     comeFor: 11, leaveFor: 18,
     /** They are called this many seconds before the swim could begin, and the cygnet stirs once they are this near. */
@@ -1228,8 +1230,8 @@ export const tuning = {
     breezeFill: 0.55,
     /** Sailing on by themselves, out of sight: their own pace, and when they are gone. */
     ownSpeed: 2.4, goneAt: 85, sailOnFor: 40,
-    /** How far the swimming cygnet edges out from the wave along the hull toward the child's own toy. */
-    swimToward: 0.9,
+    /** How far the swimming cygnet edges out from the wave along the hull toward the child's own toy, and how close it goes. */
+    swimToward: 1.2, swimClear: 0.9,
   },
   seaPassage: {
     speed: 10,

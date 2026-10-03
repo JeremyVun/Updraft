@@ -539,7 +539,8 @@ export class CrossingChapter implements Chapter {
         * (1 - mirrorWater(cygnet.position.x, cygnet.position.z));
       /** In among the toys: it keeps to the wave along the hull but edges out toward the child's own. */
       this.toward.subVectors(playmate, this.water).setY(0);
-      this.water.addScaledVector(this.toward, Math.min(1, tuning.seaToys.swimToward / Math.max(1, this.toward.length())));
+      const gap = this.toward.length();
+      this.water.addScaledVector(this.toward, THREE.MathUtils.clamp(gap - tuning.seaToys.swimClear, 0, tuning.seaToys.swimToward) / Math.max(gap, 1e-3));
       cygnet.swimTo(this.water);
       /** The boat sails on; the wave along its side carries the cygnet, which paddles only to keep its place in it. */
       const carry = boat.speed * tuning.seaPassage.swimCarry;
