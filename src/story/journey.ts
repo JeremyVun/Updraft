@@ -339,12 +339,14 @@ export class Journey {
       case 'lines':
         return new LinesChapter(cast);
       case 'toBoats':
-        return new CrossingChapter(cast, {route: ROUTES.toBoats, haze: 1.05, season: 0.22, music: 'lines', linesScore: 'shore', arrivalMusic: 'boats'});
+        return new CrossingChapter(cast, {route: ROUTES.toBoats, haze: 1.05, season: 0.22, music: 'lines', linesScore: 'shore', arrivalMusic: 'boats',
+          arrivalView: tuning.crossingCamera.arrivals.boats});
       case 'boats':
         return new LittleBoatsChapter(cast);
       case 'toMeadow':
         /** Nothing of the meadow is given away from the water: a grey shape in the haze until the bank is climbed. */
-        return new CrossingChapter(cast, { route: ROUTES.toMeadow, haze: tuning.world.meadowCrossingHaze, season: 0.26, arrivalSpeed: tuning.sail.meadowArrivalSpeed, music: 'boats', hush: .28, arrivalMusic: 'meadow' });
+        return new CrossingChapter(cast, { route: ROUTES.toMeadow, haze: tuning.world.meadowCrossingHaze, season: 0.26, arrivalSpeed: tuning.sail.meadowArrivalSpeed, music: 'boats', hush: .28, arrivalMusic: 'meadow',
+          arrivalView: tuning.crossingCamera.arrivals.meadow });
       case 'meadow':
         return new MeadowChapter(cast);
       case 'toBirches':
@@ -352,7 +354,8 @@ export class Journey {
       case 'birches':
         return new BirchesChapter(cast);
       case 'toStairs':
-        return new CrossingChapter(cast, { route: ROUTES.toStairs, haze: 0.9, dusk: 0.62, season: 0.47, music: 'birches', birchesScore: 'return', hush: 0.3 });
+        return new CrossingChapter(cast, { route: ROUTES.toStairs, haze: 0.9, dusk: 0.62, season: 0.47, music: 'birches', birchesScore: 'return', hush: 0.3,
+          arrivalView: tuning.crossingCamera.arrivals.stairs });
       case 'stairs':
         return new StairsChapter(cast);
       case 'drowned':

@@ -20,7 +20,7 @@ const SNOW_FORWARD = point(SLEEP_SNOW_STOP+1).sub(point(SLEEP_SNOW_STOP)).setY(0
 const MIST_FORWARD = point(SLEEP_MIST_STOP+1).sub(point(SLEEP_MIST_STOP)).setY(0).normalize();
 const SNOW_RIGHT = new THREE.Vector3(-SNOW_FORWARD.z, 0, SNOW_FORWARD.x);
 /** How deeply the wind scoops and ridges the drift's thick middle, as a share of its depth; the thin edges keep their shape. */
-const SNOW_SCULPT = 0.24;
+const SNOW_SCULPT = 0.4;
 /** How far the swept channel's floor and its bank tops move out from the path; the wide gap keeps the banks rounded. */
 const CHANNEL_WIDEN = .85, CHANNEL_SOFTEN = 1.75;
 const POWDER_COUNT = 560;
@@ -199,24 +199,30 @@ export class SleepingTrail {
           vec2 local=vec2(dot(xz,uSnowRight.xz),dot(xz,uSnowForward.xz));
           vec3 ridge=vnoiseGrad(local*vec2(.32,1.05));
           vec3 powder=vnoiseGrad(xz*4.2)*(1.0-smoothstep(.02,.06,pixel));
-          vec2 carve=(uSnowRight.xz*ridge.y*.32+uSnowForward.xz*ridge.z*1.05)*.3+powder.yz*.008;
+          vec2 carve=(uSnowRight.xz*ridge.y*.32+uSnowForward.xz*ridge.z*1.05)*.85+powder.yz*.012;
           vec3 n=normalize(normalize(vNormal)-vec3(carve.x,0.0,carve.y)*smoothstep(.02,.3,vDepth));
           float ndl=dot(n,uSunDir),sun=max(0.0,ndl)*cloudShadow(xz);
           // Light soaks into snow, so faces turned away go blue rather than grey.
-          vec3 base=mix(vec3(.62,.74,.90),vec3(.86,.9,.94),smoothstep(-.25,.45,ndl));
+          vec3 base=mix(vec3(.5,.63,.86),vec3(.88,.92,.96),smoothstep(-.15,.4,ndl));
           vec3 col=base*(hemiLight(n)*(.8+.45*max(0.0,n.y))+uSunColor*(sun*.75+clamp(ndl*.5+.3,0.0,1.0)*.12)+lampLight(vWorld,n)+dawnLight(vWorld,n));
           // Where it thins over the turf it takes the ground's shade.
           col*=mix(.78,1.0,smoothstep(.02,.45,vDepth));
+          // Wind-polished crust and loose powder lie in broad patches of slightly different whiteness.
+          col*=.93+.12*vnoise(local*vec2(.18,.5)+5.3);
+          // Against the moon the crests glow at their edges, the light coming through the powder on each ridge.
+          vec3 V=normalize(cameraPosition-vWorld);
+          float against=pow(max(dot(-V,uSunDir),0.0),2.0);
+          col+=uSunColor*pow(1.0-clamp(dot(n,V),0.0,1.0),3.0)*against*.5*cloudShadow(xz);
           // Spindrift: faint streaks of blown powder crossing the surface on the gusts.
           float blown=smoothstep(.62,.95,vnoise(vec2(local.x*.55-uTime*(.9+uGust*2.5),local.y*2.6+ridge.x*1.5)));
           col+=hemiLight(vec3(0,1,0))*blown*(.05+.12*uGust)*cover;
           // Crystals catch the light one at a time as the eye moves; too small to show once they would shimmer.
-          vec2 cell=floor(xz*26.0);vec3 V=normalize(cameraPosition-vWorld);
+          vec2 cell=floor(xz*26.0);
           float facet=hash12(cell+floor(V.xz*7.0+V.y*5.0)*17.0);
           // Sparse, and gathered where the wind has polished the crust rather than spread evenly.
           float polished=smoothstep(.45,.85,vnoise(xz*.55+9.1));
           float fleck=step(mix(.9985,.993,polished),facet)*(1.0-smoothstep(.13,.34,length(fract(xz*26.0)-.5)))*(1.0-smoothstep(.012,.028,pixel));
-          col+=(uSunColor*1.5+uSkyAmbient*.7)*fleck*(.45+.55*hash12(cell+3.1))*max(.25,sun)*cover;
+          col+=(uSunColor*1.5+uSkyAmbient*.7)*fleck*(.45+.55*hash12(cell+3.1))*max(max(.25,sun),against)*cover;
           gl_FragColor=vec4(applyFog(col,vWorld),cover*smoothstep(.004,.12,vDepth));}`,
     }));snow.frustumCulled=false;this.objects.push(snow);
     // Powder lifts off the drift's own surface inside the channel, so the snow visibly leaves where it is cleared.

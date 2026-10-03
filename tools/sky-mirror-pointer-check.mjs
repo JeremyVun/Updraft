@@ -57,7 +57,7 @@ function fixture(fps, portrait = false) {
     cast.plane.update(dt,time);
     boat.update(dt,time);child.update(dt);skyMirror.pose(child);carry.update(dt);
     cygnet.update(dt,time,child.position,wind.sample(cygnet.position.x,cygnet.position.z,air));carry.after();
-    skyMirror.update(dt,time,child.position,cygnet.position,!cygnet.carried);
+    skyMirror.update(dt,time,child.position);
     rig.update(dt,time,chapter.shot,chapter.pace);
   }};
 }

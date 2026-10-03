@@ -15,13 +15,17 @@ const COUNT = 12;
 /** The ring stands up in front of the child's face, turned to them, ready to blow through. */
 const WAND_PITCH = 0.3;
 const WAND_ROLL = -0.25;
+const STEPS = 16;
 export const mirrorUniforms = {
   uMirrorRings: { value: Array.from({ length: COUNT }, () => new THREE.Vector4(0, 0, -100, 0)) },
+  uMirrorSteps: { value: Array.from({ length: STEPS }, () => new THREE.Vector4(0, 0, -100, 0)) },
 };
 export const MIRROR_RIPPLES_GLSL = /* glsl */ `
 uniform vec4 uMirrorRings[${COUNT}];
-vec2 mirrorSlope(vec2 p) {
+uniform vec4 uMirrorSteps[${STEPS}];
+vec2 mirrorSlope(vec2 p, out vec2 steps) {
   vec2 slope = vec2(0.0);
+  steps = vec2(0.0);
   for (int i = 0; i < ${COUNT}; i++) {
     vec4 ring = uMirrorRings[i];
     float age = uTime - ring.z;
@@ -32,7 +36,18 @@ vec2 mirrorSlope(vec2 p) {
     float envelope = exp(-wave * wave * 0.22) * exp(-age * 0.45) * smoothstep(0.0, 0.3, age);
     slope += delta / max(d, 0.1) * cos(wave * 3.4) * envelope * ring.w;
   }
-  return slope;
+  // Each footstep sets a few fine rings running out from the foot; they are gone before the next stride's.
+  for (int i = 0; i < ${STEPS}; i++) {
+    vec4 foot = uMirrorSteps[i];
+    float age = uTime - foot.z;
+    if (age < 0.0 || age > ${glsl(T.stepLife)}) continue;
+    vec2 delta = p - foot.xy;
+    float d = length(delta);
+    float wave = d - age * ${glsl(T.stepSpeed)};
+    float envelope = exp(-wave * wave * 9.0) * exp(-age * ${glsl(4 / T.stepLife)}) * smoothstep(0.0, 0.08, age);
+    steps += delta / max(d, 0.05) * cos(wave * 15.0) * envelope * foot.w;
+  }
+  return slope + steps;
 }
 `;
 const VERT = `varying vec3 vWorld; varying vec3 vNormal;
@@ -78,6 +93,7 @@ export class SkyMirror {
   completedMask = 0;
   lastReturned = -1;
   private ring = 0;
+  private stepRing = 0;
   private nextStroke = 0;
   private forming = 0;
   private cooldown = 0;
@@ -85,8 +101,6 @@ export class SkyMirror {
   private readonly hoop = soapWand();
   private readonly film = new THREE.Mesh(new THREE.SphereGeometry(1, 40, 28), soapMaterial());
   private readonly bubbleGeometry = new THREE.SphereGeometry(1, 48, 32);
-  private readonly lastChild = new THREE.Vector3();
-  private readonly lastBird = new THREE.Vector3();
   private readonly hand = new THREE.Vector3();
   private readonly rim = new THREE.Vector3();
   private readonly projected = new THREE.Vector3();
@@ -95,7 +109,6 @@ export class SkyMirror {
   private readonly strokeFrom = new THREE.Vector3();
   private readonly strokeTo = new THREE.Vector3();
   private readonly stroke = new THREE.Vector3();
-  private footstepsReady = false;
   private readonly guideLights = new THREE.Vector4();
   private readonly constellationLines: THREE.Mesh<THREE.TubeGeometry,THREE.MeshBasicMaterial>[] = [];
 
@@ -222,13 +235,14 @@ export class SkyMirror {
     for (const b of this.bubbles) { this.group.remove(b.mesh); b.mesh.material.dispose(); }
     this.bubbles.length=0; this.completedMask=0; this.lastReturned=-1;
     this.ready=this.holdingWand=this.hasPlayed=false; this.requestedStar=-1; this.focusStar=0;
-    this.forming=this.cooldown=this.lastCharge=0; this.footstepsReady=false;
+    this.forming=this.cooldown=this.lastCharge=0;
     this.guideLights.set(0,0,0,0); this.constellationLines.forEach(line=>line.material.opacity=0);
     this.constellationCrossbars.forEach(line=>line.material.opacity=0);
     this.hoop.position.set(MIRROR_BOWL.x+0.2,1.2,MIRROR_BOWL.z); this.hoop.rotation.set(-0.35,0,0.4);
     this.hoop.visible=true; this.film.visible=false;
     for (const s of this.stars) { s.state='fallen'; s.flight=0; s.floor.visible=true; s.light.visible=false; }
     for (const r of mirrorUniforms.uMirrorRings.value) r.set(0,0,-100,0);
+    for (const r of mirrorUniforms.uMirrorSteps.value) r.set(0,0,-100,0);
   }
 
   /** Old crossing saves still restore the completed room by count. */
@@ -277,6 +291,11 @@ export class SkyMirror {
     this.holdingWand=false;
     this.hoop.position.set(child.x+1.1,0.09,child.z);
     this.hoop.rotation.set(-Math.PI/2,0,0.3);
+  }
+
+  /** A footfall on the glass: fine rings from the foot, the child's stronger than the cygnet's. */
+  step(x: number,z: number,time: number,strength: number): void {
+    mirrorUniforms.uMirrorSteps.value[this.stepRing++ % STEPS].set(x,z,time,strength);
   }
 
   ripple(x: number,z: number,time: number,strength: number): void {
@@ -394,9 +413,9 @@ export class SkyMirror {
     }
   }
 
-  update(dt: number,time: number,child: THREE.Vector3,bird: THREE.Vector3,afoot: boolean): void {
+  update(dt: number,time: number,child: THREE.Vector3): void {
     this.group.visible=this.active || Math.hypot(child.x-SKY_MIRROR.x,child.z-SKY_MIRROR.z)<185;
-    if (!this.active) { this.footstepsReady=false; return; }
+    if (!this.active) { return; }
     this.cooldown=Math.max(0,this.cooldown-dt);
     for (let i=this.bubbles.length-1;i>=0;i--) {
       const b=this.bubbles[i]; b.age+=dt;
@@ -445,9 +464,5 @@ export class SkyMirror {
       s.floor.material.uniforms.uFade.value=0.85+Math.sin(time*1.8+i*2)*0.15;
     }
     this.updateGuide(dt);
-    if (this.footstepsReady) {
-      if (child.distanceTo(this.lastChild)>0.85) { this.ripple(child.x,child.z,time,0.018); this.lastChild.copy(child); }
-      if (afoot && bird.distanceTo(this.lastBird)>0.5) { this.ripple(bird.x,bird.z,time,0.009); this.lastBird.copy(bird); }
-    } else { this.lastChild.copy(child); this.lastBird.copy(bird); this.footstepsReady=true; }
   }
 }

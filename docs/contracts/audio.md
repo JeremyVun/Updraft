@@ -229,7 +229,8 @@ pan and bounded scheduling; finished nodes disconnect.
   Swing creaks need real travel and a reversal, `swingCreakEvery` apart. Both attenuate over `birchesFoleyNear/Far`.
 - Sail: one quiet canvas fold at full droop (`sailSettleAt`), re-armed only after a refill below `sailSettleRearm`;
   flutter sounds only on fresh rises, `sailEvery` apart. Toy-boat flutter is silent.
-- Laundry: local wind on the cloth's spring and flutter thresholds, at most `clothSources` voices.
+- Laundry: local wind on the cloth's spring and flutter thresholds, at most `clothSources` voices. A passage sheet's
+  peg coming off the line snaps once (`peg`), from the peg itself; pegs already off when a checkpoint loads are silent.
 - Dolphins and whales: sounds fire from the same events as the visible splash, spray, breaths, fluke drainage and
   dive (`WhaleWake`, the shared `SeaLife` callback), with soft attacks and level trims (`dolphin*`, `whale*`). Pod
   emergence and re-entry have separate budgets. Muted or hidden events are dropped.

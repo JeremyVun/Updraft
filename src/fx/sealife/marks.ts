@@ -28,7 +28,7 @@ void main() {
   vec2 dir = vec2(cos(iA.w), sin(iA.w));
   vec2 q = position.xy;
   vec2 local = vec2(q.x * r * iC.y, q.y * r);
-  vec2 xz = iA.xy + dir * local.x + vec2(-dir.y, dir.x) * local.y;
+  vec2 xz = iA.xy + dir * local.x + vec2(-dir.y, dir.x) * (local.y + iC.w * age);
   vWorld = vec3(xz.x, seaSurfaceY(xz) + 0.035, xz.y);
   vQ = q;
   vFade = t;
@@ -42,6 +42,7 @@ const FRAG = /* glsl */ `
 ${ATMO_GLSL}
 ${SURF_GLSL}
 uniform vec3 uDeep;
+uniform float uFoam;
 in vec2 vQ;
 in vec3 vWorld;
 in float vFade;
@@ -60,7 +61,7 @@ void main() {
   if (vKind < 0.5) {
     float edge = 1.0 - smoothstep(0.25, 1.0, r + (vnoise(vQ * 2.5 + vSeed * 40.0) - 0.5) * 0.5);
     float density = edge * vStrength * pow(1.0 - vFade, 1.4) * smoothstep(0.0, 0.05, vFade + 0.02);
-    a = foamLace(density, vWorld.xz * 1.6 + vSeed * 57.0, Footprint(fp.dx * 1.6, fp.dy * 1.6));
+    a = foamLace(density, vWorld.xz * 1.6 + vSeed * 57.0, Footprint(fp.dx * 1.6, fp.dy * 1.6)) * uFoam;
     col = foamColor(V, sun);
   } else if (vKind < 1.5) {
     float body = 1.0 - smoothstep(0.35, 1.0, r + (vnoise(vQ * 1.7 + vSeed * 23.0) - 0.5) * 0.35);
@@ -94,7 +95,8 @@ export class Marks {
   private readonly b: THREE.InstancedBufferAttribute;
   private readonly c: THREE.InstancedBufferAttribute;
 
-  constructor() {
+  /** `foam` is how opaque its white water is: a dinghy's wake is thinner than a whale's. */
+  constructor(foam = 1) {
     const quad = new THREE.PlaneGeometry(2, 2, 3, 3);
     const geo = new THREE.InstancedBufferGeometry();
     geo.index = quad.index;
@@ -114,7 +116,7 @@ export class Marks {
       new THREE.ShaderMaterial({
         vertexShader: VERT,
         fragmentShader: FRAG,
-        uniforms: { ...atmo.uniforms, ...surfUniforms, ...swellUniforms, uDeep: { value: new THREE.Color('#0d4a66') } },
+        uniforms: { ...atmo.uniforms, ...surfUniforms, ...swellUniforms, uDeep: { value: new THREE.Color('#0d4a66') }, uFoam: { value: foam } },
         transparent: true,
         depthWrite: false,
         side: THREE.DoubleSide,
@@ -133,9 +135,9 @@ export class Marks {
 
   /**
    * Leaves a mark at (x, z) for `life` seconds. It grows by `grow` units per second from `radius`; `stretch` makes it
-   * that many times longer along `angle` than across.
+   * that many times longer along `angle` than across, and it drifts `drift` units per second square to `angle`.
    */
-  add(kind: number, x: number, z: number, radius: number, life: number, time: number, strength = 1, grow = 0, angle = 0, stretch = 1): void {
+  add(kind: number, x: number, z: number, radius: number, life: number, time: number, strength = 1, grow = 0, angle = 0, stretch = 1, drift = 0): void {
     const i = this.next;
     this.next = (this.next + 1) % MAX;
     const A = this.a.array as Float32Array;
@@ -152,6 +154,7 @@ export class Marks {
     C[i * 4] = grow;
     C[i * 4 + 1] = stretch;
     C[i * 4 + 2] = strength;
+    C[i * 4 + 3] = drift;
     this.until = Math.max(this.until, time + life);
     this.a.needsUpdate = true;
     this.b.needsUpdate = true;

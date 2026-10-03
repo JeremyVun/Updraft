@@ -65,6 +65,7 @@ class StartScreen {
     const saved = params.progress ? readProgress() : null;
     this.button.firstElementChild!.textContent = saved ? 'Continue' : 'Begin';
     const chapter = saved?.chapter ?? params.chapter;
+    document.getElementById('home-screen-note')!.hidden = !swipeLeavesFullscreen();
     this.veil.classList.toggle('night', (params.dusk ?? 0) > 1.3 || ['toWood', 'wood', 'dark', 'toSleeping', 'sleeping', 'home', 'summit'].includes(chapter ?? ''));
     const room = PAINTINGS[chapter ?? 'island'];
     if (room) this.paint(room);
@@ -271,6 +272,14 @@ class StartScreen {
     document.body.classList.remove('starting');
     document.getElementById('view')!.inert = false;
   }
+}
+
+/** iPad Safari leaves page full screen on any downward swipe; launching from the Home Screen avoids it. */
+function swipeLeavesFullscreen(): boolean {
+  const ua = navigator.userAgent;
+  const iPad = navigator.maxTouchPoints > 1 && /iPad|Macintosh/.test(ua) && !/CriOS|FxiOS|EdgiOS/.test(ua);
+  const inBrowser = !matchMedia('(display-mode: standalone), (display-mode: fullscreen)').matches;
+  return iPad && inBrowser && document.fullscreenEnabled;
 }
 
 export const startScreen = new StartScreen();

@@ -65,9 +65,17 @@ export function boatsRipple(x: number, z: number, time: number): number {
 export function boatsWaterHeight(x: number, z: number, time: number): number {
   return boatsWaterBase(x, z) + boatsRipple(x, z, time);
 }
-/** Keep the stranded toy visible on a small bare patch beside the pool. */
+/** Where the cygnet swims: it hops in after `enter`, never later than eight metres before `leave`, and out at `leave`. */
+export const BOATS_POOLS = [
+  { enter: 4, leave: 30 },
+  { enter: 34, leave: 65 },
+  { enter: 69, leave: 94 },
+] as const;
+/** Where the stranded toy waits: up on the flat bank, back from the water's edge. */
+export const BOATS_TOY = { x: boatsX(3) + boatsWidth(3) + tuning.littleBoats.toyBank, z: LITTLE_BOATS.startZ - 3 };
+/** Keep the stranded toy visible on a small bare patch of bank. */
 export function boatsToyClearing(x: number, z: number): number {
-  return smooth(0.8, 1.6, Math.hypot(x - boatsX(3) - boatsWidth(3) - 0.45, z - LITTLE_BOATS.startZ + 3));
+  return smooth(0.8, 1.6, Math.hypot(x - BOATS_TOY.x, z - BOATS_TOY.z));
 }
 export const LITTLE_BOATS_GLSL = /* glsl */ `
 float boatsX(float s) { return ${glsl(LITTLE_BOATS.x - 3)} + 7.0 * sin(s * 0.087); }
@@ -91,7 +99,7 @@ float boatsRipple(vec2 p, float time) {
 }
 float boatsDry(vec2 p, float h) {
   if (abs(p.x - ${glsl(LITTLE_BOATS.x)}) > 65.0 || abs(p.y - ${glsl(LITTLE_BOATS.z)}) > 85.0) return 1.0;
-  float clearing = smoothstep(0.8, 1.6, length(p - vec2(boatsX(3.0) + boatsWidth(3.0) + 0.45, ${glsl(LITTLE_BOATS.startZ - 3)})));
+  float clearing = smoothstep(0.8, 1.6, length(p - vec2(${glsl(BOATS_TOY.x)}, ${glsl(BOATS_TOY.z)})));
   return clearing * mix(1.0, smoothstep(boatsLevel(${glsl(LITTLE_BOATS.startZ)} - p.y) + 0.05, boatsLevel(${glsl(LITTLE_BOATS.startZ)} - p.y) + 0.3, h), 1.0 - smoothstep(0.9, 1.2, boatsOut(p)));
 }
 `;

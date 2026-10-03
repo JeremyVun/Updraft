@@ -237,6 +237,10 @@ export const tuning = {
     horizonOnFlat: 160, horizonOffFlat: 320,
     arrivalBlendFor: 10,
     rippleSpeed: 3.6, rippleStrength: 0.06, settleRate: 0.55,
+    /** A footstep's rings on the glass: how fast they run out (m/s), how long they last, and how deep the child's and cygnet's are. */
+    stepSpeed: 0.75, stepLife: 3, childStep: 0.05, birdStep: 0.025,
+    /** How brightly a footstep's rings catch the light, so they read where the reflection is plain. */
+    stepGlint: 9,
     bubbleRadius: 1.55, bubbleGrow: 1.25, bubbleSpeed: 6.5, bubbleResponse: 28, bubbleStrokeSpeed: 0.4,
     bubbleDrag: 1.4, bubbleFilledDrag: 2.6, bubbleVerticalDrag: 2.6,
     bubbleLift: 4.5, bubbleRelease: 8.5, bubbleReach: 19,
@@ -317,6 +321,10 @@ export const tuning = {
     /** How fast a filled sail brings the hull up to speed, and how slowly still water takes that speed away (per second). */
     drive: 1.4, drag: 0.266,
     fleetReach: 14, childLead: 6.5, bankOffset: 2.2,
+    /** The stranded toy waits this far back from the water's edge, on the flat top of the bank. */
+    toyBank: 3.2,
+    /** How far up from the beach toward the toy the child lets the cygnet down to walk with her. */
+    setDownAt: 0.4,
     /** Ease the child's toy toward its companion limit instead of hitting it at full speed. */
     followEase: 1.5,
     /** The child hurries along the bank by up to this share of a walk while its toy sails away from it. */
@@ -346,6 +354,13 @@ export const tuning = {
     sailSag: 0.48, sailFold: 0.1, sailFlutter: 0.045, sailShake: 0.13,
     heel: 0.13, rollSpring: 13, rollDamping: 3.8, drift: 0.5,
     swimSpeed: 3.15, swimWeave: 0.15, swimPlay: 0.8,
+    /**
+     * Reeds in clumps (where bank noise passes `clumpFrom`) along the stream's lip: up to `share` of the blades,
+     * reaching `far` metres (plus a share of the stream's width) up the far bank and `near` up the camera's own,
+     * `farHeight`/`nearHeight` metres tall at `width` of a grass blade's width, bending `stiff` as far,
+     * `heads` of them in seed.
+     */
+    reeds: { share: 0.8, clumpFrom: 0.48, far: 1.7, near: 0.9, farHeight: 1.45, nearHeight: 0.75, width: 0.6, stiff: 0.6, heads: 0.14 },
   },
   veil: {
     /** Sparse ambient ribbons; pointer strokes only nudge the broad colour field. */
@@ -621,6 +636,8 @@ export const tuning = {
     /** Height of the crest the birches stand on, on top of about 3 of beach and lumps. */
     birchesCrest: 5.2,
   },
+  /** Prints in the sand: how dark the hollow is, how strongly the sun models its walls, and the seconds they fade over. */
+  footprints: { depth: 0.16, relief: 0.4, fadeFrom: 14, fadeTo: 40 },
   crest: {
     /** The family resting on the pond beyond the crest: how many of them, and how wide the raft is spread. */
     family: 15,
@@ -1082,13 +1099,33 @@ export const tuning = {
     /** Local gusts count in any direction, and several small sweeps add up. */
     energyFrom: 0.025, energyFull: 0.22,
     speedFrom: 0.4, speedFull: 3,
-    fillSeconds: 1.8,
-    billowSpeed: 6, rise: 3.5, settle: 1.2,
+    billowSpeed: 6, rise: 3.5, settle: 2,
+    /**
+     * Seconds of full sweep it takes to work one peg free. A pegged sheet billows away through the gap in the
+     * player's air, pushed `pushSpeed` m/s more against `drag`, and feels at most `liveAir` m/s, so it lifts but
+     * never streams flat; once its pegs are off it feels at most `restAir` m/s of breeze, so a gust never throws
+     * it back into the way.
+     */
+    pegSeconds: 1.1, pushSpeed: 4.5, drag: 0.22, damping: 0.5, iterations: 6, liveAir: 5.5, restAir: 2.2,
+    /** A worked peg gives once the billow has fallen below `popBillow`, or after `popWait` s of gusting. */
+    popBillow: 0.2, popWait: 1.5,
+    /** The travellers go through once the last of the sheet has been down this long. */
+    passAfter: 2,
+    /** A popped peg leaps `pegHop` m/s up and `pegFling` m/s out along the line, and tumbles to the grass. */
+    pegHop: 3.2, pegFling: 1.6,
+    /** Cloth let go springs back toward the pegs still holding it at `recoil` m/s for every metre away it was. */
+    recoil: 0.8,
+    /** The last sheet, torn off, flies `flightSeconds` over a rise of `flightRise` m onto the next line. */
+    flightSeconds: 2.4, flightRise: 2.6, flightGrip: 9,
+    /** A sheet already down when a checkpoint is loaded falls and settles this long before it is shown. */
+    settleSeconds: 6,
+    /** Cloth further than this from the child holds still; nobody is near enough to see it sway. */
+    simulateWithin: 45,
     brushFrom: 0.8, brushRadius: 0.27,
     /** A warm sideways trace on the first sheet demonstrates a sweep, without generating any wind. */
     inviteAfter: 1.2, inviteSweep: 1.8, invitePause: 1.1, inviteResume: 2.2,
     inviteWidth: 0.11, inviteAlpha: 0.85, inviteSpan: 0.66,
-    /** Let the little bird try first, then the child follows beneath the raised hem. */
+    /** Let the little bird try first, then the child follows through the way the fallen sheet has left. */
     birdLead: 1.4, lookBack: 1.5,
     revealFill: 2.8, revealHold: 4.5,
     doorApproach: 5.5, doorCross: 7, shorePause: 4,
@@ -1200,15 +1237,71 @@ export const tuning = {
     /** The whale is watched from within this arc of the travelling view, and let go over `whalePass` beyond it. */
     whaleArc: 0.8, whalePass: 0.6,
     whaleWeight: 0.38, whaleBack: 6, whaleRise: 1.2, whaleExtent: 10,
+    /**
+     * Arrivals watched from somewhere else than behind and above (`ArrivalView`), easing in between `from` and `full`
+     * units of sailing from the end of the route and ending where the room's own first view stands: low beside the
+     * hull as the meadow's bank rises over it, high and wide over the little boats' pools, low on the quarter under
+     * the cloud onto the stairs' knoll.
+     */
+    arrivals: {
+      meadow: { from: 75, full: 24, bearing: 1.3, distance: 19, height: 2.4, lead: 3, side: 1 },
+      boats: { from: 80, full: 30, bearing: 0.8, distance: 28, height: 13, lead: 8, side: -1 },
+      stairs: { from: 45, full: 14, bearing: 0.95, distance: 13, height: 1.5, lead: 3, side: 1 },
+    },
+  },
+  /** The little boats' toys met again on the open sea (`fx/sealife/toys.ts`). */
+  seaToys: {
+    /** Smaller than in their own room beside the boat they are now so much smaller than. */
+    scale: 0.65,
+    /**
+     * Where they are already sailing when the passage leaves, unseen in the last of the night: on a course that
+     * crosses the route ahead at `across` (radians, out toward the swimming side) and passes `lane` out from it
+     * `meetAt` further along the route, where they will be about `meetIn` seconds later.
+     */
+    meetAt: 138, meetIn: 40, lane: 5, across: 0.18,
+    /** Their own speed in units a second: a share of `ownSpeed` with the breeze alone, the rest as the sail fills. */
+    ownSpeed: 1.95, cruise: 0.62, driven: 0.38,
+    /** The open-sea breeze keeps a sail this full; a gust fills it the rest of the way. */
+    breezeFill: 0.55,
+    /** How far a hull wanders off its course, how far a gust knocks its head round, and how fast it may turn (radians, a second). */
+    wander: 0.05, knock: 0.25, turn: 0.6,
+    /** In the night they are lit within this of the eye and dark beyond `darkBeyond`. */
+    litWithin: 55, darkBeyond: 85,
+    /** Gone once every one of them is out of the frame and this far off, or this far off at all. */
+    unseenAt: 30, lostAt: 320,
+    /** Within this of the boat the cygnet stops watching the pod and watches them; within `noticeAt` it is restless to go. */
+    sightedAt: 26, noticeAt: 22,
+    /** It goes in once the toy it is watching is this far ahead of the child or nearer, or after `waitFor` on the side regardless. */
+    goInAhead: 6.5, waitFor: 7,
+    /** The boat eases for the swim once the toy it is watching is this near. */
+    easeWithin: 11,
+    /** How close beside a toy it swims, and for how long among them before it turns back. */
+    swimClear: 1.2, playFor: 4,
+    /** Seconds of a toy's way it keeps clear of, ahead of the toy. */
+    giveWay: 0.6,
+    /** As near as it gets to the place it is making for beside a toy sailing on: it is among them. */
+    alongside: 1.4,
+    /** How eagerly it swims out to them; and once there, how fast (radians a second) and how far (radians) it swings to and fro along the toy's near side. */
+    swimOutPlay: 0.4, swimOutHurry: 0.5, roundRate: 1.3, roundSweep: 0.8,
+    /** Its paddling speed per unit it is short of where it is making for (as `cygnet.paddling` has it). */
+    swimTrack: 1.1,
+    /** Seconds the boat's way stays on it after it goes in, falling away. */
+    wayFor: 1.2,
+    /** The furthest out from the boat it swims, toys or no toys. */
+    reach: 7.5,
+    /** It makes for the child's own toy unless another is this much nearer. */
+    preferOwn: 2.5,
+    /** It turns back early once its toy has fallen this far astern of the child in the boat. */
+    turnBackAstern: 4.5,
   },
   seaPassage: {
     speed: 10,
     arrivalSpeed: 3.5,
-    /** The most the boat makes while the cygnet is swimming: ordinary sailing sails on, only a strong gust is trimmed. */
-    swimSpeed: 5,
+    /** The most the boat makes from when the toys come near until the cygnet is out of the water: it eases for a swimmer, never to a crawl. */
+    swimSpeed: 2.4,
     /** How much of the boat's way the wave along its side gives the swimming cygnet, and how fast the swim's cap comes in. */
     swimCarry: 0.75,
-    swimEase: 0.5,
+    swimEase: 1,
     swimFor: 12,
     swimAnticipation: 2,
     swimDecision: 3,
@@ -1238,11 +1331,13 @@ export const tuning = {
     swimBeside: 2.4,
     cameraDistance: 23,
     cameraHeight: 5.1,
-    swimCameraDistance: 16,
-    swimCameraHeight: 4.6,
+    swimCameraDistance: 11,
+    swimCameraHeight: 2.4,
+    /** How far toward the child, from the swimming cygnet, the lens looks while it swims. */
+    swimCameraChild: 0.35,
     cameraBearing: 0.16,
     /** Open a little beside the boat only while the cygnet is swimming. */
-    swimCameraBearing: 0.65,
+    swimCameraBearing: 1.05,
     childTurn: 0.7,
     haze: 0.94,
   },
@@ -1489,6 +1584,10 @@ export const tuning = {
     drive: 4.5 / 2.6,
     following: 1 / 2.6,
     topSpeed: 10,
+    /** How fast each arm of the wake opens sideways, per unit of boat speed (0.14 opens the V about 8° a side). */
+    wakeSpread: 0.14,
+    /** How opaque the wake's foam is: a small boat leaves a thin, see-through lace, not a motorboat's white water. */
+    wakeFoam: 0.6,
     /** Spill wind in a tight turn; the turning radius must shrink as a missed waypoint gets closer. */
     turnBrake: 0.65,
     turnAligned: 0.85,

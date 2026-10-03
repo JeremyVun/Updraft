@@ -29,7 +29,7 @@ async function start(page) {
 }
 const applied = page => page.evaluate(() => ({ mode: __game.quality.mode, name: __game.quality.level.name, ratio: __game.renderer.getPixelRatio(),
   reach: Math.round(__game.grass.quality.reach * 1e6) / 1e6, density: __game.grass.quality.density, split: __game.terrain.detail }));
-// At a device pixel ratio of 2: the table in docs/backlog/perf-final/design.md section 3.
+// At a device pixel ratio of 2: the table in docs/engine.md, Quality governor.
 const LEVELS = {
   ultra: { ratio: 1.5, reach: 1.15, density: 1, split: 1.6 },
   high: { ratio: 1.25, reach: 1.15, density: 1, split: 1.6 },

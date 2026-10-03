@@ -107,7 +107,7 @@ export class Boat {
   /** The wind the sail feels, on the hanging things' spring: it fills when a gust arrives, not when the air moves. */
   private readonly sway = new Sway();
   /** Foam left on the water behind the hull. */
-  private readonly wake = new Marks();
+  private readonly wake = new Marks(tuning.sail.wakeFoam);
   private wakeIn = 0;
   private readonly boardA = new THREE.Vector3();
   private readonly boardB = new THREE.Vector3();
@@ -535,15 +535,17 @@ export class Boat {
     waterlineUniforms.uHullAt.value.set(this.position.x, this.position.z, Math.sin(this.yaw), Math.cos(this.yaw));
     this.wake.update(time);
     this.wakeIn -= dt;
-    if (!this.afloat || this.grounded || this.speed < 0.6 || this.wakeIn > 0 || this.altitude !== null) return;
+    if (!this.afloat || this.grounded || this.speed < 0.25 || this.wakeIn > 0 || this.altitude !== null) return;
     this.wakeIn = 0.15;
     const fx = Math.sin(this.yaw), fz = Math.cos(this.yaw);
-    const strength = Math.min(0.7, this.speed * 0.13);
-    // Two broken trails peel off the quarters; a small curl at each shoulder anchors the waterline.
+    // A floor keeps the newest foam at the stern as a slowing boat drifts, so the V never comes away from the hull.
+    const strength = Math.min(0.6, 0.2 + this.speed * 0.085) * Math.min(1, this.speed / 0.6);
+    const spread = tuning.sail.wakeSpread;
+    // Two broken trails peel off the quarters and open into a V; a small curl at each shoulder anchors the waterline.
     for (const side of [-1, 1]) {
       this.wake.add(FOAM, this.position.x - fx * 1.6 + fz * side * 0.5,
-        this.position.z - fz * 1.6 - fx * side * 0.5, 0.22, 5.5, time,
-        strength, 0.22, Math.PI / 2 - this.yaw + side * 0.18, 1.65);
+        this.position.z - fz * 1.6 - fx * side * 0.5, 0.19, 4.5, time,
+        strength, 0.19, Math.PI / 2 - this.yaw + side * Math.atan(spread), 1.65, -side * spread * this.speed);
       this.wake.add(FOAM, this.position.x + fx * 0.6 + fz * side * 0.78,
         this.position.z + fz * 0.6 - fx * side * 0.78, 0.13, 1.4, time,
         strength * 0.8, 0.09, Math.PI / 2 - this.yaw, 2.4);

@@ -56,7 +56,7 @@ import { GroundBakes, type BakeInputs } from './world/ground';
 import { LifeField } from './world/life';
 import { applyPalette, applySleepingPalette } from './world/palette';
 import { heightAt } from './world/island';
-import { FLOWER_PATCHES, ROCKS, TREE, wildflowersAlong } from './world/landmarks';
+import { FLOWER_PATCHES, HOME_TREE, ROCKS, TREE, wildflowersAlong } from './world/landmarks';
 import { measureHeightParity } from './world/parity';
 import { createRocks } from './world/rocks';
 import { Foley, type Surface } from './audio/foley';
@@ -65,7 +65,7 @@ import { Probe } from './companion/probe';
 import { Cygnet } from './creatures/cygnet';
 import { screenPan } from './creatures/motion';
 import { SwanFlock } from './creatures/flock';
-import { CURTAINS, washingPassage } from './world/lines-passage';
+import { CURTAINS, SNAG_LINE, washingPassage } from './world/lines-passage';
 import { createDoorShoreGrass } from './world/door-shore';
 import { DOOR_EXIT, doorway, DoorwayView } from './world/doorway';
 import { FAMILY_LINE, WashingLines, baskets, door, family, lineField, seaLines } from './world/lines';
@@ -80,6 +80,8 @@ import { AutumnBirches } from './world/birches';
 import { CloudStairs } from './world/stairs';
 import { CLOUD, STAIRS_ISLE } from './world/stairs-layout';
 import { createTree } from './world/tree';
+import { Footprints } from './world/footprints';
+import { dreamEchoes } from './world/echoes';
 import { createSky } from './world/sky';
 import { Terrain } from './world/terrain';
 import { TerrainHeights } from './world/terrain-heights';
@@ -169,14 +171,17 @@ const cursor = new Cursor(canvas);
 await built();
 bakeNoiseTiles();
 const tree = createTree();
+const homeTree = createTree(HOME_TREE, HOME_TREE.scale);
+homeTree.life.value = 1;
 const hillFlowers = wildflowersAlong(ROUTE);
 const terrainHeights = new TerrainHeights();
 const bakes = new GroundBakes(renderer, terrainHeights);
 const bakeInputs: BakeInputs = {
-  occluders: tree.canopy,
+  occluders: [...tree.canopy, ...homeTree.canopy],
   clearings: [
     ...ROCKS.map((r) => ({ x: r.x, z: r.z, radius: r.radius })),
     { x: TREE.x, z: TREE.z, radius: 1.6 },
+    { x: HOME_TREE.x, z: HOME_TREE.z, radius: 1.6 * HOME_TREE.scale },
     { x: COTTAGE.x, z: COTTAGE.z, radius: 6.5 },
     piano.clearing,
   ],
@@ -196,6 +201,7 @@ const clouds = new CloudShadows(renderer);
 const sky = createSky();
 scene.add(sky);
 const terrain = new Terrain(wind.breeze, bakes.filterable, terrainHeights);
+const footprints = new Footprints();
 scene.add(terrain.mesh);
 scene.add(water.mesh);
 const pond = new Pond();
@@ -203,6 +209,7 @@ pond.objects.forEach((o) => scene.add(o));
 const islandRocks = createRocks();
 scene.add(islandRocks);
 scene.add(tree.group);
+scene.add(homeTree.group);
 await built();
 const grass = new Grass();
 scene.add(grass.group);
@@ -218,7 +225,7 @@ scene.add(piano.group);
 
 /** Hung around the walk over the island, so the open ground through it is always the way on. */
 await built();
-const washingLines = [...lineField(new THREE.Vector2(ISLES.lines.x, ISLES.lines.z + 8), 210, 49, 17, LINES_WALK, [FAMILY_LINE, ...CURTAINS]), ...CURTAINS, ...seaLines()];
+const washingLines = [...lineField(new THREE.Vector2(ISLES.lines.x, ISLES.lines.z + 8), 210, 49, 17, LINES_WALK, [FAMILY_LINE, SNAG_LINE, ...CURTAINS]), SNAG_LINE, ...CURTAINS, ...seaLines()];
 await built();
 const washing = new WashingLines(washingLines, 91, FAMILY_LINE);
 scene.add(washing.group);
@@ -288,6 +295,7 @@ const planeInvitation = new PlaneInvitation();
 scene.add(planeInvitation.batch.mesh);
 const glider = new Glider(wind, [
   ...tree.canopy,
+  ...homeTree.canopy,
   ...ROCKS.map((r) => ({ centre: new THREE.Vector3(r.x, heightAt(r.x, r.z) + r.height * 0.25, r.z), radius: r.radius })),
 ]);
 const planeIndicator = new PlaneIndicator();
@@ -336,6 +344,7 @@ cygnet.mount = child;
 const carry = new Carry(child, cygnet);
 const foley = new Foley();
 const worldFoley = new WorldFoley(foley, rig.camera);
+const curtainPops = new Map<object, number>();
 const birchesFoley = new BirchesFoley(foley, rig.camera);
 const materialAt = new THREE.Vector3();
 const splashAt = new THREE.Vector3();
@@ -395,12 +404,15 @@ const sheepFolds = [
 sheepFolds.forEach((fold, i) => hillCreatures.spawn({ ...fold, radius: 10, seed: 60 + i }));
 scene.add(hillCreatures.group);
 clipJourneyProps(hillCreatures.group);
+const echoes = dreamEchoes();
+Object.values(echoes).forEach((e) => scene.add(e));
 const roomObjects: Partial<Record<Room, THREE.Object3D[]>> = {
   island: [tree.group, islandRocks, creatures.group], lines: [washing.group, washingBaskets, pinwheels.group, door.group],
   shore: [shoreGrass, kite.group], boats: [littleBoats.group],
   meadow: [piano.group, ...pond.objects], birches: [...birches.objects], stairs: [cloudStairs.group], drowned: [...village.objects],
-  wood: [...wood.objects], sleeping: [...sleeping.objects], mirror: [skyMirror.group], home: [...cottage.objects, homeJetty],
+  wood: [...wood.objects], sleeping: [...sleeping.objects], mirror: [skyMirror.group], home: [...cottage.objects, homeJetty, homeTree.group],
 };
+for (const [room, echo] of Object.entries(echoes)) roomObjects[room as Room]?.push(echo);
 for (const [name, marker] of Object.entries(departureKites.markers)) {
   if (name !== "lines") roomObjects[name as Room]?.push(marker.group);
 }
@@ -677,6 +689,8 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   boat.update(dt, time);
   if (cygnet.seat === 'satchel') child.openBag();
   child.update(dt);
+  for (const f of child.footfalls) footprints.press(f.x, f.z, f.heading, 0, time);
+  if (skyMirror.active) for (const f of child.glassSteps) skyMirror.step(f.x, f.z, time, tuning.skyMirror.childStep);
   skyMirror.pose(child);
   glider.update(dt, time);
   flock.update(dt, time);
@@ -712,6 +726,10 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   }
   if (cygnet.state !== 'fallen' && story.current.invitesFlight) cygnetAir.lift += cygnetAir.energy * tuning.colt.gustLift;
   cygnet.update(dt, time, child.position, cygnetAir);
+  const birdOnGround = cygnet.position.y < heightAt(cygnet.position.x, cygnet.position.z) + 0.1;
+  for (const f of cygnet.footfalls) if (birdOnGround) footprints.press(f.x, f.z, f.heading, 1, time);
+  if (skyMirror.active && !cygnet.carried) for (const f of cygnet.footfalls) skyMirror.step(f.x, f.z, time, tuning.skyMirror.birdStep);
+  footprints.update(time);
   carry.after();
   foley.setOutput(sound.output);
   foley.frost(story.name==='sleeping' ? sleeping.cold*(1-sleeping.dawn) : 0);
@@ -825,6 +843,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
 
   /** The washing gives way in front of whoever the camera is watching, so they are never lost behind a sheet. */
   washing.subject.set(child.position.x, child.position.y + 1.1, child.position.z, child.visible ? 1 : 0);
+  if (story.name === 'lines') washing.update();
   /** And so do the birches and the sail, for the same reason. */
   birches.subject.copy(washing.subject);
   boat.subject.copy(washing.subject);
@@ -944,7 +963,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   starlings.update(dt, storm > 0.3 ? 0 : (params.dusk ?? story.dusk), joining);
   if (QA && params.whale) whaleForQa();
   sealife.update(dt, time);
-  skyMirror.update(dt, time, child.position, cygnet.position, !cygnet.carried);
+  skyMirror.update(dt, time, child.position);
   water.step(dt);
 }
 
@@ -962,6 +981,11 @@ function prepareWorldAudio(dt: number): void {
   worldFoley.motion(family, 'cloth', materialAt, family.x + family.y, dt, heard && story.name === 'lines');
   for (const curtain of CURTAINS) {
     worldFoley.motion(curtain, 'cloth', curtain.center, curtain.opening, dt, heard && story.name === 'lines');
+    const popped = curtainPops.get(curtain) ?? curtain.pops;
+    if (curtain.pops > popped && heard && story.name === 'lines') {
+      for (const peg of curtain.pegs.filter(p => p.off && !p.resting).slice(0, curtain.pops - popped)) worldFoley.knock('peg', peg.on, 1);
+    }
+    curtainPops.set(curtain, curtain.pops);
   }
   for (const snag of birches.scarf.snags) {
     worldFoley.motion(snag, 'wool', snag.center, snag.work + snag.release, dt, heard && story.name === 'birches');
@@ -1171,7 +1195,7 @@ function frame(now: number): void {
 }
 
 if (QA && params.shot) {
-  window.__game = { quality, post, wind, input, rig, renderer, scene, glider, lines, swirl, sound, child, story, creatures, hillCreatures, water, skyMirror, terrain, cottage, petals, grass, littleBoats, sealife, cygnet, flock, carry, probe, washing, curtains: CURTAINS, doorway, doorwayView, doorExit: DOOR_EXIT, washingPassage, washingInvitation, scarfInvitation, kite, departureKites, pinwheels, village, wood, stormWeather, sleeping, embers, emberInvitation, fireflies, boat, life, piano, birches, pond, cloudStairs };
+  window.__game = { quality, post, wind, input, rig, renderer, scene, glider, lines, swirl, sound, child, story, creatures, hillCreatures, water, skyMirror, terrain, footprints, cottage, petals, grass, littleBoats, sealife, cygnet, flock, carry, probe, washing, curtains: CURTAINS, doorway, doorwayView, doorExit: DOOR_EXIT, washingPassage, washingInvitation, scarfInvitation, kite, departureKites, pinwheels, village, wood, stormWeather, sleeping, embers, emberInvitation, fireflies, boat, life, piano, birches, pond, cloudStairs };
 }
 
 /**

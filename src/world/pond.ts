@@ -117,7 +117,8 @@ void main() {
   float through = pow(max(dot(-V, uSunDir), 0.0), 3.0);
   col *= uSkyAmbient * 1.2 + uSunColor * (0.55 + 0.9 * through) * cloudShadow(vWorld.xz);
   col = mix(stillGrey(col) * 1.05, col, (0.35 + 0.65 * uWorldLife) * vLife);
-  gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
+  // MSAA edge samples shaded outside the triangle extrapolate to negative colour, which half-float targets keep.
+  gl_FragColor = vec4(max(applyFog(col, vWorld), 0.0), 1.0);
 }`;
 
 /** One reed: a tapered strip of a few segments, standing on the origin. */

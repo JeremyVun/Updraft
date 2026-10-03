@@ -183,6 +183,7 @@ export class StairsChapter implements Chapter {
   private readonly birdAt = new THREE.Vector3();
   private readonly sun = new THREE.Vector3();
   private readonly subjects = { primary: new THREE.Vector3(), secondary: new THREE.Vector3(), tertiary: new THREE.Vector3(), margin: 0.8, extra: 10 };
+  private readonly ashoreSubjects = { primary: new THREE.Vector3(), secondary: new THREE.Vector3(), margin: 0.8, extra: 6 };
   private readonly invitation = new THREE.Vector3();
   private lastPush = 0;
   /** The stop on the loop's near corner, where the bird sets off round it and comes back to; and how it is getting on. */
@@ -471,7 +472,7 @@ export class StairsChapter implements Chapter {
           else down();
         }
         if (!k.carried && !carry.busy) k.watch(this.look);
-        if (this.t > 4.2 && !carry.busy && !c.busy && !k.carried && k.seat === null) {
+        if (this.t > 2 && !carry.busy && !c.busy && !k.carried && k.seat === null) {
           c.lookAt = null;
           k.watch(null);
           k.stay = false;
@@ -1520,10 +1521,15 @@ export class StairsChapter implements Chapter {
         }
         // Up the grass from the boat with her, the foot of the stair ahead of them.
         s.from = this.from.set(-0.42, 0, 1).normalize();
-        s.target.copy(c).lerp(STAIRS_FOOT, 0.35);
+        const portrait = typeof window !== 'undefined' && window.innerHeight > window.innerWidth;
+        s.target.copy(c).lerp(STAIRS_FOOT, portrait ? 0.12 : 0.35);
         s.target.y = c.y + 2.4;
         s.distance = 12.5;
         s.height = 1.4;
+        // A narrow screen loses her off the side of this view as she walks up from the boat.
+        this.ashoreSubjects.primary.copy(c).y += 1.1;
+        this.ashoreSubjects.secondary.copy(this.ashoreSubjects.primary);
+        s.subjects = this.ashoreSubjects;
         this.pace = 0.35;
         return;
       }

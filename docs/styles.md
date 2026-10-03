@@ -24,8 +24,15 @@ feel over detail. How each room plays is in `docs/chapters.md`.
   yellow-green at the tip, with large soft patches of drier gold and cooler green. Near the beach it thins into
   short, lighter tufts rather than ending in a hedge.
 - **The tree**: one broad tree on the still island's ridge is the landmark. Its canopy is small leaf cards shaded
-  as soft spheres, dark inside and warm on the sunlit side, swaying with the live wind.
+  as soft spheres, dark inside and warm on the sunlit side, swaying with the live wind. The same tree grows again,
+  two-thirds the size and alone, on the slope above the home jetty (`HOME_TREE`).
 - **Rocks**: rounded, mossy on top, a few clusters near the shore and on the hills.
+- **Footprints**: the child's round-toed boots and the cygnet's three-toed webbed feet leave small soft dents in
+  bare sand, a little darker and cooler inside, their walls modelled by the sun; they crumble softer as they age,
+  fade within the minute and are wiped wherever the swash runs over them. Never on grass or snow.
+- **Dream echoes**: a small thing from the room before lies washed up on the next arrival beach, half in the sand on
+  a damp patch above the tide line: a pegged pillowcase, an oversized yellow rubber duck with an orange bill tipped
+  on its side, a run of piano keys a little larger than the piano's, the swing's seat with gold leaves. Static, off the walk, never at home.
 - **Petals**: small pastel pink, cream, yellow and a little lilac, with a few glowing pollen specks, hidden in
   flower patches until they tumble.
 - **Wind lines**: thin white tapered ribbons that follow the actual flow, fade in and out, and curl as they die, in
@@ -85,7 +92,8 @@ feel over detail. How each room plays is in `docs/chapters.md`.
   on the grass, and a rainbow standing in the rain over the sea ahead. At sunset a murmuration of starlings turns
   near the sun.
 - **Sea life**: a humpback rolls up out of the open sea in one long slow arc, its spout glowing gold against the
-  low sun; dolphins run with the boat; small silver fish leap and flash.
+  low sun; dolphins run with the boat; small silver fish leap and flash. On the open sea three of the little boats'
+  toys are come across sailing their own way, smaller than in their own room, trailing little foam.
 - **Final image**: HDR lighting, gentle bloom, ACES tone mapping, cool shadows and warm highlights, soft vignette,
   faint lens fringe at the corners, fine grain.
 - **Interface**: no gameplay narration on screen. The cursor is a soft ring that tightens and glows while an
@@ -133,6 +141,8 @@ Set the mood and invite one click; discovering the wind belongs in the game.
 
 - **Island of lines**: washing hung so dense the child is small beneath it; ordinary laundry pale linen, the
   family's garments rich blue, warm red and the child's yellow.
+- **Little boats**: the pools meet the turf through clumps of reeds, slender, darker and bluer than the grass, with
+  a few dark brown seed heads, standing in the shallows and bending with the wind.
 - **Dark wood**: dark, with faint cold moonlight on wet trunks, uneven ground and the travellers' outlines; never so
   dark that the forest disappears. The embers are abstract light after the approved study
   (`assets/art-direction/wood-ember.png`): honey and apricot veils curling round a warm heart, breathing and
@@ -143,7 +153,8 @@ Set the mood and invite one click; discovering the wind belongs in the game.
 - **Sky mirror**: an uninterrupted skin of water doubling the sunset and clouds. No ground fog, moon prop or
   revealed sand road. A little wooden stool, an enamel soap bowl and a brass hoop are the one fragment of
   childhood. Bubbles have nearly clear centres, shifting rose, pearl and blue rims, soft highlights and a slight
-  wobble, reflected in the same glass as the child. Fallen lights are small gold starbursts on the surface; caught
+  wobble, reflected in the same glass as the child. Each footstep, hers and the cygnet's, sets a few fine rings running
+  out over the glass that catch the light and break up the reflection at their feet. Fallen lights are small gold starbursts on the surface; caught
   lights glow in their bubbles; returned lights rise into the sky and reflect below. The camera looks across a
   bubble's travel, keeping bubble, reflection and target apart.
 - **Sleeping island**: slate-blue night round a small warm bed on an open grassy terrace; lavender-grey distance

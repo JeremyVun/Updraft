@@ -48,6 +48,7 @@ for(const [fps,gust,portrait] of [[60,0,false],[30,20,false],[60,20,true]]) {
   const {chapter:c,wind,boat:b,child,cygnet:k,carry,rig,sealife}=fixture(gust,portrait);
   const air={x:0,z:0,energy:0,lift:0};
   let swimEdge=0,swimWorst=null;let heroEdge=0,worstGap=0,clipped=0,swimFrames=0,swimStart=0,leapAt=0,completed=false,lastProgress=0;
+  let among=Infinity,toyClear=Infinity,toysSeen=false;
   const transitions=[];
   let last='';
   for(let i=0;i<fps*420;i++) {
@@ -76,15 +77,27 @@ for(const [fps,gust,portrait] of [[60,0,false],[30,20,false],[60,20,true]]) {
     }
     if(c.swim==='in'&&c.swimT>3) {
       if(!swimStart)swimStart=time;
-      swimFrames++;worstGap=Math.max(worstGap,k.astern);
+      // How far it is from its place beside the hull: out among the toys, never left behind.
+      swimFrames++;worstGap=Math.max(worstGap,k.position.distanceTo(c.water.clone().setY(k.position.y)));
       const p=k.position.clone().project(rig.camera);
       if(Math.max(Math.abs(p.x),Math.abs(p.y))>swimEdge){swimEdge=Math.max(Math.abs(p.x),Math.abs(p.y));swimWorst={p:p.toArray(),time,boat:b.position.toArray(),bird:k.position.toArray(),camera:rig.camera.position.toArray()};}
       if(Math.abs(p.x)>0.82||Math.abs(p.y)>0.82||p.z>1)clipped++;
     }
-    if(c.done){completed=true;results.push({fps,gust,portrait,seconds:+time.toFixed(1),heroEdge,worstGap,clipped,transitions});break;}
+    if(!sealife.toys.idle){
+      toysSeen=true;
+      for(const t of sealife.toys.toys){
+        toyClear=Math.min(toyClear,Math.hypot(t.group.position.x-b.position.x,t.group.position.z-b.position.z));
+        if(c.swim==='in')among=Math.min(among,Math.hypot(t.group.position.x-k.position.x,t.group.position.z-k.position.z));
+      }
+    }
+    if(c.done){completed=true;results.push({fps,gust,portrait,seconds:+time.toFixed(1),heroEdge,worstGap,among,toyClear,clipped,transitions});break;}
   }
   assert(completed,'passage reaches home');assert.equal(c.swim,'done');
-  assert(swimFrames>=fps*(tuning.seaPassage.swimFor-3)-1,'keeps the authored swim after its entry');assert(worstGap<3.5,`bird fell behind ${worstGap}`);
+  assert(swimFrames>=fps*(tuning.seaPassage.swimFor-3)-1,'keeps the authored swim after its entry');
+  assert(worstGap<tuning.seaToys.reach+4,`bird strayed from the boat ${worstGap}`);
+  assert(toysSeen&&among<2&&among>0.7,`the cygnet swims among the toys and never into one: nearest ${among}`);
+  assert(toyClear>2.5,`the toys pass clear of the boat: nearest ${toyClear}`);
+  assert(sealife.toys.idle,'the toys have sailed on out of sight by the end of the passage');
   assert(heroEdge>0 && heroEdge<0.95,`featured leap must play and stay in frame: ${heroEdge}`);
   assert.equal(clipped,0,`swimmer stays inside the safe frame: ${JSON.stringify({fps,gust,portrait,swimWorst,transitions})}`);
   assert(leapAt>0&&swimStart>leapAt&&swimStart>tuning.seaPassage.swimNotBefore,'the pod arrives and plays its leap before the swim');

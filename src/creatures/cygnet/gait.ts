@@ -38,6 +38,8 @@ export class Gait {
   pace = 0;
   /** Feet that came down this frame, for whoever makes the sound of it. */
   footfalls = 0;
+  /** Which feet came down this frame. */
+  readonly landed: number[] = [];
   private phase = 0;
   private readonly prev = new THREE.Vector3();
   private readonly fwd = new THREE.Vector3();
@@ -70,6 +72,7 @@ export class Gait {
   update(dt: number, position: THREE.Vector3, yaw: number, ground: (x: number, z: number) => number): void {
     if (this.fresh || position.distanceToSquared(this.prev) > 4) this.reset(position, yaw);
     this.footfalls = 0;
+    this.landed.length = 0;
     if (dt <= 0) return;
     this.frame(yaw);
     this.tmp.copy(position).sub(this.prev).setY(0);
@@ -107,7 +110,10 @@ export class Gait {
         f.planted = false;
         f.at.copy(home).addScaledVector(this.fwd, Math.cos(a) * 0.075 * SIZE);
         f.lift = Math.max(0, -Math.sin(a)) * 0.05 * SIZE;
-        if (f.lift <= 0 && f.wasUp) this.footfalls++;
+        if (f.lift <= 0 && f.wasUp) {
+          this.footfalls++;
+          this.landed.push(i);
+        }
         f.wasUp = f.lift > 0;
       } else if (stepping) {
         const swinging = mine > STANCE;
@@ -127,6 +133,7 @@ export class Gait {
           f.planted = true;
           f.lift = 0;
           this.footfalls++;
+          this.landed.push(i);
         }
       } else if (f.planted && f.at.distanceTo(home) > 0.06 * SIZE && this.other(i).planted && this.idle > 0.12) {
         /** Standing, a foot left out of place is shuffled back under it, one at a time. */
@@ -143,6 +150,7 @@ export class Gait {
           f.planted = true;
           f.lift = 0;
           this.footfalls++;
+          this.landed.push(i);
         }
       }
       f.at.y = Math.max(ground(f.at.x, f.at.z), 0) + f.lift;
