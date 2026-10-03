@@ -31,8 +31,8 @@ feel over detail. How each room plays is in `docs/chapters.md`.
   bare sand, a little darker and cooler inside, their walls modelled by the sun; they crumble softer as they age,
   fade within the minute and are wiped wherever the swash runs over them. Never on grass or snow.
 - **Dream echoes**: a small thing from the room before lies washed up on the next arrival beach, half in the sand on
-  a damp patch above the tide line: a pegged pillowcase, a run of piano keys a little larger
-  than the piano's, the swing's seat with gold leaves. Static, off the walk, never at home.
+  a damp patch above the tide line: a pegged pillowcase, an oversized yellow rubber duck with an orange bill tipped
+  on its side, a run of piano keys a little larger than the piano's, the swing's seat with gold leaves. Static, off the walk, never at home.
 - **Petals**: small pastel pink, cream, yellow and a little lilac, with a few glowing pollen specks, hidden in
   flower patches until they tumble.
 - **Wind lines**: thin white tapered ribbons that follow the actual flow, fade in and out, and curl as they die, in
@@ -92,7 +92,8 @@ feel over detail. How each room plays is in `docs/chapters.md`.
   on the grass, and a rainbow standing in the rain over the sea ahead. At sunset a murmuration of starlings turns
   near the sun.
 - **Sea life**: a humpback rolls up out of the open sea in one long slow arc, its spout glowing gold against the
-  low sun; dolphins run with the boat; small silver fish leap and flash.
+  low sun; dolphins run with the boat; small silver fish leap and flash. On the open sea three of the little boats'
+  toys sail by, smaller than in their own room, trailing little foam.
 - **Final image**: HDR lighting, gentle bloom, ACES tone mapping, cool shadows and warm highlights, soft vignette,
   faint lens fringe at the corners, fine grain.
 - **Interface**: no gameplay narration on screen. The cursor is a soft ring that tightens and glows while an

@@ -23,6 +23,22 @@ export const MEADOW_APPROACH = new THREE.Vector2(LANDING.x, -548);
 /** The restored still island, as the child looks back at it from the first crossing. */
 export const FIRST_ISLAND = new THREE.Vector3(-8, 9, -18);
 
+/**
+ * How an arrival is watched, in place of the usual view from behind and above: the angle off astern, the distance,
+ * the height, how far ahead of the child the lens looks and, optionally, the side of the boat it commits to.
+ */
+export interface ArrivalView {
+  /** How far from the end of the route, in sailed distance, the view begins to ease in and is complete. */
+  from: number;
+  full: number;
+  bearing: number;
+  distance: number;
+  height: number;
+  lead: number;
+  /** The quarter the room's own first view stands on, kept whichever side the sail is on. */
+  side?: number;
+}
+
 /** How near a waypoint counts as rounded. */
 const ROUNDED = 22;
 /** How quickly the lens catches up with route progress, which jumps when a waypoint is passed early in its channel. */
@@ -74,6 +90,7 @@ export interface CrossingOpts {
   swimAt?: number;
   /** A jetty to come alongside at the end instead of a beach to run up. */
   moor?: { x: number; z: number; yaw: number };
+  arrivalView?: ArrivalView;
 }
 
 /** How long it stands on the side of the boat making up its mind, how long it swims, and how long it dries off on the side afterwards. */
@@ -174,11 +191,14 @@ export class CrossingChapter implements Chapter {
   private swimSide = 1;
   private readonly beside = new THREE.Vector3();
   private readonly water = new THREE.Vector3();
+  private readonly playmate = new THREE.Vector3();
+  private readonly toward = new THREE.Vector3();
   /** The sea passage's speed cap, eased so the boat is never braked, and how far the swim's own cap has come in. */
   private limit: number;
   private swimCap = 0;
   private readonly homeEye = new THREE.Vector3();
   private readonly dockEye = new THREE.Vector3();
+  private readonly arrivalView?: ArrivalView;
 
   constructor(
     private readonly cast: Cast,
@@ -233,6 +253,7 @@ export class CrossingChapter implements Chapter {
     this.shower = this.storm > 0 ? Math.max(0, this.storm - 0.2) * 1.25 : 0;
     this.nextWhale = this.whaleAt ?? 0;
     this.swimAt = opts.swimAt ?? null;
+    this.arrivalView = opts.arrivalView;
     if (this.wantsDolphins) cast.sealife.onDolphinShove = (side, strength) => cast.boat.nudge(side, strength);
     cast.boat.becalmed = 0;
     cast.boat.steerFor = this.route[0];
@@ -385,7 +406,7 @@ export class CrossingChapter implements Chapter {
     } else {
       const k = tuning.crossingCamera, progress = this.framed;
       const near = THREE.MathUtils.smootherstep(progress, 0, k.departureUntil)
-        * (1 - THREE.MathUtils.smootherstep(progress, k.arrivalFrom, 1)) * (1 - turn);
+        * (1 - this.arrival(progress)) * (1 - turn);
       this.seaTurn += (-this.quarter * k.childTurn * near - this.seaTurn) * (1 - Math.exp(-dt * 1.1));
       seatYaw += this.seaTurn;
     }
@@ -456,6 +477,8 @@ export class CrossingChapter implements Chapter {
       const lookingBack = this.lookBack !== null && this.time < this.farewellFor + tuning.crossingCamera.farewellSwing;
       this.sideAgainst = -boat.sailSide !== this.side && !lookingBack ? this.sideAgainst + dt : 0;
       if (this.sideAgainst > tuning.crossingCamera.sideCommit) { this.side = -boat.sailSide; this.sideAgainst = 0; }
+      const side = this.arrivalView?.side;
+      if (side !== undefined && this.arrival(this.framed) > 0) { this.side = side; this.sideAgainst = 0; }
       this.quarter += (this.side - this.quarter) * (1 - Math.exp(-dt * tuning.crossingCamera.sideResponse));
     }
     const course = boat.pushingOff && boat.steerFor
@@ -482,20 +505,30 @@ export class CrossingChapter implements Chapter {
       this.swim = next;
       this.swimT = 0;
     };
+    const toys = this.cast.sealife.toys;
+    toys.follow(boat.position, boat.yaw, boat.speed);
+    const playmate = toys.playmate(this.playmate);
     if (this.swim === 'before') {
-      if (this.cast.sealife.dolphinLeapComplete && this.time >= tuning.seaPassage.swimNotBefore && this.progress() > this.swimAt! && cygnet.seat === 'cradle' && !carry.busy) {
+      /** The little boats' toys come sailing out of the morning, and those are what it cannot stop watching. */
+      const k = tuning.seaPassage;
+      if (toys.idle && this.cast.sealife.dolphinLeapComplete && this.time >= k.swimNotBefore - tuning.seaToys.comeLead
+        && this.progress() > this.swimAt!) {
         this.swimSide = this.quarter > 0 ? -1 : 1;
+        toys.come(this.swimSide, boat.position, boat.yaw, boat.speed);
+      }
+      if (toys.near > 0.3) cygnet.watch(playmate);
+      if (toys.near >= tuning.seaToys.noticeAt && this.time >= k.swimNotBefore && cygnet.seat === 'cradle' && !carry.busy) {
         to('restless');
       }
     } else if (this.swim === 'restless') {
       /** It has been looking over the side since the first crossing. This time it does not look away. */
-      cygnet.watch(this.water);
+      cygnet.watch(playmate);
       child.lookAt = cygnet.eye(this.ahead);
       if (this.swimT > tuning.seaPassage.swimAnticipation) to('side');
     } else if (this.swim === 'side') {
       cygnet.perch(this.beside, boat.yaw + (this.swimSide * Math.PI) / 2);
       /** The water, then the child, then the water. The child does nothing at all, which is the right thing. */
-      cygnet.watch(this.swimT % 3.2 < 1.9 ? this.water : child.face(this.look));
+      cygnet.watch(this.swimT % 3.2 < 1.9 ? playmate : child.face(this.look));
       child.lookAt = cygnet.eye(this.ahead);
       if (this.swimT > ON_THE_SIDE) {
         cygnet.watch(null);
@@ -504,6 +537,10 @@ export class CrossingChapter implements Chapter {
     } else if (this.swim === 'in') {
       cygnet.swimLevel = swellLift(cygnet.position.x, cygnet.position.z, this.worldTime)
         * (1 - mirrorWater(cygnet.position.x, cygnet.position.z));
+      /** In among the toys: it keeps to the wave along the hull but edges out toward the child's own. */
+      this.toward.subVectors(playmate, this.water).setY(0);
+      const gap = this.toward.length();
+      this.water.addScaledVector(this.toward, THREE.MathUtils.clamp(gap - tuning.seaToys.swimClear, 0, tuning.seaToys.swimToward) / Math.max(gap, 1e-3));
       cygnet.swimTo(this.water);
       /** The boat sails on; the wave along its side carries the cygnet, which paddles only to keep its place in it. */
       const carry = boat.speed * tuning.seaPassage.swimCarry;
@@ -521,6 +558,7 @@ export class CrossingChapter implements Chapter {
         child.reachFor(hand, null);
         cygnet.bind(0.25);
         cygnet.mind.trust(0.7);
+        toys.leave();
         to('drying');
       }
     } else if (this.swim === 'drying') {
@@ -564,6 +602,13 @@ export class CrossingChapter implements Chapter {
     limit = Math.min(limit, THREE.MathUtils.lerp(this.cruiseSpeed, k.swimSpeed, this.swimCap));
     this.limit += (limit - this.limit) * (1 - Math.exp(-dt * (limit < this.limit ? k.limitEase : 2)));
     this.cast.boat.speedLimit = this.limit;
+  }
+
+  /** How far the arrival's view has come in, 0 to 1, from the framed route progress. */
+  private arrival(progress: number): number {
+    const view = this.arrivalView;
+    if (!view) return THREE.MathUtils.smootherstep(progress, tuning.crossingCamera.arrivalFrom, 1);
+    return 1 - THREE.MathUtils.smootherstep((1 - progress) * this.routeLength, view.full, view.from);
   }
 
   /** A critically damped follower of `progress()`, so a sudden jump in it becomes a gentle catch-up. */
@@ -624,14 +669,16 @@ export class CrossingChapter implements Chapter {
     const fz = Math.cos(boat.yaw);
     const progress = this.framed;
     const departure = 1 - THREE.MathUtils.smootherstep(progress, 0, k.departureUntil);
-    const arrival = THREE.MathUtils.smootherstep(progress, k.arrivalFrom, 1);
+    const view = this.arrivalView ?? { bearing: k.arrivalBearing, distance: k.arrivalDistance,
+      height: k.arrivalHeight, lead: k.arrivalLead };
+    const arrival = this.arrival(progress);
     const distance = k.nearDistance + (k.departureDistance - k.nearDistance) * departure
-      + (k.arrivalDistance - k.nearDistance) * arrival;
+      + (view.distance - k.nearDistance) * arrival;
     const height = k.nearHeight + (k.departureHeight - k.nearHeight) * departure
-      + (k.arrivalHeight - k.nearHeight) * arrival;
-    const lead = k.nearLead + (k.departureLead - k.nearLead) * departure + (k.arrivalLead - k.nearLead) * arrival;
+      + (view.height - k.nearHeight) * arrival;
+    const lead = k.nearLead + (k.departureLead - k.nearLead) * departure + (view.lead - k.nearLead) * arrival;
     const angle = k.nearBearing + (k.departureBearing - k.nearBearing) * departure
-      + (k.arrivalBearing - k.nearBearing) * arrival;
+      + (view.bearing - k.nearBearing) * arrival;
     const sailBearing = this.heading + Math.PI + this.quarter * (this.wantsDolphins ? tuning.seaPassage.cameraBearing : angle);
     const seat = this.cast.child.position;
     // Slow and even enough that swinging round to the stern never cancels the boat's own travel: they sail past

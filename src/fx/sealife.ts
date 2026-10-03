@@ -6,6 +6,7 @@ import { Dolphins } from './sealife/dolphin';
 import { Fish } from './sealife/fish';
 import { FOAM, RING, Marks } from './sealife/marks';
 import { Spray } from './sealife/spray';
+import { ToyFleet } from './sealife/toys';
 import { WhaleWake, type WhaleSound } from './sealife/wake';
 import { Whale } from './sealife/whale';
 
@@ -19,6 +20,7 @@ export class SeaLife {
   private readonly wake: WhaleWake;
   private readonly fish: Fish;
   private readonly pod: Dolphins;
+  readonly toys: ToyFleet;
   private swimMark = 0;
   private readonly seen = new THREE.Vector3();
 
@@ -32,6 +34,10 @@ export class SeaLife {
     this.objects = [this.body.mesh, this.body.ghost, this.fish.mesh, this.slicks.mesh, this.foam.mesh, this.spray.mesh, ...this.pod.objects];
     for (const o of [this.body.mesh, this.fish.mesh, this.spray.mesh]) o.layers.enable(REFLECTION_LAYER);
     for (const o of this.objects) fixTreeInPlace(o);
+    this.toys = new ToyFleet(wind);
+    this.toys.group.traverse((o) => o.layers.enable(REFLECTION_LAYER));
+    this.toys.onWake = (x, z, time) => this.foam.add(FOAM, x, z, 0.14, 1.2, time, 0.4, 0.1);
+    this.objects.push(this.toys.group);
   }
 
   /** Starts one whale surfacing: it rises at `at` travelling along `heading` (yaw, radians; 0 = +z). */
@@ -106,6 +112,7 @@ export class SeaLife {
     this.slicks.update(time);
     this.fish.update(dt, time);
     this.pod.update(dt, time);
+    this.toys.update(dt, time);
     this.spray.update(dt);
   }
 }

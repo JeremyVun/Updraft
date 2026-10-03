@@ -889,6 +889,10 @@ export class MeadowChapter implements Chapter {
       s.target.set(c.x + (look.x - c.x) * toward, ground + (top ? 3.4 : 2.4), c.z + (look.z - c.z) * toward);
       s.distance = top ? 21 : 19;
       s.height = top ? 7.5 : 2.6;
+      // A narrow screen loses her off the side of this profile as she walks up the sand.
+      this.cameraChild.copy(c).y += 1.2;
+      this.framing.secondary.copy(this.cameraChild);
+      s.subjects = this.framing;
       this.pace = top ? 0.9 : 0.4;
       this.focus.set(c.x, ground, c.z);
       return;

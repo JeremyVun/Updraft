@@ -1208,6 +1208,34 @@ export const tuning = {
     /** The whale is watched from within this arc of the travelling view, and let go over `whalePass` beyond it. */
     whaleArc: 0.8, whalePass: 0.6,
     whaleWeight: 0.38, whaleBack: 6, whaleRise: 1.2, whaleExtent: 10,
+    /**
+     * Arrivals watched from somewhere else than behind and above (`ArrivalView`), easing in between `from` and `full`
+     * units of sailing from the end of the route and ending where the room's own first view stands: low beside the
+     * hull as the meadow's bank rises over it, high and wide over the little boats' pools, low on the quarter under
+     * the cloud onto the stairs' knoll.
+     */
+    arrivals: {
+      meadow: { from: 75, full: 24, bearing: 1.3, distance: 19, height: 2.4, lead: 3, side: 1 },
+      boats: { from: 80, full: 30, bearing: 0.8, distance: 28, height: 13, lead: 8, side: -1 },
+      stairs: { from: 45, full: 14, bearing: 0.95, distance: 13, height: 1.5, lead: 3, side: 1 },
+    },
+  },
+  /** The little boats' toys met again on the open sea (`fx/sealife/toys.ts`). */
+  seaToys: {
+    /** Smaller than in their own room beside the boat they are now so much smaller than. */
+    scale: 0.65,
+    /** Seconds to come in from off the side of the frame to alongside, and to bear away astern after the swim. */
+    comeFor: 11, leaveFor: 18,
+    /** They are called this many seconds before the swim could begin, and the cygnet stirs once they are this near. */
+    comeLead: 9, noticeAt: 0.7,
+    /** How firmly a toy closes on its station, and how fast its hull may turn (radians a second). */
+    closing: 0.8, turn: 0.9,
+    /** The open-sea breeze keeps a sail this full; a gust fills it the rest of the way. */
+    breezeFill: 0.55,
+    /** Sailing on by themselves, out of sight: their own pace, and when they are gone. */
+    ownSpeed: 2.4, goneAt: 85, sailOnFor: 40,
+    /** How far the swimming cygnet edges out from the wave along the hull toward the child's own toy, and how close it goes. */
+    swimToward: 1.2, swimClear: 0.9,
   },
   seaPassage: {
     speed: 10,
@@ -1236,7 +1264,7 @@ export const tuning = {
      * playing past `farewellAt` slows it further, to `holdSpeed` by `holdAt`. The cap eases down at `limitEase` a second.
      */
     farewellAt: 0.8,
-    playFor: 41,
+    playFor: 49,
     /** The most the boat makes as it leaves the island, from which it settles by `leapFrom` into the pod's pace. */
     openSpeed: 5.5,
     leastSpeed: 3,
