@@ -68,11 +68,13 @@ edit.
   `wind-rate-check`, `wind-gesture-logic-check`, `quality-check`, `quality-browser-check`, `quality-setting-check`,
   `quality-menu-check`, `veil-controls-check`.
 - `pointer-contact-check`, `pointer-pick-check`, `touch-viewport-check` (Chrome, not a Safari substitute).
-- `start-check` (Begin, audio unlock, Continue, retry; worst boot gap under `BOOT_MAX_MS`; no program first used
+- `start-check` (Begin, audio unlock, Continue, retry; the invitation low in the room painting, and centred when the
+  painting is blocked, on desktop and phone; worst boot gap under `BOOT_MAX_MS`; no program first used
   outside boot's settle step, `__stats.bootStrayPrograms`; the construction steps a real boot counts equal
   `BUILD_STEPS`; no program first drawn in the first seconds of play after Begin, Continue or a chapter pick,
 `__stats.playFirstDraws`), `startup-check`,
-  `loading-check`, `boot-cloth-check`, `failure-paths-check`, `context-loss-check`.
+  `loading-check`, `boot-cloth-check`, `failure-paths-check` (including a blocked room painting: plain veil, working
+  Continue), `context-loss-check`.
 - After a change to world construction, boot or the programs (a new material or variant): on a QA preview, with
   nothing else busy on the GPU and back to back with the unchanged build, `RUNS=5 node tools/boot-profile.mjs` (worst
   veil gap under 150 ms, Begin at 2.8 s or less) and `RUNS=3 THROTTLE=4` (Chrome with the CPU slowed 4×, a stand-in
@@ -115,7 +117,11 @@ edit.
   `kite-check`, `geography-browser-check`, `boats-offshore-browser-check`.
 
 **Saves and lifecycle**: `progress-check`, `progress-schema-check`, `chapter-select-check` (who is offered chapters;
-a pick starts its room in place, with sound and the room's entry save, without navigating), `chapter-pick-check`
+the twelve 400x250 tiles; the painting leaving while the list is open; a pick starts its room in place, with sound and
+the room's entry save, without navigating, and the panel fades over its .45 s), `start-over-check` (no start over
+without a save; the first press asks without starting; the question goes back after 6 s, on Escape and on blur; a
+second press starts the first island in place with sound, its save replacing the old one; a press elsewhere on the
+veil continues the save; the phone layout with `chapters`), `chapter-pick-check`
 (every room picked on a page that loaded another room's save matches a fresh `?chapter=` load 3 s in; a room that
 differs, as a late readback can make it, is played once more; `ONLY=wood,jetty` for some rooms), `analytics-check`, `analytics-browser-check`; see `docs/contracts/progress.md` and `analytics.md`.
 

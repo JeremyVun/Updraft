@@ -67,15 +67,28 @@ disables it.
 ## Chapter select
 
 Once the game has been finished, the title screen offers a faint `chapters` under Begin/Continue: a strip of small,
-soft-edged stills of the rooms, each with a one- or two-word name; a pick begins that room. It must cost new players
-nothing, so `src/chapter-select/` (script, CSS and stills) is a separate chunk that only a finished player's title
-screen imports, and the stills download only when `chapters` is opened (`tools/chapter-stills.mjs` captures them).
+soft-edged tiles of the rooms, each with a one- or two-word name; a pick begins that room. The tiles are the title
+screen's room paintings cut to 400x250 (`src/chapter-select/stills/<room>.webp`), so a room has one picture
+everywhere; `tools/chapter-stills.mjs` captures the rooms the paintings are made from (`assets/art-direction/continue/`).
+It must cost new players nothing, so `src/chapter-select/` (script, CSS and tiles) is a separate chunk that only a
+finished player's title screen imports, and the tiles download only when `chapters` is opened. A pick's panel fades
+out over .45 s as the veil departs.
 
 Finishing sets `updraft.finished.v1`, which `Play again` leaves alone; an old completed save sets it on the next
 visit. A pick starts that room at once, on the page already loaded and with sound, exactly as Begin or Continue
 starts theirs: the veil departs and `story.start` begins the room as `?chapter=` would, with saving on. The pick
 overrides the save without touching it; the room's first played frames save its `entry` checkpoint, which then
 replaces it.
+
+## Start over
+
+Any valid save, a completed one included, offers `start over` under Continue (under `chapters` for a finished
+player); Begin never does. The first press only asks (`start over and lose your progress?`) and touches nothing; the
+question goes back after `tuning.veil.startOverAsks` (6 s), on Escape or when focus leaves it. A second press starts
+the first island through the same start path as a pick of the Still island: in place, with sound, and the island's
+first played frame saves its checkpoint over the old save. `updraft.finished.v1` stays, so chapter select is still
+offered. Its presses stay its own; a press anywhere else on the veil, even while it asks, continues the save
+(`tools/start-over-check.mjs`).
 
 ## Hidden pages and sound
 

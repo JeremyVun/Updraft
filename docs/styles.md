@@ -108,12 +108,26 @@ Set the mood and invite one click; discovering the wind belongs in the game.
   ambient wind ribbons borrow the game's taper.
 - One centred invitation: "Begin", or "Continue" with a valid checkpoint, in warm ivory italic serif (Iowan /
   Palatino / Georgia), with a small mouse outline for a fine pointer and a delicate rounded outline on touch. Its
-  opacity breathes gently without disappearing, scaling or bouncing; reduced motion stills it.
+  opacity breathes gently (.95 to .82) without disappearing, scaling or bouncing; reduced motion stills it.
 - The word appears after graphics preparation. Click, tap, Enter or Space starts sound and the story, and the veil
   dissolves over the first real scene; the entering gesture never reaches the wind field. A failed boot offers
-  "Try again". The veil needs no downloaded font, image, audio or graphics context, stays silent, and is removed
-  after the fade.
-- `tools/start-check.mjs` checks entry, audio gating, centring, ambient motion, checkpoint restoration and retry.
+  "Try again" on the plain veil. The veil needs nothing downloaded to read complete; the room's painting is added only
+  once it has decoded. It stays silent and is removed after the fade.
+- **The room's painting.** When the game is ready, a full-screen painting of the room the player will start in (the
+  Still island for Begin) fills the veil behind everything and fades up over 1.6 s, with a neutral near-black shade
+  taken from the paintings' own shadows rising from the bottom and eased out by 40% up (`.veil-shade`, the one place
+  to retune it; Continue keeps 4.5:1 at its faintest on the palest rooms, the Still island and Cloud stairs). The
+  invitation then sits low and centred in the painting's quiet band: its centre at `100% - max(200px, 28vh)`,
+  `chapters` 50 px below it, `start over` 50 px below, or 94 px under `chapters`. A painting that has not decoded
+  when the veil turns ready is never shown that visit: the plain veil keeps the invitation centred, so nothing moves
+  once on screen. One WebP per visit (`src/paintings/<room>-land.webp`, or `-port` under 3:4), requested at low
+  priority. Leaving, the painting fades with the invitation (.8 s) before the veil dissolves, so it never cross-fades
+  into the game's own view; while chapters are open it fades back to the plain veil (.6 s). Reduced motion: no fades.
+- `start over` is drawn like `chapters` (16 px italic at .5) and shows for any valid save. Its first press turns it
+  in place into `start over and lose your progress?` (.85); a second starts the first island. The question goes back
+  after 6 s, on Escape or when focus leaves it.
+- `tools/start-check.mjs` checks entry, audio gating, the invitation's place with and without the painting, ambient
+  motion, checkpoint restoration and retry; `tools/start-over-check.mjs` checks start over.
 
 ## Rooms
 
