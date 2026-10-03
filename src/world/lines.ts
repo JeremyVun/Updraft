@@ -5,7 +5,8 @@ import { ATMO_GLSL, atmo } from './atmosphere';
 import { mulberry32, smoothstep } from './noise';
 import { heightAt } from './island';
 import { glsl, tuning } from '../tuning';
-import { CURTAINS, curtainLift, curtainOver } from './lines-passage';
+import { CURTAINS, PEG_LENGTH, type WashingCurtain } from './lines-passage';
+import type { Cloth } from './cloth-sim';
 
 /** Washing hung out on a line: pegged along its top edge, swinging up and fluttering in the live wind. */
 const CLOTH_VERT = /* glsl */ `
@@ -16,9 +17,6 @@ in vec4 aShape;
 in vec3 aColor;
 in float aKind;
 in float aRole;
-in float aCurtain;
-uniform vec3 uCurtains;
-uniform vec3 uCurtainOver;
 uniform vec2 uFamily;
 uniform float uFamilyFlutter;
 out vec3 vWorld;
@@ -69,7 +67,7 @@ void family(vec3 along, vec3 side, vec3 up, float hang) {
 void main() {
   vUv = uv;
   vRole = aRole;
-  vCurtain = aCurtain;
+  vCurtain = -1.0;
   vec2 cut = clothProfile(aKind, uv.y, position.x);
   if (aRole > -0.5) {
     // Separate sleeves, a narrow body and shoulders: legible even before the wind makes them people.
@@ -126,24 +124,6 @@ void main() {
    * grows down the cloth and the position is the integral of that, which for a linear angle is a circular arc.
    */
   float full = swing * 1.5708 * lean;
-  float stream = 0.0;
-  float gust = 0.0;
-  if (aCurtain > -0.5) {
-    /**
-     * The breeze the player lets through the gap keeps the sheet streaming out from its pegs toward the waiting
-     * pair, high over them, where nothing else hangs; once they are through it is tossed higher, so the camera
-     * following them passes beneath. Its height rises and falls with the gusts and it is never still while held up.
-     */
-    stream = uCurtains[int(aCurtain)];
-    float t = uTime + aShape.w * 3.0;
-    gust = 0.55 * sin(t * 0.83) + 0.3 * sin(t * 1.91 + 1.3) + 0.15 * sin(t * 3.7 + 0.4);
-    // One corner flies higher, then the other: the sheet twists on its pegs as the gusts come through.
-    float twist = max(0.0, position.x * sin(t * 1.37 + 0.8)) * 2.0 * ${glsl(tuning.linesPassage.twist)} * hang;
-    float reach = mix(${glsl(tuning.linesPassage.streamAngle)}, ${glsl(tuning.linesPassage.overAngle)}, uCurtainOver[int(aCurtain)]);
-    // The hem kicks up first, so even a half-lifted sheet clears the small bird waiting in front of it.
-    full = mix(full * 0.28, -(reach + ${glsl(tuning.linesPassage.streamGust)} * gust + twist), sqrt(stream));
-    lean = mix(lean, -1.0, stream);
-  }
   // The family keeps its upright silhouette while the sleeves reach.
   if (aRole > -0.5) full *= 0.22;
   float base = ${glsl(tuning.washing.belly)};
@@ -164,26 +144,6 @@ void main() {
   vWorld += side * lean * ripple * shake * 1.2 * aShape.y * hang;
 
   vNormal = normalize(cross(down, along));
-  if (aCurtain > -0.5) {
-    float belly = sin(uv.x * 3.14159) * sin(hang * 3.14159);
-    vWorld -= vNormal * belly * (0.14 + 0.06 * sin(uTime * 0.7 + aShape.w) + 0.3 * stream * (0.7 + 0.3 * gust));
-    vWorld.y += sin(uv.x * 15.0 + uTime * 0.8) * 0.045 * hang * (1.0 - stream);
-    /**
-     * Flapping: waves run from the pegs to the free hem, growing as they go and at the side edges, harder in the
-     * gusts, and the hem whips. Tilting the normal with the waves lets the ripples catch the light.
-     */
-    float power = stream * stream * (0.75 + 0.35 * gust);
-    float edges = 1.0 + 2.4 * position.x * position.x;
-    float a = ${glsl(tuning.linesPassage.flap)} * power * pow(hang, 1.4) * edges;
-    float p1 = hang * 7.5 - uTime * 6.1 + position.x * 2.4 + aShape.w;
-    float p2 = hang * 13.0 - uTime * 10.3 - position.x * 3.1 + aShape.w * 1.7;
-    float hemWhip = ${glsl(tuning.linesPassage.whip)} * smoothstep(0.7, 1.0, hang);
-    float p3 = hang * 25.0 - uTime * 16.0 + position.x * 5.0 + aShape.w;
-    float wave = sin(p1) + 0.45 * sin(p2) + hemWhip * sin(p3);
-    float slope = a * (7.5 * cos(p1) + 5.85 * cos(p2) + 25.0 * hemWhip * cos(p3)) / aShape.y;
-    vWorld += vNormal * a * wave;
-    vNormal = normalize(vNormal - down * slope);
-  }
   if (aRole > -0.5) family(along, side, up, hang);
   if (aRole > -0.5 && uFamilyFlutter > 0.0) {
     // A distant domestic line still catches a little sea air outside the local wind texture.
@@ -266,6 +226,37 @@ void main() {
   gl_FragColor = vec4(applyFog(col, vWorld), shown);
 }`;
 
+/** A passage sheet, stepped as real cloth on the CPU: its particles arrive here already in the world. */
+const CURTAIN_VERT = /* glsl */ `
+uniform vec3 uColor;
+out vec3 vWorld;
+out vec3 vNormal;
+out vec3 vColor;
+out vec2 vUv;
+out float vSwing;
+out float vRole;
+out float vCurtain;
+void main() {
+  vWorld = position;
+  vNormal = normal;
+  vColor = uColor;
+  vUv = uv;
+  vSwing = 0.0;
+  vRole = -1.0;
+  vCurtain = 1.0;
+  gl_Position = projectionMatrix * viewMatrix * vec4(position, 1.0);
+}`;
+
+const PEG_VERT = /* glsl */ `
+out vec3 vWorld;
+out vec3 vNormal;
+void main() {
+  vec4 w = instanceMatrix * vec4(position, 1.0);
+  vWorld = w.xyz;
+  vNormal = normalize(mat3(instanceMatrix) * normal);
+  gl_Position = projectionMatrix * viewMatrix * w;
+}`;
+
 const WOOD_VERT = /* glsl */ `
 out vec3 vWorld;
 out vec3 vNormal;
@@ -320,6 +311,8 @@ export interface LineSpec {
   drop?: number;
   /** One of the three broad sheets that the player opens across the walk. */
   curtain?: number;
+  /** A stretch left without washing, as fractions along the line. */
+  bare?: [number, number];
 }
 
 /** A point on the catenary between the two ends, t from 0 to 1. */
@@ -332,6 +325,13 @@ function onLine(spec: LineSpec, t: number, out: THREE.Vector3): THREE.Vector3 {
 function poleGeometry(foot: THREE.Vector3, top: number): THREE.BufferGeometry {
   const height = top - foot.y;
   return new THREE.CylinderGeometry(0.05, 0.075, height, 6).translate(foot.x, foot.y + height / 2, foot.z);
+}
+
+/** A spring clothes peg standing on end, its two legs either side of the line, the spring a little above it. */
+function passagePegGeometry(): THREE.BufferGeometry {
+  const l = PEG_LENGTH;
+  const leg = (side: number) => new THREE.BoxGeometry(l * 0.16, l, l * 0.13).translate(0, -l * 0.2, side * l * 0.09);
+  return mergeGeometries([leg(-1), leg(1), new THREE.BoxGeometry(l * 0.2, l * 0.16, l * 0.34).translate(0, l * 0.04, 0)]);
 }
 
 /** A peg over the line at a piece's corner. */
@@ -518,8 +518,7 @@ export class WashingLines {
     this.clothMat = new THREE.ShaderMaterial({
       uniforms: { ...atmo.uniforms, uSubject: { value: this.subject },
         uFamily: { value: familyStyle.gesture ?? family },
-        uFamilyFlutter: { value: familyStyle.flutter ?? 0 }, uCurtains: { value: curtainLift },
-        uCurtainOver: { value: curtainOver } },
+        uFamilyFlutter: { value: familyStyle.flutter ?? 0 } },
       vertexShader: CLOTH_VERT,
       fragmentShader: CLOTH_FRAG,
       side: THREE.DoubleSide,
@@ -534,7 +533,6 @@ export class WashingLines {
     const colors: number[] = [];
     const kinds: number[] = [];
     const roles: number[] = [];
-    const curtains: number[] = [];
 
     const point = new THREE.Vector3();
     const next = new THREE.Vector3();
@@ -550,22 +548,7 @@ export class WashingLines {
         posts.push(poleGeometry(new THREE.Vector3(end.x, Math.max(heightAt(end.x, end.z), 0), end.z), end.y));
       }
       ropes.push(ropeGeometry(spec));
-      if (spec.curtain !== undefined) {
-        const curtain = CURTAINS[spec.curtain];
-        for (let j = 0; j < curtain.panels; j++) {
-          const width = curtain.width / curtain.panels + (curtain.panels > 1 ? 0.35 : 0);
-          onLine(spec, (j + 0.5) / curtain.panels, point);
-          dir.subVectors(spec.b, spec.a).normalize();
-          anchors.push(point.x, point.y, point.z);
-          alongs.push(dir.x, dir.y, dir.z);
-          shapes.push(width, curtain.drop - j * 0.15, 0.6 + j * 0.3, j * 2.8 + spec.curtain);
-          const c = CLOTH_COLOURS[spec.curtain === 1 ? j + 1 : 0];
-          colors.push(c.r, c.g, c.b);
-          kinds.push(0); roles.push(-1); curtains.push(spec.curtain);
-          posts.push(pegGeometry(point, dir, width * 0.46), pegGeometry(point, dir, -width * 0.46));
-        }
-        continue;
-      }
+      if (spec.curtain !== undefined) continue;
       /** Every eighth line sags enough that somebody has put a prop under it, the way they always do. */
       if (rand() < 0.13) {
         onLine(spec, 0.35 + rand() * 0.3, point);
@@ -584,6 +567,7 @@ export class WashingLines {
         const drop = high ? spec.drop! * (0.85 + rand() * 0.3) : small ? 0.5 + rand() * 0.55 : 1.4 + rand() * 1.3;
         const step = (width + 0.35 + rand() * 0.9) / span;
         if (t + step > 0.96) break;
+        if (spec.bare && t + step > spec.bare[0] && t < spec.bare[1]) { t += step; continue; }
         onLine(spec, t, point);
         onLine(spec, t + step, next);
         dir.subVectors(next, point).normalize();
@@ -601,7 +585,6 @@ export class WashingLines {
         const roll = rand();
         kinds.push(small ? (roll < 0.5 ? 1 : 0) : roll < 0.16 ? 1 : roll < 0.3 ? 2 : roll < 0.4 ? 3 : 0);
         roles.push(-1);
-        curtains.push(-1);
         t += step;
       }
     }
@@ -626,7 +609,6 @@ export class WashingLines {
         colors.push(c.r, c.g, c.b);
         kinds.push(1);
         roles.push(piece.role);
-        curtains.push(-1);
       }
     }
 
@@ -641,10 +623,9 @@ export class WashingLines {
     cloth.setAttribute('aShape', new THREE.InstancedBufferAttribute(new Float32Array(shapes), 4));
     cloth.setAttribute('aColor', new THREE.InstancedBufferAttribute(new Float32Array(colors), 3));
     cloth.setAttribute('aKind', new THREE.InstancedBufferAttribute(new Float32Array(kinds), 1));
-    cloth.setAttribute('aCurtain', new THREE.InstancedBufferAttribute(new Float32Array(curtains), 1));
     cloth.setAttribute('aRole', new THREE.InstancedBufferAttribute(new Float32Array(roles), 1));
     // Shader instances live at their anchors, not at the template quad. Include the
-    // full drop, gust ripple, lifted curtains and the family's sleeve movements.
+    // full drop, gust ripple and the family's sleeve movements.
     const clothBounds = new THREE.Box3();
     let padding = 0;
     for (let i = 0; i < cloth.instanceCount; i++) {
@@ -658,9 +639,62 @@ export class WashingLines {
     this.group.add(new THREE.Mesh(cloth, this.clothMat));
     fixTreeInPlace(this.group);
     this.count = cloth.instanceCount;
+    if (specs.some(s => s.curtain !== undefined)) this.passages(CURTAINS);
   }
 
   readonly count: number;
+  private readonly curtainMeshes: { curtain: WashingCurtain; cloth: Cloth; geometry: THREE.BufferGeometry; seen: number }[] = [];
+  private pegMesh: THREE.InstancedMesh | null = null;
+  private readonly pegMatrix = new THREE.Matrix4();
+  private readonly pegScale = new THREE.Vector3(1, 1, 1);
+
+  /** The passage sheets are real cloth, with real pegs that come off. */
+  private passages(curtains: readonly WashingCurtain[]): void {
+    for (const curtain of curtains) for (const sheet of curtain.sheets) {
+      const { cloth } = sheet;
+      const geometry = new THREE.BufferGeometry();
+      geometry.setAttribute('position', new THREE.BufferAttribute(cloth.pos, 3).setUsage(THREE.DynamicDrawUsage));
+      geometry.setAttribute('normal', new THREE.BufferAttribute(cloth.normal, 3).setUsage(THREE.DynamicDrawUsage));
+      geometry.setAttribute('uv', new THREE.BufferAttribute(cloth.uv, 2));
+      geometry.setIndex(new THREE.BufferAttribute(cloth.index, 1));
+      const material = this.clothMat.clone();
+      material.vertexShader = CURTAIN_VERT;
+      material.uniforms = { ...this.clothMat.uniforms, uColor: { value: CLOTH_COLOURS[sheet.colour] } };
+      const mesh = new THREE.Mesh(geometry, material);
+      // It goes wherever the wind takes it.
+      mesh.frustumCulled = false;
+      this.group.add(mesh);
+      this.curtainMeshes.push({ curtain, cloth, geometry, seen: -1 });
+    }
+    const pegs = curtains.flatMap(c => c.pegs);
+    const material = new THREE.ShaderMaterial({
+      uniforms: { ...atmo.uniforms, uPaint: { value: new THREE.Color('#d9c29b') } },
+      vertexShader: PEG_VERT,
+      fragmentShader: PAINT_FRAG,
+    });
+    this.pegMesh = new THREE.InstancedMesh(passagePegGeometry(), material, pegs.length);
+    this.pegMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    this.pegMesh.frustumCulled = false;
+    this.group.add(this.pegMesh);
+    this.update();
+  }
+
+  /** Upload the passage cloth and pegs where the wind has put them. */
+  update(): void {
+    for (const m of this.curtainMeshes) {
+      if (m.seen === m.curtain.version) continue;
+      m.cloth.normals();
+      m.geometry.attributes.position.needsUpdate = true;
+      m.geometry.attributes.normal.needsUpdate = true;
+      m.seen = m.curtain.version;
+    }
+    if (!this.pegMesh) return;
+    let i = 0;
+    for (const curtain of CURTAINS) for (const peg of curtain.pegs) {
+      this.pegMesh.setMatrixAt(i++, this.pegMatrix.compose(peg.p, peg.q, this.pegScale));
+    }
+    this.pegMesh.instanceMatrix.needsUpdate = true;
+  }
 }
 
 /** Where a point sits against the walk: how far off it is, how far along it, and which way the walk runs there. */

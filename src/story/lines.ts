@@ -110,7 +110,8 @@ export class LinesChapter implements Chapter {
     const { child: c, plane: p, cygnet, wind } = this.cast;
     const active = this.gate < CURTAINS.length ? CURTAINS[this.gate] : null;
     washingPassage.active = this.beat === 'curtain' ? active : null;
-    CURTAINS.forEach(g => g.update(dt, wind, g === washingPassage.active));
+    CURTAINS.forEach(g => g.update(dt, wind, g === washingPassage.active,
+      g.center.distanceToSquared(this.cast.child.position) < tuning.linesPassage.simulateWithin ** 2));
     if (active) {
       p.home.copy(active.before); p.homeRadius = 12;
     }
@@ -129,10 +130,11 @@ export class LinesChapter implements Chapter {
             cygnet.does(this.gate === 0 ? 'peer' : 'look-back', c.position, 2.5);
           }
         }
-        if (g.charge >= 1 && this.t > tuning.linesPassage.birdLead && this.noticed) {
+        if (g.passable && this.t > tuning.linesPassage.birdLead && this.noticed) {
           g.cleared = true;
           cygnet.bind(0.035);
-          cygnet.stay = false; cygnet.errand = g.after;
+          // Into the way the fallen cloth has left, then through.
+          cygnet.stay = false; cygnet.errand = g.way;
           cygnet.watch(g.after); cygnet.pace = 0.8;
           cygnet.does('nibble', g.after, 1.6);
           this.birdArrived = -1;
@@ -143,6 +145,7 @@ export class LinesChapter implements Chapter {
       case 'birdThrough': {
         c.lookAt = cygnet.position;
         const g = active!;
+        if (cygnet.errand === g.way && cygnet.position.distanceTo(g.way) < 0.7) cygnet.errand = g.after;
         if (cygnet.position.distanceTo(g.after) < 1.2) {
           cygnet.stay = true;
           cygnet.watch(this.watching.copy(c.position).setY(c.position.y + 1.5));
@@ -152,7 +155,9 @@ export class LinesChapter implements Chapter {
           }
           if (time - this.birdArrived > tuning.linesPassage.lookBack) {
             this.to('childThrough');
-            c.walkTo(g.center.x - 1.1, g.after.z - 0.8, false, () => this.passed(), 0.6);
+            const through = () => c.walkTo(g.crossX, g.after.z - 0.8, false, () => this.passed(), 0.6);
+            if (Math.abs(c.position.x - g.crossX) > 0.4) c.walkTo(g.crossX, g.way.z + 0.6, false, through, 0.6);
+            else through();
           }
         }
         break;
@@ -219,7 +224,6 @@ export class LinesChapter implements Chapter {
     const { child: c, cygnet } = this.cast;
     c.lean = 0;
     cygnet.stay = false; cygnet.errand = null; cygnet.pace = 1;
-    CURTAINS[this.gate].through = true;
     this.gate++;
     if (this.gate < CURTAINS.length) this.approach();
     else {
