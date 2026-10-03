@@ -3,13 +3,12 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { fixInPlace } from '../gl/fixed';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { heightAt } from './island';
-import { hull, sail } from './little-boats';
 import type { Room } from './journey-rooms';
 import { mulberry32 } from './noise';
 
 /**
  * Something from the room before, washed up on the next arrival beach: a pegged pillowcase from the washing, a
- * stranded toy boat, a broken-off run of piano keys, the swing's seat with a few gold leaves. Nobody remarks on it
+ * broken-off run of piano keys, the swing's seat with a few gold leaves. Nobody remarks on it
  * and nothing can be done with it. Each lies half in the sand above the tide line, off the walk, on a damp patch.
  */
 interface Echo {
@@ -126,26 +125,6 @@ function pillowcase(): THREE.BufferGeometry[] {
   return [linen, onHem, lost];
 }
 
-/** One of the little boats, run aground and heeled over, its bow in the sand and its sail slack. */
-function strandedToy(): THREE.BufferGeometry[] {
-  const shell = coloured(hull(), '#d4b35d');
-  const deck = coloured(hull().scale(0.89, 0.24, 0.91).translate(0, 0.13, 0), '#d4ad73');
-  const seat = coloured(new THREE.BoxGeometry(0.59, 0.07, 0.13).translate(0, 0.24, -0.2), '#76503a');
-  const mast = coloured(new THREE.CylinderGeometry(0.025, 0.035, 1.75, 7).translate(0, 0.85, 0.21), '#76503a');
-  const slack = sail();
-  const p = slack.getAttribute('position');
-  for (let i = 0; i < p.count; i++) {
-    const across = -p.getX(i) / 0.93;
-    const up = (p.getY(i) - 0.32) / 1.28;
-    p.setZ(i, p.getZ(i) + 0.09 * Math.sin(Math.PI * Math.min(1, across)) * Math.sin(Math.PI * Math.min(1, up)));
-  }
-  slack.computeVertexNormals();
-  /** The boom swung fore and aft, so the sail lies along the hull. */
-  const cloth = coloured(slack.translate(0, 0, -0.21).rotateY(-Math.PI / 2).translate(0, 0, 0.21), '#eee2b7');
-  const boom = coloured(new THREE.CylinderGeometry(0.022, 0.022, 1, 6).rotateZ(Math.PI / 2).translate(-0.45, 0.34, 0).rotateY(-Math.PI / 2).translate(0, 0, 0.21), '#76503a');
-  return [shell, deck, seat, mast, cloth, boom];
-}
-
 /** A run of the piano's keys broken off whole, ivories and ebonies on their wooden bed. */
 function pianoKeys(): THREE.BufferGeometry[] {
   const parts: THREE.BufferGeometry[] = [];
@@ -189,7 +168,6 @@ function swingSeat(): THREE.BufferGeometry[] {
 
 const ECHOES: Echo[] = [
   { room: 'boats', x: 155.5, z: -376, yaw: 0.6, bury: 0.04, roll: 0.05, pitch: 0.06, damp: 1.5, parts: pillowcase },
-  { room: 'meadow', x: 24.5, z: -585.2, yaw: 1.75, bury: 0.22, roll: -0.55, pitch: 0.16, damp: 1.8, parts: strandedToy },
   { room: 'birches', x: -9, z: -1063.5, yaw: 0.35, bury: 0.15, roll: 0.08, pitch: -0.14, damp: 1.9, parts: pianoKeys },
   { room: 'stairs', x: 78.3, z: -1239.5, yaw: 1.1, bury: 0.05, roll: 0.08, pitch: 0.05, damp: 1.8, parts: swingSeat },
 ];

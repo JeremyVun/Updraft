@@ -74,8 +74,7 @@ Evidence is in `/private/tmp/updraft-motion-review-Sww9sA/` (`journey` and `cont
 
 ## Polish pass — 2026-10-03
 
-Branch `polish/review` in `/private/tmp/updraft-polish`; nothing reaches `main` until Jeremy approves it. Jeremy's
-brief, after a look-review proposed five cheap visual wins and some level ideas:
+Jeremy's first brief, after a look-review proposed five cheap visual wins and some level ideas:
 
 > "work in a worktree so that i can approve any change before it gets into main
 >
@@ -87,15 +86,19 @@ brief, after a look-review proposed five cheap visual wins and some level ideas:
 >
 > If you come up with any other ideas let me know."
 
-The five wins: (1) the boat's wake opens into a V instead of two parallel strips; (2) the sleeping meadow's bare far
-fields match the silver of its grass instead of reading as tan desert; (3) backlit rocks go cool, not black; (4) the
-child leaves footprints in sand; (5) the sleeping island's snowdrift reads as snow, not a laid sheet.
-Dream echoes: something small from the room before washed up on the next room's arrival beach. The home tree: one
-lone tree, no terrain change.
+In: the still meadow's far fields, footprints in sand, the snowdrift, the toy up on the bank and the earlier set-down,
+three dream echoes (boats, birches, stairs) and the home tree. His second round, on what was not approved:
 
-Parcels: the lead does 1, 2, 3 and 5 here; `polish/boats` (`/private/tmp/updraft-polish-boats`) the washing curtains
-and the little boats; `polish/beach` (`/private/tmp/updraft-polish-beach`) footprints, dream echoes and the home tree.
-Each change is shown to Jeremy as before/after stills.
+> "- I'm not sure about number 3 with the rocks, the rocks look washed out now instead of having some kind of shadow
+> - the washing curtains winding up doesn't look good - it's not very visually clear to the player that something is happening, not like before. can you think of and try another way of doing it?
+> - i think it's too soon to have a little sail boat as a dream echo on the meadows island. They player sees them sail off. I think it's better to have a callback and have the player see them sailing by later on in the game while they are at sea. Maybe during the open sea chapter, which is what causes the cygnet to jump in and play / swim with them a bit. if we want to have a dream echo on the meadows island, i'd think something like a rubber ducky on the shore (something related to the bath theme).
+> - the v can disappear sometimes which is strange.
+> - ok, have a go adding reeds and varying the camera angle for a few beach arrivals"
+
+Open, on branch `polish/round2` (`/private/tmp/updraft-polish2`), each shown to Jeremy as before/after stills before
+`main`: backlit rocks that keep a shadow but not a black one; the boat wake's V (it sometimes vanishes); a clearer
+way for the curtains to stay open; a rubber duck on the meadow's beach; the toy fleet sailing by on the open sea,
+drawing the cygnet in to swim with them; reeds on the little boats' banks; a few beach arrivals from other angles.
 
 ## Later
 

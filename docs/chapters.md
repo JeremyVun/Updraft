@@ -31,7 +31,7 @@ Rules every room keeps:
   few idle seconds; nothing is solved by a timer or by the ambient breeze. The one exception is a safety valve
   where a child could otherwise be stranded (the drowned village's becalming lifts after 90 s).
 - **Dream echoes.** One thing from the room before has washed up on the arrival beaches of the little boats, the
-  meadow, the birches and the stairs (`world/echoes.ts`): scenery only, above the tide line and off the walk; the
+  birches and the stairs (`world/echoes.ts`): scenery only, above the tide line and off the walk; the
   camera never turns to it, and home has none. It is "things recur in the wrong place" from `docs/journey.md`.
 - **Landing and leaving.** On a beach the boat runs up the sand and the child sits a moment before stepping out
   (`Traveller.stepAshore`); at a jetty they step up onto the boards (`Traveller.alight`). See `docs/boat.md`.
@@ -100,9 +100,8 @@ stands between the camera and the child.
 The plane stays in the child's hand. Three curtains of washing hang across the path. Broad sweeps lift a hem and
 small sweeps add up, in any direction, and progress is never lost; only the waiting curtain takes the stroke
 aimed at it on screen (`WashingCurtain.brush`). The first shows sideways invitation traces
-(`fx/washing-invitation.ts`). Live air lifts a sheet's hem and lets it fall as the air dies; every sweep also
-winds the sheet further round its own line, the way wind wraps washing round a line, so it never unwinds and hangs
-shorter from a lumpy roll with its red hem below. Wound, it clears the path and stays that way. The cygnet goes under first and looks back for the child. The last sheet opens on a clearing: one low line with a blue and a red adult garment and
+(`fx/washing-invitation.ts`). The cygnet goes under first and looks back for the child; a lifted sheet stays up
+until both are through. The last sheet opens on a clearing: one low line with a blue and a red adult garment and
 the small yellow jumper between them, and the red door. The released breeze brings the sleeves together (blue
 begins, red follows, yellow answers) and the door opens once they have nearly met. Through it is a separate shore
 (`DOOR_SHORE`), drawn inside the opening, where the kite and the boat wait on open grass. The child and the bird
