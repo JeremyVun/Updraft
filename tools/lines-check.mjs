@@ -224,7 +224,7 @@ try {
     assert.equal(await page.evaluate(() => window.__objectiveCues.length), 0, 'restoring a completed objective must not replay its sound');
     console.log('restored family');
   }
-  await page.waitForFunction(() => __game.story.name === 'toMeadow', null, { timeout: 120000 });
+  await page.waitForFunction(() => __game.story.name === 'toBoats', null, { timeout: 120000 });
   await page.waitForTimeout(6000);
   assert(await page.evaluate(() => !__game.boat.grounded && __game.child.ground(__game.boat.position.x, __game.boat.position.z) < 0), 'boat must leave the sand and sail');
   await page.screenshot({ path: `${prefix}-departure.png` });

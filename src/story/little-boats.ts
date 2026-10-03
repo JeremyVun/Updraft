@@ -70,29 +70,24 @@ export class LittleBoatsChapter implements Chapter {
     p.hold(c);
     p.visible = true;
     c.stepAshore(cast.boat);
-    this.bankAt(3, this.bank);
-    const arrive = () =>
-      c.walkTo(
-        this.bank.x,
-        this.bank.z,
-        false,
-        () => {
-          this.to('setDown');
-          c.faceToward(c.position.x, c.position.z - 3, 1);
-          const down = () => cast.carry.setDown(() => {
-            this.to('notice');
-            c.engaged = true;
-            k.stay = true;
-            k.watch(room.focus);
-            c.faceToward(room.stranded.x, room.stranded.z, 1);
-          });
-          if (k.seat === 'satchel') cast.carry.unstow(down);
-          else down();
-        },
-        0.35,
-      );
+    // She lets the bird down on the grass above the beach, so it walks the rest of the way up with her.
+    const setDown = () => {
+      this.to('setDown');
+      c.faceToward(room.stranded.x, room.stranded.z, 1);
+      const down = () => cast.carry.setDown(() => {
+        this.to('notice');
+        c.engaged = true;
+        k.stay = false;
+        k.watch(room.focus);
+        c.faceToward(room.stranded.x, room.stranded.z, 1);
+      });
+      if (k.seat === 'satchel') cast.carry.unstow(down);
+      else down();
+    };
+    const landing = new THREE.Vector3(BOATS_LANDING.x, 0, BOATS_LANDING.z - 5);
+    const letDown = landing.clone().lerp(room.stranded, tuning.littleBoats.setDownAt);
     // Approach outside the first pool even when the incoming boat grounds off-centre.
-    c.walkTo(BOATS_LANDING.x, BOATS_LANDING.z - 5, false, arrive, 0.6);
+    c.walkTo(landing.x, landing.z, false, () => c.walkTo(letDown.x, letDown.z, false, setDown, 0.35), 0.6);
     this.frame();
   }
   get departureKite(): boolean { return this.cast.littleBoats.progress >= tuning.linesToys.boatKiteRevealAt; }
@@ -157,6 +152,7 @@ export class LittleBoatsChapter implements Chapter {
     const { child: c, plane: p, cygnet: k, littleBoats: room, wind, boat } = this.cast;
     const childS = L.startZ - c.position.z;
     room.update(dt, time, wind, Math.max(3, childS + tuning.littleBoats.childLead));
+    if (['pickup', 'holdToy', 'carryToy', 'launch'].includes(this.beat) && !k.errand) k.stay = true;
     if (this.beat === 'notice') {
       c.lookAt = room.focus;
       if (this.elapsed > 1.2) {
@@ -167,6 +163,9 @@ export class LittleBoatsChapter implements Chapter {
           false,
           () => {
             c.faceToward(c.position.x - 3, c.position.z, 1);
+            // The bird waits on the bank beside the launching place, in the picture with her.
+            k.errand = this.birdBank.set(room.stranded.x - 1.2, 0, room.stranded.z - 1.2);
+            this.birdBank.y = heightAt(this.birdBank.x, this.birdBank.z);
             this.to('pickup');
           },
           0.08,
@@ -385,7 +384,10 @@ export class LittleBoatsChapter implements Chapter {
     const portrait = typeof window !== 'undefined' && window.innerHeight > window.innerWidth;
     const ending = ['reveal', 'gather', 'boarding', 'aboard'].includes(this.beat);
     const toy = ending ? boat.position : room.focus;
-    s.target.copy(c.position).lerp(toy, ending ? 0.5 : portrait ? 0.4 : 0.62);
+    // Walking up from the beach the toy is still far off: favour the travellers until they near it.
+    const approach = ['arrival', 'setDown', 'notice'].includes(this.beat)
+      ? THREE.MathUtils.clamp(7 / Math.max(1, c.position.distanceTo(toy)), 0.35, 1) : 1;
+    s.target.copy(c.position).lerp(toy, ending ? 0.5 : (portrait ? 0.4 : 0.62) * approach);
     s.target.y = Math.max(c.position.y, toy.y) + 1.05;
     s.target.z -= ending ? 0 : 2;
     const handling = ['notice', 'pickup', 'holdToy', 'carryToy', 'launch'].includes(this.beat);

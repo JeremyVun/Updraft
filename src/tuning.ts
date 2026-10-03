@@ -317,6 +317,10 @@ export const tuning = {
     /** How fast a filled sail brings the hull up to speed, and how slowly still water takes that speed away (per second). */
     drive: 1.4, drag: 0.266,
     fleetReach: 14, childLead: 6.5, bankOffset: 2.2,
+    /** The stranded toy waits this far back from the water's edge, on the flat top of the bank. */
+    toyBank: 3.2,
+    /** How far up from the beach toward the toy the child lets the cygnet down to walk with her. */
+    setDownAt: 0.4,
     /** Ease the child's toy toward its companion limit instead of hitting it at full speed. */
     followEase: 1.5,
     /** The child hurries along the bank by up to this share of a walk while its toy sails away from it. */
@@ -1084,6 +1088,14 @@ export const tuning = {
     speedFrom: 0.4, speedFull: 3,
     fillSeconds: 1.8,
     billowSpeed: 6, rise: 3.5, settle: 1.2,
+    /**
+     * Sweeps wind the sheet round its line (`windUp` per second toward the swept share); live air lifts the free
+     * hem up to `liftAngle` radians. Wound fully, `rollTail` metres still hang. The roll starts `rollCore` out
+     * from the rope and grows by about `rollLayer` a turn; one end winds `rollTwist` less than the other.
+     */
+    windUp: 2.2, liftAngle: 2, rollTail: 0.9, rollCore: 0.04, rollLayer: 0.03, rollTwist: 0.3,
+    /** Loose folds across what hangs below the roll: how many across a sheet and how deep, in metres. */
+    foldCount: 4.5, foldDepth: 0.07,
     brushFrom: 0.8, brushRadius: 0.27,
     /** A warm sideways trace on the first sheet demonstrates a sweep, without generating any wind. */
     inviteAfter: 1.2, inviteSweep: 1.8, invitePause: 1.1, inviteResume: 2.2,
