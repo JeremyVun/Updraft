@@ -80,6 +80,7 @@ import { AutumnBirches } from './world/birches';
 import { CloudStairs } from './world/stairs';
 import { CLOUD, STAIRS_ISLE } from './world/stairs-layout';
 import { createTree } from './world/tree';
+import { Footprints } from './world/footprints';
 import { createSky } from './world/sky';
 import { Terrain } from './world/terrain';
 import { TerrainHeights } from './world/terrain-heights';
@@ -197,6 +198,7 @@ const clouds = new CloudShadows(renderer);
 const sky = createSky();
 scene.add(sky);
 const terrain = new Terrain(wind.breeze, bakes.filterable, terrainHeights);
+const footprints = new Footprints();
 scene.add(terrain.mesh);
 scene.add(water.mesh);
 const pond = new Pond();
@@ -680,6 +682,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   boat.update(dt, time);
   if (cygnet.seat === 'satchel') child.openBag();
   child.update(dt);
+  for (const f of child.footfalls) footprints.press(f.x, f.z, f.heading, 0, time);
   skyMirror.pose(child);
   glider.update(dt, time);
   flock.update(dt, time);
@@ -715,6 +718,10 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   }
   if (cygnet.state !== 'fallen' && story.current.invitesFlight) cygnetAir.lift += cygnetAir.energy * tuning.colt.gustLift;
   cygnet.update(dt, time, child.position, cygnetAir);
+  const birdOnGround = cygnet.position.y < heightAt(cygnet.position.x, cygnet.position.z) + 0.1;
+  for (const f of cygnet.footfalls) if (birdOnGround) footprints.press(f.x, f.z, f.heading, 1, time);
+  cygnet.footfalls.length = 0;
+  footprints.update(time);
   carry.after();
   foley.setOutput(sound.output);
   foley.frost(story.name==='sleeping' ? sleeping.cold*(1-sleeping.dawn) : 0);

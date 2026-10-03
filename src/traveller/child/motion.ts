@@ -242,6 +242,10 @@ export class ChildMotion {
   private lastSpeed = 0;
   /** The stride's lift and reach, eased so the feet settle when the child stops. */
   private stride = 0;
+  /** Where each foot was in its own cycle last frame, to catch the heel coming down. */
+  private readonly cycWas = [0, 0];
+  /** Heels that struck the ground this frame, in the world, and the way the foot points. */
+  readonly strikes: { x: number; z: number; heading: number }[] = [];
 
   constructor(private readonly rig: Rig) {
     this.b = rig.bones;
@@ -251,6 +255,7 @@ export class ChildMotion {
     const b = this.b;
     const dt = Math.max(d.dt, 1e-4);
     for (const bone of b) bone.quaternion.identity();
+    this.strikes.length = 0;
 
     const moving = Math.min(1, d.speed / WALK);
     const running = THREE.MathUtils.clamp((d.speed - WALK) / (RUN - WALK), 0, 1);
@@ -414,6 +419,12 @@ export class ChildMotion {
       const standAnkle = this.vc.set(lateral, ANKLE + lift, fz);
       // The ground under that foot, as a height in the root's frame.
       const world = this.va.copy(standAnkle).setY(0).applyMatrix4(root.matrixWorld);
+      const side = left ? 0 : 1;
+      if (cyc < stance && this.cycWas[side] >= stance && stride > 0.5 && plant > 0.9 && pose.sit < 0.1) {
+        const m = root.matrixWorld.elements;
+        this.strikes.push({ x: world.x, z: world.z, heading: Math.atan2(m[8], m[10]) });
+      }
+      this.cycWas[side] = cyc;
       const groundY = (d.ground(world.x, world.z) - root.position.y) / SCALE;
       standAnkle.y += THREE.MathUtils.clamp(groundY, -0.5, 0.5);
       /** A relaxed knee on the leg the weight is off. */

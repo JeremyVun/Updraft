@@ -114,6 +114,8 @@ export class Cygnet {
   water: { level: number; over(x: number, z: number): boolean } | null = null;
   /** What it did this frame that makes a sound; whoever plays them empties the list. */
   readonly heard: Heard[] = [];
+  /** Feet put down on the ground this frame; whoever reads them empties the list. */
+  readonly footfalls: { x: number; z: number; heading: number }[] = [];
   private readonly looseDown = new LooseDown();
 
   /** What it notices, how it feels, and what it does of its own accord. */
@@ -1670,6 +1672,7 @@ export class Cygnet {
       const g = this.gait;
       g.update(dt, this.position, this.yaw, this.groundAt);
       for (let i = 0; i < g.footfalls; i++) this.heard.push({ kind: 'step', amount: 0.6 + g.pace * 0.6 });
+      for (const i of g.landed) this.footfalls.push({ x: g.feet[i].at.x, z: g.feet[i].at.z, heading: this.yaw });
       for (const [i, f] of g.feet.entries()) {
         const out = d.gait.feet[i];
         const rx = (f.at.x - this.position.x) / SIZE;
