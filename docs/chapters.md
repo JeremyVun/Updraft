@@ -136,7 +136,11 @@ Knobs: `tuning.linesPassage`, `tuning.washing`, `tuning.family`, `tuning.linesTo
 
 Early, affectionate play, and the introduction to putting wind into a sail before the drowned village needs it.
 Three pools joined by narrow streams run down to the departure beach. An oversized bath plug hangs on a long chain
-from the haze, and an oversized enamel bathtub stands on the far bank (scenery only).
+from the haze, and an oversized enamel bathtub stands on the far bank (scenery only). Reeds stand in clumps along
+the pools' banks, rooted into the shallows and swaying with the grass (`tuning.littleBoats.reeds`, `REEDS_GLSL` in
+`world/grass.ts`): mostly on the far bank, only short low stretches on the near one, and never by the toy, on the
+child's walk, where the cygnet hops in and out (`BOATS_POOLS`) or in the narrow runs where toys pass close to the
+lip.
 
 On the grass above the beach the child takes the cygnet out of the satchel and sets it down, and it walks up with
 her. She notices a toy on a bare patch of the flat bank, back from the water (`toyBank`), kneels, lifts it in both
