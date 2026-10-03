@@ -240,8 +240,6 @@ body.starting #plane-guide { visibility: hidden; }
 #veil.ready:not(.departing) .start-over:is(:hover, :focus-visible), #veil.asking:not(.departing) .start-over { opacity: .85; transition-delay: 0s; }
 .start-over:focus-visible { outline: none; text-decoration: underline; text-underline-offset: 6px; }
 
-/* Chapter select stands on the plain veil: its names would not read over a painting. */
-#veil.painted.choosing :is(.veil-painting, .veil-shade) { opacity: 0; transition-duration: .6s; }
 #veil.choosing .start-over { visibility: hidden; opacity: 0; }
 #veil.departing :is(.veil-painting, .veil-shade, .start-over) { opacity: 0; pointer-events: none; transition-duration: .8s; transition-delay: 0s; }
 
