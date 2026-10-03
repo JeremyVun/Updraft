@@ -15,22 +15,7 @@ Play it in your browser at [updraft.jeremyvun.com](https://updraft.jeremyvun.com
 
 ![Twelve painted rooms from the journey, from a grey winter shore to a jetty at home.](docs/images/updraft-chapters.jpg)
 
-<p>
-  <img width="49%" src="docs/images/updraft-washing.jpg" alt="The child walks through tall grass towards a long line of white sheets drying in the wind.">
-  <img width="49%" src="docs/images/updraft-little-boats.jpg" alt="The child and the young swan walk beside a winding stream where toy sailboats drift.">
-</p>
-<p>
-  <img width="49%" src="docs/images/updraft-piano.jpg" alt="The child plays a piano on a hilltop while colour spreads from it across a grey island.">
-  <img width="49%" src="docs/images/updraft-birches.jpg" alt="The child walks through a golden birch wood with a red ribbon winding between the trees.">
-</p>
-<p>
-  <img width="49%" src="docs/images/updraft-stairs.jpg" alt="The child holds the young swan beneath carpeted staircases floating in a lilac sky.">
-  <img width="49%" src="docs/images/updraft-drowned-village.jpg" alt="A red-sailed boat passes the rooftops and bare trees of a drowned village at sunset.">
-</p>
-<p>
-  <img width="49%" src="docs/images/updraft-sleeping-island.jpg" alt="Under a starry sky, the child walks towards a glowing fireplace, lamp and chairs standing in a field.">
-  <img width="49%" src="docs/images/updraft-sky-mirror.jpg" alt="The child walks across still water that mirrors pink sunset clouds, with a lantern and a kite ahead.">
-</p>
+![Eight scenes from the game: the child walking towards sheets on a washing line, toy sailboats on a stream, a piano spreading colour across a grey island, a golden birch wood, staircases floating in a lilac sky, a red-sailed boat passing a drowned village, a fireplace glowing in a field at night, and still water mirroring sunset clouds.](docs/images/updraft-screenshots.jpg)
 
 ## How to play
 
