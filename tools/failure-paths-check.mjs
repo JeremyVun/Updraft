@@ -1,7 +1,8 @@
 // Fault-injection coverage for the shell parcel's failure paths: a failed audio start must not block
 // the frame loop, a frame-loop exception must show the recovery dialog, a blocked entry-module chunk
 // must fall back to the start-screen failure state, and a missing float render-target extension must
-// show the permanent "couldn't start" state with Try again hidden. Run without another GPU capture.
+// show the permanent "couldn't start" state with Try again hidden, and a blocked room painting must leave the plain veil
+// with a working Continue. Run without another GPU capture.
 import { openBrowser } from './lib/browser.mjs';
 import assert from 'node:assert/strict';
 
@@ -104,6 +105,32 @@ try {
     assert.equal(await page.locator('#begin').isHidden(), true, 'Try again must be hidden: retrying cannot help');
     await context.close();
     report.checks.push('a missing required GL extension shows the permanent failure state with Try again hidden');
+  }
+
+  // 5. A room painting that never arrives leaves the plain veil, Continue centred, and Continue still resumes the save.
+  {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+    const page = await context.newPage();
+    const errors = [];
+    page.on('pageerror', e => errors.push(e.message));
+    await page.goto(base + '?shot&progress=1&chapter=washing');
+    await page.waitForFunction(() => JSON.parse(localStorage.getItem('updraft.progress.v1') ?? 'null')?.chapter === 'lines', null, { timeout: 60000 });
+    let blocked = 0;
+    await page.route(url => /[a-z]+-(land|port)(-[^/]+)?\.webp$/.test(url.pathname), route => { blocked++; return route.abort(); });
+    await page.goto(base + '?shot&start=1&progress=1');
+    await page.waitForSelector('#veil.ready', { timeout: 60000 });
+    assert(blocked > 0, 'the fixture actually blocked the painting');
+    assert.equal(await page.locator('#veil').evaluate(e => e.classList.contains('painted')), false, 'no painting');
+    assert.equal(await page.locator('.veil-painting').count(), 0, 'the failed painting is not left in the veil');
+    assert.equal(await page.locator('#begin span').textContent(), 'Continue');
+    const box = await page.locator('#begin').boundingBox();
+    assert(Math.abs(box.y + box.height / 2 - 400) < 1, `Continue centred, at ${box.y + box.height / 2}`);
+    await page.locator('#begin').click();
+    assert.equal(await page.evaluate(() => window.__game.story.name), 'lines', 'Continue resumes the save');
+    await page.waitForSelector('#veil', { state: 'detached', timeout: 15000 });
+    assert.deepEqual(errors, []);
+    await context.close();
+    report.checks.push('a blocked room painting leaves the plain veil and a working Continue');
   }
 
   console.log(JSON.stringify(report, null, 2));
