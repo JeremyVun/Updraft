@@ -8,21 +8,22 @@ import { swellAt, type Swell } from '../../world/water/swell';
 
 /** Which of the little boats' toys come back: the child's own, the teal and the yellow. */
 const FLEET = [0, 1, 2];
-/**
- * Where each toy sails relative to the boat (ahead, and out on the swimming side): where it comes from, off the side
- * of the frame; where it keeps company with the swimmer; and where it bears away to, astern and out.
- */
-const FROM = [[22, 42], [30, 50], [16, 36]];
-const BESIDE = [[0.8, 4], [-1.2, 5.6], [2.6, 5.4]];
-const AWAY = [[-6, 26], [-12, 32], [-2, 22]];
+/** Where each sails in the loose flotilla: behind the child's own along their course, and out to one side of it. */
+const LOOSE = [[0, 0], [-2.4, 1.5], [-1.4, -1.2]];
+/** Each hull's own pace and its own small difference of course, so the flotilla is never quite in step. */
+const PACE = [1, 0.96, 0.92];
+const STRAY = [0, 0.04, -0.035];
 
 interface SeaToy {
   group: THREE.Group;
   pivot: THREE.Group;
   sail: THREE.ShaderMaterial;
-  velocity: THREE.Vector3;
+  course: number;
+  speed: number;
   yaw: number;
   fill: number;
+  gust: number;
+  luff: number;
   across: number;
   boom: number;
   roll: number;
@@ -32,28 +33,24 @@ interface SeaToy {
 }
 
 /**
- * The little boats' toys, met again out on the open sea. Their course is the story's: they come in from the side,
- * keep company with the cygnet while it swims, and bear away astern. Their sails are the wind's: the breeze keeps
- * them drawing and a gust from the player fills them hard, as in their own room.
+ * The little boats' toys, met again out on the open sea. They are out there sailing before anyone can see them,
+ * on their own course at their own small pace, and nothing about the boat changes it: it comes up on them, the
+ * cygnet goes over the side to them, and they sail on until the sea has them again. Their sails are the wind's:
+ * the breeze keeps them drawing and a gust from the player fills, heels and drives them, as in their own room.
  */
 export class ToyFleet {
   readonly group = new THREE.Group();
   private readonly toys: SeaToy[] = [];
-  private phase: 'away' | 'coming' | 'beside' | 'leaving' | 'gone' = 'away';
-  private t = 0;
-  private side = 1;
-  private readonly boat = new THREE.Vector3();
-  private boatYaw = 0;
-  private boatSpeed = 0;
-  private readonly station = new THREE.Vector3();
-  private readonly ahead = new THREE.Vector3();
-  private readonly want = new THREE.Vector3();
+  private phase: 'unseen' | 'sailing' | 'gone' = 'unseen';
   private readonly air = { x: 0, z: 0, energy: 0, lift: 0 };
   private readonly swell: Swell = { height: 0, slopeX: 0, slopeZ: 0 };
+  private readonly frustum = new THREE.Frustum();
+  private readonly view = new THREE.Matrix4();
+  private readonly sphere = new THREE.Sphere(new THREE.Vector3(), 1.5);
   /** Small foam behind a moving hull, through the sea's own marks. */
   onWake: (x: number, z: number, time: number) => void = () => {};
 
-  constructor(private readonly wind: WindField) {
+  constructor(private readonly wind: WindField, private readonly camera: THREE.Camera) {
     this.group.name = 'sea-toys';
     this.group.visible = false;
     const wood = material('#76503a'), rim = material('#d4ad73');
@@ -87,107 +84,66 @@ export class ToyFleet {
       g.add(pivot);
       fixInPlace(...g.children.filter((o) => o !== pivot), ...pivot.children);
       this.group.add(g);
-      this.toys.push({ group: g, pivot, sail: m, velocity: new THREE.Vector3(), yaw: 0, fill: 0, across: 0, boom: 0,
-        roll: 0, rollV: 0, seed: i * 1.7, nextMark: 0 });
+      this.toys.push({ group: g, pivot, sail: m, course: 0, speed: 0, yaw: 0, fill: 0, gust: 0, luff: 0, across: 0,
+        boom: 0, roll: 0, rollV: 0, seed: i * 1.7, nextMark: 0 });
     }
   }
 
-  /** Not yet seen, or long gone. */
-  get idle(): boolean { return this.phase === 'away' || this.phase === 'gone'; }
-
-  /** How near they have come, 0 out of sight to 1 alongside. */
-  get near(): number {
-    if (this.phase === 'coming') return THREE.MathUtils.smootherstep(this.t, 0, tuning.seaToys.comeFor);
-    return this.phase === 'beside' ? 1 : 0;
-  }
+  /** Not out on the water: not yet set sailing, or sailed on out of sight. */
+  get idle(): boolean { return this.phase !== 'sailing'; }
 
   /** The child's own toy, the one the cygnet goes to. */
   playmate(out: THREE.Vector3): THREE.Vector3 {
     return out.copy(this.toys[0].group.position);
   }
 
-  /** Bring them in from `side` of the boat (the swim's side, the camera's side): +1 is the boat's left. */
-  come(side: number, boat: THREE.Vector3, yaw: number, speed: number): void {
-    this.side = side;
-    this.phase = 'coming';
-    this.t = 0;
-    this.follow(boat, yaw, speed);
-    this.toys.forEach((toy, k) => {
-      this.stationOf(k, 0, toy.group.position);
-      toy.velocity.set(Math.sin(yaw), 0, Math.cos(yaw)).multiplyScalar(speed);
-      this.stationOf(k, 0.05, this.want).sub(toy.group.position).multiplyScalar(20).add(toy.velocity);
-      toy.yaw = Math.atan2(this.want.x, this.want.z);
+  /**
+   * Sets them sailing, out of sight: the child's own at `at` on `course` (yaw), the others loosely behind it and out
+   * toward `side` (+1 is the left of that course).
+   */
+  sail(at: THREE.Vector3, course: number, side: number): void {
+    const s = tuning.seaToys;
+    const fx = Math.sin(course), fz = Math.cos(course), lx = Math.cos(course) * side, lz = -Math.sin(course) * side;
+    this.toys.forEach((toy, i) => {
+      const [back, out] = LOOSE[i];
+      toy.group.position.set(at.x + fx * back + lx * out, 0, at.z + fz * back + lz * out);
+      toy.course = toy.yaw = course + STRAY[i] * side;
+      toy.speed = s.ownSpeed * PACE[i] * (s.cruise + s.driven * s.breezeFill);
+      toy.fill = toy.gust = s.breezeFill;
+      toy.luff = toy.across = toy.boom = toy.roll = toy.rollV = 0;
     });
+    this.phase = 'sailing';
     this.group.visible = true;
   }
 
-  /** Let them bear away and sail on. */
-  leave(): void {
-    if (this.phase === 'coming' || this.phase === 'beside') { this.phase = 'leaving'; this.t = 0; }
-  }
-
-  /** The boat they keep station on, each frame while they are about. */
-  follow(boat: THREE.Vector3, yaw: number, speed: number): void {
-    this.boat.copy(boat);
-    this.boatYaw = yaw;
-    this.boatSpeed = speed;
-  }
-
-  /** Station `k` at time `t` into the current phase, in the world. */
-  private stationOf(k: number, t: number, out: THREE.Vector3): THREE.Vector3 {
-    const s = tuning.seaToys;
-    let f: number, l: number;
-    if (this.phase === 'coming') {
-      const a = THREE.MathUtils.smootherstep(t, 0, s.comeFor);
-      f = THREE.MathUtils.lerp(FROM[k][0], BESIDE[k][0], a);
-      l = THREE.MathUtils.lerp(FROM[k][1], BESIDE[k][1], a);
-    } else if (this.phase === 'beside') {
-      f = BESIDE[k][0] + Math.sin(t * 0.37 + k * 2.1) * 0.9;
-      l = BESIDE[k][1] + Math.sin(t * 0.29 + k * 1.3) * 0.6;
-    } else {
-      const b = THREE.MathUtils.smootherstep(t, 0, s.leaveFor);
-      f = THREE.MathUtils.lerp(BESIDE[k][0], AWAY[k][0], b);
-      l = THREE.MathUtils.lerp(BESIDE[k][1], AWAY[k][1], b);
-    }
-    const fx = Math.sin(this.boatYaw), fz = Math.cos(this.boatYaw);
-    const lx = Math.cos(this.boatYaw) * this.side, lz = -Math.sin(this.boatYaw) * this.side;
-    return out.set(this.boat.x + fx * f + lx * l, 0, this.boat.z + fz * f + lz * l);
+  /** Off the water at once, for a passage that starts after they have been and gone. */
+  clear(): void {
+    this.phase = 'unseen';
+    this.group.visible = false;
   }
 
   update(dt: number, time: number): void {
     if (this.idle || dt <= 0) return;
     const s = tuning.seaToys;
-    this.t += dt;
-    if (this.phase === 'coming' && this.t >= s.comeFor) { this.phase = 'beside'; this.t = 0; }
-    const free = this.phase === 'leaving' && this.t > s.leaveFor;
     const k = tuning.littleBoats;
     this.toys.forEach((toy, i) => {
       const p = toy.group.position;
-      if (!free) {
-        // Keep pace with the boat, follow the station as it moves, and close on it gently.
-        this.ahead.set(Math.sin(this.boatYaw), 0, Math.cos(this.boatYaw)).multiplyScalar(this.boatSpeed);
-        this.stationOf(i, this.t + 0.1, this.want);
-        this.stationOf(i, this.t, this.station);
-        this.want.sub(this.station).multiplyScalar(10).add(this.ahead);
-        this.want.addScaledVector(this.station.sub(p).setY(0), s.closing);
-        toy.velocity.lerp(this.want, 1 - Math.exp(-dt * 2));
-      } else {
-        this.want.set(Math.sin(toy.yaw), 0, Math.cos(toy.yaw)).multiplyScalar(s.ownSpeed * (0.6 + 0.6 * toy.fill));
-        toy.velocity.lerp(this.want, 1 - Math.exp(-dt * 0.4));
-      }
-      p.x += toy.velocity.x * dt;
-      p.z += toy.velocity.z * dt;
-      const speed = Math.hypot(toy.velocity.x, toy.velocity.z);
-      if (speed > 0.4) {
-        const turn = Math.atan2(Math.sin(Math.atan2(toy.velocity.x, toy.velocity.z) - toy.yaw),
-          Math.cos(Math.atan2(toy.velocity.x, toy.velocity.z) - toy.yaw));
-        toy.yaw += THREE.MathUtils.clamp(turn * (1 - Math.exp(-dt * 2)), -s.turn * dt, s.turn * dt);
-      }
       const w = this.wind.sample(p.x, p.z, this.air);
-      const fill = Math.max(s.breezeFill, THREE.MathUtils.smoothstep(w.energy, k.windFrom, k.windFull));
+      const effort = THREE.MathUtils.smoothstep(w.energy, k.windFrom, k.windFull);
+      const fill = Math.max(s.breezeFill, effort);
       toy.fill += (fill - toy.fill) * (1 - Math.exp(-dt * (fill > toy.fill ? k.sailFillRate : k.sailEmptyRate)));
+      toy.luff = Math.max(toy.luff * Math.exp(-dt * 2.2), Math.min(1, Math.abs(fill - toy.gust) * 1.8));
+      toy.gust += (fill - toy.gust) * (1 - Math.exp(-dt * 1.2));
       const cross = Math.tanh((w.x * Math.cos(toy.yaw) - w.z * Math.sin(toy.yaw)) * 0.4);
       toy.across += (cross - toy.across) * (1 - Math.exp(-dt * 3));
+      // A gust knocks a toy's head off its course a little before it finds it again.
+      const want = toy.course + Math.sin(time * 0.09 + toy.seed * 2.3) * s.wander - toy.across * toy.luff * s.knock;
+      toy.yaw += THREE.MathUtils.clamp(Math.atan2(Math.sin(want - toy.yaw), Math.cos(want - toy.yaw)) * (1 - Math.exp(-dt * 1.5)),
+        -s.turn * dt, s.turn * dt);
+      const drive = s.ownSpeed * PACE[i] * (s.cruise + s.driven * toy.fill);
+      toy.speed += (drive - toy.speed) * (1 - Math.exp(-dt * (drive > toy.speed ? k.drive : k.drag)));
+      p.x += Math.sin(toy.yaw) * toy.speed * dt;
+      p.z += Math.cos(toy.yaw) * toy.speed * dt;
       toy.boom += (-toy.across * toy.fill * 0.85 - toy.boom) * (1 - Math.exp(-dt * 2));
       toy.pivot.rotation.y = toy.boom;
       toy.rollV += ((toy.across * toy.fill * k.heel - toy.roll) * k.rollSpring - toy.rollV * k.rollDamping) * dt;
@@ -195,6 +151,7 @@ export class ToyFleet {
       const u = toy.sail.uniforms;
       u.uFill.value += ((toy.across >= 0 ? 1 : -1) * toy.fill - u.uFill.value) * (1 - Math.exp(-dt * 3));
       u.uDroop.value = 1 - THREE.MathUtils.smoothstep(toy.fill, 0.025, 0.65);
+      u.uLuff.value = toy.luff;
       u.uPhase.value = (u.uPhase.value + dt * (3 + toy.fill * 7)) % (Math.PI * 2);
       swellAt(p.x, p.z, time, this.swell);
       p.y = this.swell.height + k.toyDraft * s.scale + Math.sin(time * 2.1 + toy.seed) * 0.03;
@@ -204,13 +161,20 @@ export class ToyFleet {
         yaw + toy.boom * 0.09,
         toy.roll + this.swell.slopeX * Math.cos(yaw) - this.swell.slopeZ * Math.sin(yaw) + Math.sin(time * 1.9 + toy.seed) * 0.05,
       );
-      if (speed > 0.6 && time > toy.nextMark) {
+      if (time > toy.nextMark) {
         toy.nextMark = time + 0.35;
         this.onWake(p.x - Math.sin(yaw) * 0.8 * s.scale, p.z - Math.cos(yaw) * 0.8 * s.scale, time);
       }
     });
-    const far = this.toys.every((toy) => toy.group.position.distanceTo(this.boat) > s.goneAt);
-    if (free && (far || this.t > s.leaveFor + s.sailOnFor)) {
+    // Once nobody could see them any more, they are gone for good.
+    this.camera.updateMatrixWorld();
+    this.frustum.setFromProjectionMatrix(this.view.multiplyMatrices(this.camera.projectionMatrix, this.camera.matrixWorldInverse));
+    const eye = this.camera.position;
+    const lost = this.toys.every((toy) => {
+      const far = toy.group.position.distanceTo(eye);
+      return far > s.lostAt || (far > s.unseenAt && !this.frustum.intersectsSphere(this.sphere.set(toy.group.position, 1.5)));
+    });
+    if (lost) {
       this.phase = 'gone';
       this.group.visible = false;
     }

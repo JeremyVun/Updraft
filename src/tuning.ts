@@ -1224,24 +1224,41 @@ export const tuning = {
   seaToys: {
     /** Smaller than in their own room beside the boat they are now so much smaller than. */
     scale: 0.65,
-    /** Seconds to come in from off the side of the frame to alongside, and to bear away astern after the swim. */
-    comeFor: 11, leaveFor: 18,
-    /** They are called this many seconds before the swim could begin, and the cygnet stirs once they are this near. */
-    comeLead: 9, noticeAt: 0.7,
-    /** How firmly a toy closes on its station, and how fast its hull may turn (radians a second). */
-    closing: 0.8, turn: 0.9,
+    /**
+     * Where they are already sailing when the passage leaves, unseen in the last of the night: this far ahead along
+     * the route and this far out to the swimming side of it, on a course that runs on near the route for `courseFor`.
+     */
+    ahead: 93, lane: 4.5, courseFor: 60,
+    /** Their own speed in units a second: a share of `ownSpeed` with the breeze alone, the rest as the sail fills. */
+    ownSpeed: 1.5, cruise: 0.62, driven: 0.38,
     /** The open-sea breeze keeps a sail this full; a gust fills it the rest of the way. */
     breezeFill: 0.55,
-    /** Sailing on by themselves, out of sight: their own pace, and when they are gone. */
-    ownSpeed: 2.4, goneAt: 85, sailOnFor: 40,
-    /** How far the swimming cygnet edges out from the wave along the hull toward the child's own toy, and how close it goes. */
-    swimToward: 1.2, swimClear: 0.9,
+    /** How far a hull wanders off its course, how far a gust knocks its head round, and how fast it may turn (radians, a second). */
+    wander: 0.05, knock: 0.25, turn: 0.6,
+    /** Gone once every one of them is out of the frame and this far off, or this far off at all. */
+    unseenAt: 30, lostAt: 320,
+    /** Within this of the boat the cygnet stops watching the pod and watches them; within `noticeAt` it is restless to go. */
+    sightedAt: 26, noticeAt: 22,
+    /** It goes in once the child's own toy is this far ahead of the cygnet or nearer, or after `waitFor` on the side regardless. */
+    goInAhead: 6.5, waitFor: 7,
+    /** Swimming out, how close beside the child's own it swims round it, and for how long among them before it turns back. */
+    swimClear: 1.1, playFor: 4,
+    /** As near as it gets to the place it is making for beside a toy sailing on: it is among them. */
+    alongside: 1.4,
+    /** How eagerly it swims out to them, and how fast it goes round the child's own once there (radians a second). */
+    swimOutPlay: 0.4, swimOutHurry: 0.5, roundRate: 0.9,
+    /** Its paddling speed per unit it is short of where it is making for (as `cygnet.paddling` has it). */
+    swimTrack: 1.1,
+    /** Seconds the boat's way stays on it after it goes in, falling away. */
+    wayFor: 1.2,
+    /** It turns back early if the toys have fallen this far astern of the child in the boat. */
+    turnBackAstern: 6,
   },
   seaPassage: {
     speed: 10,
     arrivalSpeed: 3.5,
-    /** The most the boat makes while the cygnet is swimming: ordinary sailing sails on, only a strong gust is trimmed. */
-    swimSpeed: 5,
+    /** The most the boat makes while the cygnet is in the water: it eases for a swimmer, never to a crawl. */
+    swimSpeed: 2.4,
     /** How much of the boat's way the wave along its side gives the swimming cygnet, and how fast the swim's cap comes in. */
     swimCarry: 0.75,
     swimEase: 0.5,
@@ -1264,7 +1281,7 @@ export const tuning = {
      * playing past `farewellAt` slows it further, to `holdSpeed` by `holdAt`. The cap eases down at `limitEase` a second.
      */
     farewellAt: 0.8,
-    playFor: 49,
+    playFor: 41,
     /** The most the boat makes as it leaves the island, from which it settles by `leapFrom` into the pod's pace. */
     openSpeed: 5.5,
     leastSpeed: 3,

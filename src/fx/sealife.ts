@@ -34,7 +34,7 @@ export class SeaLife {
     this.objects = [this.body.mesh, this.body.ghost, this.fish.mesh, this.slicks.mesh, this.foam.mesh, this.spray.mesh, ...this.pod.objects];
     for (const o of [this.body.mesh, this.fish.mesh, this.spray.mesh]) o.layers.enable(REFLECTION_LAYER);
     for (const o of this.objects) fixTreeInPlace(o);
-    this.toys = new ToyFleet(wind);
+    this.toys = new ToyFleet(wind, camera);
     this.toys.group.traverse((o) => o.layers.enable(REFLECTION_LAYER));
     this.toys.onWake = (x, z, time) => this.foam.add(FOAM, x, z, 0.14, 1.2, time, 0.4, 0.1);
     this.objects.push(this.toys.group);
