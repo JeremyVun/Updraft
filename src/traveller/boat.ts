@@ -535,10 +535,11 @@ export class Boat {
     waterlineUniforms.uHullAt.value.set(this.position.x, this.position.z, Math.sin(this.yaw), Math.cos(this.yaw));
     this.wake.update(time);
     this.wakeIn -= dt;
-    if (!this.afloat || this.grounded || this.speed < 0.6 || this.wakeIn > 0 || this.altitude !== null) return;
+    if (!this.afloat || this.grounded || this.speed < 0.25 || this.wakeIn > 0 || this.altitude !== null) return;
     this.wakeIn = 0.15;
     const fx = Math.sin(this.yaw), fz = Math.cos(this.yaw);
-    const strength = Math.min(0.7, this.speed * 0.13);
+    // A floor keeps the newest foam at the stern as a slowing boat drifts, so the V never comes away from the hull.
+    const strength = Math.min(0.7, 0.22 + this.speed * 0.1) * Math.min(1, this.speed / 0.6);
     const spread = tuning.sail.wakeSpread;
     // Two broken trails peel off the quarters and open into a V; a small curl at each shoulder anchors the waterline.
     for (const side of [-1, 1]) {
