@@ -424,6 +424,19 @@ stairs' visibility in `src/main.ts` / `src/story/stairs*.ts`):
   Tools that redraw frozen frames call `grass.shadeFog(renderer)` after moving the camera; time any pass the scene's
   vertices read with `FRAME_SIM=1`.
 
+## After phase 8's visual pass (2026-10-03)
+
+- Medium keeps full bloom (a54fd71): half resolution spread wider and veiled the frame near the sun; the path is gone.
+- The stairs' wisps (b847edf, Jeremy: "Merge"): each card was a flat camera-facing plane through the middle of its
+  ball, depth-tested without writing depth, so a step, rail, knob or the child poking through it got a hard veil
+  line. Cards now sit halfway to the ball's front (`FRONT`) at the same screen size and fade to nothing within
+  `SOLID_FADE` (0.55 m) of analytic solids (each flight and landing, the loop's drawn-in flight through its warp,
+  capsules for the child and the cygnet), computed at a 4×4 grid on each instanced card (per pixel cost 1.2 ms).
+  Hard-edge pixels over 16 frames 2,036 → 17; cost in the noise; no program added. New solid geometry in the white
+  needs a shape in `SOLID_GLSL` / `flightSolid` / `figureSolid` (`docs/stairs.md`).
+- Dropped: the sky mirror's reflection kept at the ordinary size until the water stills (Jeremy: "a marginal /
+  negligible saving").
+
 ## Phase 8: whole-game verification
 
 - **Do:** re-run the profile's census (per-chapter drained ms, components, CPU, memory) back to back against the
