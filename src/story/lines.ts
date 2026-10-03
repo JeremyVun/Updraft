@@ -118,7 +118,7 @@ export class LinesChapter implements Chapter {
     switch (this.beat) {
       case 'wonder':
         c.lookAt = CURTAINS[0].center;
-        if (this.t > 3.5 && !c.busy) this.setDown();
+        if (this.t > 1 && !c.busy) this.setDown();
         break;
       case 'curtain': {
         const g = active!;

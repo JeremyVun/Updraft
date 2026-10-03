@@ -472,7 +472,7 @@ export class StairsChapter implements Chapter {
           else down();
         }
         if (!k.carried && !carry.busy) k.watch(this.look);
-        if (this.t > 4.2 && !carry.busy && !c.busy && !k.carried && k.seat === null) {
+        if (this.t > 2 && !carry.busy && !c.busy && !k.carried && k.seat === null) {
           c.lookAt = null;
           k.watch(null);
           k.stay = false;

@@ -169,7 +169,7 @@ export class BirchesChapter implements Chapter {
         /** A moment looking up the ride at all that gold, and the cygnet is put down to walk it with them. */
         if (this.puttingDown) break;
         c.lookAt = this.crest;
-        if (this.t > 4 && !c.busy) this.putDown();
+        if (this.t > 2 && !c.busy) this.putDown();
         break;
       case 'walk':
         this.updateWalk(time);
