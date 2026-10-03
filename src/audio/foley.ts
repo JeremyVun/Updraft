@@ -19,6 +19,7 @@ export class Foley {
   private lastFlap = -1;
   private frostHeard = false;
   private nextCrackle = 0;
+  private hearthBed: { src: AudioBufferSourceNode; roar: BiquadFilterNode; gain: GainNode; pan: StereoPannerNode } | null = null;
   private swanBeat = 0;
 
   setOutput(out: AudioOut | null): void {
@@ -27,6 +28,10 @@ export class Foley {
       this.noise = out.ctx.createBuffer(1, length, out.ctx.sampleRate);
       const data = this.noise.getChannelData(0);
       for (let i = 0; i < length; i++) data[i] = Math.random() * 2 - 1;
+    }
+    if (out !== this.out && this.hearthBed) {
+      this.hearthBed.src.stop();
+      this.hearthBed = null;
     }
     this.out = out;
   }
@@ -216,14 +221,48 @@ export class Foley {
     this.puff({at:at+.35,len:2.5,level:.018,pan:0,type:'bandpass',from:460,to:240,q:1.2,attack:.7,wet:.45});
   }
 
-  /** The last tiny pops stop with the flame. The waking alarm is deliberately silent. */
-  hearth(flame:number,near:number,pan:number):void {
-    if(!this.out || flame<.02 || near<.01)return;
-    const at=this.out.ctx.currentTime;
-    if(at<this.nextCrackle)return;
-    this.nextCrackle=at+.18+Math.random()*.45;
-    this.puff({at:at+.005,len:.10+Math.random()*.15,level:.018*flame*near,pan,type:'highpass',from:1100+Math.random()*1400,attack:.002});
-    this.puff({at:at+.01,len:.4,level:.009*flame*near,pan,type:'lowpass',from:350,attack:.04});
+  /**
+   * Wood burning: a low roar that breathes under it all, and crackles in small uneven clusters with now and then a
+   * sharper snap. The last of them stop with the flame. The waking alarm is deliberately silent.
+   */
+  hearth(flame: number, near: number, pan: number): void {
+    const out = this.out;
+    if (!out || !this.noise) return;
+    const { ctx } = out;
+    const at = ctx.currentTime;
+    const level = flame * near;
+    if (!this.hearthBed) {
+      if (level < 0.01) return;
+      const src = ctx.createBufferSource();
+      src.buffer = this.noise;
+      src.loop = true;
+      const roar = ctx.createBiquadFilter();
+      roar.type = 'lowpass';
+      roar.Q.value = 0.4;
+      const gain = ctx.createGain();
+      gain.gain.value = 0;
+      const panner = ctx.createStereoPanner();
+      src.connect(roar).connect(gain).connect(panner).connect(out.bus);
+      src.start();
+      this.hearthBed = { src, roar, gain, pan: panner };
+    }
+    const bed = this.hearthBed;
+    const breath = 0.72 + 0.28 * Math.sin(at * 1.3) * Math.sin(at * 0.47 + 1.1);
+    bed.gain.gain.setTargetAtTime(0.05 * level * breath, at, 0.25);
+    bed.roar.frequency.setTargetAtTime(240 + 220 * flame * breath, at, 0.3);
+    bed.pan.pan.setTargetAtTime(Math.max(-0.85, Math.min(0.85, pan)), at, 0.2);
+    if (level < 0.01 || at < this.nextCrackle) return;
+    this.nextCrackle = at - Math.log(1 - Math.random()) * 0.3 / Math.max(0.3, flame);
+    let t = at + 0.005;
+    for (let i = 0, n = 1 + Math.floor(Math.random() ** 2 * 5); i < n; i++) {
+      this.puff({ at: t, len: 0.006 + Math.random() * 0.014, level: 0.1 * level * (0.35 + Math.random() * 0.65) * (i ? 0.65 : 1),
+        pan: pan + (Math.random() - 0.5) * 0.15, type: 'bandpass', from: 1800 + Math.random() * 3600, q: 1.3, attack: 0.001 });
+      t += 0.012 + Math.random() * 0.05;
+    }
+    if (Math.random() < 0.08) {
+      this.puff({ at: t + 0.02, len: 0.03, level: 0.16 * level, pan, type: 'bandpass', from: 900 + Math.random() * 600, q: 1.8, attack: 0.001, wet: 0.06 });
+      this.puff({ at: t + 0.02, len: 0.05, level: 0.05 * level, pan, type: 'highpass', from: 3200, attack: 0.001 });
+    }
   }
 
   /** One downstroke of a small wing: more air than feather. */

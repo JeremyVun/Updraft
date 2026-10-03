@@ -38,7 +38,7 @@ function fixture(fps=60) {
   const carry=new Carry(child,cygnet);
   const cast={child,cygnet,flock,boat,plane,carry,wind,nearby:()=>false,
     life:{regions:{island:new THREE.Vector4(),wave:new THREE.Vector4(),waiting:new THREE.Vector4()}},
-    sleeping:{hearth:new SleepingHearth(),trail:new SleepingTrail(),carve(){},ribbon:new CurtainRibbon(CURTAIN_KNOT,CURTAIN_END),blanketEdge:SleepingIsland.prototype.blanketEdge,fold:new THREE.Vector3(),under:new THREE.Vector3(0,1.15,0),pull:{value:0},lift:{value:0},shown:{blanket:0,curtains:0},get curtainOpening(){return this.shown.curtains;},feather:new Feather(wind),bedside:BED.clone().add(new THREE.Vector3(2.25,0,-0.84)),pillowPuff(){},lane(){},laneOpen:0,fog:1,frost:0.3,dawn:0,curtains:0},
+    sleeping:{hearth:new SleepingHearth(),trail:new SleepingTrail(),carve(){},ribbon:new CurtainRibbon(CURTAIN_KNOT,CURTAIN_END),blanketEdge:SleepingIsland.prototype.blanketEdge,onCovers:SleepingIsland.prototype.onCovers,fold:new THREE.Vector3(),under:new THREE.Vector3(0,1.15,0),pull:{value:0},lift:{value:0},shown:{blanket:0,curtains:0},get curtainOpening(){return this.shown.curtains;},feather:new Feather(wind),bedside:BED.clone().add(new THREE.Vector3(2.25,0,-0.84)),pillowPuff(){},lane(){},laneOpen:0,fog:1,frost:0.3,dawn:0,curtains:0},
   };
   let time=0;
   const rig=new CameraRig();rig.resize(Number(process.env.W??1600),Number(process.env.H??900));

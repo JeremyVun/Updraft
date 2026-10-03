@@ -5,7 +5,7 @@ import { ATMO_GLSL, atmo } from '../world/atmosphere';
 import { heightAt } from '../world/island';
 
 /** How long the feather is, in world units: a swan's primary beside a bird a unit and a half tall. */
-const LENGTH = 0.82;
+export const FEATHER_LENGTH = 0.82;
 const STEPS = 14;
 
 const VERT = /* glsl */ `
@@ -55,7 +55,7 @@ function featherGeometry(): THREE.BufferGeometry {
   const pos: number[] = [];
   const vane: number[] = [];
   const index: number[] = [];
-  const spine = (t: number): [number, number, number] => [0, Math.sin(t * 1.4) * 0.07 * t, (t - 0.42) * LENGTH];
+  const spine = (t: number): [number, number, number] => [0, Math.sin(t * 1.4) * 0.07 * t, (t - 0.42) * FEATHER_LENGTH];
   for (let i = 0; i <= STEPS; i++) {
     const t = i / STEPS;
     /** Bare for the first fifth, widest a third of the way up, and drawn to a point at the tip. */
@@ -97,9 +97,11 @@ export class Feather {
   encouragement = 0;
   /** Additional hanging height over a visible obstruction on the assisted route. */
   clearance = 0;
-  /** 0 while it is still in the pillow, 1 once it is in the air. */
+  /** False while it still lies on the bed, true once it is in the air. */
   flying = false;
   preview: THREE.Vector3 | null = null;
+  /** Which way it lies, quill to tip. */
+  readonly previewAim = new THREE.Vector3(0, 0, 1);
   previewLift = 0;
   heldBy: { billTip(out: THREE.Vector3): THREE.Vector3; yaw: number } | null = null;
   catchingBy: Feather['heldBy'] = null;
@@ -114,6 +116,7 @@ export class Feather {
   private readonly spin = new THREE.Euler(0, 0, 0, 'YXZ');
   private phase = Math.random() * 6.28;
   private rest = 0;
+  private previewIn = 0;
   private turn = 0;
   private yaw = 0;
 
@@ -144,7 +147,7 @@ export class Feather {
 
   /** Out of the pillow: it comes away slowly and hangs there, which is the whole of the invitation. */
   release(from: THREE.Vector3, drift: THREE.Vector3): void {
-    this.preview = null; this.heldBy = null; this.catchingBy = null;
+    this.preview = null; this.heldBy = null; this.catchingBy = null; this.previewIn = 0;
     this.position.copy(from);
     this.velocity.copy(drift);
     this.goal.copy(from);
@@ -164,9 +167,14 @@ export class Feather {
     if (!this.flying) {
       if (this.preview) {
         this.mesh.visible=true;
+        this.previewIn=Math.min(1,this.previewIn+dt/1.2);
+        (this.mesh.material as THREE.ShaderMaterial).uniforms.uFade.value=this.previewIn;
         this.mesh.position.copy(this.preview);
-        this.mesh.position.y+=.08+this.previewLift*.3;
-        this.mesh.rotation.set(-1.05+Math.sin(time*2.4)*.08,-.35,Math.sin(time*1.7)*.12);
+        this.mesh.position.y+=this.previewLift*.03;
+        // Lying loose, it stirs; the strokes that will free it lift its tip off the quilt first.
+        const stir=.3+this.previewLift;
+        const a=this.previewAim;
+        this.mesh.rotation.set(-Math.asin(THREE.MathUtils.clamp(a.y,-1,1))-this.previewLift*.3+Math.sin(time*7.3)*.025*stir,Math.atan2(a.x,a.z),Math.PI+.75+Math.sin(time*5.1)*.04*stir,'YXZ');
       }
       return;
     }
