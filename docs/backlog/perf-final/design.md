@@ -310,9 +310,10 @@ The profile is `profile.md`. His answers, verbatim where quoted:
 - **Phase 7's survey (2026-10-03),** `profile.md` last section, stills in `/tmp/updraft-pf-p7-shots/`. Chosen:
   - Grass fog once per blade (built a quarter of the way up the blade, which is closer to today than the root): "Every level" (about 4.5% weighted, 10–11% at Sleeping and the summit,
     at most 4/255).
-  - The frame's internal buffers as `R11F_G11F_B10F` (scene, resolve, `post.clean`, bloom chain): "Every level"
+  - The frame's internal buffers as `R11F_G11F_B10F` (scene, resolve, `post.clean`, bloom chain): "Every level"; it
+    came in over its bound (up to 30/255 on glint halos) and Jeremy took it on the stills ("Take it", 2026-10-03)
     (3–5% weighted, up to 10% in the drowned village; about −60 MiB at Ultra; at most 3–5/255, no banding seen).
-  - Sea and terrain not drawn above the stairs' cloud on top and during the sail: "Build it", every level, dropped if
+  - Sea and terrain not drawn above the stairs' cloud on top and during the sail (built and dropped: the deck blends over the sea under the hull and at its lobes' edges, up to 209/255): "Build it", every level, dropped if
     any moment along the top or the sail shows more than a faint 2–3/255 (top 13–20%, sail 19–28%).
   - Near blades with 5 segments instead of 6: "Low only" (about 3% of a Low frame).
   - Taken as a free win (exact): the sky's storm bank skipped while there is no storm or lightning.

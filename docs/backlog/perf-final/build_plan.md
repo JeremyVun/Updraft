@@ -399,7 +399,20 @@ stairs' visibility in `src/main.ts` / `src/story/stairs*.ts`):
 - Sea and terrain not drawn above the stairs' cloud on top and during the sail, every level: a gate from the story's
   beat and the camera above the deck; `ALONG` against the pre-change commit along the whole top and sail must stay at
   most 3/255 everywhere, otherwise dropped. Never hide terrain while the sea draws (`LAND_SKIP`).
-- **Done:** 7b-grass [x] at 5af509a (2026-10-03); 7b-frame [ ]
+- **Done:** 7b-grass [x] at 5af509a (2026-10-03); 7b-frame [x] at 8d027de (2026-10-03).
+- **7b-frame as built:**
+  - `R11F_G11F_B10F` for the scene target and its resolve, `post.clean` and the bloom chain where the format
+    multisamples as well as RGBA16F (`compactFrameFormat` in `gl/graphics-capability.ts`; otherwise half-float RGBA).
+    Over its 5/255 bound (sea by day 30 on glint halos, drowned 12, others 2–11: Apple GPUs store R11F truncated
+    toward zero and bloom's threshold is nearly a step); Jeremy took it on the stills (2026-10-03, "Take it").
+    −60 MiB at Ultra, −49 at Low; Low 3.5–7.4%. It also removes a bright speck beside the Meadow rabbit where a shader
+    writes negative colour (−0.47), which ACES turned bright: the writer is not yet found.
+  - The sky's storm bank: a `STORM_BANK` axis on the sky (4 programs), selected in `prepareFrame` from storm cover or
+    lightning; exact (0 changed with and without a storm). A uniform branch round it moved sky pixels by 1/255; only
+    compiling it out kept them exact. Sea 2.8% at Low, elsewhere in noise.
+  - Dropped: the sea and terrain above the stairs' cloud. The deck's top blends over the sea at its lobes' edges and
+    through the hole under the hull, so the sky showed there instead (up to 209/255 along `ALONG`); `docs/stairs.md`
+    says why they stay drawn.
 - **7b-grass as built:** a per-frame pass (`FOG_FRAG`, `grass.shadeFog` in `grass.bake`, one program, about 5.5 MiB of
   half-float targets) works out each blade's fog once, a quarter of the way up the blade (lead's call: fog at the
   root read 6/255 at `island`, a quarter up is the closest to today everywhere measured); the blade's vertices read it
