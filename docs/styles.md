@@ -132,7 +132,14 @@ Set the mood and invite one click; discovering the wind belongs in the game.
   once on screen. One WebP per visit (`src/paintings/<room>-land.webp`, or `-port` under 3:4), requested at low
   priority. Cloud stairs anchors at 50% 65% when cropped, giving the close stairs room above the invitation.
   Leaving, the painting fades with the invitation (.8 s) before the veil dissolves, so it never cross-fades
-  into the game's own view; while chapters are open it fades back to the plain veil (.6 s). Reduced motion: no fades.
+  into the game's own view; while chapters are open it stays behind the list. Reduced motion: no fades.
+- **Chapters over the paintings.** The list is two rows of six tiles, `--still: clamp(88px, 10vw, 176px)` wide (four
+  rows of three, 98 px, on a phone), names under them in 14 px italic at .86, standing on `back`, which takes the place
+  of `chapters`. There is no box or blur: one near-black gradient (#0e1014), tied to the tiles' top edge, prints the
+  painting down to .84 to .88 under the names and opens out to about a tenth above the tiles, so the room reads above
+  the list while every name keeps 4.5:1 against the brightest 5% behind it. Tiles rest at brightness .74; the current,
+  hovered or focused one goes to full brightness and grows 4%, and keyboard focus underlines its name. If the title's
+  painting was late, the veil stays plain and nothing is darkened until a looked-at room's painting arrives.
 - `start over` is drawn like `chapters` (16 px italic at .5) and shows for any valid save. Its first press turns it
   in place into `start over and lose your progress?` (.85); a second starts the first island. The question goes back
   after 6 s, on Escape or when focus leaves it.

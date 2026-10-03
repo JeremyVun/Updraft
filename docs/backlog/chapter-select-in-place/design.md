@@ -204,8 +204,8 @@ ones (Continue .95 to .82; `chapters` and `start over` .5, the armed confirmatio
   the veil dissolves into the game as today, so a painting never cross-fades into the game's own view. The veil's
   dissolve waits until .8 s after the press when a painting shows, up to .3 s later than without one.
 - **Chapters.** Chapter select's tiles are the same paintings cut to 400x250, replacing the captures, so a room has one
-  picture everywhere. While the list is open the painting fades back to the plain veil (.6 s), because the tiles and
-  names do not read over a painting. A pick's panel fades out over .45 s with a `chapters-out` animation (a
+  picture everywhere. While the list is open the painting stays behind it, printed down under the tiles, and follows
+  the room looked at ("Chapters over the paintings" below). A pick's panel fades out over .45 s with a `chapters-out` animation (a
   transition cannot start there under the `chapters-in` animation's fill, which made the panel vanish in one frame).
 - **Start over.** Drawn like `chapters`; shown for any valid save, a completed one included; never for Begin. The
   first press turns it in place into `start over and lose your progress?` (Jeremy's words); a press on that starts the
@@ -499,3 +499,28 @@ A (2 x 6) is chosen; B (single row) and the `chapterlayout` switch go. Round 2 l
 little smaller so the hovered painting's subject shows above them; round 1's tile sizes (166 px at 1440, 184 at 1600,
 200 at 1903) stay the fallback if Jeremy asks for them back. The painting stays on the last room looked at, and `back`
 stays where `chapters` was (recommended to Jeremy, not objected to).
+
+### Round 2, 2026-10-04
+
+The grid lower and a little smaller, now the only layout. Frames and measurements:
+`/tmp/updraft-chapters-r2-XqGt/index.html` (round 1 left, round 2 right).
+
+- **Tiles** are one value, `--still` on `.chapters`: `clamp(88px, 10vw, 176px)`, 144 px at 1440, 160 at 1600 and 176
+  at 1903 (12 to 13% smaller). If Jeremy asks for the larger tiles, round 1's `clamp(100px, 11.5vw, 200px)` (166, 184,
+  200) goes back in the same place. The phone's tiles are 98 px instead of 109.
+- **Lower.** The grid stands 4 px above `back`'s box instead of 18, with tighter rows (`clamp(12px, 2vh, 20px)`).
+  `back` stays where `chapters` was, so it sets how low the grid can go. The grid's top moves from 46.8% to 52.0% of
+  the height at 1440x900, from 44.2% to 49.8% at 1600x900, from 40.5% to 46.1% at 1903x876, and from 27.1% to 33.3% on
+  a 390x844 phone.
+- **Muting.** The painting is printed down hard (.84) only from 6vh below the tiles' top edge, where the top row's
+  names sit; it eases to .7 at the edge, .34 at 8vh above it, .14 at 20vh and .1 at the top (round 1: .84 at the edge,
+  then .56, .32 and .24).
+- **Subjects.** At 1440 the Meadow's piano now shows whole above the grid, keys included; only its bench stays behind
+  the tiles. Sky mirror's sail and lantern read, with its hull at the grid's top edge. The Still island's kite and
+  sail read, with the hull behind the top row. The Dark wood's swirl sits at 60 to 75% of the painting's height and
+  stays mostly behind the grid, with its glow showing between the top tiles. On a phone the subjects sit mid-height in
+  the portrait paintings and stay behind the four rows; there the gain is the sky and the tops (Home's tree, the
+  island's kite).
+- **Measured** (same method as round 1): every name keeps at least 5.9:1 (`Open sea` at 1903 over the Dark wood with
+  a wind stroke crossing behind it; otherwise 9.0:1 or more) and `back` at least 5.3:1. The nearest item is 145 px or
+  more from the corner controls on desktop and 68 px on the phone.
