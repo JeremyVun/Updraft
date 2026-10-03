@@ -254,9 +254,10 @@ drawn and the ordinary sea mirrors only the sky, while the sky mirror keeps its 
 level. The seabed's detail is its sand grain, ripples, weed and caustics; without it the bed keeps their averages, so
 the shallows keep their colour. The sea's effects are one variant axis (`SEA_EFFECTS` in `water.ts`: all, all but
 the collar, none), selected only by `applyWorldQuality`.
-Every level presents at up to 60 fps. Jeremy's rulings: "ultra, high, medium, low. dont overcomplicate this"; Medium
-and Low keep full grass; Low is not capped to 30 fps ("just let it target 60 fps", 2026-10-03), and there is no
-step below Low (2026-10-03).
+Every level presents at up to 60 fps ("just let it target 60 fps"), and Low is Auto's floor. Jeremy's rulings: "ultra,
+high, medium, low. dont overcomplicate this"; every level keeps full grass, and Low keeps 2× MSAA because the fading
+scenery fades by alpha to coverage (a dither breaks into coloured grain under the grade's lens fringe). A switched-off
+effect is compiled out or its pass skipped, never branched round (Program variants).
 
 A level is a `QualityLevel`: its `name` (`ultra`, `high`, `medium`, `low`), render scale and samples. Its
 world settings are `WORLD_QUALITY[name]`. `applyWorldQuality(level)` in `main.ts` is the one place a level's settings
@@ -309,8 +310,10 @@ would smear one bad pixel across the screen); bloom added in place on that plain
 toning, vignette, grain) straight to the screen. Nothing in the chain reads alpha, so the scene target, its resolve,
 the plain target and bloom's targets are `R11F_G11F_B10F`, half the memory and bandwidth of half-float RGBA, wherever
 the device multisamples that format as well (`compactFrameFormat`; half-float RGBA otherwise). The format holds no
-negative colour (a shader that writes one shows black there, not the bright speck the grade's ACES made of it) and
-Apple GPUs store it truncated, a fraction of a percent darker; near bloom's threshold that can move a glint's halo by
+negative colour; half-float keeps it, and the grade's ACES makes a bright speck of it. Multisampling shades an edge
+sample at the pixel centre even when that lies outside the triangle, so blends passed from the vertices extrapolate
+there: a shader that mixes colours by them clamps its output at zero (the rabbits, reeds, swans, songbirds and
+cygnet do), which is what the compact format stores anyway. Apple GPUs store it truncated, a fraction of a percent darker; near bloom's threshold that can move a glint's halo by
 a few levels. Bloom follows the level: full, or off at Low, when its passes are skipped and its targets released.
 Half-resolution bloom spread wider and veiled the frame near the sun while saving almost nothing. Turning it on or
 off eases its strength over one second, as the grass changes; boot draws it once whatever the level, so its programs
@@ -423,6 +426,14 @@ Rules:
   nearest) and fast math regroups float sums, so a fused pass cuts and orders with bit operations (`storeHalf`, `pin`).
 - Touching pieces of one material are not merged into one draw: three sorts separate meshes front to back every
   frame, and that order decides exact depth ties along where they meet (`mirror-merge` in `tools/frame-profile.mjs`).
+- Measured and not worth repeating without a new reason: tiled noise textures for single-octave `vnoise` (one sample
+  costs about as much; only four-octave `fbm` pays); skipping empty grass tiles (none are empty at every density);
+  skipping the seabed where water hides it (never hidden where drawn); a bloom gate (nothing proves in advance that no
+  pixel crosses its threshold); hiding the sea and terrain above the stairs' cloud (the deck blends over them,
+  `docs/stairs.md`); the sky mirror's pass where it is out of view (every sea pixel samples it there); folding
+  `waterWindAt`, `backlit` or `fogOf`'s `skyRadiance` (the compiler already shares them); readbacks every other frame
+  and creatures on the baked height copy (not exact for little gain); resting the drowned village during the stairs
+  (its leaf drift has no catch-up).
 - Scenery nothing moves, turns or reparents is fixed with `fixInPlace` (`gl/fixed.ts`) where it is built, so renders
   skip its matrices; anything that moves stays automatic. `tools/fixed-matrices-check.mjs` fails if a fixed object moves.
 
@@ -473,7 +484,11 @@ step that also calls `grass.update` and `grass.bake`, and lower the thresholds (
 the GPU the bottleneck on purpose; `EXT_disjoint_timer_query` is meaningless on ANGLE's Metal backend.
 `tools/frame-profile.mjs` gives CPU profiles, a per-pass and per-object draw census and paired frozen ablations;
 `tools/window-hitch.mjs` compares window-move gaps between two builds; `tools/audio-cost.mjs` measures the audio
-graph's CPU, sound on against muted.
+graph's CPU, sound on against muted. `tools/memory-census.mjs` sizes every texture, target and buffer by owner.
+`frame-profile` with `PAIR_BASE=<another dev server>` times the same frozen frame on two builds in one browser, ABBA
+over 40 rounds, so outside load lands on both sides of every pair; `tools/frame-spikes.mjs` counts slow frames through
+the stairs played on frames and across level switches. The last whole-game census (per room at Ultra and Low,
+components, script, memory, spikes, weighted by minutes) is `git show 25b6bb2:docs/backlog/perf-final/profile.md`.
 
 - **Energy is cost × minutes.** Heat and battery over a playthrough follow each room's cost per frame times the time
   spent there, plus CPU script and the audio graph, which cost CPU on the scale of the script itself. A saving in a
@@ -498,3 +513,5 @@ are not iPad frame rates or battery figures. Don't run benchmarks unless Jeremy 
   shader warm-up without chapter-entry stalls.
 - Graphics memory has no target-device budget: the grass tables (about 28 MiB), the static atlases (about 26 MiB) and
   the scene, MSAA, reflection and bloom targets on older iPads.
+- The child's bone texture is the one texture written mid-pass. Uploading it before the frame's passes is exact; on
+  the Mac it costs 2–4% of a weighted frame but saves 8–12% on top of the stairs and the sail. Decide on the iPad.

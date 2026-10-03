@@ -2,7 +2,8 @@
 // texture and GPU buffer the running game holds, with dimensions, format and estimated bytes, named by the object
 // that owns it, and whether anything used it over the frames watched at each chapter.
 // node tools/memory-census.mjs [island meadow:walk stairs:sail sea ...]
-// RATIO=1.5 MSAA=2 LEVEL=ultra|high|medium|low|last FRAMES=120 BASE=http://127.0.0.1:5230/ OUT=/tmp/updraft-memory-census
+// RATIO=1.5 MSAA=2 LEVEL=ultra|high|medium|low FRAMES=120 BASE=http://127.0.0.1:5230/ OUT=/tmp/updraft-memory-census
+// STATE='<js>' runs in main.ts's scope after the fixture (an older build's settings, which LEVEL cannot name).
 // BASE must be a dev server: the tool patches src/main.ts, which a built bundle does not serve.
 // How: WebGL2 calls are wrapped before the page loads, so every allocation is sized from the call that stores it
 // (texImage*, texStorage*, renderbufferStorage*, bufferData); deleted objects drop out. Owners come from a
@@ -109,6 +110,7 @@ window.__memAudit = {
   fastRatio: null,
   fast(on) { if (on) { this.fastRatio ??= pixelRatio; pixelRatio = 0.5; resize(); } else if (this.fastRatio) { pixelRatio = this.fastRatio; this.fastRatio = null; resize(); } },
   level(name) { applyWorldQuality({ ...quality.level, name }, true); return { level: name, grass: { ...grass.quality }, mirrorScale: water.mirrorScale, mirrorEvery: water.mirrorEvery }; },
+  state(code) { return eval(code); },
   used: null,
   start() { this.used = { textures: new Set(), targets: new Set(), geometries: new Set(), arrays: new Set() }; },
   stop() { const u = this.used; this.used = null; return u; },
@@ -244,6 +246,7 @@ try {
     if (entry === 'stairs' && fixture) await stairsFixture(page, fixture, on => page.evaluate(on => __memAudit.fast(on), on));
     else if (fixture) await page.evaluate(fixture => { const c = __game.story.current; c.skipToCrest(); if (fixture !== 'walk') c.reveal(); }, fixture);
     const detail = process.env.LEVEL ? await page.evaluate(d => __memAudit.level(d), process.env.LEVEL) : undefined;
+    const state = process.env.STATE ? await page.evaluate(code => __memAudit.state(code), process.env.STATE) : undefined;
     await page.waitForTimeout(2500);
     const census = await page.evaluate(survey);
     await page.evaluate(() => __memAudit.start());
@@ -261,7 +264,7 @@ try {
     }
     const totals = {};
     for (const o of census.objects) { const t = totals[o.kind] ??= { bytes: 0, unused: 0, count: 0 }; t.bytes += o.bytes; t.count++; if (!o.used) t.unused += o.bytes; }
-    const row = { chapter, ratio: process.env.RATIO ?? '1.5', msaa: process.env.MSAA ?? '2', detail, frames: FRAMES, canvas: census.canvas, contextAttributes: census.attributes,
+    const row = { chapter, ratio: process.env.RATIO ?? '1.5', msaa: process.env.MSAA ?? '2', detail, state, frames: FRAMES, canvas: census.canvas, contextAttributes: census.attributes,
       info: census.info, visited: census.visited, used: { ...used, ids: undefined }, totals, byOwner, objects: census.objects.sort((a, b) => b.bytes - a.bytes), errors };
     report.push(row);
     await fs.writeFile(out + '.json', JSON.stringify(report, null, 2));
