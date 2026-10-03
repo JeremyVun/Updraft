@@ -72,6 +72,31 @@ coverage across two runs, not one uninterrupted pass. The driver knows puzzle ta
 first-time discoverability; this pass also does not cover listening or performance on other devices.
 Evidence is in `/private/tmp/updraft-motion-review-Sww9sA/` (`journey` and `continued`).
 
+## Polish pass — 2026-10-03
+
+Branch `polish/review` in `/private/tmp/updraft-polish`; nothing reaches `main` until Jeremy approves it. Jeremy's
+brief, after a look-review proposed five cheap visual wins and some level ideas:
+
+> "work in a worktree so that i can approve any change before it gets into main
+>
+> - yea lets try all 5 free visual wins. I'm not sure about (4), but willing to try and see
+> - One other issue i found on the island of lines is that when you blow the washing up on each of the three blocking puzzles, it kind of just hangs in mid air, which looks a bit strange.
+> - nice idea for adding dream echoes
+> - hapy to add a lone tree on the home island to see how that looks. I'm not sure if "rolling irish hill" is right anymore though, so im more wary of changing the terrain itself.
+> - on the little boats island, i also noticed that the boat that the child picks up looks like it's already basically on the water already, and the child also lets the cygnet down onto the ground near the stream instead of earlier on
+>
+> If you come up with any other ideas let me know."
+
+The five wins: (1) the boat's wake opens into a V instead of two parallel strips; (2) the sleeping meadow's bare far
+fields match the silver of its grass instead of reading as tan desert; (3) backlit rocks go cool, not black; (4) the
+child leaves footprints in sand; (5) the sleeping island's snowdrift reads as snow, not a laid sheet.
+Dream echoes: something small from the room before washed up on the next room's arrival beach. The home tree: one
+lone tree, no terrain change.
+
+Parcels: the lead does 1, 2, 3 and 5 here; `polish/boats` (`/private/tmp/updraft-polish-boats`) the washing curtains
+and the little boats; `polish/beach` (`/private/tmp/updraft-polish-beach`) footprints, dream echoes and the home tree.
+Each change is shown to Jeremy as before/after stills.
+
 ## Later
 
 - A second companion: Jeremy would "eventually like to add another animal later one and make this a much more
