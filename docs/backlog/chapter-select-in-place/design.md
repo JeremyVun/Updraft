@@ -14,6 +14,16 @@
 
 > no reload version
 
+Phase 3, 2026-10-03:
+
+> one other usability issue i found was that if the player is continuing from a save, they,
+> a) don't know what that contuination point is before they press "continue" (I assume we can re-use the chapter images for this?)
+> b) can't "Restart" from the beginning if they wanted to.
+
+Rulings, 2026-10-03: this is phase 3 of this item, not its own item ("Phase 3 of this item"). Restart asks before it
+replaces the save ("Two-step confirm": a quiet start-over under Continue; the first press turns it in place into a
+short confirmation, a second press starts the first island).
+
 ## What changes for the player
 
 Today a pick in `chapters` saves the choice in `sessionStorage`, reloads the page, loads the whole game again and
