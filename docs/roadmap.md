@@ -97,6 +97,10 @@ three dream echoes (boats, birches, stairs) and the home tree. His second round,
 > - the v can disappear sometimes which is strange.
 > - ok, have a go adding reeds and varying the camera angle for a few beach arrivals"
 
+On the curtains, after a parting-curtains attempt: "nope, i dont think it should brush aside like curtains. that is
+completely wrong. The theme of this island isa bout washing on a clothes line being blown about, that is how it should
+feel like." The sheet stays pegged; held open, it streams, flaps and billows in a breeze that keeps blowing through.
+
 Open, on branch `polish/round2` (`/private/tmp/updraft-polish2`), each shown to Jeremy as before/after stills before
 `main`: backlit rocks that keep a shadow but not a black one; the boat wake's V (it sometimes vanishes); a clearer
 way for the curtains to stay open; a rubber duck on the meadow's beach; the toy fleet sailing by on the open sea,
