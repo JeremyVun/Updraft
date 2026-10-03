@@ -1242,11 +1242,11 @@ export const tuning = {
     unseenAt: 30, lostAt: 320,
     /** Within this of the boat the cygnet stops watching the pod and watches them; within `noticeAt` it is restless to go. */
     sightedAt: 26, noticeAt: 22,
-    /** It goes in once the child's own toy is this far ahead of the cygnet or nearer, or after `waitFor` on the side regardless. */
+    /** It goes in once the toy it is watching is this far ahead of the child or nearer, or after `waitFor` on the side regardless. */
     goInAhead: 6.5, waitFor: 7,
     /** The boat eases for the swim once the toy it is watching is this near. */
     easeWithin: 11,
-    /** Swimming out, how close beside the child's own it swims round it, and for how long among them before it turns back. */
+    /** How close beside a toy it swims, and for how long among them before it turns back. */
     swimClear: 1.2, playFor: 4,
     /** Seconds of a toy's way it keeps clear of, ahead of the toy. */
     giveWay: 0.6,
@@ -1262,13 +1262,13 @@ export const tuning = {
     reach: 7.5,
     /** It makes for the child's own toy unless another is this much nearer. */
     preferOwn: 2.5,
-    /** It turns back early if the toys have fallen this far astern of the child in the boat. */
+    /** It turns back early once its toy has fallen this far astern of the child in the boat. */
     turnBackAstern: 4.5,
   },
   seaPassage: {
     speed: 10,
     arrivalSpeed: 3.5,
-    /** The most the boat makes while the cygnet is in the water: it eases for a swimmer, never to a crawl. */
+    /** The most the boat makes from when the toys come near until the cygnet is out of the water: it eases for a swimmer, never to a crawl. */
     swimSpeed: 2.4,
     /** How much of the boat's way the wave along its side gives the swimming cygnet, and how fast the swim's cap comes in. */
     swimCarry: 0.75,
