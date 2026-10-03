@@ -194,6 +194,7 @@ body.starting #plane-guide { visibility: hidden; }
   transition: opacity 1.6s ease;
 }
 .veil-painting { object-fit: cover; }
+.veil-painting[data-room="stairs"] { object-position: 50% 65%; }
 /* A neutral near-black from the paintings' own shade, eased out by 40% up; the one place to retune it. Continue keeps
    4.5:1 at its faintest on the palest rooms (Still island, Cloud stairs). */
 .veil-shade {

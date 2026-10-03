@@ -194,6 +194,7 @@ body.starting #plane-guide { visibility: hidden; }
   transition: opacity 1.6s ease;
 }
 .veil-painting { object-fit: cover; }
+.veil-painting[data-room="stairs"] { object-position: 50% 65%; }
 /* A neutral near-black from the paintings' own shade, eased out by 40% up; the one place to retune it. Continue keeps
    4.5:1 at its faintest on the palest rooms (Still island, Cloud stairs). */
 .veil-shade {
@@ -203,7 +204,8 @@ body.starting #plane-guide { visibility: hidden; }
     rgb(var(--shade) / .02) 37.5%, rgb(var(--shade) / 0) 40%);
 }
 #veil.painted :is(.veil-painting, .veil-shade) { opacity: 1; }
-#veil.painted { --low: max(200px, 28vh); }
+#veil.painted { --low: max(160px, 22vh); }
+#veil.painted.finished { --low: max(220px, 22vh); }
 #veil.painted #begin { top: calc(100% - var(--low)); }
 
 .start-over {
@@ -609,4 +611,4 @@ body.graphics-lost #veil { visibility: hidden; }
           <rect x="3" y="2" width="14" height="24" rx="7"/>
           <path d="M3 12h14M10 2v10"/>
         </svg>
-      </button></div><div id="review-controls"><select id="room"><option>island</option><option>washing</option><option>boats</option><option>meadow</option><option>birches</option><option>stairs</option><option>drowned</option><option>wood</option><option>sleeping</option><option>sea</option><option>mirror</option><option>home</option></select><label><input type="checkbox" id="overlay" checked> Veil overlay</label></div><script>const select=document.querySelector("#room"); const q=new URLSearchParams(location.search); select.value=q.get("room")||"meadow"; function update(){document.querySelector(".veil-painting").src="masters/"+select.value+"-"+(innerWidth/innerHeight<.75?"port":"land")+".png";} select.onchange=update; onresize=update; document.querySelector("#overlay").onchange=e=>document.body.classList.toggle("bare",!e.target.checked); if(q.has("capture"))document.querySelector("#review-controls").remove(); update();</script>
+      </button></div><div id="review-controls"><select id="room"><option>island</option><option>washing</option><option>boats</option><option>meadow</option><option>birches</option><option>stairs</option><option>drowned</option><option>wood</option><option>sleeping</option><option>sea</option><option>mirror</option><option>home</option></select><label><input type="checkbox" id="overlay" checked> Veil overlay</label></div><script>const select=document.querySelector("#room"); const q=new URLSearchParams(location.search); select.value=q.get("room")||"meadow"; function update(){document.querySelector(".veil-painting").dataset.room=select.value;document.querySelector(".veil-painting").src="masters/"+select.value+"-"+(innerWidth/innerHeight<.75?"port":"land")+".png";} select.onchange=update; onresize=update; document.querySelector("#overlay").onchange=e=>document.body.classList.toggle("bare",!e.target.checked); if(q.has("capture"))document.querySelector("#review-controls").remove(); update();</script>

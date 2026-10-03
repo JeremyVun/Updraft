@@ -201,6 +201,7 @@ class StartScreen {
   private paint(room: string): void {
     const img = document.createElement('img');
     img.className = 'veil-painting';
+    img.dataset.room = room;
     img.alt = '';
     img.decoding = 'async';
     img.fetchPriority = 'low';

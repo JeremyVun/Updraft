@@ -130,7 +130,8 @@ Set the mood and invite one click; discovering the wind belongs in the game.
   `chapters` 50 px below it, `start over` 50 px below, or 94 px under `chapters`. A painting that has not decoded
   when the veil turns ready is never shown that visit: the plain veil keeps the invitation centred, so nothing moves
   once on screen. One WebP per visit (`src/paintings/<room>-land.webp`, or `-port` under 3:4), requested at low
-  priority. Leaving, the painting fades with the invitation (.8 s) before the veil dissolves, so it never cross-fades
+  priority. Cloud stairs anchors at 50% 65% when cropped, giving the close stairs room above the invitation.
+  Leaving, the painting fades with the invitation (.8 s) before the veil dissolves, so it never cross-fades
   into the game's own view; while chapters are open it fades back to the plain veil (.6 s). Reduced motion: no fades.
 - `start over` is drawn like `chapters` (16 px italic at .5) and shows for any valid save. Its first press turns it
   in place into `start over and lose your progress?` (.85); a second starts the first island. The question goes back

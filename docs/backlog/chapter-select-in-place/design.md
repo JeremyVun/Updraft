@@ -354,11 +354,20 @@ Jeremy's final framing and marketing directions:
 > you could also have just moved the "Begin" / "continue" button down a bit as well (i think we may have to do this anyway so it looks nice on most of the other images)
 
 Keep the close original Cloud stairs landscape and lower the shared invitation from 72% toward 78% height.
+On wide screens, the stairs painting uses `object-position: 50% 65%` to show a little more foreground without
+shrinking the stairs or modifying the PNG. Portrait and 16:10 framing keep the same image scale.
 Finished saves retain at least 220 px below the invitation for their additional action, avoiding phone overlap.
 The mouse icon now has an equal reserved column on the right, so the word itself is centred. Prefer adjusting the
 overlay's space before shrinking a chapter's showcase subject. The collage uses the selected portrait masters in
 story order, six columns by two rows, with no overlays: `assets/promo/updraft-chapter-collage.png` (5106x3688) and
 `updraft-chapter-collage-share.jpg` (2340x1688). Its HTML layout sits beside them; the source paintings are unchanged.
+
+Validation for this art pass: the production build (including TypeScript) passes on the updated main checkout.
+The 24 installed images decode at their native dimensions. A browser harness mounts the real `StartScreen` and
+its styles without the 3D world, checking every painting at 1903x876, 1440x900 and 390x844, the `still` alias, exact
+label centring and the finished-save phone stack. Evidence is in `/private/tmp/updraft-veil-final-review-7HqpOm/`.
+The full `start-check` was interrupted when the requested layout changed; its earlier successful checks do not
+constitute a complete end-to-end run of the final version. The focused layout harness covers this pass's changes.
 
 ### Decisions
 
