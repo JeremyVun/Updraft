@@ -1,5 +1,4 @@
 import './chapter-select.css';
-import { QA } from '../qa';
 
 /** Each room's `?chapter=` start, its name and its still, in the order of the journey. */
 const ROOMS: [start: string, name: string, still: URL][] = [
@@ -16,9 +15,6 @@ const ROOMS: [start: string, name: string, still: URL][] = [
   ['mirror', 'Sky mirror', new URL('./stills/mirror.webp', import.meta.url)],
   ['jetty', 'Home', new URL('./stills/home.webp', import.meta.url)],
 ];
-
-/** Comp only, until Jeremy picks one: `chapterlayout=row` draws the rooms as one row instead of two rows of six. */
-const LAYOUT = QA && new URLSearchParams(location.search).get('chapterlayout') === 'row' ? 'row' : 'grid';
 
 /** A pointer that only passes over a tile does not fetch its painting. */
 const DWELL = 120;
@@ -37,10 +33,11 @@ function el<K extends keyof HTMLElementTagNameMap>(tag: K, className: string, te
  * new one fades in over the old, which stays whole underneath until covered, so a crossfade never dips.
  */
 class Backdrop {
-  readonly root = el('div', `chapters-backdrop chapters-backdrop-${LAYOUT}`);
+  readonly root = el('div', 'chapters-backdrop');
   room = '';
   private readonly images = new Map<string, HTMLImageElement>();
   private top = 0;
+  private current: HTMLImageElement | null = null;
 
   constructor() {
     this.root.append(el('div', 'chapters-mute'));
@@ -67,12 +64,18 @@ class Backdrop {
   }
 
   private reveal(img: HTMLImageElement, now: boolean): void {
-    if (img.classList.contains('shown') && +img.style.zIndex === this.top) return;
-    const z = ++this.top;
-    img.style.zIndex = String(z);
+    if (img === this.current) return;
+    this.current = img;
     this.root.classList.add('lit');
+    // Looked back at before the next painting covered it, it is still whole underneath: the ones over it fade away.
+    if (!now && img.classList.contains('shown') && getComputedStyle(img).opacity === '1') {
+      for (const other of this.images.values()) if (other !== img) other.classList.remove('shown');
+      return;
+    }
+    img.style.zIndex = String(++this.top);
     const covered = (): void => {
-      for (const other of this.images.values()) if (+other.style.zIndex < z) other.classList.remove('shown');
+      if (!img.classList.contains('shown')) return;
+      for (const other of this.images.values()) if (+other.style.zIndex < +img.style.zIndex) other.classList.remove('shown');
     };
     if (now) {
       img.classList.add('now', 'shown');
@@ -81,9 +84,14 @@ class Backdrop {
       covered();
       return;
     }
+    // A painting that decoded before its first style pass would otherwise appear without its fade.
+    void getComputedStyle(img).opacity;
     img.classList.add('shown');
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) covered();
-    else img.addEventListener('transitionend', covered, { once: true });
+    const whole = (): void => {
+      if (getComputedStyle(img).opacity === '1') covered();
+      else if (img.classList.contains('shown')) requestAnimationFrame(whole);
+    };
+    whole();
   }
 }
 
@@ -95,16 +103,14 @@ export function offerChapters(veil: HTMLElement, begin: (start: string) => void)
   const toggle = el('button', 'chapters-toggle', 'chapters');
   toggle.type = 'button';
   toggle.setAttribute('aria-expanded', 'false');
-  const panel = el('div', `chapters chapters-${LAYOUT}`);
+  const panel = el('div', 'chapters');
   panel.setAttribute('role', 'dialog');
   panel.setAttribute('aria-label', 'Chapters');
   panel.hidden = true;
   const list = el('ul', 'chapters-list');
-  const caption = el('p', 'chapters-caption');
-  caption.setAttribute('aria-hidden', 'true');
   const back = el('button', 'chapters-back', 'back');
   back.type = 'button';
-  panel.append(caption, list, back);
+  panel.append(list, back);
   for (const node of [toggle, panel]) {
     node.addEventListener('pointerdown', e => e.stopPropagation());
     node.addEventListener('click', e => e.stopPropagation());
@@ -117,7 +123,7 @@ export function offerChapters(veil: HTMLElement, begin: (start: string) => void)
   // Where the list begins, so the painting is darkest under the tiles and opens out above them.
   const fold = (): void => {
     if (panel.hidden) return;
-    const top = (LAYOUT === 'row' ? list.getBoundingClientRect().top - 56 : list.querySelector('.chapter')?.getBoundingClientRect().top) ?? 0;
+    const top = list.querySelector('.chapter')?.getBoundingClientRect().top ?? 0;
     backdrop.root.style.setProperty('--fold', `${Math.round(veil.clientHeight - Math.max(0, top))}px`);
   };
   window.addEventListener('resize', fold);
@@ -125,7 +131,6 @@ export function offerChapters(veil: HTMLElement, begin: (start: string) => void)
   const show = (start: string, now = false): void => {
     backdrop.look(paintingOf(start), now);
     for (const button of list.querySelectorAll<HTMLElement>('.chapter')) button.classList.toggle('current', button.dataset.start === start);
-    caption.textContent = ROOMS.find(r => r[0] === start)?.[1] ?? '';
   };
 
   // The stills are fetched only once the player reaches for the list.
@@ -171,8 +176,6 @@ export function offerChapters(veil: HTMLElement, begin: (start: string) => void)
     if (start) show(start, true);
     const first = list.querySelector<HTMLElement>(start ? `[data-start="${start}"]` : '.chapter');
     first?.focus({ preventScroll: true });
-    // Not scrollIntoView: it would also scroll the veil, which clips but still scrolls.
-    if (LAYOUT === 'row' && first) list.scrollLeft = first.offsetLeft - (list.clientWidth - first.offsetWidth) / 2;
   };
   const close = (): void => {
     veil.classList.remove('choosing');
@@ -192,7 +195,7 @@ export function offerChapters(veil: HTMLElement, begin: (start: string) => void)
   // `back` stands where `chapters` was, so the second press of a double click must not close the list again.
   back.addEventListener('click', e => { if (e.detail < 2) close(); });
   panel.addEventListener('click', e => {
-    if (e.target === panel || e.target === list || e.target === caption) close();
+    if (e.target === panel || e.target === list) close();
   });
   panel.addEventListener('keydown', e => {
     if (e.key === 'Escape' && !veil.classList.contains('chapter-chosen')) close();
