@@ -150,7 +150,8 @@ void main() {
     float flattened = insideUv(dUv) ? smoothstep(0.3, 1.0, length(texture(uBendTex, dUv).xy)) : 0.0;
     float waves = fbm(xz * 0.016 - uBreeze * uTime * 0.016);
     field *= 0.88 + 0.24 * waves + 0.35 * flattened;
-    field = mix(stillGrey(field), field, life);
+    /** Still grass reads darker and cooler than a flat grey ground, its blades shading each other against the sky. */
+    field = mix(stillGrey(field) * vec3(0.62, 0.64, 0.7), field, life);
     tint = mix(stillGrey(tint), tint, life);
   }
   vec3 under = uGround * (0.85 + 0.3 * grain);
