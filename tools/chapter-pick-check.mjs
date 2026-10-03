@@ -99,8 +99,9 @@ async function compare(start, name, from, saves) {
   entry.evidence = { boatsPartOnFrame: parted || null, lateReadbackFrames: { pick: late(a.trace), fresh: late(b.trace) } };
   delete a.trace;
   delete b.trace;
+  const frames = f => `${f.length}${f.length ? ` from frame ${f.slice(0, 6).join(',')}${f.length > 6 ? '…' : ''}` : ''}`;
   const { pick: lp, fresh: lf } = entry.evidence.lateReadbackFrames;
-  console.log(`${start.padEnd(9)} from ${from.padEnd(8)} ${b.name}/${b.checkpoint}  child ${(entry.metres.child * 100).toFixed(3)} cm  boat ${(entry.metres.boat * 100).toFixed(3)} cm  cygnet ${(entry.metres.cygnet * 100).toFixed(3)} cm  ${differs.length ? 'DIFFERS: ' + differs.join('; ') : 'same'}  (boats part on frame ${parted || 'none'}; late readbacks pick [${lp}] fresh [${lf}])`);
+  console.log(`${start.padEnd(9)} from ${from.padEnd(8)} ${b.name}/${b.checkpoint}  child ${(entry.metres.child * 100).toFixed(3)} cm  boat ${(entry.metres.boat * 100).toFixed(3)} cm  cygnet ${(entry.metres.cygnet * 100).toFixed(3)} cm  ${differs.length ? 'DIFFERS: ' + differs.join('; ') : 'same'}  (boats part on frame ${parted || 'none'}; late readbacks pick ${frames(lp)}, fresh ${frames(lf)})`);
   return entry;
 }
 

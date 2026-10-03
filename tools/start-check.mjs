@@ -79,7 +79,24 @@ try {
  await page.reload();await ready();assert.equal(await page.locator('#begin').innerText(),'Continue');
  await page.mouse.click(100,120);await page.waitForSelector('#veil',{state:'detached'});
  assert.equal(await page.evaluate(()=>__audio.length),1);
+ const settled=async (label)=>{
+   await page.waitForTimeout(3000);
+   const stats=await page.evaluate(()=>({stray:window.__stats?.bootStrayPrograms,draws:window.__stats?.playFirstDraws}));
+   report[label]={bootStrayPrograms:stats.stray,playFirstDraws:stats.draws};
+   assert.equal(stats.stray?.count,0,`${label}: programs first used outside boot's settle step: ${stats.stray?.names.join(', ')}`);
+   assert.equal(stats.draws?.programs,0,`${label}: programs first drawn in play: ${stats.draws?.names.join(', ')}`);
+ };
+ await settled('afterContinue');
  report.checks.push('checkpoint Continue and click anywhere');
+ await page.evaluate(()=>localStorage.setItem('updraft.finished.v1','1'));
+ await page.reload();await ready();
+ await page.locator('.chapters-toggle').click();
+ await page.locator('.chapter',{hasText:'Home'}).click();
+ assert.equal(await page.evaluate(()=>__game.story.name),'home');
+ await page.waitForSelector('#veil',{state:'detached'});
+ assert.equal(await page.evaluate(()=>__audio[0].state),'running');
+ await settled('afterPick');
+ report.checks.push('a chapter pick starts its room with sound');
  await page.evaluate(key=>localStorage.removeItem(key),key);
  await page.goto(base+'?shot&progress=1&chapter=wood');
  await page.waitForFunction(()=>window.__ready,null,{timeout:60000});
