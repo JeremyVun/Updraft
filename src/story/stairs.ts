@@ -1343,6 +1343,8 @@ export class StairsChapter implements Chapter {
     wisps.amount = (white ? S(c.position.y + 1.2, CLOUD.base - 2, CLOUD.base + 0.8) * (1 - S(c.position.y, CLOUD.top - 0.8, CLOUD.top + 0.6)) : 0)
       * (this.beat === 'loop' ? 0.35 : 1);
     wisps.centre.set(c.position.x, c.position.y + 1, c.position.z);
+    wisps.child.copy(c.position);
+    wisps.bird.copy(this.cast.cygnet.position);
     // Across both the side view up the stair and the view along it on the ring's landing.
     wisps.wind.set(0.7, 0.12, -0.7).normalize().multiplyScalar(k.windInCloud * (0.45 + 0.55 * climb));
     // The wind in the white rises as they climb; on top it falls to a soft air that keeps the cloud moving, and

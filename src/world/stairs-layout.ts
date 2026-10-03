@@ -17,6 +17,16 @@ export const STEP = { rise: 0.2, going: 0.3, risers: 11, width: 1.45, landing: 2
 export const FLIGHT_RISE = STEP.rise * STEP.risers;
 export const FLIGHT_RUN = STEP.going * (STEP.risers - 1);
 
+export const RAIL_HEIGHT = 0.86;
+/** A string along each side of a flight, just under its nosings; the steps' own blocks show below it. */
+export const STRING = { thick: 0.16, above: 0.12, below: 0.24 } as const;
+/** How deep each step's block goes under its tread, so that from below the flight is a stack of steps. */
+export const STEP_BLOCK = STEP.rise + 0.24;
+export const NEWEL = 0.24;
+/** Newels stand this far in from a landing's edge, and a flight meets a landing between two of them. */
+export const INSET = NEWEL / 2 + 0.02;
+export const OPENING = STEP.landing / 2 - INSET;
+
 /** Where the first riser stands on the grass. */
 const FOOT = { x: 99, z: -1221 } as const;
 const H = STEP.landing / 2;

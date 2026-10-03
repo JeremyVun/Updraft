@@ -14,7 +14,8 @@ import { StairsCloud } from './stairs-cloud';
 import { CloudBank } from './stairs-bank';
 import { LOOP_BANK, LOOP_EYE, LOOP_SHRINK, alongBack, drawIn } from './stairs-penrose';
 import {
-  BELOW_CLOUD, FLIGHTS, LOOP, LOOP_BACK, LOOP_FAR, LOOSE, along, LOOSE_START, SLIPPERS, STEP, TOP_OUT, flight, landingOf, onLanding, type Face, type Flight, type Landing,
+  BELOW_CLOUD, FLIGHTS, INSET, LOOP, LOOP_BACK, LOOP_FAR, LOOSE, NEWEL, OPENING, RAIL_HEIGHT, STEP_BLOCK, STRING, along, LOOSE_START, SLIPPERS, STEP, TOP_OUT,
+  flight, landingOf, onLanding, type Face, type Flight, type Landing,
 } from './stairs-layout';
 
 /** What each part of the staircase is made of, read by the shader to decide its surface. */
@@ -225,16 +226,7 @@ function shareCorners(geo: THREE.BufferGeometry): void {
   geo.setIndex(new THREE.BufferAttribute(count < 65536 ? Uint16Array.from(index) : index, 1));
 }
 
-const RAIL_HEIGHT = 0.86;
 const PITCH = Math.atan2(STEP.rise, STEP.going);
-/** A string along each side of a flight, just under its nosings; the steps' own blocks show below it. */
-const STRING = { thick: 0.16, above: 0.12, below: 0.24 } as const;
-/** How deep each step's block goes under its tread, so that from below the flight is a stack of steps. */
-const STEP_BLOCK = STEP.rise + 0.24;
-const NEWEL = 0.24;
-/** Newels stand this far in from a landing's edge, and a flight meets a landing between two of them. */
-const INSET = NEWEL / 2 + 0.02;
-const OPENING = STEP.landing / 2 - INSET;
 
 /** The middle of the loop's ring, on the ground plan. */
 const RING_MIDDLE = [landingOf(LOOP.corner), landingOf(LOOP.wait), landingOf(LOOP.onward), LOOP_FAR.landing]
@@ -764,6 +756,7 @@ export class CloudStairs {
     }
     this.ghostUniform.value += ((next ? this.ghostShown : 0) - this.ghostUniform.value) * (1 - Math.exp(-dt * 2));
     this.pose();
+    this.wisps.seeTrick(this.trick.visible, this.undrawUniform.value, this.trueDepthUniform.value);
     this.wisps.update(dt, time);
     hazeStride.value += (this.stride - hazeStride.value) * (1 - Math.exp(-dt * 2.5));
     if (Math.abs(this.stride - hazeStride.value) < 1e-3) hazeStride.value = this.stride;
