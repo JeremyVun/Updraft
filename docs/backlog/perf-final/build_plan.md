@@ -408,7 +408,10 @@ stairs' visibility in `src/main.ts` / `src/story/stairs*.ts`):
     Over its 5/255 bound (sea by day 30 on glint halos, drowned 12, others 2–11: Apple GPUs store R11F truncated
     toward zero and bloom's threshold is nearly a step); Jeremy took it on the stills (2026-10-03, "Take it").
     −60 MiB at Ultra, −49 at Low; Low 3.5–7.4%. It also removes a bright speck beside the Meadow rabbit where a shader
-    writes negative colour (−0.47), which ACES turned bright: the writer is not yet found.
+    writes negative colour (−0.47), which ACES turned bright. The writer was the rabbit's shader at an MSAA edge
+    sample, its fur/ear blend extrapolated below 0 outside the triangle; it, the reeds, swans, songbirds and cygnet now
+    clamp their output at 0 (exact on R11F; under `rt-half` only the speck's pixels change). Clamping the blends
+    instead moved positive edge pixels by up to 27/255 at `meadow:walk`, so it was not used.
   - The sky's storm bank: a `STORM_BANK` axis on the sky (4 programs), selected in `prepareFrame` from storm cover or
     lightning; exact (0 changed with and without a storm). A uniform branch round it moved sky pixels by 1/255; only
     compiling it out kept them exact. Sea 2.8% at Low, elsewhere in noise.
