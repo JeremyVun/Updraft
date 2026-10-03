@@ -5,7 +5,7 @@ import { ATMO_GLSL, atmo } from './atmosphere';
 import { mulberry32, smoothstep } from './noise';
 import { heightAt } from './island';
 import { glsl, tuning } from '../tuning';
-import { CURTAINS, curtainLift, curtainWound } from './lines-passage';
+import { CURTAINS, curtainLift } from './lines-passage';
 
 /** Washing hung out on a line: pegged along its top edge, swinging up and fluttering in the live wind. */
 const CLOTH_VERT = /* glsl */ `
@@ -17,9 +17,7 @@ in vec3 aColor;
 in float aKind;
 in float aRole;
 in float aCurtain;
-in vec3 aRope;
-uniform vec3 uCurtainWound;
-uniform vec3 uCurtainLift;
+uniform vec3 uCurtains;
 uniform vec2 uFamily;
 uniform float uFamilyFlutter;
 out vec3 vWorld;
@@ -83,8 +81,6 @@ void main() {
   vec3 side = normalize(cross(up, along));
 
   vec3 pegged = aAnchor + along * (position.x * aShape.x * cut.x);
-  // A passage sheet's pegs follow its sagging rope (x: where the sheet hangs along it, y: its span, z: its sag).
-  if (aRope.y > 0.0) pegged.y -= aRope.z * (sin(3.14159 * (aRope.x + position.x * aShape.x / aRope.y)) - sin(3.14159 * aRope.x));
   /**
    * Dropped only once it is far enough out to sea to be long gone in the veil. It used to be culled against the
    * veil itself, which moves while a chapter settles, so whole bands of washing blinked in and out of the frame.
@@ -129,70 +125,37 @@ void main() {
    * grows down the cloth and the position is the integral of that, which for a linear angle is a circular arc.
    */
   float full = swing * 1.5708 * lean;
-  float wound = 0.0;
-  float tail = hang;
-  float pleat = 0.0;
   if (aCurtain > -0.5) {
-    // Live air lifts the free hem away from the waiting pair; the sheet hangs again as the air dies.
-    float lifted = uCurtainLift[int(aCurtain)];
-    full = mix(full * 0.28, ${glsl(tuning.linesPassage.liftAngle)}, lifted);
+    float lifted = uCurtains[int(aCurtain)];
+    // Wind curls a sheet overhead, away from the waiting pair. The belly stays between pegs and hem.
+    full = mix(full * 0.28, 2.28, lifted);
     lean = mix(lean, 1.0, lifted);
-    // Wound unevenly, the way the wind leaves it: one corner hangs lower, alternating from sheet to sheet.
-    float skew = mod(aCurtain, 2.0) < 0.5 ? position.x + 0.5 : 0.5 - position.x;
-    wound = uCurtainWound[int(aCurtain)] * max(aShape.y - ${glsl(tuning.linesPassage.rollTail)}, 0.0) / aShape.y
-      * (1.0 - ${glsl(tuning.linesPassage.rollTwist)} * skew);
-    tail = max(hang - wound, 0.0);
   }
   // The family keeps its upright silhouette while the sleeves reach.
   if (aRole > -0.5) full *= 0.22;
   float base = ${glsl(tuning.washing.belly)};
   float theta0 = full * base;
   float k = full * (1.0 - base);
-  float theta1 = theta0 + k * tail;
+  float theta1 = theta0 + k * hang;
   float dropDown;
   float dropSide;
   if (abs(k) > 1e-3) {
     dropDown = (sin(theta1) - sin(theta0)) / k;
     dropSide = (cos(theta0) - cos(theta1)) / k;
   } else {
-    dropDown = cos(theta0) * tail;
-    dropSide = sin(theta0) * tail;
+    dropDown = cos(theta0) * hang;
+    dropSide = sin(theta0) * hang;
   }
   vec3 down = -up * cos(theta1) + side * sin(theta1);
-  vec3 root = pegged;
-  if (wound > 0.0) {
-    /**
-     * The wound part is a roll round the rope, a spiral growing a layer per turn. It winds over the top toward
-     * the waiting pair, so they see the roll and the free hem hangs behind it, leaving tangent to the roll.
-     */
-    float core = ${glsl(tuning.linesPassage.rollCore)} * smoothstep(0.0, 0.4, wound * aShape.y);
-    float layer = ${glsl(tuning.linesPassage.rollLayer)} * (0.8 + 0.35 * sin(position.x * 8.0 + aShape.w) * sin(position.x * 3.0 + 1.7)
-      + 0.12 * sin(position.x * 23.0 + aShape.w * 2.0));
-    float outer = sqrt(core * core + layer * wound * aShape.y / 3.14159);
-    root += outer * (cos(theta0) * side + sin(theta0) * up);
-    if (hang < wound) {
-      float r = sqrt(core * core + layer * hang * aShape.y / 3.14159);
-      float turn = -theta0 - 6.28318 * (outer - r) / layer;
-      root = pegged + r * (cos(turn) * side - sin(turn) * up);
-      down = -side * sin(turn) - up * cos(turn);
-    }
-  }
-  vWorld = root - up * (dropDown * aShape.y) + side * (dropSide * aShape.y);
-  vWorld += side * lean * ripple * shake * 1.2 * aShape.y * tail;
+  vWorld = pegged - up * (dropDown * aShape.y) + side * (dropSide * aShape.y);
+  vWorld += side * lean * ripple * shake * 1.2 * aShape.y * hang;
 
   if (aCurtain > -0.5) {
-    float free = tail / max(1.0 - wound, 1e-3);
-    float belly = sin(uv.x * 3.14159) * sin(free * 3.14159) * (1.0 - wound);
+    float belly = sin(uv.x * 3.14159) * sin(hang * 3.14159);
     vWorld += side * belly * (0.14 + 0.06 * sin(uTime * 0.7 + aShape.w));
-    vWorld.y += sin(uv.x * 15.0 + uTime * 0.8) * 0.045 * tail;
-    // What hangs from the roll falls in the loose folds that winding left in it.
-    float gathered = smoothstep(0.0, 0.3, wound) * smoothstep(0.0, 0.3, tail * aShape.y);
-    float fold = uv.x * ${glsl(tuning.linesPassage.foldCount * 6.28318)} + aShape.w + 0.5 * sin(uTime * 0.9 + uv.x * 5.0);
-    float depth = ${glsl(tuning.linesPassage.foldDepth)} * gathered;
-    vWorld += side * sin(fold) * depth;
-    pleat = cos(fold) * depth * ${glsl(tuning.linesPassage.foldCount * 6.28318)} / aShape.x;
+    vWorld.y += sin(uv.x * 15.0 + uTime * 0.8) * 0.045 * hang;
   }
-  vNormal = normalize(cross(down, along + side * pleat));
+  vNormal = normalize(cross(down, along));
   if (aRole > -0.5) family(along, side, up, hang);
   if (aRole > -0.5 && uFamilyFlutter > 0.0) {
     // A distant domestic line still catches a little sea air outside the local wind texture.
@@ -503,47 +466,6 @@ const FAMILY_PIECES = [
   { at: 0.8, width: 2.65, drop: 3.1, colour: '#bd5340', role: 1 },
 ];
 
-/** Per-piece attributes for one instanced cloth mesh. */
-class ClothInstances {
-  readonly anchors: number[] = [];
-  readonly alongs: number[] = [];
-  readonly shapes: number[] = [];
-  readonly colors: number[] = [];
-  readonly kinds: number[] = [];
-  readonly roles: number[] = [];
-  readonly curtains: number[] = [];
-  readonly ropes: number[] = [];
-
-  geometry(sheet: THREE.BufferGeometry): THREE.InstancedBufferGeometry {
-    const cloth = new THREE.InstancedBufferGeometry();
-    cloth.index = sheet.index;
-    cloth.attributes.position = sheet.attributes.position;
-    cloth.attributes.uv = sheet.attributes.uv;
-    cloth.instanceCount = this.shapes.length / 4;
-    const attribute = (name: string, values: number[], size: number) =>
-      cloth.setAttribute(name, new THREE.InstancedBufferAttribute(new Float32Array(values), size));
-    attribute('aAnchor', this.anchors, 3);
-    attribute('aAlong', this.alongs, 3);
-    attribute('aShape', this.shapes, 4);
-    attribute('aColor', this.colors, 3);
-    attribute('aKind', this.kinds, 1);
-    attribute('aCurtain', this.curtains, 1);
-    attribute('aRole', this.roles, 1);
-    attribute('aRope', this.ropes, 3);
-    // Shader instances live at their anchors, not at the template quad. Include the
-    // full drop, gust ripple, lifted curtains and the family's sleeve movements.
-    const bounds = new THREE.Box3();
-    const point = new THREE.Vector3();
-    let padding = 0;
-    for (let i = 0; i < cloth.instanceCount; i++) {
-      bounds.expandByPoint(point.fromArray(this.anchors, i * 3));
-      padding = Math.max(padding, 2 * (this.shapes[i * 4] + this.shapes[i * 4 + 1]) + 2);
-    }
-    cloth.boundingSphere = bounds.expandByScalar(padding).getBoundingSphere(new THREE.Sphere());
-    return cloth;
-  }
-}
-
 /**
  * Lines of washing hung out with nobody there: the first piece of home the dream hands over. Poles and rope are
  * ordinary geometry; every sheet is one instance of a quad that reads the wind field in its vertex shader, so a
@@ -568,8 +490,7 @@ export class WashingLines {
     this.clothMat = new THREE.ShaderMaterial({
       uniforms: { ...atmo.uniforms, uSubject: { value: this.subject },
         uFamily: { value: familyStyle.gesture ?? family },
-        uFamilyFlutter: { value: familyStyle.flutter ?? 0 },
-        uCurtainWound: { value: curtainWound }, uCurtainLift: { value: curtainLift } },
+        uFamilyFlutter: { value: familyStyle.flutter ?? 0 }, uCurtains: { value: curtainLift } },
       vertexShader: CLOTH_VERT,
       fragmentShader: CLOTH_FRAG,
       side: THREE.DoubleSide,
@@ -578,9 +499,13 @@ export class WashingLines {
 
     const posts: THREE.BufferGeometry[] = [];
     const ropes: THREE.BufferGeometry[] = [];
-    const washing = new ClothInstances();
-    const passage = new ClothInstances();
-    const { anchors, alongs, shapes, colors, kinds, roles, curtains } = washing;
+    const anchors: number[] = [];
+    const alongs: number[] = [];
+    const shapes: number[] = [];
+    const colors: number[] = [];
+    const kinds: number[] = [];
+    const roles: number[] = [];
+    const curtains: number[] = [];
 
     const point = new THREE.Vector3();
     const next = new THREE.Vector3();
@@ -600,18 +525,15 @@ export class WashingLines {
         const curtain = CURTAINS[spec.curtain];
         for (let j = 0; j < curtain.panels; j++) {
           const width = curtain.width / curtain.panels + (curtain.panels > 1 ? 0.35 : 0);
-          const span = spec.a.distanceTo(spec.b);
-          const t = (j + 0.5) / curtain.panels;
-          onLine(spec, t, point);
+          onLine(spec, (j + 0.5) / curtain.panels, point);
           dir.subVectors(spec.b, spec.a).normalize();
-          passage.anchors.push(point.x, point.y, point.z);
-          passage.alongs.push(dir.x, dir.y, dir.z);
-          passage.shapes.push(width, curtain.drop - j * 0.15, 0.6 + j * 0.3, j * 2.8 + spec.curtain);
+          anchors.push(point.x, point.y, point.z);
+          alongs.push(dir.x, dir.y, dir.z);
+          shapes.push(width, curtain.drop - j * 0.15, 0.6 + j * 0.3, j * 2.8 + spec.curtain);
           const c = CLOTH_COLOURS[spec.curtain === 1 ? j + 1 : 0];
-          passage.colors.push(c.r, c.g, c.b);
-          passage.kinds.push(0); passage.roles.push(-1); passage.curtains.push(spec.curtain);
-          passage.ropes.push(t, span, spec.sag);
-          for (const peg of [-0.46, 0.46]) posts.push(pegGeometry(onLine(spec, t + peg * width / span, next), dir, 0));
+          colors.push(c.r, c.g, c.b);
+          kinds.push(0); roles.push(-1); curtains.push(spec.curtain);
+          posts.push(pegGeometry(point, dir, width * 0.46), pegGeometry(point, dir, -width * 0.46));
         }
         continue;
       }
@@ -651,7 +573,6 @@ export class WashingLines {
         kinds.push(small ? (roll < 0.5 ? 1 : 0) : roll < 0.16 ? 1 : roll < 0.3 ? 2 : roll < 0.4 ? 3 : 0);
         roles.push(-1);
         curtains.push(-1);
-        washing.ropes.push(0, 0, 0);
         t += step;
       }
     }
@@ -677,20 +598,37 @@ export class WashingLines {
         kinds.push(1);
         roles.push(piece.role);
         curtains.push(-1);
-        washing.ropes.push(0, 0, 0);
       }
     }
 
-    // The passage sheets wind into a roll round their line, which needs many more rows down the drop.
-    const cloth = washing.geometry(new THREE.PlaneGeometry(1, 1, 7, 11).translate(0, 0.5, 0));
-    const passageCloth = passage.geometry(new THREE.PlaneGeometry(1, 1, 36, 96).translate(0, 0.5, 0));
+    const sheet = new THREE.PlaneGeometry(1, 1, 7, 11).translate(0, 0.5, 0);
+    const cloth = new THREE.InstancedBufferGeometry();
+    cloth.index = sheet.index;
+    cloth.attributes.position = sheet.attributes.position;
+    cloth.attributes.uv = sheet.attributes.uv;
+    cloth.instanceCount = shapes.length / 4;
+    cloth.setAttribute('aAnchor', new THREE.InstancedBufferAttribute(new Float32Array(anchors), 3));
+    cloth.setAttribute('aAlong', new THREE.InstancedBufferAttribute(new Float32Array(alongs), 3));
+    cloth.setAttribute('aShape', new THREE.InstancedBufferAttribute(new Float32Array(shapes), 4));
+    cloth.setAttribute('aColor', new THREE.InstancedBufferAttribute(new Float32Array(colors), 3));
+    cloth.setAttribute('aKind', new THREE.InstancedBufferAttribute(new Float32Array(kinds), 1));
+    cloth.setAttribute('aCurtain', new THREE.InstancedBufferAttribute(new Float32Array(curtains), 1));
+    cloth.setAttribute('aRole', new THREE.InstancedBufferAttribute(new Float32Array(roles), 1));
+    // Shader instances live at their anchors, not at the template quad. Include the
+    // full drop, gust ripple, lifted curtains and the family's sleeve movements.
+    const clothBounds = new THREE.Box3();
+    let padding = 0;
+    for (let i = 0; i < cloth.instanceCount; i++) {
+      clothBounds.expandByPoint(point.fromArray(anchors, i * 3));
+      padding = Math.max(padding, 2 * (shapes[i * 4] + shapes[i * 4 + 1]) + 2);
+    }
+    cloth.boundingSphere = clothBounds.expandByScalar(padding).getBoundingSphere(new THREE.Sphere());
 
     this.group.add(new THREE.Mesh(mergeGeometries(posts), woodMat));
     this.group.add(new THREE.Mesh(mergeGeometries(ropes), woodMat));
     this.group.add(new THREE.Mesh(cloth, this.clothMat));
-    if (passageCloth.instanceCount) this.group.add(new THREE.Mesh(passageCloth, this.clothMat));
     fixTreeInPlace(this.group);
-    this.count = cloth.instanceCount + passageCloth.instanceCount;
+    this.count = cloth.instanceCount;
   }
 
   readonly count: number;

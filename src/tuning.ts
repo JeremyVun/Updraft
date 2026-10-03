@@ -1088,14 +1088,6 @@ export const tuning = {
     speedFrom: 0.4, speedFull: 3,
     fillSeconds: 1.8,
     billowSpeed: 6, rise: 3.5, settle: 1.2,
-    /**
-     * Sweeps wind the sheet round its line (`windUp` per second toward the swept share); live air lifts the free
-     * hem up to `liftAngle` radians. Wound fully, `rollTail` metres still hang. The roll starts `rollCore` out
-     * from the rope and grows by about `rollLayer` a turn; one end winds `rollTwist` less than the other.
-     */
-    windUp: 2.2, liftAngle: 2, rollTail: 0.9, rollCore: 0.04, rollLayer: 0.03, rollTwist: 0.3,
-    /** Loose folds across what hangs below the roll: how many across a sheet and how deep, in metres. */
-    foldCount: 4.5, foldDepth: 0.07,
     brushFrom: 0.8, brushRadius: 0.27,
     /** A warm sideways trace on the first sheet demonstrates a sweep, without generating any wind. */
     inviteAfter: 1.2, inviteSweep: 1.8, invitePause: 1.1, inviteResume: 2.2,
