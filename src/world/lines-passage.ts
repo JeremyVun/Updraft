@@ -18,10 +18,18 @@ export const LINES_WALK = [
   new THREE.Vector2(11, -398), new THREE.Vector2(14, -422),
 ];
 
-/** Physical opening of each curtain, shared with its cloth shader. */
+/**
+ * Shared with the cloth shader, one component per curtain: how far the breeze holds it open (`curtainLift`), and
+ * how far it has been tossed higher once the travellers are through (`curtainOver`).
+ */
 export const curtainLift = new THREE.Vector3();
+export const curtainOver = new THREE.Vector3();
 
-/** A sheet across the walk. Air arriving here lifts it; completed passages remain safely overhead. */
+/**
+ * A sheet across the walk. Air arriving here lifts it toward the waiting pair, and the breeze the player lets
+ * through keeps it streaming and flapping over them. Once both travellers are through, a gust tosses it higher,
+ * where it keeps flapping clear of the camera that follows them under it.
+ */
 export class WashingCurtain {
   readonly center: THREE.Vector3;
   readonly a: THREE.Vector3;
@@ -36,6 +44,9 @@ export class WashingCurtain {
   charge = 0;
   opening = 0;
   cleared = false;
+  /** Both travellers have passed beneath it. */
+  through = false;
+  private over = 0;
   private touched = false;
   /** Time since a real cursor/touch sweep reached this sheet; invitation traces never affect it. */
   brushAge = Infinity;
@@ -50,8 +61,9 @@ export class WashingCurtain {
     this.center = new THREE.Vector3(x, foot + 3.1, z);
     this.a = new THREE.Vector3(x - width / 2 - 0.35, top, z);
     this.b = new THREE.Vector3(x + width / 2 + 0.35, top + 0.08, z);
-    this.before = this.ground(x - 1.6, z + 4.7);
-    this.birdBefore = this.ground(x + 1.3, z + 1.7);
+    // Both wait beyond the reach of the hem, which the breeze lifts toward them.
+    this.before = this.ground(x - 1.6, z + 6);
+    this.birdBefore = this.ground(x + 1.4, z + 4);
     this.after = this.ground(x + 1.3, z - 4.5);
   }
 
@@ -61,8 +73,11 @@ export class WashingCurtain {
     this.charge = cleared ? 1 : 0;
     this.opening = cleared ? 1 : 0;
     this.cleared = cleared;
+    this.through = cleared;
+    this.over = cleared ? 1 : 0;
     this.touched = false; this.brushAge = Infinity;
     curtainLift.setComponent(this.curtain, this.opening);
+    curtainOver.setComponent(this.curtain, this.over);
   }
 
   update(dt: number, wind: WindField, listening: boolean): void {
@@ -84,7 +99,9 @@ export class WashingCurtain {
     const billow = THREE.MathUtils.clamp(Math.hypot(this.sway.x, this.sway.z) / k.billowSpeed, 0, 1);
     const want = this.cleared ? 1 : Math.max(this.charge * 0.75, billow * 0.8);
     this.opening += (want - this.opening) * (1 - Math.exp(-dt * (want > this.opening ? k.rise : k.settle)));
+    if (this.through) this.over = Math.min(1, this.over + dt / k.tossSeconds);
     curtainLift.setComponent(this.curtain, this.opening);
+    curtainOver.setComponent(this.curtain, THREE.MathUtils.smootherstep(this.over, 0, 1));
   }
 
   /**

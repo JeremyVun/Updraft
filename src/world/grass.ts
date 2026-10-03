@@ -4,7 +4,7 @@ import { CLOUD_DECK, register } from '../gl/variants';
 import { passJob, type CompileJob } from '../gl/boot';
 import { simMaterial, simTarget } from '../gl/gpu';
 import { JOURNEY_ROOMS_GLSL, ROOMS } from './journey-rooms';
-import { LITTLE_BOATS, boatsOut, boatsLevel, boatsToyClearing } from './little-boats-layout';
+import { BOATS_POOLS, LITTLE_BOATS, boatsOut, boatsLevel, boatsToyClearing } from './little-boats-layout';
 import * as THREE from 'three';
 import { params } from '../params';
 import { QA } from '../qa';
@@ -187,6 +187,55 @@ vec3 grassTintWithPattern(vec2 xz, vec3 pattern) {
 }
 vec3 grassTint(vec2 xz) {
   return grassTintWithPattern(xz, grassPatternAt(xz));
+}
+`;
+
+const REEDS = tuning.littleBoats.reeds;
+/** A reed's seed head: a dark brown spike. */
+const SEED_HEAD = 'vec3(0.2, 0.12, 0.07)';
+/** Darker and bluer than the bank's grass. */
+const REED_TINT = 'vec3(0.12, 0.21, 0.14)';
+
+/**
+ * Reeds and rushes along the little boats' stream, in clumps: a share of the bank's blades grow tall, slender,
+ * darker and bluer, rooted down into the shallows, so the water no longer meets a cut lawn.
+ * Stiffer than grass, they bend less and so stay dark rather than flashing pale when the wind lays them. The far
+ * bank has them all along; the near bank, the side the travellers walk and the camera looks from, keeps only
+ * short, low stretches before each pool's end, clear of the toy, the child's walk and where the cygnet hops in and
+ * out. Drawn from the blade's own position, so both blade paths agree whatever order they draw in. Reeds are a
+ * sparse share of the blades there, so `grassHeightAt`, the typical blade, leaves them out.
+ * Needs `HEIGHTFIELD_GLSL`, `ATMO_GLSL` and `BLADE_RAND_GLSL` first.
+ */
+const REEDS_GLSL = /* glsl */ `
+struct Reed { float is; float height; float head; float footing; float shade; };
+Reed reedOf(vec2 p, float groundH) {
+  Reed r = Reed(0.0, 0.0, 0.0, 0.0, 1.0);
+  if (abs(p.x - ${glsl(LITTLE_BOATS.x)}) > 65.0 || abs(p.y - ${glsl(LITTLE_BOATS.z)}) > 85.0) return r;
+  float s = ${glsl(LITTLE_BOATS.startZ)} - p.y;
+  if (s < 6.0 || s > 100.0) return r;
+  float off = p.x - boatsX(s);
+  float w = boatsWidth(s);
+  float e = abs(off) - w;
+  float near = step(0.0, off);
+  float reach = mix(${glsl(REEDS.far)} + 0.12 * w, ${glsl(REEDS.near)}, near);
+  // The waterline itself is where the ground meets the water (footing, below); none in the narrow runs between
+  // pools, where a toy sails close to the lip.
+  float band = step(-0.35 * w, e) * (1.0 - smoothstep(reach * 0.5, reach, e)) * smoothstep(2.6, 3.6, w);
+  float open = 1.0;
+  if (near > 0.5) {
+    open = 0.0;${BOATS_POOLS.map(p => `
+    open += smoothstep(${glsl(p.leave - 6.5)}, ${glsl(p.leave - 5.5)}, s) * (1.0 - smoothstep(${glsl(p.leave - 3.5)}, ${glsl(p.leave - 2.5)}, s));`).join('')}
+  }
+  float clump = smoothstep(${glsl(REEDS.clumpFrom)}, ${glsl(REEDS.clumpFrom + 0.2)}, vnoise(p * 0.42 + vec2(17.0, -9.0)))
+    * smoothstep(0.2, 0.5, vnoise(p * 1.4 - vec2(3.0, 41.0)));
+  uint h = gr_hash(floatBitsToUint(p) ^ uvec2(0x9e3779b9u, 0x85ebca6bu));
+  r.is = step(gr_rand(h), band * open * clump * ${glsl(REEDS.share)});
+  r.height = mix(${glsl(REEDS.farHeight)}, ${glsl(REEDS.nearHeight)}, near) * (0.7 + 0.6 * gr_rand(h));
+  r.head = r.is * step(gr_rand(h), ${glsl(REEDS.heads)});
+  float level = boatsLevel(s);
+  r.footing = smoothstep(level - 0.12, level - 0.04, groundH);
+  r.shade = 0.85 + 0.3 * gr_rand(h);
+  return r;
 }
 `;
 
@@ -407,6 +456,7 @@ ${HEIGHTFIELD_GLSL}
 ${FIELDS_GLSL}
 ${GRASS_GLSL}
 ${BLADE_RAND_GLSL}
+${REEDS_GLSL}
 ${BLADE_LOD_GLSL}
 uniform sampler2D uTiles;
 uniform int uTileCount;
@@ -438,9 +488,11 @@ void main() {
   float edge = smoothstep(${(GRASS_LINE - 0.6).toFixed(2)}, ${(GRASS_LINE + 1.2).toFixed(2)}, groundH);
   float tufts = smoothstep(0.48, 0.72, vnoise(root2 * 0.35));
   float keep = (edge > 0.85 ? 1.0 : edge * edge * tufts) * mix(1.0, ${glsl(tuning.wood.grassDensity)}, woodFloorAt(root2));
-  keep *= smoothstep(0.55, 0.7, hn.b) * pondDry(root2, groundH) * boatsDry(root2, groundH);
+  keep *= pondDry(root2, groundH);
+  Reed reed = reedOf(root2, groundH);
+  keep *= mix(smoothstep(0.55, 0.7, hn.b) * boatsDry(root2, groundH), reed.footing, reed.is);
   vec4 surf = surfaceAt(root2);
-  keep *= surf.x;
+  keep *= mix(surf.x, 1.0, reed.is);
   vec4 fld = fieldAt(root2);
   oRoot = vec4(root2, groundH, rank);
 
@@ -471,10 +523,17 @@ void main() {
   vec3 tint = grassTint(root2) * (0.8 + 0.4 * seed) * (0.92 + 0.16 * fract(fld.y * 7.3) * fld.w);
   tint = mix(tint, vec3(0.62, 0.52, 0.2), hay * 0.55);
   tint = mix(tint, vec3(0.13, 0.24, 0.1), rush * 0.5);
+  h = mix(h, reed.height, reed.is);
+  width *= mix(1.0, ${glsl(REEDS.width)}, reed.is);
+  curve = mix(curve, 0.05, reed.is);
+  tint = mix(tint, ${REED_TINT} * reed.shade, reed.is);
+  flowerRand = max(flowerRand, reed.head);
+  petalClass = mix(petalClass, 4.0, reed.head);
 
   oShape = vec4(keep, h, width, angle);
   oTint = vec4(tint, curve);
-  oFlower = vec4(seed, flowerRand, petalClass, 0.2 + 0.5 * pasture);
+  // A reed is marked by adding eight to its petal class, so the blade shader can stiffen it.
+  oFlower = vec4(seed, flowerRand, petalClass + 8.0 * reed.is, 0.2 + 0.5 * pasture);
 }`;
 
 const TABLE_VERT = /* glsl */ `
@@ -576,7 +635,8 @@ void main() {
   float angle = shape.w;
   float curve = tintIn.w;
   float flower = fl.y * step(0.5, life);
-  float petalClass = fl.z;
+  float reedBlade = step(7.5, fl.z);
+  float petalClass = fl.z - 8.0 * reedBlade;
   h *= 1.0 + flower * fl.w;
   vec3 rootPos = bladeRoot(root2, groundH);
 
@@ -590,7 +650,7 @@ void main() {
   float ph = seed * 43.1;
   float flutterAmp = (0.04 + 0.012 * sp) * (0.6 + 0.4 * t) * mix(0.3, 1.0, life);
   vec2 flutter = vec2(sin(uTime * (2.7 + seed * 2.1) + ph), sin(uTime * (2.1 + seed * 1.6) + ph * 1.7)) * flutterAmp;
-  vec2 wb = bend.xy + flutter;
+  vec2 wb = (bend.xy + flutter) * mix(1.0, ${glsl(REEDS.stiff)}, reedBlade);
   float wa = length(wb);
   vec2 wdir = wa > 1e-4 ? wb / wa : facing;
   vec2 align = dot(facing, wdir) >= 0.0 ? wdir : -wdir;
@@ -621,7 +681,7 @@ void main() {
   vFog = texelFetch(uFogTex, at, 0);
   vWorld = world;
   vT = t;
-  vec3 bloom = petalClass < 0.5 ? vec3(1.0, 0.8, 0.14) : petalClass < 1.5 ? vec3(0.97, 0.95, 0.9) : petalClass < 2.5 ? vec3(0.93, 0.52, 0.68) : vec3(0.62, 0.46, 0.88);
+  vec3 bloom = petalClass < 0.5 ? vec3(1.0, 0.8, 0.14) : petalClass < 1.5 ? vec3(0.97, 0.95, 0.9) : petalClass < 2.5 ? vec3(0.93, 0.52, 0.68) : petalClass < 3.5 ? vec3(0.62, 0.46, 0.88) : ${SEED_HEAD};
   vFlower = vec4(mix(stillGrey(bloom), bloom, life), flower);
   gl_Position = projectionMatrix * viewMatrix * vec4(world, 1.0);
 }`;
@@ -634,6 +694,7 @@ ${FIELDS_GLSL}
 ${GRASS_GLSL}
 ${RIME_GLSL}
 ${BLADE_RAND_GLSL}
+${REEDS_GLSL}
 ${BLADE_LOD_GLSL}
 ${BLADE_THIN_GLSL}
 ${BLADE_ROOT_GLSL}
@@ -673,9 +734,11 @@ void main() {
   float edge = smoothstep(${(GRASS_LINE - 0.6).toFixed(2)}, ${(GRASS_LINE + 1.2).toFixed(2)}, groundH);
   float tufts = smoothstep(0.48, 0.72, vnoise(root2 * 0.35));
   float share = bladeDensity(root2, dist) * (edge > 0.85 ? 1.0 : edge * edge * tufts) * mix(1.0, ${glsl(tuning.wood.grassDensity)}, woodFloorAt(root2));
-  share *= smoothstep(0.55, 0.7, hn.b) * pondDry(root2, groundH) * boatsDry(root2, groundH);
+  share *= pondDry(root2, groundH);
+  Reed reed = reedOf(root2, groundH);
+  share *= mix(smoothstep(0.55, 0.7, hn.b) * boatsDry(root2, groundH), reed.footing, reed.is);
   vec4 surf = surfaceAt(root2);
-  share *= surf.x;
+  share *= mix(surf.x, 1.0, reed.is);
   vec4 fld = fieldAt(root2);
   if (rank >= thinned * share) { collapse(); return; }
 
@@ -698,6 +761,7 @@ void main() {
   float hay = step(fld.y, 0.22) * fld.w * (1.0 - grazed);
   float rush = step(0.86, fld.y) * fld.w * (1.0 - grazed);
   h *= (1.0 + hay * 1.5 + rush * 1.2) * (1.0 + ${glsl(HOME_LUSH)} * homeAt(root2)) * mix(1.0, 0.78, hilltop) * mix(1.0, 0.5, garden) * croppedAt(root2) * woodGrassCrop(root2) * mix(1.0, ${glsl(SLEEP.swardCrop)}, sward) * troddenAt(root2);
+  h = mix(h, reed.height, reed.is);
   float fogRise = h * 0.25;
   float stand = qualityStanding(rank, share, dist, root2);
   h *= mix(0.72, 1.0, life) * stand;
@@ -706,6 +770,9 @@ void main() {
   float curve = (0.12 + 0.28 * gr_rand(s)) * mix(1.0, ${glsl(SLEEP.swardCurve)}, sward);
   float flower = step(gr_rand(s), surf.z * 0.1 * (1.0 - sward) * (1.0 - woodFloorAt(root2)) * (1.0 - pondBankAt(root2))) * step(0.5, life);
   float petal = gr_rand(s);
+  width *= mix(1.0, ${glsl(REEDS.width)}, reed.is);
+  curve = mix(curve, 0.05, reed.is);
+  flower = max(flower, reed.head * step(0.5, life));
   h *= 1.0 + flower * (0.2 + 0.5 * pasture);
   vec3 rootPos = bladeRoot(root2, groundH);
 
@@ -718,7 +785,7 @@ void main() {
   float ph = seed * 43.1;
   float flutterAmp = (0.04 + 0.012 * sp) * (0.6 + 0.4 * t) * mix(0.3, 1.0, life);
   vec2 flutter = vec2(sin(uTime * (2.7 + seed * 2.1) + ph), sin(uTime * (2.1 + seed * 1.6) + ph * 1.7)) * flutterAmp;
-  vec2 wb = bend.xy + flutter;
+  vec2 wb = (bend.xy + flutter) * mix(1.0, ${glsl(REEDS.stiff)}, reed.is);
   float wa = length(wb);
   vec2 wdir = wa > 1e-4 ? wb / wa : facing;
   vec2 align = dot(facing, wdir) >= 0.0 ? wdir : -wdir;
@@ -745,6 +812,7 @@ void main() {
   vec3 tint = grassTint(root2) * (0.8 + 0.4 * seed) * (0.92 + 0.16 * fract(fld.y * 7.3) * fld.w);
   tint = mix(tint, vec3(0.62, 0.52, 0.2), hay * 0.55);
   tint = mix(tint, vec3(0.13, 0.24, 0.1), rush * 0.5);
+  tint = mix(tint, ${REED_TINT} * reed.shade, reed.is);
   tint = mix(stillGrey(tint), tint, life);
   vTint = tint;
   ${BLADE_SHADE_GLSL}
@@ -752,7 +820,7 @@ void main() {
   vFog = fogOf(rootPos + vec3(0.0, fogRise, 0.0), 1.0);
   vWorld = world;
   vT = t;
-  vec3 bloom = petal < 0.45 ? vec3(1.0, 0.8, 0.14) : petal < 0.65 ? vec3(0.97, 0.95, 0.9) : petal < 0.9 ? vec3(0.93, 0.52, 0.68) : vec3(0.62, 0.46, 0.88);
+  vec3 bloom = reed.head > 0.5 ? ${SEED_HEAD} : petal < 0.45 ? vec3(1.0, 0.8, 0.14) : petal < 0.65 ? vec3(0.97, 0.95, 0.9) : petal < 0.9 ? vec3(0.93, 0.52, 0.68) : vec3(0.62, 0.46, 0.88);
   vFlower = vec4(mix(stillGrey(bloom), bloom, life), flower);
   gl_Position = projectionMatrix * viewMatrix * vec4(world, 1.0);
 }`;

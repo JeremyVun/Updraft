@@ -105,8 +105,11 @@ stands between the camera and the child.
 The plane stays in the child's hand. Three curtains of washing hang across the path. Broad sweeps lift a hem and
 small sweeps add up, in any direction, and progress is never lost; only the waiting curtain takes the stroke
 aimed at it on screen (`WashingCurtain.brush`). The first shows sideways invitation traces
-(`fx/washing-invitation.ts`). The cygnet goes under first and looks back for the child; a lifted sheet stays up
-until both are through. The last sheet opens on a clearing: one low line with a blue and a red adult garment and
+(`fx/washing-invitation.ts`). The wind lifts a sheet out toward the waiting pair from its pegs, higher and flapping
+harder with each sweep. Opened, it is washing in a gale: the breeze through the gap keeps it streaming high over
+them, never still, ripples running to a whipping hem, a corner at a time kicking up, its height rising and falling
+with the gusts. The cygnet goes under first and looks back for the child, both waiting beyond the hem's reach; once
+they are through a gust tosses the sheet higher, clear of the camera following them. The last sheet opens on a clearing: one low line with a blue and a red adult garment and
 the small yellow jumper between them, and the red door. The released breeze brings the sleeves together (blue
 begins, red follows, yellow answers) and the door opens once they have nearly met. Through it is a separate shore
 (`DOOR_SHORE`), drawn inside the opening, where the kite and the boat wait on open grass. The child and the bird
@@ -138,7 +141,11 @@ Knobs: `tuning.linesPassage`, `tuning.washing`, `tuning.family`, `tuning.linesTo
 
 Early, affectionate play, and the introduction to putting wind into a sail before the drowned village needs it.
 Three pools joined by narrow streams run down to the departure beach. An oversized bath plug hangs on a long chain
-from the haze, and an oversized enamel bathtub stands on the far bank (scenery only).
+from the haze, and an oversized enamel bathtub stands on the far bank (scenery only). Reeds stand in clumps along
+the pools' banks, rooted into the shallows and swaying with the grass (`tuning.littleBoats.reeds`, `REEDS_GLSL` in
+`world/grass.ts`): mostly on the far bank, only short low stretches on the near one, and never by the toy, on the
+child's walk, where the cygnet hops in and out (`BOATS_POOLS`) or in the narrow runs where toys pass close to the
+lip.
 
 On the grass above the beach the child takes the cygnet out of the satchel and sets it down, and it walks up with
 her. She notices a toy on a bare patch of the flat bank, back from the water (`toyBank`), kneels, lifts it in both

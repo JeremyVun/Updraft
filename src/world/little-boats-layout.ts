@@ -65,6 +65,12 @@ export function boatsRipple(x: number, z: number, time: number): number {
 export function boatsWaterHeight(x: number, z: number, time: number): number {
   return boatsWaterBase(x, z) + boatsRipple(x, z, time);
 }
+/** Where the cygnet swims: it hops in after `enter`, never later than eight metres before `leave`, and out at `leave`. */
+export const BOATS_POOLS = [
+  { enter: 4, leave: 30 },
+  { enter: 34, leave: 65 },
+  { enter: 69, leave: 94 },
+] as const;
 /** Where the stranded toy waits: up on the flat bank, back from the water's edge. */
 export const BOATS_TOY = { x: boatsX(3) + boatsWidth(3) + tuning.littleBoats.toyBank, z: LITTLE_BOATS.startZ - 3 };
 /** Keep the stranded toy visible on a small bare patch of bank. */

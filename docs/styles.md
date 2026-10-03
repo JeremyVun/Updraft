@@ -127,6 +127,8 @@ Set the mood and invite one click; discovering the wind belongs in the game.
 
 - **Island of lines**: washing hung so dense the child is small beneath it; ordinary laundry pale linen, the
   family's garments rich blue, warm red and the child's yellow.
+- **Little boats**: the pools meet the turf through clumps of reeds, slender, darker and bluer than the grass, with
+  a few dark brown seed heads, standing in the shallows and bending with the wind.
 - **Dark wood**: dark, with faint cold moonlight on wet trunks, uneven ground and the travellers' outlines; never so
   dark that the forest disappears. The embers are abstract light after the approved study
   (`assets/art-direction/wood-ember.png`): honey and apricot veils curling round a warm heart, breathing and
