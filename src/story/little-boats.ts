@@ -152,6 +152,7 @@ export class LittleBoatsChapter implements Chapter {
     const { child: c, plane: p, cygnet: k, littleBoats: room, wind, boat } = this.cast;
     const childS = L.startZ - c.position.z;
     room.update(dt, time, wind, Math.max(3, childS + tuning.littleBoats.childLead));
+    if (['pickup', 'holdToy', 'carryToy', 'launch'].includes(this.beat) && !k.errand) k.stay = true;
     if (this.beat === 'notice') {
       c.lookAt = room.focus;
       if (this.elapsed > 1.2) {
@@ -162,13 +163,15 @@ export class LittleBoatsChapter implements Chapter {
           false,
           () => {
             c.faceToward(c.position.x - 3, c.position.z, 1);
+            // The bird waits on the bank beside the launching place, in the picture with her.
+            k.errand = this.birdBank.set(room.stranded.x - 1.2, 0, room.stranded.z - 1.2);
+            this.birdBank.y = heightAt(this.birdBank.x, this.birdBank.z);
             this.to('pickup');
           },
           0.08,
         );
       }
     } else if (this.beat === 'pickup') {
-      k.stay = true;
       c.kneeling = 1;
       c.lean = 1.4;
       c.lookAt = room.focus;
