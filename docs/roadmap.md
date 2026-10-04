@@ -16,6 +16,8 @@ he finds, and each item is fixed and surgically verified. Sharing plans and the 
   name for the chapter select.
 - **Startup** ([backlog/boot-veil](backlog/boot-veil/)): since the stairs, the loading veil freezes for over half a
   second while the game boots (`start-check` fails); and whether the veil has outgrown itself. In design.
+- **More to do on the path** ([backlog/path-puzzles](backlog/path-puzzles/)): puzzles on the main path so players
+  don't feel there is not enough to do. Choosing ideas room by room.
 - **Chapter select without a reload** ([backlog/chapter-select-in-place](backlog/chapter-select-in-place/)): a pick
   starts the room at once, with sound, instead of reloading to the veil. Designed; ready to build.
 
@@ -79,6 +81,8 @@ Evidence is in `/private/tmp/updraft-motion-review-Sww9sA/` (`journey` and `cont
 
 ## Later
 
+- Optional secrets, one hidden per room for players who want more to do ([backlog/secrets](backlog/secrets/)).
+  Seeded, not designed.
 - A second companion: Jeremy would "eventually like to add another animal later one and make this a much more
   involved and immersive experience." The companion system is general for this reason
   ([journey.md](journey.md#the-companion)).

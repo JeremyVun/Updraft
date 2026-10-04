@@ -10,7 +10,7 @@ const BASE = process.env.BASE ?? 'http://127.0.0.1:5230/';
 const FRAMES = Number(process.env.FRAMES ?? 600);
 const chapters = process.argv.slice(2).length ? process.argv.slice(2)
   : ['island', 'lines', 'boats', 'meadow', 'piano', 'birches', 'stairs', 'drowned', 'wood', 'sleeping', 'sea', 'mirror', 'jetty', 'summit', 'stage'];
-const browser = await chromium.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true,
+const browser = await chromium.launch({ channel: 'chromium', headless: true,
   args: ['--enable-gpu', '--use-angle=metal', '--ignore-gpu-blocklist'] });
 const failures = [];
 try {

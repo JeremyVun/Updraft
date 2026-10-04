@@ -31,7 +31,7 @@ let context;
 let stopReview;
 const report = { mode, beats: [], catches: [], errors: [] };
 try {
-  browser = await chromium.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true,
+  browser = await chromium.launch({ channel: 'chromium', headless: true,
     args: ['--enable-gpu', '--use-angle=metal', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
   context = await browser.newContext({ viewport, hasTouch: portrait,
     ...(videoDir ? { recordVideo: { dir: videoDir, size: viewport } } : {}) });

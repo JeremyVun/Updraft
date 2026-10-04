@@ -24,7 +24,7 @@ const BASE = `
   .shade { position: absolute; inset: 0; background: radial-gradient(ellipse var(--sw, 34%) var(--sh, 30%) at 50% var(--at), rgba(16, 20, 26, var(--sa, .38)), rgba(16, 20, 26, 0) 100%); }
 `;
 const MARK = '<svg class="mark" viewBox="0 0 440 160"><path d="M32 96 C110 126 211 26 330 65 C229 30 121 130 32 96Z"/><path d="M95 116 C184 113 256 50 397 77 C266 54 187 117 95 116Z"/></svg>';
-const browser = await chromium.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true, args: ['--disable-gpu'] });
+const browser = await chromium.launch({ channel: 'chromium', headless: true, args: ['--disable-gpu'] });
 try {
   for (const card of cards) {
     const [w, h] = card.size;

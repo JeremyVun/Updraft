@@ -46,7 +46,7 @@ process.on('SIGTERM', () => process.exit(143));
 const prefix = process.argv[2] ?? '/tmp/updraft-startup';
 await acquireLock();
 const browser = await chromium.launch({
-  executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+  channel: 'chromium',
   headless: true,
   args: ['--enable-gpu', '--use-angle=metal', '--ignore-gpu-blocklist'],
 });

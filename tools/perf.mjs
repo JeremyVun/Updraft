@@ -1,4 +1,4 @@
-// Measures the running game in local Chrome (GPU) from inside the page, without screenshots.
+// Measures the running game in Chrome for Testing (GPU) from inside the page, without screenshots.
 // Usage: node tools/perf.mjs <mode> [seconds] [query] ['<json steps>']
 //   modes: frames   every rAF interval: percentiles, hitches (>25 ms) with their time, long tasks, __stats
 //          gl       which native WebGL calls block the main thread (count, total, max), from page load
@@ -172,7 +172,7 @@ const INIT = {
 
 await acquireLock();
 const browser = await chromium.launch({
-  executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+  channel: 'chromium',
   headless: true,
   args: ['--enable-gpu', '--use-angle=metal', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'],
 });
