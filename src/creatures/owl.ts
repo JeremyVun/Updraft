@@ -164,6 +164,12 @@ void main() {
     // Eyeshine: the light thrown back out of the eyes, which is all a frightened child sees of them in the dark.
     col += vec3(1.0, 0.72, 0.22) * uOwlEyes.x * glow * 3.2;
   }
+  // Flying up through the sliver of moon at the bend, its pale underside and the edges of its down catch it.
+  if (uOwlWing.w > 0.0) {
+    vec3 Lm = normalize(uShapeMoon.xyz - vWorld);
+    vec3 cold = vec3(0.62, 0.74, 1.0) * uShapeMoon.w * uNight * uOwlWing.w;
+    col += alb * cold * (max(0.0, dot(N, Lm)) * 1.4 + 0.25) + cold * edge * fuzz * 0.5;
+  }
   col *= uOwlEyes.w;
   gl_FragColor = vec4(max(applyFog(col, vWorld), 0.0), 1.0);
 }`;
@@ -243,7 +249,7 @@ type Phase = 'perched' | 'awake' | 'leaving' | 'gone';
 /**
  * The owl in the fork: what it is doing, kept apart from how it is drawn so the story can drive it without a
  * renderer. Sitting unseen it is perfectly still; shown for what it is, it blinks, tilts its head at her, fluffs
- * itself up, hoots once and glides off ahead into the wood.
+ * itself up, hoots once and flies up and away over the trees.
  */
 export class Owl {
   readonly position = new THREE.Vector3();
@@ -260,6 +266,8 @@ export class Owl {
   eyeshine = 0.6;
   /** 1 seen, falling to 0 as it goes off into the dark. */
   presence = 1;
+  /** How much of the sliver of moon it is flying up through. */
+  moonlit = 0;
   phase: Phase = 'perched';
   /** Raised once, the frame it hoots. */
   hooted = false;
@@ -278,7 +286,7 @@ export class Owl {
     this.position.copy(at);
     this.yaw = yaw;
     this.phase = 'perched';
-    this.fold = 1; this.flap = 0; this.pitch = 0; this.fluff = 0; this.blink = 0; this.presence = 1;
+    this.fold = 1; this.flap = 0; this.pitch = 0; this.fluff = 0; this.blink = 0; this.presence = 1; this.moonlit = 0;
     this.head.set(0, 0, 0);
     this.hooted = false;
     this.t = 0;
@@ -292,7 +300,7 @@ export class Owl {
     this.nextBlink = 0.5;
   }
 
-  /** Off ahead into the wood, the way she is going. */
+  /** Up and away, leaning the way she is going. */
   leave(toward: THREE.Vector3): void {
     if (this.phase === 'leaving' || this.phase === 'gone') return;
     this.away.copy(toward).sub(this.perch).setY(0).normalize();
@@ -342,25 +350,28 @@ export class Owl {
       this.blink = 0;
       this.fluff = Math.max(0, this.fluff - dt * 2);
       this.head.z *= Math.exp(-dt * 6);
-      this.head.x *= Math.exp(-dt * 4);
+      this.head.x *= Math.exp(-dt * 3);
       const travel = Math.atan2(this.away.x, this.away.z);
-      this.yaw += Math.atan2(Math.sin(travel - this.yaw), Math.cos(travel - this.yaw)) * (1 - Math.exp(-dt * 5));
-      // A crouch, a drop off the fork with three slow beats, then a long silent glide away into the dark.
+      this.yaw += Math.atan2(Math.sin(travel - this.yaw), Math.cos(travel - this.yaw)) * (1 - Math.exp(-dt * 4));
+      // A crouch, a spring up off the fork on opening wings, then a steep climb on deep slow beats, up and away into
+      // the dark over the trees.
       const crouch = THREE.MathUtils.smoothstep(t, 0, 0.35) * (1 - THREE.MathUtils.smoothstep(t, 0.45, 0.6));
-      this.pitch = 0.35 * crouch + 0.5 * THREE.MathUtils.smoothstep(t, 0.45, 0.9) - 0.2 * THREE.MathUtils.smoothstep(t, 1.6, 2.6);
-      this.fold = 1 - THREE.MathUtils.smoothstep(t, 0.35, 0.7);
-      const beating = 1 - THREE.MathUtils.smoothstep(t, 1.8, 2.3);
-      this.flap = Math.sin(Math.max(0, t - 0.5) * 9) * 0.75 * beating * (1 - this.fold) + 0.08 * (1 - beating);
       const s = Math.max(0, t - 0.45);
-      const along = s * 2.2 + s * s * 0.55;
-      const rise = -0.25 * Math.sin(Math.min(1, s / 0.8) * Math.PI * 0.5) + 0.35 * THREE.MathUtils.smoothstep(s, 0.8, 4);
-      this.tmp.set(-this.away.z, 0, this.away.x);
-      this.position.copy(this.perch).addScaledVector(this.away, along)
-        .addScaledVector(this.tmp, 0.06 * along * along * 0.1);
-      this.position.y = this.perch.y + rise + 0.05 * crouch;
-      this.presence = 1 - THREE.MathUtils.smoothstep(t, 3.4, 5.2);
-      if (t > 5.4) this.phase = 'gone';
+      this.fold = 1 - THREE.MathUtils.smoothstep(t, 0.3, 0.6);
+      this.pitch = 0.35 * crouch + 0.5 * THREE.MathUtils.smoothstep(s, 0, 0.6);
+      this.flap = Math.sin(s * 8.5) * 0.85 * (1 - this.fold);
+      const climb = this.climb(s);
+      this.position.copy(this.perch).addScaledVector(this.away, climb.x);
+      this.position.y = this.perch.y + climb.y - 0.06 * crouch;
+      this.presence = 1 - THREE.MathUtils.smoothstep(s, 3.4, 4.8);
+      this.moonlit = THREE.MathUtils.smoothstep(s, 0.1, 0.8);
+      if (s > 5) this.phase = 'gone';
     }
+  }
+
+  /** Out from the fork and up after `s` seconds of flight: x along the way it is going, y up. */
+  climb(s: number): { x: number; y: number } {
+    return { x: 0.95 * s + 0.2 * s * s, y: 1.05 * s + 0.2 * s * s };
   }
 
   private turnHead(dt: number, rate: number): void {
@@ -453,7 +464,7 @@ export class OwlBody {
     const u = this.uniforms;
     (u.uOwl.value as THREE.Vector4).set(owl.position.x, owl.position.y, owl.position.z, owl.yaw);
     (u.uOwlHead.value as THREE.Vector4).set(owl.head.x, owl.head.y, owl.head.z, owl.fluff);
-    (u.uOwlWing.value as THREE.Vector4).set(owl.fold, owl.flap, owl.pitch, 0);
+    (u.uOwlWing.value as THREE.Vector4).set(owl.fold, owl.flap, owl.pitch, owl.moonlit);
     (u.uOwlEyes.value as THREE.Vector4).set(owl.eyeshine, 0, owl.blink, owl.presence);
     u.uOwlTime.value = this.time;
     owl.toWorld(this.local.set(-EYE_AT.x, EYE_AT.y, EYE_AT.z + 0.01), true, this.left);

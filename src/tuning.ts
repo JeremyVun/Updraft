@@ -927,18 +927,18 @@ export const tuning = {
     fireflyRange: 25,
     fireflyPresence: 0.85,
     /**
-     * The stump at the bend: how far short of it she stops and her pace coming up to it; the first flinch back and
-     * the second, when the front coal only makes it bigger (m over s); seconds of side light to show it for what it
-     * is; how fast the one light swings round to the side coal (per second); how long after the front coal catches
-     * the side coal shows its updraft; how brightly the owl's eyes shine in the dark and how much more in light from
-     * the front; how often and how long she looks back for the player; when the owl leaves after it is seen; the
-     * breath out, the hand on the bark, how far past it she walks; and the camera behind her (back, to her left, up).
+     * The stump at the bend: how far short of it she stops and her pace coming up to it; the flinch back when she
+     * first sees it (m over s); seconds of side light to show it for what it is; how fast the one light swings round
+     * to the side coal (per second); how brightly the owl's eyes shine in the dark; how bright the sliver of moon is
+     * that throws its shadow; how often and how long she looks back for the player; when the owl leaves after it is
+     * seen; the breath out, the hand on the bark, how far past it she walks; and the camera behind her (back, to her
+     * left, up), and the longer lens on the owl once it is seen (drawn back as it narrows).
      */
     shape: {
-      stopShort: 4.4, approachPace: 0.7, flinchStep: 0.5, flinchSeconds: 0.9, shrinkStep: 0.7, shrinkSeconds: 1.2,
-      revealSeconds: 1.2, lightShift: 1.4, sideInviteAfter: 4, eyeshineDark: 0.55, eyeshineFront: 0.9,
-      glanceEvery: 5, glanceFor: 1.3, owlLeaveAfter: 6.4, exhaleSeconds: 1.3, touchSeconds: 1.6, walkOn: 9,
-      cameraBack: 6.2, cameraSide: 4.5, cameraUp: 3.5, cameraPace: 0.8, closeIn: 1.0, closeZoom: 2.1,
+      stopShort: 5.2, approachPace: 0.7, flinchStep: 0.5, flinchSeconds: 0.9, revealSeconds: 1.2, lightShift: 1.4,
+      eyeshineDark: 0.75, moonlight: 0.85, glanceEvery: 5, glanceFor: 1.3, owlLeaveAfter: 6.4, exhaleSeconds: 1.3,
+      touchSeconds: 2.2, walkOn: 9, cameraBack: 6.2, cameraSide: 4.5, cameraUp: 3.5, cameraPace: 0.8, closeBack: 5,
+      closeZoom: 1.6,
     },
     /** Seconds a coal burns from a full catch if nobody fans it again. */
     burnFor: 46,
