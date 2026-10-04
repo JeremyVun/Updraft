@@ -78,13 +78,18 @@ export const OWL_PERCH_LOCAL = new THREE.Vector3(...turned([0, 1.62, 0.04]));
 /** The top of the antlers, in the shape's frame. */
 export const SHAPE_HEIGHT = grown([0, 3.9, 0])[1];
 
-/** The owl's way out: up off the fork, over her right shoulder and on up over the way she came, clear of the trees. */
+/**
+ * The owl's way out: up off the fork past the rock, so its shadow flits across it, over her head, then round across in
+ * front of the rock and up over the way on.
+ */
 export const OWL_FLIGHT_LOCAL = [
-  new THREE.Vector3(-0.3, 3.5, 1.3),
-  new THREE.Vector3(-0.8, 4.0, 3.2),
-  new THREE.Vector3(-0.9, 4.6, 5.4),
-  new THREE.Vector3(-0.4, 7.2, 9.5),
-  new THREE.Vector3(0.4, 12, 14),
+  new THREE.Vector3(-0.7, 4.1, 0.8),
+  new THREE.Vector3(-1.5, 4.5, 2.4),
+  new THREE.Vector3(-0.6, 4.4, 4.8),
+  new THREE.Vector3(2.0, 4.5, 6.0),
+  new THREE.Vector3(4.6, 5.2, 5.2),
+  new THREE.Vector3(7.6, 7.2, 3.8),
+  new THREE.Vector3(11, 11.5, 2),
 ];
 
 /** What the throwing light reaches for the shadow, centre in the shape's frame and radius: the stump, the rock, the floor between. */

@@ -262,8 +262,8 @@ const BURST = 1.5;
 const BEATING = 0.6;
 const BEAT_RATE = 2.6;
 /** Seconds from the leap to the end of its way, and the look back at her, seconds into the flight. */
-const FLIGHT = 5.2;
-const GLANCE = [1.3, 2.1];
+const FLIGHT = 7.5;
+const GLANCE = [2.4, 3.1];
 
 /**
  * The owl in the fork: what it is doing, kept apart from how it is drawn so the story can drive it without a
