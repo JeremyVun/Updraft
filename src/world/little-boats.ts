@@ -405,7 +405,7 @@ export class LittleBoats {
     this.drain.update(dt, time, this.toys.every((t) => t.s > 118));
     boatsTide.uBoatsRise.value = this.drain.rise;
     const gate = this.drain.gate;
-    limit = this.drain.pulled ? Infinity : Math.min(limit, gate);
+    if (this.drain.pulled) limit = Infinity;
     let push = 0;
     for (const t of this.toys) {
       const w = wind.sample(t.group.position.x, t.group.position.z, this.air);
@@ -449,8 +449,9 @@ export class LittleBoats {
       // Ease toward the walkers/swimmer instead of losing all momentum at each
       // pool handoff. Contact from a following hull must obey the same easing.
       // Leave the outlet free so the toy can cross it and start departing.
-      const waiting = this.progress < L.length && limit < L.length;
-      const heroEnd = waiting ? hero.s + Math.max(0, limit - hero.s) * dt / k.followEase : k.offshoreEnd;
+      const heroLimit = Math.min(limit, gate);
+      const waiting = this.progress < L.length && heroLimit < L.length;
+      const heroEnd = waiting ? hero.s + Math.max(0, heroLimit - hero.s) * dt / k.followEase : k.offshoreEnd;
       for (const [i, t] of this.toys.entries()) {
         // Waiting toys join when the fleet reaches them, not only the child's toy.
         if (!t.joined && this.toys.some((o) => o.joined && o.s > t.s - 5)) t.joined = true;
