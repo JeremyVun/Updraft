@@ -87,6 +87,7 @@ import { Terrain } from './world/terrain';
 import { TerrainHeights } from './world/terrain-heights';
 import { Cottage } from './world/cottage';
 import { createJetty } from './world/jetty';
+import { createHomeToy } from './world/home-toy';
 import { COTTAGE, ISLES, meadowPoint } from './world/heightfield';
 import { Pond } from './world/pond';
 import { SkyMirror } from './world/sky-mirror';
@@ -264,7 +265,7 @@ const cottage = new Cottage(wind);
 cottage.objects.forEach((o) => scene.add(o));
 /** And out from the beach below it, the one landing in the journey that was built rather than run up onto. */
 const homeJetty = createJetty();
-scene.add(homeJetty);
+scene.add(homeJetty, createHomeToy());
 await built();
 const petals = new Petals(renderer, tuning.petals.stillIslandShare);
 scene.add(petals.mesh);

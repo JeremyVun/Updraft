@@ -189,6 +189,13 @@ export const tuning = {
     crestBack: 12, crestRise: 18, homePanFor: 8, descentFit: 3, descentHouseWeight: 0.2,
     returnFrom: 2.5,
   },
+  /** The child's orange toy washed up beside the home jetty (`world/home-toy.ts`). */
+  homeToy: {
+    /** Across from the jetty (negative is west), how high up the beach it lies, and how far it has settled into the sand. */
+    side: -4.2, above: 0.3, sink: 0.04,
+    /** Its heading, and how far it lies over on its side (radians). */
+    yaw: 0.9, heel: 0.7,
+  },
   homeWashing: {
     /** Behind the left side of the cottage, with the far end turned gently away. */
     left: -11.5, right: -5.3, forward: -4, turn: 0.28,

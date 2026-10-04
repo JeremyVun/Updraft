@@ -502,7 +502,10 @@ holds the returned stars and the current destination.
 jetty, with a low seaward camera arc toward the lantern. The whole home landscape shares one haze depth, so the
 hillside emerges together, clearing between 150 and 45 m from the berth and over the first stretch of the jetty
 walk (`tuning.homeApproach`). The home jetty is never seen before this crossing. The boat moors alongside it, the
-one arrival in the game with somewhere built for it; the child steps up onto the boards and climbs the hill. A lone
+one arrival in the game with somewhere built for it; the child steps up onto the boards and climbs the hill. Her own
+orange toy from the little boats, the one she set sailing out to sea, lies on its side on the sand just above the wash
+beside the shore end of the jetty (`world/home-toy.ts`, `tuning.homeToy`), turned so the jetty view shows its hull and
+fallen sail: she walks off the boards right past it. Nothing is made of it. A lone
 tree, the still island's tree again at two-thirds size, stands on the slope above the beach to the west of the jetty
 (`HOME_TREE`): in the approach it breaks the long slope right of the sun, and it is out of frame for the climb,
 the summit, the drawing and the pan to the moon.
@@ -545,6 +548,8 @@ Rulings:
   shoulders. The camera stays close behind her shoulder; swinging it out to the side makes the scene feel unnatural.
 - The cottage faces the approach with a slight turn, echoing the drawing without looking arranged for it.
 - The camera stays at the crest for the goodbye: no following, dolly or crane.
+- The little boats' toys are not met at sea; the one callback is her own toy washed up beside the home jetty, still,
+  with no timing or camera work (Jeremy, 2026-10-04).
 - No figure in the doorway. Children do not light fireplaces: the smoke starts after nightfall.
 - No bells at the summit: no phrase when the family arrives, no reward bells at the updraft, none as they fly away.
 - The closing screen is the one line and Play again: no border on the button, no credits roll.
