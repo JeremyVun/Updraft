@@ -24,24 +24,28 @@ const ACROSS = new THREE.Vector3(Math.cos(K.bearing), 0, Math.sin(K.bearing));
 export const SHORE_BERTH = new THREE.Vector3(LINES_BERTH.x, 0, LINES_BERTH.z);
 export const SHORE_MOORING = SHORE_BERTH.clone().addScaledVector(OUT, K.reach);
 const YAW_IN = Math.atan2(-OUT.x, -OUT.z);
-const NEAR = SHORE_BERTH.clone().addScaledVector(ACROSS, K.side);
+// The bank post stands inland of the berth, so the boat comes to rest beside the pinwheel rather than behind it.
+const NEAR = SHORE_BERTH.clone().addScaledVector(ACROSS, K.side).addScaledVector(OUT, -K.bankBack);
 NEAR.y = heightAt(NEAR.x, NEAR.z) + K.bankHeight;
-const FAR = NEAR.clone().addScaledVector(OUT, K.reach + K.farBeyond);
+const FAR = NEAR.clone().addScaledVector(OUT, K.bankBack + K.reach + K.farBeyond);
 FAR.y = K.farHeight;
 /** The top of the piling out in the water, where the departure kite is tied off. */
 export const SHORE_PILING = FAR.clone().addScaledVector(ACROSS, -0.18).setY(FAR.y + 0.32);
+const POST_TOP = NEAR.clone().addScaledVector(ACROSS, -0.16).setY(NEAR.y + 0.3);
 const SPAN = Math.hypot(FAR.x - NEAR.x, FAR.z - NEAR.z);
-/** The painter's knot runs this far along the line, from abeam of the moored bow to the bank wheel. */
-const KNOT_FROM = K.reach - 1.9;
-const KNOT_TO = 0.35;
+/** The painter's knot runs along the line from abeam of the moored bow to abeam of the bow on the sand. */
+const KNOT_FROM = K.bankBack + K.reach - 1.9;
+const KNOT_TO = K.bankBack - 1.9;
 const RUN = KNOT_FROM - KNOT_TO;
 /** The pinwheel, on the camera's side of the bank wheel, on the same axle. */
 export const SHORE_PINWHEEL = NEAR.clone().addScaledVector(ACROSS, K.pinwheelOut);
 /** Where the child stands to watch the boat: just inland of the post, clear of the pinwheel from the camera. */
 export const SHORE_STAND = (() => {
-  const p = NEAR.clone().addScaledVector(ACROSS, 0.4).addScaledVector(OUT, -2.9);
+  const p = NEAR.clone().addScaledVector(ACROSS, 0.1).addScaledVector(OUT, -2.9);
   return p.setY(heightAt(p.x, p.z));
 })();
+/** The haul is watched from one place: the stand, the pinwheel and the whole of the boat's way in. */
+export const SHORE_STAGE = SHORE_STAND.clone().lerp(SHORE_MOORING, 0.45).setY(Math.max(heightAt(NEAR.x, NEAR.z), 0) + 1.2);
 const LOOP = 2 * SPAN + 2 * Math.PI * K.wheelRadius;
 const SPARES = 12;
 const SPARE_SCALE = 0.75;
@@ -236,8 +240,8 @@ export class ShorePulleyRig {
 
     const fixed: THREE.BufferGeometry[] = [];
     const bankFoot = heightAt(NEAR.x, NEAR.z);
-    const postAt = NEAR.clone().addScaledVector(ACROSS, -0.16);
-    const bankTall = NEAR.y + 0.3 - bankFoot;
+    const postAt = POST_TOP;
+    const bankTall = POST_TOP.y - bankFoot;
     fixed.push(new THREE.CylinderGeometry(0.075, 0.1, bankTall + 0.3, 7).translate(postAt.x, bankFoot + bankTall / 2 - 0.15, postAt.z));
     const pileAt = SHORE_PILING;
     const seabed = Math.min(heightAt(pileAt.x, pileAt.z), -1);

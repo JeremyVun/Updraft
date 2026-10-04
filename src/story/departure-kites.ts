@@ -28,7 +28,7 @@ export class DepartureKites {
     this.markers = {
       island: new Kite(wind, BOAT_BERTH, { offset: [-8, -4] }),
       // Tied off on the pulley's piling out by the mooring, so it flies over the waiting boat and clear of the bank.
-      lines: new Kite(wind, LINES_BERTH, { offset: [SHORE_PILING.x - LINES_BERTH.x, SHORE_PILING.z - LINES_BERTH.z], ground: SHORE_PILING.y - 0.6, stringLength: tuning.linesToys.shoreKiteStringLength, tiedTo: 'rail' }),
+      lines: new Kite(wind, LINES_BERTH, { offset: [SHORE_PILING.x - LINES_BERTH.x, SHORE_PILING.z - LINES_BERTH.z], ground: SHORE_PILING.y - 0.95, stringLength: tuning.linesToys.shoreKiteStringLength, tiedTo: 'rail' }),
       boats: new Kite(wind, BOATS_BERTH, { offset: [-8, 5], stringLength: tuning.linesToys.shoreKiteStringLength }),
       meadow: new Kite(wind, FAR_SHORE, { offset: [-9, 0], stringLength: tuning.linesToys.shoreKiteStringLength }),
       birches: new Kite(wind, BIRCHES_BERTH, { offset: [-9, 7], stringLength: tuning.linesToys.shoreKiteStringLength }),

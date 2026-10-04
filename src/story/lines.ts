@@ -6,7 +6,7 @@ import { heightAt } from '../world/island';
 import { DOOR_EXIT, DOOR_SHIFT, doorway } from '../world/doorway';
 import { FAMILY_FACE, FAMILY_LINE, door, family } from '../world/lines';
 import { CURTAINS, LINES_LANDING, LINES_WALK, washingPassage } from '../world/lines-passage';
-import { SHORE_PINWHEEL, SHORE_STAND, shoreHaul } from '../world/shore-pulley';
+import { SHORE_PINWHEEL, SHORE_STAGE, SHORE_STAND, shoreHaul } from '../world/shore-pulley';
 import type { Cast, Chapter } from './cast';
 import type { LinesScorePhase } from '../audio/lines-score';
 
@@ -444,9 +444,9 @@ export class LinesChapter implements Chapter {
       const bank = THREE.MathUtils.smoothstep(Math.hypot(c.x - SHORE_STAND.x, c.z - SHORE_STAND.z), 18, 4);
       this.shoreFrom.set(Math.cos(k.bearing), 0, Math.sin(k.bearing)).lerp(this.from, 1 - k.viewTurn * bank).normalize();
       s.from = this.shoreFrom;
-      const pin = SHORE_PINWHEEL;
-      const w = 0.3 * bank;
-      s.target.set(c.x * (0.65 - w) + b.x * 0.35 + pin.x * w, Math.max(heightAt(c.x, c.z), 0) + 2.2, c.z * (0.65 - w) + b.z * 0.35 + pin.z * w);
+      // While she waits by the pinwheel the view holds still on the whole stage, so the boat comes in across it.
+      const hold = this.beat === 'haul' || this.beat === 'landed' ? 1 : bank;
+      s.target.set(c.x * 0.65 + b.x * 0.35, Math.max(heightAt(c.x, c.z), 0) + 2.2, c.z * 0.65 + b.z * 0.35).lerp(SHORE_STAGE, hold);
       s.distance = THREE.MathUtils.lerp(24, k.viewDistance, bank); s.height = THREE.MathUtils.lerp(7, k.viewHeight, bank);
       this.pace = 0.5;
     }
