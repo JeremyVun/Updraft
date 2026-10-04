@@ -23,9 +23,9 @@ const GLOW_SHARE = [0.32, 0.86, 0.65, 0.57];
  * as a miniature does, while a wide view stays clear. `aperture` turns dioptres into blur, which the distance's
  * reaches only up to `far`, and the sky's only up to `sky`.
  */
-const BLUR = { aperture: 4.8, far: 0.65, sky: 0.15 };
+const BLUR = { aperture: 12, far: 1.0, sky: 0.15 };
 /** How far each of the blur's two passes reaches, in quarter-size texels. */
-const BLUR_SPREAD = 2.2;
+const BLUR_SPREAD = 3.4;
 
 const BLUR_GLSL = /* glsl */ `
 uniform sampler2D tDepth;
