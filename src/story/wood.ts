@@ -9,7 +9,7 @@ import { heightAt } from '../world/island';
 import { WOOD_BERTH, WOOD_LANDING, WOOD_PATH, WOOD_REFUGE, WOOD_HEARTH, WOOD_OUTSIDE, WOOD_COAX, WOOD_APPROACH_LIGHT, WOOD_PLANE, WOOD_PLANE_LIGHT, woodPlaneSway } from '../world/wood';
 import type { Cast, Chapter } from './cast';
 import { cue } from './cues';
-import { WOOD_SHAPE, SHAPE_RIGHT, SHAPE_FACING, SHAPE_SIDE_COAL, SHAPE_SHADOW_HEAD, SHAPE_SHADOW_ANTLER, SHAPE_HEIGHT, OWL_PERCH_LOCAL, OWL_WAY_LOCAL, shapePoint } from '../world/wood-shape';
+import { WOOD_SHAPE, SHAPE_RIGHT, SHAPE_FACING, SHAPE_SIDE_COAL, SHAPE_THROW_COAL, SHAPE_WAIT, OWL_PERCH_LOCAL, OWL_FLIGHT_LOCAL, shapePoint, throwShapeLight, showShape, coalLight } from '../world/wood-shape';
 import { woodOwl } from '../creatures/owl';
 
 /** Where the cygnet goes to ground when the storm frightens it out of the hood: just off the path, in the dark. */
@@ -88,10 +88,10 @@ function pathSide(x: number, z: number): number {
 
 const APPROACH_ALONG = pathAlong(WOOD_APPROACH_LIGHT.x, WOOD_APPROACH_LIGHT.y);
 const PLANE_ALONG = pathAlong(WOOD_PLANE_LIGHT.x, WOOD_PLANE_LIGHT.y);
-/** Where she stops dead in front of the thing at the bend, and how far up the walk that is. */
-const SHAPE_STOP = new THREE.Vector2(WOOD_SHAPE.x + SHAPE_FACING.x * tuning.wood.shape.stopShort, WOOD_SHAPE.z + SHAPE_FACING.z * tuning.wood.shape.stopShort);
-const SHAPE_STOP_ALONG = pathAlong(SHAPE_STOP.x, SHAPE_STOP.y);
+/** How far up the walk the coal before the bend lies: the chain ends there until the thing at the bend is faced. */
+const THROW_ALONG = pathAlong(SHAPE_THROW_COAL.x, SHAPE_THROW_COAL.y);
 const OWL_PERCH = shapePoint(OWL_PERCH_LOCAL.x, OWL_PERCH_LOCAL.y, OWL_PERCH_LOCAL.z);
+const OWL_FLIGHT = OWL_FLIGHT_LOCAL.map((p) => shapePoint(p.x, p.y, p.z));
 
 type Beat = 'ashore' | 'first' | 'walk' | 'loom' | 'brave' | 'compose' | 'fright' | 'bolt' | 'lost' | 'found' | 'plane' | 'snag' | 'fall' | 'pickup' | 'out' | 'toBoat' | 'push' | 'aboard';
 
@@ -201,6 +201,12 @@ export class WoodChapter implements Chapter {
     }
     const start = Math.max(this.chainAt, pathAlong(c.x, c.z));
     let next = start + spacing;
+    if (!this.throwCoal) {
+      // Space the coals up the leg evenly, ending at the one before the bend.
+      const remaining = THROW_ALONG - start;
+      if (remaining <= tuning.wood.chainStep * 1.5) next = THROW_ALONG;
+      else if (remaining <= tuning.wood.chainStep * 2.5) next = start + remaining / 2;
+    }
     if (this.bolted && this.beat === 'walk') {
       // Space the last two fires evenly, ending at the tree rather than adding a second fire on arrival.
       const remaining = PLANE_ALONG - start;
@@ -215,6 +221,12 @@ export class WoodChapter implements Chapter {
     }
     this.chainSide = -this.chainSide;
     this.chainAt = along;
+    if (!this.throwCoal && along === THROW_ALONG) {
+      this.throwCoal = this.cast.embers.lay(SHAPE_THROW_COAL.x, SHAPE_THROW_COAL.y);
+      this.ahead = null;
+      this.toShape();
+      return;
+    }
     this.ahead = this.bolted && this.beat === 'walk' && along === PLANE_ALONG
       ? (this.planeCoal = this.cast.embers.lay(WOOD_PLANE_LIGHT.x, WOOD_PLANE_LIGHT.y))
       : !this.bolted && along === APPROACH_ALONG
@@ -446,8 +458,7 @@ export class WoodChapter implements Chapter {
       if (coal === this.planeCoal && this.beat === 'walk') continue;
       if (coal === this.ahead && this.beat === 'plane') continue;
       if (coal === this.sideCoal) continue;
-      if (coal === this.ahead && this.beat === 'walk' && !this.bolted && !this.shapeDone
-        && this.chainAt + tuning.wood.chainStep > SHAPE_STOP_ALONG - 2) { this.ahead = null; this.toShape(); continue; }
+      if (coal === this.throwCoal) { this.throwCaught(); continue; }
       if (coal === this.ahead && this.beat !== 'compose' && this.beat !== 'fright' && this.beat !== 'bolt' && this.beat !== 'lost') this.layNext();
       else if (coal === this.ahead) this.ahead = null;
     }
@@ -487,6 +498,7 @@ export class WoodChapter implements Chapter {
 
   /** Wait for the actual rendered angle, including portrait fitting and terrain corrections. */
   afterCamera(camera: THREE.PerspectiveCamera): void {
+    this.aspect = camera.aspect;
     if (this.beat === 'compose' && this.shot.eye) {
       const child = this.cast.child.position;
       this.tmp.copy(camera.position).sub(child).setY(0).normalize();
@@ -758,7 +770,7 @@ export class WoodChapter implements Chapter {
   }
 
   get updraftTarget(): THREE.Vector3 | null {
-    if (this.beat === 'loom' || this.beat === 'brave') return this.sideCoal?.live && !this.sideCoal.lit ? this.sideCoal.p : null;
+    if (this.beat === 'loom' || this.beat === 'brave') return this.shapeWaiting?.p ?? null;
     return this.waitingCoal?.p ?? null;
   }
 
@@ -798,7 +810,7 @@ export class WoodChapter implements Chapter {
 
   /** Where the walk is pointing: toward the light when there is one out ahead, and up the path when there is not. */
   private heading(dt: number): void {
-    if (['compose', 'fright', 'bolt', 'lost', 'found', 'loom'].includes(this.beat) || (this.beat === 'brave' && this.braveStep < 4)) return;
+    if (['compose', 'fright', 'bolt', 'lost', 'found', 'loom', 'brave'].includes(this.beat)) return;
     const c = this.cast.child.position;
     const t = this.target();
     const next = this.ahead?.live && !this.ahead.lit ? this.ahead.p : null;
@@ -854,8 +866,7 @@ export class WoodChapter implements Chapter {
       this.focus.copy(b);
       return;
     }
-    // Once she sets off round the bend the walking camera takes her on, so it has settled before the next coal.
-    if (this.beat === 'loom' || (this.beat === 'brave' && this.braveStep < 4)) {
+    if (this.beat === 'loom' || this.beat === 'brave') {
       this.frameShape(ground);
       return;
     }
@@ -883,6 +894,20 @@ export class WoodChapter implements Chapter {
       this.focus.copy(s.target);
       return;
     }
+    this.walkFrame(ground);
+    if (this.ahead?.live && !this.ahead.lit) {
+      this.childSubject.copy(c).y += 1.5;
+      // Preserve the same clear sightline to the next interaction that the rescue already has.
+      s.subjects = { primary: this.childSubject, secondary: this.ahead.p, margin: 0.72, extra: 12 };
+    }
+    this.pace = tuning.wood.cameraPace;
+    this.focus.copy(c);
+  }
+
+  /** Close in behind her, on the waiting coal's side, leaning a little toward the light. */
+  private walkFrame(ground: number): void {
+    const c = this.cast.child.position;
+    const s = this.shot;
     const lean = Math.min(1, 14 / Math.max(1, Math.hypot(this.glow.x - c.x, this.glow.z - c.z))) * tuning.wood.cameraLead;
     const dx = (this.glow.x - c.x) * lean;
     const dz = (this.glow.z - c.z) * lean;
@@ -898,13 +923,6 @@ export class WoodChapter implements Chapter {
     const ex = c.x - this.aim.x * tuning.wood.cameraBack - this.aim.z * this.shoulder;
     const ez = c.z - this.aim.z * tuning.wood.cameraBack + this.aim.x * this.shoulder;
     s.eye = this.side.set(ex, Math.max(Math.max(heightAt(ex, ez), 0), ground) + tuning.wood.cameraUp, ez);
-    if (this.ahead?.live && !this.ahead.lit) {
-      this.childSubject.copy(c).y += 1.5;
-      // Preserve the same clear sightline to the next interaction that the rescue already has.
-      s.subjects = { primary: this.childSubject, secondary: this.ahead.p, margin: 0.72, extra: 12 };
-    }
-    this.pace = tuning.wood.cameraPace;
-    this.focus.copy(c);
   }
 
   // The thing at the bend: a dead stump with an owl down in its fork, which in the dark is a beast with antlers.
@@ -912,35 +930,46 @@ export class WoodChapter implements Chapter {
   private shapeDone = false;
   private shapeStopped = -1;
   private shapeReveal = 0;
-  private shapeFear = 0.7;
-  /** The one waiting coal at the bend, off to the side, whose light shows the stump and the owl for what they are. */
+  private shapeFear = 0.2;
+  /** The last coal before the bend, beside her where she stops: its light throws the antlers up the rock. */
+  private throwCoal: Coal | null = null;
+  private throwLitAt = -1;
+  /** The one waiting coal at the stump, off to the side, whose light shows the stump and the owl for what they are. */
   private sideCoal: Coal | null = null;
   /** The first coal laid after the bend: until it is lit, the light at the stump stays the side coal's. */
   private afterShape: Coal | null = null;
   private shapeWorkedAt = -Infinity;
-  /** How much of the one light the wood's shaders get has swung round to the side coal. */
+  /** How much of the light, and of the shadow on the rock, has swung round from the coal before the bend to the side coal. */
   private lightShare = 0;
   private shapePower = 0;
+  /** How much the side coal's light shows the stump and the owl. */
+  private shapeShown = 0;
+  /** The owl in the stump, for QA. */
+  readonly owl = woodOwl;
   private braveStep = 0;
   private braveAt = 0;
-  /** 0 the wide shot that holds her, the stump, its shadow and the coal; 1 in closer on the owl once it is seen. */
-  private shapeClose = 0;
+  private waved = false;
+  private peeped = false;
+  private aspect = 16 / 9;
   private readonly shapeEyes = new THREE.Vector3();
-  private readonly shapeTouch = shapePoint(-0.62, 1.15, 0.22);
   private readonly shapeHold = new THREE.Vector3();
+  private readonly shapeHand = new THREE.Vector3();
   private readonly shapeGlance = new THREE.Vector3();
   private readonly shapeFace = new THREE.Vector3();
-  private readonly shapePoints = [new THREE.Vector3(), SHAPE_SHADOW_HEAD.clone(), SHAPE_SHADOW_ANTLER.clone(), shapePoint(0, SHAPE_HEIGHT, 0)];
-  /** Where the camera goes to see her hand on the bark from the side, in front of the stump's left shoulder. */
-  private readonly touchEye = shapePoint(-3.6, 1.9, 6.0);
+  private readonly childHead = new THREE.Vector3();
+  private readonly throwAt = new THREE.Vector3();
+  private readonly bendEye = new THREE.Vector3();
+  private readonly bendLook = new THREE.Vector3();
+  /** Round the bend: where she looks when she has breathed out, and goes. */
+  private readonly onward = shapePoint(6, 1.1, 2.4);
   private readonly shapeAsk: Coax = { at: new THREE.Vector3(), urgency: tuning.wood.inviteCoalUrgency, radius: tuning.wood.inviteCoalRadius };
 
-  /** QA: start a few paces short of the bend, with the coal before it just lit. */
+  /** QA: start some way short of the bend, with the coal before the last one just lit. */
   skipToShape(): void {
     const { child: c, embers } = this.cast;
     embers.clearCoals();
     this.chainSide = 1;
-    this.chainAt = SHAPE_STOP_ALONG - 12;
+    this.chainAt = THROW_ALONG - 20;
     const coal = embers.lay(...this.at(this.chainAt, this.chainSide * tuning.wood.chainOffset));
     embers.blow(coal, 1);
     this.ahead = coal;
@@ -948,33 +977,61 @@ export class WoodChapter implements Chapter {
     pathPoint(this.chainAt - 4, 0, this.spot);
     c.place(this.spot.x, this.spot.y, 0);
     c.stop();
-    c.faceToward(SHAPE_STOP.x, SHAPE_STOP.y, 1);
+    c.faceToward(WOOD_SHAPE.x, WOOD_SHAPE.z, 1);
     this.aim.set(-SHAPE_FACING.x, 0, -SHAPE_FACING.z);
     this.shoulder = -tuning.wood.cameraSide;
     this.to('walk');
     this.cutAfter = 2;
   }
 
+  /** The coal before the bend is laid, and she goes up to it slowly with the eyes on her, and stops there. */
   private toShape(): void {
-    const { child: c, embers } = this.cast;
-    this.sideCoal = embers.lay(SHAPE_SIDE_COAL.x, SHAPE_SIDE_COAL.y);
-    this.lightShare = 0;
+    const { child: c } = this.cast;
     this.to('loom');
     c.stroll = tuning.wood.shape.approachPace;
-    c.walkTo(SHAPE_STOP.x, SHAPE_STOP.y, false, () => {
+    c.walkTo(SHAPE_WAIT.x, SHAPE_WAIT.z, false, () => {
       c.stop();
       c.faceToward(WOOD_SHAPE.x, WOOD_SHAPE.z, 1);
       this.shapeStopped = this.now;
-    }, 0.4);
+    }, 0.3);
   }
 
-  /** The wood's shaders get one light; while the stump is in play it swings round to the side coal as that wakes. */
+  /** The coal before the bend has caught: the antlers are up the rock, and only now is there a coal at the side. */
+  private throwCaught(): void {
+    if (this.throwLitAt >= 0) return;
+    this.throwLitAt = this.now;
+    this.sideCoal = this.cast.embers.lay(SHAPE_SIDE_COAL.x, SHAPE_SIDE_COAL.y);
+    this.lightShare = 0;
+  }
+
+  private get shapeWaiting(): Coal | null {
+    if (this.throwCoal?.live && !this.throwCoal.lit) return this.throwCoal;
+    return this.sideCoal?.live && !this.sideCoal.lit ? this.sideCoal : null;
+  }
+
+  /**
+   * The light the stump's shadow is thrown by: the coal before the bend, swinging round to the side coal as that one
+   * wakes, so the antlers on the rock swing aside and fold into a plain stump's. The wood's shaders' one light
+   * swings with it.
+   */
   private steerShapeLight(dt: number): void {
-    const s = this.sideCoal;
-    if (!s) return;
-    this.shapePower = s.live ? this.cast.embers.glowOf(s) : 0;
-    const want = s.lit ? 1 : THREE.MathUtils.smoothstep(Math.min(2.6, this.shapePower * 0.5), 0.02, 0.5);
-    this.lightShare += (want - this.lightShare) * (1 - Math.exp(-dt * tuning.wood.shape.lightShift));
+    const k = tuning.wood.shape;
+    const { embers } = this.cast;
+    const t = this.throwCoal, s = this.sideCoal;
+    if (!t) return;
+    for (const coal of [t, s]) if (coal?.lit && (this.beat === 'loom' || this.beat === 'brave')) coal.heat = Math.max(coal.heat, k.holdHeat);
+    this.shapePower = s?.live ? embers.glowOf(s) : 0;
+    const want = s?.lit ? 1 : THREE.MathUtils.smoothstep(Math.min(2.6, this.shapePower * 0.5), 0.02, 0.5);
+    this.lightShare += (want - this.lightShare) * (1 - Math.exp(-dt * k.lightShift));
+    this.shapeShown = Math.max(this.shapeReveal, this.lightShare * THREE.MathUtils.smoothstep(this.shapePower, 0.2, 1.6));
+    const from = t.live ? embers.glowOf(t) : 0;
+    const gone = this.afterShape?.lit ? 0 : 1;
+    coalLight(t.p.x, t.p.z, this.throwAt);
+    if (s) this.throwAt.lerp(coalLight(s.p.x, s.p.z, this.tmp), this.lightShare);
+    const glow = Math.min(2.6, THREE.MathUtils.lerp(from, this.shapePower, this.lightShare) * 0.5);
+    throwShapeLight(this.throwAt, glow * k.throwLight * gone);
+    showShape(this.shapeShown);
+    woodOwl.shown = this.shapeShown;
   }
 
   private get steering(): boolean {
@@ -994,41 +1051,46 @@ export class WoodChapter implements Chapter {
   }
 
   /**
-   * Something at the bend with antlers and two eyes, thrown up on the boulder by the moon before any light of hers
-   * reaches it. She will not go past it. The coal off to the side shows a stump and a small owl.
+   * Two eyes in the dark ahead, and she will not go past them. Her own light throws antlers up the rock behind; the
+   * coal off to the side swings the light round, and it is a stump with a small owl in it.
    */
   private loom(dt: number): void {
     const { child: c, cygnet } = this.cast;
     const k = tuning.wood.shape;
     this.owlEyes(this.shapeEyes);
+    woodOwl.lookAt(this.childHead.copy(c.position).setY(c.position.y + 1.1));
     c.lookAt = this.shapeEyes;
     cygnet.watch(this.shapeEyes);
-    woodOwl.lookAt(this.cast.child.position);
     const warm = this.lightShare * THREE.MathUtils.smoothstep(this.shapePower, 0.2, 1.6);
     if (this.sideCoal?.lit) this.shapeReveal = Math.min(1, this.shapeReveal + dt * warm / k.revealSeconds);
     woodOwl.eyeshine = k.eyeshineDark * (1 - 0.7 * warm) * (1 - this.shapeReveal);
-    if (this.shapeStopped < 0) return;
-    const since = this.now - this.shapeStopped;
-    if ((this.sideCoal?.breath ?? 0) > 0) this.shapeWorkedAt = this.now;
-    const want = THREE.MathUtils.clamp(0.75 - 0.8 * this.shapeReveal - 0.3 * warm, 0, 1);
-    this.shapeFear += (want - this.shapeFear) * (1 - Math.exp(-dt * 2.5));
+    if ((this.shapeWaiting?.breath ?? 0) > 0) this.shapeWorkedAt = this.now;
+    const stopped = this.shapeStopped >= 0;
+    const thrown = this.throwLitAt >= 0;
+    // Small and still in front of the eyes; then her own light makes it worse; then the side light, and she holds.
+    const want = !stopped ? 0.3 : !thrown ? 0.5 : THREE.MathUtils.clamp(1 - 0.35 * warm - this.shapeReveal, 0, 1);
+    this.shapeFear += (want - this.shapeFear) * (1 - Math.exp(-dt * (thrown ? 5 : 1.5)));
     const fear = this.shapeFear;
-    // Now and then, while it frightens her, a look back over her shoulder for the one who makes the light.
-    if (fear > 0.55 && since > k.flinchSeconds + 1.2 && (since % k.glanceEvery) < k.glanceFor && this.shot.eye) {
+    if (!stopped) return;
+    const since = this.now - this.shapeStopped;
+    // Once, before the player has done anything: a look back over her shoulder for whoever makes the light.
+    if (!thrown && since > k.glanceAfter && since < k.glanceAfter + k.glanceFor && this.shot.eye) {
       c.lookAt = this.shapeGlance.copy(this.shot.eye);
     }
-    // A flinch back from it when she first takes it in.
-    const back = since < k.flinchSeconds ? k.flinchStep / k.flinchSeconds * Math.sin(Math.PI * since / k.flinchSeconds) * Math.PI / 2 : 0;
+    // The flinch back when the antlers leap up the rock.
+    const frightAt = Math.max(this.shapeStopped, this.throwLitAt);
+    const jolt = thrown ? this.now - frightAt : -1;
+    const back = jolt >= 0 && jolt < k.flinchSeconds ? k.flinchStep / k.flinchSeconds * Math.sin(Math.PI * jolt / k.flinchSeconds) * Math.PI / 2 : 0;
     c.position.x += SHAPE_FACING.x * back * dt;
     c.position.z += SHAPE_FACING.z * back * dt;
-    // Frightened, she leans away with her mittens drawn up to her scarf.
-    c.lean += (-0.05 - 0.12 * fear - c.lean) * (1 - Math.exp(-dt * 4));
-    c.tighter += (THREE.MathUtils.smoothstep(fear, 0.35, 0.8) - c.tighter) * (1 - Math.exp(-dt * 4));
-    if (fear > 0.35) {
+    c.lean += (-0.02 - 0.16 * fear - c.lean) * (1 - Math.exp(-dt * (thrown ? 6 : 2)));
+    c.tighter += (THREE.MathUtils.smoothstep(fear, 0.3, 0.8) - c.tighter) * (1 - Math.exp(-dt * 4));
+    if (fear > 0.65) {
+      // Mittens up to her scarf.
       c.face(this.shapeHold).y -= 0.32;
-      this.shapeHold.addScaledVector(SHAPE_FACING, -0.06);
+      this.shapeHold.addScaledVector(SHAPE_FACING, 0.06);
       c.reachFor(0, this.shapeHold);
-      c.reachFor(1, this.side.copy(this.shapeHold).addScaledVector(SHAPE_RIGHT, 0.09));
+      c.reachFor(1, this.shapeHand.copy(this.shapeHold).addScaledVector(SHAPE_RIGHT, 0.09));
     } else {
       c.reachFor(0, null);
       c.reachFor(1, null);
@@ -1037,126 +1099,112 @@ export class WoodChapter implements Chapter {
       c.reachFor(0, null);
       c.reachFor(1, null);
       woodOwl.wake();
-      cygnet.does('peer', this.shapeEyes);
       this.braveStep = 0;
       this.braveAt = this.now;
       this.to('brave');
     }
   }
 
-  /** The owl blinks at her, fluffs up, hoots and flies up and away; a breath out, a mitten on the bark, and on. */
+  /**
+   * The owl blinks at her and tilts its head, and she looks back. It fluffs itself up, hoots, and flutters up past
+   * her, and she turns to watch it go with the cygnet up out of the satchel after it. A breath out, and on.
+   */
   private brave(dt: number): void {
     const { child: c, cygnet } = this.cast;
     const k = tuning.wood.shape;
     const owl = woodOwl;
     this.owlEyes(this.shapeEyes);
-    // In close on the owl while it sits there; easing back out as it lifts away.
-    const close = this.braveStep >= 2 ? 0 : owl.phase === 'perched' || owl.phase === 'awake' ? 1 : 0.6;
-    this.shapeClose += (close - this.shapeClose) * (1 - Math.exp(-dt * 0.5));
     owl.eyeshine *= Math.exp(-dt * 3);
-    owl.lookAt(this.shapeHold.copy(c.position).setY(c.position.y + 1.2));
+    owl.lookAt(this.childHead.copy(c.position).setY(c.position.y + 1.1));
     if (owl.hooted) cue('hoot');
-    // Up and away over the boulder, a little the way she is going.
-    if (owl.phase === 'awake' && owl.elapsed > k.owlLeaveAfter) owl.leave(shapePoint(OWL_WAY_LOCAL.x, 0, OWL_WAY_LOCAL.z, this.tmp));
-    const watching = owl.phase === 'leaving' ? (owl.presence > 0.2 ? owl.position : null) : owl.phase === 'gone' ? null : this.shapeEyes;
+    if (owl.phase === 'awake' && owl.elapsed > k.owlLeaveAfter) owl.leave(OWL_FLIGHT);
+    // Her body softens: the lean goes out of her and her mittens come down.
+    c.tighter += (0 - c.tighter) * (1 - Math.exp(-dt * 1.5));
     if (this.braveStep === 0) {
-      c.lookAt = watching;
-      cygnet.watch(watching);
-    } else cygnet.watch(null);
-    c.tighter += (0 - c.tighter) * (1 - Math.exp(-dt * 2));
-    c.tilt = this.braveStep === 0 && owl.phase === 'awake' ? 0.14 * Math.sin(Math.max(0, this.now - this.braveAt - 0.8) * 1.6) * THREE.MathUtils.smoothstep(this.now - this.braveAt, 0.8, 1.6) : c.tilt * Math.exp(-dt * 4);
-    if (this.braveStep === 0) {
-      c.lean += (0.0 - c.lean) * (1 - Math.exp(-dt * 2));
-      if (owl.phase === 'gone' || (owl.phase === 'leaving' && owl.elapsed > 3.4)) {
+      c.lean += (0.0 - c.lean) * (1 - Math.exp(-dt * 1.5));
+      const flying = owl.phase === 'leaving' ? owl.flightSeconds : 0;
+      if (owl.phase === 'awake' || (owl.phase === 'leaving' && flying <= 0)) {
+        c.lookAt = this.shapeEyes;
+        cygnet.watch(this.shapeEyes);
+        // She tips her head back at it as it tips its head at her.
+        c.tilt = owl.phase === 'awake' ? -0.6 * owl.head.z : c.tilt * Math.exp(-dt * 4);
+      } else if (owl.phase === 'leaving' && owl.presence > 0.2) {
+        c.tilt *= Math.exp(-dt * 4);
+        c.lookAt = owl.position;
+        cygnet.watch(owl.position);
+        // Round after it, body and all, as it comes over her.
+        if (flying > k.turnAfter) c.faceToward(owl.position.x, owl.position.z, 1 - Math.exp(-dt * k.turnRate));
+        if (!this.peeped && flying > k.peepAfter) { this.peeped = true; cygnet.does('peer', owl.position, k.peepFor); }
+        if (!this.waved && flying > k.waveAfter) { this.waved = true; c.wave(); }
+      }
+      if (owl.phase === 'gone') {
         this.braveStep = 1;
         this.braveAt = this.now;
+        cygnet.watch(null);
       }
     }
-    // The breath out: her shoulders lift and drop.
+    // The breath out: her shoulders lift and drop, and she looks round the bend.
     if (this.braveStep === 1) {
       const b = (this.now - this.braveAt) / k.exhaleSeconds;
       c.lean = 0.07 * Math.sin(Math.PI * Math.min(1, b));
-      c.lookAt = this.shapeTouch;
-      if (b >= 1) {
-        this.braveStep = 2;
-        c.stroll = k.approachPace;
-        // Up to the stump's left side, side on to the camera, so the mitten on the bark is the one nearest the player.
-        const stand = shapePoint(-1.6, 0, 0.5);
-        c.walkTo(stand.x, stand.z, false, () => {
-          c.stop();
-          c.faceToward(this.shapeTouch.x, this.shapeTouch.z, 1);
-          c.reachFor(1, this.shapeTouch);
-          this.braveStep = 3;
-          this.braveAt = this.now;
-        }, 0.15);
-      }
-    }
-    if (this.braveStep === 2 || this.braveStep === 3) c.lookAt = this.shapeTouch;
-    if (this.braveStep === 3 && this.now - this.braveAt > k.touchSeconds) {
-      c.reachFor(1, null);
-      c.stroll = 1;
-      c.lean = 0;
-      this.shapeDone = true;
-      this.braveStep = 4;
-      c.lookAt = null;
-      // Back out round the front of the stump, round the bend by the light she has, then on to the next coal.
-      this.leg = Math.max(this.leg, 2);
-      const back = shapePoint(-1.3, 0, 2.6), clear = shapePoint(2.0, 0, 3.4);
-      c.walkTo(back.x, back.z, false, () => c.walkTo(clear.x, clear.z, false, () => {
-        pathPoint(SHAPE_STOP_ALONG + k.walkOn, 0, this.spot);
-        c.walkTo(this.spot.x, this.spot.y, false, () => {
-          this.to('walk');
-          this.chainAt = pathAlong(c.position.x, c.position.z);
-          // Near enough that she stops beside it, where the side coal's light runs out, not far short in the dark,
-          // and on the side the camera comes round to from the stump.
-          this.chainSide = -this.chainSide;
-          this.layNext(tuning.wood.shape.chainOn);
-          this.afterShape = this.ahead;
-          this.placeShoulder();
-        }, 1);
-      }, 0.5), 0.5);
+      c.lookAt = this.onward;
+      if (b >= 1 && !c.busy) this.walkOn();
     }
   }
 
-  /** After the usual idle wait, the side coal shows the updraft over it. */
+  /** On round the bend at her own pace, no longer the slow one she came up to it at. */
+  private walkOn(): void {
+    const { child: c } = this.cast;
+    c.stroll = 1;
+    c.lean = 0;
+    c.tilt = 0;
+    c.lookAt = null;
+    this.shapeDone = true;
+    this.braveStep = 2;
+    this.leg = Math.max(this.leg, 2);
+    this.to('walk');
+    this.chainAt = pathAlong(c.position.x, c.position.z);
+    this.chainSide = -this.chainSide;
+    this.layNext(tuning.wood.shape.chainOn);
+    this.afterShape = this.ahead;
+    this.placeShoulder();
+  }
+
+  /** After the usual idle wait, the waiting coal at the bend shows the updraft over it. */
   private shapeCoax(): Coax | null {
-    const coal = this.sideCoal;
-    if (this.beat !== 'loom' || this.shapeStopped < 0 || this.shapeReveal > 0 || !coal || coal.lit) return null;
-    if (this.now - this.shapeStopped < tuning.wood.inviteAfter || this.now - this.shapeWorkedAt < tuning.invitation.resumeAfter) return null;
+    const coal = this.shapeWaiting;
+    if (this.beat !== 'loom' || this.shapeStopped < 0 || this.shapeReveal > 0 || !coal) return null;
+    const since = this.now - Math.max(this.shapeStopped, this.throwLitAt);
+    if (since < tuning.wood.inviteAfter || this.now - this.shapeWorkedAt < tuning.invitation.resumeAfter) return null;
     this.shapeAsk.at.set(coal.p.x, Math.max(heightAt(coal.p.x, coal.p.z), 0), coal.p.z);
     return this.shapeAsk;
   }
 
+  /**
+   * One frame for all of it, eased into as she comes up to the coal and then held: the eyes large in the middle of
+   * it, her small at the bottom, the coal beside her and the side coal off to the left, and the rock behind the
+   * stump for the antlers to leap up.
+   */
   private frameShape(ground: number): void {
     const s = this.shot;
     const c = this.cast.child.position;
-    this.childSubject.copy(c).y += 1.5;
-    this.birdSubject.copy(this.shapeEyes);
-    const close = THREE.MathUtils.smootherstep(this.shapeClose, 0, 1);
-    s.target.copy(this.childSubject).lerp(this.birdSubject, 0.62 + 0.24 * close);
-    s.target.y += 0.3 * (1 - close);
-    // A glance after the owl as it goes, never a turn to follow it.
-    if (woodOwl.phase === 'leaving') s.target.lerp(woodOwl.position, 0.18 * woodOwl.presence);
     const k = tuning.wood.shape;
-    // Her walk up to it and the hand on the bark are seen from the side, so the mitten on the wood is in view.
-    if (this.beat === 'brave' && this.braveStep >= 2) {
-      s.target.copy(this.childSubject).lerp(this.shapeTouch, 0.45);
-      s.eye = this.side.copy(this.touchEye);
-      s.eye.y = Math.max(s.eye.y, heightAt(s.eye.x, s.eye.z) + 1.6);
-      s.subjects = { primary: this.childSubject, secondary: this.shapeTouch, margin: 0.75, extra: 1.5 };
-      s.zoom = 1;
-      this.pace = k.cameraPace * 1.3;
-      this.focus.copy(c);
-      return;
-    }
-    const back = k.cameraBack + k.closeBack * close, across = k.cameraSide * (1 - 0.25 * close);
-    const ex = c.x + SHAPE_FACING.x * back - SHAPE_RIGHT.x * across;
-    const ez = c.z + SHAPE_FACING.z * back - SHAPE_RIGHT.z * across;
-    s.eye = this.side.set(ex, Math.max(heightAt(ex, ez), 0, ground) + k.cameraUp - 0.5 * close, ez);
-    const points = this.shapePoints;
-    if (this.sideCoal) points[0].copy(this.sideCoal.p);
-    s.subjects = { primary: this.childSubject, secondary: this.birdSubject, points: close > 0.05 ? undefined : points, margin: 0.78, extra: 10 };
-    s.zoom = 1 + (k.closeZoom - 1) * close;
+    this.walkFrame(ground);
+    const portrait = this.aspect < 1;
+    const back = portrait ? k.portraitBack : k.cameraBack;
+    const across = portrait ? k.portraitSide : k.cameraSide;
+    const up = portrait ? k.portraitUp : k.cameraUp;
+    this.bendEye.copy(SHAPE_WAIT).addScaledVector(SHAPE_RIGHT, across).addScaledVector(SHAPE_FACING, back);
+    this.bendEye.x += c.x - SHAPE_WAIT.x;
+    this.bendEye.z += c.z - SHAPE_WAIT.z;
+    this.bendEye.y = Math.max(heightAt(this.bendEye.x, this.bendEye.z), 0, ground) + up;
+    shapePoint(k.lookAt[0], portrait ? k.portraitLookUp : k.lookAt[1], k.lookAt[2], this.bendLook);
+    const w = this.beat === 'brave' ? 1 : 1 - THREE.MathUtils.smoothstep(Math.hypot(c.x - SHAPE_WAIT.x, c.z - SHAPE_WAIT.z), 2, k.easeFrom);
+    s.eye!.lerp(this.bendEye, w);
+    s.target.lerp(this.bendLook, w);
+    this.childSubject.copy(c).y += 1.2;
+    this.birdSubject.copy(this.shapeEyes);
+    s.subjects = { primary: this.childSubject, secondary: this.birdSubject, margin: 0.96, extra: 0.5 };
     this.pace = k.cameraPace;
     this.focus.copy(c);
   }

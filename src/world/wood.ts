@@ -412,8 +412,8 @@ void main() {
   /** Firelight is the only light that reaches the floor here, so wet leaves take far more of it than their own
       near-black albedo would give back: without this the player's light throws no pool on the ground at all. */
   col += shapeLit(vWorld, (alb + vec3(0.085, 0.048, 0.022)) * emberLight(vWorld, N));
-  /** The sliver of moon at the bend: wet litter shines in it, so the stump's shadow runs across the floor to the boulder. */
-  col += shapeMoon(vWorld, N, alb + vec3(0.03, 0.035, 0.04));
+  /** The coal before the bend lights the litter at the stump's foot, so its shadow runs across the floor to the rock. */
+  col += shapeThrow(vWorld, N, alb + vec3(0.03, 0.025, 0.02));
   /**
    * Trunks right in front of the lens fade out: the camera trails the child through 2,700 trees and the one thing
    * the room can never do is hide the child, so anything between the two of them gets out of the way.

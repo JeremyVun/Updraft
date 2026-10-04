@@ -19,73 +19,97 @@ export function shapePoint(x: number, y: number, z: number, out = new THREE.Vect
   return out.set(WOOD_SHAPE.x, base + y, WOOD_SHAPE.z).addScaledVector(SHAPE_RIGHT, x).addScaledVector(SHAPE_FACING, z);
 }
 
-/** The one waiting coal, off to the side of the stump, where its light rakes across the bark. */
-export const SHAPE_SIDE_COAL = new THREE.Vector2();
-{
-  const side = shapePoint(-3.1, 0, 1.6);
-  SHAPE_SIDE_COAL.set(side.x, side.z);
-}
-
 /** How the stump is drawn up from the sketch below: the trunk stretched to stand over her, the antlers a little. */
 const TRUNK_TOP = 1.46;
-const TRUNK_STRETCH = 2.25;
-const ANTLER_STRETCH = 1.1;
+const TRUNK_STRETCH = 1.75;
+const ANTLER_STRETCH = 0.95;
 const GIRTH = 1.32;
 const grown = (p: number[]): [number, number, number] => {
   const y = p[1] <= TRUNK_TOP ? p[1] * TRUNK_STRETCH : TRUNK_TOP * TRUNK_STRETCH + (p[1] - TRUNK_TOP) * ANTLER_STRETCH;
   return [p[0] * GIRTH, y, p[2] * GIRTH];
 };
 
-/** The way the owl leaves, in the shape's frame: up and off to her right, over the path round the bend. */
-export const OWL_WAY_LOCAL = new THREE.Vector3(11, 0, -4);
-
-/** Where the owl sits, down in the fork between the two dead limbs, facing her. */
-export const OWL_PERCH_LOCAL = new THREE.Vector3(...grown([0, 1.6, 0.02]));
-/** The top of the antlers, in the shape's frame. */
-export const SHAPE_HEIGHT = grown([0, 3.9, 0])[1];
+/** A point in the shape's frame at `distance` out along `angle` (radians round from toward her to her right). */
+const bearing = (angle: number, distance: number) => new THREE.Vector3(Math.sin(angle) * distance, 0, Math.cos(angle) * distance);
 
 /**
- * The last coal before the bend, on the verge ahead and to her right: once lit, its light throws the stump's
- * shadow up the rock behind, larger than the stump, because the fire sits low and close.
+ * The last coal before the bend, close in front of the stump and to her left: its light throws the antlers broadside
+ * up the rock, half as big again as the stump, because the fire sits low and near. The stump is turned to face it,
+ * so the side coal, a right angle round from it and further off, sees the antlers edge on: a plain dead stump's
+ * shadow, smaller.
  */
-const THROW_LOCAL = new THREE.Vector3(3.2, 0, 7.5);
+const THROW_ANGLE = -0.79;
+const SIDE_ANGLE = THROW_ANGLE + Math.PI / 2;
+const THROW_LOCAL = bearing(THROW_ANGLE, 3.6);
+const SIDE_LOCAL = bearing(SIDE_ANGLE, 4.6);
+/** The stump's turn toward the coal before the bend. */
+const STUMP_TURN = THROW_ANGLE;
+/**
+ * The rock is a corner behind the stump: one face square to each coal, so each throws its shadow flat on stone.
+ * How far behind the stump each face stands, and each face's turn, ends along it and height.
+ */
+const FACE_BACK = 2;
+const FACES = [
+  { turn: THROW_ANGLE, from: -3, to: 3.2, top: 9.2 },
+  { turn: SIDE_ANGLE, from: -1.4, to: 3, top: 7.2 },
+];
+
 export const SHAPE_THROW_COAL = new THREE.Vector2();
+/** The one waiting coal at the stump, off to the side, where its light rakes across the bark. */
+export const SHAPE_SIDE_COAL = new THREE.Vector2();
 {
   const at = shapePoint(THROW_LOCAL.x, 0, THROW_LOCAL.z);
   SHAPE_THROW_COAL.set(at.x, at.z);
+  const side = shapePoint(SIDE_LOCAL.x, 0, SIDE_LOCAL.z);
+  SHAPE_SIDE_COAL.set(side.x, side.z);
 }
-/** The rock's face, in the shape's frame: how far behind the stump the shadow lands. */
-const FACE_Z = -2.2;
-/** The coal's light in the shape's frame: the orb hovers over the litter there. */
-function throwLocal(): THREE.Vector3 {
-  const base = heightAt(WOOD_SHAPE.x, WOOD_SHAPE.z);
-  return THROW_LOCAL.clone().setY(heightAt(SHAPE_THROW_COAL.x, SHAPE_THROW_COAL.y) - base + tuning.wood.orbHover);
-}
-/** Where a point of the stump, in its own frame, throws its shadow on the rock's face, in the world. */
-function shadowOnRock(local: THREE.Vector3): THREE.Vector3 {
-  const light = throwLocal();
-  const s = (FACE_Z - local.z) / (local.z - light.z);
-  const at = local.clone().addScaledVector(local.clone().sub(light), s);
-  return shapePoint(at.x, at.y, at.z);
-}
-/** The shadow's head and its outer antler on the rock, for the camera to keep in frame. */
-export const SHAPE_SHADOW_HEAD = shadowOnRock(OWL_PERCH_LOCAL.clone().setY(OWL_PERCH_LOCAL.y + 0.5));
-export const SHAPE_SHADOW_ANTLER = shadowOnRock(new THREE.Vector3(...grown([-0.95, 2.7, 0.05])));
-export const SHAPE_SHADOW_CROWN = shadowOnRock(new THREE.Vector3(...grown([-0.96, 3.7, 0])));
+/** Where she waits by the coal before the bend: just beyond it, so it burns beside her in frame. */
+export const SHAPE_WAIT = shapePoint(-1.3, 0, 4.1);
 
-/** What the throwing coal lights for the shadow, centre in the shape's frame and radius: the stump, the rock, the floor between. */
-const POOL_LOCAL = new THREE.Vector3(-1.2, 0, -1.6);
-const POOL_RADIUS = 7;
+/** The stump's sketch turned to face the coal, in the shape's frame. */
+const turned = (p: number[]): [number, number, number] => {
+  const [x, y, z] = grown(p);
+  const c = Math.cos(STUMP_TURN), s = Math.sin(STUMP_TURN);
+  return [x * c + z * s, y, -x * s + z * c];
+};
 
-/** How brightly the coal before the bend throws the stump's shadow up the rock: 0 until it wakes. */
-export function throwShapeLight(power: number): void {
-  shapeUniforms.uShapeThrow.value.w = power;
+/** Where the owl sits, down in the fork between the two dead limbs. */
+export const OWL_PERCH_LOCAL = new THREE.Vector3(...turned([0, 1.62, 0.04]));
+/** The top of the antlers, in the shape's frame. */
+export const SHAPE_HEIGHT = grown([0, 3.9, 0])[1];
+
+/** The owl's way out: up off the fork, over her right shoulder and on up over the way she came, clear of the trees. */
+export const OWL_FLIGHT_LOCAL = [
+  new THREE.Vector3(-0.3, 3.5, 1.3),
+  new THREE.Vector3(-0.8, 4.0, 3.2),
+  new THREE.Vector3(-0.9, 4.6, 5.4),
+  new THREE.Vector3(-0.4, 7.2, 9.5),
+  new THREE.Vector3(0.4, 12, 14),
+];
+
+/** What the throwing light reaches for the shadow, centre in the shape's frame and radius: the stump, the rock, the floor between. */
+const POOL_LOCAL = new THREE.Vector3(0, 0, -1.4);
+const POOL_RADIUS = 6.5;
+
+/** Moves the light that throws the shadow up the rock, `at` in the world, and how bright it is there: 0 until it wakes. */
+export function throwShapeLight(at: THREE.Vector3, power: number): void {
+  shapeUniforms.uShapeThrow.value.set(at.x, at.y, at.z, power);
+}
+
+/** The orb light of a coal laid at a point of the litter, in the world. */
+export function coalLight(x: number, z: number, out = new THREE.Vector3()): THREE.Vector3 {
+  return out.set(x, Math.max(heightAt(x, z), 0) + tuning.wood.orbHover, z);
+}
+
+/** How the stump and the owl are shown: 0 dark against the light behind her, 1 lit by the side coal. */
+export function showShape(amount: number): void {
+  shapeUniforms.uShapeShown.value = amount;
 }
 
 const STUMP_CAPS = 25;
 export const SHAPE_STUMP_CAPS = STUMP_CAPS;
-/** Two more for the owl's body and head, moved every frame, so its shadow leaves with it. */
-const CAPS = STUMP_CAPS + 2;
+/** Four more for the owl's body, head and wings, moved every frame, so its shadow flaps and leaves with it. */
+const CAPS = STUMP_CAPS + 4;
 
 type CapSpec = [number[], number[], number, number];
 
@@ -178,7 +202,7 @@ float shapeEye(vec3 p, vec4 eye, vec3 light) {
   float s = dot(eye.xyz - light, d) / max(dot(d, d), 1e-6);
   if (s <= 0.05 || s >= 0.9) return 0.0;
   float dist = distance(light + d * s, eye.xyz);
-  return 1.0 - smoothstep(eye.w * 0.5, eye.w * 1.6, dist);
+  return 1.0 - smoothstep(eye.w * 0.35, eye.w * 1.0, dist);
 }
 float shapeEyes(vec3 p, vec3 light) {
   if (uShapeEyeL.w <= 0.0) return 0.0;
@@ -206,7 +230,7 @@ vec3 shapeThrow(vec3 p, vec3 n, vec3 alb) {
   vec3 L = normalize(d);
   float facing = max(0.0, dot(n, L));
   float lit = facing > 0.0 ? shapeShadowFrom(p + n * 0.03, uShapeThrow.xyz, ${CAPS}) : 0.0;
-  vec3 fire = vec3(1.0, 0.54, 0.2) * uShapeThrow.w * pool / (1.0 + dot(d, d) * 0.012);
+  vec3 fire = vec3(1.0, 0.54, 0.2) * uShapeThrow.w * pool / (1.0 + dot(d, d) * 0.03);
   return alb * fire * facing * lit + SHAPE_EYE_GLOW * shapeEyes(p, uShapeThrow.xyz) * uShapeAt.y * pool * min(1.0, uShapeThrow.w);
 }`;
 
@@ -226,13 +250,17 @@ export const shapeUniforms = {
   uShapeShown: { value: 0 },
 };
 
-/** Moves the owl's two shadow capsules: its body and its head, or nothing once it has gone. */
-export function setOwlShadow(body: THREE.Vector3 | null, head: THREE.Vector3 | null, bodyR: number, headR: number): void {
+/** Moves the owl's shadow capsules: its body and its head, and each wing root to tip; nothing once it has gone. */
+export function setOwlShadow(body: THREE.Vector3 | null, head: THREE.Vector3 | null, bodyR: number, headR: number,
+  wings?: [THREE.Vector3, THREE.Vector3, THREE.Vector3, THREE.Vector3], wingR = 0): void {
   const a = shapeUniforms.uShapeA.value, b = shapeUniforms.uShapeB.value;
-  if (body) { a[STUMP_CAPS].set(body.x, body.y, body.z, bodyR); b[STUMP_CAPS].set(body.x, body.y, body.z, bodyR); }
-  else { a[STUMP_CAPS].w = 0; b[STUMP_CAPS].w = 0; }
-  if (head) { a[STUMP_CAPS + 1].set(head.x, head.y, head.z, headR); b[STUMP_CAPS + 1].set(head.x, head.y, head.z, headR); }
-  else { a[STUMP_CAPS + 1].w = 0; b[STUMP_CAPS + 1].w = 0; }
+  const set = (i: number, p: THREE.Vector3 | null, q: THREE.Vector3 | null, ra: number, rb: number) => {
+    if (p && q) { a[i].set(p.x, p.y, p.z, ra); b[i].set(q.x, q.y, q.z, rb); } else { a[i].w = 0; b[i].w = 0; }
+  };
+  set(STUMP_CAPS, body, body, bodyR, bodyR);
+  set(STUMP_CAPS + 1, head, head, headR, headR);
+  set(STUMP_CAPS + 2, wings?.[0] ?? null, wings?.[1] ?? null, wingR, wingR * 0.5);
+  set(STUMP_CAPS + 3, wings?.[2] ?? null, wings?.[3] ?? null, wingR, wingR * 0.5);
 }
 
 /** Where the owl's two eyes are, how large, and how brightly the light slipping past them shows in the shadow. */
@@ -361,9 +389,9 @@ void main() {
   } else {
     // Gritstone in beds: dark and cool, split along its bedding and down its joints, iron-stained where the rain runs,
     // a few pale crusts of lichen, moss on the ledges.
-    vec2 face = vec2(dot(vLocal.xz, vec2(${SHAPE_RIGHT.x.toFixed(4)}, ${SHAPE_RIGHT.z.toFixed(4)})), vWorld.y);
+    vec2 face = vec2(dot(vLocal.xz, normalize(vAxis.xz)), vWorld.y);
     float wob = fbm(face * vec2(0.35, 0.9) + 7.0);
-    float bed = face.y * 1.15 + wob * 0.9;
+    float bed = face.y * 0.72 + wob * 0.9;
     float seam = 1.0 - smoothstep(0.0, 0.07, abs(fract(bed) - 0.5) - 0.43);
     float joint = 1.0 - smoothstep(0.0, 0.05, abs(vnoise(vec2(face.x * 0.9, face.y * 0.12) + 3.0) - 0.5));
     joint *= smoothstep(0.3, 0.7, vnoise(face * vec2(0.4, 0.6) + 11.0));
@@ -371,22 +399,23 @@ void main() {
     float chips = smoothstep(0.6, 0.85, vnoise(face * vec2(2.3, 3.1) + floor(bed) * 5.3));
     h = grain * 0.35 + chips * 0.4 - (seam + joint) * 0.9;
     float weather = fbm(face * 0.55 + floor(bed) * 1.7);
-    alb = mix(vec3(0.055, 0.056, 0.058), vec3(0.11, 0.105, 0.1), weather) * (0.8 + 0.4 * grain);
-    alb = mix(alb, vec3(0.13, 0.085, 0.055), smoothstep(0.55, 0.85, vnoise(vec2(face.x * 2.2, face.y * 0.3) + 5.0)) * 0.45);
-    alb *= 1.0 - 0.75 * max(seam, joint);
+    alb = mix(vec3(0.16, 0.155, 0.15), vec3(0.27, 0.26, 0.245), weather) * (0.82 + 0.36 * grain);
+    alb = mix(alb, vec3(0.24, 0.17, 0.12), smoothstep(0.55, 0.85, vnoise(vec2(face.x * 2.2, face.y * 0.3) + 5.0)) * 0.35);
+    alb *= 1.0 - 0.5 * max(seam * 0.5, joint);
     float lichen = smoothstep(0.7, 0.82, fbm(face * 1.6 + 4.0) * 0.8 + grain * 0.25);
-    alb = mix(alb, vec3(0.2, 0.21, 0.18), lichen * 0.45);
+    alb = mix(alb, vec3(0.34, 0.35, 0.3), lichen * 0.4);
     float moss = smoothstep(0.35, 0.7, fbm(face * 1.1 + vLocal.z * 0.8) + n.y * 0.35) * smoothstep(0.45, 0.9, n.y);
     alb = mix(alb, vec3(0.04, 0.06, 0.025), moss);
     n = bump(n, h, 0.09);
   }
-  vec3 col = alb * hemiLight(n) * 0.75;
+  vec3 col = alb * hemiLight(n) * (vKind > 0.5 ? 0.2 : 0.75);
   // Faint moon all over, no more than the trunks round it get: in the dark the rock is not there to see.
   float moon = max(0.0, dot(n, uSunDir)) * 0.5 + 0.5 * (0.4 + 0.6 * max(0.0, dot(n, V)));
-  col += alb * uSunColor * moon * 0.3 * uNight;
+  col += alb * uSunColor * moon * (vKind > 0.5 ? 0.08 : 0.3) * uNight;
   // The stump takes less of the coal before the bend than the rock, so it stays a dark shape in front of its shadow.
-  col += shapeThrow(vWorld, n, alb) * (vKind > 0.5 ? 1.0 : 0.3);
-  vec3 warm = (alb + vec3(0.012, 0.008, 0.004)) * emberLight(vWorld, n) * mix(0.35, 1.0, uShapeShown);
+  col += shapeThrow(vWorld, n, alb) * (vKind > 0.5 ? 1.0 : 0.04 + 0.96 * uShapeShown);
+  // The stone takes the fire only through the light that throws the shadow, so it falls off with how the face is turned.
+  vec3 warm = (alb + vec3(0.012, 0.008, 0.004)) * emberLight(vWorld, n) * (vKind > 0.5 ? 0.0 : mix(0.12, 1.0, uShapeShown));
   col += shapeLit(vWorld + n * 0.04, warm);
   gl_FragColor = vec4(max(applyFog(col, vWorld), 0.0), 1.0);
 }`;
@@ -394,36 +423,45 @@ void main() {
 /** The stump that looms at the bend and the boulder it stands in front of. */
 export class WoodShape {
   readonly mesh: THREE.Mesh;
-  /** A place on the bark she can lay a mitten on, on the near side of the trunk. */
-  readonly touch = new THREE.Vector3();
-  /** Where no tree may stand: round the stump, the boulder behind it, and the gap the owl flies up and out through. */
+  /** Where the coal before the bend throws its light from, before anything steers it. */
+  readonly throwFrom = new THREE.Vector3();
+  /** Where no tree may stand: round the stump, the crag behind it, and the way the owl flies up and out. */
   static clears(x: number, z: number): boolean {
     const dx = x - WOOD_SHAPE.x, dz = z - WOOD_SHAPE.z;
     const lx = dx * SHAPE_RIGHT.x + dz * SHAPE_RIGHT.z, lz = dx * SHAPE_FACING.x + dz * SHAPE_FACING.z;
-    const along = THREE.MathUtils.clamp((lx * OWL_WAY_LOCAL.x + lz * OWL_WAY_LOCAL.z) / OWL_WAY_LOCAL.lengthSq(), 0, 1);
-    const offWay = Math.hypot(lx - OWL_WAY_LOCAL.x * along, lz - OWL_WAY_LOCAL.z * along);
-    return Math.hypot(lx, lz) < (lz > 0 ? 7.5 : 6) || Math.hypot(lx + 1.6, lz + 3.4) < 5.5 || offWay < 3;
+    const crag = FACES.some(({ turn, from, to }) => {
+      const n = bearing(turn, 1), u = lx * n.z - lz * n.x, v = lx * n.x + lz * n.z;
+      return u > from - 2 && u < to + 2 && v < -FACE_BACK + 1 && v > -FACE_BACK - 5;
+    });
+    let offWay = Infinity;
+    for (let i = 0; i < OWL_FLIGHT_LOCAL.length; i++) {
+      const p = i ? OWL_FLIGHT_LOCAL[i - 1] : OWL_PERCH_LOCAL, q = OWL_FLIGHT_LOCAL[i];
+      const ex = q.x - p.x, ez = q.z - p.z;
+      const t = THREE.MathUtils.clamp(((lx - p.x) * ex + (lz - p.z) * ez) / (ex * ex + ez * ez), 0, 1);
+      offWay = Math.min(offWay, Math.hypot(lx - p.x - ex * t, lz - p.z - ez * t));
+    }
+    const coals = Math.hypot(lx - THROW_LOCAL.x, lz - THROW_LOCAL.z) < 5.5 || Math.hypot(lx - SIDE_LOCAL.x, lz - SIDE_LOCAL.z) < 4.5;
+    return Math.hypot(lx, lz) < (lz > 0 ? 7.5 : 6) || crag || coals || offWay < 3.2;
   }
 
   constructor() {
     const base = heightAt(WOOD_SHAPE.x, WOOD_SHAPE.z);
     WOOD_SHAPE.y = base;
-    const caps = LOCAL.map(([a, b, ra, rb]) => ({ a: shapePoint(...grown(a)), b: shapePoint(...grown(b)), ra: ra * GIRTH, rb: rb * GIRTH }));
+    const caps = LOCAL.map(([a, b, ra, rb]) => ({ a: shapePoint(...turned(a)), b: shapePoint(...turned(b)), ra: ra * GIRTH, rb: rb * GIRTH }));
     caps.forEach((c, i) => {
       shapeUniforms.uShapeA.value[i].set(c.a.x, c.a.y, c.a.z, c.ra);
       shapeUniforms.uShapeB.value[i].set(c.b.x, c.b.y, c.b.z, c.rb);
     });
     shapeUniforms.uShapeAt.value.set(WOOD_SHAPE.x, 0, WOOD_SHAPE.z, 18);
-    const light = throwLocal();
-    const from = shapePoint(light.x, light.y, light.z);
-    shapeUniforms.uShapeThrow.value.set(from.x, from.y, from.z, 0);
+    const at = shapePoint(THROW_LOCAL.x, 0, THROW_LOCAL.z);
+    coalLight(at.x, at.z, this.throwFrom);
+    shapeUniforms.uShapeThrow.value.set(this.throwFrom.x, this.throwFrom.y, this.throwFrom.z, 0);
     const pool = shapePoint(POOL_LOCAL.x, 0, POOL_LOCAL.z);
     shapeUniforms.uShapePool.value.set(pool.x, 0, pool.z, POOL_RADIUS);
-    shapePoint(-0.5, 1.2, 0.5, this.touch);
 
     const parts: THREE.BufferGeometry[] = [];
-    // The trunk faces her: its front (where the rim stands highest) is the shape's +z.
-    const yaw = Math.atan2(SHAPE_FACING.x, SHAPE_FACING.z);
+    // The trunk's rim stands lowest toward her, so the owl down in the fork is in sight once it is lit.
+    const yaw = Math.atan2(SHAPE_FACING.x, SHAPE_FACING.z) + Math.PI;
     const [, top] = grown([0, 1.5, 0]);
     const stem = trunk(new THREE.Vector3(0, -0.5, 0), new THREE.Vector3(0, top, 0), 0.5 * GIRTH, 0.34 * GIRTH);
     stem.rotateY(yaw);
@@ -454,56 +492,71 @@ export class WoodShape {
    */
   private boulder(parts: THREE.BufferGeometry[]): void {
     const up = new THREE.Vector3(0, 1, 0);
-    parts.push(strip(this.crag(-1.6, 3.15, -1.0, 8.6, 1.5, 0.1, 5), 1, up));
+    FACES.forEach(({ turn, from, to, top }, i) => {
+      const along = new THREE.Vector3(Math.cos(turn), 0, -Math.sin(turn)).applyAxisAngle(up, Math.atan2(SHAPE_FACING.x, SHAPE_FACING.z));
+      parts.push(strip(this.crag(turn, (from + to) / 2, (to - from) / 2 + 0.3, -1.0, top, 1.5, 5 + i * 4), 1, along));
+    });
     // [x, y, z] centre in the shape's frame, [w, h, d] half sizes, yaw, lean back, seed.
     const stones: [number[], number[], number, number, number][] = [
-      [[1.9, 0.35, -2.9], [1.2, 1.05, 1.0], -0.4, 0.15, 7],
-      [[-4.9, 0.1, -2.1], [0.75, 0.5, 0.65], 0.9, 0.1, 11],
-      [[0.6, 0.0, -1.7], [0.5, 0.32, 0.45], -0.6, 0.1, 13],
+      [[-4.6, 0.1, 0.2], [0.75, 0.5, 0.65], 0.9, 0.1, 11],
+      [[3.6, 0.0, 0.4], [0.5, 0.32, 0.45], -0.6, 0.1, 13],
     ];
     stones.forEach(([at, size, turn, lean, seed]) => parts.push(strip(this.stone(at, size, turn, lean, seed), 1, up)));
   }
 
   /**
-   * A crag: a squared block of stone with its corners broken off along a few planes, its beds standing out from the
-   * face by different amounts, from `bottom` to `top` above the stump's foot and its face on `FACE_Z`.
+   * A tor: beds of stone stacked one on another, each a squared block with its corners broken off along a few planes,
+   * narrower and set back a little as they go up, from `bottom` to `top` above the stump's foot, the face square to
+   * `face` and `x` along it.
    */
-  private crag(x: number, half: number, bottom: number, top: number, depth: number, turn: number, seed: number): THREE.BufferGeometry {
-    const geo = new THREE.IcosahedronGeometry(1, 6);
+  private crag(face: number, x: number, half: number, bottom: number, top: number, depth: number, seed: number): THREE.BufferGeometry {
+    const rand = (k: number) => { const r = Math.sin(seed * 12.9898 + k * 78.233) * 43758.5453; return r - Math.floor(r); };
+    const beds: THREE.BufferGeometry[] = [];
+    let y = bottom, k = 0;
+    while (y < top - 0.4) {
+      const tall = Math.min(top - y, 1.25 + rand(k) * 0.9);
+      const narrow = 1 - 0.18 * (y - bottom) / (top - bottom) - 0.08 * rand(k + 3);
+      beds.push(this.bed(x + (rand(k + 5) - 0.5) * 0.5, half * narrow, y, tall + 0.12, depth * (0.92 + 0.12 * rand(k + 7)),
+        0.06 * (y - bottom) / (top - bottom) + 0.08 * rand(k + 9), (rand(k + 11) - 0.5) * 0.08, seed * 7 + k));
+      y += tall;
+      k++;
+    }
+    const geo = mergeGeometries(beds);
+    for (const b of beds) b.dispose();
+    geo.rotateY(face + Math.atan2(SHAPE_FACING.x, SHAPE_FACING.z));
+    const foot = shapePoint(0, 0, 0);
+    geo.translate(foot.x, foot.y, foot.z);
+    return geo;
+  }
+
+  /** One bed of a tor: its front on the rock's face, set back by `back`, turned a little by `turn`. */
+  private bed(x: number, half: number, bottom: number, tall: number, depth: number, back: number, turn: number, seed: number): THREE.BufferGeometry {
+    const geo = new THREE.IcosahedronGeometry(1, 4);
     const pos = geo.getAttribute('position');
     const v = new THREE.Vector3();
     const rand = (k: number) => { const r = Math.sin(seed * 12.9898 + k * 78.233) * 43758.5453; return r - Math.floor(r); };
-    const cuts = Array.from({ length: 9 }, (_, k) => {
-      const yaw = (k / 9) * Math.PI * 2 + rand(k) * 0.6, rise = (rand(k + 20) - 0.3) * 1.1;
+    const cuts = Array.from({ length: 7 }, (_, k) => {
+      const yaw = (k / 7) * Math.PI * 2 + rand(k) * 0.7, rise = (rand(k + 20) - 0.4) * 1.3;
       const n = new THREE.Vector3(Math.sin(yaw) * Math.cos(rise), Math.sin(rise), Math.cos(yaw) * Math.cos(rise));
-      // The face toward the coal is left whole; the cuts break the corners, the shoulders and the top.
-      if (n.z > 0.75) n.z = 0.3;
-      return { n: n.normalize(), d: 0.72 + rand(k + 40) * 0.2 };
+      // The face toward the coal is left whole; the cuts break the corners and the edges.
+      if (n.z > 0.35) n.z = 0.12;
+      return { n: n.normalize(), d: 0.8 + rand(k + 40) * 0.18 };
     });
-    const height = (top - bottom) / 2;
     for (let i = 0; i < pos.count; i++) {
       v.fromBufferAttribute(pos, i);
-      // Squared off toward a block, then broken.
-      v.set(Math.sign(v.x) * Math.abs(v.x) ** 0.45, Math.sign(v.y) * Math.abs(v.y) ** 0.45, Math.sign(v.z) * Math.abs(v.z) ** 0.45);
+      v.set(Math.sign(v.x) * Math.abs(v.x) ** 0.12, Math.sign(v.y) * Math.abs(v.y) ** 0.12, Math.sign(v.z) * Math.abs(v.z) ** 0.12);
       for (const { n, d } of cuts) {
         const over = v.dot(n) - d;
         if (over > 0) v.addScaledVector(n, -over);
       }
-      const wear = 0.04 * Math.sin(v.x * 4.3 - v.y * 3.1 + v.z * 3.7 + seed * 2.1) + 0.02 * Math.sin(v.x * 9.7 + v.y * 8.3 - v.z * 7.9 + seed);
+      const wear = 0.03 * Math.sin(v.x * 4.3 - v.y * 3.1 + v.z * 3.7 + seed * 2.1) + 0.015 * Math.sin(v.x * 9.7 + v.y * 8.3 - v.z * 7.9 + seed);
       v.multiplyScalar(1 + wear);
-      v.multiply(new THREE.Vector3(half, height, depth));
-      v.y += bottom + height;
-      // Each bed of the stone stands out from the face by its own amount, so the face is a stack of ledges.
-      const bed = Math.floor(v.y / 0.85 + 0.3 * Math.sin(v.x * 0.7 + seed));
-      if (v.z > 0) v.z += depth * 0.06 * (rand(bed + 60) - 0.5) * Math.min(1, v.z / (depth * 0.5));
-      v.z += FACE_Z - depth;
+      v.set(v.x * half, (v.y + 1) * tall / 2 + bottom, v.z * depth - FACE_BACK - depth - back);
       pos.setXYZ(i, v.x, v.y, v.z);
     }
+    geo.translate(0, 0, FACE_BACK + depth);
     geo.rotateY(turn);
-    geo.translate(x, 0, 0);
-    geo.rotateY(Math.atan2(SHAPE_FACING.x, SHAPE_FACING.z));
-    const foot = shapePoint(0, 0, 0);
-    geo.translate(foot.x, foot.y, foot.z);
+    geo.translate(x, 0, -FACE_BACK - depth);
     return geo;
   }
 
