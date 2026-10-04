@@ -87,6 +87,8 @@ const ROCK_OUTLINE: [number, number][] = [
 ];
 const ROCK_MIDDLE = new THREE.Vector2(3.2, 2.6);
 const ROCK_FRONT = 0.75;
+/** The lower stone at its foot: along the face, out of it, and its half-length and half-depth. */
+const FOOT_STONE = [5.6, 1.3, 1.3, 0.9];
 const ROCK_DEEP = 2.6;
 /** The two shallow fissures down the face, along it and up it from its middle on the ground, clear of the shadow's eyes. */
 const FISSURES: [number[], number[]][] = [[[0.4, 5.2], [0.9, 3.0]], [[5.6, 6.6], [6.4, 3.4]]];
@@ -750,7 +752,9 @@ export class WoodShape {
   static onRock(x: number, z: number, margin = 0): boolean {
     const dx = x - FACE_O.x, dz = z - FACE_O.z;
     const u = dx * FACE_U.x + dz * FACE_U.z, n = dx * FACE_N.x + dz * FACE_N.z;
-    return u > ROCK_OUTLINE[1][0] - margin && u < ROCK_OUTLINE[17][0] + margin && n < 1.6 + margin && n > -ROCK_DEEP - margin;
+    // The face bulges a little out of its plane; the stone at its foot stands further out.
+    const front = u > FOOT_STONE[0] - FOOT_STONE[2] ? FOOT_STONE[1] + FOOT_STONE[3] : ROCK_FRONT + 0.3;
+    return u > ROCK_OUTLINE[1][0] - margin && u < ROCK_OUTLINE[17][0] + margin && n < front + margin && n > -ROCK_DEEP - margin;
   }
 
   /**
@@ -803,7 +807,7 @@ export class WoodShape {
       if (limbs.some((d) => d !== c && d.a.distanceTo(c.b) < 0.02)) parts.push(strip(knuckle(c.b, c.rb * 1.04), 0, axis));
     });
     parts.push(strip(this.outcrop(), 1, FACE_U));
-    parts.push(strip(this.stone([5.6, 0, 1.3], [1.3, 0.85, 0.9], 0.35, 13), 1, FACE_U));
+    parts.push(strip(this.stone([FOOT_STONE[0], 0, FOOT_STONE[1]], [FOOT_STONE[2], 0.85, FOOT_STONE[3]], 0.35, 13), 1, FACE_U));
     const geo = mergeGeometries(parts);
     for (const p of parts) p.dispose();
     this.mesh = new THREE.Mesh(geo, new THREE.ShaderMaterial({
