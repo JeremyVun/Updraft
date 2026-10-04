@@ -1,4 +1,5 @@
 import { LINES_GRASS_GLSL, linesGrassCrop } from './lines-layout';
+import { LINES_SHIFT } from './geography';
 import { fixTreeInPlace } from '../gl/fixed';
 import { CLOUD_DECK, register } from '../gl/variants';
 import { passJob, type CompileJob } from '../gl/boot';
@@ -115,6 +116,8 @@ float pastureAt(vec2 xz) {
 }
 vec3 grassPatternAt(vec2 xz) {
   float pasture = pastureAt(xz);
+  // The island of lines keeps the green it was painted with before it moved; the switch is out under the sea.
+  if (length((xz - vec2(${ISLES.lines.x}.0, ${glsl(ISLES.lines.z)})) / vec2(${ISLES.lines.rx}.0, ${glsl(ISLES.lines.rz)})) < 1.4) xz -= vec2(${glsl(LINES_SHIFT.x)}, ${glsl(LINES_SHIFT.z)});
   return vec3(
     fbm(xz * 0.022 + vec2(3.1, 7.7)),
     pasture < 1.0 ? fbm(xz * 0.041 - vec2(5.3, 1.9)) : 0.0,
