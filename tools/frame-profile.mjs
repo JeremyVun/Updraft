@@ -902,7 +902,7 @@ async function open(base,chapter,setup) {
   if(FRAME)await page.addInitScript(()=>{let seed=1234567;window.__randoms=0;Math.random=()=>{window.__randoms++;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};
     let uuid=7654321;window.__uuidRandom=()=>{uuid=uuid+0x6D2B79F5|0;let t=Math.imul(uuid^uuid>>>15,1|uuid);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};});
   // three's UUIDs draw from their own stream, so a build that creates more or fewer objects keeps the game's random stream.
-  if(FRAME)await page.route(/\/node_modules\/\.vite\/deps\/three\.module-[^/]*\.js/,async route=>{
+  if(FRAME)await page.route(/\/deps\/three\.module-[^/]*\.js/,async route=>{
     const response=await route.fetch(),source=await response.text(),from='Math.random() * 4294967295 | 0';
     assert.equal(source.split(from).length,5,'Missing or ambiguous UUID hook in three');
     await route.fulfill({response,body:source.split(from).join('window.__uuidRandom() * 4294967295 | 0')});
