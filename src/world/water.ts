@@ -23,7 +23,7 @@ import { WATERLINE_GLSL, outsideHull, waterlineUniforms } from '../traveller/boa
 /** Vertex spacing of the sea near the camera, and how far that even spacing reaches before the mesh opens out. */
 const STEP = 1.9;
 const EVEN = 110;
-const REACH = 4600;
+export const REACH = 4600;
 
 /**
  * A grid centred on the camera, evenly spaced where the swell is real geometry and opening out geometrically
