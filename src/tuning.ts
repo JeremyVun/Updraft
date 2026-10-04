@@ -1166,7 +1166,7 @@ export const tuning = {
      * Radians east of north the line runs out from the bank; metres the boat is drawn in; how far beside its way
      * the line runs, and how far inland of the berth the bank post stands.
      */
-    bearing: 0.72, reach: 13, side: 2.3, bankBack: 6,
+    bearing: 0.72, reach: 13, side: 1.8, bankBack: 8,
     /** Hub heights above the ground and the sea, the wheels' radius, how far the line dips, and the piling beyond the boat. */
     bankHeight: 2.6, farHeight: 1.9, wheelRadius: 0.36, sag: 0.3, farBeyond: 1.4,
     pinwheelRadius: 1.2, pinwheelOut: 0.32,
@@ -1185,11 +1185,13 @@ export const tuning = {
      */
     slack: 0.45, pull: 1.4, drag: 0.5, beachGrip: 2.2,
     /** The heading it lies at on the sand once it is in. */
-    berthYaw: -0.15,
+    berthYaw: -0.45,
     /** A stalled player is shown a sweep across the pinwheel after this long without one. */
     inviteAfter: 4, inviteSpan: 7, inviteWidth: 0.15,
     /** At the bank the view turns this share of the way toward the line's side, at this distance and height. */
     viewTurn: 0.8, viewDistance: 21, viewHeight: 3.6,
+    /** Just through the door, the share of the way the view turns from straight ahead toward the waiting boat. */
+    arrivalLook: 0.3,
   },
   family: {
     /** Soft fullness and shoulder movement, as fractions of the piece's width. */

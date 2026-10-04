@@ -6,7 +6,7 @@ import { heightAt } from '../world/island';
 import { DOOR_EXIT, DOOR_SHIFT, doorway } from '../world/doorway';
 import { FAMILY_FACE, FAMILY_LINE, door, family } from '../world/lines';
 import { CURTAINS, LINES_LANDING, LINES_WALK, washingPassage } from '../world/lines-passage';
-import { SHORE_PINWHEEL, SHORE_STAGE, SHORE_STAND, shoreHaul } from '../world/shore-pulley';
+import { SHORE_BIRD, SHORE_PINWHEEL, SHORE_STAGE, SHORE_STAND, shoreHaul } from '../world/shore-pulley';
 import type { Cast, Chapter } from './cast';
 import type { LinesScorePhase } from '../audio/lines-score';
 
@@ -47,6 +47,9 @@ export class LinesChapter implements Chapter {
   private stalled = 0;
   /** The view of the shore turns from the walk's toward the line's side as she nears the bank. */
   private readonly shoreFrom = new THREE.Vector3();
+  /** She, the boat and the pinwheel stay in the frame however the view turns. */
+  private readonly shoreSubjects = { primary: new THREE.Vector3(), secondary: new THREE.Vector3(), tertiary: new THREE.Vector3(),
+    margin: 0.8, extra: 12 };
   private readonly thresholdEye = new THREE.Vector3();
   /** The view glances toward the line the torn sheet comes down on. */
   private readonly snagAttention = { point: new THREE.Vector3(), strength: 0, weight: tuning.linesPassage.snagGlance };
@@ -248,7 +251,7 @@ export class LinesChapter implements Chapter {
     c.walkTo(SHORE_STAND.x, SHORE_STAND.z, false, () => {
       this.boarding = false;
       c.faceToward(this.cast.boat.position.x, this.cast.boat.position.z, 1);
-      cygnet.errand = this.tmp.copy(SHORE_STAND).addScaledVector(this.reachTo.set(-1.1, 0, -0.6), 1).setY(heightAt(SHORE_STAND.x - 1.1, SHORE_STAND.z - 0.6)).clone();
+      cygnet.errand = SHORE_BIRD.clone();
       cygnet.watch(this.cast.boat.position);
       this.stalled = 0;
       this.to('haul');
@@ -396,7 +399,7 @@ export class LinesChapter implements Chapter {
     const c = this.cast.child.position;
     const s = this.shot;
     const k = tuning.linesPassage;
-    s.from = this.from; s.clearance = 2.1; s.exact = false; s.eye = undefined; s.attention = undefined;
+    s.from = this.from; s.clearance = 2.1; s.exact = false; s.eye = undefined; s.attention = undefined; s.subjects = undefined;
     if (this.beat === 'throughDoor' || this.beat === 'shore') {
       const base = door.group.position;
       const total = k.doorApproach + k.doorCross;
@@ -408,7 +411,8 @@ export class LinesChapter implements Chapter {
         const settle = THREE.MathUtils.smoothstep(this.t, 0, k.shorePause);
         this.thresholdEye.set(DOOR_EXIT.x, DOOR_EXIT.y + 1.85, DOOR_EXIT.z + 0.04);
         this.thresholdEye.lerp(this.tmp.set(DOOR_EXIT.x + 1, DOOR_EXIT.y + 5, DOOR_EXIT.z + 7), settle);
-        this.thresholdLook.set(DOOR_EXIT.x, DOOR_EXIT.y + 1.85, DOOR_EXIT.z - 14);
+        // Once through, the view drifts round to where the boat waits out on the water.
+        this.thresholdLook.set(DOOR_EXIT.x, DOOR_EXIT.y + 1.85, DOOR_EXIT.z - 14).lerp(SHORE_STAGE, settle * tuning.shorePulley.arrivalLook);
       }
       s.eye = this.thresholdEye; s.target.copy(this.thresholdLook); s.exact = true;
       this.focus.copy(s.target); return;
@@ -446,8 +450,14 @@ export class LinesChapter implements Chapter {
       s.from = this.shoreFrom;
       // While she waits by the pinwheel the view holds still on the whole stage, so the boat comes in across it.
       const hold = this.beat === 'haul' || this.beat === 'landed' ? 1 : bank;
-      s.target.set(c.x * 0.65 + b.x * 0.35, Math.max(heightAt(c.x, c.z), 0) + 2.2, c.z * 0.65 + b.z * 0.35).lerp(SHORE_STAGE, hold);
+      const toBoat = this.towing ? 0 : 0.35;
+      s.target.set(c.x * (1 - toBoat) + b.x * toBoat, Math.max(heightAt(c.x, c.z), 0) + 2.2, c.z * (1 - toBoat) + b.z * toBoat).lerp(SHORE_STAGE, hold);
       s.distance = THREE.MathUtils.lerp(24, k.viewDistance, bank); s.height = THREE.MathUtils.lerp(7, k.viewHeight, bank);
+      const f = this.shoreSubjects;
+      f.primary.copy(c).y += 1.2;
+      this.cast.boat.sailPoint(f.secondary);
+      f.tertiary.copy(SHORE_PINWHEEL);
+      s.subjects = f;
       this.pace = 0.5;
     }
     s.distance *= Math.max(1, 0.53 / (window.innerWidth / window.innerHeight));

@@ -39,9 +39,14 @@ const KNOT_TO = K.bankBack - 1.9;
 const RUN = KNOT_FROM - KNOT_TO;
 /** The pinwheel, on the camera's side of the bank wheel, on the same axle. */
 export const SHORE_PINWHEEL = NEAR.clone().addScaledVector(ACROSS, K.pinwheelOut);
-/** Where the child stands to watch the boat: just inland of the post, clear of the pinwheel from the camera. */
+/** Where the child stands to watch the boat: down the bank from the post, under the line, clear of the pinwheel. */
 export const SHORE_STAND = (() => {
-  const p = NEAR.clone().addScaledVector(ACROSS, 0.1).addScaledVector(OUT, -2.9);
+  const p = NEAR.clone().addScaledVector(ACROSS, 0.8).addScaledVector(OUT, 2.6);
+  return p.setY(heightAt(p.x, p.z));
+})();
+/** Where the little bird waits beside her, toward the water and the camera, so neither hides the other. */
+export const SHORE_BIRD = (() => {
+  const p = SHORE_STAND.clone().addScaledVector(OUT, 1.2).addScaledVector(ACROSS, 0.5);
   return p.setY(heightAt(p.x, p.z));
 })();
 /** The haul is watched from one place: the stand, the pinwheel and the whole of the boat's way in. */
