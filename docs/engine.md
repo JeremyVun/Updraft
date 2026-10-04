@@ -317,7 +317,7 @@ device's `MAX_SAMPLES`. `?grass=` overrides density, `?mirror=1|2|0` the reflect
 ## Post chain (`src/post/post.ts`)
 
 One multisampled scene target; one resolve pass that also clamps NaN, infinity and huge highlights (bloom
-would smear one bad pixel across the screen); bloom added in place on that plain target; then the grade (ACES, split
+would smear one bad pixel across the screen); bloom added in place on that plain target; then, while bloom is on, the depth blur's quarter-size frame (weighted by each pixel's blur so the sharp subject never haloes what is behind it; the scene's depth is resolved with its colour, `focusOn` from `main.ts` sets the focus on the child and the cygnet each frame); then the grade (the depth blur mixed in, ACES, split
 toning, vibrance (pinks and magentas held back, so sunlit cloud stays gold and white) and a gentle contrast curve on brightness after tone mapping, blue-tinted shadows that leave black alone, vignette, grain) straight to the screen. Nothing in the chain reads alpha, so the scene target, its resolve,
 the plain target and bloom's targets are `R11F_G11F_B10F`, half the memory and bandwidth of half-float RGBA, wherever
 the device multisamples that format as well (`compactFrameFormat`; half-float RGBA otherwise). The format holds no

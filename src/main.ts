@@ -1052,8 +1052,22 @@ function prepareFrame(dt: number): void {
 const beginMirror = (mirrorCamera: THREE.PerspectiveCamera): void => terrain.beginMirror(mirrorCamera);
 const endMirror = (): void => terrain.endMirror();
 /** The sea's reflection belongs to the same room as the main view. */
+const focusAt = new THREE.Vector3();
+/** How far along the view the child is, and the cygnet while it is seen: the depth blur keeps them sharp. */
+function focusDistance(at: THREE.Vector3, rise: number): number {
+  return -focusAt.copy(at).setY(at.y + rise).applyMatrix4(rig.camera.matrixWorldInverse).z;
+}
 function drawView(): void {
   water.update(rig.camera, beginMirror, endMirror);
+  const her = focusDistance(child.position, 0.6);
+  const bird = cygnet.visible ? focusDistance(cygnet.position, 0.2) : her;
+  // The swans overhead and the house she comes home to are subjects in their own right, however far.
+  let far = Math.max(her, bird);
+  if (flock.active) far = Math.max(far, focusDistance(flock.head, 0));
+  if (story.name === 'home') far = Math.max(far, focusDistance(cottage.doorstep, 2));
+  // Behind the lens she is not the subject, and nothing is blurred.
+  if (her < 1) post.focusOn(0.5, 1e4);
+  else post.focusOn(Math.min(her, bird), far);
   post.render(time);
 }
 function drawRooms(): void {
