@@ -104,7 +104,9 @@ feel over detail. How each room plays is in `docs/chapters.md`.
   updraft charges. Small round buttons in the corner: a speaker that breathes when muted, fullscreen, and graphics
   quality as four ascending bars (one filled for Low, two for Medium, three for High, four for Ultra) tracking the
   level in use while Auto adapts; bars stay unfilled until the first automatic level is known. Its blue-green menu has compact
-  ivory sans-serif labels and a quiet gold check; touch rows stay 44 px. The controls work on the loading veil and
+  ivory sans-serif labels and a quiet gold check; touch rows stay 44 px. On a phone they fold behind one button of
+  three dots so the game has the whole screen; it stacks them above it, the quality menu opening to their left, and a
+  tap anywhere else folds them away. The controls work on the loading veil and
   throughout play; the menu takes arrows, first letters, Enter/Space, Escape and Tab, and dismissing it never
   starts play or blows wind.
 

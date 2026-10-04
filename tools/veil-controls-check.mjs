@@ -67,6 +67,8 @@ try {
   await phone.route('**/src/main.ts*',r=>r.fulfill({contentType:'application/javascript',body:'await new Promise(() => {});'}));
   await phone.goto(base+'?analytics=0&progress=0');
   await phone.waitForFunction(() => document.querySelector('#sound').dataset.on==='true');
+  assert.equal(await phone.locator('#sound').isVisible(),false,'phone controls start folded');
+  await phone.locator('#corner-toggle').tap();
   await phone.locator('#sound').tap();
   await choose(phone, 'low');
   assert.equal(await phone.locator('#sound').getAttribute('data-on'),'false');
@@ -75,5 +77,5 @@ try {
   await phone.locator('#quality').blur();
   await phone.screenshot({path:'/tmp/updraft-veil-controls-phone.png'});
   assert.deepEqual(errors,[]);
-  console.log('Veil controls passed: loading-time mute/quality/fullscreen, no accidental Begin, queued quality, silent startup, mute retained on entry, in-game unmute and phone touch.');
+  console.log('Veil controls passed: loading-time mute/quality/fullscreen, no accidental Begin, queued quality, silent startup, mute retained on entry, in-game unmute and phone touch through the folded corner.');
 } finally { await close(); }
