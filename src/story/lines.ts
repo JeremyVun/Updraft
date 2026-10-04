@@ -45,6 +45,7 @@ export class LinesChapter implements Chapter {
   private readonly reachTo = new THREE.Vector3();
   /** Seconds the line has stood still while she waits for the boat. */
   private stalled = 0;
+  private readonly shoreFrom = new THREE.Vector3();
   /** She, the boat and the pinwheel stay in the frame however the view turns. */
   private readonly shoreSubjects = { primary: new THREE.Vector3(), secondary: new THREE.Vector3(), tertiary: new THREE.Vector3(),
     margin: 0.8, extra: 12 };
@@ -447,6 +448,10 @@ export class LinesChapter implements Chapter {
       const toBoat = this.towing ? 0 : 0.35;
       s.target.set(c.x * (1 - toBoat) + b.x * toBoat, Math.max(heightAt(c.x, c.z), 0) + 2.2, c.z * (1 - toBoat) + b.z * toBoat).lerp(SHORE_STAGE, hold);
       s.distance = 24; s.height = 7;
+      // A phone looks more along the line, so the stage runs into the distance instead of across a narrow frame.
+      const narrow = (1 - THREE.MathUtils.smoothstep(window.innerWidth / window.innerHeight, 0.6, 1.2)) * near;
+      const k = tuning.shorePulley;
+      s.from = this.shoreFrom.set(-Math.sin(k.bearing), 0, Math.cos(k.bearing)).lerp(this.from, 1 - k.narrowTurn * narrow).normalize();
       const f = this.shoreSubjects;
       f.primary.copy(c).y += 1.2;
       this.cast.boat.sailPoint(f.secondary);
