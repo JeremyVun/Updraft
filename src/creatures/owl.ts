@@ -178,7 +178,7 @@ void main() {
     col += alb * cold * (wrap * 0.2 + 0.06) + cold * edge * fuzz * 0.22 * (0.3 + 0.7 * alb);
     col += alb * vec3(0.5, 0.3, 0.16) * uOwlWing.w * 0.35;
   }
-  col *= uOwlEyes.w;
+  col *= mix(vec3(1.0), vec3(0.95, 0.78, 0.6), uOwlWing.w) * uOwlEyes.w;
   gl_FragColor = vec4(max(applyFog(col, vWorld), 0.0), 1.0);
 }`;
 

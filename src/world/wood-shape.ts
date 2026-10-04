@@ -380,7 +380,7 @@ float antler(vec2 p, float s) {
   d = min(d, sdCap(p, vec2(1.5, 4.53), vec2(1.44, 5.36), 0.07, 0.022));
   d = min(d, sdCap(p, vec2(1.9, 4.75), vec2(1.98, 5.45), 0.06, 0.02));
   d = min(d, sdCap(p, vec2(2.08, 4.88), vec2(2.55, 4.95), 0.05, 0.018));
-  return d;
+  return d * 1.08;
 }
 float sdTrap(vec2 p, float r1, float r2, float he) {
   vec2 k1 = vec2(r2, he), k2 = vec2(r2 - r1, 2.0 * he);
