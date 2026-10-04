@@ -29,6 +29,8 @@ const EYE_AT = new THREE.Vector3(0.05, 0.338, 0.128);
 const EYE_SIZE = new THREE.Vector3(0.039, 0.039, 0.022);
 /** Larger than life, as the game's creatures are, so it reads from where the camera stands. */
 const SCALE = 1.7;
+/** Beyond this the eyeshine stops shrinking with distance. */
+const GLOW_NEAR = 8;
 
 const VERT = /* glsl */ `
 ${ATMO_GLSL}
@@ -36,6 +38,7 @@ ${CREATURE_GLSL}
 uniform vec4 uOwl;
 uniform vec4 uOwlHead;
 uniform vec4 uOwlWing;
+uniform vec4 uOwlBody;
 uniform float uOwlTime;
 in float aPart;
 in vec2 aMat;
@@ -87,8 +90,8 @@ void main() {
     p += NECK;
   }
   p -= CENTRE;
-  p = rotX(p, uOwlWing.z);
-  n = rotX(n, uOwlWing.z);
+  p = rotX(rotZ(p, uOwlBody.x), uOwlWing.z);
+  n = rotX(rotZ(n, uOwlBody.x), uOwlWing.z);
   p += CENTRE;
   vec3 world = rotY(p * ${SCALE.toFixed(2)}, uOwl.w) + uOwl.xyz;
   vWorld = world;
@@ -155,7 +158,8 @@ void main() {
   float edge = pow(1.0 - clamp(dot(N, V), 0.0, 1.0), 2.0);
   vec3 col = alb * (hemiLight(N) * 0.8 + moon * (wrap * wrap * 0.9 + 0.15));
   col += moon * edge * fuzz * 0.35 * (0.3 + 0.7 * alb);
-  vec3 warm = emberLight(vWorld, N);
+  // Until the side coal's light is on it, it is a dark lump in the fork with eyes.
+  vec3 warm = emberLight(vWorld, N) * mix(0.06, 1.0, uOwlEyes.y);
   float shade = shapeShadowCaps(vWorld + N * 0.03, ${SHAPE_STUMP_CAPS});
   col += (alb + 0.012) * warm * shade;
   col += warm * shade * edge * fuzz * 0.6 * (0.3 + 0.7 * alb);
@@ -164,11 +168,10 @@ void main() {
     // Eyeshine: the light thrown back out of the eyes, which is all a frightened child sees of them in the dark.
     col += vec3(1.0, 0.72, 0.22) * uOwlEyes.x * glow * 3.2;
   }
-  // Flying up through the sliver of moon at the bend, its pale underside and the edges of its down catch it.
+  // Up out of the firelight, the moon through the canopy finds the edges of its down, so it never goes out.
   if (uOwlWing.w > 0.0) {
-    vec3 Lm = normalize(uShapeMoon.xyz - vWorld);
-    vec3 cold = vec3(0.62, 0.74, 1.0) * uShapeMoon.w * uNight * uOwlWing.w;
-    col += alb * cold * (max(0.0, dot(N, Lm)) * 1.0 + 0.2) + cold * edge * fuzz * 0.45;
+    vec3 cold = vec3(0.62, 0.74, 1.0) * uNight * uOwlWing.w;
+    col += alb * cold * (wrap * 0.5 + 0.2) + cold * edge * fuzz * 0.55;
   }
   col *= uOwlEyes.w;
   gl_FragColor = vec4(max(applyFog(col, vWorld), 0.0), 1.0);
@@ -183,9 +186,12 @@ out vec2 vUv;
 void main() {
   vec3 right = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
   vec3 up = vec3(viewMatrix[0][1], viewMatrix[1][1], viewMatrix[2][1]);
-  vec3 c = aSide < 0.0 ? uEyeL : uEyeR;
+  vec3 mid = (uEyeL + uEyeR) * 0.5;
+  // Far off in the dark, the pair keeps the size it has close to: two eyes, never one spark.
+  float far = max(1.0, distance(mid, cameraPosition) / ${GLOW_NEAR.toFixed(1)});
+  vec3 c = mid + ((aSide < 0.0 ? uEyeL : uEyeR) - mid) * far;
   vUv = position.xy;
-  vec4 view = viewMatrix * vec4(c + (right * position.x + up * position.y) * uGlowSize, 1.0);
+  vec4 view = viewMatrix * vec4(c + (right * position.x + up * position.y) * uGlowSize * far, 1.0);
   view.xyz += normalize(-view.xyz) * 0.12;
   gl_Position = projectionMatrix * view;
 }`;
@@ -246,27 +252,42 @@ const rotZ = (p: THREE.Vector3, a: number) => p.set(Math.cos(a) * p.x - Math.sin
 
 type Phase = 'perched' | 'awake' | 'leaving' | 'gone';
 
+/** One little hop round on the perch before it goes: when it starts, after `leave`, and how far it turns. */
+const SHUFFLES = [[0.25, 0.5], [0.7, 0.45]];
+/** The leap off the fork, after `leave`. */
+const LAUNCH = 1.2;
+/** Seconds of flight per burst of wingbeats, and how many of them are beats rather than glide. */
+const BURST = 1.7;
+const BEATING = 0.62;
+const BEAT_RATE = 2.4;
+/** The look back at her, seconds into the flight. */
+const GLANCE = [1.15, 2.0];
+
 /**
  * The owl in the fork: what it is doing, kept apart from how it is drawn so the story can drive it without a
- * renderer. Sitting unseen it is perfectly still; shown for what it is, it blinks, tilts its head at her, fluffs
- * itself up, hoots once and flies up and away over the trees.
+ * renderer. Unseen it sits stock still and stares, blinking now and then. Shown for what it is, it blinks slowly,
+ * tilts its head at her, fluffs itself up and hoots; then it looks the way it means to go, hops round on the fork,
+ * crouches and is off on a few soft wingbeats and glides, banking round up over the path with one look back.
  */
 export class Owl {
   readonly position = new THREE.Vector3();
   yaw = 0;
   /** Head turn, nod and tilt, radians. */
   readonly head = new THREE.Vector3();
-  /** 0 spread, 1 folded; the wingbeat; the body's pitch forward. */
+  /** 0 spread, 1 folded; the wingbeat; the body's pitch forward and its roll into a turn. */
   fold = 1;
   flap = 0;
   pitch = 0;
+  roll = 0;
   fluff = 0;
   blink = 0;
   /** How much light its eyes throw back, set by the story from where the light is. */
   eyeshine = 0.6;
+  /** How much of the firelight reaches it: none until the story's side light shows it. */
+  shown = 0;
   /** 1 seen, falling to 0 as it goes off into the dark. */
   presence = 1;
-  /** How much of the sliver of moon it is flying up through. */
+  /** How much of the moon through the canopy it has flown up into. */
   moonlit = 0;
   phase: Phase = 'perched';
   /** Raised once, the frame it hoots. */
@@ -280,16 +301,23 @@ export class Owl {
   private readonly watch = new THREE.Vector3();
   private watching = false;
   private readonly tmp = new THREE.Vector3();
+  private sitYaw = 0;
+  private flightYaw = 0;
+  private beat = 0;
+  private readonly velocity = new THREE.Vector3();
 
   sit(at: THREE.Vector3, yaw: number): void {
     this.perch.copy(at);
     this.position.copy(at);
-    this.yaw = yaw;
+    this.yaw = this.sitYaw = yaw;
     this.phase = 'perched';
-    this.fold = 1; this.flap = 0; this.pitch = 0; this.fluff = 0; this.blink = 0; this.presence = 1; this.moonlit = 0;
+    this.fold = 1; this.flap = 0; this.pitch = 0; this.roll = 0; this.fluff = 0; this.blink = 0; this.presence = 1;
+    this.moonlit = 0; this.shown = 0; this.beat = 0;
     this.head.set(0, 0, 0);
     this.hooted = false;
     this.t = 0;
+    this.blinkAt = -1;
+    this.nextBlink = 1.5;
   }
 
   /** Light from the side: it is only an owl after all. */
@@ -297,13 +325,16 @@ export class Owl {
     if (this.phase !== 'perched') return;
     this.phase = 'awake';
     this.t = 0;
+    this.blinkAt = -1;
     this.nextBlink = 0.5;
   }
 
-  /** Up and away, leaning the way she is going. */
+  /** Up and away toward `toward`, round over the way she is going. */
   leave(toward: THREE.Vector3): void {
     if (this.phase === 'leaving' || this.phase === 'gone') return;
     this.away.copy(toward).sub(this.perch).setY(0).normalize();
+    this.flightYaw = Math.atan2(this.away.x, this.away.z);
+    this.velocity.set(0, 0, 0);
     this.phase = 'leaving';
     this.t = 0;
   }
@@ -324,21 +355,16 @@ export class Owl {
     this.hooted = false;
     const t = this.t;
     if (this.phase === 'perched') {
-      // Stock still, as an owl is when it has been seen and hopes it has not.
-      this.blink = 0;
+      // Stock still and staring, as an owl is when it has been seen and hopes it has not; only the eyes go.
       this.turnHead(dt, 0.6);
+      this.blinking(t, 0.3, 2.6, 2.2);
       return;
     }
     if (this.phase === 'awake') {
       this.turnHead(dt, 3);
       // A slow tilt one way and the other: curious, not afraid.
       this.head.z = 0.32 * Math.sin(Math.max(0, t - 0.6) * 1.6) * THREE.MathUtils.smoothstep(t, 0.6, 1.4) * (1 - THREE.MathUtils.smoothstep(t, 3.2, 3.8));
-      if (t > this.nextBlink && this.blinkAt < 0) this.blinkAt = t;
-      if (this.blinkAt >= 0) {
-        const b = (t - this.blinkAt) / 0.42;
-        this.blink = b < 0.4 ? b / 0.4 : Math.max(0, 1 - (b - 0.4) / 0.6);
-        if (b >= 1) { this.blinkAt = -1; this.blink = 0; this.nextBlink = t + 1.1 + (t < 2 ? 0 : 0.8); }
-      }
+      this.blinking(t, 0.42, 1.1, t < 2 ? 0 : 0.8);
       // It fluffs itself up and shakes out, then settles again.
       this.fluff = Math.sin(Math.PI * THREE.MathUtils.clamp((t - 3.6) / 1.1, 0, 1)) * 0.95;
       if (t >= 5.0 && t - dt < 5.0) this.hooted = true;
@@ -346,33 +372,83 @@ export class Owl {
       this.head.y = -0.18 * Math.sin(Math.PI * THREE.MathUtils.clamp((t - 5.0) / 0.9, 0, 1));
       return;
     }
-    if (this.phase === 'leaving') {
+    if (this.phase === 'leaving') this.fly(dt, t);
+  }
+
+  /** Lids down and up over `length` seconds, every `every` seconds or so. */
+  private blinking(t: number, length: number, every: number, spread: number): void {
+    if (t > this.nextBlink && this.blinkAt < 0) this.blinkAt = t;
+    if (this.blinkAt < 0) { this.blink = 0; return; }
+    const b = (t - this.blinkAt) / length;
+    this.blink = b < 0.4 ? b / 0.4 : Math.max(0, 1 - (b - 0.4) / 0.6);
+    if (b >= 1) {
+      this.blinkAt = -1;
       this.blink = 0;
-      this.fluff = Math.max(0, this.fluff - dt * 2);
-      this.head.z *= Math.exp(-dt * 6);
-      this.head.x *= Math.exp(-dt * 3);
-      const travel = Math.atan2(this.away.x, this.away.z);
-      this.yaw += Math.atan2(Math.sin(travel - this.yaw), Math.cos(travel - this.yaw)) * (1 - Math.exp(-dt * 4));
-      // A crouch, a spring up off the fork on opening wings, then a steep climb on deep slow beats, up and away into
-      // the dark over the trees.
-      const crouch = THREE.MathUtils.smoothstep(t, 0, 0.35) * (1 - THREE.MathUtils.smoothstep(t, 0.45, 0.6));
-      const s = Math.max(0, t - 0.45);
-      this.fold = 1 - THREE.MathUtils.smoothstep(t, 0.3, 0.6);
-      this.pitch = 0.35 * crouch + 0.5 * THREE.MathUtils.smoothstep(s, 0, 0.6);
-      this.flap = Math.sin(s * 8.5) * 0.85 * (1 - this.fold);
-      const climb = this.climb(s);
-      this.position.copy(this.perch).addScaledVector(this.away, climb.x);
-      this.position.y = this.perch.y + climb.y - 0.06 * crouch;
-      this.presence = 1 - THREE.MathUtils.smoothstep(s, 3.4, 4.8);
-      this.moonlit = THREE.MathUtils.smoothstep(s, 0.1, 0.8);
-      if (s > 5) this.phase = 'gone';
+      this.nextBlink = t + every + spread * (0.5 + 0.5 * Math.sin(t * 7.3 + this.time));
     }
   }
 
-  /** Out from the fork and up after `s` seconds of flight: x along the way it is going, y up. */
-  climb(s: number): { x: number; y: number } {
-    return { x: 0.95 * s + 0.2 * s * s, y: 1.05 * s + 0.2 * s * s };
+  private fly(dt: number, t: number): void {
+    const smooth = THREE.MathUtils.smoothstep;
+    this.blink = 0;
+    this.fluff = Math.max(0, this.fluff - dt * 2);
+    this.head.y *= Math.exp(-dt * 4);
+    this.head.z *= Math.exp(-dt * 5);
+    const turn = Math.atan2(Math.sin(this.flightYaw - this.sitYaw), Math.cos(this.flightYaw - this.sitYaw));
+    if (t < LAUNCH) {
+      // It looks the way it means to go first, then hops round after its head, twice, and crouches.
+      const look = turn - (this.yaw - this.sitYaw);
+      this.head.x += (THREE.MathUtils.clamp(look, -1.4, 1.4) - this.head.x) * (1 - Math.exp(-dt * 5));
+      let hop = 0, turned = 0;
+      for (const [at, share] of SHUFFLES) {
+        const k = smooth(t, at, at + 0.22);
+        turned += share * k;
+        hop = Math.max(hop, Math.sin(Math.PI * k));
+      }
+      this.yaw = this.sitYaw + turn * turned;
+      const crouch = smooth(t, 0.85, LAUNCH - 0.05);
+      this.pitch = 0.4 * crouch;
+      this.fold = 1 - 0.5 * smooth(t, 0.95, LAUNCH);
+      this.flap = 0.5 * smooth(t, 0.95, LAUNCH);
+      this.position.copy(this.perch);
+      this.position.y += 0.05 * hop - 0.07 * crouch;
+      return;
+    }
+    const s = t - LAUNCH;
+    // Wings wide open on the first stroke; then bursts of soft beats with a glide between, wings held a little up.
+    const inBurst = (s % BURST) / BURST < BEATING || s < BURST * BEATING;
+    const beating = inBurst ? 1 : 0;
+    this.beat += dt * BEAT_RATE * Math.PI * 2 * (0.25 + 0.75 * beating);
+    const stroke = Math.cos(this.beat + 0.35 * Math.sin(this.beat));
+    const held = 0.14;
+    this.flapBlend += (beating - this.flapBlend) * (1 - Math.exp(-dt * 6));
+    this.flap = THREE.MathUtils.lerp(held, 0.1 + 0.62 * stroke, this.flapBlend);
+    this.fold = Math.max(0, this.fold - dt * 6);
+    // Round from the way it hopped to toward the way it goes, banked into the turn.
+    const before = this.yaw;
+    const heading = this.sitYaw + turn * (0.95 + 0.05 * smooth(s, 0, 1.6));
+    this.yaw = heading;
+    this.roll += (THREE.MathUtils.clamp((this.yaw - before) / Math.max(dt, 1e-4) * -0.6, -0.5, 0.5) - this.roll) * (1 - Math.exp(-dt * 4));
+    this.pitch += (0.55 - this.pitch) * (1 - Math.exp(-dt * 5));
+    // Climbing steeply clear of the trees, faster as it gets going, lifted on each downstroke.
+    const forward = 0.6 + 1.7 * smooth(s, 0, 1.4);
+    const climb = 2.3 + 0.4 * (1 - smooth(s, 0, 1.0)) + 0.35 * (stroke * this.flapBlend);
+    this.velocity.set(Math.sin(this.yaw) * forward, climb, Math.cos(this.yaw) * forward);
+    this.position.addScaledVector(this.velocity, dt);
+    // One look back over its shoulder at her, in the first glide.
+    const back = smooth(s, GLANCE[0], GLANCE[0] + 0.3) * (1 - smooth(s, GLANCE[1], GLANCE[1] + 0.35));
+    this.tmp.copy(this.watch).sub(this.position);
+    const toHer = Math.atan2(Math.sin(Math.atan2(this.tmp.x, this.tmp.z) - this.yaw), Math.cos(Math.atan2(this.tmp.x, this.tmp.z) - this.yaw));
+    this.head.x += ((this.watching ? THREE.MathUtils.clamp(toHer, -1.7, 1.7) * back : 0) - this.head.x) * (1 - Math.exp(-dt * 6));
+    this.moonlit = smooth(s, 0.2, 1.5);
+    this.presence = 1 - smooth(s, 5.2, 6);
+    if (s > 6) this.phase = 'gone';
   }
+
+  private flapBlend = 1;
+
+  /** Where it is after `s` seconds of flight, for checks: the climb is steep and never comes back down. */
+  get flightSeconds(): number { return this.phase === 'leaving' ? Math.max(0, this.t - LAUNCH) : 0; }
 
   private turnHead(dt: number, rate: number): void {
     if (!this.watching) return;
@@ -391,7 +467,7 @@ export class Owl {
       out.add(NECK);
     }
     out.sub(CENTRE);
-    rotX(out, this.pitch);
+    rotX(rotZ(out, this.roll), this.pitch);
     out.add(CENTRE).multiplyScalar(SCALE);
     rotY(out, this.yaw);
     return out.add(this.position);
@@ -421,6 +497,7 @@ export class OwlBody {
       uOwl: { value: new THREE.Vector4() },
       uOwlHead: { value: new THREE.Vector4() },
       uOwlWing: { value: new THREE.Vector4() },
+      uOwlBody: { value: new THREE.Vector4() },
       uOwlEyes: { value: new THREE.Vector4() },
       uOwlTime: { value: 0 },
     };
@@ -465,7 +542,8 @@ export class OwlBody {
     (u.uOwl.value as THREE.Vector4).set(owl.position.x, owl.position.y, owl.position.z, owl.yaw);
     (u.uOwlHead.value as THREE.Vector4).set(owl.head.x, owl.head.y, owl.head.z, owl.fluff);
     (u.uOwlWing.value as THREE.Vector4).set(owl.fold, owl.flap, owl.pitch, owl.moonlit);
-    (u.uOwlEyes.value as THREE.Vector4).set(owl.eyeshine, 0, owl.blink, owl.presence);
+    (u.uOwlBody.value as THREE.Vector4).set(owl.roll, 0, 0, 0);
+    (u.uOwlEyes.value as THREE.Vector4).set(owl.eyeshine, owl.shown, owl.blink, owl.presence);
     u.uOwlTime.value = this.time;
     owl.toWorld(this.local.set(-EYE_AT.x, EYE_AT.y, EYE_AT.z + 0.01), true, this.left);
     owl.toWorld(this.local.set(EYE_AT.x, EYE_AT.y, EYE_AT.z + 0.01), true, this.right);
