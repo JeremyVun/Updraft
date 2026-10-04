@@ -33,7 +33,7 @@
 // none pairs the baseline with itself.
 // msaa-nodepth swaps in a scene target built to neither resolve nor store its multisampled depth. On Chrome/ANGLE Metal
 // it renders without antialiasing (pixels match msaa-0) and is no faster, so it is not an exact skip.
-// Breakdowns: grass-frag-flat, grass-nodiscard, grass-fog, grass-cloud, grass-shade (frost, morning, lamp, dawn), grass-life,
+// Breakdowns: grass-frag-flat, grass-nodiscard, grass-fog, grass-cloud, grass-shade (morning, lamp, dawn), grass-frost, grass-life,
 // grass-collapse (every blade discarded at its first instruction), grassLod0..2; birchesTrunks/Canopy/Litter/Scarf/Leaves/Other;
 // water-frag-flat, water-vert-flat, water-bed, water-surf, water-glints, water-ripples, water-mirror, water-wind, water-paw,
 // water-fog, water-sky, water-cloud, water-landskip (returns at its top over land, not exact), water-last (drawn after the other opaques); terrain-nodiscard. POST_PASSES=1 times each post stage alone (POST_REPS); REFLECTION_PASS=1 the sea's reflection pass alone;
@@ -595,7 +595,8 @@ window.__audit = {
       'grass-nodiscard':[grassMats,'fragmentShader',s=>s.replace(/discard;/g,'{}')],
       'grass-fog':[frameMats,'fragmentShader',s=>sub(s,/vec4 fog = fogOf[^;]*;/,'vec4 fog = vec4(0.0);')],
       'grass-cloud':[frameMats,'fragmentShader',s=>sub(s,'cloudShadow(root2)));','1.0));')],
-      'grass-shade':[frameMats,'fragmentShader',s=>sub(sub(sub(s,'float rime = frostAt(root2);','float rime = 0.0;'),'float green = morningAt(root2);','float green = 0.0;'),/vec3 warm = lampLight[^;]*;/,'vec3 warm = vec3(0.0);')],
+      'grass-shade':[grassMats,'vertexShader',s=>sub(sub(s,'float green = morningAt(root2);','float green = 0.0;'),/vec3 warm = lampLight[^;]*;/,'vec3 warm = vec3(0.0);')],
+      'grass-frost':[frameMats,'fragmentShader',s=>sub(s,'frostAt(root2), shape.w','0.0, shape.w')],
       'grass-life':[frameMats,'fragmentShader',s=>sub(s,'float life = lifeAt(root2);','float life = 1.0;')],
       'grass-collapse':[grassMats,'vertexShader',s=>sub(s,'void main() {\\n  ivec2 at','void main() { collapse(); return;\\n  ivec2 at')],
       'water-frag-flat':[[waterMat],'fragmentShader',s=>main(s,'void main() { gl_FragColor = vec4(vWorld * 1e-4 + vSwell * 0.1 + vec3(0.1, 0.2, 0.3), 1.0); }')],

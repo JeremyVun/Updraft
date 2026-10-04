@@ -419,10 +419,13 @@ vec3 bladeRoot(vec2 root2, float groundH) {
 }
 `;
 
-/** The light a blade's own place gives it: the morning's green, the rime on it and the warm lights near it. Needs `root2` and `groundH`. */
+/**
+ * The light a blade's own place gives it: the morning's green and the warm lights near it. Needs `root2` and
+ * `groundH`. Worked out at every vertex: each is zero outside the rooms that light it, and stored per blade as half
+ * float it moved shading enough for the grade to change a pixel visibly.
+ */
 const BLADE_LIGHT_GLSL = /* glsl */ `
   float green = morningAt(root2);
-  float rime = frostAt(root2);
   vec3 warm = lampLight(vec3(root2.x, groundH + 0.2, root2.y), vec3(0.0, 1.0, 0.0))
             + lanternLight(vec3(root2.x, groundH + 0.2, root2.y), vec3(0.0, 1.0, 0.0))
             + dawnLight(vec3(root2.x, groundH + 0.3, root2.y), vec3(0.0, 1.0, 0.0));
@@ -431,8 +434,8 @@ const BLADE_LIGHT_GLSL = /* glsl */ `
 /**
  * What every vertex of a blade shares this frame, worked out once per blade rather than at each of its vertices:
  * how it has grown and closes, the wind on it, the ground and light under it and its fog. A blade the blade shader
- * collapses is marked by a negative height and nothing else is worked out for it. What moves a blade and the ground's
- * normal are stored as full float, the rest of its shading as half floats, two to a channel.
+ * collapses is marked by a negative height and nothing else is worked out for it. Everything is stored as full
+ * float but the fog, which is half float, two to a channel, as it always was.
  */
 const FRAME_FRAG = /* glsl */ `
 precision highp float;
@@ -485,11 +488,10 @@ void main() {
   float sp = length(wind.xy);
   vec4 ground = groundAt(root2);
   oSway = floatBitsToUint(vec4(bend.xy, 0.04 + 0.012 * sp, ground.x));
-  ${BLADE_LIGHT_GLSL}
-  oGround = uvec4(floatBitsToUint(ground.yz), packHalf2x16(vec2(ground.w, cloudShadow(root2))), packHalf2x16(vec2(green, rime)));
+  oGround = floatBitsToUint(vec4(ground.yz, frostAt(root2), shape.w));
   // A quarter of the way up is where one fog for the whole blade comes closest to the fog along it.
   vec4 fog = fogOf(bladeRoot(root2, groundH) + vec3(0.0, shape.y * 0.25, 0.0), 1.0);
-  oLight = uvec4(packHalf2x16(towardZero(fog.rg)), packHalf2x16(towardZero(fog.ba)), packHalf2x16(warm.rg), packHalf2x16(vec2(warm.b, 0.0)));
+  oLight = uvec4(packHalf2x16(towardZero(fog.rg)), packHalf2x16(towardZero(fog.ba)), floatBitsToUint(vec2(ground.w, cloudShadow(root2))));
 }`;
 
 /**
@@ -592,8 +594,8 @@ void main() {
 
 /**
  * What the blade's shading needs that is the same for every fragment of the blade: its root colour, its ambient
- * occlusion as a line in t, and how flat the wind has laid it. Computed per vertex (`tint`, `groundH`, `dist`, `wa`
- * and `BLADE_LIGHT_GLSL`'s values in scope) so the fragment shader, which runs several times per pixel under
+ * occlusion as a line in t, and how flat the wind has laid it. Computed per vertex (`tint`, `groundH`, `dist`, `wa`,
+ * `rime` and `BLADE_LIGHT_GLSL`'s values in scope) so the fragment shader, which runs several times per pixel under
  * multisampling, does not.
  */
 const BLADE_SHADE_GLSL = /* glsl */ `
@@ -632,7 +634,6 @@ in vec2 aTile;
 uniform vec3 uGrassRoot;
 uniform vec2 uGrassEye;
 uniform sampler2D uRootTex;
-uniform sampler2D uShapeTex;
 uniform sampler2D uTintTex;
 uniform sampler2D uFlowerTex;
 uniform highp usampler2D uBladeGrowthTex;
@@ -678,7 +679,7 @@ void main() {
   float side01 = position.x;
   float t = mix(position.y, position.z, growth.z);
   float seed = fl.x;
-  float angle = texelFetch(uShapeTex, at, 0).w;
+  float angle = uintBitsToFloat(groundIn.w);
   float curve = tintIn.w;
   float flower = fl.y * step(0.5, life);
   float reedBlade = step(7.5, fl.z);
@@ -713,15 +714,12 @@ void main() {
   vNormal = length(nrm) > 1e-4 ? normalize(nrm) : vec3(0.0, 1.0, 0.0);
   vSideDir = sideDir * side01;
   vGroundN = vec3(sway.w, uintBitsToFloat(groundIn.xy));
-  vec2 sun = unpackHalf2x16(groundIn.z);
-  vec2 greenRime = unpackHalf2x16(groundIn.w);
-  float green = greenRime.x;
-  float rime = greenRime.y;
-  vec3 warm = vec3(unpackHalf2x16(lightIn.z), unpackHalf2x16(lightIn.w).x);
+  float rime = uintBitsToFloat(groundIn.z);
+  ${BLADE_LIGHT_GLSL}
   vec3 tint = mix(stillGrey(tintIn.rgb), tintIn.rgb, life);
   vTint = tint;
   ${BLADE_SHADE_GLSL}
-  vSun = mix(sun.x, 1.0, t * t * 0.3) * sun.y;
+  vSun = mix(uintBitsToFloat(lightIn.z), 1.0, t * t * 0.3) * uintBitsToFloat(lightIn.w);
   vFog = vec4(unpackHalf2x16(lightIn.x), unpackHalf2x16(lightIn.y));
   vWorld = world;
   vT = t;
@@ -859,6 +857,7 @@ void main() {
   tint = mix(tint, ${REED_TINT} * reed.shade, reed.is);
   tint = mix(stillGrey(tint), tint, life);
   vTint = tint;
+  float rime = frostAt(root2);
   ${BLADE_LIGHT_GLSL}
   ${BLADE_SHADE_GLSL}
   vSun = mix(ground.w, 1.0, t * t * 0.3) * cloudShadow(root2);
@@ -1144,7 +1143,6 @@ export class Grass {
           ...atmo.uniforms,
           ...grassUniforms,
           uRootTex: { value: table.textures[0] },
-          uShapeTex: { value: table.textures[1] },
           uTintTex: { value: table.textures[2] },
           uFlowerTex: { value: table.textures[3] },
           uBladeGrowthTex: { value: frame.textures[0] },
