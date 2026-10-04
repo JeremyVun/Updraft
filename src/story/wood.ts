@@ -1049,6 +1049,8 @@ export class WoodChapter implements Chapter {
           this.to('walk');
           this.leg = Math.max(this.leg, 2);
           this.chainAt = pathAlong(c.position.x, c.position.z);
+          // The stump took a coal's place; keep the coals beyond it on the sides their framing was made for.
+          this.chainSide = -this.chainSide;
           this.layNext();
         }, 1);
       }, 0.5);

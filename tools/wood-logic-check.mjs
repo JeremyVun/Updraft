@@ -102,6 +102,7 @@ const { Cygnet } = await import('../src/creatures/cygnet.ts');
 const { Carry } = await import('../src/companion/carry.ts');
 const { WoodChapter } = await import('../src/story/wood.ts');
 const { WOOD_APPROACH_LIGHT, WOOD_LANDING, WOOD_PATH, WOOD_BERTH } = await import('../src/world/wood.ts');
+const { WOOD_SHAPE, SHAPE_RIGHT, SHAPE_FACING } = await import('../src/world/wood-shape.ts');
 const WAY = [WOOD_LANDING, ...WOOD_PATH, new THREE.Vector2(WOOD_BERTH.x, WOOD_BERTH.z)];
 /** Trunks stand at least 5 units from this line (`CORRIDOR` in world/wood.ts). */
 const offPath = (x, z) => Math.min(...WAY.slice(1).map((b, i) => {
@@ -134,7 +135,8 @@ for (const portrait of [false, true]) {
   rig.resize(portrait ? 390 : 1440, portrait ? 844 : 900);
   child.place(-26, -1688, Math.PI); cygnet.mount = child; cygnet.rideIn('satchel');
   const plane = new Glider(planeWind, []);
-  const c = new WoodChapter({ child, cygnet, boat, embers, carry, plane, wind: calm, input: { gust: 0 } });
+  const fireflies = { lantern: { at: new THREE.Vector3(), power: 0 } };
+  const c = new WoodChapter({ child, cygnet, boat, embers, carry, plane, fireflies, wind: calm, input: { gust: 0, charge: 0 } });
   c.update(0, 0); rig.cut(c.shot);
   const resumed = new Set();
   let last = '', complete = false, worstWaitFrame = 0, worst = null, waited = 0, previousTarget = null;
@@ -153,6 +155,15 @@ for (const portrait of [false, true]) {
     assert(!c.updraftTarget || !c.windInvitation, 'a coal never asks for a sweep');
     for (const coal of embers.coals) coal.breath = coal.p === target && c.t > 6 ? 1 : 0;
     c.brushDry(c.t > 6 && c.beat === 'snag' ? 1 : 0);
+    // The stump at the bend: dark, then light from where she stands (still a monster), then from beside it.
+    if (c.beat === 'loom') {
+      const side = c.t > 9, lamp = fireflies.lantern;
+      lamp.power = c.t > 4 ? 1 : 0;
+      lamp.at.copy(WOOD_SHAPE).addScaledVector(side ? SHAPE_RIGHT : SHAPE_FACING, side ? 2.8 : 3.5);
+      lamp.at.y += 1.3;
+      if (!side) assert.equal(c.shapeReveal, 0, 'darkness or light from her side never shows the stump for what it is');
+      if (c.shapeStopped >= 0) assert(Math.hypot(child.position.x - WOOD_SHAPE.x, child.position.z - WOOD_SHAPE.z) > 4.5, 'she will not go nearer it until it is shown');
+    }
     const litBefore = c.beat === 'walk' ? embers.coals.filter(k=>k.live&&k.lit).sort((a,b)=>b.laid-a.laid)[0] : null;
     const lightPlace = litBefore?.p.clone();
     c.update(dt, time); boat.update(dt, time); child.update(dt); plane.update(dt, time); carry.update(dt);
@@ -297,7 +308,8 @@ for (const [w, h] of [[1600, 900], [390, 844]]) for (const fps of [30, 60, 120])
   rig.resize(w, h);
   child.place(-26, -1688, Math.PI); cygnet.mount = child; cygnet.rideIn('satchel');
   const plane = new Glider(planeWind, []);
-  const c = new WoodChapter({ child, cygnet, boat, embers, carry, plane, wind: calm, input: { gust: 0 } });
+  const fireflies = { lantern: { at: new THREE.Vector3(), power: 0 } };
+  const c = new WoodChapter({ child, cygnet, boat, embers, carry, plane, fireflies, wind: calm, input: { gust: 0, charge: 0 } });
   c.update(0, 0); rig.cut(c.shot);
   const meshes = [];
   for (const o of child.objects) if (o !== child.shadow) o.traverse(m => { if (m.isMesh) meshes.push(m); });
@@ -307,6 +319,10 @@ for (const [w, h] of [[1600, 900], [390, 844]]) for (const fps of [30, 60, 120])
     const time = frame * dt, waiting = c.updraftTarget;
     still = waiting && !child.moving ? still + dt : 0;
     for (const coal of embers.coals) coal.breath = coal.p === waiting && (still > 8 || c.beat === 'lost' && c.t > 6) ? 1 : 0;
+    if (c.beat === 'loom') {
+      fireflies.lantern.power = c.t > 6 ? 1 : 0;
+      fireflies.lantern.at.copy(WOOD_SHAPE).addScaledVector(SHAPE_RIGHT, 2.8).y += 1.3;
+    }
     c.update(dt, time); boat.update(dt, time); child.update(dt); plane.update(dt, time); carry.update(dt);
     cygnet.update(dt, time, child.position, calm.sample(0, 0, {})); carry.after();
     embers.update(dt, child.position, c.embers);
