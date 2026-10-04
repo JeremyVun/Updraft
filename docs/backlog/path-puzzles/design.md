@@ -84,9 +84,10 @@ His answers to the second round:
   off in a cute, well-made sequence. She breathes out and walks on round the bend without going to the trunk.
 
   Refined with Jeremy (2026-10-05: "Your suggestions 1 through 4 make sense", and he gave ownership of the sequence):
-  1. One spot, one frame. The coal before the bend sits close to the stump and her wait there is her stop. The camera
-     holds one frame on the eyes in the dark, and the outline leaps up the rock when that coal catches, without the
-     camera moving.
+  1. One spot, one frame. Her wait at the coal before the bend is her stop. That coal stays on the path, well short of
+     the stump, and never reads as a second coal by it (Jeremy: "It looks like there are two embers next to the stump
+     too... i thought i asked for that not to happen"). The camera holds one frame on the eyes in the dark, and the
+     outline leaps up the rock when that coal catches, without the camera moving.
   2. The reveal also plays on the rock. As the side coal wakes and the light swings round, the giant antlers swing
      aside and shrink to a plain stump's shadow with a little round owl in its fork.
   3. The relief is cute in the same medium. The owl's small flapping shadow flits across the rock as it takes off,
