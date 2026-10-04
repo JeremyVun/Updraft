@@ -248,3 +248,7 @@ billowing a sheet, filling a sail). Each prototype is judged on its own branch.
   note draws a dark line of ruffled water on the far horizon nearer across the glass, and stirs the nearest toys (tiny
   and light) a little; a wrong pipe only sounds and ripples. On the last note the line arrives, the sail fills, the
   toys run on, and the wind keeps building past what she called for into the storm.
+
+Jeremy, on the toys: "btw, im not yet convinced that the little toys should be here anymore. i feel like we may be
+trying to fit in a callback that may or may not be artistically genuine." The prototypes leave them out: on main the
+toys' story ends with them reaching the sea, and only the orange toy comes back, washed up at home.
