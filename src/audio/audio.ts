@@ -185,8 +185,10 @@ const PHRASES: Record<Exclude<Cue, 'foghorn'>, [number, number][]> = {
   flightHome: [],
   /** The cygnet's own small question, not a phrase. */
   puzzled: [],
+  /** The owl at the stump, an animal's own voice. */
+  hoot: [],
 };
-const PHRASE_BEAT: Record<Exclude<Cue, 'foghorn' | 'fallen' | 'landed'>, number> = { star: .3, feather: 0.4, comfort: 0.3, kindled: 0.17, distress: 0.2, calling: 0.2, bugle: 0.2, breeze: 0.3, delight: 0.14, restored: 0.22, becalmed: 0.55, filled: 0.26, lifted: 0.3, wave: 0.2, unfold: 0.46, release: 0.3, home: 0.5, finale: 0.3, flightHome: 0.3, puzzled: 0.3 };
+const PHRASE_BEAT: Record<Exclude<Cue, 'foghorn' | 'fallen' | 'landed'>, number> = { star: .3, feather: 0.4, comfort: 0.3, kindled: 0.17, distress: 0.2, calling: 0.2, bugle: 0.2, breeze: 0.3, delight: 0.14, restored: 0.22, becalmed: 0.55, filled: 0.26, lifted: 0.3, wave: 0.2, unfold: 0.46, release: 0.3, home: 0.5, finale: 0.3, flightHome: 0.3, puzzled: 0.3, hoot: 0.3 };
 
 const hz = (midi: number) => 440 * Math.pow(2, (midi - 69) / 12);
 const roomTrim = (room: keyof typeof tuning.audio.roomTrimDb) => 10 ** (tuning.audio.roomTrimDb[room] / 20);
@@ -720,6 +722,13 @@ export class Soundscape {
     this.tone(395, 360, when + 1.1, 1.3, 0.045, pan, 0.8);
   }
 
+  /** The owl in the stump, close by: one soft, round hoo and a shorter one after, as if it were only clearing its throat. */
+  private hoot(): void {
+    const at = this.ctx!.currentTime + 0.05;
+    this.tone(420, 392, at, 0.42, 0.075, 0.2, 0.55);
+    this.tone(410, 380, at + 0.62, 0.3, 0.05, 0.2, 0.55);
+  }
+
   /** A skylark high over the hills: a run of quick, bright, tumbling notes. */
   private skylark(when: number, pan: number, level: number): void {
     let t = when;
@@ -1180,6 +1189,8 @@ export class Soundscape {
       else if (name === 'kindled' || name === 'comfort') {
         this.flare();
         this.phrase(name);
+      } else if (name === 'hoot') {
+        this.hoot();
       } else if (name === 'puzzled') {
         this.peep(0.6, false, s.cygnet, true);
       } else if (name === 'distress' || name === 'calling') {

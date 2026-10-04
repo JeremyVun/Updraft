@@ -293,6 +293,12 @@ export class Embers {
     return this.lit;
   }
 
+  /** How much light one coal is giving off now, waking or burning, before any falloff. */
+  glowOf(coal: Coal): number {
+    const i = this.coals.indexOf(coal);
+    return i < 0 ? 0 : this.glowPower[i] * this.presence;
+  }
+
   /** Cosmetic illumination grows before ignition; it never supplies the story's light gate. */
   illumination(out: THREE.Vector3): number {
     out.copy(this.glowCentre);

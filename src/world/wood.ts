@@ -8,7 +8,8 @@ import { ATMO_GLSL, atmo } from './atmosphere';
 import { ISLES } from './heightfield';
 import { heightAt } from './island';
 import { createNoise2D, mulberry32 } from './noise';
-import { SHAPE_SHADOW_GLSL, WOOD_SHAPE, WoodShape, shapeUniforms } from './wood-shape';
+import { SHAPE_SHADOW_GLSL, WoodShape, shapeUniforms } from './wood-shape';
+import { OwlBody, woodOwl } from '../creatures/owl';
 
 /** The south shore of the wood, where the boat runs ashore out of the storm. */
 export const WOOD_LANDING = new THREE.Vector2(-26, -1692);
@@ -410,7 +411,7 @@ void main() {
   col += uSunColor * sun * vAo * vSolid * (rim * (0.04 + 0.26 * uNight) + wet * (0.06 + 0.3 * uNight));
   /** Firelight is the only light that reaches the floor here, so wet leaves take far more of it than their own
       near-black albedo would give back: without this the player's light throws no pool on the ground at all. */
-  col += (alb + vec3(0.085, 0.048, 0.022)) * emberLight(vWorld, N) * shapeShadow(vWorld);
+  col += shapeLit(vWorld, (alb + vec3(0.085, 0.048, 0.022)) * emberLight(vWorld, N));
   /**
    * Trunks right in front of the lens fade out: the camera trails the child through 2,700 trees and the one thing
    * the room can never do is hide the child, so anything between the two of them gets out of the way.
@@ -671,6 +672,7 @@ function planeTree(): THREE.BufferGeometry {
 export class DarkWood {
   readonly objects: THREE.Object3D[] = [];
   readonly shape: WoodShape;
+  readonly owl = new OwlBody();
 
   private readonly trees: Placed[] = [];
   private readonly lods: { mesh: THREE.Mesh; geo: THREE.InstancedBufferGeometry; reach: number; cap: number; trees: Float32Array; forms: Float32Array }[] = [];
@@ -758,7 +760,7 @@ export class DarkWood {
     }));
     snagTree.name = 'wood-plane-tree';
     this.shape = new WoodShape();
-    this.objects.push(deadfall, refugeRocks(), snagTree, this.shape.mesh);
+    this.objects.push(deadfall, refugeRocks(), snagTree, this.shape.mesh, this.owl.mesh, this.owl.glow);
 
     const card = new THREE.PlaneGeometry(1, 1);
     const litterGeo = new THREE.InstancedBufferGeometry();
@@ -872,7 +874,7 @@ export class DarkWood {
       [this.trees[i], this.trees[j]] = [this.trees[j], this.trees[i]];
     }
     // Cleared after the draw so every other tree keeps its place.
-    const clear = this.trees.filter((t) => Math.hypot(t.x - WOOD_SHAPE.x, t.z - WOOD_SHAPE.z) > 5.5);
+    const clear = this.trees.filter((t) => !WoodShape.clears(t.x, t.z));
     this.trees.splice(0, this.trees.length, ...clear);
   }
 
@@ -932,7 +934,7 @@ export class DarkWood {
       const reach = Math.sqrt(rand()) * 0.86;
       const x = ISLE.x + Math.cos(ang) * reach * ISLE.rx;
       const z = ISLE.z + Math.sin(ang) * reach * ISLE.rz;
-      if (ground(x, z) < TREE_LINE + 1 || pathDistance(x, z) < 5.5
+      if (ground(x, z) < TREE_LINE + 1 || pathDistance(x, z) < 5.5 || WoodShape.clears(x, z)
         || Math.hypot(x - (WOOD_REFUGE.x - 9), z - (WOOD_REFUGE.z + 5)) < 17
         || Math.hypot(x - WOOD_PLANE.x, z - WOOD_PLANE.y) < 12) continue;
       const yaw = rand() * Math.PI * 2;
@@ -962,6 +964,7 @@ export class DarkWood {
     /** The wood is only ever drawn from its own island: everywhere else in the journey it is not in the world. */
     const here = Math.hypot(camera.position.x - ISLE.x, camera.position.z - ISLE.z) < ISLE.rx + 260;
     for (const o of this.objects) o.visible = here;
+    this.owl.update(dt, woodOwl, here);
     if (!here) return;
 
     this.field.sample(WOOD_PLANE.x, WOOD_PLANE.y, this.snagWind);

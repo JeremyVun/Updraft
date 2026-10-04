@@ -19,7 +19,6 @@ import type { PointerInput } from '../input/pointer';
 import type { Carry } from '../companion/carry';
 import type { Cygnet } from '../creatures/cygnet';
 import type { Embers } from '../fx/embers';
-import type { Fireflies } from '../fx/fireflies';
 import type { WindLines } from '../fx/windlines';
 import type { Coax } from '../fx/swirl';
 import type { GustFront } from '../fx/windlines';
@@ -59,8 +58,6 @@ export interface Cast {
   carry: Carry;
   /** The embers in the leaf litter of the dark wood: the only light the player can make there. */
   embers: Embers;
-  /** The fireflies under the trees at night, which an updraft can gather into a lantern where a room allows it. */
-  fireflies: Fireflies;
   /** The island of gold birches, its leaves and the swing hanging on the crest. */
   birches: AutumnBirches;
   /** The staircase up through the cloud, its loose flights, and the top of the cloud itself. */
@@ -178,10 +175,8 @@ export interface Chapter {
   readonly invitationRadius?: number;
   /** A chapter target, such as the wood's waiting coal, that only an updraft wound up over it can answer. */
   readonly updraftTarget?: THREE.Vector3 | null;
-  /** The player's updraft gathers the fireflies into a lantern; `releasesFireflies` lets a gathered one go. */
-  readonly gathersFireflies?: boolean;
-  readonly releasesFireflies?: boolean;
-  readonly holdsFireflies?: boolean;
+  /** Where the one ember light the shaders get comes from, when a beat needs it somewhere other than the brightest coal. */
+  steerLight?(at: THREE.Vector3, power: number): number;
   /** Screen-local wind work on chapter targets, including the paper snag. */
   brushDry?(amount: number): void;
   /** True once the music has been cut for good and only the world is left to hear. */
