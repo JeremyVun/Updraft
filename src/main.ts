@@ -254,6 +254,8 @@ const [owlShadows, owlFlaps, bendRock, bendLeaves, owlWing] = await Promise.all(
   new URL('../assets/fx/owl-bend/wing.webp', import.meta.url).href,
 ].map((href) => new THREE.TextureLoader().loadAsync(href)));
 for (const art of [bendRock, bendLeaves, owlWing]) art.colorSpace = THREE.SRGBColorSpace;
+// Leaves lie on the ground and the rock is seen at a slant: without anisotropy they blur to smudges.
+for (const art of [bendRock, bendLeaves]) art.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
 bendRock.wrapS = bendRock.wrapT = THREE.RepeatWrapping;
 const wood = new DarkWood(wind, { shadows: owlShadows, flaps: owlFlaps, rock: bendRock, leaves: bendLeaves, wing: owlWing });
 wood.objects.forEach((o) => scene.add(o));

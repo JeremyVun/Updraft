@@ -117,6 +117,8 @@ const FOOT_STONE = [5.6, 1.3, 1.3, 0.9];
 const ROCK_DEEP = 2.6;
 /** The two shallow fissures down the face, along it and up it from its middle on the ground, clear of the shadow's eyes. */
 const FISSURES: [number[], number[]][] = [[[0.4, 5.2], [0.9, 3.0]], [[5.6, 6.6], [6.4, 3.4]]];
+/** The painted leaves' colour on the lit floor at the bend, against the dirt. */
+const LEAF_TONE = [1.6, 1.75, 1.5];
 /** The painted gritstone: metres to one repeat, its tone at night, and how deep its grain stands. */
 const ROCK_GRIT = 1.7;
 const ROCK_TONE = 0.7;
@@ -367,7 +369,49 @@ export const shapeUniforms = {
   uShapeMask: { value: new THREE.Vector4() },
   /** 0 the stump and owl stand dark, 1 the side coal's light shows them. */
   uShapeShown: { value: 0 },
+  /** The sixteen painted fallen leaves, four to a row. */
+  uLeaves: { value: null as THREE.Texture | null },
 };
+
+/**
+ * Fallen leaves from the painted atlas. `leafCard` is one leaf of it on a card, l from -0.5 to 0.5 across, its stem
+ * down. `fallenLeaves` scatters them over the ground, cells to the metre: each cell's leaf of its own kind, turned and
+ * sized its own way, some cells bare and the leaves lying thicker in drifts. Its colour in rgb, its cover in a.
+ */
+export const LEAF_GLSL = /* glsl */ `
+uniform sampler2D uLeaves;
+vec4 leafCard(vec2 l, float kind, vec2 gx, vec2 gy) {
+  vec2 cell = vec2(mod(kind, 4.0), floor(kind / 4.0));
+  return textureGrad(uLeaves, vec2((cell.x + 0.5 + l.x) / 4.0, 1.0 - (cell.y + 0.5 - l.y) / 4.0), gx / 4.0, gy / 4.0);
+}
+vec4 fallenLeaves(vec2 p, float cells, float seed) {
+  float a0 = seed * 2.39;
+  mat2 grid = mat2(cos(a0), -sin(a0), sin(a0), cos(a0));
+  vec2 q = grid * p * cells;
+  vec2 qx = dFdx(q), qy = dFdy(q);
+  vec2 base = floor(q - 0.5);
+  vec4 acc = vec4(0.0);
+  for (int j = 0; j < 2; j++) {
+    for (int i = 0; i < 2; i++) {
+      vec2 cell = base + vec2(float(i), float(j));
+      vec4 h = fract(sin(vec4(dot(cell, vec2(127.1, 311.7)), dot(cell, vec2(269.5, 183.3)), dot(cell, vec2(419.2, 371.9)),
+        dot(cell, vec2(61.7, 97.3))) + seed * 17.0) * 43758.5);
+      vec2 at = cell + 0.5 + (h.xy - 0.5) * 0.8;
+      float drift = smoothstep(0.3, 0.7, fbm((transpose(grid) * at) / cells * 0.45 + seed * 5.0));
+      if (h.z > 0.04 + 0.5 * drift) continue;
+      float turn = h.w * 6.2832;
+      mat2 r = mat2(cos(turn), -sin(turn), sin(turn), cos(turn));
+      float size = 0.7 + 0.5 * fract(h.w * 13.1);
+      vec2 l = r * (q - at) / size;
+      if (abs(l.x) > 0.5 || abs(l.y) > 0.5) continue;
+      vec4 leaf = leafCard(l, floor(fract(h.x * 7.13 + h.y * 3.7) * 16.0), r * qx / size, r * qy / size);
+      // A leaf smaller than a pixel or two is only a warmth in the dirt.
+      leaf.a *= 1.0 - smoothstep(0.35, 0.8, length(qx) + length(qy));
+      acc = acc * (1.0 - leaf.a) + vec4(leaf.rgb, 1.0) * leaf.a;
+    }
+  }
+  return vec4(acc.rgb / max(acc.a, 1e-3), acc.a);
+}`;
 
 /** What only the rock needs: where its face is, and the painted shadows laid on it. */
 const faceUniforms = {
@@ -732,34 +776,15 @@ void main() {
 }`;
 const POOL_FRAG = /* glsl */ `${ATMO_GLSL}
 ${SHAPE_SHADOW_GLSL}
+${LEAF_GLSL}
 in vec3 vWorld;
-/**
- * One layer of fallen leaves, cells to the metre: a pointed leaf with its midrib in most cells, each turned and
- * coloured its own way. Its colour in rgb, how much of the pixel it covers in a.
- */
-vec4 fallen(vec2 p, float cells, float seed) {
-  vec2 q = p * cells;
-  vec2 cell = floor(q), f = fract(q) - 0.5;
-  vec3 h = fract(sin(vec3(dot(cell, vec2(127.1, 311.7)), dot(cell, vec2(269.5, 183.3)), dot(cell, vec2(419.2, 371.9))) + seed) * 43758.5);
-  float a = h.x * 6.283;
-  vec2 l = mat2(cos(a), -sin(a), sin(a), cos(a)) * (f - (h.yz - 0.5) * 0.35);
-  float len = 0.3 + 0.12 * h.y, wide = 0.11 + 0.05 * h.z;
-  float r = (len * len + wide * wide) / (2.0 * wide);
-  float d = max(length(l - vec2(0.0, wide - r)), length(l + vec2(0.0, wide - r))) - r;
-  float edge = fwidth(d) + 1e-4;
-  float cover = (1.0 - smoothstep(-edge, edge, d)) * step(0.42, h.z);
-  vec3 col = mix(mix(vec3(0.4, 0.15, 0.04), vec3(0.24, 0.09, 0.035), h.x), vec3(0.46, 0.28, 0.07), step(0.8, h.y));
-  col *= 1.0 - 0.35 * (1.0 - smoothstep(0.0, 0.012 + edge, abs(l.y))) * step(abs(l.x), len * 0.85);
-  // A leaf smaller than a pixel or two is only a warmth in the dirt.
-  return vec4(col, cover * (1.0 - smoothstep(0.25, 0.6, edge * 3.0)));
-}
 void main() {
   // Dirt, and leaves fallen on it, the nearer ones each a leaf.
   float trodden = smoothstep(0.4, 0.8, vnoise(vWorld.xz * 2.3) * 0.6 + vnoise(vWorld.xz * 7.1) * 0.4);
   vec3 alb = mix(vec3(0.02, 0.014, 0.01), vec3(0.08, 0.045, 0.022), trodden);
-  for (int i = 0; i < 2; i++) {
-    vec4 leaf = fallen(vWorld.xz + float(i) * 3.7, 2.4 + float(i) * 1.1, float(i) * 1.3);
-    alb = mix(alb, leaf.rgb, leaf.a);
+  for (int i = 0; i < 3; i++) {
+    vec4 leaf = fallenLeaves(vWorld.xz + float(i) * 3.7, 2.4 + float(i) * 0.9, float(i) + 1.0);
+    alb = mix(alb, leaf.rgb * vec3(${LEAF_TONE.map(glsl).join(', ')}), leaf.a);
   }
   vec3 warm = vec3(0.0);
   if (uShapeThrow.w > 0.0) {
@@ -828,6 +853,7 @@ export class WoodShape {
     faceUniforms.uShadowMasks.value = masks.shadows;
     faceUniforms.uFlaps.value = masks.flaps;
     faceUniforms.uRock.value = masks.rock;
+    shapeUniforms.uLeaves.value = masks.leaves;
     const base = heightAt(WOOD_SHAPE.x, WOOD_SHAPE.z);
     WOOD_SHAPE.y = base;
     const caps = LOCAL.map(([a, b, ra, rb]) => ({ a: shapePoint(...turned(a)), b: shapePoint(...turned(b)), ra: ra * STUMP_SCALE, rb: rb * STUMP_SCALE }));

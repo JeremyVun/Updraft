@@ -8,7 +8,7 @@ import { ATMO_GLSL, atmo } from './atmosphere';
 import { ISLES } from './heightfield';
 import { heightAt } from './island';
 import { createNoise2D, mulberry32 } from './noise';
-import { SHAPE_SHADOW_GLSL, WoodShape, shapeUniforms, type BendArt } from './wood-shape';
+import { LEAF_GLSL, SHAPE_SHADOW_GLSL, WoodShape, shapeUniforms, type BendArt } from './wood-shape';
 import { OwlBody, woodOwl } from '../creatures/owl';
 
 /** The south shore of the wood, where the boat runs ashore out of the storm. */
@@ -364,6 +364,7 @@ void main() {
 const WOOD_FRAG = /* glsl */ `
 ${ATMO_GLSL}
 ${SHAPE_SHADOW_GLSL}
+${LEAF_GLSL}
 uniform float uStorm;
 uniform vec3 uViewA;
 uniform vec3 uViewB;
@@ -386,13 +387,20 @@ void main() {
   vec3 N;
   vec3 alb;
   float grain = 0.5;
-  if (vLeaf > 0.5) {
+  vec3 tint = vec3(1.0);
+  if (vLeaf > 1.5) {
+    // A fallen leaf of one of the painted kinds, sodden dark; the firelight finds its own colour in it.
+    vec2 l = vCard / vec2(2.4, 2.0);
+    vec4 leaf = leafCard(l, floor(fract(vSeed * 7.31) * 16.0), dFdx(l), dFdy(l));
+    if (leaf.a < 0.5) discard;
+    tint = leaf.rgb / vec3(0.185, 0.071, 0.03);
+    N = normalize(vFace * 0.85 + vSide * l.x * 0.9);
+    alb = leaf.rgb * 0.06;
+  } else if (vLeaf > 0.5) {
     float edge = 1.0 + 0.09 * sin(atan(vCard.y, vCard.x) * 5.0 + vSeed * 30.0);
     if (length(vec2(vCard.x * 1.4, vCard.y + vCard.x * vCard.x * 0.3)) > edge) discard;
     N = normalize(vFace * 0.85 + vSide * vCard.x * 0.45);
     alb = mix(vec3(0.021, 0.013, 0.007), vec3(0.068, 0.042, 0.017), fract(vSeed * 9.7));
-    /** Leaves on the floor are sodden: darker than the ones still up there, and no light comes through them. */
-    if (vLeaf > 1.5) alb *= 0.22;
   } else {
     float round = sqrt(max(1.0 - vCard.x * vCard.x, 0.0));
     N = normalize(vSide * vCard.x + vFace * round);
@@ -411,7 +419,7 @@ void main() {
   col += uSunColor * sun * vAo * vSolid * (rim * (0.04 + 0.26 * uNight) + wet * (0.06 + 0.3 * uNight));
   /** Firelight is the only light that reaches the floor here, so wet leaves take far more of it than their own
       near-black albedo would give back: without this the player's light throws no pool on the ground at all. */
-  col += shapeLit(vWorld, (alb + vec3(0.085, 0.048, 0.022)) * emberLight(vWorld, N));
+  col += shapeLit(vWorld, (alb + vec3(0.085, 0.048, 0.022) * mix(vec3(1.0), tint, 0.6)) * emberLight(vWorld, N));
   /** The coal before the bend lights the litter at the stump's foot, so its shadow runs across the floor to the rock. */
   col += shapeThrow(vWorld, N, alb + vec3(0.03, 0.025, 0.02));
   /**
