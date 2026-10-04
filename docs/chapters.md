@@ -178,7 +178,7 @@ leading toy along the bank, hurrying while it sails away from her; the cygnet sw
 beside the toys (quick kicks and glides, wing flicks, spray: `swimPlay`) with dry-bank pauses, and the fleet waits
 for the child (never leashed to the swimming bird). Round the final bend their own boat waits among the toys (the reveal), with the departure
 kite. Once the leading toy reaches the stream mouth an outgoing current carries the fleet out and round to the
-right into the sea, where the toys sail on until out of view; three of them are met again on the open sea. The paper stays on the backpack throughout.
+right into the sea, where the toys sail on until out of view. The paper stays on the backpack throughout.
 
 How the toys move: a filled sail picks the hull up (`drive`) and still water takes speed away slowly (`drag`), so
 a toy glides on after a stroke. Each toy has its own `pace`; the child's orange toy is quickest and sails the
@@ -437,39 +437,25 @@ and `morning`.
 
 ## The open sea
 
-`toMirror`: `story/crossing.ts` with `dolphins` and `swimAt`, `fx/sealife/dolphin.ts`, `fx/sealife/whale.ts`,
-`fx/sealife/toys.ts`.
+`toMirror`: `story/crossing.ts` with `dolphins` and `swimAt`, `fx/sealife/dolphin.ts`, `fx/sealife/whale.ts`.
 `?chapter=sea`.
 
 The exhale after the worst of the journey: the one crossing that takes its time, and nothing is asked of the
 player but to sail. The boat leaves in the last of the night and the sleeping island's palette lifts astern. The
 pod rises round the boat in staggered groups and rides the bow; the featured leap runs up alongside and turns out
 so it is seen side-on, at first light; a whale surfaces far ahead. The boat settles into a pace that fits the pod's
-play: a boat running ahead of it is eased back, never below `leastSpeed` until the pod's farewell.
-
-Three of the little boats' toys (the child's orange one, the teal and the yellow) are already out there when the
-passage leaves, unseen in the night (`ToyFleet.sail`, placed from the route ahead by `seaToys.meetAt`/`meetIn`):
-a loose flotilla on a course of its own that crosses the route well ahead and runs on out to the swimming side,
-at a toy's pace, slower than the boat. Nothing about the boat changes what they do; their sails are the wind's,
-drawing in the breeze, heeling, luffing and driven harder by the player's gusts. They come out of the dark as the
-light comes (far off in the night they are unlit), the boat comes up on them, and as the nearest comes close
-after the leap, the cygnet notices: it watches them, grows restless, climbs onto the side and makes up its mind,
-and goes in when they are near. It swims out to the toy nearest it, to and fro along its near side among the
-others (`swimPlay`, as in their own room), never across a hull's bow and never further out than `seaToys.reach`,
-then turns back as they fall astern and paddles hard for the boat, which eases (`seaPassage.swimSpeed`, never a
-crawl) from the moment the toys are near until it is lifted back in to dry. The toys sail on their own way, out
-of the frame astern, and are gone once nobody could see them. While it swims the lens opens out beside the boat,
-low and close, looking across the cygnet and the toys to the child. A dolphin comes in and nudges the planking; then the pod dives away ahead before the mirror's still water develops.
+play: a boat running ahead of it is eased back, never below `leastSpeed` until the pod's farewell. Then the cygnet's
+brave swim: it grows restless, climbs onto the side, makes
+up its mind, goes in and swims in the wave along the hull while the boat sails on, and is lifted back in to dry. A
+dolphin comes in and nudges the planking; then the pod dives away ahead before the mirror's still water develops.
 Distant land dissolves into the sky until the pod has gone (`Chapter.openSea`). The paper stays stowed.
 
 Rulings: the passage takes at most 100 s. Dolphins are big, never swim in the air, and never turn faster than a
-body allows. The boat never crawls for the swim. The toys are a discovery, not a scripted event: they never steer
-for the boat, match its speed or keep station by it. Jeremy (2026-10-03): "the little boats should be doing their
-own thing and we simply "intercept" or "come across" them briefly".
+body allows. The boat never crawls for the swim.
 
 Rules: the pod follows its own stations rather than being swung with the boat.
 
-Knobs: `tuning.seaPassage`, `tuning.seaToys`, `tuning.dolphins`. Checks: `tools/sea-check.mjs`, `sea-logic-check.mjs`,
+Knobs: `tuning.seaPassage`, `tuning.dolphins`. Checks: `tools/sea-check.mjs`, `sea-logic-check.mjs`,
 `CROSSING=toMirror node tools/journey-pacing-check.mjs`.
 
 ## The sky mirror
