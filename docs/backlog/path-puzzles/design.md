@@ -264,3 +264,24 @@ billowing a sheet, filling a sail). Each prototype is judged on its own branch.
 Jeremy, on the toys: "btw, im not yet convinced that the little toys should be here anymore. i feel like we may be
 trying to fit in a callback that may or may not be artistically genuine." The prototypes leave them out: on main the
 toys' story ends with them reaching the sea, and only the orange toy comes back, washed up at home.
+
+Jeremy, on all the concept art for A to D: "yea, im honestly not convinced by any of the concept art that has been
+crated so far. what do you think? I think i'd be happy to let you take creative ownership of this piece of work and
+do the best you can."
+
+Why none convinced: the paintings were postcards from viewpoints the game never uses, showing the puzzle as magic
+effects rather than what the hand does; and every idea bolted a new mechanism onto the room (a kite in a smoke lift,
+organ pipes, smothered chimneys) instead of growing out of what is already there, because "the boat stopped, make it
+go" is an obstacle, not something the child wants.
+
+**Direction taken: the lines the village hung its washing on.** When the air dies the glass shows the village as it
+was: whole houses down to their doorsteps, lit windows, and washing out on lines strung house to house, moving in a
+breeze that does not exist above the water. The cygnet's reflection has its family beside it. Above the water the
+same lines are still there, sunk just under the glass, shown only by a peg or the corner of a sheet breaking the
+surface where the reflection's lines run. The sail is no use now; the child pulls them on herself. The player lifts
+a sunken line out of the water (the scarf's upward sweep; it rises dripping with its old washing still pegged on)
+into her hands, and she hauls the boat along it hand over hand to the next house. Then a choice read from the
+reflection (two lines leave that house; only one runs on toward the church), then a line wrapped round a chimney
+that circling unwinds. At the church the wind comes back as the storm: cat's-paws race across the glass and wipe the
+village as it was out of the water, the lines fall back, the sail fills. The memory shows the way, then the storm
+takes it, and she is the one who pulls them on: the step before the wood, where she goes into the dark first.
