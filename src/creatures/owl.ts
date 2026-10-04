@@ -28,7 +28,7 @@ const SHOULDER = new THREE.Vector3(0.1, 0.24, -0.01);
 const EYE_AT = new THREE.Vector3(0.05, 0.338, 0.128);
 const EYE_SIZE = new THREE.Vector3(0.039, 0.039, 0.022);
 /** Larger than life, as the game's creatures are, so it reads from where the camera stands. */
-const SCALE = 1.45;
+const SCALE = 1.7;
 
 const VERT = /* glsl */ `
 ${ATMO_GLSL}
@@ -168,7 +168,7 @@ void main() {
   if (uOwlWing.w > 0.0) {
     vec3 Lm = normalize(uShapeMoon.xyz - vWorld);
     vec3 cold = vec3(0.62, 0.74, 1.0) * uShapeMoon.w * uNight * uOwlWing.w;
-    col += alb * cold * (max(0.0, dot(N, Lm)) * 1.4 + 0.25) + cold * edge * fuzz * 0.5;
+    col += alb * cold * (max(0.0, dot(N, Lm)) * 1.0 + 0.2) + cold * edge * fuzz * 0.45;
   }
   col *= uOwlEyes.w;
   gl_FragColor = vec4(max(applyFog(col, vWorld), 0.0), 1.0);

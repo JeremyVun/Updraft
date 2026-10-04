@@ -53,15 +53,16 @@ const MOON_LOCAL = new THREE.Vector3(5.5, 10.5, 9.5);
 /** The pool the sliver lights: centre in the shape's frame and its radius. */
 const POOL_LOCAL = new THREE.Vector3(-1.4, 0, -1.6);
 const POOL_RADIUS = 5.2;
-/** Roughly where the shadow's head falls on the boulder's face, for the camera to keep in frame. */
-export const SHAPE_SHADOW_HEAD = new THREE.Vector3();
-{
-  const eyes = OWL_PERCH_LOCAL.clone().setY(OWL_PERCH_LOCAL.y + 0.5);
+/** Where a point of the stump, in its own frame, throws its shadow on the boulder's face, in the world. */
+function shadowOnBoulder(local: THREE.Vector3): THREE.Vector3 {
   const face = -2.9;
-  const s = (face - eyes.z) / (eyes.z - MOON_LOCAL.z);
-  const at = eyes.clone().addScaledVector(eyes.clone().sub(MOON_LOCAL), s);
-  shapePoint(at.x, at.y, at.z, SHAPE_SHADOW_HEAD);
+  const s = (face - local.z) / (local.z - MOON_LOCAL.z);
+  const at = local.clone().addScaledVector(local.clone().sub(MOON_LOCAL), s);
+  return shapePoint(at.x, at.y, at.z);
 }
+/** The shadow's head and its outer antler on the boulder, for the camera to keep in frame. */
+export const SHAPE_SHADOW_HEAD = shadowOnBoulder(OWL_PERCH_LOCAL.clone().setY(OWL_PERCH_LOCAL.y + 0.5));
+export const SHAPE_SHADOW_ANTLER = shadowOnBoulder(new THREE.Vector3(...grown([-0.95, 2.7, 0.05])));
 
 const STUMP_CAPS = 25;
 export const SHAPE_STUMP_CAPS = STUMP_CAPS;

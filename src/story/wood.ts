@@ -9,7 +9,7 @@ import { heightAt } from '../world/island';
 import { WOOD_BERTH, WOOD_LANDING, WOOD_PATH, WOOD_REFUGE, WOOD_HEARTH, WOOD_OUTSIDE, WOOD_COAX, WOOD_APPROACH_LIGHT, WOOD_PLANE, WOOD_PLANE_LIGHT, woodPlaneSway } from '../world/wood';
 import type { Cast, Chapter } from './cast';
 import { cue } from './cues';
-import { WOOD_SHAPE, SHAPE_RIGHT, SHAPE_FACING, SHAPE_SIDE_COAL, SHAPE_SHADOW_HEAD, SHAPE_HEIGHT, OWL_PERCH_LOCAL, OWL_WAY_LOCAL, shapePoint } from '../world/wood-shape';
+import { WOOD_SHAPE, SHAPE_RIGHT, SHAPE_FACING, SHAPE_SIDE_COAL, SHAPE_SHADOW_HEAD, SHAPE_SHADOW_ANTLER, SHAPE_HEIGHT, OWL_PERCH_LOCAL, OWL_WAY_LOCAL, shapePoint } from '../world/wood-shape';
 import { woodOwl } from '../creatures/owl';
 
 /** Where the cygnet goes to ground when the storm frightens it out of the hood: just off the path, in the dark. */
@@ -930,7 +930,7 @@ export class WoodChapter implements Chapter {
   private readonly shapeHold = new THREE.Vector3();
   private readonly shapeGlance = new THREE.Vector3();
   private readonly shapeFace = new THREE.Vector3();
-  private readonly shapePoints = [new THREE.Vector3(), SHAPE_SHADOW_HEAD.clone(), shapePoint(0, SHAPE_HEIGHT, 0)];
+  private readonly shapePoints = [new THREE.Vector3(), SHAPE_SHADOW_HEAD.clone(), SHAPE_SHADOW_ANTLER.clone(), shapePoint(0, SHAPE_HEIGHT, 0)];
   /** Where the camera goes to see her hand on the bark from the side, in front of the stump's left shoulder. */
   private readonly touchEye = shapePoint(-3.6, 1.9, 6.0);
   private readonly shapeAsk: Coax = { at: new THREE.Vector3(), urgency: tuning.wood.inviteCoalUrgency, radius: tuning.wood.inviteCoalRadius };
