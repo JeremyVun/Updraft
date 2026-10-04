@@ -674,6 +674,8 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
     birches.swing.brush(rig.camera, input, wind);
   }
   if (input.present && !input.muted) glider.brush(rig.camera, input.prevNdc, input.ndc, input.gust, input.gustDir, input.charge, dt);
+  fireflies.tended = !!story.current.gathersFireflies;
+  fireflies.brush(rig.camera, input);
   embers.updraft(input, story.current.updraftTarget ?? null);
   const emberBreath = embers.brush(rig.camera, input, story.current.windInvitation ?? null, dt);
   story.current.brushDry?.(story.name==='sleeping' ? sleeping.trail.brush(rig.camera,input,dt) ?? emberBreath : emberBreath);

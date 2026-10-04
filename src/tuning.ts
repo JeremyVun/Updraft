@@ -929,8 +929,9 @@ export const tuning = {
     /**
      * The fireflies gathered into a lantern by an updraft wound among them (the stump at the bend): the charge at
      * which circling starts gathering, how far from the column (m) and how fast flies join, how many make a full
-     * light, how high it hangs and how wide the swarm turns, how quickly it follows the column and how much of a gust's
-     * wind carries it, and how long it holds together untended (and once its work is done).
+     * light, how high it hangs and how wide the swarm turns, how quickly it follows the column; a stroke across it on
+     * screen pushes it (`carry` of the gust, within `brushRadius`), up to `speedMax`, gliding to rest by `drag`; and
+     * how long it holds together untended (and once its work is done).
      */
     /**
      * The stump at the bend: how far short of it she stops, her pace coming up to it, the flinch back (m over s),
@@ -946,7 +947,8 @@ export const tuning = {
     },
     lantern: {
       chargeFrom: 0.12, gatherRadius: 14, gatherRate: 2, full: 16, height: 1.35, orbit: 0.55, flySpeed: 7,
-      follow: 1.4, carry: 0.6, carryResponse: 2, looseFor: 40, releaseFor: 6,
+      follow: 1.4, carry: 0.35, gustFrom: 1.5, gustMax: 14, brushRadius: 0.16, speedMax: 6, drag: 1.4,
+      looseFor: 40, releaseFor: 6,
       light: 2.4, haloSize: 1.6, haloAlpha: 0.32,
     },
     /** Seconds a coal burns from a full catch if nobody fans it again. */

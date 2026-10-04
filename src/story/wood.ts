@@ -955,7 +955,7 @@ export class WoodChapter implements Chapter {
     const k = tuning.wood.shape;
     const strength = lamp.power * (1 - THREE.MathUtils.smoothstep(d, k.lightReach * 0.6, k.lightReach)) * THREE.MathUtils.smoothstep(d, 0.5, 1.2);
     const cos = (dx * SHAPE_FACING.x + dz * SHAPE_FACING.z) / Math.max(d, 0.001);
-    const side = THREE.MathUtils.smoothstep(cos, k.sideFront, k.sideFront - 0.2) * THREE.MathUtils.smoothstep(cos, k.sideBack, k.sideBack + 0.2);
+    const side = (1 - THREE.MathUtils.smoothstep(cos, k.sideFront - 0.2, k.sideFront)) * THREE.MathUtils.smoothstep(cos, k.sideBack, k.sideBack + 0.2);
     return { side: side * strength, front: THREE.MathUtils.smoothstep(cos, k.sideFront, k.sideFront + 0.25) * strength };
   }
 

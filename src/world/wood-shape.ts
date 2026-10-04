@@ -82,7 +82,7 @@ float shapeShadow(vec3 p) {
     else if (t > 1.0) { t = 1.0; s = clamp((b - c) / a, 0.0, 1.0); }
     float dist = distance(p + d1 * s, p2 + d2 * t);
     float rad = mix(uShapeA[i].w, uShapeB[i].w, t);
-    float pen = 0.03 + 0.35 * s;
+    float pen = 0.02 + 0.22 * s;
     lit = min(lit, smoothstep(rad - pen, rad + pen, dist));
   }
   return lit;
@@ -159,7 +159,7 @@ void main() {
   float rim = pow(1.0 - min(abs(dot(n, V)), 1.0), 3.0);
   vec3 col = alb * (hemiLight(n) * 0.8 + uSunColor * max(0.0, dot(n, uSunDir)) * 0.35);
   // The moon on the stone behind is what the stump is seen against before there is any other light.
-  if (vKind > 1.5) col += alb * uSunColor * (0.5 + 0.5 * max(0.0, dot(n, normalize(cameraPosition - vWorld)))) * 2.6 * uNight;
+  if (vKind > 1.5) col += alb * uSunColor * (0.5 + 0.5 * max(0.0, dot(n, normalize(cameraPosition - vWorld)))) * 1.5 * uNight;
   else col += uSunColor * rim * 0.12 * uNight;
   float shade = shapeShadow(vWorld + n * 0.08);
   col += (alb + vec3(0.07, 0.04, 0.02)) * emberLight(vWorld, n) * shade;
@@ -193,9 +193,9 @@ export class WoodShape {
       const eye = toWorld([side * 0.11, 1.62, 0.63], WOOD_SHAPE.y);
       parts.push(strip(bracket(eye, 0.08), 1));
     }
-    parts.push(strip(this.stone([0.5, 0.75, -3.1], [2.7, 1.6, 0.95], 0.1, 1), 2));
-    parts.push(strip(this.stone([-1.9, 0.45, -2.6], [1.3, 1.0, 0.8], -0.2, 4), 2));
-    parts.push(strip(this.stone([2.9, 0.35, -2.2], [1.1, 0.7, 0.9], 0.3, 7), 2));
+    parts.push(strip(this.stone([0.6, 1.2, -3.0], [3.4, 2.7, 0.8], 0.05, 1), 2));
+    parts.push(strip(this.stone([-2.6, 0.5, -2.5], [1.3, 1.1, 0.8], -0.3, 4), 2));
+    parts.push(strip(this.stone([3.8, 0.5, -2.4], [1.2, 1.0, 0.9], 0.35, 7), 2));
     const geo = mergeGeometries(parts);
     for (const p of parts) p.dispose();
     this.mesh = new THREE.Mesh(geo, new THREE.ShaderMaterial({
@@ -213,11 +213,12 @@ export class WoodShape {
 
   /** A weathered boulder behind the stump, pale enough to take a shadow: the wall the fear is thrown on. */
   private stone(at: number[], size: number[], yaw: number, seed: number): THREE.BufferGeometry {
-    const geo = new THREE.IcosahedronGeometry(1, 2);
+    const geo = new THREE.IcosahedronGeometry(1, 3);
     const pos = geo.getAttribute('position');
     for (let i = 0; i < pos.count; i++) {
       const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
-      const wear = 1 + 0.08 * Math.sin(x * 4.7 + y * 3.1 + z * 4.3 + seed) + 0.04 * Math.sin(z * 9.2 - x * 4.1 + seed * 2);
+      const wear = 1 + 0.09 * Math.sin(x * 4.7 + y * 3.1 + z * 4.3 + seed) + 0.05 * Math.sin(z * 9.2 - x * 4.1 + seed * 2)
+        + 0.025 * Math.sin(x * 17 + y * 13 - z * 11 + seed * 3);
       pos.setXYZ(i, x * wear * size[0], y * wear * size[1], z * wear * size[2]);
     }
     const centre = toWorld(at, WOOD_SHAPE.y);

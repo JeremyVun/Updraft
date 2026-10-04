@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { fixInPlace } from '../gl/fixed';
+import { screenBrush } from '../creatures/motion';
+import type { PointerInput } from '../input/pointer';
 import { tuning } from '../tuning';
 import type { WindField, WindSample } from '../wind/field';
 import { ATMO_GLSL, atmo } from '../world/atmosphere';
@@ -77,6 +79,8 @@ export class Fireflies {
   gatherCharge = 0;
   /** Lets the swarm go faster than it would on its own, once it has done what it was gathered for. */
   release = false;
+  /** The room lets the player gather and carry them. */
+  tended = false;
   /** Keeps a gathered swarm where it is, untouched by wind and time, while the room needs its light. */
   hold = false;
   private readonly flies: Fly[] = [];
@@ -118,6 +122,24 @@ export class Fireflies {
     }
   }
 
+  /**
+   * A gust drawn across the gathered lantern on screen carries it along the stroke, as wind pushes whatever is under
+   * the cursor. Only the stroke moves it: the storm and the eddies it leaves under the trees never do.
+   */
+  brush(camera: THREE.Camera, input: PointerInput): void {
+    const L = tuning.wood.lantern;
+    if (this.lantern.power < 0.05 || this.hold || !this.tended || !input.present || input.muted
+      || input.charge > L.chargeFrom || input.gust < L.gustFrom) return;
+    const touch = screenBrush(camera, this.lantern.at, input.prevNdc, input.ndc, L.brushRadius);
+    if (touch <= 0) return;
+    const push = Math.min(input.gust, L.gustMax) * touch * L.carry;
+    this.lanternV.x += input.gustDir.x * push;
+    this.lanternV.y = 0;
+    this.lanternV.z += input.gustDir.y * push;
+    const speed = this.lanternV.length();
+    if (speed > L.speedMax) this.lanternV.multiplyScalar(L.speedMax / speed);
+  }
+
   update(dt: number, night: number, around: THREE.Vector3, sheltered = false): void {
     this.presence += (night - this.presence) * (1 - Math.exp(-dt * 2));
     this.mesh.visible = this.presence > 0.01;
@@ -138,11 +160,7 @@ export class Fireflies {
       lamp.at.z += (this.gatherAt!.z - lamp.at.z) * k;
       this.lanternV.multiplyScalar(Math.exp(-dt * 3));
     } else if (lamp.power > 0.01 && !this.hold) {
-      const w = this.wind.sample(lamp.at.x, lamp.at.z, this.sample);
-      const k = 1 - Math.exp(-dt * L.carryResponse);
-      // Only the player's gusts carry it: the storm over the canopy does not reach down here.
-      this.lanternV.x += ((w.x - this.wind.breeze.x) * L.carry - this.lanternV.x) * k;
-      this.lanternV.z += ((w.z - this.wind.breeze.y) * L.carry - this.lanternV.z) * k;
+      this.lanternV.multiplyScalar(Math.exp(-dt * L.drag));
       lamp.at.addScaledVector(this.lanternV, dt);
     }
     lamp.at.y = surfaceHeight(lamp.at.x, lamp.at.z) + L.height + Math.sin(this.time * 0.9) * 0.08;
