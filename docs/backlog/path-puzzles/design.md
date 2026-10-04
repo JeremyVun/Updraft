@@ -63,7 +63,7 @@ His answers to the second round:
   winds it in to the shore. It adds a beat after the door rather than replacing a curtain. It knowingly relaxes two
   rulings for this shore: "beyond it only open grass, the kite and the boat" and pinwheels staying with the washing.
 
-The little boats' bath and plug are **approved** and merged (branch `proto-boats-plug` (Jeremy: "the plug
+The little boats' bath and plug are **approved** and merged (branch `proto-boats-plug`; Jeremy: "the plug
 could be very slightly easier to pull out, otherwise it's approved"). As approved: the toys ground on a shoal; the
 island's own gust rocks the bath on its feet with a few wind lines, showing it can tip and which way, without
 spilling; only the player's push toward the stream pours it, the hint drawn that way; the risen water carries them
