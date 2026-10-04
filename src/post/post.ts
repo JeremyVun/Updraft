@@ -22,11 +22,14 @@ const GLOW_SHARE = [0.32, 0.86, 0.65, 0.57];
 /** One bad pixel (NaN or a huge highlight) in the scene would otherwise be smeared across the screen by bloom. */
 const CLEAN_GLSL = /* glsl */ `
 // An all-ones exponent is NaN or infinity; isnan and isinf would change how the compiler treats every float in the grade.
-vec4 clean(vec4 c) {
+vec4 clean(vec4 c, float highest) {
   bool bad = any(equal(floatBitsToUint(c) & 0x7F800000u, uvec4(0x7F800000u)));
-  return bad ? vec4(0.0, 0.0, 0.0, 1.0) : min(c, vec4(40.0));
+  return bad ? vec4(0.0, 0.0, 0.0, 1.0) : min(c, vec4(highest));
 }
 `;
+const HIGHEST = 40;
+/** The scene with bloom added is cleaned already, and keeps what bloom adds over `HIGHEST`. */
+const UNCLAMPED = 65504;
 
 /**
  * The depth blur, as in the room paintings, made the way a lens makes it: blur grows with the difference in inverse
@@ -108,6 +111,7 @@ const GRADE_VERT = /* glsl */ `
 varying vec2 vUv;
 #if SUN_GLOW
 ${CLEAN_GLSL}
+uniform float uHighest;
 uniform sampler2D tDiffuse;
 uniform vec2 uResolution;
 uniform vec4 uSun;
@@ -123,7 +127,7 @@ void main() {
     if (dot(o, o) > 1.0) continue;
     taps += 1.0;
     // Clamped to the frame's edge, as bloom's blur reads past it, so a sun half out of frame still glows.
-    vec3 c = clean(textureLod(tDiffuse, clamp(uSun.xy + o * uSun.z / uResolution, 0.0, 1.0), 0.0)).rgb;
+    vec3 c = clean(textureLod(tDiffuse, clamp(uSun.xy + o * uSun.z / uResolution, 0.0, 1.0), 0.0), uHighest).rgb;
     sum += c * smoothstep(1.1, 1.11, dot(c, vec3(0.2126, 0.7152, 0.0722)));
   }
   vSunLight = sum / taps * uSun.w;
@@ -134,6 +138,7 @@ void main() {
 /** Reads the scene, or the scene with bloom added, cleaning it as it reads it. */
 const GRADE_FRAG = /* glsl */ `
 ${CLEAN_GLSL}
+uniform float uHighest;
 uniform sampler2D tDiffuse;
 uniform float uTime;
 #if DEPTH_BLUR
@@ -177,9 +182,9 @@ void main() {
   float r2 = dot(fromCentre, fromCentre);
   vec2 shift = fromCentre * r2 * 0.006;
   vec3 hdr;
-  hdr.r = clean(texture2D(tDiffuse, vUv + shift)).r;
-  hdr.g = clean(texture2D(tDiffuse, vUv)).g;
-  hdr.b = clean(texture2D(tDiffuse, vUv - shift)).b;
+  hdr.r = clean(texture2D(tDiffuse, vUv + shift), uHighest).r;
+  hdr.g = clean(texture2D(tDiffuse, vUv), uHighest).g;
+  hdr.b = clean(texture2D(tDiffuse, vUv - shift), uHighest).b;
 #if SUN_GLOW
   vec2 px = (vUv - uSun.xy) * uResolution;
   hdr += vSunLight * dot(uGlowShare, exp2(-dot(px, px) * uGlowFalloff));
@@ -232,7 +237,7 @@ uniform sampler2D tScene;
 uniform sampler2D tBloom;
 varying vec2 vUv;
 void main() {
-  gl_FragColor = clean(texelFetch(tScene, ivec2(gl_FragCoord.xy), 0)) + texture2D(tBloom, vUv);
+  gl_FragColor = clean(texelFetch(tScene, ivec2(gl_FragCoord.xy), 0), ${HIGHEST.toFixed(1)}) + texture2D(tBloom, vUv);
 }`;
 
 const QUAD_VERT = /* glsl */ `
@@ -315,10 +320,11 @@ export class Post {
     }
     const bright = b.materialHighPassFilter;
     if (!bright.fragmentShader.includes(BRIGHT_READ)) throw new Error('Bloom\'s bright pass no longer reads its input as expected');
-    bright.fragmentShader = CLEAN_GLSL + bright.fragmentShader.replace(BRIGHT_READ, 'vec4 texel = clean( texture2D( tDiffuse, vUv ) );');
+    bright.fragmentShader = CLEAN_GLSL + bright.fragmentShader.replace(BRIGHT_READ, `vec4 texel = clean( texture2D( tDiffuse, vUv ), ${HIGHEST.toFixed(1)} );`);
     this.bloomedMat = quadMaterial(BLOOMED_FRAG, { tScene: { value: null }, tBloom: { value: b.renderTargetsHorizontal[0].texture } });
     this.gradeMat = quadMaterial(GRADE_FRAG, {
       tDiffuse: { value: this.sceneTarget.texture },
+      uHighest: { value: HIGHEST },
       uTime: { value: 0 },
       uExposure: { value: 1.0 },
       uSaturation: { value: 1.0 },
@@ -463,6 +469,7 @@ export class Post {
     this.bloomedMat.uniforms.tScene.value = this.sceneTarget.texture;
     draw(this.bloomedMat, this.bloomed);
     this.gradeMat.uniforms.tDiffuse.value = this.bloomed.texture;
+    this.gradeMat.uniforms.uHighest.value = UNCLAMPED;
   }
 
   /** Blurs `bloomed`, which is always drawn first: the depth blur is never shown with less bloom than itself. */
@@ -499,6 +506,7 @@ export class Post {
 
     const u = this.gradeMat.uniforms;
     u.tDiffuse.value = this.sceneTarget.texture;
+    u.uHighest.value = HIGHEST;
     if (this.bloomShown > 0 || warm) {
       this.bloom.strength = BLOOM_STRENGTH * this.bloomShown;
       this.renderBloom();

@@ -326,7 +326,8 @@ and white) and a gentle contrast curve on brightness after tone mapping, blue-ti
 vignette, grain) reads the plain target, or the resolve itself while bloom is off, straight to the screen. The depth
 blur is never shown with more strength than bloom, so the plain target is always there for it. Every read of the
 scene clamps NaN, infinity and huge highlights (bloom would smear one bad pixel across the screen); it clamps the
-filtered sample, so it matches clamping each texel first except beside a texel over 40 or not finite. Bloom is added
+filtered sample, so it matches clamping each texel first except beside a texel over 40 or not finite. The grade reads
+the plain target, cleaned already, without the clamp: bloom can lift it past 40. Bloom is added
 texel for texel before the grade, not in it: the plain target's rounding of the sum is part of the picture, and
 dropping it moved blue by up to 10/255. The clamp tests the exponent's bits rather than calling `isnan` or `isinf`,
 which change how the compiler treats every float in the grade and moved its grain by up to 8/255. Nothing in the
