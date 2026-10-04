@@ -492,7 +492,10 @@ export class Post {
     }
   }
 
-  /** `warm` draws the bloom and the sun's glow even while they are off, so their programs are built before Begin whatever the level. */
+  /**
+   * `warm` draws the bloom, the depth blur, the sun's glow and every variant of the grade even while they are off, so
+   * their programs are built before Begin whatever the level: Safari builds a program only when it is first drawn.
+   */
   render(time: number, warm = false): void {
     const r = this.renderer;
     const dt = Math.min(Math.max(time - this.lastTime, 0), 0.1) || 0;
@@ -532,8 +535,12 @@ export class Post {
     this.blurShown = this.holdBlur ? Math.max(0, this.blurShown - dt / BLUR_HOLD_FADE) : Math.min(1, this.blurShown + dt / BLUR_HOLD_FADE);
     this.gradeMat.uniforms.uDepthBlur.value = depthBlur * this.blurShown;
     if (warm) {
-      select(this.gradeMat, { SUN_GLOW: glow === 0, DEPTH_BLUR: blur });
-      this.quad.render(r);
+      for (const sunGlow of [false, true]) {
+        for (const blurred of [false, true]) {
+          select(this.gradeMat, { SUN_GLOW: sunGlow, DEPTH_BLUR: blurred });
+          this.quad.render(r);
+        }
+      }
     }
     select(this.gradeMat, { SUN_GLOW: glow > 0, DEPTH_BLUR: blur });
     this.quad.render(r);
