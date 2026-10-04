@@ -931,13 +931,13 @@ export const tuning = {
      * first sees it (m over s); seconds of side light to show it for what it is; how fast the one light swings round
      * to the side coal (per second); how brightly the owl's eyes shine in the dark; how bright the sliver of moon is
      * that throws its shadow; how often and how long she looks back for the player; when the owl leaves after it is
-     * seen; the breath out, the hand on the bark, how far past it she walks; and the camera behind her (back, to her
+     * seen; the breath out, the hand on the bark, how far past it she walks and how far on the next coal waits; and the camera behind her (back, to her
      * left, up), and the longer lens on the owl once it is seen (drawn back as it narrows).
      */
     shape: {
       stopShort: 5.2, approachPace: 0.7, flinchStep: 0.5, flinchSeconds: 0.9, revealSeconds: 1.2, lightShift: 1.4,
       eyeshineDark: 0.75, moonlight: 0.85, glanceEvery: 5, glanceFor: 1.3, owlLeaveAfter: 6.4, exhaleSeconds: 1.3,
-      touchSeconds: 2.2, walkOn: 9, cameraBack: 6.2, cameraSide: 4.5, cameraUp: 3.5, cameraPace: 0.8, closeBack: 5,
+      touchSeconds: 2.2, walkOn: 9, chainOn: 13, cameraBack: 6.2, cameraSide: 4.5, cameraUp: 3.5, cameraPace: 0.8, closeBack: 5,
       closeZoom: 1.6,
     },
     /** Seconds a coal burns from a full catch if nobody fans it again. */
@@ -952,8 +952,9 @@ export const tuning = {
     /** How far up the path the next coal is laid, and how far off the middle of it, so the chain is a walk. */
     chainStep: 20.25,
     chainOffset: 2.6,
-    /** Bring the next light closer after pickup. */
+    /** Bring the next light closer after pickup, and further off the path, so it stays clear of her on screen. */
     rescueChainStep: 12,
+    rescueChainOffset: 3.6,
     /** How far off her shoulder the walking camera stands, on the waiting coal's side, so the coal is beside her in frame. */
     cameraSide: 2.8,
     cameraBack: 13,

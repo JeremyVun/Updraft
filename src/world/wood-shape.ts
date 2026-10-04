@@ -36,6 +36,9 @@ const grown = (p: number[]): [number, number, number] => {
   return [p[0] * GIRTH, y, p[2] * GIRTH];
 };
 
+/** The way the owl leaves, in the shape's frame: back over the boulder and a little the way she is going. */
+export const OWL_WAY_LOCAL = new THREE.Vector3(3.6, 0, -9.6);
+
 /** Where the owl sits, down in the fork between the two dead limbs, facing her. */
 export const OWL_PERCH_LOCAL = new THREE.Vector3(...grown([0, 1.6, 0.02]));
 /** The top of the antlers, in the shape's frame. */
@@ -364,11 +367,13 @@ export class WoodShape {
   readonly mesh: THREE.Mesh;
   /** A place on the bark she can lay a mitten on, on the near side of the trunk. */
   readonly touch = new THREE.Vector3();
-  /** Where no tree may stand: round the stump, the boulder behind it, and the owl's way up out of the fork. */
+  /** Where no tree may stand: round the stump, the boulder behind it, and the gap the owl flies up and out through. */
   static clears(x: number, z: number): boolean {
     const dx = x - WOOD_SHAPE.x, dz = z - WOOD_SHAPE.z;
     const lx = dx * SHAPE_RIGHT.x + dz * SHAPE_RIGHT.z, lz = dx * SHAPE_FACING.x + dz * SHAPE_FACING.z;
-    return Math.hypot(lx, lz) < (lz > 0 ? 7.5 : 6) || Math.hypot(lx + 1.6, lz + 3.4) < 5.5;
+    const along = THREE.MathUtils.clamp((lx * OWL_WAY_LOCAL.x + lz * OWL_WAY_LOCAL.z) / OWL_WAY_LOCAL.lengthSq(), 0, 1);
+    const offWay = Math.hypot(lx - OWL_WAY_LOCAL.x * along, lz - OWL_WAY_LOCAL.z * along);
+    return Math.hypot(lx, lz) < (lz > 0 ? 7.5 : 6) || Math.hypot(lx + 1.6, lz + 3.4) < 5.5 || offWay < 3;
   }
 
   constructor() {

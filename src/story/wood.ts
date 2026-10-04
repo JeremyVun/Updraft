@@ -9,7 +9,7 @@ import { heightAt } from '../world/island';
 import { WOOD_BERTH, WOOD_LANDING, WOOD_PATH, WOOD_REFUGE, WOOD_HEARTH, WOOD_OUTSIDE, WOOD_COAX, WOOD_APPROACH_LIGHT, WOOD_PLANE, WOOD_PLANE_LIGHT, woodPlaneSway } from '../world/wood';
 import type { Cast, Chapter } from './cast';
 import { cue } from './cues';
-import { WOOD_SHAPE, SHAPE_RIGHT, SHAPE_FACING, SHAPE_SIDE_COAL, SHAPE_SHADOW_HEAD, SHAPE_HEIGHT, OWL_PERCH_LOCAL, shapePoint } from '../world/wood-shape';
+import { WOOD_SHAPE, SHAPE_RIGHT, SHAPE_FACING, SHAPE_SIDE_COAL, SHAPE_SHADOW_HEAD, SHAPE_HEIGHT, OWL_PERCH_LOCAL, OWL_WAY_LOCAL, shapePoint } from '../world/wood-shape';
 import { woodOwl } from '../creatures/owl';
 
 /** Where the cygnet goes to ground when the storm frightens it out of the hood: just off the path, in the dark. */
@@ -191,7 +191,7 @@ export class WoodChapter implements Chapter {
    * The next coal, laid at the edge of what the one that just caught is lighting: far enough to be worth walking
    * to, near enough that its glimmer is inside the new light, and always on the way up. One at a time.
    */
-  private layNext(spacing = tuning.wood.chainStep): void {
+  private layNext(spacing = tuning.wood.chainStep, offset = tuning.wood.chainOffset): void {
     const t = tuning.wood;
     const c = this.cast.child.position;
     // Finish this stretch behind the rescue camera. Never offer another path coal beside the refuge.
@@ -219,7 +219,7 @@ export class WoodChapter implements Chapter {
       ? (this.planeCoal = this.cast.embers.lay(WOOD_PLANE_LIGHT.x, WOOD_PLANE_LIGHT.y))
       : !this.bolted && along === APPROACH_ALONG
       ? this.cast.embers.lay(WOOD_APPROACH_LIGHT.x, WOOD_APPROACH_LIGHT.y)
-      : this.cast.embers.lay(...this.at(along, this.chainSide * t.chainOffset));
+      : this.cast.embers.lay(...this.at(along, this.chainSide * offset));
   }
 
   /** The player's wind is the light here, so it is theirs for all of it except the moment of gathering it up. */
@@ -387,6 +387,8 @@ export class WoodChapter implements Chapter {
    * on for exactly as long as the player keeps something burning, and stop and wait the moment it goes out. Light
    * thrown up the path pulls them along it; light thrown anywhere else is looked at, and never punished.
    */
+  private inDark = false;
+
   private follow(): void {
     const { child: c } = this.cast;
     const t = this.target();
@@ -407,7 +409,9 @@ export class WoodChapter implements Chapter {
       this.ahead = this.cast.embers.lay(t.x, t.y);
     }
 
-    if (this.lit < ENOUGH && needsLight) {
+    // Once the light has run out she waits for more of it, not for a flicker back over the edge: no half steps.
+    this.inDark = needsLight && this.lit < (this.inDark ? ENOUGH * 1.1 : ENOUGH);
+    if (this.inDark) {
       if (c.moving) c.stop();
       c.lookAt = this.ahead ? this.ahead.p : this.lit > 0 ? this.light : null;
       return;
@@ -615,7 +619,9 @@ export class WoodChapter implements Chapter {
       cygnet.bind(0.35); cygnet.stay = false;
       this.hearth = null;
       this.to('walk'); this.chainAt = pathAlong(c.position.x, c.position.z);
-      if (!this.ahead) this.layNext(tuning.wood.rescueChainStep);
+      // The first coal after the rescue goes on the side its framing was made for, however many came before.
+      this.chainSide = -1;
+      if (!this.ahead) this.layNext(tuning.wood.rescueChainStep, tuning.wood.rescueChainOffset);
     });
   }
 
@@ -1051,7 +1057,7 @@ export class WoodChapter implements Chapter {
     owl.lookAt(this.shapeHold.copy(c.position).setY(c.position.y + 1.2));
     if (owl.hooted) cue('hoot');
     // Up and away over the boulder, a little the way she is going.
-    if (owl.phase === 'awake' && owl.elapsed > k.owlLeaveAfter) owl.leave(shapePoint(4, 0, -10, this.tmp));
+    if (owl.phase === 'awake' && owl.elapsed > k.owlLeaveAfter) owl.leave(shapePoint(OWL_WAY_LOCAL.x, 0, OWL_WAY_LOCAL.z, this.tmp));
     const watching = owl.phase === 'leaving' ? (owl.presence > 0.2 ? owl.position : null) : owl.phase === 'gone' ? null : this.shapeEyes;
     if (this.braveStep === 0) {
       c.lookAt = watching;
@@ -1101,9 +1107,10 @@ export class WoodChapter implements Chapter {
         c.walkTo(this.spot.x, this.spot.y, false, () => {
           this.to('walk');
           this.chainAt = pathAlong(c.position.x, c.position.z);
-          // The stump took a coal's place; keep the coals beyond it on the sides their framing was made for.
+          // Near enough that she stops beside it, where the side coal's light runs out, not far short in the dark,
+          // and on the side the camera comes round to from the stump.
           this.chainSide = -this.chainSide;
-          this.layNext();
+          this.layNext(tuning.wood.shape.chainOn);
           this.afterShape = this.ahead;
           this.placeShoulder();
         }, 1);
