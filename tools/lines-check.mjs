@@ -44,7 +44,7 @@ try {
       await page.evaluate(chapter => {
         const g = __game;
         if (chapter === 'lines') {
-          g.story.sail(90, -50, Math.PI);
+          g.story.sail(60, -95, Math.PI);
           g.story.current.restoreCheckpoint('entry', [5, 90]);
           g.story.current.update(0); g.rig.cut(g.story.current.shot);
         }
@@ -131,7 +131,7 @@ try {
     await page.evaluate(() => {
       const g = __game, c = g.story.current;
       g.curtains.forEach(x => x.reset(true));
-      g.child.stop(); g.child.place(9.3, -235.7, Math.PI); g.glider.hold(g.child);
+      g.child.stop(); g.child.place(9.3, -285.7, Math.PI); g.glider.hold(g.child);
       g.cygnet.release(g.child.position.clone().add({ x: 2, y: 0, z: 0 }));
       g.cygnet.seating.snap(); c.gate = 3; c.to('family'); c.frame(); g.rig.cut(c.shot);
     });
@@ -210,9 +210,9 @@ try {
   if (resume || mode.includes('legacy')) {
     if (mode.includes('legacy')) await page.evaluate(() => {
       const p = JSON.parse(localStorage.getItem('updraft.progress.v1'));
-      p.child = [11, __game.child.ground(11, -250), -250, Math.PI, 0];
-      p.bird[0] = 12; p.bird[1] = __game.child.ground(12, -251); p.bird[2] = -251;
-      p.boat = [14, -281, 0.1, 0, 1]; p.seat = null;
+      p.child = [11, __game.child.ground(11, -300), -300, Math.PI, 0];
+      p.bird[0] = 12; p.bird[1] = __game.child.ground(12, -301); p.bird[2] = -301;
+      p.boat = [14, -331, 0.1, 0, 1]; p.seat = null;
       localStorage.setItem('updraft.progress.v1', JSON.stringify(p));
     });
     await page.reload(); await page.waitForFunction(() => window.__ready === true, null, { timeout: 60000 });

@@ -3,14 +3,14 @@ import { shaderFbm, smoothstep } from './noise';
 
 /** Shared ground layout; independent of the live curtain actors and their progress. */
 export const CURTAIN_LAYOUT = [
-  { x: 0, z: -185, width: 9, panels: 1 },
-  { x: 25, z: -207, width: 10, panels: 2 },
-  { x: 11, z: -228, width: 10.5, panels: 1 },
+  { x: 0, z: -235, width: 9, panels: 1 },
+  { x: 25, z: -257, width: 10, panels: 2 },
+  { x: 11, z: -278, width: 10.5, panels: 1 },
 ];
 const CLEARINGS = [
   ...CURTAIN_LAYOUT.map(({ x, z }) => ({ x, z, radius: 8 })),
-  { x: 11, z: -238, radius: 9 },
-  { x: 11, z: -248, radius: 12 },
+  { x: 11, z: -288, radius: 9 },
+  { x: 11, z: -298, radius: 12 },
 ];
 const BOUNDS = {
   left: Math.min(...CLEARINGS.map(p => p.x - p.radius * 1.4)),

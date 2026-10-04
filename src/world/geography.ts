@@ -9,6 +9,6 @@ export const SHORE_SHIFT = { x: 0, z: 95 } as const;
 export const SEA_SHORTENING = { x: 50, z: 130 } as const;
 export const MIRROR_SHIFT = { x: 60 + SEA_SHORTENING.x, z: 90 + SEA_SHORTENING.z } as const;
 export const HOME_SHIFT = { x: -105 + SEA_SHORTENING.x, z: -380 + SEA_SHORTENING.z } as const;
-/** Revision 5 brings the island of lines 150 m closer to the still island, so the first crossing is about a minute. */
-export const LINES_SHIFT = { x: 0, z: 150 } as const;
+/** Revision 5 brings the island of lines 100 m closer to the still island, shortening the first crossing. */
+export const LINES_SHIFT = { x: 0, z: 100 } as const;
 export const GEOGRAPHY_VERSION = 5;

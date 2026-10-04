@@ -173,7 +173,7 @@ export class LinesChapter implements Chapter {
         break;
       case 'throughDoor': {
         const duration = tuning.linesPassage.doorApproach + tuning.linesPassage.doorCross;
-        const through = c.position.z < -249 && cygnet.position.z < -249;
+        const through = c.position.z < -299 && cygnet.position.z < -299;
         if (this.doorElapsed < duration * 0.75 || through) this.doorElapsed += dt;
         if (this.doorElapsed >= duration && through) this.crossDoor();
         break;
@@ -232,9 +232,9 @@ export class LinesChapter implements Chapter {
       this.to('familyApproach');
       c.lookAt = FAMILY_MID;
       cygnet.watch(FAMILY_MID);
-      c.walkTo(9.3, -235.7, false, () => {
+      c.walkTo(9.3, -285.7, false, () => {
         c.faceToward(FAMILY_MID.x, FAMILY_MID.z, 1);
-        cygnet.errand = this.tmp.set(12.5, heightAt(12.5, -235.7), -235.7).clone();
+        cygnet.errand = this.tmp.set(12.5, heightAt(12.5, -285.7), -285.7).clone();
         this.to('family');
       }, 0.4);
     }
@@ -248,7 +248,7 @@ export class LinesChapter implements Chapter {
     const fill = THREE.MathUtils.smoothstep(this.t, 0.5, k.revealFill);
     family.x += (fill - family.x) * (1 - Math.exp(-dt * 2.5));
     family.y += (THREE.MathUtils.smoothstep(this.t, 1.5, k.revealFill + 1) - family.y) * (1 - Math.exp(-dt * 3));
-    if (this.t < k.revealFill + 1) wind.addSplat({ source: this, ax: 6, az: -240, bx: 16, bz: -240, vx: 1, vz: -5,
+    if (this.t < k.revealFill + 1) wind.addSplat({ source: this, ax: 6, az: -290, bx: 16, bz: -290, vx: 1, vz: -5,
       radius: 4, energy: 0.25, swirl: 0, lift: 0 });
     if (family.y > tuning.family.doorAt && !door.opened) {
       door.open = 1;
@@ -257,9 +257,9 @@ export class LinesChapter implements Chapter {
     if (this.t > k.revealFill + k.revealHold && !c.busy) {
       this.to('throughDoor'); this.doorElapsed = 0; doorway.begin();
       cygnet.stay = false; cygnet.watch(null);
-      cygnet.errand = new THREE.Vector3(11.2, heightAt(11.2, -253), -253); cygnet.pace = 0.75;
+      cygnet.errand = new THREE.Vector3(11.2, heightAt(11.2, -303), -303); cygnet.pace = 0.75;
       c.lookAt = door.group.position;
-      c.walkTo(11, -246.8, false, () => c.walkTo(11, -252, false, undefined, 0.15), 0.15);
+      c.walkTo(11, -296.8, false, () => c.walkTo(11, -302, false, undefined, 0.15), 0.15);
     }
   }
 
@@ -334,7 +334,7 @@ export class LinesChapter implements Chapter {
       }
       this.pace = waiting ? 1.1 : 0.75;
     } else if (this.beat === 'familyApproach' || this.beat === 'family') {
-      s.target.copy(FAMILY_MID).setY(heightAt(11, -240) + 2.8);
+      s.target.copy(FAMILY_MID).setY(heightAt(11, -290) + 2.8);
       s.from = FAMILY_FACE; s.distance = 17; s.height = 0.3;
       this.pace = 0.7;
     } else if (this.beat === 'ashore' || this.beat === 'wonder') {

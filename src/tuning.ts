@@ -621,9 +621,12 @@ export const tuning = {
     isleMistLift: 0.45,
     /** Birches-style distance veil near Lines; the first island farewell keeps the original clear haze. */
     linesCrossingHaze: 1.03,
-    /** Metres from the arrival berth over which the stronger haze develops as the farewell camera releases. */
-    linesHazeFrom: 180,
-    linesHazeTo: 120,
+    /**
+     * Metres from the arrival berth over which the stronger haze develops. The whole crossing lies inside `to`, so it
+     * is full as the farewell camera releases: the island is in haze before the camera turns to it.
+     */
+    linesHazeFrom: 300,
+    linesHazeTo: 240,
     /** Soften the meadow's bare distant bank while preserving the nearby Little Boats departure. */
     meadowCrossingHaze: 0.98,
     /** North to south length of the meadow. It was sculpted 600 long and is shown as a scale model of that. */
