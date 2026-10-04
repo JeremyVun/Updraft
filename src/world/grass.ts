@@ -27,7 +27,7 @@ function onBoatsTurf(x: number, z: number): boolean {
  * child offer the water and receive the cygnet. Mirrors `croppedAt` in the blade shaders; keep them in step.
  */
 function croppedAt(x: number, z: number): number {
-  if (Math.abs(x - LITTLE_BOATS.x) < BOATS_TURF.x && Math.abs(z - LITTLE_BOATS.z) < BOATS_TURF.z) return 0.22;
+  if (Math.abs(x - LITTLE_BOATS.x) < BOATS_TURF.x && Math.abs(z - LITTLE_BOATS.z) < BOATS_TURF.z) return tuning.littleBoats.turfHeight;
   const lines = 1 - smoothstep(0.78, 1.12, Math.hypot((x - ISLES.lines.x) / ISLES.lines.rx, (z - ISLES.lines.z) / ISLES.lines.rz));
   const birches = 1 - smoothstep(0.62, 1.02, Math.hypot((x - ISLES.birches.x) / ISLES.birches.rx, (z - ISLES.birches.z) / ISLES.birches.rz));
   const bank = 1 - smoothstep(tuning.crest.bankCropFrom, tuning.crest.bankCropTo, pondOut(x, z));
@@ -155,7 +155,7 @@ float boatsTurfAt(vec2 xz) {
 }
 /** How much of its height a blade keeps on the cropped islands and the pond's bank. */
 float croppedAt(vec2 xz) {
-  if (boatsTurfAt(xz) > 0.0) return 0.22;
+  if (boatsTurfAt(xz) > 0.0) return ${glsl(tuning.littleBoats.turfHeight)};
   float lines = 1.0 - smoothstep(0.78, 1.12, length((xz - vec2(${ISLES.lines.x}.0, ${glsl(ISLES.lines.z)})) / vec2(${ISLES.lines.rx}.0, ${glsl(ISLES.lines.rz)})));
   float bank = pondBankAt(xz);
   return smoothstep(.8,1.1,length(xz-vec2(${glsl(tuning.sleeping.hearthX)},${glsl(tuning.sleeping.hearthZ)}))) * linesGrassCrop(xz) * (1.0 - 0.34 * lines) * (1.0 - 0.62 * birchFloorAt(xz)) * mix(1.0, ${glsl(tuning.crest.bankGrass)}, bank);
