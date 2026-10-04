@@ -9,6 +9,8 @@ const FOOT_IN = TOWER_FOOT.in.toFixed(3), FOOT_OUT = TOWER_FOOT.out.toFixed(3), 
 
 /** How many round lumps a tower is built of. */
 const LUMPS = 11;
+/** How far past a lump's radius its frayed edge can reach, as a share of the radius. */
+const FRAYED = 1.25;
 const NOISE = 32;
 
 function fract(x: number): number {
@@ -182,7 +184,7 @@ void main() {
   gl_FragColor = vec4(light, alpha);
 }`;
 
-interface Tower { mesh: THREE.Mesh; uniforms: Record<string, THREE.IUniform>; centre: THREE.Vector3; size: number }
+interface Tower { mesh: THREE.Mesh; uniforms: Record<string, THREE.IUniform>; centre: THREE.Vector3; size: number; lumps: THREE.Vector4[] }
 
 /**
  * A few towers of cumulus standing out of the sea of cloud along the way, where the lens sees them: heaped well
@@ -209,6 +211,21 @@ export class CloudTowers {
       eye.x = t.centre.x + dx / d * clear;
       eye.z = t.centre.z + dz / d * clear;
     }
+  }
+
+  /**
+   * How far a straight way passes outside every tower, frayed edges and all, in metres; less than 0 through one. It
+   * goes `length` metres from `from` along `dir`, which is a unit vector.
+   */
+  clearanceAlong(from: THREE.Vector3, dir: THREE.Vector3, length: number): number {
+    let d = Infinity;
+    for (const t of this.towers) {
+      for (const l of t.lumps) {
+        const s = THREE.MathUtils.clamp((l.x - from.x) * dir.x + (l.y - from.y) * dir.y + (l.z - from.z) * dir.z, 0, length);
+        d = Math.min(d, Math.hypot(from.x + dir.x * s - l.x, from.y + dir.y * s - l.y, from.z + dir.z * s - l.z) - l.w * FRAYED);
+      }
+    }
+    return d;
   }
 
   constructor(route: readonly THREE.Vector2[], gate: { from: THREE.Vector2; to: THREE.Vector2 }, berth: THREE.Vector2, floor: number) {
@@ -319,7 +336,7 @@ export class CloudTowers {
       mesh.visible = false;
       this.group.add(mesh);
       fixInPlace(mesh);
-      this.towers.push({ mesh, uniforms, centre, size });
+      this.towers.push({ mesh, uniforms, centre, size, lumps });
     }
   }
 
