@@ -252,6 +252,7 @@ The Graphics selector offers Auto (default), Ultra, High, Medium and Low; the ch
 | Sky mirror's reflection | every frame | every frame | every frame | alternate frames |
 | Bloom | full | full | full | off |
 | Sun's glow painted by the grade in bloom's place (`SUN_GLOW`, eased with bloom) | no | no | no | yes |
+| Depth blur (`DEPTH_BLUR`, eased like bloom; its quarter-size targets released when off) | yes | yes | off | off |
 | Hull's wet collar on the sea | yes | yes | off | off |
 | Lantern's glint and light on the sea | yes | yes | yes | off |
 | Ordinary sea's reflection | alternate frames | alternate frames | alternate frames | off |
@@ -262,7 +263,9 @@ reflection is redrawn at most every other frame (unless the view has cut or the 
 drawn and the ordinary sea mirrors only the sky, while the sky mirror keeps its reflection at every
 level. The seabed's detail is its sand grain, ripples, weed and caustics; without it the bed keeps their averages, so
 the shallows keep their colour. The sea's effects are one variant axis (`SEA_EFFECTS` in `water.ts`: all, all but
-the collar, none), selected only by `applyWorldQuality`.
+the collar, none), selected only by `applyWorldQuality`. A change fades them over a second (`uSeaEffects`, toward
+those averages and the sky) as the grass and bloom change: what goes keeps its variant until it has faded out, and what
+comes is selected at once and fades in.
 Every level presents at up to 60 fps ("just let it target 60 fps"), and Low is Auto's floor. Jeremy's rulings: "ultra,
 high, medium, low. dont overcomplicate this"; every level keeps full grass, and Low keeps 2× MSAA because the fading
 scenery fades by alpha to coverage (a dither breaks into coloured grain under the grade's lens fringe). A switched-off
@@ -315,16 +318,20 @@ device's `MAX_SAMPLES`. `?grass=` overrides density, `?mirror=1|2|0` the reflect
 ## Post chain (`src/post/post.ts`)
 
 One multisampled scene target; while bloom is drawn, bloom's bright pass reads its resolve and one pass writes the
-scene plus bloom into a plain target; then the grade (ACES, split toning, vibrance (pinks and magentas held back, so
-sunlit cloud stays gold and white) and a gentle contrast curve on brightness after tone mapping, blue-tinted shadows
-that leave black alone, vignette, grain) reads that target, or the resolve itself while bloom is off, straight to the
-screen. Every read of the scene clamps NaN, infinity and huge highlights (bloom would smear one bad pixel across the
-screen); it clamps the filtered sample, so it matches clamping each texel first except beside a texel over 40 or not
-finite. Bloom is added texel for texel before the grade, not in it: the plain target's rounding of the sum is part of
-the picture, and dropping it moved blue by up to 10/255. The clamp tests the exponent's bits rather than calling
-`isnan` or `isinf`, which change how the compiler treats every float in the grade and moved its grain by up to
-8/255. Nothing in the chain reads alpha, so the scene target, the plain target and bloom's targets are
-`R11F_G11F_B10F`, half the memory and bandwidth of half-float RGBA, wherever
+scene plus bloom into a plain target; then, at Ultra and High, the depth blur's quarter-size frame made from that
+target (weighted by each pixel's blur so the sharp subject never haloes what is behind it; the scene's depth is
+resolved with its colour, `focusOn` from `main.ts` sets the focus on the child and the cygnet each frame); then the
+grade (the depth blur mixed in, ACES, split toning, vibrance (pinks and magentas held back, so sunlit cloud stays gold
+and white) and a gentle contrast curve on brightness after tone mapping, blue-tinted shadows that leave black alone,
+vignette, grain) reads the plain target, or the resolve itself while bloom is off, straight to the screen. The depth
+blur is never shown with more strength than bloom, so the plain target is always there for it. Every read of the
+scene clamps NaN, infinity and huge highlights (bloom would smear one bad pixel across the screen); it clamps the
+filtered sample, so it matches clamping each texel first except beside a texel over 40 or not finite. Bloom is added
+texel for texel before the grade, not in it: the plain target's rounding of the sum is part of the picture, and
+dropping it moved blue by up to 10/255. The clamp tests the exponent's bits rather than calling `isnan` or `isinf`,
+which change how the compiler treats every float in the grade and moved its grain by up to 8/255. Nothing in the
+chain reads alpha, so the scene target, the plain target and bloom's targets are `R11F_G11F_B10F`, half the memory
+and bandwidth of half-float RGBA, wherever
 the device multisamples that format as well (`compactFrameFormat`; half-float RGBA otherwise). The format holds no
 negative colour; half-float keeps it, and the grade's ACES makes a bright speck of it. Multisampling shades an edge
 sample at the pixel centre even when that lies outside the triangle, so blends passed from the vertices extrapolate

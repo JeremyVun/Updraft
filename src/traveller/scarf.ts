@@ -182,6 +182,16 @@ export class Scarf {
     this.mesh.frustumCulled = false;
   }
 
+  /** Moves the scarf with a child carried somewhere else at once, keeping its sway. */
+  shift(by: THREE.Vector3): void {
+    for (const e of this.ends) {
+      for (const p of e.pts) p.add(by);
+      for (const p of e.prev) p.add(by);
+      e.from.add(by);
+    }
+    this.lastAnchor.add(by);
+  }
+
   /** Snaps both ends to hang from the knot (after teleporting the child). */
   reset(anchor: THREE.Vector3, body?: THREE.Matrix4): void {
     for (const e of this.ends) {

@@ -97,7 +97,8 @@ feel over detail. How each room plays is in `docs/chapters.md`.
 - **Sea life**: a humpback rolls up out of the open sea in one long slow arc, its spout glowing gold against the
   low sun; dolphins run with the boat; small silver fish leap and flash. On the open sea three of the little boats'
   toys are come across sailing their own way, smaller than in their own room, trailing little foam.
-- **Final image**: HDR lighting, gentle bloom, ACES tone mapping with vibrance and a gentle contrast curve after it, cool shadows and warm highlights, a light vignette,
+- **Final image**: a lens's depth of field as in the room paintings (the child and the cygnet sharp, what is near the lens
+  soft, the distance a little soft; the swans and the cottage kept sharp when they are the subject), HDR lighting, gentle bloom, ACES tone mapping with vibrance and a gentle contrast curve after it, cool shadows and warm highlights, a light vignette,
   faint lens fringe at the corners, fine grain.
 - **Interface**: no gameplay narration on screen. The cursor is a soft ring that tightens and glows while an
   updraft charges. Small round buttons in the corner: a speaker that breathes when muted, fullscreen, and graphics

@@ -1,4 +1,5 @@
 import { LINES_GRASS_GLSL, linesGrassCrop } from './lines-layout';
+import { LINES_SHIFT } from './geography';
 import { fixTreeInPlace } from '../gl/fixed';
 import { passJob, type CompileJob } from '../gl/boot';
 import { atBoot, simMaterial, simTarget } from '../gl/gpu';
@@ -114,6 +115,8 @@ float pastureAt(vec2 xz) {
 }
 vec3 grassPatternAt(vec2 xz) {
   float pasture = pastureAt(xz);
+  // The island of lines keeps the green it was painted with before it moved; the switch is out under the sea.
+  if (length((xz - vec2(${ISLES.lines.x}.0, ${glsl(ISLES.lines.z)})) / vec2(${ISLES.lines.rx}.0, ${glsl(ISLES.lines.rz)})) < 1.4) xz -= vec2(${glsl(LINES_SHIFT.x)}, ${glsl(LINES_SHIFT.z)});
   return vec3(
     fbm(xz * 0.022 + vec2(3.1, 7.7)),
     pasture < 1.0 ? fbm(xz * 0.041 - vec2(5.3, 1.9)) : 0.0,
@@ -157,6 +160,10 @@ float homeAt(vec2 xz) {
 float sleepFloorAt(vec2 xz) {
   return 1.0 - smoothstep(0.72, 1.06, length((xz - vec2(${ISLES.sleeping.x}.0, ${ISLES.sleeping.z}.0)) / vec2(${ISLES.sleeping.rx}.0, ${ISLES.sleeping.rz}.0)));
 }
+/** 1 over the still island and its islet, where the meadow is kept mostly green. */
+float stillIslandAt(vec2 xz) {
+  return 1.0 - smoothstep(1.5, 1.9, length((xz - vec2(-6.0, -14.0)) / vec2(60.0, 44.0)));
+}
 /** 1 over the dark wood, where the floor is leaf litter and nothing grows tall enough to hide it. */
 float woodFloorAt(vec2 xz) {
   return 1.0 - smoothstep(0.7, 1.05, length((xz - vec2(${ISLES.wood.x}.0, ${ISLES.wood.z}.0)) / vec2(${ISLES.wood.rx}.0, ${ISLES.wood.rz}.0)));
@@ -174,6 +181,7 @@ vec3 grassTintWithPattern(vec2 xz, vec3 pattern) {
   // Region weights are exactly zero/one away from their borders. Skip noise
   // whose colour would be multiplied by zero; keep both sides at every blend.
   if (pasture < 1.0) cool = smoothstep(0.5, 0.68, pattern.y) * (1.0 - dry);
+  dry *= 1.0 - 0.45 * stillIslandAt(xz);
   /** The year turning: more of the hillside goes over to seed, and the green that is left goes colder. */
   dry = clamp(dry + uSeason * 0.3, 0.0, 1.0);
   vec3 meadow = mix(mix(uTipLush, uTipDry, dry * 0.85), uTipCool, cool * 0.5);

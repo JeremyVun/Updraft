@@ -115,7 +115,7 @@ for(const [name,start] of Object.entries(starts))for(const portrait of [false,tr
   for(let i=1;i<30*200;i++) {
     const dt=1/30;seconds=i*dt;chapter.update(dt,seconds);boat.update(dt,seconds);rig.update(dt,seconds,chapter.shot,chapter.pace);
     const p=child.position.clone();p.y+=1.2;p.project(rig.camera);
-    if(name==='toLines'&&seconds>3&&seconds<30) {
+    if(name==='toLines'&&seconds>3&&seconds<chapter.farewellFor) {
       const island=FIRST_ISLAND.clone().project(rig.camera);
       assert(island.z<1&&Math.abs(island.x)<1&&Math.abs(island.y)<1,
         `still island lost around departure corner at ${seconds}, portrait=${portrait}: ${island.toArray()}`);

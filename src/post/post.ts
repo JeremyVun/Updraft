@@ -3,7 +3,7 @@ import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
 import { passJob, type CompileJob } from '../gl/boot';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import type { BloomLevel } from '../gl/quality';
-import { register, select, SUN_GLOW } from '../gl/variants';
+import { DEPTH_BLUR, register, select, SUN_GLOW } from '../gl/variants';
 
 const BLOOM_STRENGTH = 0.28;
 const ACROSS = new THREE.Vector2(1, 0);
@@ -27,6 +27,81 @@ vec4 clean(vec4 c) {
   return bad ? vec4(0.0, 0.0, 0.0, 1.0) : min(c, vec4(40.0));
 }
 `;
+
+/**
+ * The depth blur, as in the room paintings, made the way a lens makes it: blur grows with the difference in inverse
+ * distance from what is in focus (the child and the cygnet), so a near subject softens the foreground and the distance
+ * as a miniature does, while a wide view stays clear. `aperture` turns dioptres into blur, which the distance's
+ * reaches only up to `far`, and the sky's only up to `sky`.
+ */
+const BLUR = { aperture: 6.5, far: 0.35, sky: 0.08 };
+/**
+ * The blur's taps, in quarter-size texels apart, and how many times its two passes run. Taps further apart than a
+ * texel and a half leave gaps that show as stepped copies of an edge, so a wider blur comes from running them again.
+ */
+const BLUR_SPREAD = 1.3;
+const BLUR_ROUNDS = 2;
+/** Seconds the blur takes to fade out and back in around a view whose depth is not the scene's (`holdBlur`). */
+const BLUR_HOLD_FADE = 0.4;
+/** How far a near object's blur spills over what is behind it, in full-size pixels at 1080 lines. */
+const NEAR_SPILL = 9;
+
+const BLUR_GLSL = /* glsl */ `
+uniform sampler2D tDepth;
+uniform vec2 uFocus;
+uniform vec2 uDepthRange;
+float inverseAt(float d) {
+  return 1.0 / uDepthRange.x - d * (1.0 / uDepthRange.x - 1.0 / uDepthRange.y);
+}
+float nearAt(vec2 uv) {
+  return clamp((inverseAt(texture2D(tDepth, uv).r) - 1.0 / uFocus.x) * ${BLUR.aperture.toFixed(3)}, 0.0, 1.0);
+}
+/** The most blur any near object close by spreads here: a near object's blur spills past its outline, as through a lens. */
+float spillAt(vec2 uv, vec2 resolution) {
+  vec2 reach = vec2(${NEAR_SPILL.toFixed(1)} / 1080.0) * vec2(resolution.y / resolution.x, 1.0);
+  return max(max(nearAt(uv + reach), nearAt(uv - reach)), max(nearAt(uv + vec2(reach.x, -reach.y)), nearAt(uv - vec2(reach.x, -reach.y))));
+}
+float blurAt(vec2 uv) {
+  float d = texture2D(tDepth, uv).r;
+  float inverse = inverseAt(d);
+  float near = (inverse - 1.0 / uFocus.x) * ${BLUR.aperture.toFixed(3)};
+  float far = (1.0 / uFocus.y - inverse) * ${BLUR.aperture.toFixed(3)};
+  return clamp(max(near, min(far, d > 0.99999 ? ${BLUR.sky.toFixed(3)} : ${BLUR.far.toFixed(3)})), 0.0, 1.0);
+}`;
+
+/**
+ * The frame at a quarter of its size, each texel weighted by how soft it is to be, so the sharp subject is left out
+ * of what is blurred behind it and never haloes it.
+ */
+const BLUR_DOWN_FRAG = /* glsl */ `
+uniform sampler2D tDiffuse;
+uniform vec2 uTexel;
+varying vec2 vUv;
+${BLUR_GLSL}
+void main() {
+  vec4 sum = vec4(0.0);
+  // Beside a near object what lies behind it is mixed in too, so the object's own edge softens.
+  float spill = spillAt(vUv, 1.0 / uTexel);
+  for (int i = 0; i < 4; i++) {
+    vec2 uv = vUv + uTexel * vec2(i < 2 ? -1.0 : 1.0, mod(float(i), 2.0) < 1.0 ? -1.0 : 1.0);
+    float w = max(blurAt(uv), spill);
+    sum += vec4(texture2D(tDiffuse, uv).rgb * w, w);
+  }
+  gl_FragColor = sum * 0.25;
+}`;
+
+const BLUR_PASS_FRAG = /* glsl */ `
+uniform sampler2D tDiffuse;
+uniform vec2 uStep;
+varying vec2 vUv;
+void main() {
+  vec4 sum = texture2D(tDiffuse, vUv) * 0.2;
+  sum += (texture2D(tDiffuse, vUv + uStep) + texture2D(tDiffuse, vUv - uStep)) * 0.17;
+  sum += (texture2D(tDiffuse, vUv + uStep * 2.0) + texture2D(tDiffuse, vUv - uStep * 2.0)) * 0.12;
+  sum += (texture2D(tDiffuse, vUv + uStep * 3.0) + texture2D(tDiffuse, vUv - uStep * 3.0)) * 0.07;
+  sum += (texture2D(tDiffuse, vUv + uStep * 4.0) + texture2D(tDiffuse, vUv - uStep * 4.0)) * 0.04;
+  gl_FragColor = sum;
+}`;
 
 /** With the glow, the sun's light is read once for the frame: what of its disc is seen and bright enough to bloom. */
 const GRADE_VERT = /* glsl */ `
@@ -61,6 +136,11 @@ const GRADE_FRAG = /* glsl */ `
 ${CLEAN_GLSL}
 uniform sampler2D tDiffuse;
 uniform float uTime;
+#if DEPTH_BLUR
+uniform sampler2D tBlur;
+uniform float uDepthBlur;
+${BLUR_GLSL}
+#endif
 uniform float uExposure;
 uniform float uSaturation;
 uniform vec2 uResolution;
@@ -103,6 +183,11 @@ void main() {
 #if SUN_GLOW
   vec2 px = (vUv - uSun.xy) * uResolution;
   hdr += vSunLight * dot(uGlowShare, exp2(-dot(px, px) * uGlowFalloff));
+#endif
+#if DEPTH_BLUR
+  vec4 blurred = texture2D(tBlur, vUv);
+  float amount = max(blurAt(vUv), spillAt(vUv, uResolution) * 0.85);
+  hdr = mix(hdr, blurred.rgb / max(blurred.a, 1e-4), amount * smoothstep(0.0, 0.02, blurred.a) * uDepthBlur);
 #endif
   hdr *= uExposure;
 
@@ -164,8 +249,9 @@ function quadMaterial(fragmentShader: string, uniforms: Record<string, THREE.IUn
 /**
  * The frame's image chain: the scene into one multisampled float target; while bloom is drawn, bloom from its resolve
  * and one pass adding it to the scene into a plain target; then the grade straight to the screen, cleaning what it
- * reads. Only the scene target is multisampled.
- * Nothing in the chain reads alpha, so its targets drop it (and negative colour) where the device allows.
+ * reads. Only the scene target is multisampled. Nothing in the chain reads alpha, so its targets drop it (and negative
+ * colour) where the device allows. While bloom is on, the scene with bloom is also blurred at a quarter of its size
+ * for the grade's depth blur, which reads the scene's depth.
  * While bloom is off the grade paints a glow round the sun in its place, so the sun is not a hard white disc.
  */
 export class Post {
@@ -177,6 +263,19 @@ export class Post {
   private readonly quad = new FullScreenQuad();
   private readonly bloomedMat: THREE.ShaderMaterial;
   private readonly gradeMat: THREE.ShaderMaterial;
+  private readonly blurDownMat: THREE.ShaderMaterial;
+  private readonly blurPassMat: THREE.ShaderMaterial;
+  /** The depth blur's quarter-size frame and its other half-pass. */
+  private readonly blurA: THREE.WebGLRenderTarget;
+  private readonly blurB: THREE.WebGLRenderTarget;
+  private readonly focus = new THREE.Vector2(10, 10);
+  /** Set while the depth in view is not the scene's own, as through the island of lines' door: the blur fades out. */
+  holdBlur = false;
+  private blurShown = 1;
+  private depthBlurOn = true;
+  /** How much of the depth blur the quality level shows, easing as bloom does. */
+  private depthBlurShown = 1;
+  private blurReleased = false;
   private readonly size = new THREE.Vector2();
   private bloomLevel: BloomLevel = 'full';
   /** How much of the bloom is drawn, easing toward 0 while it is off and 1 while it is on. */
@@ -197,6 +296,14 @@ export class Post {
   ) {
     const size = renderer.getDrawingBufferSize(this.size);
     this.sceneTarget = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, samples, depthBuffer: true, stencilBuffer: true });
+    const depth = new THREE.DepthTexture(size.x, size.y, THREE.UnsignedInt248Type);
+    depth.format = THREE.DepthStencilFormat;
+    this.sceneTarget.depthTexture = depth;
+    // Resolving stencil is slow on Direct3D, and nothing reads it after the scene.
+    this.sceneTarget.resolveStencilBuffer = false;
+    const quarter = (n: number) => Math.max(1, Math.round(n / 4));
+    this.blurA = new THREE.WebGLRenderTarget(quarter(size.x), quarter(size.y), { type: THREE.HalfFloatType, depthBuffer: false });
+    this.blurB = this.blurA.clone();
     this.bloom = new UnrealBloomPass(new THREE.Vector2(size.x, size.y), BLOOM_STRENGTH, 0.45, 1.1);
     this.bloomed = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, depthBuffer: false });
     const b = this.bloom;
@@ -220,7 +327,20 @@ export class Post {
       uGlowFalloff: { value: new THREE.Vector4() },
       uGlowShare: { value: new THREE.Vector4() },
     }, GRADE_VERT);
-    register(this.gradeMat, SUN_GLOW);
+    const depthUniforms = {
+      tDepth: { value: depth },
+      uFocus: { value: this.focus },
+      uDepthRange: { value: new THREE.Vector2(0.5, 7000) },
+    };
+    Object.assign(this.gradeMat.uniforms, depthUniforms, { tBlur: { value: this.blurA.texture }, uDepthBlur: { value: 1 } });
+    register(this.gradeMat, SUN_GLOW, DEPTH_BLUR);
+    this.blurDownMat = quadMaterial(BLUR_DOWN_FRAG, { ...depthUniforms, tDiffuse: { value: this.bloomed.texture }, uTexel: { value: new THREE.Vector2(1 / size.x, 1 / size.y) } });
+    this.blurPassMat = quadMaterial(BLUR_PASS_FRAG, { tDiffuse: { value: this.blurA.texture }, uStep: { value: new THREE.Vector2() } });
+  }
+
+  /** The nearest and farthest of what should be sharp, as distances along the view. */
+  focusOn(near: number, far: number): void {
+    this.focus.set(Math.max(near, 0.5), Math.max(far, near, 0.5));
   }
 
   /** The chain's passes: into offscreen targets, but the grade, which draws to the screen. */
@@ -228,6 +348,7 @@ export class Post {
     const b = this.bloom;
     return [
       passJob([b.materialHighPassFilter, ...b.separableBlurMaterials, b.compositeMaterial, this.bloomedMat], this.bloomed),
+      passJob([this.blurDownMat, this.blurPassMat], this.blurA),
       passJob([this.gradeMat], null),
     ];
   }
@@ -251,6 +372,7 @@ export class Post {
     this.bloomed.setSize(w, h);
     this.sizeBloom();
     this.gradeMat.uniforms.uResolution.value.set(w, h);
+    this.blurDownMat.uniforms.uTexel.value.set(1 / w, 1 / h);
   }
 
   /** Full, or off: its passes skipped and its targets released once it has faded out. */
@@ -263,6 +385,21 @@ export class Post {
   private sizeBloom(): void {
     if (this.bloomLevel === 'off') return;
     this.bloom.setSize(this.size.x, this.size.y);
+    this.sizeBlur();
+  }
+
+  private sizeBlur(): void {
+    if (!this.depthBlurOn) return;
+    const w = Math.max(1, Math.round(this.size.x / 4)), h = Math.max(1, Math.round(this.size.y / 4));
+    this.blurA.setSize(w, h);
+    this.blurB.setSize(w, h);
+  }
+
+  /** On, or off: its passes skipped and its targets released once it has faded out. */
+  setDepthBlur(on: boolean, immediate = false): void {
+    this.depthBlurOn = on;
+    if (immediate) this.depthBlurShown = on ? 1 : 0;
+    this.sizeBlur();
   }
 
   private releaseBloom(): void {
@@ -328,6 +465,26 @@ export class Post {
     this.gradeMat.uniforms.tDiffuse.value = this.bloomed.texture;
   }
 
+  /** Blurs `bloomed`, which is always drawn first: the depth blur is never shown with less bloom than itself. */
+  private blurForDepth(): void {
+    const r = this.renderer;
+    const camera = this.camera as THREE.PerspectiveCamera;
+    (this.blurDownMat.uniforms.uDepthRange.value as THREE.Vector2).set(camera.near, camera.far);
+    this.quad.material = this.blurDownMat;
+    r.setRenderTarget(this.blurA);
+    this.quad.render(r);
+    const step = this.blurPassMat.uniforms.uStep.value as THREE.Vector2;
+    this.quad.material = this.blurPassMat;
+    for (let round = 0; round < BLUR_ROUNDS; round++) {
+      for (const [from, to, x, y] of [[this.blurA, this.blurB, 1, 0], [this.blurB, this.blurA, 0, 1]] as const) {
+        this.blurPassMat.uniforms.tDiffuse.value = from.texture;
+        step.set(x * BLUR_SPREAD / from.width, y * BLUR_SPREAD / from.height);
+        r.setRenderTarget(to);
+        this.quad.render(r);
+      }
+    }
+  }
+
   /** `warm` draws the bloom and the sun's glow even while they are off, so their programs are built before Begin whatever the level. */
   render(time: number, warm = false): void {
     const r = this.renderer;
@@ -335,6 +492,8 @@ export class Post {
     this.lastTime = time;
     const target = this.bloomLevel === 'off' ? 0 : 1;
     this.bloomShown = target > this.bloomShown ? Math.min(target, this.bloomShown + dt / BLOOM_FADE) : Math.max(target, this.bloomShown - dt / BLOOM_FADE);
+    this.depthBlurShown = this.depthBlurOn ? Math.min(1, this.depthBlurShown + dt / BLOOM_FADE) : Math.max(0, this.depthBlurShown - dt / BLOOM_FADE);
+    const depthBlur = Math.min(this.bloomShown, this.depthBlurShown);
     r.setRenderTarget(this.sceneTarget);
     r.render(this.scene, this.camera);
 
@@ -345,18 +504,30 @@ export class Post {
       this.renderBloom();
       this.bloomReleased = false;
     }
+    if (depthBlur > 0 || warm) {
+      this.blurForDepth();
+      this.blurReleased = false;
+    }
     if (this.bloomShown === 0 && !this.bloomReleased) this.releaseBloom();
+    if (depthBlur === 0 && !this.blurReleased) {
+      this.blurA.dispose();
+      this.blurB.dispose();
+      this.blurReleased = true;
+    }
 
     const glow = 1 - this.bloomShown;
     if (glow > 0 || warm) this.aimGlow(glow);
     u.uTime.value = time;
     this.quad.material = this.gradeMat;
     r.setRenderTarget(null);
+    const blur = depthBlur > 0 || warm;
+    this.blurShown = this.holdBlur ? Math.max(0, this.blurShown - dt / BLUR_HOLD_FADE) : Math.min(1, this.blurShown + dt / BLUR_HOLD_FADE);
+    this.gradeMat.uniforms.uDepthBlur.value = depthBlur * this.blurShown;
     if (warm) {
-      select(this.gradeMat, { SUN_GLOW: glow === 0 });
+      select(this.gradeMat, { SUN_GLOW: glow === 0, DEPTH_BLUR: blur });
       this.quad.render(r);
     }
-    select(this.gradeMat, { SUN_GLOW: glow > 0 });
+    select(this.gradeMat, { SUN_GLOW: glow > 0, DEPTH_BLUR: blur });
     this.quad.render(r);
   }
 }

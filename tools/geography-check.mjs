@@ -120,14 +120,23 @@ for(const point of ROUTES.toHarbour) {
 console.log('Revision 1 saves, open-sea resumes, home berth and offshore route clearance passed.');
 
 const {readProgress}=await import('../src/story/progress.ts');
-for(const geography of [undefined,1,2,3,4,5,-1,1.5,'1']) {
+for(const geography of [undefined,1,2,3,4,5,6,-1,1.5,'1']) {
  const saved={version:1,geography,chapter:'home',point:'entry',data:[],child:[-150,2,-2500,0,0],boat:[-150,-2306,0,0,1],bird:[-150,2,-2500,0,1,0,1],seat:'cradle',life:[[0,0,0,0],[0,0,0,0],[0,0,0,0]],plane:[1,0]};
  globalThis.localStorage={getItem(){return JSON.stringify(saved);}};
  const p=readProgress();
- if(geography===undefined||geography===1||geography===2||geography===3||geography===4)assert.equal(p?.geography,GEOGRAPHY_VERSION,'supported saves reach migration through the reader');
+ if(geography===undefined||[1,2,3,4,5].includes(geography))assert.equal(p?.geography,GEOGRAPHY_VERSION,'supported saves reach migration through the reader');
  else assert.equal(p,null,'reject malformed or future geography');
 }
 console.log('Save reader accepts all supported geography revisions and rejects unknown versions.');
+{
+ const {LINES_SHIFT}=await import('../src/world/geography.ts');
+ const p=migrateGeography({version:1,geography:4,chapter:'lines',point:'curtain-1',data:[1,0],child:[0,2,-330,0,1],boat:[14,-308,0,1,0],bird:[1,2,-331,0,0,0,1],life:[[14,-368,1,2],[0,0,1,2],[-150,-2500,1,2]]});
+ assert.deepEqual([p.child[0],p.child[2],p.boat[0],p.boat[1],p.bird[2]],[0,-330+LINES_SHIFT.z,14,-308+LINES_SHIFT.z,-331+LINES_SHIFT.z],'revision 4 lines saves move with the island');
+ assert.deepEqual(p.life.map(r=>r.slice(0,2)),[[14,-368+LINES_SHIFT.z],[0,0],[-150,-2500]],'only life on the island of lines moves with it');
+ const door=migrateGeography({version:1,geography:4,chapter:'lines',point:'family',data:[2,1],child:[240,2,-371,0,1],boat:[240,-388.5,0,1,0],bird:[241,2,-372,0,0,0,1],life:[[0,0,1,2],[0,0,1,2],[0,0,1,2]]});
+ assert.deepEqual([door.child[2],door.boat[1]],[-371,-388.5],'the door shore stays put');
+}
+console.log('Revision 4 saves on the island of lines move with it; the door shore stays.');
 
 // Revisions 2/3 only move Little Boats; late-island positions and swim progress stay intact.
 for (const geography of [2,3]) for (const chapter of ['boats','toMeadow','toBoats','lines','meadow','sleeping','toMirror','mirror','toHarbour','home']) {

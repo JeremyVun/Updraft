@@ -367,7 +367,7 @@ function ropeGeometry(spec: LineSpec): THREE.BufferGeometry {
 export function seaLines(): LineSpec[] {
   const rand = mulberry32(404);
   const at: [number, number, number][] = [
-    [128, -118, 0.9],
+    [100, -45, 0.9],
   ];
   return at.map(([x, z, yaw]) => {
     const run = 7.5 + rand() * 3;
@@ -476,13 +476,13 @@ export class RedDoor {
 }
 
 /** Beyond the last curtain: a quiet patch of sky behind three recognisable garments. */
-export const door = new RedDoor(11, -398, 0);
+export const door = new RedDoor(11, -298, 0);
 door.group.scale.set(1.5, 1.08, 1);
 fixInPlace(door.group);
 export const FAMILY_LINE: LineSpec = (() => {
-  const a = new THREE.Vector3(5.8, 0, -390);
-  const b = new THREE.Vector3(16.2, 0, -390);
-  const top = Math.max(heightAt(a.x, a.z), heightAt(b.x, b.z), heightAt(11, -390)) + 5.2;
+  const a = new THREE.Vector3(5.8, 0, -290);
+  const b = new THREE.Vector3(16.2, 0, -290);
+  const top = Math.max(heightAt(a.x, a.z), heightAt(b.x, b.z), heightAt(11, -290)) + 5.2;
   a.y = top; b.y = top;
   return { a, b, sag: 0.18 };
 })();
@@ -802,8 +802,8 @@ export function lineField(
 ): LineSpec[] {
   const rand = mulberry32(seed);
   const reserved = (ax: number, az: number, bx: number, bz: number): boolean => hung.length > 0 && (
-    pointToRun(11, -393, ax, az, bx, bz) < 12 ||
-    pointToRun(11, -407, ax, az, bx, bz) < 8 ||
+    pointToRun(11, -293, ax, az, bx, bz) < 12 ||
+    pointToRun(11, -307, ax, az, bx, bz) < 8 ||
     CURTAINS.some(c => {
       if (pointToRun(c.center.x, c.center.z + 3, ax, az, bx, bz) < 7) return true;
       // Reserve the low view as well as the child's standing place. Include portrait's

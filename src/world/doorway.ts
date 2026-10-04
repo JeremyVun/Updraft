@@ -3,7 +3,7 @@ import { fixInPlace } from '../gl/fixed';
 import { tuning } from '../tuning';
 import { atmo } from './atmosphere';
 import { heightAt } from './island';
-import { DOOR_SHORE } from './heightfield';
+import { DOOR_SHORE, ISLES } from './heightfield';
 import { door } from './lines';
 import type { Terrain } from './terrain';
 import type { Water } from './water';
@@ -86,13 +86,15 @@ export class DoorwayView {
           ? 'vec4 w = vec4(vWorld, 1.0);'
           : 'vec4 w = uDoorInverse * vec4(gl_FragCoord.xy / uDoorSize * 2.0 - 1.0, gl_FragCoord.z * 2.0 - 1.0, 1.0);';
         shader.fragmentShader = `uniform vec4 uDoorClip; uniform mat4 uDoorInverse; uniform vec2 uDoorSize;\n` + shader.fragmentShader;
+        // Lit where it is drawn, on the far shore, so nothing relights as the child actually steps across.
+        shader.fragmentShader = shader.fragmentShader.replace('uniform vec3 uGroundPos;', 'uniform vec3 uGroundPos; uniform vec3 uDoorOffset;\n#define uGroundPos (uGroundPos + uDoorOffset)');
         shader.fragmentShader = shader.fragmentShader.replace(/void\s+main\s*\(\s*\)\s*\{/, `void main() {
           if (uDoorClip.z != 0.0) {
             ${clipPosition}
             if (dot(w.xyz / w.w, uDoorClip.xyz) + uDoorClip.w < 0.0) discard;
           }`);
       };
-      material.customProgramCacheKey = () => 'doorway-actors-v3';
+      material.customProgramCacheKey = () => 'doorway-actors-v4';
       material.needsUpdate = true;
     }
   }
@@ -172,7 +174,7 @@ export class DoorwayView {
         r.setRenderTarget(prev);
       }
     }
-    atmo.uniforms.uRoom.value.set(doorway.crossed ? DOOR_SHORE.x : 14, doorway.crossed ? DOOR_SHORE.z : -368.4, doorway.crossed ? 48 : 96);
+    atmo.uniforms.uRoom.value.set(doorway.crossed ? DOOR_SHORE.x : ISLES.lines.x, doorway.crossed ? DOOR_SHORE.z : ISLES.lines.z, doorway.crossed ? 48 : 96);
     try { this.inRoom(doorway.crossed ? this.destination : this.source, draw); }
     finally { atmo.uniforms.uRoom.value.set(0, 0, 0); u.uDoorClip.value.z = 0; }
   }

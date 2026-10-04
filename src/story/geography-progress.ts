@@ -1,7 +1,7 @@
 import { BOATS_BERTH } from '../world/little-boats-layout';
 import { MIRROR_BERTH } from '../world/sky-mirror-layout';
 import type { Progress } from './progress';
-import { BOATS_SHIFT, BOATS_OFFSHORE_SHIFT, BOATS_SHORTENING, SHORE_SHIFT, MIRROR_SHIFT, HOME_SHIFT, SEA_SHORTENING, GEOGRAPHY_VERSION } from '../world/geography';
+import { BOATS_SHIFT, BOATS_OFFSHORE_SHIFT, BOATS_SHORTENING, SHORE_SHIFT, MIRROR_SHIFT, HOME_SHIFT, SEA_SHORTENING, LINES_SHIFT, GEOGRAPHY_VERSION } from '../world/geography';
 
 /** Preserve chapter progress when the islands move. Old sailing saves resume in safe open water. */
 export function migrateGeography(p: Progress): Progress {
@@ -29,8 +29,11 @@ export function migrateGeography(p: Progress): Progress {
     shift = { x: MIRROR_BERTH.x - p.boat[0], z: MIRROR_BERTH.z - p.boat[1] };
   }
   if (p.chapter === 'toHome') p.chapter = 'toMirror';
+  const beforeLines = (p.geography ?? 0) < 5;
+  const onOldLines = (x: number, z: number) => beforeLines && x > -70 && x < 100 && z < -290 && z > -450;
   for (const [v, z] of [[p.child, 2], [p.bird, 2], [p.boat, 1]] as const) {
     v[0] += shift.x; v[z] += shift.z;
+    if (p.chapter === 'lines' && onOldLines(v[0], v[z])) { v[0] += LINES_SHIFT.x; v[z] += LINES_SHIFT.z; }
   }
   for (const region of p.life) {
     const [x,z] = region;
@@ -41,6 +44,7 @@ export function migrateGeography(p: Progress): Progress {
       : x < -330 && z < -2180 ? MIRROR_SHIFT
       : x > -240 && z < -1990 ? HOME_SHIFT : null;
     if (move) { region[0] += move.x; region[1] += move.z; }
+    else if (onOldLines(x, z)) { region[0] += LINES_SHIFT.x; region[1] += LINES_SHIFT.z; }
   }
   p.geography = GEOGRAPHY_VERSION;
   return p;

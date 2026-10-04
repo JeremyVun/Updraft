@@ -25,7 +25,7 @@ globalThis.location = { search: '' };
 const THREE = await import('three');
 const { roomMargin, tileUnclipped } = await import('../src/world/grass.ts');
 const { ROOMS, JOURNEY_ROOMS_GLSL, visibleRooms } = await import('../src/world/journey-rooms.ts');
-const { DOOR_SHORE, GRASS_LINE } = await import('../src/world/heightfield.ts');
+const { DOOR_SHORE, GRASS_LINE, ISLES } = await import('../src/world/heightfield.ts');
 const { heightAt } = await import('../src/world/island.ts');
 
 // 1. Source.
@@ -87,7 +87,7 @@ const disc = step => { const out = []; for (let j = -SPREAD; j <= SPREAD; j += s
 const fine = disc(STEP), coarse = disc(4);
 const configs = [[-1, -1], [-2, -2]];
 for (let a = 0; a < rooms.length; a++) { configs.push([a, -2]); for (let b = a + 1; b < rooms.length; b++) configs.push([a, b]); }
-const doorways = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(DOOR_SHORE.x, DOOR_SHORE.z, -CUT), new THREE.Vector3(14, -368.4, 96), new THREE.Vector3(DOOR_SHORE.x, DOOR_SHORE.z, 48)];
+const doorways = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(DOOR_SHORE.x, DOOR_SHORE.z, -CUT), new THREE.Vector3(ISLES.lines.x, ISLES.lines.z, 96), new THREE.Vector3(DOOR_SHORE.x, DOOR_SHORE.z, 48)];
 let checked = 0, points = 0;
 const failures = [];
 for (const [a, b] of configs) {
