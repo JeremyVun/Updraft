@@ -397,7 +397,7 @@ export class LittleBoatsDrain {
     return Math.max(0.06, Math.abs(this.screenB.x - this.screenA.x) * (camera as THREE.PerspectiveCamera).aspect + 0.03);
   }
 
-  /** `fleetOut`: the last toy has left the mouth, so the rush can ease to a gentle outgoing stream. */
+  /** `fleetOut`: the last toy has left the mouth, so the rush can settle. */
   update(dt: number, time: number, fleetOut: boolean): void {
     const k = tuning.littleBoats;
     this.idle += dt;
@@ -426,7 +426,7 @@ export class LittleBoatsDrain {
       this.haul = Math.min(k.plugLift, this.haul + this.haulV * dt);
       this.swing += dt;
       if (this.haul > 0.9) {
-        const target = fleetOut ? 0.25 : 1;
+        const target = fleetOut ? 0 : 1;
         this.rush += Math.sign(target - this.rush) * Math.min(Math.abs(target - this.rush), dt / (fleetOut ? k.drainFor : k.rushRise));
         this.rise = Math.max(0, this.rise - dt / k.drainFor);
       }
