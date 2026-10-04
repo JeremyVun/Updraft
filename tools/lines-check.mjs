@@ -1,6 +1,7 @@
 // Play the island of lines with real mouse/touch sweeps, verify all passages and the departure.
 // node tools/lines-check.mjs [play|idle|portrait|resume|portrait-resume|door|portrait-door-resume|door-legacy]
-// Door modes stage the completed curtains; play/portrait exercise real gestures; idle proves waiting cannot solve the first sheet.
+// Door modes stage the completed curtains; play/portrait exercise real gestures, including sweeps across the shore's
+// pinwheel that wind the boat in; idle proves waiting cannot solve the first sheet or bring the boat in.
 // BASE selects the dev server; captures/report go to /tmp/updraft-lines-<mode>-*. Runs under the play.mjs lock.
 import { chromium } from 'playwright-core';
 import fs from 'node:fs';
@@ -115,8 +116,8 @@ try {
       saved: JSON.parse(localStorage.getItem('updraft.progress.v1'))?.point };
   });
   const touch = portrait ? await page.context().newCDPSession(page) : null;
-  async function sweep(reverse, y) {
-    const x0 = reverse ? 0.78 : 0.22, x1 = reverse ? 0.22 : 0.78;
+  async function sweep(reverse, y, from = 0.22, to = 0.78) {
+    const x0 = reverse ? to : from, x1 = reverse ? from : to;
     if (touch) await touch.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: x0 * viewport.width, y: y * viewport.height }] });
     else await page.mouse.move(x0 * viewport.width, y * viewport.height);
     for (let i = 1; i <= 36; i++) {
@@ -224,6 +225,34 @@ try {
     assert.equal(await page.evaluate(() => window.__objectiveCues.length), 0, 'restoring a completed objective must not replay its sound');
     console.log('restored family');
   }
+  // Beyond the door the boat waits out on the water; only sweeps across the pinwheel on the bank wind it in.
+  await page.waitForFunction(() => __game.story.current.beat === 'haul', null, { timeout: 90000 });
+  await page.waitForTimeout(1500);
+  const moored = await page.evaluate(() => ({ towed: __game.boat.towed, boatAt: __game.shoreHaul.boatAt }));
+  assert(moored.towed && moored.boatAt === 0, 'the boat must wait out on the water when she reaches the pinwheel');
+  if (mode === 'idle') {
+    await page.waitForTimeout(25000);
+    const idle = await page.evaluate(() => ({ run: __game.shoreHaul.run, boatAt: __game.shoreHaul.boatAt, invited: __game.shorePulley.invitation.visible }));
+    assert.equal(idle.run, 0, 'the breeze must never wind the line in');
+    assert.equal(idle.boatAt, 0, 'waiting must never bring the boat in');
+    report.shoreIdle = idle;
+    console.log('boat still moored after 25 seconds without input');
+  }
+  await page.screenshot({ path: `${prefix}-pinwheel.png` });
+  for (let stroke = 0; stroke < 40; stroke++) {
+    const [x, y, run] = await page.evaluate(() => {
+      const v = __game.shoreHaul.pinwheel.clone().project(__game.rig.camera);
+      return [(v.x + 1) / 2, (1 - v.y) / 2, __game.shoreHaul.run];
+    });
+    if (run >= 12.99) break;
+    const span = portrait ? 0.22 : 0.13;
+    await sweep(stroke % 2 === 1, y, Math.max(0.02, x - span), Math.min(0.98, x + span));
+    assert((await state()).held, 'wind over the pinwheel must never release the plane');
+  }
+  await page.waitForFunction(() => __game.story.current.beat !== 'haul', null, { timeout: 20000 });
+  report.hauled = await page.evaluate(() => ({ run: __game.shoreHaul.run, boatAt: __game.shoreHaul.boatAt, beat: __game.story.current.beat }));
+  await page.screenshot({ path: `${prefix}-boat-in.png` });
+  console.log(`wound the boat in: ${JSON.stringify(report.hauled)}`);
   await page.waitForFunction(() => __game.story.name === 'toBoats', null, { timeout: 120000 });
   await page.waitForTimeout(6000);
   assert(await page.evaluate(() => !__game.boat.grounded && __game.child.ground(__game.boat.position.x, __game.boat.position.z) < 0), 'boat must leave the sand and sail');

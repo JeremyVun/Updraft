@@ -52,6 +52,8 @@ natural wood.
   weight still in the boat; the weight across, the body rising only with the boards and clearing the gunwale while
   the trailing leg pushes off; a small give on landing. The push-off rocks the hull. A wide gap becomes a little
   hop. The feet keep to the body's level through the step and ignore a deck under the hull. Never a teleport.
+- **Towed.** `Boat.towed` hands the hull's position and heading to whoever is pulling it (the door shore's pulley
+  line); it neither sails nor grounds itself, but floats, rests on the sand it is drawn onto and leaves a wake.
 - **Boarding** (`tuning.boarding`): plant against the hull, push off, one continuous step over the gunwale and down
   onto the thwart (`railIn`, `railHeight`, `stepArc`).
 - **Shores.** The hull is resolved against the terrain every frame and eases its pitch and roll to a beach

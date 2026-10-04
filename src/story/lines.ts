@@ -5,14 +5,16 @@ import { tuning } from '../tuning';
 import { heightAt } from '../world/island';
 import { DOOR_EXIT, DOOR_SHIFT, doorway } from '../world/doorway';
 import { FAMILY_FACE, FAMILY_LINE, door, family } from '../world/lines';
-import { CURTAINS, LINES_BERTH, LINES_LANDING, LINES_WALK, washingPassage } from '../world/lines-passage';
+import { CURTAINS, LINES_LANDING, LINES_WALK, washingPassage } from '../world/lines-passage';
+import { SHORE_BIRD, SHORE_PINWHEEL, SHORE_STAGE, SHORE_STAND, shoreHaul } from '../world/shore-pulley';
 import type { Cast, Chapter } from './cast';
 import type { LinesScorePhase } from '../audio/lines-score';
 
 export { LINES_BERTH, LINES_LANDING, LINES_WALK } from '../world/lines-passage';
 const FAMILY_MID = new THREE.Vector3().lerpVectors(FAMILY_LINE.a, FAMILY_LINE.b, 0.5);
 const ROUTE = LINES_WALK;
-type Beat = 'ashore' | 'wonder' | 'approach' | 'curtain' | 'birdThrough' | 'childThrough' | 'familyApproach' | 'family' | 'throughDoor' | 'shore' | 'walk' | 'toBoat' | 'push' | 'aboard';
+type Beat = 'ashore' | 'wonder' | 'approach' | 'curtain' | 'birdThrough' | 'childThrough' | 'familyApproach' | 'family' | 'throughDoor' | 'shore' | 'walk' | 'haul' | 'landed' | 'toBoat' | 'push' | 'aboard';
+const SHORE_BEATS: Beat[] = ['shore', 'walk', 'haul', 'landed', 'toBoat', 'push', 'aboard'];
 
 /** Small beneath somebody's washing. The wind makes a way, and the little bird learns to go first. */
 export class LinesChapter implements Chapter {
@@ -37,6 +39,16 @@ export class LinesChapter implements Chapter {
   private boarding = false;
   private noticed = false;
   private doorElapsed = 0;
+  /** The boat is out on the water on its line, and goes wherever the line has brought it. */
+  private towing = false;
+  private readonly boatAt = new THREE.Vector3();
+  private readonly reachTo = new THREE.Vector3();
+  /** Seconds the line has stood still while she waits for the boat. */
+  private stalled = 0;
+  private readonly shoreFrom = new THREE.Vector3();
+  /** She, the boat and the pinwheel stay in the frame however the view turns. */
+  private readonly shoreSubjects = { primary: new THREE.Vector3(), secondary: new THREE.Vector3(), tertiary: new THREE.Vector3(),
+    margin: 0.8, extra: 12 };
   private readonly thresholdEye = new THREE.Vector3();
   /** The view glances toward the line the torn sheet comes down on. */
   private readonly snagAttention = { point: new THREE.Vector3(), strength: 0, weight: tuning.linesPassage.snagGlance };
@@ -60,11 +72,11 @@ export class LinesChapter implements Chapter {
 
   get scripted(): boolean {
     return this.beat === 'ashore' || this.beat === 'wonder' || this.beat === 'family' ||
-      this.beat === 'throughDoor' || this.beat === 'shore' || this.beat === 'toBoat' || this.beat === 'push' || this.beat === 'aboard';
+      this.beat === 'throughDoor' || this.beat === 'shore' || this.beat === 'landed' || this.beat === 'toBoat' || this.beat === 'push' || this.beat === 'aboard';
   }
   get done(): boolean { return this.beat === 'aboard'; }
   get linesScore(): LinesScorePhase | undefined {
-    if (['shore', 'walk', 'toBoat', 'push', 'aboard'].includes(this.beat)) return 'shore';
+    if (SHORE_BEATS.includes(this.beat)) return 'shore';
     if (this.beat === 'throughDoor' || (this.beat === 'family' && door.opened)) return 'door';
     if (this.beat === 'familyApproach' || this.beat === 'family') return 'family';
     return this.gate === 0 ? 'first' : this.gate === 1 ? 'second' : 'third';
@@ -85,8 +97,7 @@ export class LinesChapter implements Chapter {
       doorway.reset(true);
       // Migrate the former north-beach checkpoint into the new shore.
       if (c.position.x < 150) { c.place(DOOR_EXIT.x, DOOR_EXIT.z - 5, Math.PI); cygnet.release(c.position.clone().add(new THREE.Vector3(1, 0, -1))); cygnet.seating.snap(); }
-      this.cast.boat.beach(LINES_BERTH.x, LINES_BERTH.z, 0.1);
-      this.cast.boat.canGround = false;
+      this.moorOut();
       // Existing two-number family saves remain valid after the route and encounter change.
       this.gate = CURTAINS.length;
       CURTAINS.forEach(g => g.reset(true));
@@ -102,7 +113,7 @@ export class LinesChapter implements Chapter {
 
   private to(beat: Beat): void {
     // The boat must already wait beyond the door when it opens, but never vanish at landing.
-    if (beat === 'family') this.cast.boat.beach(LINES_BERTH.x, LINES_BERTH.z, 0.1);
+    if (beat === 'family') this.moorOut();
     this.beat = beat; this.beatStart = this.now;
   }
   private get t(): number { return this.now - this.beatStart; }
@@ -188,13 +199,87 @@ export class LinesChapter implements Chapter {
         break;
       case 'walk':
         family.multiplyScalar(Math.exp(-dt * 0.35));
-        if (!this.boarding && !c.busy) this.board();
+        if (!this.boarding && !c.busy) this.toBank();
+        break;
+      case 'haul':
+        family.multiplyScalar(Math.exp(-dt * 0.35));
+        this.haul(dt);
+        break;
+      case 'landed':
+        if (this.t > 1.6 && !this.boarding && !c.busy) this.board();
         break;
       case 'push':
         break;
     }
     if (p.held) p.hold(c);
+    shoreHaul.active = this.beat === 'haul';
+    if (this.towing) this.tow(dt);
     this.frame();
+  }
+
+  /** Out on the water, tied to the line, wherever the line has brought it so far. */
+  private moorOut(): void {
+    const { boat } = this.cast;
+    shoreHaul.reset();
+    this.towing = true;
+    boat.beach(SHORE_PINWHEEL.x, SHORE_PINWHEEL.z, 0);
+    boat.afloat = true; boat.grounded = false; boat.towed = true;
+    boat.canGround = false; boat.steerFor = null; boat.mooring = null;
+    this.tow(0);
+  }
+
+  private tow(dt: number): void {
+    const { boat, wind } = this.cast;
+    if (dt > 0) shoreHaul.update(dt, wind);
+    boat.yaw = shoreHaul.boatPose(this.boatAt);
+    boat.position.x = this.boatAt.x; boat.position.z = this.boatAt.z;
+    boat.speed = shoreHaul.boatSpeed;
+    if (shoreHaul.arrived) {
+      // Run up on the sand: it lies there until she pushes it off.
+      this.towing = false;
+      boat.towed = false; boat.grounded = true; boat.speed = 0;
+    }
+  }
+
+  /** She goes down to the water's edge by the pinwheel, where the line comes ashore. */
+  private toBank(): void {
+    const { child: c, cygnet } = this.cast;
+    this.boarding = true;
+    c.lookAt = this.cast.boat.position;
+    cygnet.watch(this.cast.boat.position);
+    c.walkTo(SHORE_STAND.x, SHORE_STAND.z, false, () => {
+      this.boarding = false;
+      c.faceToward(this.cast.boat.position.x, this.cast.boat.position.z, 1);
+      cygnet.errand = SHORE_BIRD.clone();
+      cygnet.watch(this.cast.boat.position);
+      this.stalled = 0;
+      this.to('haul');
+    }, 0.5);
+  }
+
+  /**
+   * She wants the boat: she watches it while it comes, and while the line stands still she reaches out toward it
+   * and then looks up at the pinwheel beside her.
+   */
+  private haul(dt: number): void {
+    const { child: c, cygnet, boat } = this.cast;
+    if (cygnet.errand && cygnet.position.distanceTo(cygnet.errand) < 0.7) cygnet.stay = true;
+    const coming = shoreHaul.spin > 0.8 || shoreHaul.boatSpeed > 0.12;
+    this.stalled = coming ? 0 : this.stalled + dt;
+    const cycle = this.stalled % 7;
+    const asking = this.stalled > 1.5 && cycle < 2.6;
+    c.lookAt = this.stalled > 1.5 && cycle >= 2.6 && cycle < 5 ? SHORE_PINWHEEL : boat.position;
+    if (asking) {
+      this.reachTo.subVectors(boat.position, c.position).setY(0).normalize();
+      c.reachFor(0, this.reachTo.multiplyScalar(0.7).add(c.position).setY(c.position.y + 1.2));
+    } else c.reachFor(0, null);
+    if (!this.towing) {
+      c.reachFor(0, null);
+      cygnet.stay = false; cygnet.errand = null; cygnet.watch(null);
+      c.lookAt = boat.position;
+      c.cheer();
+      this.to('landed');
+    }
   }
 
   private setDown(): void {
@@ -277,6 +362,18 @@ export class LinesChapter implements Chapter {
     this.to('shore');
   }
 
+  /** QA: the travellers just past the last sheet, so the family's line and the door play out by themselves. */
+  skipToDoor(): void {
+    const { child: c, cygnet, plane } = this.cast;
+    CURTAINS.forEach(g => g.reset(true));
+    c.dismount(); c.stop(); c.place(11, -279, Math.PI); c.standUp();
+    cygnet.release(new THREE.Vector3(12.2, heightAt(12.2, -280), -280)); cygnet.seating.snap();
+    cygnet.stay = false; cygnet.errand = null;
+    plane.hold(c);
+    this.gate = CURTAINS.length - 1;
+    this.passed();
+  }
+
   private board(): void {
     const { child: c, boat, cygnet } = this.cast;
     washingPassage.active = null;
@@ -287,6 +384,7 @@ export class LinesChapter implements Chapter {
       this.to('toBoat');
       this.cast.carry.gatherUp(() => this.cast.carry.stow(() => {
         c.lookAt = null; this.to('push');
+        shoreHaul.loose = true;
         c.faceToward(boat.position.x, boat.position.z, 1);
         c.board(boat, () => {
           this.cast.cygnet.mayFly = true;
@@ -300,7 +398,7 @@ export class LinesChapter implements Chapter {
     const c = this.cast.child.position;
     const s = this.shot;
     const k = tuning.linesPassage;
-    s.from = this.from; s.clearance = 2.1; s.exact = false; s.eye = undefined; s.attention = undefined;
+    s.from = this.from; s.clearance = 2.1; s.exact = false; s.eye = undefined; s.attention = undefined; s.subjects = undefined;
     if (this.beat === 'throughDoor' || this.beat === 'shore') {
       const base = door.group.position;
       const total = k.doorApproach + k.doorCross;
@@ -312,7 +410,8 @@ export class LinesChapter implements Chapter {
         const settle = THREE.MathUtils.smoothstep(this.t, 0, k.shorePause);
         this.thresholdEye.set(DOOR_EXIT.x, DOOR_EXIT.y + 1.85, DOOR_EXIT.z + 0.04);
         this.thresholdEye.lerp(this.tmp.set(DOOR_EXIT.x + 1, DOOR_EXIT.y + 5, DOOR_EXIT.z + 7), settle);
-        this.thresholdLook.set(DOOR_EXIT.x, DOOR_EXIT.y + 1.85, DOOR_EXIT.z - 14);
+        // Once through, the view drifts round to where the boat waits out on the water.
+        this.thresholdLook.set(DOOR_EXIT.x, DOOR_EXIT.y + 1.85, DOOR_EXIT.z - 14).lerp(SHORE_STAGE, settle * tuning.shorePulley.arrivalLook);
       }
       s.eye = this.thresholdEye; s.target.copy(this.thresholdLook); s.exact = true;
       this.focus.copy(s.target); return;
@@ -342,9 +441,22 @@ export class LinesChapter implements Chapter {
       s.distance = 25; s.height = 4;
       this.pace = 0.45;
     } else {
+      // While the boat is out, the view settles onto the whole stage as she nears the pinwheel, and holds still there.
       const b = this.cast.boat.position;
-      s.target.set(c.x * 0.65 + b.x * 0.35, Math.max(heightAt(c.x, c.z), 0) + 2.2, c.z * 0.65 + b.z * 0.35);
+      const near = 1 - THREE.MathUtils.smoothstep(Math.hypot(c.x - SHORE_STAND.x, c.z - SHORE_STAND.z), 4, 18);
+      const hold = this.towing ? (this.beat === 'haul' ? 1 : near) : 0;
+      const toBoat = this.towing ? 0 : 0.35;
+      s.target.set(c.x * (1 - toBoat) + b.x * toBoat, Math.max(heightAt(c.x, c.z), 0) + 2.2, c.z * (1 - toBoat) + b.z * toBoat).lerp(SHORE_STAGE, hold);
       s.distance = 24; s.height = 7;
+      // A phone looks more along the line, so the stage runs into the distance instead of across a narrow frame.
+      const narrow = (1 - THREE.MathUtils.smoothstep(window.innerWidth / window.innerHeight, 0.6, 1.2)) * near;
+      const k = tuning.shorePulley;
+      s.from = this.shoreFrom.set(-Math.sin(k.bearing), 0, Math.cos(k.bearing)).lerp(this.from, 1 - k.narrowTurn * narrow).normalize();
+      const f = this.shoreSubjects;
+      f.primary.copy(c).y += 1.2;
+      this.cast.boat.sailPoint(f.secondary);
+      f.tertiary.copy(SHORE_PINWHEEL);
+      s.subjects = f;
       this.pace = 0.5;
     }
     s.distance *= Math.max(1, 0.53 / (window.innerWidth / window.innerHeight));

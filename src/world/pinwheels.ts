@@ -9,7 +9,7 @@ import { heightAt } from './island';
 import { mulberry32 } from './noise';
 
 const SAILS = 4;
-const SECTOR = (Math.PI * 2) / SAILS;
+export const SECTOR = (Math.PI * 2) / SAILS;
 /** The gap between one sail and the next, so the wheel reads as folded paper rather than a disc. */
 const GAP = 0.16;
 const HUB = 0.11;
@@ -22,7 +22,7 @@ const HUB = 0.11;
  * worth of time, so a wheel that has just been caught by a gust blurs into a disc while the one beside it is
  * still crisp. That is a gust travelling, drawn one wheel at a time.
  */
-const WHEEL_VERT = /* glsl */ `
+export const WHEEL_VERT = /* glsl */ `
 ${ATMO_GLSL}
 in vec3 aPos;
 in vec4 aState;
@@ -58,7 +58,7 @@ void main() {
   gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
 }`;
 
-const WHEEL_FRAG = /* glsl */ `
+export const WHEEL_FRAG = /* glsl */ `
 ${ATMO_GLSL}
 in vec3 vWorld;
 in vec3 vNormal;
@@ -66,6 +66,8 @@ in vec3 vTint;
 in float vCover;
 in float vRadius;
 in float vPin;
+/** How much of its colour the paper side of a sail shows. */
+uniform float uFrontTint;
 
 /** Interleaved gradient noise: a dither that holds still on screen instead of crawling. */
 float wheelDither(vec2 p) {
@@ -84,7 +86,7 @@ void main() {
    * Paper one side, colour the other, the way a sheet is folded into a pinwheel: because every vane is scooped,
    * a turning wheel shows both at once and flickers between them. The pin in the middle holds it all on.
    */
-  vec3 sail = gl_FrontFacing ? mix(vec3(0.95, 0.92, 0.86), vTint, 0.28) : vTint;
+  vec3 sail = gl_FrontFacing ? mix(vec3(0.95, 0.92, 0.86), vTint, uFrontTint) : vTint;
   vec3 paper = mix(sail, vec3(0.34, 0.29, 0.22), vPin) * (0.72 + 0.28 * smoothstep(0.12, 0.42, vRadius));
   float through = max(-ndl, 0.0) * 0.5;
   vec3 col = paper * (hemiLight(N) + uSunColor * (max(ndl, 0.0) * 0.6 + through * 0.75) * sun);
@@ -120,7 +122,7 @@ void main() {
  * scooped at the rim. The scoop is what the wind pushes on, and it is what catches the low sun on one side. The
  * pin head sits in the middle of them, which is the other half of what says pinwheel rather than rosette.
  */
-function wheelGeometry(radius: number, pitch: number): THREE.BufferGeometry {
+export function wheelGeometry(radius: number, pitch: number): THREE.BufferGeometry {
   const steps = 3;
   const verts: number[] = [];
   const sweeps: number[] = [];
@@ -294,7 +296,7 @@ export class Pinwheels {
     this.group.add(
       new THREE.Mesh(
         geo,
-        new THREE.ShaderMaterial({ uniforms: atmo.uniforms, vertexShader: WHEEL_VERT, fragmentShader: WHEEL_FRAG, side: THREE.DoubleSide }),
+        new THREE.ShaderMaterial({ uniforms: { ...atmo.uniforms, uFrontTint: { value: 0.28 } }, vertexShader: WHEEL_VERT, fragmentShader: WHEEL_FRAG, side: THREE.DoubleSide }),
       ),
     );
     this.group.add(

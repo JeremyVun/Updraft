@@ -247,7 +247,7 @@ void main() {
   gl_Position = projectionMatrix * viewMatrix * vec4(position, 1.0);
 }`;
 
-const PEG_VERT = /* glsl */ `
+export const PEG_VERT = /* glsl */ `
 out vec3 vWorld;
 out vec3 vNormal;
 void main() {
@@ -257,7 +257,7 @@ void main() {
   gl_Position = projectionMatrix * viewMatrix * w;
 }`;
 
-const WOOD_VERT = /* glsl */ `
+export const WOOD_VERT = /* glsl */ `
 out vec3 vWorld;
 out vec3 vNormal;
 void main() {
@@ -267,7 +267,7 @@ void main() {
   gl_Position = projectionMatrix * viewMatrix * w;
 }`;
 
-const WOOD_FRAG = /* glsl */ `
+export const WOOD_FRAG = /* glsl */ `
 ${ATMO_GLSL}
 in vec3 vWorld;
 in vec3 vNormal;
@@ -328,7 +328,7 @@ function poleGeometry(foot: THREE.Vector3, top: number): THREE.BufferGeometry {
 }
 
 /** A spring clothes peg standing on end, its two legs either side of the line, the spring a little above it. */
-function passagePegGeometry(): THREE.BufferGeometry {
+export function passagePegGeometry(): THREE.BufferGeometry {
   const l = PEG_LENGTH;
   const leg = (side: number) => new THREE.BoxGeometry(l * 0.16, l, l * 0.13).translate(0, -l * 0.2, side * l * 0.09);
   return mergeGeometries([leg(-1), leg(1), new THREE.BoxGeometry(l * 0.2, l * 0.16, l * 0.34).translate(0, l * 0.04, 0)]);
@@ -380,7 +380,7 @@ export function seaLines(): LineSpec[] {
   });
 }
 
-const PAINT_FRAG = /* glsl */ `
+export const PAINT_FRAG = /* glsl */ `
 ${ATMO_GLSL}
 uniform vec3 uPaint;
 in vec3 vWorld;

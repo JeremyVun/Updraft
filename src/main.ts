@@ -72,6 +72,7 @@ import { FAMILY_LINE, WashingLines, baskets, door, family, lineField, seaLines }
 import { piano } from './world/piano';
 import { DepartureKites } from './story/departure-kites';
 import { Pinwheels } from './world/pinwheels';
+import { SHORE_PINWHEEL, ShorePulleyRig, shoreHaul } from './world/shore-pulley';
 import { LINES_WALK, LINES_LANDING } from './story/lines';
 import { DrownedVillage } from './world/drowned';
 import { SleepingIsland } from './world/sleeping';
@@ -237,6 +238,8 @@ const kite = departureKites.markers.lines;
 for (const marker of Object.values(departureKites.markers)) scene.add(marker.group);
 const shoreGrass = createDoorShoreGrass();
 scene.add(shoreGrass);
+const shorePulley = new ShorePulleyRig();
+scene.add(shorePulley.group, shorePulley.invitation);
 const pinwheels = new Pinwheels(wind, LINES_WALK);
 scene.add(pinwheels.group);
 await built();
@@ -410,7 +413,7 @@ const echoes = dreamEchoes();
 Object.values(echoes).forEach((e) => scene.add(e));
 const roomObjects: Partial<Record<Room, THREE.Object3D[]>> = {
   island: [tree.group, islandRocks, creatures.group], lines: [washing.group, washingBaskets, pinwheels.group, door.group],
-  shore: [shoreGrass, kite.group], boats: [littleBoats.group],
+  shore: [shoreGrass, kite.group, shorePulley.group], boats: [littleBoats.group],
   meadow: [piano.group, ...pond.objects], birches: [...birches.objects], stairs: [cloudStairs.group], drowned: [...village.objects],
   wood: [...wood.objects], sleeping: [...sleeping.objects], mirror: [skyMirror.group], home: [...cottage.objects, homeJetty, homeTree.group],
 };
@@ -429,10 +432,10 @@ const post = new Post(renderer, scene, rig.camera, Math.min(params.msaa ?? ((par
 const doorwayActors = [...child.objects, ...cygnet.objects, ...glider.objects];
 const doorwayShared = [sky, terrain.mesh, water.mesh, ...doorwayActors];
 const doorwaySource = new Set([...doorwayShared, grass.group, washing.group, washingBaskets, pinwheels.group, door.group, lines.batch.mesh, swirl.batch.mesh, washingInvitation.batch.mesh]);
-const doorwayDestination = new Set([...doorwayShared, shoreGrass, kite.group, lines.batch.mesh]);
+const doorwayDestination = new Set([...doorwayShared, shoreGrass, kite.group, shorePulley.group, shorePulley.invitation, lines.batch.mesh]);
 const doorwayView = new DoorwayView(renderer, scene, terrain, water,
   doorwaySource, doorwayDestination,
-  [shoreGrass, kite.group],
+  [shoreGrass, kite.group, shorePulley.group],
   [{ objects: [...child.objects, ...glider.objects], at: child.position }, { objects: cygnet.objects, at: cygnet.position }]);
 const quality = new Quality(maxPixelRatio, post.samples, window.innerWidth, window.innerHeight, params.ratio !== null || params.msaa !== null, (level) => {
   const resizeTargets = pixelRatio !== level.ratio || post.samples !== level.samples;
@@ -668,6 +671,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
     : story.name === 'birches' ? birches.scarf.updraftTarget : story.current.updraftTarget ?? null;
   input.update(dt, rig.camera, wind, inputFraction);
   washingPassage.active?.brush(rig.camera, input, wind);
+  if (story.name === 'lines') shoreHaul.brush(rig.camera, input, wind);
   if (story.name === 'boats') littleBoats.brush(rig.camera, input, wind, dt);
   if (story.current.invitesSail) boat.brushSail(rig.camera, input);
   if (story.name === 'stairs') cloudStairs.brush(rig.camera, input, dt);
@@ -947,6 +951,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   door.update(dt);
   scarfInvitation.update(dt, rig.camera, story.name === 'birches' ? birches : null);
   washingInvitation.update(dt, rig.camera, story.name === 'lines' ? washingPassage.active : null);
+  shorePulley.update(dt, story.name === 'lines' ? rig.camera : null, story.name === 'lines' ? boat : null);
   sailInvitation.update(dt, rig.camera, boat, story.current.invitesSail ?? false, input);
   planeInvitation.update(dt, rig.camera, glider, startScreen.started ? story.current.planeInvitation ?? null : null, input,
     story.current.planeInvitationInto ?? false);
@@ -1011,6 +1016,7 @@ function prepareWorldAudio(dt: number): void {
   worldFoley.motion(drawing, 'paper', drawing.mesh.position, drawing.open, dt, heard && drawing.mesh.visible && tuning.audio.homeEndingSounds);
   worldFoley.motion(cottage, 'door', cottage.doorstep, cottage.doorOpening, dt, heard && story.name === 'home' && tuning.audio.homeEndingSounds);
   worldFoley.motion(door, 'door', door.group.position, door.doorOpening, dt, heard && story.name === 'lines');
+  worldFoley.motion(shoreHaul, 'swing-creak', SHORE_PINWHEEL, shoreHaul.run * 0.25, dt, heard && story.name === 'lines');
 }
 
 function placeEmitter(emitter: NonNullable<SoundState['cygnet']>, at: THREE.Vector3, active: boolean): void {
@@ -1220,7 +1226,7 @@ function frame(now: number): void {
 }
 
 if (QA && params.shot) {
-  window.__game = { quality, post, wind, input, rig, renderer, scene, glider, lines, swirl, sound, child, story, creatures, hillCreatures, water, skyMirror, terrain, footprints, cottage, petals, grass, littleBoats, sealife, cygnet, flock, carry, probe, washing, curtains: CURTAINS, doorway, doorwayView, doorExit: DOOR_EXIT, washingPassage, washingInvitation, scarfInvitation, kite, departureKites, pinwheels, village, wood, stormWeather, sleeping, embers, emberInvitation, fireflies, boat, life, piano, birches, pond, cloudStairs };
+  window.__game = { quality, post, wind, input, rig, renderer, scene, glider, lines, swirl, sound, child, story, creatures, hillCreatures, water, skyMirror, terrain, footprints, cottage, petals, grass, littleBoats, sealife, cygnet, flock, carry, probe, washing, curtains: CURTAINS, doorway, doorwayView, doorExit: DOOR_EXIT, washingPassage, washingInvitation, shoreHaul, shorePulley, scarfInvitation, kite, departureKites, pinwheels, village, wood, stormWeather, sleeping, embers, emberInvitation, fireflies, boat, life, piano, birches, pond, cloudStairs };
 }
 
 /**

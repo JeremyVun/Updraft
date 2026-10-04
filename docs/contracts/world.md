@@ -168,8 +168,10 @@ first view over the bank, so the gap is the same on the ground, in the grass and
 `DOOR_SHORE` is a small island of its own with the same CPU/GLSL height function, grass from `door-shore.ts` (the
 ordinary grass skips it) and the washing's departure kite. During the washing each camera sees only its own room's
 land; the boat waits on the arrival beach until the family reveal, then moves to the shore before the door opens,
-and its room membership (in the reflection too) follows its position. The voyage to the little boats starts from
-here. The portal rendering and the threshold transfer are in `docs/engine.md`.
+and its room membership (in the reflection too) follows its position. Once the door has opened the boat waits moored
+out on the water on the pulley line (`world/shore-pulley.ts`: `shoreHaul` is the state, `ShorePulleyRig` the post,
+piling, wheels, pinwheel, pegs and painter); the lines chapter places it each frame as `Boat.towed` until it is in,
+then it lies on the sand at `LINES_BERTH`. The voyage to the little boats starts from here. The portal rendering and the threshold transfer are in `docs/engine.md`.
 
 ## The little boats' water
 
