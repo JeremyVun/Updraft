@@ -1266,19 +1266,13 @@ export class WoodChapter implements Chapter {
     const portrait = this.aspect < 1;
     const left = Math.hypot(c.x - SHAPE_WAIT.x, c.z - SHAPE_WAIT.z);
     if (this.easeAt < 0 && left > k.easeFrom && this.shapeStopped < 0) return;
-    if (this.easeAt < 0) {
-      // From the camera as it is: what it is off the walking frame now, it lets go of as the ease takes it.
+    if (this.easeAt < 0 || portrait !== this.easePortrait) {
+      // From the camera as it is, carried along with her; turned on its side mid-beat, over the same time by the clock.
+      if (this.easeAt >= 0) { this.easeProgress = 0; this.easeTimed = true; }
       this.easeAt = this.now;
       this.easePortrait = portrait;
-      this.easeEye.copy(this.camAt).sub(s.eye!);
-      this.easeLook.copy(this.camAt).addScaledVector(this.camDir, this.camAt.distanceTo(s.target)).sub(s.target);
-    } else if (portrait !== this.easePortrait) {
-      // Turned on its side mid-beat: ease from wherever the camera is to the other frame, over the same time.
-      this.easePortrait = portrait;
-      this.easeProgress = 0;
-      this.easeEye.copy(this.camAt).sub(s.eye!);
-      this.easeLook.copy(this.camAt).addScaledVector(this.camDir, this.camAt.distanceTo(s.target)).sub(s.target);
-      this.easeTimed = true;
+      this.easeEye.copy(this.camAt).sub(c);
+      this.easeLook.copy(this.camAt).addScaledVector(this.camDir, this.camAt.distanceTo(s.target)).sub(c);
     }
     const near = 1 - THREE.MathUtils.clamp((left - 0.4) / (k.easeFrom - 0.4), 0, 1);
     const timed = this.easeTimed || this.shapeStopped >= 0 ? this.easeProgress + dt / k.easeSeconds : 0;
@@ -1286,14 +1280,36 @@ export class WoodChapter implements Chapter {
     const e = THREE.MathUtils.smootherstep(this.easeProgress, 0, 1);
     framePoint(portrait ? k.portraitEye : k.eye, this.bendEye);
     framePoint(portrait ? k.portraitLook : k.look, this.bendLook);
-    this.tmp.copy(s.target).addScaledVector(this.easeLook, 1 - e);
-    s.eye!.addScaledVector(this.easeEye, 1 - e).lerp(this.bendEye, e);
-    s.target.copy(this.tmp).lerp(this.bendLook, e);
+    // Round her rather than across: the camera keeps its distance from her all the way, never in and out.
+    const from = Math.atan2(this.easeEye.x, this.easeEye.z);
+    const to = Math.atan2(this.bendEye.x - c.x, this.bendEye.z - c.z);
+    const angle = from + Math.atan2(Math.sin(to - from), Math.cos(to - from)) * e;
+    const reach = THREE.MathUtils.lerp(Math.hypot(this.easeEye.x, this.easeEye.z), Math.hypot(this.bendEye.x - c.x, this.bendEye.z - c.z), e);
+    s.eye!.set(c.x + Math.sin(angle) * reach, THREE.MathUtils.lerp(c.y + this.easeEye.y, this.bendEye.y, e), c.z + Math.cos(angle) * reach);
+    s.target.copy(this.easeLook).add(c).lerp(this.bendLook, e);
     s.exact = true;
     // The lens opens to the held frame's field with the same move.
     const half = Math.tan(THREE.MathUtils.degToRad(this.wideFov / 2));
     const want = portrait ? Math.tan(THREE.MathUtils.degToRad(k.portraitVfov / 2))
       : Math.tan(THREE.MathUtils.degToRad(k.hfov / 2)) / Math.max(this.aspect, 1e-3);
     s.zoom = this.heldZoom = THREE.MathUtils.lerp(1, THREE.MathUtils.clamp(half / want, 0.55, 1.3), e);
+    // She walks into the held frame from its edge: until she is in her place the look turns enough to keep her in it.
+    const vHalf = half / s.zoom;
+    this.keepInFrame(s.eye!, s.target, this.childSubject.copy(c).setY(c.y + 1.3), vHalf * this.aspect * 0.78, vHalf * 0.75);
+  }
+
+  /** Turns the look from `eye` to `look` just far enough that `at` is inside the given half-widths (tangents). */
+  private keepInFrame(eye: THREE.Vector3, look: THREE.Vector3, at: THREE.Vector3, across: number, upDown: number): void {
+    const dx = look.x - eye.x, dz = look.z - eye.z, flat = Math.hypot(dx, dz);
+    const yaw = Math.atan2(dx, dz), pitch = Math.atan2(look.y - eye.y, flat);
+    const ax = at.x - eye.x, az = at.z - eye.z, aFlat = Math.hypot(ax, az);
+    const aYaw = Math.atan2(ax, az), aPitch = Math.atan2(at.y - eye.y, aFlat);
+    const off = Math.atan2(Math.sin(aYaw - yaw), Math.cos(aYaw - yaw));
+    const room = Math.atan(across);
+    const newYaw = Math.abs(off) > room ? yaw + off - Math.sign(off) * room : yaw;
+    const offUp = aPitch - pitch, roomUp = Math.atan(upDown);
+    const newPitch = Math.abs(offUp) > roomUp ? pitch + offUp - Math.sign(offUp) * roomUp : pitch;
+    const reach = Math.hypot(flat, look.y - eye.y);
+    look.set(eye.x + Math.sin(newYaw) * Math.cos(newPitch) * reach, eye.y + Math.sin(newPitch) * reach, eye.z + Math.cos(newYaw) * Math.cos(newPitch) * reach);
   }
 }
