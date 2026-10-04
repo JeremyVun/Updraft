@@ -12,7 +12,7 @@ const base = process.env.BASE ?? 'http://127.0.0.1:5230/';
 const dir = path.resolve(process.argv[2] ?? '/tmp/updraft-audio-review');
 fs.mkdirSync(dir, { recursive: true });
 const browser = await chromium.launch({
-  executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+  channel: 'chromium',
   headless: true, args: ['--disable-gpu', '--autoplay-policy=no-user-gesture-required'],
 });
 const reportPath = path.join(dir, 'review.json');

@@ -14,6 +14,8 @@ function check() {
   const sea = () => ['HULL_COLLAR', 'LANTERN_GLINT', 'SEABED_DETAIL', 'SEA_REFLECTION'].map(name => water.mesh.material.defines[name]).join('');
   const applied = name => {
     grass.update(rig.camera, 1); grass.bake(renderer); terrain.update(rig.camera);
+    // The sea fades its effects over a second before dropping their variants.
+    for (let i = 0; i < 61; i++) water.step(1 / 60);
     const want = LEVELS[name];
     const got = { name: quality.level.name, ratio: renderer.getPixelRatio(), density: grass.quality.density,
       reach: grass.quality.reach, split: terrain.detail, mirrorEvery: water.mirrorEvery, mirrorScale: water.mirrorScale, bloom: post.bloomLevel, sea: sea(),

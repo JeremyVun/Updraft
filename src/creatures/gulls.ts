@@ -446,6 +446,7 @@ export class Gulls {
       shown++;
     }
     this.instances.commit(shown);
+    this.mesh.visible = shown > 0;
   }
 
   /** Circles low over `point` (a boat, say) until called with null; then each gull goes back to its own coast. */

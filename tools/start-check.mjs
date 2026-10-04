@@ -93,6 +93,11 @@ try {
  report.playFirstDraws = await page.evaluate(() => window.__stats?.playFirstDraws);
  // A quality step to a new MSAA sample count first draws existing programs into it, so only new programs fail.
  assert.equal(report.playFirstDraws?.programs, 0, `programs first drawn in play: ${report.playFirstDraws?.names.join(', ')}`);
+ // Stepping down switches effects off (bloom, the depth blur), whose other variants must have been drawn at boot too.
+ for(const level of ['high','medium','low']){await page.evaluate(l=>__game.quality.setMode(l,performance.now()),level);await page.waitForTimeout(2500)}
+ report.stepDownFirstDraws = await page.evaluate(() => window.__stats?.playFirstDraws);
+ assert.equal(report.stepDownFirstDraws?.programs, 0, `programs first drawn stepping down: ${report.stepDownFirstDraws?.names.join(', ')}`);
+ report.checks.push('stepping down to Low draws no program for the first time');
  await page.reload();await ready();assert.equal(await page.locator('#begin').innerText(),'Continue');
  await invitation(page,true);
  await page.route(painting,route=>route.abort());

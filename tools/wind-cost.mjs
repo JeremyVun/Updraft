@@ -167,7 +167,7 @@ window.__wind = {
 // rAF interval measures throughput rather than landing on 16.7 ms multiples. Same shared lock as openBrowser.
 async function openUncapped() {
   const held = await openBrowser(); await held.browser.close();
-  const browser = await chromium.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true,
+  const browser = await chromium.launch({ channel: 'chromium', headless: true,
     args: ['--enable-gpu', '--use-angle=metal', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required', '--disable-gpu-vsync', '--disable-frame-rate-limit'] });
   return { browser, close: async () => { try { await browser.close(); } finally { await held.close().catch(() => {}); } } };
 }
@@ -176,7 +176,7 @@ const { browser, close } = env.UNCAPPED === '1' ? await openUncapped() : await o
 // pass, standing in for another app's GPU work (a simulator, another browser): the suspected slow state.
 let contender = null;
 if (env.CONTEND) {
-  contender = await chromium.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true,
+  contender = await chromium.launch({ channel: 'chromium', headless: true,
     args: ['--enable-gpu', '--use-angle=metal', '--ignore-gpu-blocklist', '--disable-gpu-vsync', '--disable-frame-rate-limit'] });
   const load = await contender.newPage({ viewport: { width: 1024, height: 1024 } });
   await load.setContent('<canvas width=1024 height=1024></canvas>');

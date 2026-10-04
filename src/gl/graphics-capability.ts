@@ -32,7 +32,7 @@ export function checkGraphicsCapability(renderer: THREE.WebGLRenderer): Graphics
 }
 
 /**
- * Whether the frame's colour targets (the scene, its resolve, the clean copy and bloom), which never hold alpha, can be
+ * Whether the frame's colour targets (the scene, its resolve, the scene with bloom added and bloom), which never hold alpha, can be
  * R11F_G11F_B10F: half the memory and bandwidth of half-float RGBA, where it renders with as much multisampling.
  */
 export function compactFrameFormat(renderer: THREE.WebGLRenderer): boolean {

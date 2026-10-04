@@ -1,7 +1,7 @@
 // DOM-only loading motif preview: block the game module, use software compositing (no WebGL workload).
 import {chromium} from 'playwright-core';
 import assert from 'node:assert/strict';
-const browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true,args:['--disable-gpu']});
+const browser=await chromium.launch({channel:'chromium',headless:true,args:['--disable-gpu']});
 try {
  for(const viewport of [{width:1280,height:800},{width:390,height:844}]) {
   const page=await browser.newPage({viewport, ...(viewport.width===390?{recordVideo:{dir:'/tmp/updraft-loading-video',size:viewport}}:{})});

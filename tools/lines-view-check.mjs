@@ -1,4 +1,5 @@
-// Real sweeps through all three curtains; fixed grass heights and clear challenge views in both aspects.
+// Real sweeps through all three curtains and across the shore's pinwheel; fixed grass heights and clear challenge
+// views in both aspects, with the child, the pinwheel and the moored boat all in frame at the bank.
 // BASE overrides Vite. Evidence goes to /tmp/updraft-lines-view-<width>-*.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -64,6 +65,29 @@ try {
       await page.screenshot({ path: `${prefix}-${gate + 1}-passed.png` });
       console.log(`${width}: swept and passed curtain ${gate + 1}`);
     }
+    await page.waitForFunction(() => __game.story.current.beat === 'haul', null, { timeout: 120000 });
+    await page.waitForTimeout(3000);
+    await page.screenshot({ path: `${prefix}-shore-waiting.png` });
+    const framed = await page.evaluate(async () => {
+      const source = await (await fetch('/src/world/atmosphere.ts')).text();
+      const THREE = await import(source.match(/from ["']([^"']*three[^"']*)["']/)[1]);
+      const g = __game, cam = g.rig.camera;
+      const points = { child: g.child.position.clone().add(new THREE.Vector3(0, 1, 0)), pinwheel: g.shoreHaul.pinwheel.clone(), boat: g.boat.sailPoint(new THREE.Vector3()) };
+      return Object.fromEntries(Object.entries(points).map(([k, p]) => { const v = p.project(cam); return [k, [v.x, v.y]]; }));
+    });
+    assert(Object.values(framed).every(([x, y]) => Math.abs(x) < 0.95 && Math.abs(y) < 0.95), `${width}: shore stage out of frame: ${JSON.stringify(framed)}`);
+    for (let stroke = 0; stroke < 40 && !(await page.evaluate(() => __game.shoreHaul.run >= 12.99)); stroke++) {
+      const [x, y] = await page.evaluate(() => { const v = __game.shoreHaul.pinwheel.clone().project(__game.rig.camera); return [(v.x + 1) / 2, (1 - v.y) / 2]; });
+      const span = width < height ? 0.22 : 0.13, from = stroke % 2 ? x + span : x - span, to = stroke % 2 ? x - span : x + span;
+      await page.mouse.move(from * width, y * height);
+      for (let i = 1; i <= 36; i++) {
+        await page.mouse.move((from + (to - from) * i / 36) * width, y * height);
+        await page.waitForTimeout(16);
+      }
+    }
+    await page.waitForFunction(() => __game.story.current.beat !== 'haul', null, { timeout: 20000 });
+    await page.screenshot({ path: `${prefix}-shore-in.png` });
+    console.log(`${width}: wound the boat in at the shore`);
     const ground = await page.evaluate(() => window.linesGround);
     assert(ground.frames > 100);
     assert(ground.maxChange < 1e-9, `Grass height changed by ${ground.maxChange}`);

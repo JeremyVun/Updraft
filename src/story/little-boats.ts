@@ -4,6 +4,7 @@ import type { Shot } from '../camera';
 import { tuning } from '../tuning';
 import { heightAt } from '../world/island';
 import { LITTLE_BOATS as L, BOATS_BERTH, BOATS_LANDING, BOATS_POOLS as POOLS, boatsX, boatsWidth, boatsLevel, boatsWaterHeight } from '../world/little-boats-layout';
+import type { Coax } from '../fx/swirl';
 import type { Cast, Chapter } from './cast';
 import { completeObjective } from './cues';
 
@@ -42,6 +43,10 @@ export class LittleBoatsChapter implements Chapter {
     fitWidth: true,
   };
   private elapsed = 0;
+  private dt = 0;
+  /** How far the shot has leaned toward the bath or the plug while the fleet waits on it. */
+  private gateLean = 0;
+  private readonly gateAt = new THREE.Vector3();
   private boatMoved = false;
   private savedPool = 0;
   private nextBirdLook = 0;
@@ -84,7 +89,11 @@ export class LittleBoatsChapter implements Chapter {
     c.walkTo(landing.x, landing.z, false, () => c.walkTo(letDown.x, letDown.z, false, setDown, 0.35), 0.6);
     this.frame();
   }
-  get departureKite(): boolean { return this.cast.littleBoats.progress >= tuning.linesToys.boatKiteRevealAt; }
+  /** The kite waits for the plug to come out, so the plug has the sky to itself. */
+  get departureKite(): boolean {
+    const room = this.cast.littleBoats;
+    return room.progress >= tuning.linesToys.boatKiteRevealAt && room.drain.pulled;
+  }
 
   get done(): boolean {
     return this.beat === 'aboard';
@@ -92,9 +101,38 @@ export class LittleBoatsChapter implements Chapter {
   get scripted(): boolean {
     return !['sailing', 'reveal'].includes(this.beat);
   }
+  private get waiting(): THREE.Vector3 | null {
+    const r = this.cast.littleBoats;
+    return this.beat === 'sailing' ? r.drain.waiting(r.toys[0].s) : null;
+  }
   get windInvitation(): THREE.Vector3 | null {
     const r = this.cast.littleBoats;
-    return this.beat === 'sailing' && r.idle > tuning.littleBoats.inviteAfter ? r.invitation : null;
+    if (this.beat !== 'sailing') return null;
+    const waiting = this.waiting;
+    if (waiting) return waiting === r.drain.bathAt && r.drain.idle > tuning.littleBoats.inviteAfter ? r.drain.hintAt : null;
+    return r.idle > tuning.littleBoats.inviteAfter ? r.invitation : null;
+  }
+  get invitationRadius(): number {
+    return this.waiting === this.cast.littleBoats.drain.bathAt ? this.cast.littleBoats.drain.waitingRadius : 0;
+  }
+  get invitationHeading(): number | null {
+    const drain = this.cast.littleBoats.drain;
+    return this.waiting === drain.bathAt ? drain.pushAngle : null;
+  }
+  get updraftTarget(): THREE.Vector3 | null {
+    const drain = this.cast.littleBoats.drain;
+    return this.waiting === drain.plugAt ? drain.plugRest : null;
+  }
+  private readonly asking: Coax = { at: new THREE.Vector3(), urgency: tuning.littleBoats.plugCoaxUrgency, radius: tuning.littleBoats.plugCoaxRadius };
+  get coax(): Coax | null {
+    const drain = this.cast.littleBoats.drain;
+    if (this.waiting !== drain.plugAt || drain.idle < tuning.littleBoats.inviteAfter) return null;
+    this.asking.at.copy(drain.plugRest);
+    return this.asking;
+  }
+  /** QA: put the travellers and the fleet at course position `s` (the shoal is at 62, the plug at 97.5). */
+  skipTo(s: number): void {
+    this.restoreCheckpoint(s > 68 ? 'pool-2' : 'pool-1', [s]);
   }
   get checkpoint(): string | null {
     if (this.beat !== 'sailing') return null;
@@ -143,6 +181,7 @@ export class LittleBoatsChapter implements Chapter {
   }
   update(dt: number, time: number): void {
     this.elapsed += dt;
+    this.dt = dt;
     const { child: c, plane: p, cygnet: k, littleBoats: room, wind, boat } = this.cast;
     const childS = L.startZ - c.position.z;
     room.update(dt, time, wind, Math.max(3, childS + tuning.littleBoats.childLead));
@@ -234,7 +273,14 @@ export class LittleBoatsChapter implements Chapter {
       c.stroll = 1 + tuning.littleBoats.childHurry * THREE.MathUtils.smoothstep(s - childS, 1.5, 4);
       this.bankAt(Math.max(3, targetS), this.bank);
       if (c.position.distanceTo(this.bank) > 0.75) c.walkTo(this.bank.x, this.bank.z, false, undefined, 0.3);
-      c.lookAt = room.focus;
+      // Held at the shoal or the plug, she keeps glancing at what is holding them.
+      const waiting = room.drain.waiting(room.toys[0].s);
+      c.lookAt = waiting && time % 5 < 2.6 ? waiting : room.focus;
+      if (room.drain.gustStarted) {
+        const { gustFrom: at, gustDir: dir } = room.drain;
+        this.cast.lines.gust(at.x, at.z, dir.x, dir.z, tuning.littleBoats.nudgeLines, tuning.littleBoats.nudgeLinePace);
+        room.drain.gustStarted = false;
+      }
       if (s > 32) {
         this.savedPool = 1;
         this.moveBoat();
@@ -244,7 +290,7 @@ export class LittleBoatsChapter implements Chapter {
         const birdS = L.startZ - k.position.z;
         this.bankAt(Math.max(3, Math.min(s + 0.5, birdS + 2)), this.birdBank, 0.7);
         if (k.position.distanceTo(this.birdBank) > 0.7) k.errand = this.birdBank;
-        k.watch(room.focus);
+        k.watch(room.drain.waiting(room.toys[0].s) ?? room.focus);
         if (time > this.nextBirdLook && room.idle > 1.5 && k.position.distanceTo(c.position) < 4) {
           k.mind.perform('nibble');
           this.nextBirdLook = time + 8;
@@ -384,6 +430,12 @@ export class LittleBoatsChapter implements Chapter {
     s.target.copy(c.position).lerp(toy, ending ? 0.5 : (portrait ? 0.4 : 0.62) * approach);
     s.target.y = Math.max(c.position.y, toy.y) + 1.05;
     s.target.z -= ending ? 0 : 2;
+    // The bath or plug holding the fleet is part of the path: lean the shot to keep it in, gently, both ways.
+    const waiting = this.beat === 'sailing' ? room.drain.waiting(room.toys[0].s) : null;
+    if (waiting) this.gateAt.copy(waiting);
+    this.gateLean += ((waiting ? 1 : 0) - this.gateLean) * (1 - Math.exp(-this.dt * 0.7));
+    this.gateAt.y = s.target.y;
+    s.target.lerp(this.gateAt, this.gateLean * (portrait ? 0.42 : 0.18));
     const handling = ['notice', 'pickup', 'holdToy', 'carryToy', 'launch'].includes(this.beat);
     s.distance = ending ? 25 : handling ? 13 : 23;
     s.height = ending ? 8 : handling ? 6 : 9;

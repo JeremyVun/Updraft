@@ -154,6 +154,12 @@ export class Journey {
     } else if (choice === 'washing') {
       this.land(LINES_LANDING.x, LINES_LANDING.y + 2, LINES_LANDING.x, LINES_LANDING.y - 4);
       this.begin('lines');
+    } else if (choice === 'door' || choice === 'shore') {
+      this.land(LINES_LANDING.x, LINES_LANDING.y + 2, LINES_LANDING.x, LINES_LANDING.y - 4);
+      this.begin('lines');
+      const lines = this.chapter as LinesChapter;
+      if (choice === 'door') lines.skipToDoor();
+      else lines.restoreCheckpoint('family', [0, 1]);
     } else if (choice === 'boats') {
       this.land(BOATS_LANDING.x, BOATS_LANDING.z, BOATS_LANDING.x - 1, BOATS_LANDING.z - 4);
       this.cast.cygnet.rideIn('satchel');

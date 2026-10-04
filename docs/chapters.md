@@ -96,8 +96,9 @@ holds leaving the cove, the island receding, the farewell and the whale.
 ## The island of lines
 
 `story/lines.ts`, `world/lines.ts` (washing and cloth), `world/lines-layout.ts`, `world/lines-passage.ts` (the
-curtains), `world/doorway.ts` and `world/door-shore.ts` (the door and the shore through it), `world/kite.ts`,
-`world/pinwheels.ts`. `?chapter=washing`.
+curtains), `world/doorway.ts` and `world/door-shore.ts` (the door and the shore through it), `world/shore-pulley.ts`
+(the pinwheel and pulley line on that shore), `world/kite.ts`, `world/pinwheels.ts`. `?chapter=washing`; `?chapter=door`
+starts at the family's line, `?chapter=shore` just through the door.
 
 The first impossible fragment of home: somebody's washing with nobody there, and a child lost in it. Jeremy:
 **overwhelmed, not vast**. Density is the lever, not area: a low whaleback (`tuning.world.linesDome`) packed with
@@ -131,10 +132,23 @@ chosen once the sheet has been down `passAfter`), and the child follows.
 The last sheet opens on a clearing: one low line with a blue and a red adult garment and the small yellow jumper
 between them, and the red door. The released breeze brings the sleeves together (blue
 begins, red follows, yellow answers) and the door opens once they have nearly met. Through it is a separate shore
-(`DOOR_SHORE`), drawn inside the opening, where the kite and the boat wait on open grass. The child and the bird
-pass through, the camera follows, the washing is gone, and the child walks straight to the boat with the paper still
-in hand (no throw), gathers the bird up and lets it climb into the satchel to board: the first time it rides there,
-and the bag's flap is thrown open for the rest of the game. Checkpoints follow the first and second curtains and the
+(`DOOR_SHORE`), drawn inside the opening. The child and the bird pass through, the camera follows and drifts round
+to the boat, and the washing is gone.
+
+The boat is not on the grass: it is moored out on the water, tied by its painter to a washing-line pulley (prototype,
+branch `proto-lines-shore`). The loop of line runs from a wheel on a post on the bank out to a wheel on a piling
+beside the boat, with spare pegs riding it, and a big two-tone pinwheel sits on the bank wheel's axle. The child
+walks down to the water's edge below the post with the bird beside her and waits, watching the boat; while nothing
+moves she looks out at it, reaches toward it and looks up at the pinwheel. The view holds still on the whole stage:
+her, the pinwheel, the line and the boat. Only a sweep across the pinwheel on screen spins it (air spilling from
+sweeps nearby turns it a little; the breeze only rocks it); the wheel turns with it, the line runs in, one way only,
+and the boat follows its painter, surging when the painter tightens and gliding on when it slackens, slowed by the
+water and stopped by the sand right beside her. Nothing runs back out, so any number of sweeps over any time add up.
+After a few idle seconds a sweep is drawn across the pinwheel (`ShorePulleyRig`, never wind). Once the boat is in
+she gives a small cheer, walks to it with the paper still in hand (no throw), lets go of the painter, gathers the
+bird up and lets it climb into the satchel to board: the first time it rides there, and the bag's flap is thrown open
+for the rest of the game. The departure kite is tied off on the piling. On a phone the view at the bank looks out
+along the line, so the stage runs into the distance rather than across a narrow frame. Checkpoints follow the first and second curtains and the
 threshold.
 
 Rulings:
@@ -145,25 +159,29 @@ Rulings:
 - A sheet pegged by its top edge never stays up without something holding it: no sheet curled, streaming or
   flapping in mid air once the player's air is gone. Each passage opens a different physical way (Jeremy:
   "why not add variation and have both? We have three checkpoints").
-- The door is the only way onward; beyond it only open grass, the kite and the boat.
+- The door is the only way onward. Beyond it, open grass, the kite, the boat and (prototype) the pinwheel's pulley line
+  and nothing else; the pulley knowingly relaxes this and the rule below that pinwheels stay with the washing.
 - Lines may cross each other but never run near-parallel close together (`lineField` rejects them).
 
 Rules: rich blue, warm red and the child's yellow belong only to the family; the rest of the laundry is pale linen,
 the passage sheets share a red sewn hem, and the pinwheels stay outside the clearing. Daylight stays over the whole
 island; pinwheels belong to this island only.
 
-Knobs: `tuning.linesPassage`, `tuning.washing`, `tuning.family`, `tuning.linesToys`. Checks: `tools/lines-check.mjs`,
-`lines-view-check.mjs`.
+Knobs: `tuning.linesPassage`, `tuning.washing`, `tuning.family`, `tuning.linesToys`, `tuning.shorePulley`. Checks:
+`tools/lines-check.mjs`, `lines-view-check.mjs` (both wind the boat in with sweeps across the pinwheel; `lines-check idle`
+also proves waiting cannot).
 
 ## The little boats
 
-`story/little-boats.ts`, `world/little-boats.ts` (toys, sails, wakes, the plug), `world/little-boats-layout.ts`
-(the stream, shared by terrain, water, fleet and walkers), `world/little-boats-bath.ts`,
+`story/little-boats.ts`, `world/little-boats.ts` (toys, sails, wakes), `world/little-boats-drain.ts` (the shoal,
+the bath, the plug, the pour and the rush), `world/little-boats-layout.ts` (the stream and how high the bath has
+raised it, shared by terrain, water, fleet and walkers), `world/little-boats-bath.ts`,
 `world/little-boats-spray.ts`. `?chapter=boats`.
 
-Early, affectionate play, and the introduction to putting wind into a sail before the drowned village needs it.
-Three pools joined by narrow streams run down to the departure beach. An oversized bath plug hangs on a long chain
-from the haze, and an oversized enamel bathtub stands on the far bank (scenery only). Reeds stand in clumps along
+Early, affectionate play: the introduction to putting wind into a sail before the drowned village needs it, and the
+room that first teaches the updraft. Three pools joined by narrow streams run down to the departure beach. An
+oversized enamel bathtub stands on the far bank of the second pool, and an oversized bath plug sits in the stream
+mouth like a cork, its chain running up into the haze. Reeds stand in clumps along
 the pools' banks, rooted into the shallows and swaying with the grass (`tuning.littleBoats.reeds`, `REEDS_GLSL` in
 `world/grass.ts`): mostly on the far bank, only short low stretches on the near one, and never by the toy, on the
 child's walk, where the cygnet hops in and out (`BOATS_POOLS`) or in the narrow runs where toys pass close to the
@@ -176,9 +194,22 @@ onto the water. The
 player fills its sail; then every toy answers the wind near it. Seven toys sail the stream; the child follows the
 leading toy along the bank, hurrying while it sails away from her; the cygnet swims three sheltered stretches
 beside the toys (quick kicks and glides, wing flicks, spray: `swimPlay`) with dry-bank pauses, and the fleet waits
-for the child (never leashed to the swimming bird). Round the final bend their own boat waits among the toys (the reveal), with the departure
-kite. Once the leading toy reaches the stream mouth an outgoing current carries the fleet out and round to the
-right into the sea, where the toys sail on until out of view; three of them are met again on the open sea. The paper stays on the backpack throughout.
+for the child (never leashed to the swimming bird).
+
+**The way out to sea** is two steps of bathtime. Where the second pool narrows, the toys run aground on a line of
+rocks across the run (the shoal, `barS`) and bunch against it, bows lifted. A gust of the island's own crosses the
+bath toward the stream with a few wind lines and rocks it on its feet without spilling, after `nudgeFirst` s and
+then every `nudgeEvery` s until the player pushes it, showing that it can go over and which way. A push across the
+bath toward the stream tips it (a push the other way rocks it back); over the rim it pours a waterfall into the
+pool, and once `pourNeeded` of it is in the pools have risen `riseHeight`, the rocks go under and a short surge
+carries the fleet over. The fleet then waits against the plug. Gusts only rock it; circles drawn over it stand an
+updraft on it (`updraftTarget`, the spiral `coax` after the usual wait) that lifts it in tugs, bubbles streaming
+round its rim, keeping whatever it has worked loose, until it pops free and the chain hauls it up. A whirl opens
+where it sat and the risen pools rush out of the mouth, carrying the whole fleet out and round to the right into the
+sea, where the toys sail on until out of view. The child and the
+cygnet keep glancing at whatever is holding them, and the shot leans toward it while the fleet waits. Round the final
+bend their own boat waits among the toys (the reveal); the departure kite rises once the plug is out. The paper
+stays on the backpack throughout.
 
 How the toys move: a filled sail picks the hull up (`drive`) and still water takes speed away slowly (`drag`), so
 a toy glides on after a stroke. Each toy has its own `pace`; the child's orange toy is quickest and sails the
@@ -190,14 +221,21 @@ Rulings: the toys must move easily and glide: one relaxed stroke should carry a 
 top speed). The orange toy must not lag the fleet. The boats are not held back for the swimming cygnet; instead a
 cygnet fallen behind the child hurries, its full walk on the dry banks and a faster swim in the pools
 (`tuning.littleBoats.catchUp`, `swimCatchUp`), so it stays in the picture (Jeremy, 2026-09-29). The fleet
-leaves the stream mouth for the open sea.
+leaves the stream mouth for the open sea. Getting it there is a puzzle about how to help the little boats out onto
+the open sea, with the giant plug and bath (2026-10-04): the island's gust only wobbles the bath and never spills
+it, because a bath that tips and pours by itself makes no sense to a player; the plug needs an updraft and comes out
+"very slightly easier" than first built.
 
-Rules: no race, score, text, direction test or penalty, and time alone never completes it. Keep the toy, the
+Rules: no race, score, text or penalty, and time alone never completes it: only the player's push pours the bath and
+only their updraft lifts the plug. The sails take wind from any direction; the bath is the one thing that cares,
+because it tips the way it is pushed, and its hint is drawn that way. Keep the toy, the
 travellers and the next stretch of water in frame together, in landscape and portrait. The stream is the same water
 as the sea and merges into it.
 
-Knobs: `tuning.littleBoats`. Checks: `tools/little-boats-logic-check.mjs`, `little-boats-check.mjs` (`TOUCH=1`),
-`ONLY=boats node tools/progress-check.mjs`.
+Knobs: `tuning.littleBoats` (the way out from `barS` to `drainFor`, the island's gust `nudge*`). Checks:
+`tools/little-boats-logic-check.mjs`, `little-boats-check.mjs` (`TOUCH=1`), `ONLY=boats node tools/progress-check.mjs`.
+From a `play.mjs` eval step, `__game.story.current.skipTo(56)` starts just short of the shoal and `skipTo(86)`
+before the plug.
 
 ## The meadow and the piano
 
@@ -437,39 +475,25 @@ and `morning`.
 
 ## The open sea
 
-`toMirror`: `story/crossing.ts` with `dolphins` and `swimAt`, `fx/sealife/dolphin.ts`, `fx/sealife/whale.ts`,
-`fx/sealife/toys.ts`.
+`toMirror`: `story/crossing.ts` with `dolphins` and `swimAt`, `fx/sealife/dolphin.ts`, `fx/sealife/whale.ts`.
 `?chapter=sea`.
 
 The exhale after the worst of the journey: the one crossing that takes its time, and nothing is asked of the
 player but to sail. The boat leaves in the last of the night and the sleeping island's palette lifts astern. The
 pod rises round the boat in staggered groups and rides the bow; the featured leap runs up alongside and turns out
 so it is seen side-on, at first light; a whale surfaces far ahead. The boat settles into a pace that fits the pod's
-play: a boat running ahead of it is eased back, never below `leastSpeed` until the pod's farewell.
-
-Three of the little boats' toys (the child's orange one, the teal and the yellow) are already out there when the
-passage leaves, unseen in the night (`ToyFleet.sail`, placed from the route ahead by `seaToys.meetAt`/`meetIn`):
-a loose flotilla on a course of its own that crosses the route well ahead and runs on out to the swimming side,
-at a toy's pace, slower than the boat. Nothing about the boat changes what they do; their sails are the wind's,
-drawing in the breeze, heeling, luffing and driven harder by the player's gusts. They come out of the dark as the
-light comes (far off in the night they are unlit), the boat comes up on them, and as the nearest comes close
-after the leap, the cygnet notices: it watches them, grows restless, climbs onto the side and makes up its mind,
-and goes in when they are near. It swims out to the toy nearest it, to and fro along its near side among the
-others (`swimPlay`, as in their own room), never across a hull's bow and never further out than `seaToys.reach`,
-then turns back as they fall astern and paddles hard for the boat, which eases (`seaPassage.swimSpeed`, never a
-crawl) from the moment the toys are near until it is lifted back in to dry. The toys sail on their own way, out
-of the frame astern, and are gone once nobody could see them. While it swims the lens opens out beside the boat,
-low and close, looking across the cygnet and the toys to the child. A dolphin comes in and nudges the planking; then the pod dives away ahead before the mirror's still water develops.
+play: a boat running ahead of it is eased back, never below `leastSpeed` until the pod's farewell. Then the cygnet's
+brave swim: it grows restless, climbs onto the side, makes
+up its mind, goes in and swims in the wave along the hull while the boat sails on, and is lifted back in to dry. A
+dolphin comes in and nudges the planking; then the pod dives away ahead before the mirror's still water develops.
 Distant land dissolves into the sky until the pod has gone (`Chapter.openSea`). The paper stays stowed.
 
 Rulings: the passage takes at most 100 s. Dolphins are big, never swim in the air, and never turn faster than a
-body allows. The boat never crawls for the swim. The toys are a discovery, not a scripted event: they never steer
-for the boat, match its speed or keep station by it. Jeremy (2026-10-03): "the little boats should be doing their
-own thing and we simply "intercept" or "come across" them briefly".
+body allows. The boat never crawls for the swim.
 
 Rules: the pod follows its own stations rather than being swung with the boat.
 
-Knobs: `tuning.seaPassage`, `tuning.seaToys`, `tuning.dolphins`. Checks: `tools/sea-check.mjs`, `sea-logic-check.mjs`,
+Knobs: `tuning.seaPassage`, `tuning.dolphins`. Checks: `tools/sea-check.mjs`, `sea-logic-check.mjs`,
 `CROSSING=toMirror node tools/journey-pacing-check.mjs`.
 
 ## The sky mirror
@@ -516,7 +540,10 @@ holds the returned stars and the current destination.
 jetty, with a low seaward camera arc toward the lantern. The whole home landscape shares one haze depth, so the
 hillside emerges together, clearing between 150 and 45 m from the berth and over the first stretch of the jetty
 walk (`tuning.homeApproach`). The home jetty is never seen before this crossing. The boat moors alongside it, the
-one arrival in the game with somewhere built for it; the child steps up onto the boards and climbs the hill. A lone
+one arrival in the game with somewhere built for it; the child steps up onto the boards and climbs the hill. Her own
+orange toy from the little boats, the one she set sailing out to sea, lies on its side on the sand just above the wash
+beside the shore end of the jetty (`world/home-toy.ts`, `tuning.homeToy`), turned so the jetty view shows its hull and
+fallen sail: she walks off the boards right past it. Nothing is made of it. A lone
 tree, the still island's tree again at two-thirds size, stands on the slope above the beach to the west of the jetty
 (`HOME_TREE`): in the approach it breaks the long slope right of the sun, and it is out of frame for the climb,
 the summit, the drawing and the pan to the moon.
@@ -559,6 +586,8 @@ Rulings:
   shoulders. The camera stays close behind her shoulder; swinging it out to the side makes the scene feel unnatural.
 - The cottage faces the approach with a slight turn, echoing the drawing without looking arranged for it.
 - The camera stays at the crest for the goodbye: no following, dolly or crane.
+- The little boats' toys are not met at sea; the one callback is her own toy washed up beside the home jetty, still,
+  with no timing or camera work (Jeremy, 2026-10-04).
 - No figure in the doorway. Children do not light fireplaces: the smoke starts after nightfall.
 - No bells at the summit: no phrase when the family arrives, no reward bells at the updraft, none as they fly away.
 - The closing screen is the one line and Play again: no border on the button, no credits roll.

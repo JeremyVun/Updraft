@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { MIRROR_ROOM } from './journey-rooms';
 import { MIRROR_LAYOUT_GLSL, SKY_MIRROR } from './sky-mirror-layout';
 import { MIRROR_RIPPLES_GLSL, mirrorUniforms } from './sky-mirror';
-import { LITTLE_BOATS, LITTLE_BOATS_GLSL } from './little-boats-layout';
+import { LITTLE_BOATS, LITTLE_BOATS_GLSL, boatsTide } from './little-boats-layout';
 import { params } from '../params';
 import { CLOUD_DECK, LAND_SKIP, register, select, type Choice } from '../gl/variants';
 import type { SeaEffects } from '../gl/quality';
@@ -23,7 +23,7 @@ import { WATERLINE_GLSL, outsideHull, waterlineUniforms } from '../traveller/boa
 /** Vertex spacing of the sea near the camera, and how far that even spacing reaches before the mesh opens out. */
 const STEP = 1.9;
 const EVEN = 110;
-const REACH = 4600;
+export const REACH = 4600;
 
 /**
  * A grid centred on the camera, evenly spaced where the swell is real geometry and opening out geometrically
@@ -236,13 +236,15 @@ float smithVis(float nv, float nl, float a2) {
 vec3 glassColour(vec3 V, vec2 xz) {
   vec2 stepSlope;
   vec2 ringSlope = mirrorSlope(xz, stepSlope);
-  vec3 mirrorNormal = normalize(vec3(-ringSlope.x, 1.0, -ringSlope.y));
+  // Footstep rings show mostly as light along their crests; they bend the reflection only a little.
+  vec2 bend = ringSlope - stepSlope * ${glsl(1 - tuning.skyMirror.stepBend)};
+  vec3 mirrorNormal = normalize(vec3(-bend.x, 1.0, -bend.y));
   vec3 ray = reflect(-V, mirrorNormal);
   vec4 projected = uMirrorMatrix * vec4(vWorld, 1.0);
-  vec2 mirrorUv = projected.xy / projected.w + ringSlope * 0.12;
+  vec2 mirrorUv = projected.xy / projected.w + bend * 0.12;
   vec2 border = min(mirrorUv, 1.0 - mirrorUv);
   float on = projected.w > 0.0 ? uMirrorOn * smoothstep(0.0, 0.025, min(border.x, border.y)) : 0.0;
-  vec3 reflectedScene = textureLod(uMirror, clamp(mirrorUv, 0.0, 1.0), min(3.0, length(ringSlope) * 24.0)).rgb;
+  vec3 reflectedScene = textureLod(uMirror, clamp(mirrorUv, 0.0, 1.0), min(3.0, length(bend) * 24.0)).rgb;
   vec3 reflected = reflectedScene;
   if (on < 1.0) reflected = mix(skyRadiance(normalize(vec3(ray.x, abs(ray.y), ray.z))), reflectedScene, on);
   // A trace of cool water keeps the horizon legible without hiding the doubled clouds.
@@ -305,8 +307,10 @@ void main() {
   glass = max(glass, uSkyMirrorAppearance * onFlat * smoothstep(${glsl(tuning.skyMirror.horizonGlassFrom)}, ${glsl(tuning.skyMirror.horizonGlassTo)}, dist));
   // The full mirror replaces ordinary water, including its fog. Its transition
   // edge still evaluates both surfaces and blends them exactly as before.
+  vec3 glassCol = vec3(0.0);
+  if (glass > 0.001) glassCol = glassColour(V, xz);
   if (glass == 1.0) {
-    gl_FragColor = vec4(glassColour(V, xz), 1.0);
+    gl_FragColor = vec4(glassCol, 1.0);
     return;
   }
   // Fog per vertex is close enough until the grid opens into cells hundreds of metres wide near the horizon, where
@@ -494,7 +498,7 @@ void main() {
   col += harbourLight(vWorld) * (0.08 + 0.14 * F);
   col = mix(col, fog.rgb, fog.a);
   if (glass > 0.001) {
-    col = mix(col, glassColour(V, xz), glass);
+    col = mix(col, glassCol, glass);
   }
   gl_FragColor = vec4(col, 1.0);
 }`;
@@ -539,6 +543,7 @@ export class Water {
         ...swellUniforms,
         ...mirrorUniforms,
         ...waterlineUniforms,
+        ...boatsTide,
         uWaterWind: this.windWaves.uniform,
         uSkyMirrorAppearance: { value: 1 },
         uRipple: { value: rippleTexture() },

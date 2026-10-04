@@ -1,4 +1,4 @@
-// Drive the real game with pointer gestures in local Chrome (GPU) and capture frames for visual QA.
+// Drive the real game with pointer gestures in Chrome for Testing (GPU) and capture frames for visual QA.
 // Usage: node tools/play.mjs <out-prefix> '<json steps>'
 //   steps: [{"wait":ms} | {"shot":"name"} | {"move":[x,y]} | {"down":true} | {"up":true}
 //           | {"swipe":[[x1,y1],[x2,y2],...], "ms":600} | {"eval":"js"} | {"burst":"name","n":4,"every":120}]

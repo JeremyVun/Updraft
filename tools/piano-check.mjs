@@ -21,7 +21,7 @@ for (;;) {
 let browser,stopReview;
 const report={viewport,states:[],errors:[]};
 try {
-  browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true,
+  browser=await chromium.launch({channel:'chromium',headless:true,
     args:['--enable-gpu','--use-angle=metal','--ignore-gpu-blocklist','--autoplay-policy=no-user-gesture-required']});
   const context=await browser.newContext({viewport,hasTouch:portrait,
     ...(process.env.VIDEO==='1'?{recordVideo:{dir:prefix+'-video',size:viewport}}:{})});

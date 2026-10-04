@@ -247,7 +247,7 @@ void main() {
   gl_Position = projectionMatrix * viewMatrix * vec4(position, 1.0);
 }`;
 
-const PEG_VERT = /* glsl */ `
+export const PEG_VERT = /* glsl */ `
 out vec3 vWorld;
 out vec3 vNormal;
 void main() {
@@ -257,7 +257,7 @@ void main() {
   gl_Position = projectionMatrix * viewMatrix * w;
 }`;
 
-const WOOD_VERT = /* glsl */ `
+export const WOOD_VERT = /* glsl */ `
 out vec3 vWorld;
 out vec3 vNormal;
 void main() {
@@ -267,7 +267,7 @@ void main() {
   gl_Position = projectionMatrix * viewMatrix * w;
 }`;
 
-const WOOD_FRAG = /* glsl */ `
+export const WOOD_FRAG = /* glsl */ `
 ${ATMO_GLSL}
 in vec3 vWorld;
 in vec3 vNormal;
@@ -328,7 +328,7 @@ function poleGeometry(foot: THREE.Vector3, top: number): THREE.BufferGeometry {
 }
 
 /** A spring clothes peg standing on end, its two legs either side of the line, the spring a little above it. */
-function passagePegGeometry(): THREE.BufferGeometry {
+export function passagePegGeometry(): THREE.BufferGeometry {
   const l = PEG_LENGTH;
   const leg = (side: number) => new THREE.BoxGeometry(l * 0.16, l, l * 0.13).translate(0, -l * 0.2, side * l * 0.09);
   return mergeGeometries([leg(-1), leg(1), new THREE.BoxGeometry(l * 0.2, l * 0.16, l * 0.34).translate(0, l * 0.04, 0)]);
@@ -380,7 +380,7 @@ export function seaLines(): LineSpec[] {
   });
 }
 
-const PAINT_FRAG = /* glsl */ `
+export const PAINT_FRAG = /* glsl */ `
 ${ATMO_GLSL}
 uniform vec3 uPaint;
 in vec3 vWorld;
@@ -647,6 +647,7 @@ export class WashingLines {
   private pegMesh: THREE.InstancedMesh | null = null;
   private readonly pegMatrix = new THREE.Matrix4();
   private readonly pegScale = new THREE.Vector3(1, 1, 1);
+  private pegsDrawn: { p: THREE.Vector3; q: THREE.Quaternion }[] = [];
 
   /** The passage sheets are real cloth, with real pegs that come off. */
   private passages(curtains: readonly WashingCurtain[]): void {
@@ -680,6 +681,7 @@ export class WashingLines {
     this.pegMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     this.pegMesh.frustumCulled = false;
     this.group.add(this.pegMesh);
+    this.pegsDrawn = pegs.map(() => ({ p: new THREE.Vector3(NaN, NaN, NaN), q: new THREE.Quaternion() }));
     this.update();
   }
 
@@ -694,10 +696,18 @@ export class WashingLines {
     }
     if (!this.pegMesh) return;
     let i = 0;
+    let moved = false;
     for (const curtain of CURTAINS) for (const peg of curtain.pegs) {
-      this.pegMesh.setMatrixAt(i++, this.pegMatrix.compose(peg.p, peg.q, this.pegScale));
+      const drawn = this.pegsDrawn[i];
+      if (!drawn.p.equals(peg.p) || !drawn.q.equals(peg.q)) {
+        drawn.p.copy(peg.p);
+        drawn.q.copy(peg.q);
+        this.pegMesh.setMatrixAt(i, this.pegMatrix.compose(peg.p, peg.q, this.pegScale));
+        moved = true;
+      }
+      i++;
     }
-    this.pegMesh.instanceMatrix.needsUpdate = true;
+    if (moved) this.pegMesh.instanceMatrix.needsUpdate = true;
   }
 }
 

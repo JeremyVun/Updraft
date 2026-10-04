@@ -3,7 +3,7 @@ import { chromium } from 'playwright-core';
 
 export async function audioPage(base = process.env.BASE ?? 'http://127.0.0.1:5230/') {
   const browser = await chromium.launch({
-    executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+    channel: 'chromium',
     headless: true, args: ['--disable-gpu', '--autoplay-policy=no-user-gesture-required'],
   });
   try {

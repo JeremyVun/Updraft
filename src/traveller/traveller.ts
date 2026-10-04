@@ -189,6 +189,7 @@ export class Traveller {
   private readonly gaze = { yaw: 0, pitch: 0, w: 0 };
   private readonly straps = new Glide();
   private readonly lap = new Glide();
+  private readonly thighs = new Glide();
   private onGround = 1;
   /** How far the held paper lies in the lap instead of standing in the mitten. */
   private lapPaper = 0;
@@ -1134,14 +1135,14 @@ export class Traveller {
     const onGround = this.sitting && !this.riding && armsFree === 1 && this.swing < 0.01 && !this.armsFull
       && this.reachWant[0] === 0 && this.reachWant[1] === 0;
     const lap = this.lap.step(onGround ? 1 : 0, 0.35, dt) * (1 - this.abedGlide.value);
-    /** Seated anywhere else, idle hands come to rest on the lap. */
+    /** Seated anywhere else, idle mittens come to rest on the thighs. */
     const rest = sit * armsFree * (1 - lap);
-    L.raise = lerp(L.raise, 0.55, rest);
-    R.raise = lerp(R.raise, 0.5, rest);
-    L.elbow = lerp(L.elbow, 0.85, rest);
-    R.elbow = lerp(R.elbow, 0.85, rest);
-    L.out = lerp(L.out, 0.22, rest);
-    R.out = lerp(R.out, 0.22, rest);
+    L.raise = lerp(L.raise, 0.35, rest);
+    R.raise = lerp(R.raise, 0.3, rest);
+    L.elbow = lerp(L.elbow, 0.5, rest);
+    R.elbow = lerp(R.elbow, 0.5, rest);
+    L.out = lerp(L.out, 0.15, rest);
+    R.out = lerp(R.out, 0.15, rest);
     lean += -0.06 * sit + 0.1 * kneel;
     bend += leanNow + this.stoop(dt);
 
@@ -1179,6 +1180,18 @@ export class Traveller {
       bend += 0.12 * lap;
       headDown += 0.12 * lap;
       if (this.gaze.w === 0 && !this.lookAt) this.gazeAt(0.1, 0.32, 0.9 * this.lapPaper);
+    }
+    const thighs = this.thighs.step(this.armsFull || this.swing > 0.01 ? 0 : 1, 0.35, dt) * rest;
+    if (thighs > 0.001) {
+      for (const hand of [0, 1] as const) {
+        const g = this.grips[hand];
+        if (g.w > 0) continue;
+        g.w = thighs * (hand === 0 ? 1 - carry : 1);
+        g.world = false;
+        g.at.set(0.16, 0.31, 0.28);
+        g.elbow.set(0.5, -1, -0.3);
+      }
+      bend += 0.06 * thighs;
     }
     /** Standing a while, whatever hand is free holds a strap of the bag at their chest. */
     const handsFree = !a && !this.sitting && this.presenting < 0.01 && this.swing < 0.01 && !this.armsFull

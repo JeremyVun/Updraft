@@ -2,7 +2,7 @@
 import { chromium } from 'playwright-core';
 import assert from 'node:assert/strict';
 import { withoutHotReload } from './lib/vite-client-stub.mjs';
-const browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true,args:['--disable-gpu']});
+const browser=await chromium.launch({channel:'chromium',headless:true,args:['--disable-gpu']});
 try {
   for(const [name,viewport] of [['desktop',{width:1280,height:800}],['phone',{width:390,height:844}]]) {
     const page=await browser.newPage({viewport,...(name==='phone'?{hasTouch:true,isMobile:true,deviceScaleFactor:2}:{})});

@@ -6,6 +6,8 @@ import type { BloomLevel } from '../gl/quality';
 import { DEPTH_BLUR, register, select, SUN_GLOW } from '../gl/variants';
 
 const BLOOM_STRENGTH = 0.28;
+const ACROSS = new THREE.Vector2(1, 0);
+const DOWN = new THREE.Vector2(0, 1);
 /** Bloom fades in and out over the second the grass takes to change with the level. */
 const BLOOM_FADE = 1;
 /** The angular radius of the sky's sun disc, halfway through its edge (`skyRadiance`). */
@@ -16,6 +18,18 @@ const SUN_RADIUS = Math.acos(0.99965);
  */
 const GLOW_SPREAD = [0.0129, 0.0366, 0.0782, 0.17];
 const GLOW_SHARE = [0.32, 0.86, 0.65, 0.57];
+
+/** One bad pixel (NaN or a huge highlight) in the scene would otherwise be smeared across the screen by bloom. */
+const CLEAN_GLSL = /* glsl */ `
+// An all-ones exponent is NaN or infinity; isnan and isinf would change how the compiler treats every float in the grade.
+vec4 clean(vec4 c, float highest) {
+  bool bad = any(equal(floatBitsToUint(c) & 0x7F800000u, uvec4(0x7F800000u)));
+  return bad ? vec4(0.0, 0.0, 0.0, 1.0) : min(c, vec4(highest));
+}
+`;
+const HIGHEST = 40;
+/** The scene with bloom added is cleaned already, and keeps what bloom adds over `HIGHEST`. */
+const UNCLAMPED = 65504;
 
 /**
  * The depth blur, as in the room paintings, made the way a lens makes it: blur grows with the difference in inverse
@@ -92,17 +106,12 @@ void main() {
   gl_FragColor = sum;
 }`;
 
-const QUAD_VERT = /* glsl */ `
-varying vec2 vUv;
-void main() {
-  vUv = uv;
-  gl_Position = vec4(position.xy, 0.0, 1.0);
-}`;
-
 /** With the glow, the sun's light is read once for the frame: what of its disc is seen and bright enough to bloom. */
 const GRADE_VERT = /* glsl */ `
 varying vec2 vUv;
 #if SUN_GLOW
+${CLEAN_GLSL}
+uniform float uHighest;
 uniform sampler2D tDiffuse;
 uniform vec2 uResolution;
 uniform vec4 uSun;
@@ -118,7 +127,7 @@ void main() {
     if (dot(o, o) > 1.0) continue;
     taps += 1.0;
     // Clamped to the frame's edge, as bloom's blur reads past it, so a sun half out of frame still glows.
-    vec3 c = textureLod(tDiffuse, clamp(uSun.xy + o * uSun.z / uResolution, 0.0, 1.0), 0.0).rgb;
+    vec3 c = clean(textureLod(tDiffuse, clamp(uSun.xy + o * uSun.z / uResolution, 0.0, 1.0), 0.0), uHighest).rgb;
     sum += c * smoothstep(1.1, 1.11, dot(c, vec3(0.2126, 0.7152, 0.0722)));
   }
   vSunLight = sum / taps * uSun.w;
@@ -126,7 +135,10 @@ void main() {
   gl_Position = vec4(position.xy, 0.0, 1.0);
 }`;
 
+/** Reads the scene, or the scene with bloom added, cleaning it as it reads it. */
 const GRADE_FRAG = /* glsl */ `
+${CLEAN_GLSL}
+uniform float uHighest;
 uniform sampler2D tDiffuse;
 uniform float uTime;
 #if DEPTH_BLUR
@@ -170,9 +182,9 @@ void main() {
   float r2 = dot(fromCentre, fromCentre);
   vec2 shift = fromCentre * r2 * 0.006;
   vec3 hdr;
-  hdr.r = texture2D(tDiffuse, vUv + shift).r;
-  hdr.g = texture2D(tDiffuse, vUv).g;
-  hdr.b = texture2D(tDiffuse, vUv - shift).b;
+  hdr.r = clean(texture2D(tDiffuse, vUv + shift), uHighest).r;
+  hdr.g = clean(texture2D(tDiffuse, vUv), uHighest).g;
+  hdr.b = clean(texture2D(tDiffuse, vUv - shift), uHighest).b;
 #if SUN_GLOW
   vec2 px = (vUv - uSun.xy) * uResolution;
   hdr += vSunLight * dot(uGlowShare, exp2(-dot(px, px) * uGlowFalloff));
@@ -213,14 +225,26 @@ void main() {
   gl_FragColor = vec4(col, 1.0);
 }`;
 
-/** Resolves the scene and clamps it: one bad pixel (NaN or a huge highlight) would otherwise be smeared across the screen by bloom. */
-const RESOLVE_FRAG = /* glsl */ `
-uniform sampler2D tDiffuse;
+const BRIGHT_READ = 'vec4 texel = texture2D( tDiffuse, vUv );';
+
+/**
+ * The scene cleaned with bloom added, texel for texel, into a target the grade reads. Bloom is not added in the grade:
+ * the target's rounding of the sum is part of the picture (R11F_G11F_B10F keeps five or six bits of each channel).
+ */
+const BLOOMED_FRAG = /* glsl */ `
+${CLEAN_GLSL}
+uniform sampler2D tScene;
+uniform sampler2D tBloom;
 varying vec2 vUv;
 void main() {
-  vec4 c = texture2D(tDiffuse, vUv);
-  bool bad = any(isnan(c)) || any(isinf(c));
-  gl_FragColor = bad ? vec4(0.0, 0.0, 0.0, 1.0) : min(c, vec4(40.0));
+  gl_FragColor = clean(texelFetch(tScene, ivec2(gl_FragCoord.xy), 0), ${HIGHEST.toFixed(1)}) + texture2D(tBloom, vUv);
+}`;
+
+const QUAD_VERT = /* glsl */ `
+varying vec2 vUv;
+void main() {
+  vUv = uv;
+  gl_Position = vec4(position.xy, 0.0, 1.0);
 }`;
 
 function quadMaterial(fragmentShader: string, uniforms: Record<string, THREE.IUniform>, vertexShader = QUAD_VERT): THREE.ShaderMaterial {
@@ -228,19 +252,21 @@ function quadMaterial(fragmentShader: string, uniforms: Record<string, THREE.IUn
 }
 
 /**
- * The frame's image chain: the scene into one multisampled float target, one resolve-and-clamp pass into a plain
- * target, bloom added there, and the grade straight to the screen. Only the scene target is multisampled. Nothing in
- * the chain reads alpha, so its targets drop it (and negative colour) where the device allows. While bloom is on, the
- * finished frame is also blurred at a quarter of its size for the grade's depth blur, which reads the scene's depth.
+ * The frame's image chain: the scene into one multisampled float target; while bloom is drawn, bloom from its resolve
+ * and one pass adding it to the scene into a plain target; then the grade straight to the screen, cleaning what it
+ * reads. Only the scene target is multisampled. Nothing in the chain reads alpha, so its targets drop it (and negative
+ * colour) where the device allows. While bloom is on, the scene with bloom is also blurred at a quarter of its size
+ * for the grade's depth blur, which reads the scene's depth.
  * While bloom is off the grade paints a glow round the sun in its place, so the sun is not a hard white disc.
  */
 export class Post {
   /** Where the scene is drawn; also the target its programs are compiled against. */
   readonly sceneTarget: THREE.WebGLRenderTarget;
-  private readonly clean: THREE.WebGLRenderTarget;
+  /** The scene with bloom added, while bloom is drawn. */
+  private readonly bloomed: THREE.WebGLRenderTarget;
   private readonly bloom: UnrealBloomPass;
   private readonly quad = new FullScreenQuad();
-  private readonly resolveMat: THREE.ShaderMaterial;
+  private readonly bloomedMat: THREE.ShaderMaterial;
   private readonly gradeMat: THREE.ShaderMaterial;
   private readonly blurDownMat: THREE.ShaderMaterial;
   private readonly blurPassMat: THREE.ShaderMaterial;
@@ -283,18 +309,22 @@ export class Post {
     const quarter = (n: number) => Math.max(1, Math.round(n / 4));
     this.blurA = new THREE.WebGLRenderTarget(quarter(size.x), quarter(size.y), { type: THREE.HalfFloatType, depthBuffer: false });
     this.blurB = this.blurA.clone();
-    this.clean = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, depthBuffer: false });
     this.bloom = new UnrealBloomPass(new THREE.Vector2(size.x, size.y), BLOOM_STRENGTH, 0.45, 1.1);
+    this.bloomed = new THREE.WebGLRenderTarget(size.x, size.y, { type: THREE.HalfFloatType, depthBuffer: false });
     const b = this.bloom;
     if (compact) {
-      for (const target of [this.sceneTarget, this.clean, b.renderTargetBright, ...b.renderTargetsHorizontal, ...b.renderTargetsVertical]) {
+      for (const target of [this.sceneTarget, this.bloomed, b.renderTargetBright, ...b.renderTargetsHorizontal, ...b.renderTargetsVertical]) {
         target.texture.format = THREE.RGBFormat;
         target.texture.internalFormat = 'R11F_G11F_B10F';
       }
     }
-    this.resolveMat = quadMaterial(RESOLVE_FRAG, { tDiffuse: { value: this.sceneTarget.texture } });
+    const bright = b.materialHighPassFilter;
+    if (!bright.fragmentShader.includes(BRIGHT_READ)) throw new Error('Bloom\'s bright pass no longer reads its input as expected');
+    bright.fragmentShader = CLEAN_GLSL + bright.fragmentShader.replace(BRIGHT_READ, `vec4 texel = clean( texture2D( tDiffuse, vUv ), ${HIGHEST.toFixed(1)} );`);
+    this.bloomedMat = quadMaterial(BLOOMED_FRAG, { tScene: { value: null }, tBloom: { value: b.renderTargetsHorizontal[0].texture } });
     this.gradeMat = quadMaterial(GRADE_FRAG, {
-      tDiffuse: { value: this.clean.texture },
+      tDiffuse: { value: this.sceneTarget.texture },
+      uHighest: { value: HIGHEST },
       uTime: { value: 0 },
       uExposure: { value: 1.0 },
       uSaturation: { value: 1.0 },
@@ -310,7 +340,7 @@ export class Post {
     };
     Object.assign(this.gradeMat.uniforms, depthUniforms, { tBlur: { value: this.blurA.texture }, uDepthBlur: { value: 1 } });
     register(this.gradeMat, SUN_GLOW, DEPTH_BLUR);
-    this.blurDownMat = quadMaterial(BLUR_DOWN_FRAG, { ...depthUniforms, tDiffuse: { value: this.clean.texture }, uTexel: { value: new THREE.Vector2(1 / size.x, 1 / size.y) } });
+    this.blurDownMat = quadMaterial(BLUR_DOWN_FRAG, { ...depthUniforms, tDiffuse: { value: this.bloomed.texture }, uTexel: { value: new THREE.Vector2(1 / size.x, 1 / size.y) } });
     this.blurPassMat = quadMaterial(BLUR_PASS_FRAG, { tDiffuse: { value: this.blurA.texture }, uStep: { value: new THREE.Vector2() } });
   }
 
@@ -323,7 +353,7 @@ export class Post {
   compileJobs(): CompileJob[] {
     const b = this.bloom;
     return [
-      passJob([this.resolveMat, b.materialHighPassFilter, ...b.separableBlurMaterials, b.compositeMaterial, b.blendMaterial], this.clean),
+      passJob([b.materialHighPassFilter, ...b.separableBlurMaterials, b.compositeMaterial, this.bloomedMat], this.bloomed),
       passJob([this.blurDownMat, this.blurPassMat], this.blurA),
       passJob([this.gradeMat], null),
     ];
@@ -345,7 +375,7 @@ export class Post {
     const h = Math.round(height * pixelRatio);
     this.size.set(w, h);
     this.sceneTarget.setSize(w, h);
-    this.clean.setSize(w, h);
+    this.bloomed.setSize(w, h);
     this.sizeBloom();
     this.gradeMat.uniforms.uResolution.value.set(w, h);
     this.blurDownMat.uniforms.uTexel.value.set(1 / w, 1 / h);
@@ -380,7 +410,7 @@ export class Post {
 
   private releaseBloom(): void {
     const b = this.bloom;
-    for (const target of [b.renderTargetBright, ...b.renderTargetsHorizontal, ...b.renderTargetsVertical]) target.dispose();
+    for (const target of [this.bloomed, b.renderTargetBright, ...b.renderTargetsHorizontal, ...b.renderTargetsVertical]) target.dispose();
     this.bloomReleased = true;
   }
 
@@ -407,6 +437,42 @@ export class Post {
     }
   }
 
+  /** Bloom's bright pass, blur and composite from the scene, added to the scene in `bloomed`. */
+  private renderBloom(): void {
+    const r = this.renderer;
+    const b = this.bloom;
+    const draw = (material: THREE.Material, target: THREE.WebGLRenderTarget): void => {
+      this.quad.material = material;
+      r.setRenderTarget(target);
+      this.quad.render(r);
+    };
+    const bright = b.materialHighPassFilter.uniforms;
+    bright.tDiffuse.value = this.sceneTarget.texture;
+    bright.luminosityThreshold.value = b.threshold;
+    draw(b.materialHighPassFilter, b.renderTargetBright);
+    let input = b.renderTargetBright;
+    for (let i = 0; i < b.nMips; i++) {
+      const blur = b.separableBlurMaterials[i];
+      blur.uniforms.colorTexture.value = input.texture;
+      blur.uniforms.direction.value = ACROSS;
+      draw(blur, b.renderTargetsHorizontal[i]);
+      blur.uniforms.colorTexture.value = b.renderTargetsHorizontal[i].texture;
+      blur.uniforms.direction.value = DOWN;
+      draw(blur, b.renderTargetsVertical[i]);
+      input = b.renderTargetsVertical[i];
+    }
+    const composite = b.compositeMaterial.uniforms;
+    composite.bloomStrength.value = b.strength;
+    composite.bloomRadius.value = b.radius;
+    composite.bloomTintColors.value = b.bloomTintColors;
+    draw(b.compositeMaterial, b.renderTargetsHorizontal[0]);
+    this.bloomedMat.uniforms.tScene.value = this.sceneTarget.texture;
+    draw(this.bloomedMat, this.bloomed);
+    this.gradeMat.uniforms.tDiffuse.value = this.bloomed.texture;
+    this.gradeMat.uniforms.uHighest.value = UNCLAMPED;
+  }
+
+  /** Blurs `bloomed`, which is always drawn first: the depth blur is never shown with less bloom than itself. */
   private blurForDepth(): void {
     const r = this.renderer;
     const camera = this.camera as THREE.PerspectiveCamera;
@@ -426,7 +492,10 @@ export class Post {
     }
   }
 
-  /** `warm` draws the bloom and the sun's glow even while they are off, so their programs are built before Begin whatever the level. */
+  /**
+   * `warm` draws the bloom, the depth blur, the sun's glow and every variant of the grade even while they are off, so
+   * their programs are built before Begin whatever the level: Safari builds a program only when it is first drawn.
+   */
   render(time: number, warm = false): void {
     const r = this.renderer;
     const dt = Math.min(Math.max(time - this.lastTime, 0), 0.1) || 0;
@@ -438,13 +507,12 @@ export class Post {
     r.setRenderTarget(this.sceneTarget);
     r.render(this.scene, this.camera);
 
-    this.quad.material = this.resolveMat;
-    r.setRenderTarget(this.clean);
-    this.quad.render(r);
-
+    const u = this.gradeMat.uniforms;
+    u.tDiffuse.value = this.sceneTarget.texture;
+    u.uHighest.value = HIGHEST;
     if (this.bloomShown > 0 || warm) {
       this.bloom.strength = BLOOM_STRENGTH * this.bloomShown;
-      this.bloom.render(r, this.clean, this.clean, 0, false);
+      this.renderBloom();
       this.bloomReleased = false;
     }
     if (depthBlur > 0 || warm) {
@@ -460,15 +528,19 @@ export class Post {
 
     const glow = 1 - this.bloomShown;
     if (glow > 0 || warm) this.aimGlow(glow);
-    this.gradeMat.uniforms.uTime.value = time;
+    u.uTime.value = time;
     this.quad.material = this.gradeMat;
     r.setRenderTarget(null);
     const blur = depthBlur > 0 || warm;
     this.blurShown = this.holdBlur ? Math.max(0, this.blurShown - dt / BLUR_HOLD_FADE) : Math.min(1, this.blurShown + dt / BLUR_HOLD_FADE);
     this.gradeMat.uniforms.uDepthBlur.value = depthBlur * this.blurShown;
     if (warm) {
-      select(this.gradeMat, { SUN_GLOW: glow === 0, DEPTH_BLUR: blur });
-      this.quad.render(r);
+      for (const sunGlow of [false, true]) {
+        for (const blurred of [false, true]) {
+          select(this.gradeMat, { SUN_GLOW: sunGlow, DEPTH_BLUR: blurred });
+          this.quad.render(r);
+        }
+      }
     }
     select(this.gradeMat, { SUN_GLOW: glow > 0, DEPTH_BLUR: blur });
     this.quad.render(r);

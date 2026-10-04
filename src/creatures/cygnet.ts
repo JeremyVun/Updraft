@@ -1454,8 +1454,7 @@ export class Cygnet {
     const bobbing = Math.sin(this.time * 1.3 + 0.7) * 0.03 + Math.sin(this.time * 2.7) * 0.012;
     this.position.y = this.swimLevel + bobbing - 0.26 * Math.sin(this.dunk * Math.PI) * this.dunk;
     this.effort = ease(this.effort, Math.max(clamp((gap - 2.5) / 4, 0, 0.6), burst * 0.6), 3, dt);
-    // Little wing flicks and quick alternating kicks between calmer glides.
-    this.flap = ease(this.flap, Math.max(this.effort > 0.3 ? 0.5 : 0, burst * 0.8), 5, dt);
+    this.flap = ease(this.flap, 0, 5, dt);
     this.hurry = clamp(this.swimSpeed / 2.3, 0, 1);
     this.stride += dt * (2.5 + this.swimSpeed * 3.2 + burst * 6);
     this.position.y += burst * 0.025 * Math.sin(this.stride * 2);
@@ -1696,7 +1695,7 @@ export class Cygnet {
     const strokeWas = Math.floor(this.flapPhase / (Math.PI * 2));
     this.flapPhase += dt * (5 + this.glide * 3 + (st === 'following' ? this.hurry * 6 : 0));
     d.flapPhase = this.flapPhase;
-    const beating = Math.max(this.effort, this.flap * 0.7);
+    const beating = st === 'swimming' ? 0 : Math.max(this.effort, this.flap * 0.7);
     if (beating > 0.3 && Math.floor(this.flapPhase / (Math.PI * 2)) !== strokeWas) this.heard.push({ kind: 'flap', amount: beating });
     if (m.act !== this.actWas) {
       if (m.act === 'shake') this.heard.push({ kind: 'shake', amount: 1 });

@@ -184,6 +184,6 @@ export class WindLines {
         }
       }
     }
-    this.batch.update(this.lines);
+    this.batch.mesh.visible = this.batch.update(this.lines);
   }
 }

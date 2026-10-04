@@ -19,7 +19,7 @@ for (;;) {
 let browser;
 const errors = [], report = [];
 try {
-  browser = await chromium.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+  browser = await chromium.launch({ channel: 'chromium',
     headless: true, args: ['--enable-gpu', '--use-angle=metal', '--ignore-gpu-blocklist'] });
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
   page.on('pageerror', e => errors.push(e.message));
