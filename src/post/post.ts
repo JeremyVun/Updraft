@@ -23,17 +23,36 @@ const GLOW_SHARE = [0.32, 0.86, 0.65, 0.57];
  * as a miniature does, while a wide view stays clear. `aperture` turns dioptres into blur, which the distance's
  * reaches only up to `far`, and the sky's only up to `sky`.
  */
-const BLUR = { aperture: 12, far: 1.0, sky: 0.15 };
-/** How far each of the blur's two passes reaches, in quarter-size texels. */
-const BLUR_SPREAD = 3.4;
+const BLUR = { aperture: 8, far: 0.8, sky: 0.15 };
+/**
+ * The blur's taps, in quarter-size texels apart, and how many times its two passes run. Taps further apart than a
+ * texel and a half leave gaps that show as stepped copies of an edge, so a wider blur comes from running them again.
+ */
+const BLUR_SPREAD = 1.3;
+const BLUR_ROUNDS = 2;
+/** Seconds the blur takes to fade out and back in around a view whose depth is not the scene's (`holdBlur`). */
+const BLUR_HOLD_FADE = 0.4;
+/** How far a near object's blur spills over what is behind it, in full-size pixels at 1080 lines. */
+const NEAR_SPILL = 9;
 
 const BLUR_GLSL = /* glsl */ `
 uniform sampler2D tDepth;
 uniform vec2 uFocus;
 uniform vec2 uDepthRange;
+float inverseAt(float d) {
+  return 1.0 / uDepthRange.x - d * (1.0 / uDepthRange.x - 1.0 / uDepthRange.y);
+}
+float nearAt(vec2 uv) {
+  return clamp((inverseAt(texture2D(tDepth, uv).r) - 1.0 / uFocus.x) * ${BLUR.aperture.toFixed(3)}, 0.0, 1.0);
+}
+/** The most blur any near object close by spreads here: a near object's blur spills past its outline, as through a lens. */
+float spillAt(vec2 uv, vec2 resolution) {
+  vec2 reach = vec2(${NEAR_SPILL.toFixed(1)} / 1080.0) * vec2(resolution.y / resolution.x, 1.0);
+  return max(max(nearAt(uv + reach), nearAt(uv - reach)), max(nearAt(uv + vec2(reach.x, -reach.y)), nearAt(uv - vec2(reach.x, -reach.y))));
+}
 float blurAt(vec2 uv) {
   float d = texture2D(tDepth, uv).r;
-  float inverse = 1.0 / uDepthRange.x - d * (1.0 / uDepthRange.x - 1.0 / uDepthRange.y);
+  float inverse = inverseAt(d);
   float near = (inverse - 1.0 / uFocus.x) * ${BLUR.aperture.toFixed(3)};
   float far = (1.0 / uFocus.y - inverse) * ${BLUR.aperture.toFixed(3)};
   return clamp(max(near, min(far, d > 0.99999 ? ${BLUR.sky.toFixed(3)} : ${BLUR.far.toFixed(3)})), 0.0, 1.0);
@@ -50,9 +69,11 @@ varying vec2 vUv;
 ${BLUR_GLSL}
 void main() {
   vec4 sum = vec4(0.0);
+  // Beside a near object what lies behind it is mixed in too, so the object's own edge softens.
+  float spill = spillAt(vUv, 1.0 / uTexel);
   for (int i = 0; i < 4; i++) {
     vec2 uv = vUv + uTexel * vec2(i < 2 ? -1.0 : 1.0, mod(float(i), 2.0) < 1.0 ? -1.0 : 1.0);
-    float w = blurAt(uv);
+    float w = max(blurAt(uv), spill);
     sum += vec4(texture2D(tDiffuse, uv).rgb * w, w);
   }
   gl_FragColor = sum * 0.25;
@@ -158,7 +179,8 @@ void main() {
 #endif
 #if DEPTH_BLUR
   vec4 blurred = texture2D(tBlur, vUv);
-  hdr = mix(hdr, blurred.rgb / max(blurred.a, 1e-4), blurAt(vUv) * smoothstep(0.0, 0.02, blurred.a) * uDepthBlur);
+  float amount = max(blurAt(vUv), spillAt(vUv, uResolution) * 0.85);
+  hdr = mix(hdr, blurred.rgb / max(blurred.a, 1e-4), amount * smoothstep(0.0, 0.02, blurred.a) * uDepthBlur);
 #endif
   hdr *= uExposure;
 
@@ -226,6 +248,9 @@ export class Post {
   private readonly blurA: THREE.WebGLRenderTarget;
   private readonly blurB: THREE.WebGLRenderTarget;
   private readonly focus = new THREE.Vector2(10, 10);
+  /** Set while the depth in view is not the scene's own, as through the island of lines' door: the blur fades out. */
+  holdBlur = false;
+  private blurShown = 1;
   private readonly size = new THREE.Vector2();
   private bloomLevel: BloomLevel = 'full';
   /** How much of the bloom is drawn, easing toward 0 while it is off and 1 while it is on. */
@@ -375,11 +400,13 @@ export class Post {
     this.quad.render(r);
     const step = this.blurPassMat.uniforms.uStep.value as THREE.Vector2;
     this.quad.material = this.blurPassMat;
-    for (const [from, to, x, y] of [[this.blurA, this.blurB, 1, 0], [this.blurB, this.blurA, 0, 1]] as const) {
-      this.blurPassMat.uniforms.tDiffuse.value = from.texture;
-      step.set(x * BLUR_SPREAD / from.width, y * BLUR_SPREAD / from.height);
-      r.setRenderTarget(to);
-      this.quad.render(r);
+    for (let round = 0; round < BLUR_ROUNDS; round++) {
+      for (const [from, to, x, y] of [[this.blurA, this.blurB, 1, 0], [this.blurB, this.blurA, 0, 1]] as const) {
+        this.blurPassMat.uniforms.tDiffuse.value = from.texture;
+        step.set(x * BLUR_SPREAD / from.width, y * BLUR_SPREAD / from.height);
+        r.setRenderTarget(to);
+        this.quad.render(r);
+      }
     }
   }
 
@@ -411,7 +438,8 @@ export class Post {
     this.quad.material = this.gradeMat;
     r.setRenderTarget(null);
     const blur = this.bloomShown > 0 || warm;
-    this.gradeMat.uniforms.uDepthBlur.value = this.bloomShown;
+    this.blurShown = this.holdBlur ? Math.max(0, this.blurShown - dt / BLUR_HOLD_FADE) : Math.min(1, this.blurShown + dt / BLUR_HOLD_FADE);
+    this.gradeMat.uniforms.uDepthBlur.value = this.bloomShown * this.blurShown;
     if (warm) {
       select(this.gradeMat, { SUN_GLOW: glow === 0, DEPTH_BLUR: blur });
       this.quad.render(r);

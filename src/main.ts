@@ -1065,6 +1065,8 @@ function drawView(): void {
   let far = Math.max(her, bird);
   if (flock.active) far = Math.max(far, focusDistance(flock.head, 0));
   if (story.name === 'home') far = Math.max(far, focusDistance(cottage.doorstep, 2));
+  // The door's opening is a flat picture of the shore beyond, at the door's depth, not the shore's.
+  post.holdBlur = story.name === 'lines' && doorway.travelling;
   // Behind the lens she is not the subject, and nothing is blurred.
   if (her < 1) post.focusOn(0.5, 1e4);
   else post.focusOn(Math.min(her, bird), far);
