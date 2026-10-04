@@ -358,6 +358,9 @@ the deck is away.
 `STORM_BANK`: the sky's storm bank (one `fbm` per sky pixel in `skyRadiance`) is compiled out of the sky while
 `uStormCover` and the lightning are 0, its value replaced by 0 (two more sky programs). Branching round it instead
 changed a few sky pixels by 1/255; the define does not. Other materials that read `skyRadiance` keep the bank.
+Without the bank the sky also leaves out its clouds below and above their band, where they are exactly 0. Branching
+round the clouds' shading where none shows moved them by a rounding step (fast math regroups the two cloud lookups
+when both run), so it is worked out wherever the band is.
 
 `LAND_SKIP`: the sea returns unshaded where the ground stands a metre over it across the 3×3 pixels round it with no
 waterline inside, so no seen pixel shares its quad; it needs the terrain drawn over the sea with tiles following a
@@ -414,6 +417,11 @@ Rules:
 - Terrain computes fog first and skips surface shading only where fog opacity is exactly 1; fully reflective
   sky-mirror water skips ordinary sea shading. `node tools/render-cost-check.mjs <chapter>` compares these against
   full work in the same frozen GPU frame.
+- The terrain draws no leaf under the open sea: beyond every island's height patch the ground is `seaFloor`,
+  at least 5 m under the opaque sea, so a leaf 16 m clear of every patch and 100 m inside the sea's grid is not
+  drawn. This holds only while the sea is opaque and drawn wherever the camera, always above it, can see.
+- A dynamic buffer with nothing to upload skips its upload: WebGL2 reads an update range of length 0 as the whole
+  rest of the array.
 - The sea's fog is computed per vertex and interpolated (Jeremy could not tell it from per pixel); the fragment
   recomputes it only where the interpolated fog is nearly opaque, because near the horizon the grid's cells are so
   wide that a sliver short of opaque lets a glint line through.
