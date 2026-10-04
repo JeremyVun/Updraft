@@ -94,7 +94,18 @@ export class LittleBoatsChapter implements Chapter {
   }
   get windInvitation(): THREE.Vector3 | null {
     const r = this.cast.littleBoats;
-    return this.beat === 'sailing' && r.idle > tuning.littleBoats.inviteAfter ? r.invitation : null;
+    if (this.beat !== 'sailing') return null;
+    const waiting = r.drain.waiting(r.toys[0].s);
+    if (waiting) return r.drain.idle > tuning.littleBoats.inviteAfter ? waiting : null;
+    return r.idle > tuning.littleBoats.inviteAfter ? r.invitation : null;
+  }
+  get invitationRadius(): number {
+    const r = this.cast.littleBoats;
+    return r.drain.waiting(r.toys[0].s) ? r.drain.waitingRadius : 0;
+  }
+  /** QA: put the travellers and the fleet at course position `s` (the shoal is at 62, the plug at 97.5). */
+  skipTo(s: number): void {
+    this.restoreCheckpoint(s > 68 ? 'pool-2' : 'pool-1', [s]);
   }
   get checkpoint(): string | null {
     if (this.beat !== 'sailing') return null;
@@ -234,7 +245,9 @@ export class LittleBoatsChapter implements Chapter {
       c.stroll = 1 + tuning.littleBoats.childHurry * THREE.MathUtils.smoothstep(s - childS, 1.5, 4);
       this.bankAt(Math.max(3, targetS), this.bank);
       if (c.position.distanceTo(this.bank) > 0.75) c.walkTo(this.bank.x, this.bank.z, false, undefined, 0.3);
-      c.lookAt = room.focus;
+      // Held at the shoal or the plug, she keeps glancing at what is holding them.
+      const waiting = room.drain.waiting(room.toys[0].s);
+      c.lookAt = waiting && time % 5 < 2.6 ? waiting : room.focus;
       if (s > 32) {
         this.savedPool = 1;
         this.moveBoat();
@@ -244,7 +257,7 @@ export class LittleBoatsChapter implements Chapter {
         const birdS = L.startZ - k.position.z;
         this.bankAt(Math.max(3, Math.min(s + 0.5, birdS + 2)), this.birdBank, 0.7);
         if (k.position.distanceTo(this.birdBank) > 0.7) k.errand = this.birdBank;
-        k.watch(room.focus);
+        k.watch(room.drain.waiting(room.toys[0].s) ?? room.focus);
         if (time > this.nextBirdLook && room.idle > 1.5 && k.position.distanceTo(c.position) < 4) {
           k.mind.perform('nibble');
           this.nextBirdLook = time + 8;

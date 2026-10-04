@@ -47,10 +47,18 @@ const smooth = (a: number, b: number, v: number): number => {
   const t = Math.max(0, Math.min(1, (v - a) / (b - a)));
   return t * t * (3 - 2 * t);
 };
+/** How far the bath's water has raised the pools behind the plug (0..1 of `riseHeight`), shared with the water shader. */
+export const boatsTide = { uBoatsRise: { value: 0 } };
+/** A shoal across the run between the second and third pools: its sand lies just under the water, and stones break it. */
+export function boatsBar(s: number): number {
+  return tuning.littleBoats.barHeight * Math.exp(-(((s - tuning.littleBoats.barS) / 1.8) ** 2));
+}
 /** The sea rises into the sheltered stream. Both the renderer and floating toys use this surface. */
 export function boatsWaterBase(x: number, z: number): number {
   if (Math.abs(x - LITTLE_BOATS.x) > 65 || Math.abs(z - LITTLE_BOATS.z) > 85) return 0;
-  return boatsLevel(LITTLE_BOATS.startZ - z) * (1 - smooth(1.2, 1.65, boatsOut(x, z)));
+  const s = LITTLE_BOATS.startZ - z, k = tuning.littleBoats;
+  const held = boatsTide.uBoatsRise.value * k.riseHeight * (1 - smooth(k.plugS - 10, k.plugS - 2, s));
+  return (boatsLevel(s) + held) * (1 - smooth(1.2, 1.65, boatsOut(x, z)));
 }
 export function boatsRipple(x: number, z: number, time: number): number {
   if (Math.abs(x - LITTLE_BOATS.x) > 65 || Math.abs(z - LITTLE_BOATS.z) > 85) return 0;
@@ -86,9 +94,13 @@ float boatsOut(vec2 p) {
   float t = clamp(s, 0.0, 107.0);
   return length(vec2((p.x - boatsX(t)) / boatsWidth(t), max(0.0, max(-s, s - 107.0)) / 5.0));
 }
+uniform float uBoatsRise;
+float boatsBar(float s) { return ${glsl(tuning.littleBoats.barHeight)} * exp(-pow((s - ${glsl(tuning.littleBoats.barS)}) / 1.8, 2.0)); }
 float boatsWaterBase(vec2 p) {
   if (abs(p.x - ${glsl(LITTLE_BOATS.x)}) > 65.0 || abs(p.y - ${glsl(LITTLE_BOATS.z)}) > 85.0) return 0.0;
-  return boatsLevel(${glsl(LITTLE_BOATS.startZ)} - p.y) * (1.0 - smoothstep(1.2, 1.65, boatsOut(p)));
+  float s = ${glsl(LITTLE_BOATS.startZ)} - p.y;
+  float held = uBoatsRise * ${glsl(tuning.littleBoats.riseHeight)} * (1.0 - smoothstep(${glsl(tuning.littleBoats.plugS - 10)}, ${glsl(tuning.littleBoats.plugS - 2)}, s));
+  return (boatsLevel(s) + held) * (1.0 - smoothstep(1.2, 1.65, boatsOut(p)));
 }
 float boatsRipple(vec2 p, float time) {
   if (abs(p.x - ${glsl(LITTLE_BOATS.x)}) > 65.0 || abs(p.y - ${glsl(LITTLE_BOATS.z)}) > 85.0) return 0.0;

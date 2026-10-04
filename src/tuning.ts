@@ -357,6 +357,22 @@ export const tuning = {
     heel: 0.13, rollSpring: 13, rollDamping: 3.8, drift: 0.5,
     swimSpeed: 3.15, swimWeave: 0.15, swimPlay: 0.8,
     /**
+     * Getting out to sea. A shoal at `barS` (sand `barHeight` up its bed) grounds the fleet until the bath on the far
+     * bank at `bathS` has been rocked and poured into the pools, raising them `riseHeight`; the plug wedged in the
+     * mouth at `plugS` holds them there until gusts work it loose and its chain hauls it out.
+     */
+    barS: 62, barHeight: 0.5, bathS: 59.5, plugS: 97.5, riseHeight: 0.3,
+    /** Tip per unit of stroke across the bath, how it springs back and is damped, its furthest tip (radians), and from what tip it pours. */
+    bathPush: 0.55, bathSpring: 5, bathDamping: 2.6, bathTipMax: 0.42, pourFrom: 0.1,
+    /** Share of the bath poured per second at the furthest tip; the pools are risen once `pourNeeded` of it is in. */
+    pourRate: 0.32, pourNeeded: 0.7,
+    /** How the risen water carries the grounded fleet over the shoal (m/s) and for how long it runs (s). */
+    surgeSpeed: 2.2, surgeFor: 3.5,
+    /** The plug's size; looseness per unit of stroke across it (it pulls free at 1); how hard each stroke rocks it; how fast and how high its chain hauls it (m/s, m). */
+    plugScale: 4.4, plugLoosen: 0.16, plugRock: 0.9, plugHaul: 2.4, plugLift: 9,
+    /** How fast the water rushes out of the mouth once the plug is out, carrying the fleet (m/s), and how quickly the rush builds and the risen pools drain (s). */
+    rushSpeed: 3.6, rushRise: 1.2, drainFor: 5,
+    /**
      * Reeds in clumps (where bank noise passes `clumpFrom`) along the stream's lip: up to `share` of the blades,
      * reaching `far` metres (plus a share of the stream's width) up the far bank and `near` up the camera's own,
      * `farHeight`/`nearHeight` metres tall at `width` of a grass blade's width, bending `stiff` as far,

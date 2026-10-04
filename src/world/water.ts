@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { MIRROR_ROOM } from './journey-rooms';
 import { MIRROR_LAYOUT_GLSL, SKY_MIRROR } from './sky-mirror-layout';
 import { MIRROR_RIPPLES_GLSL, mirrorUniforms } from './sky-mirror';
-import { LITTLE_BOATS, LITTLE_BOATS_GLSL } from './little-boats-layout';
+import { LITTLE_BOATS, LITTLE_BOATS_GLSL, boatsTide } from './little-boats-layout';
 import { params } from '../params';
 import { CLOUD_DECK, LAND_SKIP, register, select, type Choice } from '../gl/variants';
 import type { SeaEffects } from '../gl/quality';
@@ -539,6 +539,7 @@ export class Water {
         ...swellUniforms,
         ...mirrorUniforms,
         ...waterlineUniforms,
+        ...boatsTide,
         uWaterWind: this.windWaves.uniform,
         uSkyMirrorAppearance: { value: 1 },
         uRipple: { value: rippleTexture() },
