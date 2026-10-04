@@ -368,8 +368,8 @@ export const tuning = {
     pourRate: 0.32, pourNeeded: 0.7,
     /** How the risen water carries the grounded fleet over the shoal (m/s) and for how long it runs (s). */
     surgeSpeed: 2.2, surgeFor: 3.5,
-    /** The plug's size; looseness per unit of stroke across it (it pulls free at 1); how hard each stroke rocks it; how fast and how high its chain hauls it (m/s, m). */
-    plugScale: 4, plugLoosen: 0.22, plugRock: 0.9, plugHaul: 3.2, plugLift: 22,
+    /** The plug's size; looseness per second of a full stroke across it (it pulls free at 1); how hard each stroke rocks it; how fast and how high its chain hauls it (m/s, m). */
+    plugScale: 4, plugLoosen: 11, plugRock: 0.9, plugHaul: 3.2, plugLift: 22,
     /** How fast the water rushes out of the mouth once the plug is out, carrying the fleet (m/s), and how quickly the rush builds and the risen pools drain (s). */
     rushSpeed: 3.6, rushRise: 1.2, drainFor: 5,
     /**

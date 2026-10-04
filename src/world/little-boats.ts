@@ -354,10 +354,10 @@ export class LittleBoats {
   }
 
   /** Put screen strokes onto the sail they cross; a low camera otherwise hits ground behind the toy. */
-  brush(camera: THREE.Camera, input: PointerInput, wind: WindField): void {
+  brush(camera: THREE.Camera, input: PointerInput, wind: WindField, dt = 1 / 60): void {
     if (!this.active || !this.launched || input.muted || !input.present || input.gust < tuning.littleBoats.brushSpeed) return;
     if (input.ndc.distanceToSquared(input.prevNdc) < 1e-8) return;
-    this.drain.brush(camera, input, this.toys[0].s);
+    this.drain.brush(camera, input, this.toys[0].s, dt);
     for (const toy of this.toys) {
       this.brushAt.copy(toy.group.position);
       this.brushAt.y += 0.8;

@@ -363,7 +363,7 @@ export class LittleBoatsDrain {
    * A stroke crossing the bath rocks it toward the stream; one crossing the plug rocks it in its hole, and works it
    * loose once the fleet is waiting against it, so strokes that sail the toys past it never pull it by accident.
    */
-  brush(camera: THREE.Camera, input: PointerInput, heroS: number): void {
+  brush(camera: THREE.Camera, input: PointerInput, heroS: number, dt: number): void {
     const k = tuning.littleBoats;
     const strength = Math.min(1, input.gust / 12);
     if (this.water > 1 - k.pourNeeded) {
@@ -380,7 +380,7 @@ export class LittleBoatsDrain {
         this.rockVX += input.gustDir.y * k.plugRock * push;
         this.rockVZ -= input.gustDir.x * k.plugRock * push;
         if (this.risen && heroS > this.gate - 2.5) {
-          this.loose = Math.min(1, this.loose + k.plugLoosen * push);
+          this.loose = Math.min(1, this.loose + k.plugLoosen * push * dt);
           this.idle = 0;
         }
         if (this.loose >= 1) this.pulled = true;
