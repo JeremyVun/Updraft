@@ -238,7 +238,7 @@ window.__audit = {
       ['child',child,'update'], ['cygnet',cygnet,'update'], ['boat',boat,'update'], ['creatures',creatures,'update'],
       ['meadow-creatures',hillCreatures,'update'], ['village-update',village,'update'], ['birches-update',birches,'update'],
       ['wood-update',wood,'update'], ['sleeping-update',sleeping,'update'], ['audio',sound,'update'],
-      ['mirror-ripples',skyMirror,'update'], ['bloom',post.bloom,'render'],
+      ['mirror-ripples',skyMirror,'update'], post.renderBloom?['bloom',post,'renderBloom']:['bloom',post.bloom,'render'],
       ['water-waves',water,'step'], ['ground-readback',bakes,'tick'],
       ['stairs-update',cloudStairs,'update'], ['stairs-cloud',cloudStairs.cloud,'update'], ['story',story,'update'],
     ]) wrap(obj,method,name);
@@ -247,7 +247,7 @@ window.__audit = {
       if (!this.census) return render(s,c);
       const target = renderer.getRenderTarget();
       const pass = target === post.sceneTarget ? 'main' : target === water.reflection.target ? 'reflection'
-        : target === doorwayView.target ? 'doorway' : !target ? 'grade' : target === post.clean ? 'resolve/bloom-blend'
+        : target === doorwayView.target ? 'doorway' : !target ? 'grade' : target === (post.clean??post.bloomed) ? 'resolve/bloom-blend'
         : this.stack.at(-1) || 'unclassified';
       this.currentPass = pass;
       const beforeCalls = renderer.info.render.calls, beforeTriangles = renderer.info.render.triangles, start = performance.now();
@@ -493,7 +493,7 @@ window.__audit = {
     const rt=variants.includes('rt-r11')?'R11F_G11F_B10F':variants.includes('rt-half')?null:this.rtBuilt;
     if(post.sceneTarget.texture.internalFormat!==rt){
       const b=post.bloom;
-      for(const t of [post.sceneTarget,post.clean,b.renderTargetBright,...b.renderTargetsHorizontal,...b.renderTargetsVertical]){
+      for(const t of [post.sceneTarget,post.clean??post.bloomed,b.renderTargetBright,...b.renderTargetsHorizontal,...b.renderTargetsVertical]){
         t.texture.internalFormat=rt;t.texture.format=rt?THREE.RGBFormat:THREE.RGBAFormat;t.dispose();}
     }
     // sky-bank-on: the sky's storm bank compiled in whatever the weather, as before 7b.
@@ -525,7 +525,7 @@ window.__audit = {
         this.alt??=new THREE.WebGLRenderTarget(o.width,o.height,{type:THREE.HalfFloatType,samples:o.samples,depthBuffer:true,resolveDepthBuffer:false,storeMultisampledDepthBuffer:false});
         if(this.alt.width!==o.width||this.alt.height!==o.height)this.alt.setSize(o.width,o.height);
       }
-      post.sceneTarget=noDepth?this.alt:o;post.resolveMat.uniforms.tDiffuse.value=post.sceneTarget.texture;this.altOn=noDepth;
+      post.sceneTarget=noDepth?this.alt:o;if(post.resolveMat)post.resolveMat.uniforms.tDiffuse.value=post.sceneTarget.texture;this.altOn=noDepth;
     }
     if(pixelRatio!==ratio){pixelRatio=ratio;resize();}
     // mirror-ordinary: the sky mirror's reflection at the ordinary sea's size and cadence (a look change, costed only).
@@ -717,8 +717,8 @@ window.__audit = {
     const stages={
       scene:()=>{r.setRenderTarget(post.sceneTarget);r.clear();r.render(scene,rig.camera);},
       'msaa-clear-resolve':()=>{r.setRenderTarget(post.sceneTarget);r.clear();r.render(new THREE.Scene(),rig.camera);},
-      clamp:()=>{post.quad.material=post.resolveMat;r.setRenderTarget(post.clean);post.quad.render(r);},
-      'bloom-bright':()=>{b.highPassUniforms.tDiffuse.value=post.clean.texture;quad(b.materialHighPassFilter,b.renderTargetBright,true);},
+      ...post.resolveMat&&{clamp:()=>{post.quad.material=post.resolveMat;r.setRenderTarget(post.clean);post.quad.render(r);}},
+      'bloom-bright':()=>{b.highPassUniforms.tDiffuse.value=(post.clean??post.sceneTarget).texture;quad(b.materialHighPassFilter,b.renderTargetBright,true);},
     };
     for(let i=0;i<b.nMips;i++){
       const m=b.separableBlurMaterials[i],input=i?b.renderTargetsVertical[i-1]:b.renderTargetBright;
@@ -726,7 +726,8 @@ window.__audit = {
       stages['bloom-blur'+i+'-v']=()=>{m.uniforms.colorTexture.value=b.renderTargetsHorizontal[i].texture;m.uniforms.direction.value=b.constructor.BlurDirectionY;quad(m,b.renderTargetsVertical[i],true);};
     }
     stages['bloom-composite']=()=>quad(b.compositeMaterial,b.renderTargetsHorizontal[0],true);
-    stages['bloom-blend']=()=>{b.copyUniforms.tDiffuse.value=b.renderTargetsHorizontal[0].texture;quad(b.blendMaterial,post.clean,false);};
+    if(post.bloomedMat)stages.bloomed=()=>{post.bloomedMat.uniforms.tScene.value=post.sceneTarget.texture;quad(post.bloomedMat,post.bloomed,true);};
+    if(post.clean)stages['bloom-blend']=()=>{b.copyUniforms.tDiffuse.value=b.renderTargetsHorizontal[0].texture;quad(b.blendMaterial,post.clean,false);};
     stages.grade=()=>{post.quad.material=post.gradeMat;r.setRenderTarget(null);post.quad.render(r);};
     // grade-plain: the grade without the sun's glow, beside a grade that draws it (at a level without bloom).
     if(post.gradeMat.defines.SUN_GLOW===1)stages['grade-plain']=()=>{const m=post.gradeMat;m.defines.SUN_GLOW=0;m.needsUpdate=true;stages.grade();m.defines.SUN_GLOW=1;m.needsUpdate=true;};
@@ -804,14 +805,15 @@ window.__audit = {
     if (this.omit !== 'grass-fog-vertex' && this.omit !== 'grass-fog-pass-off') (grass.bakeFrame??grass.shadeFog)?.call(grass,renderer);
     const draw=()=>doorwayView.render(rig.camera,story.name==='lines',story.name!=='toBoats',()=>{
       if (this.omit !== 'reflection') water.update(rig.camera,c=>terrain.beginMirror(c),()=>terrain.endMirror());
-      const bloom=post.bloom.render;
-      if(this.omit==='bloom')post.bloom.render=()=>{};
+      const bloom=post.bloom.render,renderBloom=post.renderBloom;
+      if(this.omit==='bloom'){post.bloom.render=()=>{};if(renderBloom)post.renderBloom=()=>{};}
       try {
         if(this.omit==='post') {
           renderer.setRenderTarget(post.sceneTarget);renderer.render(scene,rig.camera);
-          post.quad.material=post.resolveMat;renderer.setRenderTarget(null);post.quad.render(renderer);
+          post.quad.material=post.resolveMat??(this.copyMat??=new THREE.ShaderMaterial({uniforms:{tDiffuse:{value:null}},vertexShader:'varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',fragmentShader:'uniform sampler2D tDiffuse; varying vec2 vUv; void main() { gl_FragColor = texture2D(tDiffuse, vUv); }',depthTest:false,depthWrite:false}));
+          post.quad.material.uniforms.tDiffuse.value=post.sceneTarget.texture;renderer.setRenderTarget(null);post.quad.render(renderer);
         } else post.render(time);
-      } finally { post.bloom.render=bloom; }
+      } finally { post.bloom.render=bloom;if(renderBloom)post.renderBloom=renderBloom; }
     });
     if(typeof drawJourneyRooms==='function') {
       const rooms=visibleRooms(story.name,boat.position.z);setJourneyRooms(rooms);drawJourneyRooms(rooms,roomObjects,draw);

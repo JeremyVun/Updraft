@@ -138,7 +138,7 @@ his iPad. `node tools/start-check.mjs` also fails if the worst boot frame gap ex
    hull's frame: anything placed from the boat's last position trails it by a step, which uneven frames turn into a
    shudder (`shot`'s even steps hide it).
 4. The final view is prepared once: program variants, lighting bakes, cloud shadows, terrain selection, grass tables,
-   the blades' fog and audio.
+   what every grass blade shares this frame, and audio.
 5. The doorway view renders when open, then the sea reflection, the scene and the post chain; `endFrame()` fences it.
 
 Hidden tabs advance nothing, and visibility changes reset the timestamp. `shot` advances exactly 1/60 s per frame.
@@ -299,7 +299,7 @@ callback interval since the last presentation, floored at 16.7 ms, so deliberate
 displays don't look like overload.
 
 Grass grows and shrinks in place over one second while its distance rings move continuously. Tables reserve capacity
-for every level at boot (about 28 MiB for the four attachments, and 5.5 MiB for the blades' fog), so quality changes
+for every level at boot (about 28 MiB for the four attachments, and 44 MiB for what the blades share each frame), so quality changes
 never allocate or recompile. The near level's geometry holds its blade twice, with six segments and with five; at
 Low the sixth segment closes over a second, and the five-segment form, the same blade fully closed,
 is drawn only once it has shut (`grass.setNearSegments`).
@@ -314,16 +314,23 @@ device's `MAX_SAMPLES`. `?grass=` overrides density, `?mirror=1|2|0` the reflect
 
 ## Post chain (`src/post/post.ts`)
 
-One multisampled scene target; one resolve pass that also clamps NaN, infinity and huge highlights (bloom
-would smear one bad pixel across the screen); bloom added in place on that plain target; then the grade (ACES, split
-toning, vibrance (pinks and magentas held back, so sunlit cloud stays gold and white) and a gentle contrast curve on brightness after tone mapping, blue-tinted shadows that leave black alone, vignette, grain) straight to the screen. Nothing in the chain reads alpha, so the scene target, its resolve,
-the plain target and bloom's targets are `R11F_G11F_B10F`, half the memory and bandwidth of half-float RGBA, wherever
+One multisampled scene target; while bloom is drawn, bloom's bright pass reads its resolve and one pass writes the
+scene plus bloom into a plain target; then the grade (ACES, split toning, vibrance (pinks and magentas held back, so
+sunlit cloud stays gold and white) and a gentle contrast curve on brightness after tone mapping, blue-tinted shadows
+that leave black alone, vignette, grain) reads that target, or the resolve itself while bloom is off, straight to the
+screen. Every read of the scene clamps NaN, infinity and huge highlights (bloom would smear one bad pixel across the
+screen); it clamps the filtered sample, so it matches clamping each texel first except beside a texel over 40 or not
+finite. Bloom is added texel for texel before the grade, not in it: the plain target's rounding of the sum is part of
+the picture, and dropping it moved blue by up to 10/255. The clamp tests the exponent's bits rather than calling
+`isnan` or `isinf`, which change how the compiler treats every float in the grade and moved its grain by up to
+8/255. Nothing in the chain reads alpha, so the scene target, the plain target and bloom's targets are
+`R11F_G11F_B10F`, half the memory and bandwidth of half-float RGBA, wherever
 the device multisamples that format as well (`compactFrameFormat`; half-float RGBA otherwise). The format holds no
 negative colour; half-float keeps it, and the grade's ACES makes a bright speck of it. Multisampling shades an edge
 sample at the pixel centre even when that lies outside the triangle, so blends passed from the vertices extrapolate
 there: a shader that mixes colours by them clamps its output at zero (the rabbits, reeds, swans, songbirds and
 cygnet do), which is what the compact format stores anyway. Apple GPUs store it truncated, a fraction of a percent darker; near bloom's threshold that can move a glint's halo by
-a few levels. Bloom follows the level: full, or off at Low, when its passes are skipped and its targets released.
+a few levels. Bloom follows the level: full, or off at Low, when its passes are skipped and its targets, the plain one too, released.
 Half-resolution bloom spread wider and veiled the frame near the sun while saving almost nothing. Turning it on or
 off eases its strength over one second, as the grass changes; boot draws it once whatever the level, so its programs
 exist before Begin. Only the scene target is multisampled. The canvas has no depth buffer
@@ -349,10 +356,11 @@ effect that is off is compiled out, not branched round. Each such effect is a sw
 
 The cloud deck (`CLOUD_DECK`): its GLSL in `ATMO_GLSL` (the deck, the bank of mist, their helpers, the sun dimming in
 `cloudShadow`, the deck in `fogOf`) and the sky's use of it are compiled only where it is 1. The sea, the terrain
-(main view and the sea's mirror), the grass blades (with and without discard) and the sky have both programs, and
+(main view and the sea's mirror) and the sky have both programs, and
 `prepareFrame` selects the deck while `uCloudDeck.w > 0`, before the doorway view, the reflection and the scene are
-drawn. Every other material keeps the deck; the grass's blade table includes `ATMO_GLSL` but never reaches the deck.
-That is five programs more and about 80 ms more behind the veil on the Mac, for 6 to 9% of the GPU's frame wherever
+drawn. Every other material keeps the deck; the grass's blade table includes `ATMO_GLSL` but never reaches the deck,
+and the blades' per-frame pass (`FRAME_FRAG`) reads it only while it is there, so the blades need no variant.
+That is three programs more and about 80 ms more behind the veil on the Mac, for 6 to 9% of the GPU's frame wherever
 the deck is away.
 
 `STORM_BANK`: the sky's storm bank (one `fbm` per sky pixel in `skyRadiance`) is compiled out of the sky while
@@ -392,11 +400,18 @@ Bakes that follow the world:
   at the sea surface with local ring distortion.
 - Grass (`world/grass.ts`): per-blade constants (root, height, width, facing, curve, tint, flower) are computed once
   into a blade table (`TABLE_FRAG`, four texels a blade) when fixed inputs or the tile list change; per-blade shading
-  runs once per vertex (`BLADE_SHADE_GLSL`). Fog is worked out once a frame per blade (`FOG_FRAG`, a quarter of the
-  way up the blade, where one fog comes closest to the fog along it) into a texel the blade shader reads; blades
-  thinning collapses are skipped, and the pass draws over its rows without a clear, which would cost more than it. A level's table is reused while its tiles and fixed traits are
-  unchanged; season, palette, flattened patches and ground rebakes invalidate it, while wind, life and lighting stay
-  live in the blade shader. Clears and draws are scissored to occupied rows. The three detail levels draw one
+  runs once per vertex (`BLADE_SHADE_GLSL`). What every vertex of a blade shares in a frame is worked out once a frame
+  per blade (`FRAME_FRAG`, four `RGBA32UI` attachments, 64 bytes a blade): whether thinning collapses it, its grown
+  height, width and closing, its life, the wind's bend and flutter strength on it, the ground's normal and shadow,
+  cloud shadow, frost and fog (a quarter of the way up the blade, where one fog comes closest to the fog along it).
+  The blade shader reads them with `texelFetch`, so its vertices take no filtered sample. Everything is kept as full
+  float, as the vertex shader worked it out, but the fog, cut to half toward zero as a half-float target stores it:
+  the ground's normal, frost, the morning's green or the warm lights stored as half float moved single pixels by up to
+  41/255 through the grade's hue. The morning's green and the warm lights (lamp, hearth, lantern, dawn) stay at every
+  vertex; each is zero by a uniform outside the rooms that light it. Collapsed blades write only their mark, and the
+  pass draws over its rows without a clear, which would cost more than it. A level's table is reused while its tiles
+  and fixed traits are unchanged; season, palette, flattened patches and ground rebakes invalidate it, while wind,
+  life and lighting stay live in the per-frame pass. Clears and draws are scissored to occupied rows. The three detail levels draw one
   population: each coarser level holds the lowest-ranked blades of the finer one, and thinning depends only on
   distance, so a tile changes level with no change on screen. A thinned blade shrinks into the ground rather than
   vanishing. Sparse density starts tiles at the coarsest level that holds every blade it can show. Tiles are culled
@@ -506,7 +521,7 @@ components, script, memory, spikes, weighted by minutes) is `git show 25b6bb2:do
   dependent passes (the wind step, bloom, bakes) inflate several-fold under another process's GPU load and when
   drawn back to back, so time them with `DRAIN=1` and `GPU_QUIET=1`, and drop rows whose pair baselines straddle.
 - **Time a pass the scene reads with the wind step.** `FRAME_PASS` leaves the wind step out, so a per-frame pass
-  whose output the scene's vertices read (the blades' fog) becomes the one thing the scene waits on and reads several
+  whose output the scene's vertices read (the blades' per-frame values) becomes the one thing the scene waits on and reads several
   times its cost; `FRAME_SIM=1` steps the wind before each draw, as the loop does.
 - **Frozen draws do not re-bake.** An ablation that changes a height source must re-run the window-move bakes
   (ground, light, shore, grass tables) on both sides of every pair; list it in the tool's `heightSources`.
