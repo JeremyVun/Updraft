@@ -9,6 +9,7 @@ import { heightAt } from '../world/island';
 import { WOOD_BERTH, WOOD_LANDING, WOOD_PATH, WOOD_REFUGE, WOOD_HEARTH, WOOD_OUTSIDE, WOOD_COAX, WOOD_APPROACH_LIGHT, WOOD_PLANE, WOOD_PLANE_LIGHT, woodPlaneSway } from '../world/wood';
 import type { Cast, Chapter } from './cast';
 import { cue } from './cues';
+import { WOOD_SHAPE, SHAPE_RIGHT, SHAPE_FACING } from '../world/wood-shape';
 
 /** Where the cygnet goes to ground when the storm frightens it out of the hood: just off the path, in the dark. */
 const HIDING = WOOD_REFUGE;
@@ -86,8 +87,11 @@ function pathSide(x: number, z: number): number {
 
 const APPROACH_ALONG = pathAlong(WOOD_APPROACH_LIGHT.x, WOOD_APPROACH_LIGHT.y);
 const PLANE_ALONG = pathAlong(WOOD_PLANE_LIGHT.x, WOOD_PLANE_LIGHT.y);
+/** Where she stops dead in front of the thing at the bend, and how far up the walk that is. */
+const SHAPE_STOP = new THREE.Vector2(WOOD_SHAPE.x + SHAPE_FACING.x * tuning.wood.shape.stopShort, WOOD_SHAPE.z + SHAPE_FACING.z * tuning.wood.shape.stopShort);
+const SHAPE_STOP_ALONG = pathAlong(SHAPE_STOP.x, SHAPE_STOP.y);
 
-type Beat = 'ashore' | 'first' | 'walk' | 'compose' | 'fright' | 'bolt' | 'lost' | 'found' | 'plane' | 'snag' | 'fall' | 'pickup' | 'out' | 'toBoat' | 'push' | 'aboard';
+type Beat = 'ashore' | 'first' | 'walk' | 'loom' | 'brave' | 'compose' | 'fright' | 'bolt' | 'lost' | 'found' | 'plane' | 'snag' | 'fall' | 'pickup' | 'out' | 'toBoat' | 'push' | 'aboard';
 
 /**
  * The dark wood: the first winter storm, at night, on the smallest island of the chain. There is no grass to bend
@@ -144,6 +148,8 @@ export class WoodChapter implements Chapter {
   private planeCoal: Coal | null = null;
   /** The coal laid within throw of where the cygnet is hiding, so the way to find it is the way they came. */
   private hearth: Coal | null = null;
+  cameraCut = 0;
+  private cutAfter = -1;
 
   constructor(private readonly cast: Cast) {
     const { child, plane, cygnet } = cast;
@@ -269,6 +275,7 @@ export class WoodChapter implements Chapter {
 
   update(dt: number, time: number): void {
     this.now = time;
+    if (this.cutAfter >= 0 && --this.cutAfter < 0) this.cameraCut++;
     const { child: c, plane: p, embers } = this.cast;
     /** The boat is waiting on the far shore, the way it always is — but it goes there once they are out of sight. */
     if (!this.moored && this.leg >= 2) {
@@ -307,6 +314,12 @@ export class WoodChapter implements Chapter {
         /** The first light the player makes is the first thing the child has seen. They turn to it and go. */
         c.lookAt = this.glow;
         if (this.lit > ENOUGH && this.t > 1.2) this.to('walk');
+        break;
+      case 'loom':
+        this.loom(dt);
+        break;
+      case 'brave':
+        this.brave();
         break;
       case 'walk':
         this.follow();
@@ -423,6 +436,8 @@ export class WoodChapter implements Chapter {
       cue(coal === this.hearth ? 'comfort' : 'kindled');
       if (coal === this.planeCoal && this.beat === 'walk') continue;
       if (coal === this.ahead && this.beat === 'plane') continue;
+      if (coal === this.ahead && this.beat === 'walk' && !this.bolted && !this.shapeDone
+        && this.chainAt + tuning.wood.chainStep > SHAPE_STOP_ALONG - 2) { this.ahead = null; this.toShape(); continue; }
       if (coal === this.ahead && this.beat !== 'compose' && this.beat !== 'fright' && this.beat !== 'bolt' && this.beat !== 'lost') this.layNext();
       else if (coal === this.ahead) this.ahead = null;
     }
@@ -747,6 +762,7 @@ export class WoodChapter implements Chapter {
   }
 
   get coax(): Coax | null {
+    if (this.beat === 'loom') return this.shapeCoax();
     const coal = this.waitingCoal;
     if (!coal || coal !== this.askedFor || this.now - this.askedAt < tuning.wood.inviteAfter
       || this.now - this.workedAt < tuning.invitation.resumeAfter) return null;
@@ -769,7 +785,7 @@ export class WoodChapter implements Chapter {
 
   /** Where the walk is pointing: toward the light when there is one out ahead, and up the path when there is not. */
   private heading(dt: number): void {
-    if (['compose', 'fright', 'bolt', 'lost', 'found'].includes(this.beat)) return;
+    if (['compose', 'fright', 'bolt', 'lost', 'found', 'loom', 'brave'].includes(this.beat)) return;
     const c = this.cast.child.position;
     const t = this.target();
     const next = this.ahead?.live && !this.ahead.lit ? this.ahead.p : null;
@@ -824,6 +840,10 @@ export class WoodChapter implements Chapter {
       this.focus.copy(b);
       return;
     }
+    if (this.beat === 'loom' || this.beat === 'brave') {
+      this.frameShape(ground);
+      return;
+    }
     /** Close in behind them, leaning a little toward the light but never far enough to leave them behind. */
     const near = this.beat === 'compose' || this.beat === 'fright' || this.beat === 'bolt' || this.beat === 'lost' || this.beat === 'found';
     if (near) {
@@ -869,6 +889,184 @@ export class WoodChapter implements Chapter {
       s.subjects = { primary: this.childSubject, secondary: this.ahead.p, margin: 0.72, extra: 12 };
     }
     this.pace = tuning.wood.cameraPace;
+    this.focus.copy(c);
+  }
+
+  // The thing at the bend: a stump that looks like a beast until light from the side shows what it is.
+
+  private shapeDone = false;
+  private shapeStopped = -1;
+  private shapeReveal = 0;
+  private shapeFear = 0.7;
+  private shapeLitAt = -Infinity;
+  private shapeWorkedAt = -Infinity;
+  private shapeLampAt = -1;
+  private braveStep = 0;
+  private braveAt = 0;
+  private readonly shapeHead = new THREE.Vector3();
+  private readonly shapeTouch = new THREE.Vector3();
+  private readonly shapeHold = new THREE.Vector3();
+  private readonly shapeAsk: Coax = { at: new THREE.Vector3(), urgency: tuning.wood.inviteCoalUrgency, radius: tuning.wood.inviteCoalRadius };
+
+  get gathersFireflies(): boolean { return this.beat === 'loom' && this.shapeStopped >= 0; }
+  get releasesFireflies(): boolean { return this.shapeDone || this.beat === 'brave'; }
+
+  /** QA: start a few paces short of the bend, with the coal before it just lit. */
+  skipToShape(): void {
+    const { child: c, embers } = this.cast;
+    embers.clearCoals();
+    this.chainSide = 1;
+    this.chainAt = SHAPE_STOP_ALONG - 12;
+    const coal = embers.lay(...this.at(this.chainAt, this.chainSide * tuning.wood.chainOffset));
+    embers.blow(coal, 1);
+    this.ahead = coal;
+    this.leg = 1;
+    pathPoint(this.chainAt - 4, 0, this.spot);
+    c.place(this.spot.x, this.spot.y, 0);
+    c.stop();
+    c.faceToward(SHAPE_STOP.x, SHAPE_STOP.y, 1);
+    this.aim.set(-SHAPE_FACING.x, 0, -SHAPE_FACING.z);
+    this.shoulder = -tuning.wood.cameraSide;
+    this.to('walk');
+    this.cutAfter = 2;
+  }
+
+  private toShape(): void {
+    const k = tuning.wood.shape;
+    const base = heightAt(WOOD_SHAPE.x, WOOD_SHAPE.z);
+    this.shapeHead.set(WOOD_SHAPE.x, base + 1.6, WOOD_SHAPE.z).addScaledVector(SHAPE_FACING, 0.55);
+    this.shapeTouch.set(WOOD_SHAPE.x, base + 0.95, WOOD_SHAPE.z).addScaledVector(SHAPE_FACING, 0.38).addScaledVector(SHAPE_RIGHT, -0.22);
+    this.to('loom');
+    const c = this.cast.child;
+    c.stroll = k.approachPace;
+    c.walkTo(SHAPE_STOP.x, SHAPE_STOP.y, false, () => {
+      c.stop();
+      c.faceToward(WOOD_SHAPE.x, WOOD_SHAPE.z, 1);
+      this.shapeStopped = this.now;
+    }, 0.4);
+  }
+
+  /** How the light the player holds falls on the stump: from her side, from its side, or not at all. */
+  private shapeLight(): { side: number; front: number } {
+    const lamp = this.cast.fireflies.lantern;
+    const dx = lamp.at.x - WOOD_SHAPE.x, dz = lamp.at.z - WOOD_SHAPE.z;
+    const d = Math.hypot(dx, dz);
+    const k = tuning.wood.shape;
+    const strength = lamp.power * (1 - THREE.MathUtils.smoothstep(d, k.lightReach * 0.6, k.lightReach)) * THREE.MathUtils.smoothstep(d, 0.5, 1.2);
+    const cos = (dx * SHAPE_FACING.x + dz * SHAPE_FACING.z) / Math.max(d, 0.001);
+    const side = THREE.MathUtils.smoothstep(cos, k.sideFront, k.sideFront - 0.2) * THREE.MathUtils.smoothstep(cos, k.sideBack, k.sideBack + 0.2);
+    return { side: side * strength, front: THREE.MathUtils.smoothstep(cos, k.sideFront, k.sideFront + 0.25) * strength };
+  }
+
+  /**
+   * Something at the bend with antlers and two pale eyes. She will not go past it. Light from where she stands
+   * only throws it up bigger on the stone behind; light from beside it shows a stump, and that is what she needs.
+   */
+  private loom(dt: number): void {
+    const { child: c, cygnet } = this.cast;
+    const k = tuning.wood.shape;
+    c.lookAt = this.shapeHead;
+    cygnet.watch(this.shapeHead);
+    if (this.shapeStopped < 0) return;
+    const since = this.now - this.shapeStopped;
+    const { side, front } = this.shapeLight();
+    if (side > 0.05) this.shapeLitAt = this.now;
+    if (this.cast.fireflies.lantern.power > 0.3 && this.shapeLampAt < 0) this.shapeLampAt = this.now;
+    if (this.cast.input.charge > 0.12 || this.cast.input.gust > 0.2) this.shapeWorkedAt = this.now;
+    this.shapeReveal = Math.min(1, this.shapeReveal + dt * side / k.revealSeconds);
+    const want = THREE.MathUtils.clamp(0.7 + 0.3 * front - 0.6 * side - 0.5 * this.shapeReveal, 0, 1);
+    this.shapeFear += (want - this.shapeFear) * (1 - Math.exp(-dt * 2.5));
+    // A first flinch back from it, then she holds her ground with the bag held close.
+    if (since < k.flinchSeconds) {
+      const back = k.flinchStep / k.flinchSeconds * dt * Math.sin(Math.PI * since / k.flinchSeconds) * Math.PI / 2;
+      c.position.x += SHAPE_FACING.x * back;
+      c.position.z += SHAPE_FACING.z * back;
+    }
+    const fear = this.shapeFear;
+    c.lean = -0.04 - 0.14 * fear + 0.1 * Math.max(0, side - 0.2);
+    c.tilt = 0.12 * Math.max(0, side - 0.3) * Math.sin(this.now * 0.7);
+    const bag = cygnet.seating.shown.p;
+    if (fear > 0.35) {
+      this.shapeHold.copy(bag).y += 0.05;
+      c.reachFor(0, this.shapeHold);
+      c.reachFor(1, this.side.copy(bag).addScaledVector(SHAPE_RIGHT, 0.12));
+    } else {
+      c.reachFor(0, null);
+      c.reachFor(1, null);
+    }
+    if (this.shapeReveal >= 1) {
+      c.reachFor(0, null);
+      c.reachFor(1, null);
+      this.braveStep = 0;
+      this.braveAt = this.now;
+      this.to('brave');
+    }
+  }
+
+  /** A breath out, a few steps up to it, a mitten on the bark, and on round the bend. */
+  private brave(): void {
+    const { child: c, cygnet } = this.cast;
+    const k = tuning.wood.shape;
+    c.lookAt = this.shapeTouch;
+    cygnet.watch(null);
+    c.lean += (0.03 - c.lean) * 0.05;
+    c.tilt = 0;
+    if (this.braveStep === 0 && this.now - this.braveAt > k.exhaleSeconds) {
+      this.braveStep = 1;
+      c.stroll = k.approachPace;
+      const stand = this.tmp.copy(this.shapeTouch).addScaledVector(SHAPE_FACING, 0.62).addScaledVector(SHAPE_RIGHT, -0.18);
+      c.walkTo(stand.x, stand.z, false, () => {
+        c.stop();
+        c.faceToward(this.shapeTouch.x, this.shapeTouch.z, 1);
+        c.reachFor(1, this.shapeTouch);
+        this.braveStep = 2;
+        this.braveAt = this.now;
+      }, 0.2);
+    }
+    if (this.braveStep === 2 && this.now - this.braveAt > k.touchSeconds) {
+      c.reachFor(1, null);
+      c.stroll = 1;
+      c.lean = 0;
+      this.shapeDone = true;
+      this.to('walk');
+      this.chainAt = pathAlong(c.position.x, c.position.z);
+      this.layNext();
+    }
+  }
+
+  /** First how to gather a light, shown among the fireflies before her; then, if that only made it worse, where to take it. */
+  private shapeCoax(): Coax | null {
+    if (this.shapeStopped < 0) return null;
+    const k = tuning.wood.shape;
+    if (this.now - this.shapeWorkedAt < tuning.invitation.resumeAfter) return null;
+    const c = this.cast.child.position;
+    const lamp = this.cast.fireflies.lantern;
+    if (lamp.power < 0.3) {
+      if (this.now - this.shapeStopped < tuning.wood.inviteAfter) return null;
+      this.shapeAsk.at.set(c.x, 0, c.z).lerp(this.tmp.set(WOOD_SHAPE.x, 0, WOOD_SHAPE.z), 0.4);
+    } else {
+      if (this.shapeLampAt < 0 || this.now - Math.max(this.shapeLampAt, this.shapeLitAt) < k.sideInviteAfter) return null;
+      this.shapeAsk.at.set(WOOD_SHAPE.x, 0, WOOD_SHAPE.z).addScaledVector(SHAPE_RIGHT, -k.sideInviteOffset).addScaledVector(SHAPE_FACING, 0.4);
+    }
+    this.shapeAsk.at.y = Math.max(heightAt(this.shapeAsk.at.x, this.shapeAsk.at.z), 0);
+    return this.shapeAsk;
+  }
+
+  private frameShape(ground: number): void {
+    const s = this.shot;
+    const c = this.cast.child.position;
+    this.childSubject.copy(c).y += 1.5;
+    this.birdSubject.copy(this.shapeHead);
+    s.target.copy(this.childSubject).lerp(this.birdSubject, 0.55);
+    s.target.y -= 0.2;
+    const k = tuning.wood.shape;
+    const ex = c.x + SHAPE_FACING.x * k.cameraBack - SHAPE_RIGHT.x * k.cameraSide;
+    const ez = c.z + SHAPE_FACING.z * k.cameraBack - SHAPE_RIGHT.z * k.cameraSide;
+    s.eye = this.side.set(ex, Math.max(heightAt(ex, ez), 0, ground) + k.cameraUp, ez);
+    const lamp = this.cast.fireflies.lantern;
+    s.subjects = { primary: this.childSubject, secondary: this.birdSubject,
+      tertiary: lamp.power > 0.25 ? lamp.at : undefined, margin: 0.72, extra: 12 };
+    this.pace = k.cameraPace;
     this.focus.copy(c);
   }
 }

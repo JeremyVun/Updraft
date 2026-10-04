@@ -369,7 +369,7 @@ const cygnetAhead: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
 const handsAt = new THREE.Vector3();
 const creatureAt = new THREE.Vector3();
 const emberAt = new THREE.Vector3();
-const story = new Journey({ child, plane: glider, boat, wind, lines, input, life, tree, drawing, cottage, sealife, cygnet, flock, carry, embers, birches, stairs: cloudStairs, sleeping, littleBoats, skyMirror, village, nearby: nearbyCreature });
+const story = new Journey({ child, plane: glider, boat, wind, lines, input, life, tree, drawing, cottage, sealife, cygnet, flock, carry, embers, fireflies, birches, stairs: cloudStairs, sleeping, littleBoats, skyMirror, village, nearby: nearbyCreature });
 // Boot only needs somewhere to stand; the start cuts to the chosen room.
 rig.cut(story.shot);
 const windDebug = QA && (params.debug === 'wind' || params.debug === 'sway') ? createWindDebug(params.debug === 'sway') : null;
@@ -952,12 +952,20 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   /** Under the wood's canopy a sheltered population stays low despite the storm outside. */
   const inWood = story.name === 'wood';
   const flyWeather = inWood ? tuning.wood.fireflyPresence : Math.max(0, 1 - storm * 1.6);
+  fireflies.gatherAt = story.current.gathersFireflies && input.present && !input.muted ? input.updraftAt : null;
+  fireflies.gatherCharge = input.charge;
+  fireflies.release = !!story.current.releasesFireflies;
   fireflies.update(dt, atmo.uniforms.uNight.value * overLand * flyWeather * (1 - sleeping.presence), story.focus, inWood);
   emberInvitation.update(dt, rig.camera, story.current.windInvitation ?? null, input,
     undefined, story.name === 'mirror' ? tuning.skyMirror.bubbleRadius : story.current.invitationRadius ?? 0);
   embers.update(dt, child.visible ? child.position : story.focus, story.current.embers ?? 0);
   const emberLit = embers.illumination(emberAt);
-  atmo.uniforms.uEmberLight.value.set(emberAt.x, emberAt.y, emberAt.z, Math.min(2.6, emberLit * 0.5));
+  /** One light reaches the wood's shaders: the gathered fireflies take it over from the coals as they gather. */
+  const coalLight = Math.min(2.6, emberLit * 0.5);
+  const lampLight = inWood ? fireflies.lantern.power * tuning.wood.lantern.light : 0;
+  const lampShare = THREE.MathUtils.smoothstep(lampLight / Math.max(coalLight, 0.05), 0.7, 1.4);
+  emberAt.lerp(fireflies.lantern.at, lampShare);
+  atmo.uniforms.uEmberLight.value.set(emberAt.x, emberAt.y, emberAt.z, THREE.MathUtils.lerp(coalLight, lampLight, lampShare));
   rain.update(dt, shower, rig.camera, wind.breeze, squall);
   const joining = glider.departing && glider.position.distanceTo(child.position) < 200 ? glider.position : null;
   /** Starlings turn over the hills at sunset, not in a squall. */

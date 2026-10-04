@@ -8,6 +8,7 @@ import { ATMO_GLSL, atmo } from './atmosphere';
 import { ISLES } from './heightfield';
 import { heightAt } from './island';
 import { createNoise2D, mulberry32 } from './noise';
+import { SHAPE_SHADOW_GLSL, WOOD_SHAPE, WoodShape, shapeUniforms } from './wood-shape';
 
 /** The south shore of the wood, where the boat runs ashore out of the storm. */
 export const WOOD_LANDING = new THREE.Vector2(-26, -1692);
@@ -361,6 +362,7 @@ void main() {
  */
 const WOOD_FRAG = /* glsl */ `
 ${ATMO_GLSL}
+${SHAPE_SHADOW_GLSL}
 uniform float uStorm;
 uniform vec3 uViewA;
 uniform vec3 uViewB;
@@ -408,7 +410,7 @@ void main() {
   col += uSunColor * sun * vAo * vSolid * (rim * (0.04 + 0.26 * uNight) + wet * (0.06 + 0.3 * uNight));
   /** Firelight is the only light that reaches the floor here, so wet leaves take far more of it than their own
       near-black albedo would give back: without this the player's light throws no pool on the ground at all. */
-  col += (alb + vec3(0.085, 0.048, 0.022)) * emberLight(vWorld, N);
+  col += (alb + vec3(0.085, 0.048, 0.022)) * emberLight(vWorld, N) * shapeShadow(vWorld);
   /**
    * Trunks right in front of the lens fade out: the camera trails the child through 2,700 trees and the one thing
    * the room can never do is hide the child, so anything between the two of them gets out of the way.
@@ -668,6 +670,7 @@ function planeTree(): THREE.BufferGeometry {
 
 export class DarkWood {
   readonly objects: THREE.Object3D[] = [];
+  readonly shape: WoodShape;
 
   private readonly trees: Placed[] = [];
   private readonly lods: { mesh: THREE.Mesh; geo: THREE.InstancedBufferGeometry; reach: number; cap: number; trees: Float32Array; forms: Float32Array }[] = [];
@@ -700,6 +703,7 @@ export class DarkWood {
 
     this.uniforms = {
       ...atmo.uniforms,
+      ...shapeUniforms,
       uSegs: { value: segTex },
       uStorm: { value: 0 },
       uViewA: { value: new THREE.Vector3() },
@@ -753,7 +757,8 @@ export class DarkWood {
         uSnagHeight: { value: new THREE.Vector2(heightAt(WOOD_PLANE.x, WOOD_PLANE.y) - 0.2, tuning.wood.planeSnagHeight + 0.2) } },
     }));
     snagTree.name = 'wood-plane-tree';
-    this.objects.push(deadfall, refugeRocks(), snagTree);
+    this.shape = new WoodShape();
+    this.objects.push(deadfall, refugeRocks(), snagTree, this.shape.mesh);
 
     const card = new THREE.PlaneGeometry(1, 1);
     const litterGeo = new THREE.InstancedBufferGeometry();
@@ -866,6 +871,9 @@ export class DarkWood {
       const j = Math.floor(rand() * (i + 1));
       [this.trees[i], this.trees[j]] = [this.trees[j], this.trees[i]];
     }
+    // Cleared after the draw so every other tree keeps its place.
+    const clear = this.trees.filter((t) => Math.hypot(t.x - WOOD_SHAPE.x, t.z - WOOD_SHAPE.z) > 5.5);
+    this.trees.splice(0, this.trees.length, ...clear);
   }
 
   /** Fallen trunks, root plates and the two hiding places that are made of them. */

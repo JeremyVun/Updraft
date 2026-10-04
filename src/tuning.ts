@@ -926,6 +926,29 @@ export const tuning = {
     fireflyCount: 240,
     fireflyRange: 25,
     fireflyPresence: 0.85,
+    /**
+     * The fireflies gathered into a lantern by an updraft wound among them (the stump at the bend): the charge at
+     * which circling starts gathering, how far from the column (m) and how fast flies join, how many make a full
+     * light, how high it hangs and how wide the swarm turns, how quickly it follows the column and how much of a gust's
+     * wind carries it, and how long it holds together untended (and once its work is done).
+     */
+    /**
+     * The stump at the bend: how far short of it she stops, her pace coming up to it, the flinch back (m over s),
+     * how far (m) the gathered light reaches it, the cosines (against her line to it) that count as its side
+     * rather than her side or its back, seconds of side light to show it for what it is, the breath out and the
+     * hand on the bark, and when the second invitation shows where to take the light and how far out.
+     */
+    shape: {
+      stopShort: 6.2, approachPace: 0.7, flinchStep: 0.55, flinchSeconds: 0.9,
+      lightReach: 7, sideFront: 0.45, sideBack: -0.75, revealSeconds: 1.8,
+      exhaleSeconds: 1.2, touchSeconds: 1.6, sideInviteAfter: 7, sideInviteOffset: 2.8,
+      cameraBack: 7.5, cameraSide: 2.6, cameraUp: 2.4, cameraPace: 0.8,
+    },
+    lantern: {
+      chargeFrom: 0.12, gatherRadius: 11, gatherRate: 1.4, full: 22, height: 1.35, orbit: 0.55,
+      follow: 1.4, carry: 0.6, carryResponse: 2, looseFor: 40, releaseFor: 6,
+      light: 2.4, haloSize: 1.6, haloAlpha: 0.32,
+    },
     /** Seconds a coal burns from a full catch if nobody fans it again. */
     burnFor: 46,
     /** How high fanning can run a burning coal up, and how much of that rush is thrown as light. */

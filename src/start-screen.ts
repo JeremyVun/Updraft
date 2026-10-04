@@ -24,7 +24,7 @@ const PAINTINGS: Record<string, string> = {
   island: 'island', crossing: 'washing', toLines: 'washing', lines: 'washing', washing: 'washing',
   toBoats: 'boats', boats: 'boats', toMeadow: 'meadow', meadow: 'meadow', hills: 'meadow', piano: 'meadow',
   toBirches: 'birches', birches: 'birches', autumn: 'birches', toStairs: 'stairs', stairs: 'stairs', clouds: 'stairs',
-  drowned: 'drowned', village: 'drowned', toWood: 'wood', wood: 'wood', dark: 'wood',
+  drowned: 'drowned', village: 'drowned', toWood: 'wood', wood: 'wood', dark: 'wood', fears: 'wood',
   toSleeping: 'sleeping', sleeping: 'sleeping', toMirror: 'sea', sea: 'sea', dolphins: 'sea', mirror: 'mirror',
   toHarbour: 'home', toHome: 'home', home: 'home', jetty: 'home', summit: 'home',
 };
@@ -66,7 +66,7 @@ class StartScreen {
     this.button.firstElementChild!.textContent = saved ? 'Continue' : 'Begin';
     const chapter = saved?.chapter ?? params.chapter;
     document.getElementById('home-screen-note')!.hidden = !swipeLeavesFullscreen();
-    this.veil.classList.toggle('night', (params.dusk ?? 0) > 1.3 || ['toWood', 'wood', 'dark', 'toSleeping', 'sleeping', 'home', 'summit'].includes(chapter ?? ''));
+    this.veil.classList.toggle('night', (params.dusk ?? 0) > 1.3 || ['toWood', 'wood', 'dark', 'fears', 'toSleeping', 'sleeping', 'home', 'summit'].includes(chapter ?? ''));
     const room = PAINTINGS[chapter ?? 'island'];
     if (room) this.paint(room);
     const finished = params.progress && hasFinished();
