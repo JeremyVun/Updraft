@@ -96,6 +96,16 @@ const SKEIN_FROM_TURN = 0.4;
 const SKEIN_FROM = 220;
 const SKEIN_HEADING = 0;
 const SKEIN_HIGH = 16;
+/**
+ * They are turned off that the least it takes to keep clear of the towers of cumulus, never into one: the most
+ * they may be turned, in steps of; how far out they fly before they are put away and how wide the V is, metres;
+ * and how much room they keep from the towers' frayed edges, metres.
+ */
+const SKEIN_TURNS_AT_MOST = 0.2;
+const SKEIN_TURN_STEP = 0.01;
+const SKEIN_GOES = 1400;
+const SKEIN_SPAN = 14;
+const SKEIN_ROOM = 2;
 /** How far short of the sun they are, seen from where she sits, when the lens has come back round behind her; radians. */
 const SKEIN_SETTLES = 0.52;
 /** How far from the middle of the frame the swans may go while the lens comes round with them, as shares of its half-width and half-height. */
@@ -954,12 +964,34 @@ export class StairsChapter implements Chapter {
   private sendSkein(): void {
     this.skeinSent = true;
     const behind = Math.atan2(-TOP_OUT.x, -TOP_OUT.z) - SKEIN_FROM_TURN;
-    const heading = Math.atan2(this.sun.x - SIT.x, this.sun.z - SIT.z) - SKEIN_HEADING;
+    const x = SIT.x + Math.sin(behind) * SKEIN_FROM;
+    const z = SIT.z + Math.cos(behind) * SKEIN_FROM;
+    const high = CLOUD.top + SKEIN_HIGH;
+    const heading = this.clearWay(x, z, high, Math.atan2(this.sun.x - SIT.x, this.sun.z - SIT.z) - SKEIN_HEADING);
     const run = 140;
-    const x = SIT.x + Math.sin(behind) * SKEIN_FROM + Math.sin(heading) * run;
-    const z = SIT.z + Math.cos(behind) * SKEIN_FROM + Math.cos(heading) * run;
-    this.cast.flock.pass(x, z, CLOUD.top + SKEIN_HIGH, heading, 9, run, false);
+    this.cast.flock.pass(x + Math.sin(heading) * run, z + Math.cos(heading) * run, high, heading, 9, run, false);
     this.to('skein');
+  }
+
+  /**
+   * The heading nearest `heading` on which the whole skein, from (x, z) at height y, flies clear of every tower
+   * of cumulus until it is put away, rather than through one; or the clearest there is.
+   */
+  private clearWay(x: number, z: number, y: number, heading: number): number {
+    const towers = this.world.cloud.towers;
+    const from = this.tmp, dir = this.tmp2;
+    let best = heading, clearest = -Infinity;
+    for (let i = 0; i <= 2 * SKEIN_TURNS_AT_MOST / SKEIN_TURN_STEP; i++) {
+      const way = heading + (i % 2 ? 1 : -1) * Math.ceil(i / 2) * SKEIN_TURN_STEP;
+      dir.set(Math.sin(way), 0, Math.cos(way));
+      let clear = Infinity;
+      for (const side of [-SKEIN_SPAN, 0, SKEIN_SPAN]) {
+        clear = Math.min(clear, towers.clearanceAlong(from.set(x + dir.z * side, y, z - dir.x * side), dir, SKEIN_GOES));
+      }
+      if (clear > SKEIN_ROOM) return way;
+      if (clear > clearest) { clearest = clear; best = way; }
+    }
+    return best;
   }
 
   private gather(): void {

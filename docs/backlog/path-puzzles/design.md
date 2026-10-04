@@ -82,6 +82,28 @@ His answers to the second round:
   rock behind the stump, and that lit coal is the visible source. No moonlight throws it. She stops where the eyes
   and the outline are the focus of the frame. The one coal at the stump, off to the side, reveals the owl, which flies
   off in a cute, well-made sequence. She breathes out and walks on round the bend without going to the trunk.
+
+  Refined with Jeremy (2026-10-05: "Your suggestions 1 through 4 make sense", and he gave ownership of the sequence):
+  1. One spot, one frame. Her wait at the coal before the bend is her stop. That coal stays on the path, well short of
+     the stump, and never reads as a second coal by it (Jeremy: "It looks like there are two embers next to the stump
+     too... i thought i asked for that not to happen"). The camera holds one frame on the eyes in the dark, and the
+     outline leaps up the rock when that coal catches, without the camera moving.
+  2. The reveal also plays on the rock. As the side coal wakes and the light swings round, the giant antlers swing
+     aside and shrink to a plain stump's shadow with a little round owl in its fork.
+  3. The relief is cute in the same medium. The owl's small flapping shadow flits across the rock as it takes off,
+     then the owl flutters up past her. She turns to follow it, and the cygnet peeps after it out of the satchel.
+  4. To try, and cut if it clutters: her own small shadow, with the cygnet's head, beside the giant antlers on the rock.
+  Risk to tune: the coal that throws the outline also lights the stump's front. Pale stone and dark bark keep the owl
+  hidden until the side coal shows it, with only the eyes glowing before then.
+  No fourth wall (Jeremy: "im not sure we should be breaking the fourth wall"): she never glances back toward the camera
+  or the player for help. In fear she keeps her eyes on the eyes in the dark, or glances down at the cygnet or toward her light.
+  The shadow's size is free (Jeremy: "Figure it out.. we have fireflies, we have lightning.. many different light
+  sources.."): the outline points away from the path coal so that coal reads as its cause, but it looms far larger than
+  physics gives. The wood's other lights may help the frame; lightning stays at most a faint far flicker, because one
+  close flash later is the cygnet's fright.
+  The target is the concept in `comps/owl/` (keyframes `k1`–`k4` from one fixed side-on camera, `k2-portrait`,
+  `flight-strip`, `plan` with the layout in metres, `notes.md`). Departures from it: in `k3` the reduced shadow must
+  read as the stump's fork with a little round owl in it, not a figure with raised arms.
 - **The island of lines: a pinwheel winds the boat in, on the shore beyond the red door** (Jeremy: "yes i think this
   is a good idea to try"). The boat is moored out on the water; a pinwheel on the bank drives a pulley line that
   winds it in to the shore. It adds a beat after the door rather than replacing a curtain. It knowingly relaxes two
@@ -237,3 +259,39 @@ billowing a sheet, filling a sail). Each prototype is judged on its own branch.
   to rise. Circling stands each plume into a tower that leans out toward the storm; when the towers join it, a cold
   rush races across the glass, a visible line of darkening water, and fills the sail. Risk: circling twice can read
   as the same act twice; uncovering each chimney differently is what varies it.
+- **D. Whistle up the wind.** Jeremy: "yea i like the idea of D as well. I dont know how we would keep the boat
+  stationary as the wind starts blowing, but i do like the idea of incorporating back a bit of a musical theme." The
+  old sailors' belief that whistling at sea calls up the wind, and a storm if you overdo it. The drowned church's organ
+  pipes stand out of the water near the boat like tall reeds; a gust across a pipe's mouth sounds its note, like
+  blowing across a bottle. When the air dies the bells in the spire ring a short phrase on their own, the dying
+  breeze's last touch, and nothing answers. As each bell sounds, the pipe with the same note shivers in sympathy with
+  a ring on the water at its foot, so the phrase can be read with the sound off; the player answers it on the pipes,
+  the piano's call and response in a new place. The boat stays put because the notes never blow on it: each answered
+  note draws a dark line of ruffled water on the far horizon nearer across the glass, and stirs the nearest toys (tiny
+  and light) a little; a wrong pipe only sounds and ripples. On the last note the line arrives, the sail fills, the
+  toys run on, and the wind keeps building past what she called for into the storm.
+
+Jeremy, on the toys: "btw, im not yet convinced that the little toys should be here anymore. i feel like we may be
+trying to fit in a callback that may or may not be artistically genuine." The prototypes leave them out: on main the
+toys' story ends with them reaching the sea, and only the orange toy comes back, washed up at home.
+
+Jeremy, on all the concept art for A to D: "yea, im honestly not convinced by any of the concept art that has been
+crated so far. what do you think? I think i'd be happy to let you take creative ownership of this piece of work and
+do the best you can."
+
+Why none convinced: the paintings were postcards from viewpoints the game never uses, showing the puzzle as magic
+effects rather than what the hand does; and every idea bolted a new mechanism onto the room (a kite in a smoke lift,
+organ pipes, smothered chimneys) instead of growing out of what is already there, because "the boat stopped, make it
+go" is an obstacle, not something the child wants.
+
+**Direction taken: the lines the village hung its washing on.** When the air dies the glass shows the village as it
+was: whole houses down to their doorsteps, lit windows, and washing out on lines strung house to house, moving in a
+breeze that does not exist above the water. The cygnet's reflection has its family beside it. Above the water the
+same lines are still there, sunk just under the glass, shown only by a peg or the corner of a sheet breaking the
+surface where the reflection's lines run. The sail is no use now; the child pulls them on herself. The player lifts
+a sunken line out of the water (the scarf's upward sweep; it rises dripping with its old washing still pegged on)
+into her hands, and she hauls the boat along it hand over hand to the next house. Then a choice read from the
+reflection (two lines leave that house; only one runs on toward the church), then a line wrapped round a chimney
+that circling unwinds. At the church the wind comes back as the storm: cat's-paws race across the glass and wipe the
+village as it was out of the water, the lines fall back, the sail fills. The memory shows the way, then the storm
+takes it, and she is the one who pulls them on: the step before the wood, where she goes into the dark first.
