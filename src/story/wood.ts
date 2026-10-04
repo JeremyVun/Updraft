@@ -930,6 +930,8 @@ export class WoodChapter implements Chapter {
   private readonly shapeLightAt = new THREE.Vector3();
   private readonly shapeFace = new THREE.Vector3();
   private readonly shapePoints = [new THREE.Vector3(), new THREE.Vector3(), shapePoint(0.4, 5.2, -2.3)];
+  /** Where the camera goes to see her hand on the bark from the side, in front of the stump's left shoulder. */
+  private readonly touchEye = shapePoint(-0.5, 1.9, 5.4);
   private readonly shapeAsk: Coax = { at: new THREE.Vector3(), urgency: tuning.wood.inviteCoalUrgency, radius: tuning.wood.inviteCoalRadius };
 
   /** QA: start a few paces short of the bend, with the coal before it just lit. */
@@ -955,7 +957,7 @@ export class WoodChapter implements Chapter {
   private toShape(): void {
     const k = tuning.wood.shape;
     const { child: c, embers } = this.cast;
-    this.shapeTouch.copy(shapePoint(-0.3, 0.98, 0.32));
+    this.shapeTouch.copy(shapePoint(-0.78, 0.97, 0.2));
     this.frontCoal = embers.lay(SHAPE_FRONT_COAL.x, SHAPE_FRONT_COAL.y);
     this.sideCoal = embers.lay(SHAPE_SIDE_COAL.x, SHAPE_SIDE_COAL.y);
     this.shapeTarget = this.frontCoal;
@@ -1100,7 +1102,8 @@ export class WoodChapter implements Chapter {
     const k = tuning.wood.shape;
     const owl = woodOwl;
     this.owlEyes(this.shapeEyes);
-    this.shapeClose += ((this.braveStep < 4 ? 1 : 0) - this.shapeClose) * (1 - Math.exp(-dt * 0.5));
+    // In close on the owl while it is there.
+    this.shapeClose += ((this.braveStep < 2 ? 1 : 0) - this.shapeClose) * (1 - Math.exp(-dt * 0.5));
     owl.eyeshine *= Math.exp(-dt * 3);
     owl.lookAt(this.shapeHold.copy(c.position).setY(c.position.y + 1.2));
     if (owl.hooted) cue('hoot');
@@ -1127,15 +1130,16 @@ export class WoodChapter implements Chapter {
       if (b >= 1) {
         this.braveStep = 2;
         c.stroll = k.approachPace;
-        // To the side of the trunk the player is watching from, round the front coal, so the mitten on the bark shows.
-        const round = shapePoint(-1.15, 0, 2.7), stand = shapePoint(-0.8, 0, 0.78);
+        // Round the front coal to the stump's broken left shoulder, on the side the player watches from, so her
+        // mitten on the bark shows beside her rather than behind her.
+        const round = shapePoint(-1.15, 0, 2.7), stand = shapePoint(-1.38, 0, 0.38);
         c.walkTo(round.x, round.z, false, () => c.walkTo(stand.x, stand.z, false, () => {
           c.stop();
           c.faceToward(this.shapeTouch.x, this.shapeTouch.z, 1);
           c.reachFor(1, this.shapeTouch);
           this.braveStep = 3;
           this.braveAt = this.now;
-        }, 0.2), 0.5);
+        }, 0.15), 0.5);
       }
     }
     if (this.braveStep === 2 || this.braveStep === 3) c.lookAt = this.shapeTouch;
@@ -1148,7 +1152,7 @@ export class WoodChapter implements Chapter {
       c.lookAt = null;
       // Back out past the front coal, round the bend by the light she has, then on into the dark to the next coal.
       this.leg = Math.max(this.leg, 2);
-      const back = shapePoint(-1.0, 0, 2.8), clear = shapePoint(1.6, 0, 3.2);
+      const back = shapePoint(-1.2, 0, 2.8), clear = shapePoint(1.6, 0, 3.2);
       c.walkTo(back.x, back.z, false, () => c.walkTo(clear.x, clear.z, false, () => {
         pathPoint(SHAPE_STOP_ALONG + k.walkOn, 0, this.spot);
         c.walkTo(this.spot.x, this.spot.y, false, () => {
@@ -1188,6 +1192,17 @@ export class WoodChapter implements Chapter {
     // A glance after the owl as it goes, never a turn to follow it.
     if (woodOwl.phase === 'leaving') s.target.lerp(woodOwl.position, 0.12 * woodOwl.presence);
     const k = tuning.wood.shape;
+    // Her walk up to it and the hand on the bark are seen from the side, so the mitten on the wood is in view.
+    if (this.beat === 'brave' && this.braveStep >= 2) {
+      s.target.copy(this.childSubject).lerp(this.shapeTouch, 0.45);
+      s.eye = this.side.copy(this.touchEye);
+      s.eye.y = Math.max(s.eye.y, heightAt(s.eye.x, s.eye.z) + 1.6);
+      s.subjects = { primary: this.childSubject, secondary: this.shapeTouch, margin: 0.75, extra: 6 };
+      s.zoom = 1.15;
+      this.pace = k.cameraPace * 0.8;
+      this.focus.copy(c);
+      return;
+    }
     const back = k.cameraBack - k.closeIn * close, across = k.cameraSide * (1 - 0.25 * close);
     const ex = c.x + SHAPE_FACING.x * back - SHAPE_RIGHT.x * across;
     const ez = c.z + SHAPE_FACING.z * back - SHAPE_RIGHT.z * across;
