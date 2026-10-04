@@ -45,7 +45,7 @@ void main() {
   float foam = smoothstep(0.35, 0.75, streak + vUv.y * 0.35);
   float alpha = body * uAmount * mix(0.4, 0.85, foam);
   vec3 water = vec3(0.42, 0.64, 0.66) * (uSkyAmbient * 0.95 + uSunColor * 0.3);
-  vec3 white = vec3(0.9, 0.93, 0.88) * (uSkyAmbient * 0.75 + uSunColor * 0.45);
+  vec3 white = vec3(0.88, 0.92, 0.88) * (uSkyAmbient * 0.7 + uSunColor * 0.38);
   gl_FragColor = vec4(applyFog(mix(water, white, foam), vWorld), alpha);
 }`;
 /** Foam streaks on the water rushing out of the mouth, and the whirl where the plug was. */
@@ -359,8 +359,11 @@ export class LittleBoatsDrain {
     this.idle = 0;
   }
 
-  /** A stroke crossing the bath rocks it toward the stream; one crossing the plug rocks it in its hole and works it loose. */
-  brush(camera: THREE.Camera, input: PointerInput): void {
+  /**
+   * A stroke crossing the bath rocks it toward the stream; one crossing the plug rocks it in its hole, and works it
+   * loose once the fleet is waiting against it, so strokes that sail the toys past it never pull it by accident.
+   */
+  brush(camera: THREE.Camera, input: PointerInput, heroS: number): void {
     const k = tuning.littleBoats;
     const strength = Math.min(1, input.gust / 12);
     if (this.water > 1 - k.pourNeeded) {
@@ -376,8 +379,10 @@ export class LittleBoatsDrain {
         const push = hit * strength;
         this.rockVX += input.gustDir.y * k.plugRock * push;
         this.rockVZ -= input.gustDir.x * k.plugRock * push;
-        this.loose = Math.min(1, this.loose + k.plugLoosen * push);
-        if (this.risen) this.idle = 0;
+        if (this.risen && heroS > this.gate - 2.5) {
+          this.loose = Math.min(1, this.loose + k.plugLoosen * push);
+          this.idle = 0;
+        }
         if (this.loose >= 1) this.pulled = true;
       }
     }
@@ -390,7 +395,8 @@ export class LittleBoatsDrain {
     return Math.max(0.06, Math.abs(this.screenB.x - this.screenA.x) * (camera as THREE.PerspectiveCamera).aspect + 0.03);
   }
 
-  update(dt: number, time: number): void {
+  /** `fleetOut`: the last toy has left the mouth, so the rush can ease to a gentle outgoing stream. */
+  update(dt: number, time: number, fleetOut: boolean): void {
     const k = tuning.littleBoats;
     this.idle += dt;
 
@@ -418,12 +424,13 @@ export class LittleBoatsDrain {
       this.haul = Math.min(k.plugLift, this.haul + this.haulV * dt);
       this.swing += dt;
       if (this.haul > 0.9) {
-        this.rush = Math.min(1, this.rush + dt / k.rushRise);
+        const target = fleetOut ? 0.25 : 1;
+        this.rush += Math.sign(target - this.rush) * Math.min(Math.abs(target - this.rush), dt / (fleetOut ? k.drainFor : k.rushRise));
         this.rise = Math.max(0, this.rise - dt / k.drainFor);
       }
     }
     this.whirl = this.pulled ? Math.max(0, Math.min(1, this.haul / 1.2) - Math.max(0, this.swing - 3) * 0.12) : 0;
-    this.whirl = Math.max(this.whirl, this.rush * 0.25);
+
     this.flow += dt * this.rush * k.rushSpeed * 0.5;
 
     this.pose(time);

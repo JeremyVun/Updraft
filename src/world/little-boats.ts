@@ -357,7 +357,7 @@ export class LittleBoats {
   brush(camera: THREE.Camera, input: PointerInput, wind: WindField): void {
     if (!this.active || !this.launched || input.muted || !input.present || input.gust < tuning.littleBoats.brushSpeed) return;
     if (input.ndc.distanceToSquared(input.prevNdc) < 1e-8) return;
-    this.drain.brush(camera, input);
+    this.drain.brush(camera, input, this.toys[0].s);
     for (const toy of this.toys) {
       this.brushAt.copy(toy.group.position);
       this.brushAt.y += 0.8;
@@ -402,7 +402,7 @@ export class LittleBoats {
     if (!this.active && !this.departing) return;
     const k = tuning.littleBoats;
     this.time = time;
-    this.drain.update(dt, time);
+    this.drain.update(dt, time, this.toys.every((t) => t.s > 118));
     boatsTide.uBoatsRise.value = this.drain.rise;
     const gate = this.drain.gate;
     limit = this.drain.pulled ? Infinity : Math.min(limit, gate);
