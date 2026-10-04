@@ -86,13 +86,15 @@ export class DoorwayView {
           ? 'vec4 w = vec4(vWorld, 1.0);'
           : 'vec4 w = uDoorInverse * vec4(gl_FragCoord.xy / uDoorSize * 2.0 - 1.0, gl_FragCoord.z * 2.0 - 1.0, 1.0);';
         shader.fragmentShader = `uniform vec4 uDoorClip; uniform mat4 uDoorInverse; uniform vec2 uDoorSize;\n` + shader.fragmentShader;
+        // Lit where it is drawn, on the far shore, so nothing relights as the child actually steps across.
+        shader.fragmentShader = shader.fragmentShader.replace('uniform vec3 uGroundPos;', 'uniform vec3 uGroundPos; uniform vec3 uDoorOffset;\n#define uGroundPos (uGroundPos + uDoorOffset)');
         shader.fragmentShader = shader.fragmentShader.replace(/void\s+main\s*\(\s*\)\s*\{/, `void main() {
           if (uDoorClip.z != 0.0) {
             ${clipPosition}
             if (dot(w.xyz / w.w, uDoorClip.xyz) + uDoorClip.w < 0.0) discard;
           }`);
       };
-      material.customProgramCacheKey = () => 'doorway-actors-v3';
+      material.customProgramCacheKey = () => 'doorway-actors-v4';
       material.needsUpdate = true;
     }
   }

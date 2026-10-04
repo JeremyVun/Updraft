@@ -267,7 +267,7 @@ export class LinesChapter implements Chapter {
   private crossDoor(): void {
     const { child: c, cygnet, plane } = this.cast;
     doorway.crossed = true;
-    c.stop(); c.place(c.position.x + DOOR_SHIFT.x, c.position.z + DOOR_SHIFT.z, c.yaw);
+    c.stop(); c.place(c.position.x + DOOR_SHIFT.x, c.position.z + DOOR_SHIFT.z, c.yaw, true);
     cygnet.position.add(DOOR_SHIFT);
     cygnet.position.y = Math.max(heightAt(cygnet.position.x, cygnet.position.z), 0);
     cygnet.seating.snap();

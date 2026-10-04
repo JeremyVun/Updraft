@@ -405,18 +405,22 @@ export class Traveller {
     return deckGround(this.decks, x, z, this.position.y);
   }
 
-  place(x: number, z: number, yaw: number): void {
+  /** `keepScarf` carries the scarf's sway along, for a move nobody sees (through the island of lines' door). */
+  place(x: number, z: number, yaw: number, keepScarf = false): void {
     if (this.action?.kind === 'alight') {
       this.action = null;
       this.riding = false;
     }
+    const knotWas = keepScarf ? this.rig.knot.getWorldPosition(new THREE.Vector3()) : null;
     this.position.set(x, Math.max(this.ground(x, z), 0), z);
     this.yaw = yaw;
     this.lastSetYaw = yaw;
     this.yawLag.snap(0);
     this.pose(0);
     this.rig.root.updateMatrixWorld(true);
-    this.scarf.reset(this.rig.knot.getWorldPosition(this.tmp), this.rig.body.matrixWorld);
+    const knot = this.rig.knot.getWorldPosition(this.tmp);
+    if (knotWas) this.scarf.shift(knotWas.subVectors(knot, knotWas));
+    else this.scarf.reset(knot, this.rig.body.matrixWorld);
   }
 
   /**
