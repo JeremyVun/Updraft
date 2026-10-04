@@ -989,7 +989,7 @@ export const tuning = {
       owlLeaveAfter: 7, turnAfter: 0.9, turnRate: 2.0, peepAfter: 1.0, peepFor: 3.2, waveAfter: 2.2,
       exhaleSeconds: 1.8, chainOn: 17,
       eye: [14.4, 2.3, 5.2], look: [2.65, 3.0, 2.75], hfov: 76,
-      portraitEye: [6.2, 2.4, 15.5], portraitLook: [0.6, 5.2, 1.0], portraitVfov: 72,
+      portraitEye: [6.6, 2.4, 15.3], portraitLook: [0.6, 5.2, 1.0], portraitVfov: 72,
       easeFrom: 9, easeSeconds: 4.5, releaseSeconds: 8,
     },
     /** Seconds a coal burns from a full catch if nobody fans it again. */
