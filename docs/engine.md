@@ -517,7 +517,7 @@ scarf read the CPU wind copy and can still differ when readbacks land on differe
 
 ## Measuring
 
-`node tools/perf.mjs <frames|gl|cpu|flicker> [seconds] [query] ['<steps>']` runs the game in local Chrome and reports
+`node tools/perf.mjs <frames|gl|cpu|flicker> [seconds] [query] ['<steps>']` runs the game in Chrome for Testing and reports
 from inside the page: frame-interval percentiles and hitches, native WebGL calls that block, a CPU profile, or
 frame-to-frame image spikes. Measurement starts after readiness and a 1.5 s warm-up (`WARMUP`). To hunt level-of-detail
 pops, freeze the world (`hold=150` with a fixed `cam=`), creep the camera a few millimetres a frame from an `eval`

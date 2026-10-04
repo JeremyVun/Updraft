@@ -27,7 +27,7 @@ for (;;) {
 const portrait = mode.includes('portrait');
 const resume = mode.includes('resume');
 const viewport = portrait ? { width: 390, height: 844 } : { width: 1440, height: 900 };
-const browser = await chromium.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true,
+const browser = await chromium.launch({ channel: 'chromium', headless: true,
   args: ['--enable-gpu', '--use-angle=metal', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
 const report = { mode, passages: [], errors: [] };
 let page;

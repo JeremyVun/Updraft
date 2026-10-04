@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import assert from 'node:assert/strict';
 const portrait=process.argv.includes('portrait'), planeMode=process.argv.includes('plane'), prefix=`/tmp/updraft-wood-scene-${portrait?'portrait':'desktop'}${planeMode?'-plane':''}`;
 const width=portrait?390:1000,height=portrait?844:650;
-const browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});
+const browser=await chromium.launch({channel:'chromium',headless:true,args:['--use-angle=swiftshader','--enable-unsafe-swiftshader']});
 process.once('SIGTERM',async()=>{await browser.close();process.exit(143)});
 const page=await browser.newPage({viewport:{width,height}}),errors=[],shots=[];
 page.on('console',m=>{if(m.type()==='error'){errors.push(m.text());console.error(m.text())}else if(m.text().startsWith('scene:'))console.log(m.text())});page.on('pageerror',e=>errors.push(e.message));

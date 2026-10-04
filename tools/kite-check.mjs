@@ -36,7 +36,7 @@ const portrait = process.env.TOUCH === '1';
 const viewport = portrait ? { width: 390, height: 844 } : { width: 1200, height: 800 };
 const report = [], errors = [];
 try {
-  browser = await chromium.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true,
+  browser = await chromium.launch({ channel: 'chromium', headless: true,
     args: ['--enable-gpu', software ? '--use-angle=swiftshader' : '--use-angle=metal', ...(software ? ['--enable-unsafe-swiftshader'] : []), '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
   const page = await browser.newPage({ viewport, deviceScaleFactor: 1 });
   page.on('pageerror', e => { errors.push(e.message); console.error(e.message); });

@@ -4,7 +4,7 @@
 // --full renders the three-minute developments of the endorsed question at 80% tempo.
 // --resolution adds the opening's held resolution before the returning motif.
 // Standalone, fixed-source production/current versus alternate background audition.
-// Uses local Chrome without the GPU. Does not read project env files or alter runtime code.
+// Uses Chrome for Testing without the GPU. Does not read project env files or alter runtime code.
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
