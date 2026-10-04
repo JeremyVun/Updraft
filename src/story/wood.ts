@@ -849,7 +849,8 @@ export class WoodChapter implements Chapter {
       this.focus.copy(b);
       return;
     }
-    if (this.beat === 'loom' || this.beat === 'brave') {
+    // Once she sets off round the bend the walking camera takes her on, so it has settled before the next coal.
+    if (this.beat === 'loom' || (this.beat === 'brave' && this.braveStep < 4)) {
       this.frameShape(ground);
       return;
     }
@@ -1144,16 +1145,21 @@ export class WoodChapter implements Chapter {
       this.shapeDone = true;
       this.braveStep = 4;
       c.lookAt = null;
-      // Out round the stump's reaching limb and round the bend, then on to the next coal like any other.
+      // Out round the stump's reaching limb, round the bend by the light she has, then on into the dark to the next
+      // coal like any other.
       this.leg = Math.max(this.leg, 2);
       const clear = shapePoint(1.6, 0, 2.3);
       c.walkTo(clear.x, clear.z, false, () => {
-        this.to('walk');
-        this.chainAt = pathAlong(c.position.x, c.position.z);
-        // The stump took a coal's place; keep the coals beyond it on the sides their framing was made for.
-        this.chainSide = -this.chainSide;
-        this.layNext();
-        this.afterShape = this.ahead;
+        pathPoint(SHAPE_STOP_ALONG + k.walkOn, 0, this.spot);
+        c.walkTo(this.spot.x, this.spot.y, false, () => {
+          this.to('walk');
+          this.chainAt = pathAlong(c.position.x, c.position.z);
+          // The stump took a coal's place; keep the coals beyond it on the sides their framing was made for.
+          this.chainSide = -this.chainSide;
+          this.layNext();
+          this.afterShape = this.ahead;
+          this.placeShoulder();
+        }, 1);
       }, 0.5);
     }
   }
@@ -1177,7 +1183,7 @@ export class WoodChapter implements Chapter {
     this.childSubject.copy(c).y += 1.5;
     this.birdSubject.copy(this.shapeEyes);
     const close = THREE.MathUtils.smootherstep(this.shapeClose, 0, 1);
-    s.target.copy(this.childSubject).lerp(this.birdSubject, 0.62 + 0.18 * close);
+    s.target.copy(this.childSubject).lerp(this.birdSubject, 0.62 + 0.24 * close);
     s.target.y += 0.3 * (1 - close);
     // A glance after the owl as it goes, never a turn to follow it.
     if (woodOwl.phase === 'leaving') s.target.lerp(woodOwl.position, 0.12 * woodOwl.presence);

@@ -22,7 +22,7 @@ export function shapePoint(x: number, y: number, z: number, out = new THREE.Vect
 export const SHAPE_FRONT_COAL = new THREE.Vector2();
 export const SHAPE_SIDE_COAL = new THREE.Vector2();
 {
-  const front = shapePoint(-0.35, 0, 2.0);
+  const front = shapePoint(0, 0, 2.0);
   const side = shapePoint(-2.9, 0, 1.45);
   SHAPE_FRONT_COAL.set(front.x, front.z);
   SHAPE_SIDE_COAL.set(side.x, side.z);
