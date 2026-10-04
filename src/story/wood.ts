@@ -168,6 +168,7 @@ export class WoodChapter implements Chapter {
      * asks of the player is in it: one warm point in a blue-black world, and a gust across it takes it.
      */
     cast.embers.clearCoals();
+    shapeUniforms.uShapeEyes.value = 1;
     this.chainAt = 21;
     this.ahead = cast.embers.lay(...this.at(this.chainAt, this.chainSide * 3.4));
     this.placeShoulder();
@@ -906,6 +907,7 @@ export class WoodChapter implements Chapter {
   private readonly shapeHead = new THREE.Vector3();
   private readonly shapeTouch = new THREE.Vector3();
   private readonly shapeHold = new THREE.Vector3();
+  private readonly shapeGlance = new THREE.Vector3();
   private readonly shapeAsk: Coax = { at: new THREE.Vector3(), urgency: tuning.wood.inviteCoalUrgency, radius: tuning.wood.inviteCoalRadius };
 
   get gathersFireflies(): boolean { return this.beat === 'loom' && this.shapeStopped >= 0; }
@@ -936,7 +938,7 @@ export class WoodChapter implements Chapter {
     const k = tuning.wood.shape;
     const base = heightAt(WOOD_SHAPE.x, WOOD_SHAPE.z);
     this.shapeHead.set(WOOD_SHAPE.x, base + 1.6, WOOD_SHAPE.z).addScaledVector(SHAPE_FACING, 0.55);
-    this.shapeTouch.set(WOOD_SHAPE.x, base + 0.95, WOOD_SHAPE.z).addScaledVector(SHAPE_FACING, 0.2).addScaledVector(SHAPE_RIGHT, 0.36);
+    this.shapeTouch.set(WOOD_SHAPE.x, base + 0.95, WOOD_SHAPE.z).addScaledVector(SHAPE_FACING, 0.28).addScaledVector(SHAPE_RIGHT, -0.3);
     this.to('loom');
     const c = this.cast.child;
     c.stroll = k.approachPace;
@@ -970,13 +972,17 @@ export class WoodChapter implements Chapter {
     cygnet.watch(this.shapeHead);
     if (this.shapeStopped < 0) return;
     const since = this.now - this.shapeStopped;
+    // Now and then, while it still frightens her, a look back over her shoulder for the one who makes the light.
+    if (this.shapeFear > 0.6 && since > k.flinchSeconds + 1 && (since % k.glanceEvery) < k.glanceFor && this.shot.eye) {
+      c.lookAt = this.shapeGlance.copy(this.shot.eye);
+    }
     const { side, front } = this.shapeLight();
     if (side > 0.05) this.shapeLitAt = this.now;
     if (this.cast.fireflies.lantern.power > 0.3 && this.shapeLampAt < 0) this.shapeLampAt = this.now;
     if (this.cast.input.charge > 0.12 || this.cast.input.gust > 0.2) this.shapeWorkedAt = this.now;
     this.shapeReveal = Math.min(1, this.shapeReveal + dt * side / k.revealSeconds);
     // In the light from beside it, the two pale eyes are only a pair of little mushrooms.
-    shapeUniforms.uShapeEyes.value = 1 - THREE.MathUtils.smoothstep(this.shapeReveal, 0.15, 0.85) * 0.9;
+    shapeUniforms.uShapeEyes.value = 1 - THREE.MathUtils.smoothstep(this.shapeReveal, 0.15, 0.85);
     const want = THREE.MathUtils.clamp(0.7 + 0.3 * front - 0.6 * side - 0.5 * this.shapeReveal, 0, 1);
     this.shapeFear += (want - this.shapeFear) * (1 - Math.exp(-dt * 2.5));
     // A first flinch back from it, then she holds her ground with the bag held close.
@@ -1017,7 +1023,8 @@ export class WoodChapter implements Chapter {
     if (this.braveStep === 0 && this.now - this.braveAt > k.exhaleSeconds) {
       this.braveStep = 1;
       c.stroll = k.approachPace;
-      const stand = this.tmp.copy(this.shapeTouch).addScaledVector(SHAPE_FACING, 0.35).addScaledVector(SHAPE_RIGHT, 0.55);
+      // On the far side of it from the camera, so she never stands between the player and the thing she is touching.
+      const stand = this.tmp.copy(this.shapeTouch).addScaledVector(SHAPE_FACING, 0.45).addScaledVector(SHAPE_RIGHT, -0.5);
       c.walkTo(stand.x, stand.z, false, () => {
         c.stop();
         c.faceToward(this.shapeTouch.x, this.shapeTouch.z, 1);

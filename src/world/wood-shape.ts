@@ -159,7 +159,7 @@ void main() {
   float rim = pow(1.0 - min(abs(dot(n, V)), 1.0), 3.0);
   vec3 col = alb * (hemiLight(n) * 0.8 + uSunColor * max(0.0, dot(n, uSunDir)) * 0.35);
   // The moon on the stone behind is what the stump is seen against before there is any other light.
-  if (vKind > 1.5) col += alb * uSunColor * (0.5 + 0.5 * max(0.0, dot(n, normalize(cameraPosition - vWorld)))) * 1.5 * uNight;
+  if (vKind > 1.5) col += alb * uSunColor * (0.5 + 0.5 * max(0.0, dot(n, normalize(cameraPosition - vWorld)))) * 2.3 * uNight;
   else col += uSunColor * rim * 0.12 * uNight;
   float shade = shapeShadow(vWorld + n * 0.08);
   col += (alb + vec3(0.07, 0.04, 0.02)) * emberLight(vWorld, n) * shade;
