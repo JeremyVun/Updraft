@@ -167,6 +167,8 @@ export class Poser {
     p.land = ease(p.land, d.landing, 14, dt);
     p.plant = ease(p.plant, d.faceplant, 16, dt);
     p.swim = ease(p.swim, d.afloat ? 1 : 0, 5, dt);
+    /** Afloat, all the work is in the feet: swimming hard never opens or beats the wings. */
+    const effort = d.effort * (1 - p.swim);
     const alert = clamp((d.gaze.firm ? 0.5 : 0) + d.hope * 0.7 + d.call.env * 1.2 + p.beg * 0.5 + d.crouch * 0.9 + act('into-wind') * 0.6 + act('ask') + act('peer') + act('look-about') * 0.4, 0, 1);
     p.tall = ease(p.tall, alert * (1 - p.reach), 5, dt);
     const drowsy = d.settle * (0.55 + d.bond * 0.2) * (1 - d.fear) * (1 - alert);
@@ -174,7 +176,7 @@ export class Poser {
     const shake = act('shake');
     const spread =
       clamp(
-        d.flap * 0.35 + d.glide + d.effort * 1.3 + d.hope * 0.55 + (flying ? 1 : 0) + (climbing || lifting ? 0.45 : 0) + p.beg * 0.4 + shake * 0.35 + act('ask') * 0.6 + act('into-wind') * 0.3 + act('bowled') * 0.8 + p.plant * 0.7,
+        d.flap * 0.35 + d.glide + effort * 1.3 + d.hope * 0.55 + (flying ? 1 : 0) + (climbing || lifting ? 0.45 : 0) + p.beg * 0.4 + shake * 0.35 + act('ask') * 0.6 + act('into-wind') * 0.3 + act('bowled') * 0.8 + p.plant * 0.7,
         0,
         1,
       ) *
@@ -212,7 +214,7 @@ export class Poser {
     const body = n[BODY];
     body.rotation.x = -0.04 + p.sit * 0.04 - p.hunch * 0.12 + nibble * 0.25 + d.hurry * 0.12 - p.beg * 0.1 + stretch * 0.12 + push * 0.26 - haul * 0.18;
     body.rotation.z =
-      Math.sin(d.flapPhase + 1.2) * 0.05 * Math.max(flying ? 1 : 0, d.effort) +
+      Math.sin(d.flapPhase + 1.2) * 0.05 * Math.max(flying ? 1 : 0, effort) +
       Math.sin(d.wriggle * Math.PI * 2.5) * 0.12 * Math.min(1, d.wriggle * 3) +
       act('peer') * 0.22 * d.actSide +
       Math.sin(t * 15) * 0.3 * act('delve') +
@@ -368,7 +370,7 @@ export class Poser {
     const sway = Math.sin(t * 1.05) * 0.02 * (1 - p.reach) + (afoot ? Math.sin(d.stride * 2 + 0.7) * 0.05 * d.hurry : 0);
     /** A wingbeat pulls the head down a little; a passenger's head lags every jolt the child gives it. */
     a += sway + d.jostle * 3;
-    b += sway * 0.6 - d.effort * Math.max(0, Math.sin(d.flapPhase)) * 0.08;
+    b += sway * 0.6 - effort * Math.max(0, Math.sin(d.flapPhase)) * 0.08;
     /** Every axis is set: the preen solver rotates these bones freely, and anything left over would bend the next frame's neck. */
     n[NECK[0]].rotation.set(a * 0.55, 0, 0);
     n[NECK[1]].rotation.set(a * 0.45, 0, 0);
@@ -427,7 +429,7 @@ export class Poser {
      * Folded, the arm lies along the flank and the hand tucks back over the rump; spread, the hand whips a beat late.
      * In the satchel the hands cross further over the rump and the tail is cocked up, so neither reaches past the rim.
      */
-    let power = p.spread * (1 - d.glide * 0.8) * (d.effort > 0.02 || d.flap > 0.3 || flying ? 1 : 0.35);
+    let power = p.spread * (1 - d.glide * 0.8) * (effort > 0.02 || d.flap > 0.3 || flying ? 1 : 0.35);
     let beatPhase = d.flapPhase;
     const flutter = Math.max(p.beg, p.climb, act('ask') * 0.8, act('bowled'));
     if (flutter > 0.01) {
@@ -440,7 +442,7 @@ export class Poser {
       guard: d.wingGuard,
       beat: Math.sin(beatPhase) * power,
       lag: Math.sin(beatPhase - 0.75) * power,
-      twist: -d.glide * 0.12 + d.effort * 0.1 * Math.max(0, Math.sin(d.flapPhase)),
+      twist: -d.glide * 0.12 + effort * 0.1 * Math.max(0, Math.sin(d.flapPhase)),
       clamp: p.hunch,
       tuck: p.stowed,
       raise: [d.actSide > 0 ? preenLift : 0, d.actSide < 0 ? preenLift : 0],
