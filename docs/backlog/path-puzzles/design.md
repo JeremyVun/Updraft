@@ -66,6 +66,22 @@ His answers to the second round:
   the rocks." So: no front coal; the antlered shadow is already on a modest backdrop before anything is lit (thrown by
   the light she already has); one waiting coal, off to the side, reveals the owl; the stump stands taller than her;
   the owl leaves upward, clear of everything.
+
+  Jeremy on the third owl pass (2026-10-05): "The distance and composition at which the child stops kind of brings
+  the "scary sillouhette" and "glowing eyes" out of the focus of the frame. Figure out how to do this better. The
+  player should just see the owl eyes, and when they light the first ember, the scary outline shows up on the rock
+  behind. Right now, the outline is illuminated against the rock without any visible light source, and there's never
+  the scary moment of two glowing, blinking eyes staring at you from the darkness. I'm not sure why the child walks
+  towards the tree trunk after the owl flies away, that is strange. Tidy up the owl flying away animation and
+  direction. Right now, it's a bit amateur. It should be a nice animation sequence and feel cute when it flies away,
+  as a relief / contrast to the scariness." On which ember throws the outline: "One ember at the stump. That ember
+  is the one that reveals that it's an owl. The ember I'm talking about that reveals the scary outline should be the
+  one before it. Not at the stump."
+  So, in order: walking up in the dark, the player sees only two glowing eyes ahead that blink and stare, with no
+  stump, rock or shadow showing. The last path coal before the bend, once lit, throws the huge antlered outline up the
+  rock behind the stump, and that lit coal is the visible source. No moonlight throws it. She stops where the eyes
+  and the outline are the focus of the frame. The one coal at the stump, off to the side, reveals the owl, which flies
+  off in a cute, well-made sequence. She breathes out and walks on round the bend without going to the trunk.
 - **The island of lines: a pinwheel winds the boat in, on the shore beyond the red door** (Jeremy: "yes i think this
   is a good idea to try"). The boat is moored out on the water; a pinwheel on the bank drives a pulley line that
   winds it in to the shore. It adds a beat after the door rather than replacing a curtain. It knowingly relaxes two
