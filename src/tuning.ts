@@ -973,7 +973,8 @@ export const tuning = {
      * is with them; how fast the outline leaps up and how fast it folds into the plain stump's as the side coal
      * wakes, how far past its end the light swings it round as it folds (radians), how far its broad left antler
      * folds in and how many mip levels the masks blur while they move; the moonlight on her while she waits, and the
-     * share of fireflies left in the held frame; her one look down at the cygnet (when, for how long); when the owl
+     * share of fireflies left in the held frame, and how much of the owl's height above her she tips her head back
+     * for as it flies; her one look down at the cygnet (when, for how long); when the owl
      * leaves after it is seen; her turn after it as it flies (seconds into its flight, rate), the cygnet's peep and
      * her wave; the breath out and how far on the next coal waits. The held frame, in the shape's frame (right, up
      * from her feet, toward her): the eye and where it looks, landscape and portrait, each lens's horizontal field
@@ -983,7 +984,7 @@ export const tuning = {
     shape: {
       approachPace: 0.7, flinchStep: 0.45, flinchSeconds: 0.7, revealSeconds: 1.4,
       eyeshineDark: 0.8, throwLight: 0.34, sideLight: 1.4, holdHeat: 0.6, leapSeconds: 0.35, foldShift: 1.1,
-      foldSwing: 0.35, foldIn: 0.45, foldBlur: 3.5, moonOnHer: 0.6, heldFireflies: 0.3,
+      foldSwing: 0.35, foldIn: 0.45, foldBlur: 3.5, moonOnHer: 0.35, heldFireflies: 0.3, lookUpShare: 0.35,
       glanceAfter: 2.4, glanceFor: 1.8,
       owlLeaveAfter: 7, turnAfter: 0.9, turnRate: 2.0, peepAfter: 1.0, peepFor: 3.2, waveAfter: 2.2,
       exhaleSeconds: 1.8, chainOn: 17,

@@ -299,7 +299,8 @@ void main() {
   if (uChildMoon > 0.0) {
     // Moonlight through bare crowns: a cold wash, and a rim along her outline so she reads against the dark.
     vec3 moon = vec3(0.3, 0.38, 0.6) * uChildMoon;
-    col += alb * moon * (wrap * 0.7 + 0.2) * ao;
+    // Her face keeps the warmth of her light: washed cold it goes pale as a mask.
+    col += alb * moon * (wrap * 0.7 + 0.2) * ao * (m == ${MAT.skin} ? 0.35 : 1.0);
     col += moon * pow(1.0 - facing, 2.5) * (0.35 + 0.65 * alb) * (1.0 - inside);
   }
   if (uLamp.w > 0.0) {

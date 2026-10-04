@@ -975,6 +975,7 @@ export class WoodChapter implements Chapter {
   private readonly shapeHand = new THREE.Vector3();
   private readonly shapeFace = new THREE.Vector3();
   private readonly childHead = new THREE.Vector3();
+  private readonly upAt = new THREE.Vector3();
   private readonly throwAt = new THREE.Vector3();
   private readonly bendEye = new THREE.Vector3();
   private readonly bendLook = new THREE.Vector3();
@@ -1171,7 +1172,9 @@ export class WoodChapter implements Chapter {
         c.tilt = owl.phase === 'awake' ? -0.6 * owl.head.z : c.tilt * Math.exp(-dt * 4);
       } else if (owl.phase === 'leaving' && owl.presence > 0.2) {
         c.tilt *= Math.exp(-dt * 4);
-        c.lookAt = owl.position;
+        // She tips her head back to it only so far: further, and her hood and fringe close over her face.
+        const head = c.position.y + 2.2;
+        c.lookAt = this.upAt.copy(owl.position).setY(head + (owl.position.y - head) * k.lookUpShare);
         cygnet.watch(owl.position);
         // Round after it, body and all, as it comes over her.
         if (flying > k.turnAfter) c.faceToward(owl.position.x, owl.position.z, 1 - Math.exp(-dt * k.turnRate));
