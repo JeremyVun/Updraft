@@ -1188,8 +1188,6 @@ export const tuning = {
     berthYaw: -0.45,
     /** A stalled player is shown a sweep across the pinwheel after this long without one. */
     inviteAfter: 4, inviteSpan: 7, inviteWidth: 0.15,
-    /** At the bank the view turns this share of the way toward the line's side, at this distance and height. */
-    viewTurn: 0.8, viewDistance: 21, viewHeight: 3.6,
     /** Just through the door, the share of the way the view turns from straight ahead toward the waiting boat. */
     arrivalLook: 0.3,
   },

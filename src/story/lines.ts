@@ -45,8 +45,6 @@ export class LinesChapter implements Chapter {
   private readonly reachTo = new THREE.Vector3();
   /** Seconds the line has stood still while she waits for the boat. */
   private stalled = 0;
-  /** The view of the shore turns from the walk's toward the line's side as she nears the bank. */
-  private readonly shoreFrom = new THREE.Vector3();
   /** She, the boat and the pinwheel stay in the frame however the view turns. */
   private readonly shoreSubjects = { primary: new THREE.Vector3(), secondary: new THREE.Vector3(), tertiary: new THREE.Vector3(),
     margin: 0.8, extra: 12 };
@@ -442,17 +440,13 @@ export class LinesChapter implements Chapter {
       s.distance = 25; s.height = 4;
       this.pace = 0.45;
     } else {
-      // Down at the bank the view comes round toward the line's side, so the pinwheel, the line and the boat read across it.
+      // While the boat is out, the view settles onto the whole stage as she nears the pinwheel, and holds still there.
       const b = this.cast.boat.position;
-      const k = tuning.shorePulley;
-      const bank = THREE.MathUtils.smoothstep(Math.hypot(c.x - SHORE_STAND.x, c.z - SHORE_STAND.z), 18, 4);
-      this.shoreFrom.set(Math.cos(k.bearing), 0, Math.sin(k.bearing)).lerp(this.from, 1 - k.viewTurn * bank).normalize();
-      s.from = this.shoreFrom;
-      // While she waits by the pinwheel the view holds still on the whole stage, so the boat comes in across it.
-      const hold = this.beat === 'haul' || this.beat === 'landed' ? 1 : bank;
+      const near = 1 - THREE.MathUtils.smoothstep(Math.hypot(c.x - SHORE_STAND.x, c.z - SHORE_STAND.z), 4, 18);
+      const hold = this.towing ? (this.beat === 'haul' ? 1 : near) : 0;
       const toBoat = this.towing ? 0 : 0.35;
       s.target.set(c.x * (1 - toBoat) + b.x * toBoat, Math.max(heightAt(c.x, c.z), 0) + 2.2, c.z * (1 - toBoat) + b.z * toBoat).lerp(SHORE_STAGE, hold);
-      s.distance = THREE.MathUtils.lerp(24, k.viewDistance, bank); s.height = THREE.MathUtils.lerp(7, k.viewHeight, bank);
+      s.distance = 24; s.height = 7;
       const f = this.shoreSubjects;
       f.primary.copy(c).y += 1.2;
       this.cast.boat.sailPoint(f.secondary);
