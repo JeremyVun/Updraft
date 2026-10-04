@@ -78,20 +78,49 @@ const ROCK_ALONG = new THREE.Vector2(0.839, -0.545).normalize();
 const ROCK_OUT = new THREE.Vector2(-ROCK_ALONG.y, ROCK_ALONG.x);
 /**
  * The outcrop seen square-on, along the face and up it from its middle on the ground, clockwise from its buried left
- * foot: a broken shoulder low on the stump's side, a long slope up to an uneven top, and a rounded fall to the right.
+ * foot: broken shoulders stepping up from the stump's side, an uneven top with a notch in it, and a fall to the right
+ * in straight breaks.
  */
 const ROCK_OUTLINE: [number, number][] = [
-  [-1.5, -1.0], [-1.9, 0.8], [-1.75, 2.0], [-1.15, 2.75], [-0.75, 3.7], [-0.25, 4.9], [0.6, 5.9],
-  [1.5, 6.55], [2.6, 7.0], [3.35, 7.15], [3.8, 6.85], [4.4, 7.25], [5.5, 7.5], [6.7, 7.2], [7.7, 6.3],
-  [8.4, 4.9], [8.85, 2.9], [8.95, 0.8], [8.75, -1.0],
+  [-1.6, -1.0], [-2.0, 0.4], [-1.85, 1.3], [-1.35, 1.65], [-1.2, 2.6], [-0.7, 2.95], [-0.6, 3.8], [-0.1, 4.2],
+  [0.0, 5.0], [0.6, 5.35], [0.8, 5.95], [1.6, 6.3], [2.5, 6.95],
+  [3.2, 6.9], [3.6, 6.45], [4.3, 7.2], [5.6, 7.55], [6.6, 7.1], [7.45, 6.2], [8.2, 4.75], [8.7, 3.0],
+  [8.95, 0.8], [8.75, -1.0],
+];
+/** Its ends along the face. */
+const ROCK_SPAN = [Math.min(...ROCK_OUTLINE.map((p) => p[0])), Math.max(...ROCK_OUTLINE.map((p) => p[0]))];
+/**
+ * The breaks that give it its planes, each a way out of the stone (along, up, out of the face) and how deep it cuts
+ * into whatever faces that way: a broad side turned to the stump, sloping shoulders, a top in uneven planes, a bevel
+ * between the face and the top, and a crease low on the face's right, clear of the shadows.
+ */
+const ROCK_BREAKS: [number, number, number, number][] = [
+  [-0.85, 0.5, 0.5, 0.9], [-0.45, 0.85, 0.35, 0.45], [-1, -0.1, 0.5, 0.5], [0.75, 0.62, 0.38, 0.5], [0.95, -0.05, 0.45, 0.45],
+  [0.3, 1, 0.08, 0.3], [-0.35, 1, 0.02, 0.32], [0.05, 1, -0.4, 0.35],
+];
+/**
+ * The face's planes, each through a point of it (along, up, out) and sloping out of the face per metre along and up:
+ * two broad planes meeting in a shallow fold down the middle, where the shadows land, and narrower ones turning away
+ * round them. The face is wherever the lowest of them is.
+ */
+const ROCK_FACETS: [number, number, number, number, number][] = [
+  [3.0, 3.2, 1.0, 0.0, -0.12], [1.0, 3.0, 1.0, 0.5, -0.06], [5.2, 3.4, 1.0, -0.32, -0.16], [2.6, 5.4, 0.74, 0.12, -0.38],
+  [-0.7, 2.5, 0.75, 0.6, -0.05], [6.7, 3.0, 0.95, -0.55, -0.1], [3.5, 6.3, 0.62, 0.04, -0.62],
+  [0.4, 0.3, 1.3, 0.3, 0.38], [0.3, 5.4, 0.75, 0.45, -0.45], [6.2, 5.8, 0.68, -0.45, -0.42], [5.8, 0.4, 1.25, -0.25, 0.35],
 ];
 const ROCK_MIDDLE = new THREE.Vector2(3.2, 2.6);
+/** How much smaller the face is than the stone's foot. */
+const ROCK_INSET = 0.36;
 const ROCK_FRONT = 0.75;
 /** The lower stone at its foot: along the face, out of it, and its half-length and half-depth. */
 const FOOT_STONE = [5.6, 1.3, 1.3, 0.9];
 const ROCK_DEEP = 2.6;
 /** The two shallow fissures down the face, along it and up it from its middle on the ground, clear of the shadow's eyes. */
 const FISSURES: [number[], number[]][] = [[[0.4, 5.2], [0.9, 3.0]], [[5.6, 6.6], [6.4, 3.4]]];
+/** The painted gritstone: metres to one repeat, its tone at night, and how deep its grain stands. */
+const ROCK_GRIT = 1.7;
+const ROCK_TONE = 0.7;
+const ROCK_BUMP = 0.016;
 /** Where along the face the painted shadows stand, pinned at their base. */
 const SHADOW_U = 2.7;
 
@@ -351,6 +380,7 @@ const faceUniforms = {
   uOwlFlight: { value: new THREE.Vector4(0, 0, FLAP_M, 0) },
   uShadowMasks: { value: null as THREE.Texture | null },
   uFlaps: { value: null as THREE.Texture | null },
+  uRock: { value: null as THREE.Texture | null },
 };
 
 /** Moves the owl's shadow capsules: body, head, ear tufts, each wing root to tip; nothing once it has gone. */
@@ -391,6 +421,7 @@ uniform vec4 uFaceSet;
 uniform vec4 uOwlFlight;
 uniform sampler2D uShadowMasks;
 uniform sampler2D uFlaps;
+uniform sampler2D uRock;
 /** Along the rock's face and up it, in metres from its middle on the ground. */
 vec2 faceAt(vec3 p) {
   vec3 r = p - uFaceO;
@@ -493,27 +524,35 @@ float calm(vec2 p) {
 }
 /** How much of a pattern of freq cycles a metre is left where a pixel covers size metres: none near the pixel's own scale. */
 float keep(float freq, float size) { return 1.0 - smoothstep(0.14, 0.32, freq * size); }
-/** The stone's broad relief, metres up off its face: weathered swells a metre across and hollows a hand across. */
-float relief(vec2 p) { return fbm(p * 0.42) * 0.5 + vnoise(p * 2.2 + 11.0) * 0.5; }
+/** Metres of stone one repeat of the painted gritstone covers. */
+const float GRIT = ${glsl(ROCK_GRIT)};
 /**
- * Granite at a point of the stone, in metres, with a pixel covering size metres there: broad warm and cool mottling,
- * then the grain, pale feldspar and dark mica a few centimetres across, and hairline cracks wandering through it.
- * Whatever is finer than a few pixels fades out rather than shimmering.
+ * The painted gritstone at a point of the stone, in metres: its colour, and in w its height. A broad, faint warmth
+ * and coolness drifts across it so the repeat never shows.
  */
-vec3 granite(vec2 p, float size) {
-  float mottle = fbm(p * 0.42);
-  float mid = vnoise(p * 2.2 + 11.0);
-  vec2 g = mat2(0.8, -0.6, 0.6, 0.8) * p;
-  float fine = (vnoise(g * 9.0 + 7.0) - 0.5) * keep(9.0, size) * 0.6 + (vnoise(mat2(0.28, 0.96, -0.96, 0.28) * p * 18.0 + 3.0) - 0.5) * keep(18.0, size) * 0.6;
-  vec3 alb = mix(vec3(0.12, 0.108, 0.094), vec3(0.2, 0.172, 0.14), smoothstep(0.3, 0.72, mottle)) * (0.86 + 0.28 * mid);
-  alb *= 1.0 + 0.45 * (vnoise(g * 4.0) - 0.5);
-  alb = mix(alb, vec3(0.33, 0.29, 0.24), smoothstep(0.1, 0.28, fine) * 0.6);
-  alb = mix(alb, vec3(0.04, 0.035, 0.03), smoothstep(-0.1, -0.28, fine) * 0.5);
-  float vein = abs(vnoise(p * 0.7 + 5.0) * 2.0 - 1.0);
-  float crack = (1.0 - smoothstep(0.0, 0.03 + size, vein)) * smoothstep(0.5, 0.65, vnoise(p * 0.3 + 9.0)) * keep(4.0, size);
-  alb *= 1.0 - 0.55 * crack;
-  float lichen = smoothstep(0.66, 0.74, fbm(p * 1.1 + 4.0) + 0.1 * fine);
-  return mix(alb, vec3(0.3, 0.31, 0.25) * (0.85 + 0.6 * fine), lichen * 0.45);
+vec4 grit(vec2 p) {
+  vec4 t = texture(uRock, p / GRIT);
+  float drift = fbm(p * 0.16);
+  t.rgb = max(mix(vec3(0.19, 0.17, 0.15), t.rgb, 1.6), 0.0);
+  t.rgb *= mix(vec3(0.8, 0.83, 0.88), vec3(1.12, 1.04, 0.95), smoothstep(0.25, 0.75, drift));
+  return t;
+}
+/** How the painted height climbs across p, per metre along each of its axes. */
+vec2 gritSlope(vec2 p) {
+  const float e = GRIT / 512.0;
+  float h = texture(uRock, p / GRIT).a;
+  return vec2(texture(uRock, (p + vec2(e, 0.0)) / GRIT).a - h, texture(uRock, (p + vec2(0.0, e)) / GRIT).a - h) / e;
+}
+/** How far p is from a fissure running from a to b, its line wandering a little as a crack does. */
+float fissure(vec2 p, vec2 a, vec2 b) {
+  vec2 ab = b - a;
+  float len = length(ab);
+  vec2 dir = ab / len, across = vec2(-dir.y, dir.x);
+  float along = dot(p - a, dir), t = along / len;
+  float wander = (vnoise(vec2(t * 9.0, 3.1)) - 0.5) * 0.12 + (vnoise(vec2(t * 31.0, 7.7)) - 0.5) * 0.03;
+  float beyond = max(0.0, max(-along, along - len));
+  // It closes up toward its ends.
+  return length(vec2(abs(dot(p - a, across) - wander), beyond)) + 0.03 * (1.0 - smoothstep(0.0, 0.15, min(t, 1.0 - t)));
 }
 /** Where the litter banks against the stone's foot, up from its middle on the ground, along the face. */
 float footAt(float u) { return 0.35 * vnoise(vec2(u * 0.7, 2.0)); }
@@ -555,24 +594,23 @@ void main() {
     col += (alb + vec3(0.006, 0.004, 0.002)) * raking * 0.8;
     col += raking * pow(1.0 - max(0.0, dot(n, V)), 3.0) * 0.08;
   } else {
-    // Weathered granite: a coarse grain of pale and dark crystals over broad mottling, a few hairline cracks, lichen
-    // here and there, moss on what faces up and leaves banked at its foot. Laid on from three sides, so nothing
-    // stretches where the stone turns away.
+    // Gritstone, painted: a fine grain of brown-grey with its own bump, moss on what faces up and leaves banked at its
+    // foot. Laid on from three sides, so nothing stretches where the stone turns away.
     vec3 r = vWorld - uFaceO;
     vec3 c = vec3(dot(r, uFaceU), r.y, dot(r, uFaceN));
     vec3 cn = vec3(dot(n, uFaceU), n.y, dot(n, uFaceN));
     vec3 w = pow(abs(cn), vec3(4.0));
     w /= w.x + w.y + w.z;
-    float size = max(length(dFdx(vWorld)), length(dFdy(vWorld)));
-    vec3 alb = granite(c.xy, size) * w.z + granite(c.zy + 17.0, size) * w.x + granite(c.xz + 41.0, size) * w.y;
-    // The bump is worked out on the stone itself, across each projection, so it never shows the mesh's triangles.
-    const float e = 0.04;
-    float h0 = relief(c.xy);
-    vec3 grad = (relief(c.xy + vec2(e, 0.0)) - h0) / e * w.z * uFaceU + (relief(c.xy + vec2(0.0, e)) - h0) / e * w.z * vec3(0.0, 1.0, 0.0);
-    float hs = relief(c.zy + 17.0);
-    grad += ((relief(c.zy + vec2(17.0 + e, 17.0)) - hs) / e * uFaceN + (relief(c.zy + vec2(17.0, 17.0 + e)) - hs) / e * vec3(0.0, 1.0, 0.0)) * w.x;
-    float ht = relief(c.xz + 41.0);
-    grad += ((relief(c.xz + vec2(41.0 + e, 41.0)) - ht) / e * uFaceU + (relief(c.xz + vec2(41.0, 41.0 + e)) - ht) / e * uFaceN) * w.y;
+    vec4 front = grit(c.xy), side = grit(c.zy + 17.0), top = grit(c.xz + 41.0);
+    vec3 alb = (front.rgb * w.z + side.rgb * w.x + top.rgb * w.y) * ${glsl(ROCK_TONE)};
+    float h0 = front.a * w.z + side.a * w.x + top.a * w.y;
+    // The fissures: a dark crack with a pale lip along its upper edge where the stone broke.
+    float crack = 1e3;
+    ${FISSURES.map(([a, b]) => `crack = min(crack, fissure(c.xy, vec2(${glsl(a[0])}, ${glsl(a[1])}), vec2(${glsl(b[0])}, ${glsl(b[1])})));`).join('\n    ')}
+    alb *= mix(0.25, 1.0, smoothstep(0.012, 0.05, crack)) * (1.0 + 0.25 * (1.0 - smoothstep(0.05, 0.1, abs(crack - 0.07))));
+    vec2 gf = gritSlope(c.xy), gs = gritSlope(c.zy + 17.0), gt = gritSlope(c.xz + 41.0);
+    vec3 grad = (gf.x * uFaceU + gf.y * vec3(0.0, 1.0, 0.0)) * w.z + (gs.x * uFaceN + gs.y * vec3(0.0, 1.0, 0.0)) * w.x
+      + (gt.x * uFaceU + gt.y * uFaceN) * w.y;
     float above = r.y;
     float moss = smoothstep(0.5, 0.8, cn.y) * smoothstep(0.45, 0.65, fbm(c.xz * 0.9 + 3.0) + 0.15 * h0);
     float foot = 1.0 - smoothstep(0.2, 1.0 + 0.5 * fbm(c.xz * 0.6), above - footAt(c.x));
@@ -581,19 +619,26 @@ void main() {
     // Fallen leaves caught at its foot and on its ledges.
     float leaf = leaves(c.xz + c.y * 0.3) * max(foot, smoothstep(0.6, 0.85, cn.y));
     alb = mix(alb, mix(vec3(0.24, 0.1, 0.035), vec3(0.32, 0.17, 0.06), vnoise(c.xz * 3.0)), leaf);
-    n = normalize(n - 0.12 * (grad - dot(grad, n) * n));
+    n = normalize(n - ${glsl(ROCK_BUMP)} * (grad - dot(grad, n) * n));
     col = alb * hemiLight(n) * 0.12;
     // A breath of moon along the top edge, so it stands against the trees behind it.
     float rim = pow(1.0 - max(0.0, dot(n, V)), 3.0) * smoothstep(0.1, 0.6, n.y);
     col += alb * uSunColor * (max(0.0, dot(n, uSunDir)) * 0.03 + rim * 0.14) * uNight;
+    col += alb * vec3(0.3, 0.38, 0.6) * smoothstep(0.2, 0.9, n.y) * 0.12 * uNight;
     vec2 shade = rockShadow(faceAt(vWorld));
     vec3 toCoal = uShapeThrow.xyz - vWorld;
-    vec3 L = normalize(toCoal);
+    // Her coal's light comes on square to the face, so the face takes it whole and the stone's other planes, turned
+    // away from it, fall off into shade and show its form.
+    vec3 L = normalize(normalize(toCoal) + uFaceN * 0.45);
     // Brightest low down nearest her coal, falling away up the face and along it.
     float near = pow(dot(uShapePool.xz - uShapeThrow.xz, uShapePool.xz - uShapeThrow.xz) / max(dot(toCoal, toCoal), 1.0), 0.8);
-    vec3 thrown = SHAPE_FIRE * uShapeThrow.w * shapePoolAt(vWorld) * near * clamp(dot(n, L) * 0.85 + 0.15, 0.0, 1.0)
+    float facing = clamp(dot(n, L), 0.0, 1.0);
+    vec3 thrown = SHAPE_FIRE * uShapeThrow.w * shapePoolAt(vWorld) * near * (facing * facing * 1.3 + 0.04)
       * mix(1.0, 0.6, smoothstep(1.5, 6.5, above));
     vec3 warm = thrown + shapeSideLight(vWorld, n) * 0.5;
+    // Where the stone turns away from its face it falls into its own shade, so its planes and edges show.
+    float turned = dot(normalize(vNormal) * (gl_FrontFacing ? 1.0 : -1.0), uFaceN);
+    warm *= mix(0.3, 1.0, smoothstep(0.6, 0.995, turned)) * mix(0.45, 1.0, smoothstep(0.15, 0.75, dot(n, V)));
     col += (alb + vec3(0.006, 0.004, 0.002)) * warm * (1.0 - 0.94 * shade.x);
     col += vec3(1.0, 0.68, 0.22) * shade.y * 2.6;
   }
@@ -758,7 +803,7 @@ export class WoodShape {
     const u = dx * FACE_U.x + dz * FACE_U.z, n = dx * FACE_N.x + dz * FACE_N.z;
     // The face bulges a little out of its plane; the stone at its foot stands further out.
     const front = u > FOOT_STONE[0] - FOOT_STONE[2] ? FOOT_STONE[1] + FOOT_STONE[3] : ROCK_FRONT + 0.3;
-    return u > ROCK_OUTLINE[1][0] - margin && u < ROCK_OUTLINE[17][0] + margin && n < front + margin && n > -ROCK_DEEP - margin;
+    return u > ROCK_SPAN[0] - margin && u < ROCK_SPAN[1] + margin && n < front + margin && n > -ROCK_DEEP - margin;
   }
 
   /**
@@ -782,6 +827,7 @@ export class WoodShape {
   constructor(masks: BendArt) {
     faceUniforms.uShadowMasks.value = masks.shadows;
     faceUniforms.uFlaps.value = masks.flaps;
+    faceUniforms.uRock.value = masks.rock;
     const base = heightAt(WOOD_SHAPE.x, WOOD_SHAPE.z);
     WOOD_SHAPE.y = base;
     const caps = LOCAL.map(([a, b, ra, rb]) => ({ a: shapePoint(...turned(a)), b: shapePoint(...turned(b)), ra: ra * STUMP_SCALE, rb: rb * STUMP_SCALE }));
@@ -851,46 +897,49 @@ export class WoodShape {
   }
 
   /**
-   * One weathered outcrop: a rounded mass whose face, seen square-on, has `ROCK_OUTLINE` for its edge, bulging gently
-   * and leaning back as it rises, cut by a few shallow planes into broad facets, with lumps a metre or two across.
-   * Built along the face (x), up (y) and out of it (z), then set in the world with its foot down in the litter.
+   * One weathered outcrop: a block whose face, seen square-on, has `ROCK_OUTLINE` for its edge, flat across the front
+   * and leaning back as it rises, broken by `ROCK_BREAKS` into planes that meet at edges, with a few shallower breaks
+   * of its own and two fissures down the face. Built along the face (x), up (y) and out of it (z), then set in the
+   * world with its foot down in the litter.
    */
   private outcrop(): THREE.BufferGeometry {
     const geo = new THREE.IcosahedronGeometry(1, 48);
     const pos = geo.getAttribute('position');
-    const lumpy = createNoise2D(71), finer = createNoise2D(72);
+    const lumpy = createNoise2D(71);
     const rand = mulberry32(83);
     const v = new THREE.Vector3();
     const points: THREE.Vector3[] = [];
     for (let i = 0; i < pos.count; i++) {
       v.fromBufferAttribute(pos, i);
       const angle = Math.atan2(v.y, v.x);
-      const spread = Math.hypot(v.x, v.y) ** 0.7;
+      // The face is set in from the stone's foot all round, so its flanks slope back to the ground and show.
+      const spread = Math.hypot(v.x, v.y) ** 0.45 * (v.z > 0 ? 1 - ROCK_INSET * v.z ** 0.8 : 1);
       const reach = outlineReach(angle);
       const p = new THREE.Vector3(ROCK_MIDDLE.x + Math.cos(angle) * reach * spread, ROCK_MIDDLE.y + Math.sin(angle) * reach * spread,
-        v.z > 0 ? ROCK_FRONT * Math.sqrt(v.z) : -ROCK_DEEP * Math.sqrt(-v.z));
+        v.z > 0 ? ROCK_FRONT * 2.6 * v.z ** 0.3 : -ROCK_DEEP * (-v.z) ** 0.5);
       p.z -= 0.09 * Math.max(0, p.y);
-      const lump = 0.32 * lumpy(p.x * 0.32, p.y * 0.32) + 0.1 * finer(p.x * 0.9, p.y * 0.9);
-      p.z += lump * (v.z > 0 ? 1 : 0.5);
+      if (v.z > 0) for (const [u, y, z, du, dy] of ROCK_FACETS) p.z = Math.min(p.z, z + du * (p.x - u) + dy * (p.y - y));
+      p.z += 0.08 * lumpy(p.x * 0.22, p.y * 0.22) * (v.z > 0 ? 1 : 3);
       points.push(p);
     }
-    // Shallow cuts across the face and the top, each taking a set depth off whatever it faces: broad flat planes.
-    for (let i = 0; i < 26; i++) {
-      const top = i % 3 === 0;
-      const n = (top ? new THREE.Vector3((rand() - 0.5) * 0.8, 1, (rand() - 0.1) * 0.8) : new THREE.Vector3((rand() - 0.5) * 1.6, (rand() - 0.4) * 1.0, 1)).normalize();
-      const depth = 0.12 + rand() * 0.35;
+    const breaks = ROCK_BREAKS.map(([x, y, z, depth]) => ({ n: new THREE.Vector3(x, y, z).normalize(), depth }));
+    for (let i = 0; i < 6; i++) {
+      const n = new THREE.Vector3((rand() - 0.5) * 1.6, 0.4 + rand() * 0.8, (rand() - 0.5) * 0.6).normalize();
+      breaks.push({ n, depth: 0.08 + rand() * 0.14 });
+    }
+    for (const { n, depth } of breaks) {
       let most = -Infinity;
       for (const p of points) most = Math.max(most, p.dot(n));
       for (const p of points) {
         const over = p.dot(n) - (most - depth);
-        if (over > 0) p.addScaledVector(n, -over * 0.85);
+        if (over > 0) p.addScaledVector(n, -over);
       }
     }
     points.forEach((p, i) => {
       if (p.z > -0.6) {
         let groove = 0;
-        for (const [a, c] of FISSURES) groove = Math.max(groove, Math.exp(-((segment(p.x, p.y, a, c) / 0.12) ** 2)));
-        p.z -= 0.1 * groove;
+        for (const [a, c] of FISSURES) groove = Math.max(groove, 1 - Math.min(1, segment(p.x, p.y, a, c) / 0.09));
+        p.z -= 0.13 * groove;
       }
       pos.setXYZ(i, p.x, p.y, p.z);
     });
