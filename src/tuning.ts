@@ -968,21 +968,24 @@ export const tuning = {
     fireflyPresence: 0.85,
     /**
      * The stump at the bend: her pace coming up to the coal before it and the flinch back when the antlers leap up
-     * the rock (m over s); seconds of side light to show it for what it is; how fast the light swings round to the
-     * side coal (per second); how brightly the owl's eyes shine in the dark; how much of a coal's glow throws the
-     * shadow up the rock, and the heat the two coals there keep while she is with them; her one look down at the
-     * cygnet (when, for how long); when the owl leaves after it is seen; her turn after it as it flies (seconds into its flight,
-     * rate), the cygnet's peep and her wave; the breath out and how far on the next coal waits. The held frame:
-     * the camera from where she stops (back, to her right, up; portrait apart), where it looks in the shape's frame,
-     * how far out it starts easing in, and how fast.
+     * the rock (m over s); seconds of side light to show it for what it is; how brightly the owl's eyes shine in the
+     * dark; how much of a coal's glow lights the rock and the stump, and the heat the two coals there keep while she
+     * is with them; how fast the outline leaps up and how fast it folds into the plain stump's as the side coal
+     * wakes; her one look down at the cygnet (when, for how long); when the owl leaves after it is seen; her turn
+     * after it as it flies (seconds into its flight, rate), the cygnet's peep and her wave; the breath out and how
+     * far on the next coal waits. The held frame, in the shape's frame (right, up from her feet, toward her): the
+     * eye and where it looks, landscape and portrait, each lens's horizontal field (portrait: vertical), when the
+     * walking camera starts easing to it (metres from her stop) and over how many seconds.
      */
     shape: {
-      approachPace: 0.7, flinchStep: 0.55, flinchSeconds: 0.8, revealSeconds: 1.2, lightShift: 1.4,
-      eyeshineDark: 0.9, throwLight: 2.2, holdHeat: 0.6, glanceAfter: 2.4, glanceFor: 1.8,
-      owlLeaveAfter: 7, turnAfter: 0.5, turnRate: 2.2, peepAfter: 0.4, peepFor: 3, waveAfter: 1.5,
-      exhaleSeconds: 1.6, chainOn: 14,
-      cameraBack: 9.8, cameraSide: 1.4, cameraUp: 3.0, portraitBack: 13.4, portraitSide: 1.6, portraitUp: 3.1,
-      lookAt: [-0.5, 3.0, -0.5], portraitLook: [0.2, 3.6], easeFrom: 18, cameraPace: 0.8,
+      approachPace: 0.7, flinchStep: 0.45, flinchSeconds: 0.7, revealSeconds: 1.4,
+      eyeshineDark: 0.8, throwLight: 0.34, sideLight: 1.4, holdHeat: 0.6, leapSeconds: 0.35, foldShift: 1.1,
+      glanceAfter: 2.4, glanceFor: 1.8,
+      owlLeaveAfter: 7, turnAfter: 0.9, turnRate: 2.0, peepAfter: 1.0, peepFor: 3.2, waveAfter: 2.2,
+      exhaleSeconds: 1.8, chainOn: 14,
+      eye: [13.6, 2.3, 7.4], look: [2.4, 3.0, 3.2], hfov: 76,
+      portraitEye: [6.4, 2.2, 15.5], portraitLook: [0.4, 5.6, -2.0], portraitVfov: 74,
+      easeFrom: 9, easeSeconds: 4.5,
     },
     /** Seconds a coal burns from a full catch if nobody fans it again. */
     burnFor: 46,

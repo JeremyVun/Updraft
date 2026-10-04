@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { ATMO_GLSL, atmo } from '../world/atmosphere';
-import { SHAPE_SHADOW_GLSL, SHAPE_STUMP_CAPS, setOwlShadow, setShadowEyes, shapeUniforms } from '../world/wood-shape';
+import { SHAPE_SHADOW_GLSL, SHAPE_STUMP_CAPS, setOwlShadow, shapeUniforms } from '../world/wood-shape';
 import { CREATURE_GLSL } from './shading';
 import { blob, merge, mirrored, type BlobSpec } from './shapes';
 
@@ -27,6 +27,8 @@ const CENTRE = new THREE.Vector3(0, 0.18, 0);
 const SHOULDER = new THREE.Vector3(0.1, 0.24, -0.01);
 const EYE_AT = new THREE.Vector3(0.05, 0.338, 0.128);
 const EYE_SIZE = new THREE.Vector3(0.039, 0.039, 0.022);
+/** The tip of the right ear tuft, on the head. */
+const TUFT = new THREE.Vector3(0.095, 0.44, 0.0);
 /** Larger than life, as the game's creatures are, so it reads from where the camera stands. */
 const SCALE = 2.1;
 /** Beyond this the eyeshine stops shrinking with distance. */
@@ -129,7 +131,7 @@ void main() {
   vec3 back = mix(vec3(0.24, 0.15, 0.09), vec3(0.36, 0.24, 0.14), speck);
   // Pale spots across the back and the crown, the way a little owl is freckled.
   back = mix(back, vec3(0.7, 0.6, 0.44), smoothstep(0.8, 0.88, speck) * 0.8);
-  vec3 breast = mix(vec3(0.62, 0.52, 0.37), vec3(0.32, 0.21, 0.12), smoothstep(0.55, 0.75, streak) * 0.8);
+  vec3 breast = mix(vec3(0.5, 0.4, 0.27), vec3(0.3, 0.19, 0.11), smoothstep(0.55, 0.75, streak) * 0.8);
   vec3 alb = mix(back, breast, t);
   float fuzz = 1.0;
   float glow = 0.0;
@@ -158,8 +160,8 @@ void main() {
   float edge = pow(1.0 - clamp(dot(N, V), 0.0, 1.0), 2.0);
   vec3 col = alb * (hemiLight(N) * 0.8 + moon * (wrap * wrap * 0.9 + 0.15));
   col += moon * edge * fuzz * 0.35 * (0.3 + 0.7 * alb);
-  // Until the side coal's light is on it, it is a dark lump in the fork with eyes.
-  vec3 warm = emberLight(vWorld, N) * mix(0.06, 1.6, uOwlEyes.y);
+  // Until the side coal's light is on it, it is a dark lump in the fork with eyes; flying, her light finds it.
+  vec3 warm = emberLight(vWorld, N) * mix(0.04, 0.7, uOwlEyes.y) + shapeSideLight(vWorld, N) * 0.4 * uOwlEyes.y;
   // Sat down in the fork it would be in the dead limbs' shade; let the light that shows it reach it.
   float shade = mix(1.0, shapeShadowCaps(vWorld + N * 0.03, ${SHAPE_STUMP_CAPS}), 0.3);
   col += (alb + 0.012) * warm * shade;
@@ -169,10 +171,12 @@ void main() {
     // Eyeshine: the light thrown back out of the eyes, which is all a frightened child sees of them in the dark.
     col += vec3(1.0, 0.72, 0.22) * uOwlEyes.x * glow * 3.2;
   }
-  // Up out of the firelight, the moon through the canopy finds the edges of its down, so it never goes out.
+  // Up out of the firelight, the moon through the canopy finds the edges of its down, so it never goes out; the
+  // warmth stays in the down, so it reads as a little brown owl against the night rather than a pale ghost.
   if (uOwlWing.w > 0.0) {
-    vec3 cold = vec3(0.62, 0.74, 1.0) * uNight * uOwlWing.w;
-    col += alb * cold * (wrap * 0.25 + 0.08) + cold * edge * fuzz * 0.3 * (0.3 + 0.7 * alb);
+    vec3 cold = vec3(0.5, 0.56, 0.7) * uNight * uOwlWing.w;
+    col += alb * cold * (wrap * 0.2 + 0.06) + cold * edge * fuzz * 0.22 * (0.3 + 0.7 * alb);
+    col += alb * vec3(0.5, 0.3, 0.16) * uOwlWing.w * 0.35;
   }
   col *= uOwlEyes.w;
   gl_FragColor = vec4(max(applyFog(col, vWorld), 0.0), 1.0);
@@ -223,6 +227,11 @@ function owlGeometry(): THREE.BufferGeometry {
     blend: (u) => -u.x * 0.5 + 0.5,
   };
   const foot: BlobSpec = { part: FEET, mat: DOWN, at: [-0.04, 0.012, 0.05], size: [0.028, 0.016, 0.034], detail: 1 };
+  const tuft: BlobSpec = {
+    part: HEAD, mat: PLUMAGE, at: [-TUFT.x, TUFT.y - 0.03, TUFT.z], size: [0.026, 0.045, 0.022], rot: [0, 0, 0.35], detail: 2,
+    shape: (u) => { const k = 1 - 0.7 * Math.max(0, u.y); u.x *= k; u.z *= k; },
+    blend: () => 0,
+  };
   const parts: BlobSpec[] = [
     {
       part: BODY, mat: PLUMAGE, at: [0, 0.16, 0], size: [0.13, 0.15, 0.12], detail: 3,
@@ -242,6 +251,7 @@ function owlGeometry(): THREE.BufferGeometry {
     },
     wing, mirrored(wing, WING_R),
     foot, mirrored(foot, FEET),
+    tuft, mirrored(tuft, HEAD),
     { part: TAIL, mat: WING, at: [0, 0.06, -0.1], size: [0.05, 0.02, 0.07], rot: [0.5, 0, 0], detail: 1, blend: () => 0.8 },
   ];
   return merge(parts.map(blob));
@@ -253,17 +263,18 @@ const rotZ = (p: THREE.Vector3, a: number) => p.set(Math.cos(a) * p.x - Math.sin
 
 type Phase = 'perched' | 'awake' | 'leaving' | 'gone';
 
-/** One little hop round on the perch before it goes: when it starts, after `leave`, and how much of the turn it makes. */
-const SHUFFLES = [[0.35, 0.55], [0.8, 0.45]];
-/** The leap off the fork, after `leave`. */
-const LAUNCH = 1.45;
+/** One little hop round on the perch toward the way it means to go: when it starts, after `leave`, and its share of the turn. */
+const SHUFFLES = [[0.3, 1]];
+/** The spring off the fork, after `leave`: it crouches on its toes from `CROUCH` and is off at `LAUNCH`. */
+const CROUCH = 0.75;
+const LAUNCH = 1.3;
 /** Seconds of flight per burst of wingbeats, and how much of each is beating rather than gliding. */
-const BURST = 1.5;
-const BEATING = 0.6;
-const BEAT_RATE = 2.6;
-/** Seconds from the leap to the end of its way, and the look back at her, seconds into the flight. */
-const FLIGHT = 7.5;
-const GLANCE = [2.4, 3.1];
+const BURST = 1.6;
+const BEATING = 0.7;
+const BEAT_RATE = 2.3;
+/** Seconds from the leap to the end of its way, and the look down at her as it comes over, seconds into the flight. */
+const FLIGHT = 6.8;
+const GLANCE = [2.3, 3.4];
 
 /**
  * The owl in the fork: what it is doing, kept apart from how it is drawn so the story can drive it without a
@@ -400,41 +411,46 @@ export class Owl {
     this.head.z *= Math.exp(-dt * 5);
     const turn = Math.atan2(Math.sin(this.flightYaw - this.sitYaw), Math.cos(this.flightYaw - this.sitYaw));
     if (t < LAUNCH || !this.way) {
-      // It looks the way it means to go first, then hops round after its head, twice, and crouches to spring.
+      // It looks the way it means to go, hops round after its head, sinks on its toes, and springs with its wings
+      // coming open wide.
       const look = turn - (this.yaw - this.sitYaw);
       this.head.x += (THREE.MathUtils.clamp(look, -1.4, 1.4) - this.head.x) * (1 - Math.exp(-dt * 5));
-      this.head.y += (-0.25 * smooth(t, 0.1, 0.35) * (1 - smooth(t, 0.9, 1.2)) - this.head.y) * (1 - Math.exp(-dt * 8));
+      this.head.y += (-0.2 * smooth(t, 0.1, 0.3) * (1 - smooth(t, 0.7, 1.0)) - this.head.y) * (1 - Math.exp(-dt * 8));
       let hop = 0, turned = 0;
       for (const [at, share] of SHUFFLES) {
-        const k = smooth(t, at, at + 0.2);
+        const k = smooth(t, at, at + 0.22);
         turned += share * k;
         hop = Math.max(hop, Math.sin(Math.PI * k));
       }
       this.yaw = this.sitYaw + turn * turned;
-      const crouch = smooth(t, 1.0, LAUNCH - 0.05);
-      this.pitch = 0.45 * crouch;
-      this.fold = 1 - 0.6 * smooth(t, 1.15, LAUNCH);
-      this.flap = 0.7 * smooth(t, 1.15, LAUNCH);
+      const crouch = smooth(t, CROUCH, LAUNCH - 0.12) * (1 - smooth(t, LAUNCH - 0.12, LAUNCH));
+      const spring = smooth(t, LAUNCH - 0.12, LAUNCH);
+      this.pitch = 0.4 * crouch + 0.3 * spring;
+      this.fold = 1 - smooth(t, LAUNCH - 0.3, LAUNCH);
+      this.flap = 1.05 * smooth(t, LAUNCH - 0.3, LAUNCH);
       this.position.copy(this.perch);
-      this.position.y += 0.06 * hop - 0.08 * crouch;
+      this.position.y += 0.07 * hop - 0.1 * crouch + 0.12 * spring;
       this.moonlit = 0;
       return;
     }
     const s = t - LAUNCH;
-    // Wings wide on the first stroke; then bursts of soft beats with a glide between, wings held a little up.
-    const beating = (s % BURST) / BURST < BEATING || s < BURST * BEATING ? 1 : 0;
+    // The first stroke is wide and slow, then bursts of soft, slightly uneven beats with a glide between.
+    const beating = s < BURST * BEATING || (s % BURST) / BURST < BEATING ? 1 : 0;
     this.flapBlend += (beating - this.flapBlend) * (1 - Math.exp(-dt * 7));
-    this.beat += dt * BEAT_RATE * Math.PI * 2 * (0.3 + 0.7 * this.flapBlend);
-    // Down quickly, up slowly.
+    const first = 1 - smooth(s, 0.35, 0.7);
+    this.beat += dt * BEAT_RATE * Math.PI * 2 * (0.3 + 0.7 * this.flapBlend) * (0.55 + 0.45 * (1 - first)) * (1 + 0.12 * Math.sin(this.beat * 0.5));
+    // Down quickly, up slowly, every other stroke a little shallower.
     const stroke = Math.cos(this.beat + 0.4 * Math.sin(this.beat));
-    this.flap = THREE.MathUtils.lerp(0.16, 0.12 + 0.75 * stroke, this.flapBlend);
+    const depth = 0.75 * (1 - 0.18 * (0.5 + 0.5 * Math.cos(this.beat * 0.5))) + 0.3 * first;
+    this.flap = THREE.MathUtils.lerp(0.18, 0.12 + depth * stroke, this.flapBlend);
     this.fold = Math.max(0, this.fold - dt * 5);
-    // Unhurried off the fork, gathering way, easing as it goes up out of sight.
+    // Unhurried off the fork, gathering way, then climbing away.
     const k = THREE.MathUtils.clamp(s / FLIGHT, 0, 1);
-    const u = THREE.MathUtils.clamp(0.55 * k * k + 0.45 * k + 0.04 * Math.sin(Math.PI * k), 0, 1);
+    const u = THREE.MathUtils.clamp(0.5 * k * k + 0.5 * k + 0.03 * Math.sin(Math.PI * k), 0, 1);
     this.way.getPointAt(u, this.position);
-    // Each downstroke lifts it a little and it sinks in the glide.
-    this.position.y += 0.07 * stroke * this.flapBlend - 0.05 * (1 - this.flapBlend);
+    // Each downstroke lifts it a little and it sinks in the glide; the first one bobs it up, and it settles.
+    const bob = 0.14 * Math.sin(Math.PI * smooth(s, 0.15, 0.75)) - 0.06 * Math.sin(Math.PI * smooth(s, 0.75, 1.2));
+    this.position.y += 0.07 * stroke * this.flapBlend - 0.05 * (1 - this.flapBlend) + bob;
     this.way.getTangentAt(Math.min(0.999, u + 0.01), this.along);
     const before = this.yaw;
     const heading = Math.atan2(this.along.x, this.along.z);
@@ -444,13 +460,14 @@ export class Owl {
     // Its body levels out along the way it climbs; a steep climb keeps it more upright.
     const climb = Math.atan2(this.along.y, Math.hypot(this.along.x, this.along.z));
     this.pitch += (0.85 - 0.6 * climb - this.pitch) * (1 - Math.exp(-dt * 5));
-    // One look back over its shoulder at her, in the first glide.
-    const back = smooth(s, GLANCE[0], GLANCE[0] + 0.3) * (1 - smooth(s, GLANCE[1], GLANCE[1] + 0.35));
+    // It looks down at her as it comes over her, and then on the way it goes.
+    const back = smooth(s, GLANCE[0], GLANCE[0] + 0.4) * (1 - smooth(s, GLANCE[1], GLANCE[1] + 0.4));
     this.tmp.copy(this.watch).sub(this.position);
     const toHer = Math.atan2(Math.sin(Math.atan2(this.tmp.x, this.tmp.z) - this.yaw), Math.cos(Math.atan2(this.tmp.x, this.tmp.z) - this.yaw));
     this.head.x += ((this.watching ? THREE.MathUtils.clamp(toHer, -1.7, 1.7) * back : 0) - this.head.x) * (1 - Math.exp(-dt * 6));
+    this.head.y += ((this.watching ? 0.35 * back : 0) - this.head.y) * (1 - Math.exp(-dt * 6));
     this.moonlit = smooth(s, 0.2, 1.5);
-    this.presence = 1 - smooth(s, FLIGHT - 0.6, FLIGHT);
+    this.presence = 1 - smooth(s, FLIGHT - 0.7, FLIGHT);
     if (s >= FLIGHT) this.phase = 'gone';
   }
 
@@ -498,6 +515,7 @@ export class OwlBody {
   private readonly body = new THREE.Vector3();
   private readonly headAt = new THREE.Vector3();
   private readonly wings: [THREE.Vector3, THREE.Vector3, THREE.Vector3, THREE.Vector3] = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
+  private readonly tufts: [THREE.Vector3, THREE.Vector3] = [new THREE.Vector3(), new THREE.Vector3()];
   private time = 0;
 
   constructor() {
@@ -528,7 +546,7 @@ export class OwlBody {
     geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     geo.setAttribute('aSide', new THREE.Float32BufferAttribute(side, 1));
     geo.setIndex(index);
-    this.glowUniforms = { uEyeL: { value: new THREE.Vector3() }, uEyeR: { value: new THREE.Vector3() }, uGlow: { value: 0 }, uGlowSize: { value: 0.16 } };
+    this.glowUniforms = { uEyeL: { value: new THREE.Vector3() }, uEyeR: { value: new THREE.Vector3() }, uGlow: { value: 0 }, uGlowSize: { value: 0.09 } };
     this.glow = new THREE.Mesh(geo, new THREE.ShaderMaterial({
       uniforms: this.glowUniforms, vertexShader: GLOW_VERT, fragmentShader: GLOW_FRAG,
       transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
@@ -545,7 +563,6 @@ export class OwlBody {
     this.glow.visible = shown && owl.eyeshine > 0.01;
     if (!shown) {
       setOwlShadow(null, null, 0, 0);
-      setShadowEyes(this.left, this.right, 0, 0);
       return;
     }
     const u = this.uniforms;
@@ -571,7 +588,8 @@ export class OwlBody {
       this.local.set(SHOULDER.x * side + side * Math.cos(owl.flap) * reach * spread, SHOULDER.y + Math.sin(owl.flap) * reach * spread - 0.1 * (1 - spread), SHOULDER.z - 0.04);
       owl.toWorld(this.local, false, this.wings[i + 1]);
     }
-    setOwlShadow(seen ? this.body : null, seen ? this.headAt : null, 0.13 * SCALE, 0.115 * SCALE, seen && spread > 0.2 ? this.wings : undefined, 0.05 * SCALE);
-    setShadowEyes(this.left, this.right, EYE_SIZE.x * SCALE, owl.eyeshine * owl.presence * (1 - owl.blink));
+    for (const [i, side] of [[0, -1], [1, 1]] as const) owl.toWorld(this.local.set(TUFT.x * side * 1.2, TUFT.y + 0.07, TUFT.z), true, this.tufts[i]);
+    setOwlShadow(seen ? this.body : null, seen ? this.headAt : null, 0.14 * SCALE, 0.12 * SCALE, seen ? this.tufts : undefined, 0.03 * SCALE,
+      seen && spread > 0.2 ? this.wings : undefined, 0.05 * SCALE);
   }
 }
