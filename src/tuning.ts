@@ -362,14 +362,28 @@ export const tuning = {
      * mouth at `plugS` holds them there until gusts work it loose and its chain hauls it out.
      */
     barS: 62, barHeight: 0.5, bathS: 59.5, plugS: 95.5, riseHeight: 0.34,
-    /** Tip per unit of stroke across the bath, how it springs back and is damped, its furthest tip (radians), and from what tip it pours. */
-    bathPush: 0.55, bathSpring: 5, bathDamping: 2.6, bathTipMax: 0.42, pourFrom: 0.1,
+    /**
+     * Tip per unit of stroke pushing the bath over toward the stream, how it springs back and is damped, its furthest
+     * tip (radians), and from what tip it pours. A stroke the other way rocks it back by `bathAgainst` of that.
+     */
+    bathAgainst: 0.3, bathPush: 0.7,
+    /**
+     * While the fleet is aground, a gust of the island's own crosses the bath toward the stream and slops a little
+     * over, showing which way it goes: the first after `nudgeFirst` s, then every `nudgeEvery` s; it tips the bath by
+     * `nudgeTip` and runs for `nudgeFor` s. Only water the player pours raises the pools.
+     */
+    nudgeFirst: 1.6, nudgeEvery: 9, nudgeTip: 1.15, nudgeFor: 1.2, nudgeSpeed: 14, bathSpring: 5, bathDamping: 2.6, bathTipMax: 0.42, pourFrom: 0.1,
     /** Share of the bath poured per second at the furthest tip; the pools are risen once `pourNeeded` of it is in. */
     pourRate: 0.32, pourNeeded: 0.7,
     /** How the risen water carries the grounded fleet over the shoal (m/s) and for how long it runs (s). */
     surgeSpeed: 2.2, surgeFor: 3.5,
-    /** The plug's size; looseness per second of a full stroke across it (it pulls free at 1); how hard each stroke rocks it; how fast and how high its chain hauls it (m/s, m). */
-    plugScale: 4, plugLoosen: 11, plugRock: 0.9, plugHaul: 3.2, plugLift: 22,
+    /** The plug's size; how hard each stroke rocks it; the speed it pops out at, then how fast and how high its chain hauls it (m/s, m). */
+    plugScale: 4, plugRock: 0.9, plugPop: 7, plugHaul: 3.2, plugLift: 22,
+    /**
+     * Only an updraft lifts the plug: looseness per second under a full column (it pulls free at 1), the charge that
+     * starts and fully lifts it, how near the column must stand (m), and the spiral shown to a waiting player.
+     */
+    plugLiftRate: 0.3, plugLiftFrom: 0.12, plugLiftFull: 0.55, plugReach: 3.5, plugCoaxUrgency: 0.8, plugCoaxRadius: 1.6,
     /** How fast the water rushes out of the mouth once the plug is out, carrying the fleet (m/s), and how quickly the rush builds and the risen pools drain (s). */
     rushSpeed: 3.6, rushRise: 1.2, drainFor: 5,
     /**

@@ -173,6 +173,8 @@ export interface Chapter {
   readonly windInvitation?: THREE.Vector3 | null;
   /** How big that target is, when it is big enough that the sweep has to go across it and out the other side. */
   readonly invitationRadius?: number;
+  /** Screen angle, radians anticlockwise from the right, of a sweep that only works one way. */
+  readonly invitationHeading?: number | null;
   /** A chapter target, such as the wood's waiting coal, that only an updraft wound up over it can answer. */
   readonly updraftTarget?: THREE.Vector3 | null;
   /** Screen-local wind work on chapter targets, including the paper snag. */

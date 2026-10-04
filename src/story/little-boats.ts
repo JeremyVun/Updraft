@@ -4,6 +4,7 @@ import type { Shot } from '../camera';
 import { tuning } from '../tuning';
 import { heightAt } from '../world/island';
 import { LITTLE_BOATS as L, BOATS_BERTH, BOATS_LANDING, BOATS_POOLS as POOLS, boatsX, boatsWidth, boatsLevel, boatsWaterHeight } from '../world/little-boats-layout';
+import type { Coax } from '../fx/swirl';
 import type { Cast, Chapter } from './cast';
 import { completeObjective } from './cues';
 
@@ -96,16 +97,34 @@ export class LittleBoatsChapter implements Chapter {
   get scripted(): boolean {
     return !['sailing', 'reveal'].includes(this.beat);
   }
+  private get waiting(): THREE.Vector3 | null {
+    const r = this.cast.littleBoats;
+    return this.beat === 'sailing' ? r.drain.waiting(r.toys[0].s) : null;
+  }
   get windInvitation(): THREE.Vector3 | null {
     const r = this.cast.littleBoats;
     if (this.beat !== 'sailing') return null;
-    const waiting = r.drain.waiting(r.toys[0].s);
-    if (waiting) return r.drain.idle > tuning.littleBoats.inviteAfter ? waiting : null;
+    const waiting = this.waiting;
+    if (waiting) return waiting === r.drain.bathAt && r.drain.idle > tuning.littleBoats.inviteAfter ? r.drain.hintAt : null;
     return r.idle > tuning.littleBoats.inviteAfter ? r.invitation : null;
   }
   get invitationRadius(): number {
-    const r = this.cast.littleBoats;
-    return r.drain.waiting(r.toys[0].s) ? r.drain.waitingRadius : 0;
+    return this.waiting === this.cast.littleBoats.drain.bathAt ? this.cast.littleBoats.drain.waitingRadius : 0;
+  }
+  get invitationHeading(): number | null {
+    const drain = this.cast.littleBoats.drain;
+    return this.waiting === drain.bathAt ? drain.pushAngle : null;
+  }
+  get updraftTarget(): THREE.Vector3 | null {
+    const drain = this.cast.littleBoats.drain;
+    return this.waiting === drain.plugAt ? drain.plugRest : null;
+  }
+  private readonly asking: Coax = { at: new THREE.Vector3(), urgency: tuning.littleBoats.plugCoaxUrgency, radius: tuning.littleBoats.plugCoaxRadius };
+  get coax(): Coax | null {
+    const drain = this.cast.littleBoats.drain;
+    if (this.waiting !== drain.plugAt || drain.idle < tuning.littleBoats.inviteAfter) return null;
+    this.asking.at.copy(drain.plugRest);
+    return this.asking;
   }
   /** QA: put the travellers and the fleet at course position `s` (the shoal is at 62, the plug at 97.5). */
   skipTo(s: number): void {

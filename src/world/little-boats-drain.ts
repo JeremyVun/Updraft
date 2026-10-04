@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { screenBrush } from '../creatures/motion';
 import type { PointerInput } from '../input/pointer';
+import type { WindField } from '../wind/field';
 import { tuning } from '../tuning';
 import { atmo, ATMO_GLSL } from './atmosphere';
 import { heightAt } from './island';
@@ -213,7 +214,24 @@ export class LittleBoatsDrain {
   private readonly pourMaterial: THREE.ShaderMaterial;
   private readonly hang = new THREE.Group();
   private readonly plug = new THREE.Group();
-  private readonly plugRest = new THREE.Vector3();
+  readonly plugRest = new THREE.Vector3();
+  /** Screen angle, radians anticlockwise from the right, of a stroke that pushes the bath over toward the stream. */
+  pushAngle = 0;
+  /** Where the bath's push is shown: from the tub out over its rim toward the pour. */
+  readonly hintAt = new THREE.Vector3();
+  private lifting = 0;
+  /** The updraft's pull on the plug, quick to take hold and slow to let go. */
+  private strain = 0;
+  private heave = 0;
+  private heaveV = 0;
+  private sincePush = Infinity;
+  private nudgeClock = 0;
+  private nudges = 0;
+  /** How far the island's own gust has crossed the bath, 0..1, or -1 while none is crossing. */
+  private nudgeAt = -1;
+  private readonly nudgeFrom = new THREE.Vector3();
+  private readonly nudgeTo = new THREE.Vector3();
+  private readonly nudgeLast = new THREE.Vector3();
   private rockX = 0;
   private rockZ = 0;
   private rockVX = 0;
@@ -277,6 +295,11 @@ export class LittleBoatsDrain {
     bath.add(this.bathWater);
     this.group.add(this.bathRoot);
     this.bathAt.set(bathX, this.bathRoot.position.y + 1.6, bathZ);
+    // Where the pour will land, known before any water has gone over.
+    this.bathRoot.updateMatrixWorld(true);
+    this.out.set(1, 0, 0).transformDirection(this.bathRoot.matrixWorld).setY(0).normalize();
+    this.lip.set(1.66, 1.99, 0).applyMatrix4(bath.matrixWorld).addScaledVector(this.out, 1.6);
+    this.pourAt.set(this.lip.x, boatsWaterHeight(this.lip.x, this.lip.z, 0), this.lip.z);
 
     const pour = new THREE.PlaneGeometry(1, 1, 1, this.pourSegments);
     this.pourMaterial = film(POUR_FRAG, { uAmount: { value: 0 }, uSpeed: { value: 3.5 } });
@@ -361,18 +384,19 @@ export class LittleBoatsDrain {
     this.idle = 0;
   }
 
-  /**
-   * A stroke crossing the bath rocks it toward the stream; one crossing the plug rocks it in its hole, and works it
-   * loose once the fleet is waiting against it, so strokes that sail the toys past it never pull it by accident.
-   */
+  /** A stroke pushing across the bath toward the stream tips it over; a stroke across the plug only rocks it in its hole. */
   brush(camera: THREE.Camera, input: PointerInput, heroS: number, dt: number): void {
     const k = tuning.littleBoats;
     const strength = Math.min(1, input.gust / 12);
     if (this.water > 1 - k.pourNeeded) {
       const hit = screenBrush(camera, this.bathAt, input.prevNdc, input.ndc, this.screenRadius(camera, this.bathAt, 2.4));
       if (hit > 0.01) {
-        this.tipV += k.bathPush * hit * strength;
-        if (!this.risen) this.idle = 0;
+        const aspect = (camera as THREE.PerspectiveCamera).aspect;
+        const sx = (input.ndc.x - input.prevNdc.x) * aspect, sy = input.ndc.y - input.prevNdc.y;
+        const along = (sx * Math.cos(this.pushAngle) + sy * Math.sin(this.pushAngle)) / Math.max(1e-6, Math.hypot(sx, sy));
+        this.tipV += k.bathPush * hit * strength * (along > 0 ? along : along * k.bathAgainst);
+        if (along > 0) this.sincePush = 0;
+        if (!this.risen && along > 0.3) this.idle = 0;
       }
     }
     if (!this.pulled) {
@@ -381,13 +405,57 @@ export class LittleBoatsDrain {
         const push = hit * strength;
         this.rockVX += input.gustDir.y * k.plugRock * push;
         this.rockVZ -= input.gustDir.x * k.plugRock * push;
-        if (this.risen && heroS > this.gate - 2.5) {
-          this.loose = Math.min(1, this.loose + k.plugLoosen * push * dt);
-          this.idle = 0;
-        }
-        if (this.loose >= 1) this.pulled = true;
       }
     }
+  }
+
+  /** While the fleet waits aground, now and then the island's own gust shows which way the bath tips. */
+  breeze(wind: WindField, heroS: number, dt: number): void {
+    const k = tuning.littleBoats;
+    if (this.risen || heroS < this.gate - 2.5) { this.nudgeClock = 0; this.nudgeAt = -1; return; }
+    this.nudgeClock += dt;
+    if (this.nudgeAt < 0 && this.sincePush > 3 && this.nudgeClock > (this.nudges ? k.nudgeEvery : k.nudgeFirst)) {
+      this.nudgeAt = 0;
+      this.nudgeClock = 0;
+      this.nudges++;
+      this.tmp.subVectors(this.pourAt, this.bathAt).setY(0).normalize();
+      this.nudgeFrom.copy(this.bathAt).addScaledVector(this.tmp, -6);
+      this.nudgeTo.copy(this.pourAt).addScaledVector(this.tmp, 3);
+      this.nudgeLast.copy(this.nudgeFrom);
+    }
+    if (this.nudgeAt < 0) return;
+    const before = this.nudgeAt;
+    this.nudgeAt = Math.min(1, this.nudgeAt + dt / k.nudgeFor);
+    if (before < 0.45 && this.nudgeAt >= 0.45) this.tipV += k.nudgeTip;
+    this.out.lerpVectors(this.nudgeFrom, this.nudgeTo, this.nudgeAt);
+    this.tmp.subVectors(this.nudgeTo, this.nudgeFrom).setY(0).normalize();
+    const fade = Math.sin(this.nudgeAt * Math.PI);
+    wind.addSplat({ source: this, trail: true, ax: this.nudgeLast.x, az: this.nudgeLast.z, bx: this.out.x, bz: this.out.z,
+      vx: this.tmp.x * k.nudgeSpeed * fade, vz: this.tmp.z * k.nudgeSpeed * fade, radius: 3.5, energy: 0.8 * fade, swirl: 0, lift: 0 });
+    this.nudgeLast.copy(this.out);
+    if (this.nudgeAt >= 1) this.nudgeAt = -1;
+  }
+
+  /** Where on screen a push tips the bath toward its pour. */
+  aim(camera: THREE.Camera): void {
+    this.screenA.copy(this.bathAt).project(camera);
+    this.screenB.copy(this.pourAt).project(camera);
+    this.pushAngle = Math.atan2(this.screenB.y - this.screenA.y, (this.screenB.x - this.screenA.x) * (camera as THREE.PerspectiveCamera).aspect);
+    this.hintAt.lerpVectors(this.bathAt, this.pourAt, 0.55);
+  }
+
+  /** An updraft wound over the plug lifts it, but works it loose only once the fleet is waiting against it. */
+  updraft(input: PointerInput, heroS: number, dt: number): void {
+    const k = tuning.littleBoats;
+    this.lifting = 0;
+    if (this.pulled || input.muted || !input.present) return;
+    const over = 1 - THREE.MathUtils.smoothstep(Math.hypot(input.updraftAt.x - this.plugRest.x, input.updraftAt.z - this.plugRest.z),
+      k.plugReach * 0.5, k.plugReach);
+    this.lifting = THREE.MathUtils.smoothstep(input.charge, k.plugLiftFrom, k.plugLiftFull) * over;
+    if (this.lifting < 0.02 || !this.risen || heroS < this.gate - 2.5) return;
+    this.loose = Math.min(1, this.loose + k.plugLiftRate * this.lifting * dt);
+    this.idle = 0;
+    if (this.loose >= 1) { this.pulled = true; this.haulV = k.plugPop; }
   }
 
   private screenRadius(camera: THREE.Camera, at: THREE.Vector3, size: number): number {
@@ -409,7 +477,8 @@ export class LittleBoatsDrain {
     const canPour = this.water > 1 - k.pourNeeded ? 1 : 0;
     const pouring = THREE.MathUtils.smoothstep(this.tip, k.pourFrom, k.bathTipMax) * canPour;
     this.pour += (pouring - this.pour) * (1 - Math.exp(-dt * (pouring > this.pour ? 10 : 4)));
-    this.water = Math.max(1 - k.pourNeeded, this.water - pouring * k.pourRate * dt);
+    this.sincePush += dt;
+    if (this.sincePush < 1.5) this.water = Math.max(1 - k.pourNeeded, this.water - pouring * k.pourRate * dt);
     if (!this.pulled) this.rise = (1 - this.water) / k.pourNeeded;
     if (!this.risen && this.rise >= 0.999) {
       this.risen = true;
@@ -417,6 +486,11 @@ export class LittleBoatsDrain {
     }
     this.surge = Math.max(0, this.surge - dt / k.surgeFor);
 
+    this.strain += (this.lifting - this.strain) * (1 - Math.exp(-dt * (this.lifting > this.strain ? 6 : 1.2)));
+    // Held in its hole by suction: each tug of the column lifts it a little, and what it has worked loose stays loose.
+    const tug = this.pulled ? 0 : this.loose * 0.45 + this.strain * (0.1 + 0.12 * Math.max(0, Math.sin(time * 5.5)));
+    this.heaveV += (60 * (tug - this.heave) - 7 * this.heaveV) * dt;
+    this.heave += this.heaveV * dt;
     this.rockVX += (-14 * this.rockX - 3 * this.rockVX) * dt;
     this.rockVZ += (-14 * this.rockZ - 3 * this.rockVZ) * dt;
     this.rockX = THREE.MathUtils.clamp(this.rockX + this.rockVX * dt, -0.28, 0.28);
@@ -453,10 +527,12 @@ export class LittleBoatsDrain {
     if (this.pourSheet.visible) this.shapePour(time);
 
     const swing = this.pulled ? Math.sin(this.swing * 2.1) * 0.12 * Math.exp(-this.swing * 0.35) : 0;
-    const jiggle = this.pulled ? 0 : Math.sin(time * 31) * 0.02 * this.loose * Math.min(1, Math.hypot(this.rockVX, this.rockVZ));
-    this.hang.position.set(this.plugRest.x, this.plugRest.y + this.haul + Math.abs(jiggle) * 2, this.plugRest.z);
+    const jiggle = this.pulled ? 0 : Math.sin(time * 31) * 0.012 * (this.loose * Math.min(1, Math.hypot(this.rockVX, this.rockVZ)) + this.strain);
+    const heave = this.pulled ? 0 : this.heave;
+    const wobble = this.pulled ? 0 : this.strain * (0.03 + 0.05 * this.loose);
+    this.hang.position.set(this.plugRest.x, this.plugRest.y + this.haul + heave, this.plugRest.z);
     this.hang.rotation.set(swing * 0.6, 0, swing);
-    this.plug.rotation.set(this.rockX, 0, this.rockZ + jiggle);
+    this.plug.rotation.set(this.rockX + wobble * Math.sin(time * 3.1), 0, this.rockZ + wobble * Math.cos(time * 2.6) + jiggle);
     this.plugAt.set(this.plugRest.x, this.plugRest.y + 0.8 + this.haul, this.plugRest.z);
 
     this.whirlDisc.visible = this.whirl > 0.01;
@@ -526,10 +602,12 @@ export class LittleBoatsDrain {
           THREE.MathUtils.lerp(p.getZ(last), p.getZ(last + 1), t), time, 1.1, 1.6 + this.pour);
       }
     }
-    if (!this.pulled && this.loose > 0.05 && Math.random() < this.loose * 0.5) {
-      const a = Math.random() * Math.PI * 2, r = 0.55 * k.plugScale;
+    const seep = this.pulled ? 0 : this.loose * 0.25 + this.strain * 1.6;
+    for (let i = 0; i < 2; i++) {
+      if (Math.random() >= seep - i) continue;
+      const a = Math.random() * Math.PI * 2, r = (0.5 + Math.random() * 0.1) * k.plugScale;
       const x = this.plugRest.x + Math.cos(a) * r, z = this.plugRest.z + Math.sin(a) * r;
-      this.splash.emit(x, boatsWaterHeight(x, z, time) + 0.03, z, time, 0.3, 0.8 + this.loose);
+      this.splash.emit(x, boatsWaterHeight(x, z, time) + 0.03, z, time, 0.25 + this.strain * 0.25, 0.7 + this.loose + this.strain);
     }
     if (this.pulled && this.haul < 3) {
       for (let i = 0; i < 3; i++) {
