@@ -404,7 +404,8 @@ Bakes that follow the world:
   per blade (`FRAME_FRAG`, four `RGBA32UI` attachments, 64 bytes a blade): whether thinning collapses it, its grown
   height, width and closing, its life, the wind's bend and flutter strength on it, the ground's normal and shadow,
   cloud shadow, frost and fog (a quarter of the way up the blade, where one fog comes closest to the fog along it).
-  The blade shader reads them with `texelFetch`, so its vertices take no filtered sample. Everything is kept as full
+  The blade shader reads them with `texelFetch`, so its vertices take no filtered sample; the targets are allocated at
+  boot (`atBoot`), because a draw whose integer sampler finds three's stand-in texture is dropped by the driver. Everything is kept as full
   float, as the vertex shader worked it out, but the fog, cut to half toward zero as a half-float target stores it:
   the ground's normal, frost, the morning's green or the warm lights stored as half float moved single pixels by up to
   41/255 through the grade's hue. The morning's green and the warm lights (lamp, hearth, lantern, dawn) stay at every

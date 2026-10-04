@@ -1,7 +1,7 @@
 import { LINES_GRASS_GLSL, linesGrassCrop } from './lines-layout';
 import { fixTreeInPlace } from '../gl/fixed';
 import { passJob, type CompileJob } from '../gl/boot';
-import { simMaterial, simTarget } from '../gl/gpu';
+import { atBoot, simMaterial, simTarget } from '../gl/gpu';
 import { JOURNEY_ROOMS_GLSL, ROOMS } from './journey-rooms';
 import { BOATS_POOLS, LITTLE_BOATS, boatsOut, boatsLevel, boatsToyClearing } from './little-boats-layout';
 import * as THREE from 'three';
@@ -1056,7 +1056,7 @@ export class Grass {
   private readonly fewer = { value: 0 };
   private fewerTarget = 0;
 
-  constructor() {
+  constructor(renderer: THREE.WebGLRenderer) {
     const density = Math.max(0, Math.min(1, params.grass ?? (params.lite ? 0.25 : 1)));
     const specs = LODS.map((base) => ({ ...base }));
     const last = specs[specs.length - 1];
@@ -1165,6 +1165,9 @@ export class Grass {
       this.group.add(mesh);
       this.lods.push({ spec, geo, tiles, tileTex, table, tableMat, frame, frameMat, count: 0, previousCount: 0, tilesChanged: false, dirty: true });
     }
+    // Blades read these through integer samplers, which three's stand-in for an unallocated texture does not match:
+    // a blade warmed before the first bake would be dropped by the driver, and its first real draw would come in play.
+    atBoot(() => { for (const l of this.lods) renderer.initRenderTarget(l.frame); });
     fixTreeInPlace(this.group);
     this.pickNearForm();
     this.setQuality(density, params.lite ? 0.7 : 1, true);
