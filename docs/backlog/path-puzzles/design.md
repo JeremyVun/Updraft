@@ -94,6 +94,8 @@ His answers to the second round:
   4. To try, and cut if it clutters: her own small shadow, with the cygnet's head, beside the giant antlers on the rock.
   Risk to tune: the coal that throws the outline also lights the stump's front. Pale stone and dark bark keep the owl
   hidden until the side coal shows it, with only the eyes glowing before then.
+  No fourth wall (Jeremy: "im not sure we should be breaking the fourth wall"): she never glances back toward the camera
+  or the player for help. In fear she keeps her eyes on the eyes in the dark, or glances down at the cygnet or toward her light.
 - **The island of lines: a pinwheel winds the boat in, on the shore beyond the red door** (Jeremy: "yes i think this
   is a good idea to try"). The boat is moored out on the water; a pinwheel on the bank drives a pulley line that
   winds it in to the shore. It adds a beat after the door rather than replacing a curtain. It knowingly relaxes two
