@@ -102,7 +102,8 @@
 // half-float RGBA again), sky-bank-on (the sky's storm bank compiled in with no storm).
 // Phase 7b: grass-fog-vertex works the blades' fog out at every vertex again without the per-blade fog pass (the
 // old path; every draw here runs that pass, as prepareFrame does); grass-fog-pass-off times the frame without that
-// pass (FRAME_PASS only: the blades then read the fog it last wrote); grass-near-6seg draws the near blades with six
+// pass (FRAME_PASS only: the blades then read the fog it last wrote; grass+grass-fog-pass-off is the blades and their
+// per-frame pass together); grass-near-6seg draws the near blades with six
 // segments at any level (Low's old path). grass-near-5seg replaces the near template and only works at levels that
 // draw its six-segment form (Ultra to Medium).
 // Every pair's baseline is reported. An ablation whose max/min pair baseline exceeds 1.4 straddles two GPU states:
@@ -596,7 +597,7 @@ window.__audit = {
       'grass-fog':[frameMats,'fragmentShader',s=>sub(s,/vec4 fog = fogOf[^;]*;/,'vec4 fog = vec4(0.0);')],
       'grass-cloud':[frameMats,'fragmentShader',s=>sub(s,'cloudShadow(root2)));','1.0));')],
       'grass-shade':[grassMats,'vertexShader',s=>sub(sub(s,'float green = morningAt(root2);','float green = 0.0;'),/vec3 warm = lampLight[^;]*;/,'vec3 warm = vec3(0.0);')],
-      'grass-frost':[frameMats,'fragmentShader',s=>sub(s,'vec4(ground.xyz, frostAt(root2))','vec4(ground.xyz, 0.0)')],
+      'grass-frost':[frameMats,'fragmentShader',s=>sub(s,'0.012 * sp, frostAt(root2))','0.012 * sp, 0.0)')],
       'grass-life':[frameMats,'fragmentShader',s=>sub(s,'float life = lifeAt(root2);','float life = 1.0;')],
       'grass-collapse':[grassMats,'vertexShader',s=>sub(s,'void main() {\\n  ivec2 at','void main() { collapse(); return;\\n  ivec2 at')],
       'water-frag-flat':[[waterMat],'fragmentShader',s=>main(s,'void main() { gl_FragColor = vec4(vWorld * 1e-4 + vSwell * 0.1 + vec3(0.1, 0.2, 0.3), 1.0); }')],
@@ -802,7 +803,8 @@ window.__audit = {
     for(const a of this.uploadsMid||[])a.needsUpdate=true;
     if (sim && this.omit !== 'wind') this.stepWind();
     if (sim && this.forceGrassBakes && this.omit !== 'grass-tables') {grass.tablesDirty=true;grass.bake(renderer);}
-    if (this.omit !== 'grass-fog-vertex' && this.omit !== 'grass-fog-pass-off') (grass.bakeFrame??grass.shadeFog)?.call(grass,renderer);
+    const omits=(this.omit||'').split('+');
+    if (!omits.includes('grass-fog-vertex') && !omits.includes('grass-fog-pass-off')) (grass.bakeFrame??grass.shadeFog)?.call(grass,renderer);
     const draw=()=>doorwayView.render(rig.camera,story.name==='lines',story.name!=='toBoats',()=>{
       if (this.omit !== 'reflection') water.update(rig.camera,c=>terrain.beginMirror(c),()=>terrain.endMirror());
       const bloom=post.bloom.render,renderBloom=post.renderBloom;
