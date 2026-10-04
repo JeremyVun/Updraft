@@ -129,8 +129,7 @@ The order is `ORDER` in `src/story/journey.ts`; each room has its section in [ch
    as far as there is light; the cygnet, frightened into hiding, is found by putting light on it.
 9. **The sleeping island.** The child falls asleep and the player guides the bird: a feather, a winter climb, a
    ribbon tugged free, morning let in, and the bird's first glide home to the child.
-10. **The sea.** The long crossing at sunrise: dolphins, a whale, and the little boats' toys come across sailing
-    their own way, which the cygnet goes over the side to swim among: its brave swim.
+10. **The sea.** The long crossing at sunrise: dolphins, a whale, and the cygnet's brave swim.
 11. **The sky mirror.** A flat of still water; bubbles skim fallen star reflections and lift the lights back into the
     sky.
 12. **Home.** The last hill: the cygnet tries, the player holds it up, the family comes down and it flies. The child

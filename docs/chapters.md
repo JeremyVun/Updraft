@@ -190,7 +190,7 @@ carries the fleet over. The fleet then waits against the plug. Gusts only rock i
 updraft on it (`updraftTarget`, the spiral `coax` after the usual wait) that lifts it in tugs, bubbles streaming
 round its rim, keeping whatever it has worked loose, until it pops free and the chain hauls it up. A whirl opens
 where it sat and the risen pools rush out of the mouth, carrying the whole fleet out and round to the right into the
-sea, where the toys sail on until out of view; three of them are met again on the open sea. The child and the
+sea, where the toys sail on until out of view. The child and the
 cygnet keep glancing at whatever is holding them, and the shot leans toward it while the fleet waits. Round the final
 bend their own boat waits among the toys (the reveal); the departure kite rises once the plug is out. The paper
 stays on the backpack throughout.
@@ -459,39 +459,25 @@ and `morning`.
 
 ## The open sea
 
-`toMirror`: `story/crossing.ts` with `dolphins` and `swimAt`, `fx/sealife/dolphin.ts`, `fx/sealife/whale.ts`,
-`fx/sealife/toys.ts`.
+`toMirror`: `story/crossing.ts` with `dolphins` and `swimAt`, `fx/sealife/dolphin.ts`, `fx/sealife/whale.ts`.
 `?chapter=sea`.
 
 The exhale after the worst of the journey: the one crossing that takes its time, and nothing is asked of the
 player but to sail. The boat leaves in the last of the night and the sleeping island's palette lifts astern. The
 pod rises round the boat in staggered groups and rides the bow; the featured leap runs up alongside and turns out
 so it is seen side-on, at first light; a whale surfaces far ahead. The boat settles into a pace that fits the pod's
-play: a boat running ahead of it is eased back, never below `leastSpeed` until the pod's farewell.
-
-Three of the little boats' toys (the child's orange one, the teal and the yellow) are already out there when the
-passage leaves, unseen in the night (`ToyFleet.sail`, placed from the route ahead by `seaToys.meetAt`/`meetIn`):
-a loose flotilla on a course of its own that crosses the route well ahead and runs on out to the swimming side,
-at a toy's pace, slower than the boat. Nothing about the boat changes what they do; their sails are the wind's,
-drawing in the breeze, heeling, luffing and driven harder by the player's gusts. They come out of the dark as the
-light comes (far off in the night they are unlit), the boat comes up on them, and as the nearest comes close
-after the leap, the cygnet notices: it watches them, grows restless, climbs onto the side and makes up its mind,
-and goes in when they are near. It swims out to the toy nearest it, to and fro along its near side among the
-others (`swimPlay`, as in their own room), never across a hull's bow and never further out than `seaToys.reach`,
-then turns back as they fall astern and paddles hard for the boat, which eases (`seaPassage.swimSpeed`, never a
-crawl) from the moment the toys are near until it is lifted back in to dry. The toys sail on their own way, out
-of the frame astern, and are gone once nobody could see them. While it swims the lens opens out beside the boat,
-low and close, looking across the cygnet and the toys to the child. A dolphin comes in and nudges the planking; then the pod dives away ahead before the mirror's still water develops.
+play: a boat running ahead of it is eased back, never below `leastSpeed` until the pod's farewell. Then the cygnet's
+brave swim: it grows restless, climbs onto the side, makes
+up its mind, goes in and swims in the wave along the hull while the boat sails on, and is lifted back in to dry. A
+dolphin comes in and nudges the planking; then the pod dives away ahead before the mirror's still water develops.
 Distant land dissolves into the sky until the pod has gone (`Chapter.openSea`). The paper stays stowed.
 
 Rulings: the passage takes at most 100 s. Dolphins are big, never swim in the air, and never turn faster than a
-body allows. The boat never crawls for the swim. The toys are a discovery, not a scripted event: they never steer
-for the boat, match its speed or keep station by it. Jeremy (2026-10-03): "the little boats should be doing their
-own thing and we simply "intercept" or "come across" them briefly".
+body allows. The boat never crawls for the swim.
 
 Rules: the pod follows its own stations rather than being swung with the boat.
 
-Knobs: `tuning.seaPassage`, `tuning.seaToys`, `tuning.dolphins`. Checks: `tools/sea-check.mjs`, `sea-logic-check.mjs`,
+Knobs: `tuning.seaPassage`, `tuning.dolphins`. Checks: `tools/sea-check.mjs`, `sea-logic-check.mjs`,
 `CROSSING=toMirror node tools/journey-pacing-check.mjs`.
 
 ## The sky mirror
@@ -538,7 +524,10 @@ holds the returned stars and the current destination.
 jetty, with a low seaward camera arc toward the lantern. The whole home landscape shares one haze depth, so the
 hillside emerges together, clearing between 150 and 45 m from the berth and over the first stretch of the jetty
 walk (`tuning.homeApproach`). The home jetty is never seen before this crossing. The boat moors alongside it, the
-one arrival in the game with somewhere built for it; the child steps up onto the boards and climbs the hill. A lone
+one arrival in the game with somewhere built for it; the child steps up onto the boards and climbs the hill. Her own
+orange toy from the little boats, the one she set sailing out to sea, lies on its side on the sand just above the wash
+beside the shore end of the jetty (`world/home-toy.ts`, `tuning.homeToy`), turned so the jetty view shows its hull and
+fallen sail: she walks off the boards right past it. Nothing is made of it. A lone
 tree, the still island's tree again at two-thirds size, stands on the slope above the beach to the west of the jetty
 (`HOME_TREE`): in the approach it breaks the long slope right of the sun, and it is out of frame for the climb,
 the summit, the drawing and the pan to the moon.
@@ -581,6 +570,8 @@ Rulings:
   shoulders. The camera stays close behind her shoulder; swinging it out to the side makes the scene feel unnatural.
 - The cottage faces the approach with a slight turn, echoing the drawing without looking arranged for it.
 - The camera stays at the crest for the goodbye: no following, dolly or crane.
+- The little boats' toys are not met at sea; the one callback is her own toy washed up beside the home jetty, still,
+  with no timing or camera work (Jeremy, 2026-10-04).
 - No figure in the doorway. Children do not light fireplaces: the smoke starts after nightfall.
 - No bells at the summit: no phrase when the family arrives, no reward bells at the updraft, none as they fly away.
 - The closing screen is the one line and Play again: no border on the button, no credits roll.
