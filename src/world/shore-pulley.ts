@@ -158,7 +158,8 @@ export class ShoreHaul {
     if (!full) this.run = Math.min(RUN, this.run + this.spin * K.wheelRadius * dt);
 
     // The painter takes the boat up once the knot has drawn ahead of it by more than its slack.
-    const goal = this.run / RUN * K.reach;
+    // The last of the line takes up the slack too, so the bow is drawn right up onto the sand.
+    const goal = this.run / RUN * (K.reach + K.slack + 0.3);
     const ahead = goal - this.boatAt - K.slack;
     if (ahead > 0) this.boatSpeed += ahead * K.pull * dt;
     this.boatSpeed *= Math.exp(-dt * (K.drag + (this.boatAt > K.reach - 1 ? K.beachGrip : 0)));
@@ -173,7 +174,7 @@ export class ShoreHaul {
 
   /** How taut the painter is, 0 slack to 1 pulling. */
   get taut(): number {
-    return THREE.MathUtils.smoothstep(this.run / RUN * K.reach - this.boatAt - K.slack, -0.4, 0.2);
+    return THREE.MathUtils.smoothstep(this.run / RUN * (K.reach + K.slack + 0.3) - this.boatAt - K.slack, -0.4, 0.2);
   }
 
   /** The boat's place on its way in, and its heading: it swings a little on its mooring and toward the pull. */
