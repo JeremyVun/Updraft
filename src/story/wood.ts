@@ -204,7 +204,7 @@ export class WoodChapter implements Chapter {
     }
     const start = Math.max(this.chainAt, pathAlong(c.x, c.z));
     let next = start + spacing;
-    if (!this.throwCoal) {
+    if (!this.bolted && !this.throwCoal) {
       // Space the coals up the leg evenly, ending at the one before the bend.
       const remaining = THROW_ALONG - start;
       if (remaining <= tuning.wood.chainStep * 1.5) next = THROW_ALONG;
@@ -224,7 +224,7 @@ export class WoodChapter implements Chapter {
     }
     this.chainSide = -this.chainSide;
     this.chainAt = along;
-    if (!this.throwCoal && along === THROW_ALONG) {
+    if (!this.bolted && !this.throwCoal && along === THROW_ALONG) {
       this.throwCoal = this.cast.embers.lay(SHAPE_THROW_COAL.x, SHAPE_THROW_COAL.y);
       this.ahead = null;
       this.toShape();
