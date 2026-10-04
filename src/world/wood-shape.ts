@@ -78,13 +78,13 @@ const ROCK_ALONG = new THREE.Vector2(0.839, -0.545).normalize();
 const ROCK_OUT = new THREE.Vector2(-ROCK_ALONG.y, ROCK_ALONG.x);
 /**
  * The outcrop seen square-on, along the face and up it from its middle on the ground, clockwise from its buried left
- * foot: broken shoulders stepping up from the stump's side, an uneven top with a notch in it, and a fall to the right
- * in straight breaks.
+ * foot: broken shoulders stepping up from the stump's side, an uneven top, and a fall to the right in straight
+ * breaks.
  */
 const ROCK_OUTLINE: [number, number][] = [
   [-2.1, -1.0], [-2.35, 0.3], [-2.05, 1.3], [-1.65, 2.3], [-1.15, 3.55], [-0.75, 4.2], [-0.5, 4.45], [0.25, 5.4],
   [0.75, 5.75], [1.3, 6.2], [2.5, 6.9],
-  [3.2, 6.9], [3.6, 6.45], [4.3, 7.2], [5.6, 7.55], [6.6, 7.1], [7.45, 6.2], [8.2, 4.75], [8.7, 3.0],
+  [3.4, 7.1], [4.3, 7.3], [5.6, 7.55], [6.6, 7.1], [7.45, 6.2], [8.2, 4.75], [8.7, 3.0],
   [8.95, 0.8], [8.75, -1.0],
 ];
 /** Its ends along the face. */
@@ -121,7 +121,7 @@ const FISSURES: [number[], number[]][] = [[[0.4, 5.2], [0.9, 3.0]], [[5.6, 6.6],
 const LEAF_TONE = [1.6, 1.75, 1.5];
 /** The painted gritstone: metres to one repeat, its tone at night, and how deep its grain stands. */
 const ROCK_GRIT = 1.7;
-const ROCK_TONE = 0.7;
+const ROCK_TONE = [0.52, 0.53, 0.58];
 const ROCK_BUMP = 0.016;
 /** Where along the face the painted shadows stand, pinned at their base. */
 const SHADOW_U = 2.7;
@@ -646,7 +646,7 @@ void main() {
     vec3 w = pow(abs(cn), vec3(4.0));
     w /= w.x + w.y + w.z;
     vec4 front = grit(c.xy), side = grit(c.zy + 17.0), top = grit(c.xz + 41.0);
-    vec3 alb = (front.rgb * w.z + side.rgb * w.x + top.rgb * w.y) * ${glsl(ROCK_TONE)};
+    vec3 alb = (front.rgb * w.z + side.rgb * w.x + top.rgb * w.y) * vec3(${ROCK_TONE.map(glsl).join(', ')});
     float h0 = front.a * w.z + side.a * w.x + top.a * w.y;
     // The fissures: a dark crack with a pale lip along its upper edge where the stone broke.
     float crack = 1e3;
@@ -678,11 +678,11 @@ void main() {
     float near = pow(dot(uShapePool.xz - uShapeThrow.xz, uShapePool.xz - uShapeThrow.xz) / max(dot(toCoal, toCoal), 1.0), 0.8);
     float facing = clamp(dot(n, L), 0.0, 1.0);
     vec3 thrown = SHAPE_FIRE * uShapeThrow.w * shapePoolAt(vWorld) * near * (facing * facing * 1.3 + 0.04)
-      * mix(1.0, 0.6, smoothstep(1.5, 6.5, above));
+      * mix(1.0, 0.4, smoothstep(1.5, 6.8, above));
     vec3 warm = thrown + shapeSideLight(vWorld, n) * 0.5;
     // Where the stone turns away from its face it falls into its own shade, so its planes and edges show.
     float turned = dot(normalize(vNormal) * (gl_FrontFacing ? 1.0 : -1.0), uFaceN);
-    warm *= mix(0.3, 1.0, smoothstep(0.6, 0.995, turned)) * mix(0.45, 1.0, smoothstep(0.15, 0.75, dot(n, V)));
+    warm *= mix(0.3, 1.0, smoothstep(0.6, 0.995, turned)) * mix(0.2, 1.0, smoothstep(0.2, 0.85, dot(n, V)));
     col += (alb + vec3(0.006, 0.004, 0.002)) * warm * (1.0 - 0.94 * shade.x);
     col += vec3(1.0, 0.68, 0.22) * shade.y * 2.6;
   }
@@ -942,7 +942,7 @@ export class WoodShape {
       const spread = Math.hypot(v.x, v.y) ** 0.45 * (v.z > 0 ? 1 - ROCK_INSET * v.z ** 0.8 : 1);
       const reach = outlineReach(angle);
       const p = new THREE.Vector3(ROCK_MIDDLE.x + Math.cos(angle) * reach * spread, ROCK_MIDDLE.y + Math.sin(angle) * reach * spread,
-        v.z > 0 ? ROCK_FRONT * 2.6 * v.z ** 0.3 : -ROCK_DEEP * (-v.z) ** 0.5);
+        v.z > 0 ? ROCK_FRONT * 2.4 * v.z ** 0.5 : -ROCK_DEEP * (-v.z) ** 0.5);
       p.z -= 0.09 * Math.max(0, p.y);
       if (v.z > 0) for (const [u, y, z, du, dy] of ROCK_FACETS) p.z = Math.min(p.z, z + du * (p.x - u) + dy * (p.y - y));
       p.z += 0.08 * lumpy(p.x * 0.22, p.y * 0.22) * (v.z > 0 ? 1 : 3);
