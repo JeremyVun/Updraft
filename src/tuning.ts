@@ -937,12 +937,12 @@ export const tuning = {
      * The stump at the bend: how far short of it she stops, her pace coming up to it, the flinch back (m over s),
      * how far (m) the gathered light reaches it, the cosines (against her line to it) that count as its side
      * rather than her side or its back, seconds of side light to show it for what it is, the breath out and the
-     * hand on the bark, how often and how long she looks back for the player while it frightens her, and when the second invitation shows where to take the light and how far out.
+     * hand on the bark, how often and how long she looks back for the player while it frightens her, how far past it she walks by the light, and when the second invitation shows where to take the light and how far out.
      */
     shape: {
       stopShort: 5.2, approachPace: 0.7, flinchStep: 0.55, flinchSeconds: 0.9,
       lightReach: 9, sideFront: 0.82, sideBack: -0.8, revealSeconds: 1.4,
-      exhaleSeconds: 1.2, touchSeconds: 1.6, glanceEvery: 5, glanceFor: 1.3, sideInviteAfter: 7, sideInviteOffset: 2.8,
+      exhaleSeconds: 1.2, touchSeconds: 1.6, glanceEvery: 5, glanceFor: 1.3, walkOn: 9, sideInviteAfter: 7, sideInviteOffset: 2.8,
       cameraBack: 8.5, cameraSide: -4.6, cameraUp: 3.4, cameraPace: 0.8,
     },
     lantern: {

@@ -1016,7 +1016,7 @@ export class WoodChapter implements Chapter {
   private brave(): void {
     const { child: c, cygnet } = this.cast;
     const k = tuning.wood.shape;
-    c.lookAt = this.shapeTouch;
+    if (this.braveStep < 3) c.lookAt = this.shapeTouch;
     cygnet.watch(null);
     c.lean += (0.03 - c.lean) * 0.05;
     c.tilt = 0;
@@ -1038,9 +1038,20 @@ export class WoodChapter implements Chapter {
       c.stroll = 1;
       c.lean = 0;
       this.shapeDone = true;
-      this.to('walk');
-      this.chainAt = pathAlong(c.position.x, c.position.z);
-      this.layNext();
+      this.braveStep = 3;
+      // Round the bend past it by the light she has, and on into the dark to the next coal like any other.
+      // Out in front of the reaching branch first, so she goes round its fingers rather than through them.
+      const clear = this.tmp.set(WOOD_SHAPE.x, 0, WOOD_SHAPE.z).addScaledVector(SHAPE_FACING, 2.3).addScaledVector(SHAPE_RIGHT, 0.6);
+      c.lookAt = null;
+      c.walkTo(clear.x, clear.z, false, () => {
+        pathPoint(SHAPE_STOP_ALONG + k.walkOn, 0, this.spot);
+        c.walkTo(this.spot.x, this.spot.y, false, () => {
+          this.to('walk');
+          this.leg = Math.max(this.leg, 2);
+          this.chainAt = pathAlong(c.position.x, c.position.z);
+          this.layNext();
+        }, 1);
+      }, 0.5);
     }
   }
 
