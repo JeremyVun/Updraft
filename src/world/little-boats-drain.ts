@@ -268,18 +268,18 @@ export class LittleBoatsDrain {
     // The shoal's stones break the surface right across the run, just under the bank's lip.
     const stones: THREE.BufferGeometry[] = [];
     const level = boatsLevel(k.barS);
-    for (let i = 0; i < 17; i++) {
-      const across = -1.08 + (i / 16) * 2.16 + Math.sin(i * 7.3) * 0.04;
-      const s = k.barS + Math.sin(i * 2.7) * 0.55;
-      const r = 0.42 + 0.2 * (0.5 + 0.5 * Math.sin(i * 4.1));
+    for (let i = 0; i < 12; i++) {
+      const across = -1.08 + (i / 11) * 2.16 + Math.sin(i * 7.3) * 0.05;
+      const s = k.barS + Math.sin(i * 2.7) * 0.6;
+      const r = 0.62 + 0.26 * (0.5 + 0.5 * Math.sin(i * 4.1));
       const g = new THREE.IcosahedronGeometry(r, 1);
-      g.scale(1.15, 0.55, 0.95);
+      g.scale(1.2, 0.55, 1);
       g.rotateY(i * 1.3);
       const x = boatsX(s) + across * boatsWidth(s);
       g.translate(x, level + 0.18 + 0.06 * Math.sin(i * 3.3) - r * 0.55, L.startZ - s);
       stones.push(g);
     }
-    const shoal = new THREE.Mesh(mergeGeometries(stones), solid('#8f8a78', 0.08));
+    const shoal = new THREE.Mesh(mergeGeometries(stones), solid('#5f5a4c', 0.08));
     shoal.name = 'shoal-stones';
     this.group.add(shoal);
 

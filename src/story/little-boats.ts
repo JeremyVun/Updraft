@@ -89,7 +89,11 @@ export class LittleBoatsChapter implements Chapter {
     c.walkTo(landing.x, landing.z, false, () => c.walkTo(letDown.x, letDown.z, false, setDown, 0.35), 0.6);
     this.frame();
   }
-  get departureKite(): boolean { return this.cast.littleBoats.progress >= tuning.linesToys.boatKiteRevealAt; }
+  /** The kite waits for the plug to come out, so the plug has the sky to itself. */
+  get departureKite(): boolean {
+    const room = this.cast.littleBoats;
+    return room.progress >= tuning.linesToys.boatKiteRevealAt && room.drain.pulled;
+  }
 
   get done(): boolean {
     return this.beat === 'aboard';
