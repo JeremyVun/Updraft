@@ -232,6 +232,7 @@ export class ShorePulleyRig {
   private readonly p = new THREE.Vector3();
   private readonly scale = new THREE.Vector3();
   private readonly bow = new THREE.Vector3();
+  private readonly inviteAt = new THREE.Vector3();
   private readonly stern = new THREE.Vector3();
   private readonly axis = new THREE.Vector3(0, 0, 1);
   private invited = 0;
@@ -365,7 +366,10 @@ export class ShorePulleyRig {
     if (this.alpha < 0.01) return;
     const k = tuning.linesPassage;
     const cycle = k.inviteSweep + k.invitePause;
-    this.gesture.draw(camera, SHORE_PINWHEEL, (this.invited % cycle) / k.inviteSweep, K.inviteSpan,
+    // The pinwheel stands near the side of the frame: draw the sweep through it from the middle, so it is not clipped short.
+    const side = this.p.copy(SHORE_PINWHEEL).project(camera).x > 0 ? -1 : 1;
+    this.inviteAt.setFromMatrixColumn(camera.matrixWorld, 0).multiplyScalar(side * K.inviteSpan * 0.3).add(SHORE_PINWHEEL);
+    this.gesture.draw(camera, this.inviteAt, (this.invited % cycle) / k.inviteSweep, K.inviteSpan,
       this.alpha, K.inviteWidth, 'across', Math.floor(this.invited / cycle) % 2 === 0 ? 1 : -1);
   }
 }
