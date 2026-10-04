@@ -825,6 +825,7 @@ export class WoodChapter implements Chapter {
     s.from = undefined;
     s.eye = undefined;
     s.subjects = undefined;
+    s.zoom = undefined;
     // Return from the shelter around the child. A straight eye interpolation crosses the subject
     // and whips the view through a half-turn just as the walk resumes.
     s.orbit = true;
@@ -953,7 +954,7 @@ export class WoodChapter implements Chapter {
   private toShape(): void {
     const k = tuning.wood.shape;
     const { child: c, embers } = this.cast;
-    this.shapeTouch.copy(shapePoint(-0.3, 0.95, 0.38));
+    this.shapeTouch.copy(shapePoint(0.3, 0.95, 0.38));
     this.frontCoal = embers.lay(SHAPE_FRONT_COAL.x, SHAPE_FRONT_COAL.y);
     this.sideCoal = embers.lay(SHAPE_SIDE_COAL.x, SHAPE_SIDE_COAL.y);
     this.shapeTarget = this.frontCoal;
@@ -1026,7 +1027,9 @@ export class WoodChapter implements Chapter {
     return THREE.MathUtils.lerp(power, mine, share);
   }
 
+  /** The owl's eyes while it sits in the fork; once it has gone, where they were. */
   private owlEyes(out: THREE.Vector3): THREE.Vector3 {
+    if (woodOwl.phase === 'leaving' || woodOwl.phase === 'gone') return out;
     return woodOwl.toWorld(this.shapeFace.set(0, 0.34, 0.1), true, out);
   }
 
@@ -1101,7 +1104,7 @@ export class WoodChapter implements Chapter {
     owl.lookAt(this.shapeHold.copy(c.position).setY(c.position.y + 1.2));
     if (owl.hooted) cue('hoot');
     if (owl.phase === 'awake' && owl.elapsed > k.owlLeaveAfter) owl.leave(pathPoint(SHAPE_STOP_ALONG + 16, 0, this.spot) && this.tmp.set(this.spot.x, 0, this.spot.y));
-    const watching = owl.phase === 'leaving' && owl.presence > 0.2 ? owl.position : owl.phase === 'gone' ? null : this.shapeEyes;
+    const watching = owl.phase === 'leaving' ? (owl.presence > 0.2 ? owl.position : null) : owl.phase === 'gone' ? null : this.shapeEyes;
     if (this.braveStep === 0) {
       c.lookAt = watching;
       cygnet.watch(watching);
@@ -1123,7 +1126,7 @@ export class WoodChapter implements Chapter {
       if (b >= 1) {
         this.braveStep = 2;
         c.stroll = k.approachPace;
-        const stand = shapePoint(-0.85, 0, 0.9);
+        const stand = shapePoint(0.85, 0, 0.9);
         c.walkTo(stand.x, stand.z, false, () => {
           c.stop();
           c.faceToward(this.shapeTouch.x, this.shapeTouch.z, 1);
@@ -1141,19 +1144,16 @@ export class WoodChapter implements Chapter {
       this.shapeDone = true;
       this.braveStep = 4;
       c.lookAt = null;
-      // Back out past the front coal, round the bend clear of the side one, and on into the dark to the next coal.
-      const clear = shapePoint(-0.5, 0, 3.0);
+      // Out round the stump's reaching limb and round the bend, then on to the next coal like any other.
+      this.leg = Math.max(this.leg, 2);
+      const clear = shapePoint(1.6, 0, 2.3);
       c.walkTo(clear.x, clear.z, false, () => {
-        pathPoint(SHAPE_STOP_ALONG + k.walkOn, 0, this.spot);
-        c.walkTo(this.spot.x, this.spot.y, false, () => {
-          this.to('walk');
-          this.leg = Math.max(this.leg, 2);
-          this.chainAt = pathAlong(c.position.x, c.position.z);
-          // The stump took a coal's place; keep the coals beyond it on the sides their framing was made for.
-          this.chainSide = -this.chainSide;
-          this.layNext();
-          this.afterShape = this.ahead;
-        }, 1);
+        this.to('walk');
+        this.chainAt = pathAlong(c.position.x, c.position.z);
+        // The stump took a coal's place; keep the coals beyond it on the sides their framing was made for.
+        this.chainSide = -this.chainSide;
+        this.layNext();
+        this.afterShape = this.ahead;
       }, 0.5);
     }
   }
@@ -1190,6 +1190,7 @@ export class WoodChapter implements Chapter {
     if (this.frontCoal) points[0].copy(this.frontCoal.p);
     if (this.sideCoal) points[1].copy(this.sideCoal.p);
     s.subjects = { primary: this.childSubject, secondary: this.birdSubject, points: close > 0.05 ? undefined : points, margin: 0.78, extra: 10 };
+    s.zoom = 1 + (k.closeZoom - 1) * close;
     this.pace = k.cameraPace;
     this.focus.copy(c);
   }
