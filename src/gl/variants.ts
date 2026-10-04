@@ -19,7 +19,7 @@ export const LAND_SKIP: Axis = [{ LAND_SKIP: false }, { LAND_SKIP: true }];
 /** The grade's glow round the sun, standing in for bloom while bloom is off. */
 export const SUN_GLOW: Axis = [{ SUN_GLOW: false }, { SUN_GLOW: true }];
 
-/** The grade's depth blur, drawn while bloom is: it reads the frame bloom has finished with. */
+/** The grade's depth blur, at Ultra and High while bloom is on: it reads the frame bloom has finished with. */
 export const DEPTH_BLUR: Axis = [{ DEPTH_BLUR: true }, { DEPTH_BLUR: false }];
 
 /** The sky's storm bank (`skyRadiance`), drawn only while there is a storm or lightning. */

@@ -251,6 +251,10 @@ export class Post {
   /** Set while the depth in view is not the scene's own, as through the island of lines' door: the blur fades out. */
   holdBlur = false;
   private blurShown = 1;
+  private depthBlurOn = true;
+  /** How much of the depth blur the quality level shows, easing as bloom does. */
+  private depthBlurShown = 1;
+  private blurReleased = false;
   private readonly size = new THREE.Vector2();
   private bloomLevel: BloomLevel = 'full';
   /** How much of the bloom is drawn, easing toward 0 while it is off and 1 while it is on. */
@@ -357,14 +361,26 @@ export class Post {
   private sizeBloom(): void {
     if (this.bloomLevel === 'off') return;
     this.bloom.setSize(this.size.x, this.size.y);
+    this.sizeBlur();
+  }
+
+  private sizeBlur(): void {
+    if (!this.depthBlurOn) return;
     const w = Math.max(1, Math.round(this.size.x / 4)), h = Math.max(1, Math.round(this.size.y / 4));
     this.blurA.setSize(w, h);
     this.blurB.setSize(w, h);
   }
 
+  /** On, or off: its passes skipped and its targets released once it has faded out. */
+  setDepthBlur(on: boolean, immediate = false): void {
+    this.depthBlurOn = on;
+    if (immediate) this.depthBlurShown = on ? 1 : 0;
+    this.sizeBlur();
+  }
+
   private releaseBloom(): void {
     const b = this.bloom;
-    for (const target of [b.renderTargetBright, ...b.renderTargetsHorizontal, ...b.renderTargetsVertical, this.blurA, this.blurB]) target.dispose();
+    for (const target of [b.renderTargetBright, ...b.renderTargetsHorizontal, ...b.renderTargetsVertical]) target.dispose();
     this.bloomReleased = true;
   }
 
@@ -417,6 +433,8 @@ export class Post {
     this.lastTime = time;
     const target = this.bloomLevel === 'off' ? 0 : 1;
     this.bloomShown = target > this.bloomShown ? Math.min(target, this.bloomShown + dt / BLOOM_FADE) : Math.max(target, this.bloomShown - dt / BLOOM_FADE);
+    this.depthBlurShown = this.depthBlurOn ? Math.min(1, this.depthBlurShown + dt / BLOOM_FADE) : Math.max(0, this.depthBlurShown - dt / BLOOM_FADE);
+    const depthBlur = Math.min(this.bloomShown, this.depthBlurShown);
     r.setRenderTarget(this.sceneTarget);
     r.render(this.scene, this.camera);
 
@@ -427,19 +445,27 @@ export class Post {
     if (this.bloomShown > 0 || warm) {
       this.bloom.strength = BLOOM_STRENGTH * this.bloomShown;
       this.bloom.render(r, this.clean, this.clean, 0, false);
-      this.blurForDepth();
       this.bloomReleased = false;
     }
+    if (depthBlur > 0 || warm) {
+      this.blurForDepth();
+      this.blurReleased = false;
+    }
     if (this.bloomShown === 0 && !this.bloomReleased) this.releaseBloom();
+    if (depthBlur === 0 && !this.blurReleased) {
+      this.blurA.dispose();
+      this.blurB.dispose();
+      this.blurReleased = true;
+    }
 
     const glow = 1 - this.bloomShown;
     if (glow > 0 || warm) this.aimGlow(glow);
     this.gradeMat.uniforms.uTime.value = time;
     this.quad.material = this.gradeMat;
     r.setRenderTarget(null);
-    const blur = this.bloomShown > 0 || warm;
+    const blur = depthBlur > 0 || warm;
     this.blurShown = this.holdBlur ? Math.max(0, this.blurShown - dt / BLUR_HOLD_FADE) : Math.min(1, this.blurShown + dt / BLUR_HOLD_FADE);
-    this.gradeMat.uniforms.uDepthBlur.value = this.bloomShown * this.blurShown;
+    this.gradeMat.uniforms.uDepthBlur.value = depthBlur * this.blurShown;
     if (warm) {
       select(this.gradeMat, { SUN_GLOW: glow === 0, DEPTH_BLUR: blur });
       this.quad.render(r);

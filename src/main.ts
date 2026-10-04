@@ -450,6 +450,7 @@ function applyWorldQuality(level: QualityLevel, immediate = false): void {
   water.mirrorScale = world.mirrorScale;
   water.setEffects(world.sea, immediate);
   post.setBloom(world.bloom, immediate);
+  post.setDepthBlur(world.depthBlur, immediate);
   controls.setQualityLevel(name);
   cloudStairs.setLevel(name, immediate);
 }
