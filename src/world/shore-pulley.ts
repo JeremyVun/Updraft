@@ -121,6 +121,7 @@ export class ShoreHaul {
   }
 
   get progress(): number { return this.run / RUN; }
+  get pinwheel(): THREE.Vector3 { return SHORE_PINWHEEL; }
   get arrived(): boolean { return this.boatAt > K.reach - 0.03 && this.boatSpeed < 0.05; }
   /** The line has started to come in, so the player has found the pinwheel. */
   get started(): boolean { return this.run > 0.4; }
