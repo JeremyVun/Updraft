@@ -271,7 +271,7 @@ export class LinesChapter implements Chapter {
     c.lookAt = this.stalled > 1.5 && cycle >= 2.6 && cycle < 5 ? SHORE_PINWHEEL : boat.position;
     if (asking) {
       this.reachTo.subVectors(boat.position, c.position).setY(0).normalize();
-      c.reachFor(0, this.reachTo.multiplyScalar(0.55).add(c.position).setY(c.position.y + 1.05));
+      c.reachFor(0, this.reachTo.multiplyScalar(0.7).add(c.position).setY(c.position.y + 1.2));
     } else c.reachFor(0, null);
     if (!this.towing) {
       c.reachFor(0, null);
