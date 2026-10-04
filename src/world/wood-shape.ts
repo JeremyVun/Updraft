@@ -128,7 +128,9 @@ float shapeEyes(vec3 p) {
 }
 /** What the shadowed light gives back: the stump's shadow, and the two eyes the dream puts in it. */
 vec3 shapeLit(vec3 p, vec3 lit) {
-  return lit * shapeShadow(p) + vec3(1.0, 0.7, 0.24) * shapeEyes(p) * uShapeAt.y;
+  vec3 d = uEmberLight.xyz - p;
+  float fall = uEmberLight.w / (1.0 + dot(d, d) * 0.055);
+  return lit * shapeShadow(p) + vec3(1.0, 0.7, 0.24) * shapeEyes(p) * uShapeAt.y * min(1.0, fall * 0.9);
 }`;
 
 /** Shared by everything that receives the stump's shadow: the stump, the crag behind it, the owl and the floor. */
