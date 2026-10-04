@@ -297,8 +297,10 @@ void main() {
   glass = max(glass, uSkyMirrorAppearance * onFlat * smoothstep(${glsl(tuning.skyMirror.horizonGlassFrom)}, ${glsl(tuning.skyMirror.horizonGlassTo)}, dist));
   // The full mirror replaces ordinary water, including its fog. Its transition
   // edge still evaluates both surfaces and blends them exactly as before.
+  vec3 glassCol = vec3(0.0);
+  if (glass > 0.001) glassCol = glassColour(V, xz);
   if (glass == 1.0) {
-    gl_FragColor = vec4(glassColour(V, xz), 1.0);
+    gl_FragColor = vec4(glassCol, 1.0);
     return;
   }
   // Fog per vertex is close enough until the grid opens into cells hundreds of metres wide near the horizon, where
@@ -486,7 +488,7 @@ void main() {
   col += harbourLight(vWorld) * (0.08 + 0.14 * F);
   col = mix(col, fog.rgb, fog.a);
   if (glass > 0.001) {
-    col = mix(col, glassColour(V, xz), glass);
+    col = mix(col, glassCol, glass);
   }
   gl_FragColor = vec4(col, 1.0);
 }`;
