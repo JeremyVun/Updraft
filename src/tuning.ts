@@ -941,14 +941,14 @@ export const tuning = {
      */
     shape: {
       stopShort: 5.2, approachPace: 0.7, flinchStep: 0.55, flinchSeconds: 0.9,
-      lightReach: 7, sideFront: 0.3, sideBack: -0.8, revealSeconds: 1.8,
+      lightReach: 9, sideFront: 0.82, sideBack: -0.8, revealSeconds: 1.4,
       exhaleSeconds: 1.2, touchSeconds: 1.6, sideInviteAfter: 7, sideInviteOffset: 2.8,
       cameraBack: 8.5, cameraSide: -4.6, cameraUp: 3.4, cameraPace: 0.8,
     },
     lantern: {
       chargeFrom: 0.12, gatherRadius: 14, gatherRate: 2, full: 16, height: 1.35, orbit: 0.55, flySpeed: 7,
-      follow: 1.4, carry: 0.35, gustFrom: 1.5, gustMax: 14, brushRadius: 0.16, speedMax: 6, drag: 1.4,
-      looseFor: 40, releaseFor: 6,
+      follow: 1.4, carry: 0.5, gustFrom: 1.5, gustMax: 14, brushRadius: 0.18, speedMax: 3.5, drag: 1.4,
+      looseFor: 120, releaseFor: 6,
       light: 2.4, haloSize: 1.6, haloAlpha: 0.32,
     },
     /** Seconds a coal burns from a full catch if nobody fans it again. */
