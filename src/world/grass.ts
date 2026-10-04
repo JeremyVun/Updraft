@@ -1,6 +1,5 @@
 import { LINES_GRASS_GLSL, linesGrassCrop } from './lines-layout';
 import { fixTreeInPlace } from '../gl/fixed';
-import { CLOUD_DECK, register } from '../gl/variants';
 import { passJob, type CompileJob } from '../gl/boot';
 import { simMaterial, simTarget } from '../gl/gpu';
 import { JOURNEY_ROOMS_GLSL, ROOMS } from './journey-rooms';
@@ -420,31 +419,77 @@ vec3 bladeRoot(vec2 root2, float groundH) {
 }
 `;
 
+/** The light a blade's own place gives it: the morning's green, the rime on it and the warm lights near it. Needs `root2` and `groundH`. */
+const BLADE_LIGHT_GLSL = /* glsl */ `
+  float green = morningAt(root2);
+  float rime = frostAt(root2);
+  vec3 warm = lampLight(vec3(root2.x, groundH + 0.2, root2.y), vec3(0.0, 1.0, 0.0))
+            + lanternLight(vec3(root2.x, groundH + 0.2, root2.y), vec3(0.0, 1.0, 0.0))
+            + dawnLight(vec3(root2.x, groundH + 0.3, root2.y), vec3(0.0, 1.0, 0.0));
+`;
+
 /**
- * Each blade's fog, worked out once a frame rather than at every vertex of the blade. Blades the blade shader
- * collapses are skipped, with a margin so that every blade it draws has its fog.
+ * What every vertex of a blade shares this frame, worked out once per blade rather than at each of its vertices:
+ * how it has grown and closes, the wind on it, the ground and light under it and its fog. A blade the blade shader
+ * collapses is marked by a negative height and nothing else is worked out for it. What moves a blade and the ground's
+ * normal are stored as full float, the rest of its shading as half floats, two to a channel.
  */
-const FOG_FRAG = /* glsl */ `
+const FRAME_FRAG = /* glsl */ `
+precision highp float;
+precision highp int;
 uniform vec3 uFogEye;
 // Drawn as a full-screen pass, whose camera is not the eye.
 #define cameraPosition uFogEye
+// Neighbouring texels are unrelated blades, so derivatives mean nothing: sample at level 0, as a vertex shader does.
+#define texture(s, uv) textureLod(s, uv, 0.0)
 ${ATMO_GLSL}
 ${BLADE_THIN_GLSL}
 ${BLADE_ROOT_GLSL}
 uniform sampler2D uRootTex;
 uniform sampler2D uShapeTex;
+uniform sampler2D uFlowerTex;
+layout(location = 0) out highp uvec4 oGrowth;
+// Cut to half toward zero, as a half-float target stores it on Apple GPUs (packHalf2x16 rounds to nearest).
+vec2 towardZero(vec2 v) { return uintBitsToFloat(floatBitsToUint(v) & 0xFFFFE000u); }
+layout(location = 1) out highp uvec4 oSway;
+layout(location = 2) out highp uvec4 oGround;
+layout(location = 3) out highp uvec4 oLight;
 
 void main() {
   ivec2 at = ivec2(gl_FragCoord.xy);
   vec4 root = texelFetch(uRootTex, at, 0);
-  float dist = length(root.xy - uGrassEye);
+  vec2 root2 = root.xy;
+  float groundH = root.z;
+  float rank = root.w;
+  float dist = length(root2 - uGrassEye);
+  float thinned = densityAt(dist);
   vec4 shape = texelFetch(uShapeTex, at, 0);
-  if (root.w >= densityAt(dist) * bladeDensity(root.xy, dist) * shape.x + 1e-3) {
-    gl_FragColor = vec4(0.0);
+  float share = bladeDensity(root2, dist) * shape.x;
+  oSway = oGround = oLight = uvec4(0u);
+  if (rank >= thinned * bladeDensity(root2, dist) || rank >= thinned * share) {
+    oGrowth = floatBitsToUint(vec4(-1.0, 0.0, 0.0, 0.0));
     return;
   }
+  vec4 fl = texelFetch(uFlowerTex, at, 0);
+  float life = lifeAt(root2);
+  float stand = qualityStanding(rank, share, dist, root2);
+  float h = shape.y * mix(0.72, 1.0, life) * stand;
+  float width = shape.z * widthAt(dist) * stand;
+  float flower = fl.y * step(0.5, life);
+  h *= 1.0 + flower * fl.w;
+  oGrowth = floatBitsToUint(vec4(h, width, bladeClose(root2, dist), life));
+
+  vec2 uv = domainUv(root2);
+  vec4 bend = texture(uBendTex, uv);
+  vec4 wind = texture(uWindTex, uv);
+  float sp = length(wind.xy);
+  vec4 ground = groundAt(root2);
+  oSway = floatBitsToUint(vec4(bend.xy, 0.04 + 0.012 * sp, ground.x));
+  ${BLADE_LIGHT_GLSL}
+  oGround = uvec4(floatBitsToUint(ground.yz), packHalf2x16(vec2(ground.w, cloudShadow(root2))), packHalf2x16(vec2(green, rime)));
   // A quarter of the way up is where one fog for the whole blade comes closest to the fog along it.
-  gl_FragColor = fogOf(bladeRoot(root.xy, root.z) + vec3(0.0, shape.y * 0.25, 0.0), 1.0);
+  vec4 fog = fogOf(bladeRoot(root2, groundH) + vec3(0.0, shape.y * 0.25, 0.0), 1.0);
+  oLight = uvec4(packHalf2x16(towardZero(fog.rg)), packHalf2x16(towardZero(fog.ba)), packHalf2x16(warm.rg), packHalf2x16(vec2(warm.b, 0.0)));
 }`;
 
 /**
@@ -548,7 +593,8 @@ void main() {
 /**
  * What the blade's shading needs that is the same for every fragment of the blade: its root colour, its ambient
  * occlusion as a line in t, and how flat the wind has laid it. Computed per vertex (`tint`, `groundH`, `dist`, `wa`
- * in scope) so the fragment shader, which runs several times per pixel under multisampling, does not.
+ * and `BLADE_LIGHT_GLSL`'s values in scope) so the fragment shader, which runs several times per pixel under
+ * multisampling, does not.
  */
 const BLADE_SHADE_GLSL = /* glsl */ `
   float shadeFringe = smoothstep(${(GRASS_LINE - 0.5).toFixed(2)}, ${(GRASS_LINE + 1.4).toFixed(2)}, groundH);
@@ -566,19 +612,14 @@ const BLADE_SHADE_GLSL = /* glsl */ `
   float winter = 1.0 - smoothstep(0.72, 1.06, length((root2 - vec2(${glsl(ISLES.sleeping.x)}, ${glsl(ISLES.sleeping.z)})) / vec2(${glsl(ISLES.sleeping.rx)}, ${glsl(ISLES.sleeping.rz)})));
   // Short winter stems do not have the deep occlusion of the metre-high meadow.
   vAo = mix(vAo, vec2(0.86, 0.14), winter);
-  float green = morningAt(root2);
   vec3 winterRoot = mix(vec3(0.23, 0.29, 0.23), vec3(0.16, 0.27, 0.09), green);
   vec3 winterTip = mix(vec3(0.38, 0.44, 0.31), vec3(0.26, 0.43, 0.13), green);
   vRoot = mix(vRoot, winterRoot, winter * 0.9);
   vTint = mix(vTint, winterTip, winter * 0.85);
-  float rime = frostAt(root2);
   vec3 pale = rimeColour();
   vFlat = smoothstep(0.3, 1.0, wa) * (1.0 - 0.55 * rime);
   /** A rimed blade is shaded flat rather than rounded off like a stem, so a sward reads as one surface. */
   vSideDir *= 1.0 - 0.5 * rime;
-  vec3 warm = lampLight(vec3(root2.x, groundH + 0.2, root2.y), vec3(0.0, 1.0, 0.0))
-            + lanternLight(vec3(root2.x, groundH + 0.2, root2.y), vec3(0.0, 1.0, 0.0))
-            + dawnLight(vec3(root2.x, groundH + 0.3, root2.y), vec3(0.0, 1.0, 0.0));
   vRoot = mix(vRoot, pale * 0.82, rime * ${glsl(SLEEP.rimeRoot)});
   vTint = mix(vTint, pale, rime * ${glsl(SLEEP.rimeTip)});
   vLocalLight = warm;
@@ -589,12 +630,15 @@ ${ATMO_GLSL}
 ${RIME_GLSL}
 in vec2 aTile;
 uniform vec3 uGrassRoot;
+uniform vec2 uGrassEye;
 uniform sampler2D uRootTex;
 uniform sampler2D uShapeTex;
 uniform sampler2D uTintTex;
 uniform sampler2D uFlowerTex;
-uniform sampler2D uFogTex;
-${BLADE_THIN_GLSL}
+uniform highp usampler2D uBladeGrowthTex;
+uniform highp usampler2D uBladeSwayTex;
+uniform highp usampler2D uBladeGroundTex;
+uniform highp usampler2D uBladeLightTex;
 ${BLADE_ROOT_GLSL}
 out vec3 vWorld;
 out vec3 vNormal;
@@ -616,45 +660,36 @@ void collapse() {
 
 void main() {
   ivec2 at = ivec2(gl_InstanceID % ${TABLE_WIDTH}, gl_InstanceID / ${TABLE_WIDTH});
+  vec4 growth = uintBitsToFloat(texelFetch(uBladeGrowthTex, at, 0));
+  float h = growth.x;
+  if (h < 0.0) { collapse(); return; }
+  float width = growth.y;
+  float life = growth.w;
+  vec4 sway = uintBitsToFloat(texelFetch(uBladeSwayTex, at, 0));
+  uvec4 groundIn = texelFetch(uBladeGroundTex, at, 0);
+  uvec4 lightIn = texelFetch(uBladeLightTex, at, 0);
   vec4 root = texelFetch(uRootTex, at, 0);
   vec2 root2 = root.xy;
   float groundH = root.z;
-  float rank = root.w;
   float dist = length(root2 - uGrassEye);
-  float thinned = densityAt(dist);
-  if (rank >= thinned * bladeDensity(root2, dist)) { collapse(); return; }
-  vec4 shape = texelFetch(uShapeTex, at, 0);
-  float share = bladeDensity(root2, dist) * shape.x;
-  if (rank >= thinned * share) { collapse(); return; }
   vec4 tintIn = texelFetch(uTintTex, at, 0);
   vec4 fl = texelFetch(uFlowerTex, at, 0);
 
   float side01 = position.x;
-  float t = mix(position.y, position.z, bladeClose(root2, dist));
+  float t = mix(position.y, position.z, growth.z);
   float seed = fl.x;
-  float life = lifeAt(root2);
-  float stand = qualityStanding(rank, share, dist, root2);
-  float h = shape.y * mix(0.72, 1.0, life) * stand;
-  float width = shape.z * widthAt(dist) * stand;
-  float angle = shape.w;
+  float angle = texelFetch(uShapeTex, at, 0).w;
   float curve = tintIn.w;
   float flower = fl.y * step(0.5, life);
   float reedBlade = step(7.5, fl.z);
   float petalClass = fl.z - 8.0 * reedBlade;
-  h *= 1.0 + flower * fl.w;
   vec3 rootPos = bladeRoot(root2, groundH);
-
-  vec2 uv = domainUv(root2);
-  vec4 ground = groundAt(root2);
-  vec4 bend = texture(uBendTex, uv);
-  vec4 wind = texture(uWindTex, uv);
-  float sp = length(wind.xy);
 
   vec2 facing = vec2(cos(angle), sin(angle));
   float ph = seed * 43.1;
-  float flutterAmp = (0.04 + 0.012 * sp) * (0.6 + 0.4 * t) * mix(0.3, 1.0, life);
+  float flutterAmp = sway.z * (0.6 + 0.4 * t) * mix(0.3, 1.0, life);
   vec2 flutter = vec2(sin(uTime * (2.7 + seed * 2.1) + ph), sin(uTime * (2.1 + seed * 1.6) + ph * 1.7)) * flutterAmp;
-  vec2 wb = (bend.xy + flutter) * mix(1.0, ${glsl(REEDS.stiff)}, reedBlade);
+  vec2 wb = (sway.xy + flutter) * mix(1.0, ${glsl(REEDS.stiff)}, reedBlade);
   float wa = length(wb);
   vec2 wdir = wa > 1e-4 ? wb / wa : facing;
   vec2 align = dot(facing, wdir) >= 0.0 ? wdir : -wdir;
@@ -677,12 +712,17 @@ void main() {
   vec3 nrm = cross(sideDir, tangent);
   vNormal = length(nrm) > 1e-4 ? normalize(nrm) : vec3(0.0, 1.0, 0.0);
   vSideDir = sideDir * side01;
-  vGroundN = ground.xyz;
+  vGroundN = vec3(sway.w, uintBitsToFloat(groundIn.xy));
+  vec2 sun = unpackHalf2x16(groundIn.z);
+  vec2 greenRime = unpackHalf2x16(groundIn.w);
+  float green = greenRime.x;
+  float rime = greenRime.y;
+  vec3 warm = vec3(unpackHalf2x16(lightIn.z), unpackHalf2x16(lightIn.w).x);
   vec3 tint = mix(stillGrey(tintIn.rgb), tintIn.rgb, life);
   vTint = tint;
   ${BLADE_SHADE_GLSL}
-  vSun = mix(ground.w, 1.0, t * t * 0.3) * cloudShadow(root2);
-  vFog = texelFetch(uFogTex, at, 0);
+  vSun = mix(sun.x, 1.0, t * t * 0.3) * sun.y;
+  vFog = vec4(unpackHalf2x16(lightIn.x), unpackHalf2x16(lightIn.y));
   vWorld = world;
   vT = t;
   vec3 bloom = petalClass < 0.5 ? vec3(1.0, 0.8, 0.14) : petalClass < 1.5 ? vec3(0.97, 0.95, 0.9) : petalClass < 2.5 ? vec3(0.93, 0.52, 0.68) : petalClass < 3.5 ? vec3(0.62, 0.46, 0.88) : ${SEED_HEAD};
@@ -819,6 +859,7 @@ void main() {
   tint = mix(tint, ${REED_TINT} * reed.shade, reed.is);
   tint = mix(stillGrey(tint), tint, life);
   vTint = tint;
+  ${BLADE_LIGHT_GLSL}
   ${BLADE_SHADE_GLSL}
   vSun = mix(ground.w, 1.0, t * t * 0.3) * cloudShadow(root2);
   vFog = fogOf(rootPos + vec3(0.0, fogRise, 0.0), 1.0);
@@ -957,8 +998,9 @@ interface Lod {
   tileTex: THREE.DataTexture;
   table: THREE.WebGLRenderTarget;
   tableMat: THREE.ShaderMaterial;
-  fog: THREE.WebGLRenderTarget;
-  fogMat: THREE.ShaderMaterial;
+  /** What each blade shares this frame (FRAME_FRAG): a texel a blade in each of four attachments, held as bits. */
+  frame: THREE.WebGLRenderTarget;
+  frameMat: THREE.ShaderMaterial;
   count: number;
   previousCount: number;
   tilesChanged: boolean;
@@ -1062,14 +1104,23 @@ export class Grass {
       });
       // Root and shape stay full float (a half-float angle would turn blades by a visible fraction of a degree).
       for (let i = 2; i < 4; i++) table.textures[i].type = THREE.HalfFloatType;
-      const fog = simTarget(TABLE_WIDTH, rows, THREE.HalfFloatType, THREE.NearestFilter);
-      const fogMat = simMaterial(FOG_FRAG, {
+      const frame = simTarget(TABLE_WIDTH, rows, THREE.UnsignedIntType, THREE.NearestFilter, 4);
+      for (const texture of frame.textures) texture.format = THREE.RGBAIntegerFormat;
+      const closing = {
+        uClose: { value: new THREE.Vector2(spec.reach * spec.thinFrom, spec.reach) },
+        uQualityClose: { value: new THREE.Vector2(...(level === 0 ? [0.25, 0.55] as const : level === 1 ? [0.125, 0.25] as const : [0, 0] as const)) },
+        uFewer: level === 0 ? this.fewer : { value: 0 },
+      };
+      const frameMat = simMaterial(FRAME_FRAG, {
         ...atmo.uniforms,
         ...thinning,
+        ...closing,
         uFogEye: this.fogEye,
         uRootTex: { value: table.textures[0] },
         uShapeTex: { value: table.textures[1] },
-      }, fog);
+        uFlowerTex: { value: table.textures[3] },
+      }, frame);
+      frameMat.glslVersion = THREE.GLSL3;
       const tableMat = new THREE.ShaderMaterial({
         glslVersion: THREE.GLSL3,
         vertexShader: TABLE_VERT,
@@ -1096,24 +1147,24 @@ export class Grass {
           uShapeTex: { value: table.textures[1] },
           uTintTex: { value: table.textures[2] },
           uFlowerTex: { value: table.textures[3] },
-          uFogTex: { value: fog.texture },
+          uBladeGrowthTex: { value: frame.textures[0] },
+          uBladeSwayTex: { value: frame.textures[1] },
+          uBladeGroundTex: { value: frame.textures[2] },
+          uBladeLightTex: { value: frame.textures[3] },
           ...thinning,
-          uClose: { value: new THREE.Vector2(spec.reach * spec.thinFrom, spec.reach) },
-          uQualityClose: { value: new THREE.Vector2(...(level === 0 ? [0.25, 0.55] as const : level === 1 ? [0.125, 0.25] as const : [0, 0] as const)) },
-          uFewer: level === 0 ? this.fewer : { value: 0 },
+          ...closing,
           uTileSize: { value: TILE },
           uGrid: { value: new THREE.Vector2(spec.cols, spec.rows) },
           uLevel: { value: level },
         },
         side: THREE.DoubleSide,
       });
-      register(mat, CLOUD_DECK);
       const mesh = new THREE.Mesh(geo, mat);
       mesh.frustumCulled = false;
       // Rooms and the doorway set their uniforms around each draw, after the render list holds this material.
       mesh.onBeforeRender = () => this.pickProgram(mat);
       this.group.add(mesh);
-      this.lods.push({ spec, geo, tiles, tileTex, table, tableMat, fog, fogMat, count: 0, previousCount: 0, tilesChanged: false, dirty: true });
+      this.lods.push({ spec, geo, tiles, tileTex, table, tableMat, frame, frameMat, count: 0, previousCount: 0, tilesChanged: false, dirty: true });
     }
     fixTreeInPlace(this.group);
     this.pickNearForm();
@@ -1390,12 +1441,12 @@ export class Grass {
       l.dirty = false;
     }
     this.tablesDirty = false;
-    this.shadeFog(renderer);
+    this.bakeFrame(renderer);
     renderer.setRenderTarget(prev);
   }
 
-  /** Works out every drawn blade's fog for this frame's eye, after the tables it reads. */
-  shadeFog(renderer: THREE.WebGLRenderer): void {
+  /** Works out what every drawn blade shares this frame, for this frame's eye, after the tables it reads. */
+  bakeFrame(renderer: THREE.WebGLRenderer): void {
     if (this.direct || !this.camera) return;
     this.camera.getWorldPosition(this.fogEye.value);
     const prev = renderer.getRenderTarget();
@@ -1404,10 +1455,10 @@ export class Grass {
     renderer.autoClear = false;
     for (const l of this.lods) {
       if (!l.count) continue;
-      l.fog.scissor.set(0, 0, TABLE_WIDTH, Math.ceil(l.count * l.spec.cols * l.spec.rows / TABLE_WIDTH));
-      l.fog.scissorTest = true;
-      this.quad.material = l.fogMat;
-      renderer.setRenderTarget(l.fog);
+      l.frame.scissor.set(0, 0, TABLE_WIDTH, Math.ceil(l.count * l.spec.cols * l.spec.rows / TABLE_WIDTH));
+      l.frame.scissorTest = true;
+      this.quad.material = l.frameMat;
+      renderer.setRenderTarget(l.frame);
       this.quad.render(renderer);
     }
     renderer.autoClear = autoClear;

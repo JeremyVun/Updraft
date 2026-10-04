@@ -587,16 +587,16 @@ window.__audit = {
   patchShaders(variants) {
     const main=(source,body)=>source.slice(0,source.lastIndexOf('void main() {'))+body;
     const sub=(source,from,to)=>{if(typeof from==='string'?!source.includes(from):!from.test(source))throw Error('Missing patch site: '+from);return source.replace(from,to);};
-    const grassMats=grass.group.children.filter(o=>o.isMesh).map(o=>o.material),waterMat=water.mesh.material;
-    this.patchOriginals??=new Map([...grassMats,waterMat].map(m=>[m,{vertexShader:m.vertexShader,fragmentShader:m.fragmentShader}]));
+    const grassMats=grass.group.children.filter(o=>o.isMesh).map(o=>o.material),frameMats=grass.lods.map(l=>l.frameMat).filter(Boolean),waterMat=water.mesh.material;
+    this.patchOriginals??=new Map([...grassMats,...frameMats,waterMat].map(m=>[m,{vertexShader:m.vertexShader,fragmentShader:m.fragmentShader}]));
     const patches={
       'grass-frag-flat':[grassMats,'fragmentShader',s=>main(s,'void main() { gl_FragColor = vec4(vTint * 0.5 + vRoot * 0.1 + vFlower.rgb * vFlower.a * 0.01 + vec3(vT, vFlat, vSun) * 0.01 + vec3(vAo, 0.0) * 0.01 + vLocalLight * 0.01 + (vNormal + vSideDir + vGroundN) * 0.001 + vWorld * 1e-6 + vFog.rgb * vFog.a * 0.01, 1.0); }')],
       // The unclipped blade program has no discards to remove.
       'grass-nodiscard':[grassMats,'fragmentShader',s=>s.replace(/discard;/g,'{}')],
-      'grass-fog':[grassMats,'vertexShader',s=>sub(s,'vFog = fogOf(world, 1.0);','vFog = vec4(0.0);')],
-      'grass-cloud':[grassMats,'vertexShader',s=>sub(s,'* cloudShadow(root2);',';')],
-      'grass-shade':[grassMats,'vertexShader',s=>sub(sub(sub(s,'float rime = frostAt(root2);','float rime = 0.0;'),'float green = morningAt(root2);','float green = 0.0;'),/vec3 warm = lampLight[^;]*;/,'vec3 warm = vec3(0.0);')],
-      'grass-life':[grassMats,'vertexShader',s=>sub(s,'float life = lifeAt(root2);','float life = 1.0;')],
+      'grass-fog':[frameMats,'fragmentShader',s=>sub(s,/vec4 fog = fogOf[^;]*;/,'vec4 fog = vec4(0.0);')],
+      'grass-cloud':[frameMats,'fragmentShader',s=>sub(s,'cloudShadow(root2)));','1.0));')],
+      'grass-shade':[frameMats,'fragmentShader',s=>sub(sub(sub(s,'float rime = frostAt(root2);','float rime = 0.0;'),'float green = morningAt(root2);','float green = 0.0;'),/vec3 warm = lampLight[^;]*;/,'vec3 warm = vec3(0.0);')],
+      'grass-life':[frameMats,'fragmentShader',s=>sub(s,'float life = lifeAt(root2);','float life = 1.0;')],
       'grass-collapse':[grassMats,'vertexShader',s=>sub(s,'void main() {\\n  ivec2 at','void main() { collapse(); return;\\n  ivec2 at')],
       'water-frag-flat':[[waterMat],'fragmentShader',s=>main(s,'void main() { gl_FragColor = vec4(vWorld * 1e-4 + vSwell * 0.1 + vec3(0.1, 0.2, 0.3), 1.0); }')],
       'water-vert-flat':[[waterMat],'vertexShader',s=>main(s,'void main() { vec3 w = (modelMatrix * vec4(position, 1.0)).xyz; vSwell = vec3(0.0); vWorld = w; gl_Position = projectionMatrix * viewMatrix * vec4(w, 1.0); }')],
@@ -800,7 +800,7 @@ window.__audit = {
     for(const a of this.uploadsMid||[])a.needsUpdate=true;
     if (sim && this.omit !== 'wind') this.stepWind();
     if (sim && this.forceGrassBakes && this.omit !== 'grass-tables') {grass.tablesDirty=true;grass.bake(renderer);}
-    if (this.omit !== 'grass-fog-vertex' && this.omit !== 'grass-fog-pass-off') grass.shadeFog?.(renderer);
+    if (this.omit !== 'grass-fog-vertex' && this.omit !== 'grass-fog-pass-off') (grass.bakeFrame??grass.shadeFog)?.call(grass,renderer);
     const draw=()=>doorwayView.render(rig.camera,story.name==='lines',story.name!=='toBoats',()=>{
       if (this.omit !== 'reflection') water.update(rig.camera,c=>terrain.beginMirror(c),()=>terrain.endMirror());
       const bloom=post.bloom.render;
