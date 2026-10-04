@@ -246,11 +246,16 @@ await built();
 const village = new DrownedVillage(wind);
 village.objects.forEach((o) => scene.add(o));
 await built();
-const [owlShadows, owlFlaps] = await Promise.all([
-  new THREE.TextureLoader().loadAsync(new URL('../assets/fx/owl-shadow/shadows.webp', import.meta.url).href),
-  new THREE.TextureLoader().loadAsync(new URL('../assets/fx/owl-shadow/flaps.webp', import.meta.url).href),
-]);
-const wood = new DarkWood(wind, { shadows: owlShadows, flaps: owlFlaps });
+const [owlShadows, owlFlaps, bendRock, bendLeaves, owlWing] = await Promise.all([
+  new URL('../assets/fx/owl-shadow/shadows.webp', import.meta.url).href,
+  new URL('../assets/fx/owl-shadow/flaps.webp', import.meta.url).href,
+  new URL('../assets/fx/owl-bend/rock.webp', import.meta.url).href,
+  new URL('../assets/fx/owl-bend/leaves.webp', import.meta.url).href,
+  new URL('../assets/fx/owl-bend/wing.webp', import.meta.url).href,
+].map((href) => new THREE.TextureLoader().loadAsync(href)));
+for (const art of [bendRock, bendLeaves, owlWing]) art.colorSpace = THREE.SRGBColorSpace;
+bendRock.wrapS = bendRock.wrapT = THREE.RepeatWrapping;
+const wood = new DarkWood(wind, { shadows: owlShadows, flaps: owlFlaps, rock: bendRock, leaves: bendLeaves, wing: owlWing });
 wood.objects.forEach((o) => scene.add(o));
 await built();
 const sleeping = new SleepingIsland(renderer, wind, input);

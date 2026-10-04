@@ -732,12 +732,16 @@ void main() {
 }`;
 
 /**
- * The painted shadows, packed by `tools/pack-owl-shadows.py`: `shadows` the monster, the plain stump and its perched
- * owl, one to a channel; `flaps` the flying owl's four wing frames.
+ * The painted art at the bend. Packed by `tools/pack-owl-shadows.py`: `shadows` the monster, the plain stump and its
+ * perched owl, one to a channel; `flaps` the flying owl's four wing frames. Packed by `tools/pack-owl-bend.py`: `rock`
+ * the gritstone, height in alpha; `leaves` sixteen fallen leaves; `wing` the owl's wing card, top over underside.
  */
-export interface ShadowMasks {
+export interface BendArt {
   shadows: THREE.Texture;
   flaps: THREE.Texture;
+  rock: THREE.Texture;
+  leaves: THREE.Texture;
+  wing: THREE.Texture;
 }
 
 /** The stump at the bend and the rock behind it. */
@@ -775,7 +779,7 @@ export class WoodShape {
     return Math.hypot(lx, lz) < 3.4 || WoodShape.onRock(x, z, 1.6) || coals || offWay < 3.2 || inFrame(lx, lz);
   }
 
-  constructor(masks: ShadowMasks) {
+  constructor(masks: BendArt) {
     faceUniforms.uShadowMasks.value = masks.shadows;
     faceUniforms.uFlaps.value = masks.flaps;
     const base = heightAt(WOOD_SHAPE.x, WOOD_SHAPE.z);

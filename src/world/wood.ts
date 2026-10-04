@@ -8,7 +8,7 @@ import { ATMO_GLSL, atmo } from './atmosphere';
 import { ISLES } from './heightfield';
 import { heightAt } from './island';
 import { createNoise2D, mulberry32 } from './noise';
-import { SHAPE_SHADOW_GLSL, WoodShape, shapeUniforms, type ShadowMasks } from './wood-shape';
+import { SHAPE_SHADOW_GLSL, WoodShape, shapeUniforms, type BendArt } from './wood-shape';
 import { OwlBody, woodOwl } from '../creatures/owl';
 
 /** The south shore of the wood, where the boat runs ashore out of the storm. */
@@ -674,7 +674,7 @@ function planeTree(): THREE.BufferGeometry {
 export class DarkWood {
   readonly objects: THREE.Object3D[] = [];
   readonly shape: WoodShape;
-  readonly owl = new OwlBody();
+  readonly owl: OwlBody;
 
   private readonly trees: Placed[] = [];
   private readonly lods: { mesh: THREE.Mesh; geo: THREE.InstancedBufferGeometry; reach: number; cap: number; trees: Float32Array; forms: Float32Array }[] = [];
@@ -687,7 +687,7 @@ export class DarkWood {
   private readonly placedAt = new THREE.Vector3(1e9, 0, 0);
   private storm = 0;
 
-  constructor(private readonly field: WindField, shadows: ShadowMasks) {
+  constructor(private readonly field: WindField, art: BendArt) {
     const rand = mulberry32(4113);
     const variants: Seg[][] = [];
     for (let i = 0; i < 10; i++) variants.push(grow(rand, 'tall'));
@@ -761,8 +761,9 @@ export class DarkWood {
         uSnagHeight: { value: new THREE.Vector2(heightAt(WOOD_PLANE.x, WOOD_PLANE.y) - 0.2, tuning.wood.planeSnagHeight + 0.2) } },
     }));
     snagTree.name = 'wood-plane-tree';
-    this.shape = new WoodShape(shadows);
-    this.objects.push(deadfall, refugeRocks(), snagTree, this.shape.mesh, this.shape.floor, this.owl.mesh, this.owl.glow);
+    this.shape = new WoodShape(art);
+    this.owl = new OwlBody(art.wing);
+    this.objects.push(deadfall, refugeRocks(), snagTree, this.shape.mesh, this.shape.floor, this.owl.mesh, this.owl.wings, this.owl.glow);
 
     const card = new THREE.PlaneGeometry(1, 1);
     const litterGeo = new THREE.InstancedBufferGeometry();

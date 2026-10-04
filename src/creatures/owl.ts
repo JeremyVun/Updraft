@@ -38,6 +38,16 @@ const WING_GLSL = /* glsl */ `
 float wingSpan(vec3 rest) { return clamp((abs(rest.x) - ${SHOULDER.x.toFixed(3)}) / ${WING_REACH.toFixed(3)}, 0.0, 1.0); }
 float wingMid(float s) { return -0.02 - 0.06 * s * s; }
 float wingHalf(float s) { return 0.11 * (1.0 - 0.45 * pow(s, 2.5)) + 0.004; }`;
+/**
+ * The painted wing card (`tools/pack-owl-bend.py`), in pixels of its 512 source: the shoulder and the rows it covers;
+ * spread, it reaches this far from the shoulder, a little further than the folded wing would, as a cartoon owl's do.
+ */
+const CARD_SHOULDER = [4, 256];
+const CARD_ROWS = [64, 452];
+const CARD_REACH = 0.54;
+const CARD_PX = CARD_REACH / 495;
+/** Where the wing bends, as a share of its reach: the wrist, out past which the hand bends, sweeps and twists. */
+const WRIST = 0.42;
 /** Beyond this the eyeshine stops shrinking with distance. */
 const GLOW_NEAR = 8;
 
@@ -85,6 +95,8 @@ void main() {
     vec3 pivot = vec3(${SHOULDER.x} * side, ${SHOULDER.y}, ${SHOULDER.z});
     float fold = uOwlWing.x;
     p -= pivot;
+    // As they open the painted cards take over from these.
+    p *= smoothstep(0.55, 0.9, fold);
     // Folded at the wrist, the wing is half as long against its flank.
     p.x *= mix(1.0, 0.5, fold);
     // Spread is the wing as built, out sideways; folded it hangs down the flank and tucks back.
@@ -217,6 +229,120 @@ void main() {
   gl_FragColor = vec4(max(applyFog(col, vWorld), 0.0), 1.0);
 }`;
 
+/** The wing as the cards are posed: a point of the card (along it, across it), out from the shoulder, in the owl's own frame. */
+const CARD_POSE_GLSL = /* glsl */ `
+uniform vec4 uOwlWing;
+uniform vec4 uOwlHand;
+vec3 wingPoint(vec2 ac, float side) {
+  float fold = uOwlWing.x;
+  float s = ac.x / ${CARD_REACH.toFixed(3)};
+  // Arched over its chord, most at the arm, so it never lies dead flat.
+  float arch = 1.0 - min(1.0, pow((ac.y + 0.01) / 0.22, 2.0));
+  vec3 q = vec3(ac.x * side, 0.032 * arch * (1.0 - 0.5 * s), ac.y);
+  float hand = smoothstep(0.28, 0.62, s);
+  vec3 wrist = vec3(${(WRIST * CARD_REACH).toFixed(3)} * side, 0.0, 0.0);
+  q = wrist + rotZ(rotY(q - wrist, side * uOwlHand.y * hand), side * uOwlHand.x * hand);
+  q = rotX(q, uOwlHand.z * s);
+  q *= mix(1.0, 0.4, fold);
+  q = rotZ(q, side * uOwlWing.y);
+  q = rotX(rotZ(q, -side * 1.42 * fold), 0.25 * fold);
+  return q + vec3(${SHOULDER.x} * side, ${SHOULDER.y}, ${SHOULDER.z});
+}`;
+
+const CARD_VERT = /* glsl */ `
+${ATMO_GLSL}
+${CREATURE_GLSL}
+${CARD_POSE_GLSL}
+uniform vec4 uOwl;
+uniform vec4 uOwlBody;
+out vec3 vWorld;
+out vec3 vNormal;
+out vec2 vCard;
+const vec3 CENTRE = vec3(0.0, ${CENTRE.y}, 0.0);
+vec3 owlFrame(vec3 p) {
+  p -= CENTRE;
+  p = rotX(rotZ(p, uOwlBody.x), uOwlWing.z);
+  p += CENTRE;
+  return rotY(p * ${SCALE.toFixed(2)} * uOwlBody.y, uOwl.w) + uOwl.xyz;
+}
+void main() {
+  float side = position.z;
+  vec2 ac = position.xy;
+  vec3 p = wingPoint(ac, side);
+  vec3 along = wingPoint(ac + vec2(0.01, 0.0), side) - p;
+  vec3 across = wingPoint(ac + vec2(0.0, 0.01), side) - p;
+  vec3 n = normalize(cross(across, along)) * side;
+  vWorld = owlFrame(p);
+  vNormal = rotY(rotX(rotZ(n, uOwlBody.x), uOwlWing.z), uOwl.w);
+  vCard = vec2(ac.x / ${CARD_PX.toFixed(6)} + ${CARD_SHOULDER[0].toFixed(1)}, ${CARD_SHOULDER[1].toFixed(1)} - ac.y / ${CARD_PX.toFixed(6)}) / 512.0;
+  gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
+}`;
+
+/**
+ * The painted wing: its barred top where the camera sees the top of it, its pale underside where it sees under it,
+ * lit as the body is so the two are one owl.
+ */
+const CARD_FRAG = /* glsl */ `
+${ATMO_GLSL}
+${CREATURE_GLSL}
+${SHAPE_SHADOW_GLSL}
+uniform sampler2D uWingCard;
+uniform vec4 uOwlWing;
+uniform vec4 uOwlEyes;
+in vec3 vWorld;
+in vec3 vNormal;
+in vec2 vCard;
+void main() {
+  vec3 V = normalize(cameraPosition - vWorld);
+  vec3 N = normalize(vNormal);
+  float top = step(0.0, dot(N, V));
+  if (top < 0.5) N = -N;
+  vec4 paint = texture(uWingCard, vec2(vCard.x, (1.0 - vCard.y) * 0.5 + 0.5 * top));
+  if (paint.a < 0.5) discard;
+  vec3 alb = paint.rgb * mix(vec3(0.62, 0.55, 0.5), vec3(1.0), top);
+  vec3 moon = uSunColor * uNight;
+  float wrap = clamp(dot(N, uSunDir) * 0.5 + 0.5, 0.0, 1.0);
+  float edge = pow(1.0 - clamp(dot(N, V), 0.0, 1.0), 2.0);
+  vec3 col = alb * (hemiLight(N) * 0.8 + moon * (wrap * wrap * 0.4 + 0.08));
+  // Spread feathers are thin: the firelight on the far side of a wing comes through it.
+  vec3 warm = (emberLight(vWorld, N) + 0.7 * emberLight(vWorld, -N)) * mix(0.04, 0.45, uOwlEyes.y) * (1.0 - 0.5 * uOwlWing.w)
+    + (shapeSideLight(vWorld, N) + 0.7 * shapeSideLight(vWorld, -N)) * 0.4 * uOwlEyes.y;
+  col += (alb + 0.012) * warm;
+  if (uOwlWing.w > 0.0) {
+    vec3 fire = vec3(1.0, 0.55, 0.25) * uOwlWing.w;
+    col += alb * fire * (clamp(0.45 - N.y * 0.55, 0.0, 1.0) * 0.18 + 0.08);
+    col += fire * edge * 0.12 * (0.25 + 0.75 * alb);
+    col += alb * vec3(0.45, 0.5, 0.62) * uNight * max(0.0, N.y) * 0.12 * uOwlWing.w;
+  }
+  col *= uOwlEyes.w;
+  gl_FragColor = vec4(max(applyFog(col, vWorld), 0.0), 1.0);
+}`;
+
+/** Both wing cards: a grid over the painted wing, along it and across it from the shoulder, its side in z. */
+function cardGeometry(): THREE.BufferGeometry {
+  const ALONG = 18, ACROSS = 8;
+  const pos: number[] = [], index: number[] = [];
+  for (const side of [-1, 1]) {
+    const base = pos.length / 3;
+    for (let j = 0; j <= ACROSS; j++) {
+      const row = THREE.MathUtils.lerp(CARD_ROWS[0], CARD_ROWS[1], j / ACROSS);
+      for (let i = 0; i <= ALONG; i++) {
+        pos.push((i / ALONG * 508 - CARD_SHOULDER[0]) * CARD_PX, (CARD_SHOULDER[1] - row) * CARD_PX, side);
+      }
+    }
+    for (let j = 0; j < ACROSS; j++) {
+      for (let i = 0; i < ALONG; i++) {
+        const a = base + j * (ALONG + 1) + i, b = a + ALONG + 1;
+        index.push(a, b, a + 1, a + 1, b, b + 1);
+      }
+    }
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  geo.setIndex(index);
+  return geo;
+}
+
 const GLOW_VERT = /* glsl */ `
 uniform vec3 uEyeL;
 uniform vec3 uEyeR;
@@ -302,6 +428,22 @@ const rotX = (p: THREE.Vector3, a: number) => p.set(p.x, Math.cos(a) * p.y - Mat
 const rotY = (p: THREE.Vector3, a: number) => p.set(Math.cos(a) * p.x + Math.sin(a) * p.z, p.y, -Math.sin(a) * p.x + Math.cos(a) * p.z);
 const rotZ = (p: THREE.Vector3, a: number) => p.set(Math.cos(a) * p.x - Math.sin(a) * p.y, Math.sin(a) * p.x + Math.cos(a) * p.y, p.z);
 
+/** The tip of a wing card as `CARD_POSE_GLSL` poses it, in the owl's own frame. */
+function wingTip(owl: Owl, side: number, out: THREE.Vector3): THREE.Vector3 {
+  const wrist = WRIST * CARD_REACH * side;
+  out.set(CARD_REACH * 0.95 * side - wrist, 0, 0);
+  rotZ(rotY(out, side * owl.hand.y), side * owl.hand.x);
+  out.x += wrist;
+  rotX(out, owl.hand.z * 0.95);
+  out.multiplyScalar(THREE.MathUtils.lerp(1, 0.4, owl.fold));
+  rotZ(out, side * owl.flap);
+  rotX(rotZ(out, -side * 1.42 * owl.fold), 0.25 * owl.fold);
+  out.x += SHOULDER.x * side;
+  out.y += SHOULDER.y;
+  out.z += SHOULDER.z;
+  return out;
+}
+
 type Phase = 'perched' | 'awake' | 'leaving' | 'gone';
 
 /** One little hop round on the perch toward the way it means to go: when it starts, after `leave`, and its share of the turn. */
@@ -316,6 +458,13 @@ const BEAT_RATE = 2.3;
 /** Seconds from the leap to the end of its way, and the look down at her as it comes over, seconds into the flight. */
 const FLIGHT = 6.8;
 const GLANCE = [2.3, 3.4];
+/** The wings' angle over its back (radians): the middle of the stroke, and where it holds them in a glide. */
+const STROKE_MID = 0.55;
+const GLIDE_LIFT = 0.45;
+/** The wings' twist, leading edges down, so the barred tops of both are turned to a camera level with it. */
+const WING_CUP = 0.45;
+/** How far round it turns its breast toward where it is watched from, at most, on top of its heading. */
+const SHOW_TURN = 1.8;
 /** How much larger it grows on the wing, while its wings open, than it sat in the fork. */
 const FLIGHT_GROW = 0.3;
 
@@ -335,6 +484,8 @@ export class Owl {
   flap = 0;
   pitch = 0;
   roll = 0;
+  /** The hand of each wing at the wrist: bent up (radians), swept back, and the wing's twist, leading edge down. */
+  readonly hand = new THREE.Vector3();
   fluff = 0;
   blink = 0;
   /** How much light its eyes throw back, set by the story from where the light is. */
@@ -360,6 +511,8 @@ export class Owl {
   private readonly away = new THREE.Vector3();
   private readonly watch = new THREE.Vector3();
   private watching = false;
+  private readonly audience = new THREE.Vector3();
+  private showing = false;
   private readonly tmp = new THREE.Vector3();
   private sitYaw = 0;
   private flightYaw = 0;
@@ -375,6 +528,7 @@ export class Owl {
     this.fold = 1; this.flap = 0; this.pitch = 0; this.roll = 0; this.fluff = 0; this.blink = 0; this.presence = 1;
     this.moonlit = 0; this.shown = 0; this.beat = 0; this.size = 1;
     this.head.set(0, 0, 0);
+    this.hand.set(0, 0, 0);
     this.hooted = false;
     this.t = 0;
     this.blinkAt = -1;
@@ -399,6 +553,12 @@ export class Owl {
     this.beat = 0;
     this.phase = 'leaving';
     this.t = 0;
+  }
+
+  /** Where it is watched from: on the wing it turns its breast partway that way, so its face and wings are seen. */
+  showTo(at: THREE.Vector3 | null): void {
+    this.showing = !!at;
+    if (at) this.audience.copy(at);
   }
 
   lookAt(at: THREE.Vector3 | null): void {
@@ -490,11 +650,16 @@ export class Owl {
     this.beat += dt * BEAT_RATE * Math.PI * 2 * (0.3 + 0.7 * this.flapBlend) * (0.55 + 0.45 * (1 - first)) * (1 + 0.12 * Math.sin(this.beat * 0.5));
     // Down quickly, up slowly, every other stroke a little shallower.
     const stroke = Math.cos(this.beat + 0.4 * Math.sin(this.beat));
-    const depth = 0.75 * (1 - 0.18 * (0.5 + 0.5 * Math.cos(this.beat * 0.5))) + 0.3 * first;
-    // Held up in a soft V through the stroke, so the camera beside it sees the wings and not their edges.
-    this.flap = THREE.MathUtils.lerp(0.42, 0.3 + depth * stroke, this.flapBlend);
+    const depth = 0.72 * (1 - 0.18 * (0.5 + 0.5 * Math.cos(this.beat * 0.5))) + 0.3 * first;
+    // The stroke sweeps from high over its back to just under level and no further, so the wings are broad to the
+    // camera beside it through most of the beat and edge on only as they pass level.
+    this.flap = THREE.MathUtils.lerp(GLIDE_LIFT, STROKE_MID + depth * stroke, this.flapBlend);
+    // The hands trail the arms: bent up as the wings come down, bent down and swept back as they go up again.
+    const going = Math.sin(this.beat + 0.4 * Math.sin(this.beat)) * this.flapBlend;
+    const down = Math.max(0, going), up = Math.max(0, -going);
+    this.hand.set(0.35 * down - 0.55 * up, 0.55 * up, (WING_CUP + 0.18 * down - 0.1 * up) * this.flapBlend + WING_CUP * 0.6 * (1 - this.flapBlend));
     this.fold = Math.max(0, this.fold - dt * 5);
-    this.wingFrame = this.flap > 0.65 ? 0 : this.flap < 0.0 ? 2 : this.flap < this.flapWas ? 1 : 3;
+    this.wingFrame = this.flap > 0.95 ? 0 : this.flap < 0.2 ? 2 : this.flap < this.flapWas ? 1 : 3;
     this.flapWas = this.flap;
     // Unhurried off the fork, gathering way, then climbing away.
     const k = THREE.MathUtils.clamp(s / FLIGHT, 0, 1);
@@ -505,19 +670,30 @@ export class Owl {
     this.position.y += 0.07 * stroke * this.flapBlend - 0.05 * (1 - this.flapBlend) + bob;
     this.way.getTangentAt(Math.min(0.999, u + 0.01), this.along);
     const before = this.yaw;
-    const heading = Math.atan2(this.along.x, this.along.z);
+    let heading = Math.atan2(this.along.x, this.along.z);
+    if (this.showing) {
+      const toward = Math.atan2(this.audience.x - this.position.x, this.audience.z - this.position.z) - heading;
+      heading += THREE.MathUtils.clamp(Math.atan2(Math.sin(toward), Math.cos(toward)), -SHOW_TURN, SHOW_TURN) * 0.92;
+    }
     this.yaw += Math.atan2(Math.sin(heading - this.yaw), Math.cos(heading - this.yaw)) * (1 - Math.exp(-dt * 3));
     const swing = Math.atan2(Math.sin(this.yaw - before), Math.cos(this.yaw - before)) / Math.max(dt, 1e-4);
-    this.roll += (THREE.MathUtils.clamp(-swing * 0.5, -0.45, 0.45) - this.roll) * (1 - Math.exp(-dt * 4));
-    // Its body levels out along the way it climbs; a steep climb keeps it more upright.
+    this.roll += (THREE.MathUtils.clamp(-swing * 0.5, -0.3, 0.3) - this.roll) * (1 - Math.exp(-dt * 4));
+    // It flies sat up, as a little owl in a picture book does, more so as it climbs, so from below its face still shows.
     const climb = Math.atan2(this.along.y, Math.hypot(this.along.x, this.along.z));
-    this.pitch += (0.85 - 0.6 * climb - this.pitch) * (1 - Math.exp(-dt * 5));
+    this.pitch += (Math.max(0.12, 0.42 - 0.5 * climb) - this.pitch) * (1 - Math.exp(-dt * 5));
     // It looks down at her as it comes over her, and then on the way it goes.
     const back = smooth(s, GLANCE[0], GLANCE[0] + 0.4) * (1 - smooth(s, GLANCE[1], GLANCE[1] + 0.4));
     this.tmp.copy(this.watch).sub(this.position);
     const toHer = Math.atan2(Math.sin(Math.atan2(this.tmp.x, this.tmp.z) - this.yaw), Math.cos(Math.atan2(this.tmp.x, this.tmp.z) - this.yaw));
-    this.head.x += ((this.watching ? THREE.MathUtils.clamp(toHer, -1.7, 1.7) * back : 0) - this.head.x) * (1 - Math.exp(-dt * 6));
-    this.head.y += ((this.watching ? 0.35 * back : 0) - this.head.y) * (1 - Math.exp(-dt * 6));
+    let look = this.watching ? THREE.MathUtils.clamp(toHer, -1.7, 1.7) * back : 0;
+    if (this.showing) {
+      // Never so far round that its face is turned from where it is watched: at most it is seen in profile.
+      const seen = Math.atan2(this.audience.x - this.position.x, this.audience.z - this.position.z) - this.yaw;
+      const from = Math.atan2(Math.sin(seen), Math.cos(seen));
+      look = THREE.MathUtils.clamp(look, from - 1.45, from + 1.45);
+    }
+    this.head.x += (look - this.head.x) * (1 - Math.exp(-dt * 6));
+    this.head.y += ((this.watching ? 0.2 * back : 0) - this.head.y) * (1 - Math.exp(-dt * 6));
     this.moonlit = smooth(s, 0.2, 1.5);
     this.size = 1 + FLIGHT_GROW * smooth(s, 0.15, 1.4);
     this.presence = 1 - smooth(s, FLIGHT - 0.7, FLIGHT);
@@ -560,6 +736,8 @@ export const woodOwl = new Owl();
 /** Draws an `Owl`: its body, the eyeshine that floats over its eyes in the dark, and its share of the stump's shadow. */
 export class OwlBody {
   readonly mesh: THREE.Mesh;
+  /** The painted wings, which open out of the folded ones as it leaves. */
+  readonly wings: THREE.Mesh;
   readonly glow: THREE.Mesh;
   private readonly uniforms: Record<string, THREE.IUniform>;
   private readonly glowUniforms: Record<string, THREE.IUniform>;
@@ -568,11 +746,11 @@ export class OwlBody {
   private readonly right = new THREE.Vector3();
   private readonly body = new THREE.Vector3();
   private readonly headAt = new THREE.Vector3();
-  private readonly wings: [THREE.Vector3, THREE.Vector3, THREE.Vector3, THREE.Vector3] = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
+  private readonly wingBones: [THREE.Vector3, THREE.Vector3, THREE.Vector3, THREE.Vector3] = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
   private readonly tufts: [THREE.Vector3, THREE.Vector3] = [new THREE.Vector3(), new THREE.Vector3()];
   private time = 0;
 
-  constructor() {
+  constructor(wing: THREE.Texture) {
     this.uniforms = {
       ...atmo.uniforms,
       ...shapeUniforms,
@@ -581,6 +759,7 @@ export class OwlBody {
       uOwlWing: { value: new THREE.Vector4() },
       uOwlBody: { value: new THREE.Vector4() },
       uOwlEyes: { value: new THREE.Vector4() },
+      uOwlHand: { value: new THREE.Vector4() },
       uOwlTime: { value: 0 },
     };
     this.mesh = new THREE.Mesh(owlGeometry(), new THREE.ShaderMaterial({
@@ -588,6 +767,12 @@ export class OwlBody {
     }));
     this.mesh.name = 'wood-owl';
     this.mesh.frustumCulled = false;
+    this.wings = new THREE.Mesh(cardGeometry(), new THREE.ShaderMaterial({
+      uniforms: { ...this.uniforms, uWingCard: { value: wing } }, vertexShader: CARD_VERT, fragmentShader: CARD_FRAG,
+      side: THREE.DoubleSide, alphaToCoverage: true,
+    }));
+    this.wings.name = 'wood-owl-wings';
+    this.wings.frustumCulled = false;
     const quad = new THREE.PlaneGeometry(2, 2);
     const geo = new THREE.BufferGeometry();
     const pos: number[] = [], side: number[] = [], index: number[] = [];
@@ -614,6 +799,7 @@ export class OwlBody {
     this.time += dt;
     const shown = visible && owl.phase !== 'gone';
     this.mesh.visible = shown;
+    this.wings.visible = shown && owl.fold < 0.97;
     this.glow.visible = shown && owl.eyeshine > 0.01;
     if (!shown) {
       setOwlShadow(null, null, 0, 0);
@@ -625,6 +811,7 @@ export class OwlBody {
     (u.uOwlWing.value as THREE.Vector4).set(owl.fold, owl.flap, owl.pitch, owl.moonlit);
     (u.uOwlBody.value as THREE.Vector4).set(owl.roll, owl.size, 0, 0);
     (u.uOwlEyes.value as THREE.Vector4).set(owl.eyeshine, owl.shown, owl.blink, owl.presence);
+    (u.uOwlHand.value as THREE.Vector4).set(owl.hand.x, owl.hand.y, owl.hand.z, 0);
     u.uOwlTime.value = this.time;
     owl.toWorld(this.local.set(-EYE_AT.x, EYE_AT.y, EYE_AT.z + 0.01), true, this.left);
     owl.toWorld(this.local.set(EYE_AT.x, EYE_AT.y, EYE_AT.z + 0.01), true, this.right);
@@ -636,15 +823,12 @@ export class OwlBody {
     const seen = owl.presence > 0.5;
     const spread = 1 - owl.fold;
     for (const [i, side] of [[0, -1], [2, 1]] as const) {
-      owl.toWorld(this.local.set(SHOULDER.x * side, SHOULDER.y, SHOULDER.z), false, this.wings[i]);
-      // The wing as the shader swings it: out and up by the stroke when spread, down the flank when folded.
-      const reach = 0.34 * spread + 0.1;
-      this.local.set(SHOULDER.x * side + side * Math.cos(owl.flap) * reach * spread, SHOULDER.y + Math.sin(owl.flap) * reach * spread - 0.1 * (1 - spread), SHOULDER.z - 0.04);
-      owl.toWorld(this.local, false, this.wings[i + 1]);
+      owl.toWorld(this.local.set(SHOULDER.x * side, SHOULDER.y, SHOULDER.z), false, this.wingBones[i]);
+      owl.toWorld(wingTip(owl, side, this.local), false, this.wingBones[i + 1]);
     }
     for (const [i, side] of [[0, -1], [1, 1]] as const) owl.toWorld(this.local.set(TUFT.x * side * 1.2, TUFT.y + 0.07, TUFT.z), true, this.tufts[i]);
     const r = SCALE * owl.size;
     setOwlShadow(seen ? this.body : null, seen ? this.headAt : null, 0.14 * r, 0.12 * r, seen ? this.tufts : undefined, 0.03 * r,
-      seen && spread > 0.2 ? this.wings : undefined, 0.05 * r);
+      seen && spread > 0.2 ? this.wingBones : undefined, 0.05 * r);
   }
 }

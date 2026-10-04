@@ -1156,6 +1156,7 @@ export class WoodChapter implements Chapter {
     this.owlEyes(this.shapeEyes);
     owl.eyeshine *= Math.exp(-dt * 3);
     owl.lookAt(this.childHead.copy(c.position).setY(c.position.y + 2.2));
+    owl.showTo(this.camAt);
     if (owl.hooted) cue('hoot');
     if (owl.phase === 'awake' && owl.elapsed > k.owlLeaveAfter) owl.leave(OWL_FLIGHT);
     // Her body softens: the lean goes out of her and her mittens come down.
