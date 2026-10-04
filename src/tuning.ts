@@ -1157,6 +1157,37 @@ export const tuning = {
     curtainDistance: 17, curtainHeight: 0.9,
     viewClearanceAhead: 31, viewClearanceRadius: 5.5,
   },
+  /**
+   * The shore through the red door: the boat is moored out on the water, tied to a washing-line pulley that runs
+   * from a post on the bank out to a piling beside it. A pinwheel on the bank wheel's axle winds the line in.
+   */
+  shorePulley: {
+    /** Radians east of north the line runs out from the bank; metres the boat is drawn in; how far beside its way the line runs. */
+    bearing: 0.72, reach: 13, side: 2.3,
+    /** Hub heights above the ground and the sea, the wheels' radius, how far the line dips, and the piling beyond the boat. */
+    bankHeight: 2.6, farHeight: 1.9, wheelRadius: 0.24, sag: 0.3, farBeyond: 1.4,
+    pinwheelRadius: 1.2, pinwheelOut: 0.32,
+    /**
+     * A sweep across the pinwheel on screen pushes it toward `spinFull` rad/s once its gust reaches `pushFull`
+     * (from `pushFrom`); the push fades at `pushFade` a second, the wheel takes it up at `spinUp` and runs down at
+     * `spinDown`. Air arriving from sweeps elsewhere drives it at most `spill` of full. The island's own breeze
+     * only rocks it.
+     */
+    spinFull: 5, spinUp: 2.6, spinDown: 1.1, pushFrom: 1, pushFull: 6, pushFade: 2.5, spill: 0.2,
+    /** A sweep reaches the pinwheel within this many of its radii on screen. */
+    brushReach: 1.3,
+    /**
+     * The boat on its painter: line run before the painter tightens, the spring once it has, the water's drag a
+     * second, and how quickly the sand stops it in the last metre.
+     */
+    slack: 0.45, pull: 1.4, drag: 0.5, beachGrip: 2.2,
+    /** The heading it lies at on the sand once it is in. */
+    berthYaw: -0.15,
+    /** A stalled player is shown a sweep across the pinwheel after this long without one. */
+    inviteAfter: 4, inviteSpan: 7, inviteWidth: 0.15,
+    /** At the bank the view turns this share of the way toward the line's side, at this distance and height. */
+    viewTurn: 0.5, viewDistance: 19, viewHeight: 3.6,
+  },
   family: {
     /** Soft fullness and shoulder movement, as fractions of the piece's width. */
     chest: 0.07,

@@ -61,6 +61,8 @@ export class Boat {
   canGround = true;
   /** A berth to come alongside instead of a beach to run up: where the hull stops, and the way it lies there. */
   mooring: { x: number; z: number; yaw: number } | null = null;
+  /** Drawn along by a line: whoever pulls it puts it where it is, and it neither sails nor grounds itself. */
+  towed = false;
   /**
    * How far the world's own wind has gone out of the sails, 0 normal to 1 dead calm. At 1 the boat has no way
    * of its own at all and only the wind the player makes moves it.
@@ -177,6 +179,7 @@ export class Boat {
   }
 
   beach(x: number, z: number, yaw: number): void {
+    this.towed = false;
     this.speedLimit = Infinity;
     this.shelter = 0;
     this.position.set(x, Math.max(heightAt(x, z), 0) + DRAFT, z);
@@ -189,6 +192,7 @@ export class Boat {
   }
 
   launch(holdForBoarding = false): void {
+    this.towed = false;
     this.afloat = true;
     this.grounded = false;
     this.beaching = false;
@@ -293,7 +297,7 @@ export class Boat {
     const u = this.shoveAge / tuning.dolphins.shovePeak;
     const kick = this.shove * u * Math.exp(1 - u);
 
-    if (this.afloat && !this.grounded) {
+    if (this.afloat && !this.grounded && !this.towed) {
       let dy = 0;
       if (this.steerFor) {
         const want = Math.atan2(this.steerFor.x - p.x, this.steerFor.y - p.z);
@@ -361,7 +365,7 @@ export class Boat {
         this.grounded = true;
         this.speed = 0;
       }
-    } else if (this.afloat && this.mooring) {
+    } else if (this.afloat && this.mooring && !this.towed) {
       /** Made fast: it settles against the jetty and lies along it. */
       const m = this.mooring;
       const k = 1 - Math.exp(-dt * 0.8);

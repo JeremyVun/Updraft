@@ -82,21 +82,23 @@ const CORD_VERT = /* glsl */ `
 ${ATMO_GLSL}
 in vec3 aTangent;
 in float aEdge;
+uniform float uCordWidth;
 out vec3 vWorld;
 void main() {
   vec3 toCam = cameraPosition - position;
   float away = length(toCam);
   vec3 c = cross(aTangent, toCam / max(away, 0.001));
   vec3 side = c / max(length(c), 1e-4);
-  vWorld = position + side * aEdge * max(0.012, away * 0.0007);
+  vWorld = position + side * aEdge * max(uCordWidth, away * 0.0007);
   gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
 }`;
 
 const CORD_FRAG = /* glsl */ `
 ${ATMO_GLSL}
+uniform vec3 uCordColour;
 in vec3 vWorld;
 void main() {
-  vec3 col = vec3(0.7, 0.66, 0.58) * (hemiLight(vec3(0.0, 1.0, 0.0)) + uSunColor * 0.3);
+  vec3 col = uCordColour * (hemiLight(vec3(0.0, 1.0, 0.0)) + uSunColor * 0.3);
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;
 
@@ -135,14 +137,14 @@ function sparGeometry(): THREE.BufferGeometry {
 }
 
 /** A camera-facing strip rebuilt on the CPU each frame: the kite's string. */
-class Cord {
+export class Cord {
   readonly mesh: THREE.Mesh;
   private readonly positions: Float32Array;
   private readonly tangents: Float32Array;
   private readonly geo = new THREE.BufferGeometry();
   private readonly tmp = new THREE.Vector3();
 
-  constructor(count: number) {
+  constructor(count: number, width = 0.012, colour = new THREE.Color(0.7, 0.66, 0.58)) {
     this.positions = new Float32Array(count * 6);
     this.tangents = new Float32Array(count * 6);
     const edges = new Float32Array(count * 2);
@@ -162,7 +164,7 @@ class Cord {
     this.geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e4);
     this.mesh = new THREE.Mesh(
       this.geo,
-      new THREE.ShaderMaterial({ uniforms: atmo.uniforms, vertexShader: CORD_VERT, fragmentShader: CORD_FRAG, side: THREE.DoubleSide }),
+      new THREE.ShaderMaterial({ uniforms: { ...atmo.uniforms, uCordWidth: { value: width }, uCordColour: { value: colour } }, vertexShader: CORD_VERT, fragmentShader: CORD_FRAG, side: THREE.DoubleSide }),
     );
     this.mesh.frustumCulled = false;
   }

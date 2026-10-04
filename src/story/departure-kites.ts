@@ -10,6 +10,7 @@ import { SLEEP_BERTH } from '../world/sleeping';
 import { MIRROR_BERTH, MIRROR_DECK } from '../world/sky-mirror-layout';
 import { BOAT_BERTH } from './island';
 import { LINES_BERTH } from './lines';
+import { SHORE_PILING } from '../world/shore-pulley';
 import { FAR_SHORE } from './meadow';
 import type { Journey, ChapterName } from './journey';
 
@@ -26,7 +27,8 @@ export class DepartureKites {
   constructor(wind: WindField) {
     this.markers = {
       island: new Kite(wind, BOAT_BERTH, { offset: [-8, -4] }),
-      lines: new Kite(wind, LINES_BERTH, { offset: [-12, 7] }),
+      // Tied off on the pulley's piling out by the mooring, so it flies over the waiting boat and clear of the bank.
+      lines: new Kite(wind, LINES_BERTH, { offset: [SHORE_PILING.x - LINES_BERTH.x, SHORE_PILING.z - LINES_BERTH.z], ground: SHORE_PILING.y - 0.6, stringLength: tuning.linesToys.shoreKiteStringLength, tiedTo: 'rail' }),
       boats: new Kite(wind, BOATS_BERTH, { offset: [-8, 5], stringLength: tuning.linesToys.shoreKiteStringLength }),
       meadow: new Kite(wind, FAR_SHORE, { offset: [-9, 0], stringLength: tuning.linesToys.shoreKiteStringLength }),
       birches: new Kite(wind, BIRCHES_BERTH, { offset: [-9, 7], stringLength: tuning.linesToys.shoreKiteStringLength }),
