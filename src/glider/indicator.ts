@@ -32,6 +32,7 @@ export class PlaneIndicator {
   private bounds: Bounds = { left: 0, top: 0, right: 0, bottom: 0 };
   private resized = true;
   private opacity = 0;
+  private shownOpacity = NaN;
 
   constructor() {
     window.addEventListener('resize', () => { this.resized = true; });
@@ -54,6 +55,6 @@ export class PlaneIndicator {
     const target = active ? this.bearing.strength * tuning.planeIndicator.opacity : 0;
     this.opacity += (target - this.opacity) * (1 - Math.exp(-dt * tuning.planeIndicator.fadeRate));
     if (this.opacity < 0.002) this.opacity = 0;
-    this.icon.style.opacity = String(this.opacity);
+    if (this.opacity !== this.shownOpacity) this.icon.style.opacity = String(this.shownOpacity = this.opacity);
   }
 }

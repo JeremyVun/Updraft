@@ -647,6 +647,7 @@ export class WashingLines {
   private pegMesh: THREE.InstancedMesh | null = null;
   private readonly pegMatrix = new THREE.Matrix4();
   private readonly pegScale = new THREE.Vector3(1, 1, 1);
+  private pegsDrawn: { p: THREE.Vector3; q: THREE.Quaternion }[] = [];
 
   /** The passage sheets are real cloth, with real pegs that come off. */
   private passages(curtains: readonly WashingCurtain[]): void {
@@ -680,6 +681,7 @@ export class WashingLines {
     this.pegMesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     this.pegMesh.frustumCulled = false;
     this.group.add(this.pegMesh);
+    this.pegsDrawn = pegs.map(() => ({ p: new THREE.Vector3(NaN, NaN, NaN), q: new THREE.Quaternion() }));
     this.update();
   }
 
@@ -694,10 +696,18 @@ export class WashingLines {
     }
     if (!this.pegMesh) return;
     let i = 0;
+    let moved = false;
     for (const curtain of CURTAINS) for (const peg of curtain.pegs) {
-      this.pegMesh.setMatrixAt(i++, this.pegMatrix.compose(peg.p, peg.q, this.pegScale));
+      const drawn = this.pegsDrawn[i];
+      if (!drawn.p.equals(peg.p) || !drawn.q.equals(peg.q)) {
+        drawn.p.copy(peg.p);
+        drawn.q.copy(peg.q);
+        this.pegMesh.setMatrixAt(i, this.pegMatrix.compose(peg.p, peg.q, this.pegScale));
+        moved = true;
+      }
+      i++;
     }
-    this.pegMesh.instanceMatrix.needsUpdate = true;
+    if (moved) this.pegMesh.instanceMatrix.needsUpdate = true;
   }
 }
 

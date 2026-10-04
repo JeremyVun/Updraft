@@ -20,6 +20,8 @@ export class WorldFoley {
   private lastSurface = -Infinity;
   private readonly clothSway = new WeakMap<THREE.Vector3, Sway>();
   private readonly air: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
+  private readonly nearby: THREE.Vector3[] = [];
+  private readonly nearbyDistances: number[] = [];
 
   constructor(private readonly foley: Foley, private readonly camera: THREE.Camera) {}
 
@@ -28,9 +30,22 @@ export class WorldFoley {
   /** Nearby laundry uses the same wind spring and flutter thresholds as the cloth shader. */
   cloth(points: readonly THREE.Vector3[], wind: WindField, dt: number, active: boolean): void {
     if (!active) return;
-    const nearby = points.filter(at => this.camera.position.distanceToSquared(at) < tuning.audio.clothReach ** 2)
-      .sort((a, b) => this.camera.position.distanceToSquared(a) - this.camera.position.distanceToSquared(b))
-      .slice(0, tuning.audio.clothSources);
+    const eye = this.camera.position, reach = tuning.audio.clothReach ** 2, most = tuning.audio.clothSources;
+    const nearby = this.nearby, distances = this.nearbyDistances;
+    nearby.length = 0;
+    distances.length = 0;
+    // The nearest in order, the earlier of two at the same distance first.
+    for (const at of points) {
+      const d = eye.distanceToSquared(at);
+      if (d >= reach || (nearby.length === most && d >= distances[most - 1])) continue;
+      let i = Math.min(nearby.length, most - 1);
+      for (; i > 0 && distances[i - 1] > d; i--) {
+        nearby[i] = nearby[i - 1];
+        distances[i] = distances[i - 1];
+      }
+      nearby[i] = at;
+      distances[i] = d;
+    }
     for (const at of nearby) {
       let sway = this.clothSway.get(at);
       if (!sway) { sway = new Sway(); this.clothSway.set(at, sway); }
