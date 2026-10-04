@@ -559,6 +559,7 @@ export class Sheep {
       }
     }
     this.instances.commit(drawn);
+    this.mesh.visible = drawn > 0;
   }
 
   /** Blooms out of the grass with a soft swell and a shake of the fleece. */

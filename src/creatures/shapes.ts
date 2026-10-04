@@ -113,6 +113,8 @@ export class Instances {
 
   commit(count: number): void {
     this.geometry.instanceCount = count;
+    // An empty update range would upload the whole array: WebGL2 reads a length of 0 as "to the end".
+    if (count === 0) return;
     for (const attr of this.attrs) {
       attr.clearUpdateRanges();
       attr.addUpdateRange(0, count * 4);
