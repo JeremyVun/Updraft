@@ -17,11 +17,6 @@ import { COTTAGE, DOOR_SHORE, GRASS_LINE, HEIGHTFIELD_GLSL, ISLES, LAST_HILL, PO
 /** Half the size of the little boats' turf box, round the island. */
 const BOATS_TURF = { x: 55, z: 78 };
 
-/** True where the tile with this corner overlaps the little boats' turf, whose blades thin further out (`tuning.littleBoats.turfReach`). */
-function onBoatsTurf(x: number, z: number): boolean {
-  return Math.abs(x + TILE / 2 - LITTLE_BOATS.x) < BOATS_TURF.x + TILE / 2 && Math.abs(z + TILE / 2 - LITTLE_BOATS.z) < BOATS_TURF.z + TILE / 2;
-}
-
 /**
  * How much height grass keeps on grazed islands and the pond's margin. The bank stays short enough to see the
  * child offer the water and receive the cygnet. Mirrors `croppedAt` in the blade shaders; keep them in step.
@@ -390,17 +385,11 @@ uniform float uFewer;
 float densityAt(float dist) {
   return mix(mix(1.0, uLevelDensity.x, smoothstep(uRings.x, uRings.y, dist)), uLevelDensity.y, smoothstep(uRings.z, uRings.w, dist));
 }
-/** How many times further out the meadow thins at \`root\`: the little boats' turf is cropped too short to close over a thinned meadow's gaps. */
-float thinReach(vec2 root) {
-  return abs(root.x - ${glsl(LITTLE_BOATS.x)}) < ${glsl(BOATS_TURF.x)} && abs(root.y - ${glsl(LITTLE_BOATS.z)}) < ${glsl(BOATS_TURF.z)} ? ${glsl(tuning.littleBoats.turfReach)} : 1.0;
-}
 float bladeDensityFor(vec2 root, float dist, float density) {
-  float reach = thinReach(root);
-  float later = reach > 1.0 ? densityAt(dist / reach) / densityAt(dist) : 1.0;
   float near = 1.0 - smoothstep(${glsl(SLEEP.swardDetailFrom)}, ${glsl(SLEEP.swardDetailTo)}, dist);
   float winter = 1.0 - smoothstep(0.72, 1.06, length((root - vec2(${glsl(ISLES.sleeping.x)}, ${glsl(ISLES.sleeping.z)})) / vec2(${glsl(ISLES.sleeping.rx)}, ${glsl(ISLES.sleeping.rz)})));
   float home = 1.0 - smoothstep(0.75, 1.05, length((root - vec2(${glsl(ISLES.home.x)}, ${glsl(ISLES.home.z)})) / vec2(${glsl(ISLES.home.rx)}, ${glsl(ISLES.home.rz)})));
-  return min(1.0, density * mix(1.0, ${glsl(SLEEP.swardDensity)}, winter * near) * mix(1.0, ${glsl(tuning.homeGrass.density)}, home)) * later;
+  return min(1.0, density * mix(1.0, ${glsl(SLEEP.swardDensity)}, winter * near) * mix(1.0, ${glsl(tuning.homeGrass.density)}, home));
 }
 float bladeDensity(vec2 root, float dist) {
   return bladeDensityFor(root, dist, max(uDensity, uDensityPrevious));
@@ -418,20 +407,19 @@ float widthAt(float dist) {
   return mix(mix(1.0, uLevelWidth.x, smoothstep(uRings.x, uRings.y, dist)), uLevelWidth.y, smoothstep(uRings.z, uRings.w, dist));
 }
 /** 0..1 size of a blade: it shrinks, whole, over the last metres before thinning removes it, and the far edge sinks away. \`share\` is the blade's fixed part of what thinning keeps. */
-float standing(float rank, float share, float dist, vec2 root) {
-  float reach = thinReach(root);
+float standing(float rank, float share, float dist) {
   float here = densityAt(dist) * share;
-  float ahead = reach > 1.0 ? here * densityAt((dist + uShrinkBand) / reach) / densityAt(dist / reach) : densityAt(dist + uShrinkBand) * share;
+  float ahead = densityAt(dist + uShrinkBand) * share;
   float grown = smoothstep(0.0, 1.0, (here - rank) / max(here - ahead, 1e-5));
   return grown * (1.0 - smoothstep(uSink.x, uSink.y, dist));
 }
 /** Keep both populations during a quality change and grow/shrink each blade in place. */
 float qualityStanding(float rank, float share, float dist, vec2 root) {
-  if (uQualityBlend >= 1.0) return standing(rank, share, dist, root);
+  if (uQualityBlend >= 1.0) return standing(rank, share, dist);
   float base = max(bladeDensity(root, dist), 1e-5);
   float before = share * bladeDensityFor(root, dist, uDensityPrevious) / base;
   float after = share * bladeDensityFor(root, dist, uDensity) / base;
-  return mix(standing(rank, before, dist, root), standing(rank, after, dist, root), uQualityBlend);
+  return mix(standing(rank, before, dist), standing(rank, after, dist), uQualityBlend);
 }
 `;
 
@@ -1398,7 +1386,6 @@ export class Grass {
           homeAt(mx - TILE / 2, mz - TILE / 2) > 0 || homeAt(mx + TILE / 2, mz - TILE / 2) > 0 ||
           homeAt(mx - TILE / 2, mz + TILE / 2) > 0 || homeAt(mx + TILE / 2, mz + TILE / 2) > 0);
         let li = winterDetail || homeDetail ? 0 : this.finest;
-        const thinReach = onBoatsTurf(tx * TILE, tz * TILE) ? tuning.littleBoats.turfReach : 1;
         // At quarter density the 16x16 table contains every surviving forest blade.
         // Only use it when the entire tile lies in the fully cropped interior.
         if (tuning.wood.grassDensity <= 0.25 &&
@@ -1408,7 +1395,7 @@ export class Grass {
           woodFloorAt((tx + 1) * TILE, (tz + 1) * TILE) >= 0.9999) {
           li = Math.max(li, 1);
         }
-        while (li < this.coarsest && nearest > this.lods[li].spec.reach * thinReach) li++;
+        while (li < this.coarsest && nearest > this.lods[li].spec.reach) li++;
         while (li > this.finest && this.lods[li].count >= this.lods[li].spec.maxTiles) li--;
         const lod = this.lods[li];
         if (lod.count >= lod.spec.maxTiles) continue;
