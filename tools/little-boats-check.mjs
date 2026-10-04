@@ -1,4 +1,5 @@
-// Complete the little-boats room with real mouse or touch strokes. Captures under /tmp.
+// Complete the little-boats room with real mouse or touch strokes: sails, a push across the bath toward the stream,
+// and circles over the plug. Captures under /tmp.
 // Usage: node tools/little-boats-check.mjs [prefix]; TOUCH=1 uses a 390x844 touch viewport.
 // Inherits the shared browser lock and GPU launch from play.mjs.
 // BASE overrides the dev server. Uses the shared /tmp/updraft-chromium.lock.
@@ -62,6 +63,20 @@ page.on('console', (m) => {
   if (m.type() === 'error' && !m.text().includes('Failed to load resource')) errors.push(m.text());
 });
 const cdp = await context.newCDPSession(page);
+async function drag(points) {
+  for (const [i, [px, py]] of points.entries()) {
+    const x = Math.max(4, Math.min(width - 4, px)), y = Math.max(4, Math.min(height - 4, py));
+    if (touch)
+      await cdp.send('Input.dispatchTouchEvent', {
+        type: i === 0 ? 'touchStart' : 'touchMove',
+        touchPoints: [{ x, y, id: 1, radiusX: 4, radiusY: 4, force: 1 }],
+      });
+    else await page.mouse.move(x, y);
+    await page.waitForTimeout(16);
+  }
+  if (touch) await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+  else await page.mouse.move(width - 3, height - 3);
+}
 try {
   await page.goto(`${process.env.BASE ?? 'http://127.0.0.1:5230/'}?shot=1&chapter=boats`, { waitUntil: 'load' });
   await page.waitForFunction(() => window.__ready === true, null, { timeout: 60000 });
@@ -103,7 +118,15 @@ try {
       const g = __game,
         r = g.littleBoats;
       const p = r.invitation.clone().project(g.rig.camera);
+      const d = r.drain, waiting = d.waiting(r.toys[0].s);
+      const w = waiting && (waiting === d.plugAt ? d.plugRest : waiting).clone().project(g.rig.camera);
       return {
+        waiting: !waiting ? null : waiting === d.bathAt ? 'bath' : 'plug',
+        wx: w ? (w.x + 1) / 2 : 0,
+        wy: w ? (1 - w.y) / 2 : 0,
+        push: d.pushAngle,
+        poured: d.risen,
+        pulled: d.pulled,
         chapter: g.story.name,
         beat: g.story.current.beat,
         s: r.progress,
@@ -139,25 +162,22 @@ try {
       pool = 2;
     }
     if (stroke % 30 === 0) console.log(JSON.stringify({ stroke, ...state }));
-    const cx = state.x * width,
-      cy = state.y * height;
     const reach = touch ? 45 : 100;
-    for (let i = 0; i <= 30; i++) {
-      const x = Math.max(4, Math.min(width - 4, cx + (i / 30 - 0.5) * reach * 2)),
-        y = Math.max(4, Math.min(height - 4, cy + Math.sin((i / 30) * Math.PI) * 6));
-      if (touch)
-        await cdp.send('Input.dispatchTouchEvent', {
-          type: i === 0 ? 'touchStart' : 'touchMove',
-          touchPoints: [{ x, y, id: 1, radiusX: 4, radiusY: 4, force: 1 }],
-        });
-      else await page.mouse.move(x, y);
-      await page.waitForTimeout(16);
+    if (state.waiting) await page.screenshot({ path: `${prefix}-${state.waiting}-waiting.png` });
+    if (state.waiting === 'bath') {
+      const cx = state.wx * width, cy = state.wy * height, ux = Math.cos(state.push), uy = -Math.sin(state.push);
+      await drag(Array.from({ length: 31 }, (_, i) => [cx + (i / 30 - 0.5) * reach * 2 * ux, cy + (i / 30 - 0.5) * reach * 2 * uy]));
+    } else if (state.waiting === 'plug') {
+      const cx = state.wx * width, cy = state.wy * height - (touch ? 20 : 40), r = touch ? 35 : 70;
+      await drag(Array.from({ length: 120 }, (_, i) => [cx + Math.cos(i * 0.3) * r, cy + Math.sin(i * 0.3) * r]));
+    } else {
+      const cx = state.x * width, cy = state.y * height;
+      await drag(Array.from({ length: 31 }, (_, i) => [cx + (i / 30 - 0.5) * reach * 2, cy + Math.sin((i / 30) * Math.PI) * 6]));
     }
-    if (touch) await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
-    else await page.mouse.move(width - 3, height - 3);
     await page.waitForTimeout(220);
   }
   if (!finished) throw new Error('Pointer strokes did not finish the room');
+  if (!(await page.evaluate(() => __game.littleBoats.drain.pulled))) throw new Error('The room finished without the plug being pulled');
   const swims = await page.evaluate(() => __game.cygnet.swims);
   if (swims !== 3) throw new Error(`Expected three pool swims, got ${swims}`);
   const motion = await page.evaluate(() => __toyMotion);

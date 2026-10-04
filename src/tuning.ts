@@ -359,6 +359,37 @@ export const tuning = {
     heel: 0.13, rollSpring: 13, rollDamping: 3.8, drift: 0.5,
     swimSpeed: 3.15, swimWeave: 0.15, swimPlay: 0.8,
     /**
+     * Getting out to sea. A shoal at `barS` (sand `barHeight` up its bed) grounds the fleet until the bath on the far
+     * bank at `bathS` has been rocked and poured into the pools, raising them `riseHeight`; the plug wedged in the
+     * mouth at `plugS` holds them there until gusts work it loose and its chain hauls it out.
+     */
+    barS: 62, barHeight: 0.5, bathS: 59.5, plugS: 95.5, riseHeight: 0.34,
+    /**
+     * Tip per unit of stroke pushing the bath over toward the stream, how it springs back and is damped, its furthest
+     * tip (radians), and from what tip it pours. A stroke the other way rocks it back by `bathAgainst` of that.
+     */
+    bathAgainst: 0.3, bathPush: 0.7,
+    /**
+     * While the fleet is aground, a gust of the island's own crosses the bath toward the stream with a few wind lines
+     * and rocks it on its feet without spilling, showing that it can go over and which way: the first after
+     * `nudgeFirst` s, then every `nudgeEvery` s; two pushes of `nudgeTip` as it runs for `nudgeFor` s. Only the
+     * player's push pours.
+     */
+    nudgeFirst: 1.6, nudgeEvery: 9, nudgeTip: 0.38, nudgeFor: 1.2, nudgeSpeed: 14, nudgeLines: 4, nudgeLinePace: 9, bathSpring: 5, bathDamping: 2.6, bathTipMax: 0.42, pourFrom: 0.1,
+    /** Share of the bath poured per second at the furthest tip; the pools are risen once `pourNeeded` of it is in. */
+    pourRate: 0.32, pourNeeded: 0.7,
+    /** How the risen water carries the grounded fleet over the shoal (m/s) and for how long it runs (s). */
+    surgeSpeed: 2.2, surgeFor: 3.5,
+    /** The plug's size; how hard each stroke rocks it; the speed it pops out at, then how fast and how high its chain hauls it (m/s, m). */
+    plugScale: 4, plugRock: 0.9, plugPop: 7, plugHaul: 3.2, plugLift: 22,
+    /**
+     * Only an updraft lifts the plug: looseness per second under a full column (it pulls free at 1), the charge that
+     * starts and fully lifts it, how near the column must stand (m), and the spiral shown to a waiting player.
+     */
+    plugLiftRate: 0.36, plugLiftFrom: 0.12, plugLiftFull: 0.5, plugReach: 3.5, plugCoaxUrgency: 0.8, plugCoaxRadius: 1.6,
+    /** How fast the water rushes out of the mouth once the plug is out, carrying the fleet (m/s), and how quickly the rush builds and the risen pools drain (s). */
+    rushSpeed: 3.6, rushRise: 1.2, drainFor: 5,
+    /**
      * Reeds in clumps (where bank noise passes `clumpFrom`) along the stream's lip: up to `share` of the blades,
      * reaching `far` metres (plus a share of the stream's width) up the far bank and `near` up the camera's own,
      * `farHeight`/`nearHeight` metres tall at `width` of a grass blade's width, bending `stiff` as far,

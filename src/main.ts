@@ -251,6 +251,7 @@ await built();
 const skyMirror = new SkyMirror();
 scene.add(skyMirror.group);
 const littleBoats = new LittleBoats();
+let plugWasPulled = false;
 scene.add(littleBoats.group);
 await built();
 const cloudStairs = await prepareInBatches(CloudStairs.build(), building);
@@ -666,7 +667,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
     : story.name === 'birches' ? birches.scarf.updraftTarget : story.current.updraftTarget ?? null;
   input.update(dt, rig.camera, wind, inputFraction);
   washingPassage.active?.brush(rig.camera, input, wind);
-  if (story.name === 'boats') littleBoats.brush(rig.camera, input, wind);
+  if (story.name === 'boats') littleBoats.brush(rig.camera, input, wind, dt);
   if (story.current.invitesSail) boat.brushSail(rig.camera, input);
   if (story.name === 'stairs') cloudStairs.brush(rig.camera, input, dt);
   if (story.name === 'birches') {
@@ -954,7 +955,8 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   const flyWeather = inWood ? tuning.wood.fireflyPresence : Math.max(0, 1 - storm * 1.6);
   fireflies.update(dt, atmo.uniforms.uNight.value * overLand * flyWeather * (1 - sleeping.presence), story.focus, inWood);
   emberInvitation.update(dt, rig.camera, story.current.windInvitation ?? null, input,
-    undefined, story.name === 'mirror' ? tuning.skyMirror.bubbleRadius : story.current.invitationRadius ?? 0);
+    undefined, story.name === 'mirror' ? tuning.skyMirror.bubbleRadius : story.current.invitationRadius ?? 0,
+    story.current.invitationHeading ?? null);
   embers.update(dt, child.visible ? child.position : story.focus, story.current.embers ?? 0);
   const emberLit = embers.illumination(emberAt);
   atmo.uniforms.uEmberLight.value.set(emberAt.x, emberAt.y, emberAt.z, Math.min(2.6, emberLit * 0.5));
@@ -995,6 +997,11 @@ function prepareWorldAudio(dt: number): void {
   boat.sailPoint(materialAt);
   worldFoley.flow(boat, 'sail', materialAt, boat.sailFlutter * 0.65, heard && boat.group.visible);
   worldFoley.sailSettles(boat, materialAt, boat.sailDroop, heard && boat.group.visible);
+  const drain = littleBoats.drain, inBoats = heard && (littleBoats.active || littleBoats.departing);
+  worldFoley.flow(drain, 'water', drain.pourAt, drain.pour * 0.5, inBoats && drain.pour > 0.05);
+  worldFoley.flow(drain.plugAt, 'water', drain.plugAt, drain.rush * 0.35, inBoats && drain.rush > 0.05);
+  if (drain.pulled && !plugWasPulled) worldFoley.splash(drain.plugAt, 0.9);
+  plugWasPulled = drain.pulled;
   for (const toy of littleBoats.toys) {
     const active = heard && littleBoats.active && littleBoats.launched && toy.group.visible;
     worldFoley.flow(toy, 'water', toy.group.position, Math.min(0.14, toy.speed * 0.035), active);
