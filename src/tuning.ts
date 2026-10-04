@@ -368,11 +368,12 @@ export const tuning = {
      */
     bathAgainst: 0.3, bathPush: 0.7,
     /**
-     * While the fleet is aground, a gust of the island's own crosses the bath toward the stream and slops a little
-     * over, showing which way it goes: the first after `nudgeFirst` s, then every `nudgeEvery` s; it tips the bath by
-     * `nudgeTip` and runs for `nudgeFor` s. Only water the player pours raises the pools.
+     * While the fleet is aground, a gust of the island's own crosses the bath toward the stream with a few wind lines
+     * and rocks it on its feet without spilling, showing that it can go over and which way: the first after
+     * `nudgeFirst` s, then every `nudgeEvery` s; two pushes of `nudgeTip` as it runs for `nudgeFor` s. Only the
+     * player's push pours.
      */
-    nudgeFirst: 1.6, nudgeEvery: 9, nudgeTip: 1.15, nudgeFor: 1.2, nudgeSpeed: 14, bathSpring: 5, bathDamping: 2.6, bathTipMax: 0.42, pourFrom: 0.1,
+    nudgeFirst: 1.6, nudgeEvery: 9, nudgeTip: 0.38, nudgeFor: 1.2, nudgeSpeed: 14, nudgeLines: 4, nudgeLinePace: 9, bathSpring: 5, bathDamping: 2.6, bathTipMax: 0.42, pourFrom: 0.1,
     /** Share of the bath poured per second at the furthest tip; the pools are risen once `pourNeeded` of it is in. */
     pourRate: 0.32, pourNeeded: 0.7,
     /** How the risen water carries the grounded fleet over the shoal (m/s) and for how long it runs (s). */

@@ -272,6 +272,11 @@ export class LittleBoatsChapter implements Chapter {
       // Held at the shoal or the plug, she keeps glancing at what is holding them.
       const waiting = room.drain.waiting(room.toys[0].s);
       c.lookAt = waiting && time % 5 < 2.6 ? waiting : room.focus;
+      if (room.drain.gustStarted) {
+        const { gustFrom: at, gustDir: dir } = room.drain;
+        this.cast.lines.gust(at.x, at.z, dir.x, dir.z, tuning.littleBoats.nudgeLines, tuning.littleBoats.nudgeLinePace);
+        room.drain.gustStarted = false;
+      }
       if (s > 32) {
         this.savedPool = 1;
         this.moveBoat();

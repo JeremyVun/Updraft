@@ -225,6 +225,10 @@ export class LittleBoatsDrain {
   private heave = 0;
   private heaveV = 0;
   private sincePush = Infinity;
+  /** Set when the island's own gust sets off across the bath, for the story to draw: where from and which way. */
+  readonly gustFrom = new THREE.Vector3();
+  readonly gustDir = new THREE.Vector3();
+  gustStarted = false;
   private nudgeClock = 0;
   private nudges = 0;
   /** How far the island's own gust has crossed the bath, 0..1, or -1 while none is crossing. */
@@ -422,11 +426,14 @@ export class LittleBoatsDrain {
       this.nudgeFrom.copy(this.bathAt).addScaledVector(this.tmp, -6);
       this.nudgeTo.copy(this.pourAt).addScaledVector(this.tmp, 3);
       this.nudgeLast.copy(this.nudgeFrom);
+      this.gustDir.copy(this.tmp);
+      this.gustFrom.copy(this.bathAt).addScaledVector(this.tmp, -2.5);
+      this.gustStarted = true;
     }
     if (this.nudgeAt < 0) return;
     const before = this.nudgeAt;
     this.nudgeAt = Math.min(1, this.nudgeAt + dt / k.nudgeFor);
-    if (before < 0.45 && this.nudgeAt >= 0.45) this.tipV += k.nudgeTip;
+    for (const at of [0.32, 0.62]) if (before < at && this.nudgeAt >= at) this.tipV += k.nudgeTip;
     this.out.lerpVectors(this.nudgeFrom, this.nudgeTo, this.nudgeAt);
     this.tmp.subVectors(this.nudgeTo, this.nudgeFrom).setY(0).normalize();
     const fade = Math.sin(this.nudgeAt * Math.PI);
@@ -474,11 +481,11 @@ export class LittleBoatsDrain {
     this.tip += this.tipV * dt;
     if (this.tip > k.bathTipMax) { this.tip = k.bathTipMax; this.tipV = Math.min(0, this.tipV); }
     if (this.tip < -0.04) { this.tip = -0.04; this.tipV = Math.max(0, this.tipV) * 0.3; }
-    const canPour = this.water > 1 - k.pourNeeded ? 1 : 0;
+    this.sincePush += dt;
+    const canPour = this.water > 1 - k.pourNeeded && this.sincePush < 1.5 ? 1 : 0;
     const pouring = THREE.MathUtils.smoothstep(this.tip, k.pourFrom, k.bathTipMax) * canPour;
     this.pour += (pouring - this.pour) * (1 - Math.exp(-dt * (pouring > this.pour ? 10 : 4)));
-    this.sincePush += dt;
-    if (this.sincePush < 1.5) this.water = Math.max(1 - k.pourNeeded, this.water - pouring * k.pourRate * dt);
+    this.water = Math.max(1 - k.pourNeeded, this.water - pouring * k.pourRate * dt);
     if (!this.pulled) this.rise = (1 - this.water) / k.pourNeeded;
     if (!this.risen && this.rise >= 0.999) {
       this.risen = true;
