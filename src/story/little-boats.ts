@@ -42,6 +42,10 @@ export class LittleBoatsChapter implements Chapter {
     fitWidth: true,
   };
   private elapsed = 0;
+  private dt = 0;
+  /** How far the shot has leaned toward the bath or the plug while the fleet waits on it. */
+  private gateLean = 0;
+  private readonly gateAt = new THREE.Vector3();
   private boatMoved = false;
   private savedPool = 0;
   private nextBirdLook = 0;
@@ -154,6 +158,7 @@ export class LittleBoatsChapter implements Chapter {
   }
   update(dt: number, time: number): void {
     this.elapsed += dt;
+    this.dt = dt;
     const { child: c, plane: p, cygnet: k, littleBoats: room, wind, boat } = this.cast;
     const childS = L.startZ - c.position.z;
     room.update(dt, time, wind, Math.max(3, childS + tuning.littleBoats.childLead));
@@ -397,6 +402,12 @@ export class LittleBoatsChapter implements Chapter {
     s.target.copy(c.position).lerp(toy, ending ? 0.5 : (portrait ? 0.4 : 0.62) * approach);
     s.target.y = Math.max(c.position.y, toy.y) + 1.05;
     s.target.z -= ending ? 0 : 2;
+    // The bath or plug holding the fleet is part of the path: lean the shot to keep it in, gently, both ways.
+    const waiting = this.beat === 'sailing' ? room.drain.waiting(room.toys[0].s) : null;
+    if (waiting) this.gateAt.copy(waiting);
+    this.gateLean += ((waiting ? 1 : 0) - this.gateLean) * (1 - Math.exp(-this.dt * 0.7));
+    this.gateAt.y = s.target.y;
+    s.target.lerp(this.gateAt, this.gateLean * (portrait ? 0.42 : 0.18));
     const handling = ['notice', 'pickup', 'holdToy', 'carryToy', 'launch'].includes(this.beat);
     s.distance = ending ? 25 : handling ? 13 : 23;
     s.height = ending ? 8 : handling ? 6 : 9;
