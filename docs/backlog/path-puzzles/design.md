@@ -147,6 +147,32 @@ guess that thye need to align all three for anything to happen. You may need to 
 village level itself to make it feel and look better too." So every vane visibly does something the moment it is
 touched, and the village around the square may be reworked so the room feels and looks better.
 
+Jeremy on the third version as built (branch `proto-drowned-streams`, rejected): "get another sub agent to tidy up the
+wind vane puzzle. the design is terrible. the wind is going through a building, and then it's reflecting back at a
+sharp angle to the player. It's just super weird and not at all intuitive. I also don't see any interaction with
+stuck little boats like promised. It needs to be thought through a lot more. I also don't understand the reason for
+such a departure from the original design of the drowned village with the straight drowned street. The shiny gold
+effect also doesn't look cohesive at all. I'm extremely disappointed by the result here. It needs a huge quality
+uplift." And: "If you need help, use codex exec to generate concept art for the puzzle as a guide."
+
+**Fourth version** (concept art first, then the build follows it):
+- The village stays as it was on main and in its room painting: open glassy water at dusk with scattered
+  half-drowned rooftops, bare trees, the spire and the far lighthouse, the boat drifting a fairly straight line
+  between them. No square, no rebuilt streets.
+- The toys are in it from the start: all seven becalmed among the rooftops, sails slack, and every one of them answers
+  the breath when it reaches them.
+- The one last breath comes in from the open sea through a gap between far rooftops as a band of ruffled water with
+  leaves and faint wind lines. It only flows over open water and past posts: never through a building, never doubling
+  back toward the camera.
+- The vanes stand on the village's old iron lamp posts, drowned to mid-height with their lanterns unlit, so the breath
+  flows past the post itself. Dark wrought iron (a cockerel, a fish), large enough to read, seen against cloud rather
+  than the sun; nothing gilded or shiny.
+- Two steps, each with its own visible effect: turning the first vane sends the breath through the becalmed toys,
+  whose sails fill one by one as it reaches them, and on to the second vane, which wakes; turning the second sends it
+  onto the boat from behind and the red sail fills.
+- The camera stays low over the water, beside the drift (three-quarter side view), so the breath reads as a path
+  drawn across the scene toward the boat.
+
 Second pass, after the vanes prototype is judged on its own (Jeremy: "yea, this sounds good"): the little boats'
 toys are already becalmed in the square, sails dead, and the cygnet perks up at them. Each vane's breath fills the
 nearest toy's sail, so the toys read the wind for the player; when all the vanes agree every sail fills and the
