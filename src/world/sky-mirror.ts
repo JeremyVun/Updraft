@@ -38,7 +38,7 @@ vec2 mirrorSlope(vec2 p, out vec2 steps) {
     float envelope = exp(-wave * wave * 0.22) * exp(-age * 0.45) * smoothstep(0.0, 0.3, age);
     slope += delta / max(d, 0.1) * cos(wave * 3.4) * envelope * ring.w;
   }
-  // Each footstep sets a few fine rings running out from the foot; they are gone before the next stride's.
+  // Each footstep sets a fine ring or two running out from the foot; they are gone before the next stride's.
   for (int i = 0; i < ${STEPS}; i++) {
     vec4 foot = uMirrorSteps[i];
     float age = uTime - foot.z;
@@ -46,11 +46,13 @@ vec2 mirrorSlope(vec2 p, out vec2 steps) {
     vec2 delta = p - foot.xy;
     float d = length(delta);
     float wave = d - age * ${glsl(T.stepSpeed)};
-    // Further from the crest, exp(-wave * wave * 9.0) has underflowed to exactly 0.
-    if (abs(wave) > 4.0) continue;
-    float envelope = exp(-wave * wave * 9.0) * exp(-age * ${glsl(4 / T.stepLife)}) * smoothstep(0.0, 0.08, age);
+    // Further from the crest, exp(-wave * wave * 22.0) has underflowed to exactly 0.
+    if (abs(wave) > 2.0) continue;
+    float envelope = exp(-wave * wave * 22.0) * exp(-age * ${glsl(4 / T.stepLife)}) * smoothstep(0.0, 0.08, age);
     steps += delta / max(d, 0.05) * cos(wave * 15.0) * envelope * foot.w;
   }
+  // Where rings cross they go no deeper than one of the child's, so a run of steps never builds into a chop.
+  steps *= ${glsl(T.childStep)} / max(${glsl(T.childStep)}, length(steps));
   return slope + steps;
 }
 `;
