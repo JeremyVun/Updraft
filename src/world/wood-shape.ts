@@ -263,16 +263,16 @@ void main() {
     float along = dot(vLocal, axis);
     vec3 side = normalize(cross(axis, abs(axis.y) > 0.9 ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0)));
     vec3 perp = vLocal - axis * along;
-    float around = atan(dot(perp, cross(axis, side)), dot(perp, side) + 1e-4) * 3.0 + dot(perp, side) * 4.0;
+    float around = atan(dot(perp, cross(axis, side)), dot(perp, side) + 1e-4) * 2.0;
     float furrow = vnoise(vec2(around * 2.0, along * 1.1)) * 0.65 + vnoise(vec2(around * 4.3, along * 2.3)) * 0.35;
     float fine = vnoise(vec2(around * 9.0, along * 7.0));
     h = smoothstep(0.25, 0.75, furrow) * 0.7 + fine * 0.3;
     float weather = vnoise(vLocal.xz * 1.3 + vLocal.y * 0.8);
     // Dead wood goes silver where the weather gets at it and stays dark brown in the cracks.
-    alb = mix(vec3(0.03, 0.024, 0.018), mix(vec3(0.11, 0.085, 0.062), vec3(0.17, 0.16, 0.145), weather), smoothstep(0.15, 0.7, h));
+    alb = mix(vec3(0.05, 0.04, 0.03), mix(vec3(0.11, 0.085, 0.062), vec3(0.17, 0.16, 0.145), weather), smoothstep(0.1, 0.8, h));
     float moss = smoothstep(0.5, 0.8, vnoise(vLocal.xz * 2.1 + vLocal.y * 1.7)) * smoothstep(0.0, 0.7, n.y);
     alb = mix(alb, vec3(0.06, 0.09, 0.03), moss * 0.85);
-    n = bump(n, h, 0.11);
+    n = bump(n, h, 0.06);
   } else {
     // Gritstone: dark and cool, blotched with pale lichen, streaked where the rain runs down it, mossed on top.
     float grain = vnoise(vLocal.xz * 5.0 + vLocal.y * 4.0) * 0.5 + vnoise(vec2(dot(vLocal.xz, vec2(0.7, -0.7)), vLocal.y) * 11.0) * 0.5;
@@ -292,7 +292,7 @@ void main() {
   vec3 col = alb * hemiLight(n) * 0.75;
   // The sliver of moon: the crag catches it, so the stump is first seen as a shape against it.
   float moon = max(0.0, dot(n, uSunDir)) * 0.6 + 0.4 * max(0.0, dot(n, V));
-  col += alb * uSunColor * moon * (vKind > 0.5 ? 1.5 : 0.45) * uNight;
+  col += alb * uSunColor * moon * (vKind > 0.5 ? 5.5 : 0.4) * uNight;
   vec3 warm = (alb + vec3(0.012, 0.008, 0.004)) * emberLight(vWorld, n);
   col += shapeLit(vWorld + n * 0.04, warm);
   gl_FragColor = vec4(max(applyFog(col, vWorld), 0.0), 1.0);
@@ -356,18 +356,18 @@ export class WoodShape {
     const up = new THREE.Vector3(0, 1, 0);
     // [x, y, z] centre, [w, h, d], yaw, lean back, edge rounding: jointed blocks in three courses, set back as they rise.
     const blocks: [number[], number[], number, number, number][] = [
-      [[-3.2, 1.45, -3.1], [3.1, 3.5, 2.4], 0.06, 0.02, 0.16],
-      [[0.25, 1.35, -3.3], [3.7, 3.3, 2.4], -0.03, 0.03, 0.14],
-      [[3.75, 1.6, -3.15], [3.2, 3.8, 2.4], -0.1, 0.01, 0.18],
-      [[-1.95, 4.65, -3.55], [4.5, 2.95, 2.3], 0.04, 0.04, 0.2],
-      [[2.65, 4.85, -3.65], [4.4, 3.3, 2.3], -0.07, 0.03, 0.18],
-      [[-0.9, 7.25, -4.1], [3.8, 2.3, 2.2], 0.08, 0.06, 0.3],
-      [[2.75, 7.45, -4.2], [3.2, 2.6, 2.1], -0.05, 0.05, 0.32],
-      [[-6.3, 1.4, -2.4], [3.0, 3.4, 2.6], 0.42, 0.06, 0.3],
-      [[6.8, 2.1, -2.9], [2.8, 4.6, 2.5], -0.5, 0.05, 0.3],
-      [[-2.6, 0.2, -1.5], [1.4, 0.9, 1.1], 0.7, 0.05, 0.25],
-      [[2.9, 0.12, -1.65], [1.0, 0.7, 0.9], -0.45, 0.1, 0.22],
-      [[-4.5, 0.05, -0.6], [0.9, 0.55, 0.8], 1.1, 0.15, 0.2],
+      [[-3.3, 1.3, -3.0], [3.3, 3.4, 2.5], 0.1, 0.02, 0.35],
+      [[0.2, 1.1, -3.3], [3.9, 3.0, 2.5], -0.04, 0.04, 0.3],
+      [[3.9, 1.7, -3.1], [3.1, 4.0, 2.4], -0.16, 0.0, 0.4],
+      [[-1.2, 4.25, -3.65], [5.7, 3.1, 2.4], 0.06, 0.05, 0.45],
+      [[3.75, 4.9, -3.75], [3.5, 3.6, 2.3], -0.1, 0.03, 0.4],
+      [[-0.4, 7.1, -4.2], [4.6, 2.6, 2.2], 0.12, 0.07, 0.7],
+      [[3.4, 7.6, -4.3], [2.6, 2.4, 2.1], -0.2, 0.05, 0.7],
+      [[-6.4, 1.5, -2.5], [3.2, 3.6, 2.6], 0.45, 0.07, 0.6],
+      [[7.0, 2.2, -2.9], [2.9, 4.8, 2.6], -0.55, 0.05, 0.6],
+      [[-2.6, 0.2, -1.4], [1.5, 1.0, 1.2], 0.7, 0.05, 0.4],
+      [[2.9, 0.12, -1.6], [1.1, 0.75, 0.95], -0.45, 0.1, 0.35],
+      [[-4.6, 0.05, -0.5], [0.95, 0.6, 0.85], 1.1, 0.15, 0.3],
     ];
     blocks.forEach(([at, size, yaw, lean, round], i) => parts.push(strip(this.block(at, size, yaw, lean, i + 1, round), 1, up)));
   }
@@ -379,7 +379,16 @@ export class WoodShape {
     const scale = new THREE.Vector3(size[0], size[1], size[2]);
     const v = new THREE.Vector3(), q = new THREE.Vector3(), out = new THREE.Vector3();
     const half = scale.clone().multiplyScalar(0.5);
-    const r = Math.min(round, half.x, half.y, half.z);
+    const r = Math.min(round * 0.35, half.x, half.y, half.z);
+    // Broken corners and spalled faces: planes that shear flat facets off the block, as split stone breaks.
+    let seedState = seed * 9301 + 49297;
+    const rand = () => ((seedState = (seedState * 9301 + 49297) % 233280) / 233280);
+    const cuts: { n: THREE.Vector3; d: number }[] = [];
+    for (let c = 0; c < 14; c++) {
+      const n = new THREE.Vector3((rand() - 0.5) * 2 / half.x, (rand() - 0.5) * 2 / half.y, (rand() - 0.5) * 2 / half.z).normalize();
+      const reach = Math.abs(n.x) * half.x + Math.abs(n.y) * half.y + Math.abs(n.z) * half.z;
+      cuts.push({ n, d: reach * (0.72 + rand() * 0.2) });
+    }
     for (let i = 0; i < pos.count; i++) {
       v.fromBufferAttribute(pos, i).multiply(scale);
       q.set(THREE.MathUtils.clamp(v.x, -half.x + r, half.x - r), THREE.MathUtils.clamp(v.y, -half.y + r, half.y - r),
@@ -387,12 +396,24 @@ export class WoodShape {
       out.copy(v).sub(q);
       const len = out.length();
       if (len > 1e-5) { out.divideScalar(len); v.copy(q).addScaledVector(out, r); } else out.set(0, 0, 1);
+      for (const cut of cuts) {
+        const over = v.dot(cut.n) - cut.d;
+        if (over > 0) v.addScaledVector(cut.n, -over);
+      }
       const wx = v.x + seed * 7.1, wy = v.y + seed * 3.3, wz = v.z;
       // Faces stay nearly flat, broken by a few broad facets and smaller chips, as split stone is.
       const facet = 0.07 * Math.sin(wx * 0.7 + wy * 0.4 + seed) * Math.sin(wz * 0.9 - wy * 0.6)
         + 0.035 * Math.abs(Math.sin(wx * 1.9 - wy * 1.3 + wz * 1.1 + seed)) + 0.015 * Math.sin(wx * 4.7 + wy * 3.9 - wz * 4.1);
       v.addScaledVector(out, facet);
       v.z -= lean * (v.y + half.y);
+      // No two blocks sit square: each is rolled and tipped a little, so the joints run crooked as in a real crag.
+      const roll = Math.sin(seed * 12.9) * 0.09, tip = Math.sin(seed * 7.3) * 0.05;
+      const x = v.x, y = v.y;
+      v.x = x * Math.cos(roll) - y * Math.sin(roll);
+      v.y = x * Math.sin(roll) + y * Math.cos(roll);
+      const y2 = v.y, z2 = v.z;
+      v.y = y2 * Math.cos(tip) - z2 * Math.sin(tip);
+      v.z = y2 * Math.sin(tip) + z2 * Math.cos(tip);
       pos.setXYZ(i, v.x, v.y, v.z);
     }
     geo.rotateY(yaw + Math.atan2(SHAPE_FACING.x, SHAPE_FACING.z));

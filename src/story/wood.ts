@@ -919,6 +919,8 @@ export class WoodChapter implements Chapter {
   private shapePower = 0;
   private braveStep = 0;
   private braveAt = 0;
+  /** 0 the wide shot that holds her, the stump, its shadow and both coals; 1 in closer on the owl once it is seen. */
+  private shapeClose = 0;
   private readonly shapeEyes = new THREE.Vector3();
   private readonly shapeTouch = new THREE.Vector3();
   private readonly shapeHold = new THREE.Vector3();
@@ -1063,15 +1065,17 @@ export class WoodChapter implements Chapter {
     }
     c.position.x += SHAPE_FACING.x * back * dt;
     c.position.z += SHAPE_FACING.z * back * dt;
-    const cower = THREE.MathUtils.smoothstep(fear, 0.7, 0.95);
-    c.lean += (-0.05 - 0.12 * fear - 0.08 * cower - c.lean) * (1 - Math.exp(-dt * 4));
-    c.kneeling += (0.22 * cower - c.kneeling) * (1 - Math.exp(-dt * 3));
+    // Frightened, she leans away with her mittens drawn up to her scarf; when it gets worse she crouches down small.
+    const cower = THREE.MathUtils.smoothstep(fear, 0.72, 0.95);
+    c.lean += (-0.05 - 0.1 * fear - 0.06 * cower - c.lean) * (1 - Math.exp(-dt * 4));
+    c.kneeling += (0.5 * cower - c.kneeling) * (1 - Math.exp(-dt * 3));
     c.tighter += (THREE.MathUtils.smoothstep(fear, 0.35, 0.8) - c.tighter) * (1 - Math.exp(-dt * 4));
-    const bag = cygnet.seating.shown.p;
+    if (cower > 0.3 && c.lookAt === this.shapeEyes) c.lookAt = this.shapeGlance.copy(this.shapeEyes).lerp(c.position, 0.35).setY(c.position.y + 0.9);
     if (fear > 0.35) {
-      this.shapeHold.copy(bag).y += 0.05;
+      c.face(this.shapeHold).y -= 0.32;
+      this.shapeHold.addScaledVector(SHAPE_FACING, -0.06);
       c.reachFor(0, this.shapeHold);
-      c.reachFor(1, this.side.copy(bag).addScaledVector(SHAPE_RIGHT, 0.12));
+      c.reachFor(1, this.side.copy(this.shapeHold).addScaledVector(SHAPE_RIGHT, 0.09));
     } else {
       c.reachFor(0, null);
       c.reachFor(1, null);
@@ -1093,6 +1097,7 @@ export class WoodChapter implements Chapter {
     const k = tuning.wood.shape;
     const owl = woodOwl;
     this.owlEyes(this.shapeEyes);
+    this.shapeClose += ((this.braveStep < 4 ? 1 : 0) - this.shapeClose) * (1 - Math.exp(-dt * 0.5));
     owl.eyeshine *= Math.exp(-dt * 3);
     owl.lookAt(this.shapeHold.copy(c.position).setY(c.position.y + 1.2));
     if (owl.hooted) cue('hoot');
@@ -1173,18 +1178,20 @@ export class WoodChapter implements Chapter {
     const c = this.cast.child.position;
     this.childSubject.copy(c).y += 1.5;
     this.birdSubject.copy(this.shapeEyes);
-    s.target.copy(this.childSubject).lerp(this.birdSubject, 0.62);
-    s.target.y += 0.3;
+    const close = THREE.MathUtils.smootherstep(this.shapeClose, 0, 1);
+    s.target.copy(this.childSubject).lerp(this.birdSubject, 0.62 + 0.18 * close);
+    s.target.y += 0.3 * (1 - close);
     // A glance after the owl as it goes, never a turn to follow it.
     if (woodOwl.phase === 'leaving') s.target.lerp(woodOwl.position, 0.12 * woodOwl.presence);
     const k = tuning.wood.shape;
-    const ex = c.x + SHAPE_FACING.x * k.cameraBack - SHAPE_RIGHT.x * k.cameraSide;
-    const ez = c.z + SHAPE_FACING.z * k.cameraBack - SHAPE_RIGHT.z * k.cameraSide;
-    s.eye = this.side.set(ex, Math.max(heightAt(ex, ez), 0, ground) + k.cameraUp, ez);
+    const back = k.cameraBack - k.closeIn * close, across = k.cameraSide * (1 - 0.25 * close);
+    const ex = c.x + SHAPE_FACING.x * back - SHAPE_RIGHT.x * across;
+    const ez = c.z + SHAPE_FACING.z * back - SHAPE_RIGHT.z * across;
+    s.eye = this.side.set(ex, Math.max(heightAt(ex, ez), 0, ground) + k.cameraUp - 0.5 * close, ez);
     const points = this.shapePoints;
     if (this.frontCoal) points[0].copy(this.frontCoal.p);
     if (this.sideCoal) points[1].copy(this.sideCoal.p);
-    s.subjects = { primary: this.childSubject, secondary: this.birdSubject, points, margin: 0.78, extra: 10 };
+    s.subjects = { primary: this.childSubject, secondary: this.birdSubject, points: close > 0.05 ? undefined : points, margin: 0.78, extra: 10 };
     this.pace = k.cameraPace;
     this.focus.copy(c);
   }
