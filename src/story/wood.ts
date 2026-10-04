@@ -1168,7 +1168,6 @@ export class WoodChapter implements Chapter {
     this.leg = Math.max(this.leg, 2);
     this.to('walk');
     this.chainAt = pathAlong(c.position.x, c.position.z);
-    this.chainSide = -this.chainSide;
     this.layNext(tuning.wood.shape.chainOn);
     this.afterShape = this.ahead;
     // The walking camera comes round behind her the way she now goes, in the one move that takes her on.

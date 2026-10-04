@@ -980,7 +980,7 @@ export const tuning = {
       approachPace: 0.7, flinchStep: 0.55, flinchSeconds: 0.8, revealSeconds: 1.2, lightShift: 1.4,
       eyeshineDark: 0.9, throwLight: 2.2, holdHeat: 0.6, glanceAfter: 2.4, glanceFor: 1.8,
       owlLeaveAfter: 7, turnAfter: 0.5, turnRate: 2.2, peepAfter: 0.4, peepFor: 3, waveAfter: 1.5,
-      exhaleSeconds: 1.6, chainOn: 17,
+      exhaleSeconds: 1.6, chainOn: 14,
       cameraBack: 9.8, cameraSide: 1.4, cameraUp: 3.0, portraitBack: 13.4, portraitSide: 1.6, portraitUp: 3.1,
       lookAt: [-0.5, 3.0, -0.5], portraitLook: [0.2, 3.6], easeFrom: 18, cameraPace: 0.8,
     },
