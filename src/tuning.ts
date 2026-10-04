@@ -189,6 +189,13 @@ export const tuning = {
     crestBack: 12, crestRise: 18, homePanFor: 8, descentFit: 3, descentHouseWeight: 0.2,
     returnFrom: 2.5,
   },
+  /** The child's orange toy washed up beside the home jetty (`world/home-toy.ts`). */
+  homeToy: {
+    /** Across from the jetty (negative is west), how high up the beach it lies, and how far it has settled into the sand. */
+    side: -4.2, above: 0.3, sink: 0.04,
+    /** Its heading, and how far it lies over on its side (radians). */
+    yaw: 0.9, heel: 0.7,
+  },
   homeWashing: {
     /** Behind the left side of the cottage, with the far end turned gently away. */
     left: -11.5, right: -5.3, forward: -4, turn: 0.28,
@@ -358,6 +365,37 @@ export const tuning = {
     sailSag: 0.48, sailFold: 0.1, sailFlutter: 0.045, sailShake: 0.13,
     heel: 0.13, rollSpring: 13, rollDamping: 3.8, drift: 0.5,
     swimSpeed: 3.15, swimWeave: 0.15, swimPlay: 0.8,
+    /**
+     * Getting out to sea. A shoal at `barS` (sand `barHeight` up its bed) grounds the fleet until the bath on the far
+     * bank at `bathS` has been rocked and poured into the pools, raising them `riseHeight`; the plug wedged in the
+     * mouth at `plugS` holds them there until gusts work it loose and its chain hauls it out.
+     */
+    barS: 62, barHeight: 0.5, bathS: 59.5, plugS: 95.5, riseHeight: 0.34,
+    /**
+     * Tip per unit of stroke pushing the bath over toward the stream, how it springs back and is damped, its furthest
+     * tip (radians), and from what tip it pours. A stroke the other way rocks it back by `bathAgainst` of that.
+     */
+    bathAgainst: 0.3, bathPush: 0.7,
+    /**
+     * While the fleet is aground, a gust of the island's own crosses the bath toward the stream with a few wind lines
+     * and rocks it on its feet without spilling, showing that it can go over and which way: the first after
+     * `nudgeFirst` s, then every `nudgeEvery` s; two pushes of `nudgeTip` as it runs for `nudgeFor` s. Only the
+     * player's push pours.
+     */
+    nudgeFirst: 1.6, nudgeEvery: 9, nudgeTip: 0.38, nudgeFor: 1.2, nudgeSpeed: 14, nudgeLines: 4, nudgeLinePace: 9, bathSpring: 5, bathDamping: 2.6, bathTipMax: 0.42, pourFrom: 0.1,
+    /** Share of the bath poured per second at the furthest tip; the pools are risen once `pourNeeded` of it is in. */
+    pourRate: 0.32, pourNeeded: 0.7,
+    /** How the risen water carries the grounded fleet over the shoal (m/s) and for how long it runs (s). */
+    surgeSpeed: 2.2, surgeFor: 3.5,
+    /** The plug's size; how hard each stroke rocks it; the speed it pops out at, then how fast and how high its chain hauls it (m/s, m). */
+    plugScale: 4, plugRock: 0.9, plugPop: 7, plugHaul: 3.2, plugLift: 22,
+    /**
+     * Only an updraft lifts the plug: looseness per second under a full column (it pulls free at 1), the charge that
+     * starts and fully lifts it, how near the column must stand (m), and the spiral shown to a waiting player.
+     */
+    plugLiftRate: 0.36, plugLiftFrom: 0.12, plugLiftFull: 0.5, plugReach: 3.5, plugCoaxUrgency: 0.8, plugCoaxRadius: 1.6,
+    /** How fast the water rushes out of the mouth once the plug is out, carrying the fleet (m/s), and how quickly the rush builds and the risen pools drain (s). */
+    rushSpeed: 3.6, rushRise: 1.2, drainFor: 5,
     /**
      * Reeds in clumps (where bank noise passes `clumpFrom`) along the stream's lip: up to `share` of the blades,
      * reaching `far` metres (plus a share of the stream's width) up the far bank and `near` up the camera's own,
@@ -1308,59 +1346,15 @@ export const tuning = {
       stairs: { from: 45, full: 14, bearing: 0.95, distance: 13, height: 1.5, lead: 3, side: 1 },
     },
   },
-  /** The little boats' toys met again on the open sea (`fx/sealife/toys.ts`). */
-  seaToys: {
-    /** Smaller than in their own room beside the boat they are now so much smaller than. */
-    scale: 0.65,
-    /**
-     * Where they are already sailing when the passage leaves, unseen in the last of the night: on a course that
-     * crosses the route ahead at `across` (radians, out toward the swimming side) and passes `lane` out from it
-     * `meetAt` further along the route, where they will be about `meetIn` seconds later.
-     */
-    meetAt: 138, meetIn: 40, lane: 5, across: 0.18,
-    /** Their own speed in units a second: a share of `ownSpeed` with the breeze alone, the rest as the sail fills. */
-    ownSpeed: 1.95, cruise: 0.62, driven: 0.38,
-    /** The open-sea breeze keeps a sail this full; a gust fills it the rest of the way. */
-    breezeFill: 0.55,
-    /** How far a hull wanders off its course, how far a gust knocks its head round, and how fast it may turn (radians, a second). */
-    wander: 0.05, knock: 0.25, turn: 0.6,
-    /** In the night they are lit within this of the eye and dark beyond `darkBeyond`. */
-    litWithin: 55, darkBeyond: 85,
-    /** Gone once every one of them is out of the frame and this far off, or this far off at all. */
-    unseenAt: 30, lostAt: 320,
-    /** Within this of the boat the cygnet stops watching the pod and watches them; within `noticeAt` it is restless to go. */
-    sightedAt: 26, noticeAt: 22,
-    /** It goes in once the toy it is watching is this far ahead of the child or nearer, or after `waitFor` on the side regardless. */
-    goInAhead: 6.5, waitFor: 7,
-    /** The boat eases for the swim once the toy it is watching is this near. */
-    easeWithin: 11,
-    /** How close beside a toy it swims, and for how long among them before it turns back. */
-    swimClear: 1.2, playFor: 4,
-    /** Seconds of a toy's way it keeps clear of, ahead of the toy. */
-    giveWay: 0.6,
-    /** As near as it gets to the place it is making for beside a toy sailing on: it is among them. */
-    alongside: 1.4,
-    /** How eagerly it swims out to them; and once there, how fast (radians a second) and how far (radians) it swings to and fro along the toy's near side. */
-    swimOutPlay: 0.4, swimOutHurry: 0.5, roundRate: 1.3, roundSweep: 0.8,
-    /** Its paddling speed per unit it is short of where it is making for (as `cygnet.paddling` has it). */
-    swimTrack: 1.1,
-    /** Seconds the boat's way stays on it after it goes in, falling away. */
-    wayFor: 1.2,
-    /** The furthest out from the boat it swims, toys or no toys. */
-    reach: 7.5,
-    /** It makes for the child's own toy unless another is this much nearer. */
-    preferOwn: 2.5,
-    /** It turns back early once its toy has fallen this far astern of the child in the boat. */
-    turnBackAstern: 4.5,
-  },
+
   seaPassage: {
     speed: 10,
     arrivalSpeed: 3.5,
-    /** The most the boat makes from when the toys come near until the cygnet is out of the water: it eases for a swimmer, never to a crawl. */
-    swimSpeed: 2.4,
+    /** The most the boat makes while the cygnet is swimming: ordinary sailing sails on, only a strong gust is trimmed. */
+    swimSpeed: 5,
     /** How much of the boat's way the wave along its side gives the swimming cygnet, and how fast the swim's cap comes in. */
     swimCarry: 0.75,
-    swimEase: 1,
+    swimEase: 0.5,
     swimFor: 12,
     swimAnticipation: 2,
     swimDecision: 3,
@@ -1390,13 +1384,11 @@ export const tuning = {
     swimBeside: 2.4,
     cameraDistance: 23,
     cameraHeight: 5.1,
-    swimCameraDistance: 11,
-    swimCameraHeight: 2.4,
-    /** How far toward the child, from the swimming cygnet, the lens looks while it swims. */
-    swimCameraChild: 0.35,
+    swimCameraDistance: 16,
+    swimCameraHeight: 4.6,
     cameraBearing: 0.16,
     /** Open a little beside the boat only while the cygnet is swimming. */
-    swimCameraBearing: 1.05,
+    swimCameraBearing: 0.65,
     childTurn: 0.7,
     haze: 0.94,
   },

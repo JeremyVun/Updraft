@@ -53,7 +53,7 @@ Failure paths:
   timeout, it shows the ordinary failure ("The game couldn't start. Try again.", reloading on click) with plain DOM
   calls. `entry.ts` cancels it as its first statement; later failures go through `startScreen.fail()`.
 - Before the world is built, `gl/graphics-capability.ts` checks WebGL2's `EXT_color_buffer_float` (the grass table's
-  mixed float/half-float MRT, the multisampled half-float scene target and the wind's float targets all need it) and
+  float attachments, the multisampled half-float scene target and the wind's float targets all need it) and
   size floors. A shortfall shows the same text with Try again hidden (`fail(permanent)`), since retrying cannot help.
 - A failed `sound.start()` switches sound off, reports telemetry and still starts the loop.
 - An uncaught exception inside a frame goes through `contextRecovery.trigger('runtime', error)`, the same pause, mute
@@ -302,7 +302,7 @@ callback interval since the last presentation, floored at 16.7 ms, so deliberate
 displays don't look like overload.
 
 Grass grows and shrinks in place over one second while its distance rings move continuously. Tables reserve capacity
-for every level at boot (about 28 MiB for the four attachments, and 44 MiB for what the blades share each frame), so quality changes
+for every level at boot (about 44 MiB for the tables' four attachments, and 33 MiB for what moves each frame), so quality changes
 never allocate or recompile. The near level's geometry holds its blade twice, with six segments and with five; at
 Low the sixth segment closes over a second, and the five-segment form, the same blade fully closed,
 is drawn only once it has shut (`grass.setNearSegments`).
@@ -409,19 +409,23 @@ Bakes that follow the world:
 - The sea's mirror is a second render at quarter size with coarser terrain leaves (`MIRROR_SPLIT`; `?mirrorlod=full`
   compares). The sky mirror enables the planar pass around its sandflat at 0.75 scale (0.5 on low detail), projected
   at the sea surface with local ring distortion.
-- Grass (`world/grass.ts`): per-blade constants (root, height, width, facing, curve, tint, flower) are computed once
-  into a blade table (`TABLE_FRAG`, four texels a blade) when fixed inputs or the tile list change; per-blade shading
-  runs once per vertex (`BLADE_SHADE_GLSL`). What every vertex of a blade shares in a frame is worked out once a frame
-  per blade (`FRAME_FRAG`, four `RGBA32UI` attachments, 64 bytes a blade): whether thinning collapses it, its grown
-  height, width and closing, its life, the wind's bend and flutter strength on it, the ground's normal and shadow,
-  cloud shadow, frost and fog (a quarter of the way up the blade, where one fog comes closest to the fog along it).
-  The blade shader reads them with `texelFetch`, so its vertices take no filtered sample; the targets are allocated at
-  boot (`atBoot`), because a draw whose integer sampler finds three's stand-in texture is dropped by the driver. Everything is kept as full
-  float, as the vertex shader worked it out, but the fog, cut to half toward zero as a half-float target stores it:
-  the ground's normal, frost, the morning's green or the warm lights stored as half float moved single pixels by up to
-  41/255 through the grade's hue. The morning's green and the warm lights (lamp, hearth, lantern, dawn) stay at every
-  vertex; each is zero by a uniform outside the rooms that light it. Collapsed blades write only their mark, and the
-  pass draws over its rows without a clear, which would cost more than it. A level's table is reused while its tiles
+- Grass (`world/grass.ts`): per-blade constants (root, height, width, facing, curve, tint, flower and the ground's
+  normal under the blade) are computed once into a blade table (`TABLE_FRAG`, four texels a blade: root, shape, and
+  the normal with the facing at full float; colour, curve, seed and flower as packed halves) when fixed inputs or the
+  tile list change; per-blade shading runs once per vertex (`BLADE_SHADE_GLSL`). What moves from frame to frame is
+  worked out once a frame per blade (`FRAME_FRAG`, three `RGBA32UI` attachments, 48 bytes a blade): whether thinning
+  collapses it, its grown height, width and closing, its life, the wind's bend and flutter strength on it, frost, the
+  ground's baked shadow, cloud shadow and fog (a quarter of the way up the blade, where one fog comes closest to the
+  fog along it). Nothing that holds still between table bakes is written there, because every byte the pass writes
+  is memory traffic every frame. The blade shader reads both with `texelFetch`, so its vertices take no filtered
+  sample; the targets are allocated at boot (`atBoot`), because a draw whose integer sampler finds three's stand-in
+  texture is dropped by the driver. Values are kept as full float, as the vertex shader worked them out, but the fog
+  and the table's halves, cut toward zero as a half-float target stores them: the ground's normal, frost, the
+  morning's green or the warm lights stored as half float moved single pixels by up to 41/255 through the grade's
+  hue. The morning's green and the warm lights (lamp, hearth, lantern, dawn) stay at every vertex, where each is zero
+  by a uniform outside the rooms that light it; in the per-frame pass they would add 16 bytes a blade every frame
+  everywhere. Collapsed blades write only their mark. Neither pass clears: each draws over its rows, a clear would
+  cost more than the per-frame pass, and a target with an integer attachment cannot be cleared whole. A level's table is reused while its tiles
   and fixed traits are unchanged; season, palette, flattened patches and ground rebakes invalidate it, while wind,
   life and lighting stay live in the per-frame pass. Clears and draws are scissored to occupied rows. The three detail levels draw one
   population: each coarser level holds the lowest-ranked blades of the finer one, and thinning depends only on
@@ -552,7 +556,7 @@ are not iPad frame rates or battery figures. Don't run benchmarks unless Jeremy 
 - Startup still constructs and warms the whole archipelago before Begin (local readiness about 3–4 s; the main chunk
   carries a bundle-size warning). Staged room preparation would need explicit lifetimes, checkpoint starts and
   shader warm-up without chapter-entry stalls.
-- Graphics memory has no target-device budget: the grass tables (about 28 MiB), the static atlases (about 26 MiB) and
+- Graphics memory has no target-device budget: the grass's tables and per-frame targets (about 77 MiB), the static atlases (about 26 MiB) and
   the scene, MSAA, reflection and bloom targets on older iPads.
 - The child's bone texture is the one texture written mid-pass. Uploading it before the frame's passes is exact; on
   the Mac it costs 2–4% of a weighted frame but saves 8–12% on top of the stairs and the sail. Decide on the iPad.

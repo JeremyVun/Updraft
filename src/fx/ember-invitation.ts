@@ -19,7 +19,7 @@ export class EmberInvitation {
   private readonly screen = new THREE.Vector3();
 
   update(dt: number, camera: THREE.Camera, target: THREE.Vector3 | null, input: PointerInput,
-    alternate?: THREE.Vector3, surfaceRadius = 0): void {
+    alternate?: THREE.Vector3, surfaceRadius = 0, heading: number | null = null): void {
     this.gesture.hide();
     if (target !== this.target) { this.target = target; this.elapsed = 0; this.quiet = 0; this.alpha = 0; }
     if (!target) return;
@@ -36,13 +36,16 @@ export class EmberInvitation {
       && (screenBrush(camera, target, input.prevNdc, input.ndc, brushRadius) > 0.02
         || (alternate && screenBrush(camera, alternate, input.prevNdc, input.ndc, brushRadius) > 0.02))) this.quiet = 0;
     const k = tuning.wood;
-    const offered = this.elapsed > k.inviteAfter && this.quiet > tuning.invitation.resumeAfter;
-    this.alpha += ((offered ? k.inviteAlpha : 0) - this.alpha)
+    // A one-way sweep is asked for by a chapter that has already waited.
+    const wait = heading === null ? k.inviteAfter : 0;
+    const offered = this.elapsed > wait && this.quiet > tuning.invitation.resumeAfter;
+    // A sweep that only works one way is shown plainly, so its direction can't be missed.
+    this.alpha += ((offered ? (heading === null ? k.inviteAlpha : 1) : 0) - this.alpha)
       * (1 - Math.exp(-dt * (offered ? 6 : tuning.invitation.handover)));
-    const at = Math.max(0, this.elapsed - k.inviteAfter), cycle = k.inviteSweep + k.invitePause;
+    const at = Math.max(0, this.elapsed - wait), cycle = k.inviteSweep + k.invitePause;
     // A large target such as a soap bubble must not bury the demonstration inside its opaque surface.
     this.center.copy(target).addScaledVector(this.toward.subVectors(camera.position, target).normalize(), surfaceRadius);
     this.gesture.draw(camera, this.center, (at % cycle) / k.inviteSweep, Math.max(k.inviteSpan, surfaceRadius * 2.3), this.alpha,
-      k.inviteWidth, 'across', Math.floor(at / cycle) % 2 === 0 ? 1 : -1);
+      k.inviteWidth, 'across', heading !== null || Math.floor(at / cycle) % 2 === 0 ? 1 : -1, heading ?? 0);
   }
 }

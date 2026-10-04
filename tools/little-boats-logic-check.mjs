@@ -1,5 +1,6 @@
 // Real chapter, actors and fleet without a renderer. Usage: node tools/little-boats-logic-check.mjs
-// Checks idle/local wind, 30/60fps completion, dry-bank walking, checkpoint restore and sailing routes.
+// Checks idle/local wind, 30/60fps completion, dry-bank walking, checkpoint restore, sailing routes and the way
+// out to sea (the bath poured by the player's push, the plug lifted by the player's updraft).
 import './lib/typescript.mjs';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
@@ -33,6 +34,39 @@ const { ROUTES } = await import('../src/story/journey.ts');
 const { MeadowChapter } = await import('../src/story/meadow.ts');
 const { CrossingChapter } = await import('../src/story/crossing.ts');
 const { LINES_BERTH } = await import('../src/story/lines.ts');
+const eye = new THREE.PerspectiveCamera(50, 16 / 9, 0.1, 500);
+const hand = {
+  present: true, muted: false, gust: 12, charge: 0,
+  gustDir: new THREE.Vector2(1, 0), ndc: new THREE.Vector2(), prevNdc: new THREE.Vector2(), updraftAt: new THREE.Vector3(),
+};
+function look(at) {
+  eye.position.copy(at).add(new THREE.Vector3(0, 8, 14));
+  eye.lookAt(at);
+  eye.updateMatrixWorld();
+}
+/** A stroke across `at` on screen, `angle` radians anticlockwise from the right. */
+function strokeAcross(room, at, angle, dt) {
+  look(at);
+  const c = at.clone().project(eye), dx = Math.cos(angle) / eye.aspect * 0.01, dy = Math.sin(angle) * 0.01;
+  hand.prevNdc.set(c.x - dx, c.y - dy);
+  hand.ndc.set(c.x + dx, c.y + dy);
+  room.drain.brush(eye, hand, room.toys[0].s, dt);
+}
+function circleOver(room, at, dt) {
+  hand.charge = 1;
+  hand.updraftAt.copy(at);
+  room.drain.updraft(hand, room.toys[0].s, dt);
+  hand.charge = 0;
+}
+/** The player's part at the shoal and the plug: a push across the bath toward the stream, then circles over the plug. */
+function helpOut(room, dt) {
+  const d = room.drain, waiting = d.waiting(room.toys[0].s);
+  if (waiting === d.bathAt) {
+    look(d.bathAt);
+    d.aim(eye);
+    strokeAcross(room, d.bathAt, d.pushAngle, dt);
+  } else if (waiting === d.plugAt) circleOver(room, d.plugRest, dt);
+}
 function fixture(fps = 60, portrait = false) {
   window.innerWidth = portrait ? 390 : 1600;
   window.innerHeight = portrait ? 844 : 900;
@@ -69,6 +103,7 @@ function fixture(fps = 60, portrait = false) {
     plane,
     wind,
     littleBoats: room,
+    lines: { gusts: 0, gust() { this.gusts++; } },
     sealife: { fishNear() {}, dolphinsWith() {}, whale: null, dolphinShow: null },
   };
   const chapter = new LittleBoatsChapter(cast);
@@ -80,9 +115,14 @@ function fixture(fps = 60, portrait = false) {
     chapter,
     room,
     rig,
+    player: false,
     step() {
       const dt = 1 / fps;
       time += dt;
+      if (chapter.beat === 'sailing') {
+        room.drain.breeze(wind, room.toys[0].s, dt);
+        if (this.player) helpOut(room, dt);
+      }
       chapter.update(dt, time);
       boat.update(dt, time);
       child.update(dt);
@@ -111,6 +151,7 @@ for (const fps of [30, 60, 120]) {
     const f = fixture(fps);
     if (restored !== null) f.chapter.restoreCheckpoint(restored === 33 ? 'pool-1' : 'pool-2', [restored]);
     f.cast.wind.push = 1;
+    f.player = true;
     let minSpeed = Infinity, maxDeceleration = 0;
     for (let frame = 0; frame < fps * 180 && !f.chapter.done; frame++) {
       const previousSpeed = f.room.toys[0].speed, sailing = f.chapter.beat === 'sailing';
@@ -122,7 +163,7 @@ for (const fps of [30, 60, 120]) {
       maxDeceleration = Math.max(maxDeceleration, (previousSpeed - speed) * fps);
     }
     const label = `${fps}fps from ${restored ?? 'arrival'}`;
-    assert(f.chapter.done, `${label}: steady wind completes all pool handoffs`);
+    assert(f.chapter.done, `${label}: steady wind and the player's bath and plug complete all pool handoffs`);
     assert.equal(f.cast.cygnet.swims, restored === 69 ? 1 : restored === 33 ? 2 : 3, 'preserve remaining swims');
     assert(minSpeed > 0.05, `${label}: orange boat stopped despite steady wind: ${minSpeed}`);
     assert(maxDeceleration < 3, `${label}: orange boat lost momentum abruptly: ${maxDeceleration}`);
@@ -187,6 +228,7 @@ for (const [fps, portrait] of [
   for (let i = 0; i < fps * 5; i++) f.step();
   assert.equal(r.progress, idle, 'remote wind must not sail the fleet');
   c.wind.remote = false;
+  f.player = true;
   for (let i = 0; i < fps * 210 && !q.done; i++) {
     c.wind.push = i % (fps * 7) < fps * 5 ? 1 : 0;
     f.step();
@@ -198,7 +240,7 @@ for (const [fps, portrait] of [
       sailingFrames++;
       for (const p of [c.child.position, c.cygnet.position]) {
         if (p === c.child.position || (c.cygnet.state !== 'swimming' && !c.cygnet.seating.move))
-          minDry = Math.min(minDry, worldHeight(p.x, p.z) - boatsLevel(L.startZ - p.z));
+          minDry = Math.min(minDry, worldHeight(p.x, p.z) - boatsWaterBase(p.x, p.z));
         if (p === c.cygnet.position && c.cygnet.state === 'swimming' && !c.cygnet.seating.move) {
           swimFrames++;
           fastestSwim = Math.max(fastestSwim, c.cygnet.swimSpeed);
@@ -207,7 +249,7 @@ for (const [fps, portrait] of [
             boatsOut(p.x, p.z) < 1,
             `swimmer left water: ${boatsOut(p.x, p.z)}, s=${L.startZ - p.z}, phase=${q.swim}, pool=${q.pool}`,
           );
-          assert(Math.abs(p.y - boatsLevel(L.startZ - p.z)) < 0.3, 'swimmer follows pool surface');
+          assert(Math.abs(p.y - boatsWaterBase(p.x, p.z)) < 0.3, 'swimmer follows pool surface');
         }
         const at = p
           .clone()
@@ -375,6 +417,7 @@ for (let frame = 0; frame < 60 * 100; frame++) {
     outgoing.room.active = false; // the next chapter must still leave the fleet sailing.
     seaWind.sample = (x, z, out) => Object.assign(out, { x: 0, z: 0, energy: 0, lift: 0 });
   }
+  helpOut(outgoing.room, 1 / 60);
   outgoing.room.update(1 / 60, frame / 60, seaWind, 101);
   for (const [i, toy] of outgoing.room.toys.entries()) {
     const p = toy.group.position;
@@ -434,10 +477,13 @@ for (const fps of [30, 60, 120]) {
       // Hold the hero for ten seconds as the chapter does when the cygnet lags.
       const limit = frame < fps * 10 ? restored : L.length;
       const previous = room.toys.map((t) => t.s);
+      // Once out, the plug's rush carries the fleet off whatever the travellers' limit, so it is pulled after the hold.
+      if (frame >= fps * 10) helpOut(room, 1 / fps);
       room.update(1 / fps, frame / fps, rearWind, limit);
       room.toys.forEach((t, i) => {
         assert(t.s >= previous[i] - 1e-8, 'separation never jerks a hull backwards');
-        assert(t.s - previous[i] <= tuning.littleBoats.speed / fps + 1e-8, 'contact does not teleport a hull forward');
+        const fastest = Math.max(tuning.littleBoats.speed, tuning.littleBoats.rushSpeed, tuning.littleBoats.surgeSpeed);
+        assert(t.s - previous[i] <= fastest / fps + 1e-8, 'contact does not teleport a hull forward');
       });
       if (frame < fps * 10) assert.equal(room.progress, restored, 'rear push respects the traveller limit');
       closest = Math.min(closest, hullClearance(room, `rear gust ${fps}fps from ${restored}`));
@@ -446,4 +492,54 @@ for (const fps of [30, 60, 120]) {
     assert(room.toys.every((t) => !t.group.visible), 'rear strokes send the entire fleet offshore');
     console.log(JSON.stringify({ test: 'rear-sail separation', fps, restored, closest }));
   }
+}
+
+// The way out to sea needs the player. Steady sail wind grounds the fleet at the shoal; the island's own gusts rock the
+// bath but never pour it, and neither does a push away from the stream. Gusts across the plug only rock it, an updraft
+// over it does nothing until the fleet waits at it, and then lifts it out.
+{
+  const f = fixture();
+  f.chapter.restoreCheckpoint('pool-1', [40]);
+  f.cast.wind.push = 1;
+  const d = f.room.drain;
+  for (let i = 0; i < 60 * 60; i++) f.step();
+  assert.equal(d.waiting(f.room.toys[0].s), d.bathAt, 'steady wind grounds the fleet at the shoal');
+  assert(f.room.progress < tuning.littleBoats.barS, `the fleet stays short of the shoal: ${f.room.progress}`);
+  assert(d.nudges >= 4, `the island's own gust keeps showing the bath: ${d.nudges}`);
+  assert.equal(f.cast.lines.gusts, d.nudges, 'every one of its gusts is drawn as wind lines');
+  assert.equal(d.rise, 0, "the island's own gusts never raise the pools");
+  for (let i = 0; i < 60 * 5; i++) {
+    look(d.bathAt);
+    d.aim(eye);
+    strokeAcross(f.room, d.bathAt, d.pushAngle + Math.PI, 1 / 60);
+    f.step();
+  }
+  assert.equal(d.rise, 0, 'a push away from the stream never pours the bath');
+  f.player = true;
+  for (let i = 0; i < 60 * 30 && !d.risen; i++) f.step();
+  assert(d.risen, 'a push toward the stream pours the bath and raises the pools');
+  f.player = false;
+  for (let i = 0; i < 60 * 90 && d.waiting(f.room.toys[0].s) !== d.plugAt; i++) f.step();
+  assert.equal(d.waiting(f.room.toys[0].s), d.plugAt, 'the fleet waits at the plug');
+  for (let i = 0; i < 60 * 10; i++) {
+    strokeAcross(f.room, d.plugAt, (i % 120) < 60 ? 0 : Math.PI, 1 / 60);
+    f.step();
+  }
+  assert(d.loose === 0 && !d.pulled, `gusts across the plug never loosen it: ${d.loose}`);
+  f.player = true;
+  let lifted = 0;
+  for (; lifted < 60 * 20 && !d.pulled; lifted++) f.step();
+  assert(d.pulled, 'an updraft over the plug lifts it out');
+  assert(lifted > 60 * 2 && lifted < 60 * 8, `the plug takes a few seconds of circling: ${lifted / 60}s`);
+  for (let i = 0; i < 60 * 30 && !f.chapter.done; i++) f.step();
+  assert(f.room.progress > tuning.littleBoats.plugS + 5, `the rush carries the fleet out: ${f.room.progress}`);
+
+  const early = fixture();
+  early.chapter.restoreCheckpoint('pool-2', [70]);
+  for (let i = 0; i < 60 * 3; i++) {
+    circleOver(early.room, early.room.drain.plugRest, 1 / 60);
+    early.step();
+  }
+  assert.equal(early.room.drain.loose, 0, 'the plug holds until the fleet waits at it');
+  console.log('The bath pours only to the player\'s push toward the stream; the plug lifts only to their updraft, once the fleet waits.');
 }

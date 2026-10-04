@@ -1,7 +1,7 @@
 import { BOATS_SHIFT, SHORE_SHIFT, HOME_SHIFT, LINES_SHIFT } from './geography';
 import { mirrorBed, MIRROR_LAYOUT_GLSL } from './sky-mirror-layout';
 import { glsl, tuning } from '../tuning';
-import { LITTLE_BOATS, LITTLE_BOATS_GLSL, boatsOut, boatsLevel } from './little-boats-layout';
+import { LITTLE_BOATS, LITTLE_BOATS_GLSL, boatsBar, boatsOut, boatsLevel } from './little-boats-layout';
 import { STAIRS_GROUND, STAIRS_ISLE, STAIRS_TERRACE } from './stairs-layout';
 
 /**
@@ -207,7 +207,7 @@ function littleBoatsHeight(x: number, z: number): number {
   const d = boatsOut(x, z);
   if (d > 1.65) return h;
   const level = boatsLevel(c.startZ - z);
-  const bed = level - 0.65 + Math.min(1, d * d) * 0.24;
+  const bed = level - 0.65 + Math.min(1, d * d) * 0.24 + boatsBar(c.startZ - z);
   const bank = Math.max(h, level + 0.42);
   const bowl = bed + (bank - bed) * smoothstep(0.65, 1.35, d);
   const shaped = bowl + (h - bowl) * smoothstep(1.35, 1.65, d);
@@ -696,7 +696,7 @@ float hf_littleBoats(vec2 p) {
   float d = boatsOut(p);
   if (d > 1.65) return h;
   float level = boatsLevel(${glsl(LITTLE_BOATS.startZ)} - p.y);
-  float bed = level - 0.65 + min(1.0, d * d) * 0.24;
+  float bed = level - 0.65 + min(1.0, d * d) * 0.24 + boatsBar(${glsl(LITTLE_BOATS.startZ)} - p.y);
   float bank = max(h, level + 0.42);
   float bowl = mix(bed, bank, smoothstep(0.65, 1.35, d));
   float shaped = mix(bowl, h, smoothstep(1.35, 1.65, d));

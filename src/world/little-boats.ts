@@ -1,5 +1,5 @@
-import { littleBoatsBath } from './little-boats-bath';
-import { fixInPlace, fixTreeInPlace } from '../gl/fixed';
+import { LittleBoatsDrain } from './little-boats-drain';
+import { fixInPlace } from '../gl/fixed';
 import { PaddleSpray } from './little-boats-spray';
 import type { Traveller } from '../traveller/traveller';
 import type { PointerInput } from '../input/pointer';
@@ -11,7 +11,7 @@ import { swellAt } from './water/swell';
 import { glsl, tuning } from '../tuning';
 import type { WindField } from '../wind/field';
 import { atmo, ATMO_GLSL } from './atmosphere';
-import { LITTLE_BOATS as L, boatsX, boatsWidth, boatsWaterHeight, boatsCourse, BOATS_TOY } from './little-boats-layout';
+import { LITTLE_BOATS as L, boatsX, boatsWidth, boatsWaterHeight, boatsCourse, boatsTide, BOATS_TOY } from './little-boats-layout';
 
 const VERT = /* glsl */ `
 out vec3 vWorld;
@@ -185,6 +185,7 @@ interface Toy {
 export class LittleBoats {
   readonly group = new THREE.Group();
   readonly toys: Toy[] = [];
+  readonly drain = new LittleBoatsDrain();
   private readonly spray = new PaddleSpray();
   private readonly swimWake = new THREE.Mesh(
     new THREE.PlaneGeometry(1.35, 2.5).rotateX(-Math.PI / 2),
@@ -301,8 +302,8 @@ export class LittleBoats {
         rollV: 0,
         wake,
         shadow,
-        rest: i === 0 ? 3 : [0, 12, 36, 49, 66, 79, 87][i],
-        s: i === 0 ? 3 : [0, 12, 36, 49, 66, 79, 87][i],
+        rest: i === 0 ? 3 : [0, 12, 36, 49, 70, 79, 87][i],
+        s: i === 0 ? 3 : [0, 12, 36, 49, 70, 79, 87][i],
         lane: i === 0 ? 0 : (i % 2 ? 1 : -1) * (tuning.littleBoats.sideLane + i * 0.13),
         speed: 0,
         previousS: 0,
@@ -314,43 +315,8 @@ export class LittleBoats {
         shove: 0,
       });
     }
-    // A bathroom plug, with a brass eye and a chain that simply continues beyond sight.
-    const plug = new THREE.Group();
-    plug.name = 'bath-plug';
-    const brass = material('#ae9462');
-    const rubber = material('#494a3b');
-    const body = new THREE.Mesh(new THREE.CylinderGeometry(0.58, 0.47, 0.3, 24), rubber);
-    plug.add(body);
-    const eye = new THREE.Mesh(new THREE.TorusGeometry(0.18, 0.04, 6, 16), brass);
-    eye.position.y = 0.25;
-    plug.add(eye);
-    const plugX = boatsX(45) - boatsWidth(45) - 2.2,
-      plugZ = L.startZ - 45;
-    plug.scale.setScalar(3.2);
-    plug.position.set(plugX, heightAt(plugX, plugZ) + 1.03, plugZ);
-    plug.rotation.z = -0.35;
-    this.group.add(plug);
-    const links: THREE.BufferGeometry[] = [];
-    for (let i = 0; i < 95; i++) {
-      const y = plug.position.y + 1.34 + i * 0.84;
-      const g = new THREE.TorusGeometry(0.18, 0.034, 6, 12);
-      g.scale(1.47, 2.835, 2.1);
-      g.rotateY(((i % 2) * Math.PI) / 2);
-      g.translate(plug.position.x + 0.4 + Math.sin(i * 0.036) * 1.5, y, plug.position.z + Math.sin(i * 0.018) * 0.8);
-      links.push(g);
-    }
-    const chain = new THREE.Mesh(mergeGeometries(links), brass);
-    this.group.add(chain);
-    const bath = littleBoatsBath();
-    const bathS = 54,
-      bathX = boatsX(bathS) - boatsWidth(bathS) - 3.1,
-      bathZ = L.startZ - bathS;
-    bath.position.set(bathX, heightAt(bathX, bathZ) + 0.8, bathZ);
-    bath.rotation.set(0.035, -0.22, -0.07);
-    this.group.add(bath);
-    fixInPlace(this.group, this.spray.points, chain);
-    fixTreeInPlace(plug);
-    fixTreeInPlace(bath);
+    this.group.add(this.drain.group);
+    fixInPlace(this.group, this.spray.points);
     this.stranded.set(BOATS_TOY.x, heightAt(BOATS_TOY.x, BOATS_TOY.z) + 0.12, BOATS_TOY.z);
     this.pose(0);
   }
@@ -388,9 +354,15 @@ export class LittleBoats {
   }
 
   /** Put screen strokes onto the sail they cross; a low camera otherwise hits ground behind the toy. */
-  brush(camera: THREE.Camera, input: PointerInput, wind: WindField): void {
+  brush(camera: THREE.Camera, input: PointerInput, wind: WindField, dt = 1 / 60): void {
+    if (this.active && this.launched) {
+      this.drain.aim(camera);
+      this.drain.updraft(input, this.toys[0].s, dt);
+      this.drain.breeze(wind, this.toys[0].s, dt);
+    }
     if (!this.active || !this.launched || input.muted || !input.present || input.gust < tuning.littleBoats.brushSpeed) return;
     if (input.ndc.distanceToSquared(input.prevNdc) < 1e-8) return;
+    this.drain.brush(camera, input, this.toys[0].s, dt);
     for (const toy of this.toys) {
       this.brushAt.copy(toy.group.position);
       this.brushAt.y += 0.8;
@@ -420,6 +392,8 @@ export class LittleBoats {
     this.released = true;
     this.launch = 1;
     this.idle = 0;
+    this.drain.restore(s);
+    boatsTide.uBoatsRise.value = this.drain.rise;
     this.toys.forEach((t, i) => {
       t.joined = t.rest <= s + 8;
       const behind = s - i * tuning.littleBoats.hullSpacing;
@@ -433,6 +407,10 @@ export class LittleBoats {
     if (!this.active && !this.departing) return;
     const k = tuning.littleBoats;
     this.time = time;
+    this.drain.update(dt, time, this.toys.every((t) => t.s > 118));
+    boatsTide.uBoatsRise.value = this.drain.rise;
+    const gate = this.drain.gate;
+    if (this.drain.pulled) limit = Infinity;
     let push = 0;
     for (const t of this.toys) {
       const w = wind.sample(t.group.position.x, t.group.position.z, this.air);
@@ -476,8 +454,9 @@ export class LittleBoats {
       // Ease toward the walkers/swimmer instead of losing all momentum at each
       // pool handoff. Contact from a following hull must obey the same easing.
       // Leave the outlet free so the toy can cross it and start departing.
-      const waiting = this.progress < L.length && limit < L.length;
-      const heroEnd = waiting ? hero.s + Math.max(0, limit - hero.s) * dt / k.followEase : k.offshoreEnd;
+      const heroLimit = Math.min(limit, gate);
+      const waiting = this.progress < L.length && heroLimit < L.length;
+      const heroEnd = waiting ? hero.s + Math.max(0, heroLimit - hero.s) * dt / k.followEase : k.offshoreEnd;
       for (const [i, t] of this.toys.entries()) {
         // Waiting toys join when the fleet reaches them, not only the child's toy.
         if (!t.joined && this.toys.some((o) => o.joined && o.s > t.s - 5)) t.joined = true;
@@ -485,14 +464,18 @@ export class LittleBoats {
         const company = 1 - THREE.MathUtils.smoothstep(t.s - hero.s, k.carryAhead, k.carryAheadEnd);
         const carried = i === 0 ? push : t.joined ? push * k.fleetCarry * company : 0;
         // Each sail owns its response; a following hull can carry that movement forward.
-        const current =
-          this.departing || t.s >= L.length
-            ? THREE.MathUtils.lerp(k.outletCurrent, k.offshoreSpeed, THREE.MathUtils.smoothstep(t.s, 107, 135))
-            : 0;
+        const outgoing = this.departing || t.s >= L.length ? k.outletCurrent : 0;
+        const rush = this.drain.rush * k.rushSpeed * THREE.MathUtils.smoothstep(t.s, 66, 80);
+        const surge = this.drain.surge * k.surgeSpeed
+          * THREE.MathUtils.smoothstep(t.s, k.barS - 9, k.barS - 4) * (1 - THREE.MathUtils.smoothstep(t.s, k.barS + 4, k.barS + 9));
+        const current = Math.max(surge, outgoing || rush
+          ? THREE.MathUtils.lerp(Math.max(outgoing, rush), k.offshoreSpeed, THREE.MathUtils.smoothstep(t.s, 107, 135)) : 0);
         const top = k.speed * k.pace[i];
         t.drive = Math.max(Math.max(t.effort, carried) * top, current);
         // The fleet waits for the travellers too, drifting to rest a little beyond the child's toy.
         if (waiting && i > 0 && t.joined) t.drive = Math.min(t.drive, Math.max(0, limit + k.fleetLead - t.s) / k.followEase);
+        // Nothing sails past the shoal or the plug before its time.
+        if (t.s <= gate) t.drive = Math.min(t.drive, Math.max(0, gate - t.s) / k.followEase);
         t.shove = i === 0 ? t.drive : t.effort * top;
       }
       // A hull's own gust nudges on a toy it is closing on and cannot pass, and through it any queue ahead.
@@ -541,6 +524,7 @@ export class LittleBoats {
           if (need > 0 && behind.s > ahead.s - need + 1e-8) behind.s = Math.max(behind.previousS, ahead.s - need);
         }
       }
+      for (const t of this.fleet) if (t.previousS <= gate) t.s = Math.min(t.s, Math.max(t.previousS, gate));
       for (const t of this.fleet) t.speed = dt > 0 ? Math.max(0, (t.s - t.previousS) / dt) : 0;
       this.progress = Math.min(L.length, hero.s);
       if (this.progress >= L.length) this.departing = this.toys.some((t) => t.s < k.offshoreEnd);
@@ -584,16 +568,20 @@ export class LittleBoats {
       const surface = boatsWaterHeight(x, z, time) + this.swell.height * ocean;
       const y = surface + tuning.littleBoats.toyDraft + Math.sin(time * 2.1 + t.seed) * (0.018 + t.fill * 0.018);
       const resting = i === 0 ? (1 - this.launch) * Math.max(0, heightAt(x, z) + 0.12 - y) : 0;
-      t.group.position.set(x, y + resting, z);
+      const k = tuning.littleBoats;
+      // Run up on the shoal, a hull sits a little high, bow up, and shudders while its sail still pulls.
+      const aground = (1 - THREE.MathUtils.smoothstep(this.drain.rise, 0.55, 1)) * (t.s < k.barS ? THREE.MathUtils.smoothstep(t.s, k.barS - 2.6, k.barS - 1.25) : 0);
+      const shudder = Math.sin(time * 23 + t.seed * 5) * 0.035 * aground * Math.min(1, t.fill * 2);
+      t.group.position.set(x, y + resting + aground * 0.07, z);
       const slopeX = (boatsWaterHeight(x + 0.4, z, time) - boatsWaterHeight(x - 0.4, z, time)) / 0.8 + this.swell.slopeX * ocean;
       const slopeZ = (boatsWaterHeight(x, z + 0.6, time) - boatsWaterHeight(x, z - 0.6, time)) / 1.2 + this.swell.slopeZ * ocean;
       t.group.rotation.set(
-        -slopeX * Math.sin(yaw) - slopeZ * Math.cos(yaw) + Math.sin(time * 1.6 + t.seed) * 0.035,
+        -slopeX * Math.sin(yaw) - slopeZ * Math.cos(yaw) + Math.sin(time * 1.6 + t.seed) * 0.035 + aground * 0.1,
         yaw + t.boom * 0.09 + Math.sin(time * 0.8 + t.seed) * (0.025 + t.fill * 0.045),
         t.roll +
           slopeX * Math.cos(yaw) -
           slopeZ * Math.sin(yaw) +
-          Math.sin(time * 1.9 + t.seed) * 0.045 +
+          Math.sin(time * 1.9 + t.seed) * 0.045 + shudder +
           (i === 0 ? (1 - this.launch) * 0.85 : 0),
       );
       if (i === 0 && !this.released) {
