@@ -217,9 +217,9 @@ travellers and the next stretch of water in frame together, in landscape and por
 as the sea and merges into it.
 
 Knobs: `tuning.littleBoats` (the way out from `barS` to `drainFor`, the island's gust `nudge*`). Checks:
-`tools/little-boats-logic-check.mjs`, `little-boats-check.mjs` (`TOUCH=1`); from a `play.mjs` eval step,
-`__game.story.current.skipTo(56)` starts just short of the shoal and `skipTo(86)` before the plug,
-`ONLY=boats node tools/progress-check.mjs`.
+`tools/little-boats-logic-check.mjs`, `little-boats-check.mjs` (`TOUCH=1`), `ONLY=boats node tools/progress-check.mjs`.
+From a `play.mjs` eval step, `__game.story.current.skipTo(56)` starts just short of the shoal and `skipTo(86)`
+before the plug.
 
 ## The meadow and the piano
 
