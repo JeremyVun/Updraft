@@ -39,25 +39,29 @@ vec3 skyRadiance(vec3 d) {
   col += uSunColor * smoothstep(0.99955, 0.99975, sd) * 14.0 * pow(1.0 - uStormCover, 2.0);
   if (uRainbow > 0.0) col += rainbow(d, col);
 
+#if STORM_BANK
   if (d.y > 0.0) {
+#else
+  // Without a storm or lightning, nothing here shows outside the cloud band.
+  if (d.y > 0.015 && d.y < 0.6) {
+#endif
     vec2 p = d.xz / (d.y + 0.06) * 1.2 + uCloudShift * 0.003;
-    float band = smoothstep(0.015, 0.07, d.y) * (1.0 - smoothstep(0.3, 0.6, d.y));
-    float c = band > 0.0 ? cloudDensity(p) * band : 0.0;
+    float c = cloudDensity(p);
 #if STORM_BANK
     float bank = smoothstep(0.32, 0.75, fbm(p * 0.65 + vec2(4.0, uTime * 0.006)));
 #else
     float bank = 0.0;
 #endif
+    vec2 toSun = normalize(uSunDir.xz) * 0.25;
+    float thick = cloudDensity(p + toSun);
+    float band = smoothstep(0.015, 0.07, d.y) * (1.0 - smoothstep(0.3, 0.6, d.y));
+    c *= band;
     c = mix(c, max(c, bank * smoothstep(0.0, 0.05, d.y)), uStormCover * 0.9);
-    if (c > 0.0) {
-      vec2 toSun = normalize(uSunDir.xz) * 0.25;
-      float thick = cloudDensity(p + toSun);
-      float glow = pow(max(sd, 0.0), 5.0);
-      vec3 shade = mix(uSkyHorizon * vec3(0.78, 0.76, 0.86), uSkyHorizonSun * 0.9, glow * 0.8);
-      vec3 lit = uSkyHorizonSun * 1.15 + uSunColor * 0.35 * glow;
-      vec3 cloudCol = mix(lit, shade, smoothstep(0.1, 0.9, thick));
-      col = mix(col, cloudCol, c * 0.9);
-    }
+    float glow = pow(max(sd, 0.0), 5.0);
+    vec3 shade = mix(uSkyHorizon * vec3(0.78, 0.76, 0.86), uSkyHorizonSun * 0.9, glow * 0.8);
+    vec3 lit = uSkyHorizonSun * 1.15 + uSunColor * 0.35 * glow;
+    vec3 cloudCol = mix(lit, shade, smoothstep(0.1, 0.9, thick));
+    col = mix(col, cloudCol, c * 0.9);
     float litCloud = pow(max(dot(d, normalize(uLightning.xyz)), 0.0), 14.0);
     col += vec3(0.64, 0.72, 0.95) * uLightning.w * litCloud * (0.3 + bank * 1.7);
   }
