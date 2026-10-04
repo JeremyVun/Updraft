@@ -925,7 +925,7 @@ export class WoodChapter implements Chapter {
   private readonly shapeGlance = new THREE.Vector3();
   private readonly shapeLightAt = new THREE.Vector3();
   private readonly shapeFace = new THREE.Vector3();
-  private readonly shapePoints = [new THREE.Vector3(), new THREE.Vector3(), shapePoint(0.4, 6.4, -2.3)];
+  private readonly shapePoints = [new THREE.Vector3(), new THREE.Vector3(), shapePoint(0.4, 5.2, -2.3)];
   private readonly shapeAsk: Coax = { at: new THREE.Vector3(), urgency: tuning.wood.inviteCoalUrgency, radius: tuning.wood.inviteCoalRadius };
 
   /** QA: start a few paces short of the bend, with the coal before it just lit. */

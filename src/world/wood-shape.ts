@@ -22,8 +22,8 @@ export function shapePoint(x: number, y: number, z: number, out = new THREE.Vect
 export const SHAPE_FRONT_COAL = new THREE.Vector2();
 export const SHAPE_SIDE_COAL = new THREE.Vector2();
 {
-  const front = shapePoint(-0.55, 0, 2.05);
-  const side = shapePoint(3.1, 0, 0.75);
+  const front = shapePoint(-0.5, 0, 2.0);
+  const side = shapePoint(2.9, 0, 1.45);
   SHAPE_FRONT_COAL.set(front.x, front.z);
   SHAPE_SIDE_COAL.set(side.x, side.z);
 }
@@ -31,7 +31,7 @@ export const SHAPE_SIDE_COAL = new THREE.Vector2();
 /** Where the owl sits, down in the fork between the two dead limbs, facing her. */
 export const OWL_PERCH_LOCAL = new THREE.Vector3(0, 1.6, 0.02);
 
-const STUMP_CAPS = 23;
+const STUMP_CAPS = 25;
 export const SHAPE_STUMP_CAPS = STUMP_CAPS;
 /** Two more for the owl's body and head, moved every frame, so its shadow leaves with it. */
 const CAPS = STUMP_CAPS + 2;
@@ -44,31 +44,34 @@ type CapSpec = [number[], number[], number, number];
  * the top in tines, like antlers. Given in the shape's frame; one list makes the mesh and the shadow it casts.
  */
 const LOCAL: CapSpec[] = [
-  [[0, -0.4, 0], [0.03, 0.75, 0.05], 0.52, 0.42],
-  [[0.03, 0.75, 0.05], [0, 1.48, 0.06], 0.42, 0.33],
-  // The bark shards round the broken top: the front ones stand higher, so the fork is a hollow facing up.
-  [[-0.1, 1.38, 0.2], [-0.16, 1.84, 0.27], 0.12, 0.035],
-  [[0.17, 1.36, 0.16], [0.22, 1.76, 0.24], 0.1, 0.03],
+  // The trunk (drawn by `trunk`, a little fuller than these, so it never shades itself).
+  [[0, -0.4, 0], [0.02, 0.75, 0.03], 0.42, 0.34],
+  [[0.02, 0.75, 0.03], [0, 1.45, 0.03], 0.34, 0.26],
   // The snapped limb under it.
-  [[0.02, 1.22, 0.24], [0.04, 1.08, 0.78], 0.15, 0.085],
+  [[0.02, 1.2, 0.24], [0.08, 1.0, 0.6], 0.14, 0.045],
   // Shoulders, broken short, and one long limb reaching down to the litter.
   [[-0.28, 1.12, 0.02], [-0.86, 0.92, 0.22], 0.17, 0.09],
   [[0.28, 1.1, 0.0], [0.82, 0.84, 0.28], 0.16, 0.085],
   [[0.82, 0.84, 0.28], [1.28, 0.36, 0.7], 0.085, 0.035],
-  // The left limb: a beam rising out and up, a brow tine forward, a tine out, and a fork at the top.
-  [[-0.24, 1.48, 0.0], [-0.72, 2.42, 0.1], 0.13, 0.085],
-  [[-0.72, 2.42, 0.1], [-0.94, 3.22, -0.04], 0.085, 0.05],
-  [[-0.42, 1.96, 0.06], [-0.6, 2.32, 0.52], 0.06, 0.02],
-  [[-0.74, 2.5, 0.1], [-1.3, 2.86, 0.24], 0.055, 0.018],
-  [[-0.94, 3.22, -0.04], [-0.78, 3.62, 0.04], 0.048, 0.016],
-  [[-0.94, 3.22, -0.04], [-1.26, 3.5, -0.08], 0.045, 0.014],
-  // The right limb, a little different: its outer tine is snapped off short.
-  [[0.24, 1.48, 0.0], [0.7, 2.36, 0.12], 0.13, 0.085],
-  [[0.7, 2.36, 0.12], [0.98, 3.12, -0.02], 0.085, 0.05],
-  [[0.4, 1.92, 0.06], [0.62, 2.28, 0.5], 0.06, 0.02],
-  [[0.74, 2.46, 0.12], [1.08, 2.66, 0.2], 0.055, 0.04],
-  [[0.98, 3.12, -0.02], [0.86, 3.56, 0.06], 0.048, 0.016],
-  [[0.98, 3.12, -0.02], [1.32, 3.36, -0.06], 0.045, 0.014],
+  // The two dead limbs: each beam sweeps out and up and curls back in at the top like a lyre, with a brow tine
+  // forward, a tine standing up off the first bend, one out off the second, and a forked crown.
+  [[-0.3, 1.46, 0.0], [-0.78, 2.12, 0.08], 0.15, 0.115],
+  [[-0.78, 2.12, 0.08], [-1.06, 2.86, 0.02], 0.115, 0.085],
+  [[-1.06, 2.86, 0.02], [-0.96, 3.5, -0.04], 0.085, 0.055],
+  [[-0.5, 1.76, 0.06], [-0.58, 2.22, 0.5], 0.07, 0.022],
+  [[-0.8, 2.16, 0.08], [-0.66, 2.74, 0.2], 0.065, 0.02],
+  [[-1.04, 2.78, 0.02], [-1.42, 3.18, 0.1], 0.06, 0.018],
+  [[-0.96, 3.5, -0.04], [-0.74, 3.9, 0.02], 0.052, 0.016],
+  [[-0.96, 3.5, -0.04], [-1.18, 3.86, -0.06], 0.05, 0.015],
+  // The right one a little different: its outer tine snapped off short.
+  [[0.3, 1.46, 0.0], [0.76, 2.08, 0.1], 0.15, 0.115],
+  [[0.76, 2.08, 0.1], [1.08, 2.8, 0.02], 0.115, 0.085],
+  [[1.08, 2.8, 0.02], [1.0, 3.44, -0.04], 0.085, 0.055],
+  [[0.5, 1.74, 0.06], [0.6, 2.2, 0.5], 0.07, 0.022],
+  [[0.8, 2.12, 0.1], [0.7, 2.7, 0.22], 0.065, 0.02],
+  [[1.06, 2.74, 0.02], [1.3, 2.92, 0.08], 0.06, 0.045],
+  [[1.0, 3.44, -0.04], [0.8, 3.84, 0.02], 0.052, 0.016],
+  [[1.0, 3.44, -0.04], [1.24, 3.78, -0.06], 0.05, 0.015],
   // Roots splayed into the litter.
   [[0.32, 0.12, 0.3], [0.86, -0.12, 0.76], 0.17, 0.06],
   [[-0.34, 0.1, 0.26], [-0.9, -0.12, 0.62], 0.16, 0.05],
@@ -169,6 +172,35 @@ function tube(a: THREE.Vector3, b: THREE.Vector3, ra: number, rb: number, seed: 
   return geo;
 }
 
+/**
+ * The trunk as one piece, snapped off at the top: a ragged rim of splinters, higher at the front so the owl sits
+ * down in it, round a hollow where the heart rotted out.
+ */
+function trunk(a: THREE.Vector3, b: THREE.Vector3, ra: number, rb: number): THREE.BufferGeometry {
+  const len = a.distanceTo(b);
+  const geo = new THREE.CylinderGeometry(rb, ra, len, 28, 12, false);
+  const pos = geo.getAttribute('position');
+  const top = len / 2;
+  for (let i = 0; i < pos.count; i++) {
+    let x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+    const ang = Math.atan2(z, x);
+    const r = Math.hypot(x, z);
+    const flare = 1 + 0.35 * Math.max(0, -(y + top * 0.55) / (top * 0.45)) ** 2;
+    const gnarl = 1 + 0.06 * Math.sin(ang * 3 + y * 2.1) + 0.04 * Math.sin(ang * 8 - y * 4) + 0.03 * Math.sin(ang * 13 + y * 9);
+    x *= gnarl * flare; z *= gnarl * flare;
+    if (y > top - 1e-4) {
+      const front = Math.max(0, Math.sin(ang));
+      const splinter = Math.abs(Math.sin(ang * 4.5 + 0.7)) ** 3 * 0.22 + Math.abs(Math.sin(ang * 11 + 2.1)) ** 6 * 0.12;
+      y += r < 1e-3 ? -0.22 : (0.04 + 0.2 * front) * (0.5 + splinter * 3) - (1 - r / (rb * gnarl)) * 0.25;
+      if (r > 1e-3) { const k = 1 - 0.18 * splinter; x *= k; z *= k; }
+    }
+    pos.setXYZ(i, x, y, z);
+  }
+  geo.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), b.clone().sub(a).normalize()));
+  geo.translate((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2);
+  return geo;
+}
+
 function knuckle(at: THREE.Vector3, r: number): THREE.BufferGeometry {
   const geo = new THREE.IcosahedronGeometry(r, 2);
   geo.translate(at.x, at.y, at.z);
@@ -192,9 +224,11 @@ function strip(geo: THREE.BufferGeometry, kind: number, axis: THREE.Vector3): TH
 const SHAPE_VERT = /* glsl */ `${ATMO_GLSL}
 in float aKind;
 in vec3 aAxis;
-out vec3 vWorld; out vec3 vNormal; out float vKind; out vec3 vAxis;
+uniform vec4 uShapeAt;
+out vec3 vWorld; out vec3 vNormal; out float vKind; out vec3 vAxis; out vec3 vLocal;
 void main() {
   vWorld = position; vNormal = normal; vKind = aKind; vAxis = aAxis;
+  vLocal = position - vec3(uShapeAt.x, 0.0, uShapeAt.z);
   gl_Position = projectionMatrix * viewMatrix * vec4(position, 1.0);
 }`;
 
@@ -209,6 +243,7 @@ in vec3 vWorld;
 in vec3 vNormal;
 in float vKind;
 in vec3 vAxis;
+in vec3 vLocal;
 vec3 bump(vec3 n, float h, float k) {
   vec3 dpdx = dFdx(vWorld), dpdy = dFdy(vWorld);
   float hx = dFdx(h), hy = dFdy(h);
@@ -225,39 +260,40 @@ void main() {
   if (vKind < 0.5) {
     // Bark furrows run with the grain of each limb.
     vec3 axis = normalize(vAxis);
-    float along = dot(vWorld, axis);
+    float along = dot(vLocal, axis);
     vec3 side = normalize(cross(axis, abs(axis.y) > 0.9 ? vec3(1.0, 0.0, 0.0) : vec3(0.0, 1.0, 0.0)));
-    vec3 perp = vWorld - axis * along;
-    float around = dot(perp, side) * 9.0 + dot(perp, cross(axis, side)) * 6.0;
-    float furrow = vnoise(vec2(around, along * 1.3));
-    float fine = vnoise(vec2(around * 3.1, along * 5.0));
+    vec3 perp = vLocal - axis * along;
+    float around = atan(dot(perp, cross(axis, side)), dot(perp, side) + 1e-4) * 3.0 + dot(perp, side) * 4.0;
+    float furrow = vnoise(vec2(around * 2.0, along * 1.1)) * 0.65 + vnoise(vec2(around * 4.3, along * 2.3)) * 0.35;
+    float fine = vnoise(vec2(around * 9.0, along * 7.0));
     h = smoothstep(0.25, 0.75, furrow) * 0.7 + fine * 0.3;
-    float weather = vnoise(vWorld.xz * 1.3 + vWorld.y * 0.8);
+    float weather = vnoise(vLocal.xz * 1.3 + vLocal.y * 0.8);
     // Dead wood goes silver where the weather gets at it and stays dark brown in the cracks.
-    alb = mix(vec3(0.05, 0.038, 0.028), mix(vec3(0.2, 0.17, 0.13), vec3(0.3, 0.29, 0.26), weather), smoothstep(0.15, 0.7, h));
-    float moss = smoothstep(0.5, 0.8, vnoise(vWorld.xz * 2.1 + vWorld.y * 1.7)) * smoothstep(0.0, 0.7, n.y);
-    alb = mix(alb, vec3(0.1, 0.15, 0.05), moss * 0.85);
-    n = bump(n, h, 0.05);
+    alb = mix(vec3(0.03, 0.024, 0.018), mix(vec3(0.11, 0.085, 0.062), vec3(0.17, 0.16, 0.145), weather), smoothstep(0.15, 0.7, h));
+    float moss = smoothstep(0.5, 0.8, vnoise(vLocal.xz * 2.1 + vLocal.y * 1.7)) * smoothstep(0.0, 0.7, n.y);
+    alb = mix(alb, vec3(0.06, 0.09, 0.03), moss * 0.85);
+    n = bump(n, h, 0.11);
   } else {
-    // Bedded stone: soft ledges across it, darker seams, pale lichen, moss along the tops.
-    float bed = vWorld.y * 1.4 + vnoise(vWorld.xz * 0.35) * 2.2;
-    float ledge = smoothstep(0.0, 0.35, fract(bed)) * (1.0 - smoothstep(0.85, 1.0, fract(bed)));
-    float grain = vnoise(vec2(dot(vWorld.xz, vec2(0.7, 0.7)) * 3.0, vWorld.y * 3.0));
-    h = ledge * 0.6 + grain * 0.4;
-    float weather = vnoise(vWorld.xz * 0.45 + vWorld.y * 0.3);
-    alb = mix(vec3(0.15, 0.155, 0.16), vec3(0.27, 0.27, 0.26), weather) * (0.85 + 0.25 * grain);
-    alb *= mix(0.55, 1.0, ledge);
-    float lichen = smoothstep(0.62, 0.8, vnoise(vWorld.xz * 2.6 + vWorld.y * 2.2));
-    alb = mix(alb, vec3(0.36, 0.38, 0.32), lichen * 0.5);
-    float moss = smoothstep(0.4, 0.75, vnoise(vWorld.xz * 0.9 + vWorld.y * 0.6)) * smoothstep(0.3, 0.85, n.y);
-    alb = mix(alb, vec3(0.07, 0.1, 0.045), moss);
-    n = bump(n, h, 0.08);
+    // Gritstone: dark and cool, blotched with pale lichen, streaked where the rain runs down it, mossed on top.
+    float grain = vnoise(vLocal.xz * 5.0 + vLocal.y * 4.0) * 0.5 + vnoise(vec2(dot(vLocal.xz, vec2(0.7, -0.7)), vLocal.y) * 11.0) * 0.5;
+    float pits = smoothstep(0.62, 0.8, vnoise(vec2(dot(vLocal.xz, vec2(0.7, 0.7)), vLocal.y) * 4.0));
+    h = grain * 0.5 - pits * 0.6;
+    vec2 face = vec2(dot(vLocal.xz, vec2(0.7, -0.7)) + vLocal.x * 0.3, vLocal.y);
+    float weather = fbm(face * 0.7 + vLocal.z * 0.3);
+    alb = mix(vec3(0.085, 0.09, 0.095), vec3(0.15, 0.15, 0.145), weather) * (0.85 + 0.3 * grain);
+    float streak = vnoise(vec2(dot(vLocal.xz, vec2(0.7, -0.7)) * 3.5, vLocal.y * 0.35));
+    alb *= mix(1.0, 0.6, smoothstep(0.55, 0.8, streak) * (1.0 - smoothstep(0.2, 0.6, n.y)));
+    float lichen = smoothstep(0.55, 0.75, fbm(face * 1.3 + 4.0) * 0.8 + grain * 0.2);
+    alb = mix(alb, vec3(0.26, 0.28, 0.24), lichen * 0.55);
+    float moss = smoothstep(0.35, 0.7, fbm(face * 1.1 + vLocal.z * 0.8) + n.y * 0.35) * smoothstep(0.35, 0.85, n.y);
+    alb = mix(alb, vec3(0.05, 0.075, 0.03), moss);
+    n = bump(n, h, 0.05);
   }
   vec3 col = alb * hemiLight(n) * 0.75;
   // The sliver of moon: the crag catches it, so the stump is first seen as a shape against it.
   float moon = max(0.0, dot(n, uSunDir)) * 0.6 + 0.4 * max(0.0, dot(n, V));
   col += alb * uSunColor * moon * (vKind > 0.5 ? 1.5 : 0.45) * uNight;
-  vec3 warm = (alb + vec3(0.04, 0.025, 0.012)) * emberLight(vWorld, n);
+  vec3 warm = (alb + vec3(0.012, 0.008, 0.004)) * emberLight(vWorld, n);
   col += shapeLit(vWorld + n * 0.04, warm);
   gl_FragColor = vec4(max(applyFog(col, vWorld), 0.0), 1.0);
 }`;
@@ -286,13 +322,19 @@ export class WoodShape {
     shapePoint(0.3, 0.95, 0.38, this.touch);
 
     const parts: THREE.BufferGeometry[] = [];
+    // The trunk faces her: its front (where the rim stands highest) is the shape's +z.
+    const yaw = Math.atan2(SHAPE_FACING.x, SHAPE_FACING.z);
+    const stem = trunk(new THREE.Vector3(0, -0.4, 0), new THREE.Vector3(0, 1.5, 0), 0.5, 0.34);
+    stem.rotateY(yaw);
+    stem.translate(WOOD_SHAPE.x, base, WOOD_SHAPE.z);
+    parts.push(strip(stem, 0, new THREE.Vector3(0, 1, 0)));
     caps.forEach((c, i) => {
       const axis = c.b.clone().sub(c.a).normalize();
+      if (i < 2) return;
       parts.push(strip(tube(c.a, c.b, c.ra, c.rb, i * 1.7), 0, axis));
-      if (i !== 2 && i !== 3) parts.push(strip(knuckle(c.b, c.rb * 1.04), 0, axis));
+      // Joints are rounded over; broken ends are left as they snapped.
+      if (caps.some((d) => d !== c && d.a.distanceTo(c.b) < 0.02)) parts.push(strip(knuckle(c.b, c.rb * 1.04), 0, axis));
     });
-    // The ragged broken top inside the shards, which is what the owl sits on.
-    parts.push(strip(knuckle(shapePoint(0, 1.42, 0.04), 0.31), 0, new THREE.Vector3(0, 1, 0)));
     this.crag(parts);
     const geo = mergeGeometries(parts);
     for (const p of parts) p.dispose();
@@ -312,18 +354,27 @@ export class WoodShape {
    */
   private crag(parts: THREE.BufferGeometry[]): void {
     const up = new THREE.Vector3(0, 1, 0);
-    parts.push(strip(this.block([0.3, 3.4, -3.5], [9.4, 8.6, 2.6], -0.12, 0.07, 1, 0.6), 1, up));
-    parts.push(strip(this.block([-5.2, 1.7, -3.0], [3.6, 4.2, 3.0], 0.25, 0.05, 2, 0.5), 1, up));
-    parts.push(strip(this.block([5.6, 2.3, -3.6], [3.2, 5.6, 2.8], -0.35, 0.04, 3, 0.5), 1, up));
-    parts.push(strip(this.block([0.8, 7.9, -4.4], [6.5, 2.0, 2.6], 0.1, -0.05, 4, 0.7), 1, up));
-    parts.push(strip(this.block([-2.7, 0.25, -1.75], [1.5, 1.0, 1.2], 0.6, 0.1, 5, 0.35), 1, up));
-    parts.push(strip(this.block([3.0, 0.15, -1.9], [1.1, 0.75, 1.0], -0.4, 0.15, 6, 0.3), 1, up));
-    parts.push(strip(this.block([-4.4, 0.1, -0.9], [0.9, 0.55, 0.8], 1.1, 0.2, 7, 0.25), 1, up));
+    // [x, y, z] centre, [w, h, d], yaw, lean back, edge rounding: jointed blocks in three courses, set back as they rise.
+    const blocks: [number[], number[], number, number, number][] = [
+      [[-3.2, 1.45, -3.1], [3.1, 3.5, 2.4], 0.06, 0.02, 0.16],
+      [[0.25, 1.35, -3.3], [3.7, 3.3, 2.4], -0.03, 0.03, 0.14],
+      [[3.75, 1.6, -3.15], [3.2, 3.8, 2.4], -0.1, 0.01, 0.18],
+      [[-1.95, 4.65, -3.55], [4.5, 2.95, 2.3], 0.04, 0.04, 0.2],
+      [[2.65, 4.85, -3.65], [4.4, 3.3, 2.3], -0.07, 0.03, 0.18],
+      [[-0.9, 7.25, -4.1], [3.8, 2.3, 2.2], 0.08, 0.06, 0.3],
+      [[2.75, 7.45, -4.2], [3.2, 2.6, 2.1], -0.05, 0.05, 0.32],
+      [[-6.3, 1.4, -2.4], [3.0, 3.4, 2.6], 0.42, 0.06, 0.3],
+      [[6.8, 2.1, -2.9], [2.8, 4.6, 2.5], -0.5, 0.05, 0.3],
+      [[-2.6, 0.2, -1.5], [1.4, 0.9, 1.1], 0.7, 0.05, 0.25],
+      [[2.9, 0.12, -1.65], [1.0, 0.7, 0.9], -0.45, 0.1, 0.22],
+      [[-4.5, 0.05, -0.6], [0.9, 0.55, 0.8], 1.1, 0.15, 0.2],
+    ];
+    blocks.forEach(([at, size, yaw, lean, round], i) => parts.push(strip(this.block(at, size, yaw, lean, i + 1, round), 1, up)));
   }
 
   /** A rounded block of stone, `at` and `size` in the shape's frame, turned by `yaw` and leaning back by `lean`. */
   private block(at: number[], size: number[], yaw: number, lean: number, seed: number, round: number): THREE.BufferGeometry {
-    const geo = new THREE.BoxGeometry(1, 1, 1, Math.ceil(size[0] * 3), Math.ceil(size[1] * 3), Math.ceil(size[2] * 2));
+    const geo = new THREE.BoxGeometry(1, 1, 1, Math.ceil(size[0] * 4), Math.ceil(size[1] * 4), Math.ceil(size[2] * 3));
     const pos = geo.getAttribute('position');
     const scale = new THREE.Vector3(size[0], size[1], size[2]);
     const v = new THREE.Vector3(), q = new THREE.Vector3(), out = new THREE.Vector3();
@@ -337,11 +388,10 @@ export class WoodShape {
       const len = out.length();
       if (len > 1e-5) { out.divideScalar(len); v.copy(q).addScaledVector(out, r); } else out.set(0, 0, 1);
       const wx = v.x + seed * 7.1, wy = v.y + seed * 3.3, wz = v.z;
-      const lump = 0.16 * Math.sin(wx * 0.9 + wy * 0.5) * Math.sin(wz * 0.8 + wy * 0.7 + seed)
-        + 0.07 * Math.sin(wx * 2.3 - wy * 1.9 + wz * 1.7) + 0.03 * Math.sin(wx * 5.1 + wy * 4.3 - wz * 3.9);
-      // Bedding planes step the face in and out a little, so it reads as layered rock rather than a lump.
-      const bed = 0.06 * Math.sign(Math.sin(wy * 2.4 + Math.sin(wx * 0.6) * 0.8));
-      v.addScaledVector(out, lump + bed * (1 - Math.abs(out.y)));
+      // Faces stay nearly flat, broken by a few broad facets and smaller chips, as split stone is.
+      const facet = 0.07 * Math.sin(wx * 0.7 + wy * 0.4 + seed) * Math.sin(wz * 0.9 - wy * 0.6)
+        + 0.035 * Math.abs(Math.sin(wx * 1.9 - wy * 1.3 + wz * 1.1 + seed)) + 0.015 * Math.sin(wx * 4.7 + wy * 3.9 - wz * 4.1);
+      v.addScaledVector(out, facet);
       v.z -= lean * (v.y + half.y);
       pos.setXYZ(i, v.x, v.y, v.z);
     }

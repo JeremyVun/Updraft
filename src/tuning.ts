@@ -935,10 +935,10 @@ export const tuning = {
      * breath out, the hand on the bark, how far past it she walks; and the camera behind her (back, to her left, up).
      */
     shape: {
-      stopShort: 5.2, approachPace: 0.7, flinchStep: 0.5, flinchSeconds: 0.9, shrinkStep: 0.45, shrinkSeconds: 1.1,
+      stopShort: 4.4, approachPace: 0.7, flinchStep: 0.5, flinchSeconds: 0.9, shrinkStep: 0.45, shrinkSeconds: 1.1,
       revealSeconds: 1.2, lightShift: 1.4, sideInviteAfter: 4, eyeshineDark: 0.55, eyeshineFront: 0.9,
       glanceEvery: 5, glanceFor: 1.3, owlLeaveAfter: 6.4, exhaleSeconds: 1.3, touchSeconds: 1.6, walkOn: 9,
-      cameraBack: 8.5, cameraSide: -4.6, cameraUp: 3.4, cameraPace: 0.8,
+      cameraBack: 6.2, cameraSide: -3.6, cameraUp: 2.8, cameraPace: 0.8,
     },
     /** Seconds a coal burns from a full catch if nobody fans it again. */
     burnFor: 46,

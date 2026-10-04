@@ -25,8 +25,10 @@ const DOWN = 5;
 const NECK = new THREE.Vector3(0, 0.27, 0);
 const CENTRE = new THREE.Vector3(0, 0.18, 0);
 const SHOULDER = new THREE.Vector3(0.1, 0.24, -0.01);
-const EYE_AT = new THREE.Vector3(0.047, 0.336, 0.104);
-const EYE_SIZE = new THREE.Vector3(0.033, 0.033, 0.02);
+const EYE_AT = new THREE.Vector3(0.05, 0.338, 0.128);
+const EYE_SIZE = new THREE.Vector3(0.039, 0.039, 0.022);
+/** Larger than life, as the game's creatures are, so it reads from where the camera stands. */
+const SCALE = 1.3;
 
 const VERT = /* glsl */ `
 ${ATMO_GLSL}
@@ -88,7 +90,7 @@ void main() {
   p = rotX(p, uOwlWing.z);
   n = rotX(n, uOwlWing.z);
   p += CENTRE;
-  vec3 world = rotY(p, uOwl.w) + uOwl.xyz;
+  vec3 world = rotY(p * ${SCALE.toFixed(2)}, uOwl.w) + uOwl.xyz;
   vWorld = world;
   vNormal = rotY(n, uOwl.w);
   vMat = aMat;
@@ -121,15 +123,17 @@ void main() {
   float t = vMat.y;
   float speck = vnoise(vLocal.xy * vec2(70.0, 52.0) + vLocal.z * 30.0);
   float streak = vnoise(vec2(vLocal.x * 48.0, vLocal.y * 16.0));
-  vec3 back = mix(vec3(0.3, 0.2, 0.12), vec3(0.42, 0.3, 0.18), speck);
+  vec3 back = mix(vec3(0.24, 0.15, 0.09), vec3(0.36, 0.24, 0.14), speck);
   // Pale spots across the back and the crown, the way a little owl is freckled.
-  back = mix(back, vec3(0.82, 0.74, 0.58), smoothstep(0.78, 0.86, speck) * 0.85);
-  vec3 breast = mix(vec3(0.86, 0.79, 0.64), vec3(0.5, 0.36, 0.22), smoothstep(0.6, 0.8, streak) * 0.7);
+  back = mix(back, vec3(0.7, 0.6, 0.44), smoothstep(0.8, 0.88, speck) * 0.8);
+  vec3 breast = mix(vec3(0.62, 0.52, 0.37), vec3(0.32, 0.21, 0.12), smoothstep(0.55, 0.75, streak) * 0.8);
   vec3 alb = mix(back, breast, t);
   float fuzz = 1.0;
   float glow = 0.0;
   if (mat == ${DISC}) {
-    alb = mix(vec3(0.9, 0.85, 0.72), vec3(0.42, 0.3, 0.2), smoothstep(0.55, 0.95, t));
+    // A pale ring round each eye with a soft dark rim, and white brows meeting over the beak.
+    alb = mix(vec3(0.74, 0.66, 0.5), vec3(0.3, 0.2, 0.12), smoothstep(0.7, 0.98, t));
+    alb = mix(alb, vec3(0.86, 0.82, 0.72), smoothstep(0.25, 0.0, abs(vLocal.y - 0.37 - abs(vLocal.x) * 0.25) * 12.0) * step(0.5, t) * 0.0 + smoothstep(0.5, 0.75, t) * smoothstep(0.0, 0.3, vLocal.y - 0.335) * 0.6);
   } else if (mat == ${HORN}) {
     alb = vec3(0.72, 0.66, 0.42); fuzz = 0.15;
   } else if (mat == ${WING}) {
@@ -153,7 +157,7 @@ void main() {
   col += moon * edge * fuzz * 0.35 * (0.3 + 0.7 * alb);
   vec3 warm = emberLight(vWorld, N);
   float shade = shapeShadowCaps(vWorld + N * 0.03, ${SHAPE_STUMP_CAPS});
-  col += (alb + 0.04) * warm * shade;
+  col += (alb + 0.012) * warm * shade;
   col += warm * shade * edge * fuzz * 0.6 * (0.3 + 0.7 * alb);
   if (mat == ${EYE}) {
     col += vec3(1.0, 0.95, 0.85) * catchlight(N, vWorld) * (0.25 + 0.6 * length(warm * shade)) * glow;
@@ -192,7 +196,7 @@ void main() {
 
 function owlGeometry(): THREE.BufferGeometry {
   const disc: BlobSpec = {
-    part: FACE, mat: DISC, at: [-0.046, 0.33, 0.082], size: [0.062, 0.07, 0.03], rot: [0, -0.32, 0], detail: 3,
+    part: FACE, mat: DISC, at: [-0.05, 0.332, 0.108], size: [0.066, 0.072, 0.03], rot: [0, -0.3, 0], detail: 3,
     blend: (u) => Math.hypot(u.x, u.y),
   };
   const eye: BlobSpec = { part: EYE_L, mat: EYE, at: [-EYE_AT.x, EYE_AT.y, EYE_AT.z], size: [EYE_SIZE.x, EYE_SIZE.y, EYE_SIZE.z], detail: 3 };
@@ -208,19 +212,19 @@ function owlGeometry(): THREE.BufferGeometry {
   const foot: BlobSpec = { part: FEET, mat: DOWN, at: [-0.04, 0.012, 0.05], size: [0.028, 0.016, 0.034], detail: 1 };
   const parts: BlobSpec[] = [
     {
-      part: BODY, mat: PLUMAGE, at: [0, 0.165, 0], size: [0.135, 0.16, 0.125], detail: 3,
+      part: BODY, mat: PLUMAGE, at: [0, 0.16, 0], size: [0.13, 0.15, 0.12], detail: 3,
       shape: (u) => { const k = 1 + 0.12 * Math.max(0, -u.y); u.x *= k; u.z *= k; },
       blend: (u) => THREE.MathUtils.smoothstep(u.z * 0.9 - u.y * 0.3, 0.05, 0.55),
     },
     {
-      part: HEAD, mat: PLUMAGE, at: [0, 0.33, 0.01], size: [0.128, 0.112, 0.118], detail: 3,
+      part: HEAD, mat: PLUMAGE, at: [0, 0.335, 0.01], size: [0.138, 0.118, 0.12], detail: 3,
       shape: (u) => { u.y *= 1 - 0.12 * Math.max(0, u.y) * Math.abs(u.x); },
       blend: () => 0,
     },
     disc, mirrored(disc, FACE),
     eye, mirrored(eye, EYE_R),
     {
-      part: BEAK, mat: HORN, at: [0, 0.31, 0.112], size: [0.015, 0.026, 0.02], rot: [0.5, 0, 0], detail: 1,
+      part: BEAK, mat: HORN, at: [0, 0.312, 0.138], size: [0.014, 0.024, 0.018], rot: [0.5, 0, 0], detail: 1,
       shape: (u) => { const k = 1 - 0.6 * Math.max(-u.y, 0); u.x *= k; u.z *= k; },
     },
     wing, mirrored(wing, WING_R),
@@ -377,7 +381,7 @@ export class Owl {
     }
     out.sub(CENTRE);
     rotX(out, this.pitch);
-    out.add(CENTRE);
+    out.add(CENTRE).multiplyScalar(SCALE);
     rotY(out, this.yaw);
     return out.add(this.position);
   }
@@ -426,7 +430,7 @@ export class OwlBody {
     geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     geo.setAttribute('aSide', new THREE.Float32BufferAttribute(side, 1));
     geo.setIndex(index);
-    this.glowUniforms = { uEyeL: { value: new THREE.Vector3() }, uEyeR: { value: new THREE.Vector3() }, uGlow: { value: 0 }, uGlowSize: { value: 0.32 } };
+    this.glowUniforms = { uEyeL: { value: new THREE.Vector3() }, uEyeR: { value: new THREE.Vector3() }, uGlow: { value: 0 }, uGlowSize: { value: 0.13 } };
     this.glow = new THREE.Mesh(geo, new THREE.ShaderMaterial({
       uniforms: this.glowUniforms, vertexShader: GLOW_VERT, fragmentShader: GLOW_FRAG,
       transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
@@ -459,7 +463,7 @@ export class OwlBody {
     this.glowUniforms.uGlow.value = owl.eyeshine * owl.presence * (1 - owl.blink);
     owl.toWorld(this.local.set(0, 0.16, 0), false, this.body);
     owl.toWorld(this.local.set(0, 0.33, 0.01), true, this.headAt);
-    setOwlShadow(owl.presence > 0.5 ? this.body : null, owl.presence > 0.5 ? this.headAt : null, 0.13, 0.115);
-    setShadowEyes(this.left, this.right, EYE_SIZE.x, owl.eyeshine * owl.presence * (1 - owl.blink));
+    setOwlShadow(owl.presence > 0.5 ? this.body : null, owl.presence > 0.5 ? this.headAt : null, 0.13 * SCALE, 0.115 * SCALE);
+    setShadowEyes(this.left, this.right, EYE_SIZE.x * SCALE, owl.eyeshine * owl.presence * (1 - owl.blink));
   }
 }
