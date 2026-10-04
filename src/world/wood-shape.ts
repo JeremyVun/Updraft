@@ -22,7 +22,7 @@ export function shapePoint(x: number, y: number, z: number, out = new THREE.Vect
 export const SHAPE_FRONT_COAL = new THREE.Vector2();
 export const SHAPE_SIDE_COAL = new THREE.Vector2();
 {
-  const front = shapePoint(-0.5, 0, 2.0);
+  const front = shapePoint(0.35, 0, 2.0);
   const side = shapePoint(2.9, 0, 1.45);
   SHAPE_FRONT_COAL.set(front.x, front.z);
   SHAPE_SIDE_COAL.set(side.x, side.z);
@@ -359,8 +359,8 @@ export class WoodShape {
       [[-3.3, 1.3, -3.0], [3.3, 3.4, 2.5], 0.1, 0.02, 0.35],
       [[0.2, 0.9, -3.3], [3.9, 2.6, 2.5], -0.04, 0.04, 0.3],
       [[3.9, 1.7, -3.1], [3.1, 4.0, 2.4], -0.16, 0.0, 0.4],
-      [[-1.2, 3.85, -3.6], [5.7, 3.2, 2.4], 0.06, 0.05, 0.45],
-      [[3.75, 4.9, -3.75], [3.5, 3.6, 2.3], -0.1, 0.03, 0.4],
+      [[-1.4, 3.85, -3.6], [5.6, 3.2, 2.4], 0.06, 0.05, 0.45],
+      [[3.5, 4.9, -3.75], [3.8, 3.6, 2.3], -0.1, 0.03, 0.4],
       [[-0.4, 7.1, -4.2], [4.6, 2.6, 2.2], 0.12, 0.07, 0.7],
       [[3.4, 7.6, -4.3], [2.6, 2.4, 2.1], -0.2, 0.05, 0.7],
       [[-6.4, 1.5, -2.5], [3.2, 3.6, 2.6], 0.45, 0.07, 0.6],

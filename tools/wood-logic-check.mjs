@@ -102,7 +102,8 @@ const { Cygnet } = await import('../src/creatures/cygnet.ts');
 const { Carry } = await import('../src/companion/carry.ts');
 const { WoodChapter } = await import('../src/story/wood.ts');
 const { WOOD_APPROACH_LIGHT, WOOD_LANDING, WOOD_PATH, WOOD_BERTH } = await import('../src/world/wood.ts');
-const { WOOD_SHAPE, SHAPE_RIGHT, SHAPE_FACING } = await import('../src/world/wood-shape.ts');
+const { WOOD_SHAPE } = await import('../src/world/wood-shape.ts');
+const { woodOwl } = await import('../src/creatures/owl.ts');
 const WAY = [WOOD_LANDING, ...WOOD_PATH, new THREE.Vector2(WOOD_BERTH.x, WOOD_BERTH.z)];
 /** Trunks stand at least 5 units from this line (`CORRIDOR` in world/wood.ts). */
 const offPath = (x, z) => Math.min(...WAY.slice(1).map((b, i) => {
@@ -135,10 +136,13 @@ for (const portrait of [false, true]) {
   rig.resize(portrait ? 390 : 1440, portrait ? 844 : 900);
   child.place(-26, -1688, Math.PI); cygnet.mount = child; cygnet.rideIn('satchel');
   const plane = new Glider(planeWind, []);
-  const fireflies = { lantern: { at: new THREE.Vector3(), power: 0 } };
-  const c = new WoodChapter({ child, cygnet, boat, embers, carry, plane, fireflies, wind: calm, input: { gust: 0, charge: 0 } });
+  // Desktop lights the obvious coal first; portrait goes straight to the one at the side. Either order shows the owl.
+  const input = { gust: 0, charge: 0, ndc: null };
+  const c = new WoodChapter({ child, cygnet, boat, embers, carry, plane, wind: calm, input });
   c.update(0, 0); rig.cut(c.shot);
   const resumed = new Set();
+  const order = portrait ? 'side' : 'front';
+  let frontLitFirst = null, sawSideInvite = false, sawFrontInvite = false, hoots = 0, owlLeft = false, revealedAt = -1;
   let last = '', complete = false, worstWaitFrame = 0, worst = null, waited = 0, previousTarget = null;
   let birdBefore = null, worstBirdStep = 0, wetPaper = null, worstEscapeFrame = 0;
   const seen = new Set();
@@ -153,17 +157,39 @@ for (const portrait of [false, true]) {
     const target = c.updraftTarget ?? c.windInvitation;
     waited = target === previousTarget ? waited + dt : 0; previousTarget = target;
     assert(!c.updraftTarget || !c.windInvitation, 'a coal never asks for a sweep');
-    for (const coal of embers.coals) coal.breath = coal.p === target && c.t > 6 ? 1 : 0;
+    // At the stump the player stalls long enough to be shown the updraft before circling.
+    const stalled = c.beat !== 'loom' || (c.shapeStopped >= 0 && time - (c.frontCoal.lit ? Math.max(c.frontLitAt, c.shapeStopped) : c.shapeStopped)
+      > (c.frontCoal.lit ? tuning.wood.shape.sideInviteAfter : tuning.wood.inviteAfter) + 1.5);
+    for (const coal of embers.coals) coal.breath = coal.p === target && c.t > 6 && stalled ? 1 : 0;
     c.brushDry(c.t > 6 && c.beat === 'snag' ? 1 : 0);
-    // The stump at the bend: dark, then light from where she stands (still a monster), then from beside it.
+    // The stump at the bend: the player's pointer goes to one waiting coal or the other, as a player's would.
+    if (c.beat === 'loom' || c.beat === 'brave') {
+      const want = order === 'side' && !c.sideCoal.lit ? c.sideCoal : c.frontCoal.lit ? c.sideCoal : c.frontCoal;
+      const p = want.p.clone().project(rig.camera);
+      input.ndc = new THREE.Vector2(p.x, p.y);
+    } else input.ndc = null;
     if (c.beat === 'loom') {
-      const side = c.t > 9, lamp = fireflies.lantern;
-      lamp.power = c.t > 4 ? 1 : 0;
-      lamp.at.copy(WOOD_SHAPE).addScaledVector(side ? SHAPE_RIGHT : SHAPE_FACING, side ? 2.8 : 3.5);
-      lamp.at.y += 1.3;
-      if (!side) assert.equal(c.shapeReveal, 0, 'darkness or light from her side never shows the stump for what it is');
-      if (c.shapeStopped >= 0) assert(Math.hypot(child.position.x - WOOD_SHAPE.x, child.position.z - WOOD_SHAPE.z) > 4.5, 'she will not go nearer it until it is shown');
+      if (!c.sideCoal.lit) assert.equal(c.shapeReveal, 0, 'darkness and the front coal never show the stump for what it is');
+      if (!c.sideCoal.lit) assert.equal(woodOwl.phase, 'perched', 'the owl keeps still until the side light shows it');
+      if (c.frontCoal.lit && !c.sideCoal.lit) assert(c.lightShare < 0.5, 'with only the front coal lit, the light stays in front');
+      if (c.shapeStopped >= 0) assert(Math.hypot(child.position.x - WOOD_SHAPE.x, child.position.z - WOOD_SHAPE.z) > 3.6, 'she will not go nearer it until it is shown');
+      if (frontLitFirst === null && (c.frontCoal.lit || c.sideCoal.lit)) frontLitFirst = c.frontCoal.lit;
+      const ask = c.coax;
+      if (ask && Math.hypot(ask.at.x - c.frontCoal.p.x, ask.at.z - c.frontCoal.p.z) < 1e-6) {
+        sawFrontInvite = true;
+        assert(!c.frontCoal.lit, 'the front coal stops asking once it burns');
+      }
+      if (ask && Math.hypot(ask.at.x - c.sideCoal.p.x, ask.at.z - c.sideCoal.p.z) < 1e-6) {
+        sawSideInvite = true;
+        assert(c.frontCoal.lit, 'the side coal asks only once the front coal has made it worse');
+      }
     }
+    if (c.beat === 'brave' && revealedAt < 0) {
+      revealedAt = time;
+      assert(c.sideCoal.lit, 'only the side coal reveals the owl');
+      assert(c.lightShare > 0.5, 'once the side coal burns, the one light is the side coal\'s');
+    }
+    if (woodOwl.phase === 'leaving' || woodOwl.phase === 'gone') owlLeft = true;
     const litBefore = c.beat === 'walk' ? embers.coals.filter(k=>k.live&&k.lit).sort((a,b)=>b.laid-a.laid)[0] : null;
     const lightPlace = litBefore?.p.clone();
     c.update(dt, time); boat.update(dt, time); child.update(dt); plane.update(dt, time); carry.update(dt);
@@ -177,7 +203,9 @@ for (const portrait of [false, true]) {
     previousRotation = rig.camera.quaternion.clone();
     if(previousEye&&c.beat==='walk'&&c.leg===0) firstLightCameraStep=Math.max(firstLightCameraStep,rig.camera.position.distanceTo(previousEye));
     previousEye=rig.camera.position.clone();
-    assert(!takeCues().includes('restored'), 'the reunion must not play the level-complete cue');
+    const cues = takeCues();
+    assert(!cues.includes('restored'), 'the reunion must not play the level-complete cue');
+    hoots += cues.filter(k => k === 'hoot').length;
     scrambleCount += cygnet.heard.filter(h => h.kind === 'scramble').length; cygnet.heard.length = 0;
     if (c.hearth && ['walk', 'compose', 'fright'].includes(c.beat) && !c.goingToBird) assert.equal(c.hearth.reveal, 0, 'shelter ember leaked before the angle change: '+JSON.stringify({time,beat:c.beat,child:child.position.toArray(),hearth:c.hearth.p.toArray(),coals:embers.coals.filter(k=>k.live).map(k=>[...k.p.toArray(),k.reveal])}));
     if (c.coaxing && !c.gathering) {
@@ -226,7 +254,7 @@ for (const portrait of [false, true]) {
     }
     if (['out', 'toBoat'].includes(c.beat)) exitOffPath = Math.max(exitOffPath, offPath(child.position.x, child.position.z));
     if (c.beat !== last) { console.log(`${portrait ? 'portrait' : 'desktop'} route: ${c.beat} at ${time.toFixed(1)}s`); last = c.beat; }
-    if (target && target === c.updraftTarget) {
+    if (target && target === c.updraftTarget && c.beat !== 'loom' && c.beat !== 'brave') {
       const coax = c.coax;
       if (waited > tuning.wood.inviteAfter + 0.1 && c.t <= 6) {
         assert(coax && Math.hypot(coax.at.x - target.x, coax.at.z - target.z) < 1e-6, 'the waiting coal shows the updraft over it');
@@ -250,6 +278,11 @@ for (const portrait of [false, true]) {
     if (c.done) { complete = true; break; }
   }
   assert(complete, `route must complete: ${c.beat}, leg ${c.leg}, child ${child.position.toArray()}`);
+  assert(revealedAt > 0 && owlLeft && hoots === 1, `the owl is shown, hoots once and leaves: ${revealedAt}, ${owlLeft}, ${hoots}`);
+  assert.equal(frontLitFirst, order === 'front', `the ${order} coal was lit first`);
+  assert(sawFrontInvite, 'the obvious coal shows its updraft first');
+  if (order === 'front') assert(sawSideInvite, 'once the front coal has made it worse, the side coal shows its updraft');
+  console.log(`${portrait ? 'portrait' : 'desktop'}: the ${order} coal first; the owl shown at ${revealedAt.toFixed(1)}s, one hoot, and away`);
   assert(exitOffPath < 3.5, `the walk out must stay clear of the trunks: ${exitOffPath.toFixed(2)} off the path`);
   assert(worstWaitFrame < 0.95, `waiting target must remain in frame: ${JSON.stringify(worst)}`);
   assert.equal(scrambleCount, 1, 'one audible feather scramble per escape');
@@ -308,8 +341,7 @@ for (const [w, h] of [[1600, 900], [390, 844]]) for (const fps of [30, 60, 120])
   rig.resize(w, h);
   child.place(-26, -1688, Math.PI); cygnet.mount = child; cygnet.rideIn('satchel');
   const plane = new Glider(planeWind, []);
-  const fireflies = { lantern: { at: new THREE.Vector3(), power: 0 } };
-  const c = new WoodChapter({ child, cygnet, boat, embers, carry, plane, fireflies, wind: calm, input: { gust: 0, charge: 0 } });
+  const c = new WoodChapter({ child, cygnet, boat, embers, carry, plane, wind: calm, input: { gust: 0, charge: 0 } });
   c.update(0, 0); rig.cut(c.shot);
   const meshes = [];
   for (const o of child.objects) if (o !== child.shadow) o.traverse(m => { if (m.isMesh) meshes.push(m); });
@@ -319,10 +351,6 @@ for (const [w, h] of [[1600, 900], [390, 844]]) for (const fps of [30, 60, 120])
     const time = frame * dt, waiting = c.updraftTarget;
     still = waiting && !child.moving ? still + dt : 0;
     for (const coal of embers.coals) coal.breath = coal.p === waiting && (still > 8 || c.beat === 'lost' && c.t > 6) ? 1 : 0;
-    if (c.beat === 'loom') {
-      fireflies.lantern.power = c.t > 6 ? 1 : 0;
-      fireflies.lantern.at.copy(WOOD_SHAPE).addScaledVector(SHAPE_RIGHT, 2.8).y += 1.3;
-    }
     c.update(dt, time); boat.update(dt, time); child.update(dt); plane.update(dt, time); carry.update(dt);
     cygnet.update(dt, time, child.position, calm.sample(0, 0, {})); carry.after();
     embers.update(dt, child.position, c.embers);

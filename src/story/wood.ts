@@ -793,7 +793,7 @@ export class WoodChapter implements Chapter {
 
   /** Where the walk is pointing: toward the light when there is one out ahead, and up the path when there is not. */
   private heading(dt: number): void {
-    if (['compose', 'fright', 'bolt', 'lost', 'found', 'loom', 'brave'].includes(this.beat)) return;
+    if (['compose', 'fright', 'bolt', 'lost', 'found', 'loom'].includes(this.beat) || (this.beat === 'brave' && this.braveStep < 4)) return;
     const c = this.cast.child.position;
     const t = this.target();
     const next = this.ahead?.live && !this.ahead.lit ? this.ahead.p : null;
@@ -953,7 +953,7 @@ export class WoodChapter implements Chapter {
   private toShape(): void {
     const k = tuning.wood.shape;
     const { child: c, embers } = this.cast;
-    this.shapeTouch.copy(shapePoint(0.32, 0.95, 0.4));
+    this.shapeTouch.copy(shapePoint(-0.3, 0.95, 0.38));
     this.frontCoal = embers.lay(SHAPE_FRONT_COAL.x, SHAPE_FRONT_COAL.y);
     this.sideCoal = embers.lay(SHAPE_SIDE_COAL.x, SHAPE_SIDE_COAL.y);
     this.shapeTarget = this.frontCoal;
@@ -1123,7 +1123,7 @@ export class WoodChapter implements Chapter {
       if (b >= 1) {
         this.braveStep = 2;
         c.stroll = k.approachPace;
-        const stand = shapePoint(0.9, 0, 0.92);
+        const stand = shapePoint(-0.85, 0, 0.9);
         c.walkTo(stand.x, stand.z, false, () => {
           c.stop();
           c.faceToward(this.shapeTouch.x, this.shapeTouch.z, 1);
@@ -1141,8 +1141,8 @@ export class WoodChapter implements Chapter {
       this.shapeDone = true;
       this.braveStep = 4;
       c.lookAt = null;
-      // Round the bend clear of the side coal, then on into the dark to the next coal like any other.
-      const clear = shapePoint(1.7, 0, 2.7);
+      // Back out past the front coal, round the bend clear of the side one, and on into the dark to the next coal.
+      const clear = shapePoint(-0.5, 0, 3.0);
       c.walkTo(clear.x, clear.z, false, () => {
         pathPoint(SHAPE_STOP_ALONG + k.walkOn, 0, this.spot);
         c.walkTo(this.spot.x, this.spot.y, false, () => {
