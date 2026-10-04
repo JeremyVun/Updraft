@@ -361,7 +361,7 @@ export const tuning = {
      * bank at `bathS` has been rocked and poured into the pools, raising them `riseHeight`; the plug wedged in the
      * mouth at `plugS` holds them there until gusts work it loose and its chain hauls it out.
      */
-    barS: 62, barHeight: 0.5, bathS: 59.5, plugS: 97.5, riseHeight: 0.3,
+    barS: 62, barHeight: 0.5, bathS: 59.5, plugS: 95.5, riseHeight: 0.34,
     /** Tip per unit of stroke across the bath, how it springs back and is damped, its furthest tip (radians), and from what tip it pours. */
     bathPush: 0.55, bathSpring: 5, bathDamping: 2.6, bathTipMax: 0.42, pourFrom: 0.1,
     /** Share of the bath poured per second at the furthest tip; the pools are risen once `pourNeeded` of it is in. */
@@ -369,7 +369,7 @@ export const tuning = {
     /** How the risen water carries the grounded fleet over the shoal (m/s) and for how long it runs (s). */
     surgeSpeed: 2.2, surgeFor: 3.5,
     /** The plug's size; looseness per unit of stroke across it (it pulls free at 1); how hard each stroke rocks it; how fast and how high its chain hauls it (m/s, m). */
-    plugScale: 4.4, plugLoosen: 0.16, plugRock: 0.9, plugHaul: 2.4, plugLift: 9,
+    plugScale: 4, plugLoosen: 0.22, plugRock: 0.9, plugHaul: 3.2, plugLift: 22,
     /** How fast the water rushes out of the mouth once the plug is out, carrying the fleet (m/s), and how quickly the rush builds and the risen pools drain (s). */
     rushSpeed: 3.6, rushRise: 1.2, drainFor: 5,
     /**

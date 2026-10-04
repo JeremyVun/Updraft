@@ -25,9 +25,9 @@ void main() {
   float ripple = vnoise(vWorld.xz * 2.3 + uTime * 0.6) * 0.5 + vnoise(vWorld.xz * 4.1 - uTime * 0.9) * 0.5;
   vec3 N = normalize(vec3((ripple - 0.5) * 0.25, 1.0, (vnoise(vWorld.zx * 3.0 + uTime) - 0.5) * 0.25));
   float fres = pow(1.0 - max(dot(N, V), 0.0), 3.0);
-  vec3 body = vec3(0.36, 0.62, 0.64) * (uSkyAmbient * 1.1 + uSunColor * 0.35);
-  vec3 col = mix(body, uSkyAmbient * 1.25 + uSunColor * 0.2, 0.25 + 0.5 * fres);
-  col += uSunColor * pow(max(0.0, dot(N, halfVector(uSunDir, V))), 80.0) * 0.6;
+  vec3 body = vec3(0.26, 0.48, 0.5) * (uSkyAmbient * 1.05 + uSunColor * 0.3);
+  vec3 col = mix(body, uSkyAmbient * 1.1, 0.12 + 0.35 * fres);
+  col += uSunColor * pow(max(0.0, dot(N, halfVector(uSunDir, V))), 80.0) * 0.3;
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;
 /** A falling sheet: streaks run along it with the flow and break up toward its foot. */
@@ -43,9 +43,9 @@ void main() {
   streak = mix(streak, vnoise(vec2(vUv.x * 41.0, vUv.y * 5.0 - uTime * uSpeed * 1.3)), 0.4);
   float body = (1.0 - smoothstep(0.55, 1.0, across)) * smoothstep(0.0, 0.08, vUv.y);
   float foam = smoothstep(0.35, 0.75, streak + vUv.y * 0.35);
-  float alpha = body * uAmount * mix(0.45, 0.9, foam);
-  vec3 water = vec3(0.55, 0.75, 0.76) * (uSkyAmbient * 1.15 + uSunColor * 0.45);
-  vec3 white = vec3(0.93, 0.95, 0.9) * (uSkyAmbient * 0.9 + uSunColor * 0.7);
+  float alpha = body * uAmount * mix(0.4, 0.85, foam);
+  vec3 water = vec3(0.42, 0.64, 0.66) * (uSkyAmbient * 0.95 + uSunColor * 0.3);
+  vec3 white = vec3(0.9, 0.93, 0.88) * (uSkyAmbient * 0.75 + uSunColor * 0.45);
   gl_FragColor = vec4(applyFog(mix(water, white, foam), vWorld), alpha);
 }`;
 /** Foam streaks on the water rushing out of the mouth, and the whirl where the plug was. */
@@ -58,14 +58,14 @@ in vec2 vUv;
 void main() {
   float across = abs(vUv.x - 0.5) * 2.0;
   float s = vUv.y;
-  float streak = vnoise(vec2(vUv.x * 14.0, s * 0.45 - uFlow));
-  streak = streak * 0.65 + vnoise(vec2(vUv.x * 31.0 + 4.0, s * 0.9 - uFlow * 1.4)) * 0.35;
-  float lines = smoothstep(0.56, 0.74, streak);
-  float edge = smoothstep(0.62, 0.95, across) * (0.5 + 0.5 * vnoise(vec2(s * 1.3 - uFlow * 1.2, vUv.x * 5.0)));
-  float ends = smoothstep(0.0, 6.0, s - ${(tuning.littleBoats.plugS - 14).toFixed(1)}) * (1.0 - smoothstep(14.0, 30.0, s - ${tuning.littleBoats.plugS.toFixed(1)}));
-  float alpha = (lines * 0.75 + edge * 0.6) * (1.0 - smoothstep(0.9, 1.0, across)) * ends * uRush;
-  vec3 white = vec3(0.94, 0.96, 0.92) * (uSkyAmbient * 0.95 + uSunColor * 0.7);
-  gl_FragColor = vec4(applyFog(white, vWorld), alpha * 0.85);
+  float streak = vnoise(vec2(vUv.x * 26.0, s * 0.22 - uFlow * 0.5));
+  streak = streak * 0.6 + vnoise(vec2(vUv.x * 57.0 + 4.0, s * 0.5 - uFlow * 0.8)) * 0.4;
+  float lines = smoothstep(0.6, 0.72, streak) * (1.0 - smoothstep(0.78, 0.9, streak));
+  float edge = smoothstep(0.7, 0.95, across) * smoothstep(0.45, 0.7, vnoise(vec2(s * 0.8 - uFlow * 0.6, vUv.x * 9.0)));
+  float ends = smoothstep(0.0, 5.0, s - ${(tuning.littleBoats.plugS - 7).toFixed(1)}) * (1.0 - smoothstep(12.0, 30.0, s - ${tuning.littleBoats.plugS.toFixed(1)}));
+  float alpha = (lines * 0.55 + edge * 0.45) * (1.0 - smoothstep(0.88, 1.0, across)) * ends * uRush;
+  vec3 white = vec3(0.9, 0.94, 0.9) * (uSkyAmbient * 0.8 + uSunColor * 0.45);
+  gl_FragColor = vec4(applyFog(white, vWorld), alpha * 0.7);
 }`;
 const WHIRL_FRAG = /* glsl */ `
 ${ATMO_GLSL}
@@ -79,8 +79,8 @@ void main() {
   float arms = sin(a * 3.0 + log(max(r, 0.02)) * 7.0 + uTime * 7.0) * 0.5 + 0.5;
   float ring = smoothstep(0.08, 0.3, r) * (1.0 - smoothstep(0.65, 1.0, r));
   float alpha = smoothstep(0.55, 0.85, arms) * ring * uWhirl;
-  vec3 white = vec3(0.94, 0.96, 0.92) * (uSkyAmbient * 0.95 + uSunColor * 0.7);
-  gl_FragColor = vec4(applyFog(white, vWorld), alpha * 0.8);
+  vec3 white = vec3(0.9, 0.94, 0.9) * (uSkyAmbient * 0.8 + uSunColor * 0.45);
+  gl_FragColor = vec4(applyFog(white, vWorld), alpha * 0.7);
 }`;
 const SOLID_VERT = /* glsl */ `
 out vec3 vWorld;
@@ -233,7 +233,7 @@ export class LittleBoatsDrain {
   private readonly screenB = new THREE.Vector3();
   private readonly course = { x: 0, z: 0, yaw: 0 };
   private readonly pourSegments = 18;
-  private readonly ribbonFrom = tuning.littleBoats.plugS - 14;
+  private readonly ribbonFrom = tuning.littleBoats.plugS - 7;
   private readonly ribbonTo = tuning.littleBoats.plugS + 30;
   private readonly ribbonSteps = 70;
 
@@ -247,12 +247,12 @@ export class LittleBoatsDrain {
     for (let i = 0; i < 17; i++) {
       const across = -1.08 + (i / 16) * 2.16 + Math.sin(i * 7.3) * 0.04;
       const s = k.barS + Math.sin(i * 2.7) * 0.55;
-      const r = 0.34 + 0.16 * (0.5 + 0.5 * Math.sin(i * 4.1));
+      const r = 0.42 + 0.2 * (0.5 + 0.5 * Math.sin(i * 4.1));
       const g = new THREE.IcosahedronGeometry(r, 1);
       g.scale(1.15, 0.55, 0.95);
       g.rotateY(i * 1.3);
       const x = boatsX(s) + across * boatsWidth(s);
-      g.translate(x, level + 0.12 + 0.07 * Math.sin(i * 3.3) - r * 0.55, L.startZ - s);
+      g.translate(x, level + 0.18 + 0.06 * Math.sin(i * 3.3) - r * 0.55, L.startZ - s);
       stones.push(g);
     }
     const shoal = new THREE.Mesh(mergeGeometries(stones), solid('#8f8a78', 0.08));
@@ -261,7 +261,7 @@ export class LittleBoatsDrain {
 
     // The bath tips on the feet nearest the stream, so its far side lifts and the water goes over the near rim.
     const bath = littleBoatsBath();
-    const bathX = boatsX(k.bathS) - boatsWidth(k.bathS) - 2.5, bathZ = L.startZ - k.bathS;
+    const bathX = boatsX(k.bathS) - boatsWidth(k.bathS) - 1.5, bathZ = L.startZ - k.bathS;
     this.bathRoot.position.set(bathX, heightAt(bathX, bathZ) + 0.8, bathZ);
     this.bathRoot.rotation.set(0.035, -0.22, 0);
     this.bathPivot.position.set(1.2, -0.65, 0);
@@ -286,7 +286,7 @@ export class LittleBoatsDrain {
 
     // The plug stands in the mouth like a cork, its chain running up out of sight into the haze.
     const plugX = boatsX(k.plugS), plugZ = L.startZ - k.plugS;
-    const plugY = boatsLevel(k.plugS) + 0.08;
+    const plugY = boatsLevel(k.plugS) - 0.22;
     this.plugRest.set(plugX, plugY, plugZ);
     const brass = solid('#ae9462', 0.5);
     const rubber = solid('#4a4b3d', 0.12);
@@ -309,7 +309,7 @@ export class LittleBoatsDrain {
     }
     this.hang.add(new THREE.Mesh(mergeGeometries(links), brass));
     this.group.add(this.hang);
-    this.plugAt.set(plugX, plugY + 0.6, plugZ);
+    this.plugAt.set(plugX, plugY + 0.8, plugZ);
 
     const ribbon = new THREE.PlaneGeometry(1, 1, 8, this.ribbonSteps);
     this.rushMaterial = film(RUSH_FRAG, { uRush: { value: 0 }, uFlow: { value: 0 } });
@@ -323,7 +323,7 @@ export class LittleBoatsDrain {
     this.whirlMaterial = film(WHIRL_FRAG, { uWhirl: { value: 0 } });
     this.whirlDisc = new THREE.Mesh(new THREE.PlaneGeometry(1, 1).rotateX(-Math.PI / 2), this.whirlMaterial);
     this.whirlDisc.scale.setScalar(k.plugScale * 1.6);
-    this.whirlDisc.position.set(plugX, plugY + 0.05, plugZ);
+    this.whirlDisc.position.set(plugX, plugY + 0.3, plugZ);
     this.whirlDisc.renderOrder = 4;
     this.whirlDisc.visible = false;
     this.group.add(this.whirlDisc, this.splash.points);
@@ -448,7 +448,7 @@ export class LittleBoatsDrain {
     this.hang.position.set(this.plugRest.x, this.plugRest.y + this.haul + Math.abs(jiggle) * 2, this.plugRest.z);
     this.hang.rotation.set(swing * 0.6, 0, swing);
     this.plug.rotation.set(this.rockX, 0, this.rockZ + jiggle);
-    this.plugAt.set(this.plugRest.x, this.plugRest.y + 0.6 + this.haul, this.plugRest.z);
+    this.plugAt.set(this.plugRest.x, this.plugRest.y + 0.8 + this.haul, this.plugRest.z);
 
     this.whirlDisc.visible = this.whirl > 0.01;
     this.whirlMaterial.uniforms.uWhirl.value = this.whirl;
@@ -489,7 +489,7 @@ export class LittleBoatsDrain {
     for (let r = 0; r <= this.ribbonSteps; r++) {
       const s = this.ribbonFrom + (r / this.ribbonSteps) * (this.ribbonTo - this.ribbonFrom);
       boatsCourse(s, this.course);
-      const width = s <= 107 ? boatsWidth(s) * 0.98 : boatsWidth(107) + (s - 107) * 0.18;
+      const width = s <= 107 ? Math.min(boatsWidth(s) * 0.9, 3.2) : boatsWidth(107) * 0.9 + (s - 107) * 0.16;
       const spread = THREE.MathUtils.smoothstep(s, 109, 133);
       for (let c = 0; c < cols; c++) {
         const offset = (c / (cols - 1) - 0.5) * 2 * width;
