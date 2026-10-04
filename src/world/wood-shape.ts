@@ -86,7 +86,7 @@ const ROCK_OUTLINE: [number, number][] = [
   [2.0, 6.7], [3.0, 6.85], [4.0, 6.98], [4.8, 7.0], [5.4, 6.6], [6.0, 5.95], [6.6, 5.3], [7.3, 4.4],
   [8.1, 3.2], [8.5, 1.8], [8.7, 0.6], [8.75, -1.2],
 ];
-const ROCK_CURVE = closedCurve(ROCK_OUTLINE, 6);
+const ROCK_CURVE = closedCurve(ROCK_OUTLINE, 4);
 /** Its ends along the face. */
 const ROCK_SPAN = [Math.min(...ROCK_CURVE.map((p) => p[0])), Math.max(...ROCK_CURVE.map((p) => p[0]))];
 /**
@@ -783,7 +783,7 @@ function polygonDistance(poly: [number, number][], x: number, y: number): number
 
 /** `polygonDistance` to the boulder's outline, looked up in a grid laid over it and exact beyond. */
 function outlineGrid(): (x: number, y: number) => number {
-  const step = 0.06, x0 = ROCK_SPAN[0] - 1.5, y0 = -2.5;
+  const step = 0.1, x0 = ROCK_SPAN[0] - 1.5, y0 = -2.5;
   const nx = Math.ceil((ROCK_SPAN[1] - ROCK_SPAN[0] + 3) / step) + 1, ny = Math.ceil(11 / step) + 1;
   const d = new Float32Array(nx * ny);
   for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) d[j * nx + i] = polygonDistance(ROCK_CURVE, x0 + i * step, y0 + j * step);
@@ -816,21 +816,21 @@ function sculpt(field: (p: THREE.Vector3) => number, centre: THREE.Vector3, radi
   const at = (t: number) => field(p.copy(centre).addScaledVector(dir, t));
   for (let i = 0; i < pos.count; i++) {
     dir.fromBufferAttribute(pos, i).multiply(radii).normalize();
-    let lo = 0, hi = 0, f = at(0);
-    while (f < 0 && hi < 20) { lo = hi; hi += Math.max(-f, 0.03); f = at(hi); }
-    for (let k = 0; k < 14; k++) { const mid = (lo + hi) / 2; if (at(mid) < 0) lo = mid; else hi = mid; }
+    let lo = 0, hi = p.fromBufferAttribute(pos, i).multiply(radii).length() * 1.6;
+    for (let k = 0; k < 12; k++) { const mid = (lo + hi) / 2; if (at(mid) < 0) lo = mid; else hi = mid; }
     p.copy(centre).addScaledVector(dir, (lo + hi) / 2);
     pos.setXYZ(i, p.x, p.y, p.z);
   }
   // How sharply the stone turns at each point, read off the field a little inside and outside it: + along a ridge,
   // - down in a crease.
+  geo.computeVertexNormals();
+  const normal = geo.getAttribute('normal');
   const edge = new Float32Array(pos.count);
-  const o = new THREE.Vector3(), n = new THREE.Vector3(), e = 0.02, h = 0.35;
-  const f = (x: number, y: number, z: number) => field(p.set(o.x + x, o.y + y, o.z + z));
+  const o = new THREE.Vector3(), n = new THREE.Vector3(), h = 0.35;
   for (let i = 0; i < pos.count; i++) {
     o.fromBufferAttribute(pos, i);
-    n.set(f(e, 0, 0) - f(-e, 0, 0), f(0, e, 0) - f(0, -e, 0), f(0, 0, e) - f(0, 0, -e)).normalize();
-    const ridge = 1 + f(-n.x * h, -n.y * h, -n.z * h) / h, crease = 1 - f(n.x * h, n.y * h, n.z * h) / h;
+    n.fromBufferAttribute(normal, i).multiplyScalar(h);
+    const ridge = 1 + field(p.copy(o).sub(n)) / h, crease = 1 - field(p.copy(o).add(n)) / h;
     edge[i] = THREE.MathUtils.clamp(ridge - crease, -1, 1);
   }
   geo.setAttribute('aEdge', new THREE.Float32BufferAttribute(edge, 1));
@@ -1025,7 +1025,7 @@ export class WoodShape {
       return d - 0.06 * lumpy(p.x * 0.3, p.y * 0.3) - 0.015 * lumpy(p.x * 0.8 + p.z * 0.4 + 9, p.y * 0.8)
         - 0.05 * lumpy(p.z * 0.3 + 4, p.y * 0.25 + p.x * 0.1);
     };
-    const geo = sculpt(field, new THREE.Vector3(3.2, 2.2, -0.7), new THREE.Vector3(5.8, 4.8, 1.7), 64);
+    const geo = sculpt(field, new THREE.Vector3(3.2, 2.2, -0.7), new THREE.Vector3(5.8, 4.8, 1.7), 48);
     const pos = geo.getAttribute('position');
     for (let i = 0; i < pos.count; i++) {
       const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
@@ -1050,7 +1050,7 @@ export class WoodShape {
       d = smax(d, q.y - high * 0.6 + 0.12 * q.x, 0.4);
       return d - 0.07 * lumpy(p.x * 0.6, p.y * 0.6 + p.z * 0.5) - 0.03 * lumpy(p.x * 1.6 + 7, p.z * 1.6 + p.y);
     };
-    return this.place(sculpt(field, centre, new THREE.Vector3(len, high * 0.7, deep), 28), 0);
+    return this.place(sculpt(field, centre, new THREE.Vector3(len, high * 0.7, deep), 22), 0);
   }
 
   /** The litter's height under a point of the face's frame, up from the face's middle on the ground. */
