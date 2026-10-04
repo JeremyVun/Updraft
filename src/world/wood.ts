@@ -762,7 +762,7 @@ export class DarkWood {
     }));
     snagTree.name = 'wood-plane-tree';
     this.shape = new WoodShape();
-    this.objects.push(deadfall, refugeRocks(), snagTree, this.shape.mesh, this.owl.mesh, this.owl.glow);
+    this.objects.push(deadfall, refugeRocks(), snagTree, this.shape.mesh, this.shape.floor, this.owl.mesh, this.owl.glow);
 
     const card = new THREE.PlaneGeometry(1, 1);
     const litterGeo = new THREE.InstancedBufferGeometry();

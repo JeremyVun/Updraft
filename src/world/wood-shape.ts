@@ -333,7 +333,7 @@ const SMALL_LEAN = 0.48;
 /** Raised clear of the litter banked at the stone's foot, so the trunk of it is seen. */
 const SMALL_RISE = 0.3;
 /** The owl a little plumper in its shadow than the limbs round it, so the round of it reads. */
-const OWL_PLUMP = 1.2;
+const OWL_PLUMP = 1.32;
 const OWL_DRIFT = 0.5;
 /**
  * The way the plain shadow is laid on the stone: from the side coal's side of the fork, a little way round from
@@ -369,7 +369,8 @@ float smin(float a, float b, float k) {
 /** One antler, out to the side \`s\`: a beam sweeping out and up, with tines standing up off it like fingers. */
 float antler(vec2 p, float s) {
   p.x *= s;
-  p.x /= 0.9;
+  p.x /= 1.12;
+  p.y = 3.86 + (p.y - 3.86) / 1.08;
   float d = sdCap(p, vec2(0.2, 3.86), vec2(0.75, 4.2), 0.13, 0.11);
   d = min(d, sdCap(p, vec2(0.75, 4.2), vec2(1.35, 4.45), 0.11, 0.09));
   d = min(d, sdCap(p, vec2(1.35, 4.45), vec2(1.95, 4.78), 0.09, 0.065));
@@ -379,7 +380,7 @@ float antler(vec2 p, float s) {
   d = min(d, sdCap(p, vec2(1.5, 4.53), vec2(1.44, 5.36), 0.07, 0.022));
   d = min(d, sdCap(p, vec2(1.9, 4.75), vec2(1.98, 5.45), 0.06, 0.02));
   d = min(d, sdCap(p, vec2(2.08, 4.88), vec2(2.55, 4.95), 0.05, 0.018));
-  return d * 0.9;
+  return d;
 }
 float sdTrap(vec2 p, float r1, float r2, float he) {
   vec2 k1 = vec2(r2, he), k2 = vec2(r2 - r1, 2.0 * he);
@@ -637,9 +638,44 @@ function segment(x: number, y: number, a: readonly number[], b: readonly number[
 }
 
 
+/**
+ * The bare path and the earth round the bend take the coals' light here as the litter does: warm pools round each
+ * coal, and her coal's light running out along the ground to the foot of the rock. Added over the ground, so where
+ * no coal burns it is nothing.
+ */
+const POOL_VERT = /* glsl */ `${ATMO_GLSL}
+out vec3 vWorld;
+void main() {
+  vWorld = position;
+  gl_Position = projectionMatrix * viewMatrix * vec4(position, 1.0);
+}`;
+const POOL_FRAG = /* glsl */ `${ATMO_GLSL}
+${SHAPE_SHADOW_GLSL}
+in vec3 vWorld;
+void main() {
+  // Dirt and the leaves trodden into it, in patches.
+  float leaves = smoothstep(0.4, 0.8, vnoise(vWorld.xz * 2.3) * 0.6 + vnoise(vWorld.xz * 7.1) * 0.4);
+  vec3 alb = mix(vec3(0.02, 0.014, 0.01), vec3(0.1, 0.055, 0.025), leaves);
+  vec3 warm = vec3(0.0);
+  if (uShapeThrow.w > 0.0) {
+    vec3 d = uShapeThrow.xyz - vWorld;
+    // A pool at her coal, and a faint run of its light along the ground to the rock's foot, where it gathers.
+    warm += SHAPE_FIRE * uShapeThrow.w * (2.6 / (1.0 + dot(d, d) * 0.45) + 0.25 / (1.0 + dot(d, d) * 0.02) + shapePoolAt(vWorld) * 0.5);
+  }
+  if (uShapeSide.w > 0.0) {
+    vec3 d = uShapeSide.xyz - vWorld;
+    warm += SHAPE_FIRE * uShapeSide.w * 1.2 / (1.0 + dot(d, d) * 0.3);
+  }
+  warm += emberLight(vWorld, vec3(0.0, 1.0, 0.0)) * 0.25;
+  vec3 col = alb * warm;
+  gl_FragColor = vec4(max(applyFog(col, vWorld) - applyFog(vec3(0.0), vWorld), 0.0), 1.0);
+}`;
+
 /** The stump at the bend and the rock behind it. */
 export class WoodShape {
   readonly mesh: THREE.Mesh;
+  /** The coals' light on the ground round the bend. */
+  readonly floor: THREE.Mesh;
   /** Where the coal before the bend throws its light from. */
   readonly throwFrom = new THREE.Vector3();
 
@@ -708,6 +744,33 @@ export class WoodShape {
     }));
     this.mesh.name = 'wood-shape';
     this.mesh.frustumCulled = false;
+    this.floor = this.pool();
+  }
+
+  /** A sheet draped over the ground from behind her stop to the rock's foot. */
+  private pool(): THREE.Mesh {
+    const geo = new THREE.PlaneGeometry(26, 26, 104, 104);
+    geo.rotateX(-Math.PI / 2);
+    const pos = geo.getAttribute('position');
+    const at = new THREE.Vector3();
+    for (let i = 0; i < pos.count; i++) {
+      shapePoint(1 + pos.getX(i), 0, 3 + pos.getZ(i), at);
+      at.y = heightAt(at.x, at.z) + 0.05;
+      pos.setXYZ(i, at.x, at.y, at.z);
+    }
+    geo.deleteAttribute('uv');
+    geo.deleteAttribute('normal');
+    const mesh = new THREE.Mesh(geo, new THREE.ShaderMaterial({
+      uniforms: { ...atmo.uniforms, ...shapeUniforms },
+      vertexShader: POOL_VERT,
+      fragmentShader: POOL_FRAG,
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+      polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2,
+    }));
+    mesh.name = 'wood-shape-pool';
+    mesh.frustumCulled = false;
+    mesh.renderOrder = 1;
+    return mesh;
   }
 
   /**

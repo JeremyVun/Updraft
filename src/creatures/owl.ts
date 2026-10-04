@@ -131,7 +131,7 @@ void main() {
   vec3 back = mix(vec3(0.24, 0.15, 0.09), vec3(0.36, 0.24, 0.14), speck);
   // Pale spots across the back and the crown, the way a little owl is freckled.
   back = mix(back, vec3(0.7, 0.6, 0.44), smoothstep(0.8, 0.88, speck) * 0.8);
-  vec3 breast = mix(vec3(0.5, 0.4, 0.27), vec3(0.3, 0.19, 0.11), smoothstep(0.55, 0.75, streak) * 0.8);
+  vec3 breast = mix(vec3(0.44, 0.33, 0.21), vec3(0.28, 0.17, 0.1), smoothstep(0.55, 0.75, streak) * 0.8);
   vec3 alb = mix(back, breast, t);
   float fuzz = 1.0;
   float glow = 0.0;
@@ -161,7 +161,7 @@ void main() {
   vec3 col = alb * (hemiLight(N) * 0.8 + moon * (wrap * wrap * 0.9 + 0.15));
   col += moon * edge * fuzz * 0.35 * (0.3 + 0.7 * alb);
   // Until the side coal's light is on it, it is a dark lump in the fork with eyes; flying, her light finds it.
-  vec3 warm = emberLight(vWorld, N) * mix(0.04, 0.7, uOwlEyes.y) + shapeSideLight(vWorld, N) * 0.4 * uOwlEyes.y;
+  vec3 warm = emberLight(vWorld, N) * mix(0.04, 0.45, uOwlEyes.y) + shapeSideLight(vWorld, N) * 0.4 * uOwlEyes.y;
   // Sat down in the fork it would be in the dead limbs' shade; let the light that shows it reach it.
   float shade = mix(1.0, shapeShadowCaps(vWorld + N * 0.03, ${SHAPE_STUMP_CAPS}), 0.3);
   col += (alb + 0.012) * warm * shade;
@@ -218,7 +218,7 @@ function owlGeometry(): THREE.BufferGeometry {
   };
   const eye: BlobSpec = { part: EYE_L, mat: EYE, at: [-EYE_AT.x, EYE_AT.y, EYE_AT.z], size: [EYE_SIZE.x, EYE_SIZE.y, EYE_SIZE.z], detail: 3 };
   const wing: BlobSpec = {
-    part: WING_L, mat: WING, at: [-SHOULDER.x, SHOULDER.y, SHOULDER.z], offset: [-0.13, 0, -0.02], size: [0.14, 0.016, 0.085],
+    part: WING_L, mat: WING, at: [-SHOULDER.x, SHOULDER.y, SHOULDER.z], offset: [-0.16, 0, -0.02], size: [0.17, 0.016, 0.095],
     detail: 2,
     shape: (u) => {
       const s = Math.max(-u.x, 0);
@@ -584,7 +584,7 @@ export class OwlBody {
     for (const [i, side] of [[0, -1], [2, 1]] as const) {
       owl.toWorld(this.local.set(SHOULDER.x * side, SHOULDER.y, SHOULDER.z), false, this.wings[i]);
       // The wing as the shader swings it: out and up by the stroke when spread, down the flank when folded.
-      const reach = 0.28 * spread + 0.1;
+      const reach = 0.34 * spread + 0.1;
       this.local.set(SHOULDER.x * side + side * Math.cos(owl.flap) * reach * spread, SHOULDER.y + Math.sin(owl.flap) * reach * spread - 0.1 * (1 - spread), SHOULDER.z - 0.04);
       owl.toWorld(this.local, false, this.wings[i + 1]);
     }

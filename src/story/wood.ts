@@ -1235,6 +1235,8 @@ export class WoodChapter implements Chapter {
     s.target.lerpVectors(this.releaseLook, s.target, e);
     s.exact = true;
     s.zoom = THREE.MathUtils.lerp(this.heldZoom, 1, e);
+    const vHalf = Math.tan(THREE.MathUtils.degToRad(this.wideFov / 2)) / s.zoom;
+    this.keepInFrame(s.eye!, s.target, this.childSubject.copy(c).setY(c.y + 1.3), vHalf * this.aspect * 0.7, vHalf * 0.6);
   }
 
   /** After the usual idle wait, the waiting coal at the bend shows the updraft over it. */

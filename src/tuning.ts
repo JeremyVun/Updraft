@@ -984,7 +984,7 @@ export const tuning = {
       glanceAfter: 2.4, glanceFor: 1.8,
       owlLeaveAfter: 7, turnAfter: 0.9, turnRate: 2.0, peepAfter: 1.0, peepFor: 3.2, waveAfter: 2.2,
       exhaleSeconds: 1.8, chainOn: 17,
-      eye: [13.6, 2.3, 7.4], look: [2.4, 3.0, 3.2], hfov: 76,
+      eye: [14.4, 2.3, 5.2], look: [2.65, 3.0, 2.75], hfov: 76,
       portraitEye: [10.5, 2.3, 20.5], portraitLook: [0.5, 5.3, 0.9], portraitVfov: 60,
       easeFrom: 9, easeSeconds: 4.5, releaseSeconds: 8,
     },
