@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { heightAt } from './island';
-import { createNoise2D, mulberry32 } from './noise';
+import { createNoise2D } from './noise';
 import { glsl, tuning } from '../tuning';
 
 /** The bend where the path turns right, and the way the child comes up to it. */
@@ -77,46 +77,46 @@ const ROCK_AT = new THREE.Vector2(0.3, -3.0);
 const ROCK_ALONG = new THREE.Vector2(0.839, -0.545).normalize();
 const ROCK_OUT = new THREE.Vector2(-ROCK_ALONG.y, ROCK_ALONG.x);
 /**
- * The outcrop seen square-on, along the face and up it from its middle on the ground, clockwise from its buried left
- * foot: broken shoulders stepping up from the stump's side, an uneven top, and a fall to the right in straight
- * breaks.
+ * The boulder seen square-on, along the face and up it from its middle on the ground, clockwise from its buried left
+ * foot: a low shoulder by the stump climbing to a rounded crown on the right, then falling away behind the frame.
+ * Smoothed into one closed curve.
  */
 const ROCK_OUTLINE: [number, number][] = [
-  [-2.1, -1.0], [-2.35, 0.3], [-2.05, 1.3], [-1.65, 2.3], [-1.15, 3.55], [-0.75, 4.2], [-0.5, 4.45], [0.25, 5.4],
-  [0.75, 5.75], [1.3, 6.2], [2.5, 6.9],
-  [3.4, 7.1], [4.3, 7.3], [5.6, 7.55], [6.6, 7.1], [7.45, 6.2], [8.2, 4.75], [8.7, 3.0],
-  [8.95, 0.8], [8.75, -1.0],
+  [-2.3, -1.2], [-2.5, 0.6], [-2.45, 2.0], [-2.15, 3.3], [-1.6, 4.4], [-0.85, 5.3], [0.0, 5.95], [1.0, 6.4],
+  [2.0, 6.7], [3.0, 6.85], [4.0, 6.98], [4.8, 7.0], [5.4, 6.6], [6.0, 5.95], [6.6, 5.3], [7.3, 4.4],
+  [8.1, 3.2], [8.5, 1.8], [8.7, 0.6], [8.75, -1.2],
 ];
+const ROCK_CURVE = closedCurve(ROCK_OUTLINE, 6);
 /** Its ends along the face. */
-const ROCK_SPAN = [Math.min(...ROCK_OUTLINE.map((p) => p[0])), Math.max(...ROCK_OUTLINE.map((p) => p[0]))];
+const ROCK_SPAN = [Math.min(...ROCK_CURVE.map((p) => p[0])), Math.max(...ROCK_CURVE.map((p) => p[0]))];
 /**
- * The breaks that give it its planes, each a way out of the stone (along, up, out of the face) and how deep it cuts
- * into whatever faces that way: a broad side turned to the stump, sloping shoulders, a top in uneven planes, a bevel
- * between the face and the top, and a crease low on the face's right, clear of the shadows.
+ * Its front, out of the face at the foot: leaning back as it rises and curling back toward the crown, and turning away
+ * either side of `middle` along it, so the coal's light rolls across it instead of lying flat.
  */
-const ROCK_BREAKS: [number, number, number, number][] = [
-  [-0.85, 0.5, 0.5, 0.9], [-0.45, 0.85, 0.35, 0.45], [-1, -0.1, 0.5, 0.5], [0.75, 0.62, 0.38, 0.5], [0.95, -0.05, 0.45, 0.45],
-  [0.3, 1, 0.08, 0.3], [-0.35, 1, 0.02, 0.32], [0.05, 1, -0.4, 0.35],
-];
+const ROCK_FACE = { lean: 0.11, curl: 0.01, turn: 0.02, middle: 2.6 };
+const ROCK_FRONT = 1.1;
+const ROCK_DEEP = 2.2;
+/** How round its edges are, in metres. */
+const ROCK_ROUND = 0.6;
 /**
- * The face's planes, each through a point of it (along, up, out) and sloping out of the face per metre along and up:
- * two broad planes meeting in a shallow fold down the middle, where the shadows land, and narrower ones turning away
- * round them. The face is wherever the lowest of them is.
+ * The breaks that give it its planes, each a way out of the stone (along, up, out of the face), a point it cuts
+ * through and how soft the edge it leaves is: a broad shoulder turned to her coal by the stump, a sloped crown and a
+ * bevel low on the right.
  */
-const ROCK_FACETS: [number, number, number, number, number][] = [
-  [3.0, 3.2, 1.0, 0.0, -0.12], [1.0, 3.0, 1.0, 0.5, -0.06], [5.2, 3.4, 1.0, -0.32, -0.16], [2.6, 5.4, 0.74, 0.12, -0.38],
-  [-0.7, 2.5, 0.75, 0.6, -0.05], [6.7, 3.0, 0.95, -0.55, -0.1], [3.5, 6.3, 0.62, 0.04, -0.62],
-  [0.4, 0.3, 1.3, 0.3, 0.38], [0.3, 5.4, 0.75, 0.45, -0.45], [6.2, 5.8, 0.68, -0.45, -0.42], [5.8, 0.4, 1.25, -0.25, 0.35],
+const ROCK_BREAKS: [number[], number[], number][] = [
+  [[0, 0.2, 0.98], [2.5, 2.0, 0.55], 0.2],
+  [[-0.48, 0.2, 0.85], [0.3, 3.0, 0.3], 0.25],
+  [[0.04, 0.38, 0.92], [3.0, 5.0, 0.0], 0.25],
+  [[0.55, 0.1, 0.83], [5.4, 3.0, 0], 0.25],
+  [[0, 0.9, 0.44], [3.5, 6.2, -0.75], 0.3],
+  [[-0.45, 0.65, 0.6], [-0.8, 4.6, -0.7], 0.25],
+  [[-0.75, 0.15, 0.65], [-1.8, 2.5, -0.6], 0.25],
+  [[0.45, -0.3, 0.84], [6.2, 1.4, 0.5], 0.2],
 ];
-const ROCK_MIDDLE = new THREE.Vector2(3.2, 2.6);
-/** How much smaller the face is than the stone's foot. */
-const ROCK_INSET = 0.36;
-const ROCK_FRONT = 0.75;
-/** The lower stone at its foot: along the face, out of it, and its half-length and half-depth. */
-const FOOT_STONE = [5.6, 1.3, 1.3, 0.9];
-const ROCK_DEEP = 2.6;
+/** The rounded stone at its foot: along the face, out of it, and its half-length, height and half-depth. */
+const FOOT_STONE = [5.3, 1.9, 1.0, 1.15, 0.75];
 /** The two shallow fissures down the face, along it and up it from its middle on the ground, clear of the shadow's eyes. */
-const FISSURES: [number[], number[]][] = [[[0.4, 5.2], [0.9, 3.0]], [[5.6, 6.6], [6.4, 3.4]]];
+const FISSURES: [number[], number[]][] = [[[-1.3, 4.2], [-0.6, 1.6]], [[-0.6, 1.6], [0.2, 0.2]]];
 /** The painted leaves' colour on the lit floor at the bend, against the dirt. */
 const LEAF_TONE = [1.6, 1.75, 1.5];
 /** The painted gritstone: metres to one repeat, its tone at night, and how deep its grain stands. */
@@ -515,7 +515,7 @@ vec2 rockShadow(vec2 q) {
   return vec2(dark, eyes);
 }`;
 
-/** Tags a part with what it is (0 wood, 1 stone) and the direction its grain runs. */
+/** Tags a part with what it is (0 wood, 1 stone), the direction its grain runs and the litter's height under it. */
 function strip(geo: THREE.BufferGeometry, kind: number, axis: THREE.Vector3): THREE.BufferGeometry {
   geo.deleteAttribute('uv');
   geo.deleteAttribute('normal');
@@ -526,16 +526,21 @@ function strip(geo: THREE.BufferGeometry, kind: number, axis: THREE.Vector3): TH
   const ax = new Float32Array(n * 3);
   for (let i = 0; i < n; i++) ax.set([axis.x, axis.y, axis.z], i * 3);
   g.setAttribute('aAxis', new THREE.Float32BufferAttribute(ax, 3));
+  const pos = g.getAttribute('position');
+  const ground = new Float32Array(n);
+  for (let i = 0; i < n; i++) ground[i] = heightAt(pos.getX(i), pos.getZ(i));
+  g.setAttribute('aGround', new THREE.Float32BufferAttribute(ground, 1));
   return g;
 }
 
 const SHAPE_VERT = /* glsl */ `${ATMO_GLSL}
 in float aKind;
 in vec3 aAxis;
+in float aGround;
 uniform vec4 uShapeAt;
-out vec3 vWorld; out vec3 vNormal; out float vKind; out vec3 vAxis; out vec3 vLocal;
+out vec3 vWorld; out vec3 vNormal; out float vKind; out vec3 vAxis; out vec3 vLocal; out float vAbove;
 void main() {
-  vWorld = position; vNormal = normal; vKind = aKind; vAxis = aAxis;
+  vWorld = position; vNormal = normal; vKind = aKind; vAxis = aAxis; vAbove = position.y - aGround;
   vLocal = position - vec3(uShapeAt.x, 0.0, uShapeAt.z);
   gl_Position = projectionMatrix * viewMatrix * vec4(position, 1.0);
 }`;
@@ -553,6 +558,7 @@ in vec3 vNormal;
 in float vKind;
 in vec3 vAxis;
 in vec3 vLocal;
+in float vAbove;
 vec3 bump(vec3 n, float h, float k) {
   vec3 dpdx = dFdx(vWorld), dpdy = dFdy(vWorld);
   float hx = dFdx(h), hy = dFdy(h);
@@ -651,17 +657,18 @@ void main() {
     // The fissures: a dark crack with a pale lip along its upper edge where the stone broke.
     float crack = 1e3;
     ${FISSURES.map(([a, b]) => `crack = min(crack, fissure(c.xy, vec2(${glsl(a[0])}, ${glsl(a[1])}), vec2(${glsl(b[0])}, ${glsl(b[1])})));`).join('\n    ')}
-    alb *= mix(0.25, 1.0, smoothstep(0.012, 0.05, crack)) * (1.0 + 0.25 * (1.0 - smoothstep(0.05, 0.1, abs(crack - 0.07))));
+    alb *= mix(0.25, 1.0, smoothstep(0.012, 0.05, crack)) * (1.0 + 0.15 * (1.0 - smoothstep(0.05, 0.1, abs(crack - 0.07))));
     vec2 gf = gritSlope(c.xy), gs = gritSlope(c.zy + 17.0), gt = gritSlope(c.xz + 41.0);
     vec3 grad = (gf.x * uFaceU + gf.y * vec3(0.0, 1.0, 0.0)) * w.z + (gs.x * uFaceN + gs.y * vec3(0.0, 1.0, 0.0)) * w.x
       + (gt.x * uFaceU + gt.y * uFaceN) * w.y;
     float above = r.y;
     float moss = smoothstep(0.5, 0.8, cn.y) * smoothstep(0.45, 0.65, fbm(c.xz * 0.9 + 3.0) + 0.15 * h0);
-    float foot = 1.0 - smoothstep(0.2, 1.0 + 0.5 * fbm(c.xz * 0.6), above - footAt(c.x));
+    float foot = 1.0 - smoothstep(0.05, 0.35 + 0.3 * fbm(c.xz * 0.6), vAbove - footAt(c.x));
     moss = max(moss, foot * smoothstep(0.35, 0.6, h0 + 0.3 * fbm(c.xy * 1.7)));
-    alb = mix(alb, mix(vec3(0.045, 0.06, 0.025), vec3(0.08, 0.09, 0.03), vnoise(c.xy * 9.0)), moss * 0.85);
+    alb = mix(alb, mix(vec3(0.045, 0.06, 0.025), vec3(0.08, 0.09, 0.03), vnoise(c.xy * 9.0)) * mix(0.6, 1.0, h0), moss * 0.85);
     // Fallen leaves caught at its foot and on its ledges.
-    float leaf = leaves(c.xz + c.y * 0.3) * max(foot, smoothstep(0.6, 0.85, cn.y));
+    vec2 lp = w.y > max(w.x, w.z) ? c.xz : w.z > w.x ? c.xy : c.zy;
+    float leaf = leaves(lp) * max(foot, smoothstep(0.6, 0.85, cn.y));
     alb = mix(alb, mix(vec3(0.24, 0.1, 0.035), vec3(0.32, 0.17, 0.06), vnoise(c.xz * 3.0)), leaf);
     n = normalize(n - ${glsl(ROCK_BUMP)} * (grad - dot(grad, n) * n));
     col = alb * hemiLight(n) * 0.12;
@@ -670,19 +677,20 @@ void main() {
     col += alb * uSunColor * (max(0.0, dot(n, uSunDir)) * 0.03 + rim * 0.14) * uNight;
     col += alb * vec3(0.3, 0.38, 0.6) * smoothstep(0.2, 0.9, n.y) * 0.12 * uNight;
     vec2 shade = rockShadow(faceAt(vWorld));
+    // The stone at its foot stands out in front of the face, in the light the shadow is cut from.
+    shade.x *= 1.0 - smoothstep(1.15, 1.45, c.z);
     vec3 toCoal = uShapeThrow.xyz - vWorld;
-    // Her coal's light comes on square to the face, so the face takes it whole and the stone's other planes, turned
-    // away from it, fall off into shade and show its form.
+    // Her coal is low and off to the left: the boulder is brightest where it turns toward it, and the light rolls off
+    // over its rounded edges into shade. Leaned toward the face, so the whole face takes it and the antlers read.
     vec3 L = normalize(normalize(toCoal) + uFaceN * 0.45);
     // Brightest low down nearest her coal, falling away up the face and along it.
     float near = pow(dot(uShapePool.xz - uShapeThrow.xz, uShapePool.xz - uShapeThrow.xz) / max(dot(toCoal, toCoal), 1.0), 0.8);
-    float facing = clamp(dot(n, L), 0.0, 1.0);
-    vec3 thrown = SHAPE_FIRE * uShapeThrow.w * shapePoolAt(vWorld) * near * (facing * facing * 1.3 + 0.04)
-      * mix(1.0, 0.4, smoothstep(1.5, 6.8, above));
+    float facing = smoothstep(0.3, 1.0, dot(n, L));
+    vec3 thrown = SHAPE_FIRE * uShapeThrow.w * shapePoolAt(vWorld) * near * (facing * 1.5 + 0.03)
+      * mix(1.0, 0.55, smoothstep(1.5, 6.8, above));
     vec3 warm = thrown + shapeSideLight(vWorld, n) * 0.5;
-    // Where the stone turns away from its face it falls into its own shade, so its planes and edges show.
-    float turned = dot(normalize(vNormal) * (gl_FrontFacing ? 1.0 : -1.0), uFaceN);
-    warm *= mix(0.3, 1.0, smoothstep(0.6, 0.995, turned)) * mix(0.2, 1.0, smoothstep(0.2, 0.85, dot(n, V)));
+    // The litter banked against its foot keeps the light off the last of it.
+    warm *= mix(0.4, 1.0, smoothstep(0.0, 0.5, vAbove)) * mix(0.35, 1.0, smoothstep(0.1, 0.7, dot(n, V)));
     col += (alb + vec3(0.006, 0.004, 0.002)) * warm * (1.0 - 0.94 * shade.x);
     col += vec3(1.0, 0.68, 0.22) * shade.y * 2.6;
   }
@@ -740,19 +748,75 @@ function knuckle(at: THREE.Vector3, r: number): THREE.BufferGeometry {
   return geo;
 }
 
-/** How far from the outcrop's middle its outline lies, in the direction `angle` on its face. */
-function outlineReach(angle: number): number {
-  const dx = Math.cos(angle), dy = Math.sin(angle);
-  let best = 0;
-  for (let i = 0; i < ROCK_OUTLINE.length; i++) {
-    const [ax, ay] = ROCK_OUTLINE[i], [bx, by] = ROCK_OUTLINE[(i + 1) % ROCK_OUTLINE.length];
-    const ex = bx - ax, ey = by - ay, ox = ax - ROCK_MIDDLE.x, oy = ay - ROCK_MIDDLE.y;
-    const den = dx * ey - dy * ex;
-    if (Math.abs(den) < 1e-9) continue;
-    const t = (ox * ey - oy * ex) / den, k = (ox * dy - oy * dx) / den;
-    if (t > 0 && k >= 0 && k <= 1) best = Math.max(best, t);
+/** A closed Catmull-Rom curve through `points`, `steps` to each span. */
+function closedCurve(points: [number, number][], steps: number): [number, number][] {
+  const out: [number, number][] = [];
+  const n = points.length;
+  for (let i = 0; i < n; i++) {
+    const [p0, p1, p2, p3] = [-1, 0, 1, 2].map((k) => points[(i + k + n) % n]);
+    for (let s = 0; s < steps; s++) {
+      const t = s / steps, t2 = t * t, t3 = t2 * t;
+      const at = (k: number) => 0.5 * (2 * p1[k] + (p2[k] - p0[k]) * t + (2 * p0[k] - 5 * p1[k] + 4 * p2[k] - p3[k]) * t2
+        + (3 * p1[k] - p0[k] - 3 * p2[k] + p3[k]) * t3);
+      out.push([at(0), at(1)]);
+    }
   }
-  return best;
+  return out;
+}
+
+/** Signed distance from (x, y) to a closed polygon, negative inside. */
+function polygonDistance(poly: [number, number][], x: number, y: number): number {
+  let d = Infinity, inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    const [ax, ay] = poly[j], [bx, by] = poly[i];
+    d = Math.min(d, segment(x, y, poly[j], poly[i]));
+    if ((by > y) !== (ay > y) && x < ax + (bx - ax) * (y - ay) / (by - ay)) inside = !inside;
+  }
+  return inside ? -d : d;
+}
+
+/** `polygonDistance` to the boulder's outline, looked up in a grid laid over it and exact beyond. */
+function outlineGrid(): (x: number, y: number) => number {
+  const step = 0.06, x0 = ROCK_SPAN[0] - 1.5, y0 = -2.5;
+  const nx = Math.ceil((ROCK_SPAN[1] - ROCK_SPAN[0] + 3) / step) + 1, ny = Math.ceil(11 / step) + 1;
+  const d = new Float32Array(nx * ny);
+  for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) d[j * nx + i] = polygonDistance(ROCK_CURVE, x0 + i * step, y0 + j * step);
+  return (x, y) => {
+    const fx = (x - x0) / step, fy = (y - y0) / step;
+    const i = Math.floor(fx), j = Math.floor(fy);
+    if (i < 0 || j < 0 || i >= nx - 1 || j >= ny - 1) return polygonDistance(ROCK_CURVE, x, y);
+    const tx = fx - i, ty = fy - j, k = j * nx + i;
+    return (d[k] * (1 - tx) + d[k + 1] * tx) * (1 - ty) + (d[k + nx] * (1 - tx) + d[k + nx + 1] * tx) * ty;
+  };
+}
+
+function smax(a: number, b: number, k: number): number {
+  const h = Math.max(k - Math.abs(a - b), 0) / k;
+  return Math.max(a, b) + h * h * k * 0.25;
+}
+
+/**
+ * A stone shrink-wrapped onto `field` (negative inside): each point of a fine sphere stretched to `radii` about
+ * `centre` is carried out along its ray to where the field crosses zero.
+ */
+function sculpt(field: (p: THREE.Vector3) => number, centre: THREE.Vector3, radii: THREE.Vector3, detail: number): THREE.BufferGeometry {
+  const sphere = new THREE.IcosahedronGeometry(1, detail);
+  sphere.deleteAttribute('uv');
+  sphere.deleteAttribute('normal');
+  const geo = mergeVertices(sphere);
+  sphere.dispose();
+  const pos = geo.getAttribute('position');
+  const dir = new THREE.Vector3(), p = new THREE.Vector3();
+  const at = (t: number) => field(p.copy(centre).addScaledVector(dir, t));
+  for (let i = 0; i < pos.count; i++) {
+    dir.fromBufferAttribute(pos, i).multiply(radii).normalize();
+    let lo = 0, hi = 0, f = at(0);
+    while (f < 0 && hi < 20) { lo = hi; hi += Math.max(-f, 0.03); f = at(hi); }
+    for (let k = 0; k < 14; k++) { const mid = (lo + hi) / 2; if (at(mid) < 0) lo = mid; else hi = mid; }
+    p.copy(centre).addScaledVector(dir, (lo + hi) / 2);
+    pos.setXYZ(i, p.x, p.y, p.z);
+  }
+  return geo;
 }
 
 /** Distance from (x, y) to the segment a-b. */
@@ -827,7 +891,7 @@ export class WoodShape {
     const dx = x - FACE_O.x, dz = z - FACE_O.z;
     const u = dx * FACE_U.x + dz * FACE_U.z, n = dx * FACE_N.x + dz * FACE_N.z;
     // The face bulges a little out of its plane; the stone at its foot stands further out.
-    const front = u > FOOT_STONE[0] - FOOT_STONE[2] ? FOOT_STONE[1] + FOOT_STONE[3] : ROCK_FRONT + 0.3;
+    const front = Math.abs(u - FOOT_STONE[0]) < FOOT_STONE[2] ? FOOT_STONE[1] + FOOT_STONE[4] : ROCK_FRONT + 0.3;
     return u > ROCK_SPAN[0] - margin && u < ROCK_SPAN[1] + margin && n < front + margin && n > -ROCK_DEEP - margin;
   }
 
@@ -883,7 +947,7 @@ export class WoodShape {
       if (limbs.some((d) => d !== c && d.a.distanceTo(c.b) < 0.02)) parts.push(strip(knuckle(c.b, c.rb * 1.04), 0, axis));
     });
     parts.push(strip(this.outcrop(), 1, FACE_U));
-    parts.push(strip(this.stone([FOOT_STONE[0], 0, FOOT_STONE[1]], [FOOT_STONE[2], 0.85, FOOT_STONE[3]], 0.35, 13), 1, FACE_U));
+    parts.push(strip(this.stone(), 1, FACE_U));
     const geo = mergeGeometries(parts);
     for (const p of parts) p.dispose();
     this.mesh = new THREE.Mesh(geo, new THREE.ShaderMaterial({
@@ -923,73 +987,58 @@ export class WoodShape {
   }
 
   /**
-   * One weathered outcrop: a block whose face, seen square-on, has `ROCK_OUTLINE` for its edge, flat across the front
-   * and leaning back as it rises, broken by `ROCK_BREAKS` into planes that meet at edges, with a few shallower breaks
-   * of its own and two fissures down the face. Built along the face (x), up (y) and out of it (z), then set in the
+   * One weathered boulder: `ROCK_OUTLINE` seen square-on, its front leaning back and curling over into a rounded
+   * crown, every edge rounded by `ROCK_ROUND`, cut by `ROCK_BREAKS` into a few soft planes, lumpy at the scale of the
+   * stone and with two fissures down the face. Built along the face (x), up (y) and out of it (z), then set in the
    * world with its foot down in the litter.
    */
   private outcrop(): THREE.BufferGeometry {
-    const geo = new THREE.IcosahedronGeometry(1, 48);
-    const pos = geo.getAttribute('position');
     const lumpy = createNoise2D(71);
-    const rand = mulberry32(83);
-    const v = new THREE.Vector3();
-    const points: THREE.Vector3[] = [];
+    const breaks = ROCK_BREAKS.map(([n, at, soft]) => ({ n: new THREE.Vector3(...n).normalize(), at: new THREE.Vector3(...at), soft }));
+    const grid = outlineGrid();
+    const r = new THREE.Vector3();
+    const field = (p: THREE.Vector3) => {
+      const y = Math.max(p.y, 0);
+      const front = ROCK_FRONT - ROCK_FACE.lean * y - ROCK_FACE.curl * y * y - ROCK_FACE.turn * (p.x - ROCK_FACE.middle) ** 2;
+      const a = grid(p.x, p.y) + ROCK_ROUND;
+      const b = Math.abs(p.z - (front - ROCK_DEEP) / 2) - (front + ROCK_DEEP) / 2 + ROCK_ROUND;
+      let d = Math.hypot(Math.max(a, 0), Math.max(b, 0)) + Math.min(Math.max(a, b), 0) - ROCK_ROUND;
+      for (const { n, at, soft } of breaks) d = smax(d, r.subVectors(p, at).dot(n), soft);
+      return d - 0.06 * lumpy(p.x * 0.3, p.y * 0.3) - 0.015 * lumpy(p.x * 0.8 + p.z * 0.4 + 9, p.y * 0.8)
+        - 0.05 * lumpy(p.z * 0.3 + 4, p.y * 0.25 + p.x * 0.1);
+    };
+    const geo = sculpt(field, new THREE.Vector3(3.2, 2.2, -0.7), new THREE.Vector3(5.8, 4.8, 1.7), 64);
+    const pos = geo.getAttribute('position');
     for (let i = 0; i < pos.count; i++) {
-      v.fromBufferAttribute(pos, i);
-      const angle = Math.atan2(v.y, v.x);
-      // The face is set in from the stone's foot all round, so its flanks slope back to the ground and show.
-      const spread = Math.hypot(v.x, v.y) ** 0.45 * (v.z > 0 ? 1 - ROCK_INSET * v.z ** 0.8 : 1);
-      const reach = outlineReach(angle);
-      const p = new THREE.Vector3(ROCK_MIDDLE.x + Math.cos(angle) * reach * spread, ROCK_MIDDLE.y + Math.sin(angle) * reach * spread,
-        v.z > 0 ? ROCK_FRONT * 2.4 * v.z ** 0.5 : -ROCK_DEEP * (-v.z) ** 0.5);
-      p.z -= 0.09 * Math.max(0, p.y);
-      if (v.z > 0) for (const [u, y, z, du, dy] of ROCK_FACETS) p.z = Math.min(p.z, z + du * (p.x - u) + dy * (p.y - y));
-      p.z += 0.08 * lumpy(p.x * 0.22, p.y * 0.22) * (v.z > 0 ? 1 : 3);
-      points.push(p);
+      const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+      if (z < -0.6) continue;
+      let groove = 0;
+      for (const [a, c] of FISSURES) groove = Math.max(groove, 1 - Math.min(1, segment(x, y, a, c) / 0.09));
+      pos.setZ(i, z - 0.05 * groove);
     }
-    const breaks = ROCK_BREAKS.map(([x, y, z, depth]) => ({ n: new THREE.Vector3(x, y, z).normalize(), depth }));
-    for (let i = 0; i < 6; i++) {
-      const n = new THREE.Vector3((rand() - 0.5) * 1.6, 0.4 + rand() * 0.8, (rand() - 0.5) * 0.6).normalize();
-      breaks.push({ n, depth: 0.08 + rand() * 0.14 });
-    }
-    for (const { n, depth } of breaks) {
-      let most = -Infinity;
-      for (const p of points) most = Math.max(most, p.dot(n));
-      for (const p of points) {
-        const over = p.dot(n) - (most - depth);
-        if (over > 0) p.addScaledVector(n, -over);
-      }
-    }
-    points.forEach((p, i) => {
-      if (p.z > -0.6) {
-        let groove = 0;
-        for (const [a, c] of FISSURES) groove = Math.max(groove, 1 - Math.min(1, segment(p.x, p.y, a, c) / 0.09));
-        p.z -= 0.13 * groove;
-      }
-      pos.setXYZ(i, p.x, p.y, p.z);
-    });
     return this.place(geo, 0);
   }
 
-  /** A lower weathered stone at the rock's foot, flattened in front and on top, at `at` along, up and out of the face. */
-  private stone(at: number[], size: number[], lean: number, seed: number): THREE.BufferGeometry {
-    const geo = new THREE.IcosahedronGeometry(1, 12);
-    const pos = geo.getAttribute('position');
-    const v = new THREE.Vector3();
-    const lumpy = createNoise2D(seed);
-    for (let i = 0; i < pos.count; i++) {
-      v.fromBufferAttribute(pos, i);
-      if (v.z > 0.25) v.z = 0.25 + (v.z - 0.25) * 0.45;
-      if (v.y > 0.45) v.y = 0.45 + (v.y - 0.45) * 0.5;
-      if (v.y < -0.35) v.y = -0.35 + (v.y + 0.35) * 0.3;
-      v.multiplyScalar(1 + 0.12 * lumpy(v.x * 1.3 + v.z, v.y * 1.3));
-      v.multiply(new THREE.Vector3(size[0], size[1], size[2]));
-      v.z -= lean * (v.y + size[1]);
-      v.add(new THREE.Vector3(at[0], at[1], at[2]));
-      pos.setXYZ(i, v.x, v.y, v.z);
-    }
-    return this.place(geo, 0);
+  /** The rounded stone at the boulder's foot, a little flattened in front and on top, lumpy like the boulder. */
+  private stone(): THREE.BufferGeometry {
+    const [u, out, len, high, deep] = FOOT_STONE;
+    const lumpy = createNoise2D(13);
+    const ground = this.groundAt(u, out);
+    const centre = new THREE.Vector3(u, ground + high * 0.3, out);
+    const q = new THREE.Vector3();
+    const field = (p: THREE.Vector3) => {
+      q.subVectors(p, centre);
+      let d = (Math.hypot(q.x / len, q.y / (high * 0.7), q.z / deep) - 1) * Math.min(len, high * 0.7, deep);
+      d = smax(d, q.y - high * 0.6 + 0.12 * q.x, 0.4);
+      return d - 0.07 * lumpy(p.x * 0.6, p.y * 0.6 + p.z * 0.5) - 0.03 * lumpy(p.x * 1.6 + 7, p.z * 1.6 + p.y);
+    };
+    return this.place(sculpt(field, centre, new THREE.Vector3(len, high * 0.7, deep), 28), 0);
+  }
+
+  /** The litter's height under a point of the face's frame, up from the face's middle on the ground. */
+  private groundAt(u: number, out: number): number {
+    const p = FACE_O.clone().addScaledVector(FACE_U, u).addScaledVector(FACE_N, out);
+    return heightAt(p.x, p.z) - FACE_O.y;
   }
 
   /** From the face's own frame (along, up, out) to the world, standing on the litter at the face's middle. */
