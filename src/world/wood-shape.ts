@@ -23,7 +23,7 @@ export function shapePoint(x: number, y: number, z: number, out = new THREE.Vect
 /** Where she stops on the path, well short of the stump: the beat's one frame is built round this spot. */
 const WAIT_LOCAL = new THREE.Vector3(2.0, 0, 8.47);
 /** The coal before the bend, on the path just ahead of her feet. */
-const THROW_LOCAL = new THREE.Vector3(1.6, 0, 7.15);
+const THROW_LOCAL = new THREE.Vector3(2.5, 0, 6.9);
 /** The one coal at the stump, off to its side toward her, a little further from the camera than the stump. */
 const SIDE_LOCAL = new THREE.Vector3(-0.75, 0, 1.65);
 

@@ -102,7 +102,7 @@ const { Cygnet } = await import('../src/creatures/cygnet.ts');
 const { Carry } = await import('../src/companion/carry.ts');
 const { WoodChapter } = await import('../src/story/wood.ts');
 const { WOOD_APPROACH_LIGHT, WOOD_LANDING, WOOD_PATH, WOOD_BERTH } = await import('../src/world/wood.ts');
-const { WOOD_SHAPE, SHAPE_FACING, SHAPE_WAIT, WoodShape, shapeUniforms } = await import('../src/world/wood-shape.ts');
+const { WOOD_SHAPE, SHAPE_FACING, SHAPE_WAIT, WoodShape, shapeUniforms, beastEyes } = await import('../src/world/wood-shape.ts');
 const { woodOwl } = await import('../src/creatures/owl.ts');
 const WAY = [WOOD_LANDING, ...WOOD_PATH, new THREE.Vector2(WOOD_BERTH.x, WOOD_BERTH.z)];
 /** Trunks stand at least 5 units from this line (`CORRIDOR` in world/wood.ts). */
@@ -167,14 +167,25 @@ for (const portrait of [false, true]) {
       if (!sideLit) assert.equal(c.shapeReveal, 0, 'darkness never shows the stump for what it is, however long she waits');
       if (!sideLit) assert.equal(woodOwl.phase, 'perched', 'the owl keeps still until the side light shows it');
       if (!throwLit) assert.equal(c.sideCoal, null, 'one waiting coal at a time: the side coal comes after the coal before the bend');
-      // Until the coal before the bend wakes there is no outline at all; once it burns, the outline is its light's.
-      if (!throwLit && c.throwCoal.wake === 0) { assert.equal(shapeUniforms.uShapeThrow.value.w, 0, 'no outline before the coal before the bend is lit'); darkBefore = true; }
-      if (throwLit && c.throwLitAt >= 0 && time - c.throwLitAt > 0.5 && (c.sideCoal?.wake ?? 0) === 0 && c.lightShare < 1e-3) {
+      // Until the coal before the bend catches there is no outline and no light on the rock; once it burns, both are its.
+      if (!throwLit) {
+        assert.equal(shapeUniforms.uShapeMask.value.x, 0, 'no outline before the coal before the bend is lit');
+        assert.equal(shapeUniforms.uShapeThrow.value.w, 0, 'no light on the rock before the coal before the bend is lit');
+        darkBefore = true;
+      }
+      if (throwLit && c.throwLitAt >= 0 && time - c.throwLitAt > 0.5 && (c.sideCoal?.wake ?? 0) === 0 && c.fold < 1e-3) {
         const u = shapeUniforms.uShapeThrow.value;
-        assert(u.w > 0.5, 'the lit coal before the bend throws the outline up the rock');
+        assert(u.w > 0.2 && shapeUniforms.uShapeMask.value.x > 0.99, 'the lit coal before the bend throws the outline up the rock');
         assert(Math.hypot(u.x - c.throwCoal.p.x, u.z - c.throwCoal.p.z) < 1e-3, 'the outline is thrown from the coal before the bend, nowhere else');
+        // Cast away from her coal: the outline stands beyond the stump as seen from the coal.
+        const eyes = beastEyes(), sx = WOOD_SHAPE.x - c.throwCoal.p.x, sz = WOOD_SHAPE.z - c.throwCoal.p.z;
+        assert((eyes.x - WOOD_SHAPE.x) * sx + (eyes.z - WOOD_SHAPE.z) * sz > 0, 'the outline falls on the far side of the stump from her coal');
         thrownSeen = true;
       }
+      // Her coal waits on the path well short of the stump; the one coal near the stump is the side coal.
+      assert(Math.hypot(c.throwCoal.p.x - WOOD_SHAPE.x, c.throwCoal.p.z - WOOD_SHAPE.z) > 6.5, 'the coal before the bend stays well short of the stump');
+      const byStump = embers.coals.filter((k) => k.live && Math.hypot(k.p.x - WOOD_SHAPE.x, k.p.z - WOOD_SHAPE.z) < 4);
+      assert(byStump.length <= 1 && byStump.every((k) => k === c.sideCoal), 'exactly one coal by the stump, and it is the side coal');
       // Nothing but the side coal's light shows the stump and the owl.
       if (!c.sideCoal || c.sideCoal.wake === 0) { assert.equal(shapeUniforms.uShapeShown.value, 0); assert.equal(woodOwl.shown, 0); }
       if (c.shapeStopped >= 0) assert(Math.hypot(child.position.x - SHAPE_WAIT.x, child.position.z - SHAPE_WAIT.z) < 1.2,
@@ -190,7 +201,7 @@ for (const portrait of [false, true]) {
     if (c.beat === 'brave' && revealedAt < 0) {
       revealedAt = time;
       assert(c.sideCoal.lit, 'only the side coal reveals the owl');
-      assert(c.lightShare > 0.5, 'once the side coal burns, the one light is the side coal\'s');
+      assert(c.fold > 0.5, 'once the side coal burns, the outline has folded into the plain shadow');
     }
     // It leaves up and out the open side, away from the rock, clear of every trunk while it can still be seen.
     if (woodOwl.phase === 'leaving' && woodOwl.presence > 0.02) {
@@ -199,6 +210,7 @@ for (const portrait of [false, true]) {
       owlLow = Math.min(owlLow, o.y - owlFrom.y);
       owlTop = Math.max(owlTop, o.y - owlFrom.y);
       assert(WoodShape.clears(o.x, o.z), `the owl flies only where no tree stands: ${o.toArray()}`);
+      assert(!WoodShape.onRock(o.x, o.z, 1), `the owl never flies into the rock: ${o.toArray()}`);
       assert((o.x - WOOD_SHAPE.x) * SHAPE_FACING.x + (o.z - WOOD_SHAPE.z) * SHAPE_FACING.z > -0.3, 'the owl goes out the open side, never back into the rock');
     }
     if (woodOwl.phase === 'leaving' || woodOwl.phase === 'gone') owlLeft = true;
@@ -211,7 +223,7 @@ for (const portrait of [false, true]) {
     cygnet.update(dt, time, child.position, calm.sample(0, 0, {})); carry.after();
     embers.update(dt, child.position, c.embers); rig.update(dt, time, c.shot, c.pace); c.afterCamera(rig.camera);
     if (previousRotation && ['walk', 'out'].includes(c.beat))
-      worstWalkTurn = Math.max(worstWalkTurn, previousRotation.angleTo(rig.camera.quaternion));
+      { const turn = previousRotation.angleTo(rig.camera.quaternion); if (process.env.DEBUG && turn > 0.02) console.log("turn", time.toFixed(2), c.beat, turn.toFixed(4), c.releaseAt); worstWalkTurn = Math.max(worstWalkTurn, turn); }
     previousRotation = rig.camera.quaternion.clone();
     if(previousEye&&c.beat==='walk'&&c.leg===0) firstLightCameraStep=Math.max(firstLightCameraStep,rig.camera.position.distanceTo(previousEye));
     previousEye=rig.camera.position.clone();

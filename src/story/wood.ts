@@ -907,6 +907,7 @@ export class WoodChapter implements Chapter {
       return;
     }
     this.walkFrame(ground);
+    this.releaseShape(dt);
     if (this.ahead?.live && !this.ahead.lit) {
       this.childSubject.copy(c).y += 1.5;
       // Preserve the same clear sightline to the next interaction that the rescue already has.
@@ -977,6 +978,13 @@ export class WoodChapter implements Chapter {
   private readonly easeEye = new THREE.Vector3();
   private readonly easeLook = new THREE.Vector3();
   private easeAt = -1;
+  private releaseAt = -1;
+  private releaseWay = 0;
+  private heldZoom = 1;
+  private readonly releaseEye = new THREE.Vector3();
+  private readonly releaseLook = new THREE.Vector3();
+  private readonly releaseTo = new THREE.Vector3();
+  private readonly releaseAim = new THREE.Vector3();
   private easeProgress = 0;
   private easeTimed = false;
   private easePortrait = false;
@@ -1188,6 +1196,45 @@ export class WoodChapter implements Chapter {
     const way = this.target();
     this.aim.set(way.x - c.position.x, 0, way.y - c.position.z).normalize();
     this.placeShoulder();
+    this.releaseAt = this.now;
+    this.releaseEye.copy(this.camAt);
+    this.releaseLook.copy(this.camAt).addScaledVector(this.camDir, this.camAt.distanceTo(this.bendLook));
+  }
+
+  /**
+   * After the held frame, the camera comes back round behind her as she walks on, orbiting her at the unhurried pace
+   * it came in at, round through the open way she came by rather than across her or through the trees at the bend:
+   * the walking camera alone would swing the half turn round her in a second.
+   */
+  private releaseShape(dt: number): void {
+    if (this.releaseAt < 0) return;
+    const k = tuning.wood.shape;
+    const e = THREE.MathUtils.smootherstep(this.now - this.releaseAt, 0, k.releaseSeconds);
+    if (e >= 1) { this.releaseAt = -1; return; }
+    const s = this.shot;
+    const c = this.cast.child.position;
+    // Where the walking camera wants to be, followed softly: its own jumps (a new leg, a new coal) are the rig's to
+    // smooth, and the rig is not easing while this move is authored.
+    if (this.now === this.releaseAt) { this.releaseTo.copy(s.eye!); this.releaseAim.copy(s.target); }
+    const follow = 1 - Math.exp(-dt * 2);
+    this.releaseTo.lerp(s.eye!, follow);
+    this.releaseAim.lerp(s.target, follow);
+    s.eye!.copy(this.releaseTo);
+    s.target.copy(this.releaseAim);
+    const from = Math.atan2(this.releaseEye.x - c.x, this.releaseEye.z - c.z);
+    const to = Math.atan2(s.eye!.x - c.x, s.eye!.z - c.z);
+    // Round by the way she came, behind where she stood, the same way round all the way.
+    const via = (a: number) => Math.atan2(Math.sin(a - from), Math.cos(a - from));
+    if (this.releaseWay === 0) this.releaseWay = Math.sign(via(Math.atan2(SHAPE_FACING.x, SHAPE_FACING.z))) || 1;
+    let turn = via(to);
+    if (Math.sign(turn) !== this.releaseWay) turn += this.releaseWay * Math.PI * 2;
+    const angle = from + turn * e;
+    const reach = THREE.MathUtils.lerp(Math.hypot(this.releaseEye.x - c.x, this.releaseEye.z - c.z), Math.hypot(s.eye!.x - c.x, s.eye!.z - c.z), e);
+    const height = THREE.MathUtils.lerp(this.releaseEye.y, s.eye!.y, e);
+    s.eye!.set(c.x + Math.sin(angle) * reach, height, c.z + Math.cos(angle) * reach);
+    s.target.lerpVectors(this.releaseLook, s.target, e);
+    s.exact = true;
+    s.zoom = THREE.MathUtils.lerp(this.heldZoom, 1, e);
   }
 
   /** After the usual idle wait, the waiting coal at the bend shows the updraft over it. */
@@ -1247,6 +1294,6 @@ export class WoodChapter implements Chapter {
     const half = Math.tan(THREE.MathUtils.degToRad(this.wideFov / 2));
     const want = portrait ? Math.tan(THREE.MathUtils.degToRad(k.portraitVfov / 2))
       : Math.tan(THREE.MathUtils.degToRad(k.hfov / 2)) / Math.max(this.aspect, 1e-3);
-    s.zoom = THREE.MathUtils.lerp(1, THREE.MathUtils.clamp(half / want, 0.55, 1.3), e);
+    s.zoom = this.heldZoom = THREE.MathUtils.lerp(1, THREE.MathUtils.clamp(half / want, 0.55, 1.3), e);
   }
 }

@@ -975,17 +975,18 @@ export const tuning = {
      * after it as it flies (seconds into its flight, rate), the cygnet's peep and her wave; the breath out and how
      * far on the next coal waits. The held frame, in the shape's frame (right, up from her feet, toward her): the
      * eye and where it looks, landscape and portrait, each lens's horizontal field (portrait: vertical), when the
-     * walking camera starts easing to it (metres from her stop) and over how many seconds.
+     * walking camera starts easing to it (metres from her stop), how long it takes when it cannot go by her steps, and
+     * how long it takes to ease back behind her as she walks on.
      */
     shape: {
       approachPace: 0.7, flinchStep: 0.45, flinchSeconds: 0.7, revealSeconds: 1.4,
       eyeshineDark: 0.8, throwLight: 0.34, sideLight: 1.4, holdHeat: 0.6, leapSeconds: 0.35, foldShift: 1.1,
       glanceAfter: 2.4, glanceFor: 1.8,
       owlLeaveAfter: 7, turnAfter: 0.9, turnRate: 2.0, peepAfter: 1.0, peepFor: 3.2, waveAfter: 2.2,
-      exhaleSeconds: 1.8, chainOn: 14,
+      exhaleSeconds: 1.8, chainOn: 17,
       eye: [13.6, 2.3, 7.4], look: [2.4, 3.0, 3.2], hfov: 76,
-      portraitEye: [8.5, 2.3, 21.0], portraitLook: [-1.6, 5.4, -2.0], portraitVfov: 60,
-      easeFrom: 9, easeSeconds: 4.5,
+      portraitEye: [10.5, 2.3, 20.5], portraitLook: [0.5, 5.3, 0.9], portraitVfov: 60,
+      easeFrom: 9, easeSeconds: 4.5, releaseSeconds: 8,
     },
     /** Seconds a coal burns from a full catch if nobody fans it again. */
     burnFor: 46,
