@@ -41,22 +41,23 @@ vec3 skyRadiance(vec3 d) {
 
   if (d.y > 0.0) {
     vec2 p = d.xz / (d.y + 0.06) * 1.2 + uCloudShift * 0.003;
-    float c = cloudDensity(p);
+    float band = smoothstep(0.015, 0.07, d.y) * (1.0 - smoothstep(0.3, 0.6, d.y));
+    float c = band > 0.0 ? cloudDensity(p) * band : 0.0;
 #if STORM_BANK
     float bank = smoothstep(0.32, 0.75, fbm(p * 0.65 + vec2(4.0, uTime * 0.006)));
 #else
     float bank = 0.0;
 #endif
-    vec2 toSun = normalize(uSunDir.xz) * 0.25;
-    float thick = cloudDensity(p + toSun);
-    float band = smoothstep(0.015, 0.07, d.y) * (1.0 - smoothstep(0.3, 0.6, d.y));
-    c *= band;
     c = mix(c, max(c, bank * smoothstep(0.0, 0.05, d.y)), uStormCover * 0.9);
-    float glow = pow(max(sd, 0.0), 5.0);
-    vec3 shade = mix(uSkyHorizon * vec3(0.78, 0.76, 0.86), uSkyHorizonSun * 0.9, glow * 0.8);
-    vec3 lit = uSkyHorizonSun * 1.15 + uSunColor * 0.35 * glow;
-    vec3 cloudCol = mix(lit, shade, smoothstep(0.1, 0.9, thick));
-    col = mix(col, cloudCol, c * 0.9);
+    if (c > 0.0) {
+      vec2 toSun = normalize(uSunDir.xz) * 0.25;
+      float thick = cloudDensity(p + toSun);
+      float glow = pow(max(sd, 0.0), 5.0);
+      vec3 shade = mix(uSkyHorizon * vec3(0.78, 0.76, 0.86), uSkyHorizonSun * 0.9, glow * 0.8);
+      vec3 lit = uSkyHorizonSun * 1.15 + uSunColor * 0.35 * glow;
+      vec3 cloudCol = mix(lit, shade, smoothstep(0.1, 0.9, thick));
+      col = mix(col, cloudCol, c * 0.9);
+    }
     float litCloud = pow(max(dot(d, normalize(uLightning.xyz)), 0.0), 14.0);
     col += vec3(0.64, 0.72, 0.95) * uLightning.w * litCloud * (0.3 + bank * 1.7);
   }
@@ -66,7 +67,8 @@ vec3 skyRadiance(vec3 d) {
     float h = hash12(cell.xy * 1.37 + cell.z * 7.13);
     float star = step(0.9965, h) * (1.0 - smoothstep(0.1, 0.55, length(fract(sd3) - 0.5)));
     float twinkle = 0.65 + 0.35 * sin(uTime * (1.5 + h * 4.0) + h * 40.0);
-    float band = (1.0 - smoothstep(0.0, 0.35, abs(dot(d, normalize(vec3(0.55, 0.3, -0.78)))))) * fbm(d.xz * 9.0 + d.y * 4.0);
+    float milky = 1.0 - smoothstep(0.0, 0.35, abs(dot(d, normalize(vec3(0.55, 0.3, -0.78)))));
+    float band = milky > 0.0 ? milky * fbm(d.xz * 9.0 + d.y * 4.0) : 0.0;
     col += (vec3(0.9, 0.93, 1.0) * star * twinkle * 3.5 + vec3(0.45, 0.5, 0.75) * band * 0.18) * uNight * (1.0 - uStormCover) * smoothstep(0.0, 0.12, d.y);
   }
   return col;
