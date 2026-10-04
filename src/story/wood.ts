@@ -399,7 +399,7 @@ export class WoodChapter implements Chapter {
     this.heading(dt);
     this.weather(dt);
     if (p.held) p.hold(c);
-    this.frame();
+    this.frame(dt);
   }
 
   /**
@@ -508,11 +508,6 @@ export class WoodChapter implements Chapter {
   afterCamera(camera: THREE.PerspectiveCamera): void {
     this.aspect = camera.aspect;
     this.wideFov = verticalFov(camera.aspect);
-    if (this.camSeen && this.now > this.camTime) {
-      this.camVel.lerp(this.tmp.copy(camera.position).sub(this.camAt).multiplyScalar(1 / (this.now - this.camTime)), 0.5);
-    }
-    this.camSeen = true;
-    this.camTime = this.now;
     this.camAt.copy(camera.position);
     camera.getWorldDirection(this.camDir);
     if (this.beat === 'compose' && this.shot.eye) {
@@ -852,7 +847,7 @@ export class WoodChapter implements Chapter {
     this.hush += (quiet - this.hush) * (1 - Math.exp(-dt * 0.7));
   }
 
-  private frame(): void {
+  private frame(dt: number): void {
     const c = this.cast.child.position;
     const s = this.shot;
     s.from = undefined;
@@ -884,7 +879,7 @@ export class WoodChapter implements Chapter {
       return;
     }
     if (this.beat === 'loom' || this.beat === 'brave') {
-      this.frameShape(ground);
+      this.frameShape(ground, dt);
       return;
     }
     /** Close in behind them, leaning a little toward the light but never far enough to leave them behind. */
@@ -976,16 +971,14 @@ export class WoodChapter implements Chapter {
   private readonly throwAt = new THREE.Vector3();
   private readonly bendEye = new THREE.Vector3();
   private readonly bendLook = new THREE.Vector3();
-  /** The camera as it was last drawn, and how it was moving, so the held frame is eased into from where it is. */
+  /** The camera as it was last drawn, so the held frame is eased into from where it is. */
   private readonly camAt = new THREE.Vector3();
   private readonly camDir = new THREE.Vector3(0, 0, -1);
-  private readonly camVel = new THREE.Vector3();
-  private camTime = -1;
-  private camSeen = false;
   private readonly easeEye = new THREE.Vector3();
   private readonly easeLook = new THREE.Vector3();
-  private readonly easeVel = new THREE.Vector3();
   private easeAt = -1;
+  private easeProgress = 0;
+  private easeTimed = false;
   private easePortrait = false;
   /** Round the bend: where she looks when she has breathed out, and goes. */
   private readonly onward = shapePoint(6, 1.1, 2.4);
@@ -1210,10 +1203,10 @@ export class WoodChapter implements Chapter {
   /**
    * One frame for all of it, from off the path on her side, low at her head height with a wide lens: her in profile
    * at the left, her coal at her feet, the empty way to the stump in the middle and the rock beyond it at the right.
-   * The walking camera eases into it once as she comes up to her stop, from wherever it is and carrying on its own
-   * drift until the ease takes it over, and it holds there without a move until she walks on.
+   * The walking camera eases into it once as she comes up to her stop, measured by how far she still has to go, so
+   * it arrives as she does and she is in the frame all the way; then it holds there without a move until she walks on.
    */
-  private frameShape(ground: number): void {
+  private frameShape(ground: number, dt: number): void {
     const s = this.shot;
     const c = this.cast.child.position;
     const k = tuning.wood.shape;
@@ -1224,22 +1217,31 @@ export class WoodChapter implements Chapter {
     this.pace = tuning.wood.cameraPace;
     this.focus.copy(c);
     const portrait = this.aspect < 1;
-    const near = Math.hypot(c.x - SHAPE_WAIT.x, c.z - SHAPE_WAIT.z) < k.easeFrom || this.shapeStopped >= 0;
-    if (this.easeAt < 0 && !near) return;
-    if (this.easeAt < 0 || portrait !== this.easePortrait) {
+    const left = Math.hypot(c.x - SHAPE_WAIT.x, c.z - SHAPE_WAIT.z);
+    if (this.easeAt < 0 && left > k.easeFrom && this.shapeStopped < 0) return;
+    if (this.easeAt < 0) {
+      // From the camera as it is: what it is off the walking frame now, it lets go of as the ease takes it.
       this.easeAt = this.now;
       this.easePortrait = portrait;
-      this.easeEye.copy(this.camAt);
-      this.easeVel.copy(this.camVel).clampLength(0, 4);
+      this.easeEye.copy(this.camAt).sub(s.eye!);
+      this.easeLook.copy(this.camAt).addScaledVector(this.camDir, this.camAt.distanceTo(s.target)).sub(s.target);
+    } else if (portrait !== this.easePortrait) {
+      // Turned on its side mid-beat: ease from wherever the camera is to the other frame, over the same time.
+      this.easePortrait = portrait;
+      this.easeProgress = 0;
+      this.easeEye.copy(this.camAt).sub(s.eye!);
+      this.easeLook.copy(this.camAt).addScaledVector(this.camDir, this.camAt.distanceTo(s.target)).sub(s.target);
+      this.easeTimed = true;
     }
+    const near = 1 - THREE.MathUtils.clamp((left - 0.4) / (k.easeFrom - 0.4), 0, 1);
+    const timed = this.easeTimed || this.shapeStopped >= 0 ? this.easeProgress + dt / k.easeSeconds : 0;
+    this.easeProgress = Math.min(1, Math.max(this.easeProgress, this.easeTimed ? timed : Math.max(near, timed)));
+    const e = THREE.MathUtils.smootherstep(this.easeProgress, 0, 1);
     framePoint(portrait ? k.portraitEye : k.eye, this.bendEye);
     framePoint(portrait ? k.portraitLook : k.look, this.bendLook);
-    if (this.now === this.easeAt) this.easeLook.copy(this.camAt).addScaledVector(this.camDir, this.bendEye.distanceTo(this.bendLook));
-    const since = this.now - this.easeAt;
-    const e = THREE.MathUtils.smootherstep(since, 0, k.easeSeconds);
-    const drift = 0.6 * (1 - Math.exp(-since / 0.6));
-    s.eye!.copy(this.easeEye).addScaledVector(this.easeVel, drift).lerp(this.bendEye, e);
-    s.target.copy(this.easeLook).addScaledVector(this.easeVel, drift).lerp(this.bendLook, e);
+    this.tmp.copy(s.target).addScaledVector(this.easeLook, 1 - e);
+    s.eye!.addScaledVector(this.easeEye, 1 - e).lerp(this.bendEye, e);
+    s.target.copy(this.tmp).lerp(this.bendLook, e);
     s.exact = true;
     // The lens opens to the held frame's field with the same move.
     const half = Math.tan(THREE.MathUtils.degToRad(this.wideFov / 2));

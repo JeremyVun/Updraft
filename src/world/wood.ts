@@ -876,7 +876,11 @@ export class DarkWood {
       [this.trees[i], this.trees[j]] = [this.trees[j], this.trees[i]];
     }
     // Cleared after the draw so every other tree keeps its place.
-    const clear = this.trees.filter((t) => !WoodShape.clears(t.x, t.z));
+    // A leaning trunk is cleared by where it leans to as well as where it stands.
+    const clear = this.trees.filter((t) => {
+      const lean = Math.sin(Math.min(t.tilt, 1)) * t.scale * 0.5;
+      return !WoodShape.clears(t.x, t.z) && !WoodShape.clears(t.x + Math.cos(t.tiltDir) * lean, t.z + Math.sin(t.tiltDir) * lean);
+    });
     this.trees.splice(0, this.trees.length, ...clear);
   }
 

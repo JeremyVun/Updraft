@@ -810,18 +810,22 @@ export class WoodShape {
 }
 
 /**
- * Is a point of the shape's frame inside the held landscape frame, nearer the camera than what it holds? A trunk
- * there would stand across her, the stump or the rock.
+ * Is a point of the shape's frame inside either held frame, nearer the camera than what it holds? A trunk there would
+ * stand across her, the stump or the rock.
  */
 function inFrame(lx: number, lz: number): boolean {
-  const [ex, , ez] = tuning.wood.shape.eye, [tx, , tz] = tuning.wood.shape.look;
-  const fx = tx - ex, fz = tz - ez, len = Math.hypot(fx, fz);
+  const k = tuning.wood.shape;
+  return inView(lx, lz, k.eye, k.look, k.hfov / 2 + 6, 11.5, 17.5) || inView(lx, lz, k.portraitEye, k.portraitLook, 34, 10.5, 22);
+}
+
+function inView(lx: number, lz: number, eye: readonly number[], look: readonly number[], halfDeg: number, nearDepth: number, farDepth: number): boolean {
+  const fx = look[0] - eye[0], fz = look[2] - eye[2], len = Math.hypot(fx, fz);
   const ax = fx / len, az = fz / len;
-  const px = lx - ex, pz = lz - ez;
+  const px = lx - eye[0], pz = lz - eye[2];
   const depth = px * ax + pz * az, across = px * -az + pz * ax;
-  const half = Math.tan(THREE.MathUtils.degToRad(tuning.wood.shape.hfov / 2 + 6));
+  const half = Math.tan(THREE.MathUtils.degToRad(halfDeg));
   if (depth < -2 || Math.abs(across) > Math.max(2.5, depth * half + 2)) return false;
   // As far as a line from just behind her to beyond the rock's far end: the subjects, and a little past them.
   const reach = (across / Math.max(1, depth * half) + 1) / 2;
-  return depth < THREE.MathUtils.lerp(11.5, 17.5, THREE.MathUtils.clamp(reach, 0, 1));
+  return depth < THREE.MathUtils.lerp(nearDepth, farDepth, THREE.MathUtils.clamp(reach, 0, 1));
 }
