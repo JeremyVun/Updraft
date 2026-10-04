@@ -971,13 +971,14 @@ export const tuning = {
      * the rock (m over s); seconds of side light to show it for what it is; how brightly the owl's eyes shine in the
      * dark; how much of a coal's glow lights the rock and the stump, and the heat the two coals there keep while she
      * is with them; how fast the outline leaps up and how fast it folds into the plain stump's as the side coal
-     * wakes, and as it folds how far it swings round past its end (radians), how far its broad left antler folds in
-     * and how many mip levels the masks blur while they move; her one look down at the cygnet (when, for how long); when the owl leaves after it is seen; her turn
-     * after it as it flies (seconds into its flight, rate), the cygnet's peep and her wave; the breath out and how
-     * far on the next coal waits. The held frame, in the shape's frame (right, up from her feet, toward her): the
-     * eye and where it looks, landscape and portrait, each lens's horizontal field (portrait: vertical), when the
-     * walking camera starts easing to it (metres from her stop), how long it takes when it cannot go by her steps, and
-     * how long it takes to ease back behind her as she walks on.
+     * wakes, how far past its end the light swings it round as it folds (radians), how far its broad left antler
+     * folds in and how many mip levels the masks blur while they move; the moonlight on her while she waits, and the
+     * share of fireflies left in the held frame; her one look down at the cygnet (when, for how long); when the owl
+     * leaves after it is seen; her turn after it as it flies (seconds into its flight, rate), the cygnet's peep and
+     * her wave; the breath out and how far on the next coal waits. The held frame, in the shape's frame (right, up
+     * from her feet, toward her): the eye and where it looks, landscape and portrait, each lens's horizontal field
+     * (portrait: vertical), when the walking camera starts easing to it (metres from her stop), how long it takes
+     * when it cannot go by her steps, and how long it takes to ease back behind her as she walks on.
      */
     shape: {
       approachPace: 0.7, flinchStep: 0.45, flinchSeconds: 0.7, revealSeconds: 1.4,
