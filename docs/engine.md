@@ -426,7 +426,7 @@ Bakes that follow the world:
   life and lighting stay live in the per-frame pass. Clears and draws are scissored to occupied rows. The three detail levels draw one
   population: each coarser level holds the lowest-ranked blades of the finer one, and thinning depends only on
   distance, so a tile changes level with no change on screen. A thinned blade shrinks into the ground rather than
-  vanishing. Sparse density starts tiles at the coarsest level that holds every blade it can show. Tiles are culled
+  vanishing. Sparse density starts tiles at the coarsest level that holds every blade it can show. On the little boats' cropped turf the thinning sits `tuning.littleBoats.turfReach` times further out, and its tiles keep the finer levels that far. Tiles are culled
   against a sphere sized from the ground under the whole tile; blades that need no discard use a program without
   one (`tools/grass-unclipped-check.mjs`).
 - Blade fragments clamp `vT` and `vSun`, and swan fragments their underside shading, because under MSAA a sliver

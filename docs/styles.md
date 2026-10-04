@@ -25,7 +25,8 @@ feel over detail. How each room plays is in `docs/chapters.md`.
   yellow-green at the tip, with large soft patches of drier gold and cooler green. Near the beach it thins into
   short, lighter tufts rather than ending in a hedge. Looked down on, the ground between blades is the grass's own
   shaded green, never bare dark soil. The little boats' cropped turf is broader-bladed so it closes over the ground
-  (`tuning.littleBoats.turfWidth`).
+  (`tuning.littleBoats.turfWidth`), and keeps its full blade count further from the eye, so the far banks read as
+  turf too (`turfReach`).
 - **The tree**: one broad tree on the still island's ridge is the landmark. Its canopy is small leaf cards shaded
   as soft spheres, dark inside and warm on the sunlit side, swaying with the live wind. The same tree grows again,
   two-thirds the size and alone, on the slope above the home jetty (`HOME_TREE`).

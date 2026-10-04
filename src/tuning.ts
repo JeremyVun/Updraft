@@ -316,6 +316,8 @@ export const tuning = {
   littleBoats: {
     /** How much broader the island's cropped blades are, so its short turf closes over the ground instead of reading as stubble. */
     turfWidth: 1.5,
+    /** How many times further from the eye the turf keeps its full blade count before thinning, so it reads as turf across the pools. */
+    turfReach: 1.5,
     /** Small toy sails respond to local gust energy, not the prevailing breeze. */
     windFrom: 0.012, windFull: 0.18, speed: 3.41,
     /** Each toy's best speed as a share of `speed`: hulls sail a little differently, and the child's own (first) is the quickest. */
