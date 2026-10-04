@@ -384,7 +384,7 @@ export const tuning = {
      * Only an updraft lifts the plug: looseness per second under a full column (it pulls free at 1), the charge that
      * starts and fully lifts it, how near the column must stand (m), and the spiral shown to a waiting player.
      */
-    plugLiftRate: 0.3, plugLiftFrom: 0.12, plugLiftFull: 0.55, plugReach: 3.5, plugCoaxUrgency: 0.8, plugCoaxRadius: 1.6,
+    plugLiftRate: 0.36, plugLiftFrom: 0.12, plugLiftFull: 0.5, plugReach: 3.5, plugCoaxUrgency: 0.8, plugCoaxRadius: 1.6,
     /** How fast the water rushes out of the mouth once the plug is out, carrying the fleet (m/s), and how quickly the rush builds and the risen pools drain (s). */
     rushSpeed: 3.6, rushRise: 1.2, drainFor: 5,
     /**
