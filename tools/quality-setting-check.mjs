@@ -23,7 +23,7 @@ async function prepare(context) {
 }
 async function start(page) {
   await page.waitForSelector('#veil.ready', { timeout: 90000 });
-  assert.equal(await page.locator('#quality').isVisible(), true, 'quality available before Begin');
+  assert(await page.locator('#quality').isVisible() || await page.locator('#corner-toggle').isVisible(), 'quality available before Begin');
   await page.locator('#begin').click();
   await page.waitForSelector('#veil', { state: 'detached' });
 }
@@ -102,13 +102,13 @@ try {
   const phone = await prepare(mobile);
   await phone.goto(base+'?analytics=0&progress=0'); await start(phone);
   assert.equal((await applied(phone)).name, 'ultra', 'a touch display at DPR 1 opens at Ultra');
+  await phone.locator('#corner-toggle').tap();
   await select(phone, 'medium');
-  const boxes = await phone.locator('#quality-control, #sound, #fullscreen').evaluateAll(elements => elements.filter(e=>!e.hidden).map(e=>{
+  const boxes = await phone.locator('#quality-control, #sound, #fullscreen, #corner-toggle').evaluateAll(elements => elements.filter(e=>!e.hidden).map(e=>{
     const r=e.getBoundingClientRect();return {x:r.x,right:r.right,y:r.y,bottom:r.bottom};
   }));
   assert(boxes.every(r=>r.x>=0&&r.right<=390&&r.bottom<=844));
-  const ordered=boxes.sort((a,b)=>a.x-b.x);
-  assert(ordered.every((r,i)=>!i||ordered[i-1].right<r.x), 'controls must not overlap');
+  assert(boxes.every((a,i)=>boxes.every((b,j)=>i===j||a.right<=b.x||b.right<=a.x||a.bottom<=b.y||b.bottom<=a.y)), 'controls must not overlap');
   await phone.locator('#quality').blur();
   await phone.screenshot({path:`${out}-phone.png`});
   assert.deepEqual(errors,[]);

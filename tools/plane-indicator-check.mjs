@@ -74,7 +74,7 @@ try {
       if(edge==='left') assert(Math.abs(s.x-s.guide.left)<1);
       const overlap = await page.evaluate(() => {
         const a=document.getElementById('plane-indicator').getBoundingClientRect();
-        return ['sound','fullscreen'].some(id=>{const b=document.getElementById(id).getBoundingClientRect();
+        return ['sound','fullscreen','corner-toggle'].some(id=>{const b=document.getElementById(id).getBoundingClientRect();
           return a.left<b.right && a.right>b.left && a.top<b.bottom && a.bottom>b.top;});
       });
       assert(!overlap, `${name} ${edge}: indicator covers controls`);

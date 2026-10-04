@@ -20,7 +20,11 @@ try {
       controls.onQualityChange=mode=>window.__choices.push(mode);
     });
     await page.waitForTimeout(900);
-    const open=async()=>{if(name==='phone')await page.locator('#quality').tap();else await page.locator('#quality').click()};
+    const open=async()=>{
+      if(name!=='phone')return page.locator('#quality').click();
+      if(await page.locator('#corner-toggle').getAttribute('aria-expanded')==='false')await page.locator('#corner-toggle').tap();
+      await page.locator('#quality').tap();
+    };
     await open();
     assert.equal(await page.locator('#quality').getAttribute('aria-expanded'),'true');
     assert.equal(await page.evaluate(()=>document.activeElement.dataset.mode),'auto');

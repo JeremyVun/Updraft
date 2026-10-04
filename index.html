@@ -121,39 +121,47 @@
       <p id="recovery-message">The graphics stopped.</p>
       <button type="button">Restart game</button>
     </div>
-    <div id="quality-control">
-      <div id="quality-dismiss" hidden aria-hidden="true"></div>
-      <button id="quality" type="button" aria-label="Graphics quality" title="Graphics quality" aria-haspopup="menu" aria-controls="quality-menu" aria-expanded="false">
+    <div id="corner">
+      <div id="corner-dismiss" hidden aria-hidden="true"></div>
+      <div id="quality-control">
+        <div id="quality-dismiss" hidden aria-hidden="true"></div>
+        <button id="quality" type="button" aria-label="Graphics quality" title="Graphics quality" aria-haspopup="menu" aria-controls="quality-menu" aria-expanded="false">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <rect class="quality-bar quality-bar-1" x="2.5" y="16.25" width="2.5" height="3.75" rx=".5"/>
+            <rect class="quality-bar quality-bar-2" x="8" y="12.5" width="2.5" height="7.5" rx=".5"/>
+            <rect class="quality-bar quality-bar-3" x="13.5" y="8.75" width="2.5" height="11.25" rx=".5"/>
+            <rect class="quality-bar quality-bar-4" x="19" y="5" width="2.5" height="15" rx=".5"/>
+          </svg>
+        </button>
+        <div id="quality-menu" role="menu" aria-label="Graphics quality" hidden>
+          <div class="quality-heading" aria-hidden="true">Graphics quality</div>
+          <button type="button" role="menuitemradio" data-mode="auto" aria-checked="true" tabindex="-1">Auto</button>
+          <button type="button" role="menuitemradio" data-mode="ultra" aria-checked="false" tabindex="-1">Ultra</button>
+          <button type="button" role="menuitemradio" data-mode="high" aria-checked="false" tabindex="-1">High</button>
+          <button type="button" role="menuitemradio" data-mode="medium" aria-checked="false" tabindex="-1">Medium</button>
+          <button type="button" role="menuitemradio" data-mode="low" aria-checked="false" tabindex="-1">Low</button>
+        </div>
+      </div>
+      <button id="sound" aria-label="Sound" aria-pressed="false" data-on="false">
         <svg viewBox="0 0 24 24" aria-hidden="true">
-          <rect class="quality-bar quality-bar-1" x="2.5" y="16.25" width="2.5" height="3.75" rx=".5"/>
-          <rect class="quality-bar quality-bar-2" x="8" y="12.5" width="2.5" height="7.5" rx=".5"/>
-          <rect class="quality-bar quality-bar-3" x="13.5" y="8.75" width="2.5" height="11.25" rx=".5"/>
-          <rect class="quality-bar quality-bar-4" x="19" y="5" width="2.5" height="15" rx=".5"/>
+          <path class="speaker" d="M4 9.5h3.2L12 5.5v13l-4.8-4H4z" />
+          <path class="wave wave-1" d="M15 9.2c1.1.8 1.1 4.8 0 5.6" />
+          <path class="wave wave-2" d="M17.6 7c2.4 1.9 2.4 8.1 0 10" />
+          <path class="mute" d="M15.5 9.5l5 5m0-5l-5 5" />
         </svg>
       </button>
-      <div id="quality-menu" role="menu" aria-label="Graphics quality" hidden>
-        <div class="quality-heading" aria-hidden="true">Graphics quality</div>
-        <button type="button" role="menuitemradio" data-mode="auto" aria-checked="true" tabindex="-1">Auto</button>
-        <button type="button" role="menuitemradio" data-mode="ultra" aria-checked="false" tabindex="-1">Ultra</button>
-        <button type="button" role="menuitemradio" data-mode="high" aria-checked="false" tabindex="-1">High</button>
-        <button type="button" role="menuitemradio" data-mode="medium" aria-checked="false" tabindex="-1">Medium</button>
-        <button type="button" role="menuitemradio" data-mode="low" aria-checked="false" tabindex="-1">Low</button>
-      </div>
+      <button id="fullscreen" type="button" aria-label="Enter full screen" aria-pressed="false">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path class="enter" d="M9 5H5v4m10-4h4v4M9 19H5v-4m10 4h4v-4" />
+          <path class="exit" d="M5 9h4V5m10 4h-4V5M5 15h4v4m10-4h-4v4" />
+        </svg>
+      </button>
+      <button id="corner-toggle" type="button" aria-label="Settings" aria-expanded="false" aria-controls="corner">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <circle cx="6" cy="12" r="1.5" /><circle cx="12" cy="12" r="1.5" /><circle cx="18" cy="12" r="1.5" />
+        </svg>
+      </button>
     </div>
-    <button id="sound" aria-label="Sound" aria-pressed="false" data-on="false">
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path class="speaker" d="M4 9.5h3.2L12 5.5v13l-4.8-4H4z" />
-        <path class="wave wave-1" d="M15 9.2c1.1.8 1.1 4.8 0 5.6" />
-        <path class="wave wave-2" d="M17.6 7c2.4 1.9 2.4 8.1 0 10" />
-        <path class="mute" d="M15.5 9.5l5 5m0-5l-5 5" />
-      </svg>
-    </button>
-    <button id="fullscreen" type="button" aria-label="Enter full screen" aria-pressed="false">
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path class="enter" d="M9 5H5v4m10-4h4v4M9 19H5v-4m10 4h4v-4" />
-        <path class="exit" d="M5 9h4V5m10 4h-4V5M5 15h4v4m10-4h-4v4" />
-      </svg>
-    </button>
     <section id="ending" aria-label="Journey complete" aria-hidden="true">
       <p role="status">Thanks for bringing them home.</p>
       <div class="ending-actions" inert>

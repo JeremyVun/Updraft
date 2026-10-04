@@ -46,7 +46,21 @@ class Controls {
     quality.addEventListener('keydown', event => {
       if (event.key === 'ArrowDown' || event.key === 'ArrowUp') { event.preventDefault(); openQuality(); }
     });
-    dismiss.addEventListener('click', closeQuality);
+    const corner = document.getElementById('corner')!;
+    const cornerToggle = document.getElementById('corner-toggle') as HTMLButtonElement;
+    const cornerDismiss = document.getElementById('corner-dismiss')!;
+    const setCorner = (open: boolean) => {
+      if (!open && !menu.hidden) closeQuality();
+      corner.classList.toggle('open', open);
+      cornerDismiss.hidden = !open;
+      cornerToggle.setAttribute('aria-expanded', String(open));
+    };
+    cornerToggle.addEventListener('click', () => setCorner(!corner.classList.contains('open')));
+    cornerDismiss.addEventListener('click', () => setCorner(false));
+    corner.addEventListener('keydown', event => {
+      if (event.key === 'Escape' && corner.classList.contains('open')) { setCorner(false); cornerToggle.focus({preventScroll:true}); }
+    });
+    dismiss.addEventListener('click', () => { closeQuality(); setCorner(false); });
     for (const option of options) option.addEventListener('click', () => {
       this.qualityMode = option.dataset.mode as QualityMode;
       syncQuality();
