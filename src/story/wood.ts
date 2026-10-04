@@ -9,7 +9,7 @@ import { heightAt } from '../world/island';
 import { WOOD_BERTH, WOOD_LANDING, WOOD_PATH, WOOD_REFUGE, WOOD_HEARTH, WOOD_OUTSIDE, WOOD_COAX, WOOD_APPROACH_LIGHT, WOOD_PLANE, WOOD_PLANE_LIGHT, woodPlaneSway } from '../world/wood';
 import type { Cast, Chapter } from './cast';
 import { cue } from './cues';
-import { SHAPE_RIGHT, SHAPE_FACING, SHAPE_SIDE_COAL, SHAPE_THROW_COAL, SHAPE_WAIT, OWL_PERCH_LOCAL, OWL_FLIGHT_LOCAL, shapePoint, framePoint, beastEyes, throwShapeLight, sideShapeLight, shapeOnRock, owlOnRock, showShape, coalLight } from '../world/wood-shape';
+import { SHAPE_RIGHT, SHAPE_FACING, SHAPE_SIDE_COAL, SHAPE_THROW_COAL, SHAPE_WAIT, OWL_PERCH_LOCAL, OWL_FLIGHT_LOCAL, shapePoint, framePoint, beastEyes, throwShapeLight, sideShapeLight, shapeOnRock, owlOnRock, showShape, moonOnHer, coalLight } from '../world/wood-shape';
 import { verticalFov } from '../camera';
 import { woodOwl } from '../creatures/owl';
 
@@ -179,6 +179,8 @@ export class WoodChapter implements Chapter {
     shapeOnRock(0, 0, 0);
     owlOnRock(1, 0, 0, 0);
     showShape(0);
+    moonOnHer(0);
+    cast.embers.hush = 0;
     this.chainAt = 21;
     this.ahead = cast.embers.lay(...this.at(this.chainAt, this.chainSide * 3.4));
     this.placeShoulder();
@@ -955,6 +957,10 @@ export class WoodChapter implements Chapter {
   private fold = 0;
   /** How much the side coal's light shows the stump and the owl. */
   private shapeShown = 0;
+  private moonlit = 0;
+  /** The held frame at the bend keeps its sparks low and its fireflies few, under the trees and off the eyes. */
+  private held = 0;
+  get fireflies(): number { return 1 - (1 - tuning.wood.shape.heldFireflies) * this.held; }
   /** The owl in the stump, for QA. */
   readonly owl = woodOwl;
   private braveStep = 0;
@@ -1061,6 +1067,12 @@ export class WoodChapter implements Chapter {
     const flying = woodOwl.phase === 'leaving' && woodOwl.fold < 0.5;
     const away = flying ? woodOwl.position.distanceTo(OWL_PERCH) : 0;
     owlOnRock(flying || woodOwl.gone ? 0 : 1, away, woodOwl.wingFrame, flying ? this.fold * (1 - THREE.MathUtils.smoothstep(away, 2.5, 6.5)) : 0);
+    // Moonlight finds her as she comes up to the eyes, so her outline reads before anything is lit; then the coals have her.
+    const moon = this.beat === 'loom' ? (this.throwLitAt >= 0 ? 0.3 : 1) : this.beat === 'brave' ? 0.3 : 0;
+    this.moonlit += (moon * k.moonOnHer - this.moonlit) * (1 - Math.exp(-dt * 1.2));
+    moonOnHer(this.moonlit);
+    this.held += ((this.beat === 'loom' || this.beat === 'brave' ? 1 : 0) - this.held) * (1 - Math.exp(-dt * 1.5));
+    embers.hush = this.held;
     this.shapeShown = Math.max(this.shapeReveal, THREE.MathUtils.smoothstep(side, 0.15, 1.2));
     showShape(this.shapeShown);
     woodOwl.shown = this.shapeShown;
@@ -1295,7 +1307,7 @@ export class WoodChapter implements Chapter {
     const half = Math.tan(THREE.MathUtils.degToRad(this.wideFov / 2));
     const want = portrait ? Math.tan(THREE.MathUtils.degToRad(k.portraitVfov / 2))
       : Math.tan(THREE.MathUtils.degToRad(k.hfov / 2)) / Math.max(this.aspect, 1e-3);
-    s.zoom = this.heldZoom = THREE.MathUtils.lerp(1, THREE.MathUtils.clamp(half / want, 0.55, 1.3), e);
+    s.zoom = this.heldZoom = THREE.MathUtils.lerp(1, THREE.MathUtils.clamp(half / want, 0.45, 1.3), e);
     // She walks into the held frame from its edge: until she is in her place the look turns enough to keep her in it.
     const vHalf = half / s.zoom;
     this.keepInFrame(s.eye!, s.target, this.childSubject.copy(c).setY(c.y + 1.3), vHalf * this.aspect * 0.78, vHalf * 0.75);

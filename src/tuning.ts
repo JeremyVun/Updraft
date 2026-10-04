@@ -982,12 +982,12 @@ export const tuning = {
     shape: {
       approachPace: 0.7, flinchStep: 0.45, flinchSeconds: 0.7, revealSeconds: 1.4,
       eyeshineDark: 0.8, throwLight: 0.34, sideLight: 1.4, holdHeat: 0.6, leapSeconds: 0.35, foldShift: 1.1,
-      foldSwing: 0.35, foldIn: 0.45, foldBlur: 3.5,
+      foldSwing: 0.35, foldIn: 0.45, foldBlur: 3.5, moonOnHer: 0.6, heldFireflies: 0.3,
       glanceAfter: 2.4, glanceFor: 1.8,
       owlLeaveAfter: 7, turnAfter: 0.9, turnRate: 2.0, peepAfter: 1.0, peepFor: 3.2, waveAfter: 2.2,
       exhaleSeconds: 1.8, chainOn: 17,
       eye: [14.4, 2.3, 5.2], look: [2.65, 3.0, 2.75], hfov: 76,
-      portraitEye: [10.5, 2.3, 20.5], portraitLook: [0.5, 5.3, 0.9], portraitVfov: 60,
+      portraitEye: [5.0, 2.4, 16.5], portraitLook: [1.4, 5.2, 1.0], portraitVfov: 72,
       easeFrom: 9, easeSeconds: 4.5, releaseSeconds: 8,
     },
     /** Seconds a coal burns from a full catch if nobody fans it again. */

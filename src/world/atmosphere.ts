@@ -141,6 +141,8 @@ export const atmo = {
     uLaneOpen: { value: new THREE.Vector2(3, 0) },
     /** The bedside lamp, the one warm light in the blue: where it is (xyz) and how strong (w). */
     uLamp: { value: new THREE.Vector4(0, 0, 0, 0) },
+    /** Cold moonlight on the child alone, where a room needs her outline read in the dark: 0 none. */
+    uChildMoon: { value: 0 },
     uHearth: { value: new THREE.Vector4(0, 0, 0, 0) },
     /** The morning coming down the sleeping island's hill: how far it has come (x), and the height it has reached down to (y). */
     uDawn: { value: new THREE.Vector2(0, 0) },

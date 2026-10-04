@@ -101,6 +101,7 @@ uniform float uWhites;
 uniform float uNoseTip;
 /** Which way the hood's opening faces in the world, to keep the sun off a face it cannot reach. */
 uniform vec3 uHoodForward;
+uniform float uChildMoon;
 in vec3 vWorld;
 in vec3 vNormal;
 in vec3 vRest;
@@ -295,6 +296,12 @@ void main() {
    * on the other. Spread evenly it paints the whole child the colour of the bulb and loses the blue they lie in.
    */
   col += alb * (emberLight(vWorld, N) + dawnLight(vWorld, N) + lanternLight(vWorld, N)) * mix(0.5, 1.0, ao);
+  if (uChildMoon > 0.0) {
+    // Moonlight through bare crowns: a cold wash, and a rim along her outline so she reads against the dark.
+    vec3 moon = vec3(0.3, 0.38, 0.6) * uChildMoon;
+    col += alb * moon * (wrap * 0.7 + 0.2) * ao;
+    col += moon * pow(1.0 - facing, 2.5) * (0.35 + 0.65 * alb) * (1.0 - inside);
+  }
   if (uLamp.w > 0.0) {
     vec3 toLamp = uLamp.xyz - vWorld;
     float lampSide = clamp(dot(N, toLamp) * inversesqrt(max(dot(toLamp, toLamp), 1e-4)) * 0.5 + 0.5, 0.0, 1.0);

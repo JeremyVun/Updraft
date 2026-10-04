@@ -962,7 +962,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   birches.update(dt, rig.camera, child.visible ? child.position : null);
   /** Under the wood's canopy a sheltered population stays low despite the storm outside. */
   const inWood = story.name === 'wood';
-  const flyWeather = inWood ? tuning.wood.fireflyPresence : Math.max(0, 1 - storm * 1.6);
+  const flyWeather = (inWood ? tuning.wood.fireflyPresence : Math.max(0, 1 - storm * 1.6)) * (story.current.fireflies ?? 1);
   fireflies.update(dt, atmo.uniforms.uNight.value * overLand * flyWeather * (1 - sleeping.presence), story.focus, inWood);
   emberInvitation.update(dt, rig.camera, story.current.windInvitation ?? null, input,
     undefined, story.name === 'mirror' ? tuning.skyMirror.bubbleRadius : story.current.invitationRadius ?? 0,

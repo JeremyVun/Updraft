@@ -25,12 +25,19 @@ const DOWN = 5;
 const NECK = new THREE.Vector3(0, 0.27, 0);
 const CENTRE = new THREE.Vector3(0, 0.18, 0);
 const SHOULDER = new THREE.Vector3(0.1, 0.24, -0.01);
-const EYE_AT = new THREE.Vector3(0.05, 0.338, 0.128);
-const EYE_SIZE = new THREE.Vector3(0.039, 0.039, 0.022);
+const EYE_AT = new THREE.Vector3(0.057, 0.342, 0.136);
+const EYE_SIZE = new THREE.Vector3(0.047, 0.047, 0.024);
 /** The tip of the right ear tuft, on the head. */
-const TUFT = new THREE.Vector3(0.095, 0.44, 0.0);
+const TUFT = new THREE.Vector3(0.1, 0.46, 0.0);
 /** Larger than life, as the game's creatures are, so it reads from where the camera stands. */
 const SCALE = 2.1;
+/** The wing as built, spread: from the shoulder out to its tip, how far it reaches, and its chord. */
+const WING_REACH = 0.44;
+/** Where the wing's feathers are along it (0 at the shoulder, 1 at the tip) and across it (-1 trailing edge, 1 leading). */
+const WING_GLSL = /* glsl */ `
+float wingSpan(vec3 rest) { return clamp((abs(rest.x) - ${SHOULDER.x.toFixed(3)}) / ${WING_REACH.toFixed(3)}, 0.0, 1.0); }
+float wingMid(float s) { return -0.02 - 0.06 * s * s; }
+float wingHalf(float s) { return 0.11 * (1.0 - 0.45 * pow(s, 2.5)) + 0.004; }`;
 /** Beyond this the eyeshine stops shrinking with distance. */
 const GLOW_NEAR = 8;
 
@@ -49,6 +56,7 @@ out vec3 vNormal;
 out vec2 vMat;
 out vec3 vEye;
 out vec3 vLocal;
+out vec3 vRestN;
 out float vPart;
 
 const vec3 NECK = vec3(0.0, ${NECK.y}, 0.0);
@@ -59,6 +67,7 @@ void main() {
   vec3 p = position;
   vec3 n = normal;
   vLocal = p;
+  vRestN = n;
   float fluff = uOwlHead.w;
   if (part == ${EYE_L} || part == ${EYE_R}) {
     vec3 c = vec3(${EYE_AT.x} * (part == ${EYE_L} ? -1.0 : 1.0), ${EYE_AT.y}, ${EYE_AT.z});
@@ -76,6 +85,8 @@ void main() {
     vec3 pivot = vec3(${SHOULDER.x} * side, ${SHOULDER.y}, ${SHOULDER.z});
     float fold = uOwlWing.x;
     p -= pivot;
+    // Folded at the wrist, the wing is half as long against its flank.
+    p.x *= mix(1.0, 0.5, fold);
     // Spread is the wing as built, out sideways; folded it hangs down the flank and tucks back.
     vec3 q = rotZ(p, side * uOwlWing.y);
     vec3 nq = rotZ(n, side * uOwlWing.y);
@@ -112,6 +123,7 @@ const FRAG = /* glsl */ `
 ${ATMO_GLSL}
 ${CREATURE_GLSL}
 ${SHAPE_SHADOW_GLSL}
+${WING_GLSL}
 uniform vec4 uOwlWing;
 uniform vec4 uOwlEyes;
 in vec3 vWorld;
@@ -119,6 +131,7 @@ in vec3 vNormal;
 in vec2 vMat;
 in vec3 vEye;
 in vec3 vLocal;
+in vec3 vRestN;
 in float vPart;
 void main() {
   vec3 N = normalize(vNormal);
@@ -128,24 +141,45 @@ void main() {
   float t = vMat.y;
   float speck = vnoise(vLocal.xy * vec2(70.0, 52.0) + vLocal.z * 30.0);
   float streak = vnoise(vec2(vLocal.x * 48.0, vLocal.y * 16.0));
-  vec3 back = mix(vec3(0.24, 0.15, 0.09), vec3(0.36, 0.24, 0.14), speck);
+  vec3 back = mix(vec3(0.2, 0.12, 0.065), vec3(0.32, 0.2, 0.11), speck);
   // Pale spots across the back and the crown, the way a little owl is freckled.
-  back = mix(back, vec3(0.7, 0.6, 0.44), smoothstep(0.8, 0.88, speck) * 0.8);
-  vec3 breast = mix(vec3(0.44, 0.33, 0.21), vec3(0.28, 0.17, 0.1), smoothstep(0.55, 0.75, streak) * 0.8);
+  back = mix(back, vec3(0.62, 0.48, 0.3), smoothstep(0.8, 0.88, speck) * 0.7);
+  vec3 breast = mix(vec3(0.5, 0.34, 0.19), vec3(0.28, 0.16, 0.08), smoothstep(0.55, 0.75, streak) * 0.8);
   vec3 alb = mix(back, breast, t);
   float fuzz = 1.0;
   float glow = 0.0;
   if (mat == ${DISC}) {
     // A pale ring round each eye with a soft dark rim, and white brows meeting over the beak.
-    alb = mix(vec3(0.74, 0.66, 0.5), vec3(0.3, 0.2, 0.12), smoothstep(0.7, 0.98, t));
+    alb = mix(vec3(0.64, 0.5, 0.33), vec3(0.28, 0.17, 0.09), smoothstep(0.7, 0.98, t));
     alb = mix(alb, vec3(0.86, 0.82, 0.72), smoothstep(0.25, 0.0, abs(vLocal.y - 0.37 - abs(vLocal.x) * 0.25) * 12.0) * step(0.5, t) * 0.0 + smoothstep(0.5, 0.75, t) * smoothstep(0.0, 0.3, vLocal.y - 0.335) * 0.6);
   } else if (mat == ${HORN}) {
     alb = vec3(0.72, 0.66, 0.42); fuzz = 0.15;
   } else if (mat == ${WING}) {
-    alb = mix(back, vec3(0.2, 0.13, 0.08), smoothstep(0.6, 0.95, t) * 0.6);
-    alb = mix(alb, vec3(0.8, 0.72, 0.55), step(0.5, fract(vLocal.x * 26.0 + vLocal.z * 8.0)) * smoothstep(0.35, 0.6, t) * 0.35);
+    // Spotted coverts along the leading edge, then the long flight feathers, barred across, each with its own
+    // rounded tip along the trailing edge; the tips at the end of the wing splay into fingers.
+    float s = wingSpan(vLocal);
+    float across = (vLocal.z - wingMid(s)) / wingHalf(s);
+    // Each flight feather ends in a rounded tip; the long ones at the end of the wing splay further apart.
+    float f = fract(s * 6.0 + across * 0.3 * s);
+    float tipRound = 1.0 - sqrt(max(0.0, 1.0 - (2.0 * f - 1.0) * (2.0 * f - 1.0)));
+    if (across < -1.0 + tipRound * mix(0.14, 0.4, smoothstep(0.5, 0.95, s))) discard;
+    // Out at the tip the primaries part into fingers.
+    float finger = fract((across * 0.5 + 0.5) * 5.0 + (s - 0.7) * 1.2);
+    if (finger < 0.24 * smoothstep(0.72, 0.92, s)) discard;
+    // The coverts overlap the flight feathers in a scalloped row of their own.
+    float g = fract(s * 11.0);
+    float coverts = smoothstep(-0.02, 0.02, across - 0.05 - 0.18 * sqrt(max(0.0, 1.0 - (2.0 * g - 1.0) * (2.0 * g - 1.0))));
+    float flight = 1.0 - coverts;
+    float bars = smoothstep(0.3, 0.7, abs(fract(across * 2.2 + s * 1.5) * 2.0 - 1.0)) * flight;
+    float shaft = (1.0 - smoothstep(0.03, 0.09, abs(f - 0.5))) * flight;
+    float under = step(vRestN.y, 0.0);
+    vec3 top = mix(mix(vec3(0.3, 0.18, 0.09), vec3(0.12, 0.07, 0.035), bars), back, coverts);
+    top = mix(top, vec3(0.55, 0.42, 0.26), smoothstep(0.82, 0.9, speck) * coverts * 0.8);
+    top *= 1.0 - 0.35 * (1.0 - smoothstep(0.0, 0.06, abs(across - 0.05 - 0.18 * sqrt(max(0.0, 1.0 - (2.0 * g - 1.0) * (2.0 * g - 1.0))))));
+    vec3 below = mix(vec3(0.52, 0.4, 0.26), vec3(0.3, 0.2, 0.11), bars * 0.8);
+    alb = mix(top, below, under) * (1.0 - 0.3 * shaft);
   } else if (mat == ${DOWN}) {
-    alb = vec3(0.78, 0.72, 0.6);
+    alb = vec3(0.45, 0.35, 0.23);
   } else if (mat == ${EYE}) {
     fuzz = 0.0;
     float r = length(vEye.xy);
@@ -158,10 +192,10 @@ void main() {
   vec3 moon = uSunColor * uNight;
   float wrap = clamp(dot(N, uSunDir) * 0.5 + 0.5, 0.0, 1.0);
   float edge = pow(1.0 - clamp(dot(N, V), 0.0, 1.0), 2.0);
-  vec3 col = alb * (hemiLight(N) * 0.8 + moon * (wrap * wrap * 0.9 + 0.15));
-  col += moon * edge * fuzz * 0.35 * (0.3 + 0.7 * alb);
+  vec3 col = alb * (hemiLight(N) * 0.8 + moon * (wrap * wrap * 0.4 + 0.08));
+  col += moon * edge * fuzz * 0.15 * (0.3 + 0.7 * alb);
   // Until the side coal's light is on it, it is a dark lump in the fork with eyes; flying, her light finds it.
-  vec3 warm = emberLight(vWorld, N) * mix(0.04, 0.45, uOwlEyes.y) + shapeSideLight(vWorld, N) * 0.4 * uOwlEyes.y;
+  vec3 warm = emberLight(vWorld, N) * mix(0.04, 0.45, uOwlEyes.y) * (1.0 - 0.5 * uOwlWing.w) + shapeSideLight(vWorld, N) * 0.4 * uOwlEyes.y;
   // Sat down in the fork it would be in the dead limbs' shade; let the light that shows it reach it.
   float shade = mix(1.0, shapeShadowCaps(vWorld + N * 0.03, ${SHAPE_STUMP_CAPS}), 0.3);
   col += (alb + 0.012) * warm * shade;
@@ -169,16 +203,17 @@ void main() {
   if (mat == ${EYE}) {
     col += vec3(1.0, 0.95, 0.85) * catchlight(N, vWorld) * (0.25 + 0.6 * length(warm * shade)) * glow;
     // Eyeshine: the light thrown back out of the eyes, which is all a frightened child sees of them in the dark.
-    col += vec3(1.0, 0.72, 0.22) * uOwlEyes.x * glow * 3.2;
+    col += vec3(1.0, 0.72, 0.22) * uOwlEyes.x * glow * 1.8;
   }
-  // Up out of the firelight, the moon through the canopy finds the edges of its down, so it never goes out; the
-  // warmth stays in the down, so it reads as a little brown owl against the night rather than a pale ghost.
+  // Flying up out of the firelight it keeps the coals' warmth from below and a warm edge to its down, so it reads as a
+  // little brown owl against the night sky rather than a pale moth; the moon only touches its back.
   if (uOwlWing.w > 0.0) {
-    vec3 cold = vec3(0.5, 0.56, 0.7) * uNight * uOwlWing.w;
-    col += alb * cold * (wrap * 0.2 + 0.06) + cold * edge * fuzz * 0.22 * (0.3 + 0.7 * alb);
-    col += alb * vec3(0.5, 0.3, 0.16) * uOwlWing.w * 0.35;
+    vec3 fire = vec3(1.0, 0.55, 0.25) * uOwlWing.w;
+    col += alb * fire * clamp(0.45 - N.y * 0.55, 0.0, 1.0) * 0.18;
+    col += fire * edge * fuzz * 0.16 * (0.25 + 0.75 * alb);
+    col += alb * vec3(0.45, 0.5, 0.62) * uNight * max(0.0, N.y) * 0.12 * uOwlWing.w;
   }
-  col *= mix(vec3(1.0), vec3(0.95, 0.78, 0.6), uOwlWing.w) * uOwlEyes.w;
+  col *= uOwlEyes.w;
   gl_FragColor = vec4(max(applyFog(col, vWorld), 0.0), 1.0);
 }`;
 
@@ -206,29 +241,35 @@ uniform float uGlow;
 in vec2 vUv;
 void main() {
   float r = length(vUv);
-  float a = exp(-r * r * 9.0) * 0.9 + exp(-r * r * 2.5) * 0.25;
+  // Two crisp points with only a breath of glow round them.
+  float a = exp(-r * r * 16.0) * 0.9 + exp(-r * r * 4.0) * 0.06;
   a *= 1.0 - smoothstep(0.8, 1.0, r);
   gl_FragColor = vec4(vec3(1.0, 0.7, 0.24) * a * uGlow, 1.0);
 }`;
 
 function owlGeometry(): THREE.BufferGeometry {
   const disc: BlobSpec = {
-    part: FACE, mat: DISC, at: [-0.05, 0.332, 0.108], size: [0.066, 0.072, 0.03], rot: [0, -0.3, 0], detail: 3,
+    part: FACE, mat: DISC, at: [-0.058, 0.336, 0.112], size: [0.077, 0.083, 0.032], rot: [0, -0.3, 0], detail: 3,
     blend: (u) => Math.hypot(u.x, u.y),
   };
   const eye: BlobSpec = { part: EYE_L, mat: EYE, at: [-EYE_AT.x, EYE_AT.y, EYE_AT.z], size: [EYE_SIZE.x, EYE_SIZE.y, EYE_SIZE.z], detail: 3 };
+  // Out from the shoulder, its chord broad and swept back toward a rounded tip, as `WING_GLSL` reads it.
   const wing: BlobSpec = {
-    part: WING_L, mat: WING, at: [-SHOULDER.x, SHOULDER.y, SHOULDER.z], offset: [-0.16, 0, -0.02], size: [0.17, 0.016, 0.095],
-    detail: 2,
+    part: WING_L, mat: WING, at: [-SHOULDER.x, SHOULDER.y, SHOULDER.z], offset: [-WING_REACH / 2, 0, 0], size: [WING_REACH / 2, 0.014, 1],
+    detail: 4,
     shape: (u) => {
-      const s = Math.max(-u.x, 0);
-      u.z = u.z * (1 - 0.3 * s) - 0.35 * s * s;
+      const s = (1 - u.x) / 2;
+      const r = Math.sqrt(Math.max(1 - u.x * u.x, 1e-4));
+      const across = THREE.MathUtils.clamp(u.z / r, -1, 1);
+      const half = 0.11 * (1 - 0.45 * s ** 2.5) + 0.004;
+      u.z = -0.02 - 0.06 * s * s + across * half * r ** 0.25;
+      u.y *= r ** 0.5;
     },
     blend: (u) => -u.x * 0.5 + 0.5,
   };
   const foot: BlobSpec = { part: FEET, mat: DOWN, at: [-0.04, 0.012, 0.05], size: [0.028, 0.016, 0.034], detail: 1 };
   const tuft: BlobSpec = {
-    part: HEAD, mat: PLUMAGE, at: [-TUFT.x, TUFT.y - 0.03, TUFT.z], size: [0.026, 0.045, 0.022], rot: [0, 0, 0.35], detail: 2,
+    part: HEAD, mat: PLUMAGE, at: [-TUFT.x, TUFT.y - 0.035, TUFT.z], size: [0.03, 0.055, 0.024], rot: [0, 0, 0.35], detail: 2,
     shape: (u) => { const k = 1 - 0.7 * Math.max(0, u.y); u.x *= k; u.z *= k; },
     blend: () => 0,
   };
@@ -239,20 +280,20 @@ function owlGeometry(): THREE.BufferGeometry {
       blend: (u) => THREE.MathUtils.smoothstep(u.z * 0.9 - u.y * 0.3, 0.05, 0.55),
     },
     {
-      part: HEAD, mat: PLUMAGE, at: [0, 0.335, 0.01], size: [0.138, 0.118, 0.12], detail: 3,
+      part: HEAD, mat: PLUMAGE, at: [0, 0.34, 0.012], size: [0.152, 0.13, 0.128], detail: 3,
       shape: (u) => { u.y *= 1 - 0.12 * Math.max(0, u.y) * Math.abs(u.x); },
       blend: () => 0,
     },
     disc, mirrored(disc, FACE),
     eye, mirrored(eye, EYE_R),
     {
-      part: BEAK, mat: HORN, at: [0, 0.312, 0.138], size: [0.014, 0.024, 0.018], rot: [0.5, 0, 0], detail: 1,
+      part: BEAK, mat: HORN, at: [0, 0.314, 0.146], size: [0.014, 0.024, 0.018], rot: [0.5, 0, 0], detail: 1,
       shape: (u) => { const k = 1 - 0.6 * Math.max(-u.y, 0); u.x *= k; u.z *= k; },
     },
     wing, mirrored(wing, WING_R),
     foot, mirrored(foot, FEET),
     tuft, mirrored(tuft, HEAD),
-    { part: TAIL, mat: WING, at: [0, 0.06, -0.1], size: [0.05, 0.02, 0.07], rot: [0.5, 0, 0], detail: 1, blend: () => 0.8 },
+    { part: TAIL, mat: PLUMAGE, at: [0, 0.06, -0.1], size: [0.05, 0.02, 0.07], rot: [0.5, 0, 0], detail: 1, blend: () => 0 },
   ];
   return merge(parts.map(blob));
 }
@@ -446,9 +487,10 @@ export class Owl {
     // Down quickly, up slowly, every other stroke a little shallower.
     const stroke = Math.cos(this.beat + 0.4 * Math.sin(this.beat));
     const depth = 0.75 * (1 - 0.18 * (0.5 + 0.5 * Math.cos(this.beat * 0.5))) + 0.3 * first;
-    this.flap = THREE.MathUtils.lerp(0.18, 0.12 + depth * stroke, this.flapBlend);
+    // Held up in a soft V through the stroke, so the camera beside it sees the wings and not their edges.
+    this.flap = THREE.MathUtils.lerp(0.42, 0.3 + depth * stroke, this.flapBlend);
     this.fold = Math.max(0, this.fold - dt * 5);
-    this.wingFrame = this.flap > 0.45 ? 0 : this.flap < -0.2 ? 2 : this.flap < this.flapWas ? 1 : 3;
+    this.wingFrame = this.flap > 0.65 ? 0 : this.flap < 0.0 ? 2 : this.flap < this.flapWas ? 1 : 3;
     this.flapWas = this.flap;
     // Unhurried off the fork, gathering way, then climbing away.
     const k = THREE.MathUtils.clamp(s / FLIGHT, 0, 1);

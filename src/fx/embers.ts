@@ -110,6 +110,8 @@ export class Embers {
   readonly mesh: THREE.Mesh;
   /** 0 nothing showing, 1 fully awake: the story fades them in with the wood and out again with the dawn. */
   presence = 0;
+  /** 0 the sparks fly as the wind takes them, 1 kept few, small and low, so a held frame stays on what it holds. */
+  hush = 0;
   readonly coals: Coal[] = [];
   private readonly sparks: Spark[] = [];
   private readonly attr: THREE.InstancedBufferAttribute;
@@ -329,11 +331,11 @@ export class Embers {
       if (breath > 0.12) {
         c.flare = Math.min(t.flareMax, c.flare + breath * dt * 3.4);
         c.heat = Math.min(1, c.heat + breath * dt * 0.9);
-        if (Math.random() < breath * dt * 6) this.throwSparks(c, 2);
+        if (Math.random() < breath * dt * 6 * (1 - 0.7 * this.hush)) this.throwSparks(c, 2);
       }
       c.flare *= Math.exp(-dt * 0.85);
       c.heat -= dt / t.burnFor;
-      if (Math.random() < dt * (0.9 + c.flare)) this.throwSparks(c, 1);
+      if (Math.random() < dt * (0.9 + c.flare) * (1 - 0.7 * this.hush)) this.throwSparks(c, 1);
       /** Burnt right out: it stops being anything at all, so the only glimmer left is the next one to blow on. */
       if (c.heat <= 0) {
         c.heat = 0;
@@ -384,8 +386,9 @@ export class Embers {
       s.v.x += (w.x * 0.85 - s.v.x) * drag;
       s.v.z += (w.z * 0.85 - s.v.z) * drag;
       /** Hot ones ride their own heat upward and cold ones settle back into the litter. */
-      s.v.y += (w.lift * 2.2 + s.heat * 1.15 - 0.55 - s.v.y * 1.6) * dt * 2.2;
+      s.v.y += (w.lift * 2.2 * (1 - 0.7 * this.hush) + s.heat * 1.15 - 0.55 - s.v.y * 1.6) * dt * 2.2;
       s.p.addScaledVector(s.v, dt);
+      if (this.hush > 0) s.heat *= Math.exp(-dt * 5 * this.hush * THREE.MathUtils.smoothstep(s.p.y - Math.max(heightAt(s.p.x, s.p.z), 0), 1.2, 2.4));
       if (s.p.y < ground + 0.06) {
         s.p.y = ground + 0.06;
         s.v.y = Math.max(0, s.v.y);
@@ -395,7 +398,7 @@ export class Embers {
       data[j + 1] = s.p.y;
       data[j + 2] = s.p.z;
       data[j + 3] = s.heat * this.presence;
-      sizes[i] = 0.035 + s.heat * 0.1;
+      sizes[i] = (0.035 + s.heat * 0.1) * (1 - 0.5 * this.hush);
     }
 
     /** The light the child follows: the best single fire near them, not the average of the ones behind. */

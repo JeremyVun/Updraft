@@ -175,6 +175,8 @@ export interface Chapter {
   readonly invitationRadius?: number;
   /** Screen angle, radians anticlockwise from the right, of a sweep that only works one way. */
   readonly invitationHeading?: number | null;
+  /** How many of the night's fireflies are out, 0..1; all of them when unset. */
+  readonly fireflies?: number;
   /** A chapter target, such as the wood's waiting coal, that only an updraft wound up over it can answer. */
   readonly updraftTarget?: THREE.Vector3 | null;
   /** Where the one ember light the shaders get comes from, when a beat needs it somewhere other than the brightest coal. */

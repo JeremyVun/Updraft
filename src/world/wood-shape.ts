@@ -144,10 +144,10 @@ export const OWL_PERCH_LOCAL = new THREE.Vector3(...turned([0.22, TRUNK_TOP + 0.
  * the far side of the path and out above the crowns.
  */
 export const OWL_FLIGHT_LOCAL = [
-  new THREE.Vector3(0.4, 2.95, 1.7),
-  new THREE.Vector3(1.3, 3.6, 4.7),
-  new THREE.Vector3(2.0, 4.7, 8.1),
-  new THREE.Vector3(0.2, 7.2, 11.6),
+  new THREE.Vector3(0.5, 2.85, 1.75),
+  new THREE.Vector3(1.7, 3.65, 4.65),
+  new THREE.Vector3(2.6, 4.7, 8.0),
+  new THREE.Vector3(0.7, 7.2, 11.5),
   new THREE.Vector3(-3.6, 12.5, 15.5),
   new THREE.Vector3(-7, 18.5, 18.5),
 ];
@@ -200,6 +200,11 @@ export function coalLight(x: number, z: number, out = new THREE.Vector3()): THRE
  */
 export function shapeOnRock(beast: number, fold: number, eyes: number): void {
   shapeUniforms.uShapeMask.value.set(beast, fold, eyes, shapeUniforms.uShapeMask.value.w);
+}
+
+/** How much cold moonlight finds her while she waits in the dark before the bend. */
+export function moonOnHer(amount: number): void {
+  atmo.uniforms.uChildMoon.value = amount;
 }
 
 /** How the stump and the owl are shown: 0 dark against the light behind her, 1 lit by the side coal. */
@@ -590,7 +595,8 @@ void main() {
     col += (alb + vec3(0.006, 0.004, 0.002)) * warm * (1.0 - 0.94 * shade.x);
     col += vec3(1.0, 0.68, 0.22) * shade.y * 2.6;
   }
-  gl_FragColor = vec4(max(applyFog(col, vWorld), 0.0), 1.0);
+  // The night's haze is kept thin on the stone, so its grain and the shadow on it stay crisp from either held frame.
+  gl_FragColor = vec4(max(vKind < 0.5 ? applyFog(col, vWorld) : mix(col, applyFog(col, vWorld), 0.45), 0.0), 1.0);
 }`;
 
 function tube(a: THREE.Vector3, b: THREE.Vector3, ra: number, rb: number, seed: number): THREE.BufferGeometry {
