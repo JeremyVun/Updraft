@@ -237,3 +237,14 @@ billowing a sheet, filling a sail). Each prototype is judged on its own branch.
   to rise. Circling stands each plume into a tower that leans out toward the storm; when the towers join it, a cold
   rush races across the glass, a visible line of darkening water, and fills the sail. Risk: circling twice can read
   as the same act twice; uncovering each chimney differently is what varies it.
+- **D. Whistle up the wind.** Jeremy: "yea i like the idea of D as well. I dont know how we would keep the boat
+  stationary as the wind starts blowing, but i do like the idea of incorporating back a bit of a musical theme." The
+  old sailors' belief that whistling at sea calls up the wind, and a storm if you overdo it. The drowned church's organ
+  pipes stand out of the water near the boat like tall reeds; a gust across a pipe's mouth sounds its note, like
+  blowing across a bottle. When the air dies the bells in the spire ring a short phrase on their own, the dying
+  breeze's last touch, and nothing answers. As each bell sounds, the pipe with the same note shivers in sympathy with
+  a ring on the water at its foot, so the phrase can be read with the sound off; the player answers it on the pipes,
+  the piano's call and response in a new place. The boat stays put because the notes never blow on it: each answered
+  note draws a dark line of ruffled water on the far horizon nearer across the glass, and stirs the nearest toys (tiny
+  and light) a little; a wrong pipe only sounds and ripples. On the last note the line arrives, the sail fills, the
+  toys run on, and the wind keeps building past what she called for into the storm.
