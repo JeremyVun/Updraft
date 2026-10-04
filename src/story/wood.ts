@@ -9,7 +9,7 @@ import { heightAt } from '../world/island';
 import { WOOD_BERTH, WOOD_LANDING, WOOD_PATH, WOOD_REFUGE, WOOD_HEARTH, WOOD_OUTSIDE, WOOD_COAX, WOOD_APPROACH_LIGHT, WOOD_PLANE, WOOD_PLANE_LIGHT, woodPlaneSway } from '../world/wood';
 import type { Cast, Chapter } from './cast';
 import { cue } from './cues';
-import { WOOD_SHAPE, SHAPE_RIGHT, SHAPE_FACING, SHAPE_SIDE_COAL, SHAPE_THROW_COAL, SHAPE_WAIT, OWL_PERCH_LOCAL, OWL_FLIGHT_LOCAL, shapePoint, throwShapeLight, showShape, coalLight } from '../world/wood-shape';
+import { WOOD_SHAPE, SHAPE_RIGHT, SHAPE_FACING, SHAPE_SIDE_COAL, SHAPE_THROW_COAL, SHAPE_WAIT, OWL_PERCH_LOCAL, OWL_FLIGHT_LOCAL, shapePoint, throwShapeLight, showShape, coalLight, shapeUniforms } from '../world/wood-shape';
 import { woodOwl } from '../creatures/owl';
 
 /** Where the cygnet goes to ground when the storm frightens it out of the hood: just off the path, in the dark. */
@@ -171,6 +171,8 @@ export class WoodChapter implements Chapter {
      */
     cast.embers.clearCoals();
     woodOwl.sit(OWL_PERCH, Math.atan2(SHAPE_FACING.x, SHAPE_FACING.z));
+    shapeUniforms.uShapeThrow.value.w = 0;
+    showShape(0);
     this.chainAt = 21;
     this.ahead = cast.embers.lay(...this.at(this.chainAt, this.chainSide * 3.4));
     this.placeShoulder();
@@ -321,6 +323,7 @@ export class WoodChapter implements Chapter {
     this.caught();
     woodOwl.update(dt);
     if (this.steering) this.steerShapeLight(dt);
+    else if (this.throwCoal) shapeUniforms.uShapeThrow.value.w *= Math.exp(-dt * 1.5);
 
     switch (this.beat) {
       case 'ashore':
@@ -954,7 +957,6 @@ export class WoodChapter implements Chapter {
   private readonly shapeEyes = new THREE.Vector3();
   private readonly shapeHold = new THREE.Vector3();
   private readonly shapeHand = new THREE.Vector3();
-  private readonly shapeGlance = new THREE.Vector3();
   private readonly shapeFace = new THREE.Vector3();
   private readonly childHead = new THREE.Vector3();
   private readonly throwAt = new THREE.Vector3();
@@ -1025,11 +1027,10 @@ export class WoodChapter implements Chapter {
     this.lightShare += (want - this.lightShare) * (1 - Math.exp(-dt * k.lightShift));
     this.shapeShown = Math.max(this.shapeReveal, this.lightShare * THREE.MathUtils.smoothstep(this.shapePower, 0.2, 1.6));
     const from = t.live ? embers.glowOf(t) : 0;
-    const gone = this.afterShape?.lit ? 0 : 1;
     coalLight(t.p.x, t.p.z, this.throwAt);
     if (s) this.throwAt.lerp(coalLight(s.p.x, s.p.z, this.tmp), this.lightShare);
     const glow = Math.min(2.6, THREE.MathUtils.lerp(from, this.shapePower, this.lightShare) * 0.5);
-    throwShapeLight(this.throwAt, glow * k.throwLight * gone);
+    throwShapeLight(this.throwAt, glow * k.throwLight);
     showShape(this.shapeShown);
     woodOwl.shown = this.shapeShown;
   }
@@ -1073,9 +1074,10 @@ export class WoodChapter implements Chapter {
     const fear = this.shapeFear;
     if (!stopped) return;
     const since = this.now - this.shapeStopped;
-    // Once, before the player has done anything: a look back over her shoulder for whoever makes the light.
-    if (!thrown && since > k.glanceAfter && since < k.glanceAfter + k.glanceFor && this.shot.eye) {
-      c.lookAt = this.shapeGlance.copy(this.shot.eye);
+    // Once, before the player has done anything: a look down at the cygnet in her satchel, and it looks up at her.
+    if (!thrown && since > k.glanceAfter && since < k.glanceAfter + k.glanceFor) {
+      c.lookAt = cygnet.seating.shown.p;
+      cygnet.watch(this.childHead);
     }
     // The flinch back when the antlers leap up the rock.
     const frightAt = Math.max(this.shapeStopped, this.throwLitAt);
@@ -1167,6 +1169,9 @@ export class WoodChapter implements Chapter {
     this.chainSide = -this.chainSide;
     this.layNext(tuning.wood.shape.chainOn);
     this.afterShape = this.ahead;
+    // The walking camera comes round behind her the way she now goes, in the one move that takes her on.
+    const way = this.target();
+    this.aim.set(way.x - c.position.x, 0, way.y - c.position.z).normalize();
     this.placeShoulder();
   }
 
@@ -1198,7 +1203,7 @@ export class WoodChapter implements Chapter {
     this.bendEye.x += c.x - SHAPE_WAIT.x;
     this.bendEye.z += c.z - SHAPE_WAIT.z;
     this.bendEye.y = Math.max(heightAt(this.bendEye.x, this.bendEye.z), 0, ground) + up;
-    shapePoint(k.lookAt[0], portrait ? k.portraitLookUp : k.lookAt[1], k.lookAt[2], this.bendLook);
+    shapePoint(portrait ? k.portraitLook[0] : k.lookAt[0], portrait ? k.portraitLook[1] : k.lookAt[1], k.lookAt[2], this.bendLook);
     const w = this.beat === 'brave' ? 1 : 1 - THREE.MathUtils.smoothstep(Math.hypot(c.x - SHAPE_WAIT.x, c.z - SHAPE_WAIT.z), 2, k.easeFrom);
     s.eye!.lerp(this.bendEye, w);
     s.target.lerp(this.bendLook, w);

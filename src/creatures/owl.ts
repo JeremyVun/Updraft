@@ -172,7 +172,7 @@ void main() {
   // Up out of the firelight, the moon through the canopy finds the edges of its down, so it never goes out.
   if (uOwlWing.w > 0.0) {
     vec3 cold = vec3(0.62, 0.74, 1.0) * uNight * uOwlWing.w;
-    col += alb * cold * (wrap * 0.5 + 0.2) + cold * edge * fuzz * 0.55;
+    col += alb * cold * (wrap * 0.25 + 0.08) + cold * edge * fuzz * 0.3 * (0.3 + 0.7 * alb);
   }
   col *= uOwlEyes.w;
   gl_FragColor = vec4(max(applyFog(col, vWorld), 0.0), 1.0);

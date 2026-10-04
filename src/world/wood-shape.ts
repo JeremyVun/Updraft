@@ -64,7 +64,7 @@ export const SHAPE_SIDE_COAL = new THREE.Vector2();
   SHAPE_SIDE_COAL.set(side.x, side.z);
 }
 /** Where she waits by the coal before the bend: just beyond it, so it burns beside her in frame. */
-export const SHAPE_WAIT = shapePoint(-1.3, 0, 4.1);
+export const SHAPE_WAIT = shapePoint(-0.4, 0, 4.5);
 
 /** The stump's sketch turned to face the coal, in the shape's frame. */
 const turned = (p: number[]): [number, number, number] => {

@@ -970,19 +970,19 @@ export const tuning = {
      * The stump at the bend: her pace coming up to the coal before it and the flinch back when the antlers leap up
      * the rock (m over s); seconds of side light to show it for what it is; how fast the light swings round to the
      * side coal (per second); how brightly the owl's eyes shine in the dark; how much of a coal's glow throws the
-     * shadow up the rock, and the heat the two coals there keep while she is with them; her one look back (when,
-     * for how long); when the owl leaves after it is seen; her turn after it as it flies (seconds into its flight,
+     * shadow up the rock, and the heat the two coals there keep while she is with them; her one look down at the
+     * cygnet (when, for how long); when the owl leaves after it is seen; her turn after it as it flies (seconds into its flight,
      * rate), the cygnet's peep and her wave; the breath out and how far on the next coal waits. The held frame:
      * the camera from where she stops (back, to her right, up; portrait apart), where it looks in the shape's frame,
      * how far out it starts easing in, and how fast.
      */
     shape: {
       approachPace: 0.7, flinchStep: 0.55, flinchSeconds: 0.8, revealSeconds: 1.2, lightShift: 1.4,
-      eyeshineDark: 0.9, throwLight: 2.2, holdHeat: 0.6, glanceAfter: 2.4, glanceFor: 1.5,
+      eyeshineDark: 0.9, throwLight: 2.2, holdHeat: 0.6, glanceAfter: 2.4, glanceFor: 1.8,
       owlLeaveAfter: 7, turnAfter: 0.5, turnRate: 2.2, peepAfter: 0.4, peepFor: 3, waveAfter: 1.5,
-      exhaleSeconds: 1.6, chainOn: 13,
-      cameraBack: 9.8, cameraSide: 1.4, cameraUp: 3.0, portraitBack: 12.4, portraitSide: 1.6, portraitUp: 3.1,
-      lookAt: [0.3, 3.0, -0.5], portraitLookUp: 3.0, easeFrom: 18, cameraPace: 0.8,
+      exhaleSeconds: 1.6, chainOn: 17,
+      cameraBack: 9.8, cameraSide: 1.4, cameraUp: 3.0, portraitBack: 13.4, portraitSide: 1.6, portraitUp: 3.1,
+      lookAt: [-0.5, 3.0, -0.5], portraitLook: [0.2, 3.6], easeFrom: 18, cameraPace: 0.8,
     },
     /** Seconds a coal burns from a full catch if nobody fans it again. */
     burnFor: 46,
