@@ -28,7 +28,7 @@ const SHOULDER = new THREE.Vector3(0.1, 0.24, -0.01);
 const EYE_AT = new THREE.Vector3(0.05, 0.338, 0.128);
 const EYE_SIZE = new THREE.Vector3(0.039, 0.039, 0.022);
 /** Larger than life, as the game's creatures are, so it reads from where the camera stands. */
-const SCALE = 1.3;
+const SCALE = 1.45;
 
 const VERT = /* glsl */ `
 ${ATMO_GLSL}

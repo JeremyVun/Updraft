@@ -955,7 +955,7 @@ export class WoodChapter implements Chapter {
   private toShape(): void {
     const k = tuning.wood.shape;
     const { child: c, embers } = this.cast;
-    this.shapeTouch.copy(shapePoint(0.3, 0.95, 0.38));
+    this.shapeTouch.copy(shapePoint(-0.3, 0.98, 0.32));
     this.frontCoal = embers.lay(SHAPE_FRONT_COAL.x, SHAPE_FRONT_COAL.y);
     this.sideCoal = embers.lay(SHAPE_SIDE_COAL.x, SHAPE_SIDE_COAL.y);
     this.shapeTarget = this.frontCoal;
@@ -1127,14 +1127,15 @@ export class WoodChapter implements Chapter {
       if (b >= 1) {
         this.braveStep = 2;
         c.stroll = k.approachPace;
-        const stand = shapePoint(0.85, 0, 0.9);
-        c.walkTo(stand.x, stand.z, false, () => {
+        // To the side of the trunk the player is watching from, round the front coal, so the mitten on the bark shows.
+        const round = shapePoint(-1.15, 0, 2.7), stand = shapePoint(-0.8, 0, 0.78);
+        c.walkTo(round.x, round.z, false, () => c.walkTo(stand.x, stand.z, false, () => {
           c.stop();
           c.faceToward(this.shapeTouch.x, this.shapeTouch.z, 1);
           c.reachFor(1, this.shapeTouch);
           this.braveStep = 3;
           this.braveAt = this.now;
-        }, 0.2);
+        }, 0.2), 0.5);
       }
     }
     if (this.braveStep === 2 || this.braveStep === 3) c.lookAt = this.shapeTouch;
@@ -1145,11 +1146,10 @@ export class WoodChapter implements Chapter {
       this.shapeDone = true;
       this.braveStep = 4;
       c.lookAt = null;
-      // Out round the stump's reaching limb, round the bend by the light she has, then on into the dark to the next
-      // coal like any other.
+      // Back out past the front coal, round the bend by the light she has, then on into the dark to the next coal.
       this.leg = Math.max(this.leg, 2);
-      const clear = shapePoint(1.6, 0, 2.3);
-      c.walkTo(clear.x, clear.z, false, () => {
+      const back = shapePoint(-1.0, 0, 2.8), clear = shapePoint(1.6, 0, 3.2);
+      c.walkTo(back.x, back.z, false, () => c.walkTo(clear.x, clear.z, false, () => {
         pathPoint(SHAPE_STOP_ALONG + k.walkOn, 0, this.spot);
         c.walkTo(this.spot.x, this.spot.y, false, () => {
           this.to('walk');
@@ -1160,7 +1160,7 @@ export class WoodChapter implements Chapter {
           this.afterShape = this.ahead;
           this.placeShoulder();
         }, 1);
-      }, 0.5);
+      }, 0.5), 0.5);
     }
   }
 

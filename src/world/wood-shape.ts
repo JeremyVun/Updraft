@@ -369,7 +369,13 @@ export class WoodShape {
       [[2.9, 0.12, -1.6], [1.1, 0.75, 0.95], -0.45, 0.1, 0.35],
       [[-4.6, 0.05, -0.5], [0.95, 0.6, 0.85], 1.1, 0.15, 0.3],
     ];
-    blocks.forEach(([at, size, yaw, lean, round], i) => parts.push(strip(this.block(at, size, yaw, lean, i + 1, round), 1, up)));
+    // The whole crag is turned a little to face the camera that watches her from behind her left shoulder.
+    const turn = -0.28, cos = Math.cos(turn), sin = Math.sin(turn);
+    blocks.forEach(([at, size, yaw, lean, round], i) => {
+      const x = at[0], z = at[2];
+      const placed = [x * cos + z * sin, at[1], -x * sin + z * cos];
+      parts.push(strip(this.block(placed, size, yaw + turn, lean, i + 1, round), 1, up));
+    });
   }
 
   /** A rounded block of stone, `at` and `size` in the shape's frame, turned by `yaw` and leaning back by `lean`. */

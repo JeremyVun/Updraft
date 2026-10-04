@@ -938,7 +938,7 @@ export const tuning = {
       stopShort: 4.4, approachPace: 0.7, flinchStep: 0.5, flinchSeconds: 0.9, shrinkStep: 0.7, shrinkSeconds: 1.2,
       revealSeconds: 1.2, lightShift: 1.4, sideInviteAfter: 4, eyeshineDark: 0.55, eyeshineFront: 0.9,
       glanceEvery: 5, glanceFor: 1.3, owlLeaveAfter: 6.4, exhaleSeconds: 1.3, touchSeconds: 1.6, walkOn: 9,
-      cameraBack: 6.2, cameraSide: 4.5, cameraUp: 3.5, cameraPace: 0.8, closeIn: 1.0, closeZoom: 1.9,
+      cameraBack: 6.2, cameraSide: 4.5, cameraUp: 3.5, cameraPace: 0.8, closeIn: 1.0, closeZoom: 2.1,
     },
     /** Seconds a coal burns from a full catch if nobody fans it again. */
     burnFor: 46,
