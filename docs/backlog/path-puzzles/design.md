@@ -58,10 +58,19 @@ His answers to the second round:
   throws a huge antlered shadow up the rock and makes it worse; the one off to the side shows the stump and the owl,
   which blinks, hoots softly and glides off ahead. The puzzle is which coal, not a new verb.
 
+  Jeremy on the owl version (branch `proto-wood-owl`): "we shoul donly have one ember that reveals the owl (i.e. the
+  one on the side). the rock backdropss are unecessarily large, we don't need them to be such a big part of the
+  sequence other than to have a spooky shadow cast on hte background before the child lights the ember. I'd make the
+  tree stump a bit taller than the child so it reads more spooky and frightening. the owl is really cute when it
+  flies away, but it should probably fly away upwards. Right now it flies away at almost ground leveel and through
+  the rocks." So: no front coal; the antlered shadow is already on a modest backdrop before anything is lit (thrown by
+  the light she already has); one waiting coal, off to the side, reveals the owl; the stump stands taller than her;
+  the owl leaves upward, clear of everything.
 - **The island of lines: a pinwheel winds the boat in, on the shore beyond the red door** (Jeremy: "yes i think this
   is a good idea to try"). The boat is moored out on the water; a pinwheel on the bank drives a pulley line that
   winds it in to the shore. It adds a beat after the door rather than replacing a curtain. It knowingly relaxes two
-  rulings for this shore: "beyond it only open grass, the kite and the boat" and pinwheels staying with the washing.
+  rulings for this shore: "beyond it only open grass, the kite and the boat" and pinwheels staying with the washing. **Approved** and merged (branch `proto-lines-shore`; Jeremy: "the shore is approved"). A save past the door
+  still resumes just before it, with the boat moored out again.
 
 The little boats' bath and plug are **approved** and merged (branch `proto-boats-plug`; Jeremy: "the plug
 could be very slightly easier to pull out, otherwise it's approved"). As approved: the toys ground on a shoal; the
