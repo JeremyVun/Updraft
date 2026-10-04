@@ -19,7 +19,7 @@ export class Foley {
   private lastFlap = -1;
   private frostHeard = false;
   private nextCrackle = 0;
-  private hearthBed: { src: AudioBufferSourceNode; roar: BiquadFilterNode; gain: GainNode; pan: StereoPannerNode } | null = null;
+  private hearthBed: { src: AudioBufferSourceNode; roar: BiquadFilterNode; gain: GainNode; pan: StereoPannerNode; quietSince: number | null } | null = null;
   private swanBeat = 0;
 
   setOutput(out: AudioOut | null): void {
@@ -244,9 +244,17 @@ export class Foley {
       const panner = ctx.createStereoPanner();
       src.connect(roar).connect(gain).connect(panner).connect(out.bus);
       src.start();
-      this.hearthBed = { src, roar, gain, pan: panner };
+      this.hearthBed = { src, roar, gain, pan: panner, quietSince: null };
     }
     const bed = this.hearthBed;
+    if (level >= 0.01) bed.quietSince = null;
+    else if (bed.quietSince === null) bed.quietSince = at;
+    else if (at - bed.quietSince > 2) {
+      bed.gain.gain.setTargetAtTime(0, at, 0.05);
+      bed.src.stop(at + 0.5);
+      this.hearthBed = null;
+      return;
+    }
     const breath = 0.72 + 0.28 * Math.sin(at * 1.3) * Math.sin(at * 0.47 + 1.1);
     bed.gain.gain.setTargetAtTime(0.05 * level * breath, at, 0.25);
     bed.roar.frequency.setTargetAtTime(240 + 220 * flame * breath, at, 0.3);

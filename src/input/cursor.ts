@@ -4,6 +4,10 @@ export class Cursor {
   private x = -100;
   private y = -100;
   private visible = false;
+  private mouse = false;
+  private transform = '';
+  private opacity = '';
+  private glow = '';
 
   constructor(canvas: HTMLElement) {
     this.el = document.createElement('div');
@@ -14,6 +18,7 @@ export class Cursor {
       this.x = e.clientX;
       this.y = e.clientY;
       this.visible = true;
+      this.mouse = true;
     });
     canvas.addEventListener('pointerleave', () => {
       this.visible = false;
@@ -21,10 +26,14 @@ export class Cursor {
   }
 
   update(gust: number, charge: number, down: boolean): void {
+    if (!this.mouse) return;
     const stretch = 1 + Math.min(gust, 26) / 40;
     const scale = (down ? 0.8 : 1) * (1 - charge * 0.35) * stretch;
-    this.el.style.transform = `translate(${this.x}px, ${this.y}px) translate(-50%, -50%) scale(${scale.toFixed(3)})`;
-    this.el.style.opacity = this.visible ? (0.5 + charge * 0.5).toFixed(2) : '0';
-    this.el.style.setProperty('--charge', charge.toFixed(3));
+    const transform = `translate(${this.x}px, ${this.y}px) translate(-50%, -50%) scale(${scale.toFixed(3)})`;
+    if (transform !== this.transform) this.el.style.transform = this.transform = transform;
+    const opacity = this.visible ? (0.5 + charge * 0.5).toFixed(2) : '0';
+    if (opacity !== this.opacity) this.el.style.opacity = this.opacity = opacity;
+    const glow = charge.toFixed(3);
+    if (glow !== this.glow) this.el.style.setProperty('--charge', this.glow = glow);
   }
 }

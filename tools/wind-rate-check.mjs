@@ -6,7 +6,7 @@ import {chromium} from 'playwright-core';
 const software=process.env.SOFTWARE==='1';
 let browser,close;
 if(software){
- browser=await chromium.launch({executablePath:'/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',headless:true,args:['--disable-gpu','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
+ browser=await chromium.launch({channel:'chromium',headless:true,args:['--disable-gpu','--use-angle=swiftshader','--enable-unsafe-swiftshader']});
  close=()=>browser.close();
 }else{
  console.log('Waiting for exclusive GPU browser access.');

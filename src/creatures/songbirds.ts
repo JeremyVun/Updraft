@@ -430,6 +430,7 @@ export class Songbirds {
     let drawn = 0;
     for (const b of this.birds) if (!b.flock.asleep && !b.flock.dormant) this.write(b, drawn++);
     this.instances.commit(drawn);
+    this.mesh.visible = drawn > 0;
   }
 
   /** The flock flies in together from beyond the island. */

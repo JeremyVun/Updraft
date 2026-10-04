@@ -15,7 +15,7 @@ for (;;) {
     await new Promise(r => setTimeout(r, 400));
   }
 }
-const browser = await chromium.launch({ executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', headless: true,
+const browser = await chromium.launch({ channel: 'chromium', headless: true,
   args: ['--enable-gpu', '--use-angle=metal', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
 const report = { viewport, states: [], errors: [] };
 try {

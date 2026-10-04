@@ -50,7 +50,7 @@ const touch = process.env.TOUCH === '1',
   height = touch ? 844 : 900;
 await acquireLock();
 const browser = await chromium.launch({
-  executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+  channel: 'chromium',
   headless: true,
   args: ['--enable-gpu', '--use-angle=metal', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'],
 });

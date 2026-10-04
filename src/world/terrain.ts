@@ -12,7 +12,8 @@ import { REFLECTION_LAYER } from './water/reflection';
 import { SURF_GLSL, surfUniforms } from './water/surf';
 import { TERRAIN_FIELDS_GLSL, TerrainFields } from './terrain-fields';
 import { TERRAIN_COLOUR_GLSL, TerrainColour } from './terrain-colour';
-import { TERRAIN_HEIGHTS_GLSL, TerrainHeights } from './terrain-heights';
+import { HEIGHT_TEXEL, TERRAIN_HEIGHT_PATCHES, TERRAIN_HEIGHTS_GLSL, TerrainHeights } from './terrain-heights';
+import { REACH as SEA_REACH } from './water';
 
 const SEGMENTS = 32;
 const ROOT = 2048;
@@ -26,6 +27,13 @@ const MAX_LEAVES = 2048;
 /** Where the blades thin out; from here the terrain paints the meadow. Matches the grass's last level of detail. */
 const FIELD_FROM = 118;
 const FIELD_TO = 172;
+/**
+ * Beyond every island's height patch the ground is the open-sea floor, metres under the opaque sea, so leaves there
+ * are not drawn while the sea's grid (centred on the camera) covers them. The margins cover the window's bilinear
+ * height lookup and the camera moving between this pick and the sea's.
+ */
+const LAND = TERRAIN_HEIGHT_PATCHES.map((p) => [p.minX - 16, p.minZ - 16, p.minX + p.width * HEIGHT_TEXEL + 16, p.minZ + p.height * HEIGHT_TEXEL + 16]);
+const SEA_COVERS = SEA_REACH - 100;
 
 const VERT = /* glsl */ `
 ${HEIGHTFIELD_GLSL}
@@ -355,16 +363,18 @@ export class Terrain {
     for (let z = z0; z < this.camPos.z + REACH; z += ROOT) {
       for (let x = x0; x < this.camPos.x + REACH; x += ROOT) this.visit(x, z, ROOT);
     }
-    set.nodes.clearUpdateRanges();
-    set.nodes.addUpdateRange(0, set.count * 3);
-    set.nodes.needsUpdate = true;
+    if (set.count) {
+      set.nodes.clearUpdateRanges();
+      set.nodes.addUpdateRange(0, set.count * 3);
+      set.nodes.needsUpdate = true;
+    }
     set.geo.instanceCount = set.count;
   }
 
   private visit(x: number, z: number, size: number): void {
     this.box.min.set(x, -16, z);
     this.box.max.set(x + size, 110, z + size);
-    if (!this.frustum.intersectsBox(this.box)) return;
+    if (!this.frustum.intersectsBox(this.box) || this.underSea(x, z, size)) return;
     const d = this.box.distanceToPoint(this.camPos);
     if (size > MIN_NODE && d < size * this.split) {
       const half = size / 2;
@@ -381,5 +391,11 @@ export class Terrain {
     a[set.count * 3 + 1] = z;
     a[set.count * 3 + 2] = size;
     set.count++;
+  }
+
+  private underSea(x: number, z: number, size: number): boolean {
+    const c = this.camPos;
+    if (x < c.x - SEA_COVERS || z < c.z - SEA_COVERS || x + size > c.x + SEA_COVERS || z + size > c.z + SEA_COVERS) return false;
+    return !LAND.some(([x0, z0, x1, z1]) => x < x1 && z < z1 && x + size > x0 && z + size > z0);
   }
 }

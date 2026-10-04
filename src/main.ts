@@ -211,7 +211,7 @@ scene.add(islandRocks);
 scene.add(tree.group);
 scene.add(homeTree.group);
 await built();
-const grass = new Grass();
+const grass = new Grass(renderer);
 scene.add(grass.group);
 /** Left on the sand where the boat comes in, so the first thing the island says is that somebody was here. */
 const washingBaskets = baskets(LINES_LANDING.x + 5, LINES_LANDING.y - 3);

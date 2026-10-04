@@ -386,6 +386,7 @@ export class Rabbits {
       this.write(r, drawn++);
     }
     this.instances.commit(drawn);
+    this.mesh.visible = drawn > 0;
   }
 
   /** Pops up out of the grass, ears last, and has a look around. */

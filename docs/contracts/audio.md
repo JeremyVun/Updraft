@@ -232,7 +232,8 @@ pan and bounded scheduling; finished nodes disconnect.
 - Laundry: local wind on the cloth's spring and flutter thresholds, at most `clothSources` voices. A passage sheet's
   peg coming off the line snaps once (`peg`), from the peg itself; pegs already off when a checkpoint loads are silent.
 - Sleeping hearth: one looping low roar that breathes, plus crackles in small uneven clusters with an occasional
-  snap, all scaled by the flame and the camera's distance; the roar fades out with the flame or on leaving the room.
+  snap, all scaled by the flame and the camera's distance; the roar fades out with the flame or on leaving the room, and
+  once it has been quiet for two seconds it stops until the fire is heard again.
 - Dolphins and whales: sounds fire from the same events as the visible splash, spray, breaths, fluke drainage and
   dive (`WhaleWake`, the shared `SeaLife` callback), with soft attacks and level trims (`dolphin*`, `whale*`). Pod
   emergence and re-entry have separate budgets. Muted or hidden events are dropped.

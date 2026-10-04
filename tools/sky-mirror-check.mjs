@@ -52,7 +52,7 @@ const touch = process.env.TOUCH === '1',
 const software=process.env.SOFTWARE==='1',lastOnly=process.env.LAST_STAR_ONLY==='1';
 if(!software)await acquireLock();
 const browser = await chromium.launch({
-  executablePath: '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+  channel: 'chromium',
   headless: true,
   args: [...(software?['--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader','--disable-gpu']:['--enable-gpu','--use-angle=metal','--ignore-gpu-blocklist']), '--autoplay-policy=no-user-gesture-required'],
 });

@@ -33,7 +33,7 @@
 // none pairs the baseline with itself.
 // msaa-nodepth swaps in a scene target built to neither resolve nor store its multisampled depth. On Chrome/ANGLE Metal
 // it renders without antialiasing (pixels match msaa-0) and is no faster, so it is not an exact skip.
-// Breakdowns: grass-frag-flat, grass-nodiscard, grass-fog, grass-cloud, grass-shade (frost, morning, lamp, dawn), grass-life,
+// Breakdowns: grass-frag-flat, grass-nodiscard, grass-fog, grass-cloud, grass-shade (morning, lamp, dawn), grass-frost, grass-life,
 // grass-collapse (every blade discarded at its first instruction), grassLod0..2; birchesTrunks/Canopy/Litter/Scarf/Leaves/Other;
 // water-frag-flat, water-vert-flat, water-bed, water-surf, water-glints, water-ripples, water-mirror, water-wind, water-paw,
 // water-fog, water-sky, water-cloud, water-landskip (returns at its top over land, not exact), water-last (drawn after the other opaques); terrain-nodiscard. POST_PASSES=1 times each post stage alone (POST_REPS); REFLECTION_PASS=1 the sea's reflection pass alone;
@@ -238,7 +238,7 @@ window.__audit = {
       ['child',child,'update'], ['cygnet',cygnet,'update'], ['boat',boat,'update'], ['creatures',creatures,'update'],
       ['meadow-creatures',hillCreatures,'update'], ['village-update',village,'update'], ['birches-update',birches,'update'],
       ['wood-update',wood,'update'], ['sleeping-update',sleeping,'update'], ['audio',sound,'update'],
-      ['mirror-ripples',skyMirror,'update'], ['bloom',post.bloom,'render'],
+      ['mirror-ripples',skyMirror,'update'], post.renderBloom?['bloom',post,'renderBloom']:['bloom',post.bloom,'render'],
       ['water-waves',water,'step'], ['ground-readback',bakes,'tick'],
       ['stairs-update',cloudStairs,'update'], ['stairs-cloud',cloudStairs.cloud,'update'], ['story',story,'update'],
     ]) wrap(obj,method,name);
@@ -247,7 +247,7 @@ window.__audit = {
       if (!this.census) return render(s,c);
       const target = renderer.getRenderTarget();
       const pass = target === post.sceneTarget ? 'main' : target === water.reflection.target ? 'reflection'
-        : target === doorwayView.target ? 'doorway' : !target ? 'grade' : target === post.clean ? 'resolve/bloom-blend'
+        : target === doorwayView.target ? 'doorway' : !target ? 'grade' : target === (post.clean??post.bloomed) ? 'resolve/bloom-blend'
         : this.stack.at(-1) || 'unclassified';
       this.currentPass = pass;
       const beforeCalls = renderer.info.render.calls, beforeTriangles = renderer.info.render.triangles, start = performance.now();
@@ -493,7 +493,7 @@ window.__audit = {
     const rt=variants.includes('rt-r11')?'R11F_G11F_B10F':variants.includes('rt-half')?null:this.rtBuilt;
     if(post.sceneTarget.texture.internalFormat!==rt){
       const b=post.bloom;
-      for(const t of [post.sceneTarget,post.clean,b.renderTargetBright,...b.renderTargetsHorizontal,...b.renderTargetsVertical]){
+      for(const t of [post.sceneTarget,post.clean??post.bloomed,b.renderTargetBright,...b.renderTargetsHorizontal,...b.renderTargetsVertical]){
         t.texture.internalFormat=rt;t.texture.format=rt?THREE.RGBFormat:THREE.RGBAFormat;t.dispose();}
     }
     // sky-bank-on: the sky's storm bank compiled in whatever the weather, as before 7b.
@@ -525,7 +525,7 @@ window.__audit = {
         this.alt??=new THREE.WebGLRenderTarget(o.width,o.height,{type:THREE.HalfFloatType,samples:o.samples,depthBuffer:true,resolveDepthBuffer:false,storeMultisampledDepthBuffer:false});
         if(this.alt.width!==o.width||this.alt.height!==o.height)this.alt.setSize(o.width,o.height);
       }
-      post.sceneTarget=noDepth?this.alt:o;post.resolveMat.uniforms.tDiffuse.value=post.sceneTarget.texture;this.altOn=noDepth;
+      post.sceneTarget=noDepth?this.alt:o;if(post.resolveMat)post.resolveMat.uniforms.tDiffuse.value=post.sceneTarget.texture;this.altOn=noDepth;
     }
     if(pixelRatio!==ratio){pixelRatio=ratio;resize();}
     // mirror-ordinary: the sky mirror's reflection at the ordinary sea's size and cadence (a look change, costed only).
@@ -587,16 +587,17 @@ window.__audit = {
   patchShaders(variants) {
     const main=(source,body)=>source.slice(0,source.lastIndexOf('void main() {'))+body;
     const sub=(source,from,to)=>{if(typeof from==='string'?!source.includes(from):!from.test(source))throw Error('Missing patch site: '+from);return source.replace(from,to);};
-    const grassMats=grass.group.children.filter(o=>o.isMesh).map(o=>o.material),waterMat=water.mesh.material;
-    this.patchOriginals??=new Map([...grassMats,waterMat].map(m=>[m,{vertexShader:m.vertexShader,fragmentShader:m.fragmentShader}]));
+    const grassMats=grass.group.children.filter(o=>o.isMesh).map(o=>o.material),frameMats=grass.lods.map(l=>l.frameMat).filter(Boolean),waterMat=water.mesh.material;
+    this.patchOriginals??=new Map([...grassMats,...frameMats,waterMat].map(m=>[m,{vertexShader:m.vertexShader,fragmentShader:m.fragmentShader}]));
     const patches={
       'grass-frag-flat':[grassMats,'fragmentShader',s=>main(s,'void main() { gl_FragColor = vec4(vTint * 0.5 + vRoot * 0.1 + vFlower.rgb * vFlower.a * 0.01 + vec3(vT, vFlat, vSun) * 0.01 + vec3(vAo, 0.0) * 0.01 + vLocalLight * 0.01 + (vNormal + vSideDir + vGroundN) * 0.001 + vWorld * 1e-6 + vFog.rgb * vFog.a * 0.01, 1.0); }')],
       // The unclipped blade program has no discards to remove.
       'grass-nodiscard':[grassMats,'fragmentShader',s=>s.replace(/discard;/g,'{}')],
-      'grass-fog':[grassMats,'vertexShader',s=>sub(s,'vFog = fogOf(world, 1.0);','vFog = vec4(0.0);')],
-      'grass-cloud':[grassMats,'vertexShader',s=>sub(s,'* cloudShadow(root2);',';')],
-      'grass-shade':[grassMats,'vertexShader',s=>sub(sub(sub(s,'float rime = frostAt(root2);','float rime = 0.0;'),'float green = morningAt(root2);','float green = 0.0;'),/vec3 warm = lampLight[^;]*;/,'vec3 warm = vec3(0.0);')],
-      'grass-life':[grassMats,'vertexShader',s=>sub(s,'float life = lifeAt(root2);','float life = 1.0;')],
+      'grass-fog':[frameMats,'fragmentShader',s=>sub(s,/vec4 fog = fogOf[^;]*;/,'vec4 fog = vec4(0.0);')],
+      'grass-cloud':[frameMats,'fragmentShader',s=>sub(s,'cloudShadow(root2)));','1.0));')],
+      'grass-shade':[grassMats,'vertexShader',s=>sub(sub(s,'float green = morningAt(root2);','float green = 0.0;'),/vec3 warm = lampLight[^;]*;/,'vec3 warm = vec3(0.0);')],
+      'grass-frost':[frameMats,'fragmentShader',s=>sub(s,'vec4(ground.xyz, frostAt(root2))','vec4(ground.xyz, 0.0)')],
+      'grass-life':[frameMats,'fragmentShader',s=>sub(s,'float life = lifeAt(root2);','float life = 1.0;')],
       'grass-collapse':[grassMats,'vertexShader',s=>sub(s,'void main() {\\n  ivec2 at','void main() { collapse(); return;\\n  ivec2 at')],
       'water-frag-flat':[[waterMat],'fragmentShader',s=>main(s,'void main() { gl_FragColor = vec4(vWorld * 1e-4 + vSwell * 0.1 + vec3(0.1, 0.2, 0.3), 1.0); }')],
       'water-vert-flat':[[waterMat],'vertexShader',s=>main(s,'void main() { vec3 w = (modelMatrix * vec4(position, 1.0)).xyz; vSwell = vec3(0.0); vWorld = w; gl_Position = projectionMatrix * viewMatrix * vec4(w, 1.0); }')],
@@ -716,8 +717,8 @@ window.__audit = {
     const stages={
       scene:()=>{r.setRenderTarget(post.sceneTarget);r.clear();r.render(scene,rig.camera);},
       'msaa-clear-resolve':()=>{r.setRenderTarget(post.sceneTarget);r.clear();r.render(new THREE.Scene(),rig.camera);},
-      clamp:()=>{post.quad.material=post.resolveMat;r.setRenderTarget(post.clean);post.quad.render(r);},
-      'bloom-bright':()=>{b.highPassUniforms.tDiffuse.value=post.clean.texture;quad(b.materialHighPassFilter,b.renderTargetBright,true);},
+      ...post.resolveMat&&{clamp:()=>{post.quad.material=post.resolveMat;r.setRenderTarget(post.clean);post.quad.render(r);}},
+      'bloom-bright':()=>{b.highPassUniforms.tDiffuse.value=(post.clean??post.sceneTarget).texture;quad(b.materialHighPassFilter,b.renderTargetBright,true);},
     };
     for(let i=0;i<b.nMips;i++){
       const m=b.separableBlurMaterials[i],input=i?b.renderTargetsVertical[i-1]:b.renderTargetBright;
@@ -725,7 +726,8 @@ window.__audit = {
       stages['bloom-blur'+i+'-v']=()=>{m.uniforms.colorTexture.value=b.renderTargetsHorizontal[i].texture;m.uniforms.direction.value=b.constructor.BlurDirectionY;quad(m,b.renderTargetsVertical[i],true);};
     }
     stages['bloom-composite']=()=>quad(b.compositeMaterial,b.renderTargetsHorizontal[0],true);
-    stages['bloom-blend']=()=>{b.copyUniforms.tDiffuse.value=b.renderTargetsHorizontal[0].texture;quad(b.blendMaterial,post.clean,false);};
+    if(post.bloomedMat)stages.bloomed=()=>{post.bloomedMat.uniforms.tScene.value=post.sceneTarget.texture;quad(post.bloomedMat,post.bloomed,true);};
+    if(post.clean)stages['bloom-blend']=()=>{b.copyUniforms.tDiffuse.value=b.renderTargetsHorizontal[0].texture;quad(b.blendMaterial,post.clean,false);};
     stages.grade=()=>{post.quad.material=post.gradeMat;r.setRenderTarget(null);post.quad.render(r);};
     // grade-plain: the grade without the sun's glow, beside a grade that draws it (at a level without bloom).
     if(post.gradeMat.defines.SUN_GLOW===1)stages['grade-plain']=()=>{const m=post.gradeMat;m.defines.SUN_GLOW=0;m.needsUpdate=true;stages.grade();m.defines.SUN_GLOW=1;m.needsUpdate=true;};
@@ -800,17 +802,18 @@ window.__audit = {
     for(const a of this.uploadsMid||[])a.needsUpdate=true;
     if (sim && this.omit !== 'wind') this.stepWind();
     if (sim && this.forceGrassBakes && this.omit !== 'grass-tables') {grass.tablesDirty=true;grass.bake(renderer);}
-    if (this.omit !== 'grass-fog-vertex' && this.omit !== 'grass-fog-pass-off') grass.shadeFog?.(renderer);
+    if (this.omit !== 'grass-fog-vertex' && this.omit !== 'grass-fog-pass-off') (grass.bakeFrame??grass.shadeFog)?.call(grass,renderer);
     const draw=()=>doorwayView.render(rig.camera,story.name==='lines',story.name!=='toBoats',()=>{
       if (this.omit !== 'reflection') water.update(rig.camera,c=>terrain.beginMirror(c),()=>terrain.endMirror());
-      const bloom=post.bloom.render;
-      if(this.omit==='bloom')post.bloom.render=()=>{};
+      const bloom=post.bloom.render,renderBloom=post.renderBloom;
+      if(this.omit==='bloom'){post.bloom.render=()=>{};if(renderBloom)post.renderBloom=()=>{};}
       try {
         if(this.omit==='post') {
           renderer.setRenderTarget(post.sceneTarget);renderer.render(scene,rig.camera);
-          post.quad.material=post.resolveMat;renderer.setRenderTarget(null);post.quad.render(renderer);
+          post.quad.material=post.resolveMat??(this.copyMat??=new THREE.ShaderMaterial({uniforms:{tDiffuse:{value:null}},vertexShader:'varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',fragmentShader:'uniform sampler2D tDiffuse; varying vec2 vUv; void main() { gl_FragColor = texture2D(tDiffuse, vUv); }',depthTest:false,depthWrite:false}));
+          post.quad.material.uniforms.tDiffuse.value=post.sceneTarget.texture;renderer.setRenderTarget(null);post.quad.render(renderer);
         } else post.render(time);
-      } finally { post.bloom.render=bloom; }
+      } finally { post.bloom.render=bloom;if(renderBloom)post.renderBloom=renderBloom; }
     });
     if(typeof drawJourneyRooms==='function') {
       const rooms=visibleRooms(story.name,boat.position.z);setJourneyRooms(rooms);drawJourneyRooms(rooms,roomObjects,draw);
@@ -899,7 +902,7 @@ async function open(base,chapter,setup) {
   if(FRAME)await page.addInitScript(()=>{let seed=1234567;window.__randoms=0;Math.random=()=>{window.__randoms++;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};
     let uuid=7654321;window.__uuidRandom=()=>{uuid=uuid+0x6D2B79F5|0;let t=Math.imul(uuid^uuid>>>15,1|uuid);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};});
   // three's UUIDs draw from their own stream, so a build that creates more or fewer objects keeps the game's random stream.
-  if(FRAME)await page.route(/\/node_modules\/\.vite\/deps\/three\.module-[^/]*\.js/,async route=>{
+  if(FRAME)await page.route(/\/deps\/three\.module-[^/]*\.js/,async route=>{
     const response=await route.fetch(),source=await response.text(),from='Math.random() * 4294967295 | 0';
     assert.equal(source.split(from).length,5,'Missing or ambiguous UUID hook in three');
     await route.fulfill({response,body:source.split(from).join('window.__uuidRandom() * 4294967295 | 0')});
