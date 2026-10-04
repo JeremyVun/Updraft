@@ -96,8 +96,9 @@ holds leaving the cove, the island receding, the farewell and the whale.
 ## The island of lines
 
 `story/lines.ts`, `world/lines.ts` (washing and cloth), `world/lines-layout.ts`, `world/lines-passage.ts` (the
-curtains), `world/doorway.ts` and `world/door-shore.ts` (the door and the shore through it), `world/kite.ts`,
-`world/pinwheels.ts`. `?chapter=washing`.
+curtains), `world/doorway.ts` and `world/door-shore.ts` (the door and the shore through it), `world/shore-pulley.ts`
+(the pinwheel and pulley line on that shore), `world/kite.ts`, `world/pinwheels.ts`. `?chapter=washing`; `?chapter=door`
+starts at the family's line, `?chapter=shore` just through the door.
 
 The first impossible fragment of home: somebody's washing with nobody there, and a child lost in it. Jeremy:
 **overwhelmed, not vast**. Density is the lever, not area: a low whaleback (`tuning.world.linesDome`) packed with
@@ -131,10 +132,23 @@ chosen once the sheet has been down `passAfter`), and the child follows.
 The last sheet opens on a clearing: one low line with a blue and a red adult garment and the small yellow jumper
 between them, and the red door. The released breeze brings the sleeves together (blue
 begins, red follows, yellow answers) and the door opens once they have nearly met. Through it is a separate shore
-(`DOOR_SHORE`), drawn inside the opening, where the kite and the boat wait on open grass. The child and the bird
-pass through, the camera follows, the washing is gone, and the child walks straight to the boat with the paper still
-in hand (no throw), gathers the bird up and lets it climb into the satchel to board: the first time it rides there,
-and the bag's flap is thrown open for the rest of the game. Checkpoints follow the first and second curtains and the
+(`DOOR_SHORE`), drawn inside the opening. The child and the bird pass through, the camera follows and drifts round
+to the boat, and the washing is gone.
+
+The boat is not on the grass: it is moored out on the water, tied by its painter to a washing-line pulley (prototype,
+branch `proto-lines-shore`). The loop of line runs from a wheel on a post on the bank out to a wheel on a piling
+beside the boat, with spare pegs riding it, and a big two-tone pinwheel sits on the bank wheel's axle. The child
+walks down to the water's edge below the post with the bird beside her and waits, watching the boat; while nothing
+moves she looks out at it, reaches toward it and looks up at the pinwheel. The view holds still on the whole stage:
+her, the pinwheel, the line and the boat. Only a sweep across the pinwheel on screen spins it (air spilling from
+sweeps nearby turns it a little; the breeze only rocks it); the wheel turns with it, the line runs in, one way only,
+and the boat follows its painter, surging when the painter tightens and gliding on when it slackens, slowed by the
+water and stopped by the sand right beside her. Nothing runs back out, so any number of sweeps over any time add up.
+After a few idle seconds a sweep is drawn across the pinwheel (`ShorePulleyRig`, never wind). Once the boat is in
+she gives a small cheer, walks to it with the paper still in hand (no throw), lets go of the painter, gathers the
+bird up and lets it climb into the satchel to board: the first time it rides there, and the bag's flap is thrown open
+for the rest of the game. The departure kite is tied off on the piling. On a phone the view at the bank looks out
+along the line, so the stage runs into the distance rather than across a narrow frame. Checkpoints follow the first and second curtains and the
 threshold.
 
 Rulings:
@@ -145,15 +159,17 @@ Rulings:
 - A sheet pegged by its top edge never stays up without something holding it: no sheet curled, streaming or
   flapping in mid air once the player's air is gone. Each passage opens a different physical way (Jeremy:
   "why not add variation and have both? We have three checkpoints").
-- The door is the only way onward; beyond it only open grass, the kite and the boat.
+- The door is the only way onward. Beyond it, open grass, the kite, the boat and (prototype) the pinwheel's pulley line
+  and nothing else; the pulley knowingly relaxes this and the rule below that pinwheels stay with the washing.
 - Lines may cross each other but never run near-parallel close together (`lineField` rejects them).
 
 Rules: rich blue, warm red and the child's yellow belong only to the family; the rest of the laundry is pale linen,
 the passage sheets share a red sewn hem, and the pinwheels stay outside the clearing. Daylight stays over the whole
 island; pinwheels belong to this island only.
 
-Knobs: `tuning.linesPassage`, `tuning.washing`, `tuning.family`, `tuning.linesToys`. Checks: `tools/lines-check.mjs`,
-`lines-view-check.mjs`.
+Knobs: `tuning.linesPassage`, `tuning.washing`, `tuning.family`, `tuning.linesToys`, `tuning.shorePulley`. Checks:
+`tools/lines-check.mjs`, `lines-view-check.mjs` (both wind the boat in with sweeps across the pinwheel; `lines-check idle`
+also proves waiting cannot).
 
 ## The little boats
 
