@@ -596,7 +596,7 @@ window.__audit = {
       'grass-fog':[frameMats,'fragmentShader',s=>sub(s,/vec4 fog = fogOf[^;]*;/,'vec4 fog = vec4(0.0);')],
       'grass-cloud':[frameMats,'fragmentShader',s=>sub(s,'cloudShadow(root2)));','1.0));')],
       'grass-shade':[grassMats,'vertexShader',s=>sub(sub(s,'float green = morningAt(root2);','float green = 0.0;'),/vec3 warm = lampLight[^;]*;/,'vec3 warm = vec3(0.0);')],
-      'grass-frost':[frameMats,'fragmentShader',s=>sub(s,'frostAt(root2), shape.w','0.0, shape.w')],
+      'grass-frost':[frameMats,'fragmentShader',s=>sub(s,'vec4(ground.xyz, frostAt(root2))','vec4(ground.xyz, 0.0)')],
       'grass-life':[frameMats,'fragmentShader',s=>sub(s,'float life = lifeAt(root2);','float life = 1.0;')],
       'grass-collapse':[grassMats,'vertexShader',s=>sub(s,'void main() {\\n  ivec2 at','void main() { collapse(); return;\\n  ivec2 at')],
       'water-frag-flat':[[waterMat],'fragmentShader',s=>main(s,'void main() { gl_FragColor = vec4(vWorld * 1e-4 + vSwell * 0.1 + vec3(0.1, 0.2, 0.3), 1.0); }')],

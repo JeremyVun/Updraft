@@ -421,8 +421,8 @@ vec3 bladeRoot(vec2 root2, float groundH) {
 
 /**
  * The light a blade's own place gives it: the morning's green and the warm lights near it. Needs `root2` and
- * `groundH`. Worked out at every vertex: each is zero outside the rooms that light it, and stored per blade as half
- * float it moved shading enough for the grade to change a pixel visibly.
+ * `groundH`. Worked out at every vertex, where each is zero outside the rooms that light it: the per-blade pass has no
+ * room left to keep them at full float, and at half float they moved pixels visibly through the grade.
  */
 const BLADE_LIGHT_GLSL = /* glsl */ `
   float green = morningAt(root2);
@@ -434,8 +434,8 @@ const BLADE_LIGHT_GLSL = /* glsl */ `
 /**
  * What every vertex of a blade shares this frame, worked out once per blade rather than at each of its vertices:
  * how it has grown and closes, the wind on it, the ground and light under it and its fog. A blade the blade shader
- * collapses is marked by a negative height and nothing else is worked out for it. Everything is stored as full
- * float but the fog, which is half float, two to a channel, as it always was.
+ * collapses is marked by a negative height and nothing else is worked out for it. Everything is kept as full float
+ * but the fog, two halves to a channel, cut as a half-float target would store it.
  */
 const FRAME_FRAG = /* glsl */ `
 precision highp float;
@@ -452,11 +452,12 @@ uniform sampler2D uRootTex;
 uniform sampler2D uShapeTex;
 uniform sampler2D uFlowerTex;
 layout(location = 0) out highp uvec4 oGrowth;
-// Cut to half toward zero, as a half-float target stores it on Apple GPUs (packHalf2x16 rounds to nearest).
-vec2 towardZero(vec2 v) { return uintBitsToFloat(floatBitsToUint(v) & 0xFFFFE000u); }
 layout(location = 1) out highp uvec4 oSway;
 layout(location = 2) out highp uvec4 oGround;
 layout(location = 3) out highp uvec4 oLight;
+
+// Cut to half toward zero, as a half-float target stores it on Apple GPUs (packHalf2x16 rounds to nearest).
+vec2 towardZero(vec2 v) { return uintBitsToFloat(floatBitsToUint(v) & 0xFFFFE000u); }
 
 void main() {
   ivec2 at = ivec2(gl_FragCoord.xy);
@@ -487,8 +488,8 @@ void main() {
   vec4 wind = texture(uWindTex, uv);
   float sp = length(wind.xy);
   vec4 ground = groundAt(root2);
-  oSway = floatBitsToUint(vec4(bend.xy, 0.04 + 0.012 * sp, ground.x));
-  oGround = floatBitsToUint(vec4(ground.yz, frostAt(root2), shape.w));
+  oSway = floatBitsToUint(vec4(bend.xy, 0.04 + 0.012 * sp, shape.w));
+  oGround = floatBitsToUint(vec4(ground.xyz, frostAt(root2)));
   // A quarter of the way up is where one fog for the whole blade comes closest to the fog along it.
   vec4 fog = fogOf(bladeRoot(root2, groundH) + vec3(0.0, shape.y * 0.25, 0.0), 1.0);
   oLight = uvec4(packHalf2x16(towardZero(fog.rg)), packHalf2x16(towardZero(fog.ba)), floatBitsToUint(vec2(ground.w, cloudShadow(root2))));
@@ -667,7 +668,7 @@ void main() {
   float width = growth.y;
   float life = growth.w;
   vec4 sway = uintBitsToFloat(texelFetch(uBladeSwayTex, at, 0));
-  uvec4 groundIn = texelFetch(uBladeGroundTex, at, 0);
+  vec4 groundIn = uintBitsToFloat(texelFetch(uBladeGroundTex, at, 0));
   uvec4 lightIn = texelFetch(uBladeLightTex, at, 0);
   vec4 root = texelFetch(uRootTex, at, 0);
   vec2 root2 = root.xy;
@@ -679,7 +680,7 @@ void main() {
   float side01 = position.x;
   float t = mix(position.y, position.z, growth.z);
   float seed = fl.x;
-  float angle = uintBitsToFloat(groundIn.w);
+  float angle = sway.w;
   float curve = tintIn.w;
   float flower = fl.y * step(0.5, life);
   float reedBlade = step(7.5, fl.z);
@@ -713,8 +714,8 @@ void main() {
   vec3 nrm = cross(sideDir, tangent);
   vNormal = length(nrm) > 1e-4 ? normalize(nrm) : vec3(0.0, 1.0, 0.0);
   vSideDir = sideDir * side01;
-  vGroundN = vec3(sway.w, uintBitsToFloat(groundIn.xy));
-  float rime = uintBitsToFloat(groundIn.z);
+  vGroundN = groundIn.xyz;
+  float rime = groundIn.w;
   ${BLADE_LIGHT_GLSL}
   vec3 tint = mix(stillGrey(tintIn.rgb), tintIn.rgb, life);
   vTint = tint;
