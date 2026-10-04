@@ -156,12 +156,14 @@ void main() {
     float moss = smoothstep(0.45, 0.8, vnoise(vWorld.xz * 0.8 + vWorld.y * 0.5)) * smoothstep(0.1, 0.8, n.y);
     alb = mix(alb * (0.88 + grain * 0.2), vec3(0.07, 0.09, 0.05), moss * 0.6);
   }
-  float rim = pow(1.0 - min(abs(dot(n, V)), 1.0), 4.0);
+  float rim = pow(1.0 - min(abs(dot(n, V)), 1.0), 3.0);
   vec3 col = alb * (hemiLight(n) * 0.8 + uSunColor * max(0.0, dot(n, uSunDir)) * 0.35);
-  col += uSunColor * rim * 0.05 * uNight;
+  // The moon on the stone behind is what the stump is seen against before there is any other light.
+  if (vKind > 1.5) col += alb * uSunColor * (0.5 + 0.5 * max(0.0, dot(n, normalize(cameraPosition - vWorld)))) * 2.6 * uNight;
+  else col += uSunColor * rim * 0.12 * uNight;
   float shade = shapeShadow(vWorld + n * 0.08);
   col += (alb + vec3(0.07, 0.04, 0.02)) * emberLight(vWorld, n) * shade;
-  if (vKind > 0.5 && vKind < 1.5) col += vec3(0.55, 0.95, 0.7) * 0.32 * uShapeEyes * (0.6 + 0.4 * max(0.0, dot(n, V)));
+  if (vKind > 0.5 && vKind < 1.5) col += vec3(0.55, 0.95, 0.7) * 1.1 * uShapeEyes * (0.6 + 0.4 * max(0.0, dot(n, V)));
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;
 
@@ -189,7 +191,7 @@ export class WoodShape {
     parts.push(strip(knuckle(caps[2].b, 0.24), 0));
     for (const side of [-1, 1]) {
       const eye = toWorld([side * 0.11, 1.62, 0.63], WOOD_SHAPE.y);
-      parts.push(strip(bracket(eye, 0.065), 1));
+      parts.push(strip(bracket(eye, 0.08), 1));
     }
     parts.push(strip(this.stone([0.5, 0.75, -3.1], [2.7, 1.6, 0.95], 0.1, 1), 2));
     parts.push(strip(this.stone([-1.9, 0.45, -2.6], [1.3, 1.0, 0.8], -0.2, 4), 2));

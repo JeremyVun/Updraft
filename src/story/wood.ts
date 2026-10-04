@@ -9,7 +9,7 @@ import { heightAt } from '../world/island';
 import { WOOD_BERTH, WOOD_LANDING, WOOD_PATH, WOOD_REFUGE, WOOD_HEARTH, WOOD_OUTSIDE, WOOD_COAX, WOOD_APPROACH_LIGHT, WOOD_PLANE, WOOD_PLANE_LIGHT, woodPlaneSway } from '../world/wood';
 import type { Cast, Chapter } from './cast';
 import { cue } from './cues';
-import { WOOD_SHAPE, SHAPE_RIGHT, SHAPE_FACING } from '../world/wood-shape';
+import { WOOD_SHAPE, SHAPE_RIGHT, SHAPE_FACING, shapeUniforms } from '../world/wood-shape';
 
 /** Where the cygnet goes to ground when the storm frightens it out of the hood: just off the path, in the dark. */
 const HIDING = WOOD_REFUGE;
@@ -909,7 +909,8 @@ export class WoodChapter implements Chapter {
   private readonly shapeAsk: Coax = { at: new THREE.Vector3(), urgency: tuning.wood.inviteCoalUrgency, radius: tuning.wood.inviteCoalRadius };
 
   get gathersFireflies(): boolean { return this.beat === 'loom' && this.shapeStopped >= 0; }
-  get releasesFireflies(): boolean { return this.shapeDone || this.beat === 'brave'; }
+  get releasesFireflies(): boolean { return this.shapeDone; }
+  get holdsFireflies(): boolean { return this.beat === 'brave'; }
 
   /** QA: start a few paces short of the bend, with the coal before it just lit. */
   skipToShape(): void {
@@ -935,7 +936,7 @@ export class WoodChapter implements Chapter {
     const k = tuning.wood.shape;
     const base = heightAt(WOOD_SHAPE.x, WOOD_SHAPE.z);
     this.shapeHead.set(WOOD_SHAPE.x, base + 1.6, WOOD_SHAPE.z).addScaledVector(SHAPE_FACING, 0.55);
-    this.shapeTouch.set(WOOD_SHAPE.x, base + 0.95, WOOD_SHAPE.z).addScaledVector(SHAPE_FACING, 0.38).addScaledVector(SHAPE_RIGHT, -0.22);
+    this.shapeTouch.set(WOOD_SHAPE.x, base + 0.95, WOOD_SHAPE.z).addScaledVector(SHAPE_FACING, 0.2).addScaledVector(SHAPE_RIGHT, 0.36);
     this.to('loom');
     const c = this.cast.child;
     c.stroll = k.approachPace;
@@ -974,6 +975,8 @@ export class WoodChapter implements Chapter {
     if (this.cast.fireflies.lantern.power > 0.3 && this.shapeLampAt < 0) this.shapeLampAt = this.now;
     if (this.cast.input.charge > 0.12 || this.cast.input.gust > 0.2) this.shapeWorkedAt = this.now;
     this.shapeReveal = Math.min(1, this.shapeReveal + dt * side / k.revealSeconds);
+    // In the light from beside it, the two pale eyes are only a pair of little mushrooms.
+    shapeUniforms.uShapeEyes.value = 1 - THREE.MathUtils.smoothstep(this.shapeReveal, 0.15, 0.85) * 0.9;
     const want = THREE.MathUtils.clamp(0.7 + 0.3 * front - 0.6 * side - 0.5 * this.shapeReveal, 0, 1);
     this.shapeFear += (want - this.shapeFear) * (1 - Math.exp(-dt * 2.5));
     // A first flinch back from it, then she holds her ground with the bag held close.
@@ -1014,7 +1017,7 @@ export class WoodChapter implements Chapter {
     if (this.braveStep === 0 && this.now - this.braveAt > k.exhaleSeconds) {
       this.braveStep = 1;
       c.stroll = k.approachPace;
-      const stand = this.tmp.copy(this.shapeTouch).addScaledVector(SHAPE_FACING, 0.62).addScaledVector(SHAPE_RIGHT, -0.18);
+      const stand = this.tmp.copy(this.shapeTouch).addScaledVector(SHAPE_FACING, 0.35).addScaledVector(SHAPE_RIGHT, 0.55);
       c.walkTo(stand.x, stand.z, false, () => {
         c.stop();
         c.faceToward(this.shapeTouch.x, this.shapeTouch.z, 1);
@@ -1046,7 +1049,7 @@ export class WoodChapter implements Chapter {
       this.shapeAsk.at.set(c.x, 0, c.z).lerp(this.tmp.set(WOOD_SHAPE.x, 0, WOOD_SHAPE.z), 0.4);
     } else {
       if (this.shapeLampAt < 0 || this.now - Math.max(this.shapeLampAt, this.shapeLitAt) < k.sideInviteAfter) return null;
-      this.shapeAsk.at.set(WOOD_SHAPE.x, 0, WOOD_SHAPE.z).addScaledVector(SHAPE_RIGHT, -k.sideInviteOffset).addScaledVector(SHAPE_FACING, 0.4);
+      this.shapeAsk.at.set(WOOD_SHAPE.x, 0, WOOD_SHAPE.z).addScaledVector(SHAPE_RIGHT, k.sideInviteOffset).addScaledVector(SHAPE_FACING, 0.4);
     }
     this.shapeAsk.at.y = Math.max(heightAt(this.shapeAsk.at.x, this.shapeAsk.at.z), 0);
     return this.shapeAsk;
@@ -1057,8 +1060,8 @@ export class WoodChapter implements Chapter {
     const c = this.cast.child.position;
     this.childSubject.copy(c).y += 1.5;
     this.birdSubject.copy(this.shapeHead);
-    s.target.copy(this.childSubject).lerp(this.birdSubject, 0.55);
-    s.target.y -= 0.2;
+    s.target.copy(this.childSubject).lerp(this.birdSubject, 0.68);
+    s.target.y -= 0.3;
     const k = tuning.wood.shape;
     const ex = c.x + SHAPE_FACING.x * k.cameraBack - SHAPE_RIGHT.x * k.cameraSide;
     const ez = c.z + SHAPE_FACING.z * k.cameraBack - SHAPE_RIGHT.z * k.cameraSide;

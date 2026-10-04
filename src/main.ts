@@ -955,6 +955,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   fireflies.gatherAt = story.current.gathersFireflies && input.present && !input.muted ? input.updraftAt : null;
   fireflies.gatherCharge = input.charge;
   fireflies.release = !!story.current.releasesFireflies;
+  fireflies.hold = !!story.current.holdsFireflies;
   fireflies.update(dt, atmo.uniforms.uNight.value * overLand * flyWeather * (1 - sleeping.presence), story.focus, inWood);
   emberInvitation.update(dt, rig.camera, story.current.windInvitation ?? null, input,
     undefined, story.name === 'mirror' ? tuning.skyMirror.bubbleRadius : story.current.invitationRadius ?? 0);

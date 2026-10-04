@@ -181,6 +181,7 @@ export interface Chapter {
   /** The player's updraft gathers the fireflies into a lantern; `releasesFireflies` lets a gathered one go. */
   readonly gathersFireflies?: boolean;
   readonly releasesFireflies?: boolean;
+  readonly holdsFireflies?: boolean;
   /** Screen-local wind work on chapter targets, including the paper snag. */
   brushDry?(amount: number): void;
   /** True once the music has been cut for good and only the world is left to hear. */

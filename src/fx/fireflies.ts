@@ -77,6 +77,8 @@ export class Fireflies {
   gatherCharge = 0;
   /** Lets the swarm go faster than it would on its own, once it has done what it was gathered for. */
   release = false;
+  /** Keeps a gathered swarm where it is, untouched by wind and time, while the room needs its light. */
+  hold = false;
   private readonly flies: Fly[] = [];
   private readonly bound = new Float32Array(COUNT);
   private readonly lanternV = new THREE.Vector3();
@@ -135,15 +137,16 @@ export class Fireflies {
       lamp.at.x += (this.gatherAt!.x - lamp.at.x) * k;
       lamp.at.z += (this.gatherAt!.z - lamp.at.z) * k;
       this.lanternV.multiplyScalar(Math.exp(-dt * 3));
-    } else if (lamp.power > 0.01) {
+    } else if (lamp.power > 0.01 && !this.hold) {
       const w = this.wind.sample(lamp.at.x, lamp.at.z, this.sample);
       const k = 1 - Math.exp(-dt * L.carryResponse);
-      this.lanternV.x += (w.x * L.carry - this.lanternV.x) * k;
-      this.lanternV.z += (w.z * L.carry - this.lanternV.z) * k;
+      // Only the player's gusts carry it: the storm over the canopy does not reach down here.
+      this.lanternV.x += ((w.x - this.wind.breeze.x) * L.carry - this.lanternV.x) * k;
+      this.lanternV.z += ((w.z - this.wind.breeze.y) * L.carry - this.lanternV.z) * k;
       lamp.at.addScaledVector(this.lanternV, dt);
     }
     lamp.at.y = surfaceHeight(lamp.at.x, lamp.at.z) + L.height + Math.sin(this.time * 0.9) * 0.08;
-    const loosen = dt / (this.release ? L.releaseFor : L.looseFor);
+    const loosen = this.hold ? 0 : dt / (this.release ? L.releaseFor : L.looseFor);
     let held = 0;
     this.flies.forEach((f, i) => {
       if (i >= count) return;
@@ -176,10 +179,12 @@ export class Fireflies {
         const tx = lamp.at.x + Math.cos(spin) * rad;
         const ty = lamp.at.y + Math.sin(spin * 1.7 + f.seed * 9) * rad * 0.6;
         const tz = lamp.at.z + Math.sin(spin) * rad;
-        const k = b * b;
-        f.v.x += ((tx - f.p.x) * 2.5 - f.v.x) * k;
-        f.v.y += ((ty - f.p.y) * 2.5 - f.v.y) * k;
-        f.v.z += ((tz - f.p.z) * 2.5 - f.v.z) * k;
+        const k = Math.min(1, b * 1.6);
+        const len = Math.hypot(tx - f.p.x, ty - f.p.y, tz - f.p.z);
+        const pull = Math.min(3.5, L.flySpeed / Math.max(len, 0.001));
+        f.v.x += ((tx - f.p.x) * pull - f.v.x) * k;
+        f.v.y += ((ty - f.p.y) * pull - f.v.y) * k;
+        f.v.z += ((tz - f.p.z) * pull - f.v.z) * k;
       }
       f.p.addScaledVector(f.v, dt);
       const ground = surfaceHeight(f.p.x, f.p.z);

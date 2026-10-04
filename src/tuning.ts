@@ -939,13 +939,13 @@ export const tuning = {
      * hand on the bark, and when the second invitation shows where to take the light and how far out.
      */
     shape: {
-      stopShort: 6.2, approachPace: 0.7, flinchStep: 0.55, flinchSeconds: 0.9,
-      lightReach: 7, sideFront: 0.45, sideBack: -0.75, revealSeconds: 1.8,
+      stopShort: 5.2, approachPace: 0.7, flinchStep: 0.55, flinchSeconds: 0.9,
+      lightReach: 7, sideFront: 0.3, sideBack: -0.8, revealSeconds: 1.8,
       exhaleSeconds: 1.2, touchSeconds: 1.6, sideInviteAfter: 7, sideInviteOffset: 2.8,
-      cameraBack: 7.5, cameraSide: 2.6, cameraUp: 2.4, cameraPace: 0.8,
+      cameraBack: 8.5, cameraSide: -4.6, cameraUp: 3.4, cameraPace: 0.8,
     },
     lantern: {
-      chargeFrom: 0.12, gatherRadius: 11, gatherRate: 1.4, full: 22, height: 1.35, orbit: 0.55,
+      chargeFrom: 0.12, gatherRadius: 14, gatherRate: 2, full: 16, height: 1.35, orbit: 0.55, flySpeed: 7,
       follow: 1.4, carry: 0.6, carryResponse: 2, looseFor: 40, releaseFor: 6,
       light: 2.4, haloSize: 1.6, haloAlpha: 0.32,
     },
