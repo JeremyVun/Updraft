@@ -976,7 +976,8 @@ export const tuning = {
      * share of fireflies left in the held frame, and how much of the owl's height above her she tips her head back
      * for as it flies; her one look down at the cygnet (when, for how long); when the owl
      * leaves after it is seen; her turn after it as it flies (seconds into its flight, rate), the cygnet's peep and
-     * her wave; the breath out and how far on the next coal waits. The held frame, in the shape's frame (right, up
+     * her wave; the breath out, how far on the next coal waits and how far off the path, clear of her while the camera
+     * comes round behind her. The held frame, in the shape's frame (right, up
      * from her feet, toward her): the eye and where it looks, landscape and portrait, each lens's horizontal field
      * (portrait: vertical), when the walking camera starts easing to it (metres from her stop), how long it takes
      * when it cannot go by her steps, and how long it takes to ease back behind her as she walks on.
@@ -987,7 +988,7 @@ export const tuning = {
       foldSwing: 0.35, foldIn: 0.45, foldBlur: 3.5, moonOnHer: 0.35, heldFireflies: 0.3, lookUpShare: 0.35,
       glanceAfter: 2.4, glanceFor: 1.8,
       owlLeaveAfter: 7, turnAfter: 0.9, turnRate: 2.0, peepAfter: 1.0, peepFor: 3.2, waveAfter: 2.2,
-      exhaleSeconds: 1.8, chainOn: 17,
+      exhaleSeconds: 1.8, chainOn: 17, chainAside: 5.2,
       eye: [14.4, 2.3, 5.2], look: [2.65, 3.0, 2.75], hfov: 76,
       portraitEye: [6.6, 2.4, 15.3], portraitLook: [0.6, 5.2, 1.0], portraitVfov: 72,
       easeFrom: 9, easeSeconds: 4.5, releaseSeconds: 8,
@@ -1006,7 +1007,7 @@ export const tuning = {
     chainOffset: 2.6,
     /** Bring the next light closer after pickup, and further off the path, so it stays clear of her on screen. */
     rescueChainStep: 12,
-    rescueChainOffset: 3.6,
+    rescueChainOffset: 4.4,
     /** How far off her shoulder the walking camera stands, on the waiting coal's side, so the coal is beside her in frame. */
     cameraSide: 2.8,
     cameraBack: 13,
