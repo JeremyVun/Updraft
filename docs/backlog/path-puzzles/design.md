@@ -180,3 +180,44 @@ toys run on ahead out of the square, then the storm scatters them into the rain,
 Meeting them again on the open sea becomes relief that they made it. It must be **all** of the toys, not three:
 "another session is working to bring in all of the little boats into the opening sea sequence (not just three), so
 you'd have to have all of the little boats in the drowned village encounter as well".
+
+**Fifth round: three new directions, prototyped side by side.** Jeremy, on the vanes: "Another agent is wokring on
+some weather vanes idea, but i dont think it's panning out very well". Asked for more:
+
+> yea 1 probably works best, but any other ideas that are more engaging, multi step, or chain together different
+> ideas that the player has learnt? Feel free to be creative, push the boundaries. what can make the game more
+> amazing?
+
+> can you get astra to do concept art for A, B, and C? I'm thinking of getting a prototype for each done by an opus
+> 5.5 agent so we can explore these ideas more and see what works and what doesn't. if not, we can come up with new
+> ideas. (B) is a bit confusing but seems like it might have some kind of potential. (C) is probably also quite
+> interesting in terms of the dreamlike idea of black chimney smoke turning into a storm. i'm curious to see waht you
+> come up with
+
+All three keep the village as it is on main and in its room painting, keep all seven toys becalmed among the roofs,
+and chain verbs the player already has (the scarf's upward sweep, the plug's and the scarf's circling updraft,
+billowing a sheet, filling a sail). Each prototype is judged on its own branch.
+
+- **A. The kite climbs out of the dead air.** The water is glass but the high clouds still drift and the spire's
+  swan vane still turns: the wind has only left the water. The child looks up, then at the limp departure kite on the
+  deck. A sweep lifts it off the boards and it flops back: the dead air cannot hold it. One drowned chimney still
+  breathes a thread of smoke straight up, the only thing rising; the player gusts the kite over it and circles, the
+  smoke stands up into a column and the kite rides it up past the spire. In the last gold light it catches the high
+  wind, the line snaps taut and the boat moves; the toys bump into line behind it and are towed. Where the channel
+  turns at the church the player leans the kite with gusts and the boat follows it round (slow, soft bumps, no
+  reactions needed). The high wind is the storm: the kite pulls harder as it comes down, the child hauls it in as the
+  rain starts, and the storm scatters the toys. Knowingly shows the departure kite mid-drift.
+- **B. The village in the reflection.** When the air dies the glass shows the village as it was: lit windows,
+  smoke, washing out, trees moving in a breeze, nobody in it. The wind blows only in the reflection. A gust on the
+  water ripples the glass and breaks the reflection there, and the reflected breeze comes up through the break
+  (leaves stir, a toy's sail lifts). The reflected washing and the reflected spire vane show which way it blows in
+  each place, so the reflection is a map: break it where its wind blows toward the boat and the sail fills. The wind
+  let through ripples the glass further on and lets more through, a spreading cascade that grows into the storm and
+  erases the warm village from the water as it goes. The cygnet's reflection has its family beside it until the
+  ripples reach them. Risk: a second reflection room before the sky mirror, and the hardest to make read.
+- **C. Black smoke becomes the storm.** The storm is dark out at sea and the boat is becalmed; the only way on is to
+  call it in, so the child goes into the dark by choice. Drowned chimneys are smothered (a sheet draped over one, as
+  sheets fall on the island of lines; leaves heaped on another); the player blows them clear and black smoke starts
+  to rise. Circling stands each plume into a tower that leans out toward the storm; when the towers join it, a cold
+  rush races across the glass, a visible line of darkening water, and fills the sail. Risk: circling twice can read
+  as the same act twice; uncovering each chimney differently is what varies it.
