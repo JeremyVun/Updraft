@@ -1,4 +1,4 @@
-import { BOATS_SHIFT, SHORE_SHIFT, HOME_SHIFT } from './geography';
+import { BOATS_SHIFT, SHORE_SHIFT, HOME_SHIFT, LINES_SHIFT } from './geography';
 import { mirrorBed, MIRROR_LAYOUT_GLSL } from './sky-mirror-layout';
 import { glsl, tuning } from '../tuning';
 import { LITTLE_BOATS, LITTLE_BOATS_GLSL, boatsOut, boatsLevel } from './little-boats-layout';
@@ -144,7 +144,7 @@ function meadowSculpted(x: number, z: number): { x: number; z: number } {
 }
 
 export const ISLES = {
-  lines: { x: 14, z: -368.4, rx: 70, rz: 64.4 },
+  lines: { x: 14 + LINES_SHIFT.x, z: -368.4 + LINES_SHIFT.z, rx: 70, rz: 64.4 },
   meadow: {
     x: MEADOW_SCULPTED.x,
     z: MEADOW_SOUTH - MEADOW_SCULPTED.rz * MEADOW_SCALE,
@@ -216,8 +216,11 @@ function littleBoatsHeight(x: number, z: number): number {
 }
 
 /** The island of lines: a low green whaleback, small enough that the washing on it is the whole room. */
+const LINES_ISLE = { ...ISLES.lines, x: 14, z: -368.4 };
+
 function linesHeight(x: number, z: number): number {
-  const c = ISLES.lines;
+  x -= LINES_SHIFT.x; z -= LINES_SHIFT.z;
+  const c = LINES_ISLE;
   if (isleFar(x, z, c, 0.16, 40)) return -1.4 - 8;
   const d = isleCoast(x, z, c, 0.16, 21);
   const land = smoothstep(10, -30, d);
@@ -546,7 +549,8 @@ float hf_isleCoast(vec2 p, vec2 c, vec2 r, float wobble, float seed) {
 }
 ${LUMP_GLSL}
 float hf_lines(vec2 p) {
-  vec2 c = vec2(${ISLES.lines.x}.0, ${glsl(ISLES.lines.z)});
+  p -= vec2(${glsl(LINES_SHIFT.x)}, ${glsl(LINES_SHIFT.z)});
+  vec2 c = vec2(${LINES_ISLE.x}.0, ${glsl(LINES_ISLE.z)});
   vec2 r = vec2(${ISLES.lines.rx}.0, ${glsl(ISLES.lines.rz)});
   float d = hf_isleCoast(p, c, r, 0.16, 21.0);
   float land = (1.0 - smoothstep(-30.0, 10.0, d));

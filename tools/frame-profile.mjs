@@ -874,7 +874,7 @@ window.__audit = {
       gl.readPixels(0,0,gl.drawingBufferWidth,gl.drawingBufferHeight,gl.RGBA,gl.UNSIGNED_BYTE,pixels);return pixels;};
     try {
       tree.life.value=1;
-      const targets=[tree.canopy[0].centre,pond.centre,new THREE.Vector3(11,5,-390)];
+      const targets=[tree.canopy[0].centre,pond.centre,new THREE.Vector3(11,5,-290)];
       for(let target=0;target<targets.length;target++)for(const yaw of [-0.8,-0.4,0,0.4,0.8]) {
         camera.position.copy(targets[target]).add(new THREE.Vector3(0,3,24));
         camera.lookAt(targets[target]);camera.rotateY(yaw);camera.updateMatrixWorld();
