@@ -199,11 +199,13 @@ export class LittleBoatsDrain {
   /** Seconds since the waiting obstacle (the bath, then the plug) was last touched by a stroke. */
   idle = 0;
   readonly bathAt = new THREE.Vector3();
+  /** Where the bath's pour meets the pool. */
+  readonly pourAt = new THREE.Vector3();
   readonly plugAt = new THREE.Vector3();
   private water = 1;
   private tip = 0;
   private tipV = 0;
-  private pour = 0;
+  pour = 0;
   private readonly bathRoot = new THREE.Group();
   private readonly bathPivot = new THREE.Group();
   private readonly bathWater: THREE.Mesh;
@@ -488,6 +490,8 @@ export class LittleBoatsDrain {
       }
     }
     p.needsUpdate = true;
+    const last = this.pourSegments * 2;
+    this.pourAt.set((p.getX(last) + p.getX(last + 1)) / 2, p.getY(last), (p.getZ(last) + p.getZ(last + 1)) / 2);
   }
 
   private shapeRibbon(time: number): void {
