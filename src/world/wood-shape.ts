@@ -82,7 +82,7 @@ const ROCK_OUT = new THREE.Vector2(-ROCK_ALONG.y, ROCK_ALONG.x);
  * Smoothed into one closed curve.
  */
 const ROCK_OUTLINE: [number, number][] = [
-  [-2.3, -1.2], [-2.5, 0.6], [-2.45, 2.0], [-2.15, 3.3], [-1.6, 4.4], [-0.85, 5.3], [0.0, 5.95], [1.0, 6.4],
+  [-2.5, -1.2], [-2.75, 0.5], [-2.55, 1.5], [-2.05, 2.1], [-1.75, 2.95], [-1.25, 3.95], [-0.6, 4.9], [0.1, 5.8], [1.0, 6.4],
   [2.0, 6.7], [3.0, 6.85], [4.0, 6.98], [4.8, 7.0], [5.4, 6.6], [6.0, 5.95], [6.6, 5.3], [7.3, 4.4],
   [8.1, 3.2], [8.5, 1.8], [8.7, 0.6], [8.75, -1.2],
 ];
@@ -93,8 +93,8 @@ const ROCK_SPAN = [Math.min(...ROCK_CURVE.map((p) => p[0])), Math.max(...ROCK_CU
  * Its front, out of the face at the foot: leaning back as it rises and curling back toward the crown, and turning away
  * either side of `middle` along it, so the coal's light rolls across it instead of lying flat.
  */
-const ROCK_FACE = { lean: 0.11, curl: 0.01, turn: 0.02, middle: 2.6 };
-const ROCK_FRONT = 1.1;
+const ROCK_FACE = { lean: 0.1, curl: 0.018, turn: 0.03, middle: 2.4 };
+const ROCK_FRONT = 0.85;
 const ROCK_DEEP = 2.2;
 /** How round its edges are, in metres. */
 const ROCK_ROUND = 0.6;
@@ -104,13 +104,12 @@ const ROCK_ROUND = 0.6;
  * bevel low on the right.
  */
 const ROCK_BREAKS: [number[], number[], number][] = [
-  [[0, 0.2, 0.98], [2.5, 2.0, 0.55], 0.2],
-  [[-0.48, 0.2, 0.85], [0.3, 3.0, 0.3], 0.25],
-  [[0.04, 0.38, 0.92], [3.0, 5.0, 0.0], 0.25],
-  [[0.55, 0.1, 0.83], [5.4, 3.0, 0], 0.25],
+  [[-0.48, 0.2, 0.85], [0.3, 3.0, 0.3], 0.12],
+  [[0.04, 0.38, 0.92], [3.0, 5.0, 0.0], 0.15],
+  [[0.55, 0.1, 0.83], [5.4, 3.0, 0], 0.15],
   [[0, 0.9, 0.44], [3.5, 6.2, -0.75], 0.3],
-  [[-0.45, 0.65, 0.6], [-0.8, 4.6, -0.7], 0.25],
-  [[-0.75, 0.15, 0.65], [-1.8, 2.5, -0.6], 0.25],
+  [[-0.45, 0.65, 0.6], [-0.8, 4.6, -0.7], 0.15],
+  [[-0.75, 0.15, 0.65], [-1.8, 2.5, -0.6], 0.15],
   [[0.45, -0.3, 0.84], [6.2, 1.4, 0.5], 0.2],
 ];
 /** The rounded stone at its foot: along the face, out of it, and its half-length, height and half-depth. */
@@ -121,7 +120,7 @@ const FISSURES: [number[], number[]][] = [[[-1.3, 4.2], [-0.6, 1.6]], [[-0.6, 1.
 const LEAF_TONE = [1.6, 1.75, 1.5];
 /** The painted gritstone: metres to one repeat, its tone at night, and how deep its grain stands. */
 const ROCK_GRIT = 1.7;
-const ROCK_TONE = [0.52, 0.53, 0.58];
+const ROCK_TONE = [0.5, 0.5, 0.56];
 const ROCK_BUMP = 0.016;
 /** Where along the face the painted shadows stand, pinned at their base. */
 const SHADOW_U = 2.7;
@@ -530,6 +529,7 @@ function strip(geo: THREE.BufferGeometry, kind: number, axis: THREE.Vector3): TH
   const ground = new Float32Array(n);
   for (let i = 0; i < n; i++) ground[i] = heightAt(pos.getX(i), pos.getZ(i));
   g.setAttribute('aGround', new THREE.Float32BufferAttribute(ground, 1));
+  if (!g.getAttribute('aEdge')) g.setAttribute('aEdge', new THREE.Float32BufferAttribute(new Float32Array(n), 1));
   return g;
 }
 
@@ -537,10 +537,11 @@ const SHAPE_VERT = /* glsl */ `${ATMO_GLSL}
 in float aKind;
 in vec3 aAxis;
 in float aGround;
+in float aEdge;
 uniform vec4 uShapeAt;
-out vec3 vWorld; out vec3 vNormal; out float vKind; out vec3 vAxis; out vec3 vLocal; out float vAbove;
+out vec3 vWorld; out vec3 vNormal; out float vKind; out vec3 vAxis; out vec3 vLocal; out float vAbove; out float vEdge;
 void main() {
-  vWorld = position; vNormal = normal; vKind = aKind; vAxis = aAxis; vAbove = position.y - aGround;
+  vWorld = position; vNormal = normal; vKind = aKind; vAxis = aAxis; vAbove = position.y - aGround; vEdge = aEdge;
   vLocal = position - vec3(uShapeAt.x, 0.0, uShapeAt.z);
   gl_Position = projectionMatrix * viewMatrix * vec4(position, 1.0);
 }`;
@@ -559,6 +560,7 @@ in float vKind;
 in vec3 vAxis;
 in vec3 vLocal;
 in float vAbove;
+in float vEdge;
 vec3 bump(vec3 n, float h, float k) {
   vec3 dpdx = dFdx(vWorld), dpdy = dFdy(vWorld);
   float hx = dFdx(h), hy = dFdy(h);
@@ -584,7 +586,9 @@ vec4 grit(vec2 p) {
   vec4 t = texture(uRock, p / GRIT);
   float drift = fbm(p * 0.16);
   t.rgb = max(mix(vec3(0.19, 0.17, 0.15), t.rgb, 1.6), 0.0);
-  t.rgb *= mix(vec3(0.8, 0.83, 0.88), vec3(1.12, 1.04, 0.95), smoothstep(0.25, 0.75, drift));
+  t.rgb *= mix(vec3(0.74, 0.76, 0.84), vec3(1.14, 1.04, 0.94), smoothstep(0.25, 0.75, drift));
+  // Weathering at the scale of the stone: broad patches a shade darker or paler, never a blot.
+  t.rgb *= 0.82 + 0.36 * smoothstep(0.2, 0.8, fbm(p * 0.55 + 7.0));
   return t;
 }
 /** How the painted height climbs across p, per metre along each of its axes. */
@@ -691,6 +695,8 @@ void main() {
     vec3 warm = thrown + shapeSideLight(vWorld, n) * 0.5;
     // The litter banked against its foot keeps the light off the last of it.
     warm *= mix(0.4, 1.0, smoothstep(0.0, 0.5, vAbove)) * mix(0.35, 1.0, smoothstep(0.1, 0.7, dot(n, V)));
+    // Its ridges catch the light and its creases hold the dark, so the planes read.
+    warm *= (1.0 + 0.7 * max(vEdge, 0.0)) * (1.0 - 0.6 * max(-vEdge, 0.0));
     col += (alb + vec3(0.006, 0.004, 0.002)) * warm * (1.0 - 0.94 * shade.x);
     col += vec3(1.0, 0.68, 0.22) * shade.y * 2.6;
   }
@@ -816,6 +822,18 @@ function sculpt(field: (p: THREE.Vector3) => number, centre: THREE.Vector3, radi
     p.copy(centre).addScaledVector(dir, (lo + hi) / 2);
     pos.setXYZ(i, p.x, p.y, p.z);
   }
+  // How sharply the stone turns at each point, read off the field a little inside and outside it: + along a ridge,
+  // - down in a crease.
+  const edge = new Float32Array(pos.count);
+  const o = new THREE.Vector3(), n = new THREE.Vector3(), e = 0.02, h = 0.35;
+  const f = (x: number, y: number, z: number) => field(p.set(o.x + x, o.y + y, o.z + z));
+  for (let i = 0; i < pos.count; i++) {
+    o.fromBufferAttribute(pos, i);
+    n.set(f(e, 0, 0) - f(-e, 0, 0), f(0, e, 0) - f(0, -e, 0), f(0, 0, e) - f(0, 0, -e)).normalize();
+    const ridge = 1 + f(-n.x * h, -n.y * h, -n.z * h) / h, crease = 1 - f(n.x * h, n.y * h, n.z * h) / h;
+    edge[i] = THREE.MathUtils.clamp(ridge - crease, -1, 1);
+  }
+  geo.setAttribute('aEdge', new THREE.Float32BufferAttribute(edge, 1));
   return geo;
 }
 
