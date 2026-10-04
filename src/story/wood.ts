@@ -9,7 +9,7 @@ import { heightAt } from '../world/island';
 import { WOOD_BERTH, WOOD_LANDING, WOOD_PATH, WOOD_REFUGE, WOOD_HEARTH, WOOD_OUTSIDE, WOOD_COAX, WOOD_APPROACH_LIGHT, WOOD_PLANE, WOOD_PLANE_LIGHT, woodPlaneSway } from '../world/wood';
 import type { Cast, Chapter } from './cast';
 import { cue } from './cues';
-import { WOOD_SHAPE, SHAPE_RIGHT, SHAPE_FACING, SHAPE_SIDE_COAL, SHAPE_THROW_COAL, SHAPE_WAIT, OWL_PERCH_LOCAL, OWL_FLIGHT_LOCAL, shapePoint, throwShapeLight, showShape, coalLight, shapeUniforms } from '../world/wood-shape';
+import { WOOD_SHAPE, SHAPE_RIGHT, SHAPE_FACING, SHAPE_SIDE_COAL, SHAPE_THROW_COAL, SHAPE_WAIT, OWL_PERCH_LOCAL, OWL_FLIGHT_LOCAL, shapePoint, throwShapeLight, showShape, coalLight, owlShadowFromFirst, shapeUniforms } from '../world/wood-shape';
 import { woodOwl } from '../creatures/owl';
 
 /** Where the cygnet goes to ground when the storm frightens it out of the hood: just off the path, in the dark. */
@@ -173,6 +173,7 @@ export class WoodChapter implements Chapter {
     woodOwl.sit(OWL_PERCH, Math.atan2(SHAPE_FACING.x, SHAPE_FACING.z));
     shapeUniforms.uShapeThrow.value.w = 0;
     showShape(0);
+    owlShadowFromFirst(0);
     this.chainAt = 21;
     this.ahead = cast.embers.lay(...this.at(this.chainAt, this.chainSide * 3.4));
     this.placeShoulder();
@@ -1120,6 +1121,7 @@ export class WoodChapter implements Chapter {
     owl.lookAt(this.childHead.copy(c.position).setY(c.position.y + 1.1));
     if (owl.hooted) cue('hoot');
     if (owl.phase === 'awake' && owl.elapsed > k.owlLeaveAfter) owl.leave(OWL_FLIGHT);
+    owlShadowFromFirst(owl.phase === 'leaving' ? 1 : 0);
     // Her body softens: the lean goes out of her and her mittens come down.
     c.tighter += (0 - c.tighter) * (1 - Math.exp(-dt * 1.5));
     if (this.braveStep === 0) {

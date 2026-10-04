@@ -106,6 +106,11 @@ export function coalLight(x: number, z: number, out = new THREE.Vector3()): THRE
   return out.set(x, Math.max(heightAt(x, z), 0) + tuning.wood.orbHover, z);
 }
 
+/** How much of the owl's flitting shadow the coal before the bend throws up the rock. */
+export function owlShadowFromFirst(amount: number): void {
+  shapeUniforms.uShapeFirst.value.w = amount;
+}
+
 /** How the stump and the owl are shown: 0 dark against the light behind her, 1 lit by the side coal. */
 export function showShape(amount: number): void {
   shapeUniforms.uShapeShown.value = amount;
@@ -172,6 +177,7 @@ uniform vec4 uShapeEyeL;
 uniform vec4 uShapeEyeR;
 uniform vec4 uShapeThrow;
 uniform vec4 uShapePool;
+uniform vec4 uShapeFirst;
 uniform float uShapeShown;
 float shapeShadowFrom(vec3 p, vec3 light, int count) {
   vec3 d1 = light - p;
@@ -194,6 +200,28 @@ float shapeShadowFrom(vec3 p, vec3 light, int count) {
     float rad = mix(rad0, rad1, t);
     float pen = 0.012 + 0.03 * s;
     lit = min(lit, smoothstep(rad - pen, rad + pen, dist));
+  }
+  return lit;
+}
+/** The owl's own shadow, from a light: its body, head and wings only. */
+float shapeOwlShadow(vec3 p, vec3 light) {
+  vec3 d1 = light - p;
+  float a = dot(d1, d1);
+  float lit = 1.0;
+  for (int i = ${STUMP_CAPS}; i < ${CAPS}; i++) {
+    float rad0 = uShapeA[i].w, rad1 = uShapeB[i].w;
+    if (rad0 <= 0.0) continue;
+    vec3 p2 = uShapeA[i].xyz;
+    vec3 d2 = uShapeB[i].xyz - p2;
+    vec3 r = p - p2;
+    float e = max(dot(d2, d2), 1e-6), f = dot(d2, r), c = dot(d1, r), b = dot(d1, d2);
+    float den = a * e - b * b;
+    float s = den > 1e-6 ? clamp((b * f - c * e) / den, 0.0, 1.0) : 0.0;
+    float t = (b * s + f) / e;
+    if (t < 0.0) { t = 0.0; s = clamp(-c / a, 0.0, 1.0); }
+    else if (t > 1.0) { t = 1.0; s = clamp((b - c) / a, 0.0, 1.0); }
+    float dist = distance(p + d1 * s, p2 + d2 * t);
+    lit = min(lit, smoothstep(mix(rad0, rad1, t) - 0.03, mix(rad0, rad1, t) + 0.03, dist));
   }
   return lit;
 }
@@ -235,6 +263,8 @@ vec3 shapeThrow(vec3 p, vec3 n, vec3 alb) {
   vec3 L = normalize(d);
   float facing = max(0.0, dot(n, L));
   float lit = facing > 0.0 ? shapeShadowFrom(p + n * 0.03, uShapeThrow.xyz, ${CAPS}) : 0.0;
+  // The coal before the bend is still burning: as the owl goes, its little shadow flits up the rock from that side too.
+  if (uShapeFirst.w > 0.0 && lit > 0.0) lit *= mix(1.0, shapeOwlShadow(p + n * 0.03, uShapeFirst.xyz), uShapeFirst.w);
   vec3 fire = vec3(1.0, 0.54, 0.2) * uShapeThrow.w * pool / (1.0 + dot(d, d) * 0.03);
   return alb * fire * facing * lit + SHAPE_EYE_GLOW * shapeEyes(p, uShapeThrow.xyz) * uShapeAt.y * pool * min(1.0, uShapeThrow.w);
 }`;
@@ -251,6 +281,8 @@ export const shapeUniforms = {
   uShapeThrow: { value: new THREE.Vector4() },
   /** xz the middle of what it lights for the shadow, w its radius. */
   uShapePool: { value: new THREE.Vector4() },
+  /** xyz the coal before the bend, w how much of the owl's shadow it throws once the light has swung away from it. */
+  uShapeFirst: { value: new THREE.Vector4() },
   /** 0 the stump and owl stand dark against the fire behind her, 1 the side coal's light shows them. */
   uShapeShown: { value: 0 },
 };
@@ -461,6 +493,7 @@ export class WoodShape {
     const at = shapePoint(THROW_LOCAL.x, 0, THROW_LOCAL.z);
     coalLight(at.x, at.z, this.throwFrom);
     shapeUniforms.uShapeThrow.value.set(this.throwFrom.x, this.throwFrom.y, this.throwFrom.z, 0);
+    shapeUniforms.uShapeFirst.value.set(this.throwFrom.x, this.throwFrom.y, this.throwFrom.z, 0);
     const pool = shapePoint(POOL_LOCAL.x, 0, POOL_LOCAL.z);
     shapeUniforms.uShapePool.value.set(pool.x, 0, pool.z, POOL_RADIUS);
 
