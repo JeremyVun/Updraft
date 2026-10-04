@@ -1066,7 +1066,7 @@ export class WoodChapter implements Chapter {
     // Off the fork as soon as its wings are open, and from then on its own little shadow, flapping off the stone.
     const flying = woodOwl.phase === 'leaving' && woodOwl.fold < 0.5;
     const away = flying ? woodOwl.position.distanceTo(OWL_PERCH) : 0;
-    owlOnRock(flying || woodOwl.gone ? 0 : 1, away, woodOwl.wingFrame, flying ? this.fold * (1 - THREE.MathUtils.smoothstep(away, 2.5, 6.5)) : 0);
+    owlOnRock(flying || woodOwl.gone ? 0 : 1, away, woodOwl.wingFrame, flying ? this.fold * (1 - THREE.MathUtils.smoothstep(away, 6, 10)) : 0);
     // Moonlight finds her as she comes up to the eyes, so her outline reads before anything is lit; then the coals have her.
     const moon = this.beat === 'loom' ? (this.throwLitAt >= 0 ? 0.3 : 1) : this.beat === 'brave' ? 0.3 : 0;
     this.moonlit += (moon * k.moonOnHer - this.moonlit) * (1 - Math.exp(-dt * 1.2));

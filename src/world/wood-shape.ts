@@ -81,7 +81,7 @@ const ROCK_OUT = new THREE.Vector2(-ROCK_ALONG.y, ROCK_ALONG.x);
  * foot: a broken shoulder low on the stump's side, a long slope up to an uneven top, and a rounded fall to the right.
  */
 const ROCK_OUTLINE: [number, number][] = [
-  [-1.5, -1.0], [-1.75, 0.7], [-1.6, 1.7], [-1.2, 2.3], [-0.55, 2.45], [-0.4, 3.5], [0.0, 4.9], [0.6, 5.9],
+  [-1.5, -1.0], [-1.9, 0.8], [-1.75, 2.0], [-1.15, 2.75], [-0.75, 3.7], [-0.25, 4.9], [0.6, 5.9],
   [1.5, 6.55], [2.6, 7.0], [3.35, 7.15], [3.8, 6.85], [4.4, 7.25], [5.5, 7.5], [6.7, 7.2], [7.7, 6.3],
   [8.4, 4.9], [8.85, 2.9], [8.95, 0.8], [8.75, -1.0],
 ];
@@ -376,8 +376,8 @@ export function setOwlShadow(body: THREE.Vector3 | null, head: THREE.Vector3 | n
 export function owlOnRock(perched: number, away: number, frame: number, shown: number): void {
   faceUniforms.uFaceSet.value.z = perched;
   const fork = [(OWL_FEET[0] - 512) / PLAIN_PX[0], (1023 - OWL_FEET[1] + 60 * OWL_GROW) / PLAIN_PX[1]];
-  faceUniforms.uOwlFlight.value.set(SHADOW_BASE.x + fork[0] + away * 0.55, SHADOW_BASE.y + fork[1] + away * 0.3,
-    FLAP_M * (1 + away * 0.06), frame);
+  faceUniforms.uOwlFlight.value.set(SHADOW_BASE.x + fork[0] + away * 0.2, SHADOW_BASE.y + fork[1] + away * 0.3,
+    FLAP_M * (1 + away * 0.05), frame);
   shapeUniforms.uShapeMask.value.w = shown;
 }
 
@@ -686,10 +686,34 @@ void main() {
 const POOL_FRAG = /* glsl */ `${ATMO_GLSL}
 ${SHAPE_SHADOW_GLSL}
 in vec3 vWorld;
+/**
+ * One layer of fallen leaves, cells to the metre: a pointed leaf with its midrib in most cells, each turned and
+ * coloured its own way. Its colour in rgb, how much of the pixel it covers in a.
+ */
+vec4 fallen(vec2 p, float cells, float seed) {
+  vec2 q = p * cells;
+  vec2 cell = floor(q), f = fract(q) - 0.5;
+  vec3 h = fract(sin(vec3(dot(cell, vec2(127.1, 311.7)), dot(cell, vec2(269.5, 183.3)), dot(cell, vec2(419.2, 371.9))) + seed) * 43758.5);
+  float a = h.x * 6.283;
+  vec2 l = mat2(cos(a), -sin(a), sin(a), cos(a)) * (f - (h.yz - 0.5) * 0.35);
+  float len = 0.3 + 0.12 * h.y, wide = 0.11 + 0.05 * h.z;
+  float r = (len * len + wide * wide) / (2.0 * wide);
+  float d = max(length(l - vec2(0.0, wide - r)), length(l + vec2(0.0, wide - r))) - r;
+  float edge = fwidth(d) + 1e-4;
+  float cover = (1.0 - smoothstep(-edge, edge, d)) * step(0.42, h.z);
+  vec3 col = mix(mix(vec3(0.4, 0.15, 0.04), vec3(0.24, 0.09, 0.035), h.x), vec3(0.46, 0.28, 0.07), step(0.8, h.y));
+  col *= 1.0 - 0.35 * (1.0 - smoothstep(0.0, 0.012 + edge, abs(l.y))) * step(abs(l.x), len * 0.85);
+  // A leaf smaller than a pixel or two is only a warmth in the dirt.
+  return vec4(col, cover * (1.0 - smoothstep(0.25, 0.6, edge * 3.0)));
+}
 void main() {
-  // Dirt and the leaves trodden into it, in patches.
-  float leaves = smoothstep(0.4, 0.8, vnoise(vWorld.xz * 2.3) * 0.6 + vnoise(vWorld.xz * 7.1) * 0.4);
-  vec3 alb = mix(vec3(0.02, 0.014, 0.01), vec3(0.1, 0.055, 0.025), leaves);
+  // Dirt, and leaves fallen on it, the nearer ones each a leaf.
+  float trodden = smoothstep(0.4, 0.8, vnoise(vWorld.xz * 2.3) * 0.6 + vnoise(vWorld.xz * 7.1) * 0.4);
+  vec3 alb = mix(vec3(0.02, 0.014, 0.01), vec3(0.08, 0.045, 0.022), trodden);
+  for (int i = 0; i < 3; i++) {
+    vec4 leaf = fallen(vWorld.xz + float(i) * 3.7, 2.4 + float(i) * 1.1, float(i) * 1.3);
+    alb = mix(alb, leaf.rgb, leaf.a);
+  }
   vec3 warm = vec3(0.0);
   if (uShapeThrow.w > 0.0) {
     vec3 d = uShapeThrow.xyz - vWorld;
@@ -726,7 +750,7 @@ export class WoodShape {
   static onRock(x: number, z: number, margin = 0): boolean {
     const dx = x - FACE_O.x, dz = z - FACE_O.z;
     const u = dx * FACE_U.x + dz * FACE_U.z, n = dx * FACE_N.x + dz * FACE_N.z;
-    return u > ROCK_OUTLINE[1][0] - margin && u < ROCK_OUTLINE[18][0] + margin && n < 1.6 + margin && n > -ROCK_DEEP - margin;
+    return u > ROCK_OUTLINE[1][0] - margin && u < ROCK_OUTLINE[17][0] + margin && n < 1.6 + margin && n > -ROCK_DEEP - margin;
   }
 
   /**
@@ -779,7 +803,7 @@ export class WoodShape {
       if (limbs.some((d) => d !== c && d.a.distanceTo(c.b) < 0.02)) parts.push(strip(knuckle(c.b, c.rb * 1.04), 0, axis));
     });
     parts.push(strip(this.outcrop(), 1, FACE_U));
-    parts.push(strip(this.stone([6.2, 0, 1.1], [1.4, 0.9, 1.0], 0.35, 13), 1, FACE_U));
+    parts.push(strip(this.stone([5.6, 0, 1.3], [1.3, 0.85, 0.9], 0.35, 13), 1, FACE_U));
     const geo = mergeGeometries(parts);
     for (const p of parts) p.dispose();
     this.mesh = new THREE.Mesh(geo, new THREE.ShaderMaterial({
@@ -833,7 +857,7 @@ export class WoodShape {
     for (let i = 0; i < pos.count; i++) {
       v.fromBufferAttribute(pos, i);
       const angle = Math.atan2(v.y, v.x);
-      const spread = Math.hypot(v.x, v.y) ** 0.55;
+      const spread = Math.hypot(v.x, v.y) ** 0.7;
       const reach = outlineReach(angle);
       const p = new THREE.Vector3(ROCK_MIDDLE.x + Math.cos(angle) * reach * spread, ROCK_MIDDLE.y + Math.sin(angle) * reach * spread,
         v.z > 0 ? ROCK_FRONT * Math.sqrt(v.z) : -ROCK_DEEP * Math.sqrt(-v.z));

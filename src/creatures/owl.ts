@@ -106,7 +106,7 @@ void main() {
   p = rotX(rotZ(p, uOwlBody.x), uOwlWing.z);
   n = rotX(rotZ(n, uOwlBody.x), uOwlWing.z);
   p += CENTRE;
-  vec3 world = rotY(p * ${SCALE.toFixed(2)}, uOwl.w) + uOwl.xyz;
+  vec3 world = rotY(p * ${SCALE.toFixed(2)} * uOwlBody.y, uOwl.w) + uOwl.xyz;
   vWorld = world;
   vNormal = rotY(n, uOwl.w);
   vMat = aMat;
@@ -316,6 +316,8 @@ const BEAT_RATE = 2.3;
 /** Seconds from the leap to the end of its way, and the look down at her as it comes over, seconds into the flight. */
 const FLIGHT = 6.8;
 const GLANCE = [2.3, 3.4];
+/** How much larger it grows on the wing, while its wings open, than it sat in the fork. */
+const FLIGHT_GROW = 0.3;
 
 /**
  * The owl in the fork: what it is doing, kept apart from how it is drawn so the story can drive it without a
@@ -344,6 +346,8 @@ export class Owl {
   /** How much of the moon through the canopy it has flown up into. */
   moonlit = 0;
   phase: Phase = 'perched';
+  /** How much larger than it sat it has grown on the wing, so it still reads as an owl up against the dark. */
+  size = 1;
   /** Which of the painted flap frames its wings are in: 0 up, 1 coming down, 2 down, 3 going up. */
   wingFrame = 0;
   /** Raised once, the frame it hoots. */
@@ -369,7 +373,7 @@ export class Owl {
     this.yaw = this.sitYaw = yaw;
     this.phase = 'perched';
     this.fold = 1; this.flap = 0; this.pitch = 0; this.roll = 0; this.fluff = 0; this.blink = 0; this.presence = 1;
-    this.moonlit = 0; this.shown = 0; this.beat = 0;
+    this.moonlit = 0; this.shown = 0; this.beat = 0; this.size = 1;
     this.head.set(0, 0, 0);
     this.hooted = false;
     this.t = 0;
@@ -515,6 +519,7 @@ export class Owl {
     this.head.x += ((this.watching ? THREE.MathUtils.clamp(toHer, -1.7, 1.7) * back : 0) - this.head.x) * (1 - Math.exp(-dt * 6));
     this.head.y += ((this.watching ? 0.35 * back : 0) - this.head.y) * (1 - Math.exp(-dt * 6));
     this.moonlit = smooth(s, 0.2, 1.5);
+    this.size = 1 + FLIGHT_GROW * smooth(s, 0.15, 1.4);
     this.presence = 1 - smooth(s, FLIGHT - 0.7, FLIGHT);
     if (s >= FLIGHT) this.phase = 'gone';
   }
@@ -543,7 +548,7 @@ export class Owl {
     }
     out.sub(CENTRE);
     rotX(rotZ(out, this.roll), this.pitch);
-    out.add(CENTRE).multiplyScalar(SCALE);
+    out.add(CENTRE).multiplyScalar(SCALE * this.size);
     rotY(out, this.yaw);
     return out.add(this.position);
   }
@@ -618,7 +623,7 @@ export class OwlBody {
     (u.uOwl.value as THREE.Vector4).set(owl.position.x, owl.position.y, owl.position.z, owl.yaw);
     (u.uOwlHead.value as THREE.Vector4).set(owl.head.x, owl.head.y, owl.head.z, owl.fluff);
     (u.uOwlWing.value as THREE.Vector4).set(owl.fold, owl.flap, owl.pitch, owl.moonlit);
-    (u.uOwlBody.value as THREE.Vector4).set(owl.roll, 0, 0, 0);
+    (u.uOwlBody.value as THREE.Vector4).set(owl.roll, owl.size, 0, 0);
     (u.uOwlEyes.value as THREE.Vector4).set(owl.eyeshine, owl.shown, owl.blink, owl.presence);
     u.uOwlTime.value = this.time;
     owl.toWorld(this.local.set(-EYE_AT.x, EYE_AT.y, EYE_AT.z + 0.01), true, this.left);
@@ -638,7 +643,8 @@ export class OwlBody {
       owl.toWorld(this.local, false, this.wings[i + 1]);
     }
     for (const [i, side] of [[0, -1], [1, 1]] as const) owl.toWorld(this.local.set(TUFT.x * side * 1.2, TUFT.y + 0.07, TUFT.z), true, this.tufts[i]);
-    setOwlShadow(seen ? this.body : null, seen ? this.headAt : null, 0.14 * SCALE, 0.12 * SCALE, seen ? this.tufts : undefined, 0.03 * SCALE,
-      seen && spread > 0.2 ? this.wings : undefined, 0.05 * SCALE);
+    const r = SCALE * owl.size;
+    setOwlShadow(seen ? this.body : null, seen ? this.headAt : null, 0.14 * r, 0.12 * r, seen ? this.tufts : undefined, 0.03 * r,
+      seen && spread > 0.2 ? this.wings : undefined, 0.05 * r);
   }
 }
