@@ -84,7 +84,8 @@ export class RibbonBatch {
     fixInPlace(this.mesh);
   }
 
-  update(ribbons: Iterable<Ribbon>): void {
+  /** Returns whether anything is drawn. */
+  update(ribbons: Iterable<Ribbon>): boolean {
     const index = this.geo.index!.array as Uint32Array;
     let v = 0;
     let idx = 0;
@@ -126,6 +127,8 @@ export class RibbonBatch {
       }
     }
     this.geo.setDrawRange(0, idx);
+    // An empty update range would upload the whole array: WebGL2 reads a length of 0 as "to the end".
+    if (idx === 0) return false;
     for (const name of ['position', 'aSide', 'aInfo']) {
       const attr = this.geo.getAttribute(name) as THREE.BufferAttribute;
       attr.clearUpdateRanges();
@@ -136,5 +139,6 @@ export class RibbonBatch {
     indexAttr.clearUpdateRanges();
     indexAttr.addUpdateRange(0, idx);
     indexAttr.needsUpdate = true;
+    return true;
   }
 }

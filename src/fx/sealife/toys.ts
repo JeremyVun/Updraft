@@ -21,7 +21,7 @@ interface SeaToy {
   pivot: THREE.Group;
   sail: THREE.ShaderMaterial;
   /** Each material with its own colour, to be dimmed while it is far off in the dark. */
-  lit: [THREE.ShaderMaterial, string][];
+  lit: [THREE.ShaderMaterial, THREE.Color][];
   course: number;
   speed: number;
   yaw: number;
@@ -88,7 +88,7 @@ export class ToyFleet {
       g.add(pivot);
       fixInPlace(...g.children.filter((o) => o !== pivot), ...pivot.children);
       this.group.add(g);
-      this.toys.push({ group: g, pivot, sail: m, lit: [[paint, TOY_PAINTS[i]], [rim, RIM], [wood, WOOD], [m, TOY_LINENS[i]]],
+      this.toys.push({ group: g, pivot, sail: m, lit: ([[paint, TOY_PAINTS[i]], [rim, RIM], [wood, WOOD], [m, TOY_LINENS[i]]] as const).map(([mat, hex]) => [mat, new THREE.Color(hex)]),
         course: 0, speed: 0, yaw: 0, fill: 0, gust: 0, luff: 0, across: 0,
         boom: 0, roll: 0, rollV: 0, seed: i * 1.7, nextMark: 0 });
     }
@@ -184,7 +184,7 @@ export class ToyFleet {
       );
       // Far off in the night nothing lights them; they come out of the dark as they come near.
       const unlit = THREE.MathUtils.smoothstep(p.distanceTo(this.camera.position), s.litWithin, s.darkBeyond) * atmo.uniforms.uNight.value;
-      for (const [m, colour] of toy.lit) m.uniforms.uColour.value.set(colour).multiplyScalar(1 - unlit);
+      for (const [m, colour] of toy.lit) m.uniforms.uColour.value.copy(colour).multiplyScalar(1 - unlit);
       if (time > toy.nextMark) {
         toy.nextMark = time + 0.35;
         this.onWake(p.x - Math.sin(yaw) * 0.8 * s.scale, p.z - Math.cos(yaw) * 0.8 * s.scale, time);

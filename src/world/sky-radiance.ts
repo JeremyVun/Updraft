@@ -39,7 +39,12 @@ vec3 skyRadiance(vec3 d) {
   col += uSunColor * smoothstep(0.99955, 0.99975, sd) * 14.0 * pow(1.0 - uStormCover, 2.0);
   if (uRainbow > 0.0) col += rainbow(d, col);
 
+#if STORM_BANK
   if (d.y > 0.0) {
+#else
+  // Without a storm or lightning, nothing here shows outside the cloud band.
+  if (d.y > 0.015 && d.y < 0.6) {
+#endif
     vec2 p = d.xz / (d.y + 0.06) * 1.2 + uCloudShift * 0.003;
     float c = cloudDensity(p);
 #if STORM_BANK
@@ -66,7 +71,8 @@ vec3 skyRadiance(vec3 d) {
     float h = hash12(cell.xy * 1.37 + cell.z * 7.13);
     float star = step(0.9965, h) * (1.0 - smoothstep(0.1, 0.55, length(fract(sd3) - 0.5)));
     float twinkle = 0.65 + 0.35 * sin(uTime * (1.5 + h * 4.0) + h * 40.0);
-    float band = (1.0 - smoothstep(0.0, 0.35, abs(dot(d, normalize(vec3(0.55, 0.3, -0.78)))))) * fbm(d.xz * 9.0 + d.y * 4.0);
+    float milky = 1.0 - smoothstep(0.0, 0.35, abs(dot(d, normalize(vec3(0.55, 0.3, -0.78)))));
+    float band = milky > 0.0 ? milky * fbm(d.xz * 9.0 + d.y * 4.0) : 0.0;
     col += (vec3(0.9, 0.93, 1.0) * star * twinkle * 3.5 + vec3(0.45, 0.5, 0.75) * band * 0.18) * uNight * (1.0 - uStormCover) * smoothstep(0.0, 0.12, d.y);
   }
   return col;

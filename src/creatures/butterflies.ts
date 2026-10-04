@@ -304,6 +304,7 @@ export class Butterflies {
       drawn++;
     }
     this.instances.commit(drawn);
+    this.mesh.visible = drawn > 0;
   }
 
   /** A wingbeat: a hop up and a nudge toward where it wants to be. */
