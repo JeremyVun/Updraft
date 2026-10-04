@@ -85,11 +85,12 @@ signal, not the bird's silhouette. Knobs: `tuning.opening`. Checks: `tools/openi
 
 ## The first crossing
 
-`toLines`. The long curve round the restored island: the camera looks back at it for the farewell (30 s) and turns
-onward; a whale surfaces at 52 s. The light stays clear until the boat closes on the Lines berth, then eases into
+`toLines`. The curve round the restored island: the camera looks back at it for the farewell (18 s) and turns
+onward; a whale surfaces at 32 s. The light stays clear until the boat closes on the Lines berth, then eases into
 distance haze so the washing resolves only on the final approach (`tuning.world.linesCrossingHaze`,
-`linesHazeFrom`, `linesHazeTo`). This crossing earns its length: leaving the cove, the island receding, the
-farewell and the whale.
+`linesHazeFrom`, `linesHazeTo`). About a minute on the ordinary breeze, just over half that under steady gusts; keep
+it near a minute, because playtesters found a minute and a half too long. It holds leaving the cove, the island
+receding, the farewell and the whale.
 
 ## The island of lines
 

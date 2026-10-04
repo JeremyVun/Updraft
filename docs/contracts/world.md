@@ -30,7 +30,7 @@ and half-sizes are in `ISLES` (`heightfield.ts`) unless noted:
 | room | centre (x, z) | half-size | defined by |
 | --- | --- | --- | --- |
 | still island | (−6, −14) | its own coastline | `islandCoast` in `heightfield.ts` |
-| island of lines | (14, −368.4) | 70 × 64.4 | `ISLES.lines` |
+| island of lines | (14, −218.4) | 70 × 64.4 | `ISLES.lines` |
 | the shore through the red door | (240, −365) | 23 × 30 | `DOOR_SHORE` |
 | little boats | (130, −420) | 48 × 70 | `LITTLE_BOATS` (`little-boats-layout.ts`) |
 | meadow | (10, −780) | 227 × 200 | `ISLES.meadow`, sculpted at 340 × 300 and scaled by `tuning.world.meadowLength` (`meadowPoint`) |

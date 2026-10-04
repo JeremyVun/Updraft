@@ -11,14 +11,14 @@ import { mulberry32 } from './noise';
 import { Cloth, type ClothAir } from './cloth-sim';
 
 /** The southern beach stays put; the extra fifteen percent of island is north of it. */
-export const LINES_LANDING = new THREE.Vector2(14, -308);
+export const LINES_LANDING = new THREE.Vector2(14, -158);
 // Rest the bow on the north beach, with dry sand beside the thwart for boarding.
 export const LINES_BERTH = new THREE.Vector3(DOOR_SHORE.x, 0, DOOR_SHORE.z - 23.5);
 export const LINES_WALK = [
-  new THREE.Vector2(12, -320), new THREE.Vector2(0, -330), new THREE.Vector2(0, -340),
-  new THREE.Vector2(25, -351), new THREE.Vector2(25, -362),
-  new THREE.Vector2(11, -372), new THREE.Vector2(11, -383),
-  new THREE.Vector2(11, -398), new THREE.Vector2(14, -422),
+  new THREE.Vector2(12, -170), new THREE.Vector2(0, -180), new THREE.Vector2(0, -190),
+  new THREE.Vector2(25, -201), new THREE.Vector2(25, -212),
+  new THREE.Vector2(11, -222), new THREE.Vector2(11, -233),
+  new THREE.Vector2(11, -248), new THREE.Vector2(14, -272),
 ];
 
 /** Length of a passage sheet's peg: the sheets are giant, and so are the pegs that hold them. */
@@ -29,8 +29,8 @@ export const PEG_LENGTH = 0.34;
  * last sheet is torn off its own line and comes down over this one.
  */
 export const SNAG_LINE = (() => {
-  const a = new THREE.Vector3(18.1, 0, -369.6);
-  const b = new THREE.Vector3(20.5, 0, -384.2);
+  const a = new THREE.Vector3(18.1, 0, -219.6);
+  const b = new THREE.Vector3(20.5, 0, -234.2);
   a.y = heightAt(a.x, a.z) + 5.1;
   b.y = heightAt(b.x, b.z) + 5.3;
   return { a, b, sag: 0.32, bare: [0.22, 0.78] as [number, number] };

@@ -29,7 +29,7 @@ try {
     ['meadow-departure',-2/3,-974-2/3,0.2,false], ['birches-departure',-4,-1197,0.15,false],
     ['wood-departure',-34,-1908,0.2,false], ['sleeping-departure',-214.5,-1926,-1.76,false],
     ['home',-45.3,-1926.25,Math.PI/2,true],
-    ['lines-arrival',14.08,-304.83,Math.PI,true], ['meadow-arrival',10,-583.98,Math.PI,true],
+    ['lines-arrival',14.08,-154.83,Math.PI,true], ['meadow-arrival',10,-583.98,Math.PI,true],
     ['birches-arrival',3.1,-1050.5,Math.PI,true], ['wood-arrival',-26,-1692.1,Math.PI,true],
     ['sleeping-arrival',-132,-1916.4,-Math.PI/2,true],
   ];

@@ -276,7 +276,7 @@ function homePetals(): void {
   if (Math.hypot(cx - petalsHomedAt.x, cz - petalsHomedAt.y) < 60) return;
   petalsHomedAt.set(cx, cz);
   const near = allFlowers.filter((f) => Math.hypot(f.x - cx, f.z - cz) < 190);
-  petals.rehome(near, cz < -600 ? tuning.petals.pastureShare : cz > -200 ? tuning.petals.stillIslandShare : 1);
+  petals.rehome(near, cz < -600 ? tuning.petals.pastureShare : cz > -110 ? tuning.petals.stillIslandShare : 1);
 }
 homePetals();
 await built();
