@@ -157,13 +157,15 @@ Knobs: `tuning.linesPassage`, `tuning.washing`, `tuning.family`, `tuning.linesTo
 
 ## The little boats
 
-`story/little-boats.ts`, `world/little-boats.ts` (toys, sails, wakes, the plug), `world/little-boats-layout.ts`
-(the stream, shared by terrain, water, fleet and walkers), `world/little-boats-bath.ts`,
+`story/little-boats.ts`, `world/little-boats.ts` (toys, sails, wakes), `world/little-boats-drain.ts` (the shoal,
+the bath, the plug, the pour and the rush), `world/little-boats-layout.ts` (the stream and how high the bath has
+raised it, shared by terrain, water, fleet and walkers), `world/little-boats-bath.ts`,
 `world/little-boats-spray.ts`. `?chapter=boats`.
 
-Early, affectionate play, and the introduction to putting wind into a sail before the drowned village needs it.
-Three pools joined by narrow streams run down to the departure beach. An oversized bath plug hangs on a long chain
-from the haze, and an oversized enamel bathtub stands on the far bank (scenery only). Reeds stand in clumps along
+Early, affectionate play: the introduction to putting wind into a sail before the drowned village needs it, and the
+room that first teaches the updraft. Three pools joined by narrow streams run down to the departure beach. An
+oversized enamel bathtub stands on the far bank of the second pool, and an oversized bath plug sits in the stream
+mouth like a cork, its chain running up into the haze. Reeds stand in clumps along
 the pools' banks, rooted into the shallows and swaying with the grass (`tuning.littleBoats.reeds`, `REEDS_GLSL` in
 `world/grass.ts`): mostly on the far bank, only short low stretches on the near one, and never by the toy, on the
 child's walk, where the cygnet hops in and out (`BOATS_POOLS`) or in the narrow runs where toys pass close to the
@@ -176,9 +178,22 @@ onto the water. The
 player fills its sail; then every toy answers the wind near it. Seven toys sail the stream; the child follows the
 leading toy along the bank, hurrying while it sails away from her; the cygnet swims three sheltered stretches
 beside the toys (quick kicks and glides, wing flicks, spray: `swimPlay`) with dry-bank pauses, and the fleet waits
-for the child (never leashed to the swimming bird). Round the final bend their own boat waits among the toys (the reveal), with the departure
-kite. Once the leading toy reaches the stream mouth an outgoing current carries the fleet out and round to the
-right into the sea, where the toys sail on until out of view; three of them are met again on the open sea. The paper stays on the backpack throughout.
+for the child (never leashed to the swimming bird).
+
+**The way out to sea** is two steps of bathtime. Where the second pool narrows, the toys run aground on a line of
+rocks across the run (the shoal, `barS`) and bunch against it, bows lifted. A gust of the island's own crosses the
+bath toward the stream with a few wind lines and rocks it on its feet without spilling, after `nudgeFirst` s and
+then every `nudgeEvery` s until the player pushes it, showing that it can go over and which way. A push across the
+bath toward the stream tips it (a push the other way rocks it back); over the rim it pours a waterfall into the
+pool, and once `pourNeeded` of it is in the pools have risen `riseHeight`, the rocks go under and a short surge
+carries the fleet over. The fleet then waits against the plug. Gusts only rock it; circles drawn over it stand an
+updraft on it (`updraftTarget`, the spiral `coax` after the usual wait) that lifts it in tugs, bubbles streaming
+round its rim, keeping whatever it has worked loose, until it pops free and the chain hauls it up. A whirl opens
+where it sat and the risen pools rush out of the mouth, carrying the whole fleet out and round to the right into the
+sea, where the toys sail on until out of view; three of them are met again on the open sea. The child and the
+cygnet keep glancing at whatever is holding them, and the shot leans toward it while the fleet waits. Round the final
+bend their own boat waits among the toys (the reveal); the departure kite rises once the plug is out. The paper
+stays on the backpack throughout.
 
 How the toys move: a filled sail picks the hull up (`drive`) and still water takes speed away slowly (`drag`), so
 a toy glides on after a stroke. Each toy has its own `pace`; the child's orange toy is quickest and sails the
@@ -190,13 +205,20 @@ Rulings: the toys must move easily and glide: one relaxed stroke should carry a 
 top speed). The orange toy must not lag the fleet. The boats are not held back for the swimming cygnet; instead a
 cygnet fallen behind the child hurries, its full walk on the dry banks and a faster swim in the pools
 (`tuning.littleBoats.catchUp`, `swimCatchUp`), so it stays in the picture (Jeremy, 2026-09-29). The fleet
-leaves the stream mouth for the open sea.
+leaves the stream mouth for the open sea. Getting it there is a puzzle about how to help the little boats out onto
+the open sea, with the giant plug and bath (2026-10-04): the island's gust only wobbles the bath and never spills
+it, because a bath that tips and pours by itself makes no sense to a player; the plug needs an updraft and comes out
+"very slightly easier" than first built.
 
-Rules: no race, score, text, direction test or penalty, and time alone never completes it. Keep the toy, the
+Rules: no race, score, text or penalty, and time alone never completes it: only the player's push pours the bath and
+only their updraft lifts the plug. The sails take wind from any direction; the bath is the one thing that cares,
+because it tips the way it is pushed, and its hint is drawn that way. Keep the toy, the
 travellers and the next stretch of water in frame together, in landscape and portrait. The stream is the same water
 as the sea and merges into it.
 
-Knobs: `tuning.littleBoats`. Checks: `tools/little-boats-logic-check.mjs`, `little-boats-check.mjs` (`TOUCH=1`),
+Knobs: `tuning.littleBoats` (the way out from `barS` to `drainFor`, the island's gust `nudge*`). Checks:
+`tools/little-boats-logic-check.mjs`, `little-boats-check.mjs` (`TOUCH=1`); from a `play.mjs` eval step,
+`__game.story.current.skipTo(56)` starts just short of the shoal and `skipTo(86)` before the plug,
 `ONLY=boats node tools/progress-check.mjs`.
 
 ## The meadow and the piano
