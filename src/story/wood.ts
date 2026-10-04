@@ -9,7 +9,7 @@ import { heightAt } from '../world/island';
 import { WOOD_BERTH, WOOD_LANDING, WOOD_PATH, WOOD_REFUGE, WOOD_HEARTH, WOOD_OUTSIDE, WOOD_COAX, WOOD_APPROACH_LIGHT, WOOD_PLANE, WOOD_PLANE_LIGHT, woodPlaneSway } from '../world/wood';
 import type { Cast, Chapter } from './cast';
 import { cue } from './cues';
-import { SHAPE_RIGHT, SHAPE_FACING, SHAPE_SIDE_COAL, SHAPE_THROW_COAL, SHAPE_WAIT, OWL_PERCH_LOCAL, OWL_FLIGHT_LOCAL, shapePoint, framePoint, beastEyes, throwShapeLight, sideShapeLight, shapeOnRock, layShadowOnRock, showShape, coalLight } from '../world/wood-shape';
+import { SHAPE_RIGHT, SHAPE_FACING, SHAPE_SIDE_COAL, SHAPE_THROW_COAL, SHAPE_WAIT, OWL_PERCH_LOCAL, OWL_FLIGHT_LOCAL, shapePoint, framePoint, beastEyes, throwShapeLight, sideShapeLight, shapeOnRock, owlOnRock, showShape, coalLight } from '../world/wood-shape';
 import { verticalFov } from '../camera';
 import { woodOwl } from '../creatures/owl';
 
@@ -177,7 +177,7 @@ export class WoodChapter implements Chapter {
     throwShapeLight(OWL_PERCH, 0);
     sideShapeLight(OWL_PERCH, 0);
     shapeOnRock(0, 0, 0);
-    layShadowOnRock(0, 0);
+    owlOnRock(1, 0, 0, 0);
     showShape(0);
     this.chainAt = 21;
     this.ahead = cast.embers.lay(...this.at(this.chainAt, this.chainSide * 3.4));
@@ -1057,9 +1057,10 @@ export class WoodChapter implements Chapter {
     if (s?.lit && want - this.fold < 0.02) this.fold = Math.min(1, this.fold + dt * 0.2);
     const eyes = this.beast * (1 - THREE.MathUtils.smoothstep(this.fold, 0.05, 0.45)) * (1 - woodOwl.blink);
     shapeOnRock(this.beast, this.fold, eyes);
-    const leaving = woodOwl.phase === 'leaving';
-    const away = leaving ? woodOwl.position.distanceTo(OWL_PERCH) : 0;
-    layShadowOnRock(away, woodOwl.phase === 'gone' ? 0 : this.fold * (1 - THREE.MathUtils.smoothstep(away, 2.5, 6.5)));
+    // Off the fork as soon as its wings are open, and from then on its own little shadow, flapping off the stone.
+    const flying = woodOwl.phase === 'leaving' && woodOwl.fold < 0.5;
+    const away = flying ? woodOwl.position.distanceTo(OWL_PERCH) : 0;
+    owlOnRock(flying || woodOwl.gone ? 0 : 1, away, woodOwl.wingFrame, flying ? this.fold * (1 - THREE.MathUtils.smoothstep(away, 2.5, 6.5)) : 0);
     this.shapeShown = Math.max(this.shapeReveal, THREE.MathUtils.smoothstep(side, 0.15, 1.2));
     showShape(this.shapeShown);
     woodOwl.shown = this.shapeShown;

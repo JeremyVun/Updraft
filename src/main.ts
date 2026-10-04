@@ -246,7 +246,11 @@ await built();
 const village = new DrownedVillage(wind);
 village.objects.forEach((o) => scene.add(o));
 await built();
-const wood = new DarkWood(wind);
+const [owlShadows, owlFlaps] = await Promise.all([
+  new THREE.TextureLoader().loadAsync(new URL('../assets/fx/owl-shadow/shadows.webp', import.meta.url).href),
+  new THREE.TextureLoader().loadAsync(new URL('../assets/fx/owl-shadow/flaps.webp', import.meta.url).href),
+]);
+const wood = new DarkWood(wind, { shadows: owlShadows, flaps: owlFlaps });
 wood.objects.forEach((o) => scene.add(o));
 await built();
 const sleeping = new SleepingIsland(renderer, wind, input);

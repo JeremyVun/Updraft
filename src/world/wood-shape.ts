@@ -3,7 +3,7 @@ import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometr
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { heightAt } from './island';
 import { createNoise2D, mulberry32 } from './noise';
-import { tuning } from '../tuning';
+import { glsl, tuning } from '../tuning';
 
 /** The bend where the path turns right, and the way the child comes up to it. */
 const BEND = new THREE.Vector2(-44, -1762);
@@ -37,6 +37,30 @@ export const SHAPE_SIDE_COAL = new THREE.Vector2();
   SHAPE_SIDE_COAL.set(side.x, side.z);
 }
 
+/**
+ * The litter at the bend is bare of the wood's grass tufts, from behind her stop to the rock's foot: lit low from the
+ * coals and seen from the held camera, every tuft stood up as a black spike against the warm ground.
+ */
+const BEND_CLEAR = (() => {
+  const a = shapePoint(1.8, 0, 17), b = shapePoint(0.6, 0, -2.5);
+  return { a: new THREE.Vector2(a.x, a.z), b: new THREE.Vector2(b.x, b.z), inner: 8.5, outer: 12 };
+})();
+
+/** How much of its height a grass blade keeps at the bend. Mirrors `woodBendCrop` in `BEND_GRASS_GLSL`. */
+export function woodBendCrop(x: number, z: number): number {
+  const { a, b, inner, outer } = BEND_CLEAR;
+  const ex = b.x - a.x, ez = b.y - a.y;
+  const t = THREE.MathUtils.clamp(((x - a.x) * ex + (z - a.y) * ez) / (ex * ex + ez * ez), 0, 1);
+  return THREE.MathUtils.smoothstep(Math.hypot(x - a.x - ex * t, z - a.y - ez * t), inner, outer);
+}
+
+export const BEND_GRASS_GLSL = /* glsl */ `
+float woodBendCrop(vec2 xz) {
+  vec2 a = vec2(${glsl(BEND_CLEAR.a.x)}, ${glsl(BEND_CLEAR.a.y)}), e = vec2(${glsl(BEND_CLEAR.b.x - BEND_CLEAR.a.x)}, ${glsl(BEND_CLEAR.b.y - BEND_CLEAR.a.y)});
+  float t = clamp(dot(xz - a, e) / dot(e, e), 0.0, 1.0);
+  return smoothstep(${glsl(BEND_CLEAR.inner)}, ${glsl(BEND_CLEAR.outer)}, length(xz - a - e * t));
+}`;
+
 /** A point of the held frame, given in the shape's frame with its height from her feet. */
 export function framePoint(p: readonly number[], out = new THREE.Vector3()): THREE.Vector3 {
   shapePoint(p[0], 0, p[2], out);
@@ -46,23 +70,57 @@ export function framePoint(p: readonly number[], out = new THREE.Vector3()): THR
 
 /**
  * The rock: one weathered outcrop beyond the stump, its broad face turned between her light and the camera so it
- * takes the light and is seen. Its face in the shape's frame: the middle of it on the ground, the way along it (to
- * the right in the frame), how far it runs each way, its height and depth.
+ * takes the light and is seen. Its face in the shape's frame: the middle of it on the ground and the way along it (to
+ * the right in the frame).
  */
 const ROCK_AT = new THREE.Vector2(0.3, -3.0);
 const ROCK_ALONG = new THREE.Vector2(0.839, -0.545).normalize();
 const ROCK_OUT = new THREE.Vector2(-ROCK_ALONG.y, ROCK_ALONG.x);
-const ROCK_FROM = -2.2;
-const ROCK_TO = 8.6;
-const ROCK_DEEP = 2.8;
-/** The two shallow fissures down the face, along it and up it from its middle on the ground. */
-const FISSURES: [number[], number[]][] = [[[1.4, 5.6], [2.0, 3.6]], [[5.4, 4.6], [6.1, 2.0]]];
-/** Where on the face the antlers stand (along it, from the middle), and the plain stump's shadow beside them. */
-const MONSTER_U = 2.6;
-const SMALL_U = 3.0;
+/**
+ * The outcrop seen square-on, along the face and up it from its middle on the ground, clockwise from its buried left
+ * foot: a broken shoulder low on the stump's side, a long slope up to an uneven top, and a rounded fall to the right.
+ */
+const ROCK_OUTLINE: [number, number][] = [
+  [-1.5, -1.0], [-1.75, 0.7], [-1.6, 1.7], [-1.2, 2.3], [-0.55, 2.45], [-0.4, 3.5], [0.0, 4.9], [0.6, 5.9],
+  [1.5, 6.55], [2.6, 7.0], [3.35, 7.15], [3.8, 6.85], [4.4, 7.25], [5.5, 7.5], [6.7, 7.2], [7.7, 6.3],
+  [8.4, 4.9], [8.85, 2.9], [8.95, 0.8], [8.75, -1.0],
+];
+const ROCK_MIDDLE = new THREE.Vector2(3.2, 2.6);
+const ROCK_FRONT = 0.75;
+const ROCK_DEEP = 2.6;
+/** The two shallow fissures down the face, along it and up it from its middle on the ground, clear of the shadow's eyes. */
+const FISSURES: [number[], number[]][] = [[[0.4, 5.2], [0.9, 3.0]], [[5.6, 6.6], [6.4, 3.4]]];
+/** Where along the face the painted shadows stand, pinned at their base. */
+const SHADOW_U = 2.7;
 
-/** The stump's sketch: metres, `x` along the spread of its fork, `z` across it. */
-const STUMP_SCALE = 0.95;
+/**
+ * The painted shadows' scale, in pixels of their 1024 masks to the metre: the monster, and the plain stump across
+ * and up, a little larger than life and drawn out as a low light draws a shadow out.
+ */
+const MONSTER_PX = 1 / 0.0066;
+const PLAIN_PX = [1 / 0.0053, 1 / 0.0061];
+/** In each mask: where its two forks are, the monster's eyes, the owl's feet in the plain one (pixels from top left). */
+const MONSTER_FORK = [512, 568];
+const PLAIN_FORK = [535, 721];
+const MONSTER_EYES = [[486, 602], [538, 602]];
+const OWL_FEET = [570, 694];
+/** The perched owl's shadow is grown about its feet to the size of the owl in the fork. */
+const OWL_GROW = 1.5;
+/** The flying owl's shadow: its body in the flap frames, and the metres one of their pixels covers as it leaves. */
+const FLAP_BODY = [132, 152];
+const FLAP_M = 0.009;
+
+/** Monster metres to plain metres at the fold's end: the forks meet, turned and shrunk about the pinned base. */
+const FOLD_TO = (() => {
+  const m = [(MONSTER_FORK[0] - 512) / MONSTER_PX, (1023 - MONSTER_FORK[1]) / MONSTER_PX];
+  const p = [(PLAIN_FORK[0] - 512) / PLAIN_PX[0], (1023 - PLAIN_FORK[1]) / PLAIN_PX[1]];
+  return { turn: Math.atan2(p[0], p[1]) - Math.atan2(m[0], m[1]), size: Math.hypot(p[0], p[1]) / Math.hypot(m[0], m[1]) };
+})();
+
+/** The stump is drawn life-size in its own frame: metres, `x` along the spread of its fork, `z` across it. */
+const STUMP_SCALE = 1;
+/** The top of the trunk, where it forked and broke, and the owl sits on what is left of it. */
+const TRUNK_TOP = 1.52;
 /**
  * The fork spreads square to the camera, so the frame sees both limbs; the side coal's light, coming across it,
  * shows a little less of the spread.
@@ -78,10 +136,8 @@ const turned = (p: readonly number[]): [number, number, number] => {
   return [x * c + z * s, y, -x * s + z * c];
 };
 
-/** Where the owl sits, down in the crook of the fork against its shorter limb. */
-export const OWL_PERCH_LOCAL = new THREE.Vector3(...turned([0.25, 2.2, 0.04]));
-/** The top of the taller limb, in the shape's frame. */
-export const SHAPE_HEIGHT = 3.95 * STUMP_SCALE;
+/** Where the owl sits: on the broken top of the trunk, in the crook against its taller limb, toward the camera. */
+export const OWL_PERCH_LOCAL = new THREE.Vector3(...turned([0.22, TRUNK_TOP + 0.05, 0.16]));
 
 /**
  * The owl's way out: off the fork toward her, over her head well clear of her hood, then banking up behind her on
@@ -109,11 +165,17 @@ const FACE_N = new THREE.Vector3();
   if (FACE_N.dot(out) < 0) FACE_N.negate();
   FACE_O.y = heightAt(FACE_O.x, FACE_O.z);
 }
+/** The shadows' pinned base, along the face and up it: sunk a little into the litter banked at the stone's foot. */
+const SHADOW_BASE = (() => {
+  const at = FACE_O.clone().addScaledVector(FACE_U, SHADOW_U);
+  return new THREE.Vector2(SHADOW_U, heightAt(at.x, at.z) - FACE_O.y - 0.25);
+})();
 
 /** Where the eyes in the antlered outline shine on the rock, in the world. */
 export function beastEyes(out = new THREE.Vector3()): THREE.Vector3 {
-  out.copy(FACE_O).addScaledVector(FACE_U, MONSTER_U + 0.02);
-  out.y = FACE_O.y + 3.5;
+  const eyes = MONSTER_EYES[0].map((v, i) => (v + MONSTER_EYES[1][i]) / 2);
+  out.copy(FACE_O).addScaledVector(FACE_U, SHADOW_BASE.x + (eyes[0] - 512) / MONSTER_PX);
+  out.y = FACE_O.y + SHADOW_BASE.y + (1023 - eyes[1]) / MONSTER_PX;
   return out;
 }
 
@@ -145,35 +207,33 @@ export function showShape(amount: number): void {
   shapeUniforms.uShapeShown.value = amount;
 }
 
-const STUMP_CAPS = 14;
+type CapSpec = [number[], number[], number, number];
+
+/**
+ * An old dead stump a little taller than her, the one whose shadow is painted in the plain mask: a thick trunk broken
+ * off where it forked; the shorter limb leaning out to her side and snapped, a twig left on it; the taller limb up and
+ * out the other way in a long curve, forked into twigs at its top; a branch broken off low down, and roots. Given in
+ * its own frame; one list makes the mesh and the shadow her light throws.
+ */
+const LOCAL: CapSpec[] = [
+  [[0, -0.4, 0], [0.02, 0.8, 0.02], 0.5, 0.42],
+  [[0.02, 0.8, 0.02], [0.05, TRUNK_TOP, 0.0], 0.42, 0.36],
+  [[-0.14, 1.35, 0.03], [-0.3, 2.25, 0.06], 0.21, 0.16],
+  [[-0.3, 2.25, 0.06], [-0.46, 2.85, 0.04], 0.16, 0.11],
+  [[-0.44, 2.66, 0.05], [-0.84, 3.06, 0.1], 0.06, 0.02],
+  [[0.2, 1.35, -0.02], [0.62, 2.0, -0.04], 0.25, 0.2],
+  [[0.62, 2.0, -0.04], [0.9, 2.75, -0.02], 0.2, 0.15],
+  [[0.9, 2.75, -0.02], [1.02, 3.45, 0.0], 0.15, 0.11],
+  [[1.02, 3.45, 0.0], [1.05, 3.95, 0.02], 0.11, 0.06],
+  [[1.04, 3.82, 0.02], [1.4, 4.1, 0.06], 0.05, 0.018],
+  [[0.97, 3.15, 0.0], [1.3, 3.33, 0.05], 0.05, 0.018],
+  [[-0.38, 0.95, 0.06], [-0.72, 1.12, 0.14], 0.12, 0.06],
+];
+const STUMP_CAPS = LOCAL.length;
 export const SHAPE_STUMP_CAPS = STUMP_CAPS;
 /** Six more for the owl: body, head, its two ear tufts and its wings, moved every frame. */
 const OWL_CAPS = 6;
 const CAPS = STUMP_CAPS + OWL_CAPS;
-
-type CapSpec = [number[], number[], number, number];
-
-/**
- * An old dead stump a little taller than her: a thick trunk broken off where it forked, one long limb going up and
- * curling over with its tines, the other shorter, leaning out and snapped, a broken shoulder, a limb reaching down
- * to the litter, and roots. Given in its own frame; one list makes the mesh, its shadow and the shadow on the rock.
- */
-const LOCAL: CapSpec[] = [
-  [[0, -0.4, 0], [0.03, 1.2, 0.02], 0.46, 0.36],
-  [[0.03, 1.2, 0.02], [0.04, 2.15, 0.0], 0.36, 0.3],
-  [[-0.2, 2.0, 0.0], [-0.78, 2.68, 0.05], 0.17, 0.13],
-  [[-0.78, 2.68, 0.05], [-0.9, 3.42, 0.0], 0.13, 0.09],
-  [[-0.9, 3.42, 0.0], [-0.78, 3.95, -0.03], 0.09, 0.04],
-  [[-0.82, 2.85, 0.05], [-1.25, 3.15, 0.1], 0.07, 0.025],
-  [[-0.88, 3.4, 0.0], [-1.2, 3.72, 0.02], 0.05, 0.018],
-  [[0.2, 2.0, 0.0], [0.78, 2.6, -0.03], 0.16, 0.12],
-  [[0.78, 2.6, -0.03], [0.98, 3.3, 0.0], 0.12, 0.08],
-  [[0.98, 3.3, 0.0], [0.92, 3.68, 0.0], 0.08, 0.035],
-  [[0.84, 2.82, -0.02], [1.25, 3.05, 0.05], 0.065, 0.022],
-  [[0.3, 1.62, 0.05], [0.86, 1.55, 0.15], 0.15, 0.1],
-  [[-0.3, 1.4, 0.0], [-0.95, 1.1, 0.1], 0.15, 0.08],
-  [[-0.95, 1.1, 0.1], [-1.35, 0.42, 0.2], 0.08, 0.032],
-];
 const ROOTS: CapSpec[] = [
   [[0.32, 0.12, 0.3], [0.86, -0.12, 0.76], 0.17, 0.06],
   [[-0.34, 0.1, 0.26], [-0.9, -0.12, 0.62], 0.16, 0.05],
@@ -273,15 +333,17 @@ export const shapeUniforms = {
   uShapeShown: { value: 0 },
 };
 
-/** What only the rock needs: where its face is, and the shadow shapes laid on it, in metres along and up it. */
+/** What only the rock needs: where its face is, and the painted shadows laid on it. */
 const faceUniforms = {
   uFaceO: { value: FACE_O },
   uFaceU: { value: FACE_U },
-  /** x where the antlers stand along the face, y the plain shadow's place, z how much the outline shrinks to it. */
-  uFaceSet: { value: new THREE.Vector4(MONSTER_U, SMALL_U, 0.62, 0) },
-  /** The plain stump's shadow and the owl's, as 2D capsules on the face: a.xy, b.xy; radii in the second array. */
-  uCutA: { value: Array.from({ length: CAPS }, () => new THREE.Vector4()) },
-  uCutR: { value: Array.from({ length: CAPS }, () => new THREE.Vector4()) },
+  uFaceN: { value: FACE_N },
+  /** xy the shadows' pinned base along the face and up it, z how much of the owl is still on its perch in the plain one. */
+  uFaceSet: { value: new THREE.Vector4(SHADOW_BASE.x, SHADOW_BASE.y, 1, 0) },
+  /** xy the flying owl's shadow along the face and up it, z the metres one pixel of its flap frames covers, w the frame. */
+  uOwlFlight: { value: new THREE.Vector4(0, 0, FLAP_M, 0) },
+  uShadowMasks: { value: null as THREE.Texture | null },
+  uFlaps: { value: null as THREE.Texture | null },
 };
 
 /** Moves the owl's shadow capsules: body, head, ear tufts, each wing root to tip; nothing once it has gone. */
@@ -301,162 +363,73 @@ export function setOwlShadow(body: THREE.Vector3 | null, head: THREE.Vector3 | n
 }
 
 /**
- * Lays the stump's and the owl's capsules flat on the rock as the plain shadow the side coal throws: seen square
- * from the face, set beside the antlers and a little larger than life, leaning away from the coal. The owl's own
- * shadow slides along the face as it flies toward her, so its little flapping shape crosses the stone.
+ * The owl in the plain shadow on the rock: `perched` how much of it is still sitting in the fork there; once it is
+ * off, its little flapping shadow, `away` metres from the fork, on wing frame `frame` (0 up, 1 down-stroke, 2 down,
+ * 3 up-stroke), `shown` how much of it is left on the stone. It slides off up the face away from the side coal,
+ * growing and softening as the owl comes away from the stone toward the light.
  */
-export function layShadowOnRock(owlAway: number, owlShadow: number): void {
-  const a = shapeUniforms.uShapeA.value, b = shapeUniforms.uShapeB.value;
-  const ca = faceUniforms.uCutA.value, cr = faceUniforms.uCutR.value;
-  const along = (x: number, z: number) => {
-    const out = (x - FACE_O.x) * FACE_N.x + (z - FACE_O.z) * FACE_N.z;
-    return (x - SMALL_FROM.x * out / SMALL_INTO - FACE_O.x) * FACE_U.x + (z - SMALL_FROM.z * out / SMALL_INTO - FACE_O.z) * FACE_U.z;
-  };
-  const foot = along(WOOD_SHAPE.x, WOOD_SHAPE.z);
-  const lay = (p: THREE.Vector4, drift: number) => {
-    const u = along(p.x, p.z) - foot, v = p.y - WOOD_SHAPE.y;
-    return [SMALL_U + (u + drift) * SMALL_GROW + v * SMALL_LEAN, v * SMALL_GROW + SMALL_RISE];
-  };
-  for (let i = 0; i < CAPS; i++) {
-    const owl = i >= STUMP_CAPS;
-    if (a[i].w <= 0 || (owl && owlShadow <= 0)) { cr[i].set(0, 0, 0, 0); continue; }
-    const drift = owl ? owlAway * OWL_DRIFT : 0;
-    const [au, av] = lay(a[i], drift), [bu, bv] = lay(b[i], drift);
-    ca[i].set(au, av, bu, bv);
-    const plump = owl ? OWL_PLUMP : 1;
-    cr[i].set(a[i].w * SMALL_GROW * plump, b[i].w * SMALL_GROW * plump, 0, 0);
-  }
-  shapeUniforms.uShapeMask.value.w = owlShadow;
+export function owlOnRock(perched: number, away: number, frame: number, shown: number): void {
+  faceUniforms.uFaceSet.value.z = perched;
+  const fork = [(OWL_FEET[0] - 512) / PLAIN_PX[0], (1023 - OWL_FEET[1] + 60 * OWL_GROW) / PLAIN_PX[1]];
+  faceUniforms.uOwlFlight.value.set(SHADOW_BASE.x + fork[0] + away * 0.55, SHADOW_BASE.y + fork[1] + away * 0.3,
+    FLAP_M * (1 + away * 0.06), frame);
+  shapeUniforms.uShapeMask.value.w = shown;
 }
-const SMALL_GROW = 1.05;
-const SMALL_LEAN = 0.48;
-/** Raised clear of the litter banked at the stone's foot, so the trunk of it is seen. */
-const SMALL_RISE = 0.3;
-/** The owl a little plumper in its shadow than the limbs round it, so the round of it reads. */
-const OWL_PLUMP = 1.32;
-const OWL_DRIFT = 0.5;
-/**
- * The way the plain shadow is laid on the stone: from the side coal's side of the fork, a little way round from
- * along it, so the limbs spread narrower than the camera sees them, leaning, with the owl round and eared in the
- * crook of one: a dead stump's shadow with an owl in it, never a figure with its arms up.
- */
-const SMALL_FROM = (() => {
-  const spread = shapePoint(...turned([1, 0, 0])).sub(WOOD_SHAPE).setY(0).normalize();
-  const toward = shapePoint(SIDE_LOCAL.x, 0, SIDE_LOCAL.z).sub(WOOD_SHAPE).setY(0).normalize().negate();
-  if (spread.dot(toward) < 0) spread.negate();
-  const across = new THREE.Vector3(-spread.z, 0, spread.x);
-  if (across.dot(FACE_N) > 0) across.negate();
-  const angle = THREE.MathUtils.degToRad(35);
-  return spread.multiplyScalar(Math.cos(angle)).addScaledVector(across, Math.sin(angle)).normalize();
-})();
-const SMALL_INTO = SMALL_FROM.dot(FACE_N);
-
-/** The antlered beast the stump and owl make on the rock in her light, in metres from its feet along the face. */
-const MONSTER_GLSL = /* glsl */ `
-float sdCap(vec2 p, vec2 a, vec2 b, float ra, float rb) {
-  vec2 pa = p - a, ba = b - a;
-  float h = clamp(dot(pa, ba) / max(dot(ba, ba), 1e-6), 0.0, 1.0);
-  return length(pa - ba * h) - mix(ra, rb, h);
-}
-float sdEll(vec2 p, vec2 c, vec2 r) {
-  vec2 q = (p - c) / r;
-  return (length(q) - 1.0) * min(r.x, r.y);
-}
-float smin(float a, float b, float k) {
-  float h = clamp(0.5 + 0.5 * (b - a) / k, 0.0, 1.0);
-  return mix(b, a, h) - k * h * (1.0 - h);
-}
-/** One antler, out to the side \`s\`: a beam sweeping out and up, with tines standing up off it like fingers. */
-float antler(vec2 p, float s) {
-  p.x *= s;
-  p.x /= 1.12;
-  p.y = 3.86 + (p.y - 3.86) / 1.08;
-  float d = sdCap(p, vec2(0.2, 3.86), vec2(0.75, 4.2), 0.13, 0.11);
-  d = min(d, sdCap(p, vec2(0.75, 4.2), vec2(1.35, 4.45), 0.11, 0.09));
-  d = min(d, sdCap(p, vec2(1.35, 4.45), vec2(1.95, 4.78), 0.09, 0.065));
-  d = min(d, sdCap(p, vec2(1.95, 4.78), vec2(2.28, 5.2), 0.065, 0.03));
-  d = min(d, sdCap(p, vec2(0.52, 4.07), vec2(0.4, 4.72), 0.075, 0.025));
-  d = min(d, sdCap(p, vec2(0.98, 4.29), vec2(1.02, 5.05), 0.075, 0.025));
-  d = min(d, sdCap(p, vec2(1.5, 4.53), vec2(1.44, 5.36), 0.07, 0.022));
-  d = min(d, sdCap(p, vec2(1.9, 4.75), vec2(1.98, 5.45), 0.06, 0.02));
-  d = min(d, sdCap(p, vec2(2.08, 4.88), vec2(2.55, 4.95), 0.05, 0.018));
-  return d * 1.08;
-}
-float sdTrap(vec2 p, float r1, float r2, float he) {
-  vec2 k1 = vec2(r2, he), k2 = vec2(r2 - r1, 2.0 * he);
-  p.x = abs(p.x);
-  vec2 ca = vec2(p.x - min(p.x, p.y < 0.0 ? r1 : r2), abs(p.y) - he);
-  vec2 cb = p - k1 + k2 * clamp(dot(k1 - p, k2) / dot(k2, k2), 0.0, 1.0);
-  float s = cb.x < 0.0 && ca.y < 0.0 ? -1.0 : 1.0;
-  return s * sqrt(min(dot(ca, ca), dot(cb, cb)));
-}
-float shapeBeast(vec2 p) {
-  // Hunched under a cloak of dark, spreading to the foot of the stone, shoulders up round its head.
-  float body = sdTrap(p - vec2(-0.1, 0.7), 1.85, 0.85, 1.85) - 0.15;
-  body = smin(body, min(sdEll(p, vec2(-0.72, 2.6), vec2(0.5, 0.4)), sdEll(p, vec2(0.75, 2.62), vec2(0.5, 0.4))), 0.3);
-  float head = sdEll(p, vec2(0.03, 3.45), vec2(0.45, 0.5));
-  head = smin(head, sdEll(p, vec2(0.03, 3.15), vec2(0.28, 0.3)), 0.15);
-  head = min(head, sdCap(p, vec2(-0.35, 3.68), vec2(-0.82, 3.95), 0.09, 0.02));
-  head = min(head, sdCap(p, vec2(0.38, 3.68), vec2(0.85, 3.95), 0.09, 0.02));
-  float d = smin(body, head, 0.3);
-  d = min(d, min(antler(p, 1.0), antler(p, -1.0)));
-  // One long arm reaching down the stone toward her.
-  d = smin(d, sdCap(p, vec2(-0.9, 2.55), vec2(-1.95, 1.85), 0.2, 0.13), 0.12);
-  d = min(d, sdCap(p, vec2(-1.95, 1.85), vec2(-2.6, 0.65), 0.13, 0.05));
-  return d;
-}
-/** The two eyes in the beast's head, slanted. */
-float shapeBeastEyes(vec2 p) {
-  vec2 l = p - vec2(-0.16, 3.5), r = p - vec2(0.22, 3.5);
-  l = vec2(l.x * 0.94 + l.y * 0.34, -l.x * 0.34 + l.y * 0.94);
-  r = vec2(r.x * 0.94 - r.y * 0.34, r.x * 0.34 + r.y * 0.94);
-  float e = exp(-dot(l / vec2(0.1, 0.05), l / vec2(0.1, 0.05))) + exp(-dot(r / vec2(0.1, 0.05), r / vec2(0.1, 0.05)));
-  float halo = exp(-dot(l, l) * 30.0) + exp(-dot(r, r) * 30.0);
-  return e + halo * 0.25;
-}`;
 
 const FACE_GLSL = /* glsl */ `
 uniform vec3 uFaceO;
 uniform vec3 uFaceU;
+uniform vec3 uFaceN;
 uniform vec4 uFaceSet;
-uniform vec4 uCutA[${CAPS}];
-uniform vec4 uCutR[${CAPS}];
-${MONSTER_GLSL}
+uniform vec4 uOwlFlight;
+uniform sampler2D uShadowMasks;
+uniform sampler2D uFlaps;
 /** Along the rock's face and up it, in metres from its middle on the ground. */
 vec2 faceAt(vec3 p) {
   vec3 r = p - uFaceO;
   return vec2(dot(r, uFaceU), r.y);
 }
-float plainShadow(vec2 q) {
-  float d = 1e3;
-  for (int i = 0; i < ${CAPS}; i++) {
-    if (uCutR[i].x <= 0.0) continue;
-    if (i >= ${STUMP_CAPS} && uShapeMask.w <= 0.0) continue;
-    d = min(d, sdCap(q, uCutA[i].xy, uCutA[i].zw, uCutR[i].x, uCutR[i].y));
-  }
-  return d;
+vec2 turn2(vec2 p, float a) {
+  float c = cos(a), s = sin(a);
+  return vec2(c * p.x - s * p.y, s * p.x + c * p.y);
 }
+/** A mask's pixel, counted from its top left, to where it is in the texture. */
+vec2 maskUv(vec2 px, float size) { return vec2(px.x, size - px.y) / size; }
 /**
- * How dark the shadow on the rock is at q, and in y how bright the eyes in it are. The beast swings aside and
- * shrinks toward the plain shadow as the side coal wakes, and the two are blended through, so it folds into it.
+ * How dark the shadow on the rock is at q, and in y how bright the eyes in it are. As the side coal wakes the light
+ * swings round: pinned at its base, the monster turns clockwise, its broad left antler folding in and its crown
+ * coming down, and it shrinks into the plain stump's shadow; both masks are blurred while it moves, so one shape
+ * flows into the other as a penumbra would, never two shapes crossfading.
  */
 vec2 rockShadow(vec2 q) {
   float beast = uShapeMask.x, fold = uShapeMask.y;
-  if (beast <= 0.0 && fold <= 0.0 && uShapeMask.w <= 0.0) return vec2(0.0);
+  if (beast <= 0.0 && fold <= 0.0) return vec2(0.0);
   float k = smoothstep(0.0, 1.0, fold);
-  float grow = mix(1.0, uFaceSet.z, k);
-  vec2 m = q - vec2(mix(uFaceSet.x, uFaceSet.y, k), 0.0);
-  float swing = 0.32 * k;
-  m = vec2(m.x * cos(swing) - m.y * sin(swing), m.x * sin(swing) + m.y * cos(swing)) / grow;
-  float d = beast > 0.0 ? shapeBeast(m) * grow : 1e3;
-  float plain = plainShadow(q);
-  float blend = smoothstep(0.15, 0.85, fold);
-  d = mix(d, plain, blend);
-  if (fold >= 1.0) d = plain;
-  float soft = mix(0.05, 0.06, blend);
-  float dark = (1.0 - smoothstep(-soft, soft, d)) * max(beast, fold);
-  // Past the fold, only the owl's little shadow is left to move on the stone.
-  float eyes = beast > 0.0 && uShapeMask.z > 0.0 ? shapeBeastEyes(m) * uShapeMask.z : 0.0;
+  float moving = sin(3.14159 * k);
+  vec2 p = q - uFaceSet.xy;
+  vec2 m = turn2(p, ${glsl(FOLD_TO.turn)} * k + ${glsl(tuning.wood.shape.foldSwing)} * moving) / pow(${glsl(FOLD_TO.size)}, k);
+  vec2 plain = turn2(m, -${glsl(FOLD_TO.turn)}) * ${glsl(FOLD_TO.size)};
+  if (m.x < 0.0) m.x /= 1.0 - ${glsl(tuning.wood.shape.foldIn)} * k;
+  vec2 mpx = vec2(512.0 + m.x * ${glsl(MONSTER_PX)}, 1023.0 - m.y * ${glsl(MONSTER_PX)});
+  vec2 ppx = vec2(512.0 + plain.x * ${glsl(PLAIN_PX[0])}, 1023.0 - plain.y * ${glsl(PLAIN_PX[1])});
+  vec2 opx = vec2(${OWL_FEET[0]}.0, ${OWL_FEET[1]}.0) + (ppx - vec2(${OWL_FEET[0]}.0, ${OWL_FEET[1]}.0)) / ${glsl(OWL_GROW)};
+  float blur = ${glsl(tuning.wood.shape.foldBlur)} * pow(moving, 0.7);
+  float monster = texture(uShadowMasks, maskUv(mpx, 1024.0), blur).r;
+  float stump = max(texture(uShadowMasks, maskUv(ppx, 1024.0), blur).g, texture(uShadowMasks, maskUv(opx, 1024.0), blur).b * uFaceSet.z);
+  float a = mix(monster, stump, smoothstep(0.3, 0.7, k));
+  float edge = mix(0.5, 0.14, moving);
+  float dark = smoothstep(0.5 - edge, 0.5 + edge, a) * max(beast, fold);
+  // The owl's own little shadow, flapping off the stone.
+  vec2 fpx = vec2(${FLAP_BODY[0]}.0, ${FLAP_BODY[1]}.0) + vec2(1.0, -1.0) * (q - uOwlFlight.xy) / uOwlFlight.z;
+  vec2 cell = vec2(mod(uOwlFlight.w, 2.0), floor(uOwlFlight.w / 2.0)) * 256.0;
+  float inCell = step(2.0, min(fpx.x, fpx.y)) * step(max(fpx.x, fpx.y), 254.0);
+  float flap = texture(uFlaps, maskUv(cell + clamp(fpx, 2.0, 254.0), 512.0), 0.5).r;
+  dark = max(dark, flap * inCell * uShapeMask.w);
+  float eyes = 0.0;
+  if (uShapeMask.z > 0.0) {
+    float d = min(distance(mpx, vec2(${MONSTER_EYES[0][0]}.0, ${MONSTER_EYES[0][1]}.0)), distance(mpx, vec2(${MONSTER_EYES[1][0]}.0, ${MONSTER_EYES[1][1]}.0)));
+    eyes = (1.0 - smoothstep(6.5, 9.0, d) + 0.18 * exp(-d * d / 260.0)) * uShapeMask.z;
+  }
   return vec2(dark, eyes);
 }`;
 
@@ -511,6 +484,41 @@ float calm(vec2 p) {
   float w = length(fwidth(p));
   return mix(vnoise(p), 0.5, smoothstep(0.35, 0.9, w));
 }
+/** How much of a pattern of freq cycles a metre is left where a pixel covers size metres: none near the pixel's own scale. */
+float keep(float freq, float size) { return 1.0 - smoothstep(0.14, 0.32, freq * size); }
+/** The stone's broad relief, metres up off its face: weathered swells a metre across and hollows a hand across. */
+float relief(vec2 p) { return fbm(p * 0.42) * 0.5 + vnoise(p * 2.2 + 11.0) * 0.5; }
+/**
+ * Granite at a point of the stone, in metres, with a pixel covering size metres there: broad warm and cool mottling,
+ * then the grain, pale feldspar and dark mica a few centimetres across, and hairline cracks wandering through it.
+ * Whatever is finer than a few pixels fades out rather than shimmering.
+ */
+vec3 granite(vec2 p, float size) {
+  float mottle = fbm(p * 0.42);
+  float mid = vnoise(p * 2.2 + 11.0);
+  vec2 g = mat2(0.8, -0.6, 0.6, 0.8) * p;
+  float fine = (vnoise(g * 9.0 + 7.0) - 0.5) * keep(9.0, size) * 0.6 + (vnoise(mat2(0.28, 0.96, -0.96, 0.28) * p * 18.0 + 3.0) - 0.5) * keep(18.0, size) * 0.6;
+  vec3 alb = mix(vec3(0.12, 0.108, 0.094), vec3(0.2, 0.172, 0.14), smoothstep(0.3, 0.72, mottle)) * (0.86 + 0.28 * mid);
+  alb *= 1.0 + 0.45 * (vnoise(g * 4.0) - 0.5);
+  alb = mix(alb, vec3(0.33, 0.29, 0.24), smoothstep(0.1, 0.28, fine) * 0.6);
+  alb = mix(alb, vec3(0.04, 0.035, 0.03), smoothstep(-0.1, -0.28, fine) * 0.5);
+  float vein = abs(vnoise(p * 0.7 + 5.0) * 2.0 - 1.0);
+  float crack = (1.0 - smoothstep(0.0, 0.03 + size, vein)) * smoothstep(0.5, 0.65, vnoise(p * 0.3 + 9.0)) * keep(4.0, size);
+  alb *= 1.0 - 0.55 * crack;
+  float lichen = smoothstep(0.66, 0.74, fbm(p * 1.1 + 4.0) + 0.1 * fine);
+  return mix(alb, vec3(0.3, 0.31, 0.25) * (0.85 + 0.6 * fine), lichen * 0.45);
+}
+/** Where the litter banks against the stone's foot, up from its middle on the ground, along the face. */
+float footAt(float u) { return 0.35 * vnoise(vec2(u * 0.7, 2.0)); }
+/** Scattered fallen leaves: one in some cells of a loose grid, each turned its own way. */
+float leaves(vec2 p) {
+  vec2 cell = floor(p * 3.0), f = fract(p * 3.0) - 0.5;
+  float h = fract(sin(dot(cell, vec2(127.1, 311.7))) * 43758.5);
+  float a = h * 6.283;
+  vec2 l = mat2(cos(a), -sin(a), sin(a), cos(a)) * (f - (vec2(h, fract(h * 7.3)) - 0.5) * 0.4);
+  float d = length(l / vec2(0.22, 0.11)) - 1.0;
+  return (1.0 - smoothstep(-0.1, 0.1 + fwidth(d), d)) * step(0.45, h);
+}
 void main() {
   vec3 n = normalize(vNormal) * (gl_FrontFacing ? 1.0 : -1.0);
   vec3 V = normalize(cameraPosition - vWorld);
@@ -540,42 +548,47 @@ void main() {
     col += (alb + vec3(0.006, 0.004, 0.002)) * raking * 0.8;
     col += raking * pow(1.0 - max(0.0, dot(n, V)), 3.0) * 0.08;
   } else {
-    // Weathered stone in broad planes: brown-grey, a few shallow fissures, lichen here and there, moss and fallen
-    // leaves banked at its foot.
-    vec2 q = faceAt(vWorld);
-    vec3 an = abs(n);
-    vec2 st = an.y > 0.7 ? vWorld.xz : q;
-    float broad = fbm(st * 0.32 + 3.0);
-    float mid = calm(st * 1.4 + 7.0);
-    float grain = calm(st * 4.5);
-    float h = broad * 0.6 + mid * 0.3 + grain * 0.1;
-    vec3 alb = mix(vec3(0.1, 0.09, 0.08), vec3(0.16, 0.145, 0.125), smoothstep(0.2, 0.8, broad)) * (0.85 + 0.25 * mid) * (0.8 + 0.4 * grain);
-    // Rain has run down it for years: darker streaks under the lips, a rusty stain or two.
-    float streak = smoothstep(0.45, 0.85, calm(vec2(q.x * 1.6, q.y * 0.22) + 2.0));
-    alb *= 1.0 - 0.35 * streak * (1.0 - an.y);
-    alb = mix(alb, vec3(0.2, 0.13, 0.08), smoothstep(0.6, 0.85, vnoise(vec2(q.x * 0.7, q.y * 0.2) + 5.0)) * 0.3);
-    float lichen = smoothstep(0.68, 0.8, fbm(st * 0.9 + 4.0) * 0.85 + mid * 0.2);
-    alb = mix(alb, vec3(0.3, 0.31, 0.26), lichen * 0.35);
-    float above = vWorld.y - uFaceO.y;
-    float foot = 1.0 - smoothstep(0.15, 0.9 + 0.4 * broad, above);
-    alb = mix(alb, mix(vec3(0.05, 0.065, 0.03), vec3(0.09, 0.05, 0.025), step(0.5, mid)), foot * 0.85);
-    float moss = smoothstep(0.55, 0.85, n.y) * smoothstep(0.4, 0.7, broad + 0.2 * mid);
-    alb = mix(alb, vec3(0.05, 0.07, 0.03), moss * 0.8);
-    n = bump(n, h, 0.06);
+    // Weathered granite: a coarse grain of pale and dark crystals over broad mottling, a few hairline cracks, lichen
+    // here and there, moss on what faces up and leaves banked at its foot. Laid on from three sides, so nothing
+    // stretches where the stone turns away.
+    vec3 r = vWorld - uFaceO;
+    vec3 c = vec3(dot(r, uFaceU), r.y, dot(r, uFaceN));
+    vec3 cn = vec3(dot(n, uFaceU), n.y, dot(n, uFaceN));
+    vec3 w = pow(abs(cn), vec3(4.0));
+    w /= w.x + w.y + w.z;
+    float size = max(length(dFdx(vWorld)), length(dFdy(vWorld)));
+    vec3 alb = granite(c.xy, size) * w.z + granite(c.zy + 17.0, size) * w.x + granite(c.xz + 41.0, size) * w.y;
+    // The bump is worked out on the stone itself, across each projection, so it never shows the mesh's triangles.
+    const float e = 0.04;
+    float h0 = relief(c.xy);
+    vec3 grad = (relief(c.xy + vec2(e, 0.0)) - h0) / e * w.z * uFaceU + (relief(c.xy + vec2(0.0, e)) - h0) / e * w.z * vec3(0.0, 1.0, 0.0);
+    float hs = relief(c.zy + 17.0);
+    grad += ((relief(c.zy + vec2(17.0 + e, 17.0)) - hs) / e * uFaceN + (relief(c.zy + vec2(17.0, 17.0 + e)) - hs) / e * vec3(0.0, 1.0, 0.0)) * w.x;
+    float ht = relief(c.xz + 41.0);
+    grad += ((relief(c.xz + vec2(41.0 + e, 41.0)) - ht) / e * uFaceU + (relief(c.xz + vec2(41.0, 41.0 + e)) - ht) / e * uFaceN) * w.y;
+    float above = r.y;
+    float moss = smoothstep(0.5, 0.8, cn.y) * smoothstep(0.45, 0.65, fbm(c.xz * 0.9 + 3.0) + 0.15 * h0);
+    float foot = 1.0 - smoothstep(0.2, 1.0 + 0.5 * fbm(c.xz * 0.6), above - footAt(c.x));
+    moss = max(moss, foot * smoothstep(0.35, 0.6, h0 + 0.3 * fbm(c.xy * 1.7)));
+    alb = mix(alb, mix(vec3(0.045, 0.06, 0.025), vec3(0.08, 0.09, 0.03), vnoise(c.xy * 9.0)), moss * 0.85);
+    // Fallen leaves caught at its foot and on its ledges.
+    float leaf = leaves(c.xz + c.y * 0.3) * max(foot, smoothstep(0.6, 0.85, cn.y));
+    alb = mix(alb, mix(vec3(0.24, 0.1, 0.035), vec3(0.32, 0.17, 0.06), vnoise(c.xz * 3.0)), leaf);
+    n = normalize(n - 0.12 * (grad - dot(grad, n) * n));
     col = alb * hemiLight(n) * 0.12;
     // A breath of moon along the top edge, so it stands against the trees behind it.
     float rim = pow(1.0 - max(0.0, dot(n, V)), 3.0) * smoothstep(0.1, 0.6, n.y);
-    col += alb * uSunColor * (max(0.0, dot(n, uSunDir)) * 0.025 + rim * 0.12) * uNight;
-    vec2 shade = rockShadow(q);
+    col += alb * uSunColor * (max(0.0, dot(n, uSunDir)) * 0.03 + rim * 0.14) * uNight;
+    vec2 shade = rockShadow(faceAt(vWorld));
     vec3 toCoal = uShapeThrow.xyz - vWorld;
     vec3 L = normalize(toCoal);
     // Brightest low down nearest her coal, falling away up the face and along it.
     float near = pow(dot(uShapePool.xz - uShapeThrow.xz, uShapePool.xz - uShapeThrow.xz) / max(dot(toCoal, toCoal), 1.0), 0.8);
-    vec3 thrown = SHAPE_FIRE * uShapeThrow.w * shapePoolAt(vWorld) * near * clamp(dot(n, L) * 0.8 + 0.2, 0.0, 1.0)
+    vec3 thrown = SHAPE_FIRE * uShapeThrow.w * shapePoolAt(vWorld) * near * clamp(dot(n, L) * 0.85 + 0.15, 0.0, 1.0)
       * mix(1.0, 0.6, smoothstep(1.5, 6.5, above));
     vec3 warm = thrown + shapeSideLight(vWorld, n) * 0.5;
-    col += (alb + vec3(0.01, 0.007, 0.004)) * warm * (1.0 - 0.92 * shade.x);
-    col += vec3(1.0, 0.68, 0.22) * shade.y * 2.4;
+    col += (alb + vec3(0.006, 0.004, 0.002)) * warm * (1.0 - 0.94 * shade.x);
+    col += vec3(1.0, 0.68, 0.22) * shade.y * 2.6;
   }
   gl_FragColor = vec4(max(applyFog(col, vWorld), 0.0), 1.0);
 }`;
@@ -630,6 +643,21 @@ function knuckle(at: THREE.Vector3, r: number): THREE.BufferGeometry {
   return geo;
 }
 
+/** How far from the outcrop's middle its outline lies, in the direction `angle` on its face. */
+function outlineReach(angle: number): number {
+  const dx = Math.cos(angle), dy = Math.sin(angle);
+  let best = 0;
+  for (let i = 0; i < ROCK_OUTLINE.length; i++) {
+    const [ax, ay] = ROCK_OUTLINE[i], [bx, by] = ROCK_OUTLINE[(i + 1) % ROCK_OUTLINE.length];
+    const ex = bx - ax, ey = by - ay, ox = ax - ROCK_MIDDLE.x, oy = ay - ROCK_MIDDLE.y;
+    const den = dx * ey - dy * ex;
+    if (Math.abs(den) < 1e-9) continue;
+    const t = (ox * ey - oy * ex) / den, k = (ox * dy - oy * dx) / den;
+    if (t > 0 && k >= 0 && k <= 1) best = Math.max(best, t);
+  }
+  return best;
+}
+
 /** Distance from (x, y) to the segment a-b. */
 function segment(x: number, y: number, a: readonly number[], b: readonly number[]): number {
   const dx = b[0] - a[0], dy = b[1] - a[1];
@@ -671,6 +699,15 @@ void main() {
   gl_FragColor = vec4(max(applyFog(col, vWorld) - applyFog(vec3(0.0), vWorld), 0.0), 1.0);
 }`;
 
+/**
+ * The painted shadows, packed by `tools/pack-owl-shadows.py`: `shadows` the monster, the plain stump and its perched
+ * owl, one to a channel; `flaps` the flying owl's four wing frames.
+ */
+export interface ShadowMasks {
+  shadows: THREE.Texture;
+  flaps: THREE.Texture;
+}
+
 /** The stump at the bend and the rock behind it. */
 export class WoodShape {
   readonly mesh: THREE.Mesh;
@@ -683,7 +720,7 @@ export class WoodShape {
   static onRock(x: number, z: number, margin = 0): boolean {
     const dx = x - FACE_O.x, dz = z - FACE_O.z;
     const u = dx * FACE_U.x + dz * FACE_U.z, n = dx * FACE_N.x + dz * FACE_N.z;
-    return u > ROCK_FROM - margin && u < ROCK_TO + margin && n < 0.4 + margin && n > -ROCK_DEEP - margin;
+    return u > ROCK_OUTLINE[1][0] - margin && u < ROCK_OUTLINE[18][0] + margin && n < 1.6 + margin && n > -ROCK_DEEP - margin;
   }
 
   /**
@@ -704,7 +741,9 @@ export class WoodShape {
     return Math.hypot(lx, lz) < 3.4 || WoodShape.onRock(x, z, 1.6) || coals || offWay < 3.2 || inFrame(lx, lz);
   }
 
-  constructor() {
+  constructor(masks: ShadowMasks) {
+    faceUniforms.uShadowMasks.value = masks.shadows;
+    faceUniforms.uFlaps.value = masks.flaps;
     const base = heightAt(WOOD_SHAPE.x, WOOD_SHAPE.z);
     WOOD_SHAPE.y = base;
     const caps = LOCAL.map(([a, b, ra, rb]) => ({ a: shapePoint(...turned(a)), b: shapePoint(...turned(b)), ra: ra * STUMP_SCALE, rb: rb * STUMP_SCALE }));
@@ -716,13 +755,13 @@ export class WoodShape {
     const at = shapePoint(THROW_LOCAL.x, 0, THROW_LOCAL.z);
     coalLight(at.x, at.z, this.throwFrom);
     shapeUniforms.uShapeThrow.value.set(this.throwFrom.x, this.throwFrom.y, this.throwFrom.z, 0);
-    const pool = FACE_O.clone().addScaledVector(FACE_U, MONSTER_U + 0.4);
+    const pool = FACE_O.clone().addScaledVector(FACE_U, SHADOW_U + 0.4);
     shapeUniforms.uShapePool.value.set(pool.x, 0, pool.z, 7);
-    layShadowOnRock(0, 0);
+    owlOnRock(1, 0, 0, 0);
 
     const parts: THREE.BufferGeometry[] = [];
     const yaw = Math.atan2(SHAPE_FACING.x, SHAPE_FACING.z) + STUMP_TURN;
-    const stem = trunk(new THREE.Vector3(0, -0.5, 0), new THREE.Vector3(0, 2.2 * STUMP_SCALE, 0), 0.5 * STUMP_SCALE, 0.31 * STUMP_SCALE);
+    const stem = trunk(new THREE.Vector3(0, -0.5, 0), new THREE.Vector3(0, TRUNK_TOP * STUMP_SCALE, 0), 0.5 * STUMP_SCALE, 0.37 * STUMP_SCALE);
     stem.rotateY(yaw);
     stem.translate(WOOD_SHAPE.x, base, WOOD_SHAPE.z);
     parts.push(strip(stem, 0, new THREE.Vector3(0, 1, 0)));
@@ -734,7 +773,7 @@ export class WoodShape {
       if (limbs.some((d) => d !== c && d.a.distanceTo(c.b) < 0.02)) parts.push(strip(knuckle(c.b, c.rb * 1.04), 0, axis));
     });
     parts.push(strip(this.outcrop(), 1, FACE_U));
-    parts.push(strip(this.stone([ROCK_TO - 1.0, 0, 1.2], [1.3, 0.85, 1.0], 0.4, 13), 1, FACE_U));
+    parts.push(strip(this.stone([6.2, 0, 1.1], [1.4, 0.9, 1.0], 0.35, 13), 1, FACE_U));
     const geo = mergeGeometries(parts);
     for (const p of parts) p.dispose();
     this.mesh = new THREE.Mesh(geo, new THREE.ShaderMaterial({
@@ -774,82 +813,64 @@ export class WoodShape {
   }
 
   /**
-   * One weathered outcrop: a main mass with a broad face leaning back a little, a lower shoulder broken off and
-   * sloping away toward the stump, a lower end to the right; where they meet, the joints run down the face. Each mass
-   * is a rounded block with lumps and hollows a metre or two across, split into broad planes by shallow cuts. Built
-   * along the face (x), up (y) and out of it (z), then set in the world with its foot down in the litter.
+   * One weathered outcrop: a rounded mass whose face, seen square-on, has `ROCK_OUTLINE` for its edge, bulging gently
+   * and leaning back as it rises, cut by a few shallow planes into broad facets, with lumps a metre or two across.
+   * Built along the face (x), up (y) and out of it (z), then set in the world with its foot down in the litter.
    */
   private outcrop(): THREE.BufferGeometry {
-    const masses: [number[], number[], number, number, number][] = [
-      [[3.2, 2.0, 0], [3.4, 3.3, 1.5], -0.05, 0.04, 71],
-      [[-0.1, 0.7, -0.9], [1.9, 1.95, 1.3], 0.38, -0.12, 83],
-      [[6.9, 0.8, -0.2], [1.7, 2.2, 1.35], -0.25, 0.15, 97],
-    ];
-    const parts = masses.map(([at, half, roll, yaw, seed]) => this.mass(at, half, roll, yaw, seed));
-    const geo = mergeGeometries(parts);
-    for (const part of parts) part.dispose();
-    return this.place(geo, 0);
-  }
-
-  private mass(at: number[], half: number[], roll: number, yaw: number, seed: number): THREE.BufferGeometry {
-    const geo = new THREE.IcosahedronGeometry(1, 5);
+    const geo = new THREE.IcosahedronGeometry(1, 48);
     const pos = geo.getAttribute('position');
+    const lumpy = createNoise2D(71), finer = createNoise2D(72);
+    const rand = mulberry32(83);
     const v = new THREE.Vector3();
-    const lumpy = createNoise2D(seed), finer = createNoise2D(seed + 1);
-    const rand = mulberry32(seed);
     const points: THREE.Vector3[] = [];
-    const turn = new THREE.Euler(0, yaw, roll);
     for (let i = 0; i < pos.count; i++) {
       v.fromBufferAttribute(pos, i);
-      const p = new THREE.Vector3(Math.sign(v.x) * Math.abs(v.x) ** 0.42, Math.sign(v.y) * Math.abs(v.y) ** 0.45, Math.sign(v.z) * Math.abs(v.z) ** 0.5);
-      // A broad face in front, leaning back as it rises; a flatter, weathered top.
-      if (p.z > 0.3) p.z = 0.3 + (p.z - 0.3) * 0.4;
-      if (p.y > 0.6) p.y = 0.6 + (p.y - 0.6) * 0.6;
-      p.multiply(new THREE.Vector3(half[0], half[1], half[2]));
-      p.z -= 0.1 * (p.y + half[1]);
-      const lump = 0.3 * lumpy(p.x * 0.45 + p.z * 0.3, p.y * 0.45) + 0.1 * finer(p.x * 1.1 + p.z * 0.7, p.y * 1.1);
-      p.addScaledVector(v, lump * THREE.MathUtils.smoothstep(v.y, -0.6, -0.2));
-      p.applyEuler(turn);
+      const angle = Math.atan2(v.y, v.x);
+      const spread = Math.hypot(v.x, v.y) ** 0.55;
+      const reach = outlineReach(angle);
+      const p = new THREE.Vector3(ROCK_MIDDLE.x + Math.cos(angle) * reach * spread, ROCK_MIDDLE.y + Math.sin(angle) * reach * spread,
+        v.z > 0 ? ROCK_FRONT * Math.sqrt(v.z) : -ROCK_DEEP * Math.sqrt(-v.z));
+      p.z -= 0.09 * Math.max(0, p.y);
+      const lump = 0.32 * lumpy(p.x * 0.32, p.y * 0.32) + 0.1 * finer(p.x * 0.9, p.y * 0.9);
+      p.z += lump * (v.z > 0 ? 1 : 0.5);
       points.push(p);
     }
-    // Shallow cuts across the face and top, each taking a set depth off whatever it faces: broad flat planes.
-    for (let i = 0; i < 16; i++) {
+    // Shallow cuts across the face and the top, each taking a set depth off whatever it faces: broad flat planes.
+    for (let i = 0; i < 18; i++) {
       const top = i % 3 === 0;
-      const n = (top ? new THREE.Vector3((rand() - 0.5) * 1.2, 1, (rand() - 0.2) * 1.0) : new THREE.Vector3((rand() - 0.5) * 1.3, (rand() - 0.35) * 1.0, 1)).normalize();
-      const depth = 0.1 + rand() * 0.3;
+      const n = (top ? new THREE.Vector3((rand() - 0.5) * 0.8, 1, (rand() - 0.1) * 0.8) : new THREE.Vector3((rand() - 0.5) * 1.6, (rand() - 0.4) * 1.0, 1)).normalize();
+      const depth = 0.1 + rand() * 0.25;
       let most = -Infinity;
       for (const p of points) most = Math.max(most, p.dot(n));
       for (const p of points) {
         const over = p.dot(n) - (most - depth);
-        if (over > 0) p.addScaledVector(n, -over * 0.9);
+        if (over > 0) p.addScaledVector(n, -over * 0.85);
       }
     }
-    const front = 0.58 * half[2];
     points.forEach((p, i) => {
-      p.add(new THREE.Vector3(at[0], at[1] + half[1] - 0.7, at[2] - front));
-      if (p.z > -0.8) {
+      if (p.z > -0.6) {
         let groove = 0;
-        for (const [a, c] of FISSURES) groove = Math.max(groove, Math.exp(-((segment(p.x, p.y, a, c) / 0.16) ** 2)));
-        p.z -= 0.12 * groove;
+        for (const [a, c] of FISSURES) groove = Math.max(groove, Math.exp(-((segment(p.x, p.y, a, c) / 0.12) ** 2)));
+        p.z -= 0.1 * groove;
       }
       pos.setXYZ(i, p.x, p.y, p.z);
     });
-    return geo;
+    return this.place(geo, 0);
   }
 
   /** A lower weathered stone at the rock's foot, flattened in front and on top, at `at` along, up and out of the face. */
   private stone(at: number[], size: number[], lean: number, seed: number): THREE.BufferGeometry {
-    const geo = new THREE.IcosahedronGeometry(1, 4);
+    const geo = new THREE.IcosahedronGeometry(1, 12);
     const pos = geo.getAttribute('position');
     const v = new THREE.Vector3();
+    const lumpy = createNoise2D(seed);
     for (let i = 0; i < pos.count; i++) {
       v.fromBufferAttribute(pos, i);
-      if (v.z > 0.25) v.z = 0.25 + (v.z - 0.25) * 0.35;
-      if (v.y > 0.45) v.y = 0.45 + (v.y - 0.45) * 0.45;
+      if (v.z > 0.25) v.z = 0.25 + (v.z - 0.25) * 0.45;
+      if (v.y > 0.45) v.y = 0.45 + (v.y - 0.45) * 0.5;
       if (v.y < -0.35) v.y = -0.35 + (v.y + 0.35) * 0.3;
-      const wear = 1 + 0.12 * Math.sin(v.x * 1.7 + v.y * 1.1 + seed) * Math.sin(v.z * 2.1 - v.y * 1.6 + seed * 0.7)
-        + 0.05 * Math.sin(v.x * 4.3 - v.y * 3.1 + v.z * 3.7 + seed * 2.1);
-      v.multiplyScalar(wear);
+      v.multiplyScalar(1 + 0.12 * lumpy(v.x * 1.3 + v.z, v.y * 1.3));
       v.multiply(new THREE.Vector3(size[0], size[1], size[2]));
       v.z -= lean * (v.y + size[1]);
       v.add(new THREE.Vector3(at[0], at[1], at[2]));

@@ -303,6 +303,8 @@ export class Owl {
   /** How much of the moon through the canopy it has flown up into. */
   moonlit = 0;
   phase: Phase = 'perched';
+  /** Which of the painted flap frames its wings are in: 0 up, 1 coming down, 2 down, 3 going up. */
+  wingFrame = 0;
   /** Raised once, the frame it hoots. */
   hooted = false;
   private t = 0;
@@ -431,6 +433,8 @@ export class Owl {
       this.position.copy(this.perch);
       this.position.y += 0.07 * hop - 0.1 * crouch + 0.12 * spring;
       this.moonlit = 0;
+      this.wingFrame = 0;
+      this.flapWas = this.flap;
       return;
     }
     const s = t - LAUNCH;
@@ -444,6 +448,8 @@ export class Owl {
     const depth = 0.75 * (1 - 0.18 * (0.5 + 0.5 * Math.cos(this.beat * 0.5))) + 0.3 * first;
     this.flap = THREE.MathUtils.lerp(0.18, 0.12 + depth * stroke, this.flapBlend);
     this.fold = Math.max(0, this.fold - dt * 5);
+    this.wingFrame = this.flap > 0.45 ? 0 : this.flap < -0.2 ? 2 : this.flap < this.flapWas ? 1 : 3;
+    this.flapWas = this.flap;
     // Unhurried off the fork, gathering way, then climbing away.
     const k = THREE.MathUtils.clamp(s / FLIGHT, 0, 1);
     const u = THREE.MathUtils.clamp(0.5 * k * k + 0.5 * k + 0.03 * Math.sin(Math.PI * k), 0, 1);
@@ -472,6 +478,7 @@ export class Owl {
   }
 
   private flapBlend = 1;
+  private flapWas = 0;
 
   /** Seconds since it left the fork; 0 while it is still on it. */
   get flightSeconds(): number { return this.phase === 'leaving' ? Math.max(0, this.t - LAUNCH) : 0; }

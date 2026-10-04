@@ -1,4 +1,5 @@
 import { LINES_GRASS_GLSL, linesGrassCrop } from './lines-layout';
+import { BEND_GRASS_GLSL, woodBendCrop } from './wood-shape';
 import { LINES_SHIFT } from './geography';
 import { fixTreeInPlace } from '../gl/fixed';
 import { passJob, type CompileJob } from '../gl/boot';
@@ -44,7 +45,7 @@ function woodGrassCrop(x: number, z: number): number {
   if (wood <= 0) return 1;
   const k = tuning.wood;
   const patch = smoothstep(0.42, 0.63, shaderFbm(x * k.grassPatchScale + 53, z * k.grassPatchScale - 17));
-  return 1 + (k.grassBaseCrop + (k.grassTuftCrop - k.grassBaseCrop) * patch - 1) * wood;
+  return (1 + (k.grassBaseCrop + (k.grassTuftCrop - k.grassBaseCrop) * patch - 1) * wood) * woodBendCrop(x, z);
 }
 
 /** The sleeping island's look numbers: what a blade cropped this short keeps of itself, and how its rime lies. */
@@ -136,6 +137,7 @@ uniform vec3 uTipDry;
 uniform vec3 uTipCool;
 ${GRASS_PATTERN_GLSL}
 ${LINES_GRASS_GLSL}
+${BEND_GRASS_GLSL}
 /** 1 under the birches, where the floor is fallen gold and the little grass left in it has gone over with the year. */
 float birchFloorAt(vec2 xz) {
   return 1.0 - smoothstep(0.62, 1.02, length((xz - vec2(${ISLES.birches.x}.0, ${ISLES.birches.z}.0)) / vec2(${ISLES.birches.rx}.0, ${ISLES.birches.rz}.0)));
@@ -175,7 +177,7 @@ float woodGrassCrop(vec2 xz) {
   float wood = woodFloorAt(xz);
   if (wood <= 0.0) return 1.0;
   float tuftPatch = smoothstep(0.42, 0.63, fbm(xz * ${glsl(tuning.wood.grassPatchScale)} + vec2(53.0, -17.0)));
-  return mix(1.0, mix(${glsl(tuning.wood.grassBaseCrop)}, ${glsl(tuning.wood.grassTuftCrop)}, tuftPatch), wood);
+  return mix(1.0, mix(${glsl(tuning.wood.grassBaseCrop)}, ${glsl(tuning.wood.grassTuftCrop)}, tuftPatch), wood) * woodBendCrop(xz);
 }
 vec3 grassTintWithPattern(vec2 xz, vec3 pattern) {
   float pasture = pastureAt(xz);
