@@ -1065,10 +1065,9 @@ export class WoodChapter implements Chapter {
     }
     c.position.x += SHAPE_FACING.x * back * dt;
     c.position.z += SHAPE_FACING.z * back * dt;
-    // Frightened, she leans away with her mittens drawn up to her scarf; when it gets worse she crouches down small.
+    // Frightened, she leans away with her mittens drawn up to her scarf; when it gets worse she shrinks back further.
     const cower = THREE.MathUtils.smoothstep(fear, 0.72, 0.95);
-    c.lean += (-0.05 - 0.1 * fear - 0.06 * cower - c.lean) * (1 - Math.exp(-dt * 4));
-    c.kneeling += (0.5 * cower - c.kneeling) * (1 - Math.exp(-dt * 3));
+    c.lean += (-0.05 - 0.1 * fear - 0.1 * cower - c.lean) * (1 - Math.exp(-dt * 4));
     c.tighter += (THREE.MathUtils.smoothstep(fear, 0.35, 0.8) - c.tighter) * (1 - Math.exp(-dt * 4));
     if (cower > 0.3 && c.lookAt === this.shapeEyes) c.lookAt = this.shapeGlance.copy(this.shapeEyes).lerp(c.position, 0.35).setY(c.position.y + 0.9);
     if (fear > 0.35) {
@@ -1107,7 +1106,6 @@ export class WoodChapter implements Chapter {
       c.lookAt = watching;
       cygnet.watch(watching);
     } else cygnet.watch(null);
-    c.kneeling += (0 - c.kneeling) * (1 - Math.exp(-dt * 2));
     c.tighter += (0 - c.tighter) * (1 - Math.exp(-dt * 2));
     c.tilt = this.braveStep === 0 && owl.phase === 'awake' ? 0.14 * Math.sin(Math.max(0, this.now - this.braveAt - 0.8) * 1.6) * THREE.MathUtils.smoothstep(this.now - this.braveAt, 0.8, 1.6) : c.tilt * Math.exp(-dt * 4);
     if (this.braveStep === 0) {

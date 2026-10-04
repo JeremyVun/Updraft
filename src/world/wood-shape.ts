@@ -291,8 +291,8 @@ void main() {
   }
   vec3 col = alb * hemiLight(n) * 0.75;
   // The sliver of moon: the crag catches it, so the stump is first seen as a shape against it.
-  float moon = max(0.0, dot(n, uSunDir)) * 0.6 + 0.4 * max(0.0, dot(n, V));
-  col += alb * uSunColor * moon * (vKind > 0.5 ? 5.5 : 0.4) * uNight;
+  float moon = max(0.0, dot(n, uSunDir)) * 0.5 + 0.5 * (0.4 + 0.6 * max(0.0, dot(n, V)));
+  col += alb * uSunColor * moon * (vKind > 0.5 ? 6.5 : 0.35) * uNight;
   vec3 warm = (alb + vec3(0.012, 0.008, 0.004)) * emberLight(vWorld, n);
   col += shapeLit(vWorld + n * 0.04, warm);
   gl_FragColor = vec4(max(applyFog(col, vWorld), 0.0), 1.0);
@@ -357,9 +357,9 @@ export class WoodShape {
     // [x, y, z] centre, [w, h, d], yaw, lean back, edge rounding: jointed blocks in three courses, set back as they rise.
     const blocks: [number[], number[], number, number, number][] = [
       [[-3.3, 1.3, -3.0], [3.3, 3.4, 2.5], 0.1, 0.02, 0.35],
-      [[0.2, 1.1, -3.3], [3.9, 3.0, 2.5], -0.04, 0.04, 0.3],
+      [[0.2, 0.9, -3.3], [3.9, 2.6, 2.5], -0.04, 0.04, 0.3],
       [[3.9, 1.7, -3.1], [3.1, 4.0, 2.4], -0.16, 0.0, 0.4],
-      [[-1.2, 4.25, -3.65], [5.7, 3.1, 2.4], 0.06, 0.05, 0.45],
+      [[-1.2, 3.85, -3.6], [5.7, 3.2, 2.4], 0.06, 0.05, 0.45],
       [[3.75, 4.9, -3.75], [3.5, 3.6, 2.3], -0.1, 0.03, 0.4],
       [[-0.4, 7.1, -4.2], [4.6, 2.6, 2.2], 0.12, 0.07, 0.7],
       [[3.4, 7.6, -4.3], [2.6, 2.4, 2.1], -0.2, 0.05, 0.7],
@@ -387,7 +387,7 @@ export class WoodShape {
     for (let c = 0; c < 14; c++) {
       const n = new THREE.Vector3((rand() - 0.5) * 2 / half.x, (rand() - 0.5) * 2 / half.y, (rand() - 0.5) * 2 / half.z).normalize();
       const reach = Math.abs(n.x) * half.x + Math.abs(n.y) * half.y + Math.abs(n.z) * half.z;
-      cuts.push({ n, d: reach * (0.72 + rand() * 0.2) });
+      cuts.push({ n, d: reach * (0.8 + rand() * 0.16) });
     }
     for (let i = 0; i < pos.count; i++) {
       v.fromBufferAttribute(pos, i).multiply(scale);
