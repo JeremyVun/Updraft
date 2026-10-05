@@ -318,3 +318,8 @@ Jeremy after playing the lines, the black smoke and the kite:
 > - I did like the idea of the black smoke coming across the water towards the player, that was an interesting dream
 >   like feeling, like an unknown darkness was coming and they needed to get onto land quickly to run away from it.
 > - the kite idea was very basic in and of itself, although it is something to put in the backpocket for now.
+
+Jeremy, 2026-10-05, asked whether the darkness should come on its own or be called by the player: **on its own.** The
+child flees it; the puzzle is getting away from it and the passage after is a run for land ahead of the dark. Asked
+whether the way out should be the kite (swept off the deck, circled up into the high wind, towing the boat ahead of
+the dark): **something else.** Other ways out are to be proposed before any art.
