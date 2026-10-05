@@ -92,6 +92,7 @@ import { createHomeToy } from './world/home-toy';
 import { COTTAGE, ISLES, meadowPoint } from './world/heightfield';
 import { Pond } from './world/pond';
 import { Feather } from './fx/feather';
+import { harebells } from './world/harebells';
 import { SkyMirror } from './world/sky-mirror';
 import { Water } from './world/water';
 import { REFLECTION_LAYER } from './world/water/reflection';
@@ -383,6 +384,7 @@ const flock = new SwanFlock();
 flock.objects.forEach((o) => scene.add(o));
 const swanFeather = new Feather(wind);
 swanFeather.objects.forEach((o) => scene.add(o));
+scene.add(harebells.group);
 const cygnetAir: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
 const cygnetAhead: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
 const handsAt = new THREE.Vector3();
@@ -429,7 +431,7 @@ Object.values(echoes).forEach((e) => scene.add(e));
 const roomObjects: Partial<Record<Room, THREE.Object3D[]>> = {
   island: [tree.group, islandRocks, creatures.group], lines: [washing.group, washingBaskets, pinwheels.group, door.group],
   shore: [shoreGrass, kite.group, shorePulley.group], boats: [littleBoats.group],
-  meadow: [piano.group, ...pond.objects, ...swanFeather.objects], birches: [...birches.objects], stairs: [cloudStairs.group], drowned: [...village.objects],
+  meadow: [piano.group, ...pond.objects, ...swanFeather.objects, harebells.group], birches: [...birches.objects], stairs: [cloudStairs.group], drowned: [...village.objects],
   wood: [...wood.objects], sleeping: [...sleeping.objects], mirror: [skyMirror.group], home: [...cottage.objects, homeJetty, homeTree.group],
 };
 for (const [room, echo] of Object.entries(echoes)) roomObjects[room as Room]?.push(echo);
@@ -969,6 +971,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   wood.update(dt, time, rig.camera, storm, story.name === 'wood' ? story.shot.subjects : undefined);
   sleeping.update(dt, time, rig.camera);
   if (story.name === 'meadow') swanFeather.update(dt, time);
+  harebells.update(dt, time, rig.camera, wind, input, sound.output, [child.visible ? child.position : null, glider.position], story.name === 'meadow');
   departureKites.update(dt, time, rig.camera, story);
   cloudStairs.update(dt, time, rig.camera);
   pinwheels.update(dt, rig.camera, sound.output);
@@ -1252,7 +1255,7 @@ function frame(now: number): void {
 }
 
 if (QA && params.shot) {
-  window.__game = { quality, post, wind, input, rig, renderer, scene, glider, lines, swirl, sound, child, story, creatures, hillCreatures, water, skyMirror, terrain, footprints, cottage, petals, grass, littleBoats, sealife, cygnet, flock, carry, probe, washing, curtains: CURTAINS, doorway, doorwayView, doorExit: DOOR_EXIT, washingPassage, washingInvitation, shoreHaul, shorePulley, scarfInvitation, kite, departureKites, pinwheels, village, wood, stormWeather, sleeping, embers, emberInvitation, fireflies, boat, life, piano, birches, pond, cloudStairs };
+  window.__game = { quality, post, wind, input, rig, renderer, scene, glider, lines, swirl, sound, child, story, creatures, hillCreatures, water, skyMirror, terrain, footprints, cottage, petals, grass, littleBoats, sealife, cygnet, flock, carry, probe, washing, curtains: CURTAINS, doorway, doorwayView, doorExit: DOOR_EXIT, washingPassage, washingInvitation, shoreHaul, shorePulley, scarfInvitation, kite, departureKites, pinwheels, village, wood, stormWeather, sleeping, embers, emberInvitation, fireflies, boat, life, piano, birches, pond, cloudStairs, harebells, swanFeather };
 }
 
 /**

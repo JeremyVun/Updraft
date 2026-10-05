@@ -13,6 +13,7 @@ import { completeObjective, cue } from './cues';
 import { PianoStop } from './piano';
 import { GateStop } from './sheep-gate';
 import { sheepGate } from '../world/sheep-gate';
+import { harebells } from '../world/harebells';
 import { tuning } from '../tuning';
 import { musicFront } from '../world/music-growth';
 import type { MeadowScorePhase } from '../audio/meadow-score';
@@ -185,6 +186,7 @@ export class MeadowChapter implements Chapter {
   private featherReached = -1;
   /** How much the player has blown it toward the cygnet lately, 0..1. */
   private featherBlown = 0;
+  private bellsHeard = false;
   private readonly beak = new THREE.Vector3();
   /** Where the family is, where it was first found, and the horizontal line from the child to it. */
   private readonly far = new THREE.Vector3();
@@ -467,7 +469,10 @@ export class MeadowChapter implements Chapter {
         if (this.t > 5.5 && !c.busy) this.walkOn();
         break;
       case 'walk':
-        if (!this.piano.hold(dt, time, this.cast) && !this.gate.hold(dt, time, this.cast)) this.updateWalk(time);
+        if (!this.piano.hold(dt, time, this.cast) && !this.gate.hold(dt, time, this.cast)) {
+          this.updateWalk(time);
+          this.hearBells();
+        }
         break;
       case 'crest':
         this.updateCrest(dt, time);
@@ -932,6 +937,17 @@ export class MeadowChapter implements Chapter {
     this.play = p.held ? 'hold' : 'watch';
     this.holdUntil = this.now + 0.5;
     this.nextChase = 0;
+  }
+
+  /** A bell rung near them turns both their heads, and lets them go again. */
+  private hearBells(): void {
+    const { child: c, cygnet: k } = this.cast;
+    const near = this.now - harebells.heardAt < 1.6 && harebells.heard.distanceTo(c.position) < 16;
+    if (near) {
+      c.lookAt = harebells.heard;
+      k.watch(harebells.heard);
+    } else if (this.bellsHeard) k.watch(null);
+    this.bellsHeard = near;
   }
 
   private throwAhead(): void {
