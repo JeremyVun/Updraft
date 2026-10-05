@@ -109,7 +109,7 @@ void main() {
   float rim = pow(1.0 - max(0.0, dot(N, V)), 3.0) * toward;
   vec3 col = alb * (hemiLight(N) * 1.05 + uSunColor * wrap * wrap * sun * 0.95) + uSunColor * (gloss + rim * 0.3) * sun;
   // The bottoms of the steps go into the haze they rest on, in its colour.
-  vec3 mist = hazeShade() * 0.85 + uSunColor * 0.12 * sun;
+  vec3 mist = hazeShade() * 0.85 + cloudGlow() * 0.12 * sun;
   col = mix(col, mist, smoothstep(0.0, 0.3, vMist) * (0.4 + 0.4 * fray));
   gl_FragColor = vec4(applyFog(col, vWorld), keep);
 }`;

@@ -143,6 +143,13 @@ On that, with the swans coming in from behind the landing and flying on into the
 
 Then, asked how: "ok nevermind, this is good merge into main".
 
+On the colour after an iPad playtest (2026-10-05), the cloud having gone lilac in shade since late September and the
+concept painting with it:
+
+> "i think the concept art was lilac because it was basing itself on the ingame colour grading of the clouds. I do think the clouds are a bit too lilac, see what ou can refine towards the more white / gold / cream colours that would be more typical of a dream?"
+
+> "basically im trying to see if we can give it a bit more perceived "depth" with golden hues. Other than that, the only small tweak is that when the boat comes out of teh clouds towards teh child, it get's to a point where it's moving too fast (looks like it's going to crash into them if it doesn't slow down), so it just needs a small surgical tweak to move a bit slower there."
+
 ## Where it sits
 
 Birches → **stairs** → drowned village. Deep autumn, the afternoon going. The birches took the last of the year off
@@ -270,6 +277,11 @@ brings the light. Courage passes back and forth between them, and the stairs are
 - **Order**: birches → `toStairs` (short hop east; the deck comes down over the sea; it carries the birches' closing
   phrase) → `stairs` → drowned, which takes over wherever the fog leaves the boat. `?chapter=drowned` starts at
   `DESCENT_END`.
+- **The cloud's colours** (`cloudShade`, `cloudGold`, `cloudGlow` in `atmosphere.ts`): every part of the cloud (its
+  top, underside, towers, the white inside it, the haze, puffs and vapour, and the bank of mist through `CLOUD_GOLD`)
+  takes the brightness of the sky and the low sun but not their colours, whose blue and orange together go lilac. It
+  is white in its own shade, a little cool down in its folds, cream where the sun lights it through and gold on the
+  lobes turned to the sun; far off it goes back into a golden haze (`cloudHaze`), which gives it depth.
 - **The cloud deck** is analytic, in the shared fog (`cloudDeck` in `atmosphere.ts`) and the sky: a slab whose
   fringe thickens with height (so its underside has no edge), clipped to a disc, with a pocket of thinner cloud
   round whoever is inside (`bubble`, its thickness `clearing`). Under it the low sun comes in at about half
@@ -277,7 +289,8 @@ brings the light. Courage passes back and forth between them, and the stairs are
 - **Loose flights**: `CloudStairs.brush` reads the stroke on the flight's own level and eases the waited-for
   flight's velocity to it (the others move at `stir`); `update` turns it to fit inside `alignFrom` and draws it in
   when close and recently worked.
-- **Walking on stairs**: `Deck.height1` makes a strip a flight; neither walker steps off a raised edge
+- **Walking on stairs**: `Deck.height1` makes a strip a flight, and the grass is raised to meet the first riser
+  (`STAIRS_PAD`), so nobody steps up out of the grass onto a step in the air; neither walker steps off a raised edge
   (`offTheEdge`), and the bird turns almost on the spot there (`mayStep`). It is routed stop by stop and drops an
   errand within 0.45 m, so arrival is checked at 0.5 m. `Cygnet.standAt` puts it somewhere at once.
 - **The sea of cloud**: its top (`StairsCloud`) is drawn on world-anchored nested grids (`cloud-grid.ts`), so far

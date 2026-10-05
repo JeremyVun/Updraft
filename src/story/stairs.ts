@@ -124,6 +124,9 @@ const SEA_RIDE = DRAFT;
 const POINTER_OVER_HULL = 1;
 /** The white on the sea goes grey and blue with the dusk. */
 const DUSK_MIST = new THREE.Color(0.9, 0.96, 1.14);
+/** The gold of the low sun on the cloud, as `cloudGold` in the shaders. */
+const CLOUD_GOLD = new THREE.Color(1.0, 0.8, 0.52);
+const luma = (c: THREE.Color): number => c.r * 0.2126 + c.g * 0.7152 + c.b * 0.0722;
 
 /** One stop on the way up: where to stand and the level of the landing or flight it is on. */
 interface Stop { x: number; z: number; level: number }
@@ -1100,7 +1103,8 @@ export class StairsChapter implements Chapter {
     boat.mooring = CLOUD_BERTH;
     boat.becalmed = 1;
     const S = THREE.MathUtils.smoothstep;
-    const cruise = THREE.MathUtils.lerp(1.2, 4, S(left, 3, 20)) + FAR_OUT_SPEED * S(left, 20, 70);
+    // Well slowed by the time it is near, so it is plainly coming alongside rather than running into them.
+    const cruise = THREE.MathUtils.lerp(1.2, 3.2, S(left, 3, 20)) + FAR_OUT_SPEED * S(left, 35, 95);
     boat.speed = Math.max(boat.speed, cruise * S(this.comingFor += dt, 0, 3));
     this.world.sailing(boat, dt);
   }
@@ -1281,9 +1285,9 @@ export class StairsChapter implements Chapter {
     const fog = this.world.cloud.fog.ask();
     const u = atmo.uniforms;
     this.mist = Math.min(1, this.mist + dt / 4);
-    // The white up there: the low sun through it, and the sky.
-    fog.light.copy(u.uSunColor.value).multiplyScalar(0.3).add(this.mistLight.copy(u.uSkyAmbient.value).multiplyScalar(1.2))
-      .add(this.tmpColor.copy(u.uSkyHorizon.value).multiplyScalar(0.3));
+    // The white up there: cream, the low sun through it and the light of the sky, without the sky's colours, as the cloud is lit.
+    fog.light.copy(CLOUD_GOLD).multiplyScalar(0.33 * luma(u.uSunColor.value))
+      .addScalar(1.32 * luma(u.uSkyAmbient.value) + 0.33 * luma(u.uSkyHorizon.value));
     fog.glow = 1;
     if (this.beat !== 'thin') {
       fog.face(FOG_BANK.x, FOG_BANK.z, FOG_BANK.yaw);
