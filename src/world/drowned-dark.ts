@@ -75,7 +75,8 @@ void main() {
   // Toward its edge smoke frays into wisps the sky shows through; the softer the billow, the more it frays.
   float fray = vnoise(q * 8.0 + vec2(seed * 31.0, uTime * 0.12)) * 0.6 + vnoise(q * 17.0 - seed * 7.0) * 0.4;
   body *= mix(1.0, smoothstep(0.3, 0.7, fray), smoothstep(rim - soft - 0.25, rim, d) * smoothstep(0.12, 0.35, soft));
-  float a = body * vLook.x;
+  // It thins into the water rather than being cut off by it, so its foot is a mist on the glass, not a ledge.
+  float a = body * vLook.x * smoothstep(0.0, 0.9, vWorld.y);
   if (a <= 0.004) discard;
   float k = min(d, 1.0);
   vec3 nv = vec3(vCorner / max(d, 1.0), sqrt(max(0.0, 1.0 - k * k)));
