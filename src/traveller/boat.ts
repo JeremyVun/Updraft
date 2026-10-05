@@ -8,7 +8,7 @@ import { heightAt } from '../world/island';
 import { type Swell, swellAt, swellUniforms } from '../world/water/swell';
 import { screenBrush } from '../creatures/motion';
 import type { PointerInput } from '../input/pointer';
-import { BEAM, BOW_Z, DRAFT, LENGTH, MAST_TOP, MAST_Z, SAIL_RISE, SAIL_SPAN, SAIL_TACK, SEAT_Y, STERN_Z, contactShell, gunwale, keel } from './boat/form';
+import { BEAM, BOW_Z, DRAFT, LENGTH, MAST_TOP, MAST_Z, SAIL_RISE, SAIL_SPAN, SAIL_TACK, SEAT_Y, STERN_Z, contactShell, gunwale } from './boat/form';
 import { boomGeometry, hullGeometry, lanternFlame, pennantGeometry, sailGeometry } from './boat/parts';
 import { HULL_FRAG, HULL_VERT, PENNANT_FRAG, PENNANT_VERT, SAIL_FRAG, SAIL_VERT } from './boat/shaders';
 import { hullLid, waterlineUniforms } from './boat/waterline';
@@ -39,8 +39,6 @@ const CEILING_MARGIN = 0.25;
 const CLOUD_DRAFT = 0.42;
 /** The way the boom's mesh lies before it is turned to the clew. */
 const BOOM_REST = new THREE.Vector3(-1, 0, 0);
-/** How far below the hull's origin its keel runs. */
-const KEEL_DEPTH = -keel(0.5);
 
 /**
  * The child's little boat. It waits on a beach, is pushed into the water, and then sails where it is steered,
@@ -77,13 +75,10 @@ export class Boat {
   /** Afloat on something other than the sea, such as the top of a cloud: the height it floats at, or null. */
   altitude: number | null = null;
   /**
-   * Left high and dry: where it comes to rest and the way it lies there, the height of whatever is coming up under its
-   * keel, and how it lists and pitches once that has lifted it clear of the water. It coasts in on the way it has,
-   * and from then on nothing the wind does moves it. Null while it floats.
+   * Becalmed: where it comes to rest and the way it lies there. It coasts in on the way it has, and from then on
+   * nothing the wind does moves it. Null while it sails.
    */
-  strand: { x: number; z: number; yaw: number; floor: number; list: number; pitch: number } | null = null;
-  /** How far the slates have the hull: 0 afloat to 1 lying on them, clear of the water. */
-  aground = 0;
+  coastTo: { x: number; z: number; yaw: number } | null = null;
   /**
    * The wind the sail has, smoothed, and the only reading the cloth and the hull are allowed: `blowing` is the
    * air moving in the cloth, `taken` the part of it the sail is holding (an eased sheet spills the rest), `along`
@@ -190,7 +185,7 @@ export class Boat {
 
   beach(x: number, z: number, yaw: number): void {
     this.towed = false;
-    this.strand = null;
+    this.coastTo = null;
     this.speedLimit = Infinity;
     this.shelter = 0;
     this.position.set(x, Math.max(heightAt(x, z), 0) + DRAFT, z);
@@ -274,29 +269,18 @@ export class Boat {
     this.shoveAge = 0;
   }
 
-  /** Coasting in over the ridge on the way it has, braking so that it stops just where it will lie. */
-  private comeToRest(s: NonNullable<Boat['strand']>, dt: number): void {
+  /** Coasting on the way it has, braking so that it stops just where it will lie. */
+  private comeToRest(s: NonNullable<Boat['coastTo']>, dt: number): void {
     const p = this.position, k = tuning.drowned;
     const dx = s.x - p.x, dz = s.z - p.z, left = Math.hypot(dx, dz);
-    const most = Math.sqrt(2 * k.strandBrake * left);
-    this.speed = Math.min(Math.max(this.speed, Math.min(k.strandCreep, most)), most);
+    const most = Math.sqrt(2 * k.coastBrake * left);
+    this.speed = Math.min(Math.max(this.speed, Math.min(k.coastCreep, most)), most);
     const step = Math.min(left, this.speed * dt);
     if (left > 1e-4) {
       p.x += (dx / left) * step;
       p.z += (dz / left) * step;
     }
     this.yaw += Math.atan2(Math.sin(s.yaw - this.yaw), Math.cos(s.yaw - this.yaw)) * (1 - Math.exp(-dt * 0.9));
-  }
-
-  /** Whatever comes up under the keel lifts the hull out of the water, and it lies over on the slates. */
-  private lieOnSlates(s: NonNullable<Boat['strand']>, dt: number): void {
-    const p = this.position;
-    const rest = s.floor + KEEL_DEPTH * Math.cos(this.roll);
-    const clear = THREE.MathUtils.smoothstep(rest - p.y, 0, 0.35);
-    this.aground += (clear - this.aground) * (1 - Math.exp(-dt * 1.6));
-    p.y = Math.max(p.y, rest);
-    this.roll = THREE.MathUtils.lerp(this.roll, s.list, this.aground);
-    this.pitch = THREE.MathUtils.lerp(this.pitch, s.pitch, this.aground);
   }
 
   /** World position of the seat, where the child rides. */
@@ -333,8 +317,8 @@ export class Boat {
     const u = this.shoveAge / tuning.dolphins.shovePeak;
     const kick = this.shove * u * Math.exp(1 - u);
 
-    if (this.afloat && this.strand) {
-      this.comeToRest(this.strand, dt);
+    if (this.afloat && this.coastTo) {
+      this.comeToRest(this.coastTo, dt);
     } else if (this.afloat && !this.grounded && !this.towed) {
       let dy = 0;
       if (this.steerFor) {
@@ -428,8 +412,6 @@ export class Boat {
     this.lieOnShore(settle, this.altitude === null ? lift : 1e3, waterRoll, waterPitch);
     const bob = this.afloat ? Math.sin(t * 1.1) * 0.045 + Math.sin(t * 2.3) * 0.02 : 0;
     p.y = this.afloat ? bob + lift + (this.altitude === null ? DRAFT : CLOUD_DRAFT) : Math.max(heightAt(p.x, p.z), 0) + DRAFT + 0.1;
-    if (this.strand) this.lieOnSlates(this.strand, dt);
-    else this.aground = 0;
 
     const sail = this.sailMat.uniforms;
     sail.uScarf.value = this.scarfSail;
@@ -575,7 +557,7 @@ export class Boat {
     const bySea = this.altitude === null && this.group.visible ? 1 : 0;
     const wet = waterlineUniforms.uHullWet.value;
     const ease = 1 - Math.exp(-dt * 2);
-    wet.set(wet.x + ((this.afloat ? bySea * (1 - this.aground) : 0) - wet.x) * ease, Math.abs(this.speed), wet.z + (bySea - wet.z) * ease);
+    wet.set(wet.x + ((this.afloat ? bySea : 0) - wet.x) * ease, Math.abs(this.speed), wet.z + (bySea - wet.z) * ease);
     waterlineUniforms.uHullAt.value.set(this.position.x, this.position.z, Math.sin(this.yaw), Math.cos(this.yaw));
     this.wake.update(time);
     this.wakeIn -= dt;

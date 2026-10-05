@@ -4,7 +4,7 @@ import type { WhaleSound } from '../fx/sealife/wake';
 
 export type Surface = 'grass' | 'sand' | 'wood' | 'water';
 export type MaterialSound = 'cloth' | 'wool' | 'sail' | 'sail-settle' | 'water' | 'paper' | 'door' | 'splash' | 'peg'
-  | 'dolphin-surface' | 'leaf-scuff' | 'swing-creak' | 'sea-drain' | WhaleSound;
+  | 'dolphin-surface' | 'leaf-scuff' | 'swing-creak' | WhaleSound;
 
 /**
  * The sounds a small body makes, as opposed to a voice. The cygnet never speaks except when it is lost, so this is
@@ -109,12 +109,6 @@ export class Foley {
         from: 280, to: 150, attack: 0.22 });
       this.puff({ at: at + 0.22, len: 0.95, level: level * 0.012, pan,
         type: 'bandpass', from: 1100, to: 500, q: 0.45, attack: 0.18 });
-    } else if (kind === 'sea-drain') {
-      // The sea running out from under a whole village: one long low draw, and water falling off walls into what is left.
-      this.puff({ at, len: 9.5, level: level * 0.12, pan, type: 'lowpass', from: 460, to: 110, q: 0.6, attack: 2.6, wet: 0.14 });
-      this.puff({ at: at + 0.8, len: 7.5, level: level * 0.035, pan, type: 'bandpass', from: 900, to: 260, q: 0.7, attack: 2.2, wet: 0.1 });
-      for (let i = 0; i < 10; i++) this.puff({ at: at + 1.6 + i * 0.75 + Math.random() * 0.5, len: 0.2, level: level * 0.012,
-        pan: Math.max(-0.85, Math.min(0.85, pan + (Math.random() - 0.5) * 1.2)), type: 'bandpass', from: 1300 + Math.random() * 900, to: 600, q: 1.2, attack: 0.01 });
     } else if (kind === 'whale-drain') {
       // Water pouring from the raised flukes, falling away into individual drops.
       this.puff({ at, len: 2.2, level: level * 0.075, pan, type: 'bandpass',

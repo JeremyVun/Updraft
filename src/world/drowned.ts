@@ -10,7 +10,6 @@ import { swellLift } from './water/swell';
 import { LighthouseLight, LIGHTHOUSE_BASE_Y, LIGHTHOUSE_SCALE } from './lighthouse';
 import { REFLECTION_LAYER } from './water/reflection';
 import { fixInPlace } from '../gl/fixed';
-import { tuning } from '../tuning';
 import { Swing } from './birches';
 import { DarkBank } from './drowned-dark';
 import {
@@ -39,7 +38,7 @@ export const SPIRE = new THREE.Vector3(14, 21, -1436);
 export const LIGHTHOUSE = new THREE.Vector3(65, 0, -1580);
 /** The village comes alive within this far (along the journey) of its middle: the leaves always started here. */
 const DROWNED_Z = -1440;
-/** The way the dark comes on: the herons fly from it and the water runs off toward it. */
+/** The way the dark comes on: the herons fly from it. */
 const DARK_AHEAD = new THREE.Vector2().subVectors(DARK_WAY[1], DARK_WAY[0]).normalize();
 const NEAR_Z = 320;
 const CATCH_UP_S = 10;
@@ -73,7 +72,6 @@ const VILLAGE_VERT = /* glsl */ `
 ${ATMO_GLSL}
 uniform float uVane;
 uniform float uStorm;
-uniform float uRise;
 in vec3 color;
 in vec3 aLocal;
 in float aKind;
@@ -101,7 +99,6 @@ void main() {
     p.xz += w * belly * (0.014 + uStorm * 0.04);
     p.y += belly * (sin(uTime * (2.2 + uStorm * 9.0) + aLocal.x * 7.0) * (0.03 + uStorm * 0.32) + length(w) * 0.02);
   }
-  p.y += uRise;
   vWorld = p;
   vNormal = n;
   vColor = color;
@@ -112,8 +109,6 @@ void main() {
 
 const VILLAGE_FRAG = /* glsl */ `
 ${ATMO_GLSL}
-uniform float uRise;
-uniform float uDrain;
 in vec3 vWorld;
 in vec3 vNormal;
 in vec3 vColor;
@@ -147,30 +142,12 @@ void main() {
     alb = mix(alb, vec3(0.085, 0.105, 0.045) * (0.8 + 0.4 * grain), turf);
   }
 
-  /**
-   * Where the flood has stood: dark, green and slick, with the tide mark the water keeps washing. Drawn up out of
-   * the sea, that band stays wet, weed hangs from the line the water reached, and water runs down it in beads.
-   */
-  float drawn = smoothstep(0.0, 0.5, uRise);
-  float old = vWorld.y - uRise;
-  float lap = (0.09 * sin(vWorld.x * 0.8 + uTime * 1.3) + 0.06 * sin(vWorld.z * 1.1 - uTime * 0.9)) * (1.0 - drawn);
-  float along = vLocal.x + vLocal.z;
-  float soaked = 0.0;
-  float matte = 0.0;
+  /** Where the flood has stood: dark, green and slick, with the tide mark the water keeps washing. */
+  float lap = 0.09 * sin(vWorld.x * 0.8 + uTime * 1.3) + 0.06 * sin(vWorld.z * 1.1 - uTime * 0.9);
   if (kind != ${OPENING}) {
-    float wet = 1.0 - smoothstep(0.0, 0.85, old - lap);
-    alb = mix(alb, alb * vec3(0.3, 0.38, 0.29), wet * mix(0.92, 0.55, drawn));
-    alb += vec3(0.022, 0.026, 0.015) * (1.0 - smoothstep(0.0, 0.25, abs(old - lap - 0.85)));
-    soaked = drawn * (1.0 - smoothstep(-0.05, 0.05, old - 0.12 * vnoise(vec2(along * 1.7, 3.1))));
-    float strand = vnoise(vec2(along * 6.3, 7.7)) * 0.6 + vnoise(vec2(along * 17.0, 1.3)) * 0.4;
-    float weed = soaked * smoothstep(0.45, 0.62, strand) * (1.0 - smoothstep(0.12, 0.2 + 0.85 * strand, -old));
-    /** Deeper down, weed lies draped over whatever it settled on: slates, copings, sills. */
-    float draped = soaked * smoothstep(0.25, 0.6, -old) * smoothstep(0.52, 0.66,
-      vnoise(vWorld.xz * 1.7 + vec2(vWorld.y * 0.9, 0.0)) * 0.7 + vnoise(vWorld.xz * 4.3 - vWorld.y) * 0.3) * smoothstep(0.2, 0.6, n.y + 0.4);
-    float scum = drawn * (1.0 - smoothstep(0.0, 0.07, abs(old - 0.03 * vnoise(vec2(along * 3.0, 0.5)))));
-    matte = max(weed, draped * 0.9);
-    alb = mix(alb * mix(vec3(1.0), vec3(0.62, 0.66, 0.62), soaked), vec3(0.05, 0.065, 0.03) * (0.7 + 0.6 * grain), matte);
-    alb = mix(alb, vec3(0.2, 0.19, 0.15), scum * 0.6);
+    float wet = 1.0 - smoothstep(0.0, 0.85, vWorld.y - lap);
+    alb = mix(alb, alb * vec3(0.3, 0.38, 0.29), wet * 0.92);
+    alb += vec3(0.022, 0.026, 0.015) * (1.0 - smoothstep(0.0, 0.25, abs(vWorld.y - lap - 0.85)));
   }
 
   float ndl = max(dot(n, uSunDir), 0.0);
@@ -182,19 +159,6 @@ void main() {
   float back = pow(max(dot(-V, uSunDir), 0.0), 3.0);
   float edge = pow(1.0 - clamp(dot(n, V), 0.0, 1.0), 3.0);
   col += uSunColor * edge * back * sun * (kind == ${THATCHED} ? 0.55 : 0.16) * (0.35 + alb);
-  if (soaked > 0.0) {
-    /** Wet stone and slate give back the sky they face, and the low sun in a bright point. */
-    vec3 r = reflect(-V, n);
-    float fres = 0.08 + 0.92 * pow(1.0 - clamp(dot(n, V), 0.0, 1.0), 3.0);
-    vec3 skyBack = mix(uSkyHorizon, uSkyZenith, smoothstep(0.0, 0.7, r.y)) * smoothstep(-0.25, 0.15, r.y);
-    float glint = pow(max(dot(r, uSunDir), 0.0), 40.0) * sun;
-    float lane = floor(along * 5.0);
-    float runs = step(0.82, fract(sin(lane * 91.7) * 43758.5)) * (1.0 - smoothstep(0.0, 0.07, abs(fract(along * 5.0) - 0.5)))
-      * (1.0 - smoothstep(0.25, 0.45, abs(n.y)));
-    float bead = smoothstep(0.93, 1.0, fract(old * 0.8 + uTime * (0.3 + 0.35 * fract(lane * 0.37)) + lane * 0.31)) * runs * uDrain;
-    float wetness = soaked * (1.0 - matte);
-    col = mix(col, skyBack * (0.55 + 0.5 * grain), min(fres, 0.5) * wetness * 0.7) + (uSunColor * glint * 0.5 + uSkyHorizon * bead * 0.22) * wetness;
-  }
   if (kind == ${OPENING}) col = vColor * uSkyAmbient * 0.5;
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;
@@ -202,7 +166,6 @@ void main() {
 const TREE_VERT = /* glsl */ `
 ${ATMO_GLSL}
 uniform float uStorm;
-uniform float uRise;
 in vec3 aBase;
 out vec3 vWorld;
 out vec3 vNormal;
@@ -212,7 +175,6 @@ void main() {
   float phase = aBase.x * 0.7 + aBase.z * 0.3;
   vec2 lean = w * 0.03 + vec2(sin(uTime * 1.05 + phase), cos(uTime * 0.81 + phase * 1.7)) * (0.05 + 0.02 * length(w)) * (1.0 + uStorm * 2.2);
   vec3 p = (modelMatrix * vec4(position + vec3(lean.x, -dot(lean, lean) * 0.03, lean.y) * k, 1.0)).xyz;
-  p.y += uRise;
   vWorld = p;
   vNormal = mat3(modelMatrix) * normal;
   gl_Position = projectionMatrix * viewMatrix * vec4(p, 1.0);
@@ -238,7 +200,6 @@ void main() {
 const LEAF_VERT = /* glsl */ `
 ${ATMO_GLSL}
 uniform float uStorm;
-uniform float uRise;
 in vec4 iLeaf;
 in vec4 iTint;
 in vec4 iState;
@@ -262,7 +223,6 @@ void main() {
     float k = pow(max(at.y - iState.z, 0.0) / 7.0, 1.7);
     vec2 lean = w * 0.03 + vec2(sin(uTime * 1.05 + iState.y), cos(uTime * 0.81 + iState.y * 1.7)) * (0.05 + 0.02 * length(w)) * (1.0 + uStorm * 2.2);
     at += vec3(lean.x, -dot(lean, lean) * 0.03, lean.y) * k;
-    at.y += uRise;
   }
   vec3 e2t = e2 * cos(tilt) - vec3(0.0, 1.0, 0.0) * sin(tilt);
   vec3 world = at + (e1 * position.x + e2t * position.y) * iTint.w;
@@ -463,7 +423,7 @@ interface HouseSpec {
   stacks?: number[];
   stack?: number;
   pots?: number;
-  door?: number;
+  gable?: number;
 }
 
 function wallShape(h: HouseSpec): THREE.Shape {
@@ -657,22 +617,12 @@ function buildHouse(into: Merged, h: HouseSpec, rand: Rng, m: THREE.Matrix4): TH
     }
     perches.push(new THREE.Vector3(cx, top + 0.2, 0).applyMatrix4(m));
   }
-  /** Under the water until it draws back: the tops of the ground-floor doors and windows. */
-  if (h.sink < 3.9) {
-    const front = h.door ?? 0;
-    for (const side of [-1, 1]) {
-      for (const wx of [-h.len * 0.3, h.len * 0.3]) {
-        const door = side === front && wx < 0;
-        const tall = door ? 1.9 : 0.9;
-        const y = door ? 0.95 : 1.2;
-        into.add(opening(door ? 0.95 : 0.8, tall, 0.5).translate(wx, y, side * (h.depth / 2 - 0.16)), HOLLOW, OPENING, m);
-        into.add(new THREE.BoxGeometry(door ? 1.2 : 1.05, 0.12, 0.24).translate(wx, y + tall / 2 + 0.07, side * (h.depth / 2 + 0.02)), door ? TIMBER : STONE, PLAIN, m);
-      }
-    }
-  }
 
   /** Thatch overhangs its gable, so only a slate verge leaves an attic window anything to be seen through. */
-  if (!h.thatched && ridge - h.sink > 3.2) {
+  if (h.gable) {
+    into.add(opening(0.5, 0.8, 0.65).translate(h.gable * (h.len / 2 - 0.2), Math.max(h.wall + 0.55, h.sink + 0.75), 0), HOLLOW, OPENING, m);
+    into.add(new THREE.BoxGeometry(0.24, 0.1, 0.9).translate(h.gable * (h.len / 2 + 0.02), Math.max(h.wall + 0.55, h.sink + 0.75) + 0.46, 0), TIMBER, PLAIN, m);
+  } else if (!h.thatched && ridge - h.sink > 3.2) {
     into.add(opening(0.5, 0.9, 0.75).translate((rand() < 0.5 ? -1 : 1) * (h.len / 2 - 0.2), h.wall + 0.55, 0), HOLLOW, OPENING, m);
   }
   if (h.wall - h.sink > -0.9) {
@@ -736,15 +686,6 @@ function buildChurch(into: Merged, rand: Rng): void {
   into.add(extrude(slateShape(nave), nave.len + 0.22, 1), slate, SLATED, nm);
   into.add(new THREE.BoxGeometry(nave.len + 0.4, 0.16, 0.4).translate(0, nave.wall + nave.rise - 0.04, 0), slate, SLATED, nm);
   into.add(opening(0.6, 1.3, 0.9).translate(range(rand, -5, 5), nave.wall + 0.5, 0), HOLLOW, OPENING, nm);
-  /** Tall windows down both sides, under the water to their arches until it draws back. */
-  for (const side of [-1, 1]) {
-    for (let i = 0; i < 4; i++) {
-      const wx = -nave.len / 2 + 2.6 + i * 3.6;
-      into.add(opening(0.9, 2.4, 0.6).translate(wx, 1.4, side * (nave.depth / 2 - 0.2)), HOLLOW, OPENING, nm);
-      into.add(new THREE.CylinderGeometry(0.45, 0.45, 0.6, 8, 1, false, 0, Math.PI).rotateX(Math.PI / 2).rotateZ(Math.PI / 2)
-        .translate(wx, 2.6, side * (nave.depth / 2 - 0.2)), HOLLOW, OPENING, nm);
-    }
-  }
 
   const top = new THREE.Matrix4().makeTranslation(SPIRE.x, SPIRE.y - 1.5, SPIRE.z);
   into.add(new THREE.CylinderGeometry(0.06, 0.09, 2.4, 5).translate(0, 0.9, 0), IRON, MASONRY, top);
@@ -1126,7 +1067,7 @@ function buildWall(into: Merged, w: GardenWall): THREE.Box3 {
 /** A house laid by hand, in the generated village's materials. */
 function placedSpec(p: PlacedHouse, i: number): HouseSpec {
   return {
-    ...p, roll: p.roll ?? 0, lime: LIME[i % LIME.length],
+    ...p, roll: p.roll ?? 0, lime: p.stone ? WALL_STONE : LIME[i % LIME.length],
     roof: p.thatched ? THATCH[i % THATCH.length] : SLATE[i % SLATE.length],
     pots: p === CAT_HOUSE ? 1 : undefined,
   };
@@ -1283,25 +1224,15 @@ interface Drifter {
 export class DrownedVillage {
   readonly objects: THREE.Object3D[] = [];
   readonly cameraObstacles: THREE.Box3[] = [];
-  /** How far the village stands up out of the water, in metres: the sea drawing back. The story sets it. */
-  rise = 0;
-  /** The dark coming back over the water under its smoke. */
+  /** The dark coming on over the water under its smoke. */
   readonly dark = new DarkBank();
   /** The dead tree in the garden, standing on its root and leaning toward the lane: turned about x, it comes down. */
   readonly gardenTree = new THREE.Group();
   /** The swing on the green tree's bough, hanging still over the green. */
   readonly swing: Swing;
   private readonly storm = { value: 0 };
-  private readonly risen = { value: 0 };
-  private readonly drain = { value: 0 };
-  private shownRise = 0;
-  /** 1 while the water is running off the walls, easing away after it has gone. */
-  private draining = 0;
-  /** How fast the drawing back carries the leaves on the glass toward the dark, in metres a second. */
-  private drainFlow = 0;
+  /** Once the dark has risen the herons leave ahead of it and do not come back. */
   private fled = false;
-  /** Set the frame the sea starts to go, for whoever sounds it; they clear it. */
-  drainingFrom = false;
   private readonly lighthouse = new LighthouseLight(LIGHTHOUSE);
   private readonly vaneAngle = { value: 0 };
   private vaneSpin = 0;
@@ -1329,16 +1260,15 @@ export class DrownedVillage {
     this.objects.push(this.lighthouse.object);
     buildLine(body, houses);
     buildGate(body, rand, houses);
-    const shared = { ...atmo.uniforms, uStorm: this.storm, uVane: this.vaneAngle, uRise: this.risen, uDrain: this.drain };
+    const shared = { ...atmo.uniforms, uStorm: this.storm, uVane: this.vaneAngle };
     this.objects.push(
       new THREE.Mesh(
         body.build(),
         new THREE.ShaderMaterial({ vertexShader: VILLAGE_VERT, fragmentShader: VILLAGE_FRAG, uniforms: shared }),
       ),
-      /** The lighthouse stands on its own rock out past the village, and the sea going does not lift it. */
       new THREE.Mesh(
         rock.build(),
-        new THREE.ShaderMaterial({ vertexShader: VILLAGE_VERT, fragmentShader: VILLAGE_FRAG, uniforms: { ...shared, uRise: { value: 0 } } }),
+        new THREE.ShaderMaterial({ vertexShader: VILLAGE_VERT, fragmentShader: VILLAGE_FRAG, uniforms: shared }),
       ),
     );
 
@@ -1443,7 +1373,7 @@ export class DrownedVillage {
     }
 
     const dead = new THREE.Mesh(deadTree(placing),
-      new THREE.ShaderMaterial({ vertexShader: TREE_VERT, fragmentShader: TREE_FRAG, uniforms: { ...shared, uRise: { value: 0 } } }));
+      new THREE.ShaderMaterial({ vertexShader: TREE_VERT, fragmentShader: TREE_FRAG, uniforms: shared }));
     this.gardenTree.add(dead);
     this.gardenTree.position.copy(GARDEN_TREE.root);
     this.gardenTree.rotation.order = 'YXZ';
@@ -1474,8 +1404,8 @@ export class DrownedVillage {
     this.storm.value = storm;
     // Its sweep also lights the shared water and creature shaders, so it always keeps time.
     this.lighthouse.update(dt, storm);
-    this.drawBack(dt);
     this.dark.update(time, eye);
+    if (this.dark.rise > 0.1) this.fled = true;
     if (Math.abs(boat.z - DROWNED_Z) > NEAR_Z) {
       this.idle = Math.min(CATCH_UP_S, this.idle + dt);
       return;
@@ -1492,31 +1422,6 @@ export class DrownedVillage {
     this.turnVane(dt, storm);
     this.flyHerons(dt, time, boat, storm);
     this.driftLeaves(dt, time, boat, storm);
-  }
-
-  /**
-   * Everything the village stands on comes up with it: the lens's obstacles, the tree in the garden and the swing.
-   * While it is coming up the water runs off it, the leaves on the glass run away toward the dark with the water
-   * going, and the herons leave.
-   */
-  private drawBack(dt: number): void {
-    const by = this.rise - this.shownRise;
-    if (by !== 0) {
-      for (const b of this.cameraObstacles) {
-        b.min.y += by;
-        b.max.y += by;
-      }
-      this.shownRise = this.rise;
-      this.risen.value = this.rise;
-      this.gardenTree.position.y = GARDEN_TREE.root.y + this.rise;
-      this.swing.group.position.y = SWING_PIVOT.y + this.rise;
-    }
-    const rate = dt > 0 ? by / dt : 0;
-    if (rate > 0 && this.shownRise - by <= 0) this.drainingFrom = true;
-    this.draining = rate > 0.02 ? 1 : this.draining * Math.exp(-dt / 25);
-    this.drain.value = THREE.MathUtils.smoothstep(this.rise, 0, 0.3) * (0.25 + 0.75 * this.draining);
-    this.drainFlow = Math.max(0, rate) * tuning.drowned.drainPull;
-    if (this.rise > 0.1) this.fled = true;
   }
 
   /**
@@ -1546,7 +1451,7 @@ export class DrownedVillage {
       const rand = h.rand;
       const roost = this.roosts[Math.max(h.target, 0)];
       if (h.mode === 'perched') {
-        h.y = this.roosts[h.roost].y + STAND + this.rise;
+        h.y = this.roosts[h.roost].y + STAND;
         h.nextLook -= dt;
         if (h.nextLook <= 0) {
           h.nextLook = range(rand, 2.5, 9);
@@ -1564,7 +1469,7 @@ export class DrownedVillage {
           h.t = 0;
           h.delay = this.fled ? range(rand, 0.4, 3) : range(rand, 0.2, 1.1);
           h.neckGoal = 0;
-          /** Away from the dark when the sea goes, as birds go before weather. */
+          /** Away from the dark once it has risen, as birds go before weather. */
           h.yaw = this.fled ? Math.atan2(DARK_AHEAD.x, DARK_AHEAD.y) + range(rand, -0.5, 0.5) : Math.atan2(h.x - boat.x, h.z - boat.z);
           airborne++;
           h.target = storm > 0.22 || this.fled ? -1 : this.pickRoost(h, boat, rand);
@@ -1586,7 +1491,7 @@ export class DrownedVillage {
         if (this.fled) h.target = -1;
         const tx = h.target < 0 ? h.x * 0.2 - 40 : roost.x;
         const tz = h.target < 0 ? h.z - 400 : roost.z;
-        const ty = h.target < 0 ? 34 : roost.y + STAND + this.rise;
+        const ty = h.target < 0 ? 34 : roost.y + STAND;
         const reach = Math.hypot(tx - h.x, tz - h.z);
         const want = Math.atan2(tx - h.x, tz - h.z);
         h.yaw += THREE.MathUtils.clamp(wrapAngle(want - h.yaw) * 1.4, -0.5, 0.5) * dt;
@@ -1675,10 +1580,8 @@ export class DrownedVillage {
       const l = this.drift[i];
       if (Math.abs(l.z - boat.z) > 130) continue;
       const w = this.wind.sample(l.x, l.z, this.sample);
-      l.hx -= DARK_AHEAD.x * this.drainFlow * dt;
-      l.hz -= DARK_AHEAD.y * this.drainFlow * dt;
-      l.vx += ((w.x * pull - DARK_AHEAD.x * this.drainFlow - l.vx) * 2 + (l.hx - l.x) * 0.05) * dt;
-      l.vz += ((w.z * pull - DARK_AHEAD.y * this.drainFlow - l.vz) * 2 + (l.hz - l.z) * 0.05) * dt;
+      l.vx += ((w.x * pull - l.vx) * 2 + (l.hx - l.x) * 0.05) * dt;
+      l.vz += ((w.z * pull - l.vz) * 2 + (l.hz - l.z) * 0.05) * dt;
       l.x += l.vx * dt;
       l.z += l.vz * dt;
       l.yaw += (l.spin + w.energy * 0.8) * dt;

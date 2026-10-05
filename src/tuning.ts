@@ -1668,25 +1668,18 @@ export const tuning = {
     moonHandoffFrom: 1.5,
     moonHandoffTo: 1.85,
   },
-  /** The drowned village round the church: the sea drawing back, the boat left high and dry, and the dark. */
+  /** The drowned village round the church: the air dying, the boat coming to rest against a roof, and the dark. */
   drowned: {
-    /** The air dies this far short of the stranding (metres of drift); the hull coasts in over the last of it. */
+    /** The air dies this far short of where the boat comes to rest (metres of drift); the hull coasts in over the last of it. */
     stillFrom: 26,
-    /** Seconds from the air dying to the water starting to go, and how long the village takes to come up out of it. */
-    stillFor: 6.5, riseFor: 8,
-    /** How far the village rises out of the water once the sea has drawn back. */
-    rise: 2,
-    /**
-     * The hull coming to rest: how hard it brakes over the ridge (m/s²) and the least way it keeps till it is there;
-     * then how it lies on the slates once they have it (radians: the list, + toward its starboard side, and the bow up).
-     */
-    strandBrake: 0.5, strandCreep: 0.35, strandList: -0.27, strandPitch: 0.06,
-    /** The leaves on the glass run off toward the dark this fast for each metre a second the village rises. */
-    drainPull: 5,
+    /** Seconds from the air dying to the dark starting to rise. */
+    stillFor: 6.5,
+    /** The hull coming to rest: how hard it brakes (m/s²) and the least way it keeps till its stem is on the slates. */
+    coastBrake: 0.5, coastCreep: 0.35,
     /** How far past the drift's dusk the light goes while the dark comes on. */
-    dusk: 0.12,
-    /** How hard the cygnet starts when the slates take the hull, and how long she looks at one thing before the other. */
-    lurchStartle: 0.18, glanceEvery: 4.5,
+    dusk: 0.2,
+    /** How hard the cygnet starts when the stem touches the slates, and how long she looks at one thing before the other. */
+    touchStartle: 0.12, glanceEvery: 4.5,
     /**
      * Where along the dark's front she looks, metres to the side the church is: looking back at it she turns away
      * from the lens, never toward it.
@@ -1695,15 +1688,29 @@ export const tuning = {
     /** Seconds the camera takes to come round beside the boat once the air has died, and to turn from the dark to the church. */
     turnFor: 12, lookFor: 9,
     dark: {
-      billows: 300,
-      /** The bank: half its width, its depth behind the front, how far its flanks run on ahead, in metres. */
-      halfWidth: 170, depth: 90, flank: 60,
+      /**
+       * Billows in its low rolling skirt on the water, heaped behind it, lifting off its heads, misting its foot, and
+       * creeping out ahead over the glass.
+       */
+      skirt: 130, body: 300, plumes: 90, foot: 40, tendrils: 90,
+      /**
+       * The bank: half its width, its depth behind the front, how far its flanks run on ahead, in metres; and how far it
+       * reaches on the church's side, as a share of its half width, so the church keeps clear sky over it.
+       */
+      halfWidth: 170, depth: 70, flank: 60, wing: 0.45,
       /** How far fingers of the front reach ahead, and how far and how fast the whole front heaves. */
-      fingers: 5, heave: 1.4, heaveRate: 0.33,
-      /** Billow radius at the front and at the back, how high the back heaps, and how much distance veil it takes near and far. */
-      frontSize: 4.5, backSize: 14, heap: 12, nearHaze: 0.25, farHaze: 0.08,
-      /** Seconds it takes to rise on the horizon and then to come on, and how far behind the stranded boat it stops. */
-      riseFor: 9, comeFor: 24, holdBehind: 30,
+      fingers: 4, heave: 1.4, heaveRate: 0.33,
+      /** The skirt's billow radius and how deep it lies behind the front; the body's radius at its front and back, and how high it heaps. */
+      skirtSize: 2.6, skirtDepth: 10, bodySize: 3.6, backSize: 9, heap: 15,
+      /** How far the top of its front leans out over the water ahead of its foot. */
+      lean: 7,
+      /** The tendrils' radius, how far out over the glass they creep and how often (laps a second). */
+      tendrilSize: 2, tendrilReach: 18, creep: 0.04,
+      /** How many columns of smoke lift off it, how high before they have thinned away, and how often (laps a second). */
+      columns: 5, plumeRise: 22, plumeRate: 0.03,
+      /** How much of the distance veil it takes near and far. */
+      nearHaze: 0.12, farHaze: 0.05,
+      riseFor: 9, comeAfter: 5, comeFor: 24, holdBehind: 30,
     },
   },
   drownedCamera: {
@@ -1718,15 +1725,15 @@ export const tuning = {
     spireFrameMargin: 0.7,
     sideResponse: 1.2,
     /**
-     * Beside the stranded boat: the way the lens looks once it has come round (radians, atan2(x, z) of the view),
+     * Beside the becalmed boat: the way the lens looks once it has come round (radians, atan2(x, z) of the view),
      * first past the boat to where they came from and then turned with her to the church; upright, back the way they
      * came from ahead of the boat.
      */
-    strandDark: 1.31, strandChurch: 1.99, strandUpright: 0.35, strandZoom: 0.9,
+    strandDark: 1.25, strandChurch: 1.95, strandUpright: 0.35, strandZoom: 0.9,
     /** How far behind the boat the eye stands, how far ahead of it and to the side it looks, and at what height. */
-    strandBack: 14, strandAhead: 6, strandAside: 3, strandAim: 1.2, churchAim: 2.6,
+    strandBack: 15, strandAhead: 6, strandAside: 3, strandAim: 1.2, churchAim: 2.6,
     uprightBack: 10, uprightAhead: 16, uprightAim: -0.6, uprightSide: 3,
-    /** The eye's height over the water while the sea goes, and once the boat is lying on the slates. */
+    /** The eye's height over the water as the air dies, and once the boat has come to rest. */
     strandLow: 2.4, strandHigh: 3.4, uprightHigh: 3.8,
     strandPace: 0.6,
   },

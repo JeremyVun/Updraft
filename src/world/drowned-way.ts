@@ -3,8 +3,7 @@ import type { Deck } from './decks';
 
 /**
  * The neighbourhood round the church, laid by hand among the generated village, and the way over its roofs from
- * where the boat strands to the foot of the tower. Every height here is at the old water level: when the sea draws
- * back the village rises out of it by the village's `rise`, and so does everything on it.
+ * the roof the becalmed boat drifts against to the foot of the tower.
  */
 
 /** A hand-placed house: the generated village's house, put exactly where the way needs it. */
@@ -23,9 +22,11 @@ export interface PlacedHouse {
   stacks: number[];
   /** How far the chimney stands above the ridge. */
   stack: number;
-  /** The side a ground-floor door is on, along local z, or 0 for none. */
-  door: number;
   roll?: number;
+  /** The gable end (along local x, -1 or 1) with a small window in it, just out of the water. */
+  gable?: number;
+  /** Bare stone walls rather than limewash. */
+  stone?: boolean;
 }
 
 /** A garden wall: a run of coping from (x0, z0) to (x1, z1), its top at `top`. */
@@ -54,37 +55,50 @@ const OVERHANG = 0.28;
 const slatesAt = (h: PlacedHouse, lz: number) =>
   THREE.MathUtils.lerp(ridgeTop(h), eaveAt(h), Math.min(1, Math.abs(lz) / (h.depth / 2 + OVERHANG)));
 
-/** Up the channel, north by west: the way the drift comes into the stranding. */
+/** Up the channel, north by west: the way the drift comes in. */
 const CHANNEL = new THREE.Vector2(-0.4472, -0.8944);
 
-/** Where the hull comes to rest as the air dies, and the way it lies there. */
+/** Where the hull comes to rest as the air dies, and the way it lies there: swung a little off the drift as it loses way. */
 export const STRAND = new THREE.Vector2(-9, -1398);
-export const STRAND_YAW = Math.atan2(CHANNEL.x, CHANNEL.y);
+export const STRAND_YAW = Math.atan2(CHANNEL.x, CHANNEL.y) - 0.12;
+/** How far ahead of the hull's middle its stem meets the water. */
+const STEM = 2.1;
+/** How far in from the strand roof's west gable the stem comes to rest. */
+const STEP_IN = 2.2;
 
 /**
- * The roof the boat strands on: a long one with no chimney, its ridge lying along the channel just under the glass,
- * so the hull glides in over it unseen and the slates come up under the keel.
+ * The roof the boat drifts against: low in the water, its eaves just under the glass, so the stem comes to rest on
+ * the slates at the waterline and she can step out onto them and climb to the ridge. It lies across the drift,
+ * turned so the lens beside the boat sees its gable end and the slope the boat touches.
  */
-export const STRAND_HOUSE: PlacedHouse = {
-  x: STRAND.x + CHANNEL.x * 2.2, z: STRAND.y + CHANNEL.y * 2.2, yaw: Math.atan2(-CHANNEL.y, CHANNEL.x),
-  len: 12, depth: 5.4, wall: 3.4, rise: 2.6, sink: 6.64, thatched: false, stacks: [], stack: 0, door: 0,
-};
+export const STRAND_HOUSE: PlacedHouse = (() => {
+  const h: PlacedHouse = { x: 0, z: 0, yaw: -0.3, len: 8, depth: 4.6, wall: 3.4, rise: 2.5, sink: 3.45, thatched: false,
+    stacks: [1], stack: 1.1, gable: -1, stone: true };
+  const touch = new THREE.Vector2(STRAND.x + Math.sin(STRAND_YAW) * STEM, STRAND.y + Math.cos(STRAND_YAW) * STEM);
+  /** Across from the ridge to where the slates meet the water, and along it from the house's middle to the stem. */
+  const waterline = (ridgeTop(h) / (ridgeTop(h) - eaveAt(h))) * (h.depth / 2 + OVERHANG);
+  const along = -(h.len / 2 - STEP_IN);
+  const c = Math.cos(h.yaw), s = Math.sin(h.yaw);
+  h.x = touch.x - along * c - waterline * s;
+  h.z = touch.y + along * s - waterline * c;
+  return h;
+})();
 
 /** The cottage across the lane, its garden walled down to the water; the way goes up its south slope and over. */
 export const GARDEN_HOUSE: PlacedHouse = {
-  x: -3, z: -1423.2, yaw: -0.15, len: 10, depth: 6, wall: 3.4, rise: 2.5, sink: 3.7, thatched: false,
-  stacks: [1], stack: 1.3, door: 1,
+  x: -3, z: -1423.2, yaw: -0.15, len: 10, depth: 6, wall: 3.4, rise: 2.5, sink: 2.95, thatched: false,
+  stacks: [1], stack: 1.3,
 };
 
 /** The church's nave, joined to the tower's west face, its ridge running east to the tower's foot. */
 export const NAVE: PlacedHouse = {
-  x: 3.1, z: -1436, yaw: 0, len: 17, depth: 7.6, wall: 3.2, rise: 3.2, sink: 3.6, thatched: false, stacks: [], stack: 0, door: 0,
+  x: 3.1, z: -1436, yaw: 0, len: 17, depth: 7.6, wall: 3.2, rise: 3.2, sink: 3.6, thatched: false, stacks: [], stack: 0,
 };
 
 /** The roof the cat is stranded on, just off the channel before the stranding (roof A on the plan). */
 export const CAT_HOUSE: PlacedHouse = {
   x: 14.5, z: -1365.5, yaw: 0.32, len: 10, depth: 6, wall: 3.4, rise: 3.3, sink: 3.3, thatched: false,
-  stacks: [-1], stack: 1.5, door: 0,
+  stacks: [-1], stack: 1.5,
 };
 
 /**
@@ -92,22 +106,30 @@ export const CAT_HOUSE: PlacedHouse = {
  * through a village rather than laid out for her.
  */
 export const NEIGHBOURS: PlacedHouse[] = [
-  { x: -31, z: -1378, yaw: 0.95, len: 9, depth: 5.6, wall: 3.4, rise: 3.2, sink: 2.4, thatched: true, stacks: [1], stack: 1.3, door: -1 },
-  { x: -27, z: -1421, yaw: -0.15, len: 14, depth: 5.2, wall: 3.4, rise: 3.0, sink: 4.6, thatched: false, stacks: [-1, 1], stack: 1.0, door: 0 },
-  { x: -18, z: -1442, yaw: 0.5, len: 9.5, depth: 5.8, wall: 3.4, rise: 3.4, sink: 2.9, thatched: true, stacks: [-1], stack: 1.6, door: 1 },
-  { x: 7, z: -1399, yaw: -0.55, len: 8.5, depth: 5.2, wall: 3.4, rise: 2.8, sink: 3.1, thatched: false, stacks: [1], stack: 1.2, door: -1, roll: 0.12 },
-  { x: 18, z: -1386, yaw: 0.2, len: 9.5, depth: 5.6, wall: 3.4, rise: 3.1, sink: 4.2, thatched: false, stacks: [-1], stack: 1.4, door: 1 },
-  { x: 25, z: -1431, yaw: 1.42, len: 13, depth: 7.5, wall: 4.4, rise: 3.6, sink: 3.4, thatched: false, stacks: [], stack: 0, door: 1 },
-  { x: -14, z: -1457, yaw: 0.1, len: 16, depth: 5.4, wall: 3.4, rise: 3.0, sink: 3.4, thatched: false, stacks: [-1, 1], stack: 1.2, door: 1 },
-  { x: 28, z: -1450, yaw: 0.75, len: 9, depth: 5.8, wall: 3.4, rise: 3.3, sink: 3.0, thatched: true, stacks: [1], stack: 1.5, door: -1 },
+  { x: -31, z: -1378, yaw: 0.95, len: 9, depth: 5.6, wall: 3.4, rise: 3.2, sink: 2.4, thatched: true, stacks: [1], stack: 1.3 },
+  { x: -27, z: -1421, yaw: -0.15, len: 14, depth: 5.2, wall: 3.4, rise: 3.0, sink: 4.6, thatched: false, stacks: [-1, 1], stack: 1.0 },
+  { x: -18, z: -1442, yaw: 0.5, len: 9.5, depth: 5.8, wall: 3.4, rise: 3.4, sink: 2.9, thatched: true, stacks: [-1], stack: 1.6 },
+  { x: 7, z: -1399, yaw: -0.55, len: 8.5, depth: 5.2, wall: 3.4, rise: 2.8, sink: 3.1, thatched: false, stacks: [1], stack: 1.2, roll: 0.12 },
+  { x: 18, z: -1386, yaw: 0.2, len: 9.5, depth: 5.6, wall: 3.4, rise: 3.1, sink: 4.2, thatched: false, stacks: [-1], stack: 1.4 },
+  { x: 25, z: -1431, yaw: 1.42, len: 13, depth: 7.5, wall: 4.4, rise: 3.6, sink: 3.4, thatched: false, stacks: [], stack: 0 },
+  { x: -14, z: -1457, yaw: 0.1, len: 16, depth: 5.4, wall: 3.4, rise: 3.0, sink: 3.4, thatched: false, stacks: [-1, 1], stack: 1.2 },
+  { x: 28, z: -1450, yaw: 0.75, len: 9, depth: 5.8, wall: 3.4, rise: 3.3, sink: 3.0, thatched: true, stacks: [1], stack: 1.5 },
 ];
 
-/** Just past the stranded bow, where she climbs out onto the ridge. */
-const strandBow = houseLocal(STRAND_HOUSE, 0.4, 0);
-/** The far end of the strand's ridge, over the lane, where she waits for the tree. */
-const strandEnd = houseLocal(STRAND_HOUSE, STRAND_HOUSE.len / 2 - 0.5, 0);
 /** The corner of the garden walls across the lane, where the tree comes down. */
 const wallFoot = new THREE.Vector2(-10.2, -1409.6);
+/** Where the stem rests, along the strand's ridge; she steps out onto the slates there and climbs straight up. */
+const STEP_ALONG = -(STRAND_HOUSE.len / 2 - STEP_IN);
+const strandStep = houseLocal(STRAND_HOUSE, STEP_ALONG, STRAND_HOUSE.depth / 2 - 0.4);
+const strandTop = houseLocal(STRAND_HOUSE, STEP_ALONG, 0);
+/** The place on the strand's ridge nearest the walls across the lane, where she waits for the tree. */
+const strandEnd = (() => {
+  const c = Math.cos(STRAND_HOUSE.yaw), s = Math.sin(STRAND_HOUSE.yaw);
+  const along = (wallFoot.x - STRAND_HOUSE.x) * c - (wallFoot.y - STRAND_HOUSE.z) * s;
+  return houseLocal(STRAND_HOUSE, THREE.MathUtils.clamp(along, STEP_ALONG + 1.2, STRAND_HOUSE.len / 2 - 0.6), 0);
+})();
+/** The height of the coping she walks along from the tree to the cottage. */
+const COPING = 0.45;
 const gardenEave = houseLocal(GARDEN_HOUSE, -3, GARDEN_HOUSE.depth / 2 + OVERHANG);
 const gardenRidgeA = houseLocal(GARDEN_HOUSE, -3, 0);
 const gardenRidgeB = houseLocal(GARDEN_HOUSE, 1, 0);
@@ -122,15 +144,15 @@ const landingHeight = slatesAt(NAVE, landing.y - NAVE.z);
 /** The foot of the tower on the nave's ridge, as high as a child can get: D on the plan. */
 export const TOWER_FOOT = new THREE.Vector3(NAVE.x + NAVE.len / 2 - 0.9, ridgeTop(NAVE), NAVE.z);
 
-/** Garden walls round the way and the green; their copings break the surface once the water goes. */
+/** Garden walls round the way and the green, their copings just out of the water. */
 export const GARDEN_WALLS: GardenWall[] = [
-  { x0: wallFoot.x, z0: wallFoot.y, x1: gardenEave.x, z1: gardenEave.y, top: -0.3 },
-  { x0: wallFoot.x, z0: wallFoot.y, x1: laneEnd.x, z1: laneEnd.y, top: -0.45 },
-  { x0: laneEnd.x, z0: laneEnd.y, x1: gardenSouthEast.x, z1: gardenSouthEast.y, top: -0.5, railed: true },
-  { x0: -12.5, z0: -1427.5, x1: -6.6, z1: naveEave + 0.6, top: -0.55, railed: true },
-  { x0: 8.4, z0: -1424.5, x1: 9.6, z1: naveEave + 0.8, top: -0.6 },
-  { x0: 2.5, z0: -1421.5, x1: 8.4, z1: -1424.5, top: -0.65, railed: true },
-  { x0: 4.5, z0: -1406, x1: 9, z1: -1419, top: -0.7 },
+  { x0: wallFoot.x, z0: wallFoot.y, x1: gardenEave.x, z1: gardenEave.y, top: COPING },
+  { x0: wallFoot.x, z0: wallFoot.y, x1: laneEnd.x, z1: laneEnd.y, top: 0.35 },
+  { x0: laneEnd.x, z0: laneEnd.y, x1: gardenSouthEast.x, z1: gardenSouthEast.y, top: 0.3, railed: true },
+  { x0: -12.5, z0: -1427.5, x1: -6.6, z1: naveEave + 0.6, top: 0.25, railed: true },
+  { x0: 8.4, z0: -1424.5, x1: 9.6, z1: naveEave + 0.8, top: 0.3 },
+  { x0: 2.5, z0: -1421.5, x1: 8.4, z1: -1424.5, top: 0.2, railed: true },
+  { x0: 4.5, z0: -1406, x1: 9, z1: -1419, top: 0.25 },
 ];
 
 /** The dead tree rotted at its roots in the garden, leaning a little toward the lane it will bridge. */
@@ -164,12 +186,14 @@ export interface WayGap {
 
 /**
  * The way over the roofs, in walking order. Slopes are decks whose height runs from `height` at their first end to
- * `height1` at their second. `strand` is the ridge beyond the stranded bow (she alights onto it); `naveRidge` ends
- * at the tower's foot.
+ * `height1` at their second. `strandSlope` starts on the slates by the boat's stem (she alights onto it); `strand` is
+ * the ridge above; `naveRidge` ends at the tower's foot.
  */
 export const WAY = {
-  strand: { x0: strandBow.x, z0: strandBow.y, x1: strandEnd.x, z1: strandEnd.y, halfWidth: 0.45, height: ridgeTop(STRAND_HOUSE) },
-  gardenWall: { x0: wallFoot.x, z0: wallFoot.y, x1: gardenEave.x, z1: gardenEave.y, halfWidth: 0.3, height: -0.3 },
+  strandSlope: { x0: strandStep.x, z0: strandStep.y, x1: strandTop.x, z1: strandTop.y, halfWidth: 0.7,
+    height: slatesAt(STRAND_HOUSE, STRAND_HOUSE.depth / 2 - 0.4), height1: ridgeTop(STRAND_HOUSE) },
+  strand: { x0: strandTop.x, z0: strandTop.y, x1: strandEnd.x, z1: strandEnd.y, halfWidth: 0.45, height: ridgeTop(STRAND_HOUSE) },
+  gardenWall: { x0: wallFoot.x, z0: wallFoot.y, x1: gardenEave.x, z1: gardenEave.y, halfWidth: 0.3, height: COPING },
   gardenSlope: { x0: gardenEave.x, z0: gardenEave.y, x1: gardenRidgeA.x, z1: gardenRidgeA.y, halfWidth: 0.7,
     height: eaveAt(GARDEN_HOUSE), height1: ridgeTop(GARDEN_HOUSE) },
   gardenRidge: { x0: gardenRidgeA.x, z0: gardenRidgeA.y, x1: gardenRidgeB.x, z1: gardenRidgeB.y, halfWidth: 0.45,
@@ -183,18 +207,9 @@ export const WAY = {
 
 /** Where she has to be helped across: the lane by the tree, the green by the swing. */
 export const WAY_GAPS: WayGap[] = [
-  { name: 'tree', from: new THREE.Vector3(strandEnd.x, ridgeTop(STRAND_HOUSE), strandEnd.y), to: new THREE.Vector3(wallFoot.x, -0.3, wallFoot.y) },
+  { name: 'tree', from: new THREE.Vector3(strandEnd.x, ridgeTop(STRAND_HOUSE), strandEnd.y), to: new THREE.Vector3(wallFoot.x, COPING, wallFoot.y) },
   { name: 'swing', from: SWING_FROM.clone(), to: new THREE.Vector3(landing.x, landingHeight, landing.y) },
 ];
-
-/** The way's decks as they stand with the village risen `rise` metres out of the water. */
-export function wayDecks(rise: number, out: Deck[] = []): Deck[] {
-  out.length = 0;
-  for (const d of Object.values(WAY) as Deck[]) {
-    out.push({ ...d, height: d.height + rise, height1: d.height1 === undefined ? undefined : d.height1 + rise });
-  }
-  return out;
-}
 
 /**
  * The line the dark comes on along: from far out where they came from, through the stranding and on over the way

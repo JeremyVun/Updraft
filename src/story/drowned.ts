@@ -3,7 +3,7 @@ import type { CheckpointPayload } from './checkpoint-data';
 import * as THREE from 'three';
 import type { Shot } from '../camera';
 import { DROWNED_CHANNEL, SPIRE, LIGHTHOUSE } from '../world/drowned';
-import { DARK_AT_STRAND, NAVE, STRAND, STRAND_HOUSE, STRAND_YAW, ridgeTop } from '../world/drowned-way';
+import { DARK_AT_STRAND, NAVE, STRAND, STRAND_YAW, WAY, ridgeTop } from '../world/drowned-way';
 import { LIGHTHOUSE_TOP_Y } from '../world/lighthouse';
 import { WOOD_LANDING } from '../world/wood';
 import { atmo } from '../world/atmosphere';
@@ -25,12 +25,15 @@ const PASSAGE = [...DROWNED_CHANNEL.slice(0, 3), STRAND, ...DROWNED_CHANNEL.slic
 const TO_STRAND = 3;
 /** The top of the nave beside the tower: where she looks for somewhere higher. */
 const REFUGE = new THREE.Vector3(NAVE.x + NAVE.len / 2 - 2, ridgeTop(NAVE) + 2.5, NAVE.z);
+/** Where she will step out onto the slates by the stem, and the ridge above it. */
+const STRAND_STEP = new THREE.Vector3(WAY.strandSlope.x0, WAY.strandSlope.height, WAY.strandSlope.z0);
+const STRAND_TOP = new THREE.Vector3(WAY.strandSlope.x1, WAY.strandSlope.height1, WAY.strandSlope.z1);
 
 /**
- * `still` the air dying as the hull coasts in over the ridge; `drawing` the sea going and the village coming up out
- * of it; `stranded` the boat held on the slates while the dark comes on behind and stops.
+ * `still` the air dying as the hull coasts in against a roof; `becalmed` the boat lying there while the dark rises
+ * where they came from and comes on, and stops.
  */
-type Beat = 'enter' | 'drift' | 'still' | 'drawing' | 'stranded' | 'gather' | 'snatch' | 'after';
+type Beat = 'enter' | 'drift' | 'still' | 'becalmed' | 'gather' | 'snatch' | 'after';
 
 /**
  * The drowned village. They come in at dusk over what used to be somebody's town and drift through it: ridges and
@@ -53,7 +56,7 @@ export class DrownedChapter implements Chapter {
   readonly shot: Shot = { target: new THREE.Vector3(), distance: 20, height: 3.2, carry: true };
   readonly music = 'drowned' as const;
   get drownedScore(): DrownedScorePhase {
-    if(this.beat==='still'||this.beat==='drawing'||this.beat==='stranded')return 'still';
+    if(this.beat==='still'||this.beat==='becalmed')return 'still';
     if(this.beat==='gather')return 'gather';
     if(this.beat==='snatch')return 'loss';
     if(this.beat==='after')return this.t<12?'loss':'after';
@@ -83,9 +86,9 @@ export class DrownedChapter implements Chapter {
   private stirred = false;
   /** The screen's shape, from the last frame: an upright phone composes the stranding differently. */
   private aspect = 16 / 9;
-  /** How far the dark has come on since the boat was left on the slates, 0 to 1. */
+  /** How far the dark has come on since it rose, 0 to 1. */
   private come = 0;
-  private lurched = false;
+  private touched = false;
   private stormTime = 0;
   private hornPassed = false;
   private shook = false;
@@ -103,7 +106,7 @@ export class DrownedChapter implements Chapter {
   private readonly hullFrame = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
   private readonly subjects = { primary: new THREE.Vector3(), secondary: new THREE.Vector3(),
     points: this.hullFrame, margin: 0.8, extra: 16 };
-  /** Beside the stranded boat the child and the hull are what must stay in frame; the sail and the ends may crop. */
+  /** Beside the becalmed boat the child and the hull are what must stay in frame; the sail and the ends may crop. */
   private readonly strandSubjects = { primary: new THREE.Vector3(), secondary: new THREE.Vector3(), margin: 0.8, extra: 8 };
   private readonly churchSubjects = { primary: new THREE.Vector3(), secondary: new THREE.Vector3(),
     tertiary: new THREE.Vector3(), points: this.hullFrame, margin: tuning.drownedCamera.spireFrameMargin, extra: 32 };
@@ -123,21 +126,20 @@ export class DrownedChapter implements Chapter {
     boat.steerFor = DROWNED_CHANNEL[0];
     boat.canGround = false;
     boat.grounded = false;
-    boat.strand = null;
+    boat.coastTo = null;
     plane.homeRadius = 1e9;
     if (cast.village) {
-      cast.village.rise = 0;
       cast.village.dark.rise = 0;
       cast.village.dark.reach = 0;
     }
   }
 
   /**
-   * The drift is the player's. The sea going is played out on its own, so the glass stays still while it goes; so
-   * is the moment the wind takes the plane.
+   * The drift is the player's. The air dying is played out on its own, so the glass stays still while the boat comes
+   * to rest; so is the moment the wind takes the plane.
    */
   get scripted(): boolean {
-    return this.beat === 'still' || this.beat === 'drawing' || this.beat === 'snatch';
+    return this.beat === 'still' || this.beat === 'snatch';
   }
 
   get done(): boolean {
@@ -201,10 +203,7 @@ export class DrownedChapter implements Chapter {
         else if (Math.hypot(boat.position.x - WOOD_LANDING.x, boat.position.z - WOOD_LANDING.y) < tuning.storm.startsFromShore) this.to('gather');
         break;
       case 'still':
-        if (this.t > tuning.drowned.stillFor) this.drawBack();
-        break;
-      case 'drawing':
-        if (this.t > tuning.drowned.riseFor) this.to('stranded');
+        if (this.t > tuning.drowned.stillFor) this.to('becalmed');
         break;
       case 'gather':
         if (this.t > tuning.storm.gatherFor) this.snatch();
@@ -220,7 +219,7 @@ export class DrownedChapter implements Chapter {
     }
 
     this.weather(dt, through);
-    this.seaGoes();
+    this.darkComes();
     // The lost-plane scene owns its score; the forest takes over only after that scene has ended.
     if (this.beat === 'after' && this.leg === PASSAGE.length - 1 &&
       Math.hypot(boat.position.x - WOOD_LANDING.x, boat.position.z - WOOD_LANDING.y) <
@@ -262,7 +261,7 @@ export class DrownedChapter implements Chapter {
      * The air goes out of the village before the storm comes into it. The world's own wind dies with it, so the
      * water goes to glass and the only thing left moving anywhere is whatever the player does.
      */
-    const still = this.beat === 'still' || this.beat === 'drawing' || this.beat === 'stranded';
+    const still = this.beat === 'still' || this.beat === 'becalmed';
     const boat = this.cast.boat;
     boat.becalmed += ((still ? 1 : 0) - boat.becalmed) * (1 - Math.exp(-dt * (still ? 0.7 : 1.1)));
     this.breeze += ((still ? 0 : 1) - this.breeze) * (1 - Math.exp(-dt * (still ? 0.6 : 0.5)));
@@ -275,72 +274,57 @@ export class DrownedChapter implements Chapter {
   }
 
   /**
-   * The air dies among the roofs. The breeze goes out of the sail, the water goes to glass, and the hull coasts on
-   * over a ridge lying just under it, slowing, to come to rest there.
+   * The air dies among the roofs. The breeze goes out of the sail, the water goes to glass, and the hull coasts on,
+   * slowing, until its stem comes to rest against the slates of a roof lying low in the water.
    */
   private still(): void {
     const { boat } = this.cast;
     this.stillBearing = this.villageBearing;
     this.to('still');
     drownedEntry.behindGone = true;
-    boat.strand = {
-      x: STRAND.x, z: STRAND.y, yaw: STRAND_YAW, floor: ridgeTop(STRAND_HOUSE),
-      list: tuning.drowned.strandList, pitch: tuning.drowned.strandPitch,
-    };
-  }
-
-  /** Then the sea draws back: the whole village comes up out of the water, and the dark rises where they came from. */
-  private drawBack(): void {
-    this.to('drawing');
+    boat.coastTo = { x: STRAND.x, z: STRAND.y, yaw: STRAND_YAW };
     cue('becalmed');
   }
 
-  /** The village's rise, the slates under the keel, and the dark's rise and coming on, all from the beat's clock. */
-  private seaGoes(): void {
+  /** Once the boat lies still the dark rises where they came from, comes on over the water and stops behind them. */
+  private darkComes(): void {
     const { boat, cygnet } = this.cast;
     const village = this.cast.village;
     if (!village) return;
-    const k = tuning.drowned;
-    const drawing = this.beat === 'drawing', stranded = this.beat === 'stranded';
-    if (drawing || stranded) {
-      const risen = stranded ? 1 : THREE.MathUtils.smootherstep(this.t, 0, k.riseFor);
-      village.rise = k.rise * risen;
-      const raised = stranded ? k.riseFor + this.t : this.t;
-      village.dark.rise = THREE.MathUtils.smoothstep(raised, 0, k.dark.riseFor);
-      if (stranded) this.come = THREE.MathUtils.smootherstep(this.t, 0, k.dark.comeFor);
-      village.dark.reach = (DARK_AT_STRAND - k.dark.holdBehind) * this.come;
+    const k = tuning.drowned.dark;
+    if (this.beat === 'becalmed') {
+      village.dark.rise = THREE.MathUtils.smoothstep(this.t, 0, k.riseFor);
+      this.come = THREE.MathUtils.smootherstep(this.t, k.comeAfter, k.comeAfter + k.comeFor);
+      village.dark.reach = (DARK_AT_STRAND - k.holdBehind) * this.come;
     }
-    if (boat.strand) {
-      boat.strand.floor = ridgeTop(STRAND_HOUSE) + village.rise;
-      if (!this.lurched && boat.aground > 0.35) {
-        this.lurched = true;
-        cygnet.mind.startle(k.lurchStartle);
-      }
+    if (!this.touched && boat.coastTo && Math.hypot(boat.position.x - STRAND.x, boat.position.z - STRAND.y) < 0.05) {
+      this.touched = true;
+      cygnet.mind.startle(tuning.drowned.touchStartle);
     }
   }
 
   /**
-   * Up at the sail as it goes slack, and over the side at the water going to glass; down at the slates as they come
-   * up under her, round at the roofs coming up out of the sea, and back the way they came as the horizon goes black.
-   * Then at the dark while it comes on, and once it has stopped, from it to the church and back.
+   * Up at the sail as it goes slack, over the side at the water going to glass, and ahead at the slates as the stem
+   * comes to rest on them; up the roof to its ridge, then back the way they came as the horizon goes black. Then at the
+   * dark while it comes on, and once it has stopped, from it to the church and back. Over the side is the side away
+   * from the lens.
    */
   private strandGaze(): THREE.Vector3 {
     const { boat } = this.cast;
     const fx = Math.sin(boat.yaw), fz = Math.cos(boat.yaw);
-    const low = Math.sign(tuning.drowned.strandList) || 1;
-    const overSide = () => this.look.set(boat.position.x - fz * low * 2.4 + fx * 0.6, 0, boat.position.z + fx * low * 2.4 + fz * 0.6);
     const dark = () => {
       const front = this.cast.village?.dark.frontAt(this.front, tuning.drowned.darkGlance) ?? this.front.set(boat.position.x, boat.position.z + 60);
       return this.look.set(front.x, 3, front.y);
     };
-    if (this.beat === 'still') return this.t < 2.6 ? boat.sailPoint(this.look) : overSide();
-    if (this.beat === 'drawing') {
-      if (this.t < 3.2) return overSide();
-      if (this.t < 5.6) return this.look.set(boat.position.x + fx * 14 - fz * 8, 2.5, boat.position.z + fz * 14 + fx * 8);
-      return dark();
+    if (this.beat === 'still') {
+      if (this.t < 2.6) return boat.sailPoint(this.look);
+      if (this.t < 4.4) return this.look.set(boat.position.x - fz * 2.4 + fx * 0.8, 0, boat.position.z + fx * 2.4 + fz * 0.8);
+      return this.look.set(STRAND_STEP.x, STRAND_STEP.y, STRAND_STEP.z);
     }
-    const held = tuning.drowned.dark.comeFor * 0.8;
-    /** Upright the lens stands toward the church, so she keeps her eyes on the dark there rather than turn to it. */
+    const k = tuning.drowned.dark;
+    if (this.t < k.riseFor * 0.35) return this.look.set(STRAND_TOP.x, STRAND_TOP.y, STRAND_TOP.z);
+    const held = k.comeAfter + k.comeFor * 0.8;
+    /** Upright the lens looks back at the dark from ahead of her, so she keeps her eyes on it rather than turn. */
     if (this.t < held || this.aspect < 1) return dark();
     return Math.floor((this.t - held) / tuning.drowned.glanceEvery) % 2 === 0 ? this.look.copy(REFUGE) : dark();
   }
@@ -348,7 +332,7 @@ export class DrownedChapter implements Chapter {
   /** What the child is looking at: the spire while it is near, otherwise the houses going by. */
   private watch(): void {
     const { child: c, boat, plane: p } = this.cast;
-    if (this.beat === 'still' || this.beat === 'drawing' || this.beat === 'stranded') {
+    if (this.beat === 'still' || this.beat === 'becalmed') {
       c.lookAt = this.strandGaze();
       return;
     }
@@ -417,6 +401,7 @@ export class DrownedChapter implements Chapter {
   private frame(): void {
     const { boat, plane: p } = this.cast;
     const s = this.shot;
+    s.obstacles = this.cast.village?.cameraObstacles;
     s.eye = undefined;
     s.attention = undefined;
     s.composition = undefined;
@@ -444,7 +429,7 @@ export class DrownedChapter implements Chapter {
       this.focus.copy(boat.position);
       return;
     }
-    if (this.beat === 'still' || this.beat === 'drawing' || this.beat === 'stranded') {
+    if (this.beat === 'still' || this.beat === 'becalmed') {
       this.strandFrame();
       this.focus.copy(boat.position);
       return;
@@ -495,27 +480,27 @@ export class DrownedChapter implements Chapter {
   }
 
   /**
-   * Low beside the hull on its listing side, never above the roofs. As the air dies the lens comes round from astern
-   * to the boat's beam, and while the sea goes it looks past the boat to where they came from, so the village coming
-   * up out of the water and the dark rising on the horizon are one picture. Once the dark has come on and stopped it
-   * turns with her toward the church, which comes into the other side of the frame. Upright, it stands ahead of the
-   * boat and looks back the way they came, so the boat, the risen roofs and the dark stack up the frame.
+   * Low beside the hull, never above the roofs. As the air dies the lens comes round from astern to the boat's side
+   * away from the roof it comes to rest against, so the stem on the slates, the roof's gable and the open water behind
+   * where the dark will rise are one picture. Once the dark has come on and stopped it turns with her toward the
+   * church, which comes into the other side of the frame. Upright, it stands ahead of the boat and looks back the way
+   * they came, so the boat, the roofs and the dark stack up the frame. The eye is placed by hand here, clear of every
+   * roof, so the roofs are not asked to push it about.
    */
   private strandFrame(): void {
     const k = tuning.drownedCamera, d = tuning.drowned, s = this.shot, boat = this.cast.boat;
     const wide = THREE.MathUtils.smoothstep(this.aspect, 0.7, 1.3);
-    const since = this.beat === 'still' ? this.t : d.stillFor + (this.beat === 'drawing' ? this.t : d.riseFor + this.t);
+    const since = this.beat === 'still' ? this.t : d.stillFor + this.t;
     const round = THREE.MathUtils.smootherstep(since, 0, d.turnFor);
-    const turnFrom = d.dark.comeFor * 0.8;
-    const turned = this.beat === 'stranded' ? THREE.MathUtils.smootherstep(this.t, turnFrom, turnFrom + d.lookFor) * wide : 0;
-    const settled = THREE.MathUtils.smootherstep(since, d.stillFor + d.riseFor, d.stillFor + d.riseFor + 4);
+    const turnFrom = d.dark.comeAfter + d.dark.comeFor * 0.8;
+    const turned = this.beat === 'becalmed' ? THREE.MathUtils.smootherstep(this.t, turnFrom, turnFrom + d.lookFor) * wide : 0;
+    const settled = THREE.MathUtils.smootherstep(since, d.stillFor, d.stillFor + 6);
     const dark = THREE.MathUtils.lerp(k.strandUpright, k.strandDark, wide);
     const from = this.stillBearing + Math.PI;
     let look = from + Math.atan2(Math.sin(dark - from), Math.cos(dark - from)) * round;
     look += Math.atan2(Math.sin(k.strandChurch - k.strandDark), Math.cos(k.strandChurch - k.strandDark)) * turned;
     const b = boat.position;
     const back = THREE.MathUtils.lerp(k.uprightBack, k.strandBack, wide);
-    /** Upright, the eye stands off on the side the hull lists to, so the roof runs up the frame on a slant. */
     const side = k.uprightSide * (1 - wide) * round;
     const ex = b.x - Math.sin(look) * back - Math.cos(look) * side, ez = b.z - Math.cos(look) * back + Math.sin(look) * side;
     const reach = Math.hypot(b.x - ex, b.z - ez);
@@ -529,6 +514,7 @@ export class DrownedChapter implements Chapter {
     s.distance = dist;
     s.height = THREE.MathUtils.lerp(k.strandLow, THREE.MathUtils.lerp(k.uprightHigh, k.strandHigh, wide), settled) - s.target.y;
     s.zoom = THREE.MathUtils.lerp(1, k.strandZoom, settled * wide);
+    s.obstacles = undefined;
     this.strandSubjects.primary.copy(this.subjects.primary);
     this.strandSubjects.secondary.copy(b);
     s.subjects = this.strandSubjects;

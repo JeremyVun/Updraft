@@ -942,10 +942,8 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   if (finalStep) followWindow(...windowAim());
   cottage.update(dt, rig.camera);
   village.update(dt, time, boat.position, storm, rig.camera.position);
-  if (village.drainingFrom) {
-    village.drainingFrom = false;
-    if (sound.running) worldFoley.knock('sea-drain', boat.position, 1);
-  }
+  water.darkFront.copy(village.dark.water.front);
+  water.darkShape.copy(village.dark.water.shape);
   piano.update(dt, time, rig.camera, wind, sound.output, input, life);
   wood.update(dt, time, rig.camera, storm, story.name === 'wood' ? story.shot.subjects : undefined);
   sleeping.update(dt, time, rig.camera);
@@ -1072,6 +1070,7 @@ const beginMirror = (mirrorCamera: THREE.PerspectiveCamera): void => terrain.beg
 const endMirror = (): void => terrain.endMirror();
 /** The sea's reflection belongs to the same room as the main view. */
 const focusAt = new THREE.Vector3();
+const darkView = new THREE.Vector3();
 /** How far along the view the child is, and the cygnet while it is seen: the depth blur keeps them sharp. */
 function focusDistance(at: THREE.Vector3, rise: number): number {
   return -focusAt.copy(at).setY(at.y + rise).applyMatrix4(rig.camera.matrixWorldInverse).z;
@@ -1084,6 +1083,9 @@ function drawView(): void {
   let far = Math.max(her, bird);
   if (flock.active) far = Math.max(far, focusDistance(flock.head, 0));
   if (story.name === 'home') far = Math.max(far, focusDistance(cottage.doorstep, 2));
+  if (story.name === 'drowned' && village.dark.rise > 0) {
+    far = Math.max(far, focusDistance(village.dark.seenAt(rig.camera.position, rig.camera.getWorldDirection(darkView), focusAt), 0) + 30);
+  }
   // The door's opening is a flat picture of the shore beyond, at the door's depth, not the shore's.
   post.holdBlur = story.name === 'lines' && doorway.travelling;
   // Behind the lens she is not the subject, and nothing is blurred.
