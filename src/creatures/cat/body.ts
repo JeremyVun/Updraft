@@ -317,8 +317,8 @@ function parts(coat: boolean): THREE.BufferGeometry[] {
       /** The white bib runs from the chin down the throat and chest and on, fainter, under the belly. */
       blend: (t, a) => {
         const bib = ramp(t, 0.5, 0.66);
-        const under = ramp(-Math.sin(a), 0.1 + 0.62 * bib, 0.55 + 0.37 * bib);
-        return under * (bib + (1 - bib) * 0.65 * ramp(t, 0.15, 0.4));
+        const under = ramp(-Math.sin(a), 0.25 + 0.6 * bib, 0.7 + 0.27 * bib);
+        return under * (bib + (1 - bib) * 0.8 * ramp(t, 0.15, 0.4));
       },
     }),
   );
@@ -327,7 +327,7 @@ function parts(coat: boolean): THREE.BufferGeometry[] {
       const st = leg(front);
       const socks = front ? REST[FPAW_L][1] + 0.028 : REST[HPAW_L][1] + 0.034;
       /** The bib runs on down the fronts of the forelegs into the mittens, as it does on a bicolour tabby. */
-      const fronts = front ? (_t: number, a: number) => ramp(Math.sin(a), -0.2, 0.6) : undefined;
+      const fronts = front ? (_t: number, a: number) => ramp(Math.sin(a), 0.15, 0.7) : undefined;
       const geo = loft({ stations: side > 0 ? st : mirrorStations(st, LEFT_TO_RIGHT), mat: FUR, around: 16, smooth: 1, blend: fronts });
       out.push(paint(geo, (_x, y) => ramp(y, socks + 0.006, socks - 0.006)));
     }
@@ -395,7 +395,7 @@ function parts(coat: boolean): THREE.BufferGeometry[] {
     at: add(H, EAR_AT),
     offset: [0, 0.02, 0],
     size: [0.027, 0.03, 0.011],
-    rot: [-0.1, 0.45, -0.52],
+    rot: [-0.1, 0.65, -0.5],
     detail: 3,
     shape: (u) => {
       const k = 0.5 * (1 - u.y);

@@ -163,8 +163,8 @@ float tabby(vec3 r) {
   }
   /** Bands over the back that lean back and taper to points down the flanks, so none ring the belly. */
   float over = smoothstep(SPINE - 0.06 - 0.06 * haunch, SPINE, r.y);
-  float wave = 0.5 + 0.5 * sin((r.z + 0.35 * (SPINE - r.y)) * 165.0 + warp * 2.0);
-  float th = mix(1.02, 0.56, over);
+  float wave = 0.5 + 0.5 * sin((r.z + 0.35 * (SPINE - r.y)) * 138.0 + warp * 2.0);
+  float th = mix(1.02, 0.5, over);
   return smoothstep(th, th + 0.12, wave);
 }
 
