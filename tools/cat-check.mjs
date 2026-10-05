@@ -7,6 +7,8 @@
 //   Writes <out-dir>/<light>-<action>-<moment>-<view>.png and <out-dir>/sheet-<light>.png, a contact sheet of each.
 //   env: ONLY=sit,run (actions), VIEWS=c-near,c-far,c-close,c-side (any stage view), LIGHTS=dusk,storm, ROOM=0 skips
 //        the drowned village; SLIP=1 also prints the furthest a planted paw moved in a frame during each action.
+//        STRIP=run@0.8,leap-roof@0.6 shoots each named action as a strip of 16 frames a thirtieth of a second apart
+//        from that many seconds in, side on (STRIP_VIEW, default c-side), to judge how it moves; nothing else is shot.
 //   Default out-dir: /tmp/updraft-cat-check.
 import { chromium } from 'playwright-core';
 import fs from 'node:fs';
@@ -65,15 +67,21 @@ async function open(query) {
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
   await page.goto(`${base}?shot=1&grass=0&${query}`, { waitUntil: 'load' });
   await page.waitForFunction(() => window.__ready === true, null, { timeout: 90000 });
+  /** The world is held still between shots (`params.hold`), so every still is exactly as far into its action as it says. */
   const advance = async (seconds) => {
-    const from = await page.evaluate(() => window.__stats.time);
-    await page.waitForFunction((t) => window.__stats.time >= t, from + seconds, { timeout: 120000, polling: 16 });
+    const from = await page.evaluate(() => window.__stats.frame);
+    const to = from + Math.max(1, Math.round(seconds * 60));
+    await page.evaluate((h) => {
+      window.__game.params.hold = h;
+    }, to);
+    await page.waitForFunction((h) => window.__stats.frame >= h, to, { timeout: 120000, polling: 16 });
   };
   return { context, page, advance };
 }
 
+const strips = process.env.STRIP ? process.env.STRIP.split(',').map((s) => s.split('@')) : [];
 try {
-  for (const light of lights) {
+  for (const light of strips.length ? [] : lights) {
     const { context, page, advance } = await open(`chapter=stage&${LIGHTS[light]}`);
     await advance(1.5);
     shots[light] = [];
@@ -99,7 +107,37 @@ try {
     await context.close();
   }
 
-  if (process.env.ROOM !== '0') {
+  if (strips.length) {
+    const { context, page, advance } = await open(`chapter=stage&${LIGHTS[lights[0]]}`);
+    await advance(1.5);
+    for (const [action, from] of strips) {
+      shots[`strip-${action}`] = [];
+      await page.evaluate(([a, v]) => {
+        const stage = window.__game.story.current;
+        stage.play(`cat:${a}`);
+        stage.look(v);
+      }, [action, process.env.STRIP_VIEW ?? 'c-side']);
+      await advance(Number(from));
+      for (let i = 0; i < 16; i++) {
+        const file = path.join(out, `strip-${action}-${String(i).padStart(2, '0')}.png`);
+        /** Cut close round the cat, wherever it is in the frame. */
+        const [cx, cy] = await page.evaluate(() => {
+          const { cat, rig } = window.__game;
+          const p = cat.position.clone();
+          p.y += 0.15;
+          p.project(rig.camera);
+          return [(p.x * 0.5 + 0.5) * innerWidth, (0.5 - p.y * 0.5) * innerHeight];
+        });
+        const clip = { x: Math.min(1600 - 720, Math.max(0, cx - 360)), y: Math.min(900 - 450, Math.max(0, cy - 225)), width: 720, height: 450 };
+        await page.screenshot({ path: file, clip });
+        shots[`strip-${action}`].push({ file, label: `${action} +${(i * Number(process.env.STRIP_STEP ?? 1 / 30)).toFixed(3)}s` });
+        await advance(Number(process.env.STRIP_STEP ?? 1 / 30));
+      }
+    }
+    await context.close();
+  }
+
+  if (process.env.ROOM !== '0' && !strips.length) {
     for (const light of lights) {
       const { context, page, advance } = await open(`chapter=drowned&${LIGHTS[light]}`);
       await advance(4);

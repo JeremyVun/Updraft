@@ -119,14 +119,17 @@ void main() {
     fuzz = 0.0;
     thin = 0.8;
   } else if (m == ${EYE}) {
-    /** Measured on the eye's own face: a big round pupil, an amber ring, and a darker rim round that. */
+    /** Measured on the eye's own face: a big round pupil, an amber ring, and a thin dark rim round that. */
     vec3 c = vec3(sign(vRest.x) * ${EYE_AT[0].toFixed(4)}, ${EYE_AT[1].toFixed(4)}, ${EYE_AT[2].toFixed(4)});
     vec3 q = vRest - c;
     q = vec3(cos(${EYE_TURN.toFixed(3)}) * q.x * sign(vRest.x) - sin(${EYE_TURN.toFixed(3)}) * q.z, q.y, 0.0);
     vec2 e = q.xy / ${vec3(EYE_SIZE)}.xy;
     float r = length(e);
     float pupil = 1.0 - smoothstep(uPupil - 0.06, uPupil + 0.02, length(vec2(e.x / mix(0.45, 1.0, uPupil), e.y)));
-    alb = mix(mix(IRIS, IRIS_RIM, smoothstep(0.62, 0.95, r)), vec3(0.008, 0.006, 0.006), pupil);
+    vec3 fur = alb;
+    alb = mix(mix(IRIS, IRIS_RIM, smoothstep(0.78, 0.97, r)), vec3(0.008, 0.006, 0.006), pupil);
+    /** A soft upper lid over the top of the eye, which is the difference between a startled face and a sweet one. */
+    alb = mix(alb, fur, smoothstep(0.62, 0.7, e.y + 0.14 * e.x * e.x));
     fuzz = 0.0;
     thin = 0.0;
     ao = 1.0;

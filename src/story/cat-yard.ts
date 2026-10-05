@@ -31,14 +31,18 @@ void main() {
   gl_FragColor = vec4(max(applyFog(col, vWorld), 0.0), 1.0);
 }`;
 
-const STONE: [number, number, number] = [0.24, 0.21, 0.19];
-const BRICK: [number, number, number] = [0.33, 0.14, 0.09];
-const SLATE: [number, number, number] = [0.11, 0.11, 0.13];
-const WOOD: [number, number, number] = [0.3, 0.19, 0.11];
-const IVY: [number, number, number] = [0.07, 0.13, 0.05];
-const IRON: [number, number, number] = [0.12, 0.11, 0.1];
+type Tint = [number, number, number];
+const STONE: Tint = [0.24, 0.21, 0.19];
+const BRICK: Tint = [0.33, 0.14, 0.09];
+const SLATE: Tint = [0.11, 0.11, 0.13];
+const WOOD: Tint = [0.3, 0.19, 0.11];
+const PALE_WOOD: Tint = [0.38, 0.27, 0.16];
+const IVY: Tint = [0.07, 0.13, 0.05];
+const IRON: Tint = [0.12, 0.11, 0.1];
+/** Everything built stands on the sea floor, well under the surface. */
+const BED = -6;
 
-function tinted(geo: THREE.BufferGeometry, tint: [number, number, number]): THREE.BufferGeometry {
+function tinted(geo: THREE.BufferGeometry, tint: Tint): THREE.BufferGeometry {
   const g = geo.index ? geo.toNonIndexed() : geo;
   g.deleteAttribute('uv');
   const n = g.attributes.position.count;
@@ -47,88 +51,97 @@ function tinted(geo: THREE.BufferGeometry, tint: [number, number, number]): THRE
   g.setAttribute('aTint', new THREE.BufferAttribute(c, 3));
   return g;
 }
-const box = (w: number, h: number, d: number, x: number, y: number, z: number, tint: [number, number, number]) =>
-  tinted(new THREE.BoxGeometry(w, h, d).translate(x, y, z), tint);
+const box = (w: number, h: number, d: number, x: number, y: number, z: number, tint: Tint) => tinted(new THREE.BoxGeometry(w, h, d).translate(x, y, z), tint);
+/** A block from the sea bed up to `top`. */
+const pier = (w: number, d: number, x: number, z: number, top: number, tint = STONE) => box(w, top - BED, d, x, (top + BED) / 2, z, tint);
 
-/** A gable roof running along z: ridge height, half-width across x, eave height. */
-function gable(x: number, z0: number, z1: number, ridge: number, half: number, eave: number): THREE.BufferGeometry {
-  const shape = new THREE.Shape([new THREE.Vector2(-half, 0), new THREE.Vector2(half, 0), new THREE.Vector2(half, eave), new THREE.Vector2(0, ridge), new THREE.Vector2(-half, eave)]);
-  const geo = new THREE.ExtrudeGeometry(shape, { depth: z1 - z0, bevelEnabled: false }).translate(x, 0, z0);
-  return tinted(geo, SLATE);
+/** A drowned house's roof running along z: walls up from the bed to the eaves, then the gable to the ridge. */
+function roof(x: number, z0: number, z1: number, ridge: number, half: number, eave: number): THREE.BufferGeometry[] {
+  const shape = new THREE.Shape([new THREE.Vector2(-half, eave), new THREE.Vector2(half, eave), new THREE.Vector2(0, ridge)]);
+  return [
+    tinted(new THREE.ExtrudeGeometry(shape, { depth: z1 - z0, bevelEnabled: false }).translate(x, 0, z0), SLATE),
+    pier(half * 1.9, z1 - z0, x, (z0 + z1) / 2, eave, STONE),
+  ];
 }
 
-/** A tower of stone with an opening in its face high up, deep enough for a cat to sit in. */
+/** The places in the yard, in its own space: x to the left of the way it faces, z ahead, y up from the sea. */
+const FOOTPRINT = { x0: -3, x1: 3, z0: -1.5, z1: 19 };
+const BLOCK = { x: 0, z: -0.3, top: 0.5, size: 1.4 };
+const POT = new THREE.Vector3(1.6, 1.0, 1.0);
+const LITTLE_ROOF = { x: 1.6, z0: 0.4, z1: 1.6, ridge: 0.55, half: 0.85, eave: 0.12 };
+const RIDGE = { x: -1.2, z0: 1.0, z1: 9.0, top: 1.5, half: 0.9, eave: 0.95 };
+const RAIL = { x: -1.2, z0: 9.6, z1: 12.0, top: 0.95 };
+const WALL_A = { z0: 12.4, z1: 13.4, top: 1.0 };
+const WALL_B = { z0: 14.6, z1: 16.4, top: 1.1 };
+/** The tower's face is at `z`; the opening in it is `half` either side of the ridge line, from `sill` to `head`, `deep` into it. */
+const TOWER = { z: 16.8, top: 4.2, sill: 3.25, head: 3.9, half: 0.3, deep: 0.45, width: 1.6 };
+const TUB_AT_POT = new THREE.Vector2(0.35, 1.0);
+const TUB_AT_BOAT = new THREE.Vector2(1.27, 3.35);
+const BOAT_AT = new THREE.Vector2(0.4, 3.4);
+/** Where the cat sits in each, in its own space. */
+const IN_TUB = new THREE.Vector3(0, 0.04, 0);
+const ON_THWART = new THREE.Vector3(0.6, 0.42, 0);
+
 function tower(): THREE.BufferGeometry[] {
   const { z, top, sill, head, half, deep, width } = TOWER;
   const x = RIDGE.x;
   const side = (width / 2 - half) / 2;
   return [
-    box(width, sill, width, x, sill / 2, z + width / 2, STONE),
+    box(width, sill - BED, width, x, (sill + BED) / 2, z + width / 2, STONE),
     box(width, top - head, width, x, (top + head) / 2, z + width / 2, STONE),
     box(width / 2 - half, head - sill, width, x + half + side, (sill + head) / 2, z + width / 2, STONE),
     box(width / 2 - half, head - sill, width, x - half - side, (sill + head) / 2, z + width / 2, STONE),
     box(half * 2, head - sill, width - deep, x, (sill + head) / 2, z + deep + (width - deep) / 2, [0.05, 0.045, 0.04]),
+    ...Array.from({ length: 9 }, (_, i) => box(0.5 - (i % 3) * 0.08, 0.28, 0.03, x + ((i * 0.37) % 0.3) - 0.15, 0.9 + i * 0.26, z - 0.015, IVY)),
   ];
 }
 
-/** The places in the yard, in its own space: x to the left of the way it faces, z ahead. */
-const PLAZA = { x0: -3, x1: 3, z0: -1.5, z1: 15 };
-/** Where the tub and the boat float. */
-const POND = { x0: -0.6, x1: 2.6, z0: 1.3, z1: 4.6 };
-const POT = new THREE.Vector3(1.6, 1.22, 1.0);
-const RIDGE = { x: -1.6, z0: 1.0, z1: 5.0, top: 1.5, half: 0.9, eave: 0.95 };
-const RAIL = { x: -1.6, z0: 5.6, z1: 8.0, top: 0.95 };
-const WALL_A = { z0: 8.3, z1: 9.4, top: 1.0 };
-const WALL_B = { z0: 10.6, z1: 12.4, top: 1.1 };
-/** The tower's face is at `z`; the opening in it is `half` either side of the ridge line, from `sill` to `head`, `deep` into it. */
-const TOWER = { z: 12.8, top: 4.2, sill: 3.25, head: 3.9, half: 0.3, deep: 0.45, width: 1.6 };
-const TUB_AT_POT = new THREE.Vector2(POT.x - 0.05, POT.z + 0.62);
-const TUB_AT_BOAT = new THREE.Vector2(1.17, 3.55);
-
 /**
- * QA only: stand-ins for the drowned village's places beside the QA stage (a chimney pot, a wash-tub and a boat that
- * drift and rock, a roof ridge, a railing, two walls with a gap between them, and a tower with ivy and an opening),
- * so every one of the cat's actions can be played by name from the capture tools.
+ * QA only: stand-ins for the drowned village's places out on the sea beyond the QA stage's beach (a chimney pot on a
+ * drowned roof, a wash-tub and a boat that drift and rock, a long roof ridge, a railing, two walls with a gap between
+ * them, a tower with ivy and an opening, and a block of wall to sit on), so every one of the cat's actions can be
+ * played by name from the capture tools.
  */
 export class CatYard {
   readonly group = new THREE.Group();
   readonly tub = new THREE.Group();
   readonly boat = new THREE.Group();
   readonly floor: Floor;
-  private readonly origin = new THREE.Vector3();
+  /** Where the child's head would be, sitting in the boat: what the cat looks at. */
+  readonly watcher = new THREE.Vector3();
   private readonly inverse = new THREE.Matrix4();
   private clock = 0;
   private drifting = false;
+  private moored = 0;
   private readonly local = new THREE.Vector3();
 
-  constructor(at: THREE.Vector3, yaw: number) {
-    /** It stands on a flat plaza as high as the highest ground under it, so a slope buries nothing. */
-    let base = -Infinity;
-    for (let x = PLAZA.x0; x <= PLAZA.x1; x += 0.5) {
-      for (let z = PLAZA.z0; z <= PLAZA.z1; z += 0.5) {
-        base = Math.max(base, heightAt(at.x + Math.cos(yaw) * x + Math.sin(yaw) * z, at.z - Math.sin(yaw) * x + Math.cos(yaw) * z));
+  /** Out from `from` along +z until the whole yard is over open water. */
+  constructor(from: THREE.Vector3) {
+    let z = from.z;
+    const wet = (oz: number) => {
+      for (let x = FOOTPRINT.x0; x <= FOOTPRINT.x1; x += 1) {
+        for (let k = FOOTPRINT.z0; k <= FOOTPRINT.z1; k += 1) if (heightAt(from.x + x, oz + k) > -1) return false;
       }
-    }
-    this.origin.set(at.x, base + 0.02, at.z);
-    this.group.position.copy(this.origin);
-    this.group.rotation.y = yaw;
+      return true;
+    };
+    while (!wet(z) && z < from.z + 300) z += 2;
+    this.group.position.set(from.x, 0, z);
     this.group.updateMatrixWorld(true);
     this.inverse.copy(this.group.matrixWorld).invert();
     const material = new THREE.ShaderMaterial({ uniforms: { ...atmo.uniforms }, vertexShader: PROP_VERT, fragmentShader: PROP_FRAG, side: THREE.DoubleSide });
     const parts = [
-      box(PLAZA.x1 - PLAZA.x0, 8, PLAZA.z1 - PLAZA.z0, (PLAZA.x0 + PLAZA.x1) / 2, -4, (PLAZA.z0 + PLAZA.z1) / 2, [0.2, 0.19, 0.17]),
-      box(POND.x1 - POND.x0, 0.02, POND.z1 - POND.z0, (POND.x0 + POND.x1) / 2, 0.005, (POND.z0 + POND.z1) / 2, [0.03, 0.06, 0.07]),
-      box(0.5, 1.0, 0.36, POT.x, 0.5, POT.z, BRICK),
-      tinted(new THREE.CylinderGeometry(0.12, 0.13, 0.22, 14).translate(POT.x, 1.11, POT.z), [0.4, 0.2, 0.13]),
-      gable(RIDGE.x, RIDGE.z0, RIDGE.z1, RIDGE.top, RIDGE.half, RIDGE.eave),
-      box(0.3, 0.97, 0.3, RAIL.x, 0.485, RAIL.z0 - 0.1, STONE),
-      box(0.3, 0.97, 0.3, RAIL.x, 0.485, RAIL.z1 + 0.1, STONE),
+      pier(BLOCK.size, BLOCK.size, BLOCK.x, BLOCK.z, BLOCK.top),
+      ...roof(LITTLE_ROOF.x, LITTLE_ROOF.z0, LITTLE_ROOF.z1, LITTLE_ROOF.ridge, LITTLE_ROOF.half, LITTLE_ROOF.eave),
+      pier(0.4, 0.32, POT.x, POT.z, POT.y - 0.2, BRICK),
+      tinted(new THREE.CylinderGeometry(0.12, 0.13, 0.2, 14).translate(POT.x, POT.y - 0.1, POT.z), [0.4, 0.2, 0.13]),
+      ...roof(RIDGE.x, RIDGE.z0, RIDGE.z1, RIDGE.top, RIDGE.half, RIDGE.eave),
+      pier(0.3, 0.3, RAIL.x, RAIL.z0 - 0.1, 0.97),
+      pier(0.3, 0.3, RAIL.x, RAIL.z1 + 0.1, 0.97),
       box(0.05, 0.05, RAIL.z1 - RAIL.z0, RAIL.x, RAIL.top - 0.025, (RAIL.z0 + RAIL.z1) / 2, IRON),
-      ...[0.2, 0.4, 0.6, 0.8].map((k) => box(0.02, RAIL.top, 0.02, RAIL.x, RAIL.top / 2, RAIL.z0 + (RAIL.z1 - RAIL.z0) * k, IRON)),
-      box(0.35, WALL_A.top, WALL_A.z1 - WALL_A.z0, RIDGE.x, WALL_A.top / 2, (WALL_A.z0 + WALL_A.z1) / 2, STONE),
-      box(0.35, WALL_B.top, WALL_B.z1 - WALL_B.z0, RIDGE.x, WALL_B.top / 2, (WALL_B.z0 + WALL_B.z1) / 2, STONE),
+      ...[0.2, 0.4, 0.6, 0.8].map((k) => box(0.02, RAIL.top + 1, 0.02, RAIL.x, (RAIL.top - 1) / 2, RAIL.z0 + (RAIL.z1 - RAIL.z0) * k, IRON)),
+      pier(0.35, WALL_A.z1 - WALL_A.z0, RIDGE.x, (WALL_A.z0 + WALL_A.z1) / 2, WALL_A.top),
+      pier(0.35, WALL_B.z1 - WALL_B.z0, RIDGE.x, (WALL_B.z0 + WALL_B.z1) / 2, WALL_B.top),
       ...tower(),
-      ...Array.from({ length: 9 }, (_, i) => box(0.5 - (i % 3) * 0.08, 0.28, 0.03, RIDGE.x + ((i * 0.37) % 0.3) - 0.15, 1.2 + i * 0.24, TOWER.z - 0.015, IVY)),
     ];
     this.group.add(new THREE.Mesh(mergeGeometries(parts), material));
 
@@ -143,8 +156,8 @@ export class CatYard {
       box(2.6, 0.45, 0.05, 0, 0.25, -0.45, WOOD),
       box(0.05, 0.45, 0.9, -1.3, 0.25, 0, WOOD),
       box(0.05, 0.45, 0.9, 1.3, 0.25, 0, WOOD),
-      box(0.22, 0.04, 0.86, 0.6, 0.4, 0, [0.38, 0.27, 0.16]),
-      box(0.4, 0.04, 0.86, 1.08, 0.46, 0, [0.38, 0.27, 0.16]),
+      box(0.22, 0.04, 0.86, ON_THWART.x, ON_THWART.y - 0.02, 0, PALE_WOOD),
+      box(0.3, 0.04, 0.86, -0.7, 0.4, 0, PALE_WOOD),
     ];
     this.boat.add(new THREE.Mesh(mergeGeometries(boat), material));
     this.group.add(this.tub, this.boat);
@@ -168,19 +181,21 @@ export class CatYard {
 
   private floorAt(x: number, z: number): number {
     const p = this.local.set(x, 0, z).applyMatrix4(this.inverse);
-    const onPlaza = p.x >= PLAZA.x0 && p.x <= PLAZA.x1 && p.z >= PLAZA.z0 && p.z <= PLAZA.z1;
-    let top = onPlaza ? 0 : heightAt(x, z) - this.origin.y;
-    const inside = (x0: number, x1: number, z0: number, z1: number) => p.x >= x0 && p.x <= x1 && p.z >= z0 && p.z <= z1;
-    if (Math.hypot(p.x - POT.x, p.z - POT.z) < 0.13) top = Math.max(top, POT.y);
-    else if (inside(POT.x - 0.25, POT.x + 0.25, POT.z - 0.18, POT.z + 0.18)) top = Math.max(top, 1.0);
+    const inside = (cx: number, cz: number, hx: number, hz: number) => Math.abs(p.x - cx) <= hx && Math.abs(p.z - cz) <= hz;
+    let top = -0.5;
+    if (inside(BLOCK.x, BLOCK.z, BLOCK.size / 2, BLOCK.size / 2)) top = BLOCK.top;
+    if (Math.hypot(p.x - POT.x, p.z - POT.z) < 0.13) top = POT.y;
+    else if (inside(POT.x, POT.z, 0.2, 0.16)) top = POT.y - 0.2;
+    for (const r of [RIDGE, { ...LITTLE_ROOF, top: LITTLE_ROOF.ridge }]) {
+      const across = Math.abs(p.x - r.x);
+      if (across < r.half && p.z >= r.z0 && p.z <= r.z1) top = Math.max(top, r.top - (across / r.half) * (r.top - r.eave));
+    }
     const across = Math.abs(p.x - RIDGE.x);
-    if (across < RIDGE.half && p.z >= RIDGE.z0 && p.z <= RIDGE.z1) top = Math.max(top, RIDGE.top - (across / RIDGE.half) * (RIDGE.top - RIDGE.eave));
-    if (across < 0.15 && p.z > RAIL.z0 - 0.25 && p.z < RAIL.z0 + 0.05) top = Math.max(top, 0.97);
-    if (across < 0.15 && p.z > RAIL.z1 - 0.05 && p.z < RAIL.z1 + 0.25) top = Math.max(top, 0.97);
+    if (across < 0.15 && (Math.abs(p.z - (RAIL.z0 - 0.1)) < 0.15 || Math.abs(p.z - (RAIL.z1 + 0.1)) < 0.15)) top = Math.max(top, 0.97);
     if (across < 0.06 && p.z >= RAIL.z0 && p.z <= RAIL.z1) top = Math.max(top, RAIL.top);
     if (across < 0.18 && p.z >= WALL_A.z0 && p.z <= WALL_A.z1) top = Math.max(top, WALL_A.top);
     if (across < 0.18 && p.z >= WALL_B.z0 && p.z <= WALL_B.z1) top = Math.max(top, WALL_B.top);
-    return this.origin.y + top;
+    return this.group.position.y + top;
   }
 
   /** Back where everything starts: the tub by the chimney, or else already brought to the boat. */
@@ -190,7 +205,6 @@ export class CatYard {
     this.moored = moored ? 1 : 0;
     this.place();
   }
-  private moored = 0;
 
   /** The tub wanders by the chimney and the boat lies off the ridge, both bobbing and rocking as if afloat. */
   private place(): void {
@@ -198,13 +212,15 @@ export class CatYard {
     const drift = this.drifting ? THREE.MathUtils.smoothstep(t, 0, 8) : this.moored;
     const wander = 1 - drift;
     this.tub.position.set(
-      THREE.MathUtils.lerp(TUB_AT_POT.x, TUB_AT_BOAT.x, drift) + 0.12 * Math.sin(t * 0.31) * wander,
-      0.02 * Math.sin(t * 1.1),
+      THREE.MathUtils.lerp(TUB_AT_POT.x, TUB_AT_BOAT.x, drift) + 0.1 * Math.sin(t * 0.31) * wander,
+      0.03 + 0.02 * Math.sin(t * 1.1),
       THREE.MathUtils.lerp(TUB_AT_POT.y, TUB_AT_BOAT.y, drift) + 0.08 * Math.cos(t * 0.23) * wander,
     );
     this.tub.rotation.set(0.05 * Math.sin(t * 1.7 + 1), t * 0.05, 0.06 * Math.sin(t * 1.3));
-    this.boat.position.set(0.25, 0.03 * Math.sin(t * 0.9), 3.1 + 0.1 * Math.sin(t * 0.17));
+    this.boat.position.set(BOAT_AT.x, 0.03 * Math.sin(t * 0.9), BOAT_AT.y + 0.06 * Math.sin(t * 0.17));
     this.boat.rotation.set(0.02 * Math.sin(t * 0.8 + 2), -Math.PI / 2 + 0.03 * Math.sin(t * 0.2), 0.04 * Math.sin(t * 1.1));
+    this.boat.updateMatrixWorld(true);
+    this.watcher.set(-0.7, 0.95, 0).applyMatrix4(this.boat.matrixWorld);
   }
 
   /** The tub sets off toward the boat, as the player's gusts would carry it. */
@@ -218,16 +234,18 @@ export class CatYard {
     this.place();
   }
 
-  /** Every action the cat has, by name, set up from a place of its own in the yard so each can be looked at alone. */
-  play(name: string, cat: Cat, child: THREE.Vector3): boolean {
+  /** Every action the cat has, by name, each set up from a place of its own in the yard so it can be looked at alone. */
+  play(name: string, cat: Cat): boolean {
     const yaw = this.yaw;
-    const ground = this.at(0, 0, 0);
-    ground.y = this.floor(ground.x, ground.z);
-    const onRidge = (z: number, out = new THREE.Vector3()) => {
-      const p = this.at(RIDGE.x, 0, z, out);
+    const look = this.watcher;
+    const block = this.at(BLOCK.x, BLOCK.top, BLOCK.z);
+    const onRidge = (z: number, x = 0) => {
+      const p = this.at(RIDGE.x + x, 0, z);
       p.y = this.floor(p.x, p.z);
       return p;
     };
+    const toWatcher = Math.atan2(look.x - block.x, look.z - block.z);
+    const sitAt = (pose: 'sit' | 'stand' | 'crouch') => cat.place(block, toWatcher - 0.7, { pose, floor: this.floor });
     cat.visible = true;
     cat.unease = 0;
     cat.mewing = false;
@@ -236,39 +254,39 @@ export class CatYard {
       case 'sit':
       case 'stand':
       case 'crouch':
-        cat.place(ground, yaw + 0.6, { pose: name, floor: this.floor });
-        cat.look(child);
+        sitAt(name);
+        cat.look(look);
         return true;
       case 'wash':
-        cat.place(ground, yaw + 0.6, { pose: 'sit', floor: this.floor });
+        sitAt('sit');
         cat.look(null);
         cat.wash();
         return true;
       case 'afraid':
-        cat.place(ground, yaw + 0.6, { pose: 'stand', floor: this.floor });
-        cat.look(child);
+        sitAt('stand');
+        cat.look(look);
         cat.afraid(1);
         return true;
       case 'mew':
-        cat.place(ground, yaw + 0.6, { pose: 'sit', floor: this.floor });
-        cat.look(child);
+        sitAt('sit');
+        cat.look(look);
         cat.mew(1);
         return true;
       case 'chirrup':
-        cat.place(ground, yaw + 0.6, { pose: 'sit', floor: this.floor });
-        cat.look(child);
+        sitAt('sit');
+        cat.look(look);
         cat.chirrup();
         return true;
       case 'strand':
         this.reset();
-        cat.place(this.at(POT.x, POT.y, POT.z), yaw - 1.2, { pose: 'crouch' });
-        cat.strand(child);
+        cat.place(this.at(POT.x, POT.y, POT.z), yaw - 2.0, { pose: 'crouch' });
+        cat.strand(look);
         return true;
       case 'hop-tub':
         this.reset();
-        cat.place(this.at(POT.x, POT.y, POT.z), yaw - 0.3, { pose: 'crouch' });
-        cat.strand(child);
-        cat.hop(new THREE.Vector3(0, 0.04, 0), { frame: this.tub, then: 'sit', look: child }, () => {
+        cat.place(this.at(POT.x, POT.y, POT.z), yaw - 1.3, { pose: 'crouch' });
+        cat.strand(look);
+        cat.hop(IN_TUB, { frame: this.tub, then: 'sit', look }, () => {
           cat.mewing = false;
           cat.unease = 0.8;
           this.drift();
@@ -277,55 +295,52 @@ export class CatYard {
       case 'ride-tub':
         this.reset();
         this.drift();
-        cat.place(new THREE.Vector3(0, 0.04, 0), 0, { frame: this.tub, pose: 'sit' });
+        cat.place(IN_TUB, 0.4, { frame: this.tub, pose: 'sit' });
         cat.unease = 0.8;
-        cat.look(child);
+        cat.look(look);
         return true;
       case 'boat':
-        cat.place(new THREE.Vector3(0.6, 0.42, 0), Math.PI / 2, { frame: this.boat, pose: 'sit' });
-        cat.look(child);
-        cat.curious = child;
+        cat.place(ON_THWART, Math.PI / 2, { frame: this.boat, pose: 'sit' });
+        cat.look(look);
+        cat.curious = look;
         return true;
       case 'jump-boat':
         this.reset(true);
-        cat.place(new THREE.Vector3(0, 0.04, 0), 0.5, { frame: this.tub, pose: 'sit' });
+        cat.place(IN_TUB, 0.5, { frame: this.tub, pose: 'sit' });
         cat.unease = 0.8;
-        cat.leap(new THREE.Vector3(0.6, 0.42, 0), { frame: this.boat, yaw: Math.PI / 2, then: 'sit', look: child }, () => {
+        cat.leap(ON_THWART, { frame: this.boat, yaw: Math.PI / 2, then: 'sit', look }, () => {
           cat.unease = 0;
           cat.chirrup();
         });
         return true;
       case 'leap-roof':
-        cat.place(new THREE.Vector3(0.6, 0.42, 0), -Math.PI / 2 + 0.4, { frame: this.boat, pose: 'sit' });
+        cat.place(ON_THWART, Math.PI / 2, { frame: this.boat, pose: 'sit' });
         cat.leap(onRidge(2.6), { floor: this.floor, then: 'stand', look: null }, () => cat.chirrup());
         return true;
       case 'walk':
       case 'trot':
-      case 'run': {
+      case 'run':
         cat.place(onRidge(1.2), yaw, { pose: 'stand', floor: this.floor });
         cat.look(null);
-        const path = [onRidge(2.4), this.at(RIDGE.x + 0.12, 0, 3.6), onRidge(4.8)];
-        cat.run(path, this.floor, { pace: name, then: 'sit', look: child });
+        cat.run([onRidge(3), onRidge(5, 0.15), onRidge(8.7)], this.floor, { pace: name, then: 'sit', look });
         return true;
-      }
-      case 'rail': {
+      case 'rail':
         cat.place(this.at(RAIL.x, 0.97, RAIL.z0 - 0.1), yaw, { pose: 'stand', floor: this.floor });
         cat.look(null);
-        cat.run([this.at(RAIL.x, 0, RAIL.z0 + 0.1), this.at(RAIL.x, 0, RAIL.z1 - 0.05), this.at(RAIL.x, 0, RAIL.z1 + 0.1)], this.floor, { narrow: true, then: 'sit', look: child });
+        cat.run([this.at(RAIL.x, 0, RAIL.z0 + 0.1), this.at(RAIL.x, 0, RAIL.z1 - 0.05), this.at(RAIL.x, 0, RAIL.z1 + 0.1)], this.floor, { narrow: true, then: 'sit', look });
         return true;
-      }
       case 'gap':
-        cat.place(this.at(RIDGE.x, WALL_A.top, WALL_A.z1 - 0.3), yaw, { pose: 'stand', floor: this.floor });
+        cat.place(this.at(RIDGE.x, WALL_A.top, WALL_A.z1 - 0.5), yaw, { pose: 'stand', floor: this.floor });
         cat.look(null);
         cat.run([this.at(RIDGE.x, 0, WALL_A.z1 - 0.12)], this.floor, { pace: 'walk', then: 'stand' }, () => {
-          cat.leap(this.at(RIDGE.x, WALL_B.top, WALL_B.z0 + 0.2), { floor: this.floor, arc: 0.35, then: 'sit', look: child }, () => cat.chirrup());
+          cat.leap(this.at(RIDGE.x, WALL_B.top, WALL_B.z0 + 0.2), { floor: this.floor, arc: 0.35, then: 'sit', look }, () => cat.chirrup());
         });
         return true;
       case 'climb': {
         cat.place(this.at(RIDGE.x, WALL_B.top, WALL_B.z1 - 0.25), yaw, { pose: 'stand', floor: this.floor });
         cat.look(null);
         const face = (y: number, x = 0) => this.at(RIDGE.x + x, y, TOWER.z);
-        cat.climb([face(1.5), face(2.1, 0.06), face(2.7, -0.05), face(TOWER.sill - 0.2), this.at(RIDGE.x, TOWER.sill, TOWER.z + 0.2)], this.dir(0, 0, -1), { then: 'crouch', look: child });
+        cat.climb([face(1.5), face(2.1, 0.06), face(2.7, -0.05), face(TOWER.sill - 0.2), this.at(RIDGE.x, TOWER.sill, TOWER.z + 0.2)], this.dir(0, 0, -1), { then: 'crouch', look });
         return true;
       }
       default:

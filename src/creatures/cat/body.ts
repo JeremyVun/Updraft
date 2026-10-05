@@ -82,9 +82,9 @@ const H = REST[HEAD];
 export const SKULL: V3 = [0, H[1] + 0.012, H[2] + 0.024];
 export const SKULL_SIZE: V3 = [0.063, 0.055, 0.054];
 /** Left eye centre in rest space, how far it is turned out from straight ahead, and its radii. */
-export const EYE_AT: V3 = [0.028, H[1] + 0.02, H[2] + 0.068];
-export const EYE_TURN = 0.34;
-export const EYE_SIZE: V3 = [0.019, 0.021, 0.011];
+export const EYE_AT: V3 = [0.028, H[1] + 0.02, H[2] + 0.063];
+export const EYE_TURN = 0.36;
+export const EYE_SIZE: V3 = [0.0195, 0.0215, 0.01];
 
 const add = (a: V3, b: V3): V3 => [a[0] + b[0], a[1] + b[1], a[2] + b[2]];
 const ramp = (x: number, a: number, b: number): number => {
@@ -236,7 +236,9 @@ export function catGeometry(): THREE.BufferGeometry {
     for (const front of [true, false]) {
       const st = leg(front);
       const socks = front ? REST[FPAW_L][1] + 0.03 : REST[HPAW_L][1] + 0.026;
-      const geo = loft({ stations: side > 0 ? st : mirrorStations(st, LEFT_TO_RIGHT), mat: FUR, around: 14, smooth: 1 });
+      /** The bib runs on down the fronts of the forelegs into the mittens, as it does on a bicolour tabby. */
+      const fronts = front ? (_t: number, a: number) => ramp(Math.sin(a), 0.2, 0.75) * 0.9 : undefined;
+      const geo = loft({ stations: side > 0 ? st : mirrorStations(st, LEFT_TO_RIGHT), mat: FUR, around: 14, smooth: 1, blend: fronts });
       out.push(paint(geo, (_x, y) => ramp(y, socks + 0.006, socks - 0.006)));
     }
   }
