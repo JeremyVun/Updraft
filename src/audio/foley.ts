@@ -4,7 +4,7 @@ import type { WhaleSound } from '../fx/sealife/wake';
 
 export type Surface = 'grass' | 'sand' | 'wood' | 'water';
 export type MaterialSound = 'cloth' | 'wool' | 'sail' | 'sail-settle' | 'water' | 'paper' | 'door' | 'splash' | 'peg'
-  | 'dolphin-surface' | 'leaf-scuff' | 'swing-creak' | WhaleSound;
+  | 'dolphin-surface' | 'leaf-scuff' | 'swing-creak' | 'tub' | WhaleSound;
 
 /**
  * The sounds a small body makes, as opposed to a voice. The cygnet never speaks except when it is lost, so this is
@@ -58,6 +58,12 @@ export class Foley {
       const colour = 0.9 + Math.random() * 0.2;
       this.puff({ at, len: 0.035, level: level * 0.07, pan, type: 'bandpass', from: 2600 * colour, q: 1.2, attack: 0.002 });
       this.blip(at + 0.012, 1250 * colour, 900 * colour, 0.05, level * 0.02, pan, 'triangle', 0.04);
+    } else if (kind === 'tub') {
+      // A wooden tub knocking against slates or a hull: a hollow low knock, and the water slapping in round it.
+      const colour = 0.9 + Math.random() * 0.2;
+      this.blip(at, 210 * colour, 150 * colour, 0.16, level * 0.05, pan, 'triangle', 0.06);
+      this.puff({ at, len: 0.06, level: level * 0.05, pan, type: 'bandpass', from: 900 * colour, q: 1.4, attack: 0.002 });
+      this.puff({ at: at + 0.05, len: 0.3, level: level * 0.03, pan, type: 'bandpass', from: 700, to: 380, q: 0.6, attack: 0.03, wet: 0.05 });
     } else if (kind === 'leaf-scuff') {
       // A few dry folds under a foot, never a continuous bed of crackle.
       const colour = 0.9 + Math.random() * 0.2;

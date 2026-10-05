@@ -50,7 +50,15 @@ Seam: the cat API (`place`, `strand`, `hop`, `leap`, `run`, `rest`, `look`, `afr
 the dark's `rise` and `reach`; `WAY` decks.
 Gate: a real-gesture check (`tools/drowned-roofs-check.mjs`, started here) carries the tub to the cat and back; idle
 proves the breeze alone does nothing; stills.
-Done: [ ]
+Done: [x] (`44f5777`..`81aa993`). The cat's roof moved earlier along the drift (`CAT_HOUSE`, `CAT_HOLD`), so the cat
+aboard gets its own drift of about 15 s before the air dies; its old roof stays as a plain neighbour
+(`EAST_OF_STRAND`), and the generated village is laid out exactly as before, only left unbuilt on the cat's ground
+(`onCatGround`). The tub (`src/world/wash-tub.ts`) is pushed by strokes across it on screen, not by the field (under the
+low lens a stroke's own wind lands far beyond it; see `contracts/wind.md`). The beat lives in
+`src/story/drowned-cat.ts` (`StrandedCat`), driven by the chapter. The strand's landing is a level line of slates
+(`WAY.strandLanding`) and `WAY.strandSlope` is now the whole slope above it, because `alight` sets her down at a deck's
+own height. Left for later: the cat reads small at game distance (on the chimney and on the ridge); the climb's lens
+loses the dark off the right of frame; the cygnet in the satchel tends to look back toward the lens.
 
 ### Phase 3: over the roofs
 Owns: the child's walk over `WAY` following the cat, stopping at each gap; the tree crossing (rocks to the wind, a

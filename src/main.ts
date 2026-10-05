@@ -690,6 +690,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   if (story.name === 'lines') shoreHaul.brush(rig.camera, input, wind);
   if (story.name === 'boats') littleBoats.brush(rig.camera, input, wind, dt);
   if (story.current.invitesSail) boat.brushSail(rig.camera, input);
+  if (story.name === 'drowned') village.tub.brush(rig.camera, input, dt);
   if (story.name === 'stairs') cloudStairs.brush(rig.camera, input, dt);
   if (story.name === 'birches') {
     birches.scarf.brush(rig.camera, input, wind, dt);
@@ -701,6 +702,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   story.current.brushDry?.(story.name==='sleeping' ? sleeping.trail.brush(rig.camera,input,dt) ?? emberBreath : emberBreath);
   skyMirror.brush(dt, time, input, rig.camera);
   story.update(dt, time);
+  if (village.tub.bump > 0.08 && sound.running) worldFoley.knock('tub', village.tub.position, Math.min(1, village.tub.bump * 1.4));
   telemetry.chapter(story.name);
   if (story.current.finished) telemetry.complete();
   if (story.name !== 'boats' && littleBoats.departing) littleBoats.update(dt, time, wind, Infinity);
@@ -723,7 +725,8 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   child.face(notice.face);
   notice.hands = carry.offering(handsAt);
   notice.plane = glider.position.distanceToSquared(cygnet.position) < 400 ? glider.position : null;
-  notice.creature = nearbyCreature(cygnet.position.x, cygnet.position.z, 7, creatureAt) ? creatureAt : null;
+  notice.creature = cat.visible && cat.position.distanceToSquared(cygnet.position) < 64 ? cat.eye(creatureAt)
+    : nearbyCreature(cygnet.position.x, cygnet.position.z, 7, creatureAt) ? creatureAt : null;
   notice.flock = flock.active ? flock.head : null;
   notice.light = atmo.uniforms.uEmberLight.value.w > 0.15 ? emberAt : null;
   notice.dark = atmo.uniforms.uNight.value;

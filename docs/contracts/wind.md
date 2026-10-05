@@ -145,6 +145,12 @@ them.
   progress and deposit wind at the cloth; ambient wind only moves the drape. Released lengths are cloth
   (`ScarfCloth`): the field accelerates their particles while gravity, constraints and collisions decide where
   they go. The gathering into the sail is scripted.
+- **The drowned village's wash-tub.** `WashTub.brush` tests moving strokes against the tub on screen (a generous
+  reach, `tuning.drowned.tub.brushReach`) and pushes it along the stroke's path over the water, as fast as the stroke
+  goes there times `take`, only adding way along the stroke; a slow hand drifting back across it barely counts
+  (`flickFrom`/`flickFull`). It lays a splat at the tub so the water and the air answer too. The breeze never moves it;
+  pushed off its water it drifts back toward the middle; near the cat's eaves or the bow it is drawn in. After
+  `tuning.drowned.cat.carryAfter` seconds with no progress the world's air carries it there: the room's safety valve.
 - **The sky mirror's bubbles.** `SkyMirror.brush` tests strokes against the hoop, bubbles and their reflections.
   Sweeps grow a film; a released bubble takes its direction from the current stroke projected at its height, with
   a bounded target speed, a quick response to reversals and a short coast. Empty bubbles ignore lift and always
@@ -166,7 +172,8 @@ them.
   edges and are bounded in CSS pixels, with a minimum light level and a soft cool edge so they read on pale cloth
   and in the dark wood.
 - **Ambient breeze and idle time solve nothing**: not a curtain, a toy, a scarf tangle, an ember, a bubble, the
-  feather or the curtains. The becalmed sail's 90 s return is the one safety valve.
+  feather, the curtains or the drowned village's tub. The becalmed sail's 90 s return and the tub's are the safety
+  valves.
 - **Updraft, not gust, where the gesture is a circle.** The cygnet's flights, the wrapped trunk, the wood's embers
   (`Embers.updraft` turns the charge at the waiting coal into its breath; burning coals flare from the field's
   lift) and lifting a filled bubble. Straight strokes build no charge.
