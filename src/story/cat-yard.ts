@@ -289,6 +289,11 @@ export class CatYard {
         cat.look(onlooker);
         cat.mew(1);
         return true;
+      case 'curious':
+        sitAt('sit');
+        cat.look(onlooker);
+        cat.curious = onlooker;
+        return true;
       case 'chirrup':
         sitAt('sit');
         cat.look(onlooker);

@@ -1057,6 +1057,8 @@ export class Cat {
       const free = this.doing === 'path' && !this.narrow ? 0.6 : 1.5;
       headYaw = clamp(yaw, -free, free);
       headPitch = clamp(pitchTo, -0.9, 0.8);
+      /** Watching what it is curious about while it is calm and still, it tips its head to one side. */
+      if (gaze === this.curious && this.doing === 'still') headRoll -= 0.26 * (1 - clamp(fear * 2.5, 0, 1));
     }
 
     if (this.idle === 'wash') {

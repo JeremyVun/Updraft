@@ -103,8 +103,8 @@ const SIZE: V3 = [0.064, 0.056, 0.06];
  */
 function skullShape(u: { x: number; y: number; z: number }): void {
   const cheek = ramp(-u.y, -0.05, 0.45) * (1 - ramp(-u.y, 0.75, 1)) * ramp(u.z, -0.6, 0.2);
-  u.x *= (1 + 0.2 * cheek) * (1 - 0.2 * ramp(u.y, 0.1, 0.95));
-  if (u.y > 0.45) u.y = 0.45 + (u.y - 0.45) * 0.85;
+  u.x *= (1 + 0.27 * cheek) * (1 - 0.25 * ramp(u.y, 0.1, 0.95));
+  if (u.y > 0.4) u.y = 0.4 + (u.y - 0.4) * 0.74;
   /** The face leans forward at the bottom: the brow rounds back over the eyes and the muzzle leads. */
   const front = ramp(u.z, 0.2, 0.75);
   u.z += front * (0.05 * ramp(-u.y, -0.1, 0.5) - 0.1 * ramp(u.y, -0.05, 0.75));
@@ -345,7 +345,7 @@ function parts(coat: boolean): THREE.BufferGeometry[] {
     mat: FUR,
     at: SKULL,
     size: SIZE,
-    detail: 4,
+    detail: 12,
     shape: (u) => {
       skullShape(u);
       sockets(u);
@@ -353,8 +353,8 @@ function parts(coat: boolean): THREE.BufferGeometry[] {
     /** White only on the muzzle and under the chin: brown cheeks keep the head's round outline against the bib. */
     blend: (u) => {
       const ax = Math.abs(u.x);
-      const muzzle = ramp(-u.y, 0.26, 0.4) * ramp(u.z, 0.35, 0.7) * (1 - ramp(ax, 0.3 + 0.12 * ramp(-u.y, 0.4, 0.8), 0.46 + 0.12 * ramp(-u.y, 0.4, 0.8)));
-      const chin = ramp(-u.y, 0.62, 0.85) * ramp(u.z, -0.3, 0.2) * (1 - ramp(ax, 0.35, 0.55));
+      const muzzle = ramp(-u.y, 0.26, 0.4) * ramp(u.z, 0.35, 0.7) * (1 - ramp(ax, 0.28, 0.42));
+      const chin = ramp(-u.y, 0.62, 0.85) * ramp(u.z, -0.3, 0.2) * (1 - ramp(ax, 0.3, 0.48));
       return Math.max(muzzle, chin);
     },
   });

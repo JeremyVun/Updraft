@@ -37,6 +37,7 @@ const list = (v, all) => (v === 'none' ? [] : v ? v.split(',') : all);
 /** Each action, and the moments after it starts (seconds of game time) that show it best. */
 const ACTIONS = {
   sit: [2.5],
+  curious: [2.5],
   stand: [2],
   crouch: [2],
   wash: [1.6, 3.2],
@@ -85,7 +86,7 @@ const PANELS = {
   'head-front': { action: 'sit', at: 2.5, bearing: 0, look: 'camera', head: true, distance: 0.5, span: 0.15, sheet: 'model-sheet', crop: [40, 600, 360, 300] },
   'head-side': { action: 'sit', at: 2.5, bearing: 1.3, look: 'ahead', head: true, distance: 0.5, span: 0.15, sheet: 'model-sheet', crop: [455, 600, 320, 300] },
   content: { action: 'sit', at: 2.5, bearing: 0.15, look: 'camera', head: true, distance: 0.55, span: 0.17, sheet: 'expressions', crop: [110, 20, 370, 410] },
-  curious: { action: 'sit', at: 2.5, bearing: -0.3, head: true, distance: 0.55, span: 0.17, sheet: 'expressions', crop: [640, 20, 380, 410] },
+  curious: { action: 'curious', at: 2.5, bearing: -0.3, head: true, distance: 0.55, span: 0.17, sheet: 'expressions', crop: [640, 20, 380, 410] },
   mewing: { action: 'mew', at: 0.45, bearing: 0.15, look: 'camera', head: true, distance: 0.55, span: 0.17, sheet: 'expressions', crop: [1160, 20, 400, 410] },
   frightened: { action: 'afraid', at: 0.6, bearing: 0.15, head: true, distance: 0.55, span: 0.17, sheet: 'expressions', crop: [60, 470, 460, 400] },
   chirrup: { action: 'chirrup', at: 0.12, bearing: 0.15, look: 'camera', head: true, distance: 0.55, span: 0.17, sheet: 'expressions', crop: [640, 450, 380, 420] },
