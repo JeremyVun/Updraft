@@ -966,6 +966,35 @@ export const tuning = {
     fireflyCount: 240,
     fireflyRange: 25,
     fireflyPresence: 0.85,
+    /**
+     * The stump at the bend: her pace coming up to the coal before it and the flinch back when the antlers leap up
+     * the rock (m over s); seconds of side light to show it for what it is; how brightly the owl's eyes shine in the
+     * dark; how much of a coal's glow lights the rock and the stump, and the heat the two coals there keep while she
+     * is with them; how fast the outline leaps up and how fast it folds into the plain stump's as the side coal
+     * wakes, how far past its end the light swings it round as it folds (radians), how far its broad left antler
+     * folds in and how many mip levels the masks blur while they move; the moonlight on her while she waits, and the
+     * share of fireflies left in the held frame, and how much of the owl's height above her she tips her head back
+     * for as it flies; her one look down at the cygnet (when, for how long); when the owl
+     * leaves after it is seen; her turn after it as it flies (seconds into its flight, rate), the cygnet's peep and
+     * her wave; the breath out. The held frame, in the shape's frame (right, up
+     * from her feet, toward her): the eye and where it looks, landscape and portrait, each lens's horizontal field
+     * (portrait: vertical), when the walking camera starts easing to it (metres from her stop), the least time it
+     * takes, and how long it takes to ease back behind her as she walks on.
+     */
+    shape: {
+      approachPace: 0.7, flinchStep: 0.45, flinchSeconds: 0.7, revealSeconds: 1.4,
+      eyeshineDark: 0.8, throwLight: 0.34, sideLight: 1.4, holdHeat: 0.6, leapSeconds: 0.35, foldShift: 1.1,
+      foldSwing: 0.35, foldIn: 0.45, foldBlur: 3.5, moonOnHer: 0.35, heldFireflies: 0.3, lookUpShare: 0.35,
+      glanceAfter: 2.4, glanceFor: 1.8,
+      owlLeaveAfter: 7.5, turnAfter: 0.9, turnRate: 2.0, peepAfter: 1.0, peepFor: 3.2, waveAfter: 2.2,
+      exhaleSeconds: 1.8,
+      eye: [14.4, 2.3, 5.2], look: [2.65, 3.0, 2.75], hfov: 76,
+      portraitEye: [6.6, 2.4, 15.3], portraitLook: [0.6, 5.2, 1.0], portraitVfov: 72,
+      faceEye: [8.6, 1.6, 17.2], faceLook: [0.2, 1.55, 3.3], faceHfov: 38, faceVfov: 20,
+      portraitFaceEye: [5.6, 3.0, 17.0], portraitFaceLook: [1.5, 2.0, 5.7], portraitFaceVfov: 34,
+      faceAfter: 0.5, faceSeconds: 4.2,
+      easeFrom: 20, easeSeconds: 7.5, releaseSeconds: 8,
+    },
     /** Seconds a coal burns from a full catch if nobody fans it again. */
     burnFor: 46,
     /** How high fanning can run a burning coal up, and how much of that rush is thrown as light. */
@@ -978,8 +1007,9 @@ export const tuning = {
     /** How far up the path the next coal is laid, and how far off the middle of it, so the chain is a walk. */
     chainStep: 20.25,
     chainOffset: 2.6,
-    /** Bring the next light closer after pickup. */
+    /** Bring the next light closer after pickup, and further off the path, so it stays clear of her on screen. */
     rescueChainStep: 12,
+    rescueChainOffset: 4.4,
     /** How far off her shoulder the walking camera stands, on the waiting coal's side, so the coal is beside her in frame. */
     cameraSide: 2.8,
     cameraBack: 13,

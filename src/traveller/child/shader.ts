@@ -101,6 +101,7 @@ uniform float uWhites;
 uniform float uNoseTip;
 /** Which way the hood's opening faces in the world, to keep the sun off a face it cannot reach. */
 uniform vec3 uHoodForward;
+uniform float uChildMoon;
 in vec3 vWorld;
 in vec3 vNormal;
 in vec3 vRest;
@@ -148,9 +149,12 @@ vec3 paintFace(vec3 alb, vec3 rest, vec3 N, vec3 V, inout float gloss) {
   alb = mix(alb, uCheek, (0.2 + 0.32 * uNoseTip) * exp(-dot(p - vec2(0.0, -0.099), p - vec2(0.0, -0.099)) / 0.0007));
   /** And the soft shade under it, which is what lets a small nose read from straight in front. */
   alb *= 1.0 - 0.2 * uNoseTip * exp(-(p.x * p.x) / 0.0009 - (p.y + 0.127) * (p.y + 0.127) / 0.00012);
-  /** Brows: short soft arcs close over the eyes, fuller toward the nose, the only thing that carries a mood. */
-  vec2 b = vec2(abs(p.x) - 0.122, p.y - 0.068 + 7.0 * (abs(p.x) - 0.122) * (abs(p.x) - 0.122));
-  float brow = fill(ellipse(b, vec2(0.031, 0.0105 - 0.1 * clamp(b.x, 0.0, 0.031))));
+  /**
+   * Brows: short soft arcs close over the eyes, the only thing that carries a mood. The inner ends sit a little high
+   * and nothing is heavier toward the nose, because the face's curve tips them into a scowl seen from above.
+   */
+  vec2 b = vec2(abs(p.x) - 0.122, p.y - 0.068 + 7.0 * (abs(p.x) - 0.122) * (abs(p.x) - 0.122) + 0.2 * (abs(p.x) - 0.122));
+  float brow = fill(ellipse(b, vec2(0.031, 0.0095)));
   alb = mix(alb, uBrow, brow * 0.85);
   float open = 1.0 - clamp(uBlink, 0.0, 1.0);
   if (uWhites > 0.5) {
@@ -295,6 +299,13 @@ void main() {
    * on the other. Spread evenly it paints the whole child the colour of the bulb and loses the blue they lie in.
    */
   col += alb * (emberLight(vWorld, N) + dawnLight(vWorld, N) + lanternLight(vWorld, N)) * mix(0.5, 1.0, ao);
+  if (uChildMoon > 0.0) {
+    // Moonlight through bare crowns: a cold wash, and a rim along her outline so she reads against the dark.
+    vec3 moon = vec3(0.3, 0.38, 0.6) * uChildMoon;
+    // Her face keeps the warmth of her light: washed cold it goes pale as a mask.
+    col += alb * moon * (wrap * 0.7 + 0.2) * ao * (m == ${MAT.skin} ? 0.35 : 1.0);
+    col += moon * pow(1.0 - facing, 2.5) * (0.35 + 0.65 * alb) * (1.0 - inside);
+  }
   if (uLamp.w > 0.0) {
     vec3 toLamp = uLamp.xyz - vWorld;
     float lampSide = clamp(dot(N, toLamp) * inversesqrt(max(dot(toLamp, toLamp), 1e-4)) * 0.5 + 0.5, 0.0, 1.0);

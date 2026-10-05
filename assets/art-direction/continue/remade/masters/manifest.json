@@ -350,30 +350,31 @@
     "file": "drowned-land.png",
     "width": 1672,
     "height": 941,
-    "bytes": 1803530,
-    "sha256": "fc5aaccef9d9e90fc89840a7998ee70b059a4d24ebebed96dfa9c2f217651ab6",
-    "sourceRevision": "drowned-land.png",
+    "bytes": 1631827,
+    "sha256": "1ea573460e06866f0a57a32d948dc5610d6f30a572415950e10854f9941bcc0e",
+    "sourceRevision": "drowned-study-07-approved-2026-10-05",
     "prompt": "prompts/drowned-land.txt",
     "generation": {
-      "source": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-5ccc82bd-fc90-445e-913c-2a28e62392f0.png",
+      "source": "/Users/jeremy/.codex/generated_images/01a10a1f-6dd6-72c2-8ee3-1448b191d071/exec-bde59003-2c54-42c8-8dcb-1ab10d786e37.png",
+      "mode": "built-in image_gen",
       "historicalInputPaths": [
-        "/tmp/updraft-prompts/refs/drowned-shipped.png",
-        "/Users/jeremy/projects/updraft/src/paintings/drowned-land.webp",
-        "/tmp/updraft-prompts/refs/sail-closeup.jpg"
-      ]
+        "assets/art-direction/drowned-study-2026-10-05/06-surface-repair.png"
+      ],
+      "historicalStudyPath": "assets/art-direction/drowned-study-2026-10-05/07-clean-surfaces.png"
     },
     "webp": {
       "file": "src/paintings/drowned-land.webp",
-      "bytes": 150672,
-      "sha256": "a161eb26de1f5882c31c7659fb7f597559c02bdbe725afc74498033701187f3b",
-      "quality": 85
+      "bytes": 212356,
+      "sha256": "a7927023c5d058651cf839cc4672dec4708b666b659ad186ac54b63f055293b1",
+      "quality": 94
     },
     "tile": {
       "file": "src/chapter-select/stills/drowned.webp",
       "width": 400,
       "height": 250,
-      "bytes": 25258,
-      "quality": 90
+      "bytes": 21336,
+      "quality": 90,
+      "sha256": "de2301351c1d845170fb54b363763fba04b734443352e2380697331e2e15078d"
     }
   },
   {
@@ -381,25 +382,25 @@
     "aspect": "port",
     "name": "drowned-port",
     "file": "drowned-port.png",
-    "width": 852,
-    "height": 1846,
-    "bytes": 1710136,
-    "sha256": "9b3ccbe7eb4f4f682d076d373e7fb5f571af29126a0208545f68f29da9488ed5",
-    "sourceRevision": "drowned-port.png",
+    "width": 853,
+    "height": 1843,
+    "bytes": 1641787,
+    "sha256": "62980f8b9fda292c4beef77bd818c435f706c26d4d52579f33e6d09b4f3c0a3e",
+    "sourceRevision": "drowned-study-07-portrait-2026-10-05",
     "prompt": "prompts/drowned-port.txt",
     "generation": {
-      "source": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-14096384-7ea0-434f-9706-ec306ac4373b.png",
+      "source": "/Users/jeremy/.codex/generated_images/01a10a1f-6dd6-72c2-8ee3-1448b191d071/exec-16db777b-d517-4e0f-9d2d-3aec5ae27dc6.png",
+      "mode": "built-in image_gen",
       "historicalInputPaths": [
-        "/tmp/updraft-prompts/refs/drowned-shipped.png",
-        "/Users/jeremy/projects/updraft/assets/art-direction/continue/remade/drowned-land.png",
-        "/tmp/updraft-prompts/refs/sail-closeup.jpg"
+        "assets/art-direction/drowned-study-2026-10-05/07-clean-surfaces.png",
+        "assets/art-direction/continue/remade/masters/drowned-port.png"
       ]
     },
     "webp": {
       "file": "src/paintings/drowned-port.webp",
-      "bytes": 131522,
-      "sha256": "7e6a3eeb51cf04de1be9599a347583d8204c200bb5377e9d2f1e2881e6e2fc77",
-      "quality": 85
+      "bytes": 201060,
+      "sha256": "4a0861c2804b5b08cf023dac99cc37b98c0464972152752528f4896eeb5612a2",
+      "quality": 94
     }
   },
   {
@@ -521,30 +522,31 @@
     "file": "sea-land.png",
     "width": 1672,
     "height": 941,
-    "bytes": 1657175,
-    "sha256": "114f6bbbf26d16c271218cc861a3d5c6a6e69006563d65c71606d7a77ed8ff3d",
-    "sourceRevision": "sea-land.png",
+    "bytes": 1764461,
+    "sha256": "dc0c8044fe7a17807cb4e15a634709f1aa0b16f99a287967a582e9610ddf8aa8",
+    "sourceRevision": "sea-study06-dolphin-land",
     "prompt": "prompts/sea-land.txt",
     "generation": {
-      "source": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-d51d44bf-dcdb-468f-bef5-c8f60970e5f9.png",
+      "source": "/Users/jeremy/.codex/generated_images/01a10a1f-6dd6-72c2-8ee3-1448b191d071/exec-cc6dd519-e301-4c50-bc33-6f9744293d21.png",
       "historicalInputPaths": [
-        "/tmp/updraft-prompts/refs/sea-capture.png",
-        "/Users/jeremy/projects/updraft/src/paintings/sea-land.webp",
-        "/tmp/updraft-prompts/refs/sail-closeup.jpg"
-      ]
+        "/Users/jeremy/projects/updraft/assets/art-direction/sea-mirror-study-2026-10-05/03-sea-game-boat.png"
+      ],
+      "mode": "built-in image_gen",
+      "record": "assets/art-direction/sea-mirror-study-2026-10-05/round-3.json"
     },
     "webp": {
       "file": "src/paintings/sea-land.webp",
-      "bytes": 116960,
-      "sha256": "8560ae54db00f5644bcd417bbae67095609213ba5805ed3092079a007a1fd3ee",
-      "quality": 85
+      "bytes": 249338,
+      "sha256": "b9694eb6ca45560f9342d67521c23f0645be014deb35ddd22916bbbfd2049ee6",
+      "quality": 94
     },
     "tile": {
       "file": "src/chapter-select/stills/sea.webp",
       "width": 400,
       "height": 250,
-      "bytes": 19170,
-      "quality": 90
+      "bytes": 22502,
+      "quality": 90,
+      "sha256": "afaf9806c77078f9ded0a15862c789bd800288475b80e494a1e1d310467a7eee"
     }
   },
   {
@@ -552,25 +554,26 @@
     "aspect": "port",
     "name": "sea-port",
     "file": "sea-port.png",
-    "width": 851,
-    "height": 1847,
-    "bytes": 1724669,
-    "sha256": "ea55c40201f3a3d3d8087e80d83a7f7001b664a40269be1d803ab431fc904738",
-    "sourceRevision": "sea-port.png",
+    "width": 853,
+    "height": 1844,
+    "bytes": 1820863,
+    "sha256": "7f68e64e7c6e8aeee9fd2d30ed7a418fec8b13e0cc92f95075dd5bd8088eba6d",
+    "sourceRevision": "sea-study06-dolphin-port",
     "prompt": "prompts/sea-port.txt",
     "generation": {
-      "source": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-b168f911-0a24-43dc-8182-2995b1e63f98.png",
+      "source": "/Users/jeremy/.codex/generated_images/01a10a1f-6dd6-72c2-8ee3-1448b191d071/exec-2aa335d1-5e04-4975-b201-2722c10aa599.png",
       "historicalInputPaths": [
-        "/tmp/updraft-prompts/refs/sea-capture.png",
-        "/Users/jeremy/projects/updraft/assets/art-direction/continue/remade/sea-land.png",
-        "/tmp/updraft-prompts/refs/sail-closeup.jpg"
-      ]
+        "/Users/jeremy/.codex/generated_images/01a10a1f-6dd6-72c2-8ee3-1448b191d071/exec-96488da0-16cb-4b90-b376-eb8475c23119.png",
+        "/Users/jeremy/projects/updraft/assets/art-direction/sea-mirror-study-2026-10-05/06-sea-dolphin.png"
+      ],
+      "mode": "built-in image_gen",
+      "record": "assets/art-direction/sea-mirror-study-2026-10-05/round-3.json"
     },
     "webp": {
       "file": "src/paintings/sea-port.webp",
-      "bytes": 113416,
-      "sha256": "0411d57427043cb5e65a492b2c74bf6634ac7e37a710df76d0f9d949e5e087b1",
-      "quality": 85
+      "bytes": 252000,
+      "sha256": "b8a1026d1096b1280bf4acd74b022907f652cf050ae028813f447c41d45ff1a2",
+      "quality": 94
     }
   },
   {
@@ -580,28 +583,31 @@
     "file": "mirror-land.png",
     "width": 1672,
     "height": 941,
-    "bytes": 1682607,
-    "sha256": "9902316c5ab3909fa2b065100f67feba0fb512017edcee51812e3be92507b03a",
-    "sourceRevision": "mirror-land-v2.png",
+    "bytes": 1661523,
+    "sha256": "9f29cb8f46d879bf5d21659d06849f4b6c9fd312203a49e18f27548de655cb85",
+    "sourceRevision": "mirror-study05-eye-level-land",
     "prompt": "prompts/mirror-land.txt",
     "generation": {
-      "source": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-50d55397-848a-4f31-ac30-42bc2976e562.png",
+      "source": "/Users/jeremy/.codex/generated_images/01a10a1f-6dd6-72c2-8ee3-1448b191d071/exec-1d82521a-a95a-45dc-ad7b-d14ea69f57d8.png",
       "historicalInputPaths": [
-        "/Users/jeremy/projects/updraft/assets/art-direction/continue/remade/mirror-land.png"
-      ]
+        "/Users/jeremy/.codex/generated_images/01a10a1f-6dd6-72c2-8ee3-1448b191d071/exec-aacc96fb-5327-4095-b160-56053928eebb.png"
+      ],
+      "mode": "built-in image_gen",
+      "record": "assets/art-direction/sea-mirror-study-2026-10-05/round-3.json"
     },
     "webp": {
       "file": "src/paintings/mirror-land.webp",
-      "bytes": 103528,
-      "sha256": "82ce2b42649ac5aef52ea905737f1fbca9e3b7fc2588ade763bd2825349a06ca",
-      "quality": 85
+      "bytes": 186296,
+      "sha256": "81d798415356488be651d967a37626fd9f90c2a0910c7f5b3cb7ac4f80d982f4",
+      "quality": 94
     },
     "tile": {
       "file": "src/chapter-select/stills/mirror.webp",
       "width": 400,
       "height": 250,
-      "bytes": 19674,
-      "quality": 90
+      "bytes": 19104,
+      "quality": 90,
+      "sha256": "4db65812d54ade4157b3e0feef567d8935dd68e638dce8ab154e145c118b5af3"
     }
   },
   {
@@ -609,25 +615,25 @@
     "aspect": "port",
     "name": "mirror-port",
     "file": "mirror-port.png",
-    "width": 852,
-    "height": 1846,
-    "bytes": 1718323,
-    "sha256": "975a8efe7815dceabbdb6a5643107df3f9a703e9c94665d79922b60f3b3320fc",
-    "sourceRevision": "mirror-port.png",
+    "width": 853,
+    "height": 1844,
+    "bytes": 1797294,
+    "sha256": "c551c15862c97b4fde39967cbb6f684608e95e69b66c78d13d4c4b1a2377eb4d",
+    "sourceRevision": "mirror-study05-eye-level-port",
     "prompt": "prompts/mirror-port.txt",
     "generation": {
-      "source": "/Users/jeremy/.codex/generated_images/01a101da-34e4-7160-bb22-4d57e88c1fcc/exec-a54d46b9-9adc-4511-9cae-a229a6761edf.png",
+      "source": "/Users/jeremy/.codex/generated_images/01a10a1f-6dd6-72c2-8ee3-1448b191d071/exec-5fa5decb-64fb-4e7a-b130-8b8b1d49cb03.png",
       "historicalInputPaths": [
-        "/tmp/updraft-prompts/refs/mirror-capture.png",
-        "/Users/jeremy/projects/updraft/assets/art-direction/continue/remade/mirror-land-v2.png",
-        "/tmp/updraft-prompts/refs/sail-closeup.jpg"
-      ]
+        "/Users/jeremy/projects/updraft/assets/art-direction/sea-mirror-study-2026-10-05/05-mirror-eye-level.png"
+      ],
+      "mode": "built-in image_gen",
+      "record": "assets/art-direction/sea-mirror-study-2026-10-05/round-3.json"
     },
     "webp": {
       "file": "src/paintings/mirror-port.webp",
-      "bytes": 109556,
-      "sha256": "f1deec8bb1945f729c1f9076816d0cfe340b3131aa0b53d711e38f25f535d6b5",
-      "quality": 85
+      "bytes": 194658,
+      "sha256": "8dcaed09bd7ec1e4396f07784160de3fd451cf252a2ab207c0a054966719ebcf",
+      "quality": 94
     }
   },
   {

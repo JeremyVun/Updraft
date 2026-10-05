@@ -139,6 +139,8 @@ Set the mood and invite one click; discovering the wind belongs in the game.
   once on screen. One WebP per visit (`src/paintings/<room>-land.webp`, or `-port` under 3:4), requested at low
   priority. Cloud stairs anchors at 50% 65% when cropped; at 4:3 or wider its ordinary invitation sits at
   `100% - max(120px, 14vh)`, on the gently softened foreground clouds beneath the close stairs.
+  At 2:1 or wider, Sea and Sky mirror place Continue and its secondary actions at 77% across, in clear water
+  beside the boat or foreground light; the chapter list keeps its centred layout.
   Leaving, the painting fades with the invitation (.8 s) before the veil dissolves, so it never cross-fades
   into the game's own view; while chapters are open it stays behind the list. Reduced motion: no fades.
 - **Chapters over the paintings.** The list is two rows of six tiles, `--still: clamp(88px, 10vw, 176px)` wide (four

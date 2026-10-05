@@ -187,6 +187,10 @@ export class Journey {
     } else if (choice === 'wood' || choice === 'dark') {
       this.land(WOOD_BERTH.x, WOOD_BERTH.z, WOOD_LANDING.x, WOOD_LANDING.y + 4);
       this.begin('wood');
+    } else if (choice === 'fears') {
+      this.land(WOOD_BERTH.x, WOOD_BERTH.z, WOOD_LANDING.x, WOOD_LANDING.y + 4);
+      this.begin('wood');
+      (this.chapter as WoodChapter).skipToShape();
     } else if (choice === 'sleeping') {
       this.land(SLEEP_LANDING.x, SLEEP_LANDING.y, SLEEP_LANDING.x - 5, SLEEP_LANDING.y);
       this.begin('sleeping');

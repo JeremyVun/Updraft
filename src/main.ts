@@ -246,7 +246,18 @@ await built();
 const village = new DrownedVillage(wind);
 village.objects.forEach((o) => scene.add(o));
 await built();
-const wood = new DarkWood(wind);
+const [owlShadows, owlFlaps, bendRock, bendLeaves, owlWing] = await Promise.all([
+  new URL('../assets/fx/owl-shadow/shadows.webp', import.meta.url).href,
+  new URL('../assets/fx/owl-shadow/flaps.webp', import.meta.url).href,
+  new URL('../assets/fx/owl-bend/rock.webp', import.meta.url).href,
+  new URL('../assets/fx/owl-bend/leaves.webp', import.meta.url).href,
+  new URL('../assets/fx/owl-bend/wing.webp', import.meta.url).href,
+].map((href) => new THREE.TextureLoader().loadAsync(href)));
+for (const art of [bendRock, bendLeaves, owlWing]) art.colorSpace = THREE.SRGBColorSpace;
+// Leaves lie on the ground and the rock is seen at a slant: without anisotropy they blur to smudges.
+for (const art of [bendRock, bendLeaves]) art.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+bendRock.wrapS = bendRock.wrapT = THREE.RepeatWrapping;
+const wood = new DarkWood(wind, { shadows: owlShadows, flaps: owlFlaps, rock: bendRock, leaves: bendLeaves, wing: owlWing });
 wood.objects.forEach((o) => scene.add(o));
 await built();
 const sleeping = new SleepingIsland(renderer, wind, input);
@@ -960,14 +971,16 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   birches.update(dt, rig.camera, child.visible ? child.position : null);
   /** Under the wood's canopy a sheltered population stays low despite the storm outside. */
   const inWood = story.name === 'wood';
-  const flyWeather = inWood ? tuning.wood.fireflyPresence : Math.max(0, 1 - storm * 1.6);
+  const flyWeather = (inWood ? tuning.wood.fireflyPresence : Math.max(0, 1 - storm * 1.6)) * (story.current.fireflies ?? 1);
   fireflies.update(dt, atmo.uniforms.uNight.value * overLand * flyWeather * (1 - sleeping.presence), story.focus, inWood);
   emberInvitation.update(dt, rig.camera, story.current.windInvitation ?? null, input,
     undefined, story.name === 'mirror' ? tuning.skyMirror.bubbleRadius : story.current.invitationRadius ?? 0,
     story.current.invitationHeading ?? null);
   embers.update(dt, child.visible ? child.position : story.focus, story.current.embers ?? 0);
   const emberLit = embers.illumination(emberAt);
-  atmo.uniforms.uEmberLight.value.set(emberAt.x, emberAt.y, emberAt.z, Math.min(2.6, emberLit * 0.5));
+  const coalLight = Math.min(2.6, emberLit * 0.5);
+  const emberPower = story.current.steerLight?.(emberAt, coalLight) ?? coalLight;
+  atmo.uniforms.uEmberLight.value.set(emberAt.x, emberAt.y, emberAt.z, emberPower);
   rain.update(dt, shower, rig.camera, wind.breeze, squall);
   const joining = glider.departing && glider.position.distanceTo(child.position) < 200 ? glider.position : null;
   /** Starlings turn over the hills at sunset, not in a squall. */

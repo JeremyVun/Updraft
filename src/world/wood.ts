@@ -8,6 +8,8 @@ import { ATMO_GLSL, atmo } from './atmosphere';
 import { ISLES } from './heightfield';
 import { heightAt } from './island';
 import { createNoise2D, mulberry32 } from './noise';
+import { LEAF_GLSL, SHAPE_SHADOW_GLSL, WoodShape, shapeUniforms, type BendArt } from './wood-shape';
+import { OwlBody, woodOwl } from '../creatures/owl';
 
 /** The south shore of the wood, where the boat runs ashore out of the storm. */
 export const WOOD_LANDING = new THREE.Vector2(-26, -1692);
@@ -361,6 +363,8 @@ void main() {
  */
 const WOOD_FRAG = /* glsl */ `
 ${ATMO_GLSL}
+${SHAPE_SHADOW_GLSL}
+${LEAF_GLSL}
 uniform float uStorm;
 uniform vec3 uViewA;
 uniform vec3 uViewB;
@@ -383,13 +387,20 @@ void main() {
   vec3 N;
   vec3 alb;
   float grain = 0.5;
-  if (vLeaf > 0.5) {
+  vec3 tint = vec3(1.0);
+  if (vLeaf > 1.5) {
+    // A fallen leaf of one of the painted kinds, sodden dark; the firelight finds its own colour in it.
+    vec2 l = vCard / vec2(2.4, 2.0);
+    vec4 leaf = leafCard(l, floor(fract(vSeed * 7.31) * 16.0), dFdx(l), dFdy(l));
+    if (leaf.a < 0.5) discard;
+    tint = leaf.rgb / vec3(0.185, 0.071, 0.03);
+    N = normalize(vFace * 0.85 + vSide * l.x * 0.9);
+    alb = leaf.rgb * 0.06;
+  } else if (vLeaf > 0.5) {
     float edge = 1.0 + 0.09 * sin(atan(vCard.y, vCard.x) * 5.0 + vSeed * 30.0);
     if (length(vec2(vCard.x * 1.4, vCard.y + vCard.x * vCard.x * 0.3)) > edge) discard;
     N = normalize(vFace * 0.85 + vSide * vCard.x * 0.45);
     alb = mix(vec3(0.021, 0.013, 0.007), vec3(0.068, 0.042, 0.017), fract(vSeed * 9.7));
-    /** Leaves on the floor are sodden: darker than the ones still up there, and no light comes through them. */
-    if (vLeaf > 1.5) alb *= 0.22;
   } else {
     float round = sqrt(max(1.0 - vCard.x * vCard.x, 0.0));
     N = normalize(vSide * vCard.x + vFace * round);
@@ -408,7 +419,9 @@ void main() {
   col += uSunColor * sun * vAo * vSolid * (rim * (0.04 + 0.26 * uNight) + wet * (0.06 + 0.3 * uNight));
   /** Firelight is the only light that reaches the floor here, so wet leaves take far more of it than their own
       near-black albedo would give back: without this the player's light throws no pool on the ground at all. */
-  col += (alb + vec3(0.085, 0.048, 0.022)) * emberLight(vWorld, N);
+  col += shapeLit(vWorld, (alb + vec3(0.085, 0.048, 0.022) * mix(vec3(1.0), tint, 0.6)) * emberLight(vWorld, N));
+  /** The coal before the bend lights the litter at the stump's foot, so its shadow runs across the floor to the rock. */
+  col += shapeThrow(vWorld, N, alb + vec3(0.03, 0.025, 0.02));
   /**
    * Trunks right in front of the lens fade out: the camera trails the child through 2,700 trees and the one thing
    * the room can never do is hide the child, so anything between the two of them gets out of the way.
@@ -668,6 +681,8 @@ function planeTree(): THREE.BufferGeometry {
 
 export class DarkWood {
   readonly objects: THREE.Object3D[] = [];
+  readonly shape: WoodShape;
+  readonly owl: OwlBody;
 
   private readonly trees: Placed[] = [];
   private readonly lods: { mesh: THREE.Mesh; geo: THREE.InstancedBufferGeometry; reach: number; cap: number; trees: Float32Array; forms: Float32Array }[] = [];
@@ -680,7 +695,7 @@ export class DarkWood {
   private readonly placedAt = new THREE.Vector3(1e9, 0, 0);
   private storm = 0;
 
-  constructor(private readonly field: WindField) {
+  constructor(private readonly field: WindField, art: BendArt) {
     const rand = mulberry32(4113);
     const variants: Seg[][] = [];
     for (let i = 0; i < 10; i++) variants.push(grow(rand, 'tall'));
@@ -700,6 +715,7 @@ export class DarkWood {
 
     this.uniforms = {
       ...atmo.uniforms,
+      ...shapeUniforms,
       uSegs: { value: segTex },
       uStorm: { value: 0 },
       uViewA: { value: new THREE.Vector3() },
@@ -753,7 +769,9 @@ export class DarkWood {
         uSnagHeight: { value: new THREE.Vector2(heightAt(WOOD_PLANE.x, WOOD_PLANE.y) - 0.2, tuning.wood.planeSnagHeight + 0.2) } },
     }));
     snagTree.name = 'wood-plane-tree';
-    this.objects.push(deadfall, refugeRocks(), snagTree);
+    this.shape = new WoodShape(art);
+    this.owl = new OwlBody(art.wing);
+    this.objects.push(deadfall, refugeRocks(), snagTree, this.shape.mesh, this.shape.floor, this.owl.mesh, this.owl.wings, this.owl.glow);
 
     const card = new THREE.PlaneGeometry(1, 1);
     const litterGeo = new THREE.InstancedBufferGeometry();
@@ -866,6 +884,13 @@ export class DarkWood {
       const j = Math.floor(rand() * (i + 1));
       [this.trees[i], this.trees[j]] = [this.trees[j], this.trees[i]];
     }
+    // Cleared after the draw so every other tree keeps its place.
+    // A leaning trunk is cleared by where it leans to as well as where it stands.
+    const clear = this.trees.filter((t) => {
+      const lean = Math.sin(Math.min(t.tilt, 1)) * t.scale * 0.5;
+      return !WoodShape.clears(t.x, t.z) && !WoodShape.clears(t.x + Math.cos(t.tiltDir) * lean, t.z + Math.sin(t.tiltDir) * lean);
+    });
+    this.trees.splice(0, this.trees.length, ...clear);
   }
 
   /** Fallen trunks, root plates and the two hiding places that are made of them. */
@@ -924,7 +949,7 @@ export class DarkWood {
       const reach = Math.sqrt(rand()) * 0.86;
       const x = ISLE.x + Math.cos(ang) * reach * ISLE.rx;
       const z = ISLE.z + Math.sin(ang) * reach * ISLE.rz;
-      if (ground(x, z) < TREE_LINE + 1 || pathDistance(x, z) < 5.5
+      if (ground(x, z) < TREE_LINE + 1 || pathDistance(x, z) < 5.5 || WoodShape.clears(x, z)
         || Math.hypot(x - (WOOD_REFUGE.x - 9), z - (WOOD_REFUGE.z + 5)) < 17
         || Math.hypot(x - WOOD_PLANE.x, z - WOOD_PLANE.y) < 12) continue;
       const yaw = rand() * Math.PI * 2;
@@ -954,6 +979,7 @@ export class DarkWood {
     /** The wood is only ever drawn from its own island: everywhere else in the journey it is not in the world. */
     const here = Math.hypot(camera.position.x - ISLE.x, camera.position.z - ISLE.z) < ISLE.rx + 260;
     for (const o of this.objects) o.visible = here;
+    this.owl.update(dt, woodOwl, here);
     if (!here) return;
 
     this.field.sample(WOOD_PLANE.x, WOOD_PLANE.y, this.snagWind);
