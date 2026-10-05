@@ -323,3 +323,13 @@ Jeremy, 2026-10-05, asked whether the darkness should come on its own or be call
 child flees it; the puzzle is getting away from it and the passage after is a run for land ahead of the dark. Asked
 whether the way out should be the kite (swept off the deck, circled up into the high wind, towing the boat ahead of
 the dark): **something else.** Other ways out are to be proposed before any art.
+
+Two ways out were offered: warm chimneys whose rising smoke draws the boat house to house, and the child leaving the
+boat to run over the roofs for land. Jeremy, 2026-10-05:
+
+> lets try over the roofs. I can see it working really well if executed well (i'm not sure if the paper plane should
+> lead the way, but maybe that is what works best). But please also think and suggest another idea that is slightly
+> less ambitious as well that we can do in paralell in case the over the roofs idea doesn't work out
+
+> remember, the whole point of the work here is to create an interesting puzzle and add more interactivity to the
+> game overall. previously, the drowned village had basically no interaction
