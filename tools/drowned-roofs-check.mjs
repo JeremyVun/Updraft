@@ -1,7 +1,8 @@
 // The drowned village's stranded cat, played with real pointer gestures in Chrome for Testing against a running dev
 // server: the boat comes round to the cat and waits, strokes across the wash-tub on screen carry it to the cat's roof,
 // the cat gets in, more strokes bring the tub to the bow, the cat jumps aboard and the boat sails on, comes to rest
-// against the cottage, the dark comes on, the cat bolts over the roof and the child climbs out after it to the ridge.
+// against the cottage, the dark comes on, the cat bolts over the roof and the child climbs out after it to the ridge,
+// and the untended boat is taken off the slates and drifts away north up the open water, still going a minute on.
 // Fails if waiting moves the tub toward the roof, if no drawn gust is offered, or if any of those steps does not happen.
 // Usage: node tools/drowned-roofs-check.mjs   env: BASE (default http://127.0.0.1:5230/), SHOTS=<prefix> saves stills,
 //        W/H viewport (default 1600x900), IDLE seconds of waiting at the tub first (default 14), VALVE=1 instead
@@ -85,6 +86,11 @@ try {
     return limit;
   };
   const distance = (a, b) => Math.hypot(a[0] - b[0], a[2] - b[2]);
+  /** Waits until `seconds` more of game time have gone by, however slowly the machine renders them. */
+  const play = async (seconds) => {
+    const until = (await page.evaluate(() => __stats.time)) + seconds;
+    await page.waitForFunction((t) => __stats.time >= t, until, { timeout: seconds * 4000 + 20000, polling: 200 });
+  };
   const ORDER = ['stranded', 'seen', 'easing', 'waiting', 'coming', 'ferried', 'boarding', 'aboard', 'bolting', 'waits', 'climbing', 'ridge'];
   /** Waits until the cat has got at least as far as `step`; a slow machine may have carried it past. */
   const reach = (step, timeout) => page.waitForFunction((at) => at.order.indexOf(__game.story.current.cat.step) >= at.order.indexOf(at.step),
@@ -175,6 +181,21 @@ try {
   s = await state();
   console.log('ridge', JSON.stringify(s));
   assert(s.child[1] > 1.5, `she is not up on the ridge: ${JSON.stringify(s)}`);
+
+  // The fog's breath takes the untended boat off the slates; it drifts away up the open water and is still going.
+  const strand = s.boat;
+  await waitFor(() => __game.story.current.boatAdrift, 15000, 'the boat being taken off the slates');
+  await play(12);
+  await shot('14-boat-adrift');
+  const early = await state();
+  await play(40);
+  const late = await state();
+  await shot('15-boat-going');
+  console.log(`adrift: ${distance(early.boat, strand).toFixed(1)}m off after 12s, ${distance(late.boat, strand).toFixed(1)}m after 52s, still at ${late.speed}m/s`);
+  assert(distance(early.boat, strand) > 1, `the boat has not swung off the slates: ${JSON.stringify(early)}`);
+  assert(distance(late.boat, strand) > distance(early.boat, strand) + 5, `the boat is not drifting away: ${JSON.stringify(late)}`);
+  assert(late.boat[2] < strand[2] - 4, `the boat is not drifting north up the open water: ${JSON.stringify(late)}`);
+  assert(late.speed > 0.1, `the boat has stopped within a minute: ${JSON.stringify(late)}`);
   assert(errors.length === 0, `page errors: ${errors.join('\n')}`);
   console.log('drowned roofs check passed');
 } finally {

@@ -333,6 +333,34 @@ export function darkWayPoint(reach: number, out: THREE.Vector2): THREE.Vector2 {
   return out.copy(DARK_WAY[0]);
 }
 
+/**
+ * The way the untended boat drifts once the fog's cold breath takes it off the slates: west along the roof's edge,
+ * then north up the open water beside her way over the roofs. It fetches up at the last point, which stands in for
+ * the place near the church it will come to once the church has moved on.
+ */
+export const BOAT_ADRIFT: THREE.Vector2[] = [
+  STRAND.clone(),
+  new THREE.Vector2(-14, -1399.5),
+  new THREE.Vector2(-17, -1410),
+  new THREE.Vector2(-18, -1425),
+  new THREE.Vector2(-17, -1430),
+];
+
+/** The point `along` metres down `BOAT_ADRIFT` (held at its end), and the heading of the leg it is on. */
+export function adriftAt(along: number, out: THREE.Vector2): number {
+  let left = along;
+  for (let i = 0; i < BOAT_ADRIFT.length - 1; i++) {
+    const a = BOAT_ADRIFT[i], b = BOAT_ADRIFT[i + 1], len = a.distanceTo(b);
+    if (left <= len || i === BOAT_ADRIFT.length - 2) {
+      out.lerpVectors(a, b, THREE.MathUtils.clamp(left / len, 0, 1));
+      return Math.atan2(b.x - a.x, b.y - a.y);
+    }
+    left -= len;
+  }
+  out.copy(BOAT_ADRIFT[0]);
+  return 0;
+}
+
 /** The placed roofs other than the cat's. */
 export const PLACED: PlacedHouse[] = [STRAND_HOUSE, GARDEN_HOUSE, EAST_OF_STRAND, ...NEIGHBOURS];
 
@@ -369,6 +397,8 @@ const CAT_GROUND = [
   { x: TUB_WATER.x, z: TUB_WATER.z, r: TUB_WATER.r + 2 },
   { x: -12.78, z: -1321.4, r: 1 },
   { x: CAT_LENS.x, z: CAT_LENS.y, r: 1 },
+  /** Behind the cat and her as the lens sees them, so no other roof stands up between them to be taken for the cat's. */
+  { x: -12, z: -1320, r: 6 },
 ];
 export const onCatGround = (x: number, z: number, room: number) =>
   CAT_GROUND.some((c) => Math.hypot(x - c.x, z - c.z) < c.r + room);

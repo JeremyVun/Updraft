@@ -1702,8 +1702,8 @@ export const tuning = {
   drowned: {
     /** The air dies this far short of where the boat comes to rest (metres of drift); it coasts in over the last of it. */
     stillFrom: 26,
-    /** Seconds from the air dying to the dark starting to rise: the boat has come to rest and everything is still. */
-    stillFor: 10,
+    /** Seconds from the air dying to the dark starting to rise, as the boat comes to rest and everything goes still. */
+    stillFor: 7,
     /** The hull coming to rest: how hard it brakes (m/s²) and the least way it keeps till its stem is on the slates. */
     coastBrake: 0.5, coastCreep: 0.35,
     /** How far past the drift's dusk the light goes while the dark comes on. */
@@ -1747,8 +1747,14 @@ export const tuning = {
        * Seconds it takes to rise on the horizon once the boat lies still; when it starts to come on and how long that
        * takes; and how far behind the boat it stops.
        */
-      riseFor: 9, comeAfter: 5, comeFor: 24, holdBehind: 20,
+      riseFor: 9, comeAfter: 5, comeFor: 16, holdBehind: 20,
     },
+    /**
+     * The untended boat taken off the slates by the fog's breath: seconds after she is up on the ridge, how hard the
+     * hull is knocked as it swings off, its drift (m/s) and the seconds it takes to gather it; and when (seconds into
+     * the drift) she looks back at it from the ridge, and for how long.
+     */
+    adrift: { after: 1.5, nudge: 0.45, speed: 0.3, gather: 6, lookFrom: 1.2, lookFor: 2.6 },
     /** The wash-tub the player's wind carries to the cat's roof and back to the boat. */
     tub: {
       /**
@@ -1789,7 +1795,7 @@ export const tuning = {
       /** How far nearer (metres) the tub has to get to its goal to count as progress. */
       progress: 0.8,
       /** How far on the dark has come when the cat's unease starts to climb, and when it bolts. */
-      uneasyFrom: 0.25, boltAt: 0.75,
+      uneasyFrom: 0.12, boltAt: 0.5,
       /** The cat's run up the slates and along the ridge, m/s. */
       runSpeed: 2.6,
       /** Seconds she looks at the dark, then at the cat, before she climbs out after it. */
@@ -1827,20 +1833,21 @@ export const tuning = {
      */
     catGlance: 0.3, catTurnFrom: 16, catPace: 0.55,
     catEye: 2.1, catAlong: 0.42, catLift: 0.5, catZoom: 0.95,
-    uprightCatBack: 3.2, uprightCatSide: 1.4, uprightCatEye: 2.7, uprightCatAlong: 0.4, uprightCatLift: 0, uprightCatZoom: 1,
+    uprightCatBack: 2.6, uprightCatSide: 3.8, uprightCatEye: 2.8, uprightCatAlong: 0.2, uprightCatLift: -0.4, uprightCatZoom: 1,
     catAsideRate: 0.7,
     /**
-     * With the cat aboard: the lens beside the boat on the side it watched the cat from, its bearing from ahead
+     * With the cat aboard: the lens beside the boat on its port side, its bearing from ahead
      * (radians), how far it stands off (upright, further), how high above where it looks, how far from her toward the
      * cat it looks and how high above her seat, and how fast it eases there.
      */
-    aboardBearing: 1.45, aboardDistance: 5.5, uprightAboardDistance: 7, aboardHeight: 0.9, aboardAlong: 0.45,
+    aboardBearing: 1.75, aboardDistance: 5.5, uprightAboardDistance: 7, aboardHeight: 0.9, aboardAlong: 0.45,
     aboardAim: 0.9, aboardPace: 0.45,
     /**
-     * Once the cat bolts: the way the lens looks (atan2(x, z) of the view) as it comes round to the south of the
-     * cottage over `climbFor` seconds, how far back it stands (upright, nearer), and the height it looks at.
+     * Once the cat bolts: the way the lens looks (atan2(x, z) of the view) as it comes round to the south-west of the
+     * cottage over `climbFor` seconds, clear of the boat and looking on to the church; how far back it stands (upright,
+     * nearer), and the height it looks at.
      */
-    strandClimb: 2.9, climbFor: 7, climbBack: 15, uprightClimbBack: 10, climbAim: 2.3,
+    strandClimb: 2.5, climbFor: 7, climbBack: 10, uprightClimbBack: 8, climbAim: 2.3,
   },
   /** One continuous passage from the last drowned houses to the forest beach. */
   storm: {

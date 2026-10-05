@@ -53,12 +53,17 @@ proves the breeze alone does nothing; stills.
 Done: [x] (`44f5777`..`81aa993`). The cat's roof moved earlier along the drift (`CAT_HOUSE`, `CAT_HOLD`), so the cat
 aboard gets its own drift of about 15 s before the air dies; its old roof stays as a plain neighbour
 (`EAST_OF_STRAND`), and the generated village is laid out exactly as before, only left unbuilt on the cat's ground
-(`onCatGround`). The tub (`src/world/wash-tub.ts`) is pushed by strokes across it on screen, not by the field (under the
+(`onCatGround`). Phase 2b: the cat's cottage is sunk to its ridge with a gable-end chimney 9 m across from the hold, so
+the cat on its pot sits low; the lens watches the tub from a fixed point off that gable end (`CAT_LENS`), where she
+and the cat face each other across the frame (upright: behind her, on the side away from the slack sail); the cat sits
+rather than crouches on its pot, pleads at a kitten's length every few seconds, chirrups landing aboard and yowls
+once as it bolts; the boat's drift away up the open water once she is on the ridge is `BOAT_ADRIFT` (its last point a
+placeholder for where it fetches up by the church). The tub (`src/world/wash-tub.ts`) is pushed by strokes across it on screen, not by the field (under the
 low lens a stroke's own wind lands far beyond it; see `contracts/wind.md`). The beat lives in
 `src/story/drowned-cat.ts` (`StrandedCat`), driven by the chapter. The strand's landing is a level line of slates
 (`WAY.strandLanding`) and `WAY.strandSlope` is now the whole slope above it, because `alight` sets her down at a deck's
-own height. Left for later: the cat reads small at game distance (on the chimney and on the ridge); the climb's lens
-loses the dark off the right of frame; the cygnet in the satchel tends to look back toward the lens.
+own height. Left for later: the cat still reads small on its pot (about 40 px at 1600 × 900) and at the gap, and upright
+the cat at the bow is hidden behind her; the climb's lens looks on to the church with the dark behind it.
 
 ### Phase 3: over the roofs
 Owns: the child's walk over `WAY` following the cat, stopping at each gap; the tree crossing (rocks to the wind, a
