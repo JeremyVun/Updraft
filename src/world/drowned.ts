@@ -12,6 +12,7 @@ import { REFLECTION_LAYER } from './water/reflection';
 import { fixInPlace } from '../gl/fixed';
 import { Swing } from './birches';
 import { DarkBank } from './drowned-dark';
+import { WashTub } from './wash-tub';
 import {
   CAT_HOUSE, DARK_WAY, GARDEN_TREE, GARDEN_WALLS, GREEN_TREE, NAVE, PLACED, SWING_FROM, SWING_PIVOT,
   inClearing, type GardenWall, type PlacedHouse,
@@ -1069,7 +1070,7 @@ function placedSpec(p: PlacedHouse, i: number): HouseSpec {
   return {
     ...p, roll: p.roll ?? 0, lime: p.stone ? WALL_STONE : LIME[i % LIME.length],
     roof: p.thatched ? THATCH[i % THATCH.length] : SLATE[i % SLATE.length],
-    pots: p === CAT_HOUSE ? 1 : undefined,
+    pots: p.pots,
   };
 }
 
@@ -1230,6 +1231,8 @@ export class DrownedVillage {
   readonly gardenTree = new THREE.Group();
   /** The swing on the green tree's bough, hanging still over the green. */
   readonly swing: Swing;
+  /** The wash-tub adrift by the cat's roof. */
+  readonly tub: WashTub;
   private readonly storm = { value: 0 };
   /** Once the dark has risen the herons leave ahead of it and do not come back. */
   private fled = false;
@@ -1253,7 +1256,9 @@ export class DrownedVillage {
     buildChurch(body, rand);
     this.cameraObstacles.push(houseBounds({ ...NAVE, roll: 0, lime: STONE, roof: SLATE[0] }));
     const placing = mulberry32(9104);
-    PLACED.forEach((p, i) => this.addHouse(body, placedSpec(p, i), placing, p !== CAT_HOUSE));
+    PLACED.forEach((p, i) => this.addHouse(body, placedSpec(p, i), placing, !p.quiet));
+    /** From a seed of its own, so the trees grown after the placed roofs are the same whatever the cat's is like. */
+    this.addHouse(body, placedSpec(CAT_HOUSE, 2), mulberry32(5150), false);
     for (const w of GARDEN_WALLS) this.cameraObstacles.push(buildWall(body, w));
     const rock = new Merged();
     buildLighthouse(rock);
@@ -1379,7 +1384,8 @@ export class DrownedVillage {
     this.gardenTree.rotation.order = 'YXZ';
     this.gardenTree.rotation.set(GARDEN_TREE.lean, Math.atan2(GARDEN_TREE.fall.x, GARDEN_TREE.fall.y), 0);
     this.swing = new Swing(SWING_PIVOT, SWING_FROM.y, new THREE.Vector4());
-    this.objects.push(this.gardenTree, this.swing.group, ...this.dark.objects);
+    this.tub = new WashTub(wind);
+    this.objects.push(this.gardenTree, this.swing.group, ...this.dark.objects, ...this.tub.objects);
   }
 
   /** A house and its chimneys, with their bounds for the lens; chimneys off the drift may take a heron. */

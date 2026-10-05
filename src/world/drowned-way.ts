@@ -18,7 +18,7 @@ export interface PlacedHouse {
   rise: number;
   sink: number;
   thatched: boolean;
-  /** Which ends of the ridge carry a chimney, along local x (-1, 1). */
+  /** Where along the ridge each chimney stands, along local x from -1 at one end to 1 at the other. */
   stacks: number[];
   /** How far the chimney stands above the ridge. */
   stack: number;
@@ -27,6 +27,10 @@ export interface PlacedHouse {
   gable?: number;
   /** Bare stone walls rather than limewash. */
   stone?: boolean;
+  /** How many pots each chimney carries. */
+  pots?: number;
+  /** No heron perches on its chimney. */
+  quiet?: boolean;
 }
 
 /** A garden wall: a run of coping from (x0, z0) to (x1, z1), its top at `top`. */
@@ -95,10 +99,23 @@ export const NAVE: PlacedHouse = {
   x: 3.1, z: -1436, yaw: 0, len: 17, depth: 7.6, wall: 3.2, rise: 3.2, sink: 3.6, thatched: false, stacks: [], stack: 0,
 };
 
-/** The roof the cat is stranded on, just off the channel before the stranding (roof A on the plan). */
+/** Where the boat waits while the cat is brought over to it, off the drift as it comes round toward the church. */
+export const CAT_HOLD = new THREE.Vector2(-15, -1331);
+
+/**
+ * The roof the cat is stranded on. Its slope faces the water the boat waits on, its chimney stands near the middle of
+ * the ridge so the cat on it is straight across the water from her, and its eaves stand a hand clear of the water so
+ * the cat can come down to the edge without getting wet.
+ */
 export const CAT_HOUSE: PlacedHouse = {
+  x: -2.5, z: -1336.5, yaw: Math.atan2(CAT_HOLD.x + 2.5, CAT_HOLD.y + 1336.5), len: 10, depth: 6, wall: 3.4, rise: 3.3,
+  sink: 2.95, thatched: false, stacks: [0.2], stack: 1.5, pots: 1, quiet: true,
+};
+
+/** The roof east of the stranding, in the stranded boat's view. */
+const EAST_OF_STRAND: PlacedHouse = {
   x: 14.5, z: -1365.5, yaw: 0.32, len: 10, depth: 6, wall: 3.4, rise: 3.3, sink: 3.3, thatched: false,
-  stacks: [-1], stack: 1.5,
+  stacks: [-1], stack: 1.5, pots: 1, quiet: true,
 };
 
 /**
@@ -118,10 +135,15 @@ export const NEIGHBOURS: PlacedHouse[] = [
 
 /** The corner of the garden walls across the lane, where the tree comes down. */
 const wallFoot = new THREE.Vector2(-10.2, -1409.6);
-/** Where the stem rests, along the strand's ridge; she steps out onto the slates there and climbs straight up. */
+/** Where the stem rests, along the strand's ridge; she steps out onto the slates beside it and climbs up. */
 const STEP_ALONG = -(STRAND_HOUSE.len / 2 - STEP_IN);
-const strandStep = houseLocal(STRAND_HOUSE, STEP_ALONG, STRAND_HOUSE.depth / 2 - 0.4);
+/** Across from the ridge to the line of slates just out of the water that she steps out onto. */
+const STEP_DOWN = STRAND_HOUSE.depth / 2 - 0.1;
+const strandStep = houseLocal(STRAND_HOUSE, STEP_ALONG, STEP_DOWN);
 const strandTop = houseLocal(STRAND_HOUSE, STEP_ALONG, 0);
+/** Along the slates she steps out onto, either side of the stem: from the gable round to the boat's near side. */
+const landingA = houseLocal(STRAND_HOUSE, -(STRAND_HOUSE.len / 2 - 0.9), STEP_DOWN);
+const landingB = houseLocal(STRAND_HOUSE, STEP_ALONG + 2.2, STEP_DOWN);
 /** The west end of the strand's ridge, over the lane, where she waits for the tree. */
 const strandEnd = houseLocal(STRAND_HOUSE, -(STRAND_HOUSE.len / 2 - 0.4), 0);
 /** The height of the coping she walks along from the tree to the cottage. */
@@ -166,12 +188,58 @@ export const GREEN_TREE = new THREE.Vector3(4.6, -3.2, -1428.4);
 export const SWING_FROM = new THREE.Vector3(gardenNorth.x, eaveAt(GARDEN_HOUSE), gardenNorth.y);
 export const SWING_PIVOT = new THREE.Vector3(SWING_FROM.x, 5.65, SWING_FROM.z - 0.9);
 
+/** How far along the cat's ridge its chimney stands from the middle, as the house builder places it. */
+const CAT_STACK = CAT_HOUSE.stacks[0] * (CAT_HOUSE.len / 2 - 0.75);
+
 /** The top of the chimney the cat waits on: the rim of its pot. */
 export const CAT_CHIMNEY = (() => {
   const top = ridgeTop(CAT_HOUSE) - 0.04 + CAT_HOUSE.stack + 0.58;
-  const at = houseLocal(CAT_HOUSE, -(CAT_HOUSE.len / 2 - 0.75), 0);
+  const at = houseLocal(CAT_HOUSE, CAT_STACK, 0);
   return new THREE.Vector3(at.x, top, at.y);
 })();
+
+/** The top of a placed slate roof under (x, z), or null off it. */
+export function roofUnder(h: PlacedHouse, x: number, z: number): number | null {
+  const c = Math.cos(h.yaw), s = Math.sin(h.yaw);
+  const dx = x - h.x, dz = z - h.z;
+  const lx = dx * c - dz * s, lz = dx * s + dz * c;
+  if (Math.abs(lx) > h.len / 2 + 0.1 || Math.abs(lz) > h.depth / 2 + OVERHANG) return null;
+  return slatesAt(h, lz);
+}
+
+/** The cat's roof under (x, z), or the water off it. */
+export const catRoof = (x: number, z: number) => roofUnder(CAT_HOUSE, x, z) ?? 0;
+/** The roof the becalmed boat comes to rest against, under (x, z), or the water off it. */
+export const strandRoof = (x: number, z: number) => roofUnder(STRAND_HOUSE, x, z) ?? 0;
+
+/** A point on the cat's roof `along` its ridge from the middle and `down` its slope toward the boat, on the slates. */
+export function onCatRoof(along: number, down: number, out = new THREE.Vector3()): THREE.Vector3 {
+  const at = houseLocal(CAT_HOUSE, along, down, TMP2);
+  return out.set(at.x, slatesAt(CAT_HOUSE, down), at.y);
+}
+const TMP2 = new THREE.Vector2();
+
+/** Where on the cat's slope it lands from the chimney: just below the stack, toward the boat. */
+export const CAT_LANDING = onCatRoof(CAT_STACK, 0.95);
+
+/**
+ * The cat's roof as the tub meets it: its middle, half its length and half its depth to the eaves' edge, and its
+ * heading (the house's yaw). The slope toward the boat runs along the eave on +z, from -`len` to +`len` along x.
+ */
+export const CAT_ROOF = {
+  x: CAT_HOUSE.x, z: CAT_HOUSE.z, yaw: CAT_HOUSE.yaw,
+  len: CAT_HOUSE.len / 2 + 0.11, depth: CAT_HOUSE.depth / 2 + OVERHANG, eave: eaveAt(CAT_HOUSE),
+};
+
+/**
+ * The wash-tub: where it floats when the boat comes, and the water it is kept to (a middle and a reach), between the
+ * boat's bow and the cat's eaves.
+ */
+export const TUB_START = (() => {
+  const toward = new THREE.Vector2(CAT_HOUSE.x - CAT_HOLD.x, CAT_HOUSE.z - CAT_HOLD.y).normalize();
+  return new THREE.Vector2(CAT_HOLD.x + toward.x * 5.2 - toward.y * 2.2, CAT_HOLD.y + toward.y * 5.2 + toward.x * 2.2);
+})();
+export const TUB_WATER = { x: (CAT_HOLD.x + CAT_HOUSE.x) / 2, z: (CAT_HOLD.y + CAT_HOUSE.z) / 2, r: 6.5 };
 
 /** A step from one walkable surface to the next across water: `from` the near end, `to` the far. */
 export interface WayGap {
@@ -182,12 +250,15 @@ export interface WayGap {
 
 /**
  * The way over the roofs, in walking order. Slopes are decks whose height runs from `height` at their first end to
- * `height1` at their second. `strandSlope` starts on the slates by the boat's stem (she alights onto it); `strand` is
- * the ridge above; `naveRidge` ends at the tower's foot.
+ * `height1` at their second. `strandLanding` is the line of slates by the boat's stem she alights onto (level, as a
+ * step out of a boat needs); `strandSlope` is the whole slope above it, up to `strand`, the ridge; `naveRidge` ends
+ * at the tower's foot.
  */
 export const WAY = {
-  strandSlope: { x0: strandStep.x, z0: strandStep.y, x1: strandTop.x, z1: strandTop.y, halfWidth: 0.7,
-    height: slatesAt(STRAND_HOUSE, STRAND_HOUSE.depth / 2 - 0.4), height1: ridgeTop(STRAND_HOUSE) },
+  strandLanding: { x0: landingA.x, z0: landingA.y, x1: landingB.x, z1: landingB.y, halfWidth: 0.25,
+    height: slatesAt(STRAND_HOUSE, STEP_DOWN) },
+  strandSlope: { x0: strandStep.x, z0: strandStep.y, x1: strandTop.x, z1: strandTop.y, halfWidth: 2.2,
+    height: slatesAt(STRAND_HOUSE, STEP_DOWN), height1: ridgeTop(STRAND_HOUSE) },
   strand: { x0: strandTop.x, z0: strandTop.y, x1: strandEnd.x, z1: strandEnd.y, halfWidth: 0.45, height: ridgeTop(STRAND_HOUSE) },
   gardenWall: { x0: wallFoot.x, z0: wallFoot.y, x1: gardenEave.x, z1: gardenEave.y, halfWidth: 0.3, height: COPING },
   gardenSlope: { x0: gardenEave.x, z0: gardenEave.y, x1: gardenRidgeA.x, z1: gardenRidgeA.y, halfWidth: 0.7,
@@ -236,17 +307,27 @@ export function darkWayPoint(reach: number, out: THREE.Vector2): THREE.Vector2 {
   return out.copy(DARK_WAY[0]);
 }
 
-export const PLACED: PlacedHouse[] = [STRAND_HOUSE, GARDEN_HOUSE, CAT_HOUSE, ...NEIGHBOURS];
+/** The placed roofs other than the cat's. */
+export const PLACED: PlacedHouse[] = [STRAND_HOUSE, GARDEN_HOUSE, EAST_OF_STRAND, ...NEIGHBOURS];
+
+/**
+ * Where the lens stands while the tub is brought over: off the near side of the water between the boat and the cat,
+ * over her shoulder enough that she looks across the frame at the cat and never toward the lens, and looking on up
+ * the village to the church.
+ */
+export const CAT_LENS = new THREE.Vector2(TUB_WATER.x - 0.31 * 13, TUB_WATER.z + 0.95 * 13);
 
 /**
  * Places the generated village keeps clear of: every placed house with room round it, the garden, the green, the
- * church, and the water the drift crosses from the cat's roof to the stranding.
+ * church, the water the tub crosses and the lens watching it, and the water the drift crosses to the stranding.
  */
 export const CLEARINGS: { x: number; z: number; r: number }[] = [
-  ...[...PLACED, NAVE].map((h) => ({ x: h.x, z: h.z, r: h.len / 2 + 4 })),
+  ...[...PLACED, CAT_HOUSE, NAVE].map((h) => ({ x: h.x, z: h.z, r: h.len / 2 + 4 })),
   { x: wallFoot.x + 4, z: wallFoot.y - 4, r: 8 },
   { x: GREEN_TREE.x - 2, z: GREEN_TREE.z, r: 10 },
-  { x: CAT_HOUSE.x - 9, z: CAT_HOUSE.z - 3, r: 8 },
+  { x: TUB_WATER.x, z: TUB_WATER.z, r: TUB_WATER.r + 2 },
+  { x: CAT_LENS.x, z: CAT_LENS.y, r: 5 },
+  { x: EAST_OF_STRAND.x - 9, z: EAST_OF_STRAND.z - 3, r: 8 },
   { x: -3, z: -1376, r: 9 },
   { x: -7, z: -1388, r: 8 },
   { x: 4, z: -1446, r: 9 },

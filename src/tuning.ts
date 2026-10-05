@@ -1749,6 +1749,54 @@ export const tuning = {
        */
       riseFor: 9, comeAfter: 5, comeFor: 24, holdBehind: 20,
     },
+    /** The wash-tub the player's wind carries to the cat's roof and back to the boat. */
+    tub: {
+      /**
+       * A stroke passing within `brushReach` metres of it on screen (and never less than `brushFloor` of the screen's
+       * half height) pushes it, and lays a gust of `windRadius` at it with gust energy at `energyScale` stroke speed a unit.
+       */
+      brushReach: 1.8, brushFloor: 0.15, windRadius: 2.6, energyScale: 20,
+      /**
+       * The share of the stroke's speed over the water it goes at, the most it goes, how quickly it takes the stroke
+       * up, and how fast it loses its way once the stroke has gone, per second: it slows and settles where it is left.
+       */
+      take: 0.22, topSpeed: 2.2, grip: 9, drag: 0.9,
+      /** Screen heights a second a stroke starts to push it at, and pushes it in full at. */
+      flickFrom: 0.25, flickFull: 0.7,
+      /** Out of its water it drifts back at up to `homeSpeed` m/s, `homePull` m/s a metre beyond the edge. */
+      homeSpeed: 0.45, homePull: 0.3,
+      /** The world's own air carrying it once nobody has managed it, m/s. */
+      carrySpeed: 0.55,
+      /** How hard it is drawn into a dock it has come within reach of, m/s a metre. */
+      dockPull: 1.3,
+      /** How much it turns for its way through the water. */
+      turn: 0.7,
+      /** How deep it floats empty and with the cat in it. */
+      draft: 0.085, ladenDraft: 0.125,
+    },
+    /** The stranded cat, the tub's two trips, and the cat's bolt from the bow when the dark has come on. */
+    cat: {
+      /** She notices it this far from the place the boat waits, and the boat eases toward it from `easeFrom`. */
+      seeFrom: 46, easeFrom: 30,
+      /** How hard the boat slows into its hold (m/s²) and how far its middle stops off the cat's eaves. */
+      holdBrake: 0.42, holdOff: 13,
+      /** How near (metres) the tub must come to the eaves, or to the bow, to be drawn in. */
+      roofReach: 1.8, bowReach: 2.4,
+      /** Seconds it looks at the tub before it comes down, and stands at the edge before it hops in. */
+      looks: 1.6, edge: 1.3,
+      /** Seconds the tub is held at the bow before the cat leaps, and of the leap's settling before the boat goes on. */
+      ready: 0.7, settles: 2.6,
+      /** Seconds of nothing near the tub before the drawn gust, and with no progress before the air carries it there. */
+      inviteAfter: 6, carryAfter: 90,
+      /** How far nearer (metres) the tub has to get to its goal to count as progress. */
+      progress: 0.8,
+      /** How far on the dark has come when the cat's unease starts to climb, and when it bolts. */
+      uneasyFrom: 0.25, boltAt: 0.82,
+      /** The cat's run up the slates and along the ridge, m/s. */
+      runSpeed: 2.6,
+      /** Seconds she looks at the dark, then at the cat, before she climbs out after it. */
+      looksBack: 1.6, looksAtCat: 1.8,
+    },
   },
   drownedCamera: {
     /** Follow the boat into the streets; notice the church from that travelling view. */
@@ -1773,6 +1821,18 @@ export const tuning = {
     /** The eye's height over the water as the air dies, and once the boat has come to rest. */
     strandLow: 2.4, strandHigh: 3.4, uprightHigh: 3.8,
     strandPace: 0.6,
+    /**
+     * While the cat is brought over: seconds the lens takes to come round from the drift to the side of the water,
+     * the height it stands at there and the height it looks at over the water's middle; upright, how far behind the
+     * waiting boat it stands, how high, and how high it looks at the roof.
+     */
+    catTurnFor: 7, catEye: 2.3, catAim: 2.6, catPace: 0.55,
+    uprightCatBack: 7.5, uprightCatEye: 2.6, uprightCatAim: 2.4,
+    /**
+     * With the cat aboard: the lens beside the boat, a little aft of abeam so the cat at the bow faces it and the
+     * satchel is in view; how far it stands off and how high, and how fast it eases there.
+     */
+    aboardBearing: 1.3, aboardDistance: 8.5, aboardHeight: 1.3, aboardPace: 0.45,
   },
   /** One continuous passage from the last drowned houses to the forest beach. */
   storm: {

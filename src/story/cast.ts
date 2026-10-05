@@ -40,8 +40,8 @@ import type { Tree } from '../world/tree';
 
 /** Everyone and everything the story directs. */
 export interface Cast {
-  /** The drowned village: its roofs for the lens to keep clear of, and the dark. */
-  village?: Pick<DrownedVillage, 'cameraObstacles' | 'dark'>;
+  /** The drowned village: its roofs for the lens to keep clear of, the dark, and the wash-tub. */
+  village?: Pick<DrownedVillage, 'cameraObstacles' | 'dark' | 'tub'>;
   child: Traveller;
   plane: Glider;
   boat: Boat;
