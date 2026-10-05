@@ -985,6 +985,7 @@ export class WoodChapter implements Chapter {
   private readonly easeEye = new THREE.Vector3();
   private readonly easeLook = new THREE.Vector3();
   private easeAt = -1;
+  private easeSpan = 1;
   private releaseAt = -1;
   private releaseWay = 0;
   private releaseTurn = 0;
@@ -1281,8 +1282,8 @@ export class WoodChapter implements Chapter {
   /**
    * One frame for all of it, from off the path on her side, low at her head height with a wide lens: her in profile
    * at the left, her coal at her feet, the empty way to the stump in the middle and the rock beyond it at the right.
-   * The walking camera eases into it once as she comes up to her stop, measured by how far she still has to go, so
-   * it arrives as she does and she is in the frame all the way; then it holds there without a move until she walks on.
+   * The walking camera eases into it once over her walk up to her stop, measured by how far she still has to go but
+   * never quicker than `easeSeconds`, so the swing round her stays slow; then it holds there until she walks on.
    */
   private frameShape(ground: number, dt: number): void {
     const s = this.shot;
@@ -1301,13 +1302,14 @@ export class WoodChapter implements Chapter {
       // From the camera as it is, carried along with her; turned on its side mid-beat, over the same time by the clock.
       if (this.easeAt >= 0) { this.easeProgress = 0; this.easeTimed = true; }
       this.easeAt = this.now;
+      this.easeSpan = Math.max(1, Math.min(k.easeFrom, left));
       this.easePortrait = portrait;
       this.easeEye.copy(this.camAt).sub(c);
       this.easeLook.copy(this.camAt).addScaledVector(this.camDir, this.camAt.distanceTo(s.target)).sub(c);
     }
-    const near = 1 - THREE.MathUtils.clamp((left - 0.4) / (k.easeFrom - 0.4), 0, 1);
-    const timed = this.easeTimed || this.shapeStopped >= 0 ? this.easeProgress + dt / k.easeSeconds : 0;
-    this.easeProgress = Math.min(1, Math.max(this.easeProgress, this.easeTimed ? timed : Math.max(near, timed)));
+    const near = 1 - THREE.MathUtils.clamp((left - 0.4) / (this.easeSpan - 0.4), 0, 1);
+    const goal = this.easeTimed || this.shapeStopped >= 0 ? 1 : near;
+    this.easeProgress = Math.max(this.easeProgress, Math.min(goal, this.easeProgress + dt / k.easeSeconds));
     const e = THREE.MathUtils.smootherstep(this.easeProgress, 0, 1);
     framePoint(portrait ? k.portraitEye : k.eye, this.bendEye);
     framePoint(portrait ? k.portraitLook : k.look, this.bendLook);

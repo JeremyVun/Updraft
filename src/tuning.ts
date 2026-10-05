@@ -979,8 +979,8 @@ export const tuning = {
      * her wave; the breath out, how far on the next coal waits and how far off the path, clear of her while the camera
      * comes round behind her. The held frame, in the shape's frame (right, up
      * from her feet, toward her): the eye and where it looks, landscape and portrait, each lens's horizontal field
-     * (portrait: vertical), when the walking camera starts easing to it (metres from her stop), how long it takes
-     * when it cannot go by her steps, and how long it takes to ease back behind her as she walks on.
+     * (portrait: vertical), when the walking camera starts easing to it (metres from her stop), the least time it
+     * takes, and how long it takes to ease back behind her as she walks on.
      */
     shape: {
       approachPace: 0.7, flinchStep: 0.45, flinchSeconds: 0.7, revealSeconds: 1.4,
@@ -994,7 +994,7 @@ export const tuning = {
       faceEye: [8.6, 1.6, 17.2], faceLook: [0.2, 1.55, 3.3], faceHfov: 38, faceVfov: 20,
       portraitFaceEye: [5.6, 3.0, 17.0], portraitFaceLook: [1.5, 2.0, 5.7], portraitFaceVfov: 34,
       faceAfter: 0.5, faceSeconds: 4.2,
-      easeFrom: 9, easeSeconds: 4.5, releaseSeconds: 8,
+      easeFrom: 20, easeSeconds: 10, releaseSeconds: 8,
     },
     /** Seconds a coal burns from a full catch if nobody fans it again. */
     burnFor: 46,
