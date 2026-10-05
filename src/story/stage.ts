@@ -3,11 +3,13 @@ import type { Shot } from '../camera';
 import { heightAt } from '../world/island';
 import type { Act } from '../creatures/cygnet/mind';
 import type { Cast, Chapter } from './cast';
+import { CatYard } from './cat-yard';
 
-export type StageView = 'game' | 'flock' | 'behind' | 'front' | 'side' | 'far-side' | 'close' | 'top' | 'k-front' | 'k-side' | 'k-back' | 'k-34' | 'k-above' | 'k-full' | 'k-low';
+export type StageView = 'game' | 'flock' | 'behind' | 'front' | 'side' | 'far-side' | 'close' | 'top' | 'k-front' | 'k-side' | 'k-back' | 'k-34' | 'k-above' | 'k-full' | 'k-low'
+  | 'c-close' | 'c-face' | 'c-side' | 'c-back' | 'c-near' | 'c-far';
 
 /** Camera placements in the child's frame: bearing from their facing, distance, height above the subject, and what to look at. */
-const VIEWS: Record<StageView, { bearing: number; distance: number; height: number; on: 'both' | 'cygnet' }> = {
+const VIEWS: Record<StageView, { bearing: number; distance: number; height: number; on: 'both' | 'cygnet' | 'cat' }> = {
   game: { bearing: Math.PI, distance: 15, height: 5.2, on: 'both' },
   /** Standing where the child stands and watching the swans, wherever in the sky or on the water they are. */
   flock: { bearing: Math.PI, distance: 26, height: 7, on: 'both' },
@@ -26,6 +28,14 @@ const VIEWS: Record<StageView, { bearing: number; distance: number; height: numb
   'k-full': { bearing: 0.8, distance: 1.9, height: -0.12, on: 'cygnet' },
   'k-low': { bearing: 1.1, distance: 1.5, height: -0.4, on: 'cygnet' },
   top: { bearing: Math.PI, distance: 1.2, height: 6, on: 'both' },
+  /** Round the cat, from the way it faced when the view was chosen. */
+  'c-close': { bearing: 0.8, distance: 1.2, height: 0.2, on: 'cat' },
+  'c-face': { bearing: 0.15, distance: 1.25, height: 0.1, on: 'cat' },
+  'c-side': { bearing: Math.PI / 2, distance: 1.5, height: 0.15, on: 'cat' },
+  'c-back': { bearing: Math.PI - 0.5, distance: 1.4, height: 0.4, on: 'cat' },
+  /** Game distances, from the cat yard's own bearings so that a cat on the move stays framed the same. */
+  'c-near': { bearing: 1.9, distance: 4, height: 1.4, on: 'cat' },
+  'c-far': { bearing: 1.9, distance: 12, height: 4, on: 'cat' },
 };
 
 /**
@@ -44,16 +54,21 @@ export class StageChapter implements Chapter {
   readonly music = 'meadow' as const;
   readonly trodden = new THREE.Vector3();
   dusk = 0;
+  /** Bumped to put the camera straight onto a cat view, so a capture never waits on the camera gliding there. */
+  cameraCut = 0;
   view: StageView = 'behind';
   private readonly home = new THREE.Vector3();
   /** The views are laid out round the way the child faced when the view was chosen, so a turning child does not swing the camera. */
   private facing = 0;
   private readonly tmp = new THREE.Vector3();
+  private readonly childHead = new THREE.Vector3();
   private offering = false;
   /** While set, it swims after a point that paces up and down just off the beach. */
   private swimming = false;
   private readonly swimAt = new THREE.Vector3();
   private clock = 0;
+  /** QA stand-ins for the drowned village's places, set out beside the child the first time the cat is played. */
+  private yard: CatYard | null = null;
 
   constructor(private readonly cast: Cast) {
     const { child, cygnet } = cast;
@@ -74,7 +89,10 @@ export class StageChapter implements Chapter {
 
   look(view: StageView): void {
     this.view = view;
-    this.facing = view.startsWith('k-') ? this.cast.cygnet.yaw : this.cast.child.yaw;
+    if (view.startsWith('c-')) this.cameraCut++;
+    if (view === 'c-near' || view === 'c-far') this.facing = this.yard?.yaw ?? this.cast.child.yaw;
+    else if (view.startsWith('c-')) this.facing = this.cast.cat.yaw;
+    else this.facing = view.startsWith('k-') ? this.cast.cygnet.yaw : this.cast.child.yaw;
   }
 
   /** Everything the two of them can do, by name. Unknown names are reported rather than ignored. */
@@ -82,6 +100,17 @@ export class StageChapter implements Chapter {
     const { child: c, cygnet: k, flock, carry } = this.cast;
     const ahead = (d: number, side = 0) =>
       this.tmp.set(c.position.x + Math.sin(c.yaw) * d + Math.cos(c.yaw) * side, 0, c.position.z + Math.cos(c.yaw) * d - Math.sin(c.yaw) * side);
+    if (name.startsWith('cat:')) {
+      /** The cat's actions, each from its own place in the yard: `cat:strand`, `cat:run`, `cat:climb`. */
+      if (!this.yard) {
+        this.yard = new CatYard(ahead(4, -3).clone(), c.yaw);
+        this.cast.cat.objects[0].parent?.add(this.yard.group);
+      }
+      const played = this.yard.play(name.slice(4), this.cast.cat, this.childHead);
+      this.cameraCut++;
+      if (!played) console.warn(`stage: the cat has nothing called "${name.slice(4)}"`);
+      return played;
+    }
     if (name.startsWith('act:')) {
       /** Anything it does of its own accord, by name and on demand: `act:preen-wing`, `act:bowled`. */
       k.mind.perform(name.slice(4) as Act, Number.NaN);
@@ -220,6 +249,8 @@ export class StageChapter implements Chapter {
   update(dt: number): void {
     const { child: c, cygnet: k } = this.cast;
     this.clock += dt;
+    this.yard?.update(dt);
+    this.childHead.set(c.position.x, c.position.y + 1.05, c.position.z);
     if (this.swimming) {
       let z = c.position.z;
       while (heightAt(c.position.x, z) > -0.4 && z < c.position.z + 40) z += 0.5;
@@ -231,8 +262,8 @@ export class StageChapter implements Chapter {
     }
     const v = VIEWS[this.view];
     const s = this.shot;
-    const at = k.eye(this.tmp);
-    if (v.on === 'cygnet') s.target.copy(at);
+    const at = v.on === 'cat' ? this.tmp.copy(this.cast.cat.position).setY(this.cast.cat.position.y + 0.16) : k.eye(this.tmp);
+    if (v.on === 'cygnet' || v.on === 'cat') s.target.copy(at);
     else s.target.set((c.position.x + at.x) / 2, (c.position.y + 1.2 + at.y) / 2, (c.position.z + at.z) / 2);
     const bearing = this.facing + v.bearing;
     s.eye = (s.eye ?? new THREE.Vector3()).set(s.target.x + Math.sin(bearing) * v.distance, s.target.y + v.height, s.target.z + Math.cos(bearing) * v.distance);
