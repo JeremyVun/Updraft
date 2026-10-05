@@ -511,3 +511,21 @@ So the existing drowned village and storm code may be refactored as far as the r
 - **The cat comes home** (Jeremy, 2026-10-05: yes). At the very end, as she walks down to the cottage with the red door,
   the same tabby sits in its lit window, waiting: home's cat all along. No remark and no beat of its own; it is built
   once the drowned village is judged.
+
+**No draining: she leaves the boat to go after the cat** (Jeremy, 2026-10-05, on Phase 1's stills: "why is hte boat on
+the roof?" and "you're planning to drain the drowning village? why? Im going to let you figure out what works best,
+but it does seem a bit on the nose to exactly align ontop of the roof like that."). The sea drawing back is cut; it
+was machinery invented to strand the boat. This supersedes steps 2, 3, 7 and 8 of "The whole room":
+
+- The air dies as on main, and the becalmed boat drifts gently in against the eaves of a roof and stops: a nudge at
+  the waterline, never landing on top of anything.
+- The dark rises behind them. The cat panics, leaps onto that roof and bolts over the roofs toward the church, the
+  highest thing there is. A child does not leave a frightened cat: she climbs out after it. The boat was never stuck;
+  she left it to save the cat, so the boat coming back to her later is no contradiction.
+- The roofs already stand out of the water on main, so the run needs no change of level. The crossings are as before
+  (the garden tree pushed over, the swing on the green).
+- At the church the cat scrambles up into the belfry, safe and out of her reach, and she is left on the nave ridge as
+  the dark arrives. Now she needs her boat: the player fills its sail and brings it across to her, and the dark's
+  arrival is the storm's beginning, as before. The water does not rise round her feet; the dark itself (the smoke
+  rolling over, the wind and the first rain) is what says go.
+- The cat's run is what she follows, so it never needs the plane to lead.
