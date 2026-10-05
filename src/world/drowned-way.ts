@@ -122,12 +122,8 @@ const wallFoot = new THREE.Vector2(-10.2, -1409.6);
 const STEP_ALONG = -(STRAND_HOUSE.len / 2 - STEP_IN);
 const strandStep = houseLocal(STRAND_HOUSE, STEP_ALONG, STRAND_HOUSE.depth / 2 - 0.4);
 const strandTop = houseLocal(STRAND_HOUSE, STEP_ALONG, 0);
-/** The place on the strand's ridge nearest the walls across the lane, where she waits for the tree. */
-const strandEnd = (() => {
-  const c = Math.cos(STRAND_HOUSE.yaw), s = Math.sin(STRAND_HOUSE.yaw);
-  const along = (wallFoot.x - STRAND_HOUSE.x) * c - (wallFoot.y - STRAND_HOUSE.z) * s;
-  return houseLocal(STRAND_HOUSE, THREE.MathUtils.clamp(along, STEP_ALONG + 1.2, STRAND_HOUSE.len / 2 - 0.6), 0);
-})();
+/** The west end of the strand's ridge, over the lane, where she waits for the tree. */
+const strandEnd = houseLocal(STRAND_HOUSE, -(STRAND_HOUSE.len / 2 - 0.4), 0);
 /** The height of the coping she walks along from the tree to the cottage. */
 const COPING = 0.45;
 const gardenEave = houseLocal(GARDEN_HOUSE, -3, GARDEN_HOUSE.depth / 2 + OVERHANG);
