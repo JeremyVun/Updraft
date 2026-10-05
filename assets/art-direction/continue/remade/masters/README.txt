@@ -22,6 +22,12 @@ For further camera corrections, start from those original inputs: repeated edits
 Installed derivatives: src/paintings/<chapter>-land.webp and <chapter>-port.webp,
 encoded at WebP quality 85 (cwebp -m 6) with sharp YUV conversion and unchanged native dimensions.
 Matching chapter-select tiles are 400 x 250 WebP at quality 90.
+Drowned was refreshed on 2026-10-05 from approved study 07, with a matching portrait:
+soft painted sail folds and clean surfaces without diagonal swatches. Its WebP derivatives use quality 94;
+the manifest records their updated checksums, sizes and generation prompts.
+Sea and mirror were refreshed on 2026-10-05 from approved studies 06 and 05, with matching portraits:
+blue open water, the game's rounded boat and one dolphin; a low human viewpoint across the sky mirror,
+trapped light points and a rising bubble. Their WebP derivatives use quality 94.
 
 Jeremy will handle any subsequent upscale manually. After upscaling, encode the larger files
 under the same src/paintings filenames; preserve these original native masters.

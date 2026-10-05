@@ -6,6 +6,7 @@ Browser game where you play the wind (Three.js + TypeScript + Vite). **Read `doc
 
 - Overview and standing decisions: `docs/project.md`. Look: `docs/styles.md`.
 - Favicon artwork and Jeremy's brief: `docs/favicon.md`. Bringing the look toward the room paintings (work in progress, Jeremy's brief verbatim): `docs/painted-look.md`.
+- Chapter paintings and current art studies: `assets/art-direction/continue/README.md`; sea approval, dolphin variant and mirror perspective brief: `assets/art-direction/sea-mirror-study-2026-10-05/round-3.json`.
 - Every room, how it plays and Jeremy's rulings for it: `docs/chapters.md`. The stairs in the clouds (work in progress, Jeremy's brief verbatim): `docs/stairs.md`.
 - The drowned village being rebuilt (work in progress under Claude's creative lead; the vision, the sequence step by step and Jeremy's brief verbatim): `docs/backlog/path-puzzles/design.md`, phases in `build_plan.md`.
 - The characters: the child `docs/child.md`, the cygnet `docs/cygnet.md`, the boat `docs/boat.md`.
@@ -31,6 +32,7 @@ Available only in development and explicit QA builds; production ignores them an
 ## Where things are
 
 - Sharing with friends, promotional assets and the proposed Steam release: `docs/launch.md`. The promo videos (trailer, short, gameplay take), with Jeremy's brief, the shot plan and status: `docs/promo.md`; both files are local only (ignored by git), as is the finished media in `assets/promo/`. They are made with `tools/promo-film.mjs`, `promo-score.mjs`, `promo-text.mjs` and `promo-edit.mjs` (shots, cards and edits in `tools/promo/`).
+- Owl promotional art, Jeremy's latest direction and the complete visual review: `assets/promo/owl-promo-art-direction.md` (local only).
 - Feel knobs (gust strength, wind decay, grass spring, washing sensitivity, petal counts): `src/tuning.ts`. Put new player-feel numbers there rather than inline; GLSL takes them through `glsl()`.
 - Engine layer (boot, readbacks, quality governor, sim-pass helpers): `src/gl/`. Post chain: `src/post/post.ts`.
 - Shared shader uniforms and GLSL (sky, fog, lighting, cloud shadows, domain helpers): `src/world/atmosphere.ts`. Include `ATMO_GLSL` once per shader stage.
