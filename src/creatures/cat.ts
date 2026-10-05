@@ -942,7 +942,7 @@ export class Cat {
     let jaw = 0;
     let tailWave = 0.25;
     let tailFlick = 0;
-    let pupil = 0.82;
+    let pupil = 0.86;
 
     /** On footing that falls away under a paw, a ridge or a slope, it crouches onto it rather than reaching. */
     let sink = 0;
@@ -1152,7 +1152,7 @@ export class Cat {
     const blink = this.blinkT >= 0 ? Math.sin((this.blinkT / 0.16) * Math.PI) : 0;
     const slow = this.idle === 'blink' ? Math.sin((this.idleT / this.idleFor) * Math.PI) ** 0.6 * 0.85 : 0;
     look.blink = Math.max(blink, slow);
-    look.pupil = clamp(pupil, 0.6, 0.9);
+    look.pupil = clamp(pupil, 0.6, 0.93);
     look.air = 0.6;
     look.wet = this.wet;
 

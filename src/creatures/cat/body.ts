@@ -394,8 +394,8 @@ function parts(coat: boolean): THREE.BufferGeometry[] {
     mat: EAR,
     at: add(H, EAR_AT),
     offset: [0, 0.02, 0],
-    size: [0.027, 0.03, 0.0085],
-    rot: [-0.1, 0.3, -0.52],
+    size: [0.027, 0.03, 0.011],
+    rot: [-0.1, 0.45, -0.52],
     detail: 3,
     shape: (u) => {
       const k = 0.5 * (1 - u.y);

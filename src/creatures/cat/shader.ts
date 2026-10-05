@@ -151,8 +151,6 @@ float tabby(vec3 r) {
     float front = smoothstep(-0.02, 0.01, q.z);
     float mid = band(q.x + warp * 0.002, 0.0035 - 0.0015 * smoothstep(0.02, 0.05, brow), 0.0018) * smoothstep(0.014, 0.022, brow) * front;
     float sides = band(length(vec2(ax - 0.014 + brow * 0.08, (brow - 0.034) * 0.38)), 0.0028, 0.0018) * front;
-    float outer = band(length(vec2(ax - 0.03 + brow * 0.15, (brow - 0.03) * 0.5)), 0.0025, 0.0018) * front;
-    sides = max(sides, outer);
     float crown = band(ax - 0.012 + warp * 0.003, 0.0035, 0.002) * smoothstep(0.035, 0.045, q.y) * (1.0 - smoothstep(-0.01, 0.015, q.z));
     float cheek = band(brow + 0.002 + (ax - 0.04) * 0.25 + warp * 0.003, 0.0022, 0.0015) * smoothstep(0.044, 0.052, ax) * smoothstep(-0.035, 0.0, q.z);
     float jowl = band(brow + 0.016 + (ax - 0.05) * 0.4 + warp * 0.002, 0.0018, 0.0015) * smoothstep(0.052, 0.058, ax) * smoothstep(-0.02, 0.005, q.z);
