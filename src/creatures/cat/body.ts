@@ -102,14 +102,16 @@ const SIZE: V3 = [0.064, 0.056, 0.06];
  * a ball stuck on.
  */
 function skullShape(u: { x: number; y: number; z: number }): void {
-  const cheek = ramp(-u.y, -0.15, 0.4) * (1 - ramp(-u.y, 0.75, 1)) * ramp(u.z, -0.6, 0.2);
-  u.x *= (1 + 0.2 * cheek) * (1 - 0.12 * ramp(u.y, 0.15, 0.9));
-  if (u.y > 0.45) u.y = 0.45 + (u.y - 0.45) * 0.8;
+  const cheek = ramp(-u.y, -0.05, 0.45) * (1 - ramp(-u.y, 0.75, 1)) * ramp(u.z, -0.6, 0.2);
+  u.x *= (1 + 0.2 * cheek) * (1 - 0.2 * ramp(u.y, 0.1, 0.95));
+  if (u.y > 0.45) u.y = 0.45 + (u.y - 0.45) * 0.85;
   /** The face leans forward at the bottom: the brow rounds back over the eyes and the muzzle leads. */
   const front = ramp(u.z, 0.2, 0.75);
   u.z += front * (0.05 * ramp(-u.y, -0.1, 0.5) - 0.1 * ramp(u.y, -0.05, 0.75));
   if (u.z > 0.5) u.z = 0.5 + (u.z - 0.5) * 0.92;
   u.z += 0.04 * ramp(-u.y, 0.45, 0.9) * ramp(u.z, 0.1, 0.6);
+  /** The bridge of the nose stands between the eyes, so in profile they are set back behind it. */
+  u.z += 0.07 * front * Math.exp(-((u.x / 0.15) ** 2)) * ramp(u.y, -0.55, -0.3) * (1 - ramp(u.y, 0.05, 0.4));
   /** A short soft muzzle that leads the face, so the eyes sit back from the nose. */
   u.z += 0.2 * front * Math.exp(-((u.x / 0.36) ** 2) - ((u.y + 0.42) / 0.28) ** 2);
   /** A full chin and jowls under it, down into the bib. */
@@ -118,7 +120,7 @@ function skullShape(u: { x: number; y: number; z: number }): void {
 
 /** Shallow sockets the eyes sit in, so a whole round eye shows without standing proud of the face like a lens. */
 function sockets(u: { x: number; y: number; z: number }): void {
-  const d = Math.hypot(Math.abs(u.x) - 0.5, u.y + 0.17);
+  const d = Math.hypot(Math.abs(u.x) - 0.5, u.y + 0.1);
   u.z -= 0.075 * (1 - ramp(d, 0.18, 0.42)) * ramp(u.z, 0.3, 0.6);
 }
 
@@ -184,10 +186,10 @@ function trunk(): Station[] {
   });
   return [
     s(-0.122, 0.012, 0.014, 0.014, 0.014, [PELVIS, PELVIS, 0]),
-    s(-0.114, 0.01, 0.044, 0.04, 0.042, [PELVIS, PELVIS, 0]),
-    s(-0.096, 0.006, 0.064, 0.052, 0.058, [PELVIS, PELVIS, 0]),
-    s(-0.066, 0.002, 0.07, 0.054, 0.062, [PELVIS, PELVIS, 0]),
-    s(-0.03, 0.0, 0.063, 0.05, 0.062, [PELVIS, BODY, 0.6]),
+    s(-0.114, 0.01, 0.048, 0.04, 0.042, [PELVIS, PELVIS, 0]),
+    s(-0.096, 0.006, 0.07, 0.052, 0.058, [PELVIS, PELVIS, 0]),
+    s(-0.066, 0.002, 0.077, 0.054, 0.062, [PELVIS, PELVIS, 0]),
+    s(-0.03, 0.0, 0.066, 0.05, 0.062, [PELVIS, BODY, 0.6]),
     s(0.005, 0.0, 0.061, 0.049, 0.064, [BODY, CHEST, 0.12]),
     s(0.04, 0.003, 0.063, 0.049, 0.067, [BODY, CHEST, 0.55]),
     s(0.065, 0.006, 0.065, 0.049, 0.07, [BODY, CHEST, 0.88]),
@@ -313,7 +315,7 @@ function parts(coat: boolean): THREE.BufferGeometry[] {
       /** The white bib runs from the chin down the throat and chest and on, fainter, under the belly. */
       blend: (t, a) => {
         const bib = ramp(t, 0.5, 0.66);
-        const under = ramp(-Math.sin(a), 0.1 + 0.4 * bib, 0.55 + 0.3 * bib);
+        const under = ramp(-Math.sin(a), 0.1 + 0.62 * bib, 0.55 + 0.37 * bib);
         return under * (bib + (1 - bib) * 0.65 * ramp(t, 0.15, 0.4));
       },
     }),
@@ -331,7 +333,7 @@ function parts(coat: boolean): THREE.BufferGeometry[] {
   out.push(loft({ stations: tail(), mat: FUR, around: 16, smooth: 1 }));
 
   /** The haunch: a round ball on the thigh that is the wide bottom of the pear when it sits and its rump when it stands. */
-  pair({ part: THIGH_L, mat: FUR, at: add(REST[THIGH_L], [0.006, -0.014, -0.008]), size: [0.04, 0.052, 0.052], detail: 3 });
+  pair({ part: THIGH_L, mat: FUR, at: add(REST[THIGH_L], [0.005, -0.02, -0.006]), size: [0.042, 0.056, 0.047], detail: 3 });
   /** Paws: round mittens, all white. */
   pair({ part: FPAW_L, mat: FUR, at: add(REST[FPAW_L], [0, -WRIST + 0.013, 0.012]), size: [0.0235, 0.0135, 0.026], detail: 3, blend: () => 1 });
   pair({ part: HPAW_L, mat: FUR, at: add(REST[HPAW_L], [0, -TOE + 0.012, 0.011]), size: [0.022, 0.013, 0.027], detail: 3, blend: () => 1 });

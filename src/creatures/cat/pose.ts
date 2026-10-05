@@ -57,7 +57,7 @@ const NECK_AT = SKELETON.find(([bone]) => bone === NECK)![2];
 /** The face is held a little up from whatever it looks at, the way a small cat looks up at you. */
 const LIFT = 0.05;
 /** How far each joint of a wrapped tail turns: out sideways from the rump, round the haunch, and in to the front paws. */
-const WRAP = [0.45, 1.05, 0.75, 0.6, 0.5];
+const WRAP = [1.0, 0.85, 0.75, 0.65, 0.55];
 const clamp = THREE.MathUtils.clamp;
 
 /** The skeleton as nodes, posed each frame from the drives: the body by hand, the legs reaching for their paws. */

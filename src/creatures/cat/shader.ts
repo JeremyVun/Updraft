@@ -115,7 +115,7 @@ in float vShell;
 const vec3 FAWN = vec3(0.3, 0.212, 0.152);
 const vec3 BACK = vec3(0.235, 0.163, 0.118);
 const vec3 STRIPE = vec3(0.105, 0.063, 0.046);
-const vec3 WHITE = vec3(0.84, 0.82, 0.78);
+const vec3 WHITE = vec3(0.84, 0.8, 0.74);
 const vec3 PINK = vec3(0.72, 0.28, 0.24);
 const vec3 NOSE_PINK = vec3(0.7, 0.24, 0.22);
 const vec3 IRIS = vec3(0.62, 0.3, 0.035);
@@ -157,18 +157,13 @@ float tabby(vec3 r) {
     float jowl = band(brow + 0.016 + (ax - 0.05) * 0.4 + warp * 0.002, 0.0018, 0.0015) * smoothstep(0.052, 0.058, ax) * smoothstep(-0.02, 0.005, q.z);
     return max(max(mid, sides), max(max(crown, cheek), jowl));
   }
-  /** The haunch's stripes curve round it, as arcs about the knee. */
-  float haunch = smoothstep(0.03, 0.045, ax) * smoothstep(0.05, 0.07, r.y) * (1.0 - smoothstep(-0.02, 0.0, r.z));
-  if (haunch > 0.0) {
-    float d = distance(vec3(ax, r.y, r.z), vec3(0.05, 0.075, -0.035));
-    float arcs = smoothstep(0.3, 0.75, sin(d * 190.0 + warp * 1.4 - 1.2)) * smoothstep(0.03, 0.04, d);
-    if (r.y < 0.105) return arcs;
-  }
-  if (r.y < 0.09 && ax > 0.012) {
+  /** The haunch carries the bands of the back on down it, so its stripes run on from the body's. */
+  float haunch = smoothstep(0.03, 0.05, ax) * (1.0 - smoothstep(-0.035, -0.015, r.z)) * smoothstep(0.035, 0.06, r.y);
+  if (r.y < 0.09 && ax > 0.012 && haunch < 0.5) {
     return 0.8 * smoothstep(0.35, 0.75, sin(r.y * 120.0 + warp * 1.6)) * smoothstep(0.02, 0.035, r.y);
   }
   /** Bands over the back that lean back and taper to points down the flanks, so none ring the belly. */
-  float over = smoothstep(SPINE - 0.06, SPINE, r.y);
+  float over = smoothstep(SPINE - 0.06 - 0.06 * haunch, SPINE, r.y);
   float wave = 0.5 + 0.5 * sin((r.z + 0.35 * (SPINE - r.y)) * 165.0 + warp * 2.0);
   float th = mix(1.02, 0.56, over);
   return smoothstep(th, th + 0.12, wave);
