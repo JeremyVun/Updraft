@@ -152,7 +152,7 @@ void main() {
   float c = dot(rd, L);
   float ph = mix(phase(c, 0.55), phase(c, -0.2), 0.4) * 4.0;
   vec3 gold = cloudGold();
-  vec3 glow = cloudGlow() * vec3(1.0, 0.92, 0.8);
+  vec3 glow = cloudGlow() * vec3(1.15, 0.95, 0.7);
   float sigma = 6.0 / uSize;
   float T = 1.0;
   vec3 light = vec3(0.0);
@@ -170,7 +170,7 @@ void main() {
     float over = bulk(p + vec3(0.0, uSize * 0.09, 0.0));
     float up = clamp((p.y - uFloor) / (uSize * 1.4), 0.0, 1.0);
     vec3 shade = cloudShade(up * (1.0 - 0.6 * over) + 0.25 * (1.0 - over)) + gold * 0.06 * (0.4 + 0.6 * up);
-    vec3 col = mix(shade, gold * vec3(0.72, 0.61, 0.47) + shade * 0.35, sunT) + glow * sunT * ph * (0.12 + 0.6 * (1.0 - d));
+    vec3 col = mix(shade, gold * vec3(0.76, 0.6, 0.4) + shade * 0.3, sunT) + glow * sunT * ph * (0.12 + 0.6 * (1.0 - d));
     light += T * s * col;
     seen += T * s;
     at += T * s * t;

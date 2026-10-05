@@ -1094,7 +1094,8 @@ export class StairsChapter implements Chapter {
     boat.mooring = CLOUD_BERTH;
     boat.becalmed = 1;
     const S = THREE.MathUtils.smoothstep;
-    const cruise = THREE.MathUtils.lerp(1.2, 4, S(left, 3, 20)) + FAR_OUT_SPEED * S(left, 20, 70);
+    // Well slowed by the time it is near, so it is plainly coming alongside rather than running into them.
+    const cruise = THREE.MathUtils.lerp(1.2, 3.2, S(left, 3, 20)) + FAR_OUT_SPEED * S(left, 35, 95);
     boat.speed = Math.max(boat.speed, cruise * S(this.comingFor += dt, 0, 3));
     this.world.sailing(boat, dt);
   }

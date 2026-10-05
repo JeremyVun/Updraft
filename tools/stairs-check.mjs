@@ -177,7 +177,7 @@ try {
   s = await until((x) => x.beat === 'skein', 40000, 100);
   await page.waitForTimeout(5000);
   await shot('11-skein');
-  s = await until((x) => x.beat === 'sail', 60000);
+  s = await until((x) => x.beat === 'sail', 90000);
   await page.waitForTimeout(2000);
   await shot('12-aboard');
   // Over the cloud: push the boat along with sweeps through the hull the way it is going, and shoot each framing

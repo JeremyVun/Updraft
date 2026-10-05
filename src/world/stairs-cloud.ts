@@ -85,7 +85,7 @@ void main() {
     through += smoothstep(-0.4, 0.4, bulkAt(q.xz, vCalm, vStature) + over - (q.y - uSurface));
   }
   vThin = 1.0 - through * 0.25;
-  // Far off it goes into the haze of the horizon beyond it, gold toward the sun and rose away from it.
+  // Far off it goes into the haze of the horizon beyond it.
   vec3 ahead = vWorld - cameraPosition;
   vHaze = vec4(skyColor(normalize(vec3(ahead.x, 0.01, ahead.z))), (1.0 - exp(-length(ahead) / 700.0)) * 0.72);
   gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
@@ -174,13 +174,13 @@ void main() {
   vec3 shade = cloudShade(smoothstep(0.3, 0.95, puff));
   // The light scattered on through the cloud warms its shade, most near its crowns.
   shade += gold * 0.06 * (0.4 + 0.6 * puff) * (1.0 - 0.5 * vShade);
-  vec3 col = mix(shade, gold * vec3(0.72, 0.61, 0.47) + shade * 0.35, sunLit * mix(0.55, 1.0, crown));
-  col += gold * vec3(1.0, 0.9, 0.7) * full * 0.35;
+  vec3 col = mix(shade, gold * vec3(0.76, 0.6, 0.4) + shade * 0.3, sunLit * mix(0.55, 1.0, crown));
+  col += gold * vec3(1.0, 0.8, 0.5) * full * 0.55;
   // Against the low sun the thin edges and the crests glow: the silver lining.
-  col += cloudGlow() * vec3(1.0, 0.92, 0.8) * toward * (1.0 - 0.6 * vShade) * (0.02 + 0.85 * thin * thin);
-  // Down between the heaps far off the air thickens: the far valleys go into the haze while the crowns stand out of it.
+  col += cloudGlow() * vec3(1.15, 0.95, 0.7) * toward * (1.0 - 0.6 * vShade) * (0.02 + 0.85 * thin * thin);
+  // Down between the heaps far off the air thickens: the far valleys go gold while the crowns stand out of it.
   float low = 1.0 - smoothstep(0.0, 6.0, top.x);
-  vec3 haze = mix(vec3(lumaOf(uSkyHorizon)), uSkyHorizon, 0.5) * 0.75;
+  vec3 haze = lumaOf(uSkyHorizon) * vec3(0.95, 0.74, 0.5);
   col = mix(col, haze, (1.0 - exp(-max(dist - 40.0, 0.0) / 300.0)) * low * 0.4);
   // The tops the hull has just turned over are fresh and catch the light.
   col = mix(col, vapourLight(vWorld, ray, 0.4), stir * 0.35);
@@ -202,7 +202,7 @@ void main() {
     veil = (1.0 - exp(-veil / 3.0 * path * 0.03)) * uWisps;
   }
   col = mix(col, vapourLight(vWorld, ray, 0.6), veil * 0.65);
-  col = mix(col, vHaze.rgb, vHaze.a);
+  col = mix(col, cloudHaze(vHaze.rgb), min(vHaze.a * 1.2, 0.85));
   col = mix(col, vFog.rgb, vFog.a);
   float edge = mix(1.0, smoothstep(0.0, 0.75, 1.0 - thin + 0.25 * vnoise(xz * 0.9 + uTime * 0.2)), smoothstep(0.35, 0.9, thin));
   // At the end of its reach it thins into the deck beyond, rather than stopping along a line.

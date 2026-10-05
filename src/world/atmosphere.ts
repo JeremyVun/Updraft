@@ -540,6 +540,10 @@ vec3 cloudGold() {
 vec3 cloudGlow() {
   return mix(uSunColor, cloudGold(), 0.6);
 }
+/** The haze far off over the cloud, from the sky at the horizon: gold, so the cloud goes back into the distance warm. */
+vec3 cloudHaze(vec3 sky) {
+  return mix(sky, lumaOf(sky) * vec3(1.12, 0.88, 0.6), 0.7);
+}
 
 #if CLOUD_DECK
 /**
@@ -635,7 +639,7 @@ vec3 deckUnderside(vec2 xz, vec3 ro, float thin) {
   float toward = reach > 1.0 ? dot(away / reach, normalize(uSunDir.xz + 1e-5)) * 0.5 + 0.5 : 0.5;
   float far = smoothstep(25.0, 420.0, reach);
   vec3 gold = cloudGold();
-  vec3 body = lumaOf(uSkyAmbient) * vec3(1.6, 1.66, 1.8) + uGroundBounce * 0.3 + gold * 0.02;
+  vec3 body = lumaOf(uSkyAmbient) * vec3(1.78, 1.7, 1.64) + uGroundBounce * 0.3 + gold * 0.02;
   vec3 glow = gold * vec3(0.95, 0.9, 0.9) * (0.03 + 0.06 * toward) + cloudGlow() * pow(toward, 4.0) * (0.12 + 0.55 * far);
   return body + glow * (0.5 + 0.9 * far) + cloudGlow() * thin * (0.1 + 0.3 * toward);
 }
@@ -698,7 +702,7 @@ vec4 fogBank(vec3 ro, vec3 rd, float far) {
     + vnoise(vec2(v0 + dv * deeper + uTime * 0.6, u0 + du * deeper) * 0.05) * 0.5;
   float toward = max(0.0, dot(rd, uSunDir));
   // Seen from outside, its face is in its own shade, the low sun being beyond it, and lighter toward its top.
-  vec3 face = uFogBankLight.rgb * vec3(0.5, 0.5, 0.6) * mix(0.82, 1.18, up) * (0.78 + 0.44 * billow)
+  vec3 face = uFogBankLight.rgb * vec3(0.52, 0.5, 0.5) * mix(0.82, 1.18, up) * (0.78 + 0.44 * billow)
     + uSunColor * uFogBankLight.a * pow(toward, 3.0) * 0.06;
   // From inside it is white all round, and lighter toward the sun; long wisps of it stream past level as the boat
   // goes, nearer ones faster than those further off.
@@ -714,7 +718,7 @@ vec4 fogBank(vec3 ro, vec3 rd, float far) {
   float rim = 4.0 * cover * (1.0 - cover);
   light += uSunColor * uFogBankLight.a * (halo * mix(0.3 * inside, 1.0, rim) + (pow(toward, 400.0) * 1.5 + pow(toward, 12.0) * 0.2) * rim);
   // Far off it goes into the haze of the horizon, as the cloud does.
-  light = mix(light, skyColor(normalize(vec3(rd.x, 0.01, rd.z))), (1.0 - exp(-span.x / 650.0)) * 0.7);
+  light = mix(light, cloudHaze(skyColor(normalize(vec3(rd.x, 0.01, rd.z)))), (1.0 - exp(-span.x / 650.0)) * 0.7);
   return vec4(light, cover);
 }
 
