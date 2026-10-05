@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { ease, easeAngle, Spring, wrapAngle } from './motion';
+import { ease, Spring, wrapAngle } from './motion';
 import { catGeometry, HEAD, JAW } from './cat/body';
 import { CatGait, type GaitKind, type Support } from './cat/gait';
 import { CatRig, type Drives } from './cat/pose';
@@ -161,6 +161,7 @@ export class Cat {
   private then: CatPose = 'sit';
   private turnTo: number | null = null;
   private behind = 0;
+  private turning = 0;
 
   private climbing: Route | null = null;
   private readonly wall = new THREE.Vector3();
@@ -598,11 +599,21 @@ export class Cat {
       }
     }
     if (this.turnTo !== null) {
+      /** Round on the spot at a cat's own unhurried pace, easing in and out of it. */
       const err = wrapAngle(this.turnTo - this.heading);
-      this.heading = easeAngle(this.heading, this.turnTo, 3.2, dt);
+      this.turning = ease(this.turning, clamp(err * 3, -2.6, 2.6), 8, dt);
+      this.heading += this.turning * dt;
       this.fwd.set(Math.sin(this.heading), 0, Math.cos(this.heading));
-      if (Math.abs(err) < 0.06) this.turnTo = null;
+      if (Math.abs(err) < 0.04 && Math.abs(this.turning) < 0.2) {
+        this.turnTo = null;
+        this.turning = 0;
+      }
     }
+  }
+
+  /** Heads round toward `want` as fast as `rate` would ease it, but never faster than `most` radians a second. */
+  private turnToward(want: number, rate: number, most: number, dt: number): void {
+    this.heading += clamp(wrapAngle(want - this.heading) * (1 - Math.exp(-rate * dt)), -most * dt, most * dt);
   }
 
   private follow(dt: number): void {
@@ -619,7 +630,7 @@ export class Cat {
     this.along = Math.min(route.length, this.along + this.speed * dt);
     route.at(this.along, this.at);
     this.at.y = this.floor!(this.at.x, this.at.z);
-    this.heading = easeAngle(this.heading, want, this.speed > 0.05 ? 7 : 4, dt);
+    this.turnToward(want, 7, this.speed > 0.5 ? 6 : 2.6, dt);
     this.fwd.set(Math.sin(this.heading), 0, Math.cos(this.heading));
     if (left < 0.004 && this.speed < 0.05) {
       this.speed = 0;
@@ -655,7 +666,7 @@ export class Cat {
       there.applyMatrix4(this.frameInverse);
       if (this.up.y > 0.9) {
         const want = Math.atan2(there.x - this.at.x, there.z - this.at.z);
-        this.heading = easeAngle(this.heading, want, 6, dt);
+        this.turnToward(want, 6, 3, dt);
         this.fwd.set(Math.sin(this.heading), 0, Math.cos(this.heading));
       }
       this.gait.update(dt, this.support, this.heading, this.homes, 0.02 * this.scale);

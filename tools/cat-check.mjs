@@ -123,12 +123,11 @@ try {
         /** Cut close round the cat, wherever it is in the frame. */
         const [cx, cy] = await page.evaluate(() => {
           const { cat, rig } = window.__game;
-          const p = cat.position.clone();
-          p.y += 0.15;
+          const p = cat.eye(cat.position.clone()).add(cat.position).multiplyScalar(0.5);
           p.project(rig.camera);
           return [(p.x * 0.5 + 0.5) * innerWidth, (0.5 - p.y * 0.5) * innerHeight];
         });
-        const clip = { x: Math.min(1600 - 720, Math.max(0, cx - 360)), y: Math.min(900 - 450, Math.max(0, cy - 225)), width: 720, height: 450 };
+        const clip = { x: Math.min(1600 - 800, Math.max(0, cx - 400)), y: Math.min(900 - 500, Math.max(0, cy - 250)), width: 800, height: 500 };
         await page.screenshot({ path: file, clip });
         shots[`strip-${action}`].push({ file, label: `${action} +${(i * Number(process.env.STRIP_STEP ?? 1 / 30)).toFixed(3)}s` });
         await advance(Number(process.env.STRIP_STEP ?? 1 / 30));

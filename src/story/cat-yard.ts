@@ -324,6 +324,12 @@ export class CatYard {
         cat.look(null);
         cat.run([onRidge(3), onRidge(5, 0.15), onRidge(8.7)], this.floor, { pace: name, then: 'sit', look });
         return true;
+      case 'scared-run':
+        cat.place(onRidge(1.2), yaw, { pose: 'stand', floor: this.floor });
+        cat.look(null);
+        cat.unease = 0.6;
+        cat.run([onRidge(3), onRidge(5, 0.15), onRidge(8.7)], this.floor, { pace: 'run', then: 'crouch', look });
+        return true;
       case 'rail':
         cat.place(this.at(RAIL.x, 0.97, RAIL.z0 - 0.1), yaw, { pose: 'stand', floor: this.floor });
         cat.look(null);
