@@ -243,7 +243,7 @@ brings the light. Courage passes back and forth between them, and the stairs are
 - **The loop's trick** (`src/world/stairs-penrose.ts`): the eye (`LOOP_EYE`) stands on the line of `LOOP_GAP`, so
   the top of the last flight lies exactly in front of the near corner; that flight is drawn in (`drawIn`) toward a
   copy of the corner shrunk about the eye (`toCopy`, `LOOP_SHRINK`), so from the eye it covers the corner exactly.
-  It depth-tests as if it stood where it seems to (`TRICK`, `aDepth`), so the corner's newel and the flight below
+  It depth-tests as if it stood where it seems to, worked out per pixel along each line of sight (`TRICK`, `DRAWN_SLOPE`, `ALONG_DRAWN`), so the corner's newel and the flight below
   stand in front of it; that faked depth lets go as the lens leaves the one place (`uTrueDepth`), and `undraw`
   lets the flight climb on past the corner. `CloudStairs.trick` is drawn only while the lens is there. Its rail has
   rings all along it (`RING_RAIL`) so it bends with the flight. The bird is drawn smaller up that flight

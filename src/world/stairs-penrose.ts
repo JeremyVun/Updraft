@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { LOOP, LOOP_BACK, LOOP_FAR, LOOP_GAP, STEP, along, flight, landingOf } from './stairs-layout';
+import { LOOP, LOOP_BACK, LOOP_FAR, LOOP_GAP, RAIL_HEIGHT, STEP, along, flight, landingOf } from './stairs-layout';
 
 /**
  * The loop that seems to climb for ever, and where it has to be seen from. The loop's last flight is built going on
@@ -54,6 +54,28 @@ export function drawIn(v: THREE.Vector3): THREE.Vector3 {
   const shrunk = toCopy(v.clone().sub(LOOP_GAP));
   return v.lerp(shrunk, s);
 }
+
+/**
+ * `alongBack` worked back from a point of the flight as drawn in, for sorting it a pixel at a time. Drawn in, a
+ * point is v·(1 − a·s) + s·c (`drawIn`, a = 1 − LOOP_SHRINK), so its distance t along the flight's way from where the
+ * foot's line crosses it solves aRun·s² − k·s + t = 0.
+ */
+export const ALONG_DRAWN = (() => {
+  const a = 1 - LOOP_SHRINK;
+  const c = LOOP_EYE.clone().multiplyScalar(a).addScaledVector(LOOP_GAP, -LOOP_SHRINK);
+  const base = LOOP_BACK.bottom.x * backWay.x + LOOP_BACK.bottom.z * backWay.z;
+  return { way: new THREE.Vector2(backWay.x, backWay.z), base, aRun: a * backRun, k: backRun + c.x * backWay.x + c.z * backWay.z - a * base };
+})();
+
+/**
+ * The slope of the loop's last flight as drawn in, at the height of its rail where it comes onto the corner, as a
+ * plane: its normal and its distance from the origin.
+ */
+export const DRAWN_SLOPE = (() => {
+  const foot = drawIn(LOOP_BACK.bottom.clone()), head = drawIn(LOOP_BACK.top.clone());
+  const n = head.clone().sub(foot).cross(new THREE.Vector3(backWay.z, 0, -backWay.x)).normalize();
+  return new THREE.Vector4(n.x, n.y, n.z, n.dot(foot) + RAIL_HEIGHT * LOOP_SHRINK);
+})();
 
 /** The loop's last flight as drawn in, up its middle from the foot to where it comes onto the copy. */
 const drawnLine = Array.from({ length: 25 }, (_, i) => drawIn(LOOP_BACK.bottom.clone().lerp(LOOP_BACK.top, i / 24)));

@@ -12,7 +12,7 @@ import { HAZE_SHADE_GLSL, hazeStride, hazeUnderFlight, hazeUnderLanding } from '
 import { CloudWisps } from './stairs-wisps';
 import { StairsCloud } from './stairs-cloud';
 import { CloudBank } from './stairs-bank';
-import { LOOP_BANK, LOOP_EYE, LOOP_SHRINK, alongBack, drawIn } from './stairs-penrose';
+import { ALONG_DRAWN, DRAWN_SLOPE, LOOP_BANK, LOOP_EYE, LOOP_SHRINK, drawIn } from './stairs-penrose';
 import {
   BELOW_CLOUD, FLIGHTS, INSET, LOOP, LOOP_BACK, LOOP_FAR, LOOSE, NEWEL, OPENING, RAIL_HEIGHT, STEP_BLOCK, STRING, along, LOOSE_START, SLIPPERS, STEP, TOP_OUT,
   flight, landingOf, onLanding, type Face, type Flight, type Landing,
@@ -38,10 +38,7 @@ out vec3 vColor;
 out float vMist;
 flat out float vPart;
 #ifdef TRICK
-uniform vec3 uLoopEye;
 uniform float uUndraw;
-uniform float uTrueDepth;
-in float aDepth;
 in vec3 aBuilt;
 #endif
 void main() {
@@ -57,12 +54,6 @@ void main() {
 #endif
   vNormal = normalize(mat3(modelMatrix) * normal);
   gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
-#ifdef TRICK
-  // Drawn in, it is in front of and behind everything else as if it stood where it seems to. That only holds from
-  // the one place, so once the lens leaves it the flight is sorted where it really is.
-  vec4 seems = projectionMatrix * viewMatrix * vec4(uLoopEye + (vWorld - uLoopEye) * mix(aDepth, 1.0, uTrueDepth), 1.0);
-  gl_Position.z = seems.z / seems.w * gl_Position.w;
-#endif
 }`;
 
 /**
@@ -73,6 +64,15 @@ const FRAG = /* glsl */ `
 ${ATMO_GLSL}
 ${HAZE_SHADE_GLSL}
 uniform float uShown;
+#ifdef TRICK
+uniform mat4 projectionMatrix;
+uniform vec3 uLoopEye;
+uniform float uShrink;
+uniform float uTrueDepth;
+uniform vec4 uAlong;
+uniform float uAlongK;
+uniform vec4 uSlope;
+#endif
 in vec3 vWorld;
 in vec3 vNormal;
 in vec2 vUv;
@@ -86,6 +86,19 @@ void main() {
   float keep = nearFade(vWorld, 0.3, 1.1) * (1.0 - smoothstep(0.72, 1.0, gone));
   keep *= uShown;
   if (keep <= 0.0) discard;
+#ifdef TRICK
+  // Drawn in, it is in front of and behind everything else as if it stood where it seems to. That squeezes its depth
+  // so much near the top that the runner and the tread beneath it can no longer be told apart, so all of it is pushed
+  // back alike along each line of sight, by how far up the flight that line meets the slope of its rail (DRAWN_SLOPE,
+  // ALONG_DRAWN). That only holds from the one place, so once the lens leaves it the flight is sorted where it is.
+  vec3 ray = vWorld - cameraPosition;
+  vec3 meets = cameraPosition + ray * (uSlope.w - dot(uSlope.xyz, cameraPosition)) / dot(uSlope.xyz, ray);
+  float t = dot(meets.xz, uAlong.xy) - uAlong.z;
+  float along = clamp(2.0 * t / (uAlongK + sqrt(max(0.0, uAlongK * uAlongK - 4.0 * uAlong.w * t))), 0.0, 1.0);
+  float push = mix(1.0 / mix(1.0, uShrink, along), 1.0, uTrueDepth);
+  vec4 seems = projectionMatrix * viewMatrix * vec4(uLoopEye + (vWorld - uLoopEye) * push, 1.0);
+  gl_FragDepth = seems.z / seems.w * 0.5 + 0.5;
+#endif
   vec3 N = normalize(vNormal) * (gl_FrontFacing ? 1.0 : -1.0);
   vec3 V = normalize(cameraPosition - vWorld);
   vec3 alb = vColor;
@@ -410,7 +423,8 @@ const DETAIL: Record<QualityLevelName, { wisps: number; stride: number }> = {
 function stairMaterial(shown = { value: 1 }, trick = false, undraw = { value: 0 }, trueDepth = { value: 0 }): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     defines: trick ? { TRICK: 1 } : {},
-    uniforms: { ...atmo.uniforms, uShown: shown, uLoopEye: { value: LOOP_EYE }, uUndraw: undraw, uTrueDepth: trueDepth },
+    uniforms: { ...atmo.uniforms, uShown: shown, uLoopEye: { value: LOOP_EYE }, uShrink: { value: LOOP_SHRINK },
+      uAlong: { value: new THREE.Vector4(ALONG_DRAWN.way.x, ALONG_DRAWN.way.y, ALONG_DRAWN.base, ALONG_DRAWN.aRun) }, uAlongK: { value: ALONG_DRAWN.k }, uSlope: { value: DRAWN_SLOPE }, uUndraw: undraw, uTrueDepth: trueDepth },
     vertexShader: VERT,
     fragmentShader: FRAG,
     vertexColors: true,
@@ -435,14 +449,11 @@ function drawnInFlight(): THREE.BufferGeometry {
   const back = trick.result();
   const v = new THREE.Vector3();
   const pos = back.getAttribute('position');
-  const depth = new Float32Array(pos.count);
   back.setAttribute('aBuilt', new THREE.BufferAttribute(Float32Array.from(pos.array as Float32Array), 3));
   for (let i = 0; i < pos.count; i++) {
     v.fromBufferAttribute(pos, i);
-    depth[i] = 1 / THREE.MathUtils.lerp(1, LOOP_SHRINK, alongBack(v));
     pos.setXYZ(i, ...drawIn(v).toArray());
   }
-  back.setAttribute('aDepth', new THREE.BufferAttribute(depth, 1));
   return back;
 }
 
