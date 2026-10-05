@@ -1732,14 +1732,14 @@ export const tuning = {
     /** The sea fog the dark is: one field every shader reads, and the light it takes as it comes. */
     fog: {
       /** How high it stands over the water, how softly its top gives out, and how deep its front is soft, metres. */
-      top: 11, topSoft: 0.6, front: 3,
+      top: 11, topSoft: 0.6, front: 2,
       /** How far its front heaves to and fro across its line, metres. */
       heave: 20,
       /**
        * Per metre: how thick it is through its body as a bank, and once it has closed round (thinner, so she can still
        * see her way), and how much thicker low over the water, falling away over `low` metres.
        */
-      density: 0.5, closed: 0.03, floor: 0.035, low: 3,
+      density: 0.8, closed: 0.03, floor: 0.035, low: 3,
       /** The air thickening ahead of it once it is close: per metre at the water, falling away over `airLow` metres. */
       air: 0.02, airLow: 5,
       /** How far past the eye its front has gone once it has closed round. */

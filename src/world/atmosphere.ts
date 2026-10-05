@@ -196,6 +196,8 @@ export const atmo = {
     uSeaFogBody: { value: new THREE.Vector4() },
     /** The low sun on its crest (rgb), and how far the first wind under it has broken up the glass (a). */
     uSeaFogCrest: { value: new THREE.Vector4() },
+    /** How far down from its top the low sun still reaches into it, metres: deep far off, a thin rim once it is close. */
+    uSeaFogRim: { value: 3.5 },
     uCloudTex: { value: null as THREE.Texture | null },
     uCloudDomain: { value: new THREE.Vector4(-CLOUD_SPAN / 2, -CLOUD_SPAN / 2, 1 / CLOUD_SPAN, 1 / CLOUD_SPAN) },
     uNoiseTile: noiseTileUniforms.uNoiseTile,
@@ -343,6 +345,7 @@ uniform vec4 uSeaFogShape;
 uniform vec4 uSeaFogSides;
 uniform vec4 uSeaFogBody;
 uniform vec4 uSeaFogCrest;
+uniform float uSeaFogRim;
 uniform sampler2D uCloudTex;
 uniform vec4 uCloudDomain;
 
@@ -875,9 +878,9 @@ vec4 seaFog(vec3 ro, vec3 rd, float far) {
       // Each billow is lighter over its top, where it faces the sky, and darker under it.
       float bulge = big - vnoise(b + vec2(0.0, 0.3));
       float billow = big * 0.6 + vnoise(q * 0.13 + vec2(p.y * 0.2, -uTime * 0.04)) * 0.4;
-      light = uSeaFogBody.rgb * mix(0.8, 1.04, up) * (0.7 + 0.5 * billow + 1.4 * max(bulge, -0.1));
+      light = uSeaFogBody.rgb * mix(0.8, 1.04, up) * (0.66 + 0.5 * billow + 2.0 * max(bulge, -0.12));
       // The sun catches the tops of its highest swells and the rim of its top; lower down it is already in shade.
-      float crest = smoothstep(top - 3.5, top - 0.3, p.y + bulge * 3.0) * smoothstep(0.45, 0.9, top / uSeaFogShape.x);
+      float crest = smoothstep(top - uSeaFogRim, top - 0.2, p.y + bulge * uSeaFogRim) * smoothstep(0.45, 0.9, top / uSeaFogShape.x);
       light += uSeaFogCrest.rgb * crest;
     }
   }

@@ -122,7 +122,7 @@ export class DarkBank {
 
     const taken = smooth(p, far + 0.02, near) * here;
     const night = smooth(p, near + 0.05, 1) * here;
-    const crestGone = smooth(p, far + 0.08, near + 0.15);
+    const crestGone = smooth(p, far + 0.05, near + 0.12);
     // White is what the light makes of it: as bright as the sky round it lights it, never a white of its own.
     const sky = luminance(u.uSkyAmbient.value) * 0.9 + luminance(u.uSkyHorizon.value) * 0.3;
     this.body.copy(HUE.far).lerp(HUE.near, taken).lerp(HUE.night, night)
@@ -130,6 +130,7 @@ export class DarkBank {
     this.crest.copy(HUE.crest).multiplyScalar(luminance(u.uSunColor.value) * k.crest * (1 - 0.9 * crestGone));
     u.uSeaFogBody.value.set(this.body.r, this.body.g, this.body.b, k.air * smooth(p, far, near) * (1 - 0.6 * this.close));
     u.uSeaFogCrest.value.set(this.crest.r, this.crest.g, this.crest.b, k.stir * night);
+    u.uSeaFogRim.value = THREE.MathUtils.lerp(3.5, 1, crestGone);
 
     if (taken <= 0) return;
     tint(u.uSunColor.value, HUE.cold, 0.5 * taken, 1 - 0.88 * taken);
