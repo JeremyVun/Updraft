@@ -738,6 +738,12 @@ they are painted over real frames from the crossing camera (`ref-*.png`), so the
   slowly and from its far side, as part of the dream: spring coming up out of the sea. It is crossed in this crossing's
   own light, the mirror's dusk warming toward home, not the concept's afternoon gold; it must read in that light (warm
   light on the tips, pale undersides where the wave bends them), and the crossing's light is not changed for it.
+- As built (C1b): the flower record is the player's own stroke, a band about 1.6 m either side of the line the pointer
+  draws across the meadow, so ribbons are 2–4 m wide where the wind was drawn; the ambient breeze draws no stroke. Each
+  sea instance draws two arching blades from one root; about a quarter are stems with a bud that opens into a small
+  flower turned to the camera. The mirror's glass is turned down under the meadow so the tufts never stand on water
+  that reflects the boat but not them. Land grass differs from main by 2 pixels of 1.44M by 1/255 (compiler-level,
+  from the sea branch in the shared shader); accepted as invisible rather than doubling land tiles' vertex work.
 
 **The whale asleep across the way** (crossing to the meadow, `toMeadow`; the one must-do).
 - About a third of the way along, the whale (`fx/sealife/anatomy.ts`, 14 m; scale it up toward `k1`'s size if the

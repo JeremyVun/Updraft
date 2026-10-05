@@ -114,7 +114,7 @@ Gate: typecheck; build; a real-gesture check (`tools/sea-meadow-check.mjs`) that
 flowers there, and idles through it and finds none; the pacing check; `__stats.blades` with the meadow in frame no
 higher than the first crossing draws at its start (about 40k); stills (landscape and portrait) from the crossing camera beside `k1`–`k3`,
 opened for Jeremy.
-Done: [ ]
+Done: [x] built on `crossing-meadow` (C1a to c9418780, C1b to 7b24b73e); awaiting Jeremy's judgement.
 
 ### Phase C2: the whale asleep across the way (branch `crossing-whale`)
 Owns: the sleeping whale (rest pose, breathing, shiver along a stroke, flipper slap, eye, the roll and fluke wave, in
