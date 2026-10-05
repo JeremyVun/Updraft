@@ -171,17 +171,25 @@ const turned = (p: readonly number[]): [number, number, number] => {
 /** Where the owl sits: on the broken top of the trunk, in the crook against its taller limb, toward the camera. */
 export const OWL_PERCH_LOCAL = new THREE.Vector3(...turned([0.22, TRUNK_TOP + 0.05, 0.16]));
 
-/**
- * The owl's way out: off the fork toward her, over her head well clear of her hood, then banking up behind her on
- * the far side of the path and out above the crowns.
- */
-export const OWL_FLIGHT_LOCAL = [
+/** The gap the trees leave behind her: over the path and up through the crowns on its far side. */
+const OPEN_WAY = [
   new THREE.Vector3(0.5, 2.85, 1.75),
   new THREE.Vector3(1.7, 3.65, 4.65),
   new THREE.Vector3(2.6, 4.7, 8.0),
   new THREE.Vector3(0.7, 7.2, 11.5),
   new THREE.Vector3(-3.6, 12.5, 15.5),
   new THREE.Vector3(-7, 18.5, 18.5),
+];
+
+/**
+ * The owl's way out: off the fork toward her, over her head well clear of her hood, then banking off to her left and
+ * up that gap above the crowns. Leaving to her left keeps her turn after it away from the camera behind her shoulder.
+ */
+export const OWL_FLIGHT_LOCAL = [
+  ...OPEN_WAY.slice(0, 3),
+  new THREE.Vector3(-1.5, 7.5, 10.5),
+  new THREE.Vector3(-5.5, 12.5, 15.0),
+  new THREE.Vector3(-8.5, 18.5, 19.0),
 ];
 
 /** The rock's face frame in the world: its middle on the ground, along it, and out of it. */
@@ -915,14 +923,14 @@ export class WoodShape {
 
   /**
    * Where no tree may stand: round the stump and the rock, by the two coals, between the held camera and what it
-   * holds, and along the way the owl flies up and out.
+   * holds, and along the open way the owl flies up and out by.
    */
   static clears(x: number, z: number): boolean {
     const dx = x - WOOD_SHAPE.x, dz = z - WOOD_SHAPE.z;
     const lx = dx * SHAPE_RIGHT.x + dz * SHAPE_RIGHT.z, lz = dx * SHAPE_FACING.x + dz * SHAPE_FACING.z;
     let offWay = Infinity;
-    for (let i = 0; i < OWL_FLIGHT_LOCAL.length; i++) {
-      const p = i ? OWL_FLIGHT_LOCAL[i - 1] : OWL_PERCH_LOCAL, q = OWL_FLIGHT_LOCAL[i];
+    for (let i = 0; i < OPEN_WAY.length; i++) {
+      const p = i ? OPEN_WAY[i - 1] : OWL_PERCH_LOCAL, q = OPEN_WAY[i];
       const ex = q.x - p.x, ez = q.z - p.z;
       const t = THREE.MathUtils.clamp(((lx - p.x) * ex + (lz - p.z) * ez) / (ex * ex + ez * ez), 0, 1);
       offWay = Math.min(offWay, Math.hypot(lx - p.x - ex * t, lz - p.z - ez * t));
