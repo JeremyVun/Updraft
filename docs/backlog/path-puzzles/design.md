@@ -508,3 +508,6 @@ So the existing drowned village and storm code may be refactored as far as the r
   its light going out, the plane taken, the rain, the cygnet's shaking, the beach).
 - **Saves.** A save during the run resumes at the stranding (cat aboard, sea drawn back); a save after she is aboard
   resumes aboard with the storm to come.
+- **The cat comes home** (Jeremy, 2026-10-05: yes). At the very end, as she walks down to the cottage with the red door,
+  the same tabby sits in its lit window, waiting: home's cat all along. No remark and no beat of its own; it is built
+  once the drowned village is judged.
