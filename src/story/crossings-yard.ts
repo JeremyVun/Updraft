@@ -334,8 +334,8 @@ export class CrossingsYard {
         this.eye.set(pivot.x + 10, 5.6, pivot.z + 11);
         this.target.set(pivot.x - 0.6, 2.6, pivot.z - 4);
       } else {
-        this.eye.set(pivot.x + 16.5, 3.0, pivot.z - 4.6);
-        this.target.set(pivot.x, 3.2, pivot.z - 4.2);
+        this.eye.set(pivot.x + 18, 3.1, pivot.z - 3);
+        this.target.set(pivot.x, 3.2, pivot.z - 2.7);
       }
     } else {
       const ahead = this.tmp.set(c.x, 0, c.z);

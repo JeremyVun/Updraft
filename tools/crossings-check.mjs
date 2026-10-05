@@ -2,7 +2,7 @@
 // firm push brings the tree down and she crosses it, that wrong-way pushes only rock it, that pumping the swing
 // carries her over, and that nothing happens on its own before the safety valve (and that the valve then does it).
 // Usage: node tools/crossings-check.mjs [scenario ...]
-//   scenarios: tree, tree-wrong, swing (the default set); run (both in a row with the walk between); tree-idle,
+//   scenarios: tree, tree-wrong, swing (the default set); tree-rock (one gentle stroke); run (both in a row with the walk between); tree-idle,
 //   swing-idle (each idles past the 90 s valve, about two minutes apiece)
 //   env: BASE (default http://127.0.0.1:5287/), W/H viewport (default 1600x900), OUT (stills and video prefix,
 //        default /tmp/updraft-crossings), SHOTS=1 saves stills at the moments that matter, VIDEO=1 records
@@ -147,6 +147,22 @@ const RUNS = {
     expect(over, `she never got over (phase ${(await game.state()).tree.phase})`);
     await game.shot('over');
     game.notes.push(`over at child ${over.child.join(', ')}`);
+  },
+
+  /** A gentle stroke the right way rocks it toward the gap a beat late and loosens it, but does not bring it down. */
+  async 'tree-rock'(game) {
+    await game.open('tree');
+    const rest = (await game.state()).tree.lean;
+    let most = rest, loose = 0;
+    const aim = await game.aim('tree');
+    await game.stroke(aim, aim.heading, 0.4, 30);
+    await game.shot('rocked');
+    await game.until(() => false, 4, (s) => { most = Math.max(most, s.tree.lean); loose = s.tree.loose; });
+    const s = await game.state();
+    game.notes.push(`one gentle stroke: lean ${rest} to ${most.toFixed(3)}, loose ${loose.toFixed(3)}, back to ${s.tree.lean}`);
+    expect(s.tree.state === 'standing', 'one gentle stroke brought it down');
+    expect(most > rest + 0.04, 'a gentle stroke did not visibly rock it');
+    expect(loose > 0.02, 'a gentle stroke the right way gained nothing');
   },
 
   /** Strokes the wrong way rock it back and it springs upright again: no loosening, never over. */

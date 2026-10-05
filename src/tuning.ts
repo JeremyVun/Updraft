@@ -1794,7 +1794,7 @@ export const tuning = {
        * Rotten roots: lean past rest beyond `loosenFrom` loosens them at `loosenRate` per radian-second; they ebb
        * back at `ebb` a second, and each unit of looseness leans it `looseLean` further at rest.
        */
-      loosenFrom: 0.05, loosenRate: 7, ebb: 0.01, looseLean: 0.17,
+      loosenFrom: 0.05, loosenRate: 5, ebb: 0.01, looseLean: 0.17,
       /** Past this lean it goes over. */
       tipAt: 0.4,
       /**
