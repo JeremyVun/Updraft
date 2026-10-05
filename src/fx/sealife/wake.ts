@@ -30,6 +30,8 @@ export class WhaleWake {
   private notchWas = -1;
   private flukesUpAt = -1;
   private headBroke = false;
+  /** Lying at the surface rather than travelling: no bow wave pushed ahead of the head. */
+  private lying = false;
   private slickAt = 0;
   private fresh = true;
 
@@ -58,6 +60,7 @@ export class WhaleWake {
     this.notchWas = -1;
     this.flukesUpAt = -1;
     this.headBroke = lying;
+    this.lying = lying;
     this.fresh = true;
   }
 
@@ -95,7 +98,7 @@ export class WhaleWake {
       const h = (top - bottom) / 2;
       const half = HALF_WIDTH(s) * k * Math.sqrt(Math.max(0, 1 - (yc / h) ** 2));
       widest = Math.max(widest, half);
-      const churn = 0.12 + Math.min(1.6, Math.abs(rising)) * 0.9 + (i === first ? 1.2 : 0);
+      const churn = 0.12 + Math.min(1.6, Math.abs(rising)) * 0.9 + (i === first && !this.lying ? 1.2 : 0);
       if (Math.random() < churn * dt) {
         const side = Math.random() < 0.5 ? -1 : 1;
         const out = half + rand(0.2, 0.9);
@@ -103,7 +106,7 @@ export class WhaleWake {
         const strong = Math.min(0.85, 0.3 + Math.abs(rising) * 0.35);
         this.foam.add(FOAM, P.x + hz * side * out + hx * along, P.z - hx * side * out + hz * along, rand(0.4, 1.0), rand(3, 6), time, rand(0.6, 1) * strong, rand(0.15, 0.4), Math.random() * 6.28, rand(1, 1.8));
       }
-      if (i === first && Math.random() < dt * 5) {
+      if (i === first && !this.lying && Math.random() < dt * 5) {
         this.foam.add(FOAM, P.x + hx * rand(0.2, 0.9), P.z + hz * rand(0.2, 0.9), rand(0.5, 1.0), rand(2, 3.5), time, 0.9, 0.35, angle, 1.6);
       }
     }

@@ -215,26 +215,25 @@ export class Spray {
   }
 
   /**
-   * One frame of a spout held for a while: a narrow jet of drops thrown `height` high, opening into a crown of mist
-   * as it slows, a column rather than the bushy cloud of `blow`.
+   * One frame of a spout held for a while: a column of mist thrown `height` high, slowing and opening into a crown
+   * as it goes, with a few drops falling back out of it, rather than the low bushy cloud of `blow`.
    */
   jet(at: THREE.Vector3, height: number, strength: number, dt: number): void {
-    const up = Math.sqrt(2 * 9.8 * height);
-    const n = Math.floor(strength * 260 * dt + Math.random());
+    const n = Math.floor(strength * 220 * dt + Math.random());
     for (let i = 0; i < n; i++) {
       const a = Math.random() * Math.PI * 2;
-      const out = Math.random() * 0.6;
-      const v = up * (0.82 + Math.random() * 0.2) * strength;
-      this.emit(DROP, at.x + Math.cos(a) * 0.08, at.y, at.z + Math.sin(a) * 0.08, Math.cos(a) * out, v, Math.sin(a) * out,
-        0.02 + Math.random() * 0.02, v / 9.8 * 1.6, 0, 0.6);
+      const reach = 0.35 + 0.65 * Math.sqrt(Math.random());
+      const out = 0.15 + reach * reach * 1.1 * Math.random();
+      const up = height * DRAG[MIST] * reach * strength * (1.05 + Math.random() * 0.15);
+      this.emit(MIST, at.x + Math.cos(a) * 0.06, at.y, at.z + Math.sin(a) * 0.06, Math.cos(a) * out, up, Math.sin(a) * out,
+        0.14 + Math.random() * 0.12, 2.6 + Math.random() * 2.2, 0.25 + reach * 0.75, 0.05 + Math.random() * 0.05);
     }
-    const m = Math.floor(strength * 120 * dt + Math.random());
+    const m = Math.floor(strength * 60 * dt + Math.random());
     for (let i = 0; i < m; i++) {
       const a = Math.random() * Math.PI * 2;
-      const rise = Math.random();
-      const out = 0.2 + rise * 1.4 * Math.random();
-      this.emit(MIST, at.x, at.y + rise * height * 0.6, at.z, Math.cos(a) * out, (2 + rise * 6) * strength, Math.sin(a) * out,
-        0.18 + rise * 0.3, 2.5 + Math.random() * 2.5, 0.3 + rise * 0.8, 0.04 + Math.random() * 0.04);
+      const v = Math.sqrt(2 * GRAVITY[DROP] * height * (0.3 + Math.random() * 0.5)) * strength;
+      const out = 0.3 + Math.random() * 0.9;
+      this.emit(DROP, at.x, at.y + 0.1, at.z, Math.cos(a) * out, v, Math.sin(a) * out, 0.022 + Math.random() * 0.018, 2.2, 0, 0.55);
     }
   }
 

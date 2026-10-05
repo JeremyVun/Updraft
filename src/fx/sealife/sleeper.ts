@@ -30,7 +30,7 @@ const WAVE_TO = 14.5;
 const SURGE_AT = 6;
 const GONE = 18.5;
 /** The flipper's lazy slap: lifted (radians) over its first second, then down onto the water. */
-const SLAP = curve([[0, 0], [0.45, 0.45], [0.85, 0.95], [1.0, 1.0], [1.15, 0.2], [1.3, -0.05], [1.8, 0]]);
+const SLAP = curve([[0, 0], [0.45, 0.6], [0.85, 1.3], [1.0, 1.35], [1.15, 0.3], [1.3, -0.05], [1.8, 0]]);
 const SLAP_HITS = 1.2;
 const SLAP_FOR = 1.8;
 const FIN_SPAN = 4.5;
