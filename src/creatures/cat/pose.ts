@@ -128,7 +128,7 @@ export class CatRig {
     n[PELVIS].rotation.set(-d.flex * 0.9, 0, 0);
     n[CHEST].rotation.set(d.flex * 0.6 - d.chestUp, 0, 0);
 
-    n[JAW].rotation.set(d.jaw * 0.5, 0, 0);
+    n[JAW].rotation.set(d.jaw * 0.26, 0, 0);
     /** A head carried low swings the base of the neck forward and down round the chest, not only the neck itself. */
     const low = d.neckLow * 0.45;
     const [, ny, nz] = NECK_AT;

@@ -70,7 +70,7 @@ const STANCES: Record<Hold, Stance> = {
   stand: { bodyY: 0.124, bodyZ: 0, pitch: 0.02, flex: 0.05, chestUp: 0, neckLow: 1.0, hock: 0.5, tuck: 0, front: [0.028, 0.066], hind: [0.036, -0.074], tailUp: 0.25, tailCurl: 0.15, tailWrap: 0 },
   sit: { bodyY: 0.066, bodyZ: 0.006, pitch: 0.72, flex: 0.25, chestUp: 0.55, neckLow: 0, hock: 1.45, tuck: 0, front: [0.019, 0.08], hind: [0.047, 0.032], tailUp: -0.15, tailCurl: 0, tailWrap: 1 },
   gather: { bodyY: 0.102, bodyZ: -0.012, pitch: -0.05, flex: 0.2, chestUp: 0, neckLow: 0.9, hock: 0.85, tuck: 0, front: [0.026, 0.068], hind: [0.036, -0.06], tailUp: 0.0, tailCurl: 0, tailWrap: 0 },
-  crouch: { bodyY: 0.062, bodyZ: -0.005, pitch: -0.02, flex: 0.3, chestUp: -0.15, neckLow: 1.1, hock: 1.45, tuck: 1.3, front: [0.022, 0.068], hind: [0.046, -0.035], tailUp: -0.9, tailCurl: 0, tailWrap: -1 },
+  crouch: { bodyY: 0.068, bodyZ: -0.012, pitch: 0.03, flex: 0.62, chestUp: -0.1, neckLow: 1.25, hock: 1.45, tuck: 1.3, front: [0.022, 0.064], hind: [0.05, -0.012], tailUp: -0.9, tailCurl: 0, tailWrap: -1 },
 };
 const POSES: Hold[] = ['stand', 'sit', 'crouch', 'gather'];
 

@@ -118,9 +118,10 @@ const vec3 STRIPE = vec3(0.105, 0.063, 0.046);
 const vec3 WHITE = vec3(0.84, 0.8, 0.74);
 const vec3 PINK = vec3(0.72, 0.28, 0.24);
 const vec3 NOSE_PINK = vec3(0.7, 0.24, 0.22);
-const vec3 IRIS = vec3(0.62, 0.3, 0.035);
+const vec3 IRIS = vec3(0.55, 0.27, 0.04);
 const vec3 IRIS_DEEP = vec3(0.24, 0.1, 0.02);
-const vec3 MOUTH_IN = vec3(0.42, 0.11, 0.12);
+const vec3 MOUTH_IN = vec3(0.4, 0.12, 0.13);
+const vec3 TONGUE = vec3(0.78, 0.33, 0.31);
 const vec3 SKULL = ${vec3(SKULL)};
 const vec3 EYE_C = ${vec3(EYE_AT)};
 const float HEAD_K = ${HEAD_K.toFixed(4)};
@@ -215,7 +216,7 @@ void main() {
     alb = NOSE_PINK;
     fuzz = 0.1;
   } else if (m == ${MOUTH}) {
-    alb = MOUTH_IN;
+    alb = mix(MOUTH_IN, TONGUE, smoothstep(0.0, -0.004, vRest.y - ${(MUZZLE[1] - 0.0095 * HEAD_K).toFixed(4)}));
     fuzz = 0.0;
     ao = 0.5;
   } else if (m == ${WHISKER}) {

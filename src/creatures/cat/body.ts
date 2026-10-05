@@ -114,6 +114,8 @@ function skullShape(u: { x: number; y: number; z: number }): void {
   u.z += 0.07 * front * Math.exp(-((u.x / 0.15) ** 2)) * ramp(u.y, -0.55, -0.3) * (1 - ramp(u.y, 0.05, 0.4));
   /** A short soft muzzle that leads the face, so the eyes sit back from the nose. */
   u.z += 0.2 * front * Math.exp(-((u.x / 0.36) ** 2) - ((u.y + 0.42) / 0.28) ** 2);
+  /** Under the muzzle the skull steps back, so the chin and the mouth behind it are what show there. */
+  u.z -= 0.09 * front * Math.exp(-((u.x / 0.13) ** 2)) * ramp(-u.y, 0.55, 0.65) * (1 - ramp(-u.y, 0.82, 0.95));
   /** A full chin and jowls under it, down into the bib. */
   u.y -= 0.14 * ramp(-u.y, 0.35, 0.85) * ramp(u.z, -0.2, 0.5);
 }
@@ -154,8 +156,8 @@ function onFace(x: number, y: number, socketed = false): { at: V3; normal: V3 } 
 const EYE_R = 0.0182;
 const EYE_FACE = onFace(0.035, S[1] - 0.005);
 /** The eye is a shallow dome a little proud of the face, wider than what shows: its rim is the soft lid round it. */
-const EYE_DOME: V3 = [EYE_R / 0.86, EYE_R / 0.86, 0.007];
-const EYE_C: V3 = add(EYE_FACE.at, EYE_FACE.normal.map((n) => n * (0.0028 - EYE_DOME[2])) as V3);
+const EYE_DOME: V3 = [EYE_R / 0.86, EYE_R / 0.86, 0.0058];
+const EYE_C: V3 = add(EYE_FACE.at, EYE_FACE.normal.map((n) => n * (0.002 - EYE_DOME[2])) as V3);
 const NOSE_C: V3 = add(onFace(0, EYE_C[1] - 0.0125).at, [0, 0, -0.0012]);
 const MUZZLE_C: V3 = add(onFace(0, EYE_C[1] - 0.0215).at, [0, 0, -0.004]);
 
@@ -358,9 +360,9 @@ function parts(coat: boolean): THREE.BufferGeometry[] {
   });
   /** The muzzle: two soft white whisker pads close under the nose, barely proud of the face, and a small chin. */
   pair({ part: HEAD, mat: FUR, at: add(MUZZLE_C, [0.0095, 0.0005, -0.0055]), size: [0.0135, 0.0102, 0.0075], detail: 3, blend: () => 1 });
-  rigid({ part: JAW, mat: FUR, at: add(MUZZLE_C, [0, -0.0105, -0.0105]), size: [0.0085, 0.006, 0.0065], detail: 3, blend: () => 1 });
-  /** The inside of the mouth stays with the head, so the chin opens away from it in a small round mew. */
-  face({ part: HEAD, mat: MOUTH, at: add(MUZZLE_C, [0, -0.0085, -0.0115]), size: [0.0062, 0.0058, 0.006], detail: 2 });
+  rigid({ part: JAW, mat: FUR, at: add(MUZZLE_C, [0, -0.011, -0.0064]), size: [0.0072, 0.0052, 0.0048], detail: 3, blend: () => 1 });
+  /** The inside of the mouth stays with the head, just behind the chin, so the chin drops away from it in a small round mew. */
+  face({ part: HEAD, mat: MOUTH, at: add(MUZZLE_C, [0, -0.0092, -0.0064]), size: [0.0062, 0.0046, 0.0036], detail: 2 });
   face({
     part: HEAD,
     mat: NOSE,
