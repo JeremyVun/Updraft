@@ -107,6 +107,10 @@ His answers to the second round:
   Approved (Jeremy, 2026-10-05: "the fears sequence is approved. The only thing i'd ask to be changed slightly is after
   the owl is revealed, the camera could pan across to show the owl more face on. Otherwise, well done"). So the frame
   holds from the eyes in the dark through the reveal, then eases once across to see the perched owl more face on.
+  Jeremy on the pan build (2026-10-05): in the dark "it looks like it has 4 eyes (the light is reflecting off the
+  branches on either side. Can you fix this?"; and "the brances are arranged such that they are in line with the
+  player instead of across, so it reads a bit awkward when the owl is revealed". So only the owl's two eyes ever glow,
+  and the stump's fork spreads across her line of sight, the owl sitting in it facing her between the two limbs.
 - **The island of lines: a pinwheel winds the boat in, on the shore beyond the red door** (Jeremy: "yes i think this
   is a good idea to try"). The boat is moored out on the water; a pinwheel on the bank drives a pulley line that
   winds it in to the shore. It adds a beat after the door rather than replacing a curtain. It knowingly relaxes two
