@@ -196,12 +196,6 @@ export class Harebells {
     this.group.name = 'harebells';
   }
 
-  /** The middle of the row, for whoever wants to know where it is. */
-  get middle(): { x: number; z: number } {
-    const c = this.clumps[Math.floor(this.clumps.length / 2)];
-    return { x: c.x, z: c.z };
-  }
-
   update(dt: number, time: number, camera: THREE.Camera, wind: WindField, input: PointerInput,
     out: AudioOut | null, brushers: readonly (THREE.Vector3 | null)[], life: (x: number, z: number) => number, active: boolean): void {
     this.now = time;

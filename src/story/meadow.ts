@@ -206,7 +206,11 @@ export class MeadowChapter implements Chapter {
     flock.shown = 0;
     cygnet.water = { level: POND_LEVEL, over: overPond };
     plane.water = cygnet.water;
-    cast.swanFeather.water = cygnet.water;
+    const feather = cast.swanFeather;
+    feather.water = cygnet.water;
+    feather.heldBy = feather.catchingBy = null;
+    feather.flying = false;
+    feather.visible = false;
     plane.homeRadius = tuning.meadowPlane.reach;
     child.stepAshore(cast.boat);
     child.walkTo(BEACH.x, BEACH.y, false, () => this.to('beach'), 0.8);

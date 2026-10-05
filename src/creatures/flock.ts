@@ -577,6 +577,7 @@ export class SwanFlock {
   }
 
   private start(mode: Mode): void {
+    this.shown = 1;
     this.mode = mode;
     if (!this.departing) this.companion = null;
     this.wakeUniforms.uLevel.value = this.level;
