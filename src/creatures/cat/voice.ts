@@ -3,8 +3,8 @@ import type { AudioOut } from '../voices';
 /**
  * How one kind of call goes, measured from public-domain kitten and cat recordings and reduced to numbers: the
  * measured call's length, then pitch (over its median) and level at eleven even steps through it, the levels of
- * harmonics 1–12 in dB as the mouth opens, at its widest and as it closes, breath noise against the voice at those three
- * moments, and how far the pitch flutters (cents) and the level shimmers.
+ * harmonics 1–12 in dB as the mouth opens, at its widest and as it closes, breath noise against the voice at those
+ * three moments, and how far the pitch flutters (cents) and the level shimmers.
  */
 interface Shape {
   seconds: number;
@@ -57,7 +57,7 @@ const CHIRRUP: Shape = {
   shimmer: 0.1,
 };
 
-/** A frightened cat's drawn-out mrrow: a breathy start, the second and third harmonics loud in the middle, dark at the end. */
+/** A frightened cat's drawn-out mrrow: a breathy start, the second and third harmonics loudest, dark at the end. */
 const YOWL: Shape = {
   seconds: 0.83,
   pitch: [0.9, 0.96, 1.03, 1.05, 1.03, 1.03, 1.01, 1, 0.97, 0.97, 0.96],
@@ -135,12 +135,13 @@ export class CatVoice {
       this.noise = out.ctx.createBuffer(1, rate, rate);
       const data = this.noise.getChannelData(0);
       for (let i = 0; i < rate; i++) data[i] = Math.random() * 2 - 1;
-      this.wobble = out.ctx.createBuffer(1, rate * 4, rate);
+      // Flutter changes no faster than about 30 Hz, so a coarse buffer carries it and costs little to make.
+      this.wobble = out.ctx.createBuffer(1, 4 * 3000, 3000);
       const wob = this.wobble.getChannelData(0);
-      const knots = Array.from({ length: 4 * 60 + 3 }, () => Math.random() * 2 - 1);
+      const knots = Array.from({ length: 4 * 60 + 1 }, () => Math.random() * 2 - 1);
       let power = 0;
       for (let i = 0; i < wob.length; i++) {
-        wob[i] = spline(knots, i / wob.length * (4 * 60 / (knots.length - 1)));
+        wob[i] = spline(knots, i / wob.length);
         power += wob[i] * wob[i];
       }
       const norm = 1 / Math.sqrt(power / wob.length);
@@ -166,7 +167,7 @@ export class CatVoice {
     return { ctx, input };
   }
 
-  /** Slow random wander, `depth` deep, into `param`, from a random place in the shared wobble. */
+  /** A random wander `depth` deep into each of `params`, from a random place in the shared wobble. */
   private wander(ctx: AudioContext, params: AudioParam[], depth: number, t0: number, end: number): void {
     if (!this.wobble) return;
     const src = ctx.createBufferSource();
@@ -201,7 +202,9 @@ export class CatVoice {
     am.connect(env).connect(input);
     env.gain.setValueAtTime(0, t0);
     env.gain.linearRampToValueAtTime(peak * shape.level[0], t0 + 0.015);
-    for (let i = 1; i < 10; i++) env.gain.linearRampToValueAtTime(peak * shape.level[i], at(i));
+    for (let i = 1; i < 10; i++) {
+      env.gain.linearRampToValueAtTime(peak * shape.level[i] * (0.88 + Math.random() * 0.24), at(i));
+    }
     env.gain.linearRampToValueAtTime(peak * shape.level[10], Math.max(at(9), end - 0.025));
     env.gain.linearRampToValueAtTime(0, end);
 
@@ -292,7 +295,8 @@ export class CatVoice {
 
   /** "Mrrp": a short rolled note, the sound a cat makes arriving somewhere it wanted to be, or greeting. */
   chirrup(pan: number, loudness: number): void {
-    this.sing(pan, 0.033 * loudness, CHIRRUP, 600 * (0.92 + Math.random() * 0.16), 0.3 + Math.random() * 0.15, 0.35, 22 + Math.random() * 12);
+    const f0 = 600 * (0.92 + Math.random() * 0.16);
+    this.sing(pan, 0.033 * loudness, CHIRRUP, f0, 0.3 + Math.random() * 0.15, 0.35, 22 + Math.random() * 12);
   }
 
   /** A frightened mrrow, low and drawn out, `length` seconds. */
