@@ -515,3 +515,11 @@ with big dark pupils and a catchlight, set at or below the middle of the head an
 short muzzle with nose and mouth tucked under the eyes; round cheeks; ears wide; no neck in the sit, the head sunk into
 the shoulders; a compact pear sit with front paws together and the tail wrapped round; frightened means low (body
 down, ears flat, tail tucked). Jeremy: "opus 5.5 subagent should be able to remodel the cat appropriately".
+
+**The cat's voice** (Jeremy, 2026-10-05, on the first synthesised mew: "the cat mew sounds like a human mimicking a cat,
+it sounds hilariously uncanny and bad"; on recordings: "Im wary of using real recordings because they add to the
+bundle size don't they? And we don't have much room to modify them to suit whatever we need.."). It stays synthesised,
+as every sound in the game is (`docs/contracts/audio.md`), but grounded in real cats: a few public-domain kitten
+recordings are analysed offline (the pitch contour, the formant movement, the nasal onset, the flutter and the breath)
+and only the resulting numbers ship, so the mew, the plea and the chirrup can still be shaped freely. Jeremy judges
+each round by ear.
