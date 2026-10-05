@@ -375,7 +375,8 @@ Knobs: `tuning.storm`, `tuning.drownedCamera`. Checks: `tools/storm-check.mjs`, 
 ## The dark wood
 
 `story/wood.ts`, `world/wood.ts`, `fx/embers.ts`, `fx/ember-orb.ts`, `fx/ember-veils.ts`,
-`fx/ember-invitation.ts`, `fx/fireflies.ts`. `?chapter=wood`.
+`fx/ember-invitation.ts`, `fx/fireflies.ts`; the bend `world/wood-shape.ts`, `creatures/owl.ts`. `?chapter=wood`;
+`?chapter=fears` starts short of the bend.
 
 The first winter storm, at night. **Care becomes courage:** the child first needs light for her own next step,
 then uses it to help her companion, going into the dark first so it will not have to.
@@ -391,6 +392,22 @@ shows the updraft spiral wound from the litter under it. The child walks for as 
 She waits `tuning.wood.waitShort` short of an unlit coal. The walking camera stands behind her,
 `tuning.wood.cameraSide` off her shoulder on whichever side of the path the waiting coal lies, easing across as
 each new coal is laid, so the coal she waits for is always beside her in frame and never hidden behind her.
+
+**The owl at the bend.** Walking up in the dark, the player sees only two glowing eyes ahead that blink and stare;
+no stump, rock or shadow shows. The camera eases once into a held frame from off the path on her side, her in
+profile at the left, and arrives as she stops at the coal before the bend, well short of the stump. Moonlight finds
+her outline; she glances down at the cygnet once, never back toward the camera. When that coal catches, a huge
+antlered outline with the eyes in it leaps up the rock behind the stump, thrown by the lit coal at her feet, and she
+flinches back, mittens to her scarf. Only then is the one coal at the stump laid, off to the side. As it wakes its
+light swings round: the antlers fold into a plain stump's shadow with a little round owl in its fork, and the owl
+itself shows in the fork, which spreads square to her and to both camera views so each sees a Y with the owl in its
+crook. After a beat the camera pans once, unhurried, round and a little down behind her shoulder to see the owl
+face on as it blinks and tilts its head at her and she tips hers back, the rock's shadow still in frame
+(`tuning.wood.shape.face*`; portrait has its own framing). It fluffs up and hoots softly, hops round and flutters
+off toward her, its small flapping shadow flitting across the rock, passes over her head and banks away up to her
+left above the crowns. She turns after it and waves, and the cygnet peeps up out of the satchel. She breathes out,
+looks round the bend and walks on, never to the trunk, while the camera comes back round behind her the way she
+came. Everything is in the same verbs: which coal, not a new mechanic.
 
 **The fright.** In a cleared glade the camera settles, then one close lightning flash and clap. The cygnet
 recoils, jumps up out of the satchel with a scramble of feathers, lands clear and runs into a shelter of
@@ -415,8 +432,10 @@ moonlight. Nothing lights, finds or frees on a timer. One scripted flash, not am
 Framing, not erasing the player's earned light, directs attention. No drying mechanic ("too abstract for a
 child"). The child is never left apparently stuck.
 
-Knobs: `tuning.wood`. Checks: `tools/wood-logic-check.mjs`, `wood-check.mjs`, `wood-scene-check.mjs`,
-`ember-check.mjs`, `wood-floor-check.mjs`. The legacy `dry` checkpoint resumes after the paper.
+Knobs: `tuning.wood`, the bend's in `tuning.wood.shape`. Checks: `tools/wood-logic-check.mjs` (only the side
+coal reveals the owl, it hoots once and leaves up and out from between the stump's limbs, clear of every trunk and
+the rock), `wood-check.mjs`,
+`wood-scene-check.mjs`, `ember-check.mjs`, `wood-floor-check.mjs`. The legacy `dry` checkpoint resumes after the paper.
 
 ## The sleeping island
 
