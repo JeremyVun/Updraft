@@ -52,6 +52,8 @@ const VIEWS: Record<StageView, { bearing: number; distance: number; height: numb
  * going on, so that every pose, behaviour and shared moment can be played by name and looked at from close up.
  * `__game.story.current.play(name)` and `.look(view)` drive it from the capture tools; `play('cat:<action>')` sets
  * out the drowned village's cat in a yard of its own on the sea beyond the beach, and the `c-` views look at it.
+ * `play('crossing:tree' | 'crossing:swing' | 'crossing:run')` (or `&gap=tree|swing|run`) sets out the village's two
+ * crossings on the sea and plays them as the room would, with the lens its own.
  */
 export class StageChapter implements Chapter {
   readonly shot: Shot = { target: new THREE.Vector3(), distance: 15, height: 5.2, from: new THREE.Vector3(0, 0, 1), free: true };

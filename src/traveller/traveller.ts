@@ -416,7 +416,7 @@ export class Traveller {
 
   /** `keepScarf` carries the scarf's sway along, for a move nobody sees (through the island of lines' door). */
   place(x: number, z: number, yaw: number, keepScarf = false): void {
-    if (this.action?.kind === 'alight') {
+    if (this.action?.kind === 'alight' || this.action?.kind === 'leap') {
       this.action = null;
       this.riding = false;
     }
