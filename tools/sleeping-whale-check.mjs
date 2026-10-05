@@ -116,8 +116,8 @@ async function sweeps() {
   await page.waitForTimeout(3000);
   const end = await read(page);
   results.sweeps = { tickles: end.tickles, slaps: end.slaps, phase: end.phase, progress: end.progress, gull: end.gull };
-  assert.equal(woke, null, `sweeps woke it: ${JSON.stringify(woke)}`);
-  assert.equal(end.phase, 'asleep', 'sweeps alone never wake it');
+  assert(!woke, `sweeps woke it: ${JSON.stringify(woke)}`);
+  assert(end.phase === 'asleep', 'sweeps alone never wake it');
   assert.equal(end.progress, 0, 'sweeps put nothing toward waking it');
   assert(end.tickles > 0, 'sweeps across its back tickle it');
   assert(end.slaps > 0, 'a tickle is answered by a flipper slap');
@@ -146,7 +146,7 @@ async function idle() {
   const rest = await atRest(page);
   const restAt = rest.time - rest.still;
   const walking = await until(page, (s) => s.gull !== 'asleep' || s.phase !== 'asleep', 'the gull to go and peck', 600);
-  assert.equal(walking.phase, 'asleep', `left alone it woke before the gull went to peck: ${JSON.stringify(walking)}`);
+  assert(walking.phase === 'asleep', `left alone it woke before the gull went to peck: ${JSON.stringify(walking)}`);
   const woke = await until(page, (s) => s.phase !== 'asleep', 'the gull to wake it', 120);
   results.idle = { restAt: +restAt.toFixed(1), gullWalksAt: +walking.time.toFixed(1), wokeAt: +woke.time.toFixed(1),
     tickles: woke.tickles, progress: woke.progress };
