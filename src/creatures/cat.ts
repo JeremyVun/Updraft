@@ -303,7 +303,7 @@ export class Cat {
     this.syncWorld();
   }
 
-  /** Stays where it is, held as `pose`, looking at `look` if given. */
+  /** Stays where it is, held as `pose`, looking at `look`; if that is well behind it, it turns round to it first. */
   rest(pose: CatPose, look: THREE.Vector3 | null = this.target): void {
     if (this.airborne(() => this.rest(pose, look))) return;
     this.cancel();
@@ -311,7 +311,10 @@ export class Cat {
     this.settleInto(pose);
   }
 
-  /** Crouched where it is, tail wrapped, ears back, mewing every few seconds at `look`. */
+  /**
+   * Crouched where it is, tail wrapped, ears back, mewing every few seconds at `look`. It sets `mewing` and an
+   * `unease` the story takes off again when it is rescued; nothing else does.
+   */
   strand(look: THREE.Vector3 | null): void {
     this.rest('crouch', look);
     this.unease = Math.max(this.unease, 0.55);
@@ -347,19 +350,26 @@ export class Cat {
     this.heard.push({ kind: 'chirrup', amount: 1 });
   }
 
-  /** A small jump to a point near by: a moment's gather, a quick arc, down. */
+  /**
+   * A small jump to `to`, a point on `opts.frame` (or in the world): a moment's gather, a quick arc, down, and
+   * `onDone` once it has taken the landing, about half a second plus the flight.
+   */
   hop(to: THREE.Vector3, opts: JumpOptions = {}, onDone?: () => void): void {
     this.jump(to, opts, false, onDone);
   }
 
-  /** A real leap: it eyes the far side, gathers with a wiggle of the hips, springs, lands front paws first and settles. */
+  /**
+   * A real leap: it eyes the far side, gathers with a wiggle of the hips (most of a second), springs, lands front paws
+   * first and settles, then `onDone`. To leap from a run, end the run at the take-off point: it brakes into it.
+   */
   leap(to: THREE.Vector3, opts: JumpOptions = {}, onDone?: () => void): void {
     this.jump(to, opts, true, onDone);
   }
 
   /**
    * Along `path`, points in the world whose heights come from `floor`, with every paw planted where it is put down.
-   * It turns to the way first if it faces away, slows into the last point, then stops and holds `then`.
+   * It turns to the way first if it faces away, slows into the last point and stops, calls `onDone`, then holds
+   * `then` (turning to `look` first if that is behind it). Walk 0.6, trot 1.4, run 3.2 metres a second.
    */
   run(path: readonly THREE.Vector3[], floor: Floor, opts: RunOptions = {}, onDone?: () => void): void {
     if (this.airborne(() => this.run(path, floor, opts, onDone))) return;
@@ -384,7 +394,7 @@ export class Cat {
   /**
    * Up a near-vertical way (ivy on a tower): `path` runs up the wall's face, `out` is the wall's outward normal, and
    * the last point is the floor of the opening it pulls itself into. It leaps onto the wall, climbs, and scrambles
-   * over the lip, then holds `then` there looking at `look`.
+   * over the lip, then holds `then` there looking at `look`, and calls `onDone`. It climbs at 0.8 metres a second.
    */
   climb(path: readonly THREE.Vector3[], out: THREE.Vector3, opts: { then?: CatPose; look?: THREE.Vector3 | null } = {}, onDone?: () => void): void {
     if (this.airborne(() => this.climb(path, out, opts, onDone))) return;
