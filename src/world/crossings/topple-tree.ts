@@ -660,15 +660,15 @@ function growDeadTree(height: number, seed: number, downLean: number): THREE.Buf
     const a = (i / 7) * Math.PI * 2 + range(-0.25, 0.25);
     const out = PLATE_R * range(0.78, 0.95);
     const c = Math.cos(a), sn = Math.sin(a);
-    parts.push(tube([new THREE.Vector3(c * 0.22, 0.5, sn * 0.22), new THREE.Vector3(c * 0.5, 0.16, sn * 0.5),
-      new THREE.Vector3(c * out * 0.75, 0.1, sn * out * 0.75), new THREE.Vector3(c * out, 0.0, sn * out)], range(0.15, 0.2), 0.05, 6, ROOT, 0, 0, rand()));
+    parts.push(tube([new THREE.Vector3(c * 0.25, 0.36, sn * 0.25), new THREE.Vector3(c * 0.52, 0.12, sn * 0.52),
+      new THREE.Vector3(c * out * 0.75, 0.08, sn * out * 0.75), new THREE.Vector3(c * out, -0.02, sn * out)], range(0.13, 0.17), 0.04, 6, ROOT, 0, 0, rand()));
   }
   /** Short broken stubs where roots snapped off at the rim. */
   for (let i = 0; i < 9; i++) {
     const a = (i / 9) * Math.PI * 2 + range(-0.2, 0.2);
-    const r0 = PLATE_R * 0.9, r1 = PLATE_R + range(0.15, 0.35);
-    parts.push(tube([new THREE.Vector3(Math.cos(a) * r0, -0.08, Math.sin(a) * r0),
-      new THREE.Vector3(Math.cos(a + 0.08) * r1, -0.14 - range(0, 0.08), Math.sin(a + 0.08) * r1)], range(0.05, 0.08), 0.03, 5, ROOT, 0, 0, rand()));
+    const r0 = PLATE_R * 0.9, r1 = PLATE_R + range(0.08, 0.22);
+    parts.push(tube([new THREE.Vector3(Math.cos(a) * r0, -0.1, Math.sin(a) * r0),
+      new THREE.Vector3(Math.cos(a + 0.08) * r1, -0.2 - range(0, 0.1), Math.sin(a + 0.08) * r1)], range(0.045, 0.07), 0.025, 5, ROOT, 0, 0, rand()));
   }
   /**
    * Long thin roots out of the underside and the lower rim. They are laid out for the tree lying down, where the

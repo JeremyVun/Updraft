@@ -3,8 +3,8 @@
 // gentle stroke or wrong-way pushes only rock it, that pumping the swing carries her over and the empty swing then
 // dies away, and that nothing happens on its own before the safety valve (and that the valve then does it).
 // Usage: node tools/crossings-check.mjs [scenario ...]
-//   scenarios: tree, tree-one, tree-long, tree-rock, tree-wrong, swing (the default set); run (both in a row with the
-//   walk between); tree-idle, swing-idle (each idles past the 90 s valve, about two minutes apiece)
+//   scenarios: tree, tree-three, tree-one, tree-long, tree-rock, tree-wrong, swing (the default set); run (both in a
+//   row with the walk between); tree-idle, swing-idle (each idles past the 90 s valve, about two minutes apiece)
 //   env: BASE (default http://127.0.0.1:5287/), W/H viewport (default 1600x900), OUT (stills and video prefix,
 //        default /tmp/updraft-crossings), SHOTS=1 saves stills at the moments that matter, VIDEO=1 records
 //        <OUT>-<scenario>.webm.
@@ -20,7 +20,7 @@ const out = process.env.OUT ?? '/tmp/updraft-crossings';
 const shots = process.env.SHOTS === '1';
 const video = process.env.VIDEO === '1';
 const asked = process.argv.slice(2);
-const scenarios = asked.length ? asked : ['tree', 'tree-one', 'tree-long', 'tree-rock', 'tree-wrong', 'swing'];
+const scenarios = asked.length ? asked : ['tree', 'tree-three', 'tree-one', 'tree-long', 'tree-rock', 'tree-wrong', 'swing'];
 
 function expect(ok, message) {
   if (!ok) throw new Error(message);
@@ -157,6 +157,24 @@ const RUNS = {
     game.notes.push(`over at child ${over.child.join(', ')}`);
   },
 
+  /** Shorter, less firm pushes that still tear the roots each take three to bring it down. */
+  async 'tree-three'(game) {
+    await game.open('tree');
+    let strokes = 0;
+    for (; strokes < 6; strokes++) {
+      if ((await game.state()).tree.state !== 'standing') break;
+      const aim = await game.aim('tree');
+      await game.stroke(aim, aim.heading, 0.3, 10);
+      if (await game.until((x) => x.tree.state !== 'standing', 2.2)) { strokes++; break; }
+      const s = await game.state();
+      game.notes.push(`push ${strokes + 1}: gives ${s.tree.gives}, loose ${s.tree.loose}`);
+    }
+    const s = await game.state();
+    expect(s.tree.state !== 'standing', `still standing after ${strokes} pushes (loose ${s.tree.loose})`);
+    expect(strokes === 3, `went over after ${strokes} pushes, not three`);
+    game.notes.push(`went over after ${strokes} pushes`);
+  },
+
   /** One firm push the right way loosens it for good, leaning further, but never brings it down on its own. */
   async 'tree-one'(game) {
     await game.open('tree');
@@ -271,6 +289,11 @@ const RUNS = {
     const landing = await game.page.evaluate(() => window.__game.story.current.crossings.swing.way.landing.toArray());
     expect(over.child[2] < landing[2] + 0.3 && over.child[1] > 0.2, `she is not on the far slope (${over.child} against landing ${landing})`);
     game.notes.push(`on the far side at ${over.child.join(', ')}`);
+    let swinging = 0;
+    await game.until(() => false, 2, (x) => { swinging = Math.max(swinging, Math.abs(x.swing.angle)); });
+    const since = await game.page.evaluate(() => window.__game.story.current.crossings.swing.t);
+    game.notes.push(`the empty swing ${since.toFixed(1)} s after she landed: swinging ${swinging.toFixed(3)} rad`);
+    expect(since < 14 && swinging < 0.08, `the empty swing has not died away (${swinging} rad, ${since} s after she landed)`);
   },
 
   /** Both in a row: the tree, the walk along the wall and over the cottage to its eave, the swing. */
