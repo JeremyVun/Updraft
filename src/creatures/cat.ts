@@ -545,8 +545,24 @@ export class Cat {
   private snap(p: THREE.Vector3): void {
     if (this.onWall) {
       p.addScaledVector(this.up, -this.v.subVectors(p, this.at).dot(this.up));
-    } else if (this.floor) p.y = this.floor(p.x, p.z);
+    } else if (this.floor) p.y = this.footing(p, this.floor);
     else p.y = this.level;
+  }
+
+  /**
+   * The floor under a paw, which never goes over an edge: a paw that would come down well below where the cat stands
+   * (off the end of a wall, the side of a coping) is drawn back toward its body until it finds the top again.
+   */
+  private footing(p: THREE.Vector3, floor: Floor): number {
+    const base = floor(this.at.x, this.at.z);
+    const drop = 0.12 * this.scale;
+    let h = floor(p.x, p.z);
+    for (let k = 1; h < base - drop && k <= 8; k++) {
+      p.x += (this.at.x - p.x) * (1 / (9 - k));
+      p.z += (this.at.z - p.z) * (1 / (9 - k));
+      h = floor(p.x, p.z);
+    }
+    return h;
   }
 
   private homesFor(narrow: number): void {

@@ -35,15 +35,15 @@ const ACTIONS = {
   strand: [1.5],
   'hop-tub': [0.18, 0.45, 2.5],
   'ride-tub': [3],
-  'jump-boat': [0.5, 0.95, 3],
+  'jump-boat': [0.5, 1.2, 3],
   boat: [3],
-  'leap-roof': [0.55, 1.05, 2.4],
+  'leap-roof': [0.6, 1.4, 2.6],
   walk: [1.6],
   trot: [0.9],
   run: [0.55, 2.4],
   'scared-run': [1.2],
   rail: [2.5, 6.5],
-  gap: [1.1, 1.45, 3],
+  gap: [1.2, 1.85, 3.2],
   climb: [0.9, 2.4, 5.5],
 };
 const LIGHTS = {
@@ -86,7 +86,6 @@ try {
   for (const light of strips.length ? [] : lights) {
     const { context, page, advance } = await open(`chapter=stage&${LIGHTS[light]}`);
     await advance(1.5);
-    shots[light] = [];
     for (const action of actions) {
       for (const view of views) {
         await page.evaluate(([a, v]) => {
@@ -103,7 +102,7 @@ try {
           at = moment;
           const file = path.join(out, `${light}-${action}-${moment}-${view}.png`);
           await page.screenshot({ path: file });
-          shots[light].push({ file, label: `${action} ${moment}s ${view}` });
+          (shots[`${light}-${view}`] ??= []).push({ file, label: `${action} ${moment}s`, far: view === 'c-far' });
         }
         if (process.env.SLIP) {
           const { slip, reach, where } = await page.evaluate(() => window.__game.cat.probe);
@@ -192,17 +191,26 @@ try {
     }
   }
 
-  /** A contact sheet of each light: the browser lays them out with their names under them. */
+  /**
+   * A contact sheet of each light and view, laid out by the browser with names under them. Far shots are shown as a
+   * crop of their middle at full size, which is where the camera put the cat, so it is seen as small as it really is.
+   */
   const sheet = await browser.newContext({ viewport: { width: 1600, height: 900 }, deviceScaleFactor: 1 });
   const page = await sheet.newPage();
   for (const [name, list] of Object.entries(shots)) {
     if (!list.length) continue;
     const cells = list
-      .map(({ file, label }) => `<figure><img src="data:image/png;base64,${fs.readFileSync(file).toString('base64')}"><figcaption>${label}</figcaption></figure>`)
+      .map(({ file, label, far }) => {
+        const look = far ? 'background-size:1600px 900px;background-position:-600px -325px' : 'background-size:400px 225px';
+        return `<figure><div style="background-image:url('${path.basename(file)}');${look}"></div><figcaption>${label}</figcaption></figure>`;
+      })
       .join('');
-    await page.setContent(`<style>body{margin:0;background:#111;color:#ddd;font:13px system-ui}main{display:grid;grid-template-columns:repeat(4,400px)}figure{margin:0}img{width:400px;height:225px;display:block}figcaption{padding:2px 6px 6px}</style><main>${cells}</main>`);
+    const html = path.join(out, `sheet-${name}.html`);
+    fs.writeFileSync(html, `<style>body{margin:0;background:#111;color:#ddd;font:13px system-ui}main{display:grid;grid-template-columns:repeat(4,400px)}figure{margin:0}div{width:400px;height:225px}figcaption{padding:2px 6px 6px}</style><main>${cells}</main>`);
+    await page.goto(`file://${html}`);
     const file = path.join(out, `sheet-${name}.png`);
     await page.screenshot({ path: file, fullPage: true });
+    fs.rmSync(html);
     console.log(file);
   }
   await sheet.close();
