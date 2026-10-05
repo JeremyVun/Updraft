@@ -800,8 +800,15 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   shown.storm = squall;
   const flat = story.current.trodden ?? null;
   const tread = atmo.uniforms.uTrodden.value;
-  if (flat) tread.set(flat.x, flat.z, flat.y, ease(tread.w, 1, 1.4, dt));
-  else tread.w = ease(tread.w, 0, 1.4, dt);
+  // Trodden grass never pops: a patch lifts where it was before it is pressed anywhere else, and widens gradually.
+  const bare = tread.w < 0.01;
+  const elsewhere = !!flat && !bare && Math.hypot(flat.x - tread.x, flat.z - tread.y) > 1;
+  if (flat && !elsewhere) {
+    tread.x = flat.x;
+    tread.y = flat.z;
+    tread.z = bare ? flat.y : ease(tread.z, flat.y, 1.2, dt);
+    tread.w = ease(tread.w, 1, 1.4, dt);
+  } else tread.w = ease(tread.w, 0, elsewhere ? 2.5 : 1.4, dt);
   // The mirror's suspended light clears on the crossing; home has the low sun drawn on the paper.
   const homeLight = story.name === 'home' ? 1 : story.name === 'toHarbour' || story.name === 'toHome'
     ? 1 - THREE.MathUtils.smoothstep(dusk, tuning.homeLight.daylight, tuning.skyMirror.duskTo) : 0;

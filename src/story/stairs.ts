@@ -631,18 +631,27 @@ export class StairsChapter implements Chapter {
     this.world.trickShown = this.beat === 'loop' ? e : this.looped ? 1 - this.trickGone : 0;
     this.world.undraw = this.revealFrom < 0 ? 0 : THREE.MathUtils.smoothstep(this.now - this.revealFrom, REVEAL_HOLD + 0.4, REVEAL - 1);
     this.world.bank.amount = this.cast.child.position.y > levelHeight(LOOP.corner - 1) - 1 ? 1 : 0;
-    this.cast.cygnet.nudge = this.beat === 'loop' || this.lofted ? this.drawnDepth() : null;
+    const k = this.cast.cygnet;
+    const drawn = k.scale < 1;
+    k.nudge = this.beat === 'loop' || this.lofted ? drawn ? this.drawnDepth(k.position) : 0 : null;
+    k.nudgeSlope.set(0, 0, 0);
+    if (k.nudge === null || !drawn) return;
+    // The flight is pushed back more the higher up it is, so the bird is too, or its tail sinks behind the treads.
+    for (let axis = 0; axis < 3; axis++) {
+      const h = 0.05;
+      const ahead = this.drawnDepth(this.tmp.copy(k.position).setComponent(axis, k.position.getComponent(axis) + h));
+      const behind = this.drawnDepth(this.tmp.copy(k.position).setComponent(axis, k.position.getComponent(axis) - h));
+      k.nudgeSlope.setComponent(axis, (ahead - behind) / (2 * h));
+    }
   }
 
   /**
    * Seen from far above the loop the bird is drawn where it is, not pulled toward the lens, so the rails it walks
    * beside stand in front of it. Up the drawn-in flight, drawn smaller, it is pushed back to where it seems to be.
    */
-  private drawnDepth(): number {
-    const k = this.cast.cygnet;
-    if (k.scale >= 1) return 0;
-    const d = k.position.distanceTo(this.world.eye);
-    return d * (1 - 1 / k.scale) / Math.max(0.2, THREE.MathUtils.smoothstep(d, 9, 34));
+  private drawnDepth(p: THREE.Vector3): number {
+    const d = p.distanceTo(this.world.eye);
+    return d * (1 - 1 / sizeOnBack(p)) / Math.max(0.2, THREE.MathUtils.smoothstep(d, 9, 34));
   }
 
   private measureAir(dt: number): void {

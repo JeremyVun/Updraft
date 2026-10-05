@@ -56,7 +56,8 @@ Each from one of Jeremy's rounds; do not retry what he rejected.
 - Big dark upright eyes with a warm brown low in the iris, a sliver of white at the outer corner and one soft glint.
   No lashes (Jeremy: "the lashes need to go"). The eyes are 1.15× the first size with the brows lowered: he chose
   that over 1.2× and 1.3× eyes.
-- Soft brows set low and close over the eyes.
+- Soft brows set low and close over the eyes, even in weight, with the inner ends a little high. The face's curve
+  tips them down toward the nose seen from above, so nose-heavy or level arcs read as angry from the play camera.
 - A small round button nose (its own mesh), a small smile, big ears.
 - The lower face is 5% shorter than first modelled, under a taller forehead; 14% was too much.
 - The face is narrow enough that the hood's inside never shows in front of the cheeks (that read as sideburns).
