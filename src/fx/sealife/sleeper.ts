@@ -136,7 +136,6 @@ export class SleepingWhale extends WhaleRig {
     this.time = 0;
     this.mesh.visible = this.ghost.visible = false;
     this.gull.vanish();
-    this.spray.rainbow.value = 0;
     swellUniforms.uSurge.value.w = 0;
   }
 
@@ -227,8 +226,6 @@ export class SleepingWhale extends WhaleRig {
       const u = (t - SPOUT_FROM) / (SPOUT_TO - SPOUT_FROM);
       this.spray.jet(this.blowhole, K.spoutHeight, Math.sin(Math.PI * Math.min(1, u * 1.6)) ** 0.5 * (1 - u * 0.3), dt);
     }
-    this.spray.rainbow.value = THREE.MathUtils.smoothstep(t, SPOUT_FROM + 0.2, SPOUT_FROM + 0.9)
-      * (1 - THREE.MathUtils.smoothstep(t, SPOUT_TO + 0.5, LEAVE + 1.5));
     if (t >= LEAVE) {
       this.phase = 'leaving';
       this.time = 0;
@@ -237,7 +234,6 @@ export class SleepingWhale extends WhaleRig {
 
   private leaving(): void {
     const t = this.time;
-    this.spray.rainbow.value = 1 - THREE.MathUtils.smoothstep(t, 0, 1.5);
     const turn = THREE.MathUtils.smootherstep(t, 0.5, 9.5);
     const yaw = this.yaw0 + Math.atan2(Math.sin(this.yaw1 - this.yaw0), Math.cos(this.yaw1 - this.yaw0)) * turn;
     this.heading.set(Math.sin(yaw), 0, Math.cos(yaw));
