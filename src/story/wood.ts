@@ -987,6 +987,7 @@ export class WoodChapter implements Chapter {
   private easeAt = -1;
   private releaseAt = -1;
   private releaseWay = 0;
+  private releaseTurn = 0;
   private heldZoom = 1;
   private readonly releaseEye = new THREE.Vector3();
   private readonly releaseLook = new THREE.Vector3();
@@ -1247,9 +1248,15 @@ export class WoodChapter implements Chapter {
     const to = Math.atan2(s.eye!.x - c.x, s.eye!.z - c.z);
     // Round by the way she came, behind where she stood, the same way round all the way.
     const via = (a: number) => Math.atan2(Math.sin(a - from), Math.cos(a - from));
-    if (this.releaseWay === 0) this.releaseWay = Math.sign(via(Math.atan2(SHAPE_FACING.x, SHAPE_FACING.z))) || 1;
     let turn = via(to);
-    if (Math.sign(turn) !== this.releaseWay) turn += this.releaseWay * Math.PI * 2;
+    if (this.releaseWay === 0) {
+      this.releaseWay = Math.sign(via(Math.atan2(SHAPE_FACING.x, SHAPE_FACING.z))) || 1;
+      if (Math.sign(turn) !== this.releaseWay) turn += this.releaseWay * Math.PI * 2;
+    } else {
+      // Where she walks can carry the walking camera round past where the move began: keep the turn continuous.
+      turn += Math.PI * 2 * Math.round((this.releaseTurn - turn) / (Math.PI * 2));
+    }
+    this.releaseTurn = turn;
     const angle = from + turn * e;
     const reach = THREE.MathUtils.lerp(Math.hypot(this.releaseEye.x - c.x, this.releaseEye.z - c.z), Math.hypot(s.eye!.x - c.x, s.eye!.z - c.z), e);
     const height = THREE.MathUtils.lerp(this.releaseEye.y, s.eye!.y, e);
@@ -1316,7 +1323,8 @@ export class WoodChapter implements Chapter {
       const angle = from + Math.atan2(Math.sin(to - from), Math.cos(to - from)) * f;
       const reach = THREE.MathUtils.lerp(Math.hypot(this.bendEye.x - p.x, this.bendEye.z - p.z), Math.hypot(this.faceEye.x - p.x, this.faceEye.z - p.z), f);
       this.bendEye.set(p.x + Math.sin(angle) * reach, THREE.MathUtils.lerp(this.bendEye.y, this.faceEye.y, f), p.z + Math.cos(angle) * reach);
-      this.bendLook.lerp(this.faceLook, f);
+      // The look leads the eye a little, so she does not slide toward the frame's edge as the camera comes round her.
+      this.bendLook.lerp(this.faceLook, THREE.MathUtils.smootherstep(this.faceTime, k.faceAfter, k.faceAfter + k.faceSeconds * 0.75));
     }
     // Round her rather than across: the camera keeps its distance from her all the way, never in and out.
     const from = Math.atan2(this.easeEye.x, this.easeEye.z);
@@ -1332,11 +1340,13 @@ export class WoodChapter implements Chapter {
       : Math.tan(THREE.MathUtils.degToRad(k.hfov / 2)) / Math.max(this.aspect, 1e-3);
     const faced = portrait ? Math.tan(THREE.MathUtils.degToRad(k.portraitFaceVfov / 2))
       : Math.max(Math.tan(THREE.MathUtils.degToRad(k.faceHfov / 2)) / Math.max(this.aspect, 1e-3), Math.tan(THREE.MathUtils.degToRad(k.faceVfov / 2)));
-    const want = THREE.MathUtils.lerp(held, faced, f);
+    // The rig follows the lens a second or more behind, so it is asked for early to arrive with the pan.
+    const want = THREE.MathUtils.lerp(held, faced, THREE.MathUtils.smootherstep(this.faceTime, k.faceAfter, k.faceAfter + k.faceSeconds - 1.6));
     s.zoom = this.heldZoom = THREE.MathUtils.lerp(1, THREE.MathUtils.clamp(half / want, 0.45, 2.2), e);
     // She walks into the held frame from its edge: until she is in her place the look turns enough to keep her in it.
     const vHalf = half / s.zoom;
-    this.keepInFrame(s.eye!, s.target, this.childSubject.copy(c).setY(c.y + 1.3), vHalf * this.aspect * 0.78, vHalf * 0.75);
+    // Not across the pan to the owl: the look snapping on and off the frame's edge would jolt a move that keeps her in anyway.
+    if (f === 0) this.keepInFrame(s.eye!, s.target, this.childSubject.copy(c).setY(c.y + 1.3), vHalf * this.aspect * 0.78, vHalf * 0.75);
   }
 
   /** Turns the look from `eye` to `look` just far enough that `at` is inside the given half-widths (tangents). */
