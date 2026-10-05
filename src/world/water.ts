@@ -77,6 +77,10 @@ out vec3 vWorld;
 out vec3 vSwell;
 /** The haze toward this vertex: it changes slowly enough across a triangle of sea to be interpolated. */
 out vec4 vFog;
+#if CLOUD_DECK
+/** The drowned village's sea fog as the sea mirrors it here: soft enough to be taken at the vertices. */
+out vec4 vSeaSky;
+#endif
 void main() {
   vec3 w = (modelMatrix * vec4(position, 1.0)).xyz;
   vec2 xz = w.xz;
@@ -91,6 +95,9 @@ void main() {
   vSwell = vec3(-n.x / n.y, -n.z / n.y, uSwell > 0.0 ? height / uSwell : 0.0);
   vWorld = w + at;
   vFog = fogOf(vWorld);
+#if CLOUD_DECK
+  vSeaSky = uSeaFogShape.w > 0.0 ? seaFog(vWorld, reflect(normalize(vWorld - cameraPosition), vec3(0.0, 1.0, 0.0)), 4000.0) : vec4(0.0);
+#endif
   gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
 }`;
 
@@ -134,6 +141,9 @@ uniform vec3 uWetSand;
 in vec3 vWorld;
 in vec3 vSwell;
 in vec4 vFog;
+#if CLOUD_DECK
+in vec4 vSeaSky;
+#endif
 
 /**
  * The world above the sea seen along reflected ray R; nearby content is taken to lie ~48 units out. The last
@@ -382,10 +392,7 @@ void main() {
   R = normalize(vec3(R.x, abs(R.y) + sqrt(unresolved) * 1.2 * (1.0 - nv), R.z));
   vec3 sky = skyColor(R);
 #if CLOUD_DECK
-  if (uSeaFogShape.w > 0.0) {
-    vec4 sea = seaFog(vWorld, R, 4000.0);
-    sky = mix(sky, sea.rgb, sea.a);
-  }
+  if (uSeaFogShape.w > 0.0) sky = mix(sky, vSeaSky.rgb, vSeaSky.a);
 #endif
 #if SEA_REFLECTION
   float seen;

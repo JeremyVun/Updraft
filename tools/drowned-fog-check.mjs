@@ -3,8 +3,8 @@
 // 0 (clear dusk), 0.3 (risen far off), 0.6 (close, the sun taken) and 1 (closed round into night); then one frame
 // looking along the run toward the church from beside her on the ridge, with the fog holding behind her as the story
 // leaves it. Writes <prefix>-<view>-<stage>.png and a side-by-side <prefix>-<view>-<stage>-sheet.png with the
-// painting, and prints a probe of each frame: the far roofs' contrast against the fog round them and the warmth of
-// the boat. The probe is a mirror, not a gate.
+// painting, and prints a probe of each frame: the far roofs' contrast against the fog round them, and the boat's
+// colour and warmth (red less blue, 0..255). The probe is a mirror, not a gate.
 // Usage: node tools/drowned-fog-check.mjs [prefix]   (default /tmp/updraft-drowned-fog-check)
 //   env: BASE (default http://127.0.0.1:5230/), COMPS (the paintings' folder), ONLY=landscape|upright|church
 // Traps:
@@ -124,12 +124,12 @@ async function sheet(file, painting, out, points) {
       return sum.map((v) => v / Math.max(1, n));
     };
     const lum = (c) => 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
-    const hull = pts.hull ? mean(pts.hull, 5) : null;
+    const hull = pts.hull ? mean(pts.hull, 8) : null;
     const contrasts = pts.roofs.map(([top, over]) => Math.abs(lum(mean(top, 1)) - lum(mean(over, 1))));
     return {
       progress: pts.progress,
-      hullWarmth: hull ? +(hull[0] / Math.max(1, hull[2])).toFixed(2) : null,
-      hullLum: hull ? Math.round(lum(hull)) : null,
+      hull: hull ? hull.map(Math.round) : null,
+      hullWarmth: hull ? Math.round(hull[0] - hull[2]) : null,
       farRoofs: contrasts.length,
       farRoofContrast: contrasts.length ? Math.round(contrasts.reduce((a, b) => a + b, 0) / contrasts.length) : null,
     };
