@@ -534,7 +534,16 @@ So the existing drowned village and storm code may be refactored as far as the r
   the church and the lighthouse come back into view across the water. The kitten has gone ahead its own way and waits
   there. She chooses when to step on and off; nothing needs timing. With the tree (a walk across) and the swing (a
   leap), it makes the flood a child's playground as she runs from it. It must not crowd the horizon's spire and
-  lighthouse. Being concepted.
+  lighthouse. Approved on Astra's concept (Jeremy, 2026-10-05: "I am happy with the windmill as teh third piece"),
+  `comps/mill/` (`mill-wait`, `mill-ride`, `mill-top`, `mill-plan`, `notes.md`): a small, worn tower mill with only two
+  opposite sails left, bare lattice and torn linen, no taller than a cottage, so it never makes a third landmark;
+  about a 2 m tower, the hub about 2.9 m up, a 2.4 m sail radius, boarding near 0.7 m and stepping off near 4 m. Any
+  broad circle round the hub turns it (tangential movement is torque; the drawn invitation is a flat spiral in the
+  sails' plane, about a turn and a quarter, its tip showing the way); the sail eases and dwells as it reaches her and
+  again at the roof; circling the wrong way only rocks it, never carrying her back toward the water; when the player
+  stops it coasts and settles while she holds on; its speed is capped. She climbs the lattice like a ladder, both
+  hands on, changing grips and footholds as it turns, upright and close to it, the cygnet tucked clear. The mill
+  leaves the frame as the church and the lighthouse come back into view.
 - **The run is built on decks** (`src/world/decks.ts`): ridges, wall tops and the fallen trunk are strips the child
   walks; the slates up to a ridge are ramps. She gets out with `alight` onto the cottage's slates and back in with
   `board` at the nave.
