@@ -6,9 +6,10 @@ import { ATMO_GLSL, atmo } from '../world/atmosphere';
 import { heightAt } from '../world/island';
 import { REFLECTION_LAYER } from '../world/water/reflection';
 import { BARK, merged, tube } from '../world/crossings/shapes';
-import { barkMaterial } from '../world/crossings/topple-tree';
+import { barkMaterial, type TreeEvent } from '../world/crossings/topple-tree';
 import { TreeCrossing } from '../world/crossings/tree-crossing';
-import { SwingCrossing } from '../world/crossings/swing-crossing';
+import { SwingCrossing, type SwingEvent } from '../world/crossings/swing-crossing';
+import type { MaterialSound } from '../audio/foley';
 import type { Cast } from './cast';
 
 const ROOF_VERT = /* glsl */ `
@@ -144,6 +145,10 @@ const WAY = {
   naveRidge: { x0: SWING_X - 3, z0: NAVE.z, x1: SWING_X + 2.5, z1: NAVE.z, halfWidth: 0.45, height: ridgeOf(NAVE) },
 } satisfies Record<string, Deck>;
 
+const TREE_SOUNDS = { creak: 'tree-creak', loosen: 'roots-give', tear: 'root-tear', impact: 'tree-fall' } as const satisfies Record<TreeEvent, MaterialSound>;
+/** Her coat as she lets go of the ropes, the old rope on the bough each time it turns, her boots and hand on the slates. */
+const SWING_SOUNDS = { creak: 'bough-creak', leap: 'cloth', land: 'slate-land' } as const satisfies Record<SwingEvent, MaterialSound>;
+
 type View = 'tree' | 'swing' | 'walk';
 
 /**
@@ -182,6 +187,8 @@ export class CrossingsYard {
     }, crossingCast);
     this.swing = new SwingCrossing({ pivot: at(PIVOT), toward: new THREE.Vector2(0, -1), rope: ROPE },
       { board: at(BOARD), landing: at(LANDING), onward: at(new THREE.Vector3(SWING_X + 0.4, 0, NAVE.z + 0.9)) }, crossingCast);
+    this.tree.tree.onEvent = (kind, where, strength) => cast.knock?.(TREE_SOUNDS[kind], where, strength);
+    this.swing.onEvent = (kind, where, strength) => cast.knock?.(SWING_SOUNDS[kind], where, kind === 'leap' ? 0.5 * strength : strength);
     this.walk = [
       new THREE.Vector3(CORNER.x, 0, LANE),
       new THREE.Vector3(CORNER.x, 0, GARDEN_SOUTH + 0.2),

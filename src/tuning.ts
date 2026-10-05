@@ -1863,7 +1863,7 @@ export const tuning = {
        * ebbed and `settleFor` seconds have passed. The water bubbles for `bubbleFor` seconds after.
        */
       holdAt: 0.1, rootStiffness: 30, giveAt: 0.42, giveMin: 0.36, giveMax: 0.52, looseLean: 0.2, lurch: 0.22,
-      settleFor: 0.6, bubbleFor: 4.5,
+      settleFor: 1, bubbleFor: 4.5,
       /**
        * Going over: the pull of its own weight (per second squared at a right angle), held back at first by the
        * roots (`tearHold` of it while `tearOver` radians of fall tear them), and the share of its fall speed kept

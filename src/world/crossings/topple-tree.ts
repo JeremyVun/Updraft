@@ -198,6 +198,7 @@ export class ToppleTree {
   private armed = true;
   private settle = 0;
   private fellFrom = 0;
+  private tornUp = false;
   private heave = 0;
   private bubbling = 0;
   private silt = 0;
@@ -295,6 +296,7 @@ export class ToppleTree {
     this.loose = this.tear = this.soak = this.shudder = this.shiver = this.dripFor = 0;
     this.gives = this.pushPeak = this.settle = this.heave = this.bubbling = this.silt = this.siltAge = 0;
     this.armed = true;
+    this.tornUp = false;
     this.sinceDown = 0;
     this.base.copy(this.spot.root);
     this.pose();
@@ -380,7 +382,7 @@ export class ToppleTree {
       const strain = Math.max(0, this.lean - rest - k.holdAt);
       this.leanV += (-k.stiffness * (this.lean - rest - this.press) - k.rootStiffness * strain - k.damping * this.leanV) * dt;
       this.lean += this.leanV * dt;
-      if (this.lastLeanV * this.leanV < 0 && Math.abs(this.lean - rest) > 0.035) {
+      if (this.lastLeanV * this.leanV < 0 && Math.abs(this.lean - rest) > 0.035 && this.settle <= 0) {
         const strength = Math.min(1, Math.abs(this.lean - rest) * 6);
         this.onEvent?.('creak', this.trunkAt(0.3, this.tmp), strength);
         this.ring(0.6 * strength, time);
@@ -391,7 +393,7 @@ export class ToppleTree {
       const hold = THREE.MathUtils.lerp(k.tearHold, 1, THREE.MathUtils.smoothstep(torn, 0.2, 1));
       this.leanV += k.fallPull * Math.sin(this.lean) * hold * dt;
       this.lean += this.leanV * dt;
-      if (this.tear === 0 && torn > 0.15) this.tearUp(time);
+      if (!this.tornUp && torn > 0.15) this.tearUp(time);
       if (this.lean >= this.downLean) this.land(time);
     } else {
       this.sinceDown += dt;
@@ -460,7 +462,7 @@ export class ToppleTree {
   }
 
   private tearUp(time: number): void {
-    this.tear = 0.001;
+    this.tornUp = true;
     this.dripFor = 4.5;
     this.bubbling = Math.max(this.bubbling, 2);
     this.siltAge = 0;
