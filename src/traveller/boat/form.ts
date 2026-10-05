@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { glsl } from '../../tuning';
 
 export const LENGTH = 4.2;
 export const BEAM = 1.0;
@@ -135,6 +136,50 @@ export function sectionHalf(u: number, y: number): number {
   const sin = Math.min(1, Math.max(0, drop)) ** (1 / SECTION);
   return halfWidth(u) * Math.sqrt(Math.max(0, 1 - sin * sin));
 }
+
+/**
+ * `hullHolds(p, margin)`: whether a point in the hull's own frame lies within its planking, or `margin` metres out
+ * from it (the section above, raked at the ends, carried straight up past the gunwale), for whatever must keep out of
+ * the inside of the boat.
+ */
+export const HULL_GLSL = /* glsl */ `
+float hullKeel(float u) {
+  float fore = (u - ${glsl(FOREFOOT_FROM)}) * ${glsl(LENGTH)};
+  return u > ${glsl(FOREFOOT_FROM)}
+    ? ${glsl(KEEL + FOREFOOT_RADIUS)} - sqrt(max(${glsl(FOREFOOT_RADIUS ** 2)} - fore * fore, 0.0))
+    : ${glsl(KEEL)} + (u < 0.16 ? 0.07 * pow(1.0 - u / 0.16, 2.0) : 0.0);
+}
+float hullGunwale(float u) {
+  return 0.5 + (u < 0.48 ? 0.18 * pow((0.48 - u) / 0.48, 2.2) : 0.26 * pow((u - 0.48) / 0.52, 2.2));
+}
+bool hullHolds(vec3 p, float margin) {
+  if (abs(p.x) > ${glsl(BEAM * (1 + FLARE))} + margin || p.y < ${glsl(KEEL)} - margin
+    || p.z < ${glsl(STERN_Z - TRANSOM_RAKE)} - margin || p.z > ${glsl(BOW_Z + STEM_RAKE)} + margin) return false;
+  // The station whose raked line runs through p.
+  float z = p.z;
+  for (int i = 0; i < 3; i++) {
+    float k = clamp(z / ${glsl(LENGTH)} + 0.45, 0.0, 1.0);
+    float keel = hullKeel(k);
+    float s = clamp((p.y - keel) / max(hullGunwale(k) - keel, 1e-3), 0.0, 1.0);
+    z = p.z - ${glsl(STEM_RAKE)} * smoothstep(0.72, 1.0, k) * s
+      + ${glsl(TRANSOM_RAKE)} * (1.0 - smoothstep(0.0, 0.32, k)) * (1.0 - (1.0 - s) * (1.0 - s));
+  }
+  if (z < ${glsl(STERN_Z)} - margin || z > ${glsl(BOW_Z)} + margin) return false;
+  float u = clamp(z / ${glsl(LENGTH)} + 0.45, 0.0, 1.0);
+  float keel = hullKeel(u);
+  float rim = 0.28 * u * u;
+  if (p.y <= keel - margin) return false;
+  float w = ${glsl(BEAM)} * pow(max(1.0 - pow(u, 3.4), 0.0), 0.72) * (0.52 + 0.48 * sin(u * 3.14159265));
+  if (p.y < rim) {
+    float s = pow(clamp((rim - p.y) / (rim - keel), 0.0, 1.0), ${glsl(1 / SECTION)});
+    w *= sqrt(max(1.0 - s * s, 0.0));
+  } else {
+    float t = clamp((p.y - rim) / max(hullGunwale(u) - rim, 1e-3), 0.0, 1.0);
+    w *= 1.0 + ${glsl(FLARE)} * pow(sin(u * 3.14159265), 0.6) * t * t * (3.0 - 2.0 * t);
+  }
+  return abs(p.x) < w + margin;
+}
+`;
 
 /** Where the floorboards meet the inside of the hull at station `u`: their height and half-width there. */
 export function floorAt(u: number): { y: number; half: number } {

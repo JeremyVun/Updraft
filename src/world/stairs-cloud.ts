@@ -3,7 +3,7 @@ import { ATMO_GLSL, NOISE_GRAD_GLSL, atmo } from './atmosphere';
 import { glsl, tuning } from '../tuning';
 import { fixInPlace } from '../gl/fixed';
 import { CloudWake } from './stairs-wake';
-import { BEAM, LENGTH } from '../traveller/boat/form';
+import { HULL_GLSL } from '../traveller/boat/form';
 import { VAPOUR_GLSL } from './cloud-vapour';
 import { CloudTowers, TOWER_FOOT } from './cloud-towers';
 import { CloudLobes, LOBES_TEXTURE_GLSL } from './cloud-lobes';
@@ -106,8 +106,9 @@ uniform vec4 uGate;
 uniform float uReach;
 uniform float uHole;
 uniform float uSurface;
-uniform vec4 uHull;
+uniform mat4 uHull;
 uniform float uHullOn;
+${HULL_GLSL}
 in vec3 vWorld;
 in float vRing;
 in vec4 vCalm;
@@ -128,15 +129,9 @@ void main() {
     float hole = length(xz - uCloudBubble.xz) - uCloudBubble.w * (0.75 + 0.35 * vnoise(xz * 0.8 + uTime * 0.1));
     if (hole < 0.0 && uCloudBubble.y < uSurface + 0.5) discard;
   }
-  // Never inside the hull lying in it: the boat's own planform (boat/form.ts), a hair inside its planking.
-  if (uHullOn > 0.5) {
-    vec2 d = xz - uHull.xy;
-    float u = dot(d, uHull.zw) / ${glsl(LENGTH)} + 0.45;
-    float across = abs(d.x * uHull.w - d.y * uHull.z);
-    float k = clamp(u, 0.0, 1.0);
-    float beam = ${glsl(BEAM)} * pow(1.0 - pow(k, 3.4), 0.72) * (0.52 + 0.48 * sin(k * 3.14159265));
-    if (u > 0.0 && u < 1.0 && across < beam * 0.97) discard;
-  }
+  // Never inside the hull lying in it, however it pitches and rolls on the tops, and a little clear of its planking,
+  // where the two would fight over the same depth.
+  if (uHullOn > 0.5 && hullHolds((uHull * vec4(vWorld, 1.0)).xyz, 0.03)) discard;
   vec2 fold;
   vec3 lobe;
   vec3 top = cloudTop(xz, vCalm, vStature, vRise, vTower, 0.0, fold, lobe) + vFoot;
@@ -701,7 +696,7 @@ export class StairsCloud {
   private readonly shape: TopShape;
   private readonly grid = cloudGridGeometry(0.5);
   private readonly topUniforms: { uGrid: { value: THREE.Vector4[] }; uDrift: { value: THREE.Vector2 }; uLobesSoft: { value: THREE.Texture }; uLobesFull: { value: THREE.Texture }; uCalmAt: { value: THREE.Vector3 }; uReach: { value: number };
-    uRoute: { value: THREE.Vector2[] }; uTrail: { value: THREE.Vector4[] }; uTrailBounds: { value: THREE.Vector4 }; uFeet: { value: THREE.Vector4[] }; uGate: { value: THREE.Vector4 }; uHole: { value: number }; uHull: { value: THREE.Vector4 }; uHullOn: { value: number }; uWisps: { value: number }; uWispAir: { value: THREE.Vector2 }; uSurface: { value: number }; uRise: { value: number }; uView: { value: THREE.Vector4[] }; uViewProjection: { value: THREE.Matrix4 } };
+    uRoute: { value: THREE.Vector2[] }; uTrail: { value: THREE.Vector4[] }; uTrailBounds: { value: THREE.Vector4 }; uFeet: { value: THREE.Vector4[] }; uGate: { value: THREE.Vector4 }; uHole: { value: number }; uHull: { value: THREE.Matrix4 }; uHullOn: { value: number }; uWisps: { value: number }; uWispAir: { value: THREE.Vector2 }; uSurface: { value: number }; uRise: { value: number }; uView: { value: THREE.Vector4[] }; uViewProjection: { value: THREE.Matrix4 } };
   private readonly bellyUniforms: { uGrid: { value: THREE.Vector4[] }; uCalmAt: { value: THREE.Vector3 }; uReach: { value: number }; uStairAt: { value: THREE.Vector2 }; uView: { value: THREE.Vector4[] }; uViewProjection: { value: THREE.Matrix4 } };
   /** The parting behind the hull: where its bow has been, newest first, how fresh each point is, and how far along. */
   private readonly trail: THREE.Vector4[] = Array.from({ length: TRAIL_POINTS }, () => new THREE.Vector4(0, 0, 0, 0));
@@ -725,7 +720,7 @@ export class StairsCloud {
       uFeet: { value: Array.from({ length: FEET }, () => new THREE.Vector4()) },
       uGate: { value: new THREE.Vector4(TOWER_GATE.from.x, TOWER_GATE.from.y, TOWER_GATE.to.x, TOWER_GATE.to.y) },
       uHole: { value: 1 },
-      uHull: { value: new THREE.Vector4() },
+      uHull: { value: new THREE.Matrix4() },
       uHullOn: { value: 0 },
       uWisps: { value: 1 },
       uWispAir: { value: new THREE.Vector2(1, 0) },
@@ -837,10 +832,10 @@ export class StairsCloud {
   }
 
   /** The hull lying in the cloud, whose inside its top keeps out of; null when there is none on it. */
-  holdOut(hull: { group: THREE.Object3D; yaw: number } | null): void {
+  holdOut(hull: { group: THREE.Object3D } | null): void {
     const u = this.topUniforms;
     u.uHullOn.value = hull ? 1 : 0;
-    if (hull) u.uHull.value.set(hull.group.position.x, hull.group.position.z, Math.sin(hull.yaw), Math.cos(hull.yaw));
+    if (hull) u.uHull.value.copy(hull.group.matrixWorld).invert();
   }
 
   /** Whether the pocket round a climber opens a hole in the top of the cloud; not while the cloud is swelling up round a hull. */
