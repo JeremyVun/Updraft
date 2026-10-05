@@ -22,8 +22,8 @@ export const NOSE = 3;
 export const MOUTH = 4;
 export const WHISKER = 5;
 
-export const ARM = 0.074;
-export const FORE = 0.068;
+export const ARM = 0.078;
+export const FORE = 0.072;
 export const THIGH = 0.07;
 export const SHIN = 0.066;
 export const META = 0.046;
@@ -42,7 +42,7 @@ export const SKELETON: [bone: number, parent: number, at: V3][] = [
   [JAW, HEAD, [0, -0.03, 0.038]],
   [EAR_L, HEAD, [0.037, 0.046, -0.004]],
   [EAR_R, HEAD, [-0.037, 0.046, -0.004]],
-  [TAIL_1, PELVIS, [0, 0.03, -0.072]],
+  [TAIL_1, PELVIS, [0, 0.03, -0.066]],
   [TAIL_2, TAIL_1, [0, 0, -TAIL_LINK]],
   [TAIL_3, TAIL_2, [0, 0, -TAIL_LINK]],
   [TAIL_4, TAIL_3, [0, 0, -TAIL_LINK]],
@@ -103,10 +103,10 @@ function trunk(): Station[] {
     skin,
   });
   return [
-    s(-0.178, 0.01, 0.012, 0.012, 0.012, [PELVIS, PELVIS, 0]),
-    s(-0.168, 0.008, 0.045, 0.045, 0.048, [PELVIS, PELVIS, 0]),
-    s(-0.142, 0.004, 0.064, 0.06, 0.068, [PELVIS, PELVIS, 0]),
-    s(-0.1, 0.002, 0.069, 0.062, 0.074, [PELVIS, PELVIS, 0]),
+    s(-0.17, 0.01, 0.012, 0.012, 0.012, [PELVIS, PELVIS, 0]),
+    s(-0.16, 0.008, 0.046, 0.046, 0.048, [PELVIS, PELVIS, 0]),
+    s(-0.135, 0.004, 0.065, 0.06, 0.068, [PELVIS, PELVIS, 0]),
+    s(-0.095, 0.002, 0.07, 0.062, 0.074, [PELVIS, PELVIS, 0]),
     s(-0.05, 0.0, 0.064, 0.06, 0.068, [PELVIS, BODY, 0.6]),
     s(0.0, 0.0, 0.063, 0.06, 0.068, [BODY, BODY, 0]),
     s(0.045, 0.002, 0.066, 0.06, 0.073, [BODY, CHEST, 0.6]),
@@ -146,10 +146,10 @@ function leg(front: boolean): Station[] {
   const hock = REST[meta][1];
   const toe = REST[l.paw][1];
   return [
-    s(top[1] + 0.03, 0.018, 0.018, 0.018, [PELVIS, PELVIS, 0]),
-    s(top[1] + 0.006, 0.032, 0.034, 0.032, [PELVIS, l.upper, 0.55]),
-    s(top[1] - 0.028, 0.028, 0.03, 0.027, [l.upper, l.upper, 0]),
-    s(knee + 0.004, 0.021, 0.022, 0.021, [l.upper, l.lower, 0.5]),
+    s(top[1] + 0.03, 0.02, 0.02, 0.02, [PELVIS, PELVIS, 0]),
+    s(top[1] + 0.008, 0.034, 0.04, 0.036, [PELVIS, l.upper, 0.55], -0.004),
+    s(top[1] - 0.026, 0.031, 0.036, 0.03, [l.upper, l.upper, 0], -0.002),
+    s(knee + 0.006, 0.022, 0.024, 0.022, [l.upper, l.lower, 0.5]),
     s(knee - 0.03, 0.017, 0.018, 0.017, [l.lower, l.lower, 0]),
     s(hock + 0.006, 0.015, 0.014, 0.017, [l.lower, meta, 0.5]),
     s(hock - 0.022, 0.0145, 0.014, 0.015, [meta, meta, 0]),
@@ -244,8 +244,6 @@ export function catGeometry(): THREE.BufferGeometry {
   }
   out.push(loft({ stations: tail(), mat: FUR, around: 14, smooth: 1 }));
 
-  /** Haunches: the thigh is mostly fur round the hip, and it is what makes a sitting cat a pear. */
-  pair({ part: THIGH_L, mat: FUR, at: add(REST[THIGH_L], [-0.007, -0.024, 0.002]), size: [0.027, 0.045, 0.046], rot: [0.15, 0, 0], detail: 3, blend: (u) => ramp(-u.y, 0.55, 0.95) * 0.4 });
   /** Paws: round mittens, all white. */
   pair({ part: FPAW_L, mat: FUR, at: add(REST[FPAW_L], [0, -WRIST + 0.012, 0.013]), size: [0.02, 0.0125, 0.024], detail: 2, blend: () => 1 });
   pair({ part: HPAW_L, mat: FUR, at: add(REST[HPAW_L], [0, -TOE + 0.011, 0.012]), size: [0.019, 0.012, 0.025], detail: 2, blend: () => 1 });

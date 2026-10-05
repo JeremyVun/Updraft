@@ -90,7 +90,7 @@ export class CatVoice {
     }
 
     const env = ctx.createGain();
-    const peak = 0.11 * loudness;
+    const peak = 0.09 * loudness;
     env.gain.setValueAtTime(0, t0);
     env.gain.linearRampToValueAtTime(peak * 0.6, t0 + 0.035);
     env.gain.linearRampToValueAtTime(peak, at(0.25));
@@ -171,7 +171,7 @@ export class CatVoice {
   land(pan: number, loudness: number): void {
     const now = this.out?.ctx.currentTime;
     if (now === undefined) return;
-    this.puff(now + 0.005, 0.11, 0.05 * loudness, pan, 'lowpass', 320, 0.8);
+    this.puff(now + 0.005, 0.11, 0.08 * loudness, pan, 'lowpass', 320, 0.8);
     this.puff(now + 0.03, 0.05, 0.02 * loudness, pan, 'bandpass', 1400, 1);
   }
 

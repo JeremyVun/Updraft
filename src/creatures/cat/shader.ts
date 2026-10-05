@@ -73,7 +73,7 @@ const float SPINE = ${(REST[BODY][1] + 0.04).toFixed(4)};
 float tabby(vec3 r) {
   float warp = vnoise(r.xz * 31.0 + r.y * 17.0) - 0.5;
   float ax = abs(r.x);
-  if (r.z < TAIL_Z - 0.02 && r.y > 0.15) {
+  if (r.z < TAIL_Z - 0.03 && r.y > 0.15) {
     float along = TAIL_Z - r.z;
     return max(smoothstep(0.1, 0.6, sin(along * 72.0 + warp)), smoothstep(0.24, 0.26, along));
   }

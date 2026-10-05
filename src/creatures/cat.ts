@@ -67,8 +67,8 @@ interface Stance {
 type Hold = CatPose | 'gather';
 
 const STANCES: Record<Hold, Stance> = {
-  stand: { bodyY: 0.165, bodyZ: 0, pitch: 0.03, flex: 0.06, chestUp: 0, neckLow: 0, hock: 0.5, tuck: 0, front: [0.034, 0.088], hind: [0.04, -0.1], tailUp: 0.55, tailCurl: 0.12, tailWrap: 0 },
-  sit: { bodyY: 0.128, bodyZ: -0.02, pitch: 0.78, flex: -0.15, chestUp: 0.25, neckLow: -0.15, hock: 1.45, tuck: 0, front: [0.024, 0.08], hind: [0.044, 0.004], tailUp: -0.32, tailCurl: 0.22, tailWrap: 1 },
+  stand: { bodyY: 0.17, bodyZ: 0, pitch: 0.03, flex: 0.06, chestUp: 0, neckLow: 0, hock: 0.5, tuck: 0, front: [0.034, 0.088], hind: [0.04, -0.1], tailUp: 0.55, tailCurl: 0.12, tailWrap: 0 },
+  sit: { bodyY: 0.13, bodyZ: -0.025, pitch: 0.88, flex: -0.18, chestUp: 0.2, neckLow: -0.15, hock: 1.45, tuck: 0, front: [0.024, 0.08], hind: [0.044, 0.004], tailUp: -0.32, tailCurl: 0.22, tailWrap: 1 },
   gather: { bodyY: 0.112, bodyZ: -0.015, pitch: -0.05, flex: 0.2, chestUp: 0, neckLow: 0.15, hock: 0.85, tuck: 0, front: [0.03, 0.08], hind: [0.042, -0.068], tailUp: 0.0, tailCurl: 0, tailWrap: 0 },
   crouch: { bodyY: 0.088, bodyZ: 0, pitch: 0.05, flex: 0.3, chestUp: 0, neckLow: 0.6, hock: 1.45, tuck: 1.3, front: [0.028, 0.074], hind: [0.046, -0.06], tailUp: -0.02, tailCurl: 0, tailWrap: 1 },
 };
@@ -296,6 +296,7 @@ export class Cat {
     this.fear = this.unease;
     this.mewT = this.chirpT = this.blinkT = -1;
     this.idle = null;
+    this.nextIdle = 3 + Math.random() * 3;
     this.flinch.value = this.flinch.velocity = this.dip.value = this.dip.velocity = 0;
     this.homesFor(0);
     this.gait.reset(this.support, this.homes);
