@@ -202,6 +202,12 @@ const columnAt = (i: number) => {
   return -0.85 + ((i + 0.5) / k.columns) * (0.85 + k.wing * 0.5) + 0.05 * Math.sin(i * 7.3);
 };
 
+/** Where across the bank tendril `i` creeps out, wandering a little from side to side. */
+const reachAt = (i: number, time: number) => {
+  const k = tuning.drowned.dark;
+  return -0.75 + ((i + 0.5) / k.reaches) * (0.75 + k.wing * 0.7) + 0.02 * Math.sin(i * 5.1) + 0.006 * Math.sin(time * 0.11 + i * 2.3);
+};
+
 /** How high the bank heaps at `u` across it: an even rolling top with long low swells in it. */
 const crest = (u: number) => 0.8 + 0.2 * Math.sin(u * 4.3 + 1.3) + 0.08 * Math.sin(u * 13 + 0.4);
 
@@ -273,7 +279,8 @@ export class DarkBank {
       const heave = Math.sin(time * k.heaveRate) * k.heave;
       const show = THREE.MathUtils.smoothstep(risen, 0, 0.35);
       for (const p of this.puffs) {
-        const u = p.layer === 'plume' ? columnAt(Math.floor(p.seed * k.columns)) + p.across * 0.03 : p.across;
+        const u = p.layer === 'plume' ? columnAt(Math.floor(p.seed * k.columns)) + p.across * 0.03
+          : p.layer === 'tendril' ? reachAt(Math.floor(p.seed * k.reaches), time) + p.across * 0.004 : p.across;
         const side = u * k.halfWidth;
         /** It runs out toward its ends, lower and thinner, and on the church's side it ends soon. */
         const taper = u < 0 ? 1 - THREE.MathUtils.smoothstep(-u, 0.7, 1) : 1 - THREE.MathUtils.smoothstep(u, k.wing * 0.4, k.wing);
@@ -291,7 +298,7 @@ export class DarkBank {
           tall = 1;
           spin = (0.12 + 0.1 * p.seed) * (p.seed < 0.5 ? -1 : 1);
           alpha = 0.97;
-          tone = 0.12 * p.height;
+          tone = 0.1 + 0.25 * p.height * (1 - p.back);
           soft = 0.015;
         } else if (p.layer === 'body') {
           const back = p.back ** 1.8;
@@ -299,7 +306,7 @@ export class DarkBank {
           const up = (0.15 + 0.85 * p.height) * crest(u) * (0.18 + 0.82 * back ** 0.8);
           y = (r * 0.3 + up * k.heap) * risen;
           /** The higher it is toward the front, the further it leans out over the skirt: the front rolls over. */
-          forward = lead * 0.8 - k.skirtDepth * 0.4 - back * k.depth + k.lean * up * (1 - back) ** 2;
+          forward = lead * 0.8 - k.skirtDepth * 0.75 - back * k.depth + k.lean * up * (1 - back) ** 2;
           wide = 1.35;
           tall = 1;
           spin = 0.05 * (p.seed < 0.5 ? -1 : 1);
@@ -336,16 +343,22 @@ export class DarkBank {
           tone = 0.05;
           soft = 0.3;
         } else {
-          /** Each creeps out from the front over the glass, thinning as it goes, and another follows it. */
-          const life = (p.back + time * k.creep * (0.7 + 0.6 * p.seed)) % 1;
-          r = k.tendrilSize * p.size * (0.7 + 0.6 * life);
-          forward = lead + finger + 1 + life * k.tendrilReach;
-          y = r * 0.22;
-          wide = 2.5 + 3 * p.height;
-          tall = 0.55;
-          alpha = 0.8 * Math.sin(Math.PI * life) ** 0.8 * THREE.MathUtils.smoothstep(risen, 0.5, 1);
-          tone = 0.2;
-          soft = 0.38;
+          /**
+           * A string of small billows creeping out from the front along the glass, narrowing to its tip; each puff
+           * rides out along it and thins away, and the whole tendril reaches on and draws back.
+           */
+          const chain = Math.floor(p.seed * k.reaches);
+          const life = (p.height + time * k.creep) % 1;
+          const reach = k.tendrilReach * (0.5 + 0.5 * Math.abs(Math.sin(chain * 2.9))) * (0.75 + 0.25 * Math.sin(time * 0.07 + chain * 1.7));
+          r = k.tendrilSize * p.size * (1 - 0.6 * life);
+          forward = lead + 0.5 + life * reach;
+          y = r * 0.4;
+          wide = 1.8;
+          tall = 0.8;
+          spin = 0.1 * (chain % 2 ? 1 : -1);
+          alpha = 0.95 * THREE.MathUtils.smoothstep(life, 0, 0.1) * (1 - life * life) * THREE.MathUtils.smoothstep(risen, 0.5, 1);
+          tone = 0.15;
+          soft = 0.12;
         }
         const wobble = time * 0.05 + p.seed * 40;
         const x = this.front.x + ax * forward - az * side + Math.cos(wobble) * 1.2;

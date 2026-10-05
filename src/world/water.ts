@@ -342,8 +342,8 @@ void main() {
     float u = aside / uDarkShape.x;
     float ahead = dot(rel, uDarkFront.zw) - uDarkShape.y * u * u;
     float fingers = vnoise(vec2(aside * 0.11, uTime * 0.03)) * 0.65 + vnoise(vec2(aside * 0.37, uTime * 0.05 + 7.0)) * 0.35;
-    float reach = 6.0 + 14.0 * smoothstep(0.35, 0.9, fingers);
-    darkWater = (1.0 - smoothstep(-8.0, reach, ahead)) * uDarkShape.z * (1.0 - smoothstep(0.75, 1.0, -u)) * (1.0 - smoothstep(uDarkShape.w * 0.5, uDarkShape.w, u));
+    float reach = 8.0 + 16.0 * smoothstep(0.35, 0.9, fingers);
+    darkWater = (1.0 - smoothstep(0.0, reach, ahead)) * uDarkShape.z * (1.0 - smoothstep(0.75, 1.0, -u)) * (1.0 - smoothstep(uDarkShape.w * 0.5, uDarkShape.w, u));
     rough = max(rough, darkWater * 0.6);
   }
 
@@ -489,7 +489,7 @@ void main() {
 #endif
   // Wind on water darkens it and never oils it, so a gust takes light off the sea without touching its colour.
   col *= 1.0 - ${glsl(tuning.water.darken)} * stroke;
-  col *= mix(vec3(1.0), vec3(0.13, 0.12, 0.2), darkWater);
+  col *= mix(vec3(1.0), vec3(0.08, 0.075, 0.14), darkWater);
 
   float foam = surf.x;
   if (storm > 0.0) {

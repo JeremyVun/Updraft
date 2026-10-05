@@ -1692,7 +1692,7 @@ export const tuning = {
        * Billows in its low rolling skirt on the water, heaped behind it, lifting off its heads, misting its foot, and
        * creeping out ahead over the glass.
        */
-      skirt: 130, body: 300, plumes: 90, foot: 40, tendrils: 90,
+      skirt: 130, body: 300, plumes: 90, foot: 40, tendrils: 170,
       /**
        * The bank: half its width, its depth behind the front, how far its flanks run on ahead, in metres; and how far it
        * reaches on the church's side, as a share of its half width, so the church keeps clear sky over it.
@@ -1701,16 +1701,16 @@ export const tuning = {
       /** How far fingers of the front reach ahead, and how far and how fast the whole front heaves. */
       fingers: 4, heave: 1.4, heaveRate: 0.33,
       /** The skirt's billow radius and how deep it lies behind the front; the body's radius at its front and back, and how high it heaps. */
-      skirtSize: 2.6, skirtDepth: 10, bodySize: 3.6, backSize: 9, heap: 15,
+      skirtSize: 2.4, skirtDepth: 14, bodySize: 3.6, backSize: 9, heap: 15,
       /** How far the top of its front leans out over the water ahead of its foot. */
       lean: 7,
-      /** The tendrils' radius, how far out over the glass they creep and how often (laps a second). */
-      tendrilSize: 2, tendrilReach: 18, creep: 0.04,
+      /** How many tendrils creep out over the glass, their billows' radius, how far they reach, and how fast (laps a second). */
+      reaches: 12, tendrilSize: 2.4, tendrilReach: 22, creep: 0.05,
       /** How many columns of smoke lift off it, how high before they have thinned away, and how often (laps a second). */
       columns: 5, plumeRise: 22, plumeRate: 0.03,
       /** How much of the distance veil it takes near and far. */
-      nearHaze: 0.12, farHaze: 0.05,
-      riseFor: 9, comeAfter: 5, comeFor: 24, holdBehind: 30,
+      nearHaze: 0.06, farHaze: 0.2,
+      riseFor: 9, comeAfter: 5, comeFor: 24, holdBehind: 20,
     },
   },
   drownedCamera: {
