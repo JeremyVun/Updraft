@@ -298,3 +298,38 @@ reflection (two lines leave that house; only one runs on toward the church), the
 that circling unwinds. At the church the wind comes back as the storm: cat's-paws race across the glass and wipe the
 village as it was out of the water, the lines fall back, the sail fills. The memory shows the way, then the storm
 takes it, and she is the one who pulls them on: the step before the wood, where she goes into the dark first.
+
+Jeremy on the lines and the village as it was (branch `proto-drowned-own`, rejected): "I dont like the lines because
+it turns the drowned village into the sky mirror and it's actually quite confusing. Written down i think it had
+potential, but in execution im not sure it does. As a child im going to try to blow wind on the swans under the water
+and it's going to confuse me." Prototypes to judge next: the kite (`proto-drowned-kite`) and the black smoke
+(`proto-drowned-smoke`).
+
+Jeremy after playing the lines, the black smoke and the kite:
+
+> thoughts on the lines idea,
+> - yes it was very unclear that the lines was the thing to touch, the animations were a bit janky and there's not
+>   much "wind" interaction that synergises with the child hauling the boat across lines
+> - It felt strange to have a line do a 90 degree right handle around a house
+> - It felt slightly contrived that the line led to a bell. The player never did something something that led to it,
+>   so it just felt like an aribtrary sequence of events if that makese sense.
+>
+> Thoughts on the other ideas,
+> - I did like the idea of the black smoke coming across the water towards the player, that was an interesting dream
+>   like feeling, like an unknown darkness was coming and they needed to get onto land quickly to run away from it.
+> - the kite idea was very basic in and of itself, although it is something to put in the backpocket for now.
+
+Jeremy, 2026-10-05, asked whether the darkness should come on its own or be called by the player: **on its own.** The
+child flees it; the puzzle is getting away from it and the passage after is a run for land ahead of the dark. Asked
+whether the way out should be the kite (swept off the deck, circled up into the high wind, towing the boat ahead of
+the dark): **something else.** Other ways out are to be proposed before any art.
+
+Two ways out were offered: warm chimneys whose rising smoke draws the boat house to house, and the child leaving the
+boat to run over the roofs for land. Jeremy, 2026-10-05:
+
+> lets try over the roofs. I can see it working really well if executed well (i'm not sure if the paper plane should
+> lead the way, but maybe that is what works best). But please also think and suggest another idea that is slightly
+> less ambitious as well that we can do in paralell in case the over the roofs idea doesn't work out
+
+> remember, the whole point of the work here is to create an interesting puzzle and add more interactivity to the
+> game overall. previously, the drowned village had basically no interaction
