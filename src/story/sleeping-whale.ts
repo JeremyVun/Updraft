@@ -230,14 +230,22 @@ export class WhaleAcross {
     shot.from = from.set(Math.sin(bearing), 0, Math.cos(bearing));
     shot.distance = THREE.MathUtils.lerp(shot.distance, K.holdDistance, h);
     shot.height = THREE.MathUtils.lerp(shot.height, K.holdHeight, h);
-    if (h > 0.5 && sleeper.phase !== 'gone') {
-      const s = this.subjects;
-      s.primary.copy(this.cast.child.position).y += 1.2;
-      s.secondary.copy(sleeper.blowhole).y += sleeper.phase === 'waking' ? K.spoutHeight * 0.6 : 1.5;
-      if (portrait) sleeper.point(0, TOP(0.05), 0.05, s.tertiary);
-      else s.tertiary.copy(sleeper.phase === 'leaving' ? sleeper.flukes : sleeper.point(0, TOP(0.9), 0.9, s.tertiary));
-      shot.subjects = s;
-      shot.smoothFit = 1;
-    }
+    // Its ends join the travelling pair by degrees, so the lens never has to find a new fit all at once.
+    const s = this.subjects;
+    const pair = shot.subjects;
+    s.primary.copy(this.cast.child.position).y += 1.2;
+    const rest = pair?.secondary ?? s.primary;
+    s.secondary.copy(sleeper.blowhole).y += sleeper.phase === 'waking' ? K.spoutHeight * 0.6 : 1.5;
+    if (portrait) sleeper.point(0, TOP(0.05), 0.05, s.tertiary);
+    else if (sleeper.phase === 'leaving' || sleeper.phase === 'gone') s.tertiary.copy(sleeper.flukes);
+    else sleeper.point(0, TOP(0.9), 0.9, s.tertiary);
+    // Only what is out of the water needs room: a body going under must not draw the lens back after it.
+    s.secondary.y = Math.max(s.secondary.y, 1.5);
+    s.tertiary.y = Math.max(s.tertiary.y, 0.5);
+    s.secondary.lerp(rest, 1 - h);
+    s.tertiary.lerp(rest, 1 - h);
+    s.margin = THREE.MathUtils.lerp(pair?.margin ?? 0.85, 0.85, h);
+    s.extra = THREE.MathUtils.lerp(pair?.extra ?? 12, 12, h);
+    shot.subjects = s;
   }
 }

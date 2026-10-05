@@ -307,7 +307,8 @@ export class Poser {
       d.effort * 0.02 +
       breathe * 0.4 -
       (act('flinch') * 0.03 + act('brace') * 0.035) * p.afoot +
-      Math.abs(Math.sin(t * 11)) * 0.02 * act('ask') +
+      Math.abs(Math.sin(t * 11)) * 0.02 * act('ask') -
+      p.duck * 0.06 +
       (afoot ? Math.abs(Math.cos(d.stride)) * 0.006 * d.hurry : 0);
     body.position.x = d.gait.sway * walk;
     body.position.z = 0;
