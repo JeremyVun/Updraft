@@ -70,7 +70,6 @@ uniform vec3 uLoopEye;
 uniform float uShrink;
 uniform float uTrueDepth;
 uniform vec4 uAlong;
-uniform float uAlongK;
 uniform vec4 uSlope;
 #endif
 in vec3 vWorld;
@@ -94,7 +93,7 @@ void main() {
   vec3 ray = vWorld - cameraPosition;
   vec3 meets = cameraPosition + ray * (uSlope.w - dot(uSlope.xyz, cameraPosition)) / dot(uSlope.xyz, ray);
   float t = dot(meets.xz, uAlong.xy) - uAlong.z;
-  float along = clamp(2.0 * t / (uAlongK + sqrt(max(0.0, uAlongK * uAlongK - 4.0 * uAlong.w * t))), 0.0, 1.0);
+  float along = clamp(2.0 * t / (uAlong.w + sqrt(max(0.0, uAlong.w * uAlong.w - 4.0 * t))), 0.0, 1.0);
   float push = mix(1.0 / mix(1.0, uShrink, along), 1.0, uTrueDepth);
   vec4 seems = projectionMatrix * viewMatrix * vec4(uLoopEye + (vWorld - uLoopEye) * push, 1.0);
   gl_FragDepth = seems.z / seems.w * 0.5 + 0.5;
@@ -423,8 +422,10 @@ const DETAIL: Record<QualityLevelName, { wisps: number; stride: number }> = {
 function stairMaterial(shown = { value: 1 }, trick = false, undraw = { value: 0 }, trueDepth = { value: 0 }): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     defines: trick ? { TRICK: 1 } : {},
-    uniforms: { ...atmo.uniforms, uShown: shown, uLoopEye: { value: LOOP_EYE }, uShrink: { value: LOOP_SHRINK },
-      uAlong: { value: new THREE.Vector4(ALONG_DRAWN.way.x, ALONG_DRAWN.way.y, ALONG_DRAWN.base, ALONG_DRAWN.aRun) }, uAlongK: { value: ALONG_DRAWN.k }, uSlope: { value: DRAWN_SLOPE }, uUndraw: undraw, uTrueDepth: trueDepth },
+    uniforms: {
+      ...atmo.uniforms, uShown: shown, uLoopEye: { value: LOOP_EYE }, uShrink: { value: LOOP_SHRINK }, uAlong: { value: ALONG_DRAWN },
+      uSlope: { value: DRAWN_SLOPE }, uUndraw: undraw, uTrueDepth: trueDepth,
+    },
     vertexShader: VERT,
     fragmentShader: FRAG,
     vertexColors: true,

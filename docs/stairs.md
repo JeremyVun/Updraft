@@ -243,11 +243,12 @@ brings the light. Courage passes back and forth between them, and the stairs are
 - **The loop's trick** (`src/world/stairs-penrose.ts`): the eye (`LOOP_EYE`) stands on the line of `LOOP_GAP`, so
   the top of the last flight lies exactly in front of the near corner; that flight is drawn in (`drawIn`) toward a
   copy of the corner shrunk about the eye (`toCopy`, `LOOP_SHRINK`), so from the eye it covers the corner exactly.
-  It depth-tests as if it stood where it seems to, worked out per pixel along each line of sight (`TRICK`, `DRAWN_SLOPE`, `ALONG_DRAWN`), so the corner's newel and the flight below
-  stand in front of it; that faked depth lets go as the lens leaves the one place (`uTrueDepth`), and `undraw`
-  lets the flight climb on past the corner. `CloudStairs.trick` is drawn only while the lens is there. Its rail has
-  rings all along it (`RING_RAIL`) so it bends with the flight. The bird is drawn smaller up that flight
-  (`Cygnet.scale`, `sizeOnBack`), walks it on short strips that follow it (`loopDecks`), and at its top is put on
+  It depth-tests as if it stood where it seems to, worked out per pixel along each line of sight (`TRICK`,
+  `DRAWN_SLOPE`, `ALONG_DRAWN`), so the corner's newel and the flight below stand in front of it; that faked depth
+  lets go as the lens leaves the one place (`uTrueDepth`), and `undraw` lets the flight climb on past the corner.
+  `CloudStairs.trick` is drawn only while the lens is there. Its rail has rings all along it (`RING_RAIL`) so it
+  bends with the flight. The bird is drawn smaller up that flight (`Cygnet.scale`, `sizeOnBack`), walks it on short
+  strips that follow its nosings, since it is walked toward the lens (`loopDecks`), and at its top is put on
   the corner along the same sightline (`fromCopy`); over the loop it is not pulled toward the lens (`Cygnet.nudge`).
   The lens is `Shot.zoom` with `Shot.exact` for the hold. The heap over the way on (`LOOP_BANK`,
   `src/world/stairs-bank.ts`) is volumetric cumulus (`hazeHeapMaterial`) that a stroke carries away; `hideTop`
@@ -277,7 +278,8 @@ brings the light. Courage passes back and forth between them, and the stairs are
 - **Loose flights**: `CloudStairs.brush` reads the stroke on the flight's own level and eases the waited-for
   flight's velocity to it (the others move at `stir`); `update` turns it to fit inside `alignFrom` and draws it in
   when close and recently worked.
-- **Walking on stairs**: `Deck.height1` makes a strip a flight; neither walker steps off a raised edge
+- **Walking on stairs**: `Deck.height1` makes a strip a flight, as steep as its steps and through the middle of its
+  treads (`walkLine`); neither walker steps off a raised edge
   (`offTheEdge`), and the bird turns almost on the spot there (`mayStep`). It is routed stop by stop and drops an
   errand within 0.45 m, so arrival is checked at 0.5 m. `Cygnet.standAt` puts it somewhere at once.
 - **The sea of cloud**: its top (`StairsCloud`) is drawn on world-anchored nested grids (`cloud-grid.ts`), so far
