@@ -443,12 +443,13 @@ function slipper(b: Build, frame: THREE.Matrix4): void {
 }
 
 /**
- * What a flight is walked on: a slope as steep as its steps through the middle of every tread, run on half a tread past
- * either end to meet the floor it leaves and the landing it comes onto.
+ * What a flight is walked on: a slope as steep as its steps, crossing each tread `back` of a tread behind its nosing
+ * (through the middle of every tread unless asked), run on past either end to meet the floor it leaves and the
+ * landing it comes onto.
  */
-function walkLine(f: Flight): [THREE.Vector3, THREE.Vector3] {
-  const half = along(f.yaw).multiplyScalar(STEP.going / 2);
-  return [f.bottom.clone().sub(half), f.top.clone().add(half)];
+function walkLine(f: Flight, back = 0.5): [THREE.Vector3, THREE.Vector3] {
+  const way = along(f.yaw).multiplyScalar(STEP.going);
+  return [f.bottom.clone().addScaledVector(way, back - 1), f.top.clone().addScaledVector(way, back)];
 }
 
 /** The loop's last flight drawn in until, seen from the one place, its top lies on the corner. */
@@ -828,8 +829,9 @@ export class CloudStairs {
   /** Where only the bird walks: the loop's far side, and its last flight as it is drawn in. */
   static loopDecks(): Deck[] {
     // The drawn-in flight curves and shrinks toward its top, so it is walked in short straight pieces that follow it.
+    // It is walked toward the lens, which sees the front of every tread and not the back, so along its nosings.
     const pieces = 16;
-    const [from, to] = walkLine(LOOP_BACK);
+    const [from, to] = walkLine(LOOP_BACK, 0);
     const up = (t: number) => drawIn(from.clone().lerp(to, t));
     const back: Deck[] = Array.from({ length: pieces }, (_, i) => {
       const a = up(i / pieces), b = up((i + 1) / pieces);
