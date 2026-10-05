@@ -307,9 +307,15 @@ export class CrossingsYard {
     shot.from = undefined;
     shot.fitWidth = false;
     shot.subjects = undefined;
-    if (this.view === 'tree') {
+    const deck = this.tree.tree.deck;
+    if (this.view === 'tree' && (this.tree.phase === 'crossing' || this.tree.phase === 'over') && !upright) {
+      /** Ahead of her on the far side, a little off the trunk's line, so she comes toward us with her arms out wide. */
+      const len = Math.hypot(deck.x1 - deck.x0, deck.z1 - deck.z0);
+      const ux = (deck.x1 - deck.x0) / len, uz = (deck.z1 - deck.z0) / len;
+      this.eye.set(deck.x1 + ux * 7 - uz * 7, (deck.height1 ?? deck.height) + 2.4, deck.z1 + uz * 7 + ux * 7);
+      this.target.set(c.x * 0.6 + deck.x1 * 0.4, c.y + 0.6, c.z * 0.6 + deck.z1 * 0.4);
+    } else if (this.view === 'tree') {
       const root = this.tree.tree.spot.root;
-      /** Once she is on the trunk the lens goes along beside her, still side on, so her arms out read against the sky. */
       const on = this.tree.phase === 'crossing' || this.tree.phase === 'over' ? 0.55 : 0;
       const z = THREE.MathUtils.lerp((c.z + root.z) / 2, c.z, on);
       if (upright) {
