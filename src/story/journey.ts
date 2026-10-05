@@ -360,7 +360,7 @@ export class Journey {
       case 'toMeadow':
         /** Nothing of the meadow is given away from the water: a grey shape in the haze until the bank is climbed. */
         return new CrossingChapter(cast, { route: ROUTES.toMeadow, haze: tuning.world.meadowCrossingHaze, season: 0.26, arrivalSpeed: tuning.sail.meadowArrivalSpeed, music: 'boats', hush: .28, arrivalMusic: 'meadow',
-          arrivalView: tuning.crossingCamera.arrivals.meadow });
+          arrivalView: tuning.crossingCamera.arrivals.meadow, sleepingWhale: true });
       case 'meadow':
         return new MeadowChapter(cast);
       case 'toBirches':

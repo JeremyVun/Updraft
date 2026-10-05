@@ -25,7 +25,7 @@ const layouts = {
   island: { entry: F.empty, companion: F.empty },
   toLines: { entry: F.empty }, lines: { entry: F.empty, 'curtain-1': F.lines, 'curtain-2': F.lines, family: F.lines },
   toBoats: { entry: F.empty }, boats: { entry: F.empty, 'pool-1': F.boats, 'pool-2': F.boats },
-  toMeadow: { entry: F.empty }, meadow: { entry: F.empty, piano: F.meadow, pond: F.meadow },
+  toMeadow: { entry: F.empty, 'whale-asleep': F.crossing, 'whale-gone': F.crossing }, meadow: { entry: F.empty, piano: F.meadow, pond: F.meadow },
   toBirches: { entry: F.empty }, birches: {
     entry: F.empty, swing: F.legacyBirches, leaves: F.legacyBirches,
     'scarf-0-swing': F.birches, 'scarf-1': F.birches, 'scarf-1-swing': F.birches,

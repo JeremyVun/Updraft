@@ -1419,8 +1419,11 @@ export const tuning = {
     coaxUrgency: 0.7, coaxRadius: 1.4,
     /** The swell it leaves: speed (m/s), crest spacing (m), width of the packet (m) and height at the boat (m). */
     surgeSpeed: 4, surgeLength: 7, surgeWidth: 6, surgeHeight: 0.35,
-    /** The camera's hold beside it: distance, height, the bearing off astern, and how fast it eases in and out. */
-    holdDistance: 20, holdHeight: 6, holdBearing: 0.05, holdEase: 0.25,
+    /**
+     * The camera's hold beside it: how far ahead of the boat it looks, its distance from that point and height, the
+     * bearing off astern, and how fast it eases in and out.
+     */
+    holdAhead: 6, holdDistance: 27, holdHeight: 6.5, holdBearing: 0.05, holdEase: 0.6,
   },
 
   seaPassage: {
