@@ -991,7 +991,7 @@ export const tuning = {
       exhaleSeconds: 1.8, chainOn: 17, chainAside: 5.2,
       eye: [14.4, 2.3, 5.2], look: [2.65, 3.0, 2.75], hfov: 76,
       portraitEye: [6.6, 2.4, 15.3], portraitLook: [0.6, 5.2, 1.0], portraitVfov: 72,
-      faceEye: [8.6, 1.6, 17.2], faceLook: [1.3, 1.55, 2.5], faceHfov: 38, faceVfov: 20,
+      faceEye: [8.6, 1.6, 17.2], faceLook: [0.2, 1.55, 3.3], faceHfov: 38, faceVfov: 20,
       portraitFaceEye: [5.6, 3.0, 17.0], portraitFaceLook: [1.5, 2.0, 5.7], portraitFaceVfov: 34,
       faceAfter: 0.5, faceSeconds: 4.2,
       easeFrom: 9, easeSeconds: 4.5, releaseSeconds: 8,
