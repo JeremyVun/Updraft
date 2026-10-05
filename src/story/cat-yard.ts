@@ -244,8 +244,9 @@ export class CatYard {
       p.y = this.floor(p.x, p.z);
       return p;
     };
-    const toWatcher = Math.atan2(look.x - block.x, look.z - block.z);
-    const sitAt = (pose: 'sit' | 'stand' | 'crouch') => cat.place(block, toWatcher - 0.7, { pose, floor: this.floor });
+    /** On the block it faces someone out on the water off its corner, which is where the camera is too. */
+    const onlooker = this.at(2.4, 0.9, -2.6);
+    const sitAt = (pose: 'sit' | 'stand' | 'crouch') => cat.place(block, Math.atan2(onlooker.x - block.x, onlooker.z - block.z) - 0.45, { pose, floor: this.floor });
     cat.visible = true;
     cat.unease = 0;
     cat.mewing = false;
@@ -255,7 +256,7 @@ export class CatYard {
       case 'stand':
       case 'crouch':
         sitAt(name);
-        cat.look(look);
+        cat.look(onlooker);
         return true;
       case 'wash':
         sitAt('sit');
@@ -264,17 +265,17 @@ export class CatYard {
         return true;
       case 'afraid':
         sitAt('stand');
-        cat.look(look);
+        cat.look(onlooker);
         cat.afraid(1);
         return true;
       case 'mew':
         sitAt('sit');
-        cat.look(look);
+        cat.look(onlooker);
         cat.mew(1);
         return true;
       case 'chirrup':
         sitAt('sit');
-        cat.look(look);
+        cat.look(onlooker);
         cat.chirrup();
         return true;
       case 'strand': {
