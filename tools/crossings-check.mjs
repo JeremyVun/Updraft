@@ -30,6 +30,7 @@ class Game {
     this.page = page;
     this.name = name;
     this.notes = [];
+    this.pointer = null;
   }
 
   async open(gap) {
@@ -80,12 +81,22 @@ class Game {
     }, which);
   }
 
-  /** A stroke through `at` along `heading`, `length` screen heights long, over `frames` frames. */
+  /**
+   * A stroke through `at` along `heading`, `length` screen heights long, over `frames` frames. The pointer gets to
+   * its start along the bottom of the screen, so the way back never brushes what is being pushed.
+   */
   async stroke(at, heading, length, frames) {
     const dx = (Math.cos(heading) * length) / at.aspect, dy = -Math.sin(heading) * length;
     const from = [at.x - dx / 2, at.y - dy / 2];
+    if (this.pointer) {
+      await this.page.mouse.move(this.pointer[0] * width, 0.99 * height);
+      await this.frame();
+      await this.page.mouse.move(from[0] * width, 0.99 * height);
+      await this.frame();
+    }
     await this.page.mouse.move(from[0] * width, from[1] * height);
     await this.frame();
+    this.pointer = [from[0] + dx, from[1] + dy];
     for (let i = 1; i <= frames; i++) {
       const u = i / frames;
       await this.page.mouse.move((from[0] + dx * u) * width, (from[1] + dy * u) * height);

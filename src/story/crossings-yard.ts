@@ -158,7 +158,6 @@ export class CrossingsYard {
   private readonly eye = new THREE.Vector3();
   private readonly target = new THREE.Vector3();
   private readonly walk: THREE.Vector3[];
-  private aspect = 16 / 9;
 
   constructor(private readonly cast: Cast, near: THREE.Vector3) {
     this.origin.copy(this.findWater(near));
@@ -202,6 +201,11 @@ export class CrossingsYard {
     if (this.stage === 'tree') return this.tree.invitation;
     if (this.stage === 'swing') return this.swing.invitation;
     return null;
+  }
+
+  /** How wide what the drawn gust goes across is: the whole tree, or just the swing. */
+  get invitationRadius(): number {
+    return this.stage === 'tree' ? 2.2 : 1.2;
   }
 
   get heading(): number | null {
@@ -265,7 +269,6 @@ export class CrossingsYard {
 
   update(dt: number, camera: THREE.PerspectiveCamera | null): void {
     if (!camera || !this.playing) return;
-    this.aspect = camera.aspect;
     this.tree.update(dt, camera);
     this.swing.update(dt, camera);
     const c = this.cast.child;
@@ -298,7 +301,7 @@ export class CrossingsYard {
    */
   frame(shot: Shot): number {
     const c = this.cast.child.position;
-    const upright = this.aspect < 0.9;
+    const upright = window.innerWidth / window.innerHeight < 0.9;
     const o = this.origin;
     shot.free = false;
     shot.from = undefined;
@@ -310,8 +313,10 @@ export class CrossingsYard {
       const on = this.tree.phase === 'crossing' || this.tree.phase === 'over' ? 0.55 : 0;
       const z = THREE.MathUtils.lerp((c.z + root.z) / 2, c.z, on);
       if (upright) {
-        this.eye.set(o.x + 0.6 + 2 * on, o.y + 3.9, Math.max(z + 12, o.z + 9.5));
-        this.target.set((c.x + root.x) / 2, 3.4, z - 1);
+        /** Behind her on the line to the tree and above, so the tree stands over her and comes down toward us. */
+        const away = this.tmp.set(c.x - root.x, 0, c.z - root.z).normalize();
+        this.eye.set(c.x + away.x * 12 + away.z * 5, 7.4 - 2 * on, c.z + away.z * 12 - away.x * 5);
+        this.target.set(c.x - away.x * 4.2, 2.2, c.z - away.z * 4.2);
       } else {
         this.eye.set(o.x + 16.5 - 3 * on, o.y + 2.6, z - 0.4);
         this.target.set((c.x + root.x) / 2, 2.6, z + 0.4);
@@ -319,8 +324,9 @@ export class CrossingsYard {
     } else if (this.view === 'swing') {
       const pivot = this.swing.swing.pivot;
       if (upright) {
-        this.eye.set(pivot.x + 22, 3.6, pivot.z - 3.8);
-        this.target.set(pivot.x, 3.4, pivot.z - 3.8);
+        /** Behind her and a little above, so each swing goes away up the frame toward the slope she will land on. */
+        this.eye.set(pivot.x + 10, 5.6, pivot.z + 11);
+        this.target.set(pivot.x - 0.6, 2.6, pivot.z - 4);
       } else {
         this.eye.set(pivot.x + 16.5, 3.0, pivot.z - 4.6);
         this.target.set(pivot.x, 3.2, pivot.z - 4.2);

@@ -103,7 +103,7 @@ export class StageChapter implements Chapter {
   }
 
   get invitationRadius(): number {
-    return this.crossings?.playing ? 1.2 : 0;
+    return this.crossings?.playing ? this.crossings.invitationRadius : 0;
   }
 
   afterCamera(camera: THREE.PerspectiveCamera): void {
@@ -137,6 +137,7 @@ export class StageChapter implements Chapter {
         this.cast.cat.objects[0].parent?.add(...this.crossings.objects);
       }
       const played = this.crossings.play(name.slice(9));
+      this.pace = this.crossings.frame(this.shot);
       this.cameraCut++;
       if (!played) console.warn(`stage: no crossing called "${name.slice(9)}"`);
       return played;

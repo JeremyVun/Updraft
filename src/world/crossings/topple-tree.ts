@@ -56,10 +56,10 @@ void main() {
   float gloss = 0.0;
   if (kind == ${EARTH}) {
     float lumps = vnoise(vLocal.xz * 3.1 + vLocal.y) * 0.6 + vnoise(vLocal.xz * 9.0) * 0.4;
-    alb = mix(vec3(0.05, 0.036, 0.024), vec3(0.085, 0.064, 0.04), lumps);
-    alb = mix(alb, vec3(0.06, 0.07, 0.035), smoothstep(0.62, 0.8, vnoise(vLocal.xz * 2.0 + 9.0)) * 0.6);
+    alb = mix(vec3(0.026, 0.02, 0.016), vec3(0.05, 0.04, 0.03), lumps);
+    alb = mix(alb, vec3(0.035, 0.045, 0.025), smoothstep(0.62, 0.8, vnoise(vLocal.xz * 2.0 + 9.0)) * 0.6);
   } else if (kind == ${ROOT}) {
-    alb = vec3(0.07, 0.05, 0.035) * (0.8 + 0.4 * vnoise(vLocal.xz * 7.0 + vLocal.y * 3.0));
+    alb = vec3(0.05, 0.038, 0.028) * (0.8 + 0.4 * vnoise(vLocal.xz * 7.0 + vLocal.y * 3.0));
   } else {
     float fissures = smoothstep(0.35, 0.75, vnoise(vec2(around * 4.0, vLocal.y * 0.8)) * 0.7 + vnoise(vec2(around * 12.0, vLocal.y * 3.0)) * 0.3);
     alb = mix(vec3(0.04, 0.034, 0.03), vec3(0.1, 0.086, 0.072), fissures);
