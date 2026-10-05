@@ -109,6 +109,11 @@ export class Feather {
   lift = 0;
   /** Fade into the window seam when the guide has delivered the bird. */
   fade = 1;
+  /** How high it may hang and how hard it leans to its goal, where a room wants other than the sleeping island's. */
+  ceiling: number | null = null;
+  lean: number | null = null;
+  /** Water it comes down on and floats, rather than sinking to the bottom. */
+  water: { level: number; over(x: number, z: number): boolean } | null = null;
 
   private readonly mesh: THREE.Mesh;
   private readonly sample: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
@@ -160,7 +165,12 @@ export class Feather {
 
   /** How far above the ground it is hanging: what tells the bird to look up rather than down. */
   get height(): number {
-    return this.position.y - Math.max(heightAt(this.position.x, this.position.z), 0);
+    return this.position.y - this.groundAt(this.position.x, this.position.z);
+  }
+
+  private groundAt(x: number, z: number): number {
+    const ground = Math.max(heightAt(x, z), 0);
+    return this.water?.over(x, z) ? Math.max(ground, this.water.level) : ground;
   }
 
   update(dt: number, time: number): void {
@@ -178,6 +188,7 @@ export class Feather {
       }
       return;
     }
+    (this.mesh.material as THREE.ShaderMaterial).uniforms.uFade.value = this.fade;
     const carrier=this.heldBy??this.catchingBy;
     if (carrier) {
       carrier.billTip(this.scratch);
@@ -190,12 +201,11 @@ export class Feather {
       this.velocity.set(0,0,0);
       return;
     }
-    (this.mesh.material as THREE.ShaderMaterial).uniforms.uFade.value = this.fade;
     const t = tuning.sleeping;
     const p = this.position;
     const v = this.velocity;
     const w = this.wind.sample(p.x, p.z, this.sample);
-    let floor = Math.max(heightAt(p.x, p.z), 0) + 0.06;
+    let floor = this.groundAt(p.x, p.z) + 0.06;
 
     /** It weighs almost nothing, so it takes the air's own speed rather than being pushed along by it. */
     const take = 1 - Math.exp(-dt * t.featherTakes);
@@ -215,7 +225,7 @@ export class Feather {
     const dz = this.goal.z - p.z;
     const away = Math.hypot(dx, dz);
     if (away > 0.4) {
-      const pull = t.featherLean + Math.max(0, away - this.keepNear) * 0.6;
+      const pull = (this.lean ?? t.featherLean) + Math.max(0, away - this.keepNear) * 0.6;
       v.x += (dx / away) * pull * dt;
       v.z += (dz / away) * pull * dt;
     }
@@ -255,7 +265,7 @@ export class Feather {
     const pulled = Math.hypot(pullX, pullZ), most = (t.featherReturn + Math.hypot(v.x, v.z)) * dt;
     const scale = pulled > most ? most / pulled : 1;
     p.x += pullX * scale; p.z += pullZ * scale;
-    floor = Math.max(heightAt(p.x, p.z), 0) + 0.06;
+    floor = this.groundAt(p.x, p.z) + 0.06;
     if (p.y < floor) {
       p.y = floor;
       v.y = Math.max(v.y, 0);
@@ -263,8 +273,9 @@ export class Feather {
       v.z *= Math.exp(-dt * 3);
     }
     /** Never higher than a bird can see it against the fog, and never far enough up to be out of frame. */
-    if (p.y > floor + t.featherCeiling) {
-      p.y = floor + t.featherCeiling;
+    const ceiling = this.ceiling ?? t.featherCeiling;
+    if (p.y > floor + ceiling) {
+      p.y = floor + ceiling;
       v.y = Math.min(v.y, 0);
     }
 

@@ -145,6 +145,15 @@ export class SwanFlock {
   private readonly gustDir = new THREE.Vector2();
   private gusting = false;
 
+  /** How much of the family is there to see, 0..1: on a sleeping island they wake with it, dissolving into view. */
+  get shown(): number {
+    return (this.mesh.material as THREE.ShaderMaterial).uniforms.uShown.value;
+  }
+  set shown(k: number) {
+    (this.mesh.material as THREE.ShaderMaterial).uniforms.uShown.value = k;
+    this.wakeUniforms.uShown.value = k;
+  }
+
   constructor() {
     this.swans = new Instances(swanGeometry(), MAX, ['iPos', 'iAir', 'iNeck', 'iBody', 'iSteady']);
     this.swans.geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e5);
@@ -486,6 +495,7 @@ export class SwanFlock {
 
   /** Stops whatever the flock is doing and puts it away. */
   clear(): void {
+    this.shown = 1;
     this.mode = 'idle';
     this.stirring = false;
     this.departing = false;
@@ -567,6 +577,7 @@ export class SwanFlock {
   }
 
   private start(mode: Mode): void {
+    this.shown = 1;
     this.mode = mode;
     if (!this.departing) this.companion = null;
     this.wakeUniforms.uLevel.value = this.level;
