@@ -507,6 +507,24 @@ So the existing drowned village and storm code may be refactored as far as the r
   the line of its fall and the trunk crosses a wall square on; the lens is already on her side before the tree falls,
   so it never swings round to meet her on the trunk. The tree's creak, root tear and thud and the swing's creak are
   new foley.
+- **The run is the spine of the room** (Jeremy, 2026-10-05: "overall, it feels to me like these two challenges by
+  themselves cover very little ground. There's a lot of ground between the drowning village and the woods island... i
+  hope you have a plan here."; on the plan below: "proceed with your plan with the tree, and swing"). As first planned
+  she walked about 45 m of the roughly 445 m from the stairs to the forest beach, and the last 255 m was watched from
+  the boat. Instead her way on foot grows to about 165 m: the church moves on about 120 m to stand near the
+  lighthouse (as the room painting has them, together), and the old church site becomes ordinary roofs. In order: she
+  climbs out at the cottage; the tree (Phase 1's lane and walled garden); her own way over ridges, wall copings and a
+  lean-to, small hops she makes herself, the cat a roof ahead and the fog behind, never a puzzle and never a single
+  line of houses; a middle piece (a candidate being concepted: a flooded lane too narrow for the boat, where she sits
+  on a floating door the player's gusts carry about 40 m); her own way again; the swing on the green onto the nave;
+  the church. The storm from the church to the beach is about 140 m, past the lighthouse soon after she boards. The
+  village keeps its open water and scattered roofs; the way adds only hand-placed roofs, walls and copings where it
+  needs them. Plan: `comps/run/` (from `route-plan.png`, north up).
+- **The boat goes ahead of the fog.** With the church that far on, a boat left at the cottage would be out of reach
+  and out of frame. So the cold breath that comes with the fog swings the untended boat off the slates and drifts it
+  away along the open water, the same way she runs; she sees it go and still follows the cat. It fetches up against a
+  dead tree in the fog near the church, its lantern glowing, and the player fills its sail to bring it the last stretch
+  to the nave. Everything on the water is driven the same way, so the boat's drift is also a sign of the fog's breath.
 - **The run is built on decks** (`src/world/decks.ts`): ridges, wall tops and the fallen trunk are strips the child
   walks; the slates up to a ridge are ramps. She gets out with `alight` onto the cottage's slates and back in with
   `board` at the nave.
