@@ -1827,7 +1827,7 @@ export const tuning = {
      * waiting boat it stands and how far to the tub's side, how high, and the height it looks at over the water.
      */
     catGlance: 0.3, catTurnFrom: 16, catClear: 7, catEye: 2.3, catAim: 2.6, catPace: 0.55,
-    uprightCatBack: 5.5, uprightCatSide: 3, uprightCatEye: 3.4, uprightCatAim: 1.4,
+    uprightCatBack: 6.5, uprightCatSide: 2.5, uprightCatEye: 3.6, uprightCatAim: 0.9,
     /**
      * With the cat aboard: the lens beside the boat, a little aft of abeam so the cat at the bow faces it and the
      * satchel is in view; how far it stands off and how high, and how fast it eases there.
