@@ -1408,7 +1408,7 @@ export const tuning = {
      * The boat's speed limit coming alongside: never more than it could lose slowing at `slowing` (m/s²), nor more
      * than `settling` times the distance left, so the hull's own slow carry brings it to rest there without braking.
      */
-    slowing: 0.6, settling: 0.2,
+    slowing: 0.6, settling: 0.15,
     /** Released the same way: the limit climbs back at this rate (m/s²) once the flukes are up. */
     release: 0.7,
     /** Seconds between breaths asleep, how far the back rises with one (m), and the mist over the blowhole. */
