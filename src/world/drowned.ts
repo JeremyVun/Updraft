@@ -67,6 +67,7 @@ const MASONRY = 4;
 const ROCK = 5;
 const ROPE = 6;
 const VANE = 7;
+const COURSED = 8;
 
 const VILLAGE_VERT = /* glsl */ `
 ${ATMO_GLSL}
@@ -91,10 +92,10 @@ vec3 turn(vec3 p, float a) {
 void main() {
   vec3 p = position;
   vec3 n = normal;
-  if (aKind > ${VANE - 0.5}) {
+  if (aKind > ${VANE - 0.5} && aKind < ${VANE + 0.5}) {
     p = position - aLocal + turn(aLocal, uVane);
     n = turn(normal, uVane);
-  } else if (aKind > ${ROPE - 0.5}) {
+  } else if (aKind > ${ROPE - 0.5} && aKind < ${ROPE + 0.5}) {
     vec2 w = texture(uWindTex, domainUv(p.xz)).xy;
     float belly = sin(aLocal.x * 3.14159);
     p.xz += w * belly * (0.014 + uStorm * 0.04);
@@ -132,6 +133,13 @@ void main() {
   } else if (kind == ${SLATED}) {
     float row = vLocal.y * 3.4;
     alb *= (0.8 + 0.4 * vnoise(vec2(vLocal.x * 4.5, floor(row)))) * (0.8 + 0.25 * smoothstep(0.0, 0.2, fract(row)));
+  } else if (kind == ${COURSED}) {
+    float course = vLocal.y * 3.4;
+    float row = floor(course);
+    float run = (vLocal.x + vLocal.z) * 1.5 + fract(row * 0.37) * 3.0;
+    float stone = floor(run + 0.5 * vnoise(vec2(row * 1.7, run)));
+    float joint = max(1.0 - smoothstep(0.0, 0.09, fract(course)), 1.0 - smoothstep(0.0, 0.07, fract(run + 0.5 * vnoise(vec2(row * 1.7, run)))));
+    alb *= (0.76 + 0.4 * fract(sin(dot(vec2(row, stone), vec2(12.9898, 78.233))) * 43758.5)) * (1.0 - 0.45 * joint);
   } else if (kind == ${ROCK}) {
     float strata = sin(vWorld.y * 2.4 + vnoise(vWorld.xz * 0.4) * 3.0) * 0.5 + 0.5;
     alb *= 0.9 + 0.14 * strata;
@@ -148,6 +156,7 @@ void main() {
   float lap = (0.09 * sin(vWorld.x * 0.8 + uTime * 1.3) + 0.06 * sin(vWorld.z * 1.1 - uTime * 0.9)) * (1.0 - drawn);
   float along = vLocal.x + vLocal.z;
   float soaked = 0.0;
+  float matte = 0.0;
   if (kind != ${OPENING}) {
     float wet = 1.0 - smoothstep(0.0, 0.85, old - lap);
     alb = mix(alb, alb * vec3(0.3, 0.38, 0.29), wet * mix(0.92, 0.55, drawn));
@@ -156,10 +165,11 @@ void main() {
     float strand = vnoise(vec2(along * 6.3, 7.7)) * 0.6 + vnoise(vec2(along * 17.0, 1.3)) * 0.4;
     float weed = soaked * smoothstep(0.45, 0.62, strand) * (1.0 - smoothstep(0.12, 0.2 + 0.85 * strand, -old));
     /** Deeper down, weed lies draped over whatever it settled on: slates, copings, sills. */
-    float draped = soaked * smoothstep(0.25, 0.6, -old) * smoothstep(0.6, 0.72,
-      vnoise(vWorld.xz * 0.9 + vec2(vWorld.y * 0.7, 0.0)) * 0.7 + vnoise(vWorld.xz * 3.1 - vWorld.y) * 0.3) * smoothstep(0.2, 0.6, n.y + 0.4);
+    float draped = soaked * smoothstep(0.25, 0.6, -old) * smoothstep(0.52, 0.66,
+      vnoise(vWorld.xz * 1.7 + vec2(vWorld.y * 0.9, 0.0)) * 0.7 + vnoise(vWorld.xz * 4.3 - vWorld.y) * 0.3) * smoothstep(0.2, 0.6, n.y + 0.4);
     float scum = drawn * (1.0 - smoothstep(0.0, 0.07, abs(old - 0.03 * vnoise(vec2(along * 3.0, 0.5)))));
-    alb = mix(alb * mix(vec3(1.0), vec3(0.62, 0.66, 0.62), soaked), vec3(0.03, 0.045, 0.022) * (0.7 + 0.6 * grain), max(weed, draped * 0.85));
+    matte = max(weed, draped * 0.9);
+    alb = mix(alb * mix(vec3(1.0), vec3(0.62, 0.66, 0.62), soaked), vec3(0.05, 0.065, 0.03) * (0.7 + 0.6 * grain), matte);
     alb = mix(alb, vec3(0.2, 0.19, 0.15), scum * 0.6);
   }
 
@@ -182,7 +192,8 @@ void main() {
     float runs = step(0.82, fract(sin(lane * 91.7) * 43758.5)) * (1.0 - smoothstep(0.0, 0.07, abs(fract(along * 5.0) - 0.5)))
       * (1.0 - smoothstep(0.25, 0.45, abs(n.y)));
     float bead = smoothstep(0.93, 1.0, fract(old * 0.8 + uTime * (0.3 + 0.35 * fract(lane * 0.37)) + lane * 0.31)) * runs * uDrain;
-    col = mix(col, skyBack * 0.8, fres * soaked * 0.7) + (uSunColor * glint * 0.5 + uSkyHorizon * bead * 0.22) * soaked;
+    float wetness = soaked * (1.0 - matte);
+    col = mix(col, skyBack * (0.55 + 0.5 * grain), fres * wetness * 0.7) + (uSunColor * glint * 0.5 + uSkyHorizon * bead * 0.22) * wetness;
   }
   if (kind == ${OPENING}) col = vColor * uSkyAmbient * 0.5;
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
@@ -1096,7 +1107,7 @@ function buildWall(into: Merged, w: GardenWall): THREE.Box3 {
     .multiply(new THREE.Matrix4().makeRotationY(Math.atan2(-dz, dx)));
   const foot = -4;
   const body = w.top - 0.1 - foot;
-  into.add(new THREE.BoxGeometry(len, body, 0.42).translate(0, foot + body / 2, 0), WALL_STONE, MASONRY, m);
+  into.add(new THREE.BoxGeometry(len, body, 0.42).translate(0, foot + body / 2, 0), WALL_STONE, COURSED, m);
   into.add(new THREE.BoxGeometry(len + 0.12, 0.14, 0.56).translate(0, w.top - 0.07, 0), STONE, MASONRY, m);
   let top = w.top;
   if (w.railed) {
@@ -1289,6 +1300,8 @@ export class DrownedVillage {
   /** How fast the drawing back carries the leaves on the glass toward the dark, in metres a second. */
   private drainFlow = 0;
   private fled = false;
+  /** Set the frame the sea starts to go, for whoever sounds it; they clear it. */
+  drainingFrom = false;
   private readonly lighthouse = new LighthouseLight(LIGHTHOUSE);
   private readonly vaneAngle = { value: 0 };
   private vaneSpin = 0;
@@ -1499,6 +1512,7 @@ export class DrownedVillage {
       this.swing.group.position.y = SWING_PIVOT.y + this.rise;
     }
     const rate = dt > 0 ? by / dt : 0;
+    if (rate > 0 && this.shownRise - by <= 0) this.drainingFrom = true;
     this.draining = rate > 0.02 ? 1 : this.draining * Math.exp(-dt / 25);
     this.drain.value = THREE.MathUtils.smoothstep(this.rise, 0, 0.3) * (0.25 + 0.75 * this.draining);
     this.drainFlow = Math.max(0, rate) * tuning.drowned.drainPull;

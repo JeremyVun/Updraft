@@ -67,7 +67,7 @@ void main() {
   nv.xy += (vec2(vnoise(vCorner * 2.3 + seed * 9.0), vnoise(vCorner * 2.3 - seed * 4.0)) - 0.5) * 0.7;
   vec3 N = normalize(transpose(mat3(viewMatrix)) * normalize(nv));
   vec3 V = normalize(cameraPosition - vWorld);
-  vec3 alb = mix(vec3(0.03, 0.021, 0.045), vec3(0.075, 0.075, 0.13), tone);
+  vec3 alb = mix(vec3(0.026, 0.018, 0.052), vec3(0.075, 0.075, 0.13), tone);
   float wrap = clamp(dot(N, uSunDir) * 0.5 + 0.5, 0.0, 1.0);
   float toward = pow(max(0.0, dot(-V, uSunDir)), 3.0);
   float edge = pow(1.0 - clamp(nv.z, 0.0, 1.0), 1.6);
@@ -76,7 +76,7 @@ void main() {
   float lit = pow(wrap, mix(3.0, 3.5, tone));
   // Smoke keeps the low sun to its rims, on the side the sun is: the body of it stays black.
   float sunRim = pow(edge, 1.2) * clamp(dot(N, uSunDir) * 0.8 + N.y * 0.45, 0.0, 1.0);
-  vec3 col = alb * (sky * 1.1 + uSunColor * lit * mix(0.35, 1.1, tone) * vSun * uWarm)
+  vec3 col = alb * (sky * 1.1 + uSunColor * lit * mix(0.2, 1.1, tone) * vSun * uWarm)
     + uSunColor * (sunRim * mix(0.3, 0.0, tone) + edge * (0.04 * tone + toward * 0.25)) * vSun * uWarm;
   gl_FragColor = vec4(mix(col, vFog.rgb, vFog.a), a);
 }`;

@@ -1701,7 +1701,7 @@ export const tuning = {
       /** How far fingers of the front reach ahead, and how far and how fast the whole front heaves. */
       fingers: 5, heave: 1.4, heaveRate: 0.33,
       /** Billow radius at the front and at the back, how high the back heaps, and how much distance veil it takes near and far. */
-      frontSize: 4.5, backSize: 14, heap: 12, nearHaze: 0.45, farHaze: 0.12,
+      frontSize: 4.5, backSize: 14, heap: 12, nearHaze: 0.25, farHaze: 0.08,
       /** Seconds it takes to rise on the horizon and then to come on, and how far behind the stranded boat it stops. */
       riseFor: 9, comeFor: 24, holdBehind: 30,
     },

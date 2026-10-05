@@ -942,6 +942,10 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   if (finalStep) followWindow(...windowAim());
   cottage.update(dt, rig.camera);
   village.update(dt, time, boat.position, storm, rig.camera.position);
+  if (village.drainingFrom) {
+    village.drainingFrom = false;
+    if (sound.running) worldFoley.knock('sea-drain', boat.position, 1);
+  }
   piano.update(dt, time, rig.camera, wind, sound.output, input, life);
   wood.update(dt, time, rig.camera, storm, story.name === 'wood' ? story.shot.subjects : undefined);
   sleeping.update(dt, time, rig.camera);
