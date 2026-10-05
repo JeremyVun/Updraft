@@ -50,6 +50,8 @@ const CARD_PX = CARD_REACH / 495;
 const WRIST = 0.42;
 /** Beyond this the eyeshine stops shrinking with distance. */
 const GLOW_NEAR = 8;
+/** How much of the night's light the perched owl keeps before the side coal shows it. */
+const OWL_HIDDEN = 0.3;
 
 const VERT = /* glsl */ `
 ${ATMO_GLSL}
@@ -204,10 +206,11 @@ void main() {
   vec3 moon = uSunColor * uNight;
   float wrap = clamp(dot(N, uSunDir) * 0.5 + 0.5, 0.0, 1.0);
   float edge = pow(1.0 - clamp(dot(N, V), 0.0, 1.0), 2.0);
-  vec3 col = alb * (hemiLight(N) * 0.8 + moon * (wrap * wrap * 0.4 + 0.08));
-  col += moon * edge * fuzz * 0.15 * (0.3 + 0.7 * alb);
-  // Until the side coal's light is on it, it is a dark lump in the fork with eyes; flying, her light finds it.
-  vec3 warm = emberLight(vWorld, N) * mix(0.04, 0.45, uOwlEyes.y) * (1.0 - 0.5 * uOwlWing.w) + shapeSideLight(vWorld, N) * 0.4 * uOwlEyes.y;
+  // Until the side coal's light is on it, it is all but lost in the fork's dark, so only its eyes give it away.
+  float hid = mix(${OWL_HIDDEN.toFixed(2)}, 1.0, max(uOwlEyes.y, uOwlWing.w));
+  vec3 col = alb * (hemiLight(N) * 0.8 + moon * (wrap * wrap * 0.4 + 0.08)) * hid;
+  col += moon * edge * fuzz * 0.15 * (0.3 + 0.7 * alb) * hid;
+  vec3 warm = emberLight(vWorld, N) * mix(0.01, 0.45, uOwlEyes.y) * (1.0 - 0.5 * uOwlWing.w) + shapeSideLight(vWorld, N) * 0.4 * uOwlEyes.y;
   // Sat down in the fork it would be in the dead limbs' shade; let the light that shows it reach it.
   float shade = mix(1.0, shapeShadowCaps(vWorld + N * 0.03, ${SHAPE_STUMP_CAPS}), 0.3);
   col += (alb + 0.012) * warm * shade;
