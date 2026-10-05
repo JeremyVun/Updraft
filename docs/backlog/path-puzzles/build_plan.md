@@ -95,7 +95,8 @@ Standing constraints for every phase:
 Owns: `src/story/journey.ts` (a `?chapter=` value naming any `to*` route starts it at its first waypoint, heading
 for the second, cygnet in the satchel; prototyped on branch `crossings-study`), the query-param list in `CLAUDE.md`.
 Gate: `npm run typecheck`; `?chapter=toHarbour` and `?chapter=toMeadow` captures show the boat under way.
-Done: [ ]
+Done: [x] branch `crossings-start` (9dd4ebe), the base for both encounter branches; merges with whichever is approved
+first.
 
 ### Phase C1: the meadow on the sea (branch `crossing-meadow`)
 Start from the spike (branch `spike-sea-meadow`, commits 3fdefa4 and 43c9c94) and replace its shortcuts as listed in
@@ -108,7 +109,7 @@ Seam: the lean texture gains a second writer (the hull) alongside wind splats; t
 player's gusts and updrafts inside the mask, never spreads or falls; the mask is live only on `toHarbour`.
 Order: measure first (where the route leaves the mirror's flat, when home's hillside starts to clear from its haze,
 at the ordinary breeze and at the 10 units/s ceiling; which room partition the patch falls in), place the patch, then
-build.
+build. Built in two waves: code and the check tool with one smoke still (C1a), then the look and the gates (C1b).
 Gate: typecheck; build; a real-gesture check (`tools/sea-meadow-check.mjs`) that sweeps across the patch and finds
 flowers there, and idles through it and finds none; the pacing check; `__stats.blades` with the meadow in frame no
 higher than the first crossing draws at its start (about 40k); stills (landscape and portrait) from the crossing camera beside `k1`–`k3`,
