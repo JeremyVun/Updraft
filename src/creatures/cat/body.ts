@@ -23,11 +23,11 @@ export const NOSE = 3;
 export const MOUTH = 4;
 export const WHISKER = 5;
 
-export const ARM = 0.052;
-export const FORE = 0.05;
-export const THIGH = 0.054;
-export const SHIN = 0.052;
-export const META = 0.038;
+export const ARM = 0.047;
+export const FORE = 0.046;
+export const THIGH = 0.05;
+export const SHIN = 0.048;
+export const META = 0.035;
 /** How far the wrist and the toe joint sit above the ground when the paw is flat. */
 export const WRIST = 0.014;
 export const TOE = 0.012;
@@ -35,7 +35,7 @@ export const TAIL_LINK = 0.05;
 /** The head is authored at one size and built this much bigger about its joint: the one knob for how big it reads. */
 export const HEAD_K = 1.08;
 const JAW_AT: V3 = [0, -0.012, 0.04];
-const EAR_AT: V3 = [0.047, 0.058, 0.016];
+const EAR_AT: V3 = [0.045, 0.062, 0.014];
 const big = (v: V3): V3 => [v[0] * HEAD_K, v[1] * HEAD_K, v[2] * HEAD_K];
 
 /** Each joint's rest position on its parent. */
@@ -102,25 +102,32 @@ const SIZE: V3 = [0.064, 0.056, 0.054];
  * a ball stuck on.
  */
 function skullShape(u: { x: number; y: number; z: number }): void {
-  const cheek = ramp(-u.y, -0.1, 0.35) * (1 - ramp(-u.y, 0.65, 1)) * ramp(u.z, -0.6, 0.2);
-  u.x *= (1 + 0.16 * cheek) * (1 - 0.12 * ramp(u.y, 0.15, 0.9));
-  if (u.y > 0.5) u.y = 0.5 + (u.y - 0.5) * 0.88;
+  const cheek = ramp(-u.y, -0.15, 0.4) * (1 - ramp(-u.y, 0.75, 1)) * ramp(u.z, -0.6, 0.2);
+  u.x *= (1 + 0.2 * cheek) * (1 - 0.12 * ramp(u.y, 0.15, 0.9));
+  if (u.y > 0.45) u.y = 0.45 + (u.y - 0.45) * 0.8;
   /** The face leans forward at the bottom: the brow rounds back over the eyes and the muzzle leads. */
   const front = ramp(u.z, 0.2, 0.75);
   u.z += front * (0.05 * ramp(-u.y, -0.1, 0.5) - 0.1 * ramp(u.y, -0.05, 0.75));
   if (u.z > 0.5) u.z = 0.5 + (u.z - 0.5) * 0.85;
   u.z += 0.04 * ramp(-u.y, 0.45, 0.9) * ramp(u.z, 0.1, 0.6);
   /** A short soft muzzle that leads the face, so the eyes sit back from the nose. */
-  u.z += 0.16 * front * Math.exp(-((u.x / 0.36) ** 2) - ((u.y + 0.5) / 0.28) ** 2);
+  u.z += 0.2 * front * Math.exp(-((u.x / 0.36) ** 2) - ((u.y + 0.42) / 0.28) ** 2);
   /** A full chin and jowls under it, down into the bib. */
   u.y -= 0.14 * ramp(-u.y, 0.35, 0.85) * ramp(u.z, -0.2, 0.5);
 }
 
+/** Shallow sockets the eyes sit in, so a whole round eye shows without standing proud of the face like a lens. */
+function sockets(u: { x: number; y: number; z: number }): void {
+  const d = Math.hypot(Math.abs(u.x) - 0.5, u.y + 0.17);
+  u.z -= 0.075 * (1 - ramp(d, 0.18, 0.42)) * ramp(u.z, 0.3, 0.6);
+}
+
 /** The point on the skull's face in front of rest-space (x, y), and its outward normal there. */
-function onFace(x: number, y: number): { at: V3; normal: V3 } {
+function onFace(x: number, y: number, socketed = false): { at: V3; normal: V3 } {
   const point = (ux: number, uy: number): V3 => {
     const u = { x: ux, y: uy, z: Math.sqrt(Math.max(0, 1 - ux * ux - uy * uy)) };
     skullShape(u);
+    if (socketed) sockets(u);
     return [S[0] + u.x * SIZE[0], S[1] + u.y * SIZE[1], S[2] + u.z * SIZE[2]];
   };
   let ux = x / SIZE[0];
@@ -142,12 +149,12 @@ function onFace(x: number, y: number): { at: V3; normal: V3 } {
 }
 
 /** The eye as it shows: its radius, and its centre's height below the middle of the skull and distance off the middle line. */
-const EYE_R = 0.0174;
-const EYE_FACE = onFace(0.0305, S[1] - 0.016);
+const EYE_R = 0.0168;
+const EYE_FACE = onFace(0.032, S[1] - 0.009);
 /** The eye is a shallow dome a little proud of the face, wider than what shows: its rim is the soft lid round it. */
-const EYE_DOME: V3 = [EYE_R / 0.9, EYE_R / 0.9, 0.0095];
-const EYE_C: V3 = add(EYE_FACE.at, EYE_FACE.normal.map((n) => n * (0.0042 - EYE_DOME[2])) as V3);
-const NOSE_C: V3 = add(onFace(0, EYE_C[1] - 0.0125).at, [0, 0, 0.0005]);
+const EYE_DOME: V3 = [EYE_R / 0.86, EYE_R / 0.86, 0.007];
+const EYE_C: V3 = add(EYE_FACE.at, EYE_FACE.normal.map((n) => n * (0.0028 - EYE_DOME[2])) as V3);
+const NOSE_C: V3 = add(onFace(0, EYE_C[1] - 0.0125).at, [0, 0, -0.0012]);
 const MUZZLE_C: V3 = add(onFace(0, EYE_C[1] - 0.0215).at, [0, 0, -0.004]);
 
 /** Where the face is once the head is built at its size, for the shader to measure it. */
@@ -156,8 +163,7 @@ export const SKULL_SIZE = big(SIZE);
 export const EYE_RADIUS = EYE_R * HEAD_K;
 export const EYE_AT = onHead(EYE_C);
 export const EYE_SIZE = big(EYE_DOME);
-/** Turned out a little past the face, so that from the side the eye still shows as a dome. */
-export const EYE_TURN = Math.atan2(EYE_FACE.normal[0], EYE_FACE.normal[2]) + 0.2;
+export const EYE_TURN = Math.atan2(EYE_FACE.normal[0], EYE_FACE.normal[2]);
 export const EYE_TILT = -Math.asin(EYE_FACE.normal[1]);
 export const NOSE_AT = onHead(NOSE_C);
 /** The middle of the whisker pads, where the whiskers grow from. */
@@ -183,9 +189,9 @@ function trunk(): Station[] {
     s(0.04, 0.003, 0.06, 0.048, 0.067, [BODY, CHEST, 0.6]),
     s(0.065, 0.006, 0.062, 0.048, 0.07, [CHEST, CHEST, 0]),
     s(0.088, 0.013, 0.06, 0.046, 0.065, [CHEST, CHEST, 0]),
-    s(0.105, 0.027, 0.056, 0.043, 0.056, [CHEST, NECK, 0.5]),
-    s(0.114, 0.044, 0.052, 0.04, 0.05, [NECK, NECK, 0]),
-    s(0.119, 0.061, 0.047, 0.037, 0.043, [NECK, HEAD, 0.5]),
+    s(0.105, 0.027, 0.056, 0.05, 0.056, [CHEST, NECK, 0.5]),
+    s(0.114, 0.044, 0.053, 0.05, 0.05, [NECK, NECK, 0]),
+    s(0.119, 0.061, 0.048, 0.045, 0.043, [NECK, HEAD, 0.5]),
     s(0.121, 0.076, 0.036, 0.03, 0.032, [HEAD, HEAD, 0]),
     s(0.122, 0.084, 0.008, 0.008, 0.008, [HEAD, HEAD, 0]),
   ];
@@ -331,16 +337,19 @@ function parts(coat: boolean): THREE.BufferGeometry[] {
     at: SKULL,
     size: SIZE,
     detail: 4,
-    shape: skullShape,
+    shape: (u) => {
+      skullShape(u);
+      sockets(u);
+    },
     blend: (u) => {
-      const low = ramp(-u.y, 0.12, 0.42) * ramp(u.z, 0.35, 0.75) * (1 - ramp(Math.abs(u.x), 0.42, 0.66));
-      const jowl = ramp(-u.y, 0.55, 0.85) * ramp(u.z, -0.1, 0.4);
+      const low = ramp(-u.y, 0.3, 0.5) * ramp(u.z, 0.3, 0.7) * (1 - ramp(Math.abs(u.x), 0.5, 0.75));
+      const jowl = ramp(-u.y, 0.5, 0.8) * ramp(u.z, -0.2, 0.3);
       return Math.max(low, jowl);
     },
   });
   /** The muzzle: two soft white whisker pads close under the nose, barely proud of the face, and a small chin. */
   pair({ part: HEAD, mat: FUR, at: add(MUZZLE_C, [0.0078, 0.001, -0.003]), size: [0.0095, 0.0078, 0.0065], detail: 3, blend: () => 1 });
-  rigid({ part: JAW, mat: FUR, at: add(MUZZLE_C, [0, -0.012, -0.006]), size: [0.0105, 0.0075, 0.0075], detail: 3, blend: () => 1 });
+  rigid({ part: JAW, mat: FUR, at: add(MUZZLE_C, [0, -0.0105, -0.008]), size: [0.0085, 0.006, 0.0065], detail: 3, blend: () => 1 });
   face({ part: JAW, mat: MOUTH, at: add(MUZZLE_C, [0, -0.005, -0.009]), size: [0.0075, 0.004, 0.007], detail: 2 });
   face({
     part: HEAD,
@@ -386,9 +395,9 @@ function parts(coat: boolean): THREE.BufferGeometry[] {
   if (!coat) pair(ear);
 
   /** Bedraggled: the flood has left the top of its head in a few damp points. */
-  rigid(tuft(HEAD, add(S, [0.003, 0.047, 0.004]), [0.45, 0, -0.25], 0.014, 0.0065));
-  rigid(tuft(HEAD, add(S, [-0.008, 0.046, -0.002]), [0.3, 0, 0.5], 0.012, 0.006));
-  rigid(tuft(HEAD, add(S, [0.013, 0.045, -0.008]), [0.2, 0, -0.7], 0.011, 0.0055));
+  rigid(tuft(HEAD, add(S, [0.002, 0.048, 0.004]), [0.95, 0, -0.15], 0.016, 0.007));
+  rigid(tuft(HEAD, add(S, [-0.009, 0.047, -0.002]), [0.8, 0, 0.55], 0.014, 0.0065));
+  rigid(tuft(HEAD, add(S, [0.011, 0.046, -0.008]), [0.7, 0, -0.7], 0.013, 0.006));
 
   /** The head is built about its joint at its size, and everything on it with it. */
   for (const geo of out) {

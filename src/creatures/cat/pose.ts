@@ -53,8 +53,9 @@ export interface Drives {
 }
 
 const ORDER = 'YXZ';
+const NECK_AT = SKELETON.find(([bone]) => bone === NECK)![2];
 /** The face is held a little up from whatever it looks at, the way a small cat looks up at you. */
-const LIFT = 0.15;
+const LIFT = 0.05;
 /** How far each joint of a wrapped tail turns: out sideways from the rump, round the haunch, and in to the front paws. */
 const WRAP = [0.45, 1.05, 0.75, 0.6, 0.5];
 const clamp = THREE.MathUtils.clamp;
@@ -128,6 +129,10 @@ export class CatRig {
     n[CHEST].rotation.set(d.flex * 0.6 - d.chestUp, 0, 0);
 
     n[JAW].rotation.set(d.jaw * 0.7, 0, 0);
+    /** A head carried low swings the base of the neck forward and down round the chest, not only the neck itself. */
+    const low = d.neckLow * 0.45;
+    const [, ny, nz] = NECK_AT;
+    n[NECK].position.set(0, ny * Math.cos(low) - nz * Math.sin(low), ny * Math.sin(low) + nz * Math.cos(low));
     this.root.updateMatrixWorld(true);
     this.head(d);
 

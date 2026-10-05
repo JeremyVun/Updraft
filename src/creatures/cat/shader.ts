@@ -11,7 +11,7 @@ const SHELLS = 7;
 /** How far the coat stands off the skin, in rest metres, where it is longest. */
 const FUR = 0.0048;
 /** Strands to a rest metre: fine enough to read as plush from a metre off. */
-const STRAND = 900;
+const STRAND = 1150;
 /** The coat lies down over this range of distances, before its strands are finer than a pixel and only shimmer. */
 const FUR_NEAR = 2.2;
 const FUR_FAR = 5.5;
@@ -28,7 +28,7 @@ float furLength(vec3 r) {
   /** None over the rims of the eyes or on the nose and lips, which must stay clean. */
   float eye = smoothstep(${(EYE_RADIUS * 1.08).toFixed(4)}, ${(EYE_RADIUS * 1.6).toFixed(4)}, distance(vec3(abs(r.x), r.yz), ${vec3(EYE_AT)}));
   float nose = smoothstep(0.006, 0.014, distance(r, ${vec3(NOSE_AT)}));
-  return clamp(0.8 + 0.6 * cheek + 0.35 * tail - 0.55 * face - 0.45 * paw, 0.2, 1.4) * eye * nose;
+  return clamp(0.8 + 0.6 * cheek + 0.35 * tail - 0.65 * face - 0.45 * paw, 0.15, 1.4) * eye * nose;
 }`;
 
 const CAT_VERT = /* glsl */ `
@@ -56,11 +56,10 @@ void main() {
   vec3 p = position;
   vec3 n = normal;
   if (int(aMat.x + 0.5) == ${EYE}) {
-    /** The lids close by flattening the eye into the head from above and below: what shows of it is fur. */
+    /** The lids close by flattening the eye from above and below into a soft seam, still proud of the face. */
     vec3 c = vec3(sign(p.x) * ${EYE_AT[0].toFixed(4)}, ${EYE_AT[1].toFixed(4)}, ${EYE_AT[2].toFixed(4)});
-    float open = 1.0 - clamp(uBlink, 0.0, 1.0) * 0.94;
-    p = c + (p - c) * vec3(1.0, open, mix(0.55, 1.0, open));
-    p.z -= (1.0 - open) * 0.004;
+    float open = 1.0 - clamp(uBlink, 0.0, 1.0) * 0.9;
+    p = c + (p - c) * vec3(1.0, open, mix(0.8, 1.0, open));
   }
   mat4 a = uBones[int(aSkin.x + 0.5)];
   mat4 b = uBones[int(aSkin.y + 0.5)];
@@ -112,10 +111,10 @@ in float vShell;
  * Linear albedo on the scale of the other animals. A warm brown tabby as the model sheet paints it: a soft
  * ginger-fawn ground, darker along the back, umber stripes that never go to black, and warm cream for the white.
  */
-const vec3 FAWN = vec3(0.26, 0.17, 0.106);
-const vec3 BACK = vec3(0.2, 0.13, 0.082);
+const vec3 FAWN = vec3(0.3, 0.198, 0.124);
+const vec3 BACK = vec3(0.235, 0.152, 0.096);
 const vec3 STRIPE = vec3(0.075, 0.048, 0.034);
-const vec3 WHITE = vec3(0.7, 0.65, 0.58);
+const vec3 WHITE = vec3(0.8, 0.75, 0.68);
 const vec3 PINK = vec3(0.72, 0.28, 0.24);
 const vec3 NOSE_PINK = vec3(0.7, 0.24, 0.22);
 const vec3 IRIS = vec3(0.62, 0.3, 0.035);
@@ -148,8 +147,10 @@ float tabby(vec3 r) {
     ax = abs(q.x);
     float brow = q.y - (EYE_C.y - SKULL.y) / HEAD_K;
     float front = smoothstep(-0.02, 0.01, q.z);
-    float mid = band(q.x + warp * 0.002, 0.0045 - 0.002 * smoothstep(0.02, 0.05, brow), 0.002) * smoothstep(0.012, 0.02, brow) * front;
-    float sides = band(length(vec2(ax - 0.017, (brow - 0.032) * 0.55)), 0.0045, 0.002) * front;
+    float mid = band(q.x + warp * 0.002, 0.0035 - 0.0015 * smoothstep(0.02, 0.05, brow), 0.0018) * smoothstep(0.014, 0.022, brow) * front;
+    float sides = band(length(vec2(ax - 0.014 + brow * 0.08, (brow - 0.034) * 0.38)), 0.0028, 0.0018) * front;
+    float outer = band(length(vec2(ax - 0.03 + brow * 0.15, (brow - 0.03) * 0.5)), 0.0025, 0.0018) * front;
+    sides = max(sides, outer);
     float crown = band(ax - 0.012 + warp * 0.003, 0.0035, 0.002) * smoothstep(0.035, 0.045, q.y) * (1.0 - smoothstep(-0.01, 0.015, q.z));
     float cheek = band(brow + 0.002 + (ax - 0.04) * 0.25 + warp * 0.003, 0.0022, 0.0015) * smoothstep(0.044, 0.052, ax) * smoothstep(-0.035, 0.0, q.z);
     float jowl = band(brow + 0.016 + (ax - 0.05) * 0.4 + warp * 0.002, 0.0018, 0.0015) * smoothstep(0.052, 0.058, ax) * smoothstep(-0.02, 0.005, q.z);
@@ -183,7 +184,7 @@ bool strand(vec3 rest, float t) {
 /** Pale patches over the eyes, as the sheet's tabby has. */
 float browLight(vec3 r) {
   vec3 q = (r - EYE_C) / HEAD_K;
-  return band(length(vec2((abs(r.x) - EYE_C.x) / HEAD_K + 0.002, (q.y - 0.021) * 1.6)), 0.0025, 0.0035) * step(SKULL.z, r.z);
+  return band(length(vec2((abs(r.x) - EYE_C.x) / HEAD_K - 0.002, (q.y - 0.023) * 1.5)), 0.002, 0.004) * step(SKULL.z, r.z);
 }
 
 void main() {
@@ -197,7 +198,7 @@ void main() {
   float fleck = vnoise(vRest.xz * 140.0 + vRest.y * 97.0);
   vec3 ground = mix(FAWN, BACK, smoothstep(SPINE - 0.03, SPINE + 0.01, vRest.y) * step(TAIL_Z, vRest.z) * step(vRest.z, SKULL.z - 0.04));
   vec3 alb = mix(ground, STRIPE, tabby(vRest) * 0.9) * (0.93 + fleck * 0.14);
-  alb = mix(alb, WHITE * (0.95 + fleck * 0.08), max(k, browLight(vRest) * 0.55));
+  alb = mix(alb, WHITE * (0.95 + fleck * 0.08), max(k, browLight(vRest) * 0.4));
   float fuzz = 0.6;
   float thin = 0.12;
   float ao = mix(0.7, 1.0, smoothstep(0.02, 0.16, vRest.y));
@@ -227,13 +228,18 @@ void main() {
     q = vec3(cos(TURN) * q.x - sin(TURN) * q.z, q.y, sin(TURN) * q.x + cos(TURN) * q.z);
     vec2 e = vec2(q.x, cos(TILT) * q.y + sin(TILT) * q.z) / ${EYE_RADIUS.toFixed(5)};
     float r = length(e);
-    float pupil = 1.0 - smoothstep(uPupil - 0.035, uPupil + 0.015, length(e - vec2(0.0, 0.06)));
+    float pupil = 1.0 - smoothstep(uPupil - 0.035, uPupil + 0.015, length(e - vec2(-0.02, 0.035)));
     vec3 fur = alb;
     vec3 iris = mix(IRIS_DEEP, IRIS, smoothstep(0.4, -0.8, e.y));
     alb = mix(iris, vec3(0.005, 0.004, 0.004), pupil);
     alb = mix(alb, vec3(0.025, 0.015, 0.01), smoothstep(0.9, 0.94, r));
-    float lid = max(smoothstep(0.99, 1.02, r), smoothstep(0.9, 0.96, e.y + 0.1 * e.x * e.x));
+    float lid = max(smoothstep(0.99, 1.02, r), smoothstep(0.95, 1.0, e.y + 0.06 * e.x * e.x));
     alb = mix(alb, fur * mix(0.92, 1.0, smoothstep(1.0, 1.1, r)), lid);
+    /** Shut, it is fur with the dark seam of the lids across it, curved like a smile. */
+    float shut = smoothstep(0.3, 0.8, uBlink);
+    float seam = 1.0 - smoothstep(0.1, 0.22, abs(e.y + 0.25 * e.x * e.x - 0.05));
+    alb = mix(alb, mix(fur * 0.9, vec3(0.03, 0.02, 0.015), seam * step(r, 1.0)), shut);
+    lid = max(lid, shut);
     vec2 g = vec2(e.x * side, e.y);
     float glint = (1.0 - smoothstep(0.17, 0.2, distance(g, uGlint))) + 0.6 * (1.0 - smoothstep(0.075, 0.095, distance(g, uGlint * vec2(-0.5, -0.4) + vec2(0.0, -0.38))));
     glintAmount = glint * (1.0 - lid);
