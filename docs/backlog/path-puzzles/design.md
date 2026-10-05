@@ -710,6 +710,15 @@ they are painted over real frames from the crossing camera (`ref-*.png`), so the
   blade, the alternative `?blades=direct` shader updated, the hull writing the lean spring, the life texture's `.g` for
   flowers, shown only on `toHarbour` and grown in out of sight. No reflection of the blades.
 - The first crossing (`toLines`) is unchanged: its whale still surfaces at 37 s, the set-up for the sleeping whale.
+- Measured on the first build (`crossing-meadow`, C1a): only about 57 m of route lies between the mirror's still water
+  and home's hillside clearing, so the boat is inside the meadow about 11 s at the ordinary breeze (about 6 s at full
+  gust) and has it in frame about 18–20 s, since it shows ahead from departure. Home's own grass reaches 43–49k blades
+  late in the crossing without any meadow; the meadow's stretch peaks about 36k landscape, 22k portrait.
+- Claude's calls on that build (2026-10-05): the meadow cannot grow in out of sight (the mirror's leaving shot and the
+  crossing camera both look down the route at it), so it rises out of the water ahead as the boat leaves the flat,
+  slowly and from its far side, as part of the dream: spring coming up out of the sea. It is crossed in this crossing's
+  own light, the mirror's dusk warming toward home, not the concept's afternoon gold; it must read in that light (warm
+  light on the tips, pale undersides where the wave bends them), and the crossing's light is not changed for it.
 
 **The whale asleep across the way** (crossing to the meadow, `toMeadow`; the one must-do).
 - About a third of the way along, the whale (`fx/sealife/anatomy.ts`, 14 m; scale it up toward `k1`'s size if the
