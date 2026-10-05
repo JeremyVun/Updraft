@@ -110,6 +110,7 @@ export class CatYard {
   /** Where the child's head would be, sitting in the boat: what the cat looks at. */
   readonly watcher = new THREE.Vector3();
   private readonly inverse = new THREE.Matrix4();
+  private readonly card = new THREE.Mesh();
   private clock = 0;
   private drifting = false;
   private moored = 0;
@@ -160,9 +161,22 @@ export class CatYard {
       box(0.3, 0.04, 0.86, -0.7, 0.4, 0, PALE_WOOD),
     ];
     this.boat.add(new THREE.Mesh(mergeGeometries(boat), material));
-    this.group.add(this.tub, this.boat);
+    this.card.geometry = tinted(new THREE.PlaneGeometry(3, 2.2).translate(0, 0.6, 0), [0.36, 0.35, 0.34]);
+    this.card.material = material;
+    this.card.visible = false;
+    this.group.add(this.tub, this.boat, this.card);
     this.floor = (x, z) => this.floorAt(x, z);
     this.reset();
+  }
+
+  /** A plain card stood behind the cat from `eye`, as the model sheet's backdrop is, for close comparisons; null takes it down. */
+  backdrop(eye: THREE.Vector3 | null, cat: THREE.Vector3): void {
+    this.card.visible = eye !== null;
+    if (!eye) return;
+    const away = this.local.subVectors(cat, eye).setY(0).normalize();
+    this.card.position.copy(cat).addScaledVector(away, 0.9).applyMatrix4(this.inverse);
+    this.card.position.y = cat.y - 0.3 - this.group.position.y;
+    this.card.rotation.set(0, Math.atan2(-away.x, -away.z) - this.group.rotation.y, 0);
   }
 
   /** Where the yard's own point is in the world. */

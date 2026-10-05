@@ -6,7 +6,7 @@ import type { Cast, Chapter } from './cast';
 import { CatYard } from './cat-yard';
 
 export type StageView = 'game' | 'flock' | 'behind' | 'front' | 'side' | 'far-side' | 'close' | 'top' | 'k-front' | 'k-side' | 'k-back' | 'k-34' | 'k-above' | 'k-full' | 'k-low'
-  | 'c-close' | 'c-face' | 'c-side' | 'c-back' | 'c-near' | 'c-far' | 'c-along' | 'c-across';
+  | 'c-close' | 'c-face' | 'c-side' | 'c-back' | 'c-front' | 'c-34' | 'c-profile' | 'c-head' | 'c-near' | 'c-far' | 'c-along' | 'c-across';
 
 /** Camera placements in the child's frame: bearing from their facing, distance, height above the subject, and what to look at. */
 const VIEWS: Record<StageView, { bearing: number; distance: number; height: number; on: 'both' | 'cygnet' | 'cat' }> = {
@@ -33,6 +33,11 @@ const VIEWS: Record<StageView, { bearing: number; distance: number; height: numb
   'c-face': { bearing: 0.15, distance: 1.25, height: 0.1, on: 'cat' },
   'c-side': { bearing: Math.PI / 2, distance: 1.6, height: 0.45, on: 'cat' },
   'c-back': { bearing: Math.PI - 0.5, distance: 1.4, height: 0.4, on: 'cat' },
+  /** The model sheet's own views, a metre off: front, three-quarter from its left, its left side, and the head. */
+  'c-front': { bearing: 0, distance: 1, height: 0.08, on: 'cat' },
+  'c-34': { bearing: 0.65, distance: 1, height: 0.1, on: 'cat' },
+  'c-profile': { bearing: Math.PI / 2, distance: 1, height: 0.06, on: 'cat' },
+  'c-head': { bearing: 0.1, distance: 0.55, height: 0.12, on: 'cat' },
   /** Game distances, from the cat yard's own bearings so that a cat on the move stays framed the same. */
   'c-near': { bearing: 2.5, distance: 4, height: 1.8, on: 'cat' },
   'c-far': { bearing: 2.4, distance: 12, height: 4.6, on: 'cat' },
