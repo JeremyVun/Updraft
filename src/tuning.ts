@@ -1402,8 +1402,13 @@ export const tuning = {
     along: 40, scale: 1.8,
     /** Clear water left between the bow and its flank (m), and how far the bow reaches ahead of the boat's centre. */
     gap: 7, bow: 1.5,
-    /** Back crest above the water (m) asleep; the hold eases the boat's speed limit down at this rate (m/s²). */
-    crest: 1.5, settle: 0.32,
+    /** Back crest above the water (m) asleep. */
+    crest: 1.5,
+    /**
+     * The boat's speed limit coming alongside: never more than it could lose slowing at `slowing` (m/s²), nor more
+     * than `settling` times the distance left, so the hull's own slow carry brings it to rest there without braking.
+     */
+    slowing: 0.35, settling: 0.2,
     /** Released the same way: the limit climbs back at this rate (m/s²) once the flukes are up. */
     release: 0.5,
     /** Seconds between breaths asleep, how far the back rises with one (m), and the mist over the blowhole. */

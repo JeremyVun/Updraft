@@ -104,7 +104,7 @@ export class WhaleAcross {
     if (sleeper.phase === 'asleep') this.play(dt);
     if (this.released < 0 && (sleeper.fluking || (sleeper.phase === 'gone' && sleeper.awake))) this.released = 0;
     if (this.released >= 0) this.released += dt;
-    const approach = Math.sqrt(2 * K.settle * Math.max(0, left));
+    const approach = Math.min(Math.sqrt(2 * K.slowing * Math.max(0, left)), K.settling * Math.max(0, left));
     const freed = this.released >= 0 ? K.release * this.released : 0;
     this.limit = freed > tuning.sail.topSpeed ? Infinity : Math.max(approach, freed);
     const resting = sleeper.phase === 'asleep' && left < 1.5 && boat.speed < 0.2;

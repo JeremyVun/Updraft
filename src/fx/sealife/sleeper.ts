@@ -52,6 +52,9 @@ export class SleepingWhale extends WhaleRig {
   time = 0;
   /** How far the player's circling over the blowhole has got toward waking it, 0..1: it breathes deeper as it does. */
   stir = 0;
+  /** Frames a gust has spent crossing its back, and the flipper slaps that answered, since it lay down. */
+  tickles = 0;
+  slaps = 0;
   readonly gull = new PerchedGull();
   readonly blowhole = new THREE.Vector3();
   /** The middle of the back above the water, for a glance. */
@@ -104,6 +107,7 @@ export class SleepingWhale extends WhaleRig {
     this.phase = 'asleep';
     this.time = 0;
     this.stir = 0;
+    this.tickles = this.slaps = 0;
     this.yaw0 = yaw;
     this.yaw1 = awayYaw;
     this.away.set(Math.sin(awayYaw), 0, Math.cos(awayYaw));
@@ -147,9 +151,11 @@ export class SleepingWhale extends WhaleRig {
       this.shiverDir = Math.sign(along) || 1;
     }
     this.shiverAmp = Math.min(0.08, Math.max(this.shiverAmp, 0.05 + 0.03 * strength));
+    this.tickles++;
     this.gull.startle();
     if (this.slapT < 0 && this.slapCool <= 0) {
       this.slapT = 0;
+      this.slaps++;
       this.slapCool = K.slapEvery;
     }
   }

@@ -57,7 +57,7 @@ void main() {
 
 const FRAG = /* glsl */ `
 ${ATMO_GLSL}
-uniform float uRainbow;
+uniform float uBow;
 in vec2 vQ;
 in vec3 vWorld;
 in float vKind;
@@ -93,13 +93,13 @@ void main() {
     col = vec3(0.92, 0.9, 0.84) * (sky + uSunColor * (0.45 + pow(toSun, 4.0) * 2.5) * sun);
     additive = 0.25;
   }
-  if (uRainbow > 0.0 && vKind < 1.5) {
+  if (uBow > 0.0 && vKind < 1.5) {
     /** Sunlit drops make a bow about 42 degrees from the point opposite the sun: red outside, violet within. */
     float bow = degrees(acos(clamp(dot(V, uSunDir), -1.0, 1.0)));
     float band = (bow - 38.5) / 5.0;
     vec3 hue = clamp(vec3(1.6 - abs(band - 0.95) * 2.6, 1.4 - abs(band - 0.55) * 2.8, 1.3 - abs(band - 0.1) * 2.6), 0.0, 1.0);
     float within = smoothstep(-0.15, 0.1, band) * (1.0 - smoothstep(0.9, 1.15, band));
-    col += hue * uSunColor * sun * within * uRainbow * (vKind < 0.5 ? 0.9 : 0.5);
+    col += hue * uSunColor * sun * within * uBow * (vKind < 0.5 ? 0.9 : 0.5);
   }
   a *= smoothstep(-0.05, 0.3, vWorld.y);
   if (a < 0.003) discard;
@@ -149,7 +149,7 @@ export class Spray {
       new THREE.ShaderMaterial({
         vertexShader: VERT,
         fragmentShader: FRAG,
-        uniforms: { ...atmo.uniforms, uRainbow: this.rainbow },
+        uniforms: { ...atmo.uniforms, uBow: this.rainbow },
         transparent: true,
         depthWrite: false,
         side: THREE.DoubleSide,
