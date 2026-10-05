@@ -350,7 +350,8 @@ function parts(coat: boolean): THREE.BufferGeometry[] {
   /** The muzzle: two soft white whisker pads close under the nose, barely proud of the face, and a small chin. */
   pair({ part: HEAD, mat: FUR, at: add(MUZZLE_C, [0.0078, 0.001, -0.003]), size: [0.0095, 0.0078, 0.0065], detail: 3, blend: () => 1 });
   rigid({ part: JAW, mat: FUR, at: add(MUZZLE_C, [0, -0.0105, -0.008]), size: [0.0085, 0.006, 0.0065], detail: 3, blend: () => 1 });
-  face({ part: JAW, mat: MOUTH, at: add(MUZZLE_C, [0, -0.005, -0.009]), size: [0.0075, 0.004, 0.007], detail: 2 });
+  /** The inside of the mouth stays with the head, so the chin opens away from it in a small round mew. */
+  face({ part: HEAD, mat: MOUTH, at: add(MUZZLE_C, [0, -0.0085, -0.0115]), size: [0.0062, 0.0058, 0.006], detail: 2 });
   face({
     part: HEAD,
     mat: NOSE,
@@ -382,8 +383,8 @@ function parts(coat: boolean): THREE.BufferGeometry[] {
     mat: EAR,
     at: add(H, EAR_AT),
     offset: [0, 0.02, 0],
-    size: [0.028, 0.027, 0.0085],
-    rot: [-0.1, 0.3, -0.68],
+    size: [0.027, 0.03, 0.0085],
+    rot: [-0.1, 0.3, -0.52],
     detail: 3,
     shape: (u) => {
       const k = 0.5 * (1 - u.y);

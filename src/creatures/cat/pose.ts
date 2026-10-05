@@ -128,7 +128,7 @@ export class CatRig {
     n[PELVIS].rotation.set(-d.flex * 0.9, 0, 0);
     n[CHEST].rotation.set(d.flex * 0.6 - d.chestUp, 0, 0);
 
-    n[JAW].rotation.set(d.jaw * 0.7, 0, 0);
+    n[JAW].rotation.set(d.jaw * 0.5, 0, 0);
     /** A head carried low swings the base of the neck forward and down round the chest, not only the neck itself. */
     const low = d.neckLow * 0.45;
     const [, ny, nz] = NECK_AT;
@@ -142,7 +142,7 @@ export class CatRig {
       [EAR_R, -1, d.earTwitch[1]],
     ] as const) {
       /** Back and down flat to the sides, as a frightened cat's go, never just folded back. */
-      n[bone].rotation.set(-0.12 - back * 0.4 + twitch * 0.1, s * (back * 0.55 + twitch * 0.5), -s * back * 1.05);
+      n[bone].rotation.set(-0.12 - back * 0.45 + twitch * 0.1, s * (back * 0.5 + twitch * 0.5), -s * back * 1.3);
     }
 
     /**

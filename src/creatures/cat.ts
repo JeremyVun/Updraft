@@ -942,7 +942,14 @@ export class Cat {
     let jaw = 0;
     let tailWave = 0.25;
     let tailFlick = 0;
-    let pupil = 0.74;
+    let pupil = 0.77;
+
+    /** On footing that falls away under a paw, a ridge or a slope, it crouches onto it rather than reaching. */
+    let sink = 0;
+    if (this.doing !== 'air') {
+      for (let i = 0; i < 4; i++) if (this.gait.paws[i].planted) sink = Math.max(sink, this.v.subVectors(this.at, this.paws[i]).dot(this.up));
+    }
+    bodyY -= Math.min(sink / this.scale, 0.04) * 0.85;
 
     /** Frightened means low: whatever it is doing it presses down, sinks its head and rounds its back. */
     const fear = clamp(this.fear, 0, 1.2);

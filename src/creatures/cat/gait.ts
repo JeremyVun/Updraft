@@ -36,7 +36,7 @@ const PATTERN: Record<GaitKind, { offsets: [number, number, number, number]; dut
 export function strideAt(kind: GaitKind, speed: number): number {
   if (kind === 'walk') return 0.125 + 0.078 * speed;
   if (kind === 'trot') return 0.155 + 0.078 * speed;
-  if (kind === 'bound') return 0.31 + 0.092 * speed;
+  if (kind === 'bound') return 0.28 + 0.085 * speed;
   return 0.175 + 0.065 * speed;
 }
 
