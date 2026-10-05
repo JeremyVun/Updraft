@@ -528,6 +528,15 @@ short muzzle with nose and mouth tucked under the eyes; round cheeks; ears wide;
 the shoulders; a compact pear sit with front paws together and the tail wrapped round; frightened means low (body
 down, ears flat, tail tucked). Jeremy: "opus 5.5 subagent should be able to remodel the cat appropriately".
 
+**The rebuild, judged** (2026-10-05, `proto-drowned-cat` at `766c738`). At play distance, about 4 m, it reads as a
+kitten: big round head, no neck, large dark eyes with a glint, white muzzle and bib, a compact sit, a low frightened
+loaf. Close up it falls short of the sheet: in profile the head is a flat-sided helmet with the eye on its front edge;
+too much forehead above eyes set low, like a mushroom cap; a dark outline round each eye makes them googly where the
+sheet's are soft under the upper lid; the mew barely opens the mouth; under warm light the coat goes saturated ginger
+with heavy stripes rather than the sheet's soft grey-brown. Jeremy: "yep, the cat definitely needs a polish pass. Along
+with your observations, the body looks weird from bove" (from above and behind it is a narrow column ringed by its
+stripes, like a grub, where the sheet's back is a soft broad pear whose stripes fade down the flanks).
+
 **The cat's voice** (Jeremy, 2026-10-05, on the first synthesised mew: "the cat mew sounds like a human mimicking a cat,
 it sounds hilariously uncanny and bad"; on recordings: "Im wary of using real recordings because they add to the
 bundle size don't they? And we don't have much room to modify them to suit whatever we need.."). It stays synthesised,
