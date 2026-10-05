@@ -408,3 +408,44 @@ and the lighthouse stop above:
 - From there main's storm plays untouched (the weather closing in, the lighthouse sliding past, the beam going out,
   the plane taken, rain, the cygnet's shaking, the landing at the forest). Only its trigger changes, from
   `tuning.storm.startsFromShore` to her being back aboard.
+
+**The whole room, from the beginning** (Jeremy, 2026-10-05: "ok we need to think through this in detail from the
+beginning. The player emerges from teh haze / cloud chapter into the drowning village, which is calm. what is the
+first puzzle? what happens after that to build into the black clouds and have the child climb onto the roofs? How is
+the stormy sequence laid out all the way to the woods village? Keep in mind the existing distances. think through this
+step by step". Agreed as below: "Yes, go"; the calm drift gets "a small one" of its own). This supersedes the run back
+to a drifting boat and the run to the lighthouse above.
+
+Distances on main: the passage from where the stairs set the boat down (`DESCENT_END`, 16, −1254) to the forest beach
+(`WOOD_LANDING`, −26, −1692) is about 530 m. The air dies (`STILL_AT`) about 155 m in, about 30 s after arrival, at
+about (−9, −1398), some 40 m short of the church (`SPIRE`, 14, −1436). Main's storm begins 210 m from the beach
+(`tuning.storm.startsFromShore`), about 50 m past the church; the light goes out 23 s later, beside the lighthouse
+(65, −1580); then the plane is taken and they land. Houses stand 11–30 m off the channel, 15–40 m apart, sunk 1.7–5.4 m.
+
+1. **The calm drift** (about 150 m, about 30 s): dusk among the roofs as on main, with one small puzzle of its own (to
+   be chosen), and small answers to the wind (herons lift, the spire's vane swings).
+2. **The sea draws back** where the air dies on main. The breeze dies, the glass goes still, then the water slips away:
+   the village rises a metre or two out of it (door tops, upstairs windows, garden walls, a wet dark band on every
+   wall). A ridge comes up under the boat and it settles on the slates, listing, high and dry. Far behind, where they
+   came from, the horizon goes black: the sea coming back under black smoke lying on the water.
+3. **She climbs out** because nothing moves a boat sitting on slates (a sweep on the sail only flaps it). She looks
+   back at the black and runs for the highest thing there is, the church tower, some 40–60 m off.
+4. **Crossing 1, the tree (push):** a lane of deep water to the next house; a dead tree rotted at the roots in a garden
+   there; pushed over, it is her bridge.
+5. **Crossing 2, the swing (pump):** the drowned village green between that house and the church; the swing hangs from
+   the old tree on the green; pumped, she lets go onto the nave roof.
+6. **The church:** she climbs the nave roof to the tower and into the belfry opening. While she waits at a crossing
+   the dark creeps up and stops a little behind her; it never reaches her and nothing fails.
+7. **The dark arrives:** the black water pours back round the tower and the storm comes with it (the smoke rolls over,
+   the first rain). The water lifts the stranded boat off its ridge and carries it in among the roofs below.
+8. **Bring the boat (fill the sail):** the rising water leaves the tower nowhere safe and her boat is afloat again, the
+   only way out. The player fills its red sail (`Boat.brushSail`) to bring it to the foot of the tower and she climbs
+   down into it. She left because the boat was stranded; she goes back because the water brought it back.
+9. **The storm, untouched:** the church is about 260 m from the beach, close to where main's storm already starts, so
+   main's timeline plays from the moment she is aboard (the weather closing in, the lighthouse sliding past and going
+   out about 130 m on, the plane taken, rain, the landing at the forest). Only its trigger changes, from
+   `startsFromShore` to her being back aboard. The storm still never lets go until the beach.
+
+The village round the church is re-laid so the route reads as a real village she picks her way through (Jeremy's note
+on the first frames above). The sea itself does not move: the village rises to show the water falling and sinks to
+show it returning.
