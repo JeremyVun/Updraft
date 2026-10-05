@@ -89,7 +89,7 @@ void main() {
 #ifdef TRICK
   // Drawn in, it is in front of and behind everything else as if it stood where it seems to. That squeezes its depth
   // so much near the top that the runner and the tread beneath it can no longer be told apart, so all of it is pushed
-  // back alike along each line of sight, by how far up the flight that line meets the slope of its rail (DRAWN_SLOPE,
+  // back alike along each line of sight, by how far up the flight that line meets its slope (DRAWN_SLOPE,
   // ALONG_DRAWN). That only holds from the one place, so once the lens leaves it the flight is sorted where it is.
   vec3 ray = vWorld - cameraPosition;
   vec3 meets = cameraPosition + ray * (uSlope.w - dot(uSlope.xyz, cameraPosition)) / dot(uSlope.xyz, ray);

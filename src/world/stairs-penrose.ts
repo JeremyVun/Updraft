@@ -68,13 +68,14 @@ export const ALONG_DRAWN = (() => {
 })();
 
 /**
- * The slope of the loop's last flight as drawn in, at the height of its rail where it comes onto the corner, as a
- * plane: its normal and its distance from the origin.
+ * The slope of the loop's last flight as drawn in, as a plane (its normal and its distance from the origin): on its
+ * treads at its foot, where it must stay in front of the landing it leaves, and at the height of its rail at its top,
+ * where the rail must go behind the corner's newel.
  */
 export const DRAWN_SLOPE = (() => {
-  const foot = drawIn(LOOP_BACK.bottom.clone()), head = drawIn(LOOP_BACK.top.clone());
+  const foot = drawIn(LOOP_BACK.bottom.clone()), head = drawIn(LOOP_BACK.top.clone()).setY(drawIn(LOOP_BACK.top.clone()).y + RAIL_HEIGHT * LOOP_SHRINK);
   const n = head.clone().sub(foot).cross(new THREE.Vector3(backWay.z, 0, -backWay.x)).normalize();
-  return new THREE.Vector4(n.x, n.y, n.z, n.dot(foot) + RAIL_HEIGHT * LOOP_SHRINK);
+  return new THREE.Vector4(n.x, n.y, n.z, n.dot(foot));
 })();
 
 /** The loop's last flight as drawn in, up its middle from the foot to where it comes onto the copy. */
