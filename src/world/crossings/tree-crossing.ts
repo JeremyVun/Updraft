@@ -40,6 +40,7 @@ export class TreeCrossing {
   private stalled = 0;
   private best = 0;
   private valveClock = 0;
+  private valveOn = false;
   private readonly at = new THREE.Vector3();
   private readonly look = new THREE.Vector3();
   private readonly lineDir = new THREE.Vector2();
@@ -53,8 +54,10 @@ export class TreeCrossing {
   }
 
   /** Whether the world's own gust has taken over from the player. */
+  /** Once the world's own gust has taken over it keeps on until she is across: its own progress never stops it. */
   get valving(): boolean {
-    return this.stalled > tuning.crossings.tree.valveAfter;
+    if (this.stalled > tuning.crossings.tree.valveAfter) this.valveOn = true;
+    return this.valveOn;
   }
 
   reset(): void {
@@ -62,6 +65,7 @@ export class TreeCrossing {
     this.phase = 'off';
     this.invitation = null;
     this.t = this.quiet = this.stalled = this.best = this.valveClock = 0;
+    this.valveOn = false;
     const decks = this.cast.child.decks;
     const i = decks.indexOf(this.tree.deck);
     if (i >= 0) decks.splice(i, 1);

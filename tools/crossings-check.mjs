@@ -2,8 +2,8 @@
 // firm push brings the tree down and she crosses it, that wrong-way pushes only rock it, that pumping the swing
 // carries her over, and that nothing happens on its own before the safety valve (and that the valve then does it).
 // Usage: node tools/crossings-check.mjs [scenario ...]
-//   scenarios: tree, tree-wrong, swing (the default set); tree-idle, swing-idle (each idles past the 90 s valve,
-//   about two minutes apiece)
+//   scenarios: tree, tree-wrong, swing (the default set); run (both in a row with the walk between); tree-idle,
+//   swing-idle (each idles past the 90 s valve, about two minutes apiece)
 //   env: BASE (default http://127.0.0.1:5287/), W/H viewport (default 1600x900), OUT (stills and video prefix,
 //        default /tmp/updraft-crossings), SHOTS=1 saves stills at the moments that matter, VIDEO=1 records
 //        <OUT>-<scenario>.webm.
@@ -218,6 +218,30 @@ const RUNS = {
     const landing = await game.page.evaluate(() => window.__game.story.current.crossings.swing.way.landing.toArray());
     expect(over.child[2] < landing[2] + 0.3 && over.child[1] > 0.2, `she is not on the far slope (${over.child} against landing ${landing})`);
     game.notes.push(`on the far side at ${over.child.join(', ')}`);
+  },
+
+  /** Both in a row: the tree, the walk along the wall and over the cottage to its eave, the swing. */
+  async run(game) {
+    await game.open('run');
+    for (let i = 0; i < 6 && (await game.state()).tree.state === 'standing'; i++) {
+      const aim = await game.aim('tree');
+      await game.stroke(aim, aim.heading, 0.62, 15);
+      await game.until((x) => x.tree.state !== 'standing', 1.6);
+    }
+    const riding = await game.until((s) => s.swing.phase === 'riding', 60);
+    expect(riding, `she never got from the tree to the swing (${JSON.stringify(await game.state())})`);
+    game.notes.push(`on the swing at ${riding.child.join(', ')}`);
+    await game.shot('swing');
+    let released = null;
+    for (let i = 0; i < 40 && !released; i++) {
+      const aim = await game.aim('swing');
+      await game.stroke(aim, aim.heading, 0.5, 12);
+      released = await game.until((s) => s.swing.phase !== 'riding', 0.8);
+    }
+    expect(released, 'never let go of the swing');
+    const over = await game.until((s) => s.swing.phase === 'over', 15);
+    expect(over, 'she never got up and on after the swing');
+    await game.shot('over');
   },
 
   /** On the swing with nobody pumping, it dies away and she waits; the drawn push comes; then the valve carries her. */

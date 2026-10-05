@@ -1826,7 +1826,7 @@ export const tuning = {
       /** Seconds for the stumble and getting up on the slope after landing, and for her look back at the swing. */
       landFor: 1.3, lookBack: 0.9,
       /** Seconds riding without a push before the drawn push; with no new height before the world's own gusts carry her. */
-      inviteAfter: 5, valveAfter: 90, valveEvery: 1.5, valveEnergy: 0.9,
+      inviteAfter: 5, valveAfter: 90, valveEvery: 1.2, valveEnergy: 1.5,
     },
   },
   /** One continuous passage from the last drowned houses to the forest beach. */

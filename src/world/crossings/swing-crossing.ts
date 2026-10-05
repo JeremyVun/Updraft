@@ -30,6 +30,7 @@ export class SwingCrossing {
   private stalled = 0;
   private best = 0;
   private valveClock = 0;
+  private valveOn = false;
   private hand: 0 | 1 = 0;
   /** Back on her feet after the landing. */
   private up = false;
@@ -49,8 +50,10 @@ export class SwingCrossing {
     return this.phase === 'over';
   }
 
+  /** Once the world's own gust has taken over it keeps on until she is across: its own progress never stops it. */
   get valving(): boolean {
-    return this.stalled > tuning.crossings.swing.valveAfter;
+    if (this.stalled > tuning.crossings.swing.valveAfter) this.valveOn = true;
+    return this.valveOn;
   }
 
   /** The way it swings out, as a yaw. */
@@ -63,6 +66,7 @@ export class SwingCrossing {
     this.phase = 'off';
     this.invitation = null;
     this.t = this.quiet = this.stalled = this.best = this.valveClock = 0;
+    this.valveOn = false;
     this.up = false;
     const c = this.cast.child;
     c.swing = c.kick = 0;
