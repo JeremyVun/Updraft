@@ -529,3 +529,9 @@ was machinery invented to strand the boat. This supersedes steps 2, 3, 7 and 8 o
   arrival is the storm's beginning, as before. The water does not rise round her feet; the dark itself (the smoke
   rolling over, the wind and the first rain) is what says go.
 - The cat's run is what she follows, so it never needs the plane to lead.
+- Weighed again after Jeremy noted the tsunami logic ("just before a bad thing happens at sea like a tsunami, the water
+  will recede ... you are the artistic director so as long as you've thought carefully about what works best, feel
+  free to purusue your vision"). Kept cut: the dark is already the omen, and two omens split one event; leaving the
+  boat for the cat is the child's own act of kindness, where a stranding is only a mechanism; making the draining read
+  needs a great deal (water pouring off eaves, a visible current, the village sinking again to free the boat) for what
+  the dark already says; and a literal tsunami weighs heavier than a child's dream should.
