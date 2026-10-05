@@ -31,9 +31,10 @@ export const OPENING = STEP.landing / 2 - INSET;
 const FOOT = { x: 99, z: -1221 } as const;
 /**
  * The grass is raised to `STAIRS_GROUND` within `inner` metres of the first riser, easing back into the knoll by
- * `outer`, so nobody steps up out of the grass onto a step standing in the air.
+ * `outer`, so nobody steps up out of the grass onto a step standing in the air. It is trodden short there too, to
+ * `grass` of its height, so the bottom steps are not lost in it.
  */
-export const STAIRS_PAD = { ...FOOT, inner: 0.8, outer: 3.5 } as const;
+export const STAIRS_PAD = { ...FOOT, inner: 0.8, outer: 3.5, grass: 0.3 } as const;
 const H = STEP.landing / 2;
 
 /** The ways a flight can go: each is a quarter turn off the next. */
