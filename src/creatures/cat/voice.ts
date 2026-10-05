@@ -70,6 +70,10 @@ const YOWL: Shape = {
   shimmer: 0.32,
 };
 
+/** Harmonics past the twelfth measured keep falling about 1.7 dB each in the recordings, out to the twentieth. */
+const PARTIALS = 20;
+const ROLLOFF = 1.7;
+
 const mix = (a: readonly number[], b: readonly number[], k: number) => a.map((v, i) => v + (b[i] - v) * k);
 const blend = (a: Shape, b: Shape, k: number): Shape => ({
   seconds: a.seconds + (b.seconds - a.seconds) * k,
@@ -217,13 +221,14 @@ export class CatVoice {
     const spectra = [shape.opening, shape.open, shape.closing];
     const weights = [[1, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]];
     spectra.forEach((db, s) => {
-      const imag = new Float32Array(db.length + 1);
+      const imag = new Float32Array(PARTIALS + 1);
       let power = 0;
-      db.forEach((d, k) => {
-        const a = Math.pow(10, (d + (tilt * Math.log2(k + 1)) / 3.6 + (Math.random() - 0.5) * 3) / 20);
-        imag[k + 1] = a;
+      for (let k = 1; k <= PARTIALS; k++) {
+        const d = k <= db.length ? db[k - 1] : db[db.length - 1] - ROLLOFF * (k - db.length);
+        const a = Math.pow(10, (d + (tilt * Math.log2(k)) / 3.6 + (Math.random() - 0.5) * 3) / 20);
+        imag[k] = a;
         power += a * a;
-      });
+      }
       for (let k = 1; k < imag.length; k++) imag[k] /= Math.sqrt(power);
       const osc = ctx.createOscillator();
       osc.setPeriodicWave(ctx.createPeriodicWave(new Float32Array(imag.length), imag, { disableNormalization: true }));
