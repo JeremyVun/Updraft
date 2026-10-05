@@ -10,6 +10,13 @@ import { swellLift } from './water/swell';
 import { LighthouseLight, LIGHTHOUSE_BASE_Y, LIGHTHOUSE_SCALE } from './lighthouse';
 import { REFLECTION_LAYER } from './water/reflection';
 import { fixInPlace } from '../gl/fixed';
+import { tuning } from '../tuning';
+import { Swing } from './birches';
+import { DarkBank } from './drowned-dark';
+import {
+  CAT_HOUSE, DARK_WAY, GARDEN_TREE, GARDEN_WALLS, GREEN_TREE, NAVE, PLACED, STRAND_HOUSE, SWING_FROM, SWING_PIVOT,
+  inClearing, type GardenWall, type PlacedHouse,
+} from './drowned-way';
 
 /**
  * The way the boat drifts through the flooded village, south to north. The whole island lies under the water, so
@@ -32,6 +39,8 @@ export const SPIRE = new THREE.Vector3(14, 21, -1436);
 export const LIGHTHOUSE = new THREE.Vector3(65, 0, -1580);
 /** The village comes alive within this far (along the journey) of its middle: the leaves always started here. */
 const DROWNED_Z = -1440;
+/** The way the dark comes on: the herons fly from it and the water runs off toward it. */
+const DARK_AHEAD = new THREE.Vector2().subVectors(DARK_WAY[1], DARK_WAY[0]).normalize();
 const NEAR_Z = 320;
 const CATCH_UP_S = 10;
 const CATCH_UP_STEP = 1 / 30;
@@ -63,6 +72,7 @@ const VILLAGE_VERT = /* glsl */ `
 ${ATMO_GLSL}
 uniform float uVane;
 uniform float uStorm;
+uniform float uRise;
 in vec3 color;
 in vec3 aLocal;
 in float aKind;
@@ -90,6 +100,7 @@ void main() {
     p.xz += w * belly * (0.014 + uStorm * 0.04);
     p.y += belly * (sin(uTime * (2.2 + uStorm * 9.0) + aLocal.x * 7.0) * (0.03 + uStorm * 0.32) + length(w) * 0.02);
   }
+  p.y += uRise;
   vWorld = p;
   vNormal = n;
   vColor = color;
@@ -100,6 +111,8 @@ void main() {
 
 const VILLAGE_FRAG = /* glsl */ `
 ${ATMO_GLSL}
+uniform float uRise;
+uniform float uDrain;
 in vec3 vWorld;
 in vec3 vNormal;
 in vec3 vColor;
@@ -126,12 +139,23 @@ void main() {
     alb = mix(alb, vec3(0.085, 0.105, 0.045) * (0.8 + 0.4 * grain), turf);
   }
 
-  /** Where the flood has stood: dark, green and slick, with the tide mark the water keeps washing. */
-  float lap = 0.09 * sin(vWorld.x * 0.8 + uTime * 1.3) + 0.06 * sin(vWorld.z * 1.1 - uTime * 0.9);
+  /**
+   * Where the flood has stood: dark, green and slick, with the tide mark the water keeps washing. Drawn up out of
+   * the sea, that band stays wet, weed hangs from the line the water reached, and water runs down it in beads.
+   */
+  float drawn = smoothstep(0.0, 0.5, uRise);
+  float old = vWorld.y - uRise;
+  float lap = (0.09 * sin(vWorld.x * 0.8 + uTime * 1.3) + 0.06 * sin(vWorld.z * 1.1 - uTime * 0.9)) * (1.0 - drawn);
+  float along = vLocal.x + vLocal.z;
+  float soaked = 0.0;
   if (kind != ${OPENING}) {
-    float wet = 1.0 - smoothstep(0.0, 0.85, vWorld.y - lap);
+    float wet = 1.0 - smoothstep(0.0, 0.85, old - lap);
     alb = mix(alb, alb * vec3(0.3, 0.38, 0.29), wet * 0.92);
-    alb += vec3(0.022, 0.026, 0.015) * (1.0 - smoothstep(0.0, 0.25, abs(vWorld.y - lap - 0.85)));
+    alb += vec3(0.022, 0.026, 0.015) * (1.0 - smoothstep(0.0, 0.25, abs(old - lap - 0.85)));
+    soaked = drawn * (1.0 - smoothstep(-0.05, 0.05, old - 0.12 * vnoise(vec2(along * 1.7, 3.1))));
+    float strand = vnoise(vec2(along * 6.3, 7.7)) * 0.6 + vnoise(vec2(along * 17.0, 1.3)) * 0.4;
+    float weed = soaked * smoothstep(0.45, 0.62, strand) * (1.0 - smoothstep(0.12, 0.2 + 0.85 * strand, -old));
+    alb = mix(alb * vec3(0.72, 0.76, 0.72), vec3(0.03, 0.045, 0.022) * (0.7 + 0.6 * grain), weed);
   }
 
   float ndl = max(dot(n, uSunDir), 0.0);
@@ -143,6 +167,14 @@ void main() {
   float back = pow(max(dot(-V, uSunDir), 0.0), 3.0);
   float edge = pow(1.0 - clamp(dot(n, V), 0.0, 1.0), 3.0);
   col += uSunColor * edge * back * sun * (kind == ${THATCHED} ? 0.55 : 0.16) * (0.35 + alb);
+  if (soaked > 0.0) {
+    float glint = pow(max(dot(reflect(-V, n), uSunDir), 0.0), 28.0);
+    float sheen = pow(1.0 - clamp(dot(n, V), 0.0, 1.0), 4.0);
+    float lane = floor(along * 4.0);
+    float runs = step(0.6, fract(sin(lane * 91.7) * 43758.5)) * (1.0 - smoothstep(0.0, 0.1, abs(fract(along * 4.0) - 0.5)));
+    float bead = smoothstep(0.88, 1.0, fract(old * 0.8 + uTime * (0.3 + 0.35 * fract(lane * 0.37)) + lane * 0.31)) * runs * uDrain;
+    col += (uSunColor * glint * sun * 0.5 + uSkyHorizon * (sheen * 0.16 + bead * 0.7)) * soaked;
+  }
   if (kind == ${OPENING}) col = vColor * uSkyAmbient * 0.5;
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;
@@ -150,6 +182,7 @@ void main() {
 const TREE_VERT = /* glsl */ `
 ${ATMO_GLSL}
 uniform float uStorm;
+uniform float uRise;
 in vec3 aBase;
 out vec3 vWorld;
 out vec3 vNormal;
@@ -158,9 +191,10 @@ void main() {
   float k = pow(max(position.y - aBase.y, 0.0) / 7.0, 1.7);
   float phase = aBase.x * 0.7 + aBase.z * 0.3;
   vec2 lean = w * 0.03 + vec2(sin(uTime * 1.05 + phase), cos(uTime * 0.81 + phase * 1.7)) * (0.05 + 0.02 * length(w)) * (1.0 + uStorm * 2.2);
-  vec3 p = position + vec3(lean.x, -dot(lean, lean) * 0.03, lean.y) * k;
+  vec3 p = (modelMatrix * vec4(position + vec3(lean.x, -dot(lean, lean) * 0.03, lean.y) * k, 1.0)).xyz;
+  p.y += uRise;
   vWorld = p;
-  vNormal = normal;
+  vNormal = mat3(modelMatrix) * normal;
   gl_Position = projectionMatrix * viewMatrix * vec4(p, 1.0);
 }`;
 
@@ -184,6 +218,7 @@ void main() {
 const LEAF_VERT = /* glsl */ `
 ${ATMO_GLSL}
 uniform float uStorm;
+uniform float uRise;
 in vec4 iLeaf;
 in vec4 iTint;
 in vec4 iState;
@@ -207,6 +242,7 @@ void main() {
     float k = pow(max(at.y - iState.z, 0.0) / 7.0, 1.7);
     vec2 lean = w * 0.03 + vec2(sin(uTime * 1.05 + iState.y), cos(uTime * 0.81 + iState.y * 1.7)) * (0.05 + 0.02 * length(w)) * (1.0 + uStorm * 2.2);
     at += vec3(lean.x, -dot(lean, lean) * 0.03, lean.y) * k;
+    at.y += uRise;
   }
   vec3 e2t = e2 * cos(tilt) - vec3(0.0, 1.0, 0.0) * sin(tilt);
   vec3 world = at + (e1 * position.x + e2t * position.y) * iTint.w;
@@ -403,6 +439,11 @@ interface HouseSpec {
   thatched: boolean;
   lime: THREE.Color;
   roof: THREE.Color;
+  /** A placed house says where its chimneys go and how tall, and how many pots each carries. */
+  stacks?: number[];
+  stack?: number;
+  pots?: number;
+  door?: number;
 }
 
 function wallShape(h: HouseSpec): THREE.Shape {
@@ -532,7 +573,7 @@ function layout(rand: Rng): HouseSpec[] {
     const bucket = Math.min(BUCKETS - 1, Math.floor((c.s / CHANNEL_LENGTH) * BUCKETS));
     const distant = c.d > 30;
     if (distant ? far[bucket] >= 1 || bucket % 2 === 0 || c.d > 82 : near[bucket] >= 3 || c.d < 11) continue;
-    if (Math.hypot(c.x - SPIRE.x, c.z - SPIRE.z) < 16 || Math.hypot(c.x - SPIRE.x + 13, c.z - SPIRE.z) < 13) continue;
+    if (Math.hypot(c.x - SPIRE.x, c.z - SPIRE.z) < 16 || inClearing(c.x, c.z, 5)) continue;
     if (houses.some((h) => Math.hypot(h.x - c.x, h.z - c.z) < 11)) continue;
     if (distant) far[bucket]++;
     else near[bucket]++;
@@ -565,6 +606,13 @@ function houseMatrix(h: HouseSpec): THREE.Matrix4 {
     .multiply(new THREE.Matrix4().makeRotationX(h.roll));
 }
 
+/** A house's bounds, for the lens to keep out of. */
+function houseBounds(h: HouseSpec): THREE.Box3 {
+  return new THREE.Box3(
+    new THREE.Vector3(-h.len / 2 - 0.5, 0, -h.depth / 2 - 0.5),
+    new THREE.Vector3(h.len / 2 + 0.5, h.wall + h.rise + 0.4, h.depth / 2 + 0.5)).applyMatrix4(houseMatrix(h));
+}
+
 /** Builds one house and returns the chimney tops a heron could stand on. */
 function buildHouse(into: Merged, h: HouseSpec, rand: Rng, m: THREE.Matrix4): THREE.Vector3[] {
   const ridge = h.wall + h.rise;
@@ -576,17 +624,31 @@ function buildHouse(into: Merged, h: HouseSpec, rand: Rng, m: THREE.Matrix4): TH
   }
 
   const perches: THREE.Vector3[] = [];
-  const stacks = h.len > 14 ? [-1, 1] : [rand() < 0.5 ? -1 : 1];
+  const stacks = h.stacks ?? (h.len > 14 ? [-1, 1] : [rand() < 0.5 ? -1 : 1]);
   for (const side of stacks) {
     const cx = side * (h.len / 2 - 0.75);
-    const top = ridge + range(rand, 1, 2.1);
+    const top = ridge + (h.stack ?? range(rand, 1, 2.1));
     const shaft = top - (h.wall - 0.6);
     into.add(new THREE.BoxGeometry(0.82, shaft, 0.78).translate(cx, h.wall - 0.6 + shaft / 2, 0), STONE, MASONRY, m);
     into.add(new THREE.BoxGeometry(1.04, 0.18, 1.0).translate(cx, top + 0.09, 0), STONE, MASONRY, m);
-    for (const pz of rand() < 0.5 ? [0] : [-0.24, 0.24]) {
+    const pots = h.pots ?? (rand() < 0.5 ? 1 : 2);
+    for (const pz of pots === 1 ? [0] : [-0.24, 0.24]) {
       into.add(new THREE.CylinderGeometry(0.13, 0.15, 0.4, 6).translate(cx, top + 0.38, pz), POT, MASONRY, m);
     }
     perches.push(new THREE.Vector3(cx, top + 0.2, 0).applyMatrix4(m));
+  }
+  /** Under the water until it draws back: the tops of the ground-floor doors and windows. */
+  if (h.sink < 3.9) {
+    const front = h.door ?? 0;
+    for (const side of [-1, 1]) {
+      for (const wx of [-h.len * 0.3, h.len * 0.3]) {
+        const door = side === front && wx < 0;
+        const tall = door ? 1.9 : 0.9;
+        const y = door ? 0.95 : 1.2;
+        into.add(opening(door ? 0.95 : 0.8, tall, 0.5).translate(wx, y, side * (h.depth / 2 - 0.16)), HOLLOW, OPENING, m);
+        into.add(new THREE.BoxGeometry(door ? 1.2 : 1.05, 0.12, 0.24).translate(wx, y + tall / 2 + 0.07, side * (h.depth / 2 + 0.02)), door ? TIMBER : STONE, PLAIN, m);
+      }
+    }
   }
 
   /** Thatch overhangs its gable, so only a slate verge leaves an attic window anything to be seen through. */
@@ -648,25 +710,21 @@ function buildChurch(into: Merged, rand: Rng): void {
   cone.computeVertexNormals();
   into.add(cone, slate, SLATED, m);
 
-  const nave: HouseSpec = {
-    x: SPIRE.x - 9.6,
-    z: SPIRE.z,
-    yaw: Math.PI / 2,
-    roll: 0,
-    len: 17,
-    depth: 7.6,
-    wall: 3.2,
-    rise: 3.2,
-    sink: 3.6,
-    thatched: false,
-    lime: stone,
-    roof: slate,
-  };
+  const nave: HouseSpec = { ...NAVE, roll: 0, lime: stone, roof: slate };
   const nm = houseMatrix(nave);
   into.add(extrude(wallShape(nave), nave.len, 1), stone, PLAIN, nm);
   into.add(extrude(slateShape(nave), nave.len + 0.22, 1), slate, SLATED, nm);
   into.add(new THREE.BoxGeometry(nave.len + 0.4, 0.16, 0.4).translate(0, nave.wall + nave.rise - 0.04, 0), slate, SLATED, nm);
   into.add(opening(0.6, 1.3, 0.9).translate(range(rand, -5, 5), nave.wall + 0.5, 0), HOLLOW, OPENING, nm);
+  /** Tall windows down both sides, under the water to their arches until it draws back. */
+  for (const side of [-1, 1]) {
+    for (let i = 0; i < 4; i++) {
+      const wx = -nave.len / 2 + 2.6 + i * 3.6;
+      into.add(opening(0.9, 2.4, 0.6).translate(wx, 1.4, side * (nave.depth / 2 - 0.2)), HOLLOW, OPENING, nm);
+      into.add(new THREE.CylinderGeometry(0.45, 0.45, 0.6, 8, 1, false, 0, Math.PI).rotateX(Math.PI / 2).rotateZ(Math.PI / 2)
+        .translate(wx, 2.6, side * (nave.depth / 2 - 0.2)), HOLLOW, OPENING, nm);
+    }
+  }
 
   const top = new THREE.Matrix4().makeTranslation(SPIRE.x, SPIRE.y - 1.5, SPIRE.z);
   into.add(new THREE.CylinderGeometry(0.06, 0.09, 2.4, 5).translate(0, 0.9, 0), IRON, MASONRY, top);
@@ -764,7 +822,7 @@ function buildLine(into: Merged, houses: HouseSpec[]): void {
       for (const p of gables(a)) {
         for (const q of gables(b)) {
           const gap = p.distanceTo(q);
-          if (gap < 9 || gap > 19 || Math.abs(gap - 14) > bestGap) continue;
+          if (gap < 9 || gap > 19 || Math.abs(gap - 14) > bestGap || inClearing((p.x + q.x) / 2, (p.z + q.z) / 2, 2)) continue;
           bestGap = Math.abs(gap - 14);
           from = p;
           to = q;
@@ -815,7 +873,7 @@ function buildGate(into: Merged, rand: Rng, houses: HouseSpec[]): void {
     const off = range(rand, 12, 19);
     const x = at.x - tangent.y * off * side;
     const z = at.y + tangent.x * off * side;
-    if (houses.some((h) => Math.hypot(h.x - x, h.z - z) < 14) || Math.hypot(x - SPIRE.x, z - SPIRE.z) < 28) continue;
+    if (houses.some((h) => Math.hypot(h.x - x, h.z - z) < 14) || Math.hypot(x - SPIRE.x, z - SPIRE.z) < 28 || inClearing(x, z, 3)) continue;
     const m = new THREE.Matrix4().makeTranslation(x, -0.9, z).multiply(new THREE.Matrix4().makeRotationY(rand() * Math.PI));
     m.multiply(new THREE.Matrix4().makeRotationZ(0.07));
     for (const px of [-1.85, 1.85]) into.add(new THREE.BoxGeometry(0.22, 4.2, 0.22).translate(px, 0.5, 0), TIMBER, PLAIN, m);
@@ -924,7 +982,7 @@ function plantTrees(houses: HouseSpec[], rand: Rng, twigs: Twig[], cameraObstacl
       const x = at.x - tangent.y * off * side;
       const z = at.y + tangent.x * off * side;
       if (houses.some((h) => Math.hypot(h.x - x, h.z - z) < 9.5)) continue;
-      if (Math.hypot(x - SPIRE.x, z - SPIRE.z) < 18) continue;
+      if (Math.hypot(x - SPIRE.x, z - SPIRE.z) < 18 || inClearing(x, z, 5)) continue;
       if (Math.hypot(x - LIGHTHOUSE.x, z - LIGHTHOUSE.z) < 22) continue;
       const bare = twigs.length;
       for (const part of drownedTree(x, z, range(rand, 7, 10), rand, twigs)) {
@@ -943,6 +1001,115 @@ function plantTrees(houses: HouseSpec[], rand: Rng, twigs: Twig[], cameraObstacl
     }
   }
   return mergeGeometries(limbs);
+}
+
+/** Tags each limb with the foot it sways about, so the wind bends it from there. */
+function swaying(parts: THREE.BufferGeometry[], foot: THREE.Vector3): THREE.BufferGeometry[] {
+  return parts.map((part) => {
+    const count = part.attributes.position.count;
+    const base = new Float32Array(count * 3);
+    for (let k = 0; k < count; k++) base.set([foot.x, foot.y, foot.z], k * 3);
+    part.setAttribute('aBase', new THREE.BufferAttribute(base, 3));
+    return part.toNonIndexed();
+  });
+}
+
+/**
+ * The big old tree on the green, standing in the flood to its fork, with one long bough reaching out west over where
+ * the swing hangs. Only its trunk is in the lens's way: the crown is all well above any view the room takes.
+ */
+function greenTree(rand: Rng, twigs: Twig[], cameraObstacles: THREE.Box3[]): THREE.BufferGeometry[] {
+  const base = GREEN_TREE;
+  const phase = base.x * 0.7 + base.z * 0.3;
+  const fork = new THREE.Vector3(base.x - 0.3, 4.3, base.z + 0.2);
+  const parts = [limb(base, fork, 0, 0.9, 0.62, 10, 5)];
+  const knot = new THREE.Vector3(SWING_PIVOT.x, SWING_PIVOT.y + 0.12, SWING_PIVOT.z);
+  parts.push(limb(new THREE.Vector3(fork.x - 0.2, fork.y - 0.4, fork.z), knot, 0.8, 0.44, 0.2, 8, 8));
+  const reach = knot.clone().add(new THREE.Vector3(-1.9, 0.6, -0.5));
+  parts.push(limb(knot, reach, 0.05, 0.2, 0.06, 6, 3));
+  twigs.push({ p: reach, base: base.y, phase });
+  const bough = new THREE.Vector3();
+  const tip = new THREE.Vector3();
+  for (let i = 0; i < 6; i++) {
+    /** Every way but west, which is the swing's. */
+    const a = Math.PI + 0.7 + ((i + 0.5) / 6) * (Math.PI * 2 - 1.4) + range(rand, -0.15, 0.15);
+    const from = fork.clone().setY(fork.y - range(rand, 0, 0.9));
+    const out = range(rand, 3, 4.6);
+    bough.set(fork.x + Math.cos(a) * out, fork.y + range(rand, 2.4, 4), fork.z + Math.sin(a) * out);
+    parts.push(limb(from, bough, -0.5, 0.42, 0.17, 7, 5));
+    for (let k = 0; k < 3; k++) {
+      const b = a + range(rand, -1, 1);
+      const far = range(rand, 1.8, 3.2);
+      tip.set(bough.x + Math.cos(b) * far, bough.y + range(rand, 0.8, 2.2), bough.z + Math.sin(b) * far);
+      parts.push(limb(bough, tip, -0.4, 0.16, 0.05, 5, 4));
+      twigs.push({ p: tip.clone(), base: base.y, phase });
+      for (let j = 0; j < 2; j++) {
+        const c = b + range(rand, -1.3, 1.3);
+        const spur = range(rand, 0.7, 1.4);
+        const end = new THREE.Vector3(tip.x + Math.cos(c) * spur, tip.y + range(rand, 0, 0.8), tip.z + Math.sin(c) * spur);
+        parts.push(limb(tip, end, -0.15, 0.05, 0.018, 4, 3));
+        twigs.push({ p: end, base: base.y, phase });
+      }
+    }
+  }
+  cameraObstacles.push(new THREE.Box3(new THREE.Vector3(base.x - 1.1, base.y, base.z - 1.1), new THREE.Vector3(base.x + 1.1, fork.y, base.z + 1.1)));
+  /** An old tree is stiff: it sways about a foot well up its trunk. */
+  return swaying(parts, base.clone().setY(base.y + 4));
+}
+
+/** The dead tree in the garden, built standing on its own root so that it can be brought down whole. */
+function deadTree(rand: Rng): THREE.BufferGeometry {
+  const height = GARDEN_TREE.height;
+  const crown = new THREE.Vector3(0.25, height * 0.58, -0.15);
+  const parts = [limb(new THREE.Vector3(0, -0.6, 0), crown, 0.15, 0.36, 0.22, 8, 6)];
+  const tip = new THREE.Vector3();
+  for (let i = 0; i < 4; i++) {
+    const a = (i / 4) * Math.PI * 2 + range(rand, 0, 0.8);
+    const from = crown.clone().setY(crown.y - range(rand, 0, 0.9));
+    const out = range(rand, 1.3, 2.3);
+    tip.set(crown.x + Math.cos(a) * out, crown.y + range(rand, 1.8, height - crown.y), crown.z + Math.sin(a) * out);
+    parts.push(limb(from, tip, -0.25, 0.19, 0.06, 6, 5));
+    for (let k = 0; k < 2; k++) {
+      const b = a + range(rand, -1.2, 1.2);
+      const spur = range(rand, 0.6, 1.3);
+      parts.push(limb(tip, new THREE.Vector3(tip.x + Math.cos(b) * spur, tip.y + range(rand, -0.1, 0.6), tip.z + Math.sin(b) * spur), -0.1, 0.06, 0.018, 4, 3));
+    }
+  }
+  return mergeGeometries(swaying(parts, new THREE.Vector3(GARDEN_TREE.root.x, 0, GARDEN_TREE.root.z)));
+}
+
+const WALL_STONE = lin(0.15, 0.14, 0.125);
+
+/** A garden wall up out of the flood to its coping, with railings along it if it has them; returns its bounds. */
+function buildWall(into: Merged, w: GardenWall): THREE.Box3 {
+  const dx = w.x1 - w.x0, dz = w.z1 - w.z0, len = Math.hypot(dx, dz);
+  const m = new THREE.Matrix4().makeTranslation((w.x0 + w.x1) / 2, 0, (w.z0 + w.z1) / 2)
+    .multiply(new THREE.Matrix4().makeRotationY(Math.atan2(-dz, dx)));
+  const foot = -4;
+  const body = w.top - 0.1 - foot;
+  into.add(new THREE.BoxGeometry(len, body, 0.42).translate(0, foot + body / 2, 0), WALL_STONE, MASONRY, m);
+  into.add(new THREE.BoxGeometry(len + 0.12, 0.14, 0.56).translate(0, w.top - 0.07, 0), STONE, MASONRY, m);
+  let top = w.top;
+  if (w.railed) {
+    const bars = Math.max(2, Math.round(len / 0.26));
+    for (let i = 0; i <= bars; i++) {
+      into.add(new THREE.BoxGeometry(0.035, 0.92, 0.035).translate(-len / 2 + (i * len) / bars, w.top + 0.46, 0), IRON, MASONRY, m);
+    }
+    into.add(new THREE.BoxGeometry(len, 0.045, 0.05).translate(0, w.top + 0.86, 0), IRON, MASONRY, m);
+    into.add(new THREE.BoxGeometry(len, 0.04, 0.045).translate(0, w.top + 0.16, 0), IRON, MASONRY, m);
+    top += 0.92;
+  }
+  return new THREE.Box3(new THREE.Vector3(Math.min(w.x0, w.x1) - 0.3, foot, Math.min(w.z0, w.z1) - 0.3),
+    new THREE.Vector3(Math.max(w.x0, w.x1) + 0.3, top, Math.max(w.z0, w.z1) + 0.3));
+}
+
+/** A house laid by hand, in the generated village's materials. */
+function placedSpec(p: PlacedHouse, i: number): HouseSpec {
+  return {
+    ...p, roll: p.roll ?? 0, lime: LIME[i % LIME.length],
+    roof: p.thatched ? THATCH[i % THATCH.length] : SLATE[i % SLATE.length],
+    pots: p === CAT_HOUSE ? 1 : undefined,
+  };
 }
 
 function wingPanel(part: number, span: number, chord: (s: number) => number, lead: (s: number) => number, s0: number, s1: number): THREE.BufferGeometry {
@@ -1096,7 +1263,23 @@ interface Drifter {
 export class DrownedVillage {
   readonly objects: THREE.Object3D[] = [];
   readonly cameraObstacles: THREE.Box3[] = [];
+  /** How far the village stands up out of the water, in metres: the sea drawing back. The story sets it. */
+  rise = 0;
+  /** The dark coming back over the water under its smoke. */
+  readonly dark = new DarkBank();
+  /** The dead tree in the garden, standing on its root and leaning toward the lane: turned about x, it comes down. */
+  readonly gardenTree = new THREE.Group();
+  /** The swing on the green tree's bough, hanging still over the green. */
+  readonly swing: Swing;
   private readonly storm = { value: 0 };
+  private readonly risen = { value: 0 };
+  private readonly drain = { value: 0 };
+  private shownRise = 0;
+  /** 1 while the water is running off the walls, easing away after it has gone. */
+  private draining = 0;
+  /** How fast the drawing back carries the leaves on the glass toward the dark, in metres a second. */
+  private drainFlow = 0;
+  private fled = false;
   private readonly lighthouse = new LighthouseLight(LIGHTHOUSE);
   private readonly vaneAngle = { value: 0 };
   private vaneSpin = 0;
@@ -1113,35 +1296,34 @@ export class DrownedVillage {
     const rand = mulberry32(3140);
     const houses = layout(rand);
     const body = new Merged();
-    for (const h of houses) {
-      const m = houseMatrix(h);
-      this.cameraObstacles.push(new THREE.Box3(
-        new THREE.Vector3(-h.len / 2 - 0.5, 0, -h.depth / 2 - 0.5),
-        new THREE.Vector3(h.len / 2 + 0.5, h.wall + h.rise + 0.4, h.depth / 2 + 0.5)).applyMatrix4(m));
-      for (const perch of buildHouse(body, h, rand, m)) {
-        this.cameraObstacles.push(new THREE.Box3(
-          new THREE.Vector3(perch.x - 0.65, 0, perch.z - 0.65),
-          new THREE.Vector3(perch.x + 0.65, perch.y + 0.5, perch.z + 0.65)));
-        if (perch.y > 2.2 && perch.y < 8 && offChannel(perch.x, perch.z).d < 34) this.roosts.push(perch);
-      }
-    }
+    for (const h of houses) this.addHouse(body, h, rand, true);
     buildChurch(body, rand);
-    buildLighthouse(body);
+    this.cameraObstacles.push(houseBounds({ ...NAVE, roll: 0, lime: STONE, roof: SLATE[0] }));
+    const placing = mulberry32(9104);
+    PLACED.forEach((p, i) => this.addHouse(body, placedSpec(p, i), placing, p !== CAT_HOUSE && p !== STRAND_HOUSE));
+    for (const w of GARDEN_WALLS) this.cameraObstacles.push(buildWall(body, w));
+    const rock = new Merged();
+    buildLighthouse(rock);
     this.objects.push(this.lighthouse.object);
     buildLine(body, houses);
     buildGate(body, rand, houses);
-    const shared = { ...atmo.uniforms, uStorm: this.storm, uVane: this.vaneAngle };
+    const shared = { ...atmo.uniforms, uStorm: this.storm, uVane: this.vaneAngle, uRise: this.risen, uDrain: this.drain };
     this.objects.push(
       new THREE.Mesh(
         body.build(),
         new THREE.ShaderMaterial({ vertexShader: VILLAGE_VERT, fragmentShader: VILLAGE_FRAG, uniforms: shared }),
+      ),
+      /** The lighthouse stands on its own rock out past the village, and the sea going does not lift it. */
+      new THREE.Mesh(
+        rock.build(),
+        new THREE.ShaderMaterial({ vertexShader: VILLAGE_VERT, fragmentShader: VILLAGE_FRAG, uniforms: { ...shared, uRise: { value: 0 } } }),
       ),
     );
 
     const twigs: Twig[] = [];
     this.objects.push(
       new THREE.Mesh(
-        plantTrees(houses, rand, twigs, this.cameraObstacles),
+        mergeGeometries([plantTrees(houses, rand, twigs, this.cameraObstacles), ...greenTree(placing, twigs, this.cameraObstacles)]),
         new THREE.ShaderMaterial({ vertexShader: TREE_VERT, fragmentShader: TREE_FRAG, uniforms: shared }),
       ),
     );
@@ -1237,17 +1419,41 @@ export class DrownedVillage {
       o.layers.enable(REFLECTION_LAYER);
       if (o instanceof THREE.Mesh && !o.geometry.boundingSphere) o.geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(-10, 0, -1440), 400);
     }
+
+    const dead = new THREE.Mesh(deadTree(placing),
+      new THREE.ShaderMaterial({ vertexShader: TREE_VERT, fragmentShader: TREE_FRAG, uniforms: { ...shared, uRise: { value: 0 } } }));
+    this.gardenTree.add(dead);
+    this.gardenTree.position.copy(GARDEN_TREE.root);
+    this.gardenTree.rotation.order = 'YXZ';
+    this.gardenTree.rotation.set(GARDEN_TREE.lean, Math.atan2(GARDEN_TREE.fall.x, GARDEN_TREE.fall.y), 0);
+    this.swing = new Swing(SWING_PIVOT, SWING_FROM.y, new THREE.Vector4());
+    this.objects.push(this.gardenTree, this.swing.group, ...this.dark.objects);
+  }
+
+  /** A house and its chimneys, with their bounds for the lens; chimneys off the drift may take a heron. */
+  private addHouse(into: Merged, h: HouseSpec, rand: Rng, roosting: boolean): void {
+    const m = houseMatrix(h);
+    this.cameraObstacles.push(houseBounds(h));
+    for (const perch of buildHouse(into, h, rand, m)) {
+      this.cameraObstacles.push(new THREE.Box3(
+        new THREE.Vector3(perch.x - 0.65, 0, perch.z - 0.65),
+        new THREE.Vector3(perch.x + 0.65, perch.y + 0.5, perch.z + 0.65)));
+      if (roosting && perch.y > 2.2 && perch.y < 8 && offChannel(perch.x, perch.z).d < 34) this.roosts.push(perch);
+    }
   }
 
   /**
-   * `boat` is where the boat is, so herons lift off as it comes by; `storm` is 0 calm to 1 the squall at the end.
+   * `boat` is where the boat is, so herons lift off as it comes by; `storm` is 0 calm to 1 the squall at the end;
+   * `eye` is where the lens is, for the dark's billows to be drawn far to near.
    * While the boat is far off, the vane and herons only count the time; when it comes near they live through the
    * last `CATCH_UP_S` of it, so the vane has settled into the wind and the herons are mid-habit on arrival.
    */
-  update(dt: number, time: number, boat: THREE.Vector3, storm: number): void {
+  update(dt: number, time: number, boat: THREE.Vector3, storm: number, eye: THREE.Vector3): void {
     this.storm.value = storm;
     // Its sweep also lights the shared water and creature shaders, so it always keeps time.
     this.lighthouse.update(dt, storm);
+    this.drawBack(dt);
+    this.dark.update(time, eye);
     if (Math.abs(boat.z - DROWNED_Z) > NEAR_Z) {
       this.idle = Math.min(CATCH_UP_S, this.idle + dt);
       return;
@@ -1264,6 +1470,30 @@ export class DrownedVillage {
     this.turnVane(dt, storm);
     this.flyHerons(dt, time, boat, storm);
     this.driftLeaves(dt, time, boat, storm);
+  }
+
+  /**
+   * Everything the village stands on comes up with it: the lens's obstacles, the tree in the garden and the swing.
+   * While it is coming up the water runs off it, the leaves on the glass run away toward the dark with the water
+   * going, and the herons leave.
+   */
+  private drawBack(dt: number): void {
+    const by = this.rise - this.shownRise;
+    if (by !== 0) {
+      for (const b of this.cameraObstacles) {
+        b.min.y += by;
+        b.max.y += by;
+      }
+      this.shownRise = this.rise;
+      this.risen.value = this.rise;
+      this.gardenTree.position.y = GARDEN_TREE.root.y + this.rise;
+      this.swing.group.position.y = SWING_PIVOT.y + this.rise;
+    }
+    const rate = dt > 0 ? by / dt : 0;
+    this.draining = rate > 0.02 ? 1 : this.draining * Math.exp(-dt / 25);
+    this.drain.value = THREE.MathUtils.smoothstep(this.rise, 0, 0.3) * (0.25 + 0.75 * this.draining);
+    this.drainFlow = Math.max(0, rate) * tuning.drowned.drainPull;
+    if (this.rise > 0.1) this.fled = true;
   }
 
   /**
@@ -1293,7 +1523,7 @@ export class DrownedVillage {
       const rand = h.rand;
       const roost = this.roosts[Math.max(h.target, 0)];
       if (h.mode === 'perched') {
-        h.y = this.roosts[h.roost].y + STAND;
+        h.y = this.roosts[h.roost].y + STAND + this.rise;
         h.nextLook -= dt;
         if (h.nextLook <= 0) {
           h.nextLook = range(rand, 2.5, 9);
@@ -1306,14 +1536,15 @@ export class DrownedVillage {
         }
         h.pitch = ease(h.pitch, Math.sin(time * 0.6 + h.seed * 9) * 0.03, 1, dt);
         const spooked = Math.hypot(boat.x - h.x, boat.z - h.z) < 22 && airborne < 2;
-        if (spooked || storm > 0.22) {
+        if (spooked || storm > 0.22 || this.fled) {
           h.mode = 'lifting';
           h.t = 0;
-          h.delay = range(rand, 0.2, 1.1);
+          h.delay = this.fled ? range(rand, 0.4, 3) : range(rand, 0.2, 1.1);
           h.neckGoal = 0;
-          h.yaw = Math.atan2(h.x - boat.x, h.z - boat.z);
+          /** Away from the dark when the sea goes, as birds go before weather. */
+          h.yaw = this.fled ? Math.atan2(DARK_AHEAD.x, DARK_AHEAD.y) + range(rand, -0.5, 0.5) : Math.atan2(h.x - boat.x, h.z - boat.z);
           airborne++;
-          h.target = storm > 0.22 ? -1 : this.pickRoost(h, boat, rand);
+          h.target = storm > 0.22 || this.fled ? -1 : this.pickRoost(h, boat, rand);
         }
       } else if (h.mode === 'lifting') {
         h.t += dt;
@@ -1329,9 +1560,10 @@ export class DrownedVillage {
           h.pitch = ease(h.pitch, -0.18, 5, dt);
         }
       } else {
+        if (this.fled) h.target = -1;
         const tx = h.target < 0 ? h.x * 0.2 - 40 : roost.x;
         const tz = h.target < 0 ? h.z - 400 : roost.z;
-        const ty = h.target < 0 ? 34 : roost.y + STAND;
+        const ty = h.target < 0 ? 34 : roost.y + STAND + this.rise;
         const reach = Math.hypot(tx - h.x, tz - h.z);
         const want = Math.atan2(tx - h.x, tz - h.z);
         h.yaw += THREE.MathUtils.clamp(wrapAngle(want - h.yaw) * 1.4, -0.5, 0.5) * dt;
@@ -1420,8 +1652,10 @@ export class DrownedVillage {
       const l = this.drift[i];
       if (Math.abs(l.z - boat.z) > 130) continue;
       const w = this.wind.sample(l.x, l.z, this.sample);
-      l.vx += ((w.x * pull - l.vx) * 2 + (l.hx - l.x) * 0.05) * dt;
-      l.vz += ((w.z * pull - l.vz) * 2 + (l.hz - l.z) * 0.05) * dt;
+      l.hx -= DARK_AHEAD.x * this.drainFlow * dt;
+      l.hz -= DARK_AHEAD.y * this.drainFlow * dt;
+      l.vx += ((w.x * pull - DARK_AHEAD.x * this.drainFlow - l.vx) * 2 + (l.hx - l.x) * 0.05) * dt;
+      l.vz += ((w.z * pull - DARK_AHEAD.y * this.drainFlow - l.vz) * 2 + (l.hz - l.z) * 0.05) * dt;
       l.x += l.vx * dt;
       l.z += l.vz * dt;
       l.yaw += (l.spin + w.energy * 0.8) * dt;

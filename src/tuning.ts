@@ -1668,6 +1668,35 @@ export const tuning = {
     moonHandoffFrom: 1.5,
     moonHandoffTo: 1.85,
   },
+  /** The drowned village round the church: the sea drawing back, the boat left high and dry, and the dark. */
+  drowned: {
+    /** The air dies this far short of the stranding (metres of drift); the hull coasts in over the last of it. */
+    stillFrom: 26,
+    /** Seconds from the air dying to the water starting to go, and how long the village takes to come up out of it. */
+    stillFor: 6.5, riseFor: 8,
+    /** How far the village rises out of the water once the sea has drawn back. */
+    rise: 2,
+    /**
+     * The hull coming to rest: how hard it brakes over the ridge (m/s²) and the least way it keeps till it is there;
+     * then how it lies on the slates once they have it (radians: the list, + toward its starboard side, and the bow up).
+     */
+    strandBrake: 0.5, strandCreep: 0.35, strandList: -0.27, strandPitch: 0.06,
+    /** The leaves on the glass run off toward the dark this fast for each metre a second the village rises. */
+    drainPull: 5,
+    /** Seconds the camera takes to come round beside the boat once the air has died, and to turn from the dark to the church. */
+    turnFor: 7, lookFor: 9,
+    dark: {
+      billows: 300,
+      /** The bank: half its width, its depth behind the front, how far its flanks run on ahead, in metres. */
+      halfWidth: 170, depth: 90, flank: 30,
+      /** How far fingers of the front reach ahead, and how far and how fast the whole front heaves. */
+      fingers: 5, heave: 1.4, heaveRate: 0.33,
+      /** Billow radius at the front and at the back, how high the back heaps, and how much distance veil the far ones take. */
+      frontSize: 4.5, backSize: 14, heap: 12, farHaze: 0.15,
+      /** Seconds it takes to rise on the horizon and then to come on, and how far behind the stranded boat it stops. */
+      riseFor: 9, comeFor: 24, holdBehind: 30,
+    },
+  },
   drownedCamera: {
     /** Follow the boat into the streets; notice the church from that travelling view. */
     roofFromZ: -1260, roofUntilZ: -1360,
