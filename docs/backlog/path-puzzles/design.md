@@ -535,3 +535,10 @@ was machinery invented to strand the boat. This supersedes steps 2, 3, 7 and 8 o
   boat for the cat is the child's own act of kindness, where a stranding is only a mechanism; making the draining read
   needs a great deal (water pouring off eaves, a visible current, the village sinking again to free the boat) for what
   the dark already says; and a literal tsunami weighs heavier than a child's dream should.
+- **The cat's first build missed** (Jeremy, 2026-10-05: "i think the face makes it look mentally not all there. it
+  looks bug eyed and when it sits, it's head is pointed way back on a long neck like a swan. Come on, cute cats are the
+  most common shape on the internet"). It is rebuilt against a model sheet (`comps/cat/`): a big round head; eyes
+  large with big dark pupils and a catchlight, set at or below the middle of the head and fairly close, soft upper
+  lids; a short muzzle with nose and mouth tucked under the eyes; round cheeks; ears wide; no neck in the sit, the
+  head sunk into the shoulders; a compact pear sit with front paws together and the tail wrapped round; frightened
+  means low (body down, ears flat, tail tucked).
