@@ -108,13 +108,14 @@ in float vShell;
 #endif
 
 /**
- * Linear albedo on the scale of the other animals. A warm brown tabby as the model sheet paints it: a soft
- * ginger-fawn ground, darker along the back, umber stripes that never go to black, and warm cream for the white.
+ * Linear albedo on the scale of the other animals. The sheet's tabby is a soft warm brown in a neutral light; the
+ * game lights it warm, so the ground is a greyer fawn that the light brings back to the sheet's brown, darker along
+ * the back, with soft umber stripes and a clean white.
  */
-const vec3 FAWN = vec3(0.3, 0.198, 0.124);
-const vec3 BACK = vec3(0.235, 0.152, 0.096);
-const vec3 STRIPE = vec3(0.075, 0.048, 0.034);
-const vec3 WHITE = vec3(0.8, 0.75, 0.68);
+const vec3 FAWN = vec3(0.3, 0.212, 0.152);
+const vec3 BACK = vec3(0.235, 0.163, 0.118);
+const vec3 STRIPE = vec3(0.105, 0.063, 0.046);
+const vec3 WHITE = vec3(0.84, 0.82, 0.78);
 const vec3 PINK = vec3(0.72, 0.28, 0.24);
 const vec3 NOSE_PINK = vec3(0.7, 0.24, 0.22);
 const vec3 IRIS = vec3(0.62, 0.3, 0.035);
@@ -156,12 +157,21 @@ float tabby(vec3 r) {
     float jowl = band(brow + 0.016 + (ax - 0.05) * 0.4 + warp * 0.002, 0.0018, 0.0015) * smoothstep(0.052, 0.058, ax) * smoothstep(-0.02, 0.005, q.z);
     return max(max(mid, sides), max(max(crown, cheek), jowl));
   }
-  if (r.y < 0.09 && ax > 0.012) {
-    return smoothstep(0.25, 0.7, sin(r.y * 120.0 + warp * 1.6)) * smoothstep(0.02, 0.035, r.y);
+  /** The haunch's stripes curve round it, as arcs about the knee. */
+  float haunch = smoothstep(0.03, 0.045, ax) * smoothstep(0.05, 0.07, r.y) * (1.0 - smoothstep(-0.02, 0.0, r.z));
+  if (haunch > 0.0) {
+    float d = distance(vec3(ax, r.y, r.z), vec3(0.05, 0.075, -0.035));
+    float arcs = smoothstep(0.3, 0.75, sin(d * 190.0 + warp * 1.4 - 1.2)) * smoothstep(0.03, 0.04, d);
+    if (r.y < 0.105) return arcs;
   }
-  float side = smoothstep(0.2, 0.7, sin(r.z * 150.0 + warp * 2.2 + ax * 12.0)) * smoothstep(SPINE - 0.075, SPINE - 0.035, r.y);
-  float spine = band(ax, 0.008, 0.008) * smoothstep(SPINE - 0.01, SPINE + 0.01, r.y);
-  return max(side, spine);
+  if (r.y < 0.09 && ax > 0.012) {
+    return 0.8 * smoothstep(0.35, 0.75, sin(r.y * 120.0 + warp * 1.6)) * smoothstep(0.02, 0.035, r.y);
+  }
+  /** Bands over the back that lean back and taper to points down the flanks, so none ring the belly. */
+  float over = smoothstep(SPINE - 0.06, SPINE, r.y);
+  float wave = 0.5 + 0.5 * sin((r.z + 0.35 * (SPINE - r.y)) * 165.0 + warp * 2.0);
+  float th = mix(1.02, 0.56, over);
+  return smoothstep(th, th + 0.12, wave);
 }
 
 vec3 hash33(vec3 p) {
@@ -196,8 +206,8 @@ void main() {
   float k = vMat.y;
   vec3 V = normalize(cameraPosition - vWorld);
   float fleck = vnoise(vRest.xz * 140.0 + vRest.y * 97.0);
-  vec3 ground = mix(FAWN, BACK, smoothstep(SPINE - 0.03, SPINE + 0.01, vRest.y) * step(TAIL_Z, vRest.z) * step(vRest.z, SKULL.z - 0.04));
-  vec3 alb = mix(ground, STRIPE, tabby(vRest) * 0.9) * (0.93 + fleck * 0.14);
+  float back = smoothstep(SPINE - 0.035, SPINE + 0.01, vRest.y) * smoothstep(TAIL_Z - 0.01, TAIL_Z + 0.01, vRest.z) * (1.0 - smoothstep(SKULL.z - 0.07, SKULL.z - 0.04, vRest.z));
+  vec3 alb = mix(mix(FAWN, BACK, back), STRIPE, tabby(vRest) * 0.85) * (0.93 + fleck * 0.14);
   alb = mix(alb, WHITE * (0.95 + fleck * 0.08), max(k, browLight(vRest) * 0.4));
   float fuzz = 0.6;
   float thin = 0.12;
@@ -228,20 +238,25 @@ void main() {
     q = vec3(cos(TURN) * q.x - sin(TURN) * q.z, q.y, sin(TURN) * q.x + cos(TURN) * q.z);
     vec2 e = vec2(q.x, cos(TILT) * q.y + sin(TILT) * q.z) / ${EYE_RADIUS.toFixed(5)};
     float r = length(e);
-    float pupil = 1.0 - smoothstep(uPupil - 0.035, uPupil + 0.015, length(e - vec2(-0.02, 0.035)));
+    float pupil = 1.0 - smoothstep(uPupil - 0.03, uPupil + 0.015, length(e - vec2(-0.07, 0.06)));
     vec3 fur = alb;
-    vec3 iris = mix(IRIS_DEEP, IRIS, smoothstep(0.4, -0.8, e.y));
+    vec3 iris = mix(IRIS_DEEP, IRIS, smoothstep(0.5, -0.7, e.y));
+    /** Wet and catching the light low on the outer side, as the sheet's eyes do. */
+    iris = mix(iris, IRIS * 1.5 + 0.05, smoothstep(0.74, 0.93, r) * smoothstep(-0.1, 0.7, e.x - e.y) * 0.6);
     alb = mix(iris, vec3(0.005, 0.004, 0.004), pupil);
-    alb = mix(alb, vec3(0.025, 0.015, 0.01), smoothstep(0.9, 0.94, r));
+    /** The lid's line is drawn at the top and fades round the bottom, and the upper lid shades the eye under it. */
+    float rim = smoothstep(0.93 - 0.08 * smoothstep(0.0, 0.9, e.y), 0.985, r) * mix(0.25, 1.0, smoothstep(-0.4, 0.6, e.y));
+    alb = mix(alb, vec3(0.03, 0.018, 0.012), rim);
+    alb *= mix(1.0, 0.5, smoothstep(0.25, 0.95, e.y));
     float lid = max(smoothstep(0.99, 1.02, r), smoothstep(0.95, 1.0, e.y + 0.06 * e.x * e.x));
-    alb = mix(alb, fur * mix(0.92, 1.0, smoothstep(1.0, 1.1, r)), lid);
+    alb = mix(alb, fur * mix(0.85, 1.0, smoothstep(1.0, 1.12, r)), lid);
     /** Shut, it is fur with the dark seam of the lids across it, curved like a smile. */
     float shut = smoothstep(0.3, 0.8, uBlink);
     float seam = 1.0 - smoothstep(0.1, 0.22, abs(e.y + 0.25 * e.x * e.x - 0.05));
     alb = mix(alb, mix(fur * 0.9, vec3(0.03, 0.02, 0.015), seam * step(r, 1.0)), shut);
     lid = max(lid, shut);
     vec2 g = vec2(e.x * side, e.y);
-    float glint = (1.0 - smoothstep(0.17, 0.2, distance(g, uGlint))) + 0.6 * (1.0 - smoothstep(0.075, 0.095, distance(g, uGlint * vec2(-0.5, -0.4) + vec2(0.0, -0.38))));
+    float glint = (1.0 - smoothstep(0.125, 0.15, distance(g, uGlint))) + 0.5 * (1.0 - smoothstep(0.05, 0.07, distance(g, uGlint * vec2(-0.5, -0.4) + vec2(0.0, -0.38))));
     glintAmount = glint * (1.0 - lid);
     fuzz = 0.0;
     thin = 0.0;
@@ -265,7 +280,7 @@ void main() {
   vec3 col = shadeCreature(alb, N, vWorld, ao, fuzz, thin, uAir);
   /** Out of the sun it must still read as a soft animal and not a hole in the dusk, so the sky fills it, warmed. */
   float edge = 1.0 - clamp(dot(N, V), 0.0, 1.0);
-  col += alb * uSkyAmbient * vec3(1.35, 1.05, 0.7) * (0.22 + 0.2 * (N.y * 0.5 + 0.5));
+  col += alb * uSkyAmbient * vec3(1.15, 1.0, 0.85) * (0.22 + 0.2 * (N.y * 0.5 + 0.5));
   /** Only on true silhouettes: inside a crease the skin faces away and would catch a cold rim of sky. */
   col += uSkyAmbient * pow(edge, 3.0) * fuzz * 0.3 * smoothstep(-0.15, 0.1, dot(N, V));
   col += alb * (lanternLight(vWorld, N) * 0.8 + dawnLight(vWorld, N));

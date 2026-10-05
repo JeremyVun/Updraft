@@ -56,14 +56,14 @@ export const SKELETON: [bone: number, parent: number, at: V3][] = [
   [ARM_L, CHEST, [0.03, -0.026, 0.008]],
   [FORE_L, ARM_L, [0, -ARM, 0]],
   [FPAW_L, FORE_L, [0, -FORE, 0]],
-  [THIGH_L, PELVIS, [0.036, -0.01, 0.0]],
+  [THIGH_L, PELVIS, [0.04, -0.01, 0.0]],
   [SHIN_L, THIGH_L, [0, -THIGH, 0]],
   [META_L, SHIN_L, [0, -SHIN, 0]],
   [HPAW_L, META_L, [0, -META, 0]],
   [ARM_R, CHEST, [-0.03, -0.026, 0.008]],
   [FORE_R, ARM_R, [0, -ARM, 0]],
   [FPAW_R, FORE_R, [0, -FORE, 0]],
-  [THIGH_R, PELVIS, [-0.036, -0.01, 0.0]],
+  [THIGH_R, PELVIS, [-0.04, -0.01, 0.0]],
   [SHIN_R, THIGH_R, [0, -THIGH, 0]],
   [META_R, SHIN_R, [0, -SHIN, 0]],
   [HPAW_R, META_R, [0, -META, 0]],
@@ -93,8 +93,8 @@ const H = REST[HEAD];
 /** A point authored on the head, where it is once the head is built at its size. */
 const onHead = (p: V3): V3 => [H[0] + (p[0] - H[0]) * HEAD_K, H[1] + (p[1] - H[1]) * HEAD_K, H[2] + (p[2] - H[2]) * HEAD_K];
 /** The skull as authored: its centre and its radii. */
-const S: V3 = [0, H[1] + 0.024, H[2] + 0.024];
-const SIZE: V3 = [0.064, 0.056, 0.054];
+const S: V3 = [0, H[1] + 0.024, H[2] + 0.02];
+const SIZE: V3 = [0.064, 0.056, 0.06];
 
 /**
  * The whole head as one round shape, from the unit sphere: full cheeks that make the lower face wider than the
@@ -108,7 +108,7 @@ function skullShape(u: { x: number; y: number; z: number }): void {
   /** The face leans forward at the bottom: the brow rounds back over the eyes and the muzzle leads. */
   const front = ramp(u.z, 0.2, 0.75);
   u.z += front * (0.05 * ramp(-u.y, -0.1, 0.5) - 0.1 * ramp(u.y, -0.05, 0.75));
-  if (u.z > 0.5) u.z = 0.5 + (u.z - 0.5) * 0.85;
+  if (u.z > 0.5) u.z = 0.5 + (u.z - 0.5) * 0.92;
   u.z += 0.04 * ramp(-u.y, 0.45, 0.9) * ramp(u.z, 0.1, 0.6);
   /** A short soft muzzle that leads the face, so the eyes sit back from the nose. */
   u.z += 0.2 * front * Math.exp(-((u.x / 0.36) ** 2) - ((u.y + 0.42) / 0.28) ** 2);
@@ -149,8 +149,8 @@ function onFace(x: number, y: number, socketed = false): { at: V3; normal: V3 } 
 }
 
 /** The eye as it shows: its radius, and its centre's height below the middle of the skull and distance off the middle line. */
-const EYE_R = 0.0168;
-const EYE_FACE = onFace(0.032, S[1] - 0.009);
+const EYE_R = 0.0182;
+const EYE_FACE = onFace(0.035, S[1] - 0.005);
 /** The eye is a shallow dome a little proud of the face, wider than what shows: its rim is the soft lid round it. */
 const EYE_DOME: V3 = [EYE_R / 0.86, EYE_R / 0.86, 0.007];
 const EYE_C: V3 = add(EYE_FACE.at, EYE_FACE.normal.map((n) => n * (0.0028 - EYE_DOME[2])) as V3);
@@ -169,7 +169,10 @@ export const NOSE_AT = onHead(NOSE_C);
 /** The middle of the whisker pads, where the whiskers grow from. */
 export const MUZZLE = onHead(MUZZLE_C);
 
-/** Rump to chest, then up into a neck as wide as the head's underside, so that no neck ever shows. */
+/**
+ * Rump to chest, then up into a neck as wide as the head's underside, so that no neck ever shows. The turn up into
+ * the neck is spread long enough that the back of it never folds over itself, even with the chest tipped up to sit.
+ */
 function trunk(): Station[] {
   const b = REST[BODY];
   const s = (z: number, y: number, rx: number, up: number, down: number, skin: [number, number, number]): Station => ({
@@ -180,20 +183,20 @@ function trunk(): Station[] {
     skin,
   });
   return [
-    s(-0.118, 0.01, 0.012, 0.012, 0.012, [PELVIS, PELVIS, 0]),
-    s(-0.11, 0.008, 0.038, 0.036, 0.038, [PELVIS, PELVIS, 0]),
-    s(-0.092, 0.005, 0.056, 0.048, 0.054, [PELVIS, PELVIS, 0]),
-    s(-0.06, 0.002, 0.061, 0.05, 0.058, [PELVIS, PELVIS, 0]),
-    s(-0.025, 0.0, 0.058, 0.048, 0.06, [PELVIS, BODY, 0.6]),
-    s(0.01, 0.0, 0.058, 0.048, 0.063, [BODY, BODY, 0]),
-    s(0.04, 0.003, 0.06, 0.048, 0.067, [BODY, CHEST, 0.6]),
-    s(0.065, 0.006, 0.062, 0.048, 0.07, [CHEST, CHEST, 0]),
-    s(0.088, 0.013, 0.06, 0.046, 0.065, [CHEST, CHEST, 0]),
-    s(0.105, 0.027, 0.056, 0.05, 0.056, [CHEST, NECK, 0.5]),
-    s(0.114, 0.044, 0.053, 0.05, 0.05, [NECK, NECK, 0]),
-    s(0.119, 0.061, 0.048, 0.045, 0.043, [NECK, HEAD, 0.5]),
-    s(0.121, 0.076, 0.036, 0.03, 0.032, [HEAD, HEAD, 0]),
-    s(0.122, 0.084, 0.008, 0.008, 0.008, [HEAD, HEAD, 0]),
+    s(-0.122, 0.012, 0.014, 0.014, 0.014, [PELVIS, PELVIS, 0]),
+    s(-0.114, 0.01, 0.044, 0.04, 0.042, [PELVIS, PELVIS, 0]),
+    s(-0.096, 0.006, 0.064, 0.052, 0.058, [PELVIS, PELVIS, 0]),
+    s(-0.066, 0.002, 0.07, 0.054, 0.062, [PELVIS, PELVIS, 0]),
+    s(-0.03, 0.0, 0.063, 0.05, 0.062, [PELVIS, BODY, 0.6]),
+    s(0.005, 0.0, 0.061, 0.049, 0.064, [BODY, CHEST, 0.12]),
+    s(0.04, 0.003, 0.063, 0.049, 0.067, [BODY, CHEST, 0.55]),
+    s(0.065, 0.006, 0.065, 0.049, 0.07, [BODY, CHEST, 0.88]),
+    s(0.085, 0.016, 0.062, 0.047, 0.065, [CHEST, CHEST, 0]),
+    s(0.1, 0.03, 0.057, 0.046, 0.058, [CHEST, NECK, 0.5]),
+    s(0.11, 0.047, 0.053, 0.042, 0.05, [NECK, NECK, 0]),
+    s(0.116, 0.064, 0.048, 0.038, 0.043, [NECK, HEAD, 0.5]),
+    s(0.119, 0.078, 0.036, 0.028, 0.032, [HEAD, HEAD, 0]),
+    s(0.12, 0.086, 0.008, 0.008, 0.008, [HEAD, HEAD, 0]),
   ];
 }
 
@@ -309,8 +312,8 @@ function parts(coat: boolean): THREE.BufferGeometry[] {
       smooth: 2,
       /** The white bib runs from the chin down the throat and chest and on, fainter, under the belly. */
       blend: (t, a) => {
-        const under = ramp(-Math.sin(a), 0.0, 0.6);
         const bib = ramp(t, 0.5, 0.66);
+        const under = ramp(-Math.sin(a), 0.1 + 0.4 * bib, 0.55 + 0.3 * bib);
         return under * (bib + (1 - bib) * 0.65 * ramp(t, 0.15, 0.4));
       },
     }),
@@ -327,6 +330,8 @@ function parts(coat: boolean): THREE.BufferGeometry[] {
   }
   out.push(loft({ stations: tail(), mat: FUR, around: 16, smooth: 1 }));
 
+  /** The haunch: a round ball on the thigh that is the wide bottom of the pear when it sits and its rump when it stands. */
+  pair({ part: THIGH_L, mat: FUR, at: add(REST[THIGH_L], [0.006, -0.014, -0.008]), size: [0.04, 0.052, 0.052], detail: 3 });
   /** Paws: round mittens, all white. */
   pair({ part: FPAW_L, mat: FUR, at: add(REST[FPAW_L], [0, -WRIST + 0.013, 0.012]), size: [0.0235, 0.0135, 0.026], detail: 3, blend: () => 1 });
   pair({ part: HPAW_L, mat: FUR, at: add(REST[HPAW_L], [0, -TOE + 0.012, 0.011]), size: [0.022, 0.013, 0.027], detail: 3, blend: () => 1 });
@@ -341,15 +346,17 @@ function parts(coat: boolean): THREE.BufferGeometry[] {
       skullShape(u);
       sockets(u);
     },
+    /** White only on the muzzle and under the chin: brown cheeks keep the head's round outline against the bib. */
     blend: (u) => {
-      const low = ramp(-u.y, 0.3, 0.5) * ramp(u.z, 0.3, 0.7) * (1 - ramp(Math.abs(u.x), 0.5, 0.75));
-      const jowl = ramp(-u.y, 0.5, 0.8) * ramp(u.z, -0.2, 0.3);
-      return Math.max(low, jowl);
+      const ax = Math.abs(u.x);
+      const muzzle = ramp(-u.y, 0.26, 0.4) * ramp(u.z, 0.35, 0.7) * (1 - ramp(ax, 0.3 + 0.12 * ramp(-u.y, 0.4, 0.8), 0.46 + 0.12 * ramp(-u.y, 0.4, 0.8)));
+      const chin = ramp(-u.y, 0.62, 0.85) * ramp(u.z, -0.3, 0.2) * (1 - ramp(ax, 0.35, 0.55));
+      return Math.max(muzzle, chin);
     },
   });
   /** The muzzle: two soft white whisker pads close under the nose, barely proud of the face, and a small chin. */
-  pair({ part: HEAD, mat: FUR, at: add(MUZZLE_C, [0.0078, 0.001, -0.003]), size: [0.0095, 0.0078, 0.0065], detail: 3, blend: () => 1 });
-  rigid({ part: JAW, mat: FUR, at: add(MUZZLE_C, [0, -0.0105, -0.008]), size: [0.0085, 0.006, 0.0065], detail: 3, blend: () => 1 });
+  pair({ part: HEAD, mat: FUR, at: add(MUZZLE_C, [0.0095, 0.0005, -0.0055]), size: [0.0135, 0.0102, 0.0075], detail: 3, blend: () => 1 });
+  rigid({ part: JAW, mat: FUR, at: add(MUZZLE_C, [0, -0.0105, -0.0105]), size: [0.0085, 0.006, 0.0065], detail: 3, blend: () => 1 });
   /** The inside of the mouth stays with the head, so the chin opens away from it in a small round mew. */
   face({ part: HEAD, mat: MOUTH, at: add(MUZZLE_C, [0, -0.0085, -0.0115]), size: [0.0062, 0.0058, 0.006], detail: 2 });
   face({

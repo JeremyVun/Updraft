@@ -20,6 +20,7 @@
 //        model-sheet and expressions as .jpg or .png), and writes each beside its panel (close-<panel>.png) and all
 //        of them on one page (sheet-close.png). PANELS=sit-front,head-front picks some; LIGHTS picks the light;
 //        AT=1.1,1.2 shoots each panel at those moments instead of its own (to see a gait through its cycle).
+//        The above-* panels have no panel on the sheet: they look down on the cat from behind, as the game mostly does.
 //   Default out-dir: /tmp/updraft-cat-check.
 import { chromium } from 'playwright-core';
 import fs from 'node:fs';
@@ -71,6 +72,8 @@ const lights = list(process.env.LIGHTS, process.env.CLOSE ? ['day'] : ['dusk', '
  * on (metres for a cat of scale 1), how far off it stands, how tall a slice of the world the frame takes in, and the
  * panel's place on its sheet in pixels. `head` aims at the eyes rather than at a height.
  */
+/** The sheet never shows the cat from above and behind, which is how the game mostly sees it: these stand alone. */
+const ABOVE = { eye: 0.62, aim: 0.06, distance: 0.75, span: 0.42, crop: [0, 0, 400, 300] };
 const PANELS = {
   'sit-front': { action: 'sit', at: 2.5, bearing: 0, look: 'camera', eye: 0.24, aim: 0.15, distance: 1, span: 0.36, sheet: 'model-sheet', crop: [55, 25, 230, 310] },
   'sit-side': { action: 'sit', at: 2.5, bearing: Math.PI / 2, look: 'ahead', eye: 0.24, aim: 0.15, distance: 1, span: 0.36, sheet: 'model-sheet', crop: [355, 25, 260, 310] },
@@ -86,6 +89,14 @@ const PANELS = {
   mewing: { action: 'mew', at: 0.45, bearing: 0.15, look: 'camera', head: true, distance: 0.55, span: 0.17, sheet: 'expressions', crop: [1160, 20, 400, 410] },
   frightened: { action: 'afraid', at: 0.6, bearing: 0.15, head: true, distance: 0.55, span: 0.17, sheet: 'expressions', crop: [60, 470, 460, 400] },
   chirrup: { action: 'chirrup', at: 0.12, bearing: 0.15, look: 'camera', head: true, distance: 0.55, span: 0.17, sheet: 'expressions', crop: [640, 450, 380, 420] },
+  'back-sit': { action: 'sit', at: 2.5, bearing: Math.PI, look: 'ahead', eye: 0.3, aim: 0.1, distance: 1, span: 0.36, crop: [0, 0, 230, 310] },
+  'back-34': { action: 'sit', at: 2.5, bearing: Math.PI - 1.15, look: 'ahead', eye: 0.2, aim: 0.12, distance: 1, span: 0.36, crop: [0, 0, 260, 310] },
+  'above-sit': { action: 'sit', at: 2.5, bearing: Math.PI - 0.6, look: 'ahead', ...ABOVE },
+  'above-stand': { action: 'stand', at: 2, bearing: Math.PI - 0.6, look: 'ahead', ...ABOVE },
+  'above-walk': { action: 'walk', at: 1.6, bearing: Math.PI - 0.6, look: 'none', ...ABOVE },
+  'above-fright': { action: 'strand', at: 2, bearing: Math.PI - 0.6, ...ABOVE },
+  'above-tub': { action: 'ride-tub', at: 3, bearing: Math.PI - 0.6, ...ABOVE },
+  'above-boat': { action: 'boat', at: 3, bearing: Math.PI - 0.6, ...ABOVE },
 };
 const panels = list(process.env.PANELS, Object.keys(PANELS));
 const sheetsDir = process.env.SHEETS ?? path.resolve(path.dirname(new URL(import.meta.url).pathname), '../docs/backlog/path-puzzles/comps/cat');
@@ -188,7 +199,7 @@ try {
           at = moment;
           const file = path.join(out, `${light}-${action}-${moment}-${view}.png`);
           await page.screenshot({ path: file });
-          (shots[`${light}-${view}`] ??= []).push({ file, label: `${action} ${moment}s`, far: view === 'c-far' });
+          (shots[`${light}-${view}`] ??= []).push({ file, label: `${action} ${moment}s`, far: view === 'c-far' || view === 'c-near' });
         }
         if (process.env.SLIP) {
           const { slip, reach, where } = await page.evaluate(() => window.__game.cat.probe);
@@ -316,8 +327,9 @@ try {
   const pair = ({ name, light, file, panel }) => {
     const [x, y, w, h] = panel.crop;
     const s = H / h;
-    const art = `url('file://${sheetFile(panel.sheet)}')`;
-    return `<figure><section><div style="width:${w * s}px;height:${H}px;background:${art} ${-x * s}px ${-y * s}px/${1664 * s}px ${936 * s}px"></div><img src="file://${file}" style="height:${H}px"></section><figcaption>${name} (${light}): the sheet, then the game</figcaption></figure>`;
+    const art = panel.sheet && `url('file://${sheetFile(panel.sheet)}')`;
+    const ref = art ? `<div style="width:${w * s}px;height:${H}px;background:${art} ${-x * s}px ${-y * s}px/${1664 * s}px ${936 * s}px"></div>` : '';
+    return `<figure><section>${ref}<img src="file://${file}" style="height:${H}px"></section><figcaption>${name} (${light})${art ? ': the sheet, then the game' : ''}</figcaption></figure>`;
   };
   const style = `<style>body{margin:0;background:#222;color:#ddd;font:14px system-ui}main{display:flex;flex-wrap:wrap;gap:8px;padding:8px}figure{margin:0}section{display:flex;gap:4px}figcaption{padding:3px 6px}</style>`;
   for (const [i, list] of [...pairs.map((p) => [p]), pairs].entries()) {
