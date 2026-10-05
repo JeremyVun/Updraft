@@ -336,7 +336,7 @@ export class DrownedChapter implements Chapter {
     if (this.beat === 'still') return this.t < 2.6 ? boat.sailPoint(this.look) : overSide();
     if (this.beat === 'drawing') {
       if (this.t < 3.2) return overSide();
-      if (this.t < 5.6) return this.look.set(boat.position.x + fx * 14 + fz * 8, 2.5, boat.position.z + fz * 14 - fx * 8);
+      if (this.t < 5.6) return this.look.set(boat.position.x + fx * 14 - fz * 8, 2.5, boat.position.z + fz * 14 + fx * 8);
       return dark();
     }
     const held = tuning.drowned.dark.comeFor * 0.8;
