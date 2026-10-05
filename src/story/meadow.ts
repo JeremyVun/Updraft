@@ -11,6 +11,8 @@ import type { Cast, Chapter } from './cast';
 import { LANDING } from './crossing';
 import { completeObjective, cue } from './cues';
 import { PianoStop } from './piano';
+import { GateStop } from './sheep-gate';
+import { sheepGate } from '../world/sheep-gate';
 import { tuning } from '../tuning';
 import { musicFront } from '../world/music-growth';
 import type { MeadowScorePhase } from '../audio/meadow-score';
@@ -152,6 +154,10 @@ export class MeadowChapter implements Chapter {
   trodden: THREE.Vector3 | null = null;
   /** The piano on the ridge: the child plays colour into the meadow before walking on. */
   private readonly piano = new PianoStop();
+  /** The sheep in the gateway below the rise, which only the wind can move. */
+  private readonly gate = new GateStop();
+  /** How far the walk's view has come down and in to the child and the flock she is waiting on. */
+  private gateNear = 0;
   private nextCall = 0;
   private nextBugle = 0;
   private wentOn = false;
@@ -182,6 +188,7 @@ export class MeadowChapter implements Chapter {
     this.waveTo = PATCH.radius;
     this.piano.onWake = (stage, answered) => this.wake(stage, answered);
     this.piano.onComplete = completeObjective;
+    this.gate.onRelease = () => this.walkOnFromGate();
     /**
      * The family is on the water from the moment the chapter starts, long before anything in the story points at
      * it. Nothing in this room appears: the player comes over the rise and finds it already there.
@@ -232,6 +239,7 @@ export class MeadowChapter implements Chapter {
     this.waveTo = data[1]; this.waveSpeed = data[2]; this.dusk = data[3]; this.duskTarget = data[4];
     this.piano.restoreDone();
     this.crestDone = point === 'pond';
+    if (this.crestDone) this.gate.restoreDone();
     this.beat = 'walk'; this.play = 'hold'; this.holdUntil = 1;
     if (this.crestDone) this.cast.flock.clear();
   }
@@ -254,11 +262,16 @@ export class MeadowChapter implements Chapter {
   }
   readonly flockChatter = false;
   get pianoActive(): boolean { return piano.engaged; }
+  get windInvitation(): THREE.Vector3 | null { return this.gate.invitation; }
+  get invitationRadius(): number { return this.gate.invitation ? 2.5 : 0; }
+  /** QA: how far the stop at the sheep has got. */
+  get atGate(): string { return this.gate.at; }
 
   /** For testing: the green wave has already rolled out and the child is most of the way across. */
   skipAhead(): void {
     const { child, plane } = this.cast;
     this.wokenAlready();
+    this.gate.restoreDone();
     this.leg = ROUTE.length - 1;
     child.stop();
     child.place(ROUTE[ROUTE.length - 1].x + 4, ROUTE[ROUTE.length - 1].y + 40, Math.PI);
@@ -283,11 +296,28 @@ export class MeadowChapter implements Chapter {
     this.to('walk');
   }
 
+  /** For testing: on the walk from the piano, short of the sheep in the gateway, cygnet in the satchel and plane in hand. */
+  skipToGate(): void {
+    const { child, cygnet, plane } = this.cast;
+    this.wokenAlready();
+    this.leg = CREST_LEG;
+    const g = sheepGate;
+    child.stop();
+    child.place(g.wait.x - g.along.x * 24, g.wait.y - g.along.y * 24, Math.atan2(g.along.x, g.along.y));
+    child.standUp();
+    cygnet.rideIn('satchel');
+    cygnet.bind(0.06);
+    plane.hold(child);
+    this.play = 'hold';
+    this.to('walk');
+  }
+
   /** For testing: a few paces short of the rise, cygnet in the satchel and plane in hand, with the crest still to come. */
   skipToCrest(): void {
     const { child, cygnet, plane, flock } = this.cast;
     if (!flock.active) flock.rest(RAFT_AT.x, RAFT_AT.z, tuning.crest.raft, tuning.crest.family, POND_LEVEL);
     this.wokenAlready();
+    this.gate.restoreDone();
     this.leg = CREST_LEG;
     const at = ROUTE[CREST_LEG];
     const from = ROUTE[CREST_LEG - 1];
@@ -412,7 +442,7 @@ export class MeadowChapter implements Chapter {
         if (this.t > 5.5 && !c.busy) this.walkOn();
         break;
       case 'walk':
-        if (!this.piano.hold(dt, time, this.cast)) this.updateWalk(time);
+        if (!this.piano.hold(dt, time, this.cast) && !this.gate.hold(dt, time, this.cast)) this.updateWalk(time);
         break;
       case 'crest':
         this.updateCrest(dt, time);
@@ -487,6 +517,7 @@ export class MeadowChapter implements Chapter {
     }
     if (p.held) p.hold(c);
     p.companion = this.beat === 'walk' && !this.arrival.active ? c.position : null;
+    this.gateNear += ((this.gate.herd ? 1 : 0) - this.gateNear) * (1 - Math.exp(-dt * 0.45));
     this.frame();
     /** The stop at the piano owns the camera while it has the child, and says how fast it should follow. */
     const pianoPace = this.piano.frame(this.shot);
@@ -636,6 +667,8 @@ export class MeadowChapter implements Chapter {
     const next = this.target();
     const piano = this.piano.waypoint(next);
     if (piano !== next) return piano;
+    const gate = this.gate.waypoint(next);
+    if (gate !== next) return gate;
     if (this.leg >= CREST_LEG && !this.crestDone) return this.planeGoal.set(POND_AT.x, POND_AT.z);
     if (this.leg === ROUTE.length - 1) {
       const boat = this.cast.boat.position;
@@ -805,6 +838,14 @@ export class MeadowChapter implements Chapter {
     }
   }
 
+  /** Through the gap: back to the plane, wherever it was when the sheep stopped her. */
+  private walkOnFromGate(): void {
+    const p = this.cast.plane;
+    this.play = p.held ? 'hold' : 'watch';
+    this.holdUntil = this.now + 0.5;
+    this.nextChase = 0;
+  }
+
   private throwAhead(): void {
     const c = this.cast.child;
     const t = this.planeWaypoint();
@@ -918,15 +959,16 @@ export class MeadowChapter implements Chapter {
     }
     const guide = tuning.meadowPlane;
     const gap = Math.hypot(p.x - c.x, p.z - c.z);
-    const pw = this.cast.plane.held ? 0 : Math.min(0.25, guide.cameraLead / Math.max(gap, 1));
-    const fx = c.x + (p.x - c.x) * pw;
-    const fz = c.z + (p.z - c.z) * pw - 3;
+    const herd = this.gate.aim(c);
+    const pw = this.cast.plane.held || herd ? 0 : Math.min(0.25, guide.cameraLead / Math.max(gap, 1));
+    const fx = (herd?.x ?? c.x) + (p.x - c.x) * pw;
+    const fz = (herd?.z ?? c.z) + (p.z - c.z) * pw - 3;
     const ground = Math.max(c.y, 0);
     s.target.set(fx, ground + 3 + (this.cast.plane.held ? 0 : Math.min(guide.cameraRise, Math.max(0, p.y - ground - 6) * 0.35)), fz);
-    s.distance = guide.cameraBack;
-    s.height = 13;
+    s.distance = THREE.MathUtils.lerp(guide.cameraBack, guide.gateBack, this.gateNear);
+    s.height = THREE.MathUtils.lerp(13, guide.gateUp, this.gateNear);
     this.cameraChild.copy(c).y += 1.2;
-    this.framing.secondary.copy(this.cast.plane.held ? this.cameraChild : p);
+    this.framing.secondary.copy(this.gate.herd ?? (this.cast.plane.held ? this.cameraChild : p));
     s.subjects = this.framing;
     this.pace = guide.cameraPace;
     this.focus.set(fx, ground, fz);

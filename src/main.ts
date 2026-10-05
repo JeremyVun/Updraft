@@ -408,7 +408,6 @@ homesInHills.forEach((h, i) => {
   hillCreatures.spawn({ x: h.x, z: h.z, radius: 26, rabbits: 2, songbirds: i % 2 === 0 || last ? 4 : 0, butterflies: last ? 0 : 6, seed: 30 + i });
 });
 const sheepFolds = [
-  { ...meadowPoint(-10, -755), sheep: 6 },
   { ...meadowPoint(28, -766), sheep: 4 },
   { ...meadowPoint(-22, -916), sheep: 5 },
   { ...meadowPoint(18, -980), sheep: 5 },
@@ -417,7 +416,9 @@ const sheepFolds = [
   { ...meadowPoint(6, -1130), sheep: 5 },
   { x: COTTAGE.x - 15, z: COTTAGE.z + 20, sheep: 6 },
 ];
-sheepFolds.forEach((fold, i) => hillCreatures.spawn({ ...fold, radius: 10, seed: 60 + i }));
+sheepFolds.forEach((fold, i) => hillCreatures.spawn({ ...fold, radius: 10, seed: 61 + i }));
+/** The flock that grazed the field below the rise stands in its far gateway, on the way. */
+hillCreatures.sheep.addGateFlock(6, 60);
 scene.add(hillCreatures.group);
 clipJourneyProps(hillCreatures.group);
 const echoes = dreamEchoes();

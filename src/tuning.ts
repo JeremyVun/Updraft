@@ -231,6 +231,8 @@ export const tuning = {
     chaseFrom: 10, chaseNear: 5, retargetEvery: 0.6,
     cameraLead: 6, cameraRise: 6, cameraBack: 44, cameraExtra: 22,
     cameraMargin: 0.78, cameraPace: 0.8,
+    /** Waiting on the sheep in the gateway, the view comes down and in to her and them. */
+    gateBack: 28, gateUp: 8,
   },
   planeIndicator: {
     /** Screen pixels beyond the edge to reach full visibility; fade time stays independent of frame rate. */
