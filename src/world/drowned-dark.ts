@@ -99,8 +99,8 @@ export class DarkBank {
   update(_time: number, eye: THREE.Vector3): void {
     if (QA && params.fog !== null) this.force(params.fog);
     const u = atmo.uniforms;
-    // It belongs to the village; far enough off on the way to the forest the storm's own weather has the sea.
-    const here = 1 - smooth(Math.hypot(eye.x - CHURCH.x, eye.z - CHURCH.y), 320, 440);
+    // It belongs to the village: on the way to the forest beach it gives the sea over to the storm's own weather.
+    const here = 1 - smooth(Math.hypot(eye.x - CHURCH.x, eye.z - CHURCH.y), 200, 320);
     const amount = smooth(this.rise, 0, 0.5) * here;
     u.uSeaFogShape.value.w = amount;
     if (amount <= 0) {

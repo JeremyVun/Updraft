@@ -363,9 +363,10 @@ effect that is off is compiled out, not branched round. Each such effect is a sw
   the original afterwards (the grass's per-draw program pick, uniforms replaced, visibility) would miss the twin.
 
 The cloud deck (`CLOUD_DECK`): its GLSL in `ATMO_GLSL` (the deck, the bank of mist, their helpers, the sun dimming in
-`cloudShadow`, the deck in `fogOf`) and the sky's use of it are compiled only where it is 1. The sea, the terrain
+`cloudShadow`, the deck in `fogOf`, and the drowned village's sea fog, `seaFog`) and the sky's and the sea's use of
+them are compiled only where it is 1. The sea, the terrain
 (main view and the sea's mirror) and the sky have both programs, and
-`prepareFrame` selects the deck while `uCloudDeck.w > 0`, before the doorway view, the reflection and the scene are
+`prepareFrame` selects the deck while `uCloudDeck.w > 0` or the sea fog is out (`uSeaFogShape.w > 0`), before the doorway view, the reflection and the scene are
 drawn. Every other material keeps the deck; the grass's blade table includes `ATMO_GLSL` but never reaches the deck,
 and the blades' per-frame pass (`FRAME_FRAG`) reads it only while it is there, so the blades need no variant.
 That is three programs more and about 80 ms more behind the veil on the Mac, for 6 to 9% of the GPU's frame wherever
