@@ -156,7 +156,7 @@ for (const portrait of [false, true]) {
   const resumed = new Set();
   // Desktop circles the side coal once it is shown the updraft; portrait leaves her in the dark a long while first.
   const stall = portrait ? 40 : tuning.wood.inviteAfter + 1.5;
-  let sawSideInvite = false, sawThrowInvite = false, hoots = 0, owlLeft = false, revealedAt = -1, owlFrom = null, owlLow = Infinity, owlTop = -Infinity, owlClear = Infinity;
+  let sawSideInvite = false, sawThrowInvite = false, hoots = 0, owlLeft = false, revealedAt = -1, owlFrom = null, owlLow = Infinity, owlTop = -Infinity, owlClear = Infinity, owlWas = -Infinity, owlNearer = 0;
   let thrownSeen = false, darkBefore = false;
   let last = '', complete = false, worstWaitFrame = 0, worst = null, waited = 0, previousTarget = null;
   let birdBefore = null, worstBirdStep = 0, wetPaper = null, worstEscapeFrame = 0;
@@ -226,7 +226,12 @@ for (const portrait of [false, true]) {
       assert(WoodShape.clears(o.x, o.z), `the owl flies only where no tree stands: ${o.toArray()}`);
       assert(!WoodShape.onRock(o.x, o.z, 1), `the owl never flies into the rock: ${o.toArray()}`);
       assert((o.x - WOOD_SHAPE.x) * SHAPE_FACING.x + (o.z - WOOD_SHAPE.z) * SHAPE_FACING.z > -0.3, 'the owl goes out the open side, never back into the rock');
-      if (woodOwl.flightSeconds >= 0.3) owlClear = Math.min(owlClear, offLimbs());
+      if (woodOwl.flightSeconds > 0) {
+        const off = offLimbs();
+        owlNearer = Math.max(owlNearer, owlWas - off);
+        owlWas = off;
+        if (woodOwl.flightSeconds >= 0.5) owlClear = Math.min(owlClear, off);
+      }
     }
     if (woodOwl.phase === 'leaving' || woodOwl.phase === 'gone') owlLeft = true;
     const litBefore = c.beat === 'walk' ? embers.coals.filter(k=>k.live&&k.lit).sort((a,b)=>b.laid-a.laid)[0] : null;
@@ -321,7 +326,7 @@ for (const portrait of [false, true]) {
   assert(sawThrowInvite && sawSideInvite, 'each coal at the bend shows its updraft after the idle wait, the coal before the bend first');
   assert(darkBefore && thrownSeen, 'only eyes before the coal before the bend; its light, and only its light, throws the outline');
   assert(owlLow > -0.15 && owlTop > 8, `the owl never drops from the fork and goes up out of the wood: lowest ${owlLow.toFixed(2)}, highest ${owlTop.toFixed(2)}`);
-  assert(owlClear > 0.2, `off the fork, the owl flies out between the limbs, not through one: ${owlClear.toFixed(2)}`);
+  assert(owlNearer < 0.01 && owlClear > 0.3, `off the fork, the owl flies out from between the limbs, never toward one: ${owlNearer.toFixed(3)}, ${owlClear.toFixed(2)}`);
   console.log(`${portrait ? 'portrait' : 'desktop'}: dark for ${stall.toFixed(1)}s without a reveal; the coal before the bend throws the outline; the side coal shows the owl at ${revealedAt.toFixed(1)}s, one hoot, and up and away (${owlTop.toFixed(1)} up, ${owlClear.toFixed(2)} clear of the limbs)`);
   assert(exitOffPath < 3.5, `the walk out must stay clear of the trunks: ${exitOffPath.toFixed(2)} off the path`);
   assert(worstWaitFrame < 0.95, `waiting target must remain in frame: ${JSON.stringify(worst)}`);

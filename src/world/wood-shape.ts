@@ -154,12 +154,17 @@ const STUMP_SCALE = 1;
 /** The top of the trunk, where it forked and broke, and the owl sits on what is left of it. */
 const TRUNK_TOP = 1.52;
 /**
- * The fork spreads across her line of sight and the face-on camera's behind her, so both see a Y with the owl in its
- * crook; the held frame, off to her side, sees it a little narrower.
+ * The fork spreads square to the three that see it, her where she stops, the held frame and the face-on view behind
+ * her, so each sees a Y with the owl in its crook.
  */
 const STUMP_TURN = (() => {
-  const eye = tuning.wood.shape.faceEye;
-  return (Math.atan2(WAIT_LOCAL.x, WAIT_LOCAL.z) + Math.atan2(eye[0], eye[2])) / 2;
+  const { eye, faceEye } = tuning.wood.shape;
+  let x = 0, z = 0;
+  for (const [px, pz] of [[WAIT_LOCAL.x, WAIT_LOCAL.z], [eye[0], eye[2]], [faceEye[0], faceEye[2]]]) {
+    x += px / Math.hypot(px, pz);
+    z += pz / Math.hypot(px, pz);
+  }
+  return Math.atan2(x, z);
 })();
 
 const turned = (p: readonly number[]): [number, number, number] => {
