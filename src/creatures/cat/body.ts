@@ -35,7 +35,7 @@ export const TAIL_LINK = 0.05;
 /** The head is authored at one size and built this much bigger about its joint: the one knob for how big it reads. */
 export const HEAD_K = 1.08;
 const JAW_AT: V3 = [0, -0.012, 0.04];
-const EAR_AT: V3 = [0.045, 0.062, 0.014];
+const EAR_AT: V3 = [0.045, 0.062, 0.021];
 const big = (v: V3): V3 => [v[0] * HEAD_K, v[1] * HEAD_K, v[2] * HEAD_K];
 
 /** Each joint's rest position on its parent. */
@@ -94,7 +94,7 @@ const H = REST[HEAD];
 const onHead = (p: V3): V3 => [H[0] + (p[0] - H[0]) * HEAD_K, H[1] + (p[1] - H[1]) * HEAD_K, H[2] + (p[2] - H[2]) * HEAD_K];
 /** The skull as authored: its centre and its radii. */
 const S: V3 = [0, H[1] + 0.024, H[2] + 0.02];
-const SIZE: V3 = [0.064, 0.056, 0.06];
+const SIZE: V3 = [0.062, 0.056, 0.06];
 
 /**
  * The whole head as one round shape, from the unit sphere: full cheeks that make the lower face wider than the
@@ -103,7 +103,7 @@ const SIZE: V3 = [0.064, 0.056, 0.06];
  */
 function skullShape(u: { x: number; y: number; z: number }): void {
   const cheek = ramp(-u.y, -0.05, 0.45) * (1 - ramp(-u.y, 0.75, 1)) * ramp(u.z, -0.6, 0.2);
-  u.x *= (1 + 0.27 * cheek) * (1 - 0.25 * ramp(u.y, 0.1, 0.95));
+  u.x *= (1 + 0.26 * cheek) * (1 - 0.25 * ramp(u.y, 0.1, 0.95));
   if (u.y > 0.4) u.y = 0.4 + (u.y - 0.4) * 0.74;
   /** The face leans forward at the bottom: the brow rounds back over the eyes and the muzzle leads. */
   const front = ramp(u.z, 0.2, 0.75);
@@ -117,7 +117,7 @@ function skullShape(u: { x: number; y: number; z: number }): void {
   /** Under the muzzle the skull steps back, so the chin and the mouth behind it are what show there. */
   u.z -= 0.09 * front * Math.exp(-((u.x / 0.13) ** 2)) * ramp(-u.y, 0.55, 0.65) * (1 - ramp(-u.y, 0.82, 0.95));
   /** A full chin and jowls under it, down into the bib. */
-  u.y -= 0.14 * ramp(-u.y, 0.35, 0.85) * ramp(u.z, -0.2, 0.5);
+  u.y -= 0.19 * ramp(-u.y, 0.3, 0.85) * ramp(u.z, -0.4, 0.4);
 }
 
 /** Shallow sockets the eyes sit in, so a whole round eye shows without standing proud of the face like a lens. */
@@ -154,7 +154,7 @@ function onFace(x: number, y: number, socketed = false): { at: V3; normal: V3 } 
 
 /** The eye as it shows: its radius, and its centre's height below the middle of the skull and distance off the middle line. */
 const EYE_R = 0.0182;
-const EYE_FACE = onFace(0.035, S[1] - 0.005);
+const EYE_FACE = onFace(0.033, S[1] - 0.005);
 /** The eye is a shallow dome a little proud of the face, wider than what shows: its rim is the soft lid round it. */
 const EYE_DOME: V3 = [EYE_R / 0.86, EYE_R / 0.86, 0.0058];
 const EYE_C: V3 = add(EYE_FACE.at, EYE_FACE.normal.map((n) => n * (0.002 - EYE_DOME[2])) as V3);
