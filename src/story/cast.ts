@@ -18,6 +18,7 @@ import type { Shot } from '../camera';
 import type { Glider } from '../glider/glider';
 import type { PointerInput } from '../input/pointer';
 import type { Carry } from '../companion/carry';
+import type { Cat } from '../creatures/cat';
 import type { Cygnet } from '../creatures/cygnet';
 import type { Embers } from '../fx/embers';
 import type { WindLines } from '../fx/windlines';
@@ -56,6 +57,8 @@ export interface Cast {
   /** The cygnet that cannot keep up with its flock, and the flock that goes on without it. */
   cygnet: Cygnet;
   flock: SwanFlock;
+  /** The stranded cat of the drowned village. */
+  cat: Cat;
   /** Everything the two of them do with their hands on each other: gathering up, holding, setting down, the satchel. */
   carry: Carry;
   /** The embers in the leaf litter of the dark wood: the only light the player can make there. */

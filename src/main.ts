@@ -63,6 +63,8 @@ import { Foley, type Surface } from './audio/foley';
 import { Carry } from './companion/carry';
 import { Probe } from './companion/probe';
 import { Cygnet } from './creatures/cygnet';
+import { Cat } from './creatures/cat';
+import { CatVoice } from './creatures/cat/voice';
 import { screenPan } from './creatures/motion';
 import { SwanFlock } from './creatures/flock';
 import { CURTAINS, SNAG_LINE, washingPassage } from './world/lines-passage';
@@ -357,6 +359,9 @@ await built();
 const cygnet = new Cygnet();
 cygnet.objects.forEach((o) => { scene.add(o); o.traverse((part) => part.layers.enable(REFLECTION_LAYER)); });
 cygnet.mount = child;
+const cat = new Cat();
+cat.objects.forEach((o) => { scene.add(o); o.traverse((part) => part.layers.enable(REFLECTION_LAYER)); });
+const catVoice = new CatVoice();
 const carry = new Carry(child, cygnet);
 const foley = new Foley();
 const worldFoley = new WorldFoley(foley, rig.camera);
@@ -385,7 +390,7 @@ const cygnetAhead: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
 const handsAt = new THREE.Vector3();
 const creatureAt = new THREE.Vector3();
 const emberAt = new THREE.Vector3();
-const story = new Journey({ child, plane: glider, boat, wind, lines, input, life, tree, drawing, cottage, sealife, cygnet, flock, carry, embers, birches, stairs: cloudStairs, sleeping, littleBoats, skyMirror, village, nearby: nearbyCreature });
+const story = new Journey({ child, plane: glider, boat, wind, lines, input, life, tree, drawing, cottage, sealife, cygnet, flock, cat, carry, embers, birches, stairs: cloudStairs, sleeping, littleBoats, skyMirror, village, nearby: nearbyCreature });
 // Boot only needs somewhere to stand; the start cuts to the chosen room.
 rig.cut(story.shot);
 const windDebug = QA && (params.debug === 'wind' || params.debug === 'sway') ? createWindDebug(params.debug === 'sway') : null;
@@ -767,6 +772,23 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
     else foley.rustle(h.amount, heardPan);
   }
   cygnet.heard.length = 0;
+  cat.update(dt);
+  catVoice.setOutput(sound.output);
+  if (cat.heard.length) {
+    const catPan = screenPan(rig.camera, cat.position);
+    const away = cat.position.distanceTo(rig.camera.position);
+    /** A mew carries across the water; the pads of its paws are only heard close to. */
+    const call = 1 - 0.75 * THREE.MathUtils.smoothstep(away, 8, 50);
+    const near = 1 - THREE.MathUtils.smoothstep(away, 2, 14);
+    for (const h of cat.heard) {
+      if (h.kind === 'mew') catVoice.mew(catPan, call * h.amount, h.plea, h.length);
+      else if (h.kind === 'chirrup') catVoice.chirrup(catPan, call * h.amount);
+      else if (h.kind === 'land') catVoice.land(catPan, near * h.amount);
+      else if (h.kind === 'scrabble') catVoice.scrabble(catPan, near * h.amount);
+      else catVoice.pat(catPan, near * h.amount);
+    }
+    cat.heard.length = 0;
+  }
   /** The grown swans are heard before they are seen: the throb of their wings, and now and then one of them calling. */
   if (flock.flying) {
     const far = THREE.MathUtils.clamp(flock.head.distanceTo(rig.camera.position) / 320, 0, 1);
@@ -1092,8 +1114,11 @@ function drawView(): void {
   water.update(rig.camera, beginMirror, endMirror);
   const her = focusDistance(child.position, 0.6);
   const bird = cygnet.visible ? focusDistance(cygnet.position, 0.2) : her;
+  // Measured to the front of the cat rather than its middle: it is small enough to be seen from close to.
+  const puss = cat.visible ? focusDistance(cat.position, 0.15) - 0.3 : her;
+  const near = puss > 0.5 ? Math.min(her, bird, puss) : Math.min(her, bird);
   // The swans overhead and the house she comes home to are subjects in their own right, however far.
-  let far = Math.max(her, bird);
+  let far = Math.max(her, bird, puss);
   if (flock.active) far = Math.max(far, focusDistance(flock.head, 0));
   if (story.name === 'home') far = Math.max(far, focusDistance(cottage.doorstep, 2));
   if (story.name === 'drowned' && village.dark.rise > 0) {
@@ -1103,7 +1128,7 @@ function drawView(): void {
   post.holdBlur = story.name === 'lines' && doorway.travelling;
   // Behind the lens she is not the subject, and nothing is blurred.
   if (her < 1) post.focusOn(0.5, 1e4);
-  else post.focusOn(Math.min(her, bird), far);
+  else post.focusOn(near, far);
   post.render(time);
 }
 function drawRooms(): void {
@@ -1245,7 +1270,7 @@ function frame(now: number): void {
 }
 
 if (QA && params.shot) {
-  window.__game = { quality, post, wind, input, rig, renderer, scene, glider, lines, swirl, sound, child, story, creatures, hillCreatures, water, skyMirror, terrain, footprints, cottage, petals, grass, littleBoats, sealife, cygnet, flock, carry, probe, washing, curtains: CURTAINS, doorway, doorwayView, doorExit: DOOR_EXIT, washingPassage, washingInvitation, shoreHaul, shorePulley, scarfInvitation, kite, departureKites, pinwheels, village, wood, stormWeather, sleeping, embers, emberInvitation, fireflies, boat, life, piano, birches, pond, cloudStairs };
+  window.__game = { params, quality, post, wind, input, rig, renderer, scene, glider, lines, swirl, sound, child, story, creatures, hillCreatures, water, skyMirror, terrain, footprints, cottage, petals, grass, littleBoats, sealife, cygnet, flock, cat, carry, probe, washing, curtains: CURTAINS, doorway, doorwayView, doorExit: DOOR_EXIT, washingPassage, washingInvitation, shoreHaul, shorePulley, scarfInvitation, kite, departureKites, pinwheels, village, wood, stormWeather, sleeping, embers, emberInvitation, fireflies, boat, life, piano, birches, pond, cloudStairs };
 }
 
 /**
