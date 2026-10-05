@@ -102,15 +102,32 @@ export const NAVE: PlacedHouse = {
 /** Where the boat waits while the cat is brought over to it, off the drift as it comes round toward the church. */
 export const CAT_HOLD = new THREE.Vector2(-15, -1331);
 
+/** The cat's chimney, across the water from where the boat waits; and where the lens watching the cat stands. */
+const CAT_TOWARD = new THREE.Vector2(0.915, -0.403);
+const CAT_ACROSS = 9;
 /**
- * The roof the cat is stranded on. Its slope faces the water the boat waits on, its chimney stands near the middle of
- * the ridge so the cat on it is straight across the water from her, and its eaves stand a hand clear of the water so
- * the cat can come down to the edge without getting wet.
+ * The lens stands this far from the chimney, turned this far (radians) round from her toward the church: near enough
+ * for the cat to read, and so far round that she looks across the frame at it and never toward the lens.
  */
-export const CAT_HOUSE: PlacedHouse = {
-  x: -2.5, z: -1336.5, yaw: Math.atan2(CAT_HOLD.x + 2.5, CAT_HOLD.y + 1336.5), len: 10, depth: 6, wall: 3.4, rise: 3.3,
-  sink: 2.95, thatched: false, stacks: [0.2], stack: 1.5, pots: 1, quiet: true,
-};
+const CAT_LENS_OFF = 7;
+const CAT_LENS_TURN = 1.66;
+
+/**
+ * The roof the cat is stranded on: a cottage nearly gone under, only its ridge and a gable-end chimney out of the
+ * water, so the cat on its pot is low enough to be seen at the same time as her. Its slope faces her, turned a little
+ * toward the lens, and its chimney stands at the end toward the lens, so the cat, the slates it comes down and the
+ * water the tub crosses are all in view.
+ */
+export const CAT_HOUSE: PlacedHouse = (() => {
+  const pot = CAT_HOLD.clone().addScaledVector(CAT_TOWARD, CAT_ACROSS);
+  const yaw = Math.atan2(-CAT_TOWARD.x, -CAT_TOWARD.y) - 0.3 * CAT_LENS_TURN;
+  const h: PlacedHouse = { x: 0, z: 0, yaw, len: 6.5, depth: 5.6, wall: 3.4, rise: 3.0, sink: 4.8, thatched: false,
+    stacks: [-1], stack: 1.0, pots: 1, quiet: true };
+  const end = -(h.len / 2 - 0.75);
+  h.x = pot.x - end * Math.cos(yaw);
+  h.z = pot.y + end * Math.sin(yaw);
+  return h;
+})();
 
 /** The roof east of the stranding, in the stranded boat's view. */
 const EAST_OF_STRAND: PlacedHouse = {
@@ -222,24 +239,33 @@ const TMP2 = new THREE.Vector2();
 /** Where on the cat's slope it lands from the chimney: just below the stack, toward the boat. */
 export const CAT_LANDING = onCatRoof(CAT_STACK, 0.95);
 
+/** How far across from the cat's ridge its slates go under the water. */
+const CAT_WATERLINE = (ridgeTop(CAT_HOUSE) / (ridgeTop(CAT_HOUSE) - eaveAt(CAT_HOUSE))) * (CAT_HOUSE.depth / 2 + OVERHANG);
+
 /**
- * The cat's roof as the tub meets it: its middle, half its length and half its depth to the eaves' edge, and its
- * heading (the house's yaw). The slope toward the boat runs along the eave on +z, from -`len` to +`len` along x.
+ * The cat's roof as the tub meets it: its middle, half its length and how far across from the ridge the tub comes up
+ * against the slates (where they go under), and its heading (the house's yaw). The slope toward the boat runs along
+ * +z, from -`len` to +`len` along x.
  */
 export const CAT_ROOF = {
-  x: CAT_HOUSE.x, z: CAT_HOUSE.z, yaw: CAT_HOUSE.yaw,
-  len: CAT_HOUSE.len / 2 + 0.11, depth: CAT_HOUSE.depth / 2 + OVERHANG, eave: eaveAt(CAT_HOUSE),
+  x: CAT_HOUSE.x, z: CAT_HOUSE.z, yaw: CAT_HOUSE.yaw, len: CAT_HOUSE.len / 2 + 0.11, depth: CAT_WATERLINE + 0.1,
 };
 
 /**
  * The wash-tub: where it floats when the boat comes, and the water it is kept to (a middle and a reach), between the
- * boat's bow and the cat's eaves.
+ * boat's bow and the cat's slates.
  */
-export const TUB_START = (() => {
-  const toward = new THREE.Vector2(CAT_HOUSE.x - CAT_HOLD.x, CAT_HOUSE.z - CAT_HOLD.y).normalize();
-  return new THREE.Vector2(CAT_HOLD.x + toward.x * 5.2 - toward.y * 2.2, CAT_HOLD.y + toward.y * 5.2 + toward.x * 2.2);
+export const TUB_START = houseLocal(CAT_HOUSE, -2.6, CAT_ROOF.depth + 3.4);
+export const TUB_WATER = (() => {
+  const mid = houseLocal(CAT_HOUSE, 0, CAT_ROOF.depth + 3);
+  return { x: mid.x, z: mid.y, r: 5 };
 })();
-export const TUB_WATER = { x: (CAT_HOLD.x + CAT_HOUSE.x) / 2, z: (CAT_HOLD.y + CAT_HOUSE.z) / 2, r: 6.5 };
+
+/** The slates' edge below the chimney, which the boat comes round to face. */
+export const CAT_EAVES = (() => {
+  const at = houseLocal(CAT_HOUSE, CAT_STACK * 0.5, CAT_ROOF.depth);
+  return new THREE.Vector3(at.x, 0, at.y);
+})();
 
 /** A step from one walkable surface to the next across water: `from` the near end, `to` the far. */
 export interface WayGap {
@@ -310,12 +336,11 @@ export function darkWayPoint(reach: number, out: THREE.Vector2): THREE.Vector2 {
 /** The placed roofs other than the cat's. */
 export const PLACED: PlacedHouse[] = [STRAND_HOUSE, GARDEN_HOUSE, EAST_OF_STRAND, ...NEIGHBOURS];
 
-/**
- * Where the lens stands while the tub is brought over: off the near side of the water between the boat and the cat,
- * over her shoulder enough that she looks across the frame at the cat and never toward the lens, and looking on up
- * the village to the church.
- */
-export const CAT_LENS = new THREE.Vector2(TUB_WATER.x - 0.31 * 13, TUB_WATER.z + 0.95 * 13);
+/** Where the lens stands while the tub is brought over: off the chimney's gable end, low over the water. */
+export const CAT_LENS = (() => {
+  const a = Math.atan2(-CAT_TOWARD.x, -CAT_TOWARD.y) - CAT_LENS_TURN;
+  return new THREE.Vector2(CAT_CHIMNEY.x + Math.sin(a) * CAT_LENS_OFF, CAT_CHIMNEY.z + Math.cos(a) * CAT_LENS_OFF);
+})();
 
 /**
  * Places the generated village keeps clear of: every placed house with room round it, the garden, the green, the
@@ -338,8 +363,11 @@ export const CLEARINGS: { x: number; z: number; r: number }[] = [
  * them, so every other roof and tree stands where it always has, and whatever of it falls here is left unbuilt.
  */
 const CAT_GROUND = [
+  { x: -2.5, z: -1336.5, r: 13 },
   { x: CAT_HOUSE.x, z: CAT_HOUSE.z, r: CAT_HOUSE.len / 2 + 4 },
+  { x: -8.75, z: -1333.75, r: 8.5 },
   { x: TUB_WATER.x, z: TUB_WATER.z, r: TUB_WATER.r + 2 },
+  { x: -12.78, z: -1321.4, r: 1 },
   { x: CAT_LENS.x, z: CAT_LENS.y, r: 1 },
 ];
 export const onCatGround = (x: number, z: number, room: number) =>

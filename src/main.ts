@@ -785,6 +785,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
     const near = 1 - THREE.MathUtils.smoothstep(away, 2, 14);
     for (const h of cat.heard) {
       if (h.kind === 'mew') catVoice.mew(catPan, call * h.amount, h.plea, h.length);
+      else if (h.kind === 'yowl') catVoice.yowl(catPan, call * h.amount, h.length);
       else if (h.kind === 'chirrup') catVoice.chirrup(catPan, call * h.amount);
       else if (h.kind === 'land') catVoice.land(catPan, near * h.amount);
       else if (h.kind === 'scrabble') catVoice.scrabble(catPan, near * h.amount);

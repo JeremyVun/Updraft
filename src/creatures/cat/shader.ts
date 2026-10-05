@@ -277,7 +277,7 @@ void main() {
   col += alb * uSkyAmbient * vec3(1.15, 1.0, 0.85) * (0.22 + 0.2 * (N.y * 0.5 + 0.5));
   /** Only on true silhouettes: inside a crease the skin faces away and would catch a cold rim of sky. */
   col += uSkyAmbient * pow(edge, 3.0) * fuzz * 0.3 * smoothstep(-0.15, 0.1, dot(N, V));
-  col += alb * (lanternLight(vWorld, N) * 0.8 + dawnLight(vWorld, N));
+  col += alb * dawnLight(vWorld, N);
   /** A crisp catchlight on the side the light comes from, and a small one under it: the eyes are wet and alive in any light. */
   col += (uSunColor * 0.3 + uSkyAmbient * 2.0 + 0.06) * glintAmount * (1.0 - clamp(uBlink, 0.0, 1.0));
   if (m == ${NOSE}) col += uSunColor * pow(max(dot(N, halfVector(uSunDir, V)), 0.0), 40.0) * 0.15;

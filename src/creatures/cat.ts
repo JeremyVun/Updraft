@@ -13,9 +13,9 @@ export type Floor = (x: number, z: number) => number;
 
 /** Something it did this frame that can be heard. The cat only says what happened; the sound is made elsewhere. */
 export interface CatSound {
-  kind: 'mew' | 'chirrup' | 'pat' | 'land' | 'scrabble';
+  kind: 'mew' | 'yowl' | 'chirrup' | 'pat' | 'land' | 'scrabble';
   amount: number;
-  /** A mew: how long it is, in seconds, which the mouth keeps time with, and how much it is asking. */
+  /** A mew or a yowl: how long it is, in seconds, which the mouth keeps time with; a mew, how much it is asking. */
   length?: number;
   plea?: number;
 }
@@ -333,12 +333,19 @@ export class Cat {
     this.blinkT = 0;
   }
 
-  /** A plaintive mew now, the mouth keeping time with it. */
+  /** A plaintive mew now, a kitten's length, the mouth keeping time with it. */
   mew(plea = 1): void {
     if (this.mewT >= 0) return;
     this.mewT = 0;
-    this.mewFor = 0.6 + 0.3 * plea + Math.random() * 0.15;
+    this.mewFor = 0.3 + 0.1 * plea + Math.random() * 0.05;
     this.heard.push({ kind: 'mew', amount: 1, length: this.mewFor, plea });
+  }
+
+  /** A frightened mrrow, low and drawn out, the mouth held open through it. */
+  yowl(): void {
+    this.mewT = 0;
+    this.mewFor = 0.75 + Math.random() * 0.2;
+    this.heard.push({ kind: 'yowl', amount: 1, length: this.mewFor });
   }
 
   /** Washes a paw now, if it is sitting: licks it and wipes it over its face. */
@@ -870,7 +877,7 @@ export class Cat {
       this.nextMew -= dt;
       if (this.nextMew <= 0) {
         this.mew(0.7 + 0.3 * Math.min(1, this.fear + 0.3));
-        this.nextMew = 2.6 + Math.random() * 2.4;
+        this.nextMew = 3.4 + Math.random() * 2.8;
       }
     }
     if (this.mewT >= 0) {

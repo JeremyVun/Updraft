@@ -1779,7 +1779,7 @@ export const tuning = {
       /** She notices it this far from the place the boat waits; how hard the boat slows into it, m/s². */
       seeFrom: 46, holdBrake: 0.42,
       /** How near (metres) the tub must come to the eaves, or to the bow, to be drawn in. */
-      roofReach: 1.8, bowReach: 2.4,
+      roofReach: 1.1, bowReach: 1.6,
       /** Seconds it looks at the tub before it comes down, and stands at the edge before it hops in. */
       looks: 1.6, edge: 1.3,
       /** Seconds the tub is held at the bow before the cat leaps, and of the leap's settling before the boat goes on. */
@@ -1820,19 +1820,22 @@ export const tuning = {
     strandLow: 2.4, strandHigh: 3.4, uprightHigh: 3.8,
     strandPace: 0.6,
     /**
-     * While the cat is brought over: how much of its gaze the lens gives the cat as she notices it; how far from the
-     * place the boat waits the lens starts to move to the side of the water (never nearer the boat than `catClear`
-     * on the way), the height it stands at there and the
-     * height it looks at over the water's middle; upright, how far behind the
-     * waiting boat it stands and how far to the tub's side, how high, and the height it looks at over the water.
+     * While the cat is brought over: how much of its gaze the lens gives the cat as she notices it, and how far from the
+     * place the boat waits the lens starts to come round. Off the roof's gable end: how high, how far from the cat
+     * toward her it looks and how far above that line, and the lens it takes. Upright, behind her: how far back and to
+     * the side away from the sail, how high, and the same again; and how fast it moves out to that side.
      */
-    catGlance: 0.3, catTurnFrom: 16, catClear: 7, catEye: 2.3, catAim: 2.6, catPace: 0.55,
-    uprightCatBack: 6.5, uprightCatSide: 2.5, uprightCatEye: 3.6, uprightCatAim: 0.9,
+    catGlance: 0.3, catTurnFrom: 16, catPace: 0.55,
+    catEye: 2.1, catAlong: 0.42, catLift: 0.5, catZoom: 0.95,
+    uprightCatBack: 3.2, uprightCatSide: 1.4, uprightCatEye: 2.7, uprightCatAlong: 0.4, uprightCatLift: 0, uprightCatZoom: 1,
+    catAsideRate: 0.7,
     /**
-     * With the cat aboard: the lens beside the boat, a little aft of abeam so the cat at the bow faces it and the
-     * satchel is in view; how far it stands off and how high, and how fast it eases there.
+     * With the cat aboard: the lens beside the boat on the side it watched the cat from, its bearing from ahead
+     * (radians), how far it stands off (upright, further), how high above where it looks, how far from her toward the
+     * cat it looks and how high above her seat, and how fast it eases there.
      */
-    aboardBearing: 1.3, aboardDistance: 8.5, aboardHeight: 1.3, aboardPace: 0.45,
+    aboardBearing: 1.45, aboardDistance: 5.5, uprightAboardDistance: 7, aboardHeight: 0.9, aboardAlong: 0.45,
+    aboardAim: 0.9, aboardPace: 0.45,
     /**
      * Once the cat bolts: the way the lens looks (atan2(x, z) of the view) as it comes round to the south of the
      * cottage over `climbFor` seconds, how far back it stands (upright, nearer), and the height it looks at.
