@@ -112,9 +112,9 @@ in float vShell;
  * game lights it warm, so the ground is a greyer fawn that the light brings back to the sheet's brown, darker along
  * the back, with soft umber stripes and a clean white.
  */
-const vec3 FAWN = vec3(0.3, 0.212, 0.152);
-const vec3 BACK = vec3(0.235, 0.163, 0.118);
-const vec3 STRIPE = vec3(0.105, 0.063, 0.046);
+const vec3 FAWN = vec3(0.29, 0.214, 0.163);
+const vec3 BACK = vec3(0.228, 0.165, 0.127);
+const vec3 STRIPE = vec3(0.1, 0.068, 0.054);
 const vec3 WHITE = vec3(0.84, 0.8, 0.74);
 const vec3 PINK = vec3(0.72, 0.28, 0.24);
 const vec3 NOSE_PINK = vec3(0.7, 0.24, 0.22);
@@ -203,7 +203,7 @@ void main() {
   vec3 V = normalize(cameraPosition - vWorld);
   float fleck = vnoise(vRest.xz * 140.0 + vRest.y * 97.0);
   float back = smoothstep(SPINE - 0.035, SPINE + 0.01, vRest.y) * smoothstep(TAIL_Z - 0.01, TAIL_Z + 0.01, vRest.z) * (1.0 - smoothstep(SKULL.z - 0.07, SKULL.z - 0.04, vRest.z));
-  vec3 alb = mix(mix(FAWN, BACK, back), STRIPE, tabby(vRest) * 0.85) * (0.93 + fleck * 0.14);
+  vec3 alb = mix(mix(FAWN, BACK, back), STRIPE, tabby(vRest) * 0.8) * (0.93 + fleck * 0.14);
   alb = mix(alb, WHITE * (0.95 + fleck * 0.08), max(k, browLight(vRest) * 0.4));
   float fuzz = 0.6;
   float thin = 0.12;
