@@ -403,9 +403,8 @@ light swings round: the antlers fold into a plain stump's shadow with a little r
 itself shows in the fork, which spreads square to her and to both camera views so each sees a Y with the owl in its
 crook. After a beat the camera pans once, unhurried, round and a little down behind her shoulder to see the owl
 face on as it blinks and tilts its head at her and she tips hers back, the rock's shadow still in frame
-(`tuning.wood.shape.face*`; portrait has its own framing). It fluffs up and hoots softly, hops round and flutters
-off toward her, its small flapping shadow flitting across the rock, passes over her head and banks away up to her
-left above the crowns. She turns after it and waves, and the cygnet peeps up out of the satchel. She breathes out,
+(`tuning.wood.shape.face*`; portrait has its own framing). It fluffs up and hoots softly, hops up off the fork and
+flutters away low across the frame to her left, seen side on, before it climbs out above the crowns. She turns after it and waves, and the cygnet peeps up out of the satchel. She breathes out,
 looks round the bend and walks on, never to the trunk, while the camera comes back round behind her the way she
 came. Everything is in the same verbs: which coal, not a new mechanic.
 

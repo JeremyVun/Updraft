@@ -187,14 +187,18 @@ const OPEN_WAY = [
 ];
 
 /**
- * The owl's way out: off the fork toward her, over her head well clear of her hood, then banking off to her left and
- * up that gap above the crowns. Leaving to her left keeps her turn after it away from the camera behind her shoulder.
+ * The owl's way out: a hop up off the fork, then low across the frame away to her left before it climbs out over the
+ * crowns, so it leaves away from her and the camera and she turns from the camera to watch it go.
  */
 export const OWL_FLIGHT_LOCAL = [
-  ...OPEN_WAY.slice(0, 3),
-  new THREE.Vector3(-1.5, 7.5, 10.5),
-  new THREE.Vector3(-5.5, 12.5, 15.0),
-  new THREE.Vector3(-8.5, 18.5, 19.0),
+  new THREE.Vector3(0.2, 2.45, 1.0),
+  new THREE.Vector3(-1.0, 2.9, 1.8),
+  new THREE.Vector3(-3.5, 3.2, 2.0),
+  new THREE.Vector3(-6.5, 3.6, 1.8),
+  new THREE.Vector3(-9.5, 5.0, 1.4),
+  new THREE.Vector3(-13.0, 8.5, 1.0),
+  new THREE.Vector3(-16.0, 13.0, 0.6),
+  new THREE.Vector3(-18.5, 19.0, 0.5),
 ];
 
 /** The rock's face frame in the world: its middle on the ground, along it, and out of it. */
@@ -934,11 +938,13 @@ export class WoodShape {
     const dx = x - WOOD_SHAPE.x, dz = z - WOOD_SHAPE.z;
     const lx = dx * SHAPE_RIGHT.x + dz * SHAPE_RIGHT.z, lz = dx * SHAPE_FACING.x + dz * SHAPE_FACING.z;
     let offWay = Infinity;
-    for (let i = 0; i < OPEN_WAY.length; i++) {
-      const p = i ? OPEN_WAY[i - 1] : OWL_PERCH_LOCAL, q = OPEN_WAY[i];
-      const ex = q.x - p.x, ez = q.z - p.z;
-      const t = THREE.MathUtils.clamp(((lx - p.x) * ex + (lz - p.z) * ez) / (ex * ex + ez * ez), 0, 1);
-      offWay = Math.min(offWay, Math.hypot(lx - p.x - ex * t, lz - p.z - ez * t));
+    for (const way of [OPEN_WAY, OWL_FLIGHT_LOCAL]) {
+      for (let i = 0; i < way.length; i++) {
+        const p = i ? way[i - 1] : OWL_PERCH_LOCAL, q = way[i];
+        const ex = q.x - p.x, ez = q.z - p.z;
+        const t = THREE.MathUtils.clamp(((lx - p.x) * ex + (lz - p.z) * ez) / (ex * ex + ez * ez), 0, 1);
+        offWay = Math.min(offWay, Math.hypot(lx - p.x - ex * t, lz - p.z - ez * t));
+      }
     }
     const coals = Math.hypot(lx - THROW_LOCAL.x, lz - THROW_LOCAL.z) < 3 || Math.hypot(lx - SIDE_LOCAL.x, lz - SIDE_LOCAL.z) < 3;
     return Math.hypot(lx, lz) < 3.4 || WoodShape.onRock(x, z, 1.6) || coals || offWay < 3.2 || inFrame(lx, lz);

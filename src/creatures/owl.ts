@@ -475,9 +475,9 @@ const GLIDE_LIFT = 0.45;
 /** The wings' twist, leading edges down, so the barred tops of both are turned to a camera level with it. */
 const WING_CUP = 0.45;
 /** How far round it turns its breast toward where it is watched from, at most, on top of its heading. */
-const SHOW_TURN = 1.8;
+const SHOW_TURN = 0.6;
 /** How much larger it grows on the wing, while its wings open, than it sat in the fork. */
-const FLIGHT_GROW = 0.3;
+const FLIGHT_GROW = 0.15;
 
 /**
  * The owl in the fork: what it is doing, kept apart from how it is drawn so the story can drive it without a
@@ -689,9 +689,9 @@ export class Owl {
     this.yaw += Math.atan2(Math.sin(heading - this.yaw), Math.cos(heading - this.yaw)) * (1 - Math.exp(-dt * 3));
     const swing = Math.atan2(Math.sin(this.yaw - before), Math.cos(this.yaw - before)) / Math.max(dt, 1e-4);
     this.roll += (THREE.MathUtils.clamp(-swing * 0.5, -0.3, 0.3) - this.roll) * (1 - Math.exp(-dt * 4));
-    // It flies sat up, as a little owl in a picture book does, more so as it climbs, so from below its face still shows.
+    // It flies a little sat up, as a little owl in a picture book does, but level enough to read as flying on and away.
     const climb = Math.atan2(this.along.y, Math.hypot(this.along.x, this.along.z));
-    this.pitch += (Math.max(0.12, 0.42 - 0.5 * climb) - this.pitch) * (1 - Math.exp(-dt * 5));
+    this.pitch += (Math.max(0.08, 0.22 - 0.3 * climb) - this.pitch) * (1 - Math.exp(-dt * 5));
     // It looks down at her as it comes over her, and then on the way it goes.
     const back = smooth(s, GLANCE[0], GLANCE[0] + 0.4) * (1 - smooth(s, GLANCE[1], GLANCE[1] + 0.4));
     this.tmp.copy(this.watch).sub(this.position);
