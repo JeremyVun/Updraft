@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { BLOWHOLE, BOTTOM, FLUKE_HALF_SPAN, HALF_WIDTH, LENGTH, TOP, flukeEdges } from './anatomy';
 import { FOAM, Marks, RING, SLICK } from './marks';
 import { DROP, MIST, SPLASH, Spray } from './spray';
-import { SPINE_N, SPINE_STEP, type Whale } from './whale';
+import { SPINE_N, SPINE_STEP, type WhaleRig } from './whale';
 
 const DRIP_SPAN = 9;
 const DRIP_CHORD = 4;
@@ -34,7 +34,7 @@ export class WhaleWake {
   private fresh = true;
 
   constructor(
-    private readonly whale: Whale,
+    private readonly whale: WhaleRig,
     private readonly spray: Spray,
     private readonly foam: Marks,
     private readonly slicks: Marks,
@@ -49,20 +49,22 @@ export class WhaleWake {
     }
   }
 
-  reset(): void {
-    this.prevTop.fill(-10);
+  /** `lying`: the whale is already at the surface, so its first frame is no surfacing and no breath. */
+  reset(lying = false): void {
+    this.prevTop.fill(lying ? 10 : -10);
     this.emergedAt.fill(-1e9);
     this.lastBlow = -1e9;
-    this.blowWas = -1;
+    this.blowWas = lying ? 1e9 : -1;
     this.notchWas = -1;
     this.flukesUpAt = -1;
-    this.headBroke = false;
+    this.headBroke = lying;
     this.fresh = true;
   }
 
   update(dt: number, time: number): void {
     const w = this.whale;
     if (!w.active || dt <= 0) return;
+    const k = w.scale;
     const hx = w.heading.x;
     const hz = w.heading.z;
     const angle = Math.atan2(hz, hx);
@@ -75,8 +77,8 @@ export class WhaleWake {
       const s = (i * SPINE_STEP) / LENGTH;
       const P = w.spine[i];
       const c = Math.cos(P.w);
-      const top = P.y + TOP(Math.min(s, 1)) * c;
-      const bottom = P.y + BOTTOM(Math.min(s, 1)) * c;
+      const top = P.y + TOP(Math.min(s, 1)) * c * k;
+      const bottom = P.y + BOTTOM(Math.min(s, 1)) * c * k;
       if (top > 0 && this.prevTop[i] <= 0) this.emergedAt[i] = time;
       const rising = this.fresh ? 0 : (top - this.prevTop[i]) / dt;
       this.prevTop[i] = top;
@@ -91,13 +93,13 @@ export class WhaleWake {
       if (first < 0) first = i;
       const yc = (top + bottom) / 2;
       const h = (top - bottom) / 2;
-      const half = HALF_WIDTH(s) * Math.sqrt(Math.max(0, 1 - (yc / h) ** 2));
+      const half = HALF_WIDTH(s) * k * Math.sqrt(Math.max(0, 1 - (yc / h) ** 2));
       widest = Math.max(widest, half);
       const churn = 0.12 + Math.min(1.6, Math.abs(rising)) * 0.9 + (i === first ? 1.2 : 0);
       if (Math.random() < churn * dt) {
         const side = Math.random() < 0.5 ? -1 : 1;
         const out = half + rand(0.2, 0.9);
-        const along = rand(-0.5, 0.5) * SPINE_STEP;
+        const along = rand(-0.5, 0.5) * SPINE_STEP * k;
         const strong = Math.min(0.85, 0.3 + Math.abs(rising) * 0.35);
         this.foam.add(FOAM, P.x + hz * side * out + hx * along, P.z - hx * side * out + hz * along, rand(0.4, 1.0), rand(3, 6), time, rand(0.6, 1) * strong, rand(0.15, 0.4), Math.random() * 6.28, rand(1, 1.8));
       }

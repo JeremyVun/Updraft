@@ -78,24 +78,20 @@ const TRAVEL = (() => {
 })();
 
 
-/** A humpback surfacing: it rolls up to breathe twice, arches, lifts its flukes and dives. */
-export class Whale {
+/** A humpback's body in the water: its meshes, the spine they are bent along, and how big it is dreamt. */
+export class WhaleRig {
   readonly mesh: THREE.Mesh;
   /** The same body under the surface, seen faintly through the water. */
   readonly ghost: THREE.Mesh;
-  /** Seconds into the current surfacing; above WHALE_DURATION it is gone. */
-  time = WHALE_DURATION;
   /** Spine samples from the snout back through the flukes: world position and pitch of the body there. */
   readonly spine = Array.from({ length: SPINE_N }, () => new THREE.Vector4());
   /** How freshly each part of the back has come out of the water (1 streaming, 0 dry). */
   readonly wet = new Float32Array(SPINE_N);
   readonly heading = new THREE.Vector3(0, 0, 1);
-  private readonly origin = new THREE.Vector3();
-  private readonly pitch = new Float32Array(SPINE_N);
-  private readonly sample = { u: 0, y: 0, angle: 0 };
-  private readonly uniforms;
+  protected readonly uniforms;
+  protected readonly eye: { value: number };
 
-  constructor() {
+  constructor(readonly scale = 1) {
     this.uniforms = {
       uSpine: { value: this.spine },
       uWet: { value: this.wet },
@@ -103,11 +99,16 @@ export class Whale {
       uRoll: { value: 0 },
       uFin: { value: new THREE.Vector2() },
       uCurl: { value: 0 },
+      uScale: { value: scale },
+      uShiver: { value: new THREE.Vector3() },
+      uSlap: { value: new THREE.Vector3() },
     };
     const skin = {
       uBack: { value: new THREE.Color('#2f3b48') },
       uBelly: { value: new THREE.Color('#e3e7df') },
+      uEye: { value: 1 },
     };
+    this.eye = skin.uEye;
     const geometry = whaleGeometry();
     this.mesh = new THREE.Mesh(
       geometry,
@@ -148,6 +149,41 @@ export class Whale {
   }
 
   get active(): boolean {
+    return this.mesh.visible;
+  }
+
+  /** World position of a point on the body given across (x), up (y) and along (s) the rest pose. */
+  point(x: number, y: number, s: number, out: THREE.Vector3): THREE.Vector3 {
+    const fi = Math.min(Math.max(s / SPINE_END, 0), 1) * (SPINE_N - 1);
+    const i = Math.min(Math.floor(fi), SPINE_N - 2);
+    const t = fi - i;
+    const a = this.spine[i];
+    const b = this.spine[i + 1];
+    const pitch = a.w + (b.w - a.w) * t;
+    const roll = this.uniforms.uRoll.value;
+    const rx = (Math.cos(roll) * x - Math.sin(roll) * y) * this.scale;
+    const ry = (Math.sin(roll) * x + Math.cos(roll) * y) * this.scale;
+    const h = this.heading;
+    const c = Math.cos(pitch);
+    const sn = Math.sin(pitch);
+    // S = cross(U, F) with F = H c + Y sn and U = -H sn + Y c, which is the horizontal side vector (h.z, 0, -h.x).
+    out.set(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t);
+    out.x += h.z * rx + -h.x * sn * ry;
+    out.y += c * ry;
+    out.z += -h.x * rx + -h.z * sn * ry;
+    return out;
+  }
+}
+
+/** A humpback surfacing: it rolls up to breathe twice, arches, lifts its flukes and dives. */
+export class Whale extends WhaleRig {
+  /** Seconds into the current surfacing; above WHALE_DURATION it is gone. */
+  time = WHALE_DURATION;
+  private readonly origin = new THREE.Vector3();
+  private readonly pitch = new Float32Array(SPINE_N);
+  private readonly sample = { u: 0, y: 0, angle: 0 };
+
+  override get active(): boolean {
     return this.time < WHALE_DURATION;
   }
 
@@ -162,28 +198,6 @@ export class Whale {
     if (!this.active) return;
     this.time += dt;
     this.pose();
-  }
-
-  /** World position of a point on the body given across (x), up (y) and along (s) the rest pose. */
-  point(x: number, y: number, s: number, out: THREE.Vector3): THREE.Vector3 {
-    const fi = Math.min(Math.max(s / SPINE_END, 0), 1) * (SPINE_N - 1);
-    const i = Math.min(Math.floor(fi), SPINE_N - 2);
-    const t = fi - i;
-    const a = this.spine[i];
-    const b = this.spine[i + 1];
-    const pitch = a.w + (b.w - a.w) * t;
-    const roll = this.uniforms.uRoll.value;
-    const rx = Math.cos(roll) * x - Math.sin(roll) * y;
-    const ry = Math.sin(roll) * x + Math.cos(roll) * y;
-    const h = this.heading;
-    const c = Math.cos(pitch);
-    const sn = Math.sin(pitch);
-    // S = cross(U, F) with F = H c + Y sn and U = -H sn + Y c, which is the horizontal side vector (h.z, 0, -h.x).
-    out.set(a.x + (b.x - a.x) * t, a.y + (b.y - a.y) * t, a.z + (b.z - a.z) * t);
-    out.x += h.z * rx + -h.x * sn * ry;
-    out.y += c * ry;
-    out.z += -h.x * rx + -h.z * sn * ry;
-    return out;
   }
 
   private pose(): void {

@@ -12,6 +12,11 @@ uniform vec3 uHeading;
 uniform float uRoll;
 uniform vec2 uFin;
 uniform float uCurl;
+uniform float uScale;
+/** A shiver running along the back: where it is (s), how deep, and how long a stretch of skin it moves. */
+uniform vec3 uShiver;
+/** One flipper lifted on its own: which side, how far it is raised and swept. */
+uniform vec3 uSlap;
 in vec4 aRig;
 out vec3 vRest;
 out vec3 vRestNormal;
@@ -30,12 +35,20 @@ vec3 rig(vec3 rest, inout vec3 n) {
     n = rotZ(n, -side * uFin.y);
     p = rotY(p, side * uFin.x);
     n = rotY(n, side * uFin.x);
+    float own = step(0.5, side * uSlap.x);
+    p = rotY(rotZ(p, side * uSlap.y * own), side * uSlap.z * own);
+    n = rotY(rotZ(n, side * uSlap.y * own), side * uSlap.z * own);
     off = p + root + vec3(0.0, 0.0, s * ${f(LENGTH)});
   }
   if (part == ${FLUKES}) {
     float k = abs(rest.x) / ${f(FLUKE_HALF_SPAN)};
     off.y += uCurl * k * k;
   }
+  if (part == ${BODY} && uShiver.y > 0.0) {
+    float d = (s - uShiver.x) / uShiver.z;
+    off += normal * uShiver.y * exp(-d * d) * max(normal.y, 0.0) * (0.6 + 0.4 * sin(uTime * 47.0 + s * 90.0));
+  }
+  off *= uScale;
   float cr = cos(uRoll), sr = sin(uRoll);
   off.xy = vec2(cr * off.x - sr * off.y, sr * off.x + cr * off.y);
   n.xy = vec2(cr * n.x - sr * n.y, sr * n.x + cr * n.y);
@@ -62,6 +75,8 @@ vec3 rig(vec3 rest, inout vec3 n) {
 const SKIN_GLSL = /* glsl */ `
 uniform vec3 uBack;
 uniform vec3 uBelly;
+/** 0 the eye shut in a sleeping curve, 1 open. */
+uniform float uEye;
 in vec3 vRest;
 in vec3 vRestNormal;
 in vec4 vRig;
@@ -103,8 +118,10 @@ Skin skin() {
     float head = (1.0 - smoothstep(0.15, 0.23, s)) * smoothstep(0.1, 0.45, rn.y);
     float jaw = (1.0 - smoothstep(0.18, 0.26, s)) * (1.0 - smoothstep(0.0, 0.25, abs(rn.y + 0.05)));
     k.bump = knobs(vec2(vRest.z * 1.9, vRest.x * 2.2)) * (head + jaw * 0.8) * 0.035 - groove * 0.015;
-    float eye = length(vec2(vRest.z + 0.235 * ${f(LENGTH)}, vRest.y + 0.46));
-    k.albedo *= 1.0 - (1.0 - smoothstep(0.06, 0.1, eye)) * step(0.8, abs(rn.x)) * 0.8;
+    vec2 e = vec2(vRest.z + 0.235 * ${f(LENGTH)}, vRest.y + 0.46);
+    float open = 1.0 - smoothstep(0.06, 0.1, length(e));
+    float lid = (1.0 - smoothstep(0.012, 0.03, abs(e.y + 0.035 - 2.2 * e.x * e.x))) * (1.0 - smoothstep(0.1, 0.13, abs(e.x)));
+    k.albedo *= 1.0 - mix(lid, open, uEye) * step(0.8, abs(rn.x)) * 0.8;
   } else if (part == ${FIN}) {
     float top = smoothstep(-0.2, 0.4, rn.y);
     k.albedo = mix(uBelly * (0.92 + 0.12 * mottle), uBack * 1.1, top * (1.0 - smoothstep(0.2, 0.75, vRig.z)) * 0.8);
