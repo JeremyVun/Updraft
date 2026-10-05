@@ -976,8 +976,7 @@ export const tuning = {
      * share of fireflies left in the held frame, and how much of the owl's height above her she tips her head back
      * for as it flies; her one look down at the cygnet (when, for how long); when the owl
      * leaves after it is seen; her turn after it as it flies (seconds into its flight, rate), the cygnet's peep and
-     * her wave; the breath out, how far on the next coal waits and how far off the path, clear of her while the camera
-     * comes round behind her. The held frame, in the shape's frame (right, up
+     * her wave; the breath out. The held frame, in the shape's frame (right, up
      * from her feet, toward her): the eye and where it looks, landscape and portrait, each lens's horizontal field
      * (portrait: vertical), when the walking camera starts easing to it (metres from her stop), the least time it
      * takes, and how long it takes to ease back behind her as she walks on.
@@ -988,13 +987,13 @@ export const tuning = {
       foldSwing: 0.35, foldIn: 0.45, foldBlur: 3.5, moonOnHer: 0.35, heldFireflies: 0.3, lookUpShare: 0.35,
       glanceAfter: 2.4, glanceFor: 1.8,
       owlLeaveAfter: 7.5, turnAfter: 0.9, turnRate: 2.0, peepAfter: 1.0, peepFor: 3.2, waveAfter: 2.2,
-      exhaleSeconds: 1.8, chainOn: 17, chainAside: 5.2,
+      exhaleSeconds: 1.8,
       eye: [14.4, 2.3, 5.2], look: [2.65, 3.0, 2.75], hfov: 76,
       portraitEye: [6.6, 2.4, 15.3], portraitLook: [0.6, 5.2, 1.0], portraitVfov: 72,
       faceEye: [8.6, 1.6, 17.2], faceLook: [0.2, 1.55, 3.3], faceHfov: 38, faceVfov: 20,
       portraitFaceEye: [5.6, 3.0, 17.0], portraitFaceLook: [1.5, 2.0, 5.7], portraitFaceVfov: 34,
       faceAfter: 0.5, faceSeconds: 4.2,
-      easeFrom: 20, easeSeconds: 10, releaseSeconds: 8,
+      easeFrom: 20, easeSeconds: 7.5, releaseSeconds: 8,
     },
     /** Seconds a coal burns from a full catch if nobody fans it again. */
     burnFor: 46,

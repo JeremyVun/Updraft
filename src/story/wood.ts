@@ -1214,8 +1214,9 @@ export class WoodChapter implements Chapter {
     this.leg = Math.max(this.leg, 2);
     this.to('walk');
     this.chainAt = pathAlong(c.position.x, c.position.z);
-    // Further off the path than most, so it is not behind her while the camera comes round from the held frame.
-    this.layNext(tuning.wood.shape.chainOn, tuning.wood.shape.chainAside);
+    // Straight on to the light before the glade: a chain coal between would lie beside or behind her by the time
+    // the light she has runs out.
+    this.layNext(Infinity);
     // The walking camera comes round behind her the way she now goes, in the one move that takes her on.
     const way = this.target();
     this.aim.set(way.x - c.position.x, 0, way.y - c.position.z).normalize();
