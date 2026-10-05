@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { LOOP, LOOP_BACK, LOOP_FAR, LOOP_GAP, STEP, along, flight, landingOf } from './stairs-layout';
+import { LOOP, LOOP_BACK, LOOP_FAR, LOOP_GAP, RAIL_HEIGHT, STEP, along, flight, landingOf } from './stairs-layout';
 
 /**
  * The loop that seems to climb for ever, and where it has to be seen from. The loop's last flight is built going on
@@ -54,6 +54,31 @@ export function drawIn(v: THREE.Vector3): THREE.Vector3 {
   const shrunk = toCopy(v.clone().sub(LOOP_GAP));
   return v.lerp(shrunk, s);
 }
+
+/**
+ * `alongBack` worked back from a point of the flight as drawn in, for sorting it a pixel at a time. Drawn in, a point
+ * is v·(1 − a·s) + s·c (`drawIn`, a = 1 − LOOP_SHRINK), so with t = x·w.x + z·w.y − w.z its s solves s² − w.w·s + t = 0.
+ */
+export const ALONG_DRAWN = (() => {
+  const a = 1 - LOOP_SHRINK;
+  const c = LOOP_EYE.clone().multiplyScalar(a).addScaledVector(LOOP_GAP, -LOOP_SHRINK);
+  const base = LOOP_BACK.bottom.x * backWay.x + LOOP_BACK.bottom.z * backWay.z;
+  const k = backRun + c.x * backWay.x + c.z * backWay.z - a * base;
+  return new THREE.Vector4(backWay.x, backWay.z, base, k).divideScalar(a * backRun);
+})();
+
+/**
+ * The slope of the loop's last flight as drawn in, as a plane (its normal and its distance from the origin): on its
+ * treads at its foot, where it must stay in front of the landing it leaves, and at the height of its rail at its top,
+ * where the rail must go behind the corner's newel.
+ */
+export const DRAWN_SLOPE = (() => {
+  const foot = drawIn(LOOP_BACK.bottom.clone());
+  const head = drawIn(LOOP_BACK.top.clone());
+  head.y += RAIL_HEIGHT * LOOP_SHRINK;
+  const n = head.sub(foot).cross(new THREE.Vector3(backWay.z, 0, -backWay.x)).normalize();
+  return new THREE.Vector4(n.x, n.y, n.z, n.dot(foot));
+})();
 
 /** The loop's last flight as drawn in, up its middle from the foot to where it comes onto the copy. */
 const drawnLine = Array.from({ length: 25 }, (_, i) => drawIn(LOOP_BACK.bottom.clone().lerp(LOOP_BACK.top, i / 24)));

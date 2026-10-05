@@ -12,7 +12,7 @@ import { HAZE_SHADE_GLSL, hazeStride, hazeUnderFlight, hazeUnderLanding } from '
 import { CloudWisps } from './stairs-wisps';
 import { StairsCloud } from './stairs-cloud';
 import { CloudBank } from './stairs-bank';
-import { LOOP_BANK, LOOP_EYE, LOOP_SHRINK, alongBack, drawIn } from './stairs-penrose';
+import { ALONG_DRAWN, DRAWN_SLOPE, LOOP_BANK, LOOP_EYE, LOOP_SHRINK, drawIn } from './stairs-penrose';
 import {
   BELOW_CLOUD, FLIGHTS, INSET, LOOP, LOOP_BACK, LOOP_FAR, LOOSE, NEWEL, OPENING, RAIL_HEIGHT, STEP_BLOCK, STRING, along, LOOSE_START, SLIPPERS, STEP, TOP_OUT,
   flight, landingOf, onLanding, type Face, type Flight, type Landing,
@@ -38,10 +38,7 @@ out vec3 vColor;
 out float vMist;
 flat out float vPart;
 #ifdef TRICK
-uniform vec3 uLoopEye;
 uniform float uUndraw;
-uniform float uTrueDepth;
-in float aDepth;
 in vec3 aBuilt;
 #endif
 void main() {
@@ -57,12 +54,6 @@ void main() {
 #endif
   vNormal = normalize(mat3(modelMatrix) * normal);
   gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
-#ifdef TRICK
-  // Drawn in, it is in front of and behind everything else as if it stood where it seems to. That only holds from
-  // the one place, so once the lens leaves it the flight is sorted where it really is.
-  vec4 seems = projectionMatrix * viewMatrix * vec4(uLoopEye + (vWorld - uLoopEye) * mix(aDepth, 1.0, uTrueDepth), 1.0);
-  gl_Position.z = seems.z / seems.w * gl_Position.w;
-#endif
 }`;
 
 /**
@@ -73,6 +64,14 @@ const FRAG = /* glsl */ `
 ${ATMO_GLSL}
 ${HAZE_SHADE_GLSL}
 uniform float uShown;
+#ifdef TRICK
+uniform mat4 projectionMatrix;
+uniform vec3 uLoopEye;
+uniform float uShrink;
+uniform float uTrueDepth;
+uniform vec4 uAlong;
+uniform vec4 uSlope;
+#endif
 in vec3 vWorld;
 in vec3 vNormal;
 in vec2 vUv;
@@ -86,6 +85,19 @@ void main() {
   float keep = nearFade(vWorld, 0.3, 1.1) * (1.0 - smoothstep(0.72, 1.0, gone));
   keep *= uShown;
   if (keep <= 0.0) discard;
+#ifdef TRICK
+  // Drawn in, it is in front of and behind everything else as if it stood where it seems to. That squeezes its depth
+  // so much near the top that the runner and the tread beneath it can no longer be told apart, so all of it is pushed
+  // back alike along each line of sight, by how far up the flight that line meets its slope (DRAWN_SLOPE,
+  // ALONG_DRAWN). That only holds from the one place, so once the lens leaves it the flight is sorted where it is.
+  vec3 ray = vWorld - cameraPosition;
+  vec3 meets = cameraPosition + ray * (uSlope.w - dot(uSlope.xyz, cameraPosition)) / dot(uSlope.xyz, ray);
+  float t = dot(meets.xz, uAlong.xy) - uAlong.z;
+  float along = clamp(2.0 * t / (uAlong.w + sqrt(max(0.0, uAlong.w * uAlong.w - 4.0 * t))), 0.0, 1.0);
+  float push = mix(1.0 / mix(1.0, uShrink, along), 1.0, uTrueDepth);
+  vec4 seems = projectionMatrix * viewMatrix * vec4(uLoopEye + (vWorld - uLoopEye) * push, 1.0);
+  gl_FragDepth = seems.z / seems.w * 0.5 + 0.5;
+#endif
   vec3 N = normalize(vNormal) * (gl_FrontFacing ? 1.0 : -1.0);
   vec3 V = normalize(cameraPosition - vWorld);
   vec3 alb = vColor;
@@ -410,7 +422,10 @@ const DETAIL: Record<QualityLevelName, { wisps: number; stride: number }> = {
 function stairMaterial(shown = { value: 1 }, trick = false, undraw = { value: 0 }, trueDepth = { value: 0 }): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     defines: trick ? { TRICK: 1 } : {},
-    uniforms: { ...atmo.uniforms, uShown: shown, uLoopEye: { value: LOOP_EYE }, uUndraw: undraw, uTrueDepth: trueDepth },
+    uniforms: {
+      ...atmo.uniforms, uShown: shown, uLoopEye: { value: LOOP_EYE }, uShrink: { value: LOOP_SHRINK }, uAlong: { value: ALONG_DRAWN },
+      uSlope: { value: DRAWN_SLOPE }, uUndraw: undraw, uTrueDepth: trueDepth,
+    },
     vertexShader: VERT,
     fragmentShader: FRAG,
     vertexColors: true,
@@ -428,6 +443,16 @@ function slipper(b: Build, frame: THREE.Matrix4): void {
   b.add(new THREE.TorusGeometry(0.05, 0.014, 6, 16), frame.clone().multiply(new THREE.Matrix4().makeTranslation(0, 0.036, -0.042)).multiply(new THREE.Matrix4().makeRotationX(Math.PI / 2)).multiply(new THREE.Matrix4().makeScale(1, 1.35, 1)), SOLE, cream);
 }
 
+/**
+ * What a flight is walked on: a slope as steep as its steps, crossing each tread `back` of a tread behind its nosing
+ * (through the middle of every tread unless asked), run on past either end to meet the floor it leaves and the
+ * landing it comes onto.
+ */
+function walkLine(f: Flight, back = 0.5): [THREE.Vector3, THREE.Vector3] {
+  const way = along(f.yaw).multiplyScalar(STEP.going);
+  return [f.bottom.clone().addScaledVector(way, back - 1), f.top.clone().addScaledVector(way, back)];
+}
+
 /** The loop's last flight drawn in until, seen from the one place, its top lies on the corner. */
 function drawnInFlight(): THREE.BufferGeometry {
   const trick = new Build();
@@ -435,14 +460,11 @@ function drawnInFlight(): THREE.BufferGeometry {
   const back = trick.result();
   const v = new THREE.Vector3();
   const pos = back.getAttribute('position');
-  const depth = new Float32Array(pos.count);
   back.setAttribute('aBuilt', new THREE.BufferAttribute(Float32Array.from(pos.array as Float32Array), 3));
   for (let i = 0; i < pos.count; i++) {
     v.fromBufferAttribute(pos, i);
-    depth[i] = 1 / THREE.MathUtils.lerp(1, LOOP_SHRINK, alongBack(v));
     pos.setXYZ(i, ...drawIn(v).toArray());
   }
-  back.setAttribute('aDepth', new THREE.BufferAttribute(depth, 1));
   return back;
 }
 
@@ -808,8 +830,10 @@ export class CloudStairs {
   /** Where only the bird walks: the loop's far side, and its last flight as it is drawn in. */
   static loopDecks(): Deck[] {
     // The drawn-in flight curves and shrinks toward its top, so it is walked in short straight pieces that follow it.
+    // It is walked toward the lens, which sees the front of every tread and not the back, so along its nosings.
     const pieces = 16;
-    const up = (t: number) => drawIn(LOOP_BACK.bottom.clone().lerp(LOOP_BACK.top, t));
+    const [from, to] = walkLine(LOOP_BACK, 0);
+    const up = (t: number) => drawIn(from.clone().lerp(to, t));
     const back: Deck[] = Array.from({ length: pieces }, (_, i) => {
       const a = up(i / pieces), b = up((i + 1) / pieces);
       return { x0: a.x, z0: a.z, x1: b.x, z1: b.z, halfWidth: STEP.width * 0.4 * THREE.MathUtils.lerp(1, LOOP_SHRINK, (i + 0.5) / pieces),
@@ -838,9 +862,9 @@ export class CloudStairs {
   private static flightDecks(f: Flight, L: Landing): Deck[] {
     const cz = (L.z0 + L.z1) / 2;
     const a = onLanding(L, L.x0 + 0.12, cz), b = onLanding(L, L.x1 - 0.12, cz);
+    const [from, to] = walkLine(f);
     return [
-      { x0: f.bottom.x, z0: f.bottom.z, x1: f.top.x, z1: f.top.z, halfWidth: STEP.width / 2,
-        height: f.bottom.y, height1: f.top.y },
+      { x0: from.x, z0: from.z, x1: to.x, z1: to.z, halfWidth: STEP.width / 2, height: from.y, height1: to.y },
       { x0: a.x, z0: a.z, x1: b.x, z1: b.z, halfWidth: (L.z1 - L.z0) / 2 - 0.1, height: L.centre.y },
     ];
   }
