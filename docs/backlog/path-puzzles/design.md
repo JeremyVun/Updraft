@@ -430,8 +430,8 @@ about (−9, −1398), some 40 m short of the church (`SPIRE`, 14, −1436). Mai
    it and ducks into the satchel.
 2. **The air dies** where it does on main. The glass goes still and the becalmed boat drifts gently in until its stem
    rests against the slates of a small cottage's roof at the waterline: a nudge, never landing on top of anything.
-3. **The dark rises behind them**: black smoke lying low on the water, rising on the horizon the way they came and
-   coming on, swallowing roofs. The cat panics, leaps onto the roof and bolts over the roofs toward the church, the
+3. **The dark rises behind them**: a sea fog lying low on the water, rising on the horizon the way they came and
+   coming on, its crest gold in the last sun, roofs fading into it one by one. The cat panics, leaps onto the roof and bolts over the roofs toward the church, the
    highest thing there is. A child does not leave a frightened cat: she climbs out after it. The boat was never stuck;
    she left it to save the cat. She follows the cat's run, so the plane never leads; she clutches it the whole way.
 4. **Crossing 1, the tree (push):** a lane of deep water to a walled garden; the cat crosses its own way (a leap she
@@ -443,8 +443,8 @@ about (−9, −1398), some 40 m short of the church (`SPIRE`, 14, −1436). Mai
 6. **The church:** the cat climbs the tower's ivy into the belfry, safe and out of her reach, and looks down. She is
    left on the nave ridge at the tower's foot. While she waits at a crossing the dark creeps up and stops a little
    behind her, heaving; as she crosses it swallows the place she left. It never reaches her and nothing fails.
-7. **The dark arrives:** the smoke rolls over the church and becomes the storm's sky; the wind comes and the first rain
-   falls. Now she needs her boat, still resting against the cottage roof back along the way.
+7. **The dark arrives:** the fog rolls over the church, the sun gone, and darkens into the storm's night; the wind
+   comes and the first rain falls. Now she needs her boat, still resting against the cottage roof back along the way.
 8. **Bring the boat (fill the sail):** the player fills its red sail (`Boat.brushSail`) and brings it across the water
    to the nave; she steps down into it. She looks back once at the cat in the belfry as they go.
 9. **The storm:** the church is about 260 m from the beach, close to where main's storm already starts, so main's
@@ -479,16 +479,22 @@ So the existing drowned village and storm code may be refactored as far as the r
   is quick and sure where she is slow: at each gap it crosses its own way (along a railing top, a wall coping, a leap
   she could never make), which shows her where the far side is and that she must find her own way over. At the church
   it climbs the tower's ivy to the belfry. It is left there, safe and high, looking down as the boat goes.
-- **The dark.** Low black-violet smoke lying on the water, lit at the rims by the last low sun, coming from behind
-  (south, the way they came), the water darkening under it, swallowing roofs as it comes. Beautiful-ominous, never
-  horror and never industrial; it must read as smoke, never as rock or hedge. When it arrives at the church it rolls
-  over and becomes the storm's sky, and the light goes with it. Its look is set by Astra's study in `comps/dark/`
-  (painted over `today.jpg`, whose opaque billows lit on top read as boulders): while it comes and holds it is
-  treatment A (`dark-a.jpg`, `dark-portrait.jpg`), a low bank of layered translucent veils, near-black in front and
-  bluer behind, the sky and far chimneys glimpsed through its thin places, torn wisps lifting off its top and a
-  rolling lip where it meets the glass; as it arrives it becomes treatment C (`dark-c.jpg`), towering and leaning in
-  as the coming night, the low sun's warmth failing on everything near it. Ink in the water (B) is rejected: it reads
-  as a spill.
+- **The dark is a sea fog** (Jeremy, 2026-10-05, doubting the black smoke: "im not sure if the dark cloud look make
+  sense given the lighting and time of day... what do you think? would a white fog / mist / haze make more sense?"; on
+  Astra's fog study: "yea that fog looks way better"). A haar rolls in low off the sea from behind (south, the way they
+  came; `src/world/drowned-dark.ts`, "the dark" in code). It obeys the dusk: its crest takes the low sun's gold and rose,
+  its body is cool blue-grey, and roofs at its edge fade into it and are gone rather than being covered. As it nears it
+  takes the sun: the warmth drains from the boat, the roofs and the water, and the lantern is the warmest thing left.
+  At the church it closes round her and darkens into the storm's night, the first wind breaking up the glass. The
+  threat is what it takes away, so it never sits still: one roof, then the next, then the sun, with the cat's panic
+  selling it. Beautiful-ominous, never horror. Black smoke is cut: under a dusk sky a mass that takes none of the light
+  reads as land or rock, and smoke implies a fire that is not there. The target is Astra's study in `comps/fog/`
+  (`fog-far`, `fog-near`, `fog-arrives`, `fog-portrait`, painted over `today.jpg`). It is built as one fog field every
+  shader reads (a moving front, a height profile and slow low-frequency variation, surfaces mixing toward the fog's
+  colour by transmittance), so things truly fade into it; three to five large feathered sheets give the crest and
+  wisps but never do the hiding themselves; the fog's colour, the sun, the sky light and the water's reflection are
+  driven from one progression, and the lantern's light stays its own. It stays low, flat and cold-bodied, with a clear
+  stretch of open dusk air before it rises, so it never echoes the stairs room's luminous cloud.
 - **The run is built on decks** (`src/world/decks.ts`): ridges, wall tops and the fallen trunk are strips the child
   walks; the slates up to a ridge are ramps. She gets out with `alight` onto the cottage's slates and back in with
   `board` at the nave.
