@@ -87,6 +87,11 @@ const RAINBOW_AXIS = (() => {
 })();
 /** How near the boat the plane has to land before the child takes the hint. */
 const BOARDING = 16;
+/**
+ * The feather the family leaves: how far out over the water beyond the cygnet and how high it comes down from, how
+ * near its bill it has to drift before it reaches up and takes it, and how long before the wind is shown it.
+ */
+const FEATHER = { out: 6, aside: 2, from: 4, lean: 0.2, blown: 4, near: 5, reach: 1.4, under: 2.6, inviteAfter: 6, fetchAfter: 25, giveUpAfter: 45 };
 
 /**
  * The meadow: the last warm afternoon of the year, and the island is asleep. The boat lands in a bay under a bank,
@@ -174,6 +179,13 @@ export class MeadowChapter implements Chapter {
   private readonly onCygnet = new THREE.Vector3();
   private readonly returnLook = new THREE.Vector3();
   private readonly side = new THREE.Vector3();
+  /** When the feather came down over the pond and when the cygnet had it, both negative until then. */
+  private featherFrom = -1;
+  private featherHeld = -1;
+  private featherReached = -1;
+  /** How much the player has blown it toward the cygnet lately, 0..1. */
+  private featherBlown = 0;
+  private readonly beak = new THREE.Vector3();
   /** Where the family is, where it was first found, and the horizontal line from the child to it. */
   private readonly far = new THREE.Vector3();
   private readonly axis = new THREE.Vector3(0, 0, -1);
@@ -196,6 +208,7 @@ export class MeadowChapter implements Chapter {
     flock.rest(RAFT_AT.x, RAFT_AT.z, tuning.crest.raft, tuning.crest.family, POND_LEVEL);
     cygnet.water = { level: POND_LEVEL, over: overPond };
     plane.water = cygnet.water;
+    cast.swanFeather.water = cygnet.water;
     plane.homeRadius = tuning.meadowPlane.reach;
     child.stepAshore(cast.boat);
     child.walkTo(BEACH.x, BEACH.y, false, () => this.to('beach'), 0.8);
@@ -262,8 +275,20 @@ export class MeadowChapter implements Chapter {
   }
   readonly flockChatter = false;
   get pianoActive(): boolean { return piano.engaged; }
-  get windInvitation(): THREE.Vector3 | null { return this.gate.invitation; }
+  get windInvitation(): THREE.Vector3 | null { return this.gate.invitation ?? this.featherInvitation; }
   get invitationRadius(): number { return this.gate.invitation ? 2.5 : 0; }
+  /** The feather only wants blowing one way, toward the cygnet. */
+  get invitationHeading(): number | null { return this.featherInvitation ? this.featherHeading : null; }
+  private featherHeading = 0;
+  private readonly onScreen = new THREE.Vector3();
+
+  afterCamera(camera: THREE.PerspectiveCamera): void {
+    if (!this.featherInvitation) return;
+    const to = this.onScreen.copy(this.cast.cygnet.position).project(camera);
+    const tx = to.x, ty = to.y;
+    const from = this.onScreen.copy(this.cast.swanFeather.position).project(camera);
+    this.featherHeading = Math.atan2(ty - from.y, (tx - from.x) * camera.aspect);
+  }
   /** QA: how far the stop at the sheep has got. */
   get atGate(): string { return this.gate.at; }
 
@@ -506,6 +531,7 @@ export class MeadowChapter implements Chapter {
       fade * (1 - THREE.MathUtils.smoothstep(musicRadius, covered, covered + 40)), life);
     if (wave.z > covered && this.waveTo === WAVE_REACH) life.regions.waiting.set(0, 0, 0, 0);
     this.blowFront();
+    this.tendFeather(dt);
 
     /** Grown swans are loud. They are heard from a long way down the walk, before there is anything to see. */
     if (!this.wentOn && boat && time > this.nextBugle) {
@@ -603,7 +629,8 @@ export class MeadowChapter implements Chapter {
       }
     } else if (this.swim === 'watch') {
       k.swimTo(this.swimOut);
-      if (this.now - this.swimAt > tuning.wingCare.pondWatchFor) {
+      if (this.featherFrom < 0 && this.now - this.swimAt > tuning.wingCare.pondWatchFor) this.dropFeather();
+      if (this.featherHeld >= 0 && this.now - this.featherHeld > 1.4) {
         k.watch(c.face(this.returnLook));
         this.swim = 'back'; this.swimAt = this.now;
       }
@@ -617,6 +644,67 @@ export class MeadowChapter implements Chapter {
         this.finishPond();
       }
     }
+  }
+
+  /**
+   * One white feather comes down out of the sky they went into, slowly, over the water beyond the cygnet. It drifts
+   * to it by itself in its own time; the player's wind can bring it sooner. The cygnet reaches up and takes it in its
+   * bill, and keeps it.
+   */
+  private dropFeather(): void {
+    const f = this.cast.swanFeather;
+    this.featherFrom = this.now;
+    this.side.set(-this.axis.z, 0, this.axis.x);
+    f.release(this.tmp.copy(this.swimOut).addScaledVector(this.axis, FEATHER.out).addScaledVector(this.side, FEATHER.aside)
+      .setY(POND_LEVEL + FEATHER.from), this.side.set(0, -0.15, 0));
+    f.fade = 0;
+    f.ceiling = FEATHER.from + 0.5;
+    f.lean = FEATHER.lean;
+    f.keepNear = FEATHER.near;
+  }
+
+  /** The feather on its way down to the cygnet, and into its bill. */
+  private tendFeather(dt: number): void {
+    const f = this.cast.swanFeather;
+    const k = this.cast.cygnet;
+    if (this.featherFrom < 0 || !f.flying) return;
+    if (f.heldBy) {
+      // Tucked away with it in the satchel once they are going down to the boat.
+      const going = this.beat === 'toBoat' || this.beat === 'push' || this.beat === 'aboard';
+      if (going) f.fade = Math.max(0, f.fade - dt / 1.5);
+      if (f.fade <= 0) { f.heldBy = null; f.flying = false; f.visible = false; }
+      return;
+    }
+    f.fade = Math.min(1, f.fade + dt / 1.6);
+    k.billTip(this.beak);
+    f.goal.copy(this.beak);
+    /** Blown its way, it keeps going its way rather than drifting back on the breeze. */
+    this.featherBlown = Math.max(this.featherBlown * Math.exp(-dt * 0.2), Math.min(1, f.encouragement * 2));
+    f.lean = FEATHER.lean + this.featherBlown * FEATHER.blown;
+    f.keepNear = FEATHER.near * (1 - this.featherBlown);
+    if (this.beat !== 'pond' || this.swim !== 'watch') return;
+    k.watch(f.position);
+    /** Left where it came down, the cygnet paddles over and fetches it itself. */
+    if (this.now - this.featherFrom > FEATHER.fetchAfter && overPond(f.position.x, f.position.z)) this.swimOut.set(f.position.x, POND_LEVEL, f.position.z);
+    const near = Math.hypot(f.position.x - this.beak.x, f.position.z - this.beak.z) < FEATHER.reach
+      && f.position.y - POND_LEVEL < FEATHER.under;
+    if (!f.catchingBy && (near || this.now - this.featherFrom > FEATHER.giveUpAfter)) {
+      f.catchingBy = k;
+      this.featherReached = this.now;
+    }
+    // A bill that bobs as it swims never quite lets the feather settle on it; a moment in reach is enough.
+    if (f.catchingBy && (f.position.distanceTo(this.beak) < 0.08 || this.now - this.featherReached > 1.2)) {
+      f.heldBy = k;
+      f.catchingBy = null;
+      this.featherHeld = this.now;
+    }
+  }
+
+  /** Waiting on the feather, after a while the wind is shown what it could do. */
+  private get featherInvitation(): THREE.Vector3 | null {
+    const f = this.cast.swanFeather;
+    if (this.featherFrom < 0 || !f.flying || f.heldBy || f.catchingBy) return null;
+    return this.now - this.featherFrom > FEATHER.inviteAfter ? f.position : null;
   }
 
   private finishPond(): void {

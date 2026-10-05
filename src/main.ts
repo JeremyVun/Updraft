@@ -91,6 +91,7 @@ import { createJetty } from './world/jetty';
 import { createHomeToy } from './world/home-toy';
 import { COTTAGE, ISLES, meadowPoint } from './world/heightfield';
 import { Pond } from './world/pond';
+import { Feather } from './fx/feather';
 import { SkyMirror } from './world/sky-mirror';
 import { Water } from './world/water';
 import { REFLECTION_LAYER } from './world/water/reflection';
@@ -380,12 +381,14 @@ sealife.onWhaleSound = (kind, x, y, z) => {
 const probe = QA && params.shot ? new Probe(child, cygnet, carry) : null;
 const flock = new SwanFlock();
 flock.objects.forEach((o) => scene.add(o));
+const swanFeather = new Feather(wind);
+swanFeather.objects.forEach((o) => scene.add(o));
 const cygnetAir: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
 const cygnetAhead: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
 const handsAt = new THREE.Vector3();
 const creatureAt = new THREE.Vector3();
 const emberAt = new THREE.Vector3();
-const story = new Journey({ child, plane: glider, boat, wind, lines, input, life, tree, drawing, cottage, sealife, cygnet, flock, carry, embers, birches, stairs: cloudStairs, sleeping, littleBoats, skyMirror, village, nearby: nearbyCreature });
+const story = new Journey({ child, plane: glider, boat, wind, lines, input, life, tree, drawing, cottage, sealife, cygnet, flock, swanFeather, carry, embers, birches, stairs: cloudStairs, sleeping, littleBoats, skyMirror, village, nearby: nearbyCreature });
 // Boot only needs somewhere to stand; the start cuts to the chosen room.
 rig.cut(story.shot);
 const windDebug = QA && (params.debug === 'wind' || params.debug === 'sway') ? createWindDebug(params.debug === 'sway') : null;
@@ -426,7 +429,7 @@ Object.values(echoes).forEach((e) => scene.add(e));
 const roomObjects: Partial<Record<Room, THREE.Object3D[]>> = {
   island: [tree.group, islandRocks, creatures.group], lines: [washing.group, washingBaskets, pinwheels.group, door.group],
   shore: [shoreGrass, kite.group, shorePulley.group], boats: [littleBoats.group],
-  meadow: [piano.group, ...pond.objects], birches: [...birches.objects], stairs: [cloudStairs.group], drowned: [...village.objects],
+  meadow: [piano.group, ...pond.objects, ...swanFeather.objects], birches: [...birches.objects], stairs: [cloudStairs.group], drowned: [...village.objects],
   wood: [...wood.objects], sleeping: [...sleeping.objects], mirror: [skyMirror.group], home: [...cottage.objects, homeJetty, homeTree.group],
 };
 for (const [room, echo] of Object.entries(echoes)) roomObjects[room as Room]?.push(echo);
@@ -692,6 +695,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
     birches.swing.brush(rig.camera, input, wind);
   }
   if (input.present && !input.muted) glider.brush(rig.camera, input.prevNdc, input.ndc, input.gust, input.gustDir, input.charge, dt);
+  if (story.name === 'meadow' && input.present && !input.muted) swanFeather.brush(rig.camera, input.prevNdc, input.ndc, input.gust, input.gustDir, input.charge, dt);
   embers.updraft(input, story.current.updraftTarget ?? null);
   const emberBreath = embers.brush(rig.camera, input, story.current.windInvitation ?? null, dt);
   story.current.brushDry?.(story.name==='sleeping' ? sleeping.trail.brush(rig.camera,input,dt) ?? emberBreath : emberBreath);
@@ -964,6 +968,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   piano.update(dt, time, rig.camera, wind, sound.output, input, life);
   wood.update(dt, time, rig.camera, storm, story.name === 'wood' ? story.shot.subjects : undefined);
   sleeping.update(dt, time, rig.camera);
+  if (story.name === 'meadow') swanFeather.update(dt, time);
   departureKites.update(dt, time, rig.camera, story);
   cloudStairs.update(dt, time, rig.camera);
   pinwheels.update(dt, rig.camera, sound.output);
