@@ -1,10 +1,9 @@
 import * as THREE from 'three';
 import { ATMO_GLSL, atmo } from '../world/atmosphere';
 import { fieldAt, type FieldSample } from '../world/fields';
-import { sheepGate } from '../world/sheep-gate';
 import { mulberry32, smoothstep } from '../world/noise';
 import type { Habitat } from './habitat';
-import { Spring, ease, easeAngle, range, screenBrush, screenPan, wrapAngle, type Rng } from './motion';
+import { Spring, ease, easeAngle, range, screenPan, wrapAngle, type Rng } from './motion';
 import { CREATURE_GLSL } from './shading';
 import { Instances, blob, merge, mirrored, type BlobSpec } from './shapes';
 import { dormant, type Stimuli } from './stimuli';
@@ -273,8 +272,6 @@ interface Flock {
   rand: Rng;
   /** The field the flock lives in; they never leave it. */
   kind: number;
-  /** The flock in the gateway on the meadow's way, which goes wherever the wind sends it short of climbing a wall. */
-  gate: boolean;
   x: number;
   z: number;
   goalX: number;
@@ -330,10 +327,6 @@ interface Member {
   lookUp: boolean;
   /** Following the child with its eyes. */
   watching: boolean;
-  /** In the gateway and not moving for anybody but the wind. */
-  held: boolean;
-  /** Trotting off from a gust that reached it in the gateway. */
-  shooed: boolean;
   tucked: boolean;
   tuckSide: number;
   wary: number;
@@ -378,13 +371,6 @@ const RADDLES = ['#2c56b8', '#b3262b'];
 /** Ordinary pasture: grazed fields, not hay meadows or rushes (see `grassHeightAt`). */
 const GRAZING = [0.25, 0.84];
 const WINDY = 5.5;
-/**
- * A sheep in the gateway is moved by a stroke that crosses it on screen (radius in screen heights, and how fast the
- * stroke has to be going), or by a gust of the player's that comes this near it on the ground.
- */
-const GATE_BRUSH = 0.16;
-const GATE_GUST = 4;
-const GATE_REACH = 5;
 const TAU = Math.PI * 2;
 
 /** Sheep graze the walled pastures in loose flocks, lambs at heel; wind and the child move them about. */
@@ -430,13 +416,11 @@ export class Sheep {
   }
 
   /** A flock of `count`, about a third of them lambs, grazing the field around (x, z). */
-  addFlock(x: number, z: number, count: number, seed: number, gate = false): void {
+  addFlock(x: number, z: number, count: number, seed: number): void {
     const rand = mulberry32(seed);
-    const g = sheepGate;
     const flock: Flock = {
       rand,
       kind: fieldAt(x, z, this.field).kind,
-      gate,
       x,
       z,
       goalX: x,
@@ -459,8 +443,7 @@ export class Sheep {
       const lamb = i >= ewes;
       const mums = flock.members.filter((o) => !o.lamb);
       const mother = lamb ? (mums[(i - ewes) % mums.length] ?? null) : null;
-      const spot = gate ? this.inGateway(flock, mother)
-        : mother ? this.findSpot(flock, mother.x, mother.z, 0.6, 1.6, null) : this.findSpot(flock, x, z, 0, 4.5, null);
+      const spot = mother ? this.findSpot(flock, mother.x, mother.z, 0.6, 1.6, null) : this.findSpot(flock, x, z, 0, 4.5, null);
       if (!spot) continue;
       const marked = !lamb && rand() < 0.55;
       const m: Member = {
@@ -489,8 +472,6 @@ export class Sheep {
         lookZ: 0,
         lookUp: false,
         watching: false,
-        held: gate,
-        shooed: false,
         tucked: false,
         tuckSide: rand() < 0.5 ? -1 : 1,
         wary: 0,
@@ -532,40 +513,11 @@ export class Sheep {
       this.count++;
     }
     if (flock.members.length) this.flocks.push(flock);
-    if (gate && flock.members.length) g.stocked = true;
-  }
-
-  /** A flock standing about in the gateway on the meadow's way, a lamb by its mother. */
-  addGateFlock(count: number, seed: number): void {
-    this.addFlock(sheepGate.at.x, sheepGate.at.y, count, seed, true);
-  }
-
-  private inGateway(f: Flock, mother: Member | null): [number, number] | null {
-    const g = sheepGate;
-    for (let i = 0; i < 30; i++) {
-      const on = range(f.rand, -2, 1.8);
-      const off = range(f.rand, -2.8, 2.8);
-      const a = f.rand() * TAU;
-      const x = mother ? mother.x + Math.cos(a) * 1.4 : g.at.x + g.along.x * on + g.along.y * off;
-      const z = mother ? mother.z + Math.sin(a) * 1.4 : g.at.y + g.along.y * on - g.along.x * off;
-      if (g.inWay(x, z) && this.allowed(f, x, z) && !this.crowded(f, x, z, null)) return [x, z];
-    }
-    return null;
   }
 
   private allowed(f: Flock, x: number, z: number, margin = 1.5): boolean {
     const s = fieldAt(x, z, this.field);
-    if (f.gate) return s.presence >= 0.5 && (s.edge > margin || !s.wall) && this.habitat.meadow(x, z);
     return s.kind === f.kind && s.edge > margin && this.habitat.meadow(x, z);
-  }
-
-  /**
-   * In the gateway a sheep stays on the way until the wind moves it, and once moved off it does not go back on while
-   * any are left to move; then the flock is just a flock again, and a lamb can cross back to its mother.
-   */
-  private keeps(m: Member | null, x: number, z: number): boolean {
-    if (!m?.flock.gate || m.shooed || !sheepGate.blocked) return true;
-    return m.held === sheepGate.inWay(x, z);
   }
 
   private crowded(f: Flock, x: number, z: number, self: Member | null): boolean {
@@ -579,7 +531,7 @@ export class Sheep {
       const d = min + (max - min) * Math.sqrt(f.rand());
       const px = x + Math.cos(a) * d;
       const pz = z + Math.sin(a) * d;
-      if (this.allowed(f, px, pz, margin) && this.keeps(self, px, pz) && !this.crowded(f, px, pz, self)) return [px, pz];
+      if (this.allowed(f, px, pz, margin) && !this.crowded(f, px, pz, self)) return [px, pz];
     }
     return null;
   }
@@ -592,7 +544,6 @@ export class Sheep {
     if (walker) this.lastWalker.copy(walker);
     let drawn = 0;
     for (const f of this.flocks) {
-      if (f.gate) this.tallyGate(f);
       if (dormant(s, f.x, f.z)) continue;
       this.senseFlock(f, dt, s);
       for (const m of f.members) {
@@ -609,20 +560,6 @@ export class Sheep {
     }
     this.instances.commit(drawn);
     this.mesh.visible = drawn > 0;
-  }
-
-  private tallyGate(f: Flock): void {
-    const g = sheepGate;
-    g.blocking = 0;
-    g.herd.set(0, 0, 0);
-    for (const m of f.members) {
-      if (!m.held && !(m.shooed && g.inWay(m.x, m.z))) continue;
-      g.herd.x += m.x;
-      g.herd.y += m.y;
-      g.herd.z += m.z;
-      g.blocking++;
-    }
-    if (g.blocking) g.herd.divideScalar(g.blocking);
   }
 
   /** Blooms out of the grass with a soft swell and a shake of the fleece. */
@@ -696,11 +633,6 @@ export class Sheep {
     const f = m.flock;
     const w = s.wind.sample(m.x, m.z, s.sample);
     m.wary = Math.max(0, m.wary - dt);
-    if (m.held) {
-      this.senseHeld(m, w, s);
-      return;
-    }
-    if (m.shooed) return;
     if (w.energy > 0.3 && f.bolted <= 0 && f.alarm < 0.6) {
       const g = s.gustAt;
       const near = g && Math.hypot(g.x - m.x, g.z - m.z) < 18;
@@ -741,68 +673,6 @@ export class Sheep {
     }
 
     if (s.night > m.sleepy && m.activity !== 'rest' && m.then !== 'rest' && m.activity !== 'look') this.bed(m, false);
-  }
-
-  /**
-   * Standing in the gateway: a child is only something to stare at, and the island's own air goes over them. Only
-   * a gust of the player's that reaches a sheep moves it, and only that one, so a flock is moved on a few at a time.
-   */
-  private senseHeld(m: Member, w: { x: number; z: number; energy: number }, s: Stimuli): void {
-    const input = s.input;
-    const body = this.voiceAt.set(m.x, m.y + 0.5 * m.size, m.z);
-    if (input.present && !input.muted && input.gust > GATE_GUST
-      && screenBrush(s.camera, body, input.prevNdc, input.ndc, GATE_BRUSH) > 0.05) {
-      this.shoo(m, m.x - input.gustDir.x * 3, m.z - input.gustDir.y * 3, input.gustDir.x, input.gustDir.y);
-      return;
-    }
-    const g = s.gustAt;
-    if (g && w.energy > 0.3 && Math.hypot(g.x - m.x, g.z - m.z) < GATE_REACH) {
-      this.shoo(m, g.x, g.z, w.x, w.z);
-      return;
-    }
-    if (m.activity === 'trot' || m.hop) return;
-    const walker = s.walker;
-    if (walker && m.wary <= 0 && Math.hypot(walker.x - m.x, walker.z - m.z) < 16 && m.activity !== 'suckle') {
-      m.wary = range(m.rand, 4, 9);
-      if (m.rand() < 0.6) this.lookAt(m, walker.x, walker.z, range(m.rand, 2, 4), false, true);
-    }
-  }
-
-  /** Off down the wind that reached it, and off the way if there is room on either side. */
-  private shoo(m: Member, fromX: number, fromZ: number, windX: number, windZ: number): void {
-    if (m.shooed) return;
-    const f = m.flock;
-    const speed = Math.hypot(windX, windZ);
-    const away = Math.hypot(m.x - fromX, m.z - fromZ);
-    const ax = (speed > 0.1 ? windX / speed : 0) + (away > 0.1 ? (m.x - fromX) / away : 0) * 0.5;
-    const az = (speed > 0.1 ? windZ / speed : 0) + (away > 0.1 ? (m.z - fromZ) / away : 0) * 0.5;
-    const heading = Math.atan2(ax, az);
-    let target: [number, number] | null = null;
-    for (const turn of [0, 0.4, -0.4, 0.8, -0.8, 1.2, -1.2]) {
-      const d = range(m.rand, 5.5, 8);
-      const tx = m.x + Math.sin(heading + turn) * d;
-      const tz = m.z + Math.cos(heading + turn) * d;
-      if (!this.allowed(f, tx, tz, 2)) continue;
-      target ??= [tx, tz];
-      if (!sheepGate.inWay(tx, tz)) {
-        target = [tx, tz];
-        break;
-      }
-    }
-    if (!target) return;
-    m.held = false;
-    m.shooed = true;
-    m.activity = 'trot';
-    m.tucked = false;
-    m.hop = null;
-    m.hopY = 0;
-    m.hops = 0;
-    m.then = null;
-    this.go(m, target[0], target[1], range(m.rand, 2.2, 2.7));
-    m.timer = 6;
-    m.lookX = fromX;
-    m.lookZ = fromZ;
-    if (m.rand() < 0.5 && m.sinceBleat > 2) m.bleatIn = range(m.rand, 0.1, 0.5);
   }
 
   private lookAt(m: Member, x: number, z: number, time: number, up: boolean, watching = false): void {
@@ -846,7 +716,7 @@ export class Sheep {
     f.goalZ = cz;
     let caller: Member | null = null;
     for (const m of f.members) {
-      if (m.asleep || m.held || m.shooed) continue;
+      if (m.asleep) continue;
       let gx = cx + (m.x - f.x) * 0.35 + (m.rand() - 0.5) * 0.8;
       let gz = cz + (m.z - f.z) * 0.35 + (m.rand() - 0.5) * 0.8;
       if (m.mother) {
@@ -877,7 +747,7 @@ export class Sheep {
       const d = range(m.rand, 3, 5);
       const tx = m.x + Math.sin(away + turn) * d;
       const tz = m.z + Math.cos(away + turn) * d;
-      if (!this.allowed(m.flock, tx, tz) || !this.keeps(m, tx, tz)) continue;
+      if (!this.allowed(m.flock, tx, tz)) continue;
       m.activity = 'walk';
       m.tucked = false;
       m.then = null;
@@ -1028,7 +898,7 @@ export class Sheep {
     const a = m.yaw + (m.rand() - 0.5) * 0.8;
     const tx = m.x + Math.sin(a) * d;
     const tz = m.z + Math.cos(a) * d;
-    const ok = this.allowed(m.flock, tx, tz) && this.keeps(m, tx, tz);
+    const ok = this.allowed(m.flock, tx, tz);
     return {
       t: 0,
       prep: 0.1,
@@ -1104,7 +974,7 @@ export class Sheep {
     const step = Math.min(dist, m.pace * (0.25 + 0.75 * align) * dt);
     const nx = m.x + Math.sin(m.yaw) * step;
     const nz = m.z + Math.cos(m.yaw) * step;
-    if (!this.allowed(m.flock, nx, nz) || !this.keeps(m, nx, nz)) return true;
+    if (!this.allowed(m.flock, nx, nz)) return true;
     m.x = nx;
     m.z = nz;
     return false;
@@ -1123,10 +993,6 @@ export class Sheep {
   /** After a fright: stop, look back at what it was, and maybe (for a lamb) a relieved spring. */
   private settle(m: Member): void {
     m.moving = false;
-    if (m.shooed) {
-      m.shooed = false;
-      m.held = sheepGate.inWay(m.x, m.z);
-    }
     if (m.lamb && m.rand() < 0.35) {
       this.pronk(m, 1 + Math.floor(m.rand() * 2));
       return;
@@ -1186,7 +1052,7 @@ export class Sheep {
       const push = (gap - d) * Math.min(1, dt * 3) * (o.lie > 0.3 || o.activity === 'suckle' ? 1 : 0.5);
       const nx = m.x + (dx / d) * push;
       const nz = m.z + (dz / d) * push;
-      if (this.allowed(m.flock, nx, nz) && this.keeps(m, nx, nz)) {
+      if (this.allowed(m.flock, nx, nz)) {
         m.x = nx;
         m.z = nz;
       }

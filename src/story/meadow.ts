@@ -11,8 +11,6 @@ import type { Cast, Chapter } from './cast';
 import { LANDING } from './crossing';
 import { completeObjective, cue } from './cues';
 import { PianoStop } from './piano';
-import { GateStop } from './sheep-gate';
-import { sheepGate } from '../world/sheep-gate';
 import { harebells } from '../world/harebells';
 import { tuning } from '../tuning';
 import { musicFront } from '../world/music-growth';
@@ -92,7 +90,7 @@ const BOARDING = 16;
  * The feather the family leaves: how far out over the water beyond the cygnet and how high it comes down from, how
  * near its bill it has to drift before it reaches up and takes it, and how long before the wind is shown it.
  */
-const FEATHER = { out: 6, aside: 2, from: 4, lean: 0.2, blown: 4, near: 5, reach: 1.4, under: 2.6, inviteAfter: 6, fetchAfter: 18, giveUpAfter: 45 };
+const FEATHER = { out: 6, aside: 2, from: 4, lean: 0.5, blown: 4, near: 2.5, meets: 1.5, reach: 1.4, under: 2.6, inviteAfter: 6, fetchAfter: 18, giveUpAfter: 45 };
 
 /**
  * The meadow: the last warm afternoon of the year, and the island is asleep. The boat lands in a bay under a bank,
@@ -160,10 +158,6 @@ export class MeadowChapter implements Chapter {
   trodden: THREE.Vector3 | null = null;
   /** The piano on the ridge: the child plays colour into the meadow before walking on. */
   private readonly piano = new PianoStop();
-  /** The sheep in the gateway below the rise, which only the wind can move. */
-  private readonly gate = new GateStop();
-  /** How far the walk's view has come down and in to the child and the flock she is waiting on. */
-  private gateNear = 0;
   private nextCall = 0;
   private nextBugle = 0;
   private wentOn = false;
@@ -173,7 +167,7 @@ export class MeadowChapter implements Chapter {
   /** Where the child waits and where the cygnet enters and leaves the water. */
   private readonly edge = new THREE.Vector3();
   private readonly bank = new THREE.Vector3();
-  private swim: 'settle' | 'enter' | 'out' | 'watch' | 'back' = 'settle';
+  private swim: 'settle' | 'enter' | 'out' | 'watch' | 'feather' | 'back' = 'settle';
   private swimAt = 0;
   private readonly swimOut = new THREE.Vector3();
   private readonly dryBank = new THREE.Vector3();
@@ -187,6 +181,8 @@ export class MeadowChapter implements Chapter {
   /** How much the player has blown it toward the cygnet lately, 0..1. */
   private featherBlown = 0;
   private bellsHeard = false;
+  private featherTucked = false;
+  private featherFetched = false;
   private readonly beak = new THREE.Vector3();
   /** Where the family is, where it was first found, and the horizontal line from the child to it. */
   private readonly far = new THREE.Vector3();
@@ -202,7 +198,6 @@ export class MeadowChapter implements Chapter {
     this.waveTo = PATCH.radius;
     this.piano.onWake = (stage, answered) => this.wake(stage, answered);
     this.piano.onComplete = completeObjective;
-    this.gate.onRelease = () => this.walkOnFromGate();
     /**
      * The family is on the water from the moment the chapter starts, long before anything in the story points at
      * it. Nothing in this room appears: the player comes over the rise and finds it already there.
@@ -254,7 +249,6 @@ export class MeadowChapter implements Chapter {
     this.waveTo = data[1]; this.waveSpeed = data[2]; this.dusk = data[3]; this.duskTarget = data[4];
     this.piano.restoreDone();
     this.crestDone = point === 'pond';
-    if (this.crestDone) this.gate.restoreDone();
     this.beat = 'walk'; this.play = 'hold'; this.holdUntil = 1;
     if (this.crestDone) this.cast.flock.clear();
   }
@@ -277,8 +271,7 @@ export class MeadowChapter implements Chapter {
   }
   readonly flockChatter = false;
   get pianoActive(): boolean { return piano.engaged; }
-  get windInvitation(): THREE.Vector3 | null { return this.gate.invitation ?? this.featherInvitation; }
-  get invitationRadius(): number { return this.gate.invitation ? 2.5 : 0; }
+  get windInvitation(): THREE.Vector3 | null { return this.featherInvitation; }
   /** The feather only wants blowing one way, toward the cygnet. */
   get invitationHeading(): number | null { return this.featherInvitation ? this.featherHeading : null; }
   private featherHeading = 0;
@@ -291,14 +284,11 @@ export class MeadowChapter implements Chapter {
     const from = this.onScreen.copy(this.cast.swanFeather.position).project(camera);
     this.featherHeading = Math.atan2(ty - from.y, (tx - from.x) * camera.aspect);
   }
-  /** QA: how far the stop at the sheep has got. */
-  get atGate(): string { return this.gate.at; }
 
   /** For testing: the green wave has already rolled out and the child is most of the way across. */
   skipAhead(): void {
     const { child, plane } = this.cast;
     this.wokenAlready();
-    this.gate.restoreDone();
     this.leg = ROUTE.length - 1;
     child.stop();
     child.place(ROUTE[ROUTE.length - 1].x + 4, ROUTE[ROUTE.length - 1].y + 40, Math.PI);
@@ -323,28 +313,11 @@ export class MeadowChapter implements Chapter {
     this.to('walk');
   }
 
-  /** For testing: on the walk from the piano, short of the sheep in the gateway, cygnet in the satchel and plane in hand. */
-  skipToGate(): void {
-    const { child, cygnet, plane } = this.cast;
-    this.wokenAlready();
-    this.leg = CREST_LEG;
-    const g = sheepGate;
-    child.stop();
-    child.place(g.wait.x - g.along.x * 24, g.wait.y - g.along.y * 24, Math.atan2(g.along.x, g.along.y));
-    child.standUp();
-    cygnet.rideIn('satchel');
-    cygnet.bind(0.06);
-    plane.hold(child);
-    this.play = 'hold';
-    this.to('walk');
-  }
-
   /** For testing: a few paces short of the rise, cygnet in the satchel and plane in hand, with the crest still to come. */
   skipToCrest(): void {
     const { child, cygnet, plane, flock } = this.cast;
     if (!flock.active) flock.rest(RAFT_AT.x, RAFT_AT.z, tuning.crest.raft, tuning.crest.family, POND_LEVEL);
     this.wokenAlready();
-    this.gate.restoreDone();
     this.leg = CREST_LEG;
     const at = ROUTE[CREST_LEG];
     const from = ROUTE[CREST_LEG - 1];
@@ -469,7 +442,7 @@ export class MeadowChapter implements Chapter {
         if (this.t > 5.5 && !c.busy) this.walkOn();
         break;
       case 'walk':
-        if (!this.piano.hold(dt, time, this.cast) && !this.gate.hold(dt, time, this.cast)) {
+        if (!this.piano.hold(dt, time, this.cast)) {
           this.updateWalk(time);
           this.hearBells();
         }
@@ -548,7 +521,6 @@ export class MeadowChapter implements Chapter {
     }
     if (p.held) p.hold(c);
     p.companion = this.beat === 'walk' && !this.arrival.active ? c.position : null;
-    this.gateNear += ((this.gate.herd ? 1 : 0) - this.gateNear) * (1 - Math.exp(-dt * 0.45));
     this.frame();
     /** The stop at the piano owns the camera while it has the child, and says how fast it should follow. */
     const pianoPace = this.piano.frame(this.shot);
@@ -634,7 +606,17 @@ export class MeadowChapter implements Chapter {
       }
     } else if (this.swim === 'watch') {
       k.swimTo(this.swimOut);
-      if (this.featherFrom < 0 && this.now - this.swimAt > tuning.wingCare.pondWatchFor) this.dropFeather();
+      if (this.now - this.swimAt > tuning.wingCare.pondWatchFor) {
+        this.dropFeather();
+        this.swim = 'feather'; this.swimAt = this.now;
+      }
+    } else if (this.swim === 'feather') {
+      // It stops turning and lets itself drift, watching the feather, until it goes over to fetch it.
+      const f = this.cast.swanFeather;
+      this.featherFetched = this.now - this.featherFrom > FEATHER.fetchAfter;
+      const fetch = this.featherFetched && overPond(f.position.x, f.position.z);
+      this.swimOut.set(fetch ? f.position.x : k.position.x, POND_LEVEL, fetch ? f.position.z : k.position.z);
+      k.swimTo(this.swimOut);
       if (this.featherHeld >= 0 && this.now - this.featherHeld > 1.4) {
         k.watch(c.face(this.returnLook));
         this.swim = 'back'; this.swimAt = this.now;
@@ -652,9 +634,9 @@ export class MeadowChapter implements Chapter {
   }
 
   /**
-   * One white feather comes down out of the sky they went into, slowly, over the water beyond the cygnet. It drifts
-   * to it by itself in its own time; the player's wind can bring it sooner. The cygnet reaches up and takes it in its
-   * bill, and keeps it.
+   * Once it has watched them out of sight, one white feather comes down out of the sky they went into, slowly, over
+   * the water beyond the cygnet. Left alone it paddles over for it; the player's wind can bring it sooner. It takes it
+   * in its bill and carries it back, and it goes into the satchel with it.
    */
   private dropFeather(): void {
     const f = this.cast.swanFeather;
@@ -674,9 +656,8 @@ export class MeadowChapter implements Chapter {
     const k = this.cast.cygnet;
     if (this.featherFrom < 0 || !f.flying) return;
     if (f.heldBy) {
-      // Tucked away with it in the satchel once they are going down to the boat.
-      const going = this.beat === 'toBoat' || this.beat === 'push' || this.beat === 'aboard';
-      if (going) f.fade = Math.max(0, f.fade - dt / 1.5);
+      // It goes down into the satchel with the cygnet when she puts it away.
+      if (this.featherTucked) f.fade = Math.max(0, f.fade - dt / 0.9);
       if (f.fade <= 0) { f.heldBy = null; f.flying = false; f.visible = false; }
       return;
     }
@@ -685,12 +666,11 @@ export class MeadowChapter implements Chapter {
     f.goal.copy(this.beak);
     /** Blown its way, it keeps going its way rather than drifting back on the breeze. */
     this.featherBlown = Math.max(this.featherBlown * Math.exp(-dt * 0.2), Math.min(1, f.encouragement * 2));
-    f.lean = FEATHER.lean + this.featherBlown * FEATHER.blown;
-    f.keepNear = FEATHER.near * (1 - this.featherBlown);
-    if (this.beat !== 'pond' || this.swim !== 'watch') return;
+    // Fetched, it drifts the last of the way to meet the bill coming for it.
+    f.lean = FEATHER.lean + this.featherBlown * FEATHER.blown + (this.featherFetched ? FEATHER.meets : 0);
+    f.keepNear = this.featherFetched ? 0 : FEATHER.near * (1 - this.featherBlown);
+    if (this.beat !== 'pond' || this.swim !== 'feather') return;
     k.watch(f.position);
-    /** Left where it came down, the cygnet paddles over and fetches it itself. */
-    if (this.now - this.featherFrom > FEATHER.fetchAfter && overPond(f.position.x, f.position.z)) this.swimOut.set(f.position.x, POND_LEVEL, f.position.z);
     const near = Math.hypot(f.position.x - this.beak.x, f.position.z - this.beak.z) < FEATHER.reach
       && f.position.y - POND_LEVEL < FEATHER.under;
     if (!f.catchingBy && (near || this.now - this.featherFrom > FEATHER.giveUpAfter)) {
@@ -728,6 +708,7 @@ export class MeadowChapter implements Chapter {
       return;
     }
     this.gatherUp(() => {
+      this.featherTucked = true;
       carry.stow(() => {
         cygnet.mayFly = true;
         cygnet.stay = false; cygnet.pace = 1;
@@ -760,8 +741,6 @@ export class MeadowChapter implements Chapter {
     const next = this.target();
     const piano = this.piano.waypoint(next);
     if (piano !== next) return piano;
-    const gate = this.gate.waypoint(next);
-    if (gate !== next) return gate;
     if (this.leg >= CREST_LEG && !this.crestDone) return this.planeGoal.set(POND_AT.x, POND_AT.z);
     if (this.leg === ROUTE.length - 1) {
       const boat = this.cast.boat.position;
@@ -931,14 +910,6 @@ export class MeadowChapter implements Chapter {
     }
   }
 
-  /** Through the gap: back to the plane, wherever it was when the sheep stopped her. */
-  private walkOnFromGate(): void {
-    const p = this.cast.plane;
-    this.play = p.held ? 'hold' : 'watch';
-    this.holdUntil = this.now + 0.5;
-    this.nextChase = 0;
-  }
-
   /** A bell rung near them turns both their heads, and lets them go again. */
   private hearBells(): void {
     const { child: c, cygnet: k } = this.cast;
@@ -1063,16 +1034,15 @@ export class MeadowChapter implements Chapter {
     }
     const guide = tuning.meadowPlane;
     const gap = Math.hypot(p.x - c.x, p.z - c.z);
-    const herd = this.gate.aim(c);
-    const pw = this.cast.plane.held || herd ? 0 : Math.min(0.25, guide.cameraLead / Math.max(gap, 1));
-    const fx = (herd?.x ?? c.x) + (p.x - c.x) * pw;
-    const fz = (herd?.z ?? c.z) + (p.z - c.z) * pw - 3;
+    const pw = this.cast.plane.held ? 0 : Math.min(0.25, guide.cameraLead / Math.max(gap, 1));
+    const fx = c.x + (p.x - c.x) * pw;
+    const fz = c.z + (p.z - c.z) * pw - 3;
     const ground = Math.max(c.y, 0);
     s.target.set(fx, ground + 3 + (this.cast.plane.held ? 0 : Math.min(guide.cameraRise, Math.max(0, p.y - ground - 6) * 0.35)), fz);
-    s.distance = THREE.MathUtils.lerp(guide.cameraBack, guide.gateBack, this.gateNear);
-    s.height = THREE.MathUtils.lerp(13, guide.gateUp, this.gateNear);
+    s.distance = guide.cameraBack;
+    s.height = 13;
     this.cameraChild.copy(c).y += 1.2;
-    this.framing.secondary.copy(this.gate.herd ?? (this.cast.plane.held ? this.cameraChild : p));
+    this.framing.secondary.copy(this.cast.plane.held ? this.cameraChild : p);
     s.subjects = this.framing;
     this.pace = guide.cameraPace;
     this.focus.set(fx, ground, fz);

@@ -422,8 +422,9 @@ const sheepFolds = [
   { x: COTTAGE.x - 15, z: COTTAGE.z + 20, sheep: 6 },
 ];
 sheepFolds.forEach((fold, i) => hillCreatures.spawn({ ...fold, radius: 10, seed: 61 + i }));
-/** The flock that grazed the field below the rise stands in its far gateway, on the way. */
-hillCreatures.sheep.addGateFlock(6, 60);
+/** A flock grazing across the way below the rise: it parts for her as she comes, or for the wind. */
+const onTheWay = ROUTE[2].clone().lerp(ROUTE[3], 0.44);
+hillCreatures.spawn({ x: onTheWay.x, z: onTheWay.y, radius: 2, sheep: 8, seed: 60 });
 scene.add(hillCreatures.group);
 clipJourneyProps(hillCreatures.group);
 const echoes = dreamEchoes();
