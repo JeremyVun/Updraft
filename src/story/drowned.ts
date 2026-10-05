@@ -116,8 +116,9 @@ export class DrownedChapter implements Chapter {
     margin: 0.9, extra: 4 };
   private readonly cat: StrandedCat;
   /** When the cat beat took the lens, and when the boat went on with the cat aboard. */
-  private catFrom = -1;
+  private catRound = 0;
   private aboardFrom = -1;
+  private readonly catAttention = { point: new THREE.Vector3(), strength: 0, weight: tuning.drownedCamera.catGlance };
   private readonly darkFront = new THREE.Vector3();
   private readonly catEye = new THREE.Vector3();
   private readonly anchor = new THREE.Vector3();
@@ -558,7 +559,8 @@ export class DrownedChapter implements Chapter {
     const climbed = this.cat.sinceBolt < 0 ? 0 : THREE.MathUtils.smootherstep(this.cat.sinceBolt, 0, k.climbFor);
     look += Math.atan2(Math.sin(k.strandClimb - look), Math.cos(k.strandClimb - look)) * climbed;
     const b = this.anchor.copy(boat.position).lerp(STRAND_TOP, 0.8 * climbed);
-    const back = THREE.MathUtils.lerp(THREE.MathUtils.lerp(k.uprightBack, k.strandBack, wide), k.climbBack, climbed);
+    const back = THREE.MathUtils.lerp(THREE.MathUtils.lerp(k.uprightBack, k.strandBack, wide),
+      THREE.MathUtils.lerp(k.uprightClimbBack, k.climbBack, wide), climbed);
     const side = k.uprightSide * (1 - wide) * round;
     const ex = b.x - Math.sin(look) * back - Math.cos(look) * side, ez = b.z - Math.cos(look) * back + Math.sin(look) * side;
     const reach = Math.hypot(b.x - ex, b.z - ez);
@@ -581,32 +583,38 @@ export class DrownedChapter implements Chapter {
   }
 
   /**
-   * While the cat is brought over, the lens comes round from the drift to stand off the side of the water between the
-   * boat and the cat's roof, low, so the boat, the tub and the chimney are one picture and the tub's two trips go
-   * across it. Upright it stands behind the waiting boat and looks up past it, so the boat, the tub and the roof stack
-   * up the frame. It comes round over the time the boat takes to slow, and then holds.
+   * While the cat is brought over, the lens moves from the drift to stand off the side of the water between the boat
+   * and the cat's roof, low, so the boat, the tub and the chimney are one picture and the tub's two trips go across
+   * it. Upright it stands behind the waiting boat and off to the tub's side, clear of the sail, and looks on past it,
+   * so the boat, the tub and the roof stack up the frame. The eye itself is carried there as the boat slows into its
+   * hold, never ahead of the boat, so the boat never passes through it; first it glances at the cat as she does.
    */
   private catFrame(): void {
-    const k = tuning.drownedCamera, s = this.shot;
-    if (this.catFrom < 0) this.catFrom = this.now;
-    const round = THREE.MathUtils.smootherstep(this.now - this.catFrom, 0, k.catTurnFor);
+    const k = tuning.drownedCamera, s = this.shot, boat = this.cast.boat;
     const wide = THREE.MathUtils.smoothstep(this.aspect, 0.7, 1.3);
+    const toHold = Math.hypot(boat.position.x - CAT_HOLD.x, boat.position.z - CAT_HOLD.y);
+    this.catRound = Math.max(this.catRound, THREE.MathUtils.smootherstep(1 - (toHold - 1) / k.catTurnFrom, 0, 1));
+    const round = this.catRound;
     const tx = CAT_HOUSE.x - CAT_HOLD.x, tz = CAT_HOUSE.z - CAT_HOLD.y, tl = Math.hypot(tx, tz);
-    const eye = this.catEye.set(CAT_HOLD.x - tx / tl * k.uprightCatBack, k.uprightCatEye, CAT_HOLD.y - tz / tl * k.uprightCatBack)
-      .lerp(this.catAim.set(CAT_LENS.x, k.catEye, CAT_LENS.y), wide);
-    const aim = this.catAim.set(TUB_WATER.x, THREE.MathUtils.lerp(k.uprightCatAim, k.catAim, wide), TUB_WATER.z);
-    const was = Math.atan2(s.from!.x, s.from!.z);
-    const bearing = was + Math.atan2(Math.sin(Math.atan2(eye.x - aim.x, eye.z - aim.z) - was), Math.cos(Math.atan2(eye.x - aim.x, eye.z - aim.z) - was)) * round;
-    s.from = this.from.set(Math.sin(bearing), 0, Math.cos(bearing));
+    const eye = this.catEye.set(CAT_HOLD.x - (tx * k.uprightCatBack + tz * k.uprightCatSide) / tl, k.uprightCatEye,
+      CAT_HOLD.y - (tz * k.uprightCatBack - tx * k.uprightCatSide) / tl).lerp(this.catAim.set(CAT_LENS.x, k.catEye, CAT_LENS.y), wide);
+    const aim = this.catAim.set(TUB_WATER.x, THREE.MathUtils.lerp(k.uprightCatAim, k.catAim, wide), TUB_WATER.z)
+      .lerp(this.anchor.set(CAT_HOLD.x, THREE.MathUtils.lerp(k.uprightCatAim, k.catAim, wide), CAT_HOLD.y), 0.25 * (1 - wide));
+    const drift = this.anchor.copy(s.target).addScaledVector(s.from!, s.distance).setY(s.target.y + s.height);
+    eye.copy(drift).lerp(eye, round);
     s.target.lerp(aim, round);
-    s.distance = THREE.MathUtils.lerp(s.distance, Math.hypot(eye.x - aim.x, eye.z - aim.z), round);
-    s.height = THREE.MathUtils.lerp(s.height, eye.y - aim.y, round);
-    if (round > 0.5) s.attention = undefined;
+    const dx = eye.x - s.target.x, dz = eye.z - s.target.z, d = Math.hypot(dx, dz);
+    s.from = this.from.set(dx / d, 0, dz / d);
+    s.distance = d;
+    s.height = eye.y - s.target.y;
+    this.catAttention.point.copy(this.cat.eye);
+    this.catAttention.strength = THREE.MathUtils.smoothstep(this.cat.step === 'seen' ? this.cat.t : 3, 0, 2.5) * (1 - round);
+    if (this.catAttention.strength > (s.attention?.strength ?? 0)) s.attention = this.catAttention;
     const c = this.catSubjects;
     c.primary.copy(this.subjects.primary);
     c.secondary.copy(this.cat.eye);
     c.tertiary.copy(this.cat.tubTop);
-    s.subjects = c;
+    if (round > 0.3) s.subjects = c;
     s.smoothFit = 1.5;
     this.pace = THREE.MathUtils.lerp(this.pace, k.catPace, round);
   }

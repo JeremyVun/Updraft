@@ -15,7 +15,7 @@ import { DarkBank } from './drowned-dark';
 import { WashTub } from './wash-tub';
 import {
   CAT_HOUSE, DARK_WAY, GARDEN_TREE, GARDEN_WALLS, GREEN_TREE, NAVE, PLACED, SWING_FROM, SWING_PIVOT,
-  inClearing, type GardenWall, type PlacedHouse,
+  inClearing, onCatGround, type GardenWall, type PlacedHouse,
 } from './drowned-way';
 
 /**
@@ -947,7 +947,12 @@ function plantTrees(houses: HouseSpec[], rand: Rng, twigs: Twig[], cameraObstacl
       if (Math.hypot(x - SPIRE.x, z - SPIRE.z) < 18 || inClearing(x, z, 5)) continue;
       if (Math.hypot(x - LIGHTHOUSE.x, z - LIGHTHOUSE.z) < 22) continue;
       const bare = twigs.length;
-      for (const part of drownedTree(x, z, range(rand, 7, 10), rand, twigs)) {
+      const parts = drownedTree(x, z, range(rand, 7, 10), rand, twigs);
+      if (onCatGround(x, z, 4)) {
+        twigs.length = bare;
+        break;
+      }
+      for (const part of parts) {
         part.computeBoundingBox();
         const bounds = part.boundingBox!;
         if (Math.max(bounds.max.x - bounds.min.x, bounds.max.y - bounds.min.y, bounds.max.z - bounds.min.z) > 3)
@@ -1252,18 +1257,23 @@ export class DrownedVillage {
     const rand = mulberry32(3140);
     const houses = layout(rand);
     const body = new Merged();
-    for (const h of houses) this.addHouse(body, h, rand, true);
+    /** What stands on the cat's ground is drawn up and thrown away, so every later roof and tree takes the same chances. */
+    const unbuilt = new Merged();
+    const built = houses.filter((h) => !onCatGround(h.x, h.z, h.len / 2));
+    for (const h of houses) {
+      if (built.includes(h)) this.addHouse(body, h, rand, true);
+      else buildHouse(unbuilt, h, rand, houseMatrix(h));
+    }
     buildChurch(body, rand);
     this.cameraObstacles.push(houseBounds({ ...NAVE, roll: 0, lime: STONE, roof: SLATE[0] }));
     const placing = mulberry32(9104);
     PLACED.forEach((p, i) => this.addHouse(body, placedSpec(p, i), placing, !p.quiet));
-    /** From a seed of its own, so the trees grown after the placed roofs are the same whatever the cat's is like. */
     this.addHouse(body, placedSpec(CAT_HOUSE, 2), mulberry32(5150), false);
     for (const w of GARDEN_WALLS) this.cameraObstacles.push(buildWall(body, w));
     const rock = new Merged();
     buildLighthouse(rock);
     this.objects.push(this.lighthouse.object);
-    buildLine(body, houses);
+    buildLine(body, built);
     buildGate(body, rand, houses);
     const shared = { ...atmo.uniforms, uStorm: this.storm, uVane: this.vaneAngle };
     this.objects.push(

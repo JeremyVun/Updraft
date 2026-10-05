@@ -1822,12 +1822,13 @@ export const tuning = {
     strandLow: 2.4, strandHigh: 3.4, uprightHigh: 3.8,
     strandPace: 0.6,
     /**
-     * While the cat is brought over: seconds the lens takes to come round from the drift to the side of the water,
-     * the height it stands at there and the height it looks at over the water's middle; upright, how far behind the
-     * waiting boat it stands, how high, and how high it looks at the roof.
+     * While the cat is brought over: how much of its gaze the lens gives the cat as she notices it; how far from the
+     * place the boat waits the lens starts to move to the side of the water, the height it stands at there and the
+     * height it looks at over the water's middle; upright, how far behind the
+     * waiting boat it stands and how far to the tub's side, how high, and the height it looks at over the water.
      */
-    catTurnFor: 7, catEye: 2.3, catAim: 2.6, catPace: 0.55,
-    uprightCatBack: 7.5, uprightCatEye: 2.6, uprightCatAim: 2.4,
+    catGlance: 0.3, catTurnFrom: 16, catEye: 2.3, catAim: 2.6, catPace: 0.55,
+    uprightCatBack: 5.5, uprightCatSide: 3, uprightCatEye: 3.4, uprightCatAim: 1.4,
     /**
      * With the cat aboard: the lens beside the boat, a little aft of abeam so the cat at the bow faces it and the
      * satchel is in view; how far it stands off and how high, and how fast it eases there.
@@ -1835,9 +1836,9 @@ export const tuning = {
     aboardBearing: 1.3, aboardDistance: 8.5, aboardHeight: 1.3, aboardPace: 0.45,
     /**
      * Once the cat bolts: the way the lens looks (atan2(x, z) of the view) as it comes round to the south of the
-     * cottage over `climbFor` seconds, how far back it stands, and the height it looks at.
+     * cottage over `climbFor` seconds, how far back it stands (upright, nearer), and the height it looks at.
      */
-    strandClimb: 2.9, climbFor: 7, climbBack: 15, climbAim: 2.3,
+    strandClimb: 2.9, climbFor: 7, climbBack: 15, uprightClimbBack: 10, climbAim: 2.3,
   },
   /** One continuous passage from the last drowned houses to the forest beach. */
   storm: {

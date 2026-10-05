@@ -85,10 +85,16 @@ try {
     return limit;
   };
   const distance = (a, b) => Math.hypot(a[0] - b[0], a[2] - b[2]);
+  const ORDER = ['stranded', 'seen', 'easing', 'waiting', 'coming', 'ferried', 'boarding', 'aboard', 'bolting', 'waits', 'climbing', 'ridge'];
+  /** Waits until the cat has got at least as far as `step`; a slow machine may have carried it past. */
+  const reach = (step, timeout) => page.waitForFunction((at) => at.order.indexOf(__game.story.current.cat.step) >= at.order.indexOf(at.step),
+    { order: ORDER, step }, { timeout, polling: 100 }).catch(async () => assert.fail(`${step} did not happen: ${JSON.stringify(await state())}`));
+  /** True if the cat is still at `step`, so a still of it can be taken. */
+  const still = async (step) => (await state()).step === step;
 
-  await waitFor(() => __game.story.current.cat.step === 'seen', 40000, 'her noticing the cat');
+  await reach('seen', 40000);
   console.log('seen', JSON.stringify(await state()));
-  await waitFor(() => __game.story.current.cat.step === 'waiting', 40000, 'the boat coming to wait by the cat');
+  await reach('waiting', 60000);
   let s = await state();
   const start = s.tub, began = s.time;
   console.log('waiting', JSON.stringify(s));
@@ -97,17 +103,17 @@ try {
 
   if (process.env.VALVE) {
     // Nobody is stranded: with no input at all the air carries the tub to the roof, and later to the boat.
-    await waitFor(() => __game.story.current.cat.step === 'coming', 240000, 'the tub drifting to the roof by itself');
+    await reach('coming', 240000);
     s = await state();
     assert(s.time - began > 85, `the first valve opened after only ${(s.time - began).toFixed(0)}s`);
     console.log(`valve: the tub reached the roof by itself after ${(s.time - began).toFixed(0)}s of nothing`);
-    await waitFor(() => __game.story.current.cat.step === 'ferried', 30000, 'the cat getting into the tub');
+    await reach('ferried', 30000);
     const second = (await state()).time;
-    await waitFor(() => __game.story.current.cat.step === 'boarding', 240000, 'the tub drifting to the boat by itself');
+    await reach('boarding', 240000);
     s = await state();
     assert(s.time - second > 85, `the second valve opened after only ${(s.time - second).toFixed(0)}s`);
     console.log(`valve: the tub reached the boat by itself after ${(s.time - second).toFixed(0)}s of nothing`);
-    await waitFor(() => __game.story.current.cat.step === 'aboard', 20000, 'the cat jumping aboard');
+    await reach('aboard', 20000);
     console.log('valve: aboard', JSON.stringify(await state()));
     process.exit(0);
   }
@@ -126,10 +132,10 @@ try {
   await shot('3-tub-arriving');
   strokes += await bring((x) => x.docked || x.step !== 'waiting', 12, 'the tub reaching the roof');
   console.log(`tub at the roof after ${strokes} strokes`);
-  await waitFor(() => __game.story.current.cat.step === 'coming', 5000, 'the cat noticing the tub');
-  await page.waitForTimeout(2600);
-  await shot('4-cat-coming-down');
-  await waitFor(() => __game.story.current.cat.step === 'ferried', 20000, 'the cat getting into the tub');
+  await reach('coming', 5000);
+  await waitFor(() => __game.story.current.cat.step !== 'coming' || __game.story.current.cat.t > 2.6, 20000, 'the cat coming down');
+  if (await still('coming')) await shot('4-cat-coming-down');
+  await reach('ferried', 20000);
   await page.waitForTimeout(1200);
   await shot('5-cat-in-tub');
   s = await state();
@@ -137,10 +143,10 @@ try {
 
   strokes = await bring((x) => x.docked || x.step !== 'ferried', 40, 'the tub reaching the boat');
   console.log(`tub at the bow after ${strokes} strokes`);
-  await waitFor(() => __game.story.current.cat.step === 'boarding', 5000, 'the tub held at the bow');
-  await waitFor(() => __game.story.current.cat.t > 1.35, 5000, 'the cat springing');
-  await shot('6-cat-jumping-aboard');
-  await waitFor(() => __game.story.current.cat.step === 'aboard', 10000, 'the cat jumping aboard');
+  await reach('boarding', 5000);
+  await waitFor(() => __game.story.current.cat.step !== 'boarding' || __game.story.current.cat.t > 1.35, 10000, 'the cat springing');
+  if (await still('boarding')) await shot('6-cat-jumping-aboard');
+  await reach('aboard', 10000);
   s = await state();
   assert.equal(s.seat, 'satchel', 'the cygnet ducked into the satchel');
   console.log('aboard', JSON.stringify(s));
@@ -149,19 +155,21 @@ try {
   await waitFor(() => __game.boat.speed > 1.5, 20000, 'the boat sailing on');
   await page.waitForTimeout(6000);
   await shot('8-sailing-with-cat');
-  await waitFor(() => __game.story.current.beat === 'still', 60000, 'the air dying');
+  await waitFor(() => __game.story.current.beat === 'still', 90000, 'the air dying');
+  console.log('still', JSON.stringify(await state()));
   await page.waitForTimeout(8000);
   await shot('9-at-rest');
-  await waitFor(() => __game.story.current.cat.step === 'bolting', 90000, 'the cat bolting');
-  await page.waitForTimeout(1100);
-  await shot('10-bolt');
-  await waitFor(() => __game.story.current.cat.step === 'waits', 20000, 'the cat reaching the first gap');
-  await page.waitForTimeout(1500);
-  await shot('11-cat-at-gap');
-  await waitFor(() => __game.story.current.cat.step === 'climbing', 20000, 'her climbing out after it');
-  await page.waitForTimeout(1300);
-  await shot('12-climbing-out');
-  await waitFor(() => __game.story.current.cat.step === 'ridge', 30000, 'her reaching the ridge');
+  await reach('bolting', 120000);
+  console.log('bolting', JSON.stringify(await state()));
+  await waitFor(() => __game.story.current.cat.step !== 'bolting' || __game.story.current.cat.t > 1.6, 10000, 'the cat leaping');
+  if (await still('bolting')) await shot('10-bolt');
+  await reach('waits', 30000);
+  await page.waitForTimeout(1000);
+  if (await still('waits')) await shot('11-cat-at-gap');
+  await reach('climbing', 30000);
+  await waitFor(() => __game.story.current.cat.step !== 'climbing' || __game.story.current.cat.t > 1.3, 10000, 'her stepping out');
+  if (await still('climbing')) await shot('12-climbing-out');
+  await reach('ridge', 40000);
   await page.waitForTimeout(1500);
   await shot('13-on-ridge');
   s = await state();

@@ -319,14 +319,12 @@ export const CAT_LENS = new THREE.Vector2(TUB_WATER.x - 0.31 * 13, TUB_WATER.z +
 
 /**
  * Places the generated village keeps clear of: every placed house with room round it, the garden, the green, the
- * church, the water the tub crosses and the lens watching it, and the water the drift crosses to the stranding.
+ * church, and the water the drift crosses to the stranding.
  */
 export const CLEARINGS: { x: number; z: number; r: number }[] = [
-  ...[...PLACED, CAT_HOUSE, NAVE].map((h) => ({ x: h.x, z: h.z, r: h.len / 2 + 4 })),
+  ...[...PLACED, NAVE].map((h) => ({ x: h.x, z: h.z, r: h.len / 2 + 4 })),
   { x: wallFoot.x + 4, z: wallFoot.y - 4, r: 8 },
   { x: GREEN_TREE.x - 2, z: GREEN_TREE.z, r: 10 },
-  { x: TUB_WATER.x, z: TUB_WATER.z, r: TUB_WATER.r + 2 },
-  { x: CAT_LENS.x, z: CAT_LENS.y, r: 5 },
   { x: EAST_OF_STRAND.x - 9, z: EAST_OF_STRAND.z - 3, r: 8 },
   { x: -3, z: -1376, r: 9 },
   { x: -7, z: -1388, r: 8 },
@@ -334,6 +332,18 @@ export const CLEARINGS: { x: number; z: number; r: number }[] = [
   /** Where the lens stands beside the stranded boat. */
   { x: -23, z: -1400, r: 8 },
 ];
+
+/**
+ * The cat's roof, the water the tub crosses and the lens watching it. The generated village is laid out without
+ * them, so every other roof and tree stands where it always has, and whatever of it falls here is left unbuilt.
+ */
+const CAT_GROUND = [
+  { x: CAT_HOUSE.x, z: CAT_HOUSE.z, r: CAT_HOUSE.len / 2 + 4 },
+  { x: TUB_WATER.x, z: TUB_WATER.z, r: TUB_WATER.r + 2 },
+  { x: CAT_LENS.x, z: CAT_LENS.y, r: 1 },
+];
+export const onCatGround = (x: number, z: number, room: number) =>
+  CAT_GROUND.some((c) => Math.hypot(x - c.x, z - c.z) < c.r + room);
 
 export const inClearing = (x: number, z: number, room: number) =>
   CLEARINGS.some((c) => Math.hypot(x - c.x, z - c.z) < c.r + room);
