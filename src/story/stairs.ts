@@ -67,6 +67,8 @@ const KITE_WAITS = (() => {
 /** Where she stands to take it all in, a step in from the lip, and the bird beside her. */
 const TAKE_IN = SIT.clone().addScaledVector(TOP_OUT, -0.45);
 const BIRD_TAKES_IN = SLIPPERS.clone().addScaledVector(TOP_OUT, -0.4);
+/** It stops a little short of where it makes for, so it is sent past the slippers, away from her, to keep clear of her coat. */
+const BIRD_NESTS = SLIPPERS.clone().addScaledVector(SLIPPERS.clone().sub(SIT).setY(0).normalize(), 0.5);
 /**
  * How long the lens rests over her shoulder into the sun, once it has come round with the swans, before the boat sets
  * off out of the cloud; how long after that they watch where the swans went before they turn to each other; and the
@@ -944,7 +946,7 @@ export class StairsChapter implements Chapter {
     const { child: c, cygnet: k } = this.cast;
     this.to('nest');
     k.watch(null);
-    k.errand = this.birdAt.set(SLIPPERS.x, 0, SLIPPERS.z - 0.05);
+    k.errand = this.birdAt.copy(BIRD_NESTS);
     k.stay = false;
     c.walkTo(SIT.x, SIT.z, false, () => {
       c.faceToward(SIT.x + TOP_OUT.x, SIT.z + TOP_OUT.z, 1);
