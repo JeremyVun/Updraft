@@ -413,8 +413,9 @@ and the lighthouse stop above:
 beginning. The player emerges from teh haze / cloud chapter into the drowning village, which is calm. what is the
 first puzzle? what happens after that to build into the black clouds and have the child climb onto the roofs? How is
 the stormy sequence laid out all the way to the woods village? Keep in mind the existing distances. think through this
-step by step". Agreed as below: "Yes, go"; the calm drift gets "a small one" of its own). This supersedes the run back
-to a drifting boat and the run to the lighthouse above.
+step by step". Agreed: "Yes, go"; the calm drift gets "a small one" of its own, the stranded cat. Refined since under
+the ownership below: no draining, she leaves the boat to go after the cat). This supersedes the run back to a drifting
+boat and the run to the lighthouse above.
 
 Distances on main: the passage from where the stairs set the boat down (`DESCENT_END`, 16, −1254) to the forest beach
 (`WOOD_LANDING`, −26, −1692) is about 530 m. The air dies (`STILL_AT`) about 155 m in, about 30 s after arrival, at
@@ -422,45 +423,37 @@ about (−9, −1398), some 40 m short of the church (`SPIRE`, 14, −1436). Mai
 (`tuning.storm.startsFromShore`), about 50 m past the church; the light goes out 23 s later, beside the lighthouse
 (65, −1580); then the plane is taken and they land. Houses stand 11–30 m off the channel, 15–40 m apart, sunk 1.7–5.4 m.
 
-1. **The calm drift** (about 150 m, about 30 s): dusk among the roofs as on main, with one small puzzle of its own (to
-   be chosen), and small answers to the wind (herons lift, the spire's vane swings).
-2. **The sea draws back** where the air dies on main. The breeze dies, the glass goes still, then the water slips away:
-   the village rises a metre or two out of it (door tops, upstairs windows, garden walls, a wet dark band on every
-   wall). A ridge comes up under the boat and it settles on the slates, listing, high and dry. Far behind, where they
-   came from, the horizon goes black: the sea coming back under black smoke lying on the water.
-3. **She climbs out** because nothing moves a boat sitting on slates (a sweep on the sail only flaps it). She looks
-   back at the black and runs for the highest thing there is, the church tower, some 40–60 m off.
-4. **Crossing 1, the tree (push):** a lane of deep water to the next house; a dead tree rotted at the roots in a garden
-   there; pushed over, it is her bridge.
-5. **Crossing 2, the swing (pump):** the drowned village green between that house and the church; the swing hangs from
-   the old tree on the green; pumped, she lets go onto the nave roof.
-6. **The church:** she gets as high as a child can, the nave ridge at the tower's foot; the cat goes on up the tower
-   into the belfry, where it is safe. While she waits at a crossing the dark creeps up and stops a little behind her;
-   it never reaches her and nothing fails.
-7. **The dark arrives:** the black water pours back in round the church and the storm comes with it (the smoke rolls
-   over, the first rain). It comes up over the nave roof round her feet. The water lifts the stranded boat off its
-   ridge and carries it in among the roofs below.
-8. **Bring the boat (fill the sail):** the water is rising round her and her boat is afloat again, the only way out.
-   The player fills its red sail (`Boat.brushSail`) to bring it alongside the nave and she steps down into it. She
-   left because the boat was stranded; she goes back because the water brought it back. The cat watches from the
-   belfry as they go.
-9. **The storm, untouched:** the church is about 260 m from the beach, close to where main's storm already starts, so
-   main's timeline plays from the moment she is aboard (the weather closing in, the lighthouse sliding past and going
-   out about 130 m on, the plane taken, rain, the landing at the forest). Only its trigger changes, from
-   `startsFromShore` to her being back aboard. The storm still never lets go until the beach.
+1. **The calm drift and the stranded cat** (about 150 m): dusk among the roofs as on main, with small answers to the
+   wind (herons lift, the spire's vane swings). A cat crouches on a chimney pot along the drift, mewing (animals may be
+   as loud as they like). A wooden wash-tub floats nearby; the player's gusts carry it to the cat's roof, the cat hops
+   in, and the gusts bring the tub to the boat, where the cat jumps aboard and settles at the bow. The cygnet is wary of
+   it and ducks into the satchel.
+2. **The air dies** where it does on main. The glass goes still and the becalmed boat drifts gently in until its stem
+   rests against the slates of a small cottage's roof at the waterline: a nudge, never landing on top of anything.
+3. **The dark rises behind them**: black smoke lying low on the water, rising on the horizon the way they came and
+   coming on, swallowing roofs. The cat panics, leaps onto the roof and bolts over the roofs toward the church, the
+   highest thing there is. A child does not leave a frightened cat: she climbs out after it. The boat was never stuck;
+   she left it to save the cat. She follows the cat's run, so the plane never leads; she clutches it the whole way.
+4. **Crossing 1, the tree (push):** a lane of deep water to a walled garden; the cat crosses its own way (a leap she
+   could never make); a dead tree rotted at the roots in the garden, rocked by gusts to show which way it can fall,
+   pushed over, is her bridge.
+5. **Crossing 2, the swing (pump):** the drowned village green between the garden cottage and the church; the cat goes
+   along a railing top; the rope swing hangs from the old tree on the green; pumped, she lets go at the top of the arc
+   onto the nave roof.
+6. **The church:** the cat climbs the tower's ivy into the belfry, safe and out of her reach, and looks down. She is
+   left on the nave ridge at the tower's foot. While she waits at a crossing the dark creeps up and stops a little
+   behind her, heaving; as she crosses it swallows the place she left. It never reaches her and nothing fails.
+7. **The dark arrives:** the smoke rolls over the church and becomes the storm's sky; the wind comes and the first rain
+   falls. Now she needs her boat, still resting against the cottage roof back along the way.
+8. **Bring the boat (fill the sail):** the player fills its red sail (`Boat.brushSail`) and brings it across the water
+   to the nave; she steps down into it. She looks back once at the cat in the belfry as they go.
+9. **The storm:** the church is about 260 m from the beach, close to where main's storm already starts, so main's
+   storm plays from the moment she is aboard (the weather closing in, the lighthouse sliding past and going out about
+   130 m on, the plane taken, rain, the cygnet's shaking, the landing at the forest). The storm never lets go until the
+   beach, and the landing is relief that turns into the wood's fear.
 
 The village round the church is re-laid so the route reads as a real village she picks her way through (Jeremy's note
-on the first frames above). The sea itself does not move: the village rises to show the water falling and sinks to
-show it returning.
-
-**The calm drift's puzzle: the stranded cat** (Jeremy, 2026-10-05, chosen over a leaning tree that would have taught
-the push). A cat crouches on a chimney pot along the drift, mewing (animals may be as loud as they like). A wooden
-wash-tub floats nearby; the player's gusts carry it to the cat's roof, the cat hops in, and the gusts bring the tub
-to the boat, where the cat jumps aboard. When the sea draws back, the cat leaps off onto the roofs and runs ahead
-toward the church, and the child follows it: it shows her the way without the plane, as animals run before a wave,
-and it shows that the roofs can be walked. It waits at each crossing with her. It ends safe in the belfry and is left
-there as the storm takes the boat. The cygnet is wary of it and stays tucked in the satchel while the cat is aboard.
-A cat is a new animal: its own model and animation, matched to the game's soft painted look.
+on the first frames above). The water level never changes.
 
 **Ownership of the drowned village** (Jeremy, 2026-10-05, verbatim):
 
@@ -472,73 +465,53 @@ A cat is a new animal: its own model and animation, matched to the game's soft p
 > questions, ask at any time.
 
 So the existing drowned village and storm code may be refactored as far as the room needs; the concept frames in
-`comps/drowned/` are a guide to take from, not a target to match.
+`comps/drowned/` are a guide to take from, not a target to match (they still show the drained village, which is cut).
 
 ### How it is made (Claude's calls under that ownership, 2026-10-05)
 
 - **Pacing.** Arrival and calm drift about 30 s; the cat about 30–60 s; a short drift with the cat aboard (the cygnet
-  ducking into the satchel, the cat washing a paw on the thwart) about 15 s; the sea drawing back about 15 s, slow and
-  eerie; the run about 2 min with both crossings; the dark arriving and the boat brought in about 45 s; the storm
-  about 70 s to the beach. The room grows from about 3 minutes to 5–6, nearly all of it the player's.
+  ducking into the satchel, the cat washing a paw at the bow) about 15 s; the air dying and the dark rising about 20 s,
+  slow and eerie; the run about 2 min with both crossings; the dark arriving and the boat brought in about 45 s; the
+  storm about 70 s to the beach. The room grows from about 3 minutes to 5–6, nearly all of it the player's.
 - **The cat.** A small soft tabby with a white chest and socks, round-faced, a little bedraggled, built as soft
-  rounded shapes like the game's other animals, never realistic fur. It mews from the chimney (loud is allowed for
-  animals), hates the water, rides the tub hunched with its ears flat, and on the boat sits on the bow thwart as far
-  from the water as it can. It is quick and sure where she is slow: at each gap it crosses its own way (along a
-  railing top, a wall coping, a leap she could never make), which shows her where the far side is and that she must
-  find her own way over. At the church it climbs the tower's ivy to the belfry. It is left there, safe and high,
-  looking down as the boat goes; she looks back at it once.
-- **The sea drawing back.** The village rises about 2 m over about 8 s (tuned by eye), the walls coming up with a
-  wet dark band, weed and dripping; the leaves on the glass slide away toward the dark; the boat settles onto a ridge
-  that comes up under it and lists. A long low draining sound; the music thins to nothing. Herons lift and fly
-  away from the dark. The glass stays still: it is the stillness that frightens.
-- **The dark.** Low black-violet smoke lying on the water, made of soft painted billows like the smoke prototype's,
-  lit at the rims by the last low sun, coming from behind (south, the way they came) and swallowing roofs as it
-  comes. It is beautiful-ominous, never horror and never industrial. While she is stuck it creeps closer and stops a
-  little behind her, heaving; as she crosses it swallows the place she left. When it arrives at the church the water
-  pours back under it (the village sinks past its old level, over the nave roof), the smoke rolls over and becomes
-  the storm's sky, and the rain begins.
+  rounded shapes like the game's other animals, to the model sheet in `comps/cat/`. It mews from the chimney, hates the
+  water, rides the tub hunched with its ears flat, and on the boat sits at the bow as far from the water as it can. It
+  is quick and sure where she is slow: at each gap it crosses its own way (along a railing top, a wall coping, a leap
+  she could never make), which shows her where the far side is and that she must find her own way over. At the church
+  it climbs the tower's ivy to the belfry. It is left there, safe and high, looking down as the boat goes.
+- **The dark.** Low black-violet smoke lying on the water, lit at the rims by the last low sun, coming from behind
+  (south, the way they came), the water darkening under it, swallowing roofs as it comes. Beautiful-ominous, never
+  horror and never industrial; it must read as smoke, never as rock or hedge. When it arrives at the church it rolls
+  over and becomes the storm's sky, and the light goes with it.
 - **The run is built on decks** (`src/world/decks.ts`): ridges, wall tops and the fallen trunk are strips the child
-  walks; the slates up to a ridge are ramps. She gets out with `alight` onto the stranded ridge and back in with
+  walks; the slates up to a ridge are ramps. She gets out with `alight` onto the cottage's slates and back in with
   `board` at the nave.
 - **Camera.** Low and beside the run, at roof height at most, the dark on one side of the frame and the church on the
   other, easing between crossings and never cutting; on an upright phone it looks along her way so it stacks up the
-  frame. While she waits at a gap the gap, the thing to push and her are all in frame.
+  frame. While she waits at a gap, the gap, the thing to push and her are all in frame. With the cat aboard the lens
+  comes round to the side so the cat at the bow is not hidden behind her and the sail.
 - **The storm from aboard.** The dark has already arrived, so the storm starts with the weather mostly gathered rather
-  than gathering from clear; its beats keep their order and their spacing along the way (the lighthouse passing and
-  its light going out, the plane taken, the rain, the cygnet's shaking, the beach).
-- **Saves.** A save during the run resumes at the stranding (cat aboard, sea drawn back); a save after she is aboard
-  resumes aboard with the storm to come.
+  than gathering from clear; its beats keep their order and their spacing along the way.
+- **Saves.** A save during the run resumes with the boat at rest against the cottage, the cat aboard and the dark
+  risen; a save after she is aboard resumes aboard with the storm to come.
 - **The cat comes home** (Jeremy, 2026-10-05: yes). At the very end, as she walks down to the cottage with the red door,
   the same tabby sits in its lit window, waiting: home's cat all along. No remark and no beat of its own; it is built
   once the drowned village is judged.
 
-**No draining: she leaves the boat to go after the cat** (Jeremy, 2026-10-05, on Phase 1's stills: "why is hte boat on
-the roof?" and "you're planning to drain the drowning village? why? Im going to let you figure out what works best,
-but it does seem a bit on the nose to exactly align ontop of the roof like that."). The sea drawing back is cut; it
-was machinery invented to strand the boat. This supersedes steps 2, 3, 7 and 8 of "The whole room":
+**Why the sea does not draw back** (Jeremy, 2026-10-05, on Phase 1's stills: "why is hte boat on the roof?" and "you're
+planning to drain the drowning village? why? Im going to let you figure out what works best, but it does seem a bit on
+the nose to exactly align ontop of the roof like that."; then, on the tsunami logic, "just before a bad thing happens
+at sea like a tsunami, the water will recede ... you are the artistic director so as long as you've thought carefully
+about what works best, feel free to purusue your vision"). An earlier version stranded the boat by draining the
+village. Cut: it was machinery invented to strand the boat; the dark is already the omen, and two omens split one
+event; leaving the boat for the cat is the child's own act of kindness, where a stranding is only a mechanism; making
+the draining read needs a great deal (water pouring off eaves, a visible current, the village sinking again to free
+the boat) for what the dark already says; and a literal tsunami weighs heavier than a child's dream should.
 
-- The air dies as on main, and the becalmed boat drifts gently in against the eaves of a roof and stops: a nudge at
-  the waterline, never landing on top of anything.
-- The dark rises behind them. The cat panics, leaps onto that roof and bolts over the roofs toward the church, the
-  highest thing there is. A child does not leave a frightened cat: she climbs out after it. The boat was never stuck;
-  she left it to save the cat, so the boat coming back to her later is no contradiction.
-- The roofs already stand out of the water on main, so the run needs no change of level. The crossings are as before
-  (the garden tree pushed over, the swing on the green).
-- At the church the cat scrambles up into the belfry, safe and out of her reach, and she is left on the nave ridge as
-  the dark arrives. Now she needs her boat: the player fills its sail and brings it across to her, and the dark's
-  arrival is the storm's beginning, as before. The water does not rise round her feet; the dark itself (the smoke
-  rolling over, the wind and the first rain) is what says go.
-- The cat's run is what she follows, so it never needs the plane to lead.
-- Weighed again after Jeremy noted the tsunami logic ("just before a bad thing happens at sea like a tsunami, the water
-  will recede ... you are the artistic director so as long as you've thought carefully about what works best, feel
-  free to purusue your vision"). Kept cut: the dark is already the omen, and two omens split one event; leaving the
-  boat for the cat is the child's own act of kindness, where a stranding is only a mechanism; making the draining read
-  needs a great deal (water pouring off eaves, a visible current, the village sinking again to free the boat) for what
-  the dark already says; and a literal tsunami weighs heavier than a child's dream should.
-- **The cat's first build missed** (Jeremy, 2026-10-05: "i think the face makes it look mentally not all there. it
-  looks bug eyed and when it sits, it's head is pointed way back on a long neck like a swan. Come on, cute cats are the
-  most common shape on the internet"). It is rebuilt against a model sheet (`comps/cat/`): a big round head; eyes
-  large with big dark pupils and a catchlight, set at or below the middle of the head and fairly close, soft upper
-  lids; a short muzzle with nose and mouth tucked under the eyes; round cheeks; ears wide; no neck in the sit, the
-  head sunk into the shoulders; a compact pear sit with front paws together and the tail wrapped round; frightened
-  means low (body down, ears flat, tail tucked).
+**The cat's first build missed** (Jeremy, 2026-10-05: "i think the face makes it look mentally not all there. it looks
+bug eyed and when it sits, it's head is pointed way back on a long neck like a swan. Come on, cute cats are the most
+common shape on the internet"). It is rebuilt against the model sheet (`comps/cat/`): a big round head; eyes large
+with big dark pupils and a catchlight, set at or below the middle of the head and fairly close, soft upper lids; a
+short muzzle with nose and mouth tucked under the eyes; round cheeks; ears wide; no neck in the sit, the head sunk into
+the shoulders; a compact pear sit with front paws together and the tail wrapped round; frightened means low (body
+down, ears flat, tail tucked). Jeremy: "opus 5.5 subagent should be able to remodel the cat appropriately".
