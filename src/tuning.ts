@@ -1774,6 +1774,61 @@ export const tuning = {
     strandLow: 2.4, strandHigh: 3.4, uprightHigh: 3.8,
     strandPace: 0.6,
   },
+  /** The two crossings of the drowned village's run over the roofs: the dead tree pushed over, the swing pumped. */
+  crossings: {
+    tree: {
+      /** How far it leans toward the gap of its own accord, radians, and the spring it rocks on (per second squared, per second). */
+      restLean: 0.07, stiffness: 4.2, damping: 1.5,
+      /** A push arrives a beat after the stroke (seconds), and a held push ebbs away over `hold` seconds. */
+      lag: 0.2, hold: 1.1,
+      /**
+       * Radians of lean asked for per screen height a stroke travels across it toward the gap, against it, and
+       * across the way it falls; how far it can be held over either way. Strokes at `gentle` screen heights a
+       * second count for `soft` of that, at `firm` for all of it.
+       */
+      push: 2.4, against: 0.45, side: 0.5, pressMax: 0.8, backMax: 0.16,
+      gentle: 0.5, firm: 2.2, soft: 0.3,
+      /** How near the trunk a stroke has to pass to move it, in screen heights. */
+      reach: 0.2,
+      /**
+       * Rotten roots: lean past rest beyond `loosenFrom` loosens them at `loosenRate` per radian-second; they ebb
+       * back at `ebb` a second, and each unit of looseness leans it `looseLean` further at rest.
+       */
+      loosenFrom: 0.05, loosenRate: 7, ebb: 0.01, looseLean: 0.17,
+      /** Past this lean it goes over. */
+      tipAt: 0.4,
+      /**
+       * Going over: the pull of its own weight (per second squared at a right angle), held back at first by the
+       * roots (`tearHold` of it while `tearOver` radians of fall tear them), and the share of its fall speed kept
+       * when it lands, then the spring it settles on.
+       */
+      fallPull: 1.25, tearHold: 0.55, tearOver: 0.35, bounce: 0.18, settle: 60, settleDamping: 9,
+      /** How far its foot slides toward the gap as the roots tear out of the bed. */
+      rootShift: 0.45,
+      /** Seconds the trunk shudders after it lands. */
+      shudderFor: 1.1,
+      /** Seconds she waits after it lands, and her pace across it as a share of a walk. */
+      lookFor: 0.9, crossStroll: 0.42,
+      /** Seconds without a useful stroke before the drawn gust; seconds with no progress before the world's own gust brings it down. */
+      inviteAfter: 6, valveAfter: 90, valveEvery: 1.6, valvePush: 0.32,
+    },
+    swing: {
+      /** A slower, dreamier gravity than the world's (a share of it), and how fast a swing dies away with nobody pushing. */
+      gravity: 0.8, damping: 0.05,
+      /** Push along its travel per unit of gust energy at the seat, and per unit of the felt wind along its way. */
+      pump: 2.4, along: 0.25,
+      /** Seconds she takes to catch hold and sit, and the start she gives it pushing off the eave (radians a second). */
+      boardFor: 1.6, pushOff: 0.32,
+      /** She lets go this near the top of a forward swing (radians), when the leap would carry her this far past the landing. */
+      releaseLead: 0.14, releaseSpare: 0.15,
+      /** Her own push off the seat as she lets go, forward and up (units a second), and the gravity she flies under. */
+      leapForward: 0.9, leapUp: 0.7, leapGravity: 9,
+      /** Seconds for the stumble and getting up on the slope after landing, and for her look back at the swing. */
+      landFor: 1.3, lookBack: 0.9,
+      /** Seconds riding without a push before the drawn push; with no new height before the world's own gusts carry her. */
+      inviteAfter: 5, valveAfter: 90, valveEvery: 1.5, valveEnergy: 0.9,
+    },
+  },
   /** One continuous passage from the last drowned houses to the forest beach. */
   storm: {
     passageSpeed: 5.8,

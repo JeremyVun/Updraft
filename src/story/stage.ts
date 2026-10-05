@@ -4,6 +4,7 @@ import { heightAt } from '../world/island';
 import type { Act } from '../creatures/cygnet/mind';
 import type { Cast, Chapter } from './cast';
 import { CatYard } from './cat-yard';
+import { CrossingsYard } from './crossings-yard';
 
 export type StageView = 'game' | 'flock' | 'behind' | 'front' | 'side' | 'far-side' | 'close' | 'top' | 'k-front' | 'k-side' | 'k-back' | 'k-34' | 'k-above' | 'k-full' | 'k-low'
   | 'c-close' | 'c-face' | 'c-side' | 'c-back' | 'c-front' | 'c-34' | 'c-profile' | 'c-head' | 'c-near' | 'c-far' | 'c-along' | 'c-across';
@@ -54,12 +55,12 @@ const VIEWS: Record<StageView, { bearing: number; distance: number; height: numb
  */
 export class StageChapter implements Chapter {
   readonly shot: Shot = { target: new THREE.Vector3(), distance: 15, height: 5.2, from: new THREE.Vector3(0, 0, 1), free: true };
-  readonly breeze = 0.3;
+  breeze = 0.3;
   readonly worldLife = 1;
-  readonly pace = 8;
+  pace = 8;
   readonly focus = new THREE.Vector3();
   readonly done = false;
-  readonly haze = 0.2;
+  haze = 0.2;
   readonly music = 'meadow' as const;
   readonly trodden = new THREE.Vector3();
   dusk = 0;
@@ -77,6 +78,9 @@ export class StageChapter implements Chapter {
   private clock = 0;
   /** QA stand-ins for the drowned village's places, set out on the sea the first time the cat is played. */
   private yard: CatYard | null = null;
+  /** QA stand-ins for the drowned village's run over the roofs: the two crossings, set out on the sea when first played. */
+  private crossings: CrossingsYard | null = null;
+  private camera: THREE.PerspectiveCamera | null = null;
 
   constructor(private readonly cast: Cast) {
     const { child, cygnet } = cast;
@@ -86,6 +90,24 @@ export class StageChapter implements Chapter {
     cygnet.visible = true;
     cygnet.bond = 0.5;
     this.play('ground');
+    const gap = new URLSearchParams(location.search).get('gap');
+    if (gap) this.play(`crossing:${gap}`);
+  }
+
+  get windInvitation(): THREE.Vector3 | null {
+    return this.crossings?.playing ? this.crossings.invitation : null;
+  }
+
+  get invitationHeading(): number | null {
+    return this.crossings?.playing ? this.crossings.heading : null;
+  }
+
+  get invitationRadius(): number {
+    return this.crossings?.playing ? 1.2 : 0;
+  }
+
+  afterCamera(camera: THREE.PerspectiveCamera): void {
+    this.camera = camera;
   }
 
   /** QA: how far each mitten is from the place on the cygnet it was sent to, in world units. */
@@ -108,6 +130,18 @@ export class StageChapter implements Chapter {
     const { child: c, cygnet: k, flock, carry } = this.cast;
     const ahead = (d: number, side = 0) =>
       this.tmp.set(c.position.x + Math.sin(c.yaw) * d + Math.cos(c.yaw) * side, 0, c.position.z + Math.cos(c.yaw) * d - Math.sin(c.yaw) * side);
+    if (name.startsWith('crossing:')) {
+      /** The drowned village's crossings, each from its own start: `crossing:tree`, `crossing:swing`, `crossing:run`. */
+      if (!this.crossings) {
+        this.crossings = new CrossingsYard(this.cast, c.position);
+        this.cast.cat.objects[0].parent?.add(...this.crossings.objects);
+      }
+      const played = this.crossings.play(name.slice(9));
+      this.cameraCut++;
+      if (!played) console.warn(`stage: no crossing called "${name.slice(9)}"`);
+      return played;
+    }
+    this.crossings?.stop();
     if (name.startsWith('cat:')) {
       /** The cat's actions, each from its own place in the yard: `cat:strand`, `cat:run`, `cat:climb`. */
       if (!this.yard) {
@@ -258,6 +292,19 @@ export class StageChapter implements Chapter {
     const { child: c, cygnet: k } = this.cast;
     this.clock += dt;
     this.yard?.update(dt);
+    if (this.crossings?.playing) {
+      this.crossings.update(dt, this.camera);
+      this.pace = this.crossings.frame(this.shot);
+      this.dusk = 0.82;
+      this.haze = 0.6;
+      this.breeze = 0.04;
+      this.focus.copy(c.position);
+      return;
+    }
+    this.shot.free = true;
+    this.pace = 8;
+    this.haze = 0.2;
+    this.breeze = 0.3;
     if (this.swimming) {
       let z = c.position.z;
       while (heightAt(c.position.x, z) > -0.4 && z < c.position.z + 40) z += 0.5;
