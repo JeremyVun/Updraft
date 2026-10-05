@@ -5,8 +5,9 @@ import { REFLECTION_LAYER } from '../world/water/reflection';
 import { Dolphins } from './sealife/dolphin';
 import { Fish } from './sealife/fish';
 import { FOAM, RING, Marks } from './sealife/marks';
+import { SleepingWhale, type SleeperSound } from './sealife/sleeper';
 import { Spray } from './sealife/spray';
-import { WhaleWake, type WhaleSound } from './sealife/wake';
+import { WhaleWake } from './sealife/wake';
 import { Whale } from './sealife/whale';
 
 /** Life in the open sea on the crossing: a humpback that surfaces now and then, and small fish leaping near the boat. */
@@ -19,6 +20,8 @@ export class SeaLife {
   private readonly wake: WhaleWake;
   private readonly fish: Fish;
   private readonly pod: Dolphins;
+  /** The whale asleep across the way on the crossing to the meadow. */
+  readonly sleeper: SleepingWhale;
   private swimMark = 0;
   private readonly seen = new THREE.Vector3();
 
@@ -27,10 +30,13 @@ export class SeaLife {
     this.pod = new Dolphins(camera);
     this.wake = new WhaleWake(this.body, this.spray, this.foam, this.slicks);
     this.fish = new Fish(camera, this.spray, this.foam);
+    this.sleeper = new SleepingWhale(this.spray, this.foam, this.slicks);
     this.slicks.mesh.renderOrder = 2;
     this.foam.mesh.renderOrder = 3;
-    this.objects = [this.body.mesh, this.body.ghost, this.fish.mesh, this.slicks.mesh, this.foam.mesh, this.spray.mesh, ...this.pod.objects];
-    for (const o of [this.body.mesh, this.fish.mesh, this.spray.mesh]) o.layers.enable(REFLECTION_LAYER);
+    const sleeper = this.sleeper;
+    this.objects = [this.body.mesh, this.body.ghost, sleeper.mesh, sleeper.ghost, sleeper.gull.mesh, this.fish.mesh, this.slicks.mesh,
+      this.foam.mesh, this.spray.mesh, ...this.pod.objects];
+    for (const o of [this.body.mesh, sleeper.mesh, sleeper.gull.mesh, this.fish.mesh, this.spray.mesh]) o.layers.enable(REFLECTION_LAYER);
     for (const o of this.objects) fixTreeInPlace(o);
   }
 
@@ -72,8 +78,9 @@ export class SeaLife {
     this.pod.onSurface = fn;
   }
 
-  set onWhaleSound(fn: (kind: WhaleSound, x: number, y: number, z: number) => void) {
+  set onWhaleSound(fn: (kind: SleeperSound, x: number, y: number, z: number) => void) {
     this.wake.onSound = fn;
+    this.sleeper.onSound = fn;
   }
 
   /** Where a dolphin is playing to the boat, for the child to look at; null when they are only running alongside. */
@@ -106,6 +113,7 @@ export class SeaLife {
     this.slicks.update(time);
     this.fish.update(dt, time);
     this.pod.update(dt, time);
+    this.sleeper.update(dt, time);
     this.spray.update(dt);
   }
 }

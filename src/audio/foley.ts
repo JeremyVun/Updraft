@@ -1,10 +1,10 @@
 import { tuning } from '../tuning';
 import type { AudioOut } from '../creatures/voices';
-import type { WhaleSound } from '../fx/sealife/wake';
+import type { SleeperSound } from '../fx/sealife/sleeper';
 
 export type Surface = 'grass' | 'sand' | 'wood' | 'water';
 export type MaterialSound = 'cloth' | 'wool' | 'sail' | 'sail-settle' | 'water' | 'paper' | 'door' | 'splash' | 'peg'
-  | 'dolphin-surface' | 'leaf-scuff' | 'swing-creak' | WhaleSound;
+  | 'dolphin-surface' | 'leaf-scuff' | 'swing-creak' | SleeperSound;
 
 /**
  * The sounds a small body makes, as opposed to a voice. The cygnet never speaks except when it is lost, so this is

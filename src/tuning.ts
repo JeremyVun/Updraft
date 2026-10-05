@@ -1408,6 +1408,8 @@ export const tuning = {
     release: 0.5,
     /** Seconds between breaths asleep, how far the back rises with one (m), and the mist over the blowhole. */
     breathEvery: 5.5, breathRise: 0.12, mist: 1,
+    /** How high the waking spout is thrown above the blowhole (m). */
+    spoutHeight: 8,
     /** A gust across the back on screen (`brushFrom` and up) tickles it: a shiver along the stroke, a lazy slap. */
     brushFrom: 4, brushRadius: 0.05, slapEvery: 2.2,
     /** Circling over the blowhole: the charge that starts to count, the charge that counts fully, progress per second. */

@@ -2,7 +2,7 @@ import type * as THREE from 'three';
 import { screenPan } from '../creatures/motion';
 import { tuning } from '../tuning';
 import type { Foley, MaterialSound } from './foley';
-import type { WhaleSound } from '../fx/sealife/wake';
+import type { SleeperSound } from '../fx/sealife/sleeper';
 import { feltWind, Sway, type WindField, type WindSample } from '../wind/field';
 
 interface Motion {
@@ -151,7 +151,7 @@ export class WorldFoley {
     this.foley.material(surfacing ? 'dolphin-surface' : 'splash', level, screenPan(this.camera, at));
   }
 
-  whale(kind: WhaleSound, at: THREE.Vector3): void {
+  whale(kind: SleeperSound, at: THREE.Vector3): void {
     const level = this.heard(at, tuning.audio.whaleNear, tuning.audio.whaleFar) * tuning.audio.whaleLevel;
     if (level < 0.015) return;
     this.foley.material(kind, level, screenPan(this.camera, at));
