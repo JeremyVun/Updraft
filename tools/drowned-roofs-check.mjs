@@ -144,7 +144,7 @@ try {
   strokes = await bring((x) => x.docked || x.step !== 'ferried', 40, 'the tub reaching the boat');
   console.log(`tub at the bow after ${strokes} strokes`);
   await reach('boarding', 5000);
-  await waitFor(() => __game.story.current.cat.step !== 'boarding' || __game.story.current.cat.t > 1.35, 10000, 'the cat springing');
+  await waitFor(() => __game.story.current.cat.step !== 'boarding' || __game.story.current.cat.t > 1.05, 10000, 'the cat springing');
   if (await still('boarding')) await shot('6-cat-jumping-aboard');
   await reach('aboard', 10000);
   s = await state();

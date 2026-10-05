@@ -1776,10 +1776,8 @@ export const tuning = {
     },
     /** The stranded cat, the tub's two trips, and the cat's bolt from the bow when the dark has come on. */
     cat: {
-      /** She notices it this far from the place the boat waits, and the boat eases toward it from `easeFrom`. */
-      seeFrom: 46, easeFrom: 30,
-      /** How hard the boat slows into its hold (m/s²) and how far its middle stops off the cat's eaves. */
-      holdBrake: 0.42, holdOff: 13,
+      /** She notices it this far from the place the boat waits; how hard the boat slows into it, m/s². */
+      seeFrom: 46, holdBrake: 0.42,
       /** How near (metres) the tub must come to the eaves, or to the bow, to be drawn in. */
       roofReach: 1.8, bowReach: 2.4,
       /** Seconds it looks at the tub before it comes down, and stands at the edge before it hops in. */

@@ -242,7 +242,7 @@ export class StrandedCat {
     const most = Math.sqrt(2 * k.holdBrake * Math.max(0, toHold - 0.4));
     boat.speed = Math.min(boat.speed, most);
     boat.speedLimit = Math.max(0.05, Math.min(tuning.storm.passageSpeed, most));
-    const passing = toHold > this.nearest + 0.01 && toHold < 4;
+    const passing = toHold > this.nearest + 0.01;
     this.nearest = Math.min(this.nearest, toHold);
     if (toHold > 1 && !passing && boat.speed > 0.2) return;
     const fx = Math.sin(boat.yaw), fz = Math.cos(boat.yaw);
@@ -361,6 +361,7 @@ export class StrandedCat {
       tub.dock = null;
       tub.docked = false;
       tub.laden = false;
+      tub.carry = null;
       const away = this.v.set(tub.position.x - boat.position.x, 0, tub.position.z - boat.position.z).normalize();
       tub.velocity.set(away.x * 0.5, away.z * 0.5);
       tub.water.x = tub.position.x + away.x * 2;
