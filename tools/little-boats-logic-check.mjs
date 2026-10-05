@@ -322,7 +322,7 @@ for (const [name, from] of [
   report.push({ route: name, seconds, landed: c.boat.position.toArray() });
   if (name === 'toMeadow') {
     assert(Math.abs(c.boat.position.x - 10) < 12, 'land beside the meadow hill path');
-    c.life = { regions: { wave: new THREE.Vector4(), waiting: new THREE.Vector4() } };
+    c.life = { at: () => 1, regions: { wave: new THREE.Vector4(), waiting: new THREE.Vector4() } };
     c.flock = { rest() {}, active: false };
     c.swanFeather = new Feather(c.wind);
     const meadow = new MeadowChapter(c);

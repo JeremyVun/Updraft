@@ -265,7 +265,8 @@ sounds and chimes are hushed during the duet. A completed piano checkpoint resum
 The walk goes on over the west rise and through a pass along `WAY` (`world/fields.ts`), the plane kept within
 reach of the child (`tuning.meadowPlane`). A flock grazes across the way below the rise (`onTheWay` in `main.ts`); it parts round her as she
 comes and bolts from a gust, like any flock, and nothing waits on it. Over the brow the ground falls to **the pond** (`POND`) on the open
-north slope, with the cygnet's family resting on it, white on dark water, from the chapter's first frame; their
+north slope, with the cygnet's family resting on it, white on dark water. Like the sheep they sleep with the island: the pond is
+grey and empty until the lullaby's colour reaches the hollow, and then they dissolve into view (`SwanFlock.shown`); their
 bugling is heard on the walk. The veil stands thick from here to the boat (`tuning.crest`). The cygnet hears them
 first and the child stops on the rise to look. While she is still up there the family gets ready to go north on its
 own: heads come up, wings are tried, and the raft turns and edges toward the far shore (`Flock.stir`). As she starts

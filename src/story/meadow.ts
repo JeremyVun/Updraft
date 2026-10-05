@@ -203,6 +203,7 @@ export class MeadowChapter implements Chapter {
      * it. Nothing in this room appears: the player comes over the rise and finds it already there.
      */
     flock.rest(RAFT_AT.x, RAFT_AT.z, tuning.crest.raft, tuning.crest.family, POND_LEVEL);
+    flock.shown = 0;
     cygnet.water = { level: POND_LEVEL, over: overPond };
     plane.water = cygnet.water;
     cast.swanFeather.water = cygnet.water;
@@ -511,8 +512,11 @@ export class MeadowChapter implements Chapter {
     this.blowFront();
     this.tendFeather(dt);
 
+    /** Asleep with the island, the family wakes with it when the lullaby reaches the hollow, as the sheep do. */
+    const flock = this.cast.flock;
+    if (flock.active) flock.shown = THREE.MathUtils.clamp(flock.shown + dt * (life.at(POND.x, POND.z) >= 0.75 ? 1 / 2.5 : -1), 0, 1);
     /** Grown swans are loud. They are heard from a long way down the walk, before there is anything to see. */
-    if (!this.wentOn && boat && time > this.nextBugle) {
+    if (!this.wentOn && boat && time > this.nextBugle && flock.shown > 0.5) {
       const far = Math.hypot(c.position.x - POND_AT.x, c.position.z - POND_AT.z);
       if (far < HEARD_FROM) {
         cue('bugle');

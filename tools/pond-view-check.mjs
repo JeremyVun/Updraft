@@ -31,7 +31,7 @@ for(const fps of [30,60,120]) for(const [width,height] of [[1600,800],[390,844]]
   cygnet.mount=child;cygnet.visible=true;cygnet.wing.restore('wrapped',.4);
   const carry=new Carry(child,cygnet),rig=new CameraRig();rig.resize(width,height);
   const cast={swanFeather:new Feather(wind),child,cygnet,flock,boat,plane,carry,wind,nearby:()=>false,
-    life:{regions:{island:new THREE.Vector4(),wave:new THREE.Vector4(),waiting:new THREE.Vector4()}}};
+    life:{at:()=>1,regions:{island:new THREE.Vector4(),wave:new THREE.Vector4(),waiting:new THREE.Vector4()}}};
   const chapter=new MeadowChapter(cast);
   child.stop();child.place(startX,-842,Math.PI);cygnet.rideIn('satchel');plane.hold(child);
   chapter.leg=3;chapter.piano.restoreDone();chapter.reveal();

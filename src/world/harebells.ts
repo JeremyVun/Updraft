@@ -25,6 +25,8 @@ const ANSWER_GAP = 0.42;
 const REST = 0.3;
 /** How awake the meadow has to be where a clump stands before it rings: asleep with the island until the lullaby. */
 const AWAKE = 0.75;
+/** How long a clump takes to come up once it has. */
+const GROW_FOR = 2.5;
 /** Screen radius a stroke has to pass within (screen heights), and how near the child walks to brush one. */
 const BRUSH = 0.12;
 const BRUSHED = 1.2;
@@ -130,6 +132,8 @@ interface Clump {
   sweptAt: number;
   /** The child or the plane is in among it: it rang as they came in, and does not again until they have left it. */
   brushed: boolean;
+  /** 0 not there yet, 1 grown: like the animals, they come up out of the grass when the colour reaches them. */
+  grown: number;
 }
 
 /** A row of harebells, grown far too tall, beside the walk from the pond. The wind rings them. */
@@ -179,7 +183,7 @@ export class Harebells {
           phase: rand() * 10,
         });
       }
-      this.clumps.push({ x, z, note: NOTES[i], stems, rangAt: -Infinity, sweptAt: -Infinity, brushed: false });
+      this.clumps.push({ x, z, note: NOTES[i], stems, rangAt: -Infinity, sweptAt: -Infinity, brushed: false, grown: 0 });
     });
     const count = ALONG.length * STEMS;
     this.stems = new THREE.InstancedMesh(new THREE.TubeGeometry(STEM_PATH, 24, 0.011, 5), material('#4f6a3a', '#6f8a4a', 0, 1, 0.25), count);
@@ -201,7 +205,7 @@ export class Harebells {
   update(dt: number, time: number, camera: THREE.Camera, wind: WindField, input: PointerInput,
     out: AudioOut | null, brushers: readonly (THREE.Vector3 | null)[], life: (x: number, z: number) => number, active: boolean): void {
     this.now = time;
-    if (active) this.listen(camera, input, out, brushers, life);
+    if (active) this.listen(camera, input, out, brushers);
     if (this.answerAt > 0 && time > this.answerAt) {
       const i = this.clumps.length - 1 - this.answered;
       const order = this.answerDown ? i : this.answered;
@@ -210,6 +214,8 @@ export class Harebells {
     }
     let n = 0;
     for (const c of this.clumps) {
+      c.grown = Math.min(1, Math.max(0, c.grown + dt * (life(c.x, c.z) >= AWAKE ? 1 / GROW_FOR : -1)));
+      const grow = THREE.MathUtils.smoothstep(c.grown, 0, 1);
       const w = wind.sample(c.x, c.z, this.sample);
       for (const s of c.stems) {
         // The stem leans with the air and springs back; the bell on it swings on its own, a little behind.
@@ -222,13 +228,13 @@ export class Harebells {
         this.e.set(0, s.yaw, 0, 'YXZ');
         this.q.multiply(this.turn.setFromEuler(this.e));
         this.at.set(s.x, s.y, s.z);
-        this.size.setScalar(s.height);
+        this.size.setScalar(s.height * Math.max(grow, 1e-3));
         this.m.compose(this.at, this.q, this.size);
         this.stems.setMatrixAt(n, this.m);
         this.tip.copy(TIP).applyMatrix4(this.m);
         this.e.set(s.swing.x, s.yaw, s.swing.y, 'YXZ');
         this.q.setFromEuler(this.e);
-        this.size.copy(this.one).multiplyScalar(1.3 + s.height * 0.4);
+        this.size.copy(this.one).multiplyScalar((1.3 + s.height * 0.4) * Math.max(grow, 1e-3));
         this.m.compose(this.tip, this.q, this.size);
         this.bells.setMatrixAt(n, this.m);
         n++;
@@ -239,11 +245,10 @@ export class Harebells {
   }
 
   /** A stroke crossing a clump on screen rings it; so does the child walking through it, or the plane coming down in it. */
-  private listen(camera: THREE.Camera, input: PointerInput, out: AudioOut | null, brushers: readonly (THREE.Vector3 | null)[],
-    life: (x: number, z: number) => number): void {
+  private listen(camera: THREE.Camera, input: PointerInput, out: AudioOut | null, brushers: readonly (THREE.Vector3 | null)[]): void {
     const stroke = input.present && !input.muted && input.gust > tuning.pointer.minGust;
     for (const c of this.clumps) {
-      if (life(c.x, c.z) < AWAKE) continue;
+      if (c.grown < 1) continue;
       const ground = heightAt(c.x, c.z);
       const brushed = brushers.some((b) => !!b && b.y < ground + 2.6 && Math.hypot(b.x - c.x, b.z - c.z) < BRUSHED);
       const entered = brushed && !c.brushed;

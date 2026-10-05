@@ -159,7 +159,14 @@ const vec3 HORN = vec3(0.3, 0.22, 0.075);
 const vec3 WEB = vec3(0.032, 0.03, 0.033);
 const vec3 IRIS = vec3(0.005, 0.005, 0.006);
 
+uniform float uShown;
+/** Interleaved gradient noise: a dissolve that holds still on screen instead of crawling. */
+float swanDither(vec2 p) {
+  return fract(52.9829189 * fract(dot(p, vec2(0.06711056, 0.00583715))));
+}
+
 void main() {
+  if (uShown < 0.999 && swanDither(gl_FragCoord.xy) >= uShown) discard;
   vec3 N = normalize(vNormal);
   if (!gl_FrontFacing) N = -N;
   int mat = int(vMat.x + 0.5);
@@ -233,6 +240,7 @@ in vec2 vUv;
 in vec3 vWorld;
 in float vFade;
 in float vKind;
+uniform float uShown;
 void main() {
   float r = length(vUv);
   /**
@@ -243,19 +251,19 @@ void main() {
   float splash = (1.0 - smoothstep(0.2, 1.0, r)) * (0.55 + 0.45 * smoothstep(0.2, 0.62, r));
   float ring = (1.0 - smoothstep(0.02, 0.3, abs(r - 0.78))) * (1.0 - smoothstep(0.9, 1.02, r));
   float a = vKind < 0.5 ? smudge : vKind < 1.5 ? splash : ring;
-  a *= vFade;
+  a *= vFade * uShown;
   if (a < 0.004) discard;
   vec3 foam = uSkyAmbient * 1.1 + uSunColor * 0.42;
   gl_FragColor = vec4(applyFog(foam, vWorld), min(a, 1.0));
 }`;
 
 export function swanMaterial(): THREE.ShaderMaterial {
-  return new THREE.ShaderMaterial({ uniforms: atmo.uniforms, vertexShader: SWAN_VERT, fragmentShader: SWAN_FRAG });
+  return new THREE.ShaderMaterial({ uniforms: { ...atmo.uniforms, uShown: { value: 1 } }, vertexShader: SWAN_VERT, fragmentShader: SWAN_FRAG });
 }
 
 export function wakeMaterial(): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
-    uniforms: { ...atmo.uniforms, ...swellUniforms, uStill: { value: 0 }, uLevel: { value: 0 } },
+    uniforms: { ...atmo.uniforms, ...swellUniforms, uStill: { value: 0 }, uLevel: { value: 0 }, uShown: { value: 1 } },
     vertexShader: WAKE_VERT,
     fragmentShader: WAKE_FRAG,
     transparent: true,

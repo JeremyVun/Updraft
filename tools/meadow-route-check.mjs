@@ -29,7 +29,7 @@ function fixture() {
   cygnet.mount=child;cygnet.visible=true;cygnet.wing.restore('wrapped');
   const carry=new Carry(child,cygnet);
   const cast={swanFeather:new Feather(wind),child,cygnet,flock,boat,plane,carry,wind,nearby:()=>false,
-    life:{regions:{island:new THREE.Vector4(),wave:new THREE.Vector4(),waiting:new THREE.Vector4()}}};
+    life:{at:()=>1,regions:{island:new THREE.Vector4(),wave:new THREE.Vector4(),waiting:new THREE.Vector4()}}};
   const chapter=new MeadowChapter(cast);
   child.stop();child.place(ROUTE[0].x,ROUTE[0].y+10,Math.PI);
   cygnet.rideIn('satchel');plane.hold(child);chapter.beat='walk';chapter.play='hold';

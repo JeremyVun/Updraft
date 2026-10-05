@@ -31,7 +31,7 @@ function fixture(fps=60) {
   cygnet.mount=child;cygnet.visible=true;
   const carry=new Carry(child,cygnet);
   const cast={swanFeather:new Feather(wind),child,cygnet,flock,boat,plane,carry,wind,nearby:()=>false,
-    life:{regions:{island:new THREE.Vector4(),wave:new THREE.Vector4(),waiting:new THREE.Vector4()}},
+    life:{at:()=>1,regions:{island:new THREE.Vector4(),wave:new THREE.Vector4(),waiting:new THREE.Vector4()}},
     sleeping:{trail:new SleepingTrail(),ribbon:new CurtainRibbon(CURTAIN_KNOT,CURTAIN_END),feather:new Feather(wind),bedside:BED.clone(),lane(){},laneOpen:0,fog:1,frost:0.3,dawn:0,curtains:0,curtainOpening:0},
   };
   let time=0;
