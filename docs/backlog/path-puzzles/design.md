@@ -107,6 +107,10 @@ His answers to the second round:
   Approved (Jeremy, 2026-10-05: "the fears sequence is approved. The only thing i'd ask to be changed slightly is after
   the owl is revealed, the camera could pan across to show the owl more face on. Otherwise, well done"). So the frame
   holds from the eyes in the dark through the reveal, then eases once across to see the perched owl more face on.
+  Jeremy on the pan build (2026-10-05): in the dark "it looks like it has 4 eyes (the light is reflecting off the
+  branches on either side. Can you fix this?"; and "the brances are arranged such that they are in line with the
+  player instead of across, so it reads a bit awkward when the owl is revealed". So only the owl's two eyes ever glow,
+  and the stump's fork spreads across her line of sight, the owl sitting in it facing her between the two limbs.
 - **The island of lines: a pinwheel winds the boat in, on the shore beyond the red door** (Jeremy: "yes i think this
   is a good idea to try"). The boat is moored out on the water; a pinwheel on the bank drives a pulley line that
   winds it in to the shore. It adds a beat after the door rather than replacing a curtain. It knowingly relaxes two
@@ -333,3 +337,177 @@ boat to run over the roofs for land. Jeremy, 2026-10-05:
 
 > remember, the whole point of the work here is to create an interesting puzzle and add more interactivity to the
 > game overall. previously, the drowned village had basically no interaction
+
+**Over the roofs** (agreed with Jeremy, 2026-10-05: she runs on her own; "yes, those three" crossings; the warm
+chimneys declined as the parallel idea, "something else"):
+
+- The air dies by the church and the dark rises behind them: black smoke lying on the water, coming on and swallowing
+  roofs. The boat bumps aground on a ridge just under the glass. Ahead, a line of roofs steps away toward the
+  lighthouse crag; the line runs along the way, so it says "this way". She tucks the cygnet into the satchel and climbs
+  out.
+- She runs the ridges by herself, away from the dark and toward the light, and stops at each gap. The paper plane does
+  not lead; she clutches it the whole way, so when the lighthouse takes it, it is the thing she held on to through the
+  run. The player's work is the crossings.
+- Three crossings, each a different gesture already learnt, each made from something in the room or a piece of home
+  in the wrong place:
+  1. **The fallen tree (push).** A dead drowned tree leans beside the first gap. Small gusts rock it and show which way
+     it can fall, as the bath rocks on the little boats; a firm push topples it across the gap and she runs over the
+     trunk.
+  2. **The swing (pump).** A longer gap, with the swing from the birches hanging from a drowned bough over it. She
+     climbs on, the player pumps it with gusts, and at the top of the arc she lets go and lands on the far roof.
+     Forgiving: no timing to hit.
+  3. **The raft (fill a sail).** On the last roof the crag is out of reach. A floating door drifts nearby with a sheet
+     caught upright on it. Filling the sheet brings the raft to her; filling it again carries her across to the crag's
+     steps.
+- The dark creeps up while she waits at a gap and stops a little behind her, heaving. It never reaches her and never
+  ends anything. Behind her it swallows each crossing as she leaves it. Each gap has the usual drawn invitation and
+  its own safety valve (a gust from the dark does the job), so nobody is stranded.
+- Camera: low and side-on, the dark on one side of the frame, her in the middle, the light on the other, so one frame
+  tells the chase.
+- At the lighthouse the dark catches them: the light falters and goes out and the plane is taken. The empty boat,
+  blown in on the dark's wind, waits at the foot of the crag, and the storm carries them on to the wood as on main.
+
+On a less ambitious parallel idea (offered: the dark's first breath snatches the scarf sail onto a chimney and the
+player wins it back), Jeremy, 2026-10-05: "im not sure waht snatched sail is about, but i leave it to you to take
+ownership of what a possible alternative might be. At this point im more interested in getting the over the roof done
+well". Over the roofs comes first.
+
+**The parallel, less ambitious idea: the dark snatches the sail** (chosen under the ownership Jeremy gave; it stays in
+the boat, so it needs no walking, climbing or roof navigation, and it reuses the scarf cloth, the dark bank and the
+rush across the water). The air dies and the dark rises behind them, as over the roofs. Its first cold breath runs
+ahead of it across the glass, tears the red scarf sail off the mast and flings it away; it snags round a drowned
+chimney and the bare tree beside it. Three acts, each answered on screen: free it (circles round the turns wrapped on
+the chimney, sweeps lift the lengths draped on the branches; kept short, since it echoes the birches), bring it home
+(it drops onto the glass and floats; gusts carry it back across the water to the boat while the dark comes on behind
+it), set it and run (she hauls it aboard, it climbs the mast, the player fills it and keeps it full as they run before
+the dark for the lighthouse). The player wins the sail back from the dark; minutes later the lighthouse takes the plane
+and nobody can stop it, so that loss lands harder. Judged only if over the roofs does not work out.
+
+Jeremy on the first concept frames (`comps/roofs/`), 2026-10-05: "It looks a bit too "constructed" and "convenient"
+e.g. a single line of houses no?" So the route must read as a drowned village she picks her way through, not a row
+laid out for her: roofs of different sizes, heights and angles, bits of the village standing out of the water (a
+garden wall's top, a porch, a barn, the church's own roof), a route that bends with what is there, and crossing
+pieces that belong where they are, among other things the flood left.
+
+**From the roofs to the wood** (Jeremy, 2026-10-05: "What i liked about the existing feel in main was that the storm
+started and landed her at the forest. The moment of "relief" was the landing, but it was actually the beginning of
+another scary journey. With the lighthouse in between, it sort of breaks that flow.. any ideas?" and, on the answer
+below, "what do you think works here? My ideas may not be the best", so this is our call). This supersedes the raft
+and the lighthouse stop above:
+
+- She runs to get back to her boat, not to the lighthouse, which stays what it is on main: the far light ahead, then
+  the light the storm passes and puts out.
+- Why she leaves the boat must read at once: it runs aground on a ridge with a scrape and a lurch; a sweep on the sail
+  only makes it strain and creak; she looks back at the dark, then up at the roof, and climbs out.
+- Behind her, the swell the dark pushes ahead of it lifts the empty boat off the ridge and it drifts out among the
+  roofs, seen in frame while she is at the crossings, so her boat drifting away is what the run is for.
+- The third crossing is the boat itself: on the last roof there is open water with her boat out on it; the player
+  fills its red sail (`Boat.brushSail`, as on main's becalming) and brings it to her. She jumps in as the dark
+  reaches them, and that is the moment the storm begins: the smoke rolls over them and becomes main's storm weather
+  without a seam.
+- From there main's storm plays untouched (the weather closing in, the lighthouse sliding past, the beam going out,
+  the plane taken, rain, the cygnet's shaking, the landing at the forest). Only its trigger changes, from
+  `tuning.storm.startsFromShore` to her being back aboard.
+
+**The whole room, from the beginning** (Jeremy, 2026-10-05: "ok we need to think through this in detail from the
+beginning. The player emerges from teh haze / cloud chapter into the drowning village, which is calm. what is the
+first puzzle? what happens after that to build into the black clouds and have the child climb onto the roofs? How is
+the stormy sequence laid out all the way to the woods village? Keep in mind the existing distances. think through this
+step by step". Agreed as below: "Yes, go"; the calm drift gets "a small one" of its own). This supersedes the run back
+to a drifting boat and the run to the lighthouse above.
+
+Distances on main: the passage from where the stairs set the boat down (`DESCENT_END`, 16, −1254) to the forest beach
+(`WOOD_LANDING`, −26, −1692) is about 530 m. The air dies (`STILL_AT`) about 155 m in, about 30 s after arrival, at
+about (−9, −1398), some 40 m short of the church (`SPIRE`, 14, −1436). Main's storm begins 210 m from the beach
+(`tuning.storm.startsFromShore`), about 50 m past the church; the light goes out 23 s later, beside the lighthouse
+(65, −1580); then the plane is taken and they land. Houses stand 11–30 m off the channel, 15–40 m apart, sunk 1.7–5.4 m.
+
+1. **The calm drift** (about 150 m, about 30 s): dusk among the roofs as on main, with one small puzzle of its own (to
+   be chosen), and small answers to the wind (herons lift, the spire's vane swings).
+2. **The sea draws back** where the air dies on main. The breeze dies, the glass goes still, then the water slips away:
+   the village rises a metre or two out of it (door tops, upstairs windows, garden walls, a wet dark band on every
+   wall). A ridge comes up under the boat and it settles on the slates, listing, high and dry. Far behind, where they
+   came from, the horizon goes black: the sea coming back under black smoke lying on the water.
+3. **She climbs out** because nothing moves a boat sitting on slates (a sweep on the sail only flaps it). She looks
+   back at the black and runs for the highest thing there is, the church tower, some 40–60 m off.
+4. **Crossing 1, the tree (push):** a lane of deep water to the next house; a dead tree rotted at the roots in a garden
+   there; pushed over, it is her bridge.
+5. **Crossing 2, the swing (pump):** the drowned village green between that house and the church; the swing hangs from
+   the old tree on the green; pumped, she lets go onto the nave roof.
+6. **The church:** she gets as high as a child can, the nave ridge at the tower's foot; the cat goes on up the tower
+   into the belfry, where it is safe. While she waits at a crossing the dark creeps up and stops a little behind her;
+   it never reaches her and nothing fails.
+7. **The dark arrives:** the black water pours back in round the church and the storm comes with it (the smoke rolls
+   over, the first rain). It comes up over the nave roof round her feet. The water lifts the stranded boat off its
+   ridge and carries it in among the roofs below.
+8. **Bring the boat (fill the sail):** the water is rising round her and her boat is afloat again, the only way out.
+   The player fills its red sail (`Boat.brushSail`) to bring it alongside the nave and she steps down into it. She
+   left because the boat was stranded; she goes back because the water brought it back. The cat watches from the
+   belfry as they go.
+9. **The storm, untouched:** the church is about 260 m from the beach, close to where main's storm already starts, so
+   main's timeline plays from the moment she is aboard (the weather closing in, the lighthouse sliding past and going
+   out about 130 m on, the plane taken, rain, the landing at the forest). Only its trigger changes, from
+   `startsFromShore` to her being back aboard. The storm still never lets go until the beach.
+
+The village round the church is re-laid so the route reads as a real village she picks her way through (Jeremy's note
+on the first frames above). The sea itself does not move: the village rises to show the water falling and sinks to
+show it returning.
+
+**The calm drift's puzzle: the stranded cat** (Jeremy, 2026-10-05, chosen over a leaning tree that would have taught
+the push). A cat crouches on a chimney pot along the drift, mewing (animals may be as loud as they like). A wooden
+wash-tub floats nearby; the player's gusts carry it to the cat's roof, the cat hops in, and the gusts bring the tub
+to the boat, where the cat jumps aboard. When the sea draws back, the cat leaps off onto the roofs and runs ahead
+toward the church, and the child follows it: it shows her the way without the plane, as animals run before a wave,
+and it shows that the roofs can be walked. It waits at each crossing with her. It ends safe in the belfry and is left
+there as the storm takes the boat. The cygnet is wary of it and stays tucked in the satchel while the cat is aboard.
+A cat is a new animal: its own model and animation, matched to the game's soft painted look.
+
+**Ownership of the drowned village** (Jeremy, 2026-10-05, verbatim):
+
+> Ok great, I want you to take the lead in terms of owning the artistic vision and execution as i know you won't stop
+> of anything short of excellence. My only requirements are that it feels great, plays great, and looks great, with
+> good pacing and narrative that adds to the game's narrative. To this end, alot of refactoring of the existing
+> drowned village and storm sequence may need to happen. The astra concepts may or may not make sense, do don't
+> necessarily take them as gospel as something to match pixel for pixel. Take what works and ignore waht doesn't. Any
+> questions, ask at any time.
+
+So the existing drowned village and storm code may be refactored as far as the room needs; the concept frames in
+`comps/drowned/` are a guide to take from, not a target to match.
+
+### How it is made (Claude's calls under that ownership, 2026-10-05)
+
+- **Pacing.** Arrival and calm drift about 30 s; the cat about 30–60 s; a short drift with the cat aboard (the cygnet
+  ducking into the satchel, the cat washing a paw on the thwart) about 15 s; the sea drawing back about 15 s, slow and
+  eerie; the run about 2 min with both crossings; the dark arriving and the boat brought in about 45 s; the storm
+  about 70 s to the beach. The room grows from about 3 minutes to 5–6, nearly all of it the player's.
+- **The cat.** A small soft tabby with a white chest and socks, round-faced, a little bedraggled, built as soft
+  rounded shapes like the game's other animals, never realistic fur. It mews from the chimney (loud is allowed for
+  animals), hates the water, rides the tub hunched with its ears flat, and on the boat sits on the bow thwart as far
+  from the water as it can. It is quick and sure where she is slow: at each gap it crosses its own way (along a
+  railing top, a wall coping, a leap she could never make), which shows her where the far side is and that she must
+  find her own way over. At the church it climbs the tower's ivy to the belfry. It is left there, safe and high,
+  looking down as the boat goes; she looks back at it once.
+- **The sea drawing back.** The village rises about 2 m over about 8 s (tuned by eye), the walls coming up with a
+  wet dark band, weed and dripping; the leaves on the glass slide away toward the dark; the boat settles onto a ridge
+  that comes up under it and lists. A long low draining sound; the music thins to nothing. Herons lift and fly
+  away from the dark. The glass stays still: it is the stillness that frightens.
+- **The dark.** Low black-violet smoke lying on the water, made of soft painted billows like the smoke prototype's,
+  lit at the rims by the last low sun, coming from behind (south, the way they came) and swallowing roofs as it
+  comes. It is beautiful-ominous, never horror and never industrial. While she is stuck it creeps closer and stops a
+  little behind her, heaving; as she crosses it swallows the place she left. When it arrives at the church the water
+  pours back under it (the village sinks past its old level, over the nave roof), the smoke rolls over and becomes
+  the storm's sky, and the rain begins.
+- **The run is built on decks** (`src/world/decks.ts`): ridges, wall tops and the fallen trunk are strips the child
+  walks; the slates up to a ridge are ramps. She gets out with `alight` onto the stranded ridge and back in with
+  `board` at the nave.
+- **Camera.** Low and beside the run, at roof height at most, the dark on one side of the frame and the church on the
+  other, easing between crossings and never cutting; on an upright phone it looks along her way so it stacks up the
+  frame. While she waits at a gap the gap, the thing to push and her are all in frame.
+- **The storm from aboard.** The dark has already arrived, so the storm starts with the weather mostly gathered rather
+  than gathering from clear; its beats keep their order and their spacing along the way (the lighthouse passing and
+  its light going out, the plane taken, the rain, the cygnet's shaking, the beach).
+- **Saves.** A save during the run resumes at the stranding (cat aboard, sea drawn back); a save after she is aboard
+  resumes aboard with the storm to come.
+- **The cat comes home** (Jeremy, 2026-10-05: yes). At the very end, as she walks down to the cottage with the red door,
+  the same tabby sits in its lit window, waiting: home's cat all along. No remark and no beat of its own; it is built
+  once the drowned village is judged.
