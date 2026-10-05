@@ -442,6 +442,15 @@ function slipper(b: Build, frame: THREE.Matrix4): void {
   b.add(new THREE.TorusGeometry(0.05, 0.014, 6, 16), frame.clone().multiply(new THREE.Matrix4().makeTranslation(0, 0.036, -0.042)).multiply(new THREE.Matrix4().makeRotationX(Math.PI / 2)).multiply(new THREE.Matrix4().makeScale(1, 1.35, 1)), SOLE, cream);
 }
 
+/**
+ * What a flight is walked on: a slope as steep as its steps through the middle of every tread, run on half a tread past
+ * either end to meet the floor it leaves and the landing it comes onto.
+ */
+function walkLine(f: Flight): [THREE.Vector3, THREE.Vector3] {
+  const half = along(f.yaw).multiplyScalar(STEP.going / 2);
+  return [f.bottom.clone().sub(half), f.top.clone().add(half)];
+}
+
 /** The loop's last flight drawn in until, seen from the one place, its top lies on the corner. */
 function drawnInFlight(): THREE.BufferGeometry {
   const trick = new Build();
@@ -820,7 +829,8 @@ export class CloudStairs {
   static loopDecks(): Deck[] {
     // The drawn-in flight curves and shrinks toward its top, so it is walked in short straight pieces that follow it.
     const pieces = 16;
-    const up = (t: number) => drawIn(LOOP_BACK.bottom.clone().lerp(LOOP_BACK.top, t));
+    const [from, to] = walkLine(LOOP_BACK);
+    const up = (t: number) => drawIn(from.clone().lerp(to, t));
     const back: Deck[] = Array.from({ length: pieces }, (_, i) => {
       const a = up(i / pieces), b = up((i + 1) / pieces);
       return { x0: a.x, z0: a.z, x1: b.x, z1: b.z, halfWidth: STEP.width * 0.4 * THREE.MathUtils.lerp(1, LOOP_SHRINK, (i + 0.5) / pieces),
@@ -849,9 +859,9 @@ export class CloudStairs {
   private static flightDecks(f: Flight, L: Landing): Deck[] {
     const cz = (L.z0 + L.z1) / 2;
     const a = onLanding(L, L.x0 + 0.12, cz), b = onLanding(L, L.x1 - 0.12, cz);
+    const [from, to] = walkLine(f);
     return [
-      { x0: f.bottom.x, z0: f.bottom.z, x1: f.top.x, z1: f.top.z, halfWidth: STEP.width / 2,
-        height: f.bottom.y, height1: f.top.y },
+      { x0: from.x, z0: from.z, x1: to.x, z1: to.z, halfWidth: STEP.width / 2, height: from.y, height1: to.y },
       { x0: a.x, z0: a.z, x1: b.x, z1: b.z, halfWidth: (L.z1 - L.z0) / 2 - 0.1, height: L.centre.y },
     ];
   }
