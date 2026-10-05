@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { BOW_Z, STERN_Z } from '../traveller/boat/form';
 import { tuning } from '../tuning';
 import {
-  CAT_CHIMNEY, CAT_HOLD, CAT_LANDING, CAT_LENS, CAT_ROOF, TUB_START, TUB_WATER, WAY, catRoof, onCatRoof, strandRoof,
+  CAT_CHIMNEY, CAT_HOLD, CAT_LANDING, CAT_LENS, CAT_ROOF, TOWER_FOOT, TUB_START, TUB_WATER, WAY, catRoof, onCatRoof, strandRoof,
 } from '../world/drowned-way';
 import { WashTub, type TubWall } from '../world/wash-tub';
 import type { Cast } from './cast';
@@ -32,6 +32,8 @@ const EAVES = onCatRoof(0, CAT_ROOF.depth);
 const STEP = new THREE.Vector3(WAY.strandSlope.x0, WAY.strandSlope.height, WAY.strandSlope.z0);
 const RIDGE = new THREE.Vector3(WAY.strand.x0, WAY.strand.height, WAY.strand.z0);
 const GAP = new THREE.Vector3(WAY.strand.x1, WAY.strand.height, WAY.strand.z1);
+/** High on the church tower, the highest thing there is. */
+const TOWER = TOWER_FOOT.clone().setY(TOWER_FOOT.y + 6);
 
 /**
  * The cat of the drowned village, from its chimney to the bow and then off it again. It mews from a chimney pot
@@ -69,6 +71,7 @@ export class StrandedCat {
   private phase = 0;
   private atEdge = 0;
   private released = false;
+  private bolted = -1;
   private washed = false;
   private wary = false;
 
@@ -97,6 +100,11 @@ export class StrandedCat {
   /** Seconds since the step began. */
   get t(): number {
     return this.since;
+  }
+
+  /** Seconds since the cat bolted off the bow, or -1 before it has. */
+  get sinceBolt(): number {
+    return this.bolted < 0 ? -1 : this.now - this.bolted;
   }
 
   /** Crouched on its chimney pot, mewing, with the tub adrift on the water below. */
@@ -375,6 +383,7 @@ export class StrandedCat {
     }
     if (come >= k.boltAt && !cat.busy) {
       cat.afraid(1);
+      this.bolted = this.now;
       this.to('bolting');
     }
   }
@@ -422,6 +431,11 @@ export class StrandedCat {
       case 'waits': {
         const k = tuning.drowned.cat;
         return this.since > 0.6 && this.since < 0.6 + k.looksBack ? this.darkAt : this.eye;
+      }
+      case 'ridge': {
+        /** Up, she looks at the cat, then over the roofs to the church it is making for, and back. */
+        const beat = (this.since - 1.6) % 7;
+        return this.since < 1.6 || beat > 4.2 ? this.eye : TOWER;
       }
       default:
         return this.eye;

@@ -1833,6 +1833,11 @@ export const tuning = {
      * satchel is in view; how far it stands off and how high, and how fast it eases there.
      */
     aboardBearing: 1.3, aboardDistance: 8.5, aboardHeight: 1.3, aboardPace: 0.45,
+    /**
+     * Once the cat bolts: the way the lens looks (atan2(x, z) of the view) as it comes round to the south of the
+     * cottage over `climbFor` seconds, how far back it stands, and the height it looks at.
+     */
+    strandClimb: 2.9, climbFor: 7, climbBack: 15, climbAim: 2.3,
   },
   /** One continuous passage from the last drowned houses to the forest beach. */
   storm: {

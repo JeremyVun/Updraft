@@ -120,6 +120,7 @@ export class DrownedChapter implements Chapter {
   private aboardFrom = -1;
   private readonly darkFront = new THREE.Vector3();
   private readonly catEye = new THREE.Vector3();
+  private readonly anchor = new THREE.Vector3();
   private readonly catAim = new THREE.Vector3();
 
   constructor(private readonly cast: Cast) {
@@ -550,15 +551,22 @@ export class DrownedChapter implements Chapter {
     const from = this.stillBearing + Math.PI;
     let look = from + Math.atan2(Math.sin(dark - from), Math.cos(dark - from)) * round;
     look += Math.atan2(Math.sin(k.strandChurch - k.strandDark), Math.cos(k.strandChurch - k.strandDark)) * turned;
-    const b = boat.position;
-    const back = THREE.MathUtils.lerp(k.uprightBack, k.strandBack, wide);
+    /**
+     * When the cat bolts the lens comes on round to the south, so she is seen side on looking along the ridge at it
+     * and on to the church beyond, never back toward the lens, and it lifts to the ridge as she climbs.
+     */
+    const climbed = this.cat.sinceBolt < 0 ? 0 : THREE.MathUtils.smootherstep(this.cat.sinceBolt, 0, k.climbFor);
+    look += Math.atan2(Math.sin(k.strandClimb - look), Math.cos(k.strandClimb - look)) * climbed;
+    const b = this.anchor.copy(boat.position).lerp(STRAND_TOP, 0.8 * climbed);
+    const back = THREE.MathUtils.lerp(THREE.MathUtils.lerp(k.uprightBack, k.strandBack, wide), k.climbBack, climbed);
     const side = k.uprightSide * (1 - wide) * round;
     const ex = b.x - Math.sin(look) * back - Math.cos(look) * side, ez = b.z - Math.cos(look) * back + Math.sin(look) * side;
     const reach = Math.hypot(b.x - ex, b.z - ez);
     const vx = (b.x - ex) / reach, vz = (b.z - ez) / reach;
     const ahead = THREE.MathUtils.lerp(k.uprightAhead, k.strandAhead, wide);
     const aside = k.strandAside * wide * (1 - turned);
-    const aim = THREE.MathUtils.lerp(k.uprightAim, THREE.MathUtils.lerp(k.strandAim, k.churchAim, turned), wide);
+    const aim = THREE.MathUtils.lerp(THREE.MathUtils.lerp(k.uprightAim, THREE.MathUtils.lerp(k.strandAim, k.churchAim, turned), wide),
+      k.climbAim, climbed);
     s.target.set(b.x + vx * ahead - vz * aside, aim, b.z + vz * ahead + vx * aside);
     const dx = ex - s.target.x, dz = ez - s.target.z, dist = Math.hypot(dx, dz);
     s.from = this.from.set(dx / dist, 0, dz / dist);
@@ -567,7 +575,7 @@ export class DrownedChapter implements Chapter {
     s.zoom = THREE.MathUtils.lerp(1, k.strandZoom, settled * wide);
     s.obstacles = undefined;
     this.strandSubjects.primary.copy(this.subjects.primary);
-    this.strandSubjects.secondary.copy(b);
+    this.strandSubjects.secondary.copy(climbed > 0.5 ? this.cat.eye : boat.position);
     s.subjects = this.strandSubjects;
     this.pace = k.strandPace;
   }

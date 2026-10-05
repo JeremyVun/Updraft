@@ -91,8 +91,8 @@ function tubGeometry(): THREE.BufferGeometry {
     tagged(rim, RIM),
     tagged(bottom, WOOD),
     tagged(boards, BOARDS),
-    band(0.05, 0.085, 0.006, false, IRON),
-    band(HEIGHT - 0.1, HEIGHT - 0.062, 0.006, false, IRON),
+    band(0.045, 0.09, 0.007, false, IRON),
+    band(HEIGHT - 0.105, HEIGHT - 0.055, 0.007, false, IRON),
     lug(1),
     lug(-1),
   ]);
@@ -130,9 +130,9 @@ void main() {
   float stave = floor(s);
   float seam = 1.0 - smoothstep(0.0, 0.07 + fwidth(s), min(fract(s), 1.0 - fract(s)));
   /** Old pine gone silver-brown in the weather, each stave its own shade, the grain running up it. */
-  vec3 alb = vec3(0.105, 0.078, 0.056) * (0.82 + 0.34 * hash12(vec2(stave, 7.0)));
+  vec3 alb = vec3(0.088, 0.068, 0.052) * (0.8 + 0.36 * hash12(vec2(stave, 7.0)));
   alb *= 0.86 + 0.24 * vnoise(vec2(s * 3.1, vLocal.y * 34.0 + stave * 3.7));
-  if (kind == ${INSIDE}) alb *= 0.5 + 0.4 * smoothstep(0.05, ${HEIGHT.toFixed(3)}, vLocal.y);
+  if (kind == ${INSIDE}) alb *= 0.38 + 0.37 * smoothstep(0.05, ${HEIGHT.toFixed(3)}, vLocal.y);
   if (kind == ${BOARDS}) {
     float plank = floor((vLocal.x + 0.5) * 6.0);
     alb = vec3(0.09, 0.066, 0.048) * (0.8 + 0.3 * hash12(vec2(plank, 3.0))) * (0.85 + 0.25 * vnoise(vec2(plank * 5.0, vLocal.z * 30.0)));
