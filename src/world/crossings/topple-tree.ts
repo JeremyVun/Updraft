@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { tuning } from '../../tuning';
 import { ATMO_GLSL, atmo } from '../atmosphere';
+import { SWELL_GLSL, swellUniforms } from '../water/swell';
 import { mulberry32 } from '../noise';
 import { REFLECTION_LAYER } from '../water/reflection';
 import type { Deck } from '../decks';
@@ -10,6 +11,10 @@ import { Spray, DROP, MIST, SPLASH } from '../../fx/sealife/spray';
 import { Marks, FOAM, RING } from '../../fx/sealife/marks';
 import { BARK, EARTH, ROOT, merged, segmentGap, tagged, tube } from './shapes';
 
+/** How far the heel of the root plate heaves up when the roots have all but gone, and the plate's radius. */
+const HEAVE = 0.45;
+const PLATE_R = 1.15;
+
 const TREE_VERT = /* glsl */ `
 ${ATMO_GLSL}
 uniform float uShiver;
@@ -17,6 +22,7 @@ uniform float uFlex;
 uniform float uShudder;
 uniform float uHeight;
 uniform vec2 uSpan;
+uniform float uHeave;
 in float aShake;
 in float aKind;
 in float aPhase;
@@ -26,6 +32,12 @@ out vec3 vLocal;
 out float vKind;
 void main() {
   vec3 p = position;
+  if (aKind > ${ROOT - 0.5} && aKind < ${EARTH + 0.5}) {
+    /** The side of the plate away from the fall breaks up out of the bed as the roots give. */
+    float heel = smoothstep(0.1, -0.9, p.z) * smoothstep(0.3, 0.8, length(p.xz)) * smoothstep(-0.5, 0.0, p.y);
+    p.y += uHeave * heel * ${HEAVE};
+    p.z -= uHeave * heel * 0.08;
+  }
   float up = clamp(p.y / uHeight, 0.0, 1.0);
   float span = sin(clamp((p.y - uSpan.x) / (uSpan.y - uSpan.x), 0.0, 1.0) * 3.14159);
   p.z += uFlex * up * up * uHeight * 0.3 + uShudder * span * sin(uTime * 29.0) * 0.09;
@@ -43,6 +55,7 @@ const TREE_FRAG = /* glsl */ `
 ${ATMO_GLSL}
 uniform float uWater;
 uniform float uSoak;
+uniform float uHeave;
 in vec3 vWorld;
 in vec3 vNormal;
 in vec3 vLocal;
@@ -53,13 +66,21 @@ void main() {
   int kind = int(vKind + 0.5);
   float around = atan(vLocal.z, vLocal.x);
   vec3 alb;
-  float gloss = 0.0;
+  float wet;
   if (kind == ${EARTH}) {
+    /** Wet garden mud: lumps of it drier and lighter on top, stones and old roots through it, cracking where it heaves. */
     float lumps = vnoise(vLocal.xz * 3.1 + vLocal.y) * 0.6 + vnoise(vLocal.xz * 9.0) * 0.4;
-    alb = mix(vec3(0.026, 0.02, 0.016), vec3(0.05, 0.04, 0.03), lumps);
-    alb = mix(alb, vec3(0.035, 0.045, 0.025), smoothstep(0.62, 0.8, vnoise(vLocal.xz * 2.0 + 9.0)) * 0.6);
+    alb = mix(vec3(0.062, 0.045, 0.031), vec3(0.12, 0.092, 0.064), smoothstep(0.3, 0.8, lumps) * smoothstep(-0.25, 0.05, vLocal.y));
+    alb = mix(alb, vec3(0.13, 0.12, 0.105), smoothstep(0.8, 0.86, vnoise(vLocal.xz * 7.0 + 3.0)) * 0.7);
+    float heel = smoothstep(0.1, -0.9, vLocal.z) * smoothstep(0.3, 0.8, length(vLocal.xz));
+    float crack = abs(vnoise(vec2(around * 3.0, length(vLocal.xz) * 2.2) + 7.0) - 0.5);
+    alb *= 1.0 - 0.85 * (1.0 - smoothstep(0.0, 0.03 * uHeave * heel + 0.001, crack));
+    wet = 0.75 + 0.25 * (1.0 - smoothstep(-0.2, 0.05, vLocal.y));
   } else if (kind == ${ROOT}) {
-    alb = vec3(0.05, 0.038, 0.028) * (0.8 + 0.4 * vnoise(vLocal.xz * 7.0 + vLocal.y * 3.0));
+    /** Torn roots: pale where the skin is stripped, dark bark between. */
+    float strip = smoothstep(0.45, 0.7, vnoise(vec2(around * 2.0, (vLocal.x + vLocal.z) * 5.0) + vLocal.y * 3.0));
+    alb = mix(vec3(0.05, 0.038, 0.028), vec3(0.15, 0.12, 0.085), strip);
+    wet = 0.7;
   } else {
     float fissures = smoothstep(0.35, 0.75, vnoise(vec2(around * 4.0, vLocal.y * 0.8)) * 0.7 + vnoise(vec2(around * 12.0, vLocal.y * 3.0)) * 0.3);
     alb = mix(vec3(0.04, 0.034, 0.03), vec3(0.1, 0.086, 0.072), fissures);
@@ -68,15 +89,15 @@ void main() {
     float grain = vnoise(vec2(around * 26.0, vLocal.y * 1.4));
     alb = mix(alb, vec3(0.19, 0.18, 0.165) * (0.8 + 0.35 * grain), bare * 0.85);
     alb = mix(alb, vec3(0.05, 0.075, 0.035), smoothstep(0.66, 0.82, vnoise(vLocal.xy * vec2(2.0, 0.6) + 2.0)) * 0.5);
+    /** What stood in the flood is dark, green and slick, with the tide mark the water kept washing. */
+    float under = 1.0 - smoothstep(-0.1, 0.35, vLocal.y - uWater);
+    alb = mix(alb, alb * vec3(0.32, 0.4, 0.3), under * 0.9);
+    alb += vec3(0.02, 0.024, 0.014) * (1.0 - smoothstep(0.0, 0.18, abs(vLocal.y - uWater - 0.35)));
+    /** Torn up out of it, everything that was under is running wet. */
+    wet = under * uSoak;
   }
-  /** What stood in the flood is dark, green and slick, with the tide mark the water kept washing. */
-  float under = 1.0 - smoothstep(-0.1, 0.35, vLocal.y - uWater);
-  alb = mix(alb, alb * vec3(0.32, 0.4, 0.3), under * 0.9);
-  alb += vec3(0.02, 0.024, 0.014) * (1.0 - smoothstep(0.0, 0.18, abs(vLocal.y - uWater - 0.35)));
-  /** Torn up out of it, everything that was under is running wet. */
-  float wet = under * uSoak;
   alb *= 1.0 - 0.35 * wet;
-  gloss = 0.04 + 0.16 * wet;
+  float gloss = 0.04 + 0.2 * wet;
 
   vec3 V = normalize(cameraPosition - vWorld);
   float sun = cloudShadow(vWorld.xz);
@@ -84,11 +105,42 @@ void main() {
   float wrap = max(dot(n, uSunDir) * 0.5 + 0.5, 0.0);
   vec3 col = alb * (hemiLight(n) + uSunColor * mix(ndl, wrap * wrap, 0.2) * sun);
   float rim = pow(1.0 - clamp(dot(n, V), 0.0, 1.0), 3.0) * pow(max(dot(-V, uSunDir), 0.0), 2.5);
-  col += uSunColor * rim * sun * (kind == ${EARTH} ? 0.04 : 0.14);
-  /** A wet sheen, broken up: earth and roots running with water glint in places, never all over. */
+  col += uSunColor * rim * sun * (kind == ${EARTH} ? 0.06 : 0.14);
+  /** A wet sheen, broken up: mud and roots running with water glint in places, never all over. */
   float sheen = pow(max(dot(reflect(-uSunDir, n), V), 0.0), 40.0) * smoothstep(0.45, 0.8, vnoise(vLocal.xz * 6.0 + vLocal.y * 4.0));
   col += uSunColor * sheen * sun * gloss;
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
+}`;
+
+/** Mud stirred up off the bed, clouding the water round the foot: it shows less the flatter the water is seen. */
+const SILT_VERT = /* glsl */ `
+${ATMO_GLSL}
+${SWELL_GLSL}
+out vec2 vQ;
+out vec3 vWorld;
+void main() {
+  vec4 w = modelMatrix * vec4(position, 1.0);
+  vWorld = vec3(w.x, seaSurfaceY(w.xz) + 0.03, w.z);
+  vQ = position.xy;
+  gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
+}`;
+
+const SILT_FRAG = /* glsl */ `
+${ATMO_GLSL}
+uniform float uSilt;
+uniform float uSeed;
+in vec2 vQ;
+in vec3 vWorld;
+void main() {
+  float r = length(vQ);
+  float body = 1.0 - smoothstep(0.45, 1.0, r + (vnoise(vQ * 2.2 + uSeed + uTime * 0.05) - 0.5) * 0.5);
+  body *= 0.7 + 0.3 * vnoise(vQ * 5.0 - uSeed - uTime * 0.08);
+  vec3 V = normalize(cameraPosition - vWorld);
+  float F = 0.02 + 0.98 * pow(1.0 - max(V.y, 0.02), 5.0);
+  float a = body * uSilt * (1.0 - 0.6 * F) * 0.85;
+  if (a < 0.004) discard;
+  vec3 col = vec3(0.1, 0.075, 0.045) * (uSkyAmbient * 1.1 + uSunColor * max(uSunDir.y, 0.0) * 0.5 * cloudShadow(vWorld.xz));
+  gl_FragColor = vec4(applyFog(col, vWorld) * a, a);
 }`;
 
 /** Where a dead tree stands and what it will lie across once it is down. */
@@ -103,7 +155,7 @@ export interface TreeSpot {
   seed?: number;
 }
 
-export type TreeEvent = 'creak' | 'tear' | 'impact';
+export type TreeEvent = 'creak' | 'loosen' | 'tear' | 'impact';
 
 const SPINE = 0.86;
 const R_FOOT = 0.4;
@@ -111,9 +163,11 @@ const R_TOP = 0.13;
 
 /**
  * A dead tree rotted at its roots, standing in a flooded garden beside a gap. Strokes across it on screen rock it
- * a beat late and it springs back, creaking, its twigs shivering; strokes toward the gap loosen its roots, and a firm
- * push takes it past the point where its own weight wins. Then it goes, slowly and then faster, tearing its roots up
- * out of the bed, and comes down across the gap, where its trunk is a deck to walk over.
+ * a beat late and it springs back, creaking, its twigs shivering. Only a firm push toward the gap gets past what the
+ * roots allow, and each one tears them a step: the water boils and clouds round the foot, the far side of the plate
+ * heaves up cracked out of the water, and it stands leaning further. The second or third such push takes it. Then
+ * it goes, slowly and then faster, tilting its plate of earth up out of the bed, and comes down across the gap,
+ * where its trunk is a deck to walk over.
  */
 export class ToppleTree {
   readonly group = new THREE.Group();
@@ -125,8 +179,10 @@ export class ToppleTree {
   /** Radians toward the gap; and sideways, positive to the right of the way it falls. */
   lean = 0;
   side = 0;
-  /** How far the rotten roots have given, 0 to 1: it stays given, ebbing only slowly. */
+  /** How far the rotten roots have given, 0 to 1, a step for each firm push: at 1 it goes. */
   loose = 0;
+  /** How many times the roots have given. */
+  gives = 0;
   /** Seconds since it came down. */
   sinceDown = 0;
   /** The way over once it is down: from the near end down to where it passes over the far side. */
@@ -137,6 +193,15 @@ export class ToppleTree {
   private press = 0;
   private incoming = 0;
   private sideIncoming = 0;
+  /** The most the push has pressed since the roots last gave; ready again once that push has ebbed. */
+  private pushPeak = 0;
+  private armed = true;
+  private settle = 0;
+  private fellFrom = 0;
+  private heave = 0;
+  private bubbling = 0;
+  private silt = 0;
+  private siltAge = 0;
   private shiver = 0;
   private shudder = 0;
   private tear = 0;
@@ -148,6 +213,7 @@ export class ToppleTree {
   private readonly baseDown = new THREE.Vector3();
   readonly downLean: number;
   private readonly material: THREE.ShaderMaterial;
+  private readonly siltMesh: THREE.Mesh;
   private readonly spray: Spray;
   private readonly marks = new Marks(0.8);
   private readonly tmp = new THREE.Vector3();
@@ -202,13 +268,23 @@ export class ToppleTree {
 
     this.material = barkMaterial(this.height, -spot.root.y);
     this.material.uniforms.uSpan.value.set(sOver, sRest);
-    const mesh = new THREE.Mesh(growDeadTree(this.height, spot.seed ?? 4417), this.material);
+    const mesh = new THREE.Mesh(growDeadTree(this.height, spot.seed ?? 4417, this.downLean), this.material);
     mesh.frustumCulled = false;
     this.group.add(mesh);
     this.group.rotation.order = 'YXZ';
+    this.siltMesh = new THREE.Mesh(new THREE.CircleGeometry(1, 28), new THREE.ShaderMaterial({
+      vertexShader: SILT_VERT, fragmentShader: SILT_FRAG,
+      uniforms: { ...atmo.uniforms, ...swellUniforms, uSilt: { value: 0 }, uSeed: { value: (spot.seed ?? 4417) % 97 } },
+      transparent: true, depthWrite: false, side: THREE.DoubleSide,
+      blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor,
+      polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -4,
+    }));
+    this.siltMesh.rotation.x = -Math.PI / 2;
+    this.siltMesh.frustumCulled = false;
+    this.siltMesh.renderOrder = 2;
     this.spray = new Spray(wind);
-    this.objects = [this.group, this.spray.mesh, this.marks.mesh];
-    for (const o of this.objects) o.layers.enable(REFLECTION_LAYER);
+    this.objects = [this.group, this.spray.mesh, this.marks.mesh, this.siltMesh];
+    for (const o of [this.group, this.spray.mesh, this.marks.mesh]) o.layers.enable(REFLECTION_LAYER);
     this.reset();
   }
 
@@ -217,6 +293,8 @@ export class ToppleTree {
     this.lean = tuning.crossings.tree.restLean;
     this.leanV = this.side = this.sideV = this.press = this.incoming = this.sideIncoming = 0;
     this.loose = this.tear = this.soak = this.shudder = this.shiver = this.dripFor = 0;
+    this.gives = this.pushPeak = this.settle = this.heave = this.bubbling = this.silt = this.siltAge = 0;
+    this.armed = true;
     this.sinceDown = 0;
     this.base.copy(this.spot.root);
     this.pose();
@@ -228,14 +306,17 @@ export class ToppleTree {
 
   /** How near it is to going over, 0 to 1: what counts as progress. */
   get progress(): number {
-    if (this.state !== 'standing') return 1;
-    const k = tuning.crossings.tree;
-    return Math.max(this.loose * 0.7, (this.lean - k.restLean) / (k.tipAt - k.restLean) * 0.9);
+    return this.state === 'standing' ? this.loose * 0.95 : 1;
   }
 
   /** A point a share of the way up the standing trunk, in the world. */
   trunkAt(share: number, out: THREE.Vector3): THREE.Vector3 {
     return this.group.localToWorld(out.set(0, this.height * share, 0));
+  }
+
+  /** Where the trunk meets the water, in the world. */
+  footAt(out: THREE.Vector3): THREE.Vector3 {
+    return this.trunkAt(Math.min(0.9, -this.spot.root.y / this.height), out);
   }
 
   /** The screen angle (radians anticlockwise from the right) of a push that would take it over. */
@@ -289,23 +370,24 @@ export class ToppleTree {
       this.press += this.incoming * take;
       this.incoming -= this.incoming * take;
       this.press = THREE.MathUtils.clamp(this.press * Math.exp(-dt / k.hold), -k.backMax, k.pressMax);
-      this.leanV += (-k.stiffness * (this.lean - rest - this.press) - k.damping * this.leanV) * dt;
+      this.settle = Math.max(0, this.settle - dt);
+      if (!this.armed && this.settle <= 0 && this.press < k.giveAt * 0.4) {
+        this.armed = true;
+        this.pushPeak = 0;
+      }
+      if (this.armed) this.pushPeak = Math.max(this.pushPeak, this.press + Math.max(0, this.incoming));
+      /** The roots let it lean so far and hold hard beyond. */
+      const strain = Math.max(0, this.lean - rest - k.holdAt);
+      this.leanV += (-k.stiffness * (this.lean - rest - this.press) - k.rootStiffness * strain - k.damping * this.leanV) * dt;
       this.lean += this.leanV * dt;
-      const over = this.lean - rest - k.loosenFrom;
-      if (over > 0) this.loose = Math.min(1, this.loose + over * k.loosenRate * dt);
-      this.loose = Math.max(0, this.loose - k.ebb * dt);
       if (this.lastLeanV * this.leanV < 0 && Math.abs(this.lean - rest) > 0.035) {
         const strength = Math.min(1, Math.abs(this.lean - rest) * 6);
         this.onEvent?.('creak', this.trunkAt(0.3, this.tmp), strength);
         this.ring(0.6 * strength, time);
       }
-      if (this.lean > k.tipAt) {
-        /** However hard the push, the roots hold it a moment before it goes. */
-        this.state = 'falling';
-        this.leanV = THREE.MathUtils.clamp(this.leanV, 0.1, 0.16);
-      }
+      if (this.armed && strain > 0 && this.pushPeak >= k.giveAt) this.give(time);
     } else if (this.state === 'falling') {
-      const torn = THREE.MathUtils.clamp((this.lean - k.tipAt) / k.tearOver, 0, 1);
+      const torn = THREE.MathUtils.clamp((this.lean - this.fellFrom) / k.tearOver, 0, 1);
       const hold = THREE.MathUtils.lerp(k.tearHold, 1, THREE.MathUtils.smoothstep(torn, 0.2, 1));
       this.leanV += k.fallPull * Math.sin(this.lean) * hold * dt;
       this.lean += this.leanV * dt;
@@ -327,29 +409,66 @@ export class ToppleTree {
     this.lastLeanV = this.leanV;
 
     if (this.state !== 'standing') {
-      const torn = THREE.MathUtils.clamp((this.lean - k.tipAt) / (this.downLean - k.tipAt), 0, 1);
+      const torn = THREE.MathUtils.clamp((this.lean - this.fellFrom) / (this.downLean - this.fellFrom), 0, 1);
       this.tear = Math.max(this.tear, torn);
       const heave = THREE.MathUtils.smootherstep(this.tear, 0.05, 1);
       this.base.lerpVectors(this.spot.root, this.baseDown, heave);
       this.soak = Math.max(this.soak, heave);
     }
+    /** The heel comes up in a lurch as the roots let go, and stays up. */
+    this.heave += (Math.min(1, this.loose * 1.6) - this.heave) * (1 - Math.exp(-dt / 0.18));
     this.soak = Math.max(0, this.soak - dt * 0.01);
     this.shudder = Math.max(0, this.shudder - dt / k.shudderFor);
     const motion = Math.abs(this.leanV) + Math.abs(this.sideV);
     this.shiver += (Math.min(1.4, motion * 3 + this.shudder * 1.5) - this.shiver) * (1 - Math.exp(-dt * 5));
+    this.bubble(dt, time);
     this.drip(dt, time);
     this.pose();
     this.spray.update(dt);
     this.marks.update(time);
   }
 
+  /** The roots tear a step: the push is spent on them, it lurches over, and the water round the foot boils with mud. */
+  private give(time: number): void {
+    const k = tuning.crossings.tree;
+    const step = THREE.MathUtils.lerp(k.giveMin, k.giveMax, THREE.MathUtils.smoothstep(this.pushPeak, k.giveAt, k.pressMax));
+    this.loose = Math.min(1, this.loose + step);
+    this.gives++;
+    this.armed = false;
+    this.settle = k.settleFor;
+    this.press *= 0.3;
+    this.incoming *= 0.3;
+    if (this.loose >= 0.95) {
+      /** However hard the push, the roots hold it a moment before it goes. */
+      this.state = 'falling';
+      this.fellFrom = this.lean;
+      this.leanV = THREE.MathUtils.clamp(this.leanV, 0.1, 0.16);
+      return;
+    }
+    this.leanV += k.lurch;
+    this.shudder = Math.max(this.shudder, 0.5);
+    this.bubbling = k.bubbleFor;
+    this.siltAge = 0;
+    this.silt = Math.min(1, this.silt + 0.45 + 0.4 * step);
+    this.dripFor = Math.max(this.dripFor, 1.6);
+    const at = this.footAt(this.tmp);
+    this.onEvent?.('loosen', at, step / k.giveMax);
+    const hx = at.x - this.fall.x * 0.6, hz = at.z - this.fall.y * 0.6;
+    this.marks.add(FOAM, hx, hz, 0.7, 2.5, time, 0.55, 0.5);
+    for (let i = 0; i < 3; i++) this.marks.add(RING, at.x, at.z, 0.5 + i * 0.3, 2.6 + i * 0.6, time + i * 0.22, 0.8, 1.6);
+    for (let i = 0; i < 4; i++) this.spray.plip(hx + (Math.random() - 0.5) * 1.2, hz + (Math.random() - 0.5) * 1.2, 0.35);
+  }
+
   private tearUp(time: number): void {
     this.tear = 0.001;
     this.dripFor = 4.5;
+    this.bubbling = Math.max(this.bubbling, 2);
+    this.siltAge = 0;
+    this.silt = 1;
     const at = this.spot.root;
     this.onEvent?.('tear', this.tmp.set(at.x, 0, at.z), 1);
-    this.spray.splash(at.x, at.z, 1.3, 0.9);
-    this.marks.add(FOAM, at.x, at.z, 1.4, 4, time, 0.9, 0.6);
+    this.spray.splash(at.x, at.z, 1.1, 0.7);
+    this.marks.add(FOAM, at.x, at.z, 1.2, 4, time, 0.9, 0.6);
     for (let i = 0; i < 3; i++) this.marks.add(RING, at.x, at.z, 0.8 + i * 0.4, 3 + i, time + i * 0.25, 1, 2.2);
   }
 
@@ -370,8 +489,8 @@ export class ToppleTree {
       this.spray.emit(MIST, crown.x, crown.y + 0.1, crown.z, Math.cos(a) * out, 0.6 + Math.random() * 1.4, Math.sin(a) * out, 0.25, 1.4 + Math.random(), 0.5, 0.06);
     }
     const root = this.baseDown;
-    this.spray.splash(root.x, root.z, 1.6, 1);
-    this.marks.add(FOAM, root.x, root.z, 1.8, 5, time, 1, 0.5);
+    this.spray.splash(root.x, root.z, 1.3, 0.8);
+    this.marks.add(FOAM, root.x, root.z, 1.5, 5, time, 1, 0.5);
     for (let i = 0; i < 3; i++) this.marks.add(RING, root.x, root.z, 1 + i * 0.5, 3.5 + i, time + i * 0.3, 1, 2.6);
     const lane = this.trunkAt((this.spanOver + this.spanRest) * 0.5 / this.height, this.tmp2);
     for (let i = 0; i < 4; i++) {
@@ -384,20 +503,46 @@ export class ToppleTree {
 
   /** Rings off the trunk where it stands in the water as it rocks. */
   private ring(strength: number, time: number): void {
-    const at = this.trunkAt(Math.min(0.9, -this.spot.root.y / this.height), this.tmp);
+    const at = this.footAt(this.tmp);
     this.marks.add(RING, at.x, at.z, 0.45, 2.4, time, strength, 1.4);
     if (this.loose > 0.25) this.spray.plip(at.x, at.z, 0.3 * this.loose);
   }
 
-  /** The root plate pours as it comes up out of the water, and drips for a while after. */
+  /** Bubbles coming up through the water round the foot after the roots give, most on the side that heaved. */
+  private bubble(dt: number, time: number): void {
+    this.siltAge += dt;
+    this.silt = Math.max(0, this.silt - dt * 0.035);
+    const u = this.siltMesh.material as THREE.ShaderMaterial;
+    u.uniforms.uSilt.value = this.silt;
+    this.siltMesh.visible = this.silt > 0.01;
+    if (this.siltMesh.visible) {
+      const r = 1.6 + 1.8 * (1 - Math.exp(-this.siltAge / 5)) + this.tear * 1.2;
+      this.siltMesh.position.set(this.base.x - this.fall.x * 0.5, 0, this.base.z - this.fall.y * 0.5);
+      this.siltMesh.scale.setScalar(r);
+    }
+    if (this.bubbling <= 0) return;
+    this.bubbling -= dt;
+    const left = Math.max(0, this.bubbling / tuning.crossings.tree.bubbleFor);
+    const count = Math.floor(16 * left * Math.sqrt(left) * dt + Math.random());
+    for (let i = 0; i < count; i++) {
+      const a = Math.random() * Math.PI * 2, r = 0.35 + Math.random() * 1.1;
+      const x = this.base.x + Math.cos(a) * r - this.fall.x * 0.45, z = this.base.z + Math.sin(a) * r - this.fall.y * 0.45;
+      this.marks.add(RING, x, z, 0.04 + Math.random() * 0.06, 0.9 + Math.random() * 0.6, time, 0.5 + Math.random() * 0.4, 0.45);
+      if (Math.random() < 0.35) this.spray.emit(DROP, x, 0.03, z, (Math.random() - 0.5) * 0.3, 0.6 + Math.random() * 0.8, (Math.random() - 0.5) * 0.3, 0.012 + Math.random() * 0.008, 0.6, 0, 0.6);
+    }
+  }
+
+  /** Water pours off what comes up out of it, and drips for a while after. */
   private drip(dt: number, time: number): void {
     if (this.dripFor <= 0) return;
     this.dripFor -= dt;
     const rate = Math.min(1, this.dripFor / 2) * (this.state === 'falling' ? 90 : 26);
     const count = Math.floor(rate * dt + Math.random());
     for (let i = 0; i < count; i++) {
-      const a = Math.random() * Math.PI * 2, r = 0.4 + Math.random() * 1.0;
-      const p = this.group.localToWorld(this.tmp.set(Math.cos(a) * r, -0.35 - Math.random() * 0.3, Math.sin(a) * r));
+      const a = Math.random() * Math.PI * 2, r = 0.4 + Math.random() * (PLATE_R - 0.3);
+      const y = -0.05 - Math.random() * 0.25;
+      const heel = THREE.MathUtils.smoothstep(-Math.sin(a) * r, -0.1, 0.9) * THREE.MathUtils.smoothstep(r, 0.3, 0.8);
+      const p = this.group.localToWorld(this.tmp.set(Math.cos(a) * r, y + this.heave * heel * HEAVE, Math.sin(a) * r));
       if (p.y < 0.05) continue;
       this.spray.emit(DROP, p.x, p.y, p.z, (Math.random() - 0.5) * 0.4, -0.2, (Math.random() - 0.5) * 0.4, 0.02 + Math.random() * 0.018, 1.2, 0, 0.7);
       if (Math.random() < 0.08) this.spray.emit(SPLASH, p.x, p.y, p.z, 0, -0.5, 0, 0.06, 0.5, 0.2, 0.25);
@@ -418,6 +563,7 @@ export class ToppleTree {
     u.uShiver.value = this.shiver;
     u.uShudder.value = this.shudder * this.shudder;
     u.uSoak.value = this.soak;
+    u.uHeave.value = this.heave;
   }
 }
 
@@ -432,7 +578,7 @@ export function barkMaterial(height: number, water: number): THREE.ShaderMateria
     uniforms: {
       ...atmo.uniforms,
       uShiver: { value: 0 }, uFlex: { value: 0 }, uShudder: { value: 0 }, uHeight: { value: height },
-      uSpan: { value: new THREE.Vector2(0, 1) }, uWater: { value: water }, uSoak: { value: 0 },
+      uSpan: { value: new THREE.Vector2(0, 1) }, uWater: { value: water }, uSoak: { value: 0 }, uHeave: { value: 0 },
     },
     side: THREE.DoubleSide,
   });
@@ -444,10 +590,10 @@ function radiusAt(s: number, height: number): number {
 
 /**
  * The dead tree in its own frame, its foot at the origin and up along y: a long bole with the bark coming away,
- * stubs of limbs long broken off, a few bare limbs at the top with their twigs, and under the bed the plate of
+ * stubs of limbs long broken off, a few bare limbs at the top with their twigs, and under the water the plate of
  * earth and roots it will tear up as it goes.
  */
-function growDeadTree(height: number, seed: number): THREE.BufferGeometry {
+function growDeadTree(height: number, seed: number, downLean: number): THREE.BufferGeometry {
   const rand = mulberry32(seed);
   const range = (a: number, b: number) => a + (b - a) * rand();
   const parts: THREE.BufferGeometry[] = [];
@@ -493,33 +639,48 @@ function growDeadTree(height: number, seed: number): THREE.BufferGeometry {
     }
   }
 
-  /** A torn plate of earth: flat, ragged at the rim, roots out of its edge and hanging from its underside. */
-  const plate = new THREE.CylinderGeometry(1.25, 0.95, 0.55, 18, 2);
+  /** A flat plate of garden earth, ragged at the rim, thinning to its edge, with a little dome where the trunk stands. */
+  const plate = new THREE.CylinderGeometry(PLATE_R, PLATE_R * 0.9, 1, 26, 1);
   const p = plate.attributes.position as THREE.BufferAttribute;
   for (let i = 0; i < p.count; i++) {
-    const x = p.getX(i), y = p.getY(i), z = p.getZ(i);
-    const a = Math.atan2(z, x);
-    const rag = 1 + 0.16 * Math.sin(a * 5 + 0.7) + 0.09 * Math.sin(a * 11 + 2.1) + 0.05 * Math.sin(a * 23);
-    const r = Math.hypot(x, z) > 0.01 ? rag : 1;
-    p.setXYZ(i, x * r, y - 0.32 + 0.08 * Math.sin(a * 7) * (y < 0 ? 1 : 0.3), z * r);
+    const x = p.getX(i), z = p.getZ(i);
+    const a = Math.atan2(z, x), r = Math.hypot(x, z) / PLATE_R;
+    const rag = 1 + 0.11 * Math.sin(a * 5 + 0.7) + 0.07 * Math.sin(a * 11 + 2.1) + 0.04 * Math.sin(a * 23);
+    const lump = 0.03 * Math.sin(a * 7 + r * 5) + 0.02 * Math.sin(a * 13 - r * 9);
+    const y = p.getY(i) > 0 ? 0.07 * (1 - r * r) + lump : -0.34 + 0.2 * r * r + lump;
+    const k = r > 0.01 ? rag : 1;
+    p.setXYZ(i, x * k, y, z * k);
   }
   plate.computeVertexNormals();
   parts.push(tagged(plate, EARTH, 0, 0));
-  for (let i = 0; i < 16; i++) {
-    const a = (i / 16) * Math.PI * 2 + range(-0.15, 0.15);
-    const reach = range(1.3, 2.2);
-    const from = new THREE.Vector3(Math.cos(a) * 0.3, -0.08, Math.sin(a) * 0.3);
-    const mid = new THREE.Vector3(Math.cos(a) * reach * 0.6, -0.2 - range(0, 0.15), Math.sin(a) * reach * 0.6);
-    const b = a + range(-0.35, 0.35);
-    const end = new THREE.Vector3(Math.cos(b) * reach, -0.35 - range(0, 0.5), Math.sin(b) * reach);
-    parts.push(tube([from, mid, end], range(0.1, 0.17), 0.02, 5, ROOT, 0, 0.2, rand()));
+  /** The trunk's flare going out into the earth as thick roots, knuckled along the top of the plate. */
+  for (let i = 0; i < 7; i++) {
+    const a = (i / 7) * Math.PI * 2 + range(-0.25, 0.25);
+    const out = PLATE_R * range(0.78, 0.95);
+    const c = Math.cos(a), sn = Math.sin(a);
+    parts.push(tube([new THREE.Vector3(c * 0.22, 0.5, sn * 0.22), new THREE.Vector3(c * 0.5, 0.16, sn * 0.5),
+      new THREE.Vector3(c * out * 0.75, 0.1, sn * out * 0.75), new THREE.Vector3(c * out, 0.0, sn * out)], range(0.15, 0.2), 0.05, 6, ROOT, 0, 0, rand()));
   }
-  for (let i = 0; i < 12; i++) {
-    const a = range(0, Math.PI * 2), r = range(0.15, 1.0);
-    const from = new THREE.Vector3(Math.cos(a) * r, -0.58, Math.sin(a) * r);
-    const end = from.clone().add(new THREE.Vector3(range(-0.35, 0.35), -range(0.35, 0.9), range(-0.35, 0.35)));
-    parts.push(tube([from, from.clone().lerp(end, 0.5).add(new THREE.Vector3(range(-0.1, 0.1), 0, range(-0.1, 0.1))), end],
-      range(0.04, 0.08), 0.01, 4, ROOT, 0.05, 0.4, rand()));
+  /** Short broken stubs where roots snapped off at the rim. */
+  for (let i = 0; i < 9; i++) {
+    const a = (i / 9) * Math.PI * 2 + range(-0.2, 0.2);
+    const r0 = PLATE_R * 0.9, r1 = PLATE_R + range(0.15, 0.35);
+    parts.push(tube([new THREE.Vector3(Math.cos(a) * r0, -0.08, Math.sin(a) * r0),
+      new THREE.Vector3(Math.cos(a + 0.08) * r1, -0.14 - range(0, 0.08), Math.sin(a + 0.08) * r1)], range(0.05, 0.08), 0.03, 5, ROOT, 0, 0, rand()));
+  }
+  /**
+   * Long thin roots out of the underside and the lower rim. They are laid out for the tree lying down, where the
+   * plate stands on edge and they hang straight down off it; standing, they run out under the bed toward the fall.
+   */
+  const hang = new THREE.Vector3(0, -Math.cos(downLean), Math.sin(downLean));
+  for (let i = 0; i < 18; i++) {
+    const a = range(0, Math.PI * 2), r = PLATE_R * Math.sqrt(range(0.05, 0.95));
+    const from = new THREE.Vector3(Math.cos(a) * r, -0.3 + 0.15 * (r / PLATE_R) ** 2, Math.sin(a) * r);
+    const len = range(0.45, 1.25);
+    const sway = new THREE.Vector3(range(-0.2, 0.2), 0, range(-0.1, 0.1));
+    const mid = from.clone().addScaledVector(hang, len * 0.5).add(sway).addScaledVector(new THREE.Vector3(0, -1, 0), 0.06);
+    const end = from.clone().addScaledVector(hang, len).add(sway.multiplyScalar(1.8));
+    parts.push(tube([from, mid, end], range(0.03, 0.055), 0.006, 4, ROOT, 0, 0, rand()));
   }
   return merged(parts);
 }

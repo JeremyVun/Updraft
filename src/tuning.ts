@@ -1856,12 +1856,14 @@ export const tuning = {
       /** How near the trunk a stroke has to pass to move it, in screen heights. */
       reach: 0.2,
       /**
-       * Rotten roots: lean past rest beyond `loosenFrom` loosens them at `loosenRate` per radian-second; they ebb
-       * back at `ebb` a second, and each unit of looseness leans it `looseLean` further at rest.
+       * Rotten roots: they let it lean `holdAt` past rest and hold hard beyond (`rootStiffness`). A push that has
+       * pressed past `giveAt` when the lean meets them tears them a step, `giveMin` for one that only just does it
+       * to `giveMax` for the firmest, so it takes two or three; nearly all gone, it goes. Each step leans it
+       * `looseLean` further for good, with a lurch (radians a second); the roots bite again once that push has
+       * ebbed and `settleFor` seconds have passed. The water bubbles for `bubbleFor` seconds after.
        */
-      loosenFrom: 0.05, loosenRate: 5, ebb: 0.01, looseLean: 0.17,
-      /** Past this lean it goes over. */
-      tipAt: 0.4,
+      holdAt: 0.1, rootStiffness: 30, giveAt: 0.42, giveMin: 0.36, giveMax: 0.52, looseLean: 0.2, lurch: 0.22,
+      settleFor: 0.6, bubbleFor: 4.5,
       /**
        * Going over: the pull of its own weight (per second squared at a right angle), held back at first by the
        * roots (`tearHold` of it while `tearOver` radians of fall tear them), and the share of its fall speed kept

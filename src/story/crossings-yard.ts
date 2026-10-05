@@ -106,12 +106,14 @@ const COPING = 0.45;
 const LANE = -6.7;
 const END = new THREE.Vector3(0, ridgeOf(STRAND), 0);
 /** Where the trunk comes down over the lane wall, square across it, and the corner where the wall turns for the cottage. */
-const OVER = new THREE.Vector3(0.75, COPING, LANE);
+const OVER = new THREE.Vector3(-0.4, COPING, LANE);
 const CORNER = new THREE.Vector3(3.5, COPING, LANE);
-const ROOT_DEPTH = -2.6;
+/** The dead tree's foot on its mound of roots, the garden bed a metre down, far enough behind the wall that it lies over it. */
+const ROOT_DEPTH = -0.15;
+const ROOT_BEYOND = 2.4;
 const ROOT = (() => {
   const d = new THREE.Vector2(OVER.x - END.x, OVER.z - END.z).normalize();
-  return new THREE.Vector3(OVER.x + d.x * 1.5, ROOT_DEPTH, OVER.z + d.y * 1.5);
+  return new THREE.Vector3(OVER.x + d.x * ROOT_BEYOND, ROOT_DEPTH, OVER.z + d.y * ROOT_BEYOND);
 })();
 const GARDEN_SOUTH = GARDEN.z + GARDEN.depth / 2 + OVERHANG;
 const GARDEN_NORTH = GARDEN.z - GARDEN.depth / 2 - OVERHANG;
@@ -127,7 +129,7 @@ const OLD_TREE = new THREE.Vector3(GARDEN.x + 0.7, -3.2, -27.6);
 
 const WAY = {
   strand: { x0: -6, z0: 0, x1: END.x, z1: END.z, halfWidth: 0.45, height: END.y },
-  lane: { x0: -1.2, z0: LANE, x1: CORNER.x, z1: LANE, halfWidth: 0.28, height: COPING },
+  lane: { x0: -2.9, z0: LANE, x1: CORNER.x, z1: LANE, halfWidth: 0.28, height: COPING },
   wall: { x0: CORNER.x, z0: LANE, x1: CORNER.x, z1: GARDEN_SOUTH, halfWidth: 0.28, height: COPING },
   gardenSlope: { x0: CORNER.x, z0: GARDEN_SOUTH, x1: CORNER.x, z1: GARDEN.z, halfWidth: 0.7, height: eaveOf(GARDEN), height1: ridgeOf(GARDEN) },
   gardenRidge: { x0: CORNER.x, z0: GARDEN.z, x1: DOWN_AT, z1: GARDEN.z, halfWidth: 0.45, height: ridgeOf(GARDEN) },
@@ -219,7 +221,7 @@ export class CrossingsYard {
     const t = this.tree.tree, s = this.swing.swing, c = this.cast.child;
     return {
       playing: this.playing, stage: this.stage,
-      tree: { phase: this.tree.phase, state: t.state, lean: +t.lean.toFixed(3), loose: +t.loose.toFixed(3), progress: +t.progress.toFixed(3), valving: this.tree.valving },
+      tree: { phase: this.tree.phase, state: t.state, lean: +t.lean.toFixed(3), loose: +t.loose.toFixed(3), gives: t.gives, progress: +t.progress.toFixed(3), valving: this.tree.valving },
       swing: { phase: this.swing.phase, angle: +s.angle.toFixed(3), best: +s.best.toFixed(3), peak: +s.peak.toFixed(3), valving: this.swing.valving },
       child: c.position.toArray().map((v) => +v.toFixed(2)),
       invitation: this.invitation !== null,
@@ -324,8 +326,9 @@ export class CrossingsYard {
         this.eye.set(c.x + away.x * 12 + away.z * 5, 7.4 - 2 * on, c.z + away.z * 12 - away.x * 5);
         this.target.set(c.x - away.x * 4.2, 2.2, c.z - away.z * 4.2);
       } else {
-        this.eye.set(o.x + 16.5 - 3 * on, o.y + 2.6, z - 0.4);
-        this.target.set((c.x + root.x) / 2, 2.6, z + 0.4);
+        /** High enough to see over the garden wall to the water round the tree's foot, where its roots give. */
+        this.eye.set(o.x + 19 - 3 * on, o.y + 4, z - 0.4);
+        this.target.set((c.x + root.x) / 2, 3.5 - 0.8 * on, z + 0.4);
       }
     } else if (this.view === 'swing') {
       const pivot = this.swing.swing.pivot;
@@ -394,7 +397,7 @@ export class CrossingsYard {
       for (let i = 0; i <= bars; i++) add(new THREE.BoxGeometry(0.035, 0.92, 0.035).translate(-len / 2 + (i * len) / bars, top + 0.46, 0), IRON, PLAIN, m);
       add(new THREE.BoxGeometry(len, 0.045, 0.05).translate(0, top + 0.86, 0), IRON, PLAIN, m);
     };
-    wall(-1.4, LANE, CORNER.x, LANE, COPING);
+    wall(-3.1, LANE, CORNER.x, LANE, COPING);
     wall(CORNER.x, LANE, CORNER.x, GARDEN_SOUTH, COPING);
     wall(CORNER.x, LANE, 7.5, LANE - 0.4, 0.3);
     wall(-3.5, -24.5, GARDEN.x - 1.2, GARDEN_NORTH - 1.4, 0.25, true);

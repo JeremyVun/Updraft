@@ -1,9 +1,10 @@
-// Plays the drowned village's two crossings on the QA stage with real pointer gestures and checks each one: that a
-// firm push brings the tree down and she crosses it, that wrong-way pushes only rock it, that pumping the swing
-// carries her over, and that nothing happens on its own before the safety valve (and that the valve then does it).
+// Plays the drowned village's two crossings on the QA stage with real pointer gestures and checks each one: that the
+// tree takes two or three firm pushes and she crosses it, that one firm push (however long) only loosens it, that a
+// gentle stroke or wrong-way pushes only rock it, that pumping the swing carries her over and the empty swing then
+// dies away, and that nothing happens on its own before the safety valve (and that the valve then does it).
 // Usage: node tools/crossings-check.mjs [scenario ...]
-//   scenarios: tree, tree-wrong, swing (the default set); tree-rock (one gentle stroke); run (both in a row with the walk between); tree-idle,
-//   swing-idle (each idles past the 90 s valve, about two minutes apiece)
+//   scenarios: tree, tree-one, tree-long, tree-rock, tree-wrong, swing (the default set); run (both in a row with the
+//   walk between); tree-idle, swing-idle (each idles past the 90 s valve, about two minutes apiece)
 //   env: BASE (default http://127.0.0.1:5287/), W/H viewport (default 1600x900), OUT (stills and video prefix,
 //        default /tmp/updraft-crossings), SHOTS=1 saves stills at the moments that matter, VIDEO=1 records
 //        <OUT>-<scenario>.webm.
@@ -19,7 +20,7 @@ const out = process.env.OUT ?? '/tmp/updraft-crossings';
 const shots = process.env.SHOTS === '1';
 const video = process.env.VIDEO === '1';
 const asked = process.argv.slice(2);
-const scenarios = asked.length ? asked : ['tree', 'tree-wrong', 'swing'];
+const scenarios = asked.length ? asked : ['tree', 'tree-one', 'tree-long', 'tree-rock', 'tree-wrong', 'swing'];
 
 function expect(ok, message) {
   if (!ok) throw new Error(message);
@@ -117,7 +118,7 @@ class Game {
 }
 
 const RUNS = {
-  /** A firm push or two the right way brings it down, and she walks over it to the wall. */
+  /** Each firm push the right way tears the roots a step, which shows; the second or third brings it down, and she walks over it. */
   async tree(game) {
     await game.open('tree');
     await game.shot('waiting');
@@ -127,15 +128,22 @@ const RUNS = {
       if (s.tree.state !== 'standing') break;
       const aim = await game.aim('tree');
       await game.stroke(aim, aim.heading, 0.62, 15);
-      const fell = await game.until((x) => x.tree.state !== 'standing', 1.6);
+      const fell = await game.until((x) => x.tree.state !== 'standing', 1.8);
       if (fell) { strokes++; break; }
+      const after = await game.state();
+      expect(after.tree.gives === strokes + 1, `firm stroke ${strokes + 1} did not give the roots (gives ${after.tree.gives}, loose ${after.tree.loose})`);
+      game.notes.push(`firm stroke ${strokes + 1}: roots gave, loose ${after.tree.loose}, lean ${after.tree.lean}`);
+      if (strokes === 0) await game.shot('loosened');
+      await game.seconds(1.2);
+      if (strokes === 0) await game.shot('loosened-later');
     }
     const s = await game.state();
     expect(s.tree.state !== 'standing', `still standing after ${strokes} firm strokes (lean ${s.tree.lean}, loose ${s.tree.loose})`);
-    game.notes.push(`went over after ${strokes} firm stroke${strokes === 1 ? '' : 's'}`);
-    await game.seconds(0.7);
+    expect(strokes >= 2 && strokes <= 3, `went over after ${strokes} firm strokes, not two or three`);
+    game.notes.push(`went over after ${strokes} firm strokes`);
+    await game.seconds(0.9);
     await game.shot('falling');
-    const down = await game.until((x) => x.tree.state === 'down', 6);
+    const down = await game.until((x) => x.tree.state === 'down', 8);
     expect(down, 'never came down');
     await game.seconds(0.15);
     await game.shot('down');
@@ -149,20 +157,49 @@ const RUNS = {
     game.notes.push(`over at child ${over.child.join(', ')}`);
   },
 
-  /** A gentle stroke the right way rocks it toward the gap a beat late and loosens it, but does not bring it down. */
+  /** One firm push the right way loosens it for good, leaning further, but never brings it down on its own. */
+  async 'tree-one'(game) {
+    await game.open('tree');
+    const rest = (await game.state()).tree.lean;
+    const aim = await game.aim('tree');
+    await game.stroke(aim, aim.heading, 0.62, 15);
+    let most = rest;
+    await game.until(() => false, 6, (s) => {
+      most = Math.max(most, s.tree.lean);
+      expect(s.tree.state === 'standing', 'one firm stroke brought it down');
+    });
+    const s = await game.state();
+    game.notes.push(`one firm stroke: lean ${rest} to ${most.toFixed(3)}, settled at ${s.tree.lean}; gives ${s.tree.gives}, loose ${s.tree.loose}`);
+    expect(s.tree.gives === 1, `one firm stroke gave the roots ${s.tree.gives} times`);
+    expect(s.tree.lean > rest + 0.04, 'it does not stand leaning further after the roots gave');
+  },
+
+  /** One long, fast, unbroken stroke across it the right way is still one push. */
+  async 'tree-long'(game) {
+    await game.open('tree');
+    const aim = await game.aim('tree');
+    await game.stroke(aim, aim.heading, 1.4, 30);
+    await game.until(() => false, 5, (s) => expect(s.tree.state === 'standing', 'one long stroke brought it down'));
+    const s = await game.state();
+    game.notes.push(`one long stroke: gives ${s.tree.gives}, loose ${s.tree.loose}`);
+    expect(s.tree.gives <= 1, `one long stroke gave the roots ${s.tree.gives} times`);
+  },
+
+  /** A gentle stroke the right way rocks it a beat late and it springs back: the roots do not give. */
   async 'tree-rock'(game) {
     await game.open('tree');
     const rest = (await game.state()).tree.lean;
-    let most = rest, loose = 0;
+    let most = rest;
     const aim = await game.aim('tree');
     await game.stroke(aim, aim.heading, 0.4, 30);
     await game.shot('rocked');
-    await game.until(() => false, 4, (s) => { most = Math.max(most, s.tree.lean); loose = s.tree.loose; });
+    await game.until(() => false, 5, (s) => { most = Math.max(most, s.tree.lean); });
     const s = await game.state();
-    game.notes.push(`one gentle stroke: lean ${rest} to ${most.toFixed(3)}, loose ${loose.toFixed(3)}, back to ${s.tree.lean}`);
+    game.notes.push(`one gentle stroke: lean ${rest} to ${most.toFixed(3)}, back to ${s.tree.lean}; gives ${s.tree.gives}`);
     expect(s.tree.state === 'standing', 'one gentle stroke brought it down');
     expect(most > rest + 0.04, 'a gentle stroke did not visibly rock it');
-    expect(loose > 0.02, 'a gentle stroke the right way gained nothing');
+    expect(s.tree.gives === 0, 'a gentle stroke gave the roots');
+    expect(Math.abs(s.tree.lean - rest) < 0.02, `it did not spring back (${s.tree.lean} against ${rest})`);
   },
 
   /** Strokes the wrong way rock it back and it springs upright again: no loosening, never over. */
