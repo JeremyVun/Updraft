@@ -371,3 +371,14 @@ On a less ambitious parallel idea (offered: the dark's first breath snatches the
 player wins it back), Jeremy, 2026-10-05: "im not sure waht snatched sail is about, but i leave it to you to take
 ownership of what a possible alternative might be. At this point im more interested in getting the over the roof done
 well". Over the roofs comes first.
+
+**The parallel, less ambitious idea: the dark snatches the sail** (chosen under the ownership Jeremy gave; it stays in
+the boat, so it needs no walking, climbing or roof navigation, and it reuses the scarf cloth, the dark bank and the
+rush across the water). The air dies and the dark rises behind them, as over the roofs. Its first cold breath runs
+ahead of it across the glass, tears the red scarf sail off the mast and flings it away; it snags round a drowned
+chimney and the bare tree beside it. Three acts, each answered on screen: free it (circles round the turns wrapped on
+the chimney, sweeps lift the lengths draped on the branches; kept short, since it echoes the birches), bring it home
+(it drops onto the glass and floats; gusts carry it back across the water to the boat while the dark comes on behind
+it), set it and run (she hauls it aboard, it climbs the mast, the player fills it and keeps it full as they run before
+the dark for the lighthouse). The player wins the sail back from the dark; minutes later the lighthouse takes the plane
+and nobody can stop it, so that loss lands harder. Judged only if over the roofs does not work out.
