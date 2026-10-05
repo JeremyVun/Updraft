@@ -745,6 +745,12 @@ they are painted over real frames from the crossing camera (`ref-*.png`), so the
   that reflects the boat but not them. Land grass differs from main by 2 pixels of 1.44M by 1/255 (compiler-level,
   from the sea branch in the shared shader); accepted as invisible rather than doubling land tiles' vertex work.
 
+Jeremy on the meadow as built (2026-10-05): "I dont think the meadows earns it's keep. swiping on the grass actually
+makes the boat just go faster. There's no noticeably new interaction. I dont think it achieves what you were maybe
+looking for in terms of an interaction." Why: a sweep over the meadow is the same act as filling the sail, and the
+sail's answer (the boat surging) is the loudest thing on screen, so the flowers read as decoration on sailing, not
+as something the player did; nothing wants anything there, and nothing changes because of it.
+
 **The whale asleep across the way** (crossing to the meadow, `toMeadow`; the one must-do).
 - About a third of the way along, the whale (`fx/sealife/anatomy.ts`, 14 m; scale it up toward `k1`'s size if the
   game camera shows it smaller, as a child would dream it) lies asleep at the surface broadside across the boat's way,
