@@ -210,6 +210,11 @@ export class Journey {
       this.moor();
       this.begin('home');
       (this.chapter as HomeChapter).skipToSummit();
+    } else if (choice?.startsWith('to') && ROUTES[choice]) {
+      const [a, b] = ROUTES[choice];
+      this.sail(a.x, a.y, Math.atan2(b.x - a.x, b.y - a.y));
+      this.cast.cygnet.rideIn('satchel');
+      this.begin(choice as ChapterName);
     }
   }
 
