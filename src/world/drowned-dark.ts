@@ -21,7 +21,7 @@ const HUE = {
   near: new THREE.Color(0.74, 0.85, 1.16),
   night: new THREE.Color(0.86, 0.86, 1.1),
   /** The low sun on its crest. */
-  crest: new THREE.Color(1.9, 0.6, 0.4),
+  crest: new THREE.Color(2.2, 0.62, 0.32),
   /** What is left of the sunset aloft once the sun has gone. */
   rose: new THREE.Color(1.3, 0.7, 0.92),
   cold: new THREE.Color(0.84, 0.92, 1.16),
@@ -118,7 +118,7 @@ export class DarkBank {
     // Low on the horizon as it rises, and standing higher the nearer it comes.
     const top = k.top * (0.25 + 0.75 * smooth(this.rise, 0, 1)) * (0.7 + 0.3 * smooth(p, far, near)) * (1 + 0.4 * this.close);
     u.uSeaFogShape.value.set(top, d.flank / (d.halfWidth * d.halfWidth), this.close, amount);
-    u.uSeaFogSides.value.set(d.halfWidth, d.halfWidth * 1.8, d.wing * d.halfWidth, (d.wing + 0.35) * d.halfWidth);
+    u.uSeaFogSides.value.set(d.halfWidth, d.halfWidth * 1.8, d.wing * d.halfWidth, (d.wing + 0.3) * d.halfWidth);
 
     const taken = smooth(p, far + 0.02, near) * here;
     const night = smooth(p, near + 0.05, 1) * here;

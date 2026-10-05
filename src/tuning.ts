@@ -1722,7 +1722,7 @@ export const tuning = {
        * Its front: half its width and how far its flanks run on ahead, in metres; and how far it reaches on the
        * church's side, as a share of its half width.
        */
-      halfWidth: 170, flank: 30, wing: 0,
+      halfWidth: 170, flank: 30, wing: -0.1,
       /**
        * Seconds it takes to rise on the horizon once the boat lies still; when it starts to come on and how long that
        * takes; and how far behind the boat it stops.
@@ -1732,14 +1732,14 @@ export const tuning = {
     /** The sea fog the dark is: one field every shader reads, and the light it takes as it comes. */
     fog: {
       /** How high it stands over the water, how softly its top gives out, and how deep its front is soft, metres. */
-      top: 11, topSoft: 1.2, front: 6,
+      top: 11, topSoft: 0.6, front: 3,
       /** How far its front heaves to and fro across its line, metres. */
       heave: 20,
       /**
        * Per metre: how thick it is through its body as a bank, and once it has closed round (thinner, so she can still
        * see her way), and how much thicker low over the water, falling away over `low` metres.
        */
-      density: 0.3, closed: 0.03, floor: 0.035, low: 3,
+      density: 0.5, closed: 0.03, floor: 0.035, low: 3,
       /** The air thickening ahead of it once it is close: per metre at the water, falling away over `airLow` metres. */
       air: 0.02, airLow: 5,
       /** How far past the eye its front has gone once it has closed round. */
@@ -1748,7 +1748,7 @@ export const tuning = {
        * Its body's light against the sky's, the low sun on its crest against the sun's, and how far the first wind
        * under it breaks up the glass once it has closed round, and the slope of the ripples it raises.
        */
-      body: 0.4, crest: 0.45, stir: 1, ripple: 0.18,
+      body: 0.4, crest: 0.38, stir: 1, ripple: 0.18,
       /**
        * Where the progression stands with the bank risen far off, its front `farCome` of the way to the boat, and
        * come close with the sun taken.

@@ -875,10 +875,9 @@ vec4 seaFog(vec3 ro, vec3 rd, float far) {
       // Each billow is lighter over its top, where it faces the sky, and darker under it.
       float bulge = big - vnoise(b + vec2(0.0, 0.3));
       float billow = big * 0.6 + vnoise(q * 0.13 + vec2(p.y * 0.2, -uTime * 0.04)) * 0.4;
-      light = uSeaFogBody.rgb * mix(0.8, 1.04, up) * (0.74 + 0.4 * billow + 0.9 * max(bulge, -0.12));
+      light = uSeaFogBody.rgb * mix(0.8, 1.04, up) * (0.7 + 0.5 * billow + 1.4 * max(bulge, -0.1));
       // The sun catches the tops of its highest swells and the rim of its top; lower down it is already in shade.
-      float crest = max(smoothstep(0.6, 1.0, p.y / uSeaFogShape.x + (billow - 0.5) * 0.3 + bulge * 0.6),
-        smoothstep(top - 3.0, top, p.y) * smoothstep(0.4, 0.8, top / uSeaFogShape.x));
+      float crest = smoothstep(top - 3.5, top - 0.3, p.y + bulge * 3.0) * smoothstep(0.45, 0.9, top / uSeaFogShape.x);
       light += uSeaFogCrest.rgb * crest;
     }
   }
