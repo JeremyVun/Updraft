@@ -388,3 +388,23 @@ e.g. a single line of houses no?" So the route must read as a drowned village sh
 laid out for her: roofs of different sizes, heights and angles, bits of the village standing out of the water (a
 garden wall's top, a porch, a barn, the church's own roof), a route that bends with what is there, and crossing
 pieces that belong where they are, among other things the flood left.
+
+**From the roofs to the wood** (Jeremy, 2026-10-05: "What i liked about the existing feel in main was that the storm
+started and landed her at the forest. The moment of "relief" was the landing, but it was actually the beginning of
+another scary journey. With the lighthouse in between, it sort of breaks that flow.. any ideas?" and, on the answer
+below, "what do you think works here? My ideas may not be the best", so this is our call). This supersedes the raft
+and the lighthouse stop above:
+
+- She runs to get back to her boat, not to the lighthouse, which stays what it is on main: the far light ahead, then
+  the light the storm passes and puts out.
+- Why she leaves the boat must read at once: it runs aground on a ridge with a scrape and a lurch; a sweep on the sail
+  only makes it strain and creak; she looks back at the dark, then up at the roof, and climbs out.
+- Behind her, the swell the dark pushes ahead of it lifts the empty boat off the ridge and it drifts out among the
+  roofs, seen in frame while she is at the crossings, so her boat drifting away is what the run is for.
+- The third crossing is the boat itself: on the last roof there is open water with her boat out on it; the player
+  fills its red sail (`Boat.brushSail`, as on main's becalming) and brings it to her. She jumps in as the dark
+  reaches them, and that is the moment the storm begins: the smoke rolls over them and becomes main's storm weather
+  without a seam.
+- From there main's storm plays untouched (the weather closing in, the lighthouse sliding past, the beam going out,
+  the plane taken, rain, the cygnet's shaking, the landing at the forest). Only its trigger changes, from
+  `tuning.storm.startsFromShore` to her being back aboard.
