@@ -482,7 +482,13 @@ So the existing drowned village and storm code may be refactored as far as the r
 - **The dark.** Low black-violet smoke lying on the water, lit at the rims by the last low sun, coming from behind
   (south, the way they came), the water darkening under it, swallowing roofs as it comes. Beautiful-ominous, never
   horror and never industrial; it must read as smoke, never as rock or hedge. When it arrives at the church it rolls
-  over and becomes the storm's sky, and the light goes with it.
+  over and becomes the storm's sky, and the light goes with it. Its look is set by Astra's study in `comps/dark/`
+  (painted over `today.jpg`, whose opaque billows lit on top read as boulders): while it comes and holds it is
+  treatment A (`dark-a.jpg`, `dark-portrait.jpg`), a low bank of layered translucent veils, near-black in front and
+  bluer behind, the sky and far chimneys glimpsed through its thin places, torn wisps lifting off its top and a
+  rolling lip where it meets the glass; as it arrives it becomes treatment C (`dark-c.jpg`), towering and leaning in
+  as the coming night, the low sun's warmth failing on everything near it. Ink in the water (B) is rejected: it reads
+  as a spill.
 - **The run is built on decks** (`src/world/decks.ts`): ridges, wall tops and the fallen trunk are strips the child
   walks; the slates up to a ridge are ramps. She gets out with `alight` onto the cottage's slates and back in with
   `board` at the nave.
