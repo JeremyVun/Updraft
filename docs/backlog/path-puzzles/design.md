@@ -449,3 +449,12 @@ about (−9, −1398), some 40 m short of the church (`SPIRE`, 14, −1436). Mai
 The village round the church is re-laid so the route reads as a real village she picks her way through (Jeremy's note
 on the first frames above). The sea itself does not move: the village rises to show the water falling and sinks to
 show it returning.
+
+**The calm drift's puzzle: the stranded cat** (Jeremy, 2026-10-05, chosen over a leaning tree that would have taught
+the push). A cat crouches on a chimney pot along the drift, mewing (animals may be as loud as they like). A wooden
+wash-tub floats nearby; the player's gusts carry it to the cat's roof, the cat hops in, and the gusts bring the tub
+to the boat, where the cat jumps aboard. When the sea draws back, the cat leaps off onto the roofs and runs ahead
+toward the church, and the child follows it: it shows her the way without the plane, as animals run before a wave,
+and it shows that the roofs can be walked. It waits at each crossing with her. It ends safe in the belfry and is left
+there as the storm takes the boat. The cygnet is wary of it and stays tucked in the satchel while the cat is aboard.
+A cat is a new animal: its own model and animation, matched to the game's soft painted look.
