@@ -600,8 +600,12 @@ export class DrownedChapter implements Chapter {
       CAT_HOLD.y - (tz * k.uprightCatBack - tx * k.uprightCatSide) / tl).lerp(this.catAim.set(CAT_LENS.x, k.catEye, CAT_LENS.y), wide);
     const aim = this.catAim.set(TUB_WATER.x, THREE.MathUtils.lerp(k.uprightCatAim, k.catAim, wide), TUB_WATER.z)
       .lerp(this.anchor.set(CAT_HOLD.x, THREE.MathUtils.lerp(k.uprightCatAim, k.catAim, wide), CAT_HOLD.y), 0.25 * (1 - wide));
-    const drift = this.anchor.copy(s.target).addScaledVector(s.from!, s.distance).setY(s.target.y + s.height);
-    eye.copy(drift).lerp(eye, round);
+    eye.copy(this.anchor.copy(s.target).addScaledVector(s.from!, s.distance).setY(s.target.y + s.height).lerp(eye, round));
+    const bx = eye.x - boat.position.x, bz = eye.z - boat.position.z, clear = Math.hypot(bx, bz);
+    if (clear < k.catClear) {
+      eye.x = boat.position.x + bx / clear * k.catClear;
+      eye.z = boat.position.z + bz / clear * k.catClear;
+    }
     s.target.lerp(aim, round);
     const dx = eye.x - s.target.x, dz = eye.z - s.target.z, d = Math.hypot(dx, dz);
     s.from = this.from.set(dx / d, 0, dz / d);

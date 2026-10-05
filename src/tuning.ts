@@ -1791,7 +1791,7 @@ export const tuning = {
       /** How far nearer (metres) the tub has to get to its goal to count as progress. */
       progress: 0.8,
       /** How far on the dark has come when the cat's unease starts to climb, and when it bolts. */
-      uneasyFrom: 0.25, boltAt: 0.82,
+      uneasyFrom: 0.25, boltAt: 0.75,
       /** The cat's run up the slates and along the ridge, m/s. */
       runSpeed: 2.6,
       /** Seconds she looks at the dark, then at the cat, before she climbs out after it. */
@@ -1823,11 +1823,12 @@ export const tuning = {
     strandPace: 0.6,
     /**
      * While the cat is brought over: how much of its gaze the lens gives the cat as she notices it; how far from the
-     * place the boat waits the lens starts to move to the side of the water, the height it stands at there and the
+     * place the boat waits the lens starts to move to the side of the water (never nearer the boat than `catClear`
+     * on the way), the height it stands at there and the
      * height it looks at over the water's middle; upright, how far behind the
      * waiting boat it stands and how far to the tub's side, how high, and the height it looks at over the water.
      */
-    catGlance: 0.3, catTurnFrom: 16, catEye: 2.3, catAim: 2.6, catPace: 0.55,
+    catGlance: 0.3, catTurnFrom: 16, catClear: 7, catEye: 2.3, catAim: 2.6, catPace: 0.55,
     uprightCatBack: 5.5, uprightCatSide: 3, uprightCatEye: 3.4, uprightCatAim: 1.4,
     /**
      * With the cat aboard: the lens beside the boat, a little aft of abeam so the cat at the bow faces it and the
