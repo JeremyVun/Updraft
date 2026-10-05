@@ -115,7 +115,7 @@ export class DrownedChapter implements Chapter {
   private readonly catSubjects = { primary: new THREE.Vector3(), secondary: new THREE.Vector3(), tertiary: new THREE.Vector3(),
     margin: 0.9, extra: 4 };
   private readonly cat: StrandedCat;
-  /** When the cat beat took the lens, and when the boat went on with the cat aboard. */
+  /** How far the lens has come round to watch the cat brought over (it only grows), and when the boat went on. */
   private catRound = 0;
   private aboardFrom = -1;
   private readonly catAttention = { point: new THREE.Vector3(), strength: 0, weight: tuning.drownedCamera.catGlance };
@@ -222,13 +222,13 @@ export class DrownedChapter implements Chapter {
     boat.canGround = this.leg === PASSAGE.length - 1 && this.beat === 'after';
   }
 
-  update(dt: number, _time: number): void {
+  update(dt: number, time: number): void {
     this.now += dt;
     this.steer();
     const { child: c, plane: p, boat } = this.cast;
     if (!this.cat.ashore) c.ride(boat.seat(this.seat), boat.yaw, boat);
     if (p.held) p.hold(c);
-    this.cat.update(dt, _time);
+    this.cat.update(dt, time);
     c.lean = this.cat.holding && this.cat.step !== 'aboard' ? 0.1 : 0;
 
     const through = this.through;

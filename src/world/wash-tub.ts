@@ -174,10 +174,10 @@ export interface TubWall {
 
 /**
  * A wooden wash-tub adrift in the drowned village. Only the player's wind moves it: a stroke across it on screen
- * pushes it and lays a gust at it, and the breeze never moves it. It turns and rocks as it goes,
- * leaves a little wake, slows and settles where it is left, and comes gently back toward its water when it is pushed
- * away from it. The story gives it somewhere to be drawn into (a dock), holds it while something climbs in or out,
- * and in the end can let the world's own air carry it.
+ * pushes it and lays a gust at it, and the breeze never moves it. It turns and rocks as it goes, leaves a little wake,
+ * slows and settles where it is left, and comes gently back toward its water when it is pushed away from it. The story
+ * gives it somewhere to be drawn into (a dock), holds it while something climbs in or out, and in the end can let the
+ * world's own air carry it.
  */
 export class WashTub {
   readonly group = new THREE.Group();
@@ -189,7 +189,7 @@ export class WashTub {
   readonly water = { x: 0, z: 0, r: 6 };
   /** Roofs and the hull: it stops against them. */
   walls: TubWall[] = [];
-  /** A place it is drawn into and settles at once it comes within `reach`, and the way it turns there. */
+  /** A place it is drawn into and settles at once it comes within `reach`. */
   dock: { x: number; z: number; reach: number } | null = null;
   /** True once it has come to rest in the dock. */
   docked = false;
@@ -201,17 +201,15 @@ export class WashTub {
   laden = false;
   /** How hard it struck a wall this frame, metres a second into it; 0 when it did not. */
   bump = 0;
-  /** Which wall it last struck. */
-  struck = -1;
   /** Seconds since a stroke last crossed it on screen. */
   sinceBrushed = Infinity;
-  /** How fast the player's wind is moving it this frame. */
-  pushed = 0;
 
   private readonly mesh: THREE.Mesh;
   private readonly waterline = { value: 0 };
   private readonly marks = new Marks(0.5);
   private readonly shove = new THREE.Vector2();
+  /** How fast a stroke is driving it this frame. */
+  private pushed = 0;
   private readonly from = new THREE.Vector3();
   private readonly to = new THREE.Vector3();
   private readonly ray = new THREE.Vector3();
@@ -252,8 +250,6 @@ export class WashTub {
 
   /** The level boards inside, in its own space, for whatever rides in it. */
   static readonly floor = FLOOR;
-  /** How far in from its rim a rider's middle may sit. */
-  static readonly room = BOTTOM - WALL - 0.02;
   static readonly radius = TOP;
 
   place(x: number, z: number, yaw = this.yaw): void {
@@ -391,12 +387,12 @@ export class WashTub {
   /** Out of anything it has run into, losing the way it had into it. */
   private walled(v: THREE.Vector2): void {
     const p = this.position, r = TOP;
-    this.walls.forEach((wall, i) => {
+    for (const wall of this.walls) {
       const c = Math.cos(wall.yaw), s = Math.sin(wall.yaw);
       const dx = p.x - wall.x, dz = p.z - wall.z;
       const lx = dx * c - dz * s, lz = dx * s + dz * c;
       const ox = wall.len + r - Math.abs(lx), oz = wall.depth + r - Math.abs(lz);
-      if (ox <= 0 || oz <= 0) return;
+      if (ox <= 0 || oz <= 0) continue;
       /** Pushed out across whichever side it is nearer, along the wall's own axes. */
       let nx: number, nz: number, depth: number;
       if (ox < oz) {
@@ -412,10 +408,10 @@ export class WashTub {
       if (into > 0) {
         v.x += nx * into * 1.35;
         v.y += nz * into * 1.35;
-        if (into > this.bump) { this.bump = into; this.struck = i; }
+        this.bump = Math.max(this.bump, into);
         this.spin += (Math.random() - 0.5) * into * 1.5;
       }
-    });
+    }
   }
 
   private pose(time: number, dt: number): void {
