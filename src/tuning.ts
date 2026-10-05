@@ -1719,35 +1719,41 @@ export const tuning = {
     turnFor: 12, lookFor: 9,
     dark: {
       /**
-       * Billows in its low rolling skirt on the water, heaped behind it, lifting off its heads, misting its foot, and
-       * creeping out ahead over the glass.
+       * Its front: half its width and how far its flanks run on ahead, in metres; and how far it reaches on the
+       * church's side, as a share of its half width.
        */
-      skirt: 130, body: 300, plumes: 90, foot: 40, tendrils: 170,
-      /**
-       * The bank: half its width, its depth behind the front, how far its flanks run on ahead, in metres; and how far it
-       * reaches on the church's side, as a share of its half width, so the church keeps clear sky over it.
-       */
-      halfWidth: 170, depth: 70, flank: 60, wing: 0.3,
-      /** How far fingers of the front reach ahead, and how far and how fast the whole front heaves. */
-      fingers: 4, heave: 1.4, heaveRate: 0.33,
-      /**
-       * The skirt's billow radius and how deep it lies behind the front; the body's billow radius at its front and back,
-       * and how high it heaps.
-       */
-      skirtSize: 2.4, skirtDepth: 14, bodySize: 3.6, backSize: 9, heap: 15,
-      /** How far the top of its front leans out over the water ahead of its foot. */
-      lean: 7,
-      /** How many tendrils creep out over the glass, their billows' radius, how far they reach, how fast (laps a second). */
-      reaches: 12, tendrilSize: 2.4, tendrilReach: 22, creep: 0.05,
-      /** How many columns of smoke lift off it, how high before they have thinned away, and how often (laps a second). */
-      columns: 5, plumeRise: 22, plumeRate: 0.03,
-      /** How much of the distance veil it takes near and far. */
-      nearHaze: 0.06, farHaze: 0.2,
+      halfWidth: 170, flank: 30, wing: 0,
       /**
        * Seconds it takes to rise on the horizon once the boat lies still; when it starts to come on and how long that
        * takes; and how far behind the boat it stops.
        */
       riseFor: 9, comeAfter: 5, comeFor: 24, holdBehind: 20,
+    },
+    /** The sea fog the dark is: one field every shader reads, and the light it takes as it comes. */
+    fog: {
+      /** How high it stands over the water, how softly its top gives out, and how deep its front is soft, metres. */
+      top: 13, topSoft: 1.2, front: 6,
+      /** How far its front heaves to and fro across its line, metres. */
+      heave: 20,
+      /**
+       * Per metre: how thick it is through its body as a bank, and once it has closed round (thinner, so she can still
+       * see her way), and how much thicker low over the water, falling away over `low` metres.
+       */
+      density: 0.3, closed: 0.03, floor: 0.035, low: 3,
+      /** The air thickening ahead of it once it is close: per metre at the water, falling away over `airLow` metres. */
+      air: 0.02, airLow: 5,
+      /** How far past the eye its front has gone once it has closed round. */
+      closeRun: 500,
+      /**
+       * Its body's light against the sky's, the low sun on its crest against the sun's, and how far the first wind
+       * under it breaks up the glass once it has closed round.
+       */
+      body: 0.4, crest: 0.45, stir: 0.8,
+      /**
+       * Where the progression stands with the bank risen far off, its front `farCome` of the way to the boat, and
+       * come close with the sun taken.
+       */
+      far: 0.3, farCome: 0.93, near: 0.6,
     },
     /** The wash-tub the player's wind carries to the cat's roof and back to the boat. */
     tub: {

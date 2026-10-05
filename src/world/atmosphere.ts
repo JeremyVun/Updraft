@@ -183,6 +183,19 @@ export const atmo = {
      * into its white the eye is, 0 to 1 (y).
      */
     uFogBankEye: { value: new THREE.Vector2() },
+    /** The drowned village's sea fog: a point on its front (x, z) and the way it comes (z, w). Drawn with the deck. */
+    uSeaFog: { value: new THREE.Vector4(0, 0, 0, 1) },
+    /**
+     * Its top over the water, how far its flanks lead (metres a square metre across), how far it has closed round
+     * the eye (0 a bank with a front, 1 all round), and how much of it there is: at 0 every other room pays nothing.
+     */
+    uSeaFogShape: { value: new THREE.Vector4(1, 0, 0, 0) },
+    /** Across its front, where it thins away on the far side (x from, y gone) and on the church's side (z, w). */
+    uSeaFogSides: { value: new THREE.Vector4(1e4, 2e4, 1e4, 2e4) },
+    /** The light of its cold body (rgb), and how thick the air ahead of it has grown (a, per metre at the water). */
+    uSeaFogBody: { value: new THREE.Vector4() },
+    /** The low sun on its crest (rgb), and how far the first wind under it has broken up the glass (a). */
+    uSeaFogCrest: { value: new THREE.Vector4() },
     uCloudTex: { value: null as THREE.Texture | null },
     uCloudDomain: { value: new THREE.Vector4(-CLOUD_SPAN / 2, -CLOUD_SPAN / 2, 1 / CLOUD_SPAN, 1 / CLOUD_SPAN) },
     uNoiseTile: noiseTileUniforms.uNoiseTile,
@@ -325,6 +338,11 @@ uniform vec4 uFogBank;
 uniform vec4 uFogBankShape;
 uniform vec4 uFogBankLight;
 uniform vec2 uFogBankEye;
+uniform vec4 uSeaFog;
+uniform vec4 uSeaFogShape;
+uniform vec4 uSeaFogSides;
+uniform vec4 uSeaFogBody;
+uniform vec4 uSeaFogCrest;
 uniform sampler2D uCloudTex;
 uniform vec4 uCloudDomain;
 
@@ -775,6 +793,98 @@ vec4 cloudDeck(vec3 ro, vec3 rd, float far) {
   float a = 1.0 - (1.0 - bank.a) * (1.0 - deck.a);
   return vec4((bank.rgb * bank.a + deck.rgb * deck.a * (1.0 - bank.a)) / max(a, 1e-4), a);
 }
+
+/** How far the sea fog's front stands ahead of its line at a point across it: the flanks lead, and it heaves. */
+float seaFogLead(float across) {
+  float big = vnoise(vec2(across * 0.016 + uTime * 0.035, 1.7));
+  float mid = vnoise(vec2(across * 0.055 - uTime * 0.06, 4.3));
+  return uSeaFogShape.y * min(across * across, uSeaFogSides.x * uSeaFogSides.x) + ((big - 0.5) + (mid - 0.5) * 0.4) * ${glsl(tuning.drowned.fog.heave)};
+}
+
+/** The height of its top at a point across it and along the way it comes: low swells rolling slowly sideways. */
+float seaFogTop(vec2 q) {
+  float big = vnoise(q * vec2(0.022, 0.014) + vec2(uTime * 0.03, 0.0));
+  float mid = vnoise(q * vec2(0.07, 0.05) + vec2(-uTime * 0.05, 3.1));
+  float fine = vnoise(q * vec2(0.2, 0.15) + vec2(uTime * 0.08, 7.9));
+  float puff = vnoise(q * vec2(0.5, 0.3) + vec2(-uTime * 0.1, 2.3));
+  return uSeaFogShape.x * (0.55 + 0.2 * big + 0.4 * mid + 0.32 * fine + 0.2 * puff);
+}
+
+/**
+ * The drowned village's sea fog along a sightline of length far: rgb its light, a how much of the view it takes.
+ * It lies on the water behind a front that comes on across the way, thickest low down, with a soft top that rolls;
+ * ahead of it the air thickens as it nears, and once it has closed round there is no front, only fog. Its body
+ * is cold, lit by the sky; only its crest still takes the low sun.
+ */
+vec4 seaFog(vec3 ro, vec3 rd, float far) {
+  const float FRONT = ${glsl(tuning.drowned.fog.front)}, SOFT = ${glsl(tuning.drowned.fog.topSoft)};
+  const float LOW = ${glsl(tuning.drowned.fog.low)}, AIR_LOW = ${glsl(tuning.drowned.fog.airLow)};
+  // Seen in the sea's mirror the eye is under the water; the fog as seen from the surface is near enough.
+  ro.y = max(ro.y, 0.0);
+  vec2 n = uSeaFog.zw, side = vec2(-n.y, n.x);
+  vec2 o = ro.xz - uSeaFog.xy;
+  float s0 = dot(o, n), ds = dot(rd.xz, n);
+  float a0 = dot(o, side), da = dot(rd.xz, side);
+  float closed = uSeaFogShape.z * ${glsl(tuning.drowned.fog.closeRun)};
+  float front = seaFogLead(a0) + closed;
+  float meet = s0 <= front ? 0.0 : ds < -1e-4 ? (s0 - front) / -ds : far;
+  if (meet > 0.0 && meet < far) {
+    // A sightline that crosses its line beyond either end of it misses it.
+    float across = a0 + da * meet;
+    if (uSeaFogShape.z < 1.0 && (across < -uSeaFogSides.y || across > uSeaFogSides.w)) meet = far;
+    else {
+      // Where it meets it is not where the eye is: its front there may lead further. The eye stays outside it.
+      front = seaFogLead(across) + closed;
+      meet = s0 <= front ? meet * 0.5 : (s0 - front) / -ds;
+    }
+  }
+  float airLength = min(far, 2500.0);
+  float air = uSeaFogBody.a * (abs(rd.y) > 1e-3
+    ? AIR_LOW * (exp(-ro.y / AIR_LOW) - exp(-(ro.y + rd.y * airLength) / AIR_LOW)) / rd.y
+    : exp(-ro.y / AIR_LOW) * airLength);
+  float bank = 0.0;
+  vec3 light = uSeaFogBody.rgb;
+  if (meet < far) {
+    float am = a0 + da * meet;
+    // Toward its ends it thins and lies lower, so it runs out along the water rather than stopping.
+    float sides = (1.0 - smoothstep(uSeaFogSides.x, uSeaFogSides.y, -am)) * (1.0 - smoothstep(uSeaFogSides.z, uSeaFogSides.w, am));
+    sides = mix(sides, 1.0, uSeaFogShape.z);
+    // Its top where the sightline meets it; from inside, where the sightline would leave through it.
+    float tq = meet == 0.0 && rd.y > 1e-4 ? min((uSeaFogShape.x - ro.y) / rd.y, min(far, 80.0)) : meet;
+    vec2 pq = o + rd.xz * tq;
+    float top = seaFogTop(vec2(dot(pq, side), dot(pq, n))) * mix(0.25, 1.0, sides);
+    vec2 span = deckSlab(ro, rd, 0.0, top, far);
+    span.x = max(span.x, meet);
+    float len = span.y - span.x;
+    if (len > 0.0) {
+      float along = pastEdge(front - s0, -ds, span.x, span.y, 0.0, FRONT);
+      float high = len - pastEdge(ro.y, rd.y, span.x, span.y, top - SOFT, SOFT);
+      float y0 = ro.y + rd.y * span.x, y1 = ro.y + rd.y * span.y;
+      float low = abs(rd.y) > 1e-3 ? LOW * (exp(-y0 / LOW) - exp(-y1 / LOW)) / rd.y : exp(-0.5 * (y0 + y1) / LOW) * len;
+      float thick = mix(${glsl(tuning.drowned.fog.density)}, ${glsl(tuning.drowned.fog.closed)}, uSeaFogShape.z);
+      // Closed round her it lies thinner on the water, so the glass near her still shows.
+      bank = along / len * (thick * high + ${glsl(tuning.drowned.fog.floor)} * (1.0 - 0.7 * uSeaFogShape.z) * low) * sides * uSeaFogShape.w;
+      // Its light where the sightline is well into it: darker low over the water, lighter up toward its top, and
+      // rolling, so its face is never a flat card.
+      vec3 p = ro + rd * (span.x + min(len, mix(18.0, 60.0, uSeaFogShape.z)) * 0.5);
+      vec2 q = vec2(dot(p.xz - uSeaFog.xy, side), dot(p.xz - uSeaFog.xy, n));
+      float up = clamp(p.y / max(top, 1.0), 0.0, 1.0);
+      vec2 b = q * vec2(0.09, 0.07) + vec2(uTime * 0.05, p.y * 0.16);
+      float big = vnoise(b);
+      // Each billow is lighter over its top, where it faces the sky, and darker under it.
+      float bulge = big - vnoise(b + vec2(0.0, 0.3));
+      float billow = big * 0.6 + vnoise(q * 0.13 + vec2(p.y * 0.2, -uTime * 0.04)) * 0.4;
+      light = uSeaFogBody.rgb * mix(0.8, 1.04, up) * max(0.4, 0.74 + 0.4 * billow + 0.9 * bulge);
+      // The sun catches the tops of the highest swells; between them it is already in shade.
+      float crest = smoothstep(0.62, 0.95, up + (billow - 0.5) * 0.3 + bulge * 0.6) * smoothstep(0.75, 1.15, top / uSeaFogShape.x);
+      light += uSeaFogCrest.rgb * crest;
+    }
+  }
+  float depth = bank + air;
+  if (depth <= 0.0) return vec4(0.0);
+  vec3 col = (light * bank + uSeaFogBody.rgb * 1.1 * air) / depth;
+  return vec4(col, 1.0 - exp(-depth));
+}
 #endif
 
 /** How much of a sightline to wpos passes over a coast; sea behind a hill must have the same cover as the hill. */
@@ -873,6 +983,14 @@ vec4 fogOf(vec3 wpos, float landscape) {
     fogCol = mix(fogCol, skyRadiance(rd), arriving);
     amt = mix(amt, 1.0, arriving);
   }
+#if CLOUD_DECK
+  // The sea fog lies nearer than any of it: what it covers, the distance cannot show through.
+  if (uSeaFogShape.w > 0.0) {
+    vec4 sea = seaFog(cameraPosition, rd, dist);
+    fogCol = mix(fogCol * amt, sea.rgb, sea.a) / max(mix(amt, 1.0, sea.a), 1e-4);
+    amt = mix(amt, 1.0, sea.a);
+  }
+#endif
   return vec4(fogCol, clamp(amt, 0.0, 1.0));
 }
 

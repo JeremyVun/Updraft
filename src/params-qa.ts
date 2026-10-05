@@ -25,6 +25,7 @@ export function readQaParams() {
   const rawMsaa = num('msaa');
   const msaa = rawMsaa !== null ? Math.min(Math.max(0, rawMsaa), 16) : null;
   const rawGrass = num('grass');
+  const fog = num('fog');
   const grass = rawGrass !== null ? Math.min(Math.max(0, rawGrass), 4) : null;
 
   return {
@@ -46,6 +47,8 @@ export function readQaParams() {
     dusk: num('dusk'),
     /** Shower override, 0 dry to 1. */
     shower: num('shower'),
+    /** The drowned village's sea fog forced: 0 clear dusk, 0.3 risen far off, 0.6 close with the sun taken, 1 closed round into night. */
+    fog: fog === null ? null : Math.min(Math.max(0, fog), 1),
     /** Storm override, 0 calm to 1 the full squall: the sea gets up, the weathervane spins, the herons go. */
     storm: num('storm'),
     /** Start later in the story: `crossing`, `washing`, `door` (the family's line just before the red door opens), `shore` (just through it), `boats`, `meadow`, `birches`, `drowned`, `wood`, `sleeping`, `sea`, `mirror` or `summit`. */
