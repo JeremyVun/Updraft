@@ -544,3 +544,9 @@ as every sound in the game is (`docs/contracts/audio.md`), but grounded in real 
 recordings are analysed offline (the pitch contour, the formant movement, the nasal onset, the flutter and the breath)
 and only the resulting numbers ship, so the mew, the plea and the chirrup can still be shaped freely. Jeremy judges
 each round by ear.
+
+The analysed voice (`proto-drowned-cat-voice`, its study made with `tools/cat-voice.mjs`) is approved: "i think the cat
+sounds are much more on points, im guessing we probably wont' need all of them when you get to adding the cat into the
+story". The story uses only what each moment needs: the plea while it is stranded, at a kitten's length (0.3–0.45 s,
+which means shortening the mouth's hold for pleas in `cat.ts`); the chirrup as it lands aboard; the frightened yowl
+once, as the fog rises and it bolts; and at most a mew from the belfry as the boat goes.
