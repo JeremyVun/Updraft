@@ -143,6 +143,11 @@ On that, with the swans coming in from behind the landing and flying on into the
 
 Then, asked how: "ok nevermind, this is good merge into main".
 
+On the colour after an iPad playtest (2026-10-05), the cloud having gone lilac in shade since late September and the
+concept painting with it:
+
+> "i think the concept art was lilac because it was basing itself on the ingame colour grading of the clouds. I do think the clouds are a bit too lilac, see what ou can refine towards the more white / gold / cream colours that would be more typical of a dream?"
+
 ## Where it sits
 
 Birches → **stairs** → drowned village. Deep autumn, the afternoon going. The birches took the last of the year off
@@ -270,6 +275,11 @@ brings the light. Courage passes back and forth between them, and the stairs are
 - **Order**: birches → `toStairs` (short hop east; the deck comes down over the sea; it carries the birches' closing
   phrase) → `stairs` → drowned, which takes over wherever the fog leaves the boat. `?chapter=drowned` starts at
   `DESCENT_END`.
+- **The cloud's colours** (`cloudShade`, `cloudGold`, `cloudGlow` in `atmosphere.ts`): every part of the cloud (its
+  top, underside, towers, the white inside it, the haze, puffs and vapour, and the bank of mist through `CLOUD_GOLD`)
+  takes the brightness of the sky and the low sun but not their colours, whose blue and orange together go lilac. It
+  is white in its own shade, a little cool down in its folds, cream where the sun lights it through and gold on the
+  lobes turned to the sun.
 - **The cloud deck** is analytic, in the shared fog (`cloudDeck` in `atmosphere.ts`) and the sky: a slab whose
   fringe thickens with height (so its underside has no edge), clipped to a disc, with a pocket of thinner cloud
   round whoever is inside (`bubble`, its thickness `clearing`). Under it the low sun comes in at about half

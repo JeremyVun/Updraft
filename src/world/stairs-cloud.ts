@@ -21,7 +21,7 @@ const WISP_LAYER = 4;
 /** How many towers of cumulus the top of the cloud makes room for. */
 const FEET = 16;
 
-/** The top of the cloud as a surface: heaped up and lit gold on the sunward side, lilac in its folds. */
+/** The top of the cloud as a surface: heaped up and lit gold on the sunward side, white in its folds. */
 const TOP_VERT = /* glsl */ `
 #define LOBES_VERTEX
 ${ATMO_GLSL}
@@ -158,11 +158,11 @@ void main() {
   vec3 soft = normalize(vec3(-top.y * 0.5, 1.0, -top.z * 0.5));
   float dist = length(vWorld - cameraPosition);
   float thin = vThin;
-  // Each lobe is lit at its crown and goes lilac toward where it sits down among the others; so is each heap.
+  // Each lobe is lit at its crown and goes into shade toward where it sits down among the others; so is each heap.
   float puff = mix(0.45, 1.0, lobe.x) * mix(0.6, 1.0, lobe.y) * mix(0.9, 1.0, lobe.z) * mix(0.7, 1.0, fold.y);
-  // Lit from the side by the low sun, which the cloud scatters across its whole top: peach where the light lies
-  // across it, gold on the lobes turned full to it, lilac and violet where they sit down among the others and on
-  // the sides turned away.
+  // Lit from the side by the low sun, which the cloud scatters across its whole top: gold where the light lies
+  // across it and on the lobes turned full to it, white and a little cool where they sit down among the others and
+  // on the sides turned away.
   float facing = dot(N, L);
   float crown = smoothstep(0.5, 1.0, puff);
   // Light goes into cloud and comes out round the side: a wide, soft terminator.
@@ -170,18 +170,17 @@ void main() {
   float sunLit = wrapped * (1.0 - 0.8 * vShade);
   float full = smoothstep(0.2, 0.85, facing) * (1.0 - vShade) * crown;
   float toward = pow(max(0.0, dot(ray, L)), 3.0);
-  vec3 lilac = uSkyAmbient * vec3(1.3, 1.02, 1.2) + uGroundBounce * 0.3;
-  vec3 violet = uSkyAmbient * vec3(0.84, 0.7, 1.04);
-  vec3 shade = mix(violet, lilac, smoothstep(0.3, 0.95, puff));
+  vec3 gold = cloudGold();
+  vec3 shade = cloudShade(smoothstep(0.3, 0.95, puff));
   // The light scattered on through the cloud warms its shade, most near its crowns.
-  shade += uSunColor * vec3(0.1, 0.065, 0.075) * (0.4 + 0.6 * puff) * (1.0 - 0.5 * vShade);
-  vec3 col = mix(shade, uSunColor * vec3(0.54, 0.39, 0.36) + shade * 0.35, sunLit * mix(0.55, 1.0, crown));
-  col += uSunColor * vec3(1.0, 0.85, 0.62) * full * 0.2;
+  shade += gold * 0.06 * (0.4 + 0.6 * puff) * (1.0 - 0.5 * vShade);
+  vec3 col = mix(shade, gold * vec3(0.72, 0.61, 0.47) + shade * 0.35, sunLit * mix(0.55, 1.0, crown));
+  col += gold * vec3(1.0, 0.9, 0.7) * full * 0.35;
   // Against the low sun the thin edges and the crests glow: the silver lining.
-  col += uSunColor * vec3(1.0, 0.88, 0.72) * toward * (1.0 - 0.6 * vShade) * (0.02 + 0.85 * thin * thin);
-  // Down between the heaps far off the air thickens: the far valleys go blue-lilac while the crowns stand out of it.
+  col += cloudGlow() * vec3(1.0, 0.92, 0.8) * toward * (1.0 - 0.6 * vShade) * (0.02 + 0.85 * thin * thin);
+  // Down between the heaps far off the air thickens: the far valleys go into the haze while the crowns stand out of it.
   float low = 1.0 - smoothstep(0.0, 6.0, top.x);
-  vec3 haze = mix(uSkyHorizon, uSkyAmbient * vec3(1.0, 0.85, 1.2), 0.55);
+  vec3 haze = mix(vec3(lumaOf(uSkyHorizon)), uSkyHorizon, 0.5) * 0.75;
   col = mix(col, haze, (1.0 - exp(-max(dist - 40.0, 0.0) / 300.0)) * low * 0.4);
   // The tops the hull has just turned over are fresh and catch the light.
   col = mix(col, vapourLight(vWorld, ray, 0.4), stir * 0.35);
@@ -425,8 +424,8 @@ float heapShade(vec2 xz, float h, float spacing) {
 }`;
 
 /**
- * The underside of the cloud seen from below: bellies hanging out of it and soft cells across it, lilac in their
- * hollows and lit gold and rose where the low sun reaches in under the edge of the deck. Flat and high round the
+ * The underside of the cloud seen from below: bellies hanging out of it and soft cells across it, grey in their
+ * hollows and lit gold where the low sun reaches in under the edge of the deck. Flat and high round the
  * stair, so it goes up into the white through a level ceiling and there is room under it to work on the loose
  * flights; further off it breaks up into separate clouds with the sky between them, their thin edges lit through.
  */
@@ -471,7 +470,7 @@ void main() {
   vec2 xz = vWorld.xz;
   float cover = deckCover(xz);
   vec2 toSun = normalize(uSunDir.xz + 1e-5);
-  // Seen from below the cloud is darker the thicker it is: lilac and violet in the bodies of its cells, lighter in
+  // Seen from below the cloud is darker the thicker it is: grey, a little cool, in the bodies of its cells, lighter in
   // the thin seams between them. The low sun reaches in sideways through whatever is thin between it and a
   // point, so each cell is lit gold along the side it faces the sun from, and more so far off toward the sun.
   float thick = bellyThick(xz, 1.0) * smoothstep(0.1, 0.9, cover);
@@ -484,8 +483,8 @@ void main() {
   float far = smoothstep(20.0, 300.0, reach);
   float sunIn = exp(-2.6 * before) * (1.0 - 0.6 * thick);
   col *= mix(1.25, 0.72, thick);
-  col += uSkyAmbient * vec3(0.05, 0.0, 0.12) * thick;
-  col += uSkyHorizonSun * sunIn * (0.16 + 0.4 * sunward * far + 0.12 * far);
+  col += lumaOf(uSkyAmbient) * vec3(0.0, 0.01, 0.04) * thick;
+  col += mix(uSkyHorizonSun, cloudGold() * 0.6, 0.6) * sunIn * (0.16 + 0.4 * sunward * far + 0.12 * far);
   float edge = 1.0 - smoothstep(0.55, 0.98, length(xz - uCloudDeck.xy) / uCloudDeck.z);
   // Seen from just under it, a ceiling is a line; the fringe of the deck takes over there.
   float under = smoothstep(1.0, 4.5, uCloudDeckY.x - cameraPosition.y);
