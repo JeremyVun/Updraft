@@ -48,6 +48,9 @@ export class WhaleAcross {
   private readonly b = new THREE.Vector3();
   private readonly seat = new THREE.Vector3();
   private readonly perch = new THREE.Vector3();
+  /** Where its blowhole end and its tail were last seen above the water, for the frame. */
+  private readonly head = new THREE.Vector3();
+  private readonly tail = new THREE.Vector3();
   private readonly subjects = { primary: new THREE.Vector3(), secondary: new THREE.Vector3(), tertiary: new THREE.Vector3(),
     margin: 0.85, extra: 12 };
 
@@ -220,8 +223,11 @@ export class WhaleAcross {
     const sleeper = this.cast.sealife.sleeper;
     const boat = this.cast.boat.position;
     const portrait = (this.camera?.aspect ?? 16 / 9) < 1;
+    const going = sleeper.phase === 'leaving' || sleeper.phase === 'gone';
+    const focus = going ? this.p.copy(this.head).lerp(sleeper.flukes, THREE.MathUtils.smoothstep(sleeper.flukes.y, 0.3, 2.5))
+      : sleeper.blowhole;
     this.look.set(boat.x + this.dir.x * K.holdAhead, 1.6, boat.z + this.dir.y * K.holdAhead);
-    if (portrait) this.look.lerp(this.p.copy(sleeper.blowhole).setY(1.6), 0.4);
+    if (portrait) this.look.lerp(this.p.copy(focus).setY(1.6), 0.4);
     shot.target.lerp(this.look, h);
     const from = shot.from ?? this.p.set(0, 0, 1);
     const was = Math.atan2(from.x, from.z);
@@ -230,15 +236,25 @@ export class WhaleAcross {
     shot.from = from.set(Math.sin(bearing), 0, Math.cos(bearing));
     shot.distance = THREE.MathUtils.lerp(shot.distance, K.holdDistance, h);
     shot.height = THREE.MathUtils.lerp(shot.height, K.holdHeight, h);
-    // Its ends join the travelling pair by degrees, so the lens never has to find a new fit all at once.
+    // Its ends join the travelling pair by degrees, so the lens never has to find a new fit all at once. Going
+    // under, it is framed where it lay until the flukes come up out of the water, and then on them.
     const s = this.subjects;
     const pair = shot.subjects;
     s.primary.copy(this.cast.child.position).y += 1.2;
     const rest = pair?.secondary ?? s.primary;
-    s.secondary.copy(sleeper.blowhole).y += sleeper.phase === 'waking' ? K.spoutHeight * 0.6 : 1.5;
-    if (portrait) sleeper.point(0, TOP(0.05), 0.05, s.tertiary);
-    else if (sleeper.phase === 'leaving' || sleeper.phase === 'gone') s.tertiary.copy(sleeper.flukes);
-    else sleeper.point(0, TOP(0.9), 0.9, s.tertiary);
+    if (!going) {
+      this.head.copy(sleeper.blowhole).y += 1.5;
+      if (portrait) this.tail.copy(this.head);
+      else sleeper.point(0, TOP(0.9), 0.9, this.tail);
+    }
+    const up = THREE.MathUtils.smoothstep(sleeper.flukes.y, 0.3, 2.5);
+    s.secondary.copy(this.head);
+    if (sleeper.phase === 'waking') s.secondary.y += K.spoutHeight * 0.6 - 1.5;
+    s.tertiary.copy(this.tail);
+    if (going) {
+      s.tertiary.lerp(sleeper.flukes, up);
+      if (portrait) s.secondary.lerp(sleeper.flukes, up);
+    }
     // Only what is out of the water needs room: a body going under must not draw the lens back after it.
     s.secondary.y = Math.max(s.secondary.y, 1.5);
     s.tertiary.y = Math.max(s.tertiary.y, 0.5);
