@@ -515,9 +515,7 @@ So the existing drowned village and storm code may be refactored as far as the r
   lighthouse (as the room painting has them, together), and the old church site becomes ordinary roofs. In order: she
   climbs out at the cottage; the tree (Phase 1's lane and walled garden); her own way over ridges, wall copings and a
   lean-to, small hops she makes herself, the cat a roof ahead and the fog behind, never a puzzle and never a single
-  line of houses; a middle piece (a candidate being concepted: a flooded lane too narrow for the boat, where she sits
-  on a floating door the player's gusts carry about 40 m); her own way again; the swing on the green onto the nave;
-  the church. The storm from the church to the beach is about 140 m, past the lighthouse soon after she boards. The
+  line of houses; a middle piece (below); her own way again; the swing on the green onto the nave; the church. The storm from the church to the beach is about 140 m, past the lighthouse soon after she boards. The
   village keeps its open water and scattered roofs; the way adds only hand-placed roofs, walls and copings where it
   needs them. Plan: `comps/run/` (from `route-plan.png`, north up).
 - **The boat goes ahead of the fog.** With the church that far on, a boat left at the cottage would be out of reach
@@ -525,6 +523,18 @@ So the existing drowned village and storm code may be refactored as far as the r
   away along the open water, the same way she runs; she sees it go and still follows the cat. It fetches up against a
   dead tree in the fog near the church, its lantern glowing, and the player fills its sail to bring it the last stretch
   to the nave. Everything on the water is driven the same way, so the boat's drift is also a sign of the fog's breath.
+- **The middle piece is a drowned windmill** (Jeremy, 2026-10-05, on Astra's route frames in `comps/run/`: "this makes
+  sense. i think it's be nice to have a third player interaction way though in addition to the tree and the swing").
+  The door ride down a flooded lane (`lane.jpg`) is cut: it repeats gusting a floating thing (the tub, the boat), forty
+  metres of sitting breaks the run, and a lane too narrow for the boat packs the village. The third interaction uses
+  the game's other verb, circling: an old tower mill stands in the water up to its shoulders between two roofs, its
+  sails turning slowly in the fog's breath; the player turns it by circling round its hub (the drawn invitation shows
+  the circle); she waits on a low wall until the lowest sail comes round beside her, steps onto its lattice and holds
+  on, and as the player keeps turning it carries her up against the sky until she steps off onto a high roof, where
+  the church and the lighthouse come back into view across the water. The kitten has gone ahead its own way and waits
+  there. She chooses when to step on and off; nothing needs timing. With the tree (a walk across) and the swing (a
+  leap), it makes the flood a child's playground as she runs from it. It must not crowd the horizon's spire and
+  lighthouse. Being concepted.
 - **The run is built on decks** (`src/world/decks.ts`): ridges, wall tops and the fallen trunk are strips the child
   walks; the slates up to a ridge are ramps. She gets out with `alight` onto the cottage's slates and back in with
   `board` at the nave.
