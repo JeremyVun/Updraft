@@ -13,8 +13,8 @@ const FUR = 0.0048;
 /** Strands to a rest metre: fine enough to read as plush from a metre off. */
 const STRAND = 1150;
 /** The coat lies down over this range of distances, before its strands are finer than a pixel and only shimmer. */
-const FUR_NEAR = 2.2;
-const FUR_FAR = 5.5;
+const FUR_NEAR = 1.5;
+const FUR_FAR = 3.5;
 
 /** Where the coat is long and where short, from where a point is on the cat at rest. */
 const FUR_GLSL = /* glsl */ `
