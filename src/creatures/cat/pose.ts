@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import {
-  ARM, BODY, BONES, CHEST, EAR_L, EAR_R, FORE, HEAD, JAW, LEGS, META, NECK, PELVIS, REST, ROOT, SHIN, SKELETON, TAIL, THIGH, TOE, WRIST,
+  ARM, BODY, BONES, CHEST, EAR_L, EAR_R, FORE, HEAD, JAW, LEGS, META, NECK, PELVIS, REST, ROOT, SHIN, SKELETON, TAIL, TAIL_1, THIGH, TOE, WRIST,
 } from './body';
 
 /**
@@ -36,7 +36,7 @@ export interface Drives {
   earBack: number;
   /** Each ear's own turn toward a sound, -1..1. */
   earTwitch: [number, number];
-  /** Tail at its root: lifted (positive up) and swung (positive to its left); `curl` bends it on along its length. */
+  /** Tail at its root against the surface it stands on, whatever the body is doing: lifted (positive up) and swung (positive to its right); `curl` bends it on along its length. */
   tailLift: number;
   tailSwing: number;
   tailCurl: number;
@@ -53,6 +53,10 @@ export interface Drives {
 }
 
 const ORDER = 'YXZ';
+/** The face is held a little up from whatever it looks at, the way a small cat looks up at you. */
+const LIFT = 0.15;
+/** How far each joint of a wrapped tail turns: out sideways from the rump, round the haunch, and in to the front paws. */
+const WRAP = [0.45, 1.05, 0.75, 0.6, 0.5];
 const clamp = THREE.MathUtils.clamp;
 
 /** The skeleton as nodes, posed each frame from the drives: the body by hand, the legs reaching for their paws. */
@@ -95,6 +99,8 @@ export class CatRig {
       this.nodes[parent].add(o);
       this.nodes[bone] = o;
     }
+    /** Down the tail each joint lifts and then swings, so a tail lifted level again swings round level. */
+    for (const bone of TAIL.slice(1)) this.nodes[bone].rotation.order = 'XYZ';
     for (let i = 0; i < BONES; i++) {
       this.bones.push(new THREE.Matrix4());
       this.unbind.push(new THREE.Matrix4().makeTranslation(-REST[i][0], -REST[i][1], -REST[i][2]));
@@ -130,16 +136,30 @@ export class CatRig {
       [EAR_L, 1, d.earTwitch[0]],
       [EAR_R, -1, d.earTwitch[1]],
     ] as const) {
-      n[bone].rotation.set(-0.15 - back * 0.95 + twitch * 0.1, s * (back * 1.1 + twitch * 0.5), -s * back * 0.55);
+      /** Back and down flat to the sides, as a frightened cat's go, never just folded back. */
+      n[bone].rotation.set(-0.12 - back * 0.4 + twitch * 0.1, s * (back * 0.55 + twitch * 0.5), -s * back * 1.05);
     }
 
+    /**
+     * The root is held in the frame of what it stands on, so a tail lies along the ground however the back is
+     * tipped. Wrapped, the root goes down to the ground and the rest lies along it, round the haunch to the front paws.
+     */
+    const wrap = clamp(Math.abs(d.tailWrap), 0, 1);
+    const side = -(Math.sign(d.tailWrap) || 1);
     for (let i = 0; i < TAIL.length; i++) {
       const k = i / (TAIL.length - 1);
-      const wave = Math.sin(d.tailWave - i * 0.9) * (0.08 + 0.12 * k);
+      const wave = Math.sin(d.tailWave - i * 0.9) * (0.08 + 0.12 * k) * (1 - 0.7 * wrap);
       const flick = i >= TAIL.length - 2 ? d.tailFlick * (i === TAIL.length - 1 ? 0.9 : 0.4) : 0;
-      const lift = i === 0 ? d.tailLift : d.tailCurl * (0.6 + 0.6 * k);
-      const swing = i === 0 ? d.tailSwing + d.tailWrap * 0.6 : d.tailWrap * (0.5 + 0.3 * k) + wave + flick;
-      n[TAIL[i]].rotation.set(lift, swing, 0);
+      const lift = i === 0 ? d.tailLift : d.tailCurl * (0.6 + 0.6 * k) * (1 - wrap) - (i === 1 ? d.tailLift * wrap : 0);
+      const swing = (i === 0 ? d.tailSwing : 0) + wrap * side * WRAP[i] + wave + flick;
+      if (i > 0) {
+        n[TAIL[i]].rotation.set(lift, swing, 0);
+        continue;
+      }
+      this.qa.setFromRotationMatrix(this.m.extractRotation(this.root.matrixWorld));
+      const want = this.qa.multiply(this.qb.setFromEuler(this.e.set(lift, swing, 0, ORDER)));
+      n[PELVIS].getWorldQuaternion(this.qp);
+      n[TAIL_1].quaternion.copy(this.qp).invert().multiply(want);
     }
 
     this.root.updateMatrixWorld(true);
@@ -155,10 +175,10 @@ export class CatRig {
   private head(d: Drives): void {
     const n = this.nodes;
     this.qa.setFromRotationMatrix(this.m.extractRotation(this.root.matrixWorld));
-    this.e.set(-d.headPitch, d.headYaw, d.headRoll, ORDER);
+    this.e.set(-d.headPitch - LIFT, d.headYaw, d.headRoll, ORDER);
     const want = this.qa.multiply(this.qb.setFromEuler(this.e));
     n[CHEST].getWorldQuaternion(this.qp);
-    this.q.copy(this.qp).slerp(want, 0.35).multiply(this.qb.setFromAxisAngle(this.ax.set(1, 0, 0), d.neckLow * 0.9));
+    this.q.copy(this.qp).slerp(want, 0.55).multiply(this.qb.setFromAxisAngle(this.ax.set(1, 0, 0), d.neckLow * 0.9));
     n[NECK].quaternion.copy(this.qp).invert().multiply(this.q);
     n[HEAD].quaternion.copy(this.q).invert().multiply(want);
     n[NECK].updateMatrixWorld(true);

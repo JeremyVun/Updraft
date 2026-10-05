@@ -34,10 +34,10 @@ const PATTERN: Record<GaitKind, { offsets: [number, number, number, number]; dut
  * but never so long that a paw down at the end of its stance is out of reach of its leg.
  */
 export function strideAt(kind: GaitKind, speed: number): number {
-  if (kind === 'walk') return 0.16 + 0.1 * speed;
-  if (kind === 'trot') return 0.2 + 0.1 * speed;
-  if (kind === 'bound') return 0.4 + 0.12 * speed;
-  return 0.22 + 0.08 * speed;
+  if (kind === 'walk') return 0.135 + 0.085 * speed;
+  if (kind === 'trot') return 0.17 + 0.085 * speed;
+  if (kind === 'bound') return 0.34 + 0.1 * speed;
+  return 0.19 + 0.07 * speed;
 }
 
 export interface Support {

@@ -71,20 +71,20 @@ const lights = list(process.env.LIGHTS, process.env.CLOSE ? ['day'] : ['dusk', '
  * panel's place on its sheet in pixels. `head` aims at the eyes rather than at a height.
  */
 const PANELS = {
-  'sit-front': { action: 'sit', at: 2.5, bearing: 0, eye: 0.24, aim: 0.15, distance: 1, span: 0.36, sheet: 'model-sheet', crop: [55, 25, 230, 310] },
-  'sit-side': { action: 'sit', at: 2.5, bearing: Math.PI / 2, eye: 0.24, aim: 0.15, distance: 1, span: 0.36, sheet: 'model-sheet', crop: [355, 25, 260, 310] },
-  'sit-34': { action: 'sit', at: 2.5, bearing: 0.62, eye: 0.24, aim: 0.15, distance: 1, span: 0.36, sheet: 'model-sheet', crop: [690, 25, 230, 310] },
+  'sit-front': { action: 'sit', at: 2.5, bearing: 0, look: 'camera', eye: 0.24, aim: 0.15, distance: 1, span: 0.36, sheet: 'model-sheet', crop: [55, 25, 230, 310] },
+  'sit-side': { action: 'sit', at: 2.5, bearing: Math.PI / 2, look: 'ahead', eye: 0.24, aim: 0.15, distance: 1, span: 0.36, sheet: 'model-sheet', crop: [355, 25, 260, 310] },
+  'sit-34': { action: 'sit', at: 2.5, bearing: 0.62, look: 'camera', eye: 0.24, aim: 0.15, distance: 1, span: 0.36, sheet: 'model-sheet', crop: [690, 25, 230, 310] },
   'fright-side': { action: 'strand', at: 2, bearing: -Math.PI / 2, eye: 0.14, aim: 0.02, distance: 1, span: 0.36, sheet: 'model-sheet', crop: [965, 70, 330, 270] },
   'fright-34': { action: 'strand', at: 2, bearing: -0.75, eye: 0.16, aim: 0.02, distance: 1, span: 0.36, sheet: 'model-sheet', crop: [1335, 70, 300, 270] },
-  gallop: { action: 'run', at: 1.3, bearing: Math.PI / 2, eye: 0.18, aim: 0.13, distance: 1.4, span: 0.36, sheet: 'model-sheet', crop: [225, 365, 510, 215] },
-  rail: { action: 'rail', at: 3, bearing: Math.PI / 2, eye: 0.18, aim: 0.13, distance: 1.4, span: 0.36, sheet: 'model-sheet', crop: [925, 365, 520, 215] },
-  'head-front': { action: 'sit', at: 2.5, bearing: 0, head: true, distance: 0.5, span: 0.13, sheet: 'model-sheet', crop: [40, 600, 360, 300] },
-  'head-side': { action: 'sit', at: 2.5, bearing: Math.PI / 2, head: true, distance: 0.5, span: 0.13, sheet: 'model-sheet', crop: [455, 600, 320, 300] },
-  content: { action: 'sit', at: 2.5, bearing: 0.15, head: true, distance: 0.55, span: 0.17, sheet: 'expressions', crop: [110, 20, 370, 410] },
+  gallop: { action: 'run', at: 1.3, look: 'none', bearing: Math.PI / 2, eye: 0.18, aim: 0.13, distance: 1.4, span: 0.36, sheet: 'model-sheet', crop: [225, 365, 510, 215] },
+  rail: { action: 'rail', at: 3, look: 'none', bearing: Math.PI / 2, eye: 0.18, aim: 0.13, distance: 1.4, span: 0.36, sheet: 'model-sheet', crop: [925, 365, 520, 215] },
+  'head-front': { action: 'sit', at: 2.5, bearing: 0, look: 'camera', head: true, distance: 0.5, span: 0.13, sheet: 'model-sheet', crop: [40, 600, 360, 300] },
+  'head-side': { action: 'sit', at: 2.5, bearing: 1.3, look: 'ahead', head: true, distance: 0.5, span: 0.13, sheet: 'model-sheet', crop: [455, 600, 320, 300] },
+  content: { action: 'sit', at: 2.5, bearing: 0.15, look: 'camera', head: true, distance: 0.55, span: 0.17, sheet: 'expressions', crop: [110, 20, 370, 410] },
   curious: { action: 'sit', at: 2.5, bearing: -0.3, head: true, distance: 0.55, span: 0.17, sheet: 'expressions', crop: [640, 20, 380, 410] },
-  mewing: { action: 'mew', at: 0.45, bearing: 0.15, head: true, distance: 0.55, span: 0.17, sheet: 'expressions', crop: [1160, 20, 400, 410] },
+  mewing: { action: 'mew', at: 0.45, bearing: 0.15, look: 'camera', head: true, distance: 0.55, span: 0.17, sheet: 'expressions', crop: [1160, 20, 400, 410] },
   frightened: { action: 'afraid', at: 0.6, bearing: 0.15, head: true, distance: 0.55, span: 0.17, sheet: 'expressions', crop: [60, 470, 460, 400] },
-  chirrup: { action: 'chirrup', at: 0.12, bearing: 0.15, head: true, distance: 0.55, span: 0.17, sheet: 'expressions', crop: [640, 450, 380, 420] },
+  chirrup: { action: 'chirrup', at: 0.12, bearing: 0.15, look: 'camera', head: true, distance: 0.55, span: 0.17, sheet: 'expressions', crop: [640, 450, 380, 420] },
 };
 const panels = list(process.env.PANELS, Object.keys(PANELS));
 const sheetsDir = process.env.SHEETS ?? path.resolve(path.dirname(new URL(import.meta.url).pathname), '../docs/backlog/path-puzzles/comps/cat');
@@ -126,7 +126,15 @@ try {
     await advance(1.5);
     for (const name of panels) {
       const p = PANELS[name];
-      await page.evaluate((a) => window.__game.story.current.play(`cat:${a}`), p.action);
+      await page.evaluate((p) => {
+        const { cat, story } = window.__game;
+        story.current.play(`cat:${p.action}`);
+        /** It looks where the panel's cat looks: at the camera, or straight ahead past it. */
+        const bearing = cat.yaw + (p.look === 'ahead' ? 0 : p.bearing);
+        const at = cat.position.clone();
+        at.set(at.x + Math.sin(bearing) * 2, at.y + 0.25 * cat.scale, at.z + Math.cos(bearing) * 2);
+        if (p.look) cat.look(p.look === 'none' ? null : at);
+      }, p);
       await advance(p.at);
       const file = path.join(out, `close-${light}-${name}.png`);
       const [, , w, h] = p.crop;
@@ -135,11 +143,14 @@ try {
       await page.evaluate(([p, tall]) => {
         const { cat, rig, post, story } = window.__game;
         const k = cat.scale;
-        const ground = cat.position.clone();
-        const target = p.head ? cat.eye(ground.clone()) : ground.clone().setY(ground.y + p.aim * k);
-        const bearing = cat.yaw + p.bearing;
-        const eyeY = p.head ? target.y + 0.02 * k : ground.y + p.eye * k;
         const camera = rig.camera;
+        const ground = cat.position.clone();
+        const headTurn = cat.rig.nodes[5].getWorldQuaternion(camera.quaternion.clone());
+        const skull = new ground.constructor(0, 0.024 * k, 0.024 * k).applyQuaternion(headTurn).add(cat.eye(ground.clone()));
+        const target = p.head ? skull : ground.clone().setY(ground.y + p.aim * k);
+        const face = new ground.constructor(0, 0, 1).applyQuaternion(headTurn);
+        const bearing = (p.head ? Math.atan2(face.x, face.z) : cat.yaw) + p.bearing;
+        const eyeY = p.head ? target.y + 0.02 * k : ground.y + p.eye * k;
         camera.position.set(target.x + Math.sin(bearing) * p.distance * k, eyeY, target.z + Math.cos(bearing) * p.distance * k);
         camera.lookAt(target);
         camera.fov = (2 * Math.atan((p.span * tall * k) / (2 * p.distance * k)) * 180) / Math.PI;
