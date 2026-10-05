@@ -37,6 +37,11 @@ Seam: the village exposes its current rise (metres) and the walkable surfaces of
 data the child's walk reads; the boat strands on a named ridge.
 Gate: `npm run typecheck`; stills of the drift, the drawing back and the stranded boat from the game camera, landscape
 and portrait, compared with `comps/drowned/`.
+Code: done (`abd2608`..`2d72bd3`; route in `src/world/drowned-way.ts`, the dark in `src/world/drowned-dark.ts`).
+Look pass (Claude's verdict on the first stills, 2026-10-05): the strand roof reads as a flat blue ramp with camouflage
+blotches, not a roof the boat is lodged on; the sea drawing back does not read (from water level the rise looks like
+the boat being lifted, and nothing shows water running out); the dark reads as a hedge of brown autumn trees behind
+the houses, not black smoke lying on the water. Fix those three before Phase 2 builds on them.
 Done: [ ]
 
 ### Phase 2: the stranded cat
