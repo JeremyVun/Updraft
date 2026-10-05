@@ -495,6 +495,18 @@ So the existing drowned village and storm code may be refactored as far as the r
   wisps but never do the hiding themselves; the fog's colour, the sun, the sky light and the water's reflection are
   driven from one progression, and the lantern's light stays its own. It stays low, flat and cold-bodied, with a clear
   stretch of open dusk air before it rises, so it never echoes the stairs room's luminous cloud.
+- **The tree and the swing, from the spike** (`proto-drowned-crossings`, playable on the QA stage with
+  `?chapter=stage&gap=tree|swing|run`; `src/world/crossings/`). Kept: the push arriving a beat late, the rock and
+  spring back, the fall that hangs on its roots and then goes, her walk along the trunk with her arms out, the swing
+  pumped the birches' way with no timing, the release at the top of a forward swing with her arms up, the landing on
+  one hand and the look back. Changed in the village: the tree takes two or three firm pushes the right way, its
+  roots visibly loosening between them, never one stroke; the root plate is a flat muddy disc of earth with trailing
+  roots that heaves only a little (the garden bed about a metre down), never a spiky ball; the empty swing dies away
+  over about 10 s while she looks back; the swing hangs beside the garden cottage's gable end so its back-swing passes
+  the end of the house, and the old tree's trunk never stands behind her arc from the lens; the tree's root lies on
+  the line of its fall and the trunk crosses a wall square on; the lens is already on her side before the tree falls,
+  so it never swings round to meet her on the trunk. The tree's creak, root tear and thud and the swing's creak are
+  new foley.
 - **The run is built on decks** (`src/world/decks.ts`): ridges, wall tops and the fallen trunk are strips the child
   walks; the slates up to a ridge are ramps. She gets out with `alight` onto the cottage's slates and back in with
   `board` at the nave.
