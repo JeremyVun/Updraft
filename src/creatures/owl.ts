@@ -40,11 +40,13 @@ float wingMid(float s) { return -0.02 - 0.06 * s * s; }
 float wingHalf(float s) { return 0.11 * (1.0 - 0.45 * pow(s, 2.5)) + 0.004; }`;
 /**
  * The painted wing card (`tools/pack-owl-bend.py`), in pixels of its 512 source: the shoulder and the rows it covers;
- * spread, it reaches this far from the shoulder, a little further than the folded wing would, as a cartoon owl's do.
+ * spread, it reaches this far from where it joins the body, short and round as a cartoon owl's are.
  */
 const CARD_SHOULDER = [4, 256];
 const CARD_ROWS = [64, 452];
-const CARD_REACH = 0.54;
+const CARD_REACH = 0.44;
+/** Where the spread wings join it: lower and further back than the folded wing's shoulder, at the top of its body. */
+const CARD_ROOT = new THREE.Vector3(0.11, 0.2, -0.025);
 const CARD_PX = CARD_REACH / 495;
 /** Where the wing bends, as a share of its reach: the wrist, out past which the hand bends, sweeps and twists. */
 const WRIST = 0.42;
@@ -252,7 +254,7 @@ vec3 wingPoint(vec2 ac, float side) {
   q *= mix(1.0, 0.4, fold);
   q = rotZ(q, side * uOwlWing.y);
   q = rotX(rotZ(q, -side * 1.42 * fold), 0.25 * fold);
-  return q + vec3(${SHOULDER.x} * side, ${SHOULDER.y}, ${SHOULDER.z});
+  return q + vec3(${CARD_ROOT.x} * side, ${CARD_ROOT.y}, ${CARD_ROOT.z});
 }`;
 
 const CARD_VERT = /* glsl */ `
@@ -449,9 +451,9 @@ function wingTip(owl: Owl, side: number, out: THREE.Vector3): THREE.Vector3 {
   out.multiplyScalar(THREE.MathUtils.lerp(1, 0.4, owl.fold));
   rotZ(out, side * owl.flap);
   rotX(rotZ(out, -side * 1.42 * owl.fold), 0.25 * owl.fold);
-  out.x += SHOULDER.x * side;
-  out.y += SHOULDER.y;
-  out.z += SHOULDER.z;
+  out.x += CARD_ROOT.x * side;
+  out.y += CARD_ROOT.y;
+  out.z += CARD_ROOT.z;
   return out;
 }
 
@@ -470,8 +472,8 @@ const BEAT_RATE = 2.3;
 const FLIGHT = 6.8;
 const GLANCE = [2.3, 3.4];
 /** The wings' angle over its back (radians): the middle of the stroke, and where it holds them in a glide. */
-const STROKE_MID = 0.55;
-const GLIDE_LIFT = 0.45;
+const STROKE_MID = 0.32;
+const GLIDE_LIFT = 0.3;
 /** The wings' twist, leading edges down, so the barred tops of both are turned to a camera level with it. */
 const WING_CUP = 0.45;
 /** How far round it turns its breast toward where it is watched from, at most, on top of its heading. */
@@ -661,8 +663,8 @@ export class Owl {
     this.beat += dt * BEAT_RATE * Math.PI * 2 * (0.3 + 0.7 * this.flapBlend) * (0.55 + 0.45 * (1 - first)) * (1 + 0.12 * Math.sin(this.beat * 0.5));
     // Down quickly, up slowly, every other stroke a little shallower.
     const stroke = Math.cos(this.beat + 0.4 * Math.sin(this.beat));
-    const depth = 0.72 * (1 - 0.18 * (0.5 + 0.5 * Math.cos(this.beat * 0.5))) + 0.3 * first;
-    // The stroke sweeps from high over its back to just under level and no further, so the wings are broad to the
+    const depth = 0.6 * (1 - 0.18 * (0.5 + 0.5 * Math.cos(this.beat * 0.5))) + 0.3 * first;
+    // The stroke sweeps from up beside its head to just under level and no further, so the wings are broad to the
     // camera beside it through most of the beat and edge on only as they pass level.
     this.flap = THREE.MathUtils.lerp(GLIDE_LIFT, STROKE_MID + depth * stroke, this.flapBlend);
     // The hands trail the arms: bent up as the wings come down, bent down and swept back as they go up again.
@@ -835,7 +837,7 @@ export class OwlBody {
     const seen = owl.presence > 0.5;
     const spread = 1 - owl.fold;
     for (const [i, side] of [[0, -1], [2, 1]] as const) {
-      owl.toWorld(this.local.set(SHOULDER.x * side, SHOULDER.y, SHOULDER.z), false, this.wingBones[i]);
+      owl.toWorld(this.local.set(CARD_ROOT.x * side, CARD_ROOT.y, CARD_ROOT.z), false, this.wingBones[i]);
       owl.toWorld(wingTip(owl, side, this.local), false, this.wingBones[i + 1]);
     }
     for (const [i, side] of [[0, -1], [1, 1]] as const) owl.toWorld(this.local.set(TUFT.x * side * 1.2, TUFT.y + 0.07, TUFT.z), true, this.tufts[i]);
