@@ -366,3 +366,8 @@ chimneys declined as the parallel idea, "something else"):
   tells the chase.
 - At the lighthouse the dark catches them: the light falters and goes out and the plane is taken. The empty boat,
   blown in on the dark's wind, waits at the foot of the crag, and the storm carries them on to the wood as on main.
+
+On a less ambitious parallel idea (offered: the dark's first breath snatches the scarf sail onto a chimney and the
+player wins it back), Jeremy, 2026-10-05: "im not sure waht snatched sail is about, but i leave it to you to take
+ownership of what a possible alternative might be. At this point im more interested in getting the over the roof done
+well". Over the roofs comes first.
