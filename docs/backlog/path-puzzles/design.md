@@ -434,13 +434,16 @@ about (−9, −1398), some 40 m short of the church (`SPIRE`, 14, −1436). Mai
    there; pushed over, it is her bridge.
 5. **Crossing 2, the swing (pump):** the drowned village green between that house and the church; the swing hangs from
    the old tree on the green; pumped, she lets go onto the nave roof.
-6. **The church:** she climbs the nave roof to the tower and into the belfry opening. While she waits at a crossing
-   the dark creeps up and stops a little behind her; it never reaches her and nothing fails.
-7. **The dark arrives:** the black water pours back round the tower and the storm comes with it (the smoke rolls over,
-   the first rain). The water lifts the stranded boat off its ridge and carries it in among the roofs below.
-8. **Bring the boat (fill the sail):** the rising water leaves the tower nowhere safe and her boat is afloat again, the
-   only way out. The player fills its red sail (`Boat.brushSail`) to bring it to the foot of the tower and she climbs
-   down into it. She left because the boat was stranded; she goes back because the water brought it back.
+6. **The church:** she gets as high as a child can, the nave ridge at the tower's foot; the cat goes on up the tower
+   into the belfry, where it is safe. While she waits at a crossing the dark creeps up and stops a little behind her;
+   it never reaches her and nothing fails.
+7. **The dark arrives:** the black water pours back in round the church and the storm comes with it (the smoke rolls
+   over, the first rain). It comes up over the nave roof round her feet. The water lifts the stranded boat off its
+   ridge and carries it in among the roofs below.
+8. **Bring the boat (fill the sail):** the water is rising round her and her boat is afloat again, the only way out.
+   The player fills its red sail (`Boat.brushSail`) to bring it alongside the nave and she steps down into it. She
+   left because the boat was stranded; she goes back because the water brought it back. The cat watches from the
+   belfry as they go.
 9. **The storm, untouched:** the church is about 260 m from the beach, close to where main's storm already starts, so
    main's timeline plays from the moment she is aboard (the weather closing in, the lighthouse sliding past and going
    out about 130 m on, the plane taken, rain, the landing at the forest). Only its trigger changes, from
