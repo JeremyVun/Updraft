@@ -461,3 +461,15 @@ toward the church, and the child follows it: it shows her the way without the pl
 and it shows that the roofs can be walked. It waits at each crossing with her. It ends safe in the belfry and is left
 there as the storm takes the boat. The cygnet is wary of it and stays tucked in the satchel while the cat is aboard.
 A cat is a new animal: its own model and animation, matched to the game's soft painted look.
+
+**Ownership of the drowned village** (Jeremy, 2026-10-05, verbatim):
+
+> Ok great, I want you to take the lead in terms of owning the artistic vision and execution as i know you won't stop
+> of anything short of excellence. My only requirements are that it feels great, plays great, and looks great, with
+> good pacing and narrative that adds to the game's narrative. To this end, alot of refactoring of the existing
+> drowned village and storm sequence may need to happen. The astra concepts may or may not make sense, do don't
+> necessarily take them as gospel as something to match pixel for pixel. Take what works and ignore waht doesn't. Any
+> questions, ask at any time.
+
+So the existing drowned village and storm code may be refactored as far as the room needs; the concept frames in
+`comps/drowned/` are a guide to take from, not a target to match.
