@@ -7,12 +7,14 @@ export interface Paw {
   to: THREE.Vector3;
   planted: boolean;
   swing: number;
+  /** Where in its own cycle this swing began: late, if it was picked up part-way through, so it never jumps ahead. */
+  begun: number;
   /** How far off the surface it is this frame, and how far it is curled as it comes up. */
   lift: number;
   curl: number;
 }
 
-const paw = (): Paw => ({ at: new THREE.Vector3(), from: new THREE.Vector3(), to: new THREE.Vector3(), planted: true, swing: 0, lift: 0, curl: 0 });
+const paw = (): Paw => ({ at: new THREE.Vector3(), from: new THREE.Vector3(), to: new THREE.Vector3(), planted: true, swing: 0, begun: 0, lift: 0, curl: 0 });
 
 export type GaitKind = 'walk' | 'trot' | 'bound' | 'climb';
 
@@ -67,6 +69,7 @@ export class CatGait {
   private fresh = true;
   private idle = 0;
   private wasStepping = false;
+  private kindWas: GaitKind = 'walk';
   private readonly side = new THREE.Vector3();
   private readonly home = new THREE.Vector3();
   private readonly step = new THREE.Vector3();
@@ -147,6 +150,14 @@ export class CatGait {
       this.phase = (this.phase + travel / stride) % 1;
       this.idle = 0;
     } else this.idle += dt;
+    if ((!this.wasStepping && stepping) || this.kind !== this.kindWas) {
+      /** Setting off, or changing gait, with a paw in the air: it carries on from where it is rather than from where it left. */
+      for (const [i, p] of this.paws.entries()) {
+        if (p.planted) continue;
+        p.from.copy(p.at).addScaledVector(s.up, -p.lift);
+        p.begun = Math.min((this.phase + offsets[i]) % 1, 0.98);
+      }
+    }
     if (this.wasStepping && !stepping) {
       /** A paw caught in the air when it stops is taken the rest of the way home from where it is. */
       for (const p of this.paws) {
@@ -156,6 +167,7 @@ export class CatGait {
       }
     }
     this.wasStepping = stepping;
+    this.kindWas = this.kind;
 
     for (const [i, p] of this.paws.entries()) {
       const home = this.placeHome(s, homes[i], this.home);
@@ -165,9 +177,10 @@ export class CatGait {
         if (swinging && p.planted) {
           p.planted = false;
           p.from.copy(p.at);
+          p.begun = Math.min(mine, 0.98);
         }
         if (swinging) {
-          p.swing = (mine - duty) / (1 - duty);
+          p.swing = Math.max(0, (mine - p.begun) / (1 - p.begun));
           /** Aimed where the body will be when it lands, so it comes down as far ahead of its home as it will leave behind it. */
           const ahead = (moved / Math.max(travel, 1e-6)) * ((1 - p.swing) * (1 - duty) * stride + duty * stride * 0.5);
           p.to.copy(home).addScaledVector(s.forward, ahead);

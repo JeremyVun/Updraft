@@ -2,14 +2,19 @@
 // Usage: node tools/cat-check.mjs [out-dir]        (needs a dev server; BASE as for tools/play.mjs)
 //   Plays each action on the QA stage's cat yard (?chapter=stage: `__game.story.current.play('cat:<action>')`),
 //   stands the camera off it about 4 m (c-near) and 12 m (c-far), and shoots it at the moments that say the most,
-//   at dusk (the drowned village's own light) and in storm dark. Then it sits the cat on the real boat in the
-//   drowned village (?chapter=drowned) and shoots it from the game's own camera, calm and in the storm.
-//   Writes <out-dir>/<light>-<action>-<moment>-<view>.png and <out-dir>/sheet-<light>.png, a contact sheet of each.
-//   env: ONLY=sit,run (actions), VIEWS=c-near,c-far,c-close,c-side (any stage view), LIGHTS=dusk,storm, ROOM=0 skips
-//        the drowned village; SLIP=1 also prints, for each action, the furthest a planted paw moved in a frame (slip)
-//        and the furthest a leg fell short of a planted paw (short): both should stay at a few millimetres.
-//        STRIP=run@0.8,leap-roof@0.6 shoots each named action as a strip of 16 frames a thirtieth of a second apart
-//        from that many seconds in, side on (STRIP_VIEW, default c-side), to judge how it moves; nothing else is shot.
+//   at dusk (the drowned village's own light) and in storm dark. Then it sits the cat on the real boat's foredeck in
+//   the drowned village (?chapter=drowned) and shoots it from the game's own camera, and from 5 m and 12 m off the
+//   beam, calm and in the storm. The world is held still for every shot, so each is exactly as far in as it says.
+//   Writes <out-dir>/<light>-<action>-<moment>-<view>.png, a contact sheet of each light and view
+//   (sheet-<light>-<view>.png; 12 m shots cropped round the cat at full size), sheet-room-<light>.png, and
+//   sheet-overview.png, the moments that say most. Takes about five minutes.
+//   env: ONLY=sit,run (actions; ONLY=none for the drowned village alone), VIEWS=c-near,c-far,c-close,c-side (any
+//        stage view), LIGHTS=dusk,storm, ROOM=0 skips the drowned village. SLIP=1 also prints, for each action, the
+//        furthest a planted paw moved in a frame (slip: none) and the furthest a leg fell short of a planted paw
+//        (short: a few millimetres standing, a few centimetres at the push-off of a gallop).
+//        STRIP=run@0.8,leap-roof@0.6 shoots each named action as a strip of 16 frames, STRIP_STEP seconds apart
+//        (a thirtieth by default), from that many seconds in, from STRIP_VIEW (default c-side; c-along and
+//        c-across are side on to the yard and along it), cut close round the cat; nothing else is shot.
 //   Default out-dir: /tmp/updraft-cat-check.
 import { chromium } from 'playwright-core';
 import fs from 'node:fs';
@@ -190,6 +195,18 @@ try {
       await context.close();
     }
   }
+
+  /** One sheet of the moments that say most, for a first look. */
+  const pick = (light, view, action, moment) => path.join(out, `${light}-${action}-${moment}-${view}.png`);
+  shots.overview = [
+    ['dusk', 'c-near', 'strand', 1.5], ['dusk', 'c-near', 'hop-tub', 0.45], ['dusk', 'c-near', 'ride-tub', 3], ['dusk', 'c-near', 'jump-boat', 1.2],
+    ['dusk', 'c-near', 'boat', 3], ['dusk', 'c-near', 'leap-roof', 1.4], ['dusk', 'c-near', 'run', 0.55], ['dusk', 'c-near', 'rail', 2.5],
+    ['dusk', 'c-near', 'gap', 1.85], ['dusk', 'c-near', 'climb', 2.4], ['dusk', 'c-near', 'climb', 5.5], ['dusk', 'c-near', 'afraid', 0.25],
+    ['storm', 'c-near', 'strand', 1.5], ['storm', 'c-near', 'run', 0.55], ['storm', 'c-far', 'rail', 2.5], ['storm', 'c-far', 'climb', 5.5],
+  ]
+    .map(([light, view, action, moment]) => ({ file: pick(light, view, action, moment), label: `${action} ${moment}s, ${light}, ${view === 'c-far' ? '12 m' : '4 m'}`, far: view === 'c-far' }))
+    .filter(({ file }) => fs.existsSync(file));
+  for (const light of lights) shots.overview.push(...(shots[`room-${light}`] ?? []).filter(({ file }) => file.endsWith('-5m.png')));
 
   /**
    * A contact sheet of each light and view, laid out by the browser with names under them. Far shots are shown as a
