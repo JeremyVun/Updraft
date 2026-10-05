@@ -193,7 +193,7 @@ void main() {
       * (1.0 - smoothstep(0.25, 0.45, abs(n.y)));
     float bead = smoothstep(0.93, 1.0, fract(old * 0.8 + uTime * (0.3 + 0.35 * fract(lane * 0.37)) + lane * 0.31)) * runs * uDrain;
     float wetness = soaked * (1.0 - matte);
-    col = mix(col, skyBack * (0.55 + 0.5 * grain), fres * wetness * 0.7) + (uSunColor * glint * 0.5 + uSkyHorizon * bead * 0.22) * wetness;
+    col = mix(col, skyBack * (0.55 + 0.5 * grain), min(fres, 0.5) * wetness * 0.7) + (uSunColor * glint * 0.5 + uSkyHorizon * bead * 0.22) * wetness;
   }
   if (kind == ${OPENING}) col = vColor * uSkyAmbient * 0.5;
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);

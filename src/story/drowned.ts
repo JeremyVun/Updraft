@@ -340,7 +340,8 @@ export class DrownedChapter implements Chapter {
       return dark();
     }
     const held = tuning.drowned.dark.comeFor * 0.8;
-    if (this.t < held) return dark();
+    /** Upright the lens stands toward the church, so she keeps her eyes on the dark there rather than turn to it. */
+    if (this.t < held || this.aspect < 1) return dark();
     return Math.floor((this.t - held) / tuning.drowned.glanceEvery) % 2 === 0 ? this.look.copy(REFUGE) : dark();
   }
 
@@ -512,16 +513,17 @@ export class DrownedChapter implements Chapter {
     const from = this.stillBearing + Math.PI;
     let look = from + Math.atan2(Math.sin(dark - from), Math.cos(dark - from)) * round;
     look += Math.atan2(Math.sin(k.strandChurch - k.strandDark), Math.cos(k.strandChurch - k.strandDark)) * turned;
-    const vx = Math.sin(look), vz = Math.cos(look);
     const b = boat.position;
+    const back = THREE.MathUtils.lerp(k.uprightBack, k.strandBack, wide);
+    /** Upright, the eye stands off on the side the hull lists to, so the roof runs up the frame on a slant. */
+    const side = k.uprightSide * (1 - wide) * round;
+    const ex = b.x - Math.sin(look) * back - Math.cos(look) * side, ez = b.z - Math.cos(look) * back + Math.sin(look) * side;
+    const reach = Math.hypot(b.x - ex, b.z - ez);
+    const vx = (b.x - ex) / reach, vz = (b.z - ez) / reach;
     const ahead = THREE.MathUtils.lerp(k.uprightAhead, k.strandAhead, wide);
     const aside = k.strandAside * wide * (1 - turned);
     const aim = THREE.MathUtils.lerp(k.uprightAim, THREE.MathUtils.lerp(k.strandAim, k.churchAim, turned), wide);
     s.target.set(b.x + vx * ahead - vz * aside, aim, b.z + vz * ahead + vx * aside);
-    const back = THREE.MathUtils.lerp(k.uprightBack, k.strandBack, wide);
-    /** Upright, the eye stands off on the side the hull lists to, so the roof runs up the frame on a slant. */
-    const side = k.uprightSide * (1 - wide) * round;
-    const ex = b.x - vx * back - vz * side, ez = b.z - vz * back + vx * side;
     const dx = ex - s.target.x, dz = ez - s.target.z, dist = Math.hypot(dx, dz);
     s.from = this.from.set(dx / dist, 0, dz / dist);
     s.distance = dist;
