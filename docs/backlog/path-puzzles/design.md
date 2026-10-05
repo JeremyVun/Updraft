@@ -333,3 +333,32 @@ boat to run over the roofs for land. Jeremy, 2026-10-05:
 
 > remember, the whole point of the work here is to create an interesting puzzle and add more interactivity to the
 > game overall. previously, the drowned village had basically no interaction
+
+**Over the roofs** (agreed with Jeremy, 2026-10-05: she runs on her own; "yes, those three" crossings; the warm
+chimneys declined as the parallel idea, "something else"):
+
+- The air dies by the church and the dark rises behind them: black smoke lying on the water, coming on and swallowing
+  roofs. The boat bumps aground on a ridge just under the glass. Ahead, a line of roofs steps away toward the
+  lighthouse crag; the line runs along the way, so it says "this way". She tucks the cygnet into the satchel and climbs
+  out.
+- She runs the ridges by herself, away from the dark and toward the light, and stops at each gap. The paper plane does
+  not lead; she clutches it the whole way, so when the lighthouse takes it, it is the thing she held on to through the
+  run. The player's work is the crossings.
+- Three crossings, each a different gesture already learnt, each made from something in the room or a piece of home
+  in the wrong place:
+  1. **The fallen tree (push).** A dead drowned tree leans beside the first gap. Small gusts rock it and show which way
+     it can fall, as the bath rocks on the little boats; a firm push topples it across the gap and she runs over the
+     trunk.
+  2. **The swing (pump).** A longer gap, with the swing from the birches hanging from a drowned bough over it. She
+     climbs on, the player pumps it with gusts, and at the top of the arc she lets go and lands on the far roof.
+     Forgiving: no timing to hit.
+  3. **The raft (fill a sail).** On the last roof the crag is out of reach. A floating door drifts nearby with a sheet
+     caught upright on it. Filling the sheet brings the raft to her; filling it again carries her across to the crag's
+     steps.
+- The dark creeps up while she waits at a gap and stops a little behind her, heaving. It never reaches her and never
+  ends anything. Behind her it swallows each crossing as she leaves it. Each gap has the usual drawn invitation and
+  its own safety valve (a gust from the dark does the job), so nobody is stranded.
+- Camera: low and side-on, the dark on one side of the frame, her in the middle, the light on the other, so one frame
+  tells the chase.
+- At the lighthouse the dark catches them: the light falters and goes out and the plane is taken. The empty boat,
+  blown in on the dark's wind, waits at the foot of the crag, and the storm carries them on to the wood as on main.
