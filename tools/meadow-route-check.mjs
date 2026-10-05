@@ -14,6 +14,7 @@ const {SwanFlock}=await import('../src/creatures/flock.ts');
 const {Glider}=await import('../src/glider/glider.ts');
 const {Boat}=await import('../src/traveller/boat.ts');
 const {MeadowChapter,ROUTE,FAR_SHORE}=await import('../src/story/meadow.ts');
+const {Feather}=await import('../src/fx/feather.ts');
 const {piano}=await import('../src/world/piano.ts');
 const {POND,POND_LEVEL,pondOut}=await import('../src/world/heightfield.ts');
 const {heightAt}=await import('../src/world/island.ts');
@@ -27,7 +28,7 @@ function fixture() {
   const child=new Traveller(wind),cygnet=new Cygnet(),flock=new SwanFlock(),boat=new Boat(wind),plane=new Glider(wind,[]);
   cygnet.mount=child;cygnet.visible=true;cygnet.wing.restore('wrapped');
   const carry=new Carry(child,cygnet);
-  const cast={child,cygnet,flock,boat,plane,carry,wind,nearby:()=>false,
+  const cast={swanFeather:new Feather(wind),child,cygnet,flock,boat,plane,carry,wind,nearby:()=>false,
     life:{regions:{island:new THREE.Vector4(),wave:new THREE.Vector4(),waiting:new THREE.Vector4()}}};
   const chapter=new MeadowChapter(cast);
   child.stop();child.place(ROUTE[0].x,ROUTE[0].y+10,Math.PI);

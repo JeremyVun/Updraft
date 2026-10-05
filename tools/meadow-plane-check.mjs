@@ -10,6 +10,7 @@ globalThis.document={createElement:()=>({getContext:()=>({beginPath(){},moveTo()
 const {Glider}=await import('../src/glider/glider.ts');
 const {Traveller}=await import('../src/traveller/traveller.ts');
 const {MeadowChapter,ROUTE,FAR_SHORE}=await import('../src/story/meadow.ts');
+const {Feather}=await import('../src/fx/feather.ts');
 const {CameraRig}=await import('../src/camera.ts');
 const {heightAt}=await import('../src/world/island.ts');
 const {tuning}=await import('../src/tuning.ts');
@@ -19,7 +20,7 @@ function fixture(portrait,leg=2) {
   const wind={breeze:new THREE.Vector2(0,-2),sample(_x,_z,out){return Object.assign(out,air);},addSplat(){}};
   const child=new Traveller(wind),plane=new Glider(wind,[]),rig=new CameraRig();
   rig.resize(portrait?390:1600,portrait?844:900);
-  const cast={child,plane,wind,cygnet:{flying:false,position:new THREE.Vector3()},flock:{rest(){},clear(){},active:false},
+  const cast={swanFeather:new Feather(wind),child,plane,wind,cygnet:{flying:false,position:new THREE.Vector3()},flock:{rest(){},clear(){},active:false},
     life:{regions:{wave:new THREE.Vector4(),waiting:new THREE.Vector4()}},
     boat:{position:new THREE.Vector3(),beach(x,z){this.position.set(x,0,z);}},nearby:()=>false};
   const chapter=new MeadowChapter(cast);

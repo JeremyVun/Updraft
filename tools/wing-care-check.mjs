@@ -13,11 +13,11 @@ const {SwanFlock}=await import('../src/creatures/flock.ts');
 const {Glider}=await import('../src/glider/glider.ts');
 const {Boat}=await import('../src/traveller/boat.ts');
 const {MeadowChapter,ROUTE}=await import('../src/story/meadow.ts');
+const {Feather}=await import('../src/fx/feather.ts');
 const {SleepingChapter}=await import('../src/story/sleeping.ts');
 const {SleepingTrail}=await import('../src/world/sleeping-trail.ts');
 const {CurtainRibbon}=await import('../src/world/sleeping-ribbon.ts');
 const {BED,SLEEP_LEDGE,CURTAIN_KNOT,CURTAIN_END}=await import('../src/world/sleeping.ts');
-const {Feather}=await import('../src/fx/feather.ts');
 const {restoreWingCare}=await import('../src/story/wing-care.ts');
 const {saveProgress,readProgress,placeProgress}=await import('../src/story/progress.ts');
 const {heightAt}=await import('../src/world/island.ts');
@@ -30,7 +30,7 @@ function fixture(fps=60) {
   const child=new Traveller(wind),cygnet=new Cygnet(),flock=new SwanFlock(),boat=new Boat(wind),plane=new Glider(wind,[]);
   cygnet.mount=child;cygnet.visible=true;
   const carry=new Carry(child,cygnet);
-  const cast={child,cygnet,flock,boat,plane,carry,wind,nearby:()=>false,
+  const cast={swanFeather:new Feather(wind),child,cygnet,flock,boat,plane,carry,wind,nearby:()=>false,
     life:{regions:{island:new THREE.Vector4(),wave:new THREE.Vector4(),waiting:new THREE.Vector4()}},
     sleeping:{trail:new SleepingTrail(),ribbon:new CurtainRibbon(CURTAIN_KNOT,CURTAIN_END),feather:new Feather(wind),bedside:BED.clone(),lane(){},laneOpen:0,fog:1,frost:0.3,dawn:0,curtains:0,curtainOpening:0},
   };

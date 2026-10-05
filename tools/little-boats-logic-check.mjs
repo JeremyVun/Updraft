@@ -32,6 +32,7 @@ const {
 } = await import('../src/world/little-boats-layout.ts');
 const { ROUTES } = await import('../src/story/journey.ts');
 const { MeadowChapter } = await import('../src/story/meadow.ts');
+const { Feather } = await import('../src/fx/feather.ts');
 const { CrossingChapter } = await import('../src/story/crossing.ts');
 const { LINES_BERTH } = await import('../src/story/lines.ts');
 const eye = new THREE.PerspectiveCamera(50, 16 / 9, 0.1, 500);
@@ -323,6 +324,7 @@ for (const [name, from] of [
     assert(Math.abs(c.boat.position.x - 10) < 12, 'land beside the meadow hill path');
     c.life = { regions: { wave: new THREE.Vector4(), waiting: new THREE.Vector4() } };
     c.flock = { rest() {}, active: false };
+    c.swanFeather = new Feather(c.wind);
     const meadow = new MeadowChapter(c);
     let walk = 0;
     for (; walk < 15 && meadow.beat !== 'climb'; walk += 1 / 60) {

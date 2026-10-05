@@ -92,7 +92,7 @@ const BOARDING = 16;
  * The feather the family leaves: how far out over the water beyond the cygnet and how high it comes down from, how
  * near its bill it has to drift before it reaches up and takes it, and how long before the wind is shown it.
  */
-const FEATHER = { out: 6, aside: 2, from: 4, lean: 0.2, blown: 4, near: 5, reach: 1.4, under: 2.6, inviteAfter: 6, fetchAfter: 25, giveUpAfter: 45 };
+const FEATHER = { out: 6, aside: 2, from: 4, lean: 0.2, blown: 4, near: 5, reach: 1.4, under: 2.6, inviteAfter: 6, fetchAfter: 18, giveUpAfter: 45 };
 
 /**
  * The meadow: the last warm afternoon of the year, and the island is asleep. The boat lands in a bay under a bank,
