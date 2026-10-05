@@ -382,3 +382,9 @@ the chimney, sweeps lift the lengths draped on the branches; kept short, since i
 it), set it and run (she hauls it aboard, it climbs the mast, the player fills it and keeps it full as they run before
 the dark for the lighthouse). The player wins the sail back from the dark; minutes later the lighthouse takes the plane
 and nobody can stop it, so that loss lands harder. Judged only if over the roofs does not work out.
+
+Jeremy on the first concept frames (`comps/roofs/`), 2026-10-05: "It looks a bit too "constructed" and "convenient"
+e.g. a single line of houses no?" So the route must read as a drowned village she picks her way through, not a row
+laid out for her: roofs of different sizes, heights and angles, bits of the village standing out of the water (a
+garden wall's top, a porch, a barn, the church's own roof), a route that bends with what is there, and crossing
+pieces that belong where they are, among other things the flood left.
