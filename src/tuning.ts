@@ -1672,8 +1672,8 @@ export const tuning = {
   drowned: {
     /** The air dies this far short of where the boat comes to rest (metres of drift); the hull coasts in over the last of it. */
     stillFrom: 26,
-    /** Seconds from the air dying to the dark starting to rise. */
-    stillFor: 6.5,
+    /** Seconds from the air dying to the dark starting to rise: the boat has come to rest and everything is still. */
+    stillFor: 10,
     /** The hull coming to rest: how hard it brakes (m/s²) and the least way it keeps till its stem is on the slates. */
     coastBrake: 0.5, coastCreep: 0.35,
     /** How far past the drift's dusk the light goes while the dark comes on. */
@@ -1697,7 +1697,7 @@ export const tuning = {
        * The bank: half its width, its depth behind the front, how far its flanks run on ahead, in metres; and how far it
        * reaches on the church's side, as a share of its half width, so the church keeps clear sky over it.
        */
-      halfWidth: 170, depth: 70, flank: 60, wing: 0.45,
+      halfWidth: 170, depth: 70, flank: 60, wing: 0.3,
       /** How far fingers of the front reach ahead, and how far and how fast the whole front heaves. */
       fingers: 4, heave: 1.4, heaveRate: 0.33,
       /** The skirt's billow radius and how deep it lies behind the front; the body's radius at its front and back, and how high it heaps. */
@@ -1729,10 +1729,10 @@ export const tuning = {
      * first past the boat to where they came from and then turned with her to the church; upright, back the way they
      * came from ahead of the boat.
      */
-    strandDark: 1.25, strandChurch: 1.95, strandUpright: 0.35, strandZoom: 0.9,
+    strandDark: 1.25, strandChurch: 1.95, strandUpright: 1.0, strandZoom: 0.9,
     /** How far behind the boat the eye stands, how far ahead of it and to the side it looks, and at what height. */
     strandBack: 15, strandAhead: 6, strandAside: 3, strandAim: 1.2, churchAim: 2.6,
-    uprightBack: 10, uprightAhead: 16, uprightAim: -0.6, uprightSide: 3,
+    uprightBack: 13, uprightAhead: 14, uprightAim: 1.5, uprightSide: -1.5,
     /** The eye's height over the water as the air dies, and once the boat has come to rest. */
     strandLow: 2.4, strandHigh: 3.4, uprightHigh: 3.8,
     strandPace: 0.6,

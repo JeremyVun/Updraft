@@ -88,13 +88,13 @@ void main() {
   vec3 N = normalize(transpose(mat3(viewMatrix)) * normalize(nv));
   float edge = pow(1.0 - clamp(nv.z, 0.0, 1.0), 1.4);
   float above = N.y * 0.5 + 0.5;
-  float hollow = mix(0.45, 1.0, smoothstep(0.2, 0.75, bump));
+  float hollow = mix(0.65, 1.0, smoothstep(0.2, 0.75, bump));
   // The sky lights it cold whatever the sunset is doing, from above, so each billow is dark beneath and greyer on top.
   vec3 cool = mix(uSkyAmbient, vec3(0.42, 0.42, 0.62) * dot(uSkyAmbient, vec3(0.33)), 0.85);
   vec3 alb = mix(vec3(0.016, 0.015, 0.032), vec3(0.13, 0.12, 0.19), vLook.y);
   vec3 col = alb * cool * mix(0.1, 2.6, pow(above, 2.0)) * hollow;
   // The sky catches the top edge of every billow, so each stands off the darker one behind it.
-  col += cool * smoothstep(0.4, 0.95, edge) * smoothstep(0.55, 0.92, above) * (0.02 + 0.08 * vLook.y);
+  col += cool * smoothstep(0.4, 0.95, edge) * smoothstep(0.55, 0.92, above) * 0.08 * vLook.y * vLook.y;
   // The low sun only reaches the rims of the tops on the side it is on: the body of it stays black.
   float wrap = clamp(dot(N, uSunDir) * 0.5 + 0.5, 0.0, 1.0);
   float sunRim = smoothstep(0.3, 0.9, edge) * pow(wrap, 2.0) * smoothstep(0.45, 0.85, above);
