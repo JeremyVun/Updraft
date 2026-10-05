@@ -104,6 +104,9 @@ His answers to the second round:
   The target is the concept in `comps/owl/` (keyframes `k1`–`k4` from one fixed side-on camera, `k2-portrait`,
   `flight-strip`, `plan` with the layout in metres, `notes.md`). Departures from it: in `k3` the reduced shadow must
   read as the stump's fork with a little round owl in it, not a figure with raised arms.
+  Approved (Jeremy, 2026-10-05: "the fears sequence is approved. The only thing i'd ask to be changed slightly is after
+  the owl is revealed, the camera could pan across to show the owl more face on. Otherwise, well done"). So the frame
+  holds from the eyes in the dark through the reveal, then eases once across to see the perched owl more face on.
 - **The island of lines: a pinwheel winds the boat in, on the shore beyond the red door** (Jeremy: "yes i think this
   is a good idea to try"). The boat is moored out on the water; a pinwheel on the bank drives a pulley line that
   winds it in to the shore. It adds a beat after the door rather than replacing a curtain. It knowingly relaxes two
