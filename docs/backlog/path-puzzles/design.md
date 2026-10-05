@@ -473,3 +473,38 @@ A cat is a new animal: its own model and animation, matched to the game's soft p
 
 So the existing drowned village and storm code may be refactored as far as the room needs; the concept frames in
 `comps/drowned/` are a guide to take from, not a target to match.
+
+### How it is made (Claude's calls under that ownership, 2026-10-05)
+
+- **Pacing.** Arrival and calm drift about 30 s; the cat about 30–60 s; a short drift with the cat aboard (the cygnet
+  ducking into the satchel, the cat washing a paw on the thwart) about 15 s; the sea drawing back about 15 s, slow and
+  eerie; the run about 2 min with both crossings; the dark arriving and the boat brought in about 45 s; the storm
+  about 70 s to the beach. The room grows from about 3 minutes to 5–6, nearly all of it the player's.
+- **The cat.** A small soft tabby with a white chest and socks, round-faced, a little bedraggled, built as soft
+  rounded shapes like the game's other animals, never realistic fur. It mews from the chimney (loud is allowed for
+  animals), hates the water, rides the tub hunched with its ears flat, and on the boat sits on the bow thwart as far
+  from the water as it can. It is quick and sure where she is slow: at each gap it crosses its own way (along a
+  railing top, a wall coping, a leap she could never make), which shows her where the far side is and that she must
+  find her own way over. At the church it climbs the tower's ivy to the belfry. It is left there, safe and high,
+  looking down as the boat goes; she looks back at it once.
+- **The sea drawing back.** The village rises about 2 m over about 8 s (tuned by eye), the walls coming up with a
+  wet dark band, weed and dripping; the leaves on the glass slide away toward the dark; the boat settles onto a ridge
+  that comes up under it and lists. A long low draining sound; the music thins to nothing. Herons lift and fly
+  away from the dark. The glass stays still: it is the stillness that frightens.
+- **The dark.** Low black-violet smoke lying on the water, made of soft painted billows like the smoke prototype's,
+  lit at the rims by the last low sun, coming from behind (south, the way they came) and swallowing roofs as it
+  comes. It is beautiful-ominous, never horror and never industrial. While she is stuck it creeps closer and stops a
+  little behind her, heaving; as she crosses it swallows the place she left. When it arrives at the church the water
+  pours back under it (the village sinks past its old level, over the nave roof), the smoke rolls over and becomes
+  the storm's sky, and the rain begins.
+- **The run is built on decks** (`src/world/decks.ts`): ridges, wall tops and the fallen trunk are strips the child
+  walks; the slates up to a ridge are ramps. She gets out with `alight` onto the stranded ridge and back in with
+  `board` at the nave.
+- **Camera.** Low and beside the run, at roof height at most, the dark on one side of the frame and the church on the
+  other, easing between crossings and never cutting; on an upright phone it looks along her way so it stacks up the
+  frame. While she waits at a gap the gap, the thing to push and her are all in frame.
+- **The storm from aboard.** The dark has already arrived, so the storm starts with the weather mostly gathered rather
+  than gathering from clear; its beats keep their order and their spacing along the way (the lighthouse passing and
+  its light going out, the plane taken, the rain, the cygnet's shaking, the beach).
+- **Saves.** A save during the run resumes at the stranding (cat aboard, sea drawn back); a save after she is aboard
+  resumes aboard with the storm to come.
