@@ -107,6 +107,8 @@ export class Cygnet {
    * grass seen from afar; beside a rail that pull draws it through the rail.
    */
   nudge: number | null = null;
+  /** How that nudge changes away from its position, per metre, where what it walks on is pushed back unevenly. */
+  readonly nudgeSlope = new THREE.Vector3();
   /**
    * Still water it is allowed to come down on, where the story has put it beside any: the surface's height and a
    * test for whether a point is over it. A glide that ends over the water is a splash-down and not a landing.
@@ -1606,6 +1608,9 @@ export class Cygnet {
     // where pulling it toward a distant camera draws it through their coat and out through the satchel.
     const lifted = st === 'swimming' || st === 'gliding' || this.carried || this.seating.held || this.flightPose > 0 || this.billGrip;
     this.mat.uniforms.uNudge.value = this.nudge ?? ease(this.mat.uniforms.uNudge.value, lifted ? 0 : 2.4, 8, dt);
+    this.mat.uniforms.uNudgeAt.value.copy(this.position);
+    if (this.nudge === null) this.mat.uniforms.uNudgeSlope.value.setScalar(0);
+    else this.mat.uniforms.uNudgeSlope.value.copy(this.nudgeSlope);
     const m = this.mind;
     if (this.debug.stand) this.settle = 0;
     d.time = this.time;
@@ -1773,7 +1778,8 @@ export class Cygnet {
     }
     for (let i = 0; i < BONES; i++) this.bones[i].multiplyMatrices(n[i].matrixWorld, this.unbind[i]);
     if(this.wing.heldTip && this.wing.state==='wrapped') this.billTip(this.wing.heldTip);
-    this.wing.update(dt, this.time, n[FORE_L].matrixWorld, this.bones, this.windNow, this.visible, this.mat.uniforms.uNudge.value);
+    this.wing.update(dt, this.time, n[FORE_L].matrixWorld, this.bones, this.windNow, this.visible, this.mat.uniforms.uNudge.value,
+      this.mat.uniforms.uNudgeSlope.value, this.position);
   }
 
   /** Turns what the mind is looking at into a direction for the head, relative to the way the body faces. */
