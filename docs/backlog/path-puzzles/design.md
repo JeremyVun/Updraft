@@ -304,3 +304,17 @@ it turns the drowned village into the sky mirror and it's actually quite confusi
 potential, but in execution im not sure it does. As a child im going to try to blow wind on the swans under the water
 and it's going to confuse me." Prototypes to judge next: the kite (`proto-drowned-kite`) and the black smoke
 (`proto-drowned-smoke`).
+
+Jeremy after playing the lines, the black smoke and the kite:
+
+> thoughts on the lines idea,
+> - yes it was very unclear that the lines was the thing to touch, the animations were a bit janky and there's not
+>   much "wind" interaction that synergises with the child hauling the boat across lines
+> - It felt strange to have a line do a 90 degree right handle around a house
+> - It felt slightly contrived that the line led to a bell. The player never did something something that led to it,
+>   so it just felt like an aribtrary sequence of events if that makese sense.
+>
+> Thoughts on the other ideas,
+> - I did like the idea of the black smoke coming across the water towards the player, that was an interesting dream
+>   like feeling, like an unknown darkness was coming and they needed to get onto land quickly to run away from it.
+> - the kite idea was very basic in and of itself, although it is something to put in the backpocket for now.
