@@ -400,7 +400,8 @@ her outline; she glances down at the cygnet once, never back toward the camera. 
 antlered outline with the eyes in it leaps up the rock behind the stump, thrown by the lit coal at her feet, and she
 flinches back, mittens to her scarf. Only then is the one coal at the stump laid, off to the side. As it wakes its
 light swings round: the antlers fold into a plain stump's shadow with a little round owl in its fork, and the owl
-itself shows in the fork. After a beat the camera pans once, unhurried, round behind her shoulder to see the owl
+itself shows in the fork, which spreads square to her and to both camera views so each sees a Y with the owl in its
+crook. After a beat the camera pans once, unhurried, round and a little down behind her shoulder to see the owl
 face on as it blinks and tilts its head at her and she tips hers back, the rock's shadow still in frame
 (`tuning.wood.shape.face*`; portrait has its own framing). It fluffs up and hoots softly, hops round and flutters
 off toward her, its small flapping shadow flitting across the rock, passes over her head and banks away up to her
@@ -432,7 +433,8 @@ Framing, not erasing the player's earned light, directs attention. No drying mec
 child"). The child is never left apparently stuck.
 
 Knobs: `tuning.wood`, the bend's in `tuning.wood.shape`. Checks: `tools/wood-logic-check.mjs` (only the side
-coal reveals the owl, it hoots once and leaves up and out clear of every trunk and the rock), `wood-check.mjs`,
+coal reveals the owl, it hoots once and leaves up and out from between the stump's limbs, clear of every trunk and
+the rock), `wood-check.mjs`,
 `wood-scene-check.mjs`, `ember-check.mjs`, `wood-floor-check.mjs`. The legacy `dry` checkpoint resumes after the paper.
 
 ## The sleeping island
