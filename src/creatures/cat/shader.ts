@@ -288,7 +288,7 @@ void main() {
 export interface CatLook {
   /** 0 open to 1 shut. */
   blink: number;
-  /** How wide the pupils are, as a share of the eye: 0.55 calm in daylight to 0.82 wide with fright. */
+  /** How wide the pupils are, as a share of the eye: about 0.86 calm, as the sheet draws them, to 0.93 with fright. */
   pupil: number;
   /** 0 on the ground to 1 up off it, where nothing on the ground shades it. */
   air: number;
