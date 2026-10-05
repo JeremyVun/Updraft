@@ -62,12 +62,12 @@ export const STRAND = new THREE.Vector2(-9, -1398);
 export const STRAND_YAW = Math.atan2(CHANNEL.x, CHANNEL.y);
 
 /**
- * The roof the boat strands on: its ridge lies along the channel just under the glass, so the hull glides in over it
- * and the slates come up under the keel. The chimney stands at its far end, past the bow.
+ * The roof the boat strands on: a long one with no chimney, its ridge lying along the channel just under the glass,
+ * so the hull glides in over it unseen and the slates come up under the keel.
  */
 export const STRAND_HOUSE: PlacedHouse = {
   x: STRAND.x + CHANNEL.x * 2.2, z: STRAND.y + CHANNEL.y * 2.2, yaw: Math.atan2(-CHANNEL.y, CHANNEL.x),
-  len: 12, depth: 5.4, wall: 3.4, rise: 2.6, sink: 6.64, thatched: false, stacks: [1], stack: 1.2, door: 0,
+  len: 12, depth: 5.4, wall: 3.4, rise: 2.6, sink: 6.64, thatched: false, stacks: [], stack: 0, door: 0,
 };
 
 /** The cottage across the lane, its garden walled down to the water; the way goes up its south slope and over. */
@@ -92,7 +92,7 @@ export const CAT_HOUSE: PlacedHouse = {
  * through a village rather than laid out for her.
  */
 export const NEIGHBOURS: PlacedHouse[] = [
-  { x: -27, z: -1386, yaw: 0.95, len: 9, depth: 5.6, wall: 3.4, rise: 3.2, sink: 2.4, thatched: true, stacks: [1], stack: 1.3, door: -1 },
+  { x: -31, z: -1378, yaw: 0.95, len: 9, depth: 5.6, wall: 3.4, rise: 3.2, sink: 2.4, thatched: true, stacks: [1], stack: 1.3, door: -1 },
   { x: -27, z: -1421, yaw: -0.15, len: 14, depth: 5.2, wall: 3.4, rise: 3.0, sink: 4.6, thatched: false, stacks: [-1, 1], stack: 1.0, door: 0 },
   { x: -18, z: -1442, yaw: 0.5, len: 9.5, depth: 5.8, wall: 3.4, rise: 3.4, sink: 2.9, thatched: true, stacks: [-1], stack: 1.6, door: 1 },
   { x: 7, z: -1399, yaw: -0.55, len: 8.5, depth: 5.2, wall: 3.4, rise: 2.8, sink: 3.1, thatched: false, stacks: [1], stack: 1.2, door: -1, roll: 0.12 },
@@ -104,8 +104,8 @@ export const NEIGHBOURS: PlacedHouse[] = [
 
 /** Just past the stranded bow, where she climbs out onto the ridge. */
 const strandBow = houseLocal(STRAND_HOUSE, 0.4, 0);
-/** The far end of the strand's ridge, against its chimney, where she waits for the tree. */
-const strandEnd = houseLocal(STRAND_HOUSE, STRAND_HOUSE.len / 2 - 1.35, 0);
+/** The far end of the strand's ridge, over the lane, where she waits for the tree. */
+const strandEnd = houseLocal(STRAND_HOUSE, STRAND_HOUSE.len / 2 - 0.5, 0);
 /** The corner of the garden walls across the lane, where the tree comes down. */
 const wallFoot = new THREE.Vector2(-10.2, -1409.6);
 const gardenEave = houseLocal(GARDEN_HOUSE, -3, GARDEN_HOUSE.depth / 2 + OVERHANG);
@@ -130,7 +130,6 @@ export const GARDEN_WALLS: GardenWall[] = [
   { x0: -12.5, z0: -1427.5, x1: -6.6, z1: naveEave + 0.6, top: -0.55, railed: true },
   { x0: 8.4, z0: -1424.5, x1: 9.6, z1: naveEave + 0.8, top: -0.6 },
   { x0: 2.5, z0: -1421.5, x1: 8.4, z1: -1424.5, top: -0.65, railed: true },
-  { x0: -17, z0: -1394, x1: -16, z1: -1410, top: -0.4 },
   { x0: 4.5, z0: -1406, x1: 9, z1: -1419, top: -0.7 },
 ];
 
@@ -202,7 +201,7 @@ export function wayDecks(rise: number, out: Deck[] = []): Deck[] {
  * to the tower. The dark's reach is measured along it in metres.
  */
 export const DARK_WAY: THREE.Vector2[] = [
-  new THREE.Vector2(STRAND.x + 82, STRAND.y + 226),
+  new THREE.Vector2(STRAND.x + 138, STRAND.y + 197),
   STRAND.clone(),
   strandEnd.clone(),
   wallFoot.clone(),
@@ -240,6 +239,8 @@ export const CLEARINGS: { x: number; z: number; r: number }[] = [
   { x: -3, z: -1376, r: 9 },
   { x: -7, z: -1388, r: 8 },
   { x: 4, z: -1446, r: 9 },
+  /** Where the lens stands beside the stranded boat. */
+  { x: -23, z: -1400, r: 8 },
 ];
 
 export const inClearing = (x: number, z: number, room: number) =>

@@ -2,6 +2,7 @@ import type { MirrorScorePhase, DrownedScorePhase } from '../audio/dream-score';
 import type { StormStrike } from '../fx/storm';
 import type { SkyMirror } from '../world/sky-mirror';
 import type { LittleBoats } from '../world/little-boats';
+import type { DrownedVillage } from '../world/drowned';
 import * as THREE from 'three';
 import type { Mood } from '../audio/audio';
 import type { SeaScorePhase } from '../audio/sea-score';
@@ -38,7 +39,8 @@ import type { Tree } from '../world/tree';
 
 /** Everyone and everything the story directs. */
 export interface Cast {
-  village?: { cameraObstacles: readonly THREE.Box3[] };
+  /** The drowned village: its roofs for the lens to keep clear of, how far it has risen, and the dark. */
+  village?: Pick<DrownedVillage, 'cameraObstacles' | 'rise' | 'dark'>;
   child: Traveller;
   plane: Glider;
   boat: Boat;

@@ -1683,16 +1683,25 @@ export const tuning = {
     strandBrake: 0.5, strandCreep: 0.35, strandList: -0.27, strandPitch: 0.06,
     /** The leaves on the glass run off toward the dark this fast for each metre a second the village rises. */
     drainPull: 5,
+    /** How far past the drift's dusk the light goes while the dark comes on. */
+    dusk: 0.12,
+    /** How hard the cygnet starts when the slates take the hull, and how long she looks at one thing before the other. */
+    lurchStartle: 0.18, glanceEvery: 4.5,
+    /**
+     * Where along the dark's front she looks, metres to the side the church is: looking back at it she turns away
+     * from the lens, never toward it.
+     */
+    darkGlance: 26,
     /** Seconds the camera takes to come round beside the boat once the air has died, and to turn from the dark to the church. */
-    turnFor: 7, lookFor: 9,
+    turnFor: 12, lookFor: 9,
     dark: {
       billows: 300,
       /** The bank: half its width, its depth behind the front, how far its flanks run on ahead, in metres. */
-      halfWidth: 170, depth: 90, flank: 30,
+      halfWidth: 170, depth: 90, flank: 60,
       /** How far fingers of the front reach ahead, and how far and how fast the whole front heaves. */
       fingers: 5, heave: 1.4, heaveRate: 0.33,
-      /** Billow radius at the front and at the back, how high the back heaps, and how much distance veil the far ones take. */
-      frontSize: 4.5, backSize: 14, heap: 12, farHaze: 0.15,
+      /** Billow radius at the front and at the back, how high the back heaps, and how much distance veil it takes near and far. */
+      frontSize: 4.5, backSize: 14, heap: 12, nearHaze: 0.45, farHaze: 0.12,
       /** Seconds it takes to rise on the horizon and then to come on, and how far behind the stranded boat it stops. */
       riseFor: 9, comeFor: 24, holdBehind: 30,
     },
@@ -1708,6 +1717,18 @@ export const tuning = {
     /** Reserve room for the bow and stern while the church reveal eases into place. */
     spireFrameMargin: 0.7,
     sideResponse: 1.2,
+    /**
+     * Beside the stranded boat: the way the lens looks once it has come round (radians, atan2(x, z) of the view),
+     * first past the boat to where they came from and then turned with her to the church; upright, back the way they
+     * came from ahead of the boat.
+     */
+    strandDark: 1.31, strandChurch: 1.99, strandUpright: 0.35, strandZoom: 0.9,
+    /** How far behind the boat the eye stands, how far ahead of it and to the side it looks, and at what height. */
+    strandBack: 14, strandAhead: 6, strandAside: 3, strandAim: 1.2, churchAim: 2.6,
+    uprightBack: 10, uprightAhead: 16, uprightAim: -0.6, uprightSide: 3,
+    /** The eye's height over the water while the sea goes, and once the boat is lying on the slates. */
+    strandLow: 2.4, strandHigh: 3.4, uprightHigh: 3.8,
+    strandPace: 0.6,
   },
   /** One continuous passage from the last drowned houses to the forest beach. */
   storm: {

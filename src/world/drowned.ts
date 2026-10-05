@@ -14,7 +14,7 @@ import { tuning } from '../tuning';
 import { Swing } from './birches';
 import { DarkBank } from './drowned-dark';
 import {
-  CAT_HOUSE, DARK_WAY, GARDEN_TREE, GARDEN_WALLS, GREEN_TREE, NAVE, PLACED, STRAND_HOUSE, SWING_FROM, SWING_PIVOT,
+  CAT_HOUSE, DARK_WAY, GARDEN_TREE, GARDEN_WALLS, GREEN_TREE, NAVE, PLACED, SWING_FROM, SWING_PIVOT,
   inClearing, type GardenWall, type PlacedHouse,
 } from './drowned-way';
 
@@ -150,12 +150,17 @@ void main() {
   float soaked = 0.0;
   if (kind != ${OPENING}) {
     float wet = 1.0 - smoothstep(0.0, 0.85, old - lap);
-    alb = mix(alb, alb * vec3(0.3, 0.38, 0.29), wet * 0.92);
+    alb = mix(alb, alb * vec3(0.3, 0.38, 0.29), wet * mix(0.92, 0.55, drawn));
     alb += vec3(0.022, 0.026, 0.015) * (1.0 - smoothstep(0.0, 0.25, abs(old - lap - 0.85)));
     soaked = drawn * (1.0 - smoothstep(-0.05, 0.05, old - 0.12 * vnoise(vec2(along * 1.7, 3.1))));
     float strand = vnoise(vec2(along * 6.3, 7.7)) * 0.6 + vnoise(vec2(along * 17.0, 1.3)) * 0.4;
     float weed = soaked * smoothstep(0.45, 0.62, strand) * (1.0 - smoothstep(0.12, 0.2 + 0.85 * strand, -old));
-    alb = mix(alb * vec3(0.72, 0.76, 0.72), vec3(0.03, 0.045, 0.022) * (0.7 + 0.6 * grain), weed);
+    /** Deeper down, weed lies draped over whatever it settled on: slates, copings, sills. */
+    float draped = soaked * smoothstep(0.25, 0.6, -old) * smoothstep(0.6, 0.72,
+      vnoise(vWorld.xz * 0.9 + vec2(vWorld.y * 0.7, 0.0)) * 0.7 + vnoise(vWorld.xz * 3.1 - vWorld.y) * 0.3) * smoothstep(0.2, 0.6, n.y + 0.4);
+    float scum = drawn * (1.0 - smoothstep(0.0, 0.07, abs(old - 0.03 * vnoise(vec2(along * 3.0, 0.5)))));
+    alb = mix(alb * mix(vec3(1.0), vec3(0.62, 0.66, 0.62), soaked), vec3(0.03, 0.045, 0.022) * (0.7 + 0.6 * grain), max(weed, draped * 0.85));
+    alb = mix(alb, vec3(0.2, 0.19, 0.15), scum * 0.6);
   }
 
   float ndl = max(dot(n, uSunDir), 0.0);
@@ -168,12 +173,16 @@ void main() {
   float edge = pow(1.0 - clamp(dot(n, V), 0.0, 1.0), 3.0);
   col += uSunColor * edge * back * sun * (kind == ${THATCHED} ? 0.55 : 0.16) * (0.35 + alb);
   if (soaked > 0.0) {
-    float glint = pow(max(dot(reflect(-V, n), uSunDir), 0.0), 28.0);
-    float sheen = pow(1.0 - clamp(dot(n, V), 0.0, 1.0), 4.0);
-    float lane = floor(along * 4.0);
-    float runs = step(0.6, fract(sin(lane * 91.7) * 43758.5)) * (1.0 - smoothstep(0.0, 0.1, abs(fract(along * 4.0) - 0.5)));
-    float bead = smoothstep(0.88, 1.0, fract(old * 0.8 + uTime * (0.3 + 0.35 * fract(lane * 0.37)) + lane * 0.31)) * runs * uDrain;
-    col += (uSunColor * glint * sun * 0.5 + uSkyHorizon * (sheen * 0.16 + bead * 0.7)) * soaked;
+    /** Wet stone and slate give back the sky they face, and the low sun in a bright point. */
+    vec3 r = reflect(-V, n);
+    float fres = 0.08 + 0.92 * pow(1.0 - clamp(dot(n, V), 0.0, 1.0), 3.0);
+    vec3 skyBack = mix(uSkyHorizon, uSkyZenith, smoothstep(0.0, 0.7, r.y)) * smoothstep(-0.25, 0.15, r.y);
+    float glint = pow(max(dot(r, uSunDir), 0.0), 40.0) * sun;
+    float lane = floor(along * 5.0);
+    float runs = step(0.82, fract(sin(lane * 91.7) * 43758.5)) * (1.0 - smoothstep(0.0, 0.07, abs(fract(along * 5.0) - 0.5)))
+      * (1.0 - smoothstep(0.25, 0.45, abs(n.y)));
+    float bead = smoothstep(0.93, 1.0, fract(old * 0.8 + uTime * (0.3 + 0.35 * fract(lane * 0.37)) + lane * 0.31)) * runs * uDrain;
+    col = mix(col, skyBack * 0.8, fres * soaked * 0.7) + (uSunColor * glint * 0.5 + uSkyHorizon * bead * 0.22) * soaked;
   }
   if (kind == ${OPENING}) col = vColor * uSkyAmbient * 0.5;
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
@@ -1300,7 +1309,7 @@ export class DrownedVillage {
     buildChurch(body, rand);
     this.cameraObstacles.push(houseBounds({ ...NAVE, roll: 0, lime: STONE, roof: SLATE[0] }));
     const placing = mulberry32(9104);
-    PLACED.forEach((p, i) => this.addHouse(body, placedSpec(p, i), placing, p !== CAT_HOUSE && p !== STRAND_HOUSE));
+    PLACED.forEach((p, i) => this.addHouse(body, placedSpec(p, i), placing, p !== CAT_HOUSE));
     for (const w of GARDEN_WALLS) this.cameraObstacles.push(buildWall(body, w));
     const rock = new Merged();
     buildLighthouse(rock);

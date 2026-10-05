@@ -67,15 +67,17 @@ void main() {
   nv.xy += (vec2(vnoise(vCorner * 2.3 + seed * 9.0), vnoise(vCorner * 2.3 - seed * 4.0)) - 0.5) * 0.7;
   vec3 N = normalize(transpose(mat3(viewMatrix)) * normalize(nv));
   vec3 V = normalize(cameraPosition - vWorld);
-  vec3 alb = mix(vec3(0.062, 0.048, 0.078), vec3(0.075, 0.075, 0.13), tone);
+  vec3 alb = mix(vec3(0.03, 0.021, 0.045), vec3(0.075, 0.075, 0.13), tone);
   float wrap = clamp(dot(N, uSunDir) * 0.5 + 0.5, 0.0, 1.0);
   float toward = pow(max(0.0, dot(-V, uSunDir)), 3.0);
   float edge = pow(1.0 - clamp(nv.z, 0.0, 1.0), 1.6);
   // Under the storm the light is cold whatever the sunset is doing.
   vec3 sky = mix(uSkyAmbient, vec3(0.42, 0.45, 0.68) * dot(uSkyAmbient, vec3(0.33)), tone * 0.7) * mix(0.18, 1.6, pow(N.y * 0.5 + 0.5, 1.5));
-  float lit = pow(wrap, mix(2.0, 3.5, tone));
-  vec3 col = alb * (sky * 1.3 + uSunColor * lit * mix(2.4, 1.1, tone) * vSun * uWarm)
-    + uSunColor * edge * (0.012 + 0.04 * tone + toward * 0.25) * vSun * uWarm;
+  float lit = pow(wrap, mix(3.0, 3.5, tone));
+  // Smoke keeps the low sun to its rims, on the side the sun is: the body of it stays black.
+  float sunRim = pow(edge, 1.2) * clamp(dot(N, uSunDir) * 0.8 + N.y * 0.45, 0.0, 1.0);
+  vec3 col = alb * (sky * 1.1 + uSunColor * lit * mix(0.35, 1.1, tone) * vSun * uWarm)
+    + uSunColor * (sunRim * mix(0.3, 0.0, tone) + edge * (0.04 * tone + toward * 0.25)) * vSun * uWarm;
   gl_FragColor = vec4(mix(col, vFog.rgb, vFog.a), a);
 }`;
 
@@ -180,9 +182,11 @@ export class DarkBank {
     return [this.billows.mesh];
   }
 
-  /** Where its front crosses the way, for whoever is keeping something just ahead of it. */
-  frontAt(out: THREE.Vector2): THREE.Vector2 {
-    return darkWayPoint(this.reach, out);
+  /** Where its front is, `aside` metres along it from the way (+ to its right as it comes), for whoever watches it. */
+  frontAt(out: THREE.Vector2, aside = 0): THREE.Vector2 {
+    const k = tuning.drowned.dark, u = aside / k.halfWidth;
+    darkWayPoint(this.reach, out);
+    return out.set(out.x - this.ahead.y * aside + this.ahead.x * k.flank * u * u, out.y + this.ahead.x * aside + this.ahead.y * k.flank * u * u);
   }
 
   update(time: number, eye: THREE.Vector3): void {
@@ -209,7 +213,7 @@ export class DarkBank {
         const y = (r * 0.3 + h.height * crest * THREE.MathUtils.lerp(1.5, k.heap, h.back)) * risen;
         const edge = 1 - THREE.MathUtils.smoothstep(Math.abs(u), 0.75, 1);
         const distance = Math.hypot(x - eye.x, z - eye.z);
-        const haze = THREE.MathUtils.lerp(1, k.farHaze, THREE.MathUtils.smoothstep(distance, 60, 220));
+        const haze = THREE.MathUtils.lerp(k.nearHaze, k.farHaze, THREE.MathUtils.smoothstep(distance, 40, 200));
         b.put(x, y, z, r, 0.95 * edge * THREE.MathUtils.smoothstep(risen, 0, 0.35), 0, h.seed, haze);
       }
     }
