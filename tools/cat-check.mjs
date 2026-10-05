@@ -6,7 +6,8 @@
 //   drowned village (?chapter=drowned) and shoots it from the game's own camera, calm and in the storm.
 //   Writes <out-dir>/<light>-<action>-<moment>-<view>.png and <out-dir>/sheet-<light>.png, a contact sheet of each.
 //   env: ONLY=sit,run (actions), VIEWS=c-near,c-far,c-close,c-side (any stage view), LIGHTS=dusk,storm, ROOM=0 skips
-//        the drowned village; SLIP=1 also prints the furthest a planted paw moved in a frame during each action.
+//        the drowned village; SLIP=1 also prints, for each action, the furthest a planted paw moved in a frame (slip)
+//        and the furthest a leg fell short of a planted paw (short): both should stay at a few millimetres.
 //        STRIP=run@0.8,leap-roof@0.6 shoots each named action as a strip of 16 frames a thirtieth of a second apart
 //        from that many seconds in, side on (STRIP_VIEW, default c-side), to judge how it moves; nothing else is shot.
 //   Default out-dir: /tmp/updraft-cat-check.
@@ -40,6 +41,7 @@ const ACTIONS = {
   walk: [1.6],
   trot: [0.9],
   run: [0.55, 2.4],
+  'scared-run': [1.2],
   rail: [2.5, 6.5],
   gap: [1.1, 1.45, 3],
   climb: [0.9, 2.4, 5.5],
@@ -92,6 +94,8 @@ try {
           stage.play(`cat:${a}`);
           stage.look(v);
           window.__game.cat.probe.slip = 0;
+          window.__game.cat.probe.reach = 0;
+          window.__game.cat.probe.where = '';
         }, [action, view]);
         let at = 0;
         for (const moment of ACTIONS[action]) {
@@ -101,7 +105,10 @@ try {
           await page.screenshot({ path: file });
           shots[light].push({ file, label: `${action} ${moment}s ${view}` });
         }
-        if (process.env.SLIP) console.log(`slip ${action} ${view} ${(await page.evaluate(() => window.__game.cat.probe.slip)).toFixed(4)}`);
+        if (process.env.SLIP) {
+          const { slip, reach, where } = await page.evaluate(() => window.__game.cat.probe);
+          console.log(`${action.padEnd(10)} slip ${slip.toFixed(4)} m  short ${reach.toFixed(4)} m  (${where})`);
+        }
       }
     }
     await context.close();

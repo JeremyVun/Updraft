@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { ease, Spring, wrapAngle } from './motion';
-import { catGeometry, HEAD, JAW } from './cat/body';
+import { catGeometry, FPAW_L, FPAW_R, HEAD, HPAW_L, HPAW_R, JAW, TOE, WRIST } from './cat/body';
 import { CatGait, type GaitKind, type Support } from './cat/gait';
 import { CatRig, type Drives } from './cat/pose';
 import { Route } from './cat/route';
@@ -68,7 +68,7 @@ type Hold = CatPose | 'gather';
 
 const STANCES: Record<Hold, Stance> = {
   stand: { bodyY: 0.17, bodyZ: 0, pitch: 0.03, flex: 0.06, chestUp: 0, neckLow: 0, hock: 0.5, tuck: 0, front: [0.034, 0.088], hind: [0.04, -0.1], tailUp: 0.55, tailCurl: 0.12, tailWrap: 0 },
-  sit: { bodyY: 0.13, bodyZ: -0.025, pitch: 0.88, flex: -0.18, chestUp: 0.2, neckLow: -0.15, hock: 1.45, tuck: 0, front: [0.024, 0.08], hind: [0.044, 0.004], tailUp: -0.32, tailCurl: 0.22, tailWrap: 1 },
+  sit: { bodyY: 0.118, bodyZ: -0.025, pitch: 0.78, flex: -0.18, chestUp: 0.22, neckLow: -0.15, hock: 1.45, tuck: 0, front: [0.024, 0.08], hind: [0.044, 0.004], tailUp: -0.32, tailCurl: 0.22, tailWrap: 1 },
   gather: { bodyY: 0.112, bodyZ: -0.015, pitch: -0.05, flex: 0.2, chestUp: 0, neckLow: 0.15, hock: 0.85, tuck: 0, front: [0.03, 0.08], hind: [0.042, -0.068], tailUp: 0.0, tailCurl: 0, tailWrap: 0 },
   crouch: { bodyY: 0.088, bodyZ: 0, pitch: 0.05, flex: 0.3, chestUp: 0, neckLow: 0.6, hock: 1.45, tuck: 1.3, front: [0.028, 0.074], hind: [0.046, -0.06], tailUp: -0.02, tailCurl: 0, tailWrap: 1 },
 };
@@ -93,6 +93,7 @@ const smooth = (x: number) => {
   return t * t * (3 - 2 * t);
 };
 const UP = new THREE.Vector3(0, 1, 0);
+const PAWS = [FPAW_L, FPAW_R, HPAW_L, HPAW_R];
 const IDENTITY = new THREE.Matrix4();
 /** Whatever carries it moves in the story's update, after the scene last worked out where everything is. */
 const worldOf = (o: THREE.Object3D): THREE.Matrix4 => {
@@ -123,7 +124,7 @@ export class Cat {
   /** What it did this frame that makes a sound; whoever plays them empties the list. */
   readonly heard: CatSound[] = [];
   /** QA: the furthest a planted paw moved in one frame, and the furthest a leg was asked to reach past its length. */
-  readonly probe = { slip: 0, reach: 0 };
+  readonly probe = { slip: 0, reach: 0, where: '' };
 
   private readonly mesh: THREE.Mesh;
   private readonly mat: THREE.ShaderMaterial;
@@ -177,7 +178,6 @@ export class Cat {
   private readonly fromAt = new THREE.Vector3();
   private readonly fromQ = new THREE.Quaternion();
   private readonly fromPaws = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
-  private readonly released = [0, 0, 0, 0];
   private toFrame: THREE.Object3D | null = null;
   private readonly toAt = new THREE.Vector3();
   private readonly toFwd = new THREE.Vector3();
@@ -307,8 +307,8 @@ export class Cat {
   rest(pose: CatPose, look: THREE.Vector3 | null = this.target): void {
     if (this.airborne(() => this.rest(pose, look))) return;
     this.cancel();
-    this.settleInto(pose);
     this.target = look;
+    this.settleInto(pose);
   }
 
   /** Crouched where it is, tail wrapped, ears back, mewing every few seconds at `look`. */
@@ -626,8 +626,10 @@ export class Cat {
     /** Facing well away, it turns on the spot first rather than setting off sideways. */
     const facing = clamp((Math.cos(off) - 0.2) / 0.8, 0, 1);
     const brake = Math.sqrt(2 * (this.gait.kind === 'bound' ? 5 : 2.5) * Math.max(0, left));
-    const goal = Math.min(this.cruise * facing, brake);
-    this.speed = goal > this.speed ? ease(this.speed, goal, this.gait.kind === 'bound' ? 3 : 4, dt) : goal;
+    /** And it is up off its haunches before it goes anywhere. */
+    const up = smooth((this.weights.stand - 0.55) / 0.35);
+    const goal = Math.min(this.cruise * facing * up, brake);
+    this.speed = goal > this.speed ? ease(this.speed, goal, this.gait.kind === 'bound' ? 3 : 4, dt) : Math.max(goal, this.speed - 8 * dt);
     this.along = Math.min(route.length, this.along + this.speed * dt);
     route.at(this.along, this.at);
     this.at.y = this.floor!(this.at.x, this.at.z);
@@ -707,10 +709,7 @@ export class Cat {
     this.fromAt.copy(this.at);
     this.basisQuat(this.up, this.fwd, this.fromQ);
     if (this.frame) this.fromQ.premultiply(this.frame.getWorldQuaternion(this.q));
-    for (let i = 0; i < 4; i++) {
-      this.fromPaws[i].copy(this.paws[i]);
-      this.released[i] = i < 2 ? 0.0001 : 0;
-    }
+    for (let i = 0; i < 4; i++) this.fromPaws[i].copy(this.paws[i]);
     this.startW.copy(this.at).applyMatrix4(this.frameMatrix);
     this.ends();
     const top = Math.max(this.startW.y, this.endW.y) + this.apex;
@@ -794,7 +793,7 @@ export class Cat {
       const home = this.homes[i];
       const sideEnd = this.v.set(1, 0, 0).applyQuaternion(this.endQ);
       const fwdEnd = this.w2.set(0, 0, 1).applyQuaternion(this.endQ);
-      this.landPaw.copy(this.endW).addScaledVector(sideEnd, home.x).addScaledVector(fwdEnd, home.y + (front ? 0.03 : -0.01));
+      this.landPaw.copy(this.endW).addScaledVector(sideEnd, home.x).addScaledVector(fwdEnd, home.y + (front ? 0.03 : -0.01) * k);
       if (this.toFloor) this.landPaw.y = this.toFloor(this.landPaw.x, this.landPaw.z);
       const from = this.v.copy(this.fromPaws[i]);
       if (this.fromFrame) from.applyMatrix4(worldOf(this.fromFrame));
@@ -1149,7 +1148,9 @@ export class Cat {
   }
 
   private readonly pawW = new THREE.Vector3();
+  private readonly pawJoint = new THREE.Vector3();
 
+  /** QA: how far each planted paw moved since the last frame, and how far the leg fell short of where it was put down. */
   private measure(): void {
     if (this.reframed) {
       this.reframed = false;
@@ -1161,6 +1162,17 @@ export class Cat {
       if (planted && this.plantedWas[i]) this.probe.slip = Math.max(this.probe.slip, this.pawW.distanceTo(this.pawsWas[i]));
       this.pawsWas[i].copy(this.pawW);
       this.plantedWas[i] = planted;
+      if (!planted) continue;
+      this.rig.joint(PAWS[i], this.pawJoint);
+      const rise = (i < 2 ? WRIST : TOE) * this.scale;
+      this.pawW.addScaledVector(this.up, rise).applyMatrix4(this.frameMatrix);
+      /** A front paw may stand up on its toes by its own length before it counts as out of reach. */
+      const toes = i < 2 ? 0.025 * this.scale : 0;
+      const short = this.pawJoint.distanceTo(this.pawW) - toes;
+      if (short > this.probe.reach) {
+        this.probe.reach = short;
+        this.probe.where = `${this.doing} ${this.doing === 'air' ? this.air : ''} paw ${i} at ${this.time.toFixed(2)} s`;
+      }
     }
   }
 }

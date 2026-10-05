@@ -83,6 +83,7 @@ export class CatRig {
   private readonly ax = new THREE.Vector3();
   private readonly ay = new THREE.Vector3();
   private readonly az = new THREE.Vector3();
+  private tiptoe = 0;
 
   constructor() {
     this.nodes[ROOT] = this.root;
@@ -177,11 +178,16 @@ export class CatRig {
       this.hip.setFromMatrixPosition(n[leg.upper].matrixWorld);
       if (leg.front) {
         this.target.addScaledVector(this.wUp, WRIST * d.scale);
+        /** Reaching for a paw left far behind, the heel of the paw comes up off the ground before the leg runs out. */
+        this.tiptoe = this.heelUp(this.target, this.hip, (ARM + FORE) * d.scale, 0.025 * d.scale) / (0.03 * d.scale);
         this.reach(leg.upper, leg.lower, this.hip, this.target, ARM * d.scale, FORE * d.scale, 1, this.knee);
       } else {
+        this.tiptoe = 0;
         const tilt = d.hock[i - 2];
         this.target.addScaledVector(this.wUp, TOE * d.scale);
         this.hockAt.copy(this.target).addScaledVector(this.wUp, Math.cos(tilt) * META * d.scale).addScaledVector(this.wFwd, -Math.sin(tilt) * META * d.scale);
+        /** Pushing off, the hock lifts and the foot stands up on its toes, which is most of a hind leg's reach. */
+        this.heelUp(this.hockAt, this.hip, (THIGH + SHIN) * d.scale, META * d.scale * 1.6, this.target);
         this.reach(leg.upper, leg.lower, this.hip, this.hockAt, THIGH * d.scale, SHIN * d.scale, -1, this.knee);
         this.qp.copy(this.qb);
         this.aim(this.qa, this.dir.subVectors(this.target, this.hockAt).normalize());
@@ -190,9 +196,28 @@ export class CatRig {
       }
       /** The pad flat on the surface, toes along the way it faces, curled under as it swings. */
       this.m.makeBasis(this.wSide, this.wUp, this.wFwd);
-      this.q.setFromRotationMatrix(this.m).multiply(this.qa.setFromEuler(this.e.set(paw.curl, 0, 0)));
+      this.q.setFromRotationMatrix(this.m).multiply(this.qa.setFromEuler(this.e.set(paw.curl + this.tiptoe, 0, 0)));
       n[leg.paw].quaternion.copy(this.qb).invert().multiply(this.q);
     }
+  }
+
+  /**
+   * Swings `joint` round `pivot` (or, with none, simply toward `toward`) by as much as it takes to bring it within a
+   * leg's length of `toward`, over at most `give`: nothing while it is in reach, so a leg only stretches its foot when
+   * it would otherwise run out.
+   */
+  private heelUp(joint: THREE.Vector3, toward: THREE.Vector3, length: number, give: number, pivot?: THREE.Vector3): number {
+    const over = joint.distanceTo(toward) - length * 0.96;
+    if (over <= 0) return 0;
+    if (!pivot) {
+      const shift = Math.min(over, give);
+      joint.addScaledVector(this.bend.subVectors(toward, joint).normalize(), shift);
+      return shift;
+    }
+    const radius = joint.distanceTo(pivot);
+    this.bend.subVectors(joint, pivot).normalize().lerp(this.v.subVectors(toward, pivot).normalize(), Math.min(1, over / give)).normalize();
+    joint.copy(pivot).addScaledVector(this.bend, radius);
+    return over;
   }
 
   /**

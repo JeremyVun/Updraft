@@ -27,12 +27,15 @@ const PATTERN: Record<GaitKind, { offsets: [number, number, number, number]; dut
   climb: { offsets: [0.5, 0.55, 0, 0.05], duty: 0.5 },
 };
 
-/** Distance the body travels in one cycle at a given speed: longer strides as it goes faster, not only a faster patter. */
+/**
+ * Distance the body travels in one cycle at a given speed: longer strides as it goes faster, not only a faster patter,
+ * but never so long that a paw down at the end of its stance is out of reach of its leg.
+ */
 export function strideAt(kind: GaitKind, speed: number): number {
-  if (kind === 'walk') return 0.2 + 0.12 * speed;
-  if (kind === 'trot') return 0.28 + 0.14 * speed;
-  if (kind === 'bound') return 0.42 + 0.2 * speed;
-  return 0.24 + 0.1 * speed;
+  if (kind === 'walk') return 0.16 + 0.1 * speed;
+  if (kind === 'trot') return 0.2 + 0.1 * speed;
+  if (kind === 'bound') return 0.4 + 0.12 * speed;
+  return 0.22 + 0.08 * speed;
 }
 
 export interface Support {
@@ -175,8 +178,8 @@ export class CatGait {
           p.curl = Math.sin(Math.min(1, p.swing * 1.4) * Math.PI);
           p.at.addScaledVector(s.up, p.lift);
         } else if (!p.planted) this.plant(p, i, s);
-      } else if (p.planted && p.at.distanceTo(home) > 0.03 && this.othersDown(i) && this.idle > 0.08) {
-        /** Standing, a paw left out of place is put back under it, one at a time. */
+      } else if (p.planted && p.at.distanceTo(home) > 0.03 * this.scale && this.othersDown(i) && (this.idle > 0.08 || p.at.distanceTo(home) > 0.07 * this.scale)) {
+        /** Standing, a paw left out of place is put back under it, one at a time; one left well out straight away. */
         p.planted = false;
         p.from.copy(p.at);
         p.swing = 0;

@@ -22,8 +22,8 @@ export const NOSE = 3;
 export const MOUTH = 4;
 export const WHISKER = 5;
 
-export const ARM = 0.078;
-export const FORE = 0.072;
+export const ARM = 0.082;
+export const FORE = 0.076;
 export const THIGH = 0.07;
 export const SHIN = 0.066;
 export const META = 0.046;
