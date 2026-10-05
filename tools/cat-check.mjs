@@ -20,7 +20,7 @@ process.on('SIGTERM', () => process.exit(143));
 const out = path.resolve(process.argv[2] ?? '/tmp/updraft-cat-check');
 fs.mkdirSync(out, { recursive: true });
 const base = process.env.BASE ?? 'http://127.0.0.1:5230/';
-const list = (v, all) => (v ? v.split(',') : all);
+const list = (v, all) => (v === 'none' ? [] : v ? v.split(',') : all);
 
 /** Each action, and the moments after it starts (seconds of game time) that show it best. */
 const ACTIONS = {
@@ -143,18 +143,44 @@ try {
       await advance(4);
       const room = `room-${light}`;
       shots[room] = [];
-      /** On the mast thwart, the bow's end of the boat, as far from the water as it can get. */
+      /** Up on the foredeck, as far from the water as it can get, facing aft to the child. */
       await page.evaluate(() => {
         const { cat, boat, child } = window.__game;
+        const head = child.position.clone();
         cat.visible = true;
-        cat.place(new boat.group.position.constructor(0, 0.07, 0.55), 0, { frame: boat.group, pose: 'sit' });
-        cat.curious = child.position;
+        cat.place(new head.constructor(0, 0.668, 1.85), Math.PI, { frame: boat.group, pose: 'sit' });
+        cat.look(head);
+        cat.curious = head;
+        window.__catLook = () => head.copy(child.position).setY(child.position.y + 0.9);
       });
-      for (const [moment, label] of [[1, 'sits'], [6, 'later']]) {
-        await advance(moment);
+      let at = 0;
+      for (const [moment, label] of [[8, 'drifting'], [20, 'among-roofs']]) {
+        for (let k = at; k < moment; k += 0.5) {
+          await advance(0.5);
+          await page.evaluate(() => window.__catLook());
+        }
+        at = moment;
         const file = path.join(out, `${room}-${label}.png`);
         await page.screenshot({ path: file });
-        shots[room].push({ file, label: `drowned village, aboard (${light}) ${label}` });
+        shots[room].push({ file, label: `drowned village, aboard (${light}) ${label}, the game's camera` });
+        /** While the world is held, the lens can be stood anywhere: off the beam at the game's distances. */
+        for (const [distance, rise] of [[5, 1.6], [12, 4]]) {
+          await page.evaluate(([d, h]) => {
+            const { cat, rig, boat } = window.__game;
+            const side = new cat.position.constructor(1, 0, 0).transformDirection(boat.group.matrixWorld);
+            const at = cat.position.clone();
+            at.y += 0.2;
+            rig.camera.position.copy(at).addScaledVector(side, d).add(new at.constructor(0, h, 0));
+            rig.camera.lookAt(at);
+            rig.camera.updateMatrixWorld();
+            const far = rig.camera.position.distanceTo(at);
+            window.__game.post.focusOn(far - 0.6, far + 1);
+          }, [distance, rise]);
+          await page.waitForTimeout(150);
+          const shot = path.join(out, `${room}-${label}-${distance}m.png`);
+          await page.screenshot({ path: shot });
+          shots[room].push({ file: shot, label: `drowned village, aboard (${light}) ${label}, ${distance} m off the beam` });
+        }
       }
       await context.close();
     }

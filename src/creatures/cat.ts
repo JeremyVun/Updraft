@@ -110,8 +110,8 @@ export class Cat {
   readonly position = new THREE.Vector3();
   yaw = 0;
   visible = false;
-  /** How big it is drawn, 1 as it is. */
-  scale = 1;
+  /** How big it is: 1.15 stands it about a quarter of a metre at the shoulder, beside a child of about 1.1 m. */
+  scale = 1.15;
   /** How afraid it is underneath whatever happens, 0..1: the story sets it high in the tub and over the water. */
   unease = 0;
   /** 0 dry to 1 soaked. */
@@ -292,6 +292,10 @@ export class Cat {
     this.d.hock[0] = this.d.hock[1] = s.hock;
     this.doing = 'still';
     this.frameFresh = true;
+    this.fear = this.unease;
+    this.mewT = this.chirpT = this.blinkT = -1;
+    this.idle = null;
+    this.flinch.value = this.flinch.velocity = this.dip.value = this.dip.velocity = 0;
     this.homesFor(0);
     this.gait.reset(this.support, this.homes);
     this.syncWorld();
@@ -545,7 +549,7 @@ export class Cat {
         x += h[0] * w[p];
         y += h[1] * w[p];
       }
-      this.homes[i].set(side * THREE.MathUtils.lerp(x, front ? 0.006 : 0.01, narrow), y);
+      this.homes[i].set(side * THREE.MathUtils.lerp(x, front ? 0.006 : 0.01, narrow), y).multiplyScalar(this.scale);
     }
   }
 
@@ -565,7 +569,8 @@ export class Cat {
 
     if (this.doing === 'air') this.fly(dt);
     else {
-      const lift = this.gait.kind === 'bound' ? 0.05 : this.gait.kind === 'trot' ? 0.035 : 0.028;
+      const lift = (this.gait.kind === 'bound' ? 0.05 : this.gait.kind === 'trot' ? 0.035 : 0.028) * this.scale;
+      this.gait.scale = this.scale;
       this.gait.update(dt, this.support, this.heading, this.homes, lift);
       const tuck = POSES.reduce((sum, p) => sum + STANCES[p].tuck * this.weights[p], 0);
       for (let i = 0; i < 4; i++) {
@@ -653,7 +658,7 @@ export class Cat {
         this.heading = easeAngle(this.heading, want, 6, dt);
         this.fwd.set(Math.sin(this.heading), 0, Math.cos(this.heading));
       }
-      this.gait.update(dt, this.support, this.heading, this.homes, 0.02);
+      this.gait.update(dt, this.support, this.heading, this.homes, 0.02 * this.scale);
       for (let i = 0; i < 4; i++) this.paws[i].copy(this.gait.paws[i].at);
       this.airT += dt;
       if (this.airT >= this.gatherFor && (this.gait.still || this.airT >= this.gatherFor + 0.3)) this.takeOff();
@@ -666,7 +671,7 @@ export class Cat {
       return;
     }
     this.airT += dt;
-    this.gait.update(dt, this.support, this.heading, this.homes, 0.02);
+    this.gait.update(dt, this.support, this.heading, this.homes, 0.02 * this.scale);
     for (let i = 0; i < 4; i++) this.paws[i].copy(this.gait.paws[i].at);
     if (this.airT >= this.landFor) {
       const after = this.afterAir;
@@ -760,7 +765,8 @@ export class Cat {
     const p = this.flightPitch;
     const along = this.along3.copy(this.fwd).multiplyScalar(Math.cos(p)).addScaledVector(this.up, Math.sin(p));
     const down = this.down3.copy(this.up).multiplyScalar(-Math.cos(p)).addScaledVector(this.fwd, Math.sin(p));
-    const body = this.body3.copy(this.at).addScaledVector(this.up, 0.155);
+    const k = this.scale;
+    const body = this.body3.copy(this.at).addScaledVector(this.up, 0.155 * k);
     const stretch = Math.sin(t * Math.PI);
     const tuck = smooth((t - 0.35) / 0.4);
     for (let i = 0; i < 4; i++) {
@@ -768,11 +774,11 @@ export class Cat {
       const s = i % 2 === 0 ? 1 : -1;
       /** In the air the front paws reach on ahead along the body; the hind ones trail out long behind, then come under it. */
       if (front) {
-        this.bodyPaw.copy(body).addScaledVector(along, 0.15 + 0.07 * stretch).addScaledVector(down, 0.1 - 0.05 * stretch);
+        this.bodyPaw.copy(body).addScaledVector(along, (0.15 + 0.07 * stretch) * k).addScaledVector(down, (0.1 - 0.05 * stretch) * k);
       } else {
-        this.bodyPaw.copy(body).addScaledVector(along, -0.2 * (1 - tuck) - 0.04 * tuck).addScaledVector(down, 0.07 + 0.06 * tuck);
+        this.bodyPaw.copy(body).addScaledVector(along, (-0.2 * (1 - tuck) - 0.04 * tuck) * k).addScaledVector(down, (0.07 + 0.06 * tuck) * k);
       }
-      this.bodyPaw.addScaledVector(side, s * (front ? 0.026 : 0.036));
+      this.bodyPaw.addScaledVector(side, s * (front ? 0.026 : 0.036) * k);
       const home = this.homes[i];
       const sideEnd = this.v.set(1, 0, 0).applyQuaternion(this.endQ);
       const fwdEnd = this.w2.set(0, 0, 1).applyQuaternion(this.endQ);
@@ -856,13 +862,13 @@ export class Cat {
 
   /** Sitting with nothing asked of it: it washes a paw, flicks its tail, glances at what it is curious about, slow-blinks. */
   private idles(dt: number): void {
-    const sitting = this.doing === 'still' && this.turnTo === null && this.weights.sit > 0.9 && this.mewT < 0;
+    const sitting = this.doing === 'still' && this.turnTo === null && this.weights.sit > 0.9;
     if (this.idle) {
       this.idleT += dt;
       if (this.idleT >= this.idleFor || (!sitting && this.idle === 'wash')) this.idle = null;
       return;
     }
-    if (!sitting) return;
+    if (!sitting || this.mewT >= 0) return;
     this.nextIdle -= dt;
     if (this.nextIdle > 0) return;
     const r = Math.random();
@@ -947,7 +953,7 @@ export class Cat {
         }
       } else {
         osc.flex = 0.2 * Math.cos(ph) * k;
-        bodyY -= 0.035;
+        bodyY -= 0.055;
         tailUp = -0.5;
         tailCurl = 0;
         headPitch = 0.15;
@@ -1007,7 +1013,7 @@ export class Cat {
       jaw = up * (0.25 + 0.2 * Math.sin(this.idleT * 22));
       this.rig.joint(JAW, this.washAt);
       this.washAt.applyMatrix4(this.frameInverse);
-      this.paws[1].lerp(this.washAt.addScaledVector(this.up, -0.035), up * 0.92);
+      this.paws[1].lerp(this.washAt.addScaledVector(this.up, -0.035 * this.scale), up * 0.92);
       this.d.paws[1].curl = 1.4 * up;
     }
     if (this.idle === 'flick') tailFlick = Math.sin((this.idleT / this.idleFor) * Math.PI * 3) * 0.9;
@@ -1071,7 +1077,7 @@ export class Cat {
     d.headPitch = ease(d.headPitch, headPitch, 7, dt);
     d.headRoll = ease(d.headRoll, headRoll, 6, dt);
     d.jaw = ease(d.jaw, jaw, 18, dt);
-    d.earBack = clamp(ears, -0.1, 1.15);
+    d.earBack = clamp(ears, -0.1, 0.95);
     d.earTwitch[0] = this.twitchL * (1 - d.earBack);
     d.earTwitch[1] = -this.twitchR * (1 - d.earBack);
     const hockRate = this.doing === 'air' ? 12 : 6;
@@ -1090,7 +1096,7 @@ export class Cat {
     const blink = this.blinkT >= 0 ? Math.sin((this.blinkT / 0.16) * Math.PI) : 0;
     const slow = this.idle === 'blink' ? Math.sin((this.idleT / this.idleFor) * Math.PI) ** 0.6 * 0.85 : 0;
     look.blink = Math.max(blink, slow);
-    look.pupil = clamp(pupil, 0.35, 1);
+    look.pupil = clamp(pupil, 0.35, 0.9);
     look.air = 0.6;
     look.wet = this.wet;
     applyCatLook(this.mat, look);

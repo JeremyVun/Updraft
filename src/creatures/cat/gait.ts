@@ -57,6 +57,8 @@ export class CatGait {
   /** 0 standing to 1 at full stretch, eased, for the body to lean and bob with. */
   pace = 0;
   speed = 0;
+  /** How big the cat is: its strides are as long as its legs. */
+  scale = 1;
   private readonly prev = new THREE.Vector3();
   private yawWas = 0;
   private fresh = true;
@@ -132,7 +134,7 @@ export class CatGait {
     this.yawWas = yaw;
     this.prev.copy(s.origin);
     this.speed = moved / dt;
-    const stride = strideAt(this.kind, this.speed);
+    const stride = strideAt(this.kind, this.speed / this.scale) * this.scale;
     this.pace += (Math.min(1, this.speed / 3) - this.pace) * (1 - Math.exp(-dt * 6));
     /** Turning on the spot takes steps too: each paw has to go round the body. */
     const travel = moved + turned * 0.12;

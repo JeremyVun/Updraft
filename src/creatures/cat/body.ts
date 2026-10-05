@@ -268,7 +268,7 @@ export function catGeometry(): THREE.BufferGeometry {
   /** The muzzle: two round whisker pads and a chin, white, with a small pink nose on top. */
   pair({ part: HEAD, mat: FUR, at: add(H, [0.0155, -0.013, 0.071]), size: [0.0195, 0.0155, 0.016], detail: 2, blend: () => 1 });
   rigid({ part: JAW, mat: FUR, at: add(REST[JAW], [0, -0.004, 0.025]), size: [0.0165, 0.01, 0.016], detail: 2, blend: () => 1 });
-  rigid({ part: JAW, mat: MOUTH, at: add(REST[JAW], [0, 0.005, 0.02]), size: [0.0125, 0.006, 0.014], detail: 1 });
+  rigid({ part: JAW, mat: MOUTH, at: add(REST[JAW], [0, 0.006, 0.019]), size: [0.014, 0.008, 0.016], detail: 2 });
   rigid({
     part: HEAD,
     mat: NOSE,

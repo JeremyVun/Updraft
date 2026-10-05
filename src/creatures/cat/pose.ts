@@ -120,7 +120,7 @@ export class CatRig {
     n[PELVIS].rotation.set(-d.flex * 0.9, 0, 0);
     n[CHEST].rotation.set(d.flex * 0.6 - d.chestUp, 0, 0);
 
-    n[JAW].rotation.set(d.jaw * 0.55, 0, 0);
+    n[JAW].rotation.set(d.jaw * 0.7, 0, 0);
     this.root.updateMatrixWorld(true);
     this.head(d);
 
