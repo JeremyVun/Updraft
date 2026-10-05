@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { glsl, tuning } from '../../tuning';
 import { SKY_MIRROR } from '../sky-mirror-layout';
 
@@ -25,7 +26,19 @@ const speed = (len: number) => Math.sqrt((GRAVITY * len) / (2 * Math.PI));
 export const swellUniforms = {
   /** Height of the swell from trough to crest in world units, 0 for a flat sea. */
   uSwell: { value: 0 },
+  /** One swell spreading from where something huge went under: centre x and z, when it went, and its height. */
+  uSurge: { value: new THREE.Vector4(0, 0, -1e4, 0) },
 };
+
+const S = tuning.sleepingWhale;
+
+/** The surge's lift at distance r from where it began, t seconds after: a short packet of crests running outward. */
+function surge(r: number, t: number): number {
+  const front = t * S.surgeSpeed;
+  const d = r - front;
+  return Math.exp(-(d * d) / (S.surgeWidth * S.surgeWidth)) * Math.cos((2 * Math.PI * d) / S.surgeLength)
+    * THREE.MathUtils.smoothstep(front, 0, 6) * 12 / (12 + r);
+}
 
 const wave = (w: (typeof WAVES)[number]) => /* glsl */ `
   {
@@ -37,13 +50,23 @@ const wave = (w: (typeof WAVES)[number]) => /* glsl */ `
 /** Needs ATMO_GLSL first, in whichever stage uses it. */
 export const SWELL_GLSL = /* glsl */ `
 uniform float uSwell;
+uniform vec4 uSurge;
+
+float surgeLift(vec2 p) {
+  if (uSurge.w <= 0.0) return 0.0;
+  float r = distance(p, uSurge.xy);
+  float front = (uTime - uSurge.z) * ${glsl(S.surgeSpeed)};
+  float d = r - front;
+  return uSurge.w * exp(-d * d / ${glsl(S.surgeWidth * S.surgeWidth)}) * cos(${glsl((2 * Math.PI) / S.surgeLength)} * d)
+    * smoothstep(0.0, 6.0, front) * 12.0 / (12.0 + r);
+}
 
 /** Where the swell carries the water that would lie at p: sideways in xz, and up in y. */
 vec3 swellShift(vec2 p, float height) {
   vec2 drag = vec2(0.0);
   float lift = 0.0;
   ${WAVES.map(wave).join('')}
-  return vec3(drag.x, lift, drag.y);
+  return vec3(drag.x, lift + surgeLift(p), drag.y);
 }
 
 /** How much of that chop the water at p can carry: none in the shallows, none where the mesh is too coarse. */
@@ -110,6 +133,8 @@ function shift(ux: number, uz: number, time: number, out: Shift): Shift {
     out.z += w.dz * drag;
     out.y += w.amp * height * Math.sin(ph);
   }
+  const g = swellUniforms.uSurge.value;
+  if (g.w > 0) out.y += g.w * surge(Math.hypot(ux - g.x, uz - g.y), time - g.z);
   return out;
 }
 

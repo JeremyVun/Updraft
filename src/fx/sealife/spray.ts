@@ -57,6 +57,7 @@ void main() {
 
 const FRAG = /* glsl */ `
 ${ATMO_GLSL}
+uniform float uRainbow;
 in vec2 vQ;
 in vec3 vWorld;
 in float vKind;
@@ -92,6 +93,14 @@ void main() {
     col = vec3(0.92, 0.9, 0.84) * (sky + uSunColor * (0.45 + pow(toSun, 4.0) * 2.5) * sun);
     additive = 0.25;
   }
+  if (uRainbow > 0.0 && vKind < 1.5) {
+    /** Sunlit drops make a bow about 42 degrees from the point opposite the sun: red outside, violet within. */
+    float bow = degrees(acos(clamp(dot(V, uSunDir), -1.0, 1.0)));
+    float band = (bow - 38.5) / 5.0;
+    vec3 hue = clamp(vec3(1.6 - abs(band - 0.95) * 2.6, 1.4 - abs(band - 0.55) * 2.8, 1.3 - abs(band - 0.1) * 2.6), 0.0, 1.0);
+    float within = smoothstep(-0.15, 0.1, band) * (1.0 - smoothstep(0.9, 1.15, band));
+    col += hue * uSunColor * sun * within * uRainbow * (vKind < 0.5 ? 0.9 : 0.5);
+  }
   a *= smoothstep(-0.05, 0.3, vWorld.y);
   if (a < 0.003) discard;
   vec4 fog = fogOf(vWorld);
@@ -120,6 +129,8 @@ export class Spray {
   private readonly c: THREE.InstancedBufferAttribute;
   private readonly geo = new THREE.InstancedBufferGeometry();
   private readonly air: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
+  /** How strongly the mist in the air shows a bow where the sun is behind the viewer, 0..1. */
+  readonly rainbow = { value: 0 };
 
   constructor(private readonly wind: WindField) {
     const quad = new THREE.PlaneGeometry(2, 2);
@@ -138,7 +149,7 @@ export class Spray {
       new THREE.ShaderMaterial({
         vertexShader: VERT,
         fragmentShader: FRAG,
-        uniforms: { ...atmo.uniforms },
+        uniforms: { ...atmo.uniforms, uRainbow: this.rainbow },
         transparent: true,
         depthWrite: false,
         side: THREE.DoubleSide,
@@ -200,6 +211,30 @@ export class Spray {
     }
     for (let i = 0; i < 32; i++) {
       this.emit(DROP, at.x, at.y + 0.3, at.z, (Math.random() - 0.5) * 2.4, 4 + Math.random() * 6, (Math.random() - 0.5) * 2.4, 0.016 + Math.random() * 0.018, 2.5, 0, 0.55);
+    }
+  }
+
+  /**
+   * One frame of a spout held for a while: a narrow jet of drops thrown `height` high, opening into a crown of mist
+   * as it slows, a column rather than the bushy cloud of `blow`.
+   */
+  jet(at: THREE.Vector3, height: number, strength: number, dt: number): void {
+    const up = Math.sqrt(2 * 9.8 * height);
+    const n = Math.floor(strength * 260 * dt + Math.random());
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const out = Math.random() * 0.6;
+      const v = up * (0.82 + Math.random() * 0.2) * strength;
+      this.emit(DROP, at.x + Math.cos(a) * 0.08, at.y, at.z + Math.sin(a) * 0.08, Math.cos(a) * out, v, Math.sin(a) * out,
+        0.02 + Math.random() * 0.02, v / 9.8 * 1.6, 0, 0.6);
+    }
+    const m = Math.floor(strength * 120 * dt + Math.random());
+    for (let i = 0; i < m; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const rise = Math.random();
+      const out = 0.2 + rise * 1.4 * Math.random();
+      this.emit(MIST, at.x, at.y + rise * height * 0.6, at.z, Math.cos(a) * out, (2 + rise * 6) * strength, Math.sin(a) * out,
+        0.18 + rise * 0.3, 2.5 + Math.random() * 2.5, 0.3 + rise * 0.8, 0.04 + Math.random() * 0.04);
     }
   }
 

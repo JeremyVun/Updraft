@@ -213,6 +213,29 @@ function gullGeometry(): THREE.BufferGeometry {
   return merge([...blobs, ...wings]);
 }
 
+/**
+ * Gull bodies drawn as instances: iPos (x, y, z, yaw), iAtt (pitch, roll), iWing (inner and outer wing raise, sweep
+ * back, head turn).
+ */
+export function gullMesh(capacity: number): { instances: Instances; mesh: THREE.Mesh } {
+  const instances = new Instances(gullGeometry(), capacity, ['iPos', 'iAtt', 'iWing']);
+  const material = new THREE.ShaderMaterial({
+    vertexShader: VERT,
+    fragmentShader: FRAG,
+    uniforms: {
+      ...atmo.uniforms,
+      uWhite: { value: new THREE.Color('#f6f3ee') },
+      uMantle: { value: new THREE.Color('#8d99a6') },
+      uTip: { value: new THREE.Color('#1d1d22') },
+      uBill: { value: new THREE.Color('#f2c14e') },
+    },
+    side: THREE.DoubleSide,
+  });
+  const mesh = new THREE.Mesh(instances.geometry, material);
+  mesh.frustumCulled = false;
+  return { instances, mesh };
+}
+
 interface Gull {
   rand: Rng;
   seed: number;
@@ -259,21 +282,7 @@ export class Gulls {
     private readonly habitat: Habitat,
     capacity = 12,
   ) {
-    this.instances = new Instances(gullGeometry(), capacity, ['iPos', 'iAtt', 'iWing']);
-    const material = new THREE.ShaderMaterial({
-      vertexShader: VERT,
-      fragmentShader: FRAG,
-      uniforms: {
-        ...atmo.uniforms,
-        uWhite: { value: new THREE.Color('#f6f3ee') },
-        uMantle: { value: new THREE.Color('#8d99a6') },
-        uTip: { value: new THREE.Color('#1d1d22') },
-        uBill: { value: new THREE.Color('#f2c14e') },
-      },
-      side: THREE.DoubleSide,
-    });
-    this.mesh = new THREE.Mesh(this.instances.geometry, material);
-    this.mesh.frustumCulled = false;
+    ({ instances: this.instances, mesh: this.mesh } = gullMesh(capacity));
   }
 
   /** Adds a gull soaring over a region centred on (x, z). */

@@ -320,7 +320,7 @@ export class Cygnet {
       time: 0, carried: false, seat: null, inHands: false, move: null, jostle: 0, falling: false, gliding: false, leaving: false, afoot: false, downed: false, afloat: false, perched: false,
       settle: 0, fear: 0, bond: 0, cold: 0, effort: 0, flap: 0, flapPhase: 0, glide: 0, look: 0, tucked: 0, hope: 0, hopLift: 0, crouch: 0, landing: 0, faceplant: 0, flop: 0, doze: 0, wriggle: 0,
       puff: 0, stride: 0, hurry: 0, pitch: 0, roll: 0, beg: 0, call: { env: 0, note: 0, long: false }, gaze: { yaw: 0, pitch: 0, firm: false, wandering: true },
-      act: null, actK: 0, actEnv: 0, actSide: 1, actYaw: 0, breath: 0, blink: 0, wingGuard: 0, wingOpening: 0, wind: { x: 0, z: 0 },
+      act: null, actK: 0, actEnv: 0, actSide: 1, actYaw: 0, breath: 0, blink: 0, wingGuard: 0, wingOpening: 0, duck: 0, wind: { x: 0, z: 0 },
       gait: { on: false, feet: [{ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }], sway: 0, roll: 0, twist: 0, dip: 0, pace: 0 },
     };
     this.mat = cygnetMaterial(this.bones);
@@ -770,6 +770,9 @@ export class Cygnet {
   bind(amount: number): void {
     this.bond = Math.min(1, this.bond + amount);
   }
+
+  /** Ducked down into the satchel, peeking over the rim at something too big to be sure of, 0..1. Quiet while it is. */
+  duck = 0;
 
   watch(target: THREE.Vector3 | null): void {
     this.mind.told = target;
@@ -1547,7 +1550,7 @@ export class Cygnet {
     const against = clamp(-this.seating.jostle.x * 3.5, -0.13, 0.13);
     const rock = Math.sin(this.time * 2.1) * 0.022 * clamp(this.seating.speed * 0.6, 0, 1);
     this.roll = ease(this.roll, (against + rock) * (1 - this.doze * 0.8), 3, dt);
-    if (this.mind.told && this.state === 'hooded' && this.time > this.nextCall) {
+    if (this.mind.told && this.state === 'hooded' && this.duck === 0 && this.time > this.nextCall) {
       /** In the hood with the family in sight: it stretches up and calls to them, and nothing answers. */
       this.call(true);
       this.nextCall = this.time + 5 + Math.random() * 1.5;
@@ -1661,6 +1664,7 @@ export class Cygnet {
     d.blink = this.blink;
     d.wingGuard = Math.max(this.wing.guard, this.wrench);
     d.wingOpening = this.wing.opening;
+    d.duck = this.duck;
 
     const yaw = this.seating.yaw;
     const cy = Math.cos(yaw);

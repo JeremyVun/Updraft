@@ -1394,6 +1394,33 @@ export const tuning = {
     },
   },
 
+  /**
+   * The whale asleep across the way on the crossing to the meadow: the one thing a crossing waits for. It lies
+   * broadside on the route `along` metres past its first waypoint, dreamt `scale` times the surfacing whale's size.
+   */
+  sleepingWhale: {
+    along: 40, scale: 1.8,
+    /** Clear water left between the bow and its flank (m), and how far the bow reaches ahead of the boat's centre. */
+    gap: 7, bow: 1.5,
+    /** Back crest above the water (m) asleep; the hold eases the boat's speed limit down at this rate (m/s²). */
+    crest: 1.5, settle: 0.32,
+    /** Released the same way: the limit climbs back at this rate (m/s²) once the flukes are up. */
+    release: 0.5,
+    /** Seconds between breaths asleep, how far the back rises with one (m), and the mist over the blowhole. */
+    breathEvery: 5.5, breathRise: 0.12, mist: 1,
+    /** A gust across the back on screen (`brushFrom` and up) tickles it: a shiver along the stroke, a lazy slap. */
+    brushFrom: 4, brushRadius: 0.05, slapEvery: 2.2,
+    /** Circling over the blowhole: the charge that starts to count, the charge that counts fully, progress per second. */
+    liftFrom: 0.12, liftFull: 0.5, liftRate: 0.22, reach: 4,
+    /** Seconds held still without progress before the spiral shows, and before the gull goes and pecks it awake. */
+    inviteAfter: 6, valveAfter: 90,
+    coaxUrgency: 0.7, coaxRadius: 1.4,
+    /** The swell it leaves: speed (m/s), crest spacing (m), width of the packet (m) and height at the boat (m). */
+    surgeSpeed: 4, surgeLength: 7, surgeWidth: 6, surgeHeight: 0.35,
+    /** The camera's hold beside it: distance, height, the bearing off astern, and how fast it eases in and out. */
+    holdDistance: 20, holdHeight: 6, holdBearing: 0.05, holdEase: 0.25,
+  },
+
   seaPassage: {
     speed: 10,
     arrivalSpeed: 3.5,
