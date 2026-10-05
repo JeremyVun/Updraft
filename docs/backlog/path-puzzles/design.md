@@ -676,6 +676,9 @@ encounter may read as the boat speeding up.
   (`whale-blow` exists in `audio/foley.ts`), slap, the gull.
 - Saves: a crossing checkpoint taken before it wakes resumes with it asleep; one taken after resumes without it.
 - The meadow island beyond stays the grey shape in haze it is today.
+- As placed in the first build (C2a, 2026-10-05): about 57 m past the first waypoint of `toMeadow`, scaled 1.8 (25 m
+  long), the boat at rest about 18 s into the crossing; an idle player is woken by the gull about 90 s later. No
+  rainbow (Claude's call): on this crossing the sun is ahead of the camera, so the sun does not allow one.
 
 **QA starts.** `?chapter=toMeadow` (and any `to*` crossing) starts that crossing at its first waypoint, cygnet in
 the satchel (`src/story/journey.ts`, branch `crossings-start`).
