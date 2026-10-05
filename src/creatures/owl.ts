@@ -215,7 +215,9 @@ void main() {
   if (mat == ${EYE}) {
     col += vec3(1.0, 0.95, 0.85) * catchlight(N, vWorld) * (0.25 + 0.6 * length(warm * shade)) * glow;
     // Eyeshine: the light thrown back out of the eyes, which is all a frightened child sees of them in the dark.
-    col += vec3(1.0, 0.72, 0.22) * uOwlEyes.x * glow * 1.8;
+    // Further off the glow drawn over them is spread wider than the eyes are, and is the only pair there is.
+    float near = 1.0 - smoothstep(${GLOW_NEAR.toFixed(1)}, ${(GLOW_NEAR + 1).toFixed(1)}, distance(cameraPosition, vWorld));
+    col += vec3(1.0, 0.72, 0.22) * uOwlEyes.x * glow * 1.8 * near;
   }
   // Flying up out of the firelight it keeps the coals' warmth from below and a warm edge to its down, so it reads as a
   // little brown owl against the night sky rather than a pale moth; the moon only touches its back.
@@ -358,7 +360,8 @@ void main() {
   vec3 c = mid + ((aSide < 0.0 ? uEyeL : uEyeR) - mid) * far;
   vUv = position.xy;
   vec4 view = viewMatrix * vec4(c + (right * position.x + up * position.y) * uGlowSize * far, 1.0);
-  view.xyz += normalize(-view.xyz) * 0.12;
+  // Spread, it stands off the face as far as it is spread, so the limbs either side never cut into it.
+  view.xyz += normalize(-view.xyz) * 0.12 * far;
   gl_Position = projectionMatrix * view;
 }`;
 
