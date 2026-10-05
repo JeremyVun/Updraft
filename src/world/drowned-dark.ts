@@ -116,7 +116,7 @@ export class DarkBank {
     if (this.front.distanceToSquared(this.back) > 1) this.ahead.subVectors(this.front, this.back).normalize();
     u.uSeaFog.value.set(this.front.x, this.front.y, this.ahead.x, this.ahead.y);
     // Low on the horizon as it rises, and standing higher the nearer it comes.
-    const top = k.top * (0.25 + 0.75 * smooth(this.rise, 0, 1)) * (0.6 + 0.4 * smooth(p, far, near));
+    const top = k.top * (0.25 + 0.75 * smooth(this.rise, 0, 1)) * (0.7 + 0.3 * smooth(p, far, near)) * (1 + 0.4 * this.close);
     u.uSeaFogShape.value.set(top, d.flank / (d.halfWidth * d.halfWidth), this.close, amount);
     u.uSeaFogSides.value.set(d.halfWidth, d.halfWidth * 1.8, d.wing * d.halfWidth, (d.wing + 0.35) * d.halfWidth);
 
@@ -126,7 +126,7 @@ export class DarkBank {
     // White is what the light makes of it: as bright as the sky round it lights it, never a white of its own.
     const sky = luminance(u.uSkyAmbient.value) * 0.9 + luminance(u.uSkyHorizon.value) * 0.3;
     this.body.copy(HUE.far).lerp(HUE.near, taken).lerp(HUE.night, night)
-      .multiplyScalar(sky * k.body * (1 - 0.3 * night));
+      .multiplyScalar(sky * k.body);
     this.crest.copy(HUE.crest).multiplyScalar(luminance(u.uSunColor.value) * k.crest * (1 - 0.9 * crestGone));
     u.uSeaFogBody.value.set(this.body.r, this.body.g, this.body.b, k.air * smooth(p, far, near) * (1 - 0.6 * this.close));
     u.uSeaFogCrest.value.set(this.crest.r, this.crest.g, this.crest.b, k.stir * night);
@@ -136,8 +136,8 @@ export class DarkBank {
     // What the sun gave the near things the fog gives back softly from all round, cold.
     tint(u.uSkyAmbient.value, HUE.cold, 0.55 * taken, (1 + 0.2 * taken) * (1 - 0.45 * night));
     tint(u.uGroundBounce.value, HUE.cold, 0.5 * taken, 1 - 0.3 * taken);
-    tint(u.uSkyZenith.value, HUE.cold, 0.3 * taken, (1 - 0.12 * taken) * (1 - 0.5 * night));
-    tint(u.uSkyHorizon.value, HUE.far, 0.5 * taken, (1 - 0.15 * taken) * (1 - 0.55 * night));
-    tint(u.uSkyHorizonSun.value, HUE.rose, 0.75 * taken, (1 - 0.4 * taken) * (1 - 0.55 * night));
+    tint(u.uSkyZenith.value, HUE.cold, 0.3 * taken, (1 - 0.12 * taken) * (1 - 0.7 * night));
+    tint(u.uSkyHorizon.value, HUE.far, 0.5 * taken, (1 - 0.15 * taken) * (1 - 0.7 * night));
+    tint(u.uSkyHorizonSun.value, HUE.rose, 0.75 * taken, (1 - 0.4 * taken) * (1 - 0.75 * night));
   }
 }

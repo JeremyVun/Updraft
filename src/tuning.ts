@@ -1732,7 +1732,7 @@ export const tuning = {
     /** The sea fog the dark is: one field every shader reads, and the light it takes as it comes. */
     fog: {
       /** How high it stands over the water, how softly its top gives out, and how deep its front is soft, metres. */
-      top: 13, topSoft: 1.2, front: 6,
+      top: 11, topSoft: 1.2, front: 6,
       /** How far its front heaves to and fro across its line, metres. */
       heave: 20,
       /**
@@ -1746,9 +1746,9 @@ export const tuning = {
       closeRun: 500,
       /**
        * Its body's light against the sky's, the low sun on its crest against the sun's, and how far the first wind
-       * under it breaks up the glass once it has closed round.
+       * under it breaks up the glass once it has closed round, and the slope of the ripples it raises.
        */
-      body: 0.4, crest: 0.45, stir: 0.8,
+      body: 0.4, crest: 0.45, stir: 1, ripple: 0.18,
       /**
        * Where the progression stands with the bank risen far off, its front `farCome` of the way to the boat, and
        * come close with the sun taken.

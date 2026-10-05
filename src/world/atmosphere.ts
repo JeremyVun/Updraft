@@ -796,6 +796,7 @@ vec4 cloudDeck(vec3 ro, vec3 rd, float far) {
 
 /** How far the sea fog's front stands ahead of its line at a point across it: the flanks lead, and it heaves. */
 float seaFogLead(float across) {
+  across = clamp(across, -uSeaFogSides.y, uSeaFogSides.w);
   float big = vnoise(vec2(across * 0.016 + uTime * 0.035, 1.7));
   float mid = vnoise(vec2(across * 0.055 - uTime * 0.06, 4.3));
   return uSeaFogShape.y * min(across * across, uSeaFogSides.x * uSeaFogSides.x) + ((big - 0.5) + (mid - 0.5) * 0.4) * ${glsl(tuning.drowned.fog.heave)};
@@ -831,7 +832,7 @@ vec4 seaFog(vec3 ro, vec3 rd, float far) {
   if (meet > 0.0 && meet < far) {
     // A sightline that crosses its line beyond either end of it misses it.
     float across = a0 + da * meet;
-    if (uSeaFogShape.z < 1.0 && (across < -uSeaFogSides.y || across > uSeaFogSides.w)) meet = far;
+    if (uSeaFogShape.z <= 0.0 && (across < -uSeaFogSides.y || across > uSeaFogSides.w)) meet = far;
     else {
       // Where it meets it is not where the eye is: its front there may lead further. The eye stays outside it.
       front = seaFogLead(across) + closed;
@@ -874,9 +875,10 @@ vec4 seaFog(vec3 ro, vec3 rd, float far) {
       // Each billow is lighter over its top, where it faces the sky, and darker under it.
       float bulge = big - vnoise(b + vec2(0.0, 0.3));
       float billow = big * 0.6 + vnoise(q * 0.13 + vec2(p.y * 0.2, -uTime * 0.04)) * 0.4;
-      light = uSeaFogBody.rgb * mix(0.8, 1.04, up) * max(0.4, 0.74 + 0.4 * billow + 0.9 * bulge);
-      // The sun catches the tops of the highest swells; between them it is already in shade.
-      float crest = smoothstep(0.62, 0.95, up + (billow - 0.5) * 0.3 + bulge * 0.6) * smoothstep(0.75, 1.15, top / uSeaFogShape.x);
+      light = uSeaFogBody.rgb * mix(0.8, 1.04, up) * (0.74 + 0.4 * billow + 0.9 * max(bulge, -0.12));
+      // The sun catches the tops of its highest swells and the rim of its top; lower down it is already in shade.
+      float crest = max(smoothstep(0.6, 1.0, p.y / uSeaFogShape.x + (billow - 0.5) * 0.3 + bulge * 0.6),
+        smoothstep(top - 3.0, top, p.y) * smoothstep(0.4, 0.8, top / uSeaFogShape.x));
       light += uSeaFogCrest.rgb * crest;
     }
   }

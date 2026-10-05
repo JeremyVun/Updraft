@@ -331,10 +331,6 @@ void main() {
   float rough = clamp(max(smoothstep(1.2, 7.5, settled) * paw, uSquall), 0.0, 1.0);
   float storm = clamp(max(smoothstep(18.0, 34.0, settled) * 0.5, uSquall * 0.85) * paw, 0.0, 1.0);
   float stroke = clamp(dot(waterWindAt(xz), vec4(1.0)), 0.0, 1.0);
-#if CLOUD_DECK
-  // The first wind of the night comes in with the sea fog and breaks up the glass.
-  rough = max(rough, uSeaFogCrest.w);
-#endif
 
   float ground = mix(-12.0, texture(uHeightTex, clamp(uv, 0.0, 1.0)).r, inside);
   float depth = max(poolLevel - ground, 0.0);
@@ -357,6 +353,15 @@ void main() {
   float hidden = r0.z * a0 * a0 + r1.z * a1 * a1 + r2.z * a2 * a2 + swell.z * A_SWELL * A_SWELL;
   /** The ruffle tilts the surface but stays out of the hidden-roughness sum, so it cannot change the shine. */
   slope += windWaveSlope(xz, footprint);
+#if CLOUD_DECK
+  if (uSeaFogCrest.w > 0.0) {
+    // The first wind of the night comes in with the sea fog: long cold ripples running before it break up the glass.
+    vec2 q = vec2(dot(xz, uSeaFog.zw), dot(xz, vec2(-uSeaFog.w, uSeaFog.z)));
+    float phase = q.x * 2.4 - uTime * 2.6 + vnoise(q * vec2(0.15, 0.4)) * 8.0;
+    float gusts = smoothstep(0.1, 0.6, vnoise(vec2(q.x * 0.06 - uTime * 0.25, q.y * 0.15)));
+    slope += uSeaFog.zw * cos(phase) * ${glsl(tuning.drowned.fog.ripple)} * uSeaFogCrest.w * gusts * (1.0 - smoothstep(0.15, 0.6, footprint));
+  }
+#endif
 
   vec3 surf = vec3(0.0);
   float swellAmp = 0.0;
