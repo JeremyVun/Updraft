@@ -1729,10 +1729,10 @@ export const tuning = {
      * first past the boat to where they came from and then turned with her to the church; upright, back the way they
      * came from ahead of the boat.
      */
-    strandDark: 1.25, strandChurch: 1.95, strandUpright: 1.0, strandZoom: 0.9,
+    strandDark: 1.25, strandChurch: 1.95, strandUpright: 1.08, strandZoom: 0.9,
     /** How far behind the boat the eye stands, how far ahead of it and to the side it looks, and at what height. */
     strandBack: 15, strandAhead: 6, strandAside: 3, strandAim: 1.2, churchAim: 2.6,
-    uprightBack: 13, uprightAhead: 14, uprightAim: 1.5, uprightSide: -1.5,
+    uprightBack: 16, uprightAhead: 14, uprightAim: 3, uprightSide: -2,
     /** The eye's height over the water as the air dies, and once the boat has come to rest. */
     strandLow: 2.4, strandHigh: 3.4, uprightHigh: 3.8,
     strandPace: 0.6,
