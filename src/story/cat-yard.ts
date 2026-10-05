@@ -75,8 +75,8 @@ const WALL_A = { z0: 12.4, z1: 13.4, top: 1.0 };
 const WALL_B = { z0: 14.6, z1: 16.4, top: 1.1 };
 /** The tower's face is at `z`; the opening in it is `half` either side of the ridge line, from `sill` to `head`, `deep` into it. */
 const TOWER = { z: 16.8, top: 4.2, sill: 3.25, head: 3.9, half: 0.3, deep: 0.45, width: 1.6 };
-const TUB_AT_POT = new THREE.Vector2(0.35, 1.0);
-const TUB_AT_BOAT = new THREE.Vector2(1.27, 3.35);
+const TUB_AT_POT = new THREE.Vector2(0.3, 1.0);
+const TUB_AT_BOAT = new THREE.Vector2(1.33, 3.35);
 const BOAT_AT = new THREE.Vector2(0.4, 3.4);
 /** Where the cat sits in each, in its own space. */
 const IN_TUB = new THREE.Vector3(0, 0.04, 0);
@@ -146,8 +146,8 @@ export class CatYard {
     this.group.add(new THREE.Mesh(mergeGeometries(parts), material));
 
     const tub = [
-      tinted(new THREE.CylinderGeometry(0.34, 0.3, 0.22, 20, 1, true).translate(0, 0.11, 0), WOOD),
-      tinted(new THREE.CircleGeometry(0.29, 20).rotateX(-Math.PI / 2).translate(0, 0.04, 0), WOOD),
+      tinted(new THREE.CylinderGeometry(0.4, 0.35, 0.22, 24, 1, true).translate(0, 0.11, 0), WOOD),
+      tinted(new THREE.CircleGeometry(0.34, 24).rotateX(-Math.PI / 2).translate(0, 0.04, 0), WOOD),
     ];
     this.tub.add(new THREE.Mesh(mergeGeometries(tub), material));
     const boat = [
@@ -277,11 +277,13 @@ export class CatYard {
         cat.look(look);
         cat.chirrup();
         return true;
-      case 'strand':
+      case 'strand': {
         this.reset();
-        cat.place(this.at(POT.x, POT.y, POT.z), yaw - 2.0, { pose: 'crouch' });
+        const pot = this.at(POT.x, POT.y, POT.z);
+        cat.place(pot, Math.atan2(look.x - pot.x, look.z - pot.z) + 0.5, { pose: 'crouch' });
         cat.strand(look);
         return true;
+      }
       case 'hop-tub':
         this.reset();
         cat.place(this.at(POT.x, POT.y, POT.z), yaw - 1.3, { pose: 'crouch' });

@@ -81,6 +81,8 @@ const H = REST[HEAD];
 /** The skull: its centre and its radii in rest space. */
 export const SKULL: V3 = [0, H[1] + 0.012, H[2] + 0.024];
 export const SKULL_SIZE: V3 = [0.063, 0.055, 0.054];
+/** The middle of the whisker pads, where the whiskers grow from. */
+export const MUZZLE: V3 = [0, H[1] - 0.015, H[2] + 0.072];
 /** Left eye centre in rest space, how far it is turned out from straight ahead, and its radii. */
 export const EYE_AT: V3 = [0.028, H[1] + 0.02, H[2] + 0.063];
 export const EYE_TURN = 0.36;

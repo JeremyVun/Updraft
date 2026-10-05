@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { ATMO_GLSL, atmo } from '../../world/atmosphere';
 import { CREATURE_GLSL } from '../shading';
 import type { V3 } from '../shapes';
-import { BODY, BONES, EAR, EYE, EYE_AT, EYE_SIZE, EYE_TURN, MOUTH, NOSE, REST, SKULL, TAIL_1, WHISKER } from './body';
+import { BODY, BONES, EAR, EYE, EYE_AT, EYE_SIZE, EYE_TURN, MOUTH, MUZZLE, NOSE, REST, SKULL, TAIL_1, WHISKER } from './body';
 
 const vec3 = (v: V3) => `vec3(${v[0].toFixed(5)}, ${v[1].toFixed(5)}, ${v[2].toFixed(5)})`;
 
@@ -32,6 +32,11 @@ void main() {
   mat4 a = uBones[int(aSkin.x + 0.5)];
   mat4 b = uBones[int(aSkin.y + 0.5)];
   vec3 world = mix((a * vec4(p, 1.0)).xyz, (b * vec4(p, 1.0)).xyz, aSkin.z);
+  if (int(aMat.x + 0.5) == ${WHISKER}) {
+    /** Whiskers thinner than a pixel only shimmer, so from a few metres off they draw back into the muzzle. */
+    float far = smoothstep(3.0, 7.0, distance(cameraPosition, world));
+    world = mix(world, (a * vec4(${vec3(MUZZLE)}, 1.0)).xyz, far);
+  }
   vWorld = world;
   vNormal = normalize(mix(mat3(a) * n, mat3(b) * n, aSkin.z));
   vMat = aMat;
