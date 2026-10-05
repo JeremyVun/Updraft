@@ -53,7 +53,6 @@ export class TreeCrossing {
     return this.phase === 'over';
   }
 
-  /** Whether the world's own gust has taken over from the player. */
   /** Once the world's own gust has taken over it keeps on until she is across: its own progress never stops it. */
   get valving(): boolean {
     if (this.stalled > tuning.crossings.tree.valveAfter) this.valveOn = true;
