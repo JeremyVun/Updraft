@@ -23,6 +23,8 @@ const ANSWER_AFTER = 0.7;
 const ANSWER_GAP = 0.42;
 /** A bell rung again too soon only swings; it does not sound twice over itself. */
 const REST = 0.3;
+/** How awake the meadow has to be where a clump stands before it rings: asleep with the island until the lullaby. */
+const AWAKE = 0.75;
 /** Screen radius a stroke has to pass within (screen heights), and how near the child walks to brush one. */
 const BRUSH = 0.12;
 const BRUSHED = 1.2;
@@ -57,6 +59,7 @@ void main() {
   float ndl = dot(N, uSunDir);
   vec3 alb = mix(uDeep, uPale, smoothstep(uFrom, uTo, vY));
   vec3 col = alb * (uSkyAmbient * 1.45 + uSunColor * (max(ndl, 0.0) * 0.6 + max(-ndl, 0.0) * uGlow));
+  col = mix(stillGrey(col), col, lifeAt(vWorld.xz));
   vec4 f = fogOf(vWorld);
   gl_FragColor = vec4(mix(col, f.rgb, f.a), 1.0);
 }`;
@@ -196,9 +199,9 @@ export class Harebells {
   }
 
   update(dt: number, time: number, camera: THREE.Camera, wind: WindField, input: PointerInput,
-    out: AudioOut | null, brushers: readonly (THREE.Vector3 | null)[], active: boolean): void {
+    out: AudioOut | null, brushers: readonly (THREE.Vector3 | null)[], life: (x: number, z: number) => number, active: boolean): void {
     this.now = time;
-    if (active) this.listen(camera, input, out, brushers);
+    if (active) this.listen(camera, input, out, brushers, life);
     if (this.answerAt > 0 && time > this.answerAt) {
       const i = this.clumps.length - 1 - this.answered;
       const order = this.answerDown ? i : this.answered;
@@ -236,9 +239,11 @@ export class Harebells {
   }
 
   /** A stroke crossing a clump on screen rings it; so does the child walking through it, or the plane coming down in it. */
-  private listen(camera: THREE.Camera, input: PointerInput, out: AudioOut | null, brushers: readonly (THREE.Vector3 | null)[]): void {
+  private listen(camera: THREE.Camera, input: PointerInput, out: AudioOut | null, brushers: readonly (THREE.Vector3 | null)[],
+    life: (x: number, z: number) => number): void {
     const stroke = input.present && !input.muted && input.gust > tuning.pointer.minGust;
     for (const c of this.clumps) {
+      if (life(c.x, c.z) < AWAKE) continue;
       const ground = heightAt(c.x, c.z);
       const brushed = brushers.some((b) => !!b && b.y < ground + 2.6 && Math.hypot(b.x - c.x, b.z - c.z) < BRUSHED);
       const entered = brushed && !c.brushed;

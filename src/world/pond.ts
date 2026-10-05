@@ -70,7 +70,8 @@ void main() {
 
   vec3 H = halfVector(uSunDir, V);
   col += uSunColor * pow(max(dot(N, H), 0.0), 220.0) * 1.6 * sh;
-  col = mix(stillGrey(col) * 1.05, col, 0.35 + 0.65 * uWorldLife);
+  /** Asleep with the meadow round it until the lullaby reaches the hollow, like the reeds standing in it. */
+  col = mix(stillGrey(col) * 1.05, col, (0.35 + 0.65 * uWorldLife) * lifeAt(xz));
   gl_FragColor = vec4(applyFog(col, vWorld), alpha);
 }`;
 

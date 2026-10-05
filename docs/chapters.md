@@ -286,7 +286,8 @@ a sun shower passes, and halfway through it the sun breaks out and a rainbow sta
 ahead where the boat waits; the walk does not stop for it (`tuning.rainbow`). Beside the walk down from the pond stands a
 row of harebells taller than she is (`world/harebells.ts`). A stroke across a clump rings it, in the meadow's scale from
 low to high along the walk; she or the plane brushing through one rings it softly, and both of them look round at a bell
-rung near them. One sweep down the whole row is sung back the other way. It is there to be found; nothing waits on it.
+rung near them. One sweep down the whole row is sung back the other way. Like the pond, they are grey and silent until the lullaby
+reaches them. It is there to be found; nothing waits on it.
 
 Rulings:
 - The greening must be seen from where the player is: the camera is placed for it, and it never jerks in and out
