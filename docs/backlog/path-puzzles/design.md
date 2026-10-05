@@ -627,129 +627,31 @@ circling, and the meadow it arrives at is asleep too, so the player wakes the wh
 music. The night crossing to the sleeping island was the alternative: darker to read, and it lengthens the long dark
 stretch after the wood.
 
-**The optional encounter.** Jeremy, on flying fish leaping where the gust crosses the sea: "not the flying fish, think
-about whether there's something interesting and dreamlike to do".
+**No optional encounters.** Three were offered and first accepted: a meadow lying on the sea whose flowers open where
+the wind goes, leaves on the water that are a shoal of golden fish, and a giant dandelion clock whose seeds a gust
+blows up into the first stars. The dandelion was dropped on its concept art ("it clashes with the sky mirror puzzle").
+The meadow was built on the last crossing and cut (Jeremy, 2026-10-05: "I dont think the meadows earns it's keep.
+swiping on the grass actually makes the boat just go faster. There's no noticeably new interaction."), and the fish
+dropped with it ("cut the meadow, delete its branch and drop the fish"). The lesson, for any idea on a crossing: while
+the boat sails, a sweep is the same act as filling the sail, and the boat surging is the loudest answer on screen, so
+anything played from a moving boat reads as decoration on sailing. A crossing beat has to stop the boat and want
+something, as the whale does.
 
-Offered three dreamlike optional encounters: sailing through a meadow lying on the sea (first crossing; gusts roll
-waves through it and flowers open where the wind goes), leaves on the water that are a shoal of golden fish (meadow to
-birches; gusts scatter them, circles swirl them, on the beach they are leaves again), and a giant dandelion clock
-adrift at dusk whose seeds a gust blows up into the first stars (birches to stairs). Jeremy: "all these optional
-encounters are cool".
+**The whale is shown first and met later** (Jeremy, 2026-10-05: "The sleeping whale feels to me to be the one to put
+here since there is already a whale from the still island to the island of lines no? Or do you think it's better to
+just show the whale to the player during the first crossing, and then they can interact with it later on?"; on the
+answer below, "agreed"). The first crossing keeps its whale surfacing far off, unchanged, as the set-up; the sleeping
+whale lies on the crossing to the meadow. Waking it needs circling, which the player first learns on the little boats'
+plug, two rooms after the first crossing; there it could only wake to gusts, a weaker puzzle that would also spend the
+circling before the plug teaches it. Seen far off, then found asleep across the way one island later, it is met again
+rather than met.
 
-Asked whether that meant all three as well as the whale, against "just one or two" earlier: **all three and the
-whale** (Jeremy, 2026-10-05). Four crossings in a row get something: the meadow on the sea (still island to lines),
-the whale (little boats to meadow, the one must-do), the fish (meadow to birches), the dandelion (birches to stairs).
-The later crossings stay as they are; the sea already has the pod and the swim. Prototyped one at a time, the meadow
-first.
+### As decided: the crossing
 
-**The meadow on the sea is feasible** (spike, branch `spike-sea-meadow`, 2026-10-05; stills `comps/crossings/meadow/spike-*.jpg`).
-- Seam: a mask inside the existing blade table (`seaMeadowAt` in `TABLE_FRAG`; tiles touching it are picked on the
-  CPU), so the sea blades get the LOD tiers, wind, fog, palette and petals for free. A fake zero-height island was
-  rejected (it disturbs everything that reads the heightfield: shallows, foam, swell damping, grounding, picks, life);
-  a separate grass layer would duplicate the LOD machinery. Blades ride the swell by the GLSL `seaSurfaceY`.
-- Gusts already roll waves through it: the wind field and grass lean cover the window over sea.
-- The hull's furrow cannot use the trodden patch (`uTrodden` is static and rebuilds tables). The build has the hull
-  push the grass-lean spring directly, so the furrow springs back with the grass's own motion; that is one contract
-  change (something besides splats writes the lean texture).
-- Flowers: not `LifeField.bloom` (life only rises over ground and spreads, and the restored island's disc would flower
-  half the patch). The life texture's spare `.g` channel is raised only by the player's wind inside the patch, never
-  spreads or falls, and sea blades flower from it.
-- Two rooms at a time holds without hacks: the patch lies in the still island's partition. A uniform eases it in on
-  `toLines` only. Grass has no reflection on the water; acceptable on this rippled sea.
-- Cost: at peak about 78k drawn blades (from 40k), comparable to standing beside an island.
-- Measured in the spike: the farewell look-back lasts to about 36 s; the patch (centred (87, −34), 46 × 23) is crossed
-  from about 24 s to 43 s at the ordinary breeze and in under 10 s at the 10 units/s gust ceiling, so it is sized for
-  gusting speed; the whale surfaces just past its far edge.
-
-Jeremy on the spike stills (2026-10-05): "i think you just need to be careful about where you place the grass. e.g.
-in those sea meadow sheet shots, we've got the whole still island in view, as well as the sea grass.. that's a lot of
-rendering..." So the meadow does not lie in the farewell view: it lies where the still island is already behind the
-camera or lost in haze, after the turn ahead, and it ends before the island of lines comes out of the haze. It
-follows the concept's sparser clumps of grass with water between them rather than the spike's dense field, which
-also costs fewer blades.
-
-Jeremy on the concept art (`comps/crossings/`, 2026-10-05): "concept-meadow is nice, and the concept whale is a cool
-idea to play around with. The concept fish is probably a lower priority thing if we have time to get to it. I agree to
-skip teh dandelion, it clashes with the sky mirror puzzle." So the meadow and the whale are built; the fish waits
-until they are judged (its scatter needs a clear gold flash under the water, not the subtle concept `k2`); the
-dandelion is rejected.
-
-Jeremy then questioned the placements (2026-10-05): "Have a think about where best to put the meadow on the sea (I'm
-not convinced it should be the first crossing). The sleeping whale feels to me to be the one to put here since there
-is already a whale from the still island to the island of lines no? Or do you think it's better to just show the whale
-to the player during the first crossing, and then they can interact with it later on?" Proposed and agreed ("agreed
-with both"):
-- **The whale is shown first and met later.** The first crossing keeps its whale surfacing far off, unchanged, as the
-  set-up; the sleeping whale stays on the crossing to the meadow. Waking it needs circling, which the player first
-  learns on the little boats' plug, two rooms after the first crossing; there it could only wake to gusts, a weaker
-  puzzle that would also spend the circling before the plug teaches it. Seen far off, then found asleep across the way
-  one island later, it is met again rather than met.
-- **The meadow moves to the last crossing, sky mirror to home (`toHarbour`).** The year deepens toward winter until
-  the sleeping island's curtains turn it to spring, so a sea of flowers on the early crossings argues with the autumn
-  closing in; after the sleeping island it is spring arriving. It bookends the game: the first gesture is wind bringing
-  colour back to grey grass, and the last crossing is wind opening flowers across the sea toward home's lush hill. It
-  is also the cheapest place for it: the sky mirror behind has no grass and home's hillside stays in one haze until
-  about 150 m from the berth, so the meadow is the only grass in frame. The other crossings were worse: the sea is the
-  exhale (at most 100 s, nothing asked), the night crossing to the sleeping island is midwinter, the birches and stairs
-  hops are about 20 s and deep autumn, and the crossing to the little boats has dense washing and grass both sides.
-
-### As decided: the crossings
-
-This consolidates everything above for the build. Concept keyframes are the target for the look
-(`comps/crossings/meadow/k1–k3`, `comps/crossings/whale/k1–k4`, each folder's `notes.md` has Astra's layout in metres);
-they are painted over real frames from the crossing camera (`ref-*.png`), so they are framed as the game frames.
-
-**The meadow on the sea** (the last crossing, sky mirror to home, `toHarbour`; optional).
-- Early in the crossing, once the boat is out in the deep water beyond the mirror's flat, the sea ahead holds a
-  meadow: clumps of long green grass standing in open water with water glinting between them, thinning at its edges
-  into scattered tufts (`k1`). Not a solid field. It lies on the route so the boat sails straight through; it never
-  waits.
-- Where: never on the mirror's flat (its ruling keeps the whole surface an open mirror), and ending before home's
-  hillside starts to clear from its haze (`tuning.homeApproach`, about 150 m from the berth), so it is the only grass
-  in frame (Jeremy's ruling on rendering above). The crossing is about 40 s, which leaves perhaps 15–20 s of meadow at
-  the ordinary breeze; place it by measuring the real crossing, at the ordinary breeze and at the 10 units/s ceiling.
-  The patch must lie inside the mirror's or home's partition for `visibleRooms`, so the two-rooms rule holds unhacked.
-- Budget: with the meadow in frame, drawn blades (`__stats.blades`) stay at or below what the first crossing draws
-  at its start beside the still island (about 40k in the spike). The sparse clumps are what make this fit.
-- Light and season: the crossing eases from the mirror's dusk into home's afternoon and back toward spring (season
-  0.18); the meadow takes the grass palette of that season. The concept frames were painted on the first crossing's
-  light; re-check the look against this crossing's light.
-- Music: the homeward handoff (`homeward`, `mirrorScore: 'depart'`) is unchanged; the meadow never delays it.
-- The hull parts it: the bow pushes the grass lean outward and astern and the blades spring back with the grass's
-  own motion, a furrow closing behind the boat (`k1`).
-- Gusts roll bright waves through it as they do on land (`k2`); where the player's wind passes, white flowers (some
-  pale yellow, a little blue) open over about a second, never popping, and stay as ribbons behind the boat (`k3`).
-  Only the player's wind opens them; the ambient breeze never does.
-- The child reaches a mitten out over the side to touch the blades going by; the cygnet's head is up out of the
-  satchel, looking. The camera gives the meadow at most a low-weight glance; it never stops the world.
-- No invitation (Claude's call): it is optional, the player is already gusting the sail here, and the first gust
-  across it shows what it does.
-- Built from the spike's seam (above; the spike placed it on `toLines`, which is superseded): the sea mask in the
-  blade table, `seaSurfaceY` riding, a real flag in the table's spare slot instead of the spike's encodings, swell per
-  blade, the alternative `?blades=direct` shader updated, the hull writing the lean spring, the life texture's `.g` for
-  flowers, shown only on `toHarbour` and grown in out of sight. No reflection of the blades.
-- The first crossing (`toLines`) is unchanged: its whale still surfaces at 37 s, the set-up for the sleeping whale.
-- Measured on the first build (`crossing-meadow`, C1a): only about 57 m of route lies between the mirror's still water
-  and home's hillside clearing, so the boat is inside the meadow about 11 s at the ordinary breeze (about 6 s at full
-  gust) and has it in frame about 18–20 s, since it shows ahead from departure. Home's own grass reaches 43–49k blades
-  late in the crossing without any meadow; the meadow's stretch peaks about 36k landscape, 22k portrait.
-- Claude's calls on that build (2026-10-05): the meadow cannot grow in out of sight (the mirror's leaving shot and the
-  crossing camera both look down the route at it), so it rises out of the water ahead as the boat leaves the flat,
-  slowly and from its far side, as part of the dream: spring coming up out of the sea. It is crossed in this crossing's
-  own light, the mirror's dusk warming toward home, not the concept's afternoon gold; it must read in that light (warm
-  light on the tips, pale undersides where the wave bends them), and the crossing's light is not changed for it.
-- As built (C1b): the flower record is the player's own stroke, a band about 1.6 m either side of the line the pointer
-  draws across the meadow, so ribbons are 2–4 m wide where the wind was drawn; the ambient breeze draws no stroke. Each
-  sea instance draws two arching blades from one root; about a quarter are stems with a bud that opens into a small
-  flower turned to the camera. The mirror's glass is turned down under the meadow so the tufts never stand on water
-  that reflects the boat but not them. Land grass differs from main by 2 pixels of 1.44M by 1/255 (compiler-level,
-  from the sea branch in the shared shader); accepted as invisible rather than doubling land tiles' vertex work.
-
-Jeremy on the meadow as built (2026-10-05): "I dont think the meadows earns it's keep. swiping on the grass actually
-makes the boat just go faster. There's no noticeably new interaction. I dont think it achieves what you were maybe
-looking for in terms of an interaction." Why: a sweep over the meadow is the same act as filling the sail, and the
-sail's answer (the boat surging) is the loudest thing on screen, so the flowers read as decoration on sailing, not
-as something the player did; nothing wants anything there, and nothing changes because of it.
+The concept keyframes `comps/crossings/whale/k1–k4` are the target for the look; `notes.md` beside them has Astra's
+layout in metres. They are painted over real frames from the crossing camera (`ref-*.png`), so they are framed as the
+game frames. The gusts' answer must be plainly bigger than the slack sail's: the boat is at rest, so nothing about the
+encounter may read as the boat speeding up.
 
 **The whale asleep across the way** (crossing to the meadow, `toMeadow`; the one must-do).
 - About a third of the way along, the whale (`fx/sealife/anatomy.ts`, 14 m; scale it up toward `k1`'s size if the
@@ -775,12 +677,5 @@ as something the player did; nothing wants anything there, and nothing changes b
 - Saves: a crossing checkpoint taken before it wakes resumes with it asleep; one taken after resumes without it.
 - The meadow island beyond stays the grey shape in haze it is today.
 
-**The fish** (later, if there is time): see the encounter above and `comps/crossings/fish/`; not planned yet.
-**The dandelion:** rejected ("it clashes with the sky mirror puzzle").
-
-**QA starts.** `?chapter=toHarbour`, `toMeadow` (and any `to*` crossing) start that crossing at its first waypoint,
-cygnet in the satchel: the generic branch prototyped on `crossings-study` (`src/story/journey.ts`).
-
-Jeremy on the placements (2026-10-05): "Have a think about where best to put the meadow on the sea (im not convinced
-it should be the first crossing). The sleeping whale feels to me to be the one to put here since there is already a
-whale from the still island to the island of lines no?"
+**QA starts.** `?chapter=toMeadow` (and any `to*` crossing) starts that crossing at its first waypoint, cygnet in
+the satchel (`src/story/journey.ts`, branch `crossings-start`).

@@ -73,48 +73,24 @@ Owns: checkpoints (a save past the run resumes aboard with the storm to come; a 
 Gate: typecheck, build, the check from start to the beach; stills opened for review.
 Done: [ ]
 
-## The crossings: the meadow on the sea and the whale asleep
+## The crossing: the whale asleep
 
-Design: design.md, "The crossings" through "As decided: the crossings". Concept frames: `comps/crossings/meadow/`
-and `comps/crossings/whale/`. Each encounter is its own branch off main, judged by Jeremy on its own and never merged
-without his approval. The meadow and the whale are built at the same time (Jeremy, 2026-10-05: "can we not do the whale (C2) at the same
-time?"), one agent per branch, never more than two at once (peers share the session limit); commit after every step.
+Design: design.md, "The crossings" through the end. Concept frames: `comps/crossings/whale/`. Its own branch, judged
+by Jeremy on its own and never merged without his approval. Commit after every step.
 
 Standing constraints for every phase:
-- Cursor movement is the only verb; nothing timed, nothing failed; the boat never waits for the meadow.
-- Every response is caused by the player's own wind and visibly answers it; the ambient breeze opens no flower and
-  never wakes the whale.
-- Camera never jerks; scenery gets at most a low-weight glance; no fourth wall.
-- Player-feel numbers in `src/tuning.ts` (`tuning.seaMeadow`, `tuning.sleepingWhale`).
-- Crossing lengths stay as in `docs/contracts/world.md` apart from the whale's stop: `CROSSING=toHarbour node
-  tools/journey-pacing-check.mjs` passes unchanged.
+- Cursor movement is the only verb; nothing timed, nothing failed.
+- Every response is caused by the player's own wind and visibly answers it; the ambient breeze never wakes the whale.
+- Camera never jerks; no fourth wall.
+- Player-feel numbers in `src/tuning.ts` (`tuning.sleepingWhale`).
+- Crossing lengths stay as in `docs/contracts/world.md` apart from the whale's stop.
 - The first crossing (`toLines`) is not touched: its whale is the set-up for the sleeping one.
 - Visual judging (stills against the concept frames) is done by Opus or Astra only.
 
 ### Phase C0: direct crossing starts
 Owns: `src/story/journey.ts` (a `?chapter=` value naming any `to*` route starts it at its first waypoint, heading
-for the second, cygnet in the satchel; prototyped on branch `crossings-study`), the query-param list in `CLAUDE.md`.
-Gate: `npm run typecheck`; `?chapter=toHarbour` and `?chapter=toMeadow` captures show the boat under way.
-Done: [x] branch `crossings-start` (9dd4ebe), the base for both encounter branches; merges with whichever is approved
-first.
-
-### Phase C1: the meadow on the sea (branch `crossing-meadow`)
-Start from the spike (branch `spike-sea-meadow`, commits 3fdefa4 and 43c9c94) and replace its shortcuts as listed in
-design.md. The spike placed it on the first crossing; it now lies on the last, sky mirror to home (`toHarbour`).
-Owns: `src/world/sea-meadow.ts`, `src/world/grass.ts` (sea mask in the blade table, the flag, per-blade swell, the
-direct-blades shader), `src/world/life.ts` (`.g` flower channel inside the patch), the grass-lean writer for the hull,
-`src/main.ts` wiring, `src/story/crossing.ts` (a `seaMeadow` option; the child's reach and the cygnet's look while in
-it), `src/story/journey.ts` (the `toHarbour` option), `src/tuning.ts`.
-Seam: the lean texture gains a second writer (the hull) alongside wind splats; the flower channel rises only from the
-player's gusts and updrafts inside the mask, never spreads or falls; the mask is live only on `toHarbour`.
-Order: measure first (where the route leaves the mirror's flat, when home's hillside starts to clear from its haze,
-at the ordinary breeze and at the 10 units/s ceiling; which room partition the patch falls in), place the patch, then
-build. Built in two waves: code and the check tool with one smoke still (C1a), then the look and the gates (C1b).
-Gate: typecheck; build; a real-gesture check (`tools/sea-meadow-check.mjs`) that sweeps across the patch and finds
-flowers there, and idles through it and finds none; the pacing check; `__stats.blades` with the meadow in frame no
-higher than the first crossing draws at its start (about 40k); stills (landscape and portrait) from the crossing camera beside `k1`–`k3`,
-opened for Jeremy.
-Done: [x] built on `crossing-meadow` (C1a to c9418780, C1b to 7b24b73e); awaiting Jeremy's judgement.
+for the second, cygnet in the satchel), the query-param list in `CLAUDE.md`.
+Done: [x] branch `crossings-start` (9dd4ebe), the base of `crossing-whale`.
 
 ### Phase C2: the whale asleep across the way (branch `crossing-whale`)
 Owns: the sleeping whale (rest pose, breathing, shiver along a stroke, flipper slap, eye, the roll and fluke wave, in
@@ -126,11 +102,11 @@ Seam: the crossing holds the boat with `Boat.speedLimit` eased to zero and relea
 `awake` once the breath is drawn; nothing else in the crossing changes.
 Gate: typecheck; build; a real-gesture check (`tools/sleeping-whale-check.mjs`): sweeps alone never wake it, circles
 over the blowhole do, idle wakes it only by the gull after the valve, a save before and after resumes correctly;
-stills beside `k1`–`k4` in landscape and portrait, opened for Jeremy. Built in two waves like the meadow: code, the
+stills beside `k1`–`k4` in landscape and portrait, opened for Jeremy. Built in two waves: code, the
 check and one smoke still set (C2a), then the look and the gates (C2b).
 Done: [ ]
 
 ### Phase C3: docs on approval
-Once Jeremy approves an encounter: its section in `docs/chapters.md`, the crossing table in `docs/contracts/world.md`
-if a length changed, the new tuning names; this item's crossing sections trimmed.
+Once Jeremy approves the whale: its section in `docs/chapters.md`, the crossing table in `docs/contracts/world.md`
+if the length changed, the new tuning names; this item's crossing sections trimmed.
 Done: [ ]
