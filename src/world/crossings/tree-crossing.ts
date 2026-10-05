@@ -10,6 +10,8 @@ import { ToppleTree, type TreeSpot } from './topple-tree';
 export interface TreeWay {
   /** On the near side, a step back from the end, where she stands while the player works on the tree. */
   wait: THREE.Vector3;
+  /** Where she hops down off the end of the trunk onto what it lies across: the trunk is as thick as she is tall to the waist. */
+  stepOff: THREE.Vector3;
   /** On the far side, past where she steps off the trunk. */
   onward: THREE.Vector3;
 }
@@ -141,9 +143,12 @@ export class TreeCrossing {
       child.balance = 1;
       child.stroll = k.crossStroll;
       child.walkTo(deck.x1, deck.z1, false, () => {
-        child.balance = 0;
-        child.stroll = 1;
-        child.walkTo(this.way.onward.x, this.way.onward.z, false, () => this.to('over'), 0.3);
+        const off = this.way.stepOff;
+        const way = this.lineDir.set(off.x - child.position.x, off.z - child.position.z).normalize();
+        child.leap(this.at.set(way.x * 1.1, 1.1, way.y * 1.1), off, 9.81, () => { child.balance = 0; }, () => {
+          child.stroll = 1;
+          child.walkTo(this.way.onward.x, this.way.onward.z, false, () => this.to('over'), 0.3);
+        }, true);
       }, 0.12);
     }, 0.12);
   }

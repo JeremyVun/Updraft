@@ -300,8 +300,9 @@ export class ToppleTree {
         this.ring(0.6 * strength, time);
       }
       if (this.lean > k.tipAt) {
+        /** However hard the push, the roots hold it a moment before it goes. */
         this.state = 'falling';
-        this.leanV = Math.max(this.leanV, 0.12);
+        this.leanV = THREE.MathUtils.clamp(this.leanV, 0.1, 0.16);
       }
     } else if (this.state === 'falling') {
       const torn = THREE.MathUtils.clamp((this.lean - k.tipAt) / k.tearOver, 0, 1);
@@ -411,7 +412,9 @@ export class ToppleTree {
     this.group.updateMatrixWorld(true);
     const k = tuning.crossings.tree;
     const rest = k.restLean + this.loose * k.looseLean;
-    u.uFlex.value = this.state === 'standing' ? THREE.MathUtils.clamp((this.press - (this.lean - rest)) * 0.25 - this.leanV * 0.04, -0.06, 0.06) : 0;
+    /** Rocking, the top comes a beat after the foot; falling, it trails, whipping through as it lands. */
+    u.uFlex.value = this.state === 'standing' ? THREE.MathUtils.clamp((this.press - (this.lean - rest)) * 0.25 - this.leanV * 0.04, -0.06, 0.06)
+      : this.state === 'falling' ? -Math.min(0.1, this.leanV * 0.09) : 0;
     u.uShiver.value = this.shiver;
     u.uShudder.value = this.shudder * this.shudder;
     u.uSoak.value = this.soak;

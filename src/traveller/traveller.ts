@@ -29,7 +29,7 @@ type Action =
     }
   | {
       kind: 'leap'; t: number; from: THREE.Vector3; v: THREE.Vector3; to: THREE.Vector3; flight: number; gravity: number;
-      way: THREE.Vector2; landed: boolean; onLand: () => void; onDone: () => void;
+      way: THREE.Vector2; landed: boolean; small: boolean; onLand: () => void; onDone: () => void;
     };
 
 interface Goal {
@@ -629,9 +629,10 @@ export class Traveller {
   /**
    * Off a swing and through the air to `to`, where the feet come down: away with the swing's own speed `velocity`
    * as it was when she let go, the arc bent only as much as it must be to land there. Then a stumble forward onto
-   * her hands, and up. `onLand` comes as the feet touch, `onDone` once she is standing.
+   * her hands, and up. `onLand` comes as the feet touch, `onDone` once she is standing. A `small` one is a hop
+   * down off something, landing on bent knees.
    */
-  leap(velocity: THREE.Vector3, to: THREE.Vector3, gravity: number, onLand: () => void, onDone: () => void): void {
+  leap(velocity: THREE.Vector3, to: THREE.Vector3, gravity: number, onLand: () => void, onDone: () => void, small = false): void {
     this.goal = null;
     this.riding = false;
     this.sitting = false;
@@ -644,7 +645,7 @@ export class Traveller {
     const v = new THREE.Vector3((to.x - from.x) / flight, up, (to.z - from.z) / flight);
     const way = new THREE.Vector2(v.x, v.z).normalize();
     this.yaw = Math.atan2(way.x, way.y);
-    this.action = { kind: 'leap', t: 0, from, v, to: to.clone(), flight, gravity, way, landed: false, onLand, onDone };
+    this.action = { kind: 'leap', t: 0, from, v, to: to.clone(), flight, gravity, way, landed: false, small, onLand, onDone };
   }
 
   faceToward(x: number, z: number, amount: number): void {
@@ -951,10 +952,10 @@ export class Traveller {
         }
         /** Carried on a step by what is left of the leap, low, then up off the hands. */
         const u = a.t - a.flight;
-        const on = LEAP_STUMBLE * THREE.MathUtils.smootherstep(u, 0, 0.45);
+        const on = (a.small ? 0.1 : LEAP_STUMBLE) * THREE.MathUtils.smootherstep(u, 0, 0.45);
         const x = a.to.x + a.way.x * on, z = a.to.z + a.way.y * on;
         this.position.set(x, Math.max(this.ground(x, z), 0), z);
-        if (u >= tuning.crossings.swing.landFor) {
+        if (u >= (a.small ? LEAP_HOP_SETTLE : tuning.crossings.swing.landFor)) {
           this.action = null;
           a.onDone();
         }
@@ -1135,9 +1136,11 @@ export class Traveller {
       /** Away with everything flung wide, knees up; reaching for the slates as they come up; down on a hand, and up. */
       const T = a.flight;
       const landing = a.t - T;
-      const fling = smooth(a.t, 0, 0.16) * (1 - smooth(a.t, T * 0.55, T * 0.95));
-      const brace = smooth(a.t, T * 0.5, T) * (1 - smooth(landing, 0.45, 1.0));
-      const low = smooth(landing, 0, 0.08) * (1 - smooth(landing, 0.3, tuning.crossings.swing.landFor * 0.9));
+      const big = a.small ? 0 : 1;
+      const fling = big * smooth(a.t, 0, 0.16) * (1 - smooth(a.t, T * 0.55, T * 0.95));
+      const brace = (0.4 + 0.6 * big) * smooth(a.t, T * 0.5, T) * (1 - smooth(landing, 0.45, 1.0));
+      const low = (0.5 + 0.5 * big) * smooth(landing, 0, 0.08)
+        * (1 - smooth(landing, 0.15 + 0.15 * big, a.small ? LEAP_HOP_SETTLE : tuning.crossings.swing.landFor * 0.9));
       for (const hand of [0, 1] as const) {
         const g = this.grips[hand];
         g.w = fling;
@@ -1150,7 +1153,7 @@ export class Traveller {
         m.out = lerp(m.out, 0.55, brace);
         m.elbow = lerp(m.elbow, 0.35, brace);
       }
-      const palm = smooth(landing, 0.04, 0.16) * (1 - smooth(landing, 0.5, 0.85));
+      const palm = big * smooth(landing, 0.04, 0.16) * (1 - smooth(landing, 0.5, 0.85));
       if (palm > 0) {
         const g = this.grips[1];
         g.w = palm;
@@ -1160,8 +1163,8 @@ export class Traveller {
         g.elbow.set(0.6, 0.3, -1);
       }
       const air = Math.sin(THREE.MathUtils.clamp(a.t / T, 0, 1) * Math.PI);
-      P.step[0] = 0.8 * air + 0.55 * Math.sin(smooth(landing, 0.05, 0.45) * Math.PI);
-      P.step[1] = 0.5 * air;
+      P.step[0] = (0.4 + 0.4 * big) * air + 0.55 * big * Math.sin(smooth(landing, 0.05, 0.45) * Math.PI);
+      P.step[1] = (0.3 + 0.2 * big) * air;
       lean = -0.16 * fling + 0.3 * brace + 0.35 * low;
       bend = 0.3 * low;
       crouch = 0.36 * low;
@@ -1597,4 +1600,6 @@ const ARM_REACH = (UPPER_ARM + FOREARM) * 1.12 - 0.02;
 const SIT_DROP = 0.67;
 /** How far the last of a leap carries her on along the ground after her feet come down. */
 const LEAP_STUMBLE = 0.32;
+/** Seconds a hop down takes to come up off its bent knees. */
+const LEAP_HOP_SETTLE = 0.5;
 const KNEEL_DROP = 0.54;

@@ -1802,7 +1802,7 @@ export const tuning = {
        * roots (`tearHold` of it while `tearOver` radians of fall tear them), and the share of its fall speed kept
        * when it lands, then the spring it settles on.
        */
-      fallPull: 1.25, tearHold: 0.55, tearOver: 0.35, bounce: 0.18, settle: 60, settleDamping: 9,
+      fallPull: 1.0, tearHold: 0.25, tearOver: 0.3, bounce: 0.18, settle: 60, settleDamping: 9,
       /** How far its foot slides toward the gap as the roots tear out of the bed. */
       rootShift: 0.45,
       /** Seconds the trunk shudders after it lands. */
@@ -1816,13 +1816,13 @@ export const tuning = {
       /** A slower, dreamier gravity than the world's (a share of it), and how fast a swing dies away with nobody pushing. */
       gravity: 0.8, damping: 0.05,
       /** Push along its travel per unit of gust energy at the seat, and per unit of the felt wind along its way. */
-      pump: 2.4, along: 0.25,
+      pump: 1.5, along: 0.25,
       /** Seconds she takes to catch hold and sit, and the start she gives it pushing off the eave (radians a second). */
       boardFor: 1.6, pushOff: 0.32,
       /** She lets go this near the top of a forward swing (radians), when the leap would carry her this far past the landing. */
       releaseLead: 0.14, releaseSpare: 0.15,
       /** Her own push off the seat as she lets go, forward and up (units a second), and the gravity she flies under. */
-      leapForward: 0.9, leapUp: 0.7, leapGravity: 9,
+      leapForward: 0.9, leapUp: 1.6, leapGravity: 7.5,
       /** Seconds for the stumble and getting up on the slope after landing, and for her look back at the swing. */
       landFor: 1.3, lookBack: 0.9,
       /** Seconds riding without a push before the drawn push; with no new height before the world's own gusts carry her. */
