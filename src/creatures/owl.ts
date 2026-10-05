@@ -213,10 +213,11 @@ void main() {
   col += (alb + 0.012) * warm * shade;
   col += warm * shade * edge * fuzz * 0.6 * (0.3 + 0.7 * alb);
   if (mat == ${EYE}) {
-    col += vec3(1.0, 0.95, 0.85) * catchlight(N, vWorld) * (0.25 + 0.6 * length(warm * shade)) * glow;
-    // Eyeshine: the light thrown back out of the eyes, which is all a frightened child sees of them in the dark.
-    // Further off the glow drawn over them is spread wider than the eyes are, and is the only pair there is.
+    // Further off, the eyeshine drawn over the eyes is spread wider than they are and is the only pair there is.
     float near = 1.0 - smoothstep(${GLOW_NEAR.toFixed(1)}, ${(GLOW_NEAR + 1).toFixed(1)}, distance(cameraPosition, vWorld));
+    float own = mix(1.0, near, min(1.0, uOwlEyes.x * 4.0));
+    col += vec3(1.0, 0.95, 0.85) * catchlight(N, vWorld) * (0.25 + 0.6 * length(warm * shade)) * glow * own;
+    // Eyeshine: the light thrown back out of the eyes, which is all a frightened child sees of them in the dark.
     col += vec3(1.0, 0.72, 0.22) * uOwlEyes.x * glow * 1.8 * near;
   }
   // Flying up out of the firelight it keeps the coals' warmth from below and a warm edge to its down, so it reads as a
@@ -367,11 +368,15 @@ void main() {
 
 const GLOW_FRAG = /* glsl */ `
 uniform float uGlow;
+uniform float uBlink;
 in vec2 vUv;
 void main() {
   float r = length(vUv);
   // Two crisp points with only a breath of glow round them.
-  float a = exp(-r * r * 16.0) * 0.9 + exp(-r * r * 4.0) * 0.06;
+  // The lid comes down over each from above, as it does over the eye itself.
+  float lid = mix(0.38, -0.4, uBlink);
+  float a = smoothstep(0.36, 0.18, r) * (1.0 - smoothstep(lid - 0.05, lid + 0.05, vUv.y)) * 0.92
+    + exp(-r * r * 4.0) * 0.06 * (1.0 - uBlink);
   a *= 1.0 - smoothstep(0.8, 1.0, r);
   gl_FragColor = vec4(vec3(1.0, 0.7, 0.24) * a * uGlow, 1.0);
 }`;
@@ -788,7 +793,7 @@ export class OwlBody {
     geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     geo.setAttribute('aSide', new THREE.Float32BufferAttribute(side, 1));
     geo.setIndex(index);
-    this.glowUniforms = { uEyeL: { value: new THREE.Vector3() }, uEyeR: { value: new THREE.Vector3() }, uGlow: { value: 0 }, uGlowSize: { value: 0.09 } };
+    this.glowUniforms = { uEyeL: { value: new THREE.Vector3() }, uEyeR: { value: new THREE.Vector3() }, uGlow: { value: 0 }, uBlink: { value: 0 }, uGlowSize: { value: 0.09 } };
     this.glow = new THREE.Mesh(geo, new THREE.ShaderMaterial({
       uniforms: this.glowUniforms, vertexShader: GLOW_VERT, fragmentShader: GLOW_FRAG,
       transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
@@ -820,7 +825,8 @@ export class OwlBody {
     owl.toWorld(this.local.set(EYE_AT.x, EYE_AT.y, EYE_AT.z + 0.01), true, this.right);
     this.glowUniforms.uEyeL.value.copy(this.left);
     this.glowUniforms.uEyeR.value.copy(this.right);
-    this.glowUniforms.uGlow.value = owl.eyeshine * owl.presence * (1 - owl.blink);
+    this.glowUniforms.uGlow.value = owl.eyeshine * owl.presence;
+    this.glowUniforms.uBlink.value = owl.blink;
     owl.toWorld(this.local.set(0, 0.16, 0), false, this.body);
     owl.toWorld(this.local.set(0, 0.33, 0.01), true, this.headAt);
     const seen = owl.presence > 0.5;
