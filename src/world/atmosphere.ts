@@ -989,8 +989,9 @@ vec4 fogOf(vec3 wpos, float landscape) {
   // The sea fog lies nearer than any of it: what it covers, the distance cannot show through.
   if (uSeaFogShape.w > 0.0) {
     vec4 sea = seaFog(cameraPosition, rd, dist);
-    fogCol = mix(fogCol * amt, sea.rgb, sea.a) / max(mix(amt, 1.0, sea.a), 1e-4);
-    amt = mix(amt, 1.0, sea.a);
+    float total = mix(amt, 1.0, sea.a);
+    fogCol = mix(fogCol, sea.rgb, sea.a / max(total, 1e-4));
+    amt = total;
   }
 #endif
   return vec4(fogCol, clamp(amt, 0.0, 1.0));
