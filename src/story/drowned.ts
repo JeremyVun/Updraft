@@ -324,7 +324,7 @@ export class DrownedChapter implements Chapter {
     const k = tuning.drowned.dark;
     if (this.t < k.riseFor * 0.35) return this.look.set(STRAND_TOP.x, STRAND_TOP.y, STRAND_TOP.z);
     const held = k.comeAfter + k.comeFor * 0.8;
-    /** Upright the lens looks back at the dark from ahead of her, so she keeps her eyes on it rather than turn. */
+    /** Upright the church is out of the frame, so she keeps her eyes on the dark. */
     if (this.t < held || this.aspect < 1) return dark();
     return Math.floor((this.t - held) / tuning.drowned.glanceEvery) % 2 === 0 ? this.look.copy(REFUGE) : dark();
   }
@@ -483,9 +483,9 @@ export class DrownedChapter implements Chapter {
    * Low beside the hull, never above the roofs. As the air dies the lens comes round from astern to the boat's side
    * away from the roof it comes to rest against, so the stem on the slates, the roof's gable and the open water behind
    * where the dark will rise are one picture. Once the dark has come on and stopped it turns with her toward the
-   * church, which comes into the other side of the frame. Upright, it stands ahead of the boat and looks back the way
-   * they came, so the boat, the roofs and the dark stack up the frame. The eye is placed by hand here, clear of every
-   * roof, so the roofs are not asked to push it about.
+   * church, which comes into the other side of the frame. Upright, it stands further off on the same side and looks up
+   * past the boat, so the gable, the boat at its foot and the dark over them stack up the frame. The eye is placed by
+   * hand here, clear of every roof, so the roofs are not asked to push it about.
    */
   private strandFrame(): void {
     const k = tuning.drownedCamera, d = tuning.drowned, s = this.shot, boat = this.cast.boat;

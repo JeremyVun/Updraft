@@ -126,7 +126,10 @@ uniform sampler2D uMirror;
 uniform mat4 uMirrorMatrix;
 uniform float uMirrorOn;
 uniform vec4 uSeaEffects;
-/** Water gone dark under smoke coming over it: a point on its front and the way it comes; its half width, flank, strength, and how far it reaches to its right. */
+/**
+ * Water gone dark under smoke coming over it: a point on its front and the way it comes; its half width, flank,
+ * strength, and how far it reaches to its right.
+ */
 uniform vec4 uDarkFront;
 uniform vec4 uDarkShape;
 uniform vec2 uBreeze;

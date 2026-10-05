@@ -293,7 +293,7 @@ export class DarkBank {
         if (p.layer === 'skirt') {
           r = k.skirtSize * p.size * (0.5 + 0.5 * risen);
           forward = lead + finger * (1 - p.back) - p.back * k.skirtDepth;
-          /** Sitting low enough that the water cuts it off flat: it lies on the glass rather than floating over it. */
+          /** Sitting low, its foot thinning into the glass: it lies on the water rather than floating over it. */
           y = (r * (0.05 + 0.45 * p.height) + p.back * 1.5) * risen;
           wide = 1.9 + p.height;
           tall = 1;
@@ -320,13 +320,12 @@ export class DarkBank {
            * each puff thinning away as another follows it up.
            */
           const column = Math.floor(p.seed * k.columns);
-          const cu = u;
           const back = 0.35 + 0.4 * Math.abs(Math.sin(column * 3.1));
           const life = (p.height + time * k.plumeRate * (0.8 + 0.4 * p.back)) % 1;
-          const head = crest(cu) * (0.18 + 0.82 * back ** 0.8) * k.heap;
+          const head = crest(u) * (0.18 + 0.82 * back ** 0.8) * k.heap;
           r = k.backSize * (0.35 + 0.55 * life) * p.size * (0.4 + 0.6 * risen);
           const lift = life * k.plumeRise * (0.6 + 0.4 * Math.abs(Math.sin(column * 5.7)));
-          forward = k.flank * cu * cu * 0.8 - k.skirtDepth * 0.4 - back * k.depth - lift * 0.45;
+          forward = k.flank * u * u * 0.8 - k.skirtDepth * 0.4 - back * k.depth - lift * 0.45;
           y = (head + r * 0.3 + lift) * risen;
           wide = 1.2;
           tall = 1.1;
