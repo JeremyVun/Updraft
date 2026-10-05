@@ -289,7 +289,8 @@ brings the light. Courage passes back and forth between them, and the stairs are
 - **Loose flights**: `CloudStairs.brush` reads the stroke on the flight's own level and eases the waited-for
   flight's velocity to it (the others move at `stir`); `update` turns it to fit inside `alignFrom` and draws it in
   when close and recently worked.
-- **Walking on stairs**: `Deck.height1` makes a strip a flight; neither walker steps off a raised edge
+- **Walking on stairs**: `Deck.height1` makes a strip a flight, and the grass is raised to meet the first riser
+  (`STAIRS_PAD`), so nobody steps up out of the grass onto a step in the air; neither walker steps off a raised edge
   (`offTheEdge`), and the bird turns almost on the spot there (`mayStep`). It is routed stop by stop and drops an
   errand within 0.45 m, so arrival is checked at 0.5 m. `Cygnet.standAt` puts it somewhere at once.
 - **The sea of cloud**: its top (`StairsCloud`) is drawn on world-anchored nested grids (`cloud-grid.ts`), so far
