@@ -298,3 +298,9 @@ reflection (two lines leave that house; only one runs on toward the church), the
 that circling unwinds. At the church the wind comes back as the storm: cat's-paws race across the glass and wipe the
 village as it was out of the water, the lines fall back, the sail fills. The memory shows the way, then the storm
 takes it, and she is the one who pulls them on: the step before the wood, where she goes into the dark first.
+
+Jeremy on the lines and the village as it was (branch `proto-drowned-own`, rejected): "I dont like the lines because
+it turns the drowned village into the sky mirror and it's actually quite confusing. Written down i think it had
+potential, but in execution im not sure it does. As a child im going to try to blow wind on the swans under the water
+and it's going to confuse me." Prototypes to judge next: the kite (`proto-drowned-kite`) and the black smoke
+(`proto-drowned-smoke`).
