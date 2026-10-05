@@ -125,7 +125,12 @@ const PIVOT = new THREE.Vector3(SWING_X, 7.3, GARDEN_NORTH - 0.34);
 const ROPE = 7;
 const LANDING_Z = GARDEN_NORTH - 6.8;
 const LANDING = new THREE.Vector3(SWING_X, slates(NAVE, LANDING_Z - NAVE.z), LANDING_Z);
-const OLD_TREE = new THREE.Vector3(GARDEN.x + 0.7, -3.2, -27.6);
+/**
+ * The old tree on the green stands off the cottage's far corner, behind the swing's back-swing and east of the
+ * lens's way along the cottage, so from the side its trunk is at the edge of the frame and never behind her arc;
+ * its big low bough reaches out over the water to where the ropes are tied.
+ */
+const OLD_TREE = new THREE.Vector3(SWING_X + 4.65, -3.2, GARDEN_SOUTH + 0.95);
 
 const WAY = {
   strand: { x0: -6, z0: 0, x1: END.x, z1: END.z, halfWidth: 0.45, height: END.y },
@@ -334,11 +339,12 @@ export class CrossingsYard {
       const pivot = this.swing.swing.pivot;
       if (upright) {
         /** Behind her and a little above, so each swing goes away up the frame toward the slope she will land on. */
-        this.eye.set(pivot.x + 10, 5.6, pivot.z + 11);
-        this.target.set(pivot.x - 0.6, 2.6, pivot.z - 4);
+        this.eye.set(pivot.x + 11.5, 5.6, pivot.z + 10);
+        this.target.set(pivot.x - 2.2, 2.6, pivot.z - 4);
       } else {
-        this.eye.set(pivot.x + 18, 3.1, pivot.z - 3);
-        this.target.set(pivot.x, 3.2, pivot.z - 2.7);
+        /** Side on to her arc, the old tree's trunk at the left edge and its bough across the top, the nave on the right. */
+        this.eye.set(pivot.x + 21, 3.1, pivot.z - 1.6);
+        this.target.set(pivot.x, 3.5, pivot.z - 1.4);
       }
     } else {
       const ahead = this.tmp.set(c.x, 0, c.z);
@@ -429,19 +435,32 @@ export class CrossingsYard {
     }
   }
 
-  /** The old tree on the green: a trunk standing in the flood to its fork, and the long bough the swing hangs from. */
+  /** The old tree on the green: a thick trunk standing in the flood to its fork, and the long low bough the swing hangs from. */
   private oldTree(): THREE.Mesh {
     const base = OLD_TREE.clone();
-    const fork = new THREE.Vector3(base.x + 0.2, 4.4, base.z - 0.1);
-    const knot = PIVOT.clone().setY(PIVOT.y + 0.16);
+    const fork = new THREE.Vector3(base.x - 0.3, 4.2, base.z - 0.6);
+    const knot = PIVOT.clone().setY(PIVOT.y + 0.18);
+    const reach = new THREE.Vector2(knot.x - fork.x, knot.z - fork.z).normalize();
+    const along = (d: number, y: number) => new THREE.Vector3(knot.x + reach.x * d, y, knot.z + reach.y * d);
     const parts = [
-      tube([base, base.clone().lerp(fork, 0.5).add(new THREE.Vector3(0.15, 0, 0.05)), fork], 0.85, 0.55, 12, BARK, 0, 0, 0.3, 0.2),
-      tube([fork.clone().setY(fork.y - 0.4), fork.clone().lerp(knot, 0.5).add(new THREE.Vector3(0, 1.1, 0)), knot,
-        knot.clone().add(new THREE.Vector3(1.6, 0.5, 0.7))], 0.42, 0.1, 9, BARK, 0, 0.4, 0.7),
+      tube([base, base.clone().lerp(fork, 0.5).add(new THREE.Vector3(0.12, 0, 0.1)), fork], 0.95, 0.62, 12, BARK, 0, 0, 0.3, 0.25),
+      tube([fork.clone().setY(fork.y - 0.5), fork.clone().lerp(knot, 0.35).setY(6.1), fork.clone().lerp(knot, 0.7).setY(7.05), knot,
+        along(1.4, 7.75), along(2.4, 8.5)], 0.5, 0.11, 10, BARK, 0, 0.35, 0.7),
     ];
+    /** A few smaller limbs off the bough, leaning out to either side, each forking into twigs. */
+    for (const [share, side, len] of [[0.4, 1, 1.5], [0.58, -1, 1.2], [0.8, 1, 0.9], [0.95, -1, 0.7]] as const) {
+      const from = fork.clone().lerp(knot, share).setY(THREE.MathUtils.lerp(fork.y, knot.y, share) + 0.1);
+      const tip = from.clone().add(new THREE.Vector3(-reach.y * side * len + reach.x * 0.4, len * 0.55, reach.x * side * len + reach.y * 0.4));
+      parts.push(tube([from, from.clone().lerp(tip, 0.5).add(new THREE.Vector3(0, 0.12, 0)), tip], 0.1, 0.025, 6, BARK, 0.2, 0.9, share * 5));
+      for (let j = 0; j < 2; j++) {
+        const twig = tip.clone().add(new THREE.Vector3((j ? 0.3 : -0.2) + reach.x * 0.3, 0.35 + 0.15 * j, reach.y * 0.3 + (j ? -0.25 : 0.2)));
+        parts.push(tube([from.clone().lerp(tip, 0.6), tip.clone().lerp(twig, 0.4), twig], 0.035, 0.008, 4, BARK, 0.5, 1, share * 5 + j));
+      }
+    }
     const rand = (i: number) => (Math.sin(i * 12.9898 + 4.1) * 43758.5453) % 1;
+    const away = Math.atan2(-reach.y, -reach.x);
     for (let i = 0; i < 6; i++) {
-      const a = Math.PI * 0.9 + (i / 6) * Math.PI * 1.4 + 0.2 * Math.abs(rand(i));
+      const a = away + (i / 5 - 0.5) * Math.PI * 1.3 + 0.2 * Math.abs(rand(i));
       const out = 2.8 + 1.6 * Math.abs(rand(i + 7));
       const end = new THREE.Vector3(fork.x + Math.cos(a) * out, fork.y + 2.5 + 1.8 * Math.abs(rand(i + 3)), fork.z + Math.sin(a) * out);
       parts.push(tube([fork.clone().setY(fork.y - 0.2), fork.clone().lerp(end, 0.5).add(new THREE.Vector3(0, 0.8, 0)), end], 0.36, 0.12, 8, BARK, 0, 0.3, i * 0.37));

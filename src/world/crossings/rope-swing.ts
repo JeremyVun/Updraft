@@ -78,6 +78,8 @@ export class RopeSwing {
   aside = 0;
   /** 0 empty to 1 with her on it: a loaded swing takes more pushing. */
   rider = 0;
+  /** Someone has ridden it since it was last set still: empty after that, it dies away. */
+  ridden = false;
   /** Held where it is by someone getting on. */
   held = false;
   /** Seconds since a stroke last crossed it on screen. */
@@ -116,7 +118,7 @@ export class RopeSwing {
 
   reset(): void {
     this.angle = this.speed = this.aside = this.rider = 0;
-    this.held = false;
+    this.held = this.ridden = false;
     this.brushAge = Infinity;
     this.best = 0;
     this.pose();
@@ -188,7 +190,8 @@ export class RopeSwing {
       const way = Math.abs(this.speed) > 0.03 ? Math.sign(this.speed) : Math.sign(along) || 1;
       const push = along * k.along + w.energy * k.pump * way;
       this.speed += ((-this.gravity * Math.sin(this.angle)) + push / load) / this.rope * dt;
-      this.speed *= Math.exp(-dt * k.damping);
+      if (this.rider > 0) this.ridden = true;
+      this.speed *= Math.exp(-dt * (this.ridden && this.rider === 0 ? k.emptyDamping : k.damping));
       this.angle += this.speed * dt;
       if (Math.abs(this.angle) > 1.25) {
         this.angle = Math.sign(this.angle) * 1.25;

@@ -1880,8 +1880,11 @@ export const tuning = {
       inviteAfter: 6, valveAfter: 90, valveEvery: 1.6, valvePush: 0.32,
     },
     swing: {
-      /** A slower, dreamier gravity than the world's (a share of it), and how fast a swing dies away with nobody pushing. */
-      gravity: 0.8, damping: 0.05,
+      /**
+       * A slower, dreamier gravity than the world's (a share of it), and how fast a swing dies away with nobody
+       * pushing: hardly at all with her on it, and over about ten seconds once it is empty.
+       */
+      gravity: 0.8, damping: 0.05, emptyDamping: 0.6,
       /** Push along its travel per unit of gust energy at the seat, and per unit of the felt wind along its way. */
       pump: 1.5, along: 0.25,
       /** Seconds she takes to catch hold and sit, and the start she gives it pushing off the eave (radians a second). */
@@ -1891,7 +1894,7 @@ export const tuning = {
       /** Her own push off the seat as she lets go, forward and up (units a second), and the gravity she flies under. */
       leapForward: 0.9, leapUp: 1.6, leapGravity: 7.5,
       /** Seconds for the stumble and getting up on the slope after landing, and for her look back at the swing. */
-      landFor: 1.3, lookBack: 0.9,
+      landFor: 1.3, lookBack: 3.2,
       /** Seconds riding without a push before the drawn push; with no new height before the world's own gusts carry her. */
       inviteAfter: 5, valveAfter: 90, valveEvery: 1.2, valveEnergy: 1.5,
     },
