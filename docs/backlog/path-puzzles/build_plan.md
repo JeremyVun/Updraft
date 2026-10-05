@@ -77,8 +77,8 @@ Done: [ ]
 
 Design: design.md, "The crossings" through "As decided: the crossings". Concept frames: `comps/crossings/meadow/`
 and `comps/crossings/whale/`. Each encounter is its own branch off main, judged by Jeremy on its own and never merged
-without his approval. Build the meadow first. At most one build agent at a time on this item (peers share the session
-limit); commit after every step.
+without his approval. The meadow and the whale are built at the same time (Jeremy, 2026-10-05: "can we not do the whale (C2) at the same
+time?"), one agent per branch, never more than two at once (peers share the session limit); commit after every step.
 
 Standing constraints for every phase:
 - Cursor movement is the only verb; nothing timed, nothing failed; the boat never waits for the meadow.
@@ -126,7 +126,8 @@ Seam: the crossing holds the boat with `Boat.speedLimit` eased to zero and relea
 `awake` once the breath is drawn; nothing else in the crossing changes.
 Gate: typecheck; build; a real-gesture check (`tools/sleeping-whale-check.mjs`): sweeps alone never wake it, circles
 over the blowhole do, idle wakes it only by the gull after the valve, a save before and after resumes correctly;
-stills beside `k1`–`k4` in landscape and portrait, opened for Jeremy.
+stills beside `k1`–`k4` in landscape and portrait, opened for Jeremy. Built in two waves like the meadow: code, the
+check and one smoke still set (C2a), then the look and the gates (C2b).
 Done: [ ]
 
 ### Phase C3: docs on approval
