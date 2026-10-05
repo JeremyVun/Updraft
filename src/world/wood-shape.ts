@@ -154,12 +154,12 @@ const STUMP_SCALE = 1;
 /** The top of the trunk, where it forked and broke, and the owl sits on what is left of it. */
 const TRUNK_TOP = 1.52;
 /**
- * The fork spreads square to the camera, so the frame sees both limbs; the side coal's light, coming across it,
- * shows a little less of the spread.
+ * The fork spreads across her line of sight and the face-on camera's behind her, so both see a Y with the owl in its
+ * crook; the held frame, off to her side, sees it a little narrower.
  */
 const STUMP_TURN = (() => {
-  const eye = tuning.wood.shape.eye;
-  return Math.atan2(-eye[2], eye[0]) + Math.PI / 2;
+  const eye = tuning.wood.shape.faceEye;
+  return (Math.atan2(WAIT_LOCAL.x, WAIT_LOCAL.z) + Math.atan2(eye[0], eye[2])) / 2;
 })();
 
 const turned = (p: readonly number[]): [number, number, number] => {
@@ -168,7 +168,7 @@ const turned = (p: readonly number[]): [number, number, number] => {
   return [x * c + z * s, y, -x * s + z * c];
 };
 
-/** Where the owl sits: on the broken top of the trunk, in the crook against its taller limb, toward the camera. */
+/** Where the owl sits: on the broken top of the trunk, in the crook against its taller limb, toward her. */
 export const OWL_PERCH_LOCAL = new THREE.Vector3(...turned([0.22, TRUNK_TOP + 0.05, 0.16]));
 
 /** The gap the trees leave behind her: over the path and up through the crowns on its far side. */
@@ -256,8 +256,8 @@ type CapSpec = [number[], number[], number, number];
 
 /**
  * An old dead stump a little taller than her, the one whose shadow is painted in the plain mask: a thick trunk broken
- * off where it forked; the shorter limb leaning out to her side and snapped, a twig left on it; the taller limb up and
- * out the other way in a long curve, forked into twigs at its top; a branch broken off low down, and roots. Given in
+ * off where it forked; the shorter limb leaning out to her left and snapped, a twig left on it; the taller limb up and
+ * out to her right in a long curve, forked into twigs at its top; a branch broken off low down, and roots. Given in
  * its own frame; one list makes the mesh and the shadow her light throws.
  */
 const LOCAL: CapSpec[] = [
