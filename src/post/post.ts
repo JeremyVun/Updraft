@@ -37,7 +37,7 @@ const UNCLAMPED = 65504;
  * as a miniature does, while a wide view stays clear. `aperture` turns dioptres into blur, which the distance's
  * reaches only up to `far`, and the sky's only up to `sky`.
  */
-const BLUR = { aperture: 6.5, far: 0.35, sky: 0.08 };
+const BLUR = { aperture: 5, far: 0.35, sky: 0.08 };
 /**
  * The blur's taps, in quarter-size texels apart, and how many times its two passes run. Taps further apart than a
  * texel and a half leave gaps that show as stepped copies of an edge, so a wider blur comes from running them again.
