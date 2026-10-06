@@ -364,7 +364,7 @@ effect that is off is compiled out, not branched round. Each such effect is a sw
 0, tested with `#if`. Shared GLSL defaults a switch to on, so materials without variants keep the effect.
 
 - `register(material, ...axes)` lists the alternatives of each axis; a variant takes one alternative from every
-  axis, so several independent switches multiply (deck × land × three effect sets is three axes, twelve programs).
+  axis, so several independent switches multiply (the sea's deck × three effect sets is two axes, six programs).
 - `select(material, choice)` and `selectAll(choice)` change the defines in place. three keeps every program a
   material has built, keyed by its defines, so switching rebinds a program built before Begin, for every mesh, view
   and pass that draws the material, and never compiles. A choice that is not a registered variant throws.
@@ -391,9 +391,11 @@ Without the bank the sky also leaves out its clouds below and above their band, 
 round the clouds' shading where none shows moved them by a rounding step (fast math regroups the two cloud lookups
 when both run), so it is worked out wherever the band is.
 
-`LAND_SKIP`: the sea returns unshaded where the ground stands a metre over it across the 3×3 pixels round it with no
+`uLandSkip`: the sea returns unshaded where the ground stands a metre over it across the 3×3 pixels round it with no
 waterline inside, so no seen pixel shares its quad; it needs the terrain drawn over the sea with tiles following a
-camera above the ground, and is selected while island ground lies in the window.
+camera above the ground, and is selected while island ground lies in the window. This small early exit uses a bool
+uniform, avoiding a second copy of each large water program. The effect sets and cloud deck still use variants.
+The sample positions, waterline safety margin and return colour are unchanged.
 
 ## Bakes and caches
 
@@ -409,6 +411,11 @@ Static, baked once before Begin (runtime GPU allocations, not downloads):
   window. Cells where it would miss the formula by more than 1 cm keep the direct formula (flagged in the texel), and
   the open sea is an exact `seaFloor` expression. **`tools/terrain-heights-check.mjs` must pass again after any
   island's shape or position changes.** `?heights=direct` compares against the formula.
+- The terrain vertex shader shares its three `groundHeight` samples in a loop bounded by the frozen
+  `uGroundSamples = 3` uniform. It retains the centre, x-offset and z-offset samples and the original normal
+  calculation; D3D11 otherwise expands the large height helper at all three call sites. This is a compile-time
+  optimization, not a lower-detail normal. `tools/terrain-samples-check.mjs` compares the actual vertex calculation
+  against three separate calls, for both height-filtering paths, main/mirror heights, all patches and direct fallback.
 - `world/noise-tiles.ts`: the ground's four-octave noise as a 512² tiling texture with mips (about 0.35 MiB). The
   frost pattern samples one fixed level everywhere, so blades, ground and props agree.
 

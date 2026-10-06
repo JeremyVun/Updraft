@@ -27,6 +27,19 @@ The fog change did not establish a reduction in time to Begin. Further experimen
 First investigate compilation order: the non-cloud terrain variant is consistently queued around 30 s and is
 last to settle at 42 s. Starting it earlier can be tested with identical shader inputs and visual settings.
 
+Jeremy's next instruction: "commit and push, and then lets try tackle some meatier stuff". The verified fog and
+scheduling work was pushed as `10ab475`. This authorises investigating the terrain/water compiler hotspots next,
+while retaining the earlier no-visual-regression requirement. Isolate compile cost before editing the game; any
+retained shader restructuring must preserve effect counts and arithmetic order, pass targeted GPU output and scene
+comparisons, and produce an improvement in whole-game cold startup. Do not defer work into play or lower quality.
+
+Jeremy clarified the visual gate: "its fine if it doesn't cause a human visible issue. im happy to take a look".
+Tiny numerical or pixel differences are not an automatic rejection. Preserve the effects and the perceived look;
+offer matched before/after captures for Jeremy's review. Continue checking gameplay cost separately from startup.
+
+After reviewing the result, Jeremy approved it (2026-10-06): "yep it looks fine, that wake foam difference is acceptable".
+Keep the water-program consolidation and shared terrain-height samples. The reviewed wake-foam difference is accepted.
+
 ## Jeremy's brief (verbatim)
 
 2026-09-29:

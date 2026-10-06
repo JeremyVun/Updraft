@@ -350,3 +350,82 @@ Changing MSAA still first-draws existing programs into the new sample count, as 
 This run used `BOOT_MAX_MS=1000`; its measured 616.7 ms veil gap still exceeds the unchanged default 500 ms gate.
 This is the focused portion, not a repeat of the entire start-screen suite. Typecheck and production/QA builds pass.
 Evidence: `C:/tmp/updraft-schedule-start-check.mjs`, `C:/tmp/updraft-schedule-start-check.json`.
+
+### Terrain samples and water programs (2026-10-06)
+
+The scheduling/fog changes were committed and pushed as `10ab475` before this investigation. Jeremy then asked for
+larger improvements and clarified that imperceptible pixel differences are acceptable, with captures for his review.
+
+Two changes preserve effect counts and the work completed before Begin:
+
+- Terrain: evaluate the same centre, x-offset and z-offset heights in a uniform-bounded three-iteration loop. Keep
+  the offsets and normal arithmetic unchanged. The frozen `uGroundSamples = 3` belongs to the terrain material;
+  simulation noise stays unchanged. This avoids three compiler expansions of the large height helper.
+- Water: replace the small under-land early exit's `LAND_SKIP` program axis with `uLandSkip`. Keep its safe footprint
+  test and return colour. Cloud-deck and sea-quality effects still have their separate programs. Water now needs
+  six programs instead of twelve, and boot links 214 instead of 220. The profiler and render-cost fixtures follow
+  the uniform; the profiler retains compatibility with older comparison builds.
+
+Rejected probes: rolling the footprint's nine-by-eight loops or the field search did not materially improve isolated
+terrain compilation. Diagnostic omission of footprints, fields or fog was only an upper-bound experiment, not a
+proposed visual change. Sharing the three height samples reduced one isolated terrain link from 6.494 to 4.373 s.
+
+Cold D3D11 startup on the same Ryzen 5 9600X / RTX 4070 Super, CFT 153.0.8010.12:
+
+| Build | Time to Begin | Programs |
+| --- | --- | --- |
+| Pushed scheduling baseline | 38.397, 40.329, 40.707 s; fresh control 39.397 s | 220 |
+| Water consolidation alone | 36.948 s | 214 |
+| Water plus shared terrain samples, first trial | 31.252 s | 214 |
+| Final repeated cold loads | 31.750, 31.357, 31.319 s | 214 |
+
+The final median is 31.357 s: about 8–9 s (20–22%) faster than the scheduling baseline. No other GPU check ran during
+these loads. The worst veil gaps in the three final loads are 683, 717 and 700 ms; the existing 500 ms gate remains
+unmet. The largest measured main-thread long task was 605 ms. All loads complete without startup errors.
+
+Targeted vertex-output verification (`tools/terrain-samples-check.mjs`): 1,572,864 samples on each backend, across all
+eleven island patches plus the moving window, four leaf sizes, atlas and direct fallback, both height-filtering
+paths, and main/mirror geometry. D3D11 heights match exactly, with largest normal-component difference 7.05e-6.
+Vulkan heights and normal components match exactly. No GL errors. This tests the actual vertex calculations using
+floating-point point draws, rather than just the height function in a fragment shader.
+
+Runtime probe for the terrain change alone: alternating GPU timer queries at 1600x900, main scene and terrain alone,
+in island, sea and stairs. Whole-scene medians were 1.121→1.163, 0.833→0.846 and 1.465→1.493 ms; paired ratios were
+1.057, 1.004 and 1.018. These small increases are recorded rather than claiming a rendering speedup. They exclude
+simulation and post-processing and are not measurements of phone or Apple hardware.
+
+Reports: `C:/tmp/updraft-heavy-final-cold-*.json`, `C:/tmp/updraft-heavy-control-cold.json`,
+`C:/tmp/updraft-water-uniform-cold.json`, `C:/tmp/updraft-terrain-{loop,stage}-probes.json`,
+`C:/tmp/updraft-terrain-samples{,-vulkan}.json`, `C:/tmp/updraft-terrain-runtime-d3d11.json`.
+
+The final combined build passes all 13 fixed-frame chapter/viewport comparisons on each of D3D11 and Vulkan.
+Island, lines, meadow and portrait are pixel-identical on both. The largest mean channel difference is 0.166/255
+on D3D11 and 0.174/255 on Vulkan; at most 0.282% and 0.303% of pixels respectively differ by more than 8/255.
+The biggest visible pattern difference is in fine wake foam in the storm scene; matched storm and sea captures
+were provided for Jeremy's review. Heights retain the prior CPU/GPU parity (0.01037 m D3D11, 0.01206 m Vulkan).
+Character/camera drift stays below 0.00032 m. No stray programs or programs first drawn during play in any view.
+Reports and PNGs: `C:/tmp/updraft-heavy-parity-{d3d11,vulkan}.*` and matching scene filenames.
+
+Focused `start-check` through Begin and quality step-down passes: native audio, paused ready screen, 25/25
+construction steps, all active fixed loop bounds uploaded correctly (including both terrain programs), and no
+programs first drawn after Begin or quality changes. The allowed MSAA target-pair first draws remain. It used
+`BOOT_MAX_MS=1000`; the measured 633.3 ms gap still fails the unchanged default 500 ms gate. Typecheck, production/QA
+builds and shader bounds pass. This is not a full journey or a physical Apple/Samsung test.
+Evidence: `C:/tmp/updraft-heavy-start-check.json`.
+
+The vertex probe's `PERTURB=1` calibration fails as intended when the reference x-offset is changed by 10% (largest
+normal-component difference 0.7304), confirming it detects a real normal regression. Water GPU timings were repeated
+after warming both programs and using paired ratios to avoid GPU clock transitions biasing separate medians:
+18 cases cover island/sea/stairs, all three sea-effect sets and both under-land states. Median paired new/old costs
+range from 0.993 to 1.013; no meaningful water cost increase was established on this GPU. Report:
+`C:/tmp/updraft-water-runtime-confirm-d3d11.json`; calibration: `C:/tmp/updraft-terrain-samples-perturbed.json`.
+
+Final D3D11 stairs gameplay at 1600x900, ratio 1, MSAA 4: 600 frame intervals over 10 seconds, p50/p90 16.7 ms,
+p99/max 16.8 ms, no intervals over 25 ms, no long tasks, and no new programs or target pairs first drawn in play.
+The compiler still emits potential-uninitialized-helper warnings; the output and functional checks above pass.
+Evidence: `C:/tmp/updraft-heavy-stairs-frames.txt`.
+
+Jeremy approved the visual result on 2026-10-06: "yep it looks fine, that wake foam difference is acceptable".
+Keep both optimizations; the visual review is complete. These changes follow the earlier `10ab475` scheduling push.
+Production deployment and physical Apple/Samsung testing are not covered by this verification.
+The original phase 4 and its 500 ms gate remain open.

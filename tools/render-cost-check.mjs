@@ -83,9 +83,10 @@ async function compare() {
       material.uniforms.uMirrorPass.value = 0;
       if (mirror) terrain.endMirror();
     }
-    // The sea's skips against full work: the return under land (LAND_SKIP), and the weed where its weight is 0.
+    // The sea's skips against full work: the return under land, and the weed where its weight is 0.
     // Each is compared from the eye and from points round it, high and low.
-    const water = __game.water.mesh.material, waterFragment = water.fragmentShader, landSkip = water.defines.LAND_SKIP;
+    const water = __game.water.mesh.material, waterFragment = water.fragmentShader;
+    const landSkip = water.uniforms.uLandSkip.value;
     const skips = [['sea weed', 'if (bedDepth > 0.9 && bedDepth < 4.0) {']];
     for (const [label, from] of skips) if (!waterFragment.includes(from)) throw new Error('Missing skip: ' + label);
     const look = rig.camera.quaternion.clone();
@@ -96,17 +97,17 @@ async function compare() {
         // The terrain's tiles follow the eye, as prepareFrame has them do before every draw.
         rig.camera.updateMatrixWorld(); terrain.update(rig.camera);
         const sea = (label, full) => {
-          water.defines.LAND_SKIP = 1; water.needsUpdate = true;
+          water.uniforms.uLandSkip.value = true;
           const optimized = read(rig.camera);
           full(); water.needsUpdate = true;
           results.push(diff(optimized, read(rig.camera), `${label} eye ${dx},${dy},${dz}`));
           water.fragmentShader = waterFragment; water.needsUpdate = true;
         };
-        sea('sea land skip', () => { water.defines.LAND_SKIP = 0; });
+        sea('sea land skip', () => { water.uniforms.uLandSkip.value = false; });
         for (const [label, from] of skips) sea(label, () => { water.fragmentShader = waterFragment.replace(from, '{'); });
       }
     } finally {
-      water.fragmentShader = waterFragment; water.defines.LAND_SKIP = landSkip; water.needsUpdate = true;
+      water.fragmentShader = waterFragment; water.uniforms.uLandSkip.value = landSkip; water.needsUpdate = true;
       rig.camera.quaternion.copy(look); rig.camera.position.copy(eye); rig.camera.updateMatrixWorld(); terrain.update(rig.camera);
     }
     return results;

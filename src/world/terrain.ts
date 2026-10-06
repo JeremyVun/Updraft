@@ -39,6 +39,8 @@ const VERT = /* glsl */ `
 ${HEIGHTFIELD_GLSL}
 ${TERRAIN_HEIGHTS_GLSL}
 uniform float uMirrorPass;
+// Fixed at three: keep the large groundHeight body shared between the normal's samples on D3D11.
+uniform int uGroundSamples;
 uniform sampler2D uHeightTex;
 uniform vec4 uDomain;
 in vec3 aNode;
@@ -67,9 +69,16 @@ float groundHeight(vec2 q) {
 void main() {
   vec2 p = aNode.xy + position.xz * aNode.z;
   float e = aNode.z / ${SEGMENTS}.0;
-  float h = groundHeight(p);
-  float hx = groundHeight(p + vec2(e, 0.0));
-  float hz = groundHeight(p + vec2(0.0, e));
+  float heights[3];
+  for (int k = 0; k < uGroundSamples; k++) {
+    vec2 q = p;
+    if (k == 1) q = p + vec2(e, 0.0);
+    else if (k == 2) q = p + vec2(0.0, e);
+    heights[k] = groundHeight(q);
+  }
+  float h = heights[0];
+  float hx = heights[1];
+  float hz = heights[2];
   vNormal = normalize(vec3(h - hx, e, h - hz));
   float meadowTop = uMirrorPass * smoothstep(${GRASS_LINE.toFixed(2)}, ${(GRASS_LINE + 1.5).toFixed(2)}, h) * 1.1;
   vec3 world = vec3(p.x, h + meadowTop - position.y * (0.6 + aNode.z * 0.03), p.y);
@@ -316,6 +325,7 @@ export class Terrain {
         ...heights.uniforms,
         ...footprintUniforms,
         ...echoUniforms,
+        uGroundSamples: Object.freeze({ value: 3 }),
         uSand: { value: new THREE.Color('#e6d2a6') },
         uWetSand: { value: new THREE.Color('#a48c66') },
         uGround: { value: new THREE.Color('#2e3f22') },

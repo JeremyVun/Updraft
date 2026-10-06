@@ -4,7 +4,7 @@ import { MIRROR_LAYOUT_GLSL, SKY_MIRROR } from './sky-mirror-layout';
 import { MIRROR_RIPPLES_GLSL, mirrorUniforms } from './sky-mirror';
 import { LITTLE_BOATS, LITTLE_BOATS_GLSL, boatsTide } from './little-boats-layout';
 import { params } from '../params';
-import { CLOUD_DECK, LAND_SKIP, register, select, type Choice } from '../gl/variants';
+import { CLOUD_DECK, register, select, type Choice } from '../gl/variants';
 import type { SeaEffects } from '../gl/quality';
 import { glsl, tuning } from '../tuning';
 import { ATMO_GLSL, atmo } from './atmosphere';
@@ -121,6 +121,8 @@ ${WIND_WAVES_GLSL}
 ${MIRROR_LAYOUT_GLSL}
 ${MIRROR_RIPPLES_GLSL}
 uniform float uSkyMirrorAppearance;
+// This small early exit shares one program for both states; the expensive effects keep their variants.
+uniform bool uLandSkip;
 uniform sampler2D uRipple;
 uniform sampler2D uMirror;
 uniform mat4 uMirrorMatrix;
@@ -254,7 +256,6 @@ vec3 glassColour(vec3 V, vec2 xz) {
   return reflected * 0.96 + vec3(0.003, 0.006, 0.012);
 }
 
-#if LAND_SKIP
 float groundUnder(vec2 xz) {
   return texture(uHeightTex, clamp(domainUv(xz), 0.0, 1.0)).r;
 }
@@ -270,7 +271,6 @@ bool underLand(vec2 xz, Footprint fp, float above, float inland) {
   if (inland <= max(length(a), length(b)) + 1.0) return false;
   return min(min(groundUnder(xz + a), groundUnder(xz - a)), min(groundUnder(xz + b), groundUnder(xz - b))) > above;
 }
-#endif
 
 void main() {
   vec3 toCam = cameraPosition - vWorld;
@@ -294,13 +294,11 @@ void main() {
     offshore = mix(offshore, bankDistance, pool);
   }
   float surfBlur = fwidth(offshore) / BORE_SPACING * 1.5;
-#if LAND_SKIP
   // The terrain draws over this water (they sort by material, not depth), so its shading would be thrown away.
-  if (inside == 1.0 && underLand(xz, fp, vWorld.y + 1.0, -offshore)) {
+  if (uLandSkip && inside == 1.0 && underLand(xz, fp, vWorld.y + 1.0, -offshore)) {
     gl_FragColor = vec4(0.0, 0.0, 0.0, 1.0);
     return;
   }
-#endif
   float glass = hides ? 0.0 : mirrorWater(xz) * uSkyMirrorAppearance;
   // Ordinary sea beyond the flat would show as a dark band under the horizon.
   float onFlat = 1.0 - smoothstep(${glsl(tuning.skyMirror.horizonOnFlat)}, ${glsl(tuning.skyMirror.horizonOffFlat)}, distance(cameraPosition.xz, vec2(${glsl(SKY_MIRROR.x)}, ${glsl(SKY_MIRROR.z)})));
@@ -546,6 +544,7 @@ export class Water {
         ...boatsTide,
         uWaterWind: this.windWaves.uniform,
         uSkyMirrorAppearance: { value: 1 },
+        uLandSkip: { value: false },
         uRipple: { value: rippleTexture() },
         uMirror: { value: this.reflection.target.texture },
         uMirrorMatrix: { value: this.reflection.matrix },
@@ -560,13 +559,13 @@ export class Water {
       },
     });
     outsideHull(mat);
-    register(mat, CLOUD_DECK, LAND_SKIP, Object.values(SEA_EFFECTS));
+    register(mat, CLOUD_DECK, Object.values(SEA_EFFECTS));
     this.mesh = new THREE.Mesh(seaGrid(params.lite ? 128 : 192), mat);
     this.mesh.frustumCulled = false;
   }
 
   /**
-   * Whether to draw with `LAND_SKIP`: there is island ground in the window for the sea to lie under, and the camera
+   * Whether to skip shading under land: there is island ground in the window for the sea to lie under, and the camera
    * is above the ground, so land over the sea is always between it and the eye.
    */
   landSkip(camera: THREE.Camera): boolean {
@@ -574,6 +573,10 @@ export class Water {
     const land = TERRAIN_HEIGHT_PATCHES.some((p) => p.minX < x1 && p.minZ < z1
       && p.minX + p.width * HEIGHT_TEXEL > WINDOW.minX && p.minZ + p.height * HEIGHT_TEXEL > WINDOW.minZ);
     return land && camera.position.y > heightAt(camera.position.x, camera.position.z);
+  }
+
+  setLandSkip(enabled: boolean): void {
+    (this.mesh.material as THREE.ShaderMaterial).uniforms.uLandSkip.value = enabled;
   }
 
   /**

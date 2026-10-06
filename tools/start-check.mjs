@@ -53,14 +53,14 @@ try {
  report.bootSteps = await page.evaluate(() => window.__stats?.bootSteps);
  assert.equal(report.bootSteps?.counted, report.bootSteps?.expected, `world construction took ${report.bootSteps?.counted} steps; update BUILD_STEPS in src/main.ts`);
  report.noiseLoops = await page.evaluate(() => {
-   const gl=__game.renderer.getContext(), bad=[], checked={uNoiseOctaves:0,uHeightOctaves:0,uNoiseCorners:0};
-   for(const p of __game.renderer.info.programs)for(const [name,expected] of Object.entries({uNoiseOctaves:4,uHeightOctaves:6,uNoiseCorners:4})){
+   const gl=__game.renderer.getContext(), bad=[], checked={uNoiseOctaves:0,uHeightOctaves:0,uNoiseCorners:0,uGroundSamples:0};
+   for(const p of __game.renderer.info.programs)for(const [name,expected] of Object.entries({uNoiseOctaves:4,uHeightOctaves:6,uNoiseCorners:4,uGroundSamples:3})){
      const location=gl.getUniformLocation(p.program,name);if(location===null)continue;
      checked[name]++;const actual=gl.getUniform(p.program,location);if(actual!==expected)bad.push({program:p.id,name,expected,actual});
    }
    return {checked,bad};
  });
- assert.deepEqual(report.noiseLoops.bad,[],'every scene, bake and simulation must receive its fixed noise loop bounds');
+ assert.deepEqual(report.noiseLoops.bad,[],'every scene, bake and simulation must receive its fixed loop bounds');
  assert(Object.values(report.noiseLoops.checked).every(n=>n>0),'exercise each loop bound on real programs');
  assert.equal(await page.locator('#begin').innerText(),'Begin');
  assert.match(await page.locator('.veil-painting').evaluate(e=>e.currentSrc),/island-land/,'Begin shows the Still island');

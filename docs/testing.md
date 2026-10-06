@@ -70,6 +70,10 @@ edit.
 - `noise-loop-check`: compares the rolled scene/height noise to the original shader arithmetic on the GPU over
   294,912 samples, including negative coordinates and all six octave counts. Needs a dev server for source imports.
   Run on the default backend and a second backend (`ANGLE=vulkan` on Windows); this is not a physical mobile test.
+- `terrain-samples-check`: compares the terrain vertex shader's shared height samples with three separate calls,
+  reading normal components and heights as floats across every height patch, window boundaries, atlas/direct paths,
+  filtered/manual height lookups and main/mirror geometry. Needs a dev server; run on the default backend and Vulkan.
+  `PERTURB=1` deliberately moves the reference's x sample and must fail, to check the probe's sensitivity.
 - `render-cost-check <chapter>`, `grass-quality-check`, `grass-unclipped-check`, `swan-shading-check`,
   `water-texture-check`, `terrain-check`, `terrain-fields-check`, `terrain-colour-check`, `terrain-heights-check`
   (after any island's shape or position change), `fields-border-check`, `height-bake-check`.
@@ -80,7 +84,7 @@ edit.
 - `start-check` (Begin, audio unlock, Continue, retry; the invitation low in the room painting, and centred when the
   painting is blocked, on desktop and phone; worst boot gap under `BOOT_MAX_MS`; no program first used
   outside boot's settle step, `__stats.bootStrayPrograms`; the construction steps a real boot counts equal
-  `BUILD_STEPS`; fixed noise loop bounds actually uploaded to every active program; no program first drawn in the first seconds of play after Begin, Continue or a chapter pick,
+  `BUILD_STEPS`; fixed noise and terrain-sample loop bounds actually uploaded to every active program; no program first drawn in the first seconds of play after Begin, Continue or a chapter pick,
 `__stats.playFirstDraws`), `startup-check`,
   `loading-check`, `boot-cloth-check`, `failure-paths-check` (including a blocked room painting: plain veil, working
   Continue), `context-loss-check`.
