@@ -1297,6 +1297,8 @@ async function boot(): Promise<void> {
     return (fraction: number) => startScreen.progress('graphics', SETTLE_SHARE + (1 - SETTLE_SHARE) * (before + count * fraction) / warmTotal);
   };
   await settlePrograms(renderer, [
+    // Start the longest terrain compile early so it can finish alongside the other programs.
+    ...[undefined, ...variants].map((apply) => ({ ...sceneJob, objects: [terrain.mesh], apply })),
     sceneJob,
     passJob(simMaterials, bakes.ground),
     ...grass.tableJobs(),

@@ -15,6 +15,18 @@ the default backend; a player changing browser flags is not the deliverable. Iso
 equivalent output, and measure a fresh-profile and forced-cold QA startup. The Samsung report remains unconfirmed:
 an emulated mobile viewport or CPU slowdown does not establish physical tablet compatibility.
 
+Jeremy's follow-up (2026-10-06): "the last thing i want to happen is a regression in visuals so lets just do whats safe. i assume (2) is safe? is 1 and 3 safe?"
+
+For this follow-up, only share the duplicate fog calculation in the two dark-wood bend shaders. Keep the original
+colour mixing and subtraction order, then compare the affected stump, rock and coal pool against the current
+build on Windows. Leave the water variant consolidation (1) and remaining terrain loops (2) unchanged: their
+runtime and visual risks need separate investigation. The earlier broad loop experiment changed grass motion.
+
+Jeremy then asked: "lol what was the point of that then. so there's nothing we can do?"
+The fog change did not establish a reduction in time to Begin. Further experiments must measure that outcome.
+First investigate compilation order: the non-cloud terrain variant is consistently queued around 30 s and is
+last to settle at 42 s. Starting it earlier can be tested with identical shader inputs and visual settings.
+
 ## Jeremy's brief (verbatim)
 
 2026-09-29:
@@ -107,7 +119,8 @@ by `warmRender` with at most one new program per batch.
   (`variantSteps()`), sim and bake materials (`simMaterials`), the grass table and unclipped materials, and the post
   chain's materials (`post.compileJobs()`, also once per variant step, for the grade's `SUN_GLOW`). Each object is
   compiled on its own (`renderer.compile` on a root that visits only that object), and at most 8 programs are compiling
-  at once: when 8 are in flight it settles the finished ones until 4 or fewer remain. Eight keeps Chrome's status
+  at once: when 8 are in flight it settles the finished ones until one slot is free, then refills. The Windows
+  follow-up also queues terrain variants first, so their long compile overlaps the other work. Eight keeps Chrome's status
   queries short: one query waits behind every compile issued before it, and 138 programs at once made it wait 0.4 s.
   Waiting out each group of 8 before the next cost about 0.86 s in all, because the GPU process sat idle between
   groups (built 2026-10-02).

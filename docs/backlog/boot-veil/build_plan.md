@@ -283,3 +283,70 @@ Reports: `C:/tmp/updraft-windows-baseline-153.json`, `C:/tmp/updraft-windows-fin
 
 The Windows compilation fix is implemented and verified locally; it has not been deployed. Remaining: the stricter
 veil-gap target and physical Apple/Samsung validation of these shader changes. The original phase 4 stays open.
+
+### Conservative fog follow-up (2026-10-06)
+
+Jeremy prioritised avoiding any visual regression over further loading gains (verbatim ruling in `design.md`).
+Only the duplicate fog calls in `wood-shape.ts` change: the stump/rock shader shares its fogged colour across the
+two material branches, and the additive coal pool shares `fogOf` while retaining both colour mixes and their
+subtraction. Water variants and remaining terrain loops stay unchanged.
+
+Verification against the frozen pre-change QA build (`e97f16b` runtime), CFT 153.0.8010.12:
+
+- Six fixed-frame views of the actual owl bend (dark, antler shadow and side-lit reveal, landscape and portrait)
+  are pixel-identical on D3D11, and all six are separately pixel-identical on Vulkan. Both affected meshes issue
+  draws. Hiding them changes 148,695 pixels in the portrait reveal, confirming that the comparison sees them.
+  These are staged rendering checks of the real meshes, materials, lighting and post chain, not a playthrough.
+- Captured GLSL confirms only the two expected fragment shaders changed; all other programs and vertex sources
+  match. Three forced-cold isolated compilation trials per version, alternating order, give median times of
+  2.480 to 1.245 s for stump/rock and 1.842 to 0.855 s for the pool. Every link succeeds with no GL error. These
+  isolated savings cannot be added directly to startup time, since the game compiles programs concurrently.
+- Typecheck, production/QA builds and the shader-bounds check pass. Physical Apple/Samsung validation remains open.
+- Full D3D11 forced-cold startup: 44.556 s ready, 40.282 s settling, all 220 programs linked, no startup errors.
+  This falls within the preceding version's 43.808–44.924 s range, so no overall startup improvement is established.
+  The worst veil gap remains 700 ms; the existing 500 ms smoothness target is still unmet.
+
+Evidence: `C:/tmp/updraft-fog-parity.mjs`, `C:/tmp/updraft-fog-{d3d11,vulkan}.json` and matching PNGs;
+`C:/tmp/updraft-fog-compile.mjs`, `C:/tmp/updraft-fog-compile.json`, `C:/tmp/updraft-fog-cold.json`.
+
+### Compile scheduling follow-up (2026-10-06)
+
+The four preceding cold profiles all finish waiting on terrain variant #203: it starts around 30 s and finishes
+at 41.6–42.6 s. The fog changes do not shorten that final wait. Experiments keep the shader inputs, program variants,
+all first draws before Begin, and the world/simulation construction order unchanged.
+
+Keep two scheduling changes: enqueue the terrain's variants before the general jobs (later jobs reuse the same
+programs), and refill the eight-program window as soon as one slot is free, rather than waiting for four slots.
+Only compilation order and submission timing change; no shader arithmetic or quality settings change.
+
+Cold D3D11 measurements, CFT 153.0.8010.12, Ryzen 5 9600X / RTX 4070 Super:
+
+| Scheduling | Time to Begin | Worst veil gap | Decision |
+| --- | --- | --- | --- |
+| Before | 44.556 s; fresh control 43.755 s | 700; 767 ms | Reference |
+| Terrain first, original refill | 42.731 s | 700 ms | Some benefit |
+| Terrain first, 16-program window | 38.452 s | 1434 ms | Rejected: longer freeze |
+| Refill each slot, original order | 43.179 s | 733 ms | Little benefit alone |
+| Terrain first, refill each slot, eight-program window | 38.397; 40.329; 40.707 s | 717; 750; 700 ms | Kept; output/startup checks pass |
+
+All runs link the same 220 programs without startup errors. The retained combination saves about 4 s at the
+median (roughly 9%) against the two reference loads, with the existing approximately 0.7 s first-draw pause still
+present. The fresh control had a production build running briefly during compilation; the earlier 44.556 s
+reference did not. Physical Apple/Samsung timing remains unmeasured, and the 500 ms veil target stays open.
+
+Profiles: `C:/tmp/updraft-schedule-early-terrain*.json`, `C:/tmp/updraft-schedule-refill-only.json`,
+`C:/tmp/updraft-schedule-control-1.json`, `C:/tmp/updraft-schedule-confirm-{1,2}.json`.
+
+Default-D3D11 verification against the frozen pre-scheduling QA build: island, sea and stairs are pixel-identical,
+with identical character/camera state and CPU/GPU height parity 0.01037 m. The full retained set of 219 program
+source pairs (vertex plus fragment) hashes identically in each comparison; boot linked 220 before the unused post
+variant was released. No stray first uses and no programs or program/target pairs first drawn in play in any view.
+Harness and report: `C:/tmp/updraft-schedule-parity.mjs`, `C:/tmp/updraft-schedule-parity-d3d11.json` and matching PNGs.
+
+Focused existing `start-check` assertions through Begin and quality step-down pass on D3D11: veil animation and
+pointer strokes, paused/silent ready screen, keyboard Begin with native audio, 25/25 construction steps, all 165
+active loop-bound uploads correct, no stray programs or programs first drawn after Begin or quality changes.
+Changing MSAA still first-draws existing programs into the new sample count, as allowed by the engine contract.
+This run used `BOOT_MAX_MS=1000`; its measured 616.7 ms veil gap still exceeds the unchanged default 500 ms gate.
+This is the focused portion, not a repeat of the entire start-screen suite. Typecheck and production/QA builds pass.
+Evidence: `C:/tmp/updraft-schedule-start-check.mjs`, `C:/tmp/updraft-schedule-start-check.json`.

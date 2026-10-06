@@ -9,7 +9,8 @@ in `src/main.ts`.
 Nothing heavy may happen in the first frames of play, and the veil must keep painting while the game prepares. World
 construction runs first (stage B below), then, before the loop starts, behind the veil:
 
-1. `settlePrograms` builds every program before anything draws with it: the scene's materials against the scene's
+1. `settlePrograms` starts the terrain variants first (they are the last to finish on Windows when queued late), then
+   builds every program before anything draws with it: the scene's materials against the scene's
    half-float target (a program's cache key depends on whether it draws to the screen), the simulation and bake
    materials (`simMaterial` registers them) and the grass tables as full-screen passes, the unclipped blades, the post
    chain, and the objects with variants, the unclipped blades and the post chain again for each program variant
@@ -86,8 +87,9 @@ Failure paths:
   scene's programs into that sample count.
 - **At most 8 programs compile at once (`GROUP`).** A status query waits behind every compile issued before it: in
   Chrome, 138 programs issued together made the first query wait 0.4 s. When 8 are compiling, boot settles the
-  finished ones until 4 or fewer remain and refills; waiting out each group before the next left the GPU process
-  idle and cost about 0.86 s more. Changing the window needs the gates below measured again.
+  finished ones until a slot is free and refills. Waiting for half the group to finish leaves capacity unfilled;
+  refilling each slot shortens cold Windows startup without increasing the window. Changing the window needs the
+  gates below measured again.
 - **Each warm batch holds at most one program not yet drawn into that target format, beside up to 64 drawn ones
   (`WARM_BATCH`), and at most 4 first draws are queued on the GPU (`FIRST_DRAWS_QUEUED`).** A slow driver pays for a
   first draw in the task that issues it, so this is the smallest piece the work splits into. Chrome on Metal under
