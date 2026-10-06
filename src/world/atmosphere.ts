@@ -676,7 +676,8 @@ vec4 fogBank(vec3 ro, vec3 rd, float far) {
   float v0 = dot(o, vec2(-n.y, n.x)), dv = dot(rd.xz, vec2(-n.y, n.x));
   // Its front and top as they are where the sightline comes to it, or just ahead if it is in the bank already.
   float meet = u0 < 0.0 ? (du > 1e-4 ? -u0 / du : far) : 8.0;
-  if (meet >= far) return vec4(0.0);
+  // Inside the bank, the look-ahead sample is not an entry distance: nearby surfaces still lie in fog.
+  if (u0 < 0.0 && meet >= far) return vec4(0.0);
   vec2 heave = bankHeave(v0 + dv * meet, max(0.0, u0 + du * meet));
   float into0 = u0 - heave.x;
   float top = bankTop(v0 + dv * meet, heave.y);

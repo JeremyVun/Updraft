@@ -27,10 +27,10 @@ comparison backend. No GPU blocklist override is used. Evidence goes under
 2. Run `node tools/production-build-check.mjs` to verify production ignores game query overrides and excludes QA
    modules. For the instrumented browser checks, run `npm run build:qa`, start `npm run preview:qa`, and run
    `BASE=<preview> npm run check:release`. QA assets live in `dist-qa/`; `dist/` remains the production build.
-   Twenty of its checks fail on a preview without saying anything about the game: the audio group, `shader-browser`
-   and `progress` import modules from `src/`, which a built bundle does not serve, and `frame-time-browser` finds the
+   Twenty-one of its checks fail on a preview without saying anything about the game: the audio group, `shader-browser`,
+   `stairs-fog` and `progress` import modules from `src/`, which a built bundle does not serve, and `frame-time-browser` finds the
    frame loop by a name minification removes. Run those against a dev server in a worktree nobody is editing:
-   `BASE=<dev server> npm run check:audio`, then `node tools/<name>-check.mjs` with the same `BASE` for the three.
+   `BASE=<dev server> npm run check:audio`, then `node tools/<name>-check.mjs` with the same `BASE` for the four.
 3. Jeremy owns the parts no local tool covers: a listening pass through the whole journey (see
    `docs/contracts/audio.md`, Open) and physical-device checks on his iPad (touch robustness, Safari fullscreen,
    performance, warmth and battery).
@@ -63,6 +63,9 @@ edit.
 
 - `shader-check` (literal GLSL edge order) and `shader-browser-check` (float ramps on Chrome/Metal and software
   Vulkan, texture bytes in the browser; another compiler, not another GPU family or Safari).
+- `stairs-fog-check`: renders the shared fog-bank shader along near sightlines, including downward rays to the
+  foreground. Checks continuous coverage inside the bank at cloud and sea height, with the boat's clearing,
+  and clear surfaces outside it. Needs a dev server for the shader import.
 - `render-parity-check`: seeded frozen scene comparisons against an unchanged build. Run with
   `COMPARE_BASE=<unchanged build> BASE=<changed build> node tools/render-parity-check.mjs /tmp/<dir>`; both frozen
   builds must expose `?shot`. `CASES=lines,wood,stairs` selects cases; `TIMEOUT_MS` allows an unchanged slow baseline

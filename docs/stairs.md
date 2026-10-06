@@ -317,6 +317,10 @@ brings the light. Courage passes back and forth between them, and the stairs are
   bank are moved down onto the sea by the same offset, so the white is unchanged (`Chapter.cameraCut` lets the story
   cut where nothing can be seen); the deck goes under the water and the village shows from then on without its
   arrival veil (`stairsDescent` in `world/journey-rooms.ts`).
+- **Fog in the foreground**: once the lens is inside the bank, nearby cloud and water receive the same integrated
+  fog as the rest of the scene. Its eight-metre shape sample is only a look ahead, not a minimum visible distance;
+  treating it as an entry distance left the bottom of the screen uncovered. `tools/stairs-fog-check.mjs` checks
+  coverage and continuity on the GPU, including the pocket of clearer air round the boat.
 - **Sound**: `src/audio/stairs-sound.ts` and `stairs-score.ts` behind `StairsAir` (phase, cloud, climb, open, fog,
   speed), rendered with `tools/stairs-audio-proposal.mjs`; the contract is in `docs/contracts/audio.md`.
 - **Checking**: `node tools/stairs-check.mjs <prefix>` plays the room with real drags against a dev server
