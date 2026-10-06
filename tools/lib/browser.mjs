@@ -2,7 +2,7 @@
 import { chromium } from 'playwright-core';
 import fs from 'node:fs';
 const lock = '/tmp/updraft-chromium.lock';
-export async function openBrowser({ allowAutoplay = true, angle = 'metal' } = {}) {
+export async function openBrowser({ allowAutoplay = true, angle = process.env.ANGLE ?? (process.platform === 'darwin' ? 'metal' : 'default') } = {}) {
   for (;;) {
     try { fs.mkdirSync(lock); fs.writeFileSync(`${lock}/pid`, String(process.pid)); break; }
     catch (error) {
@@ -19,7 +19,7 @@ export async function openBrowser({ allowAutoplay = true, angle = 'metal' } = {}
   const release = () => { try { if (Number(fs.readFileSync(`${lock}/pid`, 'utf8')) === process.pid) fs.rmSync(lock, {recursive:true,force:true}); } catch {} };
   process.once('exit', release);
   let browser;
-  try { browser = await chromium.launch({channel:'chromium',headless:true,args:['--enable-gpu',`--use-angle=${angle}`,'--ignore-gpu-blocklist',...(allowAutoplay ? ['--autoplay-policy=no-user-gesture-required'] : [])]}); }
+  try { browser = await chromium.launch({channel:'chromium',headless:true,args:['--enable-gpu',...(angle === 'default' ? [] : [`--use-angle=${angle}`]),...(allowAutoplay ? ['--autoplay-policy=no-user-gesture-required'] : [])]}); }
   catch (error) { release(); throw error; }
   const close = async () => { try { await browser.close(); } finally { release(); } };
   process.once('SIGTERM', () => void close().finally(() => process.exit(143)));

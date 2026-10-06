@@ -167,7 +167,7 @@ void main() {
   if (mat == ${DISC}) {
     // A pale ring round each eye with a soft dark rim, and white brows meeting over the beak.
     alb = mix(vec3(0.64, 0.5, 0.33), vec3(0.28, 0.17, 0.09), smoothstep(0.7, 0.98, t));
-    alb = mix(alb, vec3(0.86, 0.82, 0.72), smoothstep(0.25, 0.0, abs(vLocal.y - 0.37 - abs(vLocal.x) * 0.25) * 12.0) * step(0.5, t) * 0.0 + smoothstep(0.5, 0.75, t) * smoothstep(0.0, 0.3, vLocal.y - 0.335) * 0.6);
+    alb = mix(alb, vec3(0.86, 0.82, 0.72), smoothstep(0.5, 0.75, t) * smoothstep(0.0, 0.3, vLocal.y - 0.335) * 0.6);
   } else if (mat == ${HORN}) {
     alb = vec3(0.72, 0.66, 0.42); fuzz = 0.15;
   } else if (mat == ${WING}) {
@@ -380,7 +380,7 @@ void main() {
   // Two crisp points with only a breath of glow round them.
   // The lid comes down over each from above, as it does over the eye itself.
   float lid = mix(0.38, -0.4, uBlink);
-  float a = smoothstep(0.36, 0.18, r) * (1.0 - smoothstep(lid - 0.05, lid + 0.05, vUv.y)) * 0.92
+  float a = (1.0 - smoothstep(0.18, 0.36, r)) * (1.0 - smoothstep(lid - 0.05, lid + 0.05, vUv.y)) * 0.92
     + exp(-r * r * 4.0) * 0.06 * (1.0 - uBlink);
   a *= 1.0 - smoothstep(0.8, 1.0, r);
   gl_FragColor = vec4(vec3(1.0, 0.7, 0.24) * a * uGlow, 1.0);

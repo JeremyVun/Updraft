@@ -5,15 +5,27 @@
 // comparison. QUERY adds query params (no leading ?). Each run prints the worst veil frame gap, the worst long task,
 // the worst long task after world construction (the `boot` mark), and the time to #veil.ready from navigation, with
 // the time in each boot stage (marks), the longest construction steps and the veil's percent sequence.
+// TIMEOUT_MS sets the wait limit; MAX_READY_MS optionally fails a startup-time regression on the reference machine.
 import fs from 'node:fs';
+import assert from 'node:assert/strict';
 import { openBrowser } from './lib/browser.mjs';
 const prefix=process.argv[2]??'/tmp/updraft-boot';
 const runs=Number(process.env.RUNS??1), throttle=Number(process.env.THROTTLE??1), profiling=!process.env.RUNS;
+const timeout=Number(process.env.TIMEOUT_MS??180000)*throttle;
 const url=(process.env.BASE??'http://127.0.0.1:5230/')+'?start=1&analytics=0'+(process.env.QUERY?'&'+process.env.QUERY:'');
 async function load(context,profile) {
  const page=await context.newPage(), cdp=await context.newCDPSession(page);
+ const errors=[];
+ page.on('pageerror',e=>errors.push(e.message));
+ page.on('console',m=>{if(m.type()==='error')errors.push(m.text())});
  await page.addInitScript(()=>{
-  window.__boot={long:[],gl:[],frames:[],ready:0,linked:0};
+  window.__boot={long:[],gl:[],frames:[],ready:0,linked:0,programs:[]};
+  const shaders=new WeakMap(), programs=new WeakMap(), proto=WebGL2RenderingContext.prototype;
+  const source=proto.shaderSource,attach=proto.attachShader,link=proto.linkProgram,status=proto.getProgramParameter;
+  proto.shaderSource=function(shader,text){shaders.set(shader,{name:text.match(/#define SHADER_NAME ([^\n]+)/)?.[1],chars:text.length});return source.call(this,shader,text)};
+  proto.attachShader=function(program,shader){let p=programs.get(program);if(!p){p={id:__boot.programs.length,shaders:[],start:0,ready:0};programs.set(program,p);__boot.programs.push(p)}p.shaders.push(shaders.get(shader));return attach.call(this,program,shader)};
+  proto.linkProgram=function(program){const p=programs.get(program);if(p)p.start=performance.now();return link.call(this,program)};
+  proto.getProgramParameter=function(program,key){const result=status.call(this,program,key),p=programs.get(program);if(key===0x91b1&&result&&p&&!p.ready)p.ready=performance.now();return result};
   new PerformanceObserver(list=>{for(const e of list.getEntries())__boot.long.push({start:e.startTime,duration:e.duration})}).observe({type:'longtask',buffered:true});
   for(const name of ['getUniformLocation','getAttribLocation','getProgramParameter','getShaderParameter','getProgramInfoLog','getParameter','bufferData','texImage2D','texStorage2D','drawElements','drawArrays','linkProgram','compileShader','clientWaitSync','readPixels']) {
    const original=WebGL2RenderingContext.prototype[name];
@@ -30,11 +42,13 @@ async function load(context,profile) {
  if(throttle!==1)await cdp.send('Emulation.setCPUThrottlingRate',{rate:throttle});
  if(profile){await cdp.send('Profiler.enable');await cdp.send('Profiler.start')}
  await page.goto(url);
- await page.waitForSelector('#veil.ready',{timeout:90000*throttle});
+ await page.waitForSelector('#veil.ready',{timeout});
+ assert(await page.evaluate(()=>performance.getEntriesByName('ready').length>0), 'veil showed an error instead of completing startup');
+ assert.deepEqual(errors,[], 'startup errors');
  const cpu=profile?(await cdp.send('Profiler.stop')).profile:null;
- const timings=await page.evaluate(()=>({...window.__boot,boot:performance.getEntriesByName('boot')[0]?.startTime??null,
+ const timings=await page.evaluate(()=>{const gl=document.querySelector('#view').getContext('webgl2'),debug=gl.getExtension('WEBGL_debug_renderer_info');return {...window.__boot,renderer:debug&&gl.getParameter(debug.UNMASKED_RENDERER_WEBGL),boot:performance.getEntriesByName('boot')[0]?.startTime??null,
   marks:Object.fromEntries(performance.getEntriesByType('mark').map(m=>[m.name,Math.round(m.startTime)])),
-  steps:performance.getEntriesByType('measure').filter(m=>m.name.startsWith('build step')).map(m=>({name:m.name,duration:Math.round(m.duration)}))}));
+  steps:performance.getEntriesByType('measure').filter(m=>m.name.startsWith('build step')).map(m=>({name:m.name,duration:Math.round(m.duration)}))}});
  await page.close();
  return {cpu,timings};
 }
@@ -56,7 +70,8 @@ for(let run=0;run<runs;run++) {
   console.log(`run ${run+1}: gap ${summary.gap} ms at ${summary.gapAt}; long task ${summary.long} ms at ${summary.longAt}; after construction (${summary.construction} ms) ${summary.afterConstruction} ms at ${summary.afterAt}; ready ${summary.ready} ms; ${summary.programs} programs linked`);
   if(stages)console.log(`  stages ms ${JSON.stringify(stages)}; longest construction steps ${steps.map(t=>`${t.name.slice(11)}: ${t.duration}`).join(', ')}`);
   if(timings.percents.length)console.log(`  percent ${timings.percents.map(p=>`${p.p}${p.ready?' ready':''}`).join(' ')}`);
-  const report={...summary,stages,steps:timings.steps,percents:timings.percents,worstFrame:worst.gap,long:timings.long,gl:timings.gl};
+  const slowest=timings.programs.filter(p=>p.ready).map(p=>({...p,ms:round(p.ready-p.start)})).sort((a,b)=>b.ms-a.ms);
+  const report={...summary,browser:browser.version(),renderer:timings.renderer,stages,steps:timings.steps,percents:timings.percents,worstFrame:worst.gap,long:timings.long,gl:timings.gl,slowest};
   if(cpu) {
    const totals=new Map(), nodes=new Map(cpu.nodes.map(n=>[n.id,n]));
    for(let i=0;i<cpu.samples.length;i++){const f=nodes.get(cpu.samples[i]).callFrame,key=`${f.functionName} ${f.url}:${f.lineNumber+1}`;totals.set(key,(totals.get(key)??0)+cpu.timeDeltas[i]/1000)}
@@ -64,6 +79,7 @@ for(let run=0;run<runs;run++) {
    fs.writeFileSync(prefix+'.cpuprofile',JSON.stringify(cpu));
   }
   fs.writeFileSync(runs>1?`${prefix}-${run+1}.json`:prefix+'.json',JSON.stringify(report,null,2));
+  if(process.env.MAX_READY_MS)assert(summary.ready<=Number(process.env.MAX_READY_MS),`startup took ${summary.ready} ms, budget ${process.env.MAX_READY_MS} ms`);
   if(profiling)console.log(JSON.stringify(report,null,2));
  } finally {await close()}
 }

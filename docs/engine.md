@@ -32,6 +32,17 @@ construction runs first (stage B below), then, before the loop starts, behind th
    Begin / Continue (and, for a finished player, `chapters`); the story and the quality governor do not run while
    waiting.
 
+The Windows ANGLE/D3D11 path compiles repeated procedural noise much more expensively than the Vulkan path
+tested with the same shader inputs. Keep the scene's `fbm` octaves and the height noise's octaves/corners as uniform-bounded loops
+(`gl/loops.ts`), with fixed values 4, 6 and 4. Both `atmo.uniforms` and `simMaterial` supply them; these are compiler
+bounds, not quality settings. `NOISE_GLSL` retains the original fixed loop for wind and other short simulation
+shaders: rolling those loops also changed grass motion in the seeded image comparison, despite tiny differences
+in individual noise samples.
+`fogOf` shares one sky-radiance calculation across its three veils, and the terrain caches share their exact
+fallback calls. Neither effect counts nor program variants are reduced. Validate changes with `noise-loop-check`,
+seeded `render-parity-check`, and cold startup on the platform's normal backend; measured evidence is in
+`backlog/boot-veil/build_plan.md` (Windows follow-up).
+
 The gesture that chooses (Begin, Continue or a chapter pick; `?shot` without `start=1` goes straight on with no pick)
 starts the game through the one callback of `startScreen.ready`. Inside the gesture it starts audio, then
 `story.start(choice)` applies the save, the `?chapter=` start or the pick (`progress.md`), one `story.update(0, 0)`

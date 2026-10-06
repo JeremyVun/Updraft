@@ -9,6 +9,7 @@ import { MUSIC_GROWTH_GLSL } from './music-growth';
 import { ISLES } from './heightfield';
 import { HOME_JETTY } from './home-layout';
 import { NOISE_TILES_GLSL, noiseTileUniforms } from './noise-tiles';
+import { noiseLoopUniforms } from '../gl/loops';
 
 /** North of this z the world is already living: the sea between the first island and the second. */
 export const LIVING_BEYOND = -150;
@@ -40,6 +41,7 @@ function hdr(hex: string, intensity: number): THREE.Color {
  */
 export const atmo = {
   uniforms: {
+    ...noiseLoopUniforms,
     uTime: { value: 0 },
     uSunDir: { value: sunDirection(sunAz, sunEl) },
     uSunColor: { value: hdr('#ffd2a0', 2.7) },
@@ -201,7 +203,8 @@ vec2 feltWind(vec4 w, float calm) {
   return w.xy * (mix(quiet, s, arrived) / s);
 }`;
 
-export const NOISE_GLSL = /* glsl */ `
+const noiseGlsl = (octaves: string): string => /* glsl */ `
+uniform int uNoiseOctaves;
 float hash12(vec2 p) {
   vec3 p3 = fract(vec3(p.xyx) * 0.1031);
   p3 += dot(p3, p3.yzx + 33.33);
@@ -217,7 +220,7 @@ float vnoise(vec2 p) {
 float fbm(vec2 p) {
   float s = 0.0;
   float a = 0.5;
-  for (int i = 0; i < 4; i++) {
+  for (int i = 0; i < ${octaves}; i++) {
     s += a * vnoise(p);
     p = mat2(1.6, 1.2, -1.2, 1.6) * p;
     a *= 0.5;
@@ -225,6 +228,10 @@ float fbm(vec2 p) {
   return s / 0.9375;
 }
 `;
+
+// Keep the simulation's existing arithmetic ordering; long scene shaders need the rolled loop.
+export const NOISE_GLSL = noiseGlsl('4');
+export const ROLLED_NOISE_GLSL = noiseGlsl('uNoiseOctaves');
 
 /** Value noise with its gradient (yz), from the same four hashes as vnoise. Needs NOISE_GLSL or ATMO_GLSL first. */
 export const NOISE_GRAD_GLSL = /* glsl */ `
@@ -328,7 +335,7 @@ uniform vec2 uFogBankEye;
 uniform sampler2D uCloudTex;
 uniform vec4 uCloudDomain;
 
-${NOISE_GLSL}
+${ROLLED_NOISE_GLSL}
 ${NOISE_TILES_GLSL}
 
 vec2 domainUv(vec2 xz) {
@@ -848,10 +855,19 @@ vec4 fogOf(vec3 wpos, float landscape) {
   float veil = max(0.0, fogDistance - uVeil.x) * uVeil.y;
   float amt = 1.0 - exp(-fogDistance * (uFogDensity * (0.55 + 0.65 * heightFactor) + mist * 0.0075) - veil);
   vec3 fogCol = skyColor(normalize(vec3(rd.x, 0.015 + max(rd.y, 0.0) * 0.25, rd.z))) * vec3(0.84, 0.87, 0.92);
+  float arriving = journeyVeilAt(wpos);
+  float hidden = 0.0;
+  if (uIslandVeilAmount > 0.0) {
+    float coast = length((wpos.xz - uIslandVeil.xy) / uIslandVeil.zw);
+    hidden = smoothstep(${glsl(tuning.world.meadowVeilFrom)}, ${glsl(tuning.world.meadowVeilTo)}, coast) * uIslandVeilAmount;
+  }
+  // All three veils face the same sky; one call avoids three expanded copies of its cloud noise.
+  vec3 clearSky = vec3(0.0);
+  if ((uOpenSea > 0.001 && veil > 0.0) || hidden > 0.0 || arriving > 0.0) clearSky = skyRadiance(rd);
   // Ordinary haze has its own tint. Far offshore that tint must not reveal the outline of an island.
   if (uOpenSea > 0.001 && veil > 0.0) {
     float open = uOpenSea * smoothstep(1.0, 4.0, veil);
-    fogCol = mix(fogCol, skyRadiance(rd), open);
+    fogCol = mix(fogCol, clearSky, open);
     amt = max(amt, open);
   }
   /** The ground fog of the sleeping island, taken along the eye ray at both ends and the middle of it. */
@@ -877,13 +893,9 @@ vec4 fogOf(vec3 wpos, float landscape) {
   }
   // Land, its props, reflections and the sea all reach the same sky colour beyond this coast.
   // Camera-distance fog alone can leave a tinted island silhouette even when fully opaque.
-  if (uIslandVeilAmount > 0.0) {
-    float coast = length((wpos.xz - uIslandVeil.xy) / uIslandVeil.zw);
-    float hidden = smoothstep(${glsl(tuning.world.meadowVeilFrom)}, ${glsl(tuning.world.meadowVeilTo)}, coast) * uIslandVeilAmount;
-    if (hidden > 0.0) {
-      fogCol = mix(fogCol, skyRadiance(rd), hidden);
-      amt = max(amt, hidden);
-    }
+  if (hidden > 0.0) {
+    fogCol = mix(fogCol, clearSky, hidden);
+    amt = max(amt, hidden);
   }
 #if CLOUD_DECK
   if (deck.a > 0.0) {
@@ -892,9 +904,8 @@ vec4 fogOf(vec3 wpos, float landscape) {
     amt = total;
   }
 #endif
-  float arriving = journeyVeilAt(wpos);
   if (arriving > 0.0) {
-    fogCol = mix(fogCol, skyRadiance(rd), arriving);
+    fogCol = mix(fogCol, clearSky, arriving);
     amt = mix(amt, 1.0, arriving);
   }
   return vec4(fogCol, clamp(amt, 0.0, 1.0));

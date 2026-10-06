@@ -29,15 +29,15 @@ uniform sampler2D uTerrainFields;
 uniform vec4 uTerrainFieldDomain;
 uniform float uTerrainFieldsReady;
 vec4 terrainFieldAt(vec2 p, float lineWidth) {
-  if (uTerrainFieldsReady < 0.5) return fieldAt(p);
-  vec2 uv = (p - uTerrainFieldDomain.xy) * uTerrainFieldDomain.zw;
-  // fieldAt's own answer out here: presence is 0 beyond the atlas (tools/fields-border-check.mjs).
-  if (any(lessThan(uv, vec2(0.001))) || any(greaterThan(uv, vec2(0.999)))) return vec4(99.0, 0.0, 0.0, 0.0);
-  vec4 f = texture(uTerrainFields, uv);
-  // Bilinear interpolation is valid within a field, not between different field kinds.
-  // The extra texel margin also keeps the original distance-dependent wall width and gate cuts.
-  if (f.x < max(lineWidth, ${(2 * TEXEL).toFixed(4)}) + ${(2 * TEXEL).toFixed(4)} || (f.w > 0.0 && f.w < 0.02)) return fieldAt(p);
-  return f;
+  if (uTerrainFieldsReady >= 0.5) {
+    vec2 uv = (p - uTerrainFieldDomain.xy) * uTerrainFieldDomain.zw;
+    // fieldAt's own answer out here: presence is 0 beyond the atlas (tools/fields-border-check.mjs).
+    if (any(lessThan(uv, vec2(0.001))) || any(greaterThan(uv, vec2(0.999)))) return vec4(99.0, 0.0, 0.0, 0.0);
+    vec4 f = texture(uTerrainFields, uv);
+    // Preserve exact field identities and narrow walls; share their fallback with the unbaked case.
+    if (!(f.x < max(lineWidth, ${(2 * TEXEL).toFixed(4)}) + ${(2 * TEXEL).toFixed(4)} || (f.w > 0.0 && f.w < 0.02))) return f;
+  }
+  return fieldAt(p);
 }`;
 
 export class TerrainFields {

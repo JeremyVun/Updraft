@@ -225,3 +225,61 @@ Release checks on the 558fff2 QA preview: `start-check` (worst boot gap 100 ms, 
 no program first drawn in the first seconds of play), `context-loss-check`, `boot-cloth-check`, `loading-check`,
 `chapter-select-check`, `production-build-check` and `failure-paths-check` (its blocked-entry case now matches the
 built `assets/index-*.js` as well as `src/entry.ts`) all pass. The iPad row is pending Jeremy's verdict.
+
+## Windows follow-up: shader compilation (2026-10-06)
+
+Scope: the Windows extension in `design.md`. Preserve all effects, the 220 programs, warm draws before Begin,
+simulation behaviour and the existing visual/state gates. The physical Samsung tablet model is unknown; Jeremy
+confirmed Chrome, but it has not been tested here. This does not close the older pending iPad verdict.
+
+Implementation:
+
+1. Isolate native compilation cost on the normal D3D11 backend. The same live shader inputs settle in 143 s on
+   D3D11 versus 5.2 s on Vulkan in Chrome for Testing 149. Individual program experiments then use CFT 153.
+2. Keep scene noise octaves and height noise corners/octaves in uniform-bounded loops. Share the sky radiance used
+   by the three fog veils and the terrain caches' direct fallback calls. Do not remove shader effects or move
+   compilation into play. Preserve the static noise loop in short simulation shaders: the first broad version
+   changed grass motion, despite tiny primitive-noise differences, and failed the existing image gate.
+3. Check actual GPU noise output, all chapter views, default-Windows startup and gameplay, controls and context-loss
+   recovery. Record browser/backend and cold-cache conditions. The Windows reference-machine startup guard is 60 s,
+   compared with 160 s for the unchanged QA baseline on CFT 153. Existing Mac frame-gap gates remain separate.
+4. Make the capture/performance harness use the platform backend and shared lock. Make production-build checking
+   portable (Node temporary directories; its direct-grass marker also needed updating for the existing reed code).
+   Fix two pre-existing descending smoothstep expressions in the owl that the shader gate found: one dead term and
+   the eye-glow ramp, expressed with ascending edges.
+
+Evidence so far (Ryzen 5 9600X, RTX 4070 Super, CFT 153.0.8010.12, one GPU check at a time):
+
+- Frozen baseline `d5a4941e`, QA, `coldshaders`: ready 160.075 s; settling 153.347 s; 220 programs.
+- First loop/call-sharing fix: ready 51.825–53.098 s. Rolling the four height-noise corners reduced this to 38.868 s.
+  The final shader version restores static simulation noise for visual parity: three cold loads take 44.849,
+  43.808 and 44.924 s; settling takes 40.537, 39.594 and 40.616 s. All 220 programs remain. Worst veil gaps are
+  700, 700 and 717 ms, versus 2250 ms in the unchanged baseline; the stricter 500 ms veil gate is not yet met.
+- An extra paint yield between height-atlas patches did not remove the remaining pause (44.943 s ready, worst gap
+  900 ms during settling), so it is not included. First-use driver/compositor pauses remain a separate follow-up.
+- Primitive noise: 294,912 samples on each of D3D11 and Vulkan; worst difference under 6e-8. No GL errors.
+- Vulkan before/after: all 13 views pass, including portrait, dark wood and stairs. Maximum channel difference 2/255;
+  most views are pixel-identical. Same-build washing control is pixel-identical. Height parity remains 0.01206 m.
+- Default D3D11 before/after: lines, meadow, wood, sea and stairs all pass. Worst mean channel difference 0.000286/255;
+  at most 0.000521% of pixels differ by more than 8/255. Character/camera differences remain below 5e-8 m and height
+  parity is 0.01037 m. These comparisons use the frozen baseline, not a different backend as the reference image.
+- D3D11 gameplay, dark wood at 1600x900, ratio 1, MSAA 4: 600 measured intervals over 10 s; p50/p90 16.7 ms,
+  p99/max 16.8 ms, no intervals over 25 ms and no long tasks. No programs or program/target pairs first drawn in play.
+  The existing D3D shader compiler warnings about potentially uninitialized helper results remain; no runtime errors.
+- Context loss on D3D11: saved and fresh games recover through a real reload; startup loss also recovers.
+- `start-check`: desktop and emulated-phone Begin/Continue, native audio, chapter pick, reduced motion, quality
+  step-down, blocked painting fallback, bundle failure/retry and QA bypass pass;
+  all active loop-bound uploads are correct (149 noise-octave, 8 height-octave and 8 corner bindings).
+  This functional run used `BOOT_MAX_MS=1000` to continue past the known smoothness failure; its measured gap was
+  616.7 ms, still above the unchanged default 500 ms gate. No new programs are first drawn after Begin or Continue.
+- The first phone fixture tapped 15 ms after its injected drag ended: Chrome delivered pointer down/up but no
+  click; a second tap worked. The fixture now separates those gestures by 350 ms, and the full rerun passes.
+  This observation does not diagnose the physical Samsung tablet.
+- Typecheck, production/QA builds, shader bounds, production QA exclusion, and cloth equality pass.
+
+Reports: `C:/tmp/updraft-windows-baseline-153.json`, `C:/tmp/updraft-windows-final-cold-*.json`,
+`C:/tmp/updraft-windows-parity-final-vulkan.json`, `C:/tmp/updraft-windows-parity-d3d11.json`,
+`C:/tmp/updraft-noise-loop-check.json`, `C:/tmp/updraft-noise-loop-vulkan.json`, `C:/tmp/updraft-context-loss.json`.
+
+The Windows compilation fix is implemented and verified locally; it has not been deployed. Remaining: the stricter
+veil-gap target and physical Apple/Samsung validation of these shader changes. The original phase 4 stays open.

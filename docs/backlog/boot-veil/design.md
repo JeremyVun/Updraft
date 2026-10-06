@@ -1,5 +1,20 @@
 # Boot and the loading veil
 
+## Windows compilation follow-up (2026-10-06)
+
+Jeremy: "ok listen, i need you to figure it out. I need this game to be playable on windows machines. This may explain why my sister said the game just completely hung and froze when she tried on her samsung tablet or whatever"
+
+This extends the earlier freeze-only scope to eliminating minutes of CPU-bound shader compilation on the normal
+Windows browser backend. On his Ryzen 5 9600X / RTX 4070 Super, the live game takes 149 s to Begin through ANGLE
+D3D11 (143 s settling programs), versus 18 s through Vulkan, using identical inputs for 220 programs. These first
+measurements used Chrome for Testing 149; Chrome/Brave 154 also show the problem. Terrain, water variants and dark
+wood programs are the longest waits. Evidence: `C:/tmp/updraft-windows-diagnosis/summary.md`.
+
+Keep the game's look and the rule that programs are compiled and first drawn before play. Fix the shader work on
+the default backend; a player changing browser flags is not the deliverable. Isolate the expensive code, verify
+equivalent output, and measure a fresh-profile and forced-cold QA startup. The Samsung report remains unconfirmed:
+an emulated mobile viewport or CPU slowdown does not establish physical tablet compatibility.
+
 ## Jeremy's brief (verbatim)
 
 2026-09-29:

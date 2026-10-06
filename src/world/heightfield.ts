@@ -468,6 +468,8 @@ export function worldHeight(x: number, z: number): number {
 }
 
 export const HEIGHTFIELD_GLSL = /* glsl */ `
+uniform int uHeightOctaves;
+uniform int uNoiseCorners;
 uint hf_pcg(uint v) {
   uint state = v * 747796405u + 2891336453u;
   uint word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
@@ -490,12 +492,13 @@ float gnoise(vec2 p) {
   ivec2 i = ivec2(fl);
   vec2 t = p - fl;
   vec2 u = t * t * t * (t * (t * 6.0 - 15.0) + 10.0);
-  float a = hf_gradDot(hf_hash2(i), t);
-  float b = hf_gradDot(hf_hash2(i + ivec2(1, 0)), t - vec2(1.0, 0.0));
-  float c = hf_gradDot(hf_hash2(i + ivec2(0, 1)), t - vec2(0.0, 1.0));
-  float d = hf_gradDot(hf_hash2(i + ivec2(1, 1)), t - vec2(1.0, 1.0));
-  float ab = a + (b - a) * u.x;
-  float cd = c + (d - c) * u.x;
+  float v[4] = float[4](0.0, 0.0, 0.0, 0.0);
+  for (int k = 0; k < uNoiseCorners; k++) {
+    ivec2 q = ivec2(k & 1, k >> 1);
+    v[k] = hf_gradDot(hf_hash2(i + q), t - vec2(q));
+  }
+  float ab = v[0] + (v[1] - v[0]) * u.x;
+  float cd = v[2] + (v[3] - v[2]) * u.x;
   return (ab + (cd - ab) * u.y) * 1.4;
 }
 float gfbm(vec2 p, int octaves, float seed) {
@@ -503,7 +506,7 @@ float gfbm(vec2 p, int octaves, float seed) {
   float sum = 0.0;
   float amp = 0.5;
   float norm = 0.0;
-  for (int o = 0; o < 6; o++) {
+  for (int o = 0; o < uHeightOctaves; o++) {
     if (o >= octaves) break;
     sum += amp * gnoise(p);
     norm += amp;

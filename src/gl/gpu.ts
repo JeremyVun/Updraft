@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { FullScreenQuad } from 'three/addons/postprocessing/Pass.js';
+import { noiseLoopUniforms } from './loops';
 
 const QUAD_VERT = /* glsl */ `
 out vec2 vUv;
@@ -34,7 +35,7 @@ export function simMaterial(fragmentShader: string, uniforms: Record<string, THR
   const material = new THREE.ShaderMaterial({
     vertexShader: QUAD_VERT,
     fragmentShader,
-    uniforms,
+    uniforms: { ...noiseLoopUniforms, ...uniforms },
     depthTest: false,
     depthWrite: false,
   });
