@@ -41,6 +41,9 @@ export interface CloudDeckState {
 }
 
 
+/** The beats spent under the cloud, while the sea below can be seen. */
+const UNDER_THE_CLOUD: Beat[] = ['ashore', 'wonder', 'climb', 'waiting', 'hesitate', 'birdFirst'];
+
 /** How long the lens takes to rise out over the loop to the one place it has to be seen from. */
 const LOOP_SETTLE = 5;
 /**
@@ -318,6 +321,7 @@ export class StairsChapter implements Chapter {
     stairsDescent.down = false;
     world.onDocked = (index) => this.docked(index);
     world.ghostShown = 0;
+    world.fleet.setOff();
     cygnet.mayFly = false;
     // Short careful steps: every tread of a household stair is a climb for something its size.
     cygnet.pace = 0.8;
@@ -473,6 +477,7 @@ export class StairsChapter implements Chapter {
     const { child: c, cygnet: k, carry, plane } = this.cast;
     if (plane.held) plane.hold(c);
     this.sunPoint();
+    this.world.fleet.shown = UNDER_THE_CLOUD.includes(this.beat);
     switch (this.beat) {
       case 'wonder':
         // Out of the satchel and down onto the grass: this room it climbs on its own feet. Then both of them look

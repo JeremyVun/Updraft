@@ -12,6 +12,7 @@ import { HAZE_SHADE_GLSL, hazeStride, hazeUnderFlight, hazeUnderLanding } from '
 import { CloudWisps } from './stairs-wisps';
 import { StairsCloud } from './stairs-cloud';
 import { CloudBank } from './stairs-bank';
+import { StairsFleet } from './stairs-fleet';
 import { ALONG_DRAWN, DRAWN_SLOPE, LOOP_BANK, LOOP_EYE, LOOP_SHRINK, drawIn } from './stairs-penrose';
 import {
   BELOW_CLOUD, FLIGHTS, INSET, LOOP, LOOP_BACK, LOOP_FAR, LOOSE, NEWEL, OPENING, RAIL_HEIGHT, STEP_BLOCK, STRING, along, LOOSE_START, SLIPPERS, STEP, TOP_OUT,
@@ -501,6 +502,8 @@ export class CloudStairs {
   readonly trick: THREE.Mesh;
   /** The cloud sitting over the foot of the way on out of the loop. */
   readonly bank: CloudBank;
+  /** The little boats' toys sailing by on the sea below. */
+  readonly fleet = new StairsFleet();
   /** Whether the top of the cloud is kept out of sight, while the lens is up in the white looking down on the loop. */
   hideTop = false;
   /** Where the lens is, and a point it is looking at, as of the last frame. */
@@ -562,6 +565,7 @@ export class CloudStairs {
     this.group = group;
     this.cloud = cloud;
     this.group.name = 'stairs-in-the-clouds';
+    this.group.add(this.fleet.group);
     const material = stairMaterial();
     for (let i = 1; i <= FLIGHTS; i++) {
       if ((LOOSE as readonly number[]).includes(i)) continue;
@@ -783,6 +787,7 @@ export class CloudStairs {
     hazeStride.value += (this.stride - hazeStride.value) * (1 - Math.exp(-dt * 2.5));
     if (Math.abs(this.stride - hazeStride.value) < 1e-3) hazeStride.value = this.stride;
     this.bank.update(dt);
+    this.fleet.update(dt, time);
     this.cloud.update(dt, camera);
     this.hideHazeInTheWhite(camera);
     if (this.hideTop) this.cloud.top.visible = false;

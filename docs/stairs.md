@@ -176,6 +176,10 @@ brings the light. Courage passes back and forth between them, and the stairs are
 2. **The loose flights (the puzzle).** The child climbs to where the stair stops; a gold drawing of the missing
    flight shows where it belongs; a stroke over the loose flight carries it on its own level, and it turns itself
    to fit as it nears its place. The bird waits on the landing behind. The last one placed plays the reward phrase.
+   Far out on the sea below, all seven of the little boats' toys sail by in a loose flotilla, west into the sun the
+   way the boat will take them over the cloud (`src/world/stairs-fleet.ts`, `tuning.stairs.fleet`). Nobody turns
+   to them: they come into the puzzle's view at its upper right as the climb starts and cross into the sun's glitter
+   by the last loose flight (Jeremy: "they just sail on by doing their own thing in the background below them").
 3. **Into the cloud.** On the last landing below the white the child steps aside and hangs back, looking up; the
    bird comes past, looks up too, goes up into the white first, and waits.
 4. **The loop (the Penrose stairs).** Halfway up the white the stair comes into a hollow of clear air, onto the
@@ -264,7 +268,7 @@ brings the light. Courage passes back and forth between them, and the stairs are
 - **World**: `src/world/stairs.ts` (flights, landings, loose flights and ghost, slippers, the trick),
   `stairs-cloud.ts` (the deck's underside and top, the parting behind the hull, `FogBank`), `stairs-haze.ts` (volumetric
   haze), `stairs-puffs.ts`, `stairs-wisps.ts` (cloud streaming past in the white), `stairs-wake.ts`,
-  `stairs-lantern.ts` (the glow on the boat's own lantern). Chapter: `src/story/stairs.ts`, the sail's lens
+  `stairs-lantern.ts` (the glow on the boat's own lantern), `stairs-fleet.ts` (the toys sailing by below). Chapter: `src/story/stairs.ts`, the sail's lens
   `src/story/stairs-sail.ts` (`SAIL_SHOTS`), the bird's line up the stair `src/story/stairs-track.ts`. Knobs:
   `tuning.stairs`.
 - **Wisps meeting solids**: each rag's card stands halfway to the front of its ball and thins away within
