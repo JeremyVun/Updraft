@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { Shot } from '../camera';
 import { screenBrush } from '../creatures/motion';
 import { TOP } from '../fx/sealife/anatomy';
-import type { Net } from '../fx/sealife/net';
+import type { Net, NetGrip } from '../fx/sealife/net';
 import { FREE_FLUKES_FROM, type SleepingWhale } from '../fx/sealife/sleeper';
 import type { Coax } from '../fx/swirl';
 import { tuning } from '../tuning';
@@ -21,7 +21,7 @@ export const WHALE_STEPS: readonly WhaleStep[] = ['approach', 'breath', 'line', 
 
 /** The step the breath hands on to. */
 const AFTER_BREATH: WhaleStep = 'line';
-/** Seconds each of the line and the flipper takes while they only play themselves through (the next phase builds them). */
+/** Seconds the flipper takes while it only plays itself through (the next phase builds it). */
 const PASSING = 4;
 /** Seconds the empty net takes to drift away once it is free. */
 const DRIFT_FROM = 1;
@@ -58,6 +58,28 @@ const POD_PACE = 4;
 const POD_SPREAD = 0.45;
 /** Seconds the child holds a point toward a breath she has seen. */
 const POINT_FOR = 2.6;
+/**
+ * Where she takes the line, in the boat's own frame (x to port, y up from its origin, z forward): coming up out of
+ * the water into her outer mitten just outside the rail, through the inner one in toward her, and down in a coil on
+ * the boards at her feet. `REACH_FROM`/`REACH_TO` bound where a cork is within her reach, and `REACH_HANDS` how far
+ * out over the rail and down toward the water her mittens can go for it.
+ */
+const RAIL = new THREE.Vector3(1.07, 0.47, 0.32);
+const INBOARD = new THREE.Vector3(0.6, 0.62, 0.1);
+const COIL_AT = new THREE.Vector3(0.45, -0.17, 0.55);
+const REACH_FROM = new THREE.Vector2(0.85, -0.9);
+const REACH_TO = new THREE.Vector2(2.1, 1.4);
+const REACH_HANDS = { out: 1.3, low: 0.12, back: -0.25, ahead: 0.8 };
+/** Seconds her mittens take to go down to the cork, and to bring it up to the rail once they have it. */
+const REACH_FOR = 0.7;
+const LIFT_FOR = 0.45;
+/** The last stretch of the line, back from its near cork, that a sweep across it also catches, and how much less. */
+const NEAR_LINKS = [{ back: 1, weight: 0.75 }, { back: 2, weight: 0.5 }];
+/** The valve's dolphin, nosing in: how near behind the cork its beak keeps, and how long it takes to turn away and go under. */
+const NOSE_GAP = 0.3;
+const NOSE_AWAY = 2.6;
+/** How high on the head a phone's view looks: its tall frame has sky enough without raising it. */
+const PORTRAIT_LOOK_Y = 2.6;
 
 /** Where the dolphins are asked to run this frame, for `SeaLife.dolphinsWith`. */
 export interface PodRun {
@@ -149,6 +171,38 @@ export class NetWhale {
   /** Where its beak is, while she can see it. */
   private readonly diver = new THREE.Vector3();
   private diverSeen = false;
+  /**
+   * The line: its near cork out on the water until she can reach it, her mittens going down for it, the haul, and
+   * letting it go. `hauledIn` is how much of it her pulls have brought aboard (m).
+   */
+  haul: 'out' | 'reaching' | 'hauling' | 'letting' = 'out';
+  hauledIn = 0;
+  /** What brought the cork to her: the player's sweeps, or the valve's dolphin. */
+  broughtBy: 'sweeps' | 'dolphin' | null = null;
+  /** How far along the thwart to port she has slid to lean out over the rail (m), and how far she leans out, 0..1. */
+  slide = 0;
+  private out = 0;
+  private haulT = 0;
+  private hauled = false;
+  /** Seconds since a sweep last crossed the cork: the drawn sweep waits for a few. */
+  private idle = 0;
+  private corkHit = false;
+  private pulled = 0;
+  /** The line's dolphin: how far behind the cork its beak still is, and when it turned away (s), or -1. */
+  private noseGap = 0;
+  private noseAway = -1;
+  private readonly grip: NetGrip = { by: null, coil: new THREE.Vector3(), out: 0 };
+  private readonly catchAt = new THREE.Vector3();
+  private readonly inviting = new THREE.Vector3();
+  private inviteHeading = 0;
+  private readonly hand = [new THREE.Vector3(), new THREE.Vector3()];
+  private readonly ray = new THREE.Vector3();
+  /** The holds the camera eases between: what it was holding when the step changed, what it is going to, and how far. */
+  private readonly holdFrom = new Float32Array(6);
+  private readonly holdTo = new Float32Array(6);
+  private readonly holdNow = new Float32Array(6);
+  private holdT = 1;
+  private holdSet = false;
 
   /**
    * Lays the whale beside `rest`, where a boat sailing in from `lead` comes to rest facing the way it came: its eye
@@ -166,7 +220,8 @@ export class NetWhale {
       this.exhaled = this.clock;
       this.net.breathe(strength);
     };
-    this.net.drape(this.rest);
+    this.net.drape(this.rest, this.yaw);
+    this.net.hull = cast.boat;
     this.local(POD_WAIT.x + POD_WAIT_RADIUS, POD_WAIT.y, this.wayFrom);
   }
 
@@ -182,9 +237,17 @@ export class NetWhale {
   goTo(step: WhaleStep): void {
     if (step === this.step) return;
     if (this.step === 'breath') this.breathed = true;
+    if (this.step === 'line') this.hauled = true;
     this.step = step;
     this.stepTime = 0;
     this.waiting = 0;
+    this.idle = 0;
+    if (step === 'line') {
+      if (this.valveT >= 0 && !this.vDone) this.cast.sealife.handBackDolphin();
+      this.valveT = -1;
+      this.vDone = this.diverSeen = false;
+    }
+    this.holdFor(step, false);
     const whale = this.whale;
     if (step === 'free') {
       whale.free();
@@ -200,6 +263,7 @@ export class NetWhale {
    */
   get checkpoint(): string | null {
     if (this.step === 'gone' && this.cygnetIn === 'cradle' && !this.cast.carry.busy) return 'whale-gone';
+    if (this.hauled) return 'whale-line';
     if (this.breathed) return 'whale-breath';
     if (this.step === 'breath' && this.progress === 0 && this.still > 1) this.rested = true;
     return this.rested ? 'whale-rest' : null;
@@ -207,10 +271,11 @@ export class NetWhale {
 
   /**
    * A save at rest finds it lying there still and the boat held; one after its breath finds the patch lifted and
-   * its eye open on her; one from after it has gone finds the way clear.
+   * its eye open on her; one after the line finds the net peeled off into the water and the line let go; one from
+   * after it has gone finds the way clear.
    */
   restore(point: string): void {
-    if (point === 'whale-rest' || point === 'whale-breath') {
+    if (point === 'whale-rest' || point === 'whale-breath' || point === 'whale-line') {
       this.net.finishDraping();
       this.led = true;
       this.rested = true;
@@ -221,13 +286,20 @@ export class NetWhale {
       this.hold = 1;
       this.turn = this.turnToward();
       this.cygnetIn = this.cast.cygnet.seat === 'satchel' ? 'satchel' : 'cradle';
-      if (point === 'whale-breath') {
+      if (point !== 'whale-rest') {
         this.step = AFTER_BREATH;
         this.progress = 1;
         this.breathed = this.greeted = true;
         this.whale.awaken(this.cast.child.position);
         this.net.lift = 1;
       }
+      if (point === 'whale-line') {
+        this.step = 'flipper';
+        this.hauled = true;
+        this.haul = 'letting';
+        this.net.peel = 1;
+      }
+      this.holdFor(this.step, true);
     } else if (point === 'whale-gone') {
       this.led = true;
       this.podGone = true;
@@ -258,6 +330,17 @@ export class NetWhale {
     return this.asking;
   }
 
+  /** The drawn sweep across the cork toward her, once the line has waited a few seconds with nothing crossing it. */
+  get windInvitation(): THREE.Vector3 | null {
+    if (this.step !== 'line' || this.haul !== 'out' || this.idle < K.inviteAfter || this.valveT >= 0) return null;
+    return this.inviting;
+  }
+
+  /** It only works one way: from the cork toward the boat, on screen. */
+  get invitationHeading(): number | null {
+    return this.windInvitation ? this.inviteHeading : null;
+  }
+
   /** The rendered camera, for what a gust crosses on screen. */
   sees(camera: THREE.PerspectiveCamera): void {
     this.camera = camera;
@@ -273,7 +356,8 @@ export class NetWhale {
     this.still = resting ? this.still + dt : 0;
     if (this.step === 'approach' && this.still > 1) this.goTo('breath');
     if (this.step === 'breath') this.breathe(dt);
-    if (this.step === 'line' || this.step === 'flipper') this.passThrough();
+    if (this.step === 'line') this.haulLine(dt);
+    if (this.step === 'flipper') this.passThrough();
     this.drive(dt);
     if (this.step === 'free' && whale.spouting && !this.rewarded) {
       this.rewarded = true;
@@ -291,8 +375,12 @@ export class NetWhale {
     this.hold += (want - this.hold) * (1 - Math.exp(-dt * K.holdEase));
     const out = this.step === 'free' ? THREE.MathUtils.smootherstep(this.stepTime, 0.5, 5) : this.step === 'gone' ? 1 : 0;
     this.release += (out - this.release) * (1 - Math.exp(-dt * K.holdEase));
+    const leaning = this.step === 'line' && (this.haul === 'reaching' || this.haul === 'hauling');
+    this.out += ((leaning ? 1 : 0) - this.out) * (1 - Math.exp(-dt * (leaning ? 3 : 1.6)));
+    this.slide = K.haulSlide * THREE.MathUtils.smoothstep(this.out, 0, 1);
     const turning = this.step === 'gone' ? 0 : this.turnToward() * (1 - THREE.MathUtils.smootherstep(left, 30, 120));
-    this.turn += (turning - this.turn) * (1 - Math.exp(-dt * 1.2));
+    this.turn += (THREE.MathUtils.lerp(turning, K.haulTurn, this.out) - this.turn) * (1 - Math.exp(-dt * 1.2));
+    this.holdT = Math.min(1, this.holdT + dt / K.holdMove);
   }
 
   /**
@@ -403,6 +491,7 @@ export class NetWhale {
     child.lean = (this.step === 'approach' ? 0.18 : 0.12 + looked) * near;
     if (this.step === 'approach') this.recognise(time);
     else this.stopPointing();
+    if (this.step === 'line') this.haulHands();
     if (this.step === 'free' && (whale.spouting || whale.fluking) && time > this.nextWave) {
       child.wave();
       this.nextWave = time + 2.4;
@@ -442,7 +531,9 @@ export class NetWhale {
   /** What they are both looking at: the breath, the dolphin that lifts the net, the column, the eye, the spout, the flukes. */
   private watched(): THREE.Vector3 {
     const whale = this.whale;
-    if (this.diverSeen && this.progress < 1) return this.diver;
+    if (this.diverSeen && (this.progress < 1 || (this.step === 'line' && this.haul === 'out'))) return this.diver;
+    if (this.step === 'line' && (this.haul === 'out' || this.haul === 'reaching')) return this.net.float.position;
+    if (this.step === 'line' && this.haul === 'hauling') return this.net.foot;
     if (this.step === 'free') {
       if (whale.fluking || whale.time > FREE_FLUKES_FROM) return this.look.copy(whale.flukes).setY(Math.max(whale.flukes.y, 2));
       return this.look.copy(whale.blowhole).setY(whale.blowhole.y + (whale.spouting ? 6 : 1));
@@ -574,14 +665,267 @@ export class NetWhale {
     if (past > 0) this.vFlung = true;
   }
 
-  /** The line and the flipper only play themselves through for now: the net peels into the water, the loop slides off. */
+  /** The flipper only plays itself through for now: the loop slides off. */
   private passThrough(): void {
     this.tickled();
     const net = this.net;
-    const t = THREE.MathUtils.smootherstep(this.stepTime, 0.6, 0.6 + PASSING);
-    if (this.step === 'line' && !net.posed) net.peel = Math.max(net.peel, t);
-    if (this.step === 'flipper' && !net.posed) net.loop = Math.max(net.loop, t);
-    if (this.stepTime > PASSING + 1.2) this.goTo(this.step === 'line' ? 'flipper' : 'free');
+    if (!net.posed) net.loop = Math.max(net.loop, THREE.MathUtils.smootherstep(this.stepTime, 0.6, 0.6 + PASSING));
+    if (this.stepTime > PASSING + 1.2) this.goTo('free');
+  }
+
+  /**
+   * The line. Its near cork floats a few metres off the port side; a sweep across it on screen pushes it the way the
+   * stroke goes, so one toward the boat brings it in and one away only nudges it against its tether. Within her reach
+   * she leans out over the rail and takes the line in both mittens, hauls it hand over hand, each pull drawing the
+   * net further off its head into the water, and lets it go. Left a long while with the cork out, a dolphin noses it in.
+   */
+  private haulLine(dt: number): void {
+    const net = this.net;
+    const { boat, child } = this.cast;
+    boat.group.updateMatrixWorld();
+    boat.group.localToWorld(this.catchAt.copy(RAIL));
+    this.haulT += dt;
+    this.corkHit = false;
+    if (this.valveT >= 0) this.noseCork(dt);
+    if (this.haul === 'out') {
+      if (this.still > 0) {
+        this.waiting += dt;
+        this.idle += dt;
+      }
+      this.brushCork(dt);
+      if (this.waiting > K.valveAfter && this.valveT < 0) this.noseCork(dt);
+      this.invite();
+      if (this.withinReach()) {
+        this.broughtBy = this.valveT >= 0 ? 'dolphin' : 'sweeps';
+        this.to('reaching');
+      }
+    } else if (this.haul === 'reaching') {
+      this.drawCork();
+      if (this.haulT > REACH_FOR && this.gripped()) {
+        this.grip.by = child;
+        this.grip.out = net.lineLength;
+        boat.group.localToWorld(this.grip.coil.copy(COIL_AT));
+        net.grip = this.grip;
+        for (const h of [0, 1] as const) boat.group.worldToLocal(child.mitten(h, this.hand[h]));
+        this.pulled = 0;
+        this.to('hauling');
+      }
+    } else if (this.haul === 'hauling') {
+      boat.group.localToWorld(this.grip.coil.copy(COIL_AT));
+      const pull = Math.max(0, this.haulT - LIFT_FOR) / K.pullTime;
+      const k = Math.floor(pull);
+      const drawn = k >= K.haulPulls ? 0 : THREE.MathUtils.smootherstep((pull - k) / K.pullDraw, 0, 1);
+      if (k < K.haulPulls && pull - k > 0.02 && this.pulled <= k) {
+        this.pulled = k + 1;
+        net.sound('rope-pull', child.mitten(k % 2 === 0 ? 0 : 1, this.a), 1);
+      }
+      this.hauledIn = Math.min(K.haulPulls, k + drawn) * K.pullTake;
+      this.grip.out = net.lineLength - this.hauledIn;
+      if (!net.posed) net.peel = this.hauledIn / (K.haulPulls * K.pullTake);
+      if (pull > K.haulPulls + K.haulHold / K.pullTime) {
+        this.grip.by = null;
+        this.to('letting');
+      }
+    } else if (this.haulT > K.letGo) this.goTo('flipper');
+    if (!this.corkHit) this.tickled();
+  }
+
+  private to(haul: NetWhale['haul']): void {
+    this.haul = haul;
+    this.haulT = 0;
+  }
+
+  /** The near cork is near enough the rail beside her for her mittens to go down to it. */
+  private withinReach(): boolean {
+    const local = this.cast.boat.group.worldToLocal(this.a.copy(this.net.float.position));
+    return local.x > REACH_FROM.x && local.x < REACH_TO.x && local.z > REACH_FROM.y && local.z < REACH_TO.y;
+  }
+
+  /** Where her mittens go down to it: over the cork, as far out and down as she can lean, in the world. */
+  private reachPoint(out: THREE.Vector3): THREE.Vector3 {
+    const g = this.cast.boat.group;
+    const local = g.worldToLocal(out.copy(this.net.float.position));
+    local.set(THREE.MathUtils.clamp(local.x, RAIL.x + 0.05, REACH_HANDS.out), Math.max(REACH_HANDS.low, local.y + 0.12),
+      THREE.MathUtils.clamp(local.z, REACH_HANDS.back, REACH_HANDS.ahead));
+    return g.localToWorld(local);
+  }
+
+  /** Her reach draws the cork the last little way in under her mittens. */
+  private drawCork(): void {
+    const float = this.net.float;
+    this.reachPoint(this.b).sub(float.position).setY(0);
+    const want = this.b.multiplyScalar(3);
+    if (want.length() > 1.5) want.setLength(1.5);
+    float.push(want.sub(float.velocity).setY(0));
+  }
+
+  /** A mitten has closed on the line at the cork. */
+  private gripped(): boolean {
+    const { child } = this.cast;
+    const cork = this.net.float.position;
+    for (const h of [0, 1] as const) {
+      child.mitten(h, this.a);
+      if (Math.hypot(this.a.x - cork.x, this.a.z - cork.z) < 0.4) return true;
+    }
+    return false;
+  }
+
+  /**
+   * A sweep across the near cork on screen, or across the last of the line just behind it, sets it moving across the
+   * water the way the stroke goes, as fast as the stroke goes; a stroke away from the boat only nudges it.
+   */
+  private brushCork(dt: number): void {
+    const { input } = this.cast;
+    const camera = this.camera;
+    if (!camera || !input.present || input.muted || dt <= 0) return;
+    const dx = input.ndc.x - input.prevNdc.x;
+    const dy = input.ndc.y - input.prevNdc.y;
+    const moved = Math.hypot(dx * camera.aspect, dy);
+    if (moved < 1e-4) return;
+    const float = this.net.float;
+    let hit = screenBrush(camera, float.position, input.prevNdc, input.ndc, K.corkRadius);
+    for (const near of NEAR_LINKS) {
+      hit = Math.max(hit, near.weight * screenBrush(camera, this.net.link(near.back, this.a), input.prevNdc, input.ndc, K.corkRadius));
+    }
+    if (hit <= 0.01) return;
+    this.corkHit = true;
+    this.idle = 0;
+    // The stroke's way across the water at the cork: a step along it on screen, followed down onto the water.
+    const step = 0.02 / Math.hypot(dx, dy);
+    this.a.copy(float.position).project(camera);
+    this.b.set(this.a.x + dx * step, this.a.y + dy * step, 0.5).unproject(camera).sub(camera.position);
+    if (this.b.y > -1e-3) return;
+    this.b.multiplyScalar((float.position.y - camera.position.y) / this.b.y).add(camera.position).sub(float.position).setY(0);
+    if (this.b.lengthSq() < 1e-8) return;
+    const way = this.b.normalize();
+    const toward = this.a.subVectors(this.catchAt, float.position).setY(0).normalize().dot(way);
+    const pace = Math.min(K.corkPushMax, (K.corkPush * moved) / 2 / dt) * (toward < 0 ? K.corkWrongWay : 1);
+    const more = pace * hit - float.velocity.dot(way);
+    if (more <= 0) return;
+    float.push(this.ray.copy(way).multiplyScalar(more));
+    if (toward > 0.3) this.waiting = 0;
+  }
+
+  /** Where the drawn sweep goes: across the cork and on toward her, and which way that is on screen. */
+  private invite(): void {
+    const camera = this.camera;
+    const cork = this.net.float.position;
+    this.inviting.copy(cork).lerp(this.catchAt, 0.45).setY(cork.y);
+    if (!camera) return;
+    this.a.copy(cork).project(camera);
+    this.b.copy(this.catchAt).project(camera);
+    this.inviteHeading = Math.atan2(this.b.y - this.a.y, (this.b.x - this.a.x) * camera.aspect);
+  }
+
+  /**
+   * The line's valve: a dolphin from the waiting pod swims in under the water, rises just behind the cork and noses
+   * it in to her at an easy pace (the same push a sweep gives it); once she can reach it, it turns away and goes under.
+   */
+  private noseCork(dt: number): void {
+    const { sealife } = this.cast;
+    const float = this.net.float;
+    const cork = float.position;
+    if (this.valveT < 0) {
+      const from = sealife.lendDolphin();
+      if (!from) return;
+      this.valveT = 0;
+      this.vFrom.set(from.x, from.y, from.z);
+      this.vDir.subVectors(this.catchAt, cork).setY(0).normalize();
+      this.vLaunch.copy(cork).addScaledVector(this.vDir, -K.noseFrom).setY(0);
+      this.noseGap = K.noseFrom;
+      this.noseAway = -1;
+    }
+    if (this.vDone) return;
+    this.valveT += dt;
+    const t = this.valveT;
+    const p = this.diver;
+    let yaw = Math.atan2(this.vDir.x, this.vDir.z);
+    let pitch = 0;
+    if (t < K.valveSwim) {
+      // In under the water from the pod to just behind the cork, coming up to the surface there.
+      const u = (t / K.valveSwim) ** 1.4;
+      this.a.copy(this.vLaunch).setY(0.02);
+      this.b.copy(this.vLaunch).addScaledVector(this.vDir, -5).setY(-1.8);
+      this.forward.copy(this.vFrom).setY(-2.2);
+      bezier(this.vFrom, this.forward, this.b, this.a, u, p);
+      bezier(this.vFrom, this.forward, this.b, this.a, Math.min(1, u + 0.01), this.lookFrom);
+      yaw = Math.atan2(this.lookFrom.x - p.x, this.lookFrom.z - p.z);
+      pitch = Math.atan2(this.lookFrom.y - p.y, Math.hypot(this.lookFrom.x - p.x, this.lookFrom.z - p.z));
+    } else if (this.haul === 'out' && this.noseAway < 0) {
+      // Its beak comes up to the cork and keeps just behind it, pushing it on toward her.
+      this.b.subVectors(this.catchAt, cork).setY(0).normalize();
+      this.vDir.lerp(this.b, 1 - Math.exp(-dt * 2)).normalize();
+      this.noseGap = Math.max(NOSE_GAP, this.noseGap - K.noseSpeed * dt);
+      p.copy(cork).addScaledVector(this.vDir, -this.noseGap).setY(0.02);
+      yaw = Math.atan2(this.vDir.x, this.vDir.z);
+      if (this.noseGap <= NOSE_GAP + 1e-3) {
+        const more = K.noseSpeed - float.velocity.dot(this.vDir);
+        if (more > 0) float.push(this.ray.copy(this.vDir).multiplyScalar(more));
+      }
+    } else {
+      // Turned away from the boat, and down.
+      if (this.noseAway < 0) this.noseAway = t;
+      const f = Math.min(1, (t - this.noseAway) / NOSE_AWAY);
+      this.b.subVectors(p, this.catchAt).setY(0).normalize();
+      this.vDir.lerp(this.b, 1 - Math.exp(-dt * 1.5)).normalize();
+      p.addScaledVector(this.vDir, 2.2 * dt);
+      p.y = 0.02 - 2.4 * THREE.MathUtils.smoothstep(f, 0.15, 1);
+      yaw = Math.atan2(this.vDir.x, this.vDir.z);
+      pitch = -0.4 * Math.sin(Math.PI * THREE.MathUtils.smoothstep(f, 0.15, 1));
+      if (f >= 1) {
+        this.vDone = true;
+        this.diverSeen = false;
+        sealife.handBackDolphin();
+        return;
+      }
+    }
+    this.diverSeen = p.y > -0.5;
+    sealife.poseDolphin(p.x, p.y, p.z, yaw, pitch);
+  }
+
+  /**
+   * Her body on the line: watching the cork come in; leaning out over the port rail for it with both mittens going
+   * down to it; hauling it hand over hand, one mitten drawing the line in to her while the other goes back out along
+   * it to the rail, rocking back with each pull; then sitting back up once it is let go.
+   */
+  private haulHands(): void {
+    const { child, boat } = this.cast;
+    const g = boat.group;
+    g.updateMatrixWorld();
+    if (this.haul === 'out' || this.haul === 'letting') {
+      child.reachFor(0, null);
+      child.reachFor(1, null);
+      child.lean = 0.12 + 0.1 * this.out;
+      return;
+    }
+    if (this.haul === 'reaching') {
+      child.lean = K.reachLean * this.out;
+      this.reachPoint(this.a);
+      // A hand's width apart along the line, the outer one on the cork.
+      this.b.subVectors(this.net.link(1, this.b), this.a).setY(0).normalize();
+      child.reachFor(0, this.hand[0].copy(this.a));
+      child.reachFor(1, this.hand[1].copy(this.a).addScaledVector(this.b, 0.2).setY(this.a.y + 0.05));
+      return;
+    }
+    const pull = Math.max(0, this.haulT - LIFT_FOR) / K.pullTime;
+    const k = Math.min(Math.floor(pull), K.haulPulls);
+    const w = k >= K.haulPulls ? 1 : pull - k;
+    const drawn = THREE.MathUtils.smootherstep(w / K.pullDraw, 0, 1);
+    const back = w < K.pullDraw ? drawn : 1 - THREE.MathUtils.smootherstep((w - K.pullDraw) / (1 - K.pullDraw), 0, 1);
+    const lift = THREE.MathUtils.smootherstep(this.haulT / LIFT_FOR, 0, 1);
+    const settled = k >= K.haulPulls ? 1 - THREE.MathUtils.smootherstep(pull - K.haulPulls, 0, 0.5) : 1;
+    child.lean = (K.haulLean - 0.3 * back * settled) * this.out;
+    const puller = k % 2 === 0 ? 0 : 1;
+    for (const h of [0, 1] as const) {
+      const pulling = h === puller;
+      const from = pulling ? RAIL : INBOARD;
+      const to = pulling ? INBOARD : RAIL;
+      const at = this.a.copy(from).lerp(to, drawn);
+      at.y += Math.sin(Math.PI * drawn) * (pulling ? 0.08 : 0.18);
+      if (!pulling) at.x += Math.sin(Math.PI * drawn) * 0.05;
+      g.localToWorld(at.lerp(this.hand[h], 1 - lift));
+      child.reachFor(h, at);
+    }
   }
 
   /** The net's four parts, from where the encounter is; its eye on her while it is awake; its goodbye. */
@@ -651,27 +995,56 @@ export class NetWhale {
   }
 
   /**
-   * Eases the crossing's view from behind the sail to the hold low beside the boat: a little to port of astern in
-   * landscape, so its eye and blowhole stand clear of the sail with room to circle; in portrait on the line from its
-   * head through the boat, so boat, eye and blowhole stack up the frame. Free, it eases back out to see the spout,
-   * and glances round to its flukes as they wave.
+   * The hold for `step`, eased to over `holdMove` from wherever the camera is holding now, or taken at once: high
+   * behind the boat for the breath with the blowhole in reach of a circle, closer and lower for the line with her
+   * mittens, the cork and the net coming off its head in frame, and closer and lower again for the flipper. Free,
+   * it goes back to the breath's hold and eases out from there.
+   */
+  private holdFor(step: WhaleStep, now: boolean): void {
+    const to = this.holdTo;
+    if (step === 'line') to.set([K.lineDistance, K.lineHeight, K.lineBearing, K.lineLookY, K.lineToward, 0]);
+    else if (step === 'flipper') to.set([K.flipperDistance, K.flipperHeight, K.flipperBearing, K.flipperLookY, K.flipperToward, 1]);
+    else to.set([K.holdDistance, K.holdHeight, K.holdBearing, K.holdLookY, K.holdToward, 0]);
+    if (now || !this.holdSet) {
+      this.holdFrom.set(to);
+      this.holdNow.set(to);
+      this.holdT = 1;
+      this.holdSet = true;
+      return;
+    }
+    this.holdFrom.set(this.holdNow);
+    this.holdT = 0;
+  }
+
+  /**
+   * Eases the crossing's view from behind the sail to the step's hold beside the boat: a little to port of astern
+   * in landscape, so what the step asks for stands clear of the sail; in portrait on the line from its head through
+   * the boat, nearer, so boat, eye and head stack up the frame. Free, it eases back out to see the spout, and
+   * glances round to its flukes as they wave.
    */
   frame(shot: Shot): void {
     const h = THREE.MathUtils.smootherstep(this.hold, 0, 1);
+    if (!this.holdSet) this.holdFor(this.step, true);
     if (h <= 0.001) return;
     const whale = this.whale;
     const boat = this.cast.boat.position;
     const portrait = (this.camera?.aspect ?? 16 / 9) < 1;
     const out = THREE.MathUtils.smootherstep(this.release, 0, 1);
+    const now = this.holdNow;
+    const moved = THREE.MathUtils.smootherstep(this.holdT, 0, 1);
+    for (let i = 0; i < now.length; i++) now[i] = THREE.MathUtils.lerp(this.holdFrom[i], this.holdTo[i], moved);
+    const [holdDistance, holdHeight, bearing, lookY, toward, fin] = now;
     const head = this.p.copy(whale.eye).lerp(whale.blowhole, 0.5);
-    this.look.copy(boat).setY(1.2).lerp(head.setY(2.6), portrait ? 0.62 : 0.5);
+    const focus = this.b.copy(head).lerp(whale.finTip, fin).setY(portrait ? Math.min(lookY, PORTRAIT_LOOK_Y) : lookY);
+    this.look.copy(boat).setY(1.2).lerp(focus, portrait ? toward + 0.12 : toward);
     const glance = whale.phase === 'free' ? THREE.MathUtils.smoothstep(whale.time, FREE_FLUKES_FROM, FREE_FLUKES_FROM + 3.5)
       * (1 - THREE.MathUtils.smoothstep(whale.time, FREE_FLUKES_FROM + 10, FREE_FLUKES_FROM + 14)) : 0;
     if (glance > 0) this.look.lerp(this.a.copy(whale.flukes).setY(Math.max(4, whale.flukes.y * 0.5)), glance * (portrait ? 0.85 : 0.55));
     // Behind the boat: just to port of astern, or in portrait on the line from the head through the boat.
-    const aim = portrait ? Math.atan2(head.x - boat.x, head.z - boat.z) : this.yaw - K.holdBearing;
-    const distance = THREE.MathUtils.lerp(K.holdDistance, K.releaseDistance, out);
-    this.lookFrom.set(boat.x - Math.sin(aim) * distance, boat.y + THREE.MathUtils.lerp(K.holdHeight, K.releaseHeight, out),
+    const aim = portrait ? Math.atan2(head.x - boat.x, head.z - boat.z) : this.yaw - bearing;
+    const nearer = portrait ? K.portraitIn : 1;
+    const distance = THREE.MathUtils.lerp(holdDistance, K.releaseDistance, out) * nearer;
+    this.lookFrom.set(boat.x - Math.sin(aim) * distance, boat.y + THREE.MathUtils.lerp(holdHeight, K.releaseHeight, out) * nearer,
       boat.z - Math.cos(aim) * distance);
     this.forward.subVectors(this.lookFrom, this.look).setY(0);
     const reach = this.forward.length();
@@ -680,16 +1053,18 @@ export class NetWhale {
     const from = shot.from ?? this.a.set(0, 0, 1);
     const was = Math.atan2(from.x, from.z);
     const want = Math.atan2(this.forward.x, this.forward.z);
-    const bearing = was + Math.atan2(Math.sin(want - was), Math.cos(want - was)) * h;
-    shot.from = from.set(Math.sin(bearing), 0, Math.cos(bearing));
+    const turned = was + Math.atan2(Math.sin(want - was), Math.cos(want - was)) * h;
+    shot.from = from.set(Math.sin(turned), 0, Math.cos(turned));
     shot.distance = THREE.MathUtils.lerp(shot.distance, reach, h);
     shot.height = THREE.MathUtils.lerp(shot.height, this.lookFrom.y - this.look.y, h);
-    // Its blowhole with room above for the spiral, and its eye, join the travelling pair by degrees.
+    // What the step is about, and its eye, join the travelling pair by degrees.
     const s = this.subjects;
     const pair = shot.subjects;
     s.primary.copy(this.cast.child.position).y += 1.2;
     const rest = pair?.secondary ?? s.primary;
-    s.secondary.copy(whale.blowhole).y += whale.phase === 'free' && whale.time < FREE_FLUKES_FROM - 3 ? 8 : 2.5;
+    if (this.step === 'line') s.secondary.copy(this.haul === 'out' || this.haul === 'reaching' ? this.net.float.position : this.net.foot);
+    else if (this.step === 'flipper') s.secondary.copy(whale.finTip);
+    else s.secondary.copy(whale.blowhole).y += whale.phase === 'free' && whale.time < FREE_FLUKES_FROM - 3 ? 8 : 2.5;
     s.tertiary.copy(whale.eye);
     if (glance > 0) s.tertiary.lerp(this.a.copy(whale.flukes).setY(Math.max(whale.flukes.y, 1)), glance * 0.6);
     s.secondary.lerp(rest, 1 - h);

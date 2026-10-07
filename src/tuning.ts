@@ -1459,6 +1459,34 @@ export const tuning = {
     valveSwim: 7, valveClear: 1.4, valveFall: 5.5, valveFling: 0.9,
     /** The float-line's near cork: how quickly the water stills it once it is shoved (a second). */
     floatDrag: 0.8,
+    /**
+     * A sweep across the near cork on screen (within `corkRadius` of it, a share of the screen's height) sets it
+     * moving the stroke's way at `corkPush` metres a second for each screen height a second the stroke travels, at
+     * most `corkPushMax`; a stroke away from the boat only nudges it, at `corkWrongWay` of that.
+     */
+    corkRadius: 0.075, corkPush: 1.6, corkPushMax: 3.2, corkWrongWay: 0.3,
+    /**
+     * Her haul: how many pulls hand over hand, the line each brings in (m), the seconds each takes and the share of
+     * that spent drawing; how long she holds on after the last before letting go, and how long the line takes to go.
+     */
+    haulPulls: 5, pullTake: 0.75, pullTime: 1.5, pullDraw: 0.6, haulHold: 0.8, letGo: 2.4,
+    /**
+     * Leaning out for it: how far along the thwart to port she slides (m), how far round toward the port rail she
+     * turns (radians), and how far forward over it she leans (radians), reaching and hauling.
+     */
+    haulSlide: 0.15, haulTurn: 0.55, reachLean: 0.75, haulLean: 0.6,
+    /** The valve's dolphin rises this far behind the cork and noses it in at this pace (m, m/s). */
+    noseFrom: 2.6, noseSpeed: 1.3,
+    /**
+     * The camera's hold for each step, eased from one to the next over `holdMove` seconds: how far behind the boat
+     * and how high (m), how far round to port of astern (radians), how far the look goes from the boat toward what
+     * matters (the head, then the flipper's tip) and how high on it (m). A phone's taller lens holds every one of
+     * them `portraitIn` as far off.
+     */
+    holdMove: 5, holdLookY: 4.5, holdToward: 0.5,
+    lineDistance: 15, lineHeight: 6.2, lineBearing: 0.26, lineLookY: 2.6, lineToward: 0.36,
+    flipperDistance: 13, flipperHeight: 4.7, flipperBearing: 0.32, flipperLookY: 1.2, flipperToward: 0.45,
+    portraitIn: 0.58,
   },
 
   seaPassage: {

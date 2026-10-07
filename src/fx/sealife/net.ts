@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { BOW_Z, STERN_Z, gunwaleHalf, stationU } from '../../traveller/boat/form';
 import { tuning } from '../../tuning';
 import { swellLift } from '../../world/water/swell';
 import { BLOWHOLE, LENGTH, TOP } from './anatomy';
@@ -8,7 +9,7 @@ import { MIST, type Spray } from './spray';
 
 const K = tuning.netWhale;
 
-export type NetSound = 'net-sputter' | 'net-lift' | 'whale-call';
+export type NetSound = 'net-sputter' | 'net-lift' | 'whale-call' | 'cork-knock' | 'rope-pull' | 'net-slither';
 
 /** Where the net's front edge lies along the whale (0 snout .. 1 flukes). */
 const FRONT = 0.05;
@@ -25,14 +26,16 @@ const BELOW = 5;
 const PATCH = new THREE.Vector2(5, 3.5);
 const DOME = new THREE.Vector2(1.6, 1.1);
 /**
- * Peeled, each row slides off into the water beside its own part of the head and folds back and forth `FOLD_WIDE`
- * metres out from the waterline, the near edge furthest out; the rows gather toward the head to `GATHER` of the
- * net's length, so it ends a floating mass of about 23 by 10 m.
+ * Peeled, each row slides off into the water and folds back and forth `FOLD_WIDE` metres out from the waterline,
+ * the near edge furthest out. Hauled by the leader, the sheet doubles over at the leader's row: both halves trail
+ * from that corner toward the snout, gathered to `GATHER` of their length, so the corner she hauled lies nearest
+ * the boat and the rest floats beside the head, clear of the flipper.
  */
 const FOLD_WIDE = 6;
 const FOLD_FROM = 1;
-const GATHER = 0.5;
-const GATHER_AHEAD = 4;
+const GATHER = 0.45;
+/** The half of the sheet in front of the leader's row lies over the half behind it. */
+const OVER = 0.07;
 /** However it folds, it keeps this far from the boat at rest (m). */
 const BOAT_CLEAR = 4.5;
 /** How much of the peel each part of it spreads over, so the sheet comes away together rather than point by point. */
@@ -41,8 +44,20 @@ const PEEL_SPREAD = 0.35;
 const DRIFT_AWAY = 48;
 const DRIFT_TURN = 0.5;
 const CORK_STEP = 1.2;
-const LEADER = 12;
+const LEADER = 14.4;
 const LINK = 1.2;
+/** The leader leaves the near edge at the cheek, this far in front of the eye; the loop's line this far behind it (m). */
+const LEADER_BEFORE_EYE = 3.6;
+const LOOP_BEHIND_EYE = 4.5;
+/** Where the leader's near cork floats at first: this far out to port of the boat and this far ahead of its middle (m). */
+const CORK_OUT = 3.4;
+const CORK_AHEAD = 0.6;
+/** How close to the planking a cork floats, and how hard it must knock to be heard (m/s). */
+const CORK_CLEAR = 0.16;
+const KNOCK_FROM = 0.25;
+/** The line hauled in lies in a small coil on the boards this wide, and pays back out over the rail this fast (m/s). */
+const COIL = 0.16;
+const PAY_OUT = 1.6;
 const LOOP_END = 2;
 /** Where along the near flipper the loop sits, and how far past its tip it has gone once it is off (0 root .. 1 tip). */
 const LOOP_FROM = 0.68;
@@ -61,6 +76,23 @@ export interface NetFloat {
   readonly velocity: THREE.Vector3;
   /** A shove across the water, in metres a second added to its velocity (y is ignored). */
   push(impulse: THREE.Vector3): void;
+}
+
+/** The boat the leader floats beside: its corks knock on its planking and never pass through it. */
+export interface NetHull {
+  readonly position: THREE.Vector3;
+  readonly yaw: number;
+}
+
+/**
+ * The leader in somebody's mittens: the line comes up out of the water into the outer mitten, through the inner one,
+ * and down into a coil on the boards. `out` is how much of it is still out beyond the outer mitten (m); she hauls by
+ * shortening it. Let go (`by` null), the net's weight draws the hauled line back out over the rail.
+ */
+export interface NetGrip {
+  by: { mitten(hand: 0 | 1, out: THREE.Vector3): THREE.Vector3 } | null;
+  readonly coil: THREE.Vector3;
+  out: number;
 }
 
 interface Polyline {
@@ -92,7 +124,12 @@ export class Net {
   held: THREE.Vector3 | null = null;
   /** The loop's free end, about two metres of line. */
   readonly loopEnd = new THREE.Vector3();
+  /** Where the leader leaves the net for the water: what she hauls toward her. */
+  readonly foot = new THREE.Vector3();
   readonly float: NetFloat;
+  hull: NetHull | null = null;
+  /** The leader as she holds it, or null while it floats free; `grip.out` grows back to the whole line once let go. */
+  grip: NetGrip | null = null;
   onSound: ((kind: NetSound, at: THREE.Vector3, strength: number) => void) | null = null;
 
   private readonly sheet: THREE.Mesh;
@@ -153,6 +190,15 @@ export class Net {
   private soundNext = 0;
   private clock = 0;
   private snap = true;
+  private boatYaw = 0;
+  /** The leader's links still out on the water (the rest are in her mittens or on the boards), and where it comes aboard. */
+  private free = 0;
+  private readonly outer = new THREE.Vector3();
+  private readonly inner = new THREE.Vector3();
+  private aboard = false;
+  private soundPeel = 0;
+  private peelAt = 0;
+  private knockNext = 0;
   private readonly skin: Skin = { height: 0, normal: new THREE.Vector3() };
   private readonly p = new THREE.Vector3();
   private readonly q = new THREE.Vector3();
@@ -179,14 +225,10 @@ export class Net {
         const a = this.acrossAt(j);
         uv[k * 2] = u;
         uv[k * 2 + 1] = a;
-        // The near edge at the head comes away first: that is where the line is hauled from.
-        this.order[k] = 0.62 * ((NET.near - a) / (NET.near + NET.far)) + 0.38 * (u / NET.long);
         const cloth = NET.near - a;
         const layer = Math.floor(cloth / FOLD_WIDE);
         const into = cloth - layer * FOLD_WIDE;
-        this.fold[k * 3] = u * GATHER - GATHER_AHEAD + Math.sin(a * 1.3 + u * 0.2) * 0.3;
         this.fold[k * 3 + 1] = FOLD_FROM + (layer % 2 ? into : FOLD_WIDE - into) + Math.sin(u * 0.9 + a) * 0.3;
-        this.fold[k * 3 + 2] = 0.04 + layer * 0.06 + Math.max(0, Math.sin(u * 1.7 + a * 0.8)) * 0.06;
         if (i < ROWS - 1 && j < COLS - 1) index.push(k, k + COLS, k + 1, k + 1, k + COLS, k + COLS + 1);
       }
     }
@@ -222,7 +264,8 @@ export class Net {
     this.corkVel = new Float32Array(this.corkAt.length * 3);
     this.corks = new THREE.Mesh(corkGeo, corkMaterial());
 
-    this.leaderLine = this.polyline(BELOW + this.links);
+    // Two more points than links: where the line comes up into each mitten.
+    this.leaderLine = this.polyline(BELOW + this.links + 2);
     this.loopLine = this.polyline(BELOW + 1 + RING + 4);
     for (let w = 0; w < WEEDS; w++) {
       this.weedLines.push(this.polyline(WEED_POINTS));
@@ -264,10 +307,12 @@ export class Net {
     }
   }
 
-  /** Laid on the whale, which has just been laid beside `boat`: row by row over the next frames, or at once. */
-  drape(boat: THREE.Vector3, now = false): void {
+  /** Laid on the whale, which has just been laid beside `boat` (resting facing `yaw`): row by row over the next frames, or at once. */
+  drape(boat: THREE.Vector3, yaw: number, now = false): void {
     const whale = this.whale;
     this.boat.copy(boat);
+    this.boatYaw = yaw;
+    this.grip = null;
     this.whaleLength = LENGTH * whale.scale;
     this.ahead.copy(whale.heading).setY(0).normalize();
     whale.point(1, TOP(0.2), 0.2, this.side).sub(whale.point(0, TOP(0.2), 0.2, this.p)).setY(0).normalize();
@@ -275,6 +320,7 @@ export class Net {
     this.refEye = whale.eye.y;
     this.eyeAcross = Math.max(1, this.offAxis(whale.eye));
     this.lift = this.peel = this.loop = this.drift = 0;
+    this.peelAt = this.soundPeel = 0;
     this.domeT = 10;
     this.held = null;
     this.draped = 0;
@@ -294,6 +340,16 @@ export class Net {
   hide(): void {
     this.draped = ROWS;
     for (const o of this.objects) o.visible = false;
+  }
+
+  /** The leader's link `back` links in from its near cork, in the world. */
+  link(back: number, out: THREE.Vector3): THREE.Vector3 {
+    return out.fromArray(this.chain, Math.max(0, this.links - back) * 3);
+  }
+
+  /** The whole leader, from where it leaves the net to its near cork (m). */
+  get lineLength(): number {
+    return this.links * LINK;
   }
 
   get shown(): boolean {
@@ -480,58 +536,68 @@ export class Net {
         this.domes[k] = bump(du / DOME.x) * bump(da / DOME.y);
       }
     }
-    // The leader goes from the near edge nearest the boat, the loop from just behind the eye: never across the eye.
+    // The leader comes down off the cheek in front of the eye and the loop's line behind it, toward the flipper: never across the eye.
     const sEye = ((nose.x - w.eye.x) * this.ahead.x + (nose.z - w.eye.z) * this.ahead.z) / this.whaleLength;
     const eyeRow = ((sEye - FRONT) * this.whaleLength / NET.long) * (ROWS - 1);
-    const clear = (4.5 / NET.long) * (ROWS - 1);
-    let best = Infinity;
+    const perRow = (ROWS - 1) / NET.long;
+    this.leaderRow = THREE.MathUtils.clamp(Math.round(eyeRow - LEADER_BEFORE_EYE * perRow), 0, ROWS - 1);
+    this.loopRow = THREE.MathUtils.clamp(Math.round(eyeRow + LOOP_BEHIND_EYE * perRow), 0, ROWS - 1);
+    // The near edge round the leader comes away first, and the rest after it: that is where it is hauled from.
+    const uLeader = (this.leaderRow / (ROWS - 1)) * NET.long;
     for (let i = 0; i < ROWS; i++) {
-      if (Math.abs(i - eyeRow) < clear) continue;
-      const k = (i * BELOW + BELOW - 1) * 3;
-      const d = Math.hypot(this.below[k] - this.boat.x, this.below[k + 2] - this.boat.z);
-      if (d < best) {
-        best = d;
-        this.leaderRow = i;
+      for (let j = 0; j < COLS; j++) {
+        const u = (i / (ROWS - 1)) * NET.long;
+        this.order[i * COLS + j] = 0.62 * ((NET.near - this.acrossAt(j)) / (NET.near + NET.far)) + 0.38 * (Math.abs(u - uLeader) / NET.long);
       }
     }
-    this.loopRow = THREE.MathUtils.clamp(Math.round(eyeRow + clear * (this.leaderRow > eyeRow ? -1 : 1)), 0, ROWS - 1);
-    if (Math.abs(this.loopRow - this.leaderRow) < 3) this.loopRow = THREE.MathUtils.clamp(Math.round(eyeRow - clear * Math.sign(this.leaderRow - eyeRow)), 0, ROWS - 1);
     this.layLeader();
     this.layAfloat();
     for (const o of this.objects) o.visible = true;
     this.snap = true;
   }
 
-  /** The leader's links laid out across the water from its foot toward the boat, a little slack. */
+  /**
+   * The leader's links laid out across the water from its foot at the cheek to its near cork a few metres off the
+   * boat's port side, bowed out a little away from the boat.
+   */
   private layLeader(): void {
     const k = (this.leaderRow * BELOW + BELOW - 1) * 3;
     const fx = this.below[k];
     const fz = this.below[k + 2];
-    let downSkin = 0;
-    for (let m = 1; m < BELOW; m++) {
-      const a = (this.leaderRow * BELOW + m) * 3;
-      downSkin += Math.hypot(this.below[a] - this.below[a - 3], this.below[a + 1] - this.below[a - 2], this.below[a + 2] - this.below[a - 1]);
-    }
-    const reach = Math.max(LINK, LEADER - downSkin);
-    const dx = this.boat.x - fx;
-    const dz = this.boat.z - fz;
+    const s = Math.sin(this.boatYaw);
+    const c = Math.cos(this.boatYaw);
+    const ex = this.boat.x + c * CORK_OUT + s * CORK_AHEAD;
+    const ez = this.boat.z - s * CORK_OUT + c * CORK_AHEAD;
+    const dx = ex - fx;
+    const dz = ez - fz;
     const d = Math.hypot(dx, dz) || 1;
+    const reach = Math.min(d, this.links * LINK * 0.96);
+    const bow = Math.sqrt(Math.max(0, (this.links * LINK * 0.92) ** 2 - reach * reach)) * 0.3;
+    // Bowed toward the side away from the boat.
+    const out = (fx - this.boat.x) * -dz + (fz - this.boat.z) * dx > 0 ? 1 : -1;
     for (let m = 0; m <= this.links; m++) {
       const f = m / this.links;
-      const along = f * reach * 0.94;
-      const bend = Math.sin(f * Math.PI) * 1.2;
-      this.chain[m * 3] = fx + (dx / d) * along - (dz / d) * bend;
+      const bend = Math.sin(f * Math.PI) * bow * out;
+      this.chain[m * 3] = fx + (dx / d) * f * reach - (dz / d) * bend;
       this.chain[m * 3 + 1] = 0;
-      this.chain[m * 3 + 2] = fz + (dz / d) * along + (dx / d) * bend;
+      this.chain[m * 3 + 2] = fz + (dz / d) * f * reach + (dx / d) * bend;
       this.chainVel[m * 2] = this.chainVel[m * 2 + 1] = 0;
     }
+    this.free = this.links;
+    this.aboard = false;
   }
 
-  /** Where each point will float once peeled: out from the waterline beside the head, gathered toward it, folded. */
+  /** Where each point will float once peeled: out from the waterline beside the head, doubled over at the leader's row, folded. */
   private layAfloat(): void {
     this.mass.set(0, 0, 0);
+    const uLeader = (this.leaderRow / (ROWS - 1)) * NET.long;
     for (let k = 0; k < this.n; k++) {
-      const along = this.fold[k * 3];
+      const u = (Math.floor(k / COLS) / (ROWS - 1)) * NET.long;
+      const across = this.acrossAt(k % COLS);
+      const along = uLeader - Math.abs(u - uLeader) * GATHER + Math.sin(across * 1.3 + u * 0.2) * 0.3;
+      this.fold[k * 3] = along;
+      const layer = Math.floor((NET.near - across) / FOLD_WIDE);
+      this.fold[k * 3 + 2] = 0.04 + layer * 0.06 + Math.max(0, Math.sin(u * 1.7 + across * 0.8)) * 0.06 + (u < uLeader ? OVER : 0);
       const row = THREE.MathUtils.clamp((along / NET.long) * (ROWS - 1), 0, ROWS - 1);
       const i0 = Math.floor(row);
       const i1 = Math.min(ROWS - 1, i0 + 1);
@@ -655,14 +721,26 @@ export class Net {
     }
   }
 
-  /** The wet rope and corks as the patch comes up, as loud as it is quick. */
+  /** The wet rope and corks as the patch comes up, and the mesh slithering off the skin as it peels, as loud as each is quick. */
   private sounds(): void {
+    if (this.snap) {
+      this.soundAt = this.lift;
+      this.peelAt = this.peel;
+    }
     this.soundLift += Math.max(0, this.lift - this.soundAt);
     this.soundAt = this.lift;
     if (this.soundLift > 0.05 && this.clock > this.soundNext) {
       this.soundNext = this.clock + 0.25;
       this.onSound?.('net-lift', this.whale.blowhole, Math.min(1.5, this.soundLift * 6));
       this.soundLift = 0;
+    }
+    this.soundPeel += Math.max(0, this.peel - this.peelAt);
+    this.peelAt = this.peel;
+    if (this.soundPeel > 0.03 && this.clock > this.soundNext) {
+      this.soundNext = this.clock + 0.3;
+      this.sheetPoint(this.leaderRow, COLS - 1, this.r);
+      this.onSound?.('net-slither', this.r, Math.min(1.5, this.soundPeel * 9));
+      this.soundPeel = 0;
     }
   }
 
@@ -683,22 +761,56 @@ export class Net {
     return p > 0 ? out.lerp(edge, p) : out;
   }
 
-  /** The float-line on the water: dragged by its foot, still in the breeze, stilled by the water, shoved by `push`. */
+  /**
+   * The float-line on the water: dragged by its foot, still in the breeze, stilled by the water, shoved by `push`,
+   * kept off the boat's planking. Held, the links beyond what is still out run up into her mittens and down onto the
+   * boards; let go, they pay back out over the rail.
+   */
   private moveLeader(dt: number, time: number): void {
     const C = this.chain;
     const V = this.chainVel;
     this.downSide(this.leaderRow, BELOW - 1, this.p);
+    this.foot.copy(this.p);
     C[0] = this.p.x;
     C[2] = this.p.z;
+    const whole = this.links * LINK;
+    const grip = this.grip;
+    let out = whole;
+    if (grip) {
+      if (grip.by) {
+        grip.by.mitten(0, this.outer);
+        grip.by.mitten(1, this.inner);
+        // The outer mitten is the one the line comes up to from the water.
+        const f = this.free > 1 ? Math.ceil(this.free) - 1 : 0;
+        const ox = C[f * 3], oz = C[f * 3 + 2];
+        if (Math.hypot(this.inner.x - ox, this.inner.z - oz) < Math.hypot(this.outer.x - ox, this.outer.z - oz)) {
+          this.t.copy(this.outer);
+          this.outer.copy(this.inner);
+          this.inner.copy(this.t);
+        }
+        this.aboard = true;
+      } else {
+        grip.out = Math.min(whole, grip.out + PAY_OUT * dt);
+        this.inner.copy(this.outer);
+      }
+      out = THREE.MathUtils.clamp(grip.out, Math.min(whole, Math.hypot(this.outer.x - C[0], this.outer.z - C[2]) + 0.2), whole);
+      if (!grip.by && grip.out >= whole) {
+        this.grip = null;
+        this.aboard = false;
+      }
+    }
+    this.free = this.aboard ? out / LINK : this.links;
+    const last = this.aboard ? Math.max(0, Math.ceil(this.free - 1e-6) - 1) : this.links;
     const still = Math.exp(-dt * K.floatDrag);
-    for (let m = 1; m <= this.links; m++) {
+    for (let m = 1; m <= last; m++) {
       V[m * 2] *= still;
       V[m * 2 + 1] *= still;
       C[m * 3] += V[m * 2] * dt;
       C[m * 3 + 2] += V[m * 2 + 1] * dt;
     }
+    const rest = out - last * LINK;
     for (let pass = 0; pass < 4; pass++) {
-      for (let m = 1; m <= this.links; m++) {
+      for (let m = 1; m <= last; m++) {
         const dx = C[m * 3] - C[(m - 1) * 3];
         const dz = C[m * 3 + 2] - C[(m - 1) * 3 + 2];
         const d = Math.hypot(dx, dz);
@@ -712,11 +824,77 @@ export class Net {
           C[(m - 1) * 3 + 2] += dz * pull * (1 - share);
         }
       }
+      if (this.aboard && last > 0) {
+        const dx = C[last * 3] - this.outer.x;
+        const dz = C[last * 3 + 2] - this.outer.z;
+        const d = Math.hypot(dx, dz);
+        if (d > rest) {
+          C[last * 3] -= (dx * (d - rest)) / d;
+          C[last * 3 + 2] -= (dz * (d - rest)) / d;
+        }
+      }
+      this.offHull(last, pass === 0);
     }
-    for (let m = 0; m <= this.links; m++) C[m * 3 + 1] = swellLift(C[m * 3], C[m * 3 + 2], time) + 0.03;
+    const settle = 1 - Math.exp(-dt * 8);
+    for (let m = 0; m <= last; m++) {
+      const y = swellLift(C[m * 3], C[m * 3 + 2], time) + 0.03;
+      C[m * 3 + 1] = this.snap ? y : C[m * 3 + 1] + (y - C[m * 3 + 1]) * settle;
+    }
+    const follow = this.snap ? 1 : 1 - Math.exp(-dt * 14);
+    for (let m = last + 1; m <= this.links; m++) {
+      this.aboardAt(m * LINK - out, this.t);
+      C[m * 3] += (this.t.x - C[m * 3]) * follow;
+      C[m * 3 + 1] += (this.t.y - C[m * 3 + 1]) * follow;
+      C[m * 3 + 2] += (this.t.z - C[m * 3 + 2]) * follow;
+      V[m * 2] = V[m * 2 + 1] = 0;
+    }
     const end = this.links;
-    this.float.position.set(C[end * 3], C[end * 3 + 1] + NET.cork * 0.3, C[end * 3 + 2]);
+    this.float.position.set(C[end * 3], C[end * 3 + 1] + (last === end ? NET.cork * 0.3 : 0), C[end * 3 + 2]);
     this.float.velocity.set(V[end * 2], 0, V[end * 2 + 1]);
+  }
+
+  /** `s` metres of hauled line past the outer mitten: through the inner one, down to the boards and round the coil. */
+  private aboardAt(s: number, out: THREE.Vector3): THREE.Vector3 {
+    const grip = this.grip;
+    const coil = grip ? grip.coil : this.outer;
+    const a = this.outer.distanceTo(this.inner);
+    if (s <= a) return out.copy(this.outer).lerp(this.inner, a > 0 ? s / a : 1);
+    const b = this.inner.distanceTo(coil);
+    if (s <= a + b) return out.copy(this.inner).lerp(coil, b > 0 ? (s - a) / b : 1);
+    const turn = (s - a - b) / COIL;
+    return out.set(coil.x + Math.cos(turn) * COIL, coil.y + 0.03 * turn / (Math.PI * 2), coil.z + Math.sin(turn) * COIL);
+  }
+
+  /** The links out on the water kept outside the planking; the near cork knocks on it when it comes in hard. */
+  private offHull(last: number, hear: boolean): void {
+    const hull = this.hull;
+    if (!hull) return;
+    const C = this.chain;
+    const V = this.chainVel;
+    const s = Math.sin(hull.yaw);
+    const c = Math.cos(hull.yaw);
+    for (let m = 1; m <= last; m++) {
+      const dx = C[m * 3] - hull.position.x;
+      const dz = C[m * 3 + 2] - hull.position.z;
+      const fore = dx * s + dz * c;
+      if (fore < STERN_Z - CORK_CLEAR || fore > BOW_Z + CORK_CLEAR) continue;
+      const port = dx * c - dz * s;
+      const half = gunwaleHalf(stationU(fore)) + CORK_CLEAR;
+      if (Math.abs(port) >= half) continue;
+      const side = port < 0 ? -1 : 1;
+      const nx = c * side;
+      const nz = -s * side;
+      C[m * 3] += nx * (half * side - port);
+      C[m * 3 + 2] += nz * (half * side - port);
+      const into = V[m * 2] * nx + V[m * 2 + 1] * nz;
+      if (into >= 0) continue;
+      V[m * 2] -= nx * into * 1.3;
+      V[m * 2 + 1] -= nz * into * 1.3;
+      if (hear && m === this.links && -into > KNOCK_FROM && this.clock > this.knockNext) {
+        this.knockNext = this.clock + 0.2;
+        this.onSound?.('cork-knock', this.float.position, Math.min(1.5, -into));
+      }
+    }
   }
 
   /** The corks: resting on the skin, riding the water, or hanging by their short lines under a lifted mesh, with weight. */
@@ -831,10 +1009,20 @@ export class Net {
     }
   }
 
+  /** Down the skin, across the water, and once she has it up into her mittens and down onto the boards. */
   private drawLeader(): void {
     const l = this.leaderLine;
     for (let m = 0; m < BELOW; m++) this.setPoint(l, m, this.downSide(this.leaderRow, m, this.q), NET.line, 0, 0);
-    for (let m = 1; m <= this.links; m++) this.setPoint(l, BELOW - 1 + m, this.q.fromArray(this.chain, m * 3), NET.line, 0, 0);
+    const last = this.aboard ? Math.max(0, Math.ceil(this.free - 1e-6) - 1) : this.links;
+    let v = BELOW;
+    for (let m = 1; m <= last; m++) this.setPoint(l, v++, this.q.fromArray(this.chain, m * 3), NET.line, 0, 0);
+    if (this.aboard) {
+      this.setPoint(l, v++, this.outer, NET.line, 0, 0);
+      this.setPoint(l, v++, this.inner, NET.line, 0, 0);
+    }
+    for (let m = last + 1; m <= this.links; m++) this.setPoint(l, v++, this.q.fromArray(this.chain, m * 3), NET.line, 0, 0);
+    this.q.fromArray(this.chain, this.links * 3);
+    while (v < l.count) this.setPoint(l, v++, this.q, NET.line, 0, 0);
     this.tangents(l);
   }
 

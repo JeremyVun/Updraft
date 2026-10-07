@@ -38,7 +38,7 @@ const layouts = {
   drowned: { entry: F.empty, sail: F.drowned }, toWood: { entry: F.empty },
   wood: { entry: F.empty, found: F.wood, dry: F.wood }, toSleeping: { entry: F.empty },
   sleeping: { entry: F.empty, feather: F.empty, morning: F.empty },
-  toMirror: { entry: F.empty, swim: F.crossing, 'whale-rest': F.crossing, 'whale-breath': F.crossing, 'whale-gone': F.crossing }, mirror: {
+  toMirror: { entry: F.empty, swim: F.crossing, 'whale-rest': F.crossing, 'whale-breath': F.crossing, 'whale-line': F.crossing, 'whale-gone': F.crossing }, mirror: {
     entry: F.empty,
     ...Object.fromEntries(Array.from({ length: MIRROR_STAR_MASK + 1 }, (_, mask) => [`stars4-${mask}`, F.mirror])) as Record<`stars4-${number}`, typeof F.mirror>,
     stars: F.mirror, 'stars-0': F.mirror, 'stars-1': F.mirror, 'stars-2': F.mirror, 'stars-3': F.mirror, 'stars-4': F.mirror, 'stars-5': F.mirror, 'stars-6': F.mirror, 'stars-7': F.mirror, reflection: F.legacyMirror, window: F.legacyMirror, moon: F.legacyMirror, tide: F.legacyMirror, lantern: F.legacyMirror },

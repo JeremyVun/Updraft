@@ -158,6 +158,7 @@ export class CrossingChapter implements Chapter {
   private readonly from = new THREE.Vector3();
   private readonly spot = new THREE.Vector3();
   private readonly look = new THREE.Vector3();
+  private readonly toPort = new THREE.Vector3();
   private time = 0;
   private worldTime = 0;
   private seaTurn = 0;
@@ -292,6 +293,14 @@ export class CrossingChapter implements Chapter {
 
   get coax(): Coax | null {
     return this.whale?.coax ?? null;
+  }
+
+  get windInvitation(): THREE.Vector3 | null {
+    return this.whale?.windInvitation ?? null;
+  }
+
+  get invitationHeading(): number | null {
+    return this.whale?.invitationHeading ?? null;
   }
 
   afterCamera(camera: THREE.PerspectiveCamera): void {
@@ -465,7 +474,10 @@ export class CrossingChapter implements Chapter {
       seatYaw += this.seaTurn;
     }
     this.whale?.update(dt);
-    child.ride(boat.seat(this.seat), seatYaw + (this.whale?.turn ?? 0), boat);
+    boat.seat(this.seat);
+    // Leaning out over the port rail, she slides along the thwart toward it.
+    if (this.whale?.slide) this.seat.add(this.toPort.set(Math.cos(boat.yaw), 0, -Math.sin(boat.yaw)).multiplyScalar(this.whale.slide));
+    child.ride(this.seat, seatYaw + (this.whale?.turn ?? 0), boat);
     plane.hold(child);
 
     if (farewell && back) {
