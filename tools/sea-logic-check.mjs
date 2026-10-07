@@ -1,6 +1,7 @@
 // Run the real sea chapter, boat, child, cygnet, pod and whale without a renderer.
 // Usage: node tools/sea-logic-check.mjs. Covers strong wind, 30/60fps, portrait, the whale in the net's sequence
-// (idle to its valve, and a circling player), passage completion and saves at and after the whale, and old saves.
+// (idle to its valve's dolphin, and a circling player), passage completion, saves at the whale, after its breath and
+// after it has gone, and old saves.
 import './lib/typescript.mjs';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
@@ -64,7 +65,7 @@ for(const [fps,gust,portrait,circling] of [[60,0,false,false],[30,20,false,true]
   const {chapter:c,boat:b,cygnet:k,rig,sealife}=f;
   let swimEdge=0,swimWorst=null;let heroEdge=0,worstGap=0,clipped=0,swimFrames=0,swimStart=0,leapAt=0,completed=false,lastProgress=0;
   const transitions=[],steps=[],saves=[];
-  let last='',step='',rewards=0,blowholeEdge=0,eyeOpen=0,lastSeen=0;
+  let last='',step='',rewards=0,blowholeEdge=0,eyeOpen=0,lastSeen=0,valveAt=null;
   const ndc=new THREE.Vector3();
   for(let i=0;i<fps*420;i++) {
     const dt=1/fps,time=i*dt;
@@ -77,6 +78,7 @@ for(const [fps,gust,portrait,circling] of [[60,0,false,false],[30,20,false,true]
     // At rest the blowhole is held well inside the frame, with room round it to circle.
     if(w.step==='breath'&&w.stepTime>3)blowholeEdge=Math.max(blowholeEdge,...ndc.copy(w.whale.blowhole).project(rig.camera).toArray().slice(0,2).map(Math.abs));
     if(w.step==='breath')eyeOpen=Math.max(eyeOpen,w.whale.awake?1:0);
+    if(w.step==='breath'&&w.progress>0&&valveAt===null)valveAt=w.stepTime;
     if(w.step==='breath'&&w.stepTime>1)assert(b.speed<0.2,`the boat stays at rest beside it: ${b.speed}`);
     // seaScore now turns 'arrival' once the dolphin pod has actually left (podLeftAt), not at a route fraction (ac4de1c).
     const scorePhase = !['before','done'].includes(c.swim) ? 'swim'
@@ -108,8 +110,10 @@ for(const [fps,gust,portrait,circling] of [[60,0,false,false],[30,20,false,true]
   assert(heroEdge>0 && heroEdge<0.95,`featured leap must play and stay in frame: ${heroEdge}`);
   assert.equal(clipped,0,`swimmer stays inside the safe frame: ${JSON.stringify({fps,gust,portrait,swimWorst,transitions})}`);
   assert(leapAt>0&&swimStart>leapAt&&swimStart>tuning.seaPassage.swimNotBefore,'the pod arrives and plays its leap before the swim');
-  assert.deepEqual(steps.map(([s])=>s),['approach','breath','free','gone'],'the whale\'s steps go in order');
-  assert.deepEqual(saves,['swim','whale-rest','whale-gone'],'saves after the swim, at rest beside it, and after it has gone, never back');
+  assert.deepEqual(steps.map(([s])=>s),['approach','breath','line','flipper','free','gone'],'the whale\'s steps go in order');
+  assert.deepEqual(saves,['swim','whale-rest','whale-breath','whale-gone'],'saves after the swim, at rest beside it, after its breath, and after it has gone, never back');
+  assert.equal(c.whale.liftedBy,circling?'circles':'dolphin',`the net is lifted by ${circling?'the circles':'the valve\'s dolphin'}`);
+  if(!circling)assert(valveAt>=tuning.netWhale.valveAfter,`nothing lifts the net before the valve: ${valveAt}`);
   assert(eyeOpen,'its first full breath opens its eye before it is free');
   assert.equal(rewards,1,'freeing it is rewarded once');
   assert(blowholeEdge>0&&blowholeEdge<0.75,`the blowhole is an easy target at rest: ${blowholeEdge.toFixed(2)}`);
@@ -128,6 +132,23 @@ for(const [fps,gust,portrait,circling] of [[60,0,false,false],[30,20,false,true]
   for(let i=0;i<60*240&&!c.done;i++){frame(f,1/60,95+i/60);if(c.whale.step==='breath'&&c.whale.stepTime>1)assert(b.speed<0.2,'a save at rest resumes at rest');
     if(c.whale.step==='gone'&&!gone)gone=c.time;}
   assert(gone>0&&c.done,'from the save at rest it is freed and the boat moors at the mirror');
+  assert.equal(takeCues().filter(q=>q==='restored').length,1,'and is rewarded once');
+}
+// Resumed after its first breath, the patch is up and its eye open on her from the first frame; it goes on without
+// another breath, and the boat sails on.
+{
+  const f=fixture(0,false,false,false);
+  const {chapter:c,boat:b,sealife}=f;
+  const rest=c.whale.rest;
+  b.beach(rest.x-Math.sin(c.whale.yaw)*1.5,rest.z-Math.cos(c.whale.yaw)*1.5,c.whale.yaw);b.afloat=true;b.grounded=false;
+  c.restoreCheckpoint('whale-breath',[3,110]);
+  assert.equal(c.whale.step,'line');assert.equal(c.whale.whale.phase,'woken');assert.equal(sealife.net.lift,1);
+  frame(f,1/60,110);
+  assert(sealife.net.shown,'the net is on it from the first frame');assert.equal(c.checkpoint,'whale-breath');
+  let gone=0;
+  for(let i=0;i<60*240&&!c.done;i++){frame(f,1/60,110+i/60);if(c.whale.step==='line'&&c.whale.stepTime>1)assert(b.speed<0.2,'a save after the breath resumes at rest');
+    if(c.whale.step==='gone'&&!gone)gone=c.time;}
+  assert(gone>0&&c.done,'from the save after its breath it is freed and the boat moors at the mirror');
   assert.equal(takeCues().filter(q=>q==='restored').length,1,'and is rewarded once');
 }
 // Resumed after it has gone, there is no whale and the boat sails on to the mirror.
