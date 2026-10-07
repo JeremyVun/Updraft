@@ -177,9 +177,12 @@ brings the light. Courage passes back and forth between them, and the stairs are
    flight shows where it belongs; a stroke over the loose flight carries it on its own level, and it turns itself
    to fit as it nears its place. The bird waits on the landing behind. The last one placed plays the reward phrase.
    Far out on the sea below, all seven of the little boats' toys sail by in a loose flotilla, west into the sun the
-   way the boat will take them over the cloud (`src/world/stairs-fleet.ts`, `tuning.stairs.fleet`). Nobody turns
-   to them: they come into the puzzle's view at its upper right as the climb starts and cross into the sun's glitter
-   by the last loose flight (Jeremy: "they just sail on by doing their own thing in the background below them").
+   way the boat will take them over the cloud (`src/world/stairs-fleet.ts`, `tuning.stairs.fleet`). They are seen
+   only once she is high on the stair: they are put on the water while the second loose flight waits, out past the
+   top of that view and each only while the lens is not looking at it, so the lens finds them as it rises for the
+   last flight, and they cross the sun's glitter below her as she hesitates under the white. Nobody turns to them
+   (Jeremy: "they just sail on by doing their own thing in the background below them"; "I'd show them when the
+   child is further up"). They are cheated large so they read from up there.
 3. **Into the cloud.** On the last landing below the white the child steps aside and hangs back, looking up; the
    bird comes past, looks up too, goes up into the white first, and waits.
 4. **The loop (the Penrose stairs).** Halfway up the white the stair comes into a hollow of clear air, onto the

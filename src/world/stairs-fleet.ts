@@ -14,12 +14,14 @@ interface FleetToy {
   side: number;
   pace: number;
   seed: number;
+  /** Put out on the water only while the lens is looking elsewhere, so none is ever seen to appear. */
+  out: boolean;
 }
 
 /**
  * The little boats' toys again, all seven, out on the sea below the stairs: they sail on by in a loose flotilla
  * west into the sun, the way the boat will take the travellers over the cloud, doing their own thing while the
- * child climbs. Nobody turns to them and they never come near.
+ * child climbs the last of the stair below the cloud. Nobody turns to them and they never come near.
  */
 export class StairsFleet {
   readonly group = new THREE.Group();
@@ -28,6 +30,9 @@ export class StairsFleet {
   private readonly toys: FleetToy[] = [];
   private readonly swell: Swell = { height: 0, slopeX: 0, slopeZ: 0 };
   private sailed = 0;
+  private readonly frustum = new THREE.Frustum();
+  private readonly view = new THREE.Matrix4();
+  private readonly hull = new THREE.Sphere();
 
   constructor() {
     this.group.name = 'stairs-fleet';
@@ -46,18 +51,21 @@ export class StairsFleet {
         side: k.sides[i] * k.spread,
         pace: 1 + (k.order[i] % 3 - 1) * 0.06,
         seed: i * 1.7,
+        out: false,
       });
     }
   }
 
-  /** Back to where they first come into sight, at the start of the climb. */
+  /** Back to where they set out from, none of them on the water yet. */
   setOff(): void {
     this.sailed = 0;
+    for (const t of this.toys) t.out = false;
   }
 
-  update(dt: number, time: number): void {
+  update(dt: number, time: number, camera: THREE.Camera): void {
     this.group.visible = this.shown;
     if (!this.shown) return;
+    this.frustum.setFromProjectionMatrix(this.view.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
     const k = tuning.stairs.fleet;
     this.sailed += dt * k.speed;
     const lane = STAIRS_ISLE.z + k.lane;
@@ -73,6 +81,10 @@ export class StairsFleet {
       const heel = across * fill * lk.heel;
       const y = this.swell.height + lk.toyDraft * k.scale + Math.sin(time * 2.1 + t.seed) * 0.03;
       t.group.position.set(x, y, z);
+      this.hull.center.copy(t.group.position).y += 0.9 * k.scale;
+      this.hull.radius = 1.1 * k.scale;
+      t.out ||= !this.frustum.intersectsSphere(this.hull);
+      t.group.visible = t.wake.visible = t.out;
       t.group.rotation.set(
         -this.swell.slopeX * Math.sin(yaw) - this.swell.slopeZ * Math.cos(yaw) + Math.sin(time * 1.6 + t.seed) * 0.035,
         yaw + Math.sin(time * 0.8 + t.seed) * 0.04,

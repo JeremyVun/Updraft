@@ -787,7 +787,7 @@ export class CloudStairs {
     hazeStride.value += (this.stride - hazeStride.value) * (1 - Math.exp(-dt * 2.5));
     if (Math.abs(this.stride - hazeStride.value) < 1e-3) hazeStride.value = this.stride;
     this.bank.update(dt);
-    this.fleet.update(dt, time);
+    this.fleet.update(dt, time, camera);
     this.cloud.update(dt, camera);
     this.hideHazeInTheWhite(camera);
     if (this.hideTop) this.cloud.top.visible = false;

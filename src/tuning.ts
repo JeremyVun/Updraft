@@ -320,16 +320,17 @@ export const tuning = {
      */
     towers: 11, towerSteps: 12,
     /**
-     * The little boats' toys sailing by on the sea below while the child climbs, west into the sun. Their lane, north
-     * of the island's middle, and how far east of the middle the leader starts, metres; how fast they go, metres a second;
-     * how much bigger than in their own room they are, so they read from the stair.
+     * The little boats' toys sailing by on the sea below, west into the sun, seen from the last loose flight until the
+     * child goes up into the white. Their lane, north of the island's middle, out past where the lens looks while the
+     * second loose flight is waiting, and how far east of the middle the leader starts, metres; how fast they go, metres a
+     * second; how much bigger than in their own room they are, so they read from high on the stair.
      */
     fleet: {
-      lane: -85, from: 55, speed: 0.6, scale: 1.7,
+      lane: -200, from: -15, speed: 0.9, scale: 4,
       /** Each toy's place in the flotilla (0 leads), metres between places, and how far either side of the lane (shares of `spread`). */
-      order: [2, 0, 4, 1, 5, 3, 6], spacing: 6, sides: [-0.2, 0.7, -0.9, -0.5, 0.9, 0.3, -0.6], spread: 6,
+      order: [2, 0, 4, 1, 5, 3, 6], spacing: 13, sides: [-0.2, 0.7, -0.9, -0.5, 0.9, 0.3, -0.6], spread: 12,
       /** How far each wanders off its line, metres, and how often (per metre sailed). */
-      weave: 2.5, weaveRate: 0.035,
+      weave: 5, weaveRate: 0.02,
       /** How full the sails stand, which side the breeze comes over (-1..1), and how much foam they trail. */
       fill: 0.7, across: 0.55, foam: 1.6,
     },
