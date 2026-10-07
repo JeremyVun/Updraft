@@ -30,7 +30,7 @@
 //        learn where it goes, so the lens holds still for anything that stays within the frame and glides along
 //        anything that leaves it. VIEWS=near,far, LIGHTS=dusk (the kittens are filmed in `half`, the belfry's
 //        light, unless LIGHTS is given), FPS=10, WINDOW=0.8-1.6 films only those seconds (with FPS=30, a leap's
-//        flight frame by frame), COLS=6 frames a row. ONLY picks actions as above. About five minutes for all.
+//        flight frame by frame), COLS=6 frames a row, RISE=3 lifts the lens to three times its height. ONLY picks actions as above. About five minutes for all.
 //   Default out-dir: /tmp/updraft-cat-check.
 import { chromium } from 'playwright-core';
 import fs from 'node:fs';
@@ -270,7 +270,7 @@ async function filmAll() {
         for (const view of filmViews) {
           const lens = LENS[view];
           const aim = [c[0], c[1] + 0.22, c[2]];
-          const rise = lens.rise * (spec.rise ?? 1);
+          const rise = lens.rise * Number(process.env.RISE ?? spec.rise ?? 1);
           const eye = [aim[0] + dir[0] * lens.distance, aim[1] + rise, aim[2] + dir[1] * lens.distance];
           const tall = spec.tall ?? (typeof spec.from === 'number' || spec.from === undefined ? 0.85 : lens.tall);
           const fov = lens.fov ?? (2 * Math.atan(tall / 2 / Math.hypot(lens.distance, rise)) * 180) / Math.PI;

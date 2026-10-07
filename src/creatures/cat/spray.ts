@@ -19,7 +19,7 @@ export class Spray {
     this.attr.setUsage(THREE.DynamicDrawUsage);
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', this.attr);
-    const mat = new THREE.PointsMaterial({ color: new THREE.Color(0.72, 0.78, 0.84), size, transparent: true, opacity: 0.8, depthWrite: false });
+    const mat = new THREE.PointsMaterial({ color: new THREE.Color(0.85, 0.9, 0.95), size, transparent: true, opacity: 0.9, depthWrite: false });
     this.points = new THREE.Points(geo, mat);
     this.points.frustumCulled = false;
   }

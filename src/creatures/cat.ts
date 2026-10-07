@@ -266,7 +266,8 @@ export class Cat {
   private turnAge = 0;
   private jolted = 0;
 
-  private readonly osc = { bodyY: 0, pitch: 0, flex: 0, roll: 0, head: 0, bend: 0 };
+  /** What shakes and swings too fast to be eased, laid over the eased pose each frame. */
+  private readonly osc = { bodyY: 0, pitch: 0, flex: 0, roll: 0, head: 0, bend: 0, headRoll: 0, headYaw: 0 };
   private readonly v = new THREE.Vector3();
   private readonly w = new THREE.Vector3();
   private readonly q = new THREE.Quaternion();
@@ -468,7 +469,7 @@ export class Cat {
   /** Where the hollow of its curl is, in the world, for what it curls round. */
   hollow(out: THREE.Vector3): THREE.Vector3 {
     const side = this.v.crossVectors(this.up, this.fwd).normalize();
-    return out.copy(this.at).addScaledVector(side, 0.15 * this.scale).addScaledVector(this.fwd, 0.03 * this.scale).applyMatrix4(this.frameMatrix);
+    return out.copy(this.at).addScaledVector(side, 0.1 * this.scale).addScaledVector(this.fwd, 0.01 * this.scale).applyMatrix4(this.frameMatrix);
   }
 
   /**
@@ -1133,7 +1134,6 @@ export class Cat {
     const shiver = clamp(this.shiver, 0, 1);
     const shudder = this.shudderT >= 0 ? Math.sin((this.shudderT / 0.45) * Math.PI) * shiver : 0;
     const tremble = shiver * (Math.sin(this.time * 58) * 0.6 + Math.sin(this.time * 41 + 1) * 0.4) + shudder * 2.2 * Math.sin(this.time * 76);
-    roll += tremble * 0.035;
     bodyY += tremble * 0.0015 - shiver * 0.01 - shudder * 0.01;
     flex += shiver * 0.15 + shudder * 0.12;
     neckLow += shiver * 0.35 + shudder * 0.35;
@@ -1149,7 +1149,9 @@ export class Cat {
     }
 
     const osc = this.osc;
-    osc.bodyY = osc.pitch = osc.flex = osc.roll = osc.head = osc.bend = 0;
+    osc.bodyY = osc.pitch = osc.flex = osc.roll = osc.head = osc.bend = osc.headRoll = osc.headYaw = 0;
+    osc.roll = tremble * 0.035;
+    osc.headRoll = tremble * 0.03;
     if (this.doing === 'path' || this.doing === 'climb') {
       const g = this.gait;
       const ph = g.phase * Math.PI * 2;
@@ -1237,7 +1239,7 @@ export class Cat {
           neckLow += 0.2 * sink * (1 - load);
           hock += 0.3 * load;
           osc.bend = 0.22 * sway * wiggle;
-          roll += 0.035 * sway * wiggle;
+          osc.roll += 0.035 * sway * wiggle;
           for (const i of [2, 3]) this.paws[i].addScaledVector(this.up, Math.max(0, (i === 2 ? 1 : -1) * sway) * 0.011 * this.scale * wiggle);
           tailUp = -0.15 + 0.1 * load;
           tailCurl = 0.05;
@@ -1302,7 +1304,6 @@ export class Cat {
       pupil += 0.1;
     }
     if (this.staring) tailFlick = Math.sin(this.time * 9) * 0.55 * (0.6 + 0.4 * Math.sin(this.time * 1.3));
-    headRoll += tremble * 0.03;
 
     let lids = 0;
     if (this.rubbing && this.doing === 'path') {
@@ -1341,9 +1342,9 @@ export class Cat {
       const tail = smooth((t - 0.45) / 0.12) * (1 - smooth((t - 0.9) / 0.25));
       neckLow *= 1 - env;
       flex *= 1 - 0.7 * env;
-      headRoll += Math.sin(ph) * 1.1 * head;
-      headYaw += Math.sin(ph) * 0.4 * head;
-      roll += Math.sin(ph - 1.1) * 0.5 * body;
+      osc.headRoll += Math.sin(ph) * 0.9 * head;
+      osc.headYaw += Math.sin(ph) * 0.35 * head;
+      osc.roll += Math.sin(ph - 1.1) * 0.4 * body;
       tailFlick = Math.sin(ph - 2.2) * 1.4 * tail;
       earBack = Math.max(earBack, 0.4 * env);
       lids = Math.max(lids, 0.8 * env);
@@ -1500,6 +1501,8 @@ export class Cat {
     d.roll += osc.roll;
     d.bend += osc.bend;
     d.headPitch += osc.head;
+    d.headRoll += osc.headRoll;
+    d.headYaw += osc.headYaw;
     d.scale = this.scale;
     d.frame.copy(this.frameMatrix);
     d.origin.copy(this.at);
@@ -1513,6 +1516,8 @@ export class Cat {
     d.roll -= osc.roll;
     d.bend -= osc.bend;
     d.headPitch -= osc.head;
+    d.headRoll -= osc.headRoll;
+    d.headYaw -= osc.headYaw;
   }
 
   private readonly drop = new THREE.Vector3();
