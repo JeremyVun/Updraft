@@ -371,7 +371,36 @@ inside masked from the sea and steering readily, easing toward its target once n
 every move and emote for stills.
 Gate: `cat-check`; yard stills of every move and emote at game distance (the cat reads at the room's camera
 distances, never rat-sized); the drowned run check still passing with the bigger cat.
-Done: [ ]
+Done: [x] (branch `proto-drowned-cat2`). The cat is `scale` 1.8: standing, its back is at her knee; sitting, its ears
+reach the hem of her coat. It still sits on the village's pots (0.175 m rims, its haunches over the edge as a
+perched cat's are), sits in the tub with its head and ears over the rim, and at the bow beside her.
+- Moves, all on `Cat`: `run(path, floor, { pace: 'walk' | 'trot' | 'run', speed })` (a bolt is `run` at about 3.6 m/s
+  after `afraid`); `leap` and `hop` (`gather` sets the wind-up; a hop well down leans out over the edge and looks before
+  it drops); `climb(path, out, { frame, speed, gather })` for the ivy, a dead trunk or anything that moves; riding is
+  `place`, `hop` or `leap` with `{ frame, upright: true }`, which keeps it upright in the world on a sail end or a
+  swing seat while its paws stay on it. The head and ears lead every turn.
+- Feelings: `strand(look)` (hunched, ears flat, mewing at `look`, and every few seconds it flinches and looks down at
+  the water); `shiver` (0..1); `shake()` (the wet-cat twist, on straight legs); `stare(target)` (ears flat, low, head
+  forward, tail tip twitching; null lets go); `press(legs, facing, floor, face, onDone)` (along her shins leaning in,
+  tail up and hooked, back the other way, then sits at her feet looking up); `nuzzle(hand)` (head up into her hand,
+  eyes shut); `rest('curl', look)` (curled on its side round `hollow(out)`, head tucked in unless it watches
+  something); `slowBlink()`; `mew`, `yowl`, `chirrup` as before. Her side of the rescue needs no new child code:
+  `child.kneeling = 1` and `child.reachFor(1, hand)`.
+- Kittens: `Kittens` (`src/creatures/cat/kittens.ts`), three `Cat`s at 0.62 in a straw nest (`straw`, laid with
+  `lay(at)`): `nestle(mother)` asleep curled in her hollow, `tumble()` pouncing, batting (`Cat.bat`) and bowling each
+  other over (`Cat.topple`), `toSill(i, to, look, onDone)` one scampers over and hops up beside her. `heard` collects
+  their pats and tiny mews for whoever plays them.
+- The tub: a lid over its opening drawn into the hull's stencil bit (`INSIDE_HULL`), so the sea is never drawn inside
+  it; strokes count from further off and lighter (`tuning.drowned.tub`); with `goal` set (the story sets it in
+  `bringTo`) a stroke roughly that way is bent toward it once within `easeFrom`, and for `easeFor` seconds after a
+  stroke it drifts on in by itself. Left alone it stays where it is.
+- The yard (`?chapter=stage`, `play('cat:<name>')`; `yard.child = __game.child` first for `press`): sit, stand, crouch,
+  wash, curious, mew, chirrup, afraid, strand, shiver, shake, stare, slow-blink, press, curl, kittens, tumble, sill,
+  walk, trot, run, bolt, scared-run, rail, gap, hop-down, leap-pot, leap-boat, leap-roof, hop-tub, ride-tub, jump-boat
+  (leap, shake, shiver), boat, tub, climb, climb-trunk, ride-sail, ride-swing. `cat-check` shoots them all.
+Left: the curl is a loaf turned round on itself rather than a full ring; kittens use the mother's voice; the shake
+throws no water; the rescue (shake, shiver, press, her kneel), the stare at the fog, the kittens and the slow blink are
+not yet in the room's story (Phase 7).
 
 ### Phase 6c: the windmill as a sack hoist (after 6a; owns `src/world/crossings/windmill.ts`, `mill-crossing.ts`, `mill-spiral.ts`, the mill yard, `mill-check`)
 design.md "The windmill, rebuilt": she rides a basket on the hoist, standing, the full height of the mill; the

@@ -25,6 +25,8 @@ export interface Drives {
   flex: number;
   /** The chest lifted off the line of the back, as a sitting cat holds itself. */
   chestUp: number;
+  /** The spine curved round to its left (negative, its right), as a cat curls up to sleep. */
+  bend: number;
   /** The head pulled down into the shoulders. */
   neckLow: number;
   /** Where the face points, from the surface's forward: to its left, and up. */
@@ -125,8 +127,8 @@ export class CatRig {
     body.rotation.set(-d.pitch, 0, d.roll);
     const breathe = Math.sin(d.breath) * 0.012;
     body.scale.set(1 + breathe, 1 + breathe * 1.3, 1);
-    n[PELVIS].rotation.set(-d.flex * 0.9, 0, 0);
-    n[CHEST].rotation.set(d.flex * 0.6 - d.chestUp, 0, 0);
+    n[PELVIS].rotation.set(-d.flex * 0.9, -d.bend * 0.6, 0);
+    n[CHEST].rotation.set(d.flex * 0.6 - d.chestUp, d.bend * 0.6, 0);
 
     n[JAW].rotation.set(d.jaw * 0.26, 0, 0);
     /** A head carried low swings the base of the neck forward and down round the chest, not only the neck itself. */

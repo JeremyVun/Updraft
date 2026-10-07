@@ -1,6 +1,6 @@
 // Stills of the drowned village's cat doing every one of its actions, at game distances and in the room's light.
 // Usage: node tools/cat-check.mjs [out-dir]        (needs a dev server; BASE as for tools/play.mjs)
-//   Plays each action on the QA stage's cat yard (?chapter=stage: `__game.story.current.play('cat:<action>')`),
+//   Plays each action and feeling on the QA stage's cat yard (with the child on its quay for `press`) (?chapter=stage: `__game.story.current.play('cat:<action>')`),
 //   stands the camera off it about 4 m (c-near) and 12 m (c-far), and shoots it at the moments that say the most,
 //   at dusk (the drowned village's own light) and in storm dark. Then it sits the cat on the real boat's foredeck in
 //   the drowned village (?chapter=drowned) and shoots it from the game's own camera, and from 5 m and 12 m off the
@@ -44,7 +44,6 @@ const ACTIONS = {
   mew: [0.45],
   chirrup: [0.12],
   afraid: [0.25, 2],
-  strand: [1.5],
   'hop-tub': [0.18, 0.45, 2.5],
   'ride-tub': [3],
   'jump-boat': [0.5, 1.2, 3],
@@ -57,6 +56,24 @@ const ACTIONS = {
   rail: [2.5, 6.5],
   gap: [1.2, 1.85, 3.2],
   climb: [0.9, 2.4, 5.5],
+  bolt: [0.7],
+  'leap-pot': [0.9, 1.3, 2.2],
+  'leap-boat': [0.8, 1.2, 2.2],
+  'hop-down': [0.5, 0.9, 1.8],
+  'climb-trunk': [1.2, 3, 5],
+  'ride-sail': [1, 4, 7],
+  'ride-swing': [1.5, 3, 4.5],
+  strand: [1.5, 5.4],
+  shiver: [2.5],
+  shake: [0.75],
+  stare: [2.5],
+  'slow-blink': [1.5],
+  press: [2.5, 4.2, 7],
+  curl: [3],
+  kittens: [3],
+  tumble: [2, 4],
+  sill: [2, 4],
+  tub: [1.5],
 };
 const LIGHTS = {
   dusk: 'dusk=0.75',
@@ -188,6 +205,8 @@ try {
       for (const view of views) {
         await page.evaluate(([a, v]) => {
           const stage = window.__game.story.current;
+          stage.play('cat:sit');
+          stage.yard.child = window.__game.child;
           stage.play(`cat:${a}`);
           stage.look(v);
           window.__game.cat.probe.slip = 0;

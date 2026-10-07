@@ -5,6 +5,7 @@ import { screenBrush } from '../creatures/motion';
 import type { PointerInput } from '../input/pointer';
 import { tuning } from '../tuning';
 import type { WindField } from '../wind/field';
+import { INSIDE_HULL } from '../traveller/boat/waterline';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { REFLECTION_LAYER } from './water/reflection';
 import { swellAt, swellUniforms, type Swell } from './water/swell';
@@ -96,6 +97,19 @@ function tubGeometry(): THREE.BufferGeometry {
     lug(1),
     lug(-1),
   ]);
+}
+
+/**
+ * A lid over its opening drawn only into the stencil before the sea, as the boat's is: a line of sight through it goes
+ * down into the tub, so the sea is never drawn inside it however low it floats.
+ */
+function lid(): THREE.Mesh {
+  const mesh = new THREE.Mesh(new THREE.CircleGeometry(TOP - WALL * 0.5, 40).rotateX(-Math.PI / 2).translate(0, HEIGHT, 0), new THREE.MeshBasicMaterial({
+    side: THREE.DoubleSide, colorWrite: false, depthWrite: false,
+    stencilWrite: true, stencilRef: INSIDE_HULL, stencilFunc: THREE.AlwaysStencilFunc, stencilZPass: THREE.ReplaceStencilOp,
+  }));
+  mesh.renderOrder = -1;
+  return mesh;
 }
 
 const VERT = /* glsl */ `
@@ -203,6 +217,11 @@ export class WashTub {
   bump = 0;
   /** Seconds since a stroke last crossed it on screen. */
   sinceBrushed = Infinity;
+  /**
+   * Where it is being brought: once it is within `tuning.drowned.tub.easeFrom` of it, strokes that are roughly that
+   * way are bent the rest of the way toward it and it drifts on in by itself, so bringing it is never fiddly.
+   */
+  goal: THREE.Vector2 | null = null;
 
   private readonly mesh: THREE.Mesh;
   private readonly waterline = { value: 0 };
@@ -231,7 +250,7 @@ export class WashTub {
       uniforms: { ...atmo.uniforms, ...swellUniforms, uWater: this.waterline },
     }));
     this.mesh.layers.enable(REFLECTION_LAYER);
-    this.group.add(this.mesh);
+    this.group.add(this.mesh, lid());
     this.group.rotation.order = 'YXZ';
     this.group.visible = false;
   }
@@ -320,9 +339,22 @@ export class WashTub {
      */
     const shoved = this.shove.length();
     this.pushed = 0;
+    const goal = this.goal;
+    const toGoal = goal ? Math.hypot(goal.x - p.x, goal.y - p.z) : Infinity;
+    /** Only while the player is bringing it: left alone, it stays where it is. */
+    const nearing = goal ? (1 - THREE.MathUtils.smoothstep(toGoal, k.easeFrom * 0.6, k.easeFrom)) * (1 - THREE.MathUtils.smoothstep(this.sinceBrushed, k.easeFor, k.easeFor + 1)) : 0;
     if (shoved > 1e-5) {
       const want = Math.min(k.topSpeed, (shoved / dt) * k.take);
-      const ux = this.shove.x / shoved, uz = this.shove.y / shoved;
+      let ux = this.shove.x / shoved, uz = this.shove.y / shoved;
+      if (goal && nearing > 0 && toGoal > 1e-3) {
+        const gx = (goal.x - p.x) / toGoal, gz = (goal.y - p.z) / toGoal;
+        const bend = nearing * THREE.MathUtils.smoothstep(ux * gx + uz * gz, k.aimFrom, 0.9);
+        ux += (gx - ux) * bend;
+        uz += (gz - uz) * bend;
+        const u = Math.hypot(ux, uz) || 1;
+        ux /= u;
+        uz /= u;
+      }
       const along = v.x * ux + v.y * uz;
       if (want > along) {
         const grip = 1 - Math.exp(-dt * k.grip);
@@ -333,6 +365,15 @@ export class WashTub {
       this.shove.set(0, 0);
     }
     v.multiplyScalar(Math.exp(-dt * k.drag * (this.pushed > 0 ? 0.2 : 1)));
+    if (goal && nearing > 0 && toGoal > 1e-3 && !this.held) {
+      const drift = Math.min(k.easeSpeed, toGoal * 0.5) * nearing;
+      const along = (v.x * (goal.x - p.x) + v.y * (goal.y - p.z)) / toGoal;
+      if (along < drift) {
+        const grip = 1 - Math.exp(-dt * 1.5);
+        v.x += (goal.x - p.x) / toGoal * (drift - along) * grip;
+        v.y += (goal.y - p.z) / toGoal * (drift - along) * grip;
+      }
+    }
 
     const fromMiddle = Math.hypot(p.x - this.water.x, p.z - this.water.z);
     if (fromMiddle > this.water.r) {
