@@ -758,15 +758,12 @@ export class Net {
             sum += R[o * 3 + 1];
             count++;
           }
-          if (j > 0) {
-            sum += R[(k - 1) * 3 + 1];
-            count++;
+          // An edge has a neighbour on one side only, which would hold it out off a steep flank like a stiff skirt.
+          if (j > 0 && j < COLS - 1) {
+            sum += R[(k - 1) * 3 + 1] + R[(k + 1) * 3 + 1];
+            count += 2;
           }
-          if (j < COLS - 1) {
-            sum += R[(k + 1) * 3 + 1];
-            count++;
-          }
-          R[k * 3 + 1] = Math.max(floor[k], sum / count - BRIDGE_SAG);
+          if (count) R[k * 3 + 1] = Math.max(floor[k], sum / count - BRIDGE_SAG);
         }
       }
     }
