@@ -447,10 +447,12 @@ about (−9, −1398), some 40 m short of the church (`SPIRE`, 14, −1436). Mai
    comes and the first rain falls. Now she needs her boat, still resting against the cottage roof back along the way.
 8. **Bring the boat (fill the sail):** the player fills its red sail (`Boat.brushSail`) and brings it across the water
    to the nave; she steps down into it. She looks back once at the cat in the belfry as they go.
-9. **The storm:** the church is about 260 m from the beach, close to where main's storm already starts, so main's
-   storm plays from the moment she is aboard (the weather closing in, the lighthouse sliding past and going out about
-   130 m on, the plane taken, rain, the cygnet's shaking, the landing at the forest). The storm never lets go until the
-   beach, and the landing is relief that turns into the wood's fear.
+9. **The storm:** the boat leaves the nave about 145 m from the beach, so main's storm plays from the moment she is
+   aboard, re-timed to that shorter way: the weather already half gathered, the lighthouse about 55 m off as she boards
+   and its beam going out in the first seconds while it is still in view (a glow through the fog, then gone), the
+   cygnet's shaking, the plane taken about mid-way, rain, the landing at the forest about 45 s after she boards. The
+   night takes over from the fog's dark without ever lifting. The storm never lets go until the beach, the fog thins
+   off as the forest comes up out of it, and the landing is relief that turns into the wood's fear.
 
 The village round the church is re-laid so the route reads as a real village she picks her way through (Jeremy's note
 on the first frames above). The water level never changes. The village's look may be raised as far as it needs
@@ -475,7 +477,7 @@ So the existing drowned village and storm code may be refactored as far as the r
 - **Pacing.** Arrival and calm drift about 30 s; the cat about 30–60 s; a short drift with the cat aboard (the cygnet
   ducking into the satchel, the cat washing a paw at the bow) about 15 s; the air dying and the dark rising about 20 s,
   slow and eerie; the run about 2 min with both crossings; the dark arriving and the boat brought in about 45 s; the
-  storm about 70 s to the beach. The room grows from about 3 minutes to 5–6, nearly all of it the player's.
+  storm about 45 s to the beach. The room grows from about 3 minutes to 5–6, nearly all of it the player's.
 - **The cat.** A small soft tabby with a white chest and socks, round-faced, a little bedraggled, built as soft
   rounded shapes like the game's other animals, to the model sheet in `comps/cat/`. It mews from the chimney, hates the
   water, rides the tub hunched with its ears flat, and on the boat sits at the bow as far from the water as it can. It
@@ -731,7 +733,7 @@ the pod leaves at 60 s; the mirror's jetty is already in frame by 58 s; the sun 
   the boat. Then the pod goes with it and the sea goes still into the mirror's glass.
 - Each step has the usual drawn invitation and a safety valve after about 90 s with a cause on screen: a dolphin lifts
   the mesh with its nose, noses the float to the boat, nudges the flipper. The gull of the first build is not needed.
-- The route lengthens so the mirror's island stays in haze until the whale has gone; the stop and the camera hold,
+- The pod leads the boat off its line so the mirror is out of frame until the whale has gone; the stop and the camera hold,
   the saves and the real-gesture check carry over from branch `crossing-whale`, re-placed and re-scaled. The encounter below (a whale in their way, woken for their own passage, the cygnet only
 peeking) predates this and is being redesigned to fit it.
 
@@ -756,7 +758,10 @@ The sequence:
   between the still island and island of lines to be this very same whale as well (just without the netting and all
   that)"). The first crossing's whale (`toLines`, surfacing far off about 37 s in) becomes this animal: the same
   shape, skin and dream size, free and unnetted, seen only far off, rising, blowing and lifting its flukes as it
-  dives; its timing and distance as on main, and it never crowds the farewell look-back. Claude's call: the underside
+  dives, and it never crowds the farewell look-back. As built (Claude's call, 2026-10-07): it rises at main's 37 s, but
+  at 110 m main's track carried it into the island of lines' haze, which is nearly opaque past about 150 m, so it
+  breathes once about 124 m off and dives flukes-up about 77 m off, clear of the island, about 46 s in
+  (`tuning.netWhale.sightAhead`, `sightAside`, `sightTurn`). Claude's call: the underside
   of its flukes carries a pale pattern of its own, seen as it dives there and again when it waves goodbye on the open
   sea, so the meeting is a recognition rather than a coincidence.
   Jeremy: "so when hte child encounters the whale again, it feels like a familiar face / friend". So it is met as a
@@ -802,13 +807,23 @@ The sequence:
   about 90 s with no progress, with a cause on screen: a dolphin lifts the mesh with its nose, noses the cork to the
   boat, nudges the flipper. No gull. Nothing is timed, nothing fails.
 - **Camera.** The crossing camera eases (never jerks, never cuts, no reverse angle or underwater shot) from the rear
-  view in `k1` to a lower, closer hold beside the boat for the steps (`k2`–`k4`, about 11 m behind, 4 m up), then back
-  out for the release (`k5`). In portrait the boat, the eye and the blowhole stack up the frame (`k2-portrait`).
+  view in `k1` to a hold beside the boat for the breath (`k2`), then closer and lower for the child's haul and the
+  cygnet (`k3`, `k4`), where her mittens, the cork and the bird must read, then back out for the release (`k5`, the pod
+  in frame). As found in the look pass (Claude's call, 2026-10-07): the breath's hold is about 22 m behind and 11.5 m
+  up, looking down onto the crown so the net lying on the head reads, with the eye, the blowhole and the low sun in
+  frame; from 11 m behind and 4 m up the crown was edge-on and the net only a row of corks against the sky. The
+  portrait lens is wider (62° against 38.7°), so portrait holds come in by about 0.58 to keep the whale as large. In
+  portrait the boat, the eye and the blowhole stack up the frame (`k2-portrait`).
 - **Reward.** Freeing the whale is the open sea's major conclusion, so the reward phrase (`completeObjective()`) plays
   as it spouts free.
-- **Pacing.** The route lengthens so the mirror's island and jetty stay in haze until the whale has gone (on main the
-  jetty is in frame 58 s in). The open sea's "at most 100 s" is lifted for this; the crossing without the stop keeps
-  its feel. Music: the sea's score holds through the encounter; the mirror's arrival music is not delayed early.
+- **Pacing.** The mirror's jetty is on the horizon from the first seconds of the open sea, as on main: it lies only
+  about 250 m from the sleeping island's berth and about 25° off the sunrise the sea sails toward, so no route that keeps
+  the sunrise ahead through the leap and the swim can hide it. Claude's call (2026-10-07): keep that, since the
+  destination glimpsed and then left is what makes the pod's lead read as a detour; from the lead until the whale has
+  gone nothing of the mirror is in frame, and the boat comes about for it a few seconds after. Measured on `sea-whale`:
+  the lead about 60 s in, at rest about 89 s, moored about 150 s with a circling player and about 240 s idle. The open
+  sea's "at most 100 s" is lifted for this. Music: the sea's score holds through the encounter; the mirror's arrival
+  music cannot start until the whale has gone.
 - **Saves.** Checkpoints at rest beside it (before the first step), after each step, and after it has gone (resumes
   sailing on toward the mirror with no whale).
 - **Sounds.** Its slow breath and the sputter through the mesh, the full breath, the spout (`whale-blow`), the net's
@@ -824,4 +839,5 @@ The sequence:
   2026-10-07: "the picture will need to be regenerated, but lets build it out first").
 
 **QA starts.** `?chapter=toMirror` (and any `to*` crossing) starts that crossing at its first waypoint, cygnet in the
-satchel (branch `crossings-start`, also carried by `crossing-whale`); `?chapter=sea` starts the open sea as on main.
+satchel (branch `crossings-start`, also carried by `crossing-whale`); `?chapter=sea` starts the open sea as on main;
+`?chapter=whale` starts at rest beside the whale, as its first save (`whale-rest`) resumes.
