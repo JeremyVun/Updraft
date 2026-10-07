@@ -1432,7 +1432,14 @@ export const tuning = {
      * behind the boat and `holdHeight` up, `holdBearing` radians round to port of astern, at `holdEase` a second; and
      * the wider view it eases back out to as it goes free, the plume leaving the top of the frame.
      */
-    holdFrom: 40, holdFull: 6, holdDistance: 13, holdHeight: 5, holdBearing: -0.08, holdEase: 0.45,
+    holdFrom: 40, holdFull: 6, holdDistance: 20, holdHeight: 8.5, holdBearing: 0.1, holdEase: 0.45,
+    /**
+     * Led off its line, the crossing's view rises this much higher (m) at `riseEase` a second, its look going
+     * `riseToward` of the way from the boat to the whale's eye, `riseLook` metres up.
+     */
+    riseHeight: 4, riseEase: 0.3, riseLook: 2, riseToward: 0.4,
+    /** Seconds the cygnet peeks out of the satchel at its first breath in the haze. */
+    peekFor: 2.5,
     releaseDistance: 30, releaseHeight: 12, releaseBearing: 0.28,
     /**
      * The sea's score thins as the boat comes in, from `hushFrom` to `hushNear` metres short of the rest, to `hushSorrow`
@@ -1440,6 +1447,11 @@ export const tuning = {
      * `hushEase` a second.
      */
     hushFrom: 70, hushNear: 8, hushSorrow: 0.9, hushCourage: 0.45, hushEase: 0.3,
+    /**
+     * The haze does the first reveal: until the pod leads the boat in it is `lostFar` of the way lost in the low sky
+     * beyond it, and the haze lifts off it from `lostFrom` to `lostNear` metres short of the rest, eased at `lostEase` a second.
+     */
+    lostFar: 0.75, lostFrom: 80, lostNear: 25, lostEase: 0.6,
     /** How far ahead of the bow the pod runs while it leads the boat in (m). */
     podLead: 18,
     /**
@@ -1453,8 +1465,15 @@ export const tuning = {
      * and left, how much of that it keeps while the wind is still; and how high each weak breath domes it (m).
      */
     netLift: 3.5, netSettle: 0.8, netDome: 0.4,
-    /** Seconds into its first full breath when its eye opens on her, and how long the look between them holds. */
-    eyeOpens: 3, lookFor: 7,
+    /**
+     * The look between them, in seconds into its first full breath: the view comes in over her shoulder from
+     * `lookIn`; its eye opens on her from `eyeOpens`, slowly (`eyeOpening` a second); it blinks at `blinkAt`; she holds
+     * a mitten out to it from `reachFrom`; it calls at `callAt`; the cygnet peeps up at `peepAt`; her eyes go to the
+     * float line `handOff` before the look ends, `lookFor` after its eye opened, and the view goes to the haul.
+     */
+    lookIn: 2.6, eyeOpens: 3, eyeOpening: 0.55, blinkAt: 7.2, reachFrom: 7.8, callAt: 8.6, peepAt: 9.8, handOff: 1.4, lookFor: 9.5,
+    /** The view over her left shoulder for the look, close behind her and low, the sail clear to the right: as the step holds are. */
+    lookDistance: 4.8, lookHeight: 3, lookBearing: 0.15, lookLookY: 2.2, lookToward: 0.65,
     /**
      * The valve's dolphin: seconds to swim in under water from where the pod waits, how high over the crown its leap
      * carries its beak (m), how fast the gravity of a dream brings it down (m/s²), and how quickly the mesh it flicks
@@ -1487,9 +1506,9 @@ export const tuning = {
      * and how high (m), how far round to port of astern (radians), how far the look goes from the boat toward what
      * matters (the head, then the flipper's tip) and how high on it (m).
      */
-    holdMove: 5, holdLookY: 3.3, holdToward: 0.5,
-    lineDistance: 11, lineHeight: 4.8, lineBearing: 0.3, lineLookY: 3.4, lineToward: 0.36,
-    flipperDistance: 11, flipperHeight: 6, flipperBearing: 0.2, flipperLookY: 6.5, flipperToward: 0.4,
+    holdMove: 5, holdLookY: 4.5, holdToward: 0.5,
+    lineDistance: 12.5, lineHeight: 7.2, lineBearing: 0.22, lineLookY: 3.2, lineToward: 0.33,
+    flipperDistance: 12, flipperHeight: 7.5, flipperBearing: 0.2, flipperLookY: 6.5, flipperToward: 0.4,
     /**
      * A phone's holds: on the line from what matters through the boat, turned `turn` radians round toward the low sun
      * on the bow (toward starboard when negative), as far as the step allows, so its tall frame keeps the gold
@@ -1500,6 +1519,7 @@ export const tuning = {
      */
     phone: {
       breath: { distance: 19, height: 8, turn: -0.6, lookY: 17, toward: 0.3 },
+      look: { distance: 5, height: 2.4, turn: 0.18, lookY: 3, toward: 0.85 },
       line: { distance: 11, height: 6, turn: -0.55, lookY: 20, toward: 0.12 },
       flipper: { distance: 13, height: 8, turn: -1.2, lookY: 16, toward: 0.3 },
       release: { distance: 28, height: 11, turn: -0.25 },

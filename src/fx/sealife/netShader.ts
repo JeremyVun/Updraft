@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { glsl } from '../../tuning';
 import { ATMO_GLSL, atmo } from '../../world/atmosphere';
 import { SWELL_GLSL, swellUniforms } from '../../world/water/swell';
+import { LOST_GLSL } from './whaleShader';
 
 /**
  * The old net, in metres: as it would lie flat, `long` along the whale and up to `near` + `far` across it from its
@@ -65,6 +66,7 @@ uniform vec3 uWeed;
 uniform vec3 uRope;
 uniform vec3 uShadow;
 uniform float uFade;
+${LOST_GLSL}
 in vec2 vUv;
 in vec3 vWorld;
 in vec3 vNormal;
@@ -129,7 +131,7 @@ void main() {
   vec3 alb = mix(mix(uStrand * (0.88 + age), uWeed, weed * 0.75), uRope, rope / max(cover, 1e-4) * step(strand, rope)) * round;
   vec3 col = netLight(alb, N, V, vWorld, 0.35);
   col = (col * cover + uShadow * (1.0 - cover) * shade) / alpha;
-  gl_FragColor = vec4(applyFog(col, vWorld), alpha * uFade);
+  gl_FragColor = vec4(lost(applyFog(col, vWorld), vWorld), alpha * uFade);
 }`;
 
 const ROPE_VERT = /* glsl */ `
@@ -170,6 +172,7 @@ ${LIGHT}
 uniform vec3 uStrand;
 uniform vec3 uWeed;
 uniform float uFade;
+${LOST_GLSL}
 in vec3 vWorld;
 in float vSide;
 in float vCover;
@@ -179,7 +182,7 @@ void main() {
   if (a < 0.002) discard;
   vec3 V = normalize(cameraPosition - vWorld);
   vec3 col = netLight(mix(uStrand, uWeed, vWeed) * mix(1.15, 0.7, vSide * vSide), normalize(V + vec3(0.0, 0.6, 0.0)), V, vWorld, 1.1);
-  gl_FragColor = vec4(applyFog(col, vWorld), a * uFade);
+  gl_FragColor = vec4(lost(applyFog(col, vWorld), vWorld), a * uFade);
 }`;
 
 const CORK_VERT = /* glsl */ `
@@ -207,6 +210,7 @@ uniform vec3 uCork;
 uniform vec3 uSpot;
 uniform vec3 uFouled;
 uniform float uFade;
+${LOST_GLSL}
 in vec3 vWorld;
 in vec3 vNormal;
 in vec3 vLocal;
@@ -227,7 +231,7 @@ void main() {
   vec3 col = netLight(alb, N, V, vWorld, 0.15);
   col += uSunColor * pow(max(dot(reflect(-V, N), uSunDir), 0.0), 18.0) * 0.18 * cloudShadow(vWorld.xz);
   if (uFade < 0.999 && fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453) > uFade) discard;
-  gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
+  gl_FragColor = vec4(lost(applyFog(col, vWorld), vWorld), 1.0);
 }`;
 
 export const netLook = {
@@ -240,6 +244,7 @@ export const netLook = {
   uFouled: { value: new THREE.Color('#6f7448') },
   /** How much of it is left as it drifts off into the haze, 1 .. 0. */
   uFade: { value: 1 },
+  uLost: { value: 0 },
   uRes: { value: new THREE.Vector2(800, 450) },
 };
 

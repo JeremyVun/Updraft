@@ -147,8 +147,12 @@ export class NetWhale {
   /** How far the crossing's view has given way to the hold beside it, 0..1, and to the wider view as it goes. */
   hold = 0;
   release = 0;
+  /** How far the crossing's view has risen to look over the pod leading the boat in, 0..1. */
+  private rise = 0;
   /** How far the child has turned on her seat toward it, radians. */
   turn = 0;
+  /** How lost in the morning haze it is: nearly all of it until the pod leads the boat in, and none at rest. */
+  private lost = K.lostFar;
   /** How far the sea's score has thinned, 0..1: to almost nothing in its sorrow, a little way back once it knows her. */
   hush = 0;
   /** The pod has nudged the boat and now leads it; from here the encounter says where the dolphins run. */
@@ -170,6 +174,8 @@ export class NetWhale {
   /** When she began pointing toward its breath, or -1. */
   private pointing = -1;
   private nextPoint = 0;
+  private knew = false;
+  private reached = false;
   private cygnetIn: 'cradle' | 'stowing' | 'satchel' | 'unstowing' | 'swimming' = 'cradle';
   private podGone = false;
   /** How far round its wait, and how far along its way past the boat, the pod's anchor has come. */
@@ -197,6 +203,10 @@ export class NetWhale {
   private wind = 0;
   private breathed = false;
   private greeted = false;
+  /** Through the look between them: the view over her shoulder, its blink, and the cygnet's peep. */
+  private looking = false;
+  private blinked = false;
+  private peeped = false;
   private waved = false;
   private freedAt = -1;
   /** The valve's dolphin: where it left the pod, where it leaves the water, its heading over the crown and its throw. */
@@ -352,6 +362,7 @@ export class NetWhale {
     if (point === 'whale-rest' || point === 'whale-breath' || point === 'whale-line' || point === 'whale-flipper') {
       this.net.finishDraping();
       this.led = true;
+      this.lost = 0;
       this.rested = true;
       this.waited = 1e-3;
       this.step = 'breath';
@@ -392,6 +403,7 @@ export class NetWhale {
       this.podGone = true;
       this.whale.vanish();
       this.net.hide();
+      this.lost = 0;
       this.step = 'gone';
       this.stepTime = 100;
       this.released = 1e3;
@@ -471,6 +483,7 @@ export class NetWhale {
     const near = 1 - THREE.MathUtils.smootherstep(left, K.holdFull, K.holdFrom);
     const want = this.step === 'gone' ? 0 : this.step === 'approach' ? near : 1;
     this.hold += (want - this.hold) * (1 - Math.exp(-dt * K.holdEase));
+    this.rise += ((this.led && this.step === 'approach' ? 1 : 0) - this.rise) * (1 - Math.exp(-dt * K.riseEase));
     const out = this.step === 'free' ? THREE.MathUtils.smootherstep(this.stepTime, 0.5, 5) : this.step === 'gone' ? 1 : 0;
     this.release += (out - this.release) * (1 - Math.exp(-dt * K.holdEase));
     const leaning = this.step === 'line' && (this.haul === 'reaching' || this.haul === 'hauling');
@@ -479,6 +492,10 @@ export class NetWhale {
     const turning = this.step === 'gone' ? 0 : this.turnToward() * (1 - THREE.MathUtils.smootherstep(left, 30, 120));
     this.turn += (THREE.MathUtils.lerp(turning, K.haulTurn, this.out) - this.turn) * (1 - Math.exp(-dt * 1.2));
     this.holdT = Math.min(1, this.holdT + dt / K.holdMove);
+    const lost = this.step === 'approach' ? K.lostFar * (this.led ? THREE.MathUtils.smootherstep(left, K.lostNear, K.lostFrom) : 1) : 0;
+    this.lost += (lost - this.lost) * (1 - Math.exp(-dt * K.lostEase));
+    whale.lost = this.net.lost = this.lost;
+    whale.seenFrom = this.camera ? this.camera.position.distanceTo(whale.blowhole) : 0;
     const sorrow = this.step === 'approach' ? 1 - THREE.MathUtils.smootherstep(left, K.hushNear, K.hushFrom)
       : this.step === 'breath' && !this.greeted ? 1 : this.step === 'free' || this.step === 'gone' ? 0 : K.hushCourage / K.hushSorrow;
     this.hush += (K.hushSorrow * sorrow - this.hush) * (1 - Math.exp(-dt * K.hushEase));
@@ -618,6 +635,7 @@ export class NetWhale {
     child.lean = (this.step === 'approach' ? 0.18 : 0.12 + looked) * near;
     if (this.step === 'approach') this.recognise(time);
     else this.stopPointing();
+    if (this.step === 'breath') this.answer();
     if (this.step === 'line') this.haulHands();
     if (this.step === 'flipper') this.watchBird();
     if (this.step === 'free' && (whale.spouting || whale.fluking) && time > this.nextWave) {
@@ -657,11 +675,43 @@ export class NetWhale {
     child.reachFor(0, near ? this.beside(this.hand[0]).lerp(this.mitts[0].copy(cygnet.position).setY(0.35), 0.45) : null);
   }
 
-  /** At each breath she sees in the haze, an arm out toward it for a moment. */
-  private recognise(time: number): void {
+  /**
+   * Her answer to its eye: her head tipped a little to it, and a mitten held out toward it across the water a while
+   * after it blinks, then drawn back as her eyes go to the float line.
+   */
+  private answer(): void {
     const { child } = this.cast;
-    if (this.pointing < 0 && this.clock - this.exhaled < 1 && time > this.nextPoint && this.inView()) this.pointing = time;
+    const whale = this.whale;
+    const t = whale.phase === 'woken' ? whale.time : 0;
+    const looked = THREE.MathUtils.smoothstep(t, K.eyeOpens + 1, K.eyeOpens + 3) * (1 - THREE.MathUtils.smoothstep(t, K.eyeOpens + K.lookFor - K.handOff, K.eyeOpens + K.lookFor));
+    child.tilt = -0.14 * looked;
+    const reaching = t > K.reachFrom && t < K.eyeOpens + K.lookFor - K.handOff;
+    if (!reaching) {
+      if (this.reached) child.reachFor(0, null);
+      this.reached = false;
+      return;
+    }
+    this.reached = true;
+    child.face(this.a);
+    this.b.subVectors(whale.eye, this.a).normalize();
+    child.reachFor(0, this.p.copy(this.a).addScaledVector(this.b, 0.42).addScaledVector(UP, -0.04));
+  }
+
+  /**
+   * At each breath she sees in the haze she sits up and holds an arm out toward it for a moment; at the first, the
+   * cygnet peeks out of the satchel at it too.
+   */
+  private recognise(time: number): void {
+    const { child, cygnet } = this.cast;
+    if (this.pointing < 0 && this.clock - this.exhaled < 1 && time > this.nextPoint && this.inView()) {
+      this.pointing = time;
+      if (!this.knew && this.cygnetIn === 'satchel') {
+        this.knew = true;
+        cygnet.does('peer', this.whale.blowhole, K.peekFor);
+      }
+    }
     if (this.pointing < 0) return;
+    child.lean = -0.04;
     if (time - this.pointing > POINT_FOR) {
       this.stopPointing();
       this.nextPoint = time + 4;
@@ -700,6 +750,7 @@ export class NetWhale {
       if (whale.fluking || whale.time > FREE_FLUKES_FROM) return this.look.copy(whale.flukes).setY(Math.max(whale.flukes.y, 2));
       return this.look.copy(whale.blowhole).setY(whale.blowhole.y + (whale.spouting ? 6 : 1));
     }
+    if (this.step === 'breath' && whale.phase === 'woken' && whale.time > K.eyeOpens + K.lookFor - K.handOff) return this.net.float.position;
     if (whale.phase === 'woken' && whale.time < K.eyeOpens) {
       return this.look.copy(whale.blowhole).setY(whale.blowhole.y + 1 + 2.5 * THREE.MathUtils.smoothstep(whale.time, 1, K.eyeOpens));
     }
@@ -719,12 +770,7 @@ export class NetWhale {
       this.wind += -this.wind * (1 - Math.exp(-dt * 2));
       if (whale.phase === 'resting') whale.drawBreath();
       if (whale.phase !== 'woken') return;
-      if (whale.time > K.eyeOpens) whale.look(this.cast.child.position);
-      if (!this.greeted && whale.time > K.eyeOpens + 0.6) {
-        this.greeted = true;
-        this.net.sound('whale-call', whale.eye);
-      }
-      if (whale.time > K.eyeOpens + K.lookFor) this.goTo(AFTER_BREATH);
+      this.exchange(whale.time);
       return;
     }
     if (this.still > 0) this.waiting += dt;
@@ -743,6 +789,38 @@ export class NetWhale {
     this.wind += (lifting - this.wind) * (1 - Math.exp(-dt * 3));
     if (this.waiting > K.valveAfter || this.valveT >= 0) this.valve(dt);
     whale.stir = this.progress;
+  }
+
+  /**
+   * The look between them, `t` seconds into its first full breath: as the column falls the view comes down over her
+   * shoulder; its eye opens slowly and finds her; it blinks, slowly; it calls, low, as a friend does; the cygnet peeps
+   * up from the satchel; then her eyes go to the float line by the boat and the view goes with them to the haul.
+   */
+  private exchange(t: number): void {
+    const { cygnet } = this.cast;
+    const whale = this.whale;
+    if (t > K.eyeOpens) whale.look(this.cast.child.position);
+    if (!this.looking && t > K.lookIn) {
+      this.looking = true;
+      this.holdFor('look', false);
+    }
+    if (!this.blinked && t > K.blinkAt) {
+      this.blinked = true;
+      whale.blink();
+    }
+    if (!this.greeted && t > K.callAt) {
+      this.greeted = true;
+      this.net.sound('whale-call', whale.eye);
+    }
+    if (!this.peeped && t > K.peepAt && this.cygnetIn === 'satchel') {
+      this.peeped = true;
+      cygnet.does('peer', whale.eye, K.peekFor);
+      cygnet.call(false, 'puzzled');
+    }
+    if (t > K.eyeOpens + K.lookFor) {
+      this.looking = false;
+      this.goTo(AFTER_BREATH);
+    }
   }
 
   /**
@@ -1443,10 +1521,13 @@ export class NetWhale {
    * mittens, the cork and the net coming off its head in frame, and closer and lower again for the flipper. Free,
    * it goes back to the breath's hold and eases out from there.
    */
-  private holdFor(step: WhaleStep, now: boolean): void {
+  private holdFor(step: WhaleStep | 'look', now: boolean): void {
     const to = this.holdTo;
-    const { breath, line, flipper } = K.phone;
-    if (step === 'line') {
+    const { breath, look, line, flipper } = K.phone;
+    if (step === 'look') {
+      to.set([K.lookDistance, K.lookHeight, K.lookBearing, K.lookLookY, K.lookToward, 0, look.distance, look.height, look.turn,
+        look.lookY, look.toward]);
+    } else if (step === 'line') {
       to.set([K.lineDistance, K.lineHeight, K.lineBearing, K.lineLookY, K.lineToward, 0, line.distance, line.height, line.turn,
         line.lookY, line.toward]);
     } else if (step === 'flipper') {
@@ -1476,6 +1557,10 @@ export class NetWhale {
   frame(shot: Shot): void {
     const h = THREE.MathUtils.smootherstep(this.hold, 0, 1);
     if (!this.holdSet) this.holdFor(this.step, true);
+    // Led off its line, the view rises to look over the pod at the long low island it is making for.
+    const rise = THREE.MathUtils.smootherstep(this.rise, 0, 1);
+    shot.height += K.riseHeight * rise;
+    shot.target.lerp(this.a.copy(this.whale.eye).setY(K.riseLook), K.riseToward * rise);
     if (h <= 0.001) return;
     const whale = this.whale;
     const boat = this.cast.boat.position;
@@ -1520,7 +1605,8 @@ export class NetWhale {
     else if (this.step === 'flipper') {
       const out = this.bird !== 'satchel' && this.bird !== 'lifted' && this.bird !== 'home';
       s.secondary.copy(out ? this.cast.cygnet.position : whale.finTip).y += out ? 0.4 : 0;
-    } else s.secondary.copy(whale.blowhole).y += 2.5;
+    } else if (this.looking) s.secondary.copy(whale.eye);
+    else s.secondary.copy(whale.blowhole).y += 2.5;
     // A phone's narrow frame stacks the step over the boat; fitting the eye in beside them would only back it off.
     // Going free the boat comes near and the whale lies across the middle distance, its plume leaving the frame.
     if ((portrait && (this.step === 'line' || this.step === 'flipper')) || (!portrait && this.step === 'free')) s.tertiary.copy(s.secondary);
@@ -1529,7 +1615,7 @@ export class NetWhale {
     s.secondary.lerp(rest, 1 - h);
     s.tertiary.lerp(rest, 1 - h);
     s.margin = THREE.MathUtils.lerp(pair?.margin ?? 0.85, 0.85, h);
-    s.extra = THREE.MathUtils.lerp(pair?.extra ?? 10, !portrait && this.step === 'free' ? 4 : 10, h);
+    s.extra = THREE.MathUtils.lerp(pair?.extra ?? 10, this.looking ? 2 : !portrait && this.step === 'free' ? 4 : 10, h);
     shot.subjects = s;
   }
 }

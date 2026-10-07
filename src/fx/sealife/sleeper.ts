@@ -59,6 +59,8 @@ const LIFT = curve([[0, 0], [0.4, 0.12], [1.8, 0.95], [3, 1], [4.2, 0.35], [4.7,
 const LIFT_HITS = 4.6;
 const LIFT_POURS = 0.7;
 const LIFT_FOR = 5.2;
+/** A slow blink: the lid down over half a second, a moment shut, and up again over most of a second. */
+const BLINK = curve([[0, 0], [0.5, 0.9], [0.75, 0.9], [1.6, 0]]);
 
 /**
  * Lying at rest: the head carried a little high so the eye and the jaw stand clear, the back level behind the
@@ -102,6 +104,8 @@ export class SleepingWhale extends WhaleRig {
   readonly flukes = new THREE.Vector3();
   /** How far the near flipper is lifted, 0..1. */
   flipperLift = 0;
+  /** How far off it is seen from (m): its sighs spread wider and slower so they show in the haze from far off. */
+  seenFrom = 0;
   /** Each weak breath out, with how strong it was: what the net over the blowhole has to answer. */
   onExhale: ((strength: number) => void) | null = null;
   onSound: ((kind: SleeperSound, x: number, y: number, z: number) => void) | null = null;
@@ -112,6 +116,9 @@ export class SleepingWhale extends WhaleRig {
   private readonly away = new THREE.Vector3();
   private readonly gazeAt = new THREE.Vector3();
   private gazing = false;
+  /** How far open its eye is, and seconds into a blink, or -1. */
+  private opened = 0;
+  private blinkT = -1;
   private breath = 0;
   private sighed = true;
   private liftT = -1;
@@ -178,7 +185,8 @@ export class SleepingWhale extends WhaleRig {
     if (this.away.x * (eye.x - near.x) + this.away.z * (eye.z - near.z) < 0) this.away.negate();
     this.liftT = -1;
     this.flipperLift = 0;
-    this.skin.uEye.value = 0;
+    this.skin.uEye.value = this.opened = 0;
+    this.blinkT = -1;
     this.gazing = false;
     this.wake.reset(true);
     this.uniforms.uCurl.value = REST_CURL;
@@ -187,6 +195,11 @@ export class SleepingWhale extends WhaleRig {
     this.uniforms.uHaze.value = 1;
     this.locate();
     this.mesh.visible = this.ghost.visible = true;
+  }
+
+  /** How lost in the morning haze it is from far off, 0..1. */
+  set lost(amount: number) {
+    this.uniforms.uLost.value = amount;
   }
 
   /** Gone already: nothing of it left on the water. */
@@ -211,6 +224,11 @@ export class SleepingWhale extends WhaleRig {
     return true;
   }
 
+  /** One slow blink of its open eye. */
+  blink(): void {
+    if (this.blinkT < 0) this.blinkT = 0;
+  }
+
   /** Its first full breath: drawn in, then out in a soft column up through the spiral. */
   drawBreath(): void {
     if (this.phase !== 'resting') return;
@@ -227,7 +245,7 @@ export class SleepingWhale extends WhaleRig {
     this.time = BREATH_OUT + 1;
     this.stir = 1;
     this.look(at);
-    this.skin.uEye.value = 1;
+    this.skin.uEye.value = this.opened = 1;
   }
 
   /** Free: the spout, the roll onto its back, the flukes lifted high, and away under the sea. */
@@ -357,21 +375,25 @@ export class SleepingWhale extends WhaleRig {
   /** A weak breath out over the blowhole, a sputter rather than a blow: an updraft there carries it up the spiral. */
   private mist(strength: number): void {
     const at = this.blowhole;
+    const far = THREE.MathUtils.clamp(this.seenFrom / 25, 1, 4);
+    const slow = Math.sqrt(far);
     const n = Math.round(14 * strength * K.mist);
     for (let i = 0; i < n; i++) {
       const a = Math.random() * Math.PI * 2;
-      const out = 0.2 + Math.random() * 0.4;
-      this.spray.emit(MIST, at.x + Math.cos(a) * 0.3, at.y + 0.1, at.z + Math.sin(a) * 0.3, Math.cos(a) * out,
-        0.8 + Math.random() * 0.8 * strength, Math.sin(a) * out, 0.3 + Math.random() * 0.2, 2.2 + Math.random() * 1.5, 0.35,
-        0.05 + Math.random() * 0.04);
+      const out = (0.2 + Math.random() * 0.4) * slow;
+      this.spray.emit(MIST, at.x + Math.cos(a) * 0.3 * far, at.y + 0.1, at.z + Math.sin(a) * 0.3 * far, Math.cos(a) * out,
+        (0.8 + Math.random() * 0.8 * strength) * slow, Math.sin(a) * out, (0.3 + Math.random() * 0.2) * far,
+        (2.2 + Math.random() * 1.5) * slow, 0.35, (0.05 + Math.random() * 0.04) * (1 + 0.25 * (far - 1)));
     }
   }
 
   /** The eye opens on what it is looking at, and closes again under its lid, slowly. */
   private lookOut(dt: number): void {
     const open = this.gazing && this.phase !== 'gone' ? 1 : 0;
-    const eye = this.skin.uEye;
-    eye.value += (open - eye.value) * (1 - Math.exp(-dt * (open > eye.value ? 1.3 : 0.6)));
+    this.opened += (open - this.opened) * (1 - Math.exp(-dt * (open > this.opened ? K.eyeOpening : 0.6)));
+    if (this.blinkT >= 0) this.blinkT += dt;
+    if (this.blinkT > 1.6) this.blinkT = -1;
+    this.skin.uEye.value = this.opened * (1 - (this.blinkT < 0 ? 0 : BLINK(this.blinkT)));
     if (!this.gazing) return;
     const d = Math.max(1, this.p.subVectors(this.gazeAt, this.eye).length());
     const g = this.skin.uGaze.value;

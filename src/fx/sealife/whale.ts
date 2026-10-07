@@ -115,6 +115,7 @@ export class WhaleRig {
       uShape: { value: new THREE.Vector3(DREAM_SHAPE.fin, DREAM_SHAPE.dorsal, DREAM_SHAPE.flukes) },
       /** How far its long low back melts into the morning haze, 0..1. */
       uHaze: { value: 0 },
+      uLost: { value: 0 },
     };
     const look = tuning.whaleLook;
     const skin = {

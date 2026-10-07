@@ -433,6 +433,11 @@ export class Net {
     return this.links * LINK;
   }
 
+  /** How lost in the morning haze it is from far off, with the whale it lies on, 0..1. */
+  set lost(amount: number) {
+    netLook.uLost.value = amount;
+  }
+
   get shown(): boolean {
     return this.sheet.visible;
   }

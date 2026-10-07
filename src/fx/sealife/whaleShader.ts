@@ -336,11 +336,26 @@ Skin skin(float far) {
 `;
 
 /**
+ * How lost in the morning haze it is from far off, 0..1, and the haze it is lost in: the low sky beyond it over the
+ * sea's own colour, so it stays a shade darker than the sky, as an island far off in a haze does.
+ */
+export const LOST_GLSL = /* glsl */ `
+uniform float uLost;
+vec3 lost(vec3 col, vec3 world) {
+  vec3 d = world - cameraPosition;
+  vec3 low = skyColor(normalize(vec3(d.x, 0.03 * length(d.xz), d.z)));
+  vec3 under = low * vec3(0.62, 0.55, 0.6);
+  return mix(col, mix(under, low, smoothstep(0.0, 6.0, world.y) * 0.5 + 0.2), uLost);
+}
+`;
+
+/**
  * Its far length low on the sea melts into the morning: wet and glancing, it mirrors the dawn as the sea round it
  * does, so only the head and what stands clear of the water are crisp.
  */
 const HAZE_GLSL = /* glsl */ `
 uniform float uHaze;
+${LOST_GLSL}
 /** The open sea's own colour seen at world, as the water draws it: its deep body under a rough mirror of the dawn. */
 vec3 seaLook(vec3 world) {
   vec3 V = normalize(cameraPosition - world);
@@ -356,7 +371,7 @@ float hazeAt(vec3 world, float s, float filmed) {
   return uHaze * max(smoothstep(0.24, 0.72, s) * far * (1.0 - smoothstep(2.0, 9.0, world.y)) * ${f(L.haze)}, awash * ${f(L.awashHaze)});
 }
 vec3 hazed(vec3 col, vec3 world, float s, float filmed) {
-  return applyFog(mix(col, seaLook(world), hazeAt(world, s, filmed)), world);
+  return lost(applyFog(mix(col, seaLook(world), hazeAt(world, s, filmed)), world), world);
 }
 `;
 
@@ -452,7 +467,7 @@ void main() {
 
   // The gold line stays crisp over the haze, so the back goes on into the morning as one thin line.
   float filmed = float(part == ${BODY});
-  gl_FragColor = vec4(hazed(col, vWorld, vRig.x, filmed) + gold * (1.0 - fogOf(vWorld).a) * (1.0 - ${f(L.ridgeHazed)} * hazeAt(vWorld, vRig.x, filmed)), 1.0);
+  gl_FragColor = vec4(hazed(col, vWorld, vRig.x, filmed) + gold * (1.0 - fogOf(vWorld).a) * (1.0 - ${f(L.ridgeHazed)} * hazeAt(vWorld, vRig.x, filmed)) * (1.0 - uLost), 1.0);
 }`;
 
 /** The submerged body seen through the sea: slid up its view ray to the surface, tinted and faded by the water. */
