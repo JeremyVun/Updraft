@@ -89,20 +89,22 @@ const LIGHTS = {
   dusk: 'dusk=0.75',
   storm: 'dusk=0.75&storm=1&shower=0.7',
   day: 'dusk=0.25',
-  half: 'dusk=1.1',
+  half: 'dusk=1.45',
 };
 
 /**
  * How long each action takes from its start until it has settled, and where the film's lens stands: `side` on to the
  * way it travels, `[x, z]` in the yard's own space, or a bearing from the way it faces at the start (to its left
- * positive); `rise` multiplies the view's own height above it; `kittens` frames them too.
+ * positive); `rise` multiplies the view's own height above it, `tall` is how tall a slice the near frame takes in
+ * (1.1 m for what travels, 0.85 m for what stays put), and `kittens` frames them too.
  */
 const FILM = {
   sit: { for: 3 }, stand: { for: 3 }, crouch: { for: 3 }, curious: { for: 5 }, wash: { for: 6.2 },
   mew: { for: 1.6 }, chirrup: { for: 1.2 }, afraid: { for: 3.2 }, 'slow-blink': { for: 3.6 },
   shiver: { for: 3 }, shake: { for: 2.4, from: 0.9 }, stare: { for: 3.5, from: 1.2 }, strand: { for: 8.5, from: 0.5 },
-  press: { for: 10.5, from: [-1, -0.25] }, curl: { for: 4, from: 0.9, kittens: true }, kittens: { for: 4, from: 0.9, kittens: true },
-  tumble: { for: 7, from: 0.4, kittens: true }, sill: { for: 5, from: 0.5, kittens: true },
+  press: { for: 10.5, from: [-1, -0.25] }, curl: { for: 4, from: 0.9, rise: 1.8, tall: 0.75, kittens: true },
+  kittens: { for: 4, from: 0.9, rise: 1.8, tall: 0.75, kittens: true },
+  tumble: { for: 7, from: 0.4, rise: 1.5, tall: 0.9, kittens: true }, sill: { for: 5, from: 0.5, kittens: true },
   walk: { for: 7.5, from: 'side' }, trot: { for: 7, from: 'side' }, run: { for: 4.2, from: 'side' },
   bolt: { for: 4, from: 'side' }, 'scared-run': { for: 4, from: 'side' }, rail: { for: 7.5, from: 'side' },
   gap: { for: 3.6, from: 'side' }, 'leap-pot': { for: 3.2, from: 'side' }, 'leap-roof': { for: 3.2, from: 'side', rise: 2 },
@@ -221,7 +223,7 @@ async function filmAll() {
       await start(action);
       const coarse = 0.2;
       const learnt = [];
-      for (let t = 0; t <= to + 1e-6; t += coarse) {
+      for (let t = 0; t <= to + 0.6; t += coarse) {
         const w = await where(!!spec.kittens);
         const n = w.ps.length;
         learnt.push({ t, p: w.ps.reduce((s, p) => s.map((v, i) => v + p[i] / n), [0, 0, 0]), all: w.ps, yaw: w.yaw, yard: w.yard });
@@ -270,7 +272,8 @@ async function filmAll() {
           const aim = [c[0], c[1] + 0.22, c[2]];
           const rise = lens.rise * (spec.rise ?? 1);
           const eye = [aim[0] + dir[0] * lens.distance, aim[1] + rise, aim[2] + dir[1] * lens.distance];
-          const fov = lens.fov ?? (2 * Math.atan(lens.tall / 2 / Math.hypot(lens.distance, rise)) * 180) / Math.PI;
+          const tall = spec.tall ?? (typeof spec.from === 'number' || spec.from === undefined ? 0.85 : lens.tall);
+          const fov = lens.fov ?? (2 * Math.atan(tall / 2 / Math.hypot(lens.distance, rise)) * 180) / Math.PI;
           await page.evaluate(([eye, aim, fov]) => {
             const { rig, post } = window.__game;
             const camera = rig.camera;

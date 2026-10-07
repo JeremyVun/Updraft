@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-const DROPS = 220;
+const DROPS = 400;
 const GRAVITY = 9.8;
 const GONE = -1e4;
 
@@ -14,6 +14,7 @@ export class Spray {
   private next = 0;
   private live = 0;
 
+  /** `size` is as three.js sizes a point: pixels at a metre for every half of the screen's height. */
   constructor(size: number) {
     this.attr.setUsage(THREE.DynamicDrawUsage);
     const geo = new THREE.BufferGeometry();

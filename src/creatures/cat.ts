@@ -280,7 +280,7 @@ export class Cat {
     this.mesh.visible = false;
     /** The coat hangs off the skin as a child of it, so it is shown, hidden and drawn with the cat and never apart. */
     this.mesh.add(coatShells(this.mat));
-    this.spray = new Spray(0.0045 * this.scale);
+    this.spray = new Spray(0.014 * this.scale);
     this.mesh.add(this.spray.points);
     this.support = {
       origin: this.at,
@@ -438,7 +438,7 @@ export class Cat {
     const k = this.scale / 1.8;
     const at = (ahead: number, across: number) => new THREE.Vector3(legs.x + fx * ahead + fz * across * side, legs.y, legs.z + fz * ahead - fx * across * side);
     const pass = [at(0.3 * k, 0.55 * k), at(0.2 * k, 0.2 * k), at(0.19 * k, -0.2 * k), at(0.3 * k, -0.42 * k), at(0.48 * k, -0.3 * k), at(0.42 * k, 0)];
-    this.run([at(0.42 * k, 0.75 * k)], floor, { pace: 'walk', then: 'stand' }, () => {
+    this.run([at(0.42 * k, 0.75 * k)], floor, { pace: 'walk', speed: 0.8, then: 'stand' }, () => {
       this.rubbing = true;
       this.run(pass, floor, { pace: 'walk', speed: 0.42, then: 'sit', look: face }, () => {
         this.rubbing = false;
@@ -1122,7 +1122,7 @@ export class Cat {
     const low = fear * (w.stand + 0.6 * w.sit + 0.5 * w.gather) * (1 - shaking) * (1 - 0.7 * galloping);
     bodyY += flinch * 0.05 - low * 0.036 - fear * 0.006 * (1 - galloping);
     flex += low * 0.2;
-    neckLow += fear * 0.45;
+    neckLow += fear * 0.45 * (1 - 0.6 * galloping);
     /** Sitting frightened, it hunches: its chest drops, its head sinks into its shoulders. */
     chestUp -= 0.32 * Math.min(fear, 1) * w.sit;
     neckLow += 0.3 * Math.min(fear, 1) * w.sit;
@@ -1341,10 +1341,10 @@ export class Cat {
       const tail = smooth((t - 0.45) / 0.12) * (1 - smooth((t - 0.9) / 0.25));
       neckLow *= 1 - env;
       flex *= 1 - 0.7 * env;
-      headRoll += Math.sin(ph) * 0.8 * head;
-      headYaw += Math.sin(ph) * 0.3 * head;
-      roll += Math.sin(ph - 1.1) * 0.32 * body;
-      tailFlick = Math.sin(ph - 2.2) * 1.3 * tail;
+      headRoll += Math.sin(ph) * 1.1 * head;
+      headYaw += Math.sin(ph) * 0.4 * head;
+      roll += Math.sin(ph - 1.1) * 0.5 * body;
+      tailFlick = Math.sin(ph - 2.2) * 1.4 * tail;
       earBack = Math.max(earBack, 0.4 * env);
       lids = Math.max(lids, 0.8 * env);
       this.throwWater(dt, head, body, tail, Math.sin(ph));
@@ -1527,7 +1527,7 @@ export class Cat {
     const up = this.w.copy(this.up).transformDirection(this.frameMatrix);
     const side = this.w2.crossVectors(up, spine).normalize();
     for (const [amount, bone, reach] of [[head, HEAD, 0.04], [body, CHEST, 0.055], [body, BODY, 0.06], [body, PELVIS, 0.055], [tail, TAIL[3], 0.02]] as const) {
-      let n = amount * this.wet * 130 * dt;
+      let n = amount * this.wet * 160 * dt;
       for (; n > 0; n--) {
         if (n < 1 && Math.random() > n) break;
         const a = (Math.random() - 0.5) * 2.4;
