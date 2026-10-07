@@ -50,20 +50,21 @@ const POD_WAIT_RADIUS = 8;
 const POD_WAIT_PACE = 2;
 /**
  * The pod's way round as the whale spouts free, from wherever it is waiting behind the camera: up the port side past
- * the floating net, across the open water between the bow and the whale's head and flank, and away along it to
- * starboard, at `POD_PACE` metres a second with its lanes drawn in by `POD_SPREAD`, so it leaps round the whale.
+ * the floating net and across just ahead of the bow, near enough that the camera sees its leaps against the water
+ * rather than the whale's flank, and away along the flank to starboard, at `POD_PACE` metres a second with its lanes
+ * drawn in by `POD_SPREAD`.
  */
-const POD_WAY = [new THREE.Vector2(20, 1), new THREE.Vector2(11, 5), new THREE.Vector2(0, 9.5), new THREE.Vector2(-14, 14),
-  new THREE.Vector2(-42, 30)];
+const POD_WAY = [new THREE.Vector2(18, -2), new THREE.Vector2(10, 2), new THREE.Vector2(0, 5), new THREE.Vector2(-12, 7.5),
+  new THREE.Vector2(-40, 22)];
 const POD_PACE = 5.5;
 /**
- * As it spouts, one of the pod leaps right across the water between the bow and the whale, side-on to the camera:
+ * As it spouts, one of the pod leaps right across the water just ahead of the bow, side-on to the camera:
  * out of the water `SALUTE_FROM` (metres to port, and ahead, of the boat at rest), in again `SALUTE_TO`,
  * `SALUTE_HIGH` up at the top, leaving the water `SALUTE_AT` seconds into its going free after `SALUTE_SWIM` seconds
  * in under from the pod.
  */
-const SALUTE_FROM = new THREE.Vector2(7, 8);
-const SALUTE_TO = new THREE.Vector2(-3, 10.5);
+const SALUTE_FROM = new THREE.Vector2(7, 3);
+const SALUTE_TO = new THREE.Vector2(-4, 4.5);
 const SALUTE_HIGH = 2;
 const SALUTE_AT = 4.8;
 const SALUTE_SWIM = 2.2;
@@ -1525,7 +1526,7 @@ export class NetWhale {
       * (1 - THREE.MathUtils.smoothstep(whale.time, FREE_FLUKES_FROM + 10, FREE_FLUKES_FROM + 14)) : 0;
     if (glance > 0) this.look.lerp(this.a.copy(whale.flukes).setY(Math.max(4, whale.flukes.y * 0.5)), glance * (portrait ? 0.85 : 0.55));
     // Behind the boat: just to port of astern, or in portrait on the line from what matters through the boat.
-    const aim = portrait ? Math.atan2(focus.x - boat.x, focus.z - boat.z) : this.yaw - bearing;
+    const aim = portrait ? Math.atan2(focus.x - boat.x, focus.z - boat.z) : this.yaw - THREE.MathUtils.lerp(bearing, K.releaseBearing, out);
     const nearer = portrait ? K.portraitIn : 1;
     const distance = THREE.MathUtils.lerp(portrait ? phoneDistance : holdDistance, K.releaseDistance * nearer, out);
     const height = THREE.MathUtils.lerp(portrait ? phoneHeight : holdHeight, K.releaseHeight * nearer, out);
@@ -1551,13 +1552,13 @@ export class NetWhale {
     else if (this.step === 'flipper') {
       const out = this.bird !== 'satchel' && this.bird !== 'lifted' && this.bird !== 'home';
       s.secondary.copy(out ? this.cast.cygnet.position : whale.finTip).y += out ? 0.4 : 0;
-    } else s.secondary.copy(whale.blowhole).y += whale.phase === 'free' && whale.time < FREE_FLUKES_FROM - 3 ? 8 : 2.5;
+    } else s.secondary.copy(whale.blowhole).y += 2.5;
     s.tertiary.copy(this.step === 'flipper' ? whale.finTip : whale.eye);
     if (glance > 0) s.tertiary.lerp(this.a.copy(whale.flukes).setY(Math.max(whale.flukes.y, 1)), glance * 0.6);
     s.secondary.lerp(rest, 1 - h);
     s.tertiary.lerp(rest, 1 - h);
     s.margin = THREE.MathUtils.lerp(pair?.margin ?? 0.85, 0.85, h);
-    s.extra = THREE.MathUtils.lerp(pair?.extra ?? 10, 10 + 8 * out, h);
+    s.extra = THREE.MathUtils.lerp(pair?.extra ?? 10, 10, h);
     shot.subjects = s;
   }
 }
