@@ -191,11 +191,17 @@ async function atFlipper(page, holding = true) {
 }
 
 /**
+ * The flipper's half-chord (m) at sixteenths of the way from root to tip, on the side the bird swims: its smooth
+ * trailing edge, toward the boat (`FIN_HALF_CHORD` in `anatomy.ts` at the dream size, less the bow toward its knobs).
+ */
+const FIN_HALF = [1.08, 1.23, 1.37, 1.46, 1.52, 1.52, 1.43, 1.32, 1.19, 1.07, 0.96, 0.84, 0.73, 0.63, 0.55, 0.44, 0.13];
+/**
  * Every frame of the flipper step: the least clear water between the cygnet's body and the flipper (its own half-chord
  * round the line from root to tip), and the widest gap between the loop's free end and the bill while it holds it.
  */
-const watchBird = (page) => page.evaluate(() => {
+const watchBird = (page) => page.evaluate((HALF) => {
   const watch = window.__bird = { clear: Infinity, gap: 0, frames: 0 };
+  const half = (t) => { const f = t * 16, i = Math.min(15, Math.floor(f)); return HALF[i] + (HALF[i + 1] - HALF[i]) * (f - i) + 0.05; };
   const bill = new __game.cygnet.position.constructor();
   const p = bill.clone();
   const tick = () => {
@@ -205,15 +211,16 @@ const watchBird = (page) => page.evaluate(() => {
       for (let i = 0; i <= 24; i++) {
         const t = i / 24;
         p.copy(s.finRoot).lerp(s.finTip, t);
-        watch.clear = Math.min(watch.clear, p.distanceTo(k.position) - (0.32 + 2.1 * (1 - t) ** 0.8) - 0.3);
+        const clear = p.distanceTo(k.position) - half(t) - 0.3;
+        if (clear < watch.clear) { watch.clear = clear; watch.at = t; }
       }
       if ((w.bird === 'holding' && w.birdT > 1) || w.bird === 'pulling') watch.gap = Math.max(watch.gap, k.billTip(bill).distanceTo(__game.sealife.net.loopEnd));
     }
     requestAnimationFrame(tick);
   };
   tick();
-});
-const birdWatch = (page) => page.evaluate(() => ({ clear: +window.__bird.clear.toFixed(2), gap: +window.__bird.gap.toFixed(3), frames: window.__bird.frames }));
+}, FIN_HALF);
+const birdWatch = (page) => page.evaluate(() => ({ clear: +window.__bird.clear.toFixed(2), clearAt: window.__bird.at, gap: +window.__bird.gap.toFixed(3), frames: window.__bird.frames }));
 
 async function stroke(page, points, ms, started = false) {
   const n = Math.max(2, Math.round(ms / 8));
