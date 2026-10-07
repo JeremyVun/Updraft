@@ -102,8 +102,8 @@ and cygnet), whale shader uniforms (`uScale`, `uShiver`, `uSlap`, `uEye`), `spra
 `tools/sleeping-whale-check.mjs`, and the pacing tool's real `SeaLife`. Its last report's knobs, traps and rejected
 approaches are in the commit messages; read `git log -p crossings-start..crossing-whale`.
 Owns: `src/story/journey.ts` (`toMirror`: the route lengthened, `whaleAt` cut, the encounter option), `src/story/crossing.ts`
-(the pod's nudge becomes the lead; the pod's farewell waits for the whale), the encounter module, `sleeper.ts` (75 m,
-the resting pose of `notes.md`, the eye larger than the boat), the camera hold, `src/story/checkpoint-data.ts`,
+(the pod's nudge becomes the lead; the pod's farewell waits for the whale), the encounter module, `sleeper.ts` (about
+110 m, the resting pose of `notes.md` scaled up, the eye larger than the boat), the camera hold, `src/story/checkpoint-data.ts`,
 `src/tuning.ts`, `tools/journey-pacing-check.mjs`, `tools/sea-check.mjs`, `tools/sea-logic-check.mjs`.
 Seam: the encounter exposes its step (`approach`, `breath`, `line`, `flipper`, `free`, `gone`) for the net (N2) to
 drive and read; the pod's lead and farewell read it; for this phase a stand-in (circles over the blowhole wake it, as

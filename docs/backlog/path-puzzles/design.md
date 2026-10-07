@@ -703,6 +703,14 @@ peeking) predates this and is being redesigned to fit it.
 
 ### As decided: the whale in the net (the open sea, `toMirror`)
 
+**Ownership** (Jeremy, 2026-10-07, on the frames): "looks good, i would probably see if the whale can be made a bit
+bigger though like in a dream, but i leave thr interpretation, detail, interactions, and implementation to your
+judgement. I trust you'll make a great looking sequence puzzle that plats well and fits the dream vibes". So Claude
+owns the sequence's interpretation, detail, interactions and build; the frames are a guide. Claude's call on size:
+bigger than the frames, about 110 m nose to flukes, scaled in proportion (eye about 3.5 m across, crown about 5 m,
+the net to match), so from beside its head it is a landscape that breathes; the circles over the blowhole must
+still be an easy target on screen, so the hold frames the blowhole within easy reach in both orientations.
+
 This consolidates the above for the build. The target for the look is `comps/crossings/whale-net/k1–k5` and
 `k2-portrait` (Astra, 2026-10-07, painted over real frames of this chapter, `ref-sea-*.png`); `notes.md` beside them
 has the layout in metres and the build risks. They are a guide, not pixels to match: the game's own assets, camera and
@@ -715,7 +723,7 @@ The sequence:
 - **The pod leads.** After the swim a dolphin nudges the planking (main's nudge, now asking) and the pod leads the boat
   off its line toward what looks like a long low island in the sunrise haze (`k1`). It breathes: a whale, dream-sized,
   lying still and worn out. The boat eases to rest beside its head (`Boat.speedLimit` eased to zero, never braked).
-- **The whale.** About 75 m nose to flukes, too big for the frame: the back recedes across and away into the haze and
+- **The whale.** About 110 m nose to flukes (see Ownership above; `notes.md` says 75 m), too big for the frame: the back recedes across and away into the haze and
   is never shown whole near the boat. Smooth slate-blue, paler underside, the low sun on its rim, cool sky fill so the
   eye still reads; no rock-like skin, no sharp ridge, no face-like smile. Its eye, near the boat, is larger than the
   boat is wide, under a heavy tired lid. Crown about 3.6 m above the water, eye about 1.6 m. It breathes slowly.
