@@ -787,11 +787,12 @@ export class RoofRun {
     /**
      * Asked to stand a little ahead of where it should be as she walks, by as far as the focus and the rig's easing
      * trail behind a steady walk (never at more than a walk's pace), so the eased lens stands where it was laid
-     * rather than lagging back into the roofs.
+     * rather than lagging back into the roofs; upright it looks that much ahead too, so the narrow frame keeps her.
      */
     const response = Math.min(tuning.cinematography.maxResponse, k.pace * tuning.cinematography.framingResponse);
-    const lead = (1 / k.follow + 2 / response) * (1 - at);
-    this.eye.addScaledVector(this.tmp.copy(this.velocity).clampLength(0, k.steadiest), lead);
+    const lead = this.tmp.copy(this.velocity).clampLength(0, k.steadiest).multiplyScalar((1 / k.follow + 2 / response) * (1 - at));
+    this.eye.add(lead);
+    this.target.addScaledVector(lead, 1 - wide);
     shot.free = false;
     shot.from = undefined;
     shot.subjects = undefined;
@@ -821,7 +822,7 @@ export class RoofRun {
       const wait = this.nodes[i - 1].s, over = this.nodes[i].s;
       const come = piece === 'swing' ? k.swingFrom : k.comeFrom;
       const coming = THREE.MathUtils.smootherstep(this.along, wait - come, wait - k.comeTo);
-      const leave = piece === 'mill' ? k.millLeave : piece === 'tree' ? k.treeLeave : k.leaveTo;
+      const leave = piece === 'mill' ? k.millLeave : piece === 'tree' ? k.treeLeave : k.swingLeave;
       const going = this[piece].done && this.stage !== piece ? THREE.MathUtils.smootherstep(this.along, over + k.leaveFrom, over + leave) : 0;
       const w = this.stage === piece ? 1 : coming * (1 - going);
       if (w > best) { best = w; which = piece; }
@@ -840,8 +841,9 @@ export class RoofRun {
   /**
    * Off the east end of her ridge, the side away from the boat and clear of the chimney, looking across her at the
    * tree, high enough to see over the garden wall to the water round its foot: she faces the tree side on, it falls
-   * across the frame to her, and as she walks out along it the lens comes round behind her, wide of the chimney, so it
-   * is there when she steps off and never has to come round to meet her. Upright, nearer behind her and higher.
+   * across the frame to her, and as she walks out along it the lens comes round behind her, wide of and over the
+   * chimney, so it is there when she steps off and never has to come round to meet her. Upright, further round
+   * behind her, further off and higher, so she and the tree stack up the narrow frame.
    */
   private treeView(wide: number, c: THREE.Vector3 = this.cast.child.position, on = this.onTrunk): void {
     const k = tuning.drownedCamera.run;
@@ -849,12 +851,13 @@ export class RoofRun {
     const ox = over.x - rest.x, oz = over.z - rest.z;
     const crossed = on * THREE.MathUtils.smoothstep(((c.x - rest.x) * ox + (c.z - rest.z) * oz) / (ox * ox + oz * oz), 0.4, 1);
     const away = this.tmp2.set(rest.x - root.x, 0, rest.z - root.z).normalize();
-    const turn = THREE.MathUtils.lerp(k.uprightTreeTurn, THREE.MathUtils.lerp(k.treeTurn, k.treeOver, crossed), wide);
+    const turn = THREE.MathUtils.lerp(THREE.MathUtils.lerp(k.uprightTreeTurn, k.treeTurn, wide), k.treeOver, crossed);
     const sx = -away.z, sz = away.x;
     const ex = away.x * Math.cos(turn) + sx * Math.sin(turn), ez = away.z * Math.cos(turn) + sz * Math.sin(turn);
     const from = this.scratch.copy(rest).lerp(c, on * (0.5 + 0.5 * crossed));
     const back = THREE.MathUtils.lerp(k.uprightTreeBack, k.treeBack + k.treeBulge * Math.sin(Math.PI * crossed), wide);
-    this.stationEye.set(from.x + ex * back, THREE.MathUtils.lerp(k.uprightTreeHigh, k.treeHigh, wide), from.z + ez * back);
+    this.stationEye.set(from.x + ex * back, THREE.MathUtils.lerp(k.uprightTreeHigh, k.treeHigh + k.treeLift * Math.sin(Math.PI * crossed), wide),
+      from.z + ez * back);
     this.stationTarget.set((rest.x + root.x) / 2, 2.6, (rest.z + root.z) / 2).lerp(this.tmp.copy(c).setY(c.y + 1), on * 0.5);
   }
 
@@ -862,7 +865,7 @@ export class RoofRun {
    * In front of the sails, out to the south side of her wall so the cottage she came over is clear of it, looking past
    * her at the sail she will ride, the hub and the high roof beyond; it rises with her only enough to show the water
    * below, and follows her in along the high ridge so the mill leaves the frame and the church and the lighthouse come
-   * into it beyond her.
+   * into it beyond her. Upright, further to the south side, clear of the cottage's chimney.
    */
   private millView(wide: number, c: THREE.Vector3 = this.cast.child.position, ahead = THREE.MathUtils.smootherstep(this.millAhead, 0, 1)): void {
     const m = this.mill.mill;
@@ -874,8 +877,9 @@ export class RoofRun {
     const eye = this.stationEye.set(x + k.millAside - k.millOn * ahead, 2.5 + 0.7 * p.y + 0.6 * ahead, k.millOut - 0.8 * rise - k.millIn * ahead);
     const target = this.stationTarget.set(x + 0.9 - 5.5 * ahead, 0.8 + 0.8 * p.y, 0);
     if (wide < 1) {
-      eye.lerp(this.tmp2.set(x + k.millAside - 1 - 2.5 * ahead, 2.4 + 0.7 * p.y, k.millOut + 3), 1 - wide);
-      target.lerp(this.tmp2.set(x + 0.6 - 3 * ahead, p.y + 1.9, 0), 1 - wide);
+      eye.lerp(this.tmp2.set(x + k.millAside + k.uprightMillAside - k.millOn * ahead, 2.5 + 0.7 * p.y + 0.6 * ahead,
+        k.millOut - 0.8 * rise - k.millIn * ahead), 1 - wide);
+      target.lerp(this.tmp2.set(x + 0.9 - 5.5 * ahead, 1.3 + 0.8 * p.y, 0), 1 - wide);
     }
     m.group.localToWorld(eye);
     m.group.localToWorld(target);
@@ -883,15 +887,18 @@ export class RoofRun {
 
   /**
    * Low off the west of the green, side on to her arc: the old tree at the edge of the frame, its bough across the
-   * top, the nave on the left. Upright, behind her and a little above, so each swing goes away up the frame.
+   * top, the nave on the left. Upright, further round to the north-west and a little higher, clear of the old tree's
+   * crown, with the tower and the lighthouse stacked over her, looking half at her so she stays in the narrow frame
+   * when she lands.
    */
   private swingView(wide: number): void {
     const pivot = SWING_SITE.spot.pivot;
     this.stationEye.set(pivot.x - 21, 3.1, pivot.z - 1.6);
     this.stationTarget.set(pivot.x, 3.5, pivot.z - 1.4);
     if (wide >= 1) return;
-    this.stationEye.lerp(this.tmp2.set(pivot.x - 11.5, 5.6, pivot.z + 10), 1 - wide);
-    this.stationTarget.lerp(this.tmp2.set(pivot.x + 2.2, 2.6, pivot.z - 4), 1 - wide);
+    this.stationEye.lerp(this.tmp2.set(pivot.x - 16.5, 4.2, pivot.z + 5.7), 1 - wide);
+    const c = this.cast.child.position;
+    this.stationTarget.lerp(this.tmp2.set(pivot.x + 1.1, 2.6, pivot.z - 0.3).lerp(this.tmp.copy(c).setY(c.y + 1.2), 0.5), 1 - wide);
   }
 
   /** Low off the west end of the nave, looking along its ridge to her at the tower's foot, the tower over her. */

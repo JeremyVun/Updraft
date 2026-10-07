@@ -1889,7 +1889,7 @@ export const tuning = {
        * how far along her way it looks, how high above her feet, its pace, and how far it widens to hold the fog and
        * the church together (landscape, eased back at each piece).
        */
-      follow: 2.2, followDown: 5, steady: 2, steadiest: 1.4, behind: 6, ahead: 12, churchShare: 0.5, fogAside: 80, uprightBack: 1.15, distance: 10, uprightDistance: 9,
+      follow: 2.2, followDown: 5, steady: 2, steadiest: 1.4, behind: 6, ahead: 12, churchShare: 0.5, fogAside: 80, uprightBack: 1.5, distance: 10, uprightDistance: 12,
       rise: 1.5, uprightRise: 2.6, lowest: 3, highest: 7, lead: 1, aim: 1.0, pace: 0.7, zoom: 0.85,
       /** How far it keeps off the side of a house, wall or chimney it stands lower than the top of, and over a chimney, metres. */
       clearOf: 1.6,
@@ -1908,26 +1908,27 @@ export const tuning = {
       layFor: 2,
       /**
        * Round to each piece's own view from `comeFrom` to `comeTo` metres before she reaches it, and back to her own way
-       * from `leaveFrom` to `leaveTo` metres past it; to the end's view over the last `endFrom` metres.
+       * from `leaveFrom` metres past it (over each piece's own stretch, below); to the end's view over the last
+       * `endFrom` metres.
        */
-      comeFrom: 16, comeTo: 3, leaveFrom: 0, leaveTo: 14, endFrom: 8,
+      comeFrom: 16, comeTo: 3, leaveFrom: 0, endFrom: 8,
       /**
-       * Off the mill she is soon over the high roof's back, out of its view, so the lens leaves it sooner, and off the
-       * tree she turns up the lane at once; and it comes round to the swing's view only once she has turned off the
-       * green cottage's ridge, never walking her into it.
+       * Off the mill she is soon over the high roof's back, out of its view, so the lens leaves it sooner, off the
+       * tree she turns up the lane at once, and off the swing she has only the nave's ridge to the tower; and it comes
+       * round to the swing's view only once she has turned off the green cottage's ridge, never walking her into it.
        */
-      millLeave: 5, treeLeave: 6, swingFrom: 6,
+      millLeave: 5, treeLeave: 6, swingLeave: 3, swingFrom: 6,
       /**
        * The tree's view: how far round to the west from straight behind her (radians; east is negative) while she
-       * waits and once she is most of the way over, how far back and how high it stands and how much further out it
-       * swings as it comes round (upright, the same).
+       * waits and once she is most of the way over, how far back and how high it stands and how much further out and
+       * up it swings as it comes round (upright, the same).
        */
-      treeTurn: -1.9, treeOver: -0.55, treeBack: 12, treeHigh: 4.8, treeBulge: 4, uprightTreeTurn: -0.45, uprightTreeBack: 11, uprightTreeHigh: 6.5,
+      treeTurn: -1.9, treeOver: -0.55, treeBack: 12, treeHigh: 4.8, treeBulge: 4, treeLift: 1.2, uprightTreeTurn: -1.2, uprightTreeBack: 16, uprightTreeHigh: 6.5,
       /**
        * The mill's view: how far to the side of her wall and out in front of the sails it stands, and how far it comes
-       * on along the high ridge and in toward it as she walks off the sail.
+       * on along the high ridge and in toward it as she walks off the sail; upright, how much further to the side.
        */
-      millAside: 5.4, millOut: 11.5, millOn: 1.5, millIn: 4,
+      millAside: 5.4, millOut: 11.5, millOn: 1.5, millIn: 4, uprightMillAside: 2.2,
       /** The end's view: how far back along the nave, how high, and how far out over the green. */
       naveBack: 10, naveHigh: 3.6, naveAside: 11,
     },
