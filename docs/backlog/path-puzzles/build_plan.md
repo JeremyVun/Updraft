@@ -134,7 +134,22 @@ the fog is in frame).
 Seam: each piece reports done; the fog reads her progress; the boat's drift runs on its own clock to its dead tree.
 Gate: the check plays from the air dying to the nave with real gestures; stills at each piece and between them,
 landscape and upright; the run's time measured against the pacing (about 2 minutes).
-Done: [ ]
+Done: first wave [x] (branch `proto-drowned-run`). `RoofRun` (`src/story/drowned-run.ts`) walks her over `WAY` from the
+strand's ridge to the tower's foot, the three crossings take over the village's tree, swing and mill (now the real
+`Windmill`, its site re-laid from `tuning.crossings.mill` and `SAIL` through `railAt`: her wall runs out from in front of
+the sails, the high roof's back comes down over a lean-to), the cat goes a roof ahead its own way and over each piece
+first, the fog creeps along `DARK_WAY` (held 18 m behind her at a piece, 30 m on her own way, never nearer than 14 m),
+and the boat is paced to fetch up at `BOAT_TREE` as she arrives. Chapter beats `run` and `nave`; `?chapter=roofs`
+starts on the ridge after the cat. `tools/drowned-run-check.mjs` plays it with real gestures (`FROM=roofs` from the
+ridge): 214 m of way in about 154 s, 90 s on foot and 63 s at the pieces. Left for the camera wave: the walking lens is
+laid along her way at the start (`layLens`) and mostly keeps her in frame from behind her left, but off the high roof's
+back and over the hairpin onto the long roof it loses her for a second or two (`LENS=1` makes the check fail on that),
+it never shows the fog and the church together, and the boat drifting west crosses the tree's view; the becalmed turn
+now looks to the moved church but the climb lens is unchanged; no upright pass. For Phase 4: at `nave` she stands at
+`TOWER_FOOT` looking at the cat, which sits at the tower's south face at the foot of the ivy (`CAT_WAY.swing`'s end),
+the fog is held behind her (`dark.reach`, and `close` is still 0 once the fog branch's `DarkBank` lands), the boat lies
+against its tree with `coastTo` still set, and the swing is still the crossing's; the fog's hold distances need
+retuning against the fog branch's heave and front.
 
 ### Phase 4: the dark arrives, the boat, the storm
 Owns: the cat up the tower's ivy to the belfry; the fog's `close` into the storm's night (the story's `dusk` and the
