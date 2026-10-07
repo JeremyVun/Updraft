@@ -54,11 +54,11 @@ export type ChapterName =
 
 /**
  * On the open sea, where the pod leads the boat off its line toward the whale, where the boat comes to rest beside
- * its head, and the waypoint beyond on the same heading that it holds while it waits.
+ * its head, and the waypoint just beyond on the same heading that it holds while it waits.
  */
 export const WHALE_LEAD = new THREE.Vector2(-450, -1987);
 export const WHALE_REST = new THREE.Vector2(-480, -2020);
-const WHALE_HOLD = WHALE_REST.clone().addScaledVector(WHALE_REST.clone().sub(WHALE_LEAD).normalize(), 30);
+const WHALE_HOLD = WHALE_REST.clone().addScaledVector(WHALE_REST.clone().sub(WHALE_LEAD).normalize(), 3);
 
 /** Where the boat goes on each crossing, including the long open passage after the sleeping island. */
 export const ROUTES: Record<string, THREE.Vector2[]> = {

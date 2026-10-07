@@ -1,5 +1,6 @@
-// Run the real sea chapter, boat, child, cygnet and pod without a renderer.
-// Usage: node tools/sea-logic-check.mjs. Covers strong wind, 30/60fps, passage completion and old saves.
+// Run the real sea chapter, boat, child, cygnet, pod and whale without a renderer.
+// Usage: node tools/sea-logic-check.mjs. Covers strong wind, 30/60fps, portrait, the whale in the net's sequence
+// (idle to its valve, and a circling player), passage completion and saves at and after the whale, and old saves.
 import './lib/typescript.mjs';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
@@ -23,9 +24,10 @@ const { SLEEP_BERTH } = await import('../src/world/sleeping.ts');
 const { tuning } = await import('../src/tuning.ts');
 const { atmo } = await import('../src/world/atmosphere.ts');
 const { swellUniforms } = await import('../src/world/water/swell.ts');
+const { takeCues } = await import('../src/story/cues.ts');
 swellUniforms.uSwell.value = 0.25;
 
-function fixture(gust, portrait, legacy = false) {
+function fixture(gust, portrait, legacy = false, circling = false) {
   let chapter;
   const wind = { breeze: new THREE.Vector2(2.47,-0.8), calm: 3, addSplat() {},
     sample(_x,_z,out) { return Object.assign(out,{x:2.47*(chapter?.breeze ?? 1)+gust,z:-0.8*(chapter?.breeze ?? 1)-gust,energy:gust?0.8:0,lift:0}); } };
@@ -37,27 +39,44 @@ function fixture(gust, portrait, legacy = false) {
   const plane = { hold() {child.carryingPlane=true;}, homeRadius:0 };
   boat.beach(SLEEP_BERTH.x-5,SLEEP_BERTH.z-2,-1.76);boat.launch();
   child.ride(boat.seat(new THREE.Vector3()),boat.yaw);cygnet.rideIn('cradle');
-  const cast={boat,child,cygnet,carry,sealife,plane};
+  const input={present:false,muted:false,gust:0,charge:0,updraftAt:new THREE.Vector3(),prevNdc:new THREE.Vector2(),ndc:new THREE.Vector2()};
+  const cast={boat,child,cygnet,carry,sealife,plane,input};
   chapter = legacy ? new CrossingChapter(cast,{route:ROUTES.toHome,dolphins:true,
     swimAt:tuning.seaPassage.swimAt,moor:HOME_MOORING,haze:tuning.seaPassage.haze}) : Journey.prototype.make.call({cast},'toMirror');
   chapter.update(0,0);rig.cut(chapter.shot);
-  return {chapter,wind,boat,child,cygnet,carry,rig,sealife};
+  // A player who circles over the blowhole once the boat is at rest beside the whale; otherwise nobody plays.
+  const play=()=>{const w=chapter.whale;input.present=circling&&w?.step==='breath'&&w.progress<1;input.charge=input.present?1:0;
+    if(input.present)input.updraftAt.copy(w.whale.blowhole);};
+  return {chapter,wind,boat,child,cygnet,carry,rig,sealife,play};
+}
+/** One frame of the sea passage, as main.ts runs it. */
+function frame(f,dt,time){
+  const {chapter:c,wind,boat:b,child,cygnet:k,carry,rig,sealife,play}=f;
+  atmo.uniforms.uTime.value=time;
+  wind.breeze.set(2.47*c.breeze,-.8*c.breeze);wind.calm=wind.breeze.length()*tuning.wind.calm;
+  play();c.update(dt,time);b.update(dt,time);child.update(dt);carry.update(dt);
+  k.update(dt,time,child.position,wind.sample(0,0,{x:0,z:0,energy:0,lift:0}));carry.after();
+  rig.update(dt,time,c.shot,c.pace);c.afterCamera(rig.camera);rig.camera.updateMatrixWorld();sealife.update(dt,time);
 }
 const results=[];
-for(const [fps,gust,portrait] of [[60,0,false],[30,20,false],[60,20,true]]) {
-  const {chapter:c,wind,boat:b,child,cygnet:k,carry,rig,sealife}=fixture(gust,portrait);
-  const air={x:0,z:0,energy:0,lift:0};
+for(const [fps,gust,portrait,circling] of [[60,0,false,false],[30,20,false,true],[60,20,true,true]]) {
+  const f=fixture(gust,portrait,false,circling);
+  const {chapter:c,boat:b,cygnet:k,rig,sealife}=f;
   let swimEdge=0,swimWorst=null;let heroEdge=0,worstGap=0,clipped=0,swimFrames=0,swimStart=0,leapAt=0,completed=false,lastProgress=0;
-  const transitions=[];
-  let last='';
+  const transitions=[],steps=[];
+  let last='',step='',rewards=0,blowholeEdge=0,eyeOpen=0,lastSeen=0;
+  const ndc=new THREE.Vector3();
   for(let i=0;i<fps*420;i++) {
     const dt=1/fps,time=i*dt;
-    atmo.uniforms.uTime.value=time;
-    wind.breeze.set(2.47*c.breeze,-.8*c.breeze);wind.calm=wind.breeze.length()*tuning.wind.calm;
-    c.update(dt,time);b.update(dt,time);child.update(dt);carry.update(dt);
-    k.update(dt,time,child.position,wind.sample(0,0,air));
-    rig.update(dt,time,c.shot,c.pace);sealife.update(dt,time);
+    frame(f,dt,time);
     if(c.swim!==last){transitions.push([c.swim,+time.toFixed(2)]);last=c.swim;}
+    const w=c.whale;
+    if(w.step!==step){steps.push([w.step,+time.toFixed(1)]);step=w.step;}
+    rewards+=takeCues().filter(q=>q==='restored').length;
+    // At rest the blowhole is held well inside the frame, with room round it to circle.
+    if(w.step==='breath'&&w.stepTime>3)blowholeEdge=Math.max(blowholeEdge,...ndc.copy(w.whale.blowhole).project(rig.camera).toArray().slice(0,2).map(Math.abs));
+    if(w.step==='breath')eyeOpen=Math.max(eyeOpen,w.whale.awake?1:0);
+    if(w.step==='breath'&&w.stepTime>1)assert(b.speed<0.2,`the boat stays at rest beside it: ${b.speed}`);
     // seaScore now turns 'arrival' once the dolphin pod has actually left (podLeftAt), not at a route fraction (ac4de1c).
     const scorePhase = !['before','done'].includes(c.swim) ? 'swim'
       : c.podLeftAt !== null ? 'arrival' : c.swim === 'done' ? 'return' : 'open';
@@ -67,7 +86,7 @@ for(const [fps,gust,portrait] of [[60,0,false],[30,20,false],[60,20,true]]) {
     const progress=c.progress();assert(Math.abs(progress-lastProgress)<0.05,'distance progress jumped');lastProgress=progress;
     const act=sealife.pod.stunt;
     if(act?.kind==='leap'&&act.phase==='act'&&!leapAt)leapAt=time;
-    if(act?.kind==='leap'&&act.phase==='act'&&act.d.y>0) {
+    if(act?.kind==='leap'&&act.phase==='act'&&act.d.y>0&&!w.led) {
       const d=act.d;
       for(const along of [0,-tuning.dolphins.length*d.size]) {
         const p=new THREE.Vector3(d.x+Math.sin(d.yaw)*along,d.y+d.surface,d.z+Math.cos(d.yaw)*along).project(rig.camera);
@@ -88,6 +107,38 @@ for(const [fps,gust,portrait] of [[60,0,false],[30,20,false],[60,20,true]]) {
   assert(heroEdge>0 && heroEdge<0.95,`featured leap must play and stay in frame: ${heroEdge}`);
   assert.equal(clipped,0,`swimmer stays inside the safe frame: ${JSON.stringify({fps,gust,portrait,swimWorst,transitions})}`);
   assert(leapAt>0&&swimStart>leapAt&&swimStart>tuning.seaPassage.swimNotBefore,'the pod arrives and plays its leap before the swim');
+  assert.deepEqual(steps.map(([s])=>s),['approach','breath','free','gone'],'the whale\'s steps go in order');
+  assert(eyeOpen,'its first full breath opens its eye before it is free');
+  assert.equal(rewards,1,'freeing it is rewarded once');
+  assert(blowholeEdge>0&&blowholeEdge<0.75,`the blowhole is an easy target at rest: ${blowholeEdge.toFixed(2)}`);
+  assert(c.podLeftAt!==null&&c.podLeftAt>=steps.find(([s])=>s==='free')[1],'the pod goes with the whale');
+  results[results.length-1].steps=steps;results[results.length-1].blowholeEdge=+blowholeEdge.toFixed(2);
+}
+// Resumed beside the whale, it is lying there still and the boat waits; circled, it goes and the boat sails on.
+{
+  const f=fixture(0,false,false,true);
+  const {chapter:c,boat:b}=f;
+  const rest=c.whale.rest;
+  b.beach(rest.x-Math.sin(c.whale.yaw)*1.5,rest.z-Math.cos(c.whale.yaw)*1.5,c.whale.yaw);b.afloat=true;b.grounded=false;
+  c.restoreCheckpoint('whale-rest',[3,95]);
+  assert.equal(c.whale.step,'breath');assert.equal(c.whale.whale.phase,'resting');assert.equal(c.swim,'done');
+  let gone=0;
+  for(let i=0;i<60*240&&!c.done;i++){frame(f,1/60,95+i/60);if(c.whale.step==='breath'&&c.whale.stepTime>1)assert(b.speed<0.2,'a save at rest resumes at rest');
+    if(c.whale.step==='gone'&&!gone)gone=c.time;}
+  assert(gone>0&&c.done,'from the save at rest it is freed and the boat moors at the mirror');
+  assert.equal(takeCues().filter(q=>q==='restored').length,1,'and is rewarded once');
+}
+// Resumed after it has gone, there is no whale and the boat sails on to the mirror.
+{
+  const f=fixture(0,false);
+  const {chapter:c,boat:b,sealife}=f;
+  const rest=c.whale.rest;
+  b.beach(rest.x,rest.z,c.whale.yaw);b.afloat=true;b.grounded=false;
+  c.restoreCheckpoint('whale-gone',[3,130]);
+  assert.equal(c.whale.step,'gone');assert.equal(sealife.sleeper.mesh.visible,false);
+  for(let i=0;i<60*120&&!c.done;i++){frame(f,1/60,130+i/60);assert(!sealife.sleeper.mesh.visible,'no whale after it has gone');}
+  assert(c.done,'from the save after the whale the boat moors at the mirror');
+  assert.equal(takeCues().filter(q=>q==='restored').length,0,'a restored save is never rewarded again');
 }
 // An old swim checkpoint in the coastal channel should continue to the jetty, never return offshore.
 {
