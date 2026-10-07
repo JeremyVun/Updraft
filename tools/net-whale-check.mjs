@@ -191,10 +191,10 @@ async function atFlipper(page, holding = true) {
 }
 
 /**
- * The flipper's half-chord (m) at sixteenths of the way from root to tip, on the side the bird swims: its smooth
- * trailing edge, toward the boat (`FIN_HALF_CHORD` in `anatomy.ts` at the dream size, less the bow toward its knobs).
+ * How far the flipper reaches from its line (m) at sixteenths of the way from root to tip, on whichever side is wider:
+ * `FIN_HALF_CHORD` in `anatomy.ts` at the dream size, turned on its edge, with its bow, droop and knobs.
  */
-const FIN_HALF = [1.08, 1.23, 1.37, 1.46, 1.52, 1.52, 1.43, 1.32, 1.19, 1.07, 0.96, 0.84, 0.73, 0.63, 0.55, 0.44, 0.13];
+const FIN_HALF = [0.56, 0.72, 0.9, 1.19, 1.32, 1.37, 1.37, 1.34, 1.28, 1.21, 1.13, 1.03, 0.92, 0.8, 0.67, 0.32, 0.06];
 /**
  * Every frame of the flipper step: the least clear water between the cygnet's body and the flipper (its own half-chord
  * round the line from root to tip), and the widest gap between the loop's free end and the bill while it holds it.

@@ -331,7 +331,7 @@ export class SleepingWhale extends WhaleRig {
     this.lay(0, rise, 0, 0, K.roll + liftRoll);
     this.uniforms.uCurl.value = REST_CURL;
     // The flipper lies awash: as the body rises with a breath it floats there rather than lifting out of the sea.
-    const awash = rise / (FIN_LENGTH * this.scale * 0.82);
+    const awash = rise / (FIN_LENGTH * this.scale * 0.95);
     this.uniforms.uFin.value.set(K.finRestSweep + Math.sin(this.worldTime * 0.17) * 0.03,
       -K.finRestRaise + awash + Math.sin(this.worldTime * 0.23 + 1) * 0.015);
   }

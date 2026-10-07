@@ -9,7 +9,7 @@ export { SPINE_N };
 export const SPINE_STEP = (SPINE_END * LENGTH) / (SPINE_N - 1);
 
 /** The one whale of the journey: short flippers and a small dorsal fin on a long body, its flukes a little reduced. */
-export const DREAM_SHAPE = { fin: 0.47, dorsal: 0.3, flukes: 0.8 } as const;
+export const DREAM_SHAPE = { fin: 0.28, dorsal: 0.3, flukes: 0.8 } as const;
 /** Scale of the rest pose that makes it `tuning.netWhale.length` from nose to fluke tips. */
 export const DREAM_SCALE = tuning.netWhale.length
   / (FLUKE_HINGE * LENGTH + (-flukeEdges(1).trail - FLUKE_HINGE * LENGTH) * DREAM_SHAPE.flukes);

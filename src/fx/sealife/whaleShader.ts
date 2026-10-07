@@ -390,10 +390,10 @@ void main() {
   // Cool sky fill keeps the shadowed flank slate rather than black against a low sun.
   float sky = dot(uSkyAmbient, vec3(0.3, 0.5, 0.2));
   int part = int(vRig.y + 0.5);
-  // The flipper's broad top faces the open sky more squarely than any of the flank behind it.
-  vec3 fill = vec3(0.8, 0.88, 1.05) * sky * ${f(L.fill)} * (0.55 + 0.45 * N.y) * (part == ${FIN} ? 0.72 : 1.0);
+  // The flipper's broad top faces the open sky and the low sun more squarely than the flank it hangs from.
+  vec3 fill = vec3(0.8, 0.88, 1.05) * sky * ${f(L.fill)} * (0.55 + 0.45 * N.y) * (part == ${FIN} ? 0.6 : 1.0);
   vec3 bounce = mix(uSkyHorizon, uSeaTint * sky * 3.0, 0.5) * ${f(L.bounce)} * sky * max(-N.y + 0.15, 0.0);
-  vec3 col = k.albedo * (fill + bounce + uSunColor * (wrap * wrap * wrap * ${f(L.key)} + 0.02) * sun);
+  vec3 col = k.albedo * (fill + bounce + uSunColor * (wrap * wrap * wrap * ${f(L.key)} * (part == ${FIN} ? 0.5 : 1.0) + 0.02) * sun);
   // Low on the flank the sea shades it, so the skin darkens down to the waterline.
   col *= mix(${f(L.waterline)}, 1.0, smoothstep(-0.5, 3.5, vWorld.y));
   col += k.albedo * uSunColor * sun * k.thin * back * max(-ndl, 0.0) * 1.4;
@@ -413,7 +413,9 @@ void main() {
   col = mix(col, env, F * (0.25 + 0.5 * sheet + 0.6 * k.gloss) * (part == ${FIN} ? 0.45 : 1.0));
   vec3 H = halfVector(uSunDir, V);
   float nh = max(dot(N, H), 0.0);
-  col += uSunColor * pow(nh, mix(24.0, 160.0, sheet)) * (${f(L.sheen)} + (0.8 + 3.0 * streak) * sheet) * sun * (1.0 - k.gloss) * (1.0 - 0.7 * k.near);
+  // Lying awash the flipper's blade faces the sky, and a sheen on it as broad as the back's would make it a pale thing.
+  float sheen = part == ${FIN} ? ${f(L.sheen)} * 0.3 : ${f(L.sheen)};
+  col += uSunColor * pow(nh, mix(24.0, 160.0, sheet)) * (sheen + (0.8 + 3.0 * streak) * sheet) * sun * (1.0 - k.gloss) * (1.0 - 0.7 * k.near);
   col += vec3(0.85, 0.9, 0.95) * (uSkyAmbient * 0.7 + uSunColor * (0.1 + back * 0.8) * sun) * streak * sheet * 0.45;
   // A flipper lying flat is seen edge on all over, so only the body takes the rim along its silhouette.
   float rim = pow(1.0 - nv, ${f(L.rimPower)}) * smoothstep(-0.2, 0.5, N.y + ndl) * (part == ${FIN} ? 0.2 : 1.0);

@@ -13,8 +13,11 @@ export const FIN = 1;
 export const FLUKES = 2;
 export const DORSAL = 3;
 export const FLUKE_HALF_SPAN = 2.75;
-/** Root of the left pectoral fin (the right one is its mirror image): high on the flank, so lying awash it is at the surface. */
-export const FIN_ROOT = new THREE.Vector3(1.45, -0.06, -0.31 * LENGTH);
+/**
+ * Root of the left pectoral fin (the right one is its mirror image): low on the flank just behind the corner of the
+ * mouth, so it is plainly the head's own, a little under the water lying awash.
+ */
+export const FIN_ROOT = new THREE.Vector3(1.17, -0.08, -0.19 * LENGTH);
 /** The flipper's length and its line out from the root at rest, before it is raised and swept, in its own units. */
 export const FIN_SPAN = 4.5;
 export const FIN_DIR = new THREE.Vector3(0.8, -0.3, -0.52).normalize();
@@ -23,8 +26,10 @@ export const FIN_DIR = new THREE.Vector3(0.8, -0.3, -0.52).normalize();
  * the way out, tapering to a rounded tip. Never wider than the cygnet's clearance allows for (`net-whale-check` fin).
  */
 export const FIN_HALF_CHORD = curve([
-  [0, 0.3], [0.15, 0.42], [0.32, 0.47], [0.6, 0.335], [0.8, 0.215], [0.9, 0.16], [0.96, 0.11], [1, 0.035],
+  [0, 0.26], [0.15, 0.36], [0.32, 0.4], [0.6, 0.285], [0.8, 0.18], [0.9, 0.135], [0.96, 0.095], [1, 0.03],
 ]);
+/** How far the flipper is turned on its edge about its own line, leading edge up (radians). */
+const FIN_EDGE_UP = 0.3;
 /** Where the flukes hinge on the tail stock, as a fraction of the length. */
 export const FLUKE_HINGE = 0.93;
 export const BLOWHOLE = 0.21;
@@ -222,21 +227,25 @@ function fin(): THREE.BufferGeometry {
   for (let i = 0; i <= stations; i++) {
     const t = i / stations;
     const half = FIN_HALF_CHORD(t);
-    const knobs = 0.05 * Math.max(0, Math.sin(t * 9 * Math.PI)) ** 0.7 * smoothstep(0.1, 0.22, t) * (1 - smoothstep(0.86, 0.95, t));
+    const knobs = 0.12 * Math.max(0, Math.sin(t * 9 * Math.PI)) ** 0.7 * smoothstep(0.1, 0.22, t) * (1 - smoothstep(0.86, 0.95, t));
     const bow = -0.16 * Math.sin(Math.PI * t);
     const thick = 0.14 * (1 - 0.72 * t) + 0.022;
-    // Twisted so the knobbly leading edge stands higher than the trailing one, and sagging a little along its middle,
-    // so lying awash it breaks the surface in an uneven ridge and goes under the glass in places.
-    const twist = 0.26 * smoothstep(0.05, 0.4, t);
-    const sag = 0.05 * Math.sin(Math.PI * t);
+    // Turned on its edge, the knobbly leading edge up and the trailing edge down, and drooping along its middle, so
+    // lying awash only that edge and the tip break the surface and the broad blade goes down steeply under the glass
+    // rather than lying just under it.
+    const edge = FIN_EDGE_UP * smoothstep(0, 0.3, t);
+    const ce = Math.cos(edge);
+    const se = Math.sin(edge);
+    const sag = 0.1 * Math.sin(Math.PI * t);
     for (let j = 0; j < around; j++) {
       const a = (j / around) * Math.PI * 2;
       const along = 0.5 - 0.5 * Math.cos(a);
-      const th = Math.sin(a) * thick * 2.4 * Math.sqrt(along + 0.02) * (1 - along * 0.85) + (2 * along - 1) * half * twist + sag;
+      const chord = (2 * along - 1) * half - knobs * (1 - along) ** 2;
+      const th = Math.sin(a) * thick * 2.4 * Math.sqrt(along + 0.02) * (1 - along * 0.85);
       p.copy(FIN_ROOT)
         .addScaledVector(e1, t * FIN_SPAN)
-        .addScaledVector(e2, bow + (2 * along - 1) * half - knobs * (1 - along) ** 2)
-        .addScaledVector(e3, th);
+        .addScaledVector(e2, bow + chord * ce - th * se)
+        .addScaledVector(e3, chord * se + th * ce + sag);
       pos.push(p.x, p.y, p.z);
       rig.push(s, FIN, t, along);
     }
