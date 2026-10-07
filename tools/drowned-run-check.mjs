@@ -402,7 +402,7 @@ try {
         const out = Math.abs(head.x) > 0.95 || Math.abs(head.y) > 0.95 || head.z > 1;
         w.unseenRun = out ? w.unseenRun + 1 / 60 : 0;
         if (out) w.unseen += 1 / 60;
-        if (w.unseenRun > w.unseenWorst) { w.unseenWorst = w.unseenRun; w.unseenAt = `${r.stage} at ${r.along.toFixed(1)} m`; }
+        if (w.unseenRun > w.unseenWorst) { w.unseenWorst = w.unseenRun; w.unseenAt = `${r.stage} at ${r.along.toFixed(1)} m, until ${__stats.time.toFixed(1)} s`; }
         /** Under a roof's slates, or a roof between the lens and her: a march along the line of sight. */
         const under = (x, z) => [...W.PLACED, W.NAVE].reduce((top, h) => Math.max(top, W.roofUnder(h, x, z) ?? -Infinity), -Infinity);
         if (cam.y < under(cam.x, cam.z) + 0.2) { w.inside += 1 / 60; w.insideAt = `${r.stage} at ${r.along.toFixed(1)} m`; }

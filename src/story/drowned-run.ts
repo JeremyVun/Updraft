@@ -849,16 +849,16 @@ export class RoofRun {
     const lead = this.tmp.copy(this.velocity).clampLength(0, k.steadiest).multiplyScalar((1 / k.follow + 2 / response) * (1 - at));
     this.eye.add(lead);
     this.target.addScaledVector(lead, 1 - wide);
-    this.handOver(shot, dt);
+    const handing = this.handOver(shot, dt);
     shot.free = false;
     shot.from = undefined;
     /**
-     * Upright on her own way the frame is too narrow to trust the laid path alone: she is kept inside it, never by
-     * drawing back. Each piece's own view is laid by hand.
+     * Upright on her own way, and while the hand-over swings round her, the frame is too narrow to trust the laid path
+     * alone: she is kept inside it, never by drawing back. Each piece's own view is laid by hand.
      */
     this.held.primary.copy(c).setY(c.y + 1.2);
     this.held.secondary.copy(this.held.primary);
-    shot.subjects = wide < 0.5 && at < 0.5 ? this.held : undefined;
+    shot.subjects = wide < 0.5 && (at < 0.5 || handing) ? this.held : undefined;
     shot.attention = undefined;
     shot.composition = undefined;
     shot.smoothFit = undefined;
@@ -878,9 +878,9 @@ export class RoofRun {
    * to the view the run wants: one move, never across the roof she is on, standing out wide of the boat's sail and the
    * cottage's chimney as it goes.
    */
-  private handOver(shot: Shot, dt: number): void {
+  private handOver(shot: Shot, dt: number): boolean {
     if (this.handFrom === null) {
-      if (!this.camera) return;
+      if (!this.camera) return false;
       this.handFrom = this.handEye.copy(this.camera.position);
       this.handTarget.copy(shot.target);
       /** Only from the climb's view beside her: from anywhere further (a QA start) the rig brings it in. */
@@ -889,7 +889,7 @@ export class RoofRun {
     }
     this.handT += dt;
     const hand = THREE.MathUtils.smoothstep(this.handT, 0, tuning.drownedCamera.run.handFor);
-    if (hand >= 1) return;
+    if (hand >= 1) return false;
     const h = this.focus, from = this.handFrom;
     const a0 = Math.atan2(from.x - h.x, from.z - h.z), a1 = Math.atan2(this.eye.x - h.x, this.eye.z - h.z);
     let turn = Math.atan2(Math.sin(a1 - a0), Math.cos(a1 - a0));
@@ -900,6 +900,7 @@ export class RoofRun {
     const a = a0 + turn * hand;
     this.eye.set(h.x + Math.sin(a) * r, THREE.MathUtils.lerp(from.y, this.eye.y, hand) + k.handUp * wide, h.z + Math.cos(a) * r);
     this.target.lerpVectors(this.handTarget, this.target, hand);
+    return true;
   }
 
   /**
