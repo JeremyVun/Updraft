@@ -6,7 +6,8 @@ this file only orders the work.
 ## The drowned village: the cat and the roofs (prototype)
 
 Design: the sections of design.md from "The whole room, from the beginning" on. Concept frames: `comps/drowned/` (a
-guide; they still show the drained village, which is cut). The cat: `comps/cat/`. Branch `proto-drowned-roofs`, worktree
+guide; they still show the drained village, which is cut). The cat: `comps/cat/`; the fog `comps/fog/`; the run
+`comps/run/`; the windmill `comps/mill/`; the village's look `comps/village/`. Branch `proto-drowned-roofs`, worktree
 `/private/tmp/updraft-drowned-roofs`, based on main. Judged by Jeremy on its own; never merged without his approval.
 
 Standing constraints for every phase:
@@ -40,7 +41,7 @@ Owns: `src/creatures/cat.ts`, `src/creatures/cat/`, `src/story/cat-yard.ts`, `to
 `proto-drowned-cat` (worktree `/private/tmp/updraft-drowned-cat`). First build merged into `proto-drowned-roofs`
 (`faf9574`); its API is stable. Being rebuilt to the model sheet (Jeremy found the first face bug-eyed and the sit
 swan-necked); the rebuild changes only its own files and is merged again when it lands.
-Done: [ ]
+Done: [x] (rebuilt, polished and its analysed voice merged).
 
 ### Phase 2: the stranded cat, and she goes after it
 Owns: the wash-tub (floats, pushed by the wind field), the cat's beats in `src/story/drowned.ts` from the chimney to
@@ -65,31 +66,88 @@ low lens a stroke's own wind lands far beyond it; see `contracts/wind.md`). The 
 own height. Left for later: the cat still reads small on its pot (about 40 px at 1600 × 900) and at the gap, and upright
 the cat at the bow is hidden behind her; the climb's lens looks on to the church with the dark behind it.
 
-### Phase 3: over the roofs
-Owns: the child's walk over `WAY` following the cat, stopping at each gap; the tree crossing (rocks to the wind, a
-push topples it into a bridge); the swing crossing (the birches' `Swing`, pumped, she lets go onto the nave); the
-cat's own way over each gap; the dark's creep and hold; the side-on lens for the run.
-Seam: each crossing reports done; the dark reads the child's progress.
-Gate: the check plays both crossings with real gestures; stills of each.
+### The pieces already built (parallel branches)
+- **The tree and the swing** (`proto-drowned-crossings`, `src/world/crossings/`, QA `?chapter=stage&gap=tree|swing|run`):
+  polished and merged into this branch (`715b48a`). Placement: `TreeCrossing({root, rest, over, height}, {wait, stepOff,
+  onward}, cast)`, root about 2.4 m behind the wall, its foot about 0.15 m under water, the tree about 10 m tall, the
+  waterline at its foot kept in view (a slightly raised lens); `SwingCrossing({pivot, toward, rope}, {board, landing,
+  onward}, cast)`, beside the cottage's gable end so the back-swing passes the house end, the old tree off the
+  cottage's corner behind the back-swing and never between the lens and her, the landing's slope deck in
+  `child.decks`. Copy the yard's `TREE_SOUNDS`/`SWING_SOUNDS` onto `onEvent`. Saves treat the tree as standing.
+  Jeremy has not yet judged the new foley by ear.
+- **The windmill** (`proto-drowned-mill`, worktree `/private/tmp/updraft-drowned-mill`): the piece on the QA stage
+  (`?chapter=stage&gap=mill`, `src/story/mill-yard.ts`, `tools/mill-check.mjs`, `tuning.crossings.mill`), her walk onto
+  the sail and the ride first. Done: [ ]
+- **The sea fog, pass 2** (`proto-drowned-fog`, worktree `/private/tmp/updraft-drowned-fog`): the billowed near face,
+  the gold crest, no hard edge at the far stage, the bank well away at first, the light draining over the whole
+  approach; every other room pixel-identical. Done: [ ]
+
+### Phase 3a: the village re-laid
+Owns: `src/world/drowned-way.ts`, the layout parts of `src/world/drowned.ts` (`layout`, `PLACED`, `CLEARINGS`, the
+church), `tools/drowned-roofs-check.mjs` (extended to walk the way).
+- The church (spire, nave, tower, vane, belfry, ivy) moves about 120 m on to stand near the lighthouse, about
+  (10, −1560) per `comps/run/route-plan.png`; its old site becomes ordinary roofs. `SPIRE`'s users (camera aims, the
+  heron and vane answers, the storm) follow it.
+- The village takes the shape in `comps/village/` (lanes, rows and clusters, a green, outlying farms, water between
+  them; denser off the way and toward the horizon on every side, the near water open). The generated village's
+  random draws stay stable: build and throw away, never reorder the draws in `PLACED`/`CLEARINGS`.
+- Her way, about 165 m from the strand to the nave, laid as `WAY` decks per `route-plan.png` (north up): the climb
+  out at the cottage, the tree's lane and walled garden, her own way (ridges, wall copings, a lean-to, small hops), the
+  windmill's site (a roof edge level with a sail, the mill, the high roof beyond), her own way again, the green with
+  the swing at the garden cottage's gable end, the nave. Only hand-placed roofs, walls and copings where the way needs
+  them; never a corridor or a single line of houses.
+- The dead tree the boat fetches up against near the church; `BOAT_ADRIFT` ends there. `DARK_WAY` runs along the
+  new way.
+- The pieces placed as stand-ins at their sites (the tree and swing through their real classes; the mill as a block
+  until 3b lands).
+Gate: a QA walk of the decks end to end with no gap she cannot make; a high plan still for the orchestrator only
+(never a player view) and eye-level stills compared with `comps/run/` and `comps/village/`; typecheck.
+Done: [ ]
+
+### Phase 3b: the village's look
+Owns: the house and prop pieces (a new module beside `drowned.ts`, its showroom on the QA stage) and their use in
+`drowned.ts`'s builders. Builds the house types and props chosen in `comps/village/house-kit.png` and `notes.md` in
+the game's simple faceted style, the far village toward the horizon, and the small things of village life above the
+water, on the layout 3a lays. Fixed cost: one merged mesh as today, no new draw calls per house.
+Gate: stills of the arrival, the cat's roof, the run's views and the far horizon beside `comps/village/`; the run's
+views of the church and lighthouse never crowded; typecheck.
+Done: [ ]
+
+### Phase 3c: the run
+Owns: the child's walk over `WAY` following the cat from the strand to the nave, stopping at each piece; the cat's own
+way over each gap (a railing top, a wall coping, a leap she could never make), always a roof ahead; the three pieces
+wired in place (tree, mill, swing) with their invitations, safety valves and sounds; the fog's creep and hold behind
+her (the story resets `close` to 0 when the run starts and drives `reach` along `DARK_WAY`, waiting a little behind
+her at each piece and taking the place she left as she crosses); the run's camera (low and beside her, the fog on one
+side of the frame and the church on the other, easing between pieces and never cutting; the climb-out lens turned so
+the fog is in frame).
+Seam: each piece reports done; the fog reads her progress; the boat's drift runs on its own clock to its dead tree.
+Gate: the check plays from the air dying to the nave with real gestures; stills at each piece and between them,
+landscape and upright; the run's time measured against the pacing (about 2 minutes).
 Done: [ ]
 
 ### Phase 4: the dark arrives, the boat, the storm
-Owns: the cat up the tower to the belfry; the dark rolling over into main's storm sky (the dark handed over to the
-storm or zeroed, since nothing resets it today); `boat.coastTo` cleared; `Boat.brushSail` bringing the boat from the
-cottage to the nave; her stepping down (`board`) and her one look back at the cat; the storm's trigger (aboard, not
-`startsFromShore`) with the weather mostly gathered at the start.
-Seam: from aboard, main's storm beats run in order.
-Gate: the check plays through to the forest beach; `tools/storm-check.mjs` (note: it already fails on main at the
-lighthouse crown and the plane), `boat-check.mjs` and `drowned-camera-check.mjs` fixtures updated to play the new
-sequence.
+Owns: the cat up the tower's ivy to the belfry; the fog's `close` into the storm's night (the story's `dusk` and the
+fog's drain from one progression, not stacked); `boat.coastTo` cleared before `brushSail`; the player filling the sail
+to bring the boat from its dead tree to the nave; her stepping down (`board`) and her one look back at the cat; at
+most a mew from the belfry; the storm's trigger moved to her being aboard at the nave, with the weather mostly gathered
+at the start and main's beats re-timed for about 140 m to the beach (the lighthouse passed and going out soon after
+she boards, the plane taken, rain, the landing).
+Gate: the check plays through to the forest beach; `tools/storm-check.mjs`, `boat-check.mjs` and
+`drowned-camera-check.mjs` fixtures updated to the new sequence.
 Done: [ ]
 
 ### Phase 5: saves, docs and the look
-Owns: checkpoints (a save during the run resumes with the boat at rest, the cat aboard and the dark risen; a save
-after she is aboard resumes aboard with the storm to come), `docs/chapters.md` drowned section on the branch, the
-dark's look pass, a final set of stills (landscape and portrait).
+Owns: checkpoints (a save during the run resumes with the boat at rest against the cottage, the cat aboard and the
+fog risen; a save after she is aboard resumes aboard with the storm to come), `docs/chapters.md` drowned section,
+`docs/contracts/world.md` where the village's pieces belong, a final set of stills (landscape and upright), a full play
+from the stairs to the forest beach.
 Gate: typecheck, build, the check from start to the beach; stills opened for review.
 Done: [ ]
+
+### Later
+The cat in the lit window of the cottage with the red door at the very end (design.md "The cat comes home"); a small
+cat-face pass (eyes slightly big and low close up, muzzle cream not white, profile ears small, mew mouth small).
 
 ## The crossing: the whale asleep
 
