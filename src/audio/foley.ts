@@ -127,21 +127,21 @@ export class Foley {
       this.puff({ at, len: 1.6, level: level * 0.05, pan, type: 'lowpass', from: 110, to: 220, attack: 1.0 });
     } else if (kind === 'net-sputter') {
       // A weak breath forced out through wet mesh: a low push of air broken into small wet bursts.
-      this.puff({ at, len: 1.4, level: level * 0.035, pan, type: 'lowpass', from: 260, to: 140, attack: 0.25, wet: 0.03 });
+      this.puff({ at, len: 1.4, level: level * 0.06, pan, type: 'lowpass', from: 260, to: 140, attack: 0.25, wet: 0.03 });
       let t = at + 0.12;
       for (let i = 0; i < 7; i++) {
         t += 0.06 + Math.random() * 0.14;
-        this.puff({ at: t, len: 0.05 + Math.random() * 0.05, level: level * (0.02 + Math.random() * 0.018) * (1 - i * 0.09), pan,
+        this.puff({ at: t, len: 0.05 + Math.random() * 0.05, level: level * (0.06 + Math.random() * 0.05) * (1 - i * 0.09), pan,
           type: 'bandpass', from: 520 + Math.random() * 700, to: 380, q: 2.2, attack: 0.004, wet: 0.02 });
       }
     } else if (kind === 'net-lift') {
       // Old wet rope taking the weight, the corks knocking on their lines, and the water it brings up dripping off.
-      this.puff({ at, len: 0.3, level: level * 0.03, pan, type: 'bandpass', from: 360 + Math.random() * 80, to: 520, q: 4, attack: 0.05 });
+      this.puff({ at, len: 0.3, level: level * 0.09, pan, type: 'bandpass', from: 360 + Math.random() * 80, to: 520, q: 4, attack: 0.05 });
       for (let i = 0; i < 3; i++) {
         const k = at + 0.04 + Math.random() * 0.3;
-        this.blip(k, 640 + Math.random() * 260, 520, 0.05, level * 0.012, pan, 'triangle', 0.03);
+        this.blip(k, 640 + Math.random() * 260, 520, 0.05, level * 0.02, pan, 'triangle', 0.03);
       }
-      for (let i = 0; i < 2; i++) this.puff({ at: at + 0.15 + Math.random() * 0.4, len: 0.04, level: level * 0.008, pan,
+      for (let i = 0; i < 2; i++) this.puff({ at: at + 0.15 + Math.random() * 0.4, len: 0.04, level: level * 0.025, pan,
         type: 'bandpass', from: 2400 + Math.random() * 900, q: 3, attack: 0.003 });
     } else if (kind === 'whale-slap') {
       // A broad flipper laid flat on the water: a wet clap, a low thump under it, the spray falling back.
@@ -225,9 +225,9 @@ export class Foley {
       vibrato.stop(start + len + 0.05);
     };
     if (far) {
-      voice(at, level * 0.05, 260, 0.6);
-      voice(at + 0.55, level * 0.022, 200, 0.8);
-    } else voice(at, level * 0.09, 620, 0.35);
+      voice(at, level * 0.02, 260, 0.6);
+      voice(at + 0.55, level * 0.009, 200, 0.8);
+    } else voice(at, level * 0.035, 620, 0.35);
   }
 
   /** One burst of filtered noise with its own envelope: the raw material of every sound here. */

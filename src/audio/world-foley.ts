@@ -163,7 +163,7 @@ export class WorldFoley {
 
   /** Its call heard from far off as it dives on the first crossing: at most an echo. */
   farCall(at: THREE.Vector3): void {
-    this.foley.call(tuning.audio.whaleLevel * 0.6, screenPan(this.camera, at), true);
+    this.foley.call(tuning.audio.whaleLevel * 0.3, screenPan(this.camera, at), true);
   }
 
   whale(kind: SleeperSound, at: THREE.Vector3): void {
