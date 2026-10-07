@@ -2,7 +2,8 @@ import * as THREE from 'three';
 import type { Shot } from '../camera';
 import type { Deck } from '../world/decks';
 import { tuning } from '../tuning';
-import { CAT_WAY, DARK_WAY, MILL, MILL_SITE, NAVE, PLACED, SWING_SITE, TOWER_FOOT, TREE_SITE, WAY, WAY_GAPS, roofUnder, type WayDeck } from '../world/drowned-way';
+import { CAT_WAY, DARK_WAY, MILL, MILL_SITE, NAVE, PLACED, SWING_SITE, TOWER_FOOT, TREE_SITE, WAY, WAY_GAPS, darkWayPoint, roofUnder, type WayDeck } from '../world/drowned-way';
+import { SPIRE } from '../world/drowned';
 import { railAt } from '../world/crossings/windmill';
 import { TREE_SOUNDS, TreeCrossing } from '../world/crossings/tree-crossing';
 import { MILL_SOUNDS, MillCrossing } from '../world/crossings/mill-crossing';
@@ -135,7 +136,7 @@ interface LensKey {
 }
 
 /** Each angle in turn brought within half a turn of the one before, so a swing round is never taken the long way. */
-function unwrap(keys: LensKey[], field: 'bearing' | 'facing'): void {
+function unwrap(keys: LensKey[], field: 'facing'): void {
   for (let i = 1; i < keys.length; i++) {
     const d = keys[i][field] - keys[i - 1][field];
     keys[i][field] = keys[i - 1][field] + Math.atan2(Math.sin(d), Math.cos(d));
@@ -143,102 +144,187 @@ function unwrap(keys: LensKey[], field: 'bearing' | 'facing'): void {
 }
 
 /**
- * Where the walking lens stands at every `LENS_STEP` of her way: abeam on her left, the side the low sun is on, turned
- * back a little so it looks along her way as well as across it, at about her height; never where she would walk toward
- * it; where a roof stands in the way or between it and her, swung round or drawn in as little as will do, keeping close
- * to where it stood a step before. Then smoothed along the way as a bearing round her, so it moves as she does, goes
- * round her rather than through her at a turn, and never jumps.
+ * The way the walking lens looks at each `LENS_STEP` of her way (atan2(x, z)): between the fog's body trailing behind
+ * her, as it lies when she is on her own way, and the church ahead, so with her in the middle the fog takes one side
+ * of the frame and the church the other wherever the two are near enough to share it.
  */
-function layLens(nodes: readonly Node[], obstacles: readonly THREE.Box3[], upright: boolean): LensKey[] {
+function views(nodes: readonly Node[]): number[] {
+  const k = tuning.drownedCamera.run, dark = tuning.drowned.dark;
+  const p = new THREE.Vector3(), front = new THREE.Vector2(), back = new THREE.Vector2();
+  const total = nodes[nodes.length - 1].s, out: number[] = [];
+  let leg = 1, along = 0;
+  const lengths = [0];
+  for (let i = 1; i < DARK_WAY.length; i++) lengths.push(lengths[i - 1] + DARK_WAY[i].distanceTo(DARK_WAY[i - 1]));
+  for (let s = 0; s <= total + LENS_STEP; s += LENS_STEP) {
+    wayAt(nodes, s, p);
+    let best = Infinity;
+    for (let j = leg; j < Math.min(DARK_WAY.length, leg + 3); j++) {
+      const a = DARK_WAY[j - 1], b = DARK_WAY[j], ex = b.x - a.x, ez = b.y - a.y, l2 = ex * ex + ez * ez;
+      const t = THREE.MathUtils.clamp(((p.x - a.x) * ex + (p.z - a.y) * ez) / l2, 0, 1);
+      const d = Math.hypot(p.x - a.x - ex * t, p.z - a.y - ez * t);
+      if (d < best) { best = d; leg = j; along = Math.max(along, lengths[j - 1] + t * Math.sqrt(l2)); }
+    }
+    const reach = along - tuning.drowned.run.fogTrail;
+    darkWayPoint(reach, front);
+    darkWayPoint(reach - 40, back);
+    const ax = front.x - back.x, az = front.y - back.y, al = Math.hypot(ax, az) || 1;
+    const aside = -k.fogAside, u = aside / dark.halfWidth;
+    const fx = front.x - (az / al) * aside + (ax / al) * dark.flank * u * u, fz = front.y + (ax / al) * aside + (az / al) * dark.flank * u * u;
+    const fog = Math.atan2(fx - p.x, fz - p.z), church = Math.atan2(SPIRE.x - p.x, SPIRE.z - p.z);
+    out.push(fog + Math.atan2(Math.sin(church - fog), Math.cos(church - fog)) * k.churchShare);
+  }
+  return out;
+}
+
+/**
+ * Where the walking lens stands at every `LENS_STEP` of her way, as a bearing round her: opposite the way it looks
+ * (`views`), at about her height; never where she would walk toward it; where a roof stands in the way or between it
+ * and her, swung round or drawn in as little as will do, and turning between steps as little as it can, so it moves
+ * as she does, goes round her rather than through her at a turn, and never jumps. Upright it stands behind her,
+ * looking along her way.
+ */
+/** Where a piece's own view leaves the lens as she walks on from it: how far along her way, and its bearing from her. */
+interface Anchor {
+  s: number;
+  bearing: number;
+}
+
+function* layLens(nodes: readonly Node[], obstacles: readonly THREE.Box3[], upright: boolean, anchors: readonly Anchor[]): Generator<void, LensKey[]> {
   const k = tuning.drownedCamera.run;
   const near = obstacles.filter((box) => nodes.some((n) => n.at.x > box.min.x - 30 && n.at.x < box.max.x + 30
     && n.at.z > box.min.z - 30 && n.at.z < box.max.z + 30));
   const total = nodes[nodes.length - 1].s;
-  const back = upright ? k.uprightBack : k.back, most = upright ? k.uprightDistance : k.distance;
+  const most = upright ? k.uprightDistance : k.distance;
   const rise = upright ? k.uprightRise : k.rise;
+  const looks = views(nodes);
   const p = new THREE.Vector3(), a = new THREE.Vector3(), b = new THREE.Vector3(), eye = new THREE.Vector3(), focus = new THREE.Vector3();
-  const sight = new THREE.Vector3();
-  /** Her feet at `s`, and whether a lens at `bearing`, `reach` and `lift` from there stands clear and sees her. */
-  const clear = (s: number, bearing: number, reach: number, lift: number) => {
+  const sight = new THREE.Vector3(), body = new THREE.Vector3();
+  /** Whether she walks toward a lens at `bearing` from her anywhere from `s` to a stride on. */
+  const toward = (s: number, bearing: number) => [s, s + 2].some((at) => {
+    wayAt(nodes, at - 0.5, a);
+    wayAt(nodes, at + 1, b);
+    const facing = Math.atan2(b.x - a.x, b.z - a.z);
+    return Math.cos(bearing - facing) > k.toward;
+  });
+  /** What stands within reach of the lens at the step being laid. */
+  let local: THREE.Box3[] = [], roofs: typeof ROOFS = [];
+  const probe = new THREE.Vector3();
+  /**
+   * Her feet at `s`, and what a lens at `bearing`, `reach` and `lift` from there costs: `blocked` where it stands in
+   * something or something hides her, otherwise as much as roofs, chimneys and walls crowd in close in front of it.
+   */
+  const cost = (s: number, bearing: number, reach: number, lift: number) => {
+    if (toward(s, bearing)) return k.blocked;
     wayAt(nodes, s, p);
     focus.copy(p).setY(p.y + 1.6);
     eye.set(p.x + Math.sin(bearing) * reach, p.y + lift, p.z + Math.cos(bearing) * reach);
     sight.lerpVectors(focus, eye, 0.6 / reach);
+    body.lerpVectors(focus.setY(p.y + 0.8), eye, 0.6 / reach);
+    focus.setY(p.y + 1.6);
     /** The slates of the roofs of her way, exactly: the one she is on hides her from below its ridge. */
     for (let u = 0; u < 1; u += 0.05) {
       const x = eye.x + (sight.x - eye.x) * u, z = eye.z + (sight.z - eye.z) * u, y = eye.y + (sight.y - eye.y) * u;
-      if (ROOFS.some((h) => (roofUnder(h, x, z) ?? -Infinity) > y - (u === 0 ? 0.3 : 0))) return false;
+      if (roofs.some((h) => (roofUnder(h, x, z) ?? -Infinity) > y - (u === 0 ? 0.3 : 0))) return k.blocked;
     }
-    for (const box of near) {
-      if (eye.x > box.min.x - 0.7 && eye.x < box.max.x + 0.7 && eye.z > box.min.z - 0.7 && eye.z < box.max.z + 0.7 && eye.y < box.max.y + 0.4) return false;
-      /** What is below her waist cannot hide her head from a lens above it. */
-      if (box.max.y > p.y + 1 && !box.containsPoint(sight) && crosses(eye, sight, box, 0.1)) return false;
+    for (const box of local) {
+      const above = box.max.x - box.min.x < 2 && box.max.z - box.min.z < 2 ? k.clearOf : 0.4;
+      if (eye.x > box.min.x - k.clearOf && eye.x < box.max.x + k.clearOf && eye.z > box.min.z - k.clearOf && eye.z < box.max.z + k.clearOf
+        && eye.y < box.max.y + above) return k.blocked;
+      /** What is below her waist cannot hide her from a lens above it; anything taller must leave her head and body clear. */
+      if (box.max.y > p.y + 1 && ((!box.containsPoint(sight) && crosses(eye, sight, box, 0.1))
+        || (!box.containsPoint(body) && crosses(eye, body, box, 0.1)))) return k.blocked;
     }
-    return true;
+    let crowd = 0;
+    for (let u = 0.08; u < 0.5; u += 0.06) {
+      probe.lerpVectors(eye, focus, u);
+      for (const box of local) crowd += Math.max(0, k.crowdNear - box.distanceToPoint(probe));
+      for (const h of roofs) {
+        const top = roofUnder(h, probe.x, probe.z);
+        if (top !== null) crowd += Math.max(0, k.crowdNear - (probe.y - top)) * 0.5;
+      }
+    }
+    return crowd * k.crowdCost;
   };
-  const keys: LensKey[] = [];
-  let was = null as LensKey | null;
+  /**
+   * Every bearing within reach of the one it wants and every share of its distance, at each step: the path through them
+   * that stays clear and sees her, wanting least to be away from where it wants to be, drawn in, or turning between steps.
+   * While she is at a piece its own view holds the lens, so there the path goes wherever suits the steps either side,
+   * and just past it the path starts out from where that view leaves the lens.
+   */
+  const SHARES = [1, 0.82, 0.66, 0.52, 0.4];
+  const ARC = 2.4, BEARINGS = 33, TURNS = 5;
+  const held = nodes.flatMap((n, i) => (n.by === 'walk' || n.by === 'hop' ? [] : [[nodes[i - 1].s, n.s]]));
+  const steps: { want: number; along: number; lift: number; free: boolean; anchor: { bearing: number; weight: number } | null }[] = [];
   for (let s = 0; s <= total + LENS_STEP; s += LENS_STEP) {
     wayAt(nodes, s - k.behind, a);
     wayAt(nodes, s + k.ahead, b);
     const along = Math.atan2(b.x - a.x, b.z - a.z);
-    wayAt(nodes, s - 0.5, a);
-    wayAt(nodes, s + 1, b);
-    const facing = Math.atan2(b.x - a.x, b.z - a.z), fx = Math.sin(facing), fz = Math.cos(facing);
     wayAt(nodes, s, p);
     const lift = THREE.MathUtils.clamp(p.y + rise, k.lowest, k.highest) - p.y;
-    /** Abeam on the left of the way's line, as a bearing (atan2(x, z)) from her; turned back is further round. */
-    const left = along + Math.PI / 2;
-    let best = null as LensKey | null, score = Infinity;
-    for (let off = -2.1; off <= 2.101; off += 0.15) {
-      const bearing = left + back + off;
-      if (Math.sin(bearing) * fx + Math.cos(bearing) * fz > 0.2) continue;
-      for (const share of [1, 0.82, 0.66, 0.52]) {
-        if (!clear(s, bearing, most * share, lift)) continue;
-        const turned = was ? Math.abs(Math.atan2(Math.sin(bearing - was.bearing), Math.cos(bearing - was.bearing))) : 0;
-        const cost = Math.abs(off) * 3 + (1 - share) * 6 + turned * 4;
-        if (cost < score) { score = cost; best = { bearing, reach: most * share, rise: lift, facing: along }; }
-      }
-    }
-    const key: LensKey = best ?? (was ? { ...was, facing: along } : { bearing: left + back, reach: most, rise: lift, facing: along });
-    keys.push(key);
-    was = key;
+    const handed = anchors.find((h) => s >= h.s && s < h.s + k.anchorFor);
+    steps.push({ want: upright ? along + Math.PI / 2 + k.uprightBack : looks[Math.round(s / LENS_STEP)] + Math.PI, along, lift,
+      free: held.some(([from, to]) => s > from && s < to),
+      anchor: handed ? { bearing: handed.bearing, weight: 1 - (s - handed.s) / k.anchorFor } : null });
   }
-  unwrap(keys, 'bearing');
+  for (let i = 1; i < steps.length; i++) {
+    const d = steps[i].want - steps[i - 1].want;
+    steps[i].want = steps[i - 1].want + Math.atan2(Math.sin(d), Math.cos(d));
+  }
+  const LIFTS = [0, k.lifted];
+  const states = BEARINGS * SHARES.length * LIFTS.length;
+  const shareOf = (j: number) => SHARES[Math.floor(j / LIFTS.length) % SHARES.length];
+  const liftOf = (i: number, j: number) => Math.min(steps[i].lift + LIFTS[j % LIFTS.length], k.highest - wayAt(nodes, i * LENS_STEP, p).y);
+  const bearingOf = (i: number, j: number) =>
+    steps[i].want - ARC + (2 * ARC * Math.floor(j / (SHARES.length * LIFTS.length))) / (BEARINGS - 1);
+  let sums = new Float64Array(states), next = new Float64Array(states);
+  const from: Int16Array[] = [];
+  for (let i = 0; i < steps.length; i++) {
+    const came = new Int16Array(states);
+    wayAt(nodes, i * LENS_STEP, p);
+    local = near.filter((box) => box.distanceToPoint(p) < most + 4);
+    roofs = ROOFS.filter((h) => Math.hypot(h.x - p.x, h.z - p.z) < most + 4 + h.len);
+    for (let j = 0; j < states; j++) {
+      const bearing = bearingOf(i, j), share = shareOf(j), lift = LIFTS[j % LIFTS.length];
+      const off = bearing - steps[i].want;
+      const anchor = steps[i].anchor, from = anchor ? Math.atan2(Math.sin(bearing - anchor.bearing), Math.cos(bearing - anchor.bearing)) : 0;
+      const here = steps[i].free ? 0 : cost(i * LENS_STEP, bearing, most * share, liftOf(i, j))
+        + off * off * k.offCost + (1 - share) * k.inCost + lift * k.liftCost + (anchor ? from * from * anchor.weight * k.anchorCost : 0);
+      let best = i === 0 ? 0 : Infinity, by = 0;
+      const per = SHARES.length * LIFTS.length, bi = Math.floor(j / per);
+      if (i > 0) for (let q = Math.max(0, bi - TURNS) * per; q < Math.min(BEARINGS, bi + TURNS + 1) * per; q++) {
+        const turn = bearing - bearingOf(i - 1, q), pull = shareOf(q) - share, rising = LIFTS[q % LIFTS.length] - lift;
+        const c = sums[q] + turn * turn * k.turnCost + pull * pull * k.pullCost + rising * rising * k.riseCost;
+        if (c < best) { best = c; by = q; }
+      }
+      next[j] = best + here;
+      came[j] = by;
+    }
+    from.push(came);
+    [sums, next] = [next, sums];
+    yield;
+  }
+  let at = 0;
+  for (let j = 1; j < states; j++) if (sums[j] < sums[at]) at = j;
+  const keys: LensKey[] = new Array(steps.length);
+  for (let i = steps.length - 1; i >= 0; i--) {
+    keys[i] = { bearing: bearingOf(i, at), reach: most * shareOf(at), rise: liftOf(i, at), facing: steps[i].along };
+    at = from[i][at];
+  }
   unwrap(keys, 'facing');
   const smooth = (passes: number, span: number, fields: (keyof LensKey)[]) => {
     for (let pass = 0; pass < passes; pass++) {
-      const from = keys.map((key) => ({ ...key }));
+      const was = keys.map((key) => ({ ...key }));
       for (let i = 0; i < keys.length; i++) {
         const lo = Math.max(0, i - span), hi = Math.min(keys.length - 1, i + span);
         for (const field of fields) {
           let sum = 0;
-          for (let j = lo; j <= hi; j++) sum += from[j][field];
+          for (let j = lo; j <= hi; j++) sum += was[j][field];
           keys[i][field] = sum / (hi - lo + 1);
         }
       }
     }
   };
-  /**
-   * Smoothed; then wherever that has carried it into a roof or behind one, swung round to the nearest bearing that is
-   * clear, and smoothed again more lightly; and anywhere still not clear, drawn in until it is.
-   */
-  smooth(2, 2, ['bearing', 'rise', 'facing']);
-  keys.forEach((key, i) => {
-    if (clear(i * LENS_STEP, key.bearing, key.reach, key.rise)) return;
-    for (let turn = 0.1; turn <= Math.PI; turn += 0.1) {
-      const to = [key.bearing + turn, key.bearing - turn].find((bearing) => clear(i * LENS_STEP, bearing, key.reach, key.rise));
-      if (to !== undefined) { key.bearing = to; return; }
-    }
-  });
-  smooth(1, 1, ['bearing']);
-  keys.forEach((key, i) => {
-    for (let reach = key.reach; reach >= 2.5; reach -= 0.5) {
-      key.reach = reach;
-      if (clear(i * LENS_STEP, key.bearing, reach, key.rise)) break;
-    }
-  });
-  smooth(1, 1, ['reach']);
+  smooth(2, 2, ['rise', 'facing']);
   return keys;
 }
 
@@ -290,8 +376,13 @@ export class RoofRun {
   private readonly darkLength: number[] = [0];
   /** The lens: where it looks from and at, eased, and how far round to each piece it has come. */
   private readonly focus = new THREE.Vector3();
-  /** Where the walking lens stands along her way, landscape and upright (`layLens`). */
-  private readonly lens: { wide: LensKey[]; upright: LensKey[] };
+  /** Her velocity over the ground, steadied, and where she was a frame ago. */
+  private readonly velocity = new THREE.Vector3();
+  private readonly was = new THREE.Vector3();
+  /** Where the walking lens stands along her way, landscape and upright (`layLens`), laid a little each frame until done. */
+  private lens: { wide: LensKey[]; upright: LensKey[] } | null = null;
+  private readonly laying: [Generator<void, LensKey[]>, Generator<void, LensKey[]>];
+  private readonly laid: LensKey[][] = [];
   private readonly eye = new THREE.Vector3();
   private readonly target = new THREE.Vector3();
   private readonly stationEye = new THREE.Vector3();
@@ -320,7 +411,28 @@ export class RoofRun {
       return i;
     };
     this.catFrom = { tree: before('tree'), mill: before('mill'), swing: before('swing') };
-    this.lens = { wide: layLens(this.nodes, village.cameraObstacles, false), upright: layLens(this.nodes, village.cameraObstacles, true) };
+    const ax = Math.cos(MILL.facing) * MILL.reach, az = Math.sin(MILL.facing) * MILL.reach, hub = MILL.hub;
+    const sails = new THREE.Box3(new THREE.Vector3(hub.x - Math.abs(ax) - 0.4, hub.y - MILL.reach, hub.z - Math.abs(az) - 0.4),
+      new THREE.Vector3(hub.x + Math.abs(ax) + 0.4, hub.y + MILL.reach, hub.z + Math.abs(az) + 0.4));
+    const obstacles = [...village.cameraObstacles, sails];
+    village.mill.group.updateMatrixWorld(true);
+    const anchors = (wide: number): Anchor[] => (['tree', 'mill'] as const).map((piece) => {
+      const at = PIECES[piece].onward;
+      if (piece === 'tree') this.treeView(wide, at, 1);
+      else this.millView(wide, at, 1);
+      return { s: this.nodes[this.pieceAt[piece]].s, bearing: Math.atan2(this.stationEye.x - at.x, this.stationEye.z - at.z) };
+    });
+    this.laying = [layLens(this.nodes, obstacles, false, anchors(1)), layLens(this.nodes, obstacles, true, anchors(0))];
+  }
+
+  /** Lays the walking lens for up to `ms` milliseconds, or to the end. */
+  prepare(ms = Infinity): void {
+    const until = performance.now() + ms;
+    while (!this.lens && performance.now() < until) {
+      const at = this.laid.length, step = this.laying[at].next();
+      if (step.done) this.laid.push(step.value);
+      if (this.laid.length === 2) this.lens = { wide: this.laid[0], upright: this.laid[1] };
+    }
   }
 
   /** How far along her way the place on it nearest `p` is. */
@@ -668,14 +780,20 @@ export class RoofRun {
   frame(shot: Shot, dt: number): number {
     const k = tuning.drownedCamera.run;
     const c = this.cast.child.position;
+    this.prepare();
+    const lens = this.lens!;
     const wide = THREE.MathUtils.smoothstep(this.aspect, 0.7, 1.3);
     const ease = (rate: number) => 1 - Math.exp(-dt * rate);
+    if (this.framed && dt > 0) this.velocity.lerp(this.tmp.subVectors(c, this.was).divideScalar(dt).setY(0), ease(k.steady));
+    this.was.copy(c);
+    const y = this.focus.y;
     this.focus.lerp(c, this.framed ? ease(k.follow) : 1);
+    this.focus.y = this.framed ? y + (c.y - y) * ease(k.followDown) : c.y;
     this.framed = true;
-    const i = THREE.MathUtils.clamp(this.along / LENS_STEP, 0, this.lens.wide.length - 1.001);
+    const i = THREE.MathUtils.clamp(this.along / LENS_STEP, 0, lens.wide.length - 1.001);
     const j = Math.floor(i), u = i - j;
     const key = (keys: LensKey[], field: keyof LensKey) => THREE.MathUtils.lerp(keys[j][field], keys[j + 1][field], u);
-    const blend = (field: keyof LensKey) => THREE.MathUtils.lerp(key(this.lens.upright, field), key(this.lens.wide, field), wide);
+    const blend = (field: keyof LensKey) => THREE.MathUtils.lerp(key(lens.upright, field), key(lens.wide, field), wide);
     const bearing = blend('bearing'), reach = blend('reach'), facing = blend('facing');
     this.eye.set(this.focus.x + Math.sin(bearing) * reach, this.focus.y + blend('rise'), this.focus.z + Math.cos(bearing) * reach);
     this.target.set(this.focus.x + Math.sin(facing) * k.lead, this.focus.y + k.aim, this.focus.z + Math.cos(facing) * k.lead);
@@ -692,13 +810,22 @@ export class RoofRun {
       this.target.lerp(this.stationTarget, at);
       this.eye.set(this.target.x + Math.sin(bearing) * reach, this.target.y + rise, this.target.z + Math.cos(bearing) * reach);
     }
+    /**
+     * Asked to stand a little ahead of where it should be as she walks, by as far as the focus and the rig's easing
+     * trail behind a steady walk (never at more than a walk's pace), so the eased lens stands where it was laid
+     * rather than lagging back into the roofs; upright it looks that much ahead too, so the narrow frame keeps her.
+     */
+    const response = Math.min(tuning.cinematography.maxResponse, k.pace * tuning.cinematography.framingResponse);
+    const lead = this.tmp.copy(this.velocity).clampLength(0, k.steadiest).multiplyScalar((1 / k.follow + 2 / response) * (1 - at));
+    this.eye.add(lead);
+    this.target.addScaledVector(lead, 1 - wide);
     shot.free = false;
     shot.from = undefined;
     shot.subjects = undefined;
     shot.attention = undefined;
     shot.composition = undefined;
     shot.smoothFit = undefined;
-    shot.zoom = undefined;
+    shot.zoom = THREE.MathUtils.lerp(THREE.MathUtils.lerp(1, k.zoom, wide), 1, at);
     shot.fitWidth = false;
     shot.obstacles = undefined;
     shot.eye = (shot.eye ?? new THREE.Vector3()).copy(this.eye);
@@ -721,7 +848,7 @@ export class RoofRun {
       const wait = this.nodes[i - 1].s, over = this.nodes[i].s;
       const come = piece === 'swing' ? k.swingFrom : k.comeFrom;
       const coming = THREE.MathUtils.smootherstep(this.along, wait - come, wait - k.comeTo);
-      const leave = piece === 'mill' ? k.millLeave : k.leaveTo;
+      const leave = piece === 'mill' ? k.millLeave : piece === 'tree' ? k.treeLeave : k.swingLeave;
       const going = this[piece].done && this.stage !== piece ? THREE.MathUtils.smootherstep(this.along, over + k.leaveFrom, over + leave) : 0;
       const w = this.stage === piece ? 1 : coming * (1 - going);
       if (w > best) { best = w; which = piece; }
@@ -738,41 +865,47 @@ export class RoofRun {
   }
 
   /**
-   * Behind her and out to the west, looking over her shoulder across the lane to the tree, high enough to see over the
-   * garden wall to the water round its foot: she faces away from the lens to the tree, it falls across the frame, and
-   * she walks away up it, so the lens never has to come round to meet her. Upright, straight behind her and higher.
+   * Off the east end of her ridge, the side away from the boat and clear of the chimney, looking across her at the
+   * tree, high enough to see over the garden wall to the water round its foot: she faces the tree side on, it falls
+   * across the frame to her, and as she walks out along it the lens comes round behind her, wide of and over the
+   * chimney, so it is there when she steps off and never has to come round to meet her. Upright, further round
+   * behind her, further off and higher, so she and the tree stack up the narrow frame.
    */
-  private treeView(wide: number): void {
+  private treeView(wide: number, c: THREE.Vector3 = this.cast.child.position, on = this.onTrunk): void {
     const k = tuning.drownedCamera.run;
-    const c = this.cast.child.position, root = TREE_SITE.spot.root, rest = TREE_SITE.spot.rest;
-    const on = this.onTrunk;
+    const root = TREE_SITE.spot.root, rest = TREE_SITE.spot.rest, over = TREE_SITE.spot.over;
+    const ox = over.x - rest.x, oz = over.z - rest.z;
+    const crossed = on * THREE.MathUtils.smoothstep(((c.x - rest.x) * ox + (c.z - rest.z) * oz) / (ox * ox + oz * oz), 0.4, 1);
     const away = this.tmp2.set(rest.x - root.x, 0, rest.z - root.z).normalize();
-    const turn = THREE.MathUtils.lerp(0, k.treeTurn, wide);
+    const turn = THREE.MathUtils.lerp(THREE.MathUtils.lerp(k.uprightTreeTurn, k.treeTurn, wide), k.treeOver, crossed);
     const sx = -away.z, sz = away.x;
     const ex = away.x * Math.cos(turn) + sx * Math.sin(turn), ez = away.z * Math.cos(turn) + sz * Math.sin(turn);
-    const from = this.scratch.copy(rest).lerp(c, on * 0.5);
-    const back = THREE.MathUtils.lerp(k.uprightTreeBack, k.treeBack, wide);
-    this.stationEye.set(from.x + ex * back, THREE.MathUtils.lerp(k.uprightTreeHigh, k.treeHigh, wide), from.z + ez * back);
+    const from = this.scratch.copy(rest).lerp(c, on * (0.5 + 0.5 * crossed));
+    const back = THREE.MathUtils.lerp(k.uprightTreeBack, k.treeBack + k.treeBulge * Math.sin(Math.PI * crossed), wide);
+    this.stationEye.set(from.x + ex * back, THREE.MathUtils.lerp(k.uprightTreeHigh, k.treeHigh + k.treeLift * Math.sin(Math.PI * crossed), wide),
+      from.z + ez * back);
     this.stationTarget.set((rest.x + root.x) / 2, 2.6, (rest.z + root.z) / 2).lerp(this.tmp.copy(c).setY(c.y + 1), on * 0.5);
   }
 
   /**
    * In front of the sails, out to the south side of her wall so the cottage she came over is clear of it, looking past
    * her at the sail she will ride, the hub and the high roof beyond; it rises with her only enough to show the water
-   * below, and follows her along the high ridge so the mill leaves the frame.
+   * below, and follows her in along the high ridge so the mill leaves the frame and the church and the lighthouse come
+   * into it beyond her. Upright, further to the south side, clear of the cottage's chimney.
    */
-  private millView(wide: number): void {
-    const m = this.mill.mill, c = this.cast.child.position;
+  private millView(wide: number, c: THREE.Vector3 = this.cast.child.position, ahead = THREE.MathUtils.smootherstep(this.millAhead, 0, 1)): void {
+    const m = this.mill.mill;
     const p = m.group.worldToLocal(this.tmp.copy(c));
     const board = railAt(tuning.crossings.mill.board, tuning.crossings.mill.stand);
     const rise = THREE.MathUtils.clamp((p.y - MILL.waitTop) / (MILL.offRidge - MILL.waitTop), 0, 1);
-    const x = Math.min(p.x, board.x), ahead = THREE.MathUtils.smootherstep(this.millAhead, 0, 1);
+    const x = Math.min(p.x, board.x);
     const k = tuning.drownedCamera.run;
-    const eye = this.stationEye.set(x + k.millAside - 4 * ahead, 2.5 + 0.7 * p.y + 0.6 * ahead, k.millOut - 0.8 * rise);
+    const eye = this.stationEye.set(x + k.millAside - k.millOn * ahead, 2.5 + 0.7 * p.y + 0.6 * ahead, k.millOut - 0.8 * rise - k.millIn * ahead);
     const target = this.stationTarget.set(x + 0.9 - 5.5 * ahead, 0.8 + 0.8 * p.y, 0);
     if (wide < 1) {
-      eye.lerp(this.tmp2.set(x + k.millAside - 1 - 2.5 * ahead, 2.4 + 0.7 * p.y, k.millOut + 3), 1 - wide);
-      target.lerp(this.tmp2.set(x + 0.6 - 3 * ahead, p.y + 1.9, 0), 1 - wide);
+      eye.lerp(this.tmp2.set(x + k.millAside + k.uprightMillAside - k.millOn * ahead, 2.5 + 0.7 * p.y + 0.6 * ahead,
+        k.millOut - 0.8 * rise - k.millIn * ahead), 1 - wide);
+      target.lerp(this.tmp2.set(x + 0.9 - 5.5 * ahead, 1.3 + 0.8 * p.y, 0), 1 - wide);
     }
     m.group.localToWorld(eye);
     m.group.localToWorld(target);
@@ -780,15 +913,18 @@ export class RoofRun {
 
   /**
    * Low off the west of the green, side on to her arc: the old tree at the edge of the frame, its bough across the
-   * top, the nave on the left. Upright, behind her and a little above, so each swing goes away up the frame.
+   * top, the nave on the left. Upright, further round to the north-west and a little higher, clear of the old tree's
+   * crown, with the tower and the lighthouse stacked over her, looking half at her so she stays in the narrow frame
+   * when she lands.
    */
   private swingView(wide: number): void {
     const pivot = SWING_SITE.spot.pivot;
     this.stationEye.set(pivot.x - 21, 3.1, pivot.z - 1.6);
     this.stationTarget.set(pivot.x, 3.5, pivot.z - 1.4);
     if (wide >= 1) return;
-    this.stationEye.lerp(this.tmp2.set(pivot.x - 11.5, 5.6, pivot.z + 10), 1 - wide);
-    this.stationTarget.lerp(this.tmp2.set(pivot.x + 2.2, 2.6, pivot.z - 4), 1 - wide);
+    this.stationEye.lerp(this.tmp2.set(pivot.x - 16.5, 4.2, pivot.z + 5.7), 1 - wide);
+    const c = this.cast.child.position;
+    this.stationTarget.lerp(this.tmp2.set(pivot.x + 1.1, 2.6, pivot.z - 0.3).lerp(this.tmp.copy(c).setY(c.y + 1.2), 0.5), 1 - wide);
   }
 
   /** Low off the west end of the nave, looking along its ridge to her at the tower's foot, the tower over her. */

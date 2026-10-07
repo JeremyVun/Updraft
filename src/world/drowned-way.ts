@@ -549,7 +549,7 @@ export function darkWayPoint(reach: number, out: THREE.Vector2): THREE.Vector2 {
  * its stem fetches up against the trunk.
  */
 export const BOAT_ADRIFT: THREE.Vector2[] = (() => {
-  const way = [STRAND.clone(), ...[[-14, -1399.5], [-17, -1410], [-18, -1425], [-17, -1430], [-9, -1440], [-2.5, -1452],
+  const way = [STRAND.clone(), ...[[-15, -1398.5], [-20.5, -1408], [-21, -1424], [-17, -1430], [-9, -1440], [-2.5, -1452],
     [-1.5, -1466], [-1.5, -1490], [-9.5, -1519], [-10.5, -1535], [-11.5, -1550], [-9, -1568], [2, -1576], [16, -1576], [25.5, -1569]]
     .map(([x, z]) => new THREE.Vector2(x, z))];
   const last = way[way.length - 1];

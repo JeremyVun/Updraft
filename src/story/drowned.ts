@@ -330,6 +330,7 @@ export class DrownedChapter implements Chapter {
     if (p.held) p.hold(c);
     this.cat.update(dt, time);
     c.lean = this.cat.holding && this.cat.step !== 'aboard' ? 0.1 : 0;
+    this.run?.prepare(tuning.drownedCamera.run.layFor);
     if (this.beat === 'run' || this.beat === 'nave') this.run!.update(dt);
     else if (this.run && this.run.stage !== 'off') this.run.tend(dt);
     if (this.church && this.church.step !== 'off') this.church.update(dt);

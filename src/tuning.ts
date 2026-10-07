@@ -1918,30 +1918,54 @@ export const tuning = {
     /** Her run over the roofs (`RoofRun.frame`). */
     run: {
       /**
-       * Beside her on her own way: how quickly it follows her (per second), the stretch of way behind and ahead of her
-       * whose line it stands across, how quickly it turns with that line, how far back from abeam it stands (radians,
-       * landscape and upright), how far off at most, how far above her feet and the lowest and highest it goes, how far
-       * along her way it looks, how high above her feet, and its pace.
+       * Beside her on her own way: how quickly it follows her across and up and down, and steadies its sense of her
+       * pace (per second), and the most it takes that to be (m/s); the stretch of way behind and ahead of her whose
+       * line it stands across, how far round from the fog's body toward the church it looks (a share of the angle
+       * between them, the fog's body taken that far along its front from the way), upright how far back from abeam on
+       * her left it stands (radians), how far off at most, how far above her feet and the lowest and highest it goes,
+       * how far along her way it looks, how high above her feet, its pace, and how far it widens to hold the fog and
+       * the church together (landscape, eased back at each piece).
        */
-      follow: 2.2, behind: 6, ahead: 12, turn: 0.45, back: 0.4, uprightBack: 1.15, distance: 10, uprightDistance: 9,
-      rise: 1.5, uprightRise: 2.6, lowest: 2.2, highest: 5.2, lead: 2.5, aim: 1.0, pace: 0.7,
+      follow: 2.2, followDown: 5, steady: 2, steadiest: 1.4, behind: 6, ahead: 12, churchShare: 0.5, fogAside: 80, uprightBack: 1.5, distance: 10, uprightDistance: 12,
+      rise: 1.5, uprightRise: 2.6, lowest: 3, highest: 7, lead: 1, aim: 1.0, pace: 0.7, zoom: 0.85,
+      /** How far it keeps off the side of a house, wall or chimney it stands lower than the top of, and over a chimney, metres. */
+      clearOf: 1.6,
+      /**
+       * How it is laid along her way (`layLens`): what it costs to stand a radian (squared) from where it wants, to be
+       * drawn in all the way, to stand `lifted` metres higher to see her over a roof, to turn a radian (squared) between
+       * steps of the way, draw in or out or rise or fall between them, and to stand where a roof hides her or she would
+       * walk toward it (within the angle whose cosine is `toward` of the way she is going).
+       */
+      offCost: 3, inCost: 1.5, lifted: 1.3, liftCost: 0.6, turnCost: 80, pullCost: 8, riseCost: 6, blocked: 200, toward: 0.35,
+      /** What it costs for each metre a roof, wall or chimney comes within `crowdNear` of the near half of its sightline. */
+      crowdNear: 1.5, crowdCost: 8,
+      /** Over how many metres past a piece it is drawn to start from where that piece's view leaves it, and how strongly. */
+      anchorFor: 10, anchorCost: 40,
+      /** Milliseconds a frame spends laying it from the start of the room, so it is ready long before she sets off. */
+      layFor: 2,
       /**
        * Round to each piece's own view from `comeFrom` to `comeTo` metres before she reaches it, and back to her own way
-       * from `leaveFrom` to `leaveTo` metres past it; to the end's view over the last `endFrom` metres.
+       * from `leaveFrom` metres past it (over each piece's own stretch, below); to the end's view over the last
+       * `endFrom` metres.
        */
-      comeFrom: 16, comeTo: 3, leaveFrom: 0, leaveTo: 14, endFrom: 8,
+      comeFrom: 16, comeTo: 3, leaveFrom: 0, endFrom: 8,
       /**
-       * Off the mill she is soon over the high roof's back, out of its view, so the lens leaves it sooner; and it comes
+       * Off the mill she is soon over the high roof's back, out of its view, so the lens leaves it sooner, off the
+       * tree she turns up the lane at once, and off the swing she has only the nave's ridge to the tower; and it comes
        * round to the swing's view only once she has turned off the green cottage's ridge, never walking her into it.
        */
-      millLeave: 5, swingFrom: 6,
+      millLeave: 5, treeLeave: 6, swingLeave: 3, swingFrom: 6,
       /**
-       * The tree's view: how far round to the west from straight behind her (radians), how far back and how high it
-       * stands (upright, the same).
+       * The tree's view: how far round to the west from straight behind her (radians; east is negative) while she
+       * waits and once she is most of the way over, how far back and how high it stands and how much further out and
+       * up it swings as it comes round (upright, the same).
        */
-      treeTurn: 0.65, treeBack: 13, treeHigh: 4.6, uprightTreeBack: 11, uprightTreeHigh: 6.5,
-      /** The mill's view: how far to the side of her wall and out in front of the sails it stands. */
-      millAside: 5.4, millOut: 11.5,
+      treeTurn: -1.9, treeOver: -0.55, treeBack: 12, treeHigh: 4.8, treeBulge: 4, treeLift: 1.2, uprightTreeTurn: -1.2, uprightTreeBack: 16, uprightTreeHigh: 6.5,
+      /**
+       * The mill's view: how far to the side of her wall and out in front of the sails it stands, and how far it comes
+       * on along the high ridge and in toward it as she walks off the sail; upright, how much further to the side.
+       */
+      millAside: 5.4, millOut: 11.5, millOn: 1.5, millIn: 4, uprightMillAside: 2.2,
       /** The end's view: how far back along the nave, how high, and how far out over the green. */
       naveBack: 10, naveHigh: 3.6, naveAside: 11,
     },
