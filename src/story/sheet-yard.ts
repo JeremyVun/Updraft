@@ -47,7 +47,7 @@ function lineThrough(): { from: THREE.Vector3; to: THREE.Vector3; start: number;
   let sagS = 0.07, sagE = 0.05;
   for (let i = 0; i < 4; i++) {
     const s = new THREE.Vector3(START_X, R0 + REACH + HOLD_DROP + sagS, 0);
-    const e = new THREE.Vector3(END_X, R1 + 0.1 + HANG + HOLD_DROP + k.holdDip + sagE, 0);
+    const e = new THREE.Vector3(END_X, R1 + 0.28 + HANG + HOLD_DROP + k.holdDip + sagE, 0);
     const dir = e.clone().sub(s);
     from = s.clone().addScaledVector(dir, (NEAR_STACK - s.x) / dir.x);
     to = s.clone().addScaledVector(dir, (FAR_STACK - s.x) / dir.x);

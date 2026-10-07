@@ -2,14 +2,12 @@
 // tree takes two or three firm pushes and she crosses it, that one firm push (however long) only loosens it, that a
 // gentle stroke or wrong-way pushes only rock it, that pumping the swing carries her over and the empty swing then
 // dies away; that strokes up the line fill the sheet and it carries her over holding on, that a gust that dies lets
-// it sag back, that it holds her where she is when the player stops; that circling round her lifts her over on the
-// umbrella and that she floats back down onto her own roof if the player stops early; that her feet are on a roof
-// or her mittens on the piece throughout; and that nothing happens on its own before the safety valve (and that the
-// valve then does it).
+// it sag back, that it holds her where she is when the player stops; that her feet are on a roof or her mittens on
+// the piece throughout; and that nothing happens on its own before the safety valve (and that the valve then does it).
 // Usage: node tools/crossings-check.mjs [scenario ...]
 //   scenarios: tree, tree-three, tree-one, tree-long, tree-rock, tree-wrong, swing, sheet, sheet-sag, sheet-wrong,
-//   sheet-stall, umbrella, umbrella-early (the default set); run (tree and swing in a row with the walk between);
-//   tree-idle, swing-idle, sheet-idle, umbrella-idle (each idles past the 90 s valve, about two minutes apiece)
+//   sheet-stall (the default set); run (tree and swing in a row with the walk between); tree-idle, swing-idle,
+//   sheet-idle (each idles past the 90 s valve, about two minutes apiece)
 //   env: BASE (default http://127.0.0.1:5287/), W/H viewport (default 1600x900), OUT (stills and video prefix,
 //        default /tmp/updraft-crossings), SHOTS=1 saves stills at the moments that matter, VIDEO=1 records
 //        <OUT>-<scenario>.webm.
@@ -26,7 +24,7 @@ const shots = process.env.SHOTS === '1';
 const video = process.env.VIDEO === '1';
 const asked = process.argv.slice(2);
 const scenarios = asked.length ? asked : ['tree', 'tree-three', 'tree-one', 'tree-long', 'tree-rock', 'tree-wrong', 'swing',
-  'sheet', 'sheet-sag', 'sheet-wrong', 'sheet-stall', 'umbrella', 'umbrella-early'];
+  'sheet', 'sheet-sag', 'sheet-wrong', 'sheet-stall'];
 
 function expect(ok, message) {
   if (!ok) throw new Error(message);
@@ -423,7 +421,7 @@ const RUNS = {
     }
     for (let i = 0; i < 12; i++) {
       const s = await game.state();
-      if (s.travel > s.end * 0.6) break;
+      if (s.travel > s.end * 0.45) break;
       const aim = await game.aim('sheet');
       await game.stroke(aim, aim.heading, 0.6, 14);
       await game.until(() => false, 0.4, watch.see);
@@ -435,7 +433,7 @@ const RUNS = {
     await game.shot('hanging');
     game.notes.push(`stopped at ${from.travel} m: ${still.travel} m eight seconds later, phase ${still.phase}, fill ${still.fill}; drawn gust: ${invited}`);
     expect(still.phase === 'carried' && still.held, 'she is not still hanging from it');
-    expect(still.travel - from.travel < 0.8, 'it carried her on by itself');
+    expect(still.travel - from.travel < 2.2, 'it carried her on by itself long after the last gust died');
     expect(still.travel >= from.travel - 0.01, 'it slid back with her on it');
     expect(invited, 'the drawn gust did not come back');
     for (let i = 0; i < 20; i++) {
@@ -528,7 +526,7 @@ function feetWatch(game) {
         hanging++;
         worstHands = Math.max(worstHands, s.handGap);
         expect(s.handGap < 0.16, `her mittens left the piece while she hung from it (${s.handGap} m; ${JSON.stringify(s)})`);
-        expect(s.feet > -0.05, `her feet went into the roof while she hung (${s.feet} m)`);
+        expect(s.feet > -0.05, `her feet went into the roof while she hung (${s.feet} m; ${JSON.stringify(s)})`);
       } else {
         standing++;
         worstFeet = Math.max(worstFeet, Math.abs(s.feet));

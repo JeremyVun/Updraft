@@ -220,10 +220,10 @@ export class SheetCrossing {
     const fx = Math.sin(c.yaw), fz = Math.cos(c.yaw), swing = HANG * Math.sin(this.swing);
     this.at.set(this.hands.x - fx * UNDER + a.x * swing, this.hands.y - HANG * Math.cos(this.swing), this.hands.z - fz * UNDER + a.z * swing);
     /** Until the climbing line lifts her off the end of her ridge, her heels drag on it. */
-    if (Math.hypot(this.at.x - this.way.wait.x, this.at.z - this.way.wait.z) < 0.45) this.at.y = Math.max(this.at.y, this.way.wait.y);
+    if (Math.hypot(this.at.x - this.way.wait.x, this.at.z - this.way.wait.z) < 0.7) this.at.y = Math.max(this.at.y, this.way.wait.y);
     const lift = THREE.MathUtils.smootherstep(this.lift, 0, 1);
     c.position.lerpVectors(this.from, this.at, lift);
-    c.lookAt = this.look.copy(this.way.stepOff).setY(this.way.stepOff.y + 1.4);
+    c.lookAt = s.travel < s.end - 0.6 ? s.middle(this.look) : this.look.copy(this.way.stepOff).setY(this.way.stepOff.y + 1.4);
 
     if (s.travel < s.end) {
       this.endFor = 0;

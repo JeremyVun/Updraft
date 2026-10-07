@@ -2168,7 +2168,7 @@ export const tuning = {
        * screen heights a second count for `soft` of that, at `firm` for all of it. How near the cloth on screen a
        * stroke must pass (screen heights).
        */
-      lag: 0.14, hold: 1.5, push: 2.3, against: 0.7, pressMax: 1.25, backMax: 0.45,
+      lag: 0.14, hold: 1.1, push: 2.3, against: 0.7, pressMax: 1.25, backMax: 0.45,
       gentle: 0.5, firm: 2.2, soft: 0.3, reach: 0.06,
       /** How quickly the fill follows the press (per second), and the fill that sounds full. */
       fillRate: 5, fullAt: 0.55,
@@ -2180,11 +2180,11 @@ export const tuning = {
        * She takes hold once it is `takeAt` full for `takeFor` seconds, reaching up for `reachFor` seconds. Full, it
        * carries her `carry` metres a second up the line, nothing below `carryFrom`; her speed eases over `coast` s.
        */
-      takeAt: 0.55, takeFor: 0.2, reachFor: 0.5, carry: 1.5, carryFrom: 0.2, coast: 0.5,
+      takeAt: 0.55, takeFor: 0.2, reachFor: 0.5, carry: 1.5, carryFrom: 0.3, coast: 0.5,
       /** How her body swings under her hands as the sheet starts and stops (per second squared, per second). */
       swingPull: 14, swingDamping: 2.2,
       /** Hanging, how much of the way from up the line toward the lens she turns, so her face is seen. */
-      turnToLens: 0.55,
+      turnToLens: 0.85,
       /** Seconds without a useful stroke before the drawn gust; with no progress before the world's own gusts. */
       inviteAfter: 5, valveAfter: 90, valveEvery: 1.4, valvePush: 0.45,
     },

@@ -62,7 +62,9 @@ void main() {
   float ndl = max(dot(n, uSunDir), 0.0);
   float sun = cloudShadow(vWorld.xz);
   float through = abs(dot(n, uSunDir)) * (1.0 - step(0.0, dot(n, uSunDir)));
-  vec3 col = alb * (0.5 * (hemiLight(n) + hemiLight(-n)) + uSunColor * sun * (ndl + uThrough * through));
+  /** Thin cloth scatters: light wraps round its folds rather than leaving them in hard shadow. */
+  float wrap = dot(n, uSunDir) * 0.5 + 0.5;
+  vec3 col = alb * (0.5 * (hemiLight(n) + hemiLight(-n)) * 0.85 + uSunColor * sun * (mix(ndl, wrap * wrap, 0.55) + uThrough * through) + 0.06);
   vec3 V = normalize(cameraPosition - vWorld);
   float rim = pow(1.0 - clamp(abs(dot(n, V)), 0.0, 1.0), 3.0) * pow(max(dot(-V, uSunDir), 0.0), 2.0);
   col += uSunColor * rim * sun * 0.18;
@@ -381,7 +383,7 @@ export class WashSheet {
     this.spread = 0;
     this.middle(this.tmp);
     wind.addSplat({ source: this, ax: this.tmp.x, az: this.tmp.z, bx: this.tmp.x, bz: this.tmp.z,
-      vx: input.gustDir.x * input.gust, vz: input.gustDir.y * input.gust, radius: 3, energy: Math.min(0.8, input.gust / 20) * hit, lift: 0, swirl: 0 });
+      vx: input.gustDir.x * input.gust, vz: input.gustDir.y * input.gust, radius: 2, energy: Math.min(0.3, input.gust / 40) * hit, lift: 0, swirl: 0 });
     return push;
   }
 
