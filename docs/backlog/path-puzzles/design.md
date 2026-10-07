@@ -552,19 +552,20 @@ So the existing drowned village and storm code may be refactored as far as the r
   beside the high roof and she walks off its end. The boarding and stepping-off heights follow from that arc in the
   blockout; the mill keeps the concept's size, and the cygnet stays tucked clear. The mill leaves the frame as the
   church and the lighthouse come back into view.
-- **A whole village the sea has taken** (Jeremy, 2026-10-07, quoted above; Astra's concept `comps/village/`, painted
-  over today's frames `today-*.png`, with `house-kit.png` and `notes.md`). Today it reads as a dozen identical sheds on
-  empty sea. It becomes a place with a shape: cottages in short rows of three to five whose turns imply drowned lanes,
-  broad water between clusters, groups on every side to the horizon (gold silhouettes into the sun), a few farm
-  outliers, and the green left as a clearing of water. The houses vary from one shared kit (slate and thatch, gabled and
-  hipped, a dormer or a dark attic window, bargeboards, ridge caps, stacks of two or three pots; a barn with a lean-to,
-  the pub's wordless fish sign, a low school bell-cote well away from the church), most of them ordinary. Village life
-  shows in a few coherent lines rather than scattered clutter: telegraph poles with one sagging wire along a lane,
-  garden wall copings and gate posts, two or three orchard trees still in autumn leaf among the dead ones, a gull on a
-  pot, a pair of ducks off the way. Windows stay dark so the lantern is the warm light. The near water stays open and
-  quiet; density goes to the middle distance and the horizon; nothing crowds the views of the church and the
-  lighthouse or of the fog coming, and nothing on the way becomes an obstacle. Roof shapes and the village's layout do
-  the work, not texture.
+- **A whole village the sea has taken** (Jeremy, 2026-10-07, quoted above; then: "it doesn't need to be super
+  realistic detailed btw. remember, this is a dream and it should feel surreal like one."). Today it reads as a dozen
+  identical sheds on empty sea. It becomes a place with a shape: cottages in short rows whose turns imply drowned
+  lanes, broad water between clusters, groups on every side to the horizon (gold silhouettes into the sun), and the
+  green left as a clearing of water. It is a village remembered in a dream, not surveyed: shape, colour and light over
+  detail (`docs/styles.md`), simple soft forms whose variety comes from proportion, roof colour, lean and scale rather
+  than ornament; no slate courses, moss, signs or anything recognisably of one country or era (no telegraph poles,
+  pub signs or school bells: "nowhere real"). A few quiet surreal touches carry the dream, in the game's dream logic
+  where things recur in the wrong place and nobody remarks on it: pieces of home out of place (the red door, washing on
+  a line), gentle impossible leans and shifts of scale, a lamp still glowing under the water. Windows stay dark so the
+  lantern is the warm light. The near water stays open and quiet; density goes to the middle distance and the horizon;
+  nothing crowds the views of the church and the lighthouse or of the fog coming, and nothing on the way becomes an
+  obstacle. Concept: `comps/village/` (a first, too literal round painted over today's frames `today-*.png`; the dream
+  round `dream-*.png` supersedes it).
 - **The run is built on decks** (`src/world/decks.ts`): ridges, wall tops and the fallen trunk are strips the child
   walks; the slates up to a ridge are ramps. She gets out with `alight` onto the cottage's slates and back in with
   `board` at the nave.
