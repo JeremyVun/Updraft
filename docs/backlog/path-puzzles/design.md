@@ -485,6 +485,29 @@ it is built and keeping open water between the houses.
 So the existing drowned village and storm code may be refactored as far as the room needs; the concept frames in
 `comps/drowned/` are a guide to take from, not a target to match (they still show the drained village, which is cut).
 
+### Jeremy's first play (2026-10-08, verbatim)
+
+> good first start, but it needs a ton more polish. Some isues i'm seeing
+>
+> - it's not clear why the child doesn't just ride the boat, why does the boat keep following them?
+> - The cat is as small as a rate, the animations aren't on point, It's not emotive enough to signal the rescue, the
+>   bucket it rides in has no water masking, it's hard to move around with wind.
+> - I thought the child would have to climb into the tower to "hide" from the fog
+> - the child just kind of abandons the cat in the tower
+> - there's too much dead space with the child just walking from the tree to the swing. We need more puzzles /
+>   challenges
+> - The pacing of the fog doesn't make sense. It rushes out, then stops, then I basically forget that it was even there
+>   while the child was walking over the roofs. This is probably the one thing i need you to take a look at connecting
+>   to the narrative. The fog as it stands is currently confusing and not at all connected to the over the roof
+>   sequence.
+> - The background music is just one single tone
+> - Camera direction and choreography needs a deep rethink. Subjects aren't framed properly, and in the player
+>   interactivity sequences it's not framed properly either.
+
+These reopen the room's design from the air dying to the boat leaving; the sections below answer them and supersede
+what they contradict. Found on reading the code: the run, the church and the bring loop the score's 14 s becalmed
+section (`drownedScore` returns `still` for `run`, `nave` and `church`), which is the one tone.
+
 ### How it is made (Claude's calls under that ownership, 2026-10-05)
 
 - **Pacing.** Arrival and calm drift about 30 s; the cat about 30–60 s; a short drift with the cat aboard (the cygnet
