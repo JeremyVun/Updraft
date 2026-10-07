@@ -67,6 +67,8 @@ const KITE_WAITS = (() => {
 /** Where she stands to take it all in, a step in from the lip, and the bird beside her. */
 const TAKE_IN = SIT.clone().addScaledVector(TOP_OUT, -0.45);
 const BIRD_TAKES_IN = SLIPPERS.clone().addScaledVector(TOP_OUT, -0.4);
+/** It stops a little short of where it makes for, so it is sent past the slippers, away from her, to keep clear of her coat. */
+const BIRD_NESTS = SLIPPERS.clone().addScaledVector(SLIPPERS.clone().sub(SIT).setY(0).normalize(), 0.5);
 /**
  * How long the lens rests over her shoulder into the sun, once it has come round with the swans, before the boat sets
  * off out of the cloud; how long after that they watch where the swans went before they turn to each other; and the
@@ -124,6 +126,9 @@ const SEA_RIDE = DRAFT;
 const POINTER_OVER_HULL = 1;
 /** The white on the sea goes grey and blue with the dusk. */
 const DUSK_MIST = new THREE.Color(0.9, 0.96, 1.14);
+/** The gold of the low sun on the cloud, as `cloudGold` in the shaders. */
+const CLOUD_GOLD = new THREE.Color(1.0, 0.8, 0.52);
+const luma = (c: THREE.Color): number => c.r * 0.2126 + c.g * 0.7152 + c.b * 0.0722;
 
 /** One stop on the way up: where to stand and the level of the landing or flight it is on. */
 interface Stop { x: number; z: number; level: number }
@@ -628,18 +633,27 @@ export class StairsChapter implements Chapter {
     this.world.trickShown = this.beat === 'loop' ? e : this.looped ? 1 - this.trickGone : 0;
     this.world.undraw = this.revealFrom < 0 ? 0 : THREE.MathUtils.smoothstep(this.now - this.revealFrom, REVEAL_HOLD + 0.4, REVEAL - 1);
     this.world.bank.amount = this.cast.child.position.y > levelHeight(LOOP.corner - 1) - 1 ? 1 : 0;
-    this.cast.cygnet.nudge = this.beat === 'loop' || this.lofted ? this.drawnDepth() : null;
+    const k = this.cast.cygnet;
+    const drawn = k.scale < 1;
+    k.nudge = this.beat === 'loop' || this.lofted ? drawn ? this.drawnDepth(k.position) : 0 : null;
+    k.nudgeSlope.set(0, 0, 0);
+    if (k.nudge === null || !drawn) return;
+    // The flight is pushed back more the higher up it is, so the bird is too, or its tail sinks behind the treads.
+    for (let axis = 0; axis < 3; axis++) {
+      const h = 0.05;
+      const ahead = this.drawnDepth(this.tmp.copy(k.position).setComponent(axis, k.position.getComponent(axis) + h));
+      const behind = this.drawnDepth(this.tmp.copy(k.position).setComponent(axis, k.position.getComponent(axis) - h));
+      k.nudgeSlope.setComponent(axis, (ahead - behind) / (2 * h));
+    }
   }
 
   /**
    * Seen from far above the loop the bird is drawn where it is, not pulled toward the lens, so the rails it walks
    * beside stand in front of it. Up the drawn-in flight, drawn smaller, it is pushed back to where it seems to be.
    */
-  private drawnDepth(): number {
-    const k = this.cast.cygnet;
-    if (k.scale >= 1) return 0;
-    const d = k.position.distanceTo(this.world.eye);
-    return d * (1 - 1 / k.scale) / Math.max(0.2, THREE.MathUtils.smoothstep(d, 9, 34));
+  private drawnDepth(p: THREE.Vector3): number {
+    const d = p.distanceTo(this.world.eye);
+    return d * (1 - 1 / sizeOnBack(p)) / Math.max(0.2, THREE.MathUtils.smoothstep(d, 9, 34));
   }
 
   private measureAir(dt: number): void {
@@ -932,7 +946,7 @@ export class StairsChapter implements Chapter {
     const { child: c, cygnet: k } = this.cast;
     this.to('nest');
     k.watch(null);
-    k.errand = this.birdAt.set(SLIPPERS.x, 0, SLIPPERS.z - 0.05);
+    k.errand = this.birdAt.copy(BIRD_NESTS);
     k.stay = false;
     c.walkTo(SIT.x, SIT.z, false, () => {
       c.faceToward(SIT.x + TOP_OUT.x, SIT.z + TOP_OUT.z, 1);
@@ -1091,7 +1105,8 @@ export class StairsChapter implements Chapter {
     boat.mooring = CLOUD_BERTH;
     boat.becalmed = 1;
     const S = THREE.MathUtils.smoothstep;
-    const cruise = THREE.MathUtils.lerp(1.2, 4, S(left, 3, 20)) + FAR_OUT_SPEED * S(left, 20, 70);
+    // Well slowed by the time it is near, so it is plainly coming alongside rather than running into them.
+    const cruise = THREE.MathUtils.lerp(1.2, 3.2, S(left, 3, 20)) + FAR_OUT_SPEED * S(left, 35, 95);
     boat.speed = Math.max(boat.speed, cruise * S(this.comingFor += dt, 0, 3));
     this.world.sailing(boat, dt);
   }
@@ -1272,9 +1287,9 @@ export class StairsChapter implements Chapter {
     const fog = this.world.cloud.fog.ask();
     const u = atmo.uniforms;
     this.mist = Math.min(1, this.mist + dt / 4);
-    // The white up there: the low sun through it, and the sky.
-    fog.light.copy(u.uSunColor.value).multiplyScalar(0.3).add(this.mistLight.copy(u.uSkyAmbient.value).multiplyScalar(1.2))
-      .add(this.tmpColor.copy(u.uSkyHorizon.value).multiplyScalar(0.3));
+    // The white up there: cream, the low sun through it and the light of the sky, without the sky's colours, as the cloud is lit.
+    fog.light.copy(CLOUD_GOLD).multiplyScalar(0.33 * luma(u.uSunColor.value))
+      .addScalar(1.32 * luma(u.uSkyAmbient.value) + 0.33 * luma(u.uSkyHorizon.value));
     fog.glow = 1;
     if (this.beat !== 'thin') {
       fog.face(FOG_BANK.x, FOG_BANK.z, FOG_BANK.yaw);

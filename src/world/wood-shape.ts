@@ -718,7 +718,8 @@ void main() {
     col += vec3(1.0, 0.68, 0.22) * shade.y * 2.6;
   }
   // The night's haze is kept thin on the stone, so its grain and the shadow on it stay crisp from either held frame.
-  gl_FragColor = vec4(max(vKind < 0.5 ? applyFog(col, vWorld) : mix(col, applyFog(col, vWorld), 0.45), 0.0), 1.0);
+  vec3 fogged = applyFog(col, vWorld);
+  gl_FragColor = vec4(max(vKind < 0.5 ? fogged : mix(col, fogged, 0.45), 0.0), 1.0);
 }`;
 
 function tube(a: THREE.Vector3, b: THREE.Vector3, ra: number, rb: number, seed: number): THREE.BufferGeometry {
@@ -897,7 +898,9 @@ void main() {
   }
   warm += emberLight(vWorld, vec3(0.0, 1.0, 0.0)) * 0.25;
   vec3 col = alb * warm;
-  gl_FragColor = vec4(max(applyFog(col, vWorld) - applyFog(vec3(0.0), vWorld), 0.0), 1.0);
+  // Share the fog, keeping both mixes so their rounding before subtraction stays the same.
+  vec4 fog = fogOf(vWorld);
+  gl_FragColor = vec4(max(mix(col, fog.rgb, fog.a) - mix(vec3(0.0), fog.rgb, fog.a), 0.0), 1.0);
 }`;
 
 /**

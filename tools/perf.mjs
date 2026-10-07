@@ -11,44 +11,8 @@
 //        WHOLE / BLOCK flicker spike thresholds (default 1.5 / 8; lower them for a frozen world, `hold=`)
 // Takes the same machine-wide browser lock as tools/play.mjs. Note that other processes using the GPU
 // (another capture, a browser playing video) inflate every number here: check before trusting a run.
-import { chromium } from 'playwright-core';
+import { openBrowser } from './lib/browser.mjs';
 import fs from 'node:fs';
-
-const LOCK = '/tmp/updraft-chromium.lock';
-function alive(pid) {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch {
-    return false;
-  }
-}
-async function acquireLock() {
-  for (;;) {
-    try {
-      fs.mkdirSync(LOCK);
-      fs.writeFileSync(`${LOCK}/pid`, String(process.pid));
-      return;
-    } catch (e) {
-      if (e.code !== 'EEXIST') throw e;
-      let holder = 0;
-      try {
-        holder = Number(fs.readFileSync(`${LOCK}/pid`, 'utf8')) || 0;
-      } catch {}
-      let stale = holder ? !alive(holder) : false;
-      try {
-        if (!holder) stale = Date.now() - fs.statSync(LOCK).mtimeMs > 10000;
-      } catch {}
-      if (stale) fs.rmSync(LOCK, { recursive: true, force: true });
-      else await new Promise((r) => setTimeout(r, 400));
-    }
-  }
-}
-process.on('exit', () => {
-  try {
-    if (Number(fs.readFileSync(`${LOCK}/pid`, 'utf8')) === process.pid) fs.rmSync(LOCK, { recursive: true, force: true });
-  } catch {}
-});
 
 const [mode = 'frames', secsArg = '10', query = '', stepsJson = '[]'] = process.argv.slice(2);
 const secs = Number(secsArg);
@@ -170,12 +134,7 @@ const INIT = {
   },
 };
 
-await acquireLock();
-const browser = await chromium.launch({
-  channel: 'chromium',
-  headless: true,
-  args: ['--enable-gpu', '--use-angle=metal', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'],
-});
+const { browser, close } = await openBrowser();
 try {
   const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: Number(process.env.DSF ?? 1) });
   const page = await context.newPage();
@@ -305,5 +264,5 @@ try {
   const unique = [...new Set(errors)].filter((e) => !e.includes('Failed to load resource'));
   if (unique.length) console.log(`${unique.length} console errors/warnings:`, unique.slice(0, 3).map((e) => e.slice(0, 300)).join(' | '));
 } finally {
-  await browser.close();
+  await close();
 }

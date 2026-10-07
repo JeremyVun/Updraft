@@ -48,7 +48,7 @@
 // the sea's fog per pixel. Draws alternate the reflection, so time s1-off with DRAWS even. water-caustics
 // and water-weed remove those seabed terms: upper bounds for skipping them where they are exactly 0.
 // sea-weed-off works the weed out at every depth again (the old path). landskip-off and landskip-on draw the sea
-// without or with its return under land (LAND_SKIP) whatever prepareFrame chose; water-far-ub returns everywhere
+// without or with its return under land whatever prepareFrame chose; water-far-ub returns everywhere
 // beyond the window's inner part, the upper bound for a return under land there (not exact).
 // grass-bare-tiles leaves out the grass tiles in which no blade can stand at any density: the most skipping empty tiles could save.
 // PATH_JS='<js>' PATH_STEPS=40 also compares each ablation's frames along a camera path: the code runs in main.ts's scope with
@@ -646,7 +646,10 @@ window.__audit = {
     // The ordinary sea's reflection every frame, as before.
     water.seaMirrorEvery=variants.includes('s1-off')?1:2;
     // A build before LAND_SKIP has no landSkip; it is the comparison page under COMPARE_BASE.
-    if(water.landSkip)selectAll({LAND_SKIP:variants.includes('landskip-off')?false:variants.includes('landskip-on')?true:water.landSkip(rig.camera)});
+    if(water.landSkip){
+      const skip=variants.includes('landskip-off')?false:variants.includes('landskip-on')?true:water.landSkip(rig.camera);
+      if(water.setLandSkip)water.setLandSkip(skip);else selectAll({LAND_SKIP:skip});
+    }
   },
   // Each fine noise term replaced with a constant, wherever its shared chunk is compiled. The blades'
   // fragment programs are left alone (the unclipped swap replaces them by string, and none of them calls these terms).

@@ -3,14 +3,14 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import vm from 'node:vm';
-import { execFileSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { build } from 'vite';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
-const output = execFileSync('mktemp', ['-d', '/tmp/updraft-production-check.XXXXXX'], { encoding: 'utf8' }).trim();
+const output = fs.mkdtempSync(path.join(tmpdir(), 'updraft-production-check-'));
 const entry = path.join(output, 'params.mjs');
-fs.writeFileSync(entry, `import { params } from ${JSON.stringify(path.join(root, 'src/params.ts'))}; globalThis.result = params;`);
+fs.writeFileSync(entry, `import { params } from ${JSON.stringify(path.join(root, 'src/params.ts').replaceAll('\\', '/'))}; globalThis.result = params;`);
 const overrides = '?shot&chapter=stage&progress=0&debug=wind&ratio=3&cam=1,2,3,4,5,6&sun=90,30'
   + '&grass=0&msaa=0&dusk=2&shower=1&storm=1&lite&mirror=0&mirrorlod=full&blades=direct'
   + '&heights=direct&grasslod=0&hold=1&stats&whale&lines&coldshaders&depth=1&stale=0&start=0';
@@ -56,7 +56,7 @@ for (const qa of [false, true]) {
   });
   const js = built.output.filter(item => item.type === 'chunk').map(item => item.code).join('\n');
   const css = built.output.filter(item => item.type === 'asset' && item.fileName.endsWith('.css')).map(item => item.source).join('\n');
-  for (const marker of ['__game', '__stats', '__ready', 'uScalars', 'k-above', 'footWas', 'frame p50', 'uPoints[', 'pondBankAt(root2)) * widthAt(dist) * stand;']) {
+  for (const marker of ['__game', '__stats', '__ready', 'uScalars', 'k-above', 'footWas', 'frame p50', 'uPoints[', 'h *= mix(0.72, 1.0, life) * stand;']) {
     assert.equal(js.includes(marker), qa, `${mode}: QA code marker ${marker}`);
   }
   assert.equal(css.includes('body.shot'), qa, `${mode}: QA styles`);

@@ -225,3 +225,207 @@ Release checks on the 558fff2 QA preview: `start-check` (worst boot gap 100 ms, 
 no program first drawn in the first seconds of play), `context-loss-check`, `boot-cloth-check`, `loading-check`,
 `chapter-select-check`, `production-build-check` and `failure-paths-check` (its blocked-entry case now matches the
 built `assets/index-*.js` as well as `src/entry.ts`) all pass. The iPad row is pending Jeremy's verdict.
+
+## Windows follow-up: shader compilation (2026-10-06)
+
+Scope: the Windows extension in `design.md`. Preserve all effects, the 220 programs, warm draws before Begin,
+simulation behaviour and the existing visual/state gates. The physical Samsung tablet model is unknown; Jeremy
+confirmed Chrome, but it has not been tested here. This does not close the older pending iPad verdict.
+
+Implementation:
+
+1. Isolate native compilation cost on the normal D3D11 backend. The same live shader inputs settle in 143 s on
+   D3D11 versus 5.2 s on Vulkan in Chrome for Testing 149. Individual program experiments then use CFT 153.
+2. Keep scene noise octaves and height noise corners/octaves in uniform-bounded loops. Share the sky radiance used
+   by the three fog veils and the terrain caches' direct fallback calls. Do not remove shader effects or move
+   compilation into play. Preserve the static noise loop in short simulation shaders: the first broad version
+   changed grass motion, despite tiny primitive-noise differences, and failed the existing image gate.
+3. Check actual GPU noise output, all chapter views, default-Windows startup and gameplay, controls and context-loss
+   recovery. Record browser/backend and cold-cache conditions. The Windows reference-machine startup guard is 60 s,
+   compared with 160 s for the unchanged QA baseline on CFT 153. Existing Mac frame-gap gates remain separate.
+4. Make the capture/performance harness use the platform backend and shared lock. Make production-build checking
+   portable (Node temporary directories; its direct-grass marker also needed updating for the existing reed code).
+   Fix two pre-existing descending smoothstep expressions in the owl that the shader gate found: one dead term and
+   the eye-glow ramp, expressed with ascending edges.
+
+Evidence so far (Ryzen 5 9600X, RTX 4070 Super, CFT 153.0.8010.12, one GPU check at a time):
+
+- Frozen baseline `d5a4941e`, QA, `coldshaders`: ready 160.075 s; settling 153.347 s; 220 programs.
+- First loop/call-sharing fix: ready 51.825–53.098 s. Rolling the four height-noise corners reduced this to 38.868 s.
+  The final shader version restores static simulation noise for visual parity: three cold loads take 44.849,
+  43.808 and 44.924 s; settling takes 40.537, 39.594 and 40.616 s. All 220 programs remain. Worst veil gaps are
+  700, 700 and 717 ms, versus 2250 ms in the unchanged baseline; the stricter 500 ms veil gate is not yet met.
+- An extra paint yield between height-atlas patches did not remove the remaining pause (44.943 s ready, worst gap
+  900 ms during settling), so it is not included. First-use driver/compositor pauses remain a separate follow-up.
+- Primitive noise: 294,912 samples on each of D3D11 and Vulkan; worst difference under 6e-8. No GL errors.
+- Vulkan before/after: all 13 views pass, including portrait, dark wood and stairs. Maximum channel difference 2/255;
+  most views are pixel-identical. Same-build washing control is pixel-identical. Height parity remains 0.01206 m.
+- Default D3D11 before/after: lines, meadow, wood, sea and stairs all pass. Worst mean channel difference 0.000286/255;
+  at most 0.000521% of pixels differ by more than 8/255. Character/camera differences remain below 5e-8 m and height
+  parity is 0.01037 m. These comparisons use the frozen baseline, not a different backend as the reference image.
+- D3D11 gameplay, dark wood at 1600x900, ratio 1, MSAA 4: 600 measured intervals over 10 s; p50/p90 16.7 ms,
+  p99/max 16.8 ms, no intervals over 25 ms and no long tasks. No programs or program/target pairs first drawn in play.
+  The existing D3D shader compiler warnings about potentially uninitialized helper results remain; no runtime errors.
+- Context loss on D3D11: saved and fresh games recover through a real reload; startup loss also recovers.
+- `start-check`: desktop and emulated-phone Begin/Continue, native audio, chapter pick, reduced motion, quality
+  step-down, blocked painting fallback, bundle failure/retry and QA bypass pass;
+  all active loop-bound uploads are correct (149 noise-octave, 8 height-octave and 8 corner bindings).
+  This functional run used `BOOT_MAX_MS=1000` to continue past the known smoothness failure; its measured gap was
+  616.7 ms, still above the unchanged default 500 ms gate. No new programs are first drawn after Begin or Continue.
+- The first phone fixture tapped 15 ms after its injected drag ended: Chrome delivered pointer down/up but no
+  click; a second tap worked. The fixture now separates those gestures by 350 ms, and the full rerun passes.
+  This observation does not diagnose the physical Samsung tablet.
+- Typecheck, production/QA builds, shader bounds, production QA exclusion, and cloth equality pass.
+
+Reports: `C:/tmp/updraft-windows-baseline-153.json`, `C:/tmp/updraft-windows-final-cold-*.json`,
+`C:/tmp/updraft-windows-parity-final-vulkan.json`, `C:/tmp/updraft-windows-parity-d3d11.json`,
+`C:/tmp/updraft-noise-loop-check.json`, `C:/tmp/updraft-noise-loop-vulkan.json`, `C:/tmp/updraft-context-loss.json`.
+
+The Windows compilation fix is implemented and verified locally; it has not been deployed. Remaining: the stricter
+veil-gap target and physical Apple/Samsung validation of these shader changes. The original phase 4 stays open.
+
+### Conservative fog follow-up (2026-10-06)
+
+Jeremy prioritised avoiding any visual regression over further loading gains (verbatim ruling in `design.md`).
+Only the duplicate fog calls in `wood-shape.ts` change: the stump/rock shader shares its fogged colour across the
+two material branches, and the additive coal pool shares `fogOf` while retaining both colour mixes and their
+subtraction. Water variants and remaining terrain loops stay unchanged.
+
+Verification against the frozen pre-change QA build (`e97f16b` runtime), CFT 153.0.8010.12:
+
+- Six fixed-frame views of the actual owl bend (dark, antler shadow and side-lit reveal, landscape and portrait)
+  are pixel-identical on D3D11, and all six are separately pixel-identical on Vulkan. Both affected meshes issue
+  draws. Hiding them changes 148,695 pixels in the portrait reveal, confirming that the comparison sees them.
+  These are staged rendering checks of the real meshes, materials, lighting and post chain, not a playthrough.
+- Captured GLSL confirms only the two expected fragment shaders changed; all other programs and vertex sources
+  match. Three forced-cold isolated compilation trials per version, alternating order, give median times of
+  2.480 to 1.245 s for stump/rock and 1.842 to 0.855 s for the pool. Every link succeeds with no GL error. These
+  isolated savings cannot be added directly to startup time, since the game compiles programs concurrently.
+- Typecheck, production/QA builds and the shader-bounds check pass. Physical Apple/Samsung validation remains open.
+- Full D3D11 forced-cold startup: 44.556 s ready, 40.282 s settling, all 220 programs linked, no startup errors.
+  This falls within the preceding version's 43.808–44.924 s range, so no overall startup improvement is established.
+  The worst veil gap remains 700 ms; the existing 500 ms smoothness target is still unmet.
+
+Evidence: `C:/tmp/updraft-fog-parity.mjs`, `C:/tmp/updraft-fog-{d3d11,vulkan}.json` and matching PNGs;
+`C:/tmp/updraft-fog-compile.mjs`, `C:/tmp/updraft-fog-compile.json`, `C:/tmp/updraft-fog-cold.json`.
+
+### Compile scheduling follow-up (2026-10-06)
+
+The four preceding cold profiles all finish waiting on terrain variant #203: it starts around 30 s and finishes
+at 41.6–42.6 s. The fog changes do not shorten that final wait. Experiments keep the shader inputs, program variants,
+all first draws before Begin, and the world/simulation construction order unchanged.
+
+Keep two scheduling changes: enqueue the terrain's variants before the general jobs (later jobs reuse the same
+programs), and refill the eight-program window as soon as one slot is free, rather than waiting for four slots.
+Only compilation order and submission timing change; no shader arithmetic or quality settings change.
+
+Cold D3D11 measurements, CFT 153.0.8010.12, Ryzen 5 9600X / RTX 4070 Super:
+
+| Scheduling | Time to Begin | Worst veil gap | Decision |
+| --- | --- | --- | --- |
+| Before | 44.556 s; fresh control 43.755 s | 700; 767 ms | Reference |
+| Terrain first, original refill | 42.731 s | 700 ms | Some benefit |
+| Terrain first, 16-program window | 38.452 s | 1434 ms | Rejected: longer freeze |
+| Refill each slot, original order | 43.179 s | 733 ms | Little benefit alone |
+| Terrain first, refill each slot, eight-program window | 38.397; 40.329; 40.707 s | 717; 750; 700 ms | Kept; output/startup checks pass |
+
+All runs link the same 220 programs without startup errors. The retained combination saves about 4 s at the
+median (roughly 9%) against the two reference loads, with the existing approximately 0.7 s first-draw pause still
+present. The fresh control had a production build running briefly during compilation; the earlier 44.556 s
+reference did not. Physical Apple/Samsung timing remains unmeasured, and the 500 ms veil target stays open.
+
+Profiles: `C:/tmp/updraft-schedule-early-terrain*.json`, `C:/tmp/updraft-schedule-refill-only.json`,
+`C:/tmp/updraft-schedule-control-1.json`, `C:/tmp/updraft-schedule-confirm-{1,2}.json`.
+
+Default-D3D11 verification against the frozen pre-scheduling QA build: island, sea and stairs are pixel-identical,
+with identical character/camera state and CPU/GPU height parity 0.01037 m. The full retained set of 219 program
+source pairs (vertex plus fragment) hashes identically in each comparison; boot linked 220 before the unused post
+variant was released. No stray first uses and no programs or program/target pairs first drawn in play in any view.
+Harness and report: `C:/tmp/updraft-schedule-parity.mjs`, `C:/tmp/updraft-schedule-parity-d3d11.json` and matching PNGs.
+
+Focused existing `start-check` assertions through Begin and quality step-down pass on D3D11: veil animation and
+pointer strokes, paused/silent ready screen, keyboard Begin with native audio, 25/25 construction steps, all 165
+active loop-bound uploads correct, no stray programs or programs first drawn after Begin or quality changes.
+Changing MSAA still first-draws existing programs into the new sample count, as allowed by the engine contract.
+This run used `BOOT_MAX_MS=1000`; its measured 616.7 ms veil gap still exceeds the unchanged default 500 ms gate.
+This is the focused portion, not a repeat of the entire start-screen suite. Typecheck and production/QA builds pass.
+Evidence: `C:/tmp/updraft-schedule-start-check.mjs`, `C:/tmp/updraft-schedule-start-check.json`.
+
+### Terrain samples and water programs (2026-10-06)
+
+The scheduling/fog changes were committed and pushed as `10ab475` before this investigation. Jeremy then asked for
+larger improvements and clarified that imperceptible pixel differences are acceptable, with captures for his review.
+
+Two changes preserve effect counts and the work completed before Begin:
+
+- Terrain: evaluate the same centre, x-offset and z-offset heights in a uniform-bounded three-iteration loop. Keep
+  the offsets and normal arithmetic unchanged. The frozen `uGroundSamples = 3` belongs to the terrain material;
+  simulation noise stays unchanged. This avoids three compiler expansions of the large height helper.
+- Water: replace the small under-land early exit's `LAND_SKIP` program axis with `uLandSkip`. Keep its safe footprint
+  test and return colour. Cloud-deck and sea-quality effects still have their separate programs. Water now needs
+  six programs instead of twelve, and boot links 214 instead of 220. The profiler and render-cost fixtures follow
+  the uniform; the profiler retains compatibility with older comparison builds.
+
+Rejected probes: rolling the footprint's nine-by-eight loops or the field search did not materially improve isolated
+terrain compilation. Diagnostic omission of footprints, fields or fog was only an upper-bound experiment, not a
+proposed visual change. Sharing the three height samples reduced one isolated terrain link from 6.494 to 4.373 s.
+
+Cold D3D11 startup on the same Ryzen 5 9600X / RTX 4070 Super, CFT 153.0.8010.12:
+
+| Build | Time to Begin | Programs |
+| --- | --- | --- |
+| Pushed scheduling baseline | 38.397, 40.329, 40.707 s; fresh control 39.397 s | 220 |
+| Water consolidation alone | 36.948 s | 214 |
+| Water plus shared terrain samples, first trial | 31.252 s | 214 |
+| Final repeated cold loads | 31.750, 31.357, 31.319 s | 214 |
+
+The final median is 31.357 s: about 8–9 s (20–22%) faster than the scheduling baseline. No other GPU check ran during
+these loads. The worst veil gaps in the three final loads are 683, 717 and 700 ms; the existing 500 ms gate remains
+unmet. The largest measured main-thread long task was 605 ms. All loads complete without startup errors.
+
+Targeted vertex-output verification (`tools/terrain-samples-check.mjs`): 1,572,864 samples on each backend, across all
+eleven island patches plus the moving window, four leaf sizes, atlas and direct fallback, both height-filtering
+paths, and main/mirror geometry. D3D11 heights match exactly, with largest normal-component difference 7.05e-6.
+Vulkan heights and normal components match exactly. No GL errors. This tests the actual vertex calculations using
+floating-point point draws, rather than just the height function in a fragment shader.
+
+Runtime probe for the terrain change alone: alternating GPU timer queries at 1600x900, main scene and terrain alone,
+in island, sea and stairs. Whole-scene medians were 1.121→1.163, 0.833→0.846 and 1.465→1.493 ms; paired ratios were
+1.057, 1.004 and 1.018. These small increases are recorded rather than claiming a rendering speedup. They exclude
+simulation and post-processing and are not measurements of phone or Apple hardware.
+
+Reports: `C:/tmp/updraft-heavy-final-cold-*.json`, `C:/tmp/updraft-heavy-control-cold.json`,
+`C:/tmp/updraft-water-uniform-cold.json`, `C:/tmp/updraft-terrain-{loop,stage}-probes.json`,
+`C:/tmp/updraft-terrain-samples{,-vulkan}.json`, `C:/tmp/updraft-terrain-runtime-d3d11.json`.
+
+The final combined build passes all 13 fixed-frame chapter/viewport comparisons on each of D3D11 and Vulkan.
+Island, lines, meadow and portrait are pixel-identical on both. The largest mean channel difference is 0.166/255
+on D3D11 and 0.174/255 on Vulkan; at most 0.282% and 0.303% of pixels respectively differ by more than 8/255.
+The biggest visible pattern difference is in fine wake foam in the storm scene; matched storm and sea captures
+were provided for Jeremy's review. Heights retain the prior CPU/GPU parity (0.01037 m D3D11, 0.01206 m Vulkan).
+Character/camera drift stays below 0.00032 m. No stray programs or programs first drawn during play in any view.
+Reports and PNGs: `C:/tmp/updraft-heavy-parity-{d3d11,vulkan}.*` and matching scene filenames.
+
+Focused `start-check` through Begin and quality step-down passes: native audio, paused ready screen, 25/25
+construction steps, all active fixed loop bounds uploaded correctly (including both terrain programs), and no
+programs first drawn after Begin or quality changes. The allowed MSAA target-pair first draws remain. It used
+`BOOT_MAX_MS=1000`; the measured 633.3 ms gap still fails the unchanged default 500 ms gate. Typecheck, production/QA
+builds and shader bounds pass. This is not a full journey or a physical Apple/Samsung test.
+Evidence: `C:/tmp/updraft-heavy-start-check.json`.
+
+The vertex probe's `PERTURB=1` calibration fails as intended when the reference x-offset is changed by 10% (largest
+normal-component difference 0.7304), confirming it detects a real normal regression. Water GPU timings were repeated
+after warming both programs and using paired ratios to avoid GPU clock transitions biasing separate medians:
+18 cases cover island/sea/stairs, all three sea-effect sets and both under-land states. Median paired new/old costs
+range from 0.993 to 1.013; no meaningful water cost increase was established on this GPU. Report:
+`C:/tmp/updraft-water-runtime-confirm-d3d11.json`; calibration: `C:/tmp/updraft-terrain-samples-perturbed.json`.
+
+Final D3D11 stairs gameplay at 1600x900, ratio 1, MSAA 4: 600 frame intervals over 10 seconds, p50/p90 16.7 ms,
+p99/max 16.8 ms, no intervals over 25 ms, no long tasks, and no new programs or target pairs first drawn in play.
+The compiler still emits potential-uninitialized-helper warnings; the output and functional checks above pass.
+Evidence: `C:/tmp/updraft-heavy-stairs-frames.txt`.
+
+Jeremy approved the visual result on 2026-10-06: "yep it looks fine, that wake foam difference is acceptable".
+Keep both optimizations; the visual review is complete. These changes follow the earlier `10ab475` scheduling push.
+Production deployment and physical Apple/Samsung testing are not covered by this verification.
+The original phase 4 and its 500 ms gate remain open.

@@ -1702,8 +1702,8 @@ export const tuning = {
   drowned: {
     /** The air dies this far short of where the boat comes to rest (metres of drift); it coasts in over the last of it. */
     stillFrom: 26,
-    /** Seconds from the air dying to the dark starting to rise: the boat has come to rest and everything is still. */
-    stillFor: 10,
+    /** Seconds from the air dying to the dark starting to rise, as the boat comes to rest and everything goes still. */
+    stillFor: 7,
     /** The hull coming to rest: how hard it brakes (m/s²) and the least way it keeps till its stem is on the slates. */
     coastBrake: 0.5, coastCreep: 0.35,
     /** How far past the drift's dusk the light goes while the dark comes on. */
@@ -1727,7 +1727,7 @@ export const tuning = {
        * Seconds it takes to rise on the horizon once the boat lies still; when it starts to come on and how long that
        * takes; and how far behind the boat it stops.
        */
-      riseFor: 9, comeAfter: 5, comeFor: 24, holdBehind: 20,
+      riseFor: 9, comeAfter: 5, comeFor: 16, holdBehind: 20,
     },
     /** The sea fog the dark is: one field every shader reads, and the light it takes as it comes. */
     fog: {
@@ -1755,6 +1755,12 @@ export const tuning = {
        */
       far: 0.3, farCome: 0.93, near: 0.6,
     },
+    /**
+     * The untended boat taken off the slates by the fog's breath: seconds after she is up on the ridge, how hard the
+     * hull is knocked as it swings off, its drift (m/s) and the seconds it takes to gather it; and when (seconds into
+     * the drift) she looks back at it from the ridge, and for how long.
+     */
+    adrift: { after: 1.5, nudge: 0.45, speed: 0.3, gather: 6, lookFrom: 1.2, lookFor: 2.6 },
     /** The wash-tub the player's wind carries to the cat's roof and back to the boat. */
     tub: {
       /**
@@ -1785,7 +1791,7 @@ export const tuning = {
       /** She notices it this far from the place the boat waits; how hard the boat slows into it, m/s². */
       seeFrom: 46, holdBrake: 0.42,
       /** How near (metres) the tub must come to the eaves, or to the bow, to be drawn in. */
-      roofReach: 1.8, bowReach: 2.4,
+      roofReach: 1.1, bowReach: 1.6,
       /** Seconds it looks at the tub before it comes down, and stands at the edge before it hops in. */
       looks: 1.6, edge: 1.3,
       /** Seconds the tub is held at the bow before the cat leaps, and of the leap's settling before the boat goes on. */
@@ -1795,7 +1801,7 @@ export const tuning = {
       /** How far nearer (metres) the tub has to get to its goal to count as progress. */
       progress: 0.8,
       /** How far on the dark has come when the cat's unease starts to climb, and when it bolts. */
-      uneasyFrom: 0.25, boltAt: 0.75,
+      uneasyFrom: 0.12, boltAt: 0.5,
       /** The cat's run up the slates and along the ridge, m/s. */
       runSpeed: 2.6,
       /** Seconds she looks at the dark, then at the cat, before she climbs out after it. */
@@ -1826,24 +1832,88 @@ export const tuning = {
     strandLow: 2.4, strandHigh: 3.4, uprightHigh: 3.8,
     strandPace: 0.6,
     /**
-     * While the cat is brought over: how much of its gaze the lens gives the cat as she notices it; how far from the
-     * place the boat waits the lens starts to move to the side of the water (never nearer the boat than `catClear`
-     * on the way), the height it stands at there and the
-     * height it looks at over the water's middle; upright, how far behind the
-     * waiting boat it stands and how far to the tub's side, how high, and the height it looks at over the water.
+     * While the cat is brought over: how much of its gaze the lens gives the cat as she notices it, and how far from the
+     * place the boat waits the lens starts to come round. Off the roof's gable end: how high, how far from the cat
+     * toward her it looks and how far above that line, and the lens it takes. Upright, behind her: how far back and to
+     * the side away from the sail, how high, and the same again; and how fast it moves out to that side.
      */
-    catGlance: 0.3, catTurnFrom: 16, catClear: 7, catEye: 2.3, catAim: 2.6, catPace: 0.55,
-    uprightCatBack: 5.5, uprightCatSide: 3, uprightCatEye: 3.4, uprightCatAim: 1.4,
+    catGlance: 0.3, catTurnFrom: 16, catPace: 0.55,
+    catEye: 2.1, catAlong: 0.42, catLift: 0.5, catZoom: 0.95,
+    uprightCatBack: 2.6, uprightCatSide: 3.8, uprightCatEye: 2.8, uprightCatAlong: 0.2, uprightCatLift: -0.4, uprightCatZoom: 1,
+    catAsideRate: 0.7,
     /**
-     * With the cat aboard: the lens beside the boat, a little aft of abeam so the cat at the bow faces it and the
-     * satchel is in view; how far it stands off and how high, and how fast it eases there.
+     * With the cat aboard: the lens beside the boat on its port side, its bearing from ahead
+     * (radians), how far it stands off (upright, further), how high above where it looks, how far from her toward the
+     * cat it looks and how high above her seat, and how fast it eases there.
      */
-    aboardBearing: 1.3, aboardDistance: 8.5, aboardHeight: 1.3, aboardPace: 0.45,
+    aboardBearing: 1.75, aboardDistance: 5.5, uprightAboardDistance: 7, aboardHeight: 0.9, aboardAlong: 0.45,
+    aboardAim: 0.9, aboardPace: 0.45,
     /**
-     * Once the cat bolts: the way the lens looks (atan2(x, z) of the view) as it comes round to the south of the
-     * cottage over `climbFor` seconds, how far back it stands (upright, nearer), and the height it looks at.
+     * Once the cat bolts: the way the lens looks (atan2(x, z) of the view) as it comes round to the south-west of the
+     * cottage over `climbFor` seconds, clear of the boat and looking on to the church; how far back it stands (upright,
+     * nearer), and the height it looks at.
      */
-    strandClimb: 2.9, climbFor: 7, climbBack: 15, uprightClimbBack: 10, climbAim: 2.3,
+    strandClimb: 2.5, climbFor: 7, climbBack: 10, uprightClimbBack: 8, climbAim: 2.3,
+  },
+  /** The two crossings of the drowned village's run over the roofs: the dead tree pushed over, the swing pumped. */
+  crossings: {
+    tree: {
+      /** How far it leans toward the gap of its own accord, radians, and the spring it rocks on (per second squared, per second). */
+      restLean: 0.07, stiffness: 4.2, damping: 1.5,
+      /** A push arrives a beat after the stroke (seconds), and a held push ebbs away over `hold` seconds. */
+      lag: 0.2, hold: 1.1,
+      /**
+       * Radians of lean asked for per screen height a stroke travels across it toward the gap, against it, and
+       * across the way it falls; how far it can be held over either way. Strokes at `gentle` screen heights a
+       * second count for `soft` of that, at `firm` for all of it.
+       */
+      push: 2.4, against: 0.45, side: 0.5, pressMax: 0.8, backMax: 0.16,
+      gentle: 0.5, firm: 2.2, soft: 0.3,
+      /** How near the trunk a stroke has to pass to move it, in screen heights. */
+      reach: 0.2,
+      /**
+       * Rotten roots: they let it lean `holdAt` past rest and hold hard beyond (`rootStiffness`). A push that has
+       * pressed past `giveAt` when the lean meets them tears them a step, `giveMin` for one that only just does it
+       * to `giveMax` for the firmest, so it takes two or three; nearly all gone, it goes. Each step leans it
+       * `looseLean` further for good, with a lurch (radians a second); the roots bite again once that push has
+       * ebbed and `settleFor` seconds have passed. The water bubbles for `bubbleFor` seconds after.
+       */
+      holdAt: 0.1, rootStiffness: 30, giveAt: 0.42, giveMin: 0.36, giveMax: 0.52, looseLean: 0.2, lurch: 0.22,
+      settleFor: 1, bubbleFor: 4.5,
+      /**
+       * Going over: the pull of its own weight (per second squared at a right angle), held back at first by the
+       * roots (`tearHold` of it while `tearOver` radians of fall tear them), and the share of its fall speed kept
+       * when it lands, then the spring it settles on.
+       */
+      fallPull: 1.0, tearHold: 0.25, tearOver: 0.3, bounce: 0.18, settle: 60, settleDamping: 9,
+      /** How far its foot slides toward the gap as the roots tear out of the bed. */
+      rootShift: 0.45,
+      /** Seconds the trunk shudders after it lands. */
+      shudderFor: 1.1,
+      /** Seconds she waits after it lands, and her pace across it as a share of a walk. */
+      lookFor: 0.9, crossStroll: 0.42,
+      /** Seconds without a useful stroke before the drawn gust; seconds with no progress before the world's own gust brings it down. */
+      inviteAfter: 6, valveAfter: 90, valveEvery: 1.6, valvePush: 0.32,
+    },
+    swing: {
+      /**
+       * A slower, dreamier gravity than the world's (a share of it), and how fast a swing dies away with nobody
+       * pushing: hardly at all with her on it, and over about ten seconds once it is empty.
+       */
+      gravity: 0.8, damping: 0.05, emptyDamping: 0.6,
+      /** Push along its travel per unit of gust energy at the seat, and per unit of the felt wind along its way. */
+      pump: 1.5, along: 0.25,
+      /** Seconds she takes to catch hold and sit, and the start she gives it pushing off the eave (radians a second). */
+      boardFor: 1.6, pushOff: 0.32,
+      /** She lets go this near the top of a forward swing (radians), when the leap would carry her this far past the landing. */
+      releaseLead: 0.14, releaseSpare: 0.15,
+      /** Her own push off the seat as she lets go, forward and up (units a second), and the gravity she flies under. */
+      leapForward: 0.9, leapUp: 1.6, leapGravity: 7.5,
+      /** Seconds for the stumble and getting up on the slope after landing, and for her look back at the swing. */
+      landFor: 1.3, lookBack: 3.2,
+      /** Seconds riding without a push before the drawn push; with no new height before the world's own gusts carry her. */
+      inviteAfter: 5, valveAfter: 90, valveEvery: 1.2, valveEnergy: 1.5,
+    },
   },
   /** One continuous passage from the last drowned houses to the forest beach. */
   storm: {

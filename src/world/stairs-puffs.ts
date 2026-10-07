@@ -154,7 +154,7 @@ void main() {
   vClear = mix(${f(BLEND + SOLID_FADE)}, vClear, aSoft);
 }`;
 
-/** Lit like the top of the cloud deck: gold where the low sun reaches it, glowing at the rim against the light, lilac underneath. */
+/** Lit like the top of the cloud deck: gold where the low sun reaches it, glowing at the rim against the light, grey underneath. */
 const FRAG = /* glsl */ `
 ${ATMO_GLSL}
 uniform float uPuffs;
@@ -184,8 +184,8 @@ void main() {
   float sun = vSun;
   float wrap = clamp(dot(N, uSunDir) * 0.5 + 0.5, 0.0, 1.0);
   float toward = pow(max(0.0, dot(-V, uSunDir)), 4.0);
-  vec3 shade = mix(vec3(0.66, 0.62, 0.76), vec3(0.84, 0.8, 0.88), N.y * 0.5 + 0.5) * (uSkyAmbient * 0.9 + vec3(0.12));
-  vec3 col = shade + uSunColor * (wrap * 0.55 + toward * 0.35) * sun;
+  vec3 shade = mix(vec3(0.74, 0.75, 0.8), vec3(0.94, 0.93, 0.94), N.y * 0.5 + 0.5) * (lumaOf(uSkyAmbient) * 0.9 + 0.12);
+  vec3 col = shade + cloudGlow() * (wrap * 0.55 + toward * 0.35) * sun;
   gl_FragColor = vec4(mix(col, vFog.rgb, vFog.a), a);
 }`;
 

@@ -430,8 +430,8 @@ about (−9, −1398), some 40 m short of the church (`SPIRE`, 14, −1436). Mai
    it and ducks into the satchel.
 2. **The air dies** where it does on main. The glass goes still and the becalmed boat drifts gently in until its stem
    rests against the slates of a small cottage's roof at the waterline: a nudge, never landing on top of anything.
-3. **The dark rises behind them**: black smoke lying low on the water, rising on the horizon the way they came and
-   coming on, swallowing roofs. The cat panics, leaps onto the roof and bolts over the roofs toward the church, the
+3. **The dark rises behind them**: a sea fog lying low on the water, rising on the horizon the way they came and
+   coming on, its crest gold in the last sun, roofs fading into it one by one. The cat panics, leaps onto the roof and bolts over the roofs toward the church, the
    highest thing there is. A child does not leave a frightened cat: she climbs out after it. The boat was never stuck;
    she left it to save the cat. She follows the cat's run, so the plane never leads; she clutches it the whole way.
 4. **Crossing 1, the tree (push):** a lane of deep water to a walled garden; the cat crosses its own way (a leap she
@@ -443,8 +443,8 @@ about (−9, −1398), some 40 m short of the church (`SPIRE`, 14, −1436). Mai
 6. **The church:** the cat climbs the tower's ivy into the belfry, safe and out of her reach, and looks down. She is
    left on the nave ridge at the tower's foot. While she waits at a crossing the dark creeps up and stops a little
    behind her, heaving; as she crosses it swallows the place she left. It never reaches her and nothing fails.
-7. **The dark arrives:** the smoke rolls over the church and becomes the storm's sky; the wind comes and the first rain
-   falls. Now she needs her boat, still resting against the cottage roof back along the way.
+7. **The dark arrives:** the fog rolls over the church, the sun gone, and darkens into the storm's night; the wind
+   comes and the first rain falls. Now she needs her boat, still resting against the cottage roof back along the way.
 8. **Bring the boat (fill the sail):** the player fills its red sail (`Boat.brushSail`) and brings it across the water
    to the nave; she steps down into it. She looks back once at the cat in the belfry as they go.
 9. **The storm:** the church is about 260 m from the beach, close to where main's storm already starts, so main's
@@ -453,7 +453,10 @@ about (−9, −1398), some 40 m short of the church (`SPIRE`, 14, −1436). Mai
    beach, and the landing is relief that turns into the wood's fear.
 
 The village round the church is re-laid so the route reads as a real village she picks her way through (Jeremy's note
-on the first frames above). The water level never changes.
+on the first frames above). The water level never changes. The village's look may be raised as far as it needs
+(Jeremy, 2026-10-07: "If you see opportunities to upgrade the visuals of the drowned village as well e.g. more houses,
+better looking houses, more feeling of a whole village etc., feel free to take them."), settled in concept art before
+it is built and keeping open water between the houses.
 
 **Ownership of the drowned village** (Jeremy, 2026-10-05, verbatim):
 
@@ -479,10 +482,76 @@ So the existing drowned village and storm code may be refactored as far as the r
   is quick and sure where she is slow: at each gap it crosses its own way (along a railing top, a wall coping, a leap
   she could never make), which shows her where the far side is and that she must find her own way over. At the church
   it climbs the tower's ivy to the belfry. It is left there, safe and high, looking down as the boat goes.
-- **The dark.** Low black-violet smoke lying on the water, lit at the rims by the last low sun, coming from behind
-  (south, the way they came), the water darkening under it, swallowing roofs as it comes. Beautiful-ominous, never
-  horror and never industrial; it must read as smoke, never as rock or hedge. When it arrives at the church it rolls
-  over and becomes the storm's sky, and the light goes with it.
+- **The dark is a sea fog** (Jeremy, 2026-10-05, doubting the black smoke: "im not sure if the dark cloud look make
+  sense given the lighting and time of day... what do you think? would a white fog / mist / haze make more sense?"; on
+  Astra's fog study: "yea that fog looks way better"). A haar rolls in low off the sea from behind (south, the way they
+  came; `src/world/drowned-dark.ts`, "the dark" in code). It obeys the dusk: its crest takes the low sun's gold and rose,
+  its body is cool blue-grey, and roofs at its edge fade into it and are gone rather than being covered. As it nears it
+  takes the sun: the warmth drains from the boat, the roofs and the water, and the lantern is the warmest thing left.
+  At the church it closes round her and darkens into the storm's night, the first wind breaking up the glass. The
+  threat is what it takes away, so it never sits still: one roof, then the next, then the sun, with the cat's panic
+  selling it. Beautiful-ominous, never horror. Black smoke is cut: under a dusk sky a mass that takes none of the light
+  reads as land or rock, and smoke implies a fire that is not there. The target is Astra's study in `comps/fog/`
+  (`fog-far`, `fog-near`, `fog-arrives`, `fog-portrait`, painted over `today.jpg`). It is built as one fog field every
+  shader reads (a moving front, a height profile and slow low-frequency variation, surfaces mixing toward the fog's
+  colour by transmittance), so things truly fade into it; three to five large feathered sheets give the crest and
+  wisps but never do the hiding themselves; the fog's colour, the sun, the sky light and the water's reflection are
+  driven from one progression, and the lantern's light stays its own. It stays low, flat and cold-bodied, with a clear
+  stretch of open dusk air before it rises, so it never echoes the stairs room's luminous cloud.
+- **The tree and the swing, from the spike** (`proto-drowned-crossings`, playable on the QA stage with
+  `?chapter=stage&gap=tree|swing|run`; `src/world/crossings/`). Kept: the push arriving a beat late, the rock and
+  spring back, the fall that hangs on its roots and then goes, her walk along the trunk with her arms out, the swing
+  pumped the birches' way with no timing, the release at the top of a forward swing with her arms up, the landing on
+  one hand and the look back. Changed in the village: the tree takes two or three firm pushes the right way, its
+  roots visibly loosening between them, never one stroke; the root plate is a flat muddy disc of earth with trailing
+  roots that heaves only a little (the garden bed about a metre down), never a spiky ball; the empty swing dies away
+  over about 10 s while she looks back; the swing hangs beside the garden cottage's gable end so its back-swing passes
+  the end of the house, and the old tree's trunk never stands behind her arc from the lens; the tree's root lies on
+  the line of its fall and the trunk crosses a wall square on; the lens is already on her side before the tree falls,
+  so it never swings round to meet her on the trunk. The tree's creak, root tear and thud and the swing's creak are
+  new foley.
+- **The run is the spine of the room** (Jeremy, 2026-10-05: "overall, it feels to me like these two challenges by
+  themselves cover very little ground. There's a lot of ground between the drowning village and the woods island... i
+  hope you have a plan here."; on the plan below: "proceed with your plan with the tree, and swing"). As first planned
+  she walked about 45 m of the roughly 445 m from the stairs to the forest beach, and the last 255 m was watched from
+  the boat. Instead her way on foot grows to about 165 m: the church moves on about 120 m to stand near the
+  lighthouse (as the room painting has them, together), and the old church site becomes ordinary roofs. In order: she
+  climbs out at the cottage; the tree (Phase 1's lane and walled garden); her own way over ridges, wall copings and a
+  lean-to, small hops she makes herself, the cat a roof ahead and the fog behind, never a puzzle and never a single
+  line of houses; a middle piece (below); her own way again; the swing on the green onto the nave; the church. The storm from the church to the beach is about 140 m, past the lighthouse soon after she boards. The
+  village keeps its open water and scattered roofs; the way adds only hand-placed roofs, walls and copings where it
+  needs them. Plan: `comps/run/` (from `route-plan.png`, north up).
+- **The boat goes ahead of the fog.** With the church that far on, a boat left at the cottage would be out of reach
+  and out of frame. So the cold breath that comes with the fog swings the untended boat off the slates and drifts it
+  away along the open water, the same way she runs; she sees it go and still follows the cat. It fetches up against a
+  dead tree in the fog near the church, its lantern glowing, and the player fills its sail to bring it the last stretch
+  to the nave. Everything on the water is driven the same way, so the boat's drift is also a sign of the fog's breath.
+- **The middle piece is a drowned windmill** (Jeremy, 2026-10-05, on Astra's route frames in `comps/run/`: "this makes
+  sense. i think it's be nice to have a third player interaction way though in addition to the tree and the swing").
+  The door ride down a flooded lane (`lane.jpg`) is cut: it repeats gusting a floating thing (the tub, the boat), forty
+  metres of sitting breaks the run, and a lane too narrow for the boat packs the village. The third interaction uses
+  the game's other verb, circling: an old tower mill stands in the water up to its shoulders between two roofs, its
+  sails turning slowly in the fog's breath; the player turns it by circling round its hub (the drawn invitation shows
+  the circle); she waits on a roof edge until a sail comes round level beside her, walks onto it, and as the player
+  keeps turning it lifts her up against the sky until she walks off onto a high roof, where
+  the church and the lighthouse come back into view across the water. The kitten has gone ahead its own way and waits
+  there. She chooses when to step on and off; nothing needs timing. With the tree (a walk across) and the swing (a
+  leap), it makes the flood a child's playground as she runs from it. It must not crowd the horizon's spire and
+  lighthouse. Approved on Astra's concept (Jeremy, 2026-10-05: "I am happy with the windmill as teh third piece"),
+  `comps/mill/` (`mill-wait`, `mill-ride`, `mill-top`, `mill-plan`, `notes.md`): a small, worn tower mill with only two
+  opposite sails left, bare lattice and torn linen, no taller than a cottage, so it never makes a third landmark;
+  about a 2 m tower, the hub about 2.9 m up, a 2.4 m sail radius. Any
+  broad circle round the hub turns it (tangential movement is torque; the drawn invitation is a flat spiral in the
+  sails' plane, about a turn and a quarter, its tip showing the way); the sail eases and dwells as it reaches her and
+  again at the roof; circling the wrong way only rocks it, never carrying her back toward the water; when the player
+  stops it coasts and settles while she holds on; its speed is capped. She does not climb (Jeremy, 2026-10-05: "we
+  dont need her climbing the lattice, why not keep it as simple as her just walking onto the wind mill sail?"): the
+  sail comes round to lie about level with the roof edge she waits on, she walks out onto its lattice's lower rail
+  with a hand on its stock like a handrail, and stands there, one held pose with small shifts of balance, while the
+  turn lifts her through a short arc, well under half a turn and never steeper than she could stand on, until it eases
+  beside the high roof and she walks off its end. The boarding and stepping-off heights follow from that arc in the
+  blockout; the mill keeps the concept's size, and the cygnet stays tucked clear. The mill leaves the frame as the
+  church and the lighthouse come back into view.
 - **The run is built on decks** (`src/world/decks.ts`): ridges, wall tops and the fallen trunk are strips the child
   walks; the slates up to a ridge are ramps. She gets out with `alight` onto the cottage's slates and back in with
   `board` at the nave.
@@ -515,3 +584,156 @@ with big dark pupils and a catchlight, set at or below the middle of the head an
 short muzzle with nose and mouth tucked under the eyes; round cheeks; ears wide; no neck in the sit, the head sunk into
 the shoulders; a compact pear sit with front paws together and the tail wrapped round; frightened means low (body
 down, ears flat, tail tucked). Jeremy: "opus 5.5 subagent should be able to remodel the cat appropriately".
+
+**The rebuild, judged** (2026-10-05, `proto-drowned-cat` at `766c738`). At play distance, about 4 m, it reads as a
+kitten: big round head, no neck, large dark eyes with a glint, white muzzle and bib, a compact sit, a low frightened
+loaf. Close up it falls short of the sheet: in profile the head is a flat-sided helmet with the eye on its front edge;
+too much forehead above eyes set low, like a mushroom cap; a dark outline round each eye makes them googly where the
+sheet's are soft under the upper lid; the mew barely opens the mouth; under warm light the coat goes saturated ginger
+with heavy stripes rather than the sheet's soft grey-brown. Jeremy: "yep, the cat definitely needs a polish pass. Along
+with your observations, the body looks weird from bove" (from above and behind it is a narrow column ringed by its
+stripes, like a grub, where the sheet's back is a soft broad pear whose stripes fade down the flanks).
+
+**The cat's voice** (Jeremy, 2026-10-05, on the first synthesised mew: "the cat mew sounds like a human mimicking a cat,
+it sounds hilariously uncanny and bad"; on recordings: "Im wary of using real recordings because they add to the
+bundle size don't they? And we don't have much room to modify them to suit whatever we need.."). It stays synthesised,
+as every sound in the game is (`docs/contracts/audio.md`), but grounded in real cats: a few public-domain kitten
+recordings are analysed offline (the pitch contour, the formant movement, the nasal onset, the flutter and the breath)
+and only the resulting numbers ship, so the mew, the plea and the chirrup can still be shaped freely. Jeremy judges
+each round by ear.
+
+The analysed voice (`proto-drowned-cat-voice`, its study made with `tools/cat-voice.mjs`) is approved: "i think the cat
+sounds are much more on points, im guessing we probably wont' need all of them when you get to adding the cat into the
+story". The story uses only what each moment needs: the plea while it is stranded, at a kitten's length (0.3–0.45 s,
+which means shortening the mouth's hold for pleas in `cat.ts`); the chirrup as it lands aboard; the frightened yowl
+once, as the fog rises and it bolts; and at most a mew from the belfry as the boat goes.
+
+## The crossings
+
+Jeremy, 2026-10-05, choosing what to work on after the room-by-room ideas: "lets work on the corssings first".
+
+On the crossings today the boat sails itself between rooms. The player's gusts can fill the sail and push the hull from
+the ordinary 4.5 units/s up to 10, but nothing on the water asks for that or answers it. The crossings are short
+(`docs/contracts/world.md`, Crossings): 95 s to the island of lines (the farewell and the whale), 30 s to the little
+boats, 40 s to the meadow, 20 s to the birches, a short hop to the stairs, 40 s to the sleeping island at night, up to
+100 s for the sea (the pod, the swim) and 40 s home.
+
+Jeremy's rulings (2026-10-05), answering two questions:
+- Must the boat wait for the beat? **Mix**: one must-do beat on one longer crossing, with the usual invitation and
+  safety valve; anything else on a crossing is optional and the boat sails past it whether or not the player plays.
+- Which crossings? **Just one or two**, done really well, rather than something on every crossing.
+
+**The must-do beat: a whale asleep across the way** (proposed; Jeremy left where it goes to Claude: "figure it out and
+make a suggestion"). The whale is already the crossings' creature (`fx/sealife/whale.ts`; it surfaces on the first
+crossing at 37 s and on the sea at 27 s). Partway across, a huge whale lies asleep at the surface across the boat's
+way, like a long low island, breathing slowly; the boat drifts to a stop beside it. The child leans out; the cygnet
+ducks into the satchel and peeks. Gusts across its back only tickle it (the skin shivers, a flipper slaps lazily, a
+splash reaches the boat). Circles over the blowhole wake it: the column draws a breath, it spouts a tall plume, rolls,
+lifts its flukes and sinks, and its swell lifts the boat as it passes under. Usual invitation and safety valve.
+Placed on the crossing to the meadow (Claude's call): afternoon light reads it, the little boats have just taught
+circling, and the meadow it arrives at is asleep too, so the player wakes the whale with wind and then the meadow with
+music. The night crossing to the sleeping island was the alternative: darker to read, and it lengthens the long dark
+stretch after the wood.
+
+**No optional encounters.** Three were offered and first accepted: a meadow lying on the sea whose flowers open where
+the wind goes, leaves on the water that are a shoal of golden fish, and a giant dandelion clock whose seeds a gust
+blows up into the first stars. The dandelion was dropped on its concept art ("it clashes with the sky mirror puzzle").
+The meadow was built on the last crossing and cut (Jeremy, 2026-10-05: "I dont think the meadows earns it's keep.
+swiping on the grass actually makes the boat just go faster. There's no noticeably new interaction."), and the fish
+dropped with it ("cut the meadow, delete its branch and drop the fish"). The lesson, for any idea on a crossing: while
+the boat sails, a sweep is the same act as filling the sail, and the boat surging is the loudest answer on screen, so
+anything played from a moving boat reads as decoration on sailing. A crossing beat has to stop the boat and want
+something, as the whale does.
+
+**The whale is shown first and met later** (Jeremy, 2026-10-05: "The sleeping whale feels to me to be the one to put
+here since there is already a whale from the still island to the island of lines no? Or do you think it's better to
+just show the whale to the player during the first crossing, and then they can interact with it later on?"; on the
+answer below, "agreed"). The first crossing keeps its whale surfacing far off, unchanged, as the set-up; the sleeping
+whale lies on the crossing to the meadow. Waking it needs circling, which the player first learns on the little boats'
+plug, two rooms after the first crossing; there it could only wake to gusts, a weaker puzzle that would also spend the
+circling before the plug teaches it. Seen far off, then found asleep across the way one island later, it is met again
+rather than met.
+
+**The whale moves to the open sea, dream-sized** (Jeremy, 2026-10-07, while its look was being tuned on `toMeadow`):
+"in a dream, from the perspective of a child, the whale would be really big. like really dream like big"; and "why
+not have this on the open sea chapter instead. We can extend the open sea chapter if needed e.g. move or hide the sky
+mirror island appropriately or something. Right now, the open sea chapter has nothing to do in it even though it's a
+whole selectable chapter." Agreed ("yea, i think this works"): it lies on `toMirror` after the pod has dived away
+ahead, about three times its built size (70–80 m), too big for the frame; seen far off at first as a long low island
+in the dawn haze that turns out to breathe, replacing the sea's distant surfacing whale; its leaving swell passes and
+the sea goes still into the mirror's glass. The open sea's ruling "at most 100 s, nothing asked" is lifted for it;
+the route may lengthen and the mirror's island stay hidden longer. The meadow crossing goes back to what it is on main.
+The narrative it must serve (Jeremy, 2026-10-07):
+
+> - the child is brave for the cygnet
+> - the cygnet is brave for the child
+> - then they both fix something for someone else together
+> - and then it escalates and they fix the stars
+
+So the whale is the third step: the dark wood is her courage for the bird, the sleeping island the bird's for her,
+the sky mirror the stars. Offered: a lost calf the cygnet leads to its sleeping mother, or a whale caught in a net.
+Jeremy (2026-10-07): "I dont think (1) works - if the cygnet could swim to the mother, then surely the calf could have
+done so as well. I think that the whale caught in a net is the classic example that works." So: **the whale caught in
+a net.**
+
+**The whale in the net, proposed** (2026-10-07; concept frames `comps/crossings/whale-net/`, painted from the open
+sea's own camera over `ref-sea-*.png`). Measured on main: the open sea runs about 78 s; the swim ends about 51 s in;
+the pod leaves at 60 s; the mirror's jetty is already in frame by 58 s; the sun rises low ahead.
+- After the swim, a dolphin nudges the planking (main's nudge, now asking) and the pod leads the boat off its line
+  toward what looks like a long low island in the sunrise haze. It breathes: a whale, dream-sized (about 75 m), lying
+  still and worn out, an old drifting net with cork floats over its head and blowhole and trailing down its back, one
+  loop round its near flipper. Sad but gentle: tired, never hurt. The boat eases to rest beside its head.
+- Three steps, each answered on screen, each a different part:
+  1. **The breath (the player, circles).** The net lies over the blowhole; each breath only domes the mesh and
+     sputters. Circles over the blowhole raise an updraft that lifts the mesh clear, like a sheet in the wind; the
+     whale draws its first full breath and its great eye opens and looks at the child.
+  2. **The child (a gust brings her the line).** A line of cork floats trails across the water by the boat. A sweep
+     pushes the nearest float to her; she catches the line and hauls, and the net peels back off the jaw and head.
+  3. **The cygnet (its own courage, for someone else).** The last loop is round the near flipper, out of her reach.
+     The cygnet, who swam earlier in this chapter, goes in and swims to it and takes the loop's end in its bill; a sweep
+     along the flipper makes it lift lazily (the tickle already built), and the loop slides off into the cygnet's pull.
+- Free: it spouts a tall golden plume against the sunrise, the empty net drifting away; the pod leaps round it; the
+  cygnet is lifted back in; the child waves; it rolls, lifts its flukes high as if waving and sinks, and its swell lifts
+  the boat. Then the pod goes with it and the sea goes still into the mirror's glass.
+- Each step has the usual drawn invitation and a safety valve after about 90 s with a cause on screen: a dolphin lifts
+  the mesh with its nose, noses the float to the boat, nudges the flipper. The gull of the first build is not needed.
+- The route lengthens so the mirror's island stays in haze until the whale has gone; the stop and the camera hold,
+  the saves and the real-gesture check carry over from branch `crossing-whale`, re-placed and re-scaled. The encounter below (a whale in their way, woken for their own passage, the cygnet only
+peeking) predates this and is being redesigned to fit it.
+
+### As decided: the crossing
+
+The concept keyframes `comps/crossings/whale/k1–k4` are the target for the look; `notes.md` beside them has Astra's
+layout in metres. They are painted over real frames from the crossing camera (`ref-*.png`), so they are framed as the
+game frames. The gusts' answer must be plainly bigger than the slack sail's: the boat is at rest, so nothing about the
+encounter may read as the boat speeding up.
+
+**The whale asleep across the way** (crossing to the meadow, `toMeadow`; the one must-do).
+- About a third of the way along, the whale (`fx/sealife/anatomy.ts`, 14 m; scale it up toward `k1`'s size if the
+  game camera shows it smaller, as a child would dream it) lies asleep at the surface broadside across the boat's way,
+  like a long low island, eye shut, a gull asleep on its back. It is visible ahead in good time. It breathes every few
+  seconds: the back rises, a faint mist over the blowhole.
+- The boat eases to rest about 7 m off its flank (`Boat.speedLimit` eased to zero, never braked; the sail still
+  answers gusts). The child leans over the gunwale toward it; the cygnet half-ducks into the satchel and peeks (`k1`).
+- Gusts across it on screen only tickle it: its skin shivers along the stroke, a flipper lifts lazily and slaps the
+  water, a little splash reaches toward the boat, the gull hops up and resettles (`k2`). Each gust answers; it never
+  wakes from gusts, however many.
+- Circles over the blowhole wake it: the chapter's `updraftTarget` is the blowhole, and the usual spiral `coax`
+  (`fx/swirl.ts`, as the little boats' plug) shows after `inviteAfter` idle seconds. Progress builds while the player
+  winds and is kept when they stop. When full: it draws a breath, its eye opens, and it spouts a tall plume up through
+  the spiral (`fx/sealife/spray.ts`), with a faint rainbow where the sun allows (`k3`).
+- Then it rolls and sinks beyond the boat, flukes lifted high and dripping as if waving; the swell it leaves lifts
+  the boat; the child waves after it and the cygnet comes all the way up (`k4`). The limit eases off and they sail on.
+- Safety valve (Claude's call): after about 90 s without progress the gull walks to the blowhole and pecks, and the
+  whale wakes the same way. A cause on screen, never a timer the player sees.
+- Camera: the crossing camera eases (never jerks) to hold the whale broadside with the boat in the lower middle, as in
+  `k1`; in portrait the blowhole end and the boat. No reward phrase (a small step). Sounds: breath, spout
+  (`whale-blow` exists in `audio/foley.ts`), slap, the gull.
+- Saves: a crossing checkpoint taken before it wakes resumes with it asleep; one taken after resumes without it.
+- The meadow island beyond stays the grey shape in haze it is today.
+- As placed in the first build (C2a, 2026-10-05): about 57 m past the first waypoint of `toMeadow`, scaled 1.8 (25 m
+  long), the boat at rest about 18 s into the crossing; an idle player is woken by the gull about 90 s later. No
+  rainbow (Claude's call): on this crossing the sun is ahead of the camera, so the sun does not allow one.
+
+**QA starts.** `?chapter=toMeadow` (and any `to*` crossing) starts that crossing at its first waypoint, cygnet in
+the satchel (`src/story/journey.ts`, branch `crossings-start`).

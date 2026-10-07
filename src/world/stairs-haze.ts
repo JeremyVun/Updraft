@@ -134,7 +134,7 @@ function bakeNoise(): THREE.Data3DTexture {
 /** The haze's colour in its own shade, lit through by the sky round it, for surfaces that go into it. After ATMO_GLSL. */
 export const HAZE_SHADE_GLSL = /* glsl */ `
 vec3 hazeShade() {
-  return (uSkyHorizon * 0.55 + uSkyZenith * 0.6 + uSkyAmbient * 0.8) * vec3(0.95, 0.9, 1.0);
+  return vec3(lumaOf(uSkyHorizon * 0.55 + uSkyZenith * 0.6 + uSkyAmbient * 0.8)) * vec3(1.12, 1.12, 1.16);
 }`;
 
 /** How far toward the sun each step looks to see how much vapour shades it. */
@@ -304,8 +304,8 @@ void main() {
   float c = dot(dir, uSunDir);
   // Mostly forward: the thin edges catch fire looking into the low sun.
   float phase = 0.25 * scatter(c, 0.65) + 0.75 * scatter(c, -0.1);
-  vec3 sun = uSunColor * cloudShadow(vWorld.xz) * phase * 0.45;
-  vec3 lilac = hazeShade();
+  vec3 sun = cloudGlow() * cloudShadow(vWorld.xz) * phase * 0.45;
+  vec3 pale = hazeShade();
   float sigma = 1.6 * mix(0.6, 1.0, min(uAmount, 1.0));
   vec2 side = vec2(smoothstep(1.0, 4.5, uCloudDeckY.x - cameraPosition.y),
     smoothstep(uCloudDeckY.y - 0.6, uCloudDeckY.y - 0.2, cameraPosition.y)) * uCloudDeck.w;
@@ -326,7 +326,7 @@ void main() {
     float a = 1.0 - exp(-sigma * d * dt * reach);
     float shade = shadeAt(p + vSunStep, home + sunHome);
     float lit = 0.75 * exp(-sigma * shade * ${LIGHT_REACH.toFixed(2)} * 1.4) + 0.25 * exp(-sigma * shade * 0.2);
-    vec3 s = lilac * (0.78 + 0.3 * (0.5 - p.y)) + sun * lit;
+    vec3 s = pale * (0.78 + 0.3 * (0.5 - p.y)) + sun * lit;
     light += T * a * s;
     seen += T * a;
     at += T * a * t;
@@ -443,7 +443,7 @@ void main() {
 
 /**
  * A heap of cloud sitting on the stair: round lumps run together, their edges broken by the same vapour as the haze
- * and lit the same way, gold where the low sun reaches and lilac in its own shade. Marched through the box round
+ * and lit the same way, gold where the low sun reaches and pale in its own shade. Marched through the box round
  * its lumps, which move, so the heap can be blown apart.
  */
 const HEAP_FRAG = /* glsl */ `
@@ -497,8 +497,8 @@ void main() {
   float jitter = fract(52.9829189 * fract(dot(gl_FragCoord.xy, vec2(0.06711056, 0.00583715))));
   float c = dot(rd, uSunDir);
   float phase = 0.3 * scatter(c, 0.6) + 0.7 * scatter(c, -0.15);
-  vec3 sun = uSunColor * phase * 0.55;
-  vec3 lilac = hazeShade();
+  vec3 sun = cloudGlow() * phase * 0.55;
+  vec3 pale = hazeShade();
   float T = 1.0;
   vec3 light = vec3(0.0);
   float seen = 0.0, at = 0.0;
@@ -510,10 +510,10 @@ void main() {
     if (d <= 0.0) continue;
     float s = 1.0 - exp(-3.5 * d * dt);
     float shade = heapDensity(p + uSunDir * 0.35) + heapDensity(p + uSunDir * 0.9) + heapDensity(p + uSunDir * 1.8);
-    // Lit from above by the white round it as well: its crowns pale, its underside and folds lilac.
+    // Lit from above by the white round it as well: its crowns paler, its underside and folds grey.
     float over = heapDensity(p + vec3(0.0, 0.5, 0.0)) + heapDensity(p + vec3(0.0, 1.2, 0.0));
     float up = clamp((p.y - uFloor) / 2.4, 0.0, 1.0);
-    vec3 col = lilac * (0.5 + 0.35 * up) * (1.0 - 0.3 * min(over, 1.0)) + uSkyZenith * 0.14 * (1.0 - 0.6 * min(over, 1.0))
+    vec3 col = pale * (0.5 + 0.35 * up) * (1.0 - 0.3 * min(over, 1.0)) + uSkyZenith * 0.14 * (1.0 - 0.6 * min(over, 1.0))
       + sun * exp(-1.4 * shade);
     light += T * s * col;
     seen += T * s;

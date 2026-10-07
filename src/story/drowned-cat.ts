@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { BOW_Z, STERN_Z } from '../traveller/boat/form';
 import { tuning } from '../tuning';
 import {
-  CAT_CHIMNEY, CAT_HOLD, CAT_LANDING, CAT_LENS, CAT_ROOF, TOWER_FOOT, TUB_START, TUB_WATER, WAY, catRoof, onCatRoof, strandRoof,
+  CAT_CHIMNEY, CAT_EAVES, CAT_HOLD, CAT_LANDING, CAT_ROOF, TOWER_FOOT, TUB_START, TUB_WATER, WAY, catRoof, onCatRoof, strandRoof,
 } from '../world/drowned-way';
 import { WashTub, type TubWall } from '../world/wash-tub';
 import type { Cast } from './cast';
@@ -11,7 +11,7 @@ import type { Cast } from './cast';
  * `stranded` on its chimney before the boat comes; `seen` she has noticed it; `easing` the boat slowing into its hold;
  * `waiting` for the tub to be brought to its roof; `coming` down into it; `ferried` the tub on its way to the boat;
  * `boarding` the tub at the bow; `aboard` at the bow. Then, once the dark has come on, `bolting` off the bow and over
- * the roof, `waits` at the first gap mewing back at her, `climbing` she goes after it, and `ridge` she is up.
+ * the roof, `waits` at the first gap looking back at her, `climbing` she goes after it, and `ridge` she is up.
  */
 export type CatStep = 'stranded' | 'seen' | 'easing' | 'waiting' | 'coming' | 'ferried' | 'boarding' | 'aboard'
   | 'bolting' | 'waits' | 'climbing' | 'ridge';
@@ -26,8 +26,6 @@ const HULL_LEN = (BOW_Z - STERN_Z) / 2 - 0.2;
 const BOW_DOCK = new THREE.Vector3(HULL_HALF + WashTub.radius + 0.05, 0, 1.3);
 /** On its boards in the middle of the tub. */
 const IN_TUB = new THREE.Vector3(0, WashTub.floor, 0);
-/** The middle of the cat's eaves, which the boat comes round to face. */
-const EAVES = onCatRoof(0, CAT_ROOF.depth);
 /** Where she steps out onto the slates by the stem, the ridge above it, and the west end of the ridge over the lane. */
 const STEP = new THREE.Vector3(WAY.strandSlope.x0, WAY.strandSlope.height, WAY.strandSlope.z0);
 const RIDGE = new THREE.Vector3(WAY.strand.x0, WAY.strand.height, WAY.strand.z0);
@@ -55,6 +53,9 @@ export class StrandedCat {
   readonly tubTop = new THREE.Vector3();
   private readonly satchel = new THREE.Vector3();
   private readonly darkAt = new THREE.Vector3();
+  /** Where the lens was last frame: the tub comes alongside the bow on the side it can be seen from. */
+  private readonly lensAt = new THREE.Vector3();
+  private watching = false;
   private since = 0;
   private now = 0;
   private readonly roofWall: TubWall = { x: CAT_ROOF.x, z: CAT_ROOF.z, yaw: CAT_ROOF.yaw, len: CAT_ROOF.len, depth: CAT_ROOF.depth };
@@ -107,15 +108,20 @@ export class StrandedCat {
     return this.bolted < 0 ? -1 : this.now - this.bolted;
   }
 
-  /** Crouched on its chimney pot, mewing, with the tub adrift on the water below. */
+  /**
+   * Sitting hunched on its chimney pot, ears back, mewing, with the tub adrift on the water below. It sits rather than
+   * crouches: across the water a crouch is a loaf on a pot, and a sitting cat is a cat.
+   */
   begin(): void {
     const { cat } = this.cast;
     if (!this.cast.village) return;
     cat.visible = true;
     cat.unease = 0;
     cat.curious = null;
-    cat.place(CAT_CHIMNEY, Math.atan2(CAT_HOLD.x - CAT_CHIMNEY.x, CAT_HOLD.y - CAT_CHIMNEY.z), { pose: 'crouch' });
-    cat.strand(this.head);
+    cat.place(CAT_CHIMNEY, Math.atan2(CAT_HOLD.x - CAT_CHIMNEY.x, CAT_HOLD.y - CAT_CHIMNEY.z), { pose: 'sit' });
+    cat.rest('sit', this.head);
+    cat.unease = 0.55;
+    cat.mewing = true;
     const tub = this.tub;
     tub.visible = true;
     tub.place(TUB_START.x, TUB_START.y, 0.7);
@@ -157,6 +163,7 @@ export class StrandedCat {
     child.face(this.head);
     cygnet.eye(this.satchel);
     cat.eye(this.eye);
+    this.cygnetWatch();
     const tub = this.tub;
     this.hull();
     tub.update(dt, time);
@@ -248,7 +255,7 @@ export class StrandedCat {
     const fx = Math.sin(boat.yaw), fz = Math.cos(boat.yaw);
     const on = Math.min(1.5, boat.speed * boat.speed / (2 * tuning.drowned.coastBrake));
     const x = boat.position.x + fx * on, z = boat.position.z + fz * on;
-    boat.coastTo = { x, z, yaw: Math.atan2(EAVES.x - x, EAVES.z - z) };
+    boat.coastTo = { x, z, yaw: Math.atan2(CAT_EAVES.x - x, CAT_EAVES.z - z) };
     this.to('waiting');
   }
 
@@ -277,7 +284,7 @@ export class StrandedCat {
     boat.group.updateMatrixWorld(true);
     const local = this.v.copy(this.tub.position);
     boat.group.worldToLocal(local);
-    const near = boat.group.worldToLocal(this.lens.set(CAT_LENS.x, 0, CAT_LENS.y)).x < 0 ? -1 : 1;
+    const near = boat.group.worldToLocal(this.lens.copy(this.lensAt).setY(0)).x < 0 ? -1 : 1;
     if (!this.tub.dock) this.side = local.x * near < -1.5 ? -near : near;
     return this.goal.set(BOW_DOCK.x * this.side, 0, BOW_DOCK.z).applyMatrix4(boat.group.matrixWorld).setY(0);
   }
@@ -323,7 +330,6 @@ export class StrandedCat {
         cat.run([this.edge], catRoof, { pace: 'walk', speed: 0.55, then: 'crouch', look: this.tubTop }, () => {
           this.phase = 3;
           this.atEdge = this.since;
-          cat.mew(0.6);
         });
       });
     } else if (this.phase === 3 && this.since - this.atEdge > k.edge) {
@@ -384,6 +390,7 @@ export class StrandedCat {
     }
     if (come >= k.boltAt && !cat.busy) {
       cat.afraid(1);
+      cat.yowl();
       this.bolted = this.now;
       this.to('bolting');
     }
@@ -400,8 +407,6 @@ export class StrandedCat {
     cat.leap(onto.clone(), { floor: strandRoof, then: 'stand', arc: 0.3 }, () => {
       cat.run([RIDGE, GAP], strandRoof, { pace: 'run', speed: k.runSpeed, then: 'sit', look: this.head }, () => {
         cat.unease = 0.7;
-        cat.mewing = true;
-        cat.mew(1);
         this.to('waits');
       });
     });
@@ -443,8 +448,27 @@ export class StrandedCat {
     }
   }
 
+  /**
+   * The cygnet in the satchel watches what is happening, never the lens: the cat it is wary of, now and then her, and
+   * the fog once it is coming.
+   */
+  private cygnetWatch(): void {
+    const { cygnet } = this.cast;
+    if (cygnet.seat !== 'satchel' || this.step === 'stranded') {
+      if (this.watching) cygnet.watch(null);
+      this.watching = false;
+      return;
+    }
+    this.watching = true;
+    const beat = this.now % 7;
+    const fogging = this.cast.cat.unease > 0.05 && this.step === 'aboard';
+    if (fogging) cygnet.watch(beat < 4.5 ? this.darkAt : this.eye);
+    else cygnet.watch(beat > 5.4 && this.step === 'aboard' ? this.head : this.eye);
+  }
+
   /** The drawn gust's direction on screen: from the tub toward where it has to go. */
   afterCamera(camera: THREE.Camera): void {
+    this.lensAt.copy(camera.position);
     if (!this.invitation) { this.heading = null; return; }
     const a = this.v.copy(this.tub.position).project(camera);
     const ax = a.x, ay = a.y;

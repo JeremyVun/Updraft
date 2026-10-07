@@ -240,7 +240,7 @@ before the plug.
 ## The meadow and the piano
 
 `story/meadow.ts`, `story/piano.ts`, `world/piano.ts`, `world/piano-stroke.ts`, `fx/notetraces.ts`,
-`fx/piano-wave.ts`, `world/music-growth.ts`, `world/pond.ts`, `world/fields.ts`. `?chapter=meadow`, `?chapter=piano`.
+`fx/piano-wave.ts`, `world/music-growth.ts`, `world/pond.ts`, `world/fields.ts`, `world/harebells.ts`. `?chapter=meadow`, `?chapter=piano`.
 
 The last warm afternoon of the year, and the island is asleep. The crossing hides it in haze
 (`tuning.world.meadowCrossingHaze`) and lines up offshore with the hill path before turning in, so the boat lands
@@ -263,8 +263,10 @@ camera rises and widens with the wave, and the grey hold is released only once t
 sounds and chimes are hushed during the duet. A completed piano checkpoint resumes past it.
 
 The walk goes on over the west rise and through a pass along `WAY` (`world/fields.ts`), the plane kept within
-reach of the child (`tuning.meadowPlane`). Over the brow the ground falls to **the pond** (`POND`) on the open
-north slope, with the cygnet's family resting on it, white on dark water, from the chapter's first frame; their
+reach of the child (`tuning.meadowPlane`). A flock grazes across the way below the rise (`onTheWay` in `main.ts`); it parts round her as she
+comes and bolts from a gust, like any flock, and nothing waits on it. Over the brow the ground falls to **the pond** (`POND`) on the open
+north slope, with the cygnet's family resting on it, white on dark water. Like the sheep they sleep with the island: the pond is
+grey and empty until the lullaby's colour reaches the hollow, and then they dissolve into view (`SwanFlock.shown`); their
 bugling is heard on the walk. The veil stands thick from here to the boat (`tuning.crest`). The cygnet hears them
 first and the child stops on the rise to look. While she is still up there the family gets ready to go north on its
 own: heads come up, wings are tried, and the raft turns and edges toward the far shore (`Flock.stir`). As she starts
@@ -275,10 +277,18 @@ large in the foreground and the pond and the family below. When they go it turns
 stands, no further than keeps her in frame, and lets the V fly out of the top of it (`gaze*`); it never backs away to
 hold them and never goes round the pond. Over her last few metres to the water it eases round to her shoulder, so
 that at the water her hands and the swimmer are beside her, not behind her. The cygnet calls after them from the
-satchel as she goes down, and at the water she sets it down; it paddles after them, watches them go, and swims back
-to her waiting hands. Walking on,
+satchel as she goes down, and at the water she sets it down; it paddles out after them, looks out and turns on the water
+watching them go. Then one white feather comes down out of the sky over the water beside it
+(`MeadowChapter.dropFeather`, the room's own `Feather`), and it lets itself drift, watching it. A sweep toward the
+cygnet carries it there, and the invitation shows which way after a few seconds; left alone, the cygnet paddles over
+for it. It takes it in its bill and swims back to her waiting hands, and the feather goes down into the satchel with
+it as she puts it away. Walking on,
 a sun shower passes, and halfway through it the sun breaks out and a rainbow stands in the rain over the sea
-ahead where the boat waits; the walk does not stop for it (`tuning.rainbow`).
+ahead where the boat waits; the walk does not stop for it (`tuning.rainbow`). Beside the walk down from the pond stands a
+row of harebells taller than she is (`world/harebells.ts`). A stroke across a clump rings it, in the meadow's scale from
+low to high along the walk; she or the plane brushing through one rings it softly, and both of them look round at a bell
+rung near them. One sweep down the whole row is sung back the other way. Like the pond, they are grey and silent until the lullaby
+reaches them. It is there to be found; nothing waits on it.
 
 Rulings:
 - The greening must be seen from where the player is: the camera is placed for it, and it never jerks in and out

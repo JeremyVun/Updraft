@@ -68,6 +68,8 @@ function roof(x: number, z0: number, z1: number, ridge: number, half: number, ea
 const FOOTPRINT = { x0: -3, x1: 3, z0: -1.5, z1: 19 };
 const BLOCK = { x: 0, z: -0.3, top: 0.5, size: 1.4 };
 const POT = new THREE.Vector3(1.6, 1.0, 1.0);
+/** As wide as the model sheet draws it, so the frightened cat can be judged against it. */
+const POT_R = 0.2;
 const LITTLE_ROOF = { x: 1.6, z0: 0.4, z1: 1.6, ridge: 0.55, half: 0.85, eave: 0.12 };
 const RIDGE = { x: -1.2, z0: 1.0, z1: 9.0, top: 1.5, half: 0.9, eave: 0.95 };
 const RAIL = { x: -1.2, z0: 9.6, z1: 12.0, top: 0.95 };
@@ -133,8 +135,8 @@ export class CatYard {
     const parts = [
       pier(BLOCK.size, BLOCK.size, BLOCK.x, BLOCK.z, BLOCK.top),
       ...roof(LITTLE_ROOF.x, LITTLE_ROOF.z0, LITTLE_ROOF.z1, LITTLE_ROOF.ridge, LITTLE_ROOF.half, LITTLE_ROOF.eave),
-      pier(0.4, 0.32, POT.x, POT.z, POT.y - 0.2, BRICK),
-      tinted(new THREE.CylinderGeometry(0.12, 0.13, 0.2, 14).translate(POT.x, POT.y - 0.1, POT.z), [0.4, 0.2, 0.13]),
+      pier(0.5, 0.46, POT.x, POT.z, POT.y - 0.2, BRICK),
+      tinted(new THREE.CylinderGeometry(POT_R, POT_R + 0.01, 0.2, 24).translate(POT.x, POT.y - 0.1, POT.z), [0.4, 0.2, 0.13]),
       ...roof(RIDGE.x, RIDGE.z0, RIDGE.z1, RIDGE.top, RIDGE.half, RIDGE.eave),
       pier(0.3, 0.3, RAIL.x, RAIL.z0 - 0.1, 0.97),
       pier(0.3, 0.3, RAIL.x, RAIL.z1 + 0.1, 0.97),
@@ -198,8 +200,8 @@ export class CatYard {
     const inside = (cx: number, cz: number, hx: number, hz: number) => Math.abs(p.x - cx) <= hx && Math.abs(p.z - cz) <= hz;
     let top = -0.5;
     if (inside(BLOCK.x, BLOCK.z, BLOCK.size / 2, BLOCK.size / 2)) top = BLOCK.top;
-    if (Math.hypot(p.x - POT.x, p.z - POT.z) < 0.13) top = POT.y;
-    else if (inside(POT.x, POT.z, 0.2, 0.16)) top = POT.y - 0.2;
+    if (Math.hypot(p.x - POT.x, p.z - POT.z) < POT_R) top = POT.y;
+    else if (inside(POT.x, POT.z, 0.25, 0.23)) top = POT.y - 0.2;
     for (const r of [RIDGE, { ...LITTLE_ROOF, top: LITTLE_ROOF.ridge }]) {
       const across = Math.abs(p.x - r.x);
       if (across < r.half && p.z >= r.z0 && p.z <= r.z1) top = Math.max(top, r.top - (across / r.half) * (r.top - r.eave));
@@ -286,6 +288,11 @@ export class CatYard {
         sitAt('sit');
         cat.look(onlooker);
         cat.mew(1);
+        return true;
+      case 'curious':
+        sitAt('sit');
+        cat.look(onlooker);
+        cat.curious = onlooker;
         return true;
       case 'chirrup':
         sitAt('sit');

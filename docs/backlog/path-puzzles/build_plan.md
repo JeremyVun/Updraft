@@ -50,7 +50,20 @@ Seam: the cat API (`place`, `strand`, `hop`, `leap`, `run`, `rest`, `look`, `afr
 the dark's `rise` and `reach`; `WAY` decks.
 Gate: a real-gesture check (`tools/drowned-roofs-check.mjs`, started here) carries the tub to the cat and back; idle
 proves the breeze alone does nothing; stills.
-Done: [ ]
+Done: [x] (`44f5777`..`81aa993`). The cat's roof moved earlier along the drift (`CAT_HOUSE`, `CAT_HOLD`), so the cat
+aboard gets its own drift of about 15 s before the air dies; its old roof stays as a plain neighbour
+(`EAST_OF_STRAND`), and the generated village is laid out exactly as before, only left unbuilt on the cat's ground
+(`onCatGround`). Phase 2b: the cat's cottage is sunk to its ridge with a gable-end chimney 9 m across from the hold, so
+the cat on its pot sits low; the lens watches the tub from a fixed point off that gable end (`CAT_LENS`), where she
+and the cat face each other across the frame (upright: behind her, on the side away from the slack sail); the cat sits
+rather than crouches on its pot, pleads at a kitten's length every few seconds, chirrups landing aboard and yowls
+once as it bolts; the boat's drift away up the open water once she is on the ridge is `BOAT_ADRIFT` (its last point a
+placeholder for where it fetches up by the church). The tub (`src/world/wash-tub.ts`) is pushed by strokes across it on screen, not by the field (under the
+low lens a stroke's own wind lands far beyond it; see `contracts/wind.md`). The beat lives in
+`src/story/drowned-cat.ts` (`StrandedCat`), driven by the chapter. The strand's landing is a level line of slates
+(`WAY.strandLanding`) and `WAY.strandSlope` is now the whole slope above it, because `alight` sets her down at a deck's
+own height. Left for later: the cat still reads small on its pot (about 40 px at 1600 × 900) and at the gap, and upright
+the cat at the bow is hidden behind her; the climb's lens looks on to the church with the dark behind it.
 
 ### Phase 3: over the roofs
 Owns: the child's walk over `WAY` following the cat, stopping at each gap; the tree crossing (rocks to the wind, a
@@ -76,4 +89,42 @@ Owns: checkpoints (a save during the run resumes with the boat at rest, the cat 
 after she is aboard resumes aboard with the storm to come), `docs/chapters.md` drowned section on the branch, the
 dark's look pass, a final set of stills (landscape and portrait).
 Gate: typecheck, build, the check from start to the beach; stills opened for review.
+Done: [ ]
+
+## The crossing: the whale asleep
+
+Design: design.md, "The crossings" through the end. Concept frames: `comps/crossings/whale/`. Its own branch, judged
+by Jeremy on its own and never merged without his approval. Commit after every step.
+
+Standing constraints for every phase:
+- Cursor movement is the only verb; nothing timed, nothing failed.
+- Every response is caused by the player's own wind and visibly answers it; the ambient breeze never wakes the whale.
+- Camera never jerks; no fourth wall.
+- Player-feel numbers in `src/tuning.ts` (`tuning.sleepingWhale`).
+- Crossing lengths stay as in `docs/contracts/world.md` apart from the whale's stop.
+- The first crossing (`toLines`) is not touched: its whale is the set-up for the sleeping one.
+- Visual judging (stills against the concept frames) is done by Opus or Astra only.
+
+### Phase C0: direct crossing starts
+Owns: `src/story/journey.ts` (a `?chapter=` value naming any `to*` route starts it at its first waypoint, heading
+for the second, cygnet in the satchel), the query-param list in `CLAUDE.md`.
+Done: [x] branch `crossings-start` (9dd4ebe), the base of `crossing-whale`.
+
+### Phase C2: the whale asleep across the way (branch `crossing-whale`)
+Owns: the sleeping whale (rest pose, breathing, shiver along a stroke, flipper slap, eye, the roll and fluke wave, in
+`src/fx/sealife/` beside `whale.ts`, sharing its anatomy and shader), the gull, `src/story/crossing.ts` (a
+`sleepingWhale` option: the stop, `updraftTarget`, `coax`, the brush response, the safety valve, the camera hold,
+the child's lean and wave, the cygnet's duck and peek, the checkpoint flag), `src/story/journey.ts` (`toMeadow`),
+`src/audio/foley.ts` (breath, slap, gull), `src/tuning.ts`.
+Seam: the crossing holds the boat with `Boat.speedLimit` eased to zero and releases it the same way; the whale reports
+`awake` once the breath is drawn; nothing else in the crossing changes.
+Gate: typecheck; build; a real-gesture check (`tools/sleeping-whale-check.mjs`): sweeps alone never wake it, circles
+over the blowhole do, idle wakes it only by the gull after the valve, a save before and after resumes correctly;
+stills beside `k1`–`k4` in landscape and portrait, opened for Jeremy. Built in two waves: code, the
+check and one smoke still set (C2a), then the look and the gates (C2b).
+Done: [ ]
+
+### Phase C3: docs on approval
+Once Jeremy approves the whale: its section in `docs/chapters.md`, the crossing table in `docs/contracts/world.md`
+if the length changed, the new tuning names; this item's crossing sections trimmed.
 Done: [ ]

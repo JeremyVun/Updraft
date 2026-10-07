@@ -9,6 +9,7 @@ import { MUSIC_GROWTH_GLSL } from './music-growth';
 import { ISLES } from './heightfield';
 import { HOME_JETTY } from './home-layout';
 import { NOISE_TILES_GLSL, noiseTileUniforms } from './noise-tiles';
+import { noiseLoopUniforms } from '../gl/loops';
 
 /** North of this z the world is already living: the sea between the first island and the second. */
 export const LIVING_BEYOND = -150;
@@ -40,6 +41,7 @@ function hdr(hex: string, intensity: number): THREE.Color {
  */
 export const atmo = {
   uniforms: {
+    ...noiseLoopUniforms,
     uTime: { value: 0 },
     uSunDir: { value: sunDirection(sunAz, sunEl) },
     uSunColor: { value: hdr('#ffd2a0', 2.7) },
@@ -216,7 +218,8 @@ vec2 feltWind(vec4 w, float calm) {
   return w.xy * (mix(quiet, s, arrived) / s);
 }`;
 
-export const NOISE_GLSL = /* glsl */ `
+const noiseGlsl = (octaves: string): string => /* glsl */ `
+uniform int uNoiseOctaves;
 float hash12(vec2 p) {
   vec3 p3 = fract(vec3(p.xyx) * 0.1031);
   p3 += dot(p3, p3.yzx + 33.33);
@@ -232,7 +235,7 @@ float vnoise(vec2 p) {
 float fbm(vec2 p) {
   float s = 0.0;
   float a = 0.5;
-  for (int i = 0; i < 4; i++) {
+  for (int i = 0; i < ${octaves}; i++) {
     s += a * vnoise(p);
     p = mat2(1.6, 1.2, -1.2, 1.6) * p;
     a *= 0.5;
@@ -240,6 +243,10 @@ float fbm(vec2 p) {
   return s / 0.9375;
 }
 `;
+
+// Keep the simulation's existing arithmetic ordering; long scene shaders need the rolled loop.
+export const NOISE_GLSL = noiseGlsl('4');
+export const ROLLED_NOISE_GLSL = noiseGlsl('uNoiseOctaves');
 
 /** Value noise with its gradient (yz), from the same four hashes as vnoise. Needs NOISE_GLSL or ATMO_GLSL first. */
 export const NOISE_GRAD_GLSL = /* glsl */ `
@@ -349,7 +356,7 @@ uniform float uSeaFogRim;
 uniform sampler2D uCloudTex;
 uniform vec4 uCloudDomain;
 
-${NOISE_GLSL}
+${ROLLED_NOISE_GLSL}
 ${NOISE_TILES_GLSL}
 
 vec2 domainUv(vec2 xz) {
@@ -543,6 +550,29 @@ vec3 hemiLight(vec3 n) {
   return mix(uGroundBounce, uSkyAmbient, n.y * 0.5 + 0.5);
 }
 
+float lumaOf(vec3 c) {
+  return dot(c, vec3(0.2126, 0.7152, 0.0722));
+}
+/**
+ * The stairs' cloud takes the brightness of the sky and the sun but not their colours, whose blue and orange together
+ * go lilac: in its own shade it is white, a little cool down in its folds (open 0) and paler where it lies open to the
+ * sky (open 1), and where the low sun reaches it, gold.
+ */
+vec3 cloudShade(float open) {
+  return lumaOf(uSkyAmbient) * mix(vec3(1.02, 1.08, 1.28), vec3(1.58, 1.6, 1.7), open) + uGroundBounce * 0.3 * open;
+}
+vec3 cloudGold() {
+  return lumaOf(uSunColor) * vec3(1.0, 0.8, 0.52);
+}
+/** The low sun seen through the cloud's thin edges: gold, keeping some of the sun's own colour. */
+vec3 cloudGlow() {
+  return mix(uSunColor, cloudGold(), 0.6);
+}
+/** The haze far off over the cloud, from the sky at the horizon: gold, so the cloud goes back into the distance warm. */
+vec3 cloudHaze(vec3 sky) {
+  return mix(sky, lumaOf(sky) * vec3(1.12, 0.88, 0.6), 0.7);
+}
+
 #if CLOUD_DECK
 /**
  * How the bank of mist heaves at a point across it (v) and into it (u): x how far its front stands out from its
@@ -627,19 +657,19 @@ float deckCover(vec2 xz) {
 }
 
 /**
- * The underside of the deck at xz as seen from ro: lilac in the body of the cloud, and the low sun coming in under
- * its far edge lighting it gold and rose, the more toward the sun and the further off. Its thin edges are lit
- * through. thin is 0 in the body of a cloud and 1 at its edge.
+ * The underside of the deck at xz as seen from ro: soft grey in the body of the cloud, and the low sun coming in under
+ * its far edge lighting it gold, the more toward the sun and the further off. Its thin edges are lit through. thin is 0
+ * in the body of a cloud and 1 at its edge.
  */
 vec3 deckUnderside(vec2 xz, vec3 ro, float thin) {
   vec2 away = xz - ro.xz;
   float reach = length(away);
   float toward = reach > 1.0 ? dot(away / reach, normalize(uSunDir.xz + 1e-5)) * 0.5 + 0.5 : 0.5;
   float far = smoothstep(25.0, 420.0, reach);
-  vec3 body = uSkyAmbient * vec3(0.95, 0.72, 0.85) + uGroundBounce * 0.3 + uSunColor * vec3(0.02, 0.012, 0.016);
-  vec3 rose = uSunColor * vec3(0.9, 0.7, 0.85);
-  vec3 glow = rose * (0.03 + 0.06 * toward) + uSunColor * pow(toward, 4.0) * (0.12 + 0.55 * far);
-  return body + glow * (0.5 + 0.9 * far) + uSunColor * thin * (0.1 + 0.3 * toward);
+  vec3 gold = cloudGold();
+  vec3 body = lumaOf(uSkyAmbient) * vec3(1.78, 1.7, 1.64) + uGroundBounce * 0.3 + gold * 0.02;
+  vec3 glow = gold * vec3(0.95, 0.9, 0.9) * (0.03 + 0.06 * toward) + cloudGlow() * pow(toward, 4.0) * (0.12 + 0.55 * far);
+  return body + glow * (0.5 + 0.9 * far) + cloudGlow() * thin * (0.1 + 0.3 * toward);
 }
 
 float rampArea(float x, float w) {
@@ -667,7 +697,8 @@ vec4 fogBank(vec3 ro, vec3 rd, float far) {
   float v0 = dot(o, vec2(-n.y, n.x)), dv = dot(rd.xz, vec2(-n.y, n.x));
   // Its front and top as they are where the sightline comes to it, or just ahead if it is in the bank already.
   float meet = u0 < 0.0 ? (du > 1e-4 ? -u0 / du : far) : 8.0;
-  if (meet >= far) return vec4(0.0);
+  // Inside the bank, the look-ahead sample is not an entry distance: nearby surfaces still lie in fog.
+  if (u0 < 0.0 && meet >= far) return vec4(0.0);
   vec2 heave = bankHeave(v0 + dv * meet, max(0.0, u0 + du * meet));
   float into0 = u0 - heave.x;
   float top = bankTop(v0 + dv * meet, heave.y);
@@ -700,7 +731,7 @@ vec4 fogBank(vec3 ro, vec3 rd, float far) {
     + vnoise(vec2(v0 + dv * deeper + uTime * 0.6, u0 + du * deeper) * 0.05) * 0.5;
   float toward = max(0.0, dot(rd, uSunDir));
   // Seen from outside, its face is in its own shade, the low sun being beyond it, and lighter toward its top.
-  vec3 face = uFogBankLight.rgb * vec3(0.5, 0.5, 0.6) * mix(0.82, 1.18, up) * (0.78 + 0.44 * billow)
+  vec3 face = uFogBankLight.rgb * vec3(0.52, 0.5, 0.5) * mix(0.82, 1.18, up) * (0.78 + 0.44 * billow)
     + uSunColor * uFogBankLight.a * pow(toward, 3.0) * 0.06;
   // From inside it is white all round, and lighter toward the sun; long wisps of it stream past level as the boat
   // goes, nearer ones faster than those further off.
@@ -716,7 +747,7 @@ vec4 fogBank(vec3 ro, vec3 rd, float far) {
   float rim = 4.0 * cover * (1.0 - cover);
   light += uSunColor * uFogBankLight.a * (halo * mix(0.3 * inside, 1.0, rim) + (pow(toward, 400.0) * 1.5 + pow(toward, 12.0) * 0.2) * rim);
   // Far off it goes into the haze of the horizon, as the cloud does.
-  light = mix(light, skyColor(normalize(vec3(rd.x, 0.01, rd.z))), (1.0 - exp(-span.x / 650.0)) * 0.7);
+  light = mix(light, cloudHaze(skyColor(normalize(vec3(rd.x, 0.01, rd.z)))), (1.0 - exp(-span.x / 650.0)) * 0.7);
   return vec4(light, cover);
 }
 
@@ -749,7 +780,7 @@ vec4 deckLayer(vec3 ro, vec3 rd, float far) {
   }
   float depth = uCloudDeckY.z * len - thin * cleared;
   // In a hollow big enough to stand back in, the cloud's light is taken where a sightline leaves its clear heart, so
-  // the hollow is bright over the lens and deepens to lilac under whatever it looks down on.
+  // the hollow is bright over the lens and deepens to grey under whatever it looks down on.
   float from = inside.x;
   if (uCloudBubble.w > 10.0) from = max(from, deckSphere(ro, rd, uCloudBubble.xyz, uCloudBubble.w * 0.6).y * smoothstep(10.0, 20.0, uCloudBubble.w));
   vec3 p = ro + rd * min(from + 1.2 / uCloudDeckY.z, inside.y);
@@ -776,8 +807,9 @@ vec4 deckLayer(vec3 ro, vec3 rd, float far) {
   float sunUp = clamp(uSunDir.y * 3.0 + 0.25, 0.0, 1.0);
   float behind = dot(rd.xz, rd.xz) > 1e-8 ? max(0.0, -dot(normalize(rd.xz), normalize(uSunDir.xz))) : 0.0;
   vec3 under = deckUnderside(p.xz, ro, gap);
-  under = mix(under, under * 0.8 + uSunColor * (0.06 + 0.45 * behind), wall);
-  vec3 over = uSunColor * (0.55 + 0.35 * sunUp) + uSkyAmbient * 0.55;
+  under = mix(under, under * 0.8 + cloudGlow() * (0.06 + 0.45 * behind), wall);
+  // High in it the white is lit through from the sun on its top: cream, warming toward the top.
+  vec3 over = lumaOf(uSunColor) * vec3(0.85, 0.72, 0.54) * (0.55 + 0.35 * sunUp) + lumaOf(uSkyAmbient) * 0.8;
   vec3 light = mix(under, over, smoothstep(0.0, 1.0, pow(up, 1.4)));
   light *= 0.66 + 0.55 * billow;
   return vec4(light, clamp(cover, 0.0, 1.0));
@@ -787,7 +819,7 @@ vec4 deckLayer(vec3 ro, vec3 rd, float far) {
  * The stairs' cloud deck along a sightline of length far: rgb its light, a how much of the view it covers.
  * Analytic, so it costs the same per vertex as per pixel: a slab, clipped to its disc, with the pocket round
  * the child hollowed out of it. Its light comes from where a sightline first gets well into it: sunlit gold on
- * top, lilac grey underneath, and lighter the higher up in it you are. The bank of mist stands on it.
+ * top, grey underneath, and lighter the higher up in it you are. The bank of mist stands on it.
  */
 vec4 cloudDeck(vec3 ro, vec3 rd, float far) {
   vec4 deck = deckLayer(ro, rd, far);
@@ -938,10 +970,19 @@ vec4 fogOf(vec3 wpos, float landscape) {
   float veil = max(0.0, fogDistance - uVeil.x) * uVeil.y;
   float amt = 1.0 - exp(-fogDistance * (uFogDensity * (0.55 + 0.65 * heightFactor) + mist * 0.0075) - veil);
   vec3 fogCol = skyColor(normalize(vec3(rd.x, 0.015 + max(rd.y, 0.0) * 0.25, rd.z))) * vec3(0.84, 0.87, 0.92);
+  float arriving = journeyVeilAt(wpos);
+  float hidden = 0.0;
+  if (uIslandVeilAmount > 0.0) {
+    float coast = length((wpos.xz - uIslandVeil.xy) / uIslandVeil.zw);
+    hidden = smoothstep(${glsl(tuning.world.meadowVeilFrom)}, ${glsl(tuning.world.meadowVeilTo)}, coast) * uIslandVeilAmount;
+  }
+  // All three veils face the same sky; one call avoids three expanded copies of its cloud noise.
+  vec3 clearSky = vec3(0.0);
+  if ((uOpenSea > 0.001 && veil > 0.0) || hidden > 0.0 || arriving > 0.0) clearSky = skyRadiance(rd);
   // Ordinary haze has its own tint. Far offshore that tint must not reveal the outline of an island.
   if (uOpenSea > 0.001 && veil > 0.0) {
     float open = uOpenSea * smoothstep(1.0, 4.0, veil);
-    fogCol = mix(fogCol, skyRadiance(rd), open);
+    fogCol = mix(fogCol, clearSky, open);
     amt = max(amt, open);
   }
   /** The ground fog of the sleeping island, taken along the eye ray at both ends and the middle of it. */
@@ -967,13 +1008,9 @@ vec4 fogOf(vec3 wpos, float landscape) {
   }
   // Land, its props, reflections and the sea all reach the same sky colour beyond this coast.
   // Camera-distance fog alone can leave a tinted island silhouette even when fully opaque.
-  if (uIslandVeilAmount > 0.0) {
-    float coast = length((wpos.xz - uIslandVeil.xy) / uIslandVeil.zw);
-    float hidden = smoothstep(${glsl(tuning.world.meadowVeilFrom)}, ${glsl(tuning.world.meadowVeilTo)}, coast) * uIslandVeilAmount;
-    if (hidden > 0.0) {
-      fogCol = mix(fogCol, skyRadiance(rd), hidden);
-      amt = max(amt, hidden);
-    }
+  if (hidden > 0.0) {
+    fogCol = mix(fogCol, clearSky, hidden);
+    amt = max(amt, hidden);
   }
 #if CLOUD_DECK
   if (deck.a > 0.0) {
@@ -982,9 +1019,8 @@ vec4 fogOf(vec3 wpos, float landscape) {
     amt = total;
   }
 #endif
-  float arriving = journeyVeilAt(wpos);
   if (arriving > 0.0) {
-    fogCol = mix(fogCol, skyRadiance(rd), arriving);
+    fogCol = mix(fogCol, clearSky, arriving);
     amt = mix(amt, 1.0, arriving);
   }
 #if CLOUD_DECK

@@ -1,0 +1,106 @@
+{
+  "date": "2026-10-05",
+  "brief": "yea have a go. The sea one is approved, though it'd be nice to see if you can add the hint of a dolphin or osmething to it",
+  "precedingFeedback": "do you think the sky mirror one has captured the feel of that chapter well enough? I'm not sold on the perspective",
+  "status": "Approved Mirror05 and Sea06 installed: native landscape and matching portrait masters, q94 WebP paintings, q90 chapter tiles.",
+  "vision": "A clear horizon and human viewpoint establish standing on a thin mirror with sky beneath your feet. Nearby trapped light leads through modest soap props toward one rising bubble. Preserve approved sea composition and add only a subtle swimming dolphin.",
+  "mode": "built-in image_gen",
+  "prompts": {
+    "mirror": "Use case: stylized-concept.\nCreate a new finished 16:9 landscape chapter painting for Updraft, THE SKY MIRROR.\nReference image1 is the actual game, authoritative for this place: a perfectly flat, shallow mirror of the sky with fallen LIGHT POINTS just beneath it, a little round wooden stool, a shallow enamel soap bowl, a brass bubble hoop, and a distant timber jetty. Image2 supplies ONLY the polished luminous painting style and clean continuous surfaces of the approved chapter art. Do not copy its boat, buildings or orange-sunset composition.\nEmotional aim: standing on a thin sheet of water that seems to open into an infinite sky beneath your feet. Quiet, spacious, softly impossible, a place where a child mends the sky. This is an environment painting with nobody in it.\nIMPORTANT CAMERA CHANGE: view from a child's eye height, about one metre above the water, looking gently across the mirror toward a visible far horizon around 42% down the image. A human standing view, NOT aerial, NOT looking straight down, NOT a bowl-and-stool close-up product still life. The viewer must instantly understand which is the sky above and which is its enormous reflection below. The unbroken level horizon establishes that space.\nThe lower half is an absolutely smooth glasslike sheet of shallow water reflecting the broad sky above. Show soft lavender-blue cloud masses and a few pale peach-lit edges, mirrored geometrically in the still surface. No land, no rocks, no sand, no platform, no cloud objects resting on water. No central sun, no mountains, no floating islands. The horizon is a restrained narrow pearl-apricot seam, much quieter than a blazing sunset.\nComposition with clear near/far depth:\n- The closest focal point, a little below centre around 48% across and 65% down, is a tiny INTENSE WHITE-GOLD POINT OF LIGHT trapped beneath the transparent skin of water. A minute brilliant core, softly diffusing warm halo and a few fine tapered rays laid along the plane, while a faint trace of reflected lavender cloud passes over it. NO physical shape, five-point star, diamond, ball, jewel or golden object. A single very faint wide elliptical ripple helps reveal the water's thin skin. The light feels close enough to reach down toward.\n- Further back, at roughly 34% across, the small simple ROUND THREE-LEGGED stool carries the shallow pale blue-grey enamel bowl. A thin round brass soap hoop with a short all-brass handle rests against it. These ordinary objects are modest in scale, about 13% of the image width as a group, with all feet visibly meeting the mirror and a precise dark reflection underneath. They anchor the distance, not dominate the frame.\n- A single delicate transparent soap bubble is rising above the mirror near 60% across, predominantly against the REAL sky, gently separated from its reflection below by clear space. About 11% of frame width, nearly invisible clear centre, fine pearl/rose/blue edge, one soft highlight. A tiny point of warm light has just been caught inside it. Its reflection below is correctly positioned, subtly quieter and partially lost in the reflected cloud colour: avoid two large decorative circles touching in a figure eight.\n- Two other tiny light points remain underneath the mirror further away, irregularly spaced and much dimmer than the foreground one.\n- Far off to the right, a very small timber jetty and its one warm lantern, as in the game reference, provide the slightest sense of a place to leave from. Keep this incidental, fading into the distance, no boat.\nThe overall eye travels from the close trapped light through the small soap objects to the rising bubble and spacious horizon. Large calm regions and dimensional clouds make the space breathe. Keep every important subject between 18% and 73% down for a wide-screen crop; lower centre naturally settles into quiet lavender reflection for separate UI, never a blank panel.\nColour and style: pearly lavender, muted blue, soft blush and pale apricot, small white-gold lights; rich coloured shadows with soft volumetric light, clean gently rounded wooden objects, luminous animated-film painting like reference2. Preserve warmth without an orange wash. No photographic microtextures, generic brush-stamp noise, repeated swatches, facets, triangular or diamond patterns, canvas/paper grain, waves, typography, UI, people, animals, extra props, boats or sails.",
+    "seaDolphin": "Use case: precise-object-edit.\nThis is the APPROVED Updraft Open Sea chapter painting. Preserve the existing boat EXACTLY: size, position, angle, full mast and rig, red four-sided sail, round wooden hull, white bow post and brass lantern, cream rails and rope swags, thwarts, pail and coil of rope. Preserve the whole composition, blue water, broad calm swell, lighting, wake, clean painting finish and crop.\nMake ONE small addition: the hint of ONE common dolphin swimming alongside the boat, sharing its course toward the lower left. Place it in the water to the LEFT of the bow, around 31–35% across and 65% down, with a comfortable clear gap between it and the boat. It is a quiet companion discovered on a second look, not a new focal subject.\nShow mostly a streamlined bluish-grey body just BELOW the water, with only the graceful arc of its back and small swept-back dorsal fin briefly breaking the surface. A subtle slender dolphin beak is discernible through the blue water at the front; the rest of its form including horizontal tail flukes is softened and partly obscured by the water. Keep its anatomy convincingly dolphin-like rather than a shark fin or whale. Body length about half the visible boat hull length. Soft grey-blue back, a hint of paler flank where refracted light reaches it, harmonised with the surrounding sea. A tiny glint along its wet back and a short fine disturbance in the surface; no white splash or dramatic leap, no large wake, no cartoon face or eye contact. This is an understated passing glimpse.\nDo not change or repaint anything else. Do not add a pod, extra animals, passengers, landscape, new clouds, text or UI. Preserve smooth coherent shading with no repeating swatches, grain or photoreal material noise."
+  },
+  "finalPrompts": {
+    "mirror": "Use case: precise-object-edit.\nKeep this Sky Mirror chapter painting's new low human viewpoint, visible horizon, stool and soap bowl, brass hoop, bubble in the sky, distant jetty, reflections, cloud forms, colours and composition.\nMake only one local correction: the bright foreground light at approximately x50%, y68%. Its centre currently looks like a small solid white ball and its radiating spokes and rings are too emphatic.\nReplace that disc with a TINY luminous PINPOINT beneath the mirror. The fully white core should be about 3 pixels across at this image resolution, smoothly fading into a soft small pale-gold bloom; no hard boundary or object volume. Retain just one delicate horizontal light streak and two very fine short diagonal rays, all tapering continuously to nothing. No five-sided star, polygon, diamond or physical object. The faint lavender and peach CLOUD REFLECTION must continue over the point and glow, making the light feel trapped UNDER the clear surface. Keep the glow bright enough to catch the eye but reduce its overall halo radius to about half of the existing one.\nRemove the many concentric rings and replace them with ONE extremely faint broad elliptical surface ring, almost imperceptible. No portal, magical diagram, burst of sparks or energy source. The foreground should feel like still shallow water with a single point of starlight beneath it.\nKeep all other lights and every other part of the painting unchanged. Preserve clean smooth shading and full native detail. No noise, grid, repeating swatches or new objects.",
+    "seaPortrait": "Use case: style-transfer.\nCreate the separately composed PORTRAIT chapter painting matching this APPROVED landscape Open Sea painting for Updraft. Output a tall portrait approximately 9:19.5, not landscape. Reference image1 is the approved composition and boat; reference2 is the actual in-game boat for fidelity.\nPreserve the beautiful blue open sea, gentle low swells, pale gold morning glints from upper left, little round wooden boat travelling toward lower left in three-quarter bow/side view, and short curved wake trailing toward upper right. No horizon or sky. The scene is calm and spacious.\nRecompose for the narrow tall frame: place the boat in the upper-middle portion. Full mast tip at about 20% of image height, bottom of hull around 55%, the complete boat approximately 54% of frame width and slightly right of centre. Keep the whole rig, bow and stern in frame with generous blue water to both sides. The wake curls into the upper right background. Plenty of naturally dim blue water with softly described swell below the boat, especially around 74% down for separate UI; no empty blurred panel or abrupt fade.\nThe boat must match both references: cute rounded short deep wooden clinker dinghy sitting in the water, six broad warm strakes, cream rubbing rail and two rope swags, thick forward-raked WHITE bow post topped by the little brass lantern, small triangular wooden foredeck, stout central dark mast and boom, gently filled red four-sided scarf sail with a narrow straight top and a broad bottom, small red pennant, wooden thwarts/floorboards and subtle pail/rope inside, cream stern rudder. Preserve the original proportions of sail and hull. Broad soft sail folds only, not knit stitches or photoreal textile.\nMatch the approved image's exact colour character and polished stylized dimensional painting finish, gentle blue water, restrained irregular glints and continuous smooth surfaces. No dramatic waves, heavy whitecap foam, repeating swatches, grids, diagonal facets, paper/canvas grain, people, animals, land, other boats, text or UI. This portrait is of the approved dolphin-free version."
+  },
+  "outputs": {
+    "mirror": "05-mirror-eye-level.png",
+    "seaDolphin": "06-sea-dolphin.png"
+  },
+  "sources": {
+    "mirrorBase": "/Users/jeremy/.codex/generated_images/01a10a1f-6dd6-72c2-8ee3-1448b191d071/exec-aacc96fb-5327-4095-b160-56053928eebb.png",
+    "mirrorFinal": "/Users/jeremy/.codex/generated_images/01a10a1f-6dd6-72c2-8ee3-1448b191d071/exec-1d82521a-a95a-45dc-ad7b-d14ea69f57d8.png",
+    "seaDolphin": "/Users/jeremy/.codex/generated_images/01a10a1f-6dd6-72c2-8ee3-1448b191d071/exec-cc6dd519-e301-4c50-bc33-6f9744293d21.png",
+    "seaPortrait": "/Users/jeremy/.codex/generated_images/01a10a1f-6dd6-72c2-8ee3-1448b191d071/exec-96488da0-16cb-4b90-b376-eb8475c23119.png"
+  },
+  "approval": "Great, these two that you just opened in preview are approved",
+  "approved": [
+    "05-mirror-eye-level.png",
+    "06-sea-dolphin.png"
+  ],
+  "portraitPrompts": {
+    "mirror": "Use case: style-transfer.\nCreate a separately composed tall PORTRAIT painting, approximately 9:19.5, matching this APPROVED landscape Sky Mirror chapter painting from Updraft. Treat the reference as authoritative for every subject, the low human eye-height viewpoint, softly luminous lavender/peach colour, clean surface finish, and the feeling of a thin shallow mirror with endless sky beneath it.\nRecompose the same scene for a phone, rather than cropping the landscape. Maintain a clear level horizon around 40% down. A large dimensional sky of soft blue-lilac clouds with restrained warm peach edges fills the upper portion; its accurate smooth reflection fills the entire lower portion, no land or waves. Standing at a child's eye height, NOT overhead or looking down into clouds.\nThe ordinary small ROUND THREE-LEGGED wooden stool with shallow pale blue-grey enamel bowl and thin brass soap hoop with short brass handle sits left of centre, about 30% across, its feet meeting the water around 49% down, its bowl around 39% down. The whole prop group about 28% of frame width, all comfortably in frame. Show its matching dark reflection directly below. Keep the simple proportions from the reference.\nOne clear soap bubble with a fine pearl/rose/blue iridescent rim floats against the real SKY above right, around 66% across and 28% down, about 16% of frame width. A tiny bright light pinpoint inside. The bubble is transparent inside and its correct softer reflection is visible below, separated from the real bubble by ample space. No touching figure-eight circles.\nClosest to us, around 53% across and 61% down, a single minute white-gold LIGHT PINPOINT shines from just beneath the mirror skin, with a small soft halo and a few thin gently fading rays. No white disc, ball, solid star, polygon, five-point icon or object; a little reflected lavender cloud passes across it. One very faint broad elliptical surface ring. Two other dimmer fallen light pinpoints sit further back, irregularly spaced. Keep all four lights as pure illumination.\nA tiny distant timber jetty and one warm lantern lie at far right near the horizon; secondary and small. No boat, people, bird or other animals, moon, sun disc, mountain, island, platform or clouds resting physically on the surface.\nBelow the foreground light, continue the smooth reflected clouds into quieter lavender-blue foreground, leaving room for separately added menu text at about 74% height and controls below. Do not add text or UI; no blank panel, imposed blur wall or harsh vignette. Preserve complete subjects through small phone crop changes.\nMatch the approved painting's soft dimensional animated-film finish, rich coloured shadows and broad clean continuous shading. No repeated diagonal swatches, diamond patterns, patchwork facets, canvas/paper grain, uniform noise or texture overlay. One finished portrait image.",
+    "sea": "Use case: precise-object-edit.\nImage1 is the existing tall PORTRAIT Open Sea painting; edit this portrait and keep its tall aspect ratio. Image2 is the newly APPROVED landscape version, authoritative for the dolphin addition. The goal is a matching portrait of that approved sea-and-dolphin scene.\nPreserve image1's boat, framing, camera, proportions, complete mast and red four-sided sail, white bow post/lantern, rounded broad wooden strakes, cream rail and rope swags, thwarts, pail and coil of rope, gentle broad blue swell, pale gold light from upper left and curved wake. No boat redesign or change of viewpoint.\nAdd just ONE dolphin like image2, swimming alongside the bow toward the lower left. It must fit fully inside the portrait with some water between the animal, frame edge and boat. Place it left of the boat, around 16% across and 40% down, with body length around 20% of frame width (roughly half the hull length). It is mostly submerged, a streamlined soft blue-grey body visible through the water, a gently arched wet back and small swept-back dorsal fin briefly breaking the surface, a subtle dolphin beak at the lower-left end and horizontal tail flukes softened beneath the water at upper right. A delicate warm glint along the back and tiny water disturbance, like image2. No leap, splash, bold outline or eye contact. It should be a quiet companion and remain smaller and much lower contrast than the boat.\nKeep the complete vessel and dolphin clear of the quiet lower water area used for separately added text at about 74% down. Preserve the original painting's clean smooth shaded surfaces and colour; do not introduce repetitive swatches, grain or photoreal microdetail. No other animals, people, land, horizon, extra props, letters or UI."
+  },
+  "validation": {
+    "method": "Isolated static browser fixtures using installed WebP images and the actual veil/chapter-menu CSS; Chrome for Testing.",
+    "viewports": [
+      "1600x1000",
+      "2000x800",
+      "390x844"
+    ],
+    "checks": [
+      "Landscape and portrait surfaces inspected at native resolution and enlarged details",
+      "Finished-save Continue, chapters and start over clear focal subjects",
+      "Wide sea and mirror controls moved to 77% across at aspect ratios >=2:1; chapter list remains centred",
+      "Native masters, WebP dimensions and manifest checksums verified",
+      "git diff --check passed"
+    ],
+    "historicalReview": "/private/tmp/updraft-sea-adoption-macos-oaPwQP/final/installed-review.png"
+  },
+  "artifactRetention": {
+    "date": "2026-10-05",
+    "note": "Approved cleanup removed superseded study images, duplicate selected PNGs, comparison pages/screenshots and this chat temporary directories. Filenames and temporary paths in the generation history are provenance, not retained assets. Prompts and approvals remain intact.",
+    "currentMasters": {
+      "sea": {
+        "land": "assets/art-direction/continue/remade/masters/sea-land.png",
+        "port": "assets/art-direction/continue/remade/masters/sea-port.png"
+      },
+      "mirror": {
+        "land": "assets/art-direction/continue/remade/masters/mirror-land.png",
+        "port": "assets/art-direction/continue/remade/masters/mirror-port.png"
+      }
+    },
+    "gameReferences": "references/"
+  },
+  "historicalInstallationSources": {
+    "sea": {
+      "land": "/Users/jeremy/projects/updraft/assets/art-direction/sea-mirror-study-2026-10-05/06-sea-dolphin.png",
+      "port": "/Users/jeremy/.codex/generated_images/01a10a1f-6dd6-72c2-8ee3-1448b191d071/exec-2aa335d1-5e04-4975-b201-2722c10aa599.png"
+    },
+    "mirror": {
+      "land": "/Users/jeremy/projects/updraft/assets/art-direction/sea-mirror-study-2026-10-05/05-mirror-eye-level.png",
+      "port": "/Users/jeremy/.codex/generated_images/01a10a1f-6dd6-72c2-8ee3-1448b191d071/exec-5fa5decb-64fb-4e7a-b130-8b8b1d49cb03.png"
+    }
+  },
+  "installedMasters": {
+    "sea": {
+      "land": "assets/art-direction/continue/remade/masters/sea-land.png",
+      "port": "assets/art-direction/continue/remade/masters/sea-port.png"
+    },
+    "mirror": {
+      "land": "assets/art-direction/continue/remade/masters/mirror-land.png",
+      "port": "assets/art-direction/continue/remade/masters/mirror-port.png"
+    }
+  },
+  "cleanup": {
+    "date": "2026-10-05",
+    "userApproval": "proceed",
+    "removedStudyAndComparisonFiles": 18,
+    "removedScratchDirectories": 6,
+    "removedMiB": 111.82,
+    "protectedFilesVerified": 88,
+    "collage": "assets/promo/updraft-chapter-collage-share.jpg",
+    "collageDimensions": [
+      2340,
+      1688
+    ],
+    "rebuild": "node tools/chapter-collage.mjs",
+    "checks": [
+      "All selected artwork, installed derivatives, final prompts and game-reference captures retained with identical SHA-256 hashes",
+      "Collage rendered successfully and inspected",
+      "node --check tools/chapter-collage.mjs passed",
+      "git diff --check passed"
+    ]
+  }
+}

@@ -41,6 +41,8 @@ ${CREATURE_GLSL}
 ${LORE_GLSL}
 uniform mat4 uBones[${BONES}];
 uniform float uNudge;
+uniform vec3 uNudgeAt;
+uniform vec3 uNudgeSlope;
 uniform float uBlink;
 uniform float uFold;
 uniform float uDown;
@@ -109,7 +111,7 @@ void main() {
   vNormal = N;
   vMat = aMat;
   vRest = position;
-  gl_Position = projectionMatrix * nudgedView(vWorld, uNudge);
+  gl_Position = projectionMatrix * nudgedView(vWorld, uNudge + dot(vWorld - uNudgeAt, uNudgeSlope));
 }`;
 
 export const CYGNET_FRAG = /* glsl */ `
@@ -314,6 +316,8 @@ export function cygnetMaterial(bones: THREE.Matrix4[]): THREE.ShaderMaterial {
     ...atmo.uniforms,
     uBones: { value: bones },
     uNudge: { value: 2.4 },
+    uNudgeAt: { value: new THREE.Vector3() },
+    uNudgeSlope: { value: new THREE.Vector3() },
     uAir: { value: 0 },
     uBlink: { value: 0 },
     uFold: { value: 1 },
