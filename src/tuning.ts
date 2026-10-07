@@ -1434,7 +1434,7 @@ export const tuning = {
      * behind the boat and `holdHeight` up, `holdBearing` radians round to port of astern, at `holdEase` a second; and
      * the wider view it eases back out to as it goes free, the plume leaving the top of the frame.
      */
-    holdFrom: 40, holdFull: 6, holdDistance: 18, holdHeight: 9.5, holdBearing: 0.05, holdEase: 0.45,
+    holdFrom: 40, holdFull: 6, holdDistance: 13, holdHeight: 5, holdBearing: -0.08, holdEase: 0.45,
     releaseDistance: 30, releaseHeight: 12, releaseBearing: 0.28,
     /** How far ahead of the bow the pod runs while it leads the boat in (m). */
     podLead: 18,
@@ -1483,7 +1483,7 @@ export const tuning = {
      * and how high (m), how far round to port of astern (radians), how far the look goes from the boat toward what
      * matters (the head, then the flipper's tip) and how high on it (m).
      */
-    holdMove: 5, holdLookY: 4.5, holdToward: 0.5,
+    holdMove: 5, holdLookY: 3.3, holdToward: 0.5,
     lineDistance: 11, lineHeight: 4.8, lineBearing: 0.3, lineLookY: 3.4, lineToward: 0.36,
     flipperDistance: 11.5, flipperHeight: 7.2, flipperBearing: 0.36, flipperLookY: 8, flipperToward: 0.4,
     /**
@@ -2157,7 +2157,12 @@ export const tuning = {
      */
     glass: 3, glassWarm: 2, glassDeep: 0.45, glassFrom: 30, glassTo: 80,
     /** Its long low back melts into the sea's mirror of the morning: at most this much, from `hazeFrom` to `hazeTo` metres off. */
-    haze: 0.8, hazeFrom: 30, hazeTo: 95,
+    haze: 0.9, hazeFrom: 30, hazeTo: 95,
+    /**
+     * Where its back lies within `awash` metres of the sea, the sea films over it and it takes the water's look, up to
+     * `awashHaze`; the gold line along it keeps all but `ridgeHazed` of itself through the haze.
+     */
+    awash: 2, awashHaze: 0.9, ridgeHazed: 0.4,
   },
 };
 

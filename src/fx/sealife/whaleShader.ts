@@ -1,3 +1,4 @@
+import * as THREE from 'three';
 import { CREATURE_GLSL } from '../../creatures/shading';
 import { ATMO_GLSL } from '../../world/atmosphere';
 import { tuning } from '../../tuning';
@@ -7,6 +8,8 @@ export const SPINE_N = 44;
 const f = (x: number) => x.toFixed(4);
 const L = tuning.whaleLook;
 const MOUTH_N = 32;
+/** The open sea's deep colour, as the water has it. */
+const SEA_DEEP = new THREE.Color('#0d4a66');
 
 const HEAD_GLSL = /* glsl */ `
 const float MOUTH_Y[${MOUTH_N}] = float[](${Array.from({ length: MOUTH_N }, (_, i) => f(MOUTH((i / (MOUTH_N - 1)) * JAW_CORNER))).join(', ')});
@@ -342,13 +345,22 @@ Skin skin(float far) {
  */
 const HAZE_GLSL = /* glsl */ `
 uniform float uHaze;
-vec3 hazed(vec3 col, vec3 world, float s) {
+/** The open sea's own colour seen at world, as the water draws it: its deep body under a rough mirror of the dawn. */
+vec3 seaLook(vec3 world) {
   vec3 V = normalize(cameraPosition - world);
+  float nv = max(V.y, 0.02);
+  vec3 R = normalize(vec3(-V.x, nv + 0.1 * (1.0 - nv), -V.z));
+  vec3 body = vec3(${f(SEA_DEEP.r)}, ${f(SEA_DEEP.g)}, ${f(SEA_DEEP.b)}) * (uSkyAmbient * 1.1 + uSunColor * max(uSunDir.y, 0.0) * 0.6);
+  return mix(body, skyColor(R), 0.02 + 0.58 * pow(1.0 - nv, 5.0));
+}
+/** How far the morning has taken it at world: its far length, and its low back where the sea films over it. */
+float hazeAt(vec3 world, float s, float filmed) {
   float far = smoothstep(${f(L.hazeFrom)}, ${f(L.hazeTo)}, distance(cameraPosition, world));
-  float haze = uHaze * smoothstep(0.24, 0.72, s) * far * (1.0 - smoothstep(2.0, 9.0, world.y)) * ${f(L.haze)};
-  vec3 sky = skyColor(vec3(-V.x, max(V.y, 0.02), -V.z));
-  vec3 sea = mix(vec3(0.05, 0.29, 0.4) * uSkyAmbient * 1.1, sky, 0.02 + 0.4 * pow(1.0 - max(V.y, 0.0), 5.0));
-  return applyFog(mix(col, sea, haze), world);
+  float awash = filmed * (1.0 - smoothstep(0.0, ${f(L.awash)}, world.y)) * smoothstep(0.36, 0.55, s);
+  return uHaze * max(smoothstep(0.24, 0.72, s) * far * (1.0 - smoothstep(2.0, 9.0, world.y)) * ${f(L.haze)}, awash * ${f(L.awashHaze)});
+}
+vec3 hazed(vec3 col, vec3 world, float s, float filmed) {
+  return applyFog(mix(col, seaLook(world), hazeAt(world, s, filmed)), world);
 }
 `;
 
@@ -443,7 +455,7 @@ void main() {
   // Where the back turns away toward the low sun at its edge it draws one crisp gold line against the sea.
   float sunward = dot(N, normalize(vec3(uSunDir.x, 0.0, uSunDir.z)));
   float ridge = pow(1.0 - nv, ${f(L.ridgePower)}) * smoothstep(-0.05, 0.35, sunward + 0.3 * N.y) * float(part == ${BODY} || part == ${DORSAL});
-  col += uSunColor * vec3(1.0, 0.82, 0.55) * ridge * back * ${f(L.ridge)} * sun * (1.0 - k.near);
+  vec3 gold = uSunColor * vec3(1.0, 0.82, 0.55) * ridge * back * ${f(L.ridge)} * sun * (1.0 - k.near);
   // The cornea bulges over the iris, so the sky it mirrors moves across it; the gold in it is the dawn behind.
   vec3 Nc = normalize(N + (vAxisZ * k.iris.x + vAxisY * k.iris.y) * 1.3);
   vec3 Rc = reflect(-V, Nc);
@@ -454,7 +466,9 @@ void main() {
   float glint = pow(max(dot(Nc, normalize(V + vec3(0.0, 0.55, 0.0) + vAxisZ * 0.25)), 0.0), 900.0);
   col += (uSunColor * 0.5 + uSkyHorizonSun) * glint * ${f(L.catchlight)} * k.gloss;
 
-  gl_FragColor = vec4(hazed(col, vWorld, vRig.x), 1.0);
+  // The gold line stays crisp over the haze, so the back goes on into the morning as one thin line.
+  float filmed = float(part == ${BODY});
+  gl_FragColor = vec4(hazed(col, vWorld, vRig.x, filmed) + gold * (1.0 - fogOf(vWorld).a) * (1.0 - ${f(L.ridgeHazed)} * hazeAt(vWorld, vRig.x, filmed)), 1.0);
 }`;
 
 /** The submerged body seen through the sea: slid up its view ray to the surface, tinted and faded by the water. */
@@ -511,6 +525,6 @@ void main() {
     * (1.0 - 0.85 * smoothstep(${f(L.glassFrom)}, ${f(L.glassTo)}, dist));
   if (a < 0.004) discard;
   col = mix(stillGrey(col) * 1.05, col, 0.35 + 0.65 * uWorldLife);
-  col = hazed(col, vSurface, vRig.x);
+  col = hazed(col, vSurface, vRig.x, 0.0);
   gl_FragColor = vec4(col * a, a);
 }`;
