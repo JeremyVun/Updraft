@@ -69,16 +69,19 @@ void main() {
 const lin = (r: number, g: number, b: number) => new THREE.Color().setRGB(r, g, b);
 const LIME = lin(0.33, 0.305, 0.265);
 const SLATE = lin(0.052, 0.058, 0.07);
-const STONE = lin(0.125, 0.12, 0.112);
-const WALL = lin(0.15, 0.14, 0.125);
+export const STONE = lin(0.125, 0.12, 0.112);
+export const WALL = lin(0.15, 0.14, 0.125);
 const IRON = lin(0.05, 0.05, 0.055);
-const PLAIN = 0;
+export const PLAIN = 0;
 const SLATED = 1;
-const COURSED = 2;
-const OVERHANG = 0.28;
+export const COURSED = 2;
+export const OVERHANG = 0.28;
+
+/** Lays a part of a yard's scenery: its shape, its colour, how it is surfaced, and where it goes. */
+export type AddPart = (geo: THREE.BufferGeometry, colour: THREE.Color, kind: number, m?: THREE.Matrix4) => void;
 
 /** A drowned house in the yard: its middle, along-x length, depth across, and how it stands in the water. */
-interface Roof {
+export interface Roof {
   x: number;
   z: number;
   len: number;
@@ -89,8 +92,8 @@ interface Roof {
   /** Which ends carry a chimney, -1 west and 1 east. */
   stacks: number[];
 }
-const ridgeOf = (h: Roof) => h.wall + h.rise + 0.04 - h.sink;
-const eaveOf = (h: Roof) => h.wall - 0.1 - h.sink;
+export const ridgeOf = (h: Roof) => h.wall + h.rise + 0.04 - h.sink;
+export const eaveOf = (h: Roof) => h.wall - 0.1 - h.sink;
 /** The height of the slates `across` from the ridge, either way. */
 const slates = (h: Roof, across: number) => THREE.MathUtils.lerp(ridgeOf(h), eaveOf(h), Math.min(1, Math.abs(across) / (h.depth / 2 + OVERHANG)));
 
@@ -385,61 +388,23 @@ export class CrossingsYard {
   }
 
   private build(): THREE.Mesh {
-    const parts: THREE.BufferGeometry[] = [];
-    const add = (geo: THREE.BufferGeometry, colour: THREE.Color, kind: number, m?: THREE.Matrix4) => {
-      const g = geo.index ? geo.toNonIndexed() : geo;
-      if (g.attributes.uv) g.deleteAttribute('uv');
-      if (!g.attributes.normal) g.computeVertexNormals();
-      const count = g.attributes.position.count;
-      g.setAttribute('aLocal', new THREE.BufferAttribute(Float32Array.from(g.attributes.position.array), 3));
-      const col = new Float32Array(count * 3);
-      for (let i = 0; i < count; i++) col.set([colour.r, colour.g, colour.b], i * 3);
-      g.setAttribute('color', new THREE.BufferAttribute(col, 3));
-      g.setAttribute('aKind', new THREE.BufferAttribute(new Float32Array(count).fill(kind), 1));
-      if (m) g.applyMatrix4(m);
-      parts.push(g);
-    };
-    for (const h of [STRAND, GARDEN, NAVE]) this.house(h, add);
-    const wall = (x0: number, z0: number, x1: number, z1: number, top: number, railed = false) => {
-      const len = Math.hypot(x1 - x0, z1 - z0);
-      const m = new THREE.Matrix4().makeTranslation((x0 + x1) / 2, 0, (z0 + z1) / 2).multiply(new THREE.Matrix4().makeRotationY(Math.atan2(-(z1 - z0), x1 - x0)));
-      add(new THREE.BoxGeometry(len, top + 3.9, 0.42).translate(0, (top - 4.1) / 2, 0), WALL, COURSED, m);
-      add(new THREE.BoxGeometry(len + 0.12, 0.14, 0.56).translate(0, top - 0.07, 0), STONE, PLAIN, m);
-      if (!railed) return;
-      const bars = Math.round(len / 0.26);
-      for (let i = 0; i <= bars; i++) add(new THREE.BoxGeometry(0.035, 0.92, 0.035).translate(-len / 2 + (i * len) / bars, top + 0.46, 0), IRON, PLAIN, m);
-      add(new THREE.BoxGeometry(len, 0.045, 0.05).translate(0, top + 0.86, 0), IRON, PLAIN, m);
-    };
-    wall(-3.1, LANE, CORNER.x, LANE, COPING);
-    wall(CORNER.x, LANE, CORNER.x, GARDEN_SOUTH, COPING);
-    wall(CORNER.x, LANE, 7.5, LANE - 0.4, 0.3);
-    wall(-3.5, -24.5, GARDEN.x - 1.2, GARDEN_NORTH - 1.4, 0.25, true);
-    const mesh = new THREE.Mesh(mergeGeometries(parts),
-      new THREE.ShaderMaterial({ vertexShader: ROOF_VERT, fragmentShader: ROOF_FRAG, uniforms: { ...atmo.uniforms }, side: THREE.DoubleSide }));
-    mesh.frustumCulled = false;
-    return mesh;
-  }
-
-  /** Walls up from the bed to the eaves, slates to the ridge with a cap along it, and its chimneys. */
-  private house(h: Roof, add: (g: THREE.BufferGeometry, c: THREE.Color, kind: number, m?: THREE.Matrix4) => void): void {
-    const m = new THREE.Matrix4().makeTranslation(h.x, -h.sink, h.z);
-    const half = h.depth / 2;
-    const body = new THREE.Shape([new THREE.Vector2(-half, -2.6), new THREE.Vector2(half, -2.6), new THREE.Vector2(half, h.wall),
-      new THREE.Vector2(0, h.wall + h.rise - 0.35), new THREE.Vector2(-half, h.wall)]);
-    const along = (shape: THREE.Shape, len: number) =>
-      new THREE.ExtrudeGeometry(shape, { depth: len, bevelEnabled: false }).rotateY(Math.PI / 2).translate(-len / 2, 0, 0);
-    add(along(body, h.len), LIME, PLAIN, m);
-    const o = half + OVERHANG, eave = h.wall - 0.1, apex = h.wall + h.rise, t = 0.2;
-    const slate = new THREE.Shape([new THREE.Vector2(-o, eave), new THREE.Vector2(0, apex), new THREE.Vector2(o, eave),
-      new THREE.Vector2(o - 0.14, eave - t), new THREE.Vector2(0, apex - t * 1.4), new THREE.Vector2(-o + 0.14, eave - t)]);
-    add(along(slate, h.len + 0.22), SLATE, SLATED, m);
-    add(new THREE.BoxGeometry(h.len + 0.4, 0.16, 0.36).translate(0, apex - 0.04, 0), SLATE, SLATED, m);
-    for (const side of h.stacks) {
-      const cx = side * (h.len / 2 - 0.75), top = apex + 1.2, shaft = top - (h.wall - 0.6);
-      add(new THREE.BoxGeometry(0.82, shaft, 0.78).translate(cx, h.wall - 0.6 + shaft / 2, 0), STONE, COURSED, m);
-      add(new THREE.BoxGeometry(1.04, 0.18, 1.0).translate(cx, top + 0.09, 0), STONE, PLAIN, m);
-      add(new THREE.CylinderGeometry(0.13, 0.15, 0.4, 6).translate(cx, top + 0.38, 0), lin(0.135, 0.072, 0.042), PLAIN, m);
-    }
+    return yardMesh((add) => {
+      for (const h of [STRAND, GARDEN, NAVE]) drownedHouse(h, add);
+      const wall = (x0: number, z0: number, x1: number, z1: number, top: number, railed = false) => {
+        const len = Math.hypot(x1 - x0, z1 - z0);
+        const m = new THREE.Matrix4().makeTranslation((x0 + x1) / 2, 0, (z0 + z1) / 2).multiply(new THREE.Matrix4().makeRotationY(Math.atan2(-(z1 - z0), x1 - x0)));
+        add(new THREE.BoxGeometry(len, top + 3.9, 0.42).translate(0, (top - 4.1) / 2, 0), WALL, COURSED, m);
+        add(new THREE.BoxGeometry(len + 0.12, 0.14, 0.56).translate(0, top - 0.07, 0), STONE, PLAIN, m);
+        if (!railed) return;
+        const bars = Math.round(len / 0.26);
+        for (let i = 0; i <= bars; i++) add(new THREE.BoxGeometry(0.035, 0.92, 0.035).translate(-len / 2 + (i * len) / bars, top + 0.46, 0), IRON, PLAIN, m);
+        add(new THREE.BoxGeometry(len, 0.045, 0.05).translate(0, top + 0.86, 0), IRON, PLAIN, m);
+      };
+      wall(-3.1, LANE, CORNER.x, LANE, COPING);
+      wall(CORNER.x, LANE, CORNER.x, GARDEN_SOUTH, COPING);
+      wall(CORNER.x, LANE, 7.5, LANE - 0.4, 0.3);
+      wall(-3.5, -24.5, GARDEN.x - 1.2, GARDEN_NORTH - 1.4, 0.25, true);
+    });
   }
 
   /** The old tree on the green: a thick trunk standing in the flood to its fork, and the long low bough the swing hangs from. */
@@ -481,5 +446,49 @@ export class CrossingsYard {
     const mesh = new THREE.Mesh(merged(parts), material);
     mesh.frustumCulled = false;
     return mesh;
+  }
+}
+
+/** One mesh of a yard's stone, slates and limewash, from the parts `build` lays. */
+export function yardMesh(build: (add: AddPart) => void): THREE.Mesh {
+  const parts: THREE.BufferGeometry[] = [];
+  build((geo, colour, kind, m) => {
+    const g = geo.index ? geo.toNonIndexed() : geo;
+    if (g.attributes.uv) g.deleteAttribute('uv');
+    if (!g.attributes.normal) g.computeVertexNormals();
+    const count = g.attributes.position.count;
+    g.setAttribute('aLocal', new THREE.BufferAttribute(Float32Array.from(g.attributes.position.array), 3));
+    const col = new Float32Array(count * 3);
+    for (let i = 0; i < count; i++) col.set([colour.r, colour.g, colour.b], i * 3);
+    g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+    g.setAttribute('aKind', new THREE.BufferAttribute(new Float32Array(count).fill(kind), 1));
+    if (m) g.applyMatrix4(m);
+    parts.push(g);
+  });
+  const mesh = new THREE.Mesh(mergeGeometries(parts),
+    new THREE.ShaderMaterial({ vertexShader: ROOF_VERT, fragmentShader: ROOF_FRAG, uniforms: { ...atmo.uniforms }, side: THREE.DoubleSide }));
+  mesh.frustumCulled = false;
+  return mesh;
+}
+
+/** Walls up from the bed to the eaves, slates to the ridge with a cap along it, and its chimneys. */
+export function drownedHouse(h: Roof, add: AddPart): void {
+  const m = new THREE.Matrix4().makeTranslation(h.x, -h.sink, h.z);
+  const half = h.depth / 2;
+  const body = new THREE.Shape([new THREE.Vector2(-half, -2.6), new THREE.Vector2(half, -2.6), new THREE.Vector2(half, h.wall),
+    new THREE.Vector2(0, h.wall + h.rise - 0.35), new THREE.Vector2(-half, h.wall)]);
+  const along = (shape: THREE.Shape, len: number) =>
+    new THREE.ExtrudeGeometry(shape, { depth: len, bevelEnabled: false }).rotateY(Math.PI / 2).translate(-len / 2, 0, 0);
+  add(along(body, h.len), LIME, PLAIN, m);
+  const o = half + OVERHANG, eave = h.wall - 0.1, apex = h.wall + h.rise, t = 0.2;
+  const slate = new THREE.Shape([new THREE.Vector2(-o, eave), new THREE.Vector2(0, apex), new THREE.Vector2(o, eave),
+    new THREE.Vector2(o - 0.14, eave - t), new THREE.Vector2(0, apex - t * 1.4), new THREE.Vector2(-o + 0.14, eave - t)]);
+  add(along(slate, h.len + 0.22), SLATE, SLATED, m);
+  add(new THREE.BoxGeometry(h.len + 0.4, 0.16, 0.36).translate(0, apex - 0.04, 0), SLATE, SLATED, m);
+  for (const side of h.stacks) {
+    const cx = side * (h.len / 2 - 0.75), top = apex + 1.2, shaft = top - (h.wall - 0.6);
+    add(new THREE.BoxGeometry(0.82, shaft, 0.78).translate(cx, h.wall - 0.6 + shaft / 2, 0), STONE, COURSED, m);
+    add(new THREE.BoxGeometry(1.04, 0.18, 1.0).translate(cx, top + 0.09, 0), STONE, PLAIN, m);
+    add(new THREE.CylinderGeometry(0.13, 0.15, 0.4, 6).translate(cx, top + 0.38, 0), lin(0.135, 0.072, 0.042), PLAIN, m);
   }
 }

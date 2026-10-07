@@ -5,6 +5,7 @@ import type { Act } from '../creatures/cygnet/mind';
 import type { Cast, Chapter } from './cast';
 import { CatYard } from './cat-yard';
 import { CrossingsYard } from './crossings-yard';
+import { MillYard } from './mill-yard';
 
 export type StageView = 'game' | 'flock' | 'behind' | 'front' | 'side' | 'far-side' | 'close' | 'top' | 'k-front' | 'k-side' | 'k-back' | 'k-34' | 'k-above' | 'k-full' | 'k-low'
   | 'c-close' | 'c-face' | 'c-side' | 'c-back' | 'c-front' | 'c-34' | 'c-profile' | 'c-head' | 'c-near' | 'c-far' | 'c-along' | 'c-across';
@@ -52,7 +53,7 @@ const VIEWS: Record<StageView, { bearing: number; distance: number; height: numb
  * going on, so that every pose, behaviour and shared moment can be played by name and looked at from close up.
  * `__game.story.current.play(name)` and `.look(view)` drive it from the capture tools; `play('cat:<action>')` sets
  * out the drowned village's cat in a yard of its own on the sea beyond the beach, and the `c-` views look at it.
- * `play('crossing:tree' | 'crossing:swing' | 'crossing:run')` (or `&gap=tree|swing|run`) sets out the village's two
+ * `play('crossing:tree' | 'crossing:swing' | 'crossing:run' | 'crossing:mill')` (or `&gap=tree|swing|run|mill`) sets out the village's
  * crossings on the sea and plays them as the room would, with the lens its own.
  */
 export class StageChapter implements Chapter {
@@ -82,6 +83,8 @@ export class StageChapter implements Chapter {
   private yard: CatYard | null = null;
   /** QA stand-ins for the drowned village's run over the roofs: the two crossings, set out on the sea when first played. */
   private crossings: CrossingsYard | null = null;
+  /** QA stand-in for the drowned village's middle crossing, the mill, set out on the sea when first played. */
+  private mill: MillYard | null = null;
   private camera: THREE.PerspectiveCamera | null = null;
 
   constructor(private readonly cast: Cast) {
@@ -132,6 +135,18 @@ export class StageChapter implements Chapter {
     const { child: c, cygnet: k, flock, carry } = this.cast;
     const ahead = (d: number, side = 0) =>
       this.tmp.set(c.position.x + Math.sin(c.yaw) * d + Math.cos(c.yaw) * side, 0, c.position.z + Math.cos(c.yaw) * d - Math.sin(c.yaw) * side);
+    if (name === 'crossing:mill') {
+      this.crossings?.stop();
+      if (!this.mill) {
+        this.mill = new MillYard(this.cast, c.position);
+        this.cast.cat.objects[0].parent?.add(...this.mill.objects);
+      }
+      this.mill.play();
+      this.pace = this.mill.frame(this.shot);
+      this.cameraCut++;
+      return true;
+    }
+    this.mill?.stop();
     if (name.startsWith('crossing:')) {
       /** The drowned village's crossings, each from its own start: `crossing:tree`, `crossing:swing`, `crossing:run`. */
       if (!this.crossings) {
@@ -295,6 +310,15 @@ export class StageChapter implements Chapter {
     const { child: c, cygnet: k } = this.cast;
     this.clock += dt;
     this.yard?.update(dt);
+    if (this.mill?.playing) {
+      this.mill.update(dt, this.camera);
+      this.pace = this.mill.frame(this.shot);
+      this.dusk = 0.82;
+      this.haze = 0.6;
+      this.breeze = 0.04;
+      this.focus.copy(c.position);
+      return;
+    }
     if (this.crossings?.playing) {
       this.crossings.update(dt, this.camera);
       this.pace = this.crossings.frame(this.shot);

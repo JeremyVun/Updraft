@@ -5,7 +5,8 @@ import type { WhaleSound } from '../fx/sealife/wake';
 export type Surface = 'grass' | 'sand' | 'wood' | 'water';
 export type MaterialSound = 'cloth' | 'wool' | 'sail' | 'sail-settle' | 'water' | 'paper' | 'door' | 'splash' | 'peg'
   | 'dolphin-surface' | 'leaf-scuff' | 'swing-creak' | 'tub' | WhaleSound
-  | 'tree-creak' | 'roots-give' | 'root-tear' | 'tree-fall' | 'bough-creak' | 'slate-land';
+  | 'tree-creak' | 'roots-give' | 'root-tear' | 'tree-fall' | 'bough-creak' | 'slate-land'
+  | 'mill-start' | 'mill-creak' | 'mill-settle' | 'linen-flap';
 
 /**
  * The sounds a small body makes, as opposed to a voice. The cygnet never speaks except when it is lost, so this is
