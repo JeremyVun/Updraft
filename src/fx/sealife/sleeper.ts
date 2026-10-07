@@ -121,6 +121,7 @@ export class SleepingWhale extends WhaleRig {
   /** How far open its eye is, and seconds into a blink, or -1. */
   private opened = 0;
   private blinkT = -1;
+  private headWet = 0;
   private breath = 0;
   private sighed = true;
   private liftT = -1;
@@ -272,6 +273,13 @@ export class SleepingWhale extends WhaleRig {
     this.locate();
     this.lookOut(dt);
     this.wake.update(dt, time);
+    if (this.headWet > 0) {
+      for (let i = 0; i < SPINE_N; i++) {
+        const head = 1 - THREE.MathUtils.smoothstep((i / (SPINE_N - 1)) * SPINE_END, 0.24, 0.34);
+        this.wet[i] = Math.max(this.wet[i], this.headWet * head);
+      }
+      this.headWet = 0;
+    }
     if (this.phase === 'free' && this.time > GONE) {
       this.phase = 'gone';
       this.time = 0;
@@ -439,12 +447,13 @@ export class SleepingWhale extends WhaleRig {
   }
 
   /**
-   * The sea streaming off its head where the net has just come off it, in strings of drops down the near flank,
-   * `wet` 0..1 as much as there is.
+   * The sea streaming off its head where the net has just come off it, sheeting down the skin and running off the
+   * near flank in strings of drops, `wet` 0..1 as much as there is. Asked for each frame it streams.
    */
   stream(wet: number, dt: number): void {
-    const size = Math.sqrt(this.scale);
-    const n = Math.floor(dt * 120 * wet + Math.random());
+    this.headWet = wet;
+    const size = Math.sqrt(this.scale) * 1.6;
+    const n = Math.floor(dt * 200 * wet + Math.random());
     for (let k = 0; k < n; k++) {
       const [s, up] = STREAMS[Math.floor(Math.random() * STREAMS.length)];
       const y = TOP(s) * (up + (Math.random() - 0.5) * 0.04);

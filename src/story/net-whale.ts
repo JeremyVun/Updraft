@@ -701,7 +701,7 @@ export class NetWhale {
     child.face(this.a);
     this.b.subVectors(whale.eye, this.a).setY(0).normalize();
     this.ray.set(Math.cos(boat.yaw), 0, -Math.sin(boat.yaw));
-    child.reachFor(0, this.p.copy(this.a).addScaledVector(this.ray, 0.42).addScaledVector(this.b, 0.25).addScaledVector(UP, -0.06));
+    child.reachFor(0, this.p.copy(this.a).addScaledVector(this.ray, 0.55).addScaledVector(this.b, 0.35).addScaledVector(UP, -0.2));
   }
 
   /**
