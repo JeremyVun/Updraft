@@ -666,7 +666,31 @@ So the whale is the third step: the dark wood is her courage for the bird, the s
 the sky mirror the stars. Offered: a lost calf the cygnet leads to its sleeping mother, or a whale caught in a net.
 Jeremy (2026-10-07): "I dont think (1) works - if the cygnet could swim to the mother, then surely the calf could have
 done so as well. I think that the whale caught in a net is the classic example that works." So: **the whale caught in
-a net.** The encounter below (a whale in their way, woken for their own passage, the cygnet only
+a net.**
+
+**The whale in the net, proposed** (2026-10-07; concept frames `comps/crossings/whale-net/`, painted from the open
+sea's own camera over `ref-sea-*.png`). Measured on main: the open sea runs about 78 s; the swim ends about 51 s in;
+the pod leaves at 60 s; the mirror's jetty is already in frame by 58 s; the sun rises low ahead.
+- After the swim, a dolphin nudges the planking (main's nudge, now asking) and the pod leads the boat off its line
+  toward what looks like a long low island in the sunrise haze. It breathes: a whale, dream-sized (about 75 m), lying
+  still and worn out, an old drifting net with cork floats over its head and blowhole and trailing down its back, one
+  loop round its near flipper. Sad but gentle: tired, never hurt. The boat eases to rest beside its head.
+- Three steps, each answered on screen, each a different part:
+  1. **The breath (the player, circles).** The net lies over the blowhole; each breath only domes the mesh and
+     sputters. Circles over the blowhole raise an updraft that lifts the mesh clear, like a sheet in the wind; the
+     whale draws its first full breath and its great eye opens and looks at the child.
+  2. **The child (a gust brings her the line).** A line of cork floats trails across the water by the boat. A sweep
+     pushes the nearest float to her; she catches the line and hauls, and the net peels back off the jaw and head.
+  3. **The cygnet (its own courage, for someone else).** The last loop is round the near flipper, out of her reach.
+     The cygnet, who swam earlier in this chapter, goes in and swims to it and takes the loop's end in its bill; a sweep
+     along the flipper makes it lift lazily (the tickle already built), and the loop slides off into the cygnet's pull.
+- Free: it spouts a tall golden plume against the sunrise, the empty net drifting away; the pod leaps round it; the
+  cygnet is lifted back in; the child waves; it rolls, lifts its flukes high as if waving and sinks, and its swell lifts
+  the boat. Then the pod goes with it and the sea goes still into the mirror's glass.
+- Each step has the usual drawn invitation and a safety valve after about 90 s with a cause on screen: a dolphin lifts
+  the mesh with its nose, noses the float to the boat, nudges the flipper. The gull of the first build is not needed.
+- The route lengthens so the mirror's island stays in haze until the whale has gone; the stop and the camera hold,
+  the saves and the real-gesture check carry over from branch `crossing-whale`, re-placed and re-scaled. The encounter below (a whale in their way, woken for their own passage, the cygnet only
 peeking) predates this and is being redesigned to fit it.
 
 ### As decided: the crossing
