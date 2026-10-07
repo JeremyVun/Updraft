@@ -72,6 +72,8 @@ const REACH_TO = new THREE.Vector2(2.1, 1.4);
 const REACH_HANDS = { out: 1.1, low: 0.45, back: -0.1, ahead: 0.35 };
 /** Seconds her mittens take to go down to the cork, and to bring it up to the rail once they have it. */
 const REACH_FOR = 0.7;
+/** How far out from the boat's middle the cork is once it lies against the planking beside her (m). */
+const AGAINST = 1.18;
 const LIFT_FOR = 0.45;
 /** The last stretch of the line, back from its near cork, that a sweep across it also catches, and how much less. */
 const NEAR_LINKS = [{ back: 1, weight: 0.75 }, { back: 2, weight: 0.5 }];
@@ -763,10 +765,11 @@ export class NetWhale {
     float.push(want.sub(float.velocity).setY(0));
   }
 
-  /** A mitten has closed on the line at the cork. */
+  /** The cork has come in against the planking under her mittens, and a mitten has closed on the line there. */
   private gripped(): boolean {
-    const { child } = this.cast;
+    const { child, boat } = this.cast;
     const cork = this.net.float.position;
+    if (boat.group.worldToLocal(this.a.copy(cork)).x > AGAINST) return false;
     for (const h of [0, 1] as const) {
       child.mitten(h, this.a);
       if (Math.hypot(this.a.x - cork.x, this.a.z - cork.z) < 0.4) return true;
