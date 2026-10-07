@@ -663,7 +663,10 @@ The narrative it must serve (Jeremy, 2026-10-07):
 > - and then it escalates and they fix the stars
 
 So the whale is the third step: the dark wood is her courage for the bird, the sleeping island the bird's for her,
-the sky mirror the stars. The encounter below (a whale in their way, woken for their own passage, the cygnet only
+the sky mirror the stars. Offered: a lost calf the cygnet leads to its sleeping mother, or a whale caught in a net.
+Jeremy (2026-10-07): "I dont think (1) works - if the cygnet could swim to the mother, then surely the calf could have
+done so as well. I think that the whale caught in a net is the classic example that works." So: **the whale caught in
+a net.** The encounter below (a whale in their way, woken for their own passage, the cygnet only
 peeking) predates this and is being redesigned to fit it.
 
 ### As decided: the crossing
