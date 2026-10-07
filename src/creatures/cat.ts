@@ -729,7 +729,8 @@ export class Cat {
 
     const wantPose: Hold = this.doing === 'still' && this.turnTo === null ? this.pose : this.doing === 'air' && this.air === 'gather' ? 'gather' : 'stand';
     for (const p of POSES) this.weights[p] = ease(this.weights[p], p === wantPose ? 1 : 0, this.doing === 'air' ? 14 : 5, dt);
-    this.homesFor(this.narrow && this.doing === 'path' ? 1 : 0);
+    /** At a gallop its paws come in under its midline, as a running cat's do. */
+    this.homesFor(this.doing !== 'path' ? 0 : this.narrow ? 1 : 0.6 * this.galloping);
 
     if (this.doing === 'air') this.fly(dt);
     else {
@@ -1111,7 +1112,8 @@ export class Cat {
     if (this.doing !== 'air') {
       for (let i = 0; i < 4; i++) if (this.gait.paws[i].planted) sink = Math.max(sink, this.v.subVectors(this.at, this.paws[i]).dot(this.up));
     }
-    bodyY -= Math.min(sink / this.scale, 0.04) * 0.85;
+    const galloping = this.galloping;
+    bodyY -= Math.min(sink / this.scale, 0.04) * (0.85 - 0.45 * galloping);
 
     /** Frightened means low: whatever it is doing it presses down, sinks its head and rounds its back. */
     const fear = clamp(this.fear, 0, 1.2);
@@ -1119,7 +1121,6 @@ export class Cat {
     /** Shaking itself off it stands up tall on straight legs, however frightened. */
     const shaking = this.shakeT >= 0 ? smooth(this.shakeT / 0.12) * (1 - smooth((this.shakeT - 0.65) / 0.4)) : 0;
     /** At a gallop it cannot press itself down: its fear is in its ears, its tail and how it stretches out low. */
-    const galloping = this.doing === 'path' && this.gait.kind === 'bound' ? clamp(this.gait.speed / (1.2 * this.scale), 0, 1) : 0;
     const low = fear * (w.stand + 0.6 * w.sit + 0.5 * w.gather) * (1 - shaking) * (1 - 0.7 * galloping);
     bodyY += flinch * 0.05 - low * 0.036 - fear * 0.006 * (1 - galloping);
     flex += low * 0.2;
@@ -1545,6 +1546,11 @@ export class Cat {
         this.spray.fling(this.drop, out);
       }
     }
+  }
+
+  /** 0 to 1 as it comes up to a full gallop. */
+  private get galloping(): number {
+    return this.doing === 'path' && this.gait.kind === 'bound' ? clamp(this.gait.speed / (1.2 * this.scale), 0, 1) : 0;
   }
 
   /** A point in the world in the cat's own space: across to its left, up off what it stands on, and ahead. */
