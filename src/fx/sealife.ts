@@ -8,7 +8,7 @@ import { FOAM, RING, Marks } from './sealife/marks';
 import { SleepingWhale, type SleeperSound } from './sealife/sleeper';
 import { Spray } from './sealife/spray';
 import { WhaleWake } from './sealife/wake';
-import { Whale } from './sealife/whale';
+import { WHALE_SEEN, Whale } from './sealife/whale';
 
 /** Life in the open sea on the crossings: the whale, far off or met, the dolphins, and small fish leaping near the boat. */
 export class SeaLife {
@@ -54,8 +54,8 @@ export class SeaLife {
   /** Where the whale is, for the child to look at; null when it is under water and out of sight. */
   get whale(): THREE.Vector3 | null {
     const t = this.body.time;
-    if (t < 1.5 || t > 25.5) return null;
-    if (t > 19) return this.body.point(0, 0, 1, this.seen);
+    if (t < WHALE_SEEN.from || t > WHALE_SEEN.to) return null;
+    if (t > WHALE_SEEN.flukes) return this.body.point(0, 0, 1, this.seen);
     this.body.point(0, 1, 0.45, this.seen);
     this.seen.y = Math.max(this.seen.y, 0.3);
     return this.seen;

@@ -15,7 +15,7 @@ import { roundedWaypoint } from '../traveller/navigation';
 import { HOME_JETTY } from '../world/home-layout';
 import { mirrorWater } from '../world/sky-mirror-layout';
 import type { Coax } from '../fx/swirl';
-import { whaleSighting } from '../fx/sealife/sighting';
+import { sightingHeading, whaleSighting } from '../fx/sealife/sighting';
 import { NetWhale, type PodRun } from './net-whale';
 
 /** The beach on the meadow's south shore, where the boat first comes ashore on the mainland-sized island. */
@@ -491,7 +491,7 @@ export class CrossingChapter implements Chapter {
       this.whaleCalled = true;
       this.nextWhale = this.whaleEvery > 0 ? this.time + this.whaleEvery : 1e9;
       const side = this.whaleEvery > 0 && Math.random() < 0.5 ? -1 : 1;
-      sealife.surfaceWhale(whaleSighting(boat.position, boat.yaw, side, this.spot), boat.yaw - 0.3 * side);
+      sealife.surfaceWhale(whaleSighting(boat.position, boat.yaw, side, this.spot), sightingHeading(boat.yaw, side));
     }
     sealife.fishNear(boat.position, this.wantsDolphins ? 0.15 : farewell ? 0.25 : 1);
     /** The camera rides the quarter away from the sail, and the cygnet's swim is the one thing they must not crowd. */

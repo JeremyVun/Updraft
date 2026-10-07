@@ -14,22 +14,27 @@ export const DREAM_SHAPE = { fin: 0.47, dorsal: 0.3, flukes: 0.8 } as const;
 export const DREAM_SCALE = tuning.netWhale.length
   / (FLUKE_HINGE * LENGTH + (-flukeEdges(1).trail - FLUKE_HINGE * LENGTH) * DREAM_SHAPE.flukes);
 
-/** The snout's track through the water, side on: along the heading (u) and up (y), from `at`. */
+/**
+ * The snout's track through the water, side on: along the heading (u) and up (y), from `at`, in the units of a 14 m
+ * whale. It rises once to breathe and dives with its flukes up: dreamt this big, a second breath would carry it out
+ * into the haze before anyone saw its flukes.
+ */
 const TRACK: [number, number][] = [
-  [-12, -5.0], [-7, -2.6], [-3, -0.8], [0, -0.05], [2.4, 0.18], [4.8, -0.25], [7.5, -1.2], [10.5, -2.0], [14, -2.0],
-  [17, -1.0], [19.5, -0.1], [21.6, 0.22], [23.8, -0.2], [25.8, -1.3], [27.4, -3.2], [28.6, -6.1], [29.4, -10],
-  [29.9, -16], [30.2, -24],
+  [-12, -5.0], [-7, -2.6], [-3, -0.8], [0, -0.05], [2.4, 0.18], [4.6, -0.2], [6.6, -1.3], [8.2, -3.2], [9.4, -6.1],
+  [10.2, -10], [10.7, -16], [11, -24],
 ];
 const START_U = -4.5;
 
-/** Speed along the track over the surfacing, in units per second. */
-const SPEED = curve([[0, 2.2], [3, 1.8], [5, 1.6], [9, 1.7], [12, 1.8], [15, 2.0], [17, 2.1], [19.5, 1.95], [23, 1.8], [27, 2.0]]);
-/** The whole body lifts to breathe and sinks between breaths, so the tail stays down while the head is up. */
-const RISE = curve([[0, 0], [4, 0], [6.5, -0.3], [8.5, -0.8], [10, -1.2], [11.5, -1.1], [13, -0.3], [14, 0], [15, 0.3], [18, 0.35], [21, 0.2]]);
+/** Speed along the track over the surfacing, in units per second: slow, as something this big is. */
+const SPEED = curve([[0, 1.4], [4, 1.2], [8, 1.25], [14, 1.4]]);
+/** The whole body lifts as it breathes and settles as it goes, so the tail stays down while the head is up. */
+const RISE = curve([[0, 0], [2.5, 0.3], [5, 0.35], [9, 0.2], [12, 0]]);
 /** Tail stock lifted against the track (radians): the flukes rise clear as the body tips down. */
-const TAIL = curve([[0, 0], [18, 0], [19.5, -0.55], [21.5, -0.95], [23, -0.8], [25, 0]]);
-const FLUKE = curve([[0, 0], [18, 0], [19.5, 0.35], [21.5, -0.08], [23, -0.22], [25, 0]]);
-export const WHALE_DURATION = 29;
+const TAIL = curve([[0, 0], [4, 0], [6.3, -0.55], [9.4, -0.95], [11.8, -0.8], [14.9, 0]]);
+const FLUKE = curve([[0, 0], [4, 0], [6.3, 0.35], [9.4, -0.08], [11.8, -0.22], [14.9, 0]]);
+export const WHALE_DURATION = 20;
+/** Seconds into the surfacing when its back is up to be looked at, when its flukes are, and when it is gone under. */
+export const WHALE_SEEN = { from: 1.5, flukes: 5.5, to: 15 } as const;
 
 /** Arc-length samples of the track, extended straight beyond its ends. */
 class Track {

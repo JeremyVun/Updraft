@@ -1438,8 +1438,12 @@ export const tuning = {
     releaseDistance: 27, releaseHeight: 7,
     /** How far ahead of the bow the pod runs while it leads the boat in (m). */
     podLead: 18,
-    /** The first crossing's sighting, this many times as far off as the old surfacing whale came up. */
-    farOff: 4,
+    /**
+     * The first crossing's sighting: it comes up `sightAhead` metres ahead of the boat and `sightAside` out to
+     * starboard, swimming `sightTurn` radians further to starboard than the boat, clear of the island of lines, so it
+     * blows about 120 m off and its flukes rise about 80 m off, inside the haze that closes in on that crossing.
+     */
+    sightAhead: 135, sightAside: 90, sightTurn: 1,
   },
 
   seaPassage: {
