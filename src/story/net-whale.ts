@@ -49,12 +49,22 @@ const POD_WAIT = new THREE.Vector2(24, -18);
 const POD_WAIT_RADIUS = 8;
 const POD_WAIT_PACE = 2;
 /**
- * The pod's way round the whale as it spouts free, from wherever it is waiting behind the camera: up the port side
- * inside the floating net, across the water before the bow under its eye, and on along its flank to starboard, at
- * `POD_PACE` metres a second with its lanes drawn in by `POD_SPREAD`, so the camera sees it cross the frame.
+ * The pod's way round as the whale spouts free, from wherever it is waiting behind the camera: in across the open
+ * water astern of the boat, the only water the camera sees between it and the whale, and up the starboard side along
+ * its flank, at `POD_PACE` metres a second with its lanes drawn in by `POD_SPREAD`, so it crosses the frame near.
  */
-const POD_WAY = [new THREE.Vector2(12, 0), new THREE.Vector2(4, 6), new THREE.Vector2(-8, 8.5), new THREE.Vector2(-40, 18)];
+const POD_WAY = [new THREE.Vector2(12, -8), new THREE.Vector2(0, -7), new THREE.Vector2(-12, 0), new THREE.Vector2(-40, 18)];
 const POD_PACE = 5.5;
+/**
+ * As it spouts, one of the pod leaps right across the water astern of the boat, side-on to the camera: out of the
+ * water `SALUTE_FROM` (metres to port, and ahead, of the boat at rest), in again `SALUTE_TO`, `SALUTE_HIGH` up at the
+ * top, leaving the water `SALUTE_AT` seconds into its going free after `SALUTE_SWIM` seconds in under from the pod.
+ */
+const SALUTE_FROM = new THREE.Vector2(6.5, -5);
+const SALUTE_TO = new THREE.Vector2(-2, -5.5);
+const SALUTE_HIGH = 1.8;
+const SALUTE_AT = 4.8;
+const SALUTE_SWIM = 2.2;
 const POD_SPREAD = 0.35;
 /** Seconds the child holds a point toward a breath she has seen. */
 const POINT_FOR = 2.6;
@@ -256,6 +266,9 @@ export class NetWhale {
   private finStroke = 1e3;
   private nudged = false;
   private finned = false;
+  /** Seconds into the leap one of the pod makes as it spouts, or -1 before it, or Infinity once it is back with them. */
+  private saluteT = -1;
+  private readonly leaper = new THREE.Vector3();
   private readonly station = new THREE.Vector3();
   private readonly billAt = new THREE.Vector3();
   private readonly falls = new THREE.Vector3();
@@ -448,6 +461,7 @@ export class NetWhale {
     if (this.step === 'line') this.haulLine(dt);
     if (this.step === 'flipper') this.lastLoop(dt, time);
     this.drive(dt);
+    if (this.step === 'free') this.salute(dt);
     if (this.step === 'free' && whale.spouting && !this.rewarded) {
       this.rewarded = true;
       completeObjective();
@@ -800,6 +814,68 @@ export class NetWhale {
       }
     }
     this.diverSeen = p.y > -0.5;
+    sealife.poseDolphin(p.x, p.y, p.z, yaw, pitch);
+  }
+
+  /** One of the pod, lent for a moment, leaps across astern of the boat as the whale spouts, and goes back to them. */
+  private salute(dt: number): void {
+    const { sealife } = this.cast;
+    const whale = this.whale;
+    if (this.saluteT === Infinity) return;
+    if (this.saluteT < 0) {
+      if (whale.phase !== 'free' || whale.time < SALUTE_AT - SALUTE_SWIM - RUN_UP) return;
+      const from = this.valveT >= 0 && !this.vDone ? null : sealife.lendDolphin();
+      if (!from) {
+        this.saluteT = Infinity;
+        return;
+      }
+      this.saluteT = 0;
+      this.vFrom.set(from.x, from.y, from.z);
+      this.local(SALUTE_FROM.x, SALUTE_FROM.y, this.vLaunch);
+      this.vDir.subVectors(this.local(SALUTE_TO.x, SALUTE_TO.y, this.b), this.vLaunch).setY(0);
+      const run = this.vDir.length();
+      this.vDir.normalize();
+      const up = Math.sqrt((2 * SALUTE_HIGH) / K.valveFall);
+      this.vRise = K.valveFall * up;
+      this.vAir = 2 * up;
+      this.vSpeed = run / this.vAir;
+    }
+    this.saluteT += dt;
+    const t = this.saluteT;
+    const p = this.leaper;
+    let yaw = Math.atan2(this.vDir.x, this.vDir.z);
+    let pitch = 0;
+    if (t < SALUTE_SWIM) {
+      const u = (t / SALUTE_SWIM) ** 1.4;
+      this.a.copy(this.vLaunch).addScaledVector(this.vDir, -this.vSpeed * RUN_UP).setY(-this.vRise * RUN_UP);
+      this.b.copy(this.a).addScaledVector(this.vDir, -5).setY(-1.8);
+      this.forward.copy(this.vFrom).setY(-2.2);
+      bezier(this.vFrom, this.forward, this.b, this.a, u, p);
+      bezier(this.vFrom, this.forward, this.b, this.a, Math.min(1, u + 0.01), this.lookFrom);
+      yaw = Math.atan2(this.lookFrom.x - p.x, this.lookFrom.z - p.z);
+      pitch = Math.atan2(this.lookFrom.y - p.y, Math.hypot(this.lookFrom.x - p.x, this.lookFrom.z - p.z));
+    } else {
+      const f = t - SALUTE_SWIM - RUN_UP;
+      p.copy(this.vLaunch).addScaledVector(this.vDir, this.vSpeed * f);
+      let rise: number;
+      if (f < 0) {
+        p.y = this.vRise * f;
+        rise = this.vRise;
+      } else if (f < this.vAir) {
+        p.y = this.vRise * f - 0.5 * K.valveFall * f * f;
+        rise = this.vRise - K.valveFall * f;
+      } else {
+        const x = Math.min(f - this.vAir, LEAP_DOWN) / LEAP_DOWN;
+        p.y = -this.vRise * LEAP_DOWN * 0.5 * (1 - (1 - x) ** 2);
+        rise = -this.vRise * (1 - x);
+      }
+      pitch = Math.atan2(rise, this.vSpeed);
+      if (f > this.vAir + LEAP_DOWN) {
+        this.saluteT = Infinity;
+        sealife.handBackDolphin();
+        return;
+      }
+    }
     sealife.poseDolphin(p.x, p.y, p.z, yaw, pitch);
   }
 
