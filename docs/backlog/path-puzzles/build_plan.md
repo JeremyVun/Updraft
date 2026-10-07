@@ -359,7 +359,29 @@ opens it on a roof edge and the player's updraft (traced circles) lifts her over
 never falls. Each takes her 1–3 m higher.
 Gate: `crossings-check` for all pieces; stills of each yard from the shot list's interaction framing (her on the near
 edge, the piece and the far side across the frame), landscape and upright.
-Done: [ ]
+Done: the sheet [x], the umbrella [ ] (branch `proto-drowned-pieces`).
+The sheet as built: `SheetCrossing(spot, {wait, stepOff, onward}, cast)` (`src/world/crossings/sheet-crossing.ts`) over
+`WashSheet` (`wash-sheet.ts`): a line from `spot.from` (round her chimney, behind her on her ridge) to `spot.to` (the far
+chimney's prop pulley), a 2.7 by 2.05 m cream sheet with a faded red hem on seven rings, a small mass-spring cloth
+pinned to them. Strokes up the line across it on screen fill it a beat late (`tuning.crossings.sheet`: one firm stroke
+about 0.7 full), back down only puff it back, a dying gust lets it sag and swing; full for `takeFor` she takes its
+trailing edge at her face (the hood swallows anything held higher: `HANG` 1.93 m from mittens to feet, `UNDER` 0.33 m
+behind them), and while it stays full it runs up the line with her hanging from it, legs paddling, turned toward the
+lens (`turnToLens`), swinging under her hands as it starts and stops; slack, she hangs where she is; its rings bunch at
+a knot `spot.stop` short of the pulley and she drops onto the high ridge, then goes on down the slates clear of the
+bunched cloth. The child gained `hang` (legs leave the ground and paddle, no foot planting, no brace, no shadow). Cat
+hook: `catWay(near, far)` gives the cat's steps (`CatStep`, `cat-way.ts`: hop onto the line, run it with the line's own
+`floor`, hop down onto `far`), `catAt(p|null)` dips the line under it, and she will not take hold while `clear` is false.
+The yard (`?chapter=stage&gap=sheet`, `&catless` for none; `src/story/sheet-yard.ts`) solves the line from where her
+mittens are at the start and end of the ride (`lineThrough`): lane 4 m, the high ridge 1.3 m up, her chimney 2.4 m
+behind the gable end, the far one 2.3 m past the far gable, each with a forked prop (the line clears her hood by about
+9 cm where she waits). Low dusk side light from her side, the lens beside the lane (landscape), behind her near
+shoulder (upright). `crossings-check` sheet, sheet-sag, sheet-wrong, sheet-stall, sheet-idle (valve) pass with feet on
+a ridge or mittens within 0.1 m of the edge throughout. Left: upright framing crops her at the left edge and the far
+roof barely shows, and takes far more strokes (about 29) because the sheet is small and steep on screen; hanging, she
+still reads mostly from behind in landscape; after a gust the dying fill carries her on up to 2 m; the cat on the line
+is small (the 6b cat will change it). The umbrella's look only (`umbrella.ts`, `Umbrella`: domed eight-rib canopy that
+puffs with lift, crook, lying and held poses) is written and unwired; its crossing, yard and check are not built.
 
 ### Phase 6b: the cat (parallel with 6a)
 Owns: `src/creatures/cat.ts`, `src/creatures/cat/`, `src/story/cat-yard.ts`, `tools/cat-check.mjs`, the wash-tub

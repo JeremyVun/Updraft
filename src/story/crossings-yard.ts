@@ -467,6 +467,18 @@ export function yardMesh(build: (add: AddPart) => void): THREE.Mesh {
   return mesh;
 }
 
+/**
+ * A chimney stack standing on a house's ridge at `x` (the yard's frame, the ridge along x), the top of its cap `top`
+ * above the ridge, with its pot to one side. Returns where the middle of the cap's top is.
+ */
+export function ridgeStack(h: Roof, x: number, top: number, add: AddPart): THREE.Vector3 {
+  const foot = eaveOf(h) - 0.5, cap = ridgeOf(h) + top;
+  add(new THREE.BoxGeometry(0.82, cap - 0.18 - foot, 0.78).translate(x, (cap - 0.18 + foot) / 2, h.z), STONE, COURSED);
+  add(new THREE.BoxGeometry(1.04, 0.18, 1.0).translate(x, cap - 0.09, h.z), STONE, PLAIN);
+  add(new THREE.CylinderGeometry(0.13, 0.15, 0.4, 6).translate(x + 0.22, cap + 0.2, h.z + 0.2), lin(0.135, 0.072, 0.042), PLAIN);
+  return new THREE.Vector3(x, cap, h.z);
+}
+
 /** Walls up from the bed to the eaves, slates to the ridge with a cap along it, and its chimneys. */
 export function drownedHouse(h: Roof, add: AddPart): void {
   const m = new THREE.Matrix4().makeTranslation(h.x, -h.sink, h.z);

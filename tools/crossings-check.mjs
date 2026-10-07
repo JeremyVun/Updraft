@@ -1,10 +1,13 @@
-// Plays the drowned village's two crossings on the QA stage with real pointer gestures and checks each one: that the
+// Plays the drowned village's crossings on the QA stage with real pointer gestures and checks each one: that the
 // tree takes two or three firm pushes and she crosses it, that one firm push (however long) only loosens it, that a
 // gentle stroke or wrong-way pushes only rock it, that pumping the swing carries her over and the empty swing then
-// dies away, and that nothing happens on its own before the safety valve (and that the valve then does it).
+// dies away; that strokes up the line fill the sheet and it carries her over holding on, that a gust that dies lets
+// it sag back, that it holds her where she is when the player stops; that her feet are on a roof or her mittens on
+// the piece throughout; and that nothing happens on its own before the safety valve (and that the valve then does it).
 // Usage: node tools/crossings-check.mjs [scenario ...]
-//   scenarios: tree, tree-three, tree-one, tree-long, tree-rock, tree-wrong, swing (the default set); run (both in a
-//   row with the walk between); tree-idle, swing-idle (each idles past the 90 s valve, about two minutes apiece)
+//   scenarios: tree, tree-three, tree-one, tree-long, tree-rock, tree-wrong, swing, sheet, sheet-sag, sheet-wrong,
+//   sheet-stall (the default set); run (tree and swing in a row with the walk between); tree-idle, swing-idle,
+//   sheet-idle (each idles past the 90 s valve, about two minutes apiece)
 //   env: BASE (default http://127.0.0.1:5287/), W/H viewport (default 1600x900), OUT (stills and video prefix,
 //        default /tmp/updraft-crossings), SHOTS=1 saves stills at the moments that matter, VIDEO=1 records
 //        <OUT>-<scenario>.webm.
@@ -20,7 +23,8 @@ const out = process.env.OUT ?? '/tmp/updraft-crossings';
 const shots = process.env.SHOTS === '1';
 const video = process.env.VIDEO === '1';
 const asked = process.argv.slice(2);
-const scenarios = asked.length ? asked : ['tree', 'tree-three', 'tree-one', 'tree-long', 'tree-rock', 'tree-wrong', 'swing'];
+const scenarios = asked.length ? asked : ['tree', 'tree-three', 'tree-one', 'tree-long', 'tree-rock', 'tree-wrong', 'swing',
+  'sheet', 'sheet-sag', 'sheet-wrong', 'sheet-stall'];
 
 function expect(ok, message) {
   if (!ok) throw new Error(message);
@@ -32,12 +36,15 @@ class Game {
     this.name = name;
     this.notes = [];
     this.pointer = null;
+    this.yard = 'crossings';
   }
 
-  async open(gap) {
-    await this.page.goto(`${base}?shot=1&chapter=stage&gap=${gap}`, { waitUntil: 'load' });
+  /** `yard` is the stage's field the crossing lives in: `crossings` (tree, swing, run), `sheet` or `umbrella`. */
+  async open(gap, yard = 'crossings', extra = '') {
+    this.yard = yard;
+    await this.page.goto(`${base}?shot=1&chapter=stage&gap=${gap}${extra}`, { waitUntil: 'load' });
     await this.page.waitForFunction(() => window.__ready === true, null, { timeout: 90000 });
-    await this.page.waitForFunction(() => window.__game?.story?.current?.crossings?.playing, null, { timeout: 30000 });
+    await this.page.waitForFunction((y) => window.__game?.story?.current?.[y]?.playing, yard, { timeout: 30000 });
     await this.seconds(1.5);
   }
 
@@ -55,7 +62,7 @@ class Game {
   }
 
   state() {
-    return this.page.evaluate(() => window.__game.story.current.crossings.state);
+    return this.page.evaluate((y) => window.__game.story.current[y].state, this.yard);
   }
 
   async shot(label) {
@@ -67,6 +74,14 @@ class Game {
 
   /** Where a world point is on screen, as fractions of the viewport, and the screen angle of a heading there. */
   async aim(which) {
+    if (which === 'sheet' || which === 'umbrella') return this.page.evaluate((which) => {
+      const yard = window.__game.story.current[which];
+      const camera = window.__game.rig.camera;
+      const at = which === 'sheet' ? yard.crossing.sheet.middle(camera.position.clone()) : yard.crossing.liftAt(camera.position.clone());
+      const heading = which === 'sheet' ? yard.crossing.sheet.heading(camera) : 0;
+      const p = at.project(camera);
+      return { x: (p.x + 1) / 2, y: (1 - p.y) / 2, heading, aspect: camera.aspect };
+    }, which);
     return this.page.evaluate((which) => {
       const yard = window.__game.story.current.crossings;
       const camera = window.__game.rig.camera;
@@ -103,6 +118,24 @@ class Game {
       await this.page.mouse.move((from[0] + dx * u) * width, (from[1] + dy * u) * height);
       await this.frame();
     }
+  }
+
+  /**
+   * Circles round `at` (re-aimed each turn by `aim`), `radius` screen heights, `turns` of them at `rate` turns a
+   * second, clockwise on screen unless `ccw`; `each(state)` after every quarter turn.
+   */
+  async circles(aim, radius, turns, rate = 1.1, each = null, ccw = false) {
+    const perTurn = Math.round(60 / rate);
+    let at = await aim();
+    for (let i = 0; i <= turns * perTurn; i++) {
+      if (i % perTurn === 0) at = await aim();
+      const a = (ccw ? 1 : -1) * (i / perTurn) * Math.PI * 2;
+      const x = at.x + (Math.cos(a) * radius) / at.aspect, y = at.y - Math.sin(a) * radius;
+      await this.page.mouse.move(x * width, y * height);
+      await this.frame();
+      if (each && i % Math.round(perTurn / 4) === 0) each(await this.state());
+    }
+    this.pointer = null;
   }
 
   /** Polls every few frames until `test(state)` holds or `limit` seconds pass, keeping track along the way. */
@@ -296,6 +329,145 @@ const RUNS = {
     expect(since < 14 && swinging < 0.08, `the empty swing has not died away (${swinging} rad, ${since} s after she landed)`);
   },
 
+  /**
+   * The cat runs the line first; a firm stroke up the line across the sheet fills it at once; she takes hold and it
+   * carries her over, a few more strokes keeping it full; her feet are on a ridge or her mittens on the sheet throughout.
+   */
+  async sheet(game) {
+    await game.open('sheet', 'sheet');
+    await game.shot('idle');
+    const watch = feetWatch(game);
+    await game.until((s) => s.cat.onLine, 6, watch.see);
+    await game.seconds(0.6);
+    await game.shot('cat');
+    const first = await game.aim('sheet');
+    await game.stroke(first, first.heading, 0.6, 14);
+    let most = 0;
+    await game.until(() => false, 0.5, (s) => { watch.see(s); most = Math.max(most, s.fill); });
+    game.notes.push(`one firm stroke: fill ${most.toFixed(2)} within half a second`);
+    expect(most > 0.35, `one firm stroke did not visibly fill it (${most})`);
+    await game.shot('answering');
+    let strokes = 1;
+    let held = null;
+    for (; strokes < 30; strokes++) {
+      held = await game.until((s) => s.held, 0.6, watch.see);
+      if (held) break;
+      const aim = await game.aim('sheet');
+      await game.stroke(aim, aim.heading, 0.6, 14);
+    }
+    expect(held, `she never took hold (${JSON.stringify(await game.state())})`);
+    game.notes.push(`she took hold after ${strokes} strokes (the cat over: ${held.cat.done})`);
+    expect(held.cat.done, 'she took hold while the cat was still on the line');
+    let shotMid = false;
+    let over = null;
+    for (let i = 0; i < 40; i++) {
+      over = await game.until((s) => ['landing', 'landed', 'leaving', 'over'].includes(s.phase), 0.5, watch.see);
+      if (over) break;
+      const s = await game.state();
+      if (!shotMid && s.travel > (s.end + 2.4) / 2) { await game.shot('carried'); shotMid = true; }
+      const aim = await game.aim('sheet');
+      await game.stroke(aim, aim.heading, 0.6, 14);
+      strokes++;
+    }
+    expect(over, `she was never set down (${JSON.stringify(await game.state())})`);
+    game.notes.push(`set down after ${strokes} strokes in all`);
+    await game.seconds(0.4);
+    await game.shot('across');
+    const done = await game.until((s) => s.phase === 'over', 10, watch.see);
+    expect(done, 'she never went on from the far ridge');
+    await game.seconds(1.5);
+    await game.shot('after');
+    watch.report();
+    game.notes.push(`over at ${done.child.join(', ')}`);
+  },
+
+  /** A gentle stroke fills it a little and it sags back: she does not take hold. */
+  async 'sheet-sag'(game) {
+    await game.open('sheet', 'sheet', '&catless');
+    const aim = await game.aim('sheet');
+    await game.stroke(aim, aim.heading, 0.3, 24);
+    let most = 0;
+    await game.until(() => false, 1, (s) => { most = Math.max(most, s.fill); });
+    await game.shot('sagging');
+    await game.until(() => false, 3, (s) => expect(!s.held, 'a gentle stroke had her take hold'));
+    const s = await game.state();
+    game.notes.push(`gentle stroke: fill up to ${most.toFixed(2)}, ${s.fill} three seconds later; phase ${s.phase}`);
+    expect(most > 0.12, `a gentle stroke did not visibly fill it (${most})`);
+    expect(s.fill < 0.08, `it did not sag back (${s.fill})`);
+  },
+
+  /** Strokes back down the line only puff it back toward her: nothing fills, she never takes hold. */
+  async 'sheet-wrong'(game) {
+    await game.open('sheet', 'sheet', '&catless');
+    let most = 0, least = 0;
+    for (let i = 0; i < 6; i++) {
+      const aim = await game.aim('sheet');
+      await game.stroke(aim, aim.heading + Math.PI, 0.6, 14);
+      await game.until(() => false, 0.8, (s) => { most = Math.max(most, s.fill); least = Math.min(least, s.press); expect(!s.held, 'she took hold'); });
+    }
+    game.notes.push(`six strokes back down the line: fill at most ${most.toFixed(3)}, press down to ${least.toFixed(3)}`);
+    expect(most < 0.05, `strokes back down the line filled it (${most})`);
+    expect(least < -0.1, 'strokes back down the line did not puff it back');
+  },
+
+  /** Carried part way, the player stops: it sags and she hangs where she is, her mittens on it; the drawn gust comes back; then on over. */
+  async 'sheet-stall'(game) {
+    await game.open('sheet', 'sheet', '&catless');
+    const watch = feetWatch(game);
+    for (let i = 0; i < 12 && !(await game.state()).held; i++) {
+      const aim = await game.aim('sheet');
+      await game.stroke(aim, aim.heading, 0.6, 14);
+      await game.until((s) => s.held, 0.6, watch.see);
+    }
+    for (let i = 0; i < 12; i++) {
+      const s = await game.state();
+      if (s.travel > s.end * 0.45) break;
+      const aim = await game.aim('sheet');
+      await game.stroke(aim, aim.heading, 0.6, 14);
+      await game.until(() => false, 0.4, watch.see);
+    }
+    const from = await game.state();
+    let invited = false;
+    await game.until(() => false, 8, (s) => { watch.see(s); invited ||= s.invitation; });
+    const still = await game.state();
+    await game.shot('hanging');
+    game.notes.push(`stopped at ${from.travel} m: ${still.travel} m eight seconds later, phase ${still.phase}, fill ${still.fill}; drawn gust: ${invited}`);
+    expect(still.phase === 'carried' && still.held, 'she is not still hanging from it');
+    expect(still.travel - from.travel < 2.2, 'it carried her on by itself long after the last gust died');
+    expect(still.travel >= from.travel - 0.01, 'it slid back with her on it');
+    expect(invited, 'the drawn gust did not come back');
+    for (let i = 0; i < 20; i++) {
+      if (['landing', 'landed', 'leaving', 'over'].includes((await game.state()).phase)) break;
+      const aim = await game.aim('sheet');
+      await game.stroke(aim, aim.heading, 0.6, 14);
+      await game.until(() => false, 0.5, watch.see);
+    }
+    const over = await game.until((s) => s.phase === 'over', 10, watch.see);
+    expect(over, 'she never got over after starting again');
+    watch.report();
+  },
+
+  /** With no input the sheet hangs, breathing only; the drawn gust comes; then the world's own gusts carry her over. */
+  async 'sheet-idle'(game) {
+    await game.open('sheet', 'sheet');
+    const watch = feetWatch(game);
+    let most = 0, invited = false;
+    await game.until(() => false, 85, (s) => {
+      watch.see(s);
+      most = Math.max(most, s.fill);
+      invited ||= s.invitation;
+      expect(!s.held, 'she took hold by herself');
+    });
+    await game.shot('invited');
+    game.notes.push(`85 s idle: fill at most ${most.toFixed(3)}, drawn gust shown: ${invited}`);
+    expect(invited, 'the drawn gust never came');
+    expect(most < 0.05, `it filled by itself (${most})`);
+    const over = await game.until((s) => s.phase === 'over', 60, watch.see);
+    expect(over, 'the safety valve never carried her over');
+    game.notes.push('the world\'s own gusts carried her over');
+    watch.report();
+  },
+
   /** Both in a row: the tree, the walk along the wall and over the cottage to its eave, the swing. */
   async run(game) {
     await game.open('run');
@@ -340,6 +512,32 @@ const RUNS = {
     expect(over, 'she never got up and on after the valve');
   },
 };
+
+/**
+ * Keeps an eye on her feet: on a ridge (within a few centimetres) whenever she is not hanging from the piece, and her
+ * mittens on it whenever she is. Leaps on and off the piece are let through.
+ */
+function feetWatch(game) {
+  let worstFeet = 0, worstHands = 0, hanging = 0, standing = 0;
+  return {
+    see(s) {
+      if (s.phase === 'landing' || s.phase === 'taking' || s.phase === 'fetching' || s.phase === 'raising' || s.phase === 'lowering') return;
+      if (s.hanging) {
+        hanging++;
+        worstHands = Math.max(worstHands, s.handGap);
+        expect(s.handGap < 0.16, `her mittens left the piece while she hung from it (${s.handGap} m; ${JSON.stringify(s)})`);
+        expect(s.feet > -0.05, `her feet went into the roof while she hung (${s.feet} m; ${JSON.stringify(s)})`);
+      } else {
+        standing++;
+        worstFeet = Math.max(worstFeet, Math.abs(s.feet));
+        expect(Math.abs(s.feet) < 0.08, `her feet are off the roof while she is not held (${s.feet} m; ${JSON.stringify(s)})`);
+      }
+    },
+    report() {
+      game.notes.push(`feet: on the roof to ${worstFeet.toFixed(3)} m over ${standing} looks; mittens on the piece to ${worstHands.toFixed(3)} m over ${hanging} looks hanging`);
+    },
+  };
+}
 
 async function main() {
   const browser = await chromium.launch({
