@@ -221,18 +221,30 @@ export class DrownedChapter implements Chapter {
     return this.beat === 'after' && this.cast.boat.grounded;
   }
 
-  get checkpoint(): string | null { return null; }
+  /** The latest point to come back to: the cat aboard, the run's start, the tower's foot, aboard for the storm. */
+  get checkpoint(): string | null {
+    switch (this.beat) {
+      case 'enter': return null;
+      case 'drift': case 'still': case 'becalmed': return this.aboardFrom >= 0 ? 'sail' : null;
+      case 'run': return 'roofs';
+      case 'nave': case 'church': return 'church';
+      default: return 'storm';
+    }
+  }
   saveCheckpoint(): CheckpointPayload<'drowned'> { return [this.leg]; }
-  /** An older save from past the becalming comes back to the drift before the stranding. */
-  restoreCheckpoint(_point: string, data: number[]): void {
+  restoreCheckpoint(point: string, data: number[]): void {
+    if (point === 'roofs' || point === 'church' || point === 'storm') {
+      this.skipToRun();
+      if (point === 'church') this.skipToNave();
+      if (point === 'storm') this.skipToStorm();
+      return;
+    }
     this.leg = THREE.MathUtils.clamp(Math.floor(data[0]), 0, TO_STRAND);
     this.beat = 'drift';
     this.cast.boat.speedLimit = tuning.storm.passageSpeed;
     this.cast.boat.steerFor = PASSAGE[this.leg];
-    if (this.leg >= TO_STRAND) {
-      this.cat.aboard();
-      this.aboardFrom = this.now - 30;
-    }
+    this.cat.aboard();
+    this.aboardFrom = this.now - 30;
   }
 
   /** QA (`?chapter=roofs`): straight to her up on the roof after the cat, the boat at rest against it, the fog risen. */

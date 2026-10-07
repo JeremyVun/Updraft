@@ -24,6 +24,19 @@ try {
       piano: g.story.current.atPiano, wave: g.life.regions.wave.toArray(), waiting: g.life.regions.waiting.toArray(),
       finished: g.story.current.finished ?? false };
   });
+  // A restored drowned point must go on playing: the drift to the becalming, the run onward, the church to the boat, the storm out.
+  const playsOn = async point => {
+    const goes = {
+      sail: `c.beat==='still'||c.beat==='becalmed'`,
+      roofs: `c.beat==='run'&&c.run.along>12&&c.boatAdrift`,
+      church: `c.beat==='church'&&c.church.close>0.5`,
+      storm: `c.beat==='snatch'||c.beat==='after'`,
+    }[point];
+    try {
+      await page.waitForFunction(goes => new Function('c', `return ${goes}`)(__game.story.current), goes, { timeout: 120000 });
+    } catch (e) { console.log(JSON.stringify({ stalled: point, state: await state() })); throw e; }
+    console.log(`  plays on: ${point} (${goes})`);
+  };
   await open('shot&progress=1');
   assert.equal((await read()).chapter, 'island');
 
@@ -37,7 +50,11 @@ try {
     ['meadow', 'meadow', 'pond', `c.skipToCrest();c.crestDone=true;c.beat='walk';c.play='hold';c.holdUntil=1e6;g.cygnet.rideIn('satchel');`],
     ...[1,2,3,4].map(count => ['birches','birches',`scarf4-${count}`,
       `c.restoreCheckpoint('scarf4-${count}',[${count},0,.65,${count}]);c.holdUntil=1e6;`]),
-    ['drowned', 'drowned', 'sail', `c.beat='drift';c.stirred=true;c.leg=2;`],
+    ['drowned', 'drowned', 'sail', `const {CAT_HOLD:h}=await import('/src/world/drowned-way.ts');g.boat.beach(h.x,h.y,Math.atan2(19,-41));g.boat.launch();c.cat.aboard();c.aboardFrom=c.now;c.beat='drift';c.leg=2;g.boat.steerFor=(await import('/src/world/drowned.ts')).DROWNED_CHANNEL[2];`],
+    // The run, the church and the storm save as the real play reaches them from their QA starts.
+    ['drowned', 'roofs', 'roofs', ''],
+    ['drowned', 'church', 'church', ''],
+    ['drowned', 'storm', 'storm', ''],
     ['wood', 'wood', 'found', `c.beat='walk';c.bolted=true;c.leg=2;c.chainAt=55;`],
     ['wood', 'wood', 'dry', `c.beat='out';c.bolted=true;c.leg=4;c.chainAt=100;g.glider.visible=true;g.glider.soggy.value=0;`],
     // Arrange the completed walk around the bed and the whole tuck-in before freeing the feather.
@@ -59,7 +76,7 @@ try {
     await open(`shot&progress=1${query ? '&chapter=' + query : ''}`);
     await page.evaluate(async setup => {
       const g = __game, c = g.story.current;
-      g.child.stop();g.child.standUp();
+      if (setup) { g.child.stop(); g.child.standUp(); }
       await new Function('g','c',`return (async()=>{${setup}})()`)(g,c);
     }, setup);
     try {
@@ -82,6 +99,7 @@ try {
       assert(restored.wave[2] >= saved.life[1][2]);
     }
     if (point === 'complete') assert(restored.finished);
+    if (chapter === 'drowned') await playsOn(point);
     await page.screenshot({ path: `/tmp/updraft-progress-${chapter}-${point}.png` });
     report.checkpoints.push({ chapter, point, saved, restored });
     console.log(`ok ${chapter}/${point}`);
