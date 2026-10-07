@@ -701,39 +701,60 @@ the pod leaves at 60 s; the mirror's jetty is already in frame by 58 s; the sun 
   the saves and the real-gesture check carry over from branch `crossing-whale`, re-placed and re-scaled. The encounter below (a whale in their way, woken for their own passage, the cygnet only
 peeking) predates this and is being redesigned to fit it.
 
-### As decided: the crossing
+### As decided: the whale in the net (the open sea, `toMirror`)
 
-The concept keyframes `comps/crossings/whale/k1–k4` are the target for the look; `notes.md` beside them has Astra's
-layout in metres. They are painted over real frames from the crossing camera (`ref-*.png`), so they are framed as the
-game frames. The gusts' answer must be plainly bigger than the slack sail's: the boat is at rest, so nothing about the
-encounter may read as the boat speeding up.
+This consolidates the above for the build. The target for the look is `comps/crossings/whale-net/k1–k5` and
+`k2-portrait` (Astra, 2026-10-07, painted over real frames of this chapter, `ref-sea-*.png`); `notes.md` beside them
+has the layout in metres and the build risks. They are a guide, not pixels to match: the game's own assets, camera and
+light win. Branch `crossing-whale` (a sleeping whale on `toMeadow`, built and half-tuned before the move) holds the
+parts that carry over.
 
-**The whale asleep across the way** (crossing to the meadow, `toMeadow`; the one must-do).
-- About a third of the way along, the whale (`fx/sealife/anatomy.ts`, 14 m; scale it up toward `k1`'s size if the
-  game camera shows it smaller, as a child would dream it) lies asleep at the surface broadside across the boat's way,
-  like a long low island, eye shut, a gull asleep on its back. It is visible ahead in good time. It breathes every few
-  seconds: the back rises, a faint mist over the blowhole.
-- The boat eases to rest about 7 m off its flank (`Boat.speedLimit` eased to zero, never braked; the sail still
-  answers gusts). The child leans over the gunwale toward it; the cygnet half-ducks into the satchel and peeks (`k1`).
-- Gusts across it on screen only tickle it: its skin shivers along the stroke, a flipper lifts lazily and slaps the
-  water, a little splash reaches toward the boat, the gull hops up and resettles (`k2`). Each gust answers; it never
-  wakes from gusts, however many.
-- Circles over the blowhole wake it: the chapter's `updraftTarget` is the blowhole, and the usual spiral `coax`
-  (`fx/swirl.ts`, as the little boats' plug) shows after `inviteAfter` idle seconds. Progress builds while the player
-  winds and is kept when they stop. When full: it draws a breath, its eye opens, and it spouts a tall plume up through
-  the spiral (`fx/sealife/spray.ts`), with a faint rainbow where the sun allows (`k3`).
-- Then it rolls and sinks beyond the boat, flukes lifted high and dripping as if waving; the swell it leaves lifts
-  the boat; the child waves after it and the cygnet comes all the way up (`k4`). The limit eases off and they sail on.
-- Safety valve (Claude's call): after about 90 s without progress the gull walks to the blowhole and pecks, and the
-  whale wakes the same way. A cause on screen, never a timer the player sees.
-- Camera: the crossing camera eases (never jerks) to hold the whale broadside with the boat in the lower middle, as in
-  `k1`; in portrait the blowhole end and the boat. No reward phrase (a small step). Sounds: breath, spout
-  (`whale-blow` exists in `audio/foley.ts`), slap, the gull.
-- Saves: a crossing checkpoint taken before it wakes resumes with it asleep; one taken after resumes without it.
-- The meadow island beyond stays the grey shape in haze it is today.
-- As placed in the first build (C2a, 2026-10-05): about 57 m past the first waypoint of `toMeadow`, scaled 1.8 (25 m
-  long), the boat at rest about 18 s into the crossing; an idle player is woken by the gull about 90 s later. No
-  rainbow (Claude's call): on this crossing the sun is ahead of the camera, so the sun does not allow one.
+The sequence:
+- **The open sea as on main up to the swim.** The pod rises and rides the bow, the leap at first light, the cygnet's
+  swim and its drying. The sea's distant surfacing whale (`whaleAt: 27`) is cut: the sleeper is the whale.
+- **The pod leads.** After the swim a dolphin nudges the planking (main's nudge, now asking) and the pod leads the boat
+  off its line toward what looks like a long low island in the sunrise haze (`k1`). It breathes: a whale, dream-sized,
+  lying still and worn out. The boat eases to rest beside its head (`Boat.speedLimit` eased to zero, never braked).
+- **The whale.** About 75 m nose to flukes, too big for the frame: the back recedes across and away into the haze and
+  is never shown whole near the boat. Smooth slate-blue, paler underside, the low sun on its rim, cool sky fill so the
+  eye still reads; no rock-like skin, no sharp ridge, no face-like smile. Its eye, near the boat, is larger than the
+  boat is wide, under a heavy tired lid. Crown about 3.6 m above the water, eye about 1.6 m. It breathes slowly.
+- **The net.** One old faded brown-green net, about 32 × 12 m, over the head and blowhole and down the forward back,
+  rows of cork floats on its edges, a few strands of weed; one loop round the near flipper. A sparse deforming mesh,
+  instanced corks and a few boundary ropes, never a general cloth simulation. Tired, never hurt: no injury shown.
+- **1. The breath (circles).** The net lies over the blowhole; each breath only domes the mesh and sputters a weak
+  mist. `updraftTarget` is the blowhole; circles there lift the patch of mesh off it like a sheet in the wind
+  (progress builds while the player winds and is kept when they stop); the whale draws its first full breath, a soft
+  column of mist up through the spiral, and its great eye opens and looks at the child (`k2`).
+- **2. The child (a sweep).** A line of corks trails from the net across the water by the boat. A sweep pushes the
+  nearest cork to the boat; she leans out, catches the line in both mittens and hauls, and the net peels back off the
+  jaw and head into the water (`k3`). Hands just outside the rail; she leans, never hangs out.
+- **3. The cygnet (a sweep along the flipper).** The last loop is round the near flipper, out of her reach. The cygnet,
+  which swam earlier in this chapter, goes in, swims to it and takes the loop's end in its bill; a sweep along the
+  flipper makes it lift lazily (the tickle built on `crossing-whale`), and the loop slides off into the cygnet's pull,
+  slack in the rope so the bird never reads as hauling a giant (`k4`). The child watches, mittens to her mouth. The
+  cygnet swims back and is lifted in; the bird stays its own size and keeps clear water between it and the fin.
+- **Free.** It spouts a tall plume against the sunrise, the empty net drifting away on the water; the pod leaps round
+  it; the child waves (`k5`). It rolls, lifts its flukes high as if waving and sinks; its swell lifts the boat. The pod
+  goes with it, the limit eases off, and the sea goes still into the mirror's glass.
+- **Gestures.** Each step's answer starts at the wind's target and is plainly the biggest thing on screen: the boat is
+  at rest, so nothing may read as the boat speeding up. The ambient breeze does nothing to the net, the corks or the
+  flipper. Gusts elsewhere on the whale may still tickle it (shiver, a lazy slap) but never progress a step.
+- **Invitations and valves.** Each step has the usual drawn invitation after a few idle seconds and a safety valve after
+  about 90 s with no progress, with a cause on screen: a dolphin lifts the mesh with its nose, noses the cork to the
+  boat, nudges the flipper. No gull. Nothing is timed, nothing fails.
+- **Camera.** The crossing camera eases (never jerks, never cuts, no reverse angle or underwater shot) from the rear
+  view in `k1` to a lower, closer hold beside the boat for the steps (`k2`–`k4`, about 11 m behind, 4 m up), then back
+  out for the release (`k5`). In portrait the boat, the eye and the blowhole stack up the frame (`k2-portrait`).
+- **Reward.** Freeing the whale is the open sea's major conclusion, so the reward phrase (`completeObjective()`) plays
+  as it spouts free.
+- **Pacing.** The route lengthens so the mirror's island and jetty stay in haze until the whale has gone (on main the
+  jetty is in frame 58 s in). The open sea's "at most 100 s" is lifted for this; the crossing without the stop keeps
+  its feel. Music: the sea's score holds through the encounter; the mirror's arrival music is not delayed early.
+- **Saves.** Checkpoints at rest beside it (before the first step), after each step, and after it has gone (resumes
+  sailing on toward the mirror with no whale).
+- **Sounds.** Its slow breath and the sputter through the mesh, the full breath, the spout (`whale-blow`), the net's
+  wet rope and corks, the cygnet's splash; all synthesised (`docs/contracts/audio.md`).
 
-**QA starts.** `?chapter=toMeadow` (and any `to*` crossing) starts that crossing at its first waypoint, cygnet in
-the satchel (`src/story/journey.ts`, branch `crossings-start`).
+**QA starts.** `?chapter=toMirror` (and any `to*` crossing) starts that crossing at its first waypoint, cygnet in the
+satchel (branch `crossings-start`, also carried by `crossing-whale`); `?chapter=sea` starts the open sea as on main.
