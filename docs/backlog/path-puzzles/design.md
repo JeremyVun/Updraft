@@ -776,13 +776,27 @@ The sequence:
   off its line toward what looks like a long low island in the sunrise haze (`k1`). It breathes: a whale, dream-sized,
   lying still and worn out. The boat eases to rest beside its head (`Boat.speedLimit` eased to zero, never braked).
 - **The whale.** About 110 m nose to flukes (see Ownership above; `notes.md` says 75 m), too big for the frame: the back recedes across and away into the haze and
-  is never shown whole near the boat. Smooth slate-blue, paler underside, the low sun on its rim, cool sky fill so the
-  eye still reads; no rock-like skin, no sharp ridge, no face-like smile. Its eye, near the boat, is larger than the
+  is never shown whole near the boat. Slate-blue, paler underside, the low sun on its rim, cool sky fill so the eye
+  still reads; no sharp ridge, no face-like smile. Its eye, near the boat, is larger than the
   boat is wide, under a heavy tired lid. `notes.md`'s heights scaled to 110 m: crown about 5.3 m above the water, eye
   centre about 2.3 m, the eye about 3.5 m across, the near flipper about 16 m. It breathes slowly. As built (Claude's
   call, 2026-10-08): a blunt head with its own lower jaw, the pale lip narrowing to a point under the eye and greying
   into the slate far off, so the first sight reads as a long low shape before it reads as a jaw; the near flipper lies
   awash along the surface from just under it.
+- **A dreamlike giant, ancient** (Jeremy, 2026-10-08: "To me it doesn't quite yet read like a sillouhette of a
+  dreamlike giant whale." and "I also agree about the skin being a bit too "smooth" - we need it to look like an
+  ancient giant whale"). Claude's reading, agreed with him: it rode high and even along its whole length like a balloon,
+  its outline one smooth arch, its skin clean and evenly lit like a small near model. So:
+  - **Silhouette.** Mostly under water: the head and the blowhole are the highest, the back a long low line that sinks
+    and fades into the haze, the tail stock never seen until the farewell. The outline has a whale's beats: the snout's
+    flat ridge, the raised guard round the blowhole, the dip behind it, a small hump on the back, the narrowing toward
+    the tail before it slips under.
+  - **Ancient skin.** Weathered and old, not smooth: barnacle crusts and sea growth on the head, jaw and flipper
+    edges, old pale healed scars and scuffs, mottling, wet streaks, in this game's stylised painted manner (stylised
+    detail, not photographic noise). Healed and old, never a wound.
+  - **Scale and light.** Fine detail small against its bulk and the far length melting into the haze are what make it
+    read giant; a crisp gold line along the back against the sea, and a wet top. This replaces `notes.md`'s "simplify
+    the paintings' skin texture" for this whale.
 - **The net.** One old faded brown-green net, scaled with the whale to about 45 × 17 m, over the head and blowhole and
   down the forward back, rows of cork floats on its edges, a few strands of weed; one loop round the near flipper. The
   line in her mittens and its floats keep their real sizes (`notes.md`), so it is one a child can hold; the net's own

@@ -288,6 +288,16 @@ frames keep the gold morning though the sun can't share a phone's frame with the
 Gate: as N3d's, final stills opened for Jeremy.
 Done: [ ]
 
+### Phase N3f: the silhouette and the ancient skin
+After N3e, on `sea-whale` (Jeremy, 2026-10-08; design.md, "A dreamlike giant, ancient"). Owns the whale's profile
+along its length and how much of it rides above the water (`anatomy.ts`, the rest pose in `sleeper.ts`), its skin
+(`whaleShader.ts`, `tuning.whaleLook`), the haze along its length and the rim, and whatever framing the new
+silhouette needs. Shape first, then skin.
+Seam: `surfaceAt` and the anchors stay true to the rendered skin; the net drapes by them and must still lie on it;
+the bird's clearance from the flipper and the mechanics of N2 stay.
+Gate: as N3d's, final stills opened for Jeremy.
+Done: [ ]
+
 ### Phase N4: docs on approval
 Once Jeremy approves: the open sea's chapter-select still regenerated with the whale; the open sea's section in
 `docs/chapters.md` (its ruling "at most 100 s, nothing asked" replaced),
