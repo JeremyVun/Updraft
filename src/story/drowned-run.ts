@@ -136,7 +136,7 @@ interface LensKey {
 }
 
 /** Each angle in turn brought within half a turn of the one before, so a swing round is never taken the long way. */
-function unwrap(keys: LensKey[], field: 'bearing' | 'facing'): void {
+function unwrap(keys: LensKey[], field: 'facing'): void {
   for (let i = 1; i < keys.length; i++) {
     const d = keys[i][field] - keys[i - 1][field];
     keys[i][field] = keys[i - 1][field] + Math.atan2(Math.sin(d), Math.cos(d));
