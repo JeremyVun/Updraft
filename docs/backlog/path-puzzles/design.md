@@ -578,7 +578,14 @@ each house's character carried by its shape and by stylised detail (Jeremy, 2026
   we can settle on a style"): its pastel violet, blue and rose roofs and candy-scalloped tiles belong to another game.
   The style master is the room's own approved painting (`src/paintings/drowned-land.webp`): charcoal-slate and
   dark thatch roofs, warm lime-washed gables catching the low sun, brick chimneys, soft continuous painterly shading,
-  the light doing the work. Character goes into the shapes within that palette. Round four: `painted-*.png`.
+  the light doing the work. Character goes into the shapes within that palette. Round four (`painted-*.png`,
+  `painted-kit.png`, `painted-notes.md`) is approved (Jeremy, 2026-10-07: "ok this looks good, we can refine as we
+  go"): eight houses (swayback, tall hat, low cap, little pocket, the cat's shoulder, tucked together, round keeper,
+  open shutter) in charcoal slate, dark brown-grey and deep weathered thatch, cream limewash and brick-red pots, gold
+  only in the light, no modelled tiles; the three touches once each. It is built in the construction of home's
+  cottage (`src/world/cottage.ts`), the game's own house: clean modelled masses with crisp edges, soft colour lit by
+  the scene, a few crafted parts (window frames, a door, sills, bargeboards, a dormer, a shutter, pots), as the game's
+  best built things are (the stairs, the boat); and many more of them, as the washing field repeats to the horizon.
 - **The run is built on decks** (`src/world/decks.ts`): ridges, wall tops and the fallen trunk are strips the child
   walks; the slates up to a ridge are ramps. She gets out with `alight` onto the cottage's slates and back in with
   `board` at the nave.
