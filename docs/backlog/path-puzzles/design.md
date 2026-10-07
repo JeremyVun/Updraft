@@ -423,6 +423,14 @@ about (−9, −1398), some 40 m short of the church (`SPIRE`, 14, −1436). Mai
 (`tuning.storm.startsFromShore`), about 50 m past the church; the light goes out 23 s later, beside the lighthouse
 (65, −1580); then the plane is taken and they land. Houses stand 11–30 m off the channel, 15–40 m apart, sunk 1.7–5.4 m.
 
+Arriving: the boat comes out of the white the stairs let it down into, and from then on the village is all there is.
+The stairs' room goes while the boat is still in the white, never seen from the village (Jeremy, 2026-10-08, of the
+bare staircase standing over its island in the cat's view): "we want to keep the illusion of having appeared out of
+the fog into the drowned village. By this point, the player has climbed the stairs and then went on a guided journey
+through teh clouds, emerging into the drowned village. In their mind, the stairs chapter is out of sight behind them."
+Old saves that sail in from the birches' beach still see the birches behind them until the air dies: they came from
+there by sea.
+
 1. **The calm drift and the stranded cat** (about 150 m): dusk among the roofs as on main, with small answers to the
    wind (herons lift, the spire's vane swings). A cat crouches on a chimney pot along the drift, mewing (animals may be
    as loud as they like). A wooden wash-tub floats nearby; the player's gusts carry it to the cat's roof, the cat hops

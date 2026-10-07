@@ -62,7 +62,11 @@ const passages: Partial<Record<ChapterName, Room[]>> = {
 };
 const STAGE: Room[] = ['meadow'];
 const DROWNED_FROM_BIRCHES: Room[] = ['birches', 'drowned'];
-const DROWNED_FROM_STAIRS: Room[] = ['stairs', 'drowned'];
+/**
+ * Down from the stairs the village is all there is: they climbed into the cloud and came out of it here, and the
+ * stairs are out of sight behind them. Their room goes while the boat is still in the white.
+ */
+const DROWNED_FROM_STAIRS: Room[] = ['drowned'];
 const DROWNED_TO_WOOD: Room[] = ['drowned', 'wood'];
 const alone = Object.fromEntries(names.map(room => [room, [room]])) as Record<Room, Room[]>;
 /**

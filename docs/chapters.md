@@ -405,6 +405,10 @@ About five to six minutes, nearly all of it the player's:
    the fog thins off as the forest comes up out of it. The landing is relief that turns into the wood's fear.
 
 Rulings:
+- Coming down from the stairs, the stairs are never seen from the village (their room goes while the boat is still
+  in the white): "we want to keep the illusion of having appeared out of the fog into the drowned village. By this
+  point, the player has climbed the stairs and then went on a guided journey through teh clouds, emerging into the
+  drowned village. In their mind, the stairs chapter is out of sight behind them."
 - The dark comes on its own; the child goes after the cat, and the boat was never stuck: she left it to save the cat.
 - The dark is a sea fog, beautiful and ominous, never horror: "yea that fog looks way better" than black smoke.
 - Nothing needs fast reactions; holding on to the plane against the storm was rejected for that.
@@ -427,7 +431,8 @@ on the ridge, `church` at the tower's foot, `storm` seated aboard with the storm
 
 Knobs: `tuning.drowned` (`cat`, `tub`, `dark`, `fog`, `adrift`, `run`, `church`), `tuning.crossings` (the tree, the swing,
 the mill), `tuning.drownedCamera`, `tuning.storm`. Checks: `tools/drowned-run-check.mjs` (the whole room
-with real gestures from the drift, `FROM=roofs|church|storm`, `LENS=1` for the lens's measures),
+with real gestures from the drift, `FROM=stairs|roofs|church|storm`, `LENS=1` for the lens's measures: on the run
+a roof hiding her, her walking toward it, her out of frame; at the church her out of frame, hidden or lost in the fog),
 `drowned-roofs-check.mjs`, `drowned-way-check.mjs`, `crossings-check.mjs`, `cat-check.mjs`, `mill-check.mjs`,
 `drowned-fog-check.mjs`, `storm-check.mjs`, `boat-check.mjs`, `drowned-camera-check.mjs`, `drowned-gating-check.mjs`.
 

@@ -438,7 +438,7 @@ Object.values(echoes).forEach((e) => scene.add(e));
 const roomObjects: Partial<Record<Room, THREE.Object3D[]>> = {
   island: [tree.group, islandRocks, creatures.group], lines: [washing.group, washingBaskets, pinwheels.group, door.group],
   shore: [shoreGrass, kite.group, shorePulley.group], boats: [littleBoats.group],
-  meadow: [piano.group, ...pond.objects, ...swanFeather.objects, harebells.group], birches: [...birches.objects], stairs: [cloudStairs.group], drowned: [...village.objects],
+  meadow: [piano.group, ...pond.objects, ...swanFeather.objects, harebells.group], birches: [...birches.objects], stairs: cloudStairs.scenery, drowned: [...village.objects],
   wood: [...wood.objects], sleeping: [...sleeping.objects], mirror: [skyMirror.group], home: [...cottage.objects, homeJetty, homeTree.group],
 };
 for (const [room, echo] of Object.entries(echoes)) roomObjects[room as Room]?.push(echo);

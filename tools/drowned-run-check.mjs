@@ -13,7 +13,7 @@
 //        nave (skips the church too), SHOTS=<prefix> saves stills (at each piece,
 //        two between, and through the church), FILM=<seconds> with SHOTS also
 //        saves a still every that many seconds from the air dying (from the ridge with FROM=roofs, the tower's foot
-//        with FROM=church) to the storm,
+//        with FROM=church) to the storm, and with FROM=stairs through the descent in the white and 30 s on,
 //        W/H viewport (default 1600x900), LENS=1 also fails on the lens's measures (a roof hiding her, her walking
 //        toward it, her out of frame, it inside a roof; and at the church, from the tower's foot until the storm's
 //        frame takes over, her out of frame or hidden by the church or a roof).
@@ -386,7 +386,7 @@ try {
         wind: c.windInvitation ? on(c.windInvitation) : null };
     });
     const inFrame = (p) => p && p[2] < 1 && p[0] > 0.02 && p[0] < 0.98 && p[1] > 0.02 && p[1] < 0.98;
-    let st = await stairs(), shotDown = false;
+    let st = await stairs(), shotDown = false, descentShot = -Infinity;
     for (let i = 0; i < 2000 && st.chapter === 'stairs'; i++) {
       if (st.beat === 'waiting' && st.flight && inFrame(st.flight.to)) {
         const [ax, ay] = st.flight.at, [bx, by] = st.flight.to;
@@ -394,7 +394,16 @@ try {
       } else if (st.beat === 'loop' && inFrame(st.wind)) await stroke(st.wind, 0.2, 0.38, 24);
       else await seconds(0.5);
       if (!shotDown && st.beat !== 'waiting' && st.beat !== 'loop' && i > 10) { shotDown = true; await shot('stairs-leaving'); }
+      if (film && shots && ['fog', 'thin', 'down'].includes(st.beat) && st.time - descentShot >= film) {
+        descentShot = st.time;
+        await page.screenshot({ path: `${shots}-descent-${st.beat}-${st.time.toFixed(0).padStart(4, '0')}.png` });
+      }
       st = await stairs();
+    }
+    /** On from the stairs into the village, the stills going on as it comes out of the white. */
+    for (let t = 0; film && shots && t < 30; t += film) {
+      await page.screenshot({ path: `${shots}-descent-drowned-${(await page.evaluate(() => __stats.time)).toFixed(0).padStart(4, '0')}.png` });
+      await seconds(film);
     }
     assert.equal(st.chapter, 'drowned', `the stairs never let the boat down into the drowned village (${JSON.stringify(st)})`);
     console.log(`into the drowned village from the stairs at ${st.time.toFixed(1)} s`);

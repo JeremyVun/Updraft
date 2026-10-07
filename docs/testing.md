@@ -47,7 +47,9 @@ edit.
 
 - `node tools/playthrough.mjs <prefix>`: Begin through every chapter to the closing line, reload the completed save, then
   Play again, with real pointer gestures and natural transitions in a fresh browser profile. Fails on exceptions,
-  wrong chapter order, a stalled chapter or a missing ending. `REVIEW=1` records video and one-second frames (review
+  wrong chapter order, a stalled chapter or a missing ending. In the drowned village it plays the room as a player
+  does (the tub to the cat and back, the run's tree, mill and swing, the boat brought to the nave) and fails if any of
+  the room's safety valves carries it on instead. `REVIEW=1` records video and one-second frames (review
   them in order, not just chapter entries); `TRACE=1` records the camera for `tools/camera-intent-report.mjs`;
   `UNTIL=<chapter>` stops on entering it; `SAVE_FILE=<json>` continues from a captured checkpoint.
 - `node tools/camera-review-strip.mjs <prefix> <first-frame> [count] [stride]`: chronological contact sheets from
