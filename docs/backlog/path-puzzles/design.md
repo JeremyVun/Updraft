@@ -676,7 +676,7 @@ Jeremy (2026-10-07): "I dont think (1) works - if the cygnet could swim to the m
 done so as well. I think that the whale caught in a net is the classic example that works." So: **the whale caught in
 a net.**
 
-**The whale in the net, proposed** (2026-10-07; concept frames `comps/crossings/whale-net/`, painted from the open
+**The whale in the net, agreed** (Jeremy, 2026-10-07: "sounds great, proceed"; concept frames `comps/crossings/whale-net/`, painted from the open
 sea's own camera over `ref-sea-*.png`). Measured on main: the open sea runs about 78 s; the swim ends about 51 s in;
 the pod leaves at 60 s; the mirror's jetty is already in frame by 58 s; the sun rises low ahead.
 - After the swim, a dolphin nudges the planking (main's nudge, now asking) and the pod leads the boat off its line
