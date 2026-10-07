@@ -366,6 +366,10 @@ export class NetWhale {
         this.net.peel = 1;
       }
       this.holdFor(this.step, true);
+      if (point !== 'whale-rest' && this.cast.cygnet.seat === null) {
+        this.cast.cygnet.rideIn('satchel');
+        this.cygnetIn = 'satchel';
+      }
       if (point === 'whale-flipper') {
         this.net.loop = 1;
         this.bird = 'home';
@@ -1117,6 +1121,8 @@ export class NetWhale {
       if (!net.posed) net.peel = this.hauledIn / (K.haulPulls * K.pullTake);
       if (pull > K.haulPulls + K.haulHold / K.pullTime) {
         this.grip.by = null;
+        // Saved as she lets go, while the cygnet is still in the satchel: a save written once it is in the water would resume it there.
+        this.hauled = true;
         this.to('letting');
       }
     } else if (this.haulT > K.letGo) this.goTo('flipper');
