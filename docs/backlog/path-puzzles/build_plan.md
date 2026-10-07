@@ -108,8 +108,9 @@ Owns: `src/story/journey.ts` (`toMirror`: the route lengthened, `whaleAt` cut, t
 Also: the first crossing's whale (`src/fx/sealife/whale.ts`, `toLines`) becomes the same animal at the same size and
 look, unnetted and far off, its timing and distance as on main, with the pale pattern under its flukes it shares with
 the sleeper; `CROSSING=toLines node tools/journey-pacing-check.mjs` unchanged.
-Parallel: N2's net module may be built at the same time against `?chapter=stage` and slotted in after N1 (two
-agents at most).
+Sequenced (Claude's call, 2026-10-07): N2 starts on N1's branch once N1 lands, because the net drapes over the
+re-posed 110 m head and peers are already running build agents. Branch `sea-whale`, worktree
+`/private/tmp/updraft-sea-whale` (`crossing-whale` merged in at `a15e1241`).
 Seam: the encounter exposes its step (`approach`, `breath`, `line`, `flipper`, `free`, `gone`) for the net (N2) to
 drive and read; the pod's lead and farewell read it; for this phase a stand-in (circles over the blowhole wake it, as
 on `crossing-whale`) lets the sequence play end to end.

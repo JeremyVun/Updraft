@@ -753,10 +753,13 @@ The sequence:
 - **The whale.** About 110 m nose to flukes (see Ownership above; `notes.md` says 75 m), too big for the frame: the back recedes across and away into the haze and
   is never shown whole near the boat. Smooth slate-blue, paler underside, the low sun on its rim, cool sky fill so the
   eye still reads; no rock-like skin, no sharp ridge, no face-like smile. Its eye, near the boat, is larger than the
-  boat is wide, under a heavy tired lid. Crown about 3.6 m above the water, eye about 1.6 m. It breathes slowly.
-- **The net.** One old faded brown-green net, about 32 × 12 m, over the head and blowhole and down the forward back,
-  rows of cork floats on its edges, a few strands of weed; one loop round the near flipper. A sparse deforming mesh,
-  instanced corks and a few boundary ropes, never a general cloth simulation. Tired, never hurt: no injury shown.
+  boat is wide, under a heavy tired lid. `notes.md`'s heights scaled to 110 m: crown about 5.3 m above the water, eye
+  centre about 2.3 m, the eye about 3.5 m across, the near flipper about 16 m. It breathes slowly.
+- **The net.** One old faded brown-green net, scaled with the whale to about 45 × 17 m, over the head and blowhole and
+  down the forward back, rows of cork floats on its edges, a few strands of weed; one loop round the near flipper. Its
+  mesh, ropes and corks keep their real sizes (`notes.md`), so the line in her mittens is one a child can hold. A sparse
+  deforming mesh, instanced corks and a few boundary ropes, never a general cloth simulation. Tired, never hurt: no
+  injury shown.
 - **1. The breath (circles).** The net lies over the blowhole; each breath only domes the mesh and sputters a weak
   mist. `updraftTarget` is the blowhole; circles there lift the patch of mesh off it like a sheet in the wind
   (progress builds while the player winds and is kept when they stop); the whale draws its first full breath, a soft
