@@ -211,7 +211,7 @@ export class CrossingChapter implements Chapter {
   /** The whale in the net, on the open sea; the waypoint the boat holds on beside it; and its pod's run. */
   readonly whale: NetWhale | null;
   private readonly whaleHold: number;
-  private readonly podRun: PodRun = { near: null, heading: 0, camera: 1, busy: false, ready: false, lead: 0, leaps: false };
+  private readonly podRun: PodRun = { near: null, heading: 0, camera: 1, busy: false, ready: false, lead: 0, leaps: false, spread: 1 };
   /** The length of route the pod's play is paced along: to where it leads the boat off, or the whole way. */
   private readonly podLine: number;
   /** How far the view has turned back to the voyage once the whale has gone. */
@@ -504,7 +504,7 @@ export class CrossingChapter implements Chapter {
     const light = this.podProgress() >= tuning.seaPassage.leapFrom;
     if (this.whale?.led) {
       const run = this.whale.pod(this.podRun, dt);
-      sealife.dolphinsWith(run.near, run.heading, run.camera, run.busy, run.ready, run.lead, run.leaps);
+      sealife.dolphinsWith(run.near, run.heading, run.camera, run.busy, run.ready, run.lead, run.leaps, run.spread);
       if (this.whale.passed && this.podLeftAt === null) this.podLeftAt = this.time;
     } else {
       if (this.wantsDolphins && !withPod && this.swim === 'done' && this.podLeftAt === null) this.podLeftAt = this.time;

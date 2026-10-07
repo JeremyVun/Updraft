@@ -28,6 +28,14 @@ const BRUSH_TO = 0.92;
 const BRUSH_STEPS = 18;
 /** How far out from the pod's anchor the bow is when it lets the boat come to rest alone (m). */
 const POD_PARTS = 22;
+/**
+ * The pod's way past the boat as the whale spouts free, in metres to port and ahead of the boat at rest: in from
+ * behind on the port quarter, across the water between the boat and its jaw, and on along its flank to starboard,
+ * at `POD_PACE` metres a second with its lanes drawn in by `POD_SPREAD`.
+ */
+const POD_WAY = [new THREE.Vector2(30, -14), new THREE.Vector2(9, 0), new THREE.Vector2(-16, 12)];
+const POD_PACE = 3;
+const POD_SPREAD = 0.45;
 /** Seconds the child holds a point toward a breath she has seen, and the least between two. */
 const POINT_FOR = 2.6;
 
@@ -40,6 +48,7 @@ export interface PodRun {
   ready: boolean;
   lead: number;
   leaps: boolean;
+  spread: number;
 }
 
 /**
@@ -88,8 +97,6 @@ export class NetWhale {
   private readonly p = new THREE.Vector3();
   private readonly a = new THREE.Vector3();
   private readonly b = new THREE.Vector3();
-  private readonly nose = new THREE.Vector3();
-  private readonly toBoat = new THREE.Vector3();
   private readonly forward = new THREE.Vector3();
   private readonly subjects = { primary: new THREE.Vector3(), secondary: new THREE.Vector3(), tertiary: new THREE.Vector3(),
     margin: 0.85, extra: 10 };
@@ -209,7 +216,6 @@ export class NetWhale {
     this.release += (out - this.release) * (1 - Math.exp(-dt * K.holdEase));
     const turning = this.step === 'gone' ? 0 : this.turnToward() * (1 - THREE.MathUtils.smootherstep(left, 30, 120));
     this.turn += (turning - this.turn) * (1 - Math.exp(-dt * 1.2));
-    whale.point(0, 0.15, 0, this.nose);
   }
 
   /**
@@ -224,6 +230,7 @@ export class NetWhale {
     out.ready = false;
     out.lead = 0;
     out.leaps = false;
+    out.spread = 1;
     out.heading = boat.yaw;
     out.near = null;
     if (this.step === 'approach') {
@@ -238,26 +245,38 @@ export class NetWhale {
       out.heading = this.escortYaw();
       return out;
     }
-    // Round the front of its head, from the near side to the far, leaping out in front of it.
-    this.escort += (dt * 3) / K.podMill;
-    const theta = 1 + this.escort;
-    this.toBoat.set(whale.heading.z, 0, -whale.heading.x);
-    this.anchor.copy(this.nose).addScaledVector(this.toBoat, Math.cos(theta) * K.podMill)
-      .addScaledVector(whale.heading, Math.sin(theta) * K.podMill).setY(0);
+    this.escort = Math.min(1, this.escort + (dt * POD_PACE) / this.wayLength());
+    this.wayAt(this.escort, this.anchor);
     out.near = this.anchor;
     out.heading = this.escortYaw();
     out.ready = whale.time > 1;
     out.leaps = true;
+    out.spread = POD_SPREAD;
+    // Their leaps are thrown out to the side of the camera, behind the boat.
+    out.camera = -1;
     return out;
   }
 
-  /** The way round its head the pod swims, and away along its far side as it goes. */
+  /** A point `t` of the way along the pod's way past the boat, in the world. */
+  private wayAt(t: number, out: THREE.Vector3): THREE.Vector3 {
+    const [a, b, c] = POD_WAY;
+    const u = 1 - t;
+    const left = u * u * a.x + 2 * u * t * b.x + t * t * c.x;
+    const ahead = u * u * a.y + 2 * u * t * b.y + t * t * c.y;
+    return out.set(this.rest.x + Math.sin(this.yaw) * ahead + Math.cos(this.yaw) * left, 0,
+      this.rest.z + Math.cos(this.yaw) * ahead - Math.sin(this.yaw) * left);
+  }
+
+  private wayLength(): number {
+    const [a, b, c] = POD_WAY;
+    return a.distanceTo(b) + b.distanceTo(c);
+  }
+
+  /** The way the pod swims along its way past the boat, and on as the whale goes. */
   private escortYaw(): number {
-    const whale = this.whale;
-    const theta = 1 + this.escort;
-    const x = -Math.sin(theta) * whale.heading.z + Math.cos(theta) * whale.heading.x;
-    const z = Math.sin(theta) * whale.heading.x + Math.cos(theta) * whale.heading.z;
-    return Math.atan2(x, z);
+    this.wayAt(Math.min(1, this.escort + 0.02), this.b);
+    this.wayAt(Math.max(0, this.escort - 0.02), this.a);
+    return Math.atan2(this.b.x - this.a.x, this.b.z - this.a.z);
   }
 
   /**
@@ -369,7 +388,8 @@ export class NetWhale {
     const { input } = this.cast;
     const whale = this.whale;
     const camera = this.camera;
-    if (!camera || !input.present || input.muted || input.gust <= K.brushFrom) return;
+    // Circles are the breath's gesture, and answered at the blowhole: only a sweep across the back tickles it.
+    if (!camera || !input.present || input.muted || input.gust <= K.brushFrom || input.charge > K.liftFrom) return;
     let best = 0;
     let at = 0;
     for (let i = 0; i <= BRUSH_STEPS; i++) {

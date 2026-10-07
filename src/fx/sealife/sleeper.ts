@@ -47,7 +47,7 @@ const GONE = 25;
 const LIFT = curve([[0, 0], [0.4, 0.12], [1.8, 0.95], [3, 1], [4.2, 0.35], [4.7, -0.04], [5.2, 0]]);
 const LIFT_HITS = 4.6;
 const LIFT_FOR = 5.2;
-const LIFT_ANGLE = 0.7;
+const LIFT_ANGLE = 0.3;
 
 /** The head carried a little higher than the tail, so the eye and blowhole stand clear and the flukes lie just under. */
 function restPitch(s: number): number {

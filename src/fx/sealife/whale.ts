@@ -117,7 +117,7 @@ export class WhaleRig {
       uEye: { value: 1 },
       uEyeAt: { value: new THREE.Vector3(0.16, 0.17, 2.9) },
       uGaze: { value: new THREE.Vector2() },
-      uDetail: { value: new THREE.Vector4(0.08, 0.5, 0.02, 1) },
+      uDetail: { value: new THREE.Vector4(0.08, 0.5, 0, 1) },
       uFill: { value: new THREE.Color(0.05, 0.06, 0.09) },
     };
     this.skin = skin;

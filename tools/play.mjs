@@ -1,8 +1,11 @@
 // Drive the real game with pointer gestures in Chrome for Testing (GPU) and capture frames for visual QA.
 // Usage: node tools/play.mjs <out-prefix> '<json steps>'
 //   steps: [{"wait":ms} | {"shot":"name"} | {"move":[x,y]} | {"down":true} | {"up":true}
-//           | {"swipe":[[x1,y1],[x2,y2],...], "ms":600} | {"eval":"js"} | {"burst":"name","n":4,"every":120}]
+//           | {"swipe":[[x1,y1],[x2,y2],...], "ms":600} | {"eval":"js"} | {"burst":"name","n":4,"every":120}
+//           | {"circle":"js returning [x,y]","until":"js condition","radius":0.05,"seconds":40}]
 //   Coordinates are fractions of the viewport (0..1). "swipe" moves through the points over "ms" with fine steps.
+//   "circle" draws circles round the point the expression gives (fractions; re-read every turn) until the condition
+//   holds, and fails after "seconds".
 //   "burst" takes n screenshots every <every> ms named <name>-1..n.
 //   env: BASE (default http://127.0.0.1:5230/), QUERY (appended), W/H viewport (default 1600x900),
 //        TOUCH=1 emulates a coarse primary pointer; it does not emulate GPU performance.
@@ -57,6 +60,21 @@ try {
         const [bx, by] = pts[k + 1];
         await page.mouse.move(ax + (bx - ax) * t, ay + (by - ay) * t);
         await page.waitForTimeout(ms / n);
+      }
+    }
+    if (s.circle) {
+      const end = Date.now() + (s.seconds ?? 40) * 1000;
+      const r = s.radius ?? 0.05;
+      let a = 0;
+      for (;;) {
+        const [cx, cy] = px(await page.evaluate(s.circle));
+        for (let i = 0; i < 24; i++) {
+          a += (Math.PI * 2) / 24;
+          await page.mouse.move(cx + Math.cos(a) * r * height, cy + Math.sin(a) * r * height);
+          await page.waitForTimeout(28);
+        }
+        if (s.until && (await page.evaluate(s.until))) break;
+        if (Date.now() > end) throw new Error(`circling never got there: ${s.until}`);
       }
     }
     if (s.eval) console.log(JSON.stringify(await page.evaluate(s.eval)));

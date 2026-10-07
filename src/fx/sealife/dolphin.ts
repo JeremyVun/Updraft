@@ -810,6 +810,7 @@ export class Dolphins {
   private lead = 0;
   private leading = 0;
   private leaps = false;
+  private spread = 1;
 
   /** The next set-piece comes soon, if one may: the pod answering something it sees. */
   cue(): void {
@@ -884,15 +885,16 @@ export class Dolphins {
    * which side of the stern the camera rides on, so the set-pieces play where they can be seen, `busy` holds
    * them off while something else has the boat, and until `ready` none begins. `lead` runs the lanes that far
    * ahead, as they do leading the boat somewhere; `leaps` keeps them from shouldering anything, for a pod running
-   * with something other than the boat.
+   * with something other than the boat, and `spread` draws their lanes in, for narrow water.
    */
-  run(near: THREE.Vector3 | null, heading: number, camera = 1, busy = false, ready = true, lead = 0, leaps = false): void {
+  run(near: THREE.Vector3 | null, heading: number, camera = 1, busy = false, ready = true, lead = 0, leaps = false, spread = 1): void {
     this.wanted = near !== null;
     this.camera = camera < 0 ? -1 : 1;
     this.busy = busy;
     this.ready = ready;
     this.leading = lead;
     this.leaps = leaps;
+    this.spread = spread;
     if (!near) return;
     if (!this.here || this.boat.distanceToSquared(near) > 1e4) {
       this.boat.copy(near);
@@ -1182,7 +1184,7 @@ export class Dolphins {
     const p = d.pack;
     const u = Math.min(1, Math.abs(along - p.station) / 22);
     const room = this.quiet * (p.side === this.camera ? 0 : 2);
-    return p.sideAt * (p.near + room + (p.far - p.near) * u * u) + d.dAcross;
+    return p.sideAt * (p.near + room + (p.far - p.near) * u * u) * this.spread + d.dAcross;
   }
 
   /** Picks the shape of one lane: where it sits, how far and how slowly it surges, and how close it comes. */

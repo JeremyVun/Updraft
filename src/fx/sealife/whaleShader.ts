@@ -142,13 +142,25 @@ Skin skin() {
       float where = step(1.0 - uDetail.z, hash12(id + 3.1)) * smoothstep(0.55, 0.85, rn.y);
       k.albedo = mix(k.albedo, uBelly * 0.95, spot * where);
     }
-    vec2 e = vec2(vRest.z + uEyeAt.x * ${f(LENGTH)}, vRest.y - uEyeAt.y) / uEyeAt.z;
-    float open = 1.0 - smoothstep(0.06, 0.1, length(e));
-    float lid = (1.0 - smoothstep(0.012, 0.03, abs(e.y + 0.035 - 2.2 * e.x * e.x))) * (1.0 - smoothstep(0.1, 0.13, abs(e.x)));
-    float side = step(uEyeAt.z > 1.5 ? 0.45 : 0.8, abs(rn.x));
-    k.albedo *= 1.0 - mix(lid, open, uEye) * side * 0.8;
-    float glint = 1.0 - smoothstep(0.014, 0.026, length(e - vec2(sign(rn.x) * 0.025, 0.03) - uGaze * vec2(sign(rn.x), 1.0) * 0.025));
-    k.albedo = mix(k.albedo, vec3(0.95), glint * uEye * side * step(1.5, uEyeAt.z));
+    // The eye, in units of its radius: an almond under a heavy upper lid that lifts from a slit to tired-open with
+    // uEye, a dark iris and pupil turned by uGaze, and a pale reflection that the light, not the eye, makes bright.
+    vec2 e = vec2(vRest.z + uEyeAt.x * ${f(LENGTH)}, vRest.y - uEyeAt.y) / (uEyeAt.z * 0.08);
+    float side = step(uEyeAt.z > 1.5 ? 0.35 : 0.8, abs(rn.x));
+    float span = max(0.0, 1.0 - e.x * e.x);
+    float upper = mix(-0.3, 0.2, uEye) * span;
+    float lower = -0.45 * span;
+    float aa = 0.06;
+    float opening = smoothstep(lower, lower + aa, e.y) * (1.0 - smoothstep(upper - aa, upper, e.y)) * step(abs(e.x), 1.0);
+    vec2 g = e - uGaze * vec2(sign(rn.x), 1.0) * 0.25 - vec2(0.0, -0.1);
+    float iris = 1.0 - smoothstep(0.5, 0.56, length(g));
+    float pupil = 1.0 - smoothstep(0.24, 0.3, length(g));
+    vec3 eye = mix(vec3(0.62, 0.58, 0.5), mix(vec3(0.24, 0.15, 0.09), vec3(0.03, 0.025, 0.02), pupil), iris);
+    float glint = 1.0 - smoothstep(0.08, 0.13, length(g - vec2(sign(rn.x) * 0.2, 0.22)));
+    eye = mix(eye, vec3(0.92), glint);
+    float crease = (1.0 - smoothstep(0.03, 0.09, abs(e.y - upper - 0.28 * span))) * step(abs(e.x), 1.1);
+    float socket = 1.0 - smoothstep(1.0, 1.6, length(e * vec2(1.0, 1.4)));
+    k.albedo *= 1.0 - (0.18 * socket + 0.35 * crease) * side * step(1.5, uEyeAt.z);
+    k.albedo = mix(k.albedo, eye, opening * side);
   } else if (part == ${FIN}) {
     float top = smoothstep(-0.2, 0.4, rn.y);
     k.albedo = mix(uBelly * (0.92 + 0.12 * mottle), uBack * 1.1, top * (1.0 - smoothstep(0.2, 0.75, vRig.z)) * 0.8);
