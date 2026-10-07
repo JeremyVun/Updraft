@@ -174,8 +174,8 @@ struct Skin {
 vec3 lids(vec2 e) {
   float span = max(0.0, 1.0 - e.x * e.x);
   float corner = -0.04 + 0.06 * e.x;
-  return vec3(corner, corner - (0.12 + 0.12 * uEye) * pow(span, 0.8),
-    corner + (0.06 + 0.21 * uEye) * pow(span, 0.5) * (1.0 + 0.15 * e.x));
+  return vec3(corner, corner - (0.12 + 0.15 * uEye) * pow(span, 0.6),
+    corner + (0.06 + 0.26 * uEye) * pow(span, 0.42) * (1.0 + 0.12 * e.x));
 }
 
 /**
@@ -185,19 +185,21 @@ vec3 lids(vec2 e) {
  */
 vec2 eyeFolds(vec2 e, vec3 l) {
   float span = max(0.0, 1.0 - e.x * e.x * 0.8);
-  float up = e.y - (l.x + (0.06 + 0.21 * uEye) * span);
+  float up = e.y - (l.x + (0.06 + 0.26 * uEye) * span);
   float down = l.y - e.y;
   float wide = 1.0 - smoothstep(0.6, 1.5, abs(e.x));
-  float roll = 0.32 * smoothstep(-0.1, 0.1, up) * (1.0 - smoothstep(0.08, 0.6, up));
+  // An old lid is layers of skin rather than one smooth roll, which would read as a person's.
+  float wave = vnoise(vec2(e.x * 1.7, 3.1));
+  float roll = (0.14 + 0.08 * wave) * smoothstep(-0.1, 0.1, up) * (1.0 - smoothstep(0.08, 0.45, up));
   float sill = 0.1 * smoothstep(-0.1, 0.08, down) * (1.0 - smoothstep(0.08, 0.36, down));
   // Folds arch over the lid and sag under the eye, drawn out behind it toward the tail, each fading along its length.
   float x2 = e.x * e.x;
-  float wave = vnoise(vec2(e.x * 1.7, 3.1));
+  float fold0 = 0.6 * exp(-pow((up + 0.1 * x2 - 0.28) / 0.05, 2.0)) * (1.0 - smoothstep(0.7, 1.2, abs(e.x + 0.1)));
   float fold1 = 0.7 * exp(-pow((up + 0.16 * x2 - 0.52) / 0.07, 2.0)) * (1.0 - smoothstep(0.6, 1.3, abs(e.x + 0.2)));
   float fold2 = exp(-pow((up + 0.22 * x2 - 0.86) / 0.07, 2.0)) * (1.0 - smoothstep(0.3, 1.1, abs(e.x + 0.3))) * (0.4 + 0.6 * wave);
   float fold3 = exp(-pow((down + 0.18 * x2 - 0.36) / 0.05, 2.0)) * (1.0 - smoothstep(0.5, 1.1, abs(e.x + 0.2)));
   float fold4 = exp(-pow((down + 0.2 * x2 - 0.62) / 0.06, 2.0)) * (1.0 - smoothstep(0.2, 0.85, abs(e.x + 0.35))) * (1.0 - 0.5 * wave);
-  float crease = max(max(fold1, fold2 * 0.75), max(fold3 * 0.8, fold4 * 0.55));
+  float crease = max(max(max(fold0, fold1), fold2 * 0.75), max(fold3 * 0.8, fold4 * 0.55));
   return vec2((roll + sill) * wide - 0.07 * crease, crease);
 }
 
@@ -285,8 +287,8 @@ Skin skin(float far) {
     float rr = length(g);
     float iris = 1.0 - smoothstep(0.5 - aa, 0.5 + aa, rr);
     float pupil = 1.0 - smoothstep(0.19 - aa, 0.19 + aa, length(g * vec2(0.85, 1.15)));
-    // A little wet white shows at its corners, greyed where the lids shade it.
-    vec3 white = vec3(0.24, 0.19, 0.18) * mix(0.35, 1.0, smoothstep(0.98, 0.6, abs(e.x)));
+    // At its corners only a dark wet rim, never a white: a white makes it a person's eye.
+    vec3 white = vec3(0.1, 0.06, 0.045) * mix(0.35, 1.0, smoothstep(0.98, 0.6, abs(e.x)));
     float fibres = 0.82 + 0.36 * vnoise(vec2(atan(g.y, g.x) * 9.0, rr * 5.0));
     vec3 amber = uIris * fibres * mix(1.2, 0.45, smoothstep(0.32, 0.5, rr)) * mix(0.6, 1.0, smoothstep(0.19, 0.27, rr));
     vec3 eye = mix(mix(white, amber, iris), vec3(0.014, 0.011, 0.01), pupil);
@@ -317,7 +319,7 @@ Skin skin(float far) {
     vec3 pale = mix(uBack, uBelly, 0.4) * (0.92 + 0.1 * mottle);
     float blotch = smoothstep(0.58, 0.78, vnoise(vRest.xz * 2.6 + 7.0)) * smoothstep(0.45, 0.85, vRig.z);
     float lead = 1.0 - smoothstep(0.0, 0.1, vRig.w);
-    k.albedo = mix(uBack * (0.95 + 0.1 * mottle), pale, max(max((1.0 - top) * 0.55, lead * 0.45), blotch * 0.5));
+    k.albedo = mix(uBack * (0.95 + 0.1 * mottle), pale, max(max((1.0 - top) * 0.25, lead * 0.25), blotch * 0.3));
     k.thin = 0.05;
   } else {
     // Its own marks under the flukes, the same wherever it is met: a ragged dark trailing edge and tips, a dark

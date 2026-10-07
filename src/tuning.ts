@@ -1514,7 +1514,7 @@ export const tuning = {
      * The near flipper at rest, about its root under the jaw: swept round toward the head and raised, so it reaches
      * out toward the boat's bow with its tip at the surface (radians).
      */
-    finRestSweep: -0.45, finRestRaise: 0.23,
+    finRestSweep: -0.45, finRestRaise: 0.31,
     /** How far its lazy lift raises the near flipper about its root and swings it back along its flank (radians). */
     finLift: 0.16, finSwing: 0.05,
   },

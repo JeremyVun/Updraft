@@ -17,7 +17,7 @@ export const FLUKE_HALF_SPAN = 2.75;
  * Root of the left pectoral fin (the right one is its mirror image): low on the flank just behind the corner of the
  * mouth, so it is plainly the head's own, a little under the water lying awash.
  */
-export const FIN_ROOT = new THREE.Vector3(1.17, -0.08, -0.19 * LENGTH);
+export const FIN_ROOT = new THREE.Vector3(1.17, -0.13, -0.19 * LENGTH);
 /** The flipper's length and its line out from the root at rest, before it is raised and swept, in its own units. */
 export const FIN_SPAN = 4.5;
 export const FIN_DIR = new THREE.Vector3(0.8, -0.3, -0.52).normalize();
