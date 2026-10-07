@@ -4,7 +4,7 @@ import type { Deck } from '../world/decks';
 import { tuning } from '../tuning';
 import { CAT_WAY, DARK_WAY, MILL, MILL_SITE, NAVE, PLACED, STRAND, SWING_SITE, TOWER_FOOT, TREE_SITE, WAY, WAY_GAPS, darkWayPoint, roofUnder, type WayDeck } from '../world/drowned-way';
 import { SPIRE } from '../world/drowned';
-import { railAt } from '../world/crossings/windmill';
+import { HOIST } from '../world/crossings/windmill';
 import { TREE_SOUNDS, TreeCrossing } from '../world/crossings/tree-crossing';
 import { MILL_SOUNDS, MillCrossing } from '../world/crossings/mill-crossing';
 import { SWING_SOUNDS, SwingCrossing } from '../world/crossings/swing-crossing';
@@ -670,7 +670,7 @@ export class RoofRun {
   private facePiece(dt: number): void {
     const { child: c } = this.cast;
     const at = this.stage === 'tree' && this.tree.phase === 'waiting' ? TREE_SITE.spot.root
-      : this.stage === 'mill' && this.mill.phase === 'waiting' ? this.mill.mill.railTop(tuning.crossings.mill.stand, this.scratch) : null;
+      : this.stage === 'mill' && this.mill.phase === 'waiting' ? this.mill.mill.basketFloor(this.scratch) : null;
     if (at && !c.busy) c.faceToward(at.x, at.z, 1 - Math.exp(-dt * 3));
   }
 
@@ -974,9 +974,8 @@ export class RoofRun {
   private millView(wide: number, c: THREE.Vector3 = this.cast.child.position, ahead = THREE.MathUtils.smootherstep(this.millAhead, 0, 1)): void {
     const m = this.mill.mill;
     const p = m.group.worldToLocal(this.tmp.copy(c));
-    const board = railAt(tuning.crossings.mill.board, tuning.crossings.mill.stand);
     const rise = THREE.MathUtils.clamp((p.y - MILL.waitTop) / (MILL.offRidge - MILL.waitTop), 0, 1);
-    const x = Math.min(p.x, board.x);
+    const x = Math.min(p.x, HOIST.x);
     const k = tuning.drownedCamera.run;
     const eye = this.stationEye.set(x + k.millAside - k.millOn * ahead, 2.5 + 0.7 * p.y + 0.6 * ahead, k.millOut - 0.8 * rise - k.millIn * ahead);
     const target = this.stationTarget.set(x + 0.9 - 5.5 * ahead, 0.8 + 0.8 * p.y, 0);

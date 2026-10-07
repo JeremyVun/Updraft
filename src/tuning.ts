@@ -2130,31 +2130,36 @@ export const tuning = {
     },
     mill: {
       /**
-       * The ride, as the boarding sail's angle above level (radians): it dwells for her at `board` (a little below
-       * level, so the rail slopes gently down toward its tip) and again at `top`, never steeper than she can stand on.
-       * How far out along the rail she stands (m from the hub), and where the empty sails rest.
+       * Where the sails rest, as the first sail's angle above level on the left (radians): its stock's end low over her
+       * roof's chimney, for the cat. How far the basket rises per radian the sails turn (m): about one turn of the
+       * sails winds her up the whole height.
        */
-      board: -0.26, top: 0.44, stand: 3.4, rest: -0.95,
+      rest: -1.05, rise: 1.1,
       /**
-       * Turning: rotor radians a second squared per radian a second the cursor goes round the hub on screen, how
-       * quickly a turning rotor loses speed with nobody turning it (per second), and its speed cap empty and with her
-       * aboard (radians a second). The cursor counts from `near` to `far` screen heights from the hub.
+       * Turning: sail radians a second asked for per radian a second the cursor goes round the hub on screen, the
+       * seconds they take to come up to it (longer with her weight on the hoist), how fast they coast down when it
+       * stops (per second), and their speed cap empty, loaded, and while the cat bounds along a sail. The cursor counts from `near` to `far` screen
+       * heights from the hub.
        */
-      gain: 0.16, drag: 1.1, cap: 0.6, capAboard: 0.24, near: 0.05, far: 0.7,
-      /** Below this speed a coasting rotor brakes to a stop over `brakeFor` seconds. */
-      settleSpeed: 0.07, brakeFor: 0.45,
-      /** How far before a dwell it starts to ease in (radians), and the creep it never eases below. */
-      ease: 0.35, creep: 0.03,
-      /** Wrong-way circling only rocks it: the most it gives back, empty and with her aboard (radians), and the spring it rocks on. */
-      rockMax: 0.07, rockAboard: 0.03, rockStiffness: 14, rockDamping: 4.5,
-      /** The fog's breath on the empty sails: how far they sway either way (radians) and the seconds of one sway. */
-      breath: 0.05, breathFor: 7.5,
-      /** Seconds she looks at the sail before stepping on, and her pace on the rail as a share of a walk. */
-      boardAfter: 0.5, railStroll: 0.45,
+      ratio: 0.3, spinUp: 0.45, spinUpAboard: 0.6, drag: 1.2, dragAboard: 3.5, cap: 1.7, capAboard: 1.45, capCat: 1.0, near: 0.04, far: 0.85,
+      /** Below this speed a coasting rotor brakes to a stop over `brakeFor` seconds, the pawl clicking it home. */
+      settleSpeed: 0.12, brakeFor: 0.35,
+      /** How far before the top it starts to ease in (radians of sail), and the creep it never eases below. */
+      ease: 0.3, creep: 0.3,
+      /** Wrong-way circling only rocks it against the pawl: the most it gives, empty and loaded (radians), and the spring. */
+      rockMax: 0.05, rockAboard: 0.02, rockStiffness: 14, rockDamping: 4.5,
+      /** The fog's breath on the idle sails: how far they sway either way (radians) and the seconds of one sway. */
+      breath: 0.035, breathFor: 7.5,
+      /** The ratchet's teeth round the drum, and the radians of sail between creaks of the cap. */
+      teeth: 12, creakEvery: 0.6,
+      /** Seconds she looks at the basket before stepping in, and her pace stepping in and out as a share of a walk. */
+      boardAfter: 0.4, stroll: 0.55,
       /** Seconds without a useful turn before the drawn spiral, sooner after a wrong-way turn; the world's own breath after `valveAfter`. */
-      inviteAfter: 5, inviteWrong: 1.6, valveAfter: 90, valveDrive: 2.2,
+      inviteAfter: 5, inviteWrong: 1.6, valveAfter: 90, valveDrive: 3.5,
       /** The spiral: seconds to draw it, seconds before it comes again, its inner and outer radius (m) and its turns. */
-      inviteSweep: 2.2, invitePause: 1.2, inviteInner: 0.7, inviteOuter: 2.7, inviteTurns: 1.25, inviteAlpha: 0.8, inviteWidth: 0.07,
+      inviteSweep: 2.4, invitePause: 1.2, inviteInner: 1.4, inviteOuter: 5.2, inviteTurns: 1.25, inviteAlpha: 0.8, inviteWidth: 0.1,
+      /** The first sail's angle above level once the cat, ridden up, leaps from it for the cap. */
+      catLeap: 0.6,
     },
     sheet: {
       /**

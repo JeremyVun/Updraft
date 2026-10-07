@@ -6,7 +6,7 @@ export type Surface = 'grass' | 'sand' | 'wood' | 'water';
 export type MaterialSound = 'cloth' | 'wool' | 'sail' | 'sail-settle' | 'water' | 'paper' | 'door' | 'splash' | 'peg'
   | 'dolphin-surface' | 'leaf-scuff' | 'swing-creak' | 'tub' | WhaleSound
   | 'tree-creak' | 'roots-give' | 'root-tear' | 'tree-fall' | 'bough-creak' | 'slate-land'
-  | 'mill-start' | 'mill-creak' | 'mill-settle' | 'linen-flap';
+  | 'mill-start' | 'mill-creak' | 'mill-settle' | 'mill-click' | 'linen-flap';
 
 /**
  * The sounds a small body makes, as opposed to a voice. The cygnet never speaks except when it is lost, so this is
@@ -158,6 +158,12 @@ export class Foley {
       this.puff({ at, len: 0.7, level: level * 0.02, pan, type: 'bandpass', from: 900, to: 420, q: 0.9, attack: 0.05 });
       this.blip(at + 0.72, 105 * colour, 80 * colour, 0.2, level * 0.04, pan, 'triangle', 0.06);
       this.puff({ at: at + 0.72, len: 0.08, level: level * 0.03, pan, type: 'lowpass', from: 500, attack: 0.003 });
+    } else if (kind === 'mill-click') {
+      // The hoist's pawl dropping over a tooth of the drum's ratchet: a small dry iron tick on a wooden knock.
+      const colour = 0.94 + Math.random() * 0.12;
+      this.puff({ at, len: 0.018, level: level * 0.05, pan, type: 'bandpass', from: 3200 * colour, q: 5, attack: 0.0008 });
+      this.blip(at, 1700 * colour, 1500 * colour, 0.03, level * 0.012, pan, 'triangle');
+      this.blip(at + 0.004, 240 * colour, 190 * colour, 0.05, level * 0.025, pan, 'triangle', 0.02);
     } else if (kind === 'linen-flap') {
       // Torn scraps of old sail-cloth lifting and falling back: two or three soft, papery flaps, never a snap.
       const colour = 0.9 + Math.random() * 0.2;

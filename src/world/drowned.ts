@@ -1148,8 +1148,8 @@ function buildLeanTo(into: Merged, l: LeanTo, roof: THREE.Color, lime: THREE.Col
 
 /** The mill's tower behind its sails, for the lens to keep out of. */
 function millBounds(): THREE.Box3 {
-  const behind = new THREE.Vector3(Math.sin(MILL.facing), 0, Math.cos(MILL.facing)).multiplyScalar(-1.8).add(MILL.hub);
-  return new THREE.Box3(new THREE.Vector3(behind.x - 1.4, -1, behind.z - 1.4), new THREE.Vector3(behind.x + 1.4, MILL.hub.y + 1, behind.z + 1.4));
+  const behind = new THREE.Vector3(Math.sin(MILL.facing), 0, Math.cos(MILL.facing)).multiplyScalar(-1.9).add(MILL.hub);
+  return new THREE.Box3(new THREE.Vector3(behind.x - 1.7, -1, behind.z - 1.7), new THREE.Vector3(behind.x + 1.7, MILL.hub.y + 1.8, behind.z + 1.7));
 }
 
 /** A house laid by hand, in the generated village's materials. */
