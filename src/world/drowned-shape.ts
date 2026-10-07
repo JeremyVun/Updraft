@@ -49,12 +49,12 @@ const pick = <T>(rand: Rng, from: [T, number][]): T => {
   return from[from.length - 1][0];
 };
 
-/** Four houses in five modest; the rare shapes few enough that they matter. */
+/** Four houses in five modest near, the rare shapes few enough that they matter; far off more of them point, as a dream's horizon does. */
 function look(rand: Rng, thatched: boolean, far: boolean, long: boolean): HouseType {
   if (long) return thatched ? 'thatch' : 'tucked';
   if (thatched) return pick(rand, [['thatch', 0.82], ['lowCap', 0.18]]);
   return far
-    ? pick(rand, [['cottage', 0.74], ['swayback', 0.1], ['tallHat', 0.09], ['pocket', 0.07]])
+    ? pick(rand, [['cottage', 0.56], ['swayback', 0.1], ['tallHat', 0.17], ['pocket', 0.06], ['roundKeeper', 0.11]])
     : pick(rand, [['cottage', 0.72], ['swayback', 0.1], ['openShutter', 0.07], ['pocket', 0.11]]);
 }
 

@@ -516,7 +516,11 @@ function farHouse(into: PartSink, type: HouseType, lot: Lot, rand: Rng, m: THREE
         .multiply(new THREE.Matrix4().makeRotationY(range(rand, 0.1, 0.16))));
     return;
   }
-  const g = gableFor(type === 'roundKeeper' || type === 'catShoulder' ? 'cottage' : type, lot, rand);
+  if (type === 'roundKeeper') {
+    turret(into, lot, rand, m);
+    return;
+  }
+  const g = gableFor(type === 'catShoulder' ? 'cottage' : type, lot, rand);
   const r = new Roofline(g, false, 2);
   bodyGeometry(into, r, g.len, g.depth, lot.lime, m, r.across === 1 ? 1 : 3);
   roofGeometry(into, r, lot.roof, m, true);
@@ -528,6 +532,17 @@ function farHouse(into: PartSink, type: HouseType, lot: Lot, rand: Rng, m: THREE
     into.add(new THREE.BoxGeometry(0.8, top - base, 0.75).translate(x, (top + base) / 2, r.lean(t)), lot.lime, MASONRY, m);
     into.add(new THREE.BoxGeometry(0.42, 0.45, 0.4).translate(x, top + 0.22, r.lean(t)), BRICK, MASONRY, m);
   }
+}
+
+/** Far off, the round keeper is a turret: a round cream wall under a tall pointed hat that leans a little. */
+function turret(into: PartSink, lot: Lot, rand: Rng, m: THREE.Matrix4): void {
+  const radius = 2.1;
+  const eave = lot.wall + 0.6;
+  const hat = range(rand, 4.8, 6.2);
+  const lean = new THREE.Matrix4().copy(m).multiply(new THREE.Matrix4().makeTranslation(0, eave, 0))
+    .multiply(new THREE.Matrix4().makeRotationZ(range(rand, -0.08, 0.08)));
+  into.add(new THREE.CylinderGeometry(radius, radius, eave + 2.6, 10, 1, true).translate(0, (eave - 2.6) / 2, 0), lot.lime, PLAIN, m);
+  into.add(new THREE.ConeGeometry(radius + 0.55, hat, 10, 1, true).translate(0, hat / 2, 0), lot.roof, SLATED, lean);
 }
 
 /** A rounded-square plan: `k` 0 to 1 of the way round, at half-axes `a` along and `b` across. */
