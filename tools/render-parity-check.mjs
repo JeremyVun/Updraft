@@ -7,7 +7,8 @@ import { smoothstepCalls, literalNumber } from './lib/glsl.mjs';
 const before=process.env.COMPARE_BASE??'http://127.0.0.1:5233/';
 const after=process.env.BASE??'http://127.0.0.1:5234/';
 const prefix=process.argv[2]??'/tmp/updraft-render-parity';
-const cases=[['island',''],['lines','chapter=washing'],['boats','chapter=boats'],['meadow','chapter=meadow'],['birches','chapter=birches'],['drowned','chapter=drowned&shower=1'],['wood','chapter=wood'],['sleeping','chapter=sleeping'],['sea','chapter=sea'],['mirror','chapter=mirror'],['home','chapter=summit'],['portrait','chapter=sleeping',390,844]];
+const cases=[['island',''],['lines','chapter=washing'],['boats','chapter=boats'],['meadow','chapter=meadow'],['birches','chapter=birches'],['drowned','chapter=drowned&shower=1'],['wood','chapter=wood'],['sleeping','chapter=sleeping'],['sea','chapter=sea'],['mirror','chapter=mirror'],['home','chapter=summit'],['portrait','chapter=sleeping',390,844],['stairs','chapter=stairs']]
+ .filter(([name])=>!process.env.CASES||process.env.CASES.split(',').includes(name));
 const {browser,close}=await openBrowser();
 const report=[];
 try {
@@ -27,13 +28,13 @@ try {
     });
    });
    await page.goto(`${base}?shot=1&ratio=1&msaa=4&progress=0&analytics=0&${query}`);
-   await page.waitForFunction(()=>window.__frozen,null,{polling:50,timeout:90000});
+   await page.waitForFunction(()=>window.__frozen,null,{polling:50,timeout:Number(process.env.TIMEOUT_MS??180000)});
    const state=await page.evaluate(()=>{
     const g=__game;
     return {frame:__stats.frame,chapter:g.story.name,beat:g.story.current.beat,child:g.child.position.toArray(),bird:g.cygnet.position.toArray(),camera:g.rig.camera.position.toArray(),parity:__stats.heightParity};
    });
    assert(state.parity<.02,`${name}/${label}: CPU/GPU height mismatch ${state.parity}`);
-   if(label==='after'){
+   if(label==='after'&&before!==after){
     const shaders=await page.evaluate(()=>{
      const renderer=__game.renderer,gl=renderer.getContext();
      return renderer.info.programs.flatMap(p=>[gl.getShaderSource(p.vertexShader),gl.getShaderSource(p.fragmentShader)]).filter(Boolean);

@@ -155,7 +155,8 @@ export async function settlePrograms(renderer: THREE.WebGLRenderer, jobs: readon
           compileAlone(renderer, object, job.camera, job.scene);
           for (const m of materialsOf(object)) if (!seen.has(m)) { seen.add(m); compiled++; }
           if (compiling() >= GROUP) {
-            await settle(renderer, GROUP / 2);
+            // Refill each free slot without raising the limit on outstanding programs.
+            await settle(renderer, GROUP - 1);
             onProgress(compiled / total);
           }
           await keepPainting();

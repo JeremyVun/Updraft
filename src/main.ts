@@ -93,6 +93,8 @@ import { createJetty } from './world/jetty';
 import { createHomeToy } from './world/home-toy';
 import { COTTAGE, ISLES, meadowPoint } from './world/heightfield';
 import { Pond } from './world/pond';
+import { Feather } from './fx/feather';
+import { harebells } from './world/harebells';
 import { SkyMirror } from './world/sky-mirror';
 import { Water } from './world/water';
 import { REFLECTION_LAYER } from './world/water/reflection';
@@ -385,12 +387,15 @@ sealife.onWhaleSound = (kind, x, y, z) => {
 const probe = QA && params.shot ? new Probe(child, cygnet, carry) : null;
 const flock = new SwanFlock();
 flock.objects.forEach((o) => scene.add(o));
+const swanFeather = new Feather(wind);
+swanFeather.objects.forEach((o) => scene.add(o));
+scene.add(harebells.group);
 const cygnetAir: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
 const cygnetAhead: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
 const handsAt = new THREE.Vector3();
 const creatureAt = new THREE.Vector3();
 const emberAt = new THREE.Vector3();
-const story = new Journey({ child, plane: glider, boat, wind, lines, input, life, tree, drawing, cottage, sealife, cygnet, flock, cat, carry, embers, birches, stairs: cloudStairs, sleeping, littleBoats, skyMirror, village, nearby: nearbyCreature,
+const story = new Journey({ child, plane: glider, boat, wind, lines, input, life, tree, drawing, cottage, sealife, cygnet, flock, swanFeather, cat, carry, embers, birches, stairs: cloudStairs, sleeping, littleBoats, skyMirror, village, nearby: nearbyCreature,
   knock: (kind, at, strength) => { if (sound.running) worldFoley.knock(kind, at, strength); } });
 // Boot only needs somewhere to stand; the start cuts to the chosen room.
 rig.cut(story.shot);
@@ -414,7 +419,6 @@ homesInHills.forEach((h, i) => {
   hillCreatures.spawn({ x: h.x, z: h.z, radius: 26, rabbits: 2, songbirds: i % 2 === 0 || last ? 4 : 0, butterflies: last ? 0 : 6, seed: 30 + i });
 });
 const sheepFolds = [
-  { ...meadowPoint(-10, -755), sheep: 6 },
   { ...meadowPoint(28, -766), sheep: 4 },
   { ...meadowPoint(-22, -916), sheep: 5 },
   { ...meadowPoint(18, -980), sheep: 5 },
@@ -423,7 +427,10 @@ const sheepFolds = [
   { ...meadowPoint(6, -1130), sheep: 5 },
   { x: COTTAGE.x - 15, z: COTTAGE.z + 20, sheep: 6 },
 ];
-sheepFolds.forEach((fold, i) => hillCreatures.spawn({ ...fold, radius: 10, seed: 60 + i }));
+sheepFolds.forEach((fold, i) => hillCreatures.spawn({ ...fold, radius: 10, seed: 61 + i }));
+/** A flock grazing across the way below the rise: it parts for her as she comes, or for the wind. */
+const onTheWay = ROUTE[2].clone().lerp(ROUTE[3], 0.44);
+hillCreatures.spawn({ x: onTheWay.x, z: onTheWay.y, radius: 2, sheep: 8, seed: 60 });
 scene.add(hillCreatures.group);
 clipJourneyProps(hillCreatures.group);
 const echoes = dreamEchoes();
@@ -431,7 +438,7 @@ Object.values(echoes).forEach((e) => scene.add(e));
 const roomObjects: Partial<Record<Room, THREE.Object3D[]>> = {
   island: [tree.group, islandRocks, creatures.group], lines: [washing.group, washingBaskets, pinwheels.group, door.group],
   shore: [shoreGrass, kite.group, shorePulley.group], boats: [littleBoats.group],
-  meadow: [piano.group, ...pond.objects], birches: [...birches.objects], stairs: [cloudStairs.group], drowned: [...village.objects],
+  meadow: [piano.group, ...pond.objects, ...swanFeather.objects, harebells.group], birches: [...birches.objects], stairs: [cloudStairs.group], drowned: [...village.objects],
   wood: [...wood.objects], sleeping: [...sleeping.objects], mirror: [skyMirror.group], home: [...cottage.objects, homeJetty, homeTree.group],
 };
 for (const [room, echo] of Object.entries(echoes)) roomObjects[room as Room]?.push(echo);
@@ -698,6 +705,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
     birches.swing.brush(rig.camera, input, wind);
   }
   if (input.present && !input.muted) glider.brush(rig.camera, input.prevNdc, input.ndc, input.gust, input.gustDir, input.charge, dt);
+  if (story.name === 'meadow' && input.present && !input.muted) swanFeather.brush(rig.camera, input.prevNdc, input.ndc, input.gust, input.gustDir, input.charge, dt);
   embers.updraft(input, story.current.updraftTarget ?? null);
   const emberBreath = embers.brush(rig.camera, input, story.current.windInvitation ?? null, dt);
   story.current.brushDry?.(story.name==='sleeping' ? sleeping.trail.brush(rig.camera,input,dt) ?? emberBreath : emberBreath);
@@ -827,8 +835,15 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   shown.storm = squall;
   const flat = story.current.trodden ?? null;
   const tread = atmo.uniforms.uTrodden.value;
-  if (flat) tread.set(flat.x, flat.z, flat.y, ease(tread.w, 1, 1.4, dt));
-  else tread.w = ease(tread.w, 0, 1.4, dt);
+  // Trodden grass never pops: a patch lifts where it was before it is pressed anywhere else, and widens gradually.
+  const bare = tread.w < 0.01;
+  const elsewhere = !!flat && !bare && Math.hypot(flat.x - tread.x, flat.z - tread.y) > 1;
+  if (flat && !elsewhere) {
+    tread.x = flat.x;
+    tread.y = flat.z;
+    tread.z = bare ? flat.y : ease(tread.z, flat.y, 1.2, dt);
+    tread.w = ease(tread.w, 1, 1.4, dt);
+  } else tread.w = ease(tread.w, 0, elsewhere ? 2.5 : 1.4, dt);
   // The mirror's suspended light clears on the crossing; home has the low sun drawn on the paper.
   const homeLight = story.name === 'home' ? 1 : story.name === 'toHarbour' || story.name === 'toHome'
     ? 1 - THREE.MathUtils.smoothstep(dusk, tuning.homeLight.daylight, tuning.skyMirror.duskTo) : 0;
@@ -985,6 +1000,8 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   piano.update(dt, time, rig.camera, wind, sound.output, input, life);
   wood.update(dt, time, rig.camera, storm, story.name === 'wood' ? story.shot.subjects : undefined);
   sleeping.update(dt, time, rig.camera);
+  if (story.name === 'meadow') swanFeather.update(dt, time);
+  harebells.update(dt, time, rig.camera, wind, input, sound.output, [child.visible ? child.position : null, glider.position], (x, z) => life.at(x, z), story.name === 'meadow');
   departureKites.update(dt, time, rig.camera, story);
   cloudStairs.update(dt, time, rig.camera);
   pinwheels.update(dt, rig.camera, sound.output);
@@ -1070,9 +1087,9 @@ function placeEmitter(emitter: NonNullable<SoundState['cygnet']>, at: THREE.Vect
 /** Expensive view preparation and audio scheduling run once per rendered frame. */
 function prepareFrame(dt: number): void {
   const u = atmo.uniforms;
+  water.setLandSkip(water.landSkip(rig.camera));
   selectAll({
     CLOUD_DECK: u.uCloudDeck.value.w > 0,
-    LAND_SKIP: water.landSkip(rig.camera),
     STORM_BANK: u.uStormCover.value > 0 || u.uLightning.value.w > 0,
   });
   sinceLightBake++;
@@ -1275,7 +1292,7 @@ function frame(now: number): void {
 }
 
 if (QA && params.shot) {
-  window.__game = { params, quality, post, wind, input, rig, renderer, scene, glider, lines, swirl, sound, child, story, creatures, hillCreatures, water, skyMirror, terrain, footprints, cottage, petals, grass, littleBoats, sealife, cygnet, flock, cat, carry, probe, washing, curtains: CURTAINS, doorway, doorwayView, doorExit: DOOR_EXIT, washingPassage, washingInvitation, shoreHaul, shorePulley, scarfInvitation, kite, departureKites, pinwheels, village, wood, stormWeather, sleeping, embers, emberInvitation, fireflies, boat, life, piano, birches, pond, cloudStairs };
+  window.__game = { params, quality, post, wind, input, rig, renderer, scene, glider, lines, swirl, sound, child, story, creatures, hillCreatures, water, skyMirror, terrain, footprints, cottage, petals, grass, littleBoats, sealife, cygnet, flock, cat, carry, probe, washing, curtains: CURTAINS, doorway, doorwayView, doorExit: DOOR_EXIT, washingPassage, washingInvitation, shoreHaul, shorePulley, scarfInvitation, kite, departureKites, pinwheels, village, wood, stormWeather, sleeping, embers, emberInvitation, fireflies, boat, life, piano, birches, pond, cloudStairs, harebells, swanFeather };
 }
 
 /**
@@ -1316,6 +1333,8 @@ async function boot(): Promise<void> {
     return (fraction: number) => startScreen.progress('graphics', SETTLE_SHARE + (1 - SETTLE_SHARE) * (before + count * fraction) / warmTotal);
   };
   await settlePrograms(renderer, [
+    // Start the longest terrain compile early so it can finish alongside the other programs.
+    ...[undefined, ...variants].map((apply) => ({ ...sceneJob, objects: [terrain.mesh], apply })),
     sceneJob,
     passJob(simMaterials, bakes.ground),
     ...grass.tableJobs(),

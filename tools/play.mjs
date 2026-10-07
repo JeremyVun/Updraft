@@ -8,13 +8,9 @@
 //        TOUCH=1 emulates a coarse primary pointer; it does not emulate GPU performance.
 //        VIDEO=1 records <prefix>.webm of the whole session (headless screencast, lower quality than shots)
 // Prints stats (`window.__stats`) at the end and writes <prefix>-console.log on errors.
-// No browser lock: in `shot` mode the game steps a fixed 1/60 s a frame, so a busy GPU slows a capture without
-// changing it. Timing tools (perf.mjs, the frame-time checks) keep the lock in tools/lib/browser.mjs.
-import { chromium } from 'playwright-core';
+// Shares the GPU lock with timing checks. ANGLE can override the platform's normal backend for comparisons.
+import { openBrowser } from './lib/browser.mjs';
 import fs from 'node:fs';
-
-process.on('SIGINT', () => process.exit(130));
-process.on('SIGTERM', () => process.exit(143));
 
 const [prefix, stepsJson = '[{"shot":"still"}]'] = process.argv.slice(2);
 if (!prefix) {
@@ -26,11 +22,7 @@ const base = process.env.BASE ?? 'http://127.0.0.1:5230/';
 const width = Number(process.env.W ?? 1600);
 const height = Number(process.env.H ?? 900);
 
-const browser = await chromium.launch({
-  channel: 'chromium',
-  headless: true,
-  args: ['--enable-gpu', '--use-angle=metal', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'],
-});
+const { browser, close } = await openBrowser();
 const errors = [];
 const videoDir = process.env.VIDEO ? fs.mkdtempSync('/tmp/updraft-video-') : null;
 const context = await browser.newContext({
@@ -89,7 +81,7 @@ try {
     console.log(`${prefix}.webm`);
   }
 } finally {
-  await browser.close();
+  await close();
   const unique = [...new Set(errors)].filter((e) => !e.includes('Failed to load resource'));
   if (unique.length) {
     fs.writeFileSync(`${prefix}-console.log`, unique.join('\n\n'));

@@ -9,7 +9,8 @@ in `src/main.ts`.
 Nothing heavy may happen in the first frames of play, and the veil must keep painting while the game prepares. World
 construction runs first (stage B below), then, before the loop starts, behind the veil:
 
-1. `settlePrograms` builds every program before anything draws with it: the scene's materials against the scene's
+1. `settlePrograms` starts the terrain variants first (they are the last to finish on Windows when queued late), then
+   builds every program before anything draws with it: the scene's materials against the scene's
    half-float target (a program's cache key depends on whether it draws to the screen), the simulation and bake
    materials (`simMaterial` registers them) and the grass tables as full-screen passes, the unclipped blades, the post
    chain, and the objects with variants, the unclipped blades and the post chain again for each program variant
@@ -31,6 +32,17 @@ construction runs first (stage B below), then, before the loop starts, behind th
 5. `gpuIdle` waits (polling a fence, never blocking) until the GPU has finished. The start screen then enables
    Begin / Continue (and, for a finished player, `chapters`); the story and the quality governor do not run while
    waiting.
+
+The Windows ANGLE/D3D11 path compiles repeated procedural noise much more expensively than the Vulkan path
+tested with the same shader inputs. Keep the scene's `fbm` octaves and the height noise's octaves/corners as uniform-bounded loops
+(`gl/loops.ts`), with fixed values 4, 6 and 4. Both `atmo.uniforms` and `simMaterial` supply them; these are compiler
+bounds, not quality settings. `NOISE_GLSL` retains the original fixed loop for wind and other short simulation
+shaders: rolling those loops also changed grass motion in the seeded image comparison, despite tiny differences
+in individual noise samples.
+`fogOf` shares one sky-radiance calculation across its three veils, and the terrain caches share their exact
+fallback calls. Neither effect counts nor program variants are reduced. Validate changes with `noise-loop-check`,
+seeded `render-parity-check`, and cold startup on the platform's normal backend; measured evidence is in
+`backlog/boot-veil/build_plan.md` (Windows follow-up).
 
 The gesture that chooses (Begin, Continue or a chapter pick; `?shot` without `start=1` goes straight on with no pick)
 starts the game through the one callback of `startScreen.ready`. Inside the gesture it starts audio, then
@@ -75,8 +87,9 @@ Failure paths:
   scene's programs into that sample count.
 - **At most 8 programs compile at once (`GROUP`).** A status query waits behind every compile issued before it: in
   Chrome, 138 programs issued together made the first query wait 0.4 s. When 8 are compiling, boot settles the
-  finished ones until 4 or fewer remain and refills; waiting out each group before the next left the GPU process
-  idle and cost about 0.86 s more. Changing the window needs the gates below measured again.
+  finished ones until a slot is free and refills. Waiting for half the group to finish leaves capacity unfilled;
+  refilling each slot shortens cold Windows startup without increasing the window. Changing the window needs the
+  gates below measured again.
 - **Each warm batch holds at most one program not yet drawn into that target format, beside up to 64 drawn ones
   (`WARM_BATCH`), and at most 4 first draws are queued on the GPU (`FIRST_DRAWS_QUEUED`).** A slow driver pays for a
   first draw in the task that issues it, so this is the smallest piece the work splits into. Chrome on Metal under
@@ -351,7 +364,7 @@ effect that is off is compiled out, not branched round. Each such effect is a sw
 0, tested with `#if`. Shared GLSL defaults a switch to on, so materials without variants keep the effect.
 
 - `register(material, ...axes)` lists the alternatives of each axis; a variant takes one alternative from every
-  axis, so several independent switches multiply (deck × land × three effect sets is three axes, twelve programs).
+  axis, so several independent switches multiply (the sea's deck × three effect sets is two axes, six programs).
 - `select(material, choice)` and `selectAll(choice)` change the defines in place. three keeps every program a
   material has built, keyed by its defines, so switching rebinds a program built before Begin, for every mesh, view
   and pass that draws the material, and never compiles. A choice that is not a registered variant throws.
@@ -378,9 +391,11 @@ Without the bank the sky also leaves out its clouds below and above their band, 
 round the clouds' shading where none shows moved them by a rounding step (fast math regroups the two cloud lookups
 when both run), so it is worked out wherever the band is.
 
-`LAND_SKIP`: the sea returns unshaded where the ground stands a metre over it across the 3×3 pixels round it with no
+`uLandSkip`: the sea returns unshaded where the ground stands a metre over it across the 3×3 pixels round it with no
 waterline inside, so no seen pixel shares its quad; it needs the terrain drawn over the sea with tiles following a
-camera above the ground, and is selected while island ground lies in the window.
+camera above the ground, and is selected while island ground lies in the window. This small early exit uses a bool
+uniform, avoiding a second copy of each large water program. The effect sets and cloud deck still use variants.
+The sample positions, waterline safety margin and return colour are unchanged.
 
 ## Bakes and caches
 
@@ -396,6 +411,11 @@ Static, baked once before Begin (runtime GPU allocations, not downloads):
   window. Cells where it would miss the formula by more than 1 cm keep the direct formula (flagged in the texel), and
   the open sea is an exact `seaFloor` expression. **`tools/terrain-heights-check.mjs` must pass again after any
   island's shape or position changes.** `?heights=direct` compares against the formula.
+- The terrain vertex shader shares its three `groundHeight` samples in a loop bounded by the frozen
+  `uGroundSamples = 3` uniform. It retains the centre, x-offset and z-offset samples and the original normal
+  calculation; D3D11 otherwise expands the large height helper at all three call sites. This is a compile-time
+  optimization, not a lower-detail normal. `tools/terrain-samples-check.mjs` compares the actual vertex calculation
+  against three separate calls, for both height-filtering paths, main/mirror heights, all patches and direct fallback.
 - `world/noise-tiles.ts`: the ground's four-octave noise as a 512² tiling texture with mips (about 0.35 MiB). The
   frost pattern samples one fixed level everywhere, so blades, ground and props agree.
 

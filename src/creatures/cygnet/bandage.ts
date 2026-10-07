@@ -62,15 +62,15 @@ export class WingBandage {
     geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
     geo.setIndex(indices);
     this.mesh = new THREE.Mesh(geo, new THREE.ShaderMaterial({
-      uniforms: { ...atmo.uniforms, uReveal: { value: 0 }, uFade: { value: 1 }, uNudge: { value: 0 } },
+      uniforms: { ...atmo.uniforms, uReveal: { value: 0 }, uFade: { value: 1 }, uNudge: { value: 0 }, uNudgeAt: { value: new THREE.Vector3() }, uNudgeSlope: { value: new THREE.Vector3() } },
       side: THREE.DoubleSide,
       vertexShader: `${ATMO_GLSL}
         ${CREATURE_GLSL}
-        uniform float uNudge;
+        uniform float uNudge; uniform vec3 uNudgeAt; uniform vec3 uNudgeSlope;
         out vec3 vWorld; out vec3 vNormal; out vec2 vUv;
         void main() {
           vWorld = position; vNormal = normal; vUv = uv;
-          gl_Position = projectionMatrix * nudgedView(vWorld, uNudge);
+          gl_Position = projectionMatrix * nudgedView(vWorld, uNudge + dot(vWorld - uNudgeAt, uNudgeSlope));
         }`,
       fragmentShader: `${ATMO_GLSL}
         uniform float uReveal; uniform float uFade;
@@ -196,7 +196,7 @@ export class WingBandage {
     return out;
   }
 
-  update(dt: number, time: number, wing: THREE.Matrix4, bones: readonly THREE.Matrix4[], wind: WindSample, visible: boolean, nudge: number): void {
+  update(dt: number, time: number, wing: THREE.Matrix4, bones: readonly THREE.Matrix4[], wind: WindSample, visible: boolean, nudge: number, nudgeSlope: THREE.Vector3, nudgeAt: THREE.Vector3): void {
     this.bones = bones;
     if (this.state !== 'free' || this.releaseTime < 0) this.anchor.copy(wing);
     if (this.releaseTime >= 0 && this.state === 'wrapped') {
@@ -231,6 +231,9 @@ export class WingBandage {
     normal.needsUpdate = true;
     this.mesh.material.uniforms.uReveal.value = this.dressing;
     this.mesh.material.uniforms.uFade.value = 1 - smooth(this.driftTime, 4, 7);
-    this.mesh.material.uniforms.uNudge.value = nudge * (1 - smooth(unroll, 0, 1));
+    const keep = 1 - smooth(unroll, 0, 1);
+    this.mesh.material.uniforms.uNudge.value = nudge * keep;
+    this.mesh.material.uniforms.uNudgeAt.value.copy(nudgeAt);
+    this.mesh.material.uniforms.uNudgeSlope.value.copy(nudgeSlope).multiplyScalar(keep);
   }
 }

@@ -56,12 +56,11 @@ vec3 terrainColourAddress(vec2 p) {
   return vec3(0.0, 0.0, -1.0);
 }
 vec4 terrainColourPattern(vec2 p) {
-  if (uTerrainColourReady < 0.5) return terrainColourPatternDirect(p);
-  vec3 address = terrainColourAddress(p);
-  if (address.z < 0.0) return terrainColourPatternDirect(p);
-  vec4 cached = texture(uTerrainColour, address.xy);
-  if (address.z >= 2.0) return cached;
-  return mix(terrainColourPatternDirect(p), cached, smoothstep(0.0, 2.0, address.z));
+  vec3 address = uTerrainColourReady >= 0.5 ? terrainColourAddress(p) : vec3(0.0, 0.0, -1.0);
+  if (address.z >= 2.0) return texture(uTerrainColour, address.xy);
+  vec4 direct = terrainColourPatternDirect(p);
+  if (address.z < 0.0) return direct;
+  return mix(direct, texture(uTerrainColour, address.xy), smoothstep(0.0, 2.0, address.z));
 }`;
 
 export class TerrainColour {

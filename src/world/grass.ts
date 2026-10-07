@@ -6,6 +6,7 @@ import { passJob, type CompileJob } from '../gl/boot';
 import { atBoot, simMaterial, simTarget } from '../gl/gpu';
 import { JOURNEY_ROOMS_GLSL, ROOMS } from './journey-rooms';
 import { BOATS_POOLS, LITTLE_BOATS, boatsOut, boatsLevel, boatsToyClearing } from './little-boats-layout';
+import { STAIRS_PAD } from './stairs-layout';
 import * as THREE from 'three';
 import { params } from '../params';
 import { QA } from '../qa';
@@ -27,7 +28,8 @@ function croppedAt(x: number, z: number): number {
   const lines = 1 - smoothstep(0.78, 1.12, Math.hypot((x - ISLES.lines.x) / ISLES.lines.rx, (z - ISLES.lines.z) / ISLES.lines.rz));
   const birches = 1 - smoothstep(0.62, 1.02, Math.hypot((x - ISLES.birches.x) / ISLES.birches.rx, (z - ISLES.birches.z) / ISLES.birches.rz));
   const bank = 1 - smoothstep(tuning.crest.bankCropFrom, tuning.crest.bankCropTo, pondOut(x, z));
-  return smoothstep(.8,1.1,Math.hypot(x-tuning.sleeping.hearthX,z-tuning.sleeping.hearthZ)) * linesGrassCrop(x, z) * (1 - 0.34 * lines) * (1 - 0.62 * birches) * (1 - (1 - tuning.crest.bankGrass) * bank);
+  const stairFoot = 1 - smoothstep(STAIRS_PAD.inner, STAIRS_PAD.outer, Math.hypot(x - STAIRS_PAD.x, z - STAIRS_PAD.z));
+  return smoothstep(.8,1.1,Math.hypot(x-tuning.sleeping.hearthX,z-tuning.sleeping.hearthZ)) * linesGrassCrop(x, z) * (1 - 0.34 * lines) * (1 - 0.62 * birches) * (1 - (1 - tuning.crest.bankGrass) * bank) * (1 - (1 - STAIRS_PAD.grass) * stairFoot);
 }
 
 /**
@@ -155,7 +157,8 @@ float croppedAt(vec2 xz) {
   if (boatsTurfAt(xz) > 0.0) return ${glsl(tuning.littleBoats.turfHeight)};
   float lines = 1.0 - smoothstep(0.78, 1.12, length((xz - vec2(${ISLES.lines.x}.0, ${glsl(ISLES.lines.z)})) / vec2(${ISLES.lines.rx}.0, ${glsl(ISLES.lines.rz)})));
   float bank = pondBankAt(xz);
-  return smoothstep(.8,1.1,length(xz-vec2(${glsl(tuning.sleeping.hearthX)},${glsl(tuning.sleeping.hearthZ)}))) * linesGrassCrop(xz) * (1.0 - 0.34 * lines) * (1.0 - 0.62 * birchFloorAt(xz)) * mix(1.0, ${glsl(tuning.crest.bankGrass)}, bank);
+  float stairFoot = 1.0 - smoothstep(${glsl(STAIRS_PAD.inner)}, ${glsl(STAIRS_PAD.outer)}, length(xz - vec2(${glsl(STAIRS_PAD.x)}, ${glsl(STAIRS_PAD.z)})));
+  return smoothstep(.8,1.1,length(xz-vec2(${glsl(tuning.sleeping.hearthX)},${glsl(tuning.sleeping.hearthZ)}))) * linesGrassCrop(xz) * (1.0 - 0.34 * lines) * (1.0 - 0.62 * birchFloorAt(xz)) * mix(1.0, ${glsl(tuning.crest.bankGrass)}, bank) * mix(1.0, ${glsl(STAIRS_PAD.grass)}, stairFoot);
 }
 /** 1 over the home island, where the pasture is let grow lush for the last hill. */
 float homeAt(vec2 xz) {

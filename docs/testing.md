@@ -3,8 +3,9 @@
 Every check runs locally from `tools/`; there is no CI. Browser tools default to the dev server on
 `http://127.0.0.1:5230/` and take `BASE` for another server (use `npm run build:qa` then `npm run preview:qa`, or a worktree with its own
 server, for anything long or visual: a dev server reloads on any `src` edit, including another session's). GPU checks
-share one capture lock (`tools/lib/browser.mjs`), so timings are not skewed by another browser; `play.mjs`
-captures take no lock and can run side by side. Evidence goes under
+share one capture lock (`tools/lib/browser.mjs`), including `play.mjs`, so captures cannot distort timing checks.
+Chrome for Testing uses Metal on macOS and the browser's default backend elsewhere; `ANGLE` explicitly selects a
+comparison backend. No GPU blocklist override is used. Evidence goes under
 `/tmp`. Node mechanics checks load TypeScript through `tools/lib/typescript.mjs` and need no browser.
 
 ## Groups
@@ -26,10 +27,10 @@ captures take no lock and can run side by side. Evidence goes under
 2. Run `node tools/production-build-check.mjs` to verify production ignores game query overrides and excludes QA
    modules. For the instrumented browser checks, run `npm run build:qa`, start `npm run preview:qa`, and run
    `BASE=<preview> npm run check:release`. QA assets live in `dist-qa/`; `dist/` remains the production build.
-   Twenty of its checks fail on a preview without saying anything about the game: the audio group, `shader-browser`
-   and `progress` import modules from `src/`, which a built bundle does not serve, and `frame-time-browser` finds the
+   Twenty-one of its checks fail on a preview without saying anything about the game: the audio group, `shader-browser`,
+   `stairs-fog` and `progress` import modules from `src/`, which a built bundle does not serve, and `frame-time-browser` finds the
    frame loop by a name minification removes. Run those against a dev server in a worktree nobody is editing:
-   `BASE=<dev server> npm run check:audio`, then `node tools/<name>-check.mjs` with the same `BASE` for the three.
+   `BASE=<dev server> npm run check:audio`, then `node tools/<name>-check.mjs` with the same `BASE` for the four.
 3. Jeremy owns the parts no local tool covers: a listening pass through the whole journey (see
    `docs/contracts/audio.md`, Open) and physical-device checks on his iPad (touch robustness, Safari fullscreen,
    performance, warmth and battery).
@@ -62,9 +63,20 @@ edit.
 
 - `shader-check` (literal GLSL edge order) and `shader-browser-check` (float ramps on Chrome/Metal and software
   Vulkan, texture bytes in the browser; another compiler, not another GPU family or Safari).
+- `stairs-fog-check`: renders the shared fog-bank shader along near sightlines, including downward rays to the
+  foreground. Checks continuous coverage inside the bank at cloud and sea height, with the boat's clearing,
+  and clear surfaces outside it. Needs a dev server for the shader import.
 - `render-parity-check`: seeded frozen scene comparisons against an unchanged build. Run with
   `COMPARE_BASE=<unchanged build> BASE=<changed build> node tools/render-parity-check.mjs /tmp/<dir>`; both frozen
-  builds must expose `?shot`.
+  builds must expose `?shot`. `CASES=lines,wood,stairs` selects cases; `TIMEOUT_MS` allows an unchanged slow baseline
+  to finish. Include a same-build control when investigating differences.
+- `noise-loop-check`: compares the rolled scene/height noise to the original shader arithmetic on the GPU over
+  294,912 samples, including negative coordinates and all six octave counts. Needs a dev server for source imports.
+  Run on the default backend and a second backend (`ANGLE=vulkan` on Windows); this is not a physical mobile test.
+- `terrain-samples-check`: compares the terrain vertex shader's shared height samples with three separate calls,
+  reading normal components and heights as floats across every height patch, window boundaries, atlas/direct paths,
+  filtered/manual height lookups and main/mirror geometry. Needs a dev server; run on the default backend and Vulkan.
+  `PERTURB=1` deliberately moves the reference's x sample and must fail, to check the probe's sensitivity.
 - `render-cost-check <chapter>`, `grass-quality-check`, `grass-unclipped-check`, `swan-shading-check`,
   `water-texture-check`, `terrain-check`, `terrain-fields-check`, `terrain-colour-check`, `terrain-heights-check`
   (after any island's shape or position change), `fields-border-check`, `height-bake-check`.
@@ -75,7 +87,7 @@ edit.
 - `start-check` (Begin, audio unlock, Continue, retry; the invitation low in the room painting, and centred when the
   painting is blocked, on desktop and phone; worst boot gap under `BOOT_MAX_MS`; no program first used
   outside boot's settle step, `__stats.bootStrayPrograms`; the construction steps a real boot counts equal
-  `BUILD_STEPS`; no program first drawn in the first seconds of play after Begin, Continue or a chapter pick,
+  `BUILD_STEPS`; fixed noise and terrain-sample loop bounds actually uploaded to every active program; no program first drawn in the first seconds of play after Begin, Continue or a chapter pick,
 `__stats.playFirstDraws`), `startup-check`,
   `loading-check`, `boot-cloth-check`, `failure-paths-check` (including a blocked room painting: plain veil, working
   Continue), `context-loss-check`.
@@ -83,6 +95,12 @@ edit.
   nothing else busy on the GPU and back to back with the unchanged build, `RUNS=5 node tools/boot-profile.mjs` (worst
   veil gap under 150 ms, Begin at 2.8 s or less) and `RUNS=3 THROTTLE=4` (Chrome with the CPU slowed 4×, a stand-in
   for an older tablet: worst gap under 500 ms). See `docs/engine.md`, Boot.
+- Windows startup regression: `RUNS=3 QUERY=coldshaders MAX_READY_MS=60000 BASE=<QA preview> node tools/boot-profile.mjs /tmp/updraft-windows-cold`
+  on the Ryzen 5 9600X / RTX 4070 Super reference machine, with no other GPU work. Keep `ANGLE` unset: switching a
+  player to Vulkan is not the fix. The report records browser/backend, all boot stages, program count, overlapping
+  per-program waits and main-thread stalls. It rejects a failed veil posing as readiness. The 60 s startup budget
+  is a Windows reference-machine regression guard, not a replacement for the Mac veil-gap gates above or a guarantee
+  for every device. Use `TIMEOUT_MS=300000` for the unchanged baseline.
 - `veil-stills.mjs [prefix]`: stills of the veil's loading line held at known text, desktop, iPad and phone, day and
   night, for comparing its look against the boot-veil comps.
 - `fixed-matrices-check` (every chapter: no object fixed in place moves or keeps a stale world matrix).

@@ -22,6 +22,7 @@ import type { Carry } from '../companion/carry';
 import type { Cat } from '../creatures/cat';
 import type { Cygnet } from '../creatures/cygnet';
 import type { Embers } from '../fx/embers';
+import type { Feather } from '../fx/feather';
 import type { WindLines } from '../fx/windlines';
 import type { Coax } from '../fx/swirl';
 import type { GustFront } from '../fx/windlines';
@@ -62,6 +63,8 @@ export interface Cast {
   cat: Cat;
   /** Everything the two of them do with their hands on each other: gathering up, holding, setting down, the satchel. */
   carry: Carry;
+  /** The one white feather the family leaves behind on the meadow's pond. */
+  swanFeather: Feather;
   /** The embers in the leaf litter of the dark wood: the only light the player can make there. */
   embers: Embers;
   /** The island of gold birches, its leaves and the swing hanging on the crest. */

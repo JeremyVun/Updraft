@@ -3,7 +3,7 @@ import { ATMO_GLSL, NOISE_GRAD_GLSL, atmo } from './atmosphere';
 import { glsl, tuning } from '../tuning';
 import { fixInPlace } from '../gl/fixed';
 import { CloudWake } from './stairs-wake';
-import { BEAM, LENGTH } from '../traveller/boat/form';
+import { HULL_GLSL } from '../traveller/boat/form';
 import { VAPOUR_GLSL } from './cloud-vapour';
 import { CloudTowers, TOWER_FOOT } from './cloud-towers';
 import { CloudLobes, LOBES_TEXTURE_GLSL } from './cloud-lobes';
@@ -21,7 +21,7 @@ const WISP_LAYER = 4;
 /** How many towers of cumulus the top of the cloud makes room for. */
 const FEET = 16;
 
-/** The top of the cloud as a surface: heaped up and lit gold on the sunward side, lilac in its folds. */
+/** The top of the cloud as a surface: heaped up and lit gold on the sunward side, white in its folds. */
 const TOP_VERT = /* glsl */ `
 #define LOBES_VERTEX
 ${ATMO_GLSL}
@@ -85,7 +85,7 @@ void main() {
     through += smoothstep(-0.4, 0.4, bulkAt(q.xz, vCalm, vStature) + over - (q.y - uSurface));
   }
   vThin = 1.0 - through * 0.25;
-  // Far off it goes into the haze of the horizon beyond it, gold toward the sun and rose away from it.
+  // Far off it goes into the haze of the horizon beyond it.
   vec3 ahead = vWorld - cameraPosition;
   vHaze = vec4(skyColor(normalize(vec3(ahead.x, 0.01, ahead.z))), (1.0 - exp(-length(ahead) / 700.0)) * 0.72);
   gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
@@ -106,8 +106,9 @@ uniform vec4 uGate;
 uniform float uReach;
 uniform float uHole;
 uniform float uSurface;
-uniform vec4 uHull;
+uniform mat4 uHull;
 uniform float uHullOn;
+${HULL_GLSL}
 in vec3 vWorld;
 in float vRing;
 in vec4 vCalm;
@@ -128,15 +129,9 @@ void main() {
     float hole = length(xz - uCloudBubble.xz) - uCloudBubble.w * (0.75 + 0.35 * vnoise(xz * 0.8 + uTime * 0.1));
     if (hole < 0.0 && uCloudBubble.y < uSurface + 0.5) discard;
   }
-  // Never inside the hull lying in it: the boat's own planform (boat/form.ts), a hair inside its planking.
-  if (uHullOn > 0.5) {
-    vec2 d = xz - uHull.xy;
-    float u = dot(d, uHull.zw) / ${glsl(LENGTH)} + 0.45;
-    float across = abs(d.x * uHull.w - d.y * uHull.z);
-    float k = clamp(u, 0.0, 1.0);
-    float beam = ${glsl(BEAM)} * pow(1.0 - pow(k, 3.4), 0.72) * (0.52 + 0.48 * sin(k * 3.14159265));
-    if (u > 0.0 && u < 1.0 && across < beam * 0.97) discard;
-  }
+  // Never inside the hull lying in it, however it pitches and rolls on the tops, and a little clear of its planking,
+  // where the two would fight over the same depth.
+  if (uHullOn > 0.5 && hullHolds((uHull * vec4(vWorld, 1.0)).xyz, 0.03)) discard;
   vec2 fold;
   vec3 lobe;
   vec3 top = cloudTop(xz, vCalm, vStature, vRise, vTower, 0.0, fold, lobe) + vFoot;
@@ -158,11 +153,11 @@ void main() {
   vec3 soft = normalize(vec3(-top.y * 0.5, 1.0, -top.z * 0.5));
   float dist = length(vWorld - cameraPosition);
   float thin = vThin;
-  // Each lobe is lit at its crown and goes lilac toward where it sits down among the others; so is each heap.
+  // Each lobe is lit at its crown and goes into shade toward where it sits down among the others; so is each heap.
   float puff = mix(0.45, 1.0, lobe.x) * mix(0.6, 1.0, lobe.y) * mix(0.9, 1.0, lobe.z) * mix(0.7, 1.0, fold.y);
-  // Lit from the side by the low sun, which the cloud scatters across its whole top: peach where the light lies
-  // across it, gold on the lobes turned full to it, lilac and violet where they sit down among the others and on
-  // the sides turned away.
+  // Lit from the side by the low sun, which the cloud scatters across its whole top: gold where the light lies
+  // across it and on the lobes turned full to it, white and a little cool where they sit down among the others and
+  // on the sides turned away.
   float facing = dot(N, L);
   float crown = smoothstep(0.5, 1.0, puff);
   // Light goes into cloud and comes out round the side: a wide, soft terminator.
@@ -170,18 +165,17 @@ void main() {
   float sunLit = wrapped * (1.0 - 0.8 * vShade);
   float full = smoothstep(0.2, 0.85, facing) * (1.0 - vShade) * crown;
   float toward = pow(max(0.0, dot(ray, L)), 3.0);
-  vec3 lilac = uSkyAmbient * vec3(1.3, 1.02, 1.2) + uGroundBounce * 0.3;
-  vec3 violet = uSkyAmbient * vec3(0.84, 0.7, 1.04);
-  vec3 shade = mix(violet, lilac, smoothstep(0.3, 0.95, puff));
+  vec3 gold = cloudGold();
+  vec3 shade = cloudShade(smoothstep(0.3, 0.95, puff));
   // The light scattered on through the cloud warms its shade, most near its crowns.
-  shade += uSunColor * vec3(0.1, 0.065, 0.075) * (0.4 + 0.6 * puff) * (1.0 - 0.5 * vShade);
-  vec3 col = mix(shade, uSunColor * vec3(0.54, 0.39, 0.36) + shade * 0.35, sunLit * mix(0.55, 1.0, crown));
-  col += uSunColor * vec3(1.0, 0.85, 0.62) * full * 0.2;
+  shade += gold * 0.06 * (0.4 + 0.6 * puff) * (1.0 - 0.5 * vShade);
+  vec3 col = mix(shade, gold * vec3(0.76, 0.6, 0.4) + shade * 0.3, sunLit * mix(0.55, 1.0, crown));
+  col += gold * vec3(1.0, 0.8, 0.5) * full * 0.55;
   // Against the low sun the thin edges and the crests glow: the silver lining.
-  col += uSunColor * vec3(1.0, 0.88, 0.72) * toward * (1.0 - 0.6 * vShade) * (0.02 + 0.85 * thin * thin);
-  // Down between the heaps far off the air thickens: the far valleys go blue-lilac while the crowns stand out of it.
+  col += cloudGlow() * vec3(1.15, 0.95, 0.7) * toward * (1.0 - 0.6 * vShade) * (0.02 + 0.85 * thin * thin);
+  // Down between the heaps far off the air thickens: the far valleys go gold while the crowns stand out of it.
   float low = 1.0 - smoothstep(0.0, 6.0, top.x);
-  vec3 haze = mix(uSkyHorizon, uSkyAmbient * vec3(1.0, 0.85, 1.2), 0.55);
+  vec3 haze = lumaOf(uSkyHorizon) * vec3(0.95, 0.74, 0.5);
   col = mix(col, haze, (1.0 - exp(-max(dist - 40.0, 0.0) / 300.0)) * low * 0.4);
   // The tops the hull has just turned over are fresh and catch the light.
   col = mix(col, vapourLight(vWorld, ray, 0.4), stir * 0.35);
@@ -203,7 +197,7 @@ void main() {
     veil = (1.0 - exp(-veil / 3.0 * path * 0.03)) * uWisps;
   }
   col = mix(col, vapourLight(vWorld, ray, 0.6), veil * 0.65);
-  col = mix(col, vHaze.rgb, vHaze.a);
+  col = mix(col, cloudHaze(vHaze.rgb), min(vHaze.a * 1.2, 0.85));
   col = mix(col, vFog.rgb, vFog.a);
   float edge = mix(1.0, smoothstep(0.0, 0.75, 1.0 - thin + 0.25 * vnoise(xz * 0.9 + uTime * 0.2)), smoothstep(0.35, 0.9, thin));
   // At the end of its reach it thins into the deck beyond, rather than stopping along a line.
@@ -425,8 +419,8 @@ float heapShade(vec2 xz, float h, float spacing) {
 }`;
 
 /**
- * The underside of the cloud seen from below: bellies hanging out of it and soft cells across it, lilac in their
- * hollows and lit gold and rose where the low sun reaches in under the edge of the deck. Flat and high round the
+ * The underside of the cloud seen from below: bellies hanging out of it and soft cells across it, grey in their
+ * hollows and lit gold where the low sun reaches in under the edge of the deck. Flat and high round the
  * stair, so it goes up into the white through a level ceiling and there is room under it to work on the loose
  * flights; further off it breaks up into separate clouds with the sky between them, their thin edges lit through.
  */
@@ -471,7 +465,7 @@ void main() {
   vec2 xz = vWorld.xz;
   float cover = deckCover(xz);
   vec2 toSun = normalize(uSunDir.xz + 1e-5);
-  // Seen from below the cloud is darker the thicker it is: lilac and violet in the bodies of its cells, lighter in
+  // Seen from below the cloud is darker the thicker it is: grey, a little cool, in the bodies of its cells, lighter in
   // the thin seams between them. The low sun reaches in sideways through whatever is thin between it and a
   // point, so each cell is lit gold along the side it faces the sun from, and more so far off toward the sun.
   float thick = bellyThick(xz, 1.0) * smoothstep(0.1, 0.9, cover);
@@ -484,8 +478,8 @@ void main() {
   float far = smoothstep(20.0, 300.0, reach);
   float sunIn = exp(-2.6 * before) * (1.0 - 0.6 * thick);
   col *= mix(1.25, 0.72, thick);
-  col += uSkyAmbient * vec3(0.05, 0.0, 0.12) * thick;
-  col += uSkyHorizonSun * sunIn * (0.16 + 0.4 * sunward * far + 0.12 * far);
+  col += lumaOf(uSkyAmbient) * vec3(0.0, 0.01, 0.04) * thick;
+  col += mix(uSkyHorizonSun, cloudGold() * 0.6, 0.6) * sunIn * (0.16 + 0.4 * sunward * far + 0.12 * far);
   float edge = 1.0 - smoothstep(0.55, 0.98, length(xz - uCloudDeck.xy) / uCloudDeck.z);
   // Seen from just under it, a ceiling is a line; the fringe of the deck takes over there.
   float under = smoothstep(1.0, 4.5, uCloudDeckY.x - cameraPosition.y);
@@ -701,7 +695,7 @@ export class StairsCloud {
   private readonly shape: TopShape;
   private readonly grid = cloudGridGeometry(0.5);
   private readonly topUniforms: { uGrid: { value: THREE.Vector4[] }; uDrift: { value: THREE.Vector2 }; uLobesSoft: { value: THREE.Texture }; uLobesFull: { value: THREE.Texture }; uCalmAt: { value: THREE.Vector3 }; uReach: { value: number };
-    uRoute: { value: THREE.Vector2[] }; uTrail: { value: THREE.Vector4[] }; uTrailBounds: { value: THREE.Vector4 }; uFeet: { value: THREE.Vector4[] }; uGate: { value: THREE.Vector4 }; uHole: { value: number }; uHull: { value: THREE.Vector4 }; uHullOn: { value: number }; uWisps: { value: number }; uWispAir: { value: THREE.Vector2 }; uSurface: { value: number }; uRise: { value: number }; uView: { value: THREE.Vector4[] }; uViewProjection: { value: THREE.Matrix4 } };
+    uRoute: { value: THREE.Vector2[] }; uTrail: { value: THREE.Vector4[] }; uTrailBounds: { value: THREE.Vector4 }; uFeet: { value: THREE.Vector4[] }; uGate: { value: THREE.Vector4 }; uHole: { value: number }; uHull: { value: THREE.Matrix4 }; uHullOn: { value: number }; uWisps: { value: number }; uWispAir: { value: THREE.Vector2 }; uSurface: { value: number }; uRise: { value: number }; uView: { value: THREE.Vector4[] }; uViewProjection: { value: THREE.Matrix4 } };
   private readonly bellyUniforms: { uGrid: { value: THREE.Vector4[] }; uCalmAt: { value: THREE.Vector3 }; uReach: { value: number }; uStairAt: { value: THREE.Vector2 }; uView: { value: THREE.Vector4[] }; uViewProjection: { value: THREE.Matrix4 } };
   /** The parting behind the hull: where its bow has been, newest first, how fresh each point is, and how far along. */
   private readonly trail: THREE.Vector4[] = Array.from({ length: TRAIL_POINTS }, () => new THREE.Vector4(0, 0, 0, 0));
@@ -725,7 +719,7 @@ export class StairsCloud {
       uFeet: { value: Array.from({ length: FEET }, () => new THREE.Vector4()) },
       uGate: { value: new THREE.Vector4(TOWER_GATE.from.x, TOWER_GATE.from.y, TOWER_GATE.to.x, TOWER_GATE.to.y) },
       uHole: { value: 1 },
-      uHull: { value: new THREE.Vector4() },
+      uHull: { value: new THREE.Matrix4() },
       uHullOn: { value: 0 },
       uWisps: { value: 1 },
       uWispAir: { value: new THREE.Vector2(1, 0) },
@@ -837,10 +831,10 @@ export class StairsCloud {
   }
 
   /** The hull lying in the cloud, whose inside its top keeps out of; null when there is none on it. */
-  holdOut(hull: { group: THREE.Object3D; yaw: number } | null): void {
+  holdOut(hull: { group: THREE.Object3D } | null): void {
     const u = this.topUniforms;
     u.uHullOn.value = hull ? 1 : 0;
-    if (hull) u.uHull.value.set(hull.group.position.x, hull.group.position.z, Math.sin(hull.yaw), Math.cos(hull.yaw));
+    if (hull) u.uHull.value.copy(hull.group.matrixWorld).invert();
   }
 
   /** Whether the pocket round a climber opens a hole in the top of the cloud; not while the cloud is swelling up round a hull. */

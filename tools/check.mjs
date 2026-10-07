@@ -21,7 +21,7 @@ const mechanics = [
   'plane-routing', 'scarf-normals', 'pointer-pick', 'drowned-gating',
 ];
 const browser = [
-  'shader-browser', 'touch-viewport', 'chapter-view-browser', 'context-loss', 'start',
+  'shader-browser', 'stairs-fog', 'touch-viewport', 'chapter-view-browser', 'context-loss', 'start',
   'progress', 'frame-time-browser', 'journey-view',
 ];
 // Audio/score checks render through a headless dev server (no GPU); BASE selects it.

@@ -52,6 +52,16 @@ try {
  assert.equal(report.bootStrayPrograms?.count, 0, `programs first used outside boot's settle step: ${report.bootStrayPrograms?.names.join(', ')}`);
  report.bootSteps = await page.evaluate(() => window.__stats?.bootSteps);
  assert.equal(report.bootSteps?.counted, report.bootSteps?.expected, `world construction took ${report.bootSteps?.counted} steps; update BUILD_STEPS in src/main.ts`);
+ report.noiseLoops = await page.evaluate(() => {
+   const gl=__game.renderer.getContext(), bad=[], checked={uNoiseOctaves:0,uHeightOctaves:0,uNoiseCorners:0,uGroundSamples:0};
+   for(const p of __game.renderer.info.programs)for(const [name,expected] of Object.entries({uNoiseOctaves:4,uHeightOctaves:6,uNoiseCorners:4,uGroundSamples:3})){
+     const location=gl.getUniformLocation(p.program,name);if(location===null)continue;
+     checked[name]++;const actual=gl.getUniform(p.program,location);if(actual!==expected)bad.push({program:p.id,name,expected,actual});
+   }
+   return {checked,bad};
+ });
+ assert.deepEqual(report.noiseLoops.bad,[],'every scene, bake and simulation must receive its fixed loop bounds');
+ assert(Object.values(report.noiseLoops.checked).every(n=>n>0),'exercise each loop bound on real programs');
  assert.equal(await page.locator('#begin').innerText(),'Begin');
  assert.match(await page.locator('.veil-painting').evaluate(e=>e.currentSrc),/island-land/,'Begin shows the Still island');
  await invitation(page,true);
@@ -159,6 +169,9 @@ try {
  for(let x=90;x<260;x+=10){await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:[{x,y:350-(x-80)*.2}]});await phone.waitForTimeout(15)}
  await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
  assert(await phone.locator('#veil').count());assert.equal(await phone.evaluate(()=>__audio.length),0);
+ // Let the completed drag gesture settle before a separate tap. Chromium can suppress the click
+ // when protocol-injected touches follow the drag within one frame, though down/up are delivered.
+ await phone.waitForTimeout(350);
  await phone.touchscreen.tap(180,510);await phone.waitForSelector('#veil',{state:'detached'});
  assert.equal(await phone.evaluate(()=>__audio[0].state),'running');
  report.checks.push('390px phone: Begin low in the portrait painting, centred when it is blocked; touch drag stirs without starting, tap starts with sound');

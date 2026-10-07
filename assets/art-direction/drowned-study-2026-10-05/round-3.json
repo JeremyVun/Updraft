@@ -1,0 +1,34 @@
+{
+  "date": "2026-10-05",
+  "brief": "btw, one of the issues i have with the current version (3) is that there is this sort of regular patterning / swatching all across a middle band of the image. to a human it looks really ugly. I assume it's an artifact of how the diffusion model is working",
+  "diagnostic": "Repeated diagonal/diamond-like tonal facets across unrelated surfaces. Present in PNG artwork; exact generation mechanism not established. Earlier review incorrectly focused on water ripple repetition instead of this artifact.",
+  "mode": "built-in image_gen",
+  "status": "Study 07 subsequently approved and installed with matching portrait and chapter tile on 2026-10-05. Latest approval: ../sea-mirror-study-2026-10-05/generation.json.",
+  "studies": [
+    {
+      "file": "06-surface-repair.png",
+      "prompt": "Use case: precise-object-edit.\nImage 1: full painting to repair.\nImage 2: diagnostic crop showing the defect, NOT a style reference.\nRemove the repeated triangular/diamond-shaped swatches that form a faint tessellated pattern across the middle of the painting. They can be seen crossing the red sail, the sky near the horizon, the chimneys and gable walls. This is an unwanted image artifact, not intended brushwork or material texture.\nRepaint those surfaces as continuous, softly shaded forms. The sky must have uninterrupted smooth colour gradients between cloud shapes. The sail must have clean matte red colour with only its few large physical folds. Chimneys and plaster gables must have coherent broad light and shadow following their actual geometry, without patches. Keep real roof tiles only on the roofs. Keep irregular water reflections only on the water.\nPreserve the composition, framing, positions of every object, colours, light direction, low rear view, rounded wooden boat, lantern, red sail silhouette, drowned houses, trees, church and lighthouse from image 1. Preserve the complete mast. Do not redesign the scene. Do not blur the whole picture: retain clear silhouette edges and resolve the interiors cleanly. Use smoothly blended colour rather than simulated brush dabs.\nNo triangular mosaic, polygon facets, diagonal crosshatching, diamonds, chevrons, repeating swatches, canvas grain or added global texture. No text. Same landscape aspect ratio.",
+      "assessment": "Sail improved, faceting remained on chimney and gable at 200%."
+    },
+    {
+      "file": "07-clean-surfaces.png",
+      "prompt": "Repair the rendering of this image, keeping its composition, objects, colours, lighting and framing unchanged.\nThe small polygonal colour swatches on surfaces are defects. Replace the surfaces of the cottage gable walls, chimney stacks, church tower, church spire, lighthouse and wooden boat planks with clean continuous colour and smooth natural light-to-shadow transitions. Each planar wall or chimney face should be one quiet smoothly shaded surface, with no mottled, triangular, diamond-shaped, patchwork or low-poly facets. Keep roof tiles as separate tiles, but shade each tile cleanly without smaller facets inside it. Preserve real edges, windows, rooflines, silhouettes and the boat's broad horizontal planks.\nThe red sail remains smooth matte cloth with its existing large soft folds, without small colour patches. The sky remains softly blended and untextured between the clouds. Reflections remain gentle and irregular.\nThis is surface cleanup, not a redesign or global blur. Keep the scene sharp where it is sharp. Preserve all existing objects, the rear view of the boat, its entire mast, and its position. Add nothing. Landscape 16:9.",
+      "assessment": "Smoother chimney, gables, tower and sail in 200% comparison. Stronger repair candidate; do not claim a proven global removal from one detail crop."
+    }
+  ],
+  "verification": {
+    "method": "Browser-rendered 200% detail inspection of native PNGs; same region and scale. Full images also reviewed.",
+    "before": "/private/tmp/updraft-drowned-swatches-macos-4YPZSL/03-quiet-painting-detail.png",
+    "after": "/private/tmp/updraft-drowned-swatches-macos-4YPZSL/07-clean-surfaces-detail.png"
+  },
+  "artifactRetention": {
+    "date": "2026-10-05",
+    "note": "Approved cleanup removed superseded study images, duplicate selected PNGs, comparison pages/screenshots and this chat temporary directories. Filenames and temporary paths in the generation history are provenance, not retained assets. Prompts and approvals remain intact.",
+    "currentMasters": {
+      "drowned": {
+        "land": "assets/art-direction/continue/remade/masters/drowned-land.png",
+        "port": "assets/art-direction/continue/remade/masters/drowned-port.png"
+      }
+    }
+  }
+}

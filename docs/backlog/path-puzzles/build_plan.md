@@ -90,3 +90,41 @@ after she is aboard resumes aboard with the storm to come), `docs/chapters.md` d
 dark's look pass, a final set of stills (landscape and portrait).
 Gate: typecheck, build, the check from start to the beach; stills opened for review.
 Done: [ ]
+
+## The crossing: the whale asleep
+
+Design: design.md, "The crossings" through the end. Concept frames: `comps/crossings/whale/`. Its own branch, judged
+by Jeremy on its own and never merged without his approval. Commit after every step.
+
+Standing constraints for every phase:
+- Cursor movement is the only verb; nothing timed, nothing failed.
+- Every response is caused by the player's own wind and visibly answers it; the ambient breeze never wakes the whale.
+- Camera never jerks; no fourth wall.
+- Player-feel numbers in `src/tuning.ts` (`tuning.sleepingWhale`).
+- Crossing lengths stay as in `docs/contracts/world.md` apart from the whale's stop.
+- The first crossing (`toLines`) is not touched: its whale is the set-up for the sleeping one.
+- Visual judging (stills against the concept frames) is done by Opus or Astra only.
+
+### Phase C0: direct crossing starts
+Owns: `src/story/journey.ts` (a `?chapter=` value naming any `to*` route starts it at its first waypoint, heading
+for the second, cygnet in the satchel), the query-param list in `CLAUDE.md`.
+Done: [x] branch `crossings-start` (9dd4ebe), the base of `crossing-whale`.
+
+### Phase C2: the whale asleep across the way (branch `crossing-whale`)
+Owns: the sleeping whale (rest pose, breathing, shiver along a stroke, flipper slap, eye, the roll and fluke wave, in
+`src/fx/sealife/` beside `whale.ts`, sharing its anatomy and shader), the gull, `src/story/crossing.ts` (a
+`sleepingWhale` option: the stop, `updraftTarget`, `coax`, the brush response, the safety valve, the camera hold,
+the child's lean and wave, the cygnet's duck and peek, the checkpoint flag), `src/story/journey.ts` (`toMeadow`),
+`src/audio/foley.ts` (breath, slap, gull), `src/tuning.ts`.
+Seam: the crossing holds the boat with `Boat.speedLimit` eased to zero and releases it the same way; the whale reports
+`awake` once the breath is drawn; nothing else in the crossing changes.
+Gate: typecheck; build; a real-gesture check (`tools/sleeping-whale-check.mjs`): sweeps alone never wake it, circles
+over the blowhole do, idle wakes it only by the gull after the valve, a save before and after resumes correctly;
+stills beside `k1`–`k4` in landscape and portrait, opened for Jeremy. Built in two waves: code, the
+check and one smoke still set (C2a), then the look and the gates (C2b).
+Done: [ ]
+
+### Phase C3: docs on approval
+Once Jeremy approves the whale: its section in `docs/chapters.md`, the crossing table in `docs/contracts/world.md`
+if the length changed, the new tuning names; this item's crossing sections trimmed.
+Done: [ ]

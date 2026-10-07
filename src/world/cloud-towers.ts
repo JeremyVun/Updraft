@@ -69,7 +69,7 @@ void main() {
 /**
  * A tower of cumulus standing up out of the sea of cloud: round lumps heaped on each other, their edges frayed,
  * marched through the box round them. Lit as the top of the cloud is: gold where the low sun reaches it through
- * little cloud, lilac and violet in its own shade and low down, bright at its thin edges against the sun.
+ * little cloud, white in its own shade and cool grey low down, bright at its thin edges against the sun.
  */
 const FRAG = /* glsl */ `
 ${ATMO_GLSL}
@@ -151,8 +151,8 @@ void main() {
   vec3 L = normalize(uSunDir);
   float c = dot(rd, L);
   float ph = mix(phase(c, 0.55), phase(c, -0.2), 0.4) * 4.0;
-  vec3 lilac = uSkyAmbient * vec3(1.3, 1.02, 1.2) + uGroundBounce * 0.3;
-  vec3 violet = uSkyAmbient * vec3(0.84, 0.7, 1.04);
+  vec3 gold = cloudGold();
+  vec3 glow = cloudGlow() * vec3(1.15, 0.95, 0.7);
   float sigma = 6.0 / uSize;
   float T = 1.0;
   vec3 light = vec3(0.0);
@@ -166,11 +166,11 @@ void main() {
     float s = 1.0 - exp(-sigma * d * dt);
     // How much of the tower lies between here and the sun, and over here: its shade, and its crowns open to the sky.
     float sunT = exp(-2.2 * bulk(p + L * uSize * 0.2));
-    // Each billow is open to the sky over its crown and goes lilac underneath, where the next sits over it.
+    // Each billow is open to the sky over its crown and goes into shade underneath, where the next sits over it.
     float over = bulk(p + vec3(0.0, uSize * 0.09, 0.0));
     float up = clamp((p.y - uFloor) / (uSize * 1.4), 0.0, 1.0);
-    vec3 shade = mix(violet, lilac, up * (1.0 - 0.6 * over) + 0.25 * (1.0 - over)) + uSunColor * vec3(0.1, 0.065, 0.075) * (0.4 + 0.6 * up);
-    vec3 col = mix(shade, uSunColor * vec3(0.54, 0.39, 0.36) + shade * 0.35, sunT) + uSunColor * vec3(1.0, 0.85, 0.65) * sunT * ph * (0.12 + 0.6 * (1.0 - d));
+    vec3 shade = cloudShade(up * (1.0 - 0.6 * over) + 0.25 * (1.0 - over)) + gold * 0.06 * (0.4 + 0.6 * up);
+    vec3 col = mix(shade, gold * vec3(0.76, 0.6, 0.4) + shade * 0.3, sunT) + glow * sunT * ph * (0.12 + 0.6 * (1.0 - d));
     light += T * s * col;
     seen += T * s;
     at += T * s * t;
@@ -188,7 +188,7 @@ interface Tower { mesh: THREE.Mesh; uniforms: Record<string, THREE.IUniform>; ce
 
 /**
  * A few towers of cumulus standing out of the sea of cloud along the way, where the lens sees them: heaped well
- * above the floor, round-headed, soft-edged, lit gold and lilac by the low sun. Placed from the way itself, off
+ * above the floor, round-headed, soft-edged, white and lit gold by the low sun. Placed from the way itself, off
  * either side of it, so they move with it.
  */
 export class CloudTowers {

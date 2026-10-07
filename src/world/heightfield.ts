@@ -2,7 +2,7 @@ import { BOATS_SHIFT, SHORE_SHIFT, HOME_SHIFT, LINES_SHIFT } from './geography';
 import { mirrorBed, MIRROR_LAYOUT_GLSL } from './sky-mirror-layout';
 import { glsl, tuning } from '../tuning';
 import { LITTLE_BOATS, LITTLE_BOATS_GLSL, boatsBar, boatsOut, boatsLevel } from './little-boats-layout';
-import { STAIRS_GROUND, STAIRS_ISLE, STAIRS_TERRACE } from './stairs-layout';
+import { STAIRS_GROUND, STAIRS_ISLE, STAIRS_PAD, STAIRS_TERRACE } from './stairs-layout';
 
 /**
  * The terrain height of the whole world, written twice: in TypeScript for gameplay and in GLSL for baking and
@@ -354,6 +354,8 @@ function stairsHeight(x: number, z: number): number {
   h += land * land * (Math.max(0, 1 - r * r) * 3.6 + (gfbm(x * 0.035, z * 0.035, 3, 92) * 0.5 + 0.5) * 1.8);
   const terrace = 1 - smoothstep(STAIRS_TERRACE.radius * 0.55, STAIRS_TERRACE.radius, Math.hypot(x - STAIRS_TERRACE.x, z - STAIRS_TERRACE.z));
   h += (STAIRS_GROUND - h) * terrace * land;
+  const pad = 1 - smoothstep(STAIRS_PAD.inner, STAIRS_PAD.outer, Math.hypot(x - STAIRS_PAD.x, z - STAIRS_PAD.z));
+  h += (STAIRS_GROUND - h) * pad;
   return h - smoothstep(0, 36, d) * 8;
 }
 
@@ -466,6 +468,8 @@ export function worldHeight(x: number, z: number): number {
 }
 
 export const HEIGHTFIELD_GLSL = /* glsl */ `
+uniform int uHeightOctaves;
+uniform int uNoiseCorners;
 uint hf_pcg(uint v) {
   uint state = v * 747796405u + 2891336453u;
   uint word = ((state >> ((state >> 28u) + 4u)) ^ state) * 277803737u;
@@ -488,12 +492,13 @@ float gnoise(vec2 p) {
   ivec2 i = ivec2(fl);
   vec2 t = p - fl;
   vec2 u = t * t * t * (t * (t * 6.0 - 15.0) + 10.0);
-  float a = hf_gradDot(hf_hash2(i), t);
-  float b = hf_gradDot(hf_hash2(i + ivec2(1, 0)), t - vec2(1.0, 0.0));
-  float c = hf_gradDot(hf_hash2(i + ivec2(0, 1)), t - vec2(0.0, 1.0));
-  float d = hf_gradDot(hf_hash2(i + ivec2(1, 1)), t - vec2(1.0, 1.0));
-  float ab = a + (b - a) * u.x;
-  float cd = c + (d - c) * u.x;
+  float v[4] = float[4](0.0, 0.0, 0.0, 0.0);
+  for (int k = 0; k < uNoiseCorners; k++) {
+    ivec2 q = ivec2(k & 1, k >> 1);
+    v[k] = hf_gradDot(hf_hash2(i + q), t - vec2(q));
+  }
+  float ab = v[0] + (v[1] - v[0]) * u.x;
+  float cd = v[2] + (v[3] - v[2]) * u.x;
   return (ab + (cd - ab) * u.y) * 1.4;
 }
 float gfbm(vec2 p, int octaves, float seed) {
@@ -501,7 +506,7 @@ float gfbm(vec2 p, int octaves, float seed) {
   float sum = 0.0;
   float amp = 0.5;
   float norm = 0.0;
-  for (int o = 0; o < 6; o++) {
+  for (int o = 0; o < uHeightOctaves; o++) {
     if (o >= octaves) break;
     sum += amp * gnoise(p);
     norm += amp;
@@ -616,6 +621,8 @@ float hf_stairs(vec2 p) {
   h += land * land * (max(0.0, 1.0 - rr * rr) * 3.6 + (gfbm(p * 0.035, 3, 92.0) * 0.5 + 0.5) * 1.8);
   float terrace = 1.0 - smoothstep(${glsl(STAIRS_TERRACE.radius * 0.55)}, ${glsl(STAIRS_TERRACE.radius)}, length(p - vec2(${glsl(STAIRS_TERRACE.x)}, ${glsl(STAIRS_TERRACE.z)})));
   h += (${glsl(STAIRS_GROUND)} - h) * terrace * land;
+  float pad = 1.0 - smoothstep(${glsl(STAIRS_PAD.inner)}, ${glsl(STAIRS_PAD.outer)}, length(p - vec2(${glsl(STAIRS_PAD.x)}, ${glsl(STAIRS_PAD.z)})));
+  h += (${glsl(STAIRS_GROUND)} - h) * pad;
   return h - smoothstep(0.0, 36.0, d) * 8.0;
 }
 float hf_drowned(vec2 p) {
