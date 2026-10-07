@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { ease, range, wrapAngle, type Rng } from '../creatures/motion';
 import { CREATURE_GLSL } from '../creatures/shading';
 import { Instances, blob, flipWinding, merge, mirrored, tag, type BlobSpec } from '../creatures/shapes';
@@ -389,26 +389,6 @@ class Merged {
   }
 }
 
-function extrude(shape: THREE.Shape, len: number, curve: number, bevel = 0): THREE.BufferGeometry {
-  let geo: THREE.BufferGeometry = new THREE.ExtrudeGeometry(shape, {
-    depth: len,
-    bevelEnabled: bevel > 0,
-    bevelThickness: bevel,
-    bevelSize: bevel * 0.8,
-    bevelSegments: 2,
-    curveSegments: curve,
-  });
-  /** Thatch is a rounded shape, and an extrusion's flat facets band it like decking under a grazing sun. */
-  if (curve > 1) {
-    geo.deleteAttribute('uv');
-    geo = mergeVertices(geo, 1e-3);
-    geo.computeVertexNormals();
-  }
-  geo.rotateY(Math.PI / 2);
-  geo.translate(-len / 2, 0, 0);
-  return geo;
-}
-
 interface HouseSpec {
   x: number;
   z: number;
@@ -432,34 +412,6 @@ interface HouseSpec {
   exact?: boolean;
   far?: boolean;
   mid?: boolean;
-}
-
-function wallShape(h: HouseSpec): THREE.Shape {
-  const half = h.depth / 2;
-  const s = new THREE.Shape();
-  s.moveTo(-half, -2.6);
-  s.lineTo(half, -2.6);
-  s.lineTo(half, h.wall);
-  s.lineTo(0, h.wall + h.rise - 0.35);
-  s.lineTo(-half, h.wall);
-  s.closePath();
-  return s;
-}
-
-function slateShape(h: HouseSpec): THREE.Shape {
-  const half = h.depth / 2 + 0.28;
-  const eave = h.wall - 0.1;
-  const apex = h.wall + h.rise;
-  const t = 0.2;
-  const s = new THREE.Shape();
-  s.moveTo(-half, eave);
-  s.lineTo(0, apex);
-  s.lineTo(half, eave);
-  s.lineTo(half - 0.14, eave - t);
-  s.lineTo(0, apex - t * 1.4);
-  s.lineTo(-half + 0.14, eave - t);
-  s.closePath();
-  return s;
 }
 
 /** A dark box sunk into a wall: from the water it reads as an opening with nothing behind it. */
@@ -635,37 +587,66 @@ function raise(into: Merged, h: HouseSpec, rand: Rng): THREE.Vector3[] {
   return buildHouse(into, look, fit, own, houseMatrix(h));
 }
 
-/** The church: a squat tower with a slate spire and the nave roof beside it, drowned to its eaves. */
-function buildChurch(into: Merged, rand: Rng): void {
-  const m = new THREE.Matrix4().makeTranslation(SPIRE.x, 0, SPIRE.z);
-  const stone = lin(0.21, 0.192, 0.165);
-  const slate = SLATE[0];
-  into.add(new THREE.BoxGeometry(4.8, 16.6, 4.8).translate(0, 3.6, 0), stone, PLAIN, m);
-  into.add(new THREE.BoxGeometry(5.3, 0.34, 5.3).translate(0, 11.75, 0), stone, MASONRY, m);
-  into.add(new THREE.BoxGeometry(5.2, 0.26, 5.2).translate(0, 5.4, 0), stone, MASONRY, m);
-  for (const side of [-1, 1]) {
-    into.add(new THREE.BoxGeometry(0.7, 16.6, 0.7).translate(side * 2.25, 3.6, 2.25), stone, PLAIN, m);
-    into.add(new THREE.BoxGeometry(0.7, 16.6, 0.7).translate(side * 2.25, 3.6, -2.25), stone, PLAIN, m);
-    into.add(opening(1.0, 2.5, 5.0).translate(side * 1.05, 9.5, 0), HOLLOW, OPENING, m);
-    into.add(opening(5.0, 2.5, 1.0).translate(0, 9.5, side * 1.05), HOLLOW, OPENING, m);
-    /** A sill under each opening of the belfry, wide enough for a cat to sit on and look down. */
-    for (const at of [-1.05, 1.05]) {
-      into.add(new THREE.BoxGeometry(1.3, 0.16, 0.5).translate(at, TOWER.sill - 0.08, side * (TOWER.half + 0.2)), stone, MASONRY, m);
-      into.add(new THREE.BoxGeometry(0.5, 0.16, 1.3).translate(side * (TOWER.half + 0.2), TOWER.sill - 0.08, at), stone, MASONRY, m);
-    }
-  }
-  for (const [geo, colour] of ivyParts()) into.add(geo, colour, PLAIN);
+const CHURCH_WASH = lin(0.45, 0.405, 0.33);
+const CHURCH_DRESSING = lin(0.34, 0.31, 0.26);
+const CHURCH_QUOIN = lin(0.5, 0.46, 0.385);
+const CLOCK_FACE = lin(0.6, 0.56, 0.46);
 
-  const rings = 5;
+/** A pointed arch `w` wide whose sides rise to `spring` and whose point is `point` over that, round (x, y). */
+function archShape(w: number, spring: number, point: number, path: THREE.Shape | THREE.Path = new THREE.Shape()): THREE.Shape | THREE.Path {
+  const h = w / 2;
+  path.moveTo(-h, 0);
+  path.lineTo(h, 0);
+  path.lineTo(h, spring);
+  path.quadraticCurveTo(h, spring + point * 0.7, 0, spring + point);
+  path.quadraticCurveTo(-h, spring + point * 0.7, -h, spring);
+  path.lineTo(-h, 0);
+  return path;
+}
+
+/** One belfry opening on a face (frame `f` facing its +z at the face): its arched head and its proud dressed surround. */
+function belfryOpening(into: Merged, f: THREE.Matrix4): void {
+  const head = new THREE.ExtrudeGeometry(archShape(1.0, 0.1, 0.5) as THREE.Shape, { depth: 0.6, bevelEnabled: false, curveSegments: 5 });
+  into.add(head.translate(0, 10.65, -0.5), HOLLOW, OPENING, f);
+  const ring = archShape(1.36, 2.6, 0.62) as THREE.Shape;
+  ring.holes.push(archShape(1.0, 2.6, 0.5, new THREE.Path()) as THREE.Path);
+  const surround = new THREE.ExtrudeGeometry(ring, { depth: 0.14, bevelEnabled: false, curveSegments: 5 });
+  into.add(surround.translate(0, 8.15, 0), CHURCH_DRESSING, MASONRY, f);
+  into.add(new THREE.BoxGeometry(1.6, 0.12, 0.24).translate(0, 8.15 + 2.6 + 0.66, 0.04), CHURCH_DRESSING, MASONRY, f);
+}
+
+/** A clock with no numbers on a face of the tower, its hands stopped at `at` (hours). */
+function towerClock(into: Merged, f: THREE.Matrix4, at: number): void {
+  const disc = (r: number, deep: number) => new THREE.CylinderGeometry(r, r, deep, 20).rotateX(Math.PI / 2);
+  into.add(disc(0.86, 0.1).translate(0, 0, 0.05), CHURCH_DRESSING, MASONRY, f);
+  into.add(disc(0.7, 0.06).translate(0, 0, 0.11), CLOCK_FACE, PLAIN, f);
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2;
+    into.add(new THREE.BoxGeometry(0.06, i % 3 ? 0.1 : 0.18, 0.03).translate(0, 0.56, 0).rotateZ(a).translate(0, 0, 0.15), IRON, MASONRY, f);
+  }
+  const hand = (len: number, w: number, turn: number) =>
+    into.add(new THREE.BoxGeometry(w, len, 0.03).translate(0, len / 2 - 0.08, 0).rotateZ(-turn).translate(0, 0, 0.17), IRON, MASONRY, f);
+  hand(0.38, 0.08, (at / 12) * Math.PI * 2);
+  hand(0.56, 0.05, (at % 1) * Math.PI * 2);
+}
+
+/**
+ * The spire, octagonal slate with a bell-cast foot that turns a little as it rises, as a dream remembers a crooked
+ * spire, its point still over the tower; with a small gabled light on four of its faces.
+ */
+function buildSpire(into: Merged, m: THREE.Matrix4): void {
+  const rings = 10;
+  const base = 11.95, tall = 8.7;
+  const radiusAt = (t: number) => 2.62 * Math.pow(1 - t, 1.14) + 0.32 * Math.pow(1 - t, 7);
+  const turnAt = (t: number) => Math.PI / 8 + 0.42 * t * t;
   const pos: number[] = [];
   const idx: number[] = [];
   for (let r = 0; r <= rings; r++) {
     const t = r / rings;
-    const radius = 2.62 * Math.pow(1 - t, 1.14);
-    const y = 11.95 + t * 8.7;
+    const radius = radiusAt(t);
     for (let k = 0; k < 8; k++) {
-      const a = (k / 8) * Math.PI * 2 + Math.PI / 8;
-      pos.push(Math.cos(a) * radius, y, Math.sin(a) * radius);
+      const a = (k / 8) * Math.PI * 2 + turnAt(t);
+      pos.push(Math.cos(a) * radius, base + t * tall - 0.12 * Math.pow(1 - t, 7), Math.sin(a) * radius);
     }
   }
   for (let r = 0; r < rings; r++) {
@@ -678,15 +659,94 @@ function buildChurch(into: Merged, rand: Rng): void {
   const cone = new THREE.BufferGeometry();
   cone.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   cone.setIndex(idx);
-  cone.computeVertexNormals();
-  into.add(cone, slate, SLATED, m);
+  into.add(cone.toNonIndexed(), SLATE[0], SLATED, m);
+  const t = 0.2;
+  for (let k = 0; k < 4; k++) {
+    /** The middle of every other face of the octagon, where it stands at that height. */
+    const a = ((2 * k + 0.5) / 8) * Math.PI * 2 + turnAt(t);
+    const out = radiusAt(t) * Math.cos(Math.PI / 8) - 0.05;
+    const f = new THREE.Matrix4().copy(m).multiply(new THREE.Matrix4().makeTranslation(Math.cos(a) * out, base + t * tall, Math.sin(a) * out))
+      .multiply(new THREE.Matrix4().makeRotationY(Math.PI / 2 - a));
+    into.add(new THREE.BoxGeometry(0.62, 0.7, 0.9).translate(0, 0.35, -0.2), CHURCH_WASH, PLAIN, f);
+    const roof = new THREE.Shape();
+    roof.moveTo(-0.46, 0.66);
+    roof.lineTo(0.46, 0.66);
+    roof.lineTo(0, 1.12);
+    roof.lineTo(-0.46, 0.66);
+    into.add(new THREE.ExtrudeGeometry(roof, { depth: 1.0, bevelEnabled: false }).translate(0, 0, -0.7), SLATE[1], SLATED, f);
+    into.add(new THREE.BoxGeometry(0.3, 0.42, 0.1).translate(0, 0.34, 0.27), HOLLOW, OPENING, f);
+  }
+}
 
-  const nave: HouseSpec = { ...NAVE, roll: 0, lime: stone, roof: slate };
+/**
+ * The church: a tall limewashed tower with dressed corners, arched belfry openings and a stopped clock, its slate
+ * spire the highest thing there is, and the nave roof beside it drowned to its eaves with a wheel window in its gable.
+ * The masses, the sills and the ivy are where the cat's climb and the decks need them.
+ */
+function buildChurch(into: Merged, rand: Rng): void {
+  /** The village's later roofs and trees take the chances they were tuned with. */
+  rand();
+  const m = new THREE.Matrix4().makeTranslation(SPIRE.x, 0, SPIRE.z);
+  into.add(new THREE.BoxGeometry(4.8, 16.6, 4.8).translate(0, 3.6, 0), CHURCH_WASH, PLAIN, m);
+  into.add(new THREE.BoxGeometry(5.3, 0.34, 5.3).translate(0, 11.75, 0), CHURCH_DRESSING, MASONRY, m);
+  into.add(new THREE.BoxGeometry(5.2, 0.26, 5.2).translate(0, 5.4, 0), CHURCH_DRESSING, MASONRY, m);
+  for (const sx of [-1, 1]) {
+    for (const sz of [-1, 1]) {
+      into.add(new THREE.BoxGeometry(0.7, 16.6, 0.7).translate(sx * 2.25, 3.6, sz * 2.25), CHURCH_WASH, PLAIN, m);
+      /** Quoins up the corner, long and short in turn, a little proud and a little uneven. */
+      for (let i = 0, y = 0.2; y < 11.3; i++, y += 0.62) {
+        const long = i % 2 === 0;
+        const wx = long ? 1.0 : 0.62, wz = long ? 0.62 : 1.0;
+        into.add(new THREE.BoxGeometry(wx, 0.5, wz).translate(sx * (2.63 - wx / 2), y + 0.25, sz * (2.63 - wz / 2)), CHURCH_QUOIN, MASONRY, m);
+      }
+    }
+  }
+  /** A corbel table under the cornice, chunky blocks along each face. */
+  for (let k = -3; k <= 3; k++) {
+    for (const side of [-1, 1]) {
+      into.add(new THREE.BoxGeometry(0.28, 0.3, 0.24).translate(k * 0.62, 11.43, side * 2.48), CHURCH_DRESSING, MASONRY, m);
+      into.add(new THREE.BoxGeometry(0.24, 0.3, 0.28).translate(side * 2.48, 11.43, k * 0.62), CHURCH_DRESSING, MASONRY, m);
+    }
+  }
+  for (const side of [-1, 1]) {
+    into.add(opening(1.0, 2.5, 5.0).translate(side * 1.05, 9.5, 0), HOLLOW, OPENING, m);
+    into.add(opening(5.0, 2.5, 1.0).translate(0, 9.5, side * 1.05), HOLLOW, OPENING, m);
+    /** A sill under each opening of the belfry, wide enough for a cat to sit on and look down. */
+    for (const at of [-1.05, 1.05]) {
+      into.add(new THREE.BoxGeometry(1.3, 0.16, 0.5).translate(at, TOWER.sill - 0.08, side * (TOWER.half + 0.2)), CHURCH_DRESSING, MASONRY, m);
+      into.add(new THREE.BoxGeometry(0.5, 0.16, 1.3).translate(side * (TOWER.half + 0.2), TOWER.sill - 0.08, at), CHURCH_DRESSING, MASONRY, m);
+    }
+  }
+  for (let face = 0; face < 4; face++) {
+    const yaw = (face * Math.PI) / 2;
+    for (const at of [-1.05, 1.05]) {
+      belfryOpening(into, new THREE.Matrix4().copy(m).multiply(new THREE.Matrix4().makeRotationY(yaw))
+        .multiply(new THREE.Matrix4().makeTranslation(at, 0, TOWER.half)));
+    }
+  }
+  /** North and east the clock stands at different hours. */
+  towerClock(into, new THREE.Matrix4().copy(m).multiply(new THREE.Matrix4().makeRotationY(Math.PI))
+    .multiply(new THREE.Matrix4().makeTranslation(0, 4.15, TOWER.half)), 4.6);
+  towerClock(into, new THREE.Matrix4().copy(m).multiply(new THREE.Matrix4().makeRotationY(Math.PI / 2))
+    .multiply(new THREE.Matrix4().makeTranslation(0, 4.15, TOWER.half)), 10.15);
+  for (const [geo, colour] of ivyParts()) into.add(geo, colour, PLAIN);
+  buildSpire(into, m);
+
+  const nave: HouseSpec = { ...NAVE, roll: 0, lime: CHURCH_WASH, roof: SLATE[0] };
   const nm = houseMatrix(nave);
-  into.add(extrude(wallShape(nave), nave.len, 1), stone, PLAIN, nm);
-  into.add(extrude(slateShape(nave), nave.len + 0.22, 1), slate, SLATED, nm);
-  into.add(new THREE.BoxGeometry(nave.len + 0.4, 0.16, 0.4).translate(0, nave.wall + nave.rise - 0.04, 0), slate, SLATED, nm);
-  into.add(opening(0.6, 1.3, 0.9).translate(range(rand, -5, 5), nave.wall + 0.5, 0), HOLLOW, OPENING, nm);
+  buildHouse(into, 'cottage', { len: nave.len, depth: nave.depth, wall: nave.wall, rise: nave.rise, sink: nave.sink,
+    lime: CHURCH_WASH, roof: SLATE[0], stacks: [], gable: 1, exact: true }, mulberry32(4471), nm);
+  /** A wheel window in the west gable, the water at its foot. */
+  const wheel = new THREE.Matrix4().copy(nm).multiply(new THREE.Matrix4().makeTranslation(-nave.len / 2 - 0.02, nave.sink + 1.05, 0))
+    .multiply(new THREE.Matrix4().makeRotationY(-Math.PI / 2));
+  into.add(new THREE.CylinderGeometry(0.62, 0.62, 0.3, 18).rotateX(Math.PI / 2).translate(0, 0, -0.1), HOLLOW, OPENING, wheel);
+  const rim = new THREE.Shape().absarc(0, 0, 0.78, 0, Math.PI * 2, false);
+  rim.holes.push(new THREE.Path().absarc(0, 0, 0.62, 0, Math.PI * 2, true));
+  into.add(new THREE.ExtrudeGeometry(rim, { depth: 0.14, bevelEnabled: false, curveSegments: 18 }), CHURCH_DRESSING, MASONRY, wheel);
+  for (let k = 0; k < 3; k++) {
+    into.add(new THREE.BoxGeometry(1.24, 0.07, 0.08).rotateZ((k * Math.PI) / 3).translate(0, 0, 0.04), CHURCH_DRESSING, MASONRY, wheel);
+  }
+  into.add(new THREE.CylinderGeometry(0.14, 0.14, 0.12, 10).rotateX(Math.PI / 2).translate(0, 0, 0.06), CHURCH_DRESSING, MASONRY, wheel);
 
   const top = new THREE.Matrix4().makeTranslation(SPIRE.x, SPIRE.y - 1.5, SPIRE.z);
   into.add(new THREE.CylinderGeometry(0.06, 0.09, 2.4, 5).translate(0, 0.9, 0), IRON, MASONRY, top);
