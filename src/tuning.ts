@@ -1489,13 +1489,13 @@ export const tuning = {
     flipperDistance: 9, flipperHeight: 4, flipperBearing: 0.75, flipperLookY: 1, flipperToward: 0.5,
     portraitIn: 0.58,
     /**
-     * The flipper: a stroke within `finRadius` of its outer part on screen (normalised device units) and running along
-     * it to within `finAlong` (the cosine between them) lifts it once `finSweep` screen heights of such stroke have
-     * crossed it; its drawn strokes span `finInviteRadius` metres either side of their middle. The cygnet takes the
+     * The flipper: a stroke within `finRadius` of its outer part on screen (normalised device units), moving at least
+     * `finPace` of those a second and running along it to within `finAlong` (the cosine between them), lifts it once
+     * `finSweep` of such stroke have crossed it; its drawn strokes span `finInviteRadius` metres either side of their middle. The cygnet takes the
      * loop's end where it lies, `endOut` metres to port of the boat at rest and `endAhead` before it, and holds it
      * from `birdOut`/`birdAhead`, clear of the flipper's lift; the loop comes off its tip `slipFor` seconds into the lift.
      */
-    finRadius: 0.07, finAlong: 0.5, finSweep: 0.1, finInviteRadius: 2.6,
+    finRadius: 0.07, finPace: 0.8, finAlong: 0.5, finSweep: 0.1, finInviteRadius: 2.6,
     endOut: 5.3, endAhead: 2.2, birdOut: 6.2, birdAhead: 1.4, slipFor: 4,
     /** How far its lazy lift raises the near flipper about its root and swings it back along its flank (radians). */
     finLift: 0.16, finSwing: 0.05,

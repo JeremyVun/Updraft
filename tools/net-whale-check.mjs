@@ -6,12 +6,22 @@
 // net further off into the water, and lets it go; strokes the wrong way only nudge it, held near by its tether; left
 // alone under three times the breeze, with sweeps across its back that only tickle it, the cork stays where it is
 // until the valve, whose dolphin noses it in to her.
+// The flipper: the cygnet goes in at once, swims to the loop's free end and holds it; sweeps along the flipper lift it
+// and the loop comes off into the bird's pull, the line running unbroken through its bill, the bird never within a
+// metre of the flipper; it swims back and is lifted in, and the whale is free. A sweep before the bird has the end
+// lifts the flipper but leaves the loop on. Left alone under three times the breeze, with sweeps across its back and
+// across the flipper that only shiver it, nothing lifts until the valve, whose dolphin noses the flipper up.
 // Saves: one at rest resumes beside it lying there, one after its breath with the patch up and its eye open, one after
-// the line with the net off its head and the line let go, and one from after it has gone without it, sailing on.
-// Usage: BASE=http://127.0.0.1:5230/ node tools/net-whale-check.mjs [sweeps] [circles] [idle] [line] [wrongway] [lineidle] [saves]
+// the line with the net off its head and the line let go, one after the flipper with the net loose on the water and
+// the cygnet in the satchel as it goes free, and one from after it has gone without it, sailing on.
+// The whole open sea from its start (`full`, and `fullidle` with nobody playing): the swim, the lead, the three steps
+// by real gestures (or their valves), the release and the mooring at the mirror, with the moment of each.
+// Usage: BASE=http://127.0.0.1:5230/ node tools/net-whale-check.mjs [sweeps] [circles] [idle] [line] [wrongway] [lineidle]
+//   [fin] [finearly] [finidle] [saves] [full] [fullidle]
 // Runs against a dev or QA preview server, starting at rest beside the whale (`?chapter=whale`, as the save there
-// resumes); the line's cases resume after its breath. Each idle case waits out a valve (about 90 s of game time).
-// `tools/sea-check.mjs` sails the whole way.
+// resumes); the line's cases resume after its breath and the flipper's after the line. Each idle case waits out a valve
+// (about 90 s of game time); `fullidle` waits out all three (about eight minutes of game time) and is not in the default
+// set. Run the cases a few at a time: the default set takes over twenty minutes.
 import { chromium } from 'playwright-core';
 import assert from 'node:assert/strict';
 
@@ -21,7 +31,8 @@ process.on('SIGTERM', () => process.exit(143));
 const base = process.env.BASE ?? 'http://127.0.0.1:5230/';
 const W = Number(process.env.W ?? 1600);
 const H = Number(process.env.H ?? 900);
-const cases = process.argv.slice(2).length ? process.argv.slice(2) : ['sweeps', 'circles', 'idle', 'line', 'wrongway', 'lineidle', 'saves'];
+const cases = process.argv.slice(2).length ? process.argv.slice(2)
+  : ['sweeps', 'circles', 'idle', 'line', 'wrongway', 'lineidle', 'fin', 'finearly', 'finidle', 'saves', 'full'];
 
 const browser = await chromium.launch({
   channel: 'chromium',
@@ -41,7 +52,9 @@ const STATE = `(() => {
     cork: Math.hypot(n.float.position.x - b.position.x, n.float.position.z - b.position.z),
     corkAt: [n.float.position.x, n.float.position.z], foot: Math.hypot(n.foot.x - b.position.x, n.foot.z - b.position.z),
     tether: Math.hypot(n.float.position.x - n.foot.x, n.float.position.z - n.foot.z), length: n.lineLength,
-    invited: w ? !!w.windInvitation : false };
+    invited: w ? !!w.windInvitation : false, bird: w ? w.bird : null, birdT: w ? w.birdT : 0, slipT: w ? w.slipT : -1,
+    finnedBy: w ? w.finnedBy : null, loop: n.loop, held: n.held !== null, seat: __game.cygnet.seat, swimming: __game.cygnet.state === 'swimming',
+    drift: n.drift, spouting: s.spouting, moored: __game.story.name !== 'toMirror' || c.done === true };
 })()`;
 
 async function open(context, query) {
@@ -116,9 +129,91 @@ async function onScreen(page, s, up = 0) {
   }, [s, up]);
 }
 
-async function stroke(page, points, ms) {
+/**
+ * The pointer taken off the window and brought back in at (x, y), as a hand leaves the mouse and comes back: no stroke
+ * in between. A bare move from wherever it was parked is a stroke of its own across whatever lies between.
+ */
+async function jumpTo(page, x, y) {
+  await page.evaluate(() => __game.renderer.domElement.dispatchEvent(new PointerEvent('pointerleave', { pointerType: 'mouse' })));
+  await page.mouse.move(x, y);
+  await page.waitForTimeout(100);
+}
+
+/** Off the window: nothing it does is wind. */
+const away = (page) => page.evaluate(() => __game.renderer.domElement.dispatchEvent(new PointerEvent('pointerleave', { pointerType: 'mouse' })));
+
+/** Points `t` of the way out along the near flipper (0 root .. 1 tip) on screen, in pixels. */
+const finOnScreen = (page, ...ts) => page.evaluate((ts) => {
+  const s = __game.sealife.sleeper;
+  return ts.map((t) => {
+    const p = s.finRoot.clone().lerp(s.finTip, t).project(__game.rig.camera);
+    return [(p.x * 0.5 + 0.5) * innerWidth, (0.5 - p.y * 0.5) * innerHeight];
+  });
+}, ts);
+
+/** One sweep along the flipper on screen, from inside its outer half out past its tip; or, `across`, one over it. */
+async function sweepFin(page, across = false) {
+  const [[ax, ay], [bx, by]] = await finOnScreen(page, 0.5, 1);
+  const d = Math.hypot(bx - ax, by - ay) || 1;
+  let ux = (bx - ax) / d, uy = (by - ay) / d;
+  const [mx, my] = [(ax + bx) / 2, (ay + by) / 2];
+  if (across) [ux, uy] = [-uy, ux];
+  const half = Math.max(160, d * 0.65);
+  await jumpTo(page, mx - ux * half, my - uy * half);
+  await stroke(page, [[mx - ux * half, my - uy * half], [mx + ux * half, my + uy * half]], 320, true);
+  await away(page);
+  await page.waitForTimeout(900);
+}
+
+/** Sweeps along the flipper until it lifts the loop off. */
+async function freeFin(page, wallSeconds = 60) {
+  const end = Date.now() + wallSeconds * 1000;
+  for (;;) {
+    const s = await read(page);
+    if (s.slipT >= 0 || s.step !== 'flipper') return s;
+    if (Date.now() > end) throw new Error(`the sweeps never lifted the loop off: ${JSON.stringify(s)}`);
+    await sweepFin(page);
+  }
+}
+
+/** At rest beside it, resumed as the save after the line does, until the cygnet holds the loop's end. */
+async function atFlipper(page, holding = true) {
+  await atRest(page);
+  await away(page);
+  await page.evaluate(() => { const c = __game.story.current; c.restoreCheckpoint('whale-line', [c.leg, c.time]); });
+  await watchBird(page);
+  return holding ? until(page, (s) => s.bird === 'holding' && s.birdT > 2.5, 'the cygnet to hold the loop\'s end', 120)
+    : until(page, (s) => s.bird === 'out', 'the cygnet to go in', 60);
+}
+
+/**
+ * Every frame of the flipper step: the least clear water between the cygnet's body and the flipper (its own half-chord
+ * round the line from root to tip), and the widest gap between the loop's free end and the bill while it holds it.
+ */
+const watchBird = (page) => page.evaluate(() => {
+  const watch = window.__bird = { clear: Infinity, gap: 0, frames: 0 };
+  const bill = new __game.cygnet.position.constructor();
+  const p = bill.clone();
+  const tick = () => {
+    const w = __game.story.current.whale, s = __game.sealife.sleeper, k = __game.cygnet;
+    if (w?.step === 'flipper' && k.state === 'swimming') {
+      watch.frames++;
+      for (let i = 0; i <= 24; i++) {
+        const t = i / 24;
+        p.copy(s.finRoot).lerp(s.finTip, t);
+        watch.clear = Math.min(watch.clear, p.distanceTo(k.position) - (0.32 + 2.1 * (1 - t) ** 0.8) - 0.3);
+      }
+      if ((w.bird === 'holding' && w.birdT > 1) || w.bird === 'pulling') watch.gap = Math.max(watch.gap, k.billTip(bill).distanceTo(__game.sealife.net.loopEnd));
+    }
+    requestAnimationFrame(tick);
+  };
+  tick();
+});
+const birdWatch = (page) => page.evaluate(() => ({ clear: +window.__bird.clear.toFixed(2), gap: +window.__bird.gap.toFixed(3), frames: window.__bird.frames }));
+
+async function stroke(page, points, ms, started = false) {
   const n = Math.max(2, Math.round(ms / 8));
-  await page.mouse.move(...points[0]);
+  if (!started) await page.mouse.move(...points[0]);
   for (let i = 1; i <= n; i++) {
     const f = (i / n) * (points.length - 1);
     const k = Math.min(points.length - 2, Math.floor(f));
@@ -190,6 +285,9 @@ async function circles() {
   const line = await until(page, (s) => s.step === 'line' && s.stepTime > 5, 'the breath to hand on to the line', 40);
   await bringCork(page);
   await until(page, (s) => s.step === 'flipper', 'the haul to finish', 60);
+  await until(page, (s) => s.bird === 'holding' && s.birdT > 2.5, 'the cygnet to hold the loop\'s end', 120);
+  await freeFin(page);
+  await away(page);
   const free = await until(page, (s) => s.step === 'free', 'it to be free', 60);
   const gone = await until(page, (s) => s.step === 'gone' && s.speed > 1, 'it to go and the boat to sail on', 120);
   results.circles = { restAt: +rest.time.toFixed(1), breathAt: +breathed.time.toFixed(1), eyeAt: +looked.time.toFixed(1),
@@ -265,6 +363,21 @@ async function saves() {
   assert(hauled.peel === 1 && hauled.net, 'the net off its head in the water');
   assert(!hauled.gripped && hauled.haul === 'letting', 'the line let go');
   assert(hauled.remaining < 3 && hauled.speed < 0.5, `resumed at rest: ${JSON.stringify(hauled)}`);
+  await until(page, (s) => s.bird === 'holding' && s.birdT > 2.5, 'the cygnet to hold the loop\'s end', 120);
+  await freeFin(page);
+  await away(page);
+  await until(page, (s) => s.checkpoint === 'whale-flipper', 'the checkpoint after the flipper', 60);
+  await page.waitForFunction(() => JSON.parse(localStorage.getItem('updraft.progress.v1') ?? 'null')?.point === 'whale-flipper', null, { timeout: 30000 });
+  await page.close();
+  ({ page, errors } = await open(context, '&progress=1'));
+  const finned = await read(page);
+  assert.equal(finned.chapter, 'toMirror');
+  assert.equal(finned.step, 'free', 'a save after the flipper resumes as it goes free');
+  assert(finned.peel === 1 && finned.loop === 1 && !finned.held, 'the net loose on the water');
+  assert.equal(finned.seat, 'satchel', 'the cygnet in the satchel');
+  assert(finned.remaining < 3 && finned.speed < 0.5, `resumed at rest: ${JSON.stringify(finned)}`);
+  const spouted = await until(page, (s) => s.phase === 'free' && s.drift > 0.02, 'it to go free and the net to drift', 30);
+  assert.equal(spouted.seat, 'satchel', 'still in the satchel as it goes');
   await until(page, (s) => s.checkpoint === 'whale-gone', 'the after-whale checkpoint', 120);
   await page.waitForFunction(() => JSON.parse(localStorage.getItem('updraft.progress.v1') ?? 'null')?.point === 'whale-gone', null, { timeout: 30000 });
   const point = await saved(page);
@@ -275,7 +388,7 @@ async function saves() {
   assert.equal(gone.visible, false);
   const sailing = await until(page, (s) => s.speed > 2, 'the boat to sail on after the resumed save', 60);
   results.saves = { rest: { step: resting.step, remaining: +resting.remaining.toFixed(2) }, breath: { step: breathed.step, lift: breathed.lift },
-    line: { step: hauled.step, peel: hauled.peel },
+    line: { step: hauled.step, peel: hauled.peel }, flipper: { step: finned.step, seat: finned.seat },
     after: { point, step: gone.step, speed: +sailing.speed.toFixed(2) } };
   assert.deepEqual(errors, []);
   await context.close();
@@ -377,7 +490,151 @@ async function lineidle() {
   await context.close();
 }
 
-const run = { sweeps, circles, idle, line, wrongway, lineidle, saves };
+/**
+ * The cygnet holds the loop's end; sweeps along the flipper lift it and the loop comes off into the bird's pull; it
+ * lets go, swims back and is lifted in, and the whale is free. None of those sweeps tickle the whale.
+ */
+async function fin() {
+  const context = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
+  const { page, errors } = await open(context, '');
+  const start = await atFlipper(page);
+  const slipped = await freeFin(page);
+  await away(page);
+  const off = await until(page, (s) => s.loop >= 1, 'the loop to come off', 30);
+  const aboard = await until(page, (s) => s.step === 'free', 'the cygnet back aboard and the whale free', 60);
+  const watch = await birdWatch(page);
+  results.fin = { holdAt: +(start.stepTime).toFixed(1), liftedAt: +(slipped.stepTime).toFixed(1), offAt: +off.stepTime.toFixed(1),
+    freeAt: +(aboard.time - start.time + start.stepTime).toFixed(1), lifts: slipped.lifts - start.lifts, tickles: aboard.tickles - start.tickles, ...watch };
+  assert.equal(start.loop, 0, 'the loop is on until it lifts');
+  assert.equal(slipped.finnedBy, 'sweeps', 'the sweeps lifted the flipper');
+  assert.equal(slipped.lifts - start.lifts, 1, 'one lazy lift takes the loop off');
+  assert.equal(aboard.tickles, start.tickles, 'sweeps along the flipper never tickle it');
+  assert(!aboard.held && aboard.seat === 'satchel', 'the line let go and the cygnet back in the satchel before it goes free');
+  assert.equal(aboard.checkpoint, 'whale-flipper', 'the save after the flipper');
+  assert(watch.clear >= 1, `a metre of clear water between the cygnet and the flipper: ${watch.clear} m`);
+  assert(watch.gap < 0.12, `the line runs into the bill while it holds it: ${watch.gap} m`);
+  assert.deepEqual(errors, []);
+  await context.close();
+}
+
+/** Before the cygnet has the loop's end, a sweep along the flipper lifts it lazily but the loop stays on. */
+async function finearly() {
+  const context = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
+  const { page, errors } = await open(context, '');
+  const start = await atFlipper(page, false);
+  for (let i = 0; i < 2; i++) await sweepFin(page);
+  const swept = await read(page);
+  const holding = await until(page, (s) => s.bird === 'holding' && s.birdT > 2.5, 'the cygnet to hold the loop\'s end', 120);
+  await page.waitForTimeout(6000);
+  const still = await read(page);
+  results.finearly = { lifts: swept.lifts - start.lifts, bird: swept.bird, loop: still.loop };
+  assert(swept.lifts > start.lifts, 'a sweep before the cygnet has the end still lifts the flipper');
+  assert.notEqual(swept.bird, 'holding', 'it was swept before the cygnet had the end');
+  assert(holding.loop === 0 && still.loop === 0 && still.slipT < 0, 'the loop stays on');
+  await freeFin(page);
+  await until(page, (s) => s.loop >= 1, 'the loop to come off with the end held', 30);
+  assert.deepEqual(errors, []);
+  await context.close();
+}
+
+/**
+ * Left alone under three times the sea's breeze, with sweeps across its back and across the flipper that only shiver
+ * it, the flipper never lifts and the loop stays on until the valve; then its dolphin noses the flipper up.
+ */
+async function finidle() {
+  const context = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
+  const { page, errors } = await open(context, '');
+  const start = await atFlipper(page);
+  const holdAt = start.time - start.birdT;
+  await page.evaluate(() => { __game.story.current.breeze = 3; });
+  for (let i = 0; i < 10; i++) {
+    const s = 0.3 + (i % 5) * 0.12;
+    const [x, y] = await onScreen(page, s);
+    await jumpTo(page, x - 40, y - 120);
+    await stroke(page, [[x - 40, y - 120], [x + 40, y + 60]], 260, true);
+    await away(page);
+    await page.waitForTimeout(500);
+  }
+  for (let i = 0; i < 4; i++) await sweepFin(page, true);
+  const swept = await read(page);
+  const invited = await until(page, (s) => s.invited || s.slipT >= 0, 'the drawn strokes', 60);
+  const sent = await until(page, (s) => s.valveT >= 0 || s.slipT >= 0, 'the valve to send its dolphin', 300);
+  const lifted = await until(page, (s) => s.slipT >= 0, 'the dolphin to lift the flipper', 60);
+  await until(page, (s) => s.step === 'free', 'it to be free after the dolphin', 90);
+  results.finidle = { tickles: swept.tickles - start.tickles, lifts: swept.lifts - start.lifts, invitedAt: +(invited.time - holdAt).toFixed(1),
+    sentAt: +(sent.time - holdAt).toFixed(1), liftedAt: +(lifted.time - holdAt).toFixed(1), clear: (await birdWatch(page)).clear };
+  assert(swept.tickles > start.tickles, 'sweeps across its back shiver it');
+  assert.equal(swept.lifts, start.lifts, 'nothing but a sweep along it lifts the flipper');
+  assert.equal(swept.loop, 0);
+  assert(invited.invited && invited.slipT < 0, 'the strokes are drawn before anything lifts');
+  assert(sent.time - holdAt >= 88 && sent.slipT < 0 && sent.loop === 0, `it lifted before the valve: ${(sent.time - holdAt).toFixed(1)} s held`);
+  assert.equal(sent.lifts, start.lifts, 'neither the breeze nor the sweeps lifted it');
+  assert.equal(lifted.finnedBy, 'dolphin', 'the valve is the dolphin nosing the flipper up');
+  assert.deepEqual(errors, []);
+  await context.close();
+}
+
+/**
+ * The whole open sea from its start with real gestures, or (`idle`) with nobody playing: the swim, the lead, the three
+ * steps, the release and the mooring at the mirror, with the moment of each in game seconds.
+ */
+async function voyage(idle) {
+  const context = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
+  const page = await context.newPage();
+  const errors = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
+  await page.goto(`${base}?shot=1&chapter=sea`, { waitUntil: 'load' });
+  await page.waitForFunction(() => window.__ready === true, null, { timeout: 90000 });
+  await away(page);
+  const at = {};
+  const mark = (name, s) => { at[name] = +s.time.toFixed(1); };
+  const rest = await until(page, (s) => s.step === 'breath' && s.stepTime > 1.2, 'the boat at rest beside it', 400);
+  mark('rest', { time: rest.time - rest.stepTime });
+  if (!idle) {
+    await page.waitForTimeout(1500);
+    const [sx, sy] = await onScreen(page, 'blowhole', 1.2);
+    await jumpTo(page, sx + 60, sy);
+    await circle(page, (s) => s.progress >= 1);
+    await away(page);
+  }
+  const line = await until(page, (s) => s.step === 'line', 'the breath to hand on to the line', idle ? 300 : 60);
+  mark('breath', line);
+  if (!idle) {
+    await until(page, (s) => s.stepTime > 6, 'the line, held', 30);
+    await bringCork(page);
+    await away(page);
+  }
+  const flipper = await until(page, (s) => s.step === 'flipper', 'the haul to finish', idle ? 300 : 60);
+  mark('line', flipper);
+  await watchBird(page);
+  if (!idle) {
+    await until(page, (s) => s.bird === 'holding' && s.birdT > 2.5, 'the cygnet to hold the loop\'s end', 120);
+    await freeFin(page);
+    await away(page);
+  }
+  const free = await until(page, (s) => s.step === 'free', 'the flipper and the cygnet back aboard', idle ? 300 : 90);
+  mark('flipper', free);
+  const spout = await until(page, (s) => s.spouting || s.step === 'gone', 'it to spout free', 30);
+  mark('free', spout);
+  const gone = await until(page, (s) => s.step === 'gone', 'it to go under', 60);
+  mark('gone', gone);
+  const moored = await until(page, (s) => s.moored, 'the boat to moor at the mirror', 300);
+  mark('moored', moored);
+  const watch = await birdWatch(page);
+  results[idle ? 'fullidle' : 'full'] = { ...at, by: [free.liftedBy, free.broughtBy, free.finnedBy].join('/'), clear: watch.clear };
+  const by = idle ? 'dolphin' : null;
+  assert.equal(free.liftedBy, by ?? 'circles');
+  assert.equal(free.broughtBy, by ?? 'sweeps');
+  assert.equal(free.finnedBy, by ?? 'sweeps');
+  assert(watch.clear >= 1, `the cygnet keeps clear of the flipper: ${watch.clear} m`);
+  assert.deepEqual(errors, []);
+  await context.close();
+}
+const full = () => voyage(false);
+const fullidle = () => voyage(true);
+
+const run = { sweeps, circles, idle, line, wrongway, lineidle, fin, finearly, finidle, saves, full, fullidle };
 let failed = false;
 for (const name of cases) {
   try {

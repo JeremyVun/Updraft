@@ -882,11 +882,12 @@ export class NetWhale {
     const { input } = this.cast;
     const camera = this.camera;
     this.finSwept *= Math.exp(-dt * 1.5);
-    if (!camera || !input.present || input.muted || input.gust <= K.brushFrom || input.charge > K.liftFrom) return;
+    if (!camera || !input.present || input.muted || input.charge > K.liftFrom || dt <= 0) return;
     const dx = input.ndc.x - input.prevNdc.x;
     const dy = input.ndc.y - input.prevNdc.y;
     const moved = Math.hypot(dx * camera.aspect, dy);
-    if (moved < 1e-4) return;
+    // Measured on screen: over the near water a sweep covers little of the sea, so its gust reads low.
+    if (moved < K.finPace * dt) return;
     let hit = 0;
     for (let i = 0; i <= FIN_STEPS; i++) {
       const t = FIN_FROM + ((FIN_TO - FIN_FROM) * i) / FIN_STEPS;
