@@ -797,15 +797,17 @@ The sequence:
   flipper makes it lift lazily (the tickle built on `crossing-whale`), and the loop slides off into the cygnet's pull,
   slack in the rope so the bird never reads as hauling a giant (`k4`). The child watches, mittens to her mouth. The
   cygnet swims back and is lifted in; the bird stays its own size and keeps clear water between it and the fin. As
-  built (Claude's call, 2026-10-08): it drops in on its own side and swims round the stern, never through her; it tows
-  the end about 1.4 m clear of the flipper's sweep and turns to face the loop; a sweep before it holds the end lifts
+  built (Claude's call, 2026-10-08): it drops in on its own side and swims round the stern, never through her; it holds
+  the end beside the flipper's tip, about 4 m out to port of her, at least 1.2 m clear of the flipper's lift, side-on
+  to the camera, facing the loop; a sweep before it holds the end lifts
   the flipper but the loop stays on; the lift is lazy, the tip rising about 2 m; as the loop slips off it backs away,
   lets go, climbs onto the gunwale into her arms and is stowed, and only then does the whale go free.
 - **Free.** It spouts a tall plume against the sunrise, the empty net drifting away on the water; the pod leaps round
   it; the child waves (`k5`). It rolls, lifts its flukes high as if waving and sinks; its swell lifts the boat. The pod
   goes with it, the limit eases off, and the sea goes still into the mirror's glass. The net starts drifting as the
-  loop slips off, so it is its own shape by the spout; the pod sets off as the bird is lifted in, and one dolphin leaps
-  side-on at the spout.
+  loop slips off, working loose into a raft with its corks round its edges, so it is its own shape by the spout; the
+  pod sets off as the bird is lifted in and crosses just ahead of the bow, where the camera sees its leaps against the
+  sea rather than the whale's flank, and one dolphin leaps side-on by the boat at the spout.
 - **Gestures.** Each step's answer starts at the wind's target and is plainly the biggest thing on screen: the boat is
   at rest, so nothing may read as the boat speeding up. The ambient breeze does nothing to the net, the corks or the
   flipper. Gusts elsewhere on the whale may still tickle it (shiver, a lazy slap) but never progress a step.
@@ -815,11 +817,16 @@ The sequence:
 - **Camera.** The crossing camera eases (never jerks, never cuts, no reverse angle or underwater shot) from the rear
   view in `k1` to a hold beside the boat for the breath (`k2`), then closer and lower for the child's haul and the
   cygnet (`k3`, `k4`), where her mittens, the cork and the bird must read, then back out for the release (`k5`, the pod
-  in frame). As found in the look pass (Claude's call, 2026-10-07): the breath's hold is about 22 m behind and 11.5 m
-  up, looking down onto the crown so the net lying on the head reads, with the eye, the blowhole and the low sun in
-  frame; from 11 m behind and 4 m up the crown was edge-on and the net only a row of corks against the sky. The
-  portrait lens is wider (62° against 38.7°), so portrait holds come in by about 0.58 to keep the whale as large. In
-  portrait the boat, the eye and the blowhole stack up the frame (`k2-portrait`).
+  in frame). As found in the frames pass (Claude's call, 2026-10-08): the whale lies with its eye about 14.5 m off at
+  46° to port and its length running about 72° to starboard, so its back recedes toward the low sun and leaves the
+  frame on the right; every landscape hold looks toward the sun with the whale rimmed against it. The sun stands under
+  a degree above the sea, so from any camera lower than the whale's back (about 7 m) it is hidden behind the crown:
+  the cygnet's hold is about 15 m behind and 7 m up so the sun shows over the back, at the cost of a smaller bird. The
+  breath's hold is about 18 m behind and 9.5 m up, looking down onto the crown so the net lying on the head reads; the
+  release eases out to about 30 m behind and 8.5 m up, the plume leaving the top of the frame. A phone's frame is too
+  narrow (31° across) to hold the head and the sun together, so its holds look along the line from what matters
+  through the boat, each with its own distance, height and turn, stacking boat, step and head up the frame; the
+  cygnet's is turned toward astern so the bird stands clear of the sail above the boat (`k2-portrait`).
 - **Reward.** Freeing the whale is the open sea's major conclusion, so the reward phrase (`completeObjective()`) plays
   as it spouts free.
 - **Pacing.** The mirror's jetty is on the horizon from the first seconds of the open sea, as on main: it lies only

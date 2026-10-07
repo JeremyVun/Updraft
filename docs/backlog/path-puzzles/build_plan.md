@@ -216,7 +216,23 @@ and the bird read (pose, place, light; the bird keeps its own size). Not the wha
 Seam: anchors and `surfaceAt` keep their names; the mechanics and the clearances of N2 stay as they are.
 Gate: typecheck; build; `net-whale-check` `sweeps`, `line`, `fin`, `finidle`, `saves`; `sea-logic-check`; stills at
 `k1`–`k5` with `k4-held`, landscape and portrait, beside the concept.
-Done: [ ]
+Done: [x] `b073d339..cdab5c51` on `sea-whale`. The lie: eye 14.5 m at 0.8 rad to port, length 1.25 rad to starboard, so the
+back recedes toward the sun and leaves the frame right (at 1.1 the whole animal showed from the approach). Every
+landscape hold looks into the sun; the sun is 0.65° up, so below about 7 m the crown hides it: breath 18/9.5, line
+11/4.8 (as was), flipper 15/7.2 bearing 0.36 looking 9 m up, release 30/8.5 bearing 0.2 (`releaseBearing`); the
+spout no longer pushes the camera back. Phone holds are explicit per step (`tuning.netWhale.phone`: distance,
+height, turn, lookY, toward; `portraitIn` and `flipperPhone*` gone); the line and flipper phone holds no longer fit
+the eye (it only backed the camera off). The flipper's rest pose in tuning (`finRestSweep` -1.75, `finRestRaise`
+0.67), floating awash as the body rises with each breath; `finLift` 0.1 (tip up about 2 m); the loop sits at 0.9
+along it (`LOOP_FROM`), so its line leaves the water at the tip. The cygnet takes the end at 4.6/1.8 and holds at
+3.4/2.2, side-on, 1.19 m clear at worst. The float-line is 17 m (`LEADER`; 14.4 could not bring the cork to her
+from the new lie). The net: strands 0.03 m with a 1.5 px, 0.6 opacity floor and a veil past it, darker rope and
+weed, 24 weed strands, a deeper skin shadow; drifting off it opens into a raft (`OPEN`). The pod and the leaper
+cross just ahead of and beside the bow, against the sea rather than the flank. Left for N3c: the whale reads smooth
+and toy-like and its near flank is dark against the sun; the eye a dark lens; the flipper is a straight plank from a
+root 6 m deep, so only its last metres reach the surface: at rest it shows as a pale slab under the glass, lifted as
+a pale plank (a flipper that bends up toward the surface would let it lie awash along its length); the bird at the
+flipper is small and dark against the sea from the hold that keeps the sun in frame.
 
 ### Phase N3c: the whale's body
 Owns: `whale.ts`, `whaleShader.ts`, `anatomy.ts`, the shape, skin and eye in `sleeper.ts` (not its API, pose or lift),
