@@ -6,15 +6,16 @@
 //   k1: the open sea (`?chapter=sea`) as the pod leads the boat in, `K1_LEFT` metres short of the rest (default 24).
 //   k2: at rest (`?chapter=whale`); `k2-shut` before its eye opens, then `k2` with it open on the child (`look`).
 //   k3: resumed after its breath, the cork swept in with real strokes and the still taken mid-haul.
-//   k4: resumed after the line, held for the flipper until the camera has come round.
-//   k5: freed from rest (`goTo('free')`), `k5` at the spout and `k5-flukes` as they wave.
+//   k4: resumed after the line, the cygnet holding the loop's end: `k4-held` once the drawn strokes show along the
+//     flipper, then `k4` as the lift it is given (`liftFin`, as a sweep along it would) slides the loop to the tip.
+//   k5: played on from there to the release, `k5` at the spout and `k5-flukes` as they wave.
 //   dive: the first crossing (`?chapter=toLines`), its flukes at their highest as it dives far off, when it comes.
 // Traps:
 //   - k1 sails the open sea from the start (about 80 s) and dive waits for the crossing's sighting (about 45 s): a
 //     full set takes about six minutes, so pass only the shots needed.
 //   - The browser lock is shared with every capture tool: a run may wait for another session's capture first.
-//   - k5 skips the net's steps, so whatever those steps leave on the water is not in the frame.
-//   - k3 and k4 resume a save in the running page (`restoreCheckpoint`), as the net check does.
+//   - k3, k4 and k5 resume a save in the running page (`restoreCheckpoint`), as the net check does; k4 and k5 lift
+//     the flipper by `liftFin` rather than a stroke, so no drawn wind of the player's crosses the frame.
 //   - Run it against your own dev server: a server that hot-reloads mid-capture yields a frame of the start screen.
 //   - Portrait shots are composed beside `k2-portrait` for k2 and beside the landscape painting otherwise.
 //   - The whale breathes and the swell runs, so the same shot moves a little from run to run: compare the read,
@@ -36,7 +37,7 @@ const base = process.env.BASE ?? 'http://127.0.0.1:5230/';
 const k1Left = Number(process.env.K1_LEFT ?? 24);
 const comps = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../docs/backlog/path-puzzles/comps/crossings/whale-net');
 const SIZES = { land: [1600, 900], port: [430, 932] };
-const CONCEPT = { k1: 'k1-island', k2: 'k2-the-breath', 'k2-shut': 'k2-the-breath', k3: 'k3-the-child', k4: 'k4-the-cygnet',
+const CONCEPT = { k1: 'k1-island', k2: 'k2-the-breath', 'k2-shut': 'k2-the-breath', k3: 'k3-the-child', k4: 'k4-the-cygnet', 'k4-held': 'k4-the-cygnet',
   k5: 'k5-free', 'k5-flukes': 'k5-free', dive: 'k1-island' };
 
 const STARTS = {
@@ -56,6 +57,13 @@ const atRest = (page) => waitFor(page, () => {
   const w = __game.story.current.whale;
   return w && w.step === 'breath' && w.stepTime > 1.2;
 }, null, 120);
+
+/** At rest, resumed after the line, until the cygnet holds the loop's end with the camera come round to it. */
+async function held(page) {
+  await atRest(page);
+  await page.evaluate(() => { const c = __game.story.current; c.restoreCheckpoint('whale-line', [c.leg, c.time]); });
+  await waitFor(page, () => { const w = __game.story.current.whale; return w.bird === 'holding' && w.birdT > 3; }, null, 120);
+}
 
 /** Each shot's moments: its own frames, named, taken from one page. */
 const SHOOT = {
@@ -99,16 +107,18 @@ const SHOOT = {
     await snap('k3');
   },
   async k4(page, snap) {
-    await atRest(page);
-    // Held at the start of the flipper (its stand-in plays through in a few seconds) while the camera comes round.
-    await page.evaluate(() => { const c = __game.story.current; c.restoreCheckpoint('whale-line', [c.leg, c.time]); c.whale.stepTime = -6; });
-    await page.waitForTimeout(6000);
+    await held(page);
+    await waitFor(page, () => !!__game.story.current.windInvitation, null, 60);
+    await page.waitForTimeout(1500);
+    await snap('k4-held');
+    await page.evaluate(() => __game.story.current.whale.liftFin('sweeps'));
+    await waitFor(page, () => __game.story.current.whale.slipT > 2.4, null, 20);
     await snap('k4');
   },
   async k5(page, snap) {
-    await atRest(page);
-    await page.evaluate(() => __game.story.current.whale.goTo('free'));
-    await waitFor(page, () => __game.sealife.sleeper.time > 5.6, null, 60);
+    await held(page);
+    await page.evaluate(() => __game.story.current.whale.liftFin('sweeps'));
+    await waitFor(page, () => __game.sealife.sleeper.phase === 'free' && __game.sealife.sleeper.time > 5.6, null, 90);
     await snap('k5');
     await waitFor(page, () => __game.sealife.sleeper.time > 16.5, null, 60);
     await snap('k5-flukes');

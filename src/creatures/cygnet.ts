@@ -264,6 +264,7 @@ export class Cygnet {
   private beg = 0;
   private nextBeg = 0;
   private callT = 0;
+  private hushed = false;
   private callLong = false;
   private nextCall = 0;
   private breath = 0;
@@ -771,8 +772,10 @@ export class Cygnet {
     this.bond = Math.min(1, this.bond + amount);
   }
 
-  watch(target: THREE.Vector3 | null): void {
+  /** Told what to look at; `hushed`, it watches from the hood without calling out to it as it would to family. */
+  watch(target: THREE.Vector3 | null, hushed = false): void {
     this.mind.told = target;
+    this.hushed = hushed;
   }
 
   /** QA: where a foot is in the world and whether it is meant to be standing still, left (0) or right (1). */
@@ -1547,7 +1550,7 @@ export class Cygnet {
     const against = clamp(-this.seating.jostle.x * 3.5, -0.13, 0.13);
     const rock = Math.sin(this.time * 2.1) * 0.022 * clamp(this.seating.speed * 0.6, 0, 1);
     this.roll = ease(this.roll, (against + rock) * (1 - this.doze * 0.8), 3, dt);
-    if (this.mind.told && this.state === 'hooded' && this.time > this.nextCall) {
+    if (this.mind.told && !this.hushed && this.state === 'hooded' && this.time > this.nextCall) {
       /** In the hood with the family in sight: it stretches up and calls to them, and nothing answers. */
       this.call(true);
       this.nextCall = this.time + 5 + Math.random() * 1.5;

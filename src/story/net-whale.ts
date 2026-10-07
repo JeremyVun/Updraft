@@ -600,7 +600,7 @@ export class NetWhale {
     if (this.cygnetIn === 'stowing') return;
     const watching = this.watched();
     child.lookAt = watching;
-    if (this.cygnetIn === 'satchel') cygnet.watch(watching);
+    if (this.cygnetIn === 'satchel') cygnet.watch(watching, true);
     // Looked at, she leans a little toward it.
     const looked = whale.phase === 'woken' && whale.time > K.eyeOpens ? 0.05 : 0;
     child.lean = (this.step === 'approach' ? 0.18 : 0.12 + looked) * near;
