@@ -297,6 +297,12 @@ export class Traveller {
   kick = 0;
   /** Walking something narrow, 0 to 1: arms held out to the sides, giving a little either way as they go. */
   balance = 0;
+  /**
+   * Held up off her feet by what her mittens hold overhead (`reachFor`), 0 to 1: the legs hang and paddle a little,
+   * toes down, and nothing she stands on is under her feet. Whoever holds her up places her.
+   */
+  hang = 0;
+  private readonly hangGlide = new Glide();
   private readonly balanceGlide = new Glide();
   private balanceTilt = 0;
 
@@ -711,7 +717,7 @@ export class Traveller {
     this.motion.hoodForward(this.rig.material.uniforms.uHoodForward.value);
 
     this.shadow.position.set(p.x, p.y + 0.06, p.z);
-    this.shadowMat.uniforms.uOpacity.value = this.riding ? 0 : 0.3;
+    this.shadowMat.uniforms.uOpacity.value = this.riding ? 0 : 0.3 * (1 - this.hangGlide.value);
   }
 
   private updateGoal(dt: number): void {
@@ -1206,7 +1212,15 @@ export class Traveller {
       }
     }
 
-    const brace = this.brace;
+    const hang = this.hangGlide.step(this.hang, 0.3, dt);
+    if (hang > 0.001) {
+      /** Hanging from the hands: the legs paddle in turn, slow and uneven, a knee drawn up now and then. */
+      const paddle = Math.sin(t * 2.1) * 0.6 + Math.sin(t * 3.3 + 0.8) * 0.4;
+      P.step[0] += hang * (0.16 + 0.14 * paddle);
+      P.step[1] += hang * (0.16 - 0.14 * paddle);
+      lean -= 0.06 * hang;
+    }
+    const brace = this.brace * (1 - hang);
     if (brace > 0.02 && !a) {
       /** Into a strong wind: a forearm up across the lower face with the elbow out, leaning into it, chin down. */
       const g = this.grips[1];
@@ -1400,6 +1414,7 @@ export class Traveller {
     P.dangleAt = this.dangleT;
     P.lie = 0;
     P.lieFold = 0;
+    P.hang = hang;
 
     r.root.position.copy(this.position);
     r.root.position.y += rise - crouch - sit * SIT_DROP - kneel * KNEEL_DROP + this.hop;

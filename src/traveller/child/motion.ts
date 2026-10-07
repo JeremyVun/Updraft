@@ -51,6 +51,8 @@ export interface Pose {
   lieFold: number;
   /** A knee lifted for a step up: over a gunwale, onto a deck; per leg, radians of thigh raise. */
   step: [number, number];
+  /** Held up off her feet by what she holds overhead, 0..1: the feet leave the ground and hang, toes down. */
+  hang: number;
   /** Breath, 0..1 of a slow cycle's depth. */
   breath: number;
 }
@@ -62,7 +64,7 @@ export function restArm(): ArmPose {
 export function newPose(): Pose {
   return {
     rise: 0, lean: 0, twist: 0, tilt: 0, bend: 0, headYaw: 0, headPitch: 0, headRoll: 0,
-    arms: [restArm(), restArm()], sit: 0, lap: 0, kneel: 0, swing: 0, kick: 0, dangle: 0, dangleAt: 0, lie: 0, lieFold: 0, step: [0, 0], breath: 0,
+    arms: [restArm(), restArm()], sit: 0, lap: 0, kneel: 0, swing: 0, kick: 0, dangle: 0, dangleAt: 0, lie: 0, lieFold: 0, step: [0, 0], hang: 0, breath: 0,
   };
 }
 
@@ -426,7 +428,7 @@ export class ChildMotion {
       }
       this.cycWas[side] = cyc;
       const groundY = (d.ground(world.x, world.z) - root.position.y) / SCALE;
-      standAnkle.y += THREE.MathUtils.clamp(groundY, -0.5, 0.5);
+      standAnkle.y += THREE.MathUtils.clamp(groundY, -0.5, 0.5) * (1 - pose.hang) - 0.06 * pose.hang;
       /** A relaxed knee on the leg the weight is off. */
       const relax = 0.03 * Math.max(0, -this.weight * s) * plant;
       standAnkle.y += relax;
@@ -485,7 +487,7 @@ export class ChildMotion {
       const kneelFoot = 2.2 * kneel;
       const swingFoot = swing * (0.5 + 0.3 * pose.kick);
       const sitFoot = pose.sit * -0.15;
-      this.qc.setFromEuler(this.ea.set(pitch * plant + kneelFoot + swingFoot + sitFoot + lie * 0.6, 0, 0));
+      this.qc.setFromEuler(this.ea.set(pitch * plant + kneelFoot + swingFoot + sitFoot + lie * 0.6 + 0.55 * pose.hang, 0, 0));
       this.qb.multiply(this.qc);
       foot.quaternion.copy(this.qa.invert().multiply(this.qb));
     }

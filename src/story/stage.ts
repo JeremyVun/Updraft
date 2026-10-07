@@ -6,6 +6,7 @@ import type { Cast, Chapter } from './cast';
 import { CatYard } from './cat-yard';
 import { CrossingsYard } from './crossings-yard';
 import { MillYard } from './mill-yard';
+import { SheetYard } from './sheet-yard';
 
 export type StageView = 'game' | 'flock' | 'behind' | 'front' | 'side' | 'far-side' | 'close' | 'top' | 'k-front' | 'k-side' | 'k-back' | 'k-34' | 'k-above' | 'k-full' | 'k-low'
   | 'c-close' | 'c-face' | 'c-side' | 'c-back' | 'c-front' | 'c-34' | 'c-profile' | 'c-head' | 'c-near' | 'c-far' | 'c-along' | 'c-across';
@@ -53,8 +54,9 @@ const VIEWS: Record<StageView, { bearing: number; distance: number; height: numb
  * going on, so that every pose, behaviour and shared moment can be played by name and looked at from close up.
  * `__game.story.current.play(name)` and `.look(view)` drive it from the capture tools; `play('cat:<action>')` sets
  * out the drowned village's cat in a yard of its own on the sea beyond the beach, and the `c-` views look at it.
- * `play('crossing:tree' | 'crossing:swing' | 'crossing:run' | 'crossing:mill')` (or `&gap=tree|swing|run|mill`) sets out the village's
- * crossings on the sea and plays them as the room would, with the lens its own.
+ * `play('crossing:tree' | 'crossing:swing' | 'crossing:run' | 'crossing:mill' | 'crossing:sheet' | 'crossing:umbrella')` (or
+ * `&gap=tree|swing|run|mill|sheet|umbrella`) sets out the village's crossings on the sea and plays them as the room
+ * would, with the lens its own.
  */
 export class StageChapter implements Chapter {
   readonly shot: Shot = { target: new THREE.Vector3(), distance: 15, height: 5.2, from: new THREE.Vector3(0, 0, 1), free: true };
@@ -85,6 +87,8 @@ export class StageChapter implements Chapter {
   private crossings: CrossingsYard | null = null;
   /** QA stand-in for the drowned village's middle crossing, the mill, set out on the sea when first played. */
   private mill: MillYard | null = null;
+  /** QA stand-in for the drowned village's sheet crossing, set out on the sea when first played. */
+  private sheet: SheetYard | null = null;
   private camera: THREE.PerspectiveCamera | null = null;
 
   constructor(private readonly cast: Cast) {
@@ -100,14 +104,17 @@ export class StageChapter implements Chapter {
   }
 
   get windInvitation(): THREE.Vector3 | null {
+    if (this.sheet?.playing) return this.sheet.crossing.invitation;
     return this.crossings?.playing ? this.crossings.invitation : null;
   }
 
   get invitationHeading(): number | null {
+    if (this.sheet?.playing) return this.sheet.crossing.heading;
     return this.crossings?.playing ? this.crossings.heading : null;
   }
 
   get invitationRadius(): number {
+    if (this.sheet?.playing) return 1.4;
     return this.crossings?.playing ? this.crossings.invitationRadius : 0;
   }
 
@@ -135,6 +142,20 @@ export class StageChapter implements Chapter {
     const { child: c, cygnet: k, flock, carry } = this.cast;
     const ahead = (d: number, side = 0) =>
       this.tmp.set(c.position.x + Math.sin(c.yaw) * d + Math.cos(c.yaw) * side, 0, c.position.z + Math.cos(c.yaw) * d - Math.sin(c.yaw) * side);
+    if (name === 'crossing:sheet') {
+      this.crossings?.stop();
+      this.mill?.stop();
+      if (!this.sheet) {
+        this.sheet = new SheetYard(this.cast, c.position);
+        this.cast.cat.objects[0].parent?.add(...this.sheet.objects);
+      }
+      this.sheet.catless = new URLSearchParams(location.search).has('catless');
+      this.sheet.play();
+      this.pace = this.sheet.frame(this.shot);
+      this.cameraCut++;
+      return true;
+    }
+    this.sheet?.stop();
     if (name === 'crossing:mill') {
       this.crossings?.stop();
       if (!this.mill) {
@@ -310,6 +331,15 @@ export class StageChapter implements Chapter {
     const { child: c, cygnet: k } = this.cast;
     this.clock += dt;
     this.yard?.update(dt);
+    if (this.sheet?.playing) {
+      this.sheet.update(dt, this.camera);
+      this.pace = this.sheet.frame(this.shot);
+      this.dusk = 0.82;
+      this.haze = 0.6;
+      this.breeze = 0.04;
+      this.focus.copy(c.position);
+      return;
+    }
     if (this.mill?.playing) {
       this.mill.update(dt, this.camera);
       this.pace = this.mill.frame(this.shot);

@@ -2150,6 +2150,65 @@ export const tuning = {
       /** The spiral: seconds to draw it, seconds before it comes again, its inner and outer radius (m) and its turns. */
       inviteSweep: 2.2, invitePause: 1.2, inviteInner: 0.7, inviteOuter: 2.7, inviteTurns: 1.25, inviteAlpha: 0.8, inviteWidth: 0.07,
     },
+    sheet: {
+      /**
+       * The cloth: its gravity as a share of the world's, the air's grip across its face and along it (per second),
+       * how fast it loses movement (per second), and how many passes hold its threads to their lengths.
+       */
+      gravity: 0.75, face: 2.2, drag: 0.4, damping: 1.4, iterations: 8,
+      /** The player's air in it at full press (m/s): up the line, out of its face, lifting the hem; and its flutter. */
+      forward: 7.5, belly: 2.6, lift: 2.6, flutter: 1.1,
+      /** The still evening air's slow breath out of its face (m/s), so it never hangs dead. */
+      breath: 0.5,
+      /** How fast a stroke's air spreads over the cloth from where it met it (sheet lengths a second). */
+      spreadSpeed: 2.4,
+      /**
+       * A stroke's air arrives a beat late (s) and ebbs over `hold` s. Fill asked for per screen height a stroke goes
+       * up the line across it, and back down it; how full or how far back it can be pressed. Strokes at `gentle`
+       * screen heights a second count for `soft` of that, at `firm` for all of it. How near the cloth on screen a
+       * stroke must pass (screen heights).
+       */
+      lag: 0.14, hold: 1.5, push: 2.3, against: 0.7, pressMax: 1.25, backMax: 0.45,
+      gentle: 0.5, firm: 2.2, soft: 0.3, reach: 0.06,
+      /** How quickly the fill follows the press (per second), and the fill that sounds full. */
+      fillRate: 5, fullAt: 0.55,
+      /** The line's slack as a share of its length; how far her weight and the cat's sag it (m). */
+      slack: 0.012, holdDip: 0.12, catDip: 0.04,
+      /** The low sun through the cloth from behind. */
+      through: 0.8,
+      /**
+       * She takes hold once it is `takeAt` full for `takeFor` seconds, reaching up for `reachFor` seconds. Full, it
+       * carries her `carry` metres a second up the line, nothing below `carryFrom`; her speed eases over `coast` s.
+       */
+      takeAt: 0.55, takeFor: 0.2, reachFor: 0.5, carry: 1.5, carryFrom: 0.2, coast: 0.5,
+      /** How her body swings under her hands as the sheet starts and stops (per second squared, per second). */
+      swingPull: 14, swingDamping: 2.2,
+      /** Hanging, how much of the way from up the line toward the lens she turns, so her face is seen. */
+      turnToLens: 0.55,
+      /** Seconds without a useful stroke before the drawn gust; with no progress before the world's own gusts. */
+      inviteAfter: 5, valveAfter: 90, valveEvery: 1.4, valvePush: 0.45,
+    },
+    umbrella: {
+      /**
+       * How much of the player's updraft charge (0..1) counts, from nothing at `from` to all of it at `full`, and how
+       * far from the column's middle it still reaches her (m). How quickly the canopy answers it (per second).
+       */
+      from: 0.12, full: 0.75, reach: 2.4, answer: 7,
+      /** Below this much lift the canopy fills and tugs her onto her toes; above it she rises. */
+      liftOff: 0.3,
+      /**
+       * Her way over as a share of its length a second: rising at full lift, settling back toward her roof with none
+       * (until `commit`, past which she is over the high roof's height and glides on down to it at `glide`), and the
+       * seconds her pace takes to change.
+       */
+      climb: 0.16, settle: 0.035, commit: 0.56, glide: 0.11, ease: 0.45,
+      /** Her body's swing under the handle (per second squared, per second), and how far the umbrella tips with her way (radians). */
+      swayPull: 5, swayDamping: 1.6, tip: 0.18,
+      /** Seconds she takes to pick it up and raise it, and to set it down on the far roof. */
+      raiseFor: 1.4, lowerFor: 1.1,
+      /** Seconds without lift before the drawn spiral, and over which it grows plain; no progress before the world's own lift. */
+      inviteAfter: 4, inviteRamp: 8, valveAfter: 90, valveLift: 0.8,
+    },
   },
   /** One continuous passage from the last drowned houses to the forest beach. */
   storm: {
