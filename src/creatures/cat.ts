@@ -424,7 +424,7 @@ export class Cat {
     const pass = [at(0.3 * k, 0.55 * k), at(0.2 * k, 0.2 * k), at(0.19 * k, -0.2 * k), at(0.3 * k, -0.42 * k), at(0.48 * k, -0.3 * k), at(0.42 * k, 0)];
     this.run([at(0.42 * k, 0.75 * k)], floor, { pace: 'walk', then: 'stand' }, () => {
       this.rubbing = true;
-      this.run(pass, floor, { pace: 'walk', speed: 0.32, then: 'sit', look: face }, () => {
+      this.run(pass, floor, { pace: 'walk', speed: 0.42, then: 'sit', look: face }, () => {
         this.rubbing = false;
         this.chirrup();
         onDone?.();
