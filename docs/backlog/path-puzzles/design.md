@@ -731,7 +731,7 @@ the pod leaves at 60 s; the mirror's jetty is already in frame by 58 s; the sun 
   the boat. Then the pod goes with it and the sea goes still into the mirror's glass.
 - Each step has the usual drawn invitation and a safety valve after about 90 s with a cause on screen: a dolphin lifts
   the mesh with its nose, noses the float to the boat, nudges the flipper. The gull of the first build is not needed.
-- The route lengthens so the mirror's island stays in haze until the whale has gone; the stop and the camera hold,
+- The pod leads the boat off its line so the mirror is out of frame until the whale has gone; the stop and the camera hold,
   the saves and the real-gesture check carry over from branch `crossing-whale`, re-placed and re-scaled. The encounter below (a whale in their way, woken for their own passage, the cygnet only
 peeking) predates this and is being redesigned to fit it.
 
@@ -756,7 +756,10 @@ The sequence:
   between the still island and island of lines to be this very same whale as well (just without the netting and all
   that)"). The first crossing's whale (`toLines`, surfacing far off about 37 s in) becomes this animal: the same
   shape, skin and dream size, free and unnetted, seen only far off, rising, blowing and lifting its flukes as it
-  dives; its timing and distance as on main, and it never crowds the farewell look-back. Claude's call: the underside
+  dives, and it never crowds the farewell look-back. As built (Claude's call, 2026-10-07): it rises at main's 37 s, but
+  at 110 m main's track carried it into the island of lines' haze, which is nearly opaque past about 150 m, so it
+  breathes once about 124 m off and dives flukes-up about 77 m off, clear of the island, about 46 s in
+  (`tuning.netWhale.sightAhead`, `sightAside`, `sightTurn`). Claude's call: the underside
   of its flukes carries a pale pattern of its own, seen as it dives there and again when it waves goodbye on the open
   sea, so the meeting is a recognition rather than a coincidence.
   Jeremy: "so when hte child encounters the whale again, it feels like a familiar face / friend". So it is met as a
@@ -806,9 +809,14 @@ The sequence:
   out for the release (`k5`). In portrait the boat, the eye and the blowhole stack up the frame (`k2-portrait`).
 - **Reward.** Freeing the whale is the open sea's major conclusion, so the reward phrase (`completeObjective()`) plays
   as it spouts free.
-- **Pacing.** The route lengthens so the mirror's island and jetty stay in haze until the whale has gone (on main the
-  jetty is in frame 58 s in). The open sea's "at most 100 s" is lifted for this; the crossing without the stop keeps
-  its feel. Music: the sea's score holds through the encounter; the mirror's arrival music is not delayed early.
+- **Pacing.** The mirror's jetty is on the horizon from the first seconds of the open sea, as on main: it lies only
+  about 250 m from the sleeping island's berth and about 25° off the sunrise the sea sails toward, so no route that keeps
+  the sunrise ahead through the leap and the swim can hide it. Claude's call (2026-10-07): keep that, since the
+  destination glimpsed and then left is what makes the pod's lead read as a detour; from the lead until the whale has
+  gone nothing of the mirror is in frame, and the boat comes about for it a few seconds after. Measured on `sea-whale`:
+  the lead about 60 s in, at rest about 89 s, moored about 150 s with a circling player and about 240 s idle. The open
+  sea's "at most 100 s" is lifted for this. Music: the sea's score holds through the encounter; the mirror's arrival
+  music cannot start until the whale has gone.
 - **Saves.** Checkpoints at rest beside it (before the first step), after each step, and after it has gone (resumes
   sailing on toward the mirror with no whale).
 - **Sounds.** Its slow breath and the sputter through the mesh, the full breath, the spout (`whale-blow`), the net's
@@ -824,4 +832,5 @@ The sequence:
   2026-10-07: "the picture will need to be regenerated, but lets build it out first").
 
 **QA starts.** `?chapter=toMirror` (and any `to*` crossing) starts that crossing at its first waypoint, cygnet in the
-satchel (branch `crossings-start`, also carried by `crossing-whale`); `?chapter=sea` starts the open sea as on main.
+satchel (branch `crossings-start`, also carried by `crossing-whale`); `?chapter=sea` starts the open sea as on main;
+`?chapter=whale` starts at rest beside the whale, as its first save (`whale-rest`) resumes.

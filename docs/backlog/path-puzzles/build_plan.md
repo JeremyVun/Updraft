@@ -117,20 +117,50 @@ on `crossing-whale`) lets the sequence play end to end.
 Gate: typecheck; build; a still of the first crossing's whale diving, far off; `?chapter=sea` plays the pod, the swim, the lead, the stop, the stand-in wake, the release and
 the arrival at the mirror with the mirror hidden until the whale has gone; the sea checks and `CROSSING=toMirror node
 tools/journey-pacing-check.mjs` updated and passing; one smoke still set at `k1` and `k5`.
+Done: [x] `b84a8448..3aaeed46`. `src/story/net-whale.ts` (`NetWhale`: `step`, `stepTime`, `goTo`, the stand-in
+`breathe()` handing on to `AFTER_BREATH`), `src/story/sighting.ts` (the far sighting, kept out of `crossing.ts` because
+the pacing and camera tools stub the sea life), `SleepingWhale` exposes `blowhole`, `eye`, `jaw`, `finRoot`, `finTip`,
+`back`, `flukes`, `surfaceAt(x, z, out)`, `onExhale`, `stir`, `liftFlipper()`, `tickle()`, `look(at)`, `drawBreath()`,
+`free()`. Saves `whale-rest` (held until the whale has gone) and `whale-gone`; QA `?chapter=whale`. The mirror and the
+first crossing's whale as recorded in design.md (Pacing; The same whale on the first crossing). Left for the look:
+the whale reads as a dark flat wall backlit at the hold, with no head or jaw shape; the eye reads human, its crease a
+smile with lashes; on its back the near flipper stands like a plank; the far flukes look like a flat cut-out; the pod
+is mostly out of `k5`. The N1 agent ran past the context ceiling (765k), so N2 is split.
+
+### Phase N3a: the whale's own look (parallel with N2a)
+Owns: `src/fx/sealife/whale.ts`, `whaleShader.ts`, `anatomy.ts`, the shape, pose and eye of `sleeper.ts` (not its
+API), the hold's framing numbers in `tuning.netWhale`. Branch `sea-look` from `sea-whale`.
+Seam: `surfaceAt` and the world anchors keep their names and stay true to the rendered skin; the net (N2a) drapes by
+them, so a re-shaped head moves the net with it.
+Gate: typecheck; build; `tools/sea-logic-check.mjs` passing; stills at `k1`, `k2`, `k5` and the first crossing's dive,
+landscape and portrait, beside the concept.
 Done: [ ]
 
-### Phase N2: the net and the three steps
-Owns: the net (`src/fx/sealife/net.ts`: sparse deforming mesh, instanced corks, boundary ropes, the lifted patch, the
-peel, the flipper loop, the empty net drifting off), the three steps and their invitations and dolphin valves in the
-encounter module, the child's catch and haul and the cygnet's swim to the flipper and back (`src/companion/` or the
-cygnet's states as fits), sounds in `src/audio/foley.ts` (the whale's voice among them), `tools/net-whale-check.mjs` (replacing
-`sleeping-whale-check.mjs`).
+### Phase N2a: the net and the breath
+Owns: the net (`src/fx/sealife/net.ts`: sparse deforming mesh draped by `surfaceAt`, instanced corks, boundary ropes,
+the lifted patch, the peel, the flipper loop and its slide, the empty net drifting off, each driven by its own 0..1 and
+scrubbable on `?chapter=whale`), step 1 in `net-whale.ts` (the breath replacing the stand-in, its invitation, the
+dolphin valve lifting the mesh with its nose, the eye opening on her), the whale's voice and the net's and breath's
+sounds in `src/audio/foley.ts`, `tools/net-whale-check.mjs` for step 1, the save after it. Branch `sea-net` from
+`sea-whale`.
+Seam for N2b: the net's API (the peel and loop drivers, the leader's near cork as a pushable float with its position,
+the loop's free end for the bill) and `AFTER_BREATH = 'line'` with `line` and `flipper` left as pass-through stubs.
+Gate: typecheck; build; the check with real gestures: circles at the blowhole finish the breath; the breeze, idle
+and sweeps never progress it before its valve; the valve finishes it by its dolphin; each negative proven to bite by
+breaking its guard once. One smoke still set at `k1` and `k2`.
+Done: [ ]
+
+### Phase N2b: the child and the cygnet
+Owns: steps 2 and 3 in `net-whale.ts` with their invitations and dolphin valves, the child's catch and haul, the
+cygnet's swim to the flipper and back (`src/companion/` or the cygnet's states as fits), the net's drift away at free,
+saves after each step, the rope and splash sounds, `tools/net-whale-check.mjs` extended to every step. Based on
+`sea-whale` with `sea-net` and `sea-look` merged.
 Seam: each step's progress is caused only by its own gesture at its own target; steps go in order; a valve's dolphin
 does the same physical act the player would have caused.
 Gate: typecheck; build; the check with real gestures: each step done by its gesture; the ambient breeze and idle never
 progress a step before its valve; each valve finishes its step by its dolphin; sweeps on the whale elsewhere only
 tickle; saves at each checkpoint resume correctly; each negative proven to bite by breaking its guard once. One smoke
-still set at `k2`–`k4`.
+still set at `k3` and `k4`.
 Done: [ ]
 
 ### Phase N3: the look
