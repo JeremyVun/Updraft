@@ -731,6 +731,13 @@ light win. Branch `crossing-whale` (a sleeping whale on `toMeadow`, built and ha
 parts that carry over.
 
 The sequence:
+- **The same whale on the first crossing** (Jeremy, 2026-10-07: "itd be good to have the whale at the beginning
+  between the still island and island of lines to be this very same whale as well (just without the netting and all
+  that)"). The first crossing's whale (`toLines`, surfacing far off about 37 s in) becomes this animal: the same
+  shape, skin and dream size, free and unnetted, seen only far off, rising, blowing and lifting its flukes as it
+  dives; its timing and distance as on main, and it never crowds the farewell look-back. Claude's call: the underside
+  of its flukes carries a pale pattern of its own, seen as it dives there and again when it waves goodbye on the open
+  sea, so the meeting is a recognition rather than a coincidence.
 - **The open sea as on main up to the swim.** The pod rises and rides the bow, the leap at first light, the cygnet's
   swim and its drying. The sea's distant surfacing whale (`whaleAt: 27`) is cut: the sleeper is the whale.
 - **The pod leads.** After the swim a dolphin nudges the planking (main's nudge, now asking) and the pod leads the boat
