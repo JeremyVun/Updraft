@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { BLOWHOLE, BOTTOM, FLUKE_HALF_SPAN, HALF_WIDTH, LENGTH, TOP, flukeEdges } from './anatomy';
+import { BLOWHOLE, BOTTOM, FLUKE_HALF_SPAN, LENGTH, TOP, flukeEdges, halfWidthAt } from './anatomy';
 import { FOAM, Marks, RING, SLICK } from './marks';
 import { DROP, MIST, SPLASH, Spray } from './spray';
 import { SPINE_N, SPINE_STEP, type WhaleRig } from './whale';
@@ -99,9 +99,7 @@ export class WhaleWake {
       }
       if (top <= 0 || bottom >= 0) continue;
       if (first < 0) first = i;
-      const yc = (top + bottom) / 2;
-      const h = (top - bottom) / 2;
-      const half = HALF_WIDTH(s) * k * Math.sqrt(Math.max(0, 1 - (yc / h) ** 2));
+      const half = halfWidthAt(s, -P.y / (c * k)) * k;
       widest = Math.max(widest, half);
       const churn = 0.12 + Math.min(1.6, Math.abs(rising)) * 0.9 + (i === first && !this.lying ? 1.2 : 0);
       if (Math.random() < churn * dt) {

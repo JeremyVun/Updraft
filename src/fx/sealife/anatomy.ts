@@ -17,7 +17,7 @@ export const FLUKE_HALF_SPAN = 2.75;
  * Root of the left pectoral fin (the right one is its mirror image): low on the flank just behind the corner of the
  * mouth, so it is plainly the head's own, a little under the water lying awash.
  */
-export const FIN_ROOT = new THREE.Vector3(1.17, -0.115, -0.19 * LENGTH);
+export const FIN_ROOT = new THREE.Vector3(1.17, -0.158, -0.19 * LENGTH);
 /** The flipper's length and its line out from the root at rest, before it is raised and swept, in its own units. */
 export const FIN_SPAN = 4.5;
 export const FIN_DIR = new THREE.Vector3(0.8, -0.3, -0.52).normalize();
@@ -33,26 +33,42 @@ const FIN_EDGE_UP = 0.3;
 /** Where the flukes hinge on the tail stock, as a fraction of the length. */
 export const FLUKE_HINGE = 0.93;
 export const BLOWHOLE = 0.21;
+/** The near eye in the rest pose: along, and up from the spine. */
+export const EYE_S = 0.16;
+export const EYE_Y = 0.136;
 
 /**
- * Heights of the back and belly and the half width of the body along its length (0 snout, 1 notch). The back runs
- * level from the crown to a small hump over the tail stock and narrows behind it: lying tipped tail down, only the
- * head and a long low line of back ride above the sea.
+ * The body's lines along its length (0 snout, 1 notch), from a blue whale's: heights of the back, of the line where
+ * it is broadest and of the belly, and its half width there. The head is a long flat wedge rising to the blowhole;
+ * the back runs on nearly level at that height and lowers only far along; it is broadest just behind the flippers,
+ * below the waterline, so it sits in the sea like a hull; the tail stock is narrow and deep.
  */
 export const TOP = curve([
-  [0, -0.08], [0.005, 0.05], [0.012, 0.15], [0.03, 0.25], [0.06, 0.32], [0.1, 0.4], [0.16, 0.527], [0.21, 0.644],
-  [0.24, 0.585], [0.27, 0.46], [0.3, 0.475], [0.32, 0.48], [0.36, 0.47], [0.4, 0.455], [0.45, 0.448], [0.5, 0.436],
-  [0.55, 0.442], [0.6, 0.468], [0.64, 0.57], [0.68, 0.53], [0.72, 0.49], [0.76, 0.465], [0.8, 0.445], [0.85, 0.42], [0.9, 0.34],
-  [0.95, 0.24], [1, 0.126],
+  [0, -0.11], [0.005, -0.05], [0.015, 0.01], [0.03, 0.07], [0.06, 0.17], [0.1, 0.3], [0.13, 0.395], [0.16, 0.49],
+  [0.19, 0.57], [0.21, 0.615], [0.25, 0.65], [0.3, 0.67], [0.36, 0.68], [0.42, 0.678], [0.5, 0.665], [0.58, 0.635],
+  [0.66, 0.585], [0.74, 0.505], [0.82, 0.39], [0.88, 0.28], [0.93, 0.16], [1, 0.06],
+]);
+export const WIDEST = curve([
+  [0, -0.27], [0.015, -0.28], [0.03, -0.275], [0.06, -0.25], [0.1, -0.21], [0.13, -0.185], [0.16, -0.165],
+  [0.19, -0.16], [0.21, -0.17], [0.25, -0.23], [0.3, -0.3], [0.36, -0.365], [0.42, -0.39], [0.5, -0.39], [0.58, -0.38],
+  [0.66, -0.34], [0.74, -0.3], [0.82, -0.26], [0.88, -0.235], [0.93, -0.185], [1, -0.105],
 ]);
 export const BOTTOM = curve([
-  [0, -0.22], [0.006, -0.368], [0.015, -0.486], [0.03, -0.68], [0.06, -0.92], [0.1, -1.15], [0.17, -1.38], [0.3, -1.68],
-  [0.42, -1.7], [0.55, -1.5], [0.65, -1.22], [0.75, -0.95], [0.85, -0.62], [0.93, -0.32], [1, -0.1],
+  [0, -0.4], [0.005, -0.49], [0.015, -0.58], [0.03, -0.67], [0.06, -0.78], [0.1, -0.915], [0.13, -1.005],
+  [0.16, -1.095], [0.19, -1.175], [0.21, -1.23], [0.25, -1.34], [0.3, -1.45], [0.36, -1.515], [0.42, -1.53],
+  [0.5, -1.465], [0.58, -1.345], [0.66, -1.175], [0.74, -0.995], [0.82, -0.785], [0.88, -0.63], [0.93, -0.445], [1, -0.235],
 ]);
 export const HALF_WIDTH = curve([
-  [0, 0.16], [0.006, 0.4], [0.015, 0.58], [0.04, 0.84], [0.1, 1.05], [0.17, 1.22], [0.3, 1.55], [0.42, 1.6], [0.55, 1.38],
-  [0.65, 1.0], [0.75, 0.6], [0.85, 0.32], [0.93, 0.2], [1, 0.1],
+  [0, 0.12], [0.005, 0.26], [0.015, 0.4], [0.03, 0.53], [0.06, 0.71], [0.1, 0.9], [0.13, 1.03], [0.16, 1.15],
+  [0.19, 1.255], [0.21, 1.315], [0.25, 1.42], [0.3, 1.53], [0.36, 1.605], [0.42, 1.605], [0.5, 1.515], [0.58, 1.345],
+  [0.66, 1.1], [0.74, 0.77], [0.82, 0.47], [0.88, 0.315], [0.93, 0.22], [1, 0.105],
 ]);
+/**
+ * How the skin rounds over from the broadest line to the back (above 1 a broad low ridge, below 1 the flat-topped
+ * head) and down to the belly (above 1 the keel under the tail stock).
+ */
+const ROUND = curve([[0, 0.7], [0.13, 0.7], [0.21, 0.95], [0.3, 1.3], [0.7, 1.3], [0.85, 1.25], [1, 1.2]]);
+const KEEL = curve([[0, 0.85], [0.16, 0.9], [0.3, 1], [0.66, 1], [0.8, 1.35], [1, 1.35]]);
 
 /**
  * The mouth line in the rest pose: the height where the dark upper jaw meets the pale lower lip, from the snout back
@@ -67,23 +83,31 @@ export const JAW_CORNER = 0.152;
 /** How much wider than the upper jaw the lower lip bows out, as a share of the half width. */
 const LIP = curve([[0, 0], [0.012, 0.09], [0.1, 0.11], [0.135, 0.06], [JAW_CORNER + 0.005, 0]]);
 
-/** The raised guard round the blowhole, over the back of the head, falling away steeply behind it. */
-const MOUND = curve([[0.15, 0], [0.18, 0.04], [0.205, 0.082], [0.225, 0.06], [0.245, 0.012], [0.26, 0]]);
+/** The splash guard before the blowhole, a gentle rise on the line of the back, and the ridge down the snout to it. */
+const MOUND = curve([[0.16, 0], [0.19, 0.03], [0.207, 0.045], [0.225, 0.03], [0.255, 0]]);
 const MOUND_WIDTH = 0.42;
+const RIDGE = curve([[0.004, 0], [0.02, 0.03], [0.1, 0.038], [0.17, 0.03], [0.2, 0.012], [0.22, 0]]);
+const RIDGE_WIDTH = 0.16;
 
 /** Height of the top of the body along the middle of its back, crown and all. */
-export const crown = (s: number) => TOP(s) + MOUND(s);
+export const crown = (s: number) => TOP(s) + MOUND(s) + RIDGE(s);
 
-export const DORSAL_AT = 0.64;
-export const DORSAL_BASE = TOP(DORSAL_AT) - 0.12;
-
-/** How much flatter than round the top of the body is at s: a broad flat head easing into a round back. */
-const flatness = (s: number) => 1 / (1 + 0.5 * smoothstep(0.4, 0.06, s));
+export const DORSAL_AT = 0.74;
+export const DORSAL_BASE = TOP(DORSAL_AT) - 0.08;
 
 /** How high round the ring a point `a` radians from the top sits, from -1 under the belly to 1 on the back. */
 export function ringHeight(s: number, a: number): number {
   const ca = Math.cos(a);
-  return Math.sign(ca) * Math.abs(ca) ** (ca > 0 ? flatness(s) : 1);
+  return Math.sign(ca) * Math.abs(ca) ** (ca > 0 ? ROUND(s) : KEEL(s));
+}
+
+/** How far out the bare ring is at height y (rest units) at s, without the guard, the ridge or the lip. */
+export function halfWidthAt(s: number, y: number): number {
+  const wide = WIDEST(s);
+  const k = y > wide ? (y - wide) / (TOP(s) - wide) : (wide - y) / (wide - BOTTOM(s));
+  if (k >= 1) return 0;
+  const c = k ** (1 / (y > wide ? ROUND(s) : KEEL(s)));
+  return HALF_WIDTH(s) * Math.sqrt(1 - c * c);
 }
 
 /** How far the lower lip bows out at a point `below` the mouth line at s (rest units), as a share of the half width. */
@@ -97,13 +121,11 @@ function lip(s: number, below: number): number {
  * ring of the mesh is built on, without the knuckles on the tail stock.
  */
 export function ringPoint(s: number, a: number, out: { x: number; y: number }): { x: number; y: number } {
-  const top = TOP(s);
-  const bottom = BOTTOM(s);
-  const sa = Math.sin(a);
-  const e = Math.cos(a) > 0 ? flatness(s) : 1;
-  out.x = HALF_WIDTH(s) * Math.sign(sa) * Math.abs(sa) ** e;
-  out.y = (top + bottom) / 2 + ((top - bottom) / 2) * ringHeight(s, a);
-  if (Math.cos(a) > 0) out.y += MOUND(s) * Math.exp(-((out.x / MOUND_WIDTH) ** 2));
+  const wide = WIDEST(s);
+  const k = ringHeight(s, a);
+  out.x = HALF_WIDTH(s) * Math.sin(a);
+  out.y = wide + (k > 0 ? TOP(s) - wide : wide - BOTTOM(s)) * k;
+  if (k > 0) out.y += MOUND(s) * Math.exp(-((out.x / MOUND_WIDTH) ** 2)) + RIDGE(s) * Math.exp(-((out.x / RIDGE_WIDTH) ** 2));
   out.x *= 1 + lip(s, MOUTH(s) - out.y);
   return out;
 }
@@ -182,7 +204,7 @@ function ringAt(i: number): number {
 const RINGS = 200;
 const HEAD_RINGS = 110;
 
-/** Rings along the length: a broad blunt head, the deep chest behind the flippers, a narrow keeled tail stock. */
+/** Rings along the length: a flat wedge of a head, the broad chest behind the flippers, a narrow deep tail stock. */
 function body(): THREE.BufferGeometry {
   const rings = RINGS;
   const around = 128;
@@ -192,7 +214,7 @@ function body(): THREE.BufferGeometry {
   const at = { x: 0, y: 0 };
   for (let i = 0; i <= rings; i++) {
     const s = ringAt(i);
-    const knuckles = 0.055 * Math.max(0, Math.sin((s - 0.68) * 62)) * smoothstep(0.68, 0.74, s) * smoothstep(0.98, 0.9, s);
+    const knuckles = 0.03 * Math.max(0, Math.sin((s - 0.78) * 62)) * smoothstep(0.78, 0.83, s) * smoothstep(0.98, 0.9, s);
     for (let j = 0; j < around; j++) {
       const a = (j / around) * Math.PI * 2;
       ringPoint(s, a, at);
@@ -302,7 +324,7 @@ function flukes(): THREE.BufferGeometry {
   return build(pos, rig, idx);
 }
 
-/** The small stubby dorsal fin on its hump, two thirds of the way back. */
+/** The small low dorsal fin, three quarters of the way back. */
 function dorsal(): THREE.BufferGeometry {
   const levels = 8;
   const around = 12;

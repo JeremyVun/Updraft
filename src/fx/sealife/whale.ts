@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { tuning } from '../../tuning';
 import { atmo } from '../../world/atmosphere';
-import { FLUKE_HINGE, LENGTH, SPINE_END, flukeEdges, whaleGeometry } from './anatomy';
+import { EYE_S, EYE_Y, FLUKE_HINGE, LENGTH, SPINE_END, flukeEdges, whaleGeometry } from './anatomy';
 import { curve } from './curve';
 import { GHOST_FRAG, GHOST_VERT, SPINE_N, WHALE_FRAG, WHALE_VERT } from './whaleShader';
 
@@ -9,7 +9,7 @@ export { SPINE_N };
 export const SPINE_STEP = (SPINE_END * LENGTH) / (SPINE_N - 1);
 
 /** The one whale of the journey: short flippers and a small dorsal fin on a long body, its flukes a little reduced. */
-export const DREAM_SHAPE = { fin: 0.28, dorsal: 0.3, flukes: 0.8 } as const;
+export const DREAM_SHAPE = { fin: 0.28, dorsal: 0.35, flukes: 0.8 } as const;
 /** Scale of the rest pose that makes it `tuning.netWhale.length` from nose to fluke tips. */
 export const DREAM_SCALE = tuning.netWhale.length
   / (FLUKE_HINGE * LENGTH + (-flukeEdges(1).trail - FLUKE_HINGE * LENGTH) * DREAM_SHAPE.flukes);
@@ -123,7 +123,7 @@ export class WhaleRig {
       uBelly: { value: new THREE.Color(look.belly) },
       uIris: { value: new THREE.Color(look.iris) },
       uEye: { value: 1 },
-      uEyeAt: { value: new THREE.Vector3(0.16, 0.17, 2.9) },
+      uEyeAt: { value: new THREE.Vector3(EYE_S, EYE_Y, 2.9) },
       uGaze: { value: new THREE.Vector2() },
     };
     this.skin = skin;
