@@ -573,7 +573,12 @@ each house's character carried by its shape and by stylised detail (Jeremy, 2026
   swaybacked ridge, thatch pulled low like a cap, a crooked or tall thin chimney, a round attic window, a little
   turret), with the first round's richness in stylised form, most houses modest so the special ones sing; the second round's three touches kept, each built
   once (the tall-beside-tiny pair, one red door just under the water, one washing line between two chimneys); windows
-  dark and never paired like faces. Round three: `story-*.png`.
+  dark and never paired like faces. Round three (`story-*.png`) had the character but not the game's look (Jeremy,
+  2026-10-07: "i think the style and colour palette really doesn't fit he game"; "dont rebuild the village yet until
+  we can settle on a style"): its pastel violet, blue and rose roofs and candy-scalloped tiles belong to another game.
+  The style master is the room's own approved painting (`src/paintings/drowned-land.webp`): charcoal-slate and
+  dark thatch roofs, warm lime-washed gables catching the low sun, brick chimneys, soft continuous painterly shading,
+  the light doing the work. Character goes into the shapes within that palette. Round four: `painted-*.png`.
 - **The run is built on decks** (`src/world/decks.ts`): ridges, wall tops and the fallen trunk are strips the child
   walks; the slates up to a ridge are ramps. She gets out with `alight` onto the cottage's slates and back in with
   `board` at the nave.
