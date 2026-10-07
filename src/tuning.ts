@@ -1854,8 +1854,11 @@ export const tuning = {
       setOff: 2.2, stroll: 0.95,
       /** The beat she takes before a hop of her own; within `through` of a turn gentler than `bend` (radians) she walks on through it. */
       hopPause: 0.35, through: 1.1, bend: 0.4,
-      /** How often she glances back at the fog as she goes, and for how long. */
-      glanceEvery: 8, glanceFor: 1.3,
+      /**
+       * How often she glances back at the fog as she goes, for how long, and how far round toward the lens from straight
+       * away from it she may look (radians), so her face never turns to it.
+       */
+      glanceEvery: 8, glanceFor: 1.3, glanceOff: 1.1,
       /**
        * The cat: how far ahead of her along the way it waits, how near she comes before it goes on, and how fast it goes
        * along ridges and walls and along the railings (m/s).
@@ -1924,21 +1927,27 @@ export const tuning = {
        * between them, the fog's body taken that far along its front from the way), upright how far back from abeam on
        * her left it stands (radians), how far off at most, how far above her feet and the lowest and highest it goes,
        * how far along her way it looks, how high above her feet, its pace, and how far it widens to hold the fog and
-       * the church together (landscape, eased back at each piece).
+       * the church together (landscape) or to keep her in the narrow frame through a turn (upright), eased back at each
+       * piece.
        */
       follow: 2.2, followDown: 5, steady: 2, steadiest: 1.4, behind: 6, ahead: 12, churchShare: 0.5, fogAside: 80, uprightBack: 1.5, distance: 10, uprightDistance: 12,
-      rise: 1.5, uprightRise: 2.6, lowest: 3, highest: 7, lead: 1, aim: 1.0, pace: 0.7, zoom: 0.85,
+      rise: 1.5, uprightRise: 2.6, lowest: 3, highest: 7, lead: 1, aim: 1.0, pace: 0.7, zoom: 0.85, uprightZoom: 0.85,
       /** How far it keeps off the side of a house, wall or chimney it stands lower than the top of, and over a chimney, metres. */
       clearOf: 1.6,
       /**
        * How it is laid along her way (`layLens`): what it costs to stand a radian (squared) from where it wants, to be
-       * drawn in all the way, to stand `lifted` metres higher to see her over a roof, to turn a radian (squared) between
+       * drawn in all the way (upright, where drawn in she soon leaves the narrow frame), to stand `lifted` metres higher to see her over a roof, to turn a radian (squared) between
        * steps of the way, draw in or out or rise or fall between them, and to stand where a roof hides her or she would
        * walk toward it (within the angle whose cosine is `toward` of the way she is going).
        */
-      offCost: 3, inCost: 1.5, lifted: 1.3, liftCost: 0.6, turnCost: 80, pullCost: 8, riseCost: 6, blocked: 200, toward: 0.35,
+      offCost: 3, inCost: 1.5, uprightInCost: 8, lifted: 1.3, liftCost: 0.6, turnCost: 80, pullCost: 8, riseCost: 6, blocked: 200, toward: 0.35,
       /** What it costs for each metre a roof, wall or chimney comes within `crowdNear` of the near half of its sightline. */
       crowdNear: 1.5, crowdCost: 8,
+      /**
+       * What it costs for each metre a chimney comes within `chimneyNear` of it in front (within the angle whose cosine
+       * is `chimneyCone` of its look).
+       */
+      chimneyNear: 4, chimneyCone: 0.7, chimneyCost: 14,
       /** Over how many metres past a piece it is drawn to start from where that piece's view leaves it, and how strongly. */
       anchorFor: 10, anchorCost: 40,
       /** Milliseconds a frame spends laying it from the start of the room, so it is ready long before she sets off. */
