@@ -110,15 +110,18 @@ const ROUND_STERN = [new THREE.Vector3(-1.75, 0, -0.9), new THREE.Vector3(-1.3, 
   new THREE.Vector3(2.1, 0, -0.8)];
 const WAY_NEAR = 0.8;
 const TAKES_AT = 0.3;
-/** Seconds it holds on as the loop comes free, backing off this far from it (m), and turning for the boat once it lets go. */
+/** Seconds it holds on as the loop comes free, backing off this far from it (m), and turning for the boat after. */
 const PULL_FOR = 1.2;
 const PULL_BACK = 0.8;
 const LET_GO = 0.9;
-/** Coming back: the water beside her it swims to, out from her seat (m); seconds on the side shaking off before she lifts it in. */
+/** Coming back: the water beside her it swims to, out from her seat (m); seconds on her side before she lifts it in. */
 const BESIDE_WATER = 1.35;
 const ON_THE_SIDE = 1.6;
 const LIFTED_IN = 0.8;
-/** The flipper's valve dolphin: where along the flipper it comes up under it, how far under it its beak keeps (m), and how long it rides up with it. */
+/**
+ * The flipper's valve dolphin: where along the flipper it comes up under it, how far under it its beak keeps (m), and
+ * how long it rides up with it.
+ */
 const NUDGE_AT = 0.8;
 const NUDGE_GAP = 0.45;
 const NUDGE_FOR = 1.4;
@@ -258,7 +261,7 @@ export class NetWhale {
   private birdT = 0;
   private wayPoint = 0;
   private stationed = false;
-  /** Seconds since the lift that takes the loop off began, or -1; and what lifted it, the player's sweep or the valve's dolphin. */
+  /** Seconds since the lift that takes the loop off began, or -1; and what lifted it, a sweep or the valve's dolphin. */
   slipT = -1;
   finnedBy: 'sweeps' | 'dolphin' | null = null;
   /** Screen heights of stroke run along the flipper lately, toward the next lift; seconds since one last touched it. */
@@ -266,7 +269,7 @@ export class NetWhale {
   private finStroke = 1e3;
   private nudged = false;
   private finned = false;
-  /** Seconds into the leap one of the pod makes as it spouts, or -1 before it, or Infinity once it is back with them. */
+  /** Seconds into the leap one of the pod makes as it spouts, or -1 before it, or Infinity once it is back. */
   private saluteT = -1;
   private readonly leaper = new THREE.Vector3();
   private readonly station = new THREE.Vector3();
@@ -1109,7 +1112,6 @@ export class NetWhale {
     let yaw = Math.atan2(-this.vDir.x, -this.vDir.z);
     let pitch = 0;
     if (t < K.valveSwim) {
-      // In deep under the water from the pod, coming up under the flipper from beyond its tip.
       const u = (t / K.valveSwim) ** 1.4;
       this.a.copy(under);
       this.lookFrom.copy(under).addScaledVector(this.vDir, 3).setY(under.y - 2.6);
@@ -1119,7 +1121,6 @@ export class NetWhale {
       yaw = Math.atan2(this.ray.x - p.x, this.ray.z - p.z);
       pitch = Math.atan2(this.ray.y - p.y, Math.hypot(this.ray.x - p.x, this.ray.z - p.z));
     } else if (!this.nudged || t < K.valveSwim + NUDGE_FOR) {
-      // Its beak under the flipper, nosing it up and rising with it.
       if (!this.nudged && this.liftFin('dolphin')) {
         this.nudged = true;
         this.valveT = K.valveSwim;
@@ -1195,7 +1196,7 @@ export class NetWhale {
       if (!net.posed) net.peel = this.hauledIn / (K.haulPulls * K.pullTake);
       if (pull > K.haulPulls + K.haulHold / K.pullTime) {
         this.grip.by = null;
-        // Saved as she lets go, while the cygnet is still in the satchel: a save written once it is in the water would resume it there.
+        // Saved before the cygnet goes in: a save written with it in the water would resume it there.
         this.hauled = true;
         this.to('letting');
       }

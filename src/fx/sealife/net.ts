@@ -131,12 +131,12 @@ export class Net {
   posed = false;
   /** Where the bill holds the loop's free end, or null while it lies on the water. */
   held: THREE.Vector3 | null = null;
-  /** Whose bill holds it, if set: read as the net is drawn, once the bird has moved this frame, so the end never lags it. */
+  /** Whose bill holds it: read as the net is drawn, once the bird has moved this frame, so the end never lags it. */
   holder: { billTip(out: THREE.Vector3): THREE.Vector3 } | null = null;
   private readonly heldAt = new THREE.Vector3();
   /** Where the free end lies out on the water before anything takes it, or null for just beside the loop. */
   endRest: THREE.Vector3 | null = null;
-  /** Where the loop falls as it slips off the flipper's tip into whatever pulls it, or null for beside the floating net. */
+  /** Where the loop falls as it slips off the flipper's tip into whatever pulls it; null, beside the floating net. */
   fallsTo: THREE.Vector3 | null = null;
   /** The loop's free end. */
   readonly loopEnd = new THREE.Vector3();
@@ -1126,14 +1126,12 @@ export class Net {
     const sag = bill ? Math.min(1.2, 0.16 * tail.distanceTo(bill)) : 0;
     for (let m = 1; m <= END_POINTS; m++) {
       const f = m / END_POINTS;
-      // On the water: out from the loop toward where it rests, or once the loop is off, where it was let go.
       if (dropped && off > 0) this.lie.lerpVectors(tail, dropped, f);
       else if (this.endRest) this.lie.lerpVectors(tail, this.endRest, f);
       else this.lie.set(tail.x + out.x * LOOP_END * f, 0, tail.z + out.z * LOOP_END * f);
       this.lie.y = Math.max(0.02, tail.y * (1 - f));
       point.copy(this.lie);
       if (bill && this.holding > 0.001) {
-        // Held, the slack of it hangs between the loop and the bill.
         this.hang.lerpVectors(tail, bill, f).y -= Math.sin(f * Math.PI) * sag;
         point.lerp(this.hang, this.holding);
       }
