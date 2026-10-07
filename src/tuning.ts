@@ -1485,7 +1485,7 @@ export const tuning = {
      */
     holdMove: 5, holdLookY: 3.3, holdToward: 0.5,
     lineDistance: 11, lineHeight: 4.8, lineBearing: 0.3, lineLookY: 3.4, lineToward: 0.36,
-    flipperDistance: 11.5, flipperHeight: 7.2, flipperBearing: 0.36, flipperLookY: 8, flipperToward: 0.4,
+    flipperDistance: 11, flipperHeight: 6, flipperBearing: 0.2, flipperLookY: 6.5, flipperToward: 0.4,
     /**
      * A phone's holds: on the line from what matters through the boat, turned `turn` radians round toward the low sun
      * on the bow (toward starboard when negative), as far as the step allows, so its tall frame keeps the gold
@@ -1495,7 +1495,7 @@ export const tuning = {
      * spout, its eye and the leap before it stand over the boat.
      */
     phone: {
-      breath: { distance: 22, height: 10, turn: -0.62, lookY: 20, toward: 0.3 },
+      breath: { distance: 19, height: 8, turn: -0.6, lookY: 17, toward: 0.3 },
       line: { distance: 11, height: 6, turn: -0.55, lookY: 20, toward: 0.12 },
       flipper: { distance: 13, height: 8, turn: -1.2, lookY: 16, toward: 0.3 },
       release: { distance: 28, height: 11, turn: -0.25 },
