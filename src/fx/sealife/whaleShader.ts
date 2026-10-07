@@ -440,23 +440,26 @@ void main() {
   vec3 R = reflect(-V, N);
   vec3 env = skyColor(vec3(R.x, max(R.y, 0.02), R.z));
   env = mix(env, uSeaTint * uSkyAmbient * 1.4, (1.0 - smoothstep(-0.3, 0.0, R.y)));
-  float F = 0.03 + 0.97 * pow(1.0 - nv, 5.0);
-  // Its back is wet from the sea it lies in: darker, and a mirror of the dawn at a glancing look.
+  // Its back is wet from the sea it lies in: darker, and a mirror of the dawn at a glancing look, no brighter than
+  // the sea's own; seen glancing, the long low back would otherwise draw a pale band across the water.
   float wet = part == ${BODY} ? smoothstep(0.25, 0.8, N.y) * (1.0 - k.gloss) * (1.0 - k.near) : 0.0;
+  float F = 0.03 + mix(0.97, 0.58, wet) * pow(1.0 - nv, 5.0);
+  float low = (1.0 - smoothstep(0.0, 2.5, vWorld.y)) * smoothstep(0.3, 0.45, vRig.x) * float(part == ${BODY});
   col *= 1.0 - 0.25 * wet;
   col = mix(col, env, F * (0.25 + 0.5 * sheet + ${f(L.wet)} * wet + 0.6 * k.gloss) * (part == ${FIN} ? 0.45 : 1.0));
   vec3 H = halfVector(uSunDir, V);
   float nh = max(dot(N, H), 0.0);
   // Lying awash the flipper's blade faces the sky, and a sheen on it as broad as the back's would make it a pale thing.
   float sheen = part == ${FIN} ? ${f(L.sheen)} * 0.3 : ${f(L.sheen)};
-  col += uSunColor * pow(nh, mix(mix(24.0, 70.0, wet), 160.0, sheet)) * (sheen * (1.0 + wet) + (0.8 + 3.0 * streak) * sheet) * sun * (1.0 - k.gloss) * (1.0 - 0.7 * k.near);
+  col += uSunColor * pow(nh, mix(mix(24.0, 70.0, wet), 160.0, sheet)) * (sheen * (1.0 + wet) * (1.0 - 0.7 * low) + (0.8 + 3.0 * streak) * sheet) * sun * (1.0 - k.gloss) * (1.0 - 0.7 * k.near);
   col += vec3(0.85, 0.9, 0.95) * (uSkyAmbient * 0.7 + uSunColor * (0.1 + back * 0.8) * sun) * streak * sheet * 0.45;
   // A flipper lying flat is seen edge on all over, so only the body takes the rim along its silhouette.
-  float rim = pow(1.0 - nv, ${f(L.rimPower)}) * smoothstep(-0.2, 0.5, N.y + ndl) * (part == ${FIN} ? 0.2 : 1.0);
+  float rim = pow(1.0 - nv, ${f(L.rimPower)}) * smoothstep(-0.2, 0.5, N.y + ndl) * (part == ${FIN} ? 0.2 : 1.0) * (1.0 - low);
   col += uSunColor * mix(vec3(1.0), k.albedo * 2.0, 0.35) * rim * (0.2 + back) * ${f(L.rim)} * sun * (1.0 - k.near);
   // Where the back turns away toward the low sun at its edge it draws one crisp gold line against the sea.
   float sunward = dot(N, normalize(vec3(uSunDir.x, 0.0, uSunDir.z)));
-  float ridge = pow(1.0 - nv, ${f(L.ridgePower)}) * smoothstep(-0.05, 0.35, sunward + 0.3 * N.y) * float(part == ${BODY} || part == ${DORSAL});
+  float ridge = pow(1.0 - nv, ${f(L.ridgePower)}) * (1.0 - smoothstep(0.02, 0.08, nv)) * smoothstep(-0.05, 0.35, sunward + 0.3 * N.y)
+    * float(part == ${BODY} || part == ${DORSAL});
   vec3 gold = uSunColor * vec3(1.0, 0.82, 0.55) * ridge * back * ${f(L.ridge)} * sun * (1.0 - k.near);
   // The cornea bulges over the iris, so the sky it mirrors moves across it; the gold in it is the dawn behind.
   vec3 Nc = normalize(N + (vAxisZ * k.iris.x + vAxisY * k.iris.y) * 1.3);
