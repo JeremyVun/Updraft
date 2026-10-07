@@ -96,8 +96,6 @@ const CORK_AROUND = 3;
 /** The valve's dolphin, nosing in: how near behind the cork its beak keeps, and how long it takes to turn away and go under. */
 const NOSE_GAP = 0.3;
 const NOSE_AWAY = 2.6;
-/** How high on the head a phone's view looks: its tall frame has sky enough without raising it. */
-const PORTRAIT_LOOK_Y = 2.6;
 /** Where along the flipper a sweep is looked for (0 root .. 1 tip), at how many points. */
 const FIN_FROM = 0.35;
 const FIN_TO = 1.02;
@@ -251,9 +249,9 @@ export class NetWhale {
   private readonly hand = [new THREE.Vector3(), new THREE.Vector3()];
   private readonly ray = new THREE.Vector3();
   /** The holds the camera eases between: what it was holding when the step changed, what it is going to, and how far. */
-  private readonly holdFrom = new Float32Array(8);
-  private readonly holdTo = new Float32Array(8);
-  private readonly holdNow = new Float32Array(8);
+  private readonly holdFrom = new Float32Array(12);
+  private readonly holdTo = new Float32Array(12);
+  private readonly holdNow = new Float32Array(12);
   private holdT = 1;
   private holdSet = false;
   /**
@@ -1481,13 +1479,17 @@ export class NetWhale {
    */
   private holdFor(step: WhaleStep, now: boolean): void {
     const to = this.holdTo;
-    const phone = K.portraitIn;
+    const { breath, line, flipper } = K.phone;
     if (step === 'line') {
-      to.set([K.lineDistance, K.lineHeight, K.lineBearing, K.lineLookY, K.lineToward, 0, K.lineDistance * phone, K.lineHeight * phone]);
+      to.set([K.lineDistance, K.lineHeight, K.lineBearing, K.lineLookY, K.lineToward, 0, line.distance, line.height, line.turn,
+        line.lookY, line.toward]);
     } else if (step === 'flipper') {
-      to.set([K.flipperDistance, K.flipperHeight, K.flipperBearing, K.flipperLookY, K.flipperToward, 1, K.flipperPhoneDistance,
-        K.flipperPhoneHeight]);
-    } else to.set([K.holdDistance, K.holdHeight, K.holdBearing, K.holdLookY, K.holdToward, 0, K.holdDistance * phone, K.holdHeight * phone]);
+      to.set([K.flipperDistance, K.flipperHeight, K.flipperBearing, K.flipperLookY, K.flipperToward, 1, flipper.distance,
+        flipper.height, flipper.turn, flipper.lookY, flipper.toward]);
+    } else {
+      to.set([K.holdDistance, K.holdHeight, K.holdBearing, K.holdLookY, K.holdToward, 0, breath.distance, breath.height,
+        breath.turn, breath.lookY, breath.toward]);
+    }
     if (now || !this.holdSet) {
       this.holdFrom.set(to);
       this.holdNow.set(to);
@@ -1516,20 +1518,20 @@ export class NetWhale {
     const now = this.holdNow;
     const moved = THREE.MathUtils.smootherstep(this.holdT, 0, 1);
     for (let i = 0; i < now.length; i++) now[i] = THREE.MathUtils.lerp(this.holdFrom[i], this.holdTo[i], moved);
-    const [holdDistance, holdHeight, bearing, lookY, toward, fin, phoneDistance, phoneHeight] = now;
+    const [holdDistance, holdHeight, bearing, lookY, toward, fin, phoneDistance, phoneHeight, phoneTurn, phoneLookY, phoneToward] = now;
     const head = this.p.copy(whale.eye).lerp(whale.blowhole, 0.5);
     // At the flipper what matters lies between its tip and where the cygnet holds the loop's end.
-    const focus = this.b.copy(head).lerp(this.a.copy(whale.finTip).lerp(this.station, 0.5), fin)
-      .setY(portrait ? Math.min(lookY, PORTRAIT_LOOK_Y) : lookY);
-    this.look.copy(boat).setY(1.2).lerp(focus, portrait ? toward + 0.12 : toward);
+    const focus = this.b.copy(head).lerp(this.a.copy(whale.finTip).lerp(this.station, 0.5), fin).setY(portrait ? phoneLookY : lookY);
+    this.look.copy(boat).setY(1.2).lerp(focus, portrait ? phoneToward : toward);
     const glance = whale.phase === 'free' ? THREE.MathUtils.smoothstep(whale.time, FREE_FLUKES_FROM, FREE_FLUKES_FROM + 3.5)
       * (1 - THREE.MathUtils.smoothstep(whale.time, FREE_FLUKES_FROM + 10, FREE_FLUKES_FROM + 14)) : 0;
     if (glance > 0) this.look.lerp(this.a.copy(whale.flukes).setY(Math.max(4, whale.flukes.y * 0.5)), glance * (portrait ? 0.85 : 0.55));
     // Behind the boat: just to port of astern, or in portrait on the line from what matters through the boat.
-    const aim = portrait ? Math.atan2(focus.x - boat.x, focus.z - boat.z) : this.yaw - THREE.MathUtils.lerp(bearing, K.releaseBearing, out);
-    const nearer = portrait ? K.portraitIn : 1;
-    const distance = THREE.MathUtils.lerp(portrait ? phoneDistance : holdDistance, K.releaseDistance * nearer, out);
-    const height = THREE.MathUtils.lerp(portrait ? phoneHeight : holdHeight, K.releaseHeight * nearer, out);
+    const aim = portrait ? Math.atan2(focus.x - boat.x, focus.z - boat.z) + phoneTurn
+      : this.yaw - THREE.MathUtils.lerp(bearing, K.releaseBearing, out);
+    const release = K.phone.release;
+    const distance = portrait ? THREE.MathUtils.lerp(phoneDistance, release.distance, out) : THREE.MathUtils.lerp(holdDistance, K.releaseDistance, out);
+    const height = portrait ? THREE.MathUtils.lerp(phoneHeight, release.height, out) : THREE.MathUtils.lerp(holdHeight, K.releaseHeight, out);
     this.lookFrom.set(boat.x - Math.sin(aim) * distance, boat.y + height,
       boat.z - Math.cos(aim) * distance);
     this.forward.subVectors(this.lookFrom, this.look).setY(0);
@@ -1553,7 +1555,9 @@ export class NetWhale {
       const out = this.bird !== 'satchel' && this.bird !== 'lifted' && this.bird !== 'home';
       s.secondary.copy(out ? this.cast.cygnet.position : whale.finTip).y += out ? 0.4 : 0;
     } else s.secondary.copy(whale.blowhole).y += 2.5;
-    s.tertiary.copy(this.step === 'flipper' ? whale.finTip : whale.eye);
+    // A phone's narrow frame stacks the step over the boat; fitting the eye in beside them would only back it off.
+    if (portrait && (this.step === 'line' || this.step === 'flipper')) s.tertiary.copy(s.secondary);
+    else s.tertiary.copy(this.step === 'flipper' ? whale.finTip : whale.eye);
     if (glance > 0) s.tertiary.lerp(this.a.copy(whale.flukes).setY(Math.max(whale.flukes.y, 1)), glance * 0.6);
     s.secondary.lerp(rest, 1 - h);
     s.tertiary.lerp(rest, 1 - h);

@@ -1481,13 +1481,23 @@ export const tuning = {
     /**
      * The camera's hold for each step, eased from one to the next over `holdMove` seconds: how far behind the boat
      * and how high (m), how far round to port of astern (radians), how far the look goes from the boat toward what
-     * matters (the head, then the flipper's tip) and how high on it (m). A phone's taller lens holds every one of
-     * them `portraitIn` as far off.
+     * matters (the head, then the flipper's tip) and how high on it (m).
      */
     holdMove: 5, holdLookY: 4.5, holdToward: 0.5,
     lineDistance: 11, lineHeight: 4.8, lineBearing: 0.3, lineLookY: 3.4, lineToward: 0.36,
     flipperDistance: 15, flipperHeight: 7.2, flipperBearing: 0.36, flipperLookY: 9, flipperToward: 0.4,
-    portraitIn: 0.58,
+    /**
+     * A phone's holds: on the line from what matters through the boat, turned `turn` radians round (toward astern
+     * when negative), so boat, step and head stack up its tall frame past the sail's side; `distance` behind the boat and `height` up,
+     * looking from the boat `toward` of the way to what matters and `lookY` up on it (m). `release` is where the
+     * breath's hold eases out to as it goes free.
+     */
+    phone: {
+      breath: { distance: 10, height: 11, turn: 0, lookY: 2, toward: 0.55 },
+      line: { distance: 7, height: 6, turn: 0, lookY: 1.5, toward: 0.5 },
+      flipper: { distance: 10, height: 6.5, turn: -0.6, lookY: 1.5, toward: 0.5 },
+      release: { distance: 14, height: 8 },
+    },
     /**
      * The flipper: a stroke within `finRadius` of its outer part on screen (normalised device units), moving at least
      * `finPace` of those a second and running along it to within `finAlong` (the cosine between them), lifts it once
@@ -1505,8 +1515,6 @@ export const tuning = {
     finRestSweep: -1.75, finRestRaise: 0.67,
     /** How far its lazy lift raises the near flipper about its root and swings it back along its flank (radians). */
     finLift: 0.1, finSwing: 0.05,
-    /** A phone holds the flipper higher, looking down over the sail at the cygnet and the tip beyond it (m). */
-    flipperPhoneDistance: 6.5, flipperPhoneHeight: 10,
   },
 
   seaPassage: {
