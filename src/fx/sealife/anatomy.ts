@@ -33,6 +33,9 @@ export const HALF_WIDTH = curve([
   [0.75, 0.6], [0.85, 0.32], [0.93, 0.2], [1, 0.1],
 ]);
 
+export const DORSAL_AT = 0.64;
+export const DORSAL_BASE = TOP(DORSAL_AT) - 0.12;
+
 function build(pos: number[], rig: number[], idx: number[]): THREE.BufferGeometry {
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
@@ -175,8 +178,8 @@ function flukes(): THREE.BufferGeometry {
 function dorsal(): THREE.BufferGeometry {
   const levels = 8;
   const around = 12;
-  const s0 = 0.64;
-  const base = TOP(s0) - 0.12;
+  const s0 = DORSAL_AT;
+  const base = DORSAL_BASE;
   const pos: number[] = [];
   const rig: number[] = [];
   const idx: number[] = [];

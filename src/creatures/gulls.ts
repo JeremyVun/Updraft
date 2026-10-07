@@ -34,6 +34,7 @@ ${CREATURE_GLSL}
 in float aPart;
 in vec2 aMat;
 in vec4 iPos;
+uniform float uSize;
 in vec4 iAtt;
 in vec4 iWing;
 out vec3 vWorld;
@@ -74,7 +75,7 @@ void main() {
   if (part == ${TAIL}) p.x *= 1.0 + max(-iAtt.x, 0.0) * 1.2;
   p = rotZ(rotX(p, iAtt.x), iAtt.y);
   n = rotZ(rotX(n, iAtt.x), iAtt.y);
-  vec3 world = rotY(p * ${SIZE.toFixed(2)}, iPos.w) + iPos.xyz;
+  vec3 world = rotY(p * ${SIZE.toFixed(2)} * uSize, iPos.w) + iPos.xyz;
   vWorld = world;
   vNormal = rotY(n, iPos.w);
   vMat = aMat;
@@ -217,7 +218,7 @@ function gullGeometry(): THREE.BufferGeometry {
  * Gull bodies drawn as instances: iPos (x, y, z, yaw), iAtt (pitch, roll), iWing (inner and outer wing raise, sweep
  * back, head turn).
  */
-export function gullMesh(capacity: number): { instances: Instances; mesh: THREE.Mesh } {
+export function gullMesh(capacity: number, size = 1): { instances: Instances; mesh: THREE.Mesh } {
   const instances = new Instances(gullGeometry(), capacity, ['iPos', 'iAtt', 'iWing']);
   const material = new THREE.ShaderMaterial({
     vertexShader: VERT,
@@ -228,6 +229,7 @@ export function gullMesh(capacity: number): { instances: Instances; mesh: THREE.
       uMantle: { value: new THREE.Color('#8d99a6') },
       uTip: { value: new THREE.Color('#1d1d22') },
       uBill: { value: new THREE.Color('#f2c14e') },
+      uSize: { value: size },
     },
     side: THREE.DoubleSide,
   });

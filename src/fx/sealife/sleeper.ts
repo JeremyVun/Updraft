@@ -33,13 +33,19 @@ const GONE = 18.5;
 const SLAP = curve([[0, 0], [0.45, 0.6], [0.85, 1.3], [1.0, 1.35], [1.15, 0.3], [1.3, -0.05], [1.8, 0]]);
 const SLAP_HITS = 1.2;
 const SLAP_FOR = 1.8;
-const FIN_SPAN = 4.5;
+/** A slender blue-grey sleeper rather than the first crossing's humpback: short flippers, small flukes. */
+const FIN_SCALE = 0.62;
+const FLUKE_SCALE = 0.62;
+const FIN_SPAN = 4.5 * FIN_SCALE;
+const GULL_SIZE = 2;
 const FIN_DIR = new THREE.Vector3(0.8, -0.3, -0.52).normalize();
 const REST_FIN = new THREE.Vector2(0.35, 0.3);
+/** Asleep, the fluke tips curl up out of the water at the far end. */
+const REST_CURL = 0.7;
 
 /** The head carried a little higher than the tail, so the eye is just out of the water and the flukes just under it. */
 function restPitch(s: number): number {
-  return 0.05 * (1 - THREE.MathUtils.smoothstep(s, 0.3, 0.6)) + 0.07 * THREE.MathUtils.smoothstep(s, 0.72, 0.95);
+  return 0.1 * (1 - THREE.MathUtils.smoothstep(s, 0.3, 0.6)) - 0.01 * THREE.MathUtils.smoothstep(s, 0.72, 0.95);
 }
 
 /**
@@ -55,7 +61,7 @@ export class SleepingWhale extends WhaleRig {
   /** Frames a gust has spent crossing its back, and the flipper slaps that answered, since it lay down. */
   tickles = 0;
   slaps = 0;
-  readonly gull = new PerchedGull();
+  readonly gull = new PerchedGull(GULL_SIZE);
   readonly blowhole = new THREE.Vector3();
   /** The middle of the back above the water, for a glance. */
   readonly back = new THREE.Vector3();
@@ -84,6 +90,11 @@ export class SleepingWhale extends WhaleRig {
 
   constructor(private readonly spray: Spray, foam: Marks, slicks: Marks) {
     super(K.scale);
+    this.uniforms.uShape.value.set(FIN_SCALE, 0.3, FLUKE_SCALE);
+    this.skin.uBack.value.set('#34505e');
+    this.skin.uFill.value.set(0.05, 0.06, 0.09);
+    this.skin.uDetail.value.set(0.15, 0.5, 0.06, 0.3);
+    this.skin.uEyeAt.value.set(0.16, 0.12, 1.8);
     this.wake = new WhaleWake(this, spray, foam, slicks);
     this.wake.onSound = (kind, x, y, z) => this.onSound?.(kind, x, y, z);
     this.gull.onSound = (kind, at) => this.onSound?.(kind, at.x, at.y, at.z);
@@ -210,6 +221,7 @@ export class SleepingWhale extends WhaleRig {
       this.onSound?.('whale-sigh', this.blowhole.x, this.blowhole.y, this.blowhole.z);
     }
     this.lay(0, rise, 0, 0);
+    this.uniforms.uCurl.value = REST_CURL;
     this.uniforms.uFin.value.set(REST_FIN.x + Math.sin(this.worldTime * 0.21) * 0.04, REST_FIN.y + Math.sin(this.worldTime * 0.3 + 1) * 0.05);
   }
 
@@ -241,7 +253,8 @@ export class SleepingWhale extends WhaleRig {
     this.pivot.copy(this.rest).addScaledVector(this.away, drift);
     const wave = THREE.MathUtils.smoothstep(t, WAVE_FROM, WAVE_FROM + 1) * (1 - THREE.MathUtils.smoothstep(t, WAVE_TO - 1, WAVE_TO));
     this.lay(SINK(t), 0, DIP(t), TAIL(t), ROLL(t) + Math.sin((t - WAVE_FROM) * 2.2) * 0.14 * wave);
-    this.uniforms.uCurl.value = -0.25 * wave + Math.sin((t - WAVE_FROM) * 2.2 + 0.8) * 0.12 * wave;
+    this.uniforms.uCurl.value = REST_CURL * (1 - THREE.MathUtils.smoothstep(t, 0, 4)) - 0.25 * wave
+      + Math.sin((t - WAVE_FROM) * 2.2 + 0.8) * 0.12 * wave;
     this.uniforms.uFin.value.set(REST_FIN.x + 0.5 * THREE.MathUtils.smoothstep(t, 0, 4), REST_FIN.y + 0.4 * THREE.MathUtils.smoothstep(t, 0, 4));
     if (t >= SURGE_AT && t - 1 / 30 < SURGE_AT) this.surge();
   }

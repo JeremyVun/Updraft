@@ -7,7 +7,7 @@ import type { WhaleRig } from './whale';
 export type GullSound = 'gull-hop' | 'gull-peck' | 'gull-away';
 
 /** Where along the whale it sleeps, and where it stands to peck. */
-const PERCH = 0.42;
+const PERCH = 0.35;
 const PECK_AT = BLOWHOLE + 0.025;
 /** Its body's centre above its feet. */
 const STANDS = 0.16;
@@ -37,8 +37,9 @@ export class PerchedGull {
   private readonly velocity = new THREE.Vector3();
   private readonly foot = new THREE.Vector3();
 
-  constructor() {
-    ({ instances: this.instances, mesh: this.mesh } = gullMesh(1));
+  /** `size` against the flock's gulls: dreamt as big as the whale it sleeps on. */
+  constructor(private readonly size = 1) {
+    ({ instances: this.instances, mesh: this.mesh } = gullMesh(1, size));
     this.mesh.visible = false;
   }
 
@@ -86,7 +87,7 @@ export class PerchedGull {
     let inner = -1.35;
     let outer = 0.15;
     let sweep = 1.25;
-    let head = 2.7;
+    let head = 1.7;
     let pitch = 0;
     let roll = 0;
     let lift = 0;
@@ -110,7 +111,7 @@ export class PerchedGull {
     if (this.state === 'walking') {
       this.wake = Math.min(1, this.wake + dt * 1.5);
       this.s = Math.max(PECK_AT, this.s - (WALK_SPEED * dt) / (whale.scale * LENGTH));
-      lift = Math.abs(Math.sin(this.t * 7)) * 0.04;
+      lift = Math.abs(Math.sin(this.t * 7)) * 0.04 * this.size;
       roll = Math.sin(this.t * 7) * 0.08;
       if (this.s <= PECK_AT) {
         this.state = 'pecking';
@@ -123,13 +124,13 @@ export class PerchedGull {
       if (n < PECKS && u >= 0.5 && u - dt / PECK_EVERY < 0.5) this.onSound?.('gull-peck', this.position);
       if (n >= PECKS) this.pecked = true;
     }
-    this.yaw = this.state === 'asleep' ? along + 1.9 : along;
-    head = 2.7 * (1 - this.wake);
+    this.yaw = this.state === 'asleep' ? along + 0.3 : along;
+    head = 1.7 * (1 - this.wake);
     if (this.hop >= 0) {
       this.hop += dt / HOP_FOR;
       const u = Math.min(this.hop, 1);
       const up = Math.sin(u * Math.PI);
-      lift += 0.5 * up;
+      lift += 0.5 * up * this.size;
       inner = THREE.MathUtils.lerp(inner, 0.45 + Math.sin(u * 18) * 0.35, up);
       outer = THREE.MathUtils.lerp(outer, -0.25, up);
       sweep = THREE.MathUtils.lerp(sweep, 0.2, up);
@@ -138,7 +139,7 @@ export class PerchedGull {
     }
     whale.point(0, TOP(this.s), this.s, this.foot);
     this.position.copy(this.foot);
-    this.position.y += STANDS + lift;
+    this.position.y += STANDS * this.size + lift;
     this.commit(inner, outer, sweep, head, pitch, roll);
   }
 

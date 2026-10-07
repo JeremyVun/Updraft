@@ -90,6 +90,7 @@ export class WhaleRig {
   readonly heading = new THREE.Vector3(0, 0, 1);
   protected readonly uniforms;
   protected readonly eye: { value: number };
+  protected readonly skin;
 
   constructor(readonly scale = 1) {
     this.uniforms = {
@@ -100,14 +101,19 @@ export class WhaleRig {
       uFin: { value: new THREE.Vector2() },
       uCurl: { value: 0 },
       uScale: { value: scale },
-      uShiver: { value: new THREE.Vector3() },
+      uShiver: { value: new THREE.Vector3(0, 0, 1) },
       uSlap: { value: new THREE.Vector3() },
+      uShape: { value: new THREE.Vector3(1, 1, 1) },
     };
     const skin = {
       uBack: { value: new THREE.Color('#2f3b48') },
       uBelly: { value: new THREE.Color('#e3e7df') },
       uEye: { value: 1 },
+      uEyeAt: { value: new THREE.Vector3(0.235, -0.46, 1) },
+      uDetail: { value: new THREE.Vector4(1, 0, 0, 1) },
+      uFill: { value: new THREE.Color(0, 0, 0) },
     };
+    this.skin = skin;
     this.eye = skin.uEye;
     const geometry = whaleGeometry();
     this.mesh = new THREE.Mesh(

@@ -1399,11 +1399,11 @@ export const tuning = {
    * broadside on the route `along` metres past its first waypoint, dreamt `scale` times the surfacing whale's size.
    */
   sleepingWhale: {
-    along: 40, scale: 1.8,
+    along: 46, scale: 2.4,
     /** Clear water left between the bow and its flank (m), and how far the bow reaches ahead of the boat's centre. */
-    gap: 7, bow: 1.5,
+    gap: 12, bow: 1.5,
     /** Back crest above the water (m) asleep. */
-    crest: 1.5,
+    crest: 2.1,
     /**
      * The boat's speed limit coming alongside: never more than it could lose slowing at `slowing` (m/s²), nor more
      * than `settling` times the distance left, so the hull's own slow carry brings it to rest there without braking.
@@ -1412,7 +1412,7 @@ export const tuning = {
     /** Released the same way: the limit climbs back at this rate (m/s²) once the flukes are up. */
     release: 0.7,
     /** Seconds between breaths asleep, how far the back rises with one (m), and the mist over the blowhole. */
-    breathEvery: 5.5, breathRise: 0.12, mist: 1,
+    breathEvery: 5.5, breathRise: 0.22, mist: 1,
     /** How high the waking spout is thrown above the blowhole (m). */
     spoutHeight: 8,
     /** A gust across the back on screen (`brushFrom` and up) tickles it: a shiver along the stroke, a lazy slap. */
@@ -1428,7 +1428,7 @@ export const tuning = {
      * The camera's hold beside it: how far ahead of the boat it looks, its distance from that point and height, the
      * bearing off astern, and how fast it eases in and out.
      */
-    holdAhead: 6, holdDistance: 27, holdHeight: 6.5, holdBearing: 0.05, holdEase: 0.6,
+    holdAhead: 6, holdDistance: 27, holdHeight: 5.6, holdBearing: 0.05, holdEase: 0.6,
   },
 
   seaPassage: {
