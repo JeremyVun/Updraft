@@ -646,6 +646,26 @@ plug, two rooms after the first crossing; there it could only wake to gusts, a w
 circling before the plug teaches it. Seen far off, then found asleep across the way one island later, it is met again
 rather than met.
 
+**The whale moves to the open sea, dream-sized** (Jeremy, 2026-10-07, while its look was being tuned on `toMeadow`):
+"in a dream, from the perspective of a child, the whale would be really big. like really dream like big"; and "why
+not have this on the open sea chapter instead. We can extend the open sea chapter if needed e.g. move or hide the sky
+mirror island appropriately or something. Right now, the open sea chapter has nothing to do in it even though it's a
+whole selectable chapter." Agreed ("yea, i think this works"): it lies on `toMirror` after the pod has dived away
+ahead, about three times its built size (70–80 m), too big for the frame; seen far off at first as a long low island
+in the dawn haze that turns out to breathe, replacing the sea's distant surfacing whale; its leaving swell passes and
+the sea goes still into the mirror's glass. The open sea's ruling "at most 100 s, nothing asked" is lifted for it;
+the route may lengthen and the mirror's island stay hidden longer. The meadow crossing goes back to what it is on main.
+The narrative it must serve (Jeremy, 2026-10-07):
+
+> - the child is brave for the cygnet
+> - the cygnet is brave for the child
+> - then they both fix something for someone else together
+> - and then it escalates and they fix the stars
+
+So the whale is the third step: the dark wood is her courage for the bird, the sleeping island the bird's for her,
+the sky mirror the stars. The encounter below (a whale in their way, woken for their own passage, the cygnet only
+peeking) predates this and is being redesigned to fit it.
+
 ### As decided: the crossing
 
 The concept keyframes `comps/crossings/whale/k1–k4` are the target for the look; `notes.md` beside them has Astra's
