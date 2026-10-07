@@ -391,7 +391,9 @@ Done: [ ]
 
 ### Phase 8: the camera to the shot list (after 7)
 Owns: the room's lens from the rescue to the storm's frame (`drowned-run.ts`, `drowned-church.ts`, `drowned.ts`'s
-watch, `tuning.drownedCamera`), authored per beat to design.md's shot list, upright composed for itself.
+watch, `tuning.drownedCamera`), authored per beat to design.md's shot list, upright composed for itself. First study how the rest of the game frames
+its subjects and interactions (`docs/engine.md` camera direction; the shots of the little boats, the birches' swing,
+the stairs, the dark wood and the sea in play) and take its grammar: framed well for a human.
 Gate: `LENS=1` checks, both aspects; a still at every shot-list line.
 Done: [ ]
 

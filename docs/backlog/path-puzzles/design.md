@@ -578,6 +578,11 @@ chase a quiet pulse that tightens as the fog comes closer and eases when she is 
 own note in the score's key); the boat's answer warm; then the storm's cues. Every part of the room has music; nothing
 loops a short section for minutes.
 
+Jeremy, 2026-10-08, on what the work needs: "yes, you have licence to cut or replace anything you feel doesn't earn
+it's place", and on the camera: "I think it just needs to be framed well for a human is all. The rest of the game does
+a fairly good job if you need to see how it's been done." So any piece above may be cut or replaced if it does not
+earn its place in play, and the camera takes its grammar from the game's other rooms.
+
 **The camera** is authored shot by shot rather than planned by costs, to a written shot list (below), staged in
 the engine and judged from stills. Rules: the subject is always framed as the shot intends, not merely somewhere in frame; in
 every interaction the thing the player acts on, her, and where she is going are all in frame, with the action moving
