@@ -181,7 +181,9 @@ brings the light. Courage passes back and forth between them, and the stairs are
    are seen only once she is high up, from the last loose flight until she goes into the white, where the lens
    looks down on the water: each is put on the sea only while the lens is not looking at it, so none is seen to
    appear. Nobody turns to them (Jeremy: "they just sail on by doing their own thing in the background below them";
-   "it should be when the camera is mostly pointed down"). They are a little larger than in their own room, no more.
+   "it should be when the camera is mostly pointed down"). They are smaller than in their own room, so she
+   seems higher than she is (Jeremy: "maybe even smaller than 1x so that it looks like you're higher than you
+   actually are").
 3. **Into the cloud.** On the last landing below the white the child steps aside and hangs back, looking up; the
    bird comes past, looks up too, goes up into the white first, and waits.
 4. **The loop (the Penrose stairs).** Halfway up the white the stair comes into a hollow of clear air, onto the
