@@ -310,7 +310,19 @@ Jeremy as stills before the holds and the gate.
 Seam: `surfaceAt` and the anchors stay true to the rendered skin; the net drapes by them and must still lie on it;
 the bird's clearance from the flipper and the mechanics of N2 stay.
 Gate: as N3d's, stills at every keyframe.
-Done: [ ]
+Done: [x] `fea5d161..2ab6edf9` (the rejected first form `ff2330ec..2e176d32` before it). An upper cap and a lower hull
+meeting at a broadest line, each shaped along the length (`TOP`, `WIDEST`, `BOTTOM`, `HALF_WIDTH`, `ROUND`, `KEEL` in
+`anatomy.ts`; `halfWidthAt`): the head flat-topped, about 18 m wide and 12 m deep at the eye, the lower jaw bulging
+up to 15% wider than the upper at the lip, a broad soft crest down the snout (`RIDGE`); broadest about 2.3–3 m under
+the water at s 0.36–0.45, about 23 m across (1.5× a blue whale's breadth); the tail stock narrow and deep. Above the
+sea: snout 1.1 m, the wedge rising to the blowhole's guard at 5.3 m 23 m back, the back level at 5.1–5.25 m to 55 m,
+lowering into the haze, a small dorsal knuckle (`DORSAL_AT` 0.74) about 79 m back, under from about 100 m; flukes
+about 1.7 m down (the pale slab trap now applies to them). `restPitch` tips the head 0.08 rad, level to s 0.6, then
+tail-down; anchors eye 2.30, blowhole 5.30, back 5.15, flipper root −0.09 m (the flipper and `FIN_HALF` unchanged).
+`EYE_S`/`EYE_Y` shared from `anatomy.ts`. Light, haze, glass and `breathAt` from the first form kept. The net's gap
+to the skin: worst −0.056 m, 99% within 0.65 m. Left: every near hold was lowered for the rejected low back and now
+sits at the back's height (the flank a dark wall, the sun half hidden at the haul); `breathEvery` still 7 s; up close
+the flank is a huge smooth wall until the skin pass.
 
 ### Phase N3g: the encounter staged (awe, sorrow, courage)
 After N3f, on `sea-whale` (Jeremy, 2026-10-08; design.md, "The feeling and the bar", "Claude's direction for the
