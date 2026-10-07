@@ -2,6 +2,7 @@ import type * as THREE from 'three';
 import { screenPan } from '../creatures/motion';
 import { tuning } from '../tuning';
 import type { Foley, MaterialSound } from './foley';
+import type { NetSound } from '../fx/sealife/net';
 import type { SleeperSound } from '../fx/sealife/sleeper';
 import { feltWind, Sway, type WindField, type WindSample } from '../wind/field';
 
@@ -149,6 +150,20 @@ export class WorldFoley {
     if (surfacing) this.lastSurface = this.time;
     else this.lastSplash = this.time;
     this.foley.material(surfacing ? 'dolphin-surface' : 'splash', level, screenPan(this.camera, at));
+  }
+
+  /** The net on the whale, and the whale's call: as loud as its breath, by how near it is. */
+  net(kind: NetSound, at: THREE.Vector3, strength: number): void {
+    const level = this.heard(at, tuning.audio.whaleNear, tuning.audio.whaleFar) * tuning.audio.whaleLevel * strength;
+    if (level < 0.015) return;
+    const pan = screenPan(this.camera, at);
+    if (kind === 'whale-call') this.foley.call(level, pan);
+    else this.foley.material(kind, level, pan);
+  }
+
+  /** Its call heard from far off as it dives on the first crossing: at most an echo. */
+  farCall(at: THREE.Vector3): void {
+    this.foley.call(tuning.audio.whaleLevel * 0.6, screenPan(this.camera, at), true);
   }
 
   whale(kind: SleeperSound, at: THREE.Vector3): void {

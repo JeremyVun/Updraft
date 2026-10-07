@@ -378,7 +378,12 @@ sealife.onDolphinSurface = (x, y, z, strength) => {
   if (sound.running) worldFoley.splash(splashAt.set(x, y, z), strength, true);
 };
 sealife.onWhaleSound = (kind, x, y, z) => {
-  if (sound.running) worldFoley.whale(kind, splashAt.set(x, y, z));
+  if (!sound.running) return;
+  worldFoley.whale(kind, splashAt.set(x, y, z));
+  if (kind === 'whale-dive' && story.name === 'toLines') worldFoley.farCall(splashAt);
+};
+sealife.onNetSound = (kind, at, strength) => {
+  if (sound.running) worldFoley.net(kind, at, strength);
 };
 const probe = QA && params.shot ? new Probe(child, cygnet, carry) : null;
 const flock = new SwanFlock();

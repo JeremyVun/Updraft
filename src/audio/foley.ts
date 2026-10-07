@@ -1,10 +1,11 @@
 import { tuning } from '../tuning';
 import type { AudioOut } from '../creatures/voices';
+import type { NetSound } from '../fx/sealife/net';
 import type { SleeperSound } from '../fx/sealife/sleeper';
 
 export type Surface = 'grass' | 'sand' | 'wood' | 'water';
 export type MaterialSound = 'cloth' | 'wool' | 'sail' | 'sail-settle' | 'water' | 'paper' | 'door' | 'splash' | 'peg'
-  | 'dolphin-surface' | 'leaf-scuff' | 'swing-creak' | SleeperSound;
+  | 'dolphin-surface' | 'leaf-scuff' | 'swing-creak' | SleeperSound | Exclude<NetSound, 'whale-call'>;
 
 /**
  * The sounds a small body makes, as opposed to a voice. The cygnet never speaks except when it is lost, so this is
@@ -124,6 +125,24 @@ export class Foley {
       // Drawing the waking breath: the air rises in pitch and swells toward the spout.
       this.puff({ at, len: 1.7, level: level * 0.08, pan, type: 'bandpass', from: 200, to: 620, q: 0.6, attack: 1.2, wet: 0.03 });
       this.puff({ at, len: 1.6, level: level * 0.05, pan, type: 'lowpass', from: 110, to: 220, attack: 1.0 });
+    } else if (kind === 'net-sputter') {
+      // A weak breath forced out through wet mesh: a low push of air broken into small wet bursts.
+      this.puff({ at, len: 1.4, level: level * 0.035, pan, type: 'lowpass', from: 260, to: 140, attack: 0.25, wet: 0.03 });
+      let t = at + 0.12;
+      for (let i = 0; i < 7; i++) {
+        t += 0.06 + Math.random() * 0.14;
+        this.puff({ at: t, len: 0.05 + Math.random() * 0.05, level: level * (0.02 + Math.random() * 0.018) * (1 - i * 0.09), pan,
+          type: 'bandpass', from: 520 + Math.random() * 700, to: 380, q: 2.2, attack: 0.004, wet: 0.02 });
+      }
+    } else if (kind === 'net-lift') {
+      // Old wet rope taking the weight, the corks knocking on their lines, and the water it brings up dripping off.
+      this.puff({ at, len: 0.3, level: level * 0.03, pan, type: 'bandpass', from: 360 + Math.random() * 80, to: 520, q: 4, attack: 0.05 });
+      for (let i = 0; i < 3; i++) {
+        const k = at + 0.04 + Math.random() * 0.3;
+        this.blip(k, 640 + Math.random() * 260, 520, 0.05, level * 0.012, pan, 'triangle', 0.03);
+      }
+      for (let i = 0; i < 2; i++) this.puff({ at: at + 0.15 + Math.random() * 0.4, len: 0.04, level: level * 0.008, pan,
+        type: 'bandpass', from: 2400 + Math.random() * 900, q: 3, attack: 0.003 });
     } else if (kind === 'whale-slap') {
       // A broad flipper laid flat on the water: a wet clap, a low thump under it, the spray falling back.
       this.puff({ at, len: 0.12, level: level * 0.11, pan, type: 'bandpass', from: 1300, to: 800, q: 0.7, attack: 0.004, wet: 0.06 });
@@ -142,6 +161,73 @@ export class Foley {
       this.puff({ at: at + 0.09, len: 0.4, level: dolphin * 0.024, pan,
         type: 'bandpass', from: 1500, to: 650, q: 0.5, attack: 0.07, wet: 0.04 });
     }
+  }
+
+  /**
+   * The whale's voice, once in greeting and once in goodbye: a low soft call rising a fourth from A to D and settling
+   * on B, in the sea score's own notes, hollow rather than bright and long in the reverb. `far` is the same call heard
+   * from a long way off over the water: darker, quieter, and coming back once.
+   */
+  call(level: number, pan: number, far = false): void {
+    const out = this.out;
+    if (!out || level < 0.005) return;
+    const { ctx } = out;
+    const at = ctx.currentTime + 0.02;
+    const len = 3.6;
+    const voice = (start: number, gain: number, cutoff: number, wet: number) => {
+      const env = ctx.createGain();
+      env.gain.setValueAtTime(0, start);
+      env.gain.linearRampToValueAtTime(gain, start + 0.6);
+      env.gain.setValueAtTime(gain, start + len - 1.4);
+      env.gain.exponentialRampToValueAtTime(0.0001, start + len);
+      const tone = ctx.createBiquadFilter();
+      tone.type = 'lowpass';
+      tone.Q.value = 0.7;
+      tone.frequency.setValueAtTime(cutoff * 0.6, start);
+      tone.frequency.linearRampToValueAtTime(cutoff, start + 1.3);
+      tone.frequency.linearRampToValueAtTime(cutoff * 0.7, start + len);
+      const hollow = ctx.createBiquadFilter();
+      hollow.type = 'peaking';
+      hollow.frequency.value = 340;
+      hollow.Q.value = 2.5;
+      hollow.gain.value = 7;
+      const p = ctx.createStereoPanner();
+      p.pan.value = Math.max(-0.85, Math.min(0.85, pan));
+      const vibrato = ctx.createOscillator();
+      vibrato.frequency.value = 4.2;
+      const depth = ctx.createGain();
+      depth.gain.setValueAtTime(0, start);
+      depth.gain.linearRampToValueAtTime(1.6, start + 1.2);
+      vibrato.connect(depth);
+      const nodes: AudioNode[] = [env, tone, hollow, p, vibrato, depth];
+      for (const [type, share] of [['sawtooth', 0.35], ['sine', 1]] as const) {
+        const osc = ctx.createOscillator();
+        osc.type = type;
+        osc.frequency.setValueAtTime(110, start);
+        osc.frequency.exponentialRampToValueAtTime(146.83, start + 1.4);
+        osc.frequency.setValueAtTime(146.83, start + 1.9);
+        osc.frequency.exponentialRampToValueAtTime(123.47, start + 3.3);
+        depth.connect(osc.frequency);
+        const g = ctx.createGain();
+        g.gain.value = share;
+        osc.connect(g).connect(env);
+        osc.start(start);
+        osc.stop(start + len + 0.05);
+        nodes.push(osc, g);
+        osc.onended = () => nodes.forEach((n) => n.disconnect());
+      }
+      env.connect(tone).connect(hollow).connect(p).connect(out.bus);
+      const send = ctx.createGain();
+      send.gain.value = wet;
+      p.connect(send).connect(out.reverb);
+      nodes.push(send);
+      vibrato.start(start);
+      vibrato.stop(start + len + 0.05);
+    };
+    if (far) {
+      voice(at, level * 0.05, 260, 0.6);
+      voice(at + 0.55, level * 0.022, 200, 0.8);
+    } else voice(at, level * 0.09, 620, 0.35);
   }
 
   /** One burst of filtered noise with its own envelope: the raw material of every sound here. */
