@@ -102,7 +102,17 @@ church), `tools/drowned-roofs-check.mjs` (extended to walk the way).
   until 3b lands).
 Gate: a QA walk of the decks end to end with no gap she cannot make; a high plan still for the orchestrator only
 (never a player view) and eye-level stills compared with `comps/run/` and `comps/village/`; typecheck.
-Done: [ ]
+Done: [x] (`db4e299`). Her way is about 190 m of `WAY` decks (the drawn plan's gold line measures about the same),
+walked deck to deck by `tools/drowned-way-check.mjs`; hops and the three pieces are `WAY_GAPS`, the pieces' places
+`TREE_SITE`, `MILL_SITE` (heights in `MILL`, a stand-in mill until the windmill lands) and `SWING_SITE`, the cat's
+own way over each gap `CAT_WAY`. The village's real `ToppleTree` and `RopeSwing` stand idle at their sites and the
+crossings take them over when given them. The boat cannot cross her way, so it drifts west of it, round behind the
+church to its dead tree (`BOAT_TREE`) east of the tower; at today's 0.3 m/s that drift takes minutes, so 3c sets its
+pace. The generated village keeps its draws (`DRAWN_ROUND`) and leaves open water round her way, the boat's water,
+the mill, the green and the churchyard (`inClearing`). Left: the walls round the way read as walls rather than
+plots; the strand's slope lifts her onto its ridge 0.4 m early (Phase 2's, left as tuned); the becalmed lens's turn
+to the church (`strandChurch`) and the climb lens still aim where the church stood; `drowned-camera-check.mjs` fails
+on its cast lacking the cat, as it did before this phase.
 
 ### Phase 3b: the village's look
 Owns: the house and prop pieces (a new module beside `drowned.ts`, its showroom on the QA stage) and their use in
