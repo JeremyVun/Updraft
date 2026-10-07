@@ -849,7 +849,7 @@ export class RoofRun {
     const lead = this.tmp.copy(this.velocity).clampLength(0, k.steadiest).multiplyScalar((1 / k.follow + 2 / response) * (1 - at));
     this.eye.add(lead);
     this.target.addScaledVector(lead, 1 - wide);
-    const handing = this.handOver(shot, dt);
+    const handing = this.handOver(shot, dt, wide);
     shot.free = false;
     shot.from = undefined;
     /**
@@ -878,7 +878,7 @@ export class RoofRun {
    * to the view the run wants: one move, never across the roof she is on, standing out wide of the boat's sail and the
    * cottage's chimney as it goes.
    */
-  private handOver(shot: Shot, dt: number): boolean {
+  private handOver(shot: Shot, dt: number, wide: number): boolean {
     if (this.handFrom === null) {
       if (!this.camera) return false;
       this.handFrom = this.handEye.copy(this.camera.position);
@@ -895,11 +895,14 @@ export class RoofRun {
     let turn = Math.atan2(Math.sin(a1 - a0), Math.cos(a1 - a0));
     const water = Math.atan2(STRAND.x - h.x, STRAND.y - h.z), mid = a0 + turn / 2;
     if (Math.cos(mid - water) < 0) turn -= Math.sign(turn) * Math.PI * 2;
-    const k = tuning.drownedCamera.run, wide = Math.sin(Math.PI * hand);
-    const r = THREE.MathUtils.lerp(Math.hypot(from.x - h.x, from.z - h.z), Math.hypot(this.eye.x - h.x, this.eye.z - h.z), hand) + k.handOut * wide;
+    const k = tuning.drownedCamera.run, out = Math.sin(Math.PI * hand);
+    const r = THREE.MathUtils.lerp(Math.hypot(from.x - h.x, from.z - h.z), Math.hypot(this.eye.x - h.x, this.eye.z - h.z), hand) + k.handOut * out;
     const a = a0 + turn * hand;
-    this.eye.set(h.x + Math.sin(a) * r, THREE.MathUtils.lerp(from.y, this.eye.y, hand) + k.handUp * wide, h.z + Math.cos(a) * r);
+    this.eye.set(h.x + Math.sin(a) * r, THREE.MathUtils.lerp(from.y, this.eye.y, hand) + k.handUp * out, h.z + Math.cos(a) * r);
     this.target.lerpVectors(this.handTarget, this.target, hand);
+    /** Upright the frame is too narrow to look past her on the way round, so it looks more at her. */
+    const c = this.cast.child.position;
+    this.target.lerp(this.tmp.set(c.x, c.y + k.aim, c.z), out * (1 - wide) * k.uprightHandHold);
     return true;
   }
 

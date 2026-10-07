@@ -1985,9 +1985,9 @@ export const tuning = {
       /**
        * Seconds the lens takes from where the climb left it, round her over the open water where the boat lies, to the
        * tree's view as she sets off (if it stood within `handFar` of her), and how much further out and higher it
-       * stands half-way round.
+       * stands half-way round; upright, how far half-way round its look comes onto her.
        */
-      handFor: 16, handFar: 22, handOut: 7, handUp: 1.5,
+      handFor: 16, handFar: 22, handOut: 7, handUp: 1.5, uprightHandHold: 0.7,
     },
     /** The church (`ChurchArrival.frame`). */
     church: {
