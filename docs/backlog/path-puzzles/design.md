@@ -508,6 +508,86 @@ These reopen the room's design from the air dying to the boat leaving; the secti
 what they contradict. Found on reading the code: the run, the church and the bring loop the score's 14 s becalmed
 section (`drownedScore` returns `still` for `run`, `nave` and `church`), which is the one tone.
 
+### The room rethought (Claude, 2026-10-08; Jeremy: "yea lets see how this works")
+
+One idea holds the middle of the room together: **the fog is a rising white tide and the only safe place is higher
+than it.** The cat knows where that is (the church, where its kittens are); the boat cannot go there; every crossing
+takes her higher; the tower is the refuge; and the boat, lost to the fog, comes home when she calls it. This supersedes
+the steps from the air dying to the boat leaving in "The whole room, from the beginning" and the cat bullet below
+where they differ; the drift, the village, the look and the storm stand.
+
+1. **The rescue.** The cat is a proper cat, about knee-high to her (cheated larger than life, as background animals
+   may be), soaked and frightened on its chimney pot: hunched, ears flat, mewing toward the church, flinching from the
+   water. The tub sits in the water (its inside masked from the sea) and answers the wind readily, easing toward the
+   cat's roof and the boat once it is near. In the tub the cat crouches with its head over the rim; at the boat it
+   leaps aboard, shivers, then presses against her legs and she kneels to it. That one exchange is the rescue: the
+   player sees that it trusts her. It sits at the bow.
+2. **Stuck.** The air dies. The becalmed boat drifts onto a roof lying just under the surface: a scrape, a lurch, the
+   lantern swinging, and it is fast; a sweep of wind on the sail only makes it strain and creak. Behind them the fog
+   is rising off the sea. The cat stares at it, then toward the church, and leaps onto the nearest roof and runs. She
+   looks at the dark, at the stuck boat, and goes after the cat with the plane clutched to her.
+3. **The boat is lost.** Nothing follows them. The stuck boat is left where it lies, and from the first roof she
+   looks back as the fog takes it: the hull, the sail, and last the lantern's glow. From here the boat is gone.
+4. **The fog chases them upward.** It never stops and never rushes. It comes on behind at a walking pace, rising as
+   it comes, so the roofs she leaves go under it one by one, each just after she is off it: the low roof she left,
+   then the wall, then the high roof. Its pace follows hers (it keeps a few roofs behind, closer while she works a
+   crossing, never reaching her, nothing failing). It is in the edge of every walking frame; it is heard (the sea
+   muffled, a foghorn far off); she and the cat glance back at it. The route climbs at every crossing, so its logic
+   needs no words: get higher than the fog.
+5. **Five crossings, little walking.** Short runs between pieces, none much over 10 s on foot; each piece takes her
+   higher; the cat goes first wherever a cat can, quickly, already going as she arrives, never making anyone wait
+   (Jeremy's pacing ruling in the cat bullet). The pieces, each a different use of the wind:
+   - **the tree (push)**, as built, the cat scrambling up it so it leans her way;
+   - **the sheet (fill)**: a sheet on a line between two chimneys across a lane; gusts fill it and it carries her
+     over, holding on, like a sail; the cat runs the line first;
+   - **the windmill (circle)**, as built, the cat riding a sail up first;
+   - **the umbrella (lift)**: a black umbrella open on a roof; she takes it and the player's updraft lifts her over a
+     gap to a higher roof, the cat leaping the gap its own way ahead;
+   - **the swing (pump)**, as built, the cat springing from its seat onto the nave first.
+   Their order and places come from the re-laid route; the concept round settles the two new pieces' look.
+6. **The refuge.** The cat climbs the tower's ivy into the belfry and she follows it in (the child can climb what she
+   could not before: the ivy is thick and stepped, and the cat shows the way). In the belfry, in old straw under the
+   bell, are the cat's kittens; the cat curls round them. The fog closes round the tower and rises to just below the
+   belfry's sills, and stops. They are above it: where the village was is a cold white sea in the last light, only the
+   spire, the lighthouse and her lantern-less dark standing out of it, the lighthouse beam sweeping over its top. A
+   quiet breath after the chase. It stays low and cold-bodied in colour, never the stairs room's luminous cloud.
+7. **The boat comes home.** The bell hangs over them. The player's strokes across it set it swinging until it rings;
+   each ring rolls out over the fog and pushes it back a little round the tower, and out in the fog a lantern glows in
+   answer, nearer each time: the lost boat drifting home to the sound (things drift home: nothing is lost). When it is
+   near, the fog has drawn back to the water round the nave and the player fills its sail for the last stretch to the
+   tower's foot. She climbs down the ivy and steps aboard.
+8. **Letting go.** The cat comes to the sill with a kitten beside it and looks down; she looks back up from the boat;
+   the cat gives her a slow blink. She has brought it home, and she leaves it there glad. Then the fog darkens into the
+   storm's night and the storm plays as built.
+
+**The music** follows the story, not one loop: the drift as now; the stuck and the cat's flight a held breath; the
+chase a quiet pulse that tightens as the fog comes closer and eases when she is across; the belfry hushed (the bell's
+own note in the score's key); the boat's answer warm; then the storm's cues. Every part of the room has music; nothing
+loops a short section for minutes.
+
+**The camera** is authored shot by shot rather than planned by costs, to a written shot list (below) that the
+storyboard illustrates. Rules: the subject is always framed as the shot intends, not merely somewhere in frame; in
+every interaction the thing the player acts on, her, and where she is going are all in frame, with the action moving
+across the screen rather than into it; the fog is in every chase frame, behind or beside; moves happen between beats
+or with her movement, one intention each, never an in-and-out; upright frames compose for the narrow frame, not as a
+cropped landscape.
+
+**Shot list.** Each line: the beat, the subject, the frame, how it hands on.
+- Rescue: the tub and the cat's roof in one frame from low over the water, the boat at the edge; as the tub nears the
+  boat the frame comes to the boat and her, the cat leaping in, her kneeling (close, side on).
+- Stuck: side on to the boat, close, the roof under the water visible; the fog rising behind on the horizon; the cat
+  in the bow staring at it, then its leap carries the frame up onto the roof.
+- The boat lost: over her shoulder from the first roof, the boat below, the fog taking it; the lantern the last light.
+- Each walk: three-quarter behind her, the cat ahead and the fog behind or to one side, the next piece already in view.
+- Each piece: from the side of the gap, her on the near edge, the piece and the far side across the frame, the cat's
+  showing in it; held while the player acts; the crossing played across the frame; the next walk picks up from there.
+- The refuge: rising with her up the ivy, the fog below; inside, the kittens and the cat close and warm in the
+  shadow; then the wide frame from the belfry over the fog sea, the lighthouse beam crossing it.
+- The bell: the bell and her in the opening, the fog sea beyond; each ring's wave rolling out; the lantern's glow
+  appearing in the fog, the frame finding it.
+- The boat home: from the belfry looking down at the boat coming in to the tower's foot, then down with her climbing to
+  it, then the look back up at the cat and kitten on the sill, then the storm's frame.
+
 ### How it is made (Claude's calls under that ownership, 2026-10-05)
 
 - **Pacing.** Arrival and calm drift about 30 s; the cat about 30–60 s; a short drift with the cat aboard (the cygnet
