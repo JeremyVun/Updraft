@@ -22,16 +22,16 @@ const BELT = 8;
 const TOWER_BACK = 1.9;
 const TOWER_FOOT = 1.6;
 const TOWER_HEAD = 1.3;
-const CURB_ABOVE = 2.9;
+const CURB_ABOVE = 3.4;
 /** The hub stands this far above the hoist's top floor: the door, the beam over it, the curb and up into the cap. */
-export const HUB_ABOVE = 3.7;
+export const HUB_ABOVE = 4.2;
 
 /**
  * The sails' measurements, in a sail's own frame: out along its stock from the hub, across toward its leading side,
  * and forward out of the plane it turns in. The lattice hangs on the trailing side.
  */
 export const SAIL = {
-  reach: 7.1, from: 1.3, to: 7.0,
+  reach: 7.3, from: 1.3, to: 7.2,
   width: 1.45, forward: 0.3, stock: 0.15,
 } as const;
 
@@ -43,10 +43,10 @@ export const SAIL = {
  */
 export const HOIST = {
   x: -3.6, z: -TOWER_BACK,
-  half: 0.45, rim: 0.8, bar: 1.95, barHalf: 0.3,
-  /** Where she holds the side ropes, above the floor. */
-  grip: 1.12,
-  beamAbove: 2.45, drumRadius: 0.2,
+  half: 0.5, rim: 0.85, bar: 2.45, barHalf: 0.34,
+  /** Where she holds the side ropes, above the floor: at her shoulders. */
+  grip: 1.45,
+  beamAbove: 2.95, drumRadius: 0.2,
 } as const;
 
 const DRUM = new THREE.Vector3(-1.85, 0, -TOWER_BACK);
@@ -242,7 +242,7 @@ export class Windmill {
     this.pawl = mesh(tagged(new THREE.BoxGeometry(0.05, 0.3, 0.05).translate(0, 0.15, 0), IRON, 0, 0));
     this.pawl.position.set(DRUM.x + 0.2, drumY + 0.18, DRUM.z - 0.33);
     this.group.add(this.pawl);
-    this.fall = mesh(tagged(new THREE.CylinderGeometry(0.022, 0.022, 1, 5, 1).translate(0, -0.5, 0), ROPE, 0, 0));
+    this.fall = mesh(tagged(new THREE.CylinderGeometry(0.03, 0.03, 1, 6, 1).translate(0, -0.5, 0), ROPE, 0, 0));
     this.fall.position.set(HOIST.x, spot.to + HOIST.beamAbove, HOIST.z);
     this.group.add(this.fall);
     this.basket.add(mesh(this.basketParts()));
@@ -528,7 +528,7 @@ export class Windmill {
     for (const s of [-1, 1]) {
       const a = new THREE.Vector2(s * (h - 0.02), rim), b = new THREE.Vector2(s * HOIST.barHalf, HOIST.bar);
       const d = b.clone().sub(a);
-      add(new THREE.CylinderGeometry(0.02, 0.02, d.length(), 5).rotateZ(-Math.atan2(d.x, d.y)).translate((a.x + b.x) / 2, (a.y + b.y) / 2, 0), ROPE);
+      add(new THREE.CylinderGeometry(0.03, 0.03, d.length(), 6).rotateZ(-Math.atan2(d.x, d.y)).translate((a.x + b.x) / 2, (a.y + b.y) / 2, 0), ROPE);
     }
     add(new THREE.TorusGeometry(0.06, 0.018, 5, 10).translate(0, HOIST.bar + 0.08, 0), IRON);
     return merged(parts);

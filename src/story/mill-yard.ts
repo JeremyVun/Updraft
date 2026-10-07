@@ -54,8 +54,8 @@ export class MillYard {
   readonly crossing: MillCrossing;
   readonly decks: Deck[] = Object.values(WAY).map((d) => ({ ...d }));
   playing = false;
-  /** QA: the lens on the mill itself, from in front and to the hoist's side, rather than on her. */
-  closeUp = false;
+  /** QA: the lens on the mill itself, from in front and to the hoist's side, or close on her in the basket. */
+  closeUp: 'mill' | 'her' | null = null;
   catless = false;
   private cat: CatSteps | null = null;
   private catClock = 0;
@@ -89,7 +89,7 @@ export class MillYard {
       const along: AddPart = (g, colour, kind, m) => add(g, colour, kind, ALONG_Z.clone().multiply(m ?? new THREE.Matrix4()));
       drownedHouse(LOW, along);
       drownedHouse(HIGH, along);
-      stack = ridgeStack(LOW, STACK_AT, 1.6, along).applyMatrix4(ALONG_Z);
+      stack = ridgeStack(LOW, STACK_AT, 2.0, along).applyMatrix4(ALONG_Z);
     });
     scenery.layers.enable(REFLECTION_LAYER);
     this.group.add(scenery);
@@ -198,9 +198,12 @@ export class MillYard {
     shot.subjects = undefined;
     const rise = THREE.MathUtils.smootherstep(THREE.MathUtils.clamp((p.y - FROM) / (TO - FROM), 0, 1), 0, 1);
     const ahead = THREE.MathUtils.smootherstep(this.away, 0, 1);
-    if (this.closeUp) {
+    if (this.closeUp === 'mill') {
       this.eye.set(-11, HUB_Y - 1, 13);
       this.target.set(-1.8, HUB_Y - 2.5, -1);
+    } else if (this.closeUp === 'her') {
+      this.eye.set(p.x - 1.6, p.y + 1.6, p.z + 2.6);
+      this.target.set(p.x, p.y + 0.9, p.z);
     } else {
       const k = upright ? FRAMES.upright : FRAMES.wide;
       this.target.set(k.x, FROM + k.low + k.rise * rise, -1.2).addScaledVector(ON, ahead);
