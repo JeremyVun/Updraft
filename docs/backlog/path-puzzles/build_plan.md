@@ -312,14 +312,24 @@ the bird's clearance from the flipper and the mechanics of N2 stay.
 Gate: as N3d's, stills at every keyframe.
 Done: [ ]
 
-### Phase N3g: the ancient skin and its life
-After N3f. Owns the skin (`whaleShader.ts`, `tuning.whaleLook`): barnacle crusts, healed scars, mottling, growth at the
+### Phase N3g: the encounter as one
+After N3f, on `sea-whale` (Jeremy, 2026-10-08; design.md, "One encounter, seamless", the body never answering the
+wind, the farewell a dive not a roll). Owns `net-whale.ts`'s hand-offs between steps, the whale's attention, the
+child's and the bird's answers, the camera's moves between holds and the holds themselves on the new form, the
+removal of the body's wind response (`tickle`, the shiver and slap), and the farewell's dive in `sleeper.ts`. Reviewed
+from a full real-gesture play, landscape and portrait, seam by seam.
+Gate: typecheck; build; the whole `net-whale-check` (its tickle assertions become "the body never answers");
+`sea-logic-check`; `CROSSING=toMirror node tools/journey-pacing-check.mjs`; stills at every keyframe.
+Done: [ ]
+
+### Phase N3h: the ancient skin and its life
+After N3g. Owns the skin (`whaleShader.ts`, `tuning.whaleLook`): barnacle crusts, healed scars, mottling, growth at the
 waterline, wet streaks, the eye's age; water sheeting off the back with each breath; the seabirds on its back.
 Gate: as N3d's, final stills opened for Jeremy.
 Done: [ ]
 
 ### Phase N4: docs on approval
-Once Jeremy approves: the open sea's chapter-select still regenerated with the whale; the open sea's section in
+Once Jeremy approves: the open sea's chapter-select still regenerated with the whale (from the game, not Astra: Jeremy, 2026-10-08, "don't use astra anymore"); the open sea's section in
 `docs/chapters.md` (its ruling "at most 100 s, nothing asked" replaced),
 the crossing table in `docs/contracts/world.md`, the new tuning names; this item's crossing sections trimmed.
 Done: [ ]

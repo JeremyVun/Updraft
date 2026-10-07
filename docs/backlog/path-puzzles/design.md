@@ -851,7 +851,7 @@ The sequence:
   jaw and head into the water (`k3`). Hands just outside the rail; she leans, never hangs out.
 - **3. The cygnet (a sweep along the flipper).** The last loop is round the near flipper, out of her reach. The cygnet,
   which swam earlier in this chapter, goes in, swims to it and takes the loop's end in its bill; a sweep along the
-  flipper makes it lift lazily (the tickle built on `crossing-whale`), and the loop slides off into the cygnet's pull,
+  flipper and the whale, awake now and knowing her, lifts it lazily, and the loop slides off into the cygnet's pull,
   slack in the rope so the bird never reads as hauling a giant (`k4`). The child watches, mittens to her mouth. The
   cygnet swims back and is lifted in; the bird stays its own size and keeps clear water between it and the fin. As
   built (Claude's call, 2026-10-08): it drops in on its own side and swims round the stern, never through her; it holds
@@ -860,7 +860,9 @@ The sequence:
   the flipper but the loop stays on; the lift is lazy, the tip rising about 2 m; as the loop slips off it backs away,
   lets go, climbs onto the gunwale into her arms and is stowed, and only then does the whale go free.
 - **Free.** It spouts a tall plume against the sunrise, the empty net drifting away on the water; the pod leaps round
-  it; the child waves (`k5`). It rolls, lifts its flukes high as if waving and sinks; its swell lifts the boat. The pod
+  it; the child waves (`k5`). Then it dives as a whale does, never rolling over (Jeremy, 2026-10-08: "it "rolls
+  over" at the end which is very weird"): the head goes down, the long back arches slowly forward and slides under,
+  the flukes rise high once as if waving and slip under; its swell lifts the boat. The pod
   goes with it, the limit eases off, and the sea goes still into the mirror's glass. The net starts drifting as the
   loop slips off, working loose into a raft with its corks round its edges, so it is its own shape by the spout; the
   pod sets off as the bird is lifted in, and three dolphins leap clear of the water round the head at the spout,
@@ -868,7 +870,15 @@ The sequence:
   to 19 m off), so by the spout it lies whole in the middle distance; the boat stays at rest.
 - **Gestures.** Each step's answer starts at the wind's target and is plainly the biggest thing on screen: the boat is
   at rest, so nothing may read as the boat speeding up. The ambient breeze does nothing to the net, the corks or the
-  flipper. Gusts elsewhere on the whale may still tickle it (shiver, a lazy slap) but never progress a step.
+  flipper. The whale's body never answers the wind (Jeremy, 2026-10-08: "I also saw that the whale's body responds to
+  the wind, which is weird"): no shiver, no slap, nothing from gusts on it or the breeze. What moves on it is the net,
+  the breath it draws through the player's circles, and the flipper it lifts for a sweep along it once awake.
+- **One encounter, seamless** (Jeremy, 2026-10-08: "the interactions need a pass as well so that the whole encounter
+  feels seamless"). Each step's end hands on to the next on screen, with no dead air and nothing popping: the eye
+  opens and finds her, and her look goes to the float line by the boat; the net sliding off the head bares the loop on
+  the flipper, and the bird sees it and goes; the bird aboard, the whale drifts clear. The next target is plain the
+  moment the last step ends; the whale's eye follows what matters (her, the bird); the camera's moves between holds
+  are each one unbroken ease; the child and the bird answer each step's end.
 - **Invitations and valves.** Each step has the usual drawn invitation after a few idle seconds and a safety valve after
   about 90 s with no progress, with a cause on screen: a dolphin lifts the mesh with its nose, noses the cork to the
   boat, nudges the flipper. No gull. Nothing is timed, nothing fails.
