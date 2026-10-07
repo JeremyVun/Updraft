@@ -115,12 +115,18 @@ to the church (`strandChurch`) and the climb lens still aim where the church sto
 on its cast lacking the cat, as it did before this phase.
 
 ### Phase 3b: the village's look
-Owns: the house and prop pieces (a new module beside `drowned.ts`, its showroom on the QA stage) and their use in
-`drowned.ts`'s builders. Builds the house types and props chosen in `comps/village/house-kit.png` and `notes.md` in
-the game's simple faceted style, the far village toward the horizon, and the small things of village life above the
-water, on the layout 3a lays. Fixed cost: one merged mesh as today, no new draw calls per house.
-Gate: stills of the arrival, the cat's roof, the run's views and the far horizon beside `comps/village/`; the run's
-views of the church and lighthouse never crowded; typecheck.
+Owns: the house and prop pieces (a new module beside `drowned.ts`, built in the construction of home's cottage,
+`src/world/cottage.ts`), their use in `drowned.ts`'s house builders, the generated village's growth outside
+`inClearing` (through the throw-away filter, never changing the draws), the far village toward the horizon, and the
+three touches. Look target: `comps/village/painted-*.png`, `painted-kit.png`, `painted-notes.md` (approved; design.md
+"A whole village the sea has taken"). The houses on her way (`PLACED`) are restyled without changing their footprint,
+ridge height or eaves; the mill, the green, the churchyard, her way and the boat's water stay clear.
+Wave 1: the kit and the restyle of today's houses, judged by Jeremy in stills from the three `today-*` cameras.
+Wave 2: the village's fuller shape (rows, huddles, the middle distance either side of her way, groups to the
+horizon), the touches, the far village's cheap form.
+Gate: stills beside `comps/village/painted-*` (arrival, the cat's roof, eye level, the run's views, the horizon); the
+run's views of the church and lighthouse never crowded; one merged mesh as today; typecheck, `drowned-roofs-check`,
+`drowned-way-check`.
 Done: [ ]
 
 ### Phase 3c: the run
