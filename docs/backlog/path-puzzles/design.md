@@ -453,7 +453,10 @@ about (−9, −1398), some 40 m short of the church (`SPIRE`, 14, −1436). Mai
    beach, and the landing is relief that turns into the wood's fear.
 
 The village round the church is re-laid so the route reads as a real village she picks her way through (Jeremy's note
-on the first frames above). The water level never changes.
+on the first frames above). The water level never changes. The village's look may be raised as far as it needs
+(Jeremy, 2026-10-07: "If you see opportunities to upgrade the visuals of the drowned village as well e.g. more houses,
+better looking houses, more feeling of a whole village etc., feel free to take them."), settled in concept art before
+it is built and keeping open water between the houses.
 
 **Ownership of the drowned village** (Jeremy, 2026-10-05, verbatim):
 
@@ -529,21 +532,26 @@ So the existing drowned village and storm code may be refactored as far as the r
   metres of sitting breaks the run, and a lane too narrow for the boat packs the village. The third interaction uses
   the game's other verb, circling: an old tower mill stands in the water up to its shoulders between two roofs, its
   sails turning slowly in the fog's breath; the player turns it by circling round its hub (the drawn invitation shows
-  the circle); she waits on a low wall until the lowest sail comes round beside her, steps onto its lattice and holds
-  on, and as the player keeps turning it carries her up against the sky until she steps off onto a high roof, where
+  the circle); she waits on a roof edge until a sail comes round level beside her, walks onto it, and as the player
+  keeps turning it lifts her up against the sky until she walks off onto a high roof, where
   the church and the lighthouse come back into view across the water. The kitten has gone ahead its own way and waits
   there. She chooses when to step on and off; nothing needs timing. With the tree (a walk across) and the swing (a
   leap), it makes the flood a child's playground as she runs from it. It must not crowd the horizon's spire and
   lighthouse. Approved on Astra's concept (Jeremy, 2026-10-05: "I am happy with the windmill as teh third piece"),
   `comps/mill/` (`mill-wait`, `mill-ride`, `mill-top`, `mill-plan`, `notes.md`): a small, worn tower mill with only two
   opposite sails left, bare lattice and torn linen, no taller than a cottage, so it never makes a third landmark;
-  about a 2 m tower, the hub about 2.9 m up, a 2.4 m sail radius, boarding near 0.7 m and stepping off near 4 m. Any
+  about a 2 m tower, the hub about 2.9 m up, a 2.4 m sail radius. Any
   broad circle round the hub turns it (tangential movement is torque; the drawn invitation is a flat spiral in the
   sails' plane, about a turn and a quarter, its tip showing the way); the sail eases and dwells as it reaches her and
   again at the roof; circling the wrong way only rocks it, never carrying her back toward the water; when the player
-  stops it coasts and settles while she holds on; its speed is capped. She climbs the lattice like a ladder, both
-  hands on, changing grips and footholds as it turns, upright and close to it, the cygnet tucked clear. The mill
-  leaves the frame as the church and the lighthouse come back into view.
+  stops it coasts and settles while she holds on; its speed is capped. She does not climb (Jeremy, 2026-10-05: "we
+  dont need her climbing the lattice, why not keep it as simple as her just walking onto the wind mill sail?"): the
+  sail comes round to lie about level with the roof edge she waits on, she walks out onto its lattice's lower rail
+  with a hand on its stock like a handrail, and stands there, one held pose with small shifts of balance, while the
+  turn lifts her through a short arc, well under half a turn and never steeper than she could stand on, until it eases
+  beside the high roof and she walks off its end. The boarding and stepping-off heights follow from that arc in the
+  blockout; the mill keeps the concept's size, and the cygnet stays tucked clear. The mill leaves the frame as the
+  church and the lighthouse come back into view.
 - **The run is built on decks** (`src/world/decks.ts`): ridges, wall tops and the fallen trunk are strips the child
   walks; the slates up to a ridge are ramps. She gets out with `alight` onto the cottage's slates and back in with
   `board` at the nave.
