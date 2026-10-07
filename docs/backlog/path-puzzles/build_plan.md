@@ -149,40 +149,68 @@ Done: [ ]
 The cat in the lit window of the cottage with the red door at the very end (design.md "The cat comes home"); a small
 cat-face pass (eyes slightly big and low close up, muzzle cream not white, profile ears small, mew mouth small).
 
-## The crossing: the whale asleep
+## The open sea: the whale in the net
 
-Design: design.md, "The crossings" through the end. Concept frames: `comps/crossings/whale/`. Its own branch, judged
-by Jeremy on its own and never merged without his approval. Commit after every step.
+Design: design.md, "The crossings" through the end; the spec is "As decided: the whale in the net". Concept frames:
+`comps/crossings/whale-net/` (`k1`–`k5`, `k2-portrait`, `notes.md`). Its own branch, judged by Jeremy on its own and
+never merged without his approval. At most two build agents at once (peers share the session limit); commit after
+every step. Worktrees under `/private/tmp` are wiped by a restart: the branch is the record.
 
 Standing constraints for every phase:
-- Cursor movement is the only verb; nothing timed, nothing failed.
-- Every response is caused by the player's own wind and visibly answers it; the ambient breeze never wakes the whale.
-- Camera never jerks; no fourth wall.
-- Player-feel numbers in `src/tuning.ts` (`tuning.sleepingWhale`).
-- Crossing lengths stay as in `docs/contracts/world.md` apart from the whale's stop.
-- The first crossing (`toLines`) is not touched: its whale is the set-up for the sleeping one.
-- Visual judging (stills against the concept frames) is done by Opus or Astra only.
+- Cursor movement is the only verb; nothing timed, nothing failed; the ambient breeze does nothing to the net.
+- Every response starts at the wind's target and visibly answers it; the boat is at rest, so nothing reads as the boat
+  speeding up.
+- Camera never jerks; no fourth wall (the child never looks to the camera or player).
+- Player-feel numbers in `src/tuning.ts` (`tuning.netWhale`, replacing `tuning.sleepingWhale`).
+- The first crossing (`toLines`) and the meadow crossing (`toMeadow`) are as on main.
+- Visual judging (stills against the concept frames) is done by Opus or Astra only. Code waves end with one smoke
+  still set; the look loop is its own wave.
 
 ### Phase C0: direct crossing starts
-Owns: `src/story/journey.ts` (a `?chapter=` value naming any `to*` route starts it at its first waypoint, heading
-for the second, cygnet in the satchel), the query-param list in `CLAUDE.md`.
-Done: [x] branch `crossings-start` (9dd4ebe), the base of `crossing-whale`.
+Done: [x] branch `crossings-start` (9dd4ebe): `?chapter=<route>` starts any crossing at its first waypoint.
 
-### Phase C2: the whale asleep across the way (branch `crossing-whale`)
-Owns: the sleeping whale (rest pose, breathing, shiver along a stroke, flipper slap, eye, the roll and fluke wave, in
-`src/fx/sealife/` beside `whale.ts`, sharing its anatomy and shader), the gull, `src/story/crossing.ts` (a
-`sleepingWhale` option: the stop, `updraftTarget`, `coax`, the brush response, the safety valve, the camera hold,
-the child's lean and wave, the cygnet's duck and peek, the checkpoint flag), `src/story/journey.ts` (`toMeadow`),
-`src/audio/foley.ts` (breath, slap, gull), `src/tuning.ts`.
-Seam: the crossing holds the boat with `Boat.speedLimit` eased to zero and releases it the same way; the whale reports
-`awake` once the breath is drawn; nothing else in the crossing changes.
-Gate: typecheck; build; a real-gesture check (`tools/sleeping-whale-check.mjs`): sweeps alone never wake it, circles
-over the blowhole do, idle wakes it only by the gull after the valve, a save before and after resumes correctly;
-stills beside `k1`–`k4` in landscape and portrait, opened for Jeremy. Built in two waves: code, the
-check and one smoke still set (C2a), then the look and the gates (C2b).
+### Phase N1: the whale moves to the open sea (branch `sea-whale`)
+Base: main, with `crossing-whale` (to 1900b58c) merged in, then the `toMeadow` hook removed. `crossing-whale` holds:
+`src/fx/sealife/sleeper.ts` (`SleepingWhale`, phases asleep/waking/leaving/gone, breathing, shiver, slap, eye, spout
+jet, roll and fluke wave), `perched-gull.ts` (to be removed), `whale.ts` (`WhaleRig` base), `src/story/sleeping-whale.ts`
+(`WhaleAcross`: the speed-limit hold and release, on-screen gust detection, `updraftTarget`, coax, camera hold, child
+and cygnet), whale shader uniforms (`uScale`, `uShiver`, `uSlap`, `uEye`), `spray.ts` `jet()`, `swell.ts` `uSurge`,
+`tools/sleeping-whale-check.mjs`, and the pacing tool's real `SeaLife`. Its last report's knobs, traps and rejected
+approaches are in the commit messages; read `git log -p crossings-start..crossing-whale`.
+Owns: `src/story/journey.ts` (`toMirror`: the route lengthened, `whaleAt` cut, the encounter option), `src/story/crossing.ts`
+(the pod's nudge becomes the lead; the pod's farewell waits for the whale), the encounter module, `sleeper.ts` (about
+110 m, the resting pose of `notes.md` scaled up, the eye larger than the boat), the camera hold, `src/story/checkpoint-data.ts`,
+`src/tuning.ts`, `tools/journey-pacing-check.mjs`, `tools/sea-check.mjs`, `tools/sea-logic-check.mjs`.
+Seam: the encounter exposes its step (`approach`, `breath`, `line`, `flipper`, `free`, `gone`) for the net (N2) to
+drive and read; the pod's lead and farewell read it; for this phase a stand-in (circles over the blowhole wake it, as
+on `crossing-whale`) lets the sequence play end to end.
+Gate: typecheck; build; `?chapter=sea` plays the pod, the swim, the lead, the stop, the stand-in wake, the release and
+the arrival at the mirror with the mirror hidden until the whale has gone; the sea checks and `CROSSING=toMirror node
+tools/journey-pacing-check.mjs` updated and passing; one smoke still set at `k1` and `k5`.
 Done: [ ]
 
-### Phase C3: docs on approval
-Once Jeremy approves the whale: its section in `docs/chapters.md`, the crossing table in `docs/contracts/world.md`
-if the length changed, the new tuning names; this item's crossing sections trimmed.
+### Phase N2: the net and the three steps
+Owns: the net (`src/fx/sealife/net.ts`: sparse deforming mesh, instanced corks, boundary ropes, the lifted patch, the
+peel, the flipper loop, the empty net drifting off), the three steps and their invitations and dolphin valves in the
+encounter module, the child's catch and haul and the cygnet's swim to the flipper and back (`src/companion/` or the
+cygnet's states as fits), sounds in `src/audio/foley.ts`, `tools/net-whale-check.mjs` (replacing
+`sleeping-whale-check.mjs`).
+Seam: each step's progress is caused only by its own gesture at its own target; steps go in order; a valve's dolphin
+does the same physical act the player would have caused.
+Gate: typecheck; build; the check with real gestures: each step done by its gesture; the ambient breeze and idle never
+progress a step before its valve; each valve finishes its step by its dolphin; sweeps on the whale elsewhere only
+tickle; saves at each checkpoint resume correctly; each negative proven to bite by breaking its guard once. One smoke
+still set at `k2`–`k4`.
+Done: [ ]
+
+### Phase N3: the look
+Owns: the look of the whale, the net, the light on them, the camera hold and portrait framing, the child's and the
+cygnet's poses, against `k1`–`k5` and `k2-portrait` side by side every iteration.
+Gate: typecheck; build; the N2 check still passing; final stills (landscape 1600×900 and portrait about 430×932) at
+each keyframe beside the concept, opened for Jeremy.
+Done: [ ]
+
+### Phase N4: docs on approval
+Once Jeremy approves: the open sea's section in `docs/chapters.md` (its ruling "at most 100 s, nothing asked" replaced),
+the crossing table in `docs/contracts/world.md`, the new tuning names; this item's crossing sections trimmed.
 Done: [ ]
