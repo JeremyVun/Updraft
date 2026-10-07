@@ -283,7 +283,7 @@ Skin skin(float far) {
     k.albedo = mix(k.albedo, eye, opening);
     k.gloss = opening;
     // The wet rim of the lower lid catches the sky.
-    k.rim = (1.0 - smoothstep(0.0, 0.05, abs(e.y - l.y - 0.02))) * (1.0 - smoothstep(0.6, 0.9, abs(e.x))) * flank;
+    k.rim = (1.0 - smoothstep(0.0, 0.05, abs(e.y - l.y - 0.02))) * (1.0 - smoothstep(0.6, 0.9, abs(e.x))) * flank * uEye * (1.0 - far);
     // The top of the lower lip faces the sun, but a gold line along it would draw a mouth.
     float ledge = onJaw * (1.0 - smoothstep(0.0, 0.06, abs(below - 0.02)));
     k.near = max((1.0 - smoothstep(1.0, 1.6, length(e * vec2(0.8, 1.0)))) * flank, ledge);
@@ -310,7 +310,7 @@ Skin skin(float far) {
     float under = (1.0 - smoothstep(-0.15, 0.15, rn.y));
     float t = vRig.z;
     float a = vRig.w;
-    float edge = smoothstep(0.66, 0.84, a + 0.07 * sin(t * 23.0) + 0.04 * sin(t * 51.0));
+    float edge = smoothstep(0.6, 0.78, a + 0.07 * sin(t * 23.0) + 0.04 * sin(t * 51.0));
     float stroke = (1.0 - smoothstep(0.05, 0.11, abs(t + 0.03 * sin(a * 9.0)))) * smoothstep(0.2, 0.45, a);
     float left = 1.0 - smoothstep(0.08, 0.12, length(vec2((t + 0.47) * 0.8, a - 0.36 - 0.1 * (t + 0.47))));
     float right = 1.0 - smoothstep(0.05, 0.08, length(vec2(t - 0.6, (a - 0.52) * 1.4)));
@@ -380,7 +380,7 @@ void main() {
   vec3 bounce = mix(uSkyHorizon, uSeaTint * sky * 3.0, 0.5) * ${f(L.bounce)} * sky * max(-N.y + 0.15, 0.0);
   vec3 col = k.albedo * (fill + bounce + uSunColor * (wrap * wrap * wrap * ${f(L.key)} + 0.02) * sun);
   // Low on the flank the sea shades it, so the skin darkens down to the waterline.
-  col *= mix(${f(L.waterline)}, 1.0, smoothstep(0.0, 2.5, vWorld.y));
+  col *= mix(${f(L.waterline)}, 1.0, smoothstep(-0.5, 3.5, vWorld.y));
   col += k.albedo * uSunColor * sun * k.thin * back * max(-ndl, 0.0) * 1.4;
   col += uIris * uSunColor * sun * k.caustic * ${f(L.caustic)};
 
@@ -455,7 +455,8 @@ void main() {
   vec3 seen = k.albedo * light * exp(-uAbsorb * (path + depth));
   float clear = exp(-path * ${f(L.clarity)});
   vec3 col = mix(deep, seen, clear);
-  float a = (1.0 - F) * clear * smoothstep(-0.02, 0.06, vDepth) * 0.7;
+  // Far off the body under the glass would draw a pale hull beneath it, so only what is near shows through.
+  float a = (1.0 - F) * clear * smoothstep(-0.02, 0.06, vDepth) * 0.7 * (1.0 - 0.75 * smoothstep(25.0, 60.0, distance(cameraPosition, vSurface)));
   if (a < 0.004) discard;
   col = mix(stillGrey(col) * 1.05, col, 0.35 + 0.65 * uWorldLife);
   col = applyFog(col, vSurface);
