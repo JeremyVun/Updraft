@@ -5,6 +5,7 @@ import type { LittleBoats } from '../world/little-boats';
 import type { DrownedVillage } from '../world/drowned';
 import * as THREE from 'three';
 import type { Mood } from '../audio/audio';
+import type { MaterialSound } from '../audio/foley';
 import type { SeaScorePhase } from '../audio/sea-score';
 import type { SummitScorePhase } from '../audio/summit-score';
 import type { SleepingScorePhase } from '../audio/sleeping-score';
@@ -73,6 +74,8 @@ export interface Cast {
   skyMirror: SkyMirror;
   /** The nearest animal worth a glance within `radius` of (x, z), written into `out`. */
   nearby(x: number, z: number, radius: number, out: THREE.Vector3): boolean;
+  /** A physical sound at a place in the world, heard as near as it is: for things a chapter builds and moves itself. */
+  knock?(kind: MaterialSound, at: THREE.Vector3, strength: number): void;
 }
 
 /** What a chapter tells the rest of the game each frame. */
