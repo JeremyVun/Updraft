@@ -803,13 +803,23 @@ The sequence:
   Claude's to take further. Claude's reading, agreed with him: it rode high and even along its whole length like a
   balloon, its outline one smooth arch, its skin clean and evenly lit like a small near model. Claude's direction: an
   island that breathes.
-  - **Mostly under the sea.** Above the water only the head, the blowhole and a long low line of back that sinks and
-    fades into the haze; the tail stock never seen until the farewell. Under the glass its vast shape goes on beside
-    the boat, far larger than what shows, the flipper reaching under her, so moving the camera feels like floating
-    beside something enormous: the scale cue a painting can't give. (The lie stays: the body's axis passes about 21 m
-    from the boat, so its flank under water comes within about 8–10 m.)
-  - **A whale's outline.** The snout's flat ridge, the raised guard round the blowhole, the dip behind it, a small hump
-    far along the back, the narrowing toward the tail before it slips under.
+  - **Its form, from a real whale, not the concept** (Jeremy, 2026-10-08, on the first low-back build: "I'm not
+    convinced by the sillouhette. Why is there a big hump and then the body sort of falls away. That doesn't read like
+    a giant whale to me. I think the astra concept art was very bad in this regard and it seems to have carried
+    through, creating this almost cylinder tubular shape to the whale's body"). Claude's reading: the body was a lathed
+    tube, one round section swept along its length with the crown a bump on top; sinking the back behind the crown
+    made it fall away. Claude's direction, from the blue whale (the largest animal there has been; the ancient look
+    comes from its skin):
+    - The section changes along the body. The head is broad and flat-topped, wider than it is tall, a long flat
+      wedge from above with a ridge down the snout; the body is broadest just behind the flippers; the tail stock is
+      narrow side to side and deep.
+    - The back is a broad, gently rounded ridge, not a tube's rim: from the hold its flanks curve up so slowly that
+      it reads as a long low island, not a wall. It runs long and nearly level at about the blowhole's height, the
+      blowhole's raised guard a gentle rise on it, never a hump the body falls away from; far along a small low
+      dorsal knuckle; it goes on into the haze and lowers only where the haze takes it.
+    - It sits in the sea like a hull: the flanks keep widening below the waterline, so its mass goes down and on
+      beyond what shows. Under the glass that vast shape continues beside the boat, the flipper reaching under her.
+      (The lie stays: the body's axis passes about 21 m from the boat.)
   - **It melts into the morning.** The far length dissolves into warm haze; a crisp gold line runs along the back's
     ridge against the sea; the top is wet.
   - **Ancient skin.** Weathered like an old hull or a reef: barnacle crusts clustered on the head, chin and flipper

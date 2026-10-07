@@ -300,20 +300,16 @@ moored 210.3; idle 485.9. Left: the portrait farewell has no raft (it lies 19 m 
 are dark against the sun; the flipper's root bobs about 1 m with each breath (under at the bottom, a pale horn at the
 top); at `k3` the hauled net reads as a scatter of corks.
 
-### Phase N3f: the giant
-After N3e, on `sea-whale` (Jeremy, 2026-10-08; design.md, "A dreamlike giant, ancient": Claude's direction, the
-concept now only a reference). Owns the whale's profile along its length and how much rides above the water
-(`anatomy.ts`, the rest pose in `sleeper.ts`), its vast shape under the glass, the haze along its length, the gold
-line along the back, and whatever framing the new silhouette needs.
+### Phase N3f: the giant's form
+After N3e, on `sea-whale` (Jeremy, 2026-10-08; design.md, "A dreamlike giant, ancient" and "Its form, from a real
+whale, not the concept"). Owns the whale's section and profile along its length (`anatomy.ts`, the rest pose and
+breath in `sleeper.ts`), its shape under the glass, the haze along its length, the gold line along the back, and the
+holds the new form needs. A first form (a tube sunk tail-down behind the crown, `ff2330ec..2e176d32`) was rejected by
+Jeremy: its light, haze, glass, breath and eye work may stay where they serve the new form. The form is shown to
+Jeremy as stills before the holds and the gate.
 Seam: `surfaceAt` and the anchors stay true to the rendered skin; the net drapes by them and must still lie on it;
 the bird's clearance from the flipper and the mechanics of N2 stay.
 Gate: as N3d's, stills at every keyframe.
-Progress: `ff2330ec..3313c9bf` (first agent, handed back before the gate). The back runs level from the crown to a
-small hump at 0.64 and sinks tail-down (`TOP`, `MOUND` the guard round the blowhole, `restPitch`); heights at rest
-3.8 m at the snout, 5.3 at the crown, 2.9 at 0.3, 1.0 at 0.5, awash by 0.6, under from 0.7. A breath lifts the back
-fully and the head by 0.3 (`breathAt`), so the flipper's root bobs 0.13 m; the net follows the spine's own rise per
-row (`bodyShift`, `spineShift`). A crisp gold `ridge`, a `wet` top, `HAZE_GLSL` (`uHaze`) melting the far length; the
-shape under the glass deeper, warm and soft (`glassDeep`, `glassWarm`). Left: the gate, the stills, the holds.
 Done: [ ]
 
 ### Phase N3g: the ancient skin and its life
