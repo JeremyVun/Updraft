@@ -75,7 +75,7 @@ export class MillYard {
     }
     const crossingCast = { child: cast.child, wind: cast.wind, lines: cast.lines, input: cast.input };
     this.crossing = new MillCrossing({ hub: this.at(new THREE.Vector3(0, HUB_Y, 0)), facing }, {
-      wait: this.at(new THREE.Vector3(BOARD.x + 1.1, WALL_TOP, WALL_Z)),
+      wait: this.at(new THREE.Vector3(BOARD.x + 0.45, WALL_TOP, WALL_Z)),
       stepOff: this.at(STEP_OFF.clone()),
       onward: this.at(ONWARD.clone()),
     }, crossingCast);
@@ -89,6 +89,11 @@ export class MillYard {
     return [this.group, ...this.crossing.objects];
   }
 
+  /** For the capture tools: the numbers it plays by. */
+  get tuning(): typeof K {
+    return K;
+  }
+
   /** For the capture tools: where everything has got to. */
   get state(): Record<string, unknown> {
     const m = this.crossing.mill, c = this.cast.child;
@@ -97,6 +102,7 @@ export class MillYard {
       angle: +m.angle.toFixed(4), sail: +m.sail.toFixed(4), speed: +m.speed.toFixed(4), rock: +m.rock.toFixed(4),
       drive: +m.drive.toFixed(3), dwelling: m.dwelling, aboard: m.aboard, hold: m.hold, quiet: +Math.min(999, m.quiet).toFixed(2),
       inviting: this.crossing.inviting, valving: this.crossing.valving,
+      railGap: +this.crossing.railGap().toFixed(3), shown: +m.shown.toFixed(4),
       child: c.position.toArray().map((v) => +v.toFixed(3)), yaw: +c.yaw.toFixed(3),
     };
   }
@@ -117,7 +123,7 @@ export class MillYard {
     c.reachFor(1, null);
     c.standUp();
     const wait = this.crossing.way.wait;
-    c.place(wait.x, wait.z, this.facing + Math.PI - 0.5);
+    c.place(wait.x, wait.z, this.facing + Math.PI + 0.6);
     c.stowPlane(true, true);
     const k = this.cast.cygnet;
     k.visible = true;

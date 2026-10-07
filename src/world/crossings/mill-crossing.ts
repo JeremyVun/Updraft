@@ -107,6 +107,14 @@ export class MillCrossing {
     this.spiral.update(dt, camera, m, this.inviting);
   }
 
+  /** How far her feet are above the rail's top where she stands on it (QA). */
+  railGap(): number {
+    const c = this.cast.child.position, r = this.rail;
+    const dx = r.x1 - r.x0, dz = r.z1 - r.z0;
+    const u = THREE.MathUtils.clamp(((c.x - r.x0) * dx + (c.z - r.z0) * dz) / (dx * dx + dz * dz), 0, 1);
+    return c.y - THREE.MathUtils.lerp(r.height, r.height1 ?? r.height, u);
+  }
+
   /** Across onto the rail beside her and a step out along it toward the tip, then she holds the stock and rides. */
   private board(): void {
     const k = tuning.crossings.mill;
@@ -115,7 +123,7 @@ export class MillCrossing {
     this.to('boarding');
     m.hold = true;
     if (!c.decks.includes(this.rail)) c.decks.push(this.rail);
-    const onto = m.railTop(k.stand - 0.2, this.at);
+    const onto = m.railTop(k.stand - 0.1, this.at);
     const out = m.railTop(k.stand, new THREE.Vector3());
     c.lookAt = null;
     c.stroll = k.railStroll;
