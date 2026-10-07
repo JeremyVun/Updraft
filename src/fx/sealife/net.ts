@@ -38,8 +38,16 @@ const GATHER = 0.45;
 const OVER = 0.07;
 /** However it folds, it keeps this far from the boat at rest (m). */
 const BOAT_CLEAR = 4.5;
-/** How much of the peel each part of it spreads over, so the sheet comes away together rather than point by point. */
-const PEEL_SPREAD = 0.35;
+/**
+ * Peeling, each row of the sheet slides along its own drape toward the near side like a cloth pulled off a table, so
+ * none of it stretches on the skin; the leader's row goes first and the rows furthest along it start `STAGGER` of the
+ * peel later. Off the skin, a point is drawn across the water to its place in the floating mass over the cloth still
+ * behind it plus `WATER_MIN` metres of slide, so the near edge comes all the way while the haul lasts.
+ */
+const STAGGER = 0.5;
+const WATER_MIN = 3;
+/** Points along each row's drape: the sheet across, then the line from its near edge down to the water. */
+const PATH = COLS + BELOW - 1;
 /** How far the empty net drifts, and how far round it turns, as it goes. */
 const DRIFT_AWAY = 48;
 const DRIFT_TURN = 0.5;
@@ -144,7 +152,14 @@ export class Net {
   private readonly onWater = new Float32Array(ROWS * COLS);
   private readonly lifts = new Float32Array(ROWS * COLS);
   private readonly domes = new Float32Array(ROWS * COLS);
-  private readonly order = new Float32Array(ROWS * COLS);
+  /** Each row's drape as a path from its far edge to the water on the near side, and how far along it each point is (m). */
+  private readonly path = new Float32Array(ROWS * PATH * 3);
+  private readonly pathAcross = new Float32Array(ROWS * PATH);
+  private readonly pathWater = new Uint8Array(ROWS * PATH);
+  private readonly pathArc = new Float32Array(ROWS * PATH);
+  /** How far each row has slid along its drape this frame (m), and how much of the lifted patch it still holds up. */
+  private readonly slid = new Float32Array(ROWS);
+  private readonly tent = new Float32Array(ROWS);
   /** Where each point lies in the folded mass, along and across it and how high in the fold. */
   private readonly fold = new Float32Array(ROWS * COLS * 3);
   /** Where each point floats once it is all peeled, before it drifts. */
@@ -462,6 +477,44 @@ export class Net {
       }
     }
     this.crowns[i] = crown - this.bodyShift(0);
+    this.layPath(i);
+  }
+
+  /** Row `i`'s drape as one path, far edge to the water below its near edge, with the distance along it to each point. */
+  private layPath(i: number): void {
+    let arc = 0;
+    for (let v = 0; v < PATH; v++) {
+      const o = i * PATH + v;
+      if (v < COLS) {
+        const k = i * COLS + v;
+        this.path.set(this.rest.subarray(k * 3, k * 3 + 3), o * 3);
+        this.pathAcross[o] = this.across[k];
+        this.pathWater[o] = this.onWater[k];
+      } else {
+        const b = i * BELOW + v - COLS + 1;
+        this.path.set(this.below.subarray(b * 3, b * 3 + 3), o * 3);
+        this.pathAcross[o] = this.belowAcross[b];
+        this.pathWater[o] = this.below[b * 3 + 1] > 0.05 ? 0 : 1;
+      }
+      if (v > 0) arc += Math.hypot(this.path[o * 3] - this.path[o * 3 - 3], this.path[o * 3 + 1] - this.path[o * 3 - 2], this.path[o * 3 + 2] - this.path[o * 3 - 1]);
+      this.pathArc[o] = arc;
+    }
+  }
+
+  /** The point `q` metres along row `i`'s drape, as the body lies this frame, and whether it is on the water there. */
+  private alongPath(i: number, q: number, out: THREE.Vector3): number {
+    const base = i * PATH;
+    let v = 1;
+    while (v < PATH - 1 && this.pathArc[base + v] < q) v++;
+    const a = base + v - 1;
+    const b = base + v;
+    const span = this.pathArc[b] - this.pathArc[a];
+    const f = span > 1e-6 ? THREE.MathUtils.clamp((q - this.pathArc[a]) / span, 0, 1) : 1;
+    out.set(this.path[a * 3] + (this.path[b * 3] - this.path[a * 3]) * f, this.path[a * 3 + 1] + (this.path[b * 3 + 1] - this.path[a * 3 + 1]) * f,
+      this.path[a * 3 + 2] + (this.path[b * 3 + 2] - this.path[a * 3 + 2]) * f);
+    const water = f < 0.5 ? this.pathWater[a] : this.pathWater[b];
+    if (!water) out.y += this.bodyShift(this.pathAcross[a] + (this.pathAcross[b] - this.pathAcross[a]) * f);
+    return water;
   }
 
   private skinAt(c: THREE.Vector3, h: number): number {
@@ -542,14 +595,6 @@ export class Net {
     const perRow = (ROWS - 1) / NET.long;
     this.leaderRow = THREE.MathUtils.clamp(Math.round(eyeRow - LEADER_BEFORE_EYE * perRow), 0, ROWS - 1);
     this.loopRow = THREE.MathUtils.clamp(Math.round(eyeRow + LOOP_BEHIND_EYE * perRow), 0, ROWS - 1);
-    // The near edge round the leader comes away first, and the rest after it: that is where it is hauled from.
-    const uLeader = (this.leaderRow / (ROWS - 1)) * NET.long;
-    for (let i = 0; i < ROWS; i++) {
-      for (let j = 0; j < COLS; j++) {
-        const u = (i / (ROWS - 1)) * NET.long;
-        this.order[i * COLS + j] = 0.62 * ((NET.near - this.acrossAt(j)) / (NET.near + NET.far)) + 0.38 * (Math.abs(u - uLeader) / NET.long);
-      }
-    }
     this.layLeader();
     this.layAfloat();
     for (const o of this.objects) o.visible = true;
@@ -634,65 +679,59 @@ export class Net {
       this.mass.z - s * x + c * z + (this.ahead.z + this.side.z * 0.35) * away);
   }
 
-  /** Every point of the sheet this frame: on the skin as it breathes, lifted, domed, peeling, folded, drifting. */
+  /** Every point of the sheet this frame: on the skin as it breathes, lifted, domed, sliding off, folded, drifting. */
   private layOn(time: number): void {
     const P = this.pos.array as Float32Array;
     const A = this.afloat.array as Float32Array;
     const C = this.contact.array as Float32Array;
     const dome = K.netDome * this.domeStrength * THREE.MathUtils.smoothstep(this.domeT, 0, 0.35) * Math.exp(-Math.max(0, this.domeT - 0.35) * 1.6);
-    const lift = this.lift;
-    const flutter = lift * (0.12 + 0.3 * this.updraft);
+    const flutter = this.lift * (0.12 + 0.3 * this.updraft);
     const blow = this.whale.blowhole;
-    const peel = this.peel * (1 + PEEL_SPREAD);
+    const uLeader = (this.leaderRow / (ROWS - 1)) * NET.long;
+    const far = Math.max(uLeader, NET.long - uLeader);
     for (let i = 0; i < ROWS; i++) {
-      const crown = this.crowns[i] + this.bodyShift(0);
-      const wb = (i * BELOW + BELOW - 1) * 3;
+      const u = (i / (ROWS - 1)) * NET.long;
+      const end = this.pathArc[i * PATH + PATH - 1];
+      const row = THREE.MathUtils.clamp(this.peel * (1 + STAGGER) - (STAGGER * Math.abs(u - uLeader)) / far, 0, 1);
+      const slide = row * (end + WATER_MIN);
+      this.slid[i] = slide;
+      // Pulled along, the patch the wind holds up comes down with it.
+      const tent = 1 - THREE.MathUtils.smoothstep(slide, 0, 4);
+      this.tent[i] = tent;
+      const lift = this.lift * tent;
       for (let j = 0; j < COLS; j++) {
         const k = i * COLS + j;
-        const skin = this.onSkin[k];
-        const water = this.onWater[k];
-        let x = this.rest[k * 3];
-        let y = this.rest[k * 3 + 1] + (water ? 0 : this.bodyShift(this.across[k]));
-        let z = this.rest[k * 3 + 2];
-        const wl = this.lifts[k];
-        let up = 0;
-        if (wl > 0) {
-          const shape = Math.pow(wl, 0.65);
-          up = lift * K.netLift * shape + flutter * Math.sin(time * 2.4 + i * 0.8 - j * 0.6) * shape * (1 - shape) * 4 * 0.6;
-          x += (blow.x - x) * lift * wl * 0.12;
-          z += (blow.z - z) * lift * wl * 0.12;
+        const arc = this.pathArc[i * PATH + j];
+        const q = arc + slide;
+        if (q <= end) {
+          const water = this.alongPath(i, q, this.t);
+          let up = 0;
+          const wl = this.lifts[k];
+          if (wl > 0) {
+            const shape = Math.pow(wl, 0.65);
+            up = lift * K.netLift * shape + flutter * tent * Math.sin(time * 2.4 + i * 0.8 - j * 0.6) * shape * (1 - shape) * 4 * 0.6;
+            this.t.x += (blow.x - this.t.x) * lift * wl * 0.12;
+            this.t.z += (blow.z - this.t.z) * lift * wl * 0.12;
+          }
+          up += dome * this.domes[k] * tent;
+          P[k * 3] = this.t.x;
+          P[k * 3 + 1] = this.t.y + up;
+          P[k * 3 + 2] = this.t.z;
+          A[k] = water;
+          C[k] = water ? 0 : 1 - THREE.MathUtils.smoothstep(up, 0.05, 0.4);
+          this.peeled[k] = 0;
+        } else {
+          // Off the skin: drawn across the water from below its row to its place in the floating mass.
+          const t = THREE.MathUtils.smoothstep((q - end) / (arc + WATER_MIN), 0, 1);
+          const w = (i * PATH + PATH - 1) * 3;
+          this.floating(k, this.r);
+          P[k * 3] = this.path[w] + (this.r.x - this.path[w]) * t;
+          P[k * 3 + 1] = this.path[w + 1] + (this.r.y - this.path[w + 1]) * t;
+          P[k * 3 + 2] = this.path[w + 2] + (this.r.z - this.path[w + 2]) * t;
+          A[k] = 1;
+          C[k] = 0;
+          this.peeled[k] = 1;
         }
-        up += dome * this.domes[k];
-        y += up;
-        let afloat = water;
-        let contact = skin * (1 - THREE.MathUtils.smoothstep(up, 0.05, 0.4));
-        const p = THREE.MathUtils.smootherstep((peel - this.order[k]) / PEEL_SPREAD, 0, 1);
-        this.peeled[k] = p;
-        if (p > 0) {
-          const a = this.acrossAt(j);
-          const over = 1 - THREE.MathUtils.smoothstep(a, -1, 3);
-          this.floating(k, this.t);
-          const c1y = y + 0.8 + over * Math.max(0, crown + 1.8 - y - 0.8);
-          const wx = this.below[wb] + this.side.x * 1.5;
-          const wz = this.below[wb + 2] + this.side.z * 1.5;
-          const c2y = THREE.MathUtils.lerp(Math.max(y, 0.5) + 0.6, crown + 1.4, over);
-          const u = 1 - p;
-          const b0 = u * u * u;
-          const b1 = 3 * u * u * p;
-          const b2 = 3 * u * p * p;
-          const b3 = p * p * p;
-          x = b0 * x + b1 * x + b2 * wx + b3 * this.t.x;
-          z = b0 * z + b1 * z + b2 * wz + b3 * this.t.z;
-          y = b0 * y + b1 * c1y + b2 * c2y + b3 * this.t.y;
-          const landed = THREE.MathUtils.smoothstep(p, 0.82, 1);
-          afloat = Math.max(afloat * (1 - p), landed);
-          contact *= 1 - p;
-        }
-        P[k * 3] = x;
-        P[k * 3 + 1] = y;
-        P[k * 3 + 2] = z;
-        A[k] = afloat;
-        C[k] = contact;
       }
     }
     this.normalsFrom(P);
@@ -750,15 +789,17 @@ export class Net {
     return out.fromArray(P, (i * COLS + j) * 3);
   }
 
-  /** Where a row's line runs down its near side: on the skin as draped, or with the sheet once that has come away. */
+  /**
+   * Where a row's line runs down its near side from the net's edge to the water: on the skin as draped, gathered up
+   * into the edge where the edge has slid down past it.
+   */
   private downSide(i: number, m: number, out: THREE.Vector3): THREE.Vector3 {
-    const edge = this.sheetPoint(i, COLS - 1, this.r);
+    if (m === 0) return this.sheetPoint(i, COLS - 1, out);
+    const v = i * PATH + COLS - 1 + m;
+    if (this.slid[i] + this.pathArc[i * PATH + COLS - 1] >= this.pathArc[v]) return this.sheetPoint(i, COLS - 1, out);
     const b = (i * BELOW + m) * 3;
     const y = this.below[b + 1];
-    out.set(this.below[b], y + (y > 0.05 ? this.bodyShift(this.belowAcross[i * BELOW + m]) : 0), this.below[b + 2]);
-    if (m === 0) return out.copy(edge);
-    const p = this.peeled[i * COLS + COLS - 1];
-    return p > 0 ? out.lerp(edge, p) : out;
+    return out.set(this.below[b], y + (y > 0.05 ? this.bodyShift(this.belowAcross[i * BELOW + m]) : 0), this.below[b + 2]);
   }
 
   /**
@@ -915,7 +956,7 @@ export class Net {
         this.sheetPoint(at.i, at.j, this.p).lerp(this.sheetPoint(i1, at.j, this.q), at.f);
         const k = at.i * COLS + at.j;
         afloat = A[k];
-        const lifted = THREE.MathUtils.smoothstep(this.lifts[k] * this.lift * K.netLift + this.peeled[k] * (1 - afloat) * 2, 0.15, 0.6);
+        const lifted = THREE.MathUtils.smoothstep(this.lifts[k] * this.lift * this.tent[at.i] * K.netLift + this.peeled[k] * (1 - afloat) * 2, 0.15, 0.6);
         this.q.fromArray(N, k * 3);
         this.t.copy(this.p).addScaledVector(this.q, NET.cork * (1 - lifted) * (1 - afloat));
         this.t.y += afloat ? NET.cork * 0.3 - this.p.y * afloat : 0;
@@ -1078,7 +1119,7 @@ export class Net {
       this.p.fromArray(P, k * 3);
       this.q.fromArray(N, k * 3);
       const afloat = A[k];
-      const lifted = THREE.MathUtils.smoothstep(this.lifts[k] * this.lift * K.netLift + this.peeled[k] * (1 - afloat) * 2, 0.15, 0.6);
+      const lifted = THREE.MathUtils.smoothstep(this.lifts[k] * this.lift * this.tent[Math.floor(k / COLS)] * K.netLift + this.peeled[k] * (1 - afloat) * 2, 0.15, 0.6);
       // Down the slope of the skin, straight down under the lifted mesh, out along the water afloat.
       this.r.set(0, -1, 0).addScaledVector(this.q, this.q.y).normalize();
       if (this.r.lengthSq() < 0.5) this.r.set(Math.cos(at.turn), 0, Math.sin(at.turn));

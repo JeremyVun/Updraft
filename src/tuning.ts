@@ -1464,7 +1464,7 @@ export const tuning = {
      * moving the stroke's way at `corkPush` metres a second for each screen height a second the stroke travels, at
      * most `corkPushMax`; a stroke away from the boat only nudges it, at `corkWrongWay` of that.
      */
-    corkRadius: 0.075, corkPush: 1.6, corkPushMax: 3.2, corkWrongWay: 0.3,
+    corkRadius: 0.075, corkPush: 2.6, corkPushMax: 3.2, corkWrongWay: 0.3,
     /**
      * Her haul: how many pulls hand over hand, the line each brings in (m), the seconds each takes and the share of
      * that spent drawing; how long she holds on after the last before letting go, and how long the line takes to go.
@@ -1472,9 +1472,10 @@ export const tuning = {
     haulPulls: 5, pullTake: 0.75, pullTime: 1.5, pullDraw: 0.6, haulHold: 0.8, letGo: 2.4,
     /**
      * Leaning out for it: how far along the thwart to port she slides (m), how far round toward the port rail she
-     * turns (radians), and how far forward over it she leans (radians), reaching and hauling.
+     * turns (radians), and how far forward she leans (radians), reaching and hauling. Further over and her boots go
+     * through the planking.
      */
-    haulSlide: 0.15, haulTurn: 0.55, reachLean: 0.75, haulLean: 0.6,
+    haulSlide: 0.15, haulTurn: 0.1, reachLean: 0.6, haulLean: 0.5,
     /** The valve's dolphin rises this far behind the cork and noses it in at this pace (m, m/s). */
     noseFrom: 2.6, noseSpeed: 1.3,
     /**
@@ -1484,7 +1485,7 @@ export const tuning = {
      * them `portraitIn` as far off.
      */
     holdMove: 5, holdLookY: 4.5, holdToward: 0.5,
-    lineDistance: 15, lineHeight: 6.2, lineBearing: 0.26, lineLookY: 2.6, lineToward: 0.36,
+    lineDistance: 15, lineHeight: 6.2, lineBearing: 0.26, lineLookY: 3.6, lineToward: 0.36,
     flipperDistance: 13, flipperHeight: 4.7, flipperBearing: 0.32, flipperLookY: 1.2, flipperToward: 0.45,
     portraitIn: 0.58,
   },

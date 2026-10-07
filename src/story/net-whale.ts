@@ -64,17 +64,20 @@ const POINT_FOR = 2.6;
  * the boards at her feet. `REACH_FROM`/`REACH_TO` bound where a cork is within her reach, and `REACH_HANDS` how far
  * out over the rail and down toward the water her mittens can go for it.
  */
-const RAIL = new THREE.Vector3(1.07, 0.47, 0.32);
-const INBOARD = new THREE.Vector3(0.6, 0.62, 0.1);
-const COIL_AT = new THREE.Vector3(0.45, -0.17, 0.55);
+const RAIL = new THREE.Vector3(1.05, 0.62, 0.1);
+const INBOARD = new THREE.Vector3(0.55, 0.74, -0.05);
+const COIL_AT = new THREE.Vector3(0.42, -0.17, 0.45);
 const REACH_FROM = new THREE.Vector2(0.85, -0.9);
 const REACH_TO = new THREE.Vector2(2.1, 1.4);
-const REACH_HANDS = { out: 1.3, low: 0.12, back: -0.25, ahead: 0.8 };
+const REACH_HANDS = { out: 1.1, low: 0.45, back: -0.1, ahead: 0.35 };
 /** Seconds her mittens take to go down to the cork, and to bring it up to the rail once they have it. */
 const REACH_FOR = 0.7;
 const LIFT_FOR = 0.45;
 /** The last stretch of the line, back from its near cork, that a sweep across it also catches, and how much less. */
 const NEAR_LINKS = [{ back: 1, weight: 0.75 }, { back: 2, weight: 0.5 }];
+/** Seconds after a stroke crosses the cork that the same stroke, going on over the whale, still belongs to the cork. */
+const CORK_STROKE = 0.6;
+const CORK_AROUND = 3;
 /** The valve's dolphin, nosing in: how near behind the cork its beak keeps, and how long it takes to turn away and go under. */
 const NOSE_GAP = 0.3;
 const NOSE_AWAY = 2.6;
@@ -186,7 +189,8 @@ export class NetWhale {
   private hauled = false;
   /** Seconds since a sweep last crossed the cork: the drawn sweep waits for a few. */
   private idle = 0;
-  private corkHit = false;
+  /** Seconds since a stroke last crossed the cork: the rest of that stroke, carrying on across its flank, is not a tickle. */
+  private corkStroke = 1e3;
   private pulled = 0;
   /** The line's dolphin: how far behind the cork its beak still is, and when it turned away (s), or -1. */
   private noseGap = 0;
@@ -685,7 +689,7 @@ export class NetWhale {
     boat.group.updateMatrixWorld();
     boat.group.localToWorld(this.catchAt.copy(RAIL));
     this.haulT += dt;
-    this.corkHit = false;
+    this.corkStroke += dt;
     if (this.valveT >= 0) this.noseCork(dt);
     if (this.haul === 'out') {
       if (this.still > 0) {
@@ -727,7 +731,7 @@ export class NetWhale {
         this.to('letting');
       }
     } else if (this.haulT > K.letGo) this.goTo('flipper');
-    if (!this.corkHit) this.tickled();
+    if (this.corkStroke > CORK_STROKE) this.tickled();
   }
 
   private to(haul: NetWhale['haul']): void {
@@ -745,15 +749,15 @@ export class NetWhale {
   private reachPoint(out: THREE.Vector3): THREE.Vector3 {
     const g = this.cast.boat.group;
     const local = g.worldToLocal(out.copy(this.net.float.position));
-    local.set(THREE.MathUtils.clamp(local.x, RAIL.x + 0.05, REACH_HANDS.out), Math.max(REACH_HANDS.low, local.y + 0.12),
-      THREE.MathUtils.clamp(local.z, REACH_HANDS.back, REACH_HANDS.ahead));
+    local.set(REACH_HANDS.out, REACH_HANDS.low, THREE.MathUtils.clamp(local.z, REACH_HANDS.back, REACH_HANDS.ahead));
     return g.localToWorld(local);
   }
 
-  /** Her reach draws the cork the last little way in under her mittens. */
+  /** Her reach draws the cork the last little way in, up against the planking under her mittens. */
   private drawCork(): void {
     const float = this.net.float;
-    this.reachPoint(this.b).sub(float.position).setY(0);
+    const g = this.cast.boat.group;
+    g.localToWorld(g.worldToLocal(this.reachPoint(this.b)).setX(0.9)).sub(float.position).setY(0);
     const want = this.b.multiplyScalar(3);
     if (want.length() > 1.5) want.setLength(1.5);
     float.push(want.sub(float.velocity).setY(0));
@@ -783,12 +787,13 @@ export class NetWhale {
     const moved = Math.hypot(dx * camera.aspect, dy);
     if (moved < 1e-4) return;
     const float = this.net.float;
+    // A stroke on its way to the cork, or just past it, is about the cork, not the whale behind it.
+    if (screenBrush(camera, float.position, input.prevNdc, input.ndc, K.corkRadius * CORK_AROUND) > 0) this.corkStroke = 0;
     let hit = screenBrush(camera, float.position, input.prevNdc, input.ndc, K.corkRadius);
     for (const near of NEAR_LINKS) {
       hit = Math.max(hit, near.weight * screenBrush(camera, this.net.link(near.back, this.a), input.prevNdc, input.ndc, K.corkRadius));
     }
     if (hit <= 0.01) return;
-    this.corkHit = true;
     this.idle = 0;
     // The stroke's way across the water at the cork: a step along it on screen, followed down onto the water.
     const step = 0.02 / Math.hypot(dx, dy);
@@ -800,7 +805,8 @@ export class NetWhale {
     const way = this.b.normalize();
     const toward = this.a.subVectors(this.catchAt, float.position).setY(0).normalize().dot(way);
     const pace = Math.min(K.corkPushMax, (K.corkPush * moved) / 2 / dt) * (toward < 0 ? K.corkWrongWay : 1);
-    const more = pace * hit - float.velocity.dot(way);
+    // A cork is a small thing to cross: anywhere near the middle of the stroke's reach counts in full.
+    const more = pace * Math.min(1, 1.5 * Math.sqrt(hit)) - float.velocity.dot(way);
     if (more <= 0) return;
     float.push(this.ray.copy(way).multiplyScalar(more));
     if (toward > 0.3) this.waiting = 0;
