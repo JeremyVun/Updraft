@@ -19,6 +19,7 @@ export const ROCK = 5;
 export const ROPE = 6;
 export const VANE = 7;
 export const COURSED = 8;
+export const CLOTH = 9;
 
 /** Cream limewash that catches the low sun, a narrow range so the light gives the richness. */
 export const LIME = [lin(0.56, 0.48, 0.355), lin(0.52, 0.46, 0.36), lin(0.58, 0.47, 0.33), lin(0.5, 0.45, 0.375)];
@@ -61,6 +62,8 @@ export interface Lot {
   exact?: boolean;
   /** Far out in the haze: the silhouette only, no windows, pots or trim. */
   far?: boolean;
+  /** In the middle distance: the same house on fewer stations. */
+  mid?: boolean;
 }
 
 export interface PartSink {
@@ -253,15 +256,15 @@ class Roofline {
   readonly stations: number;
   readonly across: number;
 
-  constructor(readonly g: Gable, readonly exact: boolean, coarse = false) {
+  constructor(readonly g: Gable, readonly exact: boolean, coarse: 0 | 1 | 2 = 0) {
     this.half = g.depth / 2 + g.over;
     this.eave = g.thatched ? g.wall - 0.4 : g.wall - 0.1;
     this.apex = g.wall + g.rise + (g.thatched ? 0 : 0.04);
     this.thick = g.thatched ? 0.5 : 0.2;
     this.length = g.len + 2 * g.end;
     const shaped = g.sag || g.lift || g.hip || g.brow;
-    this.stations = coarse ? (shaped ? 4 : 1) : shaped || g.thatched ? 16 : 1;
-    this.across = coarse ? (g.bow ? 2 : 1) : g.bow || g.thatched ? 6 : 1;
+    this.stations = [shaped || g.thatched ? 16 : 1, shaped ? 8 : g.thatched ? 6 : 1, shaped ? 4 : 1][coarse];
+    this.across = [g.bow || g.thatched ? 6 : 1, g.bow || g.thatched ? 3 : 1, g.bow ? 2 : 1][coarse];
   }
 
   /** How far along the length a point at local `x` is, 0 to 1. */
@@ -410,9 +413,9 @@ function chimney(into: PartSink, x: number, z: number, base: number, top: number
 }
 
 function gableHouse(into: PartSink, g: Gable, lot: Lot, rand: Rng, m: THREE.Matrix4, perch: (p: THREE.Vector3) => void, stackWidth: number): void {
-  const r = new Roofline(g, !!lot.exact);
-  bodyGeometry(into, r, g.len, g.depth, lot.lime, m);
-  roofGeometry(into, r, lot.roof, m);
+  const r = new Roofline(g, !!lot.exact, lot.mid ? 1 : 0);
+  bodyGeometry(into, r, g.len, g.depth, lot.lime, m, lot.mid ? 3 : 6);
+  roofGeometry(into, r, lot.roof, m, lot.mid);
   const n = Math.max(r.stations, 6);
   const ridge = Array.from({ length: n + 1 }, (_, i) => r.top(i / n, 1, 1));
   if (!g.thatched) {
@@ -514,7 +517,7 @@ function farHouse(into: PartSink, type: HouseType, lot: Lot, rand: Rng, m: THREE
     return;
   }
   const g = gableFor(type === 'roundKeeper' || type === 'catShoulder' ? 'cottage' : type, lot, rand);
-  const r = new Roofline(g, false, true);
+  const r = new Roofline(g, false, 2);
   bodyGeometry(into, r, g.len, g.depth, lot.lime, m, r.across === 1 ? 1 : 3);
   roofGeometry(into, r, lot.roof, m, true);
   for (const s of lot.stacks.slice(0, 1)) {
@@ -545,7 +548,7 @@ function lowCap(into: PartSink, lot: Lot, rand: Rng, m: THREE.Matrix4, perch: (p
   const eave = Math.max(lot.sink + 0.3, lot.wall - 1.2);
   const apex = lot.wall + lot.rise;
   const lip = eave + (apex - eave) * 0.4;
-  const round = 36;
+  const round = lot.mid ? 24 : 36;
   const browAt = 0.25 + range(rand, -0.06, 0.06);
   const brow = (k: number) => 0.85 * Math.exp(-((((k - browAt) * round) / 3.2) ** 2));
   const thick = 0.35;

@@ -13,9 +13,10 @@ import { fixInPlace } from '../gl/fixed';
 import { ToppleTree } from './crossings/topple-tree';
 import { RopeSwing } from './crossings/rope-swing';
 import { DarkBank } from './drowned-dark';
+import { TALL_AND_TINY, WASHING_PAIR, villageShape } from './drowned-shape';
 import { WashTub } from './wash-tub';
 import {
-  COURSED, HOLLOW, LIME, MASONRY, OPENING, PLAIN, ROCK, ROPE, SLATE, SLATED, THATCH, THATCHED, TIMBER, VANE,
+  CLOTH, COURSED, HOLLOW, LIME, MASONRY, OPENING, PLAIN, ROCK, ROPE, SLATE, SLATED, THATCH, THATCHED, TIMBER, VANE,
   buildHouse, fitLot, type HouseType, type Lot, type Stack,
 } from './drowned-houses';
 import {
@@ -82,6 +83,13 @@ void main() {
   if (aKind > ${VANE - 0.5} && aKind < ${VANE + 0.5}) {
     p = position - aLocal + turn(aLocal, uVane);
     n = turn(normal, uVane);
+  } else if (aKind > ${CLOTH - 0.5} && aKind < ${CLOTH + 0.5}) {
+    vec2 w = texture(uWindTex, domainUv(p.xz)).xy;
+    float belly = sin(clamp(aLocal.x, 0.0, 1.0) * 3.14159);
+    float hang = aLocal.y * aLocal.y;
+    p.xz += w * (belly * (0.014 + uStorm * 0.04) + hang * (0.05 + uStorm * 0.5));
+    p.xz += hang * 0.03 * vec2(sin(uTime * 0.7 + aLocal.x * 9.0), cos(uTime * 0.55 + aLocal.x * 7.0));
+    p.y += belly * (sin(uTime * (2.2 + uStorm * 9.0) + aLocal.x * 7.0) * (0.03 + uStorm * 0.32) + length(w) * 0.02);
   } else if (aKind > ${ROPE - 0.5} && aKind < ${ROPE + 0.5}) {
     vec2 w = texture(uWindTex, domainUv(p.xz)).xy;
     float belly = sin(aLocal.x * 3.14159);
@@ -418,6 +426,8 @@ interface HouseSpec {
   /** Which of the kit's houses stands here; a roof she walks on is `exact`, its slates where the way says. */
   look?: HouseType;
   exact?: boolean;
+  far?: boolean;
+  mid?: boolean;
 }
 
 function wallShape(h: HouseSpec): THREE.Shape {
@@ -608,7 +618,7 @@ function raise(into: Merged, h: HouseSpec, rand: Rng): THREE.Vector3[] {
   const look = h.look ?? (h.thatched ? 'thatch' : 'cottage');
   const own = mulberry32((Math.round(h.x * 10) * 7919) ^ (Math.round(h.z * 10) * 104729));
   const lot: Lot = { len: h.len, depth: h.depth, wall: h.wall, rise: h.rise, sink: h.sink, lime: h.lime, roof: h.roof, stacks,
-    gable: h.gable, exact: h.exact };
+    gable: h.gable, exact: h.exact, far: h.far, mid: h.mid };
   const generated = !h.stacks;
   const fit = generated ? fitLot(look, lot, own) : lot;
   Object.assign(h, { len: fit.len, depth: fit.depth, wall: fit.wall, rise: fit.rise, sink: fit.sink });
@@ -746,40 +756,15 @@ function buildSkerry(into: Merged): void {
   }
 }
 
-/** The apexes of a house's two gables, where a line could be tied. */
-function gables(h: HouseSpec): THREE.Vector3[] {
-  const y = h.wall + h.rise - h.sink - 0.25;
-  return [-1, 1].map((s) => new THREE.Vector3(h.x + Math.cos(h.yaw) * s * h.len * 0.47, y, h.z - Math.sin(h.yaw) * s * h.len * 0.47));
-}
-
-/** A line strung between two gables with nothing left on it. */
-function buildLine(into: Merged, houses: HouseSpec[]): void {
-  let from: THREE.Vector3 | null = null;
-  let to: THREE.Vector3 | null = null;
-  let bestGap = 1e9;
-  for (const a of houses) {
-    if (a.wall + a.rise - a.sink < 2.8) continue;
-    for (const b of houses) {
-      if (a === b || b.wall + b.rise - b.sink < 2.8) continue;
-      for (const p of gables(a)) {
-        for (const q of gables(b)) {
-          const gap = p.distanceTo(q);
-          if (gap < 9 || gap > 19 || Math.abs(gap - 14) > bestGap || inClearing((p.x + q.x) / 2, (p.z + q.z) / 2, 2)) continue;
-          bestGap = Math.abs(gap - 14);
-          from = p;
-          to = q;
-        }
-      }
-    }
-  }
-  if (!from || !to) return;
+/** A slack line from `from` to `to`, sagging `slack` of its length. */
+function buildLine(into: Merged, from: THREE.Vector3, to: THREE.Vector3, slack = 0.08): void {
   const segments = 14;
   const around = 4;
   const pos: number[] = [];
   const local: number[] = [];
   const idx: number[] = [];
   const centre = new THREE.Vector3();
-  const sag = from.distanceTo(to) * 0.08;
+  const sag = from.distanceTo(to) * slack;
   for (let i = 0; i <= segments; i++) {
     const t = i / segments;
     centre.lerpVectors(from, to, t);
@@ -805,8 +790,32 @@ function buildLine(into: Merged, houses: HouseSpec[]): void {
   into.add(geo, TIMBER, ROPE);
 }
 
+const CLOTH_PALE = lin(0.6, 0.57, 0.5);
+const HEM = lin(0.3, 0.075, 0.06);
+const WASHING_SLACK = 0.07;
+
+/** Washing left out between two chimneys: a slack line and two pale cloths with a faded red hem. */
+function buildWashing(into: Merged, from: THREE.Vector3, to: THREE.Vector3): void {
+  buildLine(into, from, to, WASHING_SLACK);
+  const sag = from.distanceTo(to) * WASHING_SLACK;
+  const yaw = Math.atan2(-(to.z - from.z), to.x - from.x);
+  for (const [t, w, h] of [[0.33, 0.85, 0.95], [0.64, 0.7, 0.8]]) {
+    const top = new THREE.Vector3().lerpVectors(from, to, t);
+    top.y -= Math.sin(t * Math.PI) * sag + 0.02;
+    const frame = new THREE.Matrix4().makeTranslation(top.x, top.y, top.z).multiply(new THREE.Matrix4().makeRotationY(yaw));
+    for (const [y0, y1, colour] of [[0, h - 0.11, CLOTH_PALE], [h - 0.11, h, HEM]] as const) {
+      const cloth = new THREE.BoxGeometry(w, y1 - y0, 0.025, 2, 2, 1).translate(0, -(y0 + y1) / 2, 0);
+      const p = cloth.attributes.position;
+      const local = new Float32Array(p.count * 3);
+      for (let i = 0; i < p.count; i++) local.set([t + p.getX(i) / from.distanceTo(to), -p.getY(i) / h, 0], i * 3);
+      cloth.setAttribute('aLocal', new THREE.BufferAttribute(local, 3));
+      into.add(cloth, colour, CLOTH, frame);
+    }
+  }
+}
+
 /** A field gate standing open in open water, with no field left on either side of it. */
-function buildGate(into: Merged, rand: Rng, houses: HouseSpec[]): void {
+function buildGate(into: Merged, rand: Rng, houses: HouseSpec[]): THREE.Vector2 | null {
   const at = new THREE.Vector2();
   const tangent = new THREE.Vector2();
   for (let attempt = 0; attempt < 60; attempt++) {
@@ -819,14 +828,15 @@ function buildGate(into: Merged, rand: Rng, houses: HouseSpec[]): void {
       || inDrawnClearing(x, z, 3)) continue;
     const m = new THREE.Matrix4().makeTranslation(x, -0.9, z).multiply(new THREE.Matrix4().makeRotationY(rand() * Math.PI));
     m.multiply(new THREE.Matrix4().makeRotationZ(0.07));
-    if (inClearing(x, z, 2)) return;
+    if (inClearing(x, z, 2)) return null;
     for (const px of [-1.85, 1.85]) into.add(new THREE.BoxGeometry(0.22, 4.2, 0.22).translate(px, 0.5, 0), TIMBER, PLAIN, m);
     for (let bar = 0; bar < 5; bar++) into.add(new THREE.BoxGeometry(3.7, 0.15, 0.1).translate(0, 0.35 + bar * 0.42, 0), TIMBER, PLAIN, m);
     const brace = new THREE.BoxGeometry(4.1, 0.13, 0.08).translate(0, 1.2, 0.08);
     brace.rotateZ(0.5);
     into.add(brace, TIMBER, PLAIN, m);
-    return;
+    return new THREE.Vector2(x, z);
   }
+  return null;
 }
 
 function limb(a: THREE.Vector3, b: THREE.Vector3, lift: number, r0: number, r1: number, radial: number, segments: number): THREE.BufferGeometry {
@@ -914,7 +924,7 @@ function tube(part: number, mat: number, a: THREE.Vector3, b: THREE.Vector3, lif
 }
 
 /** Eight crowns along the drift, standing clear of the roofs; half of them still have leaves to give the water. */
-function plantTrees(houses: HouseSpec[], rand: Rng, twigs: Twig[], cameraObstacles: THREE.Box3[]): THREE.BufferGeometry {
+function plantTrees(houses: HouseSpec[], rand: Rng, twigs: Twig[], cameraObstacles: THREE.Box3[], stands: THREE.Vector2[]): THREE.BufferGeometry {
   const limbs: THREE.BufferGeometry[] = [];
   const at = new THREE.Vector2();
   const tangent = new THREE.Vector2();
@@ -934,6 +944,7 @@ function plantTrees(houses: HouseSpec[], rand: Rng, twigs: Twig[], cameraObstacl
         twigs.length = bare;
         break;
       }
+      stands.push(new THREE.Vector2(x, z));
       for (const part of parts) {
         part.computeBoundingBox();
         const bounds = part.boundingBox!;
@@ -1237,6 +1248,74 @@ interface Drifter {
  * with herons on them, the crowns of drowned trees, and a spire with a weathervane still turning on the wind.
  * Nobody is here and nobody says what happened. It is the room that makes a lit window at the end mean something.
  */
+/** A house's footprint: its middle, its turn and its half length and depth. */
+interface Footprint {
+  x: number;
+  z: number;
+  yaw: number;
+  hl: number;
+  hd: number;
+}
+
+/** Whether two footprints stand clear of each other. */
+function apart(a: Footprint, b: Footprint): boolean {
+  const axes = [a.yaw, a.yaw + Math.PI / 2, b.yaw, b.yaw + Math.PI / 2].map((y) => [Math.cos(y), -Math.sin(y)]);
+  const reach = (f: Footprint, nx: number, nz: number) =>
+    f.hl * Math.abs(Math.cos(f.yaw) * nx - Math.sin(f.yaw) * nz) + f.hd * Math.abs(Math.sin(f.yaw) * nx + Math.cos(f.yaw) * nz);
+  return axes.some(([nx, nz]) => Math.abs((b.x - a.x) * nx + (b.z - a.z) * nz) > reach(a, nx, nz) + reach(b, nx, nz));
+}
+
+function toSegment(x: number, z: number, a: THREE.Vector2, b: THREE.Vector2): number {
+  const dx = b.x - a.x, dz = b.y - a.y;
+  const u = THREE.MathUtils.clamp(((x - a.x) * dx + (z - a.y) * dz) / (dx * dx + dz * dz), 0, 1);
+  return Math.hypot(x - a.x - dx * u, z - a.y - dz * u);
+}
+
+/** The pair at the end of her way, and where the run and the drift look at them from. */
+const PAIR = [new THREE.Vector2(SPIRE.x - 4, SPIRE.z), new THREE.Vector2(LIGHTHOUSE.x, LIGHTHOUSE.z),
+  new THREE.Vector2((SPIRE.x + LIGHTHOUSE.x) / 2, (SPIRE.z + LIGHTHOUSE.z) / 2)];
+const LOOKOUTS = [new THREE.Vector2(-3.5, -1277), new THREE.Vector2(-12.5, -1395), new THREE.Vector2(-30, -1420),
+  new THREE.Vector2(22.5, -1492)];
+/** The dark's way in from far out to the stranding, carried on past it, and the storm's way out from the nave. */
+const DARK_IN = [DARK_WAY[1].clone().addScaledVector(new THREE.Vector2().subVectors(DARK_WAY[0], DARK_WAY[1]), 1.6), DARK_WAY[1]];
+const STORM_OUT = [new THREE.Vector2(NAVE.x, NAVE.z), new THREE.Vector2(-30, -1700)];
+const STAIRS_FOOT = new THREE.Vector2(100, -1236);
+
+/** How far the drift has come when the boat strands; the channel beyond it is never sailed. */
+const STRANDED_AT = offChannel(DARK_WAY[1].x, DARK_WAY[1].y).s;
+
+/** How far a point is from where she goes: the drift in, then her way over the roofs to the tower. */
+function reach(x: number, z: number): number {
+  const drift = offChannel(x, z);
+  let d = drift.s < STRANDED_AT ? drift.d : 1e9;
+  for (let i = 2; i < DARK_WAY.length; i++) d = Math.min(d, toSegment(x, z, DARK_WAY[i - 1], DARK_WAY[i]));
+  return d;
+}
+
+/** Whether a house of the fuller village may stand here: off every way, sight line, clearing and landmark. */
+function free(f: Footprint, stands: THREE.Vector2[]): boolean {
+  const r = Math.hypot(f.hl, f.hd);
+  const c = Math.cos(f.yaw), s = Math.sin(f.yaw);
+  const corners = [[0, 0], [-1, -1], [-1, 1], [1, -1], [1, 1]].map(([a, b]) =>
+    new THREE.Vector2(f.x + a * f.hl * c + b * f.hd * s, f.z - a * f.hl * s + b * f.hd * c));
+  if (corners.some((p) => inClearing(p.x, p.y, 1.5) || onCatGround(p.x, p.y, 3))) return false;
+  const drift = offChannel(f.x, f.z);
+  if ((drift.s < STRANDED_AT && drift.d < 15 + r) || toSegment(f.x, f.z, STORM_OUT[0], STORM_OUT[1]) < 16 + r
+    || toSegment(f.x, f.z, DARK_IN[0], DARK_IN[1]) < 26 + r) return false;
+  if (f.z > -1250 || f.z < -1680 || Math.hypot(f.x - STAIRS_FOOT.x, f.z - STAIRS_FOOT.y) < 60) return false;
+  if (Math.hypot(f.x - PAIR[0].x, f.z - PAIR[0].y) < 32 || Math.hypot(f.x - PAIR[1].x, f.z - PAIR[1].y) < 30) return false;
+  if (stands.some((t) => Math.hypot(f.x - t.x, f.z - t.y) < 6 + r)) return false;
+  for (const eye of LOOKOUTS) {
+    const away = Math.hypot(f.x - eye.x, f.z - eye.y);
+    const bearing = Math.atan2(f.x - eye.x, f.z - eye.y);
+    for (const p of PAIR) {
+      const off = Math.abs(wrapAngle(bearing - Math.atan2(p.x - eye.x, p.y - eye.y)));
+      if (off < Math.atan2(9, p.distanceTo(eye)) + Math.atan2(r, away)) return false;
+    }
+  }
+  return true;
+}
+
 export class DrownedVillage {
   readonly objects: THREE.Object3D[] = [];
   readonly cameraObstacles: THREE.Box3[] = [];
@@ -1285,8 +1364,12 @@ export class DrownedVillage {
     const rock = new Merged();
     buildLighthouse(rock);
     this.objects.push(this.lighthouse.object);
-    buildLine(body, built.filter((h) => h.look === 'cottage' || h.look === 'thatch' || h.look === 'swayback'));
-    buildGate(body, rand, houses);
+    const gate = buildGate(body, rand, houses);
+    const twigs: Twig[] = [];
+    const stands: THREE.Vector2[] = gate ? [gate] : [];
+    const trees = plantTrees(houses, rand, twigs, this.cameraObstacles, stands);
+    const touches = this.touches(body);
+    this.spread(body, [...built, ...PLACED.map(placedSpec), placedSpec(CAT_HOUSE, 2), ...touches], stands);
     const shared = { ...atmo.uniforms, uStorm: this.storm, uVane: this.vaneAngle };
     this.objects.push(
       new THREE.Mesh(
@@ -1299,10 +1382,9 @@ export class DrownedVillage {
       ),
     );
 
-    const twigs: Twig[] = [];
     this.objects.push(
       new THREE.Mesh(
-        mergeGeometries([plantTrees(houses, rand, twigs, this.cameraObstacles), ...greenTree(placing, twigs, this.cameraObstacles),
+        mergeGeometries([trees, ...greenTree(placing, twigs, this.cameraObstacles),
           ...boatTree(this.cameraObstacles)]),
         new THREE.ShaderMaterial({ vertexShader: TREE_VERT, fragmentShader: TREE_FRAG, uniforms: shared }),
       ),
@@ -1404,6 +1486,58 @@ export class DrownedVillage {
     this.swing = new RopeSwing(SWING_SITE.spot);
     this.tub = new WashTub(wind);
     this.objects.push(...this.tree.objects, ...this.swing.objects, ...this.dark.objects, ...this.tub.objects);
+  }
+
+  /**
+   * The village beyond the drift and her way, from its own streams: lanes and huddles in the middle distance and far
+   * groups out into the haze, wherever they leave open what `free` keeps open.
+   */
+  private spread(into: Merged, standing: HouseSpec[], stands: THREE.Vector2[]): void {
+    const taken: Footprint[] = standing.map((h) => ({ x: h.x, z: h.z, yaw: h.yaw, hl: h.len / 2 + 1.5, hd: h.depth / 2 + 1.5 }));
+    const sites = villageShape(mulberry32(6203), reach, (s) => {
+      const f = { x: s.x, z: s.z, yaw: s.yaw, hl: s.len / 2 + 0.3, hd: s.depth / 2 + 0.3 };
+      if (!free(f, stands) || taken.some((t) => !apart(t, f))) return false;
+      taken.push(f);
+      return true;
+    });
+    const dress = mulberry32(8817);
+    for (const s of sites) {
+      const h: HouseSpec = {
+        ...s, wall: 3.4, roll: !s.far && dress() < 0.1 ? range(dress, 0.08, 0.18) * (dress() < 0.5 ? -1 : 1) : 0,
+        lime: LIME[Math.floor(dress() * LIME.length)],
+        roof: s.thatched ? THATCH[Math.floor(dress() * THATCH.length)] : SLATE[Math.floor(dress() * SLATE.length)],
+      };
+      if (s.far) raise(into, h, dress);
+      else this.addHouse(into, h, dress, false);
+    }
+  }
+
+  /** The dream's touches, each once: the tall hat beside the little pocket, and washing between two chimneys. */
+  private touches(into: Merged): HouseSpec[] {
+    const { x, z, yaw, apart } = TALL_AND_TINY;
+    const side = new THREE.Vector2(Math.sin(yaw), Math.cos(yaw));
+    const tall: HouseSpec = { x, z, yaw, roll: 0, len: 3.6, depth: 4.4, wall: 3.2, rise: 6.8, sink: 3.1, thatched: false,
+      lime: LIME[0], roof: SLATE[1], stacks: [-1], stack: 0.9, pots: 2, gable: 1, look: 'tallHat' };
+    const tiny: HouseSpec = { x: x + side.x * apart, z: z + side.y * apart, yaw: yaw + 0.06, roll: 0, len: 4.6, depth: 3.8, wall: 3,
+      rise: 1.5, sink: 1.7, thatched: false, lime: LIME[2], roof: SLATE[0], stacks: [1], stack: 1.1, pots: 1, gable: 1, look: 'pocket' };
+    const along = new THREE.Vector2(Math.cos(WASHING_PAIR.yaw), -Math.sin(WASHING_PAIR.yaw));
+    const len = 8.2;
+    const off = (len + WASHING_PAIR.gap) / 2;
+    const pair = [-1, 1].map((s, i): HouseSpec => ({
+      x: WASHING_PAIR.x + along.x * off * s, z: WASHING_PAIR.z + along.y * off * s, yaw: WASHING_PAIR.yaw + s * 0.04, roll: 0,
+      len, depth: 5.4 - i * 0.3, wall: 3.4, rise: 3.1 + i * 0.2, sink: 2.3 + i * 0.1, thatched: false, lime: LIME[1 + i],
+      roof: SLATE[i], stacks: [-s], stack: 1.3 + i * 0.2, pots: 2 - i, gable: s, look: 'cottage',
+    }));
+    const quiet = mulberry32(2716);
+    for (const h of [tall, tiny]) this.addHouse(into, h, quiet, false);
+    const [a, b] = pair.map((h) => {
+      const top = raise(into, h, quiet)[0];
+      this.cameraObstacles.push(houseBounds(h));
+      return top;
+    });
+    const toward = new THREE.Vector3().subVectors(b, a).setY(0).normalize().multiplyScalar(0.42);
+    buildWashing(into, a.clone().add(toward).setY(a.y + 0.22), b.clone().sub(toward).setY(b.y + 0.22));
+    return [tall, tiny, ...pair];
   }
 
   /** A house and its chimneys, with their bounds for the lens; chimneys off the drift may take a heron. */
