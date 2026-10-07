@@ -859,15 +859,6 @@ float seaFogFlank(float a0, float da, float t0, float t1) {
   return mix(near * far, 1.0, uSeaFogShape.z);
 }
 
-/** How far along a sightline it first comes in past one of its ends, or t0 if it is already within them. */
-float seaFogFlankIn(float a0, float da, float t0, float t1) {
-  float hi = 0.5 * (uSeaFogSides.z + uSeaFogSides.w), lo = -0.5 * (uSeaFogSides.x + uSeaFogSides.y);
-  float t = t0;
-  if (a0 + da * t0 > hi && da < 0.0) t = (a0 - hi) / -da;
-  if (a0 + da * t0 < lo && da > 0.0) t = (lo - a0) / da;
-  return clamp(t, t0, t1);
-}
-
 /** The height of its top at a point across it and along the way it comes: long, uneven swells sized to it. */
 float seaFogTop(vec2 q) {
   q /= max(uSeaFogShape.x, 1.0);
@@ -1021,16 +1012,15 @@ vec4 seaFog(vec3 ro, vec3 rd, float far) {
       // Closed round her it lies thinner on the water, so the glass near her still shows.
       bank = along / len * (thick * high + ${glsl(tuning.drowned.fog.floor)} * (1.0 - 0.7 * thin) * low)
         * seaFogFlank(a0, da, span.x, min(span.y, span.x + FLANK)) * uSeaFogShape.w;
-      // Its face where the sightline comes into it, past its front and its ends, heaped in broad billows that drift.
-      float tin = seaFogFlankIn(a0, da, span.x, span.y);
-      float tm = tin + min(span.y - tin, 10.0) * 0.5;
+      // Its face where the sightline comes into it, heaped in broad billows that drift.
+      float tm = span.x + min(len, 10.0) * 0.5;
       float ym = ro.y + up * tm;
       vec2 billow = seaFogBillow(vec2(a0 + da * min(tm, GRAZE), ym) / max(uSeaFogShape.x, 1.0) * vec2(1.0, 1.6) + vec2(-uTime * 0.008, 3.7));
       mottle = billow.y;
       // Its billows are heaped where it is seen from off; near the eye, and from inside, they are only a soft mottle.
       light = seaFogBody(clamp(ym / max(top, 1.0), 0.0, 1.0), mix(0.5, billow.x, smoothstep(10.0, 60.0, tm)));
       // The low sun takes what of it stands highest, and comes through it where it is thin.
-      float glow = smoothstep(0.85 - 1.5 * uSeaFogRim / uSeaFogShape.x, 0.85, (ro.y + up * tin) / uSeaFogShape.x + (mottle - 0.5) * 0.8);
+      float glow = smoothstep(0.85 - 1.5 * uSeaFogRim / uSeaFogShape.x, 0.85, (ro.y + up * span.x) / uSeaFogShape.x + (mottle - 0.5) * 0.8);
       light = seaFogLit(light, glow, exp(-bank * 3.0));
       // Toward its ends, while the sun is on it, it thins into the haze over the water rather than standing dark against the sky.
       light = mix(light, uSkyHorizon * 0.9, (1.0 - sides) * smoothstep(${glsl(tuning.drowned.fog.glowNear)}, 1.0, uSeaFogGlow) * (1.0 - uSeaFogShape.z));

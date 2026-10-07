@@ -1729,6 +1729,8 @@ export const tuning = {
     coastBrake: 0.5, coastCreep: 0.35,
     /** How far past the drift's dusk the light goes while the dark comes on. */
     dusk: 0.2,
+    /** How much of the low sun the washing's cloths let through when it is behind them. */
+    clothThrough: 0.75,
     /** How hard the cygnet starts when the stem touches the slates, and how long she looks at one thing before the other. */
     touchStartle: 0.12, glanceEvery: 4.5,
     /**

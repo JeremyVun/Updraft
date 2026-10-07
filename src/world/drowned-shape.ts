@@ -81,7 +81,11 @@ function house(rand: Rng, x: number, z: number, yaw: number, far: boolean, mid: 
  * far a point is from where she goes; the middle distance from it is full, then a band of broad water, then far
  * groups into the haze. A site that `fits` refuses is left as a gap in its lane; the draws go on the same either way.
  */
-export function villageShape(rand: Rng, reach: (x: number, z: number) => number, fits: (s: Site) => boolean): Site[] {
+/** How likely a site is to be built at a distance from where she goes: full, then a band of broad water, then far groups. */
+export const bandAt = (d: number) => (d < 95 ? 0.9 : d < 135 ? 0.3 : 0.7);
+
+export function villageShape(rand: Rng, reach: (x: number, z: number) => number, fits: (s: Site) => boolean,
+  band: (d: number, x: number, z: number) => number = bandAt): Site[] {
   const sites: Site[] = [];
   const keep = (s: Site) => {
     if (fits(s)) sites.push(s);
@@ -98,8 +102,7 @@ export function villageShape(rand: Rng, reach: (x: number, z: number) => number,
       if (Math.abs((x - CENTRE.x) / CENTRE.rx) ** 4 + Math.abs((z - CENTRE.z) / CENTRE.rz) ** 4 > 1) continue;
       const d = reach(x, z);
       const far = d > 105;
-      const band = d < 95 ? 0.9 : d < 135 ? 0.3 : 0.7;
-      if (chance > band) continue;
+      if (chance > band(d, x, z)) continue;
       const kind: Kind = kindAt < 0.5 ? 'row' : kindAt < (far ? 0.85 : 0.9) ? 'huddle' : 'farm';
       const n = kind === 'row' ? 3 + Math.floor(count * 3) : kind === 'huddle' ? 2 + Math.floor(count * 2) : 1;
       /** Each group draws from a stream of its own, so a lane's length never shifts the groups after it. */

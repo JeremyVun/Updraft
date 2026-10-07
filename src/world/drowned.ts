@@ -6,6 +6,7 @@ import { Instances, blob, flipWinding, merge, mirrored, tag, type BlobSpec } fro
 import type { WindField, WindSample } from '../wind/field';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { mulberry32 } from './noise';
+import { glsl, tuning } from '../tuning';
 import { swellLift } from './water/swell';
 import { LighthouseLight, LIGHTHOUSE_BASE_Y, LIGHTHOUSE_SCALE } from './lighthouse';
 import { REFLECTION_LAYER } from './water/reflection';
@@ -16,7 +17,7 @@ import { Windmill } from './crossings/windmill';
 import { MillSpiral } from './crossings/mill-spiral';
 import { DarkBank } from './drowned-dark';
 import { WOOD_LANDING } from './wood';
-import { TALL_AND_TINY, WASHING_PAIR, villageShape } from './drowned-shape';
+import { TALL_AND_TINY, WASHING_PAIR, bandAt, villageShape, type Site } from './drowned-shape';
 import { ivyParts } from './drowned-ivy';
 import { WashTub } from './wash-tub';
 import {
@@ -162,6 +163,11 @@ void main() {
   float back = pow(max(dot(-V, uSunDir), 0.0), 3.0);
   float edge = pow(1.0 - clamp(dot(n, V), 0.0, 1.0), 3.0);
   col += uSunColor * edge * back * sun * (kind == ${THATCHED} ? 0.55 : 0.16) * (0.35 + alb);
+  if (kind == ${CLOTH}) {
+    /** Thin cloth: the low sun comes through it from behind, warm, and the sky lights both its faces. */
+    float through = abs(dot(n, uSunDir));
+    col = alb * (0.5 * (hemiLight(n) + hemiLight(-n)) + uSunColor * sun * (ndl + ${glsl(tuning.drowned.clothThrough)} * through * (1.0 - step(0.0, dot(n, uSunDir)))));
+  }
   if (kind == ${OPENING}) col = vColor * uSkyAmbient * 0.5;
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;
@@ -1335,6 +1341,10 @@ const LOOKOUTS = [new THREE.Vector2(-3.5, -1277), new THREE.Vector2(-12.5, -1395
 const DARK_IN = [DARK_WAY[1].clone().addScaledVector(new THREE.Vector2().subVectors(DARK_WAY[0], DARK_WAY[1]), 1.6), DARK_WAY[1]];
 const STORM_OUT = [new THREE.Vector2(NAVE.x, NAVE.z), ...DROWNED_CHANNEL.slice(5), WOOD_LANDING];
 const STAIRS_FOOT = new THREE.Vector2(100, -1236);
+/** How far beyond the church or the lighthouse, seen from where she goes, a house may stand as their backdrop. */
+const BACKDROP = 24;
+/** North of this the village beyond the church is filled as its backdrop. */
+const BEYOND_CHURCH = NAVE.z - 12;
 
 /** How far the drift has come when the boat strands; the channel beyond it is never sailed. */
 const STRANDED_AT = offChannel(DARK_WAY[1].x, DARK_WAY[1].y).s;
@@ -1347,8 +1357,11 @@ function reach(x: number, z: number): number {
   return d;
 }
 
-/** Whether a house of the fuller village may stand here: off every way, sight line, clearing and landmark. */
-function free(f: Footprint, stands: THREE.Vector2[]): boolean {
+/**
+ * Whether a house of the fuller village may stand here: off every way, sight line, clearing and landmark. `behind`
+ * lets it stand on a sight line well beyond the pair, where it is their backdrop rather than in front of them.
+ */
+function free(f: Footprint, stands: THREE.Vector2[], behind = false): boolean {
   const r = Math.hypot(f.hl, f.hd);
   const c = Math.cos(f.yaw), s = Math.sin(f.yaw);
   const corners = [[0, 0], [-1, -1], [-1, 1], [1, -1], [1, 1]].map(([a, b]) =>
@@ -1365,7 +1378,7 @@ function free(f: Footprint, stands: THREE.Vector2[]): boolean {
     const bearing = Math.atan2(f.x - eye.x, f.z - eye.y);
     for (const p of PAIR) {
       const off = Math.abs(wrapAngle(bearing - Math.atan2(p.x - eye.x, p.y - eye.y)));
-      if (off < Math.atan2(9, p.distanceTo(eye)) + Math.atan2(r, away)) return false;
+      if (off < Math.atan2(9, p.distanceTo(eye)) + Math.atan2(r, away) && !(behind && away > p.distanceTo(eye) + BACKDROP)) return false;
     }
   }
   return true;
@@ -1562,7 +1575,21 @@ export class DrownedVillage {
       taken.push(f);
       return true;
     });
-    const dress = mulberry32(8817);
+    /**
+     * Then, from streams of their own so nothing above moves, the houses beyond the pair as their backdrop: the broad
+     * water there is filled, round the storm's way out.
+     */
+    const backdrop = villageShape(mulberry32(6203), reach, (s) => {
+      const f = { x: s.x, z: s.z, yaw: s.yaw, hl: s.len / 2 + 0.3, hd: s.depth / 2 + 0.3 };
+      if (!free(f, stands, true) || taken.some((t) => !apart(t, f))) return false;
+      taken.push(f);
+      return true;
+    }, (d, _x, z) => (z < BEYOND_CHURCH ? Math.max(bandAt(d), 0.85) : bandAt(d)));
+    this.dress(into, sites, mulberry32(8817));
+    this.dress(into, backdrop, mulberry32(8818));
+  }
+
+  private dress(into: Merged, sites: Site[], dress: Rng): void {
     for (const s of sites) {
       const h: HouseSpec = {
         ...s, wall: 3.4, roll: !s.far && dress() < 0.1 ? range(dress, 0.08, 0.18) * (dress() < 0.5 ? -1 : 1) : 0,
