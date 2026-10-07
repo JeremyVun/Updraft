@@ -139,6 +139,9 @@ export class Boat {
   private beaching = false;
   /** While a foot is still crossing the gunwale, the hull may drift from the shove but the sail may not take it. */
   private boardingPush = false;
+  /** Someone's weight come aboard from a deck alongside: the side it came over (+1 the hull's +x), how long ago. */
+  private weightSide = 0;
+  private weightAge = 1e3;
 
   constructor(private readonly wind: WindField) {
     const hullMat = new THREE.ShaderMaterial({
@@ -211,6 +214,21 @@ export class Boat {
     const gz = heightAt(p.x, p.z + 3) - heightAt(p.x, p.z - 3);
     if (Math.hypot(gx, gz) > 0.05) this.pushDir.set(-gx, -gz).normalize();
     else this.pushDir.set(-Math.sin(this.yaw), -Math.cos(this.yaw));
+  }
+
+  /**
+   * Afloat where it lies, taking a weight stepping in from a deck alongside over its `side` (+1 its own +x): it dips
+   * under it and rocks, and nothing pushes it off.
+   */
+  takeWeight(side: number): void {
+    this.towed = false;
+    this.afloat = true;
+    this.grounded = false;
+    this.beaching = false;
+    this.speed = 0;
+    this.pushingFor = -1;
+    this.weightSide = side;
+    this.weightAge = 0;
   }
 
   /** The child has settled: the shove may now give way to the wind already waiting in the sail. */
@@ -407,10 +425,14 @@ export class Boat {
     const bow = this.sea.slopeX * fx + this.sea.slopeZ * fz;
     const beam = this.sea.slopeX * fz - this.sea.slopeZ * fx;
     const settle = 1 - Math.exp(-dt * 3.5);
-    const waterRoll = heel + kick * tuning.dolphins.shoveHeel + Math.sin(t * 1.3) * (this.afloat ? 0.05 : 0.0) + beam;
+    this.weightAge += dt;
+    const k = tuning.boarding, wu = this.weightAge / k.weightPeak, weighed = Math.exp(-this.weightAge / k.weightSettle);
+    const rock = -this.weightSide * k.weightRoll * Math.sin(this.weightAge * k.weightRock) * weighed;
+    const dip = -k.weightDip * wu * Math.exp(1 - wu);
+    const waterRoll = heel + kick * tuning.dolphins.shoveHeel + Math.sin(t * 1.3) * (this.afloat ? 0.05 : 0.0) + beam + rock;
     const waterPitch = this.afloat ? Math.sin(t * 0.9 + 1) * 0.04 - this.speed * 0.004 - bow : -0.05;
     this.lieOnShore(settle, this.altitude === null ? lift : 1e3, waterRoll, waterPitch);
-    const bob = this.afloat ? Math.sin(t * 1.1) * 0.045 + Math.sin(t * 2.3) * 0.02 : 0;
+    const bob = this.afloat ? Math.sin(t * 1.1) * 0.045 + Math.sin(t * 2.3) * 0.02 + dip : 0;
     p.y = this.afloat ? bob + lift + (this.altitude === null ? DRAFT : CLOUD_DRAFT) : Math.max(heightAt(p.x, p.z), 0) + DRAFT + 0.1;
 
     const sail = this.sailMat.uniforms;

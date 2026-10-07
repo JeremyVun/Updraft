@@ -9,7 +9,8 @@
 // to the forest beach and reports when the storm's beats fall and where the boat is then, failing if anything stalls or
 // she leaves the decks. Usage: node tools/drowned-run-check.mjs
 //   env: BASE (default http://127.0.0.1:5230/), FROM=roofs starts on the ridge after the cat (skips the tub and the
-//        becalming), FROM=church at the tower's foot (skips the run too), SHOTS=<prefix> saves stills (at each piece,
+//        becalming), FROM=church at the tower's foot (skips the run too), FROM=storm with her just seated aboard at the
+//        nave (skips the church too), SHOTS=<prefix> saves stills (at each piece,
 //        two between, and through the church), FILM=<seconds> with SHOTS also
 //        saves a still every that many seconds of the run, W/H viewport (default 1600x900), LENS=1 also fails on the
 //        lens's measures (a roof hiding her, her walking toward it, her out of frame, it inside a roof).
@@ -19,7 +20,8 @@ import assert from 'node:assert/strict';
 const base = process.env.BASE ?? 'http://127.0.0.1:5230/';
 const width = Number(process.env.W ?? 1600), height = Number(process.env.H ?? 900);
 const shots = process.env.SHOTS ?? null;
-const fromChurch = process.env.FROM === 'church';
+const fromStorm = process.env.FROM === 'storm';
+const fromChurch = process.env.FROM === 'church' || fromStorm;
 const fromRoofs = process.env.FROM === 'roofs' || fromChurch;
 
 const browser = await chromium.launch({ channel: 'chromium', headless: true,
@@ -28,7 +30,7 @@ const errors = [];
 try {
   const page = await (await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1 })).newPage();
   page.on('pageerror', (e) => errors.push(e.message));
-  await page.goto(`${base}?shot=1&chapter=${fromChurch ? 'church' : fromRoofs ? 'roofs' : 'drowned'}&ratio=1`, { waitUntil: 'load' });
+  await page.goto(`${base}?shot=1&chapter=${fromStorm ? 'storm' : fromChurch ? 'church' : fromRoofs ? 'roofs' : 'drowned'}&ratio=1`, { waitUntil: 'load' });
   await page.waitForFunction(() => window.__ready === true, null, { timeout: 60000 });
 
   const frame = () => page.evaluate(() => new Promise((done) => requestAnimationFrame(() => done())));
@@ -139,10 +141,79 @@ try {
     const xz = (p) => [p[0], p[2]];
     const toBeach = (s) => {
       const p = xz(s.boat);
+      if (s.landed) return d(p, T.beach);
       if (s.departing || s.leg === undefined) return d(p, T.away) + d(T.away, T.last) + d(T.last, T.beach);
       return s.leg < T.legs - 1 ? d(p, T.last) + d(T.last, T.beach) : d(p, T.beach);
     };
 
+    /**
+     * From her seated aboard to the forest beach: her look back at the cat, the light going out, the cygnet's shaking,
+     * the first lightning, the plane taken, the landing. Reports when each falls and where the boat is then, and the
+     * frame's mean brightness each second; fails if the light goes out while the lighthouse is out of frame, if the
+     * frame brightens past the look back's outside a lightning flash, or if the landing comes late.
+     */
+    const storm = async (aboard, atNave) => {
+      const sharp = (await import('sharp')).default;
+      const probe = () => page.evaluate(() => {
+        const st = __game.story.current, cam = __game.rig.camera, light = __game.village.lighthouse;
+        if (!st.church) return { landed: true, time: +__stats.time.toFixed(2) };
+        const lamp = light.object.position.clone().project(cam);
+        return { time: +__stats.time.toFixed(2), storm: +st.stormTime.toFixed(2), aboardFor: +st.church.aboardFor.toFixed(2), beat: st.beat,
+          power: light.strength.value, lamp: [lamp.x, lamp.y, lamp.z], flash: __game.boat.sailMat.uniforms.uLightning.value.w,
+          shook: st.shook, sheltered: st.sheltered, horn: st.hornPassed, plane: __game.glider.group.visible };
+      });
+      const brightness = async () => (await sharp(await page.screenshot({ type: 'jpeg', quality: 70 })).greyscale().stats()).channels[0].mean;
+      const beats = [{ what: 'aboard', at: 0, toBeach: toBeach(aboard) }];
+      const mark = (what, s, b = s) => beats.push({ what, at: s.time - aboard.time, toBeach: toBeach(b) });
+      const trace = [];
+      let was = { beat: 'gather', shook: false, sheltered: false, horn: false, flash: 0, plane: true }, cat = null, out = null, unseen = null;
+      let second = -1, still = -1;
+      for (let t = 0; t < 120; t += 0.25) {
+        const [p, s] = [await probe(), await look()];
+        if (p.landed) { mark('landed', p, s); break; }
+        const since = p.time - aboard.time;
+        if (since >= 2.6 && !cat) { cat = s.cat; await shot('church-look-back'); }
+        if (since >= 8 && since < 8.3) assert(s.riding && s.beat === 'gather', `she is not riding the boat into the storm: ${JSON.stringify(s)}`);
+        if (p.beat !== was.beat) mark(p.beat, p, s);
+        if (p.shook && !was.shook) mark('the cygnet shakes', p, s);
+        if (p.horn && !was.horn) mark('the foghorn', p, s);
+        if (p.sheltered && !was.sheltered) mark('the cygnet startles at the light going', p, s);
+        if (p.flash > 0.01 && was.flash <= 0.01) mark('lightning', p, s);
+        if (!p.plane && was.plane && p.beat === 'after') mark('the plane gone', p, s);
+        const inFrame = p.lamp[2] < 1 && Math.abs(p.lamp[0]) < 0.95 && Math.abs(p.lamp[1]) < 0.95;
+        if (p.power < 0.97 && p.power > 0.001 && !inFrame && !unseen) unseen = { ...p, since };
+        if (p.power <= 0.001 && !out) { out = { ...p, since, inFrame, boat: s.boat }; mark('the light out', p, s); }
+        if (Math.floor(since) > second) {
+          second = Math.floor(since);
+          trace.push({ second, mean: +(await brightness()).toFixed(1), flash: p.flash > 0.01 || was.flash > 0.01 });
+        }
+        if (Math.floor(since / 5) > still) { still = Math.floor(since / 5); await shot(`storm-${String(still * 5).padStart(2, '0')}`); }
+        was = p;
+        await seconds(0.25);
+      }
+      const landed = beats.at(-1);
+      assert(landed.what === 'landed', `the boat never reached the forest beach: ${JSON.stringify(await look())}`);
+      console.log(`storm from aboard at the nave: ${toBeach(aboard).toFixed(0)} m to the forest beach`);
+      for (const b of beats) console.log(`  ${b.at.toFixed(1).padStart(5)} s  ${b.what}, ${b.toBeach.toFixed(0)} m from the beach`);
+      if (out) console.log(`  the light went out ${d(xz(out.boat), T.light).toFixed(0)} m from the lighthouse, its lamp ${out.inFrame ? 'in' : 'out of'} frame at ${out.lamp.slice(0, 2).map((v) => v.toFixed(2)).join(', ')}`);
+      if (atNave !== null) console.log(`  landed ${landed.at.toFixed(1)} s after she was aboard, ${(aboard.time - atNave + landed.at).toFixed(1)} s after the tower's foot`);
+      const back = trace.filter((r) => r.second >= 2 && r.second <= 5 && !r.flash);
+      const lookBack = back.reduce((a, r) => a + r.mean, 0) / Math.max(1, back.length);
+      const lit = trace.filter((r) => r.second > 5 && !r.flash);
+      const brightest = lit.reduce((a, r) => (r.mean > a.mean ? r : a), { mean: -1, second: -1 });
+      console.log(`  mean brightness each second from aboard: ${trace.map((r) => `${r.second}:${r.mean.toFixed(0)}${r.flash ? '*' : ''}`).join(' ')}`);
+      console.log(`  the look back ${lookBack.toFixed(1)}; brightest after it ${brightest.mean.toFixed(1)} at ${brightest.second} s (* a lightning flash)`);
+      assert(out, 'the light never went out');
+      assert(!unseen, `the light was going out with the lighthouse out of frame at ${unseen?.since.toFixed(1)} s (${unseen?.lamp.map((v) => v.toFixed(2)).join(', ')})`);
+      assert(out.inFrame, 'the light went out with the lighthouse out of frame');
+      assert(landed.at < 60, `the landing came ${landed.at.toFixed(1)} s after she was aboard`);
+      assert(brightest.mean < lookBack + 6, `the storm brightened the frame to ${brightest.mean.toFixed(1)} at ${brightest.second} s against ${lookBack.toFixed(1)} at the look back`);
+      return cat;
+    };
+    if (fromStorm) {
+      await storm(await wait((s) => s.aboardFor >= 0, 5, 'her aboard'), null);
+      return;
+    }
     const atNave = (await wait((s) => s.step !== 'off', 30, 'the church beginning')).time;
     await wait((s) => s.cat[1] > 4, 30, 'the cat halfway up the ivy');
     await shot('church-climbing');
@@ -170,41 +241,20 @@ try {
       if (strokes === 5) await shot('church-bring');
     }
     const berthed = await wait((s) => s.step === 'board', 40, 'her stepping down into the boat');
+    const berth = (await look()).boat;
     await seconds(1.0);
     await shot('church-boarding');
     const aboard = await wait((s) => s.aboardFor >= 0, 15, 'her seated aboard');
-    await wait((s) => s.aboardFor > 2.6, 10, 'her looking back');
-    await shot('church-look-back');
-    const cat = (await look()).cat;
-    const leaving = await wait((s) => s.aboardFor > 8, 15, 'the boat going');
-
-    const beats = [{ beat: 'gather', storm: 0, time: aboard.time, toBeach: +toBeach(aboard).toFixed(0) }];
-    let was = 'gather', out = null;
-    const shotAt = new Set();
-    const end = await (async () => {
-      for (let t = 0; t < 150; t += 0.25) {
-        const s = await look();
-        if (!s.landed && s.beat !== was) { was = s.beat; beats.push({ beat: s.beat, storm: s.storm, time: s.time, toBeach: +toBeach(s).toFixed(0) }); }
-        if (!out && s.storm >= T.out) out = s;
-        const mark = [8, 16, 24].find((m) => s.storm >= m && !shotAt.has(m));
-        if (mark) { shotAt.add(mark); await shot(`storm-${mark}`); }
-        if (s.landed) return { ...s, storm: was === 'after' ? +(beats[0].storm + s.time - beats[0].time).toFixed(1) : NaN };
-        await seconds(0.25);
-      }
-      assert.fail(`the boat never reached the forest beach: ${JSON.stringify(await look())}`);
-    })();
+    const pushed = d(xz(aboard.boat), xz(berth));
     const w = await page.evaluate(() => window.__churchWatch);
+    const cat = await storm(aboard, atNave);
     console.log(`church: the cat up the ivy ${(up.time - atNave).toFixed(1)} s after the tower's foot; the fog came ${(fog.time - atNave).toFixed(1)} s, the boat hers to bring ${(bring.time - atNave).toFixed(1)} s`);
     console.log(`  the boat brought in ${(berthed.time - bring.time).toFixed(1)} s (7 s of it idle, for the drawn invitation) with ${strokes} strokes; aboard ${(aboard.time - atNave).toFixed(1)} s after the tower's foot${berthed.carrying ? ' (the safety valve carried it)' : ''}`);
-    console.log(`  the cat looking down from ${cat.join(', ')} as they go; her feet stayed within ${w.offWorst.toFixed(3)} m of the decks (worst ${w.offAt})`);
-    console.log(`storm from aboard at the nave: ${toBeach(aboard).toFixed(0)} m to the forest beach`);
-    for (const b of beats) console.log(`  ${b.beat} at storm ${b.storm} s, ${b.toBeach} m from the beach`);
-    console.log(`  the light out at storm ${out.storm} s with the boat at ${out.boat.join(', ')}, ${d(xz(out.boat), T.light).toFixed(0)} m from the lighthouse, ${toBeach(out).toFixed(0)} m from the beach`);
-    console.log(`  landed at storm ${end.storm} s (${(end.time - aboard.time).toFixed(1)} s after she was aboard), ${(end.time - atNave).toFixed(1)} s after the tower's foot`);
+    console.log(`  her step aboard moved the boat ${pushed.toFixed(2)} m; her feet stayed within ${w.offWorst.toFixed(3)} m of the decks (worst ${w.offAt})`);
     assert(w.offWorst < 0.4, `she left the decks at the church: ${w.offWorst.toFixed(2)} m (${w.offAt})`);
     assert(!berthed.carrying, 'the strokes never brought the boat: the safety valve carried it');
+    assert(pushed < 0.6, `her step aboard pushed the boat ${pushed.toFixed(2)} m`);
     assert(Math.hypot(cat[0] - T.north[0], cat[1] - T.north[1], cat[2] - T.north[2]) < 0.5, `the cat is not on the belfry's north sill (${cat.join(', ')})`);
-    assert(leaving.riding && leaving.beat === 'gather', `she is not riding the boat into the storm: ${JSON.stringify(leaving)}`);
   };
 
   if (!fromRoofs) {

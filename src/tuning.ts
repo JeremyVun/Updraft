@@ -527,6 +527,12 @@ export const tuning = {
     ashoreInside: 0.16,
     ashoreOut: 1.25,
     ashoreAhead: 0.25,
+    /**
+     * Stepping down into a boat lying alongside a deck: how far the hull dips under the weight (m) and how soon after
+     * the step that is deepest (s); how far it rolls toward the side the weight came over (radians), how fast it rocks
+     * (radians a second), and how long the rocking takes to die away (s).
+     */
+    weightDip: 0.08, weightPeak: 0.5, weightRoll: 0.08, weightRock: 3, weightSettle: 1.2,
   },
   cygnetCalls: {
     /** Three cream strokes accompany the cygnet's voice throughout the journey. */

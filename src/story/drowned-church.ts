@@ -81,6 +81,27 @@ export class ChurchArrival {
     return this.step === 'aboard';
   }
 
+  /** QA: on to her just seated aboard at the berth, the cat on the belfry's north sill and the fog closed round. */
+  skipToAboard(): void {
+    const { boat, child: c, cat } = this.cast;
+    const k = tuning.drowned.church;
+    const dark = this.cast.village!.dark;
+    this.begin();
+    this.catIn = this.swung = this.down = true;
+    this.close = dark.close = 1;
+    dark.reach = DARK_END + k.fog.past;
+    cat.place(BELFRY_NORTH, Math.PI, { pose: 'sit', floor: sill });
+    cat.unease = 0.35;
+    boat.beach(NAVE_BERTH.x, NAVE_BERTH.z, NAVE_BERTH.yaw);
+    boat.takeWeight(0);
+    c.ride(boat.seat(this.tmp), boat.yaw, boat);
+    this.to('aboard');
+    this.aboardFor = 0;
+    this.catEye.copy(BELFRY_NORTH).setY(BELFRY_NORTH.y + 0.25);
+    this.north(this.view, THREE.MathUtils.smoothstep(this.aspect, 0.7, 1.3), true);
+    this.framed = true;
+  }
+
   /** The sail is the player's while the boat is to be brought. */
   get invitesSail(): boolean {
     return this.step === 'bring' && !this.cast.boat.grounded;
@@ -222,19 +243,19 @@ export class ChurchArrival {
     if (berthed && this.down && !c.busy) this.board();
   }
 
-  /** She steps down off the slates into the boat; the push off them takes it out from the roof. */
+  /** She steps down off the slates into the boat, which dips and rocks under her as it takes her weight. */
   private board(): void {
     const { boat, child: c } = this.cast;
     this.to('board');
     this.carrying = false;
     boat.mooring = null;
-    boat.grounded = false;
+    boat.steerFor = null;
     boat.speed = 0;
     c.faceToward(boat.position.x, boat.position.z, 1);
     c.board(boat, () => {
       this.to('aboard');
       this.aboardFor = 0;
-    });
+    }, true);
   }
 
   /**

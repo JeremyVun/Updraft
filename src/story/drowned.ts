@@ -273,6 +273,14 @@ export class DrownedChapter implements Chapter {
     this.cutIn = 2;
   }
 
+  /** QA (`?chapter=storm`): on to her just seated aboard at the nave, the fog closed round, the storm beginning. */
+  skipToStorm(): void {
+    this.skipToNave();
+    this.to('church');
+    this.church!.skipToAboard();
+    this.aboard();
+  }
+
   /** QA: a skip ahead cuts the lens there once the chapter has begun. */
   cameraCut = 0;
   private cutIn = 0;
