@@ -324,11 +324,23 @@ half closed, the plane taken). `tools/drowned-run-check.mjs FROM=stairs` docks t
 on through the room into the wood, a still at each moment, and reports the lens's fastest turn and move in the room;
 upright, the hand-over from the climb now keeps her in the narrow frame (`uprightHandHold`; she left its edge for
 3.5 s); the cat sits in the tub, ears flat, where crouched it was hidden by the tub's sides from every view. Docs:
-`chapters.md`, `world.md`, `progress.md`, `journey.md`, `wind.md`, the project instructions, design.md. Left: the
-stairs' flights stand in the sky behind the drift with no cloud deck to end in (seen from the cat's view); the
-`drowned-gating-check` vane on arrival (0.09 rad against its 0.05); as the fog closes at the church she is out of
-both aspects' frames behind the nave and a straight vertical seam stands in the fog beside the tower; the cat on the
-ivy and on its pot reads small; the first seconds in the wood are near black with the sail cropped at the frame's foot.
+`chapters.md`, `world.md`, `progress.md`, `journey.md`, `wind.md`, the project instructions, design.md.
+Fixed after the final stills: down from the stairs their room goes while the boat is still in the white (Jeremy's
+ruling in design.md, "Arriving"), so no flight stands in the sky behind the drift; at the church the lens goes round
+the nave's west end from the cat's sitting on the sill (`roundFrom`), the climb view keeps her and the cat in one
+frame (`climbAlong`, `climbZoom`), and upright the water view is wider rather than further off (`uprightWaterZoom`);
+the fog's front eases to a stop 4 m short of her (`fog.past`; its old 40 m past the tower's foot was clamped there by
+`darkWayPoint`, so it stood over her thick for six seconds) and thins round her as it arrives (`closeFrom` 6); seen
+edge-on, the fog's face heaps with height (`fog.faceHeap`, a lean for grazing sightlines only, bounded so no
+sightline turns from meeting it to leaving it) instead of standing as a straight wall. `drowned-run-check` with
+`LENS=1` now also fails through the church if she leaves the frame, the church or a roof hides her, or she is lost in
+the fog (her raincoat's warmth against what stands round her, every half second); on the old framing it failed (out
+of frame 3.7 s at the cat's sill, lost 6 s in the fog). `drowned-gating-check` compares the arriving vane with the
+wind it settles into (the moved spire's vane reads it to 0.05 rad; the step-by-step one hunts 0.04 the other side)
+and after the storm only asks that every heron has left. `playthrough.mjs` plays the room with real gestures (the
+tub, the tree, the mill, the swing, the bring) and fails if any of its safety valves fires. Left: the cat on the ivy
+and on its pot reads small; the first seconds in the wood are near black with the sail cropped at the frame's foot;
+upright the church's water views leave the lower half of the frame to empty water.
 
 ### Later
 The cat in the lit window of the cottage with the red door at the very end (design.md "The cat comes home"); a small

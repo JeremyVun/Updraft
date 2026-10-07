@@ -183,6 +183,8 @@ export class CameraRig {
   /** Jumps straight to a shot (used once at the start). */
   cut(shot: Shot): void {
     if (this.fixed) return;
+    this.zoomed = shot.zoom ?? 1;
+    this.lens();
     if (shot.exact && shot.eye) {
       this.eye.copy(shot.eye); this.wantLook.copy(shot.target);
     } else this.desired(shot, this.eye);
