@@ -940,6 +940,14 @@ vec4 seaFogSheets(vec3 ro, vec3 rd, float s0, float ds, float a0, float da, floa
   return acc;
 }
 
+/** How much light from a flame at l a sightline gathers between t0 and t1 through fog round it: falling off with distance, gone a few metres off. */
+float seaFogHalo(vec3 ro, vec3 rd, vec3 l, float t0, float t1) {
+  vec3 to = l - ro;
+  float at = dot(to, rd);
+  float d = sqrt(max(dot(to, to) - at * at, 0.04));
+  return (atan((t1 - at) / d) - atan((t0 - at) / d)) / d * exp(-d / ${glsl(tuning.drowned.fog.lanternReach)});
+}
+
 /**
  * The drowned village's sea fog along a sightline of length far: rgb its light, a how much of the view it takes.
  * It lies on the water behind a front that comes on across the way, thickening over its first stretch so what
@@ -950,7 +958,9 @@ vec4 seaFogSheets(vec3 ro, vec3 rd, float s0, float ds, float a0, float da, floa
 vec4 seaFog(vec3 ro, vec3 rd, float far) {
   const float FRONT = ${glsl(tuning.drowned.fog.front)}, SOFT = ${glsl(tuning.drowned.fog.topSoft)};
   const float LOW = ${glsl(tuning.drowned.fog.low)}, AIR_LOW = ${glsl(tuning.drowned.fog.airLow)};
-  // Seen in the sea's mirror the eye is under the water; the fog as seen from the surface is near enough.
+  // Seen in the sea's mirror the eye is under the water; the fog as seen from the surface is near enough. There, and
+  // from the sea's own surface, the flame is the water's glint, not the lantern's light in the fog.
+  bool aboveSea = ro.y > 1.0;
   ro.y = max(ro.y, 0.0);
   vec2 n = uSeaFog.zw, side = vec2(-n.y, n.x);
   vec2 o = ro.xz - uSeaFog.xy;
@@ -1021,16 +1031,18 @@ vec4 seaFog(vec3 ro, vec3 rd, float far) {
   // The thin mist ahead of it is lit by the sky more than its body is.
   vec3 haze = mix(uSeaFogBody.rgb * (0.8 + 0.4 * smoothstep(0.3, 0.7, mottle)), uSkyHorizon * 0.9, min(uSeaFogHaze * 2.0, 1.0));
   vec4 fog = vec4(haze, 1.0) * hazed + (1.0 - hazed) * field;
-  if (uLantern.w > 0.001) {
-    // Its light scattered by the fog along the sightline: a soft glow round the flame, as thick as the fog round her.
-    vec3 l = uLantern.xyz - ro;
-    float t0 = dot(l, rd);
-    float d = sqrt(max(dot(l, l) - t0 * t0, 0.04));
-    float lit = (atan((min(far, 200.0) - t0) / d) + atan(t0 / d)) / d * exp(-d / ${glsl(tuning.drowned.fog.lanternReach)});
+  if (uLantern.w > 0.001 && aboveSea) {
+    // Its light scattered by the fog along the sightline: a soft glow round the flame, as thick as the fog round her;
+    // where the sightline ends on the glassy sea, the glow in the water under it too, as the flame's mirror image.
+    float glow = seaFogHalo(ro, rd, uLantern.xyz, 0.0, min(far, 200.0));
+    if (rd.y < 0.0 && far < 200.0 && abs(ro.y + rd.y * far) < 0.4) {
+      glow += seaFogHalo(ro, rd, uLantern.xyz * vec3(1.0, -1.0, 1.0), far, far + 60.0) * ${glsl(tuning.drowned.fog.lanternMirror)};
+    }
     float thick = uSeaFogBody.a * rate + ${glsl(tuning.drowned.fog.closed)} * uSeaFogShape.z;
-    fog.rgb += vec3(1.0, 0.63, 0.29) * uLantern.w * thick * lit * ${glsl(tuning.drowned.fog.lanternHalo)} * uSeaFogShape.w;
+    fog.rgb += vec3(1.0, 0.63, 0.29) * uLantern.w * thick * glow * ${glsl(tuning.drowned.fog.lanternHalo)} * uSeaFogShape.w;
     fog.a = max(fog.a, 1e-3);
   }
+
   if (fog.a <= 0.0) return vec4(0.0);
   return vec4(fog.rgb / fog.a, fog.a);
 }
