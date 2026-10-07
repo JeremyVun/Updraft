@@ -20,8 +20,8 @@ interface FleetToy {
 
 /**
  * The little boats' toys again, all seven, out on the sea below the stairs: they sail on by in a loose flotilla
- * west into the sun, the way the boat will take the travellers over the cloud, doing their own thing while the
- * child climbs the last of the stair below the cloud. Nobody turns to them and they never come near.
+ * out of the sun's glitter and on east under her, doing their own thing while the child climbs the last of the
+ * stair below the cloud. Nobody turns to them and they never come near.
  */
 export class StairsFleet {
   readonly group = new THREE.Group();
@@ -72,9 +72,9 @@ export class StairsFleet {
     const lk = tuning.littleBoats;
     for (const t of this.toys) {
       const s = this.sailed * t.pace - t.behind;
-      const x = STAIRS_ISLE.x + k.from - s;
+      const x = STAIRS_ISLE.x + k.from + s;
       const z = lane + t.side + Math.sin(s * k.weaveRate + t.seed) * k.weave;
-      const yaw = Math.atan2(-1, Math.cos(s * k.weaveRate + t.seed) * k.weave * k.weaveRate);
+      const yaw = Math.atan2(1, Math.cos(s * k.weaveRate + t.seed) * k.weave * k.weaveRate);
       swellAt(x, z, time, this.swell);
       const fill = THREE.MathUtils.clamp(k.fill + Math.sin(time * 0.37 + t.seed * 2.3) * 0.15, 0, 1);
       const across = k.across;
