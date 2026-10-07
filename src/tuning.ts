@@ -1768,8 +1768,6 @@ export const tuning = {
        * tops break, a share of their height; and how much the wisp covers.
        */
       sheetBack: [0, 8, 40, 100], sheetTall: [0.15, 0.8, 0.9, 1.0], sheetRough: 1.8, wispAhead: 1.75, wisp: 0.4,
-      /** How far apart the sheets stand the way it comes, seen along its front, metres. */
-      sheetApart: 30,
       /**
        * How brightly the fog round her takes the lantern's light, how far round the flame it shows, metres, and how
        * much of that glow the glassy sea under it gives back.
