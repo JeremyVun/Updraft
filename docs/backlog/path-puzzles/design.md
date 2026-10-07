@@ -738,6 +738,12 @@ The sequence:
   dives; its timing and distance as on main, and it never crowds the farewell look-back. Claude's call: the underside
   of its flukes carries a pale pattern of its own, seen as it dives there and again when it waves goodbye on the open
   sea, so the meeting is a recognition rather than a coincidence.
+  Jeremy: "so when hte child encounters the whale again, it feels like a familiar face / friend". So it is met as a
+  friend, never as a stranger or a danger: on the first crossing she watches it go (her gaze follows it and she sits
+  up as it blows), and on the open sea she knows it before the player does: as it breathes in the haze she leans
+  toward it and points, and the cygnet, wary of everything else that size, is not afraid of it. When its eye opens
+  after the first breath it knows her too; the look between them is the warmest beat of the sequence, and the
+  goodbye is a friend's.
 - **The open sea as on main up to the swim.** The pod rises and rides the bow, the leap at first light, the cygnet's
   swim and its drying. The sea's distant surfacing whale (`whaleAt: 27`) is cut: the sleeper is the whale.
 - **The pod leads.** After the swim a dolphin nudges the planking (main's nudge, now asking) and the pod leads the boat
