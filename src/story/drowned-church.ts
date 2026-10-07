@@ -338,7 +338,7 @@ export class ChurchArrival {
   private north(out: View, wide: number, back: boolean): View {
     const k = tuning.drownedCamera.church;
     const { child, boat } = this.cast;
-    const near = 1 - THREE.MathUtils.clamp((this.left - 4) / 18, 0, 1);
+    const near = back || this.aboardFor >= 0 ? 1 : 1 - THREE.MathUtils.clamp((this.left - 4) / 18, 0, 1);
     const far = k.northFar, close = k.northNear;
     const e = this.northEye.set(TOWER.x + THREE.MathUtils.lerp(far.x, close.x, near), THREE.MathUtils.lerp(far.y, close.y, near),
       TOWER.z + THREE.MathUtils.lerp(far.z, close.z, near));
@@ -365,6 +365,8 @@ export class ChurchArrival {
     if (away >= 1) return;
     this.north(this.want, wide, this.aboardFor < tuning.drowned.church.lookBackAt + tuning.drowned.church.lookBackFor);
     this.ease(dt, k.ease);
+    /** The boat is under way: the lens looks where it is, not where it was. */
+    this.view.target.lerp(this.want.target, 1 - Math.exp(-dt * k.follow));
     const storm: View = { target: shot.target.clone(), bearing: Math.atan2(shot.from!.x, shot.from!.z), distance: shot.distance,
       eye: shot.target.y + shot.height, zoom: shot.zoom ?? 1 };
     const v = this.view;

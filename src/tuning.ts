@@ -1838,7 +1838,7 @@ export const tuning = {
        */
       lookBackAt: 1.2, lookBackFor: 4.5, mewAfter: 1, headTurns: 0.9, seatTurn: 1.7, turnRate: 1.6, turnPast: 2.2,
       /** The rain the fog brings as it closes round, and how far gathered the storm's weather is when it starts from here. */
-      closeShower: 0.25, stormFrom: 0.45,
+      closeShower: 0.25, stormFrom: 0.35,
     },
     /** Her run over the roofs after the cat, from the strand's ridge to the nave's. */
     run: {
@@ -1941,6 +1941,8 @@ export const tuning = {
     church: {
       /** How fast it eases to each view (per second) and its pace; upright, how much further off it stands. */
       ease: 0.6, pace: 0.6, uprightFar: 1.3,
+      /** How fast it follows her once the boat is under way (per second). */
+      follow: 4,
       /**
        * While the cat climbs, low off the green by the tower's south-west corner: where it stands from the tower's
        * middle, and how high once the cat is up; where it looks, from her head toward the cat and how far above that;
@@ -1953,7 +1955,7 @@ export const tuning = {
        * Over the north water: where it stands from the tower's middle with the boat still at its tree and with it come
        * in; how far from her toward the boat it looks while it is far off, and at what height.
        */
-      northFar: { x: -7.5, y: 2.6, z: -27 }, northNear: { x: -9.5, y: 2.2, z: -19 }, northToward: 0.45, northAim: 3,
+      northFar: { x: -7.5, y: 2.6, z: -27 }, northNear: { x: -1, y: 2.2, z: -19 }, northToward: 0.45, northAim: 3,
       /**
        * Going: seconds after she is seated it starts to give way to the storm's frame, and how long it takes; meanwhile
        * how far from her toward the cat it looks, and its lens (upright, the same).
