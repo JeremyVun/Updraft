@@ -557,11 +557,10 @@ So the existing drowned village and storm code may be refactored as far as the r
   identical sheds on empty sea. It becomes a place with a shape: cottages in short rows whose turns imply drowned
   lanes, broad water between clusters, groups on every side to the horizon (gold silhouettes into the sun), and the
   green left as a clearing of water. It is a village remembered in a dream, not surveyed: shape, colour and light over
-  detail (`docs/styles.md`), simple soft forms whose variety comes from proportion, roof colour, lean and scale rather
-  than ornament; no slate courses, moss, signs or anything recognisably of one country or era (no telegraph poles,
+  detail (`docs/styles.md`), each house's character carried by its shape rather than by ornament; no slate courses, moss, signs or anything recognisably of one country or era (no telegraph poles,
   pub signs or school bells: "nowhere real"). A few quiet surreal touches carry the dream, in the game's dream logic
   where things recur in the wrong place and nobody remarks on it: pieces of home out of place (the red door, washing on
-  a line), gentle impossible leans and shifts of scale, a lamp still glowing under the water. Windows stay dark so the
+  a line), gentle impossible leans and shifts of scale. Windows stay dark so the
   lantern is the warm light. The near water stays open and quiet; density goes to the middle distance and the horizon;
   nothing crowds the views of the church and the lighthouse or of the fog coming, and nothing on the way becomes an
   obstacle. Concept: `comps/village/`. The first round (`village-*.png`, `house-kit.png`, painted over today's frames
