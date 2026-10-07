@@ -610,6 +610,7 @@ export class Cat {
     this.route = null;
     this.climbing = null;
     this.turnTo = null;
+    this.rubbing = false;
     if (this.doing !== 'still') {
       this.doing = 'still';
       this.pose = 'stand';
