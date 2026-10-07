@@ -56,12 +56,12 @@ in vec3 vWorld;
 in vec3 vNormal;
 in float vContact;
 
-float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-float vnoise(vec2 p) {
+float netHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+float netNoise(vec2 p) {
   vec2 i = floor(p);
   vec2 f = fract(p);
   f = f * f * (3.0 - 2.0 * f);
-  return mix(mix(hash(i), hash(i + vec2(1.0, 0.0)), f.x), mix(hash(i + vec2(0.0, 1.0)), hash(i + 1.0), f.x), f.y);
+  return mix(mix(netHash(i), netHash(i + vec2(1.0, 0.0)), f.x), mix(netHash(i + vec2(0.0, 1.0)), netHash(i + 1.0), f.x), f.y);
 }
 
 /** Lines at every whole x, \`w\` of a cell wide: how much of this pixel they cover. */
@@ -82,7 +82,7 @@ float band(float d, float w) {
 
 void main() {
   vec2 q = vec2(vUv.x + vUv.y, vUv.x - vUv.y) * ${glsl(Math.SQRT1_2 / NET.cell)};
-  float weed = smoothstep(0.66, 0.88, vnoise(vUv * 0.42 + 3.1)) * 0.85;
+  float weed = smoothstep(0.66, 0.88, netNoise(vUv * 0.42 + 3.1)) * 0.85;
   float w = ${glsl(NET.strand / NET.cell)} * (1.0 + weed * 2.2);
   float ax = lines(q.x, w);
   float ay = lines(q.y, w);
@@ -190,9 +190,9 @@ void main() {
 }`;
 
 export const netLook = {
-  uStrand: { value: new THREE.Color('#6d6747') },
-  uWeed: { value: new THREE.Color('#3f4a26') },
-  uRope: { value: new THREE.Color('#5b5039') },
+  uStrand: { value: new THREE.Color('#9a8f6c') },
+  uWeed: { value: new THREE.Color('#4b5a2b') },
+  uRope: { value: new THREE.Color('#857553') },
   uShadow: { value: new THREE.Color('#151a22') },
   uCork: { value: new THREE.Color('#b09468') },
   uFouled: { value: new THREE.Color('#5d6a40') },
