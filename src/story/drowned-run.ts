@@ -852,10 +852,13 @@ export class RoofRun {
     this.handOver(shot, dt);
     shot.free = false;
     shot.from = undefined;
-    /** Upright the frame is too narrow to trust the laid path alone: she is kept inside it, never by drawing back. */
+    /**
+     * Upright on her own way the frame is too narrow to trust the laid path alone: she is kept inside it, never by
+     * drawing back. Each piece's own view is laid by hand.
+     */
     this.held.primary.copy(c).setY(c.y + 1.2);
     this.held.secondary.copy(this.held.primary);
-    shot.subjects = wide < 0.5 ? this.held : undefined;
+    shot.subjects = wide < 0.5 && at < 0.5 ? this.held : undefined;
     shot.attention = undefined;
     shot.composition = undefined;
     shot.smoothFit = undefined;
@@ -880,7 +883,9 @@ export class RoofRun {
       if (!this.camera) return;
       this.handFrom = this.handEye.copy(this.camera.position);
       this.handTarget.copy(shot.target);
-      this.handT = 0;
+      /** Only from the climb's view beside her: from anywhere further (a QA start) the rig brings it in. */
+      const c = this.cast.child.position;
+      this.handT = Math.hypot(this.handEye.x - c.x, this.handEye.z - c.z) > tuning.drownedCamera.run.handFar ? Infinity : 0;
     }
     this.handT += dt;
     const hand = THREE.MathUtils.smoothstep(this.handT, 0, tuning.drownedCamera.run.handFor);

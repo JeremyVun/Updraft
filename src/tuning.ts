@@ -1979,9 +1979,10 @@ export const tuning = {
       naveBack: 10, naveHigh: 3.6, naveAside: 11,
       /**
        * Seconds the lens takes from where the climb left it, round her over the open water where the boat lies, to the
-       * tree's view as she sets off, and how much further out and higher it stands half-way round.
+       * tree's view as she sets off (if it stood within `handFar` of her), and how much further out and higher it
+       * stands half-way round.
        */
-      handFor: 16, handOut: 7, handUp: 1.5,
+      handFor: 16, handFar: 16, handOut: 7, handUp: 1.5,
     },
     /** The church (`ChurchArrival.frame`). */
     church: {
