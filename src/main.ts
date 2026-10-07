@@ -29,6 +29,7 @@ import { Murmuration } from './fx/murmuration';
 import { Rain } from './fx/rain';
 import { StormWeather } from './fx/storm';
 import { SeaLife } from './fx/sealife';
+import { whaleSighting } from './fx/sealife/sighting';
 import { Boat } from './traveller/boat';
 import { Drawing } from './traveller/drawing';
 import { Traveller } from './traveller/traveller';
@@ -636,7 +637,7 @@ function whaleForQa(): void {
   sealife.fishNear(boat.position, 1);
   if (time < qaWhaleAt) return;
   qaWhaleAt = time + 40;
-  sealife.surfaceWhaleAhead(boat.position, boat.yaw);
+  sealife.surfaceWhale(whaleSighting(boat.position, boat.yaw, 1, new THREE.Vector3()), boat.yaw - 0.3);
 }
 
 const nearbyPopulations = [creatures.rabbits.positions, creatures.songbirds.positions,

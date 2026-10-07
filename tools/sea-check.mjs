@@ -1,4 +1,6 @@
-// Capture the complete sea passage with real simulation and verify the swimmer's framing.
+// Capture the complete sea passage with real simulation and verify the swimmer's framing, then the whale in the net:
+// the pod's lead, the rest beside its head, real circles over the blowhole (the stand-in for the net's first step),
+// its eye, the spout, the flukes and the arrival at the mirror.
 // Usage: node tools/sea-check.mjs [out-prefix]. BASE selects a stable dev server; W/H select the viewport.
 // Reuses play.mjs's machine-wide GPU lock. All captures belong in /tmp.
 import { spawn } from 'node:child_process';
@@ -26,10 +28,13 @@ function observe() {
 const wait = (condition, seconds = 60) => ({ eval: `new Promise((resolve,reject)=>{
   const until=performance.now()+${seconds * 1000};
   const id=setInterval(()=>{
-    if(${condition}) {clearInterval(id);resolve({chapter:__game.story.name,time:__game.story.current.time,swim:__game.story.current.swim});}
+    if(${condition}) {clearInterval(id);resolve({chapter:__game.story.name,time:__game.story.current.time,swim:__game.story.current.swim,whale:__game.story.current.whale?.step});}
     else if(performance.now()>until) {clearInterval(id);reject(new Error('Sea capture timed out: '+${JSON.stringify(condition)}));}
   },30);
 })` });
+const whale = '__game.story.current.whale';
+/** The blowhole on screen, as fractions of the viewport, a little above it where the column stands. */
+const blowhole = `(()=>{const p=__game.sealife.sleeper.blowhole.clone();p.y+=1.2;p.project(__game.rig.camera);return [p.x*0.5+0.5,0.5-p.y*0.5]})()`;
 
 const steps = [
   { eval: `(${observe.toString()})()` },
@@ -43,8 +48,15 @@ const steps = [
   wait("['drying','done'].includes(__game.story.current.swim)"), { shot: 'return' },
   wait("__game.story.current.swim==='done'"), { shot: 'together' },
   { eval: `(() => {const s=window.seaLog;if(!s.swimFrames||s.clipped>0||s.maxGap>11.5)throw Error(JSON.stringify(s));return s;})()` },
-  wait("__game.story.current.time>105 || __game.story.name==='mirror'"), { shot: 'farewell' },
-  wait("__game.story.name==='mirror'", 110), { shot: 'mirror-arrival' },
+  wait(`${whale}.led`, 60), { shot: 'lead' },
+  wait(`${whale}.step==='breath' && ${whale}.stepTime>3`, 90), { shot: 'beside' },
+  { circle: blowhole, until: `${whale}.progress>=1`, radius: 0.06, seconds: 60 },
+  { move: [0.98, 0.04] },
+  wait('__game.sealife.sleeper.awake && __game.sealife.sleeper.time>3', 30), { shot: 'eye' },
+  wait('__game.sealife.sleeper.spouting', 30), { shot: 'spout' },
+  wait('__game.sealife.sleeper.fluking && __game.sealife.sleeper.time>15', 40), { shot: 'flukes' },
+  wait(`${whale}.step==='gone'`, 40), { shot: 'gone' },
+  wait("__game.story.name==='mirror'", 120), { shot: 'mirror-arrival' },
   { eval: 'window.seaLog' },
 ];
 const child = spawn(process.execPath, ['tools/play.mjs', process.argv[2] ?? '/tmp/updraft-sea', JSON.stringify(steps)], {

@@ -208,6 +208,13 @@ export class Journey {
     } else if (choice === 'sea' || choice === 'dolphins') {
       this.sail(SLEEP_BERTH.x - 5, SLEEP_BERTH.z - 2, -1.76);
       this.begin('toMirror');
+    } else if (choice === 'whale') {
+      /** QA: at rest beside the whale on the open sea, as the save there resumes, the swim behind them. */
+      const toward = WHALE_REST.clone().sub(WHALE_LEAD).normalize();
+      this.sail(WHALE_REST.x - toward.x * 1.5, WHALE_REST.y - toward.y * 1.5, Math.atan2(toward.x, toward.y));
+      this.cast.cygnet.rideIn('satchel');
+      this.begin('toMirror');
+      this.chapter.restoreCheckpoint?.('whale-rest', [ROUTES.toMirror.indexOf(WHALE_HOLD), 90]);
     } else if (choice === 'mirror') {
       this.land(MIRROR_LANDING.x, MIRROR_LANDING.z, MIRROR_LANDING.x + 2, MIRROR_LANDING.z - 3);
       this.begin('mirror');

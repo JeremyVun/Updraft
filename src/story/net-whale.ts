@@ -22,6 +22,8 @@ export const WHALE_STEPS: readonly WhaleStep[] = ['approach', 'breath', 'line', 
 const AFTER_BREATH: WhaleStep = 'free';
 /** Seconds of its first full breath and the look between them before the breath step hands on. */
 const LOOKING = 5;
+/** How near the blowhole on screen a stroke is taken for the start of a circle rather than a sweep (NDC). */
+const BLOWHOLE_CLEAR = 0.16;
 /** Where along the back a gust is looked for, snout to tail stock. */
 const BRUSH_FROM = 0.06;
 const BRUSH_TO = 0.92;
@@ -415,6 +417,7 @@ export class NetWhale {
     const camera = this.camera;
     // Circles are the breath's gesture, and answered at the blowhole: only a sweep across the back tickles it.
     if (!camera || !input.present || input.muted || input.gust <= K.brushFrom || input.charge > K.liftFrom) return;
+    if (screenBrush(camera, whale.blowhole, input.prevNdc, input.ndc, BLOWHOLE_CLEAR) > 0) return;
     let best = 0;
     let at = 0;
     for (let i = 0; i <= BRUSH_STEPS; i++) {

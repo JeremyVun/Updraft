@@ -3,8 +3,8 @@
 // net's first step) and it goes free; left alone it finds its breath only after the safety valve; a save at rest
 // resumes beside it lying there, one from after it has gone resumes without it, sailing on.
 // Usage: BASE=http://127.0.0.1:5230/ node tools/net-whale-check.mjs [sweeps] [circles] [idle] [saves]
-// Runs against a dev or QA preview server, from the crossing's first waypoint (`?chapter=toMirror`). Each case sails
-// to the whale first (about a minute of game time); the idle case also waits out the valve (about 90 s more).
+// Runs against a dev or QA preview server, starting at rest beside the whale (`?chapter=whale`, as the save there
+// resumes). The idle case waits out the valve (about 90 s of game time). `tools/sea-check.mjs` sails the whole way.
 import { chromium } from 'playwright-core';
 import assert from 'node:assert/strict';
 
@@ -36,7 +36,7 @@ async function open(context, query) {
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
-  await page.goto(`${base}?shot=1&chapter=toMirror${query}`, { waitUntil: 'load' });
+  await page.goto(`${base}?shot=1&chapter=whale${query}`, { waitUntil: 'load' });
   await page.waitForFunction(() => window.__ready === true, null, { timeout: 90000 });
   return { page, errors };
 }
@@ -132,9 +132,9 @@ async function circles() {
   const free = await until(page, (s) => s.step === 'free', 'it to be free', 60);
   const gone = await until(page, (s) => s.step === 'gone' && s.speed > 1, 'it to go and the boat to sail on', 120);
   results.circles = { restAt: +rest.time.toFixed(1), breathAt: +breathed.time.toFixed(1), freeAt: +free.time.toFixed(1),
-    sailingOnAt: +gone.time.toFixed(1), tickles: breathed.tickles };
+    sailingOnAt: +gone.time.toFixed(1), lifts: breathed.lifts };
   assert(breathed.awake || breathed.phase === 'woken', 'circles over the blowhole bring its first full breath');
-  assert.equal(breathed.tickles, 0, 'circles over the blowhole never tickle it');
+  assert.equal(breathed.lifts, 0, 'circles over the blowhole never lift its flipper');
   assert.deepEqual(errors, []);
   await context.close();
 }
