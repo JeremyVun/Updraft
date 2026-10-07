@@ -31,7 +31,7 @@ export const BLOWHOLE = 0.21;
 
 /** Heights of the back and belly and the half width of the body along its length (0 snout, 1 notch). */
 export const TOP = curve([
-  [0, -0.141], [0.006, -0.048], [0.015, 0.03], [0.03, 0.116], [0.06, 0.23], [0.1, 0.358], [0.16, 0.527], [0.21, 0.644],
+  [0, -0.08], [0.005, 0.05], [0.012, 0.15], [0.03, 0.25], [0.06, 0.32], [0.1, 0.4], [0.16, 0.527], [0.21, 0.644],
   [0.26, 0.719], [0.3, 0.833], [0.36, 0.98], [0.42, 1.18], [0.55, 1.22], [0.62, 1.16],
   [0.7, 0.95], [0.8, 0.68], [0.9, 0.4], [0.96, 0.22], [1, 0.1],
 ]);
@@ -50,12 +50,12 @@ export const HALF_WIDTH = curve([
  * the eye, which would make a smile of it).
  */
 export const MOUTH = curve([
-  [0, -0.175], [0.006, -0.162], [0.03, -0.158], [0.06, -0.153], [0.1, -0.137], [0.125, -0.13], [0.152, -0.132],
+  [0, -0.165], [0.006, -0.125], [0.03, -0.118], [0.06, -0.117], [0.1, -0.11], [0.125, -0.112], [0.152, -0.122],
 ]);
 /** Where the mouth line ends, under the front of the eye, as a fraction of the length. */
 export const JAW_CORNER = 0.152;
 /** How much wider than the upper jaw the lower lip bows out, as a share of the half width. */
-const LIP = curve([[0, 0], [0.02, 0.07], [0.1, 0.08], [0.13, 0.05], [JAW_CORNER + 0.005, 0]]);
+const LIP = curve([[0, 0], [0.012, 0.09], [0.1, 0.11], [0.135, 0.06], [JAW_CORNER + 0.005, 0]]);
 
 /** The raised crown the blowhole sits on, over the top of the head. */
 const MOUND = curve([[0.14, 0], [0.185, 0.08], [0.215, 0.11], [0.25, 0.05], [0.29, 0]]);
@@ -225,10 +225,14 @@ function fin(): THREE.BufferGeometry {
     const knobs = 0.05 * Math.max(0, Math.sin(t * 9 * Math.PI)) ** 0.7 * smoothstep(0.1, 0.22, t) * (1 - smoothstep(0.86, 0.95, t));
     const bow = -0.06 * Math.sin(Math.PI * t);
     const thick = 0.14 * (1 - 0.72 * t) + 0.022;
+    // Twisted so the knobbly leading edge stands higher than the trailing one, and sagging a little along its middle,
+    // so lying awash it breaks the surface in a ridge and goes under the glass in places.
+    const twist = 0.26 * smoothstep(0.05, 0.4, t);
+    const sag = 0.05 * Math.sin(Math.PI * t);
     for (let j = 0; j < around; j++) {
       const a = (j / around) * Math.PI * 2;
       const along = 0.5 - 0.5 * Math.cos(a);
-      const th = Math.sin(a) * thick * 2.4 * Math.sqrt(along + 0.02) * (1 - along * 0.85);
+      const th = Math.sin(a) * thick * 2.4 * Math.sqrt(along + 0.02) * (1 - along * 0.85) + (2 * along - 1) * half * twist + sag;
       p.copy(FIN_ROOT)
         .addScaledVector(e1, t * FIN_SPAN)
         .addScaledVector(e2, bow + (2 * along - 1) * half - knobs * (1 - along) ** 2)

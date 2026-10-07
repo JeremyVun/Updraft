@@ -31,7 +31,7 @@ float knobs(vec3 r) {
   float h = 0.0;
   for (int i = 0; i < ${KNOBS.length}; i++) {
     vec3 d = m - KNOBS[i];
-    float q = dot(d, d) * ${f(1 / 0.045 ** 2)};
+    float q = dot(d, d) * ${f(1 / 0.055 ** 2)};
     if (q < 1.0) h += (1.0 - q) * (1.0 - q);
   }
   return h * 0.026;
@@ -192,7 +192,9 @@ vec2 eyeFolds(vec2 e, vec3 l) {
  * mouth line and the grooves of the throat, the knobs, the blowhole; fine fades the forms smaller than a pixel.
  */
 float form(vec3 r, float flank, float fine) {
-  float h = knobs(r) * uScale * fine;
+  // Broad soft swells over the skin, metres across, so the light on it is never that of moulded plastic.
+  float swell = vnoise(r.zy * 2.6 + r.x) + 0.6 * vnoise(r.zx * 4.3 + 5.0);
+  float h = (knobs(r) + 0.01 * swell) * uScale * fine;
   float below = jawBelow(r);
   float corner = 1.0 - smoothstep(${f(JAW_CORNER - 0.008)}, ${f(JAW_CORNER + 0.004)}, -r.z / ${f(LENGTH)});
   if (corner > 0.0 && flank > 0.0) {
@@ -228,7 +230,7 @@ Skin skin(float far) {
   float s = vRig.x;
   vec3 rn = normalize(vRestNormal) * (gl_FrontFacing ? 1.0 : -1.0);
   float mottle = vnoise(vRest.zx * vec2(0.9, 1.6)) * 0.5 + vnoise(vRest.zy * 2.5 + 3.0) * 0.3 + vnoise(vRest.zy * 9.0 + 7.0) * 0.2;
-  Skin k = Skin(uBack * (0.86 + 0.26 * mottle), 0.0, vec3(0.0), 0.0, 0.0, 0.0, 0.0, vec2(0.0));
+  Skin k = Skin(uBack * (0.8 + 0.38 * mottle), 0.0, vec3(0.0), 0.0, 0.0, 0.0, 0.0, vec2(0.0));
   // A few old pale scratches drawn out along the body, lost in the distance.
   float scar = smoothstep(0.8, 0.88, vnoise(vec2(vRest.z * 1.8 + 11.0, (vRest.y + abs(vRest.x) * 0.5) * 26.0)))
     * (1.0 - far) * (1.0 - smoothstep(0.02, 0.05, fwidth(vRest.y * 26.0)));
@@ -270,7 +272,7 @@ Skin skin(float far) {
     float iris = 1.0 - smoothstep(0.5 - aa, 0.5 + aa, rr);
     float pupil = 1.0 - smoothstep(0.19 - aa, 0.19 + aa, length(g * vec2(0.85, 1.15)));
     // A little wet white shows at its corners, greyed where the lids shade it.
-    vec3 white = vec3(0.3, 0.24, 0.22) * mix(0.35, 1.0, smoothstep(0.98, 0.6, abs(e.x)));
+    vec3 white = vec3(0.24, 0.19, 0.18) * mix(0.35, 1.0, smoothstep(0.98, 0.6, abs(e.x)));
     float fibres = 0.82 + 0.36 * vnoise(vec2(atan(g.y, g.x) * 9.0, rr * 5.0));
     vec3 amber = uIris * fibres * mix(1.2, 0.45, smoothstep(0.32, 0.5, rr)) * mix(0.6, 1.0, smoothstep(0.19, 0.27, rr));
     vec3 eye = mix(mix(white, amber, iris), vec3(0.014, 0.011, 0.01), pupil);
@@ -281,8 +283,10 @@ Skin skin(float far) {
     k.albedo = mix(k.albedo, eye, opening);
     k.gloss = opening;
     // The wet rim of the lower lid catches the sky.
-    k.rim = (1.0 - smoothstep(0.0, 0.08, abs(e.y - l.y - 0.02))) * (1.0 - smoothstep(0.8, 1.0, abs(e.x))) * flank;
-    k.near = (1.0 - smoothstep(1.0, 1.6, length(e * vec2(0.8, 1.0)))) * flank;
+    k.rim = (1.0 - smoothstep(0.0, 0.05, abs(e.y - l.y - 0.02))) * (1.0 - smoothstep(0.6, 0.9, abs(e.x))) * flank;
+    // The top of the lower lip faces the sun, but a gold line along it would draw a mouth.
+    float ledge = onJaw * (1.0 - smoothstep(0.0, 0.06, abs(below - 0.02)));
+    k.near = max((1.0 - smoothstep(1.0, 1.6, length(e * vec2(0.8, 1.0)))) * flank, ledge);
     k.caustic = opening * iris * (1.0 - pupil) * smoothstep(0.1, -0.35, g.y) * (1.0 - under);
     k.iris = g * iris * opening;
     if (part == ${BODY}) {
@@ -372,7 +376,7 @@ void main() {
   float back = pow(max(dot(-V, uSunDir), 0.0), 2.0);
   // Cool sky fill keeps the shadowed flank slate rather than black against a low sun.
   float sky = dot(uSkyAmbient, vec3(0.3, 0.5, 0.2));
-  vec3 fill = vec3(0.86, 0.9, 1.0) * sky * ${f(L.fill)} * (0.5 + 0.5 * N.y);
+  vec3 fill = vec3(0.8, 0.88, 1.05) * sky * ${f(L.fill)} * (0.42 + 0.58 * N.y);
   vec3 bounce = mix(uSkyHorizon, uSeaTint * sky * 3.0, 0.5) * ${f(L.bounce)} * sky * max(-N.y + 0.15, 0.0);
   vec3 col = k.albedo * (fill + bounce + uSunColor * (wrap * wrap * wrap * ${f(L.key)} + 0.02) * sun);
   // Low on the flank the sea shades it, so the skin darkens down to the waterline.
@@ -394,7 +398,7 @@ void main() {
   col = mix(col, env, F * (0.25 + 0.5 * sheet + 0.6 * k.gloss) * (part == ${FIN} ? 0.45 : 1.0));
   vec3 H = halfVector(uSunDir, V);
   float nh = max(dot(N, H), 0.0);
-  col += uSunColor * pow(nh, mix(24.0, 160.0, sheet)) * (${f(L.sheen)} + (0.8 + 3.0 * streak) * sheet) * sun * (1.0 - k.gloss);
+  col += uSunColor * pow(nh, mix(24.0, 160.0, sheet)) * (${f(L.sheen)} + (0.8 + 3.0 * streak) * sheet) * sun * (1.0 - k.gloss) * (1.0 - 0.7 * k.near);
   col += vec3(0.85, 0.9, 0.95) * (uSkyAmbient * 0.7 + uSunColor * (0.1 + back * 0.8) * sun) * streak * sheet * 0.45;
   // A flipper lying flat is seen edge on all over, so only the body takes the rim along its silhouette.
   float rim = pow(1.0 - nv, ${f(L.rimPower)}) * smoothstep(-0.2, 0.5, N.y + ndl) * (part == ${FIN} ? 0.2 : 1.0);
@@ -404,7 +408,7 @@ void main() {
   vec3 Rc = reflect(-V, Nc);
   vec3 seen = skyColor(vec3(Rc.x, max(Rc.y, 0.02), Rc.z));
   col += seen * k.gloss * (1.0 - k.caustic) * ${f(L.cornea)};
-  col = mix(col, seen * 1.3 + uSkyAmbient, k.rim * 0.5);
+  col = mix(col, seen + uSkyAmbient, k.rim * 0.22);
   // The sun's own reflection would sit under the heavy lid, so the catchlight is the sky above.
   float glint = pow(max(dot(Nc, normalize(V + vec3(0.0, 0.55, 0.0) + vAxisZ * 0.25)), 0.0), 900.0);
   col += (uSunColor * 0.5 + uSkyHorizonSun) * glint * ${f(L.catchlight)} * k.gloss;
