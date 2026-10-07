@@ -12,11 +12,13 @@ import { REFLECTION_LAYER } from './water/reflection';
 import { fixInPlace } from '../gl/fixed';
 import { ToppleTree } from './crossings/topple-tree';
 import { RopeSwing } from './crossings/rope-swing';
+import { Windmill } from './crossings/windmill';
+import { MillSpiral } from './crossings/mill-spiral';
 import { DarkBank } from './drowned-dark';
 import { WashTub } from './wash-tub';
 import {
   BOAT_TREE, CAT_HOUSE, DARK_WAY, DRAWN_ROUND, GARDEN_WALLS, GREEN_TREE, LEAN_TOS, MILL, NAVE, PLACED,
-  SWING_SITE, TREE_SITE, inClearing, inDrawnClearing, onCatGround, type GardenWall, type LeanTo, type PlacedHouse,
+  MILL_SITE, SWING_SITE, TREE_SITE, inClearing, inDrawnClearing, onCatGround, type GardenWall, type LeanTo, type PlacedHouse,
 } from './drowned-way';
 
 /**
@@ -1089,25 +1091,10 @@ function buildLeanTo(into: Merged, l: LeanTo, roof: THREE.Color, lime: THREE.Col
   return new THREE.Box3().setFromObject(new THREE.Mesh(body.clone().applyMatrix4(m)));
 }
 
-/**
- * A stand-in for the drowned mill until it is built: its stone tower up to its shoulders, the cap, and two sails at
- * rest, at the size the ride needs.
- */
-function buildMill(into: Merged): THREE.Box3 {
-  const m = new THREE.Matrix4().makeTranslation(MILL.hub.x, 0, MILL.hub.z).multiply(new THREE.Matrix4().makeRotationY(MILL.facing));
-  const hub = MILL.hub.y;
-  into.add(new THREE.CylinderGeometry(0.94, 1.02, 6, 16).translate(0, -1.05, -1.38), STONE, COURSED, m);
-  into.add(new THREE.CylinderGeometry(0.6, 1.06, hub + 0.35 - 1.95, 16).translate(0, (hub + 0.35 + 1.95) / 2, -1.38), TIMBER, PLAIN, m);
-  into.add(new THREE.ConeGeometry(0.66, 0.62, 16).translate(0, hub + 0.66, -1.38), TIMBER, PLAIN, m);
-  into.add(new THREE.CylinderGeometry(0.1, 0.1, 1.3, 8).rotateX(Math.PI / 2).translate(0, hub, -0.65), TIMBER, PLAIN, m);
-  const sails = new THREE.Matrix4().copy(m).multiply(new THREE.Matrix4().makeTranslation(0, hub, 0.1))
-    .multiply(new THREE.Matrix4().makeRotationZ(-0.95));
-  into.add(new THREE.BoxGeometry(4.9, 0.12, 0.12), TIMBER, PLAIN, sails);
-  for (const side of [-1, 1]) {
-    into.add(new THREE.BoxGeometry(1.85, 0.05, 0.05).translate(side * 1.48, -side * 0.6, 0.15), TIMBER, PLAIN, sails);
-    for (let i = 0; i < 5; i++) into.add(new THREE.BoxGeometry(0.04, 0.6, 0.04).translate(side * (0.6 + i * 0.45), -side * 0.3, 0.15), TIMBER, PLAIN, sails);
-  }
-  return new THREE.Box3(new THREE.Vector3(MILL.hub.x - 1.4, 0, MILL.hub.z - 1.4), new THREE.Vector3(MILL.hub.x + 1.4, hub + 1, MILL.hub.z + 1.4));
+/** The mill's tower behind its sails, for the lens to keep out of. */
+function millBounds(): THREE.Box3 {
+  const behind = new THREE.Vector3(Math.sin(MILL.facing), 0, Math.cos(MILL.facing)).multiplyScalar(-1.8).add(MILL.hub);
+  return new THREE.Box3(new THREE.Vector3(behind.x - 1.4, -1, behind.z - 1.4), new THREE.Vector3(behind.x + 1.4, MILL.hub.y + 1, behind.z + 1.4));
 }
 
 /** A house laid by hand, in the generated village's materials. */
@@ -1276,6 +1263,11 @@ export class DrownedVillage {
   readonly tree: ToppleTree;
   /** The swing on the green tree's bough, hanging still over the green. */
   readonly swing: RopeSwing;
+  /** The drowned mill, its sails swaying in the fog's breath, and the spiral drawn round its hub to turn it. */
+  readonly mill: Windmill;
+  readonly millSpiral = new MillSpiral();
+  /** The pieces the story is driving itself: the village leaves those alone. */
+  readonly driven = new Set<ToppleTree | RopeSwing | Windmill>();
   /** The wash-tub adrift by the cat's roof. */
   readonly tub: WashTub;
   private readonly storm = { value: 0 };
@@ -1311,7 +1303,6 @@ export class DrownedVillage {
     this.addHouse(body, placedSpec(CAT_HOUSE, 2), mulberry32(5150), false);
     for (const w of GARDEN_WALLS) this.cameraObstacles.push(buildWall(body, w));
     for (const l of LEAN_TOS) this.cameraObstacles.push(buildLeanTo(body, l, SLATE[1], LIME[1]));
-    this.cameraObstacles.push(buildMill(body));
     const rock = new Merged();
     buildLighthouse(rock);
     this.objects.push(this.lighthouse.object);
@@ -1432,8 +1423,11 @@ export class DrownedVillage {
 
     this.tree = new ToppleTree(TREE_SITE.spot, wind);
     this.swing = new RopeSwing(SWING_SITE.spot);
+    this.mill = new Windmill(MILL_SITE.spot);
+    this.cameraObstacles.push(millBounds());
     this.tub = new WashTub(wind);
-    this.objects.push(...this.tree.objects, ...this.swing.objects, ...this.dark.objects, ...this.tub.objects);
+    this.objects.push(...this.tree.objects, ...this.swing.objects, ...this.mill.objects, ...this.millSpiral.objects,
+      ...this.dark.objects, ...this.tub.objects);
   }
 
   /** A house and its chimneys, with their bounds for the lens; chimneys off the drift may take a heron. */
@@ -1464,8 +1458,9 @@ export class DrownedVillage {
       this.idle = Math.min(CATCH_UP_S, this.idle + dt);
       return;
     }
-    this.tree.update(dt);
-    this.swing.update(dt, this.wind);
+    if (!this.driven.has(this.tree)) this.tree.update(dt);
+    if (!this.driven.has(this.swing)) this.swing.update(dt, this.wind);
+    if (!this.driven.has(this.mill)) this.mill.update(dt);
     if (this.idle > 0) {
       const steps = Math.ceil(this.idle / CATCH_UP_STEP);
       const step = this.idle / steps;

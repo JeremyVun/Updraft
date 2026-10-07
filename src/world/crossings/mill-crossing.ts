@@ -24,7 +24,7 @@ export type MillEvent = MillSound;
  */
 export class MillCrossing {
   readonly mill: Windmill;
-  readonly spiral = new MillSpiral();
+  readonly spiral: MillSpiral;
   phase: 'off' | 'waiting' | 'boarding' | 'riding' | 'leaving' | 'over' = 'off';
   /** Seconds in the current phase. */
   t = 0;
@@ -41,8 +41,10 @@ export class MillCrossing {
   private readonly look = new THREE.Vector3();
   private readonly ahead = new THREE.Vector3();
 
-  constructor(spot: MillSpot, readonly way: MillWay, private readonly cast: CrossingCast) {
-    this.mill = new Windmill(spot);
+  /** Given a mill already standing in the world, and the spiral drawn round it, it takes those over. */
+  constructor(spot: MillSpot | Windmill, readonly way: MillWay, private readonly cast: CrossingCast, spiral = new MillSpiral()) {
+    this.mill = spot instanceof Windmill ? spot : new Windmill(spot);
+    this.spiral = spiral;
     this.mill.onSound = (kind, where, strength) => this.onEvent?.(kind, where, strength);
   }
 
