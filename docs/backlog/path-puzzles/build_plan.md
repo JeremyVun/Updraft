@@ -167,6 +167,26 @@ the fog is held behind her (`dark.reach`, and `close` is still 0 once the fog br
 against its tree with `coastTo` still set, and the swing is still the crossing's; the fog's hold distances need
 retuning against the fog branch's heave and front.
 
+Second wave, the run's camera [x] (branch `proto-drowned-lens`). The walking lens looks across her way between the
+fog's body trailing behind her and the church (`views`), into the low sun, a little wider than the rest of the room
+(`zoom`); where the two are too far apart to share the frame it holds the fog's flank on one side and the church or
+the lighthouse on the other as the way allows. `layLens` lays it as the cheapest path through bearings, distances and
+two heights that stays clear of every roof, wall, chimney and the mill's sails, never has her walking toward it, pays
+for anything crowding the near half of its sightline and for turning between steps, and starts out from where each
+piece's view leaves it; it is laid a little each frame from the start of the room (`prepare`). Her pace is fed
+forward to the eased lens so it stands where it was laid. The tree's view stands off the east end of her ridge (the
+boat's side is west) and comes round behind her, wide of and over the chimney, as she crosses; the mill's view comes
+in along the high ridge so the church and lighthouse open beyond her; the swing's view hands over to the nave's three
+metres past it. Upright, the walking lens stands straight behind her and its look is led too; the tree's, mill's and
+swing's upright views are their own. The drift's first legs lie a little further west. With `LENS=1` the landscape
+check holds with nothing hidden, nothing out of frame and the lens never inside a roof. Left: the climb-out lens is
+unchanged (turning it east to bring the fog in hid her behind the cottage as she climbed: the fog lies south of the
+cottage and she climbs its south slope northward, so it wants a different staging, for instance holding the becalmed
+view looking toward the fog until she tops the ridge); upright still loses her for a second or two at the tall house
+(about 55-65 m) and at the turn west near 160 m; a chimney still crowds the foreground in a few landscape moments; the
+fog's feathered sheets show as jagged blue streaks where its flank comes into these side views (its look, not the
+lens).
+
 ### Phase 4: the dark arrives, the boat, the storm
 Owns: the cat up the tower's ivy to the belfry; the fog's `close` into the storm's night (the story's `dusk` and the
 fog's drain from one progression, not stacked); `boat.coastTo` cleared before `brushSail`; the player filling the sail
