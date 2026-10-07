@@ -795,6 +795,15 @@ slow and heavy (a breath every ten seconds or so; nothing quick but the eye, and
 bulk; the far length lost in haze; the sea answering its breath; a low camera, held frames, one camera intention per
 beat (as the owl's bend has); the child and the bird acting at every beat; nothing on it moving like an object in the
 wind. Judged by playing it beside the clouds and the owl.
+What the two standards teach (studied in motion on main, 2026-10-08): the owl's bend is one clear stage (her at the
+left, the rock a screen for shadows), a fear the player's own light turns into a small kind truth, then a held
+over-the-shoulder exchange of looks (it blinks and tilts, she tips her head back), each character gesture a beat of
+a second or two, one pan, and music that allows one lift per success and nothing more. The cloud stairs reveal by
+atmosphere (thick white, then the vast sunlit top), hold a beautiful frame for half a minute when it earns it, and are
+stylised throughout: bold simple shapes with character, a soft-toy staircase, not realism. So for the whale: a real
+whale's structure drawn as bold, simple, characterful shapes; the eye's opening on her is the held exchange of
+looks at the heart of it (over her shoulder, a slow blink, she reaches a mitten toward it, the bird peeps); the haze
+does the first reveal; the score thins to almost nothing in the sorrow and blooms once at the release.
 
 This consolidates the above for the build. The concept frames `comps/crossings/whale-net/k1–k5` and `k2-portrait`
 (Astra, 2026-10-07, painted over real frames of this chapter, `ref-sea-*.png`) are now only a reference for
