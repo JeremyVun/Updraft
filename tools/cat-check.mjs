@@ -104,7 +104,7 @@ const FILM = {
   shiver: { for: 3 }, shake: { for: 2.4, from: 0.9 }, stare: { for: 3.5, from: 1.2 }, strand: { for: 8.5, from: 0.5 },
   press: { for: 10.5, from: [-1, -0.25] }, curl: { for: 4, from: 0.9, rise: 1.8, tall: 0.75, kittens: true },
   kittens: { for: 4, from: 0.9, rise: 1.8, tall: 0.75, kittens: true },
-  tumble: { for: 7, from: 0.4, rise: 1.5, tall: 0.9, kittens: true }, sill: { for: 5, from: 0.5, kittens: true },
+  tumble: { for: 7, from: [0.5, -0.87], rise: 1.5, tall: 0.9, kittens: true }, sill: { for: 5, from: 0.5, kittens: true },
   walk: { for: 7.5, from: 'side' }, trot: { for: 7, from: 'side' }, run: { for: 4.2, from: 'side' },
   bolt: { for: 4, from: 'side' }, 'scared-run': { for: 4, from: 'side' }, rail: { for: 7.5, from: 'side' },
   gap: { for: 3.6, from: 'side' }, 'leap-pot': { for: 3.2, from: 'side' }, 'leap-roof': { for: 3.2, from: 'side', rise: 2 },

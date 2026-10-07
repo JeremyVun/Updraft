@@ -408,7 +408,7 @@ export class Cat {
     this.heard.push({ kind: 'chirrup', amount: 1 });
   }
 
-  /** Shakes the water off as a wet cat does, a twist running from its head down its body to its tail, about a second. */
+  /** Shakes the water off as a wet cat does, a twist running from its head down its body to its tail and throwing drops, about a second. */
   shake(): void {
     this.shakeT = 0;
   }
