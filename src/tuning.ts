@@ -1734,35 +1734,66 @@ export const tuning = {
     turnFor: 12, lookFor: 9,
     dark: {
       /**
-       * Billows in its low rolling skirt on the water, heaped behind it, lifting off its heads, misting its foot, and
-       * creeping out ahead over the glass.
+       * Its front: half its width and how far its flanks run on ahead, in metres; and how far it reaches on the
+       * church's side and how far on from there it has thinned away, as shares of its half width, once it has come
+       * close and while it is still far off, spread along the horizon.
        */
-      skirt: 130, body: 300, plumes: 90, foot: 40, tendrils: 170,
-      /**
-       * The bank: half its width, its depth behind the front, how far its flanks run on ahead, in metres; and how far it
-       * reaches on the church's side, as a share of its half width, so the church keeps clear sky over it.
-       */
-      halfWidth: 170, depth: 70, flank: 60, wing: 0.3,
-      /** How far fingers of the front reach ahead, and how far and how fast the whole front heaves. */
-      fingers: 4, heave: 1.4, heaveRate: 0.33,
-      /**
-       * The skirt's billow radius and how deep it lies behind the front; the body's billow radius at its front and back,
-       * and how high it heaps.
-       */
-      skirtSize: 2.4, skirtDepth: 14, bodySize: 3.6, backSize: 9, heap: 15,
-      /** How far the top of its front leans out over the water ahead of its foot. */
-      lean: 7,
-      /** How many tendrils creep out over the glass, their billows' radius, how far they reach, how fast (laps a second). */
-      reaches: 12, tendrilSize: 2.4, tendrilReach: 22, creep: 0.05,
-      /** How many columns of smoke lift off it, how high before they have thinned away, and how often (laps a second). */
-      columns: 5, plumeRise: 22, plumeRate: 0.03,
-      /** How much of the distance veil it takes near and far. */
-      nearHaze: 0.06, farHaze: 0.2,
+      halfWidth: 170, flank: 30, wing: -0.1, wingFade: 0.3, wingFar: 0.35, wingFadeFar: 0.4,
       /**
        * Seconds it takes to rise on the horizon once the boat lies still; when it starts to come on and how long that
        * takes; and how far behind the boat it stops.
        */
       riseFor: 9, comeAfter: 5, comeFor: 16, holdBehind: 20,
+    },
+    /** The sea fog the dark is: one field every shader reads, and the light it takes as it comes. */
+    fog: {
+      /**
+       * How high it stands over the water (`topFar` times as high while it is far off, heaped along the horizon, and
+       * `closedTop` times once it has closed round), metres; how deep under its top it gives out, a share of its
+       * height (`closedSoft` closed round); and how deep its front is soft (what stands in that first stretch of it
+       * fades rather than being covered), metres.
+       */
+      top: 28, topFar: 1.2, closedTop: 0.6, topSoft: 0.15, closedSoft: 0.9, front: 22,
+      /** How far its front heaves to and fro across its line, metres. */
+      heave: 20,
+      /**
+       * Its feathered sheets, nearest first: metres behind its front (the first is a wisp low on the water, lying
+       * `wispAhead` times as far ahead of it as its mist reaches) and how tall against the field; how raggedly their
+       * tops break, a share of their height; and how much the wisp covers.
+       */
+      sheetBack: [0, 8, 40, 100], sheetTall: [0.15, 0.8, 0.9, 1.0], sheetRough: 1.8, wispAhead: 1.75, wisp: 0.4,
+      /** How far apart the sheets stand the way it comes, seen along its front, metres. */
+      sheetApart: 30,
+      /**
+       * How brightly the fog round her takes the lantern's light, how far round the flame it shows, metres, and how
+       * much of that glow the glassy sea under it gives back.
+       */
+      lanternHalo: 0.4, lanternReach: 2, lanternMirror: 0.6,
+      /**
+       * Per metre: how thick it is through its body as a bank, and once it has closed round (thinner, so she can still
+       * see her way), and how much thicker low over the water, falling away over `low` metres.
+       */
+      density: 0.25, closed: 0.03, floor: 0.035, low: 3,
+      /**
+       * The mist it sends on ahead: per metre at its front and at the water, falling away over `airLow` metres up and
+       * `airReach` metres ahead once it is close (`airReachFar` while it is still far off, a share `airFar` as thick).
+       */
+      air: 0.035, airLow: 6, airReach: 45, airReachFar: 120, airFar: 0.4,
+      /** How far past the eye its front has gone once it has closed round. */
+      closeRun: 500,
+      /**
+       * Its body's light against the sky's, far off and come close; the low sun on its billows' tops against the sun's;
+       * how far its foot and the mist ahead of it go into the pale haze over the water, far off and come close;
+       * how far the first wind under it breaks up the glass once it has closed round, and the slope of the ripples it raises.
+       */
+      body: 0.32, bodyNear: 0.3, crest: 0.55, haze: 0.3, hazeNear: 0.12, stir: 1, ripple: 0.18,
+      /** How much of what is left of the light comes through it where it is thin once the sun has gone from it. */
+      glowNear: 0.1,
+      /**
+       * Where the progression stands with the bank risen far off and come close with the sun taken, the light going
+       * steadily between; and how much of its rise shows it risen in full.
+       */
+      far: 0.3, near: 0.6, risen: 0.6,
     },
     /**
      * What she can make by herself on her way over the roofs: a hop from one surface to the next across at most

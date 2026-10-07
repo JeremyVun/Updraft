@@ -77,6 +77,10 @@ out vec3 vWorld;
 out vec3 vSwell;
 /** The haze toward this vertex: it changes slowly enough across a triangle of sea to be interpolated. */
 out vec4 vFog;
+#if CLOUD_DECK
+/** The drowned village's sea fog as the sea mirrors it here: soft enough to be taken at the vertices. */
+out vec4 vSeaSky;
+#endif
 void main() {
   vec3 w = (modelMatrix * vec4(position, 1.0)).xyz;
   vec2 xz = w.xz;
@@ -91,6 +95,9 @@ void main() {
   vSwell = vec3(-n.x / n.y, -n.z / n.y, uSwell > 0.0 ? height / uSwell : 0.0);
   vWorld = w + at;
   vFog = fogOf(vWorld);
+#if CLOUD_DECK
+  vSeaSky = uSeaFogShape.w > 0.0 ? seaFog(vWorld, reflect(normalize(vWorld - cameraPosition), vec3(0.0, 1.0, 0.0)), 4000.0) : vec4(0.0);
+#endif
   gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
 }`;
 
@@ -128,12 +135,6 @@ uniform sampler2D uMirror;
 uniform mat4 uMirrorMatrix;
 uniform float uMirrorOn;
 uniform vec4 uSeaEffects;
-/**
- * Water gone dark under smoke coming over it: a point on its front and the way it comes; its half width, flank,
- * strength, and how far it reaches to its right.
- */
-uniform vec4 uDarkFront;
-uniform vec4 uDarkShape;
 uniform vec2 uBreeze;
 uniform vec3 uDeep;
 uniform vec3 uAbsorb;
@@ -142,6 +143,9 @@ uniform vec3 uWetSand;
 in vec3 vWorld;
 in vec3 vSwell;
 in vec4 vFog;
+#if CLOUD_DECK
+in vec4 vSeaSky;
+#endif
 
 /**
  * The world above the sea seen along reflected ray R; nearby content is taken to lie ~48 units out. The last
@@ -335,18 +339,6 @@ void main() {
   float rough = clamp(max(smoothstep(1.2, 7.5, settled) * paw, uSquall), 0.0, 1.0);
   float storm = clamp(max(smoothstep(18.0, 34.0, settled) * 0.5, uSquall * 0.85) * paw, 0.0, 1.0);
   float stroke = clamp(dot(waterWindAt(xz), vec4(1.0)), 0.0, 1.0);
-  float darkWater = 0.0;
-  if (uDarkShape.z > 0.0) {
-    // The sea coming back under the smoke is dark and stirred, and reaches on ahead of it in fingers over the glass.
-    vec2 rel = xz - uDarkFront.xy;
-    float aside = dot(rel, vec2(-uDarkFront.w, uDarkFront.z));
-    float u = aside / uDarkShape.x;
-    float ahead = dot(rel, uDarkFront.zw) - uDarkShape.y * u * u;
-    float fingers = vnoise(vec2(aside * 0.11, uTime * 0.03)) * 0.65 + vnoise(vec2(aside * 0.37, uTime * 0.05 + 7.0)) * 0.35;
-    float reach = 8.0 + 16.0 * smoothstep(0.35, 0.9, fingers);
-    darkWater = (1.0 - smoothstep(0.0, reach, ahead)) * uDarkShape.z * (1.0 - smoothstep(0.75, 1.0, -u)) * (1.0 - smoothstep(uDarkShape.w * 0.5, uDarkShape.w, u));
-    rough = max(rough, darkWater * 0.6);
-  }
 
   float ground = mix(-12.0, texture(uHeightTex, clamp(uv, 0.0, 1.0)).r, inside);
   float depth = max(poolLevel - ground, 0.0);
@@ -369,6 +361,15 @@ void main() {
   float hidden = r0.z * a0 * a0 + r1.z * a1 * a1 + r2.z * a2 * a2 + swell.z * A_SWELL * A_SWELL;
   /** The ruffle tilts the surface but stays out of the hidden-roughness sum, so it cannot change the shine. */
   slope += windWaveSlope(xz, footprint);
+#if CLOUD_DECK
+  if (uSeaFogCrest.w > 0.0) {
+    // The first wind of the night comes in with the sea fog: long cold ripples running before it break up the glass.
+    vec2 q = vec2(dot(xz, uSeaFog.zw), dot(xz, vec2(-uSeaFog.w, uSeaFog.z)));
+    float phase = q.x * 2.4 - uTime * 2.6 + vnoise(q * vec2(0.15, 0.4)) * 8.0;
+    float gusts = smoothstep(0.1, 0.6, vnoise(vec2(q.x * 0.06 - uTime * 0.25, q.y * 0.15)));
+    slope += uSeaFog.zw * cos(phase) * ${glsl(tuning.drowned.fog.ripple)} * uSeaFogCrest.w * gusts * (1.0 - smoothstep(0.15, 0.6, footprint));
+  }
+#endif
 
   vec3 surf = vec3(0.0);
   float swellAmp = 0.0;
@@ -388,6 +389,9 @@ void main() {
   vec3 R = reflect(-V, N);
   R = normalize(vec3(R.x, abs(R.y) + sqrt(unresolved) * 1.2 * (1.0 - nv), R.z));
   vec3 sky = skyColor(R);
+#if CLOUD_DECK
+  if (uSeaFogShape.w > 0.0) sky = mix(sky, vSeaSky.rgb, vSeaSky.a);
+#endif
 #if SEA_REFLECTION
   float seen;
   vec3 mirror = mirrored(R, clamp(log2(1.0 + sqrt(alpha2) * 60.0), 0.0, 6.0), seen);
@@ -490,7 +494,6 @@ void main() {
 #endif
   // Wind on water darkens it and never oils it, so a gust takes light off the sea without touching its colour.
   col *= 1.0 - ${glsl(tuning.water.darken)} * stroke;
-  col *= mix(vec3(1.0), vec3(0.08, 0.075, 0.14), darkWater);
 
   float foam = surf.x;
   if (storm > 0.0) {
@@ -540,9 +543,6 @@ export class Water {
   private readonly renderedRooms = new THREE.Vector2();
   private readonly renderedRoom = new THREE.Vector3();
   private readonly windWaves: WindWaves;
-  /** Set while smoke comes over the water: a point on its front and the way it comes; its half width, flank, strength. */
-  readonly darkFront = new THREE.Vector4();
-  readonly darkShape = new THREE.Vector4();
 
   /** What the sea's reflection is drawn into, for boot to first draw the reflected world into its format. */
   get reflectionTarget(): THREE.WebGLRenderTarget {
@@ -572,8 +572,6 @@ export class Water {
         uMirrorMatrix: { value: this.reflection.matrix },
         uMirrorOn: { value: 0 },
         uSeaEffects: { value: new THREE.Vector4(1, 1, 1, 1) },
-        uDarkFront: { value: this.darkFront },
-        uDarkShape: { value: this.darkShape },
         uBreeze: { value: breeze },
         uDeep: { value: new THREE.Color('#0d4a66') },
         uAbsorb: { value: new THREE.Vector3(0.5, 0.13, 0.1) },

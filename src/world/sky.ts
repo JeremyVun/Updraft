@@ -22,6 +22,10 @@ void main() {
   // Where the deck covers the sky whole, the radiance would be mixed away.
   vec3 col = deck.a < 1.0 ? skyRadiance(d) : vec3(0.0);
   if (uCloudDeck.w > 0.0) col = mix(col, deck.rgb, deck.a);
+  if (uSeaFogShape.w > 0.0) {
+    vec4 sea = seaFog(cameraPosition, d, 4000.0);
+    col = mix(col, sea.rgb, sea.a);
+  }
 #else
   vec3 col = skyRadiance(d);
 #endif

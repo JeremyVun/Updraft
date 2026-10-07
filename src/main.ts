@@ -995,8 +995,6 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   if (finalStep) followWindow(...windowAim());
   cottage.update(dt, rig.camera);
   village.update(dt, time, boat.position, storm, rig.camera.position);
-  water.darkFront.copy(village.dark.water.front);
-  water.darkShape.copy(village.dark.water.shape);
   piano.update(dt, time, rig.camera, wind, sound.output, input, life);
   wood.update(dt, time, rig.camera, storm, story.name === 'wood' ? story.shot.subjects : undefined);
   sleeping.update(dt, time, rig.camera);
@@ -1089,7 +1087,7 @@ function prepareFrame(dt: number): void {
   const u = atmo.uniforms;
   water.setLandSkip(water.landSkip(rig.camera));
   selectAll({
-    CLOUD_DECK: u.uCloudDeck.value.w > 0,
+    CLOUD_DECK: u.uCloudDeck.value.w > 0 || u.uSeaFogShape.value.w > 0,
     STORM_BANK: u.uStormCover.value > 0 || u.uLightning.value.w > 0,
   });
   sinceLightBake++;
