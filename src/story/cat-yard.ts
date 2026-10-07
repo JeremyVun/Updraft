@@ -326,6 +326,8 @@ export class CatYard {
     this.place();
     this.tub.update(dt, atmo.uniforms.uTime.value);
     this.kittens.update(dt);
+    /** Their mews are heard through hers; the pats of their paws are too small to carry. */
+    for (const h of this.kittens.heard) if (h.kind === 'mew') this.cat?.heard.push(h);
     this.kittens.heard.length = 0;
     const cat = this.cat, child = this.child;
     if (this.kneelAt >= 0 && cat && child) {

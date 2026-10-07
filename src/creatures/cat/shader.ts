@@ -107,14 +107,11 @@ in float vFade;
 in float vShell;
 #endif
 
-/**
- * Linear albedo on the scale of the other animals. The sheet's tabby is a soft warm brown in a neutral light; the
- * game lights it warm, so the ground is a greyer fawn that the light brings back to the sheet's brown, darker along
- * the back, with soft umber stripes and a clean white.
- */
-const vec3 FAWN = vec3(0.29, 0.214, 0.163);
-const vec3 BACK = vec3(0.228, 0.165, 0.127);
-const vec3 STRIPE = vec3(0.1, 0.068, 0.054);
+/** Linear albedo on the scale of the other animals: the coat's own colours (Coat) and a clean white. */
+uniform vec3 uFawn;
+uniform vec3 uBack;
+uniform vec3 uStripe;
+uniform float uSocks;
 const vec3 WHITE = vec3(0.84, 0.8, 0.74);
 const vec3 PINK = vec3(0.72, 0.28, 0.24);
 const vec3 NOSE_PINK = vec3(0.7, 0.24, 0.22);
@@ -201,8 +198,9 @@ void main() {
   vec3 V = normalize(cameraPosition - vWorld);
   float fleck = vnoise(vRest.xz * 140.0 + vRest.y * 97.0);
   float back = smoothstep(SPINE - 0.035, SPINE + 0.01, vRest.y) * smoothstep(TAIL_Z - 0.01, TAIL_Z + 0.01, vRest.z) * (1.0 - smoothstep(SKULL.z - 0.07, SKULL.z - 0.04, vRest.z));
-  vec3 alb = mix(mix(FAWN, BACK, back), STRIPE, tabby(vRest) * 0.8) * (0.93 + fleck * 0.14);
-  alb = mix(alb, WHITE * (0.95 + fleck * 0.08), max(k, browLight(vRest) * 0.4));
+  vec3 alb = mix(mix(uFawn, uBack, back), uStripe, tabby(vRest) * 0.8) * (0.93 + fleck * 0.14);
+  float socks = (1.0 - smoothstep(uSocks - 0.008, uSocks + 0.004, vRest.y)) * step(0.001, uSocks);
+  alb = mix(alb, WHITE * (0.95 + fleck * 0.08), max(max(k, socks), browLight(vRest) * 0.4));
   float fuzz = 0.6;
   float thin = 0.12;
   float ao = mix(0.7, 1.0, smoothstep(0.02, 0.16, vRest.y));
@@ -285,6 +283,20 @@ void main() {
   gl_FragColor = vec4(max(applyFog(col, vWorld), 0.0), 1.0);
 }`;
 
+/**
+ * A coat's colours as linear albedo: its ground, the darker back and the stripes, and how far up its legs it is white
+ * above the paws the sheet already draws white (0 none). The sheet's tabby is a soft warm brown in a neutral light;
+ * the game lights it warm, so its ground is a greyer fawn that the light brings back to the sheet's brown.
+ */
+export interface Coat {
+  fawn: [number, number, number];
+  back: [number, number, number];
+  stripe: [number, number, number];
+  socks: number;
+}
+
+export const TABBY: Coat = { fawn: [0.29, 0.214, 0.163], back: [0.228, 0.165, 0.127], stripe: [0.1, 0.068, 0.054], socks: 0 };
+
 export interface CatLook {
   /** 0 open to 1 shut. */
   blink: number;
@@ -300,9 +312,13 @@ export interface CatLook {
  * The skin, and on `userData.coat` the same shader again as shells for the coat to be pushed out of. Both share one
  * set of uniforms, so `applyCatLook` writes each value once.
  */
-export function catMaterial(bones: THREE.Matrix4[]): THREE.ShaderMaterial {
+export function catMaterial(bones: THREE.Matrix4[], coat: Coat = TABBY): THREE.ShaderMaterial {
   const uniforms = {
     ...atmo.uniforms,
+    uFawn: { value: new THREE.Vector3(...coat.fawn) },
+    uBack: { value: new THREE.Vector3(...coat.back) },
+    uStripe: { value: new THREE.Vector3(...coat.stripe) },
+    uSocks: { value: coat.socks },
     uBones: { value: bones },
     uNudge: { value: 0 },
     uBlink: { value: 0 },

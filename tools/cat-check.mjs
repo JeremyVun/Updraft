@@ -101,14 +101,14 @@ const FILM = {
   sit: { for: 3 }, stand: { for: 3 }, crouch: { for: 3 }, curious: { for: 5 }, wash: { for: 6.2 },
   mew: { for: 1.6 }, chirrup: { for: 1.2 }, afraid: { for: 3.2 }, 'slow-blink': { for: 3.6 },
   shiver: { for: 3 }, shake: { for: 2.4, from: 0.9 }, stare: { for: 3.5, from: 1.2 }, strand: { for: 8.5, from: 0.5 },
-  press: { for: 10.5, from: -0.6 }, curl: { for: 4, from: 0.9, kittens: true }, kittens: { for: 4, from: 0.9, kittens: true },
+  press: { for: 10.5, from: [-1, -0.25] }, curl: { for: 4, from: 0.9, kittens: true }, kittens: { for: 4, from: 0.9, kittens: true },
   tumble: { for: 7, from: 0.4, kittens: true }, sill: { for: 5, from: 0.5, kittens: true },
   walk: { for: 7.5, from: 'side' }, trot: { for: 7, from: 'side' }, run: { for: 4.2, from: 'side' },
   bolt: { for: 4, from: 'side' }, 'scared-run': { for: 4, from: 'side' }, rail: { for: 7.5, from: 'side' },
   gap: { for: 3.6, from: 'side' }, 'leap-pot': { for: 3.2, from: 'side' }, 'leap-roof': { for: 3.2, from: 'side', rise: 2 },
   'leap-boat': { for: 3, from: 'side' }, 'hop-down': { for: 2.6, from: 'side' }, 'hop-tub': { for: 3.5, from: 'side' },
   'ride-tub': { for: 6, from: 0.9 }, 'jump-boat': { for: 5, from: 'side' }, boat: { for: 3, from: 0.9 },
-  climb: { for: 5.5, from: 'side' }, 'climb-trunk': { for: 5, from: 'side' }, 'ride-sail': { for: 6, from: [0, -1] },
+  climb: { for: 5.5, from: [0.8, -1] }, 'climb-trunk': { for: 5, from: 'side' }, 'ride-sail': { for: 6, from: [0, -1] },
   'ride-swing': { for: 6, from: [1, 0] },
 };
 const actions = list(process.env.ONLY, Object.keys(ACTIONS));
@@ -300,7 +300,6 @@ async function filmAll() {
   const sheet = await browser.newContext({ viewport: { width: cols * 322, height: 600 }, deviceScaleFactor: 1 });
   const page = await sheet.newPage();
   const style = `<style>body{margin:0;background:#151515;color:#ddd;font:13px system-ui}h1{font:600 15px system-ui;margin:6px 8px}main{display:grid;grid-template-columns:repeat(${cols},320px);gap:2px}figure{margin:0;position:relative}img{width:320px;height:200px;object-fit:cover;display:block}figcaption{position:absolute;left:4px;top:3px;background:#000a;padding:0 4px;border-radius:3px}</style>`;
-  const index = [];
   for (const { action, view, light, cells } of made) {
     const html = path.join(out, `film-${view}-${action}.html`);
     const title = `${action}: ${view === 'near' ? '4 m, framed on the cat' : '12 m through the game’s lens, cut at full size'} (${light}), ${fps} fps`;
@@ -309,11 +308,12 @@ async function filmAll() {
     const file = path.join(out, `film-${view}-${action}.png`);
     await page.screenshot({ path: file, fullPage: true });
     fs.rmSync(html);
-    index.push({ action, view, file });
     console.log(file);
   }
   await sheet.close();
-  const rows = index.map(({ action, view, file }) => `<h2>${action} (${view})</h2><img src="${path.basename(file)}" style="max-width:100%">`).join('');
+  /** Every strip in the folder, from this run or an earlier one. */
+  const all = fs.readdirSync(out).filter((f) => /^film-.*\.png$/.test(f)).sort();
+  const rows = all.map((f) => `<h2>${f.slice(5, -4)}</h2><img src="${f}" style="max-width:100%">`).join('');
   fs.writeFileSync(path.join(out, 'index.html'), `<body style="background:#111;color:#ddd;font:14px system-ui">${rows}</body>`);
 }
 
