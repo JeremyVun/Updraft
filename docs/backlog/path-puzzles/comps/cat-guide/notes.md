@@ -1,0 +1,91 @@
+# Cat guide paint-overs
+
+Five 1600×900 concept frames, made with the built-in image generation editor from the supplied screenshots and cat sheets. The original brief is preserved in [prompt.md](prompt.md). These are visual direction, not changes to the game.
+
+The cat starts each demonstration while the girl is still approaching. Cursor motion remains available throughout. A glance, a shift of weight and a quick crossing should do the teaching; avoid a separate demonstration cutscene or a compulsory wait.
+
+## guide-tree-a.png — the tree gives
+
+The cat's upward stretch, higher front paws and balancing tail make this a scramble, rather than a seated marker. Its white feet show contact with the branch. The crown moves toward the girl's side relative to frame B; the exposed root and disturbance at the foot are the physical cue that the tree can move. There are no drawn creak marks.
+
+Hold this source camera through the last railing steps and the scramble. Keep the cat clear of the girl's hood and kite. The source view hides most of the tree foot and the far garden behind the roof; do not count on the root detail alone. The moving crown is the primary clue. The rail run precedes this still and should already be ending as she arrives.
+
+Timing target: railing approach overlaps 0.7–1.0 seconds of her arrival; scramble 0.7–0.9 seconds; weight-induced rock 0.3–0.4 seconds. Aim for 1.5–2.0 seconds visible action, with no more than about 0.5 seconds still to finish when she reaches her ridge.
+
+## guide-tree-b.png — a destination and a look back
+
+The compact seated silhouette, white bib and paws separate the cat from the fine bare branches. Its face turns toward the girl, connecting her ridge to the crown. The quieter trunk and settled base distinguish this moment from the loaded scramble. The cat's relaxed seat says the tree is somewhere to reach.
+
+Keep exactly the same view as A through the return upright. Hold the cat, the girl's face and the space between them in frame; do not zoom in on the cat. The crown's return is more legible in motion than in either still alone.
+
+Timing target: 0.35–0.5 seconds to settle, then a 0.4–0.6 second look back. A and B together should occupy about 2–3 seconds, mostly during approach. The seated pose can remain while the player experiments; it does not need to restart or prevent wind input.
+
+## guide-mill-a.png — board the end
+
+The cat sits on the outer wooden rim beside the girl's boots, with visible white feet on the beam and its tail tucked safely around them. Looking up toward the hub connects the boarding place with the machine that will carry it. Against the dark roof, the white bib and warm face read without an outline.
+
+Hold the existing view with the outer sail end, hub and high roof ridge all visible. Avoid following the cat so closely that the hub drops out of frame. The supplied girl is already on the sail; this comp preserves that pose, so the production demonstration must begin earlier in her approach rather than treating the still as a literal waiting position.
+
+Timing target: land on the end in 0.25–0.35 seconds; tuck tail and glance upward for 0.35–0.5 seconds. Rotation should already begin during that glance. The seated cue must not become a long pause.
+
+## guide-mill-b.png — ride, then drop
+
+The cat's rear feet remain at the raised sail while its forefeet reach toward the existing high roof. The visible gap below the forefeet makes the short drop readable. The next lower sail beside the girl supplies the second half of the lesson: the machine brings another boarding opportunity around. Both blades lead back to the same hub.
+
+Hold the same camera from A through the roof landing. The upper sail end, roof ridge and lower boarding end must remain visible together; the cat should never disappear above the frame. The painted blade poses explain the action, but their exact rotor projection and collision clearances still require verification in the game.
+
+Timing target: approximately 1.3–1.7 seconds of rise, 0.15–0.25 seconds to gather its feet, then 0.3–0.4 seconds to drop. A and B together: about 2.2–2.8 seconds. Begin early enough that the next boarding sail is arriving as the girl reaches it; no extra full revolution to watch the cat.
+
+## guide-swing.png — leave at the high point
+
+The cat extends toward the church nave roof, white forepaws reaching the landing and its striped tail trailing back toward the emptied wooden seat. The angled rope and separated seat show the pendulum at the churchward end of its travel. The return toward the girl must be established by the following motion; a still cannot prove direction of travel.
+
+Hold this wide source camera from the outward arc through the first part of the return. Keep the branch attachment, empty seat, cat and nave landing visible together. The cat remains small; its brighter face, paws and clear pose carry the action at this wider scale.
+
+Timing target: cat is already aboard before she enters the crossing view; outward arc 1.0–1.3 seconds; spring and landing 0.25–0.35 seconds; seat begins returning immediately and becomes available within roughly 0.8–1.0 seconds. Total showing about 2–2.6 seconds, overlapped with her approach. Do not require a second empty swing cycle.
+
+## Reference and rendering limits
+
+- The supplied swing frame already has the girl hanging in the crossing. Preserving her position while moving the only swing to the cat's demonstration leaves her visibly unsupported in this concept. This is a staging conflict in the requested reference constraints, not a proposed gameplay pose. The demonstration should occur earlier in her approach with this camera held.
+- The supplied tree view occludes the garden and much of the tree base. The paint-over keeps that view; a complete railing route and fully exposed root lift cannot both be shown without changing its composition.
+- These generated edits retain the source compositions and scene identities, but the editor reconstructs some pixels: small framing, texture, light and branch differences remain. They are not pixel-exact overlays and should not be used as replacement backgrounds. Original screenshots are untouched.
+- The original small yellow interface strokes were removed from the swing image. No arrows, text, motion lines or glow outlines were added.
+- Treat the warmer, readable cat shading as a local character-material target. Keep the existing sky and world exposure. A seated cat around 0.28–0.34 m high beside the 1.15 m girl is the intended physical scale; perspective should govern its screen size.
+
+## Generation prompts
+
+Built-in image editor, separate calls for each asset plus localized corrections. Final images were exported to 1600×900. The prompts below record the selected generation and correction instructions.
+
+### treeA_prompt
+
+Precise-object-edit. Make a companion earlier-action frame to this image. Keep EVERY PIXEL outside the ONE existing cat and ONE existing dead tree unchanged. Same exact girl, sky, boat, water, roofs, framing and light. Output same landscape image, final intended 1600x900. DO NOT ADD A NEW TREE. Change this SAME dead tree's state: its base stays exactly where it is at the bottom of the trunk beside the girl's roof; the crown rocks slightly RIGHT toward the girl, around 15 degrees, pivoting at its fixed base. Expose a few lifted roots on its left at that fixed base, small ripple. The previous cat sitting in its crown is now scrambling UP the same tree: hind white paws grip branch near x449,y310, fore white paws grip higher branch near x495,y255, head looking up-right, striped tail counterbalancing to left. Keep cat identity but reduce it to 75 percent of its current size, about 85px nose-to-rump, small beside girl. Cat remains visible to left of yellow hood and kite; front paws touch bark, never grasp kite. Do not alter branch layout except the rigid tilt and mild bending caused by weight. Keep one cat only, no ghost of sitting pose. No motion lines, arrows, text, UI, glow, additional trees or other changes.
+
+### treeB_prompt
+
+Use case: precise-object-edit. Deliver ONE image, exactly 1600x900. Input 1 today-tree.png is a base screenshot to edit. Inputs 2 and 3 supply only the cat's identity. Make a tightly localized paintover: preserve the exact screenshot framing, camera, horizon, pink-lavender sky, water, lighting, girl in yellow raincoat with red scarf, cygnet, kite, buildings, roof edges, boat and red sail. Do not redraw the scene. Change ONLY the cat and the existing dead tree state. Remove the original tiny cropped cat from the railing at the bottom. On the SAME dead tree behind/left of the girl, put ONE small round-faced warm brown tabby, white chest and white socks, dark striped ringed tail, matching cat references. The tree has settled UPRIGHT, roots seated at the existing base near x540,y455. Cat sits securely in a fork in its crown around x425,y280, not hidden behind the kite; warm tabby back and clearly lit white bib against pink sky; body facing toward the girl to the right, face glancing right/back at her, ears pricked, tail loosely wrapped around branch. It should read as a natural small cat, sitting height about 75 pixels, the girl 1.15m tall. Preserve the existing skeletal tree's branch shapes as much as possible, change only its upright state. The girl's existing gaze already looks toward the tree; preserve her exact pose and location. Match current real-time Three.js painterly shading; cat simple soft rounded volumes, not photographic fur. No motion lines, text, arrows, glow, UI, labels, duplicate cats or new objects. Full 16:9 composition, no crop or zoom.
+
+### millA_prompt
+
+Use case: precise-object-edit. Output ONE 1600x900 paint-over, exactly the same 16:9 canvas as input 1 today-mill.png, no crop, zoom or expanded canvas. Input 1 is the screenshot edit target; inputs 2 and 3 are cat design references ONLY. Preserve the entire screenshot's exact camera, framing, sky, horizon, building and chimney silhouettes, water, dusk lighting, all architecture, windmill body and fixed central hub, girl in yellow coat, red scarf, cygnet, satchel and kite in their exact original locations and poses. Only alter cat and sail rotational state if necessary. Remove the original tiny cat on the distant high roof ridge around x515,y203. There must be exactly one cat. Place the small reference tabby, round face, warm brown striped coat, white bib and socks, on the very OUTER END of the existing leftward windmill sail at the roof edge immediately LEFT of the girl's boots, around x943,y475. Cat sitting on the broad wood rim with all paws securely planted, its tail curled around paws, body/profile facing RIGHT and head distinctly tilted UP toward the fixed dark hub at x1400,y293. The silhouette and white chest readable against the dark roof behind it. Cat scale about 65-75px tall versus the girl's 300px; never as large as girl or a giant kitten. Keep the original wood-lattice sail construction and its relation to the girl; its outer end is at the roof-edge embarkation point. Painterly real-time Three.js shading integrated with the original purple dusk, slightly stronger natural warm fill on cat's face and bib only to read at game scale. No light halos or artificial spotlight. No arrows, motion lines, UI, text, labels, decorative elements or duplicate cats. Keep screenshot otherwise unchanged.
+
+### millB_prompt
+
+Use case: precise-object-edit. ONE 1600x900 paint-over of input 1 today-mill.png. Input 1 is immutable screenshot base; inputs 2 and 3 are ONLY identity references for the little tabby cat. Keep exact camera/framing, horizon, pink dusk sky, purple water, ALL buildings and chimneys, large dark high roof at LEFT with its ridge at y215, windmill fixed body and hub at x1400,y293, and girl/cygnet/kite unchanged in original exact positions and poses. Change only cat and rotation of windmill sails. Remove tiny cat from distant left roof at x515,y200. Show ONE small round-faced tabby with white chest/socks and striped tail having ridden its windmill sail UP. The occupied sail now extends from the SAME central hub toward UPPER LEFT, its outer wooden rim arriving just ABOVE AND BESIDE the high roof's right-hand ridge corner around x920,y175. Cat about 65-75px tall crouches on that raised outer sail end around x945,y140, facing LEFT toward the high roof, forepaws reaching down towards the roof ridge, hind legs coiled to drop the short remaining gap, tail stretched right for balance. Cat must visibly be supported by the sail and poised to land on the EXISTING high roof at x880,y215. Warm fur and white paws legible against pale sky, same soft game shading. The NEXT wood-lattice sail has rotated into the LOWER-LEFT embarkation position beside/under the girl's boots around x970,y485, so both the elevated cat's sail and this next sail can be read connected to the same fixed hub. Keep the windmill's existing wood lattice construction, no new platform, ladder, bridge or enlarged sail. Show plausible successive blades in the same projected rotor plane. Cat still small compared with the girl. Preserve everything outside localized sail and cat changes. No arrows, UI, text, motion lines, glow outlines, labels, montage or border.
+
+### millB_refine_prompt
+
+Precise localized correction of this image. Preserve the cat, all windmill sails, girl, camera, sky, lighting, water, buildings, all image content EXACTLY. ONLY remove the small invented triangular dark roof spike immediately underneath the cat's FRONT paws, between the high roof's horizontal ridge near x860,y215 and the cat near x903,y170. Restore that high roof to a plain unmodified STRAIGHT horizontal ridge continuing to its original gable corner at x910,y214, with sky above. The cat must be crouching with hind paws on the raised windmill sail, its forepaws reaching into AIR with a clear roughly 35px DROP down to the straight roof ridge. This gap is intentional; the cat is about to drop off sail to roof. Do not move the cat, do not raise the roof, do not invent a wedge, platform or ramp. No other changes. Output one landscape 1600x900 paintover.
+
+### swing_prompt
+
+Use case: precise-object-edit. Output ONE 1600x900 paintover of input 1 today-swing.png, same composition with absolutely unchanged camera. Inputs 2 and 3 are cat identity references only. Preserve the base screenshot's exact horizon, pastel pink-lavender sky, water, light, ALL buildings, church tower at left, nave roof lower left, tree and long supporting branch at right, boat, girl with cygnet and kite at x820,y590, and every other scene element. Change ONLY cat and rope swing state. The cat demonstrates first: add one small rounded warm brown tabby with white chest and socks and ringed tail, approximately 60px nose-to-rump, compared with the existing girl about 145px tall (small cat, not giant). Cat is mid spring LEFTWARD off the swing's little wooden seat onto the EXISTING church nave roof edge at x485,y525, stretched catlike, white forepaws reaching to touch that roof slope, hind legs pushing off and long striped tail trailing right. Put the cat around x525,y492, unobstructed against pale sky and tower edge; naturally lit warm fur/white paws separate it from dusk, no glow. Same rounded cat identity as references with simplified game-scale detail. Swing still hangs from the EXACT original branch attachment near x881,y213; change ONLY its pendulum state, taut rope angled DOWN LEFT to the now EMPTY simple existing wooden seat around x600,y505, at the churchward top of its arc, just reversing back right toward the girl's location. No second swing or second rope. Preserve the girl's exact location and pose as explicitly required by the brief, even though the reference catches her already mid-crossing; she is not on the cat's empty seat in this demonstration comp. Remove three tiny yellow UI-like curved marks above the girl's head because requested NO UI. Match original soft painterly real-time Three.js shading and dusk exposure, no overall brightening. Do not alter the church or add architecture. No arrows, text, motion lines, ghosted positions, labels, glowing outline, extra platforms, animals, montage or borders.
+
+### swing_refine_prompt
+
+Precise localized edit to this image. Preserve all scenery, camera, sky, buildings, roofs, branch, girl, boat, light and empty swing EXACTLY as shown. Make only TWO corrections. 1. Remove the present oversized cat from the left church roof and replace with the SAME tabby cat at HALF its current linear size, approximately 78px total nose-to-tail and 35px tall. Place that one cat farther RIGHT, around x540,y535, in a leftward stretched leap, front paws reaching the church nave roof's right descending slope around x510,y535, hind paws leaving the empty seat direction, striped tail trailing right. This must be a SMALL CAT beside the 145px-high girl, not a large tiger. Preserve rounded face, brown stripes, white paws/chest and natural readable warm dusk fill. Cat leaps through air onto existing roof, not from roof away, make paws about to touch roof. 2. Remove the tiny set of THREE YELLOW CURVED HUD MARKS at x878,y478 in the distant scene, replacing ONLY those marks with matching sky/background. No UI or graphic symbols anywhere. There is ONE cat, no remnant or ghost of the old larger cat. Do not change the empty swing or girl, do not add anything. No text, motion lines or glow. Output one full 16:9 paintover for 1600x900 delivery.
+
+### swing_ui_prompt
+
+Edit this image with ONE tiny erasure only. In the distant background, just ABOVE THE GIRL'S YELLOW HOOD and just LEFT of the little brown gabled house with a chimney near the center, there are THREE BRIGHT YELLOW-WHITE CURVED VERTICAL STROKES that look like musical notes, quotation marks or bananas floating in the sky. They are unwanted interface marks. Erase ALL THREE STROKES completely and fill their tiny area with the plain lavender gray distant water/sky behind them. Locate them near 52.5% of image width and 51% of image height. Preserve absolutely EVERYTHING ELSE in image, especially the small cat leaping onto church roof at left and the empty swing. Do not change color, camera, girl, cat, rope or scene. No text, symbols, UI. Output the full image.
+
+
