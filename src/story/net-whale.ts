@@ -176,6 +176,10 @@ export class NetWhale {
   private nextPoint = 0;
   private knew = false;
   private reached = false;
+  private spotted = false;
+  /** How wet its bared head still is from the net coming off it, 0..1, and how far the net had come off last frame. */
+  private wet = 0;
+  private peeled = 0;
   private cygnetIn: 'cradle' | 'stowing' | 'satchel' | 'unstowing' | 'swimming' = 'cradle';
   private podGone = false;
   /** How far round its wait, and how far along its way past the boat, the pod's anchor has come. */
@@ -746,6 +750,7 @@ export class NetWhale {
     if (this.diverSeen && (this.progress < 1 || (this.step === 'line' && this.haul === 'out'))) return this.diver;
     if (this.step === 'line' && (this.haul === 'out' || this.haul === 'reaching')) return this.net.float.position;
     if (this.step === 'line' && this.haul === 'hauling') return this.net.foot;
+    if (this.step === 'line' && this.haul === 'letting' && this.haulT > K.sheSees) return this.finAt(0.9, this.look);
     if (this.step === 'free') {
       if (whale.fluking || whale.time > FREE_FLUKES_FROM) return this.look.copy(whale.flukes).setY(Math.max(whale.flukes.y, 2));
       return this.look.copy(whale.blowhole).setY(whale.blowhole.y + (whale.spouting ? 6 : 1));
@@ -1008,8 +1013,8 @@ export class NetWhale {
     if (this.slipT >= 0) {
       const was = net.loop;
       this.slipT += dt;
-      const loop = 0.78 * THREE.MathUtils.smootherstep(this.slipT, 0.4, 2.8)
-        + 0.22 * THREE.MathUtils.smoothstep(this.slipT, 2.8, K.slipFor);
+      const loop = 0.78 * THREE.MathUtils.smootherstep(this.slipT, 0.7, 3.6)
+        + 0.22 * THREE.MathUtils.smoothstep(this.slipT, 3.6, K.slipFor);
       if (!net.posed) net.loop = Math.max(net.loop, loop);
       if (was < 0.8 && net.loop >= 0.8) net.sound('loop-slip', this.whale.finTip);
     }
@@ -1286,7 +1291,15 @@ export class NetWhale {
         this.hauled = true;
         this.to('letting');
       }
-    } else if (this.haulT > K.letGo) this.goTo('flipper');
+    } else {
+      // The net off its head bares the loop on the flipper: the cygnet sees it first, then she does.
+      if (!this.spotted && this.haulT > K.birdSees && this.cygnetIn === 'satchel') {
+        this.spotted = true;
+        this.cast.cygnet.does('peer', this.finAt(0.9, this.p), K.peekFor);
+        this.cast.cygnet.call(false, 'puzzled');
+      }
+      if (this.haulT > K.letGo) this.goTo('flipper');
+    }
   }
 
   private to(haul: NetWhale['haul']): void {
@@ -1452,7 +1465,9 @@ export class NetWhale {
     if (this.haul === 'out' || this.haul === 'letting') {
       child.reachFor(0, null);
       child.reachFor(1, null);
-      child.lean = 0.12 + 0.1 * this.out;
+      // Let go, she sits back and breathes out.
+      const back = this.haul === 'letting' ? THREE.MathUtils.smoothstep(this.haulT, 0.1, 0.7) * (1 - THREE.MathUtils.smoothstep(this.haulT, 1.6, 2.6)) : 0;
+      child.lean = THREE.MathUtils.lerp(0.12 + 0.1 * this.out, -0.12, back);
       return;
     }
     if (this.haul === 'reaching') {
@@ -1489,7 +1504,14 @@ export class NetWhale {
     const net = this.net;
     const whale = this.whale;
     if (this.vFlung && this.progress < 1) this.progress = Math.min(1, this.progress + K.valveFling * dt);
-    if (this.step !== 'breath' && this.step !== 'approach' && whale.phase === 'woken') whale.look(this.cast.child.position);
+    const swimming = this.step === 'flipper' && this.bird !== 'satchel' && this.bird !== 'lifted' && this.bird !== 'home';
+    if (this.step !== 'breath' && this.step !== 'approach' && whale.phase === 'woken') {
+      whale.look(swimming ? this.cast.cygnet.position : this.cast.child.position);
+    }
+    const peeling = (net.peel - this.peeled) / Math.max(dt, 1e-3);
+    this.peeled = net.peel;
+    this.wet += ((peeling > 0.01 ? 1 : 0) - this.wet) * (1 - Math.exp(-dt * (peeling > 0.01 ? 2 : 0.4)));
+    if (this.wet > 0.02 && whale.phase === 'woken') whale.stream(this.wet * THREE.MathUtils.smoothstep(net.peel, 0.1, 0.5), dt);
     if (this.step === 'free' && whale.fluking && !this.waved) {
       this.waved = true;
       net.sound('whale-call', whale.back);

@@ -1492,7 +1492,9 @@ export const tuning = {
      * Her haul: how many pulls hand over hand, the line each brings in (m), the seconds each takes and the share of
      * that spent drawing; how long she holds on after the last before letting go, and how long the line takes to go.
      */
-    haulPulls: 5, pullTake: 0.75, pullTime: 1.5, pullDraw: 0.6, haulHold: 0.8, letGo: 2.4,
+    haulPulls: 5, pullTake: 0.75, pullTime: 1.5, pullDraw: 0.6, haulHold: 0.8, letGo: 3.4,
+    /** Seconds after she lets the line go that the cygnet sees the loop on the flipper and peeps, and that she looks to it. */
+    birdSees: 1, sheSees: 1.9,
     /**
      * Leaning out for it: how far along the thwart to port she slides (m), how far round toward the port rail she
      * turns (radians), and how far forward she leans (radians), reaching and hauling. Further over and her boots go
@@ -1533,7 +1535,7 @@ export const tuning = {
      * `slipFor` seconds into the lift.
      */
     finRadius: 0.07, finPace: 0.8, finAlong: 0.5, finSweep: 0.1, finInviteRadius: 2.6,
-    endOut: 5.1, endAhead: 0.2, birdOut: 5.3, birdAhead: -0.5, slipFor: 4,
+    endOut: 5.1, endAhead: 0.2, birdOut: 5.3, birdAhead: -0.5, slipFor: 5,
     /**
      * The near flipper at rest, about its root under the jaw: swept round toward the head and raised, so it reaches
      * out toward the boat's bow with its tip at the surface (radians).

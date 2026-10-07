@@ -54,11 +54,13 @@ export const FREE_FLUKES_FROM = 13.5;
  */
 const CLEAR_TURN = curve([[0, 0], [0.8, 0], [7.5, 0.05], [12, 0.06]]);
 const CLEAR_SLIDE = curve([[0, 0], [0.8, 0], [7.5, 1.6], [12, 2]]);
-/** The near flipper's lazy lift: up over two seconds, held, and laid back down on the water. */
-const LIFT = curve([[0, 0], [0.4, 0.12], [1.8, 0.95], [3, 1], [4.2, 0.35], [4.7, -0.04], [5.2, 0]]);
-const LIFT_HITS = 4.6;
-const LIFT_POURS = 0.7;
-const LIFT_FOR = 5.2;
+/** The near flipper's lift, slow and heavy: up over nearly three seconds, held, and laid back down on the water. */
+const LIFT = curve([[0, 0], [0.7, 0.1], [2.7, 0.95], [4, 1], [5.4, 0.35], [6, -0.04], [6.6, 0]]);
+const LIFT_HITS = 5.9;
+const LIFT_POURS = 1;
+const LIFT_FOR = 6.6;
+/** Where the sea streams off its bared head as the net comes off it: along the head (s) and how high up the near flank (of the top). */
+const STREAMS = [[0.05, 0.55], [0.08, 0.7], [0.11, 0.5], [0.14, 0.75], [0.17, 0.6], [0.2, 0.8], [0.23, 0.55], [0.27, 0.7]] as const;
 /** A slow blink: the lid down over half a second, a moment shut, and up again over most of a second. */
 const BLINK = curve([[0, 0], [0.5, 0.9], [0.75, 0.9], [1.6, 0]]);
 
@@ -411,7 +413,7 @@ export class SleepingWhale extends WhaleRig {
     this.liftT += dt;
     const k = LIFT(this.liftT);
     this.flipperLift = Math.max(0, k);
-    const swing = THREE.MathUtils.smoothstep(this.liftT, 0, 1.5) * (1 - THREE.MathUtils.smoothstep(this.liftT, 3.4, LIFT_FOR));
+    const swing = THREE.MathUtils.smoothstep(this.liftT, 0, 2.2) * (1 - THREE.MathUtils.smoothstep(this.liftT, 4.6, LIFT_FOR));
     this.uniforms.uSlap.value.set(1, K.finLift * k, K.finSwing * swing);
     if (was < LIFT_POURS && this.liftT >= LIFT_POURS) {
       const mid = this.finPoint(0.7, this.p);
@@ -433,6 +435,23 @@ export class SleepingWhale extends WhaleRig {
       this.spray.emit(DROP, e.x + (Math.random() - 0.5) * 0.08, e.y - 0.1, e.z + (Math.random() - 0.5) * 0.08,
         (Math.random() - 0.5) * 0.05, -0.6 - Math.random() * 0.5, (Math.random() - 0.5) * 0.05,
         (0.01 + Math.random() * 0.012) * size, 2, 0, 0.5 + Math.random() * 0.4);
+    }
+  }
+
+  /**
+   * The sea streaming off its head where the net has just come off it, in strings of drops down the near flank,
+   * `wet` 0..1 as much as there is.
+   */
+  stream(wet: number, dt: number): void {
+    const size = Math.sqrt(this.scale);
+    const n = Math.floor(dt * 120 * wet + Math.random());
+    for (let k = 0; k < n; k++) {
+      const [s, up] = STREAMS[Math.floor(Math.random() * STREAMS.length)];
+      const y = TOP(s) * (up + (Math.random() - 0.5) * 0.04);
+      const e = this.point(flankAt(s, y) * 1.01, y, s + (Math.random() - 0.5) * 0.004, this.p);
+      if (e.y < 0.2) continue;
+      this.spray.emit(DROP, e.x, e.y, e.z, (Math.random() - 0.5) * 0.05, -0.8 - Math.random() * 0.6, (Math.random() - 0.5) * 0.05,
+        (0.012 + Math.random() * 0.012) * size, 2, 0, 0.55 + Math.random() * 0.35);
     }
   }
 
