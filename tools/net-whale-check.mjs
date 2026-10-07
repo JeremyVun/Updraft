@@ -71,6 +71,8 @@ const atRest = (page) => until(page, (s) => s.step === 'breath' && s.stepTime > 
 /** At rest beside it, resumed as the save after its first breath does, the camera settled on the line's hold. */
 async function atLine(page) {
   await atRest(page);
+  // Parked in the corner by the boat before the line asks anything: the pointer's first move is a stroke too.
+  await stroke(page, [[W / 2, 10], [W - 10, 10], [W - 10, H - 10]], 600);
   await page.evaluate(() => { const c = __game.story.current; c.restoreCheckpoint('whale-breath', [c.leg, c.time]); });
   return until(page, (s) => s.step === 'line' && s.stepTime > 6, 'the line, held');
 }
