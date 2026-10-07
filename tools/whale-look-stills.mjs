@@ -14,6 +14,11 @@
 //   - k5 skips the net's steps, so whatever those steps leave on the water is not in the frame.
 //   - Run it against your own dev server: a server that hot-reloads mid-capture yields a frame of the start screen.
 //   - Portrait shots are composed beside `k2-portrait` for k2 and beside the landscape painting otherwise.
+//   - The whale breathes and the swell runs, so the same shot moves a little from run to run: compare the read,
+//     not pixels. k2 waits five seconds at rest first so the hold has settled.
+//   - In portrait the first crossing's camera does not turn to the far whale, so `dive-port` shows only haze.
+//   - A frame-rate step-down mid-run (another session's capture on the GPU) shows as `pairs` in the printed stats:
+//     render-target pairs at the lower sample count, not new programs. Rerun on a quiet machine.
 import { openBrowser } from './lib/browser.mjs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';

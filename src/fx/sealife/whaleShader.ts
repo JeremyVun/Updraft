@@ -89,7 +89,7 @@ vec3 rig(vec3 rest, inout vec3 n) {
 
 /**
  * Colour and form of the skin: a slate back over a pale lower jaw and belly, the eye under its heavy lid, the
- * blowhole's two slits, white flippers, the flukes' pale pattern. `form` is a height in metres the light models.
+ * blowhole's two slits, white flippers, the flukes' pale pattern.
  */
 const SKIN_GLSL = /* glsl */ `
 uniform vec3 uBack;
@@ -164,7 +164,6 @@ Skin skin() {
   float mottle = vnoise(vRest.zx * vec2(0.9, 1.6)) * 0.6 + vnoise(vRest.zy * 2.5 + 3.0) * 0.4;
   Skin k = Skin(uBack * (0.94 + 0.12 * mottle), 0.0, vec3(0.0), 0.0, 0.0, 0.0);
   if (part == ${BODY} || part == ${DORSAL}) {
-    // The lower jaw's line runs back from the snout to just under the eye, then falls away to the belly.
     float h = part == ${BODY} ? vRig.w : 1.0;
     float jaw = mix(0.72, 0.45, smoothstep(0.0, ${f(JAW_CORNER)}, s));
     float turn = smoothstep(${f(JAW_CORNER)}, ${f(JAW_CORNER + 0.06)}, s);
@@ -182,14 +181,12 @@ Skin skin() {
     float jawGroove = smoothstep(0.55, 1.0, sin((line - h) * 38.0)) * smoothstep(0.05, 0.12, line - h) * onHead
       * (1.0 - smoothstep(0.02, 0.05, fwidth(h * 38.0) / 6.2832));
     k.albedo = mix(k.albedo, jawTone * (1.0 - 0.1 * jawGroove), pale) * (1.0 - groove * 0.12);
-    // A soft shadow under the snout's lip along the jaw line.
     k.albedo *= 1.0 - 0.3 * onHead * smoothstep(line, line + soft + 0.01, h) * (1.0 - smoothstep(line + 0.02, line + 0.08, h));
     vec2 b = vec2(abs(vRest.x), vRest.z + ${f(BLOWHOLE * LENGTH)});
     vec2 slit = vec2(b.x - 0.07 - 0.04 * clamp(b.y / 0.2, -1.0, 1.0), b.y) / vec2(0.045, 0.2);
     k.albedo *= 1.0 - 0.75 * (1.0 - smoothstep(0.6, 1.0, length(slit))) * smoothstep(0.4, 0.7, rn.y);
 
-    // The eye: a tired almond under a heavy upper lid, its outer corner low, a dark amber iris and a dark pupil
-    // turned by uGaze. Its gloss and catchlight come from the light.
+    // Never emissive: its warmth is the light on the iris and the gloss of the glass.
     float R = uEyeAt.z * 0.08;
     vec2 e = vec2(vRest.z + uEyeAt.x * ${f(LENGTH)}, vRest.y - uEyeAt.y) / R;
     float flank = smoothstep(0.25, 0.45, abs(rn.x));
@@ -288,7 +285,7 @@ void main() {
   float wrap = clamp(ndl * 0.5 + 0.5, 0.0, 1.0);
   float nv = clamp(dot(N, V), 0.0, 1.0);
   float back = pow(max(dot(-V, uSunDir), 0.0), 2.0);
-  // Broad cool light from the open sky, strongest from above, and the sea's warm light thrown up under it.
+  // Cool sky fill keeps the shadowed flank slate rather than black against a low sun.
   float sky = dot(uSkyAmbient, vec3(0.3, 0.5, 0.2));
   vec3 fill = vec3(0.78, 0.9, 1.08) * sky * ${f(L.fill)} * (0.62 + 0.38 * N.y);
   vec3 bounce = mix(uSkyHorizon, uSeaTint * sky * 3.0, 0.5) * ${f(L.bounce)} * sky * max(-N.y + 0.15, 0.0);
@@ -310,12 +307,11 @@ void main() {
   col = mix(col, env, F * (0.25 + 0.5 * sheet + 0.6 * k.gloss));
   vec3 H = halfVector(uSunDir, V);
   float nh = max(dot(N, H), 0.0);
-  // The low sun along its top and rim: a broad wet sheen, and a gold edge where the skin turns away.
   col += uSunColor * pow(nh, mix(24.0, 160.0, sheet)) * (${f(L.sheen)} + (0.8 + 3.0 * streak) * sheet) * sun * (1.0 - k.gloss);
   col += vec3(0.85, 0.9, 0.95) * (uSkyAmbient * 0.7 + uSunColor * (0.1 + back * 0.8) * sun) * streak * sheet * 0.45;
   float rim = pow(1.0 - nv, ${f(L.rimPower)}) * smoothstep(-0.2, 0.5, N.y + ndl);
   col += uSunColor * mix(vec3(1.0), k.albedo * 2.0, 0.35) * rim * (0.2 + back) * ${f(L.rim)} * sun * (1.0 - k.near);
-  // Its catchlight is the bright sky over it, held in the upper glass of the eye.
+  // The sun's own reflection would sit under the heavy lid, so the catchlight is the sky above.
   float glint = pow(max(dot(N, normalize(V + vec3(0.0, 0.55, 0.0) + vAxisZ * 0.25)), 0.0), 2500.0);
   col += (uSunColor * 0.5 + uSkyHorizon) * glint * ${f(L.catchlight)} * k.gloss;
 
@@ -355,7 +351,6 @@ void main() {
   float path = depth / cosT;
   float F = 0.02 + 0.98 * pow(1.0 - nv, 5.0);
   float sun = cloudShadow(vSurface.xz);
-  // The same cool sky light as on its skin above, so the pale flippers still show under the glass at dawn.
   float sky = dot(uSkyAmbient, vec3(0.3, 0.5, 0.2));
   vec3 light = max(uSkyAmbient * 1.2, vec3(0.78, 0.9, 1.08) * sky * ${f(L.fill * L.glass)}) + uSunColor * max(uSunDir.y, 0.0) * 1.1 * sun;
   vec3 deep = uDeep * (uSkyAmbient * 1.1 + uSunColor * max(uSunDir.y, 0.0) * 0.6 * sun);
