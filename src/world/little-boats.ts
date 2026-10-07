@@ -155,6 +155,78 @@ export function sail(): THREE.BufferGeometry {
 export const TOY_PAINTS = ['#b96547', '#4e878c', '#d4b35d', '#72865b', '#8e727c', '#4f7a96', '#af794d'];
 export const TOY_LINENS = ['#efe1bb', '#d5dfd3', '#eee2b7', '#e5c6b0', '#d8d6c4', '#e9d9c1', '#c8d7d6'];
 
+interface ToyParts {
+  wood: THREE.ShaderMaterial;
+  rim: THREE.ShaderMaterial;
+  shell: THREE.BufferGeometry;
+  cloth: THREE.BufferGeometry;
+  spar: THREE.BufferGeometry;
+}
+
+export function toyParts(): ToyParts {
+  return {
+    wood: material('#76503a'),
+    rim: material('#d4ad73'),
+    shell: hull(),
+    cloth: sail(),
+    spar: mergeGeometries([new THREE.CylinderGeometry(0.025, 0.035, 1.75, 7).translate(0, 0.85, 0.21)]),
+  };
+}
+
+/** One of the toys, bow along +z, its sail and boom on `pivot` so they can swing; `sail` takes the fill. */
+export function toyBoat(i: number, { wood, rim, shell, cloth, spar }: ToyParts): { group: THREE.Group; sail: THREE.ShaderMaterial; pivot: THREE.Group } {
+  const g = new THREE.Group();
+  g.name = `toy-boat-${i}`;
+  g.add(new THREE.Mesh(shell, material(TOY_PAINTS[i])));
+  const deck = new THREE.Mesh(shell, rim);
+  deck.scale.set(0.89, 0.24, 0.91);
+  deck.position.y = 0.13;
+  g.add(deck);
+  const seat = new THREE.Mesh(new THREE.BoxGeometry(0.59, 0.07, 0.13), wood);
+  seat.position.set(0, 0.24, -0.2);
+  g.add(seat);
+  g.add(new THREE.Mesh(spar, wood));
+  const m = new THREE.ShaderMaterial({
+    uniforms: {
+      ...atmo.uniforms,
+      uFill: { value: 0 },
+      uDroop: { value: 1 },
+      uLuff: { value: 0 },
+      uPhase: { value: i * 1.7 },
+      uSeed: { value: i * 2.4 },
+      uColour: { value: new THREE.Color(TOY_LINENS[i]) },
+    },
+    vertexShader: SAIL_VERT,
+    fragmentShader: SAIL_FRAG,
+    side: THREE.DoubleSide,
+  });
+  const pivot = new THREE.Group();
+  pivot.position.z = 0.21;
+  pivot.add(new THREE.Mesh(cloth, m));
+  pivot.add(
+    new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 1, 6).rotateZ(Math.PI / 2).translate(-0.45, 0.34, 0), wood),
+  );
+  g.add(pivot);
+  fixInPlace(...g.children.filter((o) => o !== pivot), ...pivot.children);
+  return { group: g, sail: m, pivot };
+}
+
+/** The foam a toy trails, laid on the water behind it; `uFill` is how much of it there is. */
+export function toyWake(): THREE.Mesh {
+  const wake = new THREE.Mesh(
+    new THREE.PlaneGeometry(1.7, 3.4).rotateX(-Math.PI / 2),
+    new THREE.ShaderMaterial({
+      uniforms: { ...atmo.uniforms, uFill: { value: 0 } },
+      vertexShader: VERT,
+      fragmentShader: WAKE_FRAG,
+      transparent: true,
+      depthWrite: false,
+    }),
+  );
+  wake.renderOrder = 3;
+  return wake;
+}
+
 interface Toy {
   group: THREE.Group;
   sail: THREE.ShaderMaterial;
@@ -226,56 +298,10 @@ export class LittleBoats {
     this.swimWake.visible = false;
     this.swimWake.renderOrder = 3;
     this.group.add(this.swimWake, this.spray.points);
-    const wood = material('#76503a'),
-      rim = material('#d4ad73');
-    const shell = hull(),
-      cloth = sail();
-    const spar = mergeGeometries([new THREE.CylinderGeometry(0.025, 0.035, 1.75, 7).translate(0, 0.85, 0.21)]);
+    const parts = toyParts();
     for (let i = 0; i < 7; i++) {
-      const g = new THREE.Group();
-      g.name = `toy-boat-${i}`;
-      g.add(new THREE.Mesh(shell, material(TOY_PAINTS[i])));
-      const deck = new THREE.Mesh(shell, rim);
-      deck.scale.set(0.89, 0.24, 0.91);
-      deck.position.y = 0.13;
-      g.add(deck);
-      const seat = new THREE.Mesh(new THREE.BoxGeometry(0.59, 0.07, 0.13), wood);
-      seat.position.set(0, 0.24, -0.2);
-      g.add(seat);
-      g.add(new THREE.Mesh(spar, wood));
-      const m = new THREE.ShaderMaterial({
-        uniforms: {
-          ...atmo.uniforms,
-          uFill: { value: 0 },
-          uDroop: { value: 1 },
-          uLuff: { value: 0 },
-          uPhase: { value: i * 1.7 },
-          uSeed: { value: i * 2.4 },
-          uColour: { value: new THREE.Color(TOY_LINENS[i]) },
-        },
-        vertexShader: SAIL_VERT,
-        fragmentShader: SAIL_FRAG,
-        side: THREE.DoubleSide,
-      });
-      const pivot = new THREE.Group();
-      pivot.position.z = 0.21;
-      pivot.add(new THREE.Mesh(cloth, m));
-      pivot.add(
-        new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 1, 6).rotateZ(Math.PI / 2).translate(-0.45, 0.34, 0), wood),
-      );
-      g.add(pivot);
-      fixInPlace(...g.children.filter((o) => o !== pivot), ...pivot.children);
-      const wake = new THREE.Mesh(
-        new THREE.PlaneGeometry(1.7, 3.4).rotateX(-Math.PI / 2),
-        new THREE.ShaderMaterial({
-          uniforms: { ...atmo.uniforms, uFill: { value: 0 } },
-          vertexShader: VERT,
-          fragmentShader: WAKE_FRAG,
-          transparent: true,
-          depthWrite: false,
-        }),
-      );
-      wake.renderOrder = 3;
+      const { group: g, sail: m, pivot } = toyBoat(i, parts);
+      const wake = toyWake();
       const shadow = new THREE.Mesh(
         new THREE.PlaneGeometry(1.3, 2.3).rotateX(-Math.PI / 2),
         new THREE.ShaderMaterial({

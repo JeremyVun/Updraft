@@ -319,6 +319,21 @@ export const tuning = {
      * where it runs between them (at most 12), and how finely each is marched.
      */
     towers: 11, towerSteps: 12,
+    /**
+     * The little boats' toys sailing by on the sea below her, east out of the sun's glitter, from the last loose flight
+     * until the child goes up into the white. Their lane, just off the island's north beach where the lens looks down
+     * from the last flights, and where the leader starts from the island's middle, just past the left of that view,
+     * metres; how fast they go, metres a second; and their size against their own room, smaller so she seems higher.
+     */
+    fleet: {
+      lane: -54, from: -62, speed: 1.1, scale: 0.75,
+      /** Each toy's place in the flotilla (0 leads), metres between places, and how far either side of the lane (shares of `spread`). */
+      order: [2, 0, 4, 1, 5, 3, 6], spacing: 3.5, sides: [-0.2, 0.7, -0.9, -0.5, 0.9, 0.3, -0.6], spread: 2.5,
+      /** How far each wanders off its line, metres, and how often (per metre sailed). */
+      weave: 0.9, weaveRate: 0.08,
+      /** How full the sails stand, which side the breeze comes over (-1..1), and how much foam they trail. */
+      fill: 0.7, across: 0.55, foam: 1.6,
+    },
   },
   littleBoats: {
     /** How much broader the island's cropped blades are, so its short turf closes over the ground instead of reading as stubble. */
