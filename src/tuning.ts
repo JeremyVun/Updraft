@@ -1404,7 +1404,7 @@ export const tuning = {
      * Where it lies beside the boat at rest: its eye `eyeDistance` metres from the boat's centre and `eyeBearing`
      * radians round to port of the bow, its length running `bodyAngle` radians round to starboard into the haze.
      */
-    eyeDistance: 14.5, eyeBearing: 0.8, bodyAngle: 1.18,
+    eyeDistance: 14.5, eyeBearing: 0.8, bodyAngle: 1.25,
     /** Its highest back above the water at rest (m), and how far it lies rolled with its near side up (radians). */
     crest: 6.6, roll: 0.087,
     /**
