@@ -1,8 +1,8 @@
-// Renders the drowned village crossings' sounds from the shipping src/audio/foley.ts to WAV, offline in Chrome,
+// Renders the drowned village crossings' sounds (the tree, the swing and the mill) from the shipping src/audio/foley.ts to WAV, offline in Chrome,
 // through the game's reverb and master compressor as heard in play (--dry for the bare sound).
 // Usage: node tools/crossings-foley.mjs <out-dir> [takes=2] [--dry] [--rate 48000] [--also tub,splash,...]
 // BASE picks the dev server (default http://127.0.0.1:5230/). Writes, in listening order, each sound's takes and then
-// the two crossings as they would be heard, and prints the level of each; --also adds other material sounds after
+// the crossings as they would be heard, and prints the level of each; --also adds other material sounds after
 // them for comparison.
 import fs from 'node:fs';
 import path from 'node:path';
@@ -17,12 +17,17 @@ const [outDir = '/tmp/updraft-crossings-foley', takes = '2'] = args;
 fs.mkdirSync(outDir, { recursive: true });
 
 /** Each sound on its own at full strength, then the two crossings in play order: [seconds, sound, strength]. */
-const SINGLES = ['tree-creak', 'roots-give', 'root-tear', 'tree-fall', 'swing-creak', 'bough-creak', 'slate-land'];
+const SINGLES = ['tree-creak', 'roots-give', 'root-tear', 'tree-fall', 'swing-creak', 'bough-creak', 'slate-land',
+  'mill-start', 'mill-creak', 'mill-settle', 'linen-flap'];
 const SEQUENCES = {
   'tree-sequence': [[0, 'tree-creak', 0.45], [1.6, 'tree-creak', 0.7], [3.2, 'roots-give', 0.95], [4.9, 'tree-creak', 0.5],
     [6.4, 'tree-creak', 0.8], [7.4, 'root-tear', 1], [9.6, 'tree-fall', 1]],
   'swing-sequence': [[0, 'bough-creak', 0.4], [2.9, 'bough-creak', 0.6], [5.8, 'bough-creak', 0.8], [8.6, 'cloth', 0.5],
     [9.5, 'slate-land', 1], [11.6, 'bough-creak', 0.55], [14.5, 'bough-creak', 0.25]],
+  // The empty sails swaying, the player turning a sail round to her, the dwell, the ride up and the settle at the top.
+  'mill-sequence': [[0, 'linen-flap', 0.3], [1.5, 'mill-start', 0.7], [2.4, 'linen-flap', 0.6], [2.6, 'mill-creak', 0.8],
+    [3.6, 'mill-creak', 0.9], [4.7, 'mill-settle', 0.7], [7.2, 'mill-start', 0.5], [8.6, 'mill-creak', 0.6], [9.3, 'linen-flap', 0.45],
+    [10.9, 'mill-creak', 0.6], [12.2, 'mill-settle', 0.7], [14.5, 'linen-flap', 0.3]],
 };
 
 const { browser, page } = await audioPage();

@@ -5,7 +5,8 @@ import type { WhaleSound } from '../fx/sealife/wake';
 export type Surface = 'grass' | 'sand' | 'wood' | 'water';
 export type MaterialSound = 'cloth' | 'wool' | 'sail' | 'sail-settle' | 'water' | 'paper' | 'door' | 'splash' | 'peg'
   | 'dolphin-surface' | 'leaf-scuff' | 'swing-creak' | 'tub' | WhaleSound
-  | 'tree-creak' | 'roots-give' | 'root-tear' | 'tree-fall' | 'bough-creak' | 'slate-land';
+  | 'tree-creak' | 'roots-give' | 'root-tear' | 'tree-fall' | 'bough-creak' | 'slate-land'
+  | 'mill-start' | 'mill-creak' | 'mill-settle' | 'linen-flap';
 
 /**
  * The sounds a small body makes, as opposed to a voice. The cygnet never speaks except when it is lost, so this is
@@ -136,6 +137,33 @@ export class Foley {
       this.rasp({ at, len: 0.5, from: (rising ? 26 : 36) * colour, to: (rising ? 34 : 24) * colour, jitter: 0.14,
         bodies: [[300 * colour, 6, 1], [720 * colour, 5, 0.6]], level: level * 0.06, pan, attack: 0.1, wet: 0.04 });
       this.puff({ at: at + 0.04, len: 0.32, level: level * 0.0028, pan, type: 'bandpass', from: 1400 * colour, to: 900 * colour, q: 1, attack: 0.09 });
+    } else if (kind === 'mill-start') {
+      // The old windshaft taking up: a dull knock as the brake lets go, then a dry axle groan whose stick-slip quickens.
+      const colour = 0.9 + Math.random() * 0.2;
+      this.blip(at, 120 * colour, 85 * colour, 0.18, level * 0.05, pan, 'triangle', 0.05);
+      this.puff({ at, len: 0.06, level: level * 0.05, pan, type: 'bandpass', from: 650 * colour, q: 1.3, attack: 0.002 });
+      this.rasp({ at: at + 0.08, len: 1.3, from: 9 * colour, to: 26 * colour, jitter: 0.3,
+        bodies: [[150 * colour, 6, 1], [370 * colour, 5, 0.7], [880 * colour, 4, 0.3]], level: level * 0.12, pan, attack: 0.18, wet: 0.05 });
+      this.puff({ at: at + 0.15, len: 1.1, level: level * 0.008, pan, type: 'bandpass', from: 1100, to: 1500, q: 1.2, attack: 0.3 });
+    } else if (kind === 'mill-creak') {
+      // Wood working through the turn: the stock in its canister, drier and higher than the dead tree, and short.
+      const colour = 0.88 + Math.random() * 0.24, rising = Math.random() < 0.5;
+      this.rasp({ at, len: 0.42 + 0.25 * Math.min(1, amount), from: (rising ? 30 : 44) * colour, to: (rising ? 42 : 30) * colour, jitter: 0.18,
+        bodies: [[260 * colour, 6, 1], [620 * colour, 5, 0.7], [1350 * colour, 4, 0.3]], level: level * 0.07, pan, attack: 0.08, wet: 0.04 });
+    } else if (kind === 'mill-settle') {
+      // Coming to rest as if braked: the shaft dragging to a stop in a slowing judder, then a soft wooden settle.
+      const colour = 0.9 + Math.random() * 0.2;
+      this.rasp({ at, len: 0.75, from: 30 * colour, to: 8 * colour, jitter: 0.2,
+        bodies: [[180 * colour, 6, 1], [440 * colour, 5, 0.6], [1000 * colour, 4, 0.25]], level: level * 0.1, pan, attack: 0.04, wet: 0.05 });
+      this.puff({ at, len: 0.7, level: level * 0.02, pan, type: 'bandpass', from: 900, to: 420, q: 0.9, attack: 0.05 });
+      this.blip(at + 0.72, 105 * colour, 80 * colour, 0.2, level * 0.04, pan, 'triangle', 0.06);
+      this.puff({ at: at + 0.72, len: 0.08, level: level * 0.03, pan, type: 'lowpass', from: 500, attack: 0.003 });
+    } else if (kind === 'linen-flap') {
+      // Torn scraps of old sail-cloth lifting and falling back: two or three soft, papery flaps, never a snap.
+      const colour = 0.9 + Math.random() * 0.2;
+      for (let i = 0, t = at; i < 2 + Math.floor(Math.random() * 2); i++, t += 0.09 + Math.random() * 0.08) {
+        this.puff({ at: t, len: 0.12, level: level * (0.05 - i * 0.012), pan, type: 'bandpass', from: 1100 * colour, to: 600 * colour, q: 0.6, attack: 0.02, wet: 0.04 });
+      }
     } else if (kind === 'slate-land') {
       // Small boots and a hand coming down on wet slates: a soft thump, a clack or two of slate, a short scuff.
       const colour = 0.92 + Math.random() * 0.16;
