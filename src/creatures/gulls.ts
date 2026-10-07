@@ -34,7 +34,6 @@ ${CREATURE_GLSL}
 in float aPart;
 in vec2 aMat;
 in vec4 iPos;
-uniform float uSize;
 in vec4 iAtt;
 in vec4 iWing;
 out vec3 vWorld;
@@ -75,7 +74,7 @@ void main() {
   if (part == ${TAIL}) p.x *= 1.0 + max(-iAtt.x, 0.0) * 1.2;
   p = rotZ(rotX(p, iAtt.x), iAtt.y);
   n = rotZ(rotX(n, iAtt.x), iAtt.y);
-  vec3 world = rotY(p * ${SIZE.toFixed(2)} * uSize, iPos.w) + iPos.xyz;
+  vec3 world = rotY(p * ${SIZE.toFixed(2)}, iPos.w) + iPos.xyz;
   vWorld = world;
   vNormal = rotY(n, iPos.w);
   vMat = aMat;
@@ -214,30 +213,6 @@ function gullGeometry(): THREE.BufferGeometry {
   return merge([...blobs, ...wings]);
 }
 
-/**
- * Gull bodies drawn as instances: iPos (x, y, z, yaw), iAtt (pitch, roll), iWing (inner and outer wing raise, sweep
- * back, head turn).
- */
-export function gullMesh(capacity: number, size = 1): { instances: Instances; mesh: THREE.Mesh } {
-  const instances = new Instances(gullGeometry(), capacity, ['iPos', 'iAtt', 'iWing']);
-  const material = new THREE.ShaderMaterial({
-    vertexShader: VERT,
-    fragmentShader: FRAG,
-    uniforms: {
-      ...atmo.uniforms,
-      uWhite: { value: new THREE.Color('#f6f3ee') },
-      uMantle: { value: new THREE.Color('#8d99a6') },
-      uTip: { value: new THREE.Color('#1d1d22') },
-      uBill: { value: new THREE.Color('#f2c14e') },
-      uSize: { value: size },
-    },
-    side: THREE.DoubleSide,
-  });
-  const mesh = new THREE.Mesh(instances.geometry, material);
-  mesh.frustumCulled = false;
-  return { instances, mesh };
-}
-
 interface Gull {
   rand: Rng;
   seed: number;
@@ -284,7 +259,21 @@ export class Gulls {
     private readonly habitat: Habitat,
     capacity = 12,
   ) {
-    ({ instances: this.instances, mesh: this.mesh } = gullMesh(capacity));
+    this.instances = new Instances(gullGeometry(), capacity, ['iPos', 'iAtt', 'iWing']);
+    const material = new THREE.ShaderMaterial({
+      vertexShader: VERT,
+      fragmentShader: FRAG,
+      uniforms: {
+        ...atmo.uniforms,
+        uWhite: { value: new THREE.Color('#f6f3ee') },
+        uMantle: { value: new THREE.Color('#8d99a6') },
+        uTip: { value: new THREE.Color('#1d1d22') },
+        uBill: { value: new THREE.Color('#f2c14e') },
+      },
+      side: THREE.DoubleSide,
+    });
+    this.mesh = new THREE.Mesh(this.instances.geometry, material);
+    this.mesh.frustumCulled = false;
   }
 
   /** Adds a gull soaring over a region centred on (x, z). */

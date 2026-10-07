@@ -129,18 +129,6 @@ export class Foley {
       this.puff({ at, len: 0.12, level: level * 0.11, pan, type: 'bandpass', from: 1300, to: 800, q: 0.7, attack: 0.004, wet: 0.06 });
       this.blip(at, 95, 55, 0.24, level * 0.05, pan, 'triangle', 0.05);
       this.puff({ at: at + 0.06, len: 0.75, level: level * 0.035, pan, type: 'bandpass', from: 2100, to: 850, q: 0.5, attack: 0.06, wet: 0.04 });
-    } else if (kind === 'gull-hop' || kind === 'gull-away') {
-      // Wings opened in a hurry: a few dry feathered beats, and leaving, one soft call over the water.
-      const away = kind === 'gull-away';
-      for (let i = 0; i < (away ? 5 : 3); i++) this.puff({ at: at + i * 0.075, len: 0.06, level: level * 0.03 * (1 - i * 0.12), pan,
-        type: 'bandpass', from: 1250 + i * 60, to: 900, q: 0.6, attack: 0.008 });
-      if (away) {
-        this.blip(at + 0.3, 1350, 950, 0.28, level * 0.012, pan, 'triangle', 0.15);
-        this.blip(at + 0.62, 1250, 880, 0.32, level * 0.009, pan, 'triangle', 0.15);
-      }
-    } else if (kind === 'gull-peck') {
-      this.blip(at, 2300, 1700, 0.035, level * 0.02, pan, 'triangle');
-      this.puff({ at, len: 0.025, level: level * 0.02, pan, type: 'highpass', from: 2800, attack: 0.002 });
     } else if (kind === 'whale-surface' || kind === 'whale-dive') {
       const dive = kind === 'whale-dive';
       this.puff({ at, len: dive ? 2.1 : 1.6, level: level * (dive ? 0.17 : 0.13), pan,

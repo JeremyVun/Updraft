@@ -34,9 +34,9 @@ export class SeaLife {
     this.slicks.mesh.renderOrder = 2;
     this.foam.mesh.renderOrder = 3;
     const sleeper = this.sleeper;
-    this.objects = [this.body.mesh, this.body.ghost, sleeper.mesh, sleeper.ghost, sleeper.gull.mesh, this.fish.mesh, this.slicks.mesh,
+    this.objects = [this.body.mesh, this.body.ghost, sleeper.mesh, sleeper.ghost, this.fish.mesh, this.slicks.mesh,
       this.foam.mesh, this.spray.mesh, ...this.pod.objects];
-    for (const o of [this.body.mesh, sleeper.mesh, sleeper.gull.mesh, this.fish.mesh, this.spray.mesh]) o.layers.enable(REFLECTION_LAYER);
+    for (const o of [this.body.mesh, sleeper.mesh, this.fish.mesh, this.spray.mesh]) o.layers.enable(REFLECTION_LAYER);
     for (const o of this.objects) fixTreeInPlace(o);
   }
 

@@ -41,9 +41,7 @@ const starts = {
   toMirror:[SLEEP_BERTH.x,SLEEP_BERTH.z,-1.76],
   toHarbour:[MIRROR_BERTH.x,MIRROR_BERTH.z,MIRROR_BERTH.yaw],
 };
-// The whale asleep on the way to the meadow holds the boat until it is woken: `circling` winds an updraft over its
-// blowhole once the boat is at rest; otherwise nobody plays and the gull wakes it after the safety valve.
-function run(name, fps, gust, veer=0, waitInVillage=false, arrivalGust=false, circling=false) {
+function run(name, fps, gust, veer=0, waitInVillage=false, arrivalGust=false) {
   let push=gust;
   const baseWind=new THREE.Vector2(Math.cos(-Math.PI/10+veer),Math.sin(-Math.PI/10+veer)).multiplyScalar(tuning.wind.breeze);
   const wind={breeze:baseWind.clone(),calm:3,addSplat(){},sample(x,z,out){return Object.assign(out,{x:this.breeze.x+push,z:this.breeze.y-push,energy:push?.8:0,lift:0});}};
@@ -53,26 +51,18 @@ function run(name, fps, gust, veer=0, waitInVillage=false, arrivalGust=false, ci
   const plane={held:true,position:new THREE.Vector3(),hold(){},homeRadius:0,launch(p){this.position.copy(p);this.held=false;},depart(){}};
   const rig=name==='toMirror'?new CameraRig():null;
   rig?.resize(1600,900);
-  const sea=name==='toMeadow'?new SeaLife(wind,new THREE.PerspectiveCamera()):null;
-  const sealife=rig?new SeaLife(wind,rig.camera):sea??{dolphinsWith(){},fishNear(){},swimmerNear(){},surfaceWhale(){},whale:null,dolphinShow:null};
-  const input={present:false,muted:false,gust:0,charge:0,updraftAt:new THREE.Vector3(),prevNdc:new THREE.Vector2(),ndc:new THREE.Vector2()};
-  const cast={boat,child,cygnet,carry,wind,plane,input,lines:{gust(){}},skyMirror:{progress:3,stars:[0,1,2]},sealife};
+  const sealife=rig?new SeaLife(wind,rig.camera):{dolphinsWith(){},fishNear(){},swimmerNear(){},surfaceWhale(){},whale:null,dolphinShow:null};
+  const cast={boat,child,cygnet,carry,wind,plane,lines:{gust(){}},skyMirror:{progress:3,stars:[0,1,2]},sealife};
   const chapter=Journey.prototype.make.call({cast},name);
   let shallowAt=[];const air={};let swimFrames=0,shallow=-Infinity,turn=0,yaw=boat.yaw,lastLeg=0,worstTurn=0,peak=0,sailed=0;
-  const prev=boat.position.clone(),beats=[],dolphinActs=[],events={};let lastBeat='',stillFor=0,lastAct='',holdFor=0,heldSailed=0;
+  const prev=boat.position.clone(),beats=[],dolphinActs=[],events={};let lastBeat='',stillFor=0,lastAct='';
   if(rig){chapter.update(0,0);rig.cut(chapter.shot);}
   for(let i=0;i<fps*500;i++) {
     const dt=1/fps,time=i*dt;wind.breeze.copy(baseWind).multiplyScalar(chapter.breeze);wind.calm=wind.breeze.length()*tuning.wind.calm;
     // A repeatable attentive player supplies wind only during the village's interaction.
     const approaching=events[`music-${name==='drowned'?'wood':chapter.destinationMusic}`]!==undefined;
     push=gust || (arrivalGust&&approaching?8:0) || (name==='drowned' && chapter.beat==='still' && !waitInVillage?8:0);
-    if(circling&&chapter.sleeper?.still>1){input.present=true;input.charge=1;input.updraftAt.copy(sealife.sleeper.blowhole);}
     chapter.update(dt,time);boat.swell=chapter.storm ?? 0;boat.update(dt,time);
-    if(sea){sea.update(dt,time);
-      const held=boat.speedLimit<Infinity&&chapter.leg<chapter.route.length-2;
-      if(held){holdFor+=dt;heldSailed+=Math.hypot(boat.position.x-prev.x,boat.position.z-prev.z);}
-      if(sea.sleeper.awake&&events.whaleAwake===undefined)events.whaleAwake=+time.toFixed(1);
-      if(sea.sleeper.gull.state==='walking'&&events.gullWalks===undefined)events.gullWalks=+time.toFixed(1);}
     if(chapter.arrivalMusic && events[`music-${chapter.arrivalMusic}`]===undefined) events[`music-${chapter.arrivalMusic}`]=+time.toFixed(2);
     if(chapter.arrivalHeard && chapter.arrivalReady && events.arrivalReady===undefined)events.arrivalReady=+time.toFixed(2);
     if(name==='toMirror'){child.update(dt);carry.update(dt);cygnet.update(dt,time,child.position,wind.sample(0,0,air));carry.after();rig.update(dt,time,chapter.shot,chapter.pace);sealife.update(dt,time);
@@ -106,12 +96,7 @@ function run(name, fps, gust, veer=0, waitInVillage=false, arrivalGust=false, ci
         assert(sealife.pod.farewellReady,'keeps the completed dolphin nudge');
         assert(dolphinActs.some(([act])=>act==='push:act:contact'),'the nudge makes physical contact');
         assert(chapter.mirrorArrival > .99,'mirror transition finishes before mooring');}
-      // Time the whale's hold cost: the held stretch, less what its distance takes at the pace sailed elsewhere.
-      const pace=(sailed-heldSailed)/Math.max(1e-6,time-holdFor);
-      const whaleCost=sea?holdFor-heldSailed/pace:0;
-      if(sea)assert(sea.sleeper.awake,`${name}: sailed on past a whale that never woke`);
-      return {seconds:+time.toFixed(1),musicLead:+musicLead.toFixed(2),sailed:+sailed.toFixed(1),peak:+peak.toFixed(2),swimSeconds:+(swimFrames/fps).toFixed(1),stillSeconds:+stillFor.toFixed(1),
-        whaleHeld:+holdFor.toFixed(1),whaleCost:+whaleCost.toFixed(1),withoutWhale:+(time-whaleCost).toFixed(1),whaleCalled:chapter.whaleCalled,beats,events,dolphinActs};
+      return {seconds:+time.toFixed(1),musicLead:+musicLead.toFixed(2),sailed:+sailed.toFixed(1),peak:+peak.toFixed(2),swimSeconds:+(swimFrames/fps).toFixed(1),stillSeconds:+stillFor.toFixed(1),whaleCalled:chapter.whaleCalled,beats,events,dolphinActs};
     }
   }
   throw Error(`${name}: failed to finish at ${boat.position.toArray()}, leg ${chapter.leg}`);
@@ -122,12 +107,10 @@ for(const name of (process.env.CROSSING ? [process.env.CROSSING] : Object.keys(s
   const windLeft=run(name,30,0,-.35),windRight=run(name,30,0,.35);
   const lateGust=run(name,60,0,0,false,true);
   const entry={name,calm,gust,lowFps,windLeft,windRight,lateGust};
-  if(name==='toMeadow')entry.circling=run(name,60,0,0,false,false,true);
   if(name==='toBoats'||name==='toMeadow') {
     const target=name==='toBoats'?30:40;
-    // Only the whale's stop may lengthen the crossing to the meadow.
-    for(const result of [calm,lowFps,windLeft,windRight,...(entry.circling?[entry.circling]:[])])
-      assert(Math.abs(result.withoutWhale-target)<5,`${name}: ordinary passage exceeds its ${target}s pacing target (${result.withoutWhale}s besides the whale)`);
+    for(const result of [calm,lowFps,windLeft,windRight])
+      assert(Math.abs(result.seconds-target)<5,`${name}: ordinary passage exceeds its ${target}s pacing target (${result.seconds}s)`);
   }
   if(name==='drowned')entry.noResponse=run(name,30,0,0,true);
   results.push(entry);console.log(JSON.stringify(entry));

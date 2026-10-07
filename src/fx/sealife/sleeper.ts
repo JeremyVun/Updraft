@@ -4,12 +4,11 @@ import { swellUniforms } from '../../world/water/swell';
 import { BLOWHOLE, FIN_ROOT, LENGTH, SPINE_END, TOP } from './anatomy';
 import { curve } from './curve';
 import type { Marks } from './marks';
-import { PerchedGull, type GullSound } from './perched-gull';
 import { DROP, MIST, type Spray } from './spray';
 import { WhaleWake, type WhaleSound } from './wake';
 import { SPINE_N, SPINE_STEP, WhaleRig } from './whale';
 
-export type SleeperSound = WhaleSound | GullSound | 'whale-sigh' | 'whale-breath' | 'whale-slap';
+export type SleeperSound = WhaleSound | 'whale-sigh' | 'whale-breath' | 'whale-slap';
 
 const K = tuning.sleepingWhale;
 /** The tail stock, behind the hump: what the body turns about and tips over as it leaves. */
@@ -39,7 +38,6 @@ const SLAP_FOR = 2.4;
 const FIN_SCALE = 0.62;
 const FLUKE_SCALE = 0.62;
 const FIN_SPAN = 4.5 * FIN_SCALE;
-const GULL_SIZE = 2;
 const FIN_DIR = new THREE.Vector3(0.8, -0.3, -0.52).normalize();
 const REST_FIN = new THREE.Vector2(0.35, 0.3);
 /** Asleep, the fluke tips curl up out of the water at the far end. */
@@ -63,7 +61,6 @@ export class SleepingWhale extends WhaleRig {
   /** Frames a gust has spent crossing its back, and the flipper slaps that answered, since it lay down. */
   tickles = 0;
   slaps = 0;
-  readonly gull = new PerchedGull(GULL_SIZE);
   readonly blowhole = new THREE.Vector3();
   /** The middle of the back above the water, for a glance. */
   readonly back = new THREE.Vector3();
@@ -99,7 +96,6 @@ export class SleepingWhale extends WhaleRig {
     this.skin.uEyeAt.value.set(0.16, 0.12, 1.8);
     this.wake = new WhaleWake(this, spray, foam, slicks);
     this.wake.onSound = (kind, x, y, z) => this.onSound?.(kind, x, y, z);
-    this.gull.onSound = (kind, at) => this.onSound?.(kind, at.x, at.y, at.z);
   }
 
   /** It has drawn its waking breath: from here it is awake, whatever comes after. */
@@ -137,7 +133,6 @@ export class SleepingWhale extends WhaleRig {
     this.shiverAmp = 0;
     this.slapT = -1;
     this.eye.value = 0;
-    this.gull.settle();
     this.wake.reset(true);
     this.lay(0, 0, 0, 0);
     this.mesh.visible = this.ghost.visible = true;
@@ -148,13 +143,12 @@ export class SleepingWhale extends WhaleRig {
     this.phase = 'gone';
     this.time = 0;
     this.mesh.visible = this.ghost.visible = false;
-    this.gull.vanish();
     swellUniforms.uSurge.value.w = 0;
   }
 
   /**
    * A gust across its back at `s` (0 snout .. 1 flukes), running toward the flukes when `along` is positive: the skin
-   * shivers along the stroke, the gull hops, and now and then the near flipper comes up lazily and slaps.
+   * shivers along the stroke, and now and then the near flipper comes up lazily and slaps.
    */
   tickle(s: number, along: number, strength: number): void {
     if (this.phase !== 'asleep') return;
@@ -164,7 +158,6 @@ export class SleepingWhale extends WhaleRig {
     }
     this.shiverAmp = Math.min(0.08, Math.max(this.shiverAmp, 0.05 + 0.03 * strength));
     this.tickles++;
-    this.gull.startle();
     if (this.slapT < 0 && this.slapCool <= 0) {
       this.slapT = 0;
       this.slaps++;
@@ -184,7 +177,6 @@ export class SleepingWhale extends WhaleRig {
     if (this.phase === 'gone') {
       this.time += dt;
       if (this.time > 30) swellUniforms.uSurge.value.w = 0;
-      if (this.gull.state === 'away') this.gull.update(dt, this);
       return;
     }
     this.time += dt;
@@ -199,7 +191,6 @@ export class SleepingWhale extends WhaleRig {
     this.point(0, TOP(BLOWHOLE), BLOWHOLE, this.blowhole);
     this.point(0, TOP(0.45), 0.45, this.back);
     this.point(0, 0, 1, this.flukes);
-    this.gull.update(dt, this);
     this.wake.update(dt, time);
     if (this.phase === 'leaving' && this.time > GONE) {
       this.phase = 'gone';
@@ -234,7 +225,6 @@ export class SleepingWhale extends WhaleRig {
     this.lay(0, K.breathRise * 2.2 * draw, 0, 0);
     if (t >= SPOUT_FROM && t - dt < SPOUT_FROM) {
       this.onSound?.('whale-blow', this.blowhole.x, this.blowhole.y, this.blowhole.z);
-      this.gull.leave();
     }
     if (t >= SPOUT_FROM && t < SPOUT_TO) {
       const u = (t - SPOUT_FROM) / (SPOUT_TO - SPOUT_FROM);

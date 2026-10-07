@@ -69,8 +69,6 @@ export interface Drives {
   blink: number;
   wingGuard: number;
   wingOpening: number;
-  /** Ducked down into the satchel to peek over the rim at something very big, 0..1. */
-  duck: number;
   /** The wind on it in its own frame (x to its left, z ahead), units per second. */
   wind: { x: number; z: number };
   /**
@@ -109,7 +107,6 @@ export class Poser {
     sit: 0,
     held: 0,
     stowed: 0,
-    duck: 0,
     hunch: 0,
     curl: 0,
     tall: 0,
@@ -307,8 +304,7 @@ export class Poser {
       d.effort * 0.02 +
       breathe * 0.4 -
       (act('flinch') * 0.03 + act('brace') * 0.035) * p.afoot +
-      Math.abs(Math.sin(t * 11)) * 0.02 * act('ask') -
-      p.duck * 0.06 +
+      Math.abs(Math.sin(t * 11)) * 0.02 * act('ask') +
       (afoot ? Math.abs(Math.cos(d.stride)) * 0.006 * d.hurry : 0);
     body.position.x = d.gait.sway * walk;
     body.position.z = 0;
@@ -336,10 +332,6 @@ export class Poser {
     a = lerp(a, lerp(-0.15, 0.08, p.stowed), heldNeck);
     b = lerp(b, lerp(0.05, 0.3, p.stowed), heldNeck);
     head = lerp(head, lerp(-0.1, -0.15, p.stowed), heldNeck);
-    p.duck = ease(p.duck, d.duck * p.stowed, 2.5, dt);
-    a = lerp(a, -1.3, p.duck);
-    b = lerp(b, 2.0, p.duck);
-    head = lerp(head, 0.3, p.duck);
     a = lerp(a, -1.5, p.sleep);
     b = lerp(b, 1.9, p.sleep);
     head = lerp(head, 0.5, p.sleep);
