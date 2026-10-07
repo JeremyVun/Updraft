@@ -355,7 +355,8 @@ export class StrandedCat {
       });
     } else if (this.phase === 3 && this.since - this.atEdge > k.edge) {
       this.phase = 4;
-      cat.hop(IN_TUB, { frame: tub.group, then: 'crouch', look: this.head }, () => {
+      /** It sits, ears flat: crouched, the tub's sides hide it from every view the room takes. */
+      cat.hop(IN_TUB, { frame: tub.group, then: 'sit', look: this.head }, () => {
         cat.mewing = false;
         cat.unease = 0.8;
         tub.laden = true;
