@@ -488,6 +488,30 @@ export const CAT_WAY = {
 /** The dead tree out in the water east of the tower that the drifting boat fetches up against, the lighthouse beyond. */
 export const BOAT_TREE = new THREE.Vector2(30.5, -1557.5);
 
+/** The church tower at the nave's east end: its middle, half its width, and the floor of its belfry's openings. */
+export const TOWER = { x: NAVE.x + NAVE.len / 2 + 2.4, z: NAVE.z, half: 2.4, sill: 8.27 };
+/** The belfry's westward opening on each side, sat on: where the cat looks down from, over the green and over the north water. */
+export const BELFRY_SOUTH = new THREE.Vector3(TOWER.x - 1.05, TOWER.sill, TOWER.z + TOWER.half + 0.25);
+export const BELFRY_NORTH = new THREE.Vector3(TOWER.x - 1.05, TOWER.sill, TOWER.z - TOWER.half - 0.25);
+/**
+ * The ivy's stem up the tower's south face, from the foot of the churchyard's railings to beside the west opening of
+ * the belfry: the way the cat climbs, close against the stone.
+ */
+export const IVY = [[16.6, 0.15], [16.62, 0.95], [16.85, 2.6], [17.08, 4.5], [16.98, 6.3], [16.98, 7.85], [17.05, 9.6], [17.25, 10.7]]
+  .map(([x, y]) => new THREE.Vector3(x, y, TOWER.z + TOWER.half + 0.06));
+/**
+ * Where the boat comes alongside the nave's north slates, lying west along them, her seat abreast of the ridge's top
+ * there; and her way down the slates to the water's edge beside it.
+ */
+const BERTH_X = SWING_X;
+export const NAVE_BERTH = { x: BERTH_X - 0.25, z: NAVE.z - acrossAt(NAVE, 0) - 0.62, yaw: -Math.PI / 2 };
+export const NAVE_NORTH: Deck = strip(new THREE.Vector3(BERTH_X, ridgeTop(NAVE), NAVE.z),
+  new THREE.Vector3(BERTH_X, 0.4, NAVE.z - acrossAt(NAVE, 0.4)), 0.7);
+/** Round the tower's north side from the dead tree to the berth: the open water the boat is brought across. */
+export const BRING_WAY = [new THREE.Vector2(TOWER.x + 4, TOWER.z - 7), new THREE.Vector2(NAVE_BERTH.x, NAVE_BERTH.z)];
+/** Out from the nave into the open water north-west of the church, on the way to the forest beach. */
+export const AWAY = new THREE.Vector2(-2, -1590);
+
 /**
  * The line the dark comes on along: from far out where they came from, through the stranding and on over her way to
  * the tower. The dark's reach is measured along it in metres.
@@ -651,6 +675,7 @@ const OPEN = [
   { x: NAVE.x, z: NAVE.z, r: 14 },
   { x: TOWER_FOOT.x + 3, z: NAVE.z, r: 9 },
   { x: BOAT_TREE.x, z: BOAT_TREE.y, r: 7 },
+  { x: (NAVE_BERTH.x + AWAY.x) / 2, z: (NAVE_BERTH.z + AWAY.y) / 2, r: 16 },
 ];
 export function inClearing(x: number, z: number, room: number): boolean {
   if (OPEN.some((c) => Math.hypot(x - c.x, z - c.z) < c.r + room)) return true;

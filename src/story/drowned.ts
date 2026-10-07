@@ -238,6 +238,26 @@ export class DrownedChapter implements Chapter {
     this.cat.onRidge();
   }
 
+  /** QA (`?chapter=church`): on to her at the tower's foot, the boat fetched up against its tree. */
+  skipToNave(): void {
+    const { boat } = this.cast;
+    this.to('run');
+    this.run!.begin();
+    this.run!.skipToEnd();
+    this.adrift = tuning.drowned.adrift.gather;
+    this.adriftAlong = ADRIFT_LENGTH;
+    const yaw = adriftAt(ADRIFT_LENGTH, this.adriftTo);
+    boat.position.set(this.adriftTo.x, boat.position.y, this.adriftTo.y);
+    boat.yaw = yaw;
+    boat.coastTo = { x: this.adriftTo.x, z: this.adriftTo.y, yaw };
+    this.to('nave');
+    this.cutIn = 2;
+  }
+
+  /** QA: a skip ahead cuts the lens there once the chapter has begun. */
+  cameraCut = 0;
+  private cutIn = 0;
+
   private to(beat: Beat): void {
     this.beat = beat;
     this.beatStart = this.now;
@@ -270,6 +290,7 @@ export class DrownedChapter implements Chapter {
 
   update(dt: number, time: number): void {
     this.now += dt;
+    if (this.cutIn > 0 && --this.cutIn === 0) this.cameraCut++;
     this.steer();
     const { child: c, plane: p, boat } = this.cast;
     if (!this.cat.ashore) c.ride(boat.seat(this.seat), boat.yaw, boat);

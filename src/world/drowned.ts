@@ -15,13 +15,14 @@ import { RopeSwing } from './crossings/rope-swing';
 import { Windmill } from './crossings/windmill';
 import { MillSpiral } from './crossings/mill-spiral';
 import { DarkBank } from './drowned-dark';
+import { ivyParts } from './drowned-ivy';
 import { WashTub } from './wash-tub';
 import {
   COURSED, HOLLOW, LIME, MASONRY, OPENING, PLAIN, ROCK, ROPE, SLATE, SLATED, THATCH, THATCHED, TIMBER, VANE,
   buildHouse, fitLot, type HouseType, type Lot, type Stack,
 } from './drowned-houses';
 import {
-  BOAT_TREE, CAT_HOUSE, DARK_WAY, DRAWN_ROUND, GARDEN_WALLS, GREEN_TREE, LEAN_TOS, MILL, NAVE, PLACED,
+  BOAT_TREE, CAT_HOUSE, DARK_WAY, DRAWN_ROUND, GARDEN_WALLS, GREEN_TREE, LEAN_TOS, MILL, NAVE, PLACED, TOWER,
   MILL_SITE, SWING_SITE, TREE_SITE, inClearing, inDrawnClearing, onCatGround, type GardenWall, type LeanTo, type PlacedHouse,
 } from './drowned-way';
 
@@ -41,7 +42,7 @@ export const DROWNED_CHANNEL: THREE.Vector2[] = [
 ];
 
 /** The church spire: the one vertical in the village, its tower at the east end of the nave, near the lighthouse. */
-export const SPIRE = new THREE.Vector3(NAVE.x + NAVE.len / 2 + 2.4, 21, NAVE.z);
+export const SPIRE = new THREE.Vector3(TOWER.x, 21, TOWER.z);
 /** The boat follows the harbour light, then passes the rock it stands on. */
 export const LIGHTHOUSE = new THREE.Vector3(65, 0, -1580);
 /** The village comes alive within this far (along the journey) of its middle: the leaves always started here. */
@@ -636,7 +637,13 @@ function buildChurch(into: Merged, rand: Rng): void {
     into.add(new THREE.BoxGeometry(0.7, 16.6, 0.7).translate(side * 2.25, 3.6, -2.25), stone, PLAIN, m);
     into.add(opening(1.0, 2.5, 5.0).translate(side * 1.05, 9.5, 0), HOLLOW, OPENING, m);
     into.add(opening(5.0, 2.5, 1.0).translate(0, 9.5, side * 1.05), HOLLOW, OPENING, m);
+    /** A sill under each opening of the belfry, wide enough for a cat to sit on and look down. */
+    for (const at of [-1.05, 1.05]) {
+      into.add(new THREE.BoxGeometry(1.3, 0.16, 0.5).translate(at, TOWER.sill - 0.08, side * (TOWER.half + 0.2)), stone, MASONRY, m);
+      into.add(new THREE.BoxGeometry(0.5, 0.16, 1.3).translate(side * (TOWER.half + 0.2), TOWER.sill - 0.08, at), stone, MASONRY, m);
+    }
   }
+  for (const [geo, colour] of ivyParts()) into.add(geo, colour, PLAIN);
 
   const rings = 5;
   const pos: number[] = [];

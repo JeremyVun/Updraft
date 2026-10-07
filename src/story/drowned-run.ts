@@ -387,6 +387,27 @@ export class RoofRun {
     this.go();
   }
 
+  /** QA (`?chapter=church`): straight to the end of her way, at the tower's foot, the cat at the foot of the ivy. */
+  skipToEnd(): void {
+    const { child: c, cat } = this.cast;
+    this.next = this.nodes.length;
+    this.along = this.length;
+    this.catAt = this.nodes.length - 1;
+    for (const piece of ORDER) {
+      this.catOver.add(piece);
+      this[piece].phase = 'over';
+    }
+    this.dark = this.darkLength[this.darkLength.length - 1];
+    this.darkLeg = DARK_WAY.length - 1;
+    this.cast.village!.dark.reach = this.dark - tuning.drowned.run.fogHold;
+    c.place(TOWER_FOOT.x, TOWER_FOOT.z, Math.PI / 2);
+    c.position.y = TOWER_FOOT.y;
+    const foot = CAT_WAY.swing[CAT_WAY.swing.length - 1];
+    cat.place(foot, -Math.PI / 2, { pose: 'sit', floor: () => foot.y });
+    this.stage = 'nave';
+    c.stop();
+  }
+
   update(dt: number): void {
     if (this.stage === 'off') return;
     const { child: c, cat } = this.cast;
