@@ -62,7 +62,7 @@ cygnet's swim slow the boat naturally. Targets at the ordinary breeze:
 | little boats → meadow | 40 s | arrives lined up with the hill path |
 | meadow → birches | 20 s | a short blind hop |
 | birches → stairs | short | under the cloud deck |
-| drowned village to the wood | player-paced | the becalming waits for the player; the storm is about 40 s |
+| drowned village to the wood | player-paced | the cat, the run and the church wait for the player; the storm from the nave is about 45 s |
 | wood → sleeping | 40 s | a sheltered bend |
 | sleeping → sky mirror (the sea) | at most 100 s | includes the pod's leap, the swim and the nudge |
 | sky mirror → home | 40 s | curves offshore before turning in to the jetty |
@@ -181,6 +181,41 @@ departure beach. The sea mesh itself rises into the channel (no separate pool pl
 toys and swimmers the same mean level and sheltered ripple, and the sea material fades its surf out in the pools
 and back at the outlet, where swell takes over from ripple as the water deepens. Grass keeps out of the wet bowls
 on CPU and GPU. `boatsCourse` carries the toy route on past the stream mouth into a turn out to sea.
+
+## The drowned village
+
+The whole island is under the water; nothing on it is ground. `world/drowned.ts` (`DrownedVillage`) builds the room
+into one merged mesh and owns its live pieces: the herons, the tub, the dark, the tree, the swing, the mill, the
+lighthouse's light. How it plays is in `docs/chapters.md`.
+
+- **Her way and its places** are hand-laid in `world/drowned-way.ts`, the one place their positions live: the drift's
+  strand (`STRAND`, `STRAND_HOUSE`), the cat's cottage and the place the boat waits by it (`CAT_HOUSE`, `CAT_HOLD`),
+  the houses, walls and lean-tos her way runs over (`PLACED`, `GARDEN_WALLS`, `LEAN_TOS`), the decks she walks
+  (`WAY`, read through `world/decks.ts`), the gaps and the pieces' sites (`WAY_GAPS`, `TREE_SITE`, `MILL_SITE` with
+  the mill's heights in `MILL`, `SWING_SITE`), the cat's own way over each gap (`CAT_WAY`), the church's tower, sills
+  and ivy (`TOWER`, `BELFRY_SOUTH`, `BELFRY_NORTH`, `IVY`, `NAVE`, `TOWER_FOOT`), the boat's drift and the dead tree it
+  fetches up on (`adriftAt`, `BOAT_TREE`), its way round the tower to the nave (`BRING_WAY`, `NAVE_BERTH`), the storm's
+  way out past the lighthouse (`STORM_WAY`), and the fog's way in from the south (`DARK_WAY`). `inClearing` keeps
+  open water round all of these, the boat's water, the mill, the green, the churchyard and the storm's way, and
+  everything generated stays out of it.
+- **The village round it** is generated: `drowned.ts`'s own rows (`layout`, whose random draws stay in their order so
+  every later roof and tree keeps its chances) and the fuller shape in `world/drowned-shape.ts` (lanes, huddles and
+  farms in the middle distance, a band of broad water, far groups to the haze, and the touches that stand once each:
+  `TALL_AND_TINY`, `WASHING_PAIR`, `SUNK_DOOR`). New houses come from their own seeded streams; nothing laid before
+  them moves.
+- **A house** is a `Lot` given to `buildHouse` in `world/drowned-houses.ts`, the village's kit in the construction of
+  home's cottage: eight types, each by its silhouette, at three levels of detail (near, `mid`, `far` silhouette).
+- **The church** is built in `drowned.ts` (the tower, the spire `SPIRE`, the nave by the kit on its exact slates);
+  its ivy is `world/drowned-ivy.ts`. The lighthouse stands on its rock off the church (`LIGHTHOUSE`); its beam and
+  lamp are `world/lighthouse.ts`.
+- **The crossings** are `world/crossings/`: the piece (`ToppleTree`, `RopeSwing`, `Windmill`, standing idle in the
+  village) and the beat that drives it with her (`TreeCrossing`, `SwingCrossing`, `MillCrossing`, `MillSpiral` for the
+  mill's drawn invitation). The QA stage plays each on its own (`?chapter=stage&gap=tree|swing|mill|run`).
+- **The tub** is `world/wash-tub.ts`; **the cat** is `creatures/cat.ts` with `creatures/cat/`, one animal driven by
+  the story.
+- **The dark** is `world/drowned-dark.ts` (`DarkBank`: `rise`, `reach` along `DARK_WAY`, `close`, `storm`), which
+  drives the sea fog every shader reads (`seaFog` and the `uSeaFog*` uniforms in `world/atmosphere.ts`, knobs in
+  `tuning.drowned.fog`); `?fog=` forces it.
 
 ## The sky mirror
 
