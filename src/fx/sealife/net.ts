@@ -24,10 +24,17 @@ const BELOW = 5;
 /** The patch over the blowhole the updraft lifts, and the smaller dome each weak breath raises: half length and width (m). */
 const PATCH = new THREE.Vector2(5, 3.5);
 const DOME = new THREE.Vector2(1.6, 1.1);
-/** The floating mass it is peeled into: half length and width (m), and how far out from the jaw and on past it it lies. */
-const FOLD = new THREE.Vector2(11.5, 6);
-const FOLD_OUT = 7;
-const FOLD_AHEAD = 7;
+/**
+ * Peeled, each row slides off into the water beside its own part of the head and folds back and forth `FOLD_WIDE`
+ * metres out from the waterline, the near edge furthest out; the rows gather toward the head to `GATHER` of the
+ * net's length, so it ends a floating mass of about 23 by 10 m.
+ */
+const FOLD_WIDE = 6;
+const FOLD_FROM = 1;
+const GATHER = 0.5;
+const GATHER_AHEAD = 4;
+/** However it folds, it keeps this far from the boat at rest (m). */
+const BOAT_CLEAR = 4.5;
 /** How much of the peel each part of it spreads over, so the sheet comes away together rather than point by point. */
 const PEEL_SPREAD = 0.35;
 /** How far the empty net drifts, and how far round it turns, as it goes. */
@@ -103,6 +110,8 @@ export class Net {
   private readonly order = new Float32Array(ROWS * COLS);
   /** Where each point lies in the folded mass, along and across it and how high in the fold. */
   private readonly fold = new Float32Array(ROWS * COLS * 3);
+  /** Where each point floats once it is all peeled, before it drifts. */
+  private readonly afloatAt = new Float32Array(ROWS * COLS * 2);
   private readonly peeled = new Float32Array(ROWS * COLS);
   private readonly crowns = new Float32Array(ROWS);
   private readonly below = new Float32Array(ROWS * BELOW * 3);
@@ -172,13 +181,12 @@ export class Net {
         uv[k * 2 + 1] = a;
         // The near edge at the head comes away first: that is where the line is hauled from.
         this.order[k] = 0.62 * ((NET.near - a) / (NET.near + NET.far)) + 0.38 * (u / NET.long);
-        const half = NET.long / 2;
-        const layer = u > half ? 1 : 0;
-        const along = layer ? NET.long - u : u;
-        this.fold[k * 3] = (along / half) * 2 * FOLD.x - FOLD.x + Math.sin(a * 1.3 + u * 0.2) * 0.35;
-        this.fold[k * 3 + 1] = ((a + NET.far) / (NET.near + NET.far)) * 2 * FOLD.y - FOLD.y + Math.sin(u * 0.9) * 0.45
-          + layer * 0.6;
-        this.fold[k * 3 + 2] = 0.04 + layer * 0.07 + Math.max(0, Math.sin(u * 1.7 + a * 0.8)) * 0.06;
+        const cloth = NET.near - a;
+        const layer = Math.floor(cloth / FOLD_WIDE);
+        const into = cloth - layer * FOLD_WIDE;
+        this.fold[k * 3] = u * GATHER - GATHER_AHEAD + Math.sin(a * 1.3 + u * 0.2) * 0.3;
+        this.fold[k * 3 + 1] = FOLD_FROM + (layer % 2 ? into : FOLD_WIDE - into) + Math.sin(u * 0.9 + a) * 0.3;
+        this.fold[k * 3 + 2] = 0.04 + layer * 0.06 + Math.max(0, Math.sin(u * 1.7 + a * 0.8)) * 0.06;
         if (i < ROWS - 1 && j < COLS - 1) index.push(k, k + COLS, k + 1, k + 1, k + COLS, k + COLS + 1);
       }
     }
@@ -327,7 +335,6 @@ export class Net {
     }
     this.domeT += dt;
     netLook.uFade.value = 1 - THREE.MathUtils.smoothstep(this.drift, 0.75, 1);
-    this.placeMass();
     this.layOn(time);
     this.sounds();
     this.moveLeader(dt, time);
@@ -490,6 +497,7 @@ export class Net {
     this.loopRow = THREE.MathUtils.clamp(Math.round(eyeRow + clear * (this.leaderRow > eyeRow ? -1 : 1)), 0, ROWS - 1);
     if (Math.abs(this.loopRow - this.leaderRow) < 3) this.loopRow = THREE.MathUtils.clamp(Math.round(eyeRow - clear * Math.sign(this.leaderRow - eyeRow)), 0, ROWS - 1);
     this.layLeader();
+    this.layAfloat();
     for (const o of this.objects) o.visible = true;
     this.snap = true;
   }
@@ -519,25 +527,45 @@ export class Net {
     }
   }
 
-  /** Where the folded mass lies this moment: beside the jaw, then away. */
-  private placeMass(): void {
-    const w = this.whale;
-    const drift = THREE.MathUtils.smoothstep(this.drift, 0, 1);
-    this.mass.copy(w.jaw).addScaledVector(this.side, FOLD_OUT).addScaledVector(this.ahead, FOLD_AHEAD).setY(0);
-    this.t.copy(this.side).addScaledVector(this.ahead, 0.6).normalize();
-    this.mass.addScaledVector(this.t, drift * DRIFT_AWAY);
+  /** Where each point will float once peeled: out from the waterline beside the head, gathered toward it, folded. */
+  private layAfloat(): void {
+    this.mass.set(0, 0, 0);
+    for (let k = 0; k < this.n; k++) {
+      const along = this.fold[k * 3];
+      const row = THREE.MathUtils.clamp((along / NET.long) * (ROWS - 1), 0, ROWS - 1);
+      const i0 = Math.floor(row);
+      const i1 = Math.min(ROWS - 1, i0 + 1);
+      const a = (i0 * BELOW + BELOW - 1) * 3;
+      const b = (i1 * BELOW + BELOW - 1) * 3;
+      const f = row - i0;
+      // Ahead of the net's front edge it floats on past the snout.
+      const ahead = Math.min(0, along);
+      const out = this.fold[k * 3 + 1];
+      let x = this.below[a] + (this.below[b] - this.below[a]) * f + this.side.x * out - this.ahead.x * ahead;
+      let z = this.below[a + 2] + (this.below[b + 2] - this.below[a + 2]) * f + this.side.z * out - this.ahead.z * ahead;
+      const d = Math.hypot(x - this.boat.x, z - this.boat.z);
+      if (d < BOAT_CLEAR) {
+        x = this.boat.x + ((x - this.boat.x) / d) * BOAT_CLEAR;
+        z = this.boat.z + ((z - this.boat.z) / d) * BOAT_CLEAR;
+      }
+      this.afloatAt[k * 2] = x;
+      this.afloatAt[k * 2 + 1] = z;
+      this.mass.x += x / this.n;
+      this.mass.z += z / this.n;
+    }
   }
 
-  /** A point of the folded mass, in the world: `along` and `across` it, `up` above the water. */
-  private inMass(along: number, across: number, up: number, out: THREE.Vector3): THREE.Vector3 {
-    const turn = THREE.MathUtils.smoothstep(this.drift, 0, 1) * DRIFT_TURN;
+  /** Where point `k` floats this moment, once peeled: in the folded mass beside the head, or drifting away with it. */
+  private floating(k: number, out: THREE.Vector3): THREE.Vector3 {
+    const drift = THREE.MathUtils.smoothstep(this.drift, 0, 1);
+    const turn = drift * DRIFT_TURN;
     const c = Math.cos(turn);
     const s = Math.sin(turn);
-    const ax = this.ahead.x * c - this.ahead.z * s;
-    const az = this.ahead.x * s + this.ahead.z * c;
-    const sx = this.side.x * c - this.side.z * s;
-    const sz = this.side.x * s + this.side.z * c;
-    return out.set(this.mass.x + ax * along + sx * across, up, this.mass.z + az * along + sz * across);
+    const x = this.afloatAt[k * 2] - this.mass.x;
+    const z = this.afloatAt[k * 2 + 1] - this.mass.z;
+    const away = drift * DRIFT_AWAY;
+    return out.set(this.mass.x + c * x + s * z + (this.ahead.x + this.side.x * 0.35) * away, this.fold[k * 3 + 2],
+      this.mass.z - s * x + c * z + (this.ahead.z + this.side.z * 0.35) * away);
   }
 
   /** Every point of the sheet this frame: on the skin as it breathes, lifted, domed, peeling, folded, drifting. */
@@ -577,7 +605,7 @@ export class Net {
         if (p > 0) {
           const a = this.acrossAt(j);
           const over = 1 - THREE.MathUtils.smoothstep(a, -1, 3);
-          this.inMass(this.fold[k * 3], this.fold[k * 3 + 1], this.fold[k * 3 + 2], this.t);
+          this.floating(k, this.t);
           const c1y = y + 0.8 + over * Math.max(0, crown + 1.8 - y - 0.8);
           const wx = this.below[wb] + this.side.x * 1.5;
           const wz = this.below[wb + 2] + this.side.z * 1.5;
@@ -829,7 +857,7 @@ export class Net {
     const flat = this.flat.crossVectors(chord, axis).normalize();
     const half = (0.32 + 2.1 * Math.max(0, 1 - along) ** 0.8) * (1 - off * 0.5);
     const thick = 0.25 + 0.5 * Math.max(0, 1 - along);
-    this.inMass(-FOLD.x - 1.5, FOLD.y * 0.6, 0.02, this.t);
+    this.floating(this.loopRow * COLS + COLS - 1, this.t).addScaledVector(this.side, 1.2);
     const point = this.point;
     for (let m = 0; m <= RING; m++) {
       const a = (m / RING) * Math.PI * 2 + Math.PI / 2;
