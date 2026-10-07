@@ -1890,9 +1890,10 @@ export const tuning = {
       flickFrom: 0.12, flickFull: 0.45,
       /**
        * Nearing where it is being brought: within `easeFrom` metres a stroke whose way is within `aimFrom` (the cosine
-       * of the angle) of it is bent toward it, and it drifts on in by itself at up to `easeSpeed` m/s.
+       * of the angle) of it is bent toward it, and for `easeFor` seconds after a stroke it drifts on in by
+       * itself at up to `easeSpeed` m/s.
        */
-      easeFrom: 4.5, aimFrom: -0.2, easeSpeed: 0.5,
+      easeFrom: 4.5, aimFrom: -0.2, easeSpeed: 0.5, easeFor: 3,
       /** Out of its water it drifts back at up to `homeSpeed` m/s, `homePull` m/s a metre beyond the edge. */
       homeSpeed: 0.45, homePull: 0.3,
       /** The world's own air carrying it once nobody has managed it, m/s. */

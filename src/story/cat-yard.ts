@@ -315,6 +315,7 @@ export class CatYard {
     this.tub.water.r = 6;
     this.tub.goal = new THREE.Vector2(to.x, to.z);
     this.tub.velocity.set(to.x - this.tub.position.x, to.z - this.tub.position.z).normalize().multiplyScalar(0.9);
+    this.tub.sinceBrushed = -30;
   }
 
   update(dt: number): void {
@@ -442,7 +443,7 @@ export class CatYard {
         cat.wet = 1;
         cat.strand(look);
         cat.rest('sit', look);
-        cat.hop(IN_TUB, { frame: this.tub.group, then: 'crouch', look }, () => {
+        cat.hop(IN_TUB, { frame: this.tub.group, then: 'sit', look }, () => {
           cat.mewing = false;
           cat.unease = 0.8;
           this.tub.laden = true;
@@ -451,7 +452,7 @@ export class CatYard {
         return true;
       case 'ride-tub':
         this.drift();
-        cat.place(IN_TUB, 0.4, { frame: this.tub.group, pose: 'crouch' });
+        cat.place(IN_TUB, 0.4, { frame: this.tub.group, pose: 'sit' });
         this.tub.laden = true;
         cat.wet = 1;
         cat.unease = 0.8;
@@ -468,7 +469,7 @@ export class CatYard {
         return true;
       case 'jump-boat':
         this.reset(true);
-        cat.place(IN_TUB, 0.5, { frame: this.tub.group, pose: 'crouch' });
+        cat.place(IN_TUB, 0.5, { frame: this.tub.group, pose: 'sit' });
         this.tub.laden = true;
         cat.wet = 1;
         cat.unease = 0.8;

@@ -341,7 +341,8 @@ export class WashTub {
     this.pushed = 0;
     const goal = this.goal;
     const toGoal = goal ? Math.hypot(goal.x - p.x, goal.y - p.z) : Infinity;
-    const nearing = goal ? 1 - THREE.MathUtils.smoothstep(toGoal, k.easeFrom * 0.6, k.easeFrom) : 0;
+    /** Only while the player is bringing it: left alone, it stays where it is. */
+    const nearing = goal ? (1 - THREE.MathUtils.smoothstep(toGoal, k.easeFrom * 0.6, k.easeFrom)) * (1 - THREE.MathUtils.smoothstep(this.sinceBrushed, k.easeFor, k.easeFor + 1)) : 0;
     if (shoved > 1e-5) {
       const want = Math.min(k.topSpeed, (shoved / dt) * k.take);
       let ux = this.shove.x / shoved, uz = this.shove.y / shoved;
