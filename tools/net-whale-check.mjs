@@ -54,7 +54,7 @@ const STATE = `(() => {
     tether: Math.hypot(n.float.position.x - n.foot.x, n.float.position.z - n.foot.z), length: n.lineLength,
     invited: w ? !!w.windInvitation : false, bird: w ? w.bird : null, birdT: w ? w.birdT : 0, slipT: w ? w.slipT : -1,
     finnedBy: w ? w.finnedBy : null, loop: n.loop, held: n.held !== null, seat: __game.cygnet.seat, swimming: __game.cygnet.state === 'swimming',
-    drift: n.drift, spouting: s.spouting, moored: __game.story.name !== 'toMirror' || c.done === true };
+    drift: n.drift, spouting: s.spouting };
 })()`;
 
 async function open(context, query) {
@@ -619,8 +619,19 @@ async function voyage(idle) {
   mark('free', spout);
   const gone = await until(page, (s) => s.step === 'gone', 'it to go under', 60);
   mark('gone', gone);
-  const moored = await until(page, (s) => s.moored, 'the boat to moor at the mirror', 300);
-  mark('moored', moored);
+  // The mirror's chapter takes over the moment the boat is moored, so the crossing's own clock is kept as it ends.
+  await page.evaluate(() => {
+    const m = window.__moored = { at: null, last: 0 };
+    const tick = () => {
+      const story = __game.story;
+      if (story.name === 'toMirror') m.last = story.current.time;
+      if (m.at === null && (story.name !== 'toMirror' || story.current.done)) m.at = m.last;
+      if (m.at === null) requestAnimationFrame(tick);
+    };
+    tick();
+  });
+  await page.waitForFunction(() => window.__moored.at !== null, null, { timeout: 300000, polling: 250 });
+  mark('moored', { time: await page.evaluate(() => window.__moored.at) });
   const watch = await birdWatch(page);
   results[idle ? 'fullidle' : 'full'] = { ...at, by: [free.liftedBy, free.broughtBy, free.finnedBy].join('/'), clear: watch.clear };
   const by = idle ? 'dolphin' : null;
