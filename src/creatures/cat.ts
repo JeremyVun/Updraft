@@ -78,7 +78,7 @@ const STANCES: Record<Hold, Stance> = {
   sit: { bodyY: 0.066, bodyZ: 0.006, pitch: 0.72, flex: 0.25, chestUp: 0.55, neckLow: 0, hock: 1.45, tuck: 0, front: [0.019, 0.08], hind: [0.047, 0.032], tailUp: -0.15, tailCurl: 0, tailWrap: 1, bend: 0, roll: 0 },
   gather: { bodyY: 0.102, bodyZ: -0.012, pitch: -0.05, flex: 0.2, chestUp: 0, neckLow: 0.9, hock: 0.85, tuck: 0, front: [0.026, 0.068], hind: [0.036, -0.06], tailUp: 0.0, tailCurl: 0, tailWrap: 0, bend: 0, roll: 0 },
   crouch: { bodyY: 0.068, bodyZ: -0.012, pitch: 0.03, flex: 0.62, chestUp: -0.1, neckLow: 1.25, hock: 1.45, tuck: 1.3, front: [0.022, 0.064], hind: [0.05, -0.012], tailUp: -0.9, tailCurl: 0, tailWrap: -1, bend: 0, roll: 0 },
-  curl: { bodyY: 0.05, bodyZ: -0.01, pitch: 0.0, flex: 0.35, chestUp: -0.05, neckLow: 1.1, hock: 1.45, tuck: 1.4, front: [0.03, 0.06], hind: [0.05, -0.02], tailUp: -0.7, tailCurl: 0, tailWrap: 1, bend: 1, roll: 0.3 },
+  curl: { bodyY: 0.05, bodyZ: -0.01, pitch: 0.0, flex: 0.35, chestUp: -0.05, neckLow: 1.1, hock: 1.45, tuck: 1.4, front: [0.03, 0.06], hind: [0.05, -0.02], tailUp: -0.7, tailCurl: 0, tailWrap: 1, bend: 1.25, roll: 0.3 },
 };
 const POSES: Hold[] = ['stand', 'sit', 'crouch', 'gather', 'curl'];
 
@@ -452,7 +452,7 @@ export class Cat {
   /** Where the hollow of its curl is, in the world, for what it curls round. */
   hollow(out: THREE.Vector3): THREE.Vector3 {
     const side = this.v.crossVectors(this.up, this.fwd).normalize();
-    return out.copy(this.at).addScaledVector(side, 0.11 * this.scale).addScaledVector(this.fwd, 0.02 * this.scale).applyMatrix4(this.frameMatrix);
+    return out.copy(this.at).addScaledVector(side, 0.15 * this.scale).addScaledVector(this.fwd, 0.03 * this.scale).applyMatrix4(this.frameMatrix);
   }
 
   /**
@@ -1085,7 +1085,9 @@ export class Cat {
     /** Frightened means low: whatever it is doing it presses down, sinks its head and rounds its back. */
     const fear = clamp(this.fear, 0, 1.2);
     const flinch = this.flinch.step(0, 90, 11, dt);
-    const low = fear * (w.stand + 0.6 * w.sit + 0.5 * w.gather);
+    /** Shaking itself off it stands up tall on straight legs, however frightened. */
+    const shaking = this.shakeT >= 0 ? smooth(this.shakeT / 0.12) * (1 - smooth((this.shakeT - 0.65) / 0.4)) : 0;
+    const low = fear * (w.stand + 0.6 * w.sit + 0.5 * w.gather) * (1 - shaking);
     bodyY += flinch * 0.05 - low * 0.036 - fear * 0.006;
     flex += low * 0.2;
     neckLow += fear * 0.45;
@@ -1252,8 +1254,10 @@ export class Cat {
     }
     if (this.shakeT >= 0) {
       const t = this.shakeT;
-      const env = smooth(t / 0.12) * (1 - smooth((t - 0.65) / 0.4));
+      const env = shaking;
       const ph = t * Math.PI * 2 * 7.5;
+      neckLow *= 1 - env;
+      flex *= 1 - 0.7 * env;
       headRoll += Math.sin(ph) * 0.75 * env;
       headYaw += Math.sin(ph) * 0.25 * env;
       roll += Math.sin(ph - 1.1) * 0.3 * env;

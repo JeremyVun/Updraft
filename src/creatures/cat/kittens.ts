@@ -116,7 +116,7 @@ export class Kittens {
     this.away = -1;
     const at = mother ? mother.hollow(this.v) : this.v.copy(this.centre);
     const yaw = mother ? mother.yaw : 0;
-    const spots: [number, number, number][] = [[0.0, 0.0, 0.4], [0.13, -0.07, 2.2], [-0.05, 0.13, -1.6]];
+    const spots: [number, number, number][] = [[0.0, 0.02, 0.4], [0.09, -0.08, 2.2], [-0.03, 0.12, -1.6]];
     for (const [i, k] of this.cats.entries()) {
       const [x, z, turn] = spots[i];
       const c = Math.cos(yaw), s = Math.sin(yaw);

@@ -326,6 +326,7 @@ export class CatYard {
     this.place();
     this.tub.update(dt, atmo.uniforms.uTime.value);
     this.kittens.update(dt);
+    this.kittens.heard.length = 0;
     const cat = this.cat, child = this.child;
     if (this.kneelAt >= 0 && cat && child) {
       this.kneelAt += dt;
