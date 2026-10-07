@@ -6,7 +6,7 @@ import { CatRig, type Drives } from './cat/pose';
 import { Route } from './cat/route';
 import { applyCatLook, catMaterial, coatShells, type CatLook } from './cat/shader';
 
-export type CatPose = 'stand' | 'sit' | 'crouch';
+export type CatPose = 'stand' | 'sit' | 'crouch' | 'curl';
 export type Pace = 'walk' | 'trot' | 'run';
 /** The height of whatever it walks on under a point of the world. */
 export type Floor = (x: number, z: number) => number;
@@ -29,8 +29,12 @@ export interface JumpOptions {
   arc?: number;
   /** What it stands on once down, in the world; otherwise a level surface through the point. */
   floor?: Floor | null;
+  /** On something that tips (a sail, a swing's seat), it keeps itself upright in the world rather than tipping with it. */
+  upright?: boolean;
   then?: CatPose;
   look?: THREE.Vector3 | null;
+  /** Seconds it gathers before it springs, in place of a hop's or a leap's own. */
+  gather?: number;
 }
 
 export interface RunOptions {
@@ -61,18 +65,22 @@ interface Stance {
   tailUp: number;
   tailCurl: number;
   tailWrap: number;
+  /** Curved round to its left along the spine, and rolled over onto that side. */
+  bend: number;
+  roll: number;
 }
 
 /** Its own poses, and the gathered one it springs from. */
 type Hold = CatPose | 'gather';
 
 const STANCES: Record<Hold, Stance> = {
-  stand: { bodyY: 0.124, bodyZ: 0, pitch: 0.02, flex: 0.05, chestUp: 0, neckLow: 1.0, hock: 0.5, tuck: 0, front: [0.028, 0.066], hind: [0.036, -0.074], tailUp: 0.25, tailCurl: 0.15, tailWrap: 0 },
-  sit: { bodyY: 0.066, bodyZ: 0.006, pitch: 0.72, flex: 0.25, chestUp: 0.55, neckLow: 0, hock: 1.45, tuck: 0, front: [0.019, 0.08], hind: [0.047, 0.032], tailUp: -0.15, tailCurl: 0, tailWrap: 1 },
-  gather: { bodyY: 0.102, bodyZ: -0.012, pitch: -0.05, flex: 0.2, chestUp: 0, neckLow: 0.9, hock: 0.85, tuck: 0, front: [0.026, 0.068], hind: [0.036, -0.06], tailUp: 0.0, tailCurl: 0, tailWrap: 0 },
-  crouch: { bodyY: 0.068, bodyZ: -0.012, pitch: 0.03, flex: 0.62, chestUp: -0.1, neckLow: 1.25, hock: 1.45, tuck: 1.3, front: [0.022, 0.064], hind: [0.05, -0.012], tailUp: -0.9, tailCurl: 0, tailWrap: -1 },
+  stand: { bodyY: 0.124, bodyZ: 0, pitch: 0.02, flex: 0.05, chestUp: 0, neckLow: 1.0, hock: 0.5, tuck: 0, front: [0.028, 0.066], hind: [0.036, -0.074], tailUp: 0.25, tailCurl: 0.15, tailWrap: 0, bend: 0, roll: 0 },
+  sit: { bodyY: 0.066, bodyZ: 0.006, pitch: 0.72, flex: 0.25, chestUp: 0.55, neckLow: 0, hock: 1.45, tuck: 0, front: [0.019, 0.08], hind: [0.047, 0.032], tailUp: -0.15, tailCurl: 0, tailWrap: 1, bend: 0, roll: 0 },
+  gather: { bodyY: 0.102, bodyZ: -0.012, pitch: -0.05, flex: 0.2, chestUp: 0, neckLow: 0.9, hock: 0.85, tuck: 0, front: [0.026, 0.068], hind: [0.036, -0.06], tailUp: 0.0, tailCurl: 0, tailWrap: 0, bend: 0, roll: 0 },
+  crouch: { bodyY: 0.068, bodyZ: -0.012, pitch: 0.03, flex: 0.62, chestUp: -0.1, neckLow: 1.25, hock: 1.45, tuck: 1.3, front: [0.022, 0.064], hind: [0.05, -0.012], tailUp: -0.9, tailCurl: 0, tailWrap: -1, bend: 0, roll: 0 },
+  curl: { bodyY: 0.05, bodyZ: -0.01, pitch: 0.0, flex: 0.35, chestUp: -0.05, neckLow: 1.1, hock: 1.45, tuck: 1.4, front: [0.03, 0.06], hind: [0.05, -0.02], tailUp: -0.7, tailCurl: 0, tailWrap: 1, bend: 1, roll: 0.3 },
 };
-const POSES: Hold[] = ['stand', 'sit', 'crouch', 'gather'];
+const POSES: Hold[] = ['stand', 'sit', 'crouch', 'gather', 'curl'];
 
 const PACE: Record<Pace, { kind: GaitKind; speed: number }> = {
   walk: { kind: 'walk', speed: 0.6 },
@@ -111,8 +119,11 @@ export class Cat {
   readonly position = new THREE.Vector3();
   yaw = 0;
   visible = false;
-  /** How big it is: 1.15 stands it about a quarter of a metre at the shoulder, beside a child of about 1.1 m. */
-  scale = 1.15;
+  /**
+   * How big it is: 1.8 stands its back about at her knee and its ears, sitting, about at the middle of her thigh,
+   * larger than life so that it reads as a cat and a character from the room's distances.
+   */
+  scale = 1.8;
   /** How afraid it is underneath whatever happens, 0..1: the story sets it high in the tub and over the water. */
   unease = 0;
   /** 0 dry to 1 soaked. */
@@ -121,6 +132,8 @@ export class Cat {
   mewing = false;
   /** Something it glances at now and then while sitting, as at the cygnet in the satchel. */
   curious: THREE.Vector3 | null = null;
+  /** 0..1: cold and wet, it trembles finely through its body, ears and tail, and hunches. */
+  shiver = 0;
   /** What it did this frame that makes a sound; whoever plays them empties the list. */
   readonly heard: CatSound[] = [];
   /** QA: the furthest a planted paw moved in one frame, and the furthest a leg was asked to reach past its length. */
@@ -183,6 +196,7 @@ export class Cat {
   private readonly toFwd = new THREE.Vector3();
   private readonly toUp = new THREE.Vector3();
   private toFloor: Floor | null = null;
+  private uprightNext = false;
   private toYaw = 0;
   private toThen: CatPose = 'stand';
   private afterAir: (() => void) | null = null;
@@ -190,7 +204,7 @@ export class Cat {
   private readonly flightQ = new THREE.Quaternion();
   private flightPitch = 0;
 
-  private readonly weights: Record<Hold, number> = { stand: 0, sit: 1, crouch: 0, gather: 0 };
+  private readonly weights: Record<Hold, number> = { stand: 0, sit: 1, crouch: 0, gather: 0, curl: 0 };
   private readonly d: Drives;
   private readonly paws = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
   private readonly homes = [new THREE.Vector2(), new THREE.Vector2(), new THREE.Vector2(), new THREE.Vector2()];
@@ -224,6 +238,20 @@ export class Cat {
   private twitchL = 0;
   private twitchR = 0;
   private readonly washAt = new THREE.Vector3();
+  private staring: THREE.Vector3 | null = null;
+  private nuzzling: THREE.Vector3 | null = null;
+  private readonly legs = new THREE.Vector3();
+  private rubbing = false;
+  private upright = false;
+  private dropping = false;
+  private turnLead = 0;
+  private shakeT = -1;
+  private slowT = -1;
+  private flinchIn = 3;
+  private downT = -1;
+  private batT = -1;
+  private readonly batAt = new THREE.Vector3();
+  private toppleT = -1;
 
   private readonly osc = { bodyY: 0, pitch: 0, flex: 0, roll: 0, head: 0 };
   private readonly v = new THREE.Vector3();
@@ -249,7 +277,7 @@ export class Cat {
       bodyY: STANCES.sit.bodyY, bodyZ: 0, pitch: STANCES.sit.pitch, roll: 0, flex: 0, chestUp: STANCES.sit.chestUp, neckLow: 0,
       headYaw: 0, headPitch: 0, headRoll: 0, jaw: 0, earBack: 0, earTwitch: [0, 0],
       tailLift: 0, tailSwing: 0, tailCurl: 0, tailWrap: 1, tailWave: 0, tailFlick: 0,
-      paws: this.paws.map((at) => ({ at, curl: 0 })), hock: [1.45, 1.45], breath: 0,
+      paws: this.paws.map((at) => ({ at, curl: 0 })), hock: [1.45, 1.45], breath: 0, bend: 0,
     };
   }
 
@@ -276,10 +304,12 @@ export class Cat {
    * Puts it somewhere at once, for the room's start or a save: a point on `frame` (or in the world), which way it faces
    * there, how it holds itself, and the floor under it if it is on the world's roofs rather than a level surface.
    */
-  place(at: THREE.Vector3, yaw: number, opts: { frame?: THREE.Object3D | null; pose?: CatPose; floor?: Floor | null } = {}): void {
+  place(at: THREE.Vector3, yaw: number, opts: { frame?: THREE.Object3D | null; pose?: CatPose; floor?: Floor | null; upright?: boolean } = {}): void {
     this.cancel();
     this.reframed = true;
     this.frame = opts.frame ?? null;
+    this.upright = !!opts.upright;
+    this.shakeT = this.slowT = this.batT = this.toppleT = this.downT = -1;
     this.updateFrame();
     this.at.copy(at);
     this.floor = this.frame ? null : opts.floor ?? null;
@@ -361,6 +391,70 @@ export class Cat {
     this.heard.push({ kind: 'chirrup', amount: 1 });
   }
 
+  /** Shakes the water off as a wet cat does, a twist running from its head down its body to its tail, about a second. */
+  shake(): void {
+    this.shakeT = 0;
+  }
+
+  /** The slow blink: its eyes close for a long moment and open again as its head dips a little. Trust. */
+  slowBlink(): void {
+    this.slowT = 0;
+  }
+
+  /**
+   * Holds its eyes on `target` and nothing else: ears flat back, low, its head forward, the tip of its tail twitching.
+   * Null lets it go back to looking about.
+   */
+  stare(target: THREE.Vector3 | null): void {
+    this.staring = target;
+    if (target) this.target = target;
+  }
+
+  /**
+   * Rubs against her legs: comes to the front of them (`legs`, between her feet; `facing`, the way she faces) and
+   * goes along her shins leaning its flank and cheek into them, tail straight up, turns at the end and comes back the
+   * other way, then sits at her feet looking up at `face` and calls `onDone`. About six seconds.
+   */
+  press(legs: THREE.Vector3, facing: number, floor: Floor, face: THREE.Vector3, onDone?: () => void): void {
+    this.legs.copy(legs);
+    const fx = Math.sin(facing), fz = Math.cos(facing);
+    const side = (this.position.x - legs.x) * fz - (this.position.z - legs.z) * fx >= 0 ? 1 : -1;
+    const k = this.scale / 1.8;
+    const at = (ahead: number, across: number) => new THREE.Vector3(legs.x + fx * ahead + fz * across * side, legs.y, legs.z + fz * ahead - fx * across * side);
+    const pass = [at(0.3 * k, 0.55 * k), at(0.2 * k, 0.2 * k), at(0.19 * k, -0.2 * k), at(0.3 * k, -0.42 * k), at(0.48 * k, -0.3 * k), at(0.42 * k, 0)];
+    this.run([at(0.42 * k, 0.75 * k)], floor, { pace: 'walk', then: 'stand' }, () => {
+      this.rubbing = true;
+      this.run(pass, floor, { pace: 'walk', speed: 0.32, then: 'sit', look: face }, () => {
+        this.rubbing = false;
+        this.chirrup();
+        onDone?.();
+      });
+    });
+  }
+
+  /** Pushes its head up into `hand` with its eyes shut, rubbing its cheek on it, as she strokes it; null stops. */
+  nuzzle(hand: THREE.Vector3 | null): void {
+    this.nuzzling = hand;
+    if (hand) this.target = hand;
+  }
+
+  /** A kitten's swipe of a front paw at `at`. */
+  bat(at: THREE.Vector3): void {
+    this.batT = 0;
+    this.batAt.copy(at);
+  }
+
+  /** A kitten bowled over onto its side, paws up, and back onto its feet. */
+  topple(): void {
+    this.toppleT = 0;
+  }
+
+  /** Where the hollow of its curl is, in the world, for what it curls round. */
+  hollow(out: THREE.Vector3): THREE.Vector3 {
+    const side = this.v.crossVectors(this.up, this.fwd).normalize();
+    return out.copy(this.at).addScaledVector(side, 0.11 * this.scale).addScaledVector(this.fwd, 0.02 * this.scale).applyMatrix4(this.frameMatrix);
+  }
+
   /**
    * A small jump to `to`, a point on `opts.frame` (or in the world): a moment's gather, a quick arc, down, and
    * `onDone` once it has taken the landing, about half a second plus the flight.
@@ -407,10 +501,13 @@ export class Cat {
    * the last point is the floor of the opening it pulls itself into. It leaps onto the wall, climbs, and scrambles
    * over the lip, then holds `then` there looking at `look`, and calls `onDone`. It climbs at 0.8 metres a second.
    */
-  climb(path: readonly THREE.Vector3[], out: THREE.Vector3, opts: { then?: CatPose; look?: THREE.Vector3 | null } = {}, onDone?: () => void): void {
+  climb(path: readonly THREE.Vector3[], out: THREE.Vector3, opts: { then?: CatPose; look?: THREE.Vector3 | null; frame?: THREE.Object3D | null; speed?: number; gather?: number } = {}, onDone?: () => void): void {
     if (this.airborne(() => this.climb(path, out, opts, onDone))) return;
     this.cancel();
     this.toWorld();
+    const frame = opts.frame ?? null;
+    this.climbSpeed = opts.speed ?? CLIMB_SPEED;
+    this.dropping = false;
     this.wall.copy(out).setY(0).normalize();
     const face = path.slice(0, -1);
     const ledge = path[path.length - 1].clone();
@@ -420,7 +517,7 @@ export class Cat {
     const inward = this.w.copy(this.wall).negate();
     const yawIn = Math.atan2(inward.x, inward.z);
     this.onDone = onDone ?? null;
-    this.launch(first, null, upWall, this.wall, null, 0.12, true, 'stand', () => {
+    this.launch(first, frame, upWall, this.wall, null, 0.07 * this.scale, true, 'stand', () => {
       this.climbing = route;
       this.along = 0;
       this.gait.kind = 'climb';
@@ -428,13 +525,14 @@ export class Cat {
       this.speed = 0;
       this.floor = null;
       this.climbDone = () => {
-        this.launch(ledge, null, new THREE.Vector3(Math.sin(yawIn), 0, Math.cos(yawIn)), UP, null, 0.08, false, opts.then ?? 'sit', () => this.finish(opts.then ?? 'sit'));
+        this.launch(ledge, frame, new THREE.Vector3(Math.sin(yawIn), 0, Math.cos(yawIn)), UP, null, 0.045 * this.scale, false, opts.then ?? 'sit', () => this.finish(opts.then ?? 'sit'));
       };
-    });
+    }, opts.gather);
     if (opts.look !== undefined) this.target = opts.look;
     this.toYaw = yawIn;
   }
   private climbDone: (() => void) | null = null;
+  private climbSpeed = CLIMB_SPEED;
 
   private jump(to: THREE.Vector3, opts: JumpOptions, leap: boolean, onDone?: () => void): void {
     if (this.airborne(() => this.jump(to, opts, leap, onDone))) return;
@@ -455,18 +553,21 @@ export class Cat {
       } else yaw = away;
     }
     const fwd = new THREE.Vector3(Math.sin(yaw), 0, Math.cos(yaw));
-    const arc = opts.arc ?? (leap ? 0.12 + span * 0.1 : 0.06 + span * 0.08);
+    const drop = this.position.y - there.y;
+    this.dropping = drop > 0.2 * this.scale && drop > span * 0.5;
+    const arc = opts.arc ?? (this.dropping ? 0.02 * this.scale : leap ? 0.07 * this.scale + span * 0.1 : 0.035 * this.scale + span * 0.08);
     if (opts.look !== undefined) this.target = opts.look;
-    this.launch(to, frame, fwd, UP, frame ? null : opts.floor ?? null, arc, leap, then, () => this.finish(then));
+    this.uprightNext = !!opts.upright;
+    this.launch(to, frame, fwd, UP, frame ? null : opts.floor ?? null, arc, leap, then, () => this.finish(then), opts.gather);
   }
 
   /** Sets up a flight from where it stands to a point on something, eyed, gathered for, flown and landed. */
-  private launch(to: THREE.Vector3, frame: THREE.Object3D | null, fwd: THREE.Vector3, up: THREE.Vector3, floor: Floor | null, arc: number, leap: boolean, then: CatPose, after: () => void): void {
+  private launch(to: THREE.Vector3, frame: THREE.Object3D | null, fwd: THREE.Vector3, up: THREE.Vector3, floor: Floor | null, arc: number, leap: boolean, then: CatPose, after: () => void, gather?: number): void {
     this.doing = 'air';
     this.air = 'gather';
     this.airT = 0;
     this.leaping = leap;
-    this.gatherFor = leap ? 0.75 : 0.28;
+    this.gatherFor = gather ?? (leap ? 0.75 : this.dropping ? 0.45 : 0.28);
     this.landFor = leap ? 0.4 : 0.28;
     this.toFrame = frame;
     this.toAt.copy(to);
@@ -534,6 +635,7 @@ export class Cat {
     for (const p of this.gait.paws) p.at.applyMatrix4(f);
     for (const p of this.paws) p.applyMatrix4(f);
     this.frame = null;
+    this.upright = false;
     this.updateFrame();
     this.fwd.addScaledVector(UP, -this.fwd.dot(UP)).normalize();
     this.up.copy(UP);
@@ -597,6 +699,11 @@ export class Cat {
     if (!this.visible) return;
     this.time += dt;
     this.updateFrame();
+    if (this.upright && this.frame && this.doing === 'still') {
+      this.up.set(0, 1, 0).transformDirection(this.frameInverse);
+      this.fwd.addScaledVector(this.up, -this.fwd.dot(this.up)).normalize();
+    }
+    this.turnLead = 0;
 
     if (this.doing === 'path') this.follow(dt);
     else if (this.doing === 'climb') this.clamber(dt);
@@ -639,6 +746,7 @@ export class Cat {
     if (this.turnTo !== null) {
       /** Round on the spot at a cat's own unhurried pace, easing in and out of it. */
       const err = wrapAngle(this.turnTo - this.heading);
+      this.turnLead = err;
       this.turning = ease(this.turning, clamp(err * 3, -2.6, 2.6), 8, dt);
       this.heading += this.turning * dt;
       this.fwd.set(Math.sin(this.heading), 0, Math.cos(this.heading));
@@ -670,6 +778,8 @@ export class Cat {
     this.along = Math.min(route.length, this.along + this.speed * dt);
     route.at(this.along, this.at);
     this.at.y = this.floor!(this.at.x, this.at.z);
+    const ahead = route.tangent(Math.min(route.length, this.along + 0.35 * this.scale), this.w2);
+    this.turnLead = wrapAngle(Math.atan2(ahead.x, ahead.z) - this.heading);
     this.turnToward(want, 7, this.speed > 0.5 ? 6 : 2.6, dt);
     this.fwd.set(Math.sin(this.heading), 0, Math.cos(this.heading));
     if (left < 0.004 && this.speed < 0.05) {
@@ -684,7 +794,7 @@ export class Cat {
   private clamber(dt: number): void {
     const route = this.climbing!;
     const left = route.length - this.along;
-    this.speed = Math.min(ease(this.speed, CLIMB_SPEED, 3, dt), Math.sqrt(2 * 3 * Math.max(0, left)) + 0.15);
+    this.speed = Math.min(ease(this.speed, this.climbSpeed, 3, dt), Math.sqrt(2 * 3 * Math.max(0, left)) + 0.15);
     this.along = Math.min(route.length, this.along + this.speed * dt);
     route.at(this.along, this.at);
     route.tangent(this.along, this.fwd, 0.1);
@@ -760,6 +870,7 @@ export class Cat {
     this.up.transformDirection(this.frameMatrix);
     for (const p of this.paws) p.applyMatrix4(this.frameMatrix);
     this.frame = null;
+    this.upright = false;
     this.onWall = false;
     this.reframed = true;
     this.updateFrame();
@@ -850,6 +961,8 @@ export class Cat {
   private touchDown(): void {
     this.ends();
     this.frame = this.toFrame;
+    this.upright = this.uprightNext && !!this.frame;
+    this.uprightNext = false;
     this.updateFrame();
     const local = this.v.copy(this.endW).applyMatrix4(this.frameInverse);
     this.at.copy(local);
@@ -905,12 +1018,22 @@ export class Cat {
     const twitch = (x: number) => (Math.random() < dt * 0.25 ? 1 : x * Math.exp(-dt * 6));
     this.twitchL = twitch(this.twitchL);
     this.twitchR = twitch(this.twitchR);
+    for (const t of ['shakeT', 'slowT', 'batT', 'toppleT', 'downT'] as const) if (this[t] >= 0) this[t] = this[t] + dt > { shakeT: 1.1, slowT: 2.4, batT: 0.45, toppleT: 1.3, downT: 0.9 }[t] ? -1 : this[t] + dt;
+    /** Stranded and frightened, every few seconds the water below makes it flinch and look down at it. */
+    if (this.mewing && this.fear > 0.4 && this.doing === 'still' && !this.staring) {
+      this.flinchIn -= dt;
+      if (this.flinchIn <= 0) {
+        this.flinchIn = 3.5 + Math.random() * 3;
+        this.afraid(0.3);
+        this.downT = 0;
+      }
+    }
     this.idles(dt);
   }
 
   /** Sitting with nothing asked of it: it washes a paw, flicks its tail, glances at what it is curious about, slow-blinks. */
   private idles(dt: number): void {
-    const sitting = this.doing === 'still' && this.turnTo === null && this.weights.sit > 0.9;
+    const sitting = this.doing === 'still' && this.turnTo === null && this.weights.sit > 0.9 && !this.staring && !this.nuzzling && this.slowT < 0;
     if (this.idle) {
       this.idleT += dt;
       if (this.idleT >= this.idleFor || (!sitting && this.idle === 'wash')) this.idle = null;
@@ -941,7 +1064,8 @@ export class Cat {
     let tailUp = blend('tailUp');
     let tailCurl = blend('tailCurl');
     let tailWrap = blend('tailWrap');
-    let roll = 0;
+    let roll = blend('roll');
+    const bend = blend('bend');
     let earBack = 0;
     let headYaw = this.wander.x;
     let headPitch = this.wander.y * 0.5;
@@ -968,6 +1092,23 @@ export class Cat {
     earBack += fear;
     tailWave *= 1 - fear * 0.7;
     pupil += fear * 0.14;
+
+    const shiver = clamp(this.shiver, 0, 1);
+    const tremble = shiver * (Math.sin(this.time * 58) * 0.6 + Math.sin(this.time * 41 + 1) * 0.4);
+    roll += tremble * 0.035;
+    bodyY += tremble * 0.0015 - shiver * 0.01;
+    flex += shiver * 0.15;
+    neckLow += shiver * 0.35;
+    earBack += shiver * 0.3;
+    tailWave *= 1 - shiver * 0.8;
+    if (this.staring) {
+      earBack = Math.max(earBack, 0.9);
+      pupil += 0.3;
+      bodyY -= 0.012;
+      neckLow += 0.3;
+      flex += 0.1;
+      tailWave = 0;
+    }
 
     const osc = this.osc;
     osc.bodyY = osc.pitch = osc.flex = osc.roll = osc.head = 0;
@@ -1033,6 +1174,12 @@ export class Cat {
       const gather = this.air === 'gather' ? smooth(this.airT / Math.min(0.25, this.gatherFor)) : 0;
       if (this.air === 'gather') {
         bodyY -= (this.leaping ? 0.012 : 0) * gather;
+        if (this.dropping) {
+          /** Going down, it leans out over the edge and looks at where it will land before it lets itself go. */
+          pitch -= 0.45 * gather;
+          neckLow += 0.35 * gather;
+          bodyZ += 0.02 * gather;
+        }
         if (this.leaping && this.airT > 0.2 && this.airT < this.gatherFor - 0.1) {
           /** The wiggle: the hindquarters shuffle from side to side while the eyes stay fixed on the far side. */
           roll += 0.07 * Math.sin((this.airT - 0.2) * 22) * smooth((this.airT - 0.2) / 0.1);
@@ -1056,7 +1203,15 @@ export class Cat {
     }
 
     /** It looks at what it is told to, or at where it is going when it is about to jump. */
-    const gaze = this.doing === 'air' && this.air === 'gather' ? this.v.copy(this.toAt).applyMatrix4(this.toFrame ? worldOf(this.toFrame) : IDENTITY) : this.idle === 'glance' && this.curious ? this.curious : this.target;
+    const down = this.downT >= 0 ? this.v.copy(this.at).addScaledVector(this.fwd, 0.4 * this.scale).addScaledVector(this.up, -1.5).applyMatrix4(this.frameMatrix) : null;
+    const gaze = this.doing === 'air' && this.air === 'gather' ? this.v.copy(this.toAt).applyMatrix4(this.toFrame ? worldOf(this.toFrame) : IDENTITY)
+      : down ?? (this.staring ?? (this.idle === 'glance' && this.curious ? this.curious : this.target));
+    if (!gaze && w.curl > 0.05) {
+      /** Curled up with nothing to watch, it tucks its head round into the curve of its body. */
+      headYaw = THREE.MathUtils.lerp(headYaw, 1.1, w.curl);
+      headPitch = THREE.MathUtils.lerp(headPitch, -0.35, w.curl);
+      headRoll += 0.3 * w.curl;
+    }
     if (gaze && !(this.doing === 'climb')) {
       const local = this.toLocal(gaze, this.w);
       const yaw = Math.atan2(local.x, local.z - 0.11);
@@ -1066,6 +1221,71 @@ export class Cat {
       headPitch = clamp(pitchTo, -0.9, 0.8);
       /** Watching what it is curious about while it is calm and still, it tips its head to one side. */
       if (gaze === this.curious && this.doing === 'still') headRoll -= 0.26 * (1 - clamp(fear * 2.5, 0, 1));
+    }
+    if (this.doing === 'path' || this.turnTo !== null) headYaw = clamp(headYaw + this.turnLead * 0.7, -1.5, 1.5);
+    if (this.staring) tailFlick = Math.sin(this.time * 9) * 0.55 * (0.6 + 0.4 * Math.sin(this.time * 1.3));
+    headRoll += tremble * 0.03;
+
+    let lids = 0;
+    if (this.rubbing && this.doing === 'path') {
+      /** Along her shins: its flank and cheek lean into them and its tail stands straight up, hooked at the tip. */
+      const l = this.toLocal(this.legs, this.w);
+      const near = 1 - smooth((Math.hypot(l.x, l.z) - 0.12) / 0.16);
+      const side = Math.sign(l.x) || 1;
+      roll += side * 0.2 * near;
+      headRoll += side * 0.45 * near;
+      headYaw = THREE.MathUtils.lerp(headYaw, side * 0.55, near);
+      headPitch = THREE.MathUtils.lerp(headPitch, 0.15, near);
+      tailUp = 1.25;
+      tailCurl = 0.35;
+      earBack = Math.min(earBack, 0.1);
+      lids = 0.5 * near;
+    }
+    if (this.nuzzling && this.doing === 'still') {
+      chestUp += 0.15;
+      headPitch += 0.15;
+      headRoll += Math.sin(this.time * 2.2) * 0.3;
+      earBack = Math.min(earBack, 0.15);
+      tailUp = Math.max(tailUp, 0.9);
+      tailCurl = 0.35;
+      lids = 0.9;
+    }
+    if (this.shakeT >= 0) {
+      const t = this.shakeT;
+      const env = smooth(t / 0.12) * (1 - smooth((t - 0.65) / 0.4));
+      const ph = t * Math.PI * 2 * 7.5;
+      headRoll += Math.sin(ph) * 0.75 * env;
+      headYaw += Math.sin(ph) * 0.25 * env;
+      roll += Math.sin(ph - 1.1) * 0.3 * env;
+      tailFlick = Math.sin(ph - 2.2) * 1.2 * env;
+      earBack = Math.max(earBack, 0.4 * env);
+      lids = Math.max(lids, 0.8 * env);
+    }
+    if (this.slowT >= 0) {
+      const t = this.slowT;
+      const shut = t < 0.55 ? smooth(t / 0.55) : t < 1.25 ? 1 : 1 - smooth((t - 1.25) / 1.0);
+      lids = Math.max(lids, 0.97 * shut);
+      headPitch -= 0.14 * shut;
+      headRoll += 0.1 * shut;
+      earBack *= 1 - 0.5 * shut;
+    }
+    if (this.toppleT >= 0) {
+      const t = this.toppleT;
+      const over = smooth(t / 0.25) * (1 - smooth((t - 0.85) / 0.4));
+      roll += 1.1 * over;
+      bodyY -= 0.035 * over;
+      headRoll -= 0.5 * over;
+      for (let i = 0; i < 4; i++) {
+        this.paws[i].addScaledVector(this.up, (i < 2 ? 0.05 : 0.03) * this.scale * over);
+        this.d.paws[i].curl = Math.max(this.d.paws[i].curl, 1.1 * over);
+      }
+    }
+    if (this.batT >= 0) {
+      const u = Math.sin((this.batT / 0.45) * Math.PI);
+      const at = this.w.copy(this.batAt).applyMatrix4(this.frameInverse);
+      this.paws[0].lerp(at, 0.75 * u);
+      this.d.paws[0].curl = 1.2 * u;
+      headPitch -= 0.1 * u;
     }
 
     if (this.idle === 'wash') {
@@ -1136,14 +1356,17 @@ export class Cat {
     d.roll = ease(d.roll, roll, rate, dt);
     d.flex = ease(d.flex, flex, rate, dt);
     d.chestUp = ease(d.chestUp, chestUp, rate * 0.8, dt);
+    d.bend = ease(d.bend, bend, 4, dt);
     d.neckLow = ease(d.neckLow, neckLow, 6, dt);
     d.headYaw = ease(d.headYaw, headYaw, 7, dt);
     d.headPitch = ease(d.headPitch, headPitch, 7, dt);
     d.headRoll = ease(d.headRoll, headRoll, 6, dt);
     d.jaw = ease(d.jaw, jaw, 18, dt);
     d.earBack = clamp(ears, -0.1, 0.95);
-    d.earTwitch[0] = this.twitchL * (1 - d.earBack);
-    d.earTwitch[1] = -this.twitchR * (1 - d.earBack);
+    /** Its ears turn ahead of a turn, and flap as it shakes. */
+    const lead = clamp(this.turnLead * 0.6, -0.6, 0.6) + (this.shakeT >= 0 ? Math.sin(this.shakeT * 47) * 0.8 * (1 - smooth((this.shakeT - 0.6) / 0.4)) : 0);
+    d.earTwitch[0] = (this.twitchL + lead + tremble * 0.3) * (1 - d.earBack);
+    d.earTwitch[1] = (-this.twitchR - lead - tremble * 0.3) * (1 - d.earBack);
     const hockRate = this.doing === 'air' ? 12 : 6;
     d.hock[0] = ease(d.hock[0], hock, hockRate, dt);
     d.hock[1] = ease(d.hock[1], hock, hockRate, dt);
@@ -1158,7 +1381,7 @@ export class Cat {
     const look = this.lookNow;
     const blink = this.blinkT >= 0 ? Math.sin((this.blinkT / 0.16) * Math.PI) : 0;
     const slow = this.idle === 'blink' ? Math.sin((this.idleT / this.idleFor) * Math.PI) ** 0.6 * 0.85 : 0;
-    look.blink = Math.max(blink, slow);
+    look.blink = this.staring ? 0 : Math.max(blink, slow, lids, w.curl * (1 - clamp(fear * 3, 0, 1)) * (gaze ? 0 : 0.85));
     look.pupil = clamp(pupil, 0.6, 0.93);
     look.air = 0.6;
     look.wet = this.wet;
@@ -1209,7 +1432,7 @@ export class Cat {
       this.plantedWas.fill(false);
     }
     for (let i = 0; i < 4; i++) {
-      const planted = this.doing !== 'air' && this.gait.paws[i].planted && !(this.idle === 'wash' && i === 1);
+      const planted = this.doing !== 'air' && this.gait.paws[i].planted && !(this.idle === 'wash' && i === 1) && !(this.batT >= 0 && i === 0) && this.toppleT < 0;
       this.pawW.copy(this.paws[i]);
       if (planted && this.plantedWas[i]) this.probe.slip = Math.max(this.probe.slip, this.pawW.distanceTo(this.pawsWas[i]));
       this.pawsWas[i].copy(this.pawW);

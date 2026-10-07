@@ -62,6 +62,7 @@ export class StrandedCat {
   private readonly hullWall: TubWall = { x: 0, z: 0, yaw: 0, len: HULL_HALF, depth: HULL_LEN };
   private readonly dock = { x: 0, z: 0, reach: 0 };
   private readonly edge = new THREE.Vector3();
+  private readonly goalXZ = new THREE.Vector2();
   private readonly v = new THREE.Vector3();
   private readonly lens = new THREE.Vector3();
   private side = 1;
@@ -255,6 +256,7 @@ export class StrandedCat {
         break;
     }
     if (!this.puzzling) {
+      tub.goal = null;
       this.invitation = null;
       tub.dock = this.step === 'coming' || this.step === 'boarding' ? tub.dock : null;
     }
@@ -317,6 +319,7 @@ export class StrandedCat {
   private bringTo(dt: number, goal: THREE.Vector3, reach: number): void {
     const tub = this.tub, k = tuning.drowned.cat;
     const d = Math.hypot(tub.position.x - goal.x, tub.position.z - goal.z);
+    tub.goal = this.goalXZ.set(goal.x, goal.z);
     if (d < reach || tub.dock) {
       tub.dock = this.dock;
       this.dock.x = goal.x;

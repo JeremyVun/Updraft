@@ -1880,14 +1880,19 @@ export const tuning = {
        * A stroke passing within `brushReach` metres of it on screen (and never less than `brushFloor` of the screen's
        * half height) pushes it, and lays a gust of `windRadius` at it with gust energy at `energyScale` stroke speed a unit.
        */
-      brushReach: 1.8, brushFloor: 0.15, windRadius: 2.6, energyScale: 20,
+      brushReach: 2.4, brushFloor: 0.2, windRadius: 2.6, energyScale: 20,
       /**
        * The share of the stroke's speed over the water it goes at, the most it goes, how quickly it takes the stroke
        * up, and how fast it loses its way once the stroke has gone, per second: it slows and settles where it is left.
        */
-      take: 0.22, topSpeed: 2.2, grip: 9, drag: 0.9,
+      take: 0.3, topSpeed: 2.2, grip: 9, drag: 0.9,
       /** Screen heights a second a stroke starts to push it at, and pushes it in full at. */
-      flickFrom: 0.25, flickFull: 0.7,
+      flickFrom: 0.12, flickFull: 0.45,
+      /**
+       * Nearing where it is being brought: within `easeFrom` metres a stroke whose way is within `aimFrom` (the cosine
+       * of the angle) of it is bent toward it, and it drifts on in by itself at up to `easeSpeed` m/s.
+       */
+      easeFrom: 4.5, aimFrom: -0.2, easeSpeed: 0.5,
       /** Out of its water it drifts back at up to `homeSpeed` m/s, `homePull` m/s a metre beyond the edge. */
       homeSpeed: 0.45, homePull: 0.3,
       /** The world's own air carrying it once nobody has managed it, m/s. */
@@ -1897,7 +1902,7 @@ export const tuning = {
       /** How much it turns for its way through the water. */
       turn: 0.7,
       /** How deep it floats empty and with the cat in it. */
-      draft: 0.085, ladenDraft: 0.125,
+      draft: 0.085, ladenDraft: 0.14,
     },
     /** The stranded cat, the tub's two trips, and the cat's bolt from the bow when the dark has come on. */
     cat: {
