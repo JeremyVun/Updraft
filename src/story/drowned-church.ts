@@ -19,6 +19,8 @@ const DARK_END = DARK_WAY.reduce((sum, p, i) => (i ? sum + p.distanceTo(DARK_WAY
 const RIDGE_TOP = new THREE.Vector3(NAVE_NORTH.x0, NAVE_NORTH.height, NAVE_NORTH.z0);
 const SLATES_FOOT = new THREE.Vector3(NAVE_NORTH.x1, NAVE_NORTH.height1!, NAVE_NORTH.z1);
 const sill = () => TOWER.sill;
+/** The cat's eye as it sits on the north sill looking down at her as she goes. */
+const BELFRY_CAT = BELFRY_NORTH.clone().setY(BELFRY_NORTH.y + 0.25);
 
 /** A view the lens comes round to: where it looks, its bearing from there (atan2(x, z)), how far off and how high. */
 interface View {
@@ -357,6 +359,7 @@ export class ChurchArrival {
   private readonly waterView: View = { target: new THREE.Vector3(), bearing: 0, distance: 20, eye: 2.6, zoom: 1 };
   private readonly waterEye = new THREE.Vector3();
   private readonly mixEye = new THREE.Vector3();
+  private readonly waterClose = new THREE.Vector3();
   private readonly waterAim = new THREE.Vector3();
   private readonly mixTarget = new THREE.Vector3();
   private readonly goneFrom = new THREE.Vector3();
@@ -373,9 +376,10 @@ export class ChurchArrival {
     const k = tuning.drownedCamera.church;
     const { child, boat } = this.cast;
     const near = back || this.aboardFor >= 0 ? 1 : 1 - THREE.MathUtils.clamp((this.left - 4) / 18, 0, 1);
-    const far = k.waterFar, close = k.waterNear;
-    const e = this.waterEye.set(TOWER.x + THREE.MathUtils.lerp(far.x, close.x, near), THREE.MathUtils.lerp(far.y, close.y, near),
-      TOWER.z + THREE.MathUtils.lerp(far.z, close.z, near));
+    const far = k.waterFar, lerp = THREE.MathUtils.lerp;
+    const close = this.waterClose.set(lerp(k.uprightWaterNear.x, k.waterNear.x, wide), lerp(k.uprightWaterNear.y, k.waterNear.y, wide),
+      lerp(k.uprightWaterNear.z, k.waterNear.z, wide));
+    const e = this.waterEye.set(TOWER.x + lerp(far.x, close.x, near), lerp(far.y, close.y, near), TOWER.z + lerp(far.z, close.z, near));
     const head = this.tmp.copy(child.position).setY(child.position.y + 1.1);
     /** Under way, it goes with her, keeping where it stood from her as she sat down. */
     if (this.aboardFor >= 0) {
@@ -385,17 +389,18 @@ export class ChurchArrival {
     }
     if (back) {
       /**
-       * First on her and the cat in the belfry she turns to look back at; then, as the light falters, across to between
-       * the boat on the water and the lighthouse's lamp, so the light she leaves stands over her as it goes.
+       * First on her and the cat in the belfry she turns to look back at (landscape); then, as the light falters, across
+       * to between the boat on the water and the lighthouse's lamp, so the light she leaves stands over her as it goes.
        */
       const p = boat.position, l = this.lamp;
       const toBoat = Math.hypot(p.x - e.x, p.z - e.z), toLamp = Math.hypot(l.x - e.x, l.z - e.z);
       const from = Math.atan2(p.x - e.x, p.z - e.z), to = Math.atan2(l.x - e.x, l.z - e.z);
       const across = from + Math.atan2(Math.sin(to - from), Math.cos(to - from)) * k.backAcross;
       const up = THREE.MathUtils.lerp(Math.atan2(p.y - e.y, toBoat), Math.atan2(l.y - e.y, toLamp), k.backUp);
-      const light = THREE.MathUtils.smootherstep(this.aboardFor, k.backLightFrom, k.backLightTo);
+      /** Upright the belfry and the lamp cannot share the narrow frame, and the light must be seen going. */
+      const light = Math.max(1 - wide, THREE.MathUtils.smootherstep(this.aboardFor, k.backLightFrom, k.backLightTo));
       out.target.set(e.x + Math.sin(across) * toBoat, e.y + Math.tan(up) * toBoat, e.z + Math.cos(across) * toBoat)
-        .lerp(this.waterAim.copy(head).lerp(this.catEye, k.backCat), 1 - light);
+        .lerp(this.waterAim.copy(head).lerp(BELFRY_CAT, k.backCat), 1 - light);
     } else out.target.copy(head).lerp(boat.position, k.waterToward * (1 - near)).setY(k.waterAim);
     const reach = Math.hypot(e.x - out.target.x, e.z - out.target.z);
     out.bearing = Math.atan2(e.x - out.target.x, e.z - out.target.z);

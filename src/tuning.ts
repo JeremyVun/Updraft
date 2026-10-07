@@ -2000,16 +2000,18 @@ export const tuning = {
       roundFrom: 0, roundFor: 10, roundWide: 11,
       /**
        * Over the water off the nave's west end: where it stands from the tower's middle with the boat still at its tree
-       * and with it come in; how far from her toward the boat it looks while it is far off, at what height, and its lens.
+       * and with it come in (upright, further out, clear of the nave's eave); how far from her toward the boat it looks
+       * while it is far off, at what height, and its lens.
        */
-      waterFar: { x: -29, y: 2.8, z: -15 }, waterNear: { x: -15.6, y: 2.4, z: -6.8 }, waterToward: 0.45, waterAim: 3, waterZoom: 0.9,
+      waterFar: { x: -29, y: 2.8, z: -15 }, waterNear: { x: -18, y: 2.4, z: -7.5 },
+      uprightWaterNear: { x: -23, y: 2.4, z: -11 }, waterToward: 0.45, waterAim: 3, waterZoom: 0.9,
       /**
        * Going: seconds after she is seated it starts to give way to the storm's frame, and how long it takes; meanwhile
        * how far from her toward the cat it looks while she looks back, and seconds after she is seated it starts across
        * to the light and is there; how far across from the boat to the lighthouse's lamp it then looks and how far up
        * from the one to the other, and its lens (upright, the same).
        */
-      leaveFrom: 7, leaveFor: 9, backCat: 0.45, backLightFrom: 1.5, backLightTo: 5, backAcross: 0.5, backUp: 0.62, backZoom: 0.78, backUprightZoom: 0.85,
+      leaveFrom: 7, leaveFor: 9, backCat: 0.42, backLightFrom: 1.5, backLightTo: 5, backAcross: 0.5, backUp: 0.62, backZoom: 0.78, backUprightZoom: 0.85,
     },
     /** Follow the boat into the streets; notice the church from that travelling view. */
     roofFromZ: -1260, roofUntilZ: -1360,
