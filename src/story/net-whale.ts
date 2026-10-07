@@ -500,11 +500,11 @@ export class NetWhale {
     const rest = pair?.secondary ?? s.primary;
     s.secondary.copy(whale.blowhole).y += whale.phase === 'free' && whale.time < FREE_FLUKES_FROM - 3 ? 8 : 2.5;
     s.tertiary.copy(whale.eye);
-    if (glance > 0) s.tertiary.lerp(this.a.copy(whale.flukes).setY(Math.max(whale.flukes.y, 1)), glance);
+    if (glance > 0) s.tertiary.lerp(this.a.copy(whale.flukes).setY(Math.max(whale.flukes.y, 1)), glance * 0.6);
     s.secondary.lerp(rest, 1 - h);
     s.tertiary.lerp(rest, 1 - h);
     s.margin = THREE.MathUtils.lerp(pair?.margin ?? 0.85, 0.85, h);
-    s.extra = THREE.MathUtils.lerp(pair?.extra ?? 10, 10 + 20 * out, h);
+    s.extra = THREE.MathUtils.lerp(pair?.extra ?? 10, 10 + 8 * out, h);
     shot.subjects = s;
   }
 }
