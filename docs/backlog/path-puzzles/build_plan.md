@@ -466,13 +466,133 @@ Gate: typecheck; build; the check with real gestures: each step done by its gest
 progress a step before its valve; each valve finishes its step by its dolphin; sweeps on the whale elsewhere only
 tickle; saves at each checkpoint resume correctly; each negative proven to bite by breaking its guard once. One smoke
 still set at `k3` and `k4`.
+Done: [x] `9d8acd44..3953956a`. The bird drops in on its own side, swims round the stern, takes the end (`net.endRest`,
+outside the flipper's sweep; `net.holder` read after the bird moves, 0.024 m gap) and tows it 1.4 m out; screen pace
+along the flipper (`finPace`, `finAlong`, `finSweep`; `input.gust` reads low over the near water) lifts it once the
+end is held (`finLift` 0.16 rad, `finSwing` 0.05, eased out), the loop slipping off in `slipFor` 4 s; `tickle(mayLift)`
+keeps tickles from lifting it. Valve: a lent dolphin noses the flipper up from under 80% along. Her mittens to her
+mouth while the bird is out; it climbs onto the gunwale into her arms and is stowed before `free`. The pod crosses
+astern (`POD_*`) and one lent dolphin leaps side-on at the spout (`SALUTE_*`). Flipper hold 9/4 (landscape), portrait
+its own high hold (`flipperPhoneDistance` 6.5, `flipperPhoneHeight` 10). Save `whale-flipper` (resumes at free); the
+line's save moved to her letting go. Sounds `flipper-pour`, `loop-slip`, `swimmer-out`. The cream marks over the sail
+were the cygnet's calls from the satchel, new on this branch: `watch(target, hushed)`. Checks: `net-whale-check`
+`fin`, `finearly`, `finidle`, `full`, `fullidle` (each negative broken once and seen to fail); `sea-logic-check`
+plays and resumes the flipper; `whale-look-stills` adds `k4-held`; `tuning` on the QA `__game`. Left for the look
+below.
+
+### Phase N3b: the frames, the net and the pod
+Runs alone (Claude's call, 2026-10-08): peers' build agents share the session limit, so N3b and N3c go one after the
+other on `sea-whale`. Owns: where the boat comes to rest by the whale and the whale's lie toward the sun (in
+`net-whale.ts`), every step's camera hold in landscape and portrait (`holdFor`, `frame()`, `tuning.netWhale`), the
+flipper's rest pose and lift (not its shape), the net's look (`net.ts`, `netShader.ts`), the pod at free, how the child
+and the bird read (pose, place, light; the bird keeps its own size). Not the whale's skin, head, eye or flipper shape.
+Seam: anchors and `surfaceAt` keep their names; the mechanics and the clearances of N2 stay as they are.
+Gate: typecheck; build; `net-whale-check` `sweeps`, `line`, `fin`, `finidle`, `saves`; `sea-logic-check`; stills at
+`k1`–`k5` with `k4-held`, landscape and portrait, beside the concept.
+Done: [x] `b073d339..cdab5c51` on `sea-whale`. The lie: eye 14.5 m at 0.8 rad to port, length 1.25 rad to starboard, so the
+back recedes toward the sun and leaves the frame right (at 1.1 the whole animal showed from the approach). Every
+landscape hold looks into the sun; the sun is 0.65° up, so below about 7 m the crown hides it: breath 18/9.5, line
+11/4.8 (as was), flipper 15/7.2 bearing 0.36 looking 9 m up, release 30/8.5 bearing 0.2 (`releaseBearing`); the
+spout no longer pushes the camera back. Phone holds are explicit per step (`tuning.netWhale.phone`: distance,
+height, turn, lookY, toward; `portraitIn` and `flipperPhone*` gone); the line and flipper phone holds no longer fit
+the eye (it only backed the camera off). The flipper's rest pose in tuning (`finRestSweep` -1.75, `finRestRaise`
+0.67), floating awash as the body rises with each breath; `finLift` 0.1 (tip up about 2 m); the loop sits at 0.9
+along it (`LOOP_FROM`), so its line leaves the water at the tip. The cygnet takes the end at 4.6/1.8 and holds at
+3.4/2.2, side-on, 1.19 m clear at worst. The float-line is 17 m (`LEADER`; 14.4 could not bring the cork to her
+from the new lie). The net: strands 0.03 m with a 1.5 px, 0.6 opacity floor and a veil past it, darker rope and
+weed, 24 weed strands, a deeper skin shadow; drifting off it opens into a raft (`OPEN`). The pod and the leaper
+cross just ahead of and beside the bow, against the sea rather than the flank. Left for N3c: the whale reads smooth
+and toy-like and its near flank is dark against the sun; the eye a dark lens; the flipper is a straight plank from a
+root 6 m deep, so only its last metres reach the surface: at rest it shows as a pale slab under the glass, lifted as
+a pale plank (a flipper that bends up toward the surface would let it lie awash along its length); the bird at the
+flipper is small and dark against the sea from the hold that keeps the sun in frame.
+
+### Phase N3c: the whale's body
+Owns: `whale.ts`, `whaleShader.ts`, `anatomy.ts`, the shape, skin and eye in `sleeper.ts` (not its API, pose or lift),
+`tuning.whaleLook`; the flipper's root and rest pose too where its shape needs them (keeping the `fin` clearance);
+judged in N3b's frames, and far off on the first crossing. The concept's skin is simplified for the build
+(`notes.md`): the target is form that reads (head, jaw line, throat, eye, flipper), never rock-like noise.
+Gate: typecheck; build; `sea-logic-check`; `net-whale-check` `line`, `fin`; no first-use stalls; stills at each
+keyframe and the first crossing's dive, landscape and portrait, beside the concept.
+Done: [x] `fd76ee3b..a9c06a05`. `anatomy.ts`: a blunt head rising steeply off the rostrum, a saddle behind the crown
+(blowhole 5.76 m), the lower jaw its own mass bowing out under `MOUTH` (in `ringPoint`, so `surfaceAt` and a
+numerically solved `flankAt` follow); 201 × 128 rings. In the shader: the lip's crease and rim, broad throat
+grooves, eight soft knobs (`KNOBS`), low swells. The pale lip narrows to a point under the eye (`JAW_CORNER` 0.152)
+and greys into the slate from 70 to 140 m, so far off it reads as a long low shape first; a lip rising toward the eye
+or gold along it read as a smile and were rejected. The eye: an amber iris (`#b06a26`) with fibres and a dark pupil
+under a bulging cornea that carries the sky and the catchlight, a heavy upper lid over the top 40%, two folds above
+and two below, little white. The flank: a cooler, higher fill on steep faces, less bounce, darker toward the
+waterline, the rim gold on top only. The flipper: root about 0.5 m deep (`FIN_ROOT`), `finTip` now its true tip, a
+narrow wrist and rounded tip (`FIN_HALF_CHORD`), knobs on the leading edge, turning over as it lifts (`finTurn`);
+`finRestSweep` -1.843, `finRestRaise` 0.278; the `fin` check models its half-chord (`FIN_HALF`), clear 1.19 m. The
+pale slab under the glass is the water's shallow tint over anything a few centimetres under: keep the flipper's top
+above the water or well under it. About 4× the vertices and a heavier fragment shader. Left: the knobs read as pale
+dots in rows; the lifted flipper reads as a pale lilac second animal before the eye; the resting flipper at `k3` a
+translucent blade; the big flank still smooth where it fills the frame; the dive's flukes flat in the haze.
+
+### Phase N3d: the net up close and the last frames
+After N3c. Owns: the net's look (`net.ts`, `netShader.ts`), the pod's leaps at free, the bird's read at the flipper,
+small hold changes. The mesh reads as rope lying in sags and folds over the head rather than a grid printed on the
+skin; the corks read as the concept's cream spotted floats, cheated larger for legibility where needed (Claude's
+call, 2026-10-08), the float in her mittens still one a child can catch; the drifting raft is not a mat of corks.
+Gate: typecheck; build; `net-whale-check` `sweeps`, `line`, `fin`, `saves`; `sea-logic-check`; final stills (landscape
+1600×900 and portrait about 430×932) at each keyframe and the first crossing's dive beside the concept, opened for
+Jeremy.
+Done: [x] `f6f7c8a6..936fbf44`. Rope knotted into irregular 1.25 m diamonds (0.07 m, lit round, knots at the
+crossings), standing off the skin in seven folds and over hollows (`BRIDGE_SAG`); 46 rows × 28 columns, each row with
+its own near edge (`edge` attribute: down to the water round the head, held clear of the eye, climbing along the
+back), scalloped between corks; glow through the mesh 0.35 so it shows against the sky; 40 weed strands. Corks cream
+with dark spots, per instance (`iSize`): the net's 0.54 m on its edges (`NET.cork`), the line's floats 0.32 m
+(`NET.float`, `CORK_CLEAR` follows). The raft drifts clear of the head by the spout (`OPEN`, `DRIFT_AWAY`,
+`DRIFT_OUT`). The pod lends four dolphins (slot 0 the valves' and nudges', 1–3 `SALUTES`, three leaps round the head,
+caught by the sun through `uCatch`). Knobs no longer brighten; the flipper slate, wet and streaming as it lifts,
+dark under the glass (×0.45 in `GHOST_FRAG`), drips in strings (`POURS`). The bird only slightly wet on its second
+swim (`swimTo(…, soaked)`). Holds: flipper 11.5 back, look 8 up; release 21/7, bearing 0.28, fitting only the boat
+and the blowhole (`extra` 4). No step-downs on the whale's frames with the GPU free. Left: at `k5` the whale fills
+the frame and the snout is cut (eye 14.5 m off; the concept's 18–20 m as it drifts clear), one leap clear in frame;
+the resting and lifted flipper read as a separate big smooth lump before the eye; portrait frames look away from the
+sun into deep blue, and portrait `k5` has no leap or raft; the whale's skin smooth where it fills the frame.
+
+### Phase N3e: the farewell clear, the flipper and the phone's light
+After N3d, on `sea-whale`. At free the whale drifts clear before it spouts, as `notes.md`'s `k5` has it (eye about
+18–20 m off, nearest skin at least 8 m), so the head, eye and snout sit whole in the middle distance with the leaps
+round them; the flipper reads as the whale's own, joined under the jaw, not a separate lump before the eye; portrait
+frames keep the gold morning though the sun can't share a phone's frame with the head and the boat.
+Gate: as N3d's, final stills opened for Jeremy.
+Done: [x] `fed63c7c..58172ef1`. Free, the whale swings its head away about its tail stock and slides clear
+(`driftClear`: `CLEAR_TURN` 0.06 rad, `CLEAR_SLIDE` 2 m; pivot and heading restored in `lie()`), the eye 19.2 m off at
+40° to port by the spout; the free timeline 2 s longer (`SPOUT_FROM` 6, `FREE_FLUKES_FROM` 13.5; everything timed in
+free seconds follows). Landscape release hold 30/12. Three leaps clear in frame (`SALUTES`). The flipper about 9.6 m
+(`DREAM_SHAPE.fin` 0.28), rooted just behind the mouth's corner (`FIN_ROOT`), turned up on its knobbly edge
+(`FIN_EDGE_UP`), drooping, darker and less sky-lit than the body; `finRestSweep` -0.45, `finRestRaise` 0.23, `finLift`
+0.16; the bird's stations moved clear of the new tip (`endOut`/`endAhead`, `birdOut`/`birdAhead`). The flipper's reach
+table (`FIN_HALF`) lives in both `net-whale-check` and `sea-logic-check`: regenerate both if its shape changes; `full`
+is the tight case (1.23 m, as the bird swims out past the tip). Phone holds turned toward the sun as far as their
+subjects allow (`phone.*.turn`, `release.turn`); the breath's portrait has the sun. Timings (`full`): rest 88.8,
+moored 210.3; idle 485.9. Left: the portrait farewell has no raft (it lies 19 m abeam beside the snout); the leapers
+are dark against the sun; the flipper's root bobs about 1 m with each breath (under at the bottom, a pale horn at the
+top); at `k3` the hauled net reads as a scatter of corks.
+
+### Phase N3f: the giant
+After N3e, on `sea-whale` (Jeremy, 2026-10-08; design.md, "A dreamlike giant, ancient": Claude's direction, the
+concept now only a reference). Owns the whale's profile along its length and how much rides above the water
+(`anatomy.ts`, the rest pose in `sleeper.ts`), its vast shape under the glass, the haze along its length, the gold
+line along the back, and whatever framing the new silhouette needs.
+Seam: `surfaceAt` and the anchors stay true to the rendered skin; the net drapes by them and must still lie on it;
+the bird's clearance from the flipper and the mechanics of N2 stay.
+Gate: as N3d's, stills at every keyframe.
+Progress: `ff2330ec..3313c9bf` (first agent, handed back before the gate). The back runs level from the crown to a
+small hump at 0.64 and sinks tail-down (`TOP`, `MOUND` the guard round the blowhole, `restPitch`); heights at rest
+3.8 m at the snout, 5.3 at the crown, 2.9 at 0.3, 1.0 at 0.5, awash by 0.6, under from 0.7. A breath lifts the back
+fully and the head by 0.3 (`breathAt`), so the flipper's root bobs 0.13 m; the net follows the spine's own rise per
+row (`bodyShift`, `spineShift`). A crisp gold `ridge`, a `wet` top, `HAZE_GLSL` (`uHaze`) melting the far length; the
+shape under the glass deeper, warm and soft (`glassDeep`, `glassWarm`). Left: the gate, the stills, the holds.
 Done: [ ]
 
-### Phase N3: the look
-Owns: the look of the whale, the net, the light on them, the camera hold and portrait framing, the child's and the
-cygnet's poses, against `k1`–`k5` and `k2-portrait` side by side every iteration.
-Gate: typecheck; build; the N2 check still passing; final stills (landscape 1600×900 and portrait about 430×932) at
-each keyframe beside the concept, opened for Jeremy.
+### Phase N3g: the ancient skin and its life
+After N3f. Owns the skin (`whaleShader.ts`, `tuning.whaleLook`): barnacle crusts, healed scars, mottling, growth at the
+waterline, wet streaks, the eye's age; water sheeting off the back with each breath; the seabirds on its back.
+Gate: as N3d's, final stills opened for Jeremy.
 Done: [ ]
 
 ### Phase N4: docs on approval

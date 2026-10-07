@@ -494,8 +494,20 @@ So the existing drowned village and storm code may be refactored as far as the r
 - **The cat.** A small soft tabby with a white chest and socks, round-faced, a little bedraggled, built as soft
   rounded shapes like the game's other animals, to the model sheet in `comps/cat/`. It mews from the chimney, hates the
   water, rides the tub hunched with its ears flat, and on the boat sits at the bow as far from the water as it can. It
-  is quick and sure where she is slow: at each gap it crosses its own way (along a railing top, a wall coping, a leap
-  she could never make), which shows her where the far side is and that she must find her own way over. At the church
+  is quick and sure where she is slow, and it is the player's guide: at each gap it goes first, so the player sees
+  what the crossing is before they make it (Jeremy, 2026-10-08: "i thought the cat was supposed act as the players
+  guide, so it makes a crossing e.g. across the windmill before the player so that they know what they need to do.
+  Very cat like behaviour"). At the windmill it hops onto the sail end lying level with her roof edge and sits there
+  looking up; when the player circles it rides up and drops off onto the high roof, and the next sail comes level
+  beside her. At the swing it leaps onto the seat, its weight sets it swaying, and at the top of a swing it springs
+  onto the nave; the empty swing drifting back says "you next". At the tree the gap is too wide for it to show the
+  crossing itself (Jeremy: "i dont know how it does the tree crossing though, there's a big gap"), so it runs the
+  railing tops over the lane, scrambles up the dead trunk in the garden, and the rotten tree creaks and leans toward
+  her under its weight and settles back: the tree is loose and falls her way. It sits in the crown looking back at her
+  and leaps clear onto the garden wall as the tree goes. Each showing is brief and never makes the player wait
+  (Jeremy: "Only thing to be wary of is that we dont have the player waiting too long for the cat to cross and climb
+  up the tree, pacing is important."): the cat is already crossing as she arrives, and the player's wind is live
+  throughout. At the church
   it climbs the tower's ivy to the belfry. It is left there, safe and high, looking down as the boat goes.
 - **The dark is a sea fog** (Jeremy, 2026-10-05, doubting the black smoke: "im not sure if the dark cloud look make
   sense given the lighting and time of day... what do you think? would a white fog / mist / haze make more sense?"; on
@@ -791,13 +803,48 @@ The sequence:
   off its line toward what looks like a long low island in the sunrise haze (`k1`). It breathes: a whale, dream-sized,
   lying still and worn out. The boat eases to rest beside its head (`Boat.speedLimit` eased to zero, never braked).
 - **The whale.** About 110 m nose to flukes (see Ownership above; `notes.md` says 75 m), too big for the frame: the back recedes across and away into the haze and
-  is never shown whole near the boat. Smooth slate-blue, paler underside, the low sun on its rim, cool sky fill so the
-  eye still reads; no rock-like skin, no sharp ridge, no face-like smile. Its eye, near the boat, is larger than the
+  is never shown whole near the boat. Slate-blue, paler underside, the low sun on its rim, cool sky fill so the eye
+  still reads; no sharp ridge, no face-like smile. Its eye, near the boat, is larger than the
   boat is wide, under a heavy tired lid. `notes.md`'s heights scaled to 110 m: crown about 5.3 m above the water, eye
-  centre about 2.3 m, the eye about 3.5 m across, the near flipper about 16 m. It breathes slowly.
+  centre about 2.3 m, the eye about 3.5 m across. It breathes slowly. As built (Claude's
+  call, 2026-10-08): a blunt head with its own lower jaw, the pale lip narrowing to a point under the eye and greying
+  into the slate far off, so the first sight reads as a long low shape before it reads as a jaw; the near flipper,
+  about 9.6 m (at 16 m it read as a second animal before the eye), roots low just behind the mouth's corner and lies
+  awash toward the boat's port bow, turned up on its knobbly leading edge.
+- **A dreamlike giant, ancient** (Jeremy, 2026-10-08: "To me it doesn't quite yet read like a sillouhette of a
+  dreamlike giant whale." and "I also agree about the skin being a bit too "smooth" - we need it to look like an
+  ancient giant whale", then "i think the concept art has served it's purpose to get us this far, i need you to take
+  it to the next step."). From here the concept frames are a reference for composition, not the target: the whale is
+  Claude's to take further. Claude's reading, agreed with him: it rode high and even along its whole length like a
+  balloon, its outline one smooth arch, its skin clean and evenly lit like a small near model. Claude's direction: an
+  island that breathes.
+  - **Mostly under the sea.** Above the water only the head, the blowhole and a long low line of back that sinks and
+    fades into the haze; the tail stock never seen until the farewell. Under the glass its vast shape goes on beside
+    the boat, far larger than what shows, the flipper reaching under her, so moving the camera feels like floating
+    beside something enormous: the scale cue a painting can't give. (The lie stays: the body's axis passes about 21 m
+    from the boat, so its flank under water comes within about 8–10 m.)
+  - **A whale's outline.** The snout's flat ridge, the raised guard round the blowhole, the dip behind it, a small hump
+    far along the back, the narrowing toward the tail before it slips under.
+  - **It melts into the morning.** The far length dissolves into warm haze; a crisp gold line runs along the back's
+    ridge against the sea; the top is wet.
+  - **Ancient skin.** Weathered like an old hull or a reef: barnacle crusts clustered on the head, chin and flipper
+    edges, old pale healed scars and scuffs, mottling like lichen, green growth at the waterline, wet streaks. Stylised
+    and painted like the rest of the game, never photographic noise; healed and old, never a wound. Fine detail small
+    against its bulk is what makes it read giant. The eye old, wet and kind in folds of age.
+  - **It breathes the sea.** Each slow breath lifts the back a little, water sheeting off its top in glinting streams,
+    and the sea round it swells and settles.
+  - **Life on it.** A few seabirds stand far along its back as on a rock, never near a step's target, and lift off as
+    it spouts free.
+  - **Gentle to a child** (Jeremy, 2026-10-08: "ok but not too scary to a child yea, they still get to see the
+    whale's eyes right?"). The eye stays above the water near the boat, large, warm and kind, and opening it on her is
+    still the heart of the breath. The shape under the glass is soft and warm in the gold water, never a black abyss,
+    and never moves suddenly beneath the boat. Barnacles are sparse soft bumps, never clusters of holes; scars soft pale
+    lines, never gashes. Old and wise, never monstrous.
 - **The net.** One old faded brown-green net, scaled with the whale to about 45 × 17 m, over the head and blowhole and
-  down the forward back, rows of cork floats on its edges, a few strands of weed; one loop round the near flipper. Its
-  mesh, ropes and corks keep their real sizes (`notes.md`), so the line in her mittens is one a child can hold. A sparse
+  down the forward back, rows of cork floats on its edges, a few strands of weed; one loop round the near flipper. The
+  line in her mittens and its floats keep their real sizes (`notes.md`), so it is one a child can hold; the net's own
+  corks are cheated larger (about 0.54 m) and its rope thicker so they read from the hold (Claude's call, 2026-10-08),
+  the rope knotted in irregular diamonds and standing off the skin in folds and over hollows. A sparse
   deforming mesh, instanced corks and a few boundary ropes, never a general cloth simulation. Tired, never hurt: no
   injury shown.
 - **1. The breath (circles).** The net lies over the blowhole; each breath only domes the mesh and sputters a weak
@@ -811,10 +858,19 @@ The sequence:
   which swam earlier in this chapter, goes in, swims to it and takes the loop's end in its bill; a sweep along the
   flipper makes it lift lazily (the tickle built on `crossing-whale`), and the loop slides off into the cygnet's pull,
   slack in the rope so the bird never reads as hauling a giant (`k4`). The child watches, mittens to her mouth. The
-  cygnet swims back and is lifted in; the bird stays its own size and keeps clear water between it and the fin.
+  cygnet swims back and is lifted in; the bird stays its own size and keeps clear water between it and the fin. As
+  built (Claude's call, 2026-10-08): it drops in on its own side and swims round the stern, never through her; it holds
+  the end beside the flipper's tip, about 4 m out to port of her, at least 1.2 m clear of the flipper's lift, side-on
+  to the camera, facing the loop; a sweep before it holds the end lifts
+  the flipper but the loop stays on; the lift is lazy, the tip rising about 2 m; as the loop slips off it backs away,
+  lets go, climbs onto the gunwale into her arms and is stowed, and only then does the whale go free.
 - **Free.** It spouts a tall plume against the sunrise, the empty net drifting away on the water; the pod leaps round
   it; the child waves (`k5`). It rolls, lifts its flukes high as if waving and sinks; its swell lifts the boat. The pod
-  goes with it, the limit eases off, and the sea goes still into the mirror's glass.
+  goes with it, the limit eases off, and the sea goes still into the mirror's glass. The net starts drifting as the
+  loop slips off, working loose into a raft with its corks round its edges, so it is its own shape by the spout; the
+  pod sets off as the bird is lifted in, and three dolphins leap clear of the water round the head at the spout,
+  caught by the sun. Free, the whale first swings its head away and slides clear of the boat (the eye from about 15.6
+  to 19 m off), so by the spout it lies whole in the middle distance; the boat stays at rest.
 - **Gestures.** Each step's answer starts at the wind's target and is plainly the biggest thing on screen: the boat is
   at rest, so nothing may read as the boat speeding up. The ambient breeze does nothing to the net, the corks or the
   flipper. Gusts elsewhere on the whale may still tickle it (shiver, a lazy slap) but never progress a step.
@@ -824,23 +880,30 @@ The sequence:
 - **Camera.** The crossing camera eases (never jerks, never cuts, no reverse angle or underwater shot) from the rear
   view in `k1` to a hold beside the boat for the breath (`k2`), then closer and lower for the child's haul and the
   cygnet (`k3`, `k4`), where her mittens, the cork and the bird must read, then back out for the release (`k5`, the pod
-  in frame). As found in the look pass (Claude's call, 2026-10-07): the breath's hold is about 22 m behind and 11.5 m
-  up, looking down onto the crown so the net lying on the head reads, with the eye, the blowhole and the low sun in
-  frame; from 11 m behind and 4 m up the crown was edge-on and the net only a row of corks against the sky. The
-  portrait lens is wider (62° against 38.7°), so portrait holds come in by about 0.58 to keep the whale as large. In
-  portrait the boat, the eye and the blowhole stack up the frame (`k2-portrait`).
+  in frame). As found in the frames pass (Claude's call, 2026-10-08): the whale lies with its eye about 14.5 m off at
+  46° to port and its length running about 72° to starboard, so its back recedes toward the low sun and leaves the
+  frame on the right; every landscape hold looks toward the sun with the whale rimmed against it. The sun stands under
+  a degree above the sea, so from any camera lower than the whale's back (about 7 m) it is hidden behind the crown:
+  the cygnet's hold is about 15 m behind and 7 m up so the sun shows over the back, at the cost of a smaller bird. The
+  breath's hold is about 18 m behind and 9.5 m up, looking down onto the crown so the net lying on the head reads; the
+  release eases out to about 30 m behind and 8.5 m up, the plume leaving the top of the frame. A phone's frame is too
+  narrow (31° across) to hold the head and the sun together, so its holds look along the line from what matters
+  through the boat, each with its own distance, height and turn, stacking boat, step and head up the frame; the
+  cygnet's is turned toward astern so the bird stands clear of the sail above the boat (`k2-portrait`).
 - **Reward.** Freeing the whale is the open sea's major conclusion, so the reward phrase (`completeObjective()`) plays
   as it spouts free.
 - **Pacing.** The mirror's jetty is on the horizon from the first seconds of the open sea, as on main: it lies only
   about 250 m from the sleeping island's berth and about 25° off the sunrise the sea sails toward, so no route that keeps
   the sunrise ahead through the leap and the swim can hide it. Claude's call (2026-10-07): keep that, since the
   destination glimpsed and then left is what makes the pod's lead read as a detour; from the lead until the whale has
-  gone nothing of the mirror is in frame, and the boat comes about for it a few seconds after. Measured on `sea-whale`:
-  the lead about 60 s in, at rest about 89 s, moored about 150 s with a circling player and about 240 s idle. The open
+  gone nothing of the mirror is in frame, and the boat comes about for it a few seconds after. Measured on `sea-whale`
+  with all three steps (2026-10-08): the lead about 60 s in, at rest about 89 s; a player making each gesture is moored
+  about 208 s in, one who leaves every step to its valve about 483 s. The open
   sea's "at most 100 s" is lifted for this. Music: the sea's score holds through the encounter; the mirror's arrival
   music cannot start until the whale has gone.
 - **Saves.** Checkpoints at rest beside it (before the first step), after each step, and after it has gone (resumes
-  sailing on toward the mirror with no whale).
+  sailing on toward the mirror with no whale). The haul's is taken as she lets go of the line, before the bird goes
+  in; the flipper's resumes at free with the bird in the satchel and the net loose.
 - **Sounds.** Its slow breath and the sputter through the mesh, the full breath, the spout (`whale-blow`), the net's
   wet rope and corks, the cygnet's splash; all synthesised (`docs/contracts/audio.md`).
 - **Its voice** (Jeremy, 2026-10-07: "yea, lets give it a voice"). One low, soft call when its eye opens and it knows
