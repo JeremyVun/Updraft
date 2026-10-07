@@ -33,7 +33,7 @@ Rules every room keeps:
   the approach (`world/journey-rooms.ts`; see `docs/contracts/world.md`).
 - **Invitations show a gesture and never perform it.** A waiting interaction shows its wind invitation after a
   few idle seconds; nothing is solved by a timer or by the ambient breeze. The one exception is a safety valve
-  where a child could otherwise be stranded (the drowned village's becalming lifts after 90 s).
+  where a child could otherwise be stranded (each of the drowned village's steps gets on by itself after about 90 s).
 - **Dream echoes.** One thing from the room before has washed up on the arrival beaches of the little boats (a
   pegged pillowcase), the meadow (the bath's rubber duck, grey until the piano wakes it), the birches (a run of piano
   keys) and the stairs (the swing's seat) (`world/echoes.ts`): scenery only, above the tide line and off the walk; the
@@ -42,7 +42,7 @@ Rules every room keeps:
   (`Traveller.stepAshore`); at a jetty they step up onto the boards (`Traveller.alight`). See `docs/boat.md`.
 - **The reward phrase** (`completeObjective()` in `story/cues.ts`, the still island's restoration phrase) plays
   only at major conclusions: the still island restored, the little boats' reveal, the piano's lullaby answered (just
-  after it finishes), the last loose stair flight placed, the drowned village's sail refilled. Smaller steps keep
+  after it finishes), the last loose stair flight placed. Smaller steps keep
   their own small responses.
 
 ## The still island
@@ -351,36 +351,87 @@ first, and it needs a still and a name.
 
 ## The drowned village
 
-`story/drowned.ts`, `world/drowned.ts`, `world/lighthouse.ts`, `fx/storm.ts`, `fx/rain.ts`. `?chapter=drowned`
-starts where the stairs set the boat down on the water (`DESCENT_END`).
+`story/drowned.ts` runs the room's beats; `story/drowned-cat.ts` (`StrandedCat`) the cat and the tub,
+`story/drowned-run.ts` (`RoofRun`) her way over the roofs, `story/drowned-church.ts` (`ChurchArrival`) the church
+and the boat brought in. Where its pieces live in the world: `docs/contracts/world.md`. The design, Jeremy's brief in
+his words and every ruling: `docs/backlog/path-puzzles/design.md`. `?chapter=drowned` starts where the stairs set
+the boat down on the water (`DESCENT_END`); `roofs` on the ridge after the cat, `church` at the tower's foot,
+`storm` seated aboard at the nave.
 
-A long dusk drift between rooftops, a spire with a weathervane, herons flushing off chimneys, drowned tree crowns
-and leaves on black water: homes the water took. The camera travels behind the boat low among the roofs and pans
-up to the church.
+A homeward-looking room about leaving the boat to save a frightened animal, then losing the one thing she brought.
+About five to six minutes, nearly all of it the player's:
 
-A third of the way through **the air dies** (`STILL_AT`): the breeze eases to nothing, the water goes to glass, the
-music hushes, the sail hangs dead in the middle of the frame and the child looks up at it (`Boat.becalmed`). It is
-the first time the journey needs the player rather than answering them. A stroke across the sail on screen blows
-on the sail itself (`Boat.brushSail`, `tuning.sail.brushReach`); about `FILL_NEEDED` worth of gusts gets them
-under way. After `STILL_LIMIT` (90 s) the air returns by itself, because nobody is ever stranded.
+1. **The calm drift and the stranded cat.** Dusk among the drowned roofs, herons lifting off chimneys, the spire far
+   ahead beside the lighthouse. A small tabby sits on a chimney pot of a cottage sunk to its ridge, pleading in short
+   kitten mews. A wooden wash-tub floats nearby; strokes across it on screen push it (`WashTub`; under the low lens a
+   stroke's own wind lands far beyond it, so the tub reads the stroke, `contracts/wind.md`), the cat comes down the
+   slates and hops in, and strokes bring it to the boat, where the cat chirrups, jumps aboard and sits at the bow.
+   The cygnet is wary of it. The lens watches from off the cottage's gable end so she and the cat face each other
+   across the water. If the tub makes no progress for 90 s the air carries it there.
+2. **The air dies** about 150 m in: the breeze eases to nothing, the water goes to glass, the sail hangs, and the
+   becalmed boat coasts in until its stem rests against the slates of a small cottage (`STRAND`): a nudge, never
+   on top of anything.
+3. **The dark rises behind them**: a sea fog lying low on the water, rising on the horizon the way they came, its
+   crest gold in the last sun, roofs fading into it one by one; it comes on and stops a little behind the boat. The
+   cat watches it, flatter and flatter, yowls once and bolts up the roof and away over the roofs toward the church.
+   She climbs out after it, the cygnet in her satchel and the paper plane in her hand. The cold breath that comes with
+   the fog swings the untended boat off the slates, and it drifts away up the open water the way she goes.
+4. **The run**, about 214 m of roofs, wall copings, a lean-to and small hops of her own in about two and a half
+   minutes, the cat always a roof ahead going its own way over each gap (a railing top, a coping, a leap she could
+   never make), the fog creeping along behind her and waiting a little behind her at each piece. Three pieces, each a
+   verb the player already has:
+   - **The tree (push):** a dead tree rotted at its roots in a walled garden, rocked by strokes to show which way it
+     can fall; a few firm pushes the right way loosen it until it goes over the lane, and she walks its trunk with her
+     arms out.
+   - **The windmill (circle):** a small worn tower mill standing in the water to its shoulders with two sails left;
+     circles round its hub turn it (the invitation is a flat spiral in the sails' plane), the sail eases level beside
+     the roof edge she waits on, she walks onto its lower rail with a hand on the stock, and the turn lifts her to the
+     high roof, where the church and the lighthouse come back into view. The wrong way only rocks it.
+   - **The swing (pump):** a rope swing on the old tree on the drowned green, beside the garden cottage's gable end;
+     strokes pump it the birches' way with no timing, and at the top of a forward swing she lets go onto the nave roof.
+5. **The church.** She stands on the nave's ridge at the tower's foot. The cat climbs the tower's ivy to the belfry's
+   south sill, safe and out of her reach, then backs through the belfry to the north sill as the fog comes over the
+   church and closes round her: the sun gone, the light draining, the first rain. The first wind swings the boat off
+   the dead tree it fetched up against east of the tower; strokes across its red sail (`Boat.brushSail`) bring it
+   round the tower's north side to the nave, she walks down the slates and steps aboard, and as they go she turns on
+   the thwart to look back once at the cat, which mews once. After 90 s with no progress the world's breeze comes
+   back to carry the boat in.
+6. **The storm** begins the moment she is aboard, the weather already part gathered by the fog. They go out north of
+   the nave past the lighthouse (`STORM_WAY`, 173 m to the beach at the hard-pressed sail's 4.2 m/s): the foghorn,
+   the beam faltering and going out about 6 s in while the lamp is still in her look back, the cygnet startled and
+   nuzzling under her chin, its shaking in the rain, lightning only once the dark is established, the paper plane
+   taken off her hand by a gust about mid-way and carried off fast and low over the wood, and the landing on the
+   forest beach about 45 s after she boarded. The storm's night takes over from the fog's dark without lifting, and
+   the fog thins off as the forest comes up out of it. The landing is relief that turns into the wood's fear.
 
-Then **the storm**: the weather gathers among the last roofs (`tuning.storm.startsFromShore`); the channel bows
-toward a tall lighthouse on a crag, the lens holding its crown and the travellers together and letting it slide
-past as they come under it. Its beam sweeps the rain and water, falters and goes out (`lighthouseOutAt`); the gust
-drawn as wind lines past the child's hand may take the paper plane while it is still faltering; the storm carries it off fast and low over the
-wood (`planeAway`), and it is put away only once out of frame or deep in the rain. By the beach the last colour is
-gone: black trees, cold rain, clouded moonlight, lightning only once rain and darkness are established. The
-cygnet shakes in the rain, flinches at thunder and nuzzles under the child's chin when the light goes out. Hull
-drive is capped through the passage (`Boat.speedLimit`); see `docs/contracts/wind.md`. Island mist hides the wood
-until it comes out of the rain with its trees (`tuning.world.woodMist`).
+Rulings:
+- The dark comes on its own; the child goes after the cat, and the boat was never stuck: she left it to save the cat.
+- The dark is a sea fog, beautiful and ominous, never horror: "yea that fog looks way better" than black smoke.
+- Nothing needs fast reactions; holding on to the plane against the storm was rejected for that.
+- Her way reads as a village she picks her way through, never "a single line of houses" or a corridor.
+- The windmill is the third piece; "we dont need her climbing the lattice": she walks onto the sail.
+- The storm starts at the boat and lands her at the forest without a stop: the landing is relief that is "actually
+  the beginning of another scary journey".
+- The village is a dream, "not too realistic": stylised character in the room painting's palette (charcoal slate,
+  dark thatch, limewashed gables, brick pots), not pastel; windows dark so the lantern is the warm light.
+- No little boats here. The storm becomes really dark and scary by the forest; the lighthouse is big, as a child
+  would dream it; the plane flies away and is lost, never simply vanishes. The camera stays low near the water and
+  never surveys the village from above.
 
-Rulings: the becalming is visually and audibly clear. The storm lasts long enough to become really dark and scary
-by the forest; the lighthouse is big, as a child would dream it, and central to the passage. The plane flies away
-and is lost, never simply vanishes. The camera travels through the streets near the water, never surveying the
-village from above.
+Rules: cursor movement is the only verb (strokes push the tub, the tree, the swing and the sail; circles turn the
+mill); each step has the drawn invitation after idle seconds and a safety valve after about 90 s; the fog never
+reaches her and nothing fails; the camera never jerks or cuts and the child never looks to it.
 
-Knobs: `tuning.storm`, `tuning.drownedCamera`. Checks: `tools/storm-check.mjs`, `boat-check.mjs`,
-`drowned-camera-check.mjs`, `drowned-gating-check.mjs`.
+Saves (`docs/contracts/progress.md`): `sail` once the cat is aboard and the drift goes on, `roofs` at the run's start
+on the ridge, `church` at the tower's foot, `storm` seated aboard with the storm to come.
+
+Knobs: `tuning.drowned` (`cat`, `tub`, `dark`, `fog`, `adrift`, `run`, `church`), `tuning.crossings` (the tree, the swing,
+the mill), `tuning.drownedCamera`, `tuning.storm`. Checks: `tools/drowned-run-check.mjs` (the whole room
+with real gestures from the drift, `FROM=roofs|church|storm`, `LENS=1` for the lens's measures),
+`drowned-roofs-check.mjs`, `drowned-way-check.mjs`, `crossings-check.mjs`, `cat-check.mjs`, `mill-check.mjs`,
+`drowned-fog-check.mjs`, `storm-check.mjs`, `boat-check.mjs`, `drowned-camera-check.mjs`, `drowned-gating-check.mjs`.
+
+Open: the cat in the lit window of home's cottage at the very end ("the cat comes home").
 
 ## The dark wood
 
