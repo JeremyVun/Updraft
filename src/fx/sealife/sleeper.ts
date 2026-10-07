@@ -34,22 +34,28 @@ const REST_CURL = 0.5;
 const BREATH_IN = 1.4;
 const BREATH_OUT = 3.6;
 /**
- * Free, in seconds: a long breath drawn while the pod comes, the spout, then it rolls onto its back, lifts its
- * flukes and waves them, and goes under.
+ * Free, in seconds: a long breath drawn while it drifts clear of the boat and the pod comes, the spout, then it rolls
+ * onto its back, lifts its flukes and waves them, and goes under.
  */
-const SPOUT_FROM = 4;
-const SPOUT_TO = 6.8;
-const ROLL = curve([[0, 0], [8.5, 0], [12.5, 3.05], [19.5, 3.05], [22.5, 2.2], [26.5, 1.2]]);
-const SINK = curve([[0, 0], [8.5, 0], [12.5, -3.6], [18.5, -3.8], [21.5, -5.5], [26.5, -22]]);
-const TAIL = curve([[0, 0], [12, 0], [14.5, -0.62], [19, -0.66], [21.5, -0.25], [23.5, 0]]);
-const DIP = curve([[0, 0], [18.5, 0], [21.5, -0.12], [26.5, -0.3]]);
-const WAVE_FROM = 14.5;
-const WAVE_TO = 19.5;
-const SURGE_AT = 19;
-const RELEASE_AT = 18.5;
-const GONE = 27.5;
+const SPOUT_FROM = 6;
+const SPOUT_TO = 8.8;
+const ROLL = curve([[0, 0], [10.5, 0], [14.5, 3.05], [21.5, 3.05], [24.5, 2.2], [28.5, 1.2]]);
+const SINK = curve([[0, 0], [10.5, 0], [14.5, -3.6], [20.5, -3.8], [23.5, -5.5], [28.5, -22]]);
+const TAIL = curve([[0, 0], [14, 0], [16.5, -0.62], [21, -0.66], [23.5, -0.25], [25.5, 0]]);
+const DIP = curve([[0, 0], [20.5, 0], [23.5, -0.12], [28.5, -0.3]]);
+const WAVE_FROM = 16.5;
+const WAVE_TO = 21.5;
+const SURGE_AT = 21;
+const RELEASE_AT = 20.5;
+const GONE = 29.5;
 /** Seconds into being free when it is looking at its flukes rather than its breath. */
-export const FREE_FLUKES_FROM = 11.5;
+export const FREE_FLUKES_FROM = 13.5;
+/**
+ * Free, it drifts clear of the boat before it spouts: its head swung away about the tail stock (radians) and its
+ * body slid away sideways (m), over seconds.
+ */
+const CLEAR_TURN = curve([[0, 0], [0.8, 0], [7.5, 0.05], [12, 0.06]]);
+const CLEAR_SLIDE = curve([[0, 0], [0.8, 0], [7.5, 1.6], [12, 2]]);
 /** The near flipper's lazy lift: up over two seconds, held, and laid back down on the water. */
 const LIFT = curve([[0, 0], [0.4, 0.12], [1.8, 0.95], [3, 1], [4.2, 0.35], [4.7, -0.04], [5.2, 0]]);
 const LIFT_HITS = 4.6;
@@ -98,6 +104,8 @@ export class SleepingWhale extends WhaleRig {
   private readonly wake: WhaleWake;
   private readonly pivot = new THREE.Vector3();
   private readonly rest = new THREE.Vector3();
+  private readonly restHeading = new THREE.Vector3();
+  private readonly away = new THREE.Vector3();
   private readonly gazeAt = new THREE.Vector3();
   private gazing = false;
   private breath = 0;
@@ -165,6 +173,9 @@ export class SleepingWhale extends WhaleRig {
     this.lay(0, 0, 0, 0, K.roll);
     this.point(0, 0, 0.5, this.q);
     this.surgeNear = Math.hypot(near.x - this.q.x, near.z - this.q.z);
+    this.restHeading.copy(this.heading);
+    this.away.set(-this.heading.z, 0, this.heading.x);
+    if (this.away.x * (eye.x - near.x) + this.away.z * (eye.z - near.z) < 0) this.away.negate();
     this.shiverAmp = 0;
     this.liftT = -1;
     this.liftCool = 0;
@@ -336,11 +347,22 @@ export class SleepingWhale extends WhaleRig {
     }
     const wave = THREE.MathUtils.smoothstep(t, WAVE_FROM, WAVE_FROM + 1) * (1 - THREE.MathUtils.smoothstep(t, WAVE_TO - 1, WAVE_TO));
     const sway = Math.sin((t - WAVE_FROM) * 2.1) * wave;
+    this.driftClear(t);
     this.lay(SINK(t), K.breathRise * 2.4 * draw, DIP(t), TAIL(t) + 0.05 * sway, K.roll + ROLL(t) + 0.22 * sway);
     this.uniforms.uCurl.value = REST_CURL * (1 - THREE.MathUtils.smoothstep(t, 8.5, 12.5)) + 0.3 * sway;
     const lower = THREE.MathUtils.smoothstep(t, 6.5, 9.5);
     this.uniforms.uFin.value.set(THREE.MathUtils.lerp(K.finRestSweep, FREE_FIN.x, lower), THREE.MathUtils.lerp(-K.finRestRaise, FREE_FIN.y, lower));
     if (t >= SURGE_AT && t - dt < SURGE_AT) this.surge();
+  }
+
+  /** Turned away about its tail stock (the pivot) and slid off sideways, so its head lies clear of the boat as it spouts. */
+  private driftClear(t: number): void {
+    const turn = CLEAR_TURN(t) * Math.sign(this.away.x * this.restHeading.z - this.away.z * this.restHeading.x);
+    const c = Math.cos(turn);
+    const s = Math.sin(turn);
+    const h = this.restHeading;
+    this.heading.set(h.x * c + h.z * s, 0, -h.x * s + h.z * c);
+    this.pivot.copy(this.rest).addScaledVector(this.away, CLEAR_SLIDE(t));
   }
 
   /** The swell the body leaves as it goes under, spreading from its whole length. */

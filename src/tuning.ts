@@ -1435,7 +1435,7 @@ export const tuning = {
      * the wider view it eases back out to as it goes free, the plume leaving the top of the frame.
      */
     holdFrom: 40, holdFull: 6, holdDistance: 18, holdHeight: 9.5, holdBearing: 0.05, holdEase: 0.45,
-    releaseDistance: 21, releaseHeight: 7, releaseBearing: 0.28,
+    releaseDistance: 30, releaseHeight: 12, releaseBearing: 0.28,
     /** How far ahead of the bow the pod runs while it leads the boat in (m). */
     podLead: 18,
     /**
