@@ -495,7 +495,7 @@ export class NetWhale {
     this.slide = K.haulSlide * THREE.MathUtils.smoothstep(this.out, 0, 1);
     const turning = this.step === 'gone' ? 0 : this.turnToward() * (1 - THREE.MathUtils.smootherstep(left, 30, 120));
     this.turn += (THREE.MathUtils.lerp(turning, K.haulTurn, this.out) - this.turn) * (1 - Math.exp(-dt * 1.2));
-    this.holdT = Math.min(1, this.holdT + dt / K.holdMove);
+    this.holdT = Math.min(1, this.holdT + dt / (this.looking ? K.lookMove : K.holdMove));
     const lost = this.step === 'approach' ? K.lostFar * (this.led ? THREE.MathUtils.smootherstep(left, K.lostNear, K.lostFrom) : 1) : 0;
     this.lost += (lost - this.lost) * (1 - Math.exp(-dt * K.lostEase));
     whale.lost = this.net.lost = this.lost;
@@ -696,9 +696,12 @@ export class NetWhale {
       return;
     }
     this.reached = true;
+    // Out over the port rail toward it, so it shows beside her rather than hidden in front of her face.
+    const { boat } = this.cast;
     child.face(this.a);
-    this.b.subVectors(whale.eye, this.a).normalize();
-    child.reachFor(0, this.p.copy(this.a).addScaledVector(this.b, 0.42).addScaledVector(UP, -0.04));
+    this.b.subVectors(whale.eye, this.a).setY(0).normalize();
+    this.ray.set(Math.cos(boat.yaw), 0, -Math.sin(boat.yaw));
+    child.reachFor(0, this.p.copy(this.a).addScaledVector(this.ray, 0.42).addScaledVector(this.b, 0.25).addScaledVector(UP, -0.06));
   }
 
   /**
@@ -1582,7 +1585,10 @@ export class NetWhale {
     // Led off its line, the view rises to look over the pod at the long low island it is making for.
     const rise = THREE.MathUtils.smootherstep(this.rise, 0, 1);
     shot.height += K.riseHeight * rise;
+    // The look goes on toward it while the eye stays behind the boat.
+    this.b.copy(shot.target);
     shot.target.lerp(this.a.copy(this.whale.eye).setY(K.riseLook), K.riseToward * rise);
+    shot.distance += Math.hypot(shot.target.x - this.b.x, shot.target.z - this.b.z);
     if (h <= 0.001) return;
     const whale = this.whale;
     const boat = this.cast.boat.position;

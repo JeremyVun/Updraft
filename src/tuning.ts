@@ -1467,13 +1467,13 @@ export const tuning = {
     netLift: 3.5, netSettle: 0.8, netDome: 0.4,
     /**
      * The look between them, in seconds into its first full breath: the view comes in over her shoulder from
-     * `lookIn`; its eye opens on her from `eyeOpens`, slowly (`eyeOpening` a second); it blinks at `blinkAt`; she holds
+     * `lookIn` over `lookMove` seconds; its eye opens on her from `eyeOpens`, slowly (`eyeOpening` a second); it blinks at `blinkAt`; she holds
      * a mitten out to it from `reachFrom`; it calls at `callAt`; the cygnet peeps up at `peepAt`; her eyes go to the
      * float line `handOff` before the look ends, `lookFor` after its eye opened, and the view goes to the haul.
      */
-    lookIn: 2.6, eyeOpens: 3, eyeOpening: 0.55, blinkAt: 7.2, reachFrom: 7.8, callAt: 8.6, peepAt: 9.8, handOff: 1.4, lookFor: 9.5,
+    lookIn: 2.4, lookMove: 4, eyeOpens: 3, eyeOpening: 0.55, blinkAt: 7.6, reachFrom: 8, callAt: 8.9, peepAt: 10.1, handOff: 1.4, lookFor: 10,
     /** The view over her left shoulder for the look, close behind her and low, the sail clear to the right: as the step holds are. */
-    lookDistance: 4.8, lookHeight: 3, lookBearing: 0.15, lookLookY: 2.2, lookToward: 0.65,
+    lookDistance: 6, lookHeight: 3, lookBearing: 0.5, lookLookY: 1.8, lookToward: 0.55,
     /**
      * The valve's dolphin: seconds to swim in under water from where the pod waits, how high over the crown its leap
      * carries its beak (m), how fast the gravity of a dream brings it down (m/s²), and how quickly the mesh it flicks
