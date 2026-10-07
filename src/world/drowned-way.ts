@@ -513,7 +513,7 @@ export const BRING_WAY = [new THREE.Vector2(TOWER.x + 4, TOWER.z - 7), new THREE
  * Out from the nave in the storm: round into the open water north of the church, then on past the lighthouse's side
  * before the channel's last leg to the forest beach.
  */
-export const STORM_WAY = [new THREE.Vector2(6, -1584), new THREE.Vector2(40, -1604)];
+export const STORM_WAY = [new THREE.Vector2(6, -1584), new THREE.Vector2(36, -1602), new THREE.Vector2(38, -1622)];
 /** The water the storm's way out and the lens following it keep open: from the berth round to the lighthouse's side. */
 const STORM_OUT = [new THREE.Vector2(NAVE_BERTH.x, NAVE_BERTH.z - 4), ...STORM_WAY];
 
