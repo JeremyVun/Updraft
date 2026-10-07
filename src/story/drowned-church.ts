@@ -329,8 +329,8 @@ export class ChurchArrival {
       this.view.eye = e.y;
       this.view.zoom = 1;
     }
-    const round = this.step === 'watch' || this.step === 'climb' || this.step === 'up' ? 0
-      : THREE.MathUtils.smootherstep(this.step === 'fog' ? this.t : 1e3, k.roundFrom, k.roundFrom + k.roundFor);
+    const sat = this.step === 'up' ? this.t : this.step === 'fog' ? tuning.drowned.church.upFor + this.t : 1e3;
+    const round = this.step === 'watch' || this.step === 'climb' ? 0 : THREE.MathUtils.smootherstep(sat, k.roundFrom, k.roundFrom + k.roundFor);
     if (round < 1) {
       const climbed = THREE.MathUtils.clamp((this.catEye.y - 1) / (TOWER.sill - 1), 0, 1);
       const e = this.tmp.set(TOWER.x + k.climbFrom.x, THREE.MathUtils.lerp(k.climbFrom.y, k.climbUp, climbed), TOWER.z + k.climbFrom.z);
@@ -404,9 +404,9 @@ export class ChurchArrival {
     } else out.target.copy(head).lerp(boat.position, k.waterToward * (1 - near)).setY(k.waterAim);
     const reach = Math.hypot(e.x - out.target.x, e.z - out.target.z);
     out.bearing = Math.atan2(e.x - out.target.x, e.z - out.target.z);
-    out.distance = reach * THREE.MathUtils.lerp(k.uprightFar, 1, wide);
+    out.distance = reach;
     out.eye = e.y;
-    out.zoom = back ? THREE.MathUtils.lerp(k.backUprightZoom, k.backZoom, wide) : k.waterZoom;
+    out.zoom = back ? THREE.MathUtils.lerp(k.backUprightZoom, k.backZoom, wide) : THREE.MathUtils.lerp(k.uprightWaterZoom, k.waterZoom, wide);
     return out;
   }
 

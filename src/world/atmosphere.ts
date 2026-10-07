@@ -966,8 +966,15 @@ vec4 seaFog(vec3 ro, vec3 rd, float far) {
   if (s0 > front) {
     float probe = ds < -1e-4 ? min((s0 - front) / -ds, LOOK) : LOOK;
     lean = (seaFogLead(a0 + da * probe) + closed - front) / probe;
-    meet = lean - ds > 1e-5 ? (s0 - front) / (lean - ds) : far;
   }
+  // Seen edge-on its face is heaped: how far it leans toward a grazing sightline goes with the height that sightline
+  // has where it comes to the face, so the front stands as a billowed edge rather than a straight wall.
+  float reach = clamp(abs(s0 - front) / max(abs(lean - ds), 1e-4), 8.0, GRAZE);
+  float yb = ro.y + rd.y * reach, ab = a0 + da * reach;
+  float heap = vnoise(vec2(yb * 0.11 + uTime * 0.05, ab * 0.03)) - 0.5 + 0.5 * (vnoise(vec2(yb * 0.27 - uTime * 0.07, ab * 0.08 + 5.3)) - 0.5);
+  // As far as at GRAZE, and fading off well before a sightline would turn from meeting it to leaving it.
+  lean += 2.0 * ${glsl(tuning.drowned.fog.faceHeap)} * heap / GRAZE * (1.0 - smoothstep(0.0, 0.35, abs(lean - ds)));
+  if (s0 > front) meet = lean - ds > 1e-5 ? (s0 - front) / (lean - ds) : far;
   float line = meet;
   float air = 0.0;
   float rate = exp(-max(s0 - front, 0.0) / uSeaFogReach - ro.y / AIR_LOW);

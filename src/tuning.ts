@@ -1764,8 +1764,8 @@ export const tuning = {
       top: 28, topFar: 1.2, closedTop: 0.6, topSoft: 0.15, closedSoft: 0.9, front: 22,
       /** Once it has closed round, how much its top rises for each metre away from the eye: a bowl she stands in. */
       closedBowl: 0.5,
-      /** How far its front heaves to and fro across its line, metres. */
-      heave: 20,
+      /** How far its front heaves to and fro across its line, metres; and how far its face heaps in and out with height, seen edge-on. */
+      heave: 20, faceHeap: 8,
       /**
        * Its feathered sheets, nearest first: metres behind its front (the first is a wisp low on the water, lying
        * `wispAhead` times as far ahead of it as its mist reaches) and how tall against the field; how raggedly their
@@ -1834,7 +1834,7 @@ export const tuning = {
        * the cat backing into the belfry; the first wind swinging the boat off its tree; her looking round at the fog,
        * then up at the cat, then out to the boat; and the boat being hers to bring.
        */
-      fog: { comeAfter: 4, comeFor: 9, past: 40, closeFrom: 11, closeFor: 8, catIn: 5, swingAt: 9, lookAtFog: 3, lookAtCat: 9, bringAfter: 16 },
+      fog: { comeAfter: 4, comeFor: 9, past: -4, closeFrom: 6, closeFor: 8, catIn: 5, swingAt: 9, lookAtFog: 3, lookAtCat: 9, bringAfter: 16 },
       /** How far the first wind takes the boat back off its tree, metres, and the most it goes while she brings it, m/s. */
       swingBack: 1.4, bringSpeed: 2.6,
       /**
@@ -2000,23 +2000,23 @@ export const tuning = {
        * middle, and how high once the cat is up; where it looks, from her head toward the cat and how far above that;
        * and its lens.
        */
-      climbFrom: { x: -8.4, y: 3.6, z: 8.5 }, climbUp: 4.4, climbAlong: 0.5, climbLift: 0.3, climbZoom: 1.15,
+      climbFrom: { x: -8.4, y: 3.6, z: 8.5 }, climbUp: 4.4, climbAlong: 0.42, climbLift: 0.3, climbZoom: 1,
       /** Round the nave's west end as the fog comes: seconds into the fog it starts and takes, and how much wider it goes. */
-      roundFrom: 0, roundFor: 10, roundWide: 11,
+      roundFrom: 1, roundFor: 8.5, roundWide: 11,
       /**
        * Over the water off the nave's west end: where it stands from the tower's middle with the boat still at its tree
        * and with it come in (upright, further out, clear of the nave's eave); how far from her toward the boat it looks
-       * while it is far off, at what height, and its lens.
+       * while it is far off, at what height, and its lens (upright wider rather than further off, so she still reads).
        */
       waterFar: { x: -29, y: 2.8, z: -15 }, waterNear: { x: -18, y: 2.4, z: -7.5 },
-      uprightWaterNear: { x: -23, y: 2.4, z: -11 }, waterToward: 0.45, waterAim: 3, waterZoom: 0.9,
+      uprightWaterNear: { x: -23, y: 2.4, z: -11 }, waterToward: 0.45, waterAim: 3, waterZoom: 0.9, uprightWaterZoom: 0.8,
       /**
        * Going: seconds after she is seated it starts to give way to the storm's frame, and how long it takes; meanwhile
        * how far from her toward the cat it looks while she looks back, and seconds after she is seated it starts across
        * to the light and is there; how far across from the boat to the lighthouse's lamp it then looks and how far up
        * from the one to the other, and its lens (upright, the same).
        */
-      leaveFrom: 7, leaveFor: 9, backCat: 0.42, backLightFrom: 1.5, backLightTo: 5, backAcross: 0.5, backUp: 0.62, backZoom: 0.78, backUprightZoom: 0.85,
+      leaveFrom: 7, leaveFor: 9, backCat: 0.42, backLightFrom: 1.5, backLightTo: 5, backAcross: 0.5, backUp: 0.62, backZoom: 0.78, backUprightZoom: 0.7,
     },
     /** Follow the boat into the streets; notice the church from that travelling view. */
     roofFromZ: -1260, roofUntilZ: -1360,
