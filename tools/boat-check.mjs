@@ -30,40 +30,47 @@ function fixture(gust = 0) {
   return { wind, boat, child, plane, cygnet: { carried: true, mind: { perform() {}, startle() {} }, eye: out => out.copy(child.position) },
     lines: { gust() {} }, sealife: { fishNear() {}, dolphinsWith() {}, whale: null, dolphinShow: null } };
 }
+const { drownedCast, stormCast } = await import('./lib/storm-cast.mjs');
+/** The drowned village's wind for the storm checks: its breeze plus a steady push. */
+const drownedWind = (gust) => ({ breeze: new THREE.Vector2(2.47, -0.80), calm: 3, addSplat() {},
+  sample(_x, _z, out) { return Object.assign(out, { x: this.breeze.x + gust, z: this.breeze.y - gust, energy: gust !== 0 ? 0.8 : 0, lift: 0 }); } });
+// The storm from her seated aboard at the nave to the forest beach: out round the church, past the lighthouse's side,
+// the plane lost and the landing about 45 s on, whatever the player's wind and the frame rate.
 const report = [];
 for (const [gust, fps] of [[0,60], [8,60], [0,30], [8,30], [40,60], [-40,60]]) {
-  const cast = fixture(gust), boat = cast.boat;
-  boat.beach(BIRCHES_BERTH.x, BIRCHES_BERTH.z - 6, Math.PI); boat.launch();
-  const chapter = new DrownedChapter(cast);
-  let start = null, snatch = null, lastBeat = '', afterTurns = 0, lastYaw = boat.yaw, lightGap = Infinity;
+  const wind = drownedWind(gust);
+  const { cast, chapter } = stormCast(wind), boat = cast.boat;
+  let snatch = null, lastBeat = '', turns = 0, lastYaw = boat.yaw, lightGap = Infinity, outAt = null;
   const beats = [];
-  for (let frame = 0; frame < fps * 300; frame++) {
+  for (let frame = 0; frame < fps * 120; frame++) {
     const dt = 1 / fps, time = frame * dt;
-    cast.wind.breeze.set(2.47, -0.80).multiplyScalar(chapter.breeze);
-    cast.wind.calm = cast.wind.breeze.length() * tuning.wind.calm;
+    wind.breeze.set(2.47, -0.80).multiplyScalar(chapter.breeze);
+    wind.calm = wind.breeze.length() * tuning.wind.calm;
     lightGap = Math.min(lightGap, Math.hypot(boat.position.x - LIGHTHOUSE.x, boat.position.z - LIGHTHOUSE.z));
     chapter.update(dt, time); boat.swell = chapter.storm; boat.update(dt, time);
     if (chapter.beat !== lastBeat) { beats.push([chapter.beat, +time.toFixed(2)]); lastBeat = chapter.beat; }
-    if (chapter.beat === 'gather' && start === null) start = time;
     if (chapter.beat === 'snatch' && snatch === null) snatch = time;
-    if (start !== null) afterTurns += Math.abs(Math.atan2(Math.sin(boat.yaw-lastYaw), Math.cos(boat.yaw-lastYaw)));
+    if (outAt === null && chapter.stormTime >= tuning.storm.lighthouseOutAt) outAt = Math.hypot(boat.position.x - LIGHTHOUSE.x, boat.position.z - LIGHTHOUSE.z);
+    turns += Math.abs(Math.atan2(Math.sin(boat.yaw - lastYaw), Math.cos(boat.yaw - lastYaw)));
     lastYaw = boat.yaw;
     if (chapter.done) {
-      const duration = time - start;
-      report.push({ gust, fps, stormToShore: +duration.toFixed(2), stormTurns: +(afterTurns / (2*Math.PI)).toFixed(3), beats });
-      assert(start !== null && snatch !== null, 'must lose the plane before landing');
+      report.push({ gust, fps, stormToShore: +time.toFixed(2), stormTurns: +(turns / (2 * Math.PI)).toFixed(3), lightGap: +lightGap.toFixed(1),
+        lightOutFrom: +outAt.toFixed(1), beats });
+      assert(snatch !== null, 'must lose the plane before landing');
+      assert(snatch > time * 0.35 && snatch < time * 0.65, `the plane must be taken about mid-way: ${snatch} of ${time}`);
       assert.equal(cast.plane.visible, false, 'plane must be gone before shore');
-      assert(duration >= 38 && duration <= 44, `storm duration ${duration}`);
-      assert(afterTurns < Math.PI, 'no circle during the storm');
-      assert(lightGap > 12 && lightGap < 40, `must pass the lighthouse safely and closely: ${lightGap}`);
+      assert(time >= 40 && time <= 52, `storm duration ${time}`);
+      assert(turns < Math.PI * 2, `no circle during the storm: ${turns}`);
+      assert(outAt < 70, `the light must go out while the lighthouse is near: ${outAt}`);
+      assert(lightGap > 15 && lightGap < 40, `must pass the lighthouse safely and closely: ${lightGap}`);
       break;
     }
-    assert(frame < fps * 300 - 1, `failed to arrive: ${JSON.stringify({beat:chapter.beat,leg:chapter.leg,position:boat.position})}`);
+    assert(frame < fps * 120 - 1, `failed to arrive: ${JSON.stringify({beat:chapter.beat,leg:chapter.leg,position:boat.position})}`);
   }
 }
 // Loading a checkpoint places the boat a second time after constructing the chapter.
 {
-  const cast=fixture(), b=cast.boat;
+  const cast=drownedCast(drownedWind(0)), b=cast.boat;
   b.beach(-4,-1203,Math.PI);b.afloat=true;
   const c=new DrownedChapter(cast);
   b.beach(-20,-1390,Math.PI);b.afloat=true;
