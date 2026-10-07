@@ -312,20 +312,33 @@ the bird's clearance from the flipper and the mechanics of N2 stay.
 Gate: as N3d's, stills at every keyframe.
 Done: [ ]
 
-### Phase N3g: the encounter as one
-After N3f, on `sea-whale` (Jeremy, 2026-10-08; design.md, "One encounter, seamless", the body never answering the
-wind, the farewell a dive not a roll). Owns `net-whale.ts`'s hand-offs between steps, the whale's attention, the
-child's and the bird's answers, the camera's moves between holds and the holds themselves on the new form, the
-removal of the body's wind response (`tickle`, the shiver and slap), and the farewell's dive in `sleeper.ts`. Reviewed
-from a full real-gesture play, landscape and portrait, seam by seam.
+### Phase N3g: the encounter staged (awe, sorrow, courage)
+After N3f, on `sea-whale` (Jeremy, 2026-10-08; design.md, "The feeling and the bar", "Claude's direction for the
+encounter", "One encounter, seamless", the body never answering the wind). Owns the approach's reveal in the haze,
+the sorrow at rest, the breath's held exchange of looks, the haul and the bird's swim as one flow: `net-whale.ts`'s
+hand-offs between steps, the whale's attention (its eye on her and the bird), the child's and the bird's acts at
+every beat, the camera's holds and moves on the new form, the score thinning in the sorrow, and the removal of the
+body's wind response (`tickle`, the shiver and slap). Claude plays the build in motion before it is done.
 Gate: typecheck; build; the whole `net-whale-check` (its tickle assertions become "the body never answers");
-`sea-logic-check`; `CROSSING=toMirror node tools/journey-pacing-check.mjs`; stills at every keyframe.
+`sea-logic-check`; `CROSSING=toMirror node tools/journey-pacing-check.mjs`; a real-gesture recording of the whole
+open sea with frame strips.
 Done: [ ]
 
-### Phase N3h: the ancient skin and its life
-After N3g. Owns the skin (`whaleShader.ts`, `tuning.whaleLook`): barnacle crusts, healed scars, mottling, growth at the
-waterline, wet streaks, the eye's age; water sheeting off the back with each breath; the seabirds on its back.
-Gate: as N3d's, final stills opened for Jeremy.
+### Phase N3h: the release and the farewell
+After N3g. The river-spirit moment: it breathes free, the plume's mist drifting down over the boat in the gold light,
+its call turning glad, the sea brightening round it, the net let go sinking away into the deep, the pod's leaps, her
+wave and the bird's call, the score's one bloom; then the dive (head down, the back arching forward and sliding under,
+the flukes rising once with their pale pattern and slipping under, never a roll), the swell lifting the boat, and the
+sea stilling toward the mirror. Owns the free and gone steps in `net-whale.ts` and `sleeper.ts`, the net's sinking,
+the spout's mist, the sounds and score there.
+Gate: as N3g's.
+Done: [ ]
+
+### Phase N3i: the ancient skin and its life
+After N3h. Owns the skin (`whaleShader.ts`, `tuning.whaleLook`): barnacle crusts, healed scars, mottling, growth at the
+waterline, wet streaks, the eye's age, drawn as bold simple painted shapes like the rest of the game; water sheeting
+off the back with each breath; the seabirds on its back.
+Gate: as N3g's, then the playable build for Jeremy.
 Done: [ ]
 
 ### Phase N4: docs on approval
