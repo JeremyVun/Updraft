@@ -172,7 +172,8 @@ them.
   edges and are bounded in CSS pixels, with a minimum light level and a soft cool edge so they read on pale cloth
   and in the dark wood.
 - **Ambient breeze and idle time solve nothing**: not a curtain, a toy, a scarf tangle, an ember, a bubble, the
-  feather, the curtains or the drowned village's tub. The becalmed sail's 90 s return and the tub's are the safety
+  feather, the curtains or the drowned village's tub. The drowned village's steps (the tub, the tree, the mill, the
+  swing and the boat brought to the nave) each get on by themselves after about 90 s with no progress: the safety
   valves.
 - **Updraft, not gust, where the gesture is a circle.** The cygnet's flights, the wrapped trunk, the wood's embers
   (`Embers.updraft` turns the charge at the waiting coal into its breath; burning coals flare from the field's
