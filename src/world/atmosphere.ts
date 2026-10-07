@@ -998,7 +998,7 @@ vec4 seaFog(vec3 ro, vec3 rd, float far) {
       float low = abs(rd.y) > 1e-3 ? LOW * (exp(-y0 / LOW) - exp(-y1 / LOW)) / rd.y : exp(-0.5 * (y0 + y1) / LOW) * len;
       float thick = mix(${glsl(tuning.drowned.fog.density)}, ${glsl(tuning.drowned.fog.closed)}, uSeaFogShape.z);
       // Closed round her it lies thinner on the water, so the glass near her still shows.
-      bank = along / len * (thick * high + ${glsl(tuning.drowned.fog.floor)} * (1.0 - 0.7 * uSeaFogShape.z) * low) * sides * sides * uSeaFogShape.w;
+      bank = along / len * (thick * high + ${glsl(tuning.drowned.fog.floor)} * (1.0 - 0.7 * uSeaFogShape.z) * low) * sides * uSeaFogShape.w;
       // Its face where the sightline comes into it, heaped in broad billows that drift.
       float tm = span.x + min(len, 10.0) * 0.5;
       float ym = ro.y + rd.y * tm;
@@ -1008,8 +1008,8 @@ vec4 seaFog(vec3 ro, vec3 rd, float far) {
       // The low sun takes what of it stands highest, and comes through it where it is thin.
       float glow = smoothstep(0.85 - 1.5 * uSeaFogRim / uSeaFogShape.x, 0.85, y0 / uSeaFogShape.x + (mottle - 0.5) * 0.8);
       light = seaFogLit(light, glow, exp(-bank * 3.0));
-      // Toward its ends it thins into the haze over the water rather than standing dark against the sky.
-      light = mix(light, uSkyHorizon * 0.9, (1.0 - sides) * uSeaFogGlow * (1.0 - uSeaFogShape.z));
+      // Toward its ends, while the sun is on it, it thins into the haze over the water rather than standing dark against the sky.
+      light = mix(light, uSkyHorizon * 0.9, (1.0 - sides) * smoothstep(${glsl(tuning.drowned.fog.glowNear)}, 1.0, uSeaFogGlow) * (1.0 - uSeaFogShape.z));
     }
     fieldSpan = span;
   }

@@ -1770,7 +1770,7 @@ export const tuning = {
        */
       body: 0.32, bodyNear: 0.3, crest: 0.55, haze: 0.3, hazeNear: 0.12, stir: 1, ripple: 0.18,
       /** How much of what is left of the light comes through it where it is thin once the sun has gone from it. */
-      glowNear: 0.25,
+      glowNear: 0.1,
       /**
        * Where the progression stands with the bank risen far off and come close with the sun taken, the light going
        * steadily between; and how much of its rise shows it risen in full.
