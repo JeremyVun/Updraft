@@ -41,6 +41,9 @@ export interface CloudDeckState {
 }
 
 
+/** The beats spent under the cloud, while the sea below can be seen; the toys sail by there from the last loose flight on. */
+const UNDER_THE_CLOUD: Beat[] = ['ashore', 'wonder', 'climb', 'waiting', 'hesitate', 'birdFirst'];
+
 /** How long the lens takes to rise out over the loop to the one place it has to be seen from. */
 const LOOP_SETTLE = 5;
 /**
@@ -473,6 +476,10 @@ export class StairsChapter implements Chapter {
     const { child: c, cygnet: k, carry, plane } = this.cast;
     if (plane.held) plane.hold(c);
     this.sunPoint();
+    const fleet = this.world.fleet;
+    const fleetOut = this.world.docked >= LOOSE.length - 1 && UNDER_THE_CLOUD.includes(this.beat);
+    if (fleetOut && !fleet.shown) fleet.setOff();
+    fleet.shown = fleetOut;
     switch (this.beat) {
       case 'wonder':
         // Out of the satchel and down onto the grass: this room it climbs on its own feet. Then both of them look

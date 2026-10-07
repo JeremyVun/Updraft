@@ -614,8 +614,9 @@ Rulings:
   shoulders. The camera stays close behind her shoulder; swinging it out to the side makes the scene feel unnatural.
 - The cottage faces the approach with a slight turn, echoing the drawing without looking arranged for it.
 - The camera stays at the crest for the goodbye: no following, dolly or crane.
-- The little boats' toys are not met at sea; the one callback is her own toy washed up beside the home jetty, still,
-  with no timing or camera work (Jeremy, 2026-10-04).
+- The little boats' toys are never met at sea: all seven sail on by far below while she climbs the stairs in the
+  clouds, and the one thing that comes back to her is her own toy washed up beside the home jetty, still, with no
+  timing or camera work (Jeremy, 2026-10-04).
 - No figure in the doorway. Children do not light fireplaces: the smoke starts after nightfall.
 - No bells at the summit: no phrase when the family arrives, no reward bells at the updraft, none as they fly away.
 - The closing screen is the one line and Play again: no border on the button, no credits roll.

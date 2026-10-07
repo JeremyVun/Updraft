@@ -552,19 +552,40 @@ So the existing drowned village and storm code may be refactored as far as the r
   beside the high roof and she walks off its end. The boarding and stepping-off heights follow from that arc in the
   blockout; the mill keeps the concept's size, and the cygnet stays tucked clear. The mill leaves the frame as the
   church and the lighthouse come back into view.
-- **A whole village the sea has taken** (Jeremy, 2026-10-07, quoted above; Astra's concept `comps/village/`, painted
-  over today's frames `today-*.png`, with `house-kit.png` and `notes.md`). Today it reads as a dozen identical sheds on
-  empty sea. It becomes a place with a shape: cottages in short rows of three to five whose turns imply drowned lanes,
-  broad water between clusters, groups on every side to the horizon (gold silhouettes into the sun), a few farm
-  outliers, and the green left as a clearing of water. The houses vary from one shared kit (slate and thatch, gabled and
-  hipped, a dormer or a dark attic window, bargeboards, ridge caps, stacks of two or three pots; a barn with a lean-to,
-  the pub's wordless fish sign, a low school bell-cote well away from the church), most of them ordinary. Village life
-  shows in a few coherent lines rather than scattered clutter: telegraph poles with one sagging wire along a lane,
-  garden wall copings and gate posts, two or three orchard trees still in autumn leaf among the dead ones, a gull on a
-  pot, a pair of ducks off the way. Windows stay dark so the lantern is the warm light. The near water stays open and
-  quiet; density goes to the middle distance and the horizon; nothing crowds the views of the church and the
-  lighthouse or of the fog coming, and nothing on the way becomes an obstacle. Roof shapes and the village's layout do
-  the work, not texture.
+- **A whole village the sea has taken** (Jeremy, 2026-10-07, quoted above; then: "it doesn't need to be super
+  realistic detailed btw. remember, this is a dream and it should feel surreal like one."). Today it reads as a dozen
+  identical sheds on empty sea. It becomes a place with a shape: cottages in short rows whose turns imply drowned
+  lanes, broad water between clusters, groups on every side to the horizon (gold silhouettes into the sun), and the
+  green left as a clearing of water. It is a village remembered in a dream, not surveyed: shape, colour and light over
+each house's character carried by its shape and by stylised detail (Jeremy, 2026-10-07: "when i said dont be
+  detailed, i meant dont be too realistic. detail is nice, just not realistic detail if that makes sense. i.e. add a
+  little bit of artistic flair that suits it being a dream / game"): chunky slates and scalloped tiles drawn as bold
+  shapes, thatch as sculpted layers, wonky frames and shutters, leaning pots, never photographic materials, grime or
+  noise; nothing recognisably of one country or era, and no lettering ("nowhere real"). A few quiet surreal touches carry the dream, in the game's dream logic
+  where things recur in the wrong place and nobody remarks on it: pieces of home out of place (the red door, washing on
+  a line), gentle impossible leans and shifts of scale. Windows stay dark so the
+  lantern is the warm light. The near water stays open and quiet; density goes to the middle distance and the horizon;
+  nothing crowds the views of the church and the lighthouse or of the fog coming, and nothing on the way becomes an
+  obstacle. Concept: `comps/village/`. The first round (`village-*.png`, `house-kit.png`, painted over today's frames
+  `today-*.png`) had character but was too literal; the second (`dream-*.png`) was dreamlike but plain, every house the
+  same polite gable (Jeremy, 2026-10-07: "nah iit doesnt have enough character"). The target is between them: a
+  storybook dream village where every house has a personality readable in its silhouette (a roof like a pointed hat, a
+  swaybacked ridge, thatch pulled low like a cap, a crooked or tall thin chimney, a round attic window, a little
+  turret), with the first round's richness in stylised form, most houses modest so the special ones sing; the second round's three touches kept, each built
+  once (the tall-beside-tiny pair, one red door just under the water, one washing line between two chimneys); windows
+  dark and never paired like faces. Round three (`story-*.png`) had the character but not the game's look (Jeremy,
+  2026-10-07: "i think the style and colour palette really doesn't fit he game"; "dont rebuild the village yet until
+  we can settle on a style"): its pastel violet, blue and rose roofs and candy-scalloped tiles belong to another game.
+  The style master is the room's own approved painting (`src/paintings/drowned-land.webp`): charcoal-slate and
+  dark thatch roofs, warm lime-washed gables catching the low sun, brick chimneys, soft continuous painterly shading,
+  the light doing the work. Character goes into the shapes within that palette. Round four (`painted-*.png`,
+  `painted-kit.png`, `painted-notes.md`) is approved (Jeremy, 2026-10-07: "ok this looks good, we can refine as we
+  go"): eight houses (swayback, tall hat, low cap, little pocket, the cat's shoulder, tucked together, round keeper,
+  open shutter) in charcoal slate, dark brown-grey and deep weathered thatch, cream limewash and brick-red pots, gold
+  only in the light, no modelled tiles; the three touches once each. It is built in the construction of home's
+  cottage (`src/world/cottage.ts`), the game's own house: clean modelled masses with crisp edges, soft colour lit by
+  the scene, a few crafted parts (window frames, a door, sills, bargeboards, a dormer, a shutter, pots), as the game's
+  best built things are (the stairs, the boat); and many more of them, as the washing field repeats to the horizon.
 - **The run is built on decks** (`src/world/decks.ts`): ridges, wall tops and the fallen trunk are strips the child
   walks; the slates up to a ridge are ramps. She gets out with `alight` onto the cottage's slates and back in with
   `board` at the nave.
@@ -731,6 +752,19 @@ light win. Branch `crossing-whale` (a sleeping whale on `toMeadow`, built and ha
 parts that carry over.
 
 The sequence:
+- **The same whale on the first crossing** (Jeremy, 2026-10-07: "itd be good to have the whale at the beginning
+  between the still island and island of lines to be this very same whale as well (just without the netting and all
+  that)"). The first crossing's whale (`toLines`, surfacing far off about 37 s in) becomes this animal: the same
+  shape, skin and dream size, free and unnetted, seen only far off, rising, blowing and lifting its flukes as it
+  dives; its timing and distance as on main, and it never crowds the farewell look-back. Claude's call: the underside
+  of its flukes carries a pale pattern of its own, seen as it dives there and again when it waves goodbye on the open
+  sea, so the meeting is a recognition rather than a coincidence.
+  Jeremy: "so when hte child encounters the whale again, it feels like a familiar face / friend". So it is met as a
+  friend, never as a stranger or a danger: on the first crossing she watches it go (her gaze follows it and she sits
+  up as it blows), and on the open sea she knows it before the player does: as it breathes in the haze she leans
+  toward it and points, and the cygnet, wary of everything else that size, is not afraid of it. When its eye opens
+  after the first breath it knows her too; the look between them is the warmest beat of the sequence, and the
+  goodbye is a friend's.
 - **The open sea as on main up to the swim.** The pod rises and rides the bow, the leap at first light, the cygnet's
   swim and its drying. The sea's distant surfacing whale (`whaleAt: 27`) is cut: the sleeper is the whale.
 - **The pod leads.** After the swim a dolphin nudges the planking (main's nudge, now asking) and the pod leads the boat
@@ -739,10 +773,13 @@ The sequence:
 - **The whale.** About 110 m nose to flukes (see Ownership above; `notes.md` says 75 m), too big for the frame: the back recedes across and away into the haze and
   is never shown whole near the boat. Smooth slate-blue, paler underside, the low sun on its rim, cool sky fill so the
   eye still reads; no rock-like skin, no sharp ridge, no face-like smile. Its eye, near the boat, is larger than the
-  boat is wide, under a heavy tired lid. Crown about 3.6 m above the water, eye about 1.6 m. It breathes slowly.
-- **The net.** One old faded brown-green net, about 32 × 12 m, over the head and blowhole and down the forward back,
-  rows of cork floats on its edges, a few strands of weed; one loop round the near flipper. A sparse deforming mesh,
-  instanced corks and a few boundary ropes, never a general cloth simulation. Tired, never hurt: no injury shown.
+  boat is wide, under a heavy tired lid. `notes.md`'s heights scaled to 110 m: crown about 5.3 m above the water, eye
+  centre about 2.3 m, the eye about 3.5 m across, the near flipper about 16 m. It breathes slowly.
+- **The net.** One old faded brown-green net, scaled with the whale to about 45 × 17 m, over the head and blowhole and
+  down the forward back, rows of cork floats on its edges, a few strands of weed; one loop round the near flipper. Its
+  mesh, ropes and corks keep their real sizes (`notes.md`), so the line in her mittens is one a child can hold. A sparse
+  deforming mesh, instanced corks and a few boundary ropes, never a general cloth simulation. Tired, never hurt: no
+  injury shown.
 - **1. The breath (circles).** The net lies over the blowhole; each breath only domes the mesh and sputters a weak
   mist. `updraftTarget` is the blowhole; circles there lift the patch of mesh off it like a sheet in the wind
   (progress builds while the player winds and is kept when they stop); the whale draws its first full breath, a soft
@@ -776,6 +813,15 @@ The sequence:
   sailing on toward the mirror with no whale).
 - **Sounds.** Its slow breath and the sputter through the mesh, the full breath, the spout (`whale-blow`), the net's
   wet rope and corks, the cygnet's splash; all synthesised (`docs/contracts/audio.md`).
+- **Its voice** (Jeremy, 2026-10-07: "yea, lets give it a voice"). One low, soft call when its eye opens and it knows
+  her, the friend's greeting, and the same call once more as it waves goodbye. Synthesised like every sound, shaped
+  to sit in the sea's score, never a cartoon voice; on the first crossing, at most a far echo of it as it dives.
+- **The cygnet's second swim** (Claude's call). Its first swim in this chapter is the hesitant brave one; at the
+  flipper it goes in at once, without the climbing and deciding: the same bird after the sleeping island.
+- **No first-use stalls.** The whale's new programs and the net are compiled at boot like every other program
+  (`docs/backlog/boot-veil/`; `__stats.bootStrayPrograms` and `playFirstDraws` stay at 0).
+- **The chapter-select still** for the open sea becomes the whale; regenerated after the build is judged (Jeremy,
+  2026-10-07: "the picture will need to be regenerated, but lets build it out first").
 
 **QA starts.** `?chapter=toMirror` (and any `to*` crossing) starts that crossing at its first waypoint, cygnet in the
 satchel (branch `crossings-start`, also carried by `crossing-whale`); `?chapter=sea` starts the open sea as on main.

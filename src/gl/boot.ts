@@ -464,7 +464,7 @@ export function watchFirstDraws(renderer: THREE.WebGLRenderer): { begin(): void;
   const setTarget = renderer.setRenderTarget.bind(renderer);
   renderer.setRenderTarget = (target, face, level): void => {
     const texture = target ? target.textures[0] as THREE.Texture : null;
-    format = target && texture ? `${texture.type}x${target.textures.length}${target.samples ? ` msaa${target.samples}` : ''}${target.depthBuffer ? ' depth' : ''}${texture.colorSpace === THREE.SRGBColorSpace ? ' srgb' : ''}` : 'screen';
+    format = target && texture ? `${texture.type}/${texture.internalFormat ?? texture.format}x${target.textures.length}${target.samples ? ` msaa${target.samples}` : ''}${target.depthBuffer ? ' depth' : ''}${target.stencilBuffer ? ' stencil' : ''}${texture.colorSpace === THREE.SRGBColorSpace ? ' srgb' : ''}` : 'screen';
     setTarget(target, face, level);
   };
   const arrays = gl.drawArrays.bind(gl), elements = gl.drawElements.bind(gl);
