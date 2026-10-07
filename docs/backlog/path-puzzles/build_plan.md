@@ -243,9 +243,29 @@ the storm). Left: the cat in the belfry reads about 10 px in the look back (the 
 the turn past the lighthouse pans the lens at up to 17 deg/s for about 8 s; the storm from 10 to 30 s is dark and the
 boat small in the frame at 15-20 s; the lighthouse stands clear above the closed fog's top rather than as a glow in it.
 
+### Phase 4c: polish from the strand to the beach (two parallel parcels)
+What the first full pass left, judged on the merged stills. Each parcel is visual, Opus, and checked by the run check
+with `LENS=1` from `roofs` and `church`, landscape and upright.
+
+- **Lens** (`src/story/drowned-run.ts`, the church's and the storm's lens in `drowned-church.ts` and `drowned.ts`,
+  `tuning.drownedCamera`, the storm's camera numbers): the climb out of the boat sees the fog she is leaving (hold the
+  becalmed view toward the fog until she tops the ridge, then hand to the tree's view, never a swing round the
+  cottage); the cat in the belfry reads in the look back (today about 10 px); the storm's 10–20 s keeps the boat and
+  its lantern legible (today very dark, the lens about 23 m off); upright never loses her (the tall house at 55–65 m,
+  the westward turn near 160 m, the old tree's branches over the swing); no chimney fills the near frame; her glance
+  back at the fog never turns her face to the lens.
+- **Look** (`src/world/atmosphere.ts` sea fog, `drowned-dark.ts`, the church's build in `drowned.ts`, `drowned-houses.ts`,
+  `drowned-shape.ts`): the fog's sheets seen side-on along its flank show as jagged blue vertical streaks, and its
+  front makes a dark smoky smear beside the tower as it comes; the lighthouse reads as a glow through the closed fog,
+  not a ghost tower standing clear of it; the church and its tower in home's cottage family like the houses (today a
+  plain box); the village north of the church less thin, the washing not grey when backlit, a few far silhouettes
+  that are not plain gables.
+
+Done: lens [ ], look [ ]
+
 ### Phase 5: saves, docs and the look
-Owns: checkpoints (a save during the run resumes with the boat at rest against the cottage, the cat aboard and the
-fog risen; a save after she is aboard resumes aboard with the storm to come), `docs/chapters.md` drowned section,
+Owns: checkpoints (a save during the run resumes at its start on the strand roof, the cat ahead, the fog risen and the
+boat adrift as it was then; a save after she is aboard resumes aboard with the storm to come), `docs/chapters.md` drowned section,
 `docs/contracts/world.md` where the village's pieces belong, a final set of stills (landscape and upright), a full play
 from the stairs to the forest beach.
 Gate: typecheck, build, the check from start to the beach; stills opened for review.
