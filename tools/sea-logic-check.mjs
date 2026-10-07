@@ -1,7 +1,7 @@
 // Run the real sea chapter, boat, child, cygnet, pod and whale without a renderer.
 // Usage: node tools/sea-logic-check.mjs. Covers strong wind, 30/60fps, portrait, the whale in the net's sequence
-// (idle to its valve's dolphin, and a circling player), passage completion, saves at the whale, after its breath and
-// after it has gone, and old saves.
+// (idle to each valve's dolphin, and a player who circles over the blowhole and sweeps the cork in), passage
+// completion, saves at the whale, after its breath, after the line and after it has gone, and old saves.
 import './lib/typescript.mjs';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
@@ -45,9 +45,15 @@ function fixture(gust, portrait, legacy = false, circling = false) {
   chapter = legacy ? new CrossingChapter(cast,{route:ROUTES.toHome,dolphins:true,
     swimAt:tuning.seaPassage.swimAt,moor:HOME_MOORING,haze:tuning.seaPassage.haze}) : Journey.prototype.make.call({cast},'toMirror');
   chapter.update(0,0);rig.cut(chapter.shot);
-  // A player who circles over the blowhole once the boat is at rest beside the whale; otherwise nobody plays.
-  const play=()=>{const w=chapter.whale;input.present=circling&&w?.step==='breath'&&w.progress<1;input.charge=input.present?1:0;
-    if(input.present)input.updraftAt.copy(w.whale.blowhole);};
+  // A player who circles over the blowhole once the boat is at rest beside the whale, then sweeps across the cork
+  // toward the boat; otherwise nobody plays.
+  const play=()=>{const w=chapter.whale;
+    const breath=circling&&w?.step==='breath'&&w.progress<1, sweep=circling&&w?.step==='line'&&w.haul==='out'&&w.stepTime>4;
+    input.present=breath||sweep;input.charge=breath?1:0;
+    if(breath)input.updraftAt.copy(w.whale.blowhole);
+    if(sweep){const a=sealife.net.float.position.clone().project(rig.camera),b=boat.position.clone().project(rig.camera),k=rig.camera.aspect;
+      const d=new THREE.Vector2((b.x-a.x)*k,b.y-a.y).normalize();
+      input.prevNdc.set(a.x-d.x*0.05/k,a.y-d.y*0.05);input.ndc.set(a.x+d.x*0.05/k,a.y+d.y*0.05);}};
   return {chapter,wind,boat,child,cygnet,carry,rig,sealife,play};
 }
 /** One frame of the sea passage, as main.ts runs it. */
@@ -67,7 +73,7 @@ for(const [fps,gust,portrait,circling] of [[60,0,false,false],[30,20,false,true]
   const transitions=[],steps=[],saves=[];
   let last='',step='',rewards=0,blowholeEdge=0,eyeOpen=0,lastSeen=0,valveAt=null;
   const ndc=new THREE.Vector3();
-  for(let i=0;i<fps*420;i++) {
+  for(let i=0;i<fps*520;i++) {
     const dt=1/fps,time=i*dt;
     frame(f,dt,time);
     if(c.swim!==last){transitions.push([c.swim,+time.toFixed(2)]);last=c.swim;}
@@ -111,8 +117,9 @@ for(const [fps,gust,portrait,circling] of [[60,0,false,false],[30,20,false,true]
   assert.equal(clipped,0,`swimmer stays inside the safe frame: ${JSON.stringify({fps,gust,portrait,swimWorst,transitions})}`);
   assert(leapAt>0&&swimStart>leapAt&&swimStart>tuning.seaPassage.swimNotBefore,'the pod arrives and plays its leap before the swim');
   assert.deepEqual(steps.map(([s])=>s),['approach','breath','line','flipper','free','gone'],'the whale\'s steps go in order');
-  assert.deepEqual(saves,['swim','whale-rest','whale-breath','whale-gone'],'saves after the swim, at rest beside it, after its breath, and after it has gone, never back');
+  assert.deepEqual(saves,['swim','whale-rest','whale-breath','whale-line','whale-gone'],'saves after the swim, at rest beside it, after its breath, after the line, and after it has gone, never back');
   assert.equal(c.whale.liftedBy,circling?'circles':'dolphin',`the net is lifted by ${circling?'the circles':'the valve\'s dolphin'}`);
+  assert.equal(c.whale.broughtBy,circling?'sweeps':'dolphin',`the cork is brought in by ${circling?'the sweeps':'the valve\'s dolphin'}`);
   if(!circling)assert(valveAt>=tuning.netWhale.valveAfter,`nothing lifts the net before the valve: ${valveAt}`);
   assert(eyeOpen,'its first full breath opens its eye before it is free');
   assert.equal(rewards,1,'freeing it is rewarded once');
@@ -146,9 +153,26 @@ for(const [fps,gust,portrait,circling] of [[60,0,false,false],[30,20,false,true]
   frame(f,1/60,110);
   assert(sealife.net.shown,'the net is on it from the first frame');assert.equal(c.checkpoint,'whale-breath');
   let gone=0;
-  for(let i=0;i<60*240&&!c.done;i++){frame(f,1/60,110+i/60);if(c.whale.step==='line'&&c.whale.stepTime>1)assert(b.speed<0.2,'a save after the breath resumes at rest');
+  for(let i=0;i<60*320&&!c.done;i++){frame(f,1/60,110+i/60);if(c.whale.step==='line'&&c.whale.stepTime>1)assert(b.speed<0.2,'a save after the breath resumes at rest');
     if(c.whale.step==='gone'&&!gone)gone=c.time;}
   assert(gone>0&&c.done,'from the save after its breath it is freed and the boat moors at the mirror');
+  assert.equal(c.whale.broughtBy,'dolphin','with nobody playing, the line comes in by its valve');
+  assert.equal(takeCues().filter(q=>q==='restored').length,1,'and is rewarded once');
+}
+// Resumed after the line, the net is off its head in the water and the line let go; it goes on to the flipper.
+{
+  const f=fixture(0,false,false,false);
+  const {chapter:c,boat:b,sealife}=f;
+  const rest=c.whale.rest;
+  b.beach(rest.x-Math.sin(c.whale.yaw)*1.5,rest.z-Math.cos(c.whale.yaw)*1.5,c.whale.yaw);b.afloat=true;b.grounded=false;
+  c.restoreCheckpoint('whale-line',[3,120]);
+  assert.equal(c.whale.step,'flipper');assert.equal(c.whale.whale.phase,'woken');assert.equal(sealife.net.peel,1);assert.equal(sealife.net.grip,null);
+  frame(f,1/60,120);
+  assert(sealife.net.shown,'the net is in the water from the first frame');assert.equal(c.checkpoint,'whale-line');
+  let gone=0;
+  for(let i=0;i<60*240&&!c.done;i++){frame(f,1/60,120+i/60);if(c.whale.step==='flipper')assert(b.speed<0.2,'a save after the line resumes at rest');
+    if(c.whale.step==='gone'&&!gone)gone=c.time;}
+  assert(gone>0&&c.done,'from the save after the line it is freed and the boat moors at the mirror');
   assert.equal(takeCues().filter(q=>q==='restored').length,1,'and is rewarded once');
 }
 // Resumed after it has gone, there is no whale and the boat sails on to the mirror.

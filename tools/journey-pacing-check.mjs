@@ -55,7 +55,8 @@ const starts = {
   toHarbour:[MIRROR_BERTH.x,MIRROR_BERTH.z,MIRROR_BERTH.yaw],
 };
 // On the open sea the boat waits beside the whale until it is free: `circling` winds an updraft over its blowhole
-// once the boat is at rest; otherwise nobody plays and it finds its breath by itself after the safety valve.
+// once the boat is at rest and then sweeps the cork in to her; otherwise nobody plays and each step comes by itself
+// after its safety valve.
 function run(name, fps, gust, veer=0, waitInVillage=false, arrivalGust=false, circling=false) {
   let push=gust;
   const baseWind=new THREE.Vector2(Math.cos(-Math.PI/10+veer),Math.sin(-Math.PI/10+veer)).multiplyScalar(tuning.wind.breeze);
@@ -80,12 +81,16 @@ function run(name, fps, gust, veer=0, waitInVillage=false, arrivalGust=false, ci
     const approaching=events[`music-${name==='drowned'?'wood':chapter.destinationMusic}`]!==undefined;
     push=gust || (arrivalGust&&approaching?8:0) || (name==='drowned' && chapter.beat==='still' && !waitInVillage?8:0);
     const whale=chapter.whale;
-    input.present=circling&&whale?.step==='breath'&&whale.progress<1;input.charge=input.present?1:0;
-    if(input.present)input.updraftAt.copy(whale.whale.blowhole);
+    const breath=circling&&whale?.step==='breath'&&whale.progress<1, sweep=circling&&whale?.step==='line'&&whale.haul==='out'&&whale.stepTime>4;
+    input.present=breath||sweep;input.charge=breath?1:0;
+    if(breath)input.updraftAt.copy(whale.whale.blowhole);
+    if(sweep){const a=sealife.net.float.position.clone().project(rig.camera),b=boat.position.clone().project(rig.camera),k=rig.camera.aspect;
+      const d=new THREE.Vector2((b.x-a.x)*k,b.y-a.y).normalize();
+      input.prevNdc.set(a.x-d.x*0.05/k,a.y-d.y*0.05);input.ndc.set(a.x+d.x*0.05/k,a.y+d.y*0.05);}
     chapter.update(dt,time);boat.swell=chapter.storm ?? 0;boat.update(dt,time);
     if(chapter.arrivalMusic && events[`music-${chapter.arrivalMusic}`]===undefined) events[`music-${chapter.arrivalMusic}`]=+time.toFixed(2);
     if(chapter.arrivalHeard && chapter.arrivalReady && events.arrivalReady===undefined)events.arrivalReady=+time.toFixed(2);
-    if(name==='toMirror'){child.update(dt);carry.update(dt);cygnet.update(dt,time,child.position,wind.sample(0,0,air));carry.after();rig.update(dt,time,chapter.shot,chapter.pace);sealife.update(dt,time);
+    if(name==='toMirror'){child.update(dt);carry.update(dt);cygnet.update(dt,time,child.position,wind.sample(0,0,air));carry.after();rig.update(dt,time,chapter.shot,chapter.pace);rig.camera.updateMatrixWorld();chapter.afterCamera(rig.camera);sealife.update(dt,time);
       const stunt=sealife.pod.stunt,act=stunt?`${stunt.kind}:${stunt.phase}${stunt.hit?':contact':''}`:'none';
       if(act!==lastAct){dolphinActs.push([act,+time.toFixed(1)]);lastAct=act;}
       if(chapter.mirrorArrival>0)assert(!sealife.pod.mesh.visible,'dolphins finish diving before the mirror appears');
