@@ -1491,14 +1491,14 @@ export const tuning = {
      * on the bow (toward starboard when negative), as far as the step allows, so its tall frame keeps the gold
      * morning over the whale's back though it is too narrow to hold the head and the sun together; `distance` behind
      * the boat and `height` up, looking from the boat `toward` of the way to what matters and `lookY` up on it (m).
-     * `release` is where the breath's hold eases out to as it goes free, turned back from the sun toward the raft
-     * and the leaps round its head.
+     * `release` is where the breath's hold eases out to as it goes free, turned back a little from the sun so the
+     * spout, its eye and the leap before it stand over the boat.
      */
     phone: {
       breath: { distance: 22, height: 10, turn: -0.62, lookY: 20, toward: 0.3 },
       line: { distance: 11, height: 6, turn: -0.55, lookY: 20, toward: 0.12 },
       flipper: { distance: 13, height: 8, turn: -1.2, lookY: 16, toward: 0.3 },
-      release: { distance: 28, height: 11, turn: 0.2 },
+      release: { distance: 28, height: 11, turn: -0.25 },
     },
     /**
      * The flipper: a stroke within `finRadius` of its outer part on screen (normalised device units), moving at least

@@ -64,9 +64,9 @@ const POD_PACE = 5.5;
  * `SALUTE_SWIM` seconds in under from the pod. They are lent in slots of their own, clear of the valves' slot 0.
  */
 const SALUTES = [
-  { along: 11, out: 5, run: 5, high: 1.9, at: 6.3 },
-  { along: -6, out: 7, run: 4.5, high: 1.5, at: 6.6 },
-  { along: -20, out: 8.5, run: -5, high: 1.7, at: 6.8 },
+  { along: 11, out: 5, run: 6, high: 2.6, at: 6.2 },
+  { along: -6, out: 7, run: 5.5, high: 2.3, at: 6.4 },
+  { along: -20, out: 8.5, run: -6, high: 2.5, at: 6.6 },
 ];
 const SALUTE_SWIM = 3;
 const POD_SPREAD = 0.35;
