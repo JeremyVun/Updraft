@@ -24,8 +24,6 @@ const JAW_Y = -0.12;
 const JAW_X = flankAt(JAW_S, JAW_Y);
 const FIN_SPAN = 4.5 * DREAM_SHAPE.fin;
 const FIN_DIR = new THREE.Vector3(0.8, -0.3, -0.52).normalize();
-/** The near flipper at rest: swept round toward the head and lifted, so it reaches toward the boat with its tip at the surface. */
-const REST_FIN = new THREE.Vector2(-2, -0.64);
 /** Rolling free it lays its flippers back along its flanks, so on its back they lie low rather than stand up. */
 const FREE_FIN = new THREE.Vector2(0.95, -0.4);
 /** Lying at the surface the fluke tips curl up a little at the far end. */
@@ -173,7 +171,7 @@ export class SleepingWhale extends WhaleRig {
     this.gazing = false;
     this.wake.reset(true);
     this.uniforms.uCurl.value = REST_CURL;
-    this.uniforms.uFin.value.copy(REST_FIN);
+    this.uniforms.uFin.value.set(K.finRestSweep, -K.finRestRaise);
     this.uniforms.uSlap.value.set(1, 0, 0);
     this.locate();
     this.mesh.visible = this.ghost.visible = true;
@@ -319,7 +317,10 @@ export class SleepingWhale extends WhaleRig {
     const liftRoll = this.liftT < 0 ? 0 : 0.06 * LIFT(this.liftT);
     this.lay(0, rise, 0, 0, K.roll + liftRoll);
     this.uniforms.uCurl.value = REST_CURL;
-    this.uniforms.uFin.value.set(REST_FIN.x + Math.sin(this.worldTime * 0.17) * 0.03, REST_FIN.y + Math.sin(this.worldTime * 0.23 + 1) * 0.03);
+    // The flipper lies awash: as the body rises with a breath it floats there rather than lifting out of the sea.
+    const awash = rise / (FIN_SPAN * this.scale * 0.82);
+    this.uniforms.uFin.value.set(K.finRestSweep + Math.sin(this.worldTime * 0.17) * 0.03,
+      -K.finRestRaise + awash + Math.sin(this.worldTime * 0.23 + 1) * 0.015);
   }
 
   /** Free: the deep breath and the spout, then onto its back, flukes up and waving, and away under. */
@@ -336,7 +337,7 @@ export class SleepingWhale extends WhaleRig {
     this.lay(SINK(t), K.breathRise * 2.4 * draw, DIP(t), TAIL(t) + 0.05 * sway, K.roll + ROLL(t) + 0.22 * sway);
     this.uniforms.uCurl.value = REST_CURL * (1 - THREE.MathUtils.smoothstep(t, 8.5, 12.5)) + 0.3 * sway;
     const lower = THREE.MathUtils.smoothstep(t, 6.5, 9.5);
-    this.uniforms.uFin.value.set(THREE.MathUtils.lerp(REST_FIN.x, FREE_FIN.x, lower), THREE.MathUtils.lerp(REST_FIN.y, FREE_FIN.y, lower));
+    this.uniforms.uFin.value.set(THREE.MathUtils.lerp(K.finRestSweep, FREE_FIN.x, lower), THREE.MathUtils.lerp(-K.finRestRaise, FREE_FIN.y, lower));
     if (t >= SURGE_AT && t - dt < SURGE_AT) this.surge();
   }
 

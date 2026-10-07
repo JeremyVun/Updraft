@@ -1404,7 +1404,7 @@ export const tuning = {
      * Where it lies beside the boat at rest: its eye `eyeDistance` metres from the boat's centre and `eyeBearing`
      * radians round to port of the bow, its length running `bodyAngle` radians round to starboard into the haze.
      */
-    eyeDistance: 12, eyeBearing: 0.82, bodyAngle: 1.22,
+    eyeDistance: 14.5, eyeBearing: 0.8, bodyAngle: 1.18,
     /** Its highest back above the water at rest (m), and how far it lies rolled with its near side up (radians). */
     crest: 6.6, roll: 0.087,
     /**
@@ -1435,7 +1435,7 @@ export const tuning = {
      * the wider view it eases back out to as it goes.
      */
     holdFrom: 40, holdFull: 6, holdDistance: 22, holdHeight: 11.5, holdBearing: 0.05, holdEase: 0.45,
-    releaseDistance: 27, releaseHeight: 7,
+    releaseDistance: 38, releaseHeight: 9,
     /** How far ahead of the bow the pod runs while it leads the boat in (m). */
     podLead: 18,
     /**
@@ -1486,7 +1486,7 @@ export const tuning = {
      */
     holdMove: 5, holdLookY: 4.5, holdToward: 0.5,
     lineDistance: 11, lineHeight: 4.8, lineBearing: 0.3, lineLookY: 3.4, lineToward: 0.36,
-    flipperDistance: 9, flipperHeight: 4, flipperBearing: 0.75, flipperLookY: 1, flipperToward: 0.5,
+    flipperDistance: 15, flipperHeight: 7.2, flipperBearing: 0.36, flipperLookY: 9, flipperToward: 0.4,
     portraitIn: 0.58,
     /**
      * The flipper: a stroke within `finRadius` of its outer part on screen (normalised device units), moving at least
@@ -1497,9 +1497,14 @@ export const tuning = {
      * `slipFor` seconds into the lift.
      */
     finRadius: 0.07, finPace: 0.8, finAlong: 0.5, finSweep: 0.1, finInviteRadius: 2.6,
-    endOut: 5.3, endAhead: 2.2, birdOut: 6.2, birdAhead: 1.4, slipFor: 4,
+    endOut: 5, endAhead: 2.4, birdOut: 4, birdAhead: 3.2, slipFor: 4,
+    /**
+     * The near flipper at rest, about its root: swept round toward the head and raised, so it reaches toward the boat
+     * with its tip at the surface (radians).
+     */
+    finRestSweep: -1.75, finRestRaise: 0.67,
     /** How far its lazy lift raises the near flipper about its root and swings it back along its flank (radians). */
-    finLift: 0.16, finSwing: 0.05,
+    finLift: 0.1, finSwing: 0.05,
     /** A phone holds the flipper higher, looking down over the sail at the cygnet and the tip beyond it (m). */
     flipperPhoneDistance: 6.5, flipperPhoneHeight: 10,
   },

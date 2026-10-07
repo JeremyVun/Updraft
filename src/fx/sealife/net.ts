@@ -69,7 +69,7 @@ const PAY_OUT = 1.6;
 const LOOP_END = 2;
 const END_POINTS = 10;
 /** Where along the near flipper the loop sits, and how far past its tip it has gone once it is off (0 root .. 1 tip). */
-const LOOP_FROM = 0.68;
+const LOOP_FROM = 0.9;
 const LOOP_PAST = 1.04;
 const RING = 14;
 const WEEDS = 10;

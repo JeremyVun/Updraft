@@ -49,20 +49,22 @@ const POD_WAIT = new THREE.Vector2(24, -18);
 const POD_WAIT_RADIUS = 8;
 const POD_WAIT_PACE = 2;
 /**
- * The pod's way round as the whale spouts free, from wherever it is waiting behind the camera: in across the open
- * water astern of the boat, the only water the camera sees between it and the whale, and up the starboard side along
- * its flank, at `POD_PACE` metres a second with its lanes drawn in by `POD_SPREAD`, so it crosses the frame near.
+ * The pod's way round as the whale spouts free, from wherever it is waiting behind the camera: up the port side past
+ * the floating net, across the open water between the bow and the whale's head and flank, and away along it to
+ * starboard, at `POD_PACE` metres a second with its lanes drawn in by `POD_SPREAD`, so it leaps round the whale.
  */
-const POD_WAY = [new THREE.Vector2(12, -8), new THREE.Vector2(0, -7), new THREE.Vector2(-12, 0), new THREE.Vector2(-40, 18)];
+const POD_WAY = [new THREE.Vector2(20, 1), new THREE.Vector2(11, 5), new THREE.Vector2(0, 9.5), new THREE.Vector2(-14, 14),
+  new THREE.Vector2(-42, 30)];
 const POD_PACE = 5.5;
 /**
- * As it spouts, one of the pod leaps right across the water astern of the boat, side-on to the camera: out of the
- * water `SALUTE_FROM` (metres to port, and ahead, of the boat at rest), in again `SALUTE_TO`, `SALUTE_HIGH` up at the
- * top, leaving the water `SALUTE_AT` seconds into its going free after `SALUTE_SWIM` seconds in under from the pod.
+ * As it spouts, one of the pod leaps right across the water between the bow and the whale, side-on to the camera:
+ * out of the water `SALUTE_FROM` (metres to port, and ahead, of the boat at rest), in again `SALUTE_TO`,
+ * `SALUTE_HIGH` up at the top, leaving the water `SALUTE_AT` seconds into its going free after `SALUTE_SWIM` seconds
+ * in under from the pod.
  */
-const SALUTE_FROM = new THREE.Vector2(6.5, -5);
-const SALUTE_TO = new THREE.Vector2(-2, -5.5);
-const SALUTE_HIGH = 1.8;
+const SALUTE_FROM = new THREE.Vector2(7, 8);
+const SALUTE_TO = new THREE.Vector2(-3, 10.5);
+const SALUTE_HIGH = 2;
 const SALUTE_AT = 4.8;
 const SALUTE_SWIM = 2.2;
 const POD_SPREAD = 0.35;
