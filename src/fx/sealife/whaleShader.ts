@@ -336,14 +336,19 @@ Skin skin(float far) {
 }
 `;
 
-/** Its far length low on the sea melts into the morning haze, so only the head and what stands clear of it are crisp. */
+/**
+ * Its far length low on the sea melts into the morning: wet and glancing, it mirrors the dawn as the sea round it
+ * does, so only the head and what stands clear of the water are crisp.
+ */
 const HAZE_GLSL = /* glsl */ `
 uniform float uHaze;
 vec3 hazed(vec3 col, vec3 world, float s) {
-  vec4 f = fogOf(world);
+  vec3 V = normalize(cameraPosition - world);
   float far = smoothstep(${f(L.hazeFrom)}, ${f(L.hazeTo)}, distance(cameraPosition, world));
   float haze = uHaze * smoothstep(0.24, 0.72, s) * far * (1.0 - smoothstep(2.0, 9.0, world.y)) * ${f(L.haze)};
-  return mix(col, f.rgb, max(f.a, haze));
+  vec3 sky = skyColor(vec3(-V.x, max(V.y, 0.02), -V.z));
+  vec3 sea = mix(vec3(0.05, 0.29, 0.4) * uSkyAmbient * 1.1, sky, 0.02 + 0.4 * pow(1.0 - max(V.y, 0.0), 5.0));
+  return applyFog(mix(col, sea, haze), world);
 }
 `;
 
@@ -495,15 +500,15 @@ void main() {
   vec3 light = max(uSkyAmbient * 1.2, vec3(0.78, 0.9, 1.08) * sky * ${f(L.glass)}) + uSunColor * max(uSunDir.y, 0.0) * 1.1 * sun
     + uSkyHorizonSun * sky * ${f(L.glassWarm)};
   vec3 deep = uDeep * (uSkyAmbient * 1.1 + uSunColor * max(uSunDir.y, 0.0) * 0.6 * sun);
-  // The flipper just under the glass would show as a pale blade of its own: the sea keeps it a shape beneath.
-  vec3 seen = k.albedo * light * exp(-uAbsorb * (path + depth)) * (int(vRig.y + 0.5) == ${FIN} ? 0.45 : 1.0);
+  // Under the glass it is one soft shape: its pale jaw and the flipper just under would each show as a pale slab.
+  vec3 seen = mix(k.albedo, uBack, 0.5) * light * exp(-uAbsorb * (path + depth)) * (int(vRig.y + 0.5) == ${FIN} ? 0.45 : 1.0);
   float clear = exp(-path * ${f(L.clarity)});
   vec3 col = mix(deep, seen, clear);
   // Its outline softens with depth, as the sea blurs a shape far down.
-  vec3 under = normalize(vec3(-V.x, -V.y * 1.6, -V.z));
-  float soft = smoothstep(0.0, 0.15 + 0.6 * (1.0 - clear), abs(dot(normalize(vFacing), under)));
-  float a = (1.0 - F) * soft * smoothstep(-0.02, 0.06, vDepth) * mix(${f(L.glassDeep)}, 0.75, clear)
-    * (1.0 - 0.75 * smoothstep(${f(L.glassFrom)}, ${f(L.glassTo)}, dist));
+  float soft = smoothstep(0.0, mix(1.0, 0.2, clear), abs(dot(normalize(vFacing), V)));
+  float deepShows = ${f(L.glassDeep)} * (1.0 - smoothstep(${f(L.glassFrom)}, ${f(L.glassFrom)} * 2.0, dist));
+  float a = (1.0 - F) * soft * smoothstep(-0.02, 0.06, vDepth) * mix(deepShows, 0.75, clear)
+    * (1.0 - 0.85 * smoothstep(${f(L.glassFrom)}, ${f(L.glassTo)}, dist));
   if (a < 0.004) discard;
   col = mix(stillGrey(col) * 1.05, col, 0.35 + 0.65 * uWorldLife);
   col = hazed(col, vSurface, vRig.x);

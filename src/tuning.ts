@@ -2155,9 +2155,9 @@ export const tuning = {
      * of the dawn's warmth comes down to it, how much of its shape still shows deep down, and from how far off to how
      * far it fades (m).
      */
-    glass: 4, glassWarm: 0.6, glassDeep: 0.45, glassFrom: 35, glassTo: 110,
-    /** Its long low back melts into the morning haze: at most this much, from `hazeFrom` to `hazeTo` metres off. */
-    haze: 0.85, hazeFrom: 25, hazeTo: 80,
+    glass: 3, glassWarm: 2, glassDeep: 0.45, glassFrom: 30, glassTo: 80,
+    /** Its long low back melts into the sea's mirror of the morning: at most this much, from `hazeFrom` to `hazeTo` metres off. */
+    haze: 0.8, hazeFrom: 30, hazeTo: 95,
   },
 };
 

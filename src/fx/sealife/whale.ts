@@ -147,7 +147,7 @@ export class WhaleRig {
           ...this.uniforms,
           ...skin,
           uDeep: { value: new THREE.Color('#0d4a66') },
-          uAbsorb: { value: new THREE.Vector3(0.24, 0.11, 0.1) },
+          uAbsorb: { value: new THREE.Vector3(0.14, 0.1, 0.1) },
         },
         transparent: true,
         depthWrite: false,

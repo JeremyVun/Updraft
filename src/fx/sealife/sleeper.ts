@@ -359,6 +359,7 @@ export class SleepingWhale extends WhaleRig {
     this.lay(SINK(t), K.breathRise * 2.4 * draw, DIP(t), TAIL(t) + 0.05 * sway, K.roll + ROLL(t) + 0.22 * sway,
       1 - THREE.MathUtils.smoothstep(t, 10.5, 14.5), 1);
     this.uniforms.uCurl.value = REST_CURL * (1 - THREE.MathUtils.smoothstep(t, 8.5, 12.5)) + 0.3 * sway;
+    this.uniforms.uHaze.value = 1 - 0.8 * THREE.MathUtils.smoothstep(t, 11, 15);
     const lower = THREE.MathUtils.smoothstep(t, 6.5, 9.5);
     this.uniforms.uFin.value.set(THREE.MathUtils.lerp(K.finRestSweep, FREE_FIN.x, lower), THREE.MathUtils.lerp(-K.finRestRaise, FREE_FIN.y, lower));
     if (t >= SURGE_AT && t - dt < SURGE_AT) this.surge();
