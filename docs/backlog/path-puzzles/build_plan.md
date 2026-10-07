@@ -261,7 +261,25 @@ with `LENS=1` from `roofs` and `church`, landscape and upright.
   plain box); the village north of the church less thin, the washing not grey when backlit, a few far silhouettes
   that are not plain gables.
 
-Done: lens [ ], look [ ]
+Done: lens [ ], look [x]
+
+Look as built: the sea fog's front is met by a sightline from its front read at the eye and 160 m out along it, taken
+as straight between and beyond (`LOOK`), so a sightline along it no longer reads a heave hundreds of metres off; its
+swells and billows are read no further than 120 m off (`GRAZE`); its ends are integrated over a sightline's first
+200 m (`seaFogFlank`) rather than sampled and cut; a grazing sightline crosses its soft front within 30 m (`EDGE`);
+the sheets standing along the way it comes are gone and those across it show only to a sightline looking into it;
+its billows are a soft mottle near the eye. Seen side-on it is one soft body. Closed round her its top rises 0.5 m
+for each metre away (`fog.closedBowl`), so the lighthouse stands in it, and its lamp (now drawn through the weather)
+glows in it (`fog.harbourHalo`, `harbourReach`) until it goes out. The church is limewash with dressed quoins, a
+corbel table, arched belfry openings in proud surrounds, a numberless clock stopped at different hours north and
+east, a bell-cast slate spire that turns a little as it rises with four gabled lights, and the nave built by the kit
+on its exact slates with a wheel window in its west gable; masses, sills, ivy and decks unchanged. A second pass of
+the fuller village from its own streams fills the broad water beyond the pair (`BEYOND_CHURCH`, `BACKDROP`) round the
+storm's way out; nothing laid before it moves. The washing lets the low sun through (`drowned.clothThrough`). Far
+off more houses are tall hats and the round keeper is a leaning-hatted turret. Draw calls unchanged (82 at the
+drift's start); the village's merged mesh 150k to 166k triangles. Left: the fog closing at the church has no lit
+crest (the sun is gone by then) and can still show a dark ragged patch at a frame's edge when a sightline grazes its
+top; the fog's crest seen side-on reads as a darker top rather than the painting's lit rim.
 
 ### Phase 5: saves, docs and the look
 Owns: checkpoints (a save during the run resumes at its start on the strand roof, the cat ahead, the fog risen and the
