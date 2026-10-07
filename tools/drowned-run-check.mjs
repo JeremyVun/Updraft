@@ -35,7 +35,7 @@ try {
   await page.goto(`${base}?shot=1&chapter=${fromStorm ? 'storm' : fromChurch ? 'church' : fromRoofs ? 'roofs' : fromStairs ? 'stairs' : 'drowned'}&ratio=1`, { waitUntil: 'load' });
   await page.waitForFunction(() => window.__ready === true, null, { timeout: 60000 });
 
-  /** The lens's own motion every frame from the start: its fastest turn and fastest move, and where they fell. */
+  /** The lens's own motion every frame in the drowned village and on into the wood: its fastest turn and move, and where. */
   await page.evaluate(() => {
     const w = window.__lensWatch = { turn: 0, turnAt: '', move: 0, moveAt: '' };
     let last = null;
@@ -43,12 +43,13 @@ try {
       const st = __game.story.current, cam = __game.rig.camera, t = __stats.time;
       const d = cam.getWorldDirection(cam.position.clone()), p = cam.position.clone();
       const where = () => `${st.beat ?? __game.story.name}${st.run && st.run.stage !== 'off' ? '/' + st.run.stage : ''}${st.church && st.church.step !== 'off' ? '/' + st.church.step : ''} at ${t.toFixed(1)} s`;
-      if (last && t > last.t && (last.cut === st.cameraCut || last.story !== st)) {
+      const ours = __game.story.name === 'drowned' || last?.name === 'drowned';
+      if (ours && last && t > last.t && (last.cut === st.cameraCut || last.story !== st)) {
         const dt = t - last.t, turn = Math.acos(Math.min(1, d.dot(last.d))) * 180 / Math.PI / dt, move = p.distanceTo(last.p) / dt;
         if (turn > w.turn) { w.turn = turn; w.turnAt = where(); }
         if (move > w.move) { w.move = move; w.moveAt = where(); }
       }
-      last = { t, d, p, cut: st.cameraCut, story: st };
+      last = { t, d, p, cut: st.cameraCut, story: st, name: __game.story.name };
       requestAnimationFrame(tick);
     };
     requestAnimationFrame(tick);
