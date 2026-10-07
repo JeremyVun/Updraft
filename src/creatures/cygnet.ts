@@ -709,9 +709,9 @@ export class Cygnet {
 
   /**
    * Into the water, and swimming for the place it is given, which whoever is sailing beside it moves along. It has
-   * never done this before the first time, and goes in like a dropped loaf.
+   * never done this before the first time, and goes in like a dropped loaf; `soaked` is how wet its down gets going in.
    */
-  swimTo(target: THREE.Vector3, launch = 0): void {
+  swimTo(target: THREE.Vector3, launch = 0, soaked = 1): void {
     if (this.state !== 'swimming') {
       this.seating.go({ seat: null, held: false }, 'hop', 0.75, 0.22);
       this.swimSpeed = this.swimLaunch = launch;
@@ -720,7 +720,7 @@ export class Cygnet {
       this.swum = 0;
       this.dunk = 1;
       this.swims++;
-      this.mind.wet = 1;
+      this.mind.wet = Math.max(this.mind.wet, soaked);
     }
     this.swimAim.copy(target);
   }

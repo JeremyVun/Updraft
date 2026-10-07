@@ -1435,7 +1435,7 @@ export const tuning = {
      * the wider view it eases back out to as it goes free, the plume leaving the top of the frame.
      */
     holdFrom: 40, holdFull: 6, holdDistance: 18, holdHeight: 9.5, holdBearing: 0.05, holdEase: 0.45,
-    releaseDistance: 30, releaseHeight: 8.5, releaseBearing: 0.2,
+    releaseDistance: 21, releaseHeight: 7, releaseBearing: 0.28,
     /** How far ahead of the bow the pod runs while it leads the boat in (m). */
     podLead: 18,
     /**
@@ -1485,7 +1485,7 @@ export const tuning = {
      */
     holdMove: 5, holdLookY: 4.5, holdToward: 0.5,
     lineDistance: 11, lineHeight: 4.8, lineBearing: 0.3, lineLookY: 3.4, lineToward: 0.36,
-    flipperDistance: 15, flipperHeight: 7.2, flipperBearing: 0.36, flipperLookY: 9, flipperToward: 0.4,
+    flipperDistance: 11.5, flipperHeight: 7.2, flipperBearing: 0.36, flipperLookY: 7, flipperToward: 0.4,
     /**
      * A phone's holds: on the line from what matters through the boat, turned `turn` radians round (toward astern
      * when negative), so boat, step and head stack up its tall frame past the sail's side; `distance` behind the boat and `height` up,

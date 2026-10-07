@@ -58,16 +58,17 @@ const POD_WAY = [new THREE.Vector2(18, -2), new THREE.Vector2(10, 2), new THREE.
   new THREE.Vector2(-40, 22)];
 const POD_PACE = 5.5;
 /**
- * As it spouts, one of the pod leaps right across the water by the boat, side-on to the camera and against the sea:
- * out of the water `SALUTE_FROM` (metres to port, and ahead, of the boat at rest), in again `SALUTE_TO`,
- * `SALUTE_HIGH` up at the top, leaving the water `SALUTE_AT` seconds into its going free after `SALUTE_SWIM` seconds
- * in under from the pod.
+ * As it spouts, three of the pod leap clear round its head and catch the sun. Each leaves the water `along` metres
+ * from the eye toward the snout (tailward when negative) and `out` metres from it toward the boat, leaps `run`
+ * metres toward the snout (tailward when negative), `high` up at the top, `at` seconds into its going free, after
+ * `SALUTE_SWIM` seconds in under from the pod. They are lent in slots of their own, clear of the valves' slot 0.
  */
-const SALUTE_FROM = new THREE.Vector2(7, -2.5);
-const SALUTE_TO = new THREE.Vector2(-4, -1);
-const SALUTE_HIGH = 2;
-const SALUTE_AT = 4.8;
-const SALUTE_SWIM = 2.2;
+const SALUTES = [
+  { along: 13, out: 8, run: 5, high: 1.9, at: 4.3 },
+  { along: 4, out: 9.5, run: 4.5, high: 1.4, at: 4.8 },
+  { along: -13, out: 6.5, run: -5, high: 1.7, at: 5.2 },
+];
+const SALUTE_SWIM = 3;
 const POD_SPREAD = 0.35;
 /** Seconds the child holds a point toward a breath she has seen. */
 const POINT_FOR = 2.6;
@@ -271,8 +272,11 @@ export class NetWhale {
   private nudged = false;
   private finned = false;
   /** Seconds into the leap one of the pod makes as it spouts, or -1 before it, or Infinity once it is back. */
-  private saluteT = -1;
-  private readonly leaper = new THREE.Vector3();
+  private caught = 0;
+  private readonly salutes = SALUTES.map(() => ({
+    t: -1, from: new THREE.Vector3(), launch: new THREE.Vector3(), dir: new THREE.Vector3(), rise: 0, air: 0, speed: 0,
+    at: new THREE.Vector3(), ahead: new THREE.Vector3(),
+  }));
   private readonly station = new THREE.Vector3();
   private readonly falls = new THREE.Vector3();
   private readonly endRest = new THREE.Vector3();
@@ -315,6 +319,7 @@ export class NetWhale {
   /** Moves the encounter on to `step`; what the whale does there begins with it. */
   goTo(step: WhaleStep): void {
     if (step === this.step) return;
+    if (step === 'gone') this.cast.sealife.dolphinCatch = 0;
     if (this.step === 'breath') this.breathed = true;
     if (this.step === 'line') this.hauled = true;
     if (this.step === 'flipper') this.finned = true;
@@ -820,66 +825,83 @@ export class NetWhale {
     sealife.poseDolphin(p.x, p.y, p.z, yaw, pitch);
   }
 
-  /** One of the pod, lent for a moment, leaps across astern of the boat as the whale spouts, and goes back to them. */
+  /** Three of the pod, lent for a moment, leap round its head as it spouts, and go back to them. */
   private salute(dt: number): void {
     const { sealife } = this.cast;
     const whale = this.whale;
-    if (this.saluteT === Infinity) return;
-    if (this.saluteT < 0) {
-      if (whale.phase !== 'free' || whale.time < SALUTE_AT - SALUTE_SWIM - RUN_UP) return;
-      const from = this.valveT >= 0 && !this.vDone ? null : sealife.lendDolphin();
-      if (!from) {
-        this.saluteT = Infinity;
-        return;
+    this.caught += ((this.salutes.some((s) => s.t >= 0 && s.t < Infinity) ? 1 : 0) - this.caught) * (1 - Math.exp(-dt * 1.5));
+    sealife.dolphinCatch = this.caught;
+    SALUTES.forEach((leap, i) => {
+      const s = this.salutes[i];
+      const slot = i + 1;
+      if (s.t === Infinity) return;
+      if (s.t < 0) {
+        if (whale.phase !== 'free' || whale.time < leap.at - SALUTE_SWIM - RUN_UP) return;
+        const from = sealife.lendDolphin(slot);
+        if (!from) {
+          s.t = Infinity;
+          return;
+        }
+        s.t = 0;
+        s.from.set(from.x, from.y, from.z);
+        this.fromEye(leap.along, leap.out, s.launch);
+        s.dir.subVectors(this.fromEye(leap.along + leap.run, leap.out, this.b), s.launch).setY(0);
+        const run = s.dir.length();
+        s.dir.normalize();
+        const up = Math.sqrt((2 * leap.high) / K.valveFall);
+        s.rise = K.valveFall * up;
+        s.air = 2 * up;
+        s.speed = run / s.air;
       }
-      this.saluteT = 0;
-      this.vFrom.set(from.x, from.y, from.z);
-      this.local(SALUTE_FROM.x, SALUTE_FROM.y, this.vLaunch);
-      this.vDir.subVectors(this.local(SALUTE_TO.x, SALUTE_TO.y, this.b), this.vLaunch).setY(0);
-      const run = this.vDir.length();
-      this.vDir.normalize();
-      const up = Math.sqrt((2 * SALUTE_HIGH) / K.valveFall);
-      this.vRise = K.valveFall * up;
-      this.vAir = 2 * up;
-      this.vSpeed = run / this.vAir;
-    }
-    this.saluteT += dt;
-    const t = this.saluteT;
-    const p = this.leaper;
-    let yaw = Math.atan2(this.vDir.x, this.vDir.z);
-    let pitch = 0;
-    if (t < SALUTE_SWIM) {
-      const u = (t / SALUTE_SWIM) ** 1.4;
-      this.a.copy(this.vLaunch).addScaledVector(this.vDir, -this.vSpeed * RUN_UP).setY(-this.vRise * RUN_UP);
-      this.b.copy(this.a).addScaledVector(this.vDir, -5).setY(-1.8);
-      this.forward.copy(this.vFrom).setY(-2.2);
-      bezier(this.vFrom, this.forward, this.b, this.a, u, p);
-      bezier(this.vFrom, this.forward, this.b, this.a, Math.min(1, u + 0.01), this.lookFrom);
-      yaw = Math.atan2(this.lookFrom.x - p.x, this.lookFrom.z - p.z);
-      pitch = Math.atan2(this.lookFrom.y - p.y, Math.hypot(this.lookFrom.x - p.x, this.lookFrom.z - p.z));
-    } else {
-      const f = t - SALUTE_SWIM - RUN_UP;
-      p.copy(this.vLaunch).addScaledVector(this.vDir, this.vSpeed * f);
-      let rise: number;
-      if (f < 0) {
-        p.y = this.vRise * f;
-        rise = this.vRise;
-      } else if (f < this.vAir) {
-        p.y = this.vRise * f - 0.5 * K.valveFall * f * f;
-        rise = this.vRise - K.valveFall * f;
+      s.t += dt;
+      const t = s.t;
+      const p = s.at;
+      let yaw = Math.atan2(s.dir.x, s.dir.z);
+      let pitch = 0;
+      if (t < SALUTE_SWIM) {
+        const u = (t / SALUTE_SWIM) ** 1.4;
+        this.a.copy(s.launch).addScaledVector(s.dir, -s.speed * RUN_UP).setY(-s.rise * RUN_UP);
+        this.b.copy(this.a).addScaledVector(s.dir, -5).setY(-1.8);
+        this.forward.copy(s.from).setY(-2.2);
+        bezier(s.from, this.forward, this.b, this.a, u, p);
+        bezier(s.from, this.forward, this.b, this.a, Math.min(1, u + 0.01), s.ahead);
+        yaw = Math.atan2(s.ahead.x - p.x, s.ahead.z - p.z);
+        pitch = Math.atan2(s.ahead.y - p.y, Math.hypot(s.ahead.x - p.x, s.ahead.z - p.z));
       } else {
-        const x = Math.min(f - this.vAir, LEAP_DOWN) / LEAP_DOWN;
-        p.y = -this.vRise * LEAP_DOWN * 0.5 * (1 - (1 - x) ** 2);
-        rise = -this.vRise * (1 - x);
+        const f = t - SALUTE_SWIM - RUN_UP;
+        p.copy(s.launch).addScaledVector(s.dir, s.speed * f);
+        let rise: number;
+        if (f < 0) {
+          p.y = s.rise * f;
+          rise = s.rise;
+        } else if (f < s.air) {
+          p.y = s.rise * f - 0.5 * K.valveFall * f * f;
+          rise = s.rise - K.valveFall * f;
+        } else {
+          const x = Math.min(f - s.air, LEAP_DOWN) / LEAP_DOWN;
+          p.y = -s.rise * LEAP_DOWN * 0.5 * (1 - (1 - x) ** 2);
+          rise = -s.rise * (1 - x);
+        }
+        pitch = Math.atan2(rise, s.speed);
+        if (f > s.air + LEAP_DOWN) {
+          s.t = Infinity;
+          sealife.handBackDolphin(slot);
+          return;
+        }
       }
-      pitch = Math.atan2(rise, this.vSpeed);
-      if (f > this.vAir + LEAP_DOWN) {
-        this.saluteT = Infinity;
-        sealife.handBackDolphin();
-        return;
-      }
-    }
-    sealife.poseDolphin(p.x, p.y, p.z, yaw, pitch);
+      sealife.poseDolphin(p.x, p.y, p.z, yaw, pitch, slot);
+    });
+  }
+
+  /** A point on the water `along` metres from the eye toward the snout and `out` metres from it toward the boat. */
+  private fromEye(along: number, out: number, target: THREE.Vector3): THREE.Vector3 {
+    const eye = this.whale.eye;
+    const h = this.whale.heading;
+    const len = Math.hypot(h.x, h.z) || 1;
+    const hx = h.x / len;
+    const hz = h.z / len;
+    const toward = (this.rest.x - eye.x) * -hz + (this.rest.z - eye.z) * hx > 0 ? 1 : -1;
+    return target.set(eye.x + hx * along - hz * out * toward, 0, eye.z + hz * along + hx * out * toward);
   }
 
   /** Its beak over the crown catches the mesh and flicks the patch up, which goes on rising after it has passed. */
@@ -1009,7 +1031,8 @@ export class NetWhale {
     if (this.bird === 'out') {
       const last = this.wayPoint >= ROUND_STERN.length;
       const aim = last ? this.endRest : g.localToWorld(this.a.copy(ROUND_STERN[this.wayPoint]));
-      cygnet.swimTo(aim, 0.6);
+      // Its second swim is a sure one: it sits high on the water and its down stays dry enough to show grey.
+      cygnet.swimTo(aim, 0.6, 0.3);
       const gap = Math.hypot(aim.x - cygnet.position.x, aim.z - cygnet.position.z);
       if (!last && gap < WAY_NEAR) this.wayPoint++;
       else if (last && gap < TAKES_AT) this.birdTo('holding');
@@ -1556,13 +1579,14 @@ export class NetWhale {
       s.secondary.copy(out ? this.cast.cygnet.position : whale.finTip).y += out ? 0.4 : 0;
     } else s.secondary.copy(whale.blowhole).y += 2.5;
     // A phone's narrow frame stacks the step over the boat; fitting the eye in beside them would only back it off.
-    if (portrait && (this.step === 'line' || this.step === 'flipper')) s.tertiary.copy(s.secondary);
+    // Going free the boat comes near and the whale lies across the middle distance, its plume leaving the frame.
+    if ((portrait && (this.step === 'line' || this.step === 'flipper')) || (!portrait && this.step === 'free')) s.tertiary.copy(s.secondary);
     else s.tertiary.copy(this.step === 'flipper' ? whale.finTip : whale.eye);
     if (glance > 0) s.tertiary.lerp(this.a.copy(whale.flukes).setY(Math.max(whale.flukes.y, 1)), glance * 0.6);
     s.secondary.lerp(rest, 1 - h);
     s.tertiary.lerp(rest, 1 - h);
     s.margin = THREE.MathUtils.lerp(pair?.margin ?? 0.85, 0.85, h);
-    s.extra = THREE.MathUtils.lerp(pair?.extra ?? 10, 10, h);
+    s.extra = THREE.MathUtils.lerp(pair?.extra ?? 10, !portrait && this.step === 'free' ? 4 : 10, h);
     shot.subjects = s;
   }
 }

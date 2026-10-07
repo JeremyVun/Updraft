@@ -8,6 +8,9 @@ import { DROP, MIST, type Spray } from './spray';
 import { WhaleWake, type WhaleSound } from './wake';
 import { DREAM_SHAPE, SPINE_N, SPINE_STEP, WhaleRig } from './whale';
 
+/** Where along the flipper the sea pours off it as it lifts (0 root .. 1 tip). */
+const POURS = [0.38, 0.5, 0.61, 0.73, 0.84, 0.95];
+
 export type SleeperSound = WhaleSound | 'whale-sigh' | 'whale-breath' | 'whale-slap' | 'flipper-pour';
 
 const K = tuning.netWhale;
@@ -394,16 +397,17 @@ export class SleepingWhale extends WhaleRig {
     if (this.liftT > LIFT_FOR) this.liftT = -1;
   }
 
-  /** The sea running off the flipper as it comes up out of it, in drops from its edge all along what is clear. */
+  /** The sea running off the flipper as it comes up out of it, in strings of drops from the low places along its edge. */
   private drip(dt: number): void {
     const size = Math.sqrt(this.scale);
-    const n = Math.floor(dt * 70 + Math.random());
+    const n = Math.floor(dt * 90 + Math.random());
     for (let k = 0; k < n; k++) {
-      const e = this.finPoint(0.3 + Math.random() * 0.72, this.p);
+      const at = POURS[Math.floor(Math.random() * POURS.length)];
+      const e = this.finPoint(at + (Math.random() - 0.5) * 0.015, this.p);
       if (e.y < 0.15) continue;
-      this.spray.emit(DROP, e.x + (Math.random() - 0.5) * 0.6, e.y - 0.1, e.z + (Math.random() - 0.5) * 0.6,
-        (Math.random() - 0.5) * 0.3, -0.2 - Math.random() * 0.6, (Math.random() - 0.5) * 0.3,
-        (0.018 + Math.random() * 0.02) * size, 2, 0, 0.5 + Math.random() * 0.4);
+      this.spray.emit(DROP, e.x + (Math.random() - 0.5) * 0.08, e.y - 0.1, e.z + (Math.random() - 0.5) * 0.08,
+        (Math.random() - 0.5) * 0.05, -0.6 - Math.random() * 0.5, (Math.random() - 0.5) * 0.05,
+        (0.01 + Math.random() * 0.012) * size, 2, 0, 0.5 + Math.random() * 0.4);
     }
   }
 

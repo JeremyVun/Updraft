@@ -61,14 +61,18 @@ const STAGGER = 0.5;
 const WATER_MIN = 3;
 /** Points along each row's drape: the sheet across, then the line from its near edge down to the water. */
 const PATH = COLS + BELOW - 1;
-/** How far the empty net drifts, and how far round it turns, as it goes. */
-const DRIFT_AWAY = 30;
+/**
+ * How far the empty net drifts, quickest at first, and how far round it turns, as it goes: on along the whale past
+ * its snout and out toward the boat's side of it, clear of its head before it spouts.
+ */
+const DRIFT_AWAY = 34;
 const DRIFT_TURN = 0.5;
+const DRIFT_OUT = 0.75;
 /**
  * Drifting off, the folded mass works loose into a raft this share of the sheet's length and breadth, its edge corks
  * round it, between these shares of the drift.
  */
-const OPEN = new THREE.Vector2(0.4, 0.55);
+const OPEN = new THREE.Vector2(0.42, 0.34);
 const OPEN_FROM = 0.06;
 const OPEN_TO = 0.4;
 const LEADER = 17;
@@ -195,6 +199,7 @@ export class Net {
   /** Where each point floats once it is all peeled, before it drifts. */
   private readonly afloatAt = new Float32Array(ROWS * COLS * 2);
   private readonly openAt = new Float32Array(ROWS * COLS * 2);
+  private readonly openY = new Float32Array(ROWS * COLS);
   private readonly crowns = new Float32Array(ROWS);
   private readonly below = new Float32Array(ROWS * BELOW * 3);
   private readonly belowAcross = new Float32Array(ROWS * BELOW);
@@ -860,8 +865,12 @@ export class Net {
       this.mass.z += z / this.n;
       const long = (NET.long / 2 - u) * OPEN.x;
       const wide = (across - (near - NET.far) / 2) * OPEN.y;
-      this.openAt[k * 2] = this.ahead.x * long + this.side.x * wide;
-      this.openAt[k * 2 + 1] = this.ahead.z * long + this.side.z * wide;
+      // Worked loose, it lies in no straight line: its edges wander and its mesh bunches here and opens there.
+      const alongBy = long + Math.sin(u * 0.31 + across * 0.23) * 1.3 + Math.sin(across * 0.9) * 0.5;
+      const wideBy = wide + Math.sin(across * 0.37 + u * 0.17) * 1.1 + Math.sin(u * 0.8) * 0.4;
+      this.openAt[k * 2] = this.ahead.x * alongBy + this.side.x * wideBy;
+      this.openAt[k * 2 + 1] = this.ahead.z * alongBy + this.side.z * wideBy;
+      this.openY[k] = 0.04 + Math.max(0, Math.sin(u * 0.7 + across * 0.5) * Math.sin(across * 0.4 - u * 0.2)) * 0.14;
     }
   }
 
@@ -874,9 +883,9 @@ export class Net {
     const open = THREE.MathUtils.smootherstep(this.drift, OPEN_FROM, OPEN_TO);
     const x = THREE.MathUtils.lerp(this.afloatAt[k * 2] - this.mass.x, this.openAt[k * 2], open);
     const z = THREE.MathUtils.lerp(this.afloatAt[k * 2 + 1] - this.mass.z, this.openAt[k * 2 + 1], open);
-    const away = drift * DRIFT_AWAY;
-    return out.set(this.mass.x + c * x + s * z + (this.ahead.x + this.side.x * 0.35) * away, THREE.MathUtils.lerp(this.fold[k * 3 + 2], 0.04, open),
-      this.mass.z - s * x + c * z + (this.ahead.z + this.side.z * 0.35) * away);
+    const away = (1 - (1 - drift) ** 2) * DRIFT_AWAY;
+    return out.set(this.mass.x + c * x + s * z + (this.ahead.x + this.side.x * DRIFT_OUT) * away, THREE.MathUtils.lerp(this.fold[k * 3 + 2], this.openY[k], open),
+      this.mass.z - s * x + c * z + (this.ahead.z + this.side.z * DRIFT_OUT) * away);
   }
 
   /** Every point of the sheet this frame: on the skin as it breathes, lifted, domed, sliding off, folded, drifting. */
@@ -1197,8 +1206,8 @@ export class Net {
     };
     along(0);
     along(COLS - 1);
-    acrossRow(0);
-    acrossRow(ROWS - 1);
+    acrossRow(0, false, 3);
+    acrossRow(ROWS - 1, false, 3);
     acrossRow(Math.round((((BLOWHOLE - FRONT) * LENGTH * this.whale.scale) / NET.long) * (ROWS - 1)), true, 1);
     for (let m = 2; m <= this.links; m++) this.corkAt.push({ i: 0, j: 0, f: 0, leader: m, patch: false });
   }

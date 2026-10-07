@@ -9,7 +9,7 @@ import { SWELL_GLSL, swellUniforms } from '../../world/water/swell';
  * floats. The cells, strands and corks are drawn larger than a real net's so they read from the boat as the paintings
  * do; the float-line and its floats stay a size a child can hold.
  */
-export const NET = { long: 45, near: 22, far: 11, cell: 1.25, strand: 0.07, rope: 0.1, line: 0.016, cork: 0.27, float: 0.16, sag: 0.4, corkStep: 1.5 };
+export const NET = { long: 45, near: 22, far: 11, cell: 1.25, strand: 0.07, rope: 0.1, line: 0.016, cork: 0.27, float: 0.16, sag: 0.4, corkStep: 2.4 };
 /**
  * However far off, a strand is drawn at least this opaque a line a pixel and a half wide, and once its cells are too
  * fine to draw it veils the skin at least this much: an old net reads as rope from the hold without crawling.

@@ -346,6 +346,7 @@ const DOLPHIN_FRAG = /* glsl */ `
 ${ATMO_GLSL}
 ${SKIN_GLSL}
 uniform vec3 uSeaTint;
+uniform float uCatch;
 in vec3 vWorld;
 in vec3 vNormal;
 void main() {
@@ -374,7 +375,9 @@ void main() {
   vec3 H = halfVector(uSunDir, V);
   col += uSunColor * pow(max(dot(N, H), 0.0), mix(60.0, 170.0, gloss)) * (0.35 + (0.7 + 0.9 * streak) * sheet) * sun;
   col += vec3(0.85, 0.9, 0.95) * (uSkyAmbient * 0.7 + uSunColor * (0.1 + back * 0.8) * sun) * streak * sheet * 0.2;
-  col += uSunColor * pow(1.0 - nv, 6.0) * back * smoothstep(-0.3, 0.5, ndl) * 0.6 * sun;
+  col += uSunColor * pow(1.0 - nv, mix(6.0, 3.0, uCatch)) * back * smoothstep(-0.3, 0.5, ndl) * (0.6 + 1.6 * uCatch) * sun;
+  // Leaping in a set piece against a low sun, a painter would light its flank too, or it is only a cut-out.
+  col += k.albedo * uSkyAmbient * vec3(1.25, 1.05, 0.85) * (0.5 + 0.5 * N.y) * uCatch;
 
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;
@@ -802,8 +805,11 @@ export class Dolphins {
   private turn = 0;
   private pushed = false;
   private resumed = false;
-  private lent: Dolphin | null = null;
-  private readonly lentPose: DolphinPose = { x: 0, y: 0, z: 0, yaw: 0, pitch: 0 };
+  /** Dolphins lent out of the pod, each to be posed in its own slot by whoever borrowed it. */
+  private readonly lent: (Dolphin | null)[] = [null, null, null, null];
+  /** How much the low sun is let catch them all, 0..1, for a set piece leaping against it. */
+  readonly catchLight = { value: 0 };
+  private readonly lentPose: DolphinPose[] = this.lent.map(() => ({ x: 0, y: 0, z: 0, yaw: 0, pitch: 0 }));
   resumeAfterSwim(): void { this.resumed = true; }
   get present(): boolean { return this.here; }
   get leapComplete(): boolean {
@@ -847,6 +853,7 @@ export class Dolphins {
       uSeaTint: { value: new THREE.Color('#5a8a9a') },
       uDeep: { value: new THREE.Color('#0d4a66') },
       uAbsorb: { value: new THREE.Vector3(0.5, 0.13, 0.1) },
+      uCatch: this.catchLight,
     };
     this.mesh = new THREE.Mesh(
       this.geo,
@@ -967,7 +974,8 @@ export class Dolphins {
       const d = this.pod[i];
       const p = d.pack;
       const s = this.stunt && this.stunt.d === d ? this.stunt : null;
-      if (d === this.lent) this.puppet(d, dt, time);
+      const slot = this.lent.indexOf(d);
+      if (slot >= 0) this.puppet(d, this.lentPose[slot], dt, time);
       else {
         if (!s) {
           d.offAlong -= d.offAlong * ease(dt, tune.rejoinEase);
@@ -1008,16 +1016,16 @@ export class Dolphins {
   }
 
   /**
-   * Lends one grown dolphin out of the pod to be posed by `pose` until `handBack`: where its beak is as it leaves, or
-   * null when the pod is not here.
+   * Lends one grown dolphin out of the pod into `slot`, to be posed by `pose` until `handBack`: where its beak is as it
+   * leaves, or null when the pod is not here.
    */
-  lend(): Readonly<DolphinPose> | null {
-    if (this.lent) return this.lentPose;
+  lend(slot = 0): Readonly<DolphinPose> | null {
+    if (this.lent[slot]) return this.lentPose[slot];
     if (!this.here || !this.wanted) return null;
-    const d = this.pod.find((d) => d.adult && d.placed && this.stunt?.d !== d);
+    const d = this.pod.find((d) => d.adult && d.placed && this.stunt?.d !== d && !this.lent.includes(d));
     if (!d) return null;
-    this.lent = d;
-    const pose = this.lentPose;
+    this.lent[slot] = d;
+    const pose = this.lentPose[slot];
     pose.x = d.x;
     pose.y = d.y;
     pose.z = d.z;
@@ -1027,8 +1035,8 @@ export class Dolphins {
   }
 
   /** The lent dolphin's beak at (x, y above the water, z), heading `yaw` and pitched `pitch` nose up. */
-  pose(x: number, y: number, z: number, yaw: number, pitch: number): void {
-    const pose = this.lentPose;
+  pose(x: number, y: number, z: number, yaw: number, pitch: number, slot = 0): void {
+    const pose = this.lentPose[slot];
     pose.x = x;
     pose.y = y;
     pose.z = z;
@@ -1037,10 +1045,10 @@ export class Dolphins {
   }
 
   /** The lent dolphin swims back to its lane from wherever it was left, under water. */
-  handBack(): void {
-    const d = this.lent;
+  handBack(slot = 0): void {
+    const d = this.lent[slot];
     if (!d) return;
-    this.lent = null;
+    this.lent[slot] = null;
     d.seg = 'hold';
     d.hold = d.depth = Math.min(d.y, -0.5);
     d.vy = 0;
@@ -1051,8 +1059,7 @@ export class Dolphins {
   }
 
   /** The lent dolphin, where it is posed: its tail beating under water and still in the air, its splashes its own. */
-  private puppet(d: Dolphin, dt: number, time: number): void {
-    const pose = this.lentPose;
+  private puppet(d: Dolphin, pose: DolphinPose, dt: number, time: number): void {
     d.vy = dt > 0 ? (pose.y - d.y) / dt : 0;
     d.pace = Math.max(1, Math.hypot(pose.x - d.x, pose.z - d.z) / Math.max(dt, 1e-3));
     d.x = d.tx = pose.x;
@@ -1230,7 +1237,7 @@ export class Dolphins {
       p.delay = n * tuning.dolphins.arrivalSpacing + rand(0, 1.5);
       n++;
     }
-    this.lent = null;
+    this.lent.fill(null);
     for (const d of this.pod) {
       d.placed = false;
       d.y = d.hold = d.depth = -tuning.dolphins.arrivalDepth - rand(0, 1);
@@ -1323,7 +1330,7 @@ export class Dolphins {
     let d: Dolphin | null = null;
     let nearest = -1e9;
     for (const other of this.pod) {
-      if (!other.adult || other.pack.rider || other.pack.delay > 0) continue;
+      if (!other.adult || other.pack.rider || other.pack.delay > 0 || this.lent.includes(other)) continue;
       const score = side * other.across > 0 ? 1000 - other.pack.along - other.dAlong : side * other.across;
       if (score > nearest) {
         nearest = score;

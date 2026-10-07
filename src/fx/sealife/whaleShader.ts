@@ -10,7 +10,7 @@ const MOUTH_N = 32;
 
 const HEAD_GLSL = /* glsl */ `
 const float MOUTH_Y[${MOUTH_N}] = float[](${Array.from({ length: MOUTH_N }, (_, i) => f(MOUTH((i / (MOUTH_N - 1)) * JAW_CORNER))).join(', ')});
-const vec3 KNOBS[${KNOBS.length}] = vec3[](${KNOBS.map((k) => `vec3(${f(k.x)}, ${f(k.y)}, ${f(k.z)})`).join(', ')});
+const vec4 KNOBS[${KNOBS.length}] = vec4[](${KNOBS.map((k, i) => `vec4(${f(k.x)}, ${f(k.y)}, ${f(k.z)}, ${f(i < KNOBS.length - 3 ? 0.11 : 0.2)})`).join(', ')});
 
 /** The mouth line's height in the rest pose at s, held level past its corner. */
 float mouthAt(float s) {
@@ -30,11 +30,13 @@ float knobs(vec3 r) {
   vec3 m = vec3(abs(r.x), r.y, r.z);
   float h = 0.0;
   for (int i = 0; i < ${KNOBS.length}; i++) {
-    vec3 d = m - KNOBS[i];
-    float q = dot(d, d) * ${f(1 / 0.055 ** 2)};
-    if (q < 1.0) h += (1.0 - q) * (1.0 - q);
+    // Those along the top are broad and low: seen edge on against the sun, a small one draws a porthole of light.
+    vec3 d = m - KNOBS[i].xyz;
+    float r = KNOBS[i].w;
+    float q = dot(d, d) / (r * r);
+    if (q < 1.0) h += (1.0 - q) * (1.0 - q) * (1.0 - q) * 0.011 / r;
   }
-  return h * 0.026;
+  return h * 0.15;
 }
 `;
 
@@ -262,7 +264,7 @@ Skin skin(float far) {
     vec3 paleTone = mix(mix(uBack, uBelly, 0.45) * (0.92 + 0.1 * mottle), jawTone, lip);
     // Far off the lip greys into the slate, so the first sight of it is a long low shape before it is a jaw.
     paleTone = mix(paleTone, mix(uBack, uBelly, 0.3), far);
-    k.albedo = mix(k.albedo, paleTone, max(lip, throat)) * (1.0 + 3.0 * knobs(vRest));
+    k.albedo = mix(k.albedo, paleTone, max(lip, throat)) * (1.0 - 2.5 * knobs(vRest));
     k.albedo *= 1.0 - 0.45 * onJaw * (1.0 - 0.6 * far) * exp(-pow((below + 0.003) / max(0.008, px), 2.0));
     vec2 b = vec2(abs(vRest.x), vRest.z + ${f(BLOWHOLE * LENGTH)});
     vec2 slit = vec2(b.x - 0.07 - 0.04 * clamp(b.y / 0.2, -1.0, 1.0), b.y) / vec2(0.045, 0.2);
@@ -306,13 +308,14 @@ Skin skin(float far) {
         form(vRest + vec3(0.0, 0.0, d), flank, fine) - f0) / d;
     }
   } else if (part == ${FIN}) {
-    // Slate on top with a few pale blotches toward the tip, pale beneath and along the knobs of its leading edge.
+    // The back's own slate, a little paler beneath, along the knobs of its leading edge and in a few blotches toward
+    // the tip: lifted and turned it is still the whale's flipper, never a pale thing of its own.
     float top = smoothstep(-0.3, 0.3, rn.y);
-    vec3 under = uBelly * (0.92 + 0.1 * mottle);
+    vec3 pale = mix(uBack, uBelly, 0.4) * (0.92 + 0.1 * mottle);
     float blotch = smoothstep(0.58, 0.78, vnoise(vRest.xz * 2.6 + 7.0)) * smoothstep(0.45, 0.85, vRig.z);
     float lead = 1.0 - smoothstep(0.0, 0.1, vRig.w);
-    k.albedo = mix(under, uBack * (0.95 + 0.1 * mottle), top * (1.0 - 0.45 * blotch) * (1.0 - 0.6 * lead));
-    k.thin = 0.15;
+    k.albedo = mix(uBack * (0.95 + 0.1 * mottle), pale, max(max((1.0 - top) * 0.55, lead * 0.45), blotch * 0.5));
+    k.thin = 0.05;
   } else {
     // Its own marks under the flukes, the same wherever it is met: a ragged dark trailing edge and tips, a dark
     // stroke up from the notch, and two dark commas that do not match.
@@ -351,6 +354,7 @@ ${ATMO_GLSL}
 ${SKIN_GLSL}
 uniform vec3 uSeaTint;
 uniform vec3 uShiver;
+uniform vec3 uSlap;
 in vec3 vWorld;
 in vec3 vNormal;
 in vec3 vAxisX;
@@ -385,7 +389,9 @@ void main() {
   float back = pow(max(dot(-V, uSunDir), 0.0), 2.0);
   // Cool sky fill keeps the shadowed flank slate rather than black against a low sun.
   float sky = dot(uSkyAmbient, vec3(0.3, 0.5, 0.2));
-  vec3 fill = vec3(0.8, 0.88, 1.05) * sky * ${f(L.fill)} * (0.55 + 0.45 * N.y);
+  int part = int(vRig.y + 0.5);
+  // The flipper's broad top faces the open sky more squarely than any of the flank behind it.
+  vec3 fill = vec3(0.8, 0.88, 1.05) * sky * ${f(L.fill)} * (0.55 + 0.45 * N.y) * (part == ${FIN} ? 0.72 : 1.0);
   vec3 bounce = mix(uSkyHorizon, uSeaTint * sky * 3.0, 0.5) * ${f(L.bounce)} * sky * max(-N.y + 0.15, 0.0);
   vec3 col = k.albedo * (fill + bounce + uSunColor * (wrap * wrap * wrap * ${f(L.key)} + 0.02) * sun);
   // Low on the flank the sea shades it, so the skin darkens down to the waterline.
@@ -394,11 +400,11 @@ void main() {
   col += uIris * uSunColor * sun * k.caustic * ${f(L.caustic)};
 
   float dry = smoothstep(0.0, 0.25, vWorld.y);
-  int part = int(vRig.y + 0.5);
   float across = part == ${BODY} || part == ${DORSAL} ? vRig.z * 24.0 : dot(vRest.xz, vec2(5.0, 2.0));
   vec2 flow = vec2(across, vWorld.y * 1.1 + uTime * 1.9);
   float streak = smoothstep(0.7, 0.95, vnoise(vec2(flow.x * 2.5, flow.y)) * 0.75 + vnoise(vec2(flow.x * 7.0, flow.y * 3.0)) * 0.25);
-  float sheet = vWet * dry;
+  // Lifted out of the sea, the flipper streams with it.
+  float sheet = max(vWet, part == ${FIN} ? clamp(uSlap.y * 30.0, 0.0, 1.0) : 0.0) * dry;
 
   vec3 R = reflect(-V, N);
   vec3 env = skyColor(vec3(R.x, max(R.y, 0.02), R.z));
@@ -461,7 +467,8 @@ void main() {
   float sky = dot(uSkyAmbient, vec3(0.3, 0.5, 0.2));
   vec3 light = max(uSkyAmbient * 1.2, vec3(0.78, 0.9, 1.08) * sky * ${f(L.glass)}) + uSunColor * max(uSunDir.y, 0.0) * 1.1 * sun;
   vec3 deep = uDeep * (uSkyAmbient * 1.1 + uSunColor * max(uSunDir.y, 0.0) * 0.6 * sun);
-  vec3 seen = k.albedo * light * exp(-uAbsorb * (path + depth));
+  // The flipper just under the glass would show as a pale blade of its own: the sea keeps it a shape beneath.
+  vec3 seen = k.albedo * light * exp(-uAbsorb * (path + depth)) * (int(vRig.y + 0.5) == ${FIN} ? 0.45 : 1.0);
   float clear = exp(-path * ${f(L.clarity)});
   vec3 col = mix(deep, seen, clear);
   // Far off the body under the glass would draw a pale hull beneath it, so only what is near shows through.

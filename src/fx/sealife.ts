@@ -109,20 +109,25 @@ export class SeaLife {
   }
 
   /**
-   * One grown dolphin out of the pod, to be posed by `poseDolphin` until `handBackDolphin`: where its beak is as it
-   * leaves, or null when the pod is not here.
+   * One grown dolphin out of the pod, to be posed by `poseDolphin` until `handBackDolphin` in the same `slot` (up to
+   * four at once): where its beak is as it leaves, or null when the pod is not here.
    */
-  lendDolphin(): Readonly<DolphinPose> | null {
-    return this.pod.lend();
+  lendDolphin(slot = 0): Readonly<DolphinPose> | null {
+    return this.pod.lend(slot);
   }
 
   /** The lent dolphin's beak at (x, y above the water, z), heading `yaw` and pitched `pitch` nose up. */
-  poseDolphin(x: number, y: number, z: number, yaw: number, pitch: number): void {
-    this.pod.pose(x, y, z, yaw, pitch);
+  poseDolphin(x: number, y: number, z: number, yaw: number, pitch: number, slot = 0): void {
+    this.pod.pose(x, y, z, yaw, pitch, slot);
   }
 
-  handBackDolphin(): void {
-    this.pod.handBack();
+  handBackDolphin(slot = 0): void {
+    this.pod.handBack(slot);
+  }
+
+  /** How much the low sun catches the pod, 0..1, while it leaps in a set piece against it. */
+  set dolphinCatch(v: number) {
+    this.pod.catchLight.value = v;
   }
 
   /** Where a dolphin is playing to the boat, for the child to look at; null when they are only running alongside. */
