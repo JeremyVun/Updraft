@@ -794,6 +794,7 @@ export class Dolphins {
   private pushed = false;
   private resumed = false;
   resumeAfterSwim(): void { this.resumed = true; }
+  get present(): boolean { return this.here; }
   get leapComplete(): boolean {
     return this.turn >= 1 || this.stunt?.kind === 'leap' && this.stunt.phase === 'back' && this.stunt.t >= tuning.dolphins.leapRecovery;
   }
@@ -807,6 +808,13 @@ export class Dolphins {
   private quiet = 0;
   /** How far ahead the lanes run while the boat is busy; it opens and closes no faster than they can swim it. */
   private lead = 0;
+  private leading = 0;
+  private leaps = false;
+
+  /** The next set-piece comes soon, if one may: the pod answering something it sees. */
+  cue(): void {
+    if (!this.stunt) this.next = Math.min(this.next, this.clock + 0.5);
+  }
 
   constructor(private readonly lens: THREE.PerspectiveCamera) {
     const base = dolphinGeometry();
@@ -874,13 +882,17 @@ export class Dolphins {
   /**
    * Keeps the pod running with a boat at `near` on bearing `heading`; a null `near` sends them away. `camera` is
    * which side of the stern the camera rides on, so the set-pieces play where they can be seen, `busy` holds
-   * them off while something else has the boat, and until `ready` none begins.
+   * them off while something else has the boat, and until `ready` none begins. `lead` runs the lanes that far
+   * ahead, as they do leading the boat somewhere; `leaps` keeps them from shouldering anything, for a pod running
+   * with something other than the boat.
    */
-  run(near: THREE.Vector3 | null, heading: number, camera = 1, busy = false, ready = true): void {
+  run(near: THREE.Vector3 | null, heading: number, camera = 1, busy = false, ready = true, lead = 0, leaps = false): void {
     this.wanted = near !== null;
     this.camera = camera < 0 ? -1 : 1;
     this.busy = busy;
     this.ready = ready;
+    this.leading = lead;
+    this.leaps = leaps;
     if (!near) return;
     if (!this.here || this.boat.distanceToSquared(near) > 1e4) {
       this.boat.copy(near);
@@ -924,7 +936,7 @@ export class Dolphins {
     this.headRate = turnToward(this.headRate, wrap(this.heading - this.head), tune.headTurn, tune.headAccel, dt);
     this.head += this.headRate * dt;
     this.quiet += ((this.busy ? 1 : 0) - this.quiet) * ease(dt, tuning.dolphins.quietEase);
-    const lead = ((this.busy ? tune.quietLead : 0) - this.lead) * ease(dt, tune.quietEase);
+    const lead = (Math.max(this.busy ? tune.quietLead : 0, this.leading) - this.lead) * ease(dt, tune.quietEase);
     this.lead += THREE.MathUtils.clamp(lead, -tune.leadRate * dt, tune.leadRate * dt);
     const step = Math.hypot(this.boat.x - this.was.x, this.boat.z - this.was.z);
     if (step < 8) this.speed += (step / dt - this.speed) * ease(dt, 1.5);
@@ -1205,7 +1217,7 @@ export class Dolphins {
     this.clock += dt;
     const s = this.stunt;
     if (!s) {
-      const kind: Show = this.turn === 0 ? 'leap' : !this.pushed ? 'push' : Math.random() < 0.5 ? 'leap' : 'push';
+      const kind: Show = this.turn === 0 || this.leaps ? 'leap' : !this.pushed ? 'push' : Math.random() < 0.5 ? 'leap' : 'push';
       if (!this.busy && this.ready && this.wanted && this.clock > this.next) this.begin(kind);
       return;
     }

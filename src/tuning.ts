@@ -1436,8 +1436,8 @@ export const tuning = {
      */
     holdFrom: 40, holdFull: 6, holdDistance: 11, holdHeight: 4, holdBearing: 0.05, holdEase: 0.45,
     releaseDistance: 27, releaseHeight: 7,
-    /** The pod ahead of the bow while it leads (m), and how far it mills off the whale's nose while the boat waits (m). */
-    podLead: 12, podMill: 26,
+    /** The pod ahead of the bow while it leads (m), and how far off its snout it swims round its head as it is free (m). */
+    podLead: 12, podMill: 18,
     /** The first crossing's sighting, this many times as far off as the old surfacing whale came up. */
     farOff: 4,
   },

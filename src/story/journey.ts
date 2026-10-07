@@ -52,6 +52,14 @@ export type ChapterName =
   | 'home'
   | 'stage';
 
+/**
+ * On the open sea, where the pod leads the boat off its line toward the whale, where the boat comes to rest beside
+ * its head, and the waypoint beyond on the same heading that it holds while it waits.
+ */
+export const WHALE_LEAD = new THREE.Vector2(-450, -1987);
+export const WHALE_REST = new THREE.Vector2(-480, -2020);
+const WHALE_HOLD = WHALE_REST.clone().addScaledVector(WHALE_REST.clone().sub(WHALE_LEAD).normalize(), 30);
+
 /** Where the boat goes on each crossing, including the long open passage after the sleeping island. */
 export const ROUTES: Record<string, THREE.Vector2[]> = {
   toLines: [
@@ -79,10 +87,13 @@ export const ROUTES: Record<string, THREE.Vector2[]> = {
     new THREE.Vector2(-105, -1962), new THREE.Vector2(-118, -1935),
     SLEEP_LANDING,
   ],
-  /** The offshore passage keeps the dolphins and brave swim, then moors beside the entry jetty. */
+  /**
+   * The offshore passage keeps the dolphins and the brave swim; the pod leads the boat off its line to rest beside
+   * the whale, and once it has gone the boat comes about and moors beside the entry jetty.
+   */
   toMirror: [
     new THREE.Vector2(-300, -1950), new THREE.Vector2(-375, -1970),
-    new THREE.Vector2(-408, -2003),
+    WHALE_LEAD, WHALE_HOLD,
     new THREE.Vector2(-421, -2034), new THREE.Vector2(MIRROR_LANDING.x, MIRROR_LANDING.z),
   ],
   toHarbour: [
@@ -388,10 +399,10 @@ export class Journey {
           route: ROUTES.toMirror, haze: tuning.seaPassage.haze,
           departureMusic: 'sea',
           arrivalMusic: 'mirror',
-          dusk: 1.02, duskTo: tuning.skyMirror.duskFrom,
-          whaleAt: 27, whaleEvery: 0, dolphins: true,
+          dusk: 1.02, duskTo: tuning.skyMirror.duskFrom, dolphins: true,
           swimAt: tuning.seaPassage.swimAt, season: 0.45,
           moor: MIRROR_LANDING, arrivalSpeed: tuning.seaPassage.arrivalSpeed,
+          netWhale: { lead: WHALE_LEAD, rest: WHALE_REST },
         });
       case 'mirror': return new SkyMirrorChapter(cast);
       case 'toHarbour':
