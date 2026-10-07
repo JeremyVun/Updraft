@@ -23,7 +23,7 @@ export const doorway = {
 /** The destination is drawn once, in linear light, before the ordinary scene/bloom/grade. */
 export class DoorwayView {
   readonly surface: THREE.Mesh;
-  readonly target = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, depthBuffer: true, samples: 2 });
+  readonly target: THREE.WebGLRenderTarget;
   private readonly camera = new THREE.PerspectiveCamera();
   private readonly size = new THREE.Vector2();
   private readonly plane = new THREE.Plane();
@@ -40,10 +40,16 @@ export class DoorwayView {
   };
 
   constructor(private readonly renderer: THREE.WebGLRenderer, private readonly scene: THREE.Scene,
+    private readonly sceneTarget: THREE.WebGLRenderTarget,
     private readonly terrain: Terrain, private readonly water: Water,
     private readonly source: Set<THREE.Object3D>, private readonly destination: Set<THREE.Object3D>,
     private readonly shoreObjects: THREE.Object3D[],
     actors: { objects: THREE.Object3D[]; at: THREE.Vector3 }[]) {
+    // The same kind of target as the scene's, so the door draws with the pipelines boot built for it.
+    this.target = new THREE.WebGLRenderTarget(1, 1, { type: sceneTarget.texture.type, samples: sceneTarget.samples, depthBuffer: true, stencilBuffer: sceneTarget.stencilBuffer });
+    this.target.texture.format = sceneTarget.texture.format;
+    this.target.texture.internalFormat = sceneTarget.texture.internalFormat;
+    this.target.resolveStencilBuffer = false;
     const mat = new THREE.ShaderMaterial({
       uniforms: { tDoor: { value: this.target.texture } },
       vertexShader: `varying vec4 vScreen; void main() { gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); vScreen = gl_Position; }`,
@@ -137,6 +143,7 @@ export class DoorwayView {
     if (this.surface.visible) {
       const scale = view.position.distanceTo(this.surface.position) < 5 ? 1 : tuning.linesPassage.portalScale;
       const w = Math.max(1, Math.round(this.size.x * scale)), h = Math.max(1, Math.round(this.size.y * scale));
+      if (this.target.samples !== this.sceneTarget.samples) { this.target.samples = this.sceneTarget.samples; this.target.dispose(); }
       if (this.target.width !== w || this.target.height !== h) this.target.setSize(w, h);
       const cam = this.camera;
       cam.copy(view); cam.position.add(DOOR_SHIFT); cam.updateMatrixWorld(true);
