@@ -402,6 +402,17 @@ Left: the curl is a loaf turned round on itself rather than a full ring; kittens
 throws no water; the rescue (shake, shiver, press, her kneel), the stare at the fog, the kittens and the slow blink are
 not yet in the room's story (Phase 7).
 
+### Phase 6b2: the cat in motion (after 6b)
+Owns as 6b. 6b's stills read (size, slow blink, the tub dry inside) but motion was never judged, and Jeremy's note
+was "the animations aren't on point". `tools/cat-check.mjs` gains a film mode: each action and feeling as a strip of
+frames at 8–10 fps from its framing camera (near and at the room's distance), so the lead judges motion, not poses.
+Then the motion is polished until each move reads as a real cat's: anticipation and weight before a leap, the
+landing's give, the bolt's low stretch, the climb's reach and pull, the press's lean and tail, the shiver, the slow
+blink's timing. The kittens read in the belfry's half light (lighter coats, one ginger, one with white socks, about a
+third of her size) and the curl is a ring round them, not a loaf; the shake throws a little water.
+Gate: `cat-check`; film strips of every action and feeling for the lead to judge.
+Done: [ ]
+
 ### Phase 6c: the windmill as a sack hoist (after 6a; owns `src/world/crossings/windmill.ts`, `mill-crossing.ts`, `mill-spiral.ts`, the mill yard, `mill-check`)
 design.md "The windmill, rebuilt": she rides a basket on the hoist, standing, the full height of the mill; the
 circles turn big sails with weight and carry-on; creak, the rope winding on its drum, a ratchet that holds her; the
