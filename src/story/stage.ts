@@ -54,8 +54,8 @@ const VIEWS: Record<StageView, { bearing: number; distance: number; height: numb
  * going on, so that every pose, behaviour and shared moment can be played by name and looked at from close up.
  * `__game.story.current.play(name)` and `.look(view)` drive it from the capture tools; `play('cat:<action>')` sets
  * out the drowned village's cat in a yard of its own on the sea beyond the beach, and the `c-` views look at it.
- * `play('crossing:tree' | 'crossing:swing' | 'crossing:run' | 'crossing:mill' | 'crossing:sheet' | 'crossing:umbrella')` (or
- * `&gap=tree|swing|run|mill|sheet|umbrella`) sets out the village's crossings on the sea and plays them as the room
+ * `play('crossing:tree' | 'crossing:swing' | 'crossing:run' | 'crossing:mill' | 'crossing:sheet')` (or
+ * `&gap=tree|swing|run|mill|sheet`) sets out the village's crossings on the sea and plays them as the room
  * would, with the lens its own.
  */
 export class StageChapter implements Chapter {

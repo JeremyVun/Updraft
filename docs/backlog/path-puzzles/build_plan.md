@@ -440,6 +440,10 @@ design.md "The windmill, rebuilt": she rides a basket on the hoist, standing, th
 circles turn big sails with weight and carry-on; creak, the rope winding on its drum, a ratchet that holds her; the
 cat rides a sail up first. Gate: `mill-check` and `crossings-check` with real circles; yard stills and a recorded
 clip of the turning watched for feel; how many circles and seconds the climb takes.
+Also, the sheet (6a) as Jeremy will play it: in upright it took 29 strokes because the sheet is small and steep on
+screen (count strokes by their sweep across the sheet in the world, not its size on screen); she turns her face to
+the lens as she lands (no fourth wall: she looks where she is going or back at the fog); the dying gust carries her on
+up to 2 m after the last stroke (stop sooner, so the player's stroke is what moves her).
 Done: [ ]
 
 ### Phase 7: the room's story re-laid (after 6a, 6b and 6c)

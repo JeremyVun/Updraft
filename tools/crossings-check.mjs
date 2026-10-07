@@ -39,7 +39,7 @@ class Game {
     this.yard = 'crossings';
   }
 
-  /** `yard` is the stage's field the crossing lives in: `crossings` (tree, swing, run), `sheet` or `umbrella`. */
+  /** `yard` is the stage's field the crossing lives in: `crossings` (tree, swing, run) or `sheet`. */
   async open(gap, yard = 'crossings', extra = '') {
     this.yard = yard;
     await this.page.goto(`${base}?shot=1&chapter=stage&gap=${gap}${extra}`, { waitUntil: 'load' });
@@ -74,11 +74,11 @@ class Game {
 
   /** Where a world point is on screen, as fractions of the viewport, and the screen angle of a heading there. */
   async aim(which) {
-    if (which === 'sheet' || which === 'umbrella') return this.page.evaluate((which) => {
+    if (which === 'sheet') return this.page.evaluate((which) => {
       const yard = window.__game.story.current[which];
       const camera = window.__game.rig.camera;
-      const at = which === 'sheet' ? yard.crossing.sheet.middle(camera.position.clone()) : yard.crossing.liftAt(camera.position.clone());
-      const heading = which === 'sheet' ? yard.crossing.sheet.heading(camera) : 0;
+      const at = yard.crossing.sheet.middle(camera.position.clone());
+      const heading = yard.crossing.sheet.heading(camera);
       const p = at.project(camera);
       return { x: (p.x + 1) / 2, y: (1 - p.y) / 2, heading, aspect: camera.aspect };
     }, which);

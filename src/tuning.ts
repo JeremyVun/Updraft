@@ -2194,27 +2194,6 @@ export const tuning = {
       /** Seconds without a useful stroke before the drawn gust; with no progress before the world's own gusts. */
       inviteAfter: 5, valveAfter: 90, valveEvery: 1.4, valvePush: 0.45,
     },
-    umbrella: {
-      /**
-       * How much of the player's updraft charge (0..1) counts, from nothing at `from` to all of it at `full`, and how
-       * far from the column's middle it still reaches her (m). How quickly the canopy answers it (per second).
-       */
-      from: 0.12, full: 0.75, reach: 2.4, answer: 7,
-      /** Below this much lift the canopy fills and tugs her onto her toes; above it she rises. */
-      liftOff: 0.3,
-      /**
-       * Her way over as a share of its length a second: rising at full lift, settling back toward her roof with none
-       * (until `commit`, past which she is over the high roof's height and glides on down to it at `glide`), and the
-       * seconds her pace takes to change.
-       */
-      climb: 0.16, settle: 0.035, commit: 0.56, glide: 0.11, ease: 0.45,
-      /** Her body's swing under the handle (per second squared, per second), and how far the umbrella tips with her way (radians). */
-      swayPull: 5, swayDamping: 1.6, tip: 0.18,
-      /** Seconds she takes to pick it up and raise it, and to set it down on the far roof. */
-      raiseFor: 1.4, lowerFor: 1.1,
-      /** Seconds without lift before the drawn spiral, and over which it grows plain; no progress before the world's own lift. */
-      inviteAfter: 4, inviteRamp: 8, valveAfter: 90, valveLift: 0.8,
-    },
   },
   /** One continuous passage from the last drowned houses to the forest beach. */
   storm: {

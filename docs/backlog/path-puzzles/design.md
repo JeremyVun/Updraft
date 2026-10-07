@@ -534,17 +534,17 @@ where they differ; the drift, the village, the look and the storm stand.
    crossing, never reaching her, nothing failing). It is in the edge of every walking frame; it is heard (the sea
    muffled, a foghorn far off); she and the cat glance back at it. The route climbs at every crossing, so its logic
    needs no words: get higher than the fog.
-5. **Five crossings, little walking.** Short runs between pieces, none much over 10 s on foot; each piece takes her
+5. **Four crossings, little walking.** Short runs between pieces, none much over 10 s on foot; each piece takes her
    higher; the cat goes first wherever a cat can, quickly, already going as she arrives, never making anyone wait
    (Jeremy's pacing ruling in the cat bullet). The pieces, each a different use of the wind:
    - **the tree (push)**, as built, the cat scrambling up it so it leans her way;
    - **the sheet (fill)**: a sheet on a line between two chimneys across a lane; gusts fill it and it carries her
      over, holding on, like a sail; the cat runs the line first;
    - **the windmill (circle)**, rebuilt as the mill's sack hoist (below), the cat riding a sail up first;
-   - **the umbrella (lift)**: a black umbrella open on a roof; she takes it and the player's updraft lifts her over a
-     gap to a higher roof, the cat leaping the gap its own way ahead;
    - **the swing (pump)**, as built, the cat springing from its seat onto the nave first.
-   Their order and places come from the re-laid route; the two new pieces are staged and judged on the stage's yards
+   The umbrella (her lifted over a gap by the player's updraft) was cut under the licence to cut: a second
+   crossing worked by circles beside the mill's hoist, and more length, for an image the room did not need. Their order
+   and places come from the re-laid route; the two new pieces are staged and judged on the stage's yards
    (`?chapter=stage`) before they go into the room.
 6. **The refuge.** The cat climbs the tower's ivy into the belfry and she follows it in (the child can climb what she
    could not before: the ivy is thick and stepped, and the cat shows the way). In the belfry, in old straw under the
