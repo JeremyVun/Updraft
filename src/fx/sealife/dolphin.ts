@@ -749,6 +749,15 @@ interface Dolphin {
   trail: number;
 }
 
+/** Where a dolphin lent out of the pod is posed: its beak, above the water's surface there, its heading and pitch nose up. */
+export interface DolphinPose {
+  x: number;
+  y: number;
+  z: number;
+  yaw: number;
+  pitch: number;
+}
+
 /** Stations along the spine at which `lay` measures the body against its path. */
 const SPINE = 8;
 /** Pairs of (distance swum, beak height) kept per dolphin, one every `TRACE_STEP` units: longer than the largest body. */
@@ -793,6 +802,8 @@ export class Dolphins {
   private turn = 0;
   private pushed = false;
   private resumed = false;
+  private lent: Dolphin | null = null;
+  private readonly lentPose: DolphinPose = { x: 0, y: 0, z: 0, yaw: 0, pitch: 0 };
   resumeAfterSwim(): void { this.resumed = true; }
   get present(): boolean { return this.here; }
   get leapComplete(): boolean {
@@ -956,24 +967,27 @@ export class Dolphins {
       const d = this.pod[i];
       const p = d.pack;
       const s = this.stunt && this.stunt.d === d ? this.stunt : null;
-      if (!s) {
-        d.offAlong -= d.offAlong * ease(dt, tune.rejoinEase);
-        d.offAcross -= d.offAcross * ease(dt, tune.rejoinEase);
+      if (d === this.lent) this.puppet(d, dt, time);
+      else {
+        if (!s) {
+          d.offAlong -= d.offAlong * ease(dt, tune.rejoinEase);
+          d.offAcross -= d.offAcross * ease(dt, tune.rejoinEase);
+        }
+        if (d.burst > 0) {
+          d.burst -= dt;
+          d.offAlong += tune.porpoiseBurst * dt;
+        }
+        const veer = d.burst > 0 ? p.sideAt * tune.porpoiseVeer : 0;
+        d.veer += THREE.MathUtils.clamp(veer - d.veer, -tune.porpoiseVeerRate * dt, tune.porpoiseVeerRate * dt);
+        const lane = p.along + d.dAlong + this.lead;
+        d.wantAlong = s ? s.along : lane + d.offAlong;
+        d.wantAcross = s ? s.across : this.wide(d, lane) + d.offAcross + d.veer;
+        this.move(d, fx, fz, dt);
+        // The swell dies away over the sky mirror's calm water, as the sea there is drawn.
+        d.surface = swellLift(d.x, d.z, time) * (1 - mirrorWater(d.x, d.z));
+        this.swim(d, dt, time);
+        this.bank(d, dt, time);
       }
-      if (d.burst > 0) {
-        d.burst -= dt;
-        d.offAlong += tune.porpoiseBurst * dt;
-      }
-      const veer = d.burst > 0 ? p.sideAt * tune.porpoiseVeer : 0;
-      d.veer += THREE.MathUtils.clamp(veer - d.veer, -tune.porpoiseVeerRate * dt, tune.porpoiseVeerRate * dt);
-      const lane = p.along + d.dAlong + this.lead;
-      d.wantAlong = s ? s.along : lane + d.offAlong;
-      d.wantAcross = s ? s.across : this.wide(d, lane) + d.offAcross + d.veer;
-      this.move(d, fx, fz, dt);
-      // The swell dies away over the sky mirror's calm water, as the sea there is drawn.
-      d.surface = swellLift(d.x, d.z, time) * (1 - mirrorWater(d.x, d.z));
-      this.swim(d, dt, time);
-      this.bank(d, dt, time);
       const k = i * 4;
       A[k] = d.x;
       A[k + 1] = d.y + d.surface;
@@ -991,6 +1005,69 @@ export class Dolphins {
     }
     this.iA.needsUpdate = this.iB.needsUpdate = this.iC.needsUpdate = this.iT.needsUpdate = true;
     this.geo.instanceCount = POD;
+  }
+
+  /**
+   * Lends one grown dolphin out of the pod to be posed by `pose` until `handBack`: where its beak is as it leaves, or
+   * null when the pod is not here.
+   */
+  lend(): Readonly<DolphinPose> | null {
+    if (this.lent) return this.lentPose;
+    if (!this.here || !this.wanted) return null;
+    const d = this.pod.find((d) => d.adult && d.placed && this.stunt?.d !== d);
+    if (!d) return null;
+    this.lent = d;
+    const pose = this.lentPose;
+    pose.x = d.x;
+    pose.y = d.y;
+    pose.z = d.z;
+    pose.yaw = d.yaw;
+    pose.pitch = d.pitch;
+    return pose;
+  }
+
+  /** The lent dolphin's beak at (x, y above the water, z), heading `yaw` and pitched `pitch` nose up. */
+  pose(x: number, y: number, z: number, yaw: number, pitch: number): void {
+    const pose = this.lentPose;
+    pose.x = x;
+    pose.y = y;
+    pose.z = z;
+    pose.yaw = yaw;
+    pose.pitch = pitch;
+  }
+
+  /** The lent dolphin swims back to its lane from wherever it was left, under water. */
+  handBack(): void {
+    const d = this.lent;
+    if (!d) return;
+    this.lent = null;
+    d.seg = 'hold';
+    d.hold = d.depth = Math.min(d.y, -0.5);
+    d.vy = 0;
+    d.held = null;
+    d.traced = 0;
+    d.swum = 0;
+    d.flight = 0;
+  }
+
+  /** The lent dolphin, where it is posed: its tail beating under water and still in the air, its splashes its own. */
+  private puppet(d: Dolphin, dt: number, time: number): void {
+    const pose = this.lentPose;
+    d.vy = dt > 0 ? (pose.y - d.y) / dt : 0;
+    d.pace = Math.max(1, Math.hypot(pose.x - d.x, pose.z - d.z) / Math.max(dt, 1e-3));
+    d.x = d.tx = pose.x;
+    d.y = pose.y;
+    d.z = d.tz = pose.z;
+    d.yaw = pose.yaw;
+    d.pitch = pose.pitch;
+    d.turn = d.bend = 0;
+    d.flight = d.y > 0 ? 1 : 0;
+    d.roll += -d.roll * ease(dt, 2);
+    d.arch += -d.arch * ease(dt, 3);
+    d.beat += ((d.y < 0 ? 0.28 : 0.04) - d.beat) * ease(dt, 4);
+    d.phase += dt * (d.y < 0 ? 13 : 3);
+    d.surface = swellLift(d.x, d.z, time) * (1 - mirrorWater(d.x, d.z));
+    this.wash(d, dt, time);
   }
 
   /**
@@ -1153,6 +1230,7 @@ export class Dolphins {
       p.delay = n * tuning.dolphins.arrivalSpacing + rand(0, 1.5);
       n++;
     }
+    this.lent = null;
     for (const d of this.pod) {
       d.placed = false;
       d.y = d.hold = d.depth = -tuning.dolphins.arrivalDepth - rand(0, 1);

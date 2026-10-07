@@ -1444,6 +1444,21 @@ export const tuning = {
      * blows about 120 m off and its flukes rise about 80 m off, inside the haze that closes in on that crossing.
      */
     sightAhead: 135, sightAside: 90, sightTurn: 1,
+    /**
+     * The net over the blowhole: how high the patch the updraft lifts rises clear of the crown (m); circled part way
+     * and left, how much of that it keeps while the wind is still; and how high each weak breath domes it (m).
+     */
+    netLift: 3.5, netSettle: 0.8, netDome: 0.4,
+    /** Seconds into its first full breath when its eye opens on her, and how long the look between them holds. */
+    eyeOpens: 3, lookFor: 7,
+    /**
+     * The valve's dolphin: seconds to swim in under water from where the pod waits, how high over the crown its leap
+     * carries its beak (m), how fast the gravity of a dream brings it down (m/s²), and how quickly the mesh it flicks
+     * up goes on rising after it (a second).
+     */
+    valveSwim: 7, valveClear: 1.4, valveFall: 5.5, valveFling: 0.9,
+    /** The float-line's near cork: how quickly the water stills it once it is shoved (a second). */
+    floatDrag: 0.8,
   },
 
   seaPassage: {

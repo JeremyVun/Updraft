@@ -2,9 +2,10 @@ import * as THREE from 'three';
 import { fixTreeInPlace } from '../gl/fixed';
 import type { WindField } from '../wind/field';
 import { REFLECTION_LAYER } from '../world/water/reflection';
-import { Dolphins } from './sealife/dolphin';
+import { Dolphins, type DolphinPose } from './sealife/dolphin';
 import { Fish } from './sealife/fish';
 import { FOAM, RING, Marks } from './sealife/marks';
+import { Net, type NetSound } from './sealife/net';
 import { SleepingWhale, type SleeperSound } from './sealife/sleeper';
 import { Spray } from './sealife/spray';
 import { WhaleWake } from './sealife/wake';
@@ -22,6 +23,8 @@ export class SeaLife {
   private readonly pod: Dolphins;
   /** The same whale met on the open sea, lying worn out beside the boat. */
   readonly sleeper: SleepingWhale;
+  /** The old net over its head and blowhole. */
+  readonly net: Net;
   private swimMark = 0;
   private readonly seen = new THREE.Vector3();
 
@@ -31,11 +34,12 @@ export class SeaLife {
     this.wake = new WhaleWake(this.body, this.spray, this.foam, this.slicks);
     this.fish = new Fish(camera, this.spray, this.foam);
     this.sleeper = new SleepingWhale(this.spray, this.foam, this.slicks);
+    this.net = new Net(this.sleeper, this.spray);
     this.slicks.mesh.renderOrder = 2;
     this.foam.mesh.renderOrder = 3;
     const sleeper = this.sleeper;
     this.objects = [this.body.mesh, this.body.ghost, sleeper.mesh, sleeper.ghost, this.fish.mesh, this.slicks.mesh,
-      this.foam.mesh, this.spray.mesh, ...this.pod.objects];
+      this.foam.mesh, this.spray.mesh, ...this.pod.objects, ...this.net.objects];
     for (const o of [this.body.mesh, sleeper.mesh, this.fish.mesh, this.spray.mesh]) o.layers.enable(REFLECTION_LAYER);
     for (const o of this.objects) fixTreeInPlace(o);
   }
@@ -100,6 +104,27 @@ export class SeaLife {
     this.sleeper.onSound = fn;
   }
 
+  set onNetSound(fn: (kind: NetSound, at: THREE.Vector3, strength: number) => void) {
+    this.net.onSound = fn;
+  }
+
+  /**
+   * One grown dolphin out of the pod, to be posed by `poseDolphin` until `handBackDolphin`: where its beak is as it
+   * leaves, or null when the pod is not here.
+   */
+  lendDolphin(): Readonly<DolphinPose> | null {
+    return this.pod.lend();
+  }
+
+  /** The lent dolphin's beak at (x, y above the water, z), heading `yaw` and pitched `pitch` nose up. */
+  poseDolphin(x: number, y: number, z: number, yaw: number, pitch: number): void {
+    this.pod.pose(x, y, z, yaw, pitch);
+  }
+
+  handBackDolphin(): void {
+    this.pod.handBack();
+  }
+
   /** Where a dolphin is playing to the boat, for the child to look at; null when they are only running alongside. */
   resumeDolphinsAfterSwim(): void { this.pod.resumeAfterSwim(); }
 
@@ -131,6 +156,7 @@ export class SeaLife {
     this.fish.update(dt, time);
     this.pod.update(dt, time);
     this.sleeper.update(dt, time);
+    this.net.update(dt, time);
     this.spray.update(dt);
   }
 }

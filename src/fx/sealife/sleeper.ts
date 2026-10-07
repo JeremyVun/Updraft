@@ -225,6 +225,16 @@ export class SleepingWhale extends WhaleRig {
     this.onSound?.('whale-breath', this.blowhole.x, this.blowhole.y, this.blowhole.z);
   }
 
+  /** Already past its first full breath, as a save after it resumes: awake, its eye open on `at` from the first frame. */
+  awaken(at: THREE.Vector3): void {
+    if (this.phase !== 'resting' && this.phase !== 'woken') return;
+    this.phase = 'woken';
+    this.time = BREATH_OUT + 1;
+    this.stir = 1;
+    this.look(at);
+    this.skin.uEye.value = 1;
+  }
+
   /** Free: the spout, the roll onto its back, the flukes lifted high, and away under the sea. */
   free(): void {
     if (this.phase !== 'resting' && this.phase !== 'woken') return;
