@@ -1434,7 +1434,7 @@ export const tuning = {
      * behind the boat and `holdHeight` up, `holdBearing` radians round to port of astern, at `holdEase` a second; and
      * the wider view it eases back out to as it goes.
      */
-    holdFrom: 40, holdFull: 6, holdDistance: 11, holdHeight: 4, holdBearing: 0.05, holdEase: 0.45,
+    holdFrom: 40, holdFull: 6, holdDistance: 20, holdHeight: 10, holdBearing: 0.05, holdEase: 0.45,
     releaseDistance: 27, releaseHeight: 7,
     /** How far ahead of the bow the pod runs while it leads the boat in (m). */
     podLead: 18,
@@ -2053,6 +2053,22 @@ export const tuning = {
      */
     swingIn: 0.45,
     lieFold: 1.45,
+  },
+
+  /** The dream-sized whale's look, wherever it is met. */
+  whaleLook: {
+    /** Smooth slate-blue back, a pale lower jaw and belly, a warm amber eye. */
+    back: '#4c6474', belly: '#d8d1c4', iris: '#86461a',
+    /** Cool light from the open sky on its skin, as a multiple of the sky's own ambient brightness. */
+    fill: 2.1,
+    /** Warm light thrown up off the sea onto the jaw and belly, the same way. */
+    bounce: 2.2,
+    /** The low sun wrapped over its top, the gold rim it lays along the silhouette, and the wet sheen on the back. */
+    key: 0.9, rim: 1.2, sheen: 0.45,
+    /** The sun through the eye's cornea lighting the lower iris, and its sharp reflection in the eye. */
+    caustic: 0.22, catchlight: 1.5,
+    /** How far down through the sea its body and flippers still show, per metre of water looked through. */
+    clarity: 0.32,
   },
 };
 

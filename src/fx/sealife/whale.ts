@@ -115,15 +115,14 @@ export class WhaleRig {
       uSlap: { value: new THREE.Vector3() },
       uShape: { value: new THREE.Vector3(DREAM_SHAPE.fin, DREAM_SHAPE.dorsal, DREAM_SHAPE.flukes) },
     };
-    // Smooth slate-blue over a pale jaw and belly, held in cool sky light so the eye reads against a low sun.
+    const look = tuning.whaleLook;
     const skin = {
-      uBack: { value: new THREE.Color('#34505e') },
-      uBelly: { value: new THREE.Color('#e3e7df') },
+      uBack: { value: new THREE.Color(look.back) },
+      uBelly: { value: new THREE.Color(look.belly) },
+      uIris: { value: new THREE.Color(look.iris) },
       uEye: { value: 1 },
       uEyeAt: { value: new THREE.Vector3(0.16, 0.17, 2.9) },
       uGaze: { value: new THREE.Vector2() },
-      uDetail: { value: new THREE.Vector4(0.08, 0.5, 0, 1) },
-      uFill: { value: new THREE.Color(0.05, 0.06, 0.09) },
     };
     this.skin = skin;
     const geometry = whaleGeometry();

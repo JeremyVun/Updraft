@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { tuning } from '../../tuning';
 import { swellUniforms } from '../../world/water/swell';
-import { BLOWHOLE, FIN_ROOT, LENGTH, SPINE_END, TOP, flankAt, ringPoint } from './anatomy';
+import { BLOWHOLE, FIN_ROOT, LENGTH, SPINE_END, TOP, crown, flankAt, ringPoint } from './anatomy';
 import { curve } from './curve';
 import type { Marks } from './marks';
 import { MIST, type Spray } from './spray';
@@ -25,7 +25,7 @@ const JAW_X = flankAt(JAW_S, JAW_Y);
 const FIN_SPAN = 4.5 * DREAM_SHAPE.fin;
 const FIN_DIR = new THREE.Vector3(0.8, -0.3, -0.52).normalize();
 /** The near flipper at rest: swept round toward the head and lifted, so it reaches toward the boat with its tip at the surface. */
-const REST_FIN = new THREE.Vector2(-2, -0.7);
+const REST_FIN = new THREE.Vector2(-2, -0.6);
 /** Lying at the surface the fluke tips curl up a little at the far end. */
 const REST_CURL = 0.5;
 /** The first full breath, in seconds: drawn in, then out in a soft column up through the spiral. */
@@ -388,7 +388,7 @@ export class SleepingWhale extends WhaleRig {
 
   /** Every part that is watched or held this frame, where it is in the world. */
   private locate(): void {
-    this.point(0, TOP(BLOWHOLE), BLOWHOLE, this.blowhole);
+    this.point(0, crown(BLOWHOLE), BLOWHOLE, this.blowhole);
     this.point(EYE_X, EYE_Y, EYE_S, this.eye);
     this.point(JAW_X, JAW_Y, JAW_S, this.jaw);
     this.finPoint(0, this.finRoot);

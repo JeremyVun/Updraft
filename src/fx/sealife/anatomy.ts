@@ -18,26 +18,41 @@ export const FIN_ROOT = new THREE.Vector3(1.25, -0.8, -0.3 * LENGTH);
 /** Where the flukes hinge on the tail stock, as a fraction of the length. */
 export const FLUKE_HINGE = 0.93;
 export const BLOWHOLE = 0.21;
+/** Where the lower jaw's line ends, just behind and under the eye, as a fraction of the length. */
+export const JAW_CORNER = 0.185;
 
 /** Heights of the back and belly and the half width of the body along its length (0 snout, 1 notch). */
 export const TOP = curve([
-  [0, 0.0], [0.03, 0.22], [0.09, 0.45], [0.16, 0.62], [0.21, 0.72], [0.3, 0.98], [0.42, 1.18], [0.55, 1.22], [0.62, 1.16],
+  [0, -0.2], [0.02, -0.02], [0.05, 0.15], [0.1, 0.37], [0.16, 0.56], [0.21, 0.69], [0.3, 0.96], [0.42, 1.18], [0.55, 1.22], [0.62, 1.16],
   [0.7, 0.95], [0.8, 0.68], [0.9, 0.4], [0.96, 0.22], [1, 0.1],
 ]);
 export const BOTTOM = curve([
-  [0, -0.14], [0.03, -0.5], [0.09, -0.95], [0.17, -1.35], [0.3, -1.68], [0.42, -1.7], [0.55, -1.5], [0.65, -1.22],
+  [0, -0.42], [0.03, -0.74], [0.09, -1.08], [0.17, -1.38], [0.3, -1.68], [0.42, -1.7], [0.55, -1.5], [0.65, -1.22],
   [0.75, -0.95], [0.85, -0.62], [0.93, -0.32], [1, -0.1],
 ]);
 export const HALF_WIDTH = curve([
-  [0, 0.05], [0.02, 0.42], [0.08, 0.85], [0.17, 1.2], [0.3, 1.55], [0.42, 1.6], [0.55, 1.38], [0.65, 1.0],
+  [0, 0.1], [0.015, 0.5], [0.05, 0.8], [0.1, 1.0], [0.17, 1.2], [0.3, 1.55], [0.42, 1.6], [0.55, 1.38], [0.65, 1.0],
   [0.75, 0.6], [0.85, 0.32], [0.93, 0.2], [1, 0.1],
 ]);
+
+/** The raised crown the blowhole sits on, over the top of the head. */
+const MOUND = curve([[0.14, 0], [0.185, 0.08], [0.215, 0.11], [0.25, 0.05], [0.29, 0]]);
+const MOUND_WIDTH = 0.42;
+
+/** Height of the top of the body along the middle of its back, crown and all. */
+export const crown = (s: number) => TOP(s) + MOUND(s);
 
 export const DORSAL_AT = 0.64;
 export const DORSAL_BASE = TOP(DORSAL_AT) - 0.12;
 
 /** How much flatter than round the top of the body is at s: a broad flat head easing into a round back. */
 const flatness = (s: number) => 1 / (1 + 0.5 * smoothstep(0.4, 0.06, s));
+
+/** How high round the ring a point `a` radians from the top sits, from -1 under the belly to 1 on the back. */
+export function ringHeight(s: number, a: number): number {
+  const ca = Math.cos(a);
+  return Math.sign(ca) * Math.abs(ca) ** (ca > 0 ? flatness(s) : 1);
+}
 
 /**
  * A point on the body's rest-pose ring at s, `a` radians round from the top toward its left (+x): the shape every
@@ -47,10 +62,10 @@ export function ringPoint(s: number, a: number, out: { x: number; y: number }): 
   const top = TOP(s);
   const bottom = BOTTOM(s);
   const sa = Math.sin(a);
-  const ca = Math.cos(a);
-  const e = ca > 0 ? flatness(s) : 1;
+  const e = Math.cos(a) > 0 ? flatness(s) : 1;
   out.x = HALF_WIDTH(s) * Math.sign(sa) * Math.abs(sa) ** e;
-  out.y = (top + bottom) / 2 + ((top - bottom) / 2) * Math.sign(ca) * Math.abs(ca) ** e;
+  out.y = (top + bottom) / 2 + ((top - bottom) / 2) * ringHeight(s, a);
+  if (Math.cos(a) > 0) out.y += MOUND(s) * Math.exp(-((out.x / MOUND_WIDTH) ** 2));
   return out;
 }
 
@@ -86,8 +101,8 @@ function stitch(idx: number[], loops: number, around: number, base = 0): void {
 
 /** Rings along the length: a broad flat head, the deep chest behind the flippers, a narrow keeled tail stock. */
 function body(): THREE.BufferGeometry {
-  const rings = 90;
-  const around = 44;
+  const rings = 130;
+  const around = 64;
   const pos: number[] = [];
   const rig: number[] = [];
   const idx: number[] = [];
@@ -99,7 +114,7 @@ function body(): THREE.BufferGeometry {
       const a = (j / around) * Math.PI * 2;
       ringPoint(s, a, at);
       pos.push(at.x, at.y + knuckles * Math.max(0, Math.cos(a)) ** 6, -s * LENGTH);
-      rig.push(s, BODY, j / around, 0);
+      rig.push(s, BODY, j / around, ringHeight(s, a));
     }
   }
   stitch(idx, rings + 1, around);
@@ -131,10 +146,10 @@ function fin(): THREE.BufferGeometry {
   const s = -FIN_ROOT.z / LENGTH;
   for (let i = 0; i <= stations; i++) {
     const t = i / stations;
-    const chord = 1.0 * Math.sqrt(Math.max(1 - t ** 3, 0)) * (0.78 + 0.22 * Math.sin(Math.PI * t)) + 0.06;
+    const chord = 1.05 * Math.max(1 - t ** 2.4, 0) ** 0.6 * (0.7 + 0.42 * Math.sin(Math.PI * Math.min(1, t * 1.6))) + 0.07;
     const knobs = 0.07 * Math.max(0, Math.sin(t * 9.5 * Math.PI)) ** 0.6 * smoothstep(0.12, 0.25, t);
     const sweep = 0.55 * t * t;
-    const thick = 0.12 * (1 - 0.7 * t) + 0.015;
+    const thick = 0.17 * (1 - 0.72 * t) + 0.02;
     for (let j = 0; j < around; j++) {
       const a = (j / around) * Math.PI * 2;
       const along = 0.5 - 0.5 * Math.cos(a);
@@ -178,7 +193,7 @@ function flukes(): THREE.BufferGeometry {
     const t = -1 + (2 * i) / stations;
     const at = Math.abs(t);
     const { lead, trail } = flukeEdges(t);
-    const thick = 0.19 * (1 - at) ** 0.9 + 0.012;
+    const thick = 0.25 * (1 - at) ** 0.8 + 0.018;
     for (let j = 0; j < around; j++) {
       const a = (j / around) * Math.PI * 2;
       const along = 0.5 - 0.5 * Math.cos(a);

@@ -1,9 +1,11 @@
 import { CREATURE_GLSL } from '../../creatures/shading';
 import { ATMO_GLSL } from '../../world/atmosphere';
-import { BODY, DORSAL, DORSAL_AT, DORSAL_BASE, FIN, FIN_ROOT, FLUKES, FLUKE_HALF_SPAN, FLUKE_HINGE, LENGTH, SPINE_END } from './anatomy';
+import { tuning } from '../../tuning';
+import { BLOWHOLE, BODY, DORSAL, DORSAL_AT, DORSAL_BASE, FIN, FIN_ROOT, FLUKES, FLUKE_HALF_SPAN, FLUKE_HINGE, JAW_CORNER, LENGTH, SPINE_END } from './anatomy';
 
 export const SPINE_N = 44;
 const f = (x: number) => x.toFixed(4);
+const L = tuning.whaleLook;
 
 const RIG_GLSL = /* glsl */ `
 uniform vec4 uSpine[${SPINE_N}];
@@ -24,6 +26,10 @@ out vec3 vRest;
 out vec3 vRestNormal;
 out vec4 vRig;
 out float vWet;
+/** The rest pose's axes in the world, for the light to model the skin's small forms. */
+out vec3 vAxisX;
+out vec3 vAxisY;
+out vec3 vAxisZ;
 
 /** Bends the rest pose along the spine: each point rides the spine frame at its place along the body. */
 vec3 rig(vec3 rest, inout vec3 n) {
@@ -74,25 +80,28 @@ vec3 rig(vec3 rest, inout vec3 n) {
   vRestNormal = normal;
   vRig = aRig;
   vWet = mix(uWet[i], uWet[i + 1], t);
+  vAxisX = S * cr + U * sr;
+  vAxisY = U * cr - S * sr;
+  vAxisZ = F;
   return mix(a.xyz, b.xyz, t) + S * off.x + U * off.y + F * off.z;
 }
 `;
 
-/** Colour of the skin: a dark back, a pale pleated throat and belly, white flippers, the flukes' pale pattern. */
+/**
+ * Colour and form of the skin: a slate back over a pale lower jaw and belly, the eye under its heavy lid, the
+ * blowhole's two slits, white flippers, the flukes' pale pattern. `form` is a height in metres the light models.
+ */
 const SKIN_GLSL = /* glsl */ `
 uniform vec3 uBack;
 uniform vec3 uBelly;
-/** 0 the eye shut in a sleeping curve, 1 open. */
+uniform vec3 uIris;
+uniform float uScale;
+/** 0 the eye a tired slit under its lid, 1 open. */
 uniform float uEye;
 /** Where the eye is (s along, height in the rest pose) and how big it is drawn. */
 uniform vec3 uEyeAt;
 /** Where the open eye looks, across its own disc (along the body, up), -1..1. */
 uniform vec2 uGaze;
-/**
- * How knobbly the head is, how high the pale of the jaw comes up the head, how many pale barnacle spots, and how
- * pale and sunlit-through the undersides of the flukes are.
- */
-uniform vec4 uDetail;
 in vec3 vRest;
 in vec3 vRestNormal;
 in vec4 vRig;
@@ -101,21 +110,48 @@ in float vWet;
 struct Skin {
   vec3 albedo;
   float thin;
-  float bump;
+  /** Slope of the skin's small forms (eye, lids, blowhole) along the rest pose's axes, metres per rest unit. */
+  vec3 slope;
+  /** 1 on the wet glass of the eye. */
+  float gloss;
+  /** Where light coming in through the eye falls on the iris. */
+  float caustic;
+  /** 1 round the eye, where the light is kept soft. */
+  float near;
 };
 
-/** Rounded knobs scattered on a jittered grid, 0..1. */
-float knobs(vec2 p) {
-  vec2 id = floor(p);
-  vec2 fr = fract(p);
+/** The eye's lids, in units of its radius (x toward the snout): where its corners lie, and the lower and upper lid. */
+vec3 lids(vec2 e) {
+  float span = max(0.0, 1.0 - e.x * e.x);
+  float corner = -0.04 + 0.06 * e.x;
+  return vec3(corner, corner - (0.12 + 0.1 * uEye) * pow(span, 0.8),
+    corner + (0.06 + 0.42 * uEye) * pow(span, 0.55) * (1.0 + 0.18 * e.x));
+}
+
+/** Height in metres of the skin's small forms over the rest pose at r: the eye on its mound under a heavy lid, the blowhole. */
+float form(vec3 r, float flank) {
   float h = 0.0;
-  for (int y = -1; y <= 1; y++) {
-    for (int x = -1; x <= 1; x++) {
-      vec2 c = vec2(float(x), float(y));
-      vec2 o = vec2(hash12(id + c), hash12(id + c + 17.1)) * 0.6 + 0.2;
-      float d = length(c + o - fr) / (0.26 + 0.12 * hash12(id + c + 5.3));
-      h = max(h, 1.0 - d * d);
-    }
+  float R = uEyeAt.z * 0.08;
+  vec2 e = vec2(r.z + uEyeAt.x * ${f(LENGTH)}, r.y - uEyeAt.y) / R;
+  if (flank > 0.0 && length(e * vec2(0.62, 1.0)) < 2.6) {
+    vec3 l = lids(e);
+    float open = smoothstep(l.y - 0.04, l.y + 0.04, e.y) * (1.0 - smoothstep(l.z - 0.04, l.z + 0.04, e.y))
+      * (1.0 - smoothstep(0.94, 1.0, abs(e.x)));
+    // The lids' swellings follow rounder curves than their edges, so they ease out past the corners.
+    float span = max(0.0, 1.0 - e.x * e.x * 0.8);
+    float top = l.x + (0.06 + 0.42 * uEye) * span;
+    float wide = 1.0 - smoothstep(0.4, 1.3, abs(e.x));
+    float lid = 0.22 * smoothstep(-0.08, 0.14, e.y - top) * (1.0 - smoothstep(0.1, 1.3, e.y - top));
+    float sill = 0.08 * smoothstep(-0.1, 0.14, l.y - e.y) * (1.0 - smoothstep(0.1, 0.7, l.y - e.y));
+    float mound = 0.24 * (1.0 - smoothstep(0.0, 2.6, length(e * vec2(0.62, 1.0))));
+    vec2 c = e - vec2(0.0, l.x);
+    float ball = 0.45 * sqrt(max(0.0, 1.3 - dot(c, c))) - 0.43;
+    h += R * uScale * flank * (mound + mix((lid + sill) * wide, ball, open));
+  }
+  vec2 b = vec2(abs(r.x), r.z + ${f(BLOWHOLE * LENGTH)});
+  if (b.x < 0.3 && abs(b.y) < 0.3) {
+    vec2 slit = vec2(b.x - 0.07 - 0.04 * clamp(b.y / 0.2, -1.0, 1.0), b.y) / vec2(0.045, 0.2);
+    h -= 0.03 * uScale * (1.0 - smoothstep(0.5, 1.1, length(slit)));
   }
   return h;
 }
@@ -124,46 +160,58 @@ Skin skin() {
   int part = int(vRig.y + 0.5);
   float s = vRig.x;
   vec3 rn = normalize(vRestNormal) * (gl_FrontFacing ? 1.0 : -1.0);
-  float mottle = vnoise(vRest.zx * vec2(1.3, 2.1)) * 0.6 + vnoise(vRest.zy * 4.0 + 3.0) * 0.4;
-  Skin k = Skin(uBack * (0.9 + 0.2 * mottle), 0.0, 0.0);
+  float mottle = vnoise(vRest.zx * vec2(0.9, 1.6)) * 0.6 + vnoise(vRest.zy * 2.5 + 3.0) * 0.4;
+  Skin k = Skin(uBack * (0.94 + 0.12 * mottle), 0.0, vec3(0.0), 0.0, 0.0, 0.0);
   if (part == ${BODY} || part == ${DORSAL}) {
-    float jawLift = uDetail.y * (1.0 - smoothstep(0.1, 0.24, s));
-    float pale = (1.0 - smoothstep(-0.62, -0.2, rn.y - jawLift + (mottle - 0.5) * 0.5)) * (1.0 - smoothstep(0.55, 0.82, s));
-    float pleats = smoothstep(0.06, 0.12, s) * (1.0 - smoothstep(0.38, 0.5, s)) * (1.0 - smoothstep(-0.6, -0.35, rn.y));
-    float groove = smoothstep(0.55, 1.0, sin(vRig.z * 6.2832 * 26.0)) * pleats;
-    k.albedo = mix(k.albedo, uBelly * (0.88 + 0.16 * mottle), pale) * (1.0 - groove * 0.35);
-    float head = (1.0 - smoothstep(0.15, 0.23, s)) * smoothstep(0.1, 0.45, rn.y);
-    float jaw = (1.0 - smoothstep(0.18, 0.26, s)) * (1.0 - smoothstep(0.0, 0.25, abs(rn.y + 0.05)));
-    k.bump = knobs(vec2(vRest.z * 1.9, vRest.x * 2.2)) * (head + jaw * 0.8) * 0.035 * uDetail.x - groove * 0.015;
-    if (uDetail.z > 0.0) {
-      vec2 g = vec2(vRest.z * 2.6, vRig.z * 70.0);
-      vec2 id = floor(g);
-      float spot = 1.0 - smoothstep(0.14, 0.22, length(fract(g) - 0.5 - (vec2(hash12(id), hash12(id + 7.7)) - 0.5) * 0.5));
-      float where = step(1.0 - uDetail.z, hash12(id + 3.1)) * smoothstep(0.55, 0.85, rn.y);
-      k.albedo = mix(k.albedo, uBelly * 0.95, spot * where);
+    // The lower jaw's line runs back from the snout to just under the eye, then falls away to the belly.
+    float h = part == ${BODY} ? vRig.w : 1.0;
+    float jaw = mix(0.38, 0.45, smoothstep(0.0, ${f(JAW_CORNER)}, s));
+    float line = mix(jaw, -0.55, smoothstep(${f(JAW_CORNER)}, ${f(JAW_CORNER + 0.05)}, s));
+    float onHead = 1.0 - smoothstep(${f(JAW_CORNER)}, ${f(JAW_CORNER + 0.04)}, s);
+    float soft = mix(0.07, 0.01, onHead) + fwidth(h);
+    float pale = (1.0 - smoothstep(line - soft, line + soft, h + (mottle - 0.5) * 0.08 * (1.0 - onHead)))
+      * (1.0 - smoothstep(0.55, 0.85, s));
+    float pleats = smoothstep(0.08, 0.14, s) * (1.0 - smoothstep(0.36, 0.48, s)) * (1.0 - smoothstep(-0.75, -0.45, h));
+    float groove = smoothstep(0.6, 1.0, sin(vRig.z * 6.2832 * 30.0)) * pleats * (1.0 - smoothstep(0.0, 0.02, fwidth(vRig.z * 30.0)));
+    vec3 jawTone = uBelly * (0.92 + 0.1 * mottle) * mix(0.62, 1.0, smoothstep(line - 0.6, line - 0.04, h));
+    // Behind the jaw the belly is a paler slate, so rolled over it is not a white hull.
+    jawTone = mix(jawTone, mix(uBack, uBelly, 0.45), smoothstep(${f(JAW_CORNER + 0.03)}, ${f(JAW_CORNER + 0.12)}, s));
+    k.albedo = mix(k.albedo, jawTone, pale) * (1.0 - groove * 0.12);
+    // A soft shadow under the snout's lip along the jaw line.
+    k.albedo *= 1.0 - 0.3 * onHead * smoothstep(line, line + soft + 0.01, h) * (1.0 - smoothstep(line + 0.02, line + 0.08, h));
+    vec2 b = vec2(abs(vRest.x), vRest.z + ${f(BLOWHOLE * LENGTH)});
+    vec2 slit = vec2(b.x - 0.07 - 0.04 * clamp(b.y / 0.2, -1.0, 1.0), b.y) / vec2(0.045, 0.2);
+    k.albedo *= 1.0 - 0.75 * (1.0 - smoothstep(0.6, 1.0, length(slit))) * smoothstep(0.4, 0.7, rn.y);
+
+    // The eye: a tired almond under a heavy upper lid, its outer corner low, a dark amber iris and a dark pupil
+    // turned by uGaze. Its gloss and catchlight come from the light.
+    float R = uEyeAt.z * 0.08;
+    vec2 e = vec2(vRest.z + uEyeAt.x * ${f(LENGTH)}, vRest.y - uEyeAt.y) / R;
+    float flank = smoothstep(0.25, 0.45, abs(rn.x));
+    vec3 l = lids(e);
+    float aa = fwidth(e.y) + 0.015;
+    float opening = smoothstep(l.y - aa, l.y + aa, e.y) * (1.0 - smoothstep(l.z - aa, l.z + aa, e.y))
+      * (1.0 - smoothstep(1.0 - aa, 1.0, abs(e.x))) * flank;
+    vec2 g = e - vec2(uGaze.x * 0.3, l.x + 0.05 + uGaze.y * 0.08);
+    float iris = 1.0 - smoothstep(0.42 - aa, 0.42 + aa, length(g));
+    float pupil = 1.0 - smoothstep(0.17 - aa, 0.17 + aa, length(g * vec2(0.72, 1.35)));
+    float under = smoothstep(l.z - 0.3, l.z, e.y);
+    vec3 ring = mix(uIris * 0.25, uIris, smoothstep(0.2, -0.38, g.y)) * (0.85 + 0.3 * vnoise(vec2(atan(g.y, g.x) * 7.0, 0.5)));
+    vec3 eye = mix(vec3(0.06, 0.045, 0.04), ring, iris);
+    eye = mix(eye, vec3(0.012, 0.01, 0.01), pupil) * (1.0 - 0.7 * under);
+    k.albedo = mix(k.albedo, eye, opening);
+    k.gloss = opening;
+    k.near = (1.0 - smoothstep(1.0, 1.6, length(e * vec2(0.8, 1.0)))) * flank;
+    k.caustic = opening * iris * (1.0 - pupil) * smoothstep(0.1, -0.35, g.y) * (1.0 - under);
+    if (part == ${BODY}) {
+      float d = 0.012;
+      float f0 = form(vRest, flank);
+      k.slope = vec3(form(vRest + vec3(d, 0.0, 0.0), flank) - f0, form(vRest + vec3(0.0, d, 0.0), flank) - f0,
+        form(vRest + vec3(0.0, 0.0, d), flank) - f0) / d;
     }
-    // The eye, in units of its radius: an almond under a heavy upper lid that lifts from a slit to tired-open with
-    // uEye, a dark iris and pupil turned by uGaze, and a pale reflection that the light, not the eye, makes bright.
-    vec2 e = vec2(vRest.z + uEyeAt.x * ${f(LENGTH)}, vRest.y - uEyeAt.y) / (uEyeAt.z * 0.08);
-    float side = step(uEyeAt.z > 1.5 ? 0.35 : 0.8, abs(rn.x));
-    float span = max(0.0, 1.0 - e.x * e.x);
-    float upper = mix(-0.3, 0.2, uEye) * span;
-    float lower = -0.45 * span;
-    float aa = 0.06;
-    float opening = smoothstep(lower, lower + aa, e.y) * (1.0 - smoothstep(upper - aa, upper, e.y)) * step(abs(e.x), 1.0);
-    vec2 g = e - uGaze * vec2(sign(rn.x), 1.0) * 0.25 - vec2(0.0, -0.1);
-    float iris = 1.0 - smoothstep(0.5, 0.56, length(g));
-    float pupil = 1.0 - smoothstep(0.24, 0.3, length(g));
-    vec3 eye = mix(vec3(0.62, 0.58, 0.5), mix(vec3(0.24, 0.15, 0.09), vec3(0.03, 0.025, 0.02), pupil), iris);
-    float glint = 1.0 - smoothstep(0.08, 0.13, length(g - vec2(sign(rn.x) * 0.2, 0.22)));
-    eye = mix(eye, vec3(0.92), glint);
-    float crease = (1.0 - smoothstep(0.03, 0.09, abs(e.y - upper - 0.28 * span))) * step(abs(e.x), 1.1);
-    float socket = 1.0 - smoothstep(1.0, 1.6, length(e * vec2(1.0, 1.4)));
-    k.albedo *= 1.0 - (0.18 * socket + 0.35 * crease) * side * step(1.5, uEyeAt.z);
-    k.albedo = mix(k.albedo, eye, opening * side);
   } else if (part == ${FIN}) {
     float top = smoothstep(-0.2, 0.4, rn.y);
-    k.albedo = mix(uBelly * (0.92 + 0.12 * mottle), uBack * 1.1, top * (1.0 - smoothstep(0.2, 0.75, vRig.z)) * 0.8);
+    k.albedo = mix(uBelly * (0.92 + 0.1 * mottle), uBack * 1.05, top * (1.0 - smoothstep(0.15, 0.7, vRig.z)) * 0.85);
     k.thin = 0.6;
   } else {
     // Its own marks under the flukes, the same wherever it is met: a ragged dark trailing edge and tips, a dark
@@ -176,9 +224,10 @@ Skin skin() {
     float left = 1.0 - smoothstep(0.08, 0.12, length(vec2((t + 0.47) * 0.8, a - 0.36 - 0.1 * (t + 0.47))));
     float right = 1.0 - smoothstep(0.05, 0.08, length(vec2(t - 0.6, (a - 0.52) * 1.4)));
     float tips = smoothstep(0.8, 0.95, abs(t));
-    float mark = max(max(edge, stroke), max(max(left, right), tips));
-    k.albedo = mix(k.albedo, uBelly * 1.08, under * (1.0 - mark) * uDetail.w);
-    k.thin = 0.8 * uDetail.w;
+    float lead = 1.0 - smoothstep(0.04, 0.12, a);
+    float mark = max(max(max(edge, stroke), max(max(left, right), tips)), lead);
+    k.albedo = mix(k.albedo, uBelly * mix(0.78, 1.0, smoothstep(0.0, 0.5, abs(t))) * (0.9 + 0.15 * mottle), under * (1.0 - mark));
+    k.thin = 0.8;
   }
   return k;
 }
@@ -201,12 +250,12 @@ export const WHALE_FRAG = /* glsl */ `
 ${ATMO_GLSL}
 ${SKIN_GLSL}
 uniform vec3 uSeaTint;
-/** Soft light the skin holds from the sky, over what the sun gives it. */
-uniform vec3 uFill;
 uniform vec3 uShiver;
-uniform float uScale;
 in vec3 vWorld;
 in vec3 vNormal;
+in vec3 vAxisX;
+in vec3 vAxisY;
+in vec3 vAxisZ;
 
 /** Tilts N by the slope of a height field h over the surface (screen-space surface gradient). */
 vec3 bumped(vec3 N, vec3 p, float h) {
@@ -225,17 +274,22 @@ void main() {
   Skin k = skin();
   float d = (vRig.x - uShiver.x) / uShiver.z;
   float ripple = uShiver.y * uScale * 0.35 * exp(-d * d) * sin(vRig.x * ${f(LENGTH)} * uScale * 6.0 - uTime * 14.0);
-  N = bumped(N, vWorld, k.bump * (1.0 - smoothstep(20.0, 60.0, length(cameraPosition - vWorld))) + ripple);
+  vec3 slope = (k.slope.x * vAxisX + k.slope.y * vAxisY + k.slope.z * vAxisZ) / uScale;
+  N = normalize(N - (slope - N * dot(slope, N)));
+  N = bumped(N, vWorld, ripple);
 
   float sun = cloudShadow(vWorld.xz);
   float ndl = dot(N, uSunDir);
   float wrap = clamp(ndl * 0.5 + 0.5, 0.0, 1.0);
   float nv = clamp(dot(N, V), 0.0, 1.0);
   float back = pow(max(dot(-V, uSunDir), 0.0), 2.0);
-  vec3 ambient = mix(uSeaTint * uSkyAmbient, uSkyAmbient * 1.1, N.y * 0.5 + 0.5);
-  vec3 col = k.albedo * (ambient + uSunColor * (wrap * wrap * 0.75 + 0.04) * sun);
+  // Broad cool light from the open sky, strongest from above, and the sea's warm light thrown up under it.
+  float sky = dot(uSkyAmbient, vec3(0.3, 0.5, 0.2));
+  vec3 fill = vec3(0.78, 0.9, 1.08) * sky * ${f(L.fill)} * (0.62 + 0.38 * N.y);
+  vec3 bounce = mix(uSkyHorizon, uSeaTint * sky * 3.0, 0.5) * ${f(L.bounce)} * sky * max(-N.y + 0.15, 0.0);
+  vec3 col = k.albedo * (fill + bounce + uSunColor * (wrap * wrap * wrap * ${f(L.key)} + 0.02) * sun);
   col += k.albedo * uSunColor * sun * k.thin * back * max(-ndl, 0.0) * 1.4;
-  col += k.albedo * uFill * (0.6 + 0.4 * N.y);
+  col += uIris * uSunColor * sun * k.caustic * ${f(L.caustic)};
 
   float dry = smoothstep(0.0, 0.25, vWorld.y);
   int part = int(vRig.y + 0.5);
@@ -248,11 +302,17 @@ void main() {
   vec3 env = skyColor(vec3(R.x, max(R.y, 0.02), R.z));
   env = mix(env, uSeaTint * uSkyAmbient * 1.4, (1.0 - smoothstep(-0.3, 0.0, R.y)));
   float F = 0.03 + 0.97 * pow(1.0 - nv, 5.0);
-  col = mix(col, env, F * (0.3 + 0.5 * sheet));
+  col = mix(col, env, F * (0.25 + 0.5 * sheet + 0.6 * k.gloss));
   vec3 H = halfVector(uSunDir, V);
-  col += uSunColor * pow(max(dot(N, H), 0.0), mix(60.0, 160.0, sheet)) * (0.35 + (0.8 + 3.0 * streak) * sheet) * sun;
+  float nh = max(dot(N, H), 0.0);
+  // The low sun along its top and rim: a broad wet sheen, and a gold edge where the skin turns away.
+  col += uSunColor * pow(nh, mix(24.0, 160.0, sheet)) * (${f(L.sheen)} + (0.8 + 3.0 * streak) * sheet) * sun * (1.0 - k.gloss);
   col += vec3(0.85, 0.9, 0.95) * (uSkyAmbient * 0.7 + uSunColor * (0.1 + back * 0.8) * sun) * streak * sheet * 0.45;
-  col += uSunColor * pow(1.0 - nv, 6.0) * back * smoothstep(-0.3, 0.5, ndl) * 0.7 * sun;
+  float rim = pow(1.0 - nv, 3.0) * smoothstep(-0.2, 0.5, N.y + ndl);
+  col += uSunColor * mix(vec3(1.0), k.albedo * 2.0, 0.35) * rim * (0.2 + back) * ${f(L.rim)} * sun * (1.0 - k.near);
+  // Its catchlight is the bright sky over it, held in the upper glass of the eye.
+  float glint = pow(max(dot(N, normalize(V + vec3(0.0, 0.55, 0.0) + vAxisZ * 0.25)), 0.0), 500.0);
+  col += (uSunColor * 0.5 + uSkyHorizon) * glint * ${f(L.catchlight)} * k.gloss;
 
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;
@@ -293,7 +353,7 @@ void main() {
   vec3 light = uSkyAmbient * 1.2 + uSunColor * max(uSunDir.y, 0.0) * 1.1 * sun;
   vec3 deep = uDeep * (uSkyAmbient * 1.1 + uSunColor * max(uSunDir.y, 0.0) * 0.6 * sun);
   vec3 seen = k.albedo * light * exp(-uAbsorb * (path + depth));
-  float clear = exp(-path * 0.55);
+  float clear = exp(-path * ${f(L.clarity)});
   vec3 col = mix(deep, seen, clear);
   float a = (1.0 - F) * clear * smoothstep(-0.02, 0.06, vDepth) * 0.7;
   if (a < 0.004) discard;
