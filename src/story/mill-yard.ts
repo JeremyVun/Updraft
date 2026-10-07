@@ -57,13 +57,15 @@ export class MillYard {
   readonly crossing: MillCrossing;
   readonly decks: Deck[] = Object.values(WAY).map((d) => ({ ...d }));
   playing = false;
+  /** QA: the lens on the mill itself, from in front and to the boarding side, rather than on her. */
+  closeUp = false;
   private readonly origin = new THREE.Vector3();
   private readonly facing: number;
   private readonly local = new THREE.Vector3();
   private readonly eye = new THREE.Vector3();
   private readonly target = new THREE.Vector3();
 
-  constructor(private readonly cast: Cast, near: THREE.Vector3, facing = Math.PI / 2) {
+  constructor(private readonly cast: Cast, near: THREE.Vector3, facing = 2.65) {
     this.facing = facing;
     this.origin.copy(this.findWater(near));
     this.group.position.copy(this.origin);
@@ -123,7 +125,7 @@ export class MillYard {
     c.reachFor(1, null);
     c.standUp();
     const wait = this.crossing.way.wait;
-    c.place(wait.x, wait.z, this.facing + Math.PI + 0.6);
+    c.place(wait.x, wait.z, this.facing - Math.PI / 2 + 0.5);
     c.stowPlane(true, true);
     const k = this.cast.cygnet;
     k.visible = true;
@@ -161,7 +163,10 @@ export class MillYard {
     shot.subjects = undefined;
     const rise = THREE.MathUtils.clamp((p.y - WALL_TOP) / (RIDGE - WALL_TOP), 0, 1);
     const x = Math.min(p.x, BOARD.x);
-    if (upright) {
+    if (this.closeUp) {
+      this.eye.set(-6.5, 4.4, 11);
+      this.target.set(-0.6, 3.6, -1);
+    } else if (upright) {
       this.eye.set(x + 3, 1.6 + 0.75 * p.y, 19);
       this.target.set(x - 0.4, p.y + 1.6, 0);
     } else {

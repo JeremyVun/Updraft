@@ -10,6 +10,12 @@ const WOOD = 1;
 const SHINGLE = 2;
 const LINEN = 3;
 const IRON = 4;
+const BOARDS = 5;
+const HOLLOW = 6;
+/** The stone tower: its radius at the water, how far behind the sails its middle stands, and its height out of the water. */
+const TOWER_RADIUS = 1.6;
+const TOWER_BACK = 2.05;
+const TOWER_TOP = 3.1;
 
 const MILL_VERT = /* glsl */ `
 uniform float uTime;
@@ -49,19 +55,27 @@ void main() {
   vec3 alb;
   if (kind == ${STONE}) {
     float course = vLocal.y * 3.2;
-    float run = atan(vLocal.x, vLocal.z) * 4.0 + fract(floor(course) * 0.37) * 3.0;
+    float run = atan(vLocal.x, vLocal.z + ${TOWER_BACK.toFixed(2)}) * 4.0 + fract(floor(course) * 0.37) * 3.0;
     float joint = max(1.0 - smoothstep(0.0, 0.09, fract(course)), 1.0 - smoothstep(0.0, 0.06, fract(run)));
     alb = vec3(0.15, 0.14, 0.125) * (0.78 + 0.38 * fract(sin(dot(vec2(floor(course), floor(run)), vec2(12.9898, 78.233))) * 43758.5)) * (1.0 - 0.4 * joint);
+    float moss = smoothstep(0.55, 0.8, vnoise(vLocal.xy * 1.3 + vLocal.z) * 0.7 + vnoise(vLocal.xy * 6.0) * 0.3 + 0.25 * (1.0 - smoothstep(0.0, 2.0, vLocal.y)));
+    alb = mix(alb, vec3(0.09, 0.11, 0.045), moss * 0.75);
   } else if (kind == ${SHINGLE}) {
     float row = vLocal.y * 9.0;
-    alb = vec3(0.13, 0.1, 0.075) * (0.75 + 0.4 * vnoise(vec2(atan(vLocal.x, vLocal.z) * 9.0, floor(row)))) * (0.75 + 0.3 * smoothstep(0.0, 0.25, fract(row)));
+    alb = vec3(0.11, 0.1, 0.09) * (0.75 + 0.4 * vnoise(vec2(atan(vLocal.x, vLocal.z) * 9.0, floor(row)))) * (0.75 + 0.3 * smoothstep(0.0, 0.25, fract(row)));
   } else if (kind == ${LINEN}) {
     alb = vec3(0.42, 0.39, 0.33) * (0.8 + 0.25 * vnoise(vLocal.xy * 9.0));
   } else if (kind == ${IRON}) {
     alb = vec3(0.05, 0.045, 0.045);
+  } else if (kind == ${HOLLOW}) {
+    alb = vec3(0.012, 0.012, 0.014);
+  } else if (kind == ${BOARDS}) {
+    float plank = atan(vLocal.x, vLocal.z + ${TOWER_BACK.toFixed(2)}) * 14.0 + vLocal.x * 4.0;
+    float seam = 1.0 - smoothstep(0.0, 0.12, abs(fract(plank) - 0.5) * 2.0 - 0.8);
+    alb = vec3(0.17, 0.145, 0.12) * (0.75 + 0.35 * vnoise(vec2(floor(plank), vLocal.y * 3.0))) * (1.0 - 0.35 * seam);
   } else {
     float grain = vnoise(vec2(vLocal.x * 2.0 + vLocal.y * 2.0, vLocal.z * 30.0)) * 0.6 + vnoise(vLocal.xy * 11.0) * 0.4;
-    alb = mix(vec3(0.17, 0.12, 0.08), vec3(0.3, 0.22, 0.14), grain);
+    alb = mix(vec3(0.14, 0.12, 0.1), vec3(0.26, 0.22, 0.17), grain);
   }
   float lap = 0.09 * sin(vWorld.x * 0.8 + uTime * 1.3) + 0.06 * sin(vWorld.z * 1.1 - uTime * 0.9);
   float wet = 1.0 - smoothstep(0.0, 0.7, vWorld.y - lap);
@@ -94,10 +108,6 @@ export const SAIL = {
   /** The rail: how far across from the stock, how far forward of the plane, how thick and how deep its top. */
   width: 1.0, forward: 0.42, rail: 0.12, railDepth: 0.36,
 } as const;
-/** The stone tower: its radius at the water, how far behind the sails its middle stands, and its height out of the water. */
-const TOWER_RADIUS = 1.6;
-const TOWER_BACK = 2.05;
-const TOWER_TOP = 3.1;
 
 export type MillSound = 'start' | 'creak' | 'settle' | 'flap';
 
@@ -346,14 +356,21 @@ export class Windmill {
   /** The stone tower, its wooden cap, and the windshaft out to the hub. */
   private body(hubY: number): THREE.BufferGeometry {
     const parts: THREE.BufferGeometry[] = [];
-    const add = (g: THREE.BufferGeometry, kind: number) => parts.push(tagged(g, kind, 0, 0));
-    add(new THREE.CylinderGeometry(TOWER_RADIUS * 0.92, TOWER_RADIUS, TOWER_TOP + 3, 20, 4).translate(0, (TOWER_TOP - 3) / 2, -TOWER_BACK), STONE);
-    add(new THREE.CylinderGeometry(TOWER_RADIUS * 0.97, TOWER_RADIUS * 0.97, 0.18, 20).translate(0, TOWER_TOP + 0.02, -TOWER_BACK), WOOD);
-    add(new THREE.CylinderGeometry(1.0, TOWER_RADIUS * 1.04, hubY + 0.55 - TOWER_TOP, 18, 1).translate(0, (hubY + 0.55 + TOWER_TOP) / 2, -TOWER_BACK), SHINGLE);
-    add(new THREE.ConeGeometry(1.06, 1.0, 18).translate(0, hubY + 1.05, -TOWER_BACK), SHINGLE);
-    add(new THREE.CylinderGeometry(0.15, 0.18, TOWER_BACK - 0.2, 8).rotateX(Math.PI / 2).translate(0, hubY, -TOWER_BACK / 2 - 0.1), WOOD);
-    add(new THREE.CylinderGeometry(0.28, 0.28, 0.34, 12).rotateX(Math.PI / 2).translate(0, hubY, -0.1), WOOD);
-    add(new THREE.CylinderGeometry(0.1, 0.1, 0.4, 8).rotateX(Math.PI / 2).translate(0, hubY, 0.06), IRON);
+    const add = (g: THREE.BufferGeometry, kind: number) => parts.push(tagged(g.translate(0, 0, -TOWER_BACK), kind, 0, 0));
+    const top = TOWER_RADIUS * 0.9, skirt = hubY - 0.45;
+    add(new THREE.CylinderGeometry(top, TOWER_RADIUS, TOWER_TOP + 3, 22, 4).translate(0, (TOWER_TOP - 3) / 2, 0), STONE);
+    add(new THREE.CylinderGeometry(top + 0.08, top + 0.08, 0.2, 22).translate(0, TOWER_TOP + 0.05, 0), WOOD);
+    add(new THREE.BoxGeometry(0.42, 0.6, 0.2).translate(0, TOWER_TOP - 0.85, top + 0.02), HOLLOW);
+    add(new THREE.CylinderGeometry(top - 0.12, top + 0.16, skirt - TOWER_TOP, 22, 1, true).translate(0, (skirt + TOWER_TOP) / 2 + 0.05, 0), BOARDS);
+    add(new THREE.ConeGeometry(top + 0.02, hubY + 1.55 - skirt, 22, 1, true).translate(0, (hubY + 1.55 + skirt) / 2, 0), SHINGLE);
+    const breast = new THREE.Shape([new THREE.Vector2(-0.5, -0.5), new THREE.Vector2(0.5, -0.5), new THREE.Vector2(0.5, 0.35),
+      new THREE.Vector2(0, 0.75), new THREE.Vector2(-0.5, 0.35)]);
+    add(new THREE.ExtrudeGeometry(breast, { depth: 1.1, bevelEnabled: false }).translate(0, hubY, top - 0.7), BOARDS);
+    add(new THREE.BoxGeometry(0.62, 0.07, 1.2).rotateZ(0.68).translate(-0.27, hubY + 0.57, top - 0.12), SHINGLE);
+    add(new THREE.BoxGeometry(0.62, 0.07, 1.2).rotateZ(-0.68).translate(0.27, hubY + 0.57, top - 0.12), SHINGLE);
+    add(new THREE.CylinderGeometry(0.15, 0.18, TOWER_BACK - top - 0.2, 8).rotateX(Math.PI / 2).translate(0, hubY, (TOWER_BACK + top) / 2 + 0.1), WOOD);
+    add(new THREE.CylinderGeometry(0.3, 0.28, 0.4, 12).rotateX(Math.PI / 2).translate(0, hubY, TOWER_BACK - 0.1), WOOD);
+    add(new THREE.CylinderGeometry(0.11, 0.11, 0.46, 8).rotateX(Math.PI / 2).translate(0, hubY, TOWER_BACK + 0.06), IRON);
     return merged(parts);
   }
 
@@ -368,14 +385,19 @@ export class Windmill {
       piece(new THREE.BoxGeometry(railLen, SAIL.rail, SAIL.railDepth).translate(-(SAIL.from + SAIL.to) / 2, -SAIL.width, SAIL.forward), WOOD);
       piece(new THREE.BoxGeometry(railLen, 0.07, 0.08).translate(-(SAIL.from + SAIL.to) / 2, -SAIL.width * 0.5, SAIL.forward * 0.5), WOOD);
       const bars = 7;
+      const span = Math.hypot(SAIL.width, SAIL.forward);
       for (let i = 0; i < bars; i++) {
+        /** Worn: one bar gone from one sail, and one on the other snapped and hanging from the stock. */
+        if (side === 1 && i === 3) continue;
         const along = SAIL.from + 0.04 + (i / (bars - 1)) * (SAIL.to - SAIL.from - 0.08);
-        const a = new THREE.Vector3(-along, 0, 0), b = new THREE.Vector3(-along, -SAIL.width, SAIL.forward);
-        const bar = new THREE.BoxGeometry(0.08, a.distanceTo(b), 0.08);
+        const broken = side === 1 && i === 5;
+        const len = broken ? span * 0.55 : span;
+        const bar = new THREE.BoxGeometry(0.08, len, 0.08).translate(0, span / 2 - len / 2, 0);
+        if (broken) bar.translate(0, -span / 2, 0).rotateZ(0.35).translate(0, span / 2, 0);
         bar.rotateX(-Math.atan2(SAIL.forward, SAIL.width)).translate(-along, -SAIL.width / 2, SAIL.forward / 2);
         piece(bar, WOOD);
       }
-      for (const [at, span, drop, phase] of side === 0 ? [[1.85, 0.68, 0.8, 0.2], [3.3, 0.48, 0.6, 0.7]] : [[2.6, 0.8, 0.72, 0.4]]) {
+      for (const [at, span, drop, phase] of side === 0 ? [[1.55, 0.62, 0.85, 0.2], [2.5, 0.4, 0.5, 0.9], [3.45, 0.5, 0.62, 0.7]] : [[1.3, 0.45, 0.4, 0.6], [2.75, 0.8, 0.78, 0.4]]) {
         const cloth = new THREE.PlaneGeometry(span, drop, 4, 4);
         const pos = cloth.attributes.position;
         const shake: number[] = [];
