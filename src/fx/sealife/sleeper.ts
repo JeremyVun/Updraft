@@ -25,7 +25,9 @@ const JAW_X = flankAt(JAW_S, JAW_Y);
 const FIN_SPAN = 4.5 * DREAM_SHAPE.fin;
 const FIN_DIR = new THREE.Vector3(0.8, -0.3, -0.52).normalize();
 /** The near flipper at rest: swept round toward the head and lifted, so it reaches toward the boat with its tip at the surface. */
-const REST_FIN = new THREE.Vector2(-2, -0.6);
+const REST_FIN = new THREE.Vector2(-2, -0.64);
+/** Rolling free it lays its flippers back along its flanks, so on its back they lie low rather than stand up. */
+const FREE_FIN = new THREE.Vector2(0.95, -0.4);
 /** Lying at the surface the fluke tips curl up a little at the far end. */
 const REST_CURL = 0.5;
 /** The first full breath, in seconds: drawn in, then out in a soft column up through the spiral. */
@@ -324,7 +326,7 @@ export class SleepingWhale extends WhaleRig {
     this.lay(SINK(t), K.breathRise * 2.4 * draw, DIP(t), TAIL(t) + 0.05 * sway, K.roll + ROLL(t) + 0.22 * sway);
     this.uniforms.uCurl.value = REST_CURL * (1 - THREE.MathUtils.smoothstep(t, 8.5, 12.5)) + 0.3 * sway;
     const lower = THREE.MathUtils.smoothstep(t, 6.5, 9.5);
-    this.uniforms.uFin.value.set(THREE.MathUtils.lerp(REST_FIN.x, 0.3, lower), THREE.MathUtils.lerp(REST_FIN.y, -0.2, lower));
+    this.uniforms.uFin.value.set(THREE.MathUtils.lerp(REST_FIN.x, FREE_FIN.x, lower), THREE.MathUtils.lerp(REST_FIN.y, FREE_FIN.y, lower));
     if (t >= SURGE_AT && t - dt < SURGE_AT) this.surge();
   }
 

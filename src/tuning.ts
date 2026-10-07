@@ -2058,7 +2058,7 @@ export const tuning = {
   /** The dream-sized whale's look, wherever it is met. */
   whaleLook: {
     /** Smooth slate-blue back, a pale lower jaw and belly, a warm amber eye. */
-    back: '#4c6474', belly: '#d8d1c4', iris: '#86461a',
+    back: '#4c6474', belly: '#c2b9ad', iris: '#86461a',
     /** Cool light from the open sky on its skin, as a multiple of the sky's own ambient brightness. */
     fill: 2.1,
     /** Warm light thrown up off the sea onto the jaw and belly, the same way. */

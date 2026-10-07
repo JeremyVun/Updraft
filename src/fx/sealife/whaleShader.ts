@@ -165,10 +165,11 @@ Skin skin() {
   if (part == ${BODY} || part == ${DORSAL}) {
     // The lower jaw's line runs back from the snout to just under the eye, then falls away to the belly.
     float h = part == ${BODY} ? vRig.w : 1.0;
-    float jaw = mix(0.38, 0.45, smoothstep(0.0, ${f(JAW_CORNER)}, s));
-    float line = mix(jaw, -0.55, smoothstep(${f(JAW_CORNER)}, ${f(JAW_CORNER + 0.05)}, s));
+    float jaw = mix(0.72, 0.45, smoothstep(0.0, ${f(JAW_CORNER)}, s));
+    float turn = smoothstep(${f(JAW_CORNER)}, ${f(JAW_CORNER + 0.06)}, s);
+    float line = mix(jaw, -0.55, 1.0 - sqrt(max(0.0, 1.0 - turn * turn)));
     float onHead = 1.0 - smoothstep(${f(JAW_CORNER)}, ${f(JAW_CORNER + 0.04)}, s);
-    float soft = mix(0.07, 0.01, onHead) + fwidth(h);
+    float soft = mix(0.07, 0.018, onHead) + fwidth(h);
     float pale = (1.0 - smoothstep(line - soft, line + soft, h + (mottle - 0.5) * 0.08 * (1.0 - onHead)))
       * (1.0 - smoothstep(0.55, 0.85, s));
     float pleats = smoothstep(0.08, 0.14, s) * (1.0 - smoothstep(0.36, 0.48, s)) * (1.0 - smoothstep(-0.75, -0.45, h));
@@ -212,7 +213,7 @@ Skin skin() {
   } else if (part == ${FIN}) {
     float top = smoothstep(-0.2, 0.4, rn.y);
     k.albedo = mix(uBelly * (0.92 + 0.1 * mottle), uBack * 1.05, top * (1.0 - smoothstep(0.15, 0.7, vRig.z)) * 0.85);
-    k.thin = 0.6;
+    k.thin = 0.15;
   } else {
     // Its own marks under the flukes, the same wherever it is met: a ragged dark trailing edge and tips, a dark
     // stroke up from the notch, and two dark commas that do not match.
@@ -227,7 +228,7 @@ Skin skin() {
     float lead = 1.0 - smoothstep(0.04, 0.12, a);
     float mark = max(max(max(edge, stroke), max(max(left, right), tips)), lead);
     k.albedo = mix(k.albedo, uBelly * mix(0.78, 1.0, smoothstep(0.0, 0.5, abs(t))) * (0.9 + 0.15 * mottle), under * (1.0 - mark));
-    k.thin = 0.8;
+    k.thin = 0.12;
   }
   return k;
 }
@@ -350,7 +351,9 @@ void main() {
   float path = depth / cosT;
   float F = 0.02 + 0.98 * pow(1.0 - nv, 5.0);
   float sun = cloudShadow(vSurface.xz);
-  vec3 light = uSkyAmbient * 1.2 + uSunColor * max(uSunDir.y, 0.0) * 1.1 * sun;
+  // The same cool sky light as on its skin above, so the pale flippers still show under the glass at dawn.
+  float sky = dot(uSkyAmbient, vec3(0.3, 0.5, 0.2));
+  vec3 light = max(uSkyAmbient * 1.2, vec3(0.78, 0.9, 1.08) * sky * ${f(L.fill)}) + uSunColor * max(uSunDir.y, 0.0) * 1.1 * sun;
   vec3 deep = uDeep * (uSkyAmbient * 1.1 + uSunColor * max(uSunDir.y, 0.0) * 0.6 * sun);
   vec3 seen = k.albedo * light * exp(-uAbsorb * (path + depth));
   float clear = exp(-path * ${f(L.clarity)});

@@ -6,7 +6,7 @@
 //   k1: the open sea (`?chapter=sea`) as the pod leads the boat in, `K1_LEFT` metres short of the rest (default 24).
 //   k2: at rest (`?chapter=whale`); `k2-shut` before its eye opens, then `k2` with it open on the child (`look`).
 //   k5: freed from rest (`goTo('free')`), `k5` at the spout and `k5-flukes` as they wave.
-//   dive: the first crossing (`?chapter=toLines`), its flukes up as it dives far off, at the real time it comes.
+//   dive: the first crossing (`?chapter=toLines`), its flukes at their highest as it dives far off, when it comes.
 // Traps:
 //   - k1 sails the open sea from the start (about 80 s) and dive waits for the crossing's sighting (about 45 s): a
 //     full set takes about six minutes, so pass only the shots needed.
@@ -72,7 +72,7 @@ const SHOOT = {
     await snap('k5-flukes');
   },
   async dive(page, snap) {
-    await waitFor(page, () => __game.sealife.body.time > 7.5 && __game.sealife.body.time < 20, null, 240);
+    await waitFor(page, () => __game.sealife.body.time > 9.2 && __game.sealife.body.time < 20, null, 240);
     await snap('dive');
   },
 };
