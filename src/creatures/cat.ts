@@ -1262,6 +1262,7 @@ export class Cat {
         const t = this.airT / this.landFor;
         const give = Math.sin(Math.min(1, t * 1.4) * Math.PI) * (this.leaping ? 1 : 0.5);
         pitch -= 0.16 * give;
+        bodyY -= 0.012 * give;
         neckLow += 0.25 * give;
         bodyZ += 0.012 * give;
         tailUp += 0.4 * (1 - t);
@@ -1428,9 +1429,9 @@ export class Cat {
       this.frameVel.copy(vel);
       this.frameWas.copy(now);
       const push = acc.length();
-      /** A lurch of what it rides makes it flinch and press itself down. */
+      /** Uneasy, a lurch of what it rides makes it flinch and press itself down. */
       this.jolted = Math.max(0, this.jolted - dt);
-      if (push > 2.5 && this.jolted <= 0 && !this.frameFresh) {
+      if (push > 2.5 && this.unease > 0.4 && this.jolted <= 0 && !this.frameFresh) {
         this.afraid(this.fear < 0.9 ? 0.2 : 0);
         this.jolted = 1.2;
       }
