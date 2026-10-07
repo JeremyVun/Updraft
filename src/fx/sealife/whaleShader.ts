@@ -376,7 +376,7 @@ void main() {
   float back = pow(max(dot(-V, uSunDir), 0.0), 2.0);
   // Cool sky fill keeps the shadowed flank slate rather than black against a low sun.
   float sky = dot(uSkyAmbient, vec3(0.3, 0.5, 0.2));
-  vec3 fill = vec3(0.8, 0.88, 1.05) * sky * ${f(L.fill)} * (0.42 + 0.58 * N.y);
+  vec3 fill = vec3(0.8, 0.88, 1.05) * sky * ${f(L.fill)} * (0.55 + 0.45 * N.y);
   vec3 bounce = mix(uSkyHorizon, uSeaTint * sky * 3.0, 0.5) * ${f(L.bounce)} * sky * max(-N.y + 0.15, 0.0);
   vec3 col = k.albedo * (fill + bounce + uSunColor * (wrap * wrap * wrap * ${f(L.key)} + 0.02) * sun);
   // Low on the flank the sea shades it, so the skin darkens down to the waterline.
