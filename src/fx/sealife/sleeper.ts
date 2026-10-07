@@ -31,18 +31,23 @@ const REST_CURL = 0.5;
 /** The first full breath, in seconds: drawn in, then out in a soft column up through the spiral. */
 const BREATH_IN = 1.4;
 const BREATH_OUT = 3.6;
-/** Free, in seconds: the breath drawn, the spout, then it rolls onto its back, lifts its flukes, waves, and goes. */
-const SPOUT_FROM = 1.4;
-const SPOUT_TO = 4.2;
-const ROLL = curve([[0, 0], [6, 0], [10, 3.05], [17, 3.05], [20, 2.2], [24, 1.2]]);
-const SINK = curve([[0, 0], [6, 0], [10, -3.6], [16, -3.8], [19, -5.5], [24, -22]]);
-const TAIL = curve([[0, 0], [9.5, 0], [12, -0.62], [16.5, -0.66], [19, -0.25], [21, 0]]);
-const DIP = curve([[0, 0], [16, 0], [19, -0.12], [24, -0.3]]);
-const WAVE_FROM = 12;
-const WAVE_TO = 17;
-const SURGE_AT = 16.5;
-const RELEASE_AT = 16;
-const GONE = 25;
+/**
+ * Free, in seconds: a long breath drawn while the pod comes, the spout, then it rolls onto its back, lifts its
+ * flukes and waves them, and goes under.
+ */
+const SPOUT_FROM = 4;
+const SPOUT_TO = 6.8;
+const ROLL = curve([[0, 0], [8.5, 0], [12.5, 3.05], [19.5, 3.05], [22.5, 2.2], [26.5, 1.2]]);
+const SINK = curve([[0, 0], [8.5, 0], [12.5, -3.6], [18.5, -3.8], [21.5, -5.5], [26.5, -22]]);
+const TAIL = curve([[0, 0], [12, 0], [14.5, -0.62], [19, -0.66], [21.5, -0.25], [23.5, 0]]);
+const DIP = curve([[0, 0], [18.5, 0], [21.5, -0.12], [26.5, -0.3]]);
+const WAVE_FROM = 14.5;
+const WAVE_TO = 19.5;
+const SURGE_AT = 19;
+const RELEASE_AT = 18.5;
+const GONE = 27.5;
+/** Seconds into being free when it is looking at its flukes rather than its breath. */
+export const FREE_FLUKES_FROM = 11.5;
 /** The near flipper's lazy lift: up over two seconds, held, and laid back down on the water. */
 const LIFT = curve([[0, 0], [0.4, 0.12], [1.8, 0.95], [3, 1], [4.2, 0.35], [4.7, -0.04], [5.2, 0]]);
 const LIFT_HITS = 4.6;
@@ -308,7 +313,7 @@ export class SleepingWhale extends WhaleRig {
   /** Free: the deep breath and the spout, then onto its back, flukes up and waving, and away under. */
   private leave(dt: number): void {
     const t = this.time;
-    const draw = THREE.MathUtils.smootherstep(t, 0, SPOUT_FROM) * (1 - THREE.MathUtils.smootherstep(t, SPOUT_TO, 6));
+    const draw = THREE.MathUtils.smootherstep(t, 0, SPOUT_FROM) * (1 - THREE.MathUtils.smootherstep(t, SPOUT_TO, SPOUT_TO + 1.8));
     if (t >= SPOUT_FROM && t - dt < SPOUT_FROM) this.onSound?.('whale-blow', this.blowhole.x, this.blowhole.y, this.blowhole.z);
     if (t >= SPOUT_FROM && t < SPOUT_TO) {
       const k = (t - SPOUT_FROM) / (SPOUT_TO - SPOUT_FROM);
@@ -317,8 +322,8 @@ export class SleepingWhale extends WhaleRig {
     const wave = THREE.MathUtils.smoothstep(t, WAVE_FROM, WAVE_FROM + 1) * (1 - THREE.MathUtils.smoothstep(t, WAVE_TO - 1, WAVE_TO));
     const sway = Math.sin((t - WAVE_FROM) * 2.1) * wave;
     this.lay(SINK(t), K.breathRise * 2.4 * draw, DIP(t), TAIL(t) + 0.05 * sway, K.roll + ROLL(t) + 0.22 * sway);
-    this.uniforms.uCurl.value = REST_CURL * (1 - THREE.MathUtils.smoothstep(t, 6, 10)) + 0.3 * sway;
-    const lower = THREE.MathUtils.smoothstep(t, 4, 7);
+    this.uniforms.uCurl.value = REST_CURL * (1 - THREE.MathUtils.smoothstep(t, 8.5, 12.5)) + 0.3 * sway;
+    const lower = THREE.MathUtils.smoothstep(t, 6.5, 9.5);
     this.uniforms.uFin.value.set(THREE.MathUtils.lerp(REST_FIN.x, 0.3, lower), THREE.MathUtils.lerp(REST_FIN.y, -0.2, lower));
     if (t >= SURGE_AT && t - dt < SURGE_AT) this.surge();
   }

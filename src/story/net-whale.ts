@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { Shot } from '../camera';
 import { screenBrush } from '../creatures/motion';
 import { TOP } from '../fx/sealife/anatomy';
-import type { SleepingWhale } from '../fx/sealife/sleeper';
+import { FREE_FLUKES_FROM, type SleepingWhale } from '../fx/sealife/sleeper';
 import type { Coax } from '../fx/swirl';
 import { tuning } from '../tuning';
 import type { Cast } from './cast';
@@ -29,12 +29,19 @@ const BRUSH_STEPS = 18;
 /** How far out from the pod's anchor the bow is when it lets the boat come to rest alone (m). */
 const POD_PARTS = 22;
 /**
- * The pod's way past the boat as the whale spouts free, in metres to port and ahead of the boat at rest: in from
- * behind on the port quarter, across the water between the boat and its jaw, and on along its flank to starboard,
- * at `POD_PACE` metres a second with its lanes drawn in by `POD_SPREAD`.
+ * Where the pod waits while the boat does, in metres to port and ahead of the boat at rest: circling slowly behind
+ * the camera, `POD_WAIT_RADIUS` across at `POD_WAIT_PACE` metres a second.
  */
-const POD_WAY = [new THREE.Vector2(30, -14), new THREE.Vector2(9, 0), new THREE.Vector2(-16, 12)];
-const POD_PACE = 3;
+const POD_WAIT = new THREE.Vector2(24, -18);
+const POD_WAIT_RADIUS = 8;
+const POD_WAIT_PACE = 2;
+/**
+ * The pod's way past the boat as the whale spouts free, from wherever it is waiting: across the water between the
+ * boat and the whale's jaw and on along its flank to starboard, at `POD_PACE` metres a second with its lanes drawn
+ * in by `POD_SPREAD`.
+ */
+const POD_WAY = [new THREE.Vector2(9, 0), new THREE.Vector2(-40, 26)];
+const POD_PACE = 4;
 const POD_SPREAD = 0.45;
 /** Seconds the child holds a point toward a breath she has seen, and the least between two. */
 const POINT_FOR = 2.6;
@@ -88,7 +95,10 @@ export class NetWhale {
   private nextPoint = 0;
   private cygnetIn: 'cradle' | 'stowing' | 'satchel' | 'unstowing' = 'cradle';
   private podGone = false;
+  /** How far round its wait, and how far along its way past the boat, the pod's anchor has come. */
+  private waited = 0;
   private escort = 0;
+  private readonly wayFrom = new THREE.Vector3();
   private camera: THREE.PerspectiveCamera | null = null;
   private readonly asking: Coax = { at: new THREE.Vector3(), urgency: K.coaxUrgency, radius: K.coaxRadius };
   private readonly anchor = new THREE.Vector3();
@@ -118,6 +128,7 @@ export class NetWhale {
     const whale = this.whale;
     whale.lie(this.p, this.yaw - K.bodyAngle + Math.PI, this.rest);
     whale.onExhale = () => (this.exhaled = this.clock);
+    this.local(POD_WAIT.x + POD_WAIT_RADIUS, POD_WAIT.y, this.wayFrom);
   }
 
   get whale(): SleepingWhale {
@@ -146,7 +157,7 @@ export class NetWhale {
   restore(point: string): void {
     if (point === 'whale-rest') {
       this.led = true;
-      this.podGone = true;
+      this.waited = 1e-3;
       this.step = 'breath';
       this.stepTime = 0;
       this.limit = 0;
@@ -240,9 +251,19 @@ export class NetWhale {
       }
       return out;
     }
-    if (this.step !== 'free' || whale.going || this.podGone) {
-      if (this.step === 'free' && whale.going) this.podGone = true;
+    if ((this.step === 'free' && whale.going) || this.step === 'gone' || this.podGone) {
+      this.podGone = true;
       out.heading = this.escortYaw();
+      return out;
+    }
+    if (this.step !== 'free') {
+      // Gone under ahead of the boat as it came to rest, the pod comes back round behind it and waits there.
+      if (this.waited === 0 && this.cast.sealife.dolphinsHere) return out;
+      this.waited += (dt * POD_WAIT_PACE) / POD_WAIT_RADIUS;
+      this.local(POD_WAIT.x + Math.cos(this.waited) * POD_WAIT_RADIUS, POD_WAIT.y + Math.sin(this.waited) * POD_WAIT_RADIUS, this.anchor);
+      out.near = this.anchor;
+      out.heading = this.yaw - this.waited;
+      this.wayFrom.copy(this.anchor);
       return out;
     }
     this.escort = Math.min(1, this.escort + (dt * POD_PACE) / this.wayLength());
@@ -257,26 +278,30 @@ export class NetWhale {
     return out;
   }
 
-  /** A point `t` of the way along the pod's way past the boat, in the world. */
-  private wayAt(t: number, out: THREE.Vector3): THREE.Vector3 {
-    const [a, b, c] = POD_WAY;
-    const u = 1 - t;
-    const left = u * u * a.x + 2 * u * t * b.x + t * t * c.x;
-    const ahead = u * u * a.y + 2 * u * t * b.y + t * t * c.y;
+  /** A point `left` metres to port of the boat at rest and `ahead` metres before it, in the world. */
+  private local(left: number, ahead: number, out: THREE.Vector3): THREE.Vector3 {
     return out.set(this.rest.x + Math.sin(this.yaw) * ahead + Math.cos(this.yaw) * left, 0,
       this.rest.z + Math.cos(this.yaw) * ahead - Math.sin(this.yaw) * left);
   }
 
+  /** A point `t` of the way along the pod's way past the boat, from where it was waiting, in the world. */
+  private wayAt(t: number, out: THREE.Vector3): THREE.Vector3 {
+    const u = 1 - t;
+    this.local(POD_WAY[0].x, POD_WAY[0].y, this.p);
+    this.local(POD_WAY[1].x, POD_WAY[1].y, this.b);
+    return out.copy(this.wayFrom).multiplyScalar(u * u).addScaledVector(this.p, 2 * u * t).addScaledVector(this.b, t * t);
+  }
+
   private wayLength(): number {
-    const [a, b, c] = POD_WAY;
-    return a.distanceTo(b) + b.distanceTo(c);
+    this.local(POD_WAY[0].x, POD_WAY[0].y, this.p);
+    return this.wayFrom.distanceTo(this.p) + POD_WAY[0].distanceTo(POD_WAY[1]);
   }
 
   /** The way the pod swims along its way past the boat, and on as the whale goes. */
   private escortYaw(): number {
-    this.wayAt(Math.min(1, this.escort + 0.02), this.b);
+    this.wayAt(Math.min(1, this.escort + 0.02), this.forward);
     this.wayAt(Math.max(0, this.escort - 0.02), this.a);
-    return Math.atan2(this.b.x - this.a.x, this.b.z - this.a.z);
+    return Math.atan2(this.forward.x - this.a.x, this.forward.z - this.a.z);
   }
 
   /**
@@ -350,7 +375,7 @@ export class NetWhale {
   private watched(): THREE.Vector3 {
     const whale = this.whale;
     if (this.step === 'free') {
-      if (whale.fluking || whale.time > 9) return this.look.copy(whale.flukes).setY(Math.max(whale.flukes.y, 2));
+      if (whale.fluking || whale.time > FREE_FLUKES_FROM) return this.look.copy(whale.flukes).setY(Math.max(whale.flukes.y, 2));
       return this.look.copy(whale.blowhole).setY(whale.blowhole.y + (whale.spouting ? 6 : 1));
     }
     if (whale.awake) return whale.eye;
@@ -446,7 +471,8 @@ export class NetWhale {
     const out = THREE.MathUtils.smootherstep(this.release, 0, 1);
     const head = this.p.copy(whale.eye).lerp(whale.blowhole, 0.5);
     this.look.copy(boat).setY(1.2).lerp(head.setY(2.6), portrait ? 0.62 : 0.5);
-    const glance = whale.phase === 'free' ? THREE.MathUtils.smoothstep(whale.time, 9, 12.5) * (1 - THREE.MathUtils.smoothstep(whale.time, 19, 23)) : 0;
+    const glance = whale.phase === 'free' ? THREE.MathUtils.smoothstep(whale.time, FREE_FLUKES_FROM, FREE_FLUKES_FROM + 3.5)
+      * (1 - THREE.MathUtils.smoothstep(whale.time, FREE_FLUKES_FROM + 10, FREE_FLUKES_FROM + 14)) : 0;
     if (glance > 0) this.look.lerp(this.a.copy(whale.flukes).setY(Math.max(4, whale.flukes.y * 0.5)), glance * (portrait ? 0.85 : 0.55));
     // Behind the boat: just to port of astern, or in portrait on the line from the head through the boat.
     const aim = portrait ? Math.atan2(head.x - boat.x, head.z - boat.z) : this.yaw - K.holdBearing;
@@ -469,7 +495,7 @@ export class NetWhale {
     const pair = shot.subjects;
     s.primary.copy(this.cast.child.position).y += 1.2;
     const rest = pair?.secondary ?? s.primary;
-    s.secondary.copy(whale.blowhole).y += whale.phase === 'free' && whale.time < 6 ? 8 : 2.5;
+    s.secondary.copy(whale.blowhole).y += whale.phase === 'free' && whale.time < FREE_FLUKES_FROM - 3 ? 8 : 2.5;
     s.tertiary.copy(whale.eye);
     if (glance > 0) s.tertiary.lerp(this.a.copy(whale.flukes).setY(Math.max(whale.flukes.y, 1)), glance);
     s.secondary.lerp(rest, 1 - h);
