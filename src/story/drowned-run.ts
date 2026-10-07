@@ -424,6 +424,11 @@ export class RoofRun {
     cat.unease = 0.6;
   }
 
+  /** Past the end of her way: only what the pieces she crossed go on doing, the empty swing dying away. */
+  tend(dt: number): void {
+    if (this.camera) for (const piece of this.started) this[piece].update(dt, this.camera);
+  }
+
   afterCamera(camera: THREE.PerspectiveCamera): void {
     this.camera = camera;
     this.aspect = camera.aspect;

@@ -966,7 +966,8 @@ vec4 seaFog(vec3 ro, vec3 rd, float far) {
   vec2 o = ro.xz - uSeaFog.xy;
   float s0 = dot(o, n), ds = dot(rd.xz, n);
   float a0 = dot(o, side), da = dot(rd.xz, side);
-  float closed = uSeaFogShape.z * ${glsl(tuning.drowned.fog.closeRun)};
+  // It thins before it runs on past the eye, so nobody is ever left standing in its thick body.
+  float closed = smoothstep(${glsl(tuning.drowned.fog.closedBy)}, 1.0, uSeaFogShape.z) * ${glsl(tuning.drowned.fog.closeRun)};
   float front = seaFogLead(a0) + closed;
   float meet = s0 <= front ? 0.0 : ds < -1e-4 ? (s0 - front) / -ds : far;
   float line = meet;
@@ -1006,9 +1007,11 @@ vec4 seaFog(vec3 ro, vec3 rd, float far) {
       float high = len - pastEdge(ro.y, rd.y, span.x, span.y, top - soft, soft);
       float y0 = ro.y + rd.y * span.x, y1 = ro.y + rd.y * span.y;
       float low = abs(rd.y) > 1e-3 ? LOW * (exp(-y0 / LOW) - exp(-y1 / LOW)) / rd.y : exp(-0.5 * (y0 + y1) / LOW) * len;
-      float thick = mix(${glsl(tuning.drowned.fog.density)}, ${glsl(tuning.drowned.fog.closed)}, uSeaFogShape.z);
+      // Its body thins early in the closing, so it rolls over the eye and opens round her rather than standing thick on it.
+      float thin = smoothstep(0.0, ${glsl(tuning.drowned.fog.closedBy)}, uSeaFogShape.z);
+      float thick = mix(${glsl(tuning.drowned.fog.density)}, ${glsl(tuning.drowned.fog.closed)}, thin);
       // Closed round her it lies thinner on the water, so the glass near her still shows.
-      bank = along / len * (thick * high + ${glsl(tuning.drowned.fog.floor)} * (1.0 - 0.7 * uSeaFogShape.z) * low) * sides * uSeaFogShape.w;
+      bank = along / len * (thick * high + ${glsl(tuning.drowned.fog.floor)} * (1.0 - 0.7 * thin) * low) * sides * uSeaFogShape.w;
       // Its face where the sightline comes into it, heaped in broad billows that drift.
       float tm = span.x + min(len, 10.0) * 0.5;
       float ym = ro.y + rd.y * tm;
