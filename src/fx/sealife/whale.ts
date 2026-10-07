@@ -111,7 +111,6 @@ export class WhaleRig {
       uFin: { value: new THREE.Vector2() },
       uCurl: { value: 0 },
       uScale: { value: scale },
-      uShiver: { value: new THREE.Vector3(0, 0, 1) },
       uSlap: { value: new THREE.Vector3() },
       uShape: { value: new THREE.Vector3(DREAM_SHAPE.fin, DREAM_SHAPE.dorsal, DREAM_SHAPE.flukes) },
       /** How far its long low back melts into the morning haze, 0..1. */

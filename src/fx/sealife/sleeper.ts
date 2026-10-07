@@ -89,8 +89,7 @@ export class SleepingWhale extends WhaleRig {
   time = 0;
   /** How far toward its first full breath the player's wind has brought it, 0..1: it breathes deeper as it does. */
   stir = 0;
-  /** Frames a gust has spent crossing its back, and the lazy lifts of the flipper they drew, since it lay down. */
-  tickles = 0;
+  /** The lazy lifts of the near flipper since it lay down. */
   lifts = 0;
   /** Where the parts that matter are this frame, in the world. */
   readonly blowhole = new THREE.Vector3();
@@ -115,11 +114,7 @@ export class SleepingWhale extends WhaleRig {
   private gazing = false;
   private breath = 0;
   private sighed = true;
-  private shiverS = 0;
-  private shiverDir = 1;
-  private shiverAmp = 0;
   private liftT = -1;
-  private liftCool = 0;
   private surgeNear = 12;
   private worldTime = 0;
   private readonly u = new Float32Array(SPINE_N);
@@ -163,7 +158,7 @@ export class SleepingWhale extends WhaleRig {
     this.phase = 'resting';
     this.time = 0;
     this.stir = 0;
-    this.tickles = this.lifts = 0;
+    this.lifts = 0;
     this.heading.set(Math.sin(noseYaw), 0, Math.cos(noseYaw));
     this.rest.set(0, 0, 0);
     this.pivot.copy(this.rest);
@@ -181,9 +176,7 @@ export class SleepingWhale extends WhaleRig {
     this.restHeading.copy(this.heading);
     this.away.set(-this.heading.z, 0, this.heading.x);
     if (this.away.x * (eye.x - near.x) + this.away.z * (eye.z - near.z) < 0) this.away.negate();
-    this.shiverAmp = 0;
     this.liftT = -1;
-    this.liftCool = 0;
     this.flipperLift = 0;
     this.skin.uEye.value = 0;
     this.gazing = false;
@@ -208,21 +201,6 @@ export class SleepingWhale extends WhaleRig {
   look(at: THREE.Vector3 | null): void {
     this.gazing = at !== null;
     if (at) this.gazeAt.copy(at);
-  }
-
-  /**
-   * A gust across its back at `s` (0 snout .. 1 flukes), running toward the flukes when `along` is positive: the skin
-   * shivers along the stroke, and now and then the near flipper comes up lazily. It never wakes it.
-   */
-  tickle(s: number, along: number, strength: number, mayLift = true): void {
-    if (this.phase !== 'resting' && this.phase !== 'woken') return;
-    if (this.shiverAmp < 0.02 || Math.abs(s - this.shiverS) > 0.2) {
-      this.shiverS = s;
-      this.shiverDir = Math.sign(along) || 1;
-    }
-    this.shiverAmp = Math.min(0.06, Math.max(this.shiverAmp, 0.035 + 0.025 * strength));
-    this.tickles++;
-    if (mayLift && this.liftCool <= 0 && this.liftFlipper()) this.liftCool = K.liftEvery;
   }
 
   /** The near flipper lifts lazily out of the water, is held up, and is laid back down. False while it already is. */
@@ -268,12 +246,8 @@ export class SleepingWhale extends WhaleRig {
       if (this.time > 30 && this.time < 1e3) swellUniforms.uSurge.value.w = 0;
       return;
     }
-    this.liftCool = Math.max(0, this.liftCool - dt);
     if (this.phase === 'free') this.leave(dt);
     else this.lieThere(dt);
-    this.shiverS = THREE.MathUtils.clamp(this.shiverS + this.shiverDir * 0.18 * dt, 0.05, 0.95);
-    this.shiverAmp *= Math.exp(-dt * 1.8);
-    this.uniforms.uShiver.value.set(this.shiverS, this.shiverAmp, 0.05);
     this.lift(dt);
     this.locate();
     this.lookOut(dt);

@@ -1,16 +1,18 @@
 // The whale in the net on the open sea, played with real pointer gestures in Chrome for Testing (GPU).
-// The breath: sweeps across its back only ever tickle it and lift nothing; circles over the blowhole lift the patch of
+// The whale's body never answers the wind: sweeps across it and the breeze move nothing on it; only its breath moves it,
+// and its flipper when a sweep along it asks.
+// The breath: sweeps across its back do nothing and lift nothing; circles over the blowhole lift the patch of
 // net off it, it draws its first full breath, its eye opens on her and the sequence goes on to the line; left alone,
 // under a breeze three times the sea's, nothing lifts until the safety valve, whose dolphin leaps and lifts the mesh.
 // The line: sweeps across the near cork toward the boat bring it to her, she takes it and hauls, each pull peeling the
 // net further off into the water, and lets it go; strokes the wrong way only nudge it, held near by its tether; left
-// alone under three times the breeze, with sweeps across its back that only tickle it, the cork stays where it is
+// alone under three times the breeze, with sweeps across its back that do nothing, the cork stays where it is
 // until the valve, whose dolphin noses it in to her.
 // The flipper: the cygnet goes in at once, swims to the loop's free end and holds it; sweeps along the flipper lift it
 // and the loop comes off into the bird's pull, the line running unbroken through its bill, the bird never within a
 // metre of the flipper; it swims back and is lifted in, and the whale is free. A sweep before the bird has the end
 // lifts the flipper but leaves the loop on. Left alone under three times the breeze, with sweeps across its back that
-// only shiver it and scrubs across the flipper, nothing lifts until the valve, whose dolphin noses the flipper up.
+// do nothing and scrubs across the flipper, nothing lifts until the valve, whose dolphin noses the flipper up.
 // Saves: one at rest resumes beside it lying there, one after its breath with the patch up and its eye open, one after
 // the line with the net off its head and the line let go, one after the flipper with the net loose on the water and
 // the cygnet in the satchel as it goes free, and one from after it has gone without it, sailing on.
@@ -44,7 +46,7 @@ const browser = await chromium.launch({
 const STATE = `(() => {
   const c = __game.story.current, s = __game.sealife.sleeper, w = c.whale, b = __game.boat, n = __game.sealife.net;
   return { chapter: __game.story.name, time: c.time, step: w ? w.step : null, stepTime: w ? w.stepTime : 0,
-    phase: s.phase, awake: s.awake, visible: s.mesh.visible, tickles: s.tickles, lifts: s.lifts,
+    phase: s.phase, awake: s.awake, visible: s.mesh.visible, answers: window.__body?.answers ?? 0, lifts: s.lifts,
     progress: w ? w.progress : null, remaining: w ? w.remaining() : null, speed: b.speed, limit: b.speedLimit,
     checkpoint: c.checkpoint, coax: !!c.coax, lift: __game.sealife.net.lift, net: __game.sealife.net.shown,
     liftedBy: w ? w.liftedBy : null, valveT: w ? w.valveT : -1, eye: s.awake && s.phase === 'woken' && s.time > 3,
@@ -64,10 +66,28 @@ async function open(context, query) {
   page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
   await page.goto(`${base}?shot=1&chapter=whale${query}`, { waitUntil: 'load' });
   await page.waitForFunction(() => window.__ready === true, null, { timeout: 90000 });
+  await watchBody(page);
   return { page, errors };
 }
 
 const read = (page) => page.evaluate(STATE);
+
+/**
+ * Every frame, whether anything on its body moved other than its breathing: a flipper lifted or swept, or the body
+ * rolled off its rest. Read as `answers`, the frames it did.
+ */
+const watchBody = (page) => page.evaluate(() => {
+  const body = window.__body = { answers: 0 };
+  const roll = __game.tuning.netWhale.roll;
+  const tick = () => {
+    const u = __game.sealife.sleeper.uniforms;
+    if (__game.sealife.sleeper.phase === 'resting' || __game.sealife.sleeper.phase === 'woken') {
+      if (u.uSlap.value.y !== 0 || u.uSlap.value.z !== 0 || Math.abs(u.uRoll.value - roll) > 1e-6) body.answers++;
+    }
+    requestAnimationFrame(tick);
+  };
+  tick();
+});
 
 async function until(page, test, what, wallSeconds = 300) {
   const end = Date.now() + wallSeconds * 1000;
@@ -270,13 +290,13 @@ async function sweeps() {
   }
   await page.waitForTimeout(3000);
   const end = await read(page);
-  results.sweeps = { tickles: end.tickles, lifts: end.lifts, step: end.step, progress: end.progress };
+  results.sweeps = { answers: end.answers, lifts: end.lifts, step: end.step, progress: end.progress };
   assert.equal(end.step, 'breath', 'sweeps alone never move it on');
   assert.equal(end.progress, 0, 'sweeps put nothing toward its breath');
   assert.equal(end.lift, 0, 'sweeps lift none of the net');
   assert.equal(end.net, true, 'the net lies on it');
-  assert(end.tickles > 0, 'sweeps across its back tickle it');
-  assert(end.lifts > 0, 'a tickle is answered by a lazy lift of the flipper');
+  assert.equal(end.answers, 0, 'its body never answers the sweeps');
+  assert.equal(end.lifts, 0, 'nor does its flipper');
   assert.deepEqual(errors, []);
   await context.close();
 }
@@ -307,7 +327,7 @@ async function circles() {
   assert.equal(breathed.liftedBy, 'circles', 'the circles lifted the net');
   assert(looked.phase === 'woken' && looked.lift > 0.9, 'clear of the net, its first full breath, and its eye opens');
   assert.equal(line.lift > 0.95, true, 'the patch stays up after the breath');
-  assert.equal(breathed.tickles, before.tickles, 'circles over the blowhole never tickle it');
+  assert.equal(breathed.answers, before.answers, 'circles over the blowhole move nothing on its body but its breath');
   assert.deepEqual(errors, []);
   await context.close();
 }
@@ -323,11 +343,11 @@ async function idle() {
   const sent = await until(page, (s) => s.valveT >= 0 || s.progress > 0, 'the valve to send its dolphin', 300);
   const moving = await until(page, (s) => s.progress > 0, 'the dolphin to lift the net', 60);
   results.idle = { restAt: +restAt.toFixed(1), invitedAt: +coaxed.time.toFixed(1), sentAt: +sent.time.toFixed(1),
-    liftedAt: +moving.time.toFixed(1), by: moving.liftedBy, tickles: moving.tickles };
+    liftedAt: +moving.time.toFixed(1), by: moving.liftedBy, answers: moving.answers };
   assert(coaxed.coax && coaxed.progress === 0, 'the spiral invites before anything moves');
   assert(sent.time - restAt >= 88 && sent.progress === 0 && sent.lift === 0, `it moved before the valve: ${(sent.time - restAt).toFixed(1)} s at rest`);
   assert.equal(moving.liftedBy, 'dolphin', 'the valve is the dolphin lifting the mesh');
-  assert.equal(moving.tickles, 0, 'the breeze never tickles it');
+  assert.equal(moving.answers, 0, 'the breeze never moves its body');
   await until(page, (s) => s.eye, 'its eye to open after the dolphin', 60);
   await until(page, (s) => s.step === 'line', 'the breath to hand on', 60);
   assert.deepEqual(errors, []);
@@ -407,7 +427,7 @@ async function saves() {
 
 /**
  * Sweeps across the cork toward the boat bring it to her; she takes the line and hauls it in, each pull peeling the
- * net further off its head, and lets it go; none of those sweeps tickle the whale behind the cork.
+ * net further off its head, and lets it go; none of those sweeps move the whale behind the cork.
  */
 async function line() {
   const context = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
@@ -424,7 +444,7 @@ async function line() {
   }
   const after = await until(page, (s) => s.step === 'flipper', 'the haul to finish', 30);
   results.line = { corkFrom: +start.cork.toFixed(2), caughtAt: +brought.cork.toFixed(2), footFrom: +start.foot.toFixed(1), footTo: +after.foot.toFixed(1),
-    hauled: +after.hauledIn.toFixed(2), samples: pulls.length, tickles: after.tickles - start.tickles };
+    hauled: +after.hauledIn.toFixed(2), samples: pulls.length, answers: after.answers - start.answers };
   assert.equal(start.haul, 'out');
   assert.equal(start.peel, 0, 'the net lies on its head until she hauls');
   assert.equal(brought.broughtBy, 'sweeps', 'the sweeps brought the cork in');
@@ -437,7 +457,7 @@ async function line() {
   assert(held.size >= 3, `it comes in pull by pull: ${[...held].join(', ')}`);
   assert.equal(after.peel, 1, 'by the end the head is bare');
   assert(after.foot < start.foot - 2, `the hauled corner came toward her: ${start.foot.toFixed(1)} to ${after.foot.toFixed(1)} m`);
-  assert.equal(after.tickles, start.tickles, 'sweeps at the cork never tickle the whale behind it');
+  assert.equal(after.answers, start.answers, 'sweeps at the cork never move the whale behind it');
   assert.equal(after.checkpoint, 'whale-line', 'the save after the line');
   assert.deepEqual(errors, []);
   await context.close();
@@ -468,7 +488,7 @@ async function wrongway() {
 }
 
 /**
- * Left alone under three times the sea's breeze, with sweeps across its back that only tickle it, the cork stays out
+ * Left alone under three times the sea's breeze, with sweeps across its back that do nothing, the cork stays out
  * where it floats and nothing peels until the valve; then its dolphin noses the cork in to her and she hauls.
  */
 async function lineidle() {
@@ -488,9 +508,9 @@ async function lineidle() {
   const invited = await until(page, (s) => s.invited || s.haul !== 'out', 'the drawn sweep', 60);
   const sent = await until(page, (s) => s.valveT >= 0 || s.haul !== 'out', 'the valve to send its dolphin', 300);
   const caught = await until(page, (s) => s.haul !== 'out', 'the dolphin to bring the cork', 60);
-  results.lineidle = { lineAt: +lineAt.toFixed(1), tickles: swept.tickles - start.tickles, invitedAt: +(invited.time - lineAt).toFixed(1),
+  results.lineidle = { lineAt: +lineAt.toFixed(1), answers: swept.answers - start.answers, invitedAt: +(invited.time - lineAt).toFixed(1),
     sentAt: +(sent.time - lineAt).toFixed(1), caughtAt: +(caught.time - lineAt).toFixed(1), drift: +Math.hypot(sent.corkAt[0] - start.corkAt[0], sent.corkAt[1] - start.corkAt[1]).toFixed(2) };
-  assert(swept.tickles > start.tickles, 'sweeps across its back tickle it');
+  assert.equal(swept.answers, start.answers, 'sweeps across its back do nothing to it');
   assert.equal(swept.haul, 'out');
   assert(invited.invited && invited.haul === 'out', 'the sweep is drawn before anything comes');
   assert(sent.time - lineAt >= 88 && sent.haul === 'out' && sent.peel === 0, `it moved before the valve: ${(sent.time - lineAt).toFixed(1)} s into the line`);
@@ -503,7 +523,7 @@ async function lineidle() {
 
 /**
  * The cygnet holds the loop's end; sweeps along the flipper lift it and the loop comes off into the bird's pull; it
- * lets go, swims back and is lifted in, and the whale is free. None of those sweeps tickle the whale.
+ * lets go, swims back and is lifted in, and the whale is free.
  */
 async function fin() {
   const context = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
@@ -515,11 +535,11 @@ async function fin() {
   const aboard = await until(page, (s) => s.step === 'free', 'the cygnet back aboard and the whale free', 60);
   const watch = await birdWatch(page);
   results.fin = { holdAt: +(start.stepTime).toFixed(1), liftedAt: +(slipped.stepTime).toFixed(1), offAt: +off.stepTime.toFixed(1),
-    freeAt: +(aboard.time - start.time + start.stepTime).toFixed(1), lifts: slipped.lifts - start.lifts, tickles: aboard.tickles - start.tickles, ...watch };
+    freeAt: +(aboard.time - start.time + start.stepTime).toFixed(1), lifts: slipped.lifts - start.lifts, ...watch };
   assert.equal(start.loop, 0, 'the loop is on until it lifts');
   assert.equal(slipped.finnedBy, 'sweeps', 'the sweeps lifted the flipper');
   assert.equal(slipped.lifts - start.lifts, 1, 'one lazy lift takes the loop off');
-  assert.equal(aboard.tickles, start.tickles, 'sweeps along the flipper never tickle it');
+  assert.equal(aboard.lifts, slipped.lifts, 'the one lift is all its body answers');
   assert(!aboard.held && aboard.seat === 'satchel', 'the line let go and the cygnet back in the satchel before it goes free');
   assert.equal(aboard.checkpoint, 'whale-flipper', 'the save after the flipper');
   assert(watch.clear >= 1, `a metre of clear water between the cygnet and the flipper: ${watch.clear} m`);
@@ -550,7 +570,7 @@ async function finearly() {
 }
 
 /**
- * Left alone under three times the sea's breeze, with sweeps across its back that only shiver it and scrubs across
+ * Left alone under three times the sea's breeze, with sweeps across its back that do nothing and scrubs across
  * the flipper, the flipper never lifts and the loop stays on until the valve; then its dolphin noses the flipper up.
  */
 async function finidle() {
@@ -573,10 +593,10 @@ async function finidle() {
   const sent = await until(page, (s) => s.valveT >= 0 || s.slipT >= 0, 'the valve to send its dolphin', 300);
   const lifted = await until(page, (s) => s.slipT >= 0, 'the dolphin to lift the flipper', 60);
   await until(page, (s) => s.step === 'free', 'it to be free after the dolphin', 90);
-  results.finidle = { tickles: swept.tickles - start.tickles, lifts: swept.lifts - start.lifts, invitedAt: +(invited.time - holdAt).toFixed(1),
+  results.finidle = { answers: swept.answers - start.answers, lifts: swept.lifts - start.lifts, invitedAt: +(invited.time - holdAt).toFixed(1),
     sentAt: +(sent.time - holdAt).toFixed(1), liftedAt: +(lifted.time - holdAt).toFixed(1), clear: (await birdWatch(page)).clear };
   assert(sent.time - holdAt >= 88 && sent.slipT < 0 && sent.loop === 0, `it lifted before the valve: ${(sent.time - holdAt).toFixed(1)} s held`);
-  assert(swept.tickles > start.tickles, 'sweeps across its back shiver it');
+  assert.equal(swept.answers, start.answers, 'sweeps across its back and scrubs across the flipper move nothing on its body');
   assert.equal(swept.lifts, start.lifts, 'nothing but a sweep along it lifts the flipper');
   assert.equal(swept.loop, 0);
   assert(invited.invited && invited.slipT < 0, 'the strokes are drawn before anything lifts');

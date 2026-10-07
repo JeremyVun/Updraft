@@ -1417,8 +1417,6 @@ export const tuning = {
     breathEvery: 7, breathRise: 0.45, mist: 1,
     /** The soft column of its first full breath, and the tall spout when it is free (m above the blowhole). */
     firstBreathHeight: 9, spoutHeight: 20,
-    /** A gust across its back on screen (`brushFrom` and up) tickles it: a shiver along the stroke, now and then a lazy lift of the near flipper. */
-    brushFrom: 4, brushRadius: 0.05, liftEvery: 6,
     /**
      * Circling over the blowhole (the stand-in for the net's first step): the charge that starts to count, the charge
      * that counts fully, progress a second, and how far from the blowhole the column may stand (m).

@@ -1,7 +1,6 @@
 import * as THREE from 'three';
 import type { Shot } from '../camera';
 import { screenBrush } from '../creatures/motion';
-import { TOP } from '../fx/sealife/anatomy';
 import type { Net, NetGrip } from '../fx/sealife/net';
 import { FREE_FLUKES_FROM, type SleepingWhale } from '../fx/sealife/sleeper';
 import type { Coax } from '../fx/swirl';
@@ -33,12 +32,6 @@ const DRIFT_TO = 50;
 const LEAP_OUT = 14;
 const RUN_UP = 0.35;
 const LEAP_DOWN = 1.6;
-/** How near the blowhole on screen a stroke is taken for the start of a circle rather than a sweep (NDC). */
-const BLOWHOLE_CLEAR = 0.16;
-/** Where along the back a gust is looked for, snout to tail stock. */
-const BRUSH_FROM = 0.06;
-const BRUSH_TO = 0.92;
-const BRUSH_STEPS = 18;
 /** How far out from the pod's anchor the bow is when it lets the boat come to rest alone (m). */
 const POD_PARTS = 22;
 /**
@@ -91,9 +84,6 @@ const AGAINST = 1.18;
 const LIFT_FOR = 0.45;
 /** The last stretch of the line, back from its near cork, that a sweep across it also catches, and how much less. */
 const NEAR_LINKS = [{ back: 1, weight: 0.75 }, { back: 2, weight: 0.5 }];
-/** Seconds after a stroke crosses the cork that the same stroke, going on over the whale, still belongs to the cork. */
-const CORK_STROKE = 0.6;
-const CORK_AROUND = 3;
 /** The valve's dolphin, nosing in: how near behind the cork its beak keeps, and how long it takes to turn away and go under. */
 const NOSE_GAP = 0.3;
 const NOSE_AWAY = 2.6;
@@ -101,8 +91,6 @@ const NOSE_AWAY = 2.6;
 const FIN_FROM = 0.35;
 const FIN_TO = 1.02;
 const FIN_STEPS = 10;
-/** Seconds after a stroke crosses the flipper that the same stroke, going on across the head, still belongs to it. */
-const FIN_STROKE = 0.6;
 /**
  * The cygnet's way into the water from the satchel on its own side and round the stern to port, in the boat's own
  * frame (x to port, z forward); how near each waypoint it comes before making for the next, and how near the loop's
@@ -237,8 +225,6 @@ export class NetWhale {
   private hauled = false;
   /** Seconds since a sweep last crossed the cork: the drawn sweep waits for a few. */
   private idle = 0;
-  /** Seconds since a stroke last crossed the cork: the rest of that stroke, carrying on across its flank, is not a tickle. */
-  private corkStroke = 1e3;
   private pulled = 0;
   /** The line's dolphin: how far behind the cork its beak still is, and when it turned away (s), or -1. */
   private noseGap = 0;
@@ -266,9 +252,8 @@ export class NetWhale {
   /** Seconds since the lift that takes the loop off began, or -1; and what lifted it, a sweep or the valve's dolphin. */
   slipT = -1;
   finnedBy: 'sweeps' | 'dolphin' | null = null;
-  /** Screen heights of stroke run along the flipper lately, toward the next lift; seconds since one last touched it. */
+  /** Screen heights of stroke run along the flipper lately, toward the next lift. */
   private finSwept = 0;
-  private finStroke = 1e3;
   private nudged = false;
   private finned = false;
   /** Seconds into the leap one of the pod makes as it spouts, or -1 before it, or Infinity once it is back. */
@@ -738,7 +723,6 @@ export class NetWhale {
       return;
     }
     if (this.still > 0) this.waiting += dt;
-    this.tickled();
     const { input } = this.cast;
     let lifting = 0;
     if (input.present && !input.muted) {
@@ -920,13 +904,11 @@ export class NetWhale {
    * The flipper. The last loop is round its outer part, out of her reach; the cygnet goes in after it at once and
    * takes the loop's end in its bill. A sweep along the flipper lifts it lazily out of the water; with the end held,
    * the loop slides along it toward the tip as it rises and slips off into the bird's pull as it goes back down.
-   * Sweeps elsewhere on the whale only shiver it. Left a long while with the end held and nothing lifted, a dolphin
-   * comes up under the flipper and noses it up.
+   * Left a long while with the end held and nothing lifted, a dolphin comes up under the flipper and noses it up.
    */
   private lastLoop(dt: number, time: number): void {
     const { carry } = this.cast;
     const net = this.net;
-    this.finStroke += dt;
     if (this.bird === 'satchel' && this.cygnetIn === 'satchel' && !carry.busy) {
       this.cygnetIn = 'swimming';
       this.birdTo('out');
@@ -940,7 +922,6 @@ export class NetWhale {
     }
     this.brushFin(dt);
     if (this.valveT >= 0 || (holding && this.waiting > K.valveAfter)) this.nudgeFin(dt);
-    if (this.finStroke > FIN_STROKE) this.tickled(false);
     if (this.slipT >= 0) {
       const was = net.loop;
       this.slipT += dt;
@@ -999,7 +980,6 @@ export class NetWhale {
       hit = Math.max(hit, screenBrush(camera, this.finAt(t, this.p), input.prevNdc, input.ndc, K.finRadius));
     }
     if (hit <= 0.01) return;
-    this.finStroke = 0;
     this.idle = 0;
     this.finAt(FIN_FROM, this.a).project(camera);
     this.finAt(1, this.b).project(camera);
@@ -1181,7 +1161,6 @@ export class NetWhale {
     boat.group.updateMatrixWorld();
     boat.group.localToWorld(this.catchAt.copy(RAIL));
     this.haulT += dt;
-    this.corkStroke += dt;
     if (this.valveT >= 0) this.noseCork(dt);
     if (this.haul === 'out') {
       if (this.still > 0) {
@@ -1225,7 +1204,6 @@ export class NetWhale {
         this.to('letting');
       }
     } else if (this.haulT > K.letGo) this.goTo('flipper');
-    if (this.corkStroke > CORK_STROKE) this.tickled();
   }
 
   private to(haul: NetWhale['haul']): void {
@@ -1282,8 +1260,6 @@ export class NetWhale {
     const moved = Math.hypot(dx * camera.aspect, dy);
     if (moved < 1e-4) return;
     const float = this.net.float;
-    // A stroke on its way to the cork, or just past it, is about the cork, not the whale behind it.
-    if (screenBrush(camera, float.position, input.prevNdc, input.ndc, K.corkRadius * CORK_AROUND) > 0) this.corkStroke = 0;
     let hit = screenBrush(camera, float.position, input.prevNdc, input.ndc, K.corkRadius);
     for (const near of NEAR_LINKS) {
       hit = Math.max(hit, near.weight * screenBrush(camera, this.net.link(near.back, this.a), input.prevNdc, input.ndc, K.corkRadius));
@@ -1440,44 +1416,6 @@ export class NetWhale {
     net.lift += (held - net.lift) * (1 - Math.exp(-dt * 2.5));
     net.updraft = this.wind;
     if (this.freedAt >= 0) net.drift = THREE.MathUtils.smoothstep(this.clock - this.freedAt, DRIFT_FROM, DRIFT_TO);
-  }
-
-  /**
-   * Gusts across its back only tickle it: a shiver along the stroke, and now and then a lazy lift of the flipper,
-   * except while the flipper is what is asked, when only a sweep along it lifts it.
-   */
-  private tickled(mayLift = true): void {
-    const { input } = this.cast;
-    const whale = this.whale;
-    const camera = this.camera;
-    // Circles are the breath's gesture, and answered at the blowhole: only a sweep across the back tickles it.
-    if (!camera || !input.present || input.muted || input.gust <= K.brushFrom || input.charge > K.liftFrom) return;
-    if (screenBrush(camera, whale.blowhole, input.prevNdc, input.ndc, BLOWHOLE_CLEAR) > 0) return;
-    let best = 0;
-    let at = 0;
-    for (let i = 0; i <= BRUSH_STEPS; i++) {
-      const s = BRUSH_FROM + ((BRUSH_TO - BRUSH_FROM) * i) / BRUSH_STEPS;
-      const top = whale.point(0, TOP(s), s, this.p);
-      const hit = screenBrush(camera, top, input.prevNdc, input.ndc, this.reach(camera, top, s));
-      if (hit > best) {
-        best = hit;
-        at = s;
-      }
-    }
-    if (best <= 0.01) return;
-    whale.point(0, TOP(0.1), 0.1, this.a).project(camera);
-    whale.point(0, TOP(0.9), 0.9, this.b).project(camera);
-    const along = (this.b.x - this.a.x) * (input.ndc.x - input.prevNdc.x) * camera.aspect * camera.aspect
-      + (this.b.y - this.a.y) * (input.ndc.y - input.prevNdc.y);
-    whale.tickle(at, along, Math.min(1, input.gust / 12) * best, mayLift);
-  }
-
-  /** How near a stroke has to pass on screen to touch the back there: the body's own thickness, seen from here. */
-  private reach(camera: THREE.PerspectiveCamera, top: THREE.Vector3, s: number): number {
-    const whale = this.whale;
-    this.a.copy(top).project(camera);
-    this.b.copy(top).setY(top.y - TOP(s) * whale.scale - 0.5).project(camera);
-    return Math.max(K.brushRadius, Math.abs(this.b.y - this.a.y)) + 0.02;
   }
 
   /** Sailing distance still to go before the boat is at rest beside it, along the way it comes in. */

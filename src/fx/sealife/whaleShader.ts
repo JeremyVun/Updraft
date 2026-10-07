@@ -51,8 +51,6 @@ uniform float uRoll;
 uniform vec2 uFin;
 uniform float uCurl;
 uniform float uScale;
-/** A shiver running along the back: where it is (s), how deep, and how long a stretch of skin it moves. */
-uniform vec3 uShiver;
 /** One flipper lifted on its own: which side, how far it is raised and further swept. */
 uniform vec3 uSlap;
 /** The flippers, the dorsal fin and the flukes, each scaled about its root. */
@@ -101,10 +99,6 @@ vec3 rig(vec3 rest, inout vec3 n) {
   if (part == ${DORSAL}) {
     off.xy = vec2(off.x * uShape.y, ${f(DORSAL_BASE)} + (off.y - ${f(DORSAL_BASE)}) * uShape.y);
     s = ${f(DORSAL_AT)} + (s - ${f(DORSAL_AT)}) * uShape.y;
-  }
-  if (part == ${BODY} && uShiver.y > 0.0) {
-    float d = (s - uShiver.x) / uShiver.z;
-    off += normal * uShiver.y * exp(-d * d) * max(normal.y, 0.0);
   }
   off *= uScale;
   float cr = cos(uRoll), sr = sin(uRoll);
@@ -384,7 +378,6 @@ ${ATMO_GLSL}
 ${SKIN_GLSL}
 ${HAZE_GLSL}
 uniform vec3 uSeaTint;
-uniform vec3 uShiver;
 uniform vec3 uSlap;
 in vec3 vWorld;
 in vec3 vNormal;
@@ -392,26 +385,12 @@ in vec3 vAxisX;
 in vec3 vAxisY;
 in vec3 vAxisZ;
 
-/** Tilts N by the slope of a height field h over the surface (screen-space surface gradient). */
-vec3 bumped(vec3 N, vec3 p, float h) {
-  vec3 dpdx = dFdx(p);
-  vec3 dpdy = dFdy(p);
-  vec3 r1 = cross(dpdy, N);
-  vec3 r2 = cross(N, dpdx);
-  float det = dot(dpdx, r1);
-  vec3 grad = sign(det) * (dFdx(h) * r1 + dFdy(h) * r2);
-  return normalize(abs(det) * N - grad);
-}
-
 void main() {
   vec3 N = normalize(vNormal) * (gl_FrontFacing ? 1.0 : -1.0);
   vec3 V = normalize(cameraPosition - vWorld);
   Skin k = skin(smoothstep(70.0, 140.0, distance(cameraPosition, vWorld)));
-  float d = (vRig.x - uShiver.x) / uShiver.z;
-  float ripple = uShiver.y * uScale * 0.35 * exp(-d * d) * sin(vRig.x * ${f(LENGTH)} * uScale * 6.0 - uTime * 14.0);
   vec3 slope = (k.slope.x * vAxisX + k.slope.y * vAxisY + k.slope.z * vAxisZ) / uScale;
   N = normalize(N - (slope - N * dot(slope, N)));
-  N = bumped(N, vWorld, ripple);
 
   float sun = cloudShadow(vWorld.xz);
   float ndl = dot(N, uSunDir);
