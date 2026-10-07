@@ -804,9 +804,10 @@ The sequence:
   balloon, its outline one smooth arch, its skin clean and evenly lit like a small near model. Claude's direction: an
   island that breathes.
   - **Mostly under the sea.** Above the water only the head, the blowhole and a long low line of back that sinks and
-    fades into the haze; the tail stock never seen until the farewell. Under the glass its vast dark shape goes on
-    beside and beneath the boat, far larger than what shows, so moving the camera feels like floating over something
-    enormous: the scale cue a painting can't give.
+    fades into the haze; the tail stock never seen until the farewell. Under the glass its vast shape goes on beside
+    the boat, far larger than what shows, the flipper reaching under her, so moving the camera feels like floating
+    beside something enormous: the scale cue a painting can't give. (The lie stays: the body's axis passes about 21 m
+    from the boat, so its flank under water comes within about 8–10 m.)
   - **A whale's outline.** The snout's flat ridge, the raised guard round the blowhole, the dip behind it, a small hump
     far along the back, the narrowing toward the tail before it slips under.
   - **It melts into the morning.** The far length dissolves into warm haze; a crisp gold line runs along the back's

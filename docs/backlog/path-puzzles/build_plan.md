@@ -308,6 +308,12 @@ line along the back, and whatever framing the new silhouette needs.
 Seam: `surfaceAt` and the anchors stay true to the rendered skin; the net drapes by them and must still lie on it;
 the bird's clearance from the flipper and the mechanics of N2 stay.
 Gate: as N3d's, stills at every keyframe.
+Progress: `ff2330ec..3313c9bf` (first agent, handed back before the gate). The back runs level from the crown to a
+small hump at 0.64 and sinks tail-down (`TOP`, `MOUND` the guard round the blowhole, `restPitch`); heights at rest
+3.8 m at the snout, 5.3 at the crown, 2.9 at 0.3, 1.0 at 0.5, awash by 0.6, under from 0.7. A breath lifts the back
+fully and the head by 0.3 (`breathAt`), so the flipper's root bobs 0.13 m; the net follows the spine's own rise per
+row (`bodyShift`, `spineShift`). A crisp gold `ridge`, a `wet` top, `HAZE_GLSL` (`uHaze`) melting the far length; the
+shape under the glass deeper, warm and soft (`glassDeep`, `glassWarm`). Left: the gate, the stills, the holds.
 Done: [ ]
 
 ### Phase N3g: the ancient skin and its life
