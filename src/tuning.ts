@@ -1737,7 +1737,7 @@ export const tuning = {
        * softly its top gives out, and how deep its front is soft (what
        * stands in that first stretch of it fades rather than being covered), metres.
        */
-      top: 22, topFar: 1.5, topSoft: 2.5, front: 22,
+      top: 28, topFar: 1.2, topSoft: 2.5, front: 22,
       /** How far its front heaves to and fro across its line, metres, and how far its billows swell out of its face, a share of its height. */
       heave: 20, billow: 0.35,
       /**
@@ -1757,12 +1757,12 @@ export const tuning = {
        * how far its foot and the mist ahead of it go into the pale haze over the water, far off and come close;
        * how far the first wind under it breaks up the glass once it has closed round, and the slope of the ripples it raises.
        */
-      body: 0.7, bodyNear: 0.42, crest: 0.45, haze: 0.3, hazeNear: 0.3, stir: 1, ripple: 0.18,
+      body: 0.7, bodyNear: 0.42, crest: 0.45, haze: 0.3, hazeNear: 0.05, stir: 1, ripple: 0.18,
       /**
-       * Where the progression stands with the bank risen far off and come close with the sun taken; how much of its
-       * rise shows it risen in full; and where in the progression the light starts to go.
+       * Where the progression stands with the bank risen far off and come close with the sun taken, the light going
+       * steadily between; and how much of its rise shows it risen in full.
        */
-      far: 0.3, near: 0.6, risen: 0.6, drainFrom: 0.27,
+      far: 0.3, near: 0.6, risen: 0.6,
     },
     /**
      * The untended boat taken off the slates by the fog's breath: seconds after she is up on the ridge, how hard the
