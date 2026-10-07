@@ -115,11 +115,11 @@ void main() {
   if (kind == ${THATCHED}) {
     /** Sparse strokes down the slope, the way a brush lays thatch. */
     float stroke = vnoise(vec2(vLocal.x * 3.0, vLocal.y * 0.6)) * 0.65 + vnoise(vec2(vLocal.x * 8.0, vLocal.y * 1.1)) * 0.35;
-    alb *= (0.8 + 0.3 * smoothstep(0.3, 0.8, stroke)) * (0.9 + 0.2 * vnoise(vLocal.xz * 0.5));
+    alb *= (0.76 + 0.38 * smoothstep(0.3, 0.8, stroke)) * (0.9 + 0.2 * vnoise(vLocal.xz * 0.5));
   } else if (kind == ${SLATED}) {
     /** A few long flat strokes along the slope, never courses of tiles. */
     float stroke = smoothstep(0.58, 0.8, vnoise(vec2((vLocal.x + vLocal.z) * 0.55, vLocal.y * 2.6)));
-    alb *= 0.95 + 0.16 * stroke;
+    alb *= 0.93 + 0.22 * stroke;
   } else if (kind == ${COURSED}) {
     float course = vLocal.y * 3.4;
     float row = floor(course);

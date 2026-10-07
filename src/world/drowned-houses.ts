@@ -71,8 +71,6 @@ export function fitLot(type: HouseType, lot: Lot, rand: Rng): Lot {
   switch (type) {
     case 'tallHat':
       return ridgeOut({ ...lot, len: 3.6, depth: 4.4, wall: 3.2, rise: range(rand, 6.2, 6.8), gable: 1 }, range(rand, 6.4, 7));
-    case 'tucked':
-      return { ...lot, sink: Math.min(lot.sink, 2.4) };
     case 'pocket':
       return { ...lot, len: 5, depth: 4, wall: 3, rise: 1.6, sink: Math.min(lot.sink, 1.6) };
     case 'roundKeeper':
