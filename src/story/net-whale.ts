@@ -23,7 +23,7 @@ export const WHALE_STEPS: readonly WhaleStep[] = ['approach', 'breath', 'line', 
 
 /** The step the breath hands on to. */
 const AFTER_BREATH: WhaleStep = 'line';
-/** Seconds the empty net takes to drift away once it is free. */
+/** Seconds the empty net takes to drift away once the loop is off. */
 const DRIFT_FROM = 1;
 const DRIFT_TO = 38;
 /**
@@ -49,13 +49,13 @@ const POD_WAIT = new THREE.Vector2(24, -18);
 const POD_WAIT_RADIUS = 8;
 const POD_WAIT_PACE = 2;
 /**
- * The pod's way past the boat as the whale spouts free, from wherever it is waiting: across the water between the
- * boat and the whale's jaw and on along its flank to starboard, at `POD_PACE` metres a second with its lanes drawn
- * in by `POD_SPREAD`.
+ * The pod's way round the whale as it spouts free, from wherever it is waiting behind the camera: up the port side
+ * inside the floating net, across the water before the bow under its eye, and on along its flank to starboard, at
+ * `POD_PACE` metres a second with its lanes drawn in by `POD_SPREAD`, so the camera sees it cross the frame.
  */
-const POD_WAY = [new THREE.Vector2(9, 0), new THREE.Vector2(-40, 26)];
-const POD_PACE = 4;
-const POD_SPREAD = 0.45;
+const POD_WAY = [new THREE.Vector2(12, 0), new THREE.Vector2(4, 6), new THREE.Vector2(-8, 8.5), new THREE.Vector2(-40, 18)];
+const POD_PACE = 5.5;
+const POD_SPREAD = 0.35;
 /** Seconds the child holds a point toward a breath she has seen. */
 const POINT_FOR = 2.6;
 /**
@@ -171,6 +171,9 @@ export class NetWhale {
   private waited = 0;
   private escort = 0;
   private readonly wayFrom = new THREE.Vector3();
+  private readonly way = [new THREE.Vector3(), ...POD_WAY.map(() => new THREE.Vector3())];
+  private readonly wayLengths = new Float32Array(POD_WAY.length);
+  private wayLaid = false;
   private camera: THREE.PerspectiveCamera | null = null;
   private readonly asking: Coax = { at: new THREE.Vector3(), urgency: K.coaxUrgency, radius: K.coaxRadius };
   private readonly anchor = new THREE.Vector3();
@@ -312,7 +315,7 @@ export class NetWhale {
     const whale = this.whale;
     if (step === 'free') {
       whale.free();
-      this.freedAt = this.clock;
+      if (this.freedAt < 0) this.freedAt = this.clock;
     }
     if (step === 'gone' && whale.phase !== 'gone') whale.vanish();
   }
@@ -492,7 +495,9 @@ export class NetWhale {
       out.heading = this.escortYaw();
       return out;
     }
-    if (this.step !== 'free') {
+    // It sets off round the whale as the cygnet is lifted in, so it is in the frame as the whale spouts.
+    const coming = this.step === 'free' || (this.step === 'flipper' && this.bird === 'lifted');
+    if (!coming) {
       // Gone under ahead of the boat as it came to rest, the pod comes back round behind it and waits there.
       if (this.waited === 0 && this.cast.sealife.dolphinsHere) return out;
       this.waited += (dt * POD_WAIT_PACE) / POD_WAIT_RADIUS;
@@ -506,7 +511,7 @@ export class NetWhale {
     this.wayAt(this.escort, this.anchor);
     out.near = this.anchor;
     out.heading = this.escortYaw();
-    out.ready = whale.time > 1;
+    out.ready = this.step !== 'free' || whale.time > 1;
     out.leaps = true;
     out.spread = POD_SPREAD;
     // Their leaps are thrown out to the side of the camera, behind the boat.
@@ -520,17 +525,40 @@ export class NetWhale {
       this.rest.z + Math.cos(this.yaw) * ahead - Math.sin(this.yaw) * left);
   }
 
-  /** A point `t` of the way along the pod's way past the boat, from where it was waiting, in the world. */
+  /** A point `t` of the way along the pod's way round the whale, from where it was waiting, in the world. */
   private wayAt(t: number, out: THREE.Vector3): THREE.Vector3 {
-    const u = 1 - t;
-    this.local(POD_WAY[0].x, POD_WAY[0].y, this.p);
-    this.local(POD_WAY[1].x, POD_WAY[1].y, this.b);
-    return out.copy(this.wayFrom).multiplyScalar(u * u).addScaledVector(this.p, 2 * u * t).addScaledVector(this.b, t * t);
+    const way = this.layWay();
+    let along = THREE.MathUtils.clamp(t, 0, 1) * this.wayLength();
+    let i = 0;
+    while (i < this.wayLengths.length - 1 && along > this.wayLengths[i]) along -= this.wayLengths[i++];
+    const u = along / this.wayLengths[i];
+    const a = way[Math.max(0, i - 1)];
+    const b = way[i];
+    const c = way[i + 1];
+    const d = way[Math.min(way.length - 1, i + 2)];
+    // Catmull-Rom through the waypoints, so the pod turns round its corners rather than at them.
+    const u2 = u * u;
+    const u3 = u2 * u;
+    return out.set(0, 0, 0).addScaledVector(a, -0.5 * u3 + u2 - 0.5 * u).addScaledVector(b, 1.5 * u3 - 2.5 * u2 + 1)
+      .addScaledVector(c, -1.5 * u3 + 2 * u2 + 0.5 * u).addScaledVector(d, 0.5 * u3 - 0.5 * u2);
   }
 
   private wayLength(): number {
-    this.local(POD_WAY[0].x, POD_WAY[0].y, this.p);
-    return this.wayFrom.distanceTo(this.p) + POD_WAY[0].distanceTo(POD_WAY[1]);
+    this.layWay();
+    let length = 0;
+    for (const l of this.wayLengths) length += l;
+    return length;
+  }
+
+  /** The way's waypoints in the world, laid from wherever the pod was waiting when it set off. */
+  private layWay(): THREE.Vector3[] {
+    if (!this.wayLaid) {
+      this.wayLaid = true;
+      this.way[0].copy(this.wayFrom);
+      POD_WAY.forEach((p, i) => this.local(p.x, p.y, this.way[i + 1]));
+      for (let i = 0; i < this.wayLengths.length; i++) this.wayLengths[i] = Math.max(1e-3, this.way[i].distanceTo(this.way[i + 1]));
+    }
+    return this.way;
   }
 
   /** The way the pod swims along its way past the boat, and on as the whale goes. */
@@ -918,6 +946,7 @@ export class NetWhale {
       this.keepBird(this.a, tip, dt);
       if (this.birdT > PULL_FOR) {
         net.held = net.fallsTo = null;
+        this.freedAt = this.clock;
         this.birdTo('letting');
       }
     } else if (this.bird === 'letting') {
@@ -939,6 +968,7 @@ export class NetWhale {
         this.cast.child.reachFor(1, null);
         cygnet.rideIn('cradle');
         this.birdTo('lifted');
+        this.cast.sealife.cueDolphinLeap();
       }
     } else if (this.bird === 'lifted') {
       if (this.birdT > LIFTED_IN && this.cygnetIn === 'swimming') this.cygnetIn = 'cradle';
