@@ -759,10 +759,25 @@ bigger than the frames, about 110 m nose to flukes, scaled in proportion (eye ab
 the net to match), so from beside its head it is a landscape that breathes; the circles over the blowhole must
 still be an easy target on screen, so the hold frames the blowhole within easy reach in both orientations.
 
-This consolidates the above for the build. The target for the look is `comps/crossings/whale-net/k1–k5` and
-`k2-portrait` (Astra, 2026-10-07, painted over real frames of this chapter, `ref-sea-*.png`); `notes.md` beside them
-has the layout in metres and the build risks. They are a guide, not pixels to match: the game's own assets, camera and
-light win. Branch `crossing-whale` (a sleeping whale on `toMeadow`, built and half-tuned before the move) holds the
+**The feeling and the bar** (Jeremy, 2026-10-08, asked what would help Claude do better, verbatim):
+> 1. the journey through the clouds, the owl sequence in the woods. Those are the main standards of quality.
+> 2. I am imagining a studio ghibli sequence for the whale. We don't need the same art style, but it should have a
+> sort of similar dream feel. That's why i was pushing for a "giant" whale, not a "realistic" sized whale. It's more
+> about the feeling of an ancient whale caught in a "net" (a representation of the problems of the past, ignorances
+> etc.) that you have to save. I think that's the narrative development at this point of the journey. You put things
+> right with the "past" (the ancient whale), and then you put things right with the "future", the stars in the sky in
+> the sky mirror. Hopefully that makes sense
+> 3. this is fine with me, im happy to let you drive the creative work here until you're happy with the result
+
+So: the standard is the clouds journey and the owl in the dark wood; the feel is a Ghibli dream, not realism; the
+whale is the past, ancient and burdened by the net of old ignorance, and freeing it puts the past right before the
+sky mirror puts the future right. Claude drives the creative work and brings it to Jeremy when Claude is happy with
+it, judged by playing it in motion. Astra is no longer used (Jeremy, 2026-10-08: "don't use astra anymore").
+
+This consolidates the above for the build. The concept frames `comps/crossings/whale-net/k1–k5` and `k2-portrait`
+(Astra, 2026-10-07, painted over real frames of this chapter, `ref-sea-*.png`) are now only a reference for
+composition: their whale's form was wrong (a round tube) and is not followed. `notes.md` beside them has the layout
+in metres and the build risks. Branch `crossing-whale` (a sleeping whale on `toMeadow`, built and half-tuned before the move) holds the
 parts that carry over.
 
 The sequence:
