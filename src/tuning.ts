@@ -2128,7 +2128,7 @@ export const tuning = {
     /** She watches the lighthouse, lit and then dark, until it is this far behind abeam (the cosine off her bow). */
     lighthouseWatched: -0.2,
     lighthouseStartle: 0.18,
-    darkBy: 33,
+    darkBy: 22,
     lighthouseOutAt: 6.5,
     lighthouseFadeFor: 2.5,
     lighthouseSweep: 0.38,
