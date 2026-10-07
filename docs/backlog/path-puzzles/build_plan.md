@@ -315,7 +315,18 @@ boat adrift as it was then; a save after she is aboard resumes aboard with the s
 `docs/contracts/world.md` where the village's pieces belong, a final set of stills (landscape and upright), a full play
 from the stairs to the forest beach.
 Gate: typecheck, build, the check from start to the beach; stills opened for review.
-Done: [ ]
+Done: [x] Saves: `sail` once the cat is aboard (resumes the drift with the cat at the bow), `roofs` from her setting off
+(resumes on the strand's ridge through `skipToRun`; the restore starts in the climb's view, which the run hands over
+from, `handFar` 22, rather than a far view the rig brought in through her at up to 340 deg/s), `church` from the tower's
+foot (`skipToNave`), `storm` from her seated aboard (`skipToStorm`); all `[leg]`. `tools/progress-check.mjs` saves each
+from real play, reloads and waits for it to play on (the becalming, 12 m of the run with the boat adrift, the fog
+half closed, the plane taken). `tools/drowned-run-check.mjs FROM=stairs` docks the stairs with real strokes and plays
+on through the room into the wood, a still at each moment, and reports the lens's fastest turn and move in the room;
+upright, the hand-over from the climb now keeps her in the narrow frame (`uprightHandHold`; she left its edge for
+3.5 s); the cat sits in the tub, ears flat, where crouched it was hidden by the tub's sides from every view. Docs:
+`chapters.md`, `world.md`, `progress.md`, `journey.md`, `wind.md`, the project instructions, design.md. Left: the
+stairs' flights stand in the sky behind the drift with no cloud deck to end in (seen from the cat's view); the
+`drowned-gating-check` vane tolerance; the open items in the final review.
 
 ### Later
 The cat in the lit window of the cottage with the red door at the very end (design.md "The cat comes home"); a small
