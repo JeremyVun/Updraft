@@ -1760,6 +1760,8 @@ export const tuning = {
        * fades rather than being covered), metres.
        */
       top: 28, topFar: 1.2, closedTop: 0.6, topSoft: 0.15, closedSoft: 0.9, front: 22,
+      /** Once it has closed round, how much its top rises for each metre away from the eye: a bowl she stands in. */
+      closedBowl: 0.5,
       /** How far its front heaves to and fro across its line, metres. */
       heave: 20,
       /**
@@ -1773,6 +1775,8 @@ export const tuning = {
        * much of that glow the glassy sea under it gives back.
        */
       lanternHalo: 0.4, lanternReach: 2, lanternMirror: 0.6,
+      /** Closed round, how brightly the lighthouse's lamp glows in it and how far round the lamp that glow reaches, metres. */
+      harbourHalo: 0.12, harbourReach: 14,
       /**
        * Per metre: how thick it is through its body as a bank, and once it has closed round (thinner, so she can still
        * see her way), and how much thicker low over the water, falling away over `low` metres.

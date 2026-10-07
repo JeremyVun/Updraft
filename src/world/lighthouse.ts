@@ -16,7 +16,23 @@ export class LighthouseLight {
   private elapsed = 0;
   private readonly strength = { value: 1 };
   private readonly beam: THREE.Mesh;
-  private readonly lamp = new THREE.MeshBasicMaterial({ color: '#ffe6ad', toneMapped: false });
+  private readonly glow = { value: new THREE.Color('#ffe6ad') };
+  /** The lamp itself, seen through whatever weather lies between it and the eye. */
+  private readonly lamp = new THREE.ShaderMaterial({
+    uniforms: { ...atmo.uniforms, uGlow: this.glow },
+    vertexShader: `
+      varying vec3 vWorld;
+      void main() {
+        vWorld = (modelMatrix * vec4(position, 1.0)).xyz;
+        gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
+      }`,
+    fragmentShader: `${ATMO_GLSL}
+      uniform vec3 uGlow;
+      varying vec3 vWorld;
+      void main() {
+        gl_FragColor = vec4(applyFog(uGlow, vWorld), 1.0);
+      }`,
+  });
 
   constructor(position: THREE.Vector3) {
     this.object.position.copy(position).setY(LIGHTHOUSE_LANTERN_Y);
@@ -63,7 +79,7 @@ export class LighthouseLight {
     const falter = 1 - 0.65 * Math.pow(Math.sin(dying * Math.PI), 2);
     const power = (1 - dying) * falter;
     this.strength.value = power;
-    this.lamp.color.setRGB(1.8, 1.15, 0.5).multiplyScalar(power);
+    this.glow.value.setRGB(1.8, 1.15, 0.5).multiplyScalar(power);
     this.beam.rotation.set(0.48, this.elapsed * s.lighthouseSweep + s.lighthouseSweepStart, 0);
     this.beam.visible = power > 0.001;
     atmo.uniforms.uHarbourLight.value.set(this.object.position.x, this.object.position.y, this.object.position.z, power);
