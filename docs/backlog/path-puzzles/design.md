@@ -549,7 +549,7 @@ where they differ; the drift, the village, the look and the storm stand.
    could not before: the ivy is thick and stepped, and the cat shows the way). In the belfry, in old straw under the
    bell, are the cat's kittens; the cat curls round them. The fog closes round the tower and rises to just below the
    belfry's sills, and stops. They are above it: where the village was is a cold white sea in the last light, only the
-   spire, the lighthouse and her lantern-less dark standing out of it, the lighthouse beam sweeping over its top. A
+   spire and the lighthouse standing out of it, the lighthouse beam sweeping over its top. A
    quiet breath after the chase. It stays low and cold-bodied in colour, never the stairs room's luminous cloud.
 7. **The boat comes home.** The bell hangs over them. The player's strokes across it set it swinging until it rings;
    each ring rolls out over the fog and pushes it back a little round the tower, and out in the fog a lantern glows in
