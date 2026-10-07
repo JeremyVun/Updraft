@@ -15,7 +15,7 @@ const FRONT = 0.05;
 const ROWS = 46;
 const COLS = 18;
 /** Rows draped a frame while it lies far off, so laying it on costs no frame much. */
-const ROWS_A_FRAME = 2;
+const ROWS_A_FRAME = 1;
 /** How far out either side the skin is looked for across a row, and how finely (m). */
 const REACH = 17;
 const STEP = 0.6;
