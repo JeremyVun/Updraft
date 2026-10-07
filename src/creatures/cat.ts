@@ -1124,9 +1124,10 @@ export class Cat {
     bodyY += flinch * 0.05 - low * 0.036 - fear * 0.006 * (1 - galloping);
     flex += low * 0.2;
     neckLow += fear * 0.45 * (1 - 0.6 * galloping);
-    /** Sitting frightened, it hunches: its chest drops, its head sinks into its shoulders. */
-    chestUp -= 0.32 * Math.min(fear, 1) * w.sit;
-    neckLow += 0.3 * Math.min(fear, 1) * w.sit;
+    /** Sitting frightened, it hunches: its chest drops, its head sinks into its shoulders; riding, it keeps its head up to see out. */
+    const hunch = Math.min(fear, 1) * w.sit * (this.frame ? 0 : 1);
+    chestUp -= 0.32 * hunch;
+    neckLow += 0.3 * hunch;
     earBack += fear;
     tailWave *= 1 - fear * 0.7;
     pupil += fear * 0.14;
@@ -1430,7 +1431,7 @@ export class Cat {
       /** A lurch of what it rides makes it flinch and press itself down. */
       this.jolted = Math.max(0, this.jolted - dt);
       if (push > 2.5 && this.jolted <= 0 && !this.frameFresh) {
-        this.afraid(0.2);
+        this.afraid(this.fear < 0.9 ? 0.2 : 0);
         this.jolted = 1.2;
       }
       acc.transformDirection(this.frameInverse).multiplyScalar(push);

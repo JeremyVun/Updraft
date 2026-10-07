@@ -109,7 +109,7 @@ const FILM = {
   bolt: { for: 4, from: 'side' }, 'scared-run': { for: 4, from: 'side' }, rail: { for: 7.5, from: 'side' },
   gap: { for: 3.6, from: 'side' }, 'leap-pot': { for: 3.2, from: 'side' }, 'leap-roof': { for: 3.2, from: 'side', rise: 2 },
   'leap-boat': { for: 3, from: 'side' }, 'hop-down': { for: 2.6, from: 'side' }, 'hop-tub': { for: 3.5, from: 'side' },
-  'ride-tub': { for: 6, from: 0.9 }, 'jump-boat': { for: 5, from: 'side' }, boat: { for: 3, from: 0.9 },
+  'ride-tub': { for: 6, from: 'side', rise: 2 }, 'jump-boat': { for: 5, from: 'side' }, boat: { for: 3, from: 0.9 },
   climb: { for: 5.5, from: [0.8, -1] }, 'climb-trunk': { for: 5, from: 'side' }, 'ride-sail': { for: 6, from: [0, -1] },
   'ride-swing': { for: 6, from: [1, 0] },
 };
