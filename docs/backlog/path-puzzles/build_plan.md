@@ -326,7 +326,9 @@ upright, the hand-over from the climb now keeps her in the narrow frame (`uprigh
 3.5 s); the cat sits in the tub, ears flat, where crouched it was hidden by the tub's sides from every view. Docs:
 `chapters.md`, `world.md`, `progress.md`, `journey.md`, `wind.md`, the project instructions, design.md. Left: the
 stairs' flights stand in the sky behind the drift with no cloud deck to end in (seen from the cat's view); the
-`drowned-gating-check` vane tolerance; the open items in the final review.
+`drowned-gating-check` vane on arrival (0.09 rad against its 0.05); as the fog closes at the church she is out of
+both aspects' frames behind the nave and a straight vertical seam stands in the fog beside the tower; the cat on the
+ivy and on its pot reads small; the first seconds in the wood are near black with the sail cropped at the frame's foot.
 
 ### Later
 The cat in the lit window of the cottage with the red door at the very end (design.md "The cat comes home"); a small
