@@ -288,13 +288,19 @@ frames keep the gold morning though the sun can't share a phone's frame with the
 Gate: as N3d's, final stills opened for Jeremy.
 Done: [ ]
 
-### Phase N3f: the silhouette and the ancient skin
-After N3e, on `sea-whale` (Jeremy, 2026-10-08; design.md, "A dreamlike giant, ancient"). Owns the whale's profile
-along its length and how much of it rides above the water (`anatomy.ts`, the rest pose in `sleeper.ts`), its skin
-(`whaleShader.ts`, `tuning.whaleLook`), the haze along its length and the rim, and whatever framing the new
-silhouette needs. Shape first, then skin.
+### Phase N3f: the giant
+After N3e, on `sea-whale` (Jeremy, 2026-10-08; design.md, "A dreamlike giant, ancient": Claude's direction, the
+concept now only a reference). Owns the whale's profile along its length and how much rides above the water
+(`anatomy.ts`, the rest pose in `sleeper.ts`), its vast shape under the glass, the haze along its length, the gold
+line along the back, and whatever framing the new silhouette needs.
 Seam: `surfaceAt` and the anchors stay true to the rendered skin; the net drapes by them and must still lie on it;
 the bird's clearance from the flipper and the mechanics of N2 stay.
+Gate: as N3d's, stills at every keyframe.
+Done: [ ]
+
+### Phase N3g: the ancient skin and its life
+After N3f. Owns the skin (`whaleShader.ts`, `tuning.whaleLook`): barnacle crusts, healed scars, mottling, growth at the
+waterline, wet streaks, the eye's age; water sheeting off the back with each breath; the seabirds on its back.
 Gate: as N3d's, final stills opened for Jeremy.
 Done: [ ]
 

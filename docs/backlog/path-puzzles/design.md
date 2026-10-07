@@ -785,18 +785,27 @@ The sequence:
   awash along the surface from just under it.
 - **A dreamlike giant, ancient** (Jeremy, 2026-10-08: "To me it doesn't quite yet read like a sillouhette of a
   dreamlike giant whale." and "I also agree about the skin being a bit too "smooth" - we need it to look like an
-  ancient giant whale"). Claude's reading, agreed with him: it rode high and even along its whole length like a balloon,
-  its outline one smooth arch, its skin clean and evenly lit like a small near model. So:
-  - **Silhouette.** Mostly under water: the head and the blowhole are the highest, the back a long low line that sinks
-    and fades into the haze, the tail stock never seen until the farewell. The outline has a whale's beats: the snout's
-    flat ridge, the raised guard round the blowhole, the dip behind it, a small hump on the back, the narrowing toward
-    the tail before it slips under.
-  - **Ancient skin.** Weathered and old, not smooth: barnacle crusts and sea growth on the head, jaw and flipper
-    edges, old pale healed scars and scuffs, mottling, wet streaks, in this game's stylised painted manner (stylised
-    detail, not photographic noise). Healed and old, never a wound.
-  - **Scale and light.** Fine detail small against its bulk and the far length melting into the haze are what make it
-    read giant; a crisp gold line along the back against the sea, and a wet top. This replaces `notes.md`'s "simplify
-    the paintings' skin texture" for this whale.
+  ancient giant whale", then "i think the concept art has served it's purpose to get us this far, i need you to take
+  it to the next step."). From here the concept frames are a reference for composition, not the target: the whale is
+  Claude's to take further. Claude's reading, agreed with him: it rode high and even along its whole length like a
+  balloon, its outline one smooth arch, its skin clean and evenly lit like a small near model. Claude's direction: an
+  island that breathes.
+  - **Mostly under the sea.** Above the water only the head, the blowhole and a long low line of back that sinks and
+    fades into the haze; the tail stock never seen until the farewell. Under the glass its vast dark shape goes on
+    beside and beneath the boat, far larger than what shows, so moving the camera feels like floating over something
+    enormous: the scale cue a painting can't give.
+  - **A whale's outline.** The snout's flat ridge, the raised guard round the blowhole, the dip behind it, a small hump
+    far along the back, the narrowing toward the tail before it slips under.
+  - **It melts into the morning.** The far length dissolves into warm haze; a crisp gold line runs along the back's
+    ridge against the sea; the top is wet.
+  - **Ancient skin.** Weathered like an old hull or a reef: barnacle crusts clustered on the head, chin and flipper
+    edges, old pale healed scars and scuffs, mottling like lichen, green growth at the waterline, wet streaks. Stylised
+    and painted like the rest of the game, never photographic noise; healed and old, never a wound. Fine detail small
+    against its bulk is what makes it read giant. The eye old, wet and kind in folds of age.
+  - **It breathes the sea.** Each slow breath lifts the back a little, water sheeting off its top in glinting streams,
+    and the sea round it swells and settles.
+  - **Life on it.** A few seabirds stand far along its back as on a rock, never near a step's target, and lift off as
+    it spouts free.
 - **The net.** One old faded brown-green net, scaled with the whale to about 45 × 17 m, over the head and blowhole and
   down the forward back, rows of cork floats on its edges, a few strands of weed; one loop round the near flipper. The
   line in her mittens and its floats keep their real sizes (`notes.md`), so it is one a child can hold; the net's own
