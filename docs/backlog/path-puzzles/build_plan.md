@@ -171,6 +171,15 @@ above the eye) and `valveClear`. The new sounds still need an entry in `docs/con
 Owns: step 2 (`line`) in `net-whale.ts` with its invitation and dolphin valve, the sweep that brings the cork, the
 child's catch and haul, the peel, the camera's per-step holds (the breath, the haul, the cygnet, the release) with the
 portrait scale, the save after it, the rope sounds, `tools/net-whale-check.mjs` for it. On `sea-whale`.
+Done: [x] `d4ac84ad..bddd45cf`. A stroke crossing the cork on screen pushes it along the stroke (away from the boat at
+0.3, tethered); it knocks on the planking, she leans out and takes it in both mittens, and five pulls hand over hand
+set `peel` from the line hauled in; the sheet doubles over at the leader's row (which now leaves at the cheek, 14.4 m)
+and slides off along its own drape. Valve: a lent dolphin noses the cork in. Holds per step (`NetWhale.holdFor`; breath
+22/11.5, line 11/4.8, flipper 11/4.6 as a first pass; portrait ×0.58). Save `whale-line`; sounds `cork-knock`,
+`rope-pull`, `net-slither` (in `docs/contracts/audio.md`). Her mittens reach the rail rather than just outside it: further
+puts her boots through the planking. Idle the open sea now runs about 371 s (two valves); circling and sweeping about
+180 s. Left for the look: portrait holds show much empty sky and a small boat at the haul; the eye reads as a dark lens;
+the net is a sparse grid on the flank; the flipper under the glass reads as a pale slab.
 
 ### Phase N2c: the cygnet and the flipper
 Owns: step 3 (`flipper`) with its invitation and dolphin valve, the cygnet's swim to the flipper and back (`src/companion/`
