@@ -303,6 +303,10 @@ export class CrossingChapter implements Chapter {
     return this.whale?.invitationHeading ?? null;
   }
 
+  get invitationRadius(): number {
+    return this.whale?.invitationRadius ?? 0;
+  }
+
   afterCamera(camera: THREE.PerspectiveCamera): void {
     this.whale?.sees(camera);
   }
@@ -473,7 +477,7 @@ export class CrossingChapter implements Chapter {
       this.seaTurn += (-this.quarter * k.childTurn * near - this.seaTurn) * (1 - Math.exp(-dt * 1.1));
       seatYaw += this.seaTurn;
     }
-    this.whale?.update(dt);
+    this.whale?.update(dt, time);
     boat.seat(this.seat);
     // Leaning out over the port rail, she slides along the thwart toward it.
     if (this.whale?.slide) this.seat.add(this.toPort.set(Math.cos(boat.yaw), 0, -Math.sin(boat.yaw)).multiplyScalar(this.whale.slide));

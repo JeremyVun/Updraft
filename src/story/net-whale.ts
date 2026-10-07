@@ -8,6 +8,8 @@ import type { Coax } from '../fx/swirl';
 import { tuning } from '../tuning';
 import type { Cast } from './cast';
 import { completeObjective } from './cues';
+import { swellLift } from '../world/water/swell';
+import { mirrorWater } from '../world/sky-mirror-layout';
 
 const K = tuning.netWhale;
 
@@ -21,8 +23,6 @@ export const WHALE_STEPS: readonly WhaleStep[] = ['approach', 'breath', 'line', 
 
 /** The step the breath hands on to. */
 const AFTER_BREATH: WhaleStep = 'line';
-/** Seconds the flipper takes while it only plays itself through (the next phase builds it). */
-const PASSING = 4;
 /** Seconds the empty net takes to drift away once it is free. */
 const DRIFT_FROM = 1;
 const DRIFT_TO = 38;
@@ -85,6 +85,34 @@ const NOSE_GAP = 0.3;
 const NOSE_AWAY = 2.6;
 /** How high on the head a phone's view looks: its tall frame has sky enough without raising it. */
 const PORTRAIT_LOOK_Y = 2.6;
+/** Where along the flipper a sweep is looked for (0 root .. 1 tip), at how many points. */
+const FIN_FROM = 0.35;
+const FIN_TO = 1.02;
+const FIN_STEPS = 10;
+/** Seconds after a stroke crosses the flipper that the same stroke, going on across the head, still belongs to it. */
+const FIN_STROKE = 0.6;
+/**
+ * The cygnet's way into the water from the satchel on its own side and round the stern to port, in the boat's own
+ * frame (x to port, z forward); how near each waypoint it comes before making for the next, and how near the loop's
+ * end it comes to take it (m).
+ */
+const ROUND_STERN = [new THREE.Vector3(-1.75, 0, -0.9), new THREE.Vector3(-1.3, 0, -2.5), new THREE.Vector3(1.3, 0, -2.5),
+  new THREE.Vector3(2.1, 0, -0.8)];
+const WAY_NEAR = 0.8;
+const TAKES_AT = 0.3;
+/** Seconds it holds on as the loop comes free, backing off this far from it (m), and turning for the boat once it lets go. */
+const PULL_FOR = 1.2;
+const PULL_BACK = 0.8;
+const LET_GO = 0.9;
+/** Coming back: the water beside her it swims to, out from her seat (m); seconds on the side shaking off before she lifts it in. */
+const BESIDE_WATER = 1.35;
+const ON_THE_SIDE = 1.6;
+const LIFTED_IN = 0.8;
+/** The flipper's valve dolphin: where along the flipper it comes up under it, how far under it its beak keeps (m), and how long it rides up with it. */
+const NUDGE_AT = 0.8;
+const NUDGE_GAP = 0.45;
+const NUDGE_FOR = 1.4;
+const UP = new THREE.Vector3(0, 1, 0);
 
 /** Where the dolphins are asked to run this frame, for `SeaLife.dolphinsWith`. */
 export interface PodRun {
@@ -137,7 +165,7 @@ export class NetWhale {
   /** When she began pointing toward its breath, or -1. */
   private pointing = -1;
   private nextPoint = 0;
-  private cygnetIn: 'cradle' | 'stowing' | 'satchel' | 'unstowing' = 'cradle';
+  private cygnetIn: 'cradle' | 'stowing' | 'satchel' | 'unstowing' | 'swimming' = 'cradle';
   private podGone = false;
   /** How far round its wait, and how far along its way past the boat, the pod's anchor has come. */
   private waited = 0;
@@ -204,11 +232,35 @@ export class NetWhale {
   private readonly hand = [new THREE.Vector3(), new THREE.Vector3()];
   private readonly ray = new THREE.Vector3();
   /** The holds the camera eases between: what it was holding when the step changed, what it is going to, and how far. */
-  private readonly holdFrom = new Float32Array(6);
-  private readonly holdTo = new Float32Array(6);
-  private readonly holdNow = new Float32Array(6);
+  private readonly holdFrom = new Float32Array(8);
+  private readonly holdTo = new Float32Array(8);
+  private readonly holdNow = new Float32Array(8);
   private holdT = 1;
   private holdSet = false;
+  /**
+   * The cygnet's second swim: in at once and round the stern to the loop's free end, holding it, pulling it off as
+   * the loop comes free, letting go, back to her, up her side, and lifted in.
+   */
+  bird: 'satchel' | 'out' | 'holding' | 'pulling' | 'letting' | 'back' | 'side' | 'lifted' | 'home' = 'satchel';
+  private birdT = 0;
+  private wayPoint = 0;
+  private stationed = false;
+  /** Seconds since the lift that takes the loop off began, or -1; and what lifted it, the player's sweep or the valve's dolphin. */
+  slipT = -1;
+  finnedBy: 'sweeps' | 'dolphin' | null = null;
+  /** Screen heights of stroke run along the flipper lately, toward the next lift; seconds since one last touched it. */
+  private finSwept = 0;
+  private finStroke = 1e3;
+  private nudged = false;
+  private finned = false;
+  private readonly station = new THREE.Vector3();
+  private readonly billAt = new THREE.Vector3();
+  private readonly falls = new THREE.Vector3();
+  private readonly endRest = new THREE.Vector3();
+  private readonly birdEye = new THREE.Vector3();
+  private readonly herFace = new THREE.Vector3();
+  private readonly mouth = new THREE.Vector3();
+  private readonly mitts = [new THREE.Vector3(), new THREE.Vector3()];
 
   /**
    * Lays the whale beside `rest`, where a boat sailing in from `lead` comes to rest facing the way it came: its eye
@@ -228,6 +280,8 @@ export class NetWhale {
     };
     this.net.drape(this.rest, this.yaw);
     this.net.hull = cast.boat;
+    this.net.endRest = this.local(K.endOut, K.endAhead, this.endRest);
+    this.local(K.birdOut, K.birdAhead, this.station);
     this.local(POD_WAIT.x + POD_WAIT_RADIUS, POD_WAIT.y, this.wayFrom);
   }
 
@@ -244,11 +298,12 @@ export class NetWhale {
     if (step === this.step) return;
     if (this.step === 'breath') this.breathed = true;
     if (this.step === 'line') this.hauled = true;
+    if (this.step === 'flipper') this.finned = true;
     this.step = step;
     this.stepTime = 0;
     this.waiting = 0;
     this.idle = 0;
-    if (step === 'line') {
+    if (step === 'line' || step === 'flipper') {
       if (this.valveT >= 0 && !this.vDone) this.cast.sealife.handBackDolphin();
       this.valveT = -1;
       this.vDone = this.diverSeen = false;
@@ -263,12 +318,13 @@ export class NetWhale {
   }
 
   /**
-   * Taken at rest beside it before the first step and again once its first full breath is drawn, each kept until
-   * the next, and the last once it has gone and the cygnet is back in her arms, so nothing in between ever falls
-   * back to a save before it.
+   * Taken at rest beside it before the first step and again after each step (its first full breath, the line, the
+   * flipper with the cygnet back in the satchel), each kept until the next, and the last once it has gone and the
+   * cygnet is back in her arms, so nothing in between ever falls back to a save before it.
    */
   get checkpoint(): string | null {
     if (this.step === 'gone' && this.cygnetIn === 'cradle' && !this.cast.carry.busy) return 'whale-gone';
+    if (this.finned) return 'whale-flipper';
     if (this.hauled) return 'whale-line';
     if (this.breathed) return 'whale-breath';
     if (this.step === 'breath' && this.progress === 0 && this.still > 1) this.rested = true;
@@ -277,11 +333,12 @@ export class NetWhale {
 
   /**
    * A save at rest finds it lying there still and the boat held; one after its breath finds the patch lifted and
-   * its eye open on her; one after the line finds the net peeled off into the water and the line let go; one from
-   * after it has gone finds the way clear.
+   * its eye open on her; one after the line finds the net peeled off into the water and the line let go; one after
+   * the flipper finds the net loose on the water, the cygnet in the satchel and the whale free; one from after it
+   * has gone finds the way clear.
    */
   restore(point: string): void {
-    if (point === 'whale-rest' || point === 'whale-breath' || point === 'whale-line') {
+    if (point === 'whale-rest' || point === 'whale-breath' || point === 'whale-line' || point === 'whale-flipper') {
       this.net.finishDraping();
       this.led = true;
       this.rested = true;
@@ -299,13 +356,22 @@ export class NetWhale {
         this.whale.awaken(this.cast.child.position);
         this.net.lift = 1;
       }
-      if (point === 'whale-line') {
+      if (point === 'whale-line' || point === 'whale-flipper') {
         this.step = 'flipper';
         this.hauled = true;
         this.haul = 'letting';
         this.net.peel = 1;
       }
       this.holdFor(this.step, true);
+      if (point === 'whale-flipper') {
+        this.net.loop = 1;
+        this.bird = 'home';
+        if (this.cygnetIn === 'cradle' && !this.cast.cygnet.visible) {
+          this.cast.cygnet.rideIn('satchel');
+          this.cygnetIn = 'satchel';
+        }
+        this.goTo('free');
+      }
     } else if (point === 'whale-gone') {
       this.led = true;
       this.podGone = true;
@@ -336,10 +402,20 @@ export class NetWhale {
     return this.asking;
   }
 
-  /** The drawn sweep across the cork toward her, once the line has waited a few seconds with nothing crossing it. */
+  /**
+   * The drawn sweep across the cork toward her, once the line has waited a few seconds with nothing crossing it; and
+   * the drawn strokes along the flipper, once the cygnet holds the loop's end and nothing has touched it for a few.
+   */
   get windInvitation(): THREE.Vector3 | null {
-    if (this.step !== 'line' || this.haul !== 'out' || this.idle < K.inviteAfter || this.valveT >= 0) return null;
-    return this.inviting;
+    if (this.valveT >= 0 || this.idle < K.inviteAfter) return null;
+    if (this.step === 'line' && this.haul === 'out') return this.inviting;
+    if (this.step === 'flipper' && this.bird === 'holding' && this.slipT < 0) return this.inviting;
+    return null;
+  }
+
+  /** The flipper is long: its strokes span its outer part rather than a cork's width. */
+  get invitationRadius(): number {
+    return this.windInvitation && this.step === 'flipper' ? K.finInviteRadius : 0;
   }
 
   /** It only works one way: from the cork toward the boat, on screen. */
@@ -352,7 +428,7 @@ export class NetWhale {
     this.camera = camera;
   }
 
-  update(dt: number): void {
+  update(dt: number, time: number): void {
     this.clock += dt;
     this.stepTime += dt;
     const { boat } = this.cast;
@@ -363,7 +439,7 @@ export class NetWhale {
     if (this.step === 'approach' && this.still > 1) this.goTo('breath');
     if (this.step === 'breath') this.breathe(dt);
     if (this.step === 'line') this.haulLine(dt);
-    if (this.step === 'flipper') this.passThrough();
+    if (this.step === 'flipper') this.lastLoop(dt, time);
     this.drive(dt);
     if (this.step === 'free' && whale.spouting && !this.rewarded) {
       this.rewarded = true;
@@ -499,10 +575,42 @@ export class NetWhale {
     if (this.step === 'approach') this.recognise(time);
     else this.stopPointing();
     if (this.step === 'line') this.haulHands();
+    if (this.step === 'flipper') this.watchBird();
     if (this.step === 'free' && (whale.spouting || whale.fluking) && time > this.nextWave) {
       child.wave();
       this.nextWave = time + 2.4;
     }
+  }
+
+  /**
+   * Her part in the cygnet's swim: watching it with her mittens to her mouth while it is out at the flipper, a mitten
+   * down over the side toward it as it comes back, and both to it on the side as she lifts it in. Its eyes are on
+   * the loop's end, then the loop, then her.
+   */
+  private watchBird(): void {
+    const { child, cygnet } = this.cast;
+    if (this.bird === 'satchel' || this.bird === 'lifted' || this.bird === 'home') return;
+    child.lookAt = cygnet.eye(this.birdEye);
+    if (this.bird === 'out' || this.bird === 'holding' || this.bird === 'pulling') {
+      cygnet.watch(this.bird === 'out' ? this.endRest : this.whale.finTip);
+      child.lean = 0.16;
+      const mouth = child.breathFrom(this.mouth);
+      const ahead = this.mitts[0].subVectors(mouth, child.face(this.mitts[1])).normalize();
+      const left = this.mitts[1].crossVectors(UP, ahead).normalize();
+      child.reachFor(0, this.hand[0].copy(mouth).addScaledVector(ahead, 0.06).addScaledVector(left, 0.045).addScaledVector(UP, -0.03));
+      child.reachFor(1, this.hand[1].copy(mouth).addScaledVector(ahead, 0.075).addScaledVector(left, -0.04).addScaledVector(UP, -0.05));
+      return;
+    }
+    cygnet.watch(child.face(this.herFace));
+    child.lean = 0.12;
+    if (this.bird === 'side') {
+      child.reachFor(0, cygnet.grip('bellyL', this.hand[0]));
+      child.reachFor(1, cygnet.grip('bellyR', this.hand[1]));
+      return;
+    }
+    child.reachFor(1, null);
+    const near = this.bird === 'back' && Math.hypot(cygnet.position.x - child.position.x, cygnet.position.z - child.position.z) < 2.2;
+    child.reachFor(0, near ? this.beside(this.hand[0]).lerp(this.mitts[0].copy(cygnet.position).setY(0.35), 0.45) : null);
   }
 
   /** At each breath she sees in the haze, an arm out toward it for a moment. */
@@ -675,12 +783,256 @@ export class NetWhale {
     if (past > 0) this.vFlung = true;
   }
 
-  /** The flipper only plays itself through for now: the loop slides off. */
-  private passThrough(): void {
-    this.tickled();
+  /**
+   * The flipper. The last loop is round its outer part, out of her reach; the cygnet goes in after it at once and
+   * takes the loop's end in its bill. A sweep along the flipper lifts it lazily out of the water; with the end held,
+   * the loop slides along it toward the tip as it rises and slips off into the bird's pull as it goes back down.
+   * Sweeps elsewhere on the whale only shiver it. Left a long while with the end held and nothing lifted, a dolphin
+   * comes up under the flipper and noses it up.
+   */
+  private lastLoop(dt: number, time: number): void {
+    const { carry } = this.cast;
     const net = this.net;
-    if (!net.posed) net.loop = Math.max(net.loop, THREE.MathUtils.smootherstep(this.stepTime, 0.6, 0.6 + PASSING));
-    if (this.stepTime > PASSING + 1.2) this.goTo('free');
+    this.finStroke += dt;
+    if (this.bird === 'satchel' && this.cygnetIn === 'satchel' && !carry.busy) {
+      this.cygnetIn = 'swimming';
+      this.birdTo('out');
+      this.wayPoint = 0;
+    }
+    if (this.bird !== 'satchel' && this.bird !== 'home') this.swimBird(dt, time);
+    const holding = this.bird === 'holding' && this.slipT < 0;
+    if (holding && this.still > 0) {
+      this.waiting += dt;
+      this.idle += dt;
+    }
+    this.brushFin(dt);
+    if (this.valveT >= 0 || (holding && this.waiting > K.valveAfter)) this.nudgeFin(dt);
+    if (this.finStroke > FIN_STROKE) this.tickled(false);
+    if (this.slipT >= 0) {
+      const was = net.loop;
+      this.slipT += dt;
+      const loop = 0.78 * THREE.MathUtils.smootherstep(this.slipT, 0.4, 2.8)
+        + 0.22 * THREE.MathUtils.smoothstep(this.slipT, 2.8, K.slipFor);
+      if (!net.posed) net.loop = Math.max(net.loop, loop);
+      if (was < 0.8 && net.loop >= 0.8) net.sound('loop-slip', this.whale.finTip);
+    }
+    this.inviteFin();
+  }
+
+  /** The drawn strokes go along the flipper's outer part, root to tip, and which way that is on screen. */
+  private inviteFin(): void {
+    const camera = this.camera;
+    this.finAt(0.72, this.inviting);
+    this.inviting.y = Math.max(this.inviting.y, 0.1);
+    if (!camera) return;
+    this.finAt(0.45, this.a).project(camera);
+    this.finAt(1, this.b).project(camera);
+    this.inviteHeading = Math.atan2(this.b.y - this.a.y, (this.b.x - this.a.x) * camera.aspect);
+  }
+
+  /** The flipper lifts lazily, if it is not already; with the loop's end in the bill, that lift takes the loop off. */
+  private liftFin(by: 'sweeps' | 'dolphin'): boolean {
+    if (!this.whale.liftFlipper()) return false;
+    if (this.bird === 'holding' && this.slipT < 0) {
+      this.slipT = 0;
+      this.finnedBy = by;
+      this.waiting = 0;
+    }
+    return true;
+  }
+
+  /** A point `t` of the way out along the near flipper (0 root .. 1 tip), as posed this frame. */
+  private finAt(t: number, out: THREE.Vector3): THREE.Vector3 {
+    return out.copy(this.whale.finRoot).lerp(this.whale.finTip, t);
+  }
+
+  /**
+   * A stroke crossing the flipper's outer part on screen and running along it, the way a gust along it would go,
+   * adds up toward a lift; enough of it, and it lifts. Strokes across it, and the breeze, do nothing.
+   */
+  private brushFin(dt: number): void {
+    const { input } = this.cast;
+    const camera = this.camera;
+    this.finSwept *= Math.exp(-dt * 1.5);
+    if (!camera || !input.present || input.muted || input.gust <= K.brushFrom || input.charge > K.liftFrom) return;
+    const dx = input.ndc.x - input.prevNdc.x;
+    const dy = input.ndc.y - input.prevNdc.y;
+    const moved = Math.hypot(dx * camera.aspect, dy);
+    if (moved < 1e-4) return;
+    let hit = 0;
+    for (let i = 0; i <= FIN_STEPS; i++) {
+      const t = FIN_FROM + ((FIN_TO - FIN_FROM) * i) / FIN_STEPS;
+      hit = Math.max(hit, screenBrush(camera, this.finAt(t, this.p), input.prevNdc, input.ndc, K.finRadius));
+    }
+    if (hit <= 0.01) return;
+    this.finStroke = 0;
+    this.idle = 0;
+    this.finAt(FIN_FROM, this.a).project(camera);
+    this.finAt(1, this.b).project(camera);
+    const fx = (this.b.x - this.a.x) * camera.aspect;
+    const fy = this.b.y - this.a.y;
+    const along = Math.abs(fx * dx * camera.aspect + fy * dy) / (Math.hypot(fx, fy) * moved || 1);
+    if (along < K.finAlong) return;
+    this.finSwept += moved * Math.min(1, 1.5 * Math.sqrt(hit));
+    if (this.finSwept > K.finSweep && this.liftFin('sweeps')) this.finSwept = 0;
+  }
+
+  /**
+   * The cygnet's second swim. It is the same bird that went into the dark for her: it goes in at once on its own
+   * side and swims round the stern to the loop's free end, takes it in its bill and tows it out to where it holds it,
+   * facing the loop and clear of the flipper; as the loop comes off it backs away with it and lets go, swims back,
+   * climbs up her side and is lifted in.
+   */
+  private swimBird(dt: number, time: number): void {
+    const { cygnet, boat, sealife } = this.cast;
+    const net = this.net;
+    this.birdT += dt;
+    if (cygnet.state === 'swimming') {
+      cygnet.swimLevel = swellLift(cygnet.position.x, cygnet.position.z, time) * (1 - mirrorWater(cygnet.position.x, cygnet.position.z));
+      sealife.swimmerNear(cygnet.position, time);
+    }
+    const g = boat.group;
+    g.updateMatrixWorld();
+    const tip = this.forward.copy(this.whale.finTip).setY(0);
+    if (this.bird === 'out') {
+      const last = this.wayPoint >= ROUND_STERN.length;
+      const aim = last ? this.endRest : g.localToWorld(this.a.copy(ROUND_STERN[this.wayPoint]));
+      cygnet.swimTo(aim, 0.6);
+      const gap = Math.hypot(aim.x - cygnet.position.x, aim.z - cygnet.position.z);
+      if (!last && gap < WAY_NEAR) this.wayPoint++;
+      else if (last && gap < TAKES_AT) this.birdTo('holding');
+    } else if (this.bird === 'holding') {
+      net.held = cygnet.billTip(this.billAt);
+      net.fallsTo = this.falls.copy(tip).lerp(this.station, 0.55);
+      if (!this.stationed && Math.hypot(this.station.x - cygnet.position.x, this.station.z - cygnet.position.z) > 0.25) {
+        cygnet.swimTo(this.station);
+      } else {
+        this.stationed = true;
+        this.keepBird(this.station, tip, dt);
+      }
+      if (net.loop >= 1) this.birdTo('pulling');
+    } else if (this.bird === 'pulling') {
+      net.held = cygnet.billTip(this.billAt);
+      const away = this.b.subVectors(this.station, tip).setY(0).normalize();
+      this.a.copy(this.station).addScaledVector(away, PULL_BACK * THREE.MathUtils.smootherstep(this.birdT, 0, PULL_FOR));
+      this.keepBird(this.a, tip, dt);
+      if (this.birdT > PULL_FOR) {
+        net.held = net.fallsTo = null;
+        this.birdTo('letting');
+      }
+    } else if (this.bird === 'letting') {
+      this.keepBird(cygnet.position, this.besideWater(this.a), dt);
+      if (this.birdT > LET_GO) this.birdTo('back');
+    } else if (this.bird === 'back') {
+      const water = this.besideWater(this.a);
+      cygnet.swimTo(water);
+      if (Math.hypot(water.x - cygnet.position.x, water.z - cygnet.position.z) < 0.45) {
+        net.sound('swimmer-out', cygnet.position);
+        cygnet.bind(0.15);
+        this.birdTo('side');
+      }
+    }
+    if (this.bird === 'side') {
+      cygnet.perch(this.beside(this.a), boat.yaw - Math.PI / 2);
+      if (this.birdT > ON_THE_SIDE) {
+        this.cast.child.reachFor(0, null);
+        this.cast.child.reachFor(1, null);
+        cygnet.rideIn('cradle');
+        this.birdTo('lifted');
+      }
+    } else if (this.bird === 'lifted') {
+      if (this.birdT > LIFTED_IN && this.cygnetIn === 'swimming') this.cygnetIn = 'cradle';
+      if (this.cygnetIn === 'satchel') {
+        this.birdTo('home');
+        this.goTo('free');
+      }
+    }
+  }
+
+  private birdTo(phase: NetWhale['bird']): void {
+    this.bird = phase;
+    this.birdT = 0;
+  }
+
+  /** Keeps it paddling gently where it is put, turned to face `toward`, rather than swimming for a place of its own. */
+  private keepBird(at: THREE.Vector3, toward: THREE.Vector3, dt: number): void {
+    const { cygnet } = this.cast;
+    const k = 1 - Math.exp(-dt * 1.5);
+    cygnet.position.x += (at.x - cygnet.position.x) * k;
+    cygnet.position.z += (at.z - cygnet.position.z) * k;
+    cygnet.swimTo(cygnet.position);
+    const want = Math.atan2(toward.x - cygnet.position.x, toward.z - cygnet.position.z);
+    cygnet.yaw += Math.atan2(Math.sin(want - cygnet.yaw), Math.cos(want - cygnet.yaw)) * (1 - Math.exp(-dt * 2));
+  }
+
+  /** On the port side by her seat: the water beside it, and the side of the boat it climbs up onto. */
+  private besideWater(out: THREE.Vector3): THREE.Vector3 {
+    const { boat } = this.cast;
+    return boat.seat(out).add(this.ray.set(Math.cos(boat.yaw), 0, -Math.sin(boat.yaw)).multiplyScalar(BESIDE_WATER)).setY(0);
+  }
+
+  private beside(out: THREE.Vector3): THREE.Vector3 {
+    const { boat } = this.cast;
+    return boat.seat(out).add(this.ray.set(Math.cos(boat.yaw), 0, -Math.sin(boat.yaw)).multiplyScalar(0.82)).setY(boat.position.y + 0.1);
+  }
+
+  /**
+   * The flipper's valve: a dolphin from the waiting pod swims in deep under the flipper's outer part, comes up under
+   * it and noses it up (the same lazy lift a sweep gives it), rides up with it a moment, and turns away under.
+   */
+  private nudgeFin(dt: number): void {
+    const { sealife } = this.cast;
+    const p = this.diver;
+    if (this.valveT < 0) {
+      const from = sealife.lendDolphin();
+      if (!from) return;
+      this.valveT = 0;
+      this.vFrom.set(from.x, from.y, from.z);
+      this.noseAway = -1;
+      this.nudged = false;
+      this.vDir.subVectors(this.whale.finTip, this.whale.finRoot).setY(0).normalize();
+    }
+    if (this.vDone) return;
+    this.valveT += dt;
+    const t = this.valveT;
+    const under = this.finAt(NUDGE_AT, this.b);
+    under.y -= NUDGE_GAP;
+    let yaw = Math.atan2(-this.vDir.x, -this.vDir.z);
+    let pitch = 0;
+    if (t < K.valveSwim) {
+      // In deep under the water from the pod, coming up under the flipper from beyond its tip.
+      const u = (t / K.valveSwim) ** 1.4;
+      this.a.copy(under);
+      this.lookFrom.copy(under).addScaledVector(this.vDir, 3).setY(under.y - 2.6);
+      this.forward.copy(this.vFrom).setY(-2.4);
+      bezier(this.vFrom, this.forward, this.lookFrom, this.a, u, p);
+      bezier(this.vFrom, this.forward, this.lookFrom, this.a, Math.min(1, u + 0.01), this.ray);
+      yaw = Math.atan2(this.ray.x - p.x, this.ray.z - p.z);
+      pitch = Math.atan2(this.ray.y - p.y, Math.hypot(this.ray.x - p.x, this.ray.z - p.z));
+    } else if (!this.nudged || t < K.valveSwim + NUDGE_FOR) {
+      // Its beak under the flipper, nosing it up and rising with it.
+      if (!this.nudged && this.liftFin('dolphin')) {
+        this.nudged = true;
+        this.valveT = K.valveSwim;
+      }
+      p.copy(under);
+      pitch = 0.9;
+    } else {
+      if (this.noseAway < 0) this.noseAway = t;
+      const f = Math.min(1, (t - this.noseAway) / NOSE_AWAY);
+      p.addScaledVector(this.vDir, 2.4 * dt);
+      p.y -= 1.6 * dt * THREE.MathUtils.smoothstep(f, 0, 0.4);
+      pitch = THREE.MathUtils.lerp(0.9, -0.5, THREE.MathUtils.smoothstep(f, 0, 0.5));
+      yaw = Math.atan2(this.vDir.x, this.vDir.z);
+      if (f >= 1) {
+        this.vDone = true;
+        this.diverSeen = false;
+        sealife.handBackDolphin();
+        return;
+      }
+    }
+    this.diverSeen = p.y > -0.5;
+    sealife.poseDolphin(p.x, p.y, p.z, yaw, pitch);
   }
 
   /**
@@ -954,8 +1306,11 @@ export class NetWhale {
     if (this.freedAt >= 0) net.drift = THREE.MathUtils.smoothstep(this.clock - this.freedAt, DRIFT_FROM, DRIFT_TO);
   }
 
-  /** Gusts across its back only tickle it: a shiver along the stroke, now and then a lazy lift of the flipper. */
-  private tickled(): void {
+  /**
+   * Gusts across its back only tickle it: a shiver along the stroke, and now and then a lazy lift of the flipper,
+   * except while the flipper is what is asked, when only a sweep along it lifts it.
+   */
+  private tickled(mayLift = true): void {
     const { input } = this.cast;
     const whale = this.whale;
     const camera = this.camera;
@@ -978,7 +1333,7 @@ export class NetWhale {
     whale.point(0, TOP(0.9), 0.9, this.b).project(camera);
     const along = (this.b.x - this.a.x) * (input.ndc.x - input.prevNdc.x) * camera.aspect * camera.aspect
       + (this.b.y - this.a.y) * (input.ndc.y - input.prevNdc.y);
-    whale.tickle(at, along, Math.min(1, input.gust / 12) * best);
+    whale.tickle(at, along, Math.min(1, input.gust / 12) * best, mayLift);
   }
 
   /** How near a stroke has to pass on screen to touch the back there: the body's own thickness, seen from here. */
@@ -1011,9 +1366,13 @@ export class NetWhale {
    */
   private holdFor(step: WhaleStep, now: boolean): void {
     const to = this.holdTo;
-    if (step === 'line') to.set([K.lineDistance, K.lineHeight, K.lineBearing, K.lineLookY, K.lineToward, 0]);
-    else if (step === 'flipper') to.set([K.flipperDistance, K.flipperHeight, K.flipperBearing, K.flipperLookY, K.flipperToward, 1]);
-    else to.set([K.holdDistance, K.holdHeight, K.holdBearing, K.holdLookY, K.holdToward, 0]);
+    const phone = K.portraitIn;
+    if (step === 'line') {
+      to.set([K.lineDistance, K.lineHeight, K.lineBearing, K.lineLookY, K.lineToward, 0, K.lineDistance * phone, K.lineHeight * phone]);
+    } else if (step === 'flipper') {
+      to.set([K.flipperDistance, K.flipperHeight, K.flipperBearing, K.flipperLookY, K.flipperToward, 1, K.flipperPhoneDistance,
+        K.flipperPhoneHeight]);
+    } else to.set([K.holdDistance, K.holdHeight, K.holdBearing, K.holdLookY, K.holdToward, 0, K.holdDistance * phone, K.holdHeight * phone]);
     if (now || !this.holdSet) {
       this.holdFrom.set(to);
       this.holdNow.set(to);
@@ -1042,19 +1401,21 @@ export class NetWhale {
     const now = this.holdNow;
     const moved = THREE.MathUtils.smootherstep(this.holdT, 0, 1);
     for (let i = 0; i < now.length; i++) now[i] = THREE.MathUtils.lerp(this.holdFrom[i], this.holdTo[i], moved);
-    const [holdDistance, holdHeight, bearing, lookY, toward, fin] = now;
+    const [holdDistance, holdHeight, bearing, lookY, toward, fin, phoneDistance, phoneHeight] = now;
     const head = this.p.copy(whale.eye).lerp(whale.blowhole, 0.5);
-    // A phone's frame keeps to the line from the head through the boat, so it turns only part way toward the flipper.
-    const focus = this.b.copy(head).lerp(whale.finTip, portrait ? fin * 0.5 : fin).setY(portrait ? Math.min(lookY, PORTRAIT_LOOK_Y) : lookY);
+    // At the flipper what matters lies between its tip and where the cygnet holds the loop's end.
+    const focus = this.b.copy(head).lerp(this.a.copy(whale.finTip).lerp(this.station, 0.5), fin)
+      .setY(portrait ? Math.min(lookY, PORTRAIT_LOOK_Y) : lookY);
     this.look.copy(boat).setY(1.2).lerp(focus, portrait ? toward + 0.12 : toward);
     const glance = whale.phase === 'free' ? THREE.MathUtils.smoothstep(whale.time, FREE_FLUKES_FROM, FREE_FLUKES_FROM + 3.5)
       * (1 - THREE.MathUtils.smoothstep(whale.time, FREE_FLUKES_FROM + 10, FREE_FLUKES_FROM + 14)) : 0;
     if (glance > 0) this.look.lerp(this.a.copy(whale.flukes).setY(Math.max(4, whale.flukes.y * 0.5)), glance * (portrait ? 0.85 : 0.55));
-    // Behind the boat: just to port of astern, or in portrait on the line from the head through the boat.
-    const aim = portrait ? Math.atan2(head.x - boat.x, head.z - boat.z) : this.yaw - bearing;
+    // Behind the boat: just to port of astern, or in portrait on the line from what matters through the boat.
+    const aim = portrait ? Math.atan2(focus.x - boat.x, focus.z - boat.z) : this.yaw - bearing;
     const nearer = portrait ? K.portraitIn : 1;
-    const distance = THREE.MathUtils.lerp(holdDistance, K.releaseDistance, out) * nearer;
-    this.lookFrom.set(boat.x - Math.sin(aim) * distance, boat.y + THREE.MathUtils.lerp(holdHeight, K.releaseHeight, out) * nearer,
+    const distance = THREE.MathUtils.lerp(portrait ? phoneDistance : holdDistance, K.releaseDistance * nearer, out);
+    const height = THREE.MathUtils.lerp(portrait ? phoneHeight : holdHeight, K.releaseHeight * nearer, out);
+    this.lookFrom.set(boat.x - Math.sin(aim) * distance, boat.y + height,
       boat.z - Math.cos(aim) * distance);
     this.forward.subVectors(this.lookFrom, this.look).setY(0);
     const reach = this.forward.length();
@@ -1073,9 +1434,11 @@ export class NetWhale {
     s.primary.copy(this.cast.child.position).y += 1.2;
     const rest = pair?.secondary ?? s.primary;
     if (this.step === 'line') s.secondary.copy(this.haul === 'out' || this.haul === 'reaching' ? this.net.float.position : this.net.foot);
-    else if (this.step === 'flipper') s.secondary.copy(whale.finTip);
-    else s.secondary.copy(whale.blowhole).y += whale.phase === 'free' && whale.time < FREE_FLUKES_FROM - 3 ? 8 : 2.5;
-    s.tertiary.copy(whale.eye);
+    else if (this.step === 'flipper') {
+      const out = this.bird !== 'satchel' && this.bird !== 'lifted' && this.bird !== 'home';
+      s.secondary.copy(out ? this.cast.cygnet.position : whale.finTip).y += out ? 0.4 : 0;
+    } else s.secondary.copy(whale.blowhole).y += whale.phase === 'free' && whale.time < FREE_FLUKES_FROM - 3 ? 8 : 2.5;
+    s.tertiary.copy(this.step === 'flipper' ? whale.finTip : whale.eye);
     if (glance > 0) s.tertiary.lerp(this.a.copy(whale.flukes).setY(Math.max(whale.flukes.y, 1)), glance * 0.6);
     s.secondary.lerp(rest, 1 - h);
     s.tertiary.lerp(rest, 1 - h);

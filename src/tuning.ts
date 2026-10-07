@@ -1486,8 +1486,21 @@ export const tuning = {
      */
     holdMove: 5, holdLookY: 4.5, holdToward: 0.5,
     lineDistance: 11, lineHeight: 4.8, lineBearing: 0.3, lineLookY: 3.4, lineToward: 0.36,
-    flipperDistance: 11, flipperHeight: 4.6, flipperBearing: 0.34, flipperLookY: 1.6, flipperToward: 0.4,
+    flipperDistance: 9, flipperHeight: 4, flipperBearing: 0.75, flipperLookY: 1, flipperToward: 0.5,
     portraitIn: 0.58,
+    /**
+     * The flipper: a stroke within `finRadius` of its outer part on screen (normalised device units) and running along
+     * it to within `finAlong` (the cosine between them) lifts it once `finSweep` screen heights of such stroke have
+     * crossed it; its drawn strokes span `finInviteRadius` metres either side of their middle. The cygnet takes the
+     * loop's end where it lies, `endOut` metres to port of the boat at rest and `endAhead` before it, and holds it
+     * from `birdOut`/`birdAhead`, clear of the flipper's lift; the loop comes off its tip `slipFor` seconds into the lift.
+     */
+    finRadius: 0.07, finAlong: 0.5, finSweep: 0.1, finInviteRadius: 2.6,
+    endOut: 5.3, endAhead: 2.2, birdOut: 6.2, birdAhead: 1.4, slipFor: 4,
+    /** How far its lazy lift raises the near flipper about its root and swings it back along its flank (radians). */
+    finLift: 0.16, finSwing: 0.05,
+    /** A phone holds the flipper higher, looking down over the sail at the cygnet and the tip beyond it (m). */
+    flipperPhoneDistance: 6.5, flipperPhoneHeight: 10,
   },
 
   seaPassage: {

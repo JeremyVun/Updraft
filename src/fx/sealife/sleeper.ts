@@ -4,11 +4,11 @@ import { swellUniforms } from '../../world/water/swell';
 import { BLOWHOLE, FIN_ROOT, LENGTH, SPINE_END, TOP, crown, flankAt, ringPoint } from './anatomy';
 import { curve } from './curve';
 import type { Marks } from './marks';
-import { MIST, type Spray } from './spray';
+import { DROP, MIST, type Spray } from './spray';
 import { WhaleWake, type WhaleSound } from './wake';
 import { DREAM_SHAPE, SPINE_N, SPINE_STEP, WhaleRig } from './whale';
 
-export type SleeperSound = WhaleSound | 'whale-sigh' | 'whale-breath' | 'whale-slap';
+export type SleeperSound = WhaleSound | 'whale-sigh' | 'whale-breath' | 'whale-slap' | 'flipper-pour';
 
 const K = tuning.netWhale;
 /** The tail stock, behind the hump: what the body tips over as it lifts its flukes. */
@@ -53,8 +53,8 @@ export const FREE_FLUKES_FROM = 11.5;
 /** The near flipper's lazy lift: up over two seconds, held, and laid back down on the water. */
 const LIFT = curve([[0, 0], [0.4, 0.12], [1.8, 0.95], [3, 1], [4.2, 0.35], [4.7, -0.04], [5.2, 0]]);
 const LIFT_HITS = 4.6;
+const LIFT_POURS = 0.7;
 const LIFT_FOR = 5.2;
-const LIFT_ANGLE = 0.3;
 
 /** The head carried a little higher than the tail, so the eye and blowhole stand clear and the flukes lie just under. */
 function restPitch(s: number): number {
@@ -197,7 +197,7 @@ export class SleepingWhale extends WhaleRig {
    * A gust across its back at `s` (0 snout .. 1 flukes), running toward the flukes when `along` is positive: the skin
    * shivers along the stroke, and now and then the near flipper comes up lazily. It never wakes it.
    */
-  tickle(s: number, along: number, strength: number): void {
+  tickle(s: number, along: number, strength: number, mayLift = true): void {
     if (this.phase !== 'resting' && this.phase !== 'woken') return;
     if (this.shiverAmp < 0.02 || Math.abs(s - this.shiverS) > 0.2) {
       this.shiverS = s;
@@ -205,7 +205,7 @@ export class SleepingWhale extends WhaleRig {
     }
     this.shiverAmp = Math.min(0.06, Math.max(this.shiverAmp, 0.035 + 0.025 * strength));
     this.tickles++;
-    if (this.liftCool <= 0 && this.liftFlipper()) this.liftCool = K.liftEvery;
+    if (mayLift && this.liftCool <= 0 && this.liftFlipper()) this.liftCool = K.liftEvery;
   }
 
   /** The near flipper lifts lazily out of the water, is held up, and is laid back down. False while it already is. */
@@ -383,9 +383,28 @@ export class SleepingWhale extends WhaleRig {
     this.liftT += dt;
     const k = LIFT(this.liftT);
     this.flipperLift = Math.max(0, k);
-    this.uniforms.uSlap.value.set(1, LIFT_ANGLE * k, 0.15 * Math.min(1, this.liftT / 1.5));
+    const swing = THREE.MathUtils.smoothstep(this.liftT, 0, 1.5) * (1 - THREE.MathUtils.smoothstep(this.liftT, 3.4, LIFT_FOR));
+    this.uniforms.uSlap.value.set(1, K.finLift * k, K.finSwing * swing);
+    if (was < LIFT_POURS && this.liftT >= LIFT_POURS) {
+      const mid = this.finPoint(0.7, this.p);
+      this.onSound?.('flipper-pour', mid.x, Math.max(0, mid.y), mid.z);
+    }
+    if (this.liftT > 0.3 && this.liftT < LIFT_HITS - 0.2) this.drip(dt);
     if (was < LIFT_HITS && this.liftT >= LIFT_HITS) this.splashFin();
     if (this.liftT > LIFT_FOR) this.liftT = -1;
+  }
+
+  /** The sea running off the flipper as it comes up out of it, in drops from its edge all along what is clear. */
+  private drip(dt: number): void {
+    const size = Math.sqrt(this.scale);
+    const n = Math.floor(dt * 70 + Math.random());
+    for (let k = 0; k < n; k++) {
+      const e = this.finPoint(0.3 + Math.random() * 0.72, this.p);
+      if (e.y < 0.15) continue;
+      this.spray.emit(DROP, e.x + (Math.random() - 0.5) * 0.6, e.y - 0.1, e.z + (Math.random() - 0.5) * 0.6,
+        (Math.random() - 0.5) * 0.3, -0.2 - Math.random() * 0.6, (Math.random() - 0.5) * 0.3,
+        (0.018 + Math.random() * 0.02) * size, 2, 0, 0.5 + Math.random() * 0.4);
+    }
   }
 
   /** Laid back down on the water: white water along it. */
