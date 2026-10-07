@@ -451,7 +451,7 @@ const doorwayActors = [...child.objects, ...cygnet.objects, ...glider.objects];
 const doorwayShared = [sky, terrain.mesh, water.mesh, ...doorwayActors];
 const doorwaySource = new Set([...doorwayShared, grass.group, washing.group, washingBaskets, pinwheels.group, door.group, lines.batch.mesh, swirl.batch.mesh, washingInvitation.batch.mesh]);
 const doorwayDestination = new Set([...doorwayShared, shoreGrass, kite.group, shorePulley.group, shorePulley.invitation, lines.batch.mesh]);
-const doorwayView = new DoorwayView(renderer, scene, terrain, water,
+const doorwayView = new DoorwayView(renderer, scene, post.sceneTarget, terrain, water,
   doorwaySource, doorwayDestination,
   [shoreGrass, kite.group, shorePulley.group],
   [{ objects: [...child.objects, ...glider.objects], at: child.position }, { objects: cygnet.objects, at: cygnet.position }]);
