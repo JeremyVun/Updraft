@@ -135,7 +135,7 @@ export class CrossingChapter implements Chapter {
   readonly linesScore?: LinesScorePhase;
   readonly meadowScore?: MeadowScorePhase;
   readonly birchesScore?: BirchesScorePhase;
-  readonly hush: number;
+  private readonly quiet: number;
   private readonly destinationMusic?: ArrivalMusic;
   private readonly departureMusic?: ArrivalMusic;
   private arrivalHeard = false;
@@ -244,7 +244,7 @@ export class CrossingChapter implements Chapter {
     this.linesScore = opts.linesScore;
     this.meadowScore = opts.meadowScore;
     this.birchesScore = opts.birchesScore;
-    this.hush = opts.hush ?? 0;
+    this.quiet = opts.hush ?? 0;
     this.destinationMusic = opts.arrivalMusic;
     this.season = opts.season ?? 0.3;
     this.lookBack = opts.lookBack ?? null;
@@ -389,6 +389,11 @@ export class CrossingChapter implements Chapter {
     if (remaining <= Math.min(lead, this.routeLength * tuning.audio.arrivalMusicRouteShare)) {
       this.arrivalHeard = true;
     }
+  }
+
+  /** How far the music pulls back: the crossing's own quiet, and the whale's sorrow. */
+  get hush(): number {
+    return Math.max(this.quiet, this.whale?.hush ?? 0);
   }
 
   get seaScore(): SeaScorePhase | undefined {

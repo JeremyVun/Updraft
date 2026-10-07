@@ -1414,7 +1414,7 @@ export const tuning = {
      */
     slowing: 0.35, settling: 0.13, release: 0.6,
     /** Seconds between its weak breaths, how far its back rises with one (m), and how much mist each sputters. */
-    breathEvery: 7, breathRise: 0.45, mist: 1,
+    breathEvery: 10, breathRise: 0.45, mist: 1,
     /** The soft column of its first full breath, and the tall spout when it is free (m above the blowhole). */
     firstBreathHeight: 9, spoutHeight: 20,
     /**
@@ -1434,6 +1434,12 @@ export const tuning = {
      */
     holdFrom: 40, holdFull: 6, holdDistance: 13, holdHeight: 5, holdBearing: -0.08, holdEase: 0.45,
     releaseDistance: 30, releaseHeight: 12, releaseBearing: 0.28,
+    /**
+     * The sea's score thins as the boat comes in, from `hushFrom` to `hushNear` metres short of the rest, to `hushSorrow`
+     * of the way to silence at rest beside it, and comes back to `hushCourage` once its eye has found her, at
+     * `hushEase` a second.
+     */
+    hushFrom: 70, hushNear: 8, hushSorrow: 0.9, hushCourage: 0.45, hushEase: 0.3,
     /** How far ahead of the bow the pod runs while it leads the boat in (m). */
     podLead: 18,
     /**

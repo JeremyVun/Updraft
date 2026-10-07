@@ -149,6 +149,8 @@ export class NetWhale {
   release = 0;
   /** How far the child has turned on her seat toward it, radians. */
   turn = 0;
+  /** How far the sea's score has thinned, 0..1: to almost nothing in its sorrow, a little way back once it knows her. */
+  hush = 0;
   /** The pod has nudged the boat and now leads it; from here the encounter says where the dolphins run. */
   led = false;
   /** How far the patch of net over the blowhole has been lifted clear by circling, or by the valve's dolphin, 0..1. */
@@ -477,6 +479,9 @@ export class NetWhale {
     const turning = this.step === 'gone' ? 0 : this.turnToward() * (1 - THREE.MathUtils.smootherstep(left, 30, 120));
     this.turn += (THREE.MathUtils.lerp(turning, K.haulTurn, this.out) - this.turn) * (1 - Math.exp(-dt * 1.2));
     this.holdT = Math.min(1, this.holdT + dt / K.holdMove);
+    const sorrow = this.step === 'approach' ? 1 - THREE.MathUtils.smootherstep(left, K.hushNear, K.hushFrom)
+      : this.step === 'breath' && !this.greeted ? 1 : this.step === 'free' || this.step === 'gone' ? 0 : K.hushCourage / K.hushSorrow;
+    this.hush += (K.hushSorrow * sorrow - this.hush) * (1 - Math.exp(-dt * K.hushEase));
   }
 
   /**
