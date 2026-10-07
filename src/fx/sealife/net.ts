@@ -2,7 +2,8 @@ import * as THREE from 'three';
 import { BOW_Z, STERN_Z, gunwaleHalf, stationU } from '../../traveller/boat/form';
 import { tuning } from '../../tuning';
 import { swellLift } from '../../world/water/swell';
-import { BLOWHOLE, LENGTH, TOP } from './anatomy';
+import { BLOWHOLE, LENGTH, SPINE_END, TOP } from './anatomy';
+import { SPINE_N } from './whaleShader';
 import { NET, corkMaterial, netLook, ropeMaterial, sheetMaterial } from './netShader';
 import type { SleepingWhale, Skin } from './sleeper';
 import { MIST, type Spray } from './spray';
@@ -240,8 +241,10 @@ export class Net {
   private readonly ahead = new THREE.Vector3();
   private readonly boat = new THREE.Vector3();
   private readonly mass = new THREE.Vector3();
-  private refBlow = 0;
+  /** The spine's heights and the eye's as the net was laid on, and how far along the body the eye is. */
+  private readonly refSpine = new Float32Array(SPINE_N);
   private refEye = 0;
+  private sEye = 0;
   private eyeAcross = 8;
   private domeT = 10;
   private domeStrength = 1;
@@ -384,14 +387,15 @@ export class Net {
     this.whaleLength = LENGTH * whale.scale;
     this.ahead.copy(whale.heading).setY(0).normalize();
     whale.point(1, TOP(0.2), 0.2, this.side).sub(whale.point(0, TOP(0.2), 0.2, this.p)).setY(0).normalize();
-    this.refBlow = whale.blowhole.y;
+    for (let k = 0; k < SPINE_N; k++) this.refSpine[k] = whale.spine[k].y;
     this.refEye = whale.eye.y;
     this.eyeAcross = Math.max(1, this.offAxis(whale.eye));
     const nose = whale.spine[0];
     const sEye = ((nose.x - whale.eye.x) * this.ahead.x + (nose.z - whale.eye.z) * this.ahead.z) / this.whaleLength;
+    this.sEye = sEye;
     this.uEye = (sEye - FRONT) * this.whaleLength;
     const c = whale.point(0, TOP(sEye), sEye, this.q);
-    this.profileFrom(c, 1);
+    this.profileFrom(c, 1, sEye);
     this.eyeTop = this.arcNearest(this.offAxis(whale.eye) - this.offAxis(c), whale.eye.y) - EYE_CLEAR;
     this.lift = this.peel = this.loop = this.drift = 0;
     this.peelAt = this.soundPeel = 0;
@@ -479,10 +483,25 @@ export class Net {
   }
 
   /** The skin's breathing and roll at `across` metres out from the crown line, since it was draped. */
-  private bodyShift(across: number): number {
-    const w = this.whale;
-    const db = w.blowhole.y - this.refBlow;
-    return db + (across / this.eyeAcross) * (w.eye.y - this.refEye - db);
+  /**
+   * How far the skin under a point `across` from the crown line at `s` has moved up since the net was laid on: the
+   * back swells with a breath more than the head, and rolled, the near side rises.
+   */
+  private bodyShift(across: number, s: number): number {
+    return this.spineShift(s) + (across / this.eyeAcross) * (this.whale.eye.y - this.refEye - this.spineShift(this.sEye));
+  }
+
+  private spineShift(s: number): number {
+    const fi = THREE.MathUtils.clamp(s / SPINE_END, 0, 1) * (SPINE_N - 1);
+    const k = Math.min(Math.floor(fi), SPINE_N - 2);
+    const f = fi - k;
+    const spine = this.whale.spine;
+    return (spine[k].y - this.refSpine[k]) * (1 - f) + (spine[k + 1].y - this.refSpine[k + 1]) * f;
+  }
+
+  /** Where row `i` crosses the whale's length (0 snout .. 1 flukes). */
+  private rowS(i: number): number {
+    return FRONT + ((i / (ROWS - 1)) * NET.long) / this.whaleLength;
   }
 
   /** How far out from the whale's crown line `p` is, toward the boat. */
@@ -503,11 +522,11 @@ export class Net {
    */
   private drapeRow(i: number): void {
     const u = (i / (ROWS - 1)) * NET.long;
-    const s = FRONT + u / this.whaleLength;
+    const s = this.rowS(i);
     const c = this.whale.point(0, TOP(s), s, this.q);
     let crown = 0;
     for (const dir of [1, -1]) {
-      crown = this.profileFrom(c, dir);
+      crown = this.profileFrom(c, dir, s);
       if (dir === 1) {
         const water = this.profileWater();
         const held = 1 - THREE.MathUtils.smoothstep(Math.abs(u - this.uEye), EYE_HELD, EYE_OPEN);
@@ -537,19 +556,19 @@ export class Net {
         this.alongProfile(Math.abs(a), c, dir, i * COLS + j);
       }
     }
-    this.crowns[i] = crown - this.bodyShift(0);
+    this.crowns[i] = crown - this.bodyShift(0, s);
     this.layPath(i);
   }
 
-  /** The skin's profile across the whale from its crown line at `c` toward `dir`, into `this.profile`; the crown's height. */
-  private profileFrom(c: THREE.Vector3, dir: number): number {
+  /** The skin's profile across the whale from its crown line at `c` (`s` along it) toward `dir`, into `this.profile`; the crown's height. */
+  private profileFrom(c: THREE.Vector3, dir: number, s: number): number {
     const pr = this.profile;
     pr.n = 0;
-    let lastY = this.skinAt(c, 0);
+    let lastY = this.skinAt(c, 0, s);
     const crown = lastY;
     this.addProfile(0, lastY, true);
     for (let h = STEP; h <= REACH; h += STEP) {
-      const y = this.skinAt(c, h * dir);
+      const y = this.skinAt(c, h * dir, s);
       if (y === -Infinity || y < 0) {
         if (y === -Infinity && lastY > 0) this.addProfile(h - STEP + Math.min(0.3, lastY * 0.12), 0, false);
         else if (y < 0) this.addProfile(h - STEP * (y / (y - lastY)), 0, true);
@@ -617,13 +636,13 @@ export class Net {
     out.set(this.path[a * 3] + (this.path[b * 3] - this.path[a * 3]) * f, this.path[a * 3 + 1] + (this.path[b * 3 + 1] - this.path[a * 3 + 1]) * f,
       this.path[a * 3 + 2] + (this.path[b * 3 + 2] - this.path[a * 3 + 2]) * f);
     const water = f < 0.5 ? this.pathWater[a] : this.pathWater[b];
-    if (!water) out.y += this.bodyShift(this.pathAcross[a] + (this.pathAcross[b] - this.pathAcross[a]) * f);
+    if (!water) out.y += this.bodyShift(this.pathAcross[a] + (this.pathAcross[b] - this.pathAcross[a]) * f, this.rowS(i));
     return water;
   }
 
-  private skinAt(c: THREE.Vector3, h: number): number {
+  private skinAt(c: THREE.Vector3, h: number, s: number): number {
     const y = this.whale.surfaceAt(c.x + this.side.x * h, c.z + this.side.z * h, this.skin).height;
-    return y === -Infinity ? y : y - this.bodyShift(h);
+    return y === -Infinity ? y : y - this.bodyShift(h, s);
   }
 
   private addProfile(h: number, y: number, skin: boolean): void {
@@ -1005,7 +1024,7 @@ export class Net {
     if (this.slid[i] + this.pathArc[i * PATH + COLS - 1] >= this.pathArc[v]) return this.sheetPoint(i, COLS - 1, out);
     const b = (i * BELOW + m) * 3;
     const y = this.below[b + 1];
-    return out.set(this.below[b], y + (y > 0.05 ? this.bodyShift(this.belowAcross[i * BELOW + m]) : 0), this.below[b + 2]);
+    return out.set(this.below[b], y + (y > 0.05 ? this.bodyShift(this.belowAcross[i * BELOW + m], this.rowS(i)) : 0), this.below[b + 2]);
   }
 
   /**

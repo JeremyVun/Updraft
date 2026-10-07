@@ -34,11 +34,16 @@ const FIN_EDGE_UP = 0.3;
 export const FLUKE_HINGE = 0.93;
 export const BLOWHOLE = 0.21;
 
-/** Heights of the back and belly and the half width of the body along its length (0 snout, 1 notch). */
+/**
+ * Heights of the back and belly and the half width of the body along its length (0 snout, 1 notch). The back runs
+ * level from the crown to a small hump over the tail stock and narrows behind it: lying tipped tail down, only the
+ * head and a long low line of back ride above the sea.
+ */
 export const TOP = curve([
   [0, -0.08], [0.005, 0.05], [0.012, 0.15], [0.03, 0.25], [0.06, 0.32], [0.1, 0.4], [0.16, 0.527], [0.21, 0.644],
-  [0.26, 0.719], [0.3, 0.833], [0.36, 0.98], [0.42, 1.18], [0.55, 1.22], [0.62, 1.16],
-  [0.7, 0.95], [0.8, 0.68], [0.9, 0.4], [0.96, 0.22], [1, 0.1],
+  [0.24, 0.628], [0.27, 0.575], [0.32, 0.647], [0.36, 0.675], [0.4, 0.668], [0.45, 0.652], [0.5, 0.633], [0.55, 0.62],
+  [0.6, 0.632], [0.64, 0.708], [0.68, 0.69], [0.72, 0.637], [0.76, 0.583], [0.8, 0.54], [0.85, 0.475], [0.9, 0.36],
+  [0.95, 0.24], [1, 0.126],
 ]);
 export const BOTTOM = curve([
   [0, -0.22], [0.006, -0.368], [0.015, -0.486], [0.03, -0.68], [0.06, -0.92], [0.1, -1.15], [0.17, -1.38], [0.3, -1.68],
@@ -62,8 +67,8 @@ export const JAW_CORNER = 0.152;
 /** How much wider than the upper jaw the lower lip bows out, as a share of the half width. */
 const LIP = curve([[0, 0], [0.012, 0.09], [0.1, 0.11], [0.135, 0.06], [JAW_CORNER + 0.005, 0]]);
 
-/** The raised crown the blowhole sits on, over the top of the head. */
-const MOUND = curve([[0.14, 0], [0.185, 0.08], [0.215, 0.11], [0.25, 0.05], [0.29, 0]]);
+/** The raised guard round the blowhole, over the back of the head, falling away steeply behind it. */
+const MOUND = curve([[0.15, 0], [0.18, 0.04], [0.205, 0.082], [0.225, 0.06], [0.245, 0.012], [0.26, 0]]);
 const MOUND_WIDTH = 0.42;
 
 /** Height of the top of the body along the middle of its back, crown and all. */

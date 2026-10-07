@@ -336,6 +336,17 @@ Skin skin(float far) {
 }
 `;
 
+/** Its far length low on the sea melts into the morning haze, so only the head and what stands clear of it are crisp. */
+const HAZE_GLSL = /* glsl */ `
+uniform float uHaze;
+vec3 hazed(vec3 col, vec3 world, float s) {
+  vec4 f = fogOf(world);
+  float far = smoothstep(${f(L.hazeFrom)}, ${f(L.hazeTo)}, distance(cameraPosition, world));
+  float haze = uHaze * smoothstep(0.24, 0.72, s) * far * (1.0 - smoothstep(2.0, 9.0, world.y)) * ${f(L.haze)};
+  return mix(col, f.rgb, max(f.a, haze));
+}
+`;
+
 export const WHALE_VERT = /* glsl */ `
 ${ATMO_GLSL}
 ${CREATURE_GLSL}
@@ -352,6 +363,7 @@ void main() {
 export const WHALE_FRAG = /* glsl */ `
 ${ATMO_GLSL}
 ${SKIN_GLSL}
+${HAZE_GLSL}
 uniform vec3 uSeaTint;
 uniform vec3 uShiver;
 uniform vec3 uSlap;
@@ -410,16 +422,23 @@ void main() {
   vec3 env = skyColor(vec3(R.x, max(R.y, 0.02), R.z));
   env = mix(env, uSeaTint * uSkyAmbient * 1.4, (1.0 - smoothstep(-0.3, 0.0, R.y)));
   float F = 0.03 + 0.97 * pow(1.0 - nv, 5.0);
-  col = mix(col, env, F * (0.25 + 0.5 * sheet + 0.6 * k.gloss) * (part == ${FIN} ? 0.45 : 1.0));
+  // Its back is wet from the sea it lies in: darker, and a mirror of the dawn at a glancing look.
+  float wet = part == ${BODY} ? smoothstep(0.25, 0.8, N.y) * (1.0 - k.gloss) * (1.0 - k.near) : 0.0;
+  col *= 1.0 - 0.25 * wet;
+  col = mix(col, env, F * (0.25 + 0.5 * sheet + ${f(L.wet)} * wet + 0.6 * k.gloss) * (part == ${FIN} ? 0.45 : 1.0));
   vec3 H = halfVector(uSunDir, V);
   float nh = max(dot(N, H), 0.0);
   // Lying awash the flipper's blade faces the sky, and a sheen on it as broad as the back's would make it a pale thing.
   float sheen = part == ${FIN} ? ${f(L.sheen)} * 0.3 : ${f(L.sheen)};
-  col += uSunColor * pow(nh, mix(24.0, 160.0, sheet)) * (sheen + (0.8 + 3.0 * streak) * sheet) * sun * (1.0 - k.gloss) * (1.0 - 0.7 * k.near);
+  col += uSunColor * pow(nh, mix(mix(24.0, 70.0, wet), 160.0, sheet)) * (sheen * (1.0 + wet) + (0.8 + 3.0 * streak) * sheet) * sun * (1.0 - k.gloss) * (1.0 - 0.7 * k.near);
   col += vec3(0.85, 0.9, 0.95) * (uSkyAmbient * 0.7 + uSunColor * (0.1 + back * 0.8) * sun) * streak * sheet * 0.45;
   // A flipper lying flat is seen edge on all over, so only the body takes the rim along its silhouette.
   float rim = pow(1.0 - nv, ${f(L.rimPower)}) * smoothstep(-0.2, 0.5, N.y + ndl) * (part == ${FIN} ? 0.2 : 1.0);
   col += uSunColor * mix(vec3(1.0), k.albedo * 2.0, 0.35) * rim * (0.2 + back) * ${f(L.rim)} * sun * (1.0 - k.near);
+  // Where the back turns away toward the low sun at its edge it draws one crisp gold line against the sea.
+  float sunward = dot(N, normalize(vec3(uSunDir.x, 0.0, uSunDir.z)));
+  float ridge = pow(1.0 - nv, ${f(L.ridgePower)}) * smoothstep(-0.05, 0.35, sunward + 0.3 * N.y) * float(part == ${BODY} || part == ${DORSAL});
+  col += uSunColor * vec3(1.0, 0.82, 0.55) * ridge * back * ${f(L.ridge)} * sun * (1.0 - k.near);
   // The cornea bulges over the iris, so the sky it mirrors moves across it; the gold in it is the dawn behind.
   vec3 Nc = normalize(N + (vAxisZ * k.iris.x + vAxisY * k.iris.y) * 1.3);
   vec3 Rc = reflect(-V, Nc);
@@ -430,7 +449,7 @@ void main() {
   float glint = pow(max(dot(Nc, normalize(V + vec3(0.0, 0.55, 0.0) + vAxisZ * 0.25)), 0.0), 900.0);
   col += (uSunColor * 0.5 + uSkyHorizonSun) * glint * ${f(L.catchlight)} * k.gloss;
 
-  gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
+  gl_FragColor = vec4(hazed(col, vWorld, vRig.x), 1.0);
 }`;
 
 /** The submerged body seen through the sea: slid up its view ray to the surface, tinted and faded by the water. */
@@ -440,10 +459,12 @@ ${CREATURE_GLSL}
 ${RIG_GLSL}
 out vec3 vSurface;
 out float vDepth;
+out vec3 vFacing;
 void main() {
   vec3 n = normal;
   vec3 w = rig(position, n);
   vDepth = -w.y;
+  vFacing = n;
   if (w.y < 0.04) w = cameraPosition + (w - cameraPosition) * (cameraPosition.y - 0.04) / max(cameraPosition.y - w.y, 1e-3);
   vSurface = w;
   gl_Position = projectionMatrix * viewMatrix * vec4(w, 1.0);
@@ -452,13 +473,16 @@ void main() {
 export const GHOST_FRAG = /* glsl */ `
 ${ATMO_GLSL}
 ${SKIN_GLSL}
+${HAZE_GLSL}
 uniform vec3 uDeep;
 uniform vec3 uAbsorb;
 in vec3 vSurface;
 in float vDepth;
+in vec3 vFacing;
 void main() {
   if (vDepth < -0.02) discard;
-  Skin k = skin(smoothstep(70.0, 140.0, distance(cameraPosition, vSurface)));
+  float dist = distance(cameraPosition, vSurface);
+  Skin k = skin(smoothstep(70.0, 140.0, dist));
   float depth = max(vDepth, 0.0);
   vec3 V = normalize(cameraPosition - vSurface);
   float nv = max(V.y, 0.02);
@@ -467,16 +491,21 @@ void main() {
   float F = 0.02 + 0.98 * pow(1.0 - nv, 5.0);
   float sun = cloudShadow(vSurface.xz);
   float sky = dot(uSkyAmbient, vec3(0.3, 0.5, 0.2));
-  vec3 light = max(uSkyAmbient * 1.2, vec3(0.78, 0.9, 1.08) * sky * ${f(L.glass)}) + uSunColor * max(uSunDir.y, 0.0) * 1.1 * sun;
+  // The dawn comes down through the glass warm, so however deep it lies its shape is a soft warm shade, never a hole.
+  vec3 light = max(uSkyAmbient * 1.2, vec3(0.78, 0.9, 1.08) * sky * ${f(L.glass)}) + uSunColor * max(uSunDir.y, 0.0) * 1.1 * sun
+    + uSkyHorizonSun * sky * ${f(L.glassWarm)};
   vec3 deep = uDeep * (uSkyAmbient * 1.1 + uSunColor * max(uSunDir.y, 0.0) * 0.6 * sun);
   // The flipper just under the glass would show as a pale blade of its own: the sea keeps it a shape beneath.
   vec3 seen = k.albedo * light * exp(-uAbsorb * (path + depth)) * (int(vRig.y + 0.5) == ${FIN} ? 0.45 : 1.0);
   float clear = exp(-path * ${f(L.clarity)});
   vec3 col = mix(deep, seen, clear);
-  // Far off the body under the glass would draw a pale hull beneath it, so only what is near shows through.
-  float a = (1.0 - F) * clear * smoothstep(-0.02, 0.06, vDepth) * 0.7 * (1.0 - 0.75 * smoothstep(25.0, 60.0, distance(cameraPosition, vSurface)));
+  // Its outline softens with depth, as the sea blurs a shape far down.
+  vec3 under = normalize(vec3(-V.x, -V.y * 1.6, -V.z));
+  float soft = smoothstep(0.0, 0.15 + 0.6 * (1.0 - clear), abs(dot(normalize(vFacing), under)));
+  float a = (1.0 - F) * soft * smoothstep(-0.02, 0.06, vDepth) * mix(${f(L.glassDeep)}, 0.75, clear)
+    * (1.0 - 0.75 * smoothstep(${f(L.glassFrom)}, ${f(L.glassTo)}, dist));
   if (a < 0.004) discard;
   col = mix(stillGrey(col) * 1.05, col, 0.35 + 0.65 * uWorldLife);
-  col = applyFog(col, vSurface);
+  col = hazed(col, vSurface, vRig.x);
   gl_FragColor = vec4(col * a, a);
 }`;

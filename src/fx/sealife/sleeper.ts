@@ -16,7 +16,6 @@ export type SleeperSound = WhaleSound | 'whale-sigh' | 'whale-breath' | 'whale-s
 const K = tuning.netWhale;
 /** The tail stock, behind the hump: what the body tips over as it lifts its flukes. */
 const PIVOT = 0.75;
-const CREST = 0.55;
 /** The eye on the near side of the head, in the rest pose: along, up, and out on the skin there. */
 const EYE_S = 0.16;
 const EYE_Y = 0.17;
@@ -26,6 +25,7 @@ const JAW_S = 0.07;
 const JAW_Y = -0.12;
 const JAW_X = flankAt(JAW_S, JAW_Y);
 const FIN_LENGTH = FIN_SPAN * DREAM_SHAPE.fin;
+const FIN_S = -FIN_ROOT.z / LENGTH;
 /** Rolling free it lays its flippers back along its flanks, so on its back they lie low rather than stand up. */
 const FREE_FIN = new THREE.Vector2(0.95, -0.4);
 /** Lying at the surface the fluke tips curl up a little at the far end. */
@@ -40,7 +40,7 @@ const BREATH_OUT = 3.6;
 const SPOUT_FROM = 6;
 const SPOUT_TO = 8.8;
 const ROLL = curve([[0, 0], [10.5, 0], [14.5, 3.05], [21.5, 3.05], [24.5, 2.2], [28.5, 1.2]]);
-const SINK = curve([[0, 0], [10.5, 0], [14.5, -3.6], [20.5, -3.8], [23.5, -5.5], [28.5, -22]]);
+const SINK = curve([[0, 0], [10.5, 0], [14.5, -1.7], [20.5, -1.9], [23.5, -3.8], [28.5, -21]]);
 const TAIL = curve([[0, 0], [14, 0], [16.5, -0.62], [21, -0.66], [23.5, -0.25], [25.5, 0]]);
 const DIP = curve([[0, 0], [20.5, 0], [23.5, -0.12], [28.5, -0.3]]);
 const WAVE_FROM = 16.5;
@@ -62,10 +62,17 @@ const LIFT_HITS = 4.6;
 const LIFT_POURS = 0.7;
 const LIFT_FOR = 5.2;
 
-/** The head carried a little higher than the tail, so the eye and blowhole stand clear and the flukes lie just under. */
-function restPitch(s: number): number {
-  return 0.1 * (1 - THREE.MathUtils.smoothstep(s, 0.3, 0.6)) - 0.01 * THREE.MathUtils.smoothstep(s, 0.72, 0.95);
+/**
+ * Lying tipped tail down: the head carried high so the eye and blowhole stand clear, the back sinking into the sea
+ * along its length, the tail stock well under. `settle` 0 lifts the tail level again, as it does to wave its flukes.
+ */
+function restPitch(s: number, settle: number): number {
+  const sm = THREE.MathUtils.smoothstep;
+  return 0.1 * (1 - (1 - settle) * sm(s, 0.3, 0.6)) - settle * 0.035 * sm(s, 0.26, 0.5) - (0.01 + settle * 0.035) * sm(s, 0.78, 1);
 }
+
+/** How much of a breath lifts the body at s: the back swells with it, the head only by `head` of it. */
+const breathAt = (s: number, head = 0.3) => head + (1 - head) * THREE.MathUtils.smoothstep(s, 0.2, 0.45);
 
 /** The height of the skin and its normal at a point, from `surfaceAt`. */
 export interface Skin {
@@ -160,10 +167,10 @@ export class SleepingWhale extends WhaleRig {
     this.stir = 0;
     this.tickles = this.lifts = 0;
     this.heading.set(Math.sin(noseYaw), 0, Math.cos(noseYaw));
-    this.bend(0, 0);
-    const iP = this.at(PIVOT);
-    const iC = this.at(CREST);
-    this.rest.set(0, K.crest - TOP(CREST) * this.scale - (this.y[iC] - this.y[iP]), 0);
+    this.rest.set(0, 0, 0);
+    this.pivot.copy(this.rest);
+    this.lay(0, 0, 0, 0, K.roll);
+    this.rest.y = K.crown - this.point(0, crown(BLOWHOLE), BLOWHOLE, this.p).y;
     this.pivot.copy(this.rest);
     this.lay(0, 0, 0, 0, K.roll);
     this.point(EYE_X, EYE_Y, EYE_S, this.p);
@@ -186,6 +193,7 @@ export class SleepingWhale extends WhaleRig {
     this.uniforms.uCurl.value = REST_CURL;
     this.uniforms.uFin.value.set(K.finRestSweep, -K.finRestRaise);
     this.uniforms.uSlap.value.set(1, 0, 0);
+    this.uniforms.uHaze.value = 1;
     this.locate();
     this.mesh.visible = this.ghost.visible = true;
   }
@@ -331,7 +339,7 @@ export class SleepingWhale extends WhaleRig {
     this.lay(0, rise, 0, 0, K.roll + liftRoll);
     this.uniforms.uCurl.value = REST_CURL;
     // The flipper lies awash: as the body rises with a breath it floats there rather than lifting out of the sea.
-    const awash = rise / (FIN_LENGTH * this.scale * 0.95);
+    const awash = (rise * breathAt(FIN_S)) / (FIN_LENGTH * this.scale * 0.95);
     this.uniforms.uFin.value.set(K.finRestSweep + Math.sin(this.worldTime * 0.17) * 0.03,
       -K.finRestRaise + awash + Math.sin(this.worldTime * 0.23 + 1) * 0.015);
   }
@@ -348,7 +356,8 @@ export class SleepingWhale extends WhaleRig {
     const wave = THREE.MathUtils.smoothstep(t, WAVE_FROM, WAVE_FROM + 1) * (1 - THREE.MathUtils.smoothstep(t, WAVE_TO - 1, WAVE_TO));
     const sway = Math.sin((t - WAVE_FROM) * 2.1) * wave;
     this.driftClear(t);
-    this.lay(SINK(t), K.breathRise * 2.4 * draw, DIP(t), TAIL(t) + 0.05 * sway, K.roll + ROLL(t) + 0.22 * sway);
+    this.lay(SINK(t), K.breathRise * 2.4 * draw, DIP(t), TAIL(t) + 0.05 * sway, K.roll + ROLL(t) + 0.22 * sway,
+      1 - THREE.MathUtils.smoothstep(t, 10.5, 14.5), 1);
     this.uniforms.uCurl.value = REST_CURL * (1 - THREE.MathUtils.smoothstep(t, 8.5, 12.5)) + 0.3 * sway;
     const lower = THREE.MathUtils.smoothstep(t, 6.5, 9.5);
     this.uniforms.uFin.value.set(THREE.MathUtils.lerp(K.finRestSweep, FREE_FIN.x, lower), THREE.MathUtils.lerp(-K.finRestRaise, FREE_FIN.y, lower));
@@ -502,13 +511,13 @@ export class SleepingWhale extends WhaleRig {
   }
 
   /** Pitch along the body, from the rest pose tipped head down by `dip` and the tail stock lifted by `tail`. */
-  private bend(dip: number, tail: number): void {
+  private bend(dip: number, tail: number, settle: number): void {
     let u = 0;
     let y = 0;
     for (let i = 0; i < SPINE_N; i++) {
       const s = (i / (SPINE_N - 1)) * SPINE_END;
       const aft = THREE.MathUtils.smoothstep(s, PIVOT - 0.1, PIVOT + 0.15);
-      this.pitch[i] = restPitch(s) * (1 - Math.min(1, Math.abs(dip) * 4)) + dip + tail * aft;
+      this.pitch[i] = restPitch(s, settle) * (1 - Math.min(1, Math.abs(dip) * 4)) + dip + tail * aft;
     }
     for (let i = 0; i < SPINE_N; i++) {
       this.u[i] = u;
@@ -521,15 +530,19 @@ export class SleepingWhale extends WhaleRig {
     }
   }
 
-  /** Poses the spine about the pivot: sunk by `sink`, lifted by `rise`, tipped by `dip` and `tail`, rolled by `roll`. */
-  private lay(sink: number, rise: number, dip: number, tail: number, roll: number): void {
-    this.bend(dip, tail);
+  /**
+   * Poses the spine about the pivot: sunk by `sink`, its back lifted by `rise`, tipped by `dip` and `tail`, rolled by
+   * `roll`, its back sunk tail down as it lies by `settle`, its head lifted by `head` of the rise.
+   */
+  private lay(sink: number, rise: number, dip: number, tail: number, roll: number, settle = 1, head = 0.3): void {
+    this.bend(dip, tail, settle);
     const k = this.at(PIVOT);
     const h = this.heading;
-    const py = this.pivot.y + sink + rise;
+    const py = this.pivot.y + sink;
     for (let i = 0; i < SPINE_N; i++) {
       const du = this.u[i] - this.u[k];
-      this.spine[i].set(this.pivot.x + h.x * du, py + this.y[i] - this.y[k], this.pivot.z + h.z * du, this.pitch[i]);
+      const lift = rise * breathAt((i / (SPINE_N - 1)) * SPINE_END, head);
+      this.spine[i].set(this.pivot.x + h.x * du, py + lift + this.y[i] - this.y[k], this.pivot.z + h.z * du, this.pitch[i]);
     }
     this.uniforms.uRoll.value = roll;
   }

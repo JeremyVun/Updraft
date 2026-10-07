@@ -1405,8 +1405,8 @@ export const tuning = {
      * radians round to port of the bow, its length running `bodyAngle` radians round to starboard into the haze.
      */
     eyeDistance: 14.5, eyeBearing: 0.8, bodyAngle: 1.25,
-    /** Its highest back above the water at rest (m), and how far it lies rolled with its near side up (radians). */
-    crest: 6.6, roll: 0.087,
+    /** The crown round its blowhole above the water at rest (m), and how far it lies rolled with its near side up (radians). */
+    crown: 5.3, roll: 0.087,
     /**
      * The boat's speed limit coming to rest beside it: never more than it could lose slowing at `slowing` (m/s²), nor
      * more than `settling` times the distance left, so the hull's own carry brings it to rest without braking; and
@@ -2138,6 +2138,8 @@ export const tuning = {
     bounce: 1.8,
     /** The low sun wrapped over its top, the gold rim it lays along the silhouette, and the wet sheen on the back. */
     key: 0.9, rim: 2.6, rimPower: 9, sheen: 0.45,
+    /** The crisp gold line where its back turns away toward the low sun, how thin, and how much the wet top mirrors the sky. */
+    ridge: 6, ridgePower: 26, wet: 0.6,
     /** The sun through the eye's cornea lighting the lower iris, and its sharp reflection in the eye. */
     caustic: 0.45, catchlight: 2.5,
     /** How much of the sky the wet cornea over the iris mirrors. */
@@ -2147,9 +2149,15 @@ export const tuning = {
     /** How dark the skin goes at the waterline, shaded by the sea, against its tone 3.5 m up. */
     waterline: 0.72,
     /** How far down through the sea its body and flippers still show, per metre of water looked through. */
-    clarity: 0.32,
-    /** How bright the sky light lies on it under the glass, as a multiple of the sky's own ambient brightness. */
-    glass: 4,
+    clarity: 0.12,
+    /**
+     * Under the glass: how bright the sky light lies on it (a multiple of the sky's own ambient brightness), how much
+     * of the dawn's warmth comes down to it, how much of its shape still shows deep down, and from how far off to how
+     * far it fades (m).
+     */
+    glass: 4, glassWarm: 0.6, glassDeep: 0.45, glassFrom: 35, glassTo: 110,
+    /** Its long low back melts into the morning haze: at most this much, from `hazeFrom` to `hazeTo` metres off. */
+    haze: 0.85, hazeFrom: 25, hazeTo: 80,
   },
 };
 

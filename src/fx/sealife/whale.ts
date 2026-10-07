@@ -114,6 +114,8 @@ export class WhaleRig {
       uShiver: { value: new THREE.Vector3(0, 0, 1) },
       uSlap: { value: new THREE.Vector3() },
       uShape: { value: new THREE.Vector3(DREAM_SHAPE.fin, DREAM_SHAPE.dorsal, DREAM_SHAPE.flukes) },
+      /** How far its long low back melts into the morning haze, 0..1. */
+      uHaze: { value: 0 },
     };
     const look = tuning.whaleLook;
     const skin = {
@@ -145,7 +147,7 @@ export class WhaleRig {
           ...this.uniforms,
           ...skin,
           uDeep: { value: new THREE.Color('#0d4a66') },
-          uAbsorb: { value: new THREE.Vector3(0.5, 0.13, 0.1) },
+          uAbsorb: { value: new THREE.Vector3(0.24, 0.11, 0.1) },
         },
         transparent: true,
         depthWrite: false,
