@@ -264,6 +264,7 @@ export class SleepingWhale extends WhaleRig {
     const centre = this.point(0, 0, 0.5, this.q);
     const height = K.surgeHeight * (12 + this.surgeNear) / 12;
     swellUniforms.uSurge.value.set(centre.x, centre.z, this.worldTime, height);
+    swellUniforms.uSurgeAxis.value.set(this.heading.x, this.heading.z, 0.3 * LENGTH * this.scale);
   }
 
   /** A faint breath out over the blowhole: the player's updraft carries it up into the spiral. */

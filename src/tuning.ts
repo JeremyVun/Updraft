@@ -1423,7 +1423,7 @@ export const tuning = {
     inviteAfter: 6, valveAfter: 90,
     coaxUrgency: 0.7, coaxRadius: 1.4,
     /** The swell it leaves: speed (m/s), crest spacing (m), width of the packet (m) and height at the boat (m). */
-    surgeSpeed: 4, surgeLength: 7, surgeWidth: 6, surgeHeight: 0.35,
+    surgeSpeed: 4, surgeLength: 14, surgeWidth: 7, surgeHeight: 0.35,
     /**
      * The camera's hold beside it: how far ahead of the boat it looks, its distance from that point and height, the
      * bearing off astern, and how fast it eases in and out.

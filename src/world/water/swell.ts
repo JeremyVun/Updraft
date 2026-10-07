@@ -28,11 +28,21 @@ export const swellUniforms = {
   uSwell: { value: 0 },
   /** One swell spreading from where something huge went under: centre x and z, when it went, and its height. */
   uSurge: { value: new THREE.Vector4(0, 0, -1e4, 0) },
+  /** The length of what went under, which the swell spreads from: its direction in xz and half its length. */
+  uSurgeAxis: { value: new THREE.Vector3(1, 0, 0) },
 };
 
 const S = tuning.sleepingWhale;
 
-/** The surge's lift at distance r from where it began, t seconds after: a short packet of crests running outward. */
+/** How far p is from the length of what went under. */
+function surgeDistance(x: number, z: number): number {
+  const g = swellUniforms.uSurge.value;
+  const a = swellUniforms.uSurgeAxis.value;
+  const along = THREE.MathUtils.clamp((x - g.x) * a.x + (z - g.y) * a.y, -a.z, a.z);
+  return Math.hypot(x - g.x - a.x * along, z - g.y - a.y * along);
+}
+
+/** The surge's lift at distance r from where it began, t seconds after: one long low crest running outward. */
 function surge(r: number, t: number): number {
   const front = t * S.surgeSpeed;
   const d = r - front;
@@ -51,10 +61,12 @@ const wave = (w: (typeof WAVES)[number]) => /* glsl */ `
 export const SWELL_GLSL = /* glsl */ `
 uniform float uSwell;
 uniform vec4 uSurge;
+uniform vec3 uSurgeAxis;
 
 float surgeLift(vec2 p) {
   if (uSurge.w <= 0.0) return 0.0;
-  float r = distance(p, uSurge.xy);
+  vec2 q = p - uSurge.xy;
+  float r = length(q - uSurgeAxis.xy * clamp(dot(q, uSurgeAxis.xy), -uSurgeAxis.z, uSurgeAxis.z));
   float front = (uTime - uSurge.z) * ${glsl(S.surgeSpeed)};
   float d = r - front;
   return uSurge.w * exp(-d * d / ${glsl(S.surgeWidth * S.surgeWidth)}) * cos(${glsl((2 * Math.PI) / S.surgeLength)} * d)
@@ -134,7 +146,7 @@ function shift(ux: number, uz: number, time: number, out: Shift): Shift {
     out.y += w.amp * height * Math.sin(ph);
   }
   const g = swellUniforms.uSurge.value;
-  if (g.w > 0) out.y += g.w * surge(Math.hypot(ux - g.x, uz - g.y), time - g.z);
+  if (g.w > 0) out.y += g.w * surge(surgeDistance(ux, uz), time - g.z);
   return out;
 }
 
