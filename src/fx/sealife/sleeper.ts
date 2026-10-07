@@ -30,9 +30,11 @@ const WAVE_TO = 14.5;
 const SURGE_AT = 6;
 const GONE = 18.5;
 /** The flipper's lazy slap: lifted (radians) over its first second, then down onto the water. */
-const SLAP = curve([[0, 0], [0.45, 0.6], [0.85, 1.3], [1.0, 1.35], [1.15, 0.3], [1.3, -0.05], [1.8, 0]]);
+const SLAP = curve([[0, 0], [0.45, 0.7], [0.85, 1.5], [1.0, 1.6], [1.15, 0.35], [1.3, -0.05], [1.8, 0]]);
+/** It rolls lazily onto its far side to lift the near flipper clear, and back. */
+const SLAP_ROLL = curve([[0, 0], [0.8, 0.3], [1.2, 0.3], [2.4, 0]]);
 const SLAP_HITS = 1.2;
-const SLAP_FOR = 1.8;
+const SLAP_FOR = 2.4;
 /** A slender blue-grey sleeper rather than the first crossing's humpback: short flippers, small flukes. */
 const FIN_SCALE = 0.62;
 const FLUKE_SCALE = 0.62;
@@ -220,7 +222,7 @@ export class SleepingWhale extends WhaleRig {
       this.mist(0.6 + this.stir * 0.8);
       this.onSound?.('whale-sigh', this.blowhole.x, this.blowhole.y, this.blowhole.z);
     }
-    this.lay(0, rise, 0, 0);
+    this.lay(0, rise, 0, 0, 0.03 + (this.slapT < 0 ? 0 : SLAP_ROLL(this.slapT)));
     this.uniforms.uCurl.value = REST_CURL;
     this.uniforms.uFin.value.set(REST_FIN.x + Math.sin(this.worldTime * 0.21) * 0.04, REST_FIN.y + Math.sin(this.worldTime * 0.3 + 1) * 0.05);
   }
