@@ -8,7 +8,7 @@
 // bring it from its tree to the nave, she steps down into it and looks back at the cat as the storm begins; it plays on
 // to the forest beach and reports when the storm's beats fall and where the boat is then, failing if anything stalls or
 // she leaves the decks. Usage: node tools/drowned-run-check.mjs
-//   env: BASE (default http://127.0.0.1:5230/), FROM=roofs starts on the ridge after the cat (skips the tub and the
+//   env: BASE (default http://127.0.0.1:5230/), FROM=stairs starts on the stairs and docks their flights first, FROM=roofs starts on the ridge after the cat (skips the tub and the
 //        becalming), FROM=church at the tower's foot (skips the run too), FROM=storm with her just seated aboard at the
 //        nave (skips the church too), SHOTS=<prefix> saves stills (at each piece,
 //        two between, and through the church), FILM=<seconds> with SHOTS also
@@ -21,6 +21,7 @@ import assert from 'node:assert/strict';
 const base = process.env.BASE ?? 'http://127.0.0.1:5230/';
 const width = Number(process.env.W ?? 1600), height = Number(process.env.H ?? 900);
 const shots = process.env.SHOTS ?? null;
+const fromStairs = process.env.FROM === 'stairs';
 const fromStorm = process.env.FROM === 'storm';
 const fromChurch = process.env.FROM === 'church' || fromStorm;
 const fromRoofs = process.env.FROM === 'roofs' || fromChurch;
@@ -31,7 +32,7 @@ const errors = [];
 try {
   const page = await (await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1 })).newPage();
   page.on('pageerror', (e) => errors.push(e.message));
-  await page.goto(`${base}?shot=1&chapter=${fromStorm ? 'storm' : fromChurch ? 'church' : fromRoofs ? 'roofs' : 'drowned'}&ratio=1`, { waitUntil: 'load' });
+  await page.goto(`${base}?shot=1&chapter=${fromStorm ? 'storm' : fromChurch ? 'church' : fromRoofs ? 'roofs' : fromStairs ? 'stairs' : 'drowned'}&ratio=1`, { waitUntil: 'load' });
   await page.waitForFunction(() => window.__ready === true, null, { timeout: 60000 });
 
   /** The lens's own motion every frame from the start: its fastest turn and fastest move, and where they fell. */
@@ -42,7 +43,7 @@ try {
       const st = __game.story.current, cam = __game.rig.camera, t = __stats.time;
       const d = cam.getWorldDirection(cam.position.clone()), p = cam.position.clone();
       const where = () => `${st.beat ?? __game.story.name}${st.run && st.run.stage !== 'off' ? '/' + st.run.stage : ''}${st.church && st.church.step !== 'off' ? '/' + st.church.step : ''} at ${t.toFixed(1)} s`;
-      if (last && t > last.t && last.cut === st.cameraCut && last.story === st) {
+      if (last && t > last.t && (last.cut === st.cameraCut || last.story !== st)) {
         const dt = t - last.t, turn = Math.acos(Math.min(1, d.dot(last.d))) * 180 / Math.PI / dt, move = p.distanceTo(last.p) / dt;
         if (turn > w.turn) { w.turn = turn; w.turnAt = where(); }
         if (move > w.move) { w.move = move; w.moveAt = where(); }
@@ -294,6 +295,35 @@ try {
     assert(Math.hypot(cat[0] - T.north[0], cat[1] - T.north[1], cat[2] - T.north[2]) < 0.5, `the cat is not on the belfry's north sill (${cat.join(', ')})`);
   };
 
+  if (fromStairs) {
+    // The stairs as a player docks them (each loose flight swept onto its landing), then down through the cloud.
+    const stairs = () => page.evaluate(() => {
+      const g = __game, c = g.story.current, cam = g.rig.camera;
+      const on = (p) => { const q = p.clone().project(cam); return [(q.x + 1) / 2, (1 - q.y) / 2, q.z]; };
+      const piece = g.story.name === 'stairs' ? g.cloudStairs.waiting : null;
+      const home = piece?.flight.bottom.clone().lerp(piece.flight.landing, 0.5);
+      return { chapter: g.story.name, beat: c.beat, time: __stats.time,
+        flight: piece && !piece.settling ? { at: on(g.cloudStairs.pointOn(piece, home.clone(), home.clone())), to: on(home) } : null,
+        wind: c.windInvitation ? on(c.windInvitation) : null };
+    });
+    const inFrame = (p) => p && p[2] < 1 && p[0] > 0.02 && p[0] < 0.98 && p[1] > 0.02 && p[1] < 0.98;
+    let st = await stairs(), shotDown = false;
+    for (let i = 0; i < 2000 && st.chapter === 'stairs'; i++) {
+      if (st.beat === 'waiting' && st.flight && inFrame(st.flight.to)) {
+        const [ax, ay] = st.flight.at, [bx, by] = st.flight.to;
+        await stroke([(ax + bx) / 2, (ay + by) / 2], Math.atan2(-(by - ay) * height, (bx - ax) * width), Math.max(0.1, Math.hypot((bx - ax) * width / height, by - ay)), 40);
+      } else if (st.beat === 'loop' && inFrame(st.wind)) await stroke(st.wind, 0.2, 0.38, 24);
+      else await seconds(0.5);
+      if (!shotDown && st.beat !== 'waiting' && st.beat !== 'loop' && i > 10) { shotDown = true; await shot('stairs-leaving'); }
+      st = await stairs();
+    }
+    assert.equal(st.chapter, 'drowned', `the stairs never let the boat down into the drowned village (${JSON.stringify(st)})`);
+    console.log(`into the drowned village from the stairs at ${st.time.toFixed(1)} s`);
+    await seconds(4);
+    await shot('arrival');
+    await seconds(8);
+    await shot('arrival-drift');
+  }
   if (!fromRoofs) {
     // The tub: strokes across it on screen carry it to the cat's roof, and then to the bow.
     const ORDER = ['stranded', 'seen', 'easing', 'waiting', 'coming', 'ferried', 'boarding', 'aboard', 'bolting', 'waits', 'climbing', 'ridge'];
@@ -306,13 +336,25 @@ try {
       await seconds(0.6);
     };
     await reach('waiting', 120);
+    await shot('cat');
     for (let i = 0; i < 40 && (await state()).step === 'waiting'; i++) await push();
     await reach('ferried', 30);
-    for (let i = 0; i < 50 && (await state()).step === 'ferried'; i++) await push();
+    for (let i = 0; i < 50 && (await state()).step === 'ferried'; i++) {
+      await push();
+      if (i === 3) await shot('tub');
+    }
     await reach('aboard', 30);
     console.log('the cat is aboard', JSON.stringify(await state()));
     await until((s) => s.beat === 'still', 120, 'the air dying');
     filmFrom = (await state()).time;
+    await seconds(4);
+    await shot('air-dies');
+    await until((s) => s.beat === 'becalmed', 30, 'the boat at rest');
+    await seconds(14);
+    await shot('fog-rising');
+    await reach('climbing', 150);
+    await seconds(2);
+    await shot('climb');
     await reach('ridge', 150);
     console.log('she is up on the ridge after the cat', JSON.stringify(await state()));
   }
@@ -414,6 +456,9 @@ try {
       await seconds(1.8);
     }
     console.log(`the tree went over after ${pushes} strokes`);
+    await until((s) => s.tree === 'crossing', 30, 'her on the trunk');
+    await seconds(1.5);
+    await shot('tree-crossing');
 
     // The mill: broad circles round its hub on screen, clockwise the way the sails turn, until she is off on the high roof.
     await walkTo('mill', 120);
@@ -484,6 +529,11 @@ try {
     assert(end.boatLeft < 1, `the boat is still ${end.boatLeft} m short of its tree`);
   }
   await church();
+  for (let t = 0; t < 30 && (await page.evaluate(() => __game.story.name)) !== 'wood'; t += 0.25) await seconds(0.25);
+  assert.equal(await page.evaluate(() => __game.story.name), 'wood', 'the landing never handed on to the dark wood');
+  await seconds(3);
+  await shot('wood');
+  console.log(`on into the dark wood at ${(await page.evaluate(() => __stats.time)).toFixed(1)} s`);
   const motion = await page.evaluate(() => window.__lensWatch);
   console.log(`the lens turned at most ${motion.turn.toFixed(1)} deg/s (${motion.turnAt}) and moved at most ${motion.move.toFixed(1)} m/s (${motion.moveAt})`);
   if (process.env.LENS) assert(motion.turn < 60, `the lens whipped round at ${motion.turn.toFixed(0)} deg/s (${motion.turnAt})`);
