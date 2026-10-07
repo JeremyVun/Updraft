@@ -516,7 +516,7 @@ async function fin() {
   assert(!aboard.held && aboard.seat === 'satchel', 'the line let go and the cygnet back in the satchel before it goes free');
   assert.equal(aboard.checkpoint, 'whale-flipper', 'the save after the flipper');
   assert(watch.clear >= 1, `a metre of clear water between the cygnet and the flipper: ${watch.clear} m`);
-  assert(watch.gap < 0.12, `the line runs into the bill while it holds it: ${watch.gap} m`);
+  assert(watch.gap < 0.06, `the line runs into the bill while it holds it: ${watch.gap} m`);
   assert.deepEqual(errors, []);
   await context.close();
 }

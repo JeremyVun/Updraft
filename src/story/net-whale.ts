@@ -270,7 +270,6 @@ export class NetWhale {
   private saluteT = -1;
   private readonly leaper = new THREE.Vector3();
   private readonly station = new THREE.Vector3();
-  private readonly billAt = new THREE.Vector3();
   private readonly falls = new THREE.Vector3();
   private readonly endRest = new THREE.Vector3();
   private readonly birdEye = new THREE.Vector3();
@@ -1011,7 +1010,7 @@ export class NetWhale {
       if (!last && gap < WAY_NEAR) this.wayPoint++;
       else if (last && gap < TAKES_AT) this.birdTo('holding');
     } else if (this.bird === 'holding') {
-      net.held = cygnet.billTip(this.billAt);
+      net.holder = cygnet;
       net.fallsTo = this.falls.copy(tip).lerp(this.station, 0.55);
       if (!this.stationed && Math.hypot(this.station.x - cygnet.position.x, this.station.z - cygnet.position.z) > 0.25) {
         cygnet.swimTo(this.station);
@@ -1021,12 +1020,11 @@ export class NetWhale {
       }
       if (net.loop >= 1) this.birdTo('pulling');
     } else if (this.bird === 'pulling') {
-      net.held = cygnet.billTip(this.billAt);
       const away = this.b.subVectors(this.station, tip).setY(0).normalize();
       this.a.copy(this.station).addScaledVector(away, PULL_BACK * THREE.MathUtils.smootherstep(this.birdT, 0, PULL_FOR));
       this.keepBird(this.a, tip, dt);
       if (this.birdT > PULL_FOR) {
-        net.held = net.fallsTo = null;
+        net.held = net.fallsTo = net.holder = null;
         this.freedAt = this.clock;
         this.birdTo('letting');
       }

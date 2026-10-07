@@ -131,6 +131,9 @@ export class Net {
   posed = false;
   /** Where the bill holds the loop's free end, or null while it lies on the water. */
   held: THREE.Vector3 | null = null;
+  /** Whose bill holds it, if set: read as the net is drawn, once the bird has moved this frame, so the end never lags it. */
+  holder: { billTip(out: THREE.Vector3): THREE.Vector3 } | null = null;
+  private readonly heldAt = new THREE.Vector3();
   /** Where the free end lies out on the water before anything takes it, or null for just beside the loop. */
   endRest: THREE.Vector3 | null = null;
   /** Where the loop falls as it slips off the flipper's tip into whatever pulls it, or null for beside the floating net. */
@@ -351,7 +354,7 @@ export class Net {
     this.lift = this.peel = this.loop = this.drift = 0;
     this.peelAt = this.soundPeel = 0;
     this.domeT = 10;
-    this.held = this.fallsTo = null;
+    this.held = this.fallsTo = this.holder = null;
     this.curlFrom.set(0, 0, 0);
     this.endDropped = false;
     this.holding = 0;
@@ -411,6 +414,7 @@ export class Net {
 
   update(dt: number, time: number): void {
     this.clock += dt;
+    if (this.holder) this.held = this.holder.billTip(this.heldAt);
     this.holding += ((this.held ? 1 : 0) - this.holding) * (1 - Math.exp(-dt * 4));
     if (this.draped < ROWS) {
       for (let r = 0; r < ROWS_A_FRAME && this.draped < ROWS; r++) this.drapeRow(this.draped++);
