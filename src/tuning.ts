@@ -1435,9 +1435,9 @@ export const tuning = {
     holdFrom: 40, holdFull: 6, holdDistance: 20, holdHeight: 8.5, holdBearing: 0.1, holdEase: 0.45,
     /**
      * Led off its line, the crossing's view rises this much higher (m) at `riseEase` a second, its look going
-     * `riseToward` of the way from the boat to the whale's eye, `riseLook` metres up.
+     * `riseToward` of the way from the boat to the whale's eye (`riseTowardPhone` in a phone's narrow frame), `riseLook` metres up.
      */
-    riseHeight: 4, riseEase: 0.3, riseLook: 2, riseToward: 0.4,
+    riseHeight: 4, riseEase: 0.3, riseLook: 2, riseToward: 0.4, riseTowardPhone: 0.12,
     /** Seconds the cygnet peeks out of the satchel at its first breath in the haze. */
     peekFor: 2.5,
     releaseDistance: 30, releaseHeight: 12, releaseBearing: 0.28,
@@ -1521,8 +1521,8 @@ export const tuning = {
      */
     phone: {
       breath: { distance: 19, height: 8, turn: -0.6, lookY: 17, toward: 0.3 },
-      look: { distance: 5, height: 2.4, turn: 0.18, lookY: 3, toward: 0.85 },
-      line: { distance: 11, height: 6, turn: -0.55, lookY: 20, toward: 0.12 },
+      look: { distance: 10, height: 3.8, turn: -0.6, lookY: 2.2, toward: 0.75 },
+      line: { distance: 11, height: 6, turn: -0.1, lookY: 20, toward: 0.12 },
       flipper: { distance: 13, height: 8, turn: -1.2, lookY: 16, toward: 0.3 },
       release: { distance: 28, height: 11, turn: -0.25 },
     },

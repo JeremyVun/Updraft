@@ -1587,7 +1587,8 @@ export class NetWhale {
     shot.height += K.riseHeight * rise;
     // The look goes on toward it while the eye stays behind the boat.
     this.b.copy(shot.target);
-    shot.target.lerp(this.a.copy(this.whale.eye).setY(K.riseLook), K.riseToward * rise);
+    const phone = (this.camera?.aspect ?? 16 / 9) < 1;
+    shot.target.lerp(this.a.copy(this.whale.eye).setY(K.riseLook), (phone ? K.riseTowardPhone : K.riseToward) * rise);
     shot.distance += Math.hypot(shot.target.x - this.b.x, shot.target.z - this.b.z);
     if (h <= 0.001) return;
     const whale = this.whale;
