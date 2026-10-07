@@ -193,13 +193,36 @@ Gate: typecheck; build; the check with real gestures: each step done by its gest
 progress a step before its valve; each valve finishes its step by its dolphin; sweeps on the whale elsewhere only
 tickle; saves at each checkpoint resume correctly; each negative proven to bite by breaking its guard once. One smoke
 still set at `k3` and `k4`.
+Done: [x] `9d8acd44..3953956a`. The bird drops in on its own side, swims round the stern, takes the end (`net.endRest`,
+outside the flipper's sweep; `net.holder` read after the bird moves, 0.024 m gap) and tows it 1.4 m out; screen pace
+along the flipper (`finPace`, `finAlong`, `finSweep`; `input.gust` reads low over the near water) lifts it once the
+end is held (`finLift` 0.16 rad, `finSwing` 0.05, eased out), the loop slipping off in `slipFor` 4 s; `tickle(mayLift)`
+keeps tickles from lifting it. Valve: a lent dolphin noses the flipper up from under 80% along. Her mittens to her
+mouth while the bird is out; it climbs onto the gunwale into her arms and is stowed before `free`. The pod crosses
+astern (`POD_*`) and one lent dolphin leaps side-on at the spout (`SALUTE_*`). Flipper hold 9/4 (landscape), portrait
+its own high hold (`flipperPhoneDistance` 6.5, `flipperPhoneHeight` 10). Save `whale-flipper` (resumes at free); the
+line's save moved to her letting go. Sounds `flipper-pour`, `loop-slip`, `swimmer-out`. The cream marks over the sail
+were the cygnet's calls from the satchel, new on this branch: `watch(target, hushed)`. Checks: `net-whale-check`
+`fin`, `finearly`, `finidle`, `full`, `fullidle` (each negative broken once and seen to fail); `sea-logic-check`
+plays and resumes the flipper; `whale-look-stills` adds `k4-held`; `tuning` on the QA `__game`. Left for the look
+below.
+
+### Phase N3b: the frames, the net and the pod
+Runs alone (Claude's call, 2026-10-08): peers' build agents share the session limit, so N3b and N3c go one after the
+other on `sea-whale`. Owns: where the boat comes to rest by the whale and the whale's lie toward the sun (in
+`net-whale.ts`), every step's camera hold in landscape and portrait (`holdFor`, `frame()`, `tuning.netWhale`), the
+flipper's rest pose and lift (not its shape), the net's look (`net.ts`, `netShader.ts`), the pod at free, how the child
+and the bird read (pose, place, light; the bird keeps its own size). Not the whale's skin, head, eye or flipper shape.
+Seam: anchors and `surfaceAt` keep their names; the mechanics and the clearances of N2 stay as they are.
+Gate: typecheck; build; `net-whale-check` `sweeps`, `line`, `fin`, `finidle`, `saves`; `sea-logic-check`; stills at
+`k1`–`k5` with `k4-held`, landscape and portrait, beside the concept.
 Done: [ ]
 
-### Phase N3: the look
-Owns: the look of the whale, the net, the light on them, the camera hold and portrait framing, the child's and the
-cygnet's poses, against `k1`–`k5` and `k2-portrait` side by side every iteration.
-Gate: typecheck; build; the N2 check still passing; final stills (landscape 1600×900 and portrait about 430×932) at
-each keyframe beside the concept, opened for Jeremy.
+### Phase N3c: the whale's body
+Owns: `whale.ts`, `whaleShader.ts`, `anatomy.ts`, the shape, skin and eye in `sleeper.ts` (not its API, pose or lift),
+`tuning.whaleLook`; judged in N3b's frames, and far off on the first crossing.
+Gate: typecheck; build; `sea-logic-check`; no first-use stalls; final stills (landscape 1600×900 and portrait about
+430×932) at each keyframe and the first crossing's dive beside the concept, opened for Jeremy.
 Done: [ ]
 
 ### Phase N4: docs on approval

@@ -796,10 +796,16 @@ The sequence:
   which swam earlier in this chapter, goes in, swims to it and takes the loop's end in its bill; a sweep along the
   flipper makes it lift lazily (the tickle built on `crossing-whale`), and the loop slides off into the cygnet's pull,
   slack in the rope so the bird never reads as hauling a giant (`k4`). The child watches, mittens to her mouth. The
-  cygnet swims back and is lifted in; the bird stays its own size and keeps clear water between it and the fin.
+  cygnet swims back and is lifted in; the bird stays its own size and keeps clear water between it and the fin. As
+  built (Claude's call, 2026-10-08): it drops in on its own side and swims round the stern, never through her; it tows
+  the end about 1.4 m clear of the flipper's sweep and turns to face the loop; a sweep before it holds the end lifts
+  the flipper but the loop stays on; the lift is lazy, the tip rising about 2 m; as the loop slips off it backs away,
+  lets go, climbs onto the gunwale into her arms and is stowed, and only then does the whale go free.
 - **Free.** It spouts a tall plume against the sunrise, the empty net drifting away on the water; the pod leaps round
   it; the child waves (`k5`). It rolls, lifts its flukes high as if waving and sinks; its swell lifts the boat. The pod
-  goes with it, the limit eases off, and the sea goes still into the mirror's glass.
+  goes with it, the limit eases off, and the sea goes still into the mirror's glass. The net starts drifting as the
+  loop slips off, so it is its own shape by the spout; the pod sets off as the bird is lifted in, and one dolphin leaps
+  side-on at the spout.
 - **Gestures.** Each step's answer starts at the wind's target and is plainly the biggest thing on screen: the boat is
   at rest, so nothing may read as the boat speeding up. The ambient breeze does nothing to the net, the corks or the
   flipper. Gusts elsewhere on the whale may still tickle it (shiver, a lazy slap) but never progress a step.
@@ -820,12 +826,14 @@ The sequence:
   about 250 m from the sleeping island's berth and about 25° off the sunrise the sea sails toward, so no route that keeps
   the sunrise ahead through the leap and the swim can hide it. Claude's call (2026-10-07): keep that, since the
   destination glimpsed and then left is what makes the pod's lead read as a detour; from the lead until the whale has
-  gone nothing of the mirror is in frame, and the boat comes about for it a few seconds after. Measured on `sea-whale`:
-  the lead about 60 s in, at rest about 89 s, moored about 150 s with a circling player and about 240 s idle. The open
+  gone nothing of the mirror is in frame, and the boat comes about for it a few seconds after. Measured on `sea-whale`
+  with all three steps (2026-10-08): the lead about 60 s in, at rest about 89 s; a player making each gesture is moored
+  about 208 s in, one who leaves every step to its valve about 483 s. The open
   sea's "at most 100 s" is lifted for this. Music: the sea's score holds through the encounter; the mirror's arrival
   music cannot start until the whale has gone.
 - **Saves.** Checkpoints at rest beside it (before the first step), after each step, and after it has gone (resumes
-  sailing on toward the mirror with no whale).
+  sailing on toward the mirror with no whale). The haul's is taken as she lets go of the line, before the bird goes
+  in; the flipper's resumes at free with the bird in the satchel and the net loose.
 - **Sounds.** Its slow breath and the sputter through the mesh, the full breath, the spout (`whale-blow`), the net's
   wet rope and corks, the cygnet's splash; all synthesised (`docs/contracts/audio.md`).
 - **Its voice** (Jeremy, 2026-10-07: "yea, lets give it a voice"). One low, soft call when its eye opens and it knows
