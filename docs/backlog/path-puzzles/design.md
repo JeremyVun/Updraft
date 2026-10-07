@@ -437,20 +437,25 @@ about (−9, −1398), some 40 m short of the church (`SPIRE`, 14, −1436). Mai
 4. **Crossing 1, the tree (push):** a lane of deep water to a walled garden; the cat crosses its own way (a leap she
    could never make); a dead tree rotted at the roots in the garden, rocked by gusts to show which way it can fall,
    pushed over, is her bridge.
-5. **Crossing 2, the swing (pump):** the drowned village green between the garden cottage and the church; the cat goes
+5. **Crossing 2, the windmill (circle):** a small worn tower mill in the water between two roofs; circled round its
+   hub, its sail comes level beside her roof edge, she walks onto it and is lifted to the high roof beyond.
+6. **Crossing 3, the swing (pump):** the drowned village green between the garden cottage and the church; the cat goes
    along a railing top; the rope swing hangs from the old tree on the green; pumped, she lets go at the top of the arc
    onto the nave roof.
-6. **The church:** the cat climbs the tower's ivy into the belfry, safe and out of her reach, and looks down. She is
+7. **The church:** the cat climbs the tower's ivy into the belfry, safe and out of her reach, and looks down. She is
    left on the nave ridge at the tower's foot. While she waits at a crossing the dark creeps up and stops a little
    behind her, heaving; as she crosses it swallows the place she left. It never reaches her and nothing fails.
-7. **The dark arrives:** the fog rolls over the church, the sun gone, and darkens into the storm's night; the wind
-   comes and the first rain falls. Now she needs her boat, still resting against the cottage roof back along the way.
-8. **Bring the boat (fill the sail):** the player fills its red sail (`Boat.brushSail`) and brings it across the water
-   to the nave; she steps down into it. She looks back once at the cat in the belfry as they go.
-9. **The storm:** the boat leaves the nave about 145 m from the beach, so main's storm plays from the moment she is
-   aboard, re-timed to that shorter way: the weather already half gathered, the lighthouse about 55 m off as she boards
-   and its beam going out in the first seconds while it is still in view (a glow through the fog, then gone), the
-   cygnet's shaking, the plane taken about mid-way, rain, the landing at the forest about 45 s after she boards. The
+8. **The dark arrives:** the fog rolls over the church, the sun gone, and darkens into the storm's night; the wind
+   comes and the first rain falls. Now she needs her boat, which the fog's breath took off the cottage's slates and
+   drifted ahead of her to fetch up against a dead tree east of the tower.
+9. **Bring the boat (fill the sail):** the first wind swings it off its tree; the player fills its red sail
+   (`Boat.brushSail`) and brings it round the tower's north side to the nave; she steps down into it. She looks back
+   once at the cat in the belfry as they go.
+10. **The storm:** the boat goes out from the nave by the open water to its north and past the lighthouse, 173 m to the
+   beach, so main's storm plays from the moment she is aboard, re-timed to that shorter way: the weather already part
+   gathered, the lighthouse about 55 m off as she boards and its beam going out about 6 s in while it is still in view
+   (a glow through the fog, then gone), the cygnet's shaking, the plane taken about mid-way, rain, the landing at the
+   forest about 45 s after she boards. The
    night takes over from the fog's dark without ever lifting. The storm never lets go until the beach, the fog thins
    off as the forest comes up out of it, and the landing is relief that turns into the wood's fear.
 
@@ -476,8 +481,8 @@ So the existing drowned village and storm code may be refactored as far as the r
 
 - **Pacing.** Arrival and calm drift about 30 s; the cat about 30–60 s; a short drift with the cat aboard (the cygnet
   ducking into the satchel, the cat washing a paw at the bow) about 15 s; the air dying and the dark rising about 20 s,
-  slow and eerie; the run about 2 min with both crossings; the dark arriving and the boat brought in about 45 s; the
-  storm about 45 s to the beach. The room grows from about 3 minutes to 5–6, nearly all of it the player's.
+  slow and eerie; the run about 2.5 min with its three pieces; the church, the dark arriving and the boat brought in
+  about 50 s; the storm about 45 s to the beach. The room grows from about 3 minutes to 5–6, nearly all of it the player's.
 - **The cat.** A small soft tabby with a white chest and socks, round-faced, a little bedraggled, built as soft
   rounded shapes like the game's other animals, to the model sheet in `comps/cat/`. It mews from the chimney, hates the
   water, rides the tub hunched with its ears flat, and on the boat sits at the bow as far from the water as it can. It
@@ -516,11 +521,11 @@ So the existing drowned village and storm code may be refactored as far as the r
   themselves cover very little ground. There's a lot of ground between the drowning village and the woods island... i
   hope you have a plan here."; on the plan below: "proceed with your plan with the tree, and swing"). As first planned
   she walked about 45 m of the roughly 445 m from the stairs to the forest beach, and the last 255 m was watched from
-  the boat. Instead her way on foot grows to about 165 m: the church moves on about 120 m to stand near the
+  the boat. Instead her way on foot grows to about 165 m (214 m as built): the church moves on about 120 m to stand near the
   lighthouse (as the room painting has them, together), and the old church site becomes ordinary roofs. In order: she
   climbs out at the cottage; the tree (Phase 1's lane and walled garden); her own way over ridges, wall copings and a
   lean-to, small hops she makes herself, the cat a roof ahead and the fog behind, never a puzzle and never a single
-  line of houses; a middle piece (below); her own way again; the swing on the green onto the nave; the church. The storm from the church to the beach is about 140 m, past the lighthouse soon after she boards. The
+  line of houses; a middle piece (below); her own way again; the swing on the green onto the nave; the church. The storm from the church to the beach is about 173 m, past the lighthouse soon after she boards. The
   village keeps its open water and scattered roofs; the way adds only hand-placed roofs, walls and copings where it
   needs them. Plan: `comps/run/` (from `route-plan.png`, north up).
 - **The boat goes ahead of the fog.** With the church that far on, a boat left at the cottage would be out of reach
@@ -597,8 +602,10 @@ each house's character carried by its shape and by stylised detail (Jeremy, 2026
   comes round to the side so the cat at the bow is not hidden behind her and the sail.
 - **The storm from aboard.** The dark has already arrived, so the storm starts with the weather mostly gathered rather
   than gathering from clear; its beats keep their order and their spacing along the way.
-- **Saves.** A save during the run resumes with the boat at rest against the cottage, the cat aboard and the dark
-  risen; a save after she is aboard resumes aboard with the storm to come.
+- **Saves.** Once the cat is aboard a save resumes the drift with the cat at the bow; a save during the run resumes at
+  its start on the strand's ridge, the cat a roof ahead, the fog risen and the boat against the slates about to
+  drift; a save at the church resumes at the tower's foot; a save after she is aboard resumes aboard with the storm to
+  come.
 - **The cat comes home** (Jeremy, 2026-10-05: yes). At the very end, as she walks down to the cottage with the red door,
   the same tabby sits in its lit window, waiting: home's cat all along. No remark and no beat of its own; it is built
   once the drowned village is judged.
