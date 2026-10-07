@@ -1485,8 +1485,8 @@ export const tuning = {
      * them `portraitIn` as far off.
      */
     holdMove: 5, holdLookY: 4.5, holdToward: 0.5,
-    lineDistance: 15, lineHeight: 6.2, lineBearing: 0.26, lineLookY: 3.6, lineToward: 0.36,
-    flipperDistance: 13, flipperHeight: 4.7, flipperBearing: 0.32, flipperLookY: 1.2, flipperToward: 0.45,
+    lineDistance: 11, lineHeight: 4.8, lineBearing: 0.3, lineLookY: 3.4, lineToward: 0.36,
+    flipperDistance: 11, flipperHeight: 4.6, flipperBearing: 0.34, flipperLookY: 1.6, flipperToward: 0.4,
     portraitIn: 0.58,
   },
 

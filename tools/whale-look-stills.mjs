@@ -1,10 +1,12 @@
 // Stills of the dream-sized whale beside the concept paintings it is judged against
 // (docs/backlog/path-puzzles/comps/crossings/whale-net/), for the whale's look.
 // Usage: BASE=http://127.0.0.1:5230/ node tools/whale-look-stills.mjs <out-prefix> [shots] [orientations]
-//   shots: comma list of k1, k2, k5, dive (default all); orientations: land (1600×900), port (430×932) (default both).
+//   shots: comma list of k1, k2, k3, k4, k5, dive (default all); orientations: land (1600×900), port (430×932) (default both).
 //   Writes <prefix>-<shot>-<orientation>.png and <prefix>-compare-<shot>-<orientation>.jpg (concept left, game right).
 //   k1: the open sea (`?chapter=sea`) as the pod leads the boat in, `K1_LEFT` metres short of the rest (default 24).
 //   k2: at rest (`?chapter=whale`); `k2-shut` before its eye opens, then `k2` with it open on the child (`look`).
+//   k3: resumed after its breath, the cork swept in with real strokes and the still taken mid-haul.
+//   k4: resumed after the line, held for the flipper until the camera has come round.
 //   k5: freed from rest (`goTo('free')`), `k5` at the spout and `k5-flukes` as they wave.
 //   dive: the first crossing (`?chapter=toLines`), its flukes at their highest as it dives far off, when it comes.
 // Traps:
@@ -12,6 +14,7 @@
 //     full set takes about six minutes, so pass only the shots needed.
 //   - The browser lock is shared with every capture tool: a run may wait for another session's capture first.
 //   - k5 skips the net's steps, so whatever those steps leave on the water is not in the frame.
+//   - k3 and k4 resume a save in the running page (`restoreCheckpoint`), as the net check does.
 //   - Run it against your own dev server: a server that hot-reloads mid-capture yields a frame of the start screen.
 //   - Portrait shots are composed beside `k2-portrait` for k2 and beside the landscape painting otherwise.
 //   - The whale breathes and the swell runs, so the same shot moves a little from run to run: compare the read,
@@ -33,11 +36,14 @@ const base = process.env.BASE ?? 'http://127.0.0.1:5230/';
 const k1Left = Number(process.env.K1_LEFT ?? 24);
 const comps = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../docs/backlog/path-puzzles/comps/crossings/whale-net');
 const SIZES = { land: [1600, 900], port: [430, 932] };
-const CONCEPT = { k1: 'k1-island', k2: 'k2-the-breath', 'k2-shut': 'k2-the-breath', k5: 'k5-free', 'k5-flukes': 'k5-free', dive: 'k1-island' };
+const CONCEPT = { k1: 'k1-island', k2: 'k2-the-breath', 'k2-shut': 'k2-the-breath', k3: 'k3-the-child', k4: 'k4-the-cygnet',
+  k5: 'k5-free', 'k5-flukes': 'k5-free', dive: 'k1-island' };
 
 const STARTS = {
   k1: 'sea',
   k2: 'whale',
+  k3: 'whale',
+  k4: 'whale',
   k5: 'whale',
   dive: 'toLines',
 };
@@ -67,6 +73,37 @@ const SHOOT = {
     await page.evaluate(() => __game.sealife.sleeper.look(__game.child.position));
     await page.waitForTimeout(4000);
     await snap('k2');
+  },
+  async k3(page, snap) {
+    await atRest(page);
+    await page.evaluate(() => { const c = __game.story.current; c.restoreCheckpoint('whale-breath', [c.leg, c.time]); });
+    await waitFor(page, () => __game.story.current.whale.stepTime > 6, null, 30);
+    const view = page.viewportSize();
+    for (let i = 0; i < 12; i++) {
+      if (await page.evaluate(() => __game.story.current.whale.haul !== 'out')) break;
+      const [cx, cy, bx, by] = await page.evaluate(() => {
+        const s = (v) => { const p = v.clone().project(__game.rig.camera); return [(p.x * 0.5 + 0.5) * innerWidth, (0.5 - p.y * 0.5) * innerHeight]; };
+        return [...s(__game.sealife.net.float.position), ...s(__game.boat.position)];
+      });
+      const d = Math.hypot(bx - cx, by - cy) || 1, reach = view.height * 0.14;
+      await page.mouse.move(cx - ((bx - cx) / d) * reach, cy - ((by - cy) / d) * reach);
+      for (let k = 1; k <= 24; k++) {
+        const f = -1 + (k / 24) * 2.3;
+        await page.mouse.move(cx + ((bx - cx) / d) * reach * f, cy + ((by - cy) / d) * reach * f);
+        await page.waitForTimeout(10);
+      }
+      await page.mouse.move(view.width - 5, view.height - 5);
+      await page.waitForTimeout(1200);
+    }
+    await waitFor(page, () => __game.story.current.whale.hauledIn >= 1.8, null, 40);
+    await snap('k3');
+  },
+  async k4(page, snap) {
+    await atRest(page);
+    // Held at the start of the flipper (its stand-in plays through in a few seconds) while the camera comes round.
+    await page.evaluate(() => { const c = __game.story.current; c.restoreCheckpoint('whale-line', [c.leg, c.time]); c.whale.stepTime = -6; });
+    await page.waitForTimeout(6000);
+    await snap('k4');
   },
   async k5(page, snap) {
     await atRest(page);

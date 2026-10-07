@@ -1041,7 +1041,8 @@ export class NetWhale {
     for (let i = 0; i < now.length; i++) now[i] = THREE.MathUtils.lerp(this.holdFrom[i], this.holdTo[i], moved);
     const [holdDistance, holdHeight, bearing, lookY, toward, fin] = now;
     const head = this.p.copy(whale.eye).lerp(whale.blowhole, 0.5);
-    const focus = this.b.copy(head).lerp(whale.finTip, fin).setY(portrait ? Math.min(lookY, PORTRAIT_LOOK_Y) : lookY);
+    // A phone's frame keeps to the line from the head through the boat, so it turns only part way toward the flipper.
+    const focus = this.b.copy(head).lerp(whale.finTip, portrait ? fin * 0.5 : fin).setY(portrait ? Math.min(lookY, PORTRAIT_LOOK_Y) : lookY);
     this.look.copy(boat).setY(1.2).lerp(focus, portrait ? toward + 0.12 : toward);
     const glance = whale.phase === 'free' ? THREE.MathUtils.smoothstep(whale.time, FREE_FLUKES_FROM, FREE_FLUKES_FROM + 3.5)
       * (1 - THREE.MathUtils.smoothstep(whale.time, FREE_FLUKES_FROM + 10, FREE_FLUKES_FROM + 14)) : 0;
