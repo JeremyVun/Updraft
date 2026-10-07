@@ -147,7 +147,8 @@ function run(name, fps, gust, veer=0, waitInVillage=false, arrivalGust=false, ci
         ...(chapter.whale?{whaleBrake:+worstBrake.toFixed(2),restGap:+restGap.toFixed(2)}:{}),beats,events,dolphinActs};
     }
   }
-  throw Error(`${name}: failed to finish at ${boat.position.toArray()}, leg ${chapter.leg}`);
+  const w=chapter.whale;
+  throw Error(`${name}: failed to finish at ${boat.position.toArray()}, leg ${chapter.leg}${w?`, whale ${w.step} ${w.stepTime.toFixed(1)} s, haul ${w.haul}, bird ${w.bird}, ${JSON.stringify(events)}`:''}`);
 }
 const results=[];
 for(const name of (process.env.CROSSING ? [process.env.CROSSING] : Object.keys(starts))) {

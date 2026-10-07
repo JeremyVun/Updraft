@@ -59,7 +59,7 @@ const OPEN = new THREE.Vector2(0.4, 0.55);
 const OPEN_FROM = 0.06;
 const OPEN_TO = 0.4;
 const CORK_STEP = 1.2;
-const LEADER = 14.4;
+const LEADER = 17;
 const LINK = 1.2;
 /** The leader leaves the near edge at the cheek, this far in front of the eye; the loop's line this far behind it (m). */
 const LEADER_BEFORE_EYE = 3.6;
