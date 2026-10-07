@@ -59,6 +59,8 @@ export interface Lot {
   /** The gable end (along local x, -1 or 1) with a small window in it, just out of the water. */
   gable?: number;
   exact?: boolean;
+  /** Far out in the haze: the silhouette only, no windows, pots or trim. */
+  far?: boolean;
 }
 
 export interface PartSink {
@@ -76,7 +78,8 @@ export function fitLot(type: HouseType, lot: Lot, rand: Rng): Lot {
     case 'roundKeeper':
       return { ...lot, len: 6.4, depth: 6.4, wall: 3.4, rise: 2.3, sink: Math.min(lot.sink, 1.2) };
     case 'lowCap':
-      return { ...lot, len: Math.min(lot.len, 9.5), rise: lot.depth * 0.5, sink: Math.min(lot.sink, 2) };
+      return { ...lot, len: Math.min(lot.len, range(rand, 7.5, 9)), depth: Math.max(lot.depth, 5.6), rise: range(rand, 1.9, 2.4),
+        sink: Math.min(lot.sink, 2) };
     case 'swayback':
       return { ...lot, sink: Math.min(lot.sink, 2.6) };
     case 'openShutter':
@@ -90,6 +93,10 @@ export function fitLot(type: HouseType, lot: Lot, rand: Rng): Lot {
 export function buildHouse(into: PartSink, type: HouseType, lot: Lot, rand: Rng, m: THREE.Matrix4): THREE.Vector3[] {
   const perches: THREE.Vector3[] = [];
   const out = (p: THREE.Vector3) => perches.push(p.applyMatrix4(m));
+  if (lot.far) {
+    farHouse(into, type, lot, rand, m);
+    return perches;
+  }
   switch (type) {
     case 'lowCap':
       lowCap(into, lot, rand, m, out);
@@ -246,14 +253,15 @@ class Roofline {
   readonly stations: number;
   readonly across: number;
 
-  constructor(readonly g: Gable, readonly exact: boolean) {
+  constructor(readonly g: Gable, readonly exact: boolean, coarse = false) {
     this.half = g.depth / 2 + g.over;
     this.eave = g.thatched ? g.wall - 0.4 : g.wall - 0.1;
     this.apex = g.wall + g.rise + (g.thatched ? 0 : 0.04);
     this.thick = g.thatched ? 0.5 : 0.2;
     this.length = g.len + 2 * g.end;
-    this.stations = g.sag || g.lift || g.hip || g.brow || g.thatched ? 16 : 1;
-    this.across = g.bow || g.thatched ? 6 : 1;
+    const shaped = g.sag || g.lift || g.hip || g.brow;
+    this.stations = coarse ? (shaped ? 4 : 1) : shaped || g.thatched ? 16 : 1;
+    this.across = coarse ? (g.bow ? 2 : 1) : g.bow || g.thatched ? 6 : 1;
   }
 
   /** How far along the length a point at local `x` is, 0 to 1. */
@@ -305,12 +313,12 @@ class Roofline {
   }
 }
 
-function roofGeometry(into: PartSink, r: Roofline, colour: THREE.Color, m: THREE.Matrix4): void {
+function roofGeometry(into: PartSink, r: Roofline, colour: THREE.Color, m: THREE.Matrix4, far = false): void {
   const kind = r.g.thatched ? THATCHED : SLATED;
   const { stations: n, across: k } = r;
   for (const side of [-1, 1]) {
     into.add(sheet(n, k, (i, j) => r.top(i / n, side, j / k), new THREE.Vector3(0, 1, side * 0.3)), colour, kind, m);
-    into.add(sheet(n, k, (i, j) => r.top(i / n, side, j / k, r.thick), new THREE.Vector3(0, -1, 0)), colour, kind, m);
+    if (!far) into.add(sheet(n, k, (i, j) => r.top(i / n, side, j / k, r.thick), new THREE.Vector3(0, -1, 0)), colour, kind, m);
     into.add(sheet(n, 1, (i, j) => r.top(i / n, side, 0, j * r.thick), new THREE.Vector3(0, 0, side)), colour, kind, m);
     for (const end of [0, 1]) {
       into.add(sheet(k, 1, (i, j) => r.top(end, side, i / k, j * r.thick), new THREE.Vector3(end ? 1 : -1, 0, 0)), colour, kind, m);
@@ -319,11 +327,10 @@ function roofGeometry(into: PartSink, r: Roofline, colour: THREE.Color, m: THREE
 }
 
 /** The walls, lofted under the roof so a sagging or leaning roof still sits on them; their ends are the gables. */
-function bodyGeometry(into: PartSink, r: Roofline, len: number, depth: number, colour: THREE.Color, m: THREE.Matrix4): void {
+function bodyGeometry(into: PartSink, r: Roofline, len: number, depth: number, colour: THREE.Color, m: THREE.Matrix4, samples = 6): void {
   const n = r.stations;
   const hw = depth / 2;
   const bottom = -2.6;
-  const samples = 6;
   const section = (i: number): THREE.Vector2[] => {
     const x = (i / n - 0.5) * len;
     const t = r.t(x);
@@ -494,21 +501,82 @@ function tucked(into: PartSink, lot: Lot, rand: Rng, m: THREE.Matrix4, perch: (p
   gableHouse(into, gableFor('cottage', small, rand), small, rand, ms, perch, 0.7);
 }
 
-/** A broad thatch settled low like a cap: swelling, hipped, its eaves near the water and lifted in a brow over its one window. */
+/** A house far out in the haze: its silhouette only, a plain body under a plain roof, and one bare stack. */
+function farHouse(into: PartSink, type: HouseType, lot: Lot, rand: Rng, m: THREE.Matrix4): void {
+  if (type === 'tucked') {
+    const bigLen = lot.len * 0.56;
+    const smallLen = lot.len * 0.5;
+    farHouse(into, 'cottage', { ...lot, len: bigLen }, rand,
+      new THREE.Matrix4().copy(m).multiply(new THREE.Matrix4().makeTranslation(-lot.len / 2 + bigLen / 2, 0, 0)));
+    farHouse(into, 'cottage', { ...lot, len: smallLen, depth: lot.depth * 0.86, wall: lot.wall - 0.25, rise: lot.rise * 0.82, stacks: [] }, rand,
+      new THREE.Matrix4().copy(m).multiply(new THREE.Matrix4().makeTranslation(lot.len / 2 - smallLen / 2, 0, 0.35))
+        .multiply(new THREE.Matrix4().makeRotationY(range(rand, 0.1, 0.16))));
+    return;
+  }
+  const g = gableFor(type === 'roundKeeper' || type === 'catShoulder' ? 'cottage' : type, lot, rand);
+  const r = new Roofline(g, false, true);
+  bodyGeometry(into, r, g.len, g.depth, lot.lime, m, r.across === 1 ? 1 : 3);
+  roofGeometry(into, r, lot.roof, m, true);
+  for (const s of lot.stacks.slice(0, 1)) {
+    const x = s.side * (g.len / 2 - 0.75);
+    const t = r.t(x);
+    const top = r.ridge(t) + s.above;
+    const base = g.wall - 0.6;
+    into.add(new THREE.BoxGeometry(0.8, top - base, 0.75).translate(x, (top + base) / 2, r.lean(t)), lot.lime, MASONRY, m);
+    into.add(new THREE.BoxGeometry(0.42, 0.45, 0.4).translate(x, top + 0.22, r.lean(t)), BRICK, MASONRY, m);
+  }
+}
+
+/** A rounded-square plan: `k` 0 to 1 of the way round, at half-axes `a` along and `b` across. */
+function squircle(k: number, a: number, b: number): THREE.Vector2 {
+  const phi = k * Math.PI * 2;
+  const c = Math.cos(phi), s = Math.sin(phi);
+  return new THREE.Vector2(a * Math.sign(c) * Math.abs(c) ** 0.7, b * Math.sign(s) * Math.abs(s) ** 0.7);
+}
+
+/**
+ * A broad thatch settled low like a cap: a swelling skirt with its eaves near the water, and a soft crown laid over it
+ * with a lip between them, the way thatch is sculpted in layers. The skirt lifts in a brow over its one window.
+ */
 function lowCap(into: PartSink, lot: Lot, rand: Rng, m: THREE.Matrix4, perch: (p: THREE.Vector3) => void): void {
-  const g = gableFor('lowCap', lot, rand);
-  const r = new Roofline(g, false);
-  bodyGeometry(into, r, g.len, g.depth, lot.lime, m);
-  roofGeometry(into, r, lot.roof, m);
-  const ridge: Gable = { ...g, len: g.len * 0.62, depth: 1.4, wall: r.ridge(0.5) - 0.32, rise: 0.5, over: 0.2, end: 0.25, hip: 0.3, brow: 0 };
-  roofGeometry(into, new Roofline(ridge, false), lot.roof, m);
-  const x = (g.browAt ?? 0) * (r.length / 2);
-  const wy = Math.max(lot.sink + 0.45, r.eaves(r.t(x)) - 0.2);
-  if (r.eaves(r.t(x), 1) - 0.45 > wy + 0.4) windowAt(into, 0.8, 0.75, placed(m, x, wy, g.depth / 2 + 0.02, 0));
+  const a = lot.len / 2;
+  const b = lot.depth / 2;
+  const over = 0.75;
+  const eave = Math.max(lot.sink + 0.3, lot.wall - 1.2);
+  const apex = lot.wall + lot.rise;
+  const lip = eave + (apex - eave) * 0.4;
+  const round = 36;
+  const browAt = 0.25 + range(rand, -0.06, 0.06);
+  const brow = (k: number) => 0.85 * Math.exp(-((((k - browAt) * round) / 3.2) ** 2));
+  const thick = 0.35;
+  /** The skirt narrows as it rises and swells a little on the way; the crown is a soft dome over its top. */
+  const skirt = (k: number, v: number, under = 0) => {
+    const q = squircle(k, a + over, b + over).multiplyScalar(1 + 0.03 * Math.sin(v * Math.PI) - 0.2 * v);
+    const y0 = eave + brow(k);
+    return new THREE.Vector3(q.x, y0 + (lip - y0) * v - under, q.y);
+  };
+  const crown = (k: number, v: number, under = 0) => {
+    const q = squircle(k, a + over, b + over).multiplyScalar(0.88 * Math.cos(v * Math.PI / 2) ** 0.7);
+    return new THREE.Vector3(q.x, lip - 0.16 + (apex - lip + 0.16) * Math.sin(v * Math.PI / 2) ** 0.85 - under, q.y);
+  };
+  const up = (p: THREE.Vector3) => new THREE.Vector3(p.x, Math.max(p.y - eave, 0.4), p.z);
+  const wall = Array.from({ length: round + 1 }, (_, i) => squircle(i / round, a, b));
+  into.add(sheet(round, 1, (i, j) => new THREE.Vector3(wall[i].x, j ? eave + 0.5 : -2.6, wall[i].y), outward), lot.lime, PLAIN, m);
+  into.add(sheet(round, 5, (i, j) => skirt(i / round, j / 5), up), lot.roof, THATCHED, m);
+  into.add(sheet(round, 1, (i, j) => skirt(i / round, 0, j * thick), outward), lot.roof, THATCHED, m);
+  into.add(sheet(round, 1, (i, j) => (j ? skirt(i / round, 0, thick).multiply(new THREE.Vector3(0.82, 1, 0.82)).setY(eave + brow(i / round) + 0.15)
+    : skirt(i / round, 0, thick)), new THREE.Vector3(0, -1, 0)), lot.roof, THATCHED, m);
+  into.add(sheet(round, 6, (i, j) => crown(i / round, j / 6), up), lot.roof, THATCHED, m);
+  into.add(sheet(round, 1, (i, j) => (j ? skirt(i / round, 0.9) : crown(i / round, 0, 0.12)), new THREE.Vector3(0, -1, 0)), lot.roof, THATCHED, m);
+
+  const w = squircle(browAt, a, b);
+  const t = squircle(browAt + 0.01, a, b).sub(squircle(browAt - 0.01, a, b));
+  const wy = eave + 0.85 * 0.5 - 0.05;
+  if (wy - 0.36 > lot.sink + 0.1) windowAt(into, 0.8, 0.72, placed(m, w.x, wy, w.y, Math.atan2(t.y, -t.x)));
   for (const s of lot.stacks) {
-    const sx = s.side * (g.len / 2 - 1.2);
-    const top = r.ridge(r.t(sx)) + s.above * 0.8;
-    perch(chimney(into, sx, 0, g.wall - 0.6, top, s.pots, 0.8, lot.lime, 0, m));
+    const sx = s.side * a * 0.42;
+    const top = apex - 0.25 + s.above * 0.8;
+    perch(chimney(into, sx, 0, eave, top, s.pots, 0.8, lot.lime, 0, m));
   }
 }
 
