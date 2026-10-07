@@ -14,7 +14,7 @@ export type NetSound = 'net-sputter' | 'net-lift' | 'whale-call' | 'cork-knock' 
 /** Where the net's front edge lies along the whale (0 snout .. 1 flukes). */
 const FRONT = 0.05;
 const ROWS = 46;
-const COLS = 18;
+const COLS = 28;
 /** Rows draped a frame while it lies far off, so laying it on costs no frame much. */
 const ROWS_A_FRAME = 1;
 /** How far out either side the skin is looked for across a row, and how finely (m). */
@@ -22,6 +22,19 @@ const REACH = 17;
 const STEP = 0.6;
 /** Points kept on each row's near side, from the net's edge down to the water: the lines run down them. */
 const BELOW = 5;
+/** The near edge hangs this far out onto the water past the waterline (m), and stays this far above the eye's middle round it. */
+const AFLOAT_OUT = 1;
+const EYE_CLEAR = 2.5;
+/** Along the whale the edge keeps clear of the eye this far either side of it, and is back down at the water by `EYE_OPEN` (m). */
+const EYE_HELD = 2;
+const EYE_OPEN = 6.5;
+/** Back along the whale from this far behind the eye the near edge climbs, to this far across from the crown line at its end (m). */
+const BACK_FROM = 7;
+const BACK_EDGE = 6.5;
+/** Each point of the sheet comes to rest on whatever is under it or on its neighbours, less this sag, so it bridges hollows (m). */
+const BRIDGE_SAG = 0.025;
+const BRIDGE_PASSES = 80;
+const FOLDS = 7;
 /** The patch over the blowhole the updraft lifts, and the smaller dome each weak breath raises: half length and width (m). */
 const PATCH = new THREE.Vector2(5, 3.5);
 const DOME = new THREE.Vector2(1.6, 1.1);
@@ -58,7 +71,6 @@ const DRIFT_TURN = 0.5;
 const OPEN = new THREE.Vector2(0.4, 0.55);
 const OPEN_FROM = 0.06;
 const OPEN_TO = 0.4;
-const CORK_STEP = 1.2;
 const LEADER = 17;
 const LINK = 1.2;
 /** The leader leaves the near edge at the cheek, this far in front of the eye; the loop's line this far behind it (m). */
@@ -68,7 +80,7 @@ const LOOP_BEHIND_EYE = 4.5;
 const CORK_OUT = 3.4;
 const CORK_AHEAD = 0.6;
 /** How close to the planking a cork floats, and how hard it must knock to be heard (m/s). */
-const CORK_CLEAR = 0.16;
+const CORK_CLEAR = NET.float + 0.03;
 const KNOCK_FROM = 0.25;
 /** The line hauled in lies in a small coil on the boards this wide, and pays back out over the rail this fast (m/s). */
 const COIL = 0.16;
@@ -79,8 +91,8 @@ const END_POINTS = 10;
 const LOOP_FROM = 0.9;
 const LOOP_PAST = 1.04;
 const RING = 14;
-const WEEDS = 24;
-const WEED_POINTS = 5;
+const WEEDS = 40;
+const WEED_POINTS = 6;
 const HANG = 0.16;
 
 const bump = (x: number) => (Math.abs(x) >= 1 ? 0 : 0.5 + 0.5 * Math.cos(Math.PI * x));
@@ -161,6 +173,9 @@ export class Net {
   private readonly n = ROWS * COLS;
   /** Each point of the sheet as draped, with the body's breathing and roll taken out. */
   private readonly rest = new Float32Array(ROWS * COLS * 3);
+  private readonly floor = new Float32Array(ROWS * COLS);
+  /** How far each point stands off the skin at rest, bridging a hollow or along a fold (m). */
+  private readonly stand = new Float32Array(ROWS * COLS);
   /** How far out from the crown line it lies, for the body's roll; on the skin, and afloat, 0..1. */
   private readonly across = new Float32Array(ROWS * COLS);
   private readonly onSkin = new Float32Array(ROWS * COLS);
@@ -185,10 +200,20 @@ export class Net {
   private readonly belowAcross = new Float32Array(ROWS * BELOW);
   private readonly pos: THREE.BufferAttribute;
   private readonly normals: THREE.BufferAttribute;
+  /** Each point's place on the net laid flat, along it and across it from the crown line (m). */
+  private readonly uv: THREE.BufferAttribute;
+  /**
+   * How far across its row the near edge is, down to the water or held up clear of the eye beside it (m), how much it
+   * hangs in scallops between its corks there (none where it climbs round the eye), and how steeply it climbs.
+   */
+  private readonly edge: THREE.BufferAttribute;
+  private uEye = 0;
+  private eyeTop = 0;
   private readonly afloat: THREE.BufferAttribute;
   private readonly contact: THREE.BufferAttribute;
   private readonly cork: THREE.InstancedBufferAttribute;
-  private readonly corkAt: { i: number; j: number; f: number; leader: number }[] = [];
+  private readonly corkSize: THREE.InstancedBufferAttribute;
+  private readonly corkAt: { i: number; j: number; f: number; leader: number; patch: boolean }[] = [];
   private readonly corkNow: Float32Array;
   private readonly corkVel: Float32Array;
   private readonly line: { pos: THREE.BufferAttribute; along: THREE.BufferAttribute; width: THREE.BufferAttribute; afloat: THREE.BufferAttribute; weed: THREE.BufferAttribute };
@@ -256,27 +281,21 @@ export class Net {
     this.normals = new THREE.BufferAttribute(new Float32Array(this.n * 3), 3).setUsage(THREE.DynamicDrawUsage);
     this.afloat = new THREE.BufferAttribute(new Float32Array(this.n), 1).setUsage(THREE.DynamicDrawUsage);
     this.contact = new THREE.BufferAttribute(new Float32Array(this.n), 1).setUsage(THREE.DynamicDrawUsage);
-    const uv = new Float32Array(this.n * 2);
+    this.uv = new THREE.BufferAttribute(new Float32Array(this.n * 2), 2);
+    this.edge = new THREE.BufferAttribute(new Float32Array(this.n * 3), 3);
     const index: number[] = [];
     for (let i = 0; i < ROWS; i++) {
-      for (let j = 0; j < COLS; j++) {
+      for (let j = 0; j < COLS - 1; j++) {
         const k = i * COLS + j;
-        const u = (i / (ROWS - 1)) * NET.long;
-        const a = this.acrossAt(j);
-        uv[k * 2] = u;
-        uv[k * 2 + 1] = a;
-        const cloth = NET.near - a;
-        const layer = Math.floor(cloth / FOLD_WIDE);
-        const into = cloth - layer * FOLD_WIDE;
-        this.fold[k * 3 + 1] = FOLD_FROM + (layer % 2 ? into : FOLD_WIDE - into) + Math.sin(u * 0.9 + a) * 0.3;
-        if (i < ROWS - 1 && j < COLS - 1) index.push(k, k + COLS, k + 1, k + 1, k + COLS, k + COLS + 1);
+        if (i < ROWS - 1) index.push(k, k + COLS, k + 1, k + 1, k + COLS, k + COLS + 1);
       }
     }
     geo.setAttribute('position', this.pos);
     geo.setAttribute('normal', this.normals);
-    geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+    geo.setAttribute('uv', this.uv);
     geo.setAttribute('afloat', this.afloat);
     geo.setAttribute('contact', this.contact);
+    geo.setAttribute('edge', this.edge);
     geo.setIndex(index);
     this.sheet = new THREE.Mesh(geo, sheetMaterial());
     this.sheet.renderOrder = 4;
@@ -298,7 +317,9 @@ export class Net {
     this.placeCorks();
     const corkGeo = new THREE.InstancedBufferGeometry().copy(new THREE.IcosahedronGeometry(1, 2) as unknown as THREE.InstancedBufferGeometry);
     this.cork = new THREE.InstancedBufferAttribute(new Float32Array(this.corkAt.length * 4), 4).setUsage(THREE.DynamicDrawUsage);
+    this.corkSize = new THREE.InstancedBufferAttribute(new Float32Array(this.corkAt.length), 1);
     corkGeo.setAttribute('iCork', this.cork);
+    corkGeo.setAttribute('iSize', this.corkSize);
     corkGeo.instanceCount = this.corkAt.length;
     this.corkNow = new Float32Array(this.corkAt.length * 3);
     this.corkVel = new Float32Array(this.corkAt.length * 3);
@@ -310,7 +331,9 @@ export class Net {
     for (let w = 0; w < WEEDS; w++) {
       this.weedLines.push(this.polyline(WEED_POINTS));
       const seed = Math.sin(w * 91.7) * 0.5 + 0.5;
-      this.weedAt.push({ v: Math.floor(((w * 0.6180339 + 0.13) % 1) * this.n), length: 0.8 + seed * 1.2, turn: seed * 6.28 });
+      const across = (Math.sin(w * 37.3) * 0.5 + 0.5) ** 1.6;
+      const row = Math.floor(((w * 0.6180339 + 0.13) % 1) * ROWS);
+      this.weedAt.push({ v: row * COLS + COLS - 1 - Math.floor(across * COLS * 0.8), length: 1 + seed * 2.2, turn: seed * 6.28 });
     }
     this.linePoints = this.polylines.reduce((n, l) => n + l.count, 0);
     const lineGeo = new THREE.BufferGeometry();
@@ -359,6 +382,12 @@ export class Net {
     this.refBlow = whale.blowhole.y;
     this.refEye = whale.eye.y;
     this.eyeAcross = Math.max(1, this.offAxis(whale.eye));
+    const nose = whale.spine[0];
+    const sEye = ((nose.x - whale.eye.x) * this.ahead.x + (nose.z - whale.eye.z) * this.ahead.z) / this.whaleLength;
+    this.uEye = (sEye - FRONT) * this.whaleLength;
+    const c = whale.point(0, TOP(sEye), sEye, this.q);
+    this.profileFrom(c, 1);
+    this.eyeTop = this.arcNearest(this.offAxis(whale.eye) - this.offAxis(c), whale.eye.y) - EYE_CLEAR;
     this.lift = this.peel = this.loop = this.drift = 0;
     this.peelAt = this.soundPeel = 0;
     this.domeT = 10;
@@ -457,47 +486,39 @@ export class Net {
     return (p.x - nose.x) * this.side.x + (p.z - nose.z) * this.side.z;
   }
 
-  private acrossAt(j: number): number {
-    return -NET.far + (j / (COLS - 1)) * (NET.near + NET.far);
+  private acrossOf(k: number): number {
+    return this.uv.getY(k);
   }
 
   /**
    * One row across the whale: the skin's profile there (down into the water where it goes under, or hanging straight
    * from the bulge where it curves back under), and each of the row's points laid along it at its own distance from
-   * the crown line, so the mesh keeps its size over the curve.
+   * the crown line, so the mesh keeps its size over the curve. Its near edge lies out on the water past the
+   * waterline, except beside the eye, where it is held up clear of it.
    */
   private drapeRow(i: number): void {
-    const w = this.whale;
     const u = (i / (ROWS - 1)) * NET.long;
     const s = FRONT + u / this.whaleLength;
-    const c = w.point(0, TOP(s), s, this.q);
+    const c = this.whale.point(0, TOP(s), s, this.q);
     let crown = 0;
     for (const dir of [1, -1]) {
-      const pr = this.profile;
-      pr.n = 0;
-      let lastY = this.skinAt(c, 0);
-      crown = lastY;
-      this.addProfile(0, lastY, true);
-      for (let h = STEP; h <= REACH; h += STEP) {
-        const y = this.skinAt(c, h * dir);
-        if (y === -Infinity || y < 0) {
-          if (y === -Infinity && lastY > 0) this.addProfile(h - STEP + Math.min(0.3, lastY * 0.12), 0, false);
-          else if (y < 0) this.addProfile(h - STEP * (y / (y - lastY)), 0, true);
-          this.addProfile(REACH * 3, 0, false);
-          break;
-        }
-        this.addProfile(h, y, true);
-        lastY = y;
-      }
-      if (pr.h[pr.n - 1] < REACH * 3) this.addProfile(REACH * 3, Math.max(0, lastY), false);
-      for (let j = 0; j < COLS; j++) {
-        const a = this.acrossAt(j);
-        if (Math.sign(a || 1) !== dir) continue;
-        this.alongProfile(Math.abs(a), c, dir, i * COLS + j);
-      }
+      crown = this.profileFrom(c, dir);
       if (dir === 1) {
-        const near = Math.abs(this.acrossAt(COLS - 1));
-        const end = this.profileWater();
+        const water = this.profileWater();
+        const held = 1 - THREE.MathUtils.smoothstep(Math.abs(u - this.uEye), EYE_HELD, EYE_OPEN);
+        const out = Math.min(water + AFLOAT_OUT, THREE.MathUtils.lerp(water + AFLOAT_OUT, BACK_EDGE, THREE.MathUtils.smoothstep(u - this.uEye, BACK_FROM, NET.long - this.uEye)));
+        const near = Math.min(NET.near, THREE.MathUtils.lerp(out, Math.min(out, this.eyeTop), held));
+        for (let j = 0; j < COLS; j++) {
+          const k = i * COLS + j;
+          const a = -NET.far + (j / (COLS - 1)) * (near + NET.far);
+          this.uv.setXY(k, u, a);
+          this.edge.setXYZ(k, near, held < 0.01 || held > 0.99 ? 1 : 0, 0);
+          const cloth = near - a;
+          const layer = Math.floor(cloth / FOLD_WIDE);
+          const into = cloth - layer * FOLD_WIDE;
+          this.fold[k * 3 + 1] = FOLD_FROM + (layer % 2 ? into : FOLD_WIDE - into) + Math.sin(u * 0.9 + a) * 0.3;
+        }
+        const end = Math.max(near, water);
         for (let k = 0; k < BELOW; k++) {
           const arc = near + ((end - near) * k) / (BELOW - 1);
           this.alongProfile(arc, c, 1, -1);
@@ -505,9 +526,57 @@ export class Net {
           this.belowAcross[i * BELOW + k] = this.r.x;
         }
       }
+      for (let j = 0; j < COLS; j++) {
+        const a = this.acrossOf(i * COLS + j);
+        if (Math.sign(a || 1) !== dir) continue;
+        this.alongProfile(Math.abs(a), c, dir, i * COLS + j);
+      }
     }
     this.crowns[i] = crown - this.bodyShift(0);
     this.layPath(i);
+  }
+
+  /** The skin's profile across the whale from its crown line at `c` toward `dir`, into `this.profile`; the crown's height. */
+  private profileFrom(c: THREE.Vector3, dir: number): number {
+    const pr = this.profile;
+    pr.n = 0;
+    let lastY = this.skinAt(c, 0);
+    const crown = lastY;
+    this.addProfile(0, lastY, true);
+    for (let h = STEP; h <= REACH; h += STEP) {
+      const y = this.skinAt(c, h * dir);
+      if (y === -Infinity || y < 0) {
+        if (y === -Infinity && lastY > 0) this.addProfile(h - STEP + Math.min(0.3, lastY * 0.12), 0, false);
+        else if (y < 0) this.addProfile(h - STEP * (y / (y - lastY)), 0, true);
+        this.addProfile(REACH * 3, 0, false);
+        break;
+      }
+      this.addProfile(h, y, true);
+      lastY = y;
+    }
+    if (pr.h[pr.n - 1] < REACH * 3) this.addProfile(REACH * 3, Math.max(0, lastY), false);
+    return crown;
+  }
+
+  /** How far along the profile from the crown line it comes nearest (`h` out, `y` up). */
+  private arcNearest(h: number, y: number): number {
+    const pr = this.profile;
+    let arc = 0;
+    let best = Infinity;
+    let at = 0;
+    for (let k = 1; k < pr.n; k++) {
+      const dh = pr.h[k] - pr.h[k - 1];
+      const dy = pr.y[k] - pr.y[k - 1];
+      const len = Math.hypot(dh, dy);
+      const f = len > 0 ? THREE.MathUtils.clamp(((h - pr.h[k - 1]) * dh + (y - pr.y[k - 1]) * dy) / (len * len), 0, 1) : 0;
+      const d = Math.hypot(pr.h[k - 1] + dh * f - h, pr.y[k - 1] + dy * f - y);
+      if (d < best) {
+        best = d;
+        at = arc + len * f;
+      }
+      arc += len;
+    }
+    return at;
   }
 
   /** Row `i`'s drape as one path, far edge to the water below its near edge, with the distance along it to each point. */
@@ -606,6 +675,14 @@ export class Net {
 
   /** Once it is all draped: where the patch, the leader, the loop and the folded mass lie. */
   private laidOn(): void {
+    for (let i = 0; i < ROWS; i++) {
+      const slope = (this.edge.getX(Math.min(ROWS - 1, i + 1) * COLS) - this.edge.getX(Math.max(0, i - 1) * COLS)) / (2 * NET.long / (ROWS - 1));
+      for (let j = 0; j < COLS; j++) this.edge.setZ(i * COLS + j, slope);
+    }
+    this.bridge();
+    this.foldOver();
+    for (let i = 0; i < ROWS; i++) this.layPath(i);
+    this.uv.needsUpdate = this.edge.needsUpdate = true;
     const w = this.whale;
     const nose = w.spine[0];
     const sBlow = ((nose.x - w.blowhole.x) * this.ahead.x + (nose.z - w.blowhole.z) * this.ahead.z) / this.whaleLength;
@@ -614,7 +691,7 @@ export class Net {
       for (let j = 0; j < COLS; j++) {
         const k = i * COLS + j;
         const du = (i / (ROWS - 1)) * NET.long - uBlow;
-        const da = this.acrossAt(j);
+        const da = this.acrossOf(k);
         this.lifts[k] = bump(du / PATCH.x) * bump(da / PATCH.y);
         this.domes[k] = bump(du / DOME.x) * bump(da / DOME.y);
       }
@@ -627,8 +704,96 @@ export class Net {
     this.loopRow = THREE.MathUtils.clamp(Math.round(eyeRow + LOOP_BEHIND_EYE * perRow), 0, ROWS - 1);
     this.layLeader();
     this.layAfloat();
+    const sizes = this.corkSize.array as Float32Array;
+    this.corkAt.forEach((at, c) => {
+      sizes[c] = at.leader >= 0 ? NET.float : at.patch && Math.abs(this.acrossOf(at.i * COLS + at.j)) > PATCH.y * 0.75 ? 0 : NET.cork;
+    });
+    this.corkSize.needsUpdate = true;
     for (const o of this.objects) o.visible = true;
     this.snap = true;
+  }
+
+  /**
+   * The sheet comes to rest over the skin: on it where the skin bulges, across hollows where it does not, sagging a
+   * little between. Its neighbours along the whale count only where they lie as far across theirs.
+   */
+  private bridge(): void {
+    const R = this.rest;
+    const floor = this.floor;
+    for (let k = 0; k < this.n; k++) floor[k] = R[k * 3 + 1];
+    for (let pass = 0; pass < BRIDGE_PASSES; pass++) {
+      for (let i = 0; i < ROWS; i++) {
+        for (let j = 0; j < COLS; j++) {
+          const k = i * COLS + j;
+          if (this.onWater[k]) continue;
+          const a = this.acrossOf(k);
+          let sum = 0;
+          let count = 0;
+          for (const o of [k - COLS, k + COLS]) {
+            if (o < 0 || o >= this.n || Math.abs(this.acrossOf(o) - a) > 0.3) continue;
+            sum += R[o * 3 + 1];
+            count++;
+          }
+          if (j > 0) {
+            sum += R[(k - 1) * 3 + 1];
+            count++;
+          }
+          if (j < COLS - 1) {
+            sum += R[(k + 1) * 3 + 1];
+            count++;
+          }
+          R[k * 3 + 1] = Math.max(floor[k], sum / count - BRIDGE_SAG);
+        }
+      }
+    }
+    for (let k = 0; k < this.n; k++) this.stand[k] = R[k * 3 + 1] - floor[k];
+  }
+
+  /**
+   * Soft folds where the old net has been dragged and gathered: ridges standing off the skin across it, rising from
+   * the crown line, where it is held, and settling again before its edges.
+   */
+  private foldOver(): void {
+    const R = this.rest;
+    const n = this.r;
+    for (let i = 0; i < ROWS; i++) {
+      const u = (i / (ROWS - 1)) * NET.long;
+      for (let j = 0; j < COLS; j++) {
+        const k = i * COLS + j;
+        if (this.onWater[k]) continue;
+        const a = this.acrossOf(k);
+        const reach = a > 0 ? this.edge.getX(k) : NET.far;
+        const span = THREE.MathUtils.smoothstep(Math.abs(a), 1, 3.5) * (1 - THREE.MathUtils.smoothstep(Math.abs(a), reach - 2.5, reach - 0.6));
+        if (span <= 0) continue;
+        let up = 0;
+        for (let f = 0; f < FOLDS; f++) {
+          const at = 3 + f * (NET.long / FOLDS) + Math.sin(f * 7.1) * 1.6 + a * 0.18 * Math.sin(f * 3.3);
+          const seed = Math.sin(f * 12.9) * 0.5 + 0.5;
+          up = Math.max(up, (0.18 + 0.32 * seed) * bump((u - at) / (1.3 + 0.8 * seed)));
+        }
+        up *= span;
+        if (up <= 0.005) continue;
+        this.restNormal(i, j, n);
+        R[k * 3] += n.x * up;
+        R[k * 3 + 1] += n.y * up;
+        R[k * 3 + 2] += n.z * up;
+        this.stand[k] += up;
+      }
+    }
+  }
+
+  /** Which way the sheet faces at point (i, j) as it lies at rest, out from the skin. */
+  private restNormal(i: number, j: number, out: THREE.Vector3): THREE.Vector3 {
+    const R = this.rest;
+    const a = (Math.min(ROWS - 1, i + 1) * COLS + j) * 3;
+    const b = (Math.max(0, i - 1) * COLS + j) * 3;
+    const c = (i * COLS + Math.min(COLS - 1, j + 1)) * 3;
+    const d = (i * COLS + Math.max(0, j - 1)) * 3;
+    this.p.set(R[a] - R[b], R[a + 1] - R[b + 1], R[a + 2] - R[b + 2]);
+    this.q.set(R[c] - R[d], R[c + 1] - R[d + 1], R[c + 2] - R[d + 2]);
+    out.crossVectors(this.q, this.p);
+    if (out.y < 0) out.negate();
+    return out.normalize();
   }
 
   /**
@@ -667,10 +832,11 @@ export class Net {
     const uLeader = (this.leaderRow / (ROWS - 1)) * NET.long;
     for (let k = 0; k < this.n; k++) {
       const u = (Math.floor(k / COLS) / (ROWS - 1)) * NET.long;
-      const across = this.acrossAt(k % COLS);
+      const across = this.acrossOf(k);
+      const near = this.edge.getX(k);
       const along = uLeader - Math.abs(u - uLeader) * GATHER + Math.sin(across * 1.3 + u * 0.2) * 0.3;
       this.fold[k * 3] = along;
-      const layer = Math.floor((NET.near - across) / FOLD_WIDE);
+      const layer = Math.floor((near - across) / FOLD_WIDE);
       this.fold[k * 3 + 2] = 0.04 + layer * 0.06 + Math.max(0, Math.sin(u * 1.7 + across * 0.8)) * 0.06 + (u < uLeader ? OVER : 0);
       const row = THREE.MathUtils.clamp((along / NET.long) * (ROWS - 1), 0, ROWS - 1);
       const i0 = Math.floor(row);
@@ -693,7 +859,7 @@ export class Net {
       this.mass.x += x / this.n;
       this.mass.z += z / this.n;
       const long = (NET.long / 2 - u) * OPEN.x;
-      const wide = (across - (NET.near - NET.far) / 2) * OPEN.y;
+      const wide = (across - (near - NET.far) / 2) * OPEN.y;
       this.openAt[k * 2] = this.ahead.x * long + this.side.x * wide;
       this.openAt[k * 2 + 1] = this.ahead.z * long + this.side.z * wide;
     }
@@ -752,7 +918,7 @@ export class Net {
           P[k * 3 + 1] = this.t.y + up;
           P[k * 3 + 2] = this.t.z;
           A[k] = water;
-          C[k] = water ? 0 : 1 - THREE.MathUtils.smoothstep(up, 0.05, 0.4);
+          C[k] = water ? 0 : 1 - THREE.MathUtils.smoothstep(up + this.stand[k], 0.05, 0.3);
         } else {
           const t = THREE.MathUtils.smoothstep((q - end) / (arc + WATER_MIN), 0, 1);
           const w = (i * PATH + PATH - 1) * 3;
@@ -921,7 +1087,7 @@ export class Net {
       V[m * 2] = V[m * 2 + 1] = 0;
     }
     const end = this.links;
-    this.float.position.set(C[end * 3], C[end * 3 + 1] + (last === end ? NET.cork * 0.3 : 0), C[end * 3 + 2]);
+    this.float.position.set(C[end * 3], C[end * 3 + 1] + (last === end ? NET.float * 0.3 : 0), C[end * 3 + 2]);
     this.float.velocity.set(V[end * 2], 0, V[end * 2 + 1]);
   }
 
@@ -976,11 +1142,13 @@ export class Net {
     const out = this.cork.array as Float32Array;
     const N = this.normals.array as Float32Array;
     const A = this.afloat.array as Float32Array;
+    const sizes = this.corkSize.array as Float32Array;
     for (let c = 0; c < this.corkAt.length; c++) {
       const at = this.corkAt[c];
       let afloat: number;
+      const size = sizes[c];
       if (at.leader >= 0) {
-        this.t.fromArray(this.chain, at.leader * 3).setY(NET.cork * 0.3 + this.chain[at.leader * 3 + 1]);
+        this.t.fromArray(this.chain, at.leader * 3).setY(size * 0.3 + this.chain[at.leader * 3 + 1]);
         afloat = 0;
       } else {
         const i1 = Math.min(ROWS - 1, at.i + 1);
@@ -989,9 +1157,9 @@ export class Net {
         afloat = A[k];
         const lifted = THREE.MathUtils.smoothstep(this.lifts[k] * this.lift * this.tent[at.i] * K.netLift, 0.15, 0.6);
         this.q.fromArray(N, k * 3);
-        this.t.copy(this.p).addScaledVector(this.q, NET.cork * (1 - lifted) * (1 - afloat));
-        this.t.y += afloat ? NET.cork * 0.3 - this.p.y * afloat : 0;
-        this.t.y -= lifted * (HANG + NET.cork);
+        this.t.copy(this.p).addScaledVector(this.q, size * 0.8 * (1 - lifted) * (1 - afloat));
+        this.t.y += afloat ? size * 0.3 - this.p.y * afloat : 0;
+        this.t.y -= lifted * (HANG + size);
       }
       const o = c * 3;
       if (this.snap) {
@@ -1016,24 +1184,23 @@ export class Net {
     this.cork.needsUpdate = true;
   }
 
-  /** Rows of corks along every edge, one across the blowhole and one along beside the crown line; one at each leader link. */
+  /** Rows of corks along every edge and a few across the blowhole, hanging from the patch; one at each leader link. */
   private placeCorks(): void {
-    const along = (j: number, from = 0, to = NET.long) => {
-      for (let u = from + 0.6; u < to; u += CORK_STEP) {
+    const along = (j: number) => {
+      for (let u = 0.6; u < NET.long; u += NET.corkStep) {
         const fi = (u / NET.long) * (ROWS - 1);
-        this.corkAt.push({ i: Math.floor(fi), j, f: fi - Math.floor(fi), leader: -1 });
+        this.corkAt.push({ i: Math.floor(fi), j, f: fi - Math.floor(fi), leader: -1, patch: false });
       }
     };
-    const acrossRow = (i: number) => {
-      for (let j = 1; j < COLS - 1; j++) this.corkAt.push({ i, j, f: 0, leader: -1 });
+    const acrossRow = (i: number, patch = false, every = 2) => {
+      for (let j = 1; j < COLS - 1; j += every) this.corkAt.push({ i, j, f: 0, leader: -1, patch });
     };
     along(0);
     along(COLS - 1);
     acrossRow(0);
     acrossRow(ROWS - 1);
-    acrossRow(Math.round((((BLOWHOLE - FRONT) * LENGTH * this.whale.scale) / NET.long) * (ROWS - 1)));
-    along(Math.round(((2 + NET.far) / (NET.near + NET.far)) * (COLS - 1)), 8, 28);
-    for (let m = 2; m <= this.links; m++) this.corkAt.push({ i: 0, j: 0, f: 0, leader: m });
+    acrossRow(Math.round((((BLOWHOLE - FRONT) * LENGTH * this.whale.scale) / NET.long) * (ROWS - 1)), true, 1);
+    for (let m = 2; m <= this.links; m++) this.corkAt.push({ i: 0, j: 0, f: 0, leader: m, patch: false });
   }
 
   private polyline(count: number): Polyline {
@@ -1156,6 +1323,7 @@ export class Net {
 
   /** Strands of weed caught in it: lying down the skin, hanging under the lifted mesh, trailing on the water. */
   private drawWeed(): void {
+    const time = this.clock;
     const P = this.pos.array as Float32Array;
     const N = this.normals.array as Float32Array;
     const A = this.afloat.array as Float32Array;
@@ -1171,11 +1339,13 @@ export class Net {
       this.r.set(0, -1, 0).addScaledVector(this.q, this.q.y).normalize();
       if (this.r.lengthSq() < 0.5) this.r.set(Math.cos(at.turn), 0, Math.sin(at.turn));
       this.r.lerp(this.t.set(0, -1, 0), lifted).lerp(this.t.set(Math.cos(at.turn), 0, Math.sin(at.turn)), afloat).normalize();
+      this.flat.crossVectors(this.q, this.r).normalize();
       for (let m = 0; m < WEED_POINTS; m++) {
         const f = m / (WEED_POINTS - 1);
-        this.t.copy(this.p).addScaledVector(this.r, f * at.length).addScaledVector(this.q, 0.03 * (1 - lifted));
+        const wave = Math.sin(f * 3.2 + at.turn + time * 0.7) * 0.16 * f * at.length;
+        this.t.copy(this.p).addScaledVector(this.r, f * at.length).addScaledVector(this.flat, wave).addScaledVector(this.q, 0.03 * (1 - lifted));
         if (afloat) this.t.y = THREE.MathUtils.lerp(this.t.y, 0.02, afloat);
-        this.setPoint(l, m, this.t, 0.08 * (1 - f * 0.6), afloat, 1);
+        this.setPoint(l, m, this.t, 0.11 * (0.45 + 0.75 * Math.sin(Math.PI * (0.15 + f * 0.7))) * (1 - f * 0.4), afloat, 1);
       }
       this.tangents(l);
     }

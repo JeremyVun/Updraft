@@ -4,10 +4,12 @@ import { ATMO_GLSL, atmo } from '../../world/atmosphere';
 import { SWELL_GLSL, swellUniforms } from '../../world/water/swell';
 
 /**
- * The old net at its real sizes, in metres: as it would lie flat, `long` along the whale and `near` + `far` across it
- * from its crown line; its diamond cells, strands, the rope round its edge, the float-line and the corks.
+ * The old net, in metres: as it would lie flat, `long` along the whale and up to `near` + `far` across it from its
+ * crown line; its diamond cells, strands, the rope round its edge, the float-line, the net's corks and the leader's
+ * floats. The cells, strands and corks are drawn larger than a real net's so they read from the boat as the paintings
+ * do; the float-line and its floats stay a size a child can hold.
  */
-export const NET = { long: 45, near: 6, far: 11, cell: 0.7, strand: 0.03, rope: 0.04, line: 0.016, cork: 0.14 };
+export const NET = { long: 45, near: 22, far: 11, cell: 1.25, strand: 0.07, rope: 0.1, line: 0.016, cork: 0.27, float: 0.16, sag: 0.4, corkStep: 1.5 };
 /**
  * However far off, a strand is drawn at least this opaque a line a pixel and a half wide, and once its cells are too
  * fine to draw it veils the skin at least this much: an old net reads as rope from the hold without crawling.
@@ -30,10 +32,13 @@ ${ATMO_GLSL}
 ${SWELL_GLSL}
 in float afloat;
 in float contact;
+in vec3 edge;
 out vec2 vUv;
 out vec3 vWorld;
 out vec3 vNormal;
 out float vContact;
+out vec3 vEdge;
+out float vAfloat;
 void main() {
   vec3 p = position;
   p.y += seaSurfaceY(p.xz) * afloat;
@@ -41,13 +46,16 @@ void main() {
   vNormal = normal;
   vUv = uv;
   vContact = contact;
+  vEdge = edge;
+  vAfloat = afloat;
   gl_Position = projectionMatrix * viewMatrix * vec4(p, 1.0);
 }`;
 
 /**
- * Strands drawn at their real width wherever a pixel can hold them and otherwise a pixel and a half wide, never
- * fainter than `STRAND_FLOOR`; once a cell is finer than about two pixels its lines give way to a veil, so the mesh
- * never crawls or sparkles against the moving sea, near or far.
+ * Old rope knotted into diamonds: no two cells quite the same size, each strand sagging a little between its knots
+ * toward the edges, the near edge hanging in scallops between its corks. Strands are drawn at their width wherever
+ * a pixel can hold them and otherwise a pixel and a half wide, never fainter than \`STRAND_FLOOR\`; once a cell is
+ * finer than about two pixels its lines give way to a veil, so the mesh never crawls against the moving sea.
  */
 const SHEET_FRAG = /* glsl */ `
 ${ATMO_GLSL}
@@ -61,6 +69,8 @@ in vec2 vUv;
 in vec3 vWorld;
 in vec3 vNormal;
 in float vContact;
+in vec3 vEdge;
+in float vAfloat;
 
 float netHash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float netNoise(vec2 p) {
@@ -70,13 +80,13 @@ float netNoise(vec2 p) {
   return mix(mix(netHash(i), netHash(i + vec2(1.0, 0.0)), f.x), mix(netHash(i + vec2(0.0, 1.0)), netHash(i + 1.0), f.x), f.y);
 }
 
-/** Lines at every whole x, \`w\` of a cell wide: how much of this pixel they cover. */
-float lines(float x, float w) {
+/** Lines at every whole x, \`w\` of a cell wide: how much of this pixel they cover, and how far across the line it is (0 middle, 1 side). */
+vec2 lines(float x, float w) {
   float fw = max(fwidth(x), 1e-5);
   float drawn = max(w, fw * 1.5);
   float d = abs(fract(x + 0.5) - 0.5);
   float c = (1.0 - smoothstep(drawn * 0.5 - fw * 0.5, drawn * 0.5 + fw * 0.5, d)) * max(w / drawn, ${glsl(STRAND_FLOOR)});
-  return mix(c, max(w, ${glsl(STRAND_VEIL)}), smoothstep(0.35, 0.75, fw));
+  return vec2(mix(c, max(w, ${glsl(STRAND_VEIL)}), smoothstep(0.35, 0.75, fw)), min(1.0, d / (drawn * 0.5)));
 }
 
 /** A line \`w\` wide along d = 0. */
@@ -87,23 +97,36 @@ float band(float d, float w) {
 }
 
 void main() {
-  vec2 q = vec2(vUv.x + vUv.y, vUv.x - vUv.y) * ${glsl(Math.SQRT1_2 / NET.cell)};
-  float weed = smoothstep(0.6, 0.85, netNoise(vUv * 0.42 + 3.1)) * 0.9;
-  float w = ${glsl(NET.strand / NET.cell)} * (1.0 + weed * 3.0);
-  float ax = lines(q.x, w);
-  float ay = lines(q.y, w);
-  float strand = ax + ay - ax * ay;
-  float edge = min(min(vUv.x, ${glsl(NET.long)} - vUv.x), min(vUv.y + ${glsl(NET.far)}, ${glsl(NET.near)} - vUv.y));
-  float rope = band(edge - ${glsl(NET.rope * 0.75)}, ${glsl(NET.rope)});
-  // Where the net presses on the skin, the skin under each strand is a little darker: the net reads from further off.
-  float shade = max(lines(q.x, w * 2.6), lines(q.y, w * 2.6)) * vContact * 0.65;
+  float hang = vEdge.x - ${glsl(NET.sag)} * vEdge.y * sin(3.14159 * fract((vUv.x - 0.6) / ${glsl(NET.corkStep)}));
+  if (vUv.y > hang + 0.02) discard;
+  // Knotted by hand and pulled about since: no two cells the same shape.
+  vec2 uv = vUv + (vec2(netNoise(vUv * 0.22 + 7.0), netNoise(vUv * 0.22 + 1.7)) - 0.5) * 0.9
+    + (vec2(netNoise(vUv * 0.55 + 4.3), netNoise(vUv * 0.55 + 9.1)) - 0.5) * 0.45;
+  vec2 kx = vec2(uv.x + uv.y, uv.x - uv.y) * ${glsl(Math.SQRT1_2 / NET.cell)};
+  float weed = smoothstep(0.62, 0.85, netNoise(vUv * 0.37 + 3.1));
+  float w = ${glsl(NET.strand / NET.cell)} * (1.0 + weed * 0.5) * (1.0 + vAfloat * 0.4);
+  vec2 ax = lines(kx.x, w);
+  vec2 ay = lines(kx.y, w);
+  float strand = ax.x + ay.x - ax.x * ay.x;
+  vec2 knotAt = kx - floor(kx + 0.5);
+  float kfw = max(fwidth(kx.x), 1e-5);
+  float knot = (1.0 - smoothstep(w * 1.1 - kfw, w * 1.1 + kfw, length(knotAt))) * smoothstep(0.6, 0.2, kfw);
+  strand = max(strand, knot);
+  float edge = min(min(vUv.x, ${glsl(NET.long)} - vUv.x), min(vUv.y + ${glsl(NET.far)}, (hang - vUv.y) / sqrt(1.0 + vEdge.z * vEdge.z)));
+  float rope = band(edge - ${glsl(NET.rope * 0.5)}, ${glsl(NET.rope)});
+  // Round rope: lit along its top, darker down its sides.
+  float across = ax.x > ay.x ? ax.y : ay.y;
+  float round = mix(1.0, mix(1.18, 0.62, across * across), smoothstep(1.0, 1.5, w / kfw));
+  // Where it presses on the skin the skin round each strand is a little darker.
+  float shade = max(lines(kx.x, w * 2.2).x, lines(kx.y, w * 2.2).x) * vContact * 0.25;
   float cover = max(strand, rope);
   float alpha = cover + (1.0 - cover) * shade;
   if (alpha < 0.002) discard;
   vec3 V = normalize(cameraPosition - vWorld);
   vec3 N = normalize(vNormal);
   N *= sign(dot(N, V) + 1e-4);
-  vec3 alb = mix(mix(uStrand, uWeed, weed), uRope, rope / max(cover, 1e-4) * step(strand, rope));
+  float age = netHash(floor(kx + 0.5) * 0.37) * 0.25;
+  vec3 alb = mix(mix(uStrand * (0.88 + age), uWeed, weed * 0.75), uRope, rope / max(cover, 1e-4) * step(strand, rope)) * round;
   vec3 col = netLight(alb, N, V, vWorld, 0.9);
   col = (col * cover + uShadow * (1.0 - cover) * shade) / alpha;
   gl_FragColor = vec4(applyFog(col, vWorld), alpha * uFade);
@@ -155,7 +178,7 @@ void main() {
   float a = vCover * (1.0 - smoothstep(0.55, 1.0, abs(vSide)));
   if (a < 0.002) discard;
   vec3 V = normalize(cameraPosition - vWorld);
-  vec3 col = netLight(mix(uStrand, uWeed, vWeed), normalize(V + vec3(0.0, 0.6, 0.0)), V, vWorld, 1.1);
+  vec3 col = netLight(mix(uStrand, uWeed, vWeed) * mix(1.15, 0.7, vSide * vSide), normalize(V + vec3(0.0, 0.6, 0.0)), V, vWorld, 1.1);
   gl_FragColor = vec4(applyFog(col, vWorld), a * uFade);
 }`;
 
@@ -163,45 +186,58 @@ const CORK_VERT = /* glsl */ `
 ${ATMO_GLSL}
 ${SWELL_GLSL}
 in vec4 iCork;
+in float iSize;
 out vec3 vWorld;
 out vec3 vNormal;
 out vec3 vLocal;
 void main() {
-  vec3 p = iCork.xyz + position * vec3(${glsl(NET.cork)}, ${glsl(NET.cork * 0.82)}, ${glsl(NET.cork)});
+  vec3 p = iCork.xyz + position * vec3(1.0, 0.82, 1.0) * iSize;
   p.y += seaSurfaceY(iCork.xz) * iCork.w;
   vWorld = p;
   vNormal = normal;
-  vLocal = position + iCork.xyz * 3.7;
+  vLocal = position * 4.5 + iCork.xyz * 1.7;
   gl_Position = projectionMatrix * viewMatrix * vec4(p, 1.0);
 }`;
 
+/** An old float, cream where the sun has bleached it, with dark spots and a green-fouled underside. */
 const CORK_FRAG = /* glsl */ `
 ${ATMO_GLSL}
 ${LIGHT}
 uniform vec3 uCork;
+uniform vec3 uSpot;
 uniform vec3 uFouled;
 uniform float uFade;
 in vec3 vWorld;
 in vec3 vNormal;
 in vec3 vLocal;
+float corkHash(vec3 p) { return fract(sin(dot(p, vec3(12.9898, 78.233, 37.719))) * 43758.5453); }
+float corkNoise(vec3 p) {
+  vec3 i = floor(p);
+  vec3 f = fract(p);
+  f = f * f * (3.0 - 2.0 * f);
+  return mix(mix(mix(corkHash(i), corkHash(i + vec3(1, 0, 0)), f.x), mix(corkHash(i + vec3(0, 1, 0)), corkHash(i + vec3(1, 1, 0)), f.x), f.y),
+    mix(mix(corkHash(i + vec3(0, 0, 1)), corkHash(i + vec3(1, 0, 1)), f.x), mix(corkHash(i + vec3(0, 1, 1)), corkHash(i + 1.0), f.x), f.y), f.z);
+}
 void main() {
   vec3 N = normalize(vNormal);
   vec3 V = normalize(cameraPosition - vWorld);
-  float pit = fract(sin(dot(floor(vLocal * 6.0), vec3(12.9898, 78.233, 37.719))) * 43758.5453);
-  vec3 alb = mix(uCork, uFouled, smoothstep(0.1, -0.7, N.y) * 0.7) * (0.85 + 0.15 * pit);
+  float spot = smoothstep(0.7, 0.76, corkNoise(vLocal));
+  vec3 alb = mix(uCork, uSpot, spot * 0.85);
+  alb = mix(alb, uFouled, smoothstep(0.0, -0.8, N.y) * 0.6);
   vec3 col = netLight(alb, N, V, vWorld, 0.15);
-  col += uSunColor * pow(max(dot(reflect(-V, N), uSunDir), 0.0), 24.0) * 0.12 * cloudShadow(vWorld.xz);
+  col += uSunColor * pow(max(dot(reflect(-V, N), uSunDir), 0.0), 18.0) * 0.18 * cloudShadow(vWorld.xz);
   if (uFade < 0.999 && fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453) > uFade) discard;
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;
 
 export const netLook = {
-  uStrand: { value: new THREE.Color('#7f6e4b') },
-  uWeed: { value: new THREE.Color('#3e5224') },
-  uRope: { value: new THREE.Color('#857553') },
+  uStrand: { value: new THREE.Color('#8a7650') },
+  uWeed: { value: new THREE.Color('#56682c') },
+  uRope: { value: new THREE.Color('#8f7c55') },
   uShadow: { value: new THREE.Color('#151a22') },
-  uCork: { value: new THREE.Color('#b09468') },
-  uFouled: { value: new THREE.Color('#5d6a40') },
+  uCork: { value: new THREE.Color('#e4d7b4') },
+  uSpot: { value: new THREE.Color('#4a3622') },
+  uFouled: { value: new THREE.Color('#6f7448') },
   /** How much of it is left as it drifts off into the haze, 1 .. 0. */
   uFade: { value: 1 },
   uRes: { value: new THREE.Vector2(800, 450) },
