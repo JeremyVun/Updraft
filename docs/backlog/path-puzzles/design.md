@@ -818,6 +818,11 @@ The sequence:
     and the sea round it swells and settles.
   - **Life on it.** A few seabirds stand far along its back as on a rock, never near a step's target, and lift off as
     it spouts free.
+  - **Gentle to a child** (Jeremy, 2026-10-08: "ok but not too scary to a child yea, they still get to see the
+    whale's eyes right?"). The eye stays above the water near the boat, large, warm and kind, and opening it on her is
+    still the heart of the breath. The shape under the glass is soft and warm in the gold water, never a black abyss,
+    and never moves suddenly beneath the boat. Barnacles are sparse soft bumps, never clusters of holes; scars soft pale
+    lines, never gashes. Old and wise, never monstrous.
 - **The net.** One old faded brown-green net, scaled with the whale to about 45 × 17 m, over the head and blowhole and
   down the forward back, rows of cork floats on its edges, a few strands of weed; one loop round the near flipper. The
   line in her mittens and its floats keep their real sizes (`notes.md`), so it is one a child can hold; the net's own
