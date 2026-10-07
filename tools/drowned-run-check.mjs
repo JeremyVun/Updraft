@@ -12,9 +12,11 @@
 //        becalming), FROM=church at the tower's foot (skips the run too), FROM=storm with her just seated aboard at the
 //        nave (skips the church too), SHOTS=<prefix> saves stills (at each piece,
 //        two between, and through the church), FILM=<seconds> with SHOTS also
-//        saves a still every that many seconds from the air dying (from the ridge with FROM=roofs) to the tower,
+//        saves a still every that many seconds from the air dying (from the ridge with FROM=roofs, the tower's foot
+//        with FROM=church) to the storm,
 //        W/H viewport (default 1600x900), LENS=1 also fails on the lens's measures (a roof hiding her, her walking
-//        toward it, her out of frame, it inside a roof).
+//        toward it, her out of frame, it inside a roof; and at the church, from the tower's foot until the storm's
+//        frame takes over, her out of frame or hidden by the church or a roof).
 import { chromium } from 'playwright-core';
 import assert from 'node:assert/strict';
 
@@ -127,24 +129,84 @@ try {
         carrying: ch.carrying, boat: f(b.position), child: f(c.position), cat: f(__game.cat.position), riding: c.riding,
         storm: +st.stormTime.toFixed(1), grounded: b.grounded, out: st.out, leg: st.leg };
     });
+    const sharp = (await import('sharp')).default;
+    /**
+     * Whether she reads in the frame: her raincoat's warmth (red over blue) against what stands round her, in a box
+     * about her on screen, every half second from the tower's foot until the lens has given way to the storm's.
+     */
+    const sight = { lostRun: 0, lostWorst: 0, lostAt: '', last: -1, trace: [] };
+    const seen = async () => {
+      const at = await page.evaluate(() => {
+        const ch = __game.story.current.church, cam = __game.rig.camera, p = __game.child.position;
+        if (!ch || ch.step === 'off' || ch.aboardFor >= __leaveBy) return null;
+        const foot = p.clone().project(cam), head = p.clone().setY(p.y + 1.15).project(cam);
+        return { time: __stats.time, step: ch.step, aboardFor: ch.aboardFor, foot: [foot.x, foot.y, foot.z], head: [head.x, head.y, head.z] };
+      });
+      if (!at || at.time - sight.last < 0.5) return;
+      sight.last = at.time;
+      const px = (q) => [(q[0] + 1) / 2 * width, (1 - q[1]) / 2 * height];
+      const [hx, hy] = px(at.head), [fx, fy] = px(at.foot);
+      const tall = Math.max(12, fy - hy), cx = (hx + fx) / 2, cy = (hy + fy) / 2;
+      const x0 = Math.max(0, Math.round(cx - tall)), x1 = Math.min(width, Math.round(cx + tall));
+      const y0 = Math.max(0, Math.round(cy - tall)), y1 = Math.min(height, Math.round(cy + tall));
+      let warmth = 0;
+      if (at.head[2] < 1 && x1 - x0 > 4 && y1 - y0 > 4) {
+        const { data } = await sharp(await page.screenshot({ clip: { x: x0, y: y0, width: x1 - x0, height: y1 - y0 } })).removeAlpha().raw()
+          .toBuffer({ resolveWithObject: true });
+        const warm = [];
+        for (let i = 0; i < data.length; i += 3) warm.push(data[i] - data[i + 2]);
+        warm.sort((a, b) => a - b);
+        warmth = warm[Math.floor(warm.length * 0.97)] - warm[Math.floor(warm.length * 0.5)];
+      }
+      const where = `${at.step}${at.aboardFor >= 0 ? ` ${at.aboardFor.toFixed(1)} s aboard` : ''}, until ${at.time.toFixed(1)} s`;
+      sight.trace.push(`${at.time.toFixed(1)}:${warmth}`);
+      const lost = warmth < 24;
+      sight.lostRun = lost ? sight.lostRun + 0.5 : 0;
+      if (sight.lostRun > sight.lostWorst) { sight.lostWorst = sight.lostRun; sight.lostAt = where; }
+    };
     const wait = async (test, limit, what) => {
       for (let t = 0; t < limit; t += 0.25) {
         const s = await look();
         if (test(s)) return s;
         await seconds(0.25);
         await reel();
+        await seen();
       }
       assert.fail(`${what} did not happen in ${limit} s: ${JSON.stringify(await look())}`);
     };
     await page.evaluate(async () => {
       const D = await import('/src/world/decks.ts');
-      const w = window.__churchWatch = { offWorst: 0, offAt: '' };
+      const W = await import('/src/world/drowned-way.ts');
+      const { tuning } = await import('/src/tuning.ts');
+      const k = tuning.drownedCamera.church;
+      window.__leaveBy = k.leaveFrom + k.leaveFor;
+      const w = window.__churchWatch = { offWorst: 0, offAt: '', unseenRun: 0, unseenWorst: 0, unseenAt: '', hiddenRun: 0, hiddenWorst: 0, hiddenAt: '' };
+      const roofs = [...W.PLACED, W.NAVE];
+      /** A roof or the tower between the lens and her. */
+      const solid = (x, y, z) => Math.abs(x - W.TOWER.x) < W.TOWER.half && Math.abs(z - W.TOWER.z) < W.TOWER.half && y < W.TOWER.sill + 3.5
+        || roofs.some((h) => y < (W.roofUnder(h, x, z) ?? -Infinity) - 0.05);
       const tick = () => {
         const ch = __game.story.current.church, c = __game.child, p = c.position;
         if (ch && ch.step !== 'off' && ch.step !== 'board' && ch.aboardFor < 0 && !c.riding && !c.action) {
           const beyond = D.beyondDecks(c.decks, p.x, p.z, p.y), under = D.deckGround(c.decks, p.x, p.z, p.y);
           const off = Math.max(beyond === Infinity ? 99 : beyond, Math.abs(under - p.y));
           if (off > w.offWorst) { w.offWorst = off; w.offAt = `${ch.step} at ${p.toArray().map((v) => v.toFixed(2))}`; }
+        }
+        /** She stays in the frame and in sight from the tower's foot until the lens has given way to the storm's. */
+        if (ch && ch.step !== 'off' && ch.aboardFor < k.leaveFrom + k.leaveFor) {
+          const cam = __game.rig.camera, e = cam.position, head = p.clone().setY(p.y + 1.1);
+          const q = head.clone().project(cam);
+          const out = Math.abs(q.x) > 0.95 || Math.abs(q.y) > 0.95 || q.z > 1;
+          let hidden = false;
+          for (let i = 1; i < 32 && !hidden; i++) {
+            const u = i / 32, x = e.x + (head.x - e.x) * u, y = e.y + (head.y - e.y) * u, z = e.z + (head.z - e.z) * u;
+            if (Math.hypot(x - p.x, z - p.z) > 0.8 && solid(x, y, z)) hidden = true;
+          }
+          const where = `${ch.step}${ch.aboardFor >= 0 ? ` ${ch.aboardFor.toFixed(1)} s aboard` : ''}, until ${__stats.time.toFixed(1)} s`;
+          w.unseenRun = out ? w.unseenRun + 1 / 60 : 0;
+          if (w.unseenRun > w.unseenWorst) { w.unseenWorst = w.unseenRun; w.unseenAt = where; }
+          w.hiddenRun = hidden && !out ? w.hiddenRun + 1 / 60 : 0;
+          if (w.hiddenRun > w.hiddenWorst) { w.hiddenWorst = w.hiddenRun; w.hiddenAt = where; }
         }
         requestAnimationFrame(tick);
       };
@@ -179,7 +241,6 @@ try {
      * frame brightens past the look back's outside a lightning flash, or if the landing comes late.
      */
     const storm = async (aboard, atNave) => {
-      const sharp = (await import('sharp')).default;
       const probe = () => page.evaluate(() => {
         const st = __game.story.current, cam = __game.rig.camera, light = __game.village.lighthouse;
         if (!st.church) return { landed: true, time: +__stats.time.toFixed(2) };
@@ -221,6 +282,7 @@ try {
         if (Math.floor(since / 5) > still) { still = Math.floor(since / 5); await shot(`storm-${String(still * 5).padStart(2, '0')}`); }
         was = p;
         await seconds(0.25);
+        await seen();
       }
       const landed = beats.at(-1);
       assert(landed.what === 'landed', `the boat never reached the forest beach: ${JSON.stringify(await look())}`);
@@ -254,6 +316,7 @@ try {
       return;
     }
     const atNave = (await wait((s) => s.step !== 'off', 30, 'the church beginning')).time;
+    filmFrom ??= atNave;
     await wait((s) => s.cat[1] > 4, 30, 'the cat halfway up the ivy');
     await shot('church-climbing');
     const up = await wait((s) => s.step === 'up', 30, 'the cat in the belfry');
@@ -263,7 +326,10 @@ try {
     await wait((s) => s.close > 0.12, 30, 'the fog closing round');
     await shot('church-fog');
     const bring = await wait((s) => s.step === 'bring', 30, 'the boat being hers to bring');
-    await seconds(7);
+    for (let i = 0; i < 14; i++) {
+      await seconds(0.5);
+      await seen();
+    }
     await shot('church-invitation');
     let strokes = 0;
     for (; strokes < 80; strokes++) {
@@ -276,7 +342,9 @@ try {
         return { at: [(a.x + 1) / 2, (1 - a.y) / 2], heading: Math.atan2(ahead.y - a.y, (ahead.x - a.x) * cam.aspect) };
       });
       await stroke(aim.at, aim.heading, 0.35, 12);
+      await seen();
       await seconds(0.7);
+      await seen();
       if (strokes === 5) await shot('church-bring');
     }
     const berthed = await wait((s) => s.step === 'board', 40, 'her stepping down into the boat');
@@ -285,11 +353,21 @@ try {
     await shot('church-boarding');
     const aboard = await wait((s) => s.aboardFor >= 0, 15, 'her seated aboard');
     const pushed = d(xz(aboard.boat), xz(berth));
-    const w = await page.evaluate(() => window.__churchWatch);
     const cat = await storm(aboard, atNave);
+    const w = await page.evaluate(() => window.__churchWatch);
     console.log(`church: the cat up the ivy ${(up.time - atNave).toFixed(1)} s after the tower's foot; the fog came ${(fog.time - atNave).toFixed(1)} s, the boat hers to bring ${(bring.time - atNave).toFixed(1)} s`);
     console.log(`  the boat brought in ${(berthed.time - bring.time).toFixed(1)} s (7 s of it idle, for the drawn invitation) with ${strokes} strokes; aboard ${(aboard.time - atNave).toFixed(1)} s after the tower's foot${berthed.carrying ? ' (the safety valve carried it)' : ''}`);
     console.log(`  her step aboard moved the boat ${pushed.toFixed(2)} m; her feet stayed within ${w.offWorst.toFixed(3)} m of the decks (worst ${w.offAt})`);
+    console.log(`  through the church she was out of frame for at most ${w.unseenWorst.toFixed(1)} s at a time (${w.unseenAt}), hidden by the church or a roof for at most ${w.hiddenWorst.toFixed(1)} s (${w.hiddenAt})`);
+    console.log(`  her raincoat's warmth against what stands round her each half second: ${sight.trace.join(' ')}`);
+    console.log(`  she was lost in the frame (the fog or the dark over her) for at most ${sight.lostWorst.toFixed(1)} s at a time (${sight.lostAt})`);
+    const lens = [[w.unseenWorst < 0.5, `she was out of the frame at the church for ${w.unseenWorst.toFixed(1)} s (${w.unseenAt})`],
+      [sight.lostWorst < 1.5, `she was lost in the frame at the church for ${sight.lostWorst.toFixed(1)} s (${sight.lostAt})`],
+      [w.hiddenWorst < 1, `the church or a roof hid her for ${w.hiddenWorst.toFixed(1)} s (${w.hiddenAt})`]];
+    for (const [ok, what] of lens) {
+      if (process.env.LENS) assert(ok, what);
+      else if (!ok) console.log(`  lens: ${what}`);
+    }
     assert(w.offWorst < 0.4, `she left the decks at the church: ${w.offWorst.toFixed(2)} m (${w.offAt})`);
     assert(!berthed.carrying, 'the strokes never brought the boat: the safety valve carried it');
     assert(pushed < 0.6, `her step aboard pushed the boat ${pushed.toFixed(2)} m`);
