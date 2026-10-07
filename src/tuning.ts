@@ -2140,6 +2140,8 @@ export const tuning = {
     caustic: 0.45, catchlight: 2.5,
     /** How much of the sky the wet cornea over the iris mirrors. */
     cornea: 0.06,
+    /** How far the near flipper turns over along its length for each radian it is lifted. */
+    finTurn: 4,
     /** How dark the skin goes at the waterline, shaded by the sea, against its tone 3.5 m up. */
     waterline: 0.72,
     /** How far down through the sea its body and flippers still show, per metre of water looked through. */

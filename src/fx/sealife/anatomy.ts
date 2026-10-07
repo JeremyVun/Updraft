@@ -225,9 +225,9 @@ function fin(): THREE.BufferGeometry {
     const knobs = 0.05 * Math.max(0, Math.sin(t * 9 * Math.PI)) ** 0.7 * smoothstep(0.1, 0.22, t) * (1 - smoothstep(0.86, 0.95, t));
     const bow = -0.06 * Math.sin(Math.PI * t);
     const thick = 0.14 * (1 - 0.72 * t) + 0.022;
-    // Twisted so the knobbly leading edge stands higher than the trailing one, and sagging a little along its middle,
-    // so lying awash it breaks the surface in a ridge and goes under the glass in places.
-    const twist = 0.26 * smoothstep(0.05, 0.4, t);
+    // Twisted to turn its broad top toward the boat, and sagging a little along its middle, so lying awash its smooth
+    // edge breaks the surface and the knobbly one lies under the glass.
+    const twist = -0.2 * smoothstep(0.05, 0.4, t);
     const sag = 0.05 * Math.sin(Math.PI * t);
     for (let j = 0; j < around; j++) {
       const a = (j / around) * Math.PI * 2;

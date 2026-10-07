@@ -1,7 +1,7 @@
 import { CREATURE_GLSL } from '../../creatures/shading';
 import { ATMO_GLSL } from '../../world/atmosphere';
 import { tuning } from '../../tuning';
-import { BLOWHOLE, BODY, DORSAL, DORSAL_AT, DORSAL_BASE, FIN, FIN_ROOT, FLUKES, FLUKE_HALF_SPAN, FLUKE_HINGE, JAW_CORNER, KNOBS, LENGTH, MOUTH, SPINE_END } from './anatomy';
+import { BLOWHOLE, BODY, DORSAL, DORSAL_AT, DORSAL_BASE, FIN, FIN_DIR, FIN_ROOT, FLUKES, FLUKE_HALF_SPAN, FLUKE_HINGE, JAW_CORNER, KNOBS, LENGTH, MOUTH, SPINE_END } from './anatomy';
 
 export const SPINE_N = 44;
 const f = (x: number) => x.toFixed(4);
@@ -62,6 +62,11 @@ out vec3 vAxisX;
 out vec3 vAxisY;
 out vec3 vAxisZ;
 
+/** v turned by angle a about the unit axis k. */
+vec3 alongFin(vec3 v, vec3 k, float a) {
+  return v * cos(a) + cross(k, v) * sin(a) + k * dot(k, v) * (1.0 - cos(a));
+}
+
 /** Bends the rest pose along the spine: each point rides the spine frame at its place along the body. */
 vec3 rig(vec3 rest, inout vec3 n) {
   float s = aRig.x;
@@ -74,8 +79,12 @@ vec3 rig(vec3 rest, inout vec3 n) {
     float own = step(0.5, side * uSlap.x);
     float raise = side * (uSlap.y * own - uFin.y);
     float sweep = side * (uFin.x + uSlap.z * own);
-    vec3 p = rotY(rotZ((rest - root) * uShape.x, raise), sweep);
-    n = rotY(rotZ(n, raise), sweep);
+    // Lifted, it also turns over a little along its length, its broad top toward the boat.
+    vec3 axis = vec3(side * ${f(FIN_DIR.x)}, ${f(FIN_DIR.y)}, ${f(FIN_DIR.z)});
+    float turn = -side * uSlap.y * own * ${f(L.finTurn)};
+    vec3 p = alongFin((rest - root) * uShape.x, axis, turn);
+    p = rotY(rotZ(p, raise), sweep);
+    n = rotY(rotZ(alongFin(n, axis, turn), raise), sweep);
     off = p + root + vec3(0.0, 0.0, s * ${f(LENGTH)});
   }
   if (part == ${FLUKES}) {
@@ -317,7 +326,7 @@ Skin skin(float far) {
     float tips = smoothstep(0.8, 0.95, abs(t));
     float lead = 1.0 - smoothstep(0.04, 0.12, a);
     float mark = max(max(max(edge, stroke), max(max(left, right), tips)), lead);
-    k.albedo = mix(k.albedo, uBelly * mix(0.78, 1.0, smoothstep(0.0, 0.5, abs(t))) * (0.9 + 0.15 * mottle), under * (1.0 - mark));
+    k.albedo = mix(k.albedo * 0.8, uBelly * 1.08 * mix(0.78, 1.0, smoothstep(0.0, 0.5, abs(t))) * (0.9 + 0.15 * mottle), under * (1.0 - mark));
     k.thin = 0.12;
   }
   return k;
