@@ -565,7 +565,13 @@ So the existing drowned village and storm code may be refactored as far as the r
   lantern is the warm light. The near water stays open and quiet; density goes to the middle distance and the horizon;
   nothing crowds the views of the church and the lighthouse or of the fog coming, and nothing on the way becomes an
   obstacle. Concept: `comps/village/` (a first, too literal round painted over today's frames `today-*.png`; the dream
-  round `dream-*.png` supersedes it).
+  round `dream-*.png`, `dream-kit.png` and `dream-notes.md` supersedes it). As painted: one familiar cottage shape
+  repeated across the water to the horizon like a memory, in a family of proportions (familiar, tall and narrow, tiny,
+  wide, a soft hip, two joined), plain roof planes, pale gables, one dark window, one plain capped stack, soft bevels;
+  roofs in dusky plum, slate blue, faded rose and ochre, kept muted under the dusk as in `dream-eye.png` rather than
+  bright. Three touches only, each built once: a few houses leaning 5–8° and the tall-beside-tiny pair; one red door
+  just under the water; one washing line between two chimneys, cream sheets with a faded red hem, barely moving. No
+  lamps, chairs or standalone windows.
 - **The run is built on decks** (`src/world/decks.ts`): ridges, wall tops and the fallen trunk are strips the child
   walks; the slates up to a ridge are ramps. She gets out with `alight` onto the cottage's slates and back in with
   `board` at the nave.
