@@ -49,8 +49,15 @@ const WATER_MIN = 3;
 /** Points along each row's drape: the sheet across, then the line from its near edge down to the water. */
 const PATH = COLS + BELOW - 1;
 /** How far the empty net drifts, and how far round it turns, as it goes. */
-const DRIFT_AWAY = 48;
+const DRIFT_AWAY = 30;
 const DRIFT_TURN = 0.5;
+/**
+ * Drifting off, the folded mass works loose into a raft this share of the sheet's length and breadth, its edge corks
+ * round it, between these shares of the drift.
+ */
+const OPEN = new THREE.Vector2(0.4, 0.55);
+const OPEN_FROM = 0.06;
+const OPEN_TO = 0.4;
 const CORK_STEP = 1.2;
 const LEADER = 14.4;
 const LINK = 1.2;
@@ -72,7 +79,7 @@ const END_POINTS = 10;
 const LOOP_FROM = 0.9;
 const LOOP_PAST = 1.04;
 const RING = 14;
-const WEEDS = 10;
+const WEEDS = 24;
 const WEED_POINTS = 5;
 const HANG = 0.16;
 
@@ -172,6 +179,7 @@ export class Net {
   private readonly fold = new Float32Array(ROWS * COLS * 3);
   /** Where each point floats once it is all peeled, before it drifts. */
   private readonly afloatAt = new Float32Array(ROWS * COLS * 2);
+  private readonly openAt = new Float32Array(ROWS * COLS * 2);
   private readonly crowns = new Float32Array(ROWS);
   private readonly below = new Float32Array(ROWS * BELOW * 3);
   private readonly belowAcross = new Float32Array(ROWS * BELOW);
@@ -302,7 +310,7 @@ export class Net {
     for (let w = 0; w < WEEDS; w++) {
       this.weedLines.push(this.polyline(WEED_POINTS));
       const seed = Math.sin(w * 91.7) * 0.5 + 0.5;
-      this.weedAt.push({ v: Math.floor(((w * 0.6180339 + 0.13) % 1) * this.n), length: 0.6 + seed * 0.8, turn: seed * 6.28 });
+      this.weedAt.push({ v: Math.floor(((w * 0.6180339 + 0.13) % 1) * this.n), length: 0.8 + seed * 1.2, turn: seed * 6.28 });
     }
     this.linePoints = this.polylines.reduce((n, l) => n + l.count, 0);
     const lineGeo = new THREE.BufferGeometry();
@@ -684,6 +692,10 @@ export class Net {
       this.afloatAt[k * 2 + 1] = z;
       this.mass.x += x / this.n;
       this.mass.z += z / this.n;
+      const long = (NET.long / 2 - u) * OPEN.x;
+      const wide = (across - (NET.near - NET.far) / 2) * OPEN.y;
+      this.openAt[k * 2] = this.ahead.x * long + this.side.x * wide;
+      this.openAt[k * 2 + 1] = this.ahead.z * long + this.side.z * wide;
     }
   }
 
@@ -693,10 +705,11 @@ export class Net {
     const turn = drift * DRIFT_TURN;
     const c = Math.cos(turn);
     const s = Math.sin(turn);
-    const x = this.afloatAt[k * 2] - this.mass.x;
-    const z = this.afloatAt[k * 2 + 1] - this.mass.z;
+    const open = THREE.MathUtils.smootherstep(this.drift, OPEN_FROM, OPEN_TO);
+    const x = THREE.MathUtils.lerp(this.afloatAt[k * 2] - this.mass.x, this.openAt[k * 2], open);
+    const z = THREE.MathUtils.lerp(this.afloatAt[k * 2 + 1] - this.mass.z, this.openAt[k * 2 + 1], open);
     const away = drift * DRIFT_AWAY;
-    return out.set(this.mass.x + c * x + s * z + (this.ahead.x + this.side.x * 0.35) * away, this.fold[k * 3 + 2],
+    return out.set(this.mass.x + c * x + s * z + (this.ahead.x + this.side.x * 0.35) * away, THREE.MathUtils.lerp(this.fold[k * 3 + 2], 0.04, open),
       this.mass.z - s * x + c * z + (this.ahead.z + this.side.z * 0.35) * away);
   }
 
@@ -1162,7 +1175,7 @@ export class Net {
         const f = m / (WEED_POINTS - 1);
         this.t.copy(this.p).addScaledVector(this.r, f * at.length).addScaledVector(this.q, 0.03 * (1 - lifted));
         if (afloat) this.t.y = THREE.MathUtils.lerp(this.t.y, 0.02, afloat);
-        this.setPoint(l, m, this.t, 0.05 * (1 - f * 0.6), afloat, 1);
+        this.setPoint(l, m, this.t, 0.08 * (1 - f * 0.6), afloat, 1);
       }
       this.tangents(l);
     }

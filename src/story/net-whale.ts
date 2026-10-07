@@ -25,7 +25,7 @@ export const WHALE_STEPS: readonly WhaleStep[] = ['approach', 'breath', 'line', 
 const AFTER_BREATH: WhaleStep = 'line';
 /** Seconds the empty net takes to drift away once the loop is off. */
 const DRIFT_FROM = 1;
-const DRIFT_TO = 38;
+const DRIFT_TO = 50;
 /**
  * The valve's dolphin leaps from this far out on the near side of the blowhole, over the crown and down beyond it;
  * the last stretch of its run in rises straight along its leap for `RUN_UP` seconds.
@@ -58,13 +58,13 @@ const POD_WAY = [new THREE.Vector2(18, -2), new THREE.Vector2(10, 2), new THREE.
   new THREE.Vector2(-40, 22)];
 const POD_PACE = 5.5;
 /**
- * As it spouts, one of the pod leaps right across the water just ahead of the bow, side-on to the camera:
+ * As it spouts, one of the pod leaps right across the water by the boat, side-on to the camera and against the sea:
  * out of the water `SALUTE_FROM` (metres to port, and ahead, of the boat at rest), in again `SALUTE_TO`,
  * `SALUTE_HIGH` up at the top, leaving the water `SALUTE_AT` seconds into its going free after `SALUTE_SWIM` seconds
  * in under from the pod.
  */
-const SALUTE_FROM = new THREE.Vector2(7, 3);
-const SALUTE_TO = new THREE.Vector2(-4, 4.5);
+const SALUTE_FROM = new THREE.Vector2(7, -2.5);
+const SALUTE_TO = new THREE.Vector2(-4, -1);
 const SALUTE_HIGH = 2;
 const SALUTE_AT = 4.8;
 const SALUTE_SWIM = 2.2;

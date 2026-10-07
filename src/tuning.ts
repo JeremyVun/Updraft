@@ -1434,8 +1434,8 @@ export const tuning = {
      * behind the boat and `holdHeight` up, `holdBearing` radians round to port of astern, at `holdEase` a second; and
      * the wider view it eases back out to as it goes free, the plume leaving the top of the frame.
      */
-    holdFrom: 40, holdFull: 6, holdDistance: 22, holdHeight: 11.5, holdBearing: 0.05, holdEase: 0.45,
-    releaseDistance: 27, releaseHeight: 7.5, releaseBearing: 0.2,
+    holdFrom: 40, holdFull: 6, holdDistance: 18, holdHeight: 9.5, holdBearing: 0.05, holdEase: 0.45,
+    releaseDistance: 30, releaseHeight: 8.5, releaseBearing: 0.2,
     /** How far ahead of the bow the pod runs while it leads the boat in (m). */
     podLead: 18,
     /**

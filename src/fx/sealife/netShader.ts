@@ -7,7 +7,13 @@ import { SWELL_GLSL, swellUniforms } from '../../world/water/swell';
  * The old net at its real sizes, in metres: as it would lie flat, `long` along the whale and `near` + `far` across it
  * from its crown line; its diamond cells, strands, the rope round its edge, the float-line and the corks.
  */
-export const NET = { long: 45, near: 6, far: 11, cell: 0.7, strand: 0.02, rope: 0.04, line: 0.016, cork: 0.14 };
+export const NET = { long: 45, near: 6, far: 11, cell: 0.7, strand: 0.03, rope: 0.04, line: 0.016, cork: 0.14 };
+/**
+ * However far off, a strand is drawn at least this opaque a line a pixel and a half wide, and once its cells are too
+ * fine to draw it veils the skin at least this much: an old net reads as rope from the hold without crawling.
+ */
+const STRAND_FLOOR = 0.6;
+const STRAND_VEIL = 0.1;
 
 const LIGHT = /* glsl */ `
 vec3 netLight(vec3 alb, vec3 N, vec3 V, vec3 world, float through) {
@@ -39,9 +45,9 @@ void main() {
 }`;
 
 /**
- * Strands drawn at their real width wherever a pixel can hold them, and never thinner than a pixel: a thinner one is
- * drawn a pixel wide at the share of it the strand covers, and once a cell is finer than about two pixels its lines
- * give way to the cell's average. So the mesh never crawls or sparkles against the moving sea, near or far.
+ * Strands drawn at their real width wherever a pixel can hold them and otherwise a pixel and a half wide, never
+ * fainter than `STRAND_FLOOR`; once a cell is finer than about two pixels its lines give way to a veil, so the mesh
+ * never crawls or sparkles against the moving sea, near or far.
  */
 const SHEET_FRAG = /* glsl */ `
 ${ATMO_GLSL}
@@ -67,10 +73,10 @@ float netNoise(vec2 p) {
 /** Lines at every whole x, \`w\` of a cell wide: how much of this pixel they cover. */
 float lines(float x, float w) {
   float fw = max(fwidth(x), 1e-5);
-  float drawn = max(w, fw * 1.25);
+  float drawn = max(w, fw * 1.5);
   float d = abs(fract(x + 0.5) - 0.5);
-  float c = (1.0 - smoothstep(drawn * 0.5 - fw * 0.5, drawn * 0.5 + fw * 0.5, d)) * w / drawn;
-  return mix(c, w, smoothstep(0.35, 0.75, fw));
+  float c = (1.0 - smoothstep(drawn * 0.5 - fw * 0.5, drawn * 0.5 + fw * 0.5, d)) * max(w / drawn, ${glsl(STRAND_FLOOR)});
+  return mix(c, max(w, ${glsl(STRAND_VEIL)}), smoothstep(0.35, 0.75, fw));
 }
 
 /** A line \`w\` wide along d = 0. */
@@ -82,15 +88,15 @@ float band(float d, float w) {
 
 void main() {
   vec2 q = vec2(vUv.x + vUv.y, vUv.x - vUv.y) * ${glsl(Math.SQRT1_2 / NET.cell)};
-  float weed = smoothstep(0.66, 0.88, netNoise(vUv * 0.42 + 3.1)) * 0.85;
-  float w = ${glsl(NET.strand / NET.cell)} * (1.0 + weed * 2.2);
+  float weed = smoothstep(0.6, 0.85, netNoise(vUv * 0.42 + 3.1)) * 0.9;
+  float w = ${glsl(NET.strand / NET.cell)} * (1.0 + weed * 3.0);
   float ax = lines(q.x, w);
   float ay = lines(q.y, w);
   float strand = ax + ay - ax * ay;
   float edge = min(min(vUv.x, ${glsl(NET.long)} - vUv.x), min(vUv.y + ${glsl(NET.far)}, ${glsl(NET.near)} - vUv.y));
   float rope = band(edge - ${glsl(NET.rope * 0.75)}, ${glsl(NET.rope)});
   // Where the net presses on the skin, the skin under each strand is a little darker: the net reads from further off.
-  float shade = max(lines(q.x, w * 2.6), lines(q.y, w * 2.6)) * vContact * 0.4;
+  float shade = max(lines(q.x, w * 2.6), lines(q.y, w * 2.6)) * vContact * 0.65;
   float cover = max(strand, rope);
   float alpha = cover + (1.0 - cover) * shade;
   if (alpha < 0.002) discard;
@@ -190,8 +196,8 @@ void main() {
 }`;
 
 export const netLook = {
-  uStrand: { value: new THREE.Color('#9a8f6c') },
-  uWeed: { value: new THREE.Color('#4b5a2b') },
+  uStrand: { value: new THREE.Color('#7f6e4b') },
+  uWeed: { value: new THREE.Color('#3e5224') },
   uRope: { value: new THREE.Color('#857553') },
   uShadow: { value: new THREE.Color('#151a22') },
   uCork: { value: new THREE.Color('#b09468') },
