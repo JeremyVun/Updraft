@@ -287,7 +287,7 @@ export class NetWhale {
       this.rested = true;
       this.waited = 1e-3;
       this.step = 'breath';
-      this.stepTime = 0;
+      this.stepTime = this.waiting = this.idle = 0;
       this.limit = 0;
       this.hold = 1;
       this.turn = this.turnToward();
