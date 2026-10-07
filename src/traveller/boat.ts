@@ -227,6 +227,7 @@ export class Boat {
     this.beaching = false;
     this.speed = 0;
     this.pushingFor = -1;
+    this.boardingPush = true;
     this.weightSide = side;
     this.weightAge = 0;
   }
@@ -352,6 +353,9 @@ export class Boat {
         if (!this.boardingPush && ((this.steerFor && Math.abs(dy) < PUSH_OFF_UNTIL) || this.pushingFor > PUSH_OFF_LONGEST)) {
           this.pushingFor = -1;
         }
+      } else if (this.boardingPush) {
+        /** Taking a weight from alongside: it lies where it is until they have sat down. */
+        this.speed = 0;
       } else if (this.beaching) {
         this.speed = Math.max(0, this.speed - tuning.sail.beachGrip * dt);
         p.x += fx * this.speed * dt;

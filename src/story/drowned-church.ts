@@ -96,6 +96,7 @@ export class ChurchArrival {
     cat.unease = 0.35;
     boat.beach(NAVE_BERTH.x, NAVE_BERTH.z, NAVE_BERTH.yaw);
     boat.takeWeight(0);
+    boat.finishBoarding();
     c.ride(boat.seat(this.tmp), boat.yaw, boat);
     this.to('aboard');
     this.aboardFor = 0;
@@ -377,8 +378,15 @@ export class ChurchArrival {
       this.going = true;
       e.copy(head).add(this.goneFrom);
     }
-    if (back) out.target.copy(head).lerp(this.catEye, THREE.MathUtils.lerp(k.backUprightAlong, k.backAlong, wide)).lerp(this.lamp, k.backLight);
-    else out.target.copy(head).lerp(boat.position, k.waterToward * (1 - near)).setY(k.waterAim);
+    if (back) {
+      /** Between the boat on the water and the lighthouse's lamp, so the light she leaves stands over her as it goes. */
+      const p = boat.position, l = this.lamp;
+      const toBoat = Math.hypot(p.x - e.x, p.z - e.z), toLamp = Math.hypot(l.x - e.x, l.z - e.z);
+      const from = Math.atan2(p.x - e.x, p.z - e.z), to = Math.atan2(l.x - e.x, l.z - e.z);
+      const across = from + Math.atan2(Math.sin(to - from), Math.cos(to - from)) * k.backAcross;
+      const up = THREE.MathUtils.lerp(Math.atan2(p.y - e.y, toBoat), Math.atan2(l.y - e.y, toLamp), k.backUp);
+      out.target.set(e.x + Math.sin(across) * toBoat, e.y + Math.tan(up) * toBoat, e.z + Math.cos(across) * toBoat);
+    } else out.target.copy(head).lerp(boat.position, k.waterToward * (1 - near)).setY(k.waterAim);
     const reach = Math.hypot(e.x - out.target.x, e.z - out.target.z);
     out.bearing = Math.atan2(e.x - out.target.x, e.z - out.target.z);
     out.distance = reach * THREE.MathUtils.lerp(k.uprightFar, 1, wide);

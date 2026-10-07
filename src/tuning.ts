@@ -1966,11 +1966,10 @@ export const tuning = {
       waterFar: { x: -29, y: 2.8, z: -15 }, waterNear: { x: -23, y: 2.4, z: -11 }, waterToward: 0.45, waterAim: 3, waterZoom: 0.9,
       /**
        * Going: seconds after she is seated it starts to give way to the storm's frame, and how long it takes; meanwhile
-       * how far from her toward the cat it looks, how far from there toward the lighthouse's lamp, and its lens (upright,
-       * the same).
+       * how far across from the boat to the lighthouse's lamp it looks and how far up from the one to the other (the cat
+       * in the belfry lies between), and its lens (upright, the same).
        */
-      leaveFrom: 7, leaveFor: 6, backAlong: 0.5, backUprightAlong: 0.5, backLight: 0.15, backZoom: 0.85,
-      backUprightZoom: 0.85,
+      leaveFrom: 7, leaveFor: 6, backAcross: 0.5, backUp: 0.5, backZoom: 0.85, backUprightZoom: 0.85,
     },
     /** Follow the boat into the streets; notice the church from that travelling view. */
     roofFromZ: -1260, roofUntilZ: -1360,
