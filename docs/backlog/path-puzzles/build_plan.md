@@ -359,7 +359,7 @@ opens it on a roof edge and the player's updraft (traced circles) lifts her over
 never falls. Each takes her 1–3 m higher.
 Gate: `crossings-check` for all pieces; stills of each yard from the shot list's interaction framing (her on the near
 edge, the piece and the far side across the frame), landscape and upright.
-Done: the sheet [x], the umbrella [ ] (branch `proto-drowned-pieces`).
+Done: [x] the sheet (branch `proto-drowned-pieces`); the umbrella cut (design.md, step 5).
 The sheet as built: `SheetCrossing(spot, {wait, stepOff, onward}, cast)` (`src/world/crossings/sheet-crossing.ts`) over
 `WashSheet` (`wash-sheet.ts`): a line from `spot.from` (round her chimney, behind her on her ridge) to `spot.to` (the far
 chimney's prop pulley), a 2.7 by 2.05 m cream sheet with a faded red hem on seven rings, a small mass-spring cloth
