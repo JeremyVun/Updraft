@@ -373,7 +373,14 @@ Gate: `cat-check`; yard stills of every move and emote at game distance (the cat
 distances, never rat-sized); the drowned run check still passing with the bigger cat.
 Done: [ ]
 
-### Phase 7: the room's story re-laid (after 6a and 6b)
+### Phase 6c: the windmill as a sack hoist (after 6a; owns `src/world/crossings/windmill.ts`, `mill-crossing.ts`, `mill-spiral.ts`, the mill yard, `mill-check`)
+design.md "The windmill, rebuilt": she rides a basket on the hoist, standing, the full height of the mill; the
+circles turn big sails with weight and carry-on; creak, the rope winding on its drum, a ratchet that holds her; the
+cat rides a sail up first. Gate: `mill-check` and `crossings-check` with real circles; yard stills and a recorded
+clip of the turning watched for feel; how many circles and seconds the climb takes.
+Done: [ ]
+
+### Phase 7: the room's story re-laid (after 6a, 6b and 6c)
 Owns: `src/world/drowned-way.ts` (the route climbing over five piece sites, short walks), `src/world/drowned.ts`
 layout, `src/world/drowned-dark.ts` (the fog as a rising tide paced to her), `src/story/drowned*.ts` (the stuck boat
 and its loss, the chase, the tower climb, the belfry and kittens, the bell and the boat home, the goodbye), the

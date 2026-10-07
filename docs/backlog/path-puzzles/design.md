@@ -540,7 +540,7 @@ where they differ; the drift, the village, the look and the storm stand.
    - **the tree (push)**, as built, the cat scrambling up it so it leans her way;
    - **the sheet (fill)**: a sheet on a line between two chimneys across a lane; gusts fill it and it carries her
      over, holding on, like a sail; the cat runs the line first;
-   - **the windmill (circle)**, as built, the cat riding a sail up first;
+   - **the windmill (circle)**, rebuilt as the mill's sack hoist (below), the cat riding a sail up first;
    - **the umbrella (lift)**: a black umbrella open on a roof; she takes it and the player's updraft lifts her over a
      gap to a higher roof, the cat leaping the gap its own way ahead;
    - **the swing (pump)**, as built, the cat springing from its seat onto the nave first.
@@ -560,6 +560,18 @@ where they differ; the drift, the village, the look and the storm stand.
 8. **Letting go.** The cat comes to the sill with a kitten beside it and looks down; she looks back up from the boat;
    the cat gives her a slow blink. She has brought it home, and she leaves it there glad. Then the fog darkens into the
    storm's night and the storm plays as built.
+
+**The windmill, rebuilt** (Jeremy, 2026-10-08: "spekaing of the windmill, that reminds me. I'm also not happy with how
+it works right now. The child effectively has a wedgie riding it up. it's very strange looking and feeling, and it
+doesn't feel nice to actually move the windmill with wind either. Because the distance is so small, it actually
+doesn't feel satisfying to solve the puzzle either, more like "oh, that's it?""). She no longer rides a sail. The
+mill keeps its sack hoist: a beam out of a door high under its cap, a rope down to a slatted basket at her roof's
+edge. She steps into the basket and holds the rope, standing. The player's circles turn the sails, the sails wind the
+hoist, and she rises the full height of the mill, the biggest climb of the run, to step off at the top onto the high
+roof (or a plank from the mill's door across to it). Turning it must feel good: the sails are big and catch the
+circles at once, gather speed with weight and keep turning a little when the circling stops, the cap creaks, the
+rope winds visibly on its drum, and a ratchet clicks and holds her wherever the sails stop (she never sinks back).
+The cat goes first by riding a sail up and leaping onto the cap, which shows that the turning sails are the way up.
 
 **The music** follows the story, not one loop: the drift as now; the stuck and the cat's flight a held breath; the
 chase a quiet pulse that tightens as the fog comes closer and eases when she is across; the belfry hushed (the bell's
