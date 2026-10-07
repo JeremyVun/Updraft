@@ -67,7 +67,7 @@ export const HALF_WIDTH = curve([
  * How the skin rounds over from the broadest line to the back (above 1 a broad low ridge, below 1 the flat-topped
  * head) and down to the belly (above 1 the keel under the tail stock).
  */
-const ROUND = curve([[0, 0.7], [0.13, 0.7], [0.21, 0.95], [0.3, 1.3], [0.7, 1.3], [0.85, 1.25], [1, 1.2]]);
+const ROUND = curve([[0, 0.6], [0.13, 0.6], [0.21, 0.9], [0.3, 1.3], [0.7, 1.3], [0.85, 1.25], [1, 1.2]]);
 const KEEL = curve([[0, 0.85], [0.16, 0.9], [0.3, 1], [0.66, 1], [0.8, 1.35], [1, 1.35]]);
 
 /**
@@ -81,13 +81,13 @@ export const MOUTH = curve([
 /** Where the mouth line ends, under the front of the eye, as a fraction of the length. */
 export const JAW_CORNER = 0.152;
 /** How much wider than the upper jaw the lower lip bows out, as a share of the half width. */
-const LIP = curve([[0, 0], [0.012, 0.09], [0.1, 0.11], [0.135, 0.06], [JAW_CORNER + 0.005, 0]]);
+const LIP = curve([[0, 0], [0.012, 0.11], [0.1, 0.15], [0.135, 0.08], [JAW_CORNER + 0.005, 0]]);
 
 /** The splash guard before the blowhole, a gentle rise on the line of the back, and the ridge down the snout to it. */
 const MOUND = curve([[0.16, 0], [0.19, 0.03], [0.207, 0.045], [0.225, 0.03], [0.255, 0]]);
 const MOUND_WIDTH = 0.42;
-const RIDGE = curve([[0.004, 0], [0.02, 0.03], [0.1, 0.038], [0.17, 0.03], [0.2, 0.012], [0.22, 0]]);
-const RIDGE_WIDTH = 0.16;
+const RIDGE = curve([[0.004, 0], [0.02, 0.035], [0.1, 0.048], [0.17, 0.038], [0.2, 0.014], [0.22, 0]]);
+const RIDGE_WIDTH = 0.22;
 
 /** Height of the top of the body along the middle of its back, crown and all. */
 export const crown = (s: number) => TOP(s) + MOUND(s) + RIDGE(s);
@@ -118,7 +118,7 @@ function lip(s: number, below: number): number {
 
 /**
  * A point on the body's rest-pose ring at s, `a` radians round from the top toward its left (+x): the shape every
- * ring of the mesh is built on, without the knuckles on the tail stock.
+ * ring of the mesh is built on.
  */
 export function ringPoint(s: number, a: number, out: { x: number; y: number }): { x: number; y: number } {
   const wide = WIDEST(s);
@@ -214,11 +214,10 @@ function body(): THREE.BufferGeometry {
   const at = { x: 0, y: 0 };
   for (let i = 0; i <= rings; i++) {
     const s = ringAt(i);
-    const knuckles = 0.03 * Math.max(0, Math.sin((s - 0.78) * 62)) * smoothstep(0.78, 0.83, s) * smoothstep(0.98, 0.9, s);
     for (let j = 0; j < around; j++) {
       const a = (j / around) * Math.PI * 2;
       ringPoint(s, a, at);
-      pos.push(at.x, at.y + knuckles * Math.max(0, Math.cos(a)) ** 6, -s * LENGTH);
+      pos.push(at.x, at.y, -s * LENGTH);
       rig.push(s, BODY, j / around, ringHeight(s, a));
     }
   }
