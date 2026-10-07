@@ -286,7 +286,19 @@ After N3d, on `sea-whale`. At free the whale drifts clear before it spouts, as `
 round them; the flipper reads as the whale's own, joined under the jaw, not a separate lump before the eye; portrait
 frames keep the gold morning though the sun can't share a phone's frame with the head and the boat.
 Gate: as N3d's, final stills opened for Jeremy.
-Done: [ ]
+Done: [x] `fed63c7c..58172ef1`. Free, the whale swings its head away about its tail stock and slides clear
+(`driftClear`: `CLEAR_TURN` 0.06 rad, `CLEAR_SLIDE` 2 m; pivot and heading restored in `lie()`), the eye 19.2 m off at
+40° to port by the spout; the free timeline 2 s longer (`SPOUT_FROM` 6, `FREE_FLUKES_FROM` 13.5; everything timed in
+free seconds follows). Landscape release hold 30/12. Three leaps clear in frame (`SALUTES`). The flipper about 9.6 m
+(`DREAM_SHAPE.fin` 0.28), rooted just behind the mouth's corner (`FIN_ROOT`), turned up on its knobbly edge
+(`FIN_EDGE_UP`), drooping, darker and less sky-lit than the body; `finRestSweep` -0.45, `finRestRaise` 0.23, `finLift`
+0.16; the bird's stations moved clear of the new tip (`endOut`/`endAhead`, `birdOut`/`birdAhead`). The flipper's reach
+table (`FIN_HALF`) lives in both `net-whale-check` and `sea-logic-check`: regenerate both if its shape changes; `full`
+is the tight case (1.23 m, as the bird swims out past the tip). Phone holds turned toward the sun as far as their
+subjects allow (`phone.*.turn`, `release.turn`); the breath's portrait has the sun. Timings (`full`): rest 88.8,
+moored 210.3; idle 485.9. Left: the portrait farewell has no raft (it lies 19 m abeam beside the snout); the leapers
+are dark against the sun; the flipper's root bobs about 1 m with each breath (under at the bottom, a pale horn at the
+top); at `k3` the hauled net reads as a scatter of corks.
 
 ### Phase N3f: the giant
 After N3e, on `sea-whale` (Jeremy, 2026-10-08; design.md, "A dreamlike giant, ancient": Claude's direction, the

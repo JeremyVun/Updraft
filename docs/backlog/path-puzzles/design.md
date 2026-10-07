@@ -791,10 +791,11 @@ The sequence:
   is never shown whole near the boat. Slate-blue, paler underside, the low sun on its rim, cool sky fill so the eye
   still reads; no sharp ridge, no face-like smile. Its eye, near the boat, is larger than the
   boat is wide, under a heavy tired lid. `notes.md`'s heights scaled to 110 m: crown about 5.3 m above the water, eye
-  centre about 2.3 m, the eye about 3.5 m across, the near flipper about 16 m. It breathes slowly. As built (Claude's
+  centre about 2.3 m, the eye about 3.5 m across. It breathes slowly. As built (Claude's
   call, 2026-10-08): a blunt head with its own lower jaw, the pale lip narrowing to a point under the eye and greying
-  into the slate far off, so the first sight reads as a long low shape before it reads as a jaw; the near flipper lies
-  awash along the surface from just under it.
+  into the slate far off, so the first sight reads as a long low shape before it reads as a jaw; the near flipper,
+  about 9.6 m (at 16 m it read as a second animal before the eye), roots low just behind the mouth's corner and lies
+  awash toward the boat's port bow, turned up on its knobbly leading edge.
 - **A dreamlike giant, ancient** (Jeremy, 2026-10-08: "To me it doesn't quite yet read like a sillouhette of a
   dreamlike giant whale." and "I also agree about the skin being a bit too "smooth" - we need it to look like an
   ancient giant whale", then "i think the concept art has served it's purpose to get us this far, i need you to take
@@ -852,7 +853,8 @@ The sequence:
   goes with it, the limit eases off, and the sea goes still into the mirror's glass. The net starts drifting as the
   loop slips off, working loose into a raft with its corks round its edges, so it is its own shape by the spout; the
   pod sets off as the bird is lifted in, and three dolphins leap clear of the water round the head at the spout,
-  caught by the sun.
+  caught by the sun. Free, the whale first swings its head away and slides clear of the boat (the eye from about 15.6
+  to 19 m off), so by the spout it lies whole in the middle distance; the boat stays at rest.
 - **Gestures.** Each step's answer starts at the wind's target and is plainly the biggest thing on screen: the boat is
   at rest, so nothing may read as the boat speeding up. The ambient breeze does nothing to the net, the corks or the
   flipper. Gusts elsewhere on the whale may still tickle it (shiver, a lazy slap) but never progress a step.
