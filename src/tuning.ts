@@ -1774,6 +1774,8 @@ export const tuning = {
        * see her way), and how much thicker low over the water, falling away over `low` metres.
        */
       density: 0.25, closed: 0.03, floor: 0.035, low: 3,
+      /** How much of its closing round thins its body to the closed fog's, before its front runs on past the eye. */
+      closedBy: 0.3,
       /**
        * The mist it sends on ahead: per metre at its front and at the water, falling away over `airLow` metres up and
        * `airReach` metres ahead once it is close (`airReachFar` while it is still far off, a share `airFar` as thick).
@@ -1811,6 +1813,33 @@ export const tuning = {
        * shortfall), never faster than `most` m/s, so it has fetched up at its tree with its lantern lit when she reaches the nave.
        */
       catchUp: 0.3, most: 2.4, lead: 1.15 },
+    /** The church: the cat up the ivy, the fog closing round, the boat brought to the nave, and her look back as they go. */
+    church: {
+      /** Seconds she stands at the tower's foot before the cat goes up, and the cat sits on the sill before the fog comes. */
+      naveFor: 1, climbAfter: 1.2, upFor: 2.5,
+      /**
+       * Seconds into the fog's coming: its front on over the church and `past` metres beyond her; its closing round;
+       * the cat backing into the belfry; the first wind swinging the boat off its tree; her looking round at the fog,
+       * then up at the cat, then out to the boat; and the boat being hers to bring.
+       */
+      fog: { comeAfter: 4, comeFor: 9, past: 40, closeFrom: 11, closeFor: 8, catIn: 5, swingAt: 9, lookAtFog: 3, lookAtCat: 9, bringAfter: 16 },
+      /** How far the first wind takes the boat back off its tree, metres, and the most it goes while she brings it, m/s. */
+      swingBack: 1.4, bringSpeed: 2.6,
+      /**
+       * Its way round the tower: how near a turn counts as rounded; how far off the berth she goes down the slates to
+       * meet it, and how near the berth it has to lie; seconds with no progress before the world's air carries it,
+       * and how much breeze that is.
+       */
+      rounded: 3.5, meetFrom: 9, berthed: 0.6, valve: 90, carryBreeze: 0.45,
+      /**
+       * Seconds after she is seated that she looks back at the cat, for how long, and when in that it mews; and how she
+       * turns round on the thwart to it: beyond what her head turns (radians), the most her body turns and how fast, and
+       * how far behind the cat has to be before she turns the side away from the lens.
+       */
+      lookBackAt: 1.2, lookBackFor: 4.5, mewAfter: 1, headTurns: 0.9, seatTurn: 1.7, turnRate: 1.6, turnPast: 2.2,
+      /** The rain the fog brings as it closes round, and how far gathered the storm's weather is when it starts from here. */
+      closeShower: 0.25, stormFrom: 0.35,
+    },
     /** Her run over the roofs after the cat, from the strand's ridge to the nave's. */
     run: {
       /** Seconds she stands on the ridge looking after the cat before she goes, and her pace as a share of a walk. */
@@ -1907,6 +1936,32 @@ export const tuning = {
       millAside: 5.4, millOut: 11.5,
       /** The end's view: how far back along the nave, how high, and how far out over the green. */
       naveBack: 10, naveHigh: 3.6, naveAside: 11,
+    },
+    /** The church (`ChurchArrival.frame`). */
+    church: {
+      /** How fast it eases to each view (per second) and its pace; upright, how much further off it stands. */
+      ease: 0.6, pace: 0.6, uprightFar: 1.3,
+      /** How fast it follows her once the boat is under way (per second). */
+      follow: 4,
+      /**
+       * While the cat climbs, low off the green by the tower's south-west corner: where it stands from the tower's
+       * middle, and how high once the cat is up; where it looks, from her head toward the cat and how far above that;
+       * and its lens.
+       */
+      climbFrom: { x: -8.4, y: 3.6, z: 8.5 }, climbUp: 4.4, climbAlong: 0.5, climbLift: 0.3, climbZoom: 1.15,
+      /** Round the nave's west end as the fog comes: seconds into the fog it starts and takes, and how much wider it goes. */
+      roundFrom: 0, roundFor: 10, roundWide: 11,
+      /**
+       * Over the north water: where it stands from the tower's middle with the boat still at its tree and with it come
+       * in; how far from her toward the boat it looks while it is far off, and at what height.
+       */
+      northFar: { x: -7.5, y: 2.6, z: -27 }, northNear: { x: -1, y: 2.2, z: -19 }, northToward: 0.45, northAim: 3,
+      /**
+       * Going: seconds after she is seated it starts to give way to the storm's frame, and how long it takes; meanwhile
+       * how far from her toward the cat it looks, and its lens (upright, the same).
+       */
+      leaveFrom: 6, leaveFor: 6, backAlong: 0.5, backUprightAlong: 0.5, backZoom: 1.25,
+      backUprightZoom: 1,
     },
     /** Follow the boat into the streets; notice the church from that travelling view. */
     roofFromZ: -1260, roofUntilZ: -1360,
@@ -2045,7 +2100,6 @@ export const tuning = {
   /** One continuous passage from the last drowned houses to the forest beach. */
   storm: {
     passageSpeed: 5.8,
-    startsFromShore: 210,
     gatherFor: 22,
     /** One distant ship call, with its tail clear before the first thunder. */
     foghornAt: 8, foghornLateAllowance: 0.25,

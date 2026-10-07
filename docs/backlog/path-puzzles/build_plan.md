@@ -176,7 +176,27 @@ at the start and main's beats re-timed for about 140 m to the beach (the lightho
 she boards, the plane taken, rain, the landing).
 Gate: the check plays through to the forest beach; `tools/storm-check.mjs`, `boat-check.mjs` and
 `drowned-camera-check.mjs` fixtures updated to the new sequence.
-Done: [ ]
+Done: 4a [x] (branch `proto-drowned-board`), 4b [ ]. `ChurchArrival` (`src/story/drowned-church.ts`, chapter beat
+`church`, `?chapter=church` starts at the tower's foot): ivy up the tower's south face (`src/world/drowned-ivy.ts`,
+`IVY`) and sills under the belfry's openings; the cat climbs it to the south sill (`BELFRY_SOUTH`) while she steps
+back along the ridge, then backs through the belfry to the north sill (`BELFRY_NORTH`) as the fog comes; the fog's
+front comes on to the tower's foot and `close` runs 0 to 1 (its body now thins over the first `fog.closedBy` of the
+closing before its front runs on past the eye, so nobody stands in its thick body); the fog alone takes the light
+(the story's dusk no longer rises with it) and the storm's night takes over from the fog's (`DarkBank.storm`); the
+first wind swings the boat off its tree, the player fills its sail (`invitesSail`) to bring it round the tower's north
+side (`BRING_WAY`) to `NAVE_BERTH` (safety valve: 90 s with no progress brings the world's breeze back to carry it),
+she walks down the nave's north slates (`NAVE_NORTH`) and `board`s, and turns round on the thwart to look back at the
+cat, which mews once. The storm (`gather`) now begins with her aboard (`startsFromShore` is gone), its weather from
+`church.stormFrom` gathered, and the boat goes out by `AWAY` onto the channel's last leg. As it now falls (check, landscape):
+the cat up 13 s after the tower's foot, the fog 16 s, the boat hers at 32 s, brought in 12 s of stroking, aboard 54 s;
+from aboard 146 m to `WOOD_LANDING`; snatch at storm 22 s, 39 m from the beach; the light out at 23 s with the boat
+114 m from the lighthouse (it is long past it, out of sight in the closed fog); landed 30 s after she is aboard. For
+4b: main's beats need re-timing to this (the lighthouse is abeam about 55 m off as she boards; the light should go out
+within the first few seconds, the plane be taken mid-way); the closed fog still covers the forest beach (`here` fades
+200 to 320 m from the church); the storm's first seconds grey and brighten the frame (the squall's desaturation and
+veil coming in before its night), worth judging; `storm-check`, `boat-check` and `drowned-camera-check` fixtures are
+untouched and expect `startsFromShore`. For the camera wave: the run's shot still has `carry` on, so its lens is carried
+by the drifting boat; the look back's cat reads small (about 20 px landscape).
 
 ### Phase 5: saves, docs and the look
 Owns: checkpoints (a save during the run resumes with the boat at rest against the cottage, the cat aboard and the

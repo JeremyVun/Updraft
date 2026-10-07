@@ -47,6 +47,8 @@ export class DarkBank {
   rise = 0;
   /** 0 a bank with a front to 1 closed round the eye and darkening into the storm's night. */
   close = 0;
+  /** How far the storm's own night has taken over from the darkness the fog brought, 0 to 1. */
+  storm = 0;
   /** The way it comes where its front is now. */
   private readonly ahead = new THREE.Vector2().subVectors(DARK_WAY[1], DARK_WAY[0]).normalize();
   private readonly front = new THREE.Vector2();
@@ -125,7 +127,7 @@ export class DarkBank {
     u.uSeaFogSides.value.set(d.halfWidth, d.halfWidth * 1.8, wing * d.halfWidth, (wing + fade) * d.halfWidth);
 
     const taken = THREE.MathUtils.clamp((p - far) / (near - far), 0, 1) * here;
-    const night = smooth(p, near + 0.05, 1) * here;
+    const night = smooth(p, near + 0.05, 1) * here * (1 - this.storm);
     const crestGone = smooth(p, far, near + 0.1);
     // White is what the light makes of it: as bright as the sky round it lights it, never a white of its own.
     const sky = luminance(u.uSkyAmbient.value) * 0.9 + luminance(u.uSkyHorizon.value) * 0.3;
