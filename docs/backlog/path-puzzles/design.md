@@ -544,7 +544,8 @@ where they differ; the drift, the village, the look and the storm stand.
    - **the umbrella (lift)**: a black umbrella open on a roof; she takes it and the player's updraft lifts her over a
      gap to a higher roof, the cat leaping the gap its own way ahead;
    - **the swing (pump)**, as built, the cat springing from its seat onto the nave first.
-   Their order and places come from the re-laid route; the concept round settles the two new pieces' look.
+   Their order and places come from the re-laid route; the two new pieces are staged and judged on the stage's yards
+   (`?chapter=stage`) before they go into the room.
 6. **The refuge.** The cat climbs the tower's ivy into the belfry and she follows it in (the child can climb what she
    could not before: the ivy is thick and stepped, and the cat shows the way). In the belfry, in old straw under the
    bell, are the cat's kittens; the cat curls round them. The fog closes round the tower and rises to just below the
@@ -565,8 +566,8 @@ chase a quiet pulse that tightens as the fog comes closer and eases when she is 
 own note in the score's key); the boat's answer warm; then the storm's cues. Every part of the room has music; nothing
 loops a short section for minutes.
 
-**The camera** is authored shot by shot rather than planned by costs, to a written shot list (below) that the
-storyboard illustrates. Rules: the subject is always framed as the shot intends, not merely somewhere in frame; in
+**The camera** is authored shot by shot rather than planned by costs, to a written shot list (below), staged in
+the engine and judged from stills. Rules: the subject is always framed as the shot intends, not merely somewhere in frame; in
 every interaction the thing the player acts on, her, and where she is going are all in frame, with the action moving
 across the screen rather than into it; the fog is in every chase frame, behind or beside; moves happen between beats
 or with her movement, one intention each, never an in-and-out; upright frames compose for the narrow frame, not as a

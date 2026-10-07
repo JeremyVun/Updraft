@@ -342,19 +342,58 @@ tub, the tree, the mill, the swing, the bring) and fails if any of its safety va
 and on its pot reads small; the first seconds in the wood are near black with the sail cropped at the frame's foot;
 upright the church's water views leave the lower half of the frame to empty water.
 
-### Phase 6: the cat goes first
-Design: design.md, "How it is made", the cat bullet (Jeremy's rulings of 2026-10-08, verbatim there), and steps 4–6.
-Sketches (a guide, not a target): `comps/cat-guide/` (`guide-*.png`, `notes.md`; they paint her already on the sail and
-the swing, which is wrong: the cat goes first). Owns: the cat's way and beats at the three pieces (`CAT_WAY`,
-`src/story/drowned-run.ts`, the cat in `src/creatures/cat*`), the pieces' response to the cat's weight (the tree's
-lean, the mill's sail carrying it, the swing's sway, in `src/world/crossings/`), the cat's presence (size, pose,
-light, the run's and pieces' lens holding it as it shows), its eyes catching the lantern in the belfry.
-Contract: each showing starts while she is still on her way and lasts about 2–3 s; the player's wind is live
-throughout and the crossing is hers to make the moment she arrives (a player who acts before the cat finishes is
-never blocked; the cat finishes alongside). At the mill the player's first circles carry the cat's sail up and the
-next comes level for her. Nothing waits on the cat.
-Gate: `LENS=1` run check from the drift, landscape and upright, with the cat in frame through each showing; the
-pieces' checks; the playthrough from the stairs to the wood with no safety valve; stills of each showing.
+### The room rethought (Phases 6–10)
+Design: design.md, "Jeremy's first play" and "The room rethought" (the spine, the shot list, the music). No concept
+art: pieces are staged on the stage's yards and judged from stills. The base is `proto-drowned-roofs`; its village,
+church, storm, saves and checks carry over. The interrupted cat-guide work is on `proto-drowned-catguide` (`8d39016f`,
+uncommitted state saved as one commit), to take from where useful.
+
+### Phase 6a: the two new crossings (parallel with 6b)
+Owns: `src/world/crossings/` new pieces (the sheet on its line, the umbrella), their yards in `src/story/stage.ts`
+(`?chapter=stage&gap=sheet|umbrella`), `tools/crossings-check.mjs`, their tuning under `tuning.crossings`.
+Contract: each is a piece like `TreeCrossing`/`SwingCrossing`/`MillCrossing` (constructed with its site, a wait point,
+a step-off and an onward point; `taken` when she is across; an invitation for a stalled player; a safety valve), with a
+hook for the cat going first (`showFor(cat)` or similar: the cat's way across it and when it is clear for her). The
+sheet: gusts across it fill it, and full it carries her holding on over a lane to a higher roof. The umbrella: she
+opens it on a roof edge and the player's updraft (traced circles) lifts her over a gap to a higher roof; she floats,
+never falls. Each takes her 1–3 m higher.
+Gate: `crossings-check` for all pieces; stills of each yard from the shot list's interaction framing (her on the near
+edge, the piece and the far side across the frame), landscape and upright.
+Done: [ ]
+
+### Phase 6b: the cat (parallel with 6a)
+Owns: `src/creatures/cat.ts`, `src/creatures/cat/`, `src/story/cat-yard.ts`, `tools/cat-check.mjs`, the wash-tub
+(`src/world/wash-tub.ts`), kittens (new, in `src/creatures/cat/`).
+Contract: the cat about knee-high to her (cheated); gaits and moves that read cat-quick (walk, trot, bolt, leap and
+land, climb, ride, hop down); emotes for the story (frightened on the pot, shiver, press against her legs, staring at
+the fog with ears back, curling round kittens, the slow blink, a mew); three kittens that tumble and nestle; the tub's
+inside masked from the sea and steering readily, easing toward its target once near. The yard (`cat-yard.ts`) plays
+every move and emote for stills.
+Gate: `cat-check`; yard stills of every move and emote at game distance (the cat reads at the room's camera
+distances, never rat-sized); the drowned run check still passing with the bigger cat.
+Done: [ ]
+
+### Phase 7: the room's story re-laid (after 6a and 6b)
+Owns: `src/world/drowned-way.ts` (the route climbing over five piece sites, short walks), `src/world/drowned.ts`
+layout, `src/world/drowned-dark.ts` (the fog as a rising tide paced to her), `src/story/drowned*.ts` (the stuck boat
+and its loss, the chase, the tower climb, the belfry and kittens, the bell and the boat home, the goodbye), the
+belfry's inside and the bell, the checks and saves.
+Gate: the run check from the drift through the belfry and the boat home to the beach, with real gestures; saves;
+stills of every beat.
+Done: [ ]
+
+### Phase 8: the camera to the shot list (after 7)
+Owns: the room's lens from the rescue to the storm's frame (`drowned-run.ts`, `drowned-church.ts`, `drowned.ts`'s
+watch, `tuning.drownedCamera`), authored per beat to design.md's shot list, upright composed for itself.
+Gate: `LENS=1` checks, both aspects; a still at every shot-list line.
+Done: [ ]
+
+### Phase 9: the music (parallel with 7 or 8)
+Owns: the drowned score (`src/audio/dream-score.ts` and its notes, the room's `drownedScore` phases): a cue for every
+part of the room per design.md, the bell's note in key; renders for Jeremy to judge by ear.
+Done: [ ]
+
+### Phase 10: polish, saves, docs and the full play
 Done: [ ]
 
 ### Later
