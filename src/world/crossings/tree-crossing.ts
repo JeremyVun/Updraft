@@ -4,7 +4,11 @@ import type { PointerInput } from '../../input/pointer';
 import type { Traveller } from '../../traveller/traveller';
 import type { WindField } from '../../wind/field';
 import type { WindLines } from '../../fx/windlines';
-import { ToppleTree, type TreeSpot } from './topple-tree';
+import type { MaterialSound } from '../../audio/foley';
+import { ToppleTree, type TreeEvent, type TreeSpot } from './topple-tree';
+
+/** The dead tree's voice in the world's foley: its creak as it rocks, the roots giving and tearing, the fall. */
+export const TREE_SOUNDS = { creak: 'tree-creak', loosen: 'roots-give', tear: 'root-tear', impact: 'tree-fall' } as const satisfies Record<TreeEvent, MaterialSound>;
 
 /** Where she waits for the tree, and where she goes on to once she is over. */
 export interface TreeWay {

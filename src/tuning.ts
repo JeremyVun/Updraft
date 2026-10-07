@@ -1759,7 +1759,31 @@ export const tuning = {
      * hull is knocked as it swings off, its drift (m/s) and the seconds it takes to gather it; and when (seconds into
      * the drift) she looks back at it from the ridge, and for how long.
      */
-    adrift: { after: 1.5, nudge: 0.45, speed: 0.3, gather: 6, lookFrom: 1.2, lookFor: 2.6 },
+    adrift: { after: 1.5, nudge: 0.45, speed: 0.3, gather: 6, lookFrom: 1.2, lookFor: 2.6,
+      /**
+       * Once she is on her way it keeps pace with her: it makes up toward `lead` times her share of the way (per second of
+       * shortfall), never faster than `most` m/s, so it has fetched up at its tree with its lantern lit when she reaches the nave.
+       */
+      catchUp: 0.3, most: 2.4, lead: 1.15 },
+    /** Her run over the roofs after the cat, from the strand's ridge to the nave's. */
+    run: {
+      /** Seconds she stands on the ridge looking after the cat before she goes, and her pace as a share of a walk. */
+      setOff: 2.2, stroll: 0.95,
+      /** The beat she takes before a hop of her own; within `through` of a turn gentler than `bend` (radians) she walks on through it. */
+      hopPause: 0.35, through: 1.1, bend: 0.4,
+      /** How often she glances back at the fog as she goes, and for how long. */
+      glanceEvery: 8, glanceFor: 1.3,
+      /**
+       * The cat: how far ahead of her along the way it waits, how near she comes before it goes on, and how fast it goes
+       * along ridges and walls and along the railings (m/s).
+       */
+      catLead: 13, catNear: 6, catSpeed: 3.0, railSpeed: 1.6,
+      /**
+       * The fog along `DARK_WAY`: how near behind her it creeps while she waits at a piece, how far back it lets her get
+       * on her own way, the nearest it ever comes, and how fast it comes on (m/s).
+       */
+      fogHold: 18, fogTrail: 30, fogNearest: 14, fogCreep: 1.1,
+    },
     /** The wash-tub the player's wind carries to the cat's roof and back to the boat. */
     tub: {
       /**
@@ -1808,6 +1832,36 @@ export const tuning = {
     },
   },
   drownedCamera: {
+    /** Her run over the roofs (`RoofRun.frame`). */
+    run: {
+      /**
+       * Beside her on her own way: how quickly it follows her (per second), the stretch of way behind and ahead of her
+       * whose line it stands across, how quickly it turns with that line, how far back from abeam it stands (radians,
+       * landscape and upright), how far off at most, how far above her feet and the lowest and highest it goes, how far
+       * along her way it looks, how high above her feet, and its pace.
+       */
+      follow: 2.2, behind: 6, ahead: 12, turn: 0.45, back: 0.4, uprightBack: 1.15, distance: 10, uprightDistance: 9,
+      rise: 1.5, uprightRise: 2.6, lowest: 2.2, highest: 5.2, lead: 2.5, aim: 1.0, pace: 0.7,
+      /**
+       * Round to each piece's own view from `comeFrom` to `comeTo` metres before she reaches it, and back to her own way
+       * from `leaveFrom` to `leaveTo` metres past it; to the end's view over the last `endFrom` metres.
+       */
+      comeFrom: 16, comeTo: 3, leaveFrom: 0, leaveTo: 14, endFrom: 8,
+      /**
+       * Off the mill she is soon over the high roof's back, out of its view, so the lens leaves it sooner; and it comes
+       * round to the swing's view only once she has turned off the green cottage's ridge, never walking her into it.
+       */
+      millLeave: 5, swingFrom: 6,
+      /**
+       * The tree's view: how far round to the west from straight behind her (radians), how far back and how high it
+       * stands (upright, the same).
+       */
+      treeTurn: 0.65, treeBack: 13, treeHigh: 4.6, uprightTreeBack: 11, uprightTreeHigh: 6.5,
+      /** The mill's view: how far to the side of her wall and out in front of the sails it stands. */
+      millAside: 5.4, millOut: 11.5,
+      /** The end's view: how far back along the nave, how high, and how far out over the green. */
+      naveBack: 10, naveHigh: 3.6, naveAside: 11,
+    },
     /** Follow the boat into the streets; notice the church from that travelling view. */
     roofFromZ: -1260, roofUntilZ: -1360,
     entryBearing: 0.16, roofBearing: 0.10,

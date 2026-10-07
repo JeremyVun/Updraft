@@ -4,9 +4,8 @@ import type { Deck } from '../world/decks';
 import { heightAt } from '../world/island';
 import { REFLECTION_LAYER } from '../world/water/reflection';
 import { tuning } from '../tuning';
-import { MillCrossing, type MillEvent } from '../world/crossings/mill-crossing';
+import { MILL_SOUNDS, MillCrossing } from '../world/crossings/mill-crossing';
 import { HUB_HEIGHT, SAIL, railAt } from '../world/crossings/windmill';
-import type { MaterialSound } from '../audio/foley';
 import { COURSED, PLAIN, STONE, WALL, drownedHouse, ridgeOf, yardMesh, type Roof } from './crossings-yard';
 import type { Cast } from './cast';
 
@@ -39,8 +38,6 @@ const WAY = {
   ridge: { x0: TIP.x + 0.15, z0: SAIL.forward, x1: HIGH.x - HIGH.len / 2 + 1.2, z1: SAIL.forward, halfWidth: 0.4, height: RIDGE },
 } satisfies Record<string, Deck>;
 
-/** The mill's own voice: the dry axle as it starts, wood working through the turn, the brake as it settles, the linen. */
-const MILL_SOUNDS = { start: 'mill-start', creak: 'mill-creak', settle: 'mill-settle', flap: 'linen-flap' } as const satisfies Record<MillEvent, MaterialSound>;
 
 /**
  * QA only: the drowned village's middle crossing set out on the sea off the QA stage, playable on its own

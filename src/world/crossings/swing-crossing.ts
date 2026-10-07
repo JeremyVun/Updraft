@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { tuning } from '../../tuning';
+import type { MaterialSound } from '../../audio/foley';
 import { RopeSwing, type SwingSpot } from './rope-swing';
 import type { CrossingCast } from './tree-crossing';
 
@@ -13,6 +14,9 @@ export interface SwingWay {
 }
 
 export type SwingEvent = 'creak' | 'leap' | 'land';
+
+/** Her coat as she lets go of the ropes, the old rope on the bough each time it turns, her boots and hand on the slates. */
+export const SWING_SOUNDS = { creak: 'bough-creak', leap: 'cloth', land: 'slate-land' } as const satisfies Record<SwingEvent, MaterialSound>;
 
 /**
  * The second crossing: a rope swing over open water from an old tree's bough. She gets on by herself; the player's

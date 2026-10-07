@@ -526,6 +526,9 @@ export const BOAT_ADRIFT: THREE.Vector2[] = (() => {
   return way;
 })();
 
+/** How far the untended boat drifts, metres, from the strand to where it fetches up against its tree. */
+export const ADRIFT_LENGTH = BOAT_ADRIFT.reduce((sum, p, i) => (i ? sum + p.distanceTo(BOAT_ADRIFT[i - 1]) : 0), 0);
+
 /** The point `along` metres down `BOAT_ADRIFT` (held at its end), and the heading of the leg it is on. */
 export function adriftAt(along: number, out: THREE.Vector2): number {
   let left = along;

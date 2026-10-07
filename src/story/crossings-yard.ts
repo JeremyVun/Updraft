@@ -6,10 +6,9 @@ import { ATMO_GLSL, atmo } from '../world/atmosphere';
 import { heightAt } from '../world/island';
 import { REFLECTION_LAYER } from '../world/water/reflection';
 import { BARK, merged, tube } from '../world/crossings/shapes';
-import { barkMaterial, type TreeEvent } from '../world/crossings/topple-tree';
-import { TreeCrossing } from '../world/crossings/tree-crossing';
-import { SwingCrossing, type SwingEvent } from '../world/crossings/swing-crossing';
-import type { MaterialSound } from '../audio/foley';
+import { barkMaterial } from '../world/crossings/topple-tree';
+import { TREE_SOUNDS, TreeCrossing } from '../world/crossings/tree-crossing';
+import { SWING_SOUNDS, SwingCrossing } from '../world/crossings/swing-crossing';
 import type { Cast } from './cast';
 
 const ROOF_VERT = /* glsl */ `
@@ -148,9 +147,6 @@ const WAY = {
   naveRidge: { x0: SWING_X - 3, z0: NAVE.z, x1: SWING_X + 2.5, z1: NAVE.z, halfWidth: 0.45, height: ridgeOf(NAVE) },
 } satisfies Record<string, Deck>;
 
-const TREE_SOUNDS = { creak: 'tree-creak', loosen: 'roots-give', tear: 'root-tear', impact: 'tree-fall' } as const satisfies Record<TreeEvent, MaterialSound>;
-/** Her coat as she lets go of the ropes, the old rope on the bough each time it turns, her boots and hand on the slates. */
-const SWING_SOUNDS = { creak: 'bough-creak', leap: 'cloth', land: 'slate-land' } as const satisfies Record<SwingEvent, MaterialSound>;
 
 type View = 'tree' | 'swing' | 'walk';
 

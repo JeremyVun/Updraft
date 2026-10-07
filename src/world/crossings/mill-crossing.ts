@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { tuning } from '../../tuning';
+import type { MaterialSound } from '../../audio/foley';
 import type { Deck } from '../decks';
 import { MillSpiral } from './mill-spiral';
 import { SAIL, Windmill, type MillSound, type MillSpot } from './windmill';
@@ -15,6 +16,9 @@ export interface MillWay {
 }
 
 export type MillEvent = MillSound;
+
+/** The mill's own voice: the dry axle as it starts, wood working through the turn, the brake as it settles, the linen. */
+export const MILL_SOUNDS = { start: 'mill-start', creak: 'mill-creak', settle: 'mill-settle', flap: 'linen-flap' } as const satisfies Record<MillEvent, MaterialSound>;
 
 /**
  * The middle crossing: a drowned mill's sails turned by the player's circling. A sail comes round level beside the
