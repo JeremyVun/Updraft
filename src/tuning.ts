@@ -1733,13 +1733,24 @@ export const tuning = {
     /** The sea fog the dark is: one field every shader reads, and the light it takes as it comes. */
     fog: {
       /**
-       * How high it stands over the water (`topFar` times as high while it is far off, heaped along the horizon), how
-       * softly its top gives out, and how deep its front is soft (what
-       * stands in that first stretch of it fades rather than being covered), metres.
+       * How high it stands over the water (`topFar` times as high while it is far off, heaped along the horizon, and
+       * `closedTop` times once it has closed round), metres; how deep under its top it gives out, a share of its
+       * height (`closedSoft` closed round); and how deep its front is soft (what stands in that first stretch of it
+       * fades rather than being covered), metres.
        */
-      top: 28, topFar: 1.2, topSoft: 2.5, front: 22,
-      /** How far its front heaves to and fro across its line, metres, and how far its billows swell out of its face, a share of its height. */
-      heave: 20, billow: 0.35,
+      top: 28, topFar: 1.2, closedTop: 0.6, topSoft: 0.15, closedSoft: 0.9, front: 22,
+      /** How far its front heaves to and fro across its line, metres. */
+      heave: 20,
+      /**
+       * Its feathered sheets, nearest first: metres behind its front (the first is a wisp low on the water, lying
+       * `wispAhead` times as far ahead of it as its mist reaches) and how tall against the field; how raggedly their
+       * tops break, a share of their height; and how much the wisp covers.
+       */
+      sheetBack: [0, 8, 40, 100], sheetTall: [0.15, 0.8, 0.9, 1.0], sheetRough: 1.8, wispAhead: 1.75, wisp: 0.4,
+      /** How far apart the sheets stand the way it comes, seen along its front, metres. */
+      sheetApart: 30,
+      /** How brightly the fog round her takes the lantern's light, and how far round the flame it shows, metres. */
+      lanternHalo: 0.4, lanternReach: 2,
       /**
        * Per metre: how thick it is through its body as a bank, and once it has closed round (thinner, so she can still
        * see her way), and how much thicker low over the water, falling away over `low` metres.
@@ -1749,7 +1760,7 @@ export const tuning = {
        * The mist it sends on ahead: per metre at its front and at the water, falling away over `airLow` metres up and
        * `airReach` metres ahead once it is close (`airReachFar` while it is still far off, a share `airFar` as thick).
        */
-      air: 0.05, airLow: 6, airReach: 70, airReachFar: 120, airFar: 0.4,
+      air: 0.035, airLow: 6, airReach: 45, airReachFar: 120, airFar: 0.4,
       /** How far past the eye its front has gone once it has closed round. */
       closeRun: 500,
       /**
@@ -1757,7 +1768,9 @@ export const tuning = {
        * how far its foot and the mist ahead of it go into the pale haze over the water, far off and come close;
        * how far the first wind under it breaks up the glass once it has closed round, and the slope of the ripples it raises.
        */
-      body: 0.7, bodyNear: 0.42, crest: 0.45, haze: 0.3, hazeNear: 0.05, stir: 1, ripple: 0.18,
+      body: 0.32, bodyNear: 0.3, crest: 0.55, haze: 0.3, hazeNear: 0.12, stir: 1, ripple: 0.18,
+      /** How much of what is left of the light comes through it where it is thin once the sun has gone from it. */
+      glowNear: 0.25,
       /**
        * Where the progression stands with the bank risen far off and come close with the sun taken, the light going
        * steadily between; and how much of its rise shows it risen in full.

@@ -21,7 +21,7 @@ const HUE = {
   near: new THREE.Color(0.74, 0.85, 1.16),
   night: new THREE.Color(0.86, 0.86, 1.1),
   /** The low sun on its billows' tops. */
-  crest: new THREE.Color(2.5, 0.75, 0.45),
+  crest: new THREE.Color(2.4, 0.85, 0.5),
   /** What is left of the sunset aloft once the sun has gone. */
   rose: new THREE.Color(1.3, 0.7, 0.92),
   cold: new THREE.Color(0.84, 0.92, 1.16),
@@ -119,7 +119,7 @@ export class DarkBank {
     u.uSeaFog.value.set(this.front.x, this.front.y, this.ahead.x, this.ahead.y);
     // Low on the horizon as it rises, and standing higher the nearer it comes.
     const drawn = smooth(p, far, near);
-    const top = k.top * (0.3 + 0.7 * risen) * THREE.MathUtils.lerp(k.topFar, 1, drawn) * (1 + 0.3 * this.close);
+    const top = k.top * (0.3 + 0.7 * risen) * THREE.MathUtils.lerp(k.topFar, 1, drawn) * THREE.MathUtils.lerp(1, k.closedTop, this.close);
     u.uSeaFogShape.value.set(top, d.flank / (d.halfWidth * d.halfWidth), this.close, amount);
     const wing = THREE.MathUtils.lerp(d.wingFar, d.wing, drawn), fade = THREE.MathUtils.lerp(d.wingFadeFar, d.wingFade, drawn);
     u.uSeaFogSides.value.set(d.halfWidth, d.halfWidth * 1.8, wing * d.halfWidth, (wing + fade) * d.halfWidth);
@@ -137,6 +137,7 @@ export class DarkBank {
     u.uSeaFogBody.value.set(this.body.r, this.body.g, this.body.b, k.air * risen * THREE.MathUtils.lerp(k.airFar, 1, drawn) * (1 - 0.6 * this.close));
     u.uSeaFogCrest.value.set(this.crest.r, this.crest.g, this.crest.b, k.stir * night);
     u.uSeaFogRim.value = THREE.MathUtils.lerp(0.32, 0.12, crestGone) * top;
+    u.uSeaFogGlow.value = THREE.MathUtils.lerp(1, k.glowNear, crestGone);
     u.uSeaFogHaze.value = THREE.MathUtils.lerp(k.haze, k.hazeNear, drawn) * (1 - this.close);
     u.uSeaFogReach.value = THREE.MathUtils.lerp(k.airReachFar, k.airReach, drawn);
 
