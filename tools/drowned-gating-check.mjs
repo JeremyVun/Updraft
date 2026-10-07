@@ -57,7 +57,7 @@ while (now < 560) {
   const storm = stormAt(now);
   const far = Math.abs(boat.z + 1440) > 320;
   if (far) restingSteps++;
-  gated.update(dt, now, boat, storm);
+  gated.update(dt, now, boat, storm, boat);
   updateEvery(every, dt, now, boat, storm);
   steps++;
   if (!far && !entered) entered = { at: now, gated: snapshot(gated), every: snapshot(every) };
