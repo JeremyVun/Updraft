@@ -12,7 +12,7 @@
 //        becalming), FROM=church at the tower's foot (skips the run too), FROM=storm with her just seated aboard at the
 //        nave (skips the church too), SHOTS=<prefix> saves stills (at each piece,
 //        two between, and through the church), FILM=<seconds> with SHOTS also
-//        saves a still every that many seconds of the run, W/H viewport (default 1600x900), LENS=1 also fails on the
+//        saves a still every that many seconds from the air dying (from the ridge with FROM=roofs) to the tower, W/H viewport (default 1600x900), LENS=1 also fails on the
 //        lens's measures (a roof hiding her, her walking toward it, her out of frame, it inside a roof).
 import { chromium } from 'playwright-core';
 import assert from 'node:assert/strict';
@@ -30,6 +30,7 @@ const errors = [];
 try {
   const page = await (await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1 })).newPage();
   page.on('pageerror', (e) => errors.push(e.message));
+  if (process.env.LENSLOG) page.on('console', (m) => { if (m.text().startsWith('OUT')) console.log(m.text()); });
   await page.goto(`${base}?shot=1&chapter=${fromStorm ? 'storm' : fromChurch ? 'church' : fromRoofs ? 'roofs' : 'drowned'}&ratio=1`, { waitUntil: 'load' });
   await page.waitForFunction(() => window.__ready === true, null, { timeout: 60000 });
 
@@ -292,11 +293,12 @@ try {
     await reach('aboard', 30);
     console.log('the cat is aboard', JSON.stringify(await state()));
     await until((s) => s.beat === 'still', 120, 'the air dying');
+    filmFrom = (await state()).time;
     await reach('ridge', 150);
     console.log('she is up on the ridge after the cat', JSON.stringify(await state()));
   }
   if (!fromChurch) {
-    filmFrom = (await state()).time;
+    filmFrom ??= (await state()).time;
     await until((s) => s.beat === 'run', 30, 'her setting off');
 
     // Watches every frame from here: her feet on the decks, her progress, and the fog behind her.
@@ -332,6 +334,7 @@ try {
         if (w.facingRun > w.facingWorst) { w.facingWorst = w.facingRun; w.facingAt = `at ${r.along.toFixed(1)} m, ${p.toArray().map((v) => v.toFixed(2))}`; }
         const head = p.clone().setY(p.y + 1.2).project(__game.rig.camera);
         const out = Math.abs(head.x) > 0.95 || Math.abs(head.y) > 0.95 || head.z > 1;
+        if (out) { const K = r.lens.upright[Math.round(r.along / 1.5)], cp = __game.rig.camera.position; console.log('OUT', r.stage, r.along.toFixed(1), head.x.toFixed(2), head.y.toFixed(2), 'd', Math.hypot(cp.x - p.x, cp.z - p.z).toFixed(1), 'key', K.reach.toFixed(1), (K.bearing - K.facing).toFixed(2), 'eye', r.eye.toArray().map((v) => v.toFixed(1)).join(','), 'cam', cp.toArray().map((v) => v.toFixed(1)).join(','), 'her', p.toArray().map((v) => v.toFixed(1)).join(',')); }
         w.unseenRun = out ? w.unseenRun + 1 / 60 : 0;
         if (out) w.unseen += 1 / 60;
         if (w.unseenRun > w.unseenWorst) { w.unseenWorst = w.unseenRun; w.unseenAt = `${r.stage} at ${r.along.toFixed(1)} m`; }

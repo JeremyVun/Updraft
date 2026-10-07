@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { Shot } from '../camera';
 import type { Deck } from '../world/decks';
 import { tuning } from '../tuning';
-import { CAT_WAY, DARK_WAY, MILL, MILL_SITE, NAVE, PLACED, SWING_SITE, TOWER_FOOT, TREE_SITE, WAY, WAY_GAPS, darkWayPoint, roofUnder, type WayDeck } from '../world/drowned-way';
+import { CAT_WAY, DARK_WAY, MILL, MILL_SITE, NAVE, PLACED, STRAND, SWING_SITE, TOWER_FOOT, TREE_SITE, WAY, WAY_GAPS, darkWayPoint, roofUnder, type WayDeck } from '../world/drowned-way';
 import { SPIRE } from '../world/drowned';
 import { railAt } from '../world/crossings/windmill';
 import { TREE_SOUNDS, TreeCrossing } from '../world/crossings/tree-crossing';
@@ -101,6 +101,20 @@ function wayAt(nodes: readonly Node[], s: number, out: THREE.Vector3): THREE.Vec
     if (nodes[i].s >= s) return out.lerpVectors(nodes[i - 1].at, nodes[i].at, (s - nodes[i - 1].s) / (nodes[i].s - nodes[i - 1].s || 1));
   }
   return out.copy(nodes[nodes.length - 1].at);
+}
+
+/**
+ * Turns a place she looks at round her until it is no further toward the lens than `glanceOff` of straight away from
+ * it, so her face never turns to the lens.
+ */
+export function lookAwayFrom(at: THREE.Vector3, her: THREE.Vector3, lens: THREE.Vector3): void {
+  const away = Math.atan2(her.x - lens.x, her.z - lens.z);
+  const want = Math.atan2(at.x - her.x, at.z - her.z), reach = Math.max(4, Math.hypot(at.x - her.x, at.z - her.z));
+  const off = Math.atan2(Math.sin(want - away), Math.cos(want - away));
+  const most = tuning.drowned.run.glanceOff;
+  if (Math.abs(off) <= most) return;
+  const to = away + Math.sign(off) * most;
+  at.set(her.x + Math.sin(to) * reach, at.y, her.z + Math.cos(to) * reach);
 }
 
 /** The hand-laid roofs of her way, for the lens to see her past. */
@@ -398,6 +412,11 @@ export class RoofRun {
   private readonly stationTarget = new THREE.Vector3();
   private readonly sumEye = new THREE.Vector3();
   private readonly sumTarget = new THREE.Vector3();
+  /** Where the lens was as she set off, and seconds since: the run takes it from there to its own view (`handOver`). */
+  private handFrom: THREE.Vector3 | null = null;
+  private readonly handEye = new THREE.Vector3();
+  private readonly handTarget = new THREE.Vector3();
+  private handT = 0;
   private readonly held = { primary: new THREE.Vector3(), secondary: new THREE.Vector3(), margin: 0.8, extra: 0 };
   private onTrunk = 0;
   private millAhead = 0;
@@ -529,6 +548,8 @@ export class RoofRun {
     const foot = CAT_WAY.swing[CAT_WAY.swing.length - 1];
     cat.place(foot, -Math.PI / 2, { pose: 'sit', floor: () => foot.y });
     this.stage = 'nave';
+    this.handFrom = this.handEye;
+    this.handT = Infinity;
     c.stop();
   }
 
@@ -765,21 +786,14 @@ export class RoofRun {
     const k = tuning.drowned.run;
     this.glance += dt;
     if (this.glance > k.glanceEvery + k.glanceFor) this.glance = 0;
-    if (this.glance > k.glanceEvery) {
-      /** Back toward the fog, but never further round toward the lens than `glanceOff` of straight away from it. */
-      const lens = this.camera?.position ?? this.eye;
-      const away = Math.atan2(c.position.x - lens.x, c.position.z - lens.z);
-      const back = this.pointAt(this.along - 14, this.look);
-      const want = Math.atan2(back.x - c.position.x, back.z - c.position.z);
-      const off = THREE.MathUtils.clamp(Math.atan2(Math.sin(want - away), Math.cos(want - away)), -k.glanceOff, k.glanceOff);
-      c.lookAt = this.look.set(c.position.x + Math.sin(away + off) * 9, c.position.y + 1, c.position.z + Math.cos(away + off) * 9);
-      return;
-    }
-    if (this.catGoing) {
-      c.lookAt = cat.eye(this.look);
-      return;
-    }
-    c.lookAt = this.pointAt(this.along + 7, this.look).setY(c.position.y + 1.1);
+    if (this.glance > k.glanceEvery) c.lookAt = this.pointAt(this.along - 14, this.look).setY(c.position.y + 1);
+    else if (this.catGoing) c.lookAt = cat.eye(this.look);
+    else c.lookAt = this.pointAt(this.along + 7, this.look).setY(c.position.y + 1.1);
+    this.awayFromLens(c.lookAt);
+  }
+
+  private awayFromLens(at: THREE.Vector3): void {
+    lookAwayFrom(at, this.cast.child.position, this.camera?.position ?? this.eye);
   }
 
   /** The point `s` metres along her way. */
@@ -835,6 +849,7 @@ export class RoofRun {
     const lead = this.tmp.copy(this.velocity).clampLength(0, k.steadiest).multiplyScalar((1 / k.follow + 2 / response) * (1 - at));
     this.eye.add(lead);
     this.target.addScaledVector(lead, 1 - wide);
+    this.handOver(shot, dt);
     shot.free = false;
     shot.from = undefined;
     /** Upright the frame is too narrow to trust the laid path alone: she is kept inside it, never by drawing back. */
@@ -853,6 +868,33 @@ export class RoofRun {
     shot.distance = Math.hypot(this.eye.x - this.target.x, this.eye.z - this.target.z);
     shot.height = this.eye.y - this.target.y;
     return k.pace;
+  }
+
+  /**
+   * From where the climb out of the boat left the lens, round her by the side over the open water where the boat lies
+   * to the view the run wants: one move, never across the roof she is on, standing out wide of the boat's sail and the
+   * cottage's chimney as it goes.
+   */
+  private handOver(shot: Shot, dt: number): void {
+    if (this.handFrom === null) {
+      if (!this.camera) return;
+      this.handFrom = this.handEye.copy(this.camera.position);
+      this.handTarget.copy(shot.target);
+      this.handT = 0;
+    }
+    this.handT += dt;
+    const hand = THREE.MathUtils.smoothstep(this.handT, 0, tuning.drownedCamera.run.handFor);
+    if (hand >= 1) return;
+    const h = this.focus, from = this.handFrom;
+    const a0 = Math.atan2(from.x - h.x, from.z - h.z), a1 = Math.atan2(this.eye.x - h.x, this.eye.z - h.z);
+    let turn = Math.atan2(Math.sin(a1 - a0), Math.cos(a1 - a0));
+    const water = Math.atan2(STRAND.x - h.x, STRAND.y - h.z), mid = a0 + turn / 2;
+    if (Math.cos(mid - water) < 0) turn -= Math.sign(turn) * Math.PI * 2;
+    const k = tuning.drownedCamera.run, wide = Math.sin(Math.PI * hand);
+    const r = THREE.MathUtils.lerp(Math.hypot(from.x - h.x, from.z - h.z), Math.hypot(this.eye.x - h.x, this.eye.z - h.z), hand) + k.handOut * wide;
+    const a = a0 + turn * hand;
+    this.eye.set(h.x + Math.sin(a) * r, THREE.MathUtils.lerp(from.y, this.eye.y, hand) + k.handUp * wide, h.z + Math.cos(a) * r);
+    this.target.lerpVectors(this.handTarget, this.target, hand);
   }
 
   /**

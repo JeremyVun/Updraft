@@ -1856,7 +1856,7 @@ export const tuning = {
       hopPause: 0.35, through: 1.1, bend: 0.4,
       /**
        * How often she glances back at the fog as she goes, for how long, and how far round toward the lens from straight
-       * away from it she may look (radians), so her face never turns to it.
+       * away from it she may look on her way (radians), at the fog, the cat or ahead, so her face never turns to it.
        */
       glanceEvery: 8, glanceFor: 1.3, glanceOff: 1.1,
       /**
@@ -1977,6 +1977,11 @@ export const tuning = {
       millAside: 5.4, millOut: 11.5, millOn: 1.5, millIn: 4, uprightMillAside: 2.2,
       /** The end's view: how far back along the nave, how high, and how far out over the green. */
       naveBack: 10, naveHigh: 3.6, naveAside: 11,
+      /**
+       * Seconds the lens takes from where the climb left it, round her over the open water where the boat lies, to the
+       * tree's view as she sets off, and how much further out and higher it stands half-way round.
+       */
+      handFor: 16, handOut: 7, handUp: 1.5,
     },
     /** The church (`ChurchArrival.frame`). */
     church: {
@@ -2045,11 +2050,10 @@ export const tuning = {
     aboardBearing: 1.75, aboardDistance: 5.5, uprightAboardDistance: 7, aboardHeight: 0.9, aboardAlong: 0.45,
     aboardAim: 0.9, aboardPace: 0.45,
     /**
-     * Once the cat bolts: the way the lens looks (atan2(x, z) of the view) as it comes round to the south-west of the
-     * cottage over `climbFor` seconds, clear of the boat and looking on to the church; how far back it stands (upright,
-     * nearer), and the height it looks at.
+     * Once the cat bolts: over `climbFor` seconds the lens comes back to the view toward the dark and up the slope with
+     * her; how far back it stands (upright, nearer), and the height it looks at.
      */
-    strandClimb: 2.5, climbFor: 7, climbBack: 10, uprightClimbBack: 8, climbAim: 2.3,
+    climbFor: 7, climbBack: 10, uprightClimbBack: 8, climbAim: 2.3,
   },
   /** The two crossings of the drowned village's run over the roofs: the dead tree pushed over, the swing pumped. */
   crossings: {

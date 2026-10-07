@@ -13,7 +13,7 @@ import { roundedWaypoint } from '../traveller/navigation';
 import type { Cast, Chapter } from './cast';
 import { cue } from './cues';
 import { StrandedCat } from './drowned-cat';
-import { RoofRun } from './drowned-run';
+import { RoofRun, lookAwayFrom } from './drowned-run';
 import { ChurchArrival } from './drowned-church';
 
 /** How near a waypoint counts as rounded. */
@@ -110,6 +110,7 @@ export class DrownedChapter implements Chapter {
    */
   private heading = 0;
   private headingSpeed = 0;
+  private readonly lensAt = new THREE.Vector3();
   private readonly churchAttention = { point: SPIRE, strength: 0, weight: tuning.drownedCamera.spireWeight,
     distance: tuning.drownedCamera.spireDistance,
     height: tuning.drownedCamera.spireHeight };
@@ -571,6 +572,10 @@ export class DrownedChapter implements Chapter {
       : this.beat === 'drift' || this.beat === 'enter' ? this.cat.gaze() : null;
     if (onCat) {
       c.lookAt = onCat;
+      if (this.cat.ashore) {
+        c.lookAt = this.look.copy(onCat);
+        lookAwayFrom(this.look, c.position, this.lensAt);
+      }
       return;
     }
     if (this.beat === 'still' || this.beat === 'becalmed') {
@@ -635,6 +640,7 @@ export class DrownedChapter implements Chapter {
     this.aspect = camera.aspect;
     this.cat.afterCamera(camera);
     this.run?.afterCamera(camera);
+    this.lensAt.copy(camera.position);
     this.church?.afterCamera(camera);
     const p = this.cast.plane;
     if (this.beat !== 'after' || !p.visible) return;
@@ -764,12 +770,12 @@ export class DrownedChapter implements Chapter {
     let look = from + Math.atan2(Math.sin(dark - from), Math.cos(dark - from)) * round;
     look += Math.atan2(Math.sin(k.strandChurch - k.strandDark), Math.cos(k.strandChurch - k.strandDark)) * turned;
     /**
-     * When the cat bolts the lens comes on round to the south-west of the cottage, clear of the boat and looking on to
-     * the church, so the cat's run along the ridge to the gap goes across the frame and she climbs after it looking
-     * along the ridge, never back toward the lens; it lifts to the ridge as she climbs.
+     * When the cat bolts the lens holds to the view toward the dark, side on to the slope, so she climbs across the
+     * frame away from the fog she is leaving, never toward the lens nor behind the roof; it lifts to the ridge as she
+     * climbs. Once she is up the run takes the lens round to the tree in one move.
      */
     const climbed = this.cat.sinceBolt < 0 ? 0 : THREE.MathUtils.smootherstep(this.cat.sinceBolt, 0, k.climbFor);
-    look += Math.atan2(Math.sin(k.strandClimb - look), Math.cos(k.strandClimb - look)) * climbed;
+    look += Math.atan2(Math.sin(dark - look), Math.cos(dark - look)) * climbed;
     const b = this.anchor.copy(boat.position).lerp(this.tmp.set(STRAND.x, boat.position.y, STRAND.y), climbed)
       .lerp(STRAND_TOP, 0.8 * climbed);
     const back = THREE.MathUtils.lerp(THREE.MathUtils.lerp(k.uprightBack, k.strandBack, wide),
