@@ -1,7 +1,9 @@
-// The whale in the net on the open sea, played with real pointer gestures in Chrome for Testing (GPU): sweeps
-// across its back only ever tickle it; circles over the blowhole bring its first full breath (the stand-in for the
-// net's first step) and it goes free; left alone it finds its breath only after the safety valve; a save at rest
-// resumes beside it lying there, one from after it has gone resumes without it, sailing on.
+// The whale in the net on the open sea, played with real pointer gestures in Chrome for Testing (GPU). The breath:
+// sweeps across its back only ever tickle it and lift nothing; circles over the blowhole lift the patch of net off it,
+// it draws its first full breath, its eye opens on her and the sequence goes on to the line; left alone, under a
+// breeze three times the sea's, nothing lifts until the safety valve, whose dolphin leaps and lifts the mesh; a save
+// at rest resumes beside it lying there, one after its breath resumes with the patch up and its eye open, and one
+// from after it has gone resumes without it, sailing on.
 // Usage: BASE=http://127.0.0.1:5230/ node tools/net-whale-check.mjs [sweeps] [circles] [idle] [saves]
 // Runs against a dev or QA preview server, starting at rest beside the whale (`?chapter=whale`, as the save there
 // resumes). The idle case waits out the valve (about 90 s of game time). `tools/sea-check.mjs` sails the whole way.
@@ -28,7 +30,8 @@ const STATE = `(() => {
   return { chapter: __game.story.name, time: c.time, step: w ? w.step : null, stepTime: w ? w.stepTime : 0,
     phase: s.phase, awake: s.awake, visible: s.mesh.visible, tickles: s.tickles, lifts: s.lifts,
     progress: w ? w.progress : null, remaining: w ? w.remaining() : null, speed: b.speed, limit: b.speedLimit,
-    checkpoint: c.checkpoint, coax: !!c.coax };
+    checkpoint: c.checkpoint, coax: !!c.coax, lift: __game.sealife.net.lift, net: __game.sealife.net.shown,
+    liftedBy: w ? w.liftedBy : null, valveT: w ? w.valveT : -1, eye: s.awake && s.phase === 'woken' && s.time > 3 };
 })()`;
 
 async function open(context, query) {
@@ -117,6 +120,8 @@ async function sweeps() {
   results.sweeps = { tickles: end.tickles, lifts: end.lifts, step: end.step, progress: end.progress };
   assert.equal(end.step, 'breath', 'sweeps alone never move it on');
   assert.equal(end.progress, 0, 'sweeps put nothing toward its breath');
+  assert.equal(end.lift, 0, 'sweeps lift none of the net');
+  assert.equal(end.net, true, 'the net lies on it');
   assert(end.tickles > 0, 'sweeps across its back tickle it');
   assert(end.lifts > 0, 'a tickle is answered by a lazy lift of the flipper');
   assert.deepEqual(errors, []);
@@ -134,11 +139,16 @@ async function circles() {
   const before = await read(page);
   const breathed = await circle(page, (s) => s.progress >= 1);
   await page.mouse.move(W - 10, 10);
+  const looked = await until(page, (s) => s.eye, 'its eye to open on her', 30);
+  const line = await until(page, (s) => s.step === 'line', 'the breath to hand on to the line', 30);
   const free = await until(page, (s) => s.step === 'free', 'it to be free', 60);
   const gone = await until(page, (s) => s.step === 'gone' && s.speed > 1, 'it to go and the boat to sail on', 120);
-  results.circles = { restAt: +rest.time.toFixed(1), breathAt: +breathed.time.toFixed(1), freeAt: +free.time.toFixed(1),
-    sailingOnAt: +gone.time.toFixed(1), lifts: breathed.lifts - before.lifts };
-  assert(breathed.awake || breathed.phase === 'woken', 'circles over the blowhole bring its first full breath');
+  results.circles = { restAt: +rest.time.toFixed(1), breathAt: +breathed.time.toFixed(1), eyeAt: +looked.time.toFixed(1),
+    lineAt: +line.time.toFixed(1), freeAt: +free.time.toFixed(1), sailingOnAt: +gone.time.toFixed(1), lifts: breathed.lifts - before.lifts };
+  assert.equal(before.progress, 0, 'nothing lifted before the circling');
+  assert.equal(breathed.liftedBy, 'circles', 'the circles lifted the net');
+  assert(looked.phase === 'woken' && looked.lift > 0.9, 'clear of the net, its first full breath, and its eye opens');
+  assert.equal(line.lift > 0.95, true, 'the patch stays up after the breath');
   assert.equal(breathed.tickles, before.tickles, 'circles over the blowhole never tickle it');
   assert.deepEqual(errors, []);
   await context.close();
@@ -149,13 +159,19 @@ async function idle() {
   const { page, errors } = await open(context, '');
   const rest = await atRest(page);
   const restAt = rest.time - rest.stepTime;
+  // A breeze three times the sea's own, the whole time: it may move the water, never the net.
+  await page.evaluate(() => { __game.story.current.breeze = 3; });
   const coaxed = await until(page, (s) => s.coax || s.progress > 0, 'the drawn spiral', 60);
-  const moving = await until(page, (s) => s.progress > 0, 'it to find its own breath', 300);
-  results.idle = { restAt: +restAt.toFixed(1), invitedAt: +coaxed.time.toFixed(1), valveAt: +moving.time.toFixed(1), tickles: moving.tickles };
+  const sent = await until(page, (s) => s.valveT >= 0 || s.progress > 0, 'the valve to send its dolphin', 300);
+  const moving = await until(page, (s) => s.progress > 0, 'the dolphin to lift the net', 60);
+  results.idle = { restAt: +restAt.toFixed(1), invitedAt: +coaxed.time.toFixed(1), sentAt: +sent.time.toFixed(1),
+    liftedAt: +moving.time.toFixed(1), by: moving.liftedBy, tickles: moving.tickles };
   assert(coaxed.coax && coaxed.progress === 0, 'the spiral invites before anything moves');
-  assert(moving.time - restAt >= 88, `it moved before the valve: ${(moving.time - restAt).toFixed(1)} s at rest`);
-  assert.equal(moving.tickles, 0, 'the ambient breeze never tickles it');
-  await until(page, (s) => s.step === 'free', 'the valve to free it', 60);
+  assert(sent.time - restAt >= 88 && sent.progress === 0 && sent.lift === 0, `it moved before the valve: ${(sent.time - restAt).toFixed(1)} s at rest`);
+  assert.equal(moving.liftedBy, 'dolphin', 'the valve is the dolphin lifting the mesh');
+  assert.equal(moving.tickles, 0, 'the breeze never tickles it');
+  await until(page, (s) => s.eye, 'its eye to open after the dolphin', 60);
+  await until(page, (s) => s.step === 'line', 'the breath to hand on', 60);
   assert.deepEqual(errors, []);
   await context.close();
 }
@@ -177,6 +193,16 @@ async function saves() {
   await page.waitForTimeout(1500);
   await circle(page, (s) => s.progress >= 1);
   await page.mouse.move(W - 10, 10);
+  await until(page, (s) => s.checkpoint === 'whale-breath', 'the checkpoint after its breath', 60);
+  await page.waitForFunction(() => JSON.parse(localStorage.getItem('updraft.progress.v1') ?? 'null')?.point === 'whale-breath', null, { timeout: 30000 });
+  await page.close();
+  ({ page, errors } = await open(context, '&progress=1'));
+  const breathed = await read(page);
+  assert.equal(breathed.chapter, 'toMirror');
+  assert.equal(breathed.step, 'line', 'a save after its breath resumes at the line');
+  assert(breathed.phase === 'woken' && breathed.eye, 'awake, its eye open on her');
+  assert(breathed.lift === 1 && breathed.net, 'the patch up off the blowhole');
+  assert(breathed.remaining < 3 && breathed.speed < 0.5, `resumed at rest: ${JSON.stringify(breathed)}`);
   await until(page, (s) => s.checkpoint === 'whale-gone', 'the after-whale checkpoint', 120);
   await page.waitForFunction(() => JSON.parse(localStorage.getItem('updraft.progress.v1') ?? 'null')?.point === 'whale-gone', null, { timeout: 30000 });
   const point = await saved(page);
@@ -186,7 +212,8 @@ async function saves() {
   assert.equal(gone.step, 'gone', 'a save from after it has gone resumes without it');
   assert.equal(gone.visible, false);
   const sailing = await until(page, (s) => s.speed > 2, 'the boat to sail on after the resumed save', 60);
-  results.saves = { rest: { step: resting.step, remaining: +resting.remaining.toFixed(2) }, after: { point, step: gone.step, speed: +sailing.speed.toFixed(2) } };
+  results.saves = { rest: { step: resting.step, remaining: +resting.remaining.toFixed(2) }, breath: { step: breathed.step, lift: breathed.lift },
+    after: { point, step: gone.step, speed: +sailing.speed.toFixed(2) } };
   assert.deepEqual(errors, []);
   await context.close();
 }
