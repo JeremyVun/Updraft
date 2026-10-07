@@ -779,7 +779,10 @@ The sequence:
   is never shown whole near the boat. Smooth slate-blue, paler underside, the low sun on its rim, cool sky fill so the
   eye still reads; no rock-like skin, no sharp ridge, no face-like smile. Its eye, near the boat, is larger than the
   boat is wide, under a heavy tired lid. `notes.md`'s heights scaled to 110 m: crown about 5.3 m above the water, eye
-  centre about 2.3 m, the eye about 3.5 m across, the near flipper about 16 m. It breathes slowly.
+  centre about 2.3 m, the eye about 3.5 m across, the near flipper about 16 m. It breathes slowly. As built (Claude's
+  call, 2026-10-08): a blunt head with its own lower jaw, the pale lip narrowing to a point under the eye and greying
+  into the slate far off, so the first sight reads as a long low shape before it reads as a jaw; the near flipper lies
+  awash along the surface from just under it.
 - **The net.** One old faded brown-green net, scaled with the whale to about 45 × 17 m, over the head and blowhole and
   down the forward back, rows of cork floats on its edges, a few strands of weed; one loop round the near flipper. Its
   mesh, ropes and corks keep their real sizes (`notes.md`), so the line in her mittens is one a child can hold. A sparse

@@ -241,7 +241,21 @@ judged in N3b's frames, and far off on the first crossing. The concept's skin is
 (`notes.md`): the target is form that reads (head, jaw line, throat, eye, flipper), never rock-like noise.
 Gate: typecheck; build; `sea-logic-check`; `net-whale-check` `line`, `fin`; no first-use stalls; stills at each
 keyframe and the first crossing's dive, landscape and portrait, beside the concept.
-Done: [ ]
+Done: [x] `fd76ee3b..a9c06a05`. `anatomy.ts`: a blunt head rising steeply off the rostrum, a saddle behind the crown
+(blowhole 5.76 m), the lower jaw its own mass bowing out under `MOUTH` (in `ringPoint`, so `surfaceAt` and a
+numerically solved `flankAt` follow); 201 × 128 rings. In the shader: the lip's crease and rim, broad throat
+grooves, eight soft knobs (`KNOBS`), low swells. The pale lip narrows to a point under the eye (`JAW_CORNER` 0.152)
+and greys into the slate from 70 to 140 m, so far off it reads as a long low shape first; a lip rising toward the eye
+or gold along it read as a smile and were rejected. The eye: an amber iris (`#b06a26`) with fibres and a dark pupil
+under a bulging cornea that carries the sky and the catchlight, a heavy upper lid over the top 40%, two folds above
+and two below, little white. The flank: a cooler, higher fill on steep faces, less bounce, darker toward the
+waterline, the rim gold on top only. The flipper: root about 0.5 m deep (`FIN_ROOT`), `finTip` now its true tip, a
+narrow wrist and rounded tip (`FIN_HALF_CHORD`), knobs on the leading edge, turning over as it lifts (`finTurn`);
+`finRestSweep` -1.843, `finRestRaise` 0.278; the `fin` check models its half-chord (`FIN_HALF`), clear 1.19 m. The
+pale slab under the glass is the water's shallow tint over anything a few centimetres under: keep the flipper's top
+above the water or well under it. About 4× the vertices and a heavier fragment shader. Left: the knobs read as pale
+dots in rows; the lifted flipper reads as a pale lilac second animal before the eye; the resting flipper at `k3` a
+translucent blade; the big flank still smooth where it fills the frame; the dive's flukes flat in the haze.
 
 ### Phase N3d: the net up close and the last frames
 After N3c. Owns: the net's look (`net.ts`, `netShader.ts`), the pod's leaps at free, the bird's read at the flipper,
