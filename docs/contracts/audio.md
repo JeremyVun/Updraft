@@ -237,6 +237,12 @@ pan and bounded scheduling; finished nodes disconnect.
 - Dolphins and whales: sounds fire from the same events as the visible splash, spray, breaths, fluke drainage and
   dive (`WhaleWake`, the shared `SeaLife` callback), with soft attacks and level trims (`dolphin*`, `whale*`). Pod
   emergence and re-entry have separate budgets. Muted or hidden events are dropped.
+- The whale in the net (`Net.onSound`, through `WorldFoley.net` at the whale's level and distance): each weak breath
+  under the mesh sputters (`net-sputter`); the lifted patch takes the weight of its wet rope and corks as fast as it
+  rises (`net-lift`); the near cork knocks on the planking when it comes in hard (`cork-knock`); each of her pulls draws
+  the wet rope through her mittens (`rope-pull`); the mesh slithers off the skin into the sea as fast as it peels
+  (`net-slither`). Its call (`whale-call`) sounds as its eye opens on her and as it waves goodbye, and as a far echo on
+  the first crossing.
 - Flock wingbeats follow flight and take-off; resting rafts are silent. Beats consumed while inaudible never burst on
   return.
 - The Lines pinwheels share one flutter voice; out of reach it fades, stops and disconnects, and a new one is made if
