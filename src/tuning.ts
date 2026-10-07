@@ -1972,11 +1972,11 @@ export const tuning = {
     aboardBearing: 1.75, aboardDistance: 5.5, uprightAboardDistance: 7, aboardHeight: 0.9, aboardAlong: 0.45,
     aboardAim: 0.9, aboardPace: 0.45,
     /**
-     * Once the cat bolts: the way the lens looks (atan2(x, z) of the view) as it comes round to the east of the
-     * cottage over `climbFor` seconds, looking back past the boat to the fog; how far back it stands (upright,
+     * Once the cat bolts: the way the lens looks (atan2(x, z) of the view) as it comes round to the south-west of the
+     * cottage over `climbFor` seconds, clear of the boat and looking on to the church; how far back it stands (upright,
      * nearer), and the height it looks at.
      */
-    strandClimb: -1.31, climbFor: 7, climbBack: 10, uprightClimbBack: 8, climbAim: 2.3,
+    strandClimb: 2.5, climbFor: 7, climbBack: 10, uprightClimbBack: 8, climbAim: 2.3,
   },
   /** The two crossings of the drowned village's run over the roofs: the dead tree pushed over, the swing pumped. */
   crossings: {

@@ -657,9 +657,9 @@ export class DrownedChapter implements Chapter {
     let look = from + Math.atan2(Math.sin(dark - from), Math.cos(dark - from)) * round;
     look += Math.atan2(Math.sin(k.strandChurch - k.strandDark), Math.cos(k.strandChurch - k.strandDark)) * turned;
     /**
-     * When the cat bolts the lens comes on round to the east of the cottage, looking back across its slates past the
-     * boat to the fog, so she climbs out across the frame with the fog behind her and sees the boat swing off into it;
-     * it lifts to the ridge as she climbs.
+     * When the cat bolts the lens comes on round to the south-west of the cottage, clear of the boat and looking on to
+     * the church, so the cat's run along the ridge to the gap goes across the frame and she climbs after it looking
+     * along the ridge, never back toward the lens; it lifts to the ridge as she climbs.
      */
     const climbed = this.cat.sinceBolt < 0 ? 0 : THREE.MathUtils.smootherstep(this.cat.sinceBolt, 0, k.climbFor);
     look += Math.atan2(Math.sin(k.strandClimb - look), Math.cos(k.strandClimb - look)) * climbed;
