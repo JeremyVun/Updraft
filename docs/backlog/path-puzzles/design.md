@@ -805,8 +805,13 @@ The sequence:
   about 90 s with no progress, with a cause on screen: a dolphin lifts the mesh with its nose, noses the cork to the
   boat, nudges the flipper. No gull. Nothing is timed, nothing fails.
 - **Camera.** The crossing camera eases (never jerks, never cuts, no reverse angle or underwater shot) from the rear
-  view in `k1` to a lower, closer hold beside the boat for the steps (`k2`–`k4`, about 11 m behind, 4 m up), then back
-  out for the release (`k5`). In portrait the boat, the eye and the blowhole stack up the frame (`k2-portrait`).
+  view in `k1` to a hold beside the boat for the breath (`k2`), then closer and lower for the child's haul and the
+  cygnet (`k3`, `k4`), where her mittens, the cork and the bird must read, then back out for the release (`k5`, the pod
+  in frame). As found in the look pass (Claude's call, 2026-10-07): the breath's hold is about 22 m behind and 11.5 m
+  up, looking down onto the crown so the net lying on the head reads, with the eye, the blowhole and the low sun in
+  frame; from 11 m behind and 4 m up the crown was edge-on and the net only a row of corks against the sky. The
+  portrait lens is wider (62° against 38.7°), so portrait holds come in by about 0.58 to keep the whale as large. In
+  portrait the boat, the eye and the blowhole stack up the frame (`k2-portrait`).
 - **Reward.** Freeing the whale is the open sea's major conclusion, so the reward phrase (`completeObjective()`) plays
   as it spouts free.
 - **Pacing.** The mirror's jetty is on the horizon from the first seconds of the open sea, as on main: it lies only

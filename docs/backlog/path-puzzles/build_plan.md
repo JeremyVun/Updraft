@@ -134,7 +134,16 @@ Seam: `surfaceAt` and the world anchors keep their names and stay true to the re
 them, so a re-shaped head moves the net with it.
 Gate: typecheck; build; `tools/sea-logic-check.mjs` passing; stills at `k1`, `k2`, `k5` and the first crossing's dive,
 landscape and portrait, beside the concept.
-Done: [ ]
+Done: [x] `591cfc4a..57df85a5` on `sea-look` (with `sea-net` merged; `sea-whale` fast-forwarded to it). The skin lit
+by a cool sky fill and a warm sea bounce, the sun only on the top and a narrow gold rim (`tuning.whaleLook`); the eye
+a tired amber almond under a heavy lid, gloss from the sky, never emissive; a wedge snout, a raised crown with two
+slits, a pale lower jaw under a mouth line (`aRig.w` is the ring height); flippers and flukes with thickness and no
+backlit glow, the flippers folding back on the roll. The hold 22 m behind, 11.5 m up. Still tool:
+`tools/whale-look-stills.mjs`. Left for the look: it reads smooth and toy-like (a grey blimp at `k5`), the jaw a
+straight pale stripe; the net is faint at the hold (true-width strands); portrait holds need bringing in by about
+0.58 and the landscape look point raised for the sky (both in `net-whale.ts` `frame()`); far off the pale jaw gives
+it away too soon; the pod mostly out of `k5`. `sea-logic-check`'s featured-leap assertion fails at one seed in about
+fifty on every branch since N1 (seed-sensitive, attribution open).
 
 ### Phase N2a: the net and the breath
 Owns: the net (`src/fx/sealife/net.ts`: sparse deforming mesh draped by `surfaceAt`, instanced corks, boundary ropes,
@@ -158,11 +167,17 @@ hold's low camera sees the crown edge-on, so the net reads only as a band of cor
 long; the loop is mostly under water from the hold. After merging `sea-look`, re-check `ACROSS_NEAR` (the near edge
 above the eye) and `valveClear`. The new sounds still need an entry in `docs/contracts/audio.md`.
 
-### Phase N2b: the child and the cygnet
-Owns: steps 2 and 3 in `net-whale.ts` with their invitations and dolphin valves, the child's catch and haul, the
-cygnet's swim to the flipper and back (`src/companion/` or the cygnet's states as fits), the net's drift away at free,
-saves after each step, the rope and splash sounds, `tools/net-whale-check.mjs` extended to every step. Based on
-`sea-whale` with `sea-net` and `sea-look` merged.
+### Phase N2b: the child's haul
+Owns: step 2 (`line`) in `net-whale.ts` with its invitation and dolphin valve, the sweep that brings the cork, the
+child's catch and haul, the peel, the camera's per-step holds (the breath, the haul, the cygnet, the release) with the
+portrait scale, the save after it, the rope sounds, `tools/net-whale-check.mjs` for it. On `sea-whale`.
+
+### Phase N2c: the cygnet and the flipper
+Owns: step 3 (`flipper`) with its invitation and dolphin valve, the cygnet's swim to the flipper and back (`src/companion/`
+or the cygnet's states as fits), the lazy lift and the loop's slide, the net's drift and the pod in frame at free,
+the save after it, the splash sounds, `tools/net-whale-check.mjs` for it. On `sea-whale` after N2b.
+
+Both:
 Seam: each step's progress is caused only by its own gesture at its own target; steps go in order; a valve's dolphin
 does the same physical act the player would have caused.
 Gate: typecheck; build; the check with real gestures: each step done by its gesture; the ambient breeze and idle never
