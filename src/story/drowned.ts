@@ -109,6 +109,7 @@ export class DrownedChapter implements Chapter {
    * a waypoint does not swing the view; among the roofs it is the hull's own, so the lens stays in the channel behind.
    */
   private heading = 0;
+  private headingSpeed = 0;
   private readonly churchAttention = { point: SPIRE, strength: 0, weight: tuning.drownedCamera.spireWeight,
     distance: tuning.drownedCamera.spireDistance,
     height: tuning.drownedCamera.spireHeight };
@@ -392,8 +393,15 @@ export class DrownedChapter implements Chapter {
     if (this.sideAgainst > tuning.crossingCamera.sideCommit) { this.side = -boat.sailSide; this.sideAgainst = 0; }
     this.quarter += (this.side - this.quarter) * (1 - Math.exp(-dt * sideResponse));
     const open = this.beat === 'gather' || this.beat === 'snatch' || this.beat === 'after';
-    const follow = open && dt > 0 ? 1 - Math.exp(-dt * tuning.crossingCamera.headingResponse) : 1;
-    this.heading += Math.atan2(Math.sin(boat.yaw - this.heading), Math.cos(boat.yaw - this.heading)) * follow;
+    if (open && dt > 0) {
+      /** Critically damped, so a bow swinging round the lighthouse turns the lens with built-up speed, never at once. */
+      const w = tuning.storm.lensTurn, off = Math.atan2(Math.sin(boat.yaw - this.heading), Math.cos(boat.yaw - this.heading));
+      this.headingSpeed += (w * w * off - 2 * w * this.headingSpeed) * dt;
+      this.heading += this.headingSpeed * dt;
+    } else {
+      this.heading = boat.yaw;
+      this.headingSpeed = 0;
+    }
     this.frame(dt);
   }
 
@@ -714,13 +722,15 @@ export class DrownedChapter implements Chapter {
    */
   private lighthouseFrame(astern: number): void {
     const k = tuning.storm.lighthouseCamera, s = this.shot, boat = this.cast.boat, seat = this.cast.child.position;
-    const opening = THREE.MathUtils.smootherstep(this.stormTime, 0, k.openFor);
+    /** Once the light is out the tower has had its look: the lens lets it go and comes in to the boat and its lantern. */
+    const out = tuning.storm.lighthouseOutAt + k.inFrom;
+    const opening = THREE.MathUtils.smootherstep(this.stormTime, 0, k.openFor) * (1 - THREE.MathUtils.smootherstep(this.stormTime, out, out + k.inFor));
     const toward = Math.atan2(boat.position.x - LIGHTHOUSE.x, boat.position.z - LIGHTHOUSE.z) + k.offset;
     const passing = Math.atan2(Math.sin(toward - astern), Math.cos(toward - astern));
     const glance = opening * (1 - THREE.MathUtils.smootherstep(Math.abs(passing), k.arc, k.arc + k.pass));
     const bearing = astern + THREE.MathUtils.clamp(passing, -k.arc, k.arc) * glance;
     s.from = this.from.set(Math.sin(bearing), 0, Math.cos(bearing));
-    s.distance = THREE.MathUtils.lerp(16, k.distance, opening);
+    s.distance = k.near;
     s.zoom = THREE.MathUtils.lerp(1, k.zoom, glance);
     /** Tilt up from the travellers toward the crown, as far as the lens can while they keep the lower frame. */
     const eyeX = s.target.x + s.from.x * s.distance, eyeZ = s.target.z + s.from.z * s.distance;

@@ -1987,13 +1987,14 @@ export const tuning = {
        * Over the water off the nave's west end: where it stands from the tower's middle with the boat still at its tree
        * and with it come in; how far from her toward the boat it looks while it is far off, at what height, and its lens.
        */
-      waterFar: { x: -29, y: 2.8, z: -15 }, waterNear: { x: -23, y: 2.4, z: -11 }, waterToward: 0.45, waterAim: 3, waterZoom: 0.9,
+      waterFar: { x: -29, y: 2.8, z: -15 }, waterNear: { x: -15.6, y: 2.4, z: -6.8 }, waterToward: 0.45, waterAim: 3, waterZoom: 0.9,
       /**
        * Going: seconds after she is seated it starts to give way to the storm's frame, and how long it takes; meanwhile
-       * how far across from the boat to the lighthouse's lamp it looks and how far up from the one to the other (the cat
-       * in the belfry lies between), and its lens (upright, the same).
+       * how far from her toward the cat it looks while she looks back, and seconds after she is seated it starts across
+       * to the light and is there; how far across from the boat to the lighthouse's lamp it then looks and how far up
+       * from the one to the other, and its lens (upright, the same).
        */
-      leaveFrom: 7, leaveFor: 6, backAcross: 0.5, backUp: 0.5, backZoom: 0.85, backUprightZoom: 0.85,
+      leaveFrom: 7, leaveFor: 9, backCat: 0.45, backLightFrom: 1.5, backLightTo: 5, backAcross: 0.5, backUp: 0.62, backZoom: 0.78, backUprightZoom: 0.85,
     },
     /** Follow the boat into the streets; notice the church from that travelling view. */
     roofFromZ: -1260, roofUntilZ: -1360,
@@ -2144,10 +2145,14 @@ export const tuning = {
     /**
      * The lens's one move for the lighthouse: out over `openFor` seconds to `distance`, down to `eyeRise` over the
      * drift's aim and the lens widened to `zoom`, tilted up to `tilt` radians toward the crown. The tower is watched from
-     * within `arc` radians of astern (`offset` puts it beside the travellers) and let go over `pass` beyond it.
+     * within `arc` radians of astern (`offset` puts it beside the travellers) and let go over `pass` beyond it. From
+     * `inFrom` seconds after the light is out it lets the tower go over `inFor` seconds, drawn in to `near` metres
+     * behind the boat so she and the lantern carry the dark.
      */
     lighthouseCamera: { openFor: 6, distance: 24, eyeRise: 1.7, zoom: 0.82, tilt: 0.21, arc: 0.7, pass: 0.9,
-      offset: 0.24, pace: 0.8 },
+      offset: 0.24, pace: 0.8, inFrom: 1, inFor: 10, near: 12 },
+    /** How quickly the storm's lens takes up the hull's turns (critically damped, per second). */
+    lensTurn: 0.6,
     lighthouseComfortFor: 2.6,
     /** She watches the lighthouse, lit and then dark, until it is this far behind abeam (the cosine off her bow). */
     lighthouseWatched: -0.2,

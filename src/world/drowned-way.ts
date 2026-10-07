@@ -490,9 +490,12 @@ export const BOAT_TREE = new THREE.Vector2(30.5, -1557.5);
 
 /** The church tower at the nave's east end: its middle, half its width, and the floor of its belfry's openings. */
 export const TOWER = { x: NAVE.x + NAVE.len / 2 + 2.4, z: NAVE.z, half: 2.4, sill: 8.27 };
-/** The belfry's westward opening on each side, sat on: where the cat looks down from, over the green and over the north water. */
+/**
+ * The belfry's westward opening on each side, sat on: where the cat looks down from, over the green and over the north
+ * water. On the north it sits at the sill's west end, so from the water off the nave's west end it shows over the sill.
+ */
 export const BELFRY_SOUTH = new THREE.Vector3(TOWER.x - 1.05, TOWER.sill, TOWER.z + TOWER.half + 0.3);
-export const BELFRY_NORTH = new THREE.Vector3(TOWER.x - 1.05, TOWER.sill, TOWER.z - TOWER.half - 0.3);
+export const BELFRY_NORTH = new THREE.Vector3(TOWER.x - 1.45, TOWER.sill, TOWER.z - TOWER.half - 0.3);
 /**
  * The ivy's stem up the tower's south face, from the foot of the churchyard's railings to beside the west opening of
  * the belfry: the way the cat climbs, close against the stone.
