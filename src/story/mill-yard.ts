@@ -4,9 +4,8 @@ import type { Deck } from '../world/decks';
 import { heightAt } from '../world/island';
 import { REFLECTION_LAYER } from '../world/water/reflection';
 import { tuning } from '../tuning';
-import { MillCrossing, type MillEvent } from '../world/crossings/mill-crossing';
-import { SAIL } from '../world/crossings/windmill';
-import type { MaterialSound } from '../audio/foley';
+import { MILL_SOUNDS, MillCrossing } from '../world/crossings/mill-crossing';
+import { HUB_HEIGHT, SAIL, railAt } from '../world/crossings/windmill';
 import { COURSED, PLAIN, STONE, WALL, drownedHouse, ridgeOf, yardMesh, type Roof } from './crossings-yard';
 import type { Cast } from './cast';
 
@@ -16,15 +15,9 @@ import type { Cast } from './cast';
  * top where the boarding sail's rail lies as it dwells; the high house stands beyond the rail's tip with its gable
  * end to the mill and its ridge in line with the rail, at the height of the tip as the sail dwells at the top.
  */
-const HUB_Y = 4.6;
-/** Out along the boarding sail at an angle above level, onto the top of its rail: where her feet go, in the yard. */
-function railTop(angle: number, along: number): THREE.Vector3 {
-  const across = -SAIL.width + SAIL.rail / 2;
-  return new THREE.Vector3(-along * Math.cos(angle) + across * Math.sin(angle), HUB_Y + along * Math.sin(angle) + across * Math.cos(angle), SAIL.forward);
-}
 const K = tuning.crossings.mill;
-const BOARD = railTop(K.board, K.stand);
-const TIP = railTop(K.top, SAIL.to);
+const BOARD = railAt(K.board, K.stand);
+const TIP = railAt(K.top, SAIL.to);
 const WALL_Z = 1.02;
 const WALL_TOP = BOARD.y;
 const HIGH: Roof = (() => {
@@ -45,8 +38,6 @@ const WAY = {
   ridge: { x0: TIP.x + 0.15, z0: SAIL.forward, x1: HIGH.x - HIGH.len / 2 + 1.2, z1: SAIL.forward, halfWidth: 0.4, height: RIDGE },
 } satisfies Record<string, Deck>;
 
-/** The mill's own voice: the dry axle as it starts, wood working through the turn, the brake as it settles, the linen. */
-const MILL_SOUNDS = { start: 'mill-start', creak: 'mill-creak', settle: 'mill-settle', flap: 'linen-flap' } as const satisfies Record<MillEvent, MaterialSound>;
 
 /**
  * QA only: the drowned village's middle crossing set out on the sea off the QA stage, playable on its own
@@ -78,7 +69,7 @@ export class MillYard {
       d.x0 = a.x; d.z0 = a.z; d.x1 = b.x; d.z1 = b.z;
     }
     const crossingCast = { child: cast.child, wind: cast.wind, lines: cast.lines, input: cast.input };
-    this.crossing = new MillCrossing({ hub: this.at(new THREE.Vector3(0, HUB_Y, 0)), facing }, {
+    this.crossing = new MillCrossing({ hub: this.at(new THREE.Vector3(0, HUB_HEIGHT, 0)), facing }, {
       wait: this.at(new THREE.Vector3(BOARD.x + 0.45, WALL_TOP, WALL_Z)),
       stepOff: this.at(STEP_OFF.clone()),
       onward: this.at(ONWARD.clone()),

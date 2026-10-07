@@ -147,6 +147,26 @@ export class StrandedCat {
     this.to('aboard');
   }
 
+  /** QA: up on the roof already, the cat sitting at the end of the ridge and her on it after it. */
+  onRidge(): void {
+    const { cat, child } = this.cast;
+    if (!this.cast.village) return;
+    cat.visible = true;
+    cat.mewing = false;
+    cat.curious = null;
+    cat.unease = 0.7;
+    cat.place(GAP, Math.atan2(RIDGE.x - GAP.x, RIDGE.z - GAP.z), { pose: 'sit', floor: strandRoof });
+    cat.look(this.head);
+    this.tub.visible = false;
+    this.released = true;
+    this.bolted = this.now;
+    child.decks = [WAY.strandLanding, WAY.strandSlope, WAY.strand];
+    child.dismount();
+    child.place(RIDGE.x, RIDGE.z, Math.atan2(GAP.x - RIDGE.x, GAP.z - RIDGE.z));
+    child.position.y = RIDGE.y;
+    this.to('ridge');
+  }
+
   private to(step: CatStep): void {
     this.step = step;
     this.since = 0;

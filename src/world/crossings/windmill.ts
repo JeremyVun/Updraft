@@ -109,6 +109,19 @@ export const SAIL = {
   width: 1.0, forward: 0.42, rail: 0.12, railDepth: 0.36,
 } as const;
 
+/** How high the hub stands out of the water. */
+export const HUB_HEIGHT = 4.6;
+
+/**
+ * On top of the boarding sail's rail, `along` it from the hub with the sail `angle` above level, in the mill's own
+ * frame: x to the right seen from in front of the sails, y up from the water, z out of their front.
+ */
+export function railAt(angle: number, along: number): THREE.Vector3 {
+  const across = -SAIL.width + SAIL.rail / 2;
+  return new THREE.Vector3(-along * Math.cos(angle) + across * Math.sin(angle),
+    HUB_HEIGHT + along * Math.sin(angle) + across * Math.cos(angle), SAIL.forward);
+}
+
 export type MillSound = 'start' | 'creak' | 'settle' | 'flap';
 
 /**

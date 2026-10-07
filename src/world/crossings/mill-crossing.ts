@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { tuning } from '../../tuning';
+import type { MaterialSound } from '../../audio/foley';
 import type { Deck } from '../decks';
 import { MillSpiral } from './mill-spiral';
 import { SAIL, Windmill, type MillSound, type MillSpot } from './windmill';
@@ -16,6 +17,9 @@ export interface MillWay {
 
 export type MillEvent = MillSound;
 
+/** The mill's own voice: the dry axle as it starts, wood working through the turn, the brake as it settles, the linen. */
+export const MILL_SOUNDS = { start: 'mill-start', creak: 'mill-creak', settle: 'mill-settle', flap: 'linen-flap' } as const satisfies Record<MillEvent, MaterialSound>;
+
 /**
  * The middle crossing: a drowned mill's sails turned by the player's circling. A sail comes round level beside the
  * wall she waits on and dwells; she walks out onto its rail with a hand on the stock and stands there while the turn
@@ -24,7 +28,7 @@ export type MillEvent = MillSound;
  */
 export class MillCrossing {
   readonly mill: Windmill;
-  readonly spiral = new MillSpiral();
+  readonly spiral: MillSpiral;
   phase: 'off' | 'waiting' | 'boarding' | 'riding' | 'leaving' | 'over' = 'off';
   /** Seconds in the current phase. */
   t = 0;
@@ -41,8 +45,10 @@ export class MillCrossing {
   private readonly look = new THREE.Vector3();
   private readonly ahead = new THREE.Vector3();
 
-  constructor(spot: MillSpot, readonly way: MillWay, private readonly cast: CrossingCast) {
-    this.mill = new Windmill(spot);
+  /** Given a mill already standing in the world, and the spiral drawn round it, it takes those over. */
+  constructor(spot: MillSpot | Windmill, readonly way: MillWay, private readonly cast: CrossingCast, spiral = new MillSpiral()) {
+    this.mill = spot instanceof Windmill ? spot : new Windmill(spot);
+    this.spiral = spiral;
     this.mill.onSound = (kind, where, strength) => this.onEvent?.(kind, where, strength);
   }
 

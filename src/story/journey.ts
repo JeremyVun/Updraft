@@ -184,6 +184,10 @@ export class Journey {
       /** The drift into the village begins where the stairs let the boat down through the cloud onto the water. */
       this.sail(DESCENT_END.x, DESCENT_END.y, -1.9);
       this.begin('drowned');
+    } else if (choice === 'roofs') {
+      this.sail(DESCENT_END.x, DESCENT_END.y, -1.9);
+      this.begin('drowned');
+      (this.chapter as DrownedChapter).skipToRun();
     } else if (choice === 'wood' || choice === 'dark') {
       this.land(WOOD_BERTH.x, WOOD_BERTH.z, WOOD_LANDING.x, WOOD_LANDING.y + 4);
       this.begin('wood');
