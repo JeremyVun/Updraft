@@ -4,7 +4,8 @@
 //   shots: comma list of k1, k2, k3, k4, k5, dive (default all); orientations: land (1600×900), port (430×932) (default both).
 //   Writes <prefix>-<shot>-<orientation>.png and <prefix>-compare-<shot>-<orientation>.jpg (concept left, game right).
 //   k1: the open sea (`?chapter=sea`) as the pod leads the boat in, `K1_LEFT` metres short of the rest (default 24).
-//   k2: at rest (`?chapter=whale`); `k2-shut` before its eye opens, then `k2` with it open on the child (`look`).
+//   k2: at rest (`?chapter=whale`); `k2-shut` before its eye opens, then `k2` circled at its blowhole with real
+//     strokes until the patch is up, it has drawn its first full breath and its eye has opened on the child.
 //   k3: resumed after its breath, the cork swept in with real strokes and the still taken mid-haul.
 //   k4: resumed after the line, the cygnet holding the loop's end: `k4-held` once the drawn strokes show along the
 //     flipper, then `k4` as the lift it is given (`liftFin`, as a sweep along it would) slides the loop to the tip.
@@ -78,8 +79,21 @@ const SHOOT = {
     await atRest(page);
     await page.waitForTimeout(5000);
     await snap('k2-shut');
-    await page.evaluate(() => __game.sealife.sleeper.look(__game.child.position));
-    await page.waitForTimeout(4000);
+    const view = page.viewportSize();
+    const end = Date.now() + 90000;
+    for (let a = 0; ;) {
+      const [cx, cy] = await page.evaluate(() => {
+        const p = __game.sealife.sleeper.blowhole.clone().project(__game.rig.camera);
+        return [(p.x * 0.5 + 0.5) * innerWidth, (0.5 - p.y * 0.5) * innerHeight];
+      });
+      for (let i = 0; i < 24; i++) {
+        a += (Math.PI * 2) / 24;
+        await page.mouse.move(cx + Math.cos(a) * 0.06 * view.height, cy + Math.sin(a) * 0.06 * view.height);
+        await page.waitForTimeout(28);
+      }
+      if (await page.evaluate(() => { const s = __game.sealife.sleeper; return s.phase === 'woken' && s.time > 4.4; })) break;
+      if (Date.now() > end) throw new Error('the circles never woke it');
+    }
     await snap('k2');
   },
   async k3(page, snap) {

@@ -127,7 +127,7 @@ void main() {
   N *= sign(dot(N, V) + 1e-4);
   float age = netHash(floor(kx + 0.5) * 0.37) * 0.25;
   vec3 alb = mix(mix(uStrand * (0.88 + age), uWeed, weed * 0.75), uRope, rope / max(cover, 1e-4) * step(strand, rope)) * round;
-  vec3 col = netLight(alb, N, V, vWorld, 0.9);
+  vec3 col = netLight(alb, N, V, vWorld, 0.35);
   col = (col * cover + uShadow * (1.0 - cover) * shade) / alpha;
   gl_FragColor = vec4(applyFog(col, vWorld), alpha * uFade);
 }`;
