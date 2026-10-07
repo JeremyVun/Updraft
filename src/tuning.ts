@@ -1782,6 +1782,8 @@ export const tuning = {
       density: 0.25, closed: 0.03, floor: 0.035, low: 3,
       /** How much of its closing round thins its body to the closed fog's, before its front runs on past the eye. */
       closedBy: 0.3,
+      /** How far from the forest beach it starts to thin off as the forest comes up out of it, and where it has gone, metres. */
+      shoreFrom: 90, shoreGone: 25,
       /**
        * The mist it sends on ahead: per metre at its front and at the water, falling away over `airLow` metres up and
        * `airReach` metres ahead once it is close (`airReachFar` while it is still far off, a share `airFar` as thick).
@@ -1958,16 +1960,17 @@ export const tuning = {
       /** Round the nave's west end as the fog comes: seconds into the fog it starts and takes, and how much wider it goes. */
       roundFrom: 0, roundFor: 10, roundWide: 11,
       /**
-       * Over the north water: where it stands from the tower's middle with the boat still at its tree and with it come
-       * in; how far from her toward the boat it looks while it is far off, and at what height.
+       * Over the water off the nave's west end: where it stands from the tower's middle with the boat still at its tree
+       * and with it come in; how far from her toward the boat it looks while it is far off, at what height, and its lens.
        */
-      northFar: { x: -7.5, y: 2.6, z: -27 }, northNear: { x: -1, y: 2.2, z: -19 }, northToward: 0.45, northAim: 3,
+      waterFar: { x: -29, y: 2.8, z: -15 }, waterNear: { x: -23, y: 2.4, z: -11 }, waterToward: 0.45, waterAim: 3, waterZoom: 0.9,
       /**
        * Going: seconds after she is seated it starts to give way to the storm's frame, and how long it takes; meanwhile
-       * how far from her toward the cat it looks, and its lens (upright, the same).
+       * how far from her toward the cat it looks, how far from there toward the lighthouse's lamp, and its lens (upright,
+       * the same).
        */
-      leaveFrom: 6, leaveFor: 6, backAlong: 0.5, backUprightAlong: 0.5, backZoom: 1.25,
-      backUprightZoom: 1,
+      leaveFrom: 7, leaveFor: 6, backAlong: 0.5, backUprightAlong: 0.5, backLight: 0.15, backZoom: 0.85,
+      backUprightZoom: 0.85,
     },
     /** Follow the boat into the streets; notice the church from that travelling view. */
     roofFromZ: -1260, roofUntilZ: -1360,
@@ -2106,10 +2109,15 @@ export const tuning = {
   /** One continuous passage from the last drowned houses to the forest beach. */
   storm: {
     passageSpeed: 5.8,
-    gatherFor: 22,
+    /**
+     * The most the boat makes in the storm from the nave, hard-pressed with its sail spilling most of the wind, m/s;
+     * and how near a turn of its way out counts as rounded, metres.
+     */
+    speed: 4.2, outRounded: 7,
+    gatherFor: 23,
     /** One distant ship call, with its tail clear before the first thunder. */
-    foghornAt: 8, foghornLateAllowance: 0.25,
-    weatherGatherFor: 14,
+    foghornAt: 3, foghornLateAllowance: 0.25,
+    weatherGatherFor: 20,
     /**
      * The lens's one move for the lighthouse: out over `openFor` seconds to `distance`, down to `eyeRise` over the
      * drift's aim and the lens widened to `zoom`, tilted up to `tilt` radians toward the crown. The tower is watched from
@@ -2118,9 +2126,11 @@ export const tuning = {
     lighthouseCamera: { openFor: 6, distance: 24, eyeRise: 1.7, zoom: 0.82, tilt: 0.21, arc: 0.7, pass: 0.9,
       offset: 0.24, pace: 0.8 },
     lighthouseComfortFor: 2.6,
+    /** She watches the lighthouse, lit and then dark, until it is this far behind abeam (the cosine off her bow). */
+    lighthouseWatched: -0.2,
     lighthouseStartle: 0.18,
     darkBy: 33,
-    lighthouseOutAt: 23,
+    lighthouseOutAt: 6.5,
     lighthouseFadeFor: 2.5,
     lighthouseSweep: 0.38,
     lighthouseSweepStart: 1.7,
@@ -2130,7 +2140,7 @@ export const tuning = {
     shadowSoftenFrom: 0.8,
     shadowCovered: 0.98,
     snatchFor: 4,
-    shakeAt: 7.5,
+    shakeAt: 14,
     cameraQuarter: 0.16,
     lookAhead: 1.3,
     planeAhead: 2,
@@ -2143,7 +2153,7 @@ export const tuning = {
     snatchGust: { lines: 8, speed: 17 },
     planeLostInFog: 2.5,
     planeLostAfter: 14,
-    firstLightning: 16,
+    firstLightning: 18,
     lightningStormFrom: 0.85,
     lightningNightFrom: 0.06,
     lightningRainFrom: 0.8,

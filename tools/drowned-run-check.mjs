@@ -103,7 +103,7 @@ try {
       if (!ch) return { landed: true, time: +__stats.time.toFixed(1), boat: f(b.position), storm: NaN };
       return { time: +__stats.time.toFixed(1), beat: st.beat, step: ch.step, close: +ch.close.toFixed(2), aboardFor: +ch.aboardFor.toFixed(1),
         carrying: ch.carrying, boat: f(b.position), child: f(c.position), cat: f(__game.cat.position), riding: c.riding,
-        storm: +st.stormTime.toFixed(1), grounded: b.grounded, departing: st.departing, leg: st.leg };
+        storm: +st.stormTime.toFixed(1), grounded: b.grounded, out: st.out, leg: st.leg };
     });
     const wait = async (test, limit, what) => {
       for (let t = 0; t < limit; t += 0.25) {
@@ -134,7 +134,7 @@ try {
       const { DROWNED_CHANNEL, LIGHTHOUSE } = await import('/src/world/drowned.ts');
       const { WOOD_LANDING } = await import('/src/world/wood.ts');
       const last = DROWNED_CHANNEL[DROWNED_CHANNEL.length - 1];
-      return { out: tuning.storm.lighthouseOutAt, away: [W.AWAY.x, W.AWAY.y], last: [last.x, last.y], beach: [WOOD_LANDING.x, WOOD_LANDING.y],
+      return { out: tuning.storm.lighthouseOutAt, way: W.STORM_WAY.map((p) => [p.x, p.y]), last: [last.x, last.y], beach: [WOOD_LANDING.x, WOOD_LANDING.y],
         light: [LIGHTHOUSE.x, LIGHTHOUSE.z], north: W.BELFRY_NORTH.toArray(), legs: DROWNED_CHANNEL.length + 2 };
     });
     const d = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
@@ -142,7 +142,11 @@ try {
     const toBeach = (s) => {
       const p = xz(s.boat);
       if (s.landed) return d(p, T.beach);
-      if (s.departing || s.leg === undefined) return d(p, T.away) + d(T.away, T.last) + d(T.last, T.beach);
+      if (s.leg === undefined) return NaN;
+      if (s.out < T.way.length) {
+        const ahead = [...T.way.slice(s.out), T.last, T.beach];
+        return ahead.reduce((sum, q, i) => sum + d(i ? ahead[i - 1] : p, q), 0);
+      }
       return s.leg < T.legs - 1 ? d(p, T.last) + d(T.last, T.beach) : d(p, T.beach);
     };
 
@@ -175,10 +179,15 @@ try {
         if (since >= 2.6 && !cat) { cat = s.cat; await shot('church-look-back'); }
         if (since >= 8 && since < 8.3) assert(s.riding && s.beat === 'gather', `she is not riding the boat into the storm: ${JSON.stringify(s)}`);
         if (p.beat !== was.beat) mark(p.beat, p, s);
+        if (p.beat === 'snatch' && was.beat !== 'snatch') { await seconds(1); await shot('storm-plane'); }
+        if (p.power < 0.6 && was.power >= 0.6) await shot('storm-light');
         if (p.shook && !was.shook) mark('the cygnet shakes', p, s);
         if (p.horn && !was.horn) mark('the foghorn', p, s);
         if (p.sheltered && !was.sheltered) mark('the cygnet startles at the light going', p, s);
-        if (p.flash > 0.01 && was.flash <= 0.01) mark('lightning', p, s);
+        if (p.flash > 0.01 && was.flash <= 0.01) {
+          mark('lightning', p, s);
+          if (!beats.some((x, i) => x.what === 'lightning' && i < beats.length - 1)) await shot('storm-lightning');
+        }
         if (!p.plane && was.plane && p.beat === 'after') mark('the plane gone', p, s);
         const inFrame = p.lamp[2] < 1 && Math.abs(p.lamp[0]) < 0.95 && Math.abs(p.lamp[1]) < 0.95;
         if (p.power < 0.97 && p.power > 0.001 && !inFrame && !unseen) unseen = { ...p, since };
@@ -193,6 +202,12 @@ try {
       }
       const landed = beats.at(-1);
       assert(landed.what === 'landed', `the boat never reached the forest beach: ${JSON.stringify(await look())}`);
+      /** On into the wood chapter's first seconds, so a cut at the hand-off shows in the trace. */
+      for (let i = 1; i <= 4; i++) {
+        await seconds(1);
+        trace.push({ second: second + i, mean: +(await brightness()).toFixed(1), flash: false, ashore: true });
+        if (i === 3) await shot('storm-ashore');
+      }
       console.log(`storm from aboard at the nave: ${toBeach(aboard).toFixed(0)} m to the forest beach`);
       for (const b of beats) console.log(`  ${b.at.toFixed(1).padStart(5)} s  ${b.what}, ${b.toBeach.toFixed(0)} m from the beach`);
       if (out) console.log(`  the light went out ${d(xz(out.boat), T.light).toFixed(0)} m from the lighthouse, its lamp ${out.inFrame ? 'in' : 'out of'} frame at ${out.lamp.slice(0, 2).map((v) => v.toFixed(2)).join(', ')}`);
@@ -201,12 +216,14 @@ try {
       const lookBack = back.reduce((a, r) => a + r.mean, 0) / Math.max(1, back.length);
       const lit = trace.filter((r) => r.second > 5 && !r.flash);
       const brightest = lit.reduce((a, r) => (r.mean > a.mean ? r : a), { mean: -1, second: -1 });
-      console.log(`  mean brightness each second from aboard: ${trace.map((r) => `${r.second}:${r.mean.toFixed(0)}${r.flash ? '*' : ''}`).join(' ')}`);
-      console.log(`  the look back ${lookBack.toFixed(1)}; brightest after it ${brightest.mean.toFixed(1)} at ${brightest.second} s (* a lightning flash)`);
+      console.log(`  mean brightness each second from aboard: ${trace.map((r) => `${r.second}:${r.mean.toFixed(0)}${r.flash ? '*' : r.ashore ? '+' : ''}`).join(' ')}`);
+      const cut = trace.slice(1).reduce((worst, r, i) => (r.flash || trace[i].flash ? worst : Math.max(worst, Math.abs(r.mean - trace[i].mean))), 0);
+      console.log(`  the look back ${lookBack.toFixed(1)}; brightest after it ${brightest.mean.toFixed(1)} at ${brightest.second} s; the most it changed in a second ${cut.toFixed(1)} (* a lightning flash, + ashore in the wood)`);
       assert(out, 'the light never went out');
       assert(!unseen, `the light was going out with the lighthouse out of frame at ${unseen?.since.toFixed(1)} s (${unseen?.lamp.map((v) => v.toFixed(2)).join(', ')})`);
       assert(out.inFrame, 'the light went out with the lighthouse out of frame');
       assert(landed.at < 60, `the landing came ${landed.at.toFixed(1)} s after she was aboard`);
+      assert(cut < 12, `the frame's brightness jumped by ${cut.toFixed(1)} in a second`);
       assert(brightest.mean < lookBack + 6, `the storm brightened the frame to ${brightest.mean.toFixed(1)} at ${brightest.second} s against ${lookBack.toFixed(1)} at the look back`);
       return cat;
     };

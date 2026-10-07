@@ -4,6 +4,7 @@ import { params } from '../params';
 import { QA } from '../qa';
 import { tuning } from '../tuning';
 import { DARK_AT_STRAND, DARK_WAY, darkWayPoint } from './drowned-way';
+import { WOOD_LANDING } from './wood';
 
 const smooth = THREE.MathUtils.smoothstep;
 
@@ -102,15 +103,16 @@ export class DarkBank {
   update(_time: number, eye: THREE.Vector3): void {
     if (QA && params.fog !== null) this.force(params.fog);
     const u = atmo.uniforms;
-    // It belongs to the village: on the way to the forest beach it gives the sea over to the storm's own weather.
-    const here = 1 - smooth(Math.hypot(eye.x - CHURCH.x, eye.z - CHURCH.y), 200, 320);
+    // It belongs to the village: it thins off as the forest beach comes up out of it, leaving the storm's own weather.
+    const k = tuning.drowned.fog, d = tuning.drowned.dark;
+    const here = (1 - smooth(Math.hypot(eye.x - CHURCH.x, eye.z - CHURCH.y), 200, 320))
+      * smooth(Math.hypot(eye.x - WOOD_LANDING.x, eye.z - WOOD_LANDING.y), k.shoreGone, k.shoreFrom);
     const amount = smooth(this.rise, 0, 0.5) * here;
     u.uSeaFogShape.value.w = amount;
     if (amount <= 0) {
       u.uSeaFogCrest.value.w = 0;
       return;
     }
-    const k = tuning.drowned.fog, d = tuning.drowned.dark;
     const { far, near } = k;
     const p = this.progress;
     const risen = smooth(this.rise, 0, k.risen);

@@ -3,7 +3,7 @@ import type { CheckpointPayload } from './checkpoint-data';
 import * as THREE from 'three';
 import type { Shot } from '../camera';
 import { DROWNED_CHANNEL, SPIRE, LIGHTHOUSE } from '../world/drowned';
-import { ADRIFT_LENGTH, AWAY, CAT_CHIMNEY, CAT_HOLD, CAT_LENS, DARK_AT_STRAND, adriftAt, NAVE, STRAND, STRAND_YAW, WAY, ridgeTop } from '../world/drowned-way';
+import { ADRIFT_LENGTH, STORM_WAY, CAT_CHIMNEY, CAT_HOLD, CAT_LENS, DARK_AT_STRAND, adriftAt, NAVE, STRAND, STRAND_YAW, WAY, ridgeTop } from '../world/drowned-way';
 import { LIGHTHOUSE_TOP_Y } from '../world/lighthouse';
 import { WOOD_LANDING } from '../world/wood';
 import { atmo } from '../world/atmosphere';
@@ -28,7 +28,7 @@ const PASSAGE = [...DROWNED_CHANNEL.slice(0, 3), STRAND, ...DROWNED_CHANNEL.slic
 const TO_STRAND = 3;
 /** The top of the nave beside the tower: where she looks for somewhere higher. */
 const REFUGE = new THREE.Vector3(NAVE.x + NAVE.len / 2 - 2, ridgeTop(NAVE) + 2.5, NAVE.z);
-/** Once she is aboard at the nave they go out round the open water to the north-west and on along the channel's last leg. */
+/** Once she is aboard at the nave they go out by `STORM_WAY` and on along the channel's last leg. */
 const ON_FROM_NAVE = PASSAGE.indexOf(DROWNED_CHANNEL[DROWNED_CHANNEL.length - 1]);
 /** Where she will step out onto the slates by the stem, and the ridge above it. */
 const STRAND_STEP = new THREE.Vector3(WAY.strandSlope.x0, WAY.strandSlope.height, WAY.strandSlope.z0);
@@ -127,8 +127,8 @@ export class DrownedChapter implements Chapter {
   readonly run: RoofRun | null;
   /** The church, from the tower's foot until she is aboard again. */
   readonly church: ChurchArrival | null;
-  /** Out from the nave, steering for the open water before the channel's last leg. */
-  private departing = false;
+  /** How far out from the nave along `STORM_WAY` they are; past its end, on the channel's last leg. */
+  private out = STORM_WAY.length;
   /** How far through the village they were when the air died: the light goes on from there with the dark, not with the boat. */
   private held = 0;
   /** How far the lens has come round to watch the cat brought over (it only grows), and when the boat went on. */
@@ -309,11 +309,12 @@ export class DrownedChapter implements Chapter {
     const wp = PASSAGE[this.leg];
     const from = this.leg === 0 ? this.departure : PASSAGE[this.leg - 1];
     const sailing = this.beat === 'enter' || this.beat === 'drift' || this.beat === 'gather' || this.beat === 'snatch' || this.beat === 'after';
-    if (sailing && this.departing && Math.hypot(boat.position.x - AWAY.x, boat.position.z - AWAY.y) < ROUNDED) {
-      this.departing = false;
-      boat.steerFor = PASSAGE[this.leg];
+    const out = STORM_WAY[this.out];
+    if (sailing && out && Math.hypot(boat.position.x - out.x, boat.position.z - out.y) < tuning.storm.outRounded) {
+      this.out++;
+      boat.steerFor = STORM_WAY[this.out] ?? PASSAGE[this.leg];
     }
-    if (sailing && !this.departing && this.leg < PASSAGE.length - 1 && roundedWaypoint(boat.position.x, boat.position.z, from.x, from.y, wp.x, wp.y, ROUNDED)) {
+    if (sailing && !STORM_WAY[this.out] && this.leg < PASSAGE.length - 1 && roundedWaypoint(boat.position.x, boat.position.z, from.x, from.y, wp.x, wp.y, ROUNDED)) {
       this.leg++;
       boat.steerFor = PASSAGE[this.leg];
     }
@@ -542,9 +543,9 @@ export class DrownedChapter implements Chapter {
   private aboard(): void {
     const { boat } = this.cast;
     this.leg = ON_FROM_NAVE;
-    this.departing = true;
-    boat.steerFor = AWAY;
-    boat.speedLimit = tuning.storm.passageSpeed;
+    this.out = 0;
+    boat.steerFor = STORM_WAY[0];
+    boat.speedLimit = tuning.storm.speed;
     this.to('gather');
   }
 
@@ -580,11 +581,13 @@ export class DrownedChapter implements Chapter {
       c.lookAt = this.cast.cygnet.eye(this.look);
       return;
     }
-    if (this.beat === 'gather' && this.t < tuning.storm.lighthouseOutAt) {
+    /** At the light until it has gone and then where it was, while it is still ahead of her shoulder. */
+    const lx = LIGHTHOUSE.x - boat.position.x, lz = LIGHTHOUSE.z - boat.position.z;
+    if (this.beat === 'gather' && (Math.sin(boat.yaw) * lx + Math.cos(boat.yaw) * lz) / Math.hypot(lx, lz) > tuning.storm.lighthouseWatched) {
       c.lookAt = this.look.copy(LIGHTHOUSE).setY(14);
       return;
     }
-    if (Math.hypot(boat.position.x - SPIRE.x, boat.position.z - SPIRE.z) < SPIRE_NEAR) {
+    if ((this.beat === 'enter' || this.beat === 'drift') && Math.hypot(boat.position.x - SPIRE.x, boat.position.z - SPIRE.z) < SPIRE_NEAR) {
       c.lookAt = SPIRE;
       return;
     }

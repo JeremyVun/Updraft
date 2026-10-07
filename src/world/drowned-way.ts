@@ -509,8 +509,13 @@ export const NAVE_NORTH: Deck = strip(new THREE.Vector3(BERTH_X, ridgeTop(NAVE),
   new THREE.Vector3(BERTH_X, 0.4, NAVE.z - acrossAt(NAVE, 0.4)), 0.7);
 /** Round the tower's north side from the dead tree to the berth: the open water the boat is brought across. */
 export const BRING_WAY = [new THREE.Vector2(TOWER.x + 4, TOWER.z - 7), new THREE.Vector2(NAVE_BERTH.x, NAVE_BERTH.z)];
-/** Out from the nave into the open water north-west of the church, on the way to the forest beach. */
-export const AWAY = new THREE.Vector2(-10, -1580);
+/**
+ * Out from the nave in the storm: round into the open water north of the church, then on past the lighthouse's side
+ * before the channel's last leg to the forest beach.
+ */
+export const STORM_WAY = [new THREE.Vector2(6, -1584), new THREE.Vector2(40, -1604)];
+/** The water the storm's way out and the lens following it keep open: from the berth round to the lighthouse's side. */
+const STORM_OUT = [new THREE.Vector2(NAVE_BERTH.x, NAVE_BERTH.z - 4), ...STORM_WAY];
 
 /**
  * The line the dark comes on along: from far out where they came from, through the stranding and on over her way to
@@ -675,7 +680,7 @@ const OPEN = [
   { x: NAVE.x, z: NAVE.z, r: 14 },
   { x: TOWER_FOOT.x + 3, z: NAVE.z, r: 9 },
   { x: BOAT_TREE.x, z: BOAT_TREE.y, r: 7 },
-  { x: (NAVE_BERTH.x + AWAY.x) / 2, z: (NAVE_BERTH.z + AWAY.y) / 2, r: 16 },
+  { x: 0.625, z: -1572.54, r: 16 },
 ];
 export function inClearing(x: number, z: number, room: number): boolean {
   if (OPEN.some((c) => Math.hypot(x - c.x, z - c.z) < c.r + room)) return true;
@@ -683,6 +688,10 @@ export function inClearing(x: number, z: number, room: number): boolean {
   for (let i = 1; i < BOAT_ADRIFT.length; i++) {
     const a = BOAT_ADRIFT[i - 1], b = BOAT_ADRIFT[i];
     if (toSegment(x, z, a.x, a.y, b.x, b.y) < 4 + room) return true;
+  }
+  for (let i = 1; i < STORM_OUT.length; i++) {
+    const a = STORM_OUT[i - 1], b = STORM_OUT[i];
+    if (toSegment(x, z, a.x, a.y, b.x, b.y) < 14 + room) return true;
   }
   return false;
 }

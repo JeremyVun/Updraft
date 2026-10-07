@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import type { Shot } from '../camera';
 import { tuning } from '../tuning';
+import { LIGHTHOUSE } from '../world/drowned';
+import { LIGHTHOUSE_LANTERN_Y } from '../world/lighthouse';
 import { BELFRY_NORTH, BELFRY_SOUTH, BRING_WAY, DARK_WAY, IVY, NAVE_BERTH, NAVE_NORTH, TOWER } from '../world/drowned-way';
 import type { Cast } from './cast';
 
@@ -98,7 +100,7 @@ export class ChurchArrival {
     this.to('aboard');
     this.aboardFor = 0;
     this.catEye.copy(BELFRY_NORTH).setY(BELFRY_NORTH.y + 0.25);
-    this.north(this.view, THREE.MathUtils.smoothstep(this.aspect, 0.7, 1.3), true);
+    this.water(this.view, THREE.MathUtils.smoothstep(this.aspect, 0.7, 1.3), true);
     this.framed = true;
   }
 
@@ -305,7 +307,7 @@ export class ChurchArrival {
   /**
    * Low over the water and never above the roofs. While the cat climbs, off the green to the south-west, near enough
    * for the cat on the ivy to read, with her on the ridge and the tower's south face, tilting up with the cat. As the
-   * fog comes on behind it, it goes round the nave's west end, wide of its gable, to the open water north of the
+   * fog comes on behind it, it goes round the nave's west end, wide of its gable, to the open water off that end, north of the
    * church, ahead of the fog: from there the fog comes over the church, the boat is brought round the tower to the
    * nave and she steps down into it, the cat looking down from the belfry over them.
    */
@@ -334,14 +336,14 @@ export class ChurchArrival {
       w.zoom = THREE.MathUtils.lerp(1, k.climbZoom, wide);
     }
     if (round > 0) {
-      const north = this.north(this.northView, wide, false);
+      const water = this.water(this.waterView, wide, false);
       /** Wide of the nave's gable as it goes round, never across its roof. */
       const swing = Math.sin(round * Math.PI) * k.roundWide;
-      w.target.lerp(north.target, round);
-      w.bearing += Math.atan2(Math.sin(north.bearing - w.bearing), Math.cos(north.bearing - w.bearing)) * round;
-      w.distance = THREE.MathUtils.lerp(round < 1 ? w.distance : north.distance, north.distance, round) + swing;
-      w.eye = THREE.MathUtils.lerp(round < 1 ? w.eye : north.eye, north.eye, round);
-      w.zoom = north.zoom;
+      w.target.lerp(water.target, round);
+      w.bearing += Math.atan2(Math.sin(water.bearing - w.bearing), Math.cos(water.bearing - w.bearing)) * round;
+      w.distance = THREE.MathUtils.lerp(round < 1 ? w.distance : water.distance, water.distance, round) + swing;
+      w.eye = THREE.MathUtils.lerp(round < 1 ? w.eye : water.eye, water.eye, round);
+      w.zoom = water.zoom;
     }
     this.ease(dt, k.ease);
     this.write(shot, this.view);
@@ -349,28 +351,39 @@ export class ChurchArrival {
     return k.pace;
   }
 
-  private readonly northView: View = { target: new THREE.Vector3(), bearing: 0, distance: 20, eye: 2.6, zoom: 1 };
-  private readonly northEye = new THREE.Vector3();
+  private readonly waterView: View = { target: new THREE.Vector3(), bearing: 0, distance: 20, eye: 2.6, zoom: 1 };
+  private readonly waterEye = new THREE.Vector3();
+  private readonly goneFrom = new THREE.Vector3();
+  private going = false;
+  private readonly lamp = new THREE.Vector3(LIGHTHOUSE.x, LIGHTHOUSE_LANTERN_Y, LIGHTHOUSE.z);
 
   /**
-   * The view from the open water north of the church: it stands further off while the boat is still at its tree and
-   * draws in as it comes, looking between her and the boat; or, as they go, between her and the cat in the belfry.
+   * The view from the open water off the nave's west end, looking east along its north side: the tower over her, the
+   * boat brought round it, and the lighthouse's light out over the water beyond. It stands further off while the boat
+   * is still at its tree and draws in as it comes, looking between her and the boat; or, as they go, between her, the
+   * cat in the belfry and the light.
    */
-  private north(out: View, wide: number, back: boolean): View {
+  private water(out: View, wide: number, back: boolean): View {
     const k = tuning.drownedCamera.church;
     const { child, boat } = this.cast;
     const near = back || this.aboardFor >= 0 ? 1 : 1 - THREE.MathUtils.clamp((this.left - 4) / 18, 0, 1);
-    const far = k.northFar, close = k.northNear;
-    const e = this.northEye.set(TOWER.x + THREE.MathUtils.lerp(far.x, close.x, near), THREE.MathUtils.lerp(far.y, close.y, near),
+    const far = k.waterFar, close = k.waterNear;
+    const e = this.waterEye.set(TOWER.x + THREE.MathUtils.lerp(far.x, close.x, near), THREE.MathUtils.lerp(far.y, close.y, near),
       TOWER.z + THREE.MathUtils.lerp(far.z, close.z, near));
     const head = this.tmp.copy(child.position).setY(child.position.y + 1.1);
-    if (back) out.target.copy(head).lerp(this.catEye, THREE.MathUtils.lerp(k.backUprightAlong, k.backAlong, wide));
-    else out.target.copy(head).lerp(boat.position, k.northToward * (1 - near)).setY(k.northAim);
+    /** Under way, it goes with her, keeping where it stood from her as she sat down. */
+    if (this.aboardFor >= 0) {
+      if (!this.going) this.goneFrom.subVectors(e, head);
+      this.going = true;
+      e.copy(head).add(this.goneFrom);
+    }
+    if (back) out.target.copy(head).lerp(this.catEye, THREE.MathUtils.lerp(k.backUprightAlong, k.backAlong, wide)).lerp(this.lamp, k.backLight);
+    else out.target.copy(head).lerp(boat.position, k.waterToward * (1 - near)).setY(k.waterAim);
     const reach = Math.hypot(e.x - out.target.x, e.z - out.target.z);
     out.bearing = Math.atan2(e.x - out.target.x, e.z - out.target.z);
     out.distance = reach * THREE.MathUtils.lerp(k.uprightFar, 1, wide);
     out.eye = e.y;
-    out.zoom = back ? THREE.MathUtils.lerp(k.backUprightZoom, k.backZoom, wide) : 1;
+    out.zoom = back ? THREE.MathUtils.lerp(k.backUprightZoom, k.backZoom, wide) : k.waterZoom;
     return out;
   }
 
@@ -384,7 +397,7 @@ export class ChurchArrival {
     const wide = THREE.MathUtils.smoothstep(this.aspect, 0.7, 1.3);
     const away = THREE.MathUtils.smootherstep(this.aboardFor, k.leaveFrom, k.leaveFrom + k.leaveFor);
     if (away >= 1) return;
-    this.north(this.want, wide, this.aboardFor < tuning.drowned.church.lookBackAt + tuning.drowned.church.lookBackFor);
+    this.water(this.want, wide, this.aboardFor < tuning.drowned.church.lookBackAt + tuning.drowned.church.lookBackFor);
     this.ease(dt, k.ease);
     /** The boat is under way: the lens looks where it is, not where it was. */
     this.view.target.lerp(this.want.target, 1 - Math.exp(-dt * k.follow));
