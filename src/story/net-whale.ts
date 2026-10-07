@@ -65,7 +65,7 @@ const POD_PACE = 5.5;
  */
 const SALUTES = [
   { along: 11, out: 5, run: 5, high: 1.9, at: 6.3 },
-  { along: 3.5, out: 7, run: 4.5, high: 1.5, at: 6.6 },
+  { along: -6, out: 7, run: 4.5, high: 1.5, at: 6.6 },
   { along: -20, out: 8.5, run: -5, high: 1.7, at: 6.8 },
 ];
 const SALUTE_SWIM = 3;
@@ -1550,9 +1550,9 @@ export class NetWhale {
       * (1 - THREE.MathUtils.smoothstep(whale.time, FREE_FLUKES_FROM + 10, FREE_FLUKES_FROM + 14)) : 0;
     if (glance > 0) this.look.lerp(this.a.copy(whale.flukes).setY(Math.max(4, whale.flukes.y * 0.5)), glance * (portrait ? 0.85 : 0.55));
     // Behind the boat: just to port of astern, or in portrait on the line from what matters through the boat.
-    const aim = portrait ? Math.atan2(focus.x - boat.x, focus.z - boat.z) + phoneTurn
-      : this.yaw - THREE.MathUtils.lerp(bearing, K.releaseBearing, out);
     const release = K.phone.release;
+    const aim = portrait ? Math.atan2(focus.x - boat.x, focus.z - boat.z) + THREE.MathUtils.lerp(phoneTurn, release.turn, out)
+      : this.yaw - THREE.MathUtils.lerp(bearing, K.releaseBearing, out);
     const distance = portrait ? THREE.MathUtils.lerp(phoneDistance, release.distance, out) : THREE.MathUtils.lerp(holdDistance, K.releaseDistance, out);
     const height = portrait ? THREE.MathUtils.lerp(phoneHeight, release.height, out) : THREE.MathUtils.lerp(holdHeight, K.releaseHeight, out);
     this.lookFrom.set(boat.x - Math.sin(aim) * distance, boat.y + height,

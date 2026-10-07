@@ -1487,16 +1487,18 @@ export const tuning = {
     lineDistance: 11, lineHeight: 4.8, lineBearing: 0.3, lineLookY: 3.4, lineToward: 0.36,
     flipperDistance: 11.5, flipperHeight: 7.2, flipperBearing: 0.36, flipperLookY: 8, flipperToward: 0.4,
     /**
-     * A phone's holds: on the line from what matters through the boat, turned `turn` radians round (toward astern
-     * when negative), so boat, step and head stack up its tall frame past the sail's side; `distance` behind the boat and `height` up,
-     * looking from the boat `toward` of the way to what matters and `lookY` up on it (m). `release` is where the
-     * breath's hold eases out to as it goes free.
+     * A phone's holds: on the line from what matters through the boat, turned `turn` radians round toward the low sun
+     * on the bow (toward starboard when negative), as far as the step allows, so its tall frame keeps the gold
+     * morning over the whale's back though it is too narrow to hold the head and the sun together; `distance` behind
+     * the boat and `height` up, looking from the boat `toward` of the way to what matters and `lookY` up on it (m).
+     * `release` is where the breath's hold eases out to as it goes free, turned back from the sun toward the raft
+     * and the leaps round its head.
      */
     phone: {
-      breath: { distance: 10, height: 11, turn: 0, lookY: 2, toward: 0.55 },
-      line: { distance: 7, height: 6, turn: 0, lookY: 1.5, toward: 0.5 },
-      flipper: { distance: 10, height: 6.5, turn: -0.6, lookY: 1.5, toward: 0.5 },
-      release: { distance: 14, height: 8 },
+      breath: { distance: 22, height: 10, turn: -0.62, lookY: 20, toward: 0.3 },
+      line: { distance: 11, height: 6, turn: -0.55, lookY: 20, toward: 0.12 },
+      flipper: { distance: 13, height: 8, turn: -1.2, lookY: 16, toward: 0.3 },
+      release: { distance: 28, height: 11, turn: 0.2 },
     },
     /**
      * The flipper: a stroke within `finRadius` of its outer part on screen (normalised device units), moving at least
