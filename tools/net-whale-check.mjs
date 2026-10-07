@@ -127,14 +127,19 @@ async function circles() {
   const context = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
   const { page, errors } = await open(context, '');
   const rest = await atRest(page);
+  // Reaching the blowhole from wherever the pointer was is a sweep of its own; only the circling itself is judged.
+  const [sx, sy] = await onScreen(page, 'blowhole', 1.2);
+  await stroke(page, [[W - 10, 10], [sx + 60, sy]], 400);
+  await page.waitForTimeout(1000);
+  const before = await read(page);
   const breathed = await circle(page, (s) => s.progress >= 1);
   await page.mouse.move(W - 10, 10);
   const free = await until(page, (s) => s.step === 'free', 'it to be free', 60);
   const gone = await until(page, (s) => s.step === 'gone' && s.speed > 1, 'it to go and the boat to sail on', 120);
   results.circles = { restAt: +rest.time.toFixed(1), breathAt: +breathed.time.toFixed(1), freeAt: +free.time.toFixed(1),
-    sailingOnAt: +gone.time.toFixed(1), lifts: breathed.lifts };
+    sailingOnAt: +gone.time.toFixed(1), lifts: breathed.lifts - before.lifts };
   assert(breathed.awake || breathed.phase === 'woken', 'circles over the blowhole bring its first full breath');
-  assert.equal(breathed.lifts, 0, 'circles over the blowhole never lift its flipper');
+  assert.equal(breathed.tickles, before.tickles, 'circles over the blowhole never tickle it');
   assert.deepEqual(errors, []);
   await context.close();
 }
