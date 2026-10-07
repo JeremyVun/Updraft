@@ -127,7 +127,17 @@ horizon), the touches, the far village's cheap form.
 Gate: stills beside `comps/village/painted-*` (arrival, the cat's roof, eye level, the run's views, the horizon); the
 run's views of the church and lighthouse never crowded; one merged mesh as today; typecheck, `drowned-roofs-check`,
 `drowned-way-check`.
-Done: [ ]
+Done: [x] The kit is `drowned-houses.ts` (a house is a `Lot` given to `buildHouse`; `mid` builds it on fewer stations,
+`far` as a silhouette only). The fuller village is `drowned-shape.ts`: lanes, huddles and farms on a loose grid from
+their own seeded streams, full in the middle distance from where she goes (the drift up to the strand, then her way),
+a band of broad water, then far groups to the haze; `free` in `drowned.ts` keeps them off the drift, her way and the
+clearings, the storm's way to the wood, the dark's way in from the south-east, the church and lighthouse and the sight
+lines to them from the arrival, the strand, eye level and the high roof. The touches stand once each: the tall hat
+beside the little pocket in the arrival's middle distance (`TALL_AND_TINY`), washing between two chimneys west of her
+way (`WASHING_PAIR`), and her door under the water in the strand roof's gable end (`SUNK_DOOR`, drawn by the sea's
+shader down through the surface). The low cap is a swelling skirt under a soft crown. Left: north of the church stays
+thin (the storm's way and the sight lines behind the pair); the washing's cloths are backlit from every play view;
+far houses have no form between `mid` and the silhouette.
 
 ### Phase 3c: the run
 Owns: the child's walk over `WAY` following the cat from the strand to the nave, stopping at each piece; the cat's own
