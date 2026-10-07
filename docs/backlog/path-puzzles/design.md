@@ -447,10 +447,12 @@ about (−9, −1398), some 40 m short of the church (`SPIRE`, 14, −1436). Mai
    comes and the first rain falls. Now she needs her boat, still resting against the cottage roof back along the way.
 8. **Bring the boat (fill the sail):** the player fills its red sail (`Boat.brushSail`) and brings it across the water
    to the nave; she steps down into it. She looks back once at the cat in the belfry as they go.
-9. **The storm:** the church is about 260 m from the beach, close to where main's storm already starts, so main's
-   storm plays from the moment she is aboard (the weather closing in, the lighthouse sliding past and going out about
-   130 m on, the plane taken, rain, the cygnet's shaking, the landing at the forest). The storm never lets go until the
-   beach, and the landing is relief that turns into the wood's fear.
+9. **The storm:** the boat leaves the nave about 145 m from the beach, so main's storm plays from the moment she is
+   aboard, re-timed to that shorter way: the weather already half gathered, the lighthouse about 55 m off as she boards
+   and its beam going out in the first seconds while it is still in view (a glow through the fog, then gone), the
+   cygnet's shaking, the plane taken about mid-way, rain, the landing at the forest about 45 s after she boards. The
+   night takes over from the fog's dark without ever lifting. The storm never lets go until the beach, the fog thins
+   off as the forest comes up out of it, and the landing is relief that turns into the wood's fear.
 
 The village round the church is re-laid so the route reads as a real village she picks her way through (Jeremy's note
 on the first frames above). The water level never changes. The village's look may be raised as far as it needs
@@ -475,7 +477,7 @@ So the existing drowned village and storm code may be refactored as far as the r
 - **Pacing.** Arrival and calm drift about 30 s; the cat about 30–60 s; a short drift with the cat aboard (the cygnet
   ducking into the satchel, the cat washing a paw at the bow) about 15 s; the air dying and the dark rising about 20 s,
   slow and eerie; the run about 2 min with both crossings; the dark arriving and the boat brought in about 45 s; the
-  storm about 70 s to the beach. The room grows from about 3 minutes to 5–6, nearly all of it the player's.
+  storm about 45 s to the beach. The room grows from about 3 minutes to 5–6, nearly all of it the player's.
 - **The cat.** A small soft tabby with a white chest and socks, round-faced, a little bedraggled, built as soft
   rounded shapes like the game's other animals, to the model sheet in `comps/cat/`. It mews from the chimney, hates the
   water, rides the tub hunched with its ears flat, and on the boat sits at the bow as far from the water as it can. It
