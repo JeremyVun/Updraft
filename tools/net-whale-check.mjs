@@ -212,7 +212,7 @@ const watchBird = (page) => page.evaluate((HALF) => {
         const t = i / 24;
         p.copy(s.finRoot).lerp(s.finTip, t);
         const clear = p.distanceTo(k.position) - half(t) - 0.3;
-        if (clear < watch.clear) { watch.clear = clear; watch.at = t; }
+        if (clear < watch.clear) { watch.clear = clear; watch.at = t; watch.bird = `${w.bird} lift ${s.flipperLift.toFixed(2)}`; }
       }
       if ((w.bird === 'holding' && w.birdT > 1) || w.bird === 'pulling') watch.gap = Math.max(watch.gap, k.billTip(bill).distanceTo(__game.sealife.net.loopEnd));
     }
@@ -220,7 +220,7 @@ const watchBird = (page) => page.evaluate((HALF) => {
   };
   tick();
 }, FIN_HALF);
-const birdWatch = (page) => page.evaluate(() => ({ clear: +window.__bird.clear.toFixed(2), clearAt: window.__bird.at, gap: +window.__bird.gap.toFixed(3), frames: window.__bird.frames }));
+const birdWatch = (page) => page.evaluate(() => ({ clear: +window.__bird.clear.toFixed(2), clearAt: window.__bird.at, clearWhen: window.__bird.bird, gap: +window.__bird.gap.toFixed(3), frames: window.__bird.frames }));
 
 async function stroke(page, points, ms, started = false) {
   const n = Math.max(2, Math.round(ms / 8));
@@ -650,7 +650,7 @@ async function voyage(idle) {
   assert.equal(free.liftedBy, by ?? 'circles');
   assert.equal(free.broughtBy, by ?? 'sweeps');
   assert.equal(free.finnedBy, by ?? 'sweeps');
-  assert(watch.clear >= 1, `the cygnet keeps clear of the flipper: ${watch.clear} m`);
+  assert(watch.clear >= 1, `the cygnet keeps clear of the flipper: ${watch.clear} m at ${watch.clearAt} along it, ${watch.clearWhen}`);
   assert.deepEqual(errors, []);
   await context.close();
 }

@@ -1509,7 +1509,7 @@ export const tuning = {
      * `slipFor` seconds into the lift.
      */
     finRadius: 0.07, finPace: 0.8, finAlong: 0.5, finSweep: 0.1, finInviteRadius: 2.6,
-    endOut: 4.8, endAhead: 0.7, birdOut: 5.2, birdAhead: -0.4, slipFor: 4,
+    endOut: 5.1, endAhead: 0.2, birdOut: 5.3, birdAhead: -0.5, slipFor: 4,
     /**
      * The near flipper at rest, about its root under the jaw: swept round toward the head and raised, so it reaches
      * out toward the boat's bow with its tip at the surface (radians).
