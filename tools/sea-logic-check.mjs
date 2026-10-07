@@ -61,10 +61,12 @@ function fixture(gust, portrait, legacy = false, circling = false) {
   return {chapter,wind,boat,child,cygnet,carry,rig,sealife,play};
 }
 /** How much clear water there is between the cygnet's body and the near flipper, posed this frame (m). */
+/** How far the flipper reaches from its line (m) at sixteenths from root to tip, as `net-whale-check.mjs` has it. */
+const FIN_HALF=[0.56,0.72,0.9,1.19,1.32,1.37,1.37,1.34,1.28,1.21,1.13,1.03,0.92,0.8,0.67,0.32,0.06];
 function clearOfFin(whale,at){
   let clear=Infinity;const p=new THREE.Vector3();
-  for(let i=0;i<=24;i++){const t=i/24;p.copy(whale.finRoot).lerp(whale.finTip,t);
-    clear=Math.min(clear,p.distanceTo(at)-(0.32+2.1*(1-t)**0.8)-0.3);}
+  for(let i=0;i<=24;i++){const t=i/24,f=t*16,j=Math.min(15,Math.floor(f));p.copy(whale.finRoot).lerp(whale.finTip,t);
+    clear=Math.min(clear,p.distanceTo(at)-(FIN_HALF[j]+(FIN_HALF[j+1]-FIN_HALF[j])*(f-j)+0.05)-0.3);}
   return clear;
 }
 /** One frame of the sea passage, as main.ts runs it. */
