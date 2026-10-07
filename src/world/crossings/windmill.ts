@@ -13,8 +13,8 @@ const IRON = 4;
 const BOARDS = 5;
 const HOLLOW = 6;
 /** The stone tower: its radius at the water, how far behind the sails its middle stands, and its height out of the water. */
-const TOWER_RADIUS = 1.6;
-const TOWER_BACK = 2.05;
+const TOWER_RADIUS = 1.35;
+const TOWER_BACK = 1.8;
 const TOWER_TOP = 3.1;
 
 const MILL_VERT = /* glsl */ `

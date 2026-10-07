@@ -147,19 +147,21 @@ const RUNS = {
   /** Circling brings a sail to her and it dwells; she boards, rides with her feet on the rail, and walks off at the top. */
   async ride(game) {
     await game.open();
+    if (shots) await game.seconds(2.5);
     await game.shot('waiting');
     const from = await game.mark();
     const dwelt = await game.circleUntil((s) => s.dwelling || s.phase !== 'waiting', 20);
     expect(dwelt, 'circling never brought a sail round to her');
     game.notes.push(`a sail came round and dwelt at ${dwelt.sail} rad`);
-    await game.circle(1.5, 1.3);
+    await game.circle(0.75, 1.3);
     const held = await game.state();
     expect(held.phase !== 'waiting' || Math.abs(held.sail - K.board) < 0.01, `the sail did not hold for her while the player kept circling (sail ${held.sail})`);
     expect(await game.until((s) => s.phase === 'riding', 8), 'she never got on the sail');
     const aboard = (await game.log(from)).frames.find((f) => f.phase === 'riding');
     expect(Math.abs(aboard.sail - K.board) < 0.02, `she got on with the sail at ${aboard.sail}, not at its dwell`);
     await game.shot('aboard');
-    await game.circle(1, 1.3);
+    await game.circle(0.5, 1.3);
+    await game.seconds(0.4);
     await game.shot('mid-ride');
     const top = await game.circleUntil((s) => s.phase !== 'riding', 30);
     expect(top, 'the sail never carried her to the top');
@@ -167,6 +169,10 @@ const RUNS = {
     const over = await game.until((s) => s.phase === 'over', 15);
     expect(over, `she never walked off onto the high roof (phase ${(await game.state()).phase})`);
     await game.shot('off');
+    if (shots) {
+      await game.seconds(2);
+      await game.shot('ahead');
+    }
     const { frames, events } = await game.log(from);
     const riding = frames.filter((f) => f.phase === 'riding');
     const gaps = riding.map((f) => Math.abs(f.railGap));
