@@ -164,7 +164,6 @@ export class Net {
   private readonly fold = new Float32Array(ROWS * COLS * 3);
   /** Where each point floats once it is all peeled, before it drifts. */
   private readonly afloatAt = new Float32Array(ROWS * COLS * 2);
-  private readonly peeled = new Float32Array(ROWS * COLS);
   private readonly crowns = new Float32Array(ROWS);
   private readonly below = new Float32Array(ROWS * BELOW * 3);
   private readonly belowAcross = new Float32Array(ROWS * BELOW);
@@ -618,7 +617,6 @@ export class Net {
     const d = Math.hypot(dx, dz) || 1;
     const reach = Math.min(d, this.links * LINK * 0.96);
     const bow = Math.sqrt(Math.max(0, (this.links * LINK * 0.92) ** 2 - reach * reach)) * 0.3;
-    // Bowed toward the side away from the boat.
     const out = (fx - this.boat.x) * -dz + (fz - this.boat.z) * dx > 0 ? 1 : -1;
     for (let m = 0; m <= this.links; m++) {
       const f = m / this.links;
@@ -719,9 +717,7 @@ export class Net {
           P[k * 3 + 2] = this.t.z;
           A[k] = water;
           C[k] = water ? 0 : 1 - THREE.MathUtils.smoothstep(up, 0.05, 0.4);
-          this.peeled[k] = 0;
         } else {
-          // Off the skin: drawn across the water from below its row to its place in the floating mass.
           const t = THREE.MathUtils.smoothstep((q - end) / (arc + WATER_MIN), 0, 1);
           const w = (i * PATH + PATH - 1) * 3;
           this.floating(k, this.r);
@@ -730,7 +726,6 @@ export class Net {
           P[k * 3 + 2] = this.path[w + 2] + (this.r.z - this.path[w + 2]) * t;
           A[k] = 1;
           C[k] = 0;
-          this.peeled[k] = 1;
         }
       }
     }
@@ -956,7 +951,7 @@ export class Net {
         this.sheetPoint(at.i, at.j, this.p).lerp(this.sheetPoint(i1, at.j, this.q), at.f);
         const k = at.i * COLS + at.j;
         afloat = A[k];
-        const lifted = THREE.MathUtils.smoothstep(this.lifts[k] * this.lift * this.tent[at.i] * K.netLift + this.peeled[k] * (1 - afloat) * 2, 0.15, 0.6);
+        const lifted = THREE.MathUtils.smoothstep(this.lifts[k] * this.lift * this.tent[at.i] * K.netLift, 0.15, 0.6);
         this.q.fromArray(N, k * 3);
         this.t.copy(this.p).addScaledVector(this.q, NET.cork * (1 - lifted) * (1 - afloat));
         this.t.y += afloat ? NET.cork * 0.3 - this.p.y * afloat : 0;
@@ -1119,7 +1114,7 @@ export class Net {
       this.p.fromArray(P, k * 3);
       this.q.fromArray(N, k * 3);
       const afloat = A[k];
-      const lifted = THREE.MathUtils.smoothstep(this.lifts[k] * this.lift * this.tent[Math.floor(k / COLS)] * K.netLift + this.peeled[k] * (1 - afloat) * 2, 0.15, 0.6);
+      const lifted = THREE.MathUtils.smoothstep(this.lifts[k] * this.lift * this.tent[Math.floor(k / COLS)] * K.netLift, 0.15, 0.6);
       // Down the slope of the skin, straight down under the lifted mesh, out along the water afloat.
       this.r.set(0, -1, 0).addScaledVector(this.q, this.q.y).normalize();
       if (this.r.lengthSq() < 0.5) this.r.set(Math.cos(at.turn), 0, Math.sin(at.turn));

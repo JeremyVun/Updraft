@@ -467,7 +467,8 @@ export class NetWhale {
   /**
    * What the two of them do about it, over whatever the crossing had them doing. She knows it before the player
    * does: as it breathes in the haze she leans toward it and points, with the cygnet up in the satchel looking too.
-   * At rest she watches the blowhole, and the eye when it opens on her; free, she waves.
+   * At rest she watches the blowhole, and the eye when it opens on her; she leans out for the line and hauls it;
+   * free, she waves.
    */
   direct(time: number): void {
     const { child, cygnet, carry } = this.cast;
@@ -534,7 +535,10 @@ export class NetWhale {
     return Math.cos(bearing) > 0.2;
   }
 
-  /** What they are both looking at: the breath, the dolphin that lifts the net, the column, the eye, the spout, the flukes. */
+  /**
+   * What they are both looking at: the breath, the dolphin that lifts the net, the column, the eye, the cork coming
+   * in and the dolphin bringing it, the net coming off as she hauls, the spout, the flukes.
+   */
   private watched(): THREE.Vector3 {
     const whale = this.whale;
     if (this.diverSeen && (this.progress < 1 || (this.step === 'line' && this.haul === 'out'))) return this.diver;
@@ -851,7 +855,6 @@ export class NetWhale {
     let yaw = Math.atan2(this.vDir.x, this.vDir.z);
     let pitch = 0;
     if (t < K.valveSwim) {
-      // In under the water from the pod to just behind the cork, coming up to the surface there.
       const u = (t / K.valveSwim) ** 1.4;
       this.a.copy(this.vLaunch).setY(0.02);
       this.b.copy(this.vLaunch).addScaledVector(this.vDir, -5).setY(-1.8);
@@ -861,7 +864,6 @@ export class NetWhale {
       yaw = Math.atan2(this.lookFrom.x - p.x, this.lookFrom.z - p.z);
       pitch = Math.atan2(this.lookFrom.y - p.y, Math.hypot(this.lookFrom.x - p.x, this.lookFrom.z - p.z));
     } else if (this.haul === 'out' && this.noseAway < 0) {
-      // Its beak comes up to the cork and keeps just behind it, pushing it on toward her.
       this.b.subVectors(this.catchAt, cork).setY(0).normalize();
       this.vDir.lerp(this.b, 1 - Math.exp(-dt * 2)).normalize();
       this.noseGap = Math.max(NOSE_GAP, this.noseGap - K.noseSpeed * dt);
@@ -872,7 +874,6 @@ export class NetWhale {
         if (more > 0) float.push(this.ray.copy(this.vDir).multiplyScalar(more));
       }
     } else {
-      // Turned away from the boat, and down.
       if (this.noseAway < 0) this.noseAway = t;
       const f = Math.min(1, (t - this.noseAway) / NOSE_AWAY);
       this.b.subVectors(p, this.catchAt).setY(0).normalize();
@@ -910,7 +911,6 @@ export class NetWhale {
     if (this.haul === 'reaching') {
       child.lean = K.reachLean * this.out;
       this.reachPoint(this.a);
-      // A hand's width apart along the line, the outer one on the cork.
       this.b.subVectors(this.net.link(1, this.b), this.a).setY(0).normalize();
       child.reachFor(0, this.hand[0].copy(this.a));
       child.reachFor(1, this.hand[1].copy(this.a).addScaledVector(this.b, 0.2).setY(this.a.y + 0.05));
