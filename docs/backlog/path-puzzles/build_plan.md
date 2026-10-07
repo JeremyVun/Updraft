@@ -342,6 +342,21 @@ tub, the tree, the mill, the swing, the bring) and fails if any of its safety va
 and on its pot reads small; the first seconds in the wood are near black with the sail cropped at the frame's foot;
 upright the church's water views leave the lower half of the frame to empty water.
 
+### Phase 6: the cat goes first
+Design: design.md, "How it is made", the cat bullet (Jeremy's rulings of 2026-10-08, verbatim there), and steps 4–6.
+Sketches (a guide, not a target): `comps/cat-guide/` (`guide-*.png`, `notes.md`; they paint her already on the sail and
+the swing, which is wrong: the cat goes first). Owns: the cat's way and beats at the three pieces (`CAT_WAY`,
+`src/story/drowned-run.ts`, the cat in `src/creatures/cat*`), the pieces' response to the cat's weight (the tree's
+lean, the mill's sail carrying it, the swing's sway, in `src/world/crossings/`), the cat's presence (size, pose,
+light, the run's and pieces' lens holding it as it shows), its eyes catching the lantern in the belfry.
+Contract: each showing starts while she is still on her way and lasts about 2–3 s; the player's wind is live
+throughout and the crossing is hers to make the moment she arrives (a player who acts before the cat finishes is
+never blocked; the cat finishes alongside). At the mill the player's first circles carry the cat's sail up and the
+next comes level for her. Nothing waits on the cat.
+Gate: `LENS=1` run check from the drift, landscape and upright, with the cat in frame through each showing; the
+pieces' checks; the playthrough from the stairs to the wood with no safety valve; stills of each showing.
+Done: [ ]
+
 ### Later
 The cat in the lit window of the cottage with the red door at the very end (design.md "The cat comes home"); a small
 cat-face pass (eyes slightly big and low close up, muzzle cream not white, profile ears small, mew mouth small).

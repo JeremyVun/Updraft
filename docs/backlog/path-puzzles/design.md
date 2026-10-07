@@ -442,13 +442,13 @@ there by sea.
    coming on, its crest gold in the last sun, roofs fading into it one by one. The cat panics, leaps onto the roof and bolts over the roofs toward the church, the
    highest thing there is. A child does not leave a frightened cat: she climbs out after it. The boat was never stuck;
    she left it to save the cat. She follows the cat's run, so the plane never leads; she clutches it the whole way.
-4. **Crossing 1, the tree (push):** a lane of deep water to a walled garden; the cat crosses its own way (a leap she
-   could never make); a dead tree rotted at the roots in the garden, rocked by gusts to show which way it can fall,
+4. **Crossing 1, the tree (push):** a lane of deep water to a walled garden; the cat runs the railing tops over it
+   and up the dead tree, which leans her way under its weight; a dead tree rotted at the roots in the garden, rocked by gusts to show which way it can fall,
    pushed over, is her bridge.
-5. **Crossing 2, the windmill (circle):** a small worn tower mill in the water between two roofs; circled round its
-   hub, its sail comes level beside her roof edge, she walks onto it and is lifted to the high roof beyond.
-6. **Crossing 3, the swing (pump):** the drowned village green between the garden cottage and the church; the cat goes
-   along a railing top; the rope swing hangs from the old tree on the green; pumped, she lets go at the top of the arc
+5. **Crossing 2, the windmill (circle):** a small worn tower mill in the water between two roofs; the cat rides a sail up first; circled
+   round its hub, its sail comes level beside her roof edge, she walks onto it and is lifted to the high roof beyond.
+6. **Crossing 3, the swing (pump):** the drowned village green between the garden cottage and the church; the cat leaps
+   onto the swing's seat and springs from it onto the nave; the rope swing hangs from the old tree on the green; pumped, she lets go at the top of the arc
    onto the nave roof.
 7. **The church:** the cat climbs the tower's ivy into the belfry, safe and out of her reach, and looks down. She is
    left on the nave ridge at the tower's foot. While she waits at a crossing the dark creeps up and stops a little
