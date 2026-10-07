@@ -1936,9 +1936,10 @@ export const tuning = {
       clearOf: 1.6,
       /**
        * How it is laid along her way (`layLens`): what it costs to stand a radian (squared) from where it wants, to be
-       * drawn in all the way (upright, where drawn in she soon leaves the narrow frame), to stand `lifted` metres higher to see her over a roof, to turn a radian (squared) between
-       * steps of the way, draw in or out or rise or fall between them, and to stand where a roof hides her or she would
-       * walk toward it (within the angle whose cosine is `toward` of the way she is going).
+       * drawn in all the way (upright, where drawn in she soon leaves the narrow frame), to stand `lifted` metres
+       * higher to see her over a roof, to turn a radian (squared) between steps of the way, draw in or out or rise or
+       * fall between them, and to stand where a roof hides her or she would walk toward it (within the angle whose
+       * cosine is `toward` of the way she is going).
        */
       offCost: 3, inCost: 1.5, uprightInCost: 8, lifted: 1.3, liftCost: 0.6, turnCost: 80, pullCost: 8, riseCost: 6, blocked: 200, toward: 0.35,
       /** What it costs for each metre a roof, wall or chimney comes within `crowdNear` of the near half of its sightline. */
