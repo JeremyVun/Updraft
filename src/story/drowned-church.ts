@@ -64,6 +64,8 @@ export class ChurchArrival {
   private readonly view: View = { target: new THREE.Vector3(), bearing: 0, distance: 15, eye: 3.5, zoom: 1 };
   private readonly want: View = { target: new THREE.Vector3(), bearing: 0, distance: 15, eye: 3.5, zoom: 1 };
   private framed = false;
+  /** False until the view has been placed where a skip ahead starts it, with the screen's shape known. */
+  private placed = true;
 
   constructor(private readonly cast: Cast) {}
 
@@ -101,8 +103,8 @@ export class ChurchArrival {
     this.to('aboard');
     this.aboardFor = 0;
     this.catEye.copy(BELFRY_NORTH).setY(BELFRY_NORTH.y + 0.25);
-    this.water(this.view, THREE.MathUtils.smoothstep(this.aspect, 0.7, 1.3), true);
     this.framed = true;
+    this.placed = false;
   }
 
   /** The sail is the player's while the boat is to be brought. */
@@ -405,6 +407,8 @@ export class ChurchArrival {
     const wide = THREE.MathUtils.smoothstep(this.aspect, 0.7, 1.3);
     const away = THREE.MathUtils.smootherstep(this.aboardFor, k.leaveFrom, k.leaveFrom + k.leaveFor);
     if (away >= 1) return;
+    if (!this.placed) this.water(this.view, wide, true);
+    this.placed = true;
     this.water(this.want, wide, this.aboardFor < tuning.drowned.church.lookBackAt + tuning.drowned.church.lookBackFor);
     this.ease(dt, k.ease);
     /** The boat is under way: the lens looks where it is, not where it was. */
