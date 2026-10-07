@@ -280,6 +280,14 @@ the frame and the snout is cut (eye 14.5 m off; the concept's 18–20 m as it dr
 the resting and lifted flipper read as a separate big smooth lump before the eye; portrait frames look away from the
 sun into deep blue, and portrait `k5` has no leap or raft; the whale's skin smooth where it fills the frame.
 
+### Phase N3e: the farewell clear, the flipper and the phone's light
+After N3d, on `sea-whale`. At free the whale drifts clear before it spouts, as `notes.md`'s `k5` has it (eye about
+18–20 m off, nearest skin at least 8 m), so the head, eye and snout sit whole in the middle distance with the leaps
+round them; the flipper reads as the whale's own, joined under the jaw, not a separate lump before the eye; portrait
+frames keep the gold morning though the sun can't share a phone's frame with the head and the boat.
+Gate: as N3d's, final stills opened for Jeremy.
+Done: [ ]
+
 ### Phase N4: docs on approval
 Once Jeremy approves: the open sea's chapter-select still regenerated with the whale; the open sea's section in
 `docs/chapters.md` (its ruling "at most 100 s, nothing asked" replaced),
