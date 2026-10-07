@@ -9,8 +9,8 @@
 // The flipper: the cygnet goes in at once, swims to the loop's free end and holds it; sweeps along the flipper lift it
 // and the loop comes off into the bird's pull, the line running unbroken through its bill, the bird never within a
 // metre of the flipper; it swims back and is lifted in, and the whale is free. A sweep before the bird has the end
-// lifts the flipper but leaves the loop on. Left alone under three times the breeze, with sweeps across its back and
-// across the flipper that only shiver it, nothing lifts until the valve, whose dolphin noses the flipper up.
+// lifts the flipper but leaves the loop on. Left alone under three times the breeze, with sweeps across its back that
+// only shiver it and scrubs across the flipper, nothing lifts until the valve, whose dolphin noses the flipper up.
 // Saves: one at rest resumes beside it lying there, one after its breath with the patch up and its eye open, one after
 // the line with the net off its head and the line let go, one after the flipper with the net loose on the water and
 // the cygnet in the satchel as it goes free, and one from after it has gone without it, sailing on.
@@ -151,16 +151,20 @@ const finOnScreen = (page, ...ts) => page.evaluate((ts) => {
   });
 }, ts);
 
-/** One sweep along the flipper on screen, from inside its outer half out past its tip; or, `across`, one over it. */
+/**
+ * One sweep along the flipper on screen, from inside its outer half out past its tip; or, `across`, a scrub back and
+ * forth across it, which stays on it as long as a sweep along it does.
+ */
 async function sweepFin(page, across = false) {
   const [[ax, ay], [bx, by]] = await finOnScreen(page, 0.5, 1);
   const d = Math.hypot(bx - ax, by - ay) || 1;
-  let ux = (bx - ax) / d, uy = (by - ay) / d;
+  const ux = (bx - ax) / d, uy = (by - ay) / d;
   const [mx, my] = [(ax + bx) / 2, (ay + by) / 2];
-  if (across) [ux, uy] = [-uy, ux];
   const half = Math.max(160, d * 0.65);
-  await jumpTo(page, mx - ux * half, my - uy * half);
-  await stroke(page, [[mx - ux * half, my - uy * half], [mx + ux * half, my + uy * half]], 320, true);
+  const points = across ? Array.from({ length: 9 }, (_, i) => [mx - uy * 45 * (i % 2 ? 1 : -1) + ux * (i - 4) * 12, my + ux * 45 * (i % 2 ? 1 : -1) + uy * (i - 4) * 12])
+    : [[mx - ux * half, my - uy * half], [mx + ux * half, my + uy * half]];
+  await jumpTo(page, ...points[0]);
+  await stroke(page, points, across ? 640 : 320, true);
   await away(page);
   await page.waitForTimeout(900);
 }
@@ -524,6 +528,7 @@ async function finearly() {
   const start = await atFlipper(page, false);
   for (let i = 0; i < 2; i++) await sweepFin(page);
   const swept = await read(page);
+  assert(swept.slipT < 0 && swept.loop === 0, 'the loop stays on while the cygnet has not got the end');
   const holding = await until(page, (s) => s.bird === 'holding' && s.birdT > 2.5, 'the cygnet to hold the loop\'s end', 120);
   await page.waitForTimeout(6000);
   const still = await read(page);
@@ -538,8 +543,8 @@ async function finearly() {
 }
 
 /**
- * Left alone under three times the sea's breeze, with sweeps across its back and across the flipper that only shiver
- * it, the flipper never lifts and the loop stays on until the valve; then its dolphin noses the flipper up.
+ * Left alone under three times the sea's breeze, with sweeps across its back that only shiver it and scrubs across
+ * the flipper, the flipper never lifts and the loop stays on until the valve; then its dolphin noses the flipper up.
  */
 async function finidle() {
   const context = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
@@ -563,11 +568,11 @@ async function finidle() {
   await until(page, (s) => s.step === 'free', 'it to be free after the dolphin', 90);
   results.finidle = { tickles: swept.tickles - start.tickles, lifts: swept.lifts - start.lifts, invitedAt: +(invited.time - holdAt).toFixed(1),
     sentAt: +(sent.time - holdAt).toFixed(1), liftedAt: +(lifted.time - holdAt).toFixed(1), clear: (await birdWatch(page)).clear };
+  assert(sent.time - holdAt >= 88 && sent.slipT < 0 && sent.loop === 0, `it lifted before the valve: ${(sent.time - holdAt).toFixed(1)} s held`);
   assert(swept.tickles > start.tickles, 'sweeps across its back shiver it');
   assert.equal(swept.lifts, start.lifts, 'nothing but a sweep along it lifts the flipper');
   assert.equal(swept.loop, 0);
   assert(invited.invited && invited.slipT < 0, 'the strokes are drawn before anything lifts');
-  assert(sent.time - holdAt >= 88 && sent.slipT < 0 && sent.loop === 0, `it lifted before the valve: ${(sent.time - holdAt).toFixed(1)} s held`);
   assert.equal(sent.lifts, start.lifts, 'neither the breeze nor the sweeps lifted it');
   assert.equal(lifted.finnedBy, 'dolphin', 'the valve is the dolphin nosing the flipper up');
   assert.deepEqual(errors, []);
