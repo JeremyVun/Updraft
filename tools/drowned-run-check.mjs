@@ -12,8 +12,9 @@
 //        becalming), FROM=church at the tower's foot (skips the run too), FROM=storm with her just seated aboard at the
 //        nave (skips the church too), SHOTS=<prefix> saves stills (at each piece,
 //        two between, and through the church), FILM=<seconds> with SHOTS also
-//        saves a still every that many seconds of the run, W/H viewport (default 1600x900), LENS=1 also fails on the
-//        lens's measures (a roof hiding her, her walking toward it, her out of frame, it inside a roof).
+//        saves a still every that many seconds from the air dying (from the ridge with FROM=roofs) to the tower,
+//        W/H viewport (default 1600x900), LENS=1 also fails on the lens's measures (a roof hiding her, her walking
+//        toward it, her out of frame, it inside a roof).
 import { chromium } from 'playwright-core';
 import assert from 'node:assert/strict';
 
@@ -292,11 +293,12 @@ try {
     await reach('aboard', 30);
     console.log('the cat is aboard', JSON.stringify(await state()));
     await until((s) => s.beat === 'still', 120, 'the air dying');
+    filmFrom = (await state()).time;
     await reach('ridge', 150);
     console.log('she is up on the ridge after the cat', JSON.stringify(await state()));
   }
   if (!fromChurch) {
-    filmFrom = (await state()).time;
+    filmFrom ??= (await state()).time;
     await until((s) => s.beat === 'run', 30, 'her setting off');
 
     // Watches every frame from here: her feet on the decks, her progress, and the fog behind her.

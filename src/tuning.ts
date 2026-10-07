@@ -1858,8 +1858,11 @@ export const tuning = {
       setOff: 2.2, stroll: 0.95,
       /** The beat she takes before a hop of her own; within `through` of a turn gentler than `bend` (radians) she walks on through it. */
       hopPause: 0.35, through: 1.1, bend: 0.4,
-      /** How often she glances back at the fog as she goes, and for how long. */
-      glanceEvery: 8, glanceFor: 1.3,
+      /**
+       * How often she glances back at the fog as she goes, for how long, and how far round toward the lens from straight
+       * away from it she may look on her way (radians), at the fog, the cat or ahead, so her face never turns to it.
+       */
+      glanceEvery: 8, glanceFor: 1.3, glanceOff: 1.1,
       /**
        * The cat: how far ahead of her along the way it waits, how near she comes before it goes on, and how fast it goes
        * along ridges and walls and along the railings (m/s).
@@ -1928,21 +1931,28 @@ export const tuning = {
        * between them, the fog's body taken that far along its front from the way), upright how far back from abeam on
        * her left it stands (radians), how far off at most, how far above her feet and the lowest and highest it goes,
        * how far along her way it looks, how high above her feet, its pace, and how far it widens to hold the fog and
-       * the church together (landscape, eased back at each piece).
+       * the church together (landscape) or to keep her in the narrow frame through a turn (upright), eased back at each
+       * piece.
        */
       follow: 2.2, followDown: 5, steady: 2, steadiest: 1.4, behind: 6, ahead: 12, churchShare: 0.5, fogAside: 80, uprightBack: 1.5, distance: 10, uprightDistance: 12,
-      rise: 1.5, uprightRise: 2.6, lowest: 3, highest: 7, lead: 1, aim: 1.0, pace: 0.7, zoom: 0.85,
+      rise: 1.5, uprightRise: 2.6, lowest: 3, highest: 7, lead: 1, aim: 1.0, pace: 0.7, zoom: 0.85, uprightZoom: 0.85,
       /** How far it keeps off the side of a house, wall or chimney it stands lower than the top of, and over a chimney, metres. */
       clearOf: 1.6,
       /**
        * How it is laid along her way (`layLens`): what it costs to stand a radian (squared) from where it wants, to be
-       * drawn in all the way, to stand `lifted` metres higher to see her over a roof, to turn a radian (squared) between
-       * steps of the way, draw in or out or rise or fall between them, and to stand where a roof hides her or she would
-       * walk toward it (within the angle whose cosine is `toward` of the way she is going).
+       * drawn in all the way (upright, where drawn in she soon leaves the narrow frame), to stand `lifted` metres
+       * higher to see her over a roof, to turn a radian (squared) between steps of the way, draw in or out or rise or
+       * fall between them, and to stand where a roof hides her or she would walk toward it (within the angle whose
+       * cosine is `toward` of the way she is going).
        */
-      offCost: 3, inCost: 1.5, lifted: 1.3, liftCost: 0.6, turnCost: 80, pullCost: 8, riseCost: 6, blocked: 200, toward: 0.35,
+      offCost: 3, inCost: 1.5, uprightInCost: 8, lifted: 1.3, liftCost: 0.6, turnCost: 80, pullCost: 8, riseCost: 6, blocked: 200, toward: 0.35,
       /** What it costs for each metre a roof, wall or chimney comes within `crowdNear` of the near half of its sightline. */
       crowdNear: 1.5, crowdCost: 8,
+      /**
+       * What it costs for each metre a chimney comes within `chimneyNear` of it in front (within the angle whose cosine
+       * is `chimneyCone` of its look).
+       */
+      chimneyNear: 4, chimneyCone: 0.7, chimneyCost: 14,
       /** Over how many metres past a piece it is drawn to start from where that piece's view leaves it, and how strongly. */
       anchorFor: 10, anchorCost: 40,
       /** Milliseconds a frame spends laying it from the start of the room, so it is ready long before she sets off. */
@@ -1972,6 +1982,12 @@ export const tuning = {
       millAside: 5.4, millOut: 11.5, millOn: 1.5, millIn: 4, uprightMillAside: 2.2,
       /** The end's view: how far back along the nave, how high, and how far out over the green. */
       naveBack: 10, naveHigh: 3.6, naveAside: 11,
+      /**
+       * Seconds the lens takes from where the climb left it, round her over the open water where the boat lies, to the
+       * tree's view as she sets off (if it stood within `handFar` of her), and how much further out and higher it
+       * stands half-way round.
+       */
+      handFor: 16, handFar: 16, handOut: 7, handUp: 1.5,
     },
     /** The church (`ChurchArrival.frame`). */
     church: {
@@ -1989,15 +2005,18 @@ export const tuning = {
       roundFrom: 0, roundFor: 10, roundWide: 11,
       /**
        * Over the water off the nave's west end: where it stands from the tower's middle with the boat still at its tree
-       * and with it come in; how far from her toward the boat it looks while it is far off, at what height, and its lens.
+       * and with it come in (upright, further out, clear of the nave's eave); how far from her toward the boat it looks
+       * while it is far off, at what height, and its lens.
        */
-      waterFar: { x: -29, y: 2.8, z: -15 }, waterNear: { x: -23, y: 2.4, z: -11 }, waterToward: 0.45, waterAim: 3, waterZoom: 0.9,
+      waterFar: { x: -29, y: 2.8, z: -15 }, waterNear: { x: -18, y: 2.4, z: -7.5 },
+      uprightWaterNear: { x: -23, y: 2.4, z: -11 }, waterToward: 0.45, waterAim: 3, waterZoom: 0.9,
       /**
        * Going: seconds after she is seated it starts to give way to the storm's frame, and how long it takes; meanwhile
-       * how far across from the boat to the lighthouse's lamp it looks and how far up from the one to the other (the cat
-       * in the belfry lies between), and its lens (upright, the same).
+       * how far from her toward the cat it looks while she looks back, and seconds after she is seated it starts across
+       * to the light and is there; how far across from the boat to the lighthouse's lamp it then looks and how far up
+       * from the one to the other, and its lens (upright, the same).
        */
-      leaveFrom: 7, leaveFor: 6, backAcross: 0.5, backUp: 0.5, backZoom: 0.85, backUprightZoom: 0.85,
+      leaveFrom: 7, leaveFor: 9, backCat: 0.42, backLightFrom: 1.5, backLightTo: 5, backAcross: 0.5, backUp: 0.62, backZoom: 0.78, backUprightZoom: 0.85,
     },
     /** Follow the boat into the streets; notice the church from that travelling view. */
     roofFromZ: -1260, roofUntilZ: -1360,
@@ -2039,11 +2058,10 @@ export const tuning = {
     aboardBearing: 1.75, aboardDistance: 5.5, uprightAboardDistance: 7, aboardHeight: 0.9, aboardAlong: 0.45,
     aboardAim: 0.9, aboardPace: 0.45,
     /**
-     * Once the cat bolts: the way the lens looks (atan2(x, z) of the view) as it comes round to the south-west of the
-     * cottage over `climbFor` seconds, clear of the boat and looking on to the church; how far back it stands (upright,
-     * nearer), and the height it looks at.
+     * Once the cat bolts: over `climbFor` seconds the lens comes back to the view toward the dark and up the slope with
+     * her; how far back it stands (upright, nearer), and the height it looks at.
      */
-    strandClimb: 2.5, climbFor: 7, climbBack: 10, uprightClimbBack: 8, climbAim: 2.3,
+    climbFor: 7, climbBack: 10, uprightClimbBack: 8, climbAim: 2.3,
   },
   /** The two crossings of the drowned village's run over the roofs: the dead tree pushed over, the swing pumped. */
   crossings: {
@@ -2148,10 +2166,14 @@ export const tuning = {
     /**
      * The lens's one move for the lighthouse: out over `openFor` seconds to `distance`, down to `eyeRise` over the
      * drift's aim and the lens widened to `zoom`, tilted up to `tilt` radians toward the crown. The tower is watched from
-     * within `arc` radians of astern (`offset` puts it beside the travellers) and let go over `pass` beyond it.
+     * within `arc` radians of astern (`offset` puts it beside the travellers) and let go over `pass` beyond it. From
+     * `inFrom` seconds after the light is out it lets the tower go over `inFor` seconds, drawn in to `near` metres
+     * behind the boat so she and the lantern carry the dark.
      */
     lighthouseCamera: { openFor: 6, distance: 24, eyeRise: 1.7, zoom: 0.82, tilt: 0.21, arc: 0.7, pass: 0.9,
-      offset: 0.24, pace: 0.8 },
+      offset: 0.24, pace: 0.8, inFrom: 1, inFor: 10, near: 12 },
+    /** How quickly the storm's lens takes up the hull's turns (critically damped, per second). */
+    lensTurn: 0.6,
     lighthouseComfortFor: 2.6,
     /** She watches the lighthouse, lit and then dark, until it is this far behind abeam (the cosine off her bow). */
     lighthouseWatched: -0.2,

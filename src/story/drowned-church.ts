@@ -19,6 +19,8 @@ const DARK_END = DARK_WAY.reduce((sum, p, i) => (i ? sum + p.distanceTo(DARK_WAY
 const RIDGE_TOP = new THREE.Vector3(NAVE_NORTH.x0, NAVE_NORTH.height, NAVE_NORTH.z0);
 const SLATES_FOOT = new THREE.Vector3(NAVE_NORTH.x1, NAVE_NORTH.height1!, NAVE_NORTH.z1);
 const sill = () => TOWER.sill;
+/** The cat's eye as it sits on the north sill looking down at her as she goes. */
+const BELFRY_CAT = BELFRY_NORTH.clone().setY(BELFRY_NORTH.y + 0.25);
 
 /** A view the lens comes round to: where it looks, its bearing from there (atan2(x, z)), how far off and how high. */
 interface View {
@@ -356,6 +358,10 @@ export class ChurchArrival {
 
   private readonly waterView: View = { target: new THREE.Vector3(), bearing: 0, distance: 20, eye: 2.6, zoom: 1 };
   private readonly waterEye = new THREE.Vector3();
+  private readonly mixEye = new THREE.Vector3();
+  private readonly waterClose = new THREE.Vector3();
+  private readonly waterAim = new THREE.Vector3();
+  private readonly mixTarget = new THREE.Vector3();
   private readonly goneFrom = new THREE.Vector3();
   private going = false;
   private readonly lamp = new THREE.Vector3(LIGHTHOUSE.x, LIGHTHOUSE_LANTERN_Y, LIGHTHOUSE.z);
@@ -370,9 +376,10 @@ export class ChurchArrival {
     const k = tuning.drownedCamera.church;
     const { child, boat } = this.cast;
     const near = back || this.aboardFor >= 0 ? 1 : 1 - THREE.MathUtils.clamp((this.left - 4) / 18, 0, 1);
-    const far = k.waterFar, close = k.waterNear;
-    const e = this.waterEye.set(TOWER.x + THREE.MathUtils.lerp(far.x, close.x, near), THREE.MathUtils.lerp(far.y, close.y, near),
-      TOWER.z + THREE.MathUtils.lerp(far.z, close.z, near));
+    const far = k.waterFar, lerp = THREE.MathUtils.lerp;
+    const close = this.waterClose.set(lerp(k.uprightWaterNear.x, k.waterNear.x, wide), lerp(k.uprightWaterNear.y, k.waterNear.y, wide),
+      lerp(k.uprightWaterNear.z, k.waterNear.z, wide));
+    const e = this.waterEye.set(TOWER.x + lerp(far.x, close.x, near), lerp(far.y, close.y, near), TOWER.z + lerp(far.z, close.z, near));
     const head = this.tmp.copy(child.position).setY(child.position.y + 1.1);
     /** Under way, it goes with her, keeping where it stood from her as she sat down. */
     if (this.aboardFor >= 0) {
@@ -381,13 +388,19 @@ export class ChurchArrival {
       e.copy(head).add(this.goneFrom);
     }
     if (back) {
-      /** Between the boat on the water and the lighthouse's lamp, so the light she leaves stands over her as it goes. */
+      /**
+       * First on her and the cat in the belfry she turns to look back at (landscape); then, as the light falters, across
+       * to between the boat on the water and the lighthouse's lamp, so the light she leaves stands over her as it goes.
+       */
       const p = boat.position, l = this.lamp;
       const toBoat = Math.hypot(p.x - e.x, p.z - e.z), toLamp = Math.hypot(l.x - e.x, l.z - e.z);
       const from = Math.atan2(p.x - e.x, p.z - e.z), to = Math.atan2(l.x - e.x, l.z - e.z);
       const across = from + Math.atan2(Math.sin(to - from), Math.cos(to - from)) * k.backAcross;
       const up = THREE.MathUtils.lerp(Math.atan2(p.y - e.y, toBoat), Math.atan2(l.y - e.y, toLamp), k.backUp);
-      out.target.set(e.x + Math.sin(across) * toBoat, e.y + Math.tan(up) * toBoat, e.z + Math.cos(across) * toBoat);
+      /** Upright the belfry and the lamp cannot share the narrow frame, and the light must be seen going. */
+      const light = Math.max(1 - wide, THREE.MathUtils.smootherstep(this.aboardFor, k.backLightFrom, k.backLightTo));
+      out.target.set(e.x + Math.sin(across) * toBoat, e.y + Math.tan(up) * toBoat, e.z + Math.cos(across) * toBoat)
+        .lerp(this.waterAim.copy(head).lerp(BELFRY_CAT, k.backCat), 1 - light);
     } else out.target.copy(head).lerp(boat.position, k.waterToward * (1 - near)).setY(k.waterAim);
     const reach = Math.hypot(e.x - out.target.x, e.z - out.target.z);
     out.bearing = Math.atan2(e.x - out.target.x, e.z - out.target.z);
@@ -413,15 +426,19 @@ export class ChurchArrival {
     this.ease(dt, k.ease);
     /** The boat is under way: the lens looks where it is, not where it was. */
     this.view.target.lerp(this.want.target, 1 - Math.exp(-dt * k.follow));
-    const storm: View = { target: shot.target.clone(), bearing: Math.atan2(shot.from!.x, shot.from!.z), distance: shot.distance,
-      eye: shot.target.y + shot.height, zoom: shot.zoom ?? 1 };
-    const v = this.view;
-    const mixed: View = { target: storm.target.lerp(v.target, 1 - away),
-      bearing: v.bearing + Math.atan2(Math.sin(storm.bearing - v.bearing), Math.cos(storm.bearing - v.bearing)) * away,
-      distance: THREE.MathUtils.lerp(v.distance, storm.distance, away), eye: THREE.MathUtils.lerp(v.eye, storm.eye, away),
-      zoom: THREE.MathUtils.lerp(v.zoom, storm.zoom, away) };
-    this.write(shot, mixed);
-    shot.carry = away > 0.5;
+    /** Round her from the one eye to the other, so the lens goes about her and never swings out wide of the boat. */
+    const v = this.view, head = this.cast.child.position;
+    const from = this.mixEye.copy(v.target).add(this.tmp.set(Math.sin(v.bearing) * v.distance, 0, Math.cos(v.bearing) * v.distance));
+    const to = this.tmp.copy(shot.target).addScaledVector(shot.from!, shot.distance);
+    const a0 = Math.atan2(from.x - head.x, from.z - head.z), a1 = Math.atan2(to.x - head.x, to.z - head.z);
+    const r = THREE.MathUtils.lerp(Math.hypot(from.x - head.x, from.z - head.z), Math.hypot(to.x - head.x, to.z - head.z), away);
+    const a = a0 + Math.atan2(Math.sin(a1 - a0), Math.cos(a1 - a0)) * away;
+    const eyeY = THREE.MathUtils.lerp(v.eye, shot.target.y + shot.height, away);
+    const target = this.mixTarget.copy(v.target).lerp(shot.target, away);
+    const ex = head.x + Math.sin(a) * r, ez = head.z + Math.cos(a) * r;
+    this.write(shot, { target, bearing: Math.atan2(ex - target.x, ez - target.z), distance: Math.hypot(ex - target.x, ez - target.z),
+      eye: eyeY, zoom: THREE.MathUtils.lerp(v.zoom, shot.zoom ?? 1, away) });
+    shot.carry = true;
   }
 
   private ease(dt: number, rate: number): void {

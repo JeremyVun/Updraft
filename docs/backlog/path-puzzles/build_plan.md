@@ -261,7 +261,7 @@ with `LENS=1` from `roofs` and `church`, landscape and upright.
   plain box); the village north of the church less thin, the washing not grey when backlit, a few far silhouettes
   that are not plain gables.
 
-Done: lens [ ], look [x]
+Done: lens [x] (branch `proto-drowned-polish-lens`), look [x] (branch `proto-drowned-polish-look`)
 
 Look as built: the sea fog's front is met by a sightline from its front read at the eye and 160 m out along it, taken
 as straight between and beyond (`LOOK`), so a sightline along it no longer reads a heave hundreds of metres off; its
@@ -280,6 +280,34 @@ off more houses are tall hats and the round keeper is a leaning-hatted turret. D
 drift's start); the village's merged mesh 150k to 166k triangles. Left: the fog closing at the church has no lit
 crest (the sun is gone by then) and can still show a dark ragged patch at a frame's edge when a sightline grazes its
 top; the fog's crest seen side-on reads as a darker top rather than the painting's lit rim.
+
+Lens as built. The climb: when the cat bolts the strand's lens holds the view toward the dark (`strandDark`), side on
+to the slope, so she climbs across the frame with the fog behind her; `strandClimb` is gone. Once she is up, the run
+takes the lens from that near view round her over the open water where the boat lies to the tree's east view in one
+move (`handOver`, `run.handFor` 16 s, standing `handOut` further out and `handUp` higher half-way so the sail and the
+east chimney stay clear); from anywhere further than `handFar` (a QA start) the rig brings it in instead. Her looks on
+the slope, the ridge and her own way (the fog, the cat, ahead) are turned until they are no further toward the lens than
+`run.glanceOff` of straight away from it (`lookAwayFrom`), so her face never turns to it. The walking lens pays for a
+chimney close in front of it (`chimneyNear`, `chimneyCone`, `chimneyCost`); overlapping piece views blend by weight
+(the swing's going as the end's comes no longer jumps); upright it is drawn in less (`uprightInCost`), a little wider
+(`uprightZoom`), and on her own way keeps her inside the narrow frame through the rig's 0.9 safety frame (subjects with
+no drawing back). The look back: the near water view stands nearer, due west of the berth (`waterNear`; upright as
+before, `uprightWaterNear`), and landscape first aims between her and the cat on the north sill (`backCat`) and goes
+across to the boat and the lamp from `backLightFrom` to `backLightTo` as the light falters; the cat sits at the north
+sill's west end (`BELFRY_NORTH`), so its face shows over the sill: about twice the size it was, the lighthouse, the
+tower and her in the boat in one frame. The departure into the storm's frame now goes round her (eye blended about her,
+`shot.carry` on from the start, `leaveFor` 9), the storm lens lets the lighthouse go once its light is out and comes in
+to `lighthouseCamera.near` 12 m behind the boat over `inFor` 10 s, and takes the hull's turns critically damped
+(`storm.lensTurn`): the lens never goes out past 18 m, the pan peaks at about 14 deg/s with no reversal, and the boat,
+her and the lantern fill the dark 10 to 22 s. Checks (`LENS=1`): from the drift, `roofs` and `church`, landscape and
+upright, nothing hidden, nothing out of frame, never inside a roof; `drowned-camera-check`, `storm-check`,
+`crossings-check` pass. `FILM` now films from the air dying. Left: upright the look back is as before (the belfry and
+the lamp cannot share the narrow frame) and its cat stays small; the cat in landscape is still only a face over the sill
+(about 15-20 px), which is about as large as it can be with her and the cat in one frame; upright near the tall house
+(55-65 m) the safety frame keeps her in but the lens is close and she sits at the frame's edge; a chimney still stands
+beside her in a few landscape moments (just after the tree, about 25 m, and on the high cottage near 60 m), and the old
+tree's boughs still cross the top of the upright swing view; the hand-over passes close by the cottage's east chimney as
+it arrives at the tree.
 
 ### Phase 5: saves, docs and the look
 Owns: checkpoints (a save during the run resumes at its start on the strand roof, the cat ahead, the fog risen and the

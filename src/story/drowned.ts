@@ -13,7 +13,7 @@ import { roundedWaypoint } from '../traveller/navigation';
 import type { Cast, Chapter } from './cast';
 import { cue } from './cues';
 import { StrandedCat } from './drowned-cat';
-import { RoofRun } from './drowned-run';
+import { RoofRun, lookAwayFrom } from './drowned-run';
 import { ChurchArrival } from './drowned-church';
 
 /** How near a waypoint counts as rounded. */
@@ -109,6 +109,8 @@ export class DrownedChapter implements Chapter {
    * a waypoint does not swing the view; among the roofs it is the hull's own, so the lens stays in the channel behind.
    */
   private heading = 0;
+  private headingSpeed = 0;
+  private readonly lensAt = new THREE.Vector3();
   private readonly churchAttention = { point: SPIRE, strength: 0, weight: tuning.drownedCamera.spireWeight,
     distance: tuning.drownedCamera.spireDistance,
     height: tuning.drownedCamera.spireHeight };
@@ -392,8 +394,15 @@ export class DrownedChapter implements Chapter {
     if (this.sideAgainst > tuning.crossingCamera.sideCommit) { this.side = -boat.sailSide; this.sideAgainst = 0; }
     this.quarter += (this.side - this.quarter) * (1 - Math.exp(-dt * sideResponse));
     const open = this.beat === 'gather' || this.beat === 'snatch' || this.beat === 'after';
-    const follow = open && dt > 0 ? 1 - Math.exp(-dt * tuning.crossingCamera.headingResponse) : 1;
-    this.heading += Math.atan2(Math.sin(boat.yaw - this.heading), Math.cos(boat.yaw - this.heading)) * follow;
+    if (open && dt > 0) {
+      /** Critically damped, so a bow swinging round the lighthouse turns the lens with built-up speed, never at once. */
+      const w = tuning.storm.lensTurn, off = Math.atan2(Math.sin(boat.yaw - this.heading), Math.cos(boat.yaw - this.heading));
+      this.headingSpeed += (w * w * off - 2 * w * this.headingSpeed) * dt;
+      this.heading += this.headingSpeed * dt;
+    } else {
+      this.heading = boat.yaw;
+      this.headingSpeed = 0;
+    }
     this.frame(dt);
   }
 
@@ -563,6 +572,10 @@ export class DrownedChapter implements Chapter {
       : this.beat === 'drift' || this.beat === 'enter' ? this.cat.gaze() : null;
     if (onCat) {
       c.lookAt = onCat;
+      if (this.cat.ashore) {
+        c.lookAt = this.look.copy(onCat);
+        lookAwayFrom(this.look, c.position, this.lensAt);
+      }
       return;
     }
     if (this.beat === 'still' || this.beat === 'becalmed') {
@@ -627,6 +640,7 @@ export class DrownedChapter implements Chapter {
     this.aspect = camera.aspect;
     this.cat.afterCamera(camera);
     this.run?.afterCamera(camera);
+    this.lensAt.copy(camera.position);
     this.church?.afterCamera(camera);
     const p = this.cast.plane;
     if (this.beat !== 'after' || !p.visible) return;
@@ -714,13 +728,15 @@ export class DrownedChapter implements Chapter {
    */
   private lighthouseFrame(astern: number): void {
     const k = tuning.storm.lighthouseCamera, s = this.shot, boat = this.cast.boat, seat = this.cast.child.position;
-    const opening = THREE.MathUtils.smootherstep(this.stormTime, 0, k.openFor);
+    /** Once the light is out the tower has had its look: the lens lets it go and comes in to the boat and its lantern. */
+    const out = tuning.storm.lighthouseOutAt + k.inFrom;
+    const opening = THREE.MathUtils.smootherstep(this.stormTime, 0, k.openFor) * (1 - THREE.MathUtils.smootherstep(this.stormTime, out, out + k.inFor));
     const toward = Math.atan2(boat.position.x - LIGHTHOUSE.x, boat.position.z - LIGHTHOUSE.z) + k.offset;
     const passing = Math.atan2(Math.sin(toward - astern), Math.cos(toward - astern));
     const glance = opening * (1 - THREE.MathUtils.smootherstep(Math.abs(passing), k.arc, k.arc + k.pass));
     const bearing = astern + THREE.MathUtils.clamp(passing, -k.arc, k.arc) * glance;
     s.from = this.from.set(Math.sin(bearing), 0, Math.cos(bearing));
-    s.distance = THREE.MathUtils.lerp(16, k.distance, opening);
+    s.distance = k.near;
     s.zoom = THREE.MathUtils.lerp(1, k.zoom, glance);
     /** Tilt up from the travellers toward the crown, as far as the lens can while they keep the lower frame. */
     const eyeX = s.target.x + s.from.x * s.distance, eyeZ = s.target.z + s.from.z * s.distance;
@@ -754,12 +770,12 @@ export class DrownedChapter implements Chapter {
     let look = from + Math.atan2(Math.sin(dark - from), Math.cos(dark - from)) * round;
     look += Math.atan2(Math.sin(k.strandChurch - k.strandDark), Math.cos(k.strandChurch - k.strandDark)) * turned;
     /**
-     * When the cat bolts the lens comes on round to the south-west of the cottage, clear of the boat and looking on to
-     * the church, so the cat's run along the ridge to the gap goes across the frame and she climbs after it looking
-     * along the ridge, never back toward the lens; it lifts to the ridge as she climbs.
+     * When the cat bolts the lens holds to the view toward the dark, side on to the slope, so she climbs across the
+     * frame away from the fog she is leaving, never toward the lens nor behind the roof; it lifts to the ridge as she
+     * climbs. Once she is up the run takes the lens round to the tree in one move.
      */
     const climbed = this.cat.sinceBolt < 0 ? 0 : THREE.MathUtils.smootherstep(this.cat.sinceBolt, 0, k.climbFor);
-    look += Math.atan2(Math.sin(k.strandClimb - look), Math.cos(k.strandClimb - look)) * climbed;
+    look += Math.atan2(Math.sin(dark - look), Math.cos(dark - look)) * climbed;
     const b = this.anchor.copy(boat.position).lerp(this.tmp.set(STRAND.x, boat.position.y, STRAND.y), climbed)
       .lerp(STRAND_TOP, 0.8 * climbed);
     const back = THREE.MathUtils.lerp(THREE.MathUtils.lerp(k.uprightBack, k.strandBack, wide),
