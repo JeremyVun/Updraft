@@ -176,7 +176,7 @@ at the start and main's beats re-timed for about 140 m to the beach (the lightho
 she boards, the plane taken, rain, the landing).
 Gate: the check plays through to the forest beach; `tools/storm-check.mjs`, `boat-check.mjs` and
 `drowned-camera-check.mjs` fixtures updated to the new sequence.
-Done: 4a [x] (branch `proto-drowned-board`), 4b [ ]. `ChurchArrival` (`src/story/drowned-church.ts`, chapter beat
+Done: 4a [x] (branch `proto-drowned-board`), 4b [x] (branch `proto-drowned-storm`). `ChurchArrival` (`src/story/drowned-church.ts`, chapter beat
 `church`, `?chapter=church` starts at the tower's foot): ivy up the tower's south face (`src/world/drowned-ivy.ts`,
 `IVY`) and sills under the belfry's openings; the cat climbs it to the south sill (`BELFRY_SOUTH`) while she steps
 back along the ridge, then backs through the belfry to the north sill (`BELFRY_NORTH`) as the fog comes; the fog's
@@ -197,6 +197,31 @@ within the first few seconds, the plane be taken mid-way); the closed fog still 
 veil coming in before its night), worth judging; `storm-check`, `boat-check` and `drowned-camera-check` fixtures are
 untouched and expect `startsFromShore`. For the camera wave: the run's shot still has `carry` on, so its lens is carried
 by the drifting boat; the look back's cat reads small (about 20 px landscape).
+4b as built: the storm goes out by `STORM_WAY` (`drowned-way.ts`): round into the open water north of the nave, on
+past the lighthouse's side (nearest about 37 m) and down the channel's last leg, 173 m in all at `tuning.storm.speed`
+(4.2 m/s, the hard-pressed sail), so it lands about 45 s after she is seated; the generated village and its trees keep
+14 m off that way (`inClearing`), which took out one tree the lens used to pass through. The church's water view
+(`waterFar`, `waterNear`) now stands off the nave's west end looking east, so the bring, the boarding and the look
+back all hold the tower, the boat and the lighthouse; leaving, the lens keeps where it stood from her and aims between
+the boat and the lighthouse's lamp (`backAcross`, `backUp`), and the light falters and goes out in that look back
+(`lighthouseOutAt` 6.5 s, 57 m off) before the lens gives way to the storm's frame from 7 s; the cygnet startles and
+nuzzles with it, and she watches the lighthouse, lit and then dark, until it is behind her shoulder
+(`lighthouseWatched`); the spire look is the drift's only. Beats from her seated (check, landscape): foghorn 3 s (its
+tail gone before the first thunder at about 19 s), light out 6.5, shake 14, first lightning 18, snatch 23 (89 m from
+the beach, about mid-way), after 27, the plane gone 32, landed 45.7. The storm's night comes in over `darkBy` 22 s so
+the frame only darkens from the look back (mean 55 at the look back, 20 by 12 s, 9-14 to the beach, lifting to 14 as
+the forest comes up); the fog thins off from 90 to 25 m from the beach (`fog.shoreFrom`, `shoreGone`). Her step aboard
+from the slates (`board(..., fromDeck)`, `Boat.takeWeight`) dips and rocks the hull and leaves it where it lies. The
+stray A-frame in 4a's storm still was the paper plane seen from behind with its wingtip trails strung back 24 m to
+the boat; the trails are capped at 7 m (`TRAIL_REACH`). `?chapter=storm` starts with her seated aboard at the berth.
+Fixtures: `storm-check`, `storm-profile` (via `storm-fixture`) start from `?chapter=storm`; `boat-check`,
+`drowned-camera-check` and `storm-camera-trace` sail the storm on a headless cast (`tools/lib/storm-cast.mjs`;
+`drowned-camera-check` also drives the drift until the cat is seen); `drowned-run-check` reports the storm's beats and
+the mean brightness each second, and fails if the light goes out with the lamp out of frame, the frame brightens past
+the look back, jumps at the hand-off, or the landing comes 60 s or more after she is aboard (`FROM=storm` plays only
+the storm). Left: the cat in the belfry reads about 10 px in the look back (the lens now holds the lighthouse too);
+the turn past the lighthouse pans the lens at up to 17 deg/s for about 8 s; the storm from 10 to 30 s is dark and the
+boat small in the frame at 15-20 s; the lighthouse stands clear above the closed fog's top rather than as a glow in it.
 
 ### Phase 5: saves, docs and the look
 Owns: checkpoints (a save during the run resumes with the boat at rest against the cottage, the cat aboard and the
