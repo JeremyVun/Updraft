@@ -17,6 +17,7 @@ import { ShoreBake } from './water/shore';
 import { SURF_GLSL, surfUniforms } from './water/surf';
 import { SWELL_GLSL, swellUniforms } from './water/swell';
 import { rippleTexture } from './water/textures';
+import { SUNK_DOOR } from './drowned-shape';
 import { WIND_WAVES_GLSL, WindWaves } from './water/wind-waves';
 import { WATERLINE_GLSL, outsideHull, waterlineUniforms } from '../traveller/boat/waterline';
 
@@ -448,6 +449,27 @@ void main() {
     vec3 skyBed = uSkyAmbient * 1.25 * exp(-uAbsorb * bedDepth * 1.4);
     vec3 seen = bed * (sunBed + skyBed) * exp(-uAbsorb * path);
     body = mix(body, seen, exp(-path * 0.2) * (1.0 - smoothstep(6.0, 9.0, bedDepth)));
+  }
+  {
+    /** Her door on a drowned wall, seen down through the surface: the wall's stone, then the red, going with depth. */
+    vec2 doorAt = vec2(${glsl(SUNK_DOOR.x)}, ${glsl(SUNK_DOOR.z)});
+    if (distance(xz, doorAt) < 12.0) {
+      vec2 face = vec2(${glsl(Math.sin(SUNK_DOOR.facing))}, ${glsl(Math.cos(SUNK_DOOR.facing))});
+      vec3 Td = refract(-V, N, 0.75);
+      float toward = dot(Td.xz, face);
+      float t = dot(doorAt - xz, face) / min(toward, -1e-3);
+      vec3 hit = vWorld + Td * t;
+      float along = dot(hit.xz - doorAt, vec2(face.y, -face.x));
+      if (toward < -0.02 && t > 0.0 && abs(along) < ${glsl(SUNK_DOOR.wallHalf)} && hit.y > ${glsl(SUNK_DOOR.wallFoot)}) {
+        float door = (1.0 - smoothstep(${glsl(SUNK_DOOR.half - 0.04)}, ${glsl(SUNK_DOOR.half)}, abs(along)))
+          * (1.0 - smoothstep(${glsl(SUNK_DOOR.top - 0.04)}, ${glsl(SUNK_DOOR.top)}, hit.y)) * smoothstep(${glsl(SUNK_DOOR.foot)}, ${glsl(SUNK_DOOR.foot + 0.04)}, hit.y);
+        vec3 wallAlb = mix(vec3(0.15, 0.14, 0.125), vec3(0.46, 0.04, 0.028), door);
+        float down = -hit.y;
+        vec3 lit = wallAlb * (uSkyAmbient * 1.25 * exp(-uAbsorb * down * 1.4) + uSunColor * max(uSunDir.y, 0.0) * 0.6 * sh * exp(-uAbsorb * down));
+        float seenWall = exp(-t * 0.2) * (1.0 - smoothstep(${glsl(SUNK_DOOR.wallHalf - 0.4)}, ${glsl(SUNK_DOOR.wallHalf)}, abs(along)));
+        body = mix(body, lit * exp(-uAbsorb * t), seenWall);
+      }
+    }
   }
   float crest = surf.y * swellAmp * 6.0;
   float backlit = pow(max(dot(-V, normalize(vec3(uSunDir.x, 0.0, uSunDir.z))), 0.0), 3.0);
