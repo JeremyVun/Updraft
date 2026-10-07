@@ -481,8 +481,20 @@ So the existing drowned village and storm code may be refactored as far as the r
 - **The cat.** A small soft tabby with a white chest and socks, round-faced, a little bedraggled, built as soft
   rounded shapes like the game's other animals, to the model sheet in `comps/cat/`. It mews from the chimney, hates the
   water, rides the tub hunched with its ears flat, and on the boat sits at the bow as far from the water as it can. It
-  is quick and sure where she is slow: at each gap it crosses its own way (along a railing top, a wall coping, a leap
-  she could never make), which shows her where the far side is and that she must find her own way over. At the church
+  is quick and sure where she is slow, and it is the player's guide: at each gap it goes first, so the player sees
+  what the crossing is before they make it (Jeremy, 2026-10-08: "i thought the cat was supposed act as the players
+  guide, so it makes a crossing e.g. across the windmill before the player so that they know what they need to do.
+  Very cat like behaviour"). At the windmill it hops onto the sail end lying level with her roof edge and sits there
+  looking up; when the player circles it rides up and drops off onto the high roof, and the next sail comes level
+  beside her. At the swing it leaps onto the seat, its weight sets it swaying, and at the top of a swing it springs
+  onto the nave; the empty swing drifting back says "you next". At the tree the gap is too wide for it to show the
+  crossing itself (Jeremy: "i dont know how it does the tree crossing though, there's a big gap"), so it runs the
+  railing tops over the lane, scrambles up the dead trunk in the garden, and the rotten tree creaks and leans toward
+  her under its weight and settles back: the tree is loose and falls her way. It sits in the crown looking back at her
+  and leaps clear onto the garden wall as the tree goes. Each showing is brief and never makes the player wait
+  (Jeremy: "Only thing to be wary of is that we dont have the player waiting too long for the cat to cross and climb
+  up the tree, pacing is important."): the cat is already crossing as she arrives, and the player's wind is live
+  throughout. At the church
   it climbs the tower's ivy to the belfry. It is left there, safe and high, looking down as the boat goes.
 - **The dark is a sea fog** (Jeremy, 2026-10-05, doubting the black smoke: "im not sure if the dark cloud look make
   sense given the lighting and time of day... what do you think? would a white fog / mist / haze make more sense?"; on
