@@ -265,7 +265,20 @@ call, 2026-10-08), the float in her mittens still one a child can catch; the dri
 Gate: typecheck; build; `net-whale-check` `sweeps`, `line`, `fin`, `saves`; `sea-logic-check`; final stills (landscape
 1600×900 and portrait about 430×932) at each keyframe and the first crossing's dive beside the concept, opened for
 Jeremy.
-Done: [ ]
+Done: [x] `f6f7c8a6..936fbf44`. Rope knotted into irregular 1.25 m diamonds (0.07 m, lit round, knots at the
+crossings), standing off the skin in seven folds and over hollows (`BRIDGE_SAG`); 46 rows × 28 columns, each row with
+its own near edge (`edge` attribute: down to the water round the head, held clear of the eye, climbing along the
+back), scalloped between corks; glow through the mesh 0.35 so it shows against the sky; 40 weed strands. Corks cream
+with dark spots, per instance (`iSize`): the net's 0.54 m on its edges (`NET.cork`), the line's floats 0.32 m
+(`NET.float`, `CORK_CLEAR` follows). The raft drifts clear of the head by the spout (`OPEN`, `DRIFT_AWAY`,
+`DRIFT_OUT`). The pod lends four dolphins (slot 0 the valves' and nudges', 1–3 `SALUTES`, three leaps round the head,
+caught by the sun through `uCatch`). Knobs no longer brighten; the flipper slate, wet and streaming as it lifts,
+dark under the glass (×0.45 in `GHOST_FRAG`), drips in strings (`POURS`). The bird only slightly wet on its second
+swim (`swimTo(…, soaked)`). Holds: flipper 11.5 back, look 8 up; release 21/7, bearing 0.28, fitting only the boat
+and the blowhole (`extra` 4). No step-downs on the whale's frames with the GPU free. Left: at `k5` the whale fills
+the frame and the snout is cut (eye 14.5 m off; the concept's 18–20 m as it drifts clear), one leap clear in frame;
+the resting and lifted flipper read as a separate big smooth lump before the eye; portrait frames look away from the
+sun into deep blue, and portrait `k5` has no leap or raft; the whale's skin smooth where it fills the frame.
 
 ### Phase N4: docs on approval
 Once Jeremy approves: the open sea's chapter-select still regenerated with the whale; the open sea's section in

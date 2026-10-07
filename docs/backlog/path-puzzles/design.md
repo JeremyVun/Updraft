@@ -784,8 +784,10 @@ The sequence:
   into the slate far off, so the first sight reads as a long low shape before it reads as a jaw; the near flipper lies
   awash along the surface from just under it.
 - **The net.** One old faded brown-green net, scaled with the whale to about 45 × 17 m, over the head and blowhole and
-  down the forward back, rows of cork floats on its edges, a few strands of weed; one loop round the near flipper. Its
-  mesh, ropes and corks keep their real sizes (`notes.md`), so the line in her mittens is one a child can hold. A sparse
+  down the forward back, rows of cork floats on its edges, a few strands of weed; one loop round the near flipper. The
+  line in her mittens and its floats keep their real sizes (`notes.md`), so it is one a child can hold; the net's own
+  corks are cheated larger (about 0.54 m) and its rope thicker so they read from the hold (Claude's call, 2026-10-08),
+  the rope knotted in irregular diamonds and standing off the skin in folds and over hollows. A sparse
   deforming mesh, instanced corks and a few boundary ropes, never a general cloth simulation. Tired, never hurt: no
   injury shown.
 - **1. The breath (circles).** The net lies over the blowhole; each breath only domes the mesh and sputters a weak
@@ -809,8 +811,8 @@ The sequence:
   it; the child waves (`k5`). It rolls, lifts its flukes high as if waving and sinks; its swell lifts the boat. The pod
   goes with it, the limit eases off, and the sea goes still into the mirror's glass. The net starts drifting as the
   loop slips off, working loose into a raft with its corks round its edges, so it is its own shape by the spout; the
-  pod sets off as the bird is lifted in and crosses just ahead of the bow, where the camera sees its leaps against the
-  sea rather than the whale's flank, and one dolphin leaps side-on by the boat at the spout.
+  pod sets off as the bird is lifted in, and three dolphins leap clear of the water round the head at the spout,
+  caught by the sun.
 - **Gestures.** Each step's answer starts at the wind's target and is plainly the biggest thing on screen: the boat is
   at rest, so nothing may read as the boat speeding up. The ambient breeze does nothing to the net, the corks or the
   flipper. Gusts elsewhere on the whale may still tickle it (shiver, a lazy slap) but never progress a step.
