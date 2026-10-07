@@ -32,7 +32,7 @@ export const swellUniforms = {
   uSurgeAxis: { value: new THREE.Vector3(1, 0, 0) },
 };
 
-const S = tuning.sleepingWhale;
+const S = tuning.netWhale;
 
 /** How far p is from the length of what went under. */
 function surgeDistance(x: number, z: number): number {

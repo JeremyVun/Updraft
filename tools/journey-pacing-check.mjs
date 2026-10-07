@@ -26,11 +26,24 @@ const { BOAT_BERTH } = await import('../src/story/island.ts');
 const { LINES_BERTH } = await import('../src/world/lines-passage.ts');
 const { FAR_SHORE } = await import('../src/story/meadow.ts');
 const { BOATS_BERTH } = await import('../src/world/little-boats-layout.ts');
-const { MIRROR_BERTH } = await import('../src/world/sky-mirror-layout.ts');
+const { MIRROR_BERTH, MIRROR_ENTRY_DECK, MIRROR_DECK, MIRROR_STARS } = await import('../src/world/sky-mirror-layout.ts');
+const { applyPalette } = await import('../src/world/palette.ts');
+const { atmo } = await import('../src/world/atmosphere.ts');
 const { tuning } = await import('../src/tuning.ts');
 const { swellUniforms } = await import('../src/world/water/swell.ts');
 const { heightAt } = await import('../src/world/island.ts');
 swellUniforms.uSwell.value = 0.25;
+// What of the sky mirror could be made out: its jetties' ends and its fallen lights, lifted to where they show.
+const MIRROR_MARKS=[[MIRROR_ENTRY_DECK.x0,MIRROR_ENTRY_DECK.z0],[MIRROR_ENTRY_DECK.x1,MIRROR_ENTRY_DECK.z1],
+  [MIRROR_DECK.x0,MIRROR_DECK.z0],[MIRROR_DECK.x1,MIRROR_DECK.z1],...MIRROR_STARS.map(s=>[s.x,s.z])].map(([x,z])=>new THREE.Vector3(x,0.6,z));
+/** The share of a point the haze covers, as `fogOf` works it out on the GPU (no home or cloud-deck veils at sea). */
+function hazeOver(p,camera,haze,openSea){
+  const u=atmo.uniforms,dist=p.distanceTo(camera.position),seen=haze;
+  const veil=Math.max(0,dist-(900-780*seen))*(0.002+0.03*seen);
+  const mist=u.uMist.value*Math.exp(-Math.max(Math.min(p.y,camera.position.y),0)*0.22);
+  const amt=1-Math.exp(-dist*(u.uFogDensity.value*(0.55+0.65*Math.exp(-Math.max(p.y,0)*0.06))+mist*0.0075)-veil);
+  return Math.max(amt,openSea*THREE.MathUtils.smoothstep(veil,1,4));
+}
 const starts = {
   toLines:[BOAT_BERTH.x,BOAT_BERTH.z,.95],
   toBoats:[LINES_BERTH.x,LINES_BERTH.z,.1],
@@ -57,6 +70,7 @@ function run(name, fps, gust, veer=0, waitInVillage=false, arrivalGust=false) {
   let shallowAt=[];const air={};let swimFrames=0,shallow=-Infinity,turn=0,yaw=boat.yaw,lastLeg=0,worstTurn=0,peak=0,sailed=0;
   const prev=boat.position.clone(),beats=[],dolphinActs=[],events={};let lastBeat='',stillFor=0,lastAct='';
   if(rig){chapter.update(0,0);rig.cut(chapter.shot);}
+  let hazeShown=NaN,openShown=NaN;const ndc=new THREE.Vector3();
   for(let i=0;i<fps*500;i++) {
     const dt=1/fps,time=i*dt;wind.breeze.copy(baseWind).multiplyScalar(chapter.breeze);wind.calm=wind.breeze.length()*tuning.wind.calm;
     // A repeatable attentive player supplies wind only during the village's interaction.
@@ -70,6 +84,13 @@ function run(name, fps, gust, veer=0, waitInVillage=false, arrivalGust=false) {
       if(act!==lastAct){dolphinActs.push([act,+time.toFixed(1)]);lastAct=act;}
       if(chapter.mirrorArrival>0)assert(!sealife.pod.mesh.visible,'dolphins finish diving before the mirror appears');
       if(!sealife.pod.wanted && chapter.swim==='done' && events.podFarewell===undefined)events.podFarewell=+time.toFixed(1);
+      // The mirror shows once any of it is in frame through less than nine tenths haze, as main.ts eases the haze.
+      hazeShown=Number.isNaN(hazeShown)?chapter.haze:hazeShown+(chapter.haze-hazeShown)*(1-Math.exp(-dt*0.6));
+      openShown=Number.isNaN(openShown)?chapter.openSea:openShown+(chapter.openSea-openShown)*(1-Math.exp(-dt*0.7));
+      applyPalette(1,chapter.dusk);rig.camera.updateMatrixWorld();
+      if(process.env.TRACE_MIRROR&&i%(fps*2)===0&&gust===0&&veer===0&&fps===60&&!arrivalGust)console.error(time.toFixed(0),boat.position.x.toFixed(0),boat.position.z.toFixed(0),chapter.openSea.toFixed(2),openShown.toFixed(2),MIRROR_MARKS.slice(0,5).map(p=>{ndc.copy(p).project(rig.camera);return `${p.distanceTo(rig.camera.position).toFixed(0)}:${ndc.x.toFixed(2)},${ndc.y.toFixed(2)}:${hazeOver(p,rig.camera,hazeShown,openShown).toFixed(2)}`}).join(' '));
+      if(events.mirrorSeen===undefined&&MIRROR_MARKS.some(p=>{ndc.copy(p).project(rig.camera);
+        return Math.abs(ndc.x)<1&&Math.abs(ndc.y)<1&&ndc.z<1&&hazeOver(p,rig.camera,hazeShown,openShown)<0.9;}))events.mirrorSeen=+time.toFixed(1);
     }
     if(name==='drowned'&&chapter.leg>0&&events.channelEntry===undefined)events.channelEntry=+time.toFixed(1);
     sailed+=Math.hypot(boat.position.x-prev.x,boat.position.z-prev.z);prev.copy(boat.position);peak=Math.max(peak,boat.speed);

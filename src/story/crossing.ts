@@ -448,11 +448,7 @@ export class CrossingChapter implements Chapter {
     if (this.whaleAt !== null && this.time > this.nextWhale && (!this.whaleCalled || this.whaleEvery > 0)) {
       this.whaleCalled = true;
       this.nextWhale = this.whaleEvery > 0 ? this.time + this.whaleEvery : 1e9;
-      const fx0 = Math.sin(boat.yaw);
-      const fz0 = Math.cos(boat.yaw);
-      const side = this.whaleEvery > 0 && Math.random() < 0.5 ? -1 : 1;
-      this.spot.set(boat.position.x + fx0 * 58 - fz0 * 17 * side, 0, boat.position.z + fz0 * 58 + fx0 * 17 * side);
-      sealife.surfaceWhale(this.spot, boat.yaw - 0.3 * side);
+      sealife.surfaceWhaleAhead(boat.position, boat.yaw, this.whaleEvery > 0 && Math.random() < 0.5 ? -1 : 1);
     }
     sealife.fishNear(boat.position, this.wantsDolphins ? 0.15 : farewell ? 0.25 : 1);
     /** The camera rides the quarter away from the sail, and the cygnet's swim is the one thing they must not crowd. */

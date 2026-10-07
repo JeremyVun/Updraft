@@ -1,11 +1,18 @@
 import * as THREE from 'three';
+import { tuning } from '../../tuning';
 import { atmo } from '../../world/atmosphere';
-import { FLUKE_HINGE, LENGTH, SPINE_END, whaleGeometry } from './anatomy';
+import { FLUKE_HINGE, LENGTH, SPINE_END, flukeEdges, whaleGeometry } from './anatomy';
 import { curve } from './curve';
 import { GHOST_FRAG, GHOST_VERT, SPINE_N, WHALE_FRAG, WHALE_VERT } from './whaleShader';
 
 export { SPINE_N };
 export const SPINE_STEP = (SPINE_END * LENGTH) / (SPINE_N - 1);
+
+/** The one whale of the journey: short flippers and a small dorsal fin on a long body, its flukes a little reduced. */
+export const DREAM_SHAPE = { fin: 0.47, dorsal: 0.3, flukes: 0.8 } as const;
+/** Scale of the rest pose that makes it `tuning.netWhale.length` from nose to fluke tips. */
+export const DREAM_SCALE = tuning.netWhale.length
+  / (FLUKE_HINGE * LENGTH + (-flukeEdges(1).trail - FLUKE_HINGE * LENGTH) * DREAM_SHAPE.flukes);
 
 /** The snout's track through the water, side on: along the heading (u) and up (y), from `at`. */
 const TRACK: [number, number][] = [
@@ -77,8 +84,7 @@ const TRAVEL = (() => {
   };
 })();
 
-
-/** A humpback's body in the water: its meshes, the spine they are bent along, and how big it is dreamt. */
+/** The whale's body in the water: its meshes, the spine they are bent along, and how big it is dreamt. */
 export class WhaleRig {
   readonly mesh: THREE.Mesh;
   /** The same body under the surface, seen faintly through the water. */
@@ -89,10 +95,9 @@ export class WhaleRig {
   readonly wet = new Float32Array(SPINE_N);
   readonly heading = new THREE.Vector3(0, 0, 1);
   protected readonly uniforms;
-  protected readonly eye: { value: number };
   protected readonly skin;
 
-  constructor(readonly scale = 1) {
+  constructor(readonly scale = DREAM_SCALE) {
     this.uniforms = {
       uSpine: { value: this.spine },
       uWet: { value: this.wet },
@@ -103,18 +108,19 @@ export class WhaleRig {
       uScale: { value: scale },
       uShiver: { value: new THREE.Vector3(0, 0, 1) },
       uSlap: { value: new THREE.Vector3() },
-      uShape: { value: new THREE.Vector3(1, 1, 1) },
+      uShape: { value: new THREE.Vector3(DREAM_SHAPE.fin, DREAM_SHAPE.dorsal, DREAM_SHAPE.flukes) },
     };
+    // Smooth slate-blue over a pale jaw and belly, held in cool sky light so the eye reads against a low sun.
     const skin = {
-      uBack: { value: new THREE.Color('#2f3b48') },
+      uBack: { value: new THREE.Color('#34505e') },
       uBelly: { value: new THREE.Color('#e3e7df') },
       uEye: { value: 1 },
-      uEyeAt: { value: new THREE.Vector3(0.235, -0.46, 1) },
-      uDetail: { value: new THREE.Vector4(1, 0, 0, 1) },
-      uFill: { value: new THREE.Color(0, 0, 0) },
+      uEyeAt: { value: new THREE.Vector3(0.16, 0.17, 2.9) },
+      uGaze: { value: new THREE.Vector2() },
+      uDetail: { value: new THREE.Vector4(0.08, 0.5, 0.02, 1) },
+      uFill: { value: new THREE.Color(0.05, 0.06, 0.09) },
     };
     this.skin = skin;
-    this.eye = skin.uEye;
     const geometry = whaleGeometry();
     this.mesh = new THREE.Mesh(
       geometry,
@@ -181,7 +187,7 @@ export class WhaleRig {
   }
 }
 
-/** A humpback surfacing: it rolls up to breathe twice, arches, lifts its flukes and dives. */
+/** The whale surfacing far off: it rolls up to breathe twice, arches, lifts its flukes and dives. */
 export class Whale extends WhaleRig {
   /** Seconds into the current surfacing; above WHALE_DURATION it is gone. */
   time = WHALE_DURATION;
@@ -206,11 +212,13 @@ export class Whale extends WhaleRig {
     this.pose();
   }
 
+  /** The surfacing as it was drawn for a 14 m whale, scaled whole: track, depths and travel grow with the body. */
   private pose(): void {
     const t = this.time;
+    const k = this.scale;
     this.mesh.visible = this.ghost.visible = this.active;
     const head = TRAVEL(t);
-    const rise = RISE(t);
+    const rise = RISE(t) * k;
     const tail = TAIL(t);
     const fluke = FLUKE(t);
     const beat = Math.sin(t * 1.7) * 0.05 * (1 - Math.min(1, Math.abs(tail) * 3));
@@ -222,15 +230,15 @@ export class Whale extends WhaleRig {
       this.pitch[i] = this.sample.angle + (tail + beat) * bend + (s > FLUKE_HINGE ? fluke : 0);
     }
     TRACK_PATH.at(head, this.sample);
-    let u = this.sample.u;
-    let y = this.sample.y + rise;
+    let u = this.sample.u * k;
+    let y = this.sample.y * k + rise;
     for (let i = 0; i < SPINE_N; i++) {
       const p = this.spine[i];
       p.set(this.origin.x + this.heading.x * u, y, this.origin.z + this.heading.z * u, this.pitch[i]);
       if (i < SPINE_N - 1) {
         const mid = (this.pitch[i] + this.pitch[i + 1]) / 2;
-        u -= Math.cos(mid) * SPINE_STEP;
-        y -= Math.sin(mid) * SPINE_STEP;
+        u -= Math.cos(mid) * SPINE_STEP * k;
+        y -= Math.sin(mid) * SPINE_STEP * k;
       }
     }
     this.uniforms.uRoll.value = Math.sin(t * 0.4 + 1) * 0.05;

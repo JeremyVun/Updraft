@@ -36,6 +36,34 @@ export const HALF_WIDTH = curve([
 export const DORSAL_AT = 0.64;
 export const DORSAL_BASE = TOP(DORSAL_AT) - 0.12;
 
+/** How much flatter than round the top of the body is at s: a broad flat head easing into a round back. */
+const flatness = (s: number) => 1 / (1 + 0.5 * smoothstep(0.4, 0.06, s));
+
+/**
+ * A point on the body's rest-pose ring at s, `a` radians round from the top toward its left (+x): the shape every
+ * ring of the mesh is built on, without the knuckles on the tail stock.
+ */
+export function ringPoint(s: number, a: number, out: { x: number; y: number }): { x: number; y: number } {
+  const top = TOP(s);
+  const bottom = BOTTOM(s);
+  const sa = Math.sin(a);
+  const ca = Math.cos(a);
+  const e = ca > 0 ? flatness(s) : 1;
+  out.x = HALF_WIDTH(s) * Math.sign(sa) * Math.abs(sa) ** e;
+  out.y = (top + bottom) / 2 + ((top - bottom) / 2) * Math.sign(ca) * Math.abs(ca) ** e;
+  return out;
+}
+
+/** How far out on its left (+x) the skin is at height y in the rest pose, at s along it. */
+export function flankAt(s: number, y: number): number {
+  const top = TOP(s);
+  const bottom = BOTTOM(s);
+  const v = THREE.MathUtils.clamp((2 * y - top - bottom) / (top - bottom), -1, 1);
+  const e = v > 0 ? flatness(s) : 1;
+  const ca = Math.abs(v) ** (1 / e);
+  return HALF_WIDTH(s) * Math.sqrt(Math.max(0, 1 - ca * ca)) ** e;
+}
+
 function build(pos: number[], rig: number[], idx: number[]): THREE.BufferGeometry {
   const geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
@@ -63,22 +91,14 @@ function body(): THREE.BufferGeometry {
   const pos: number[] = [];
   const rig: number[] = [];
   const idx: number[] = [];
+  const at = { x: 0, y: 0 };
   for (let i = 0; i <= rings; i++) {
     const s = 0.5 - 0.5 * Math.cos((Math.PI * i) / rings);
-    const top = TOP(s);
-    const bottom = BOTTOM(s);
-    const w = HALF_WIDTH(s);
-    const cy = (top + bottom) / 2;
-    const h = (top - bottom) / 2;
     const knuckles = 0.055 * Math.max(0, Math.sin((s - 0.68) * 62)) * smoothstep(0.68, 0.74, s) * smoothstep(0.98, 0.9, s);
-    const flat = 1 / (1 + 0.5 * smoothstep(0.4, 0.06, s));
     for (let j = 0; j < around; j++) {
       const a = (j / around) * Math.PI * 2;
-      const sa = Math.sin(a);
-      const ca = Math.cos(a);
-      const e = ca > 0 ? flat : 1;
-      const ridge = knuckles * Math.max(0, ca) ** 6;
-      pos.push(w * Math.sign(sa) * Math.abs(sa) ** e, cy + h * Math.sign(ca) * Math.abs(ca) ** e + ridge, -s * LENGTH);
+      ringPoint(s, a, at);
+      pos.push(at.x, at.y + knuckles * Math.max(0, Math.cos(a)) ** 6, -s * LENGTH);
       rig.push(s, BODY, j / around, 0);
     }
   }

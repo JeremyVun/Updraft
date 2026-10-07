@@ -631,14 +631,12 @@ const intervals: number[] = [];
 const cpuTimes: number[] = [];
 let bootMs = 0;
 
-/** `?whale`: a whale surfaces ahead and to the left of the boat every 40 s, and fish keep leaping by it. */
+/** `?whale`: the whale surfaces far off ahead of the boat every 40 s, and fish keep leaping by it. */
 function whaleForQa(): void {
   sealife.fishNear(boat.position, 1);
   if (time < qaWhaleAt) return;
   qaWhaleAt = time + 40;
-  const fx = Math.sin(boat.yaw);
-  const fz = Math.cos(boat.yaw);
-  sealife.surfaceWhale(new THREE.Vector3(boat.position.x + fx * 125 + fz * 26, 0, boat.position.z + fz * 125 - fx * 26), boat.yaw - 0.3);
+  sealife.surfaceWhaleAhead(boat.position, boat.yaw);
 }
 
 const nearbyPopulations = [creatures.rabbits.positions, creatures.songbirds.positions,

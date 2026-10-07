@@ -173,36 +173,39 @@ export class Spray {
     this.calm[i] = calm;
   }
 
-  /** A whale's breath: a bushy column of fine mist, a few heavier drops falling out of it. */
-  blow(at: THREE.Vector3, heading: THREE.Vector3): void {
+  /** A whale's breath: a bushy column of fine mist, a few heavier drops falling out of it, `size` times a 14 m whale's. */
+  blow(at: THREE.Vector3, heading: THREE.Vector3, size = 1): void {
     for (let i = 0; i < 150; i++) {
       const jet = Math.random();
-      const up = 4 + jet * 10;
-      const spread = 0.25 + jet * jet * 2.2 * Math.random();
+      const up = (4 + jet * 10) * size;
+      const spread = (0.25 + jet * jet * 2.2 * Math.random()) * size;
       const a = Math.random() * Math.PI * 2;
-      const lean = 0.4 + Math.random() * 0.5;
+      const lean = (0.4 + Math.random() * 0.5) * size;
       this.emit(
         MIST,
-        at.x + (Math.random() - 0.5) * 0.3,
+        at.x + (Math.random() - 0.5) * 0.3 * size,
         at.y + Math.random() * 0.2,
-        at.z + (Math.random() - 0.5) * 0.3,
+        at.z + (Math.random() - 0.5) * 0.3 * size,
         Math.cos(a) * spread + heading.x * lean,
         up,
         Math.sin(a) * spread + heading.z * lean,
-        0.22 + Math.random() * 0.22,
+        (0.22 + Math.random() * 0.22) * size,
         2.5 + Math.random() * 3,
-        0.35 + jet * 0.7 + Math.random() * 0.3,
+        (0.35 + jet * 0.7 + Math.random() * 0.3) * size,
         0.045 + Math.random() * 0.05,
       );
     }
     // Slower, wider puffs that pile up into the bushy crown of the blow.
     for (let i = 0; i < 45; i++) {
       const a = Math.random() * Math.PI * 2;
-      const out = 1.2 + Math.random() * 1.8;
-      this.emit(MIST, at.x, at.y + 0.5, at.z, Math.cos(a) * out + heading.x * 0.5, 5.5 + Math.random() * 4, Math.sin(a) * out + heading.z * 0.5, 0.45 + Math.random() * 0.35, 3 + Math.random() * 2.5, 0.7 + Math.random() * 0.7, 0.03 + Math.random() * 0.035);
+      const out = (1.2 + Math.random() * 1.8) * size;
+      this.emit(MIST, at.x, at.y + 0.5 * size, at.z, Math.cos(a) * out + heading.x * 0.5 * size, (5.5 + Math.random() * 4) * size,
+        Math.sin(a) * out + heading.z * 0.5 * size, (0.45 + Math.random() * 0.35) * size, 3 + Math.random() * 2.5,
+        (0.7 + Math.random() * 0.7) * size, 0.03 + Math.random() * 0.035);
     }
     for (let i = 0; i < 32; i++) {
-      this.emit(DROP, at.x, at.y + 0.3, at.z, (Math.random() - 0.5) * 2.4, 4 + Math.random() * 6, (Math.random() - 0.5) * 2.4, 0.016 + Math.random() * 0.018, 2.5, 0, 0.55);
+      this.emit(DROP, at.x, at.y + 0.3, at.z, (Math.random() - 0.5) * 2.4 * size, (4 + Math.random() * 6) * size,
+        (Math.random() - 0.5) * 2.4 * size, (0.016 + Math.random() * 0.018) * size, 2.5, 0, 0.55);
     }
   }
 

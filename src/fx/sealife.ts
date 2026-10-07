@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { fixTreeInPlace } from '../gl/fixed';
+import { tuning } from '../tuning';
 import type { WindField } from '../wind/field';
 import { REFLECTION_LAYER } from '../world/water/reflection';
 import { Dolphins } from './sealife/dolphin';
@@ -10,7 +11,7 @@ import { Spray } from './sealife/spray';
 import { WhaleWake } from './sealife/wake';
 import { Whale } from './sealife/whale';
 
-/** Life in the open sea on the crossing: a humpback that surfaces now and then, and small fish leaping near the boat. */
+/** Life in the open sea on the crossings: the whale, far off or met, the dolphins, and small fish leaping near the boat. */
 export class SeaLife {
   readonly objects: THREE.Object3D[];
   private readonly body = new Whale();
@@ -20,7 +21,7 @@ export class SeaLife {
   private readonly wake: WhaleWake;
   private readonly fish: Fish;
   private readonly pod: Dolphins;
-  /** The whale asleep across the way on the crossing to the meadow. */
+  /** The same whale met on the open sea, lying worn out beside the boat. */
   readonly sleeper: SleepingWhale;
   private swimMark = 0;
   private readonly seen = new THREE.Vector3();
@@ -44,6 +45,23 @@ export class SeaLife {
   surfaceWhale(at: THREE.Vector3, heading: number): void {
     this.body.start(at, heading);
     this.wake.reset();
+  }
+
+  /**
+   * The whale comes up far off ahead of a boat at `boat` heading `yaw`, on its starboard bow when `side` is 1, and
+   * swims on away from it: where a 14 m whale once came up, as many times further off as it is dreamt bigger.
+   */
+  surfaceWhaleAhead(boat: THREE.Vector3, yaw: number, side = 1): void {
+    const far = tuning.netWhale.farOff;
+    const fx = Math.sin(yaw);
+    const fz = Math.cos(yaw);
+    this.seen.set(boat.x + (fx * 58 - fz * 17 * side) * far, 0, boat.z + (fz * 58 + fx * 17 * side) * far);
+    this.surfaceWhale(this.seen, yaw - 0.3 * side);
+  }
+
+  /** World time of the whale's last blow, so whoever is watching can answer it. */
+  get whaleBlewAt(): number {
+    return this.wake.blewAt;
   }
 
   /** Where the whale is, for the child to look at; null when it is under water and out of sight. */

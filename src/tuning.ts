@@ -1395,40 +1395,51 @@ export const tuning = {
   },
 
   /**
-   * The whale asleep across the way on the crossing to the meadow: the one thing a crossing waits for. It lies
-   * broadside on the route `along` metres past its first waypoint, dreamt `scale` times the surfacing whale's size.
+   * The whale on the open sea, worn out under an old net, and the same animal seen far off on the first crossing,
+   * dreamt `length` metres from nose to fluke tips.
    */
-  sleepingWhale: {
-    along: 46, scale: 2.4,
-    /** Clear water left between the bow and its flank (m), and how far the bow reaches ahead of the boat's centre. */
-    gap: 12, bow: 1.5,
-    /** Back crest above the water (m) asleep. */
-    crest: 2.1,
+  netWhale: {
+    length: 110,
     /**
-     * The boat's speed limit coming alongside: never more than it could lose slowing at `slowing` (m/s²), nor more
-     * than `settling` times the distance left, so the hull's own slow carry brings it to rest there without braking.
+     * Where it lies beside the boat at rest: its eye `eyeDistance` metres from the boat's centre and `eyeBearing`
+     * radians round to port of the bow, its length running `bodyAngle` radians round to starboard into the haze.
      */
-    slowing: 0.6, settling: 0.15,
-    /** Released the same way: the limit climbs back at this rate (m/s²) once the flukes are up. */
-    release: 0.7,
-    /** Seconds between breaths asleep, how far the back rises with one (m), and the mist over the blowhole. */
-    breathEvery: 5.5, breathRise: 0.22, mist: 1,
-    /** How high the waking spout is thrown above the blowhole (m). */
-    spoutHeight: 10,
-    /** A gust across the back on screen (`brushFrom` and up) tickles it: a shiver along the stroke, a lazy slap. */
-    brushFrom: 4, brushRadius: 0.05, slapEvery: 2.2,
-    /** Circling over the blowhole: the charge that starts to count, the charge that counts fully, progress per second. */
-    liftFrom: 0.12, liftFull: 0.5, liftRate: 0.22, reach: 4,
-    /** Seconds held still without progress before the spiral shows, and before the gull goes and pecks it awake. */
+    eyeDistance: 12, eyeBearing: 0.82, bodyAngle: 1.22,
+    /** Its highest back above the water at rest (m), and how far it lies rolled with its near side up (radians). */
+    crest: 6.6, roll: 0.087,
+    /**
+     * The boat's speed limit coming to rest beside it: never more than it could lose slowing at `slowing` (m/s²), nor
+     * more than `settling` times the distance left, so the hull's own carry brings it to rest without braking; and
+     * how fast the limit climbs back (m/s²) once the whale is going under.
+     */
+    slowing: 0.35, settling: 0.13, release: 0.6,
+    /** Seconds between its weak breaths, how far its back rises with one (m), and how much mist each sputters. */
+    breathEvery: 7, breathRise: 0.45, mist: 1,
+    /** The soft column of its first full breath, and the tall spout when it is free (m above the blowhole). */
+    firstBreathHeight: 9, spoutHeight: 20,
+    /** A gust across its back on screen (`brushFrom` and up) tickles it: a shiver along the stroke, now and then a lazy lift of the near flipper. */
+    brushFrom: 4, brushRadius: 0.05, liftEvery: 6,
+    /**
+     * Circling over the blowhole (the stand-in for the net's first step): the charge that starts to count, the charge
+     * that counts fully, progress a second, and how far from the blowhole the column may stand (m).
+     */
+    liftFrom: 0.12, liftFull: 0.5, liftRate: 0.16, reach: 6,
+    /** Seconds at rest without progress before the drawn spiral shows, and before it finds its breath by itself. */
     inviteAfter: 6, valveAfter: 90,
-    coaxUrgency: 0.7, coaxRadius: 1.4,
-    /** The swell it leaves: speed (m/s), crest spacing (m), width of the packet (m) and height at the boat (m). */
-    surgeSpeed: 4, surgeLength: 14, surgeWidth: 7, surgeHeight: 0.35,
+    coaxUrgency: 0.7, coaxRadius: 2.2,
+    /** The swell it leaves going under: speed (m/s), crest spacing (m), width of the packet (m) and height at the boat (m). */
+    surgeSpeed: 6, surgeLength: 22, surgeWidth: 10, surgeHeight: 0.4,
     /**
-     * The camera's hold beside it: how far ahead of the boat it looks, its distance from that point and height, the
-     * bearing off astern, and how fast it eases in and out.
+     * The camera's hold beside it: eased in between `holdFrom` and `holdFull` metres short of the rest, `holdDistance`
+     * behind the boat and `holdHeight` up, `holdBearing` radians round to port of astern, at `holdEase` a second; and
+     * the wider view it eases back out to as it goes.
      */
-    holdAhead: 6, holdDistance: 27, holdHeight: 5.6, holdBearing: 0.05, holdEase: 0.6,
+    holdFrom: 40, holdFull: 6, holdDistance: 11, holdHeight: 4, holdBearing: 0.05, holdEase: 0.45,
+    releaseDistance: 27, releaseHeight: 7,
+    /** The pod ahead of the bow while it leads (m), and how far it mills off the whale's nose while the boat waits (m). */
+    podLead: 12, podMill: 26,
+    /** The first crossing's sighting, this many times as far off as the old surfacing whale came up. */
+    farOff: 4,
   },
 
   seaPassage: {

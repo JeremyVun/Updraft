@@ -1,257 +1,329 @@
 import * as THREE from 'three';
 import { tuning } from '../../tuning';
 import { swellUniforms } from '../../world/water/swell';
-import { BLOWHOLE, FIN_ROOT, LENGTH, SPINE_END, TOP } from './anatomy';
+import { BLOWHOLE, FIN_ROOT, LENGTH, SPINE_END, TOP, flankAt, ringPoint } from './anatomy';
 import { curve } from './curve';
 import type { Marks } from './marks';
-import { DROP, MIST, type Spray } from './spray';
+import { MIST, type Spray } from './spray';
 import { WhaleWake, type WhaleSound } from './wake';
-import { SPINE_N, SPINE_STEP, WhaleRig } from './whale';
+import { DREAM_SHAPE, SPINE_N, SPINE_STEP, WhaleRig } from './whale';
 
 export type SleeperSound = WhaleSound | 'whale-sigh' | 'whale-breath' | 'whale-slap';
 
-const K = tuning.sleepingWhale;
-/** The tail stock, behind the hump: what the body turns about and tips over as it leaves. */
+const K = tuning.netWhale;
+/** The tail stock, behind the hump: what the body tips over as it lifts its flukes. */
 const PIVOT = 0.75;
 const CREST = 0.55;
-/** The waking, in seconds: the breath is drawn, the eye opens, the spout, and then it goes. */
-const DRAWN = 1.6;
-const SPOUT_FROM = 1.7;
-const SPOUT_TO = 3.9;
-const LEAVE = 5;
-/** The leaving, in seconds: rolled away and sinking while it turns its head out ahead, then the flukes. */
-const SINK = curve([[0, 0], [2, -0.5], [6, -2.4], [9, -2.7], [11, -2.2], [14, -2.3], [17.5, -8]]);
-const DIP = curve([[0, 0], [2, -0.06], [6, -0.25], [9, -0.55], [11, -0.7], [14, -0.75], [17.5, -1.1]]);
-const TAIL = curve([[0, 0], [7.5, 0], [9.5, -0.3], [11, -0.42], [13.5, -0.38], [16, -0.1], [18, 0]]);
-const ROLL = curve([[0, 0], [3, 0.4], [7, 0.3], [9.5, 0]]);
-const WAVE_FROM = 10.5;
-const WAVE_TO = 14.5;
-const SURGE_AT = 6;
-const GONE = 18.5;
-/** The flipper's lazy slap: lifted (radians) over its first second, then down onto the water. */
-const SLAP = curve([[0, 0], [0.45, 0.7], [0.85, 1.5], [1.0, 1.6], [1.15, 0.35], [1.3, -0.05], [1.8, 0]]);
-/** It rolls lazily onto its far side to lift the near flipper clear, and back. */
-const SLAP_ROLL = curve([[0, 0], [0.8, 0.3], [1.2, 0.3], [2.4, 0]]);
-const SLAP_HITS = 1.2;
-const SLAP_FOR = 2.4;
-/** A slender blue-grey sleeper rather than the first crossing's humpback: short flippers, small flukes. */
-const FIN_SCALE = 0.62;
-const FLUKE_SCALE = 0.62;
-const FIN_SPAN = 4.5 * FIN_SCALE;
+/** The eye on the near side of the head, in the rest pose: along, up, and out on the skin there. */
+const EYE_S = 0.16;
+const EYE_Y = 0.17;
+const EYE_X = flankAt(EYE_S, EYE_Y);
+/** The lower jaw on the near side, at the waterline. */
+const JAW_S = 0.07;
+const JAW_Y = -0.12;
+const JAW_X = flankAt(JAW_S, JAW_Y);
+const FIN_SPAN = 4.5 * DREAM_SHAPE.fin;
 const FIN_DIR = new THREE.Vector3(0.8, -0.3, -0.52).normalize();
-const REST_FIN = new THREE.Vector2(0.35, 0.3);
-/** Asleep, the fluke tips curl up out of the water at the far end. */
-const REST_CURL = 0.7;
+/** The near flipper at rest: swept round toward the head and lifted, so it reaches toward the boat with its tip at the surface. */
+const REST_FIN = new THREE.Vector2(-2, -0.7);
+/** Lying at the surface the fluke tips curl up a little at the far end. */
+const REST_CURL = 0.5;
+/** The first full breath, in seconds: drawn in, then out in a soft column up through the spiral. */
+const BREATH_IN = 1.4;
+const BREATH_OUT = 3.6;
+/** Free, in seconds: the breath drawn, the spout, then it rolls onto its back, lifts its flukes, waves, and goes. */
+const SPOUT_FROM = 1.4;
+const SPOUT_TO = 4.2;
+const ROLL = curve([[0, 0], [6, 0], [10, 3.05], [17, 3.05], [20, 2.2], [24, 1.2]]);
+const SINK = curve([[0, 0], [6, 0], [10, -3.6], [16, -3.8], [19, -5.5], [24, -22]]);
+const TAIL = curve([[0, 0], [9.5, 0], [12, -0.62], [16.5, -0.66], [19, -0.25], [21, 0]]);
+const DIP = curve([[0, 0], [16, 0], [19, -0.12], [24, -0.3]]);
+const WAVE_FROM = 12;
+const WAVE_TO = 17;
+const SURGE_AT = 16.5;
+const RELEASE_AT = 16;
+const GONE = 25;
+/** The near flipper's lazy lift: up over two seconds, held, and laid back down on the water. */
+const LIFT = curve([[0, 0], [0.4, 0.12], [1.8, 0.95], [3, 1], [4.2, 0.35], [4.7, -0.04], [5.2, 0]]);
+const LIFT_HITS = 4.6;
+const LIFT_FOR = 5.2;
+const LIFT_ANGLE = 0.7;
 
-/** The head carried a little higher than the tail, so the eye is just out of the water and the flukes just under it. */
+/** The head carried a little higher than the tail, so the eye and blowhole stand clear and the flukes lie just under. */
 function restPitch(s: number): number {
   return 0.1 * (1 - THREE.MathUtils.smoothstep(s, 0.3, 0.6)) - 0.01 * THREE.MathUtils.smoothstep(s, 0.72, 0.95);
 }
 
+/** The height of the skin and its normal at a point, from `surfaceAt`. */
+export interface Skin {
+  height: number;
+  readonly normal: THREE.Vector3;
+}
+
 /**
- * The whale asleep across the way: lying at the surface like a long low island, breathing slowly. Gusts only tickle
- * it; woken, it draws a breath, opens its eye, spouts, rolls away and sinks with its flukes lifted high.
+ * The whale lying at the surface beside the boat, worn out: from far off a long low island that breathes. Its weak
+ * breaths only sputter; given its first full breath its eye opens; free, it spouts, rolls onto its back, lifts its
+ * flukes high as if waving, and goes under, and the swell it leaves lifts the boat.
  */
 export class SleepingWhale extends WhaleRig {
-  phase: 'asleep' | 'waking' | 'leaving' | 'gone' = 'gone';
+  phase: 'resting' | 'woken' | 'free' | 'gone' = 'gone';
   /** Seconds into the current phase. */
   time = 0;
-  /** How far the player's circling over the blowhole has got toward waking it, 0..1: it breathes deeper as it does. */
+  /** How far toward its first full breath the player's wind has brought it, 0..1: it breathes deeper as it does. */
   stir = 0;
-  /** Frames a gust has spent crossing its back, and the flipper slaps that answered, since it lay down. */
+  /** Frames a gust has spent crossing its back, and the lazy lifts of the flipper they drew, since it lay down. */
   tickles = 0;
-  slaps = 0;
+  lifts = 0;
+  /** Where the parts that matter are this frame, in the world. */
   readonly blowhole = new THREE.Vector3();
-  /** The middle of the back above the water, for a glance. */
+  readonly eye = new THREE.Vector3();
+  readonly jaw = new THREE.Vector3();
+  readonly finRoot = new THREE.Vector3();
+  readonly finTip = new THREE.Vector3();
+  /** The middle of the back above the water, and the fluke notch. */
   readonly back = new THREE.Vector3();
   readonly flukes = new THREE.Vector3();
+  /** How far the near flipper is lifted, 0..1. */
+  flipperLift = 0;
+  /** Each weak breath out, with how strong it was: what the net over the blowhole has to answer. */
+  onExhale: ((strength: number) => void) | null = null;
   onSound: ((kind: SleeperSound, x: number, y: number, z: number) => void) | null = null;
   private readonly wake: WhaleWake;
   private readonly pivot = new THREE.Vector3();
   private readonly rest = new THREE.Vector3();
-  private readonly away = new THREE.Vector3();
-  private yaw0 = 0;
-  private yaw1 = 0;
+  private readonly gazeAt = new THREE.Vector3();
+  private gazing = false;
   private breath = 0;
   private sighed = true;
   private shiverS = 0;
   private shiverDir = 1;
   private shiverAmp = 0;
-  private slapT = -1;
-  private slapCool = 0;
-  private surgeNear = 10;
+  private liftT = -1;
+  private liftCool = 0;
+  private surgeNear = 12;
   private worldTime = 0;
   private readonly u = new Float32Array(SPINE_N);
   private readonly y = new Float32Array(SPINE_N);
   private readonly pitch = new Float32Array(SPINE_N);
   private readonly p = new THREE.Vector3();
   private readonly q = new THREE.Vector3();
+  private readonly ring = { x: 0, y: 0 };
 
   constructor(private readonly spray: Spray, foam: Marks, slicks: Marks) {
-    super(K.scale);
-    this.uniforms.uShape.value.set(FIN_SCALE, 0.3, FLUKE_SCALE);
-    this.skin.uBack.value.set('#34505e');
-    this.skin.uFill.value.set(0.05, 0.06, 0.09);
-    this.skin.uDetail.value.set(0.15, 0.5, 0.06, 0.3);
-    this.skin.uEyeAt.value.set(0.16, 0.12, 1.8);
+    super();
     this.wake = new WhaleWake(this, spray, foam, slicks);
     this.wake.onSound = (kind, x, y, z) => this.onSound?.(kind, x, y, z);
   }
 
-  /** It has drawn its waking breath: from here it is awake, whatever comes after. */
+  /** It has drawn its first full breath: from here on it is awake. */
   get awake(): boolean {
-    return this.phase === 'leaving' || this.phase === 'gone' || (this.phase === 'waking' && this.time >= DRAWN);
+    return this.phase === 'woken' || this.phase === 'free';
   }
 
-  /** Its flukes are up out of the water: the time to wave. */
+  /** The tall plume it throws up as it is free: the moment the open sea is won. */
+  get spouting(): boolean {
+    return this.phase === 'free' && this.time >= SPOUT_FROM && this.time < SPOUT_TO;
+  }
+
+  /** On its back with its flukes up out of the water: the time to wave. */
   get fluking(): boolean {
-    return this.phase === 'leaving' && this.time > WAVE_FROM - 0.5 && this.time < WAVE_TO + 1;
+    return this.phase === 'free' && this.time > WAVE_FROM - 1 && this.time < WAVE_TO + 1;
+  }
+
+  /** Going under, or gone: the boat may go, and the pod with it. */
+  get going(): boolean {
+    return (this.phase === 'free' && this.time >= RELEASE_AT) || this.phase === 'gone';
   }
 
   /**
-   * Lays it asleep broadside across the way: body centre at `centre`, snout pointing along `yaw`, and when it goes
-   * it turns out toward `awayYaw`. `near` is where the boat will rest, for how high its swell is there.
+   * Lays it resting with its near eye over `eye` (only x and z are kept) and its snout along `noseYaw`, rolled near
+   * side up. `near` is where the boat rests, for how high its swell is there.
    */
-  lie(centre: THREE.Vector3, yaw: number, awayYaw: number, near: THREE.Vector3): void {
-    this.phase = 'asleep';
+  lie(eye: THREE.Vector3, noseYaw: number, near: THREE.Vector3): void {
+    this.phase = 'resting';
     this.time = 0;
     this.stir = 0;
-    this.tickles = this.slaps = 0;
-    this.yaw0 = yaw;
-    this.yaw1 = awayYaw;
-    this.away.set(Math.sin(awayYaw), 0, Math.cos(awayYaw));
-    this.heading.set(Math.sin(yaw), 0, Math.cos(yaw));
+    this.tickles = this.lifts = 0;
+    this.heading.set(Math.sin(noseYaw), 0, Math.cos(noseYaw));
     this.bend(0, 0);
     const iP = this.at(PIVOT);
-    const iM = this.at(0.5);
     const iC = this.at(CREST);
-    const along = this.u[iP] - this.u[iM];
-    this.rest.set(centre.x + this.heading.x * along, 0, centre.z + this.heading.z * along);
-    this.rest.y = K.crest - TOP(CREST) * this.scale - (this.y[iC] - this.y[iP]);
+    this.rest.set(0, K.crest - TOP(CREST) * this.scale - (this.y[iC] - this.y[iP]), 0);
     this.pivot.copy(this.rest);
-    this.surgeNear = Math.hypot(near.x - centre.x, near.z - centre.z);
+    this.lay(0, 0, 0, 0, K.roll);
+    this.point(EYE_X, EYE_Y, EYE_S, this.p);
+    this.rest.x = eye.x - this.p.x;
+    this.rest.z = eye.z - this.p.z;
+    this.pivot.copy(this.rest);
+    this.lay(0, 0, 0, 0, K.roll);
+    this.point(0, 0, 0.5, this.q);
+    this.surgeNear = Math.hypot(near.x - this.q.x, near.z - this.q.z);
     this.shiverAmp = 0;
-    this.slapT = -1;
-    this.eye.value = 0;
+    this.liftT = -1;
+    this.liftCool = 0;
+    this.flipperLift = 0;
+    this.skin.uEye.value = 0;
+    this.gazing = false;
     this.wake.reset(true);
-    this.lay(0, 0, 0, 0);
+    this.uniforms.uCurl.value = REST_CURL;
+    this.uniforms.uFin.value.copy(REST_FIN);
+    this.uniforms.uSlap.value.set(1, 0, 0);
+    this.locate();
     this.mesh.visible = this.ghost.visible = true;
   }
 
   /** Gone already: nothing of it left on the water. */
   vanish(): void {
     this.phase = 'gone';
-    this.time = 0;
+    this.time = 1e3;
     this.mesh.visible = this.ghost.visible = false;
     swellUniforms.uSurge.value.w = 0;
   }
 
+  /** The eye opens on `at` (and follows it), or closes again under its heavy lid when `null`. */
+  look(at: THREE.Vector3 | null): void {
+    this.gazing = at !== null;
+    if (at) this.gazeAt.copy(at);
+  }
+
   /**
    * A gust across its back at `s` (0 snout .. 1 flukes), running toward the flukes when `along` is positive: the skin
-   * shivers along the stroke, and now and then the near flipper comes up lazily and slaps.
+   * shivers along the stroke, and now and then the near flipper comes up lazily. It never wakes it.
    */
   tickle(s: number, along: number, strength: number): void {
-    if (this.phase !== 'asleep') return;
+    if (this.phase !== 'resting' && this.phase !== 'woken') return;
     if (this.shiverAmp < 0.02 || Math.abs(s - this.shiverS) > 0.2) {
       this.shiverS = s;
       this.shiverDir = Math.sign(along) || 1;
     }
-    this.shiverAmp = Math.min(0.08, Math.max(this.shiverAmp, 0.05 + 0.03 * strength));
+    this.shiverAmp = Math.min(0.06, Math.max(this.shiverAmp, 0.035 + 0.025 * strength));
     this.tickles++;
-    if (this.slapT < 0 && this.slapCool <= 0) {
-      this.slapT = 0;
-      this.slaps++;
-      this.slapCool = K.slapEvery;
-    }
+    if (this.liftCool <= 0 && this.liftFlipper()) this.liftCool = K.liftEvery;
   }
 
-  wakeUp(): void {
-    if (this.phase !== 'asleep') return;
-    this.phase = 'waking';
+  /** The near flipper lifts lazily out of the water, is held up, and is laid back down. False while it already is. */
+  liftFlipper(): boolean {
+    if (this.liftT >= 0 || (this.phase !== 'resting' && this.phase !== 'woken')) return false;
+    this.liftT = 0;
+    this.lifts++;
+    return true;
+  }
+
+  /** Its first full breath: drawn in, then out in a soft column up through the spiral. */
+  drawBreath(): void {
+    if (this.phase !== 'resting') return;
+    this.phase = 'woken';
     this.time = 0;
+    this.stir = 1;
+    this.onSound?.('whale-breath', this.blowhole.x, this.blowhole.y, this.blowhole.z);
+  }
+
+  /** Free: the spout, the roll onto its back, the flukes lifted high, and away under the sea. */
+  free(): void {
+    if (this.phase !== 'resting' && this.phase !== 'woken') return;
+    this.phase = 'free';
+    this.time = 0;
+    this.stir = 1;
     this.onSound?.('whale-breath', this.blowhole.x, this.blowhole.y, this.blowhole.z);
   }
 
   update(dt: number, time: number): void {
     this.worldTime = time;
+    this.time += dt;
     if (this.phase === 'gone') {
-      this.time += dt;
-      if (this.time > 30) swellUniforms.uSurge.value.w = 0;
+      if (this.time > 30 && this.time < 1e3) swellUniforms.uSurge.value.w = 0;
       return;
     }
-    this.time += dt;
-    this.slapCool = Math.max(0, this.slapCool - dt);
-    if (this.phase === 'asleep') this.sleep(dt);
-    else if (this.phase === 'waking') this.waking(dt);
-    else this.leaving();
-    this.shiverS = THREE.MathUtils.clamp(this.shiverS + this.shiverDir * 0.28 * dt, 0.05, 0.95);
-    this.shiverAmp *= Math.exp(-dt * 2.2);
-    this.uniforms.uShiver.value.set(this.shiverS, this.shiverAmp, 0.07);
-    this.slap(dt);
-    this.point(0, TOP(BLOWHOLE), BLOWHOLE, this.blowhole);
-    this.point(0, TOP(0.45), 0.45, this.back);
-    this.point(0, 0, 1, this.flukes);
+    this.liftCool = Math.max(0, this.liftCool - dt);
+    if (this.phase === 'free') this.leave(dt);
+    else this.lieThere(dt);
+    this.shiverS = THREE.MathUtils.clamp(this.shiverS + this.shiverDir * 0.18 * dt, 0.05, 0.95);
+    this.shiverAmp *= Math.exp(-dt * 1.8);
+    this.uniforms.uShiver.value.set(this.shiverS, this.shiverAmp, 0.05);
+    this.lift(dt);
+    this.locate();
+    this.lookOut(dt);
     this.wake.update(dt, time);
-    if (this.phase === 'leaving' && this.time > GONE) {
+    if (this.phase === 'free' && this.time > GONE) {
       this.phase = 'gone';
       this.time = 0;
       this.mesh.visible = this.ghost.visible = false;
     }
   }
 
-  private sleep(dt: number): void {
-    const every = K.breathEvery / (1 + this.stir * 0.8);
-    this.breath += dt / every;
-    if (this.breath >= 1) {
-      this.breath -= 1;
-      this.sighed = false;
+  /**
+   * The height of its skin over (x, z) on the head and forward back (snout to mid-back) and the skin's normal there;
+   * the height is -Infinity off the body. For whatever has to lie on it.
+   */
+  surfaceAt(x: number, z: number, out: Skin): Skin {
+    out.height = this.topAt(x, z);
+    if (out.height === -Infinity) {
+      out.normal.set(0, 1, 0);
+      return out;
     }
-    const b = this.breath;
-    const rise = K.breathRise * (1 + this.stir * 1.5) * (0.5 - 0.5 * Math.cos(Math.PI * 2 * Math.min(1, b / 0.8)));
-    if (!this.sighed && b > 0.42) {
+    const e = 0.35;
+    const hx = this.topAt(x + e, z);
+    const hz = this.topAt(x, z + e);
+    out.normal.set(hx === -Infinity ? 0 : out.height - hx, e, hz === -Infinity ? 0 : out.height - hz).normalize();
+    return out;
+  }
+
+  /** Lying there: slow breaths that only sputter, deeper and quicker as `stir` rises; then its first full breath. */
+  private lieThere(dt: number): void {
+    let rise: number;
+    if (this.phase === 'woken' && this.time < BREATH_OUT + 1) {
+      const t = this.time;
+      rise = K.breathRise * 2.6 * THREE.MathUtils.smootherstep(t, 0, BREATH_IN)
+        * (1 - 0.6 * THREE.MathUtils.smootherstep(t, BREATH_IN, BREATH_OUT + 1));
+      if (t >= BREATH_IN && t < BREATH_OUT) {
+        const k = (t - BREATH_IN) / (BREATH_OUT - BREATH_IN);
+        this.spray.jet(this.blowhole, K.firstBreathHeight, 0.45 * Math.sin(Math.PI * Math.min(1, k * 1.4)) ** 0.5, dt);
+      }
+      if (t >= BREATH_IN && t - dt < BREATH_IN) this.onSound?.('whale-blow', this.blowhole.x, this.blowhole.y, this.blowhole.z);
+      this.breath = 0.6;
       this.sighed = true;
-      this.mist(0.6 + this.stir * 0.8);
-      this.onSound?.('whale-sigh', this.blowhole.x, this.blowhole.y, this.blowhole.z);
+    } else {
+      const deep = this.phase === 'woken' ? 1 : this.stir;
+      this.breath += dt / (K.breathEvery / (1 + deep * 0.6));
+      if (this.breath >= 1) {
+        this.breath -= 1;
+        this.sighed = false;
+      }
+      const b = this.breath;
+      rise = K.breathRise * (1 + deep * 1.2) * (0.5 - 0.5 * Math.cos(Math.PI * 2 * Math.min(1, b / 0.8)));
+      if (!this.sighed && b > 0.42) {
+        this.sighed = true;
+        const strength = 0.6 + deep * 0.8;
+        this.mist(strength);
+        this.onExhale?.(strength);
+        this.onSound?.('whale-sigh', this.blowhole.x, this.blowhole.y, this.blowhole.z);
+      }
     }
-    this.lay(0, rise, 0, 0, 0.03 + (this.slapT < 0 ? 0 : SLAP_ROLL(this.slapT)));
+    const liftRoll = this.liftT < 0 ? 0 : 0.06 * LIFT(this.liftT);
+    this.lay(0, rise, 0, 0, K.roll + liftRoll);
     this.uniforms.uCurl.value = REST_CURL;
-    this.uniforms.uFin.value.set(REST_FIN.x + Math.sin(this.worldTime * 0.21) * 0.04, REST_FIN.y + Math.sin(this.worldTime * 0.3 + 1) * 0.05);
+    this.uniforms.uFin.value.set(REST_FIN.x + Math.sin(this.worldTime * 0.17) * 0.03, REST_FIN.y + Math.sin(this.worldTime * 0.23 + 1) * 0.03);
   }
 
-  private waking(dt: number): void {
+  /** Free: the deep breath and the spout, then onto its back, flukes up and waving, and away under. */
+  private leave(dt: number): void {
     const t = this.time;
-    const draw = THREE.MathUtils.smootherstep(t, 0, DRAWN) * (1 - THREE.MathUtils.smootherstep(t, SPOUT_TO, LEAVE));
-    this.eye.value = THREE.MathUtils.smoothstep(t, 0.6, 1.4);
-    this.lay(0, K.breathRise * 2.2 * draw, 0, 0);
-    if (t >= SPOUT_FROM && t - dt < SPOUT_FROM) {
-      this.onSound?.('whale-blow', this.blowhole.x, this.blowhole.y, this.blowhole.z);
-    }
+    const draw = THREE.MathUtils.smootherstep(t, 0, SPOUT_FROM) * (1 - THREE.MathUtils.smootherstep(t, SPOUT_TO, 6));
+    if (t >= SPOUT_FROM && t - dt < SPOUT_FROM) this.onSound?.('whale-blow', this.blowhole.x, this.blowhole.y, this.blowhole.z);
     if (t >= SPOUT_FROM && t < SPOUT_TO) {
-      const u = (t - SPOUT_FROM) / (SPOUT_TO - SPOUT_FROM);
-      this.spray.jet(this.blowhole, K.spoutHeight, Math.sin(Math.PI * Math.min(1, u * 1.6)) ** 0.5 * (1 - u * 0.3), dt);
+      const k = (t - SPOUT_FROM) / (SPOUT_TO - SPOUT_FROM);
+      this.spray.jet(this.blowhole, K.spoutHeight, Math.sin(Math.PI * Math.min(1, k * 1.6)) ** 0.5 * (1 - k * 0.3), dt);
     }
-    if (t >= LEAVE) {
-      this.phase = 'leaving';
-      this.time = 0;
-    }
-  }
-
-  private leaving(): void {
-    const t = this.time;
-    const turn = THREE.MathUtils.smootherstep(t, 0.5, 9.5);
-    const yaw = this.yaw0 + Math.atan2(Math.sin(this.yaw1 - this.yaw0), Math.cos(this.yaw1 - this.yaw0)) * turn;
-    this.heading.set(Math.sin(yaw), 0, Math.cos(yaw));
-    const drift = 7 * THREE.MathUtils.smootherstep(t, 1, 12);
-    this.pivot.copy(this.rest).addScaledVector(this.away, drift);
     const wave = THREE.MathUtils.smoothstep(t, WAVE_FROM, WAVE_FROM + 1) * (1 - THREE.MathUtils.smoothstep(t, WAVE_TO - 1, WAVE_TO));
-    this.lay(SINK(t), 0, DIP(t), TAIL(t), ROLL(t) + Math.sin((t - WAVE_FROM) * 2.2) * 0.14 * wave);
-    this.uniforms.uCurl.value = REST_CURL * (1 - THREE.MathUtils.smoothstep(t, 0, 4)) - 0.25 * wave
-      + Math.sin((t - WAVE_FROM) * 2.2 + 0.8) * 0.12 * wave;
-    this.uniforms.uFin.value.set(REST_FIN.x + 0.5 * THREE.MathUtils.smoothstep(t, 0, 4), REST_FIN.y + 0.4 * THREE.MathUtils.smoothstep(t, 0, 4));
-    if (t >= SURGE_AT && t - 1 / 30 < SURGE_AT) this.surge();
+    const sway = Math.sin((t - WAVE_FROM) * 2.1) * wave;
+    this.lay(SINK(t), K.breathRise * 2.4 * draw, DIP(t), TAIL(t) + 0.05 * sway, K.roll + ROLL(t) + 0.22 * sway);
+    this.uniforms.uCurl.value = REST_CURL * (1 - THREE.MathUtils.smoothstep(t, 6, 10)) + 0.3 * sway;
+    const lower = THREE.MathUtils.smoothstep(t, 4, 7);
+    this.uniforms.uFin.value.set(THREE.MathUtils.lerp(REST_FIN.x, 0.3, lower), THREE.MathUtils.lerp(REST_FIN.y, -0.2, lower));
+    if (t >= SURGE_AT && t - dt < SURGE_AT) this.surge();
   }
 
-  /** The swell the body leaves as it goes under, spreading from where it lay. */
+  /** The swell the body leaves as it goes under, spreading from its whole length. */
   private surge(): void {
     const centre = this.point(0, 0, 0.5, this.q);
     const height = K.surgeHeight * (12 + this.surgeNear) / 12;
@@ -259,58 +331,107 @@ export class SleepingWhale extends WhaleRig {
     swellUniforms.uSurgeAxis.value.set(this.heading.x, this.heading.z, 0.3 * LENGTH * this.scale);
   }
 
-  /** A faint breath out over the blowhole: the player's updraft carries it up into the spiral. */
+  /** A weak breath out over the blowhole, a sputter rather than a blow: an updraft there carries it up the spiral. */
   private mist(strength: number): void {
     const at = this.blowhole;
-    const n = Math.round(10 * strength * K.mist);
+    const n = Math.round(14 * strength * K.mist);
     for (let i = 0; i < n; i++) {
       const a = Math.random() * Math.PI * 2;
-      const out = 0.1 + Math.random() * 0.25;
-      this.spray.emit(MIST, at.x, at.y + 0.1, at.z, Math.cos(a) * out, 0.7 + Math.random() * 0.6 * strength, Math.sin(a) * out,
-        0.18 + Math.random() * 0.12, 2.2 + Math.random() * 1.5, 0.22, 0.05 + Math.random() * 0.04);
+      const out = 0.2 + Math.random() * 0.4;
+      this.spray.emit(MIST, at.x + Math.cos(a) * 0.3, at.y + 0.1, at.z + Math.sin(a) * 0.3, Math.cos(a) * out,
+        0.8 + Math.random() * 0.8 * strength, Math.sin(a) * out, 0.3 + Math.random() * 0.2, 2.2 + Math.random() * 1.5, 0.35,
+        0.05 + Math.random() * 0.04);
     }
   }
 
-  private slap(dt: number): void {
-    if (this.slapT < 0) {
+  /** The eye opens on what it is looking at, and closes again under its lid, slowly. */
+  private lookOut(dt: number): void {
+    const open = this.gazing && this.phase !== 'gone' ? 1 : 0;
+    const eye = this.skin.uEye;
+    eye.value += (open - eye.value) * (1 - Math.exp(-dt * (open > eye.value ? 1.3 : 0.6)));
+    if (!this.gazing) return;
+    const d = Math.max(1, this.p.subVectors(this.gazeAt, this.eye).length());
+    const g = this.skin.uGaze.value;
+    g.x += (THREE.MathUtils.clamp(this.p.dot(this.heading) / d, -1, 1) - g.x) * (1 - Math.exp(-dt * 2));
+    g.y += (THREE.MathUtils.clamp((2 * this.p.y) / d, -1, 1) - g.y) * (1 - Math.exp(-dt * 2));
+  }
+
+  private lift(dt: number): void {
+    if (this.liftT < 0) {
+      this.flipperLift = 0;
       this.uniforms.uSlap.value.set(1, 0, 0);
       return;
     }
-    const was = this.slapT;
-    this.slapT += dt;
-    this.uniforms.uSlap.value.set(1, SLAP(this.slapT), 0.25 * Math.min(1, this.slapT / 0.8));
-    if (was < SLAP_HITS && this.slapT >= SLAP_HITS) this.splashFin();
-    if (this.slapT > SLAP_FOR) this.slapT = -1;
+    const was = this.liftT;
+    this.liftT += dt;
+    const k = LIFT(this.liftT);
+    this.flipperLift = Math.max(0, k);
+    this.uniforms.uSlap.value.set(1, LIFT_ANGLE * k, 0.15 * Math.min(1, this.liftT / 1.5));
+    if (was < LIFT_HITS && this.liftT >= LIFT_HITS) this.splashFin();
+    if (this.liftT > LIFT_FOR) this.liftT = -1;
   }
 
-  /** Where the flipper meets the water, white water thrown up along it, and a few drops toward the boat. */
+  /** Laid back down on the water: white water along it. */
   private splashFin(): void {
     const tip = this.finPoint(0.85, this.p);
     const mid = this.finPoint(0.45, this.q);
-    const toward = Math.hypot(tip.x - this.back.x, tip.z - this.back.z) || 1;
-    const tx = (tip.x - this.back.x) / toward;
-    const tz = (tip.z - this.back.z) / toward;
-    this.spray.splash(tip.x, tip.z, 0.9, 0.55);
-    this.spray.splash(mid.x, mid.z, 0.7, 0.35);
-    for (let i = 0; i < 26; i++) {
-      const v = 2 + Math.random() * 2.5;
-      this.spray.emit(DROP, tip.x, 0.1, tip.z, tx * v + (Math.random() - 0.5), 2.5 + Math.random() * 2.5, tz * v + (Math.random() - 0.5),
-        0.02 + Math.random() * 0.02, 1.4, 0, 0.7);
-    }
+    const size = Math.sqrt(this.scale);
+    this.spray.splash(tip.x, tip.z, 0.9 * size, 0.45);
+    this.spray.splash(mid.x, mid.z, 0.7 * size, 0.3);
     this.onSound?.('whale-slap', tip.x, 0, tip.z);
+  }
+
+  /** Every part that is watched or held this frame, where it is in the world. */
+  private locate(): void {
+    this.point(0, TOP(BLOWHOLE), BLOWHOLE, this.blowhole);
+    this.point(EYE_X, EYE_Y, EYE_S, this.eye);
+    this.point(JAW_X, JAW_Y, JAW_S, this.jaw);
+    this.finPoint(0, this.finRoot);
+    this.finPoint(1, this.finTip);
+    this.point(0, TOP(0.45), 0.45, this.back);
+    this.point(0, 0, 1, this.flukes);
   }
 
   /** A point `t` of the way out along the near flipper, posed as the shader poses it, in the world. */
   private finPoint(t: number, out: THREE.Vector3): THREE.Vector3 {
     const fin = this.uniforms.uFin.value;
-    const slap = this.uniforms.uSlap.value;
+    const lift = this.uniforms.uSlap.value;
     out.copy(FIN_DIR).multiplyScalar(t * FIN_SPAN);
-    rotZ(out, -fin.y);
-    rotY(out, fin.x);
-    rotZ(out, slap.y);
-    rotY(out, slap.z);
+    rotZ(out, lift.y - fin.y);
+    rotY(out, fin.x + lift.z);
     out.add(FIN_ROOT);
     return this.point(out.x, out.y, -out.z / LENGTH, out);
+  }
+
+  /** The top of the skin over (x, z), or -Infinity where that is not over the head and forward back. */
+  private topAt(x: number, z: number): number {
+    const h = this.heading;
+    const nose = this.spine[0];
+    const s = ((nose.x - x) * h.x + (nose.z - z) * h.z) / (LENGTH * this.scale);
+    if (s < 0.01 || s > 0.5) return -Infinity;
+    const fi = (s / SPINE_END) * (SPINE_N - 1);
+    const i = Math.min(Math.floor(fi), SPINE_N - 2);
+    const a = this.spine[i];
+    const b = this.spine[i + 1];
+    const f = fi - i;
+    const spineY = a.y + (b.y - a.y) * f;
+    const pitch = a.w + (b.w - a.w) * f;
+    const across = ((x - nose.x) * h.z - (z - nose.z) * h.x) / this.scale;
+    const roll = this.uniforms.uRoll.value;
+    const c = Math.cos(roll);
+    const sn = Math.sin(roll);
+    let top = -Infinity;
+    let px = 0;
+    let py = 0;
+    for (let j = 0; j <= 48; j++) {
+      ringPoint(s, (j / 48) * Math.PI * 2, this.ring);
+      const rx = c * this.ring.x - sn * this.ring.y;
+      const ry = sn * this.ring.x + c * this.ring.y;
+      if (j > 0 && (px - across) * (rx - across) <= 0 && rx !== px) top = Math.max(top, py + ((ry - py) * (across - px)) / (rx - px));
+      px = rx;
+      py = ry;
+    }
+    return top === -Infinity ? top : spineY + top * this.scale * Math.cos(pitch);
   }
 
   /** Index of the spine sample nearest `s`. */
@@ -339,7 +460,7 @@ export class SleepingWhale extends WhaleRig {
   }
 
   /** Poses the spine about the pivot: sunk by `sink`, lifted by `rise`, tipped by `dip` and `tail`, rolled by `roll`. */
-  private lay(sink: number, rise: number, dip: number, tail: number, roll = 0.03): void {
+  private lay(sink: number, rise: number, dip: number, tail: number, roll: number): void {
     this.bend(dip, tail);
     const k = this.at(PIVOT);
     const h = this.heading;

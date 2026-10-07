@@ -34,6 +34,10 @@ export class WhaleWake {
   private lying = false;
   private slickAt = 0;
   private fresh = true;
+  /** Splashes, breath and drips grow more slowly than the body: a dream-sized whale is seen from far off. */
+  private readonly size: number;
+  /** World time of the last breath, so whoever is watching can answer it. */
+  blewAt = -1e9;
 
   constructor(
     private readonly whale: WhaleRig,
@@ -41,6 +45,7 @@ export class WhaleWake {
     private readonly foam: Marks,
     private readonly slicks: Marks,
   ) {
+    this.size = Math.sqrt(whale.scale);
     for (let i = 0; i < DRIP_SPAN; i++) {
       const t = -0.95 + (1.9 * i) / (DRIP_SPAN - 1);
       const { lead, trail } = flukeEdges(t);
@@ -118,10 +123,10 @@ export class WhaleWake {
 
     const blow = w.point(0, TOP(BLOWHOLE), BLOWHOLE, this.p);
     if (blow.y > 0.05 && this.blowWas <= 0.05 && time - this.lastBlow > 5) {
-      this.lastBlow = time;
-      this.spray.blow(blow, w.heading);
+      this.lastBlow = this.blewAt = time;
+      this.spray.blow(blow, w.heading, this.size);
       this.onSound?.('whale-blow', blow.x, blow.y, blow.z);
-      this.ring(blow.x, blow.z, 1.2, time, 0.8);
+      this.ring(blow.x, blow.z, 1.2 * this.size, time, 0.8);
     }
     this.blowWas = blow.y;
 
@@ -129,8 +134,8 @@ export class WhaleWake {
       this.headBroke = true;
       const P = w.spine[first];
       this.onSound?.('whale-surface', P.x, 0, P.z);
-      this.spray.splash(P.x + hx * 0.5, P.z + hz * 0.5, 1.2, 0.45);
-      this.burst(P.x, P.z, 2.2, 10, time);
+      this.spray.splash(P.x + hx * 0.5 * k, P.z + hz * 0.5 * k, 1.2 * this.size, 0.45);
+      this.burst(P.x, P.z, 2.2 * this.size, 10, time);
     }
 
     this.flukes(dt, time);
@@ -154,15 +159,16 @@ export class WhaleWake {
       this.onSound?.('whale-drain', notch.x, notch.y, notch.z);
       for (let k = 0; k < 50; k++) {
         const e = this.dripNow[Math.floor(Math.random() * DRIP_POINTS)];
-        this.spray.emit(MIST, e.x, Math.max(e.y, 0.1), e.z, rand(-0.5, 0.5), rand(0.3, 2), rand(-0.5, 0.5), 0.22, rand(1.5, 2.5), 0.4, 0.2);
+        this.spray.emit(MIST, e.x, Math.max(e.y, 0.1), e.z, rand(-0.5, 0.5) * this.size, rand(0.3, 2) * this.size, rand(-0.5, 0.5) * this.size,
+          0.22 * this.size, rand(1.5, 2.5), 0.4 * this.size, 0.2);
       }
     }
     if (!up && this.notchWas > 0.05 && this.flukesUpAt > 0) {
       this.onSound?.('whale-dive', notch.x, 0, notch.z);
-      this.spray.splash(notch.x, notch.z, 1.4, 0.75);
-      this.burst(notch.x, notch.z, 2, 10, time);
-      this.slicks.add(SLICK, notch.x, notch.z, 3, 30, time, 0.8, 0.09);
-      this.ring(notch.x, notch.z, 1.8, time, 0.9);
+      this.spray.splash(notch.x, notch.z, 1.4 * this.size, 0.75);
+      this.burst(notch.x, notch.z, 2 * this.size, 10, time);
+      this.slicks.add(SLICK, notch.x, notch.z, 3 * this.size, 30, time, 0.8, 0.09);
+      this.ring(notch.x, notch.z, 1.8 * this.size, time, 0.9);
       this.flukesUpAt = -1;
     }
     this.notchWas = notch.y;
@@ -187,7 +193,7 @@ export class WhaleWake {
         (e.x - prev.x) * f + rand(-0.25, 0.25),
         (e.y - prev.y) * f - rand(0.1, 0.8),
         (e.z - prev.z) * f + rand(-0.25, 0.25),
-        rand(0.018, 0.038),
+        rand(0.018, 0.038) * this.size,
         2,
         0,
         rand(0.5, 0.9),
@@ -195,7 +201,7 @@ export class WhaleWake {
     }
     if (Math.random() < dt * 10 * Math.exp(-since / 1.5)) {
       const e = this.dripNow[Math.floor(Math.random() * DRIP_POINTS)];
-      if (e.y > 0.3) this.spray.emit(SPLASH, e.x, e.y, e.z, 0, -0.6, 0, 0.1, 0.8, 0.12, 0.3);
+      if (e.y > 0.3) this.spray.emit(SPLASH, e.x, e.y, e.z, 0, -0.6, 0, 0.1 * this.size, 0.8, 0.12 * this.size, 0.3);
     }
   }
 

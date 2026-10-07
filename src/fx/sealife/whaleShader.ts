@@ -15,7 +15,7 @@ uniform float uCurl;
 uniform float uScale;
 /** A shiver running along the back: where it is (s), how deep, and how long a stretch of skin it moves. */
 uniform vec3 uShiver;
-/** One flipper lifted on its own: which side, how far it is raised and swept. */
+/** One flipper lifted on its own: which side, how far it is raised and further swept. */
 uniform vec3 uSlap;
 /** The flippers, the dorsal fin and the flukes, each scaled about its root. */
 uniform vec3 uShape;
@@ -33,13 +33,12 @@ vec3 rig(vec3 rest, inout vec3 n) {
   if (part == ${FIN}) {
     float side = sign(rest.x);
     vec3 root = vec3(side * ${f(FIN_ROOT.x)}, ${f(FIN_ROOT.y)}, ${f(FIN_ROOT.z)});
-    vec3 p = rotZ((rest - root) * uShape.x, -side * uFin.y);
-    n = rotZ(n, -side * uFin.y);
-    p = rotY(p, side * uFin.x);
-    n = rotY(n, side * uFin.x);
+    // The one lifted flipper rises in its own outward plane before both are swept, so it lifts however it lies.
     float own = step(0.5, side * uSlap.x);
-    p = rotY(rotZ(p, side * uSlap.y * own), side * uSlap.z * own);
-    n = rotY(rotZ(n, side * uSlap.y * own), side * uSlap.z * own);
+    float raise = side * (uSlap.y * own - uFin.y);
+    float sweep = side * (uFin.x + uSlap.z * own);
+    vec3 p = rotY(rotZ((rest - root) * uShape.x, raise), sweep);
+    n = rotY(rotZ(n, raise), sweep);
     off = p + root + vec3(0.0, 0.0, s * ${f(LENGTH)});
   }
   if (part == ${FLUKES}) {
@@ -87,6 +86,8 @@ uniform vec3 uBelly;
 uniform float uEye;
 /** Where the eye is (s along, height in the rest pose) and how big it is drawn. */
 uniform vec3 uEyeAt;
+/** Where the open eye looks, across its own disc (along the body, up), -1..1. */
+uniform vec2 uGaze;
 /**
  * How knobbly the head is, how high the pale of the jaw comes up the head, how many pale barnacle spots, and how
  * pale and sunlit-through the undersides of the flukes are.
@@ -146,17 +147,25 @@ Skin skin() {
     float lid = (1.0 - smoothstep(0.012, 0.03, abs(e.y + 0.035 - 2.2 * e.x * e.x))) * (1.0 - smoothstep(0.1, 0.13, abs(e.x)));
     float side = step(uEyeAt.z > 1.5 ? 0.45 : 0.8, abs(rn.x));
     k.albedo *= 1.0 - mix(lid, open, uEye) * side * 0.8;
-    float glint = 1.0 - smoothstep(0.014, 0.026, length(e - vec2(sign(rn.x) * 0.025, 0.03)));
+    float glint = 1.0 - smoothstep(0.014, 0.026, length(e - vec2(sign(rn.x) * 0.025, 0.03) - uGaze * vec2(sign(rn.x), 1.0) * 0.025));
     k.albedo = mix(k.albedo, vec3(0.95), glint * uEye * side * step(1.5, uEyeAt.z));
   } else if (part == ${FIN}) {
     float top = smoothstep(-0.2, 0.4, rn.y);
     k.albedo = mix(uBelly * (0.92 + 0.12 * mottle), uBack * 1.1, top * (1.0 - smoothstep(0.2, 0.75, vRig.z)) * 0.8);
     k.thin = 0.6;
   } else {
+    // Its own marks under the flukes, the same wherever it is met: a ragged dark trailing edge and tips, a dark
+    // stroke up from the notch, and two dark commas that do not match.
     float under = (1.0 - smoothstep(-0.15, 0.15, rn.y));
-    float marks = smoothstep(0.3, 0.72, vnoise(vRest.xz * vec2(1.1, 2.0) + 4.0));
-    float white = under * (1.0 - smoothstep(0.76, 0.93, vRig.w)) * (1.0 - smoothstep(0.78, 0.97, abs(vRig.z))) * (0.62 + 0.38 * marks);
-    k.albedo = mix(k.albedo, uBelly * 1.08, white * uDetail.w);
+    float t = vRig.z;
+    float a = vRig.w;
+    float edge = smoothstep(0.66, 0.84, a + 0.07 * sin(t * 23.0) + 0.04 * sin(t * 51.0));
+    float stroke = (1.0 - smoothstep(0.05, 0.11, abs(t + 0.03 * sin(a * 9.0)))) * smoothstep(0.2, 0.45, a);
+    float left = 1.0 - smoothstep(0.08, 0.12, length(vec2((t + 0.47) * 0.8, a - 0.36 - 0.1 * (t + 0.47))));
+    float right = 1.0 - smoothstep(0.05, 0.08, length(vec2(t - 0.6, (a - 0.52) * 1.4)));
+    float tips = smoothstep(0.8, 0.95, abs(t));
+    float mark = max(max(edge, stroke), max(max(left, right), tips));
+    k.albedo = mix(k.albedo, uBelly * 1.08, under * (1.0 - mark) * uDetail.w);
     k.thin = 0.8 * uDetail.w;
   }
   return k;
