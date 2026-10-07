@@ -18,7 +18,7 @@ const CREST = 0.55;
 /** The waking, in seconds: the breath is drawn, the eye opens, the spout, and then it goes. */
 const DRAWN = 1.6;
 const SPOUT_FROM = 1.7;
-const SPOUT_TO = 3.3;
+const SPOUT_TO = 3.9;
 const LEAVE = 5;
 /** The leaving, in seconds: rolled away and sinking while it turns its head out ahead, then the flukes. */
 const SINK = curve([[0, 0], [2, -0.5], [6, -2.4], [9, -2.7], [11, -2.2], [14, -2.3], [17.5, -8]]);

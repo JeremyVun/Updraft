@@ -115,6 +115,8 @@ export class Spray {
   private readonly opacity = new Float32Array(MAX);
   private readonly kind = new Uint8Array(MAX);
   private readonly seed = new Float32Array(MAX);
+  /** Seconds a particle is thrown clear of the wind before the air takes it. */
+  private readonly calm = new Float32Array(MAX);
   private readonly a: THREE.InstancedBufferAttribute;
   private readonly b: THREE.InstancedBufferAttribute;
   private readonly c: THREE.InstancedBufferAttribute;
@@ -151,7 +153,7 @@ export class Spray {
     this.mesh.renderOrder = 7;
   }
 
-  emit(kind: number, x: number, y: number, z: number, vx: number, vy: number, vz: number, size: number, life: number, grow = 0, opacity = 1): void {
+  emit(kind: number, x: number, y: number, z: number, vx: number, vy: number, vz: number, size: number, life: number, grow = 0, opacity = 1, calm = 0): void {
     if (this.count >= MAX) return;
     const i = this.count++;
     const o = i * 3;
@@ -168,6 +170,7 @@ export class Spray {
     this.opacity[i] = opacity;
     this.kind[i] = kind;
     this.seed[i] = Math.random();
+    this.calm[i] = calm;
   }
 
   /** A whale's breath: a bushy column of fine mist, a few heavier drops falling out of it. */
@@ -204,25 +207,27 @@ export class Spray {
   }
 
   /**
-   * One frame of a spout held for a while: a column of mist thrown `height` high, slowing and opening into a crown
-   * as it goes, with a few drops falling back out of it, rather than the low bushy cloud of `blow`.
+   * One frame of a spout held for a while: a tall column of mist thrown `height` high, straight up clear of the
+   * breeze until it slows and opens into a crown, with drops falling back out of it.
    */
   jet(at: THREE.Vector3, height: number, strength: number, dt: number): void {
-    const n = Math.floor(strength * 220 * dt + Math.random());
+    const n = Math.floor(strength * 600 * dt + Math.random());
     for (let i = 0; i < n; i++) {
       const a = Math.random() * Math.PI * 2;
-      const reach = 0.35 + 0.65 * Math.sqrt(Math.random());
-      const out = 0.15 + reach * reach * 1.1 * Math.random();
-      const up = height * DRAG[MIST] * reach * strength * (1.05 + Math.random() * 0.15);
-      this.emit(MIST, at.x + Math.cos(a) * 0.06, at.y, at.z + Math.sin(a) * 0.06, Math.cos(a) * out, up, Math.sin(a) * out,
-        0.14 + Math.random() * 0.12, 2.6 + Math.random() * 2.2, 0.25 + reach * 0.75, 0.05 + Math.random() * 0.05);
+      const reach = 0.3 + 0.7 * Math.sqrt(Math.random());
+      const crown = THREE.MathUtils.smoothstep(reach, 0.7, 1);
+      const out = 0.06 + reach * 0.3 * Math.random() + crown * (0.8 + Math.random() * 1.8);
+      const up = height * DRAG[MIST] * reach * strength * (1.05 + Math.random() * 0.12);
+      this.emit(MIST, at.x + Math.cos(a) * 0.1, at.y, at.z + Math.sin(a) * 0.1, Math.cos(a) * out, up, Math.sin(a) * out,
+        0.18 + Math.random() * 0.2, 2.6 + Math.random() * 1.8, 0.2 + reach * 0.5 + crown * 0.9, 0.09 + Math.random() * 0.1,
+        1.1 + crown * 0.5);
     }
-    const m = Math.floor(strength * 60 * dt + Math.random());
+    const m = Math.floor(strength * 160 * dt + Math.random());
     for (let i = 0; i < m; i++) {
       const a = Math.random() * Math.PI * 2;
-      const v = Math.sqrt(2 * GRAVITY[DROP] * height * (0.3 + Math.random() * 0.5)) * strength;
-      const out = 0.3 + Math.random() * 0.9;
-      this.emit(DROP, at.x, at.y + 0.1, at.z, Math.cos(a) * out, v, Math.sin(a) * out, 0.022 + Math.random() * 0.018, 2.2, 0, 0.55);
+      const v = Math.sqrt(2 * GRAVITY[DROP] * height * (0.35 + Math.random() * 0.65)) * strength;
+      const out = 0.4 + Math.random() * 1.6;
+      this.emit(DROP, at.x, at.y + 0.1, at.z, Math.cos(a) * out, v, Math.sin(a) * out, 0.04 + Math.random() * 0.04, 2.6, 0, 0.8);
     }
   }
 
@@ -267,7 +272,7 @@ export class Spray {
       }
       const k = this.kind[i];
       const o = i * 3;
-      if (k === DROP) air.x = air.z = air.lift = 0;
+      if (k === DROP || this.age[i] < this.calm[i]) air.x = air.z = air.lift = 0;
       else this.wind.sample(p[o], p[o + 2], air);
       const settle = 1 - Math.exp(-dt * DRAG[k]);
       v[o] += (air.x - v[o]) * settle;
@@ -320,5 +325,6 @@ export class Spray {
     this.opacity[i] = this.opacity[last];
     this.kind[i] = this.kind[last];
     this.seed[i] = this.seed[last];
+    this.calm[i] = this.calm[last];
   }
 }
