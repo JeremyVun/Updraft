@@ -108,6 +108,8 @@ Owns: `src/story/journey.ts` (`toMirror`: the route lengthened, `whaleAt` cut, t
 Also: the first crossing's whale (`src/fx/sealife/whale.ts`, `toLines`) becomes the same animal at the same size and
 look, unnetted and far off, its timing and distance as on main, with the pale pattern under its flukes it shares with
 the sleeper; `CROSSING=toLines node tools/journey-pacing-check.mjs` unchanged.
+Parallel: N2's net module may be built at the same time against `?chapter=stage` and slotted in after N1 (two
+agents at most).
 Seam: the encounter exposes its step (`approach`, `breath`, `line`, `flipper`, `free`, `gone`) for the net (N2) to
 drive and read; the pod's lead and farewell read it; for this phase a stand-in (circles over the blowhole wake it, as
 on `crossing-whale`) lets the sequence play end to end.
@@ -120,7 +122,7 @@ Done: [ ]
 Owns: the net (`src/fx/sealife/net.ts`: sparse deforming mesh, instanced corks, boundary ropes, the lifted patch, the
 peel, the flipper loop, the empty net drifting off), the three steps and their invitations and dolphin valves in the
 encounter module, the child's catch and haul and the cygnet's swim to the flipper and back (`src/companion/` or the
-cygnet's states as fits), sounds in `src/audio/foley.ts`, `tools/net-whale-check.mjs` (replacing
+cygnet's states as fits), sounds in `src/audio/foley.ts` (the whale's voice among them), `tools/net-whale-check.mjs` (replacing
 `sleeping-whale-check.mjs`).
 Seam: each step's progress is caused only by its own gesture at its own target; steps go in order; a valve's dolphin
 does the same physical act the player would have caused.
@@ -138,6 +140,7 @@ each keyframe beside the concept, opened for Jeremy.
 Done: [ ]
 
 ### Phase N4: docs on approval
-Once Jeremy approves: the open sea's section in `docs/chapters.md` (its ruling "at most 100 s, nothing asked" replaced),
+Once Jeremy approves: the open sea's chapter-select still regenerated with the whale; the open sea's section in
+`docs/chapters.md` (its ruling "at most 100 s, nothing asked" replaced),
 the crossing table in `docs/contracts/world.md`, the new tuning names; this item's crossing sections trimmed.
 Done: [ ]

@@ -790,6 +790,15 @@ The sequence:
   sailing on toward the mirror with no whale).
 - **Sounds.** Its slow breath and the sputter through the mesh, the full breath, the spout (`whale-blow`), the net's
   wet rope and corks, the cygnet's splash; all synthesised (`docs/contracts/audio.md`).
+- **Its voice** (Jeremy, 2026-10-07: "yea, lets give it a voice"). One low, soft call when its eye opens and it knows
+  her, the friend's greeting, and the same call once more as it waves goodbye. Synthesised like every sound, shaped
+  to sit in the sea's score, never a cartoon voice; on the first crossing, at most a far echo of it as it dives.
+- **The cygnet's second swim** (Claude's call). Its first swim in this chapter is the hesitant brave one; at the
+  flipper it goes in at once, without the climbing and deciding: the same bird after the sleeping island.
+- **No first-use stalls.** The whale's new programs and the net are compiled at boot like every other program
+  (`docs/backlog/boot-veil/`; `__stats.bootStrayPrograms` and `playFirstDraws` stay at 0).
+- **The chapter-select still** for the open sea becomes the whale; regenerated after the build is judged (Jeremy,
+  2026-10-07: "the picture will need to be regenerated, but lets build it out first").
 
 **QA starts.** `?chapter=toMirror` (and any `to*` crossing) starts that crossing at its first waypoint, cygnet in the
 satchel (branch `crossings-start`, also carried by `crossing-whale`); `?chapter=sea` starts the open sea as on main.
