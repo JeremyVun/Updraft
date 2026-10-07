@@ -72,7 +72,7 @@ export class StrandedCat {
   private phase = 0;
   private atEdge = 0;
   private released = false;
-  private bolted = -1;
+  private bolted: number | null = null;
   private washed = false;
   private wary = false;
 
@@ -105,7 +105,7 @@ export class StrandedCat {
 
   /** Seconds since the cat bolted off the bow, or -1 before it has. */
   get sinceBolt(): number {
-    return this.bolted < 0 ? -1 : this.now - this.bolted;
+    return this.bolted === null ? -1 : this.now - this.bolted;
   }
 
   /**
@@ -159,7 +159,8 @@ export class StrandedCat {
     cat.look(this.head);
     this.tub.visible = false;
     this.released = true;
-    this.bolted = this.now;
+    /** Long enough ago that the climb's view has come round to her on the ridge, where the run takes the lens from. */
+    this.bolted = this.now - tuning.drownedCamera.climbFor;
     child.decks = [WAY.strandLanding, WAY.strandSlope, WAY.strand];
     child.dismount();
     child.place(RIDGE.x, RIDGE.z, Math.atan2(GAP.x - RIDGE.x, GAP.z - RIDGE.z));

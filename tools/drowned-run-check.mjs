@@ -34,6 +34,25 @@ try {
   await page.goto(`${base}?shot=1&chapter=${fromStorm ? 'storm' : fromChurch ? 'church' : fromRoofs ? 'roofs' : 'drowned'}&ratio=1`, { waitUntil: 'load' });
   await page.waitForFunction(() => window.__ready === true, null, { timeout: 60000 });
 
+  /** The lens's own motion every frame from the start: its fastest turn and fastest move, and where they fell. */
+  await page.evaluate(() => {
+    const w = window.__lensWatch = { turn: 0, turnAt: '', move: 0, moveAt: '' };
+    let last = null;
+    const tick = () => {
+      const st = __game.story.current, cam = __game.rig.camera, t = __stats.time;
+      const d = cam.getWorldDirection(cam.position.clone()), p = cam.position.clone();
+      const where = () => `${st.beat ?? __game.story.name}${st.run && st.run.stage !== 'off' ? '/' + st.run.stage : ''}${st.church && st.church.step !== 'off' ? '/' + st.church.step : ''} at ${t.toFixed(1)} s`;
+      if (last && t > last.t && last.cut === st.cameraCut && last.story === st) {
+        const dt = t - last.t, turn = Math.acos(Math.min(1, d.dot(last.d))) * 180 / Math.PI / dt, move = p.distanceTo(last.p) / dt;
+        if (turn > w.turn) { w.turn = turn; w.turnAt = where(); }
+        if (move > w.move) { w.move = move; w.moveAt = where(); }
+      }
+      last = { t, d, p, cut: st.cameraCut, story: st };
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
+
   const frame = () => page.evaluate(() => new Promise((done) => requestAnimationFrame(() => done())));
   const seconds = (s) => page.evaluate((n) => new Promise((done) => {
     let i = 0;
@@ -300,6 +319,10 @@ try {
   if (!fromChurch) {
     filmFrom ??= (await state()).time;
     await until((s) => s.beat === 'run', 30, 'her setting off');
+    await frame();
+    const hand = await page.evaluate(() => { const r = __game.story.current.run, c = __game.child.position;
+      return { t: r.handT, off: r.handFrom ? Math.hypot(r.handFrom.x - c.x, r.handFrom.z - c.z) : null }; });
+    console.log(`the run took the lens ${hand.t === Infinity ? 'by the rig' : 'by its hand-over'} from ${hand.off?.toFixed(1)} m off her`);
 
     // Watches every frame from here: her feet on the decks, her progress, and the fog behind her.
     await page.evaluate(async () => {
@@ -461,6 +484,9 @@ try {
     assert(end.boatLeft < 1, `the boat is still ${end.boatLeft} m short of its tree`);
   }
   await church();
+  const motion = await page.evaluate(() => window.__lensWatch);
+  console.log(`the lens turned at most ${motion.turn.toFixed(1)} deg/s (${motion.turnAt}) and moved at most ${motion.move.toFixed(1)} m/s (${motion.moveAt})`);
+  if (process.env.LENS) assert(motion.turn < 60, `the lens whipped round at ${motion.turn.toFixed(0)} deg/s (${motion.turnAt})`);
   assert.deepEqual(errors, [], `page errors: ${errors.join('; ')}`);
   console.log('drowned run check passed');
 } finally {

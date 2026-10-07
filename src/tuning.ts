@@ -1987,7 +1987,7 @@ export const tuning = {
        * tree's view as she sets off (if it stood within `handFar` of her), and how much further out and higher it
        * stands half-way round.
        */
-      handFor: 16, handFar: 16, handOut: 7, handUp: 1.5,
+      handFor: 16, handFar: 22, handOut: 7, handUp: 1.5,
     },
     /** The church (`ChurchArrival.frame`). */
     church: {
