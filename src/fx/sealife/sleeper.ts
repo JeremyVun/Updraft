@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { tuning } from '../../tuning';
 import { swellUniforms } from '../../world/water/swell';
-import { BLOWHOLE, FIN_ROOT, LENGTH, SPINE_END, TOP, crown, flankAt, ringPoint } from './anatomy';
+import { BLOWHOLE, FIN_DIR, FIN_ROOT, FIN_SPAN, LENGTH, SPINE_END, TOP, crown, flankAt, ringPoint } from './anatomy';
 import { curve } from './curve';
 import type { Marks } from './marks';
 import { DROP, MIST, type Spray } from './spray';
@@ -22,8 +22,7 @@ const EYE_X = flankAt(EYE_S, EYE_Y);
 const JAW_S = 0.07;
 const JAW_Y = -0.12;
 const JAW_X = flankAt(JAW_S, JAW_Y);
-const FIN_SPAN = 4.5 * DREAM_SHAPE.fin;
-const FIN_DIR = new THREE.Vector3(0.8, -0.3, -0.52).normalize();
+const FIN_LENGTH = FIN_SPAN * DREAM_SHAPE.fin;
 /** Rolling free it lays its flippers back along its flanks, so on its back they lie low rather than stand up. */
 const FREE_FIN = new THREE.Vector2(0.95, -0.4);
 /** Lying at the surface the fluke tips curl up a little at the far end. */
@@ -318,7 +317,7 @@ export class SleepingWhale extends WhaleRig {
     this.lay(0, rise, 0, 0, K.roll + liftRoll);
     this.uniforms.uCurl.value = REST_CURL;
     // The flipper lies awash: as the body rises with a breath it floats there rather than lifting out of the sea.
-    const awash = rise / (FIN_SPAN * this.scale * 0.82);
+    const awash = rise / (FIN_LENGTH * this.scale * 0.82);
     this.uniforms.uFin.value.set(K.finRestSweep + Math.sin(this.worldTime * 0.17) * 0.03,
       -K.finRestRaise + awash + Math.sin(this.worldTime * 0.23 + 1) * 0.015);
   }
@@ -433,7 +432,7 @@ export class SleepingWhale extends WhaleRig {
   private finPoint(t: number, out: THREE.Vector3): THREE.Vector3 {
     const fin = this.uniforms.uFin.value;
     const lift = this.uniforms.uSlap.value;
-    out.copy(FIN_DIR).multiplyScalar(t * FIN_SPAN);
+    out.copy(FIN_DIR).multiplyScalar(t * FIN_LENGTH);
     rotZ(out, lift.y - fin.y);
     rotY(out, fin.x + lift.z);
     out.add(FIN_ROOT);

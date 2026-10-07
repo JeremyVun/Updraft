@@ -13,27 +13,49 @@ export const FIN = 1;
 export const FLUKES = 2;
 export const DORSAL = 3;
 export const FLUKE_HALF_SPAN = 2.75;
-/** Root of the left pectoral fin (the right one is its mirror image). */
-export const FIN_ROOT = new THREE.Vector3(1.25, -0.8, -0.3 * LENGTH);
+/** Root of the left pectoral fin (the right one is its mirror image): high on the flank, so lying awash it is at the surface. */
+export const FIN_ROOT = new THREE.Vector3(1.45, -0.06, -0.31 * LENGTH);
+/** The flipper's length and its line out from the root at rest, before it is raised and swept, in its own units. */
+export const FIN_SPAN = 4.5;
+export const FIN_DIR = new THREE.Vector3(0.8, -0.3, -0.52).normalize();
+/**
+ * Half the flipper's chord along it, either side of its line, in its own units: a narrow wrist, broadest a third of
+ * the way out, tapering to a rounded tip. Never wider than the cygnet's clearance allows for (`net-whale-check` fin).
+ */
+export const FIN_HALF_CHORD = curve([
+  [0, 0.3], [0.15, 0.42], [0.32, 0.47], [0.6, 0.335], [0.8, 0.215], [0.9, 0.16], [0.96, 0.11], [1, 0.035],
+]);
 /** Where the flukes hinge on the tail stock, as a fraction of the length. */
 export const FLUKE_HINGE = 0.93;
 export const BLOWHOLE = 0.21;
-/** Where the lower jaw's line ends, just behind and under the eye, as a fraction of the length. */
-export const JAW_CORNER = 0.185;
 
 /** Heights of the back and belly and the half width of the body along its length (0 snout, 1 notch). */
 export const TOP = curve([
-  [0, -0.3], [0.015, -0.13], [0.05, 0.06], [0.1, 0.29], [0.16, 0.52], [0.21, 0.69], [0.3, 0.96], [0.42, 1.18], [0.55, 1.22], [0.62, 1.16],
+  [0, -0.141], [0.006, -0.048], [0.015, 0.03], [0.03, 0.116], [0.06, 0.23], [0.1, 0.358], [0.16, 0.527], [0.21, 0.644],
+  [0.26, 0.719], [0.3, 0.833], [0.36, 0.98], [0.42, 1.18], [0.55, 1.22], [0.62, 1.16],
   [0.7, 0.95], [0.8, 0.68], [0.9, 0.4], [0.96, 0.22], [1, 0.1],
 ]);
 export const BOTTOM = curve([
-  [0, -0.46], [0.015, -0.74], [0.05, -1.02], [0.1, -1.22], [0.17, -1.4], [0.3, -1.68], [0.42, -1.7], [0.55, -1.5], [0.65, -1.22],
-  [0.75, -0.95], [0.85, -0.62], [0.93, -0.32], [1, -0.1],
+  [0, -0.22], [0.006, -0.368], [0.015, -0.486], [0.03, -0.68], [0.06, -0.92], [0.1, -1.15], [0.17, -1.38], [0.3, -1.68],
+  [0.42, -1.7], [0.55, -1.5], [0.65, -1.22], [0.75, -0.95], [0.85, -0.62], [0.93, -0.32], [1, -0.1],
 ]);
 export const HALF_WIDTH = curve([
-  [0, 0.16], [0.012, 0.56], [0.04, 0.86], [0.1, 1.05], [0.17, 1.22], [0.3, 1.55], [0.42, 1.6], [0.55, 1.38], [0.65, 1.0],
-  [0.75, 0.6], [0.85, 0.32], [0.93, 0.2], [1, 0.1],
+  [0, 0.16], [0.006, 0.4], [0.015, 0.58], [0.04, 0.84], [0.1, 1.05], [0.17, 1.22], [0.3, 1.55], [0.42, 1.6], [0.55, 1.38],
+  [0.65, 1.0], [0.75, 0.6], [0.85, 0.32], [0.93, 0.2], [1, 0.1],
 ]);
+
+/**
+ * The mouth line in the rest pose: the height where the dark upper jaw meets the pale lower lip, from the snout back
+ * to its corner under the front of the eye, running down toward the water as the head lies tipped up (never up toward
+ * the eye, which would make a smile of it).
+ */
+export const MOUTH = curve([
+  [0, -0.175], [0.006, -0.162], [0.03, -0.158], [0.06, -0.153], [0.1, -0.137], [0.125, -0.13], [0.152, -0.132],
+]);
+/** Where the mouth line ends, under the front of the eye, as a fraction of the length. */
+export const JAW_CORNER = 0.152;
+/** How much wider than the upper jaw the lower lip bows out, as a share of the half width. */
+const LIP = curve([[0, 0], [0.02, 0.07], [0.1, 0.08], [0.13, 0.05], [JAW_CORNER + 0.005, 0]]);
 
 /** The raised crown the blowhole sits on, over the top of the head. */
 const MOUND = curve([[0.14, 0], [0.185, 0.08], [0.215, 0.11], [0.25, 0.05], [0.29, 0]]);
@@ -54,6 +76,12 @@ export function ringHeight(s: number, a: number): number {
   return Math.sign(ca) * Math.abs(ca) ** (ca > 0 ? flatness(s) : 1);
 }
 
+/** How far the lower lip bows out at a point `below` the mouth line at s (rest units), as a share of the half width. */
+function lip(s: number, below: number): number {
+  if (s > JAW_CORNER + 0.005) return 0;
+  return LIP(s) * smoothstep(-0.01, 0.045, below) * (1 - 0.6 * smoothstep(0.08, 0.5, below));
+}
+
 /**
  * A point on the body's rest-pose ring at s, `a` radians round from the top toward its left (+x): the shape every
  * ring of the mesh is built on, without the knuckles on the tail stock.
@@ -66,18 +94,54 @@ export function ringPoint(s: number, a: number, out: { x: number; y: number }): 
   out.x = HALF_WIDTH(s) * Math.sign(sa) * Math.abs(sa) ** e;
   out.y = (top + bottom) / 2 + ((top - bottom) / 2) * ringHeight(s, a);
   if (Math.cos(a) > 0) out.y += MOUND(s) * Math.exp(-((out.x / MOUND_WIDTH) ** 2));
+  out.x *= 1 + lip(s, MOUTH(s) - out.y);
   return out;
 }
 
 /** How far out on its left (+x) the skin is at height y in the rest pose, at s along it. */
 export function flankAt(s: number, y: number): number {
-  const top = TOP(s);
-  const bottom = BOTTOM(s);
-  const v = THREE.MathUtils.clamp((2 * y - top - bottom) / (top - bottom), -1, 1);
-  const e = v > 0 ? flatness(s) : 1;
-  const ca = Math.abs(v) ** (1 / e);
-  return HALF_WIDTH(s) * Math.sqrt(Math.max(0, 1 - ca * ca)) ** e;
+  const at = { x: 0, y: 0 };
+  let lo = 0;
+  let hi = Math.PI;
+  for (let k = 0; k < 40; k++) {
+    const mid = (lo + hi) / 2;
+    if (ringPoint(s, mid, at).y > y) lo = mid;
+    else hi = mid;
+  }
+  return ringPoint(s, (lo + hi) / 2, at).x;
 }
+
+/** The rest-pose point on the top half of the ring at s that lies `x` out from the midline. */
+function topAtX(s: number, x: number): THREE.Vector3 {
+  const at = { x: 0, y: 0 };
+  let lo = 0;
+  let hi = Math.PI / 2;
+  for (let k = 0; k < 40; k++) {
+    const mid = (lo + hi) / 2;
+    if (ringPoint(s, mid, at).x < x) lo = mid;
+    else hi = mid;
+  }
+  ringPoint(s, (lo + hi) / 2, at);
+  return new THREE.Vector3(at.x, at.y, -s * LENGTH);
+}
+
+/**
+ * The knobs on its head, on the near side (mirrored on the far): a row along the upper jaw over the mouth line, a few
+ * on the chin of the lower lip, and a few either side of the rostrum's top.
+ */
+export const KNOBS: THREE.Vector3[] = [
+  ...[[0.024, 0.08], [0.05, 0.13], [0.093, 0.1]].map(([s, up]) => {
+    const y = MOUTH(s) + up;
+    return new THREE.Vector3(flankAt(s, y), y, -s * LENGTH);
+  }),
+  ...[0.016, 0.045].map((s) => {
+    const y = MOUTH(s) - 0.06;
+    return new THREE.Vector3(flankAt(s, y), y, -s * LENGTH);
+  }),
+  topAtX(0.03, 0.22),
+  topAtX(0.068, 0.34),
+  topAtX(0.11, 0.24),
+];
 
 function build(pos: number[], rig: number[], idx: number[]): THREE.BufferGeometry {
   const geo = new THREE.BufferGeometry();
@@ -99,16 +163,25 @@ function stitch(idx: number[], loops: number, around: number, base = 0): void {
   }
 }
 
-/** Rings along the length: a broad flat head, the deep chest behind the flippers, a narrow keeled tail stock. */
+/** Where ring i of the body lies along it: close together over the head, where its forms are, and at the flukes. */
+function ringAt(i: number): number {
+  const HEAD = 0.34;
+  if (i <= HEAD_RINGS) return HEAD * (1 - Math.cos((Math.PI / 2) * (i / HEAD_RINGS)));
+  return HEAD + (1 - HEAD) * Math.sin((Math.PI / 2) * ((i - HEAD_RINGS) / (RINGS - HEAD_RINGS)));
+}
+const RINGS = 200;
+const HEAD_RINGS = 110;
+
+/** Rings along the length: a broad blunt head, the deep chest behind the flippers, a narrow keeled tail stock. */
 function body(): THREE.BufferGeometry {
-  const rings = 130;
-  const around = 64;
+  const rings = RINGS;
+  const around = 128;
   const pos: number[] = [];
   const rig: number[] = [];
   const idx: number[] = [];
   const at = { x: 0, y: 0 };
   for (let i = 0; i <= rings; i++) {
-    const s = 0.5 - 0.5 * Math.cos((Math.PI * i) / rings);
+    const s = ringAt(i);
     const knuckles = 0.055 * Math.max(0, Math.sin((s - 0.68) * 62)) * smoothstep(0.68, 0.74, s) * smoothstep(0.98, 0.9, s);
     for (let j = 0; j < around; j++) {
       const a = (j / around) * Math.PI * 2;
@@ -130,12 +203,14 @@ function body(): THREE.BufferGeometry {
   return build(pos, rig, idx);
 }
 
-/** A long pectoral fin, slung low and swept back, with the knobbly leading edge humpbacks are named for. */
+/**
+ * A long pectoral fin, its chord centred on its line, the knobbly leading edge humpbacks are named for, thick at the
+ * leading edge and thin at the trailing one.
+ */
 function fin(): THREE.BufferGeometry {
-  const stations = 30;
-  const around = 12;
-  const span = 4.5;
-  const e1 = new THREE.Vector3(0.8, -0.3, -0.52).normalize();
+  const stations = 44;
+  const around = 16;
+  const e1 = FIN_DIR;
   const back = new THREE.Vector3(0, 0, -1);
   const e2 = back.clone().addScaledVector(e1, -back.dot(e1)).normalize();
   const e3 = new THREE.Vector3().crossVectors(e2, e1);
@@ -146,17 +221,17 @@ function fin(): THREE.BufferGeometry {
   const s = -FIN_ROOT.z / LENGTH;
   for (let i = 0; i <= stations; i++) {
     const t = i / stations;
-    const chord = 1.05 * Math.max(1 - t ** 2.4, 0) ** 0.6 * (0.7 + 0.42 * Math.sin(Math.PI * Math.min(1, t * 1.6))) + 0.07;
-    const knobs = 0.07 * Math.max(0, Math.sin(t * 9.5 * Math.PI)) ** 0.6 * smoothstep(0.12, 0.25, t);
-    const sweep = 0.55 * t * t;
-    const thick = 0.17 * (1 - 0.72 * t) + 0.02;
+    const half = FIN_HALF_CHORD(t);
+    const knobs = 0.05 * Math.max(0, Math.sin(t * 9 * Math.PI)) ** 0.7 * smoothstep(0.1, 0.22, t) * (1 - smoothstep(0.86, 0.95, t));
+    const bow = -0.06 * Math.sin(Math.PI * t);
+    const thick = 0.14 * (1 - 0.72 * t) + 0.022;
     for (let j = 0; j < around; j++) {
       const a = (j / around) * Math.PI * 2;
       const along = 0.5 - 0.5 * Math.cos(a);
       const th = Math.sin(a) * thick * 2.4 * Math.sqrt(along + 0.02) * (1 - along * 0.85);
       p.copy(FIN_ROOT)
-        .addScaledVector(e1, t * span)
-        .addScaledVector(e2, sweep - knobs + (along - 0.3) * chord)
+        .addScaledVector(e1, t * FIN_SPAN)
+        .addScaledVector(e2, bow + (2 * along - 1) * half - knobs * (1 - along) ** 2)
         .addScaledVector(e3, th);
       pos.push(p.x, p.y, p.z);
       rig.push(s, FIN, t, along);
@@ -164,7 +239,7 @@ function fin(): THREE.BufferGeometry {
   }
   stitch(idx, stations + 1, around);
   const tip = pos.length / 3;
-  p.copy(FIN_ROOT).addScaledVector(e1, span + 0.04).addScaledVector(e2, 0.55);
+  p.copy(FIN_ROOT).addScaledVector(e1, FIN_SPAN + 0.03);
   pos.push(p.x, p.y, p.z);
   rig.push(s, FIN, 1, 0.5);
   const last = stations * around;

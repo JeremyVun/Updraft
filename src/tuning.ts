@@ -1512,7 +1512,7 @@ export const tuning = {
      * The near flipper at rest, about its root: swept round toward the head and raised, so it reaches toward the boat
      * with its tip at the surface (radians).
      */
-    finRestSweep: -1.75, finRestRaise: 0.67,
+    finRestSweep: -1.843, finRestRaise: 0.278,
     /** How far its lazy lift raises the near flipper about its root and swings it back along its flank (radians). */
     finLift: 0.1, finSwing: 0.05,
   },
@@ -2129,19 +2129,23 @@ export const tuning = {
   /** The dream-sized whale's look, wherever it is met. */
   whaleLook: {
     /** Smooth slate-blue back, a pale lower jaw and belly, a warm amber eye. */
-    back: '#4c6474', belly: '#c2b9ad', iris: '#7d5222',
+    back: '#5d6570', belly: '#aea79f', iris: '#b06a26',
     /** Cool light from the open sky on its skin, as a multiple of the sky's own ambient brightness. */
-    fill: 2.1,
+    fill: 3,
     /** Warm light thrown up off the sea onto the jaw and belly, the same way. */
-    bounce: 2.2,
+    bounce: 3,
     /** The low sun wrapped over its top, the gold rim it lays along the silhouette, and the wet sheen on the back. */
     key: 0.9, rim: 2, rimPower: 7, sheen: 0.45,
     /** The sun through the eye's cornea lighting the lower iris, and its sharp reflection in the eye. */
-    caustic: 0.22, catchlight: 2.5,
+    caustic: 0.9, catchlight: 2.5,
+    /** How much of the sky the wet cornea over the iris mirrors. */
+    cornea: 0.06,
+    /** How dark the skin goes at the waterline, shaded by the sea, against its tone 2.5 m up. */
+    waterline: 0.72,
     /** How far down through the sea its body and flippers still show, per metre of water looked through. */
     clarity: 0.32,
-    /** How much brighter than its skin above the sky light lies on it under the glass, so the pale flippers show at dawn. */
-    glass: 2.5,
+    /** How bright the sky light lies on it under the glass, as a multiple of the sky's own ambient brightness. */
+    glass: 5.2,
   },
 };
 
