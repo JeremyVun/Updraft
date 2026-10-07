@@ -236,9 +236,21 @@ flipper is small and dark against the sea from the hold that keeps the sun in fr
 
 ### Phase N3c: the whale's body
 Owns: `whale.ts`, `whaleShader.ts`, `anatomy.ts`, the shape, skin and eye in `sleeper.ts` (not its API, pose or lift),
-`tuning.whaleLook`; judged in N3b's frames, and far off on the first crossing.
-Gate: typecheck; build; `sea-logic-check`; no first-use stalls; final stills (landscape 1600×900 and portrait about
-430×932) at each keyframe and the first crossing's dive beside the concept, opened for Jeremy.
+`tuning.whaleLook`; the flipper's root and rest pose too where its shape needs them (keeping the `fin` clearance);
+judged in N3b's frames, and far off on the first crossing. The concept's skin is simplified for the build
+(`notes.md`): the target is form that reads (head, jaw line, throat, eye, flipper), never rock-like noise.
+Gate: typecheck; build; `sea-logic-check`; `net-whale-check` `line`, `fin`; no first-use stalls; stills at each
+keyframe and the first crossing's dive, landscape and portrait, beside the concept.
+Done: [ ]
+
+### Phase N3d: the net up close and the last frames
+After N3c. Owns: the net's look (`net.ts`, `netShader.ts`), the pod's leaps at free, the bird's read at the flipper,
+small hold changes. The mesh reads as rope lying in sags and folds over the head rather than a grid printed on the
+skin; the corks read as the concept's cream spotted floats, cheated larger for legibility where needed (Claude's
+call, 2026-10-08), the float in her mittens still one a child can catch; the drifting raft is not a mat of corks.
+Gate: typecheck; build; `net-whale-check` `sweeps`, `line`, `fin`, `saves`; `sea-logic-check`; final stills (landscape
+1600×900 and portrait about 430×932) at each keyframe and the first crossing's dive beside the concept, opened for
+Jeremy.
 Done: [ ]
 
 ### Phase N4: docs on approval
