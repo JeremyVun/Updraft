@@ -17,11 +17,11 @@ const luminance = (c: THREE.Color) => c.r * 0.2126 + c.g * 0.7152 + c.b * 0.0722
 /** The hues it and the light it takes go toward, each at the brightness of what it tints. */
 const HUE = {
   /** Its body risen far off, lilac grey; come close, steel blue; closed round, slate violet. */
-  far: new THREE.Color(0.94, 0.88, 1.1),
+  far: new THREE.Color(0.86, 0.84, 1.14),
   near: new THREE.Color(0.74, 0.85, 1.16),
   night: new THREE.Color(0.86, 0.86, 1.1),
-  /** The low sun on its crest. */
-  crest: new THREE.Color(2.2, 0.62, 0.32),
+  /** The low sun on its billows' tops. */
+  crest: new THREE.Color(2.4, 0.82, 0.48),
   /** What is left of the sunset aloft once the sun has gone. */
   rose: new THREE.Color(1.3, 0.7, 0.92),
   cold: new THREE.Color(0.84, 0.92, 1.16),
@@ -60,12 +60,13 @@ export class DarkBank {
 
   /**
    * The one progression: 0 clear dusk, `fog.far` risen far off, `fog.near` come close with the sun taken (it stays
-   * there while it holds behind her), 1 closed round and dark.
+   * there while it holds behind her), 1 closed round and dark. It goes on steadily while the front, easing in and
+   * out, is still far off, so the light drains through the whole approach rather than at its end.
    */
   get progress(): number {
-    const { far, farCome, near } = tuning.drowned.fog;
+    const { far, near, risen } = tuning.drowned.fog;
     const come = THREE.MathUtils.clamp(this.reach / HELD, 0, 1);
-    return far * Math.min(this.rise, come / farCome) + (near - far) * Math.max(0, (come - farCome) / (1 - farCome)) + (1 - near) * this.close;
+    return far * Math.min(1, this.rise / risen) + (near - far) * Math.sqrt(come) + (1 - near) * this.close;
   }
 
   /** Where its front is, `aside` metres along it from the way (+ to its right as it comes), for whoever watches it. */
@@ -89,9 +90,9 @@ export class DarkBank {
 
   /** `?fog=` stands it where the progression puts it, whatever the story is doing. */
   private force(p: number): void {
-    const { far, farCome, near } = tuning.drowned.fog;
-    this.rise = THREE.MathUtils.clamp(p / far, 0, 1);
-    this.reach = (farCome * this.rise + (1 - farCome) * THREE.MathUtils.clamp((p - far) / (near - far), 0, 1)) * HELD;
+    const { far, near, risen } = tuning.drowned.fog;
+    this.rise = p < far ? risen * p / far : 1;
+    this.reach = THREE.MathUtils.clamp((p - far) / (near - far), 0, 1) ** 2 * HELD;
     this.close = THREE.MathUtils.clamp((p - near) / (1 - near), 0, 1);
   }
 
@@ -110,27 +111,34 @@ export class DarkBank {
     const k = tuning.drowned.fog, d = tuning.drowned.dark;
     const { far, near } = k;
     const p = this.progress;
+    const risen = Math.min(1, this.rise / k.risen);
 
     darkWayPoint(this.reach, this.front);
     darkWayPoint(this.reach - 40, this.back);
     if (this.front.distanceToSquared(this.back) > 1) this.ahead.subVectors(this.front, this.back).normalize();
     u.uSeaFog.value.set(this.front.x, this.front.y, this.ahead.x, this.ahead.y);
     // Low on the horizon as it rises, and standing higher the nearer it comes.
-    const top = k.top * (0.25 + 0.75 * smooth(this.rise, 0, 1)) * (0.7 + 0.3 * smooth(p, far, near)) * (1 + 0.4 * this.close);
+    const drawn = smooth(p, far, near);
+    const top = k.top * (0.3 + 0.7 * smooth(risen, 0, 1)) * THREE.MathUtils.lerp(k.topFar, 1, drawn) * (1 + 0.3 * this.close);
     u.uSeaFogShape.value.set(top, d.flank / (d.halfWidth * d.halfWidth), this.close, amount);
-    u.uSeaFogSides.value.set(d.halfWidth, d.halfWidth * 1.8, d.wing * d.halfWidth, (d.wing + 0.3) * d.halfWidth);
+    const wing = THREE.MathUtils.lerp(d.wingFar, d.wing, drawn), fade = THREE.MathUtils.lerp(d.wingFadeFar, d.wingFade, drawn);
+    u.uSeaFogSides.value.set(d.halfWidth, d.halfWidth * 1.8, wing * d.halfWidth, (wing + fade) * d.halfWidth);
 
-    const taken = smooth(p, far + 0.02, near) * here;
+    const taken = THREE.MathUtils.clamp((p - k.drainFrom) / (near - k.drainFrom), 0, 1) * here;
     const night = smooth(p, near + 0.05, 1) * here;
-    const crestGone = smooth(p, far + 0.05, near + 0.12);
+    const crestGone = smooth(p, far, near + 0.1);
     // White is what the light makes of it: as bright as the sky round it lights it, never a white of its own.
     const sky = luminance(u.uSkyAmbient.value) * 0.9 + luminance(u.uSkyHorizon.value) * 0.3;
     this.body.copy(HUE.far).lerp(HUE.near, taken).lerp(HUE.night, night)
-      .multiplyScalar(sky * k.body);
-    this.crest.copy(HUE.crest).multiplyScalar(luminance(u.uSunColor.value) * k.crest * (1 - 0.9 * crestGone));
-    u.uSeaFogBody.value.set(this.body.r, this.body.g, this.body.b, k.air * smooth(p, far, near) * (1 - 0.6 * this.close));
+      .multiplyScalar(sky * THREE.MathUtils.lerp(k.body, k.bodyNear, taken));
+    // Once the sun has gone from it only a little rose is left along its top, a touch lighter than its body.
+    this.crest.copy(HUE.crest).multiplyScalar(luminance(u.uSunColor.value) * k.crest)
+      .lerp(tmp.copy(HUE.rose).multiplyScalar(luminance(this.body) * 1.25), crestGone);
+    u.uSeaFogBody.value.set(this.body.r, this.body.g, this.body.b, k.air * risen * THREE.MathUtils.lerp(k.airFar, 1, drawn) * (1 - 0.6 * this.close));
     u.uSeaFogCrest.value.set(this.crest.r, this.crest.g, this.crest.b, k.stir * night);
-    u.uSeaFogRim.value = THREE.MathUtils.lerp(3.5, 1, crestGone);
+    u.uSeaFogRim.value = THREE.MathUtils.lerp(0.32, 0.12, crestGone) * top;
+    u.uSeaFogHaze.value = THREE.MathUtils.lerp(k.haze, k.hazeNear, drawn) * (1 - this.close);
+    u.uSeaFogReach.value = THREE.MathUtils.lerp(k.airReachFar, k.airReach, drawn);
 
     if (taken <= 0) return;
     tint(u.uSunColor.value, HUE.cold, 0.5 * taken, 1 - 0.88 * taken);
