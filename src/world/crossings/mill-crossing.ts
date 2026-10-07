@@ -39,6 +39,7 @@ export class MillCrossing {
   private valveOn = false;
   private readonly at = new THREE.Vector3();
   private readonly look = new THREE.Vector3();
+  private readonly ahead = new THREE.Vector3();
 
   constructor(spot: MillSpot, readonly way: MillWay, private readonly cast: CrossingCast) {
     this.mill = new Windmill(spot);
@@ -151,7 +152,7 @@ export class MillCrossing {
     c.balance = THREE.MathUtils.lerp(c.balance, 0.25 + 0.1 * Math.sin(this.t * 1.3), 1 - Math.exp(-dt * 2));
     c.lean = 0.06 + 0.05 * Math.sin(this.t * 0.9) + m.sail * 0.15;
     c.reachFor(1, m.stockAt(k.stand + 0.2, this.look));
-    c.lookAt = this.way.stepOff;
+    c.lookAt = this.ahead.copy(this.way.stepOff).setY(this.way.stepOff.y + 1.2);
   }
 
   /** Let go of the stock, up the rail to its tip, and a stride off its end onto the high roof. */

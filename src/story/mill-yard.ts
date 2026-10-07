@@ -37,12 +37,12 @@ const GABLE = HIGH.x + HIGH.len / 2;
 const WALL_FROM = GABLE;
 const WALL_TO = -0.6;
 const STEP_OFF = new THREE.Vector3(GABLE - 0.4, RIDGE, SAIL.forward);
-const ONWARD = new THREE.Vector3(GABLE - 3, RIDGE, SAIL.forward);
-const KITTEN = new THREE.Vector3(GABLE - 5.2, RIDGE + 0.06, SAIL.forward);
+const ONWARD = new THREE.Vector3(GABLE - 1.9, RIDGE, SAIL.forward);
+const KITTEN = new THREE.Vector3(GABLE - 3.3, RIDGE + 0.06, SAIL.forward);
 
 const WAY = {
   wall: { x0: WALL_TO, z0: WALL_Z, x1: WALL_FROM + 0.4, z1: WALL_Z, halfWidth: 0.3, height: WALL_TOP },
-  ridge: { x0: TIP.x - 0.04, z0: SAIL.forward, x1: HIGH.x - HIGH.len / 2 + 1.2, z1: SAIL.forward, halfWidth: 0.4, height: RIDGE },
+  ridge: { x0: TIP.x + 0.15, z0: SAIL.forward, x1: HIGH.x - HIGH.len / 2 + 1.2, z1: SAIL.forward, halfWidth: 0.4, height: RIDGE },
 } satisfies Record<string, Deck>;
 
 /** The mill's own voice: the dry axle as it starts, wood working through the turn, the brake as it settles, the linen. */
@@ -64,6 +64,8 @@ export class MillYard {
   private readonly local = new THREE.Vector3();
   private readonly eye = new THREE.Vector3();
   private readonly target = new THREE.Vector3();
+  /** 0 while she waits and rides, easing to 1 once she is off the sail, as the lens turns to the way ahead. */
+  private away = 0;
 
   constructor(private readonly cast: Cast, near: THREE.Vector3, facing = 2.65) {
     this.facing = facing;
@@ -112,6 +114,7 @@ export class MillYard {
   play(): void {
     const c = this.cast.child;
     this.playing = true;
+    this.away = 0;
     this.crossing.reset();
     this.decks.length = Object.keys(WAY).length;
     c.decks = this.decks;
@@ -147,6 +150,8 @@ export class MillYard {
   update(dt: number, camera: THREE.PerspectiveCamera | null): void {
     if (!camera || !this.playing) return;
     this.crossing.update(dt, camera);
+    const off = this.crossing.phase === 'leaving' || this.crossing.phase === 'over';
+    this.away = off ? Math.min(1, this.away + dt / 4) : 0;
   }
 
   /**
@@ -167,11 +172,13 @@ export class MillYard {
       this.eye.set(-6.5, 4.4, 11);
       this.target.set(-0.6, 3.6, -1);
     } else if (upright) {
-      this.eye.set(x + 3, 1.6 + 0.75 * p.y, 19);
-      this.target.set(x - 0.4, p.y + 1.6, 0);
+      const ahead = THREE.MathUtils.smootherstep(this.away, 0, 1);
+      this.eye.set(x + 1.5 - 2.5 * ahead, 2.4 + 0.7 * p.y, 15.5);
+      this.target.set(x + 0.6 - 3 * ahead, p.y + 1.9, 0);
     } else {
-      this.eye.set(x - 2.6, 1.9 + 0.72 * p.y, 12.5 - rise);
-      this.target.set(x + 0.9, 1.0 + 0.8 * p.y, 0);
+      const ahead = THREE.MathUtils.smootherstep(this.away, 0, 1);
+      this.eye.set(x + 0.4 - 3.5 * ahead, 2.5 + 0.7 * p.y + 0.6 * ahead, 12.5 - 0.8 * rise);
+      this.target.set(x + 0.9 - 5.5 * ahead, 0.8 + 0.8 * p.y, 0);
     }
     this.at(this.eye);
     this.at(this.target);

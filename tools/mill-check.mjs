@@ -183,6 +183,8 @@ const RUNS = {
     expect(fastest <= K.capAboard + 1e-3, `with her aboard it turned at ${fastest} rad/s, over the cap`);
     const lift = Math.max(...riding.map((f) => f.child[1])) - Math.min(...riding.map((f) => f.child[1]));
     const kinds = [...new Set(events.map((e) => e.kind))];
+    const leaving = frames.findIndex((f) => f.phase === 'leaving'), done = frames.findIndex((f) => f.phase === 'over');
+    game.notes.push(`from the top dwell to the high roof: ${((done - leaving) / 60).toFixed(1)} s`);
     game.notes.push(`rode ${arc.toFixed(2)} rad, lifted ${lift.toFixed(2)} m, feet within ${gap.toFixed(3)} m of the rail, steepest ${steep.toFixed(2)} rad, biggest frame move ${step.most.toFixed(3)} m (${step.at}), fastest ${fastest.toFixed(3)} rad/s; heard ${kinds.join(', ')}`);
   },
 
