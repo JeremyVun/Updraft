@@ -148,7 +148,15 @@ the loop's free end for the bill) and `AFTER_BREATH = 'line'` with `line` and `f
 Gate: typecheck; build; the check with real gestures: circles at the blowhole finish the breath; the breeze, idle
 and sweeps never progress it before its valve; the valve finishes it by its dolphin; each negative proven to bite by
 breaking its guard once. One smoke still set at `k1` and `k2`.
-Done: [ ]
+Done: [x] `591cfc4a..518bf634` on `sea-net`. `sealife.net` (`net.ts`, `netShader.ts`): `lift`, `peel`, `loop`, `drift`
+(0..1; `posed = true` lets a QA eval scrub them), `float` (the leader's near cork: `position`, `velocity`,
+`push(impulse)`), `loopEnd` (`held` pins it to the bill). Draped once by `surfaceAt`, then carried by the anchors.
+Strands drawn at true coverage, so no shimmer. The valve's dolphin leaps over the crown and flicks the mesh up
+(`lendDolphin`, `poseDolphin`, `handBackDolphin`, reusable for N2b's valves). Save `whale-breath`. The whale's call
+(A2 to D3, settling on B2) at the eye and at the farewell flukes, and a far echo on `toLines`. Left: the
+hold's low camera sees the crown edge-on, so the net reads only as a band of corks; mid-peel the flank cells stretch
+long; the loop is mostly under water from the hold. After merging `sea-look`, re-check `ACROSS_NEAR` (the near edge
+above the eye) and `valveClear`. The new sounds still need an entry in `docs/contracts/audio.md`.
 
 ### Phase N2b: the child and the cygnet
 Owns: steps 2 and 3 in `net-whale.ts` with their invitations and dolphin valves, the child's catch and haul, the
