@@ -45,8 +45,9 @@ export class TreeCrossing {
   private readonly look = new THREE.Vector3();
   private readonly lineDir = new THREE.Vector2();
 
-  constructor(spot: TreeSpot, readonly way: TreeWay, private readonly cast: CrossingCast) {
-    this.tree = new ToppleTree(spot, cast.wind);
+  /** Given a tree already standing in the world, it takes that one over. */
+  constructor(spot: TreeSpot | ToppleTree, readonly way: TreeWay, private readonly cast: CrossingCast) {
+    this.tree = spot instanceof ToppleTree ? spot : new ToppleTree(spot, cast.wind);
   }
 
   get done(): boolean {

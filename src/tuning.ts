@@ -1750,6 +1750,11 @@ export const tuning = {
       riseFor: 9, comeAfter: 5, comeFor: 16, holdBehind: 20,
     },
     /**
+     * What she can make by herself on her way over the roofs: a hop from one surface to the next across at most
+     * `hopReach` metres of water, at most `hopUp` up and `hopDown` down. Decks that touch she simply walks on between.
+     */
+    way: { hopReach: 1.0, hopUp: 0.4, hopDown: 1.1 },
+    /**
      * The untended boat taken off the slates by the fog's breath: seconds after she is up on the ridge, how hard the
      * hull is knocked as it swings off, its drift (m/s) and the seconds it takes to gather it; and when (seconds into
      * the drift) she looks back at it from the ridge, and for how long.

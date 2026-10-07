@@ -42,8 +42,9 @@ export class SwingCrossing {
   private readonly projected = new THREE.Vector3();
   private fromYaw = 0;
 
-  constructor(spot: SwingSpot, readonly way: SwingWay, private readonly cast: CrossingCast) {
-    this.swing = new RopeSwing(spot);
+  /** Given a swing already hanging in the world, it takes that one over. */
+  constructor(spot: SwingSpot | RopeSwing, readonly way: SwingWay, private readonly cast: CrossingCast) {
+    this.swing = spot instanceof RopeSwing ? spot : new RopeSwing(spot);
   }
 
   get done(): boolean {
