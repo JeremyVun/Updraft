@@ -13,6 +13,7 @@ import { fixInPlace } from '../gl/fixed';
 import { ToppleTree } from './crossings/topple-tree';
 import { RopeSwing } from './crossings/rope-swing';
 import { DarkBank } from './drowned-dark';
+import { WOOD_LANDING } from './wood';
 import { TALL_AND_TINY, WASHING_PAIR, villageShape } from './drowned-shape';
 import { WashTub } from './wash-tub';
 import {
@@ -1276,9 +1277,9 @@ const PAIR = [new THREE.Vector2(SPIRE.x - 4, SPIRE.z), new THREE.Vector2(LIGHTHO
   new THREE.Vector2((SPIRE.x + LIGHTHOUSE.x) / 2, (SPIRE.z + LIGHTHOUSE.z) / 2)];
 const LOOKOUTS = [new THREE.Vector2(-3.5, -1277), new THREE.Vector2(-12.5, -1395), new THREE.Vector2(-30, -1420),
   new THREE.Vector2(22.5, -1492)];
-/** The dark's way in from far out to the stranding, carried on past it, and the storm's way out from the nave. */
+/** The dark's way in from far out to the stranding, carried on past it, and the storm's way from the nave to the wood. */
 const DARK_IN = [DARK_WAY[1].clone().addScaledVector(new THREE.Vector2().subVectors(DARK_WAY[0], DARK_WAY[1]), 1.6), DARK_WAY[1]];
-const STORM_OUT = [new THREE.Vector2(NAVE.x, NAVE.z), new THREE.Vector2(-30, -1700)];
+const STORM_OUT = [new THREE.Vector2(NAVE.x, NAVE.z), ...DROWNED_CHANNEL.slice(5), WOOD_LANDING];
 const STAIRS_FOOT = new THREE.Vector2(100, -1236);
 
 /** How far the drift has come when the boat strands; the channel beyond it is never sailed. */
@@ -1300,7 +1301,7 @@ function free(f: Footprint, stands: THREE.Vector2[]): boolean {
     new THREE.Vector2(f.x + a * f.hl * c + b * f.hd * s, f.z - a * f.hl * s + b * f.hd * c));
   if (corners.some((p) => inClearing(p.x, p.y, 1.5) || onCatGround(p.x, p.y, 3))) return false;
   const drift = offChannel(f.x, f.z);
-  if ((drift.s < STRANDED_AT && drift.d < 15 + r) || toSegment(f.x, f.z, STORM_OUT[0], STORM_OUT[1]) < 16 + r
+  if ((drift.s < STRANDED_AT && drift.d < 15 + r) || STORM_OUT.some((p, i) => i > 0 && toSegment(f.x, f.z, STORM_OUT[i - 1], p) < 16 + r)
     || toSegment(f.x, f.z, DARK_IN[0], DARK_IN[1]) < 26 + r) return false;
   if (f.z > -1250 || f.z < -1680 || Math.hypot(f.x - STAIRS_FOOT.x, f.z - STAIRS_FOOT.y) < 60) return false;
   if (Math.hypot(f.x - PAIR[0].x, f.z - PAIR[0].y) < 32 || Math.hypot(f.x - PAIR[1].x, f.z - PAIR[1].y) < 30) return false;

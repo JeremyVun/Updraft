@@ -463,10 +463,10 @@ void main() {
       if (toward < -0.02 && t > 0.0 && abs(along) < ${glsl(SUNK_DOOR.wallHalf)} && hit.y > ${glsl(SUNK_DOOR.wallFoot)}) {
         float door = (1.0 - smoothstep(${glsl(SUNK_DOOR.half - 0.04)}, ${glsl(SUNK_DOOR.half)}, abs(along)))
           * (1.0 - smoothstep(${glsl(SUNK_DOOR.top - 0.04)}, ${glsl(SUNK_DOOR.top)}, hit.y)) * smoothstep(${glsl(SUNK_DOOR.foot)}, ${glsl(SUNK_DOOR.foot + 0.04)}, hit.y);
-        vec3 wallAlb = mix(vec3(0.15, 0.14, 0.125), vec3(0.38, 0.034, 0.024), door);
+        vec3 wallAlb = mix(vec3(0.15, 0.14, 0.125), vec3(0.46, 0.04, 0.028), door);
         float down = -hit.y;
         vec3 lit = wallAlb * (uSkyAmbient * 1.25 * exp(-uAbsorb * down * 1.4) + uSunColor * max(uSunDir.y, 0.0) * 0.6 * sh * exp(-uAbsorb * down));
-        float seenWall = exp(-t * 0.3) * (1.0 - smoothstep(${glsl(SUNK_DOOR.wallHalf - 0.4)}, ${glsl(SUNK_DOOR.wallHalf)}, abs(along)));
+        float seenWall = exp(-t * 0.2) * (1.0 - smoothstep(${glsl(SUNK_DOOR.wallHalf - 0.4)}, ${glsl(SUNK_DOOR.wallHalf)}, abs(along)));
         body = mix(body, lit * exp(-uAbsorb * t), seenWall);
       }
     }
