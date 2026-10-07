@@ -45,7 +45,7 @@ const POD_WAIT_PACE = 2;
 const POD_WAY = [new THREE.Vector2(9, 0), new THREE.Vector2(-40, 26)];
 const POD_PACE = 4;
 const POD_SPREAD = 0.45;
-/** Seconds the child holds a point toward a breath she has seen, and the least between two. */
+/** Seconds the child holds a point toward a breath she has seen. */
 const POINT_FOR = 2.6;
 
 /** Where the dolphins are asked to run this frame, for `SeaLife.dolphinsWith`. */
@@ -85,11 +85,11 @@ export class NetWhale {
   /** How far the player's circling has brought its first full breath, 0..1 (the stand-in for the net's breath). */
   progress = 0;
   private readonly dir = new THREE.Vector2();
-  private readonly lead = new THREE.Vector2();
   private still = 0;
   /** Seconds at rest in a step without progress: the invitation, then the valve. */
   private waiting = 0;
   private released = -1;
+  private rested = false;
   private rewarded = false;
   private nextWave = 0;
   /** When she began pointing toward its breath, or -1. */
@@ -121,7 +121,6 @@ export class NetWhale {
    * `tuning.netWhale.eyeDistance` off to port, its length running away into the haze to starboard.
    */
   constructor(private readonly cast: Cast, lead: THREE.Vector2, rest: THREE.Vector2) {
-    this.lead.copy(lead);
     this.dir.subVectors(rest, lead).normalize();
     this.yaw = Math.atan2(this.dir.x, this.dir.y);
     this.rest.set(rest.x, 0, rest.y);
@@ -148,17 +147,21 @@ export class NetWhale {
     if (step === 'gone' && whale.phase !== 'gone') whale.vanish();
   }
 
-  /** At rest beside it before the first step, and once it has gone with the cygnet back in her arms. */
+  /**
+   * Taken at rest beside it before the first step, and kept until it has gone and the cygnet is back in her arms,
+   * so nothing in between ever falls back to the save before it.
+   */
   get checkpoint(): string | null {
     if (this.step === 'gone' && this.cygnetIn === 'cradle' && !this.cast.carry.busy) return 'whale-gone';
-    if (this.step === 'breath' && this.progress === 0 && this.still > 1) return 'whale-rest';
-    return null;
+    if (this.step === 'breath' && this.progress === 0 && this.still > 1) this.rested = true;
+    return this.rested ? 'whale-rest' : null;
   }
 
   /** A save at rest finds it lying there still and the boat held; one from after finds the way clear. */
   restore(point: string): void {
     if (point === 'whale-rest') {
       this.led = true;
+      this.rested = true;
       this.waited = 1e-3;
       this.step = 'breath';
       this.stepTime = 0;

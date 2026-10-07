@@ -63,7 +63,7 @@ for(const [fps,gust,portrait,circling] of [[60,0,false,false],[30,20,false,true]
   const f=fixture(gust,portrait,false,circling);
   const {chapter:c,boat:b,cygnet:k,rig,sealife}=f;
   let swimEdge=0,swimWorst=null;let heroEdge=0,worstGap=0,clipped=0,swimFrames=0,swimStart=0,leapAt=0,completed=false,lastProgress=0;
-  const transitions=[],steps=[];
+  const transitions=[],steps=[],saves=[];
   let last='',step='',rewards=0,blowholeEdge=0,eyeOpen=0,lastSeen=0;
   const ndc=new THREE.Vector3();
   for(let i=0;i<fps*420;i++) {
@@ -72,6 +72,7 @@ for(const [fps,gust,portrait,circling] of [[60,0,false,false],[30,20,false,true]
     if(c.swim!==last){transitions.push([c.swim,+time.toFixed(2)]);last=c.swim;}
     const w=c.whale;
     if(w.step!==step){steps.push([w.step,+time.toFixed(1)]);step=w.step;}
+    const point=c.checkpoint;if(point&&point!==saves[saves.length-1])saves.push(point);
     rewards+=takeCues().filter(q=>q==='restored').length;
     // At rest the blowhole is held well inside the frame, with room round it to circle.
     if(w.step==='breath'&&w.stepTime>3)blowholeEdge=Math.max(blowholeEdge,...ndc.copy(w.whale.blowhole).project(rig.camera).toArray().slice(0,2).map(Math.abs));
@@ -108,6 +109,7 @@ for(const [fps,gust,portrait,circling] of [[60,0,false,false],[30,20,false,true]
   assert.equal(clipped,0,`swimmer stays inside the safe frame: ${JSON.stringify({fps,gust,portrait,swimWorst,transitions})}`);
   assert(leapAt>0&&swimStart>leapAt&&swimStart>tuning.seaPassage.swimNotBefore,'the pod arrives and plays its leap before the swim');
   assert.deepEqual(steps.map(([s])=>s),['approach','breath','free','gone'],'the whale\'s steps go in order');
+  assert.deepEqual(saves,['swim','whale-rest','whale-gone'],'saves after the swim, at rest beside it, and after it has gone, never back');
   assert(eyeOpen,'its first full breath opens its eye before it is free');
   assert.equal(rewards,1,'freeing it is rewarded once');
   assert(blowholeEdge>0&&blowholeEdge<0.75,`the blowhole is an easy target at rest: ${blowholeEdge.toFixed(2)}`);
