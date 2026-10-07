@@ -774,6 +774,28 @@ whale is the past, ancient and burdened by the net of old ignorance, and freeing
 sky mirror puts the future right. Claude drives the creative work and brings it to Jeremy when Claude is happy with
 it, judged by playing it in motion. Astra is no longer used (Jeremy, 2026-10-08: "don't use astra anymore").
 
+**Claude's direction for the encounter** (2026-10-08, from Jeremy's brief above). The Ghibli touchstone is the river
+spirit in *Spirited Away*: an ancient being weighed down by what people left behind, freed by a child, leaving
+renewed and glad. Here the net is the past's old carelessness lying on something kind; the child and the bird take it
+off. Five movements, each with its own feeling, each handing on to the next on screen:
+1. **Awe.** A long low island in the gold haze breathes: a slow sigh of mist and the sea lifting round it. She knows
+   it before the player does. The camera comes down as the boat slows, so it grows above the horizon.
+2. **Sorrow.** At rest beside its head: an old faded net grown with weed lies over it, its breath sputtering through
+   the mesh, the eye heavy and tired. The camera holds still and the score thins.
+3. **Courage.** The breath (the player's circles; the eye opens and finds her; its low call, the friend's greeting);
+   the haul (her pulls; the net slides off the bared head, water streaming; its eye on her); the bird's swim and the
+   flipper it lifts for the wind's touch.
+4. **Release.** The river-spirit moment: it breathes free; the plume's mist drifts down over the boat in the gold
+   light; its call turns glad; the sea round it brightens; the net, let go, sinks slowly away into the deep and is
+   gone; the dolphins leap; she waves and the bird calls.
+5. **Farewell.** It dives as a whale does, the flukes rising once with the pale pattern from the first crossing, and
+   its swell lifts the boat; then the sea stills toward the mirror's glass, the future next.
+What makes it a giant and a dream rather than a model: a form from a real whale at dream size; everything about it
+slow and heavy (a breath every ten seconds or so; nothing quick but the eye, and that slow); detail small against its
+bulk; the far length lost in haze; the sea answering its breath; a low camera, held frames, one camera intention per
+beat (as the owl's bend has); the child and the bird acting at every beat; nothing on it moving like an object in the
+wind. Judged by playing it beside the clouds and the owl.
+
 This consolidates the above for the build. The concept frames `comps/crossings/whale-net/k1–k5` and `k2-portrait`
 (Astra, 2026-10-07, painted over real frames of this chapter, `ref-sea-*.png`) are now only a reference for
 composition: their whale's form was wrong (a round tube) and is not followed. `notes.md` beside them has the layout
@@ -879,7 +901,8 @@ The sequence:
   over" at the end which is very weird"): the head goes down, the long back arches slowly forward and slides under,
   the flukes rise high once as if waving and slip under; its swell lifts the boat. The pod
   goes with it, the limit eases off, and the sea goes still into the mirror's glass. The net starts drifting as the
-  loop slips off, working loose into a raft with its corks round its edges, so it is its own shape by the spout; the
+  loop slips off, working loose into a raft with its corks round its edges, so it is its own shape by the spout, then
+  sinks slowly away into the deep and is gone by the dive (Claude's call, 2026-10-08: the past let go); the
   pod sets off as the bird is lifted in, and three dolphins leap clear of the water round the head at the spout,
   caught by the sun. Free, the whale first swings its head away and slides clear of the boat (the eye from about 15.6
   to 19 m off), so by the spout it lies whole in the middle distance; the boat stays at rest.
