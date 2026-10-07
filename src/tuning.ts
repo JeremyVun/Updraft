@@ -1485,7 +1485,7 @@ export const tuning = {
      */
     holdMove: 5, holdLookY: 4.5, holdToward: 0.5,
     lineDistance: 11, lineHeight: 4.8, lineBearing: 0.3, lineLookY: 3.4, lineToward: 0.36,
-    flipperDistance: 11.5, flipperHeight: 7.2, flipperBearing: 0.36, flipperLookY: 7, flipperToward: 0.4,
+    flipperDistance: 11.5, flipperHeight: 7.2, flipperBearing: 0.36, flipperLookY: 8, flipperToward: 0.4,
     /**
      * A phone's holds: on the line from what matters through the boat, turned `turn` radians round (toward astern
      * when negative), so boat, step and head stack up its tall frame past the sail's side; `distance` behind the boat and `height` up,
