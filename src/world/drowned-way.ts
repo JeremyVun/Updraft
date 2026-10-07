@@ -4,6 +4,7 @@ import type { TreeSpot } from './crossings/topple-tree';
 import type { TreeWay } from './crossings/tree-crossing';
 import type { SwingSpot } from './crossings/rope-swing';
 import type { SwingWay } from './crossings/swing-crossing';
+import type { HouseType } from './drowned-houses';
 
 /**
  * Her way over the roofs, laid by hand among the generated village: from the roof the becalmed boat drifts against,
@@ -36,6 +37,8 @@ export interface PlacedHouse {
   pots?: number;
   /** No heron perches on its chimney. */
   quiet?: boolean;
+  /** Off her way, one of the kit's houses with more character than her plain roofs. */
+  look?: HouseType;
 }
 
 /** A garden wall: a run of coping from (x0, z0) to (x1, z1), its top at `top`. */
@@ -168,7 +171,7 @@ export const CAT_HOUSE: PlacedHouse = (() => {
 /** The roof east of the stranding, in the stranded boat's view. */
 const EAST_OF_STRAND: PlacedHouse = {
   x: 14.5, z: -1365.5, yaw: 0.32, len: 10, depth: 6, wall: 3.4, rise: 3.3, sink: 3.3, thatched: false,
-  stacks: [-1], stack: 1.5, pots: 1, quiet: true,
+  stacks: [-1], stack: 1.5, pots: 1, quiet: true, look: 'swayback',
 };
 
 /**
@@ -176,14 +179,14 @@ const EAST_OF_STRAND: PlacedHouse = {
  * through a village rather than laid out for her.
  */
 export const NEIGHBOURS: PlacedHouse[] = [
-  { x: -31, z: -1378, yaw: 0.95, len: 9, depth: 5.6, wall: 3.4, rise: 3.2, sink: 2.4, thatched: true, stacks: [1], stack: 1.3 },
-  { x: -27, z: -1421, yaw: -0.15, len: 14, depth: 5.2, wall: 3.4, rise: 3.0, sink: 4.6, thatched: false, stacks: [-1, 1], stack: 1.0 },
-  { x: -18, z: -1442, yaw: 0.5, len: 9.5, depth: 5.8, wall: 3.4, rise: 3.4, sink: 2.9, thatched: true, stacks: [-1], stack: 1.6 },
-  { x: 7, z: -1399, yaw: -0.55, len: 8.5, depth: 5.2, wall: 3.4, rise: 2.8, sink: 3.1, thatched: false, stacks: [1], stack: 1.2, roll: 0.12 },
-  { x: 18, z: -1386, yaw: 0.2, len: 9.5, depth: 5.6, wall: 3.4, rise: 3.1, sink: 4.2, thatched: false, stacks: [-1], stack: 1.4 },
-  { x: 25, z: -1431, yaw: 1.42, len: 13, depth: 7.5, wall: 4.4, rise: 3.6, sink: 3.4, thatched: false, stacks: [], stack: 0 },
-  { x: -14, z: -1457, yaw: 0.1, len: 16, depth: 5.4, wall: 3.4, rise: 3.0, sink: 3.4, thatched: false, stacks: [-1, 1], stack: 1.2 },
-  { x: 28, z: -1450, yaw: 0.75, len: 9, depth: 5.8, wall: 3.4, rise: 3.3, sink: 3.0, thatched: true, stacks: [1], stack: 1.5 },
+  { x: -31, z: -1378, yaw: 0.95, len: 9, depth: 5.6, wall: 3.4, rise: 3.2, sink: 2.4, thatched: true, stacks: [1], stack: 1.3, look: 'thatch' },
+  { x: -27, z: -1421, yaw: -0.15, len: 14, depth: 5.2, wall: 3.4, rise: 3.0, sink: 4.6, thatched: false, stacks: [-1, 1], stack: 1.0, look: 'swayback' },
+  { x: -18, z: -1442, yaw: 0.5, len: 9.5, depth: 5.8, wall: 3.4, rise: 3.4, sink: 2.9, thatched: true, stacks: [-1], stack: 1.6, look: 'thatch' },
+  { x: 7, z: -1399, yaw: -0.55, len: 8.5, depth: 5.2, wall: 3.4, rise: 2.8, sink: 3.1, thatched: false, stacks: [1], stack: 1.2, roll: 0.12, look: 'openShutter' },
+  { x: 18, z: -1386, yaw: 0.2, len: 9.5, depth: 5.6, wall: 3.4, rise: 3.1, sink: 4.2, thatched: false, stacks: [-1], stack: 1.4, look: 'cottage' },
+  { x: 25, z: -1431, yaw: 1.42, len: 13, depth: 7.5, wall: 4.4, rise: 3.6, sink: 3.4, thatched: false, stacks: [], stack: 0, look: 'cottage' },
+  { x: -14, z: -1457, yaw: 0.1, len: 16, depth: 5.4, wall: 3.4, rise: 3.0, sink: 3.4, thatched: false, stacks: [-1, 1], stack: 1.2, look: 'tucked' },
+  { x: 28, z: -1450, yaw: 0.75, len: 9, depth: 5.8, wall: 3.4, rise: 3.3, sink: 3.0, thatched: true, stacks: [1], stack: 1.5, look: 'thatch' },
 ];
 
 /** Where the stem rests, along the strand's ridge; she steps out onto the slates beside it and climbs up. */
@@ -323,7 +326,7 @@ const TOWER_SOUTH = NAVE.z + 2.45;
 const RAILINGS_TOP = -0.3;
 
 /** A roof where the church stood once, off her way. */
-const OLD_SITE: PlacedHouse = { ...sunk({ yaw: 0.08, len: 9.5, depth: 5.6, wall: 3.4, rise: 3.0, thatched: true, stacks: [1], stack: 1.4 }, 2.3),
+const OLD_SITE: PlacedHouse = { ...sunk({ yaw: 0.08, len: 9.5, depth: 5.6, wall: 3.4, rise: 3.0, thatched: true, stacks: [1], stack: 1.4, look: 'lowCap' }, 2.3),
   x: 3, z: -1446 };
 
 /** Garden walls round the way, their copings just out of the water; the railings stand out of it on drowned walls. */
