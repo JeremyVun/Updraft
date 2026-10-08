@@ -557,9 +557,14 @@ where they differ; the drift, the village, the look and the storm stand.
    answer, nearer each time: the lost boat drifting home to the sound (things drift home: nothing is lost). When it is
    near, the fog has drawn back to the water round the nave and the player fills its sail for the last stretch to the
    tower's foot. She climbs down the ivy and steps aboard.
-8. **Letting go.** The cat comes to the sill with a kitten beside it and looks down; she looks back up from the boat;
-   the cat gives her a slow blink. She has brought it home, and she leaves it there glad. Then the fog darkens into the
-   storm's night and the storm plays as built.
+8. **Letting go.** The cat follows her down. While she climbs down the ivy it leaves its kittens and comes down
+   after her, backing down the ivy as cats do, to its foot on the nave's ridge above the boat, and sits there as she
+   walks down the slates and steps aboard. She turns on the thwart and looks back up at it, a few metres off and a
+   little above her; they look at each other and it gives her a slow blink. Then it turns and goes back up the ivy to
+   its kittens, a kitten's head over the sill waiting for it. She has brought it home; it came down to see her off and
+   went home, and she leaves it there glad. Then the fog darkens into the storm's night and the storm plays as built.
+   (Claude, 2026-10-09: the cat on the sill was 7 m above her and 5 m off, so no frame held her face and the blink;
+   a cat that comes down to see her off is also the warmer goodbye.)
 
 **The windmill, rebuilt** (Jeremy, 2026-10-08: "spekaing of the windmill, that reminds me. I'm also not happy with how
 it works right now. The child effectively has a wedgie riding it up. it's very strange looking and feeling, and it
@@ -647,10 +652,11 @@ clouds, the owl, the boats, the birches, the sea), authored shot by shot to the 
   appearing in the fog, the frame finding it.
 - The boat home: from the belfry looking down at the boat coming in to the tower's foot, then down with her as she
   climbs to it.
-- Letting go: from low beside the boat, near her head height, looking up past her face at the sill, a long lens so
-  the cat and the kitten read and the blink is seen; the sail out of the line; held for the blink; then the storm's
-  frame over its 12 s. (As built the lens tilts up off her face to the cat, which is all the long lens holds; she is
-  7 m below it, and a frame holding both makes the cat a speck. The blink is held to 5.6 s for the tilt.)
+- Letting go: the cat backing down the ivy behind her as she climbs down, seen in the frame that comes down with her;
+  aboard, low over her shoulder from behind the boat's quarter, her hood large in a lower corner and the cat on the
+  nave's ridge a few metres off in the upper third, both in one frame (the cat well over 80 px landscape); held for
+  the look and the blink; then the lens lets her go and rises with the cat going back up the ivy to the kitten at the
+  sill, and hands to the storm's frame.
 
 ### How it is made (Claude's calls under that ownership, 2026-10-05)
 

@@ -990,7 +990,7 @@ For Phase 9: the look up now runs 10.6 s (`lookUpFor`), the blink at 5.6 s, so t
 than before. For Phase 10: the run check's `FILMFROM=cat`, `TO=ridge`, `TRACE=<file>` (per-quarter-second lens trace
 and per-stretch fastest turns), stills' lens measures (`<prefix>-measures.json`), and `LENS=1` gating 30 deg/s and cuts.
 
-### Phase 8b: the camera's leftovers (after 8 and 9 merged)
+### Phase 8b: the camera's leftovers (after 8 and 9 merged; what was left goes to 8c and 8d)
 Owns: the same camera code as Phase 8 (`drowned-run.ts`'s lens, `drowned-church.ts`'s frames, `drowned.ts`'s
 frames, `tuning.drownedCamera`) and `tools/drowned-run-check.mjs`'s lens gates. Not the music, the fog's look or the
 cat's animation.
@@ -1053,6 +1053,30 @@ Left:
   and upright), her walking toward the lens at corners (1.5 s at 58.9 m), the kittens' three-quarter frame, the
   kittens to the fog sea behind the tower, and the gate from the drift through the storm. The check now reports where
   the fog was lost (her, the lens, the front, its top) to lay the walking lens against.
+
+### Phase 8c: the goodbye re-staged (after 8b)
+Owns: the cat's part from her climb down to the storm (`drowned-church.ts`'s steps from `down` on, the cat's way
+down and back up the ivy from `ivy.catWay()`), the look up's frames (`upFrame`, `departure`'s start,
+`tuning.drownedCamera.church`'s boarding and look-up knobs), and boarding. Design.md step 8 and its shot-list line.
+The cat comes down the ivy after her (backing down; `Cat.climb` along the ivy's way reversed, its body facing up the
+ivy) to the ivy's foot on the nave's ridge, and sits facing the boat; aboard she looks back up at it; the slow blink;
+it turns and climbs back up to the sill, where a kitten's head shows over it. The low over-the-shoulder look up holds
+both. Boarding keeps the mast out of the line (a bearing toward the stern quarter). The farewell music's cadence is
+timed to `blinkAt`; keep the look up about as long (`lookUpFor`) or say what moved.
+Gate: `FROM=belfry` `LENS=1` both aspects, no exceptions; the cat at the blink at least 80 px tall landscape with her
+in frame; 2 fps strips of the climb down, boarding and the look up to the storm's frame, both aspects; `crossings-check`
+`climb-down`.
+Done: [ ]
+
+### Phase 8d: the run's walks and the belfry's inside (parallel with 8c)
+Owns: the run's walking lens (`drowned-run.ts` `layLens`, `frame`, `tuning.drownedCamera.run`) and the church's
+`nest` and `sea` frames (`drowned-church.ts` `frame`'s `nest`/`sea` cases, their knobs). From 8b's Left: the fog at
+the frame's edge on every walk (granary to swing 10.2 s out, to the mill up to 8 s, landscape and upright); no
+walking toward the lens at corners (1.5 s at 58.9 m); the kittens three-quarter on with her face, a continuous path
+in through her light if no outside eye sees it; the kittens to the fog sea never behind the tower.
+Gate: `drowned-run-check` `LENS=1` from the drift to the nave and `FROM=church`, both aspects, no exceptions; before
+and after stills per item, both aspects; 2 fps strips of the two walks and the kittens.
+Done: [ ]
 
 ### Phase 9: the music (parallel with 7c or 8)
 Owns: the drowned score (`src/audio/dream-score.ts` and its notes, the room's `drownedScore` phases): a cue for every
