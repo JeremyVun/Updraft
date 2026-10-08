@@ -484,16 +484,71 @@ the lens as she lands (no fourth wall: she looks where she is going or back at t
 up to 2 m after the last stroke (stop sooner, so the player's stroke is what moves her).
 Done: [ ]
 
-### Phase 7: the room's story re-laid (after 6a, 6b and 6c)
-Owns: `src/world/drowned-way.ts` (the route climbing over five piece sites, short walks), `src/world/drowned.ts`
-layout, `src/world/drowned-dark.ts` (the fog as a rising tide paced to her), `src/story/drowned*.ts` (the stuck boat
-and its loss, the chase, the tower climb, the belfry and kittens, the bell and the boat home, the goodbye), the
-belfry's inside and the bell, the checks and saves.
-Gate: the run check from the drift through the belfry and the boat home to the beach, with real gestures; saves;
-stills of every beat.
+### Phase 7a: the rescue, the stuck boat and the chase (after 6c)
+Owns: `src/world/drowned-way.ts` (the route), `src/world/drowned.ts` layout from the strand to the nave,
+`src/world/drowned-dark.ts` and this room's fog knobs, `src/story/drowned.ts` beats `enter` to `nave`,
+`src/story/drowned-run.ts`, `src/story/drowned-cat.ts`, the crossings' places in the room, `drowned-run-check` and the
+saves for these beats. design.md "The room rethought", steps 1 to 5, is the spec.
+- The rescue in the room with 6b's cat: in the tub, head over the rim; the leap aboard, the shake, the shiver; the
+  press against her shins and her kneeling to it (`child.kneeling`, `child.reachFor`); it sits at the bow.
+- Stuck: the becalmed boat runs onto a roof lying just under the water (seen under the surface): a scrape, a lurch,
+  the lantern swinging. A sweep on the sail only makes it strain and creak against the roof; it never comes off.
+- The cat stares at the rising fog (`stare`), then toward the church, leaps onto the nearest roof and runs; she looks
+  at the fog and the boat and goes after it with the plane.
+- The boat is left where it lies for the rest of the run. From the first roof she looks back as the fog takes it:
+  the hull, the sail, and last the lantern's glow. Nothing follows them.
+- The fog is a rising tide: never stops, never rushes; it comes on behind at her pace and rises as it comes, so each
+  roof she leaves goes under just after she is off it. It keeps a few roofs back, closer while she works a crossing,
+  never reaching her; nothing fails. It is physically behind or beside every walk (Phase 8 frames it); she and the
+  cat glance back at it now and then; the sea goes muffled under it.
+- The route climbs at every crossing: the tree, the sheet, the windmill's hoist, the swing onto the nave, in that
+  order, each landing higher than it started. No walk much over 10 s on foot. The cat goes first at every piece,
+  already going as she arrives, never making her wait.
+- Hand-on to 7c: she on the nave's ridge at the tower's foot, the cat at the ivy, the fog a few roofs back, the boat
+  lost where it stuck, its lantern lit inside the fog. The fog is drivable by its level (the height of its top) and its
+  front (how far along her way it has come), named in the as-built note, for 7c to raise round the tower and push back.
+Gate: `drowned-run-check` from the drift to the nave with real gestures (its fog checks re-cast for the tide: in
+every walk's frame, never on her, each roof she leaves going under after she is off it; each walk's seconds on foot
+reported); `crossings-check`; the saves (`progress-check`, `progress-schema-check`, `drowned-gating-check`); a
+`VIDEO=1` webm of the whole run from the rescue to the nave for the lead to watch.
 Done: [ ]
 
-### Phase 8: the camera to the shot list (after 7)
+### Phase 7b: the belfry and the bell, staged (after 6b3; parallel with 7a; new files only)
+Owns new files: `src/world/belfry.ts` (the belfry's inside: the bell in its oak frame, old straw under it, the four
+sills, the trap down into the tower), `src/world/crossings/bell.ts` (the bell as a piece), `src/story/bell-yard.ts`
+on the stage (`?chapter=stage`, `gap=bell` in `crossings-check`), the bell's sound (a new file under `src/audio/`
+with one registering line where foley is wired), and the child's ivy climb (her clamber up and down a stepped ivy
+face, in `src/traveller/child/motion.ts`, staged on the yard with a stand-in wall).
+- The bell: big, old bronze, green at the lip, hung in its frame. One good stroke across it swings it and it rings
+  once at the top of the swing; it is not pumped up like the swing. A weak stroke rocks it and the clapper only
+  touches. Each ring is deep and long, its note given by Phase 9's key (until then the score's tonic), and sends a
+  visible ring rolling out from the tower over the fog's top. The yard shows four rings in about 15 s of play.
+- The belfry is warm and close in shadow after the cold outside: the straw nest under the bell with the kittens
+  (`Kittens.lay`, `nestle`, `tumble`), the cat curled round them, the last light coming in low at the sills.
+- The child's climb: hand over hand up the ivy, a knee up, feet finding the steps, the plane tucked in her coat; down
+  the same way, looking for her footing. Reads at the room's distance; no hand or foot slips (`probe.report()`).
+Gate: `crossings-check` `gap=bell` with real strokes; yard stills of the belfry and of every climb pose; a recorded
+clip of four rings for the lead to watch and hear.
+Done: [ ]
+
+### Phase 7c: the refuge and the boat home (after 7a and 7b)
+Owns: `src/story/drowned-church.ts`, `src/story/drowned.ts` from `nave` to the storm's `gather`, the belfry mounted
+in the tower (`src/world/drowned.ts`, `src/world/drowned-ivy.ts`), the fog's level and front through these beats, the
+checks and saves for them. design.md "The room rethought", steps 6 to 8, is the spec.
+- The cat climbs the ivy into the belfry and she follows, climbing (7b's clamber); inside are the kittens; the cat
+  curls round them. The fog closes round the tower and rises to just below the sills, and stops: the village a cold
+  white sea in the last light, the spire and the lighthouse out of it, the beam sweeping its top.
+- The bell: each ring rolls out over the fog and pushes it back a little round the tower, and out in the fog a lantern
+  glows in answer, nearer each time; the boat, freed, drifting home to the sound from where it was lost. When it is
+  near, the fog has drawn back to the water round the nave and the player fills its sail for the last stretch to the
+  tower's foot.
+- She climbs down the ivy and steps aboard. The cat comes to the sill with a kitten (`toSill`) and looks down; she
+  looks up from the boat; the slow blink. Then the fog darkens into the storm's night and the storm plays as built.
+Gate: `drowned-run-check` from the drift through the belfry and the boat home to the storm, with real gestures; the
+saves; `playthrough.mjs` through the room; a `VIDEO=1` webm of the nave to the storm for the lead.
+Done: [ ]
+
+### Phase 8: the camera to the shot list (after 7c)
 Owns: the room's lens from the rescue to the storm's frame (`drowned-run.ts`, `drowned-church.ts`, `drowned.ts`'s
 watch, `tuning.drownedCamera`), authored per beat to design.md's shot list, upright composed for itself. First study how the rest of the game frames
 its subjects and interactions (`docs/engine.md` camera direction; the shots of the little boats, the birches' swing,
@@ -501,7 +556,7 @@ the stairs, the dark wood and the sea in play) and take its grammar: framed well
 Gate: `LENS=1` checks, both aspects; a still at every shot-list line.
 Done: [ ]
 
-### Phase 9: the music (parallel with 7 or 8)
+### Phase 9: the music (parallel with 7c or 8)
 Owns: the drowned score (`src/audio/dream-score.ts` and its notes, the room's `drownedScore` phases): a cue for every
 part of the room per design.md, the bell's note in key; renders for Jeremy to judge by ear.
 Done: [ ]

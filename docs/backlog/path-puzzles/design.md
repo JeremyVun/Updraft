@@ -552,8 +552,8 @@ where they differ; the drift, the village, the look and the storm stand.
    belfry's sills, and stops. They are above it: where the village was is a cold white sea in the last light, only the
    spire and the lighthouse standing out of it, the lighthouse beam sweeping over its top. A
    quiet breath after the chase. It stays low and cold-bodied in colour, never the stairs room's luminous cloud.
-7. **The boat comes home.** The bell hangs over them. The player's strokes across it set it swinging until it rings;
-   each ring rolls out over the fog and pushes it back a little round the tower, and out in the fog a lantern glows in
+7. **The boat comes home.** The bell hangs over them. One good stroke across it swings it and it rings once (a
+   weak one only rocks it; it is not pumped up like the swing, so the two pieces never feel alike); each ring rolls out over the fog and pushes it back a little round the tower, and out in the fog a lantern glows in
    answer, nearer each time: the lost boat drifting home to the sound (things drift home: nothing is lost). When it is
    near, the fog has drawn back to the water round the nave and the player fills its sail for the last stretch to the
    tower's foot. She climbs down the ivy and steps aboard.
