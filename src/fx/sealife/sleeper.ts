@@ -2,9 +2,10 @@ import * as THREE from 'three';
 import { tuning } from '../../tuning';
 import { gladUniforms } from '../../world/water/glad';
 import { swellUniforms } from '../../world/water/swell';
-import { BLOWHOLE, EYE_S, EYE_Y, FIN_DIR, FIN_ROOT, FIN_SPAN, LENGTH, SPINE_END, TOP, crown, finPoint as finSurface, flankAt, ringPoint } from './anatomy';
+import { BLOWHOLE, EYE_S, EYE_Y, FIN_DIR, FIN_ROOT, FIN_SPAN, LENGTH, SPINE_END, TOP, crown, finPoint as finSurface, flankAt, halfWidthAt, ringPoint } from './anatomy';
 import { curve } from './curve';
-import type { Marks } from './marks';
+import { FOAM, type Marks } from './marks';
+import { Seabirds } from './seabirds';
 import { DROP, MIST, type Spray } from './spray';
 import { WhaleWake, type WhaleSound } from './wake';
 import { DREAM_SCALE, DREAM_SHAPE, SPINE_N, SPINE_STEP, WhaleRig } from './whale';
@@ -12,7 +13,7 @@ import { DREAM_SCALE, DREAM_SHAPE, SPINE_N, SPINE_STEP, WhaleRig } from './whale
 /** Along the flipper's trailing edge from here to its tip the sea pours off it as it lifts (0 root .. 1 tip). */
 const POURS_FROM = 0.18;
 
-export type SleeperSound = WhaleSound | 'whale-sigh' | 'whale-breath' | 'whale-slap' | 'flipper-pour';
+export type SleeperSound = WhaleSound | 'whale-sigh' | 'whale-breath' | 'whale-slap' | 'flipper-pour' | 'seabirds-lift';
 
 const K = tuning.netWhale;
 /** The tail stock, behind the hump: what the body tips over as it lifts its flukes. */
@@ -136,6 +137,10 @@ const LIFT_POURS = 1;
 const LIFT_FOR = 6.6;
 /** Where the sea streams off its bared head as the net comes off it: along the head (s) and how high up the near flank (of the top). */
 const STREAMS = [[0.05, 0.55], [0.08, 0.7], [0.11, 0.5], [0.14, 0.75], [0.17, 0.6], [0.2, 0.8], [0.23, 0.55], [0.27, 0.7]] as const;
+/** How far through each slow breath its back is rising fast enough to shed the sea off its top. */
+const SHEDS_AT = 0.2;
+/** The part of it lying along the surface, from the snout: what the sea round it swells out from as it breathes. */
+const LYING = 0.75;
 /** A slow blink: the lid down over half a second, a moment shut, and up again over most of a second. */
 const BLINK = curve([[0, 0], [0.5, 0.9], [0.75, 0.9], [1.6, 0]]);
 
@@ -188,6 +193,8 @@ export class SleepingWhale extends WhaleRig {
   /** Each weak breath out, with how strong it was: what the net over the blowhole has to answer. */
   onExhale: ((strength: number) => void) | null = null;
   onSound: ((kind: SleeperSound, x: number, y: number, z: number) => void) | null = null;
+  /** The seabirds standing far along its back. */
+  readonly birds: Seabirds;
   private readonly wake: WhaleWake;
   private readonly pivot = new THREE.Vector3();
   private readonly rest = new THREE.Vector3();
@@ -203,6 +210,10 @@ export class SleepingWhale extends WhaleRig {
   private headWet = 0;
   private breath = 0;
   private sighed = true;
+  /** Seconds since its back last rose with a breath and shed the sea off its top, and how deep that breath was. */
+  private shedT = Infinity;
+  private shedBy = 0;
+  private shed = true;
   private liftT = -1;
   /** A sigh seen from far off, still rising: seconds of it left, how far off, how strong. */
   private sigh = { left: 0, far: 1, strength: 1 };
@@ -219,10 +230,12 @@ export class SleepingWhale extends WhaleRig {
   private readonly q = new THREE.Vector3();
   private readonly ring = { x: 0, y: 0 };
 
-  constructor(private readonly spray: Spray, foam: Marks, slicks: Marks) {
+  constructor(private readonly spray: Spray, private readonly foam: Marks, slicks: Marks) {
     super();
     this.wake = new WhaleWake(this, spray, foam, slicks);
     this.wake.onSound = (kind, x, y, z) => this.onSound?.(kind, x, y, z);
+    this.birds = new Seabirds(this.uniforms);
+    this.birds.onLift = (at) => this.onSound?.('seabirds-lift', at.x, at.y, at.z);
   }
 
   /** It has drawn its first full breath: from here on it is awake. */
@@ -291,8 +304,12 @@ export class SleepingWhale extends WhaleRig {
     this.uniforms.uSlap.value.set(1, 0, 0);
     this.uniforms.uHaze.value = 1;
     gladUniforms.uGlad.value.w = 0;
+    swellUniforms.uHeave.value.w = 0;
+    this.shedT = Infinity;
+    this.shed = true;
     this.locate();
     this.mesh.visible = this.ghost.visible = true;
+    this.birds.settle();
   }
 
   /** How lost in the morning haze it is from far off, 0..1. */
@@ -323,7 +340,9 @@ export class SleepingWhale extends WhaleRig {
     this.time = 1e3;
     this.mesh.visible = this.ghost.visible = false;
     swellUniforms.uSurge.value.w = 0;
+    swellUniforms.uHeave.value.w = 0;
     gladUniforms.uGlad.value.w = 0;
+    this.birds.hide();
   }
 
   /** The eye opens on `at` (and follows it), or closes again under its heavy lid when `null`. */
@@ -392,6 +411,8 @@ export class SleepingWhale extends WhaleRig {
     }
     this.lookOut(dt);
     this.wake.update(dt, time);
+    this.shedSea(dt);
+    this.birds.update(dt, this, this.phase === 'free' ? this.time - SPOUT_FROM : -1, this.blowhole, this.away);
     if (this.headWet > 0) {
       for (let i = 0; i < SPINE_N; i++) {
         const head = 1 - THREE.MathUtils.smoothstep((i / (SPINE_N - 1)) * SPINE_END, 0.24, 0.34);
@@ -404,6 +425,7 @@ export class SleepingWhale extends WhaleRig {
       this.time = 0;
       this.mesh.visible = this.ghost.visible = false;
       gladUniforms.uGlad.value.w = 0;
+      this.birds.hide();
     }
   }
 
@@ -438,6 +460,7 @@ export class SleepingWhale extends WhaleRig {
         this.spray.jet(this.blowhole, K.firstBreathHeight * 0.6, 0.35 * strength, dt);
       }
       if (t >= BREATH_IN && t - dt < BREATH_IN) this.onSound?.('whale-blow', this.blowhole.x, this.blowhole.y, this.blowhole.z);
+      if (t >= BREATH_IN * 0.5 && t - dt < BREATH_IN * 0.5) this.rises(1.3);
       this.breath = 0.6;
       this.sighed = true;
     } else {
@@ -446,8 +469,13 @@ export class SleepingWhale extends WhaleRig {
       if (this.breath >= 1) {
         this.breath -= 1;
         this.sighed = false;
+        this.shed = false;
       }
       const b = this.breath;
+      if (!this.shed && b > SHEDS_AT) {
+        this.shed = true;
+        this.rises((1 + deep * 1.2) / 2.2);
+      }
       rise = K.breathRise * (1 + deep * 1.2) * (0.5 - 0.5 * Math.cos(Math.PI * 2 * Math.min(1, b / 0.8)));
       if (!this.sighed && b > SIGH_AT) {
         this.sighed = true;
@@ -471,6 +499,7 @@ export class SleepingWhale extends WhaleRig {
     const t = this.time;
     const draw = THREE.MathUtils.smootherstep(t, 0, SPOUT_FROM) * (1 - THREE.MathUtils.smootherstep(t, SPOUT_TO, SPOUT_TO + 1.8));
     if (t >= SPOUT_FROM && t - dt < SPOUT_FROM) this.onSound?.('whale-blow', this.blowhole.x, this.blowhole.y, this.blowhole.z);
+    if (t >= SPOUT_FROM - 1 && t - dt < SPOUT_FROM - 1) this.rises(1.5);
     if (t >= SPOUT_FROM && t < SPOUT_TO) {
       const k = (t - SPOUT_FROM) / (SPOUT_TO - SPOUT_FROM);
       const strength = Math.sin(Math.PI * Math.min(1, k * 1.6)) ** 0.5 * (1 - k * 0.3);
@@ -672,6 +701,52 @@ export class SleepingWhale extends WhaleRig {
         this.spray.emit(DROP, x, e.y - 0.04, z, (Math.random() - 0.5) * 0.06, -0.2 - Math.random() * 0.4, (Math.random() - 0.5) * 0.06,
           (0.018 + Math.random() * 0.014) * size, 2, 0, 0.65 + Math.random() * 0.3);
       }
+    }
+  }
+
+  /**
+   * Its back rising with a breath `deep` as a waking breath: the sea sheets off its top and the sea round it swells
+   * out from its flank and settles.
+   */
+  private rises(deep: number): void {
+    this.shedT = 0;
+    this.shedBy = deep;
+    const h = this.heading;
+    const half = (LYING / 2) * BODY_M;
+    const mid = this.point(0, 0, LYING / 2, this.q);
+    const at = this.spine[this.at(0.3)];
+    const flank = halfWidthAt(0.3, -at.y / (Math.cos(at.w) * this.scale)) * this.scale;
+    swellUniforms.uHeave.value.set(mid.x, mid.z, this.worldTime, K.heaveHeight * deep);
+    swellUniforms.uHeaveAxis.value.set(h.x, h.z, half, flank);
+  }
+
+  /**
+   * After each breath the sea runs off its back in glinting sheets down its flanks, and laces white along its
+   * waterline where it pours back into the sea.
+   */
+  private shedSea(dt: number): void {
+    if (this.shedT > K.sheetFor + 1) return;
+    this.shedT += dt;
+    const wet = K.sheetWet * Math.min(1, this.shedBy) * THREE.MathUtils.smoothstep(this.shedT, 0, 1)
+      * (1 - THREE.MathUtils.smoothstep(this.shedT, 1, K.sheetFor));
+    for (let i = 0; i < SPINE_N; i++) {
+      const s = (i / (SPINE_N - 1)) * SPINE_END;
+      const top = THREE.MathUtils.smoothstep(s, 0.15, 0.35) * (1 - THREE.MathUtils.smoothstep(s, 0.65, 0.82));
+      this.wet[i] = Math.max(this.wet[i], wet * top);
+    }
+    const pouring = this.shedBy * THREE.MathUtils.smoothstep(this.shedT, 0.6, 1.4) * (1 - THREE.MathUtils.smoothstep(this.shedT, 1.4, 3.5));
+    const n = Math.floor(dt * 40 * pouring + Math.random());
+    const h = this.heading;
+    for (let k = 0; k < n; k++) {
+      const s = 0.18 + Math.random() * 0.5;
+      const P = this.spine[this.at(s)];
+      const c = Math.cos(P.w);
+      const half = halfWidthAt(s, -P.y / (c * this.scale)) * this.scale;
+      if (half <= 0) continue;
+      const side = Math.random() < 0.7 ? 1 : -1;
+      const out = half + 0.2 + Math.random() * 0.8;
+      this.foam.add(FOAM, P.x + h.z * side * out, P.z - h.x * side * out, 0.5 + Math.random() * 0.7, 3 + Math.random() * 2.5,
+        this.worldTime, 0.35 + Math.random() * 0.3, 0.25 + Math.random() * 0.3, Math.atan2(h.z, h.x), 1.6 + Math.random() * 0.8);
     }
   }
 

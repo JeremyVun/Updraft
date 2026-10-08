@@ -8,24 +8,26 @@ import { Instances, blob, flipWinding, merge, mirrored, tag, type BlobSpec } fro
 import { dormant, type Stimuli } from './stimuli';
 
 const BODY = 0;
-const HEAD = 1;
-const BEAK = 2;
-const EYE = 3;
-const TAIL = 4;
-const INNER_L = 5;
-const INNER_R = 6;
-const OUTER_L = 7;
-const OUTER_R = 8;
+export const HEAD = 1;
+export const BEAK = 2;
+export const EYE = 3;
+export const TAIL = 4;
+export const INNER_L = 5;
+export const INNER_R = 6;
+export const OUTER_L = 7;
+export const OUTER_R = 8;
 
-const WHITE = 0;
-const BILL = 1;
-const EYE_MAT = 2;
-const WING = 3;
+export const WHITE = 0;
+export const BILL = 1;
+export const EYE_MAT = 2;
+export const WING = 3;
 
 const SIZE = 1.1;
-const SHOULDER = [0.09, 0.05, 0.1] as const;
+/** A gull's colours: white, the grey mantle on its back and wings, the black wing tips, the yellow bill. */
+export const GULL_LOOK = { white: '#f6f3ee', mantle: '#8d99a6', tip: '#1d1d22', bill: '#f2c14e' } as const;
+export const SHOULDER = [0.09, 0.05, 0.1] as const;
 const here = new THREE.Vector3();
-const INNER_SPAN = 0.52;
+export const INNER_SPAN = 0.52;
 const OUTER_SPAN = 0.68;
 
 const VERT = /* glsl */ `
@@ -154,7 +156,7 @@ function placed(geo: THREE.BufferGeometry, x: number, y: number, z: number, mirr
   return geo;
 }
 
-function gullGeometry(): THREE.BufferGeometry {
+export function gullGeometry(): THREE.BufferGeometry {
   const [sx, sy, sz] = SHOULDER;
   const wings: THREE.BufferGeometry[] = [];
   for (const mirror of [false, true]) {
@@ -265,10 +267,10 @@ export class Gulls {
       fragmentShader: FRAG,
       uniforms: {
         ...atmo.uniforms,
-        uWhite: { value: new THREE.Color('#f6f3ee') },
-        uMantle: { value: new THREE.Color('#8d99a6') },
-        uTip: { value: new THREE.Color('#1d1d22') },
-        uBill: { value: new THREE.Color('#f2c14e') },
+        uWhite: { value: new THREE.Color(GULL_LOOK.white) },
+        uMantle: { value: new THREE.Color(GULL_LOOK.mantle) },
+        uTip: { value: new THREE.Color(GULL_LOOK.tip) },
+        uBill: { value: new THREE.Color(GULL_LOOK.bill) },
       },
       side: THREE.DoubleSide,
     });

@@ -1416,6 +1416,22 @@ export const tuning = {
     /** Seconds between its weak breaths, how far its back rises with one (m), and how much mist each sputters. */
     breathEvery: 10, breathRise: 0.45, mist: 1,
     /**
+     * As each breath lifts its back the sea sheets off the top, as wet as `sheetWet`, running off over `sheetFor`
+     * seconds in threads that mirror the dawn (`rills` of it) and glint (`glints`); and the sea round it swells with it,
+     * one low crest `heaveHeight` m high at its flank going out at `heaveSpeed` m/s, `heaveWidth` m across, settled
+     * `heaveFor` s after the breath.
+     */
+    sheetWet: 0.8, sheetFor: 4, rills: 0.4, glints: 2.5, heaveHeight: 0.2, heaveSpeed: 3.5, heaveWidth: 6, heaveFor: 6,
+    /**
+     * The seabirds standing far along its back, each at [s along it, radians round from the top of its ring toward
+     * the boat, facing in radians from its heading], `seabirdSize` times a gull. They go up from `seabirdsAfter` s
+     * after its free spout, each flying its way past the spout `seabirdPast` m beyond it and `seabirdHeight` m above
+     * it and off into the morning over `seabirdFlight` s, fading into the sky over the last `seabirdFade`. A wing
+     * stretch takes `seabirdStretch` s.
+     */
+    seabirdPerches: [[0.54, 0.1, 0.3], [0.565, -0.05, -0.4], [0.665, 0.15, 2.6], [0.7, 0, 0.5]],
+    seabirdSize: 2.2, seabirdsAfter: 0.1, seabirdFlight: 8, seabirdFade: 2.5, seabirdPast: 8, seabirdHeight: 12, seabirdStretch: 1.6,
+    /**
      * The soft column of its first full breath, and the tall spout when it is free (m above the blowhole), its mist
      * `spoutBreadth` times as broad as the first column's.
      */

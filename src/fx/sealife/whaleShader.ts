@@ -191,6 +191,25 @@ float shows(float size, float px) {
 }
 
 /**
+ * The sea running off it at m metres over the skin: threads about 1.4 m apart along it, each wandering as it runs down
+ * the flank and carrying its water in pulses that run down it; and where a pulse catches the low sun, a glint.
+ * Threads finer than a pixel give way to the faint sheen they would add up to.
+ */
+vec2 rills(vec2 m) {
+  float px = length(fwidth(m)) + 1e-4;
+  float lane = m.x * 0.7 + (vnoise(vec2(m.x * 0.3, m.y * 0.25)) - 0.5) * 1.4;
+  float id = floor(lane);
+  float w = 0.035 + 0.035 * hash12(vec2(id, 3.0));
+  float x = abs(fract(lane) - 0.5);
+  float fine = shows(w * 2.8, px);
+  float core = 1.0 - smoothstep(0.0, w + px * 0.7, x);
+  float thread = mix(w * 2.0, core, fine) * step(0.5, hash12(vec2(id, 7.0)));
+  float pulse = smoothstep(0.3, 0.75, vnoise(vec2(id * 1.7, m.y * 0.7 + uTime * 2.2)));
+  float spark = smoothstep(0.86, 0.96, vnoise(vec2(id * 5.3, m.y * 6.0 + uTime * 5.0))) * core * fine;
+  return vec2(thread * pulse, spark * pulse * step(0.5, hash12(vec2(id, 7.0))));
+}
+
+/**
  * One scatter of shells where \`where\` (0..1) calls for them, m metres over the skin, in cells \`cell\` metres across:
  * how much a shell covers here, its light (pale on top, shaded under), and the soft shade it casts on the skin below.
  */
@@ -636,7 +655,7 @@ vec3 lost(vec3 col, vec3 world) {
  * Its far length low on the sea melts into the morning: wet and glancing, it mirrors the dawn as the sea round it
  * does, so only the head and what stands clear of the water are crisp.
  */
-const HAZE_GLSL = /* glsl */ `
+export const HAZE_GLSL = /* glsl */ `
 uniform float uHaze;
 ${LOST_GLSL}
 /** The open sea's own colour seen at world, as the water draws it: its deep body under a rough mirror of the dawn. */
@@ -709,9 +728,14 @@ void main() {
   col += uIris * dot(uSunColor, vec3(0.3, 0.5, 0.2)) * sun * k.caustic * ${f(L.caustic)};
 
   float dry = smoothstep(0.0, 0.25, vWorld.y);
-  float across = part == ${BODY} || part == ${DORSAL} ? vRig.z * 24.0 : dot(vRest.xz, vec2(5.0, 2.0));
-  vec2 flow = vec2(across, vWorld.y * 1.1 + uTime * 1.9);
+  vec2 flow = vec2(dot(vRest.xz, vec2(5.0, 2.0)), vWorld.y * 1.1 + uTime * 1.9);
   float streak = smoothstep(0.7, 0.95, vnoise(vec2(flow.x * 2.5, flow.y)) * 0.75 + vnoise(vec2(flow.x * 7.0, flow.y * 3.0)) * 0.25);
+  // Over its back and flanks the sea runs off in threads, side by side along it, each wandering down from the top.
+  vec2 running = vec2(0.0);
+  if (part == ${BODY}) {
+    running = rills(overSkin(vRest));
+    streak = running.x;
+  }
   // Lifted out of the sea, the flipper streams with it.
   float sheet = max(vWet, part == ${FIN} ? clamp(uSlap.y * 30.0, 0.0, 1.0) : 0.0) * dry;
 
@@ -724,13 +748,16 @@ void main() {
   float F = 0.03 + mix(0.97, 0.58, wet) * pow(1.0 - nv, 5.0);
   float low = (1.0 - smoothstep(0.0, 2.5, vWorld.y)) * smoothstep(0.3, 0.45, vRig.x) * float(part == ${BODY});
   col *= (1.0 - 0.25 * wet) * (1.0 - 0.3 * ${f(L.runs)} * k.run);
-  col = mix(col, env, F * (0.25 + 0.5 * sheet + ${f(L.wet)} * wet + 0.6 * k.gloss) * (part == ${FIN} ? 0.45 : 1.0));
+  col = mix(col, env, F * (0.25 + (part == ${FIN} ? 0.5 : 0.15) * sheet + ${f(L.wet)} * wet + 0.6 * k.gloss) * (part == ${FIN} ? 0.45 : 1.0));
+  // Each thread a strip of the dawn it mirrors, darker skin between them.
+  col = mix(col * (1.0 - 0.12 * sheet), env * 1.15, streak * sheet * ${f(tuning.netWhale.rills)} * float(part == ${BODY}));
   vec3 H = halfVector(uSunDir, V);
   float nh = max(dot(N, H), 0.0);
   // Lying awash the flipper's blade faces the sky, and a sheen on it as broad as the back's would make it a pale thing.
   float sheen = (part == ${FIN} ? ${f(L.sheen)} * 0.3 : ${f(L.sheen)}) * (1.0 - k.crust);
   col += uSunColor * pow(nh, mix(mix(24.0, 70.0, wet), 160.0, sheet)) * (sheen * (1.0 + wet) * (1.0 - 0.7 * low) + (0.8 + 3.0 * streak) * sheet) * sun * (1.0 - k.gloss) * (1.0 - 0.7 * k.near);
   col += vec3(0.85, 0.9, 0.95) * (uSkyAmbient * 0.7 + uSunColor * (0.1 + back * 0.8) * sun) * streak * sheet * 0.45;
+  col += uSunColor * vec3(1.0, 0.9, 0.7) * running.y * sheet * ${f(tuning.netWhale.glints)} * sun;
   // A flipper lying flat is seen edge on all over, so only the body takes the rim along its silhouette.
   float rim = pow(1.0 - nv, ${f(L.rimPower)}) * smoothstep(-0.2, 0.5, N.y + ndl) * (part == ${FIN} ? 0.2 : 1.0) * (1.0 - low);
   col += uSunColor * mix(vec3(1.0), k.albedo * 2.0, 0.35) * rim * (0.2 + back) * ${f(L.rim)} * sun * (1.0 - k.near);

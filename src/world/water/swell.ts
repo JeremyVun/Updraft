@@ -30,6 +30,10 @@ export const swellUniforms = {
   uSurge: { value: new THREE.Vector4(0, 0, -1e4, 0) },
   /** The length of what went under, which the swell spreads from: its direction in xz and half its length. */
   uSurgeAxis: { value: new THREE.Vector3(1, 0, 0) },
+  /** One low crest going out from a breathing whale's flank: the middle of its length in x and z, when, and its height. */
+  uHeave: { value: new THREE.Vector4(0, 0, -1e4, 0) },
+  /** The whale's direction in xz, half its length, and how far out from that line its flank meets the sea. */
+  uHeaveAxis: { value: new THREE.Vector4(1, 0, 0, 0) },
 };
 
 const S = tuning.netWhale;
@@ -50,6 +54,18 @@ function surge(r: number, t: number): number {
     * THREE.MathUtils.smoothstep(front, 0, 6) * 12 / (12 + r);
 }
 
+/** How far out from a breathing whale's flank p is, and so its lift t seconds after the breath. */
+function heave(x: number, z: number, time: number): number {
+  const g = swellUniforms.uHeave.value;
+  const a = swellUniforms.uHeaveAxis.value;
+  const t = time - g.z;
+  const along = THREE.MathUtils.clamp((x - g.x) * a.x + (z - g.y) * a.y, -a.z, a.z);
+  const off = Math.hypot(x - g.x - a.x * along, z - g.y - a.y * along) - a.w;
+  const d = off - t * S.heaveSpeed;
+  return g.w * Math.exp(-(d * d) / (S.heaveWidth * S.heaveWidth)) * THREE.MathUtils.smoothstep(t, 0, 1.5)
+    * (1 - THREE.MathUtils.smoothstep(t, S.heaveFor * 0.6, S.heaveFor)) * 12 / (12 + Math.max(off, 0));
+}
+
 const wave = (w: (typeof WAVES)[number]) => /* glsl */ `
   {
     float ph = ${glsl((2 * Math.PI) / w.len)} * dot(vec2(${glsl(w.dx)}, ${glsl(w.dz)}), p) - ${glsl((speed(w.len) * 2 * Math.PI) / w.len)} * uTime;
@@ -62,6 +78,8 @@ export const SWELL_GLSL = /* glsl */ `
 uniform float uSwell;
 uniform vec4 uSurge;
 uniform vec3 uSurgeAxis;
+uniform vec4 uHeave;
+uniform vec4 uHeaveAxis;
 
 float surgeLift(vec2 p) {
   if (uSurge.w <= 0.0) return 0.0;
@@ -73,12 +91,22 @@ float surgeLift(vec2 p) {
     * smoothstep(0.0, 6.0, front) * 12.0 / (12.0 + r);
 }
 
+float heaveLift(vec2 p) {
+  if (uHeave.w <= 0.0) return 0.0;
+  float t = uTime - uHeave.z;
+  vec2 q = p - uHeave.xy;
+  float off = length(q - uHeaveAxis.xy * clamp(dot(q, uHeaveAxis.xy), -uHeaveAxis.z, uHeaveAxis.z)) - uHeaveAxis.w;
+  float d = off - t * ${glsl(S.heaveSpeed)};
+  return uHeave.w * exp(-d * d / ${glsl(S.heaveWidth * S.heaveWidth)}) * smoothstep(0.0, 1.5, t)
+    * (1.0 - smoothstep(${glsl(S.heaveFor * 0.6)}, ${glsl(S.heaveFor)}, t)) * 12.0 / (12.0 + max(off, 0.0));
+}
+
 /** Where the swell carries the water that would lie at p: sideways in xz, and up in y. */
 vec3 swellShift(vec2 p, float height) {
   vec2 drag = vec2(0.0);
   float lift = 0.0;
   ${WAVES.map(wave).join('')}
-  return vec3(drag.x, lift + surgeLift(p), drag.y);
+  return vec3(drag.x, lift + surgeLift(p) + heaveLift(p), drag.y);
 }
 
 /** How much of that chop the water at p can carry: none in the shallows, none where the mesh is too coarse. */
@@ -147,6 +175,7 @@ function shift(ux: number, uz: number, time: number, out: Shift): Shift {
   }
   const g = swellUniforms.uSurge.value;
   if (g.w > 0) out.y += g.w * surge(surgeDistance(ux, uz), time - g.z);
+  if (swellUniforms.uHeave.value.w > 0) out.y += heave(ux, uz, time);
   return out;
 }
 

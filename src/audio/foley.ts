@@ -176,6 +176,13 @@ export class Foley {
       this.puff({ at, len: 0.2, level: level * 0.09, pan, type: 'bandpass', from: 1700, to: 900, q: 0.7, attack: 0.006, wet: 0.2 });
       for (let i = 0; i < 5; i++) this.blip(at + 0.08 + i * 0.05 + Math.random() * 0.03, 1300 + Math.random() * 1400, 700, 0.04,
         level * 0.016, pan);
+    } else if (kind === 'seabirds-lift') {
+      // A few big gulls going up off its back at once: soft heavy wingbeats, uneven between them, thinning as they climb.
+      for (let bird = 0; bird < 4; bird++) {
+        const from = at + bird * 0.2 + Math.random() * 0.12;
+        for (let i = 0; i < 6; i++) this.puff({ at: from + i * (0.19 + Math.random() * 0.03), len: 0.13,
+          level: level * 0.03 * (1 - i * 0.13), pan, type: 'lowpass', from: 950, to: 380, attack: 0.025, wet: 0.08 });
+      }
     } else if (kind === 'whale-slap') {
       // A broad flipper laid flat on the water: a wet clap, a low thump under it, the spray falling back.
       this.puff({ at, len: 0.12, level: level * 0.11, pan, type: 'bandpass', from: 1300, to: 800, q: 0.7, attack: 0.004, wet: 0.06 });
