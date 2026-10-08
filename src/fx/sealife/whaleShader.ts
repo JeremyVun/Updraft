@@ -199,10 +199,10 @@ vec3 shells(vec2 m, float where, float cell, float px) {
   vec2 d = (fract(c) - 0.5 - (vec2(hash12(id + 9.7), hash12(id + 2.9)) - 0.5) * (1.0 - 2.0 * r)) / r;
   float q = dot(d, d);
   float aa = 2.0 * px / (r * cell);
-  float seen = shows(2.0 * r * cell, px);
+  float seen = smoothstep(2.0, 5.0, 2.0 * r * cell / px);
   vec2 below = d + vec2(0.0, 0.45);
   float under = smoothstep(0.9, 1.1, q) * (1.0 - smoothstep(0.8, 1.6, dot(below, below))) * seen;
-  return vec3((1.0 - smoothstep(1.0 - aa, 1.0, q)) * seen, 0.82 + 0.3 * d.y - 0.1 * q, under);
+  return vec3((1.0 - smoothstep(1.0 - aa, 1.0, q)) * seen, 0.74 + 0.24 * d.y - 0.1 * q, under);
 }
 
 /** Barnacles: two scatters of shells of their own sizes, so no grid shows; soft domes, never pits. */
@@ -221,11 +221,11 @@ float scars(vec2 m, float px) {
   vec2 id = floor(m / CELL);
   if (hash12(id + 41.0) > ${f(L.scars)}) return 0.0;
   float len = 1.6 + 2.6 * hash12(id + 8.0);
-  float rake = floor(hash12(id + 23.0) * 2.6);
+  float rake = floor(hash12(id + 23.0) * 1.8);
   float gap = 0.45;
-  vec2 room = max(CELL * 0.5 - vec2(len + 0.4, 0.3 + 0.12 * len + gap * rake), 0.0);
+  vec2 room = max(CELL * 0.5 - vec2(len + 0.4, 0.3 + 0.3 * len + gap * rake), 0.0);
   vec2 p = (fract(m / CELL) - 0.5) * CELL - (vec2(hash12(id + 11.0), hash12(id + 13.0)) - 0.5) * 2.0 * room;
-  float a = (hash12(id + 5.0) - 0.5) * 0.3;
+  float a = (hash12(id + 5.0) - 0.5) * 0.7;
   p = vec2(cos(a) * p.x + sin(a) * p.y, cos(a) * p.y - sin(a) * p.x);
   p.y -= (hash12(id + 2.0) - 0.5) * 0.2 * p.x * p.x / len;
   p.y -= clamp(floor(p.y / gap + 0.5), 0.0, rake) * gap;
@@ -411,7 +411,7 @@ Skin skin(float far, float dry) {
       float grown = (1.0 - smoothstep(reach - 0.06 - px, reach + 0.06 + px, above)) * (1.0 - 0.7 * lip);
       k.albedo = mix(k.albedo, ${rgb(L.growth)} * (0.75 + 0.5 * n2), grown * 0.8 * clear);
       // Wet runs down from the top of its back.
-      k.run = smoothstep(0.62, 0.8, vnoise(vec2(m.x * 1.1, m.y * 0.08 + 3.0))) * smoothstep(1.5, 3.5, above) * (1.0 - k.crust);
+      k.run = smoothstep(0.7, 0.85, vnoise(vec2(m.x * 0.45, m.y * 0.12 + 3.0))) * smoothstep(1.5, 3.5, above) * (1.0 - k.crust);
     }
 
     // Never emissive: its warmth is the light on the iris and the gloss of the glass.
@@ -427,7 +427,7 @@ Skin skin(float far, float dry) {
     vec3 white = vec3(0.1, 0.06, 0.045) * mix(0.35, 1.0, smoothstep(0.98, 0.6, abs(e.x)));
     float fibres = 0.8 + 0.4 * vnoise(vec2(atan(g.y, g.x) * 9.0, rr * 5.0));
     // Deep warm brown, lighter in a ring round the pupil and darkening to its edge.
-    vec3 brown = uIris * fibres * (1.0 + 0.7 * (1.0 - smoothstep(0.2, 0.36, rr))) * (1.0 - 0.6 * smoothstep(0.36, 0.5, rr));
+    vec3 brown = uIris * fibres * (1.0 + 0.9 * (1.0 - smoothstep(0.2, 0.38, rr))) * (1.0 - 0.6 * smoothstep(0.38, 0.5, rr));
     vec3 eye = mix(mix(white, brown, iris), vec3(0.014, 0.011, 0.01), pupil);
     float under = smoothstep(l.z - 0.4, l.z, e.y);
     eye *= 1.0 - 0.7 * under;
@@ -622,7 +622,10 @@ void main() {
   col = mix(col, seen + uSkyAmbient, k.rim * 0.22);
   // The sun's own reflection would sit under the heavy lid, so the catchlight is the sky above.
   float glint = pow(max(dot(Nc, normalize(V + vec3(0.0, 0.55, 0.0) + vAxisZ * 0.25)), 0.0), 700.0);
-  col += vec3(1.0, 0.95, 0.86) * dot(uSunColor * 0.5 + uSkyHorizonSun, vec3(0.3, 0.5, 0.2)) * glint * ${f(L.catchlight)} * k.gloss;
+  // And a soft second light low in it, the bright sea, so it reads wet and gentle rather than glassy.
+  float sea = pow(max(dot(Nc, normalize(V - vec3(0.0, 0.4, 0.0) - vAxisZ * 0.3)), 0.0), 90.0);
+  vec3 bright = vec3(1.0, 0.95, 0.86) * dot(uSunColor * 0.5 + uSkyHorizonSun, vec3(0.3, 0.5, 0.2));
+  col += bright * (glint * ${f(L.catchlight)} + sea * 0.06) * k.gloss;
 
   // The gold line stays crisp over the haze, so the back goes on into the morning as one thin line.
   float filmed = float(part == ${BODY});

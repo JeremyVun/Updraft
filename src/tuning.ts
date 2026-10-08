@@ -2206,7 +2206,7 @@ export const tuning = {
   /** The dream-sized whale's look, wherever it is met. */
   whaleLook: {
     /** A slate-blue back, a pale lower jaw and belly, a deep warm brown eye. */
-    back: '#526276', belly: '#aea79f', iris: '#7a4622',
+    back: '#526276', belly: '#aea79f', iris: '#82502b',
     /**
      * Its ancient skin, painted: broad soft patches of tone (how strong), a pale lichen dapple (colour, how much of the
      * skin it covers, how strongly), old healed scars and scuffs (colour, the share of the skin's cells that carry one,
@@ -2214,7 +2214,7 @@ export const tuning = {
      * waterline (colour, how far up it reaches in metres).
      */
     tone: 0.1, dapple: '#7f8fa0', dappleCover: 0.3, dappleAmount: 0.4,
-    scar: '#b3bcc2', scars: 0.5, scarAmount: 0.55,
+    scar: '#b3bcc2', scars: 0.28, scarAmount: 0.5,
     crust: '#d2cbbb',
     growth: '#4c5a2b', growthReach: 0.7,
     /** Wet runs down from the top: how much darker and glossier the skin is along them. */
@@ -2228,7 +2228,7 @@ export const tuning = {
     /** The crisp gold line where its back turns away toward the low sun, how thin, and how much the wet top mirrors the sky. */
     ridge: 6, ridgePower: 26, wet: 0.6,
     /** The sun through the eye's cornea warming the lower iris, and its one sharp point of light in the eye. */
-    caustic: 0.35, catchlight: 3,
+    caustic: 0.5, catchlight: 3,
     /** How much of the sky the wet cornea over the iris mirrors. */
     cornea: 0.06,
     /** How far the near flipper turns over along its length for each radian it is lifted. */
