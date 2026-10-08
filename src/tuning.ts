@@ -2050,7 +2050,7 @@ export const tuning = {
        * it looks, how high above her feet, its pace and its lens.
        */
       follow: 2.2, followDown: 3, steady: 2, steadiest: 1.4, behind: 6, ahead: 12,
-      off: 1.25, uprightOff: 1.35, distance: 12.5, uprightDistance: 13.5, rise: 3.5, uprightRise: 4.2, lowest: 2.8, highest: 12,
+      off: 1.35, uprightOff: 1.35, distance: 12.5, uprightDistance: 13.5, rise: 3.5, uprightRise: 4.2, lowest: 2.8, highest: 12,
       lead: 0.8, aim: 1.0, pace: 0.6, zoom: 1, uprightZoom: 0.9,
       /** How far ahead of her on her way the laid lens is read, so the eased lens turns as she does (metres). */
       keyAhead: 2.5,
@@ -2072,7 +2072,7 @@ export const tuning = {
        * front's edge is taken to be (metres), how far off where the lens looks that edge may stand (radians; upright
        * its own) and what each radian further costs.
        */
-      fogClear: 3, steepFrom: 0.3, steepCost: 60, fogEdge: 8, fogInView: 0.42, uprightFogInView: 0.3, fogCost: 120,
+      fogClear: 3, steepFrom: 0.3, steepCost: 60, fogEdge: 16, fogInView: 0.42, uprightFogInView: 0.3, fogCost: 120,
       /**
        * How it is laid along her way (`layLens`): what it costs to stand a radian (squared) from where it wants, to be
        * drawn in all the way (upright, where drawn in she soon leaves the narrow frame), to stand `lifted` metres
@@ -2093,13 +2093,14 @@ export const tuning = {
       /** Milliseconds a frame spends laying it from the start of the room, so it is ready long before she sets off. */
       layFor: 2,
       /**
-       * Round to each piece's own view from `comeFrom` to `comeTo` metres before she reaches it, and back to her own way
+       * Round to each piece's own view from `comeFrom` to `comeTo` metres before she reaches it (the mill's only once she
+       * is at its basket, its view standing ahead of her as she comes), and back to her own way
        * from `leaveFrom` metres past it (over each piece's own stretch, below); to the end's view over the last
        * `endFrom` metres; and how fast it comes round to a piece's view once she has stopped at it (per second).
        */
-      comeFrom: 5, comeTo: 0, leaveFrom: 0, endFrom: 8, roundRate: 0.95,
+      comeFrom: { tree: 5, sheet: 5, mill: 0.5, swing: 5 }, comeTo: 0, leaveFrom: 0, endFrom: 8, roundRate: 0.95,
       /** How far past each piece the lens has given it back to her own way, metres. */
-      leave: { tree: 4, sheet: 0, mill: 5, swing: 3 },
+      leave: { tree: 2, sheet: 0, mill: 2, swing: 3 },
       /**
        * Her look back from the first roof's end: how strongly it holds the lens, how quickly it comes and goes (s) and
        * how long before she turns to go on it has gone, so it is back beside her before she walks; how far behind her,

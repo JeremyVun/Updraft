@@ -169,22 +169,18 @@ function behindHer(nodes: readonly Node[], heading: readonly number[], off: numb
   return out;
 }
 
-/**
- * Where a piece's own view leaves the lens as she walks on from it, or where it takes the lens as she comes to it: how
- * far along her way, and its bearing from her.
- */
+/** Where a piece's own view leaves the lens as she walks on from it: how far along her way, and its bearing from her. */
 interface Anchor {
   s: number;
   bearing: number;
-  coming?: boolean;
 }
 
 /**
- * Where the walking lens stands at every `LENS_STEP` of her way, as a bearing round her: opposite the way it looks
- * (`views`), at about her height; never where she would walk toward it; where a roof stands in the way or between it
- * and her, swung round or drawn in as little as will do, and turning between steps as little as it can, so it moves
- * as she does, goes round her rather than through her at a turn, and never jumps. Upright it stands behind her,
- * looking along her way.
+ * Where the walking lens stands at every `LENS_STEP` of her way, as a bearing round her: behind her on the fog's side
+ * (`behindHer`), above her; never where she would walk toward it, look down on her steeply or lose the fog behind her;
+ * where a roof stands in the way or between it and her, swung round or drawn in as little as will do, and turning
+ * between steps as little as it can, so it moves as she does, goes round her rather than through her at a turn, and
+ * never jumps.
  */
 function* layLens(nodes: readonly Node[], obstacles: readonly THREE.Box3[], upright: boolean, anchors: readonly Anchor[]): Generator<void, LensKey[]> {
   const k = tuning.drownedCamera.run;
@@ -295,7 +291,7 @@ function* layLens(nodes: readonly Node[], obstacles: readonly THREE.Box3[], upri
     const along = Math.atan2(b.x - a.x, b.z - a.z);
     wayAt(nodes, s, p);
     const lift = THREE.MathUtils.clamp(p.y + rise, k.lowest, k.highest) - p.y;
-    const handed = anchors.find((h) => (h.coming ? s > h.s - k.anchorFor && s <= h.s : s >= h.s && s < h.s + k.anchorFor));
+    const handed = anchors.find((h) => s >= h.s && s < h.s + k.anchorFor);
     steps.push({ want: along, along, lift,
       free: held.some(([from, to]) => s > from && s < to),
       anchor: handed ? { bearing: handed.bearing, weight: 1 - Math.abs(s - handed.s) / k.anchorFor } : null });
@@ -490,19 +486,11 @@ export class RoofRun {
     const bough = new THREE.Box3().setFromPoints([new THREE.Vector3(tree.x, 6, tree.z), new THREE.Vector3(pivot.x, pivot.y + 1.2, pivot.z)]).expandByScalar(0.8);
     const obstacles = [...village.cameraObstacles, sails, crown, bough];
     village.mill.group.updateMatrixWorld(true);
+    /** Just past the tree, the lens starts out from where the tree's view leaves it. */
     const anchors = (wide: number): Anchor[] => {
-      /** The sheet's view stands across the way she goes on from it, so the lens leaves it for her own way at once. */
-      const leaving = (['tree', 'mill'] as const).map((piece) => {
-        const at = PIECES[piece].onward;
-        if (piece === 'tree') this.treeView(wide, at, 1);
-        else this.millView(wide, at);
-        return { s: this.nodes[this.pieceAt[piece]].s, bearing: Math.atan2(this.stationEye.x - at.x, this.stationEye.z - at.z) };
-      });
-      /** The mill's view stands on the far side of the mill from the way she comes to it: the lens comes that side. */
-      const wait = PIECES.mill.wait;
-      this.millView(wide, wait);
-      const mill = { s: this.nodes[this.pieceAt.mill - 1].s, bearing: Math.atan2(this.stationEye.x - wait.x, this.stationEye.z - wait.z), coming: true };
-      return [...leaving, mill];
+      const at = PIECES.tree.onward;
+      this.treeView(wide, at, 1);
+      return [{ s: this.nodes[this.pieceAt.tree].s, bearing: Math.atan2(this.stationEye.x - at.x, this.stationEye.z - at.z) }];
     };
     this.laying = [layLens(this.nodes, obstacles, false, anchors(1)), layLens(this.nodes, obstacles, true, anchors(0))];
   }
@@ -1002,6 +990,8 @@ export class RoofRun {
     if (at > 0.5) held.secondary.copy(this.stationTarget);
     else if (cat.distanceTo(c) < k.catHeld) held.secondary.copy(cat);
     else this.pointAt(this.along + k.lookOn, held.secondary).setY(c.y + 1);
+    /** At a piece its view is authored to hold both; it never draws back while she works it. */
+    held.extra = at > 0.5 ? 0 : k.extra;
     shot.subjects = held;
     shot.attention = undefined;
     shot.composition = undefined;
@@ -1043,7 +1033,7 @@ export class RoofRun {
     for (const piece of ORDER) {
       const i = this.pieceAt[piece];
       const wait = this.nodes[i - 1].s, over = this.nodes[i].s;
-      const coming = THREE.MathUtils.smootherstep(this.along, wait - k.comeFrom, wait - k.comeTo);
+      const coming = THREE.MathUtils.smootherstep(this.along, wait - k.comeFrom[piece], wait - k.comeTo);
       const leave = k.leave[piece];
       const going = this[piece].done && this.stage !== piece ? THREE.MathUtils.smootherstep(this.along, over + k.leaveFrom, over + leave) : 0;
       /** Set down by the sheet she takes a breath while the lens goes round to her own way. */
@@ -1090,7 +1080,7 @@ export class RoofRun {
     const root = TREE_SITE.spot.root, rest = TREE_SITE.spot.rest, over = TREE_SITE.spot.over;
     const fx = rest.x - root.x, fz = rest.z - root.z, fl = Math.hypot(fx, fz);
     const ex = fx / fl, ez = fz / fl, nx = ez, nz = -ex;
-    const crossed = on * THREE.MathUtils.smoothstep(((c.x - over.x) * ex + (c.z - over.z) * ez) / (fl - 2.4), 0.2, 1);
+    const crossed = on * THREE.MathUtils.smoothstep(((c.x - over.x) * ex + (c.z - over.z) * ez) / (fl - 2.4), 0, 0.8);
     const north = THREE.MathUtils.lerp(k.uprightTreeNorth, k.treeNorth, wide), east = THREE.MathUtils.lerp(k.uprightTreeEast, k.treeEast, wide);
     const eye = this.treeEye.set(over.x + nx * north + ex * east, THREE.MathUtils.lerp(k.uprightTreeHigh, k.treeHigh, wide), over.z + nz * north + ez * east);
     const target = this.treeTarget.copy(over).lerp(rest, 0.25).setY(1.9).lerp(this.tmp.copy(c).setY(c.y + 1), THREE.MathUtils.lerp(k.uprightTreeOnHer, 0.45, wide));
