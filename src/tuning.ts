@@ -1925,8 +1925,17 @@ export const tuning = {
       rings: 4, answers: [0.1, 0.42, 0.72, 1], answerAfter: 0.7, homeGlide: 1.6, answerFor: 3.8,
       /** Its light in the fog: steady, the swell of an answer and how fast that fades (s), and how big, metres at 30 m off. */
       glow: 0.55, glowSwell: 1.1, answerGlow: 1.6, glowSize: 3.2,
-      /** Seconds after she starts down that the cat gets up from its kittens and comes to the sill. */
-      catUpAfter: 2.5,
+      /**
+       * The cat after her: seconds after she starts down that it gets up from its kittens; how far in from the lip it
+       * stands on the sill and how long it looks down at her there before it turns its back to the drop; how fast it
+       * backs down the ivy (m/s) and how long it looks down over its shoulder before it drops; where it drops from, across
+       * the ivy from her line (her right positive) and up from the ridge, and how far across from her line its way goes
+       * (metres); how far along the ridge from the tower it sits; how long
+       * after it goes over the lip a kitten comes to the sill; and seconds after she sits that it goes back up, and its
+       * gather for the leap onto the ivy.
+       */
+      catUpAfter: 0.3, catLip: 0.15, catLooks: 0.4, catDown: 0.95, catPause: 0.8, catFoot: [-0.45, 0.62], catAcross: -0.62, catRidge: 0.5,
+      kittenAfter: 2.4, homeAt: 7.9, homeGather: 0.3,
       /** The most the boat goes under sail, m/s; how near a turn of its way counts as rounded; how near the berth it lies. */
       bringSpeed: 2.6, rounded: 3.5, berthed: 0.6,
       /** Seconds with no progress before the world's air carries it, and how much breeze that is. */
@@ -1936,7 +1945,7 @@ export const tuning = {
        * its soft chirrup, and how long before they go; how she turns round on the thwart to it: beyond what her head turns (radians), the most her body
        * turns and how fast, and how far behind the cat has to be before she turns the side away from the lens.
        */
-      lookUpAt: 0.6, blinkAt: 5.6, chirrupAfter: 2.2, lookUpFor: 10.6, headTurns: 0.9, seatTurn: 1.7, turnRate: 1.6, turnPast: 2.2,
+      lookUpAt: 0.6, blinkAt: 5.6, chirrupAfter: 2.0, lookUpFor: 10.6, headTurns: 0.9, seatTurn: 1.7, turnRate: 1.6, turnPast: 2.2,
       /** The rain the fog brings as it closes round, and how far gathered the storm's weather is when it starts from here. */
       closeShower: 0.25, stormFrom: 0.35,
     },
@@ -2163,24 +2172,30 @@ export const tuning = {
        * her); it looks this share of the way from her to the boat.
        */
       bring: [-11, 1.6, -10, 0, 0, 0], uprightBring: [-10, 2.4, -9, 0, 0, 0], bringAlong: 0.45,
-      /** As she steps aboard it comes round to stand this far off her (upright, its own) and this high over her feet. */
-      boardBack: 7.5, uprightBoardBack: 7, boardHigh: 2.2,
       /**
-       * Aboard, over her shoulder looking up at the cat on the sill: her eyes over the thwart seated; how far behind
-       * them it stands, how far under them, how far round from straight behind toward the boat's starboard (radians),
-       * how far under her eyes her hood is taken to be, what share of the way round from her hood to the cat it looks,
-       * and its lens (upright, its own); from `tiltFrom` to `tiltTo` seconds after she sits it comes round and down
-       * there from the boarding view; how low it may go over the water, and how far along its look it aims, metres
-       * (as far as the sill, so the ground check sees the ray rise clear of the water).
+       * As the boat comes in alongside it comes round, from when the boat is `boardFrom` metres from the berth until
+       * `boardBy`, toward the boat's starboard quarter, this share of the way from the beam to the stern, to stand this
+       * far off her (upright, its own) and this high over her feet as she steps aboard.
        */
-      seatedEyes: 1.5, upBack: 2.6, upUnder: 1.32, upRound: 0.75, hoodBelow: 0, upAim: 0.56, upZoom: 1.3,
-      uprightUpBack: 2.4, uprightUpUnder: 1.35, uprightUpRound: 0.56, uprightUpAim: 0.5, uprightUpZoom: 1.7,
+      boardFrom: 7, boardBy: 2.5, boardQuarter: 0.2, boardBack: 7.5, uprightBoardBack: 7, boardHigh: 2.2,
+      /**
+       * Aboard, over her shoulder looking at the cat on the ridge: how high its eyes are as it sits there; how far
+       * behind her eyes the lens stands and how far over them, how far round from straight behind toward the boat's
+       * starboard (radians), how far over her eyes her hood's top is taken to be, what share of the way round from her
+       * hood to the cat it looks, and its lens (upright, its own); from `tiltFrom` to `tiltTo` seconds after she sits it
+       * comes round and in there from the boarding view; how low it may go over the water, and how far along its look it
+       * aims, metres.
+       */
+      catEyes: 0.3, upBack: 3.4, upOver: 0.15, upRound: 0.45, hoodOver: 0.12, upAim: 0.5, upZoom: 1.5,
+      uprightUpBack: 2.2, uprightUpOver: 0.2, uprightUpRound: 0.35, uprightUpAim: 0.55, uprightUpZoom: 1.5,
       tiltFrom: 0.3, tiltTo: 4.2, upClear: 0.35, upLook: 8,
       /**
-       * After the blink, from `releaseFrom` to `releaseTo` seconds after she sits, it lets go out to the west over the
-       * water: [eye x, height over the sill, z, the height over her it looks at, lens].
+       * After the blink, from `releaseFrom` to `releaseTo` seconds after she sits, it lets her go as the cat goes home:
+       * round toward the bow by this much (radians), this far from her eyes and this far over them, looking this share
+       * of the way from her up to the sill, on this lens (upright, its own).
        */
-      releaseFrom: 6.6, releaseTo: 10.6, release: [-17, -4.2, -15, 1.2, 1.1],
+      releaseFrom: 8.2, releaseTo: 12, releaseRound: 0.3, releaseBack: 15, releaseUp: 2.3, releaseLook: 0.3, releaseZoom: 1.05,
+      uprightReleaseRound: 0.5, uprightReleaseBack: 12, uprightReleaseUp: 2, uprightReleaseLook: 0.4,
       /**
        * The paces it moves at (the kittens', the fog sea's and the look up's slower), how much of the frame she and
        * what she is with keep inside and how far it may draw back to hold them, and upright how much wider the lens.
@@ -2193,7 +2208,7 @@ export const tuning = {
        * falters, and is there; how much of the way it goes, how much it favours her over the lamp and how wide the
        * lens goes to hold them both (upright, wider); and when it gives way to the storm's frame, and how long that takes.
        */
-      lampFrom: 0, lampTo: 3, lampAim: 1, lampHer: 0.55, uprightLampHer: 0.5, lampZoom: 0.68, uprightLampZoom: 0.62,
+      lampFrom: 1, lampTo: 3.8, lampAim: 1, lampHer: 0.55, uprightLampHer: 0.5, lampZoom: 0.68, uprightLampZoom: 0.62,
       leaveFrom: 6.6, leaveFor: 12,
     },
     /** Follow the boat into the streets; notice the church from that travelling view. */
