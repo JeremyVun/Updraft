@@ -990,6 +990,38 @@ For Phase 9: the look up now runs 10.6 s (`lookUpFor`), the blink at 5.6 s, so t
 than before. For Phase 10: the run check's `FILMFROM=cat`, `TO=ridge`, `TRACE=<file>` (per-quarter-second lens trace
 and per-stretch fastest turns), stills' lens measures (`<prefix>-measures.json`), and `LENS=1` gating 30 deg/s and cuts.
 
+### Phase 8b: the camera's leftovers (after 8 and 9 merged)
+Owns: the same camera code as Phase 8 (`drowned-run.ts`'s lens, `drowned-church.ts`'s frames, `drowned.ts`'s
+frames, `tuning.drownedCamera`) and `tools/drowned-run-check.mjs`'s lens gates. Not the music, the fog's look or the
+cat's animation.
+The lead's review of Phase 8: the rescue, the stranding's lean in on the bow, the bolt, the sheet, the mill from low
+beside the basket and the bell all read now, and nothing turns faster than the bar rooms. What is left, with the
+lead's calls:
+- **The slow blink** (the room's last word) has drifted from the shot list: the lens rises 4.5 m to the sill's height
+  and looks across at the cat, so she is out of frame for 8 s. Make it the low over-the-shoulder looking up: the lens
+  below her head height and close behind her (about 1.5 m back, 1 m under her eyes), her hood and shoulder large in a
+  lower corner, the cat and the kitten on the sill in the upper third beyond, both in one frame, the cat at least
+  80 px tall in landscape (a lens around 1.3-1.6 does it: from there she and the sill are only about 20 degrees
+  apart). Mast and sail out of the line. Held through the blink; then the release as now. She stays in frame
+  throughout, so the church check holds without an exception.
+- **The fog on walks:** it leaves the frame for 7-10 s on the walk from the granary to the swing and up to 8 s on
+  the walk to the mill (upright up to 8 s). Keep it at the frame's edge on every walk: stand off the shoulder on the
+  fog's side so it shows beside her, or give it a glance whose weight rises as it nears; never chase it round.
+- **Her walking toward the lens** for 1.1-1.5 s at one corner (onto the wall before the mill, or the tree's end):
+  the lens comes round before her, not after.
+- **The kittens:** her face and the kittens in one frame, three-quarter on, close and warm. If no eye outside the
+  belfry sees it, the lens follows her in through the light she climbs in by (a continuous path, as the red door's
+  threshold), never a cut.
+- **From the kittens to the fog sea** the orbit round the tower's corner hides her for up to 7.6 s: go round the
+  other way, or over.
+- **Boarding:** the mast crosses her as she steps in; keep it out by bearing.
+- **The storm's light going out from `FROM=belfry`:** the lighthouse leaves the frame as the light fails (the check
+  fails there; `FROM=church` passes).
+Gate: `drowned-run-check` `LENS=1` from the drift through the storm and `FROM=belfry`, landscape and upright, passing
+with no exceptions; stills of each item before and after, in both aspects, captioned as the Phase 8 sheets; 2 fps
+strips of the blink, the kittens and the two walks.
+Done: [ ]
+
 ### Phase 9: the music (parallel with 7c or 8)
 Owns: the drowned score (`src/audio/dream-score.ts` and its notes, the room's `drownedScore` phases): a cue for every
 part of the room per design.md, the bell's note in key; renders for Jeremy to judge by ear.
