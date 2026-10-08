@@ -263,6 +263,8 @@ export class Cat {
   private batT = -1;
   private readonly batAt = new THREE.Vector3();
   private toppleT = -1;
+  /** Which way it goes over: to its left (1) or its right. */
+  private toppleSide = 1;
   private shudderT = -1;
   private nextShudder = 1.2;
   private turnAge = 0;
@@ -294,7 +296,7 @@ export class Cat {
     };
     this.d = {
       frame: new THREE.Matrix4(), scale: 1, origin: new THREE.Vector3(), forward: new THREE.Vector3(0, 0, 1), up: new THREE.Vector3(0, 1, 0),
-      bodyY: STANCES.sit.bodyY, bodyZ: 0, pitch: STANCES.sit.pitch, roll: 0, flex: 0, stretch: 0, legs: 1, chestUp: STANCES.sit.chestUp, neckLow: 0,
+      bodyX: 0, bodyY: STANCES.sit.bodyY, bodyZ: 0, pitch: STANCES.sit.pitch, roll: 0, flex: 0, stretch: 0, legs: 1, chestUp: STANCES.sit.chestUp, neckLow: 0,
       headYaw: 0, headPitch: 0, headRoll: 0, headSize: 1, jaw: 0, earBack: 0, earTwitch: [0, 0],
       tailLift: 0, tailSwing: 0, tailCurl: 0, tailWrap: 1, tailWave: 0, tailFlick: 0,
       paws: this.paws.map((at) => ({ at, curl: 0 })), hock: [1.45, 1.45], breath: 0, bend: 0,
@@ -308,6 +310,11 @@ export class Cat {
   /** True until the action it was last given has finished. */
   get busy(): boolean {
     return this.onDone !== null || this.doing !== 'still';
+  }
+
+  /** True from the moment it springs until it is down. */
+  get flying(): boolean {
+    return this.doing === 'air' && this.air === 'fly';
   }
 
   /** Where its eyes are, in the world: for the child's gaze and the camera. */
@@ -464,9 +471,11 @@ export class Cat {
     this.batAt.copy(at);
   }
 
-  /** A kitten bowled over onto its side, paws up, and back onto its feet. */
-  topple(): void {
+  /** A kitten bowled over onto its side, paws up, and back onto its feet: away from `from`, if it was knocked from there. */
+  topple(from?: THREE.Vector3): void {
     this.toppleT = 0;
+    if (this.doing === 'still') this.pose = 'stand';
+    this.toppleSide = from ? -(Math.sign(this.toLocal(from, this.w).x) || 1) : 1;
   }
 
   /** Where the hollow of its curl is, in the world, for what it curls round. */
@@ -1369,14 +1378,19 @@ export class Cat {
       earBack *= 1 - 0.6 * nod;
     }
     lids = Math.max(lids, 0.18 * shiver + 0.4 * shudder);
+    let bodyX = 0;
     if (this.toppleT >= 0) {
+      /** Knocked over away from what hit it: it rolls onto its back on that side, paws up, and scrambles up again. */
       const t = this.toppleT;
-      const over = smooth(t / 0.25) * (1 - smooth((t - 0.85) / 0.4));
-      roll += 1.1 * over;
-      bodyY -= 0.035 * over;
-      headRoll -= 0.5 * over;
+      const side = this.toppleSide;
+      const over = smooth(t / 0.18) * (1 - smooth((t - 0.85) / 0.4));
+      roll += 1.5 * side * over;
+      bodyX += 0.1 * side * over;
+      bodyY -= 0.04 * over;
+      headRoll -= 0.6 * side * over;
+      const across = this.v.crossVectors(this.up, this.fwd).normalize();
       for (let i = 0; i < 4; i++) {
-        this.paws[i].addScaledVector(this.up, (i < 2 ? 0.05 : 0.03) * this.scale * over);
+        this.paws[i].addScaledVector(this.up, (i < 2 ? 0.06 : 0.04) * this.scale * over).addScaledVector(across, 0.03 * side * this.scale * over);
         this.d.paws[i].curl = Math.max(this.d.paws[i].curl, 1.1 * over);
       }
     }
@@ -1466,7 +1480,8 @@ export class Cat {
 
     const ears = this.earSpring.step(clamp(earBack, 0, 1), 140, 12, dt);
     const tailRate = this.doing === 'air' || this.doing === 'path' ? 14 : 4;
-    const rate = this.doing === 'air' ? 16 : this.doing === 'path' ? 12 : 6;
+    const rate = this.doing === 'air' ? 16 : this.doing === 'path' || this.toppleT >= 0 ? 12 : 6;
+    d.bodyX = ease(d.bodyX, bodyX, rate * 1.5, dt);
     d.bodyY = ease(d.bodyY, bodyY, rate, dt);
     d.bodyZ = ease(d.bodyZ, bodyZ, rate, dt);
     d.pitch = ease(d.pitch, pitch, rate, dt);

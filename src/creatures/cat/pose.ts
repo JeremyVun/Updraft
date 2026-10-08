@@ -16,6 +16,8 @@ export interface Drives {
   origin: THREE.Vector3;
   forward: THREE.Vector3;
   up: THREE.Vector3;
+  /** The body carried over to its left, up off what it stands on, and ahead. */
+  bodyX: number;
   bodyY: number;
   bodyZ: number;
   /** Nose up, and over to its left. */
@@ -134,7 +136,7 @@ export class CatRig {
     this.root.matrix.multiplyMatrices(d.frame, this.basis).multiply(this.m);
 
     const body = n[BODY];
-    body.position.set(0, d.bodyY, REST[BODY][2] + d.bodyZ);
+    body.position.set(d.bodyX, d.bodyY, REST[BODY][2] + d.bodyZ);
     body.rotation.set(-d.pitch, 0, d.roll);
     const breathe = Math.sin(d.breath) * 0.012;
     body.scale.set(1 + breathe, 1 + breathe * 1.3, 1);
