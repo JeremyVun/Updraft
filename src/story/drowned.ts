@@ -404,10 +404,7 @@ export class DrownedChapter implements Chapter {
           this.to('run');
           this.run.begin(this.fogSpeed);
           /** Restored on the ridge there was no climb for the run to take the lens from: it cuts to her. */
-          if (this.restored) {
-            this.run.cutIn();
-            this.cutIn = 2;
-          }
+          if (this.restored) this.cutIn = 2;
           this.restored = false;
         }
         break;

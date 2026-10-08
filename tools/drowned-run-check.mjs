@@ -567,9 +567,6 @@ try {
     filmFrom ??= (await state()).time;
     await until((s) => s.beat === 'run', 30, 'her setting off');
     await frame();
-    const hand = await page.evaluate(() => { const r = __game.story.current.run, c = __game.child.position;
-      return { t: r.handT, off: r.handFrom ? Math.hypot(r.handFrom.x - c.x, r.handFrom.z - c.z) : null }; });
-    console.log(`the run took the lens ${hand.t === Infinity ? 'by the rig' : 'by its hand-over'} from ${hand.off?.toFixed(1)} m off her`);
 
     // Watches every frame from here: her feet on the decks, her progress, the fog behind her and in the frame, the
     // roofs she leaves going under it, the boat where it lies, and how long she waits on the cat at a piece.
@@ -606,10 +603,14 @@ try {
         if (ahead < w.fogAhead) { w.fogAhead = ahead; w.fogNear = near; w.fogAt = `${r.stage} at ${r.along.toFixed(1)} m, ${t.toFixed(1)} s`; }
         if (r.stage === 'walk') {
           let seen = false;
+          /** Its body low down or its top, which is what a lens up on the high roofs sees of it. */
           for (let a = -40; a <= 40 && !seen; a += 5) {
             for (const deep of [0, 6, 14]) {
-              probe.set(front.x - (dz / dl) * a - (dx / dl) * deep, Math.min(2.5, dark.level * 0.5), front.y + (dx / dl) * a - (dz / dl) * deep).project(cam);
-              if (probe.z < 1 && Math.abs(probe.x) < 0.98 && Math.abs(probe.y) < 0.98) { seen = true; break; }
+              for (const y of [Math.min(2.5, dark.level * 0.5), dark.level * 0.85]) {
+                probe.set(front.x - (dz / dl) * a - (dx / dl) * deep, y, front.y + (dx / dl) * a - (dz / dl) * deep).project(cam);
+                if (probe.z < 1 && Math.abs(probe.x) < 0.98 && Math.abs(probe.y) < 0.98) { seen = true; break; }
+              }
+              if (seen) break;
             }
           }
           w.fogGoneRun = seen ? 0 : w.fogGoneRun + 1 / 60;

@@ -2043,23 +2043,36 @@ export const tuning = {
     /** Her run over the roofs (`RoofRun.frame`). */
     run: {
       /**
-       * Beside her on her own way: how quickly it follows her across and up and down, and steadies its sense of her
-       * pace (per second), and the most it takes that to be (m/s); the stretch of way behind and ahead of her whose
-       * line it stands across, how far round from the fog's body toward the church it looks (a share of the angle
-       * between them, the fog's body taken that far along its front from the way), upright how far back from abeam on
-       * her left it stands (radians), how far off at most, how far above her feet and the lowest and highest it goes,
-       * how far along her way it looks, how high above her feet, its pace, and how far it widens to hold the fog and
-       * the church together (landscape) or to keep her in the narrow frame through a turn (upright), eased back at each
-       * piece.
+       * On her own way: how quickly it follows her across and up and down, and steadies its sense of her pace (per
+       * second), and the most it takes that to be (m/s); the stretch of way behind and ahead of her whose line is the
+       * way she is going; how far round from straight behind her toward the fog's side it stands (radians; upright
+       * its own), how far off at most, how far above her feet and the lowest and highest it goes, how far along her way
+       * it looks, how high above her feet, its pace and its lens.
        */
-      follow: 2.2, followDown: 3, steady: 2, steadiest: 1.4, behind: 6, ahead: 12, churchShare: 0.55, fogAside: 0,
-      /** With the fog and the church nearly opposite (beyond `flipFrom` radians apart) it looks across from this side (+1 her right going round to the church). */
-      flipFrom: 2.6, side: -1, uprightBack: 1.5, distance: 10, uprightDistance: 12,
-      rise: 1.5, uprightRise: 2.6, lowest: 2.8, highest: 7, lead: 1, aim: 1.0, pace: 0.7, zoom: 0.85, uprightZoom: 0.85,
+      follow: 2.2, followDown: 3, steady: 2, steadiest: 1.4, behind: 6, ahead: 12,
+      off: 1.25, uprightOff: 1.35, distance: 12.5, uprightDistance: 13.5, rise: 3.5, uprightRise: 4.2, lowest: 2.8, highest: 12,
+      lead: 0.8, aim: 1.0, pace: 0.6, zoom: 1, uprightZoom: 0.9,
+      /** How far ahead of her on her way the laid lens is read, so the eased lens turns as she does (metres). */
+      keyAhead: 2.5,
+      /**
+       * Which side it stands at first (+1 her right going round from behind her), and how far round the fog has to be
+       * on the other side before it changes (radians).
+       */
+      side: -1, flipFrom: 0.35,
+      /**
+       * What shares the frame with her (`Shot.subjects`): how much of the frame they keep inside and how far it may
+       * draw back to hold them; the cat while it is within `catHeld` metres of her, else her way `lookOn` metres on.
+       */
+      margin: 0.8, extra: 3, catHeld: 14, lookOn: 8,
       /** How far it keeps off the side of a house, wall or chimney it stands lower than the top of, and over a chimney, metres. */
       clearOf: 1.6,
-      /** How far ahead of the fog's front, along the way it comes, it always stands, metres. */
-      fogClear: 9,
+      /**
+       * How far ahead of the fog's front, along the way it comes, it always stands, metres; the angle down to her past
+       * which it costs to stand (radians) and what each further radian costs; how far either side of the fog's way its
+       * front's edge is taken to be (metres), how far off where the lens looks that edge may stand (radians; upright
+       * its own) and what each radian further costs.
+       */
+      fogClear: 3, steepFrom: 0.3, steepCost: 60, fogEdge: 8, fogInView: 0.45, uprightFogInView: 0.3, fogCost: 40,
       /**
        * How it is laid along her way (`layLens`): what it costs to stand a radian (squared) from where it wants, to be
        * drawn in all the way (upright, where drawn in she soon leaves the narrow frame), to stand `lifted` metres
@@ -2082,14 +2095,9 @@ export const tuning = {
       /**
        * Round to each piece's own view from `comeFrom` to `comeTo` metres before she reaches it, and back to her own way
        * from `leaveFrom` metres past it (over each piece's own stretch, below); to the end's view over the last
-       * `endFrom` metres.
+       * `endFrom` metres; and how fast it comes round to a piece's view once she has stopped at it (per second).
        */
-      comeFrom: 5, comeTo: 0, leaveFrom: 0, endFrom: 8,
-      /**
-       * How fast the lens comes round to a piece's view once she has stopped at it (per second), and to the swing's
-       * (from the mill's, which brings her to it), by way of a point this far from the swing's pivot (x, height, z).
-       */
-      roundRate: 0.95, swingRate: 0.25, swingVia: [-3.5, 13, -6.5],
+      comeFrom: 5, comeTo: 0, leaveFrom: 0, endFrom: 8, roundRate: 0.95,
       /** How far past each piece the lens has given it back to her own way, metres. */
       leave: { tree: 4, sheet: 0, mill: 5, swing: 3 },
       /**
@@ -2108,22 +2116,19 @@ export const tuning = {
       sheetSide: 1, sheetOff: 10.5,
       /**
        * The mill's view, in the mill's own frame (x to the right seen from in front, z out of the front, heights above
-       * her roof): where it stands and looks while she is low, how much higher it stands and looks as she rises, how far
-       * it moves on once she is off onto the granary and the way it bends on the way there (a curve's middle point), how
-       * quickly (per second; upright, a little slower), how soon (a share of that move) it has turned to look at her,
-       * and how far above her feet it looks then (low, so she stays in the frame as she comes down off the granary).
+       * her roof): where it stands and looks while she is low, and how much higher it stands and looks once she is up.
        */
-      millWide: { eye: [-13.0, 9.3, 9.0], at: [-2.6, 5.0, -1.2], eyeRise: 1.0, rise: 1.6, on: [8.6, -4.3, -24.9], via: [-1.4, -4.3, -27.4] },
-      millUpright: { eye: [-10.5, 9.0, 7.5], at: [-2.8, 5.2, -1.4], eyeRise: 1.4, rise: 1.8, on: [5.5, -3.6, -24.0], via: [-1.2, -3.6, -25.5] },
-      millOn: 0.5, uprightMillOn: 0.38, millLook: 0.2, millAim: 0.5,
+      millWide: { eye: [-10, 1.6, 6], at: [-2.8, 3.6, -1.4], eyeRise: 2.4, rise: 3.2 },
+      millUpright: { eye: [-8, 1.8, 5], at: [-3.0, 4.2, -1.6], eyeRise: 2.6, rise: 3.4 },
+      /**
+       * The swing's view: how far round from side on to her arc toward the way she swings out (radians), how far from
+       * the bough and how high over the seat it stands; it looks this far out along her arc and this high over the
+       * seat. Upright its own.
+       */
+      swingRound: 0.3, swingBack: 13, swingHigh: 2.6, swingAhead: 1.2, swingAim: 0.9,
+      uprightSwingRound: 0.4, uprightSwingBack: 12, uprightSwingHigh: 3.2,
       /** The end's view: how far back along the nave, how high, and how far out over the green. */
       naveBack: 10, naveHigh: 3.6, naveAside: 11,
-      /**
-       * Seconds the lens takes from where the climb left it, round her over the open water where the boat lies, to the
-       * tree's view as she sets off (if it stood within `handFar` of her), and how much further out and higher it
-       * stands half-way round; upright, how far half-way round its look comes onto her.
-       */
-      handFor: 5, handFar: 22, handOut: 2, handUp: 0.8, uprightHandHold: 0.7,
     },
     /**
      * The church (`ChurchArrival.frame`): each view as [eye x, y, z, target x, y, z, lens], x and z from the tower's
