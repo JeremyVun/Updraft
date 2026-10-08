@@ -306,7 +306,7 @@ export class Traveller {
   /**
    * On a wall, 0 to 1: her feet go where `footFor` puts them rather than walking, her shadow goes, and whoever has her
    * climbing places her and turns her body with `climbPose` (leaning in to the wall, turned toward a reaching hand,
-   * the hips swung over the foot she stands on, radians).
+   * the hips swung over the foot she stands on, radians), which eases out with `climbing` when she is let go.
    */
   climbing = 0;
   readonly climbPose = { lean: 0, twist: 0, sway: 0 };

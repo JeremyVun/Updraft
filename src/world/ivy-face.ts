@@ -32,7 +32,7 @@ const LEAVES = [lin(0.13, 0.18, 0.05), lin(0.18, 0.23, 0.06), lin(0.1, 0.145, 0.
 const WOOD = 0;
 const LEAF_KIND = 1;
 /** Her way's two old stems, either side of it, and how thick they are (as her wrist) and how far off the stone. */
-const SPAN = 0.4;
+const SPAN = 0.44;
 const THICK = 0.052;
 const OFF = 0.075;
 /** A hold every so far up each stem, the right one starting lower so that her hands and feet go up by turns. */
@@ -188,19 +188,20 @@ export class IvyFace {
       way.push(new THREE.Vector3(stemX(side, H - 0.12), H - 0.12, OFF * 0.6));
       stems.push(way);
       add(stem(way, THICK * 1.15, THICK * 0.78, 8), STEM, WOOD, null, 0);
-      const out = side ? 1 : -1;
+      /** Each fork leans in toward her way, so the crotch a boot goes into is on the inside of the stem. */
+      const inward = side ? -1 : 1;
       for (let y = FIRST[side]; y < H - 0.15; y += RUNG) {
         const yy = y + (rand() - 0.5) * 0.04;
         const at = new THREE.Vector3(stemX(side, yy), yy, OFF);
-        const branch = [at.clone(), at.clone().add(new THREE.Vector3(out * 0.12, 0.13, 0.025)),
-          at.clone().add(new THREE.Vector3(out * 0.3, 0.36, 0.01)), at.clone().add(new THREE.Vector3(out * 0.42, 0.62, -0.02))];
+        const branch = [at.clone(), at.clone().add(new THREE.Vector3(inward * 0.1, 0.14, 0.025)),
+          at.clone().add(new THREE.Vector3(inward * 0.22, 0.34, 0.012)), at.clone().add(new THREE.Vector3(inward * 0.28, 0.55, -0.02))];
         stems.push(branch);
         add(stem(branch, THICK * 0.82, THICK * 0.3, 6), STEM, WOOD, null, 0);
         add(new THREE.SphereGeometry(THICK * 1.35, 8, 6).scale(1, 1.25, 0.95).translate(at.x, at.y - 0.01, at.z), STEM, WOOD, null, 0);
         crotches.push(at);
         this.holds[side].push({
           hand: this.toWorld(new THREE.Vector3(at.x, at.y + 0.1, OFF + THICK + 0.02)),
-          foot: this.toWorld(new THREE.Vector3(at.x + out * 0.03, at.y + 0.11, OFF + 0.13)),
+          foot: this.toWorld(new THREE.Vector3(at.x + inward * 0.06, at.y + 0.11, OFF + 0.13)),
           up: yy,
         });
       }

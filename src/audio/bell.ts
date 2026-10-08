@@ -7,11 +7,11 @@ import type { AudioOut } from '../creatures/voices';
  * tierce, quint and nominal carry the note; the partials above them make the strike's brightness and are gone soon.
  */
 const PARTIALS: [ratio: number, level: number, lasts: number, beat: number][] = [
-  [0.5, 0.5, 1, 0.42],
-  [1, 0.46, 0.62, 0.8],
+  [0.5, 0.3, 1, 0.42],
+  [1, 0.38, 0.62, 0.8],
   [1.189, 0.42, 0.5, 1.15],
-  [1.498, 0.16, 0.3, 0.55],
-  [2, 0.58, 0.36, 1.05],
+  [1.498, 0.15, 0.3, 0.55],
+  [2, 0.62, 0.36, 1.05],
   [2.51, 0.17, 0.16, 1.6],
   [2.67, 0.1, 0.13, 0],
   [3.01, 0.22, 0.11, 2.2],

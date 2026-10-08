@@ -6,8 +6,9 @@
 // the piece throughout; and that nothing happens on its own before the safety valve (and that the valve then does it).
 // Usage: node tools/crossings-check.mjs [scenario ...]
 //   scenarios: tree, tree-three, tree-one, tree-long, tree-rock, tree-wrong, swing, sheet, sheet-sag, sheet-wrong,
-//   sheet-stall (the default set); run (tree and swing in a row with the walk between); tree-idle, swing-idle,
-//   sheet-idle (each idles past the 90 s valve, about two minutes apiece)
+//   sheet-stall, bell, bell-weak (the default set); run (tree and swing in a row with the walk between); climb,
+//   climb-down (her climb up the ivy into the belfry, and back down: hands and feet on their holds); tree-idle,
+//   swing-idle, sheet-idle, bell-idle (each idles past the 90 s valve, about two minutes apiece)
 //   env: BASE (default http://127.0.0.1:5287/), W/H viewport (default 1600x900), OUT (stills and video prefix,
 //        default /tmp/updraft-crossings), SHOTS=1 saves stills at the moments that matter, VIDEO=1 records
 //        <OUT>-<scenario>.webm.
@@ -24,7 +25,7 @@ const shots = process.env.SHOTS === '1';
 const video = process.env.VIDEO === '1';
 const asked = process.argv.slice(2);
 const scenarios = asked.length ? asked : ['tree', 'tree-three', 'tree-one', 'tree-long', 'tree-rock', 'tree-wrong', 'swing',
-  'sheet', 'sheet-sag', 'sheet-wrong', 'sheet-stall'];
+  'sheet', 'sheet-sag', 'sheet-wrong', 'sheet-stall', 'bell', 'bell-weak'];
 
 function expect(ok, message) {
   if (!ok) throw new Error(message);
@@ -74,6 +75,12 @@ class Game {
 
   /** Where a world point is on screen, as fractions of the viewport, and the screen angle of a heading there. */
   async aim(which) {
+    if (which === 'bell') return this.page.evaluate(() => {
+      const yard = window.__game.story.current.bell;
+      const camera = window.__game.rig.camera;
+      const p = yard.bell.middle(camera.position.clone()).project(camera);
+      return { x: (p.x + 1) / 2, y: (1 - p.y) / 2, heading: yard.bell.screenHeading(camera), aspect: camera.aspect };
+    });
     if (which === 'sheet') return this.page.evaluate((which) => {
       const yard = window.__game.story.current[which];
       const camera = window.__game.rig.camera;
@@ -469,6 +476,108 @@ const RUNS = {
     watch.report();
   },
 
+  /**
+   * Standing in the opening with the bell to ring: each firm stroke across it on screen swings it once and it rings
+   * once as the swing tops out; four of them, a stroke every few seconds, ring it four times in about fifteen.
+   */
+  async bell(game) {
+    await game.open('bell', 'bell', '&bell=ring');
+    await game.shot('ready');
+    const start = await game.state();
+    expect(start.bell.rings === 0 && start.phase === 'ringing', `the bell rang or she was not ready before a stroke (${JSON.stringify(start.bell)})`);
+    let first = null, last = null;
+    for (let i = 0; i < 4; i++) {
+      const before = (await game.state()).bell.rings;
+      const aim = await game.aim('bell');
+      await game.stroke(aim, (i % 2 ? Math.PI : 0) + aim.heading, 0.42, 15);
+      const rang = await game.until((s) => s.bell.rings > before, 2.5);
+      expect(rang, `firm stroke ${i + 1} did not ring it (${JSON.stringify((await game.state()).bell)})`);
+      expect(rang.bell.rings === before + 1, `firm stroke ${i + 1} rang it ${rang.bell.rings - before} times`);
+      first ??= rang.t;
+      last = rang.t;
+      game.notes.push(`firm stroke ${i + 1}: rang at the top of a ${rang.bell.peak} rad swing, wave ${rang.waves}`);
+      if (i === 0) {
+        await game.seconds(0.7);
+        await game.shot('ring');
+        await game.seconds(1.4);
+        await game.shot('wave');
+      }
+      await game.until(() => false, 1.0);
+    }
+    const s = await game.until(() => false, 3);
+    game.notes.push(`four rings ${(last - first).toFixed(1)} s apart first to last; ${(await game.state()).bell.rings} rings, ${(await game.state()).bell.touches} touches`);
+    expect((await game.state()).bell.rings === 4, 'it rang on by itself after the strokes');
+  },
+
+  /** Weak strokes, slower and shorter, only rock it and the clapper just touches the bronze; it never rings. */
+  async 'bell-weak'(game) {
+    await game.open('bell', 'bell', '&bell=ring');
+    let most = 0;
+    for (let i = 0; i < 5; i++) {
+      const aim = await game.aim('bell');
+      await game.stroke(aim, aim.heading, 0.22, 24);
+      await game.until(() => false, 2.2, (s) => { most = Math.max(most, Math.abs(s.bell.angle)); expect(s.bell.rings === 0, `a weak stroke rang it (${JSON.stringify(s.bell)})`); });
+    }
+    await game.shot('rocked');
+    const s = await game.state();
+    game.notes.push(`five weak strokes: swung at most ${most.toFixed(3)} rad, ${s.bell.touches} touches of the clapper, no ring`);
+    expect(most > 0.05, `weak strokes did not visibly rock it (${most})`);
+    expect(s.bell.touches > 0, 'the clapper never touched');
+    expect(most < tuningOf(s).ringAt, 'weak strokes swung it as far as a ring');
+  },
+
+  /** Nobody strokes it: it hangs still, the drawn stroke comes, and after the valve the world's own gust rings it. */
+  async 'bell-idle'(game) {
+    await game.open('bell', 'bell', '&bell=ring');
+    let invited = false, most = 0;
+    await game.until(() => false, 85, (s) => {
+      invited ||= s.bell.invitation;
+      most = Math.max(most, Math.abs(s.bell.angle));
+      expect(s.bell.rings === 0 && s.bell.touches === 0, `it rang by itself (${JSON.stringify(s.bell)})`);
+    });
+    await game.shot('invited');
+    game.notes.push(`85 s idle: swung at most ${most.toFixed(4)} rad, the drawn stroke shown: ${invited}`);
+    expect(invited, 'the drawn stroke never came');
+    const rang = await game.until((s) => s.bell.rings > 0, 20);
+    expect(rang, 'the safety valve never rang it');
+    game.notes.push(`the world's own gust rang it at ${rang.t} s`);
+  },
+
+  /** Her climb up the ivy and over the sill into the belfry: every mitten and boot on its hold the whole way. */
+  async climb(game) {
+    await game.open('bell', 'bell', '');
+    await game.page.evaluate(() => window.__game.probe?.reset());
+    const up = await game.until((s) => s.climb.phase === 'up', 8);
+    expect(up, 'she never started climbing');
+    await game.seconds(3.5);
+    await game.shot('climbing');
+    const done = await game.until((s) => s.phase === 'nest' || s.phase === 'ringing', 25);
+    expect(done, `she never got in (${JSON.stringify((await game.state()).climb)})`);
+    const s = await game.state();
+    const probe = await game.page.evaluate(() => window.__game.probe?.report() ?? null);
+    game.notes.push(`climbed ${s.climb.length} s; worst hand gap ${s.climb.hand} m (${s.climb.handAt}), foot slip ${s.climb.foot} m (${s.climb.footAt})`);
+    game.notes.push(`probe: ${probe}`);
+    expect(s.climb.hand < 0.05 && s.climb.foot < 0.05, 'a mitten or a boot came off its hold');
+  },
+
+  /** Back out over the sill and down the ivy, feet first, to the ridge. */
+  async 'climb-down'(game) {
+    await game.open('bell', 'bell', '&bell=down');
+    await game.page.evaluate(() => window.__game.probe?.reset());
+    const down = await game.until((s) => s.climb.phase === 'down', 8);
+    expect(down, 'she never started down');
+    await game.seconds(4);
+    await game.shot('down');
+    const done = await game.until((s) => s.phase === 'below', 30);
+    expect(done, `she never got down (${JSON.stringify((await game.state()).climb)})`);
+    const s = await game.state();
+    const probe = await game.page.evaluate(() => window.__game.probe?.report() ?? null);
+    game.notes.push(`climbed down in ${s.climb.length} s; worst hand gap ${s.climb.hand} m (${s.climb.handAt}), foot slip ${s.climb.foot} m (${s.climb.footAt}); on the ridge at ${s.child.join(', ')}`);
+    game.notes.push(`probe: ${probe}`);
+    expect(s.climb.hand < 0.05 && s.climb.foot < 0.05, 'a mitten or a boot came off its hold');
+    expect(Math.abs(s.child[1] - 2.84) < 0.08, `she is not back on the ridge (${s.child[1]})`);
+  },
+
   /** Both in a row: the tree, the walk along the wall and over the cottage to its eave, the swing. */
   async run(game) {
     await game.open('run');
@@ -513,6 +622,10 @@ const RUNS = {
     expect(over, 'she never got up and on after the valve');
   },
 };
+
+function tuningOf(state) {
+  return state.tuning;
+}
 
 /**
  * Keeps an eye on her feet: on a ridge (within a few centimetres) whenever she is not hanging from the piece, and her

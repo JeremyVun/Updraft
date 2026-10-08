@@ -47,10 +47,10 @@ interface Running {
 }
 
 /** How high above her soles a hand can close at full reach, and how low before it moves on up. */
-const REACH = 2.2;
-const LOW_HAND = 1.42;
+const REACH = 2.08;
+const LOW_HAND = 1.36;
 /** How high over the foot she stands on a raised knee can carry the other. */
-const KNEE = 0.9;
+const KNEE = 0.97;
 const UP = new THREE.Vector3(0, 1, 0);
 
 /**
@@ -67,7 +67,7 @@ export class Climb {
   t = 0;
   length = 0;
   /** QA: how far a mitten or an ankle was ever from where it was put while it was meant to be there. */
-  readonly worst = { hand: 0, foot: 0, where: '' };
+  readonly worst = { hand: 0, foot: 0, handAt: '', footAt: '' };
   private plan: Step[] = [];
   private running: Running[] = [];
   private next = 0;
@@ -102,20 +102,13 @@ export class Climb {
 
   /** From where she stands at the foot, facing the wall, up and over the sill; `onDone` once she stands in the opening. */
   up(onDone?: () => void): void {
-    this.plan = this.planUp();
+    this.plan = this.planned().up;
     this.begin('up', onDone);
   }
 
   /** From standing in the opening with her back to the drop, back over the sill and down; `onDone` once she is on the ridge. */
   down(onDone?: () => void): void {
-    const up = this.planUp();
-    const k = tuning.crossings.climb;
-    /** The same moves backwards: each limb goes back to where it came from, feet first, every foot feeling for its hold. */
-    this.plan = up.slice().reverse().map((s, i, all) => {
-      const after = all[i - 1];
-      return { limb: s.limb, from: s.to, to: s.from, dur: s.dur * k.down + (s.limb >= 2 ? k.feel : 0), gap: (after?.gap ?? 0) * k.down, lean: s.lean };
-    });
-    this.plan[0].gap = 0;
+    this.plan = this.planned().down;
     this.begin('down', onDone);
   }
 
@@ -132,7 +125,7 @@ export class Climb {
 
   resetWorst(): void {
     this.worst.hand = this.worst.foot = 0;
-    this.worst.where = '';
+    this.worst.handAt = this.worst.footAt = '';
   }
 
   update(dt: number): void {
@@ -226,7 +219,6 @@ export class Climb {
     for (const foot of [0, 1] as const) c.footFor(foot, null);
     c.reachFor(0, null);
     c.reachFor(1, null);
-    c.climbPose.lean = c.climbPose.twist = c.climbPose.sway = 0;
     c.lookAt = null;
     this.onDone = null;
     done?.();
@@ -239,7 +231,7 @@ export class Climb {
       const gap = c.mitten(hand, this.tmp).distanceTo(this.limbs[hand]);
       if (gap > this.worst.hand) {
         this.worst.hand = gap;
-        this.worst.where = `${this.phase} ${this.t.toFixed(2)}s hand ${hand}`;
+        this.worst.handAt = `${this.phase} ${this.t.toFixed(2)}s hand ${hand}`;
       }
     }
     for (const foot of [0, 1] as const) {
@@ -247,7 +239,7 @@ export class Climb {
       const slip = c.ankle(foot, this.tmp).distanceTo(this.limbs[foot + 2]);
       if (slip > this.worst.foot) {
         this.worst.foot = slip;
-        this.worst.where = `${this.phase} ${this.t.toFixed(2)}s foot ${foot}`;
+        this.worst.footAt = `${this.phase} ${this.t.toFixed(2)}s foot ${foot}`;
       }
     }
   }
@@ -255,16 +247,18 @@ export class Climb {
   /**
    * The whole way up as moves, worked out from the holds: where each limb and her body are after each move, so that
    * every hold is within reach of where her body is when a limb is on it. It starts from her standing at the foot
-   * with her arms down, whether she is there yet or not, so that going down can play it backwards.
+   * with her arms down, whether she is there yet or not. Going down, she backs out over the sill (its own moves, so
+   * that her body is lowered before a foot feels down for the top hold) and then plays the ladder backwards: each limb
+   * back to where it came from, every foot feeling for its hold.
    */
-  private planUp(): Step[] {
+  private planned(): { up: Step[]; down: Step[] } {
     const k = tuning.crossings.climb;
     const { wall, out, holds, sill, depth } = this.way;
     const plan: Step[] = [];
     const root0 = this.start();
     const facing = out.clone().negate();
     const side = (s: number) => this.right.clone().multiplyScalar(s ? 1 : -1);
-    const limbs = [0, 1].map((s) => root0.clone().addScaledVector(side(s), 0.33).addScaledVector(UP, 0.78).addScaledVector(facing, 0.06))
+    const limbs = [0, 1].map((s) => root0.clone().addScaledVector(side(s), 0.32).addScaledVector(UP, 1.05).addScaledVector(facing, 0.1))
       .concat([0, 1].map((s) => root0.clone().addScaledVector(side(s), 0.15).addScaledVector(UP, 0.11)));
     const base = wall.y;
     const lateral = (p: THREE.Vector3) => p.clone().sub(wall).dot(this.right);
@@ -282,9 +276,15 @@ export class Climb {
     const sole = [0, 0];
     const hand = [-1, -1];
     const foot = [-1, -1];
-    const pick = (s: number, near: number) => holds[s].reduce((best, h, i) => (Math.abs(h.up - near) < Math.abs(holds[s][best].up - near) ? i : best), 0);
-    hand[0] = pick(0, LOW_HAND + 0.6);
-    hand[1] = pick(1, LOW_HAND + 0.25);
+    const grip = (h: ClimbHold) => h.hand.y - base;
+    /** The highest hold on a side a hand can reach from where her body is, or -1. */
+    const highest = (s: number, rel: number, above = -1) => {
+      let best = -1;
+      holds[s].forEach((h, i) => { if (i > above && grip(h) <= rel + REACH && h.up < sill.y - base - 0.2) best = i; });
+      return best;
+    };
+    hand[0] = highest(0, 0);
+    hand[1] = highest(1, -0.25);
     move(0, holds[0][hand[0]].hand, 0.5, 0, 0.12);
     move(1, holds[1][hand[1]].hand, 0.5, 0.28, 0.12);
 
@@ -293,50 +293,87 @@ export class Climb {
     const sillHand = (s: number) => sill.clone().addScaledVector(side(s), 0.24).addScaledVector(out, -0.1).addScaledVector(UP, 0.045);
     let foot0 = holds[1][0].up < holds[0][0].up ? 1 : 0;
     let gap = 0.45;
-    for (let guard = 0; guard < 40 && !(onSill[0] && onSill[1] && sole[0] > S - 1.2 && sole[1] > S - 1.2); guard++) {
+    const sillGrip = S + 0.045;
+    for (let guard = 0; guard < 40 && !(onSill[0] && onSill[1] && rootY - base >= S - 1.3); guard++) {
       const other = 1 - foot0;
       const rel = rootY - base;
-      let handMoved = false;
-      if (!onSill[other] && holds[other][hand[other]].up <= rel + LOW_HAND) {
-        const up = hand[other] + 1 < holds[other].length ? holds[other][hand[other] + 1] : null;
-        if (up && up.up <= rel + REACH && up.up < S - 0.2) {
-          hand[other]++;
-          move(other as Limb, up.hand, k.hand, gap, 0.14);
-          handMoved = true;
-        } else if (S <= rel + REACH) {
-          onSill[other] = true;
-          move(other as Limb, sillHand(other), k.hand * 1.25, gap, 0.16);
-          handMoved = true;
-        }
-      }
       const want = holds[foot0].findIndex((h, i) => i > foot[foot0] && h.up > sole[other] + 0.1);
       if (want < 0 || holds[foot0][want].up > rel + KNEE) break;
+      const after = Math.max(0, Math.min(holds[foot0][want].up, sole[other]) - 0.2);
+      /**
+       * Before her body rises, any hand it would leave too low goes up to the highest hold it can reach, the hand on the
+       * other side from the foot first; once the sill is in reach it goes onto that.
+       */
+      let moved = 0;
+      for (const s of [other, foot0]) {
+        if (onSill[s] || grip(holds[s][hand[s]]) > after + LOW_HAND) continue;
+        const up = highest(s, rel, hand[s]);
+        const lead = moved ? k.hand * 0.6 : gap;
+        if (sillGrip <= rel + REACH + 0.04 && (up < 0 || holds[s][up].up > S - 0.6)) {
+          onSill[s] = true;
+          move(s as Limb, sillHand(s), k.hand * 1.25, lead, 0.16);
+          moved++;
+        } else if (up >= 0) {
+          hand[s] = up;
+          move(s as Limb, holds[s][up].hand, k.hand, lead, 0.14);
+          moved++;
+        }
+      }
       foot[foot0] = want;
       sole[foot0] = holds[foot0][want].up;
-      move((foot0 + 2) as Limb, holds[foot0][want].foot, k.foot, handMoved ? k.lead : gap, 0.16);
-      rootY = base + Math.max(0, Math.min(sole[0], sole[1]) - 0.12);
+      move((foot0 + 2) as Limb, holds[foot0][want].foot, k.foot, moved ? k.lead : gap, 0.16);
+      rootY = base + after;
       standOff = k.standOff - 0.2 * THREE.MathUtils.smoothstep(rootY - base, S - 1.9, S - 1.0);
       move(-1, rootAt(), k.push, k.foot * 0.75, 0.2);
-      gap = k.beat - (handMoved ? k.lead : 0) - k.foot * 0.75;
+      gap = Math.max(0.05, k.beat - (moved ? k.lead + (moved - 1) * k.hand * 0.6 : 0) - k.foot * 0.75);
       foot0 = other;
     }
 
     for (const s of [0, 1]) if (!onSill[s]) move(s as Limb, sillHand(s), k.reachSill, 0.3, 0.16);
+    const ladder = plan.length;
+    const top = limbs.map((l) => l.clone());
+    const ladderRoot = root.clone();
     const inReveal = (deep: number, across: number, up: number) =>
       sill.clone().addScaledVector(out, -deep).addScaledVector(this.right, across).addScaledVector(UP, up);
-    /** Up on her arms until her chest is over the sill; her hands to the sides of the opening; a knee up onto it; up into the opening. */
-    rootY = sill.y - 1.02;
-    standOff = 0.2;
-    move(-1, rootAt(), k.pull, 0.2, 0.3);
-    move(0, inReveal(0.14, -0.47, 0.6), k.hand, k.pull * 0.7, 0.3);
-    move(1, inReveal(0.14, 0.47, 0.66), k.hand, k.hand * 0.6, 0.3);
-    move(3, inReveal(0.26, 0.12, 0.13), k.knee, k.hand * 0.5, 0.32);
+    const jamb = (s: number, up: number) => inReveal(0.14, s ? 0.47 : -0.47, up + (s ? 0.06 : 0));
+    const knee = inReveal(0.26, 0.12, 0.13);
     const stand = inReveal(depth * 0.45, 0, 0);
+    const standFoot = (s: number) => stand.clone().addScaledVector(side(s), 0.14).addScaledVector(UP, 0.11);
+    /** Up on her arms until her chest is over the sill; her hands to the sides of the opening; a knee up onto it; up into the opening. */
+    rootY = Math.max(rootY, sill.y - 1.02);
+    standOff = 0.2;
+    const over = rootAt();
+    move(-1, over, k.pull, 0.2, 0.3);
+    move(0, jamb(0, 0.6), k.hand, k.pull * 0.7, 0.3);
+    move(1, jamb(1, 0.6), k.hand, k.hand * 0.6, 0.3);
+    move(3, knee, k.knee, k.hand * 0.5, 0.32);
     move(-1, stand, k.rise, k.knee * 0.85, 0.24);
-    move(0, inReveal(0.14, -0.47, 1.4), k.rise * 0.8, k.rise * 0.15, 0.2);
-    move(1, inReveal(0.14, 0.47, 1.46), k.rise * 0.8, 0.06, 0.2);
-    move(2, stand.clone().addScaledVector(this.right, -0.14).addScaledVector(UP, 0.11), k.knee * 0.8, k.rise * 0.2, 0.2);
-    move(3, stand.clone().addScaledVector(this.right, 0.14).addScaledVector(UP, 0.11), k.knee * 0.6, k.knee * 0.7, 0.1);
-    return plan;
+    move(0, jamb(0, 1.4), k.rise * 0.8, k.rise * 0.15, 0.2);
+    move(1, jamb(1, 1.4), k.rise * 0.8, 0.06, 0.2);
+    move(2, standFoot(0), k.knee * 0.8, k.rise * 0.2, 0.2);
+    move(3, standFoot(1), k.knee * 0.6, k.knee * 0.7, 0.1);
+
+    const d = k.down;
+    const step = (limb: Limb, to: THREE.Vector3, dur: number, gap: number, lean?: number): Step => ({ limb, from: to, to: to.clone(), dur, gap, lean });
+    /** Backing out: hold the sides of the opening, a foot to the edge of the sill, down over it on her arms, a foot feeling for the top fork. */
+    const out0 = [
+      step(0, jamb(0, 1.4), k.hand * d, 0, 0.2),
+      step(1, jamb(1, 1.4), k.hand * d, 0.15, 0.2),
+      step(3, knee, k.knee * d, 0.35, 0.24),
+      step(-1, over, k.rise * d * 1.2, k.knee * d * 0.8, 0.3),
+      step(0, jamb(0, 0.6), k.hand * d, k.rise * d * 0.3, 0.3),
+      step(1, jamb(1, 0.6), k.hand * d, 0.1, 0.3),
+      step(2, top[2], k.foot * d + k.feel, k.hand * d * 0.4, 0.3),
+      step(0, top[0], k.hand * d, k.foot * d + k.feel * 0.7, 0.3),
+      step(1, top[1], k.hand * d, k.hand * d * 0.6, 0.3),
+      step(3, top[3], k.foot * d + k.feel, k.hand * d * 0.6, 0.3),
+      step(-1, ladderRoot, k.pull * d, k.foot * d, 0.2),
+    ];
+    const back = plan.slice(0, ladder).reverse().map((s, i, all): Step => {
+      const after = all[i - 1];
+      return { limb: s.limb, from: s.to, to: s.from, dur: s.dur * d + (s.limb >= 2 ? k.feel : 0), gap: (after?.gap ?? 0.3) * d, lean: s.lean };
+    });
+    back[0].gap = k.foot * d + k.feel;
+    return { up: plan, down: [...out0, ...back] };
   }
 }

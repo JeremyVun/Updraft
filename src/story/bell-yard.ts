@@ -137,13 +137,13 @@ export class BellYard {
   get state(): Record<string, unknown> {
     const b = this.bell, c = this.cast.child, w = this.climb.worst;
     return {
-      playing: this.playing, phase: this.phase, t: +this.t.toFixed(2),
+      playing: this.playing, phase: this.phase, t: +this.t.toFixed(2), tuning: { ringAt: tuning.crossings.bell.ringAt },
       bell: { angle: +b.angle.toFixed(4), speed: +b.speed.toFixed(4), clapper: +b.clapper.toFixed(3), rings: b.rings, touches: b.touches,
         peak: +b.peak.toFixed(3), ask: +b.ask.toFixed(3), quiet: +Math.min(999, b.quiet).toFixed(2), sinceRing: +Math.min(999, b.sinceRing).toFixed(2),
         valving: b.valving, invitation: b.invitation !== null },
       waves: this.waves.count,
       climb: { phase: this.climb.phase, t: +this.climb.t.toFixed(2), length: +this.climb.length.toFixed(2),
-        hand: +w.hand.toFixed(4), foot: +w.foot.toFixed(4), where: w.where },
+        hand: +w.hand.toFixed(4), foot: +w.foot.toFixed(4), handAt: w.handAt, footAt: w.footAt },
       nestSun: this.belfry.sunAt(this.belfry.nest().setY(this.belfry.floor + 0.2), this.sunDir()),
       cat: { done: this.catDone, at: this.cast.cat.position.toArray().map((v) => +v.toFixed(2)) },
       child: c.position.toArray().map((v) => +v.toFixed(3)), yaw: +c.yaw.toFixed(3), climbing: c.climbing,
@@ -363,20 +363,20 @@ export class BellYard {
     const S = BELFRY.sill;
     switch (view) {
       case 'climb-far':
-        this.eye.set(-11.6, y + 2.0, -8.7);
-        this.target.set(-2.7, y + 1.35, -0.4);
+        this.eye.set(-8.6, y + 1.2, -10.2);
+        this.target.set(-3.6, y + 1.55, -1.0);
         break;
       case 'climb-near':
-        this.eye.set(-6.4, y + 1.6, -3.7);
-        this.target.set(-2.75, y + 1.35, -0.4);
+        this.eye.set(-5.3, y + 1.3, -4.4);
+        this.target.set(-3.05, y + 1.4, -0.6);
         break;
       case 'climb-profile':
         this.eye.set(-3.4, y + 1.4, -5.4);
         this.target.set(-2.85, y + 1.35, -0.4);
         break;
       case 'climb-side':
-        this.eye.set(upright ? -9.4 : -11.6, y + 2.1, upright ? -7.0 : -8.7);
-        this.target.set(-2.5, y + (upright ? 2.2 : 1.7), -0.4);
+        this.eye.set(upright ? -7.8 : -8.6, y + 1.2, upright ? -8.6 : -10.2);
+        this.target.set(upright ? -3.2 : -3.6, y + (upright ? 2.3 : 1.55), upright ? -0.7 : -1.0);
         break;
       case 'ivy':
         this.eye.set(-13.5, RIDGE + 3.4, 2.2);
