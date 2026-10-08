@@ -464,6 +464,7 @@ try {
     await page.evaluate(async () => {
       const D = await import('/src/world/decks.ts');
       const W = await import('/src/world/drowned-way.ts');
+      const { tuning } = await import('/src/tuning.ts');
       const w = window.__runWatch = { frames: 0, offWorst: 0, offAt: '', fogAhead: Infinity, fogNear: Infinity, fogAt: '',
         stallWorst: 0, stallAt: '', last: -1, since: 0, facing: 0, facingRun: 0, facingWorst: 0, facingAt: '', unseen: 0, unseenRun: 0,
         unseenWorst: 0, unseenAt: '', inside: 0, insideAt: '', fogGoneRun: 0, fogGoneWorst: 0, fogGoneAt: '', boatMoved: 0,
@@ -502,7 +503,10 @@ try {
           w.fogGoneRun = seen ? 0 : w.fogGoneRun + 1 / 60;
           if (w.fogGoneRun > w.fogGoneWorst) { w.fogGoneWorst = w.fogGoneRun; w.fogGoneAt = `at ${r.along.toFixed(1)} m, until ${t.toFixed(1)} s`; }
         } else w.fogGoneRun = 0;
-        /** The roofs she has been on: when she was last on one and where, and when the fog has that place under it, front and top. */
+        /**
+         * The roofs she has been on: when she went on from each and where, and when the fog has that place under it,
+         * front and top.
+         */
         for (const { h, i } of placed) {
           const top = W.roofUnder(h, p.x, p.z);
           const rec = w.roofs[i];
@@ -511,6 +515,8 @@ try {
             continue;
           }
           if (!rec || rec.under !== null) continue;
+          /** Beside it in the mill's basket, or looking back from just off it, she has not yet gone on from it. */
+          if ((r.stage === 'mill' && Math.hypot(rec.x - p.x, rec.z - p.z) < 3) || (r.lookingBack >= 0 && r.lookingBack < tuning.drowned.run.lookBackFor)) rec.left = t;
           const behind = (rec.x - front.x) * dx + (rec.z - front.y) * dz < -2;
           if (behind && dark.level > rec.ridge) rec.under = t;
         }
@@ -667,7 +673,7 @@ try {
     console.log(`on her own way the fog was out of the frame for at most ${w.fogGoneWorst.toFixed(1)} s at a time (${w.fogGoneAt})`);
     const names = await page.evaluate(() => import('/src/world/drowned-way.ts').then((W) => W.PLACED.map((h) => `${h.x.toFixed(0)},${h.z.toFixed(0)}`)));
     const roofs = Object.values(w.roofs);
-    for (const r of roofs) console.log(`  the roof at ${names[r.name]} (ridge ${r.ridge.toFixed(1)} m) ${r.under === null ? 'not under yet' : `under ${(r.under - r.left).toFixed(1)} s after she was off it`}`);
+    for (const r of roofs) console.log(`  the roof at ${names[r.name]} (ridge ${r.ridge.toFixed(1)} m) ${r.under === null ? 'not under yet' : `under ${(r.under - r.left).toFixed(1)} s after she went on from it`}`);
     console.log(`the boat moved ${w.boatMoved.toFixed(2)} m from where it ran aground`);
     console.log(`at the end: cat at ${end.cat.join(', ')}, her at ${end.child.join(', ')}`);
     const towerSouth = await page.evaluate(() => { const c = window.__game.cat.position; return Math.hypot(c.x - 16.5, c.z - (-1561 + 2.6)); });
@@ -686,7 +692,9 @@ try {
     assert(w.stallWorst < 3, `she stalled on her own way for ${w.stallWorst.toFixed(1)} s (${w.stallAt})`);
     assert(w.fogAhead > 4, `the fog reached her: ${w.fogAhead.toFixed(1)} m ahead of its front (${w.fogAt})`);
     assert(w.fogGoneWorst < 2, `the fog was out of a walk's frame for ${w.fogGoneWorst.toFixed(1)} s (${w.fogGoneAt})`);
-    const late = roofs.filter((r) => (r.under ?? end.time) - r.left > 14);
+    /** Each roof she went on from is taken within 14 s, but for the one the fog waits short of at the tower's foot. */
+    const waits = (r) => r.under === null && Math.hypot(r.x - end.child[0], r.z - end.child[2]) < 22;
+    const late = roofs.filter((r) => !waits(r) && (r.under ?? end.time) - r.left > 14);
     assert(!late.length, `a roof she left was not taken by the fog in time: ${late.map((r) => names[r.name]).join('; ')}`);
     assert(w.boatMoved < 1.5, `the boat moved ${w.boatMoved.toFixed(2)} m from where it ran aground`);
     assert(towerSouth < 1.5, `the cat is not at the tower's south face (${towerSouth.toFixed(2)} m off)`);

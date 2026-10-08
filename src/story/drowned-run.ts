@@ -487,8 +487,8 @@ export class RoofRun {
       /** The mill's view stands on the far side of the mill from the way she comes to it: the lens comes that side. */
       const wait = PIECES.mill.wait;
       this.millView(wide, wait, 0);
-      const coming = { s: this.nodes[this.pieceAt.mill - 1].s, bearing: Math.atan2(this.stationEye.x - wait.x, this.stationEye.z - wait.z), coming: true };
-      return [...leaving, coming];
+      const mill = { s: this.nodes[this.pieceAt.mill - 1].s, bearing: Math.atan2(this.stationEye.x - wait.x, this.stationEye.z - wait.z), coming: true };
+      return [...leaving, mill];
     };
     this.laying = [layLens(this.nodes, obstacles, false, anchors(1)), layLens(this.nodes, obstacles, true, anchors(0))];
   }
@@ -644,14 +644,13 @@ export class RoofRun {
   }
 
   /**
-   * A turn gentle enough she takes it in her stride: on toward the place after without stopping at it. Partway along the
+   * A turn gentle enough she takes it in her stride: on toward the place after without stopping at it. Just down off the
    * wall from the first roof she stops and looks back at the boat as the fog takes it.
    */
   private walking(dt: number): void {
     const { child: c } = this.cast;
     const k = tuning.drowned.run;
-    if (this.lookingBack < 0 && this.stage === 'walk' && this.along >= this.lookBackFrom && !c.acting && this.pause < 0
-      && this.cast.village!.dark.front >= DARK_AT_STRAND - k.lookBackWhen) {
+    if (this.lookingBack < 0 && this.stage === 'walk' && this.along >= this.lookBackFrom && !c.acting && this.pause < 0) {
       this.lookingBack = 0;
       c.stop();
     }
@@ -856,19 +855,19 @@ export class RoofRun {
 
   /**
    * The fog comes on along `DARK_WAY` behind her at her pace, never stopping and never rushing: toward `fogTrail`
-   * behind her on her own way and `fogHold` while she works a piece, never nearer than `fogNearest`; it rises as it
-   * comes (`DarkBank.comeOn`).
+   * behind her on her own way and `fogHold` while she works a piece, never nearer than `fogNearest`, and as near as
+   * that while she looks back, so it takes the boat as she watches; it rises as it comes (`DarkBank.comeOn`).
    */
   private fog(dt: number): void {
     const k = tuning.drowned.run;
     const dark = this.cast.village!.dark;
     const looking = this.lookingBack >= 0 && this.lookingBack < k.lookBackFor;
     const hold = this.stage === 'tree' || this.stage === 'sheet' || this.stage === 'mill' || this.stage === 'swing' ? k.fogHold[this.stage]
-      : this.stage === 'nave' ? k.fogEnd : looking ? k.fogLooked : k.fogTrail;
+      : this.stage === 'nave' ? k.fogEnd : looking ? k.fogNearest : k.fogTrail;
     const want = this.dark - hold;
     /** At the tower's foot it comes on to a few roofs back and waits there for the church. */
     const pull = THREE.MathUtils.clamp((want - dark.front) * k.fogPull, this.stage === 'nave' ? 0 : k.fogSlowest, k.fogFastest);
-    this.fogSpeed += (pull - this.fogSpeed) * (1 - Math.exp(-dt * k.fogEase));
+    this.fogSpeed += (pull - this.fogSpeed) * (1 - Math.exp(-dt * (looking ? k.fogLookedEase : k.fogEase)));
     dark.faces = this.her.set(this.cast.child.position.x, this.cast.child.position.z);
     dark.comeOn(Math.min(dark.front + this.fogSpeed * dt, this.dark - k.fogNearest), dt);
   }
@@ -952,14 +951,14 @@ export class RoofRun {
       this.eye.set(this.target.x + Math.sin(bearing) * reach, this.target.y + rise, this.target.z + Math.cos(bearing) * reach);
     }
     /**
-     * Asked to stand a little ahead of where it should be as she walks, by as far as the focus and the rig's easing
-     * trail behind a steady walk (never at more than a walk's pace), so the eased lens stands where it was laid
-     * rather than lagging back into the roofs; upright it looks that much ahead too, so the narrow frame keeps her.
+     * Asked to stand and look a little ahead of where it should as she walks, by as far as the focus and the rig's
+     * easing trail behind a steady walk (never at more than a walk's pace), so the eased lens stands where it was laid
+     * rather than lagging back into the roofs, and looks at her rather than where she was.
      */
     const response = Math.min(tuning.cinematography.maxResponse, k.pace * tuning.cinematography.framingResponse);
     const lead = this.tmp.copy(this.velocity).clampLength(0, k.steadiest).multiplyScalar((1 / k.follow + 2 / response) * (1 - at));
     this.eye.add(lead);
-    this.target.addScaledVector(lead, 1 - wide);
+    this.target.add(lead);
     const handing = this.handOver(shot, dt, wide);
     shot.free = false;
     shot.from = undefined;
@@ -1039,7 +1038,7 @@ export class RoofRun {
       total += w;
     };
     const back = this.lookingBack < 0 ? 0 : THREE.MathUtils.smoothstep(this.lookingBack, 0, k.backIn)
-      * (1 - THREE.MathUtils.smoothstep(this.lookingBack, tuning.drowned.run.lookBackFor - k.backOut, tuning.drowned.run.lookBackFor));
+      * (1 - THREE.MathUtils.smoothstep(this.lookingBack, tuning.drowned.run.lookBackFor - k.backGone - k.backOut, tuning.drowned.run.lookBackFor - k.backGone));
     add(back * k.backHold, () => this.backView(wide));
     for (const piece of ORDER) {
       const i = this.pieceAt[piece];

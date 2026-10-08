@@ -319,8 +319,8 @@ const W1_END = onFrom(OVER, NORTH, 2.4, COPING);
 /** The garden wall she comes north along, beside the lane, from the first roof. */
 const W1_LENGTH = 16;
 const W1_FROM = onFrom(OVER, NORTH, -W1_LENGTH, COPING);
-/** Partway along it, from where she may stop and look back at the boat as the fog takes it. */
-export const LOOK_BACK = onFrom(W1_FROM, NORTH, 3, COPING);
+/** Just down on it from the first roof, where she stops and looks back at the boat as the fog takes it. */
+export const LOOK_BACK = onFrom(W1_FROM, NORTH, 0.4, COPING);
 
 /** Where the drift comes from as it nears the stranding: the channel's third point. */
 const DRIFT_FROM = new THREE.Vector2(4, -1372);
