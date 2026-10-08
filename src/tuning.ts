@@ -2174,13 +2174,13 @@ export const tuning = {
       /** How fast a stroke's air spreads over the cloth from where it met it (sheet lengths a second). */
       spreadSpeed: 2.4,
       /**
-       * A stroke's air arrives a beat late (s) and ebbs over `hold` s. Fill asked for per screen height a stroke goes
-       * up the line across it, and back down it; how full or how far back it can be pressed. Strokes at `gentle`
-       * screen heights a second count for `soft` of that, at `firm` for all of it. How near the cloth on screen a
-       * stroke must pass (screen heights).
+       * A stroke's air arrives a beat late (s) and ebbs over `hold` s. Fill asked for per sheet length a stroke
+       * sweeps up the line across it (measured on the sheet, so its size on screen does not matter), and back down it;
+       * how full or how far back it can be pressed. Strokes sweeping `gentle` sheet lengths a second count for `soft`
+       * of that, at `firm` for all of it. How near the cloth on screen a stroke must pass (screen heights).
        */
-      lag: 0.14, hold: 1.1, push: 2.3, against: 0.7, pressMax: 1.25, backMax: 0.45,
-      gentle: 0.5, firm: 2.2, soft: 0.3, reach: 0.06,
+      lag: 0.14, hold: 1.1, push: 0.75, against: 0.23, pressMax: 1.25, backMax: 0.45,
+      gentle: 1.3, firm: 7, soft: 0.35, reach: 0.06,
       /** How quickly the fill follows the press (per second), and the fill that sounds full. */
       fillRate: 5, fullAt: 0.55,
       /** The line's slack as a share of its length; how far her weight and the cat's sag it (m). */
@@ -2188,16 +2188,17 @@ export const tuning = {
       /** The low sun through the cloth from behind. */
       through: 0.8,
       /**
-       * She takes hold once it is `takeAt` full for `takeFor` seconds, reaching up for `reachFor` seconds. Full, it
-       * carries her `carry` metres a second up the line, nothing below `carryFrom`; her speed eases over `coast` s.
+       * She takes hold once it is `takeAt` full for `takeFor` seconds, reaching up for `reachFor` seconds. Full and
+       * freshly blown, it carries her `carry` metres a second up the line, nothing below `carryFrom`; her speed eases
+       * over `coast` s. What carries her is the stroke itself: its gust ebbs over `gustFor` s, sooner than the cloth sags.
        */
-      takeAt: 0.55, takeFor: 0.2, reachFor: 0.5, carry: 1.5, carryFrom: 0.3, coast: 0.5,
+      takeAt: 0.55, takeFor: 0.2, reachFor: 0.5, carry: 2.2, carryFrom: 0.3, coast: 0.3, gustFor: 0.8,
       /** How her body swings under her hands as the sheet starts and stops (per second squared, per second). */
       swingPull: 14, swingDamping: 2.2,
       /** Hanging, how much of the way from up the line toward the lens she turns, so her face is seen. */
       turnToLens: 0.85,
       /** Seconds without a useful stroke before the drawn gust; with no progress before the world's own gusts. */
-      inviteAfter: 5, valveAfter: 90, valveEvery: 1.4, valvePush: 0.45,
+      inviteAfter: 5, valveAfter: 90, valveEvery: 1.4, valvePush: 1.5,
     },
   },
   /** One continuous passage from the last drowned houses to the forest beach. */

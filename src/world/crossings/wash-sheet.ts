@@ -343,7 +343,9 @@ export class WashSheet {
 
   /**
    * A stroke that passes over the sheet on screen is air on it: the part of it going up the line fills it, a beat
-   * late; back down the line only puffs it back toward her. Returns the push taken, in screen heights.
+   * late; back down the line only puffs it back toward her. It counts by how much of the sheet's own length it swept
+   * across, so a sheet small or steep on screen takes the same strokes as one seen large. Returns the push taken, in
+   * sheet lengths.
    */
   brush(camera: THREE.PerspectiveCamera, input: PointerInput, wind: WindField, dt: number): number {
     if (!input.present || input.muted || dt <= 0) return 0;
@@ -369,8 +371,9 @@ export class WashSheet {
     const hit = gap < k.reach ? Math.min(1, 1.3 * (1 - gap / k.reach)) : 0;
     if (hit <= 0) return 0;
     const heading = this.heading(camera);
-    const up = sx * Math.cos(heading) + sy * Math.sin(heading);
-    const firm = THREE.MathUtils.lerp(k.soft, 1, THREE.MathUtils.smoothstep(travel / dt, k.gentle, k.firm));
+    const across = Math.max(0.02, Math.hypot((c1.x + c2.x - c0.x - c3.x) / 2, (c1.y + c2.y - c0.y - c3.y) / 2));
+    const up = (sx * Math.cos(heading) + sy * Math.sin(heading)) / across;
+    const firm = THREE.MathUtils.lerp(k.soft, 1, THREE.MathUtils.smoothstep(travel / dt / across, k.gentle, k.firm));
     const push = up * hit * firm;
     this.incoming += push * (push > 0 ? k.push : k.against);
     if (push > 0.002) this.quiet = 0;
@@ -387,7 +390,7 @@ export class WashSheet {
     return push;
   }
 
-  /** A push of the world's own, as a stroke of `amount` screen heights up the line would give. */
+  /** A push of the world's own, as a stroke sweeping `amount` of the sheet's length up the line would give. */
   nudge(amount: number): void {
     this.incoming += amount * tuning.crossings.sheet.push;
     this.hitAt = 0.3;

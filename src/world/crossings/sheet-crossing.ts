@@ -56,6 +56,8 @@ export class SheetCrossing {
   private swingSpeed = 0;
   private swungForward = false;
   private lift = 0;
+  /** The fresh air of the last strokes, which is what carries her: it ebbs faster than the cloth sags. */
+  private gust = 0;
   private endFor = 0;
   private readonly from = new THREE.Vector3();
   private readonly at = new THREE.Vector3();
@@ -99,7 +101,7 @@ export class SheetCrossing {
     this.phase = 'off';
     this.invitation = null;
     this.t = this.full = this.stalled = this.best = this.valveClock = this.speed = this.lastSpeed = 0;
-    this.swing = this.swingSpeed = this.lift = this.turn = 0;
+    this.swing = this.swingSpeed = this.lift = this.turn = this.gust = 0;
     this.valveOn = this.swungForward = false;
     this.clear = true;
     const c = this.cast.child;
@@ -141,7 +143,8 @@ export class SheetCrossing {
     this.lens.copy(camera.position);
     const playing = this.phase === 'waiting' || this.phase === 'taking' || this.phase === 'carried';
     if (playing) {
-      this.sheet.brush(camera, input, wind, dt);
+      const push = this.sheet.brush(camera, input, wind, dt);
+      this.gust = Math.min(1.2, Math.max(0, this.gust * Math.exp(-dt / k.gustFor) + Math.max(0, push) * k.push));
       const progress = this.phase === 'carried' ? 1 + this.sheet.travel : Math.min(1, this.sheet.fill);
       if (progress > this.best + 0.02) {
         this.best = progress;
@@ -149,7 +152,7 @@ export class SheetCrossing {
       } else this.stalled += dt;
       if (this.valving) this.blow(dt);
     }
-    if (this.phase === 'landed') c.lookAt = this.sheet.middle(this.look);
+    if (this.phase === 'landed') c.lookAt = this.look.copy(this.way.wait).setY(this.way.wait.y + 0.8);
     this.sheet.update(dt, camera, wind);
 
     const asking = (this.phase === 'waiting' || this.phase === 'carried') && this.sheet.quiet > k.inviteAfter && !this.valving;
@@ -199,7 +202,7 @@ export class SheetCrossing {
     const k = tuning.crossings.sheet;
     const c = this.cast.child;
     const s = this.sheet;
-    const want = s.travel >= s.end ? 0 : k.carry * THREE.MathUtils.smoothstep(s.fill, k.carryFrom, 1);
+    const want = s.travel >= s.end ? 0 : k.carry * THREE.MathUtils.smoothstep(Math.min(s.fill, this.gust), k.carryFrom, 1);
     this.speed += (want - this.speed) * (1 - Math.exp(-dt / k.coast));
     s.travel = Math.min(s.end, s.travel + this.speed * dt);
     if (s.travel >= s.end) this.speed = 0;
@@ -266,6 +269,7 @@ export class SheetCrossing {
     this.cast.wind.addSplat({ source: this, impulse: true, ax: mid.x - a.x * 4, az: mid.z - a.z * 4, bx: mid.x + a.x * 2, bz: mid.z + a.z * 2,
       vx: a.x * 9, vz: a.z * 9, radius: 3.5, energy: 0.8, lift: 0, swirl: 0 });
     this.sheet.nudge(k.valvePush);
+    this.gust = Math.min(1.2, this.gust + k.valvePush * k.push);
   }
 
   private to(phase: SheetCrossing['phase']): void {
