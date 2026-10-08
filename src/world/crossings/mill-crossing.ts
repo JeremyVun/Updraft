@@ -4,7 +4,7 @@ import type { MaterialSound } from '../../audio/foley';
 import type { Deck } from '../decks';
 import type { CatStep } from './cat-way';
 import { MillSpiral } from './mill-spiral';
-import { Windmill, type MillSound, type MillSpot } from './windmill';
+import { HOIST, Windmill, type MillSound, type MillSpot } from './windmill';
 import type { CrossingCast } from './tree-crossing';
 
 /** Where she waits for the basket, where she steps off it at the top, and where she goes on to. */
@@ -39,6 +39,8 @@ export class MillCrossing {
   clear = true;
   /** Set while the cat is on its sail, so they turn gently until it is off onto the cap. */
   catOn = false;
+  /** What she looks down at over her shoulder as she rises, the room's fog below; by default the water she came over. */
+  below: THREE.Vector3 | null = null;
   onEvent: ((kind: MillEvent, at: THREE.Vector3, strength: number) => void) | null = null;
   /** What she stands on from her roof's edge into the basket, in it as it rises, and out of it onto the high roof. */
   readonly deck: Deck = { x0: 0, z0: 0, x1: 0, z1: 0, halfWidth: 0.4, height: 0 };
@@ -77,9 +79,9 @@ export class MillCrossing {
     return m.quiet > k.inviteAfter || (m.wrong && m.quiet > k.inviteWrong);
   }
 
-  /** The way she faces in the basket: back out past the sails, the way she came. */
+  /** The way she faces in the basket: toward the tower, the rope she holds in front of her. */
   get facing(): number {
-    return this.mill.facing;
+    return this.mill.facing + Math.PI / 2;
   }
 
   reset(): void {
@@ -135,7 +137,7 @@ export class MillCrossing {
       c.lookAt = m.basketFloor(this.look).setY(this.look.y + 0.6);
       if (this.t >= k.boardAfter && !c.busy) this.board();
     } else if (this.phase === 'riding') {
-      this.ride(dt);
+      this.ride(dt, camera);
       if (m.topped && m.speed === 0 && this.t > 0.5) this.stepOff();
     }
     if (this.phase === 'riding' || this.phase === 'leaving') this.layDeck();
@@ -147,7 +149,7 @@ export class MillCrossing {
     return this.cast.child.position.y - this.mill.basketFloor(this.at).y;
   }
 
-  /** Across her roof's edge into the middle of the basket, round to face the way she came, and hands to the ropes. */
+  /** Across her roof's edge into the middle of the basket, round to face the tower, and hands to the rope. */
   private board(): void {
     const k = tuning.crossings.mill;
     const { child: c } = this.cast;
@@ -164,8 +166,12 @@ export class MillCrossing {
     }, 0.06);
   }
 
-  /** Feet on the floor, a hand on each rope, looking up at the cat going first and then to where she is going. */
-  private ride(dt: number): void {
+  /**
+   * Feet on the floor, facing the tower with both mittens on the rope in front of her: looking up at the cat going first
+   * and the top, then down over her shoulder at what is below, then to where she is going; never round at the lens.
+   */
+  private ride(dt: number, camera: THREE.PerspectiveCamera): void {
+    const k = tuning.crossings.mill;
     const { child: c } = this.cast;
     const m = this.mill;
     m.basketFloor(this.at);
@@ -174,13 +180,24 @@ export class MillCrossing {
     c.yaw += turn * (1 - Math.exp(-dt * 3.5));
     const settled = Math.min(1, this.t / 0.6);
     if (settled > 0.3) {
-      c.reachFor(0, m.grip(0, this.look));
-      c.reachFor(1, m.grip(1, this.look));
+      c.reachFor(0, m.grip(0, this.look, k.gripHigh));
+      c.reachFor(1, m.grip(0, this.look, k.gripLow));
     }
     const share = m.wound / m.full;
-    if (share > 0.72) c.lookAt = this.look.copy(this.way.stepOff).setY(this.way.stepOff.y + 0.5);
-    else if (share > 0.12) c.lookAt = this.look.copy(this.way.wait).setY(this.way.wait.y + 0.3);
-    else c.lookAt = m.at(m.capTop(this.look));
+    if (share > k.lookOn) c.lookAt = this.look.copy(this.way.stepOff).setY(this.way.stepOff.y + 0.5);
+    else if (share > k.lookDown) {
+      if (this.below) c.lookAt = this.look.copy(this.below);
+      else c.lookAt = m.at(this.look.set(HOIST.x + 1.2, 0, HOIST.z + 3));
+    } else c.lookAt = m.at(m.capTop(this.look));
+    /** Turned no further toward the lens than a glance over her shoulder. */
+    const her = c.position, lens = camera.position;
+    const away = Math.atan2(her.x - lens.x, her.z - lens.z);
+    const want = Math.atan2(c.lookAt.x - her.x, c.lookAt.z - her.z);
+    const off = Math.atan2(Math.sin(want - away), Math.cos(want - away));
+    if (Math.abs(off) > k.lookOff) {
+      const to = away + Math.sign(off) * k.lookOff, reach = Math.max(3, Math.hypot(c.lookAt.x - her.x, c.lookAt.z - her.z));
+      c.lookAt.set(her.x + Math.sin(to) * reach, c.lookAt.y, her.z + Math.cos(to) * reach);
+    }
   }
 
   /** Hands off the ropes, round to the high roof, out of the back of the basket onto it, and on. */

@@ -142,6 +142,12 @@ export class Boat {
   /** Someone's weight come aboard from a deck alongside: the side it came over (+1 the hull's +x), how long ago. */
   private weightSide = 0;
   private weightAge = 1e3;
+  /** Run aground: how far its bow is lifted (radians), and the jolt of each knock against what it lies on. */
+  private trim = 0;
+  private trimNow = 0;
+  private joltAge = 1e3;
+  private joltPitch = 0;
+  private joltRoll = 0;
 
   constructor(private readonly wind: WindField) {
     const hullMat = new THREE.ShaderMaterial({
@@ -189,6 +195,7 @@ export class Boat {
   beach(x: number, z: number, yaw: number): void {
     this.towed = false;
     this.coastTo = null;
+    this.trim = this.trimNow = 0;
     this.speedLimit = Infinity;
     this.shelter = 0;
     this.position.set(x, Math.max(heightAt(x, z), 0) + DRAFT, z);
@@ -202,6 +209,7 @@ export class Boat {
 
   launch(holdForBoarding = false): void {
     this.towed = false;
+    this.trim = 0;
     this.afloat = true;
     this.grounded = false;
     this.beaching = false;
@@ -286,6 +294,17 @@ export class Boat {
   nudge(side: number, strength = 1): void {
     this.shove = side * strength;
     this.shoveAge = 0;
+  }
+
+  /**
+   * Its keel has met something under the water: the hull jolts, bow up by `pitch` and heeling by `roll` (radians),
+   * shuddering out over a second or so; `trim` is how far its bow then stays lifted while it lies there.
+   */
+  knock(pitch: number, roll: number, trim = this.trim): void {
+    this.joltAge = 0;
+    this.joltPitch = pitch;
+    this.joltRoll = roll;
+    this.trim = trim;
   }
 
   /** Coasting on the way it has, braking so that it stops just where it will lie. */
@@ -432,9 +451,12 @@ export class Boat {
     this.weightAge += dt;
     const k = tuning.boarding, wu = this.weightAge / k.weightPeak, weighed = Math.exp(-this.weightAge / k.weightSettle);
     const rock = -this.weightSide * k.weightRoll * Math.sin(this.weightAge * k.weightRock) * weighed;
+    this.joltAge += dt;
+    this.trimNow += (this.trim - this.trimNow) * (1 - Math.exp(-dt * 4));
+    const shudder = Math.exp(-this.joltAge / tuning.boarding.joltSettle) * Math.cos(this.joltAge * tuning.boarding.joltRock);
     const dip = -k.weightDip * wu * Math.exp(1 - wu);
-    const waterRoll = heel + kick * tuning.dolphins.shoveHeel + Math.sin(t * 1.3) * (this.afloat ? 0.05 : 0.0) + beam + rock;
-    const waterPitch = this.afloat ? Math.sin(t * 0.9 + 1) * 0.04 - this.speed * 0.004 - bow : -0.05;
+    const waterRoll = heel + kick * tuning.dolphins.shoveHeel + Math.sin(t * 1.3) * (this.afloat ? 0.05 : 0.0) + beam + rock + this.joltRoll * shudder;
+    const waterPitch = (this.afloat ? Math.sin(t * 0.9 + 1) * 0.04 - this.speed * 0.004 - bow : -0.05) - this.trimNow - this.joltPitch * shudder;
     this.lieOnShore(settle, this.altitude === null ? lift : 1e3, waterRoll, waterPitch);
     const bob = this.afloat ? Math.sin(t * 1.1) * 0.045 + Math.sin(t * 2.3) * 0.02 + dip : 0;
     p.y = this.afloat ? bob + lift + (this.altitude === null ? DRAFT : CLOUD_DRAFT) : Math.max(heightAt(p.x, p.z), 0) + DRAFT + 0.1;

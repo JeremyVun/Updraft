@@ -18,6 +18,8 @@ export interface TreeWay {
   stepOff: THREE.Vector3;
   /** On the far side, past where she steps off the trunk. */
   onward: THREE.Vector3;
+  /** She waits by its foot and walks up the trunk from where it lies over her side to where it rests on the far roof. */
+  climb?: boolean;
 }
 
 export interface CrossingCast {
@@ -116,6 +118,7 @@ export class TreeCrossing {
     if (this.valving) this.blow(dt);
     if (this.tree.state === 'falling') {
       this.to('falling');
+      if (this.way.climb) return;
       /** A step back from the end as it comes down toward her. */
       const back = this.lineDir.set(this.way.wait.x - this.tree.spot.rest.x, this.way.wait.z - this.tree.spot.rest.z).normalize();
       child.walkTo(this.way.wait.x + back.x * 0.7, this.way.wait.z + back.y * 0.7, false, undefined, 0.15);
@@ -136,7 +139,10 @@ export class TreeCrossing {
     this.tree.nudge(k.valvePush);
   }
 
-  /** Onto the trunk where it lies on the ridge, and down it to the far side with her arms out. */
+  /**
+   * Onto the trunk where it lies on the ridge, and down it to the far side with her arms out; or, climbing, onto it
+   * where it lies over her wall and up it to where it rests on the far roof.
+   */
   private cross(): void {
     const k = tuning.crossings.tree;
     const { child } = this.cast;
@@ -147,10 +153,13 @@ export class TreeCrossing {
     const len = Math.hypot(deck.x1 - deck.x0, deck.z1 - deck.z0);
     const on = Math.min(0.35, len * 0.1);
     const ux = (deck.x1 - deck.x0) / len, uz = (deck.z1 - deck.z0) / len;
-    child.walkTo(deck.x0 + ux * on, deck.z0 + uz * on, false, () => {
+    const up = this.way.climb ? -1 : 1;
+    const [ax, az] = up > 0 ? [deck.x0, deck.z0] : [deck.x1, deck.z1];
+    const [bx, bz] = up > 0 ? [deck.x1, deck.z1] : [deck.x0 - ux * up * k.climbShort, deck.z0 - uz * up * k.climbShort];
+    child.walkTo(ax + ux * on * up, az + uz * on * up, false, () => {
       child.balance = 1;
       child.stroll = k.crossStroll;
-      child.walkTo(deck.x1, deck.z1, false, () => {
+      child.walkTo(bx, bz, false, () => {
         const off = this.way.stepOff;
         const way = this.lineDir.set(off.x - child.position.x, off.z - child.position.z).normalize();
         child.leap(this.at.set(way.x * 1.1, 1.1, way.y * 1.1), off, 9.81, () => { child.balance = 0; }, () => {

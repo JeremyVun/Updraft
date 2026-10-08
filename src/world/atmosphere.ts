@@ -859,10 +859,10 @@ float seaFogFlank(float a0, float da, float t0, float t1) {
   return mix(near * far, 1.0, uSeaFogShape.z);
 }
 
-/** The height of its top at a point across it and along the way it comes: long, uneven swells sized to it. */
+/** The height of its top at a point across it and along the way it comes: a tide's long, slow swells about its level. */
 float seaFogTop(vec2 q) {
-  q /= max(uSeaFogShape.x, 1.0);
-  return uSeaFogShape.x * (0.25 + 1.2 * tiledFbmFixed(q * vec2(1.1, 1.2) + vec2(uTime * 0.006, 9.1)));
+  q /= max(uSeaFogShape.x, ${glsl(tuning.drowned.fog.swellBroad)});
+  return uSeaFogShape.x * mix(${glsl(tuning.drowned.fog.swellLow)}, ${glsl(tuning.drowned.fog.swellHigh)}, tiledFbmFixed(q * vec2(1.1, 1.2) + vec2(uTime * 0.006, 9.1)));
 }
 
 /** Its billows at p: how one is lit (0 in the crease under it, 1 over its top where the sky takes it), and the noise. */

@@ -76,7 +76,7 @@ export class ChurchArrival {
     const { child: c, cat } = this.cast;
     this.step = 'watch';
     this.t = 0;
-    this.fogFrom = this.cast.village!.dark.reach;
+    this.fogFrom = this.cast.village!.dark.front;
     c.decks = [...c.decks, NAVE_NORTH];
     c.face(this.head);
     cat.look(this.head);
@@ -95,7 +95,7 @@ export class ChurchArrival {
     this.begin();
     this.catIn = this.swung = this.down = true;
     this.close = dark.close = 1;
-    dark.reach = DARK_END + k.fog.past;
+    dark.front = DARK_END + k.fog.past;
     cat.place(BELFRY_NORTH, Math.PI, { pose: 'sit', floor: sill });
     cat.unease = 0.35;
     boat.beach(NAVE_BERTH.x, NAVE_BERTH.z, NAVE_BERTH.yaw);
@@ -151,7 +151,7 @@ export class ChurchArrival {
       case 'up':
         if (this.t > k.upFor) {
           this.to('fog');
-          this.fogFrom = this.cast.village!.dark.reach;
+          this.fogFrom = this.cast.village!.dark.front;
         }
         break;
       case 'fog':
@@ -188,7 +188,7 @@ export class ChurchArrival {
     const k = tuning.drowned.church.fog;
     const dark = this.cast.village!.dark;
     const since = this.step === 'fog' ? this.t : k.bringAfter + this.t + (this.step === 'board' ? 1e3 : 0);
-    dark.reach = THREE.MathUtils.lerp(this.fogFrom, DARK_END + k.past, THREE.MathUtils.smootherstep(since, k.comeAfter, k.comeAfter + k.comeFor));
+    dark.front = THREE.MathUtils.lerp(this.fogFrom, DARK_END + k.past, THREE.MathUtils.smootherstep(since, k.comeAfter, k.comeAfter + k.comeFor));
     this.close = THREE.MathUtils.smootherstep(since, k.closeFrom, k.closeFrom + k.closeFor);
     dark.close = this.close;
     if (!this.catIn && since > k.catIn) {

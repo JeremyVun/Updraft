@@ -3,7 +3,7 @@ import { tuning } from '../../tuning';
 import type { MaterialSound } from '../../audio/foley';
 import type { CatStep } from './cat-way';
 import type { CrossingCast } from './tree-crossing';
-import { WashSheet, type SheetSound, type SheetSpot } from './wash-sheet';
+import { HOLD_DROP, SHEET, WashSheet, type SheetSound, type SheetSpot } from './wash-sheet';
 
 /** Where she waits under the sheet's trailing edge, where her feet come down on the far roof, and where she goes on to. */
 export interface SheetWay {
@@ -25,6 +25,42 @@ export const SHEET_SOUNDS = { fill: 'sail', sag: 'sail-settle', flap: 'linen-fla
  */
 export const HANG = 1.93;
 export const UNDER = 0.33;
+
+/** Where her mittens close on the trailing edge at the start of the ride, and where they are at its end, past each gable (m). */
+const TAKE_FROM = 0.04;
+const LET_GO = 0.62;
+/** Where she waits, a reach short of the trailing edge at her gable; and where her feet come down past the far one (m). */
+export const SHEET_WAIT = TAKE_FROM - UNDER;
+export const SHEET_OFF = 0.36;
+
+/**
+ * A sheet's line over a lane, laid level along `along` from `edge` (the end of her ridge at its gable, at the ridge's
+ * height) to a ridge at height `far` beyond a lane `lane` wide: tied round her chimney `back` behind her gable and run
+ * over the far chimney's pulley `beyond` past its gable. Solved from where her mittens are at the start of the ride
+ * (the trailing edge where she reaches standing, her weight sagging it onto her heels) and at its end (her feet just
+ * over the far ridge), each sag made up.
+ */
+export function sheetLine(edge: THREE.Vector3, along: THREE.Vector2, lane: number, far: number, back: number, beyond: number):
+  { from: THREE.Vector3; to: THREE.Vector3; start: number; stop: number } {
+  const k = tuning.crossings.sheet;
+  const at = (u: number, y: number) => new THREE.Vector3(edge.x + along.x * u, y, edge.z + along.y * u);
+  let from = new THREE.Vector3(), to = new THREE.Vector3(), start = 0, stop = 0;
+  let sagS = 0.07, sagE = 0.05;
+  for (let i = 0; i < 4; i++) {
+    const s = at(TAKE_FROM, edge.y + HANG + HOLD_DROP + sagS);
+    const e = at(lane + LET_GO, far + 0.28 + HANG + HOLD_DROP + k.holdDip + sagE);
+    const rise = (e.y - s.y) / (lane + LET_GO - TAKE_FROM);
+    from = at(-back, s.y + rise * (-back - TAKE_FROM));
+    to = at(lane + beyond, s.y + rise * (lane + beyond - TAKE_FROM));
+    const L = from.distanceTo(to);
+    start = from.distanceTo(s);
+    stop = L - from.distanceTo(e) - (SHEET.rings - 1) * SHEET.bunch;
+    const sag = (d: number) => k.slack * L * 4 * (d / L) * (1 - d / L);
+    sagS = sag(start);
+    sagE = sag(from.distanceTo(e));
+  }
+  return { from, to, start, stop };
+}
 
 /**
  * The sheet crossing: a big sheet on a washing line from her chimney over a lane to a higher roof's. The player's

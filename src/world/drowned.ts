@@ -15,6 +15,7 @@ import { ToppleTree } from './crossings/topple-tree';
 import { RopeSwing } from './crossings/rope-swing';
 import { Windmill } from './crossings/windmill';
 import { MillSpiral } from './crossings/mill-spiral';
+import { WashSheet } from './crossings/wash-sheet';
 import { DarkBank } from './drowned-dark';
 import { WOOD_LANDING } from './wood';
 import { TALL_AND_TINY, WASHING_PAIR, bandAt, villageShape, type Site } from './drowned-shape';
@@ -26,7 +27,7 @@ import {
 } from './drowned-houses';
 import {
   BOAT_TREE, CAT_HOUSE, DARK_WAY, DRAWN_ROUND, GARDEN_WALLS, GREEN_TREE, LEAN_TOS, MILL, NAVE, PLACED, TOWER,
-  MILL_SITE, SWING_SITE, TREE_SITE, inClearing, inDrawnClearing, onCatGround, type GardenWall, type LeanTo, type PlacedHouse,
+  MILL_SITE, SHEET_SITE, STRAND_FROM, SWING_SITE, TREE_SITE, inClearing, inDrawnClearing, onCatGround, type GardenWall, type LeanTo, type PlacedHouse,
 } from './drowned-way';
 
 /**
@@ -1368,7 +1369,8 @@ function free(f: Footprint, stands: THREE.Vector2[], behind = false): boolean {
     new THREE.Vector2(f.x + a * f.hl * c + b * f.hd * s, f.z - a * f.hl * s + b * f.hd * c));
   if (corners.some((p) => inClearing(p.x, p.y, 1.5) || onCatGround(p.x, p.y, 3))) return false;
   const drift = offChannel(f.x, f.z);
-  if ((drift.s < STRANDED_AT && drift.d < 15 + r) || STORM_OUT.some((p, i) => i > 0 && toSegment(f.x, f.z, STORM_OUT[i - 1], p) < 16 + r)
+  if ((drift.s < STRANDED_AT && drift.d < 15 + r) || toSegment(f.x, f.z, STRAND_FROM, DARK_WAY[1]) < 15 + r
+    || STORM_OUT.some((p, i) => i > 0 && toSegment(f.x, f.z, STORM_OUT[i - 1], p) < 16 + r)
     || toSegment(f.x, f.z, DARK_IN[0], DARK_IN[1]) < 26 + r) return false;
   if (f.z > -1250 || f.z < -1680 || Math.hypot(f.x - STAIRS_FOOT.x, f.z - STAIRS_FOOT.y) < 60) return false;
   if (Math.hypot(f.x - PAIR[0].x, f.z - PAIR[0].y) < 32 || Math.hypot(f.x - PAIR[1].x, f.z - PAIR[1].y) < 30) return false;
@@ -1393,6 +1395,8 @@ export class DrownedVillage {
   readonly tree: ToppleTree;
   /** The swing on the green tree's bough, hanging still over the green. */
   readonly swing: RopeSwing;
+  /** The sheet on its line across the lane from the barn's chimney to the high roof's. */
+  readonly sheet: WashSheet;
   /** The drowned mill, its sails swaying in the fog's breath, and the spiral drawn round its hub to turn it. */
   readonly mill: Windmill;
   readonly millSpiral = new MillSpiral();
@@ -1557,9 +1561,10 @@ export class DrownedVillage {
     this.tree = new ToppleTree(TREE_SITE.spot, wind);
     this.swing = new RopeSwing(SWING_SITE.spot);
     this.mill = new Windmill(MILL_SITE.spot);
+    this.sheet = new WashSheet(SHEET_SITE.spot);
     this.cameraObstacles.push(millBounds());
     this.tub = new WashTub(wind);
-    this.objects.push(...this.tree.objects, ...this.swing.objects, ...this.mill.objects, ...this.millSpiral.objects,
+    this.objects.push(...this.tree.objects, ...this.swing.objects, ...this.mill.objects, ...this.millSpiral.objects, ...this.sheet.objects,
       ...this.dark.objects, ...this.tub.objects);
   }
 
