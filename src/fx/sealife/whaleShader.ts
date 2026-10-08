@@ -214,7 +214,7 @@ vec3 barnacles(vec2 m, float where, float px) {
 
 /**
  * Old healed scars, m metres over the skin: in some cells one soft pale stroke drawn out along the body, tapering at
- * its ends like a brush's, or two or three side by side where something once raked it.
+ * its ends like a brush's, or two side by side where something once raked it.
  */
 float scars(vec2 m, float px) {
   const vec2 CELL = vec2(11.0, 3.4);
@@ -411,7 +411,6 @@ Skin skin(float far, float dry) {
       float reach = ${f(L.growthReach)} * (0.35 + 0.9 * n1 * (0.4 + n2));
       float grown = (1.0 - smoothstep(reach - 0.06 - px, reach + 0.06 + px, above)) * smoothstep(-1.6, -0.4, above) * (1.0 - 0.7 * lip);
       k.albedo = mix(k.albedo, ${rgb(L.growth)} * (0.75 + 0.5 * n2), grown * 0.8 * clear);
-      // Wet runs down from the top of its back.
       k.run = smoothstep(0.7, 0.85, vnoise(vec2(m.x * 0.45, m.y * 0.12 + 3.0))) * smoothstep(1.5, 3.5, above) * (1.0 - k.crust);
     }
 
