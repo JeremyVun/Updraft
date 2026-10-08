@@ -919,10 +919,16 @@ The sequence:
   the flukes rise high once as if waving and slip under; its swell lifts the boat. The pod
   goes with it, the limit eases off, and the sea goes still into the mirror's glass. The net starts drifting as the
   loop slips off, working loose into a raft with its corks round its edges, so it is its own shape by the spout, then
-  sinks slowly away into the deep and is gone by the dive (Claude's call, 2026-10-08: the past let go); the
+  sinks slowly away into the deep and is gone by the dive (Claude's call, 2026-10-08: the past let go); as built
+  (N3h), the raft lies in the open water between the boat and its head, where both frames see it, settles awash as
+  the spout falls and goes down through the glass, its floats last; the
   pod sets off as the bird is lifted in, and three dolphins leap clear of the water round the head at the spout,
   caught by the sun. Free, the whale first swings its head away and slides clear of the boat (the eye from about 15.6
-  to 19 m off), so by the spout it lies whole in the middle distance; the boat stays at rest.
+  to 19 m off), so by the spout it lies whole in the middle distance; the boat stays at rest. The release as built
+  (Claude's call, N3h): the spout, then its mist drifting down over the boat in the gold light with fine drops
+  glinting, the sea brightening round it, its call turned glad (the same voice, rising instead of settling) with her
+  eyes on its eye, then her look up into the mist and the cygnet calling back; about ten seconds from the spout to
+  the dive.
 - **Gestures.** Each step's answer starts at the wind's target and is plainly the biggest thing on screen: the boat is
   at rest, so nothing may read as the boat speeding up. The ambient breeze does nothing to the net, the corks or the
   flipper. The whale's body never answers the wind (Jeremy, 2026-10-08: "I also saw that the whale's body responds to

@@ -400,13 +400,43 @@ column and the spout read as mist, white lit gold through the sun and soft grey-
 coloured smoke or ring bands. Owns the free step in `net-whale.ts` and the free motion in `sleeper.ts` up to the dive,
 the net's raft and sinking (`net.ts`, `netShader.ts`), `spray.ts`, the sounds and score there.
 Gate: as N3g's.
-Done: [ ]
+Done: [x] `20eebe58..2c47c804`. Mist (`spray.ts`): `COLUMN` puffs are soft balls all the way from the middle (no rim
+term, so no rings), shaded as the stairs' cloud is, the sky's brightness without its colours (`mistShade`, lilac-grey in
+its folds), a share of the low sun scattered all through, gold where it is thin toward the sun, warming as it thins; the
+first column, the far plume and the sighs share it. Free, in seconds of `whale.time` (`sleeper.ts`): it drifts clear as
+before; `SPOUT_FROM` 6 the spout, `spray.jet` plus a `spray.column` `spoutBreadth` 1.5 times as broad, 20 m; the
+reward phrase and three leaps as before; from 7 to 13.8 its mist comes down over the boat (`spray.veil`: puffs from
+high in the plume carried on their own way, slowing as the square of their life, and fine drops glinting); the sea
+brightens round it from the spout (`water/glad.ts`, `gladSea` 0.8 out to `gladReach` 34 m along its head and forward
+body: the body lifted, the sun's glitter tripled); at `GLAD_AT` 9.2 its glad call (`whale-glad`: the same voice,
+brighter, rising to E instead of settling), her eyes on its eye, from 10.5 up into the mist; at 11 the cygnet calls back
+(`call(true)`); she waves from the spout to 12. The dive now starts at `DIVE_AT` 15.5 (every dive key is timed from it;
+`FREE_FLUKES_FROM` is `DIVE_AT` + 3). The net: let go it drifts to `raftPort` 8 / `raftAhead` 9 (to port and ahead
+of the boat at rest, turning `raftTurn` 0.5) and works loose into a raft by the spout (`DRIFT_TO` 24; a save at the
+flipper backdates the letting go by `FREED_BEFORE` 7.5 so it is a raft by the spout there too); from the spout's end
+to `DIVE_AT` − 1 it sinks (`net.sink`, `uSunk` = 4 m × sink², drawn through the glass by `SINK_VERT`/`SINK_FRAG`: each
+point slid up its view ray to the surface, the mesh fading fast, the floats going down whole 0.6 m behind it and
+fading slowly; corks are now a transparent material so they fade rather than dither), and is hidden at sink 1. The
+release view: free holds `release*` as a hold of its own, eased to from the flipper's in one move over `releaseMove`
+7 s (no second ease): 18 back, 3.6 up, 0.3 to port, `releaseLookY` 5, `releaseToward` 0.5, backed off at most
+`releaseRoom` 4; phone 12/3/−0.3, lookY 12, toward 0.4, `phone.releaseRoom` 4; what it keeps in frame moves from the
+flipper to the spout with the same ease; a phone's view turns between flipper and head by angle (through the point
+between them it swung round fast). Camera through the release, measured on the recordings: worst 0.6 m/s² landscape,
+0.5 portrait (N3g2: 1.9 at its first second). Played (`full`): rest 88.7, line 111.8, flipper 144.5, free 167.2,
+spout 173.2, gone 201.9, moored 221.2; idle moored about 485 (pacing `calm` arrivalReady 484.7). Left: in the webm the
+spout's upper crown reads paler grey-white than in stills; the sea's brightening is subtle at the low angle; the
+pod's own leaps cross close by the boat as before; the hand-back to the crossing camera as it goes (`gone`) still
+jerks (about 9 m/s², as on N3g2's recording) — N3i's.
 
 ### Phase N3i: the farewell
 After N3h, on `sea-whale`. It dives as a whale does, never rolling (Jeremy, 2026-10-08): the head goes down, the long
 back arches slowly forward and slides under, the flukes rise high once with their pale pattern and slip under; its
-swell lifts the boat; the pod goes with it; the sea stills toward the mirror's glass and the boat comes about. Owns the
-dive and gone in `net-whale.ts` and `sleeper.ts`, the swell, the camera through it.
+swell lifts the boat; the pod goes with it; the sea stills toward the mirror's glass and the boat comes about. Two
+things N3h left, both Claude's judgement on playing it (2026-10-08): the free spout, the climax image, reads in motion
+as a grey wedge widening up out of the frame, where the first column now reads as white mist lit gold; it becomes that
+mist, taller and glad, bushing out at its crown against the sunrise. And the hand-back to the crossing camera as it
+goes jerks (about 9 m/s²); it becomes one ease. Owns the dive and gone in `net-whale.ts` and `sleeper.ts`, the swell,
+the free spout in `spray.ts`, the camera through it.
 Gate: as N3g's.
 Done: [ ]
 
