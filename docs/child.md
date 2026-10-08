@@ -144,6 +144,9 @@ In `traveller.ts` unless noted.
   paper comes up in hand at `PICKUP_GRAB`; `pickUp(onDone, at)`), cheer, wave with the free hand, reach, and a
   forearm raised against a strong wind.
 - **Low reaches** bend her further over toward something low in front, only as far as needed (`stoop`).
+- **High reaches** take the collarbone up with the arm, as a posed raised arm does (`SHRUG` in `motion.ts`). Her
+  shoulder sits about 0.5 m below her face and her arm is short, so a mitten tops out about 0.2 m above her face,
+  level with her hood's brim: a reach meant to read from behind goes up and out across the view, beside her hood.
 - **Gusts**: an arriving gust turns her head toward it unless the story has her attention, and the body gives a
   little with its push (`gusted`).
 - **Springs**: the hem swings with each stride, trails when running and ripples on the side the air leaves (plus a
