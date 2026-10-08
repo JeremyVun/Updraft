@@ -1560,8 +1560,8 @@ export const tuning = {
      * along her outline, the lantern wrapped round her face and side, a lift in her shade; eased at `lightEase` a second.
      */
     lookLight: [2.2, 2.5, 0.6], farewellLight: [1.5, 0, 0.3], lightEase: 1,
-    /** Her goodbye as its flukes stand, from her face (m): out to her left, up, swaying either way, and how fast (rad/s). */
-    goodbyeWave: [0.55, 0.12, 0.15, 4.5],
+    /** Her goodbye as its flukes stand, from her face (m): out across the view toward where it went down, up, swaying, and how fast (rad/s). */
+    goodbyeWave: [0.45, 0.45, 0.2, 4.5],
     /** As it dives she slides this far along the thwart to the port rail (m), at `farewellRailEase` a second. */
     farewellSlide: 0.35, farewellRailEase: 0.8,
     /**

@@ -229,6 +229,8 @@ export class NetWhale {
   private greeted = false;
   /** Through the look between them: the view over her shoulder, its blink, and the cygnet's peep. */
   private looking = false;
+  /** The mitten she waves goodbye with: the one on the side of her toward where it went down. */
+  private waveHand: 0 | 1 = 0;
   private blinked = false;
   private peeped = false;
   private waved = false;
@@ -805,21 +807,22 @@ export class NetWhale {
   }
 
   /**
-   * Her goodbye as its flukes stand: a mitten up and out to her side, waving slowly, so from behind it shows beside
-   * her hood against the sky and the sun's glow rather than in front of the sail.
+   * Her goodbye as its flukes stand: the mitten on the side toward where it went down held up and out across the view,
+   * waving slowly, so from behind it rises beside her hood against the sky and the sun's glow rather than her coat.
    */
   private waveGoodbye(time: number): void {
-    const { child, boat } = this.cast;
+    const { child } = this.cast;
     const [out, up, sway, rate] = K.goodbyeWave;
-    const facing = boat.yaw + this.turn;
     child.face(this.a);
-    this.b.set(Math.cos(facing), 0, -Math.sin(facing));
-    child.reachFor(0, this.p.copy(this.a).addScaledVector(this.b, out + sway * Math.sin(time * rate)).addScaledVector(UP, up));
+    if (this.camera) this.b.setFromMatrixColumn(this.camera.matrixWorld, 0).setY(0).normalize().negate();
+    else this.b.set(Math.cos(this.cast.boat.yaw + this.turn), 0, -Math.sin(this.cast.boat.yaw + this.turn));
+    if (!this.wavingGoodbye) this.waveHand = child.toBody(this.p.copy(this.a).add(this.b), this.ray).x >= child.toBody(this.a, this.p).x ? 0 : 1;
+    child.reachFor(this.waveHand, this.p.copy(this.a).addScaledVector(this.b, out + sway * Math.sin(time * rate)).addScaledVector(UP, up));
     this.wavingGoodbye = true;
   }
 
   private stopWaving(): void {
-    if (this.wavingGoodbye) this.cast.child.reachFor(0, null);
+    if (this.wavingGoodbye) this.cast.child.reachFor(this.waveHand, null);
     this.wavingGoodbye = false;
   }
 
