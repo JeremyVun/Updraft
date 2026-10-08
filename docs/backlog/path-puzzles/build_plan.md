@@ -360,24 +360,73 @@ first column reading against the glow; the far sigh in the haze seen and her poi
 pale paddle side-on with water running off it; a reverse stroke pushing the cork away; a phone's swipe along the flipper
 at a phone's pace. Not the eye's colour (N3i), nor free and gone (N3h).
 Gate: as N3g's, `wrongway` included.
-Done: [ ]
+Done: [x] `a41aff1d..e28bfebc`. The holds sit low, the lens allowed a metre over the water beside it (`holdClearance`) and
+backed off at most `holdRoom` 2 m (the look not at all): sorrow 13 m back, 2.8 up, 0.25 to port (the back's ridge and
+its gold line against the sky, the sun's disc behind the back, its glow over it); line 9/3.4/0.3; flipper 12/3.2/0.55,
+from the port quarter so the flipper is side-on; phone sorrow 18/2.8, haul 6/3.2 aimed at its eye (`eyeward`), bird
+12/3.4 turned −1.5. The approach comes down in one ease: no rise over the pod; led, the view comes `leadDrop` 2.6 lower
+and `leadIn` 10 nearer, and the hold (`holdFrom` 75) takes it on down. The lead's sigh: `sighIn` makes it breathe
+`leadSigh` 4 s after the lead, and a sigh seen from over 40 m off rises as a soft plume of `COLUMN` puffs scaled to the
+distance (`spray.plume`, over 2.2 s); she sits up and leans toward it (`knowsLean`) `knowsFirst` 1.2 s before each such
+breath (`untilSigh`), the cygnet peeking at the first. The patch: `net.slump` from `slumpFrom` 3.2 s into the first
+breath over 3 s, sliding it 4.2 m down the far side of the crown in loose folds (`net.raised` is the patch's lift
+everywhere it is read). The first column: `spray.column`, round puffs lit as one shape (`COLUMN`, the side each left
+from in `iC.w`), 13 m (`firstBreathHeight`). The look: she slides 0.35 m to the port rail, turns 0.95 and leans 0.9 out
+toward its eye (`lookSlide`, `lookTurn`, `lookLean`, eased by `drawn`); the camera 3.8 back, 1.75 up, 0.22 to port,
+looking 0.33 toward its eye (the focus is the eye there), her face the primary; the mast stands at the frame's right
+edge and the sail beyond it once the boat has settled (the bird peeks at the edge beside it); phone 2.9/2.55, turn
+−0.45, close behind her on the line to its eye. The flipper: `finPoint` (anatomy) gives its surface for the mesh and
+`sleeper.finAt` the posed point; lifted it pales (`finRaised` in the skin) and the sea pours off the whole trailing
+edge in threads and drops. The cork: a wrong-way stroke pushes it a little away and `settleCork` draws it back to where
+it lay (`corkSettle`); `wrongway` failed because the check parked the pointer by dragging it back across the cork, now
+it leaves and comes back as a hand does (`jumpTo`/`away`), and it fails with the push reversed. The flipper's pace is
+eased over a few frames (`finPace` 0.45): a 150 px, 0.34 s phone swipe lifts it, a 1.5 s drag does not.
+`sea-logic-check` measures the blowhole as a target only while the circles are asked (NDC 0.12–0.13). Played: rest
+88.7, line 112.2, flipper 143.6, free 165.8, gone 195.3, moored 215.0 (`full`: moored 216.3); idle moored about 480
+(pacing `calm` arrivalReady 479.7). Left: from behind, her short arms never clear her hood, so her pointing at the lead
+and her mitten at the look barely read (her lean, her head turned and the cygnet carry them); her hood is a dark
+backlit shape in the look; the sail can show at the look's edge while the boat is still settling or the boom swings;
+on a phone the paper plane on her back hides her hands at the haul and the bird sits at the edge of the bird's hold;
+the eye's orange iris is N3i's.
 
-### Phase N3h: the release and the farewell
-After N3g. The river-spirit moment: it breathes free, the plume's mist drifting down over the boat in the gold light,
-its call turning glad, the sea brightening round it, the net let go sinking away into the deep, the pod's leaps, her
-wave and the bird's call, the score's one bloom; then the dive (head down, the back arching forward and sliding under,
-the flukes rising once with their pale pattern and slipping under, never a roll), the swell lifting the boat, and the
-sea stilling toward the mirror. Owns the free and gone steps in `net-whale.ts` and `sleeper.ts`, the net's sinking,
-the spout's mist, the sounds and score there.
+### Phase N3h: the release
+After N3g2, on `sea-whale`, in parallel with N3j (Claude played N3g2, 2026-10-08: the giant now breaks the horizon and
+the far sigh reads; its first column reads as violet smoke with rings in it, not mist). The river-spirit moment, from
+the bird lifted in to the start of the dive: it drifts clear and breathes free, the tall plume against the sunrise, its
+mist drifting down over the boat in the gold light; its call turning glad; the sea brightening round it; the net let go
+working loose into a raft and sinking away into the deep; the pod's leaps; her wave and the bird's call; the score's one
+bloom; the release view easing out from the low holds without a lurch, the giant still breaking the horizon. The first
+column and the spout read as mist, white lit gold through the sun and soft grey-blue on the shadow side, never
+coloured smoke or ring bands. Owns the free step in `net-whale.ts` and the free motion in `sleeper.ts` up to the dive,
+the net's raft and sinking (`net.ts`, `netShader.ts`), `spray.ts`, the sounds and score there.
 Gate: as N3g's.
 Done: [ ]
 
-### Phase N3i: the ancient skin and its life
-After N3h. Owns the skin (`whaleShader.ts`, `tuning.whaleLook`): barnacle crusts, healed scars, mottling, growth at the
-waterline, wet streaks, the eye's age (its iris a deep warm brown with one bright catchlight, not the lit orange N3g
-left), drawn as bold simple painted shapes like the rest of the game; water sheeting
-off the back with each breath; the seabirds on its back.
-Gate: as N3g's, then the playable build for Jeremy.
+### Phase N3i: the farewell
+After N3h, on `sea-whale`. It dives as a whale does, never rolling (Jeremy, 2026-10-08): the head goes down, the long
+back arches slowly forward and slides under, the flukes rise high once with their pale pattern and slip under; its
+swell lifts the boat; the pod goes with it; the sea stills toward the mirror's glass and the boat comes about. Owns the
+dive and gone in `net-whale.ts` and `sleeper.ts`, the swell, the camera through it.
+Gate: as N3g's.
+Done: [ ]
+
+### Phase N3j: the ancient skin and the eye
+In parallel with N3h, on its own branch `sea-whale-skin` off `sea-whale` (merged back before N3k). Owns the skin and the
+eye in `whaleShader.ts`, `whale.ts`'s look uniforms and `tuning.whaleLook`, shader only (the form, the anchors and the
+net's drape untouched): barnacle crusts, healed scars, mottling, growth at the waterline, wet streaks, drawn as bold
+simple painted shapes like the rest of the game, fine against its bulk; the eye old, wet and kind in its folds, its iris a
+deep warm brown catching the sun in one bright point (not the lit orange N3g left). The same skin on the first
+crossing's whale.
+Gate: typecheck; build; stills of every hold (landscape and portrait) and of the first crossing's whale, beside N3g2's.
+Done: [ ]
+
+### Phase N3k: its life, her light, and the playable build
+After N3i and N3j are merged on `sea-whale`. Water sheeting off the back with each breath and the sea swelling and
+settling round it; the seabirds standing far along its back, lifting off as it spouts free; the look's frame finished
+(N3g2 left her a dark backlit hood filling a quarter of the frame: her whole seated figure smaller in it, the sun's rim
+on her hood and the lantern warm on her cheek, her head and mitten turned to the eye, the eye large). Then Claude plays
+the whole open sea beside the clouds and the owl, and the playable build goes to Jeremy.
+Gate: as N3g's.
 Done: [ ]
 
 ### Phase N4: docs on approval

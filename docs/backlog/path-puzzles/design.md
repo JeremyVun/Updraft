@@ -894,8 +894,8 @@ The sequence:
   (progress builds while the player winds and is kept when they stop); the whale draws its first full breath, a soft
   column of mist up through the spiral, and its great eye opens and looks at the child (`k2`). Once it has breathed,
   the patch falls back loose and slumps off the blowhole to the far side of the crown, so the back's outline is the
-  whale's again, never a tent of net standing on it; the column reads against the bright sky, full and tall, gold on
-  its sun side and cool on its shadow side, drifting as it falls (Claude's call, 2026-10-08, after playing N3g: the
+  whale's again, never a tent of net standing on it; the column reads against the bright sky, full and tall, white
+  mist lit gold on its sun side and soft grey-blue on its shadow side, never coloured smoke, drifting as it falls (Claude's call, 2026-10-08, after playing N3g: the
   patch held up stood as a pyramid of net over the back, and the column was lost in the glow).
 - **2. The child (a sweep).** A line of corks trails from the net across the water by the boat. A sweep pushes the
   nearest cork to the boat; she leans out, catches the line in both mittens and hauls, and the net peels back off the
