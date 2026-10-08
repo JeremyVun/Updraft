@@ -29,11 +29,11 @@ export interface BoundShape {
 
 type Keys = readonly (readonly [number, number])[];
 
-const RISE: Keys = [[0, -0.02], [0.2, -0.006], [0.34, 0.012], [0.47, 0.036], [0.6, 0.012], [0.76, -0.012], [0.92, -0.022]];
+const RISE: Keys = [[0, -0.024], [0.2, -0.006], [0.34, 0.016], [0.46, 0.046], [0.6, 0.012], [0.76, -0.014], [0.92, -0.026]];
 const FLEX: Keys = [[0, 0.6], [0.2, 0.15], [0.36, -0.25], [0.5, -0.32], [0.64, -0.1], [0.8, 0.32], [0.94, 0.62]];
 const STRETCH: Keys = [[0, -0.024], [0.2, -0.004], [0.36, 0.016], [0.5, 0.026], [0.64, 0.018], [0.8, -0.006], [0.94, -0.024]];
-const PITCH: Keys = [[0, -0.02], [0.18, 0.1], [0.32, 0.13], [0.47, 0.02], [0.62, -0.13], [0.8, -0.09], [0.94, -0.04]];
-const TAIL: Keys = [[0.02, 0.28], [0.3, 0.1], [0.52, -0.12], [0.76, 0.02]];
+const PITCH: Keys = [[0, -0.03], [0.18, 0.13], [0.32, 0.17], [0.47, 0.03], [0.62, -0.16], [0.8, -0.1], [0.94, -0.05]];
+const TAIL: Keys = [[0.02, 0.32], [0.3, 0.1], [0.52, -0.16], [0.76, 0.02]];
 
 /** A smooth closed curve through values at phases round the stride. */
 function loop(p: number, keys: Keys): number {
@@ -90,14 +90,14 @@ export function boundReach(leg: number, p: number, low: number, first: number[],
     const up = y + SHOULDER[1] - BODY_Y;
     first[0] = along - 0.012;
     first[1] = 0.05 * BOUND_LEGS;
-    second[0] = along + 0.092 * BOUND_LEGS;
-    second[1] = up - 0.06 * BOUND_LEGS;
+    second[0] = along + 0.1 * BOUND_LEGS;
+    second[1] = up - 0.045 * BOUND_LEGS;
     return [0.3, 0.72];
   }
   const along = HIP[2] + shape.surge - shape.stretch / 2;
   const up = y + HIP[1] - BODY_Y;
-  first[0] = along - 0.13 * BOUND_LEGS;
-  first[1] = up - 0.075 * BOUND_LEGS;
+  first[0] = along - 0.14 * BOUND_LEGS;
+  first[1] = up - 0.06 * BOUND_LEGS;
   second[0] = along + 0.045;
   second[1] = 0.045 * BOUND_LEGS;
   return [0.26, 0.76];
