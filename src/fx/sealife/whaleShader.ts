@@ -400,7 +400,12 @@ Skin skin(float far, float dry) {
   vec3 base = uBack * (0.94 + 0.12 * mottle) * (${f(1 - L.tone)} + ${f(2 * L.tone)} * smoothstep(0.2, 0.8, n0));
   float grain = (vnoise(m * 6.0 + 1.7) - 0.5) * shows(0.16, px) + 0.6 * (vnoise(m * 15.0 + 4.1) - 0.5) * shows(0.07, px);
   base *= 1.0 + ${f(L.grain)} * grain;
-  float thick = ${f(L.lichenCover)} * (0.3 + 1.1 * smoothstep(0.25, 0.75, n0 + 0.3 * (n1 - 0.5))) + 0.22 * (1.0 - smoothstep(1.2, 3.0, face)) * flank;
+  // It gathers on the head and along the top of the back, as on the top of an old rock, and thins down the flank; the
+  // flukes carry only a little, on top.
+  float up = part == ${BODY} ? vRig.w : part == ${FLUKES} ? 0.0 : 1.0;
+  float gather = mix(${f(L.lichenFlank)}, 1.0, smoothstep(0.45, 0.9, up + 0.25 * (1.0 - smoothstep(0.2, 0.32, s))));
+  float thick = ${f(L.lichenCover)} * gather * (0.3 + 1.1 * smoothstep(0.25, 0.75, n0 + 0.3 * (n1 - 0.5)))
+    + 0.22 * (1.0 - smoothstep(1.2, 3.0, face)) * flank;
   vec2 lich = lichen(m, thick, px);
   vec3 lichTone = mix(${rgb(L.lichen)}, ${rgb(L.lichenWarm)}, smoothstep(0.62, 0.85, lich.y)) * (0.9 + 0.2 * lich.y);
   // Low on its flanks the sea's weed has it rather than lichen.
@@ -419,7 +424,7 @@ Skin skin(float far, float dry) {
     float lip = smoothstep(-pr, pr, below + 0.002) * smoothstep(-pr, pr, taper - below) * onJaw;
     // Behind the jaw the throat and belly are a paler slate, so rolled over it is not a white hull.
     float throat = (1.0 - smoothstep(-0.62, -0.48, h + (mottle - 0.5) * 0.08)) * smoothstep(${f(JAW_CORNER)}, ${f(JAW_CORNER + 0.05)}, s)
-      * (1.0 - smoothstep(0.55, 0.85, s));
+      * (1.0 - smoothstep(0.5, 0.7, s));
     float pleat = max(below - 0.035, 0.0) / (0.045 + 0.25 * max(below - 0.035, 0.0));
     float groove = smoothstep(0.0, 0.5, pleat) * pow(0.5 + 0.5 * cos(6.2832 * pleat), 4.0) * (1.0 - smoothstep(0.3, 0.6, fwidth(pleat)));
     vec3 jawTone = uBelly * (0.92 + 0.1 * mottle) * (1.0 - 0.18 * groove) * mix(0.72, 1.0, smoothstep(0.0, 0.05, below))
@@ -473,10 +478,12 @@ Skin skin(float far, float dry) {
       // the faint yellow film old whales carry; kept off the pale lip.
       float top = ${f(L.growthReach)} * (0.4 + 0.9 * vnoise(vec2(m.x * 0.3, 1.3)))
         + 0.35 * (vnoise(m * vec2(1.4, 2.0) + 7.7) - 0.5) + 0.18 * (vnoise(m * 4.5 + 3.3) - 0.5) * shows(0.12, px);
-      float grown = (1.0 - smoothstep(top - 0.02 - px, top + 0.02 + px, above)) * smoothstep(-1.6, -0.4, above) * (1.0 - 0.7 * lip);
+      // The tail stock stands up out of the sea as it dives, one old surface without the weed of the waterline.
+      float stock = 1.0 - smoothstep(0.74, 0.84, s);
+      float grown = (1.0 - smoothstep(top - 0.02 - px, top + 0.02 + px, above)) * smoothstep(-1.6, -0.4, above) * (1.0 - 0.7 * lip) * stock;
       float moss = smoothstep(0.45, 0.6, vnoise(m * vec2(1.1, 1.6) + 4.0)) * smoothstep(-0.4, 0.2, above);
       vec3 weed = mix(${rgb(L.growth)}, ${rgb(L.moss)}, moss) * (0.85 + 0.3 * n2);
-      float film = smoothstep(0.5, 0.72, vnoise(m * vec2(0.22, 0.5) + 13.0)) * smoothstep(top - 0.1, top + 0.1, above)
+      float film = stock * smoothstep(0.5, 0.72, vnoise(m * vec2(0.22, 0.5) + 13.0)) * smoothstep(top - 0.1, top + 0.1, above)
         * (1.0 - smoothstep(top, top + 1.6 * ${f(L.growthReach)} + 0.6, above));
       k.albedo = mix(k.albedo, ${rgb(L.film)}, film * 0.25 * clear * (1.0 - lip));
       k.albedo = mix(k.albedo, weed, grown * 0.85 * clear);
@@ -556,19 +563,55 @@ Skin skin(float far, float dry) {
     k.crust = crust.x;
     k.thin = 0.05;
   } else {
-    // Its own marks under the flukes, the same wherever it is met: a ragged dark trailing edge and tips, a dark
-    // stroke up from the notch, and two dark commas that do not match.
-    float under = (1.0 - smoothstep(-0.15, 0.15, rn.y));
+    // Under the flukes, pale with a dark margin, and its own few old marks, the same wherever it is met: the leading
+    // edge, the scalloped trailing edge and the tips dark, a dark wedge up from the notch into the tail stock, a dark
+    // comma on the left fluke, a round spot on the right that does not match it, and a few specks. Barnacles sit
+    // along the edges, most toward the tips. Above, they are the back's own slate.
+    float under = 1.0 - smoothstep(-0.2, 0.2, rn.y);
     float t = vRig.z;
+    float at = abs(t);
     float a = vRig.w;
-    float edge = smoothstep(0.6, 0.78, a + 0.07 * sin(t * 23.0) + 0.04 * sin(t * 51.0));
-    float stroke = (1.0 - smoothstep(0.05, 0.11, abs(t + 0.03 * sin(a * 9.0)))) * smoothstep(0.2, 0.45, a);
-    float left = 1.0 - smoothstep(0.08, 0.12, length(vec2((t + 0.47) * 0.8, a - 0.36 - 0.1 * (t + 0.47))));
-    float right = 1.0 - smoothstep(0.05, 0.08, length(vec2(t - 0.6, (a - 0.52) * 1.4)));
-    float tips = smoothstep(0.8, 0.95, abs(t));
-    float lead = 1.0 - smoothstep(0.04, 0.12, a);
-    float mark = max(max(max(edge, stroke), max(max(left, right), tips)), lead);
-    k.albedo = mix(k.albedo * 0.8, uBelly * 1.08 * mix(0.78, 1.0, smoothstep(0.0, 0.5, abs(t))) * (0.9 + 0.15 * mottle), under * (1.0 - mark));
+    vec2 fm = vRest.xz * uScale * uShape.z;
+    float fpx = length(fwidth(fm)) + 1e-4;
+    float wob = vnoise(fm * 0.35 + 3.0) - 0.5;
+    float wob2 = vnoise(fm * 1.1 + 9.0) - 0.5;
+    float soft = 0.025 + fwidth(a);
+    // The dark of the trailing edge reaches into the pale in a few soft tongues, as a painted margin does.
+    float tongues = smoothstep(0.55, 0.85, vnoise(vec2(t * 9.0, 2.0))) * 0.07 + 0.03 * wob2;
+    float trailing = smoothstep(0.87 - soft, 0.87 + soft, a + 0.05 * wob + tongues + 0.04 * smoothstep(0.55, 0.9, at));
+    float leading = 1.0 - smoothstep(0.07 - soft, 0.07 + soft, a + 0.04 * wob - 0.03 * smoothstep(0.6, 0.95, at));
+    float tips = smoothstep(0.86, 0.93, at + 0.04 * wob);
+    float wedge = 1.0 - smoothstep(0.0, 0.03 + fwidth(at), at - 0.04 - 0.15 * (1.0 - a) * (1.0 - a) - 0.03 * wob2);
+    // The comma: a round head and a tail that tapers as it curls away toward the trailing edge (span stretched to
+    // about the chord's scale, so it keeps its shape).
+    vec2 cp = vec2((t + 0.45) * 2.4, a - 0.4);
+    float comma = length(cp) - 0.08;
+    const vec2 TAIL[4] = vec2[](vec2(0.0), vec2(0.03, 0.1), vec2(0.0, 0.19), vec2(-0.08, 0.24));
+    for (int i = 0; i < 3; i++) {
+      vec2 d = TAIL[i + 1] - TAIL[i];
+      float h = clamp(dot(cp - TAIL[i], d) / dot(d, d), 0.0, 1.0);
+      comma = min(comma, length(cp - TAIL[i] - d * h) - 0.07 * (1.0 - (float(i) + h) / 3.0));
+    }
+    comma = 1.0 - smoothstep(0.0, 0.01 + fwidth(a) * 1.5, comma + 0.01 * wob2);
+    vec2 sp = vec2((t - 0.6) * 2.4, a - 0.52);
+    float spot = 1.0 - smoothstep(0.06, 0.075 + fwidth(a) * 2.0, length(sp * vec2(1.0, 1.2)) + 0.015 * wob2);
+    vec2 cell = floor(fm / 2.2);
+    vec2 fc = fract(fm / 2.2) - 0.5 - (vec2(hash12(cell + 3.1), hash12(cell + 7.7)) - 0.5) * 0.6;
+    float speck = (1.0 - smoothstep(0.08, 0.13, length(fc))) * step(0.9, hash12(cell + 1.9)) * smoothstep(0.25, 0.4, a) * (1.0 - smoothstep(0.7, 0.78, a));
+    float mark = max(max(max(trailing, leading), max(tips, wedge)), max(max(comma, spot), speck));
+    // Old pale skin rather than paint: soft grey clouding, greyer toward the root, and a few faint old scratches.
+    float clouds = smoothstep(0.35, 0.8, vnoise(fm * 0.3 + 5.0)) * 0.1 + 0.06 * (1.0 - smoothstep(0.1, 0.45, at));
+    float scratch = (1.0 - smoothstep(0.0, 0.012 + fwidth(t), abs(fract(t * 6.0 + 0.4 * a + 0.2 * wob) - 0.5) - 0.48))
+      * step(0.55, hash12(vec2(floor(t * 6.0 + 0.4 * a + 0.2 * wob), 4.0))) * smoothstep(0.2, 0.35, a) * (1.0 - smoothstep(0.6, 0.75, a));
+    vec3 pale = uBelly * ${f(L.flukePale)} * (0.95 + 0.06 * mottle + 0.04 * wob) * (1.0 - clouds) * (1.0 - 0.12 * scratch);
+    vec3 dark = uBack * 0.7 * (0.9 + 0.15 * mottle);
+    k.albedo = mix(k.albedo * 0.85, mix(pale, dark, mark), under);
+    float edges = max(smoothstep(0.86, 0.97, a) * (0.35 + 0.65 * smoothstep(0.3, 0.85, at)), (1.0 - smoothstep(0.0, 0.07, a)) * smoothstep(0.45, 0.85, at));
+    float where = edges * smoothstep(0.45, 0.7, vnoise(fm * 0.25 + 21.0) * 0.7 + wob2 * 0.6 + 0.3) * ${f(L.flukeShells)} * dry;
+    vec3 crust = barnacles(fm, where, fpx);
+    k.albedo *= 1.0 - 0.35 * crust.z;
+    k.albedo = mix(k.albedo, ${rgb(L.crust)} * crust.y, crust.x);
+    k.crust = crust.x;
     k.thin = 0.12;
   }
   return k;

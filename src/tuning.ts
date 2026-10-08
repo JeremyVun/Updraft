@@ -1464,7 +1464,7 @@ export const tuning = {
      * `farewellHeight` up and `farewellBearing` round to port of astern, looking `farewellToward` of the way there and
      * `farewellLookY` up, so its flukes stand whole in the frame over the boat.
      */
-    farewellDistance: 20, farewellHeight: 3.4, farewellBearing: 0.5, farewellLookY: 14, farewellToward: 0.5, farewellMove: 7,
+    farewellDistance: 17, farewellHeight: 1.8, farewellBearing: 0.45, farewellLookY: 18.5, farewellToward: 0.5, farewellMove: 7,
     /** Once it has gone, seconds over which the view eases from the farewell's hold back to the crossing's behind the boat. */
     handBack: 16,
     /**
@@ -2216,6 +2216,10 @@ export const tuning = {
      */
     tone: 0.14, grain: 0.35, creases: 0.3,
     lichen: '#8695a6', lichenWarm: '#9a9c8e', lichenCover: 0.4, lichenAmount: 0.6,
+    /** How much of the lichen's cover is left low on the flank, against the top of the back and the head. */
+    lichenFlank: 0.2,
+    /** Under the flukes: how pale their field is against the belly's colour, and how thickly barnacles sit on their edges. */
+    flukePale: 1.12, flukeShells: 0.7,
     scar: '#aeb7bd', scars: 0.24, scarAmount: 0.65,
     crust: '#b5afa1', crustShells: 0.85,
     growth: '#454b2a', moss: '#5d7038', film: '#9e8d50', growthReach: 0.7,

@@ -70,20 +70,20 @@ const FLUKES_UP = -1.45;
  * The lift, by metres the tail stock lies ahead of the bend: coming up as it nears it, held as the flukes stand over
  * it and slip down through it.
  */
-const LIFT_BY = curve([[-4, 0], [-1, 0.12], [3, 0.7], [6, 1], [40, 1]]);
+const LIFT_BY = curve([[-4, 0], [-1, 0.14], [2, 0.75], [4.5, 1], [40, 1]]);
 /** Share of the way round toward the boat its tail stock turns its flukes as they rise, so their pale undersides face her. */
-const TURN_TO_HER = 1;
+const TURN_TO_HER = 0.75;
 /**
  * Its tail stock turns them about its own line as they lift, from the start of the lift over `TURN_WITH` of it, but
  * never so far that they tilt more than `TILT` (the sine of the slope across their span) while they are still low:
  * so they come up opening toward her, never edge on, and stand level facing her.
  */
 const TURN_WITH = 0.3;
-const TILT = 0.3;
+const TILT = 0.2;
 const YAW_WITH = [0.1, 0.85] as const;
 const TRAIL = 0.5;
 const TRAIL_UNTIL = [0.35, 0.85] as const;
-const YAW_SHARE = 0.6;
+const YAW_SHARE = 0.7;
 /** A slow wave of the flukes while they are up: radians of flex at the hinge, and of turn, and its pace. */
 const WAVE_FLEX = 0.16;
 const WAVE_TURN = 0.12;
@@ -518,7 +518,7 @@ export class SleepingWhale extends WhaleRig {
     const lift = LIFT_BY(stock) * THREE.MathUtils.smoothstep(t, 2, 6);
     const waving = THREE.MathUtils.smoothstep(t, FLUKES_FROM - D + 1.5, FLUKES_FROM - D + 3.5)
       * (1 - THREE.MathUtils.smoothstep(t, UNDER_AT - D - 3, UNDER_AT - D - 1));
-    const wave = Math.sin((t - (FLUKES_FROM - D + 1.5)) * WAVE_PACE) * waving;
+    const wave = -Math.sin((t - (FLUKES_FROM - D + 1.5)) * WAVE_PACE) * waving;
     const trail = TRAIL * THREE.MathUtils.smoothstep(lift, 0, 0.2) * (1 - THREE.MathUtils.smootherstep(lift, TRAIL_UNTIL[0], TRAIL_UNTIL[1]));
     // It sounds more steeply as its tail comes to the bend, so by the time its flukes rise the rest of it is under.
     const steeper = 1 + THREE.MathUtils.smoothstep(stock, -45, -10);
