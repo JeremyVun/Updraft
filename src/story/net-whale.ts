@@ -37,7 +37,7 @@ const GLAD_AT = SPOUT_TO + 0.4;
 const MIST_LOOK = GLAD_AT + 1.3;
 const ANSWER_AT = GLAD_AT + 1.8;
 /** About how long before it goes free the loop is let go, as the cygnet swims back and is lifted in (s). */
-const FREED_BEFORE = 6;
+const FREED_BEFORE = 7.5;
 const SINK_TO = DIVE_AT - 1;
 /**
  * The valve's dolphin leaps from this far out on the near side of the blowhole, over the crown and down beyond it;
@@ -1684,7 +1684,15 @@ export class NetWhale {
       * (1 - THREE.MathUtils.smoothstep(whale.time, FREE_FLUKES_FROM + 10, FREE_FLUKES_FROM + 14)) : 0;
     if (glance > 0) this.look.lerp(this.a.copy(whale.flukes).setY(Math.max(4, whale.flukes.y * 0.5)), glance * (portrait ? 0.85 : 0.55));
     // Behind the boat: just to port of astern, or in portrait on the line from what matters through the boat.
-    const aim = portrait ? Math.atan2(focus.x - boat.x, focus.z - boat.z) + phoneTurn : this.yaw - bearing;
+    // Turned between the head and the flipper by angle rather than through the point between them, which can pass
+    // close by the boat and swing the view round fast.
+    let aim = this.yaw - bearing;
+    if (portrait) {
+      this.ray.copy(whale.finTip).lerp(this.station, 0.5);
+      const toFin = Math.atan2(this.ray.x - boat.x, this.ray.z - boat.z);
+      const toHead = Math.atan2(head.x - boat.x, head.z - boat.z);
+      aim = toHead + Math.atan2(Math.sin(toFin - toHead), Math.cos(toFin - toHead)) * fin + phoneTurn;
+    }
     const distance = portrait ? phoneDistance : holdDistance;
     const height = portrait ? phoneHeight : holdHeight;
     this.lookFrom.set(boat.x - Math.sin(aim) * distance, boat.y + height,
@@ -1713,16 +1721,22 @@ export class NetWhale {
       s.secondary.copy(out ? this.cast.cygnet.position : whale.finTip).y += out ? 0.4 : 0;
     } else if (this.looking) s.secondary.copy(whale.eye);
     else s.secondary.copy(whale.blowhole).y += 2.5;
+    // Going free, what the view keeps in frame moves from the flipper to the spout with the view's own ease.
+    const freeing = this.step === 'free' || this.step === 'gone';
+    const into = this.step === 'free' ? moved : 1;
+    if (into < 1) s.secondary.lerp(whale.finTip, 1 - into);
     // A phone's narrow frame stacks the step over the boat; fitting the eye in beside them would only back it off.
     // Going free the boat comes near and the whale lies across the middle distance, its plume leaving the frame.
-    if ((portrait && (this.step === 'line' || this.step === 'flipper')) || (!portrait && this.step === 'free')) s.tertiary.copy(s.secondary);
+    if ((portrait && (this.step === 'line' || this.step === 'flipper')) || (!portrait && freeing)) s.tertiary.copy(s.secondary);
     else s.tertiary.copy(this.step === 'flipper' ? whale.finTip : whale.eye);
+    if (portrait && into < 1) s.tertiary.lerp(whale.finTip, 1 - into);
     if (glance > 0) s.tertiary.lerp(this.a.copy(whale.flukes).setY(Math.max(whale.flukes.y, 1)), glance * 0.6);
     s.secondary.lerp(rest, 1 - h);
     s.tertiary.lerp(rest, 1 - h);
     // Each hold is composed as it stands: the look is never backed off, the steps only a little if what they ask for strays.
     s.margin = THREE.MathUtils.lerp(pair?.margin ?? 0.85, this.looking ? 1 : 0.85, h);
-    s.extra = THREE.MathUtils.lerp(pair?.extra ?? 10, this.looking ? 0 : this.step === 'free' ? (portrait ? K.phone.releaseRoom : K.releaseRoom) : K.holdRoom, h);
+    const room = freeing ? THREE.MathUtils.lerp(K.holdRoom, portrait ? K.phone.releaseRoom : K.releaseRoom, into) : K.holdRoom;
+    s.extra = THREE.MathUtils.lerp(pair?.extra ?? 10, this.looking ? 0 : room, h);
     shot.subjects = s;
   }
 }
