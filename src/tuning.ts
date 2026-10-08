@@ -1452,11 +1452,12 @@ export const tuning = {
     /**
      * Its blow, close: breathed out hard and easing off over `exhale` s, `puffs` puffs a second for each metre of its
      * height at its hardest, thrown up into air that slows them `drag` a second, so they reach their height in about a
-     * second; the column `stem` m across the middle at the blowhole and `flare` m wider for each metre it rises. Each puff swells `swell` a second
-     * toward its share of the column's breadth there and keeps spreading `spread` m/s; it is `opacity` thick at most,
-     * thinning by the power `thinning` of the life it has left over `life` s (the top's; the low parts go sooner),
-     * falling `fall` m/s² as it drifts, the air tearing its top apart at up to `tear` m/s and drawing each puff out
-     * sideways by `torn` of its size over its life. `drops` fine drops a second are thrown up through it.
+     * second; the column `stem` m in radius at the blowhole and `flare` m wider in radius for each metre it rises (more
+     * toward its top). Each puff swells `swell` a second toward its share of the column's radius there and keeps
+     * spreading `spread` m/s; it is `opacity` thick at most, thinning by the power `thinning` of the life it has left
+     * over `life` s (the top's; the low parts go sooner), falling `fall` m/s² as it drifts, the air tearing its top
+     * apart at up to `tear` m/s and drawing each puff out sideways by `torn` of its size over its life. `drops` fine
+     * drops a second are thrown up through it.
      */
     blow: {
       exhale: 0.6, puffs: 66, drag: 2.6, stem: 0.35, flare: 0.2, swell: 2.4, spread: 0.25, opacity: 0.2,
