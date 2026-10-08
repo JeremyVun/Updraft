@@ -528,7 +528,48 @@ and the top of the back, thinning down the flank. Owns `flukes()` and the tail s
 skin in `whaleShader.ts` (not its wet terms), the dive's turn in `sleeper.ts`, the farewell's hold in `net-whale.ts`,
 their tuning.
 Gate: as N3g's, with stills of the flukes high and slipping (landscape and portrait) and the first crossing's dive.
-Done: [ ]
+Done: [x] `e5406172..c3e4fb91`. The form (`anatomy.ts`): the flukes (about 34 m across) drawn at 200 stations of 36
+round a blade section (`blade`: round at the leading edge, fine behind; thickness 0.34 of the chord at the root, 0.12
+at the tips), the trailing edge five soft lobes a side either side of the notch (`SCALLOPS`, 0.2-0.45 m, the right
+fluke's unlike the left's) over the unscalloped `flukeLine`; the tips' trailing point is unchanged, so `DREAM_SCALE` is
+too. The tail stock from 0.82 a deep narrow keel (`ROUND`/`KEEL` up to 1.7/1.9 at 0.88) tapering in depth into the
+flukes' root, flaring out in their plane (`FLARE` 0.2 rest units, `FLARE_DEPTH` 0.1) and ending inside them at
+`TAIL_END` 0.975, so nothing shows in the notch and there is no seam; the hinge's flex is spread over 0.9-0.96 rather
+than stepping at 0.93. The skin (`whaleShader.ts`, shared with the first crossing's whale): under the flukes pale
+(`flukePale` 1.12) with a dark leading edge, tips and scalloped trailing margin reaching into the pale in a few soft
+tongues, a dark wedge up from the notch into the stock, a dark comma on one fluke and a round spot on the other, a few
+specks and faint old scratches, barnacles on the edges (`flukeShells` 0.7); above them the back's slate, little lichen.
+The stock without the waterline's weed (`stock`, from 0.74); the throat's pale ends by 0.7. Lichen gathers on the head
+and the top of the back and thins down the flank to `lichenFlank` 0.2 of its cover. The turn (`sleeper.ts`; `uTurn` in
+the rig and in `point()`, over `STOCK_TURN` 0.76-0.93): `TURN_TO_HER` 0.75, `YAW_SHARE` 0.6 of it the body about its
+bend over `YAW_WITH` 0.1-0.85 of the lift, the rest the stock turning them about its own line from the lift's start
+(`TILT_WITH` 0.3), never tipping them more than `TILT` 0.3 (about 17°) while low; meanwhile they trail low from the
+stock (`TRAIL` 0.7 rad, straightening over `TRAIL_UNTIL` 0.4-0.85). `LIFT_BY` has all of the lift 4.5 m past the bend
+(was 6); the wave first leans them away from her. The farewell's holds: landscape 17 m behind, 1.8 m up,
+`farewellBearing` 0.6, `farewellLookY` 19; phone 40/2/-0.5, lookY 26, toward 0.6.
+The lens's own composition layer (`CameraDirection` in `camera-direction.ts`) keeps an orbit it chose earlier: in a
+full play 0.18 rad through the whole release and farewell, none when resumed from the flipper's save. Both holds were
+tuned so that either way the sun stands between the stock and the sail, the sail clears the stock on a phone and the
+tips stay in frame (headless, `FULL=1` in the scratch `frame.mjs`).
+Beats in seconds of being free: the flukes break the water about 28.5, stand from about 29.5 to 34 (the notch highest,
+about 13 m, at 31), under 36.1, going 37.3, gone 39.3. Played (`full`): rest 88.6, breath 111.2, line 144.1, flipper
+166.9, free 172.9, gone 205.8, moored 232.4, fin clearance 1.48 m. Idle, moored about 496 (pacing `calm` arrivalReady
+496.5). Camera from free to the hand-back's end, worst acceleration: landscape 1.95 m/s², portrait 4.5 m/s² (N3i 3.75;
+the phone's hold now stands farther back), both in the hand-back's swing round as the boat comes about.
+Left:
+- For about a third of a second the near fluke rises as a broad diagonal paddle over the sail before it opens; never
+  the thin blade, but not yet opening from the first frame.
+- Her waving mitten: she is bigger in landscape (about 95 px tall at 1600×900, was 79), but low in the frame with the
+  hull cut, and her mitten waves against the sail, so it is still not plain; on a phone she is about 23 px.
+- On a phone the rising fluke passes the right edge for about a third of a second, and as they slip under the near
+  tip drifts to the left edge.
+- The sun stands behind the stock on a phone, so its disc does not show there.
+- The first crossing's whale still flexes its flukes with a step at the hinge (`whale.ts`, `s > FLUKE_HINGE`); far
+  off it does not show.
+Claude's judgement, 2026-10-08, from the stills and sheets: the flukes now read as a humpback's, swept and
+scalloped, pale beneath with a dark margin and the first crossing's comma, the stock flowing into them as one animal;
+standing over the boat beside the sun they are the image this encounter needed. But the landscape frame is so low
+that the boat sits on its bottom edge, the hull cut and her only a dark head against the sail, so her goodbye is lost.
 
 ### Phase N3m: its life
 After N3i, on `sea-whale-life` off `sea-whale`; in parallel with N3l. Each slow breath lifts the back a little and
@@ -537,14 +578,78 @@ its back as on a rock, never near a step's target, and lift off as it spouts fre
 back. Owns the breath's lift and the water off it in `sleeper.ts` (not the dive), `spray.ts`, `wake.ts`, the whale's
 `uWet` sheeting, the seabirds (the gulls in `src/creatures/creatures.ts` or a few of their own), their tuning.
 Gate: as N3g's.
+Done: [x] `2f87b831..9f0afb5f` on `sea-whale-life`. The breath (`sleeper.ts`): as each breath's rise passes `SHEDS_AT` 0.2 of
+its cycle, its first full breath half way into drawing it, and the free spout a second before it, `rises(deep)` (deep
+0.45 at rest, 1 awake, 1.3 the first full breath, 1.5 the spout) sheds the sea off its back: `uWet` is raised along
+s 0.15 to 0.8 to `sheetWet` 0.8 (times deep, at most 1), in over a second and gone over `sheetFor` 4 s (`shedSea`);
+white water laces the waterline over s 0.18 to 0.68, seven in ten on the near side, for the first 3.5 s; and one low
+crest of sea goes out from its flank (`swell.ts`: `uHeave`/`uHeaveAxis`, `heaveLift` in the shader and the same on
+the CPU, so the boat, the corks and the swimming cygnet ride it), `heaveHeight` 0.3 m times deep at the flank, out at
+`heaveSpeed` 3.5 m/s, `heaveWidth` 6 m, settled by `heaveFor` 6 s. Measured at the line's hold, the boat rises about
+0.15 m more about 3 s after a waking breath, its worst vertical acceleration 0.58 m/s² (0.47 without). The skin's wet
+terms (`whaleShader.ts`): over the body the sheet is now `rills` (threads about 1.4 m apart along it, wandering down
+the flank, each carrying its water in pulses that run down it, mirroring the dawn with a little of the low sun behind,
+`rills` 0.4, with gold glints, `glints` 2.5, fading to a faint sheen below a pixel); the old streaks were keyed to the
+ring's angle and lay as horizontal bands along it. The Fresnel wash a sheet added to the body is down from 0.5 to
+0.15. The bared head running wet at the haul (`stream`) takes the same threads. The seabirds (`seabirds.ts`, the
+gull's geometry and colours from `gulls.ts` with folded wings and legs of their own; `whale.birds`): four at
+`seabirdPerches` (s 0.54, 0.565, 0.665, 0.7, on the ridge), `seabirdSize` 2.2 times a gull (about 5.7 m across the
+wings), hazed as the back they stand on (`HAZE_GLSL`, now exported); they ride its breath, turn their heads every
+1.2 to 5 s, shift their feet every 8 to 22 s and stretch their wings every 25 to 55 s (`seabirdStretch` 1.6 s). From
+`seabirdsAfter` 0 s after the free spout, 0.18 s apart and up to 0.2 s more, each crouches, opens its wings over 0.3 s
+and flies a curve through its perch, a climb toward the head, a point `seabirdAside` 4 m to the tail side of the
+spout and `seabirdHeight` 10 m over it, and `seabirdAway` 75 m off toward the low sun, over `seabirdFlight` 8.2 s,
+fading into the sky behind it over the last `seabirdFade` 2.5 s: all gone by about 14.9 s into being free (`DIVE_AT`
+15.5). `seabirds-lift`: a flurry of heavy wingbeats through `WorldFoley.whale`. Where they show, landscape: not in the
+sorrow, look or line holds (s 0.45 lies past the right edge); in the bird's hold the far pair (s 0.665, 0.7) stands
+against the sky right of the sail, about 63 to 67 m off, the near pair behind it; at the spout they rise at the right
+edge, cross the sky to beside the spout by about 9.5 s into being free and go off small into the sun by about 12.
+Portrait: the back from s 0.45 lies off the right edge in every hold, so they are seen only in flight, entering at
+the right edge beside the spout from about 10 s into being free to about 12.5. `net-whale-check`: all 11 cases pass
+(`fin` clearance 1.61 m, `finidle` 1.65, `full` 1.49). Played (`full`): rest 88.7, line 111.5, flipper 144.2, free
+167.1, spout 173.0, gone 206.2, moored 232.8; idle moored about 496 (pacing `calm` arrivalReady 496.4).
+Left:
+- On a phone the standing birds are never seen, and in flight they are small and pale against the bright sky beside
+  the spout for two or three seconds.
+- In the bird's hold the sail hides the near pair; in the release hold the far pair is off the right edge until it flies.
+- At twice a gull's size they read as big gulls as they pass the spout.
+- A weak breath at rest sheds only faint threads; the crest at the boat is under the sea's own swell (0.15 against
+  about 0.35 m), so it reads as the boat lifting a little more rather than as a wave seen on the water.
+- In a still the threads can read like the pale scars; they differ in motion.
+- Taking off, for 0.3 s the folded and the open wings show together.
+- At its height the lace can read as a bright line along the near waterline.
+Claude's judgement, 2026-10-08, from the sheets, stills and the recording: the seabirds are right, birds on a
+rock on its far skyline, then rising one after another to wheel over the gold sky beside the plume and off into the
+sun. The breath is not yet seen: in motion the threads are too faint to read as water running off, in a still they
+read as scratches or wires on the skin, and the crest is never seen as a wave on the water.
+
+### Phase N3n: her light and her goodbye
+After N3l and N3m merged on `sea-whale`; in parallel with N3o. The look's frame finished (N3g2 left her a dark
+backlit hood filling a quarter of the frame): her whole seated figure smaller in it, the sun's rim on her hood and the
+lantern warm on her cheek, her head and mitten turned to the eye, the eye large. The farewell's frame keeping its low
+height and the flukes over the boat with the sun beside the stock, but the boat whole above the bottom edge and her
+waving mitten against the sky or the sun's glow, not the sail; on a phone she reads as a child waving. Owns the look's
+and the farewell's holds in `net-whale.ts` and `tuning.ts`, and the light on her (the child's own look, its lantern
+and rim).
+Gate: as N3g's, with stills of the look and the flukes high, landscape and portrait, in a full play and resumed.
 Done: [ ]
 
-### Phase N3n: her light, and the playable build
-After N3l and N3m merged on `sea-whale`. The look's frame finished (N3g2 left her a dark backlit hood filling a
-quarter of the frame): her whole seated figure smaller in it, the sun's rim on her hood and the lantern warm on her
-cheek, her head and mitten turned to the eye, the eye large. Then Claude plays the whole open sea beside the clouds
-and the owl, and the playable build goes to Jeremy.
+### Phase N3o: the breath seen, the spout white
+After N3l and N3m merged on `sea-whale`; in parallel with N3n. Each breath's water seen as water: sheets of the sea
+pouring off the ridge and down the flanks in broad glinting falls that thin to threads and drops at the waterline,
+never thin lines like scars or wires; the crest seen on the water as a low ring of swell going out and lifting the
+boat. The free spout white mist lit gold on its sun side and soft grey-blue on its shadow side, as the first column,
+never a grey pillar. And the pod's featured leap kept in frame: at the check's seed 147 on the merge, the 30 fps,
+gust 20, circling case, a dolphin surfaces about 13 m from the lens below the bottom edge during the approach (the
+seed only exposes it; the player would see a leap cut by the frame's edge). Owns the whale's wet terms in
+`whaleShader.ts`, the breath's shedding in `sleeper.ts`, `spray.ts`, the heave in `swell.ts`, the leap's placement
+in `dolphin.ts`, their tuning.
 Gate: as N3g's.
+Done: [ ]
+
+### Phase N3p: the playable build
+After N3n and N3o merged. Claude plays the whole open sea beside the clouds and the owl, folds what that turns up
+into the docs and fixes it, and the playable build goes to Jeremy.
 Done: [ ]
 
 ### Phase N4: docs on approval

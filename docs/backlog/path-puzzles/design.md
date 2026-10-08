@@ -865,7 +865,11 @@ The sequence:
       the tail stock a deep narrow keel flowing into them with no seam at the hinge, never a round stalk; their
       underside pale with a dark margin and a few old marks of its own (the first crossing's pattern), a few
       barnacles along the edges, never a cow's patches (Claude's call, 2026-10-08, after N3i: they stood as flat
-      faceted boards on a pale stalk).
+      faceted boards on a pale stalk). As built (N3l): about 34 m across, their trailing edge five soft round lobes a
+      side, the right fluke's a little unlike the left's; thickest at the root, where the tail stock flares out in
+      their plane to meet them and ends inside them; underneath, a dark leading edge, tips and scalloped trailing
+      margin reaching into the pale in a few soft tongues, a dark wedge up from the notch into the stock, a dark comma
+      on one fluke and a round spot on the other, a few specks and faint old scratches on the pale.
     - The back is a broad, gently rounded ridge, not a tube's rim: from the hold its flanks curve up so slowly that
       it reads as a long low island, not a wall. It runs long and nearly level at about the blowhole's height, the
       blowhole's raised guard a gentle rise on it, never a hump the body falls away from; far along a small low
@@ -883,9 +887,23 @@ The sequence:
     2026-10-08, after N3k). The eye old, wet and kind in folds of age, its iris a deep warm brown catching
     the sun in one bright point, never a lit orange.
   - **It breathes the sea.** Each slow breath lifts the back a little, water sheeting off its top in glinting streams,
-    and the sea round it swells and settles.
+    and the sea round it swells and settles. As built (Claude's call, 2026-10-08): as each breath's rise passes its
+    middle the sea runs off the back (s 0.15 to 0.8) for a few seconds in thin threads side by side along it, each
+    wandering down the flank with its water running down it in pulses that mirror the dawn and glint gold where they
+    catch the low sun behind; the skin between darkens a little; where they pour back in, white water laces the
+    waterline, mostly on the near side; and one low crest of sea goes out from its flank, lifting the corks and the
+    boat a hand's breadth and settling. A weak breath at rest sheds little, a deep one once it is awake much more;
+    its first full breath and the free spout the most. Never a sudden lift under the boat. Claude's call after N3m: the
+    threads are too faint to read as water in motion and read as scratches or wires in a still, so the water comes off
+    as broad glinting falls from the ridge that thin to threads and drops at the waterline, and the crest is seen on
+    the water as a low ring of swell going out.
   - **Life on it.** A few seabirds stand far along its back as on a rock, never near a step's target, and lift off as
-    it spouts free.
+    it spouts free. As built (Claude's call, 2026-10-08): four gulls in the game's gull look, cheated to about twice a
+    gull's size so they read at 50 to 70 m, stand in two loose pairs on the ridge at s 0.54 to 0.7, riding its breath,
+    turning their heads, shifting their feet and now and then stretching their wings. They are never in the sorrow,
+    the look or the line's frames; from the bird's hold the far pair stands against the sky beside the sail. As it
+    spouts they go up one after another, round beside the spout on its tail side, clear of its mist, and off into the
+    low sun, fading into it well before the dive.
   - **Gentle to a child** (Jeremy, 2026-10-08: "ok but not too scary to a child yea, they still get to see the
     whale's eyes right?"). The eye stays above the water near the boat, large, warm and kind, and opening it on her is
     still the heart of the breath. The shape under the glass is soft and warm in the gold water, never a black abyss,
@@ -943,7 +961,9 @@ The sequence:
   on her, the long back rises into an arch over the bend and slides forward under it, the low sun cresting the
   arch; the tail stock comes to the bend and the flukes lift and stand high there, the whale turning about the
   bend as they rise so their pale undersides open toward her (it turns, never rolls), flexing once or twice in a
-  slow wave with its goodbye call and her waves; they slip straight down, and its swell comes back and lifts the
+  slow wave with its goodbye call and her waves; as built (N3l), they trail low from the stock as it arches and its
+  stock tips them open toward her while they are still low (never more than about 17° across), so they come up
+  already opening, never a blade edge on to her, and stand level three-quarters toward her; they slip straight down, and its swell comes back and lifts the
   boat; the pod leaps away over where it went; the boat comes about. About 20 s from the head going down to the
   flukes under.
 - **Gestures.** Each step's answer starts at the wind's target and is plainly the biggest thing on screen: the boat is
@@ -976,7 +996,10 @@ The sequence:
   across clear water, the sail out of frame. The release eases out wide, the plume's crown in the frame; as it dives
   the view eases once to the farewell's hold, framed on where it goes down, the flukes standing whole over the boat
   against the sun with their tips inside the frame on a phone as in landscape, the sail clear of the stock and her
-  waving mitten plain; once it has gone the view goes back to the crossing's in one long even ease as the boat comes
+  waving mitten plain; as built (N3l) the landscape hold sits low (1.8 m) and near (17 m) behind the boat to port, so
+  the flukes tower over her with the sun between the stock and the sail; a phone's stands farther back (40 m) and turned off the line to the bend, to
+  hold their whole span. Claude's call after N3l: the boat stays whole above the bottom edge and her waving
+  mitten shows against the sky or the sun's glow, never lost against the sail; once it has gone the view goes back to the crossing's in one long even ease as the boat comes
   about. A phone's frame is too narrow (31° across) to hold the head and the sun together, so its holds look along the line from what matters
   through the boat, each with its own distance, height and turn, stacking boat, step and head up the frame; the
   cygnet's is turned toward astern so the bird stands clear of the sail above the boat (`k2-portrait`).
