@@ -214,8 +214,10 @@ export class SheetCrossing {
     this.lift = Math.min(1, this.lift + dt / 0.35);
     c.hang = 1;
     const toLens = Math.atan2(this.lens.x - c.position.x, this.lens.z - c.position.z) - this.facing;
-    const turn = THREE.MathUtils.clamp(Math.atan2(Math.sin(toLens), Math.cos(toLens)), -1, 1) * k.turnToLens;
-    this.turn += (turn - this.turn) * (1 - Math.exp(-dt * 1.5));
+    /** Coming in to the far roof she turns back to face where she is going, so she lands looking at it. */
+    const coming = THREE.MathUtils.smoothstep(s.end - s.travel, 0.4, 2.4);
+    const turn = THREE.MathUtils.clamp(Math.atan2(Math.sin(toLens), Math.cos(toLens)), -1, 1) * k.turnToLens * coming;
+    this.turn += (turn - this.turn) * (1 - Math.exp(-dt * 2.5));
     c.yaw = this.facing + this.turn;
     this.reach();
     const a = s.along;
@@ -226,7 +228,7 @@ export class SheetCrossing {
     if (Math.hypot(this.at.x - this.way.wait.x, this.at.z - this.way.wait.z) < 0.7) this.at.y = Math.max(this.at.y, this.way.wait.y);
     const lift = THREE.MathUtils.smootherstep(this.lift, 0, 1);
     c.position.lerpVectors(this.from, this.at, lift);
-    c.lookAt = s.travel < s.end - 0.6 ? s.middle(this.look) : this.look.copy(this.way.stepOff).setY(this.way.stepOff.y + 1.4);
+    c.lookAt = s.travel < s.end - 1.2 ? s.middle(this.look) : this.look.copy(this.hands).addScaledVector(s.along, 2.5).setY(this.hands.y - 0.6);
 
     if (s.travel < s.end) {
       this.endFor = 0;

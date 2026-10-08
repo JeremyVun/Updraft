@@ -2195,8 +2195,8 @@ export const tuning = {
       takeAt: 0.55, takeFor: 0.2, reachFor: 0.5, carry: 2.2, carryFrom: 0.3, coast: 0.3, gustFor: 0.8,
       /** How her body swings under her hands as the sheet starts and stops (per second squared, per second). */
       swingPull: 14, swingDamping: 2.2,
-      /** Hanging, how much of the way from up the line toward the lens she turns, so her face is seen. */
-      turnToLens: 0.85,
+      /** Hanging, how much of the way from up the line toward the lens she turns, so her face is seen side on. */
+      turnToLens: 0.6,
       /** Seconds without a useful stroke before the drawn gust; with no progress before the world's own gusts. */
       inviteAfter: 5, valveAfter: 90, valveEvery: 1.4, valvePush: 1.5,
     },
