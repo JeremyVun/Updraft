@@ -747,7 +747,51 @@ the look found and fixed: in 2 of 5 full plays with real gestures, about 4.7 s i
 fell to its 1 m floor and swung through the boat at about 20 m/s. Owns the look's holds in `net-whale.ts`, the lens
 (`camera.ts`, `camera-direction.ts`), the child's arm, their tuning.
 Gate: as N3g's, the look in at least five full plays with real gestures, landscape and portrait, none with a jolt.
-Done: [ ]
+Done: [x] `4010afe0..42c21d7d`. The jolt: the lens carries the boat's motion by taking up its speed
+(`carried` in `camera.ts`), and took it up in one frame while shedding it no harder than `carryBrake` 9 m/s², so a hull
+that dropped 0.155 m in one frame became a 9.3 m/s coast: the lens sank 1.7 m to its 1 m floor, and once its own eye was
+under the water the occlusion test pulled it toward its gaze, through the boat at about 20 m/s. Both glitch runs'
+drops began on the exact frames the whale laid a ring of swell (`rises`, 4.62 and 8.35 s into its first breath; the
+4.62 ring comes only when the first breath interrupts a resting breath before its ring, about one play in two). Fixed
+at the lens: `carryTake` 12 m/s², the hardest it takes up the speed of what carries it (above any boat gathering way
+or child setting off), so a one-frame jump is left to the ease. Headless, a 0.155 m one-frame drop of the boat at 4.62 s
+reproduces the glitch exactly before (lens worst 19.5 m/s, down to 1.00 m) and after is no different from no drop
+(3.0 m/s, lowest 1.43 m). At the sea: each ring of swell now keeps the axis it went out on (`uHeaveAxisBefore`); a new
+breath re-laid the older ring's axis, stepping the sea near the boat by up to 4.6 cm. The 15 cm step of the glitch
+runs was not reproduced on this code: the largest step under the boat at any ring in the six plays below was 3 mm.
+Six full plays with real gestures (three landscape, three portrait; three with the 4.62 ring), none with a jolt;
+through the look (first breath to 2 s into the line, 0.25 s velocity windows) landscape worst 1.5 m/s and 0.8 m/s²,
+lowest 2.1 m; portrait 4.8 m/s and 2.7 m/s², lowest 2.3 m. The 0.5 m one-frame jump as the look handed over to the
+line (her face outside the frame's safety margin) is gone with the new frame. Free to the crossing's end is as on
+N3n (landscape 4.8 m/s², portrait 6.2, same measure on N3n's plays 4.7 and 6.3). The child's arm: her shoulder sits
+about 0.5 m below her face and the reach IK (`motion.reach`) left the collarbone down, so any target above her face
+stopped level with it; now a reach above the shoulder lifts the collarbone as a posed raised arm does (`SHRUG` 0.45),
+and the mitten tops out about 0.2 m above her face (was 0.09). The look: she was turned 0.95, 52° past its eye (she
+sits a little turned to port already), so from behind her mitten folded across her face; now `lookTurn` 0.05 faces
+her to its eye, `lookLean` 0.35 (was 0.9) sits her up, and `lookReach` [0.5, 0.15, 0.4] holds her left mitten up and
+out beside her hood. Landscape `lookDistance` 9.5, `lookHeight` 2, `lookBearing` 0.3, `lookToward` 0.32, `lookLookY`
+2.7: the whole boat and her seated figure (about 250 px of 900, hood to seat) three-quarters from behind her left
+shoulder at the frame's right third, the sail behind her at the right edge, its eye about 220 px across at the left
+over clear water. Phone `look` 4.8 back, 2.2 up, turn −0.55, lookY 2.5, toward 0.28: her seated under its eye, the
+mitten up beside her hood. The goodbye (`waveGoodbye`): the mitten on the side toward where it went down, held up and
+out across the view (`goodbyeWave` [0.45 across, 0.45 up, 0.2 sway, 4.5 rad/s]), so it rises beside her hood; the
+farewell frames unchanged. `cygnet-gates` 27 of 27 (before: 26, `stow turn` 0.101 over its 0.08, now 0.062; the rest
+within 0.007). `net-whale-check` all 11 pass (`fin` clearance 1.6 m, `finidle` 1.69, `full` 1.5); played (`full`):
+rest 88.8, breath 111.7, line 144.7, flipper 167.4, free 173.5, gone 206.6, moored 233.1. `sea-logic-check` passes at
+seeds 147 and 148; pacing `calm` arrivalReady 508.6 (N3n 496.4).
+Left:
+- In the farewell her wave is about 30 px out from her face and 8 px above it in landscape, backlit against the sun:
+  it reads in motion as a small mitten beside her hood, not a plain wave. Her arm cannot get above her hood's brim.
+- In the look her face stays inside her hood from behind; the paper plane in her satchel stands up beside the cygnet
+  as a white triangle by the sail, and on a phone it covers her right side.
+- On a phone she is large in the look and cut by the frame's right edge (the plane and the boat's quarter).
+
+Claude's judgement, 2026-10-09, from the stills of three full plays: the landscape look is the owl's frame now, her
+small whole figure seated in the boat to one side, three-quarters from behind, the giant eye large across clear water
+and the sail behind her; the jolt had a real cause (a one-frame dip of the boat copied as a fall) and is fixed at it.
+`carryTake` changes how the lens rides the boat in every chapter, so the whole-game playthrough checks it. The
+goodbye wave stays small, a mitten beside her hood; the white paper plane standing in her satchel is the frame's
+loudest shape after the sail, on a phone beside her face.
 
 ### Phase N3r: the mist and the skin
 After N3n and N3o merged on `sea-whale`; in parallel with N3q. The spout and the first column made a whale's blow,
@@ -757,7 +801,52 @@ and only a soft sheen at a resting breath, never a curtain repeating over the st
 never chevrons. Owns `spray.ts`, the whale's skin and wet terms in `whaleShader.ts`, the breath's shedding in
 `sleeper.ts`, their tuning.
 Gate: as N3g's.
-Done: [ ]
+Done: [x] `90f282fa..65b43bb0` on `sea-whale-life`, docs in the commits after. The blow (`spray.ts`): the first column
+and the spout are one kind of puff, `BLOW`, thrown by `blowOut(at, height, strength, dt, wide, glad)` (the old
+`column`, `jet`, `spout` and the `SPOUT` kind are gone; the far sigh's `COLUMN` puffs are untouched). Its strength is
+`blowing(t)` in `sleeper.ts`, all at once over 0.15 s then easing off over `blow.exhale` 0.6 s, from `BREATH_IN` for the
+first column and `SPOUT_FROM` for the spout (`SPOUT_FROM`, `SPOUT_TO` and the sounds are as they were). `blow.puffs` 66
+puffs a second for each metre of its height at its hardest, each thrown up into air that slows it `blow.drag` 2.6 a
+second, so it reaches its height in about a second, and out the further the higher it goes, so the column is
+`blow.stem` 0.35 m in radius at the blowhole and flares `blow.flare` 0.2 m a metre, by the 1.4 power of its height
+share, into a bushy top; the edge falls short and some puffs overshoot, so the top is domed and ragged. Each
+puff swells (`blow.swell` 2.4 a second) toward 0.35 to 0.6 of the column's radius there and 0.2 m more and keeps spreading
+(`blow.spread` 0.25 m/s); bursting up, it is drawn out along its flight (up to 2.5 times), so the blow reads as thrown;
+it hangs clear of the breeze 0.6 to 2 s (the top longest), then drifts on the wind, its top torn apart at up to
+`blow.tear` 0.8 m/s and each puff drawn out sideways by `blow.torn` 0.8 of its size over its life; `blow.opacity` 0.2 at
+most, thinning by the power `blow.thinning` 0.9 of its life left over `blow.life` 7 s for the top (the low parts go
+sooner, the spout's last a fifth longer). The shader lights it as one column, never puff by puff: its side is where it
+was thrown and how far out, its core facing the eye, a little of each clump's own lumps; the puff a small soft clump
+with a lumpy edge torn into wisps as it ages, its thin parts glowing toward the low sun (`mistLook.blowThrough` 1.8)
+and partly additive. `firstBreathHeight` 10 (was 13), `spoutHeight` 13.5 (was 10), `spoutBreadth` 1.2. Measured: the
+first column's crown about 8.7 to 9.4 m over the blowhole, 65 to 86 px under the top of the landscape breath frame
+(portrait 269); the spout's 12.3 to 13.5 m, 58 to 70 px under the top in the landscape release frame (portrait 216
+to 239), at full height within a second of the blow, its top torn and drifting from about 3 s after it, thin by
+about 5 and gone by about 7 (before the dive at 15.5). The falls (`sleeper.ts`, `whaleShader.ts`): `rises(deep,
+falls)`, falls 1 only for the first full breath and the spout; `uPour` is now a `Vector3`, its `z` how much of the
+breath pours in falls. `falls()` takes `full`: at 0 a breath runs off as a faint sheen streaming down the whole skin
+behind the same front (`sheen` 0.28 of a fall's cover, broad, the falls' streaming in it, no glints), at 1 the falls
+as N3o built them; the head bared at the haul still streams in falls. At such a breath the lace and the drops at the
+waterline are `sheenShed` 0.3 of a fall's. The scars (`whaleShader.ts`): `scarIn` is a soft pale smear along the body
+(slant at most about 14°, its width 0.2 to 0.32 m falling off as a Gaussian across it and at its ends), no shade line
+under it, `scarAmount` 0.45 (was 0.65); it comes in over `scarSeen` 1.5 to 4.5 px across a 0.26 m mark, so it is only
+there close enough to read as skin. Gates: typecheck, build; `net-whale-check` all 11 cases (`fin` clearance 1.6 m,
+`finidle` 1.7, `full` 1.5; played `full`: rest 88.7, breath 111.5, line 144.5, flipper 167.4, free 173.2, gone 206.4,
+moored 232.9); `sea-logic-check` at the default seed and 148 to 150; pacing `toMirror` (whale brake 0.41 to 0.56 m/s²,
+`calm` arrivalReady 496.55).
+Left:
+- Thinning, for about a second before its top tears (about 2.5 s after the blow) the spout's crown can read as a soft
+  rounded mass over a thin stem, translucent rather than wool.
+- From the release hold the low sun lies almost behind the spout, so its grey-blue shade side is faint; it reads
+  mostly white with a warm sun side.
+- The first column's base stands among the net patch's corks on the domed mesh, which show as dark balls inside it.
+- The seabirds' flight beside the spout now passes over its torn top as it thins (it drifts toward their side).
+- The scars are faint enough that at the bird's hold only two or three soft smears show on the near flank.
+- The resting breath's sheen shows as fine bright vertical streaks in a still, the falls' streaming in it.
+
+Claude's judgement, 2026-10-09, from the sheets and stills: the blow is a whale's now, a narrow stem bursting up and
+bushing out, torn into glowing wisps toward the sun, in the family of the stairs' clouds; a breath through the steps
+is a faint sheen and the eye stays on the step; the scars no longer read from across the water.
 
 ### Phase N3p: the playable build
 After N3q and N3r merged. Claude plays the whole open sea beside the clouds and the owl, folds what that turns up
