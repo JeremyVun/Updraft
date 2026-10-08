@@ -1020,7 +1020,39 @@ lead's calls:
 Gate: `drowned-run-check` `LENS=1` from the drift through the storm and `FROM=belfry`, landscape and upright, passing
 with no exceptions; stills of each item before and after, in both aspects, captioned as the Phase 8 sheets; 2 fps
 strips of the blink, the kittens and the two walks.
-Done: [ ]
+Done: [~] (branch `proto-drowned-camfix`; the blink and the belfry's light done, the rest left). As built:
+- **The slow blink** (`upFrame`, `drownedCamera.church` `seatedEyes`…`upLook`): one move from the boarding view, round
+  first and in after, to a low lens behind her on the boat's starboard (2.6 m from her eyes, 0.45 m over the water, 43°
+  round from straight behind toward starboard, so the sail and boom, which stand out to starboard from the mast, stay
+  behind it), looking half way round from her face to the cat on a lens of 1.3 (upright 2.4 m, 32°, 1.7); her face is
+  the primary subject and it never draws back (`extra` 0 aboard, since back is down and away from the sill); it may go
+  down to `upClear` over the water and aims `upLook` 8 m out so the rig's ground check sees the ray rise clear. Held
+  from about 5 s through the blink, then the release as before. She is in frame throughout, so `LENS=1` holds at the
+  church with no exception; the swap that made the cat the primary (a 5 m jump of the lens in one frame) is gone.
+  The check takes her face as her head while she is seated.
+- **The belfry's light:** `FROM=belfry` keeps the lighthouse in frame as the light goes out, both aspects (lamp at
+  -0.4, 0.66 landscape; -0.65, 0.36 upright).
+- **Boarding** (`boardEye`, `boardBack`, `boardHigh`): once the boat lies at the berth the lens comes round onto the
+  bearing the look up comes in along, off the starboard, so the move aboard never passes the boom.
+- The check times its swing strokes to the seat swinging out (a player's pumping): 8 strokes, where untimed strokes
+  took 9 to more than 40.
+Measured (`FROM=belfry`, `LENS=1`): passes in both aspects; her out of frame at the church 0.0 s (was 7.9 landscape,
+6.3 upright), lost in the frame 0.0 s (was 4.0), the fastest turn 21.6 deg/s landscape and 20.6 upright (the release),
+the fastest lens move 7.8 m/s (was 310). Sheets: `/tmp/updraft-cam8b-sheet-{l,u}-blink-boarding.jpg`.
+Left:
+- The blink still does not read: from the low shoulder her hood, the cygnet in her satchel and the paper plane fill the
+  lower right, and the cat is about 53 px (feet to ears, landscape; 73 upright) at the top of the frame with its body
+  behind the sill's lip and the ivy, its face about 35 px. 80 px is out of reach from any lens holding both: the cat
+  is 7 m over her eyes and 5 m off, so seen from below it is foreshortened by about a third; with her face in frame the
+  cat reaches 80 px only when her hood is as tall as the frame, and with the hood a third of the frame it is 48 px.
+  Closer than about 2 m the hood fills the frame; on her other shoulder stand the mast and sail. Bringing the cat
+  lower for the blink (the ivy's top, or the nave's ridge by the tower) would let a shoulder shot hold both.
+- Boarding: the mast still crosses her as she steps in (from the starboard beam it stands in line with where she steps
+  down off the slates); the board view wants a bearing toward the stern quarter.
+- Not started: the fog at the frame's edge on the walks (granary to swing 10.2 s, to the mill up to 8 s; landscape
+  and upright), her walking toward the lens at corners (1.5 s at 58.9 m), the kittens' three-quarter frame, the
+  kittens to the fog sea behind the tower, and the gate from the drift through the storm. The check now reports where
+  the fog was lost (her, the lens, the front, its top) to lay the walking lens against.
 
 ### Phase 9: the music (parallel with 7c or 8)
 Owns: the drowned score (`src/audio/dream-score.ts` and its notes, the room's `drownedScore` phases): a cue for every

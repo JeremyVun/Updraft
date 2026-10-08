@@ -2163,13 +2163,19 @@ export const tuning = {
        * her); it looks this share of the way from her to the boat.
        */
       bring: [-11, 1.6, -10, 0, 0, 0], uprightBring: [-10, 2.4, -9, 0, 0, 0], bringAlong: 0.45,
+      /** As she steps aboard it comes round to stand this far off her (upright, its own) and this high over her feet. */
+      boardBack: 7.5, uprightBoardBack: 7, boardHigh: 2.2,
       /**
-       * Aboard: low beside the boat, how far from her (upright, its own) and how high over her head, at most how far
-       * round from the sill's far side toward the boat's starboard (radians); from `tiltFrom` to `tiltTo` seconds after
-       * she sits it looks up this share of the way from her to the cat on the sill, the lens lengthening to `upZoom`.
+       * Aboard, over her shoulder looking up at the cat on the sill: her eyes over the thwart seated; how far behind
+       * them it stands, how far under them, how far round from straight behind toward the boat's starboard (radians),
+       * how far under her eyes her hood is taken to be, what share of the way round from her hood to the cat it looks,
+       * and its lens (upright, its own); from `tiltFrom` to `tiltTo` seconds after she sits it comes round and down
+       * there from the boarding view; how low it may go over the water, and how far along its look it aims, metres
+       * (as far as the sill, so the ground check sees the ray rise clear of the water).
        */
-      upBack: 4.2, upHigh: 0.15, upRound: 1.3, tiltFrom: 1.2, tiltTo: 5.0, upTilt: 0.85, upZoom: 2.2,
-      uprightUpBack: 3.6, uprightUpHigh: 0.2, uprightUpTilt: 0.6, uprightUpZoom: 1.25,
+      seatedEyes: 1.5, upBack: 2.6, upUnder: 1.32, upRound: 0.75, hoodBelow: 0, upAim: 0.56, upZoom: 1.3,
+      uprightUpBack: 2.4, uprightUpUnder: 1.35, uprightUpRound: 0.56, uprightUpAim: 0.5, uprightUpZoom: 1.7,
+      tiltFrom: 0.3, tiltTo: 4.2, upClear: 0.35, upLook: 8,
       /**
        * After the blink, from `releaseFrom` to `releaseTo` seconds after she sits, it lets go out to the west over the
        * water: [eye x, height over the sill, z, the height over her it looks at, lens].
@@ -2179,7 +2185,7 @@ export const tuning = {
        * The paces it moves at (the kittens', the fog sea's and the look up's slower), how much of the frame she and
        * what she is with keep inside and how far it may draw back to hold them, and upright how much wider the lens.
        */
-      pace: 0.45, nestPace: 0.3, seaPace: 0.35, upPace: 0.3, margin: 0.8, extra: 1.5, uprightZoom: 0.85,
+      pace: 0.45, nestPace: 0.3, seaPace: 0.35, upPace: 0.6, margin: 0.8, extra: 1.5, uprightZoom: 0.85,
       /** When the lantern answers the lens looks this share of the way toward it, for about this many seconds. */
       find: 0.1, findFor: 3,
       /**

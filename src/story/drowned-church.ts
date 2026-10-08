@@ -115,6 +115,7 @@ export class ChurchArrival {
   private readonly look = new THREE.Vector3();
   private readonly catEye = new THREE.Vector3();
   private readonly tmp = new THREE.Vector3();
+  private readonly tmp2 = new THREE.Vector3();
   private readonly flat = new THREE.Vector2();
   private readonly inviteAt = new THREE.Vector3();
   private readonly inviteDir = new THREE.Vector3();
@@ -668,6 +669,10 @@ export class ChurchArrival {
   private readonly dirLamp = new THREE.Vector3();
   private readonly mixEye = new THREE.Vector3();
   private readonly mixTarget = new THREE.Vector3();
+  private readonly upEyes = new THREE.Vector3();
+  private readonly upShoulder = new THREE.Vector3();
+  private readonly upTarget = new THREE.Vector3();
+  private readonly upHood = new THREE.Vector3();
   private readonly held = { primary: new THREE.Vector3(), secondary: new THREE.Vector3(), margin: tuning.drownedCamera.church.margin,
     extra: tuning.drownedCamera.church.extra };
 
@@ -686,7 +691,7 @@ export class ChurchArrival {
     const c = this.cast.child.position;
     this.herY.value += (c.y - this.herY.value) * (1 - Math.exp(-dt * 3.5));
     const y = this.herY.value;
-    const pick = (a: readonly number[], b: readonly number[]) => a.map((x, i) => THREE.MathUtils.lerp(b[i], x, wide));
+    const pick = (a: readonly number[], b: readonly number[]) => this.pick(a, b, wide);
     const held = this.held;
     held.primary.copy(c).setY(c.y + (this.step === 'nest' ? 0.8 : 1.1));
     held.margin = k.margin;
@@ -723,6 +728,8 @@ export class ChurchArrival {
       case 'board':
         view = pick(k.bring, k.uprightBring);
         held.secondary.copy(this.cast.boat.position).setY(this.cast.boat.position.y + 1);
+        /** Room it makes is held for seconds after; the look up that follows wants none. */
+        if (this.alongside) held.extra = 0;
         break;
       default:
         return this.upFrame(shot, wide);
@@ -738,32 +745,49 @@ export class ChurchArrival {
     if (this.step === 'down' || this.step === 'wait' || this.step === 'board') {
       this.target.copy(held.primary).lerp(held.secondary, k.bringAlong);
     }
+    if (this.alongside) this.boardEye(wide, this.eye);
     this.write(shot, this.eye, this.target, (view[6] ?? 1) * THREE.MathUtils.lerp(k.uprightZoom, 1, wide));
     return pace;
   }
 
   /**
-   * Aboard, from low beside the boat on the side away from its bow, so the mast and the sail stand behind her: on her
-   * as she turns on the thwart to look up, then up past her face, the lens lengthening, to the cat and its kitten on the
-   * sill, and held there for the slow blink.
+   * Aboard, one move from where the boarding view leaves it, round and down behind her shoulder on the boat's
+   * starboard, below her eyes, looking up past her hood at the cat and its kitten on the sill on a longer lens, so she
+   * and they share the frame for the slow blink; then it lets go out to the west.
    */
   private upFrame(shot: Shot, wide: number): number {
     const k = tuning.drownedCamera.church, c = this.cast.child.position, boat = this.cast.boat;
-    const head = this.held.primary;
-    const sill = this.catSill();
-    const away = Math.atan2(c.x - sill.x, c.z - sill.z);
-    /** Round from the sill's side of her to the boat's starboard, clear of the nave on her port. */
-    const fx = Math.sin(boat.yaw), fz = Math.cos(boat.yaw);
-    const starboard = Math.atan2(-fz, fx);
-    const turn = Math.atan2(Math.sin(starboard - away), Math.cos(starboard - away));
-    const bearing = away + THREE.MathUtils.clamp(turn, -k.upRound, k.upRound);
-    const back = THREE.MathUtils.lerp(k.uprightUpBack, k.upBack, wide);
-    this.eye.set(c.x + Math.sin(bearing) * back, head.y + THREE.MathUtils.lerp(k.uprightUpHigh, k.upHigh, wide), c.z + Math.cos(bearing) * back);
-    const tilt = this.aboardFor < 0 ? 0 : THREE.MathUtils.smootherstep(this.aboardFor, k.tiltFrom, k.tiltTo);
+    const lerp = THREE.MathUtils.lerp;
+    const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
+    const eyes = this.upEyes.copy(c).setY(c.y + k.seatedEyes);
     const cat = this.cast.cat.eye(this.held.secondary);
-    this.target.copy(head).lerp(cat, tilt * THREE.MathUtils.lerp(k.uprightUpTilt, k.upTilt, wide));
+    const bearing = this.shoulderBearing(wide);
+    const back = lerp(k.uprightUpBack, k.upBack, wide);
+    const shoulder = this.upShoulder.set(eyes.x + Math.sin(bearing) * back, eyes.y - lerp(k.uprightUpUnder, k.upUnder, wide),
+      eyes.z + Math.cos(bearing) * back);
+    /** Looking the share of the way round from her hood to the cat, so she keeps a lower corner and it the upper third. */
+    const hood = this.upHood.copy(eyes).setY(eyes.y - k.hoodBelow);
+    const toHer = this.dirHer.copy(hood).sub(shoulder).normalize();
+    const toCat = this.dirLamp.copy(cat).sub(shoulder).normalize();
+    const up = this.upTarget.copy(shoulder).addScaledVector(toHer.lerp(toCat, lerp(k.uprightUpAim, k.upAim, wide)).normalize(), k.upLook);
 
-    let zoom = THREE.MathUtils.lerp(1, THREE.MathUtils.lerp(k.uprightUpZoom, k.upZoom, wide), tilt);
+    const fromEye = this.boardEye(wide, this.tmp);
+    const move = this.aboardFor < 0 ? 0 : THREE.MathUtils.smootherstep(this.aboardFor, k.tiltFrom, k.tiltTo);
+    /**
+     * Round her and in, not across: round first and in after, so it passes clear beyond the end of the boom, and
+     * down as it comes in.
+     */
+    const a0 = Math.atan2(fromEye.x - eyes.x, fromEye.z - eyes.z);
+    const round = THREE.MathUtils.smootherstep(move, 0, 0.6), closer = THREE.MathUtils.smootherstep(move, 0.35, 1);
+    const a = a0 + wrap(bearing - a0) * round;
+    const r = lerp(Math.hypot(fromEye.x - eyes.x, fromEye.z - eyes.z), back, closer);
+    this.eye.set(eyes.x + Math.sin(a) * r, lerp(fromEye.y, shoulder.y, closer), eyes.z + Math.cos(a) * r);
+    this.target.copy(c).setY(c.y + 1.1).lerp(this.tmp.copy(boat.position).setY(boat.position.y + 1), k.bringAlong).lerp(up, move);
+
+    let zoom = lerp(1, lerp(k.uprightUpZoom, k.upZoom, wide), move);
+    /** Over her shoulder what keeps the frame is her hood, and it never draws back: back is down, away from the sill. */
+    this.held.primary.lerp(hood, move);
+    this.held.extra = 0;
     /** After the blink it lets go: back out over the water to the west, so the storm's lens can take her from there. */
     const release = this.aboardFor < 0 ? 0 : THREE.MathUtils.smootherstep(this.aboardFor, k.releaseFrom, k.releaseTo);
     if (release > 0) {
@@ -771,16 +795,14 @@ export class ChurchArrival {
       this.eye.lerp(this.tmp.set(C.x + r[0], BELFRY.sill + r[1], C.z + r[2]), release);
       this.target.lerp(this.tmp.copy(c).setY(c.y + r[3]), release);
       zoom = THREE.MathUtils.lerp(zoom, r[4], release);
+      this.held.extra = k.extra * release;
     }
-    this.keepInFrame(tilt > 0.5);
     this.write(shot, this.eye, this.target, zoom);
     return k.upPace;
   }
 
   /** Cuts the lens makes on a skip ahead, for the rig. */
   cut = 0;
-  /** While the cat on the sill is the subject the frame keeps. */
-  private keepingCat = false;
 
   /**
    * Leaving the nave, the lens goes with her from where it stood for the look up, so the boat never sails up to it;
@@ -828,26 +850,35 @@ export class ChurchArrival {
     const zoom = THREE.MathUtils.lerp(THREE.MathUtils.lerp(this.zoomNow, lampZoom, light), shot.zoom ?? 1, away);
     this.held.primary.copy(head).setY(head.y + 1.1);
     this.cast.cat.eye(this.held.secondary);
-    this.keepInFrame(true);
     this.write(shot, this.mixEye, this.mixTarget, zoom);
   }
 
   /**
-   * The rig holds the primary subject inside the frame at once, so the cat on the sill is the one it keeps while the
-   * lens is up on it, and she is again only once she is back inside the frame.
+   * Behind her, away from the cat on the sill, turned toward the boat's starboard past the boom's end, so the mast and
+   * the sail, which stand out to starboard from the mast just forward of her, never come between.
    */
-  private keepInFrame(onCat: boolean): void {
-    const held = this.held;
-    if (!onCat) this.keepingCat = false;
-    else if (!this.leaving) this.keepingCat = true;
-    else if (this.keepingCat && this.camera) {
-      const seen = this.tmp.copy(held.primary).project(this.camera);
-      if (seen.z < 1 && Math.abs(seen.x) < 0.8 && Math.abs(seen.y) < 0.8) this.keepingCat = false;
-    }
-    if (!this.keepingCat) return;
-    this.tmp.copy(held.primary);
-    held.primary.copy(held.secondary);
-    held.secondary.copy(this.tmp);
+  private shoulderBearing(wide: number): number {
+    const k = tuning.drownedCamera.church, c = this.cast.child.position, yaw = this.cast.boat.yaw;
+    const cat = this.cast.cat.eye(this.tmp2);
+    const away = Math.atan2(c.x - cat.x, c.z - cat.z);
+    const starboard = Math.atan2(-Math.cos(yaw), Math.sin(yaw));
+    return away + Math.sign(Math.sin(starboard - away)) * THREE.MathUtils.lerp(k.uprightUpRound, k.upRound, wide);
+  }
+
+  /** The boat lies at the berth for her to step down into. */
+  private get alongside(): boolean {
+    return this.step === 'board' || (this.step === 'wait' && this.cast.boat.grounded);
+  }
+
+  /** As she steps aboard: on the bearing the look up will come in along, off the boat's starboard, a little over her. */
+  private boardEye(wide: number, out: THREE.Vector3): THREE.Vector3 {
+    const k = tuning.drownedCamera.church, c = this.cast.child.position, a = this.shoulderBearing(wide);
+    const back = THREE.MathUtils.lerp(k.uprightBoardBack, k.boardBack, wide);
+    return out.set(c.x + Math.sin(a) * back, this.herY.value + k.boardHigh, c.z + Math.cos(a) * back);
+  }
+
+  private pick(a: readonly number[], b: readonly number[], wide: number): number[] {
+    return a.map((x, i) => THREE.MathUtils.lerp(b[i], x, wide));
   }
 
   private write(shot: Shot, eye: THREE.Vector3, target: THREE.Vector3, zoom: number): void {
@@ -871,5 +902,6 @@ export class ChurchArrival {
     shot.height = eye.y - target.y;
     shot.zoom = zoom;
     shot.carry = false;
+    shot.clearance = this.step === 'aboard' ? tuning.drownedCamera.church.upClear : undefined;
   }
 }

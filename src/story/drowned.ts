@@ -735,6 +735,7 @@ export class DrownedChapter implements Chapter {
     s.attention = undefined;
     s.composition = undefined;
     s.smoothFit = undefined;
+    s.clearance = undefined;
     s.carry = true;
     this.subjects.primary.copy(this.cast.child.position).y += 1.2;
     this.hullFrame[0].copy(boat.position);

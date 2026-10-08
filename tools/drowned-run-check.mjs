@@ -186,7 +186,7 @@ try {
       const at = await page.evaluate(() => {
         const ch = __game.story.current.church, cam = __game.rig.camera, p = __game.child.position;
         if (!ch || ch.step === 'off' || ch.aboardFor >= __leaveBy) return null;
-        const foot = p.clone().project(cam), head = p.clone().setY(p.y + 1.15).project(cam);
+        const c = __game.child, foot = p.clone().project(cam), head = (c.riding ? c.face(p.clone()) : p.clone().setY(p.y + 1.15)).project(cam);
         return { time: __stats.time, step: ch.step, aboardFor: ch.aboardFor, foot: [foot.x, foot.y, foot.z], head: [head.x, head.y, head.z] };
       });
       if (!at || at.time - sight.last < 0.5) return;
@@ -241,7 +241,8 @@ try {
         }
         /** She stays in the frame and in sight from the tower's foot until the lens has given way to the storm's. */
         if (ch && ch.step !== 'off' && ch.aboardFor < window.__leaveBy) {
-          const cam = __game.rig.camera, e = cam.position, head = p.clone().setY(p.y + 1.1);
+          /** Seated, her head is her face's height over the boards, not a standing child's. */
+          const cam = __game.rig.camera, e = cam.position, head = c.riding ? c.face(p.clone()) : p.clone().setY(p.y + 1.1);
           const q = head.clone().project(cam);
           const out = Math.abs(q.x) > 0.95 || Math.abs(q.y) > 0.95 || q.z > 1;
           let hidden = false;
@@ -635,7 +636,11 @@ try {
             }
           }
           w.fogGoneRun = seen ? 0 : w.fogGoneRun + 1 / 60;
-          if (w.fogGoneRun > w.fogGoneWorst) { w.fogGoneWorst = w.fogGoneRun; w.fogGoneAt = `at ${r.along.toFixed(1)} m, until ${t.toFixed(1)} s`; }
+          const f = (v) => v.toArray().map((x) => x.toFixed(1)).join(',');
+          if (w.fogGoneRun > w.fogGoneWorst) {
+            w.fogGoneWorst = w.fogGoneRun;
+            w.fogGoneAt = `at ${r.along.toFixed(1)} m, until ${t.toFixed(1)} s; her at ${f(p)}, the lens at ${f(cam.position)}, the front at ${front.x.toFixed(1)},${front.y.toFixed(1)} coming ${dx.toFixed(2)},${dz.toFixed(2)}, its top ${dark.level.toFixed(1)} m`;
+          }
         } else w.fogGoneRun = 0;
         /**
          * The roofs she has been on: when she went on from each and where, and when the fog has that place under it,
@@ -782,6 +787,8 @@ try {
     await until((s) => s.swing === 'riding', 10, 'her getting on the swing');
     let pumps = 0, swung = false;
     for (; pumps < 40 && (await state()).swing === 'riding'; pumps++) {
+      /** As a player pumps: each stroke as the seat comes back through and starts out toward the far side. */
+      for (let i = 0; i < 40 && !(await page.evaluate(() => { const s = __game.story.current.run.swing.swing; return s.speed > 0 && s.angle < 0.05; })); i++) await seconds(0.05);
       const aim = await page.evaluate(() => {
         const r = __game.story.current.run, cam = __game.rig.camera, s = r.swing.swing;
         const at = s.seat(cam.position.clone());
@@ -789,7 +796,7 @@ try {
         return { at: [(a.x + 1) / 2, (1 - a.y) / 2], heading: Math.atan2(b.y - a.y, (b.x - a.x) * cam.aspect) };
       });
       await stroke(aim.at, aim.heading, 0.5, 12);
-      await seconds(0.8);
+      await seconds(0.3);
       if (!swung && pumps === 4) { swung = true; await shot('swing'); }
     }
     console.log(`she let go of the swing after ${pumps} pumping strokes`);
