@@ -332,7 +332,7 @@ export class Spray {
       const up = height * reach * k * (1 - 0.3 * rim * rim * reach) * (0.92 + Math.random() * 0.16);
       this.emit(BLOW, at.x + Math.cos(a) * 0.2 * wide, at.y + 0.1, at.z + Math.sin(a) * 0.2 * wide, Math.cos(a) * out, up, Math.sin(a) * out,
         (0.25 + Math.random() * 0.15) * wide, BLOWN.life * (0.35 + 0.65 * reach) * (0.85 + Math.random() * 0.3) * (1 + 0.2 * glad),
-        BLOWN.spread * (0.5 + Math.random()), BLOWN.opacity * (0.7 + Math.random() * 0.6), 0.8 + 1.4 * reach + Math.random() * 0.5);
+        BLOWN.spread * (0.5 + Math.random()), BLOWN.opacity * (0.7 + Math.random() * 0.6), 0.6 + reach + Math.random() * 0.4);
       const j = this.count - 1;
       this.side[j] = a / (Math.PI * 2);
       const tear = Math.random() * Math.PI * 2;
