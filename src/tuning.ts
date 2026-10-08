@@ -1464,7 +1464,7 @@ export const tuning = {
      * `farewellHeight` up and `farewellBearing` round to port of astern, looking `farewellToward` of the way there and
      * `farewellLookY` up, so its flukes stand whole in the frame over the boat.
      */
-    farewellDistance: 20, farewellHeight: 3.4, farewellBearing: 0.5, farewellLookY: 13, farewellToward: 0.5, farewellMove: 7,
+    farewellDistance: 20, farewellHeight: 3.4, farewellBearing: 0.5, farewellLookY: 14, farewellToward: 0.5, farewellMove: 7,
     /** Once it has gone, seconds over which the view eases from the farewell's hold back to the crossing's behind the boat. */
     handBack: 16,
     /**
