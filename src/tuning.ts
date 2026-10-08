@@ -27,6 +27,11 @@ export const tuning = {
     maxCarrySpeed: 40,
     /** The hardest the lens slows when what carries it stops (a hull on the sand), units per second squared. */
     carryBrake: 9,
+    /**
+     * The hardest it takes up the speed of what carries it, units per second squared: above any boat gathering way or
+     * child setting off, so a steady carry is exact, while a hull lifted a hand's breadth in one frame is left to the ease.
+     */
+    carryTake: 12,
     /** Start clearing scenery before it crosses the child, then settle back slowly. */
     obstacleAhead: 3, obstacleMaxRise: 12, obstacleMaxElevation: 0.3,
     obstacleRise: 2, obstacleRelease: 0.7, obstacleSpeed: 3,

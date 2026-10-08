@@ -120,7 +120,7 @@ export class CameraRig {
   private readonly moved = new THREE.Vector3();
   /** The target's own travel, smoothed: a follow carries part of it so a walking subject does not stretch the shot. */
   private readonly following = new THREE.Vector3();
-  /** The carried velocity: it takes up the anchor's speed at once but brakes no harder than the lens can. */
+  /** The carried velocity: it takes up the anchor's speed as fast as a boat gathers way and brakes no harder than the lens can. */
   private readonly carried = new THREE.Vector3();
   private readonly carrying = new THREE.Vector3();
   private readonly want = new THREE.Vector3();
@@ -256,9 +256,10 @@ export class CameraRig {
     const carries = shot.carry && this.carrySource === shot.carryAnchor
       && this.moved.length() <= tuning.cinematography.maxCarrySpeed * dt;
     this.carrying.copy(this.moved).multiplyScalar(carries ? 1 / dt : 0);
-    const brake = tuning.cinematography.carryBrake * dt;
-    if (carries && this.carrying.length() >= this.carried.length() - brake) this.carried.copy(this.carrying);
-    else this.carried.add(this.carrying.sub(this.carried).clampLength(0, brake));
+    // A hull that jumps for one frame (a swell ring passing under it) must be followed by the ease, never coasted on.
+    const gathering = carries && this.carrying.length() >= this.carried.length();
+    const change = (gathering ? tuning.cinematography.carryTake : tuning.cinematography.carryBrake) * dt;
+    this.carried.add(this.carrying.sub(this.carried).clampLength(0, change));
     this.eye.addScaledVector(this.carried, dt);
     this.look.addScaledVector(this.carried, dt);
     this.carrySource = shot.carryAnchor;
