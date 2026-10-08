@@ -1128,7 +1128,7 @@ export class RoofRun {
   /**
    * High off the sails' left, above the fog's top as it comes on below: down past her in the basket to the sails' face
    * (where the circling is drawn) and up to the hub, rising a little as she does. Once she is off it glides high round
-   * the granary's west side to stand north of the green, looking down at her on her way to the swing with the fog
+   * the granary's west side to stand north-east of the green, looking down at her on her way to the swing with the fog
    * beyond. Upright, nearer, the basket and the hub stacked up the narrow frame.
    */
   private millView(wide: number, c: THREE.Vector3 = this.cast.child.position, off = this.millAhead): void {
@@ -1139,12 +1139,17 @@ export class RoofRun {
     const rise = THREE.MathUtils.smootherstep(THREE.MathUtils.clamp((p.y - from) / (to - from), 0, 1), 0, 1);
     const f = wide >= 0.5 ? k.millWide : k.millUpright;
     const [ex, ey, ez] = f.eye, [tx, ty, tz] = f.at;
-    /** Once she is off it looks at her straight away, and glides on after her. */
-    const ahead = THREE.MathUtils.smootherstep(off, 0, 1), onHer = THREE.MathUtils.smoothstep(off, 0, k.millLook);
-    this.stationEye.set(ex + f.on[0] * ahead, from + ey + f.eyeRise * rise + f.on[1] * ahead, ez + f.on[2] * ahead);
+    /**
+     * Once she is off it looks at her straight away, and glides on after her: north round the granary's west side, wide
+     * of where she comes down off it, then east to stand over the green.
+     */
+    const u = THREE.MathUtils.smootherstep(off, 0, 1), onHer = THREE.MathUtils.smoothstep(off, 0, k.millLook);
+    const via = 2 * u * (1 - u), on = u * u;
+    this.stationEye.set(ex + f.via[0] * via + f.on[0] * on, from + ey + f.eyeRise * rise + f.via[1] * via + f.on[1] * on,
+      ez + f.via[2] * via + f.on[2] * on);
     this.stationTarget.set(tx, from + ty + f.rise * rise, tz);
     m.group.localToWorld(this.stationEye);
-    m.group.localToWorld(this.stationTarget).lerp(this.tmp.copy(c).setY(c.y + k.aim), onHer);
+    m.group.localToWorld(this.stationTarget).lerp(this.tmp.copy(c).setY(c.y + k.millAim), onHer);
   }
 
   /**

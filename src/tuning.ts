@@ -2043,12 +2043,13 @@ export const tuning = {
       /**
        * The mill's view, in the mill's own frame (x to the right seen from in front, z out of the front, heights above
        * her roof): where it stands and looks while she is low, how much higher it stands and looks as she rises, how far
-       * it moves on once she is off onto the granary, how quickly (per second), and how soon (a share of that move) it
-       * has turned to look at her.
+       * it moves on once she is off onto the granary and the way it bends on the way there (a curve's middle point), how
+       * quickly (per second), how soon (a share of that move) it has turned to look at her, and how far above her feet
+       * it looks then (low, so she stays in the frame as she comes down off the granary).
        */
-      millWide: { eye: [-13.0, 9.3, 9.0], at: [-2.6, 5.0, -1.2], eyeRise: 1.0, rise: 1.6, on: [7.1, -4.3, -26.4] },
-      millUpright: { eye: [-10.5, 9.0, 7.5], at: [-2.8, 5.2, -1.4], eyeRise: 1.4, rise: 1.8, on: [5.5, -3.6, -24.0] },
-      millOn: 0.35, millLook: 0.2,
+      millWide: { eye: [-13.0, 9.3, 9.0], at: [-2.6, 5.0, -1.2], eyeRise: 1.0, rise: 1.6, on: [8.6, -4.3, -24.9], via: [-1.4, -4.3, -27.4] },
+      millUpright: { eye: [-10.5, 9.0, 7.5], at: [-2.8, 5.2, -1.4], eyeRise: 1.4, rise: 1.8, on: [5.5, -3.6, -24.0], via: [-1.2, -3.6, -25.5] },
+      millOn: 0.5, millLook: 0.2, millAim: 0.5,
       /** The end's view: how far back along the nave, how high, and how far out over the green. */
       naveBack: 10, naveHigh: 3.6, naveAside: 11,
       /**
