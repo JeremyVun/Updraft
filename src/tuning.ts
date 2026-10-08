@@ -1455,11 +1455,12 @@ export const tuning = {
      * across the middle at the blowhole and `flare` m wider for each metre it rises. Each puff swells `swell` a second
      * toward its share of the column's breadth there and keeps spreading `spread` m/s; it is `opacity` thick at most,
      * thinning by the power `thinning` of the life it has left over `life` s (the top's; the low parts go sooner),
-     * falling `fall` m/s² as it drifts. `drops` fine drops a second are thrown up through it.
+     * falling `fall` m/s² as it drifts, the air tearing its top apart at up to `tear` m/s and drawing each puff out
+     * sideways by `torn` of its size over its life. `drops` fine drops a second are thrown up through it.
      */
     blow: {
       exhale: 0.6, puffs: 900, drag: 2.6, stem: 0.35, flare: 0.2, swell: 2.4, spread: 0.25, opacity: 0.2,
-      thinning: 0.9, life: 7, fall: 0.5, drops: 90,
+      thinning: 0.9, life: 7, fall: 0.5, tear: 0.8, torn: 0.8, drops: 90,
     },
     /**
      * Its breath's mist against the low sky, in shares of the sky's brightness behind it: `shade` on the side away

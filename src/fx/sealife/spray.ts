@@ -44,13 +44,15 @@ void main() {
   vec3 across = right;
   float stretch = 1.0;
   if (abs(iB.w - ${BLOW}.0) < 0.5) {
-    // Bursting up, its puffs draw out along their flight, so the blow reads as thrown rather than grown.
-    float speed = length(iB.xyz);
-    if (speed > 0.01) {
-      along = normalize(iB.xyz - dot(iB.xyz, normalize(cameraPosition - p)) * normalize(cameraPosition - p) + up * 1e-3);
-      across = normalize(cross(along, normalize(cameraPosition - p)));
-      stretch = 1.0 + min(speed * 0.05, 1.5);
-    }
+    // Bursting up, its puffs draw out along their flight, so the blow reads as thrown rather than grown; drifting,
+    // they draw out sideways as the air tears them.
+    vec3 toCam = normalize(cameraPosition - p);
+    vec3 flight = iB.xyz - dot(iB.xyz, toCam) * toCam;
+    float speed = length(flight);
+    float burst = smoothstep(2.0, 8.0, speed);
+    along = normalize(mix(right, flight / max(speed, 1e-3), burst));
+    across = normalize(cross(along, toCam));
+    stretch = 1.0 + burst * min(speed * 0.05, 1.5) + (1.0 - burst) * ${glsl(BLOWN.torn)} * iC.z;
   } else if (abs(iB.w - ${DROP}.0) < 0.5) {
     vec3 toCam = normalize(cameraPosition - p);
     vec3 across2d = iB.xyz - dot(iB.xyz, toCam) * toCam;
@@ -333,6 +335,10 @@ export class Spray {
         BLOWN.spread * (0.5 + Math.random()), BLOWN.opacity * (0.7 + Math.random() * 0.6), 0.8 + 1.4 * reach + Math.random() * 0.5);
       const j = this.count - 1;
       this.side[j] = a / (Math.PI * 2);
+      const tear = Math.random() * Math.PI * 2;
+      const pull = BLOWN.tear * reach * (0.3 + 0.7 * Math.random());
+      this.carry[j * 3] = Math.cos(tear) * pull;
+      this.carry[j * 3 + 2] = Math.sin(tear) * pull;
       this.full[j] = across * (0.35 + 0.25 * Math.random()) + 0.2 * wide;
       this.blown[j * 3] = rim;
       this.blown[j * 3 + 1] = reach;
@@ -457,7 +463,13 @@ export class Spray {
         v[o + 2] += (this.carry[o + 2] * slowing - v[o + 2]) * settle;
       } else {
         if (k === DROP || this.age[i] < this.calm[i]) air.x = air.z = air.lift = 0;
-        else this.wind.sample(p[o], p[o + 2], air);
+        else {
+          this.wind.sample(p[o], p[o + 2], air);
+          if (k === BLOW) {
+            air.x += this.carry[o];
+            air.z += this.carry[o + 2];
+          }
+        }
         const settle = 1 - Math.exp(-dt * DRAG[k]);
         v[o] += (air.x - v[o]) * settle;
         v[o + 1] += (air.lift * 1.5 - v[o + 1]) * settle - GRAVITY[k] * dt * (k === MIST ? Math.min(1, this.age[i]) : 1);
