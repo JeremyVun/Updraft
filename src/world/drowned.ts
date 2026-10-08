@@ -27,7 +27,7 @@ import {
 } from './drowned-houses';
 import {
   BOAT_TREE, CAT_HOUSE, DARK_WAY, DRAWN_ROUND, GARDEN_WALLS, GREEN_TREE, LEAN_TOS, MILL, NAVE, PLACED, TOWER,
-  MILL_SITE, SHEET_SITE, STRAND_FROM, SWING_SITE, TREE_SITE, inClearing, inDrawnClearing, onCatGround, type GardenWall, type LeanTo, type PlacedHouse,
+  HER_WAY, MILL_SITE, SHEET_SITE, STRAND, STRAND_FROM, SWING_SITE, TREE_SITE, inClearing, inDrawnClearing, onCatGround, type GardenWall, type LeanTo, type PlacedHouse,
 } from './drowned-way';
 
 /**
@@ -1339,7 +1339,6 @@ const PAIR = [new THREE.Vector2(SPIRE.x - 4, SPIRE.z), new THREE.Vector2(LIGHTHO
 const LOOKOUTS = [new THREE.Vector2(-3.5, -1277), new THREE.Vector2(-12.5, -1395), new THREE.Vector2(-30, -1420),
   new THREE.Vector2(22.5, -1492)];
 /** The dark's way in from far out to the stranding, carried on past it, and the storm's way from the nave to the wood. */
-const DARK_IN = [DARK_WAY[1].clone().addScaledVector(new THREE.Vector2().subVectors(DARK_WAY[0], DARK_WAY[1]), 1.6), DARK_WAY[1]];
 const STORM_OUT = [new THREE.Vector2(NAVE.x, NAVE.z), ...DROWNED_CHANNEL.slice(5), WOOD_LANDING];
 const STAIRS_FOOT = new THREE.Vector2(100, -1236);
 /** How far beyond the church or the lighthouse, seen from where she goes, a house may stand as their backdrop. */
@@ -1348,13 +1347,14 @@ const BACKDROP = 24;
 const BEYOND_CHURCH = NAVE.z - 12;
 
 /** How far the drift has come when the boat strands; the channel beyond it is never sailed. */
-const STRANDED_AT = offChannel(DARK_WAY[1].x, DARK_WAY[1].y).s;
+const STRANDED_AT = offChannel(STRAND.x, STRAND.y).s;
 
 /** How far a point is from where she goes: the drift in, then her way over the roofs to the tower. */
 function reach(x: number, z: number): number {
   const drift = offChannel(x, z);
   let d = drift.s < STRANDED_AT ? drift.d : 1e9;
-  for (let i = 2; i < DARK_WAY.length; i++) d = Math.min(d, toSegment(x, z, DARK_WAY[i - 1], DARK_WAY[i]));
+  for (let i = 1; i < HER_WAY.length; i++) d = Math.min(d, toSegment(x, z, HER_WAY[i - 1], HER_WAY[i]));
+  d = Math.min(d, toSegment(x, z, STRAND, HER_WAY[0]));
   return d;
 }
 
@@ -1369,9 +1369,8 @@ function free(f: Footprint, stands: THREE.Vector2[], behind = false): boolean {
     new THREE.Vector2(f.x + a * f.hl * c + b * f.hd * s, f.z - a * f.hl * s + b * f.hd * c));
   if (corners.some((p) => inClearing(p.x, p.y, 1.5) || onCatGround(p.x, p.y, 3))) return false;
   const drift = offChannel(f.x, f.z);
-  if ((drift.s < STRANDED_AT && drift.d < 15 + r) || toSegment(f.x, f.z, STRAND_FROM, DARK_WAY[1]) < 15 + r
-    || STORM_OUT.some((p, i) => i > 0 && toSegment(f.x, f.z, STORM_OUT[i - 1], p) < 16 + r)
-    || toSegment(f.x, f.z, DARK_IN[0], DARK_IN[1]) < 26 + r) return false;
+  if ((drift.s < STRANDED_AT && drift.d < 15 + r) || toSegment(f.x, f.z, STRAND_FROM, STRAND) < 15 + r
+    || STORM_OUT.some((p, i) => i > 0 && toSegment(f.x, f.z, STORM_OUT[i - 1], p) < 16 + r)) return false;
   if (f.z > -1250 || f.z < -1680 || Math.hypot(f.x - STAIRS_FOOT.x, f.z - STAIRS_FOOT.y) < 60) return false;
   if (Math.hypot(f.x - PAIR[0].x, f.z - PAIR[0].y) < 32 || Math.hypot(f.x - PAIR[1].x, f.z - PAIR[1].y) < 30) return false;
   if (stands.some((t) => Math.hypot(f.x - t.x, f.z - t.y) < 6 + r)) return false;

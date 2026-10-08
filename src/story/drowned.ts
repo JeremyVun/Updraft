@@ -144,6 +144,8 @@ export class DrownedChapter implements Chapter {
   private readonly lensWas = new THREE.Vector3();
   /** How fast the fog's front is coming on while the boat lies stuck, m/s. */
   private fogSpeed = 0;
+  /** How far the lens has come in to watch the cat come to her in the boat. */
+  private rescueIn = 0;
   /** The player's sweeps on the stuck boat's sail: how full it was last frame, and seconds since it last strained. */
   private strained = 0;
   private strainAge = 10;
@@ -452,7 +454,8 @@ export class DrownedChapter implements Chapter {
     /** Waiting on the cat she lets the sheet go, so the sail hangs while the breeze goes on blowing. */
     const slack = (still && !carried) || (this.cat.holding && this.cat.step !== 'easing');
     boat.becalmed += ((slack ? 1 : 0) - boat.becalmed) * (1 - Math.exp(-dt * (slack ? 0.7 : 1.1)));
-    const air = still ? (carried ? ch.carryBreeze : 0) : 1;
+    /** With the cat aboard the breeze freshens a little for the last of the drift, before it dies. */
+    const air = still ? (carried ? ch.carryBreeze : 0) : this.beat === 'drift' && this.aboardFrom >= 0 ? tuning.drowned.driftBreeze : 1;
     this.breeze += (air - this.breeze) * (1 - Math.exp(-dt * (still ? 0.6 : 0.5)));
     /**
      * The light goes on going down while the dark comes, a little further than the drift would have taken it; as the
@@ -483,9 +486,9 @@ export class DrownedChapter implements Chapter {
   }
 
   /**
-   * Once the boat lies stuck the fog rises where they came from and comes on over the water, never stopping: quickly
-   * while it is still far off on the horizon, slowing as it nears to a walk's pace, rising as it comes. The cat stares at
-   * it until it bolts. The boat stays where it lies.
+   * Once the boat lies stuck the fog rises where they came from and comes on over the water, never stopping: a little
+   * quicker while it is still far off, slowing as it nears to a walk's pace, rising as it comes. The cat stares at it
+   * until it bolts. The boat stays where it lies.
    */
   private darkComes(dt: number): void {
     const { boat, cygnet } = this.cast;
@@ -495,8 +498,10 @@ export class DrownedChapter implements Chapter {
     const dark = village.dark;
     if (this.beat === 'becalmed') {
       dark.rise = THREE.MathUtils.smoothstep(this.t, 0, k.riseFor);
+      if (dark.front <= 0) dark.front = DARK_AT_STRAND - k.riseAway;
       if (this.t > k.comeAfter) {
-        const pace = Math.max(k.comePace, (DARK_AT_STRAND - dark.front) * k.comeRate);
+        const left = DARK_AT_STRAND - dark.front - tuning.drowned.cat.boltFrom;
+        const pace = Math.min(k.comeMost, k.comePace + Math.max(0, left) * k.comeRate);
         this.fogSpeed += (pace - this.fogSpeed) * (1 - Math.exp(-dt * 1.2));
         dark.comeOn(dark.front + this.fogSpeed * dt, dt);
       }
@@ -719,7 +724,7 @@ export class DrownedChapter implements Chapter {
       return;
     }
     if (this.beat === 'enter' || this.beat === 'drift') {
-      if (this.aboardFrom >= 0 || this.cat.step === 'aboard') this.aboardFrame();
+      if (this.aboardFrom >= 0 || this.cat.step === 'aboard') this.aboardFrame(dt);
       else {
         this.villageFrame(fx, fz);
         if (this.cat.step !== 'stranded') this.catFrame(dt);
@@ -878,7 +883,7 @@ export class DrownedChapter implements Chapter {
    * side the stranding is seen from, a little aft of abeam: she and the cat at the bow face each other across the
    * frame, she turned away from the lens, with the satchel the cygnet peeks out of.
    */
-  private aboardFrame(): void {
+  private aboardFrame(dt: number): void {
     const k = tuning.drownedCamera, s = this.shot, seat = this.cast.child.position;
     const wide = THREE.MathUtils.smoothstep(this.aspect, 0.7, 1.3);
     const fx = Math.sin(this.heading), fz = Math.cos(this.heading);
@@ -889,6 +894,16 @@ export class DrownedChapter implements Chapter {
     s.target.copy(seat).lerp(this.cat.eye, k.aboardAlong).setY(seat.y + k.aboardAim);
     s.distance = THREE.MathUtils.lerp(k.uprightAboardDistance, k.aboardDistance, wide);
     s.height = k.aboardHeight;
+    /** While the cat comes to her and she kneels to it, nearer and higher, so the boards show over the gunwale. */
+    this.rescueIn += ((this.cat.rescuing ? 1 : 0) - this.rescueIn) * (1 - Math.exp(-dt * 0.7));
+    const r = THREE.MathUtils.smootherstep(this.rescueIn, 0, 1);
+    if (r > 0) {
+      const b = THREE.MathUtils.lerp(a, k.rescueBearing, r);
+      s.from.set(fx * Math.cos(b) + px * Math.sin(b), 0, fz * Math.cos(b) + pz * Math.sin(b));
+      s.target.lerp(this.tmp.copy(seat).lerp(this.cat.eye, 0.5).setY(seat.y + k.rescueAim), r);
+      s.distance = THREE.MathUtils.lerp(s.distance, THREE.MathUtils.lerp(k.uprightRescueDistance, k.rescueDistance, wide), r);
+      s.height = THREE.MathUtils.lerp(s.height, k.rescueHeight, r);
+    }
     s.zoom = 1;
     const c = this.catSubjects;
     c.primary.copy(this.cat.eye);

@@ -241,8 +241,11 @@ const MILL_FOOT = onRoof(MILL_LOW, LOW_ON, acrossAt(MILL_LOW, COPING));
 const NORTH = Math.PI - 0.08;
 const EAST = NORTH - Math.PI / 2;
 const W3_TURN = onFrom(MILL_FOOT, EAST, -2.6, COPING);
-const W3_LENGTH = 10;
-const W3_FROM = onFrom(W3_TURN, NORTH, -W3_LENGTH, COPING);
+const W3_LENGTH = 8.5;
+const W3_CORNER = onFrom(W3_TURN, NORTH, -W3_LENGTH, COPING);
+/** How far west of the mill's way in the wall runs from the sheet's high roof, leaving open water in front of the sails. */
+const W3_ACROSS = 7;
+const W3_FROM = onFrom(W3_CORNER, EAST, -W3_ACROSS, COPING);
 
 /**
  * The sheet's high roof, a ridge `SHEET_RISE` above the barn's across the lane: she comes down its east slope just past
@@ -302,19 +305,22 @@ export const SHEET_SITE = (() => {
 
 /**
  * The dead tree in a walled garden across the lane from the barn: it falls east, square across the lane, onto the
- * barn's ridge near its north end. She waits on the garden's wall beside it and walks up the trunk onto the barn.
+ * barn's ridge near its north end. She waits on the garden's wall just past where it will come down across it, and
+ * steps back onto the trunk and walks up it onto the barn.
  */
 const FALL = new THREE.Vector2(Math.sin(EAST), Math.cos(EAST));
 const TREE_LANE = 6.7;
 const TREE_REST = onRoof(BARN, BARN_LEN / 2 - BARN_REST, 0);
 const OVER = new THREE.Vector3(TREE_REST.x - FALL.x * TREE_LANE, COPING, TREE_REST.z - FALL.y * TREE_LANE);
 const TREE_ROOT = new THREE.Vector3(OVER.x - FALL.x * 2.4, -0.15, OVER.z - FALL.y * 2.4);
-const TREE_WAIT = onFrom(OVER, NORTH, -1.35, COPING);
+const TREE_WAIT = onFrom(OVER, NORTH, 1.35, COPING);
 const TREE_OFF = onRoof(BARN, BARN_LEN / 2 - BARN_REST + 0.55, 0);
 const W1_END = onFrom(OVER, NORTH, 2.4, COPING);
 /** The garden wall she comes north along, beside the lane, from the first roof. */
 const W1_LENGTH = 16;
 const W1_FROM = onFrom(OVER, NORTH, -W1_LENGTH, COPING);
+/** Partway along it, from where she may stop and look back at the boat as the fog takes it. */
+export const LOOK_BACK = onFrom(W1_FROM, NORTH, 3, COPING);
 
 /** Where the drift comes from as it nears the stranding: the channel's third point. */
 const DRIFT_FROM = new THREE.Vector2(4, -1372);
@@ -385,7 +391,8 @@ export const GARDEN_WALLS: GardenWall[] = [
   coping(onFrom(TREE_ROOT, NORTH, -3.0, 0.3), onFrom(onFrom(TREE_ROOT, NORTH, -3.0, 0.3), EAST, -3.2, 0.3)),
   coping(onFrom(TREE_ROOT, NORTH, 3.3, 0.25), onFrom(onFrom(TREE_ROOT, NORTH, 3.3, 0.25), EAST, -2.8, 0.25)),
   coping(onFrom(RAIL_AT, EAST, 0.2, RAILINGS_TOP), RAIL_END, true),
-  coping(W3_FROM, W3_TURN),
+  coping(W3_FROM, W3_CORNER),
+  coping(W3_CORNER, W3_TURN),
   coping(W3_TURN, MILL_FOOT.clone().setY(COPING)),
   coping(new THREE.Vector3(SWING_X + 5, RAILINGS_TOP, GREEN_NORTH - 0.45), new THREE.Vector3(SWING_X + 5, RAILINGS_TOP, TOWER_SOUTH), true),
   coping(new THREE.Vector3(SWING_X + 5, -0.6, TOWER_SOUTH + 1.6), new THREE.Vector3(SWING_X + 8.5, -0.6, TOWER_SOUTH + 2.4), true),
@@ -408,11 +415,12 @@ export const WAY = {
   strandSlope: { x0: strandStep.x, z0: strandStep.y, x1: strandTop.x, z1: strandTop.y, halfWidth: 1.6,
     height: slatesAt(STRAND_HOUSE, STEP_DOWN), height1: ridgeTop(STRAND_HOUSE) },
   strand: { x0: strandTop.x, z0: strandTop.y, x1: strandEnd.x, z1: strandEnd.y, halfWidth: 0.45, height: ridgeTop(STRAND_HOUSE) },
-  laneWall: strip(W1_FROM, TREE_WAIT, 0.28),
+  laneWall: strip(W1_FROM, W1_END, 0.28),
   barnRidge: strip(TREE_REST, onRoof(BARN, BARN.len / 2 - 0.1, 0), RIDGE),
   laneRidge: strip(SHEET_SITE.way.stepOff.clone().setY(ridgeTop(HIGH_LANE)), LANE_TOP, RIDGE),
   laneEast: strip(LANE_TOP, LANE_EAVE, 0.7),
-  millWall: strip(W3_FROM, W3_TURN, 0.28),
+  millWall: strip(W3_FROM, W3_CORNER, 0.28),
+  millWallUp: strip(W3_CORNER, W3_TURN, 0.28),
   millWallOn: strip(W3_TURN, MILL_FOOT.clone().setY(COPING), 0.28),
   millSlope: strip(MILL_FOOT, onRoof(MILL_LOW, LOW_ON, 0), 0.7),
   millRidge: strip(onRoof(MILL_LOW, LOW_ON, 0), MILL_WAIT, RIDGE),
@@ -515,24 +523,40 @@ export const STORM_WAY = [new THREE.Vector2(6, -1584), new THREE.Vector2(36, -16
 const STORM_OUT = [new THREE.Vector2(NAVE_BERTH.x, NAVE_BERTH.z - 4), ...STORM_WAY];
 
 /**
- * The line the fog comes on along: from far out where they came from, through the stranding and on over her way to
- * the tower. Its front is measured along it in metres.
+ * The line the fog comes on along: in from the sea far behind them, up the drift past the stranded boat and on north up
+ * the run to the tower, straight, so its front sweeps across the roofs as a tide, the roofs going under in the order
+ * she leaves them. It runs down the middle of her way; its front is measured along it in metres, so it is also how far
+ * north the tide has come.
  */
-const ON_HER_WAY = [RIDGE_END, W1_FROM, TREE_WAIT, OVER, TREE_REST, deckEnd(WAY.barnRidge), SHEET_SITE.way.stepOff, LANE_TOP, W3_FROM, W3_TURN,
-  MILL_FOOT, MILL_WAIT, MILL_OFF, GRANARY_TOP, LEAN_FOOT, GREEN_EAST, deckEnd(WAY.greenRidge), BOARD, LANDING, TOWER_FOOT];
+const ON_HER_WAY = [RIDGE_END, W1_FROM, TREE_WAIT, OVER, TREE_REST, deckEnd(WAY.barnRidge), SHEET_SITE.way.stepOff, LANE_TOP, W3_FROM, W3_CORNER,
+  W3_TURN, MILL_FOOT, MILL_WAIT, MILL_OFF, GRANARY_TOP, LEAN_FOOT, GREEN_EAST, deckEnd(WAY.greenRidge), BOARD, LANDING, TOWER_FOOT];
+/** Her way over the roofs, as a line on the water, for the village to be laid round. */
+export const HER_WAY: THREE.Vector2[] = ON_HER_WAY.map((p) => new THREE.Vector2(p.x, p.z));
+const FOG_X = (Math.min(...ON_HER_WAY.map((p) => p.x)) + Math.max(...ON_HER_WAY.map((p) => p.x))) / 2;
+const FOG_FAR = 240;
 export const DARK_WAY: THREE.Vector2[] = [
-  new THREE.Vector2(STRAND.x + 138, STRAND.y + 197),
-  STRAND.clone(),
-  ...ON_HER_WAY.map((p) => new THREE.Vector2(p.x, p.z)),
+  new THREE.Vector2(FOG_X, STRAND.y + FOG_FAR),
+  new THREE.Vector2(FOG_X, STRAND.y),
+  new THREE.Vector2(FOG_X, TOWER_FOOT.z - 6),
 ];
-/** How high what stands at each point of `DARK_WAY` is: nothing far out, the boat's masthead at the stranding, then her way. */
-export const DARK_TOPS: number[] = [0, tuning.drowned.fog.overBoat, ...ON_HER_WAY.map((p) => p.y)];
 /** How far along `DARK_WAY` each of its points is, and the whole of it. */
 export const DARK_ALONG: number[] = DARK_WAY.map((_, i) => DARK_WAY.slice(1, i + 1).reduce((sum, p, j) => sum + p.distanceTo(DARK_WAY[j]), 0));
 export const DARK_END = DARK_ALONG[DARK_ALONG.length - 1];
+/** How far along `DARK_WAY` a point lies: how far north it is, counted from far out. */
+export function darkAlong(_x: number, z: number): number {
+  return THREE.MathUtils.clamp(FOG_FAR + STRAND.y - z, 0, DARK_END);
+}
+/**
+ * What the fog has to rise over as it comes: how far along `DARK_WAY` each thing stands and how high it is: the
+ * stranded boat's masthead, then her way over the roofs, in order along it.
+ */
+export const DARK_TOPS: { along: number; top: number }[] = [
+  { along: FOG_FAR, top: tuning.drowned.fog.overBoat },
+  ...ON_HER_WAY.map((p) => ({ along: darkAlong(p.x, p.z), top: p.y })),
+].sort((a, b) => a.along - b.along);
 
 /** How far along `DARK_WAY` the stranded boat lies. */
-export const DARK_AT_STRAND = DARK_WAY[0].distanceTo(DARK_WAY[1]);
+export const DARK_AT_STRAND = FOG_FAR;
 
 /** The point `front` metres along `DARK_WAY`. */
 export function darkWayPoint(front: number, out: THREE.Vector2): THREE.Vector2 {

@@ -3,7 +3,7 @@ import { atmo } from './atmosphere';
 import { params } from '../params';
 import { QA } from '../qa';
 import { tuning } from '../tuning';
-import { DARK_ALONG, DARK_AT_STRAND, DARK_END, DARK_TOPS, DARK_WAY, darkWayPoint } from './drowned-way';
+import { DARK_AT_STRAND, DARK_END, DARK_TOPS, DARK_WAY, darkWayPoint } from './drowned-way';
 import { WOOD_LANDING } from './wood';
 
 const smooth = THREE.MathUtils.smoothstep;
@@ -94,7 +94,7 @@ export class DarkBank {
   tide(front: number): number {
     const k = tuning.drowned.fog;
     let over = -Infinity;
-    for (let i = 0; i < DARK_ALONG.length && DARK_ALONG[i] <= front - k.levelBehind; i++) over = Math.max(over, DARK_TOPS[i]);
+    for (const t of DARK_TOPS) if (t.along <= front - k.levelBehind) over = Math.max(over, t.top);
     const climb = THREE.MathUtils.lerp(k.levelFrom, k.levelTo, THREE.MathUtils.clamp((front - DARK_AT_STRAND) / (DARK_END - DARK_AT_STRAND), 0, 1));
     return Math.max(k.level, climb, over + k.levelOver);
   }
@@ -145,7 +145,7 @@ export class DarkBank {
     const risen = smooth(this.rise, 0, k.risen);
 
     darkWayPoint(this.front, this.at);
-    darkWayPoint(this.front - 40, this.back);
+    darkWayPoint(this.front - d.aheadFrom, this.back);
     if (this.at.distanceToSquared(this.back) > 1) this.ahead.subVectors(this.at, this.back).normalize();
     u.uSeaFog.value.set(this.at.x, this.at.y, this.ahead.x, this.ahead.y);
     const drawn = smooth(p, far, near);

@@ -1725,6 +1725,8 @@ export const tuning = {
   drowned: {
     /** The air dies this far short of where the boat comes to rest (metres of drift); it coasts in over the last of it. */
     stillFrom: 26,
+    /** The breeze, against the room's own, on the drift with the cat aboard. */
+    driftBreeze: 1.28,
     /** Seconds from the air dying to the dark starting to rise, as the boat comes to rest and everything goes still. */
     stillFor: 7,
     /** The hull coming to rest: how hard it brakes (m/s²) and the least way it keeps till its stem is on the slates. */
@@ -1748,14 +1750,17 @@ export const tuning = {
        * church's side and how far on from there it has thinned away, as shares of its half width, once it has come
        * close and while it is still far off, spread along the horizon.
        */
-      halfWidth: 170, flank: 30, wing: -0.1, wingFade: 0.3, wingFar: 0.35, wingFadeFar: 0.4,
+      halfWidth: 170, flank: 30, wing: 0.3, wingFade: 0.45, wingFar: 0.35, wingFadeFar: 0.4,
+      /** How far back along its way the line its front lies across is taken from, metres: far enough that it sweeps on rather than swinging. */
+      aheadFrom: 30,
       /**
-       * Seconds it takes to rise on the horizon once the boat lies stuck, and when it starts to come on: never stopping,
-       * at `comeRate` of the way left to the boat each second while that is faster, slowing to `comePace` (m/s) as it
-       * nears; how far short of the boat its front is when the light has gone from it; and how far short of the boat
-       * it is when she sets off along the first roof's ridge (QA and the save there).
+       * Seconds it takes to rise on the horizon once the boat lies stuck, how far behind the boat it rises, and when it
+       * starts to come on: never stopping, at `comePace` (m/s) and `comeRate` a second of however far it still is from
+       * where the cat bolts, at most `comeMost` m/s, so it slows as it nears; how far short of the boat its front is when
+       * the light has gone from it; and how far short of the boat it is when she sets off along the first roof's ridge
+       * (QA and the save there).
        */
-      riseFor: 9, comeAfter: 4, comeRate: 0.13, comePace: 2.2, holdBehind: 20, setOffBehind: 22,
+      riseFor: 9, comeAfter: 2, riseAway: 95, comeRate: 0.15, comeMost: 5, comePace: 1.8, holdBehind: 20, setOffBehind: 20,
     },
     /** The sea fog the dark is: one field every shader reads, and the light it takes as it comes. */
     fog: {
@@ -1765,13 +1770,13 @@ export const tuning = {
        * round); and how deep its front is soft (what stands in that first stretch of it fades rather than being
        * covered), metres.
        */
-      level: 2.5, closedTop: 0.6, topSoft: 0.15, closedSoft: 0.9, front: 22,
+      level: 2.5, closedTop: 0.6, topSoft: 0.15, closedSoft: 0.9, front: 12,
       /**
        * As it comes it rises over all it has taken `levelBehind` metres behind its front by `levelOver` metres, the
        * stranded boat's masthead (`overBoat` above the water) first, and never lower than a steady climb from
        * `levelFrom` at the stranding to `levelTo` at the tower; it rises at most `levelRate` metres a second.
        */
-      levelBehind: 3, levelOver: 0.9, overBoat: 5.3, levelFrom: 4.5, levelTo: 7.2, levelRate: 0.32,
+      levelBehind: 3, levelOver: 0.9, overBoat: 5.3, levelFrom: 4.5, levelTo: 7.2, levelRate: 0.6,
       /**
        * Its top as a tide: the lowest and highest its long swells lie against its level, as shares of it, and how
        * broad they are at least, metres.
@@ -1780,7 +1785,7 @@ export const tuning = {
       /** Once it has closed round, how much its top rises for each metre away from the eye: a bowl she stands in. */
       closedBowl: 0.5,
       /** How far its front heaves to and fro across its line, metres; and how far its face heaps in and out with height, seen edge-on. */
-      heave: 20, faceHeap: 8,
+      heave: 8, faceHeap: 8,
       /**
        * Its feathered sheets, nearest first: metres behind its front (the first is a wisp low on the water, lying
        * `wispAhead` times as far ahead of it as its mist reaches) and how tall against the field; how raggedly their
@@ -1807,7 +1812,7 @@ export const tuning = {
        * The mist it sends on ahead: per metre at its front and at the water, falling away over `airLow` metres up and
        * `airReach` metres ahead once it is close (`airReachFar` while it is still far off, a share `airFar` as thick).
        */
-      air: 0.035, airLow: 6, airReach: 45, airReachFar: 120, airFar: 0.4,
+      air: 0.02, airLow: 4, airReach: 10, airReachFar: 120, airFar: 0.4,
       /** How far past the eye its front has gone once it has closed round. */
       closeRun: 500,
       /**
@@ -1869,7 +1874,7 @@ export const tuning = {
       /** Seconds she stands on the ridge looking after the cat before she goes, and her pace as a share of a walk. */
       setOff: 1.2, stroll: 1.05,
       /** Seconds she stands at the first roof's end looking back at the boat as the fog takes it. */
-      lookBackFor: 3.4,
+      lookBackWhen: 5, lookBackFor: 5.2,
       /** The beat she takes before a hop of her own; within `through` of a turn gentler than `bend` (radians) she walks on through it. */
       hopPause: 0.3, through: 1.1, bend: 0.4,
       /**
@@ -1889,11 +1894,13 @@ export const tuning = {
        */
       catGo: { tree: 9, sheet: 40, mill: 4, swing: 14 }, catDown: 0.55,
       /**
-       * The fog along `DARK_WAY`: how far behind her it comes on while she is on her own way and while she works a piece
-       * (or looks back), the nearest it ever comes; how hard it closes on that (per second a metre), the slowest and
+       * The fog along `DARK_WAY` (how far north it has come): how far behind her it comes on while she is on her own way,
+       * while she looks back at the boat, and while she works each piece; the nearest it ever comes; how near her the
+       * walking lens is laid to expect it; how hard it closes on where it is going (per second a metre), the slowest and
        * fastest it comes on (m/s), and how quickly it changes pace (per second).
        */
-      fogTrail: 16, fogHold: 8, fogNearest: 5.5, fogPull: 0.35, fogSlowest: 0.12, fogFastest: 3.2, fogEase: 0.9,
+      fogTrail: 16, fogLooked: 9, fogHold: { tree: 10, sheet: 10, mill: 14, swing: 12 }, fogNearest: 7.5, fogLaid: 10,
+      fogPull: 0.35, fogSlowest: 0.12, fogFastest: 3.2, fogEase: 0.9,
     },
     /** The wash-tub the player's wind carries to the cat's roof and back to the boat. */
     tub: {
@@ -1944,7 +1951,7 @@ export const tuning = {
        * How far off the boat the fog's front is (metres) when the cat starts to stare at it, when it looks round toward
        * the church, and when it bolts.
        */
-      uneasyFrom: 110, churchFrom: 46, boltFrom: 38,
+      uneasyFrom: 85, churchFrom: 48, boltFrom: 40,
       /** The cat's run up the slates and along the ridge, m/s. */
       runSpeed: 2.6,
       /** Seconds she looks at the fog, down at the stuck boat, then at the cat, before she climbs out after it. */
@@ -1953,13 +1960,13 @@ export const tuning = {
     /** The rescue, once the cat is aboard. */
     rescue: {
       /** Seconds after it lands aboard that it shakes, starts to shiver (and how hard), and comes down to her. */
-      shakeAt: 0.35, shiverAt: 1.5, shiver: 0.7, downAt: 2.6,
+      shakeAt: 0.35, shiverAt: 1.4, shiver: 0.7, downAt: 2.1,
       /**
        * Once it sits at her feet: seconds before she gets down onto her knees, how long she stays down, when her hand
        * goes out; how fast she goes down and back up (per second); how its shivering eases under her hand (per second,
        * and down to); and seconds after it is back at the bow before the boat goes on.
        */
-      kneelAfter: 0.3, kneelFor: 4.4, reachAfter: 0.9, kneelRate: 3, calming: 0.25, calmed: 0.12, goOnAfter: 0.8,
+      kneelAfter: 0.2, kneelFor: 3.8, reachAfter: 0.8, kneelRate: 3, calming: 0.3, calmed: 0.12, goOnAfter: 0.4,
     },
   },
   drownedCamera: {
@@ -1975,10 +1982,14 @@ export const tuning = {
        * the church together (landscape) or to keep her in the narrow frame through a turn (upright), eased back at each
        * piece.
        */
-      follow: 2.2, followDown: 5, steady: 2, steadiest: 1.4, behind: 6, ahead: 12, churchShare: 0.5, fogAside: 80, uprightBack: 1.5, distance: 10, uprightDistance: 12,
+      follow: 2.2, followDown: 5, steady: 2, steadiest: 1.4, behind: 6, ahead: 12, churchShare: 0.55, fogAside: 0,
+      /** With the fog and the church nearly opposite (beyond `flipFrom` radians apart) it looks across from this side (+1 her right going round to the church). */
+      flipFrom: 2.6, side: -1, uprightBack: 1.5, distance: 10, uprightDistance: 12,
       rise: 1.5, uprightRise: 2.6, lowest: 3, highest: 7, lead: 1, aim: 1.0, pace: 0.7, zoom: 0.85, uprightZoom: 0.85,
       /** How far it keeps off the side of a house, wall or chimney it stands lower than the top of, and over a chimney, metres. */
       clearOf: 1.6,
+      /** How far ahead of the fog's front, along the way it comes, it always stands, metres. */
+      fogClear: 9,
       /**
        * How it is laid along her way (`layLens`): what it costs to stand a radian (squared) from where it wants, to be
        * drawn in all the way (upright, where drawn in she soon leaves the narrow frame), to stand `lifted` metres
@@ -2003,7 +2014,9 @@ export const tuning = {
        * from `leaveFrom` metres past it (over each piece's own stretch, below); to the end's view over the last
        * `endFrom` metres.
        */
-      comeFrom: 16, comeTo: 3, leaveFrom: 0, endFrom: 8,
+      comeFrom: 3, comeTo: 0, leaveFrom: 0, endFrom: 8,
+      /** How fast the lens comes round to a piece's view once she has stopped at it (per second). */
+      roundRate: 1.1,
       /** How far past each piece the lens has given it back to her own way, metres; and it comes round to the swing's view late. */
       leave: { tree: 4, sheet: 5, mill: 5, swing: 3 }, swingFrom: 6,
       /**
@@ -2013,19 +2026,19 @@ export const tuning = {
        */
       backHold: 1, backIn: 1.2, backOut: 1.4, backBehind: 4.2, backSide: 2.4, uprightBackSide: 1.2, backHigh: 2.3, backAt: 0.55, backAim: 0.6,
       /**
-       * The tree's view: how far north of where it lies over her wall and west of it (back over the garden) it stands,
-       * and how high (upright, the same).
+       * The tree's view: how far north of where it lies over her wall and east of it (out over the lane) it stands, and
+       * how high (upright, the same).
        */
-      treeNorth: 10, treeWest: 4.5, treeHigh: 4.2, uprightTreeNorth: 8, uprightTreeWest: 5.5, uprightTreeHigh: 5.2,
+      treeNorth: 7.5, treeEast: 1.2, treeHigh: 3.4, uprightTreeNorth: 8.5, uprightTreeEast: 0.6, uprightTreeHigh: 4.4,
       /** The sheet's view: which side of the line it stands (+1 the left looking up it), and how far off it in landscape. */
-      sheetSide: 1, sheetOff: 10.5,
+      sheetSide: -1, sheetOff: 10.5,
       /**
        * The mill's view, in the mill's own frame, as its yard has it: which way it looks from (x, z), how far off at the
        * start and how much closer at the top, where it looks (across, and up from her roof at the start and how much
        * higher at the top), and its own height.
        */
-      millWide: { dir: [-0.7, 0.72], far: 19, closer: 3, x: -2.4, low: 4.6, rise: 1.4, eye: 2.6, eyeRise: 1.4 },
-      millUpright: { dir: [-0.62, 0.78], far: 12.5, closer: 2, x: -1.3, low: 5.0, rise: 2.4, eye: 2.0, eyeRise: 3.4 },
+      millWide: { dir: [-0.7, 0.72], far: 12.5, closer: 1.5, x: -3.2, low: 3.4, rise: 2.4, eye: 2.4, eyeRise: 2.2 },
+      millUpright: { dir: [-0.62, 0.78], far: 11, closer: 1.5, x: -1.3, low: 4.6, rise: 2.4, eye: 2.0, eyeRise: 3.4 },
       /** The end's view: how far back along the nave, how high, and how far out over the green. */
       naveBack: 10, naveHigh: 3.6, naveAside: 11,
       /**
@@ -2033,7 +2046,7 @@ export const tuning = {
        * tree's view as she sets off (if it stood within `handFar` of her), and how much further out and higher it
        * stands half-way round; upright, how far half-way round its look comes onto her.
        */
-      handFor: 16, handFar: 22, handOut: 7, handUp: 1.5, uprightHandHold: 0.7,
+      handFor: 4, handFar: 22, handOut: 2, handUp: 0.8, uprightHandHold: 0.7,
     },
     /** The church (`ChurchArrival.frame`). */
     church: {
@@ -2104,6 +2117,11 @@ export const tuning = {
     aboardBearing: 1.75, aboardDistance: 5.5, uprightAboardDistance: 7, aboardHeight: 0.9, aboardAlong: 0.45,
     aboardAim: 0.9, aboardPace: 0.45,
     /**
+     * While the cat comes to her in the boat and she kneels to it: how far round toward the stern (radians), how near and
+     * how high it stands, so the boat's floor shows over the gunwale, and where it looks (above the boards).
+     */
+    rescueBearing: 1.35, rescueDistance: 4.2, uprightRescueDistance: 5.2, rescueHeight: 2.6, rescueAim: 0.25,
+    /**
      * Once the cat bolts: over `climbFor` seconds the lens comes back to the view toward the dark and up the slope with
      * her; how far back it stands (upright, nearer), and the height it looks at.
      */
@@ -2146,8 +2164,11 @@ export const tuning = {
       shudderFor: 1.1,
       /** Seconds she waits after it lands, and her pace across it as a share of a walk. */
       lookFor: 0.9, crossStroll: 0.42,
-      /** Walking up a fallen trunk, how far short of where it rests on the far roof she steps off it, metres. */
-      climbShort: 0.35,
+      /**
+       * Walking up a fallen trunk: how far from where it lies over her wall she hops up onto it, from how far off, and
+       * how far short of where it rests on the far roof she steps off it, metres.
+       */
+      climbOn: 0.45, climbReach: 0.65, climbShort: 0.35,
       /** Seconds without a useful stroke before the drawn gust; seconds with no progress before the world's own gust brings it down. */
       inviteAfter: 6, valveAfter: 90, valveEvery: 1.6, valvePush: 0.32,
     },

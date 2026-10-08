@@ -153,21 +153,34 @@ export class TreeCrossing {
     const len = Math.hypot(deck.x1 - deck.x0, deck.z1 - deck.z0);
     const on = Math.min(0.35, len * 0.1);
     const ux = (deck.x1 - deck.x0) / len, uz = (deck.z1 - deck.z0) / len;
-    const up = this.way.climb ? -1 : 1;
-    const [ax, az] = up > 0 ? [deck.x0, deck.z0] : [deck.x1, deck.z1];
-    const [bx, bz] = up > 0 ? [deck.x1, deck.z1] : [deck.x0 - ux * up * k.climbShort, deck.z0 - uz * up * k.climbShort];
-    child.walkTo(ax + ux * on * up, az + uz * on * up, false, () => {
+    const along = (onto: () => void) => {
       child.balance = 1;
       child.stroll = k.crossStroll;
-      child.walkTo(bx, bz, false, () => {
-        const off = this.way.stepOff;
-        const way = this.lineDir.set(off.x - child.position.x, off.z - child.position.z).normalize();
-        child.leap(this.at.set(way.x * 1.1, 1.1, way.y * 1.1), off, 9.81, () => { child.balance = 0; }, () => {
-          child.stroll = 1;
-          child.walkTo(this.way.onward.x, this.way.onward.z, false, () => this.to('over'), 0.3);
-        }, true);
-      }, 0.12);
-    }, 0.12);
+      onto();
+    };
+    const off = () => {
+      const to = this.way.stepOff;
+      const way = this.lineDir.set(to.x - child.position.x, to.z - child.position.z).normalize();
+      child.leap(this.at.set(way.x * 1.1, 1.1, way.y * 1.1), to, 9.81, () => { child.balance = 0; }, () => {
+        child.stroll = 1;
+        child.walkTo(this.way.onward.x, this.way.onward.z, false, () => this.to('over'), 0.3);
+      }, true);
+    };
+    if (!this.way.climb) {
+      child.walkTo(deck.x0 + ux * on, deck.z0 + uz * on, false, () => along(() => child.walkTo(deck.x1, deck.z1, false, off, 0.12)), 0.12);
+      return;
+    }
+    /** Up onto the trunk where it lies over her wall, as thick as she is tall to the waist, and up it on all fours of balance. */
+    const foot = this.look.set(deck.x1 - ux * k.climbOn, 0, deck.z1 - uz * k.climbOn);
+    foot.y = deck.height1! + (deck.height - deck.height1!) * (k.climbOn / len);
+    const from = this.lineDir.set(child.position.x - foot.x, child.position.z - foot.z);
+    const near = Math.max(0, from.length() - k.climbReach);
+    from.normalize();
+    child.walkTo(foot.x + from.x * k.climbReach, foot.z + from.y * k.climbReach, false, () => {
+      const way = this.lineDir.set(foot.x - child.position.x, foot.z - child.position.z).normalize();
+      child.leap(this.at.set(way.x * 0.8, 1.6, way.y * 0.8), foot.clone(), 9.81, () => {}, () => along(() =>
+        child.walkTo(deck.x0 + ux * k.climbShort, deck.z0 + uz * k.climbShort, false, off, 0.12)), true);
+    }, near > 0.2 ? 0.15 : 10);
   }
 
   private to(phase: TreeCrossing['phase']): void {
