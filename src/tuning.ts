@@ -1485,9 +1485,10 @@ export const tuning = {
     /**
      * A sweep across the near cork on screen (within `corkRadius` of it, a share of the screen's height) sets it
      * moving the stroke's way at `corkPush` metres a second for each screen height a second the stroke travels, at
-     * most `corkPushMax`; a stroke away from the boat only nudges it, at `corkWrongWay` of that.
+     * most `corkPushMax`; a stroke away from the boat only nudges it, at `corkWrongWay` of that, and pushed out past
+     * where it lay it drifts back at `corkSettle` metres a second for each metre out, at most `corkSettleMax`.
      */
-    corkRadius: 0.075, corkPush: 2.6, corkPushMax: 3.2, corkWrongWay: 0.3,
+    corkRadius: 0.075, corkPush: 2.6, corkPushMax: 3.2, corkWrongWay: 0.3, corkSettle: 0.35, corkSettleMax: 0.4,
     /**
      * Her haul: how many pulls hand over hand, the line each brings in (m), the seconds each takes and the share of
      * that spent drawing; how long she holds on after the last before letting go, and how long the line takes to go.

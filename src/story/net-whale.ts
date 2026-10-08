@@ -242,6 +242,9 @@ export class NetWhale {
   /** Seconds since a sweep last crossed the cork: the drawn sweep waits for a few. */
   private idle = 0;
   private pulled = 0;
+  /** Where the near cork lay when the line began: pushed out past it, away from the boat, it settles back. */
+  private readonly corkHome = new THREE.Vector3();
+  private corkLaid = false;
   /** The line's dolphin: how far behind the cork its beak still is, and when it turned away (s), or -1. */
   private noseGap = 0;
   private noseAway = -1;
@@ -365,6 +368,7 @@ export class NetWhale {
   restore(point: string): void {
     if (point === 'whale-rest' || point === 'whale-breath' || point === 'whale-line' || point === 'whale-flipper') {
       this.net.finishDraping();
+      this.corkLaid = false;
       this.led = true;
       this.lost = 0;
       this.rested = true;
@@ -1259,6 +1263,7 @@ export class NetWhale {
         this.idle += dt;
       }
       this.brushCork(dt);
+      this.settleCork(dt);
       if (this.waiting > K.valveAfter && this.valveT < 0) this.noseCork(dt);
       this.invite();
       if (this.withinReach()) {
@@ -1380,6 +1385,21 @@ export class NetWhale {
     if (more <= 0) return;
     float.push(this.ray.copy(way).multiplyScalar(more));
     if (toward > 0.3) this.waiting = 0;
+  }
+
+  /** Pushed out past where it lay, the weight of the net on its line draws the cork back there, and no nearer. */
+  private settleCork(dt: number): void {
+    const float = this.net.float;
+    const boat = this.cast.boat.position;
+    if (!this.corkLaid) {
+      this.corkLaid = true;
+      this.corkHome.copy(float.position).setY(0);
+    }
+    const outward = this.a.set(this.corkHome.x - boat.x, 0, this.corkHome.z - boat.z).normalize();
+    const out = (float.position.x - this.corkHome.x) * outward.x + (float.position.z - this.corkHome.z) * outward.z;
+    if (out <= 0) return;
+    const more = (Math.min(K.corkSettle * out, K.corkSettleMax) + float.velocity.dot(outward)) * (1 - Math.exp(-dt * 3));
+    if (more > 0) float.push(this.ray.copy(outward).multiplyScalar(-more));
   }
 
   /** Where the drawn sweep goes: across the cork and on toward her, and which way that is on screen. */

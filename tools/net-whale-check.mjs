@@ -5,7 +5,7 @@
 // net off it, it draws its first full breath, its eye opens on her and the sequence goes on to the line; left alone,
 // under a breeze three times the sea's, nothing lifts until the safety valve, whose dolphin leaps and lifts the mesh.
 // The line: sweeps across the near cork toward the boat bring it to her, she takes it and hauls, each pull peeling the
-// net further off into the water, and lets it go; strokes the wrong way only nudge it, held near by its tether; left
+// net further off into the water, and lets it go; strokes the wrong way only nudge it away, and it settles back; left
 // alone under three times the breeze, with sweeps across its back that do nothing, the cork stays where it is
 // until the valve, whose dolphin noses it in to her.
 // The flipper: the cygnet goes in at once, swims to the loop's free end and holds it; sweeps along the flipper lift it
@@ -116,13 +116,19 @@ const screenOf = (page, expr) => page.evaluate((e) => {
   return [(p.x * 0.5 + 0.5) * innerWidth, (0.5 - p.y * 0.5) * innerHeight];
 }, expr);
 
-/** One sweep across the near cork on screen, `way` 1 toward the boat or -1 away from it, from well short to well past. */
+/**
+ * One sweep across the near cork on screen, `way` 1 toward the boat or -1 away from it, from well short to well past.
+ * The pointer comes in at the start and leaves at the end, as a hand does: a bare move to or from a parked corner is
+ * a stroke of its own, back across the cork.
+ */
 async function sweepCork(page, way = 1) {
   const [cx, cy] = await screenOf(page, '__game.sealife.net.float.position');
   const [bx, by] = await screenOf(page, '__game.boat.position');
   const d = Math.hypot(bx - cx, by - cy) || 1;
   const ux = ((bx - cx) / d) * way, uy = ((by - cy) / d) * way;
-  await stroke(page, [[cx - ux * 110, cy - uy * 110], [cx + ux * 150, cy + uy * 150]], 240);
+  await jumpTo(page, cx - ux * 110, cy - uy * 110);
+  await stroke(page, [[cx - ux * 110, cy - uy * 110], [cx + ux * 150, cy + uy * 150]], 240, true);
+  await away(page);
   await page.mouse.move(W - 10, H - 10);
   await page.waitForTimeout(1200);
 }
@@ -474,13 +480,14 @@ async function wrongway() {
     const s = await read(page);
     far = Math.max(far, s.cork);
   }
-  await page.waitForTimeout(3000);
+  await page.waitForTimeout(7000);
   const end = await read(page);
-  results.wrongway = { corkFrom: +start.cork.toFixed(2), farthest: +far.toFixed(2), tether: +end.tether.toFixed(2), of: end.length };
+  results.wrongway = { corkFrom: +start.cork.toFixed(2), farthest: +far.toFixed(2), settled: +end.cork.toFixed(2), tether: +end.tether.toFixed(2), of: end.length };
   assert.equal(end.haul, 'out', 'nothing is caught');
   assert.equal(end.peel, 0, 'nothing peels');
   assert(far > start.cork + 0.1, 'a stroke the wrong way still moves it a little');
   assert(far < start.cork + 2.5, `the wrong way only nudges it: ${start.cork.toFixed(2)} to ${far.toFixed(2)} m from the boat`);
+  assert(Math.abs(end.cork - start.cork) < 0.4, `it settles back where it lay: ${start.cork.toFixed(2)}, out to ${far.toFixed(2)}, back to ${end.cork.toFixed(2)} m`);
   assert(end.tether <= end.length + 0.05, 'its tether to the net keeps it near');
   await bringCork(page);
   assert.deepEqual(errors, []);
