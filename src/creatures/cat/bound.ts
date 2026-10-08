@@ -57,13 +57,13 @@ function loop(p: number, keys: Keys): number {
 
 /** `low`, 0..1, is fear: the same bound kept down nearer the roof and drawn out longer. */
 export function boundShape(p: number, low: number, out: BoundShape): BoundShape {
-  const stretch = loop(p, STRETCH) * (1 + 0.3 * low);
-  out.rise = loop(p, RISE) * (1 - 0.4 * low) - 0.012 * low;
-  out.flex = loop(p, FLEX) * (1 - 0.2 * low);
+  const stretch = loop(p, STRETCH) * (1 + 0.35 * low);
+  out.rise = loop(p, RISE) * (1 - 0.25 * low) - 0.01 * low;
+  out.flex = loop(p, FLEX);
   out.stretch = stretch;
   /** The hips go on at an even pace; it is the shoulders that check over the front paws and surge on after. */
   out.surge = stretch / 2;
-  out.pitch = loop(p, PITCH) * (1 - 0.3 * low);
+  out.pitch = loop(p, PITCH) * (1 - 0.2 * low);
   out.tail = loop(p, TAIL);
   return out;
 }
