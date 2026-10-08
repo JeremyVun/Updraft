@@ -1066,7 +1066,43 @@ timed to `blinkAt`; keep the look up about as long (`lookUpFor`) or say what mov
 Gate: `FROM=belfry` `LENS=1` both aspects, no exceptions; the cat at the blink at least 80 px tall landscape with her
 in frame; 2 fps strips of the climb down, boarding and the look up to the storm's frame, both aspects; `crossings-check`
 `climb-down`.
-Done: [ ]
+Done: [x] (branch `proto-drowned-goodbye`). As built (`drowned-church.ts`, knobs in `tuning.drowned.church` and
+`tuning.drownedCamera.church`):
+- **The cat after her** (`catToLight`, `catDown`, `Cat.backDown`): as the boat answers the last ring it leaves its
+  kittens for just inside her light; once she is `catGap` below the sill it hops onto the lip of the light's north half,
+  looks down at her, turns its back to the drop (`catTurn`), lets itself over the lip hind feet first with its front
+  paws holding the edge till last, and backs down the ivy on her left, the boat's side (the cat's `back` gait: a hind
+  foot reaches down, then the front on its side, its weight rolling with each). At the foot it stops and looks down
+  over its shoulder (`catPause`) and drops, turning, onto the nave's ridge (`catRidge`), where it sits facing the boat
+  and watches her. A kitten comes to the sill's other half (`kittenAfter`). It is on the ridge 4.2 s after she is off
+  the ivy and 7-18 s before she sits, so it never holds her up.
+- **Home**: at `homeAt` 7.7 s aboard (after the blink and its chirrup) it turns round on the ridge and climbs the ivy
+  (`homeClimb`) to the sill beside the kitten, home 14.3 s after she sat, 3.7 s into the storm.
+- **Boarding** (`boardEye`): once the boat is `boardFrom` 14 m out the lens comes round in one `boardFor` 4 s move to the
+  starboard quarter (`boardQuarter`), bearings taken from the berth, not the sailing hull; she steps in once the boat
+  has lain there `boardAfter` 1 s; the mast stands 35° off her line as she steps in. The boat is made fast at the berth
+  from her sitting until `lookUpFor`, so air left in its sail cannot carry it off along the nave during the look up.
+- **The look up** (`upFrame`): round and in from the boarding view (`tiltFrom`-`tiltTo`, `upPace`) to 3.4 m behind her
+  eyes at their height, 0.6 rad round toward starboard from straight behind, on a 1.5 lens, looking half way from her
+  hood to the cat's eyes on the ridge (`catSeen`): her hood large in the lower right, the cygnet beside it looking up
+  too, the cat in the upper third. Held through the blink (`blinkAt` 5.6 s and `lookUpFor` 10.6 s unchanged). Then the
+  release (`releaseEye`): back first and round toward the bow after, to 15 m off and 2 m over her eyes, so the cat going
+  home stays above her in frame; the departure takes it from there (upright `uprightLampHer` 0.45).
+- **Checks**: `drowned-run-check` finds the cat on the ridge and the kitten on the sill at the blink, measures the cat's
+  height on screen (feet to ear tips by its bones) and her place, times the cat's way down and home, and fails if it is
+  not home before the storm's lens takes over; with `LENS=1` in landscape it asks 80 px with her in frame. The cat yard
+  has `back-down` (`cat-check.mjs`).
+Measured (`FROM=belfry`, `LENS=1`): both aspects pass with no exceptions (her out of frame or hidden 0.0 s; fastest
+turn 16.8 deg/s landscape, 17.4 upright; no cuts; the light out in frame). At the blink the cat is 109 px at (0.29,
+0.36) with her face at (0.66, 0.69) landscape, 125 px at (0.27, 0.41) and (0.67, 0.67) upright. Sheets
+`/tmp/updraft-cam8c-sheet-{l,u}-goodbye.jpg`.
+Left:
+- The cat on the ivy reads small in the bring view (about 40 px landscape); upright she climbs at the frame's right
+  edge, and the upright bring view looks 33° down as she walks the ridge.
+- At the blink the dead sail on the mast stands at the frame's right edge (about an eighth of it in landscape), and the
+  release brings mast and sail beside her (never across); as the boat comes in for boarding its sail sweeps across her
+  once (giving way, as the sail does over her).
+- The cat waits for her to be clear of the light before it goes over, so it is on the ivy above her for only a moment.
 
 ### Phase 8d: the run's walks and the belfry's inside (parallel with 8c)
 Owns: the run's walking lens (`drowned-run.ts` `layLens`, `frame`, `tuning.drownedCamera.run`) and the church's
