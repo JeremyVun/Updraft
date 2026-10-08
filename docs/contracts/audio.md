@@ -25,6 +25,8 @@ and clears it on exit.
   measurements are never a listening sign-off.
 - The game's style is the detuned drone. Keep it, but it must move harmonically: "it just can't be one single drone
   note the whole way through". Circle-of-fifths piano rewrites of the opening and summit were rejected.
+- New music needs structured harmony and melody: a theme in regular phrases over clear, repeating progressions, not a
+  scatter of notes ("the music sounds a bit... random? I think there's not enough structured harmony / melody to it").
 - Never fill a musical gap with one held sound: a stretch in Sleeping "playing the exact same note" was "horrible".
   The held-chord crossfade replacement for the shared pad's chord clock and glides was rejected; the pad's clock and
   glides stay.
@@ -122,19 +124,27 @@ optional swing is accepted, `scarf` (no lead melody) for the later tangles, and 
 up on the roof after the cat; `chase` over the roofs; `climb` from the tower's foot up the ivy; `belfry` over the
 kittens, the fog sea and the wait for the bell; `answer1` to `answer3` and `home` by the count of the lantern's answers
 (`church.answered`), `home` carrying on through her climb down and the boat brought in; `farewell` from aboard through
-the slow blink; then the 22 s gathering storm, plane loss and the approach to the wood. The chase's pulse follows
+the slow blink; then the 22 s gathering storm, plane loss and the approach to the wood. Every new cue is built on one
+theme, the piano's question D–E–F♯ rising to B and its answer B–F♯–E–D, in four-bar phrases on a steady beat over a
+round of four chords diatonic to B minor (D major for home; A♯ only over the dominant): `stuck` rocks B minor to G
+while the cello asks the question at half speed and stops on F♯ as the dominant comes with a heartbeat; the chase
+plays the theme over B minor, G, D, A eased, and pressed the question's head climbing a step a bar over B minor, G,
+E minor, F♯ followed by an answer denied its home note, each three times round with different voices; the climb
+sequences the head up over B minor, G, A and stops short of B; the belfry rocks B minor to Gmaj7 under the felt's
+lullaby an octave up; each answer sings the question so far after the strike (D, D–E, D–E–F♯) above the bell's
+ringing partials, and the fourth lands B over D major; home is the theme whole over D, A, B minor, G; the farewell is
+its last phrase as a cadence onto D at the blink. The chase is conducted a passage at a time (`Conductor`): it reads
 `SoundState.drownedTension` (0 to 1: how near the fog's front is behind her, less while she walks than at a piece,
-eased for a few seconds once she is across one; `tuning.audio.drownedChase`), and a note may carry the range it plays
-in: eased, half notes under the cello's line; pressed, quarters, eighths and a pickup into each bar, the line giving way
-to a held low note and the felt's sighs. The bell rings B, the score's tonic; each answer turns the harmony a step
-warmer (G, E minor, A suspended) and sings the next note of the piano's question after the strike has passed, and the
-fourth lands on D major. Sections the story can hold repeat a body of at least 20 s (the chase's 102 s in two passes
-with different lines). The composed levels include the withdrawals (the stuck boat about 4 dB, the chase 2 dB, the
-belfry 6 dB under the drift), so chapter hush is not applied again. `node tools/drowned-music-study.mjs [outDir]`
-renders each cue and the room from the rescue into the storm with the bell. The Mirror follows approach, first play,
-one to three returned lights, the full constellation and departure; completed-star count, not order, picks the
-section, the third star reuses the middle verse and only the fourth gets the final bloom. `star` is emitted once per
-real return, never on entry, loops or restore. The departure section carries on over the harbour crossing.
+eased for a few seconds once she is across one; `tuning.audio.drownedChase`) only where a phrase begins, pressing at
+`press` and easing below `relax`, and its pulse fills (halves, quarters, eighths) only at bar lines; no tune is cut
+mid-phrase. Cues whose first notes come soon cross in over `fade` rather than the usual phase fade. Sections the
+story can hold repeat a body of at least 20 s. The composed levels include the withdrawals (the stuck boat about
+4 dB, the chase 2 dB, the belfry 6 dB under the drift), so chapter hush is not applied again.
+`node tools/drowned-music-study.mjs [outDir]` renders each cue and the room from the rescue into the storm with the
+bell, and names each chase passage as chosen. The Mirror follows approach, first play, one to three returned lights,
+the full constellation and departure; completed-star count, not order, picks the section, the third star reuses the
+middle verse and only the fourth gets the final bloom. `star` is emitted once per real return, never on entry, loops
+or restore. The departure section carries on over the harbour crossing.
 
 **Wood.** The original low forest drone. Ordinary embers cue `kindled`; lighting the rescue hearth cues `comfort`.
 
@@ -176,8 +186,9 @@ for permanent silence), disconnects finished voices and buses, and freezes with 
 hidden. Missed frames skip stale attacks rather than bursting.
 
 The piano's D–E–F♯–B question links the rooms: a three-note reed fragment in Lines, the plucked shape in Boats, the
-Meadow melody itself, B–F♯–E–D in Birches, the drowned village's lantern answering the bell note by note and the cello's
-B–F♯–E–D as the boat comes home, a stretched recollection at sea, and D–E–F on the Sleeping climb.
+Meadow melody itself, B–F♯–E–D in Birches, the whole question and answer through the drowned village (the chase's
+theme, the lantern completing the question ring by ring, the theme in D major as the boat comes home), a stretched
+recollection at sea, and D–E–F on the Sleeping climb.
 
 ## Handoffs between pieces
 
