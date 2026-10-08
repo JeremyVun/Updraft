@@ -42,8 +42,8 @@ void main() {
   float rim = pow(1.0 - max(dot(N, V), 0.0), 2.0);
   vec3 col = shadeCreature(WATER, N, vWorld, 1.0, 0.0, 0.8, 1.0) + uSkyAmbient * rim * 0.9;
   float glint = pow(max(dot(reflect(-V, N), uSunDir), 0.0), 40.0) * cloudShadow(vWorld.xz);
-  col += uSunColor * glint * 1.4;
-  float alpha = vCover * clamp(0.35 + 0.55 * rim + glint, 0.0, 1.0);
+  col += uSunColor * glint * 1.8;
+  float alpha = vCover * clamp(0.5 + 0.5 * rim + glint, 0.0, 1.0);
   gl_FragColor = vec4(max(applyFog(col, vWorld), 0.0), alpha);
 }`;
 
