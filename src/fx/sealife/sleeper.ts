@@ -313,7 +313,9 @@ export class SleepingWhale extends WhaleRig {
         * (1 - 0.6 * THREE.MathUtils.smootherstep(t, BREATH_IN, BREATH_OUT + 1));
       if (t >= BREATH_IN && t < BREATH_OUT) {
         const k = (t - BREATH_IN) / (BREATH_OUT - BREATH_IN);
-        this.spray.jet(this.blowhole, K.firstBreathHeight, 0.65 * Math.sin(Math.PI * Math.min(1, k * 1.4)) ** 0.5, dt);
+        const strength = Math.sin(Math.PI * Math.min(1, k * 1.4)) ** 0.5;
+        this.spray.column(this.blowhole, K.firstBreathHeight, strength, dt);
+        this.spray.jet(this.blowhole, K.firstBreathHeight * 0.6, 0.35 * strength, dt);
       }
       if (t >= BREATH_IN && t - dt < BREATH_IN) this.onSound?.('whale-blow', this.blowhole.x, this.blowhole.y, this.blowhole.z);
       this.breath = 0.6;

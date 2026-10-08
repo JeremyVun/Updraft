@@ -6,10 +6,12 @@ const MAX = 2400;
 export const MIST = 0;
 export const DROP = 1;
 export const SPLASH = 2;
+/** The soft round puffs of a column of breath, lit as solid shapes: gold on the sun's side, cool on the other. */
+export const COLUMN = 3;
 
 /** How fast each kind settles into the air around it (per second), and how strongly it falls. */
-const DRAG = [1.5, 0.15, 0.9];
-const GRAVITY = [0.4, 9.8, 6.5];
+const DRAG = [1.5, 0.15, 0.9, 1.1];
+const GRAVITY = [0.4, 9.8, 6.5, 0.3];
 
 const VERT = /* glsl */ `
 ${ATMO_GLSL}
@@ -22,6 +24,9 @@ out float vKind;
 out float vAlpha;
 out float vSeed;
 out float vAge;
+out vec3 vRight;
+out vec3 vUp;
+out float vSide;
 void main() {
   vec3 p = iA.xyz;
   float size = iA.w;
@@ -46,6 +51,9 @@ void main() {
     q = mat2(cos(a), -sin(a), sin(a), cos(a)) * (q * vec2(1.0, 0.7 + 0.5 * fract(iC.y * 5.7)));
   }
   vec3 world = p + (across * q.x + along * q.y * stretch) * size;
+  vRight = right;
+  vUp = up;
+  vSide = iC.w;
   vQ = position.xy;
   vWorld = world;
   vKind = iB.w;
@@ -63,6 +71,9 @@ in float vKind;
 in float vAlpha;
 in float vSeed;
 in float vAge;
+in vec3 vRight;
+in vec3 vUp;
+in float vSide;
 void main() {
   float r = length(vQ);
   if (r > 1.0) discard;
@@ -81,6 +92,22 @@ void main() {
     float glow = min(pow(toSun, 12.0) * 1.8 + pow(toSun, 4.0) * 0.8, 1.2) * (0.7 + 0.6 * fract(vSeed * 7.3));
     col = sky + uSunColor * (0.22 + glow) * sun;
     additive = 0.12;
+  } else if (vKind > 2.5) {
+    vec2 w = vQ * 1.2 + vSeed * 23.0;
+    float lumps = vnoise(w + uTime * 0.15) * 0.6 + vnoise(w * 2.4 - uTime * 0.2) * 0.4;
+    float torn = vAge * 0.7;
+    a = (1.0 - smoothstep(0.1 + 0.35 * lumps - torn * 0.3, 1.0, r)) * smoothstep(torn * 0.8, torn * 0.8 + 0.4, lumps + 0.3) * vAlpha;
+    // Lit as one soft column, by which side of it each puff left from, and a little as a round puff of its own: the
+    // face toward the low sun gold, the face away cool sky, the thin edges lit through from behind.
+    float facing = sqrt(max(0.0, 1.0 - r * r));
+    float side = vSide * 6.2832;
+    vec3 N = normalize(mix(normalize(vRight * vQ.x * 0.6 + vUp * vQ.y * 0.6 + V * facing), normalize(vec3(cos(side), 0.25, sin(side))), 0.55));
+    float lit = smoothstep(-0.3, 0.8, dot(N, uSunDir));
+    vec3 sky = hemiLight(N);
+    vec3 shade = mix(sky, vec3(lumaOf(sky)), 0.45) * vec3(0.93, 0.96, 1.08) * 1.55;
+    float edge = pow(1.0 - facing, 1.3) * (0.4 + 0.6 * lit);
+    col = mix(shade, shade * 0.35 + uSunColor * 1.2, lit * sun) + uSunColor * pow(toSun, 3.0) * edge * 2.6 * sun;
+    additive = 0.04;
   } else if (vKind < 1.5) {
     a = (1.0 - smoothstep(0.0, 1.0, r)) * vAlpha;
     float glint = pow(toSun, 8.0) * 2.5 + 0.45;
@@ -117,6 +144,8 @@ export class Spray {
   private readonly seed = new Float32Array(MAX);
   /** Seconds a particle is thrown clear of the wind before the air takes it. */
   private readonly calm = new Float32Array(MAX);
+  /** Which side of its column a puff left from, as a share of a turn. */
+  private readonly side = new Float32Array(MAX);
   private readonly a: THREE.InstancedBufferAttribute;
   private readonly b: THREE.InstancedBufferAttribute;
   private readonly c: THREE.InstancedBufferAttribute;
@@ -171,6 +200,7 @@ export class Spray {
     this.kind[i] = kind;
     this.seed[i] = Math.random();
     this.calm[i] = calm;
+    this.side[i] = 0;
   }
 
   /** A whale's breath: a bushy column of fine mist, a few heavier drops falling out of it, `size` times a 14 m whale's. */
@@ -231,6 +261,25 @@ export class Spray {
       const v = Math.sqrt(2 * GRAVITY[DROP] * height * (0.35 + Math.random() * 0.65)) * strength;
       const out = 0.4 + Math.random() * 1.6;
       this.emit(DROP, at.x, at.y + 0.1, at.z, Math.cos(a) * out, v, Math.sin(a) * out, 0.04 + Math.random() * 0.04, 2.6, 0, 0.8);
+    }
+  }
+
+  /**
+   * One frame of a soft column of breath, `height` high: big round puffs thrown straight up clear of the breeze,
+   * slowing and opening as they rise, then taken by it and drifting off as they settle and thin.
+   */
+  column(at: THREE.Vector3, height: number, strength: number, dt: number): void {
+    const n = Math.floor(strength * 210 * dt + Math.random());
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const reach = 0.25 + 0.75 * Math.sqrt(Math.random());
+      const crown = THREE.MathUtils.smoothstep(reach, 0.7, 1);
+      const out = 0.3 + reach * 0.8 * Math.random() + crown * (1.2 + Math.random() * 1.8);
+      const up = height * DRAG[COLUMN] * reach * strength * (1 + Math.random() * 0.1);
+      this.emit(COLUMN, at.x + Math.cos(a) * 0.5, at.y + 0.2, at.z + Math.sin(a) * 0.5, Math.cos(a) * out, up, Math.sin(a) * out,
+        0.9 + Math.random() * 0.6, 6 + Math.random() * 2.5, 0.7 + reach * 0.8 + crown * 0.9, 0.42 + Math.random() * 0.28,
+        1.6 + crown * 0.8 + Math.random() * 0.6);
+      this.side[this.count - 1] = a / (Math.PI * 2);
     }
   }
 
@@ -306,6 +355,7 @@ export class Spray {
       C[k] = fade * this.opacity[i];
       C[k + 1] = this.seed[i];
       C[k + 2] = t;
+      C[k + 3] = this.side[i];
     }
     for (const attr of [this.a, this.b, this.c]) {
       attr.clearUpdateRanges();
@@ -329,5 +379,6 @@ export class Spray {
     this.kind[i] = this.kind[last];
     this.seed[i] = this.seed[last];
     this.calm[i] = this.calm[last];
+    this.side[i] = this.side[last];
   }
 }

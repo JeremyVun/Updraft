@@ -1416,7 +1416,7 @@ export const tuning = {
     /** Seconds between its weak breaths, how far its back rises with one (m), and how much mist each sputters. */
     breathEvery: 10, breathRise: 0.45, mist: 1,
     /** The soft column of its first full breath, and the tall spout when it is free (m above the blowhole). */
-    firstBreathHeight: 9, spoutHeight: 20,
+    firstBreathHeight: 13, spoutHeight: 20,
     /**
      * Circling over the blowhole (the stand-in for the net's first step): the charge that starts to count, the charge
      * that counts fully, progress a second, and how far from the blowhole the column may stand (m).
