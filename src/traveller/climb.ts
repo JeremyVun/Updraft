@@ -56,9 +56,9 @@ const UP = new THREE.Vector3(0, 1, 0);
 /**
  * Her climb up a wall by its holds, hand over hand, a knee up and a foot onto the next fork and a push up onto it,
  * over the sill on her knee and in; and down the same way, feet first, each foot feeling for its hold. She goes by
- * turns, a hand and the opposite foot: the hand that is lowest goes up first to the next hold it can reach, the
- * lower foot comes up onto the next hold on its own side, and only once it is there does her body rise. Every hold a
- * hand lets go of is taken by the foot on that side later, as on a ladder. The moves are planned once from the holds
+ * turns, a hand and the opposite foot: before her body rises, a hand it would leave too low goes up to the highest
+ * hold it can reach, the lower foot comes up onto the next hold on its own side, and only once it is there does her
+ * body rise. Every hold a hand lets go of is taken by the foot on that side later, as on a ladder. The moves are planned once from the holds
  * and played in time; her limbs and her body only ever go where the plan puts them, so nothing slips.
  */
 export class Climb {

@@ -69,16 +69,19 @@ export class BellYard {
   view: BellYardView = 'play';
   private t = 0;
   private catDone = false;
-  private after = 0;
-  private then: (() => void) | null = null;
+  private readonly timers: { at: number; go: () => void }[] = [];
   private readonly centre = new THREE.Vector3();
   private readonly look = new THREE.Vector3();
   private readonly down = new THREE.Vector3();
+  private readonly inviteAt = new THREE.Vector3();
+  private readonly inviteDir = new THREE.Vector3();
   private readonly eye = new THREE.Vector3();
   private readonly target = new THREE.Vector3();
   private readonly herY = { value: RIDGE };
   /** The lens as it is, gliding toward where the frame wants it; cut there when she is set somewhere new. */
   private readonly eyeNow = new THREE.Vector3();
+  private readonly orbitNow = new THREE.Vector3();
+  private readonly orbitWant = new THREE.Vector3();
   private readonly targetNow = new THREE.Vector3();
   private readonly eyeSpeed = new THREE.Vector3();
   private readonly targetSpeed = new THREE.Vector3();
@@ -129,8 +132,8 @@ export class BellYard {
   invitationAt(camera: THREE.Camera | null): THREE.Vector3 | null {
     const at = this.bell.invitation;
     if (!at || !camera) return at;
-    const toward = camera.position.clone().sub(at).normalize();
-    return at.clone().addScaledVector(toward, Math.min(at.distanceTo(camera.position) * 0.5, 2.9));
+    const toward = this.inviteDir.copy(camera.position).sub(at).normalize();
+    return this.inviteAt.copy(at).addScaledVector(toward, Math.min(at.distanceTo(camera.position) * 0.5, 2.9));
   }
 
   /** For the capture tools: where everything has got to. */
@@ -154,6 +157,7 @@ export class BellYard {
   play(from: 'climb' | 'ring' | 'down' = 'climb'): void {
     const c = this.cast.child;
     this.playing = true;
+    this.timers.length = 0;
     this.view = (new URLSearchParams(location.search).get('bellView') as BellYardView | null) ?? 'play';
     this.cut = true;
     this.t = 0;
@@ -219,14 +223,13 @@ export class BellYard {
     c.lookAt = null;
     c.walkTo(stand.x, stand.z, false, () => {
       c.yaw = this.climb.facing;
-      this.after = 0.7;
-      this.then = () => {
+      this.later(0.7, () => {
         this.phase = 'down';
         this.climb.down(() => {
           this.phase = 'below';
           c.lookAt = this.look.copy(this.belfry.sill(FACE, LIGHT, 0)).setY(BELFRY.sill + 0.3);
         });
-      };
+      });
     }, 0.08);
   }
 
@@ -238,16 +241,13 @@ export class BellYard {
     this.kittens.update(dt);
     for (const h of this.kittens.heard) if (h.kind === 'mew') this.cast.cat.heard.push(h);
     this.kittens.heard.length = 0;
-    if (this.then) {
-      this.after -= dt;
-      if (this.after <= 0) {
-        const go = this.then;
-        this.then = null;
-        go();
-      }
+    for (const due of this.timers.filter((timer) => timer.at <= this.t)) {
+      this.timers.splice(this.timers.indexOf(due), 1);
+      due.go();
     }
     this.climb.update(dt);
     this.belfry.shadeBell(this.bell.pivot, this.bell.down(this.down));
+    this.bell.live = this.phase === 'ringing';
     this.bell.update(dt, camera);
     this.waves.update(dt);
     this.herY.value += (c.position.y - this.herY.value) * (1 - Math.exp(-dt * 3.5));
@@ -275,42 +275,43 @@ export class BellYard {
     this.phase = 'nest';
     c.faceToward(this.kittens.centre.x, this.kittens.centre.z, 1);
     c.kneeling = 1;
-    this.after = 3.8;
-    this.then = () => {
+    this.later(3.8, () => {
       c.kneeling = 0;
-      this.after = 0.8;
-      this.then = () => {
+      this.later(0.8, () => {
         c.yaw = this.outward;
         this.phase = 'ringing';
-      };
-    };
-  }
-
-  /** Up the ivy ahead of her, in over the sill and across the boards to its kittens, and curled round them. */
-  private catClimbs(): void {
-    const cat = this.cast.cat;
-    const ledge = this.belfry.sill(FACE, LIGHT, -0.24).add(new THREE.Vector3(0, 0, 0.25));
-    this.after = 0.25;
-    this.then = () => cat.climb([...this.ivy.catWay(), ledge], faceOut(FACE), { then: 'stand', speed: 1.2 }, () => {
-      const down = this.belfry.inside(FACE, LIGHT, 0.3).add(new THREE.Vector3(0, 0, 0.3));
-      cat.hop(down, { then: 'stand', floor: this.floor }, () => {
-        const by = this.curlAt();
-        cat.run([by], this.floor, { pace: 'trot', speed: 1.3, then: 'stand' }, () => {
-          this.kittens.tumble();
-          cat.chirrup();
-          this.after = 1.4;
-          this.then = () => {
-            this.curlCat();
-            this.catDone = true;
-          };
-        });
       });
     });
   }
 
-  /** Where the cat lies curled so that the kittens are in the hollow of it, and its face to the light. */
+  /**
+   * Up the ivy ahead of her, in over the sill and across the boards to the straw where its kittens are asleep, and
+   * round them: it comes in on the heading it lies down on, so that it curls without turning.
+   */
+  private catClimbs(): void {
+    const cat = this.cast.cat;
+    const ledge = this.belfry.sill(FACE, LIGHT, -0.24).add(new THREE.Vector3(0, 0, 0.25));
+    this.later(0.25, () => cat.climb([...this.ivy.catWay(), ledge], faceOut(FACE), { then: 'stand', speed: 1.2 }, () => {
+      const down = this.belfry.inside(FACE, LIGHT, 0.3).add(new THREE.Vector3(0, 0, 0.3));
+      cat.hop(down, { then: 'stand', floor: this.floor }, () => {
+        const at = this.curlAt();
+        const before = at.clone().add(new THREE.Vector3(-Math.sin(CURL_YAW), 0, -Math.cos(CURL_YAW)).multiplyScalar(0.35));
+        cat.run([before, at], this.floor, { pace: 'walk', speed: 0.8, then: 'stand' }, () => {
+          cat.chirrup();
+          cat.rest('curl', null);
+          this.later(1.2, () => {
+            this.kittens.nestle(cat);
+            this.catDone = true;
+          });
+        });
+      });
+    }));
+  }
+
+  /** Where the cat lies so that the hollow of its curl is round the kittens' heap in the middle of the straw. */
   private curlAt(): THREE.Vector3 {
-    return this.belfry.nest().setY(this.belfry.floor + 0.03).add(new THREE.Vector3(0.08, 0, 0.12));
+    const fx = Math.sin(CURL_YAW), fz = Math.cos(CURL_YAW), k = this.cast.cat.scale;
+    return this.belfry.nest().setY(this.belfry.floor + 0.03).add(new THREE.Vector3(-fz * 0.1 * k - fx * 0.01 * k, 0, fx * 0.1 * k - fz * 0.01 * k));
   }
 
   private curlCat(): void {
@@ -319,6 +320,10 @@ export class BellYard {
     cat.place(at, CURL_YAW, { pose: 'curl', floor: () => at.y });
     cat.look(null);
     this.kittens.nestle(cat);
+  }
+
+  private later(seconds: number, go: () => void): void {
+    this.timers.push({ at: this.t + seconds, go });
   }
 
   /** On the sill in the opening she climbed in by, halfway through the wall. */
@@ -394,18 +399,22 @@ export class BellYard {
         this.eye.set(upright ? -13.6 : -11.2, S + (upright ? 5.2 : 3.3), upright ? 3.6 : 4.4);
         this.target.set(upright ? -2.2 : -1.9, S + (upright ? -1.5 : 0.35), upright ? 0.1 : -0.2);
     }
-    this.eye.add(this.centre);
+    /** The eye goes round the tower, never through it: it glides in its bearing, distance and height about the middle. */
+    const want = this.orbitWant.set(Math.atan2(this.eye.z, this.eye.x), Math.hypot(this.eye.x, this.eye.z), this.eye.y);
     this.target.add(this.centre);
     if (this.cut || this.view !== 'play') {
-      this.eyeNow.copy(this.eye);
+      this.orbitNow.copy(want);
       this.targetNow.copy(this.target);
       this.eyeSpeed.set(0, 0, 0);
       this.targetSpeed.set(0, 0, 0);
       this.cut = false;
     } else {
-      glide(this.eyeNow, this.eyeSpeed, this.eye, LENS_GLIDE, this.dt);
+      want.x = this.orbitNow.x + Math.atan2(Math.sin(want.x - this.orbitNow.x), Math.cos(want.x - this.orbitNow.x));
+      glide(this.orbitNow, this.eyeSpeed, want, LENS_GLIDE, this.dt);
       glide(this.targetNow, this.targetSpeed, this.target, LENS_GLIDE * 0.8, this.dt);
     }
+    const o = this.orbitNow;
+    this.eyeNow.set(this.centre.x + Math.cos(o.x) * o.y, o.z, this.centre.z + Math.sin(o.x) * o.y);
     shot.eye = (shot.eye ?? new THREE.Vector3()).copy(this.eyeNow);
     shot.target.copy(this.targetNow);
     shot.distance = this.eyeNow.distanceTo(this.targetNow);

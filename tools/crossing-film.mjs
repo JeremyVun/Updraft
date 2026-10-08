@@ -5,7 +5,8 @@
 //   mill: broad circles round the hub on screen until she steps off at the top, then on a while; also PAUSE=<s>
 //         stops circling for that long once she is a third of the way up, to show the coast and the pawl holding.
 //   sheet: firm strokes up the line across the sheet until she is set down on the far roof.
-//   bell: BELL=climb (default) films her climb up the ivy and in; BELL=down her climb back out and down; BELL=ring
+//   bell: BELL=climb (default) films her climb up the ivy, and her kneeling in the opening over the nest until she
+//         stands to ring; BELL=down her climb back out and down; BELL=ring
 //         firm strokes across the bell until it has rung RINGS times (default 4), then on while the waves roll out.
 //         VIEW=climb-near|climb-far|... holds the yard's lens on one of its views. CLIP=<file.mp4> also writes every
 //         frame at 30 fps to a clip, with the bell's rings rendered into its sound track where they fell.
@@ -107,7 +108,7 @@ try {
     const until = now + 4;
     while (now < until) await tick();
   } else if (what === 'bell' && bellFrom !== 'ring') {
-    const done = bellFrom === 'down' ? (s) => s.phase === 'below' : (s) => s.phase === 'nest' || s.phase === 'ringing';
+    const done = bellFrom === 'down' ? (s) => s.phase === 'below' : (s) => s.phase === 'ringing';
     for (let guard = 0; guard < 60 * 40; guard++) {
       if (done(await state())) break;
       await tick();

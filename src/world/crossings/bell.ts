@@ -93,10 +93,17 @@ void main() {
     /** Bronze shows what is round it: indoors the dim timbers and stone, and the sky only where it looks out through a light. */
     vec3 r = reflect(-V, n);
     float sky = smoothstep(-0.15, 0.2, r.y) * (1.0 - smoothstep(0.35, 0.85, r.y));
-    float open = mix(sky, belfryOpen(vWorld + r * 0.05, r), uIndoors);
-    float fres = 0.3 + 0.7 * pow(1.0 - clamp(dot(n, V), 0.0, 1.0), 3.0);
+    /** Old bronze is not a mirror: the openings it reflects are blurred, five looks a little apart. */
+    vec3 side = normalize(cross(r, vec3(0.0, 1.0, 0.0)) + 1e-4);
+    float seen = 0.0;
+    for (int i = 0; i < 5; i++) {
+      vec2 o = vec2(float(i - 2) * 0.16, float((i * 3) % 5 - 2) * 0.08);
+      seen += belfryOpen(vWorld + r * 0.05, normalize(r + side * o.x + vec3(0.0, o.y, 0.0)));
+    }
+    float open = mix(sky, seen / 5.0, uIndoors);
+    float fres = 0.15 + 0.85 * pow(1.0 - clamp(dot(n, V), 0.0, 1.0), 4.0);
     vec3 room = mix(uSkyAmbient * 0.15, uSunColor * vec3(1.0, 0.7, 0.45) * 0.05 + uSkyAmbient * 0.04, uIndoors);
-    col += mix(room, mix(uSkyHorizon, uSkyHorizonSun, 0.5) * mix(0.7, 0.4, uIndoors), open) * mix(vec3(1.0), metal * 3.0, 0.6) * fres * shine;
+    col += mix(room, mix(uSkyHorizon, uSkyHorizonSun, 0.5) * mix(0.7, 0.45, uIndoors), open) * mix(vec3(1.0), metal * 3.0, 0.6) * fres * shine;
     /** Struck, the bronze shivers: a sheen runs round the sound bow and up the waist as it rings. */
     float band = 0.5 + 0.5 * sin(a * 6.0 + y * 9.0 - uTime * 40.0);
     col += uSkyHorizonSun * tint * uShimmer * (0.35 + 0.65 * band) * smoothstep(-0.4, -1.5, y) * shine * 0.6;
@@ -167,6 +174,8 @@ export class Bell {
   heading = 0;
   onEvent: ((kind: BellEvent, at: THREE.Vector3, strength: number) => void) | null = null;
   onRing: ((strength: number) => void) | null = null;
+  /** Off while she is not there to ring it: strokes pass it by, and it neither asks for one nor rings by itself. */
+  live = true;
   /** QA: the most recent swing's top (radians), and the swing a stroke last asked for. */
   peak = 0;
   ask = 0;
@@ -186,6 +195,7 @@ export class Bell {
   private readonly v = new THREE.Vector3();
   private readonly w = new THREE.Vector3();
   private readonly middleAt = new THREE.Vector3();
+  private readonly inviteAt = new THREE.Vector3();
   private readonly axisA = new THREE.Vector2();
   private readonly axisB = new THREE.Vector2();
   private readonly centreAt = new THREE.Vector2();
@@ -319,11 +329,13 @@ export class Bell {
   update(dt: number, camera: THREE.PerspectiveCamera): void {
     if (dt <= 0) return;
     const k = tuning.crossings.bell;
-    this.quiet += dt;
-    this.sinceRing += dt;
+    if (this.live) {
+      this.quiet += dt;
+      this.sinceRing += dt;
+      this.brush(camera, dt);
+      if (this.valving) this.blow(dt);
+    }
     this.askAge += dt;
-    this.brush(camera, dt);
-    if (this.valving) this.blow(dt);
 
     const energy = 0.5 * this.speed * this.speed + k.pull * (1 - Math.cos(this.angle));
     const wanted = k.pull * (1 - Math.cos(this.ask));
@@ -351,8 +363,8 @@ export class Bell {
     this.shudder = Math.max(0, this.shudder - dt * 0.7);
 
     const resting = Math.abs(this.angle) < 0.03 && Math.abs(this.speed) < 0.05;
-    const asking = this.quiet > k.inviteAfter && resting && !this.valving;
-    this.invitation = asking ? this.middle(new THREE.Vector3()) : null;
+    const asking = this.live && this.quiet > k.inviteAfter && resting && !this.valving;
+    this.invitation = asking ? this.middle(this.inviteAt) : null;
     if (asking) this.heading = this.screenHeading(camera);
     this.pose();
   }
