@@ -735,7 +735,8 @@ lilac-gold sheets over the ridge breaking into threads at the waterline, but eve
 the flipper lays the same bright curtain along the back, so it repeats and pulls the eye from the step at hand. The
 spout is white and gold but swells into a round opaque ball like cotton wool, a cloud rather than a blow. The scars
 read across the water as drawn chevrons. The leap kept in frame and the softlock found at seed 149 are both right.
-The white curved strokes in the sky over the breath are the player's own drawn wind, not an artifact.
+The white curved strokes are the steps' drawn invitations (at the weak breath's still, the coax over the blowhole),
+not an artifact.
 
 ### Phase N3q: her frame
 After N3n and N3o merged on `sea-whale`; in parallel with N3r. The look's landscape frame made the owl's: her whole
