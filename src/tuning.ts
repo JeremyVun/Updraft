@@ -1539,21 +1539,22 @@ export const tuning = {
      */
     lookIn: 2.4, lookMove: 4, eyeOpens: 3, eyeOpening: 0.55, blinkAt: 7.6, reachFrom: 8, callAt: 8.9, peepAt: 10.1, handOff: 1.4, lookFor: 10,
     /**
-     * The look between them, framed as the owl's is: low over her left shoulder, `lookDistance` behind the boat and
-     * `lookHeight` up, `lookBearing` round to port of astern, looking `lookToward` of the way from the boat to its eye,
-     * `lookLookY` up: her whole upper body to the right of its eye, and the mast at the frame's edge with the sail beyond it.
+     * The look between them, framed as the owl's is: `lookDistance` behind the boat and `lookHeight` up, `lookBearing`
+     * round to port of astern, so she is seen three-quarters from behind her left shoulder, looking `lookToward` of the
+     * way from the boat to its eye, `lookLookY` up: the whole boat and her seated figure (about a quarter of the frame's
+     * height) to the right, its eye large to the left across clear water, the sail behind her at the frame's edge.
      */
-    lookDistance: 4.6, lookHeight: 1.6, lookBearing: 0.08, lookLookY: 2.6, lookToward: 0.66,
+    lookDistance: 9.5, lookHeight: 2, lookBearing: 0.3, lookLookY: 2.7, lookToward: 0.32,
     /**
-     * Looked at, she slides along the thwart toward the port rail (m), turns on it to face its eye (radians) and
-     * leans out over the rail toward it (radians), clear of the mast and the sail behind her.
+     * Looked at, she slides along the thwart toward the port rail (m), turns on it until she faces its eye (radians:
+     * she sits a little turned to port already) and leans toward it (radians).
      */
-    lookSlide: 0.35, lookTurn: 0.95, lookLean: 0.9,
+    lookSlide: 0.35, lookTurn: 0.05, lookLean: 0.35,
     /**
-     * Where she holds her mitten out to its eye, from her face (m): out to port, on toward its eye, and up. Leaning
-     * out she is already over the rail, so nearer than this the arm folds back against her hood.
+     * Where she holds her left mitten up toward its eye, from her face (m): out to port, on toward its eye, and up.
+     * Out of reach, so her arm stretches up and out and the mitten shows beside her hood against its flank.
      */
-    lookReach: [0.35, 0.25, 0.32],
+    lookReach: [0.5, 0.15, 0.4],
     /**
      * The light lent her (`Traveller.lent`) in the look and the farewell, where the low sun is behind her: the sun
      * along her outline, the lantern wrapped round her face and side, a lift in her shade; eased at `lightEase` a second.
@@ -1613,7 +1614,7 @@ export const tuning = {
      */
     phone: {
       breath: { distance: 18, height: 2.8, turn: -0.2, lookY: 8, toward: 0.35 },
-      look: { distance: 3.8, height: 2.1, turn: -0.42, lookY: 2.5, toward: 0.5 },
+      look: { distance: 4.8, height: 2.2, turn: -0.55, lookY: 2.5, toward: 0.28 },
       line: { distance: 6, height: 3.2, turn: -0.75, lookY: 3, toward: 0.37, eyeward: 1 },
       flipper: { distance: 12, height: 3.4, turn: -1.5, lookY: 3, toward: 0.5 },
       release: { distance: 12, height: 3, turn: -0.3, lookY: 12, toward: 0.4 },
