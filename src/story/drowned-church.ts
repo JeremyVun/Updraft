@@ -18,7 +18,7 @@ import type { Cast } from './cast';
  * `foot` her at the tower's foot as the cat runs up the ivy; `climb` her going up after it; `nest` kneeling in the
  * opening over the kittens; `sea` standing in it looking out over the fog sea; `ring` the bell hers to ring, the lost
  * boat's lantern answering out in the fog; `down` her climbing down to it as the player sails it the last stretch;
- * `wait` on the slates for it; `board` stepping down into it; `aboard` looking back up at the cat on the sill.
+ * `wait` on the slates for it; `board` stepping down into it; `aboard` looking back up at the cat on the nave's ridge.
  */
 type Step = 'foot' | 'climb' | 'nest' | 'sea' | 'ring' | 'down' | 'wait' | 'board' | 'aboard';
 
@@ -198,7 +198,7 @@ export class ChurchArrival {
     this.lensCut = true;
   }
 
-  /** QA: on to her just seated aboard at the berth, the cat on the sill above and the fog drawn back to the water. */
+  /** QA: on to her just seated aboard at the berth, the cat on the ridge above and the fog drawn back to the water. */
   skipToAboard(): void {
     const { boat, child: c, cat } = this.cast;
     const k = tuning.drowned.church;
@@ -506,8 +506,8 @@ export class ChurchArrival {
   private madeFast = false;
 
   /**
-   * Seated, she turns round on the thwart to look back up at the cat and its kitten on the sill, the way that keeps
-   * her face from the lens; the cat looks down at her and gives her a slow blink.
+   * Seated, she turns round on the thwart to look back up at the cat on the ridge, the way that keeps her face from the
+   * lens; the cat looks down at her and gives her a slow blink, then goes home.
    */
   private lookUp(dt: number): void {
     const { child: c, cat, boat } = this.cast;
@@ -787,7 +787,8 @@ export class ChurchArrival {
    * through the other at the kittens she has found; out west over the fog
    * sea while she stands looking at it; beside the tower while the bell is hers to ring, the bell, her in the other light
    * and the fog sea where the lantern answers; high off the north water, coming down with her as she climbs to the boat
-   * coming in; and low beside the boat, up past her face to the cat and its kitten on the sill, held for the blink.
+   * coming in; off the boat's starboard quarter as she steps in; and over her shoulder at the cat on the ridge, held for
+   * the blink.
    */
   frame(shot: Shot, dt: number): number {
     const k = tuning.drownedCamera.church;
