@@ -109,7 +109,9 @@ void main() {
     // spout's firmer at its lumpy edge, so its crown billows as a shape against the bright sky behind it.
     float edge = mix(0.75 + 0.2 * lumps, 0.62 + 0.3 * lumps, spout);
     float body = 1.0 - smoothstep(edge * mix(0.35, 0.72, spout), edge, r);
-    a = pow(body, 1.5 - 0.7 * spout) * smoothstep(vAge * 0.6, vAge * 0.6 + 0.5, lumps + 0.2) * vAlpha;
+    // Thinning, it frays into wisps rather than fading as a ball.
+    float fray = vAge * mix(0.6, 0.8, spout);
+    a = pow(body, 1.5 - 0.7 * spout) * smoothstep(fray, fray + mix(0.5, 0.4, spout), lumps + 0.2) * vAlpha;
     // Each puff a soft ball, a little of the column's own side in it.
     float k = min(r, 1.0);
     float facing = sqrt(max(0.0, 1.0 - k * k));

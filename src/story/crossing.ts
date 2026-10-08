@@ -519,7 +519,8 @@ export class CrossingChapter implements Chapter {
     const swimming = this.swim === 'restless' || this.swim === 'side' || this.swim === 'in' || this.swim === 'drying';
     // Where a whale waits, the nudge asks the boat to follow and the pod leads it off instead of saying goodbye.
     const whaleLed = this.whale !== null && this.swim === 'done' && sealife.dolphinFarewellReady;
-    if (this.whale && whaleLed) this.whale.led = true;
+    // Come to rest beside it with the pod's nudge never landed, it has brought her there all the same.
+    if (this.whale && (whaleLed || this.whale.step !== 'approach')) this.whale.led = true;
     const withPod = this.wantsDolphins && this.time >= tuning.seaPassage.dolphinsAfter
       && (this.whale !== null || this.podProgress() < tuning.seaPassage.farewellAt || this.swim !== 'done' || !sealife.dolphinFarewellReady);
     // The nudge may begin its approach, under water, while the cygnet is climbing back aboard. The first leap

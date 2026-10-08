@@ -58,6 +58,9 @@ function surge(r: number, t: number): number {
 
 /** A shallow trough follows the ring out, as the sea it heaped up settles back. */
 const HEAVE_TROUGH = 0.35;
+/** It broadens over its first `HEAVE_SPREADS` m, and ends a little way either side, so the far sea is left as it was. */
+const HEAVE_SPREADS = 12;
+const HEAVE_EDGE = (d: number) => THREE.MathUtils.smoothstep(-d, -2.6, -2.0) * THREE.MathUtils.smoothstep(d, -4.4, -3.6);
 
 /** The lift at (x, z) of the low ring of swell a breathing whale sends out from its flank. */
 function heave(g: THREE.Vector4, x: number, z: number, time: number): number {
@@ -66,8 +69,9 @@ function heave(g: THREE.Vector4, x: number, z: number, time: number): number {
   const t = time - g.z;
   const along = THREE.MathUtils.clamp((x - g.x) * a.x + (z - g.y) * a.y, -a.z, a.z);
   const off = Math.hypot(x - g.x - a.x * along, z - g.y - a.y * along) - a.w;
-  const d = (off - t * S.heaveSpeed) / (S.heaveWidth + S.heaveSpread * Math.max(off, 0));
-  return g.w * (Math.exp(-d * d) - HEAVE_TROUGH * Math.exp(-(d + 1.6) * (d + 1.6))) * THREE.MathUtils.smoothstep(t, 0, 1.5)
+  const d = (off - t * S.heaveSpeed) / (S.heaveWidth + S.heaveSpread * THREE.MathUtils.clamp(off, 0, HEAVE_SPREADS));
+  if (d > 2.6 || d < -4.4) return 0;
+  return g.w * (Math.exp(-d * d) - HEAVE_TROUGH * Math.exp(-(d + 1.6) * (d + 1.6))) * HEAVE_EDGE(d) * THREE.MathUtils.smoothstep(t, 0, 1.5)
     * (1 - THREE.MathUtils.smoothstep(t, S.heaveFor * 0.6, S.heaveFor)) * S.heaveReach / (S.heaveReach + Math.max(off, 0));
 }
 
@@ -102,8 +106,9 @@ float heaveRing(vec2 p, vec4 g) {
   float t = uTime - g.z;
   vec2 q = p - g.xy;
   float off = length(q - uHeaveAxis.xy * clamp(dot(q, uHeaveAxis.xy), -uHeaveAxis.z, uHeaveAxis.z)) - uHeaveAxis.w;
-  float d = (off - t * ${glsl(S.heaveSpeed)}) / (${glsl(S.heaveWidth)} + ${glsl(S.heaveSpread)} * max(off, 0.0));
-  return g.w * (exp(-d * d) - ${glsl(HEAVE_TROUGH)} * exp(-(d + 1.6) * (d + 1.6))) * smoothstep(0.0, 1.5, t)
+  float d = (off - t * ${glsl(S.heaveSpeed)}) / (${glsl(S.heaveWidth)} + ${glsl(S.heaveSpread)} * clamp(off, 0.0, ${glsl(HEAVE_SPREADS)}));
+  if (d > 2.6 || d < -4.4) return 0.0;
+  return g.w * (exp(-d * d) - ${glsl(HEAVE_TROUGH)} * exp(-(d + 1.6) * (d + 1.6))) * (1.0 - smoothstep(2.0, 2.6, d)) * smoothstep(-4.4, -3.6, d) * smoothstep(0.0, 1.5, t)
     * (1.0 - smoothstep(${glsl(S.heaveFor * 0.6)}, ${glsl(S.heaveFor)}, t)) * ${glsl(S.heaveReach)} / (${glsl(S.heaveReach)} + max(off, 0.0));
 }
 
