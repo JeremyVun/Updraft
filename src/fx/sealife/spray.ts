@@ -283,6 +283,23 @@ export class Spray {
     }
   }
 
+  /**
+   * One frame of a slow sigh seen from far off: a soft plume of round puffs `scale` times the size of a near one,
+   * rising clear of the breeze from the blowhole and standing a while before it drifts and thins.
+   */
+  plume(at: THREE.Vector3, scale: number, strength: number, dt: number): void {
+    const n = Math.floor(strength * 30 * dt + Math.random());
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const reach = 0.3 + 0.7 * Math.sqrt(Math.random());
+      const out = (0.08 + reach * 0.24) * scale;
+      const up = reach * 2.8 * scale * DRAG[COLUMN] * strength * (0.9 + Math.random() * 0.2);
+      this.emit(COLUMN, at.x + Math.cos(a) * 0.2 * scale, at.y, at.z + Math.sin(a) * 0.2 * scale, Math.cos(a) * out, up, Math.sin(a) * out,
+        (0.36 + Math.random() * 0.22) * scale, 6.5 + Math.random() * 2.5, (0.12 + reach * 0.14) * scale, 0.36 + Math.random() * 0.2, 2.4);
+      this.side[this.count - 1] = a / (Math.PI * 2);
+    }
+  }
+
   /** White water thrown up where something heavy breaks the surface. */
   splash(x: number, z: number, radius: number, strength: number): void {
     const n = Math.round(20 + 90 * strength);

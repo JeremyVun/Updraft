@@ -63,8 +63,8 @@ const SALUTES = [
 ];
 const SALUTE_SWIM = 3;
 const POD_SPREAD = 0.35;
-/** Seconds the child holds a point toward a breath she has seen. */
-const POINT_FOR = 2.6;
+/** Seconds the child holds a point toward a breath she knows is coming. */
+const POINT_FOR = 3.6;
 /**
  * Where she takes the line, in the boat's own frame (x to port, y up from its origin, z forward): coming up out of
  * the water into her outer mitten just outside the rail, through the inner one in toward her, and down in a coil on
@@ -149,7 +149,7 @@ export class NetWhale {
   /** How far the crossing's view has given way to the hold beside it, 0..1, and to the wider view as it goes. */
   hold = 0;
   release = 0;
-  /** How far the crossing's view has risen to look over the pod leading the boat in, 0..1. */
+  /** How far the crossing's view has turned to look past the pod leading the boat in, 0..1. */
   private rise = 0;
   /** How far the child has turned on her seat toward it, radians. */
   turn = 0;
@@ -159,6 +159,7 @@ export class NetWhale {
   hush = 0;
   /** The pod has nudged the boat and now leads it; from here the encounter says where the dolphins run. */
   led = false;
+  private ledSeen = false;
   /** How far the patch of net over the blowhole has been lifted clear by circling, or by the valve's dolphin, 0..1. */
   progress = 0;
   /** What lifted it: the player's circles, or the dolphin sent once nothing had for a long while. */
@@ -202,9 +203,8 @@ export class NetWhale {
   private readonly forward = new THREE.Vector3();
   private readonly subjects = { primary: new THREE.Vector3(), secondary: new THREE.Vector3(), tertiary: new THREE.Vector3(),
     margin: 0.85, extra: 10 };
-  /** Seconds since the encounter began, and when it last breathed out. */
+  /** Seconds since the encounter began. */
   private clock = 0;
-  private exhaled = -1e9;
   /** How strongly the player's updraft is lifting under the patch right now, eased. */
   private wind = 0;
   private breathed = false;
@@ -306,10 +306,7 @@ export class NetWhale {
     this.p.set(rest.x + Math.sin(toEye) * K.eyeDistance, 0, rest.y + Math.cos(toEye) * K.eyeDistance);
     const whale = this.whale;
     whale.lie(this.p, this.yaw - K.bodyAngle + Math.PI, this.rest);
-    whale.onExhale = (strength) => {
-      this.exhaled = this.clock;
-      this.net.breathe(strength);
-    };
+    whale.onExhale = (strength) => this.net.breathe(strength);
     this.net.drape(this.rest, this.yaw);
     this.net.hull = cast.boat;
     this.net.endRest = this.local(K.endOut, K.endAhead, this.endRest);
@@ -477,6 +474,11 @@ export class NetWhale {
     const resting = left < 1.5 && boat.speed < 0.2;
     this.still = resting ? this.still + dt : 0;
     if (this.step === 'approach' && this.still > 1) this.goTo('breath');
+    // As the pod turns the boat toward it, it sighs in the haze ahead while they watch.
+    if (this.led && !this.ledSeen) {
+      this.ledSeen = true;
+      if (this.step === 'approach') whale.sighIn(K.leadSigh);
+    }
     if (this.step === 'breath') this.breathe(dt);
     if (this.step === 'line') this.haulLine(dt);
     if (this.step === 'flipper') this.lastLoop(dt, time);
@@ -719,12 +721,12 @@ export class NetWhale {
   }
 
   /**
-   * At each breath she sees in the haze she sits up and holds an arm out toward it for a moment; at the first, the
-   * cygnet peeks out of the satchel at it too.
+   * She knows it before the player does: a moment before each breath in the haze ahead she sits up straight and
+   * holds an arm up toward it; at the first, the cygnet peeks out of the satchel at it too.
    */
   private recognise(time: number): void {
     const { child, cygnet } = this.cast;
-    if (this.pointing < 0 && this.clock - this.exhaled < 1 && time > this.nextPoint && this.inView()) {
+    if (this.pointing < 0 && this.whale.untilSigh < K.knowsFirst && time > this.nextPoint && this.inView()) {
       this.pointing = time;
       if (!this.knew && this.cygnetIn === 'satchel') {
         this.knew = true;
@@ -732,16 +734,17 @@ export class NetWhale {
       }
     }
     if (this.pointing < 0) return;
-    child.lean = -0.04;
+    // Up straight and leaning toward it, as a child does who has seen something before anyone else.
+    child.lean = K.knowsLean;
     if (time - this.pointing > POINT_FOR) {
       this.stopPointing();
       this.nextPoint = time + 4;
       return;
     }
-    // An arm's length out toward the breath, a little above her shoulder.
+    // An arm's length out and up toward its breath, well above her shoulder.
     child.face(this.a);
     this.b.subVectors(this.whale.blowhole, this.a).setY(0).normalize();
-    this.p.copy(this.a).addScaledVector(this.b, 0.5).setY(this.a.y + 0.08);
+    this.p.copy(this.a).addScaledVector(this.b, 0.55).setY(this.a.y + 0.28);
     child.reachFor(0, this.p);
   }
 
@@ -1620,10 +1623,11 @@ export class NetWhale {
     const h = THREE.MathUtils.smootherstep(this.hold, 0, 1);
     if (!this.holdSet) this.holdFor(this.step, true);
     shot.clearance = undefined;
-    // Led off its line, the view rises to look over the pod at the long low island it is making for.
+    // Led off its line, the view comes down and in toward her, so her arm held up stands against the haze, and the
+    // look goes on toward the long low island it is making for while the eye stays behind the boat.
     const rise = THREE.MathUtils.smootherstep(this.rise, 0, 1);
-    shot.height += K.riseHeight * rise;
-    // The look goes on toward it while the eye stays behind the boat.
+    shot.height -= K.leadDrop * rise;
+    shot.distance -= K.leadIn * rise;
     this.b.copy(shot.target);
     const phone = (this.camera?.aspect ?? 16 / 9) < 1;
     shot.target.lerp(this.a.copy(this.whale.eye).setY(K.riseLook), (phone ? K.riseTowardPhone : K.riseToward) * rise);

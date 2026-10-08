@@ -1433,14 +1433,19 @@ export const tuning = {
      * low as `holdClearance` over the water and backed off at most `holdRoom` metres to keep what a step asks for in
      * frame; and the wider view it eases back out to as it goes free, the plume leaving the top of the frame.
      */
-    holdFrom: 40, holdFull: 6, holdDistance: 16, holdHeight: 2.8, holdBearing: 0.18, holdEase: 0.45, holdClearance: 1, holdRoom: 2,
+    holdFrom: 75, holdFull: 6, holdDistance: 13, holdHeight: 2.8, holdBearing: 0.18, holdEase: 0.45, holdClearance: 1, holdRoom: 2,
     /**
-     * Led off its line, the crossing's view rises this much higher (m) at `riseEase` a second, its look going
-     * `riseToward` of the way from the boat to the whale's eye (`riseTowardPhone` in a phone's narrow frame), `riseLook` metres up.
+     * Led off its line, the crossing's view comes `leadDrop` lower and `leadIn` nearer (m) at `riseEase` a second, its
+     * look going `riseToward` of the way from the boat to the whale's eye (`riseTowardPhone` in a phone's narrow
+     * frame), `riseLook` metres up; the hold beside it takes it on down from there.
      */
-    riseHeight: 4, riseEase: 0.3, riseLook: 2, riseToward: 0.4, riseTowardPhone: 0.12,
-    /** Seconds the cygnet peeks out of the satchel at its first breath in the haze. */
-    peekFor: 2.5,
+    leadDrop: 2.6, leadIn: 8, riseEase: 0.3, riseLook: 2, riseToward: 0.4, riseTowardPhone: 0.12,
+    /**
+     * Seconds the cygnet peeks out of the satchel at its first breath in the haze; seconds after the pod turns the
+     * boat toward it that it sighs there; and how long before each breath she knows it is coming, leans toward it
+     * (radians) and points.
+     */
+    peekFor: 2.5, leadSigh: 4, knowsFirst: 1.2, knowsLean: 0.32,
     releaseDistance: 30, releaseHeight: 12, releaseBearing: 0.28,
     /**
      * The sea's score thins as the boat comes in, from `hushFrom` to `hushNear` metres short of the rest, to `hushSorrow`

@@ -28,6 +28,9 @@ const FIN_S = -FIN_ROOT.z / LENGTH;
 const FREE_FIN = new THREE.Vector2(0.95, -0.4);
 /** Lying at the surface the fluke tips curl up a little at the far end. */
 const REST_CURL = 0.2;
+/** How far through each slow breath it breathes out, and how long a sigh seen from far off goes on rising (s). */
+const SIGH_AT = 0.42;
+const SIGH_FOR = 2.2;
 /** The first full breath, in seconds: drawn in, then out in a soft column up through the spiral. */
 const BREATH_IN = 1.4;
 const BREATH_OUT = 3.6;
@@ -125,6 +128,8 @@ export class SleepingWhale extends WhaleRig {
   private breath = 0;
   private sighed = true;
   private liftT = -1;
+  /** A sigh seen from far off, still rising: seconds of it left, how far off, how strong. */
+  private sigh = { left: 0, far: 1, strength: 1 };
   private surgeNear = 12;
   private worldTime = 0;
   private readonly u = new Float32Array(SPINE_N);
@@ -205,6 +210,23 @@ export class SleepingWhale extends WhaleRig {
     this.uniforms.uLost.value = amount;
   }
 
+  /** Seconds until its next weak breath out, while it lies resting. */
+  get untilSigh(): number {
+    if (this.phase !== 'resting') return Infinity;
+    return (this.breath < SIGH_AT ? SIGH_AT - this.breath : 1 + SIGH_AT - this.breath) * this.breathPeriod();
+  }
+
+  /** Its next weak breath out comes `seconds` from now, while it lies resting. */
+  sighIn(seconds: number): void {
+    if (this.phase !== 'resting') return;
+    this.breath = SIGH_AT - Math.min(SIGH_AT - 0.02, seconds / this.breathPeriod());
+    this.sighed = false;
+  }
+
+  private breathPeriod(): number {
+    return K.breathEvery / (1 + (this.phase === 'woken' ? 1 : this.stir) * 0.6);
+  }
+
   /** Gone already: nothing of it left on the water. */
   vanish(): void {
     this.phase = 'gone';
@@ -271,6 +293,10 @@ export class SleepingWhale extends WhaleRig {
     else this.lieThere(dt);
     this.lift(dt);
     this.locate();
+    if (this.sigh.left > 0) {
+      this.spray.plume(this.blowhole, this.sigh.far, this.sigh.strength * (this.sigh.left / SIGH_FOR) ** 0.6, dt);
+      this.sigh.left -= dt;
+    }
     this.lookOut(dt);
     this.wake.update(dt, time);
     if (this.headWet > 0) {
@@ -322,14 +348,14 @@ export class SleepingWhale extends WhaleRig {
       this.sighed = true;
     } else {
       const deep = this.phase === 'woken' ? 1 : this.stir;
-      this.breath += dt / (K.breathEvery / (1 + deep * 0.6));
+      this.breath += dt / this.breathPeriod();
       if (this.breath >= 1) {
         this.breath -= 1;
         this.sighed = false;
       }
       const b = this.breath;
       rise = K.breathRise * (1 + deep * 1.2) * (0.5 - 0.5 * Math.cos(Math.PI * 2 * Math.min(1, b / 0.8)));
-      if (!this.sighed && b > 0.42) {
+      if (!this.sighed && b > SIGH_AT) {
         this.sighed = true;
         const strength = 0.6 + deep * 0.8;
         this.mist(strength);
@@ -388,6 +414,8 @@ export class SleepingWhale extends WhaleRig {
   private mist(strength: number): void {
     const at = this.blowhole;
     const far = THREE.MathUtils.clamp(this.seenFrom / 25, 1, 4);
+    // Seen from far off, its sigh is a soft plume standing in the haze.
+    if (far > 1.6) this.sigh = { left: SIGH_FOR, far, strength };
     const slow = Math.sqrt(far);
     const n = Math.round(14 * strength * K.mist);
     for (let i = 0; i < n; i++) {
