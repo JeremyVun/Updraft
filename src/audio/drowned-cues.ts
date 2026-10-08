@@ -91,7 +91,8 @@ function stuck(): Cue {
     const at = bar * BAR + beat * BEAT;
     return [pulse(at, root, 1.8, .0085), pulse(at, root + 12, 1.8, .003), pulse(at + .22, root, 1.8, .0055)];
   });
-  const first = [...sing('cello', QUESTION.slice(0, 3), 2 * BAR, 2 * BEAT, .013), ...[4, 5, 6, 7].flatMap((bar) => heart(bar, 42))];
+  const first = [...sing('cello', QUESTION.slice(0, 3), 2 * BAR, 2 * BEAT, .013),
+    ...[4, 5, 6, 7].flatMap((bar) => heart(bar, 42))];
   const held = [47, 47, 43, 43, 42, 42, 42, 42].flatMap((root, bar) => heart(bar, root));
   return cue(8 * BAR, chords, [first, held]);
 }
@@ -100,8 +101,8 @@ function stuck(): Cue {
 function beats(at: number, root: number): CueNote[] {
   return [0, 1, 2, 3].flatMap((beat) => {
     const t = at + beat * BEAT;
-    return [...(beat % 2 ? [pulse(t, root + 7, 2, .0064, { fill: 1 })] : [pulse(t, root, 2, .008), pulse(t, root + 12, 2, .0033)]),
-      pulse(t + BEAT / 2, root + 12, 1.8, .005, { fill: 2 })];
+    const on = beat % 2 ? [pulse(t, root + 7, 2, .0064, { fill: 1 })] : [pulse(t, root, 2, .008), pulse(t, root + 12, 2, .0033)];
+    return [...on, pulse(t + BEAT / 2, root + 12, 1.8, .005, { fill: 2 })];
   });
 }
 
@@ -232,9 +233,9 @@ function belfry(): Cue {
 
 /**
  * Each answer of the lantern sings the question so far, a note further each time (D over G, D–E over E minor, D–E–F♯
- * over the suspended A), once the bell's strike has passed: the felt struck, the cello an octave under, below the
- * bell's ringing partials. If the next ring is slow in coming, the strings turn through voicings of the chord and the
- * cello recalls the notes so far at half speed.
+ * over the suspended A), once the bell's strike has passed: the felt struck in the lullaby's octave, above the bell's
+ * ringing partials, and the cello swelling below them. If the next ring is slow in coming, the strings turn through
+ * voicings of the chord and the cello recalls the notes so far at half speed.
  */
 function answer(sung: number, level: number, ...voicings: (readonly number[])[]): Cue {
   const so = [D, E, Fs].slice(0, sung), last = sung - 1;
@@ -242,7 +243,7 @@ function answer(sung: number, level: number, ...voicings: (readonly number[])[])
   const bowed: Line = so.map((midi, i) => [i, midi, i === last ? 5 : 1]);
   const recalled: Line = so.map((midi, i) => [2 * i, midi, i === last ? 6 : 2]);
   const chords = [...voicings, voicings[0]].map((tones, i): Chord => [i * 8, tones, 8, level]);
-  return cue(32, chords, [[...sing('felt', struck, .9, BEAT, .011), ...sing('cello', bowed, .6, BEAT, .012, -12),
+  return cue(32, chords, [[...sing('felt', struck, .9, BEAT, .011, 12), ...sing('cello', bowed, .6, BEAT, .012, -12),
     ...sing('cello', recalled, 9, BEAT, .008, -12)]], { loopFrom: 8, fade: 1 });
 }
 
@@ -251,10 +252,10 @@ const UNDER_HOME_QUESTION: Line = [[0, 54, 4], [4, 52, 4], [8, 50, 4], [12, 47, 
 const UNDER_HOME_ANSWER: Line = [[0, 50, 4], [4, 52, 4], [8, 54, 4], [12, 55, 4]];
 
 /**
- * The fourth answer lands: B over D major, the felt completing the question with the cello an octave under. Then the
- * theme whole in D major over D, A, B minor and G, question then answer, warm, while she climbs down and the boat
- * comes in; each time round the orchestration turns (the cello; the felt an octave up over the cello's counter-line;
- * the cello asking and the felt answering), over a soft beat at the bar.
+ * The fourth answer lands: B over D major, the felt completing the question above the bell with the cello below.
+ * Then the theme whole in D major over D, A, B minor and G, question then answer, warm, while she climbs down and the
+ * boat comes in; each time round the orchestration turns (the cello; the felt an octave up over the cello's
+ * counter-line; the cello asking and the felt answering), over a soft beat at the bar.
  */
 function home(): Cue {
   const major = [CHORD.D, CHORD.A, CHORD.Bm, CHORD.G];
@@ -266,7 +267,7 @@ function home(): Cue {
     return [pulse(at, root, 2, .005), pulse(at, root + 12, 2, .002), pulse(at + 2 * HOME_BEAT, root, 2, .0035)];
   });
   const passes = [
-    [felt(1, B, 3.4, .0105), cello(1.3, B - 12, 4.4, .0102),
+    [felt(1, B + 12, 3.4, .0105), cello(1.3, B - 12, 4.4, .0102),
       ...sing('cello', QUESTION, ask, HOME_BEAT, .014), ...sing('cello', ANSWER, reply, HOME_BEAT, .014)],
     [...sing('felt', QUESTION, ask, HOME_BEAT, .011, 12), ...sing('cello', UNDER_HOME_QUESTION, ask, HOME_BEAT, .0102),
       ...sing('felt', ANSWER, reply, HOME_BEAT, .011, 12), ...sing('cello', UNDER_HOME_ANSWER, reply, HOME_BEAT, .0102)],
