@@ -2228,7 +2228,7 @@ export const tuning = {
     /** The crisp gold line where its back turns away toward the low sun, how thin, and how much the wet top mirrors the sky. */
     ridge: 6, ridgePower: 26, wet: 0.6,
     /** The sun through the eye's cornea warming the lower iris, and its one sharp point of light in the eye. */
-    caustic: 0.5, catchlight: 3,
+    caustic: 0.65, catchlight: 3,
     /** How much of the sky the wet cornea over the iris mirrors. */
     cornea: 0.06,
     /** How far the near flipper turns over along its length for each radian it is lifted. */

@@ -629,7 +629,8 @@ void main() {
   // And a soft second light low in it, the bright sea, so it reads wet and gentle rather than glassy.
   float sea = pow(max(dot(Nc, normalize(V - vec3(0.0, 0.4, 0.0) - vAxisZ * 0.3)), 0.0), 90.0);
   vec3 bright = vec3(1.0, 0.95, 0.86) * dot(uSunColor * 0.5 + uSkyHorizonSun, vec3(0.3, 0.5, 0.2));
-  col += bright * (glint * ${f(L.catchlight)} + sea * 0.06) * k.gloss;
+  // Under the tired lid only a dim glint, so the shut eye never reads as watching.
+  col += bright * (glint * ${f(L.catchlight)} * mix(0.25, 1.0, uEye) + sea * 0.06) * k.gloss;
 
   // The gold line stays crisp over the haze, so the back goes on into the morning as one thin line.
   float filmed = float(part == ${BODY});
