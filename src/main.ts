@@ -958,6 +958,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   soundState.linesScore = story.current.linesScore;
   soundState.linesMelodyQuiet = story.current.linesMelodyQuiet;
   soundState.hush += ((story.current.hush ?? 0) - soundState.hush) * (1 - Math.exp(-dt * 1.6));
+  soundState.seaMuffle = story.current.seaMuffle ?? 0;
   soundState.piano = story.current.pianoMix ?? 0;
   soundState.pianoActive = story.current.pianoActive ?? false;
   soundState.caringWind = story.current.caringWind ?? false;

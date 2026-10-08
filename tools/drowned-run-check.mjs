@@ -1,22 +1,26 @@
 // The drowned village's run over the roofs, played with real pointer gestures in Chrome for Testing against a running
-// dev server: from the drift (strokes bring the wash-tub to the cat and back), the air dying, the dark coming on, the
-// cat's bolt and her climb out, then her way over the roofs after the cat: strokes push the dead tree down across the
-// lane, circles round the hub turn the mill's sail to carry her up, strokes pump the swing until she lets go over the
-// nave, and she walks on to the tower's foot. Reports the run's time and each stretch of it, and fails if she ever
-// leaves the decks, stalls on her own way, or the fog reaches her; checks the cat ends at the tower and the boat at its
-// tree. Then the church: the cat climbs the ivy into the belfry, the fog closes round, strokes across the boat's sail
-// bring it from its tree to the nave, she steps down into it and looks back at the cat as the storm begins; it plays on
-// to the forest beach and reports when the storm's beats fall and where the boat is then, failing if anything stalls or
-// she leaves the decks. Usage: node tools/drowned-run-check.mjs
+// dev server: from the drift (strokes bring the wash-tub to the cat and back, the cat comes to her and she kneels to
+// it), the air dying and the boat running aground, the fog coming on, the cat's bolt and her climb out, then her way
+// over the roofs after the cat: strokes push the dead tree down across the lane and she walks up it, strokes up the
+// sheet's line fill it to carry her over, circles round the hub turn the mill's sails to wind her up its hoist,
+// strokes pump the swing until she lets go over the nave, and she walks on to the tower's foot. Reports the run's
+// time, each walk's seconds on foot, how long she waits on the cat at each piece, the fog's nearest approach and how
+// soon each roof she goes on from goes under, and fails if she leaves the decks, stalls, the fog reaches her or (in a
+// landscape frame) drops out of a walk's frame, a roof she left is not taken, or the boat leaves where it ran aground. Then (unless TO=nave) the
+// church: the cat climbs the ivy into the belfry, the fog closes round, strokes across the boat's sail bring it to the
+// nave, she steps down into it and looks back at the cat as the storm begins; it plays on to the forest beach and
+// reports when the storm's beats fall and where the boat is then, failing if anything stalls or she leaves the decks.
+// Usage: node tools/drowned-run-check.mjs
 //   env: BASE (default http://127.0.0.1:5230/), FROM=stairs starts on the stairs and docks their flights first, FROM=roofs starts on the ridge after the cat (skips the tub and the
 //        becalming), FROM=church at the tower's foot (skips the run too), FROM=storm with her just seated aboard at the
 //        nave (skips the church too), SHOTS=<prefix> saves stills (at each piece,
 //        two between, and through the church), FILM=<seconds> with SHOTS also
 //        saves a still every that many seconds from the air dying (from the ridge with FROM=roofs, the tower's foot
 //        with FROM=church) to the storm, and with FROM=stairs through the descent in the white and 30 s on,
-//        W/H viewport (default 1600x900), LENS=1 also fails on the lens's measures (a roof hiding her, her walking
-//        toward it, her out of frame, it inside a roof; and at the church, from the tower's foot until the storm's
-//        frame takes over, her out of frame or hidden by the church or a roof).
+//        TO=nave stops at the tower's foot, VIDEO=<dir> records the whole play as a webm there, W/H viewport
+//        (default 1600x900), LENS=1 also fails on the lens's measures (a roof hiding her, her walking toward it, her
+//        out of frame, it inside a roof, it whipping round; and at the church, from the tower's foot until the
+//        storm's frame takes over, her out of frame or hidden by the church or a roof).
 import { chromium } from 'playwright-core';
 import assert from 'node:assert/strict';
 
@@ -27,12 +31,16 @@ const fromStairs = process.env.FROM === 'stairs';
 const fromStorm = process.env.FROM === 'storm';
 const fromChurch = process.env.FROM === 'church' || fromStorm;
 const fromRoofs = process.env.FROM === 'roofs' || fromChurch;
+const toNave = process.env.TO === 'nave';
 
 const browser = await chromium.launch({ channel: 'chromium', headless: true,
   args: ['--enable-gpu', '--use-angle=metal', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
 const errors = [];
+const video = process.env.VIDEO ?? null;
+const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1,
+  ...(video ? { recordVideo: { dir: video, size: { width, height } } } : {}) });
 try {
-  const page = await (await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1 })).newPage();
+  const page = await context.newPage();
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto(`${base}?shot=1&chapter=${fromStorm ? 'storm' : fromChurch ? 'church' : fromRoofs ? 'roofs' : fromStairs ? 'stairs' : 'drowned'}&ratio=1`, { waitUntil: 'load' });
   await page.waitForFunction(() => window.__ready === true, null, { timeout: 60000 });
@@ -48,7 +56,7 @@ try {
       const ours = __game.story.name === 'drowned' || last?.name === 'drowned';
       if (ours && last && t > last.t && (last.cut === st.cameraCut || last.story !== st)) {
         const dt = t - last.t, turn = Math.acos(Math.min(1, d.dot(last.d))) * 180 / Math.PI / dt, move = p.distanceTo(last.p) / dt;
-        if (turn > w.turn) { w.turn = turn; w.turnAt = where(); }
+        if (turn > w.turn) { w.turn = turn; w.turnAt = `${where()}, the lens at ${p.toArray().map((v) => v.toFixed(1))} over ${(dt * 1000).toFixed(0)} ms`; }
         if (move > w.move) { w.move = move; w.moveAt = where(); }
       }
       last = { t, d, p, cut: st.cameraCut, story: st, name: __game.story.name };
@@ -77,7 +85,8 @@ try {
     const st = __game.story.current, r = st.run, f = (v) => v.toArray().map((x) => +x.toFixed(2));
     return { time: +__stats.time.toFixed(1), beat: st.beat, step: st.cat.step, stage: r.stage, along: +r.along.toFixed(1),
       child: f(__game.child.position), cat: f(__game.cat.position), tree: r.tree.phase, fallen: r.tree.tree.state,
-      mill: r.mill.phase, swing: r.swing.phase, boatLeft: +st.adriftLeft.toFixed(1) };
+      sheet: r.sheet.phase, clear: r.sheet.clear, mill: r.mill.phase, swing: r.swing.phase, boat: f(__game.boat.position),
+      front: +__game.village.dark.front.toFixed(1), level: +__game.village.dark.level.toFixed(2) };
   });
   /** Waits, in game time, until `test` holds of the state, at most `limit` game seconds. */
   const until = async (test, limit, what) => {
@@ -454,67 +463,119 @@ try {
       return { t: r.handT, off: r.handFrom ? Math.hypot(r.handFrom.x - c.x, r.handFrom.z - c.z) : null }; });
     console.log(`the run took the lens ${hand.t === Infinity ? 'by the rig' : 'by its hand-over'} from ${hand.off?.toFixed(1)} m off her`);
 
-    // Watches every frame from here: her feet on the decks, her progress, and the fog behind her.
+    // Watches every frame from here: her feet on the decks, her progress, the fog behind her and in the frame, the
+    // roofs she leaves going under it, the boat where it lies, and how long she waits on the cat at a piece.
     await page.evaluate(async () => {
       const D = await import('/src/world/decks.ts');
       const W = await import('/src/world/drowned-way.ts');
-      const w = window.__runWatch = { frames: 0, offWorst: 0, offAt: '', fogAlong: Infinity, fogNear: Infinity, fogAt: '',
+      const { tuning } = await import('/src/tuning.ts');
+      const w = window.__runWatch = { frames: 0, offWorst: 0, offAt: '', fogAhead: Infinity, fogNear: Infinity, fogAt: '',
         stallWorst: 0, stallAt: '', last: -1, since: 0, facing: 0, facingRun: 0, facingWorst: 0, facingAt: '', unseen: 0, unseenRun: 0,
-        unseenWorst: 0, unseenAt: '', inside: 0, insideAt: '' };
+        unseenWorst: 0, unseenAt: '', inside: 0, insideAt: '', fogGoneRun: 0, fogGoneWorst: 0, fogGoneAt: '', boatMoved: 0,
+        roofs: {}, waits: {}, levelAt: [] };
       const front = W.DARK_WAY[0].clone();
+      const strand = { x: __game.boat.position.x, z: __game.boat.position.z };
+      const placed = W.PLACED.map((h, i) => ({ h, i }));
+      const cam = __game.rig.camera;
+      const probe = cam.position.clone();
       const tick = () => {
-        const st = __game.story.current, r = st.run, c = __game.child, p = c.position;
+        const st = __game.story.current, r = st.run, c = __game.child, p = c.position, t = __stats.time;
         if (!r || r.stage === 'off') { requestAnimationFrame(tick); return; }
         w.frames++;
-        const flying = c.action?.kind === 'leap' || c.riding || r.swing.phase === 'boarding' || r.swing.phase === 'riding' || r.swing.phase === 'flying';
+        const flying = c.action?.kind === 'leap' || c.riding || r.swing.phase === 'boarding' || r.swing.phase === 'riding' || r.swing.phase === 'flying'
+          || r.sheet.hanging || r.sheet.phase === 'landing' || r.mill.phase === 'riding';
         if (!flying) {
           const beyond = D.beyondDecks(c.decks, p.x, p.z, p.y);
           const under = D.deckGround(c.decks, p.x, p.z, p.y);
           const off = Math.max(beyond === Infinity ? 99 : beyond, Math.abs(under - p.y));
           if (off > w.offWorst) { w.offWorst = off; w.offAt = `${r.stage} at ${p.toArray().map((v) => v.toFixed(2))}`; }
         }
+        /** The fog: how far ahead of its front's line she is, and its front in the frame on her own way. */
         const dark = __game.village.dark;
-        W.darkWayPoint(dark.reach, front);
-        const along = r.darkAt - dark.reach, near = Math.hypot(p.x - front.x, p.z - front.y);
-        if (along < w.fogAlong) w.fogAlong = along;
-        if (near < w.fogNear) { w.fogNear = near; w.fogAt = `${r.stage} at ${p.toArray().map((v) => v.toFixed(2))}`; }
+        W.darkWayPoint(dark.front, front);
+        const dx = dark.ahead.x, dz = dark.ahead.y, dl = 1;
+        const ahead = ((p.x - front.x) * dx + (p.z - front.y) * dz) / dl, near = Math.hypot(p.x - front.x, p.z - front.y);
+        if (ahead < w.fogAhead) { w.fogAhead = ahead; w.fogNear = near; w.fogAt = `${r.stage} at ${r.along.toFixed(1)} m, ${t.toFixed(1)} s`; }
+        if (r.stage === 'walk') {
+          let seen = false;
+          for (let a = -40; a <= 40 && !seen; a += 5) {
+            for (const deep of [0, 6, 14]) {
+              probe.set(front.x - (dz / dl) * a - (dx / dl) * deep, Math.min(2.5, dark.level * 0.5), front.y + (dx / dl) * a - (dz / dl) * deep).project(cam);
+              if (probe.z < 1 && Math.abs(probe.x) < 0.98 && Math.abs(probe.y) < 0.98) { seen = true; break; }
+            }
+          }
+          w.fogGoneRun = seen ? 0 : w.fogGoneRun + 1 / 60;
+          if (w.fogGoneRun > w.fogGoneWorst) { w.fogGoneWorst = w.fogGoneRun; w.fogGoneAt = `at ${r.along.toFixed(1)} m, until ${t.toFixed(1)} s`; }
+        } else w.fogGoneRun = 0;
+        /**
+         * The roofs she has been on: when she went on from each and where, and when the fog has that place under it,
+         * front and top.
+         */
+        for (const { h, i } of placed) {
+          const top = W.roofUnder(h, p.x, p.z);
+          const rec = w.roofs[i];
+          if (top !== null && Math.abs(top - p.y) < 0.6) {
+            w.roofs[i] = { name: i, left: t, x: p.x, z: p.z, under: null, ridge: W.ridgeTop(h) };
+            continue;
+          }
+          if (!rec || rec.under !== null) continue;
+          /** Beside it in the mill's basket, or looking back from just off it, she has not yet gone on from it. */
+          if ((r.stage === 'mill' && Math.hypot(rec.x - p.x, rec.z - p.z) < 3) || (r.lookingBack >= 0 && r.lookingBack < tuning.drowned.run.lookBackFor)) rec.left = t;
+          const behind = (rec.x - front.x) * dx + (rec.z - front.y) * dz < -2;
+          if (behind && dark.level > rec.ridge) rec.under = t;
+        }
+        w.boatMoved = Math.max(w.boatMoved, Math.hypot(__game.boat.position.x - strand.x, __game.boat.position.z - strand.z));
+        /** Waiting on the cat at the sheet and the mill: from her coming to it until it is clear for her. */
+        for (const piece of ['sheet', 'mill']) {
+          const x = r[piece];
+          if (r.stage === piece && x.phase === 'waiting' && !x.clear) w.waits[piece] = (w.waits[piece] ?? 0) + 1 / 60;
+        }
         /** Never toward the lens: on her own way she never faces it, and she is always in the frame. */
-        const cam = __game.rig.camera.position, fx = Math.sin(c.yaw), fz = Math.cos(c.yaw);
-        const tx = cam.x - p.x, tz = cam.z - p.z, tl = Math.hypot(tx, tz) || 1;
+        const lens = cam.position, fx = Math.sin(c.yaw), fz = Math.cos(c.yaw);
+        const tx = lens.x - p.x, tz = lens.z - p.z, tl = Math.hypot(tx, tz) || 1;
         const toward = (fx * tx + fz * tz) / tl > 0.5 && r.stage === 'walk' && c.moving;
         w.facingRun = toward ? w.facingRun + 1 / 60 : 0;
         if (toward) w.facing += 1 / 60;
-        if (w.facingRun > w.facingWorst) { w.facingWorst = w.facingRun; w.facingAt = `at ${r.along.toFixed(1)} m, ${p.toArray().map((v) => v.toFixed(2))}`; }
-        const head = p.clone().setY(p.y + 1.2).project(__game.rig.camera);
+        if (w.facingRun > w.facingWorst) {
+          w.facingWorst = w.facingRun;
+          w.facingAt = `at ${r.along.toFixed(1)} m, ${p.toArray().map((v) => v.toFixed(2))}, the lens at ${lens.toArray().map((v) => v.toFixed(1))}`;
+        }
+        const head = p.clone().setY(p.y + 1.2).project(cam);
         const out = Math.abs(head.x) > 0.95 || Math.abs(head.y) > 0.95 || head.z > 1;
         w.unseenRun = out ? w.unseenRun + 1 / 60 : 0;
         if (out) w.unseen += 1 / 60;
-        if (w.unseenRun > w.unseenWorst) { w.unseenWorst = w.unseenRun; w.unseenAt = `${r.stage} at ${r.along.toFixed(1)} m, until ${__stats.time.toFixed(1)} s`; }
+        if (w.unseenRun > w.unseenWorst) { w.unseenWorst = w.unseenRun; w.unseenAt = `${r.stage} at ${r.along.toFixed(1)} m, until ${t.toFixed(1)} s`; }
         /** Under a roof's slates, or a roof between the lens and her: a march along the line of sight. */
         const under = (x, z) => [...W.PLACED, W.NAVE].reduce((top, h) => Math.max(top, W.roofUnder(h, x, z) ?? -Infinity), -Infinity);
-        if (cam.y < under(cam.x, cam.z) + 0.2) { w.inside += 1 / 60; w.insideAt = `${r.stage} at ${r.along.toFixed(1)} m`; }
+        if (lens.y < under(lens.x, lens.z) + 0.2) {
+          w.inside += 1 / 60;
+          w.insideAt = `${r.stage} at ${r.along.toFixed(1)} m, the lens at ${lens.toArray().map((v) => v.toFixed(1))}`;
+        }
         let hidden = false;
         for (let i = 1; i < 24 && !hidden; i++) {
-          const u = i / 24, x = cam.x + (p.x - cam.x) * u, z = cam.z + (p.z - cam.z) * u, y = cam.y + (p.y + 1.4 - cam.y) * u;
+          const u = i / 24, x = lens.x + (p.x - lens.x) * u, z = lens.z + (p.z - lens.z) * u, y = lens.y + (p.y + 1.4 - lens.y) * u;
           if (Math.hypot(x - p.x, z - p.z) > 0.8 && y < under(x, z) - 0.05) hidden = true;
         }
         w.hiddenRun = hidden && !flying ? (w.hiddenRun ?? 0) + 1 / 60 : 0;
         if (w.hiddenRun > (w.hiddenWorst ?? 0)) { w.hiddenWorst = w.hiddenRun; w.hiddenAt = `${r.stage} at ${r.along.toFixed(1)} m`; }
-        if (r.stage === 'walk' && !c.action) {
+        if (r.stage === 'walk' && !c.action && r.lookingBack !== undefined) {
           if (r.along > w.last + 0.05) { w.last = r.along; w.since = 0; } else w.since += 1 / 60;
-          if (w.since > w.stallWorst) { w.stallWorst = w.since; w.stallAt = `at ${r.along.toFixed(1)} m, ${p.toArray().map((v) => v.toFixed(2))}`; }
+          const k = tuning.drowned.run;
+          const looking = (r.lookingBack >= 0 && r.lookingBack < k.lookBackFor) || (r.lookingDown >= 0 && r.lookingDown < k.lookDownFor);
+          if (!looking && w.since > w.stallWorst) { w.stallWorst = w.since; w.stallAt = `at ${r.along.toFixed(1)} m, ${p.toArray().map((v) => v.toFixed(2))}`; }
+          if (looking) w.since = 0;
         } else w.since = 0;
         requestAnimationFrame(tick);
       };
       requestAnimationFrame(tick);
     });
-    const started = (await state()).time;
     const shotsBetween = [];
     const snapBetween = async (name, at) => {
       shotsBetween.push({ name, at });
     };
-    await snapBetween('between-1', 0.32);
-    await snapBetween('between-2', 0.72);
+    await snapBetween('between-1', 0.18);
+    await snapBetween('between-2', 0.55);
+    await snapBetween('between-3', 0.78);
     const runLength = await page.evaluate(() => __game.story.current.run.length);
     /** On her own way: waits for the next piece, taking the stills between pieces as she passes their places. */
     const walkTo = async (stage, limit) => {
@@ -529,7 +590,7 @@ try {
       assert.fail(`she never reached the ${stage}: ${JSON.stringify(await state())}`);
     };
 
-    // The tree: firm strokes across it the way it can fall, until it goes over; she walks over it.
+    // The tree: firm strokes across it the way it can fall, until it goes over; she walks up it.
     await walkTo('tree', 60);
     await seconds(2.5);
     await shot('tree');
@@ -537,7 +598,12 @@ try {
     for (; pushes < 8 && (await state()).fallen === 'standing'; pushes++) {
       const aim = await page.evaluate(() => {
         const r = __game.story.current.run, cam = __game.rig.camera;
-        const p = r.tree.tree.trunkAt(0.5, cam.position.clone()).project(cam);
+        /** Across the trunk where it is on the screen, as high up it as is in the frame. */
+        let p = null;
+        for (const share of [0.5, 0.4, 0.3, 0.2, 0.12]) {
+          p = r.tree.tree.trunkAt(share, cam.position.clone()).project(cam);
+          if (Math.abs(p.y) < 0.7 && Math.abs(p.x) < 0.8) break;
+        }
         return { at: [(p.x + 1) / 2, (1 - p.y) / 2], heading: r.tree.tree.fallHeading(cam) };
       });
       await stroke(aim.at, aim.heading, 0.62, 15);
@@ -548,9 +614,25 @@ try {
     await seconds(1.5);
     await shot('tree-crossing');
 
-    // The mill: broad circles round its hub on screen, clockwise the way the sails turn, until she is off on the high roof.
+    // The sheet: firm strokes up the line across it, until she has been carried over and set down.
+    await walkTo('sheet', 60);
+    await shot('sheet');
+    let fills = 0;
+    for (; fills < 40 && ['waiting', 'taking', 'carried'].includes((await state()).sheet); fills++) {
+      const aim = await page.evaluate(() => {
+        const r = __game.story.current.run, cam = __game.rig.camera;
+        const p = r.sheet.sheet.middle(cam.position.clone()).project(cam);
+        return { at: [(p.x + 1) / 2, (1 - p.y) / 2], heading: r.sheet.sheet.heading(cam) };
+      });
+      await stroke(aim.at, aim.heading, 0.6, 14);
+      await seconds(0.5);
+      if (fills === 6) await shot('sheet-carried');
+    }
+    console.log(`she was carried over the sheet's lane after ${fills} strokes`);
+
+    // The mill: broad circles round its hub on screen, the way the sails turn, until she is off on the granary.
     await walkTo('mill', 120);
-    await seconds(1.5);
+    await seconds(1.0);
     let circled = 0, rode = false;
     for (; circled < 240 && (await state()).stage === 'mill'; circled++) {
       const hub = await onScreen('__game.story.current.run.mill.mill.hub');
@@ -563,7 +645,7 @@ try {
       await reel();
       if (!rode && (await state()).mill === 'riding') { rode = true; await seconds(1.2); await shot('mill'); }
     }
-    console.log(`she was carried up after ${(circled / 2).toFixed(1)} turns of circling`);
+    console.log(`she was wound up the mill after ${(circled / 2).toFixed(1)} turns of circling`);
 
     // The swing: strokes across the seat the way it swings out, until she lets go.
     await walkTo('swing', 120);
@@ -593,15 +675,22 @@ try {
     const w = report.watch;
     console.log(`run: ${report.length.toFixed(0)} m of way in ${report.time.toFixed(1)} s (game time from setting off to the tower's foot)`);
     for (const s of report.stretches) console.log(`  ${s.name}: ${s.seconds} s`);
-    const onFoot = report.stretches.filter((s) => s.name.startsWith('her way') || s.name === 'the nave').reduce((a, s) => a + s.seconds, 0);
-    console.log(`  on foot ${onFoot.toFixed(1)} s, at the pieces ${(report.time - onFoot).toFixed(1)} s`);
+    const walks = report.stretches.filter((s) => s.name.startsWith('her way') || s.name === 'the nave');
+    const onFoot = walks.reduce((a, s) => a + s.seconds, 0);
+    console.log(`  on foot ${onFoot.toFixed(1)} s (longest walk ${Math.max(...walks.map((s) => s.seconds)).toFixed(1)} s), at the pieces ${(report.time - onFoot).toFixed(1)} s`);
+    console.log(`  she waited on the cat ${Object.entries(w.waits).map(([k, v]) => `${v.toFixed(1)} s at the ${k}`).join(', ') || 'never'}`);
     console.log(`her feet stayed within ${w.offWorst.toFixed(3)} m of the decks (worst ${w.offAt}); longest stall on her own way ${w.stallWorst.toFixed(1)} s`);
-    console.log(`the fog came within ${w.fogAlong.toFixed(1)} m of her along its way, ${w.fogNear.toFixed(1)} m as the crow flies (${w.fogAt})`);
-    console.log(`at the end: cat at ${end.cat.join(', ')}, her at ${end.child.join(', ')}, the boat ${end.boatLeft} m short of its tree`);
+    console.log(`the fog's front came within ${w.fogAhead.toFixed(1)} m of her across its line, ${w.fogNear.toFixed(1)} m as the crow flies (${w.fogAt}); its level ${end.level} m at the end, its front ${end.front} m`);
+    console.log(`on her own way the fog was out of the frame for at most ${w.fogGoneWorst.toFixed(1)} s at a time (${w.fogGoneAt})`);
+    const names = await page.evaluate(() => import('/src/world/drowned-way.ts').then((W) => W.PLACED.map((h) => `${h.x.toFixed(0)},${h.z.toFixed(0)}`)));
+    const roofs = Object.values(w.roofs);
+    for (const r of roofs) console.log(`  the roof at ${names[r.name]} (ridge ${r.ridge.toFixed(1)} m) ${r.under === null ? 'not under yet' : `under ${(r.under - r.left).toFixed(1)} s after she went on from it`}`);
+    console.log(`the boat moved ${w.boatMoved.toFixed(2)} m from where it ran aground`);
+    console.log(`at the end: cat at ${end.cat.join(', ')}, her at ${end.child.join(', ')}`);
     const towerSouth = await page.evaluate(() => { const c = window.__game.cat.position; return Math.hypot(c.x - 16.5, c.z - (-1561 + 2.6)); });
     console.log(`she faced the lens on her way for ${w.facing.toFixed(1)} s in all (longest ${w.facingWorst.toFixed(1)} s ${w.facingAt}); out of frame ${w.unseen.toFixed(1)} s (longest ${w.unseenWorst.toFixed(1)} s ${w.unseenAt}); lens inside a roof ${w.inside.toFixed(1)} s ${w.insideAt}`);
     console.log(`a roof hid her for at most ${(w.hiddenWorst ?? 0).toFixed(1)} s at a time (${w.hiddenAt ?? ''})`);
-    /** The lens's measures are reported, and fail only with LENS=1 until its polish pass makes them hold. */
+    /** The lens's measures are reported, and fail only with LENS=1. */
     const lens = [[(w.hiddenWorst ?? 0) < 1, `a roof hid her for ${(w.hiddenWorst ?? 0).toFixed(1)} s (${w.hiddenAt})`],
       [w.facingWorst < 1, `she walked toward the lens for ${w.facingWorst.toFixed(1)} s (${w.facingAt})`],
       [w.unseenWorst < 0.5, `she was out of the frame for ${w.unseenWorst.toFixed(1)} s (${w.unseenAt})`],
@@ -612,21 +701,32 @@ try {
     }
     assert(w.offWorst < 0.4, `she left the decks: ${w.offWorst.toFixed(2)} m (${w.offAt})`);
     assert(w.stallWorst < 3, `she stalled on her own way for ${w.stallWorst.toFixed(1)} s (${w.stallAt})`);
-    assert(w.fogAlong > 5 && w.fogNear > 5, `the fog reached her: ${w.fogAlong.toFixed(1)} m along, ${w.fogNear.toFixed(1)} m (${w.fogAt})`);
+    assert(w.fogAhead > 4, `the fog reached her: ${w.fogAhead.toFixed(1)} m ahead of its front (${w.fogAt})`);
+    /** Upright the lens stands behind her looking along her way, the fog behind it: only the wide frame holds both. */
+    if (width > height) assert(w.fogGoneWorst < 2, `the fog was out of a walk's frame for ${w.fogGoneWorst.toFixed(1)} s (${w.fogGoneAt})`);
+    /** Each roof she went on from is taken within 14 s, but for the one the fog waits short of at the tower's foot. */
+    const waits = (r) => r.under === null && Math.hypot(r.x - end.child[0], r.z - end.child[2]) < 22;
+    const late = roofs.filter((r) => !waits(r) && (r.under ?? end.time) - r.left > 14);
+    assert(!late.length, `a roof she left was not taken by the fog in time: ${late.map((r) => names[r.name]).join('; ')}`);
+    assert(w.boatMoved < 1.5, `the boat moved ${w.boatMoved.toFixed(2)} m from where it ran aground`);
     assert(towerSouth < 1.5, `the cat is not at the tower's south face (${towerSouth.toFixed(2)} m off)`);
-    assert(end.boatLeft < 1, `the boat is still ${end.boatLeft} m short of its tree`);
   }
-  await church();
-  for (let t = 0; t < 30 && (await page.evaluate(() => __game.story.name)) !== 'wood'; t += 0.25) await seconds(0.25);
-  assert.equal(await page.evaluate(() => __game.story.name), 'wood', 'the landing never handed on to the dark wood');
-  await seconds(3);
-  await shot('wood');
-  console.log(`on into the dark wood at ${(await page.evaluate(() => __stats.time)).toFixed(1)} s`);
+  if (!toNave) {
+    await church();
+    for (let t = 0; t < 30 && (await page.evaluate(() => __game.story.name)) !== 'wood'; t += 0.25) await seconds(0.25);
+    assert.equal(await page.evaluate(() => __game.story.name), 'wood', 'the landing never handed on to the dark wood');
+    await seconds(3);
+    await shot('wood');
+    console.log(`on into the dark wood at ${(await page.evaluate(() => __stats.time)).toFixed(1)} s`);
+  }
   const motion = await page.evaluate(() => window.__lensWatch);
   console.log(`the lens turned at most ${motion.turn.toFixed(1)} deg/s (${motion.turnAt}) and moved at most ${motion.move.toFixed(1)} m/s (${motion.moveAt})`);
   if (process.env.LENS) assert(motion.turn < 60, `the lens whipped round at ${motion.turn.toFixed(0)} deg/s (${motion.turnAt})`);
   assert.deepEqual(errors, [], `page errors: ${errors.join('; ')}`);
   console.log('drowned run check passed');
 } finally {
+  const recorded = video ? context.pages()[0]?.video() : null;
+  await context.close();
+  if (recorded) console.log(`video: ${await recorded.path()}`);
   await browser.close();
 }

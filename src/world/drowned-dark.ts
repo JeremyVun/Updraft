@@ -3,12 +3,12 @@ import { atmo } from './atmosphere';
 import { params } from '../params';
 import { QA } from '../qa';
 import { tuning } from '../tuning';
-import { DARK_AT_STRAND, DARK_WAY, darkWayPoint } from './drowned-way';
+import { DARK_AT_STRAND, DARK_END, DARK_TOPS, DARK_WAY, darkWayPoint } from './drowned-way';
 import { WOOD_LANDING } from './wood';
 
 const smooth = THREE.MathUtils.smoothstep;
 
-/** How far along `DARK_WAY` the story brings its front while the boat lies becalmed: just behind the boat. */
+/** How far along `DARK_WAY` its front is when it has come up to the stranded boat and taken the light. */
 const HELD = DARK_AT_STRAND - tuning.drowned.dark.holdBehind;
 const CHURCH = DARK_WAY[DARK_WAY.length - 1];
 
@@ -34,25 +34,36 @@ function tint(c: THREE.Color, hue: THREE.Color, k: number, scale: number): THREE
 }
 
 /**
- * The dark: a sea fog lying low on the water. It rises on the horizon the way they came and comes on over the
- * village, its crest gold in the last of the sun and its body cold; roofs at its edge fade into it and are gone. As
- * it nears it takes the sun, and at the church it closes round her and darkens into the storm's night.
+ * The dark: a sea fog lying low on the water, a rising white tide. It rises on the horizon the way they came and comes
+ * on over the village, its crest gold in the last of the sun and its body cold; roofs at its edge fade into it and are
+ * gone, and it stands higher the further it comes. As it nears it takes the sun, and at the church it closes round her
+ * and darkens into the storm's night.
  *
- * It is one field every shader reads (`seaFog` in `ATMO_GLSL`), so whatever is in it truly fades; and one
- * progression, from where it stands, drives it and the light it takes.
+ * The story drives it by two numbers: its `front`, how far along `DARK_WAY` (the drift in, then her way over the
+ * roofs to the tower) it has come, and its `level`, the height of its top. It is one field every shader reads
+ * (`seaFog` in `ATMO_GLSL`), so whatever is in it truly fades; and one progression, from where it stands, drives it
+ * and the light it takes.
  */
 export class DarkBank {
   /** How far its front has come along `DARK_WAY`, in metres. */
-  reach = 0;
+  front = 0;
+  /** How high its top stands over the water while it has a front, metres; its swells heave about it. */
+  level = tuning.drowned.fog.level;
   /** 0 nothing on the horizon to 1 risen in full. */
   rise = 0;
   /** 0 a bank with a front to 1 closed round the eye and darkening into the storm's night. */
   close = 0;
   /** How far the storm's own night has taken over from the darkness the fog brought, 0 to 1. */
   storm = 0;
-  /** The way it comes where its front is now. */
-  private readonly ahead = new THREE.Vector2().subVectors(DARK_WAY[1], DARK_WAY[0]).normalize();
-  private readonly front = new THREE.Vector2();
+  /**
+   * Where its front turns to face as it comes, while it chases her (her, on her way); otherwise it lies across its own
+   * way. And the way its front faces now.
+   */
+  faces: THREE.Vector2 | null = null;
+  readonly ahead = new THREE.Vector2().subVectors(DARK_WAY[1], DARK_WAY[0]).normalize();
+  private readonly want = new THREE.Vector2();
+  private readonly origin = new THREE.Vector2();
+  private readonly at = new THREE.Vector2();
   private readonly back = new THREE.Vector2();
   private readonly crest = new THREE.Color();
   private readonly body = new THREE.Color();
@@ -68,39 +79,61 @@ export class DarkBank {
    */
   get progress(): number {
     const { far, near, risen } = tuning.drowned.fog;
-    const come = THREE.MathUtils.clamp(this.reach / HELD, 0, 1);
+    const come = THREE.MathUtils.clamp(this.front / HELD, 0, 1);
     return far * smooth(this.rise, 0, risen) + (near - far) * Math.sqrt(come) + (1 - near) * this.close;
+  }
+
+  /**
+   * Comes on to `front`, never back, and rises as it comes: toward the level its front calls for (`tide`), never
+   * faster than `levelRate` metres a second and never falling.
+   */
+  comeOn(front: number, dt: number): void {
+    this.front = Math.max(this.front, front);
+    this.level = Math.max(this.level, Math.min(this.tide(this.front), this.level + tuning.drowned.fog.levelRate * dt));
+  }
+
+  /**
+   * The level a front this far along `DARK_WAY` calls for: over everything it has taken (all it has come `levelBehind`
+   * metres past) by `levelOver`, the boat's masthead first; and never below its steady climb from the stranding to the
+   * tower, so it is always rising while it comes.
+   */
+  tide(front: number): number {
+    const k = tuning.drowned.fog;
+    let over = -Infinity;
+    for (const t of DARK_TOPS) if (t.along <= front - k.levelBehind) over = Math.max(over, t.top);
+    const climb = THREE.MathUtils.lerp(k.levelFrom, k.levelTo, THREE.MathUtils.clamp((front - DARK_AT_STRAND) / (DARK_END - DARK_AT_STRAND), 0, 1));
+    return Math.max(k.level, climb, over + k.levelOver);
   }
 
   /** Where its front is, `aside` metres along it from the way (+ to its right as it comes), for whoever watches it. */
   frontAt(out: THREE.Vector2, aside = 0): THREE.Vector2 {
     const k = tuning.drowned.dark, u = aside / k.halfWidth;
-    darkWayPoint(this.reach, out);
+    darkWayPoint(this.front, out);
     return out.set(out.x - this.ahead.y * aside + this.ahead.x * k.flank * u * u, out.y + this.ahead.x * aside + this.ahead.y * k.flank * u * u);
   }
 
   /** Where a lens at `eye` looking along `view` sees its front, low over the water: what the depth blur keeps sharp. */
   seenAt(eye: THREE.Vector3, view: THREE.Vector3, out: THREE.Vector3): THREE.Vector3 {
-    darkWayPoint(this.reach, this.front);
+    darkWayPoint(this.front, this.at);
     const ax = this.ahead.x, az = this.ahead.y;
     const toward = Math.min(view.x * ax + view.z * az, -0.25);
-    const along = ((this.front.x - eye.x) * ax + (this.front.y - eye.z) * az) / toward;
+    const along = ((this.at.x - eye.x) * ax + (this.at.y - eye.z) * az) / toward;
     const reach = tuning.drowned.dark.halfWidth * 0.7;
-    const aside = THREE.MathUtils.clamp((eye.x + view.x * along - this.front.x) * -az + (eye.z + view.z * along - this.front.y) * ax, -reach, reach);
-    this.frontAt(this.front, aside);
-    return out.set(this.front.x, 2, this.front.y);
+    const aside = THREE.MathUtils.clamp((eye.x + view.x * along - this.at.x) * -az + (eye.z + view.z * along - this.at.y) * ax, -reach, reach);
+    this.frontAt(this.at, aside);
+    return out.set(this.at.x, 2, this.at.y);
   }
 
   /** `?fog=` stands it where the progression puts it, whatever the story is doing. */
   private force(p: number): void {
     const { far, near, risen } = tuning.drowned.fog;
     this.rise = p < far ? risen * (0.5 - Math.sin(Math.asin(1 - 2 * p / far) / 3)) : 1;
-    this.reach = THREE.MathUtils.clamp((p - far) / (near - far), 0, 1) ** 2 * HELD;
+    this.front = THREE.MathUtils.clamp((p - far) / (near - far), 0, 1) ** 2 * HELD;
     this.close = THREE.MathUtils.clamp((p - near) / (1 - near), 0, 1);
   }
 
   /** Lays the fog out for every shader and takes the light it takes; after the palette has been set for the step. */
-  update(_time: number, eye: THREE.Vector3): void {
+  update(_time: number, eye: THREE.Vector3, dt = 1 / 60): void {
     if (QA && params.fog !== null) this.force(params.fog);
     const u = atmo.uniforms;
     // It belongs to the village: it thins off as the forest beach comes up out of it, leaving the storm's own weather.
@@ -117,13 +150,17 @@ export class DarkBank {
     const p = this.progress;
     const risen = smooth(this.rise, 0, k.risen);
 
-    darkWayPoint(this.reach, this.front);
-    darkWayPoint(this.reach - 40, this.back);
-    if (this.front.distanceToSquared(this.back) > 1) this.ahead.subVectors(this.front, this.back).normalize();
-    u.uSeaFog.value.set(this.front.x, this.front.y, this.ahead.x, this.ahead.y);
-    // Low on the horizon as it rises, and standing higher the nearer it comes.
+    darkWayPoint(this.front, this.at);
+    darkWayPoint(this.front - d.aheadFrom, this.back);
+    const to = this.faces && this.faces.distanceToSquared(this.at) > 1 ? this.faces : this.at.distanceToSquared(this.back) > 1 ? this.at : null;
+    if (to) {
+      this.want.subVectors(to, to === this.faces ? this.at : this.back).normalize();
+      const turn = Math.atan2(this.ahead.x * this.want.y - this.ahead.y * this.want.x, this.ahead.dot(this.want));
+      this.ahead.rotateAround(this.origin, turn * (1 - Math.exp(-Math.max(dt, 0) * d.turnRate)));
+    }
+    u.uSeaFog.value.set(this.at.x, this.at.y, this.ahead.x, this.ahead.y);
     const drawn = smooth(p, far, near);
-    const top = k.top * (0.3 + 0.7 * risen) * THREE.MathUtils.lerp(k.topFar, 1, drawn) * THREE.MathUtils.lerp(1, k.closedTop, this.close);
+    const top = this.level * (0.3 + 0.7 * risen) * THREE.MathUtils.lerp(1, k.closedTop, this.close);
     u.uSeaFogShape.value.set(top, d.flank / (d.halfWidth * d.halfWidth), this.close, amount);
     const wing = THREE.MathUtils.lerp(d.wingFar, d.wing, drawn), fade = THREE.MathUtils.lerp(d.wingFadeFar, d.wingFade, drawn);
     u.uSeaFogSides.value.set(d.halfWidth, d.halfWidth * 1.8, wing * d.halfWidth, (wing + fade) * d.halfWidth);

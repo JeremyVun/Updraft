@@ -4,8 +4,7 @@ import type { Deck } from '../world/decks';
 import { heightAt } from '../world/island';
 import { REFLECTION_LAYER } from '../world/water/reflection';
 import { tuning } from '../tuning';
-import { HANG, SHEET_SOUNDS, SheetCrossing, UNDER } from '../world/crossings/sheet-crossing';
-import { HOLD_DROP, SHEET } from '../world/crossings/wash-sheet';
+import { SHEET_OFF, SHEET_SOUNDS, SHEET_WAIT, SheetCrossing, sheetLine } from '../world/crossings/sheet-crossing';
 import type { CatStep } from '../world/crossings/cat-way';
 import { drownedHouse, ridgeOf, ridgeStack, yardMesh, type Roof } from './crossings-yard';
 import { playCatSteps } from './cat-steps';
@@ -25,42 +24,14 @@ const R0 = ridgeOf(NEAR);
 const R1 = ridgeOf(FAR);
 const NEAR_STACK = -2.4;
 const FAR_STACK = LANE + 2.3;
-const WAIT = new THREE.Vector3(0.04 - UNDER, R0, 0);
-/** Where her mittens are at the start (the trailing edge a short reach ahead of her) and at the end of the ride. */
-const START_X = 0.04;
+const WAIT = new THREE.Vector3(SHEET_WAIT, R0, 0);
 const END_X = LANE + 0.62;
-const STEP_OFF = new THREE.Vector3(LANE + 0.36, R1, 0);
-/** How high her mittens close standing, in front of her face. */
-const REACH = HANG;
+const STEP_OFF = new THREE.Vector3(LANE + SHEET_OFF, R1, 0);
 /** Down onto the slates on the lens's side, clear of the sheet bunched on the line over the ridge. */
 const SLOPE = 2.6 / (FAR.depth / 2 + 0.28);
 const ONWARD = new THREE.Vector3(LANE + 1.3, R1 - SLOPE, 1.0);
 
-/**
- * The line through the two holds, with its slack made up: at the start the trailing edge is where her mittens reach
- * standing, and her weight sags it onto her heels until the climbing line lifts her off the ridge's end; at the end it
- * hangs her feet just over the high ridge, her weight's sag made up too.
- */
-function lineThrough(): { from: THREE.Vector3; to: THREE.Vector3; start: number; stop: number } {
-  const k = tuning.crossings.sheet;
-  let from = new THREE.Vector3(), to = new THREE.Vector3(), start = 0, stop = 0;
-  let sagS = 0.07, sagE = 0.05;
-  for (let i = 0; i < 4; i++) {
-    const s = new THREE.Vector3(START_X, R0 + REACH + HOLD_DROP + sagS, 0);
-    const e = new THREE.Vector3(END_X, R1 + 0.28 + HANG + HOLD_DROP + k.holdDip + sagE, 0);
-    const dir = e.clone().sub(s);
-    from = s.clone().addScaledVector(dir, (NEAR_STACK - s.x) / dir.x);
-    to = s.clone().addScaledVector(dir, (FAR_STACK - s.x) / dir.x);
-    const L = from.distanceTo(to);
-    start = from.distanceTo(s);
-    stop = L - from.distanceTo(e) - (SHEET.rings - 1) * SHEET.bunch;
-    const sag = (d: number) => k.slack * L * 4 * (d / L) * (1 - d / L);
-    sagS = sag(start);
-    sagE = sag(from.distanceTo(e));
-  }
-  return { from, to, start, stop };
-}
-const LINE = lineThrough();
+const LINE = sheetLine(new THREE.Vector3(0, R0, 0), new THREE.Vector2(1, 0), LANE, R1, -NEAR_STACK, FAR_STACK - LANE);
 
 const WAY = {
   near: { x0: NEAR.x - NEAR.len / 2 + 0.6, z0: 0, x1: 0.1, z1: 0, halfWidth: 0.45, height: R0 },

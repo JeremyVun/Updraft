@@ -7,7 +7,8 @@ export type Surface = 'grass' | 'sand' | 'wood' | 'water';
 export type MaterialSound = 'cloth' | 'wool' | 'sail' | 'sail-settle' | 'water' | 'paper' | 'door' | 'splash' | 'peg'
   | 'dolphin-surface' | 'leaf-scuff' | 'swing-creak' | 'tub' | WhaleSound
   | 'tree-creak' | 'roots-give' | 'root-tear' | 'tree-fall' | 'bough-creak' | 'slate-land'
-  | 'mill-start' | 'mill-creak' | 'mill-settle' | 'mill-click' | 'linen-flap' | 'bell' | 'bell-touch';
+  | 'mill-start' | 'mill-creak' | 'mill-settle' | 'mill-click' | 'linen-flap' | 'bell' | 'bell-touch' | 'hull-scrape'
+  | 'hull-strain';
 
 /**
  * The sounds a small body makes, as opposed to a voice. The cygnet never speaks except when it is lost, so this is
@@ -166,6 +167,21 @@ export class Foley {
       this.puff({ at, len: 0.018, level: level * 0.05, pan, type: 'bandpass', from: 3200 * colour, q: 5, attack: 0.0008 });
       this.blip(at, 1700 * colour, 1500 * colour, 0.03, level * 0.012, pan, 'triangle');
       this.blip(at + 0.004, 240 * colour, 190 * colour, 0.05, level * 0.025, pan, 'triangle', 0.02);
+    } else if (kind === 'hull-scrape') {
+      // The keel running up onto slates under the water: a grinding drag that slows, a hollow knock in the hull as it stops.
+      const colour = 0.9 + Math.random() * 0.2;
+      this.rasp({ at, len: 0.9, from: 34 * colour, to: 11 * colour, jitter: 0.35,
+        bodies: [[170 * colour, 5, 1], [420 * colour, 4, 0.7], [1500 * colour, 3, 0.35]], level: level * 0.16, pan, attack: 0.03, wet: 0.06 });
+      this.puff({ at, len: 0.8, level: level * 0.04, pan, type: 'bandpass', from: 2400 * colour, to: 900 * colour, q: 0.8, attack: 0.02 });
+      this.blip(at + 0.82, 95 * colour, 60 * colour, 0.32, level * 0.09, pan, 'triangle', 0.08);
+      this.puff({ at: at + 0.82, len: 0.1, level: level * 0.04, pan, type: 'lowpass', from: 420, attack: 0.002 });
+      this.puff({ at: at + 0.86, len: 0.6, level: level * 0.02, pan, type: 'bandpass', from: 650, to: 340, q: 0.6, attack: 0.05, wet: 0.06 });
+    } else if (kind === 'hull-strain') {
+      // The hull pressed by its sail against what holds it: planks and keel working on the slates, a slow deep creak.
+      const colour = 0.9 + Math.random() * 0.2;
+      this.rasp({ at, len: 0.8, from: 16 * colour, to: 26 * colour, jitter: 0.24,
+        bodies: [[150 * colour, 6, 1], [380 * colour, 5, 0.6], [900 * colour, 4, 0.25]], level: level * 0.11, pan, attack: 0.15, wet: 0.05 });
+      this.puff({ at: at + 0.3, len: 0.35, level: level * 0.015, pan, type: 'bandpass', from: 1300 * colour, to: 700 * colour, q: 1.1, attack: 0.08 });
     } else if (kind === 'linen-flap') {
       // Torn scraps of old sail-cloth lifting and falling back: two or three soft, papery flaps, never a snap.
       const colour = 0.9 + Math.random() * 0.2;

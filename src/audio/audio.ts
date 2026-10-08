@@ -60,6 +60,8 @@ export interface SoundState {
   night: number;
   /** How close the sea is: 1 on the island and at sea, falling away inland. */
   sea: number;
+  /** How far a fog lying over the water muffles it, 0 to 1. */
+  seaMuffle?: number;
   /** 1 out over the green hills, where skylarks sing. */
   meadow: number;
   /** Ground beneath the story, independent of the pointer's overLand test. */
@@ -290,6 +292,7 @@ export class Soundscape {
   private whistleFilter!: BiquadFilterNode;
   private rustleGain!: GainNode;
   private seaGain!: GainNode;
+  private seaFilter!: BiquadFilterNode;
   private liftGain!: GainNode;
   private liftFilter!: BiquadFilterNode;
   private padVoices: { osc: OscillatorNode[]; gain: GainNode }[] = [];
@@ -442,8 +445,9 @@ export class Soundscape {
     [this.rustleGain] = this.noiseLayer('highpass', 2800, 0.6, 0.05, this.gustPan);
     [this.liftGain, this.liftFilter] = this.noiseLayer('bandpass', 300, 3, 0.3);
 
-    const [seaGain] = this.noiseLayer('lowpass', 380, 0.5, 0);
+    const [seaGain, seaFilter] = this.noiseLayer('lowpass', 380, 0.5, 0);
     this.seaGain = seaGain;
+    this.seaFilter = seaFilter;
     [this.rainGain] = this.noiseLayer('highpass', 2600, 0.5, 0.2);
     [this.patterGain] = this.noiseLayer('bandpass', 900, 0.7, 0.3);
 
@@ -989,7 +993,10 @@ export class Soundscape {
     this.fade(this.breezeGain.gain, (0.02 + s.breeze * 0.2) * air * room.breeze, now, 0.5);
     this.fade(this.rainGain.gain, s.shower * 0.07, now, 1.2);
     this.fade(this.patterGain.gain, s.shower * (0.05 + 0.02 * Math.sin(now * 1.7)), now, 1.2);
-    this.fade(this.seaGain.gain, (0.05 + 0.035 * Math.sin(now * 0.8) * Math.sin(now * 0.37)) * (0.15 + 0.85 * s.sea) * (0.4 + 0.6 * s.breeze) * room.sea, now, 0.3);
+    const muffle = s.seaMuffle ?? 0;
+    this.fade(this.seaGain.gain, (0.05 + 0.035 * Math.sin(now * 0.8) * Math.sin(now * 0.37)) * (0.15 + 0.85 * s.sea) * (0.4 + 0.6 * s.breeze) * room.sea
+      * (1 - tuning.audio.seaMuffleLevel * muffle), now, 0.3);
+    this.seaFilter.frequency.setTargetAtTime(380 * (1 - tuning.audio.seaMuffleCutoff * muffle), now, 0.5);
     this.fade(this.gustGain.gain, gustLevel * 0.55 * air, now, tc);
     this.gustFilter.frequency.setTargetAtTime(260 + filterGust * 1100, now, tc);
     this.gustPan.pan.setTargetAtTime((winter > g ? Math.sin(now*.31)*.55 : s.pan * .7), now, winter > g ? .3 : tc);

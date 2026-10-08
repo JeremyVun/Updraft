@@ -28,7 +28,7 @@ try {
   const playsOn = async point => {
     const goes = {
       sail: `c.beat==='still'||c.beat==='becalmed'`,
-      roofs: `c.beat==='run'&&c.run.along>12&&c.boatAdrift`,
+      roofs: `c.beat==='run'&&c.run.along>12`,
       church: `c.beat==='church'&&c.church.close>0.5`,
       storm: `c.beat==='snatch'||c.beat==='after'`,
     }[point];

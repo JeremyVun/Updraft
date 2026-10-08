@@ -43,7 +43,7 @@ import type { Tree } from '../world/tree';
 /** Everyone and everything the story directs. */
 export interface Cast {
   /** The drowned village: its roofs for the lens to keep clear of, the dark, the wash-tub and the three pieces of her run. */
-  village?: Pick<DrownedVillage, 'cameraObstacles' | 'dark' | 'tub' | 'tree' | 'swing' | 'mill' | 'millSpiral' | 'driven'>;
+  village?: Pick<DrownedVillage, 'cameraObstacles' | 'dark' | 'tub' | 'tree' | 'swing' | 'mill' | 'millSpiral' | 'sheet' | 'driven'>;
   child: Traveller;
   plane: Glider;
   boat: Boat;
@@ -108,6 +108,8 @@ export interface Chapter {
   readonly mirrorArrival?: number;
   /** How far the music pulls back, so a moment can be heard on its own. */
   readonly hush?: number;
+  /** How far a fog lying over the water muffles the sea, 0 to 1. */
+  readonly seaMuffle?: number;
   /** The piano owns both the melody and the player's gesture sound during its duet. */
   readonly pianoMix?: number;
   /** The piano supplies gesture notes while engaged, independently of its fading mix. */
