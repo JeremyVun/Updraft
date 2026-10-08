@@ -899,7 +899,9 @@ export class ChurchArrival {
     this.held.extra = 0;
     const release = this.aboardFor < 0 ? 0 : THREE.MathUtils.smootherstep(this.aboardFor, k.releaseFrom, k.releaseTo);
     if (release > 0) {
-      this.eye.lerp(this.releaseEye(wide, this.tmp), release);
+      /** Back first and round after, so it is well clear before the mast and the sail on it come near her line. */
+      const back = THREE.MathUtils.smootherstep(release, 0, 0.65), across = THREE.MathUtils.smootherstep(release, 0.35, 1);
+      this.eye.copy(this.releaseEye(wide, this.tmp, back, across));
       this.target.lerp(this.releaseAim(wide, this.tmp), release);
       zoom = lerp(zoom, k.releaseZoom, release);
     }
@@ -911,12 +913,13 @@ export class ChurchArrival {
    * Where the look up lets her go to as the cat goes home: back and a little higher, round toward the bow, where the
    * tower and the lighthouse both stand beyond her for the storm's lens to take her from.
    */
-  private releaseEye(wide: number, out: THREE.Vector3): THREE.Vector3 {
-    const k = tuning.drownedCamera.church, eyes = this.cast.child.face(out), yaw = NAVE_BERTH.yaw;
+  private releaseEye(wide: number, out: THREE.Vector3, back = 1, across = 1): THREE.Vector3 {
+    const k = tuning.drownedCamera.church, lerp = THREE.MathUtils.lerp, eyes = this.cast.child.face(out), yaw = NAVE_BERTH.yaw;
     const from = this.shoulderBearing(wide), bow = Math.atan2(Math.sin(yaw), Math.cos(yaw));
-    const a = from + Math.sign(Math.sin(bow - from)) * THREE.MathUtils.lerp(k.uprightReleaseRound, k.releaseRound, wide);
-    const back = THREE.MathUtils.lerp(k.uprightReleaseBack, k.releaseBack, wide);
-    return eyes.set(eyes.x + Math.sin(a) * back, eyes.y + THREE.MathUtils.lerp(k.uprightReleaseUp, k.releaseUp, wide), eyes.z + Math.cos(a) * back);
+    const a = from + Math.sign(Math.sin(bow - from)) * lerp(k.uprightReleaseRound, k.releaseRound, wide) * across;
+    const r = lerp(lerp(k.uprightUpBack, k.upBack, wide), lerp(k.uprightReleaseBack, k.releaseBack, wide), back);
+    const up = lerp(lerp(k.uprightUpOver, k.upOver, wide), lerp(k.uprightReleaseUp, k.releaseUp, wide), back);
+    return eyes.set(eyes.x + Math.sin(a) * r, eyes.y + up, eyes.z + Math.cos(a) * r);
   }
 
   /** Looking this share of the way from her up to the sill the cat goes home to. */

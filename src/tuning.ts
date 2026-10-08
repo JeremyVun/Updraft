@@ -2199,7 +2199,7 @@ export const tuning = {
        * round toward the bow by this much (radians), this far from her eyes and this far over them, looking this share
        * of the way from her up to the sill, on this lens (upright, its own).
        */
-      releaseFrom: 7.8, releaseTo: 10.8, releaseRound: 0.5, releaseBack: 15, releaseUp: 2, releaseLook: 0.12, releaseZoom: 1.05,
+      releaseFrom: 7.8, releaseTo: 10.8, releaseRound: 0.5, releaseBack: 13, releaseUp: 2.2, releaseLook: 0.2, releaseZoom: 1.05,
       uprightReleaseRound: 0.5, uprightReleaseBack: 12, uprightReleaseUp: 2, uprightReleaseLook: 0.4,
       /**
        * The paces it moves at (the kittens', the fog sea's and the look up's slower), how much of the frame she and
