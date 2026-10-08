@@ -274,9 +274,11 @@ export class NetWhale {
   private readonly hand = [new THREE.Vector3(), new THREE.Vector3()];
   private readonly ray = new THREE.Vector3();
   /** The holds the camera eases between: what it was holding when the step changed, what it is going to, and how far. */
-  private readonly holdFrom = new Float32Array(13);
-  private readonly holdTo = new Float32Array(13);
-  private readonly holdNow = new Float32Array(13);
+  private readonly holdFrom = new Float32Array(14);
+  private readonly holdTo = new Float32Array(14);
+  private readonly holdNow = new Float32Array(14);
+  /** The view has eased round to the farewell's hold, where it dives. */
+  private farewelled = false;
   private holdT = 1;
   private holdSet = false;
   /**
@@ -409,6 +411,7 @@ export class NetWhale {
         this.haul = 'letting';
         this.net.peel = 1;
       }
+      this.farewelled = false;
       this.holdFor(this.step, true);
       if (point !== 'whale-rest' && this.cast.cygnet.seat === null) {
         this.cast.cygnet.rideIn('satchel');
@@ -526,7 +529,12 @@ export class NetWhale {
     const turning = this.step === 'gone' ? 0 : this.turnToward() * (1 - THREE.MathUtils.smootherstep(left, 30, 120));
     const toward = THREE.MathUtils.lerp(turning, K.lookTurn, drawn);
     this.turn += (THREE.MathUtils.lerp(toward, K.haulTurn, this.out) - this.turn) * (1 - Math.exp(-dt * 1.2));
-    this.holdT = Math.min(1, this.holdT + dt / (this.looking ? K.lookMove : this.step === 'free' ? K.releaseMove : K.holdMove));
+    if (this.step === 'free' && whale.diving >= 0 && !this.farewelled) {
+      this.farewelled = true;
+      this.holdFor('farewell', false);
+    }
+    const move = this.looking ? K.lookMove : this.farewelled ? K.farewellMove : this.step === 'free' ? K.releaseMove : K.holdMove;
+    this.holdT = Math.min(1, this.holdT + dt / move);
     const lost = this.step === 'approach' ? K.lostFar * (this.led ? THREE.MathUtils.smootherstep(left, K.lostNear, K.lostFrom) : 1) : 0;
     this.lost += (lost - this.lost) * (1 - Math.exp(-dt * K.lostEase));
     whale.lost = this.net.lost = this.lost;
@@ -1627,24 +1635,27 @@ export class NetWhale {
    * mittens, the cork and the net coming off its head in frame, and closer and lower again for the flipper. Free,
    * it eases out in one move to the release's, low and wider, the spout leaving the top of the frame.
    */
-  private holdFor(step: WhaleStep | 'look', now: boolean): void {
+  private holdFor(step: WhaleStep | 'look' | 'farewell', now: boolean): void {
     const to = this.holdTo;
-    const { breath, look, line, flipper, release } = K.phone;
+    const { breath, look, line, flipper, release, farewell } = K.phone;
     if (step === 'look') {
       to.set([K.lookDistance, K.lookHeight, K.lookBearing, K.lookLookY, K.lookToward, 0, look.distance, look.height, look.turn,
-        look.lookY, look.toward, 1, 1]);
+        look.lookY, look.toward, 1, 1, 0]);
     } else if (step === 'line') {
       to.set([K.lineDistance, K.lineHeight, K.lineBearing, K.lineLookY, K.lineToward, 0, line.distance, line.height, line.turn,
-        line.lookY, line.toward, 0, line.eyeward]);
+        line.lookY, line.toward, 0, line.eyeward, 0]);
     } else if (step === 'flipper') {
       to.set([K.flipperDistance, K.flipperHeight, K.flipperBearing, K.flipperLookY, K.flipperToward, 1, flipper.distance,
-        flipper.height, flipper.turn, flipper.lookY, flipper.toward, 0, 0]);
+        flipper.height, flipper.turn, flipper.lookY, flipper.toward, 0, 0, 0]);
+    } else if (step === 'farewell' || (step === 'gone' && this.farewelled)) {
+      to.set([K.farewellDistance, K.farewellHeight, K.farewellBearing, K.farewellLookY, K.farewellToward, 0, farewell.distance,
+        farewell.height, farewell.turn, farewell.lookY, farewell.toward, 0, 0, 1]);
     } else if (step === 'free' || step === 'gone') {
       to.set([K.releaseDistance, K.releaseHeight, K.releaseBearing, K.releaseLookY, K.releaseToward, 0, release.distance,
-        release.height, release.turn, release.lookY, release.toward, 0, 0]);
+        release.height, release.turn, release.lookY, release.toward, 0, 0, 0]);
     } else {
       to.set([K.holdDistance, K.holdHeight, K.holdBearing, K.holdLookY, K.holdToward, 0, breath.distance, breath.height,
-        breath.turn, breath.lookY, breath.toward, 0, 0]);
+        breath.turn, breath.lookY, breath.toward, 0, 0, 0]);
     }
     if (now || !this.holdSet) {
       this.holdFrom.set(to);
@@ -1686,9 +1697,11 @@ export class NetWhale {
     const moved = THREE.MathUtils.smootherstep(this.holdT, 0, 1);
     for (let i = 0; i < now.length; i++) now[i] = THREE.MathUtils.lerp(this.holdFrom[i], this.holdTo[i], moved);
     const [holdDistance, holdHeight, bearing, lookY, toward, fin, phoneDistance, phoneHeight, phoneTurn, phoneLookY, phoneToward, eyeward,
-      phoneEyeward] = now;
-    // The head's middle, or its eye: for the look between them, and on a phone for the haul its eye is on.
+      phoneEyeward, farewell] = now;
+    // The head's middle, or its eye: for the look between them, and on a phone for the haul its eye is on; as it dives,
+    // where it bends down under and its flukes will rise.
     const head = this.p.copy(whale.eye).lerp(whale.blowhole, 0.5 * (1 - (portrait ? phoneEyeward : eyeward)));
+    if (farewell > 0) head.lerp(whale.farewell, farewell);
     // At the flipper what matters lies between its tip and where the cygnet holds the loop's end.
     const focus = this.b.copy(head).lerp(this.a.copy(whale.finTip).lerp(this.station, 0.5), fin).setY(portrait ? phoneLookY : lookY);
     this.look.copy(boat).setY(1.2).lerp(focus, portrait ? phoneToward : toward);
@@ -1730,6 +1743,7 @@ export class NetWhale {
       s.secondary.copy(out ? this.cast.cygnet.position : whale.finTip).y += out ? 0.4 : 0;
     } else if (this.looking) s.secondary.copy(whale.eye);
     else s.secondary.copy(whale.blowhole).y += 2.5;
+    if (farewell > 0) s.secondary.lerp(this.a.copy(whale.farewell).setY(K.farewellLookY * 0.6), farewell);
     // Going free, what the view keeps in frame moves from the flipper to the spout with the view's own ease.
     const freeing = this.step === 'free' || this.step === 'gone';
     const into = this.step === 'free' ? moved : 1;

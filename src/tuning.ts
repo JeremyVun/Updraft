@@ -1419,7 +1419,7 @@ export const tuning = {
      * The soft column of its first full breath, and the tall spout when it is free (m above the blowhole), its mist
      * `spoutBreadth` times as broad as the first column's.
      */
-    firstBreathHeight: 13, spoutHeight: 20, spoutBreadth: 1.5,
+    firstBreathHeight: 13, spoutHeight: 15, spoutBreadth: 1.2,
     /** As it spouts free the sea round it brightens, as much as `gladSea`, out to `gladReach` metres from it. */
     gladSea: 0.8, gladReach: 34,
     /**
@@ -1457,7 +1457,14 @@ export const tuning = {
      * `releaseBearing` round to port of astern, looking `releaseToward` of the way to its head and `releaseLookY` up,
      * backed off at most `releaseRoom` metres to keep the boat, the spout and its eye in frame.
      */
-    releaseDistance: 18, releaseHeight: 3.6, releaseBearing: 0.3, releaseLookY: 5, releaseToward: 0.5, releaseMove: 7, releaseRoom: 4,
+    releaseDistance: 18, releaseHeight: 3.6, releaseBearing: 0.3, releaseLookY: 10, releaseToward: 0.5, releaseMove: 7, releaseRoom: 4,
+    /**
+     * As it dives the view eases over `farewellMove` seconds in one move from the release's to the farewell's, framed on
+     * where it bends under and its flukes will rise against the sunrise: `farewellDistance` behind the boat,
+     * `farewellHeight` up and `farewellBearing` round to port of astern, looking `farewellToward` of the way there and
+     * `farewellLookY` up, so its flukes stand whole in the frame over the boat.
+     */
+    farewellDistance: 25, farewellHeight: 3.2, farewellBearing: 0.5, farewellLookY: 14.5, farewellToward: 0.5, farewellMove: 7,
     /**
      * The sea's score thins as the boat comes in, from `hushFrom` to `hushNear` metres short of the rest, to `hushSorrow`
      * of the way to silence at rest beside it, and comes back to `hushCourage` once its eye has found her, at
@@ -1561,6 +1568,7 @@ export const tuning = {
       line: { distance: 6, height: 3.2, turn: -0.75, lookY: 3, toward: 0.37, eyeward: 1 },
       flipper: { distance: 12, height: 3.4, turn: -1.5, lookY: 3, toward: 0.5 },
       release: { distance: 12, height: 3, turn: -0.3, lookY: 12, toward: 0.4 },
+      farewell: { distance: 16, height: 3, turn: 0, lookY: 12, toward: 0.45 },
       releaseRoom: 4,
     },
     /**

@@ -51,15 +51,15 @@ const D = DIVE_AT;
  * into an arch over that bend and slides forward and under; the flukes rise high there once, turning to face her as
  * if waving, and slip straight down.
  */
-const BEND_AT = 0.27;
+const BEND_AT = 0.22;
 /** The way's slope down from the bend, by metres ahead of it: rising a little into the arch, then down steeply. */
 const DIVE_SLOPE = curve([[-30, 0], [-24, 0], [-12, 0.1], [0, 0], [14, -0.55], [28, -1.15], [40, -1.2], [60, -1.2]]);
 /** Seconds into the dive over which its head goes down off the surface onto the way. */
 const HEAD_DOWN = 6.5;
 /** Its glide along its own length, in metres a second, from the dive's start. */
-const GLIDE = curve([[0, 0], [1, 0.3], [4, 4.2], [7, 6.6], [10, 6.6], [12, 4], [13.5, 2], [15.5, 1.4], [17, 2.5], [19, 5.5], [21, 6.5], [26, 6.5]]);
+const GLIDE = curve([[0, 0], [1, 0.3], [4, 4.4], [7, 7.6], [10, 7.6], [11.8, 3], [13, 2], [16, 1.8], [18.5, 1.4], [19.5, 2.4], [21.5, 5.5], [23.5, 6.5], [30, 6.5]]);
 /** Where along it the tail stock bends to lift the flukes, and how far into the flukes the lift has all of them. */
-const STOCK = 0.82;
+const STOCK = 0.84;
 const STOCK_TO = 0.95;
 /** The flukes' pitch held up out of the sea (radians, nose up): a little short of straight up, so their undersides open to the sky. */
 const FLUKES_UP = -1.45;
@@ -67,12 +67,14 @@ const FLUKES_UP = -1.45;
  * The lift, by metres the tail stock lies ahead of the bend: coming up as it nears it, held as the flukes stand over
  * it and slip down through it.
  */
-const LIFT_BY = curve([[-16, 0], [-12, 0.1], [-4, 0.75], [2, 1], [40, 1]]);
-/** Share of the way round toward the boat the raised flukes turn, so their pale undersides face her. */
-const TURN_TO_HER = 0.62;
+const LIFT_BY = curve([[-4, 0], [-1, 0.12], [3, 0.7], [6, 1], [40, 1]]);
+/** Share of the way round toward the boat it turns as its flukes rise, so their pale undersides face her. */
+const TURN_TO_HER = 0.7;
 /** A slow wave of the flukes while they are up: radians of flex at the hinge, and of turn, and its pace. */
 const WAVE_FLEX = 0.16;
 const WAVE_TURN = 0.12;
+/** How far the rising flukes lean their faces toward her before it turns (radians of roll). */
+const FLUKES_LEAN = 0;
 const WAVE_PACE = 1.25;
 /** Seconds after the notch slips under before the boat may go and the pod goes with it, and before it is gone. */
 const GOING_AFTER = 1.2;
@@ -101,9 +103,9 @@ const glidedAt = (m: number) => {
 };
 const BODY_M = LENGTH * DREAM_SCALE;
 /** Seconds into being free when the flukes start up out of the sea, when the notch slips under, and the swell goes out. */
-const FLUKES_FROM = D + glidedAt((STOCK - BEND_AT) * BODY_M - 10);
+const FLUKES_FROM = D + glidedAt((STOCK - BEND_AT) * BODY_M - 1);
 const UNDER_AT = D + glidedAt((1 - BEND_AT) * BODY_M + 4);
-const SURGE_AT = D + glidedAt((STOCK - BEND_AT) * BODY_M + 6);
+const SURGE_AT = D + glidedAt((STOCK - BEND_AT) * BODY_M + 12);
 const GOING_AT = UNDER_AT + GOING_AFTER;
 const GONE = UNDER_AT + GONE_AFTER;
 /**
@@ -195,6 +197,7 @@ export class SleepingWhale extends WhaleRig {
   private planned = false;
   private readonly bendFrom = new THREE.Vector3();
   private twist = 0;
+  private lean = 0;
   private arch = 0;
   private readonly u = new Float32Array(SPINE_N);
   private readonly y = new Float32Array(SPINE_N);
@@ -477,20 +480,19 @@ export class SleepingWhale extends WhaleRig {
   }
 
   /**
-   * The dive's way, from where it lies clear of the boat: its bend on the water a little behind its blowhole, and
-   * how far its flukes turn as they rise so their pale undersides open toward the boat rather than stand edge on.
+   * The dive's way, from where it lies clear of the boat: its bend on the water at its blowhole, and how far round
+   * it turns as its flukes rise, so their pale undersides open toward the boat rather than stand edge on.
    */
   private plan(): void {
     this.planned = true;
     this.bendFrom.copy(this.point(0, 0, BEND_AT, this.p));
     this.farewell.copy(this.bendFrom).setY(0);
-    // Standing up, its back faces the way it goes and its underside back along it; rolled by r, the underside faces
-    // -cos(r) along the heading and sin(r) along (heading.z, -heading.x).
-    const h = this.heading;
+    // Standing up, its underside faces back along the way it goes: turned all the way, that is toward the boat.
+    const full = Math.atan2(this.farewell.x - this.near.x, this.farewell.z - this.near.z) - Math.atan2(this.heading.x, this.heading.z);
+    this.twist = Math.atan2(Math.sin(full), Math.cos(full)) * TURN_TO_HER;
     const tx = this.near.x - this.farewell.x;
     const tz = this.near.z - this.farewell.z;
-    const full = Math.atan2(tx * h.z - tz * h.x, -(tx * h.x + tz * h.z));
-    this.twist = full * TURN_TO_HER;
+    this.lean = Math.sign(tx * this.heading.z - tz * this.heading.x) * FLUKES_LEAN;
     let rise = 0;
     for (let c = -30; c < 0; c += 0.25) rise += Math.sin(DIVE_SLOPE(c + 0.125)) * 0.25;
     this.arch = rise;
@@ -511,11 +513,13 @@ export class SleepingWhale extends WhaleRig {
     const waving = THREE.MathUtils.smoothstep(t, FLUKES_FROM - D + 1.5, FLUKES_FROM - D + 3.5)
       * (1 - THREE.MathUtils.smoothstep(t, UNDER_AT - D - 3, UNDER_AT - D - 1));
     const wave = Math.sin((t - (FLUKES_FROM - D + 1.5)) * WAVE_PACE) * waving;
+    // It sounds more steeply as its tail comes to the bend, so by the time its flukes rise the rest of it is under.
+    const steeper = 1 + THREE.MathUtils.smoothstep(stock, -45, -10);
     for (let i = 0; i < SPINE_N; i++) {
       const s = (i / (SPINE_N - 1)) * SPINE_END;
       const c = at - i * step;
       const posture = THREE.MathUtils.lerp(1, 1 - THREE.MathUtils.smoothstep(c, -40, -8), down);
-      const way = restPitch(s) * posture + down * DIVE_SLOPE(c);
+      const way = restPitch(s) * posture + down * DIVE_SLOPE(c > 0 ? c * steeper : c);
       const aft = THREE.MathUtils.smoothstep(s, STOCK, STOCK_TO);
       this.pitch[i] = THREE.MathUtils.lerp(way, FLUKES_UP, aft * lift) + (s > 0.93 ? WAVE_FLEX * wave : 0);
     }
@@ -536,15 +540,19 @@ export class SleepingWhale extends WhaleRig {
     const f = fi - k;
     const bu = this.u[k] + (this.u[k + 1] - this.u[k]) * f;
     const by = this.y[k] + (this.y[k + 1] - this.y[k]) * f;
+    // It turns about its bend as its flukes come up, never rolling: by then only they and the tail stock stand clear.
+    const turn = this.twist * THREE.MathUtils.smootherstep(lift, 0.1, 0.85);
     const h = this.heading;
+    h.set(h.x * Math.cos(turn) + h.z * Math.sin(turn), 0, h.z * Math.cos(turn) - h.x * Math.sin(turn));
     const ay = this.bendFrom.y + this.arch * down;
     for (let i = 0; i < SPINE_N; i++) {
       const du = this.u[i] - bu;
       this.spine[i].set(this.bendFrom.x + h.x * du, ay + this.y[i] - by, this.bendFrom.z + h.z * du, this.pitch[i]);
     }
-    const turn = THREE.MathUtils.smootherstep(t, FLUKES_FROM - D + 0.5, FLUKES_FROM - D + 4);
-    this.uniforms.uRoll.value = K.roll * (1 - down) + this.twist * turn + WAVE_TURN * wave;
-    this.uniforms.uCurl.value = 0.25 * wave * turn;
+    // Rising, before it has turned, its flukes lean their faces toward her so they never stand edge on.
+    const leaning = THREE.MathUtils.smoothstep(lift, 0, 0.3) * (1 - THREE.MathUtils.smoothstep(lift, 0.45, 1));
+    this.uniforms.uRoll.value = K.roll * (1 - down) + this.lean * leaning + WAVE_TURN * wave;
+    this.uniforms.uCurl.value = 0.25 * wave * lift;
   }
 
   /** As it spouts free the sea round it clears and fills with light, gathering to where it goes down as it dives. */

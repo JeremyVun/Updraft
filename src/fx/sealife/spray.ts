@@ -8,10 +8,12 @@ export const DROP = 1;
 export const SPLASH = 2;
 /** The soft round puffs of a column of breath, lit as solid shapes: gold on the sun's side, cool on the other. */
 export const COLUMN = 3;
+/** The free spout's puffs: a column's, fuller, with a firmer edge that the low sun behind rims rather than fills. */
+const SPOUT = 4;
 
 /** How fast each kind settles into the air around it (per second), and how strongly it falls. */
-const DRAG = [1.5, 0.15, 0.9, 1.1];
-const GRAVITY = [0.4, 9.8, 6.5, 0.3];
+const DRAG = [1.5, 0.15, 0.9, 1.1, 1.1];
+const GRAVITY = [0.4, 9.8, 6.5, 0.3, 0.3];
 
 const VERT = /* glsl */ `
 ${ATMO_GLSL}
@@ -97,11 +99,13 @@ void main() {
     col = mistShade(0.7) + cloudGlow() * (0.22 + glow) * sun;
     additive = 0.12;
   } else if (vKind > 2.5) {
+    float spout = step(3.5, vKind);
     vec2 w = vQ * 1.2 + vSeed * 23.0;
     float lumps = vnoise(w + uTime * 0.15) * 0.6 + vnoise(w * 2.4 - uTime * 0.2) * 0.4;
-    // Soft all the way from the middle, so overlapping puffs add up to one body of mist, never rings of discs.
-    float body = 1.0 - smoothstep(0.0, 0.75 + 0.35 * lumps, r);
-    a = pow(body, 1.5) * smoothstep(vAge * 0.6, vAge * 0.6 + 0.5, lumps + 0.2) * vAlpha;
+    // Soft all the way from the middle, so overlapping puffs add up to one body of mist, never rings of discs; the
+    // spout's a little firmer at its lumpy edge, so its crown reads as a shape against the bright sky behind it.
+    float body = mix(1.0 - smoothstep(0.0, 0.75 + 0.35 * lumps, r), 1.0 - smoothstep(0.25, 0.8 + 0.2 * lumps, r), spout);
+    a = pow(body, 1.5 - 0.5 * spout) * smoothstep(vAge * 0.6, vAge * 0.6 + 0.5, lumps + 0.2) * vAlpha;
     // Each puff a soft ball, a little of the column's own side in it.
     float k = min(r, 1.0);
     float facing = sqrt(max(0.0, 1.0 - k * k));
@@ -110,7 +114,7 @@ void main() {
     vec3 N = normalize(mix(ball, vec3(cos(side), 0.2, sin(side)), 0.3));
     float wrap = clamp(dot(N, uSunDir) * 0.5 + 0.5, 0.0, 1.0);
     // The low sun comes through where it is thin, so it glows from behind; where it is thick it is in its own shade.
-    float through = pow(toSun, 2.0) * (0.3 + 0.7 * (1.0 - facing));
+    float through = pow(toSun, 2.0) * mix(0.3 + 0.7 * (1.0 - facing), 0.12 + 0.88 * pow(1.0 - facing, 1.5), spout);
     // The sky's brightness without its colours, whose blue and orange together go lilac: white, cool grey-blue in its
     // shade, gold where the sun reaches it.
     // Some of the low sun is scattered all through it, so even its shaded side is a warm white, never smoke.
@@ -303,16 +307,16 @@ export class Spray {
    * up through it and falling back glinting.
    */
   spout(at: THREE.Vector3, height: number, strength: number, dt: number, wide = 1): void {
-    const n = Math.floor(strength * 300 * wide * dt + Math.random());
+    const n = Math.floor(strength * 380 * wide * dt + Math.random());
     for (let i = 0; i < n; i++) {
       const a = Math.random() * Math.PI * 2;
       const reach = 0.3 + 0.7 * Math.sqrt(Math.random());
       const crown = THREE.MathUtils.smoothstep(reach, 0.72, 1);
-      const out = (0.25 + reach * 0.5 * Math.random() + crown * (1.6 + Math.random() * 2.6)) * wide;
-      const up = height * DRAG[COLUMN] * reach * strength * (1 + Math.random() * 0.12);
-      this.emit(COLUMN, at.x + Math.cos(a) * 0.45 * wide, at.y + 0.2, at.z + Math.sin(a) * 0.45 * wide, Math.cos(a) * out, up,
-        Math.sin(a) * out, (0.7 + Math.random() * 0.45 + crown * 0.8) * wide, 6.5 + Math.random() * 2.5,
-        (0.3 + reach * 0.35 + crown * 0.9) * wide, 0.55 + Math.random() * 0.3, 2 + crown * 1.2 + Math.random() * 0.6);
+      const out = (0.2 + reach * 0.4 * Math.random() + crown * (1 + Math.random() * 1.8)) * wide;
+      const up = height * DRAG[SPOUT] * reach * strength * (1 + Math.random() * 0.12);
+      this.emit(SPOUT, at.x + Math.cos(a) * 0.4 * wide, at.y + 0.2, at.z + Math.sin(a) * 0.4 * wide, Math.cos(a) * out, up,
+        Math.sin(a) * out, (0.55 + Math.random() * 0.35 + crown * 0.6) * wide, 6.5 + Math.random() * 2.5,
+        (0.15 + reach * 0.25 + crown * 0.55) * wide, 0.6 + Math.random() * 0.3, 2.2 + crown * 1.4 + Math.random() * 0.6);
       this.side[this.count - 1] = a / (Math.PI * 2);
     }
     const m = Math.floor(strength * 90 * dt + Math.random());
