@@ -57,11 +57,14 @@ const DIVE_SLOPE = curve([[-30, 0], [-24, 0], [-12, 0.1], [0, 0], [14, -0.55], [
 /** Seconds into the dive over which its head goes down off the surface onto the way. */
 const HEAD_DOWN = 6.5;
 /** Its glide along its own length, in metres a second, from the dive's start. */
-const GLIDE = curve([[0, 0], [1, 0.3], [4, 4.6], [6.5, 8.6], [9.5, 8.6], [11.3, 3.2], [12.3, 2.2], [14.5, 1.6], [16.5, 1.3], [17.5, 2.4], [19.5, 5.5], [21.5, 6.5], [30, 6.5]]);
+const GLIDE = curve([
+  [0, 0], [1, 0.3], [4, 4.6], [6.5, 8.6], [9.5, 8.6], [11.3, 3.2], [12.3, 2.2], [14.5, 1.6], [16.5, 1.3], [17.5, 2.4],
+  [19.5, 5.5], [21.5, 6.5], [30, 6.5],
+]);
 /** Where along it the tail stock bends to lift the flukes, and how far into the flukes the lift has all of them. */
 const STOCK = 0.84;
 const STOCK_TO = 0.95;
-/** The flukes' pitch held up out of the sea (radians, nose up): a little short of straight up, so their undersides open to the sky. */
+/** The flukes' pitch held up out of the sea (radians, nose up): a little short of straight up, undersides to the sky. */
 const FLUKES_UP = -1.45;
 /**
  * The lift, by metres the tail stock lies ahead of the bend: coming up as it nears it, held as the flukes stand over
@@ -162,7 +165,7 @@ export class SleepingWhale extends WhaleRig {
   /** The middle of the back above the water, and the fluke notch. */
   readonly back = new THREE.Vector3();
   readonly flukes = new THREE.Vector3();
-  /** Where it bends down into its dive on the water, and so where its flukes will rise: known once it is free and clear. */
+  /** Where it bends down into its dive on the water, and so where its flukes will rise: known once it has drifted clear. */
   readonly farewell = new THREE.Vector3();
   /** How far the near flipper is lifted, 0..1. */
   flipperLift = 0;
@@ -189,9 +192,8 @@ export class SleepingWhale extends WhaleRig {
   private liftT = -1;
   /** A sigh seen from far off, still rising: seconds of it left, how far off, how strong. */
   private sigh = { left: 0, far: 1, strength: 1 };
-  private surgeNear = 12;
   private worldTime = 0;
-  /** The dive's way, laid once it has drifted clear: its bend on the water, and how far round toward the boat its raised flukes turn. */
+  /** The dive's way, laid once it has drifted clear: its bend, how high its back arches over it, how far round it turns. */
   private planned = false;
   private readonly bendFrom = new THREE.Vector3();
   private twist = 0;
@@ -260,8 +262,6 @@ export class SleepingWhale extends WhaleRig {
     this.rest.z = eye.z - this.p.z;
     this.pivot.copy(this.rest);
     this.lay(0, 0, 0, 0, K.roll);
-    this.point(0, 0, 0.5, this.q);
-    this.surgeNear = Math.hypot(near.x - this.q.x, near.z - this.q.z);
     this.near.copy(near);
     this.restHeading.copy(this.heading);
     this.away.set(-this.heading.z, 0, this.heading.x);
@@ -574,8 +574,8 @@ export class SleepingWhale extends WhaleRig {
     const half = 0.12 * BODY_M;
     const centre = this.q.copy(this.farewell).addScaledVector(h, -half);
     const along = THREE.MathUtils.clamp((this.near.x - centre.x) * h.x + (this.near.z - centre.z) * h.z, -half, half);
-    this.surgeNear = Math.hypot(this.near.x - centre.x - h.x * along, this.near.z - centre.z - h.z * along);
-    const height = K.surgeHeight * (12 + this.surgeNear) / 12;
+    const near = Math.hypot(this.near.x - centre.x - h.x * along, this.near.z - centre.z - h.z * along);
+    const height = (K.surgeHeight * (12 + near)) / 12;
     swellUniforms.uSurge.value.set(centre.x, centre.z, this.worldTime, height);
     swellUniforms.uSurgeAxis.value.set(h.x, h.z, half);
   }

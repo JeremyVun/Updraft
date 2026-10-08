@@ -1464,7 +1464,7 @@ export const tuning = {
      * `farewellHeight` up and `farewellBearing` round to port of astern, looking `farewellToward` of the way there and
      * `farewellLookY` up, so its flukes stand whole in the frame over the boat.
      */
-    farewellDistance: 25, farewellHeight: 3.2, farewellBearing: 0.5, farewellLookY: 14.5, farewellToward: 0.5, farewellMove: 7,
+    farewellDistance: 20, farewellHeight: 3.4, farewellBearing: 0.5, farewellLookY: 13, farewellToward: 0.5, farewellMove: 7,
     /** Once it has gone, seconds over which the view eases from the farewell's hold back to the crossing's behind the boat. */
     handBack: 16,
     /**
@@ -1562,7 +1562,8 @@ export const tuning = {
      * the boat and `height` up, looking from the boat `toward` of the way to what matters and `lookY` up on it (m); for
      * the haul what matters is `eyeward` of the way from the head's middle to its eye.
      * `release` is where the flipper's hold eases out to as it goes free, turned back a little from the sun so the
-     * spout, its eye and the leaps before it stand over the boat, backed off at most `releaseRoom` metres.
+     * spout, its eye and the leaps before it stand over the boat, backed off at most `releaseRoom` metres; `farewell`
+     * the dive's, on the line from where it goes down through the boat, turned toward the sun its flukes rise against.
      */
     phone: {
       breath: { distance: 18, height: 2.8, turn: -0.2, lookY: 8, toward: 0.35 },
