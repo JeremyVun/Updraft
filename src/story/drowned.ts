@@ -3,7 +3,7 @@ import type { CheckpointPayload } from './checkpoint-data';
 import * as THREE from 'three';
 import type { Shot } from '../camera';
 import { DROWNED_CHANNEL, SPIRE, LIGHTHOUSE } from '../world/drowned';
-import { BOAT_TREE, STORM_WAY, CAT_CHIMNEY, CAT_HOLD, CAT_LENS, DARK_AT_STRAND, STRAND, STRAND_YAW, WAY } from '../world/drowned-way';
+import { STORM_WAY, CAT_CHIMNEY, CAT_HOLD, CAT_LENS, DARK_AT_STRAND, STRAND, STRAND_YAW, WAY } from '../world/drowned-way';
 import { LIGHTHOUSE_TOP_Y } from '../world/lighthouse';
 import { WOOD_LANDING } from '../world/wood';
 import { atmo } from '../world/atmosphere';
@@ -36,9 +36,9 @@ const STRAND_TOP = new THREE.Vector3(WAY.strandSlope.x1, WAY.strandSlope.height1
  * `still` the air dying as the hull coasts on and runs aground on a roof just under the water; `becalmed` the boat stuck
  * there while the fog rises where they came from and comes on, until the cat bolts onto the roof and she is up on it
  * after the cat; `run` her way over the roofs to the church, the fog coming on behind her, the boat lost to it where it
- * lies; `nave` her on the nave's ridge at the tower's foot, the cat at the tower's south face below the ivy, the fog a
- * few roofs back; `church` the cat up the ivy, the fog closing round, the boat brought and her stepping down into it.
- * The storm (`gather`, `snatch`, `after`) begins with her aboard at the nave.
+ * lies; `nave` her on the nave's ridge at the tower's foot, the cat on the railings below the tower, the fog a few roofs
+ * back; `church` the cat and her up the ivy into the belfry, the fog sea, the bell calling the boat home, her climb down
+ * into it and the look back up at the cat. The storm (`gather`, `snatch`, `after`) begins as they leave the nave.
  */
 type Beat = 'enter' | 'drift' | 'still' | 'becalmed' | 'run' | 'nave' | 'church' | 'gather' | 'snatch' | 'after';
 
@@ -149,8 +149,6 @@ export class DrownedChapter implements Chapter {
   /** The player's sweeps on the stuck boat's sail: how full it was last frame, and seconds since it last strained. */
   private strained = 0;
   private strainAge = 10;
-  /** QA and the church until it brings the boat home itself: the boat taken from where it was lost to the dead tree east of the tower. */
-  private fetched = false;
   private readonly catHead = new THREE.Vector3();
   private readonly catAttention = { point: new THREE.Vector3(), strength: 0, weight: tuning.drownedCamera.catGlance };
   private readonly darkFront = new THREE.Vector3();
@@ -195,7 +193,8 @@ export class DrownedChapter implements Chapter {
   }
 
   get windInvitation(): THREE.Vector3 | null {
-    if (this.beat === 'nave' || this.beat === 'church') return null;
+    if (this.beat === 'nave') return null;
+    if (this.beat === 'church') return this.church!.invitation;
     return this.beat === 'run' ? this.run!.invitation : this.cat.invitation;
   }
 
@@ -205,6 +204,7 @@ export class DrownedChapter implements Chapter {
   }
 
   get invitationHeading(): number | null {
+    if (this.beat === 'church') return this.church!.inviteHeading;
     return this.beat === 'run' ? this.run!.inviteHeading : this.cat.heading;
   }
 
@@ -224,21 +224,29 @@ export class DrownedChapter implements Chapter {
     return this.beat === 'after' && this.cast.boat.grounded;
   }
 
-  /** The latest point to come back to: the cat aboard, the run's start, the tower's foot, aboard for the storm. */
+  /**
+   * The latest point to come back to: the cat aboard, the run's start, the tower's foot, in the belfry with the bell to
+   * ring, aboard for the storm.
+   */
   get checkpoint(): string | null {
     switch (this.beat) {
       case 'enter': return null;
       case 'drift': case 'still': case 'becalmed': return this.aboardFrom >= 0 ? 'sail' : null;
       case 'run': return 'roofs';
-      case 'nave': case 'church': return 'church';
+      case 'nave': return 'church';
+      case 'church': {
+        const step = this.church!.step;
+        return step === 'foot' || step === 'climb' ? 'church' : step === 'board' || step === 'aboard' ? 'storm' : 'belfry';
+      }
       default: return 'storm';
     }
   }
   saveCheckpoint(): CheckpointPayload<'drowned'> { return [this.leg]; }
   restoreCheckpoint(point: string, data: number[]): void {
-    if (point === 'roofs' || point === 'church' || point === 'storm') {
+    if (point === 'roofs' || point === 'church' || point === 'belfry' || point === 'storm') {
       this.skipToRun();
       if (point === 'church') this.skipToNave();
+      if (point === 'belfry') this.skipToBelfry();
       if (point === 'storm') this.skipToStorm();
       return;
     }
@@ -287,12 +295,20 @@ export class DrownedChapter implements Chapter {
     this.cutIn = 2;
   }
 
-  /** QA (`?chapter=storm`): on to her just seated aboard at the nave, the fog closed round, the storm beginning. */
+  /** QA (`?chapter=belfry`): on to her in the belfry's opening over the fog sea, the bell about to be hers to ring. */
+  skipToBelfry(): void {
+    this.skipToNave();
+    this.to('church');
+    this.church!.begin();
+    this.church!.skipToBelfry();
+  }
+
+  /** QA (`?chapter=storm`): on to her just seated aboard at the nave, about to look back up at the cat before the storm. */
   skipToStorm(): void {
     this.skipToNave();
     this.to('church');
+    this.church!.begin();
     this.church!.skipToAboard();
-    this.aboard();
   }
 
   /** How far the fog over the water muffles the sea: as it comes on toward the lens and once the lens is in it. */
@@ -306,8 +322,9 @@ export class DrownedChapter implements Chapter {
     this.seaMuffle = dark.rise * (1 - THREE.MathUtils.smoothstep(ahead, k.muffleTo, k.muffleFrom));
   }
 
-  /** QA: a skip ahead cuts the lens there once the chapter has begun. */
+  /** QA: a skip ahead cuts the lens there once the chapter has begun; so does the church's into and out of the belfry. */
   cameraCut = 0;
+  private churchCut = 0;
   private cutIn = 0;
   private readonly muffleAt = new THREE.Vector2();
   private restored = false;
@@ -354,7 +371,7 @@ export class DrownedChapter implements Chapter {
     this.muffleSea();
     this.steer();
     const { child: c, plane: p, boat } = this.cast;
-    if (!this.cat.ashore || this.church?.done) {
+    if (!this.cat.ashore || this.church?.aboard) {
       c.ride(this.cat.seatIn(this.seat, boat.seat(this.seat)), boat.yaw + (this.church?.seatTurn ?? 0), boat);
       if (this.cat.kneel > 0.05) c.sitting = false;
     }
@@ -365,6 +382,10 @@ export class DrownedChapter implements Chapter {
     if (this.beat === 'run' || this.beat === 'nave') this.run!.update(dt);
     else this.run?.tend(dt);
     if (this.church && this.church.step !== 'off') this.church.update(dt);
+    if (this.church && this.church.cut !== this.churchCut) {
+      this.churchCut = this.church.cut;
+      this.cameraCut++;
+    }
 
     const through = this.beat === 'enter' || this.beat === 'drift' || this.beat === 'still' ? (this.held = this.through) : this.held;
     switch (this.beat) {
@@ -538,7 +559,6 @@ export class DrownedChapter implements Chapter {
       this.cast.knock?.('hull-scrape', boat.position, 1);
       cygnet.mind.startle(tuning.drowned.touchStartle);
     }
-    this.fetchForChurch();
   }
 
   /**
@@ -557,25 +577,6 @@ export class DrownedChapter implements Chapter {
       this.cast.knock?.('hull-strain', boat.position, Math.min(1, made / (s.strainFrom * 3)));
     }
     this.strained = made;
-  }
-
-  /**
-   * Until the church brings the boat home out of the fog itself, it is found waiting against the dead tree east of the
-   * tower once the fog has closed round, so the bring can be played.
-   */
-  private fetchForChurch(): void {
-    const ch = this.church;
-    if (this.fetched || !ch || ch.step !== 'fog' || ch.close < tuning.drowned.church.fetchAt) return;
-    this.fetched = true;
-    const { boat } = this.cast;
-    const lie = new THREE.Vector2(25.5, -1569);
-    const toTree = new THREE.Vector2().subVectors(BOAT_TREE, lie).normalize();
-    const at = new THREE.Vector2().copy(BOAT_TREE).addScaledVector(toTree, -2.5);
-    const yaw = Math.atan2(toTree.x, toTree.y);
-    boat.knock(0, 0, 0);
-    boat.position.set(at.x, boat.position.y, at.y);
-    boat.yaw = yaw;
-    boat.coastTo = { x: at.x, z: at.y, yaw };
   }
 
   /**
@@ -612,7 +613,7 @@ export class DrownedChapter implements Chapter {
 
   /** What the child is looking at: the spire while it is near, otherwise the houses going by. */
   private watch(): void {
-    if (this.beat === 'run' || this.beat === 'nave' || this.beat === 'church' || this.church?.lookingBack) return;
+    if (this.beat === 'run' || this.beat === 'nave' || this.beat === 'church' || this.church?.lookingUp) return;
     const { child: c, boat, plane: p } = this.cast;
     const onCat = this.beat === 'becalmed' ? (['bolting', 'waits', 'climbing', 'ridge'].includes(this.cat.step) ? this.cat.gaze() : null)
       : this.beat === 'drift' || this.beat === 'enter' ? this.cat.gaze() : null;
