@@ -632,7 +632,48 @@ waving mitten against the sky or the sun's glow, not the sail; on a phone she re
 and the farewell's holds in `net-whale.ts` and `tuning.ts`, and the light on her (the child's own look, its lantern
 and rim).
 Gate: as N3g's, with stills of the look and the flukes high, landscape and portrait, in a full play and resumed.
-Done: [ ]
+Done: [x] `df1738cb..b8d1c6e0`. The look: the boat's sail swings out over her starboard quarter and its
+mast stands 0.8 m ahead of her, so a view that sees her side brings the sail in behind her; the landscape hold looks
+from nearly astern of her, `lookDistance` 4.6, `lookHeight` 1.6, `lookBearing` 0.08, `lookToward` 0.66, `lookLookY`
+2.6: her figure from hood to gunwale about 315 px of 900 at the frame's right (was cut by the bottom edge), the eye
+about 245 px across, the mast at the right edge. Phone `look` 3.8 back, 2.1 up, turn −0.42, lookY 2.5, toward 0.5:
+her seated in the boat (about 180 px hood to gunwale of 932), its eye above her, the mast just past the right edge.
+Her light (`Traveller.lent`, a per-frame vector the story lends and the traveller lets go after each frame; `uLent` in
+the child's shader, so nothing changes where it is not lent): the sun along her outline where it turns toward it, the
+lantern wrapped round her face and side, a lift in her shade; `lookLight` [2.2, 2.5, 0.6], `farewellLight`
+[1.5, 0, 0.3], eased at `lightEase` 1 a second. Her reach to its eye is `lookReach` (unchanged values). The farewell:
+landscape `farewellDistance` 21, `farewellHeight` 1.2, `farewellBearing` 0.3, `farewellLookY` 16 (was 17/1.8/0.6/19):
+the boat whole on the water about 75 px above the bottom edge, the flukes' tips inside the top, the sun between the
+stock and the sail. As it dives her seat turns to where it goes down (`turnToward(at)`), she goes along the thwart to
+the port rail (`farewellSlide` 0.35 at `farewellRailEase` 0.8) and, while it flukes, holds a mitten out at her side
+waving slowly (`waveGoodbye`, `goodbyeWave` [0.55 out, 0.12 up, 0.15 sway, 4.5 rad/s]), so it shows beside her hood
+against the sun's glow rather than in front of the sail. Phone `farewell` 22 back, 1.2 up, turn −0.6, lookY 24,
+toward 0.25 (was 40/2/−0.5/26/0.6): she is about 70 px seat to hood (was about 38 by the same measure), the flukes
+tower past the frame's left edge, the sun between the stock and the boat. `Shot.authored` (`camera.ts`,
+`camera-direction.ts`): a story that frames a view itself lets any turn the lens chose earlier ease out and has no new
+one chosen; the encounter sets it while its hold has any weight, so the full play and a resumed save now frame the same
+(headless: offset 0 through the look and the farewell either way; it was 0.18 rad in a full play). The child is
+unchanged elsewhere (the dark wood and the meadow, stills before and after). Camera on the recordings (full play with
+gestures): through the look worst 1.6 m/s² landscape, 2.7 portrait; free to the hand-back's end worst 2.3 landscape,
+4.6 portrait, in the hand-back's swing as the boat comes about (N3l: 1.95, 4.5). `net-whale-check` all 11 cases pass
+(`fin` clearance 1.61 m, `finidle` 1.65, `full` 1.5); played (`full`): rest 88.6, breath 111.4, line 144.5, flipper
+167.2, free 173.3, gone 206.5, moored 232.9. Idle, moored about 496 (pacing `calm` arrivalReady 496.4).
+Left:
+- In landscape her face stays inside her hood and the hood is most of her figure; her mitten held out to its eye
+  never shows from behind (the arm folds back beside her hood).
+- The mast stands at the landscape look's right edge and shows there as the boat rolls; her bag is near that edge.
+- The goodbye mitten never rises above her face: a reach above face height stops level with it (the child's arm,
+  cause not found), so her goodbye is a small mitten swinging at her side, about 30 px out in landscape and 15 on a phone.
+- On a phone the left fluke is cut by the frame's edge through the farewell.
+- In 2 of 5 full plays with real gestures (both of the first two recordings) the look's camera dropped to its 1 m
+  clearance about 4.7 s into the first breath and swung through the boat at about 20 m/s; three later plays and every
+  resumed one were smooth, and the logged state was the same (`/tmp/updraft-seawhale-n3n-glitch-full-*`).
+
+Claude's judgement, 2026-10-09, from the stills and a full play of the merged sea: lit, she is a child in a yellow
+coat rather than a dark lump, and the phone's look holds her seated under the eye. The farewell in landscape is the
+encounter's image now, the boat whole under the flukes and the sun between the stock and the sail. The landscape look
+is not yet the owl's: her hood fills the right corner, cut by the frame, and her reaching mitten never shows. The
+intermittent drop of the lens through the boat in the look must not reach Jeremy.
 
 ### Phase N3o: the breath seen, the spout white
 After N3l and N3m merged on `sea-whale`; in parallel with N3n. Each breath's water seen as water: sheets of the sea
@@ -645,10 +686,80 @@ seed only exposes it; the player would see a leap cut by the frame's edge). Owns
 `whaleShader.ts`, the breath's shedding in `sleeper.ts`, `spray.ts`, the heave in `swell.ts`, the leap's placement
 in `dolphin.ts`, their tuning.
 Gate: as N3g's.
+Done: [x] `d47c32ab..a064fec3` on `sea-whale-life`, docs in the commit after. The water (`whaleShader.ts`): the threads
+(`rills`) are gone; each breath's sea pours off as `falls()`: broad lanes along the body about 2.5 m apart that
+wander as they run down, covering more as there is more water (`sheetWet` 0.8 times the breath's depth, up to 1),
+streaming with the dawn they mirror (gold where they pour over the ridge toward the sun, `falls` 0.8 of the skin
+they cover at most, the skin showing through but where they run full), with gold glints (`glints` 2); below about
+2.4 m they part into threads, and as they drain they narrow to their middles and go. Their front (`uPour`) comes down
+from `pourFrom` 6.5 m above the sea at `pourSpeed` 1.2 m/s gathering `pourFall` 1.6 m/s², reaching the waterline
+about 2.2 s after the shed; they drain over `sheetFor` 5.5 s; where they reach the sea, white churn on the skin.
+The span shed is s 0.08 to 0.86 (was 0.15 to 0.8). The head bared at the haul streams with the same falls, already
+come down (`uPour.y`). `sleeper.ts`: from 1.3 to 5 s after a shed, `pourDrops` 260 drops a second times its depth run
+off the flank just over the waterline (three in four on the near side), and the lace runs with them, never laid
+within 2.8 m of the near flipper's blade (over it, it drew white threads across the blade). The ring (`swell.ts`):
+`heaveHeight` 0.55 m times depth at the flank, out at `heaveSpeed` 2.6 m/s, `heaveWidth` 2.2 m from crest to side
+there, broadening by `heaveSpread` 0.3 of each metre over its first 12 m, lower by half `heaveReach` 8 m out, with a
+shallow trough behind (0.35), settled by `heaveFor` 8 s and cut off a little way either side so the far sea is
+exactly as it was; the breath before keeps its ring going (`uHeaveBefore`), so a new breath never cuts one off
+under the boat. The water shader takes the ring's height (`vHeave`) and lights its crest through toward the low sun
+(`heaveGlow` 2.5). Measured at the line's hold after a waking breath: the boat rises about 0.21 m more, its worst
+vertical acceleration 0.48 m/s² (0.47 with no ring; N3m's 0.58). The mist (`spray.ts`, `mistLook`): the first column
+and the spout are lit as a painter lights a backlit plume, from the side the sun lies on in the frame, in shares of
+the sky's brightness behind them: `shade` 1 grey-blue on the far side, `white` 2.1 (`spoutWhite` 0.3 more) warm white
+on the sun's side with `gold` 0.4 of the low sun's glow, and `through` 0.9 glowing through thin edges toward it. The
+spout's puffs are firmer at their lumpy edge, so its crown billows, and fray into wisps as they thin; `spoutHeight`
+10 (was 15) and its crown's puffs grow slower, so its crown, about 14 m over the blowhole at most, stays in the
+release frame (landscape: at least 33 px under the top, at about 11 s free; portrait about 208 px). The leap
+(`dolphin.ts`): the throw is asked only once the leaper is within `leapMarkNear` 1.5 m of its mark beside the boat;
+at seed 147 the leaper had set out 40 m astern and threw 9 m astern, 13 m from the lens (featured leap edge now 0.53
+in that case, was 1.21). Seed 149 then exposed a softlock: the pod's nudge never landed (the boat had slowed for the
+whale and a dolphin ahead of it cannot drop back), so the whale was never led and the cygnet stayed in her arms at
+the flipper; `crossing.ts` now counts the whale as led once its step is past the approach. Gates: typecheck, build;
+`net-whale-check` all 11 cases (`fin` clearance 1.61 m, `finidle` 1.7, `full` 1.5); `sea-logic-check` at seeds 147 to
+158; pacing `toMirror` (whale brake 0.41 to 0.55 m/s², as before). Played (`full`): rest 88.8, line 111.6, flipper
+144.5, free 167.2, spout 173.3, gone 206.4, moored 233.0; idle moored about 497 (pacing `calm` arrivalReady 496.5).
+Left:
+- The ring reads in motion as a soft warm band going out and the boat lifting, not as a crisp ring on the water.
+- A deep breath in the bird's hold lays a broad bright curtain along the back for about three seconds, behind the
+  cygnet swimming to the loop.
+- A lone narrow fall can read as a single bright streak in a still; the pale scars still read as scratches.
+- The spout is no taller in its frame than the first column at rest, whose crown still leaves the top of the rest frame.
+- Thinning (from about 10 s free) the plume reads as a soft round cloud more than wisps.
+- In the played portrait release the plume stands behind the sail as it rises and drifts to the right edge, its right
+  side cut (the release hold's framing, unchanged).
+- Thin white curved strokes show near the loop's end by the cygnet and the flipper's tip (not the lace; unidentified).
+
+Claude's judgement, 2026-10-09, from the sheets and a full play of the merged sea: the breath now reads as water,
+lilac-gold sheets over the ridge breaking into threads at the waterline, but every resting breath through the line and
+the flipper lays the same bright curtain along the back, so it repeats and pulls the eye from the step at hand. The
+spout is white and gold but swells into a round opaque ball like cotton wool, a cloud rather than a blow. The scars
+read across the water as drawn chevrons. The leap kept in frame and the softlock found at seed 149 are both right.
+The white curved strokes in the sky over the breath are the player's own drawn wind, not an artifact.
+
+### Phase N3q: her frame
+After N3n and N3o merged on `sea-whale`; in parallel with N3r. The look's landscape frame made the owl's: her whole
+seated figure smaller, three-quarter back, lit, the sail allowed behind her at the frame's edge but never between her
+and the eye (the design's Camera bullet), her reaching mitten against its flank. The child's arm able to reach above
+her face, so the reach to the eye and the goodbye wave rise as they should. And the intermittent drop of the lens in
+the look found and fixed: in 2 of 5 full plays with real gestures, about 4.7 s into the first breath, the camera
+fell to its 1 m floor and swung through the boat at about 20 m/s. Owns the look's holds in `net-whale.ts`, the lens
+(`camera.ts`, `camera-direction.ts`), the child's arm, their tuning.
+Gate: as N3g's, the look in at least five full plays with real gestures, landscape and portrait, none with a jolt.
+Done: [ ]
+
+### Phase N3r: the mist and the skin
+After N3n and N3o merged on `sea-whale`; in parallel with N3q. The spout and the first column made a whale's blow,
+a tall bushy column bursting up and widening, the sun through its thin parts, drifting and fraying (the design's
+release); the breath's falls kept for the breaths that matter (its waking breath, its first full breath, the spout)
+and only a soft sheen at a resting breath, never a curtain repeating over the step at hand; the scars faint and soft,
+never chevrons. Owns `spray.ts`, the whale's skin and wet terms in `whaleShader.ts`, the breath's shedding in
+`sleeper.ts`, their tuning.
+Gate: as N3g's.
 Done: [ ]
 
 ### Phase N3p: the playable build
-After N3n and N3o merged. Claude plays the whole open sea beside the clouds and the owl, folds what that turns up
+After N3q and N3r merged. Claude plays the whole open sea beside the clouds and the owl, folds what that turns up
 into the docs and fixes it, and the playable build goes to Jeremy.
 Done: [ ]
 

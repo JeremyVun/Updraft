@@ -829,10 +829,13 @@ The sequence:
   after the first breath it knows her too; the look between them is the warmest beat of the sequence, and the
   goodbye is a friend's.
 - **The open sea as on main up to the swim.** The pod rises and rides the bow, the leap at first light, the cygnet's
-  swim and its drying. The sea's distant surfacing whale (`whaleAt: 27`) is cut: the sleeper is the whale.
+  swim and its drying. The sea's distant surfacing whale (`whaleAt: 27`) is cut: the sleeper is the whale. The leap
+  is thrown only from its mark beside the boat (Claude's call, N3o): a leaper that set out far astern runs up to it
+  first, so the whole arc stays in the frame, never close under the lens.
 - **The pod leads.** After the swim a dolphin nudges the planking (main's nudge, now asking) and the pod leads the boat
   off its line toward what looks like a long low island in the sunrise haze (`k1`). It breathes: a whale, dream-sized,
   lying still and worn out. The boat eases to rest beside its head (`Boat.speedLimit` eased to zero, never braked).
+  Come to rest beside it with the nudge never landed, it counts as led all the same.
 - **The whale.** About 110 m nose to flukes (see Ownership above; `notes.md` says 75 m), too big for the frame: the back recedes across and away into the haze and
   is never shown whole near the boat. Slate-blue, paler underside, the low sun on its rim, cool sky fill so the eye
   still reads; no sharp ridge, no face-like smile. Its eye, near the boat, is larger than the
@@ -884,19 +887,20 @@ The sequence:
     and painted like the rest of the game, never photographic noise; healed and old, never a wound. Fine detail small
     against its bulk is what makes it read giant. The lichen gathers on the head and the top of the back and thins
     down the flank, so the near flank reads as one old surface rather than a scatter of decals (Claude's call,
-    2026-10-08, after N3k). The eye old, wet and kind in folds of age, its iris a deep warm brown catching
+    2026-10-08, after N3k). The scars are faint soft pale marks seen only as you look, never drawn strokes or
+    chevrons that read from across the water (Claude's call, 2026-10-09, after playing the merged sea). The eye old, wet and kind in folds of age, its iris a deep warm brown catching
     the sun in one bright point, never a lit orange.
   - **It breathes the sea.** Each slow breath lifts the back a little, water sheeting off its top in glinting streams,
-    and the sea round it swells and settles. As built (Claude's call, 2026-10-08): as each breath's rise passes its
-    middle the sea runs off the back (s 0.15 to 0.8) for a few seconds in thin threads side by side along it, each
-    wandering down the flank with its water running down it in pulses that mirror the dawn and glint gold where they
-    catch the low sun behind; the skin between darkens a little; where they pour back in, white water laces the
-    waterline, mostly on the near side; and one low crest of sea goes out from its flank, lifting the corks and the
-    boat a hand's breadth and settling. A weak breath at rest sheds little, a deep one once it is awake much more;
-    its first full breath and the free spout the most. Never a sudden lift under the boat. Claude's call after N3m: the
-    threads are too faint to read as water in motion and read as scratches or wires in a still, so the water comes off
-    as broad glinting falls from the ridge that thin to threads and drops at the waterline, and the crest is seen on
-    the water as a low ring of swell going out.
+    and the sea round it swells and settles. As built (Claude's calls, 2026-10-08, N3m then N3o): as each breath's
+    rise passes its middle the sea pours off its back (s 0.08 to 0.86) in broad falls over the ridge and down the
+    flanks, their front coming down from the top to the waterline in about two seconds, each fall wandering a little
+    and streaming with the dawn it mirrors, lit gold through where it pours over the ridge toward the sun, gold drops
+    glinting in it; low down they part into threads, and as they drain over the next few seconds they narrow to their
+    middles and go. Where they reach the sea, strings of drops run off just over the waterline and white water laces
+    it, mostly on the near side, never over the flipper. One low ring of swell goes out from its flank, the low sun
+    coming through its crest, broadening as it goes so it lifts the corks and the boat gently (about 0.2 m at the
+    boat after a waking breath). A weak breath at rest sheds a few narrow falls, a deep one once it is awake broad
+    ones; its first full breath and the free spout the most. Never a sudden lift under the boat.
   - **Life on it.** A few seabirds stand far along its back as on a rock, never near a step's target, and lift off as
     it spouts free. As built (Claude's call, 2026-10-08): four gulls in the game's gull look, cheated to about twice a
     gull's size so they read at 50 to 70 m, stand in two loose pairs on the ridge at s 0.54 to 0.7, riding its breath,
@@ -955,7 +959,12 @@ The sequence:
   (Claude's call, N3h): the spout, then its mist drifting down over the boat in the gold light with fine drops
   glinting, the sea brightening round it, its call turned glad (the same voice, rising instead of settling) with her
   eyes on its eye, then her look up into the mist and the cygnet calling back; about ten seconds from the spout to
-  the dive. The spout is the first breath's white mist lit gold, taller, with a rounded crown in the frame. The dive
+  the dive. The spout is the first breath's white mist, glad: a billowing white plume lit gold on its sun side and
+  soft grey-blue in its shade, firmer at its lumpy edge than the first column, fraying into wisps as it thins, its
+  crown held in the release frame (Claude's call, N3o: as tall as fits, about 14 m at most, not taller). Claude's
+  call, 2026-10-09, after playing it: as built it swelled into a round opaque ball like cotton wool sitting on the
+  back, a cloud rather than a blow; it is a tall bushy column, burst up fast and widening as it rises, the sun
+  glowing through its thin parts, then drifting and fraying, and the first column is the same kind, smaller. The dive
   as built (Claude's call, N3i): one slow forward glide down a way through the sea that the whole body follows, its
   bend where the spout stood, so the flukes rise in the sun's own glow; its head tips down into the sea with its eye
   on her, the long back rises into an arch over the bend and slides forward under it, the low sun cresting the
@@ -991,16 +1000,29 @@ The sequence:
   stands under a degree above the sea, so a camera below the back (about 5.2 m) hides its disc; what must show is its
   light, glowing along the ridge or over the far back, never the disc for its own sake. The haul's and the bird's
   holds rise only as far as the cork and the bird on the water need. The approach comes down as the boat slows, so
-  the island rises above the horizon as it nears. The look between them is framed as the owl's is: her whole upper
-  body in three-quarter back view to one side, her hood and reaching mitten clear against its flank, its eye large
-  across clear water, the sail out of frame. The release eases out wide, the plume's crown in the frame; as it dives
-  the view eases once to the farewell's hold, framed on where it goes down, the flukes standing whole over the boat
-  against the sun with their tips inside the frame on a phone as in landscape, the sail clear of the stock and her
-  waving mitten plain; as built (N3l) the landscape hold sits low (1.8 m) and near (17 m) behind the boat to port, so
-  the flukes tower over her with the sun between the stock and the sail; a phone's stands farther back (40 m) and turned off the line to the bend, to
-  hold their whole span. Claude's call after N3l: the boat stays whole above the bottom edge and her waving
-  mitten shows against the sky or the sun's glow, never lost against the sail; once it has gone the view goes back to the crossing's in one long even ease as the boat comes
-  about. A phone's frame is too narrow (31° across) to hold the head and the sun together, so its holds look along the line from what matters
+  the island rises above the horizon as it nears. The look between them is framed as the owl's is: her whole seated
+  figure in three-quarter back view to one side, lit, its eye large across clear water. Claude's call, 2026-10-09,
+  after playing N3n: from nearly astern her hood filled the corner, cut by the frame, not the owl's whole small figure,
+  so the sail may stand behind her at the frame's edge as long as it never comes between her and the eye, and her
+  reaching mitten shows against its flank. As
+  built (N3n): the sail swings out over her starboard quarter and the mast stands 0.8 m ahead of her, so any view that
+  sees her side brings the sail in behind her; the landscape hold looks from nearly astern of her (4.6 m behind the
+  boat, 1.6 m up, 0.08 to port, 0.66 of the way to its eye), her figure about a third of the frame's height at its
+  right with the mast at the edge, her face inside her hood, so what reads is her figure turned to the eye; a phone's
+  stands 3.8 m back and 2.1 up, turned −0.42, close behind her on the line to its eye, her seated in the boat under
+  it. Backlit by the low sun she would read as a dark lump, so the held frames lend her light of their own
+  (`Traveller.lent`, only while they hold): the sun along her outline where it turns toward it, the lantern wrapped
+  round her face and side, a lift in her shade so her coat stays yellow. The encounter composes its holds itself
+  (`Shot.authored`): any turn the lens chose for the approach eases out, so they frame the same however the boat came
+  in. The release eases out wide, the plume's crown in the frame; as it dives the view eases once to the farewell's
+  hold, framed on where it goes down, the flukes towering over the boat against the sun, the sail clear of the stock,
+  the boat whole above the bottom edge and her waving mitten against the sky or the sun's glow, never lost against
+  the sail. As built (N3n): the landscape hold sits low (1.2 m), 21 m behind the boat and 0.3 to port, the flukes'
+  tips inside the frame and the sun between the stock and the sail; as it dives she turns to where it goes down, goes
+  along the thwart to the port rail and holds a mitten out at her side, waving slowly, so it shows beside her hood
+  against the sun's glow rather than in front of the sail. A phone's stands 22 m behind, 1.2 m up, turned −0.6, so she
+  is about 70 px tall: the flukes tower past the frame's left edge and the sun stands between the stock and the boat.
+  Once it has gone the view goes back to the crossing's in one long even ease as the boat comes about. A phone's frame is too narrow (31° across) to hold the head and the sun together, so its holds look along the line from what matters
   through the boat, each with its own distance, height and turn, stacking boat, step and head up the frame; the
   cygnet's is turned toward astern so the bird stands clear of the sail above the boat (`k2-portrait`).
 - **Reward.** Freeing the whale is the open sea's major conclusion, so the reward phrase (`completeObjective()`) plays
