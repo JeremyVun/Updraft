@@ -271,8 +271,9 @@ export class NetWhale {
   /** Seconds since the lift that takes the loop off began, or -1; and what lifted it, a sweep or the valve's dolphin. */
   slipT = -1;
   finnedBy: 'sweeps' | 'dolphin' | null = null;
-  /** Screen heights of stroke run along the flipper lately, toward the next lift. */
+  /** Screen heights of stroke run along the flipper lately, toward the next lift, and how fast the stroke goes. */
   private finSwept = 0;
+  private finPace = 0;
   private nudged = false;
   private finned = false;
   /** Seconds into the leap one of the pod makes as it spouts, or -1 before it, or Infinity once it is back. */
@@ -1063,12 +1064,17 @@ export class NetWhale {
     const { input } = this.cast;
     const camera = this.camera;
     this.finSwept *= Math.exp(-dt * 1.5);
-    if (!camera || !input.present || input.muted || input.charge > K.liftFrom || dt <= 0) return;
+    if (!camera || !input.present || input.muted || input.charge > K.liftFrom || dt <= 0) {
+      this.finPace = 0;
+      return;
+    }
     const dx = input.ndc.x - input.prevNdc.x;
     const dy = input.ndc.y - input.prevNdc.y;
     const moved = Math.hypot(dx * camera.aspect, dy);
-    // Measured on screen: over the near water a sweep covers little of the sea, so its gust reads low.
-    if (moved < K.finPace * dt) return;
+    // Measured on screen, as the embers' brush is: over the near water a sweep covers little of the sea, so its gust
+    // reads low. Eased over a few frames, as the gust is, so a thumb's swipe counts from end to end.
+    this.finPace += (moved / dt - this.finPace) * (1 - Math.exp(-dt * 15));
+    if (this.finPace < K.finPace || moved < 1e-5) return;
     let hit = 0;
     for (let i = 0; i <= FIN_STEPS; i++) {
       const t = FIN_FROM + ((FIN_TO - FIN_FROM) * i) / FIN_STEPS;

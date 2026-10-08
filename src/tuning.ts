@@ -1529,13 +1529,14 @@ export const tuning = {
     },
     /**
      * The flipper: a stroke within `finRadius` of its outer part on screen (normalised device units), moving at least
-     * `finPace` of those a second and running along it to within `finAlong` (the cosine between them), lifts it once
+     * `finPace` of those a second (a thumb's swipe on a phone; a slow drag is slower) and running along it to within
+     * `finAlong` (the cosine between them), lifts it once
      * `finSweep` of such stroke have crossed it; its drawn strokes span `finInviteRadius` metres either side of their
      * middle. The cygnet takes the loop's end where it lies, `endOut` metres to port of the boat at rest and `endAhead`
      * before it, and holds it from `birdOut`/`birdAhead`, clear of the flipper's lift; the loop comes off its tip
      * `slipFor` seconds into the lift.
      */
-    finRadius: 0.07, finPace: 0.8, finAlong: 0.5, finSweep: 0.1, finInviteRadius: 2.6,
+    finRadius: 0.07, finPace: 0.45, finAlong: 0.5, finSweep: 0.1, finInviteRadius: 2.6,
     endOut: 5.1, endAhead: 0.2, birdOut: 5.3, birdAhead: -0.5, slipFor: 5,
     /**
      * The near flipper at rest, about its root under the jaw: swept round toward the head and raised, so it reaches
