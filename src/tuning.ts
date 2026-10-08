@@ -1747,11 +1747,6 @@ export const tuning = {
      * from the lens, never toward it.
      */
     darkGlance: 26,
-    /**
-     * Seconds the camera takes to come round beside the boat once the air has died, and to turn from the dark to the
-     * church; and when after the air has died it lifts to its wider view of the stuck boat, and over how long.
-     */
-    turnFor: 8, lookFor: 9, settleFrom: 4, settleFor: 5,
     dark: {
       /**
        * Its front: half its width and how far its flanks run on ahead, in metres; and how far it reaches on the
@@ -2173,17 +2168,22 @@ export const tuning = {
     spireFrameMargin: 0.7,
     sideResponse: 1.2,
     /**
-     * Beside the becalmed boat: the way the lens looks once it has come round (radians, atan2(x, z) of the view),
-     * first past the boat to where they came from and then turned with her to the church; upright, back the way they
-     * came from ahead of the boat.
+     * The stranding: where the lens looks (metres ahead of the boat's middle, and over the water), its bearing from
+     * there (atan2(x, z): side on from the open water west of the boat), how far off and how high over the water it
+     * stands, how far round toward the fog coming on behind the boat it looks (a share of the angle between the two),
+     * the lens it takes and its pace; upright its own. As the cat's fear grows it looks this far ahead, at the cat,
+     * and the lens lengthens by this much.
      */
-    strandDark: 1.25, strandChurch: 2.9, strandUpright: 1.08, strandZoom: 0.9,
-    /** How far behind the boat the eye stands, how far ahead of it and to the side it looks, and at what height. */
-    strandBack: 15, strandAhead: 6, strandAside: 3, strandAim: 1.2, churchAim: 2.6,
-    uprightBack: 16, uprightAhead: 14, uprightAim: 5.2, uprightSide: -2,
-    /** The eye's height over the water as the air dies, and once the boat has come to rest. */
-    strandLow: 2.4, strandHigh: 3.4, uprightHigh: 3.8,
-    strandPace: 0.6,
+    stuckAlong: 1.2, stuckOnCat: 1.8, stuckCloser: 1.3, stuckAim: 1.0, stuckFrom: -1.5, stuckDistance: 5.6, stuckEye: 1.5,
+    stuckFog: 0.25, stuckZoom: 1.15,
+    stuckPace: 0.35, uprightStuckFrom: -1.4, uprightStuckDistance: 5.4, uprightStuckEye: 1.7, uprightStuckFog: 0.05,
+    uprightStuckZoom: 1,
+    /**
+     * Once the cat bolts, over `climbFor` seconds up onto the roof with it: the lens's bearing from the ridge's west
+     * end, how far off and how high over the ridge, how far from her toward the cat it looks, and its pace.
+     */
+    climbFor: 7, ridgeFrom: -1.0, ridgeDistance: 8, ridgeEye: 1.8, ridgeAlong: 0.4, ridgePace: 0.3,
+    uprightRidgeFrom: -1.1, uprightRidgeDistance: 7, uprightRidgeEye: 2.2,
     /**
      * While the cat is brought over: how much of its gaze the lens gives the cat as she notices it, and how far from the
      * place the boat waits the lens starts to come round. Off the roof's gable end: how high, how far from the cat
@@ -2191,26 +2191,22 @@ export const tuning = {
      * the side away from the sail, how high, and the same again; and how fast it moves out to that side.
      */
     catGlance: 0.3, catTurnFrom: 16, catPace: 0.55,
-    catEye: 2.1, catAlong: 0.42, catLift: 0.5, catZoom: 0.95,
+    catEye: 2.1, catAlong: 0.42, catLift: 0.5, catZoom: 1.15,
     uprightCatBack: 2.6, uprightCatSide: 3.8, uprightCatEye: 2.8, uprightCatAlong: 0.2, uprightCatLift: -0.4, uprightCatZoom: 1,
     catAsideRate: 0.7,
     /**
-     * With the cat aboard: the lens beside the boat on its port side, its bearing from ahead
-     * (radians), how far it stands off (upright, further), how high above where it looks, how far from her toward the
-     * cat it looks and how high above her seat, and how fast it eases there.
+     * The cat brought aboard: once the tub is this near the boat the lens comes round to the bow's quarter, its bearing
+     * from ahead (radians), how far off (upright, nearer) and how high over where it looks, which is this share of the
+     * way from her to the cat and this high over her seat; the lens it takes, and its pace.
      */
-    aboardBearing: 1.75, aboardDistance: 5.5, uprightAboardDistance: 7, aboardHeight: 0.9, aboardAlong: 0.45,
-    aboardAim: 0.9, aboardPace: 0.45,
+    rescueFrom: 5, rescueBearing: 0.95, rescueDistance: 5.4, uprightRescueDistance: 4.8, rescueHeight: 2.5, rescueAlong: 0.5,
+    rescueAim: 0.1, rescueZoom: 1.25, uprightRescueZoom: 1.05, rescuePace: 0.35,
     /**
-     * While the cat comes to her in the boat and she kneels to it: how far round toward the stern (radians), how near and
-     * how high it stands, so the boat's floor shows over the gunwale, and where it looks (above the boards).
+     * The drift with the cat aboard, wide behind the boat: how far round from dead astern toward the side away from
+     * the sail (radians), how far back (upright, nearer), how high over where it looks, how far ahead of her it looks,
+     * and its pace.
      */
-    rescueBearing: 1.35, rescueDistance: 4.2, uprightRescueDistance: 5.2, rescueHeight: 2.6, rescueAim: 0.25,
-    /**
-     * Once the cat bolts: over `climbFor` seconds the lens comes back to the view toward the dark and up the slope with
-     * her; how far back it stands (upright, nearer), and the height it looks at.
-     */
-    climbFor: 7, climbBack: 10, uprightClimbBack: 8, climbAim: 2.3,
+    driftQuarter: 0.22, driftDistance: 19, uprightDriftDistance: 15, driftHeight: 4.2, driftAhead: 3, driftPace: 0.4,
   },
   /** The two crossings of the drowned village's run over the roofs: the dead tree pushed over, the swing pumped. */
   crossings: {
