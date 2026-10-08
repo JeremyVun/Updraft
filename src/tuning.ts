@@ -1903,7 +1903,7 @@ export const tuning = {
        * walking lens is laid to expect it; how hard it closes on where it is going (per second a metre), the slowest and
        * fastest it comes on (m/s), and how quickly it changes pace (per second).
        */
-      fogTrail: 16, fogLooked: 9, fogHold: { tree: 10, sheet: 10, mill: 14, swing: 12 }, fogEnd: 19, fogNearest: 7.5, fogLaid: 10,
+      fogTrail: 16, fogLooked: 9, fogHold: { tree: 10, sheet: 10, mill: 18, swing: 12 }, fogEnd: 19, fogNearest: 7.5, fogLaid: 10,
       fogPull: 0.35, fogSlowest: 0.12, fogFastest: 3.2, fogEase: 0.9,
     },
     /** The wash-tub the player's wind carries to the cat's roof and back to the boat. */
@@ -2038,11 +2038,12 @@ export const tuning = {
       sheetSide: 1, sheetOff: 10.5,
       /**
        * The mill's view, in the mill's own frame (x to the right seen from in front, z out of the front, heights above
-       * her roof): where it stands and where it looks while she is low, how much higher it stands and looks as she rises,
-       * and how far it moves on and what it looks along once she is off onto the granary.
+       * her roof): where it stands and looks while she is low, how much higher it stands and looks as she rises, how far
+       * it moves on once she is off onto the granary, and how quickly (per second).
        */
-      millWide: { eye: [-11.8, 4.6, -2.5], at: [-2.2, 3.0, -1.4], eyeRise: 1.4, rise: 2.8, on: [1.5, 0.6, -2.0], onAt: [-1.4, 0, -4.6] },
-      millUpright: { eye: [-10.0, 5.4, -2.2], at: [-2.6, 3.3, -1.6], eyeRise: 2.0, rise: 3.2, on: [1.2, 0.6, -1.6], onAt: [-1.0, 0, -4.2] },
+      millWide: { eye: [-13.0, 9.3, 9.0], at: [-2.6, 5.0, -1.2], eyeRise: 1.0, rise: 1.6, on: [7.1, -4.3, -26.4] },
+      millUpright: { eye: [-10.5, 9.0, 7.5], at: [-2.8, 5.2, -1.4], eyeRise: 1.4, rise: 1.8, on: [5.5, -3.6, -24.0] },
+      millOn: 0.35,
       /** The end's view: how far back along the nave, how high, and how far out over the green. */
       naveBack: 10, naveHigh: 3.6, naveAside: 11,
       /**
