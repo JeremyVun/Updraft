@@ -418,14 +418,34 @@ simple painted shapes like the rest of the game, fine against its bulk; the eye 
 deep warm brown catching the sun in one bright point (not the lit orange N3g left). The same skin on the first
 crossing's whale.
 Gate: typecheck; build; stills of every hold (landscape and portrait) and of the first crossing's whale, beside N3g2's.
+Done: [x] `2adf00d4..8ab6e76b` on `sea-whale-skin` (`whaleShader.ts`, `tuning.whaleLook` only). Every mark sized in metres
+on the skin and faded to its mean tone below a few pixels: broad tone patches (`tone`); two scatters of ragged pale
+grey-blue dapple 0.4–1.4 m (`dapple`, `dappleCover`, `dappleAmount`); a few soft pale wavering scar strokes 3–8 m,
+kept off the eye (`scar`, `scars`, `scarAmount`); barnacle clusters of shaded soft domes round the head's knobs, the
+chin, a few head patches and the flipper's edges, a pale crust far off (`crust`); a dark olive band with a ragged top
+on the rest waterline (`growth`, `growthReach`; the line is the table `REST_SEA` with `tuning.netWhale.roll`, re-measure
+it if the rest lay changes); faint wet runs (`runs`); the ghost body softened (`dry`). The eye: a brown iris `#82502b`
+with fibres, the sun through the cornea keeping its hue (`caustic`), one warm-white catchlight (`catchlight`) and a faint
+second from the sea, dimmed to a quarter when shut; fine age lines behind the corner. Claude's judgement, 2026-10-08:
+the eye is right, kind and wet, and the whale now reads as a mottled blue whale rather than a plastic model, but not
+yet as ancient: the dapple's soft round spots read as out-of-focus light up close, the scars do not read, the
+barnacles show only at the snout beyond the near frames, the growth is a plain dark band, the wet runs never show.
+
+### Phase N3k: its age
+After N3j, on `sea-whale-skin`, in parallel with N3h and N3i; shader only, as N3j. The skin taken to ancient where the
+near frames see it: barnacle crusts on the chin, the lip and the head near the eye (clear of the eye itself), scars bold
+enough to read as old healed marks, the dapple painted with edges like lichen on a rock (the owl's rock is the
+reference), the growth with life in it. Still gentle to a child.
+Gate: as N3j's.
 Done: [ ]
 
-### Phase N3k: its life, her light, and the playable build
-After N3i and N3j are merged on `sea-whale`. Water sheeting off the back with each breath and the sea swelling and
-settling round it; the seabirds standing far along its back, lifting off as it spouts free; the look's frame finished
-(N3g2 left her a dark backlit hood filling a quarter of the frame: her whole seated figure smaller in it, the sun's rim
-on her hood and the lantern warm on her cheek, her head and mitten turned to the eye, the eye large). Then Claude plays
-the whole open sea beside the clouds and the owl, and the playable build goes to Jeremy.
+### Phase N3l: its life, her light, and the playable build
+After N3i, and N3k merged on `sea-whale`. Water sheeting off the back with each breath in glinting streams (N3j's wet
+runs folded into it) and the sea swelling and settling round it; the seabirds standing far along its back, lifting off
+as it spouts free; the look's frame finished (N3g2 left her a dark backlit hood filling a quarter of the frame): her
+whole seated figure smaller in it, the sun's rim on her hood and the lantern warm on her cheek, her head and mitten
+turned to the eye, the eye large. Then Claude plays the whole open sea beside the clouds and the owl, and the playable
+build goes to Jeremy.
 Gate: as N3g's.
 Done: [ ]
 
