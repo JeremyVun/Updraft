@@ -1884,7 +1884,7 @@ export const tuning = {
        * Seconds she stands just down off the first roof looking back at the boat as the fog takes it, and on the
        * granary's ridge looking back down at it.
        */
-      lookBackFor: 6.0, lookDownFor: 1.4,
+      lookBackFor: 6.5, lookDownFor: 1.4,
       /** The beat she takes before a hop of her own; within `through` of a turn gentler than `bend` (radians) she walks on through it. */
       hopPause: 0.3, through: 1.1, bend: 0.4,
       /** Seconds she stands once the sheet has set her down before she goes on, while the lens comes round to her way. */
@@ -1995,7 +1995,7 @@ export const tuning = {
        * the church together (landscape) or to keep her in the narrow frame through a turn (upright), eased back at each
        * piece.
        */
-      follow: 2.2, followDown: 5, steady: 2, steadiest: 1.4, behind: 6, ahead: 12, churchShare: 0.55, fogAside: 0,
+      follow: 2.2, followDown: 3, steady: 2, steadiest: 1.4, behind: 6, ahead: 12, churchShare: 0.55, fogAside: 0,
       /** With the fog and the church nearly opposite (beyond `flipFrom` radians apart) it looks across from this side (+1 her right going round to the church). */
       flipFrom: 2.6, side: -1, uprightBack: 1.5, distance: 10, uprightDistance: 12,
       rise: 1.5, uprightRise: 2.6, lowest: 2.8, highest: 7, lead: 1, aim: 1.0, pace: 0.7, zoom: 0.85, uprightZoom: 0.85,
@@ -2041,7 +2041,7 @@ export const tuning = {
        * to the side (landscape and upright) and above her it stands, and where it looks (a share of the way from her to
        * the boat, and above her feet).
        */
-      backHold: 1, backIn: 1.5, backOut: 1.4, backGone: 1.2, backBehind: 4.2, backSide: 2.4, uprightBackSide: 1.2, backHigh: 2.3, backAt: 0.55, backAim: 0.6,
+      backHold: 1, backIn: 2.2, backOut: 1.4, backGone: 1.2, backBehind: 4.2, backSide: 2.4, uprightBackSide: 1.2, backHigh: 2.3, backAt: 0.55, backAim: 0.6,
       /**
        * The tree's view: how far north of where it lies over her wall and east of it (out over the lane) it stands, and
        * how high (upright, the same, and how far it looks round to her as she crosses, so she stays in the narrow frame).
@@ -2066,7 +2066,7 @@ export const tuning = {
        * tree's view as she sets off (if it stood within `handFar` of her), and how much further out and higher it
        * stands half-way round; upright, how far half-way round its look comes onto her.
        */
-      handFor: 4, handFar: 22, handOut: 2, handUp: 0.8, uprightHandHold: 0.7,
+      handFor: 5, handFar: 22, handOut: 2, handUp: 0.8, uprightHandHold: 0.7,
     },
     /** The church (`ChurchArrival.frame`). */
     church: {

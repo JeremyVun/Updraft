@@ -444,6 +444,7 @@ export class RoofRun {
   private readonly handEye = new THREE.Vector3();
   private readonly handTarget = new THREE.Vector3();
   private handT = 0;
+  private handWay = 0;
   private readonly held = { primary: new THREE.Vector3(), secondary: new THREE.Vector3(), margin: 0.8, extra: 0 };
   private onTrunk = 0;
   /** How far round to each piece's own view the lens has come. */
@@ -1023,7 +1024,9 @@ export class RoofRun {
     if (this.handFrom === null) {
       if (!this.camera) return;
       this.handFrom = this.handEye.copy(this.camera.position);
-      this.handTarget.copy(shot.target);
+      /** From where the lens is truly looking, which the climb's eased frame may not yet have reached. */
+      const looking = this.camera.getWorldDirection(this.tmp);
+      this.handTarget.copy(this.camera.position).addScaledVector(looking, this.camera.position.distanceTo(shot.target));
       /** Only from the climb's view beside her: from anywhere further (a QA start) the rig brings it in. */
       const c = this.cast.child.position;
       this.handT = Math.hypot(this.handEye.x - c.x, this.handEye.z - c.z) > tuning.drownedCamera.run.handFar ? Infinity : 0;
@@ -1034,9 +1037,13 @@ export class RoofRun {
     const h = this.focus, from = this.handFrom;
     const a0 = Math.atan2(from.x - h.x, from.z - h.z), a1 = Math.atan2(this.eye.x - h.x, this.eye.z - h.z);
     let turn = Math.atan2(Math.sin(a1 - a0), Math.cos(a1 - a0));
-    const boat = this.cast.boat.position;
-    const water = Math.atan2(boat.x - h.x, boat.z - h.z), mid = a0 + turn / 2;
-    if (Math.cos(mid - water) > 0) turn -= Math.sign(turn) * Math.PI * 2;
+    /** Which way round is settled on the first frame and kept, however the view it goes to moves. */
+    if (this.handWay === 0) {
+      const boat = this.cast.boat.position;
+      const water = Math.atan2(boat.x - h.x, boat.z - h.z);
+      this.handWay = Math.sign(turn) * (Math.cos(a0 + turn / 2 - water) > 0 ? -1 : 1) || 1;
+    }
+    if (Math.sign(turn) !== this.handWay) turn += this.handWay * Math.PI * 2;
     const k = tuning.drownedCamera.run, out = Math.sin(Math.PI * hand);
     const r = THREE.MathUtils.lerp(Math.hypot(from.x - h.x, from.z - h.z), Math.hypot(this.eye.x - h.x, this.eye.z - h.z), hand) + k.handOut * out;
     const a = a0 + turn * hand;
