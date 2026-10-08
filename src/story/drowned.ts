@@ -275,6 +275,7 @@ export class DrownedChapter implements Chapter {
     cygnet.rideIn('satchel');
     child.openBag(true);
     this.cat.onRidge();
+    this.restored = true;
   }
 
   /** QA (`?chapter=church`): on to her at the tower's foot, the boat lost in the fog where it ran aground. */
@@ -297,6 +298,7 @@ export class DrownedChapter implements Chapter {
   /** QA: a skip ahead cuts the lens there once the chapter has begun. */
   cameraCut = 0;
   private cutIn = 0;
+  private restored = false;
 
   private to(beat: Beat): void {
     this.beat = beat;
@@ -366,6 +368,12 @@ export class DrownedChapter implements Chapter {
         if (this.run && this.cat.step === 'ridge' && this.cat.t > tuning.drowned.run.setOff) {
           this.to('run');
           this.run.begin(this.fogSpeed);
+          /** Restored on the ridge there was no climb for the run to take the lens from: it cuts to her. */
+          if (this.restored) {
+            this.run.cutIn();
+            this.cutIn = 2;
+          }
+          this.restored = false;
         }
         break;
       case 'run':

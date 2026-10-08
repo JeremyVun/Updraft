@@ -5,8 +5,8 @@
 // sheet's line fill it to carry her over, circles round the hub turn the mill's sails to wind her up its hoist,
 // strokes pump the swing until she lets go over the nave, and she walks on to the tower's foot. Reports the run's
 // time, each walk's seconds on foot, how long she waits on the cat at each piece, the fog's nearest approach and how
-// soon each roof she leaves goes under, and fails if she leaves the decks, stalls, the fog reaches her or drops out of
-// a walk's frame, a roof she left is not taken, or the boat leaves where it ran aground. Then (unless TO=nave) the
+// soon each roof she goes on from goes under, and fails if she leaves the decks, stalls, the fog reaches her or (in a
+// landscape frame) drops out of a walk's frame, a roof she left is not taken, or the boat leaves where it ran aground. Then (unless TO=nave) the
 // church: the cat climbs the ivy into the belfry, the fog closes round, strokes across the boat's sail bring it to the
 // nave, she steps down into it and looks back at the cat as the storm begins; it plays on to the forest beach and
 // reports when the storm's beats fall and where the boat is then, failing if anything stalls or she leaves the decks.
@@ -697,7 +697,8 @@ try {
     assert(w.offWorst < 0.4, `she left the decks: ${w.offWorst.toFixed(2)} m (${w.offAt})`);
     assert(w.stallWorst < 3, `she stalled on her own way for ${w.stallWorst.toFixed(1)} s (${w.stallAt})`);
     assert(w.fogAhead > 4, `the fog reached her: ${w.fogAhead.toFixed(1)} m ahead of its front (${w.fogAt})`);
-    assert(w.fogGoneWorst < 2, `the fog was out of a walk's frame for ${w.fogGoneWorst.toFixed(1)} s (${w.fogGoneAt})`);
+    /** Upright the lens stands behind her looking along her way, the fog behind it: only the wide frame holds both. */
+    if (width > height) assert(w.fogGoneWorst < 2, `the fog was out of a walk's frame for ${w.fogGoneWorst.toFixed(1)} s (${w.fogGoneAt})`);
     /** Each roof she went on from is taken within 14 s, but for the one the fog waits short of at the tower's foot. */
     const waits = (r) => r.under === null && Math.hypot(r.x - end.child[0], r.z - end.child[2]) < 22;
     const late = roofs.filter((r) => !waits(r) && (r.under ?? end.time) - r.left > 14);

@@ -3,7 +3,7 @@ import type { Shot } from '../camera';
 import type { Deck } from '../world/decks';
 import { tuning } from '../tuning';
 import {
-  CAT_WAY, DARK_AT_STRAND, DARK_END, LOOK_BACK, MILL, MILL_SITE, NAVE, PLACED, SHEET_SITE, SWING_SITE, TOWER_FOOT, TREE_SITE, WAY, WAY_GAPS, darkAlong, darkWayPoint, roofUnder,
+  CAT_WAY, DARK_AT_STRAND, DARK_END, GRANARY_TOP, LOOK_BACK, MILL, MILL_SITE, NAVE, PLACED, SHEET_SITE, SWING_SITE, TOWER_FOOT, TREE_SITE, WAY, WAY_GAPS, darkAlong, darkWayPoint, roofUnder,
   type WayDeck,
 } from '../world/drowned-way';
 import { SPIRE } from '../world/drowned';
@@ -394,6 +394,8 @@ export class RoofRun {
   private lookingBack = -1;
   private settled = 0;
   private readonly lookBackFrom: number;
+  private readonly lookDownFrom: number;
+  private lookingDown = -1;
   private readonly head = new THREE.Vector3();
   private readonly look = new THREE.Vector3();
   private readonly scratch = new THREE.Vector3();
@@ -472,6 +474,7 @@ export class RoofRun {
       return i;
     };
     this.lookBackFrom = this.sOf(LOOK_BACK);
+    this.lookDownFrom = this.sOf(GRANARY_TOP);
     this.catFrom = {
       tree: before('tree', CAT_WAY.tree[0]),
       sheet: this.pieceAt.tree,
@@ -576,6 +579,12 @@ export class RoofRun {
   }
 
   /** QA (`?chapter=church`): straight to the end of her way, at the tower's foot, the cat at the foot of the ivy. */
+  /** Starting without the climb's view to come round from: the run's own lens from the first frame. */
+  cutIn(): void {
+    this.handFrom = this.handEye;
+    this.handT = Infinity;
+  }
+
   skipToEnd(): void {
     const { child: c, cat } = this.cast;
     const k = tuning.drowned.run;
@@ -587,6 +596,7 @@ export class RoofRun {
       this[piece].phase = 'over';
     }
     this.lookingBack = Infinity;
+    this.lookingDown = Infinity;
     this.dark = DARK_END;
     const dark = this.cast.village!.dark;
     dark.front = this.dark - k.fogEnd;
@@ -596,8 +606,7 @@ export class RoofRun {
     const foot = CAT_WAY.swing[CAT_WAY.swing.length - 1];
     cat.place(foot, -Math.PI / 2, { pose: 'sit', floor: () => foot.y });
     this.stage = 'nave';
-    this.handFrom = this.handEye;
-    this.handT = Infinity;
+    this.cutIn();
     c.stop();
   }
 
@@ -652,7 +661,8 @@ export class RoofRun {
 
   /**
    * A turn gentle enough she takes it in her stride: on toward the place after without stopping at it. Just down off the
-   * wall from the first roof she stops and looks back at the boat as the fog takes it.
+   * first roof onto the wall she stops and looks back at the boat as the fog takes it; at the top of her way, on the
+   * granary's ridge, she stops and looks back down at the fog below.
    */
   private walking(dt: number): void {
     const { child: c } = this.cast;
@@ -660,6 +670,21 @@ export class RoofRun {
     if (this.lookingBack < 0 && this.stage === 'walk' && this.along >= this.lookBackFrom && !c.acting && this.pause < 0) {
       this.lookingBack = 0;
       c.stop();
+    }
+    if (this.lookingDown < 0 && this.stage === 'walk' && this.along >= this.lookDownFrom - 0.2 && !c.acting && this.pause < 0) {
+      this.lookingDown = 0;
+      c.stop();
+    }
+    if (this.lookingDown >= 0 && this.lookingDown < k.lookDownFor) {
+      this.lookingDown += dt;
+      const fog = this.fogFront(this.look);
+      c.faceToward(fog.x, fog.z, 1 - Math.exp(-dt * 3));
+      c.lookAt = fog.setY(c.position.y - 2);
+      if (this.lookingDown >= k.lookDownFor) {
+        c.lookAt = null;
+        this.go();
+      }
+      return;
     }
     if (this.lookingBack >= 0 && this.lookingBack < k.lookBackFor) {
       this.lookingBack += dt;
@@ -969,16 +994,13 @@ export class RoofRun {
     const lead = this.tmp.copy(this.velocity).clampLength(0, k.steadiest).multiplyScalar((1 / k.follow + 2 / response) * (1 - at));
     this.eye.add(lead);
     this.target.add(lead);
-    const handing = this.handOver(shot, dt, wide);
+    this.handOver(shot, dt, wide);
     shot.free = false;
     shot.from = undefined;
-    /**
-     * Upright on her own way, and while the hand-over swings round her, the frame is too narrow to trust the laid path
-     * alone: she is kept inside it, never by drawing back. Each piece's own view is laid by hand.
-     */
+    /** Upright the frame is too narrow to trust any laid view alone: she is kept inside it, never by drawing back. */
     this.held.primary.copy(c).setY(c.y + 1.2);
     this.held.secondary.copy(this.held.primary);
-    shot.subjects = wide < 0.5 && (at < 0.5 || handing) ? this.held : undefined;
+    shot.subjects = wide < 0.5 ? this.held : undefined;
     shot.attention = undefined;
     shot.composition = undefined;
     shot.smoothFit = undefined;
@@ -997,9 +1019,9 @@ export class RoofRun {
    * From where the climb out of the boat left the lens, round her by the side away from the boat and the fog coming
    * over it to the view the run wants: one move, never across the roof she is on.
    */
-  private handOver(shot: Shot, dt: number, wide: number): boolean {
+  private handOver(shot: Shot, dt: number, wide: number): void {
     if (this.handFrom === null) {
-      if (!this.camera) return false;
+      if (!this.camera) return;
       this.handFrom = this.handEye.copy(this.camera.position);
       this.handTarget.copy(shot.target);
       /** Only from the climb's view beside her: from anywhere further (a QA start) the rig brings it in. */
@@ -1008,7 +1030,7 @@ export class RoofRun {
     }
     this.handT += dt;
     const hand = THREE.MathUtils.smoothstep(this.handT, 0, tuning.drownedCamera.run.handFor);
-    if (hand >= 1) return false;
+    if (hand >= 1) return;
     const h = this.focus, from = this.handFrom;
     const a0 = Math.atan2(from.x - h.x, from.z - h.z), a1 = Math.atan2(this.eye.x - h.x, this.eye.z - h.z);
     let turn = Math.atan2(Math.sin(a1 - a0), Math.cos(a1 - a0));
@@ -1023,7 +1045,6 @@ export class RoofRun {
     /** Upright the frame is too narrow to look past her on the way round, so it looks more at her. */
     const c = this.cast.child.position;
     this.target.lerp(this.tmp.set(c.x, c.y + k.aim, c.z), out * (1 - wide) * k.uprightHandHold);
-    return true;
   }
 
   /**
@@ -1036,7 +1057,8 @@ export class RoofRun {
     this.onTrunk += ((this.tree.phase === 'crossing' || this.tree.phase === 'over' ? 1 : 0) - this.onTrunk) * (1 - Math.exp(-dt * 0.8));
     this.sheetGo += ((this.sheet.phase === 'carried' || this.sheet.phase === 'landing' || this.sheet.phase === 'landed'
       || this.sheet.phase === 'leaving' || this.sheet.phase === 'over' ? 1 : 0) - this.sheetGo) * (1 - Math.exp(-dt * 0.6));
-    this.millAhead += ((this.mill.phase === 'leaving' || this.mill.phase === 'over' ? 1 : 0) - this.millAhead) * (1 - Math.exp(-dt * k.millOn));
+    this.millAhead += ((this.mill.phase === 'leaving' || this.mill.phase === 'over' ? 1 : 0) - this.millAhead)
+      * (1 - Math.exp(-dt * THREE.MathUtils.lerp(k.uprightMillOn, k.millOn, wide)));
     /** Where two views overlap (the swing's going as the end's comes) each takes its share, so the lens never jumps between them. */
     let total = 0;
     const eye = this.sumEye.set(0, 0, 0), target = this.sumTarget.set(0, 0, 0);
@@ -1109,7 +1131,7 @@ export class RoofRun {
     const crossed = on * THREE.MathUtils.smoothstep(((c.x - over.x) * ex + (c.z - over.z) * ez) / (fl - 2.4), 0.2, 1);
     const north = THREE.MathUtils.lerp(k.uprightTreeNorth, k.treeNorth, wide), east = THREE.MathUtils.lerp(k.uprightTreeEast, k.treeEast, wide);
     const eye = this.treeEye.set(over.x + nx * north + ex * east, THREE.MathUtils.lerp(k.uprightTreeHigh, k.treeHigh, wide), over.z + nz * north + ez * east);
-    const target = this.treeTarget.copy(over).lerp(rest, 0.25).setY(1.9).lerp(this.tmp.copy(c).setY(c.y + 1), 0.45);
+    const target = this.treeTarget.copy(over).lerp(rest, 0.25).setY(1.9).lerp(this.tmp.copy(c).setY(c.y + 1), THREE.MathUtils.lerp(k.uprightTreeOnHer, 0.45, wide));
     if (crossed > 0) {
       this.sheetView(wide, 0);
       eye.lerp(this.stationEye, crossed);
@@ -1120,8 +1142,8 @@ export class RoofRun {
   }
 
   /**
-   * From the side of the sheet's lane, low: her at the near edge, the sheet and the high roof across the frame, the
-   * line climbing from right to left; it drifts with her as she is carried so the far roof stays in. Upright, it
+   * From the side of the sheet's lane away from the fog, low: her at the near edge, the sheet and the high roof across
+   * the frame, the line climbing across it; it drifts with her as she is carried so the far roof stays in. Upright, it
    * stands behind her near shoulder and looks up the line, so the lane and the high roof stack up the narrow frame.
    */
   private sheetView(wide: number, go = this.sheetGo): void {
@@ -1135,8 +1157,8 @@ export class RoofRun {
     at(1.5 + 1.6 * g, 1.3 + 0.7 * g, k.sheetOff, this.stationEye);
     at(1.7 + 1.4 * g, 1.75 + 0.6 * g, 0, this.stationTarget);
     if (wide >= 1) return;
-    this.stationEye.lerp(at(-3.4 + 2.4 * g, 2.2 + 0.9 * g, 5.6 - 0.6 * g, this.tmp), 1 - wide);
-    this.stationTarget.lerp(at(4 * 0.55 + 1.6 * g, 1.9 + 0.5 * g, -0.6, this.tmp), 1 - wide);
+    this.stationEye.lerp(at(-3.4 + 2.4 * g, 2.2 + 0.9 * g, -5.6 + 0.6 * g, this.tmp), 1 - wide);
+    this.stationTarget.lerp(at(4 * 0.55 + 1.6 * g, 1.9 + 0.5 * g, 0.6, this.tmp), 1 - wide);
   }
 
   /**

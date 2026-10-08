@@ -224,7 +224,8 @@ const MILL_ONWARD = atMill(HOIST.x, -4.4, MILL_TO);
 const GRANARY_DOWN = localOf(GRANARY_HOUSE, GREEN_EAST).x;
 const GRANARY_LEAN: LeanTo = { house: GRANARY_HOUSE, side: 1, from: GRANARY_DOWN - 1.3, to: GRANARY_DOWN + 1.3, out: LEAN_OUT,
   high: eaveAt(GRANARY_HOUSE) - 0.05, low: GREEN_EAST.y + 0.06 };
-const GRANARY_TOP = onRoof(GRANARY_HOUSE, GRANARY_DOWN, 0);
+/** The top of her way, on the granary's ridge where she turns down off it, from where she looks back down at the fog. */
+export const GRANARY_TOP = onRoof(GRANARY_HOUSE, GRANARY_DOWN, 0);
 const GRANARY_EAVE = onRoof(GRANARY_HOUSE, GRANARY_DOWN, GRANARY.depth / 2 + 0.2);
 const LEAN_FOOT = (() => {
   const at = houseLocal(GRANARY_HOUSE, GRANARY_DOWN, GRANARY.depth / 2 + LEAN_OUT - 0.05);

@@ -1876,8 +1876,11 @@ export const tuning = {
     run: {
       /** Seconds she stands on the ridge looking after the cat before she goes, and her pace as a share of a walk. */
       setOff: 1.2, stroll: 1.05,
-      /** Seconds she stands just down off the first roof looking back at the boat as the fog takes it. */
-      lookBackFor: 5.6,
+      /**
+       * Seconds she stands just down off the first roof looking back at the boat as the fog takes it, and on the
+       * granary's ridge looking back down at it.
+       */
+      lookBackFor: 5.6, lookDownFor: 1.4,
       /** The beat she takes before a hop of her own; within `through` of a turn gentler than `bend` (radians) she walks on through it. */
       hopPause: 0.3, through: 1.1, bend: 0.4,
       /** Seconds she stands once the sheet has set her down before she goes on, while the lens comes round to her way. */
@@ -2037,21 +2040,21 @@ export const tuning = {
       backHold: 1, backIn: 1.0, backOut: 1.4, backGone: 1.2, backBehind: 4.2, backSide: 2.4, uprightBackSide: 1.2, backHigh: 2.3, backAt: 0.55, backAim: 0.6,
       /**
        * The tree's view: how far north of where it lies over her wall and east of it (out over the lane) it stands, and
-       * how high (upright, the same).
+       * how high (upright, the same, and how far it looks round to her as she crosses, so she stays in the narrow frame).
        */
-      treeNorth: 9.5, treeEast: 1.6, treeHigh: 4.4, uprightTreeNorth: 10.5, uprightTreeEast: 0.8, uprightTreeHigh: 4.6,
+      treeNorth: 9.5, treeEast: 1.6, treeHigh: 4.4, uprightTreeNorth: 10.5, uprightTreeEast: 0.8, uprightTreeHigh: 4.6, uprightTreeOnHer: 0.85,
       /** The sheet's view: which side of the line it stands (+1 the left looking up it), and how far off it in landscape. */
       sheetSide: 1, sheetOff: 10.5,
       /**
        * The mill's view, in the mill's own frame (x to the right seen from in front, z out of the front, heights above
        * her roof): where it stands and looks while she is low, how much higher it stands and looks as she rises, how far
        * it moves on once she is off onto the granary and the way it bends on the way there (a curve's middle point), how
-       * quickly (per second), how soon (a share of that move) it has turned to look at her, and how far above her feet
-       * it looks then (low, so she stays in the frame as she comes down off the granary).
+       * quickly (per second; upright, a little slower), how soon (a share of that move) it has turned to look at her,
+       * and how far above her feet it looks then (low, so she stays in the frame as she comes down off the granary).
        */
       millWide: { eye: [-13.0, 9.3, 9.0], at: [-2.6, 5.0, -1.2], eyeRise: 1.0, rise: 1.6, on: [8.6, -4.3, -24.9], via: [-1.4, -4.3, -27.4] },
       millUpright: { eye: [-10.5, 9.0, 7.5], at: [-2.8, 5.2, -1.4], eyeRise: 1.4, rise: 1.8, on: [5.5, -3.6, -24.0], via: [-1.2, -3.6, -25.5] },
-      millOn: 0.5, millLook: 0.2, millAim: 0.5,
+      millOn: 0.5, uprightMillOn: 0.38, millLook: 0.2, millAim: 0.5,
       /** The end's view: how far back along the nave, how high, and how far out over the green. */
       naveBack: 10, naveHigh: 3.6, naveAside: 11,
       /**
