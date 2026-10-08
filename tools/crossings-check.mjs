@@ -78,8 +78,14 @@ class Game {
     if (which === 'bell') return this.page.evaluate(() => {
       const yard = window.__game.story.current.bell;
       const camera = window.__game.rig.camera;
-      const p = yard.bell.middle(camera.position.clone()).project(camera);
-      return { x: (p.x + 1) / 2, y: (1 - p.y) / 2, heading: yard.bell.screenHeading(camera), aspect: camera.aspect };
+      const mid = yard.bell.middle(camera.position.clone());
+      const p = mid.clone().project(camera);
+      const side = mid.clone();
+      side.x += yard.bell.toward.x * 0.97;
+      side.z += yard.bell.toward.y * 0.97;
+      side.project(camera);
+      const width = Math.hypot((side.x - p.x) * camera.aspect, side.y - p.y);
+      return { x: (p.x + 1) / 2, y: (1 - p.y) / 2, heading: yard.bell.screenHeading(camera), aspect: camera.aspect, width };
     });
     if (which === 'sheet') return this.page.evaluate((which) => {
       const yard = window.__game.story.current[which];
@@ -509,13 +515,13 @@ const RUNS = {
     expect((await game.state()).bell.rings === 4, 'it rang on by itself after the strokes');
   },
 
-  /** Weak strokes, slower and shorter, only rock it and the clapper just touches the bronze; it never rings. */
+  /** Weak strokes, slower and no longer than the bell is wide, only rock it and the clapper just touches; it never rings. */
   async 'bell-weak'(game) {
     await game.open('bell', 'bell', '&bell=ring');
     let most = 0;
     for (let i = 0; i < 5; i++) {
       const aim = await game.aim('bell');
-      await game.stroke(aim, aim.heading, 0.22, 24);
+      await game.stroke(aim, aim.heading, 0.8 * aim.width, 24);
       await game.until(() => false, 2.2, (s) => { most = Math.max(most, Math.abs(s.bell.angle)); expect(s.bell.rings === 0, `a weak stroke rang it (${JSON.stringify(s.bell)})`); });
     }
     await game.shot('rocked');
