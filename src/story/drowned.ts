@@ -145,9 +145,8 @@ export class DrownedChapter implements Chapter {
   private readonly lensWas = new THREE.Vector3();
   /** How fast the fog's front is coming on while the boat lies stuck, m/s. */
   private fogSpeed = 0;
-  /** The lens has come in close for the cat's coming aboard, and the hull's side it watches from (+1 its port). */
+  /** The lens has come in close for the cat's coming aboard. */
   private closeIn = false;
-  private rescueSide = 0;
   /** The player's sweeps on the stuck boat's sail: how full it was last frame, and seconds since it last strained. */
   private strained = 0;
   private strainAge = 10;
@@ -908,20 +907,17 @@ export class DrownedChapter implements Chapter {
   }
 
   /**
-   * The rescue, close: off the bow's quarter on whichever side the lens already is, forward of the sail, which only
-   * ever hangs aft of the mast, and far enough round that the mast stands clear of her face; a little over her head so
-   * the boards show past the gunwale, with a longer lens: the cat's leap aboard, its shiver, and it pressing against
-   * her shins as she kneels to it, her face and the cat one frame.
+   * The rescue, close: off the bow's quarter on the side away from the sail, which hangs slack and swings, committed as
+   * the sailing view's side is and going round by the bow when it changes; far enough round that the mast stands clear
+   * of her face, a little over her head so the boards show past the gunwale, with a longer lens: the cat's leap aboard,
+   * its shiver, and it pressing against her shins as she kneels to it, her face and the cat one frame.
    */
   private rescueFrame(): void {
     const k = tuning.drownedCamera, s = this.shot, seat = this.cast.child.position;
     const wide = THREE.MathUtils.smoothstep(this.aspect, 0.7, 1.3);
     const fx = Math.sin(this.heading), fz = Math.cos(this.heading);
-    if (this.rescueSide === 0) {
-      const lens = this.lensAt, boat = this.cast.boat.position;
-      this.rescueSide = (lens.x - boat.x) * Math.cos(this.heading) - (lens.z - boat.z) * Math.sin(this.heading) >= 0 ? 1 : -1;
-    }
-    const px = Math.cos(this.heading) * this.rescueSide, pz = -Math.sin(this.heading) * this.rescueSide;
+    /** `quarter` +1 is the starboard side, the hull's -x. */
+    const px = -Math.cos(this.heading) * this.quarter, pz = Math.sin(this.heading) * this.quarter;
     const b = k.rescueBearing;
     s.from = this.from.set(fx * Math.cos(b) + px * Math.sin(b), 0, fz * Math.cos(b) + pz * Math.sin(b)).normalize();
     s.target.copy(seat).lerp(this.cat.eye, k.rescueAlong).setY(seat.y + k.rescueAim);
