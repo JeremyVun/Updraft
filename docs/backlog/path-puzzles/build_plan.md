@@ -851,7 +851,24 @@ is a faint sheen and the eye stays on the step; the scars no longer read from ac
 ### Phase N3p: the playable build
 After N3q and N3r merged. Claude plays the whole open sea beside the clouds and the owl, folds what that turns up
 into the docs and fixes it, and the playable build goes to Jeremy.
-Done: [ ]
+Done: [x] 2026-10-09, `sea-whale` at `1fe33692`. Claude played the whole open sea in landscape and on a phone from
+its start to the mooring at the mirror (with real gestures, twice each across the round), and it reads as one
+sequence: the giant breaking the horizon, the first breath's blow through the drawn spiral, the look framed as the
+owl's, the haul and the cygnet at the flipper, the free spout with the gulls rising, the dive and the flukes over
+the boat, the sea stilling into the mirror. Camera: no jolt in the encounter; the worst acceleration in a full play
+is the mirror's own swing round to the mooring (about 5.5 m/s² landscape, 6.7 on a phone, smooth in motion).
+Gates on the merge: typecheck, build, `net-whale-check` all 11, `sea-logic-check` at seeds 147 to 150, the pacing
+check, `cygnet-gates` 27 of 27 (one earlier run missed two by a hair at the cygnet's step up, unrelated, and passed
+on rerun). The whole journey (`playthrough.mjs`) on the QA build: Begin through every chapter, the credits, the
+completed-save reload and Play again, in three legs. It needed two gestures it had never been taught, both added:
+a sweep across the shore pinwheel through the haul (`shorePinwheel` on `__game`), and the little boats' bath pushed
+its hinted way and the plug circled. `carryTake` was checked against it: the child's first steps speed up at 13 to
+15 m/s², so the lens trails her by millimetres; only one-frame jumps are changed. Found on the way, both already on
+main and outside the whale: continuing a save made in the little boats (`pool-1`) leaves the story's focus and the
+camera NaN from the first frame; and once, in a full run, the dark wood stalled after the owl with her standing on
+the path and no next coal laid (from the `found` save it passed on main and the branch alike, so it is timing).
+Left for Jeremy's eye: the phone's line frame stands the boat half out at the right edge (as before N3n), and the
+paper plane standing in her satchel is the loudest shape in the near frames after the sail.
 
 ### Phase N4: docs on approval
 Once Jeremy approves: the open sea's chapter-select still regenerated with the whale (from the game, not Astra: Jeremy, 2026-10-08, "don't use astra anymore"); the open sea's section in
