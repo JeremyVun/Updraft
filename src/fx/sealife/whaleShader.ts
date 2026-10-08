@@ -229,7 +229,7 @@ float scars(vec2 m, float px) {
   p = vec2(cos(a) * p.x + sin(a) * p.y, cos(a) * p.y - sin(a) * p.x);
   p.y -= (hash12(id + 2.0) - 0.5) * 0.2 * p.x * p.x / len;
   p.y -= clamp(floor(p.y / gap + 0.5), 0.0, rake) * gap;
-  float w = (0.06 + 0.06 * hash12(id + 29.0)) * (1.0 - smoothstep(0.3, 1.0, abs(p.x) / len));
+  float w = (0.07 + 0.07 * hash12(id + 29.0)) * (1.0 - smoothstep(0.3, 1.0, abs(p.x) / len));
   return (1.0 - smoothstep(w, w + px, abs(p.y))) * min(1.0, 3.0 * w / px);
 }
 
@@ -398,8 +398,8 @@ Skin skin(float far, float dry) {
       float head = (1.0 - smoothstep(0.1, 0.2, s)) * clear * dry;
       if (head > 0.0) {
         float chin = smoothstep(0.0, 0.03, below) * (1.0 - smoothstep(0.05, 0.11, s));
-        float bias = max(0.22 * smoothstep(0.0, 0.004, knobbed), 0.12 * chin);
-        float where = head * smoothstep(0.6, 0.72, vnoise(m * 0.35 + 11.0) * 0.7 + n2 * 0.3 + bias);
+        float bias = max(0.3 * smoothstep(0.0, 0.004, knobbed), 0.15 * chin);
+        float where = head * smoothstep(0.56, 0.7, vnoise(m * 0.35 + 11.0) * 0.7 + n2 * 0.3 + bias);
         vec3 crust = barnacles(m, where * 0.9, px);
         k.albedo = mix(k.albedo, ${rgb(L.crust)} * 0.75, where * 0.35 * (1.0 - shows(0.2, px)));
         k.albedo *= 1.0 - 0.35 * crust.z;
@@ -408,7 +408,7 @@ Skin skin(float far, float dry) {
       }
       // Green growth along the line where the sea lies on it at rest, its top edge ragged, kept off the pale lip.
       float reach = ${f(L.growthReach)} * (0.35 + 0.9 * n1 * (0.4 + n2));
-      float grown = (1.0 - smoothstep(reach - 0.06 - px, reach + 0.06 + px, above)) * (1.0 - 0.7 * lip);
+      float grown = (1.0 - smoothstep(reach - 0.06 - px, reach + 0.06 + px, above)) * smoothstep(-1.6, -0.4, above) * (1.0 - 0.7 * lip);
       k.albedo = mix(k.albedo, ${rgb(L.growth)} * (0.75 + 0.5 * n2), grown * 0.8 * clear);
       // Wet runs down from the top of its back.
       k.run = smoothstep(0.7, 0.85, vnoise(vec2(m.x * 0.45, m.y * 0.12 + 3.0))) * smoothstep(1.5, 3.5, above) * (1.0 - k.crust);
@@ -467,7 +467,7 @@ Skin skin(float far, float dry) {
     k.albedo = mix(k.albedo, mix(uBelly, vec3(0.92, 0.94, 0.96), 0.3) * (0.95 + 0.08 * mottle), 0.8 * finRaised());
     // Barnacles along its knobbly leading edge and round its tip, and a few along the trailing edge.
     float edges = max(max(1.0 - smoothstep(0.0, 0.2, vRig.w), smoothstep(0.8, 0.96, vRig.z)), 0.4 * smoothstep(0.85, 1.0, vRig.w));
-    float where = edges * smoothstep(0.08, 0.2, vRig.z) * smoothstep(0.45, 0.65, n1 * 0.7 + n2 * 0.3) * 0.8 * dry;
+    float where = edges * smoothstep(0.08, 0.2, vRig.z) * (0.3 + 0.6 * smoothstep(0.4, 0.6, n1 * 0.7 + n2 * 0.3)) * dry;
     vec3 crust = barnacles(m, where, px);
     k.albedo *= 1.0 - 0.35 * crust.z;
     k.albedo = mix(k.albedo, ${rgb(L.crust)} * crust.y, crust.x);
