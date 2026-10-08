@@ -593,8 +593,14 @@ face, in `src/traveller/child/motion.ts`, staged on the yard with a stand-in wal
   touches. Each ring is deep and long, its note given by Phase 9's key (until then the score's tonic), and sends a
   visible ring rolling out from the tower over the fog's top. The yard shows four rings in about 15 s of play.
 - The belfry is warm and close in shadow after the cold outside: the straw nest under the bell with the kittens
-  (`Kittens.lay`, `nestle`, `tumble`), the cat curled round them, the last light coming in low at the sills.
-- The child's climb: hand over hand up the ivy, a knee up, feet finding the steps, the plane tucked in her coat; down
+  (`Kittens.lay`, `nestle`, `tumble`), the cat curled round them, the last light coming in low at the sills and laid
+  across the straw, so the kittens' coats and the cat's closed eyes read (6b2's strips in a plain half light were too
+  dark to read them).
+- The ivy she climbs (new `src/world/ivy-face.ts`, which 7c puts on the tower in place of today's single stem): old
+  woody stems as thick as her wrist, forking into footholds, under a dense mat of leaves, so a child can believe she
+  climbs it. On the yard it covers a stand-in tower face from a ridge to a belfry sill as high as the room's (about
+  5.5 m, the nave's ridge to the sill).
+- The child's climb: hand over hand up the ivy, a knee up, feet finding the forks, the plane tucked in her coat; down
   the same way, looking for her footing. Reads at the room's distance; no hand or foot slips (`probe.report()`).
 Gate: `crossings-check` `gap=bell` with real strokes; yard stills of the belfry and of every climb pose; a recorded
 clip of four rings for the lead to watch and hear.
