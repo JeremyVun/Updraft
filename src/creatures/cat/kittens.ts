@@ -18,6 +18,10 @@ const LITTER: { coat: Coat; voice: number }[] = [
 ];
 /** How far from the middle of the straw they wander while they play. */
 const ROOM = 0.38;
+/** How far short of a sibling's middle a pounce comes down, before scale: its front paws on the other's flank. */
+const CONTACT = 0.22;
+/** How near it is in the air when the other starts to go over, so that it is going as the pounce lands. */
+const STRIKE = 0.36;
 
 const STRAW_VERT = /* glsl */ `
 ${ATMO_GLSL}
@@ -88,6 +92,10 @@ export class Kittens {
   readonly centre = new THREE.Vector3();
   private doing: Doing = 'nestle';
   private readonly next = [0, 0, 0];
+  /** Which sibling each one is in the air to pounce on, if any. */
+  private readonly pouncing = [-1, -1, -1];
+  private readonly struck = [false, false, false];
+  private woken = false;
   private away = -1;
   private readonly v = new THREE.Vector3();
   private readonly w = new THREE.Vector3();
@@ -127,6 +135,7 @@ export class Kittens {
   nestle(mother: Cat | null = null): void {
     this.doing = 'nestle';
     this.away = -1;
+    this.pouncing.fill(-1);
     const at = mother ? mother.hollow(this.v) : this.v.copy(this.centre);
     const yaw = mother ? mother.yaw : 0;
     const spots: [number, number, number][] = [[0.0, 0.0, 0.4], [0.07, -0.1, 2.2], [0.1, 0.04, -2.6]];
@@ -145,6 +154,8 @@ export class Kittens {
   tumble(): void {
     this.doing = 'tumble';
     this.away = -1;
+    this.pouncing.fill(-1);
+    this.woken = true;
     for (const [i, k] of this.cats.entries()) {
       const a = (i / 3) * Math.PI * 2 + 0.4;
       k.place(this.w.set(this.centre.x + Math.cos(a) * 0.2, this.floor(), this.centre.z + Math.sin(a) * 0.2), a + Math.PI * 0.8, { pose: i === 1 ? 'sit' : 'stand', floor: this.floor });
@@ -159,6 +170,7 @@ export class Kittens {
   toSill(i: 0 | 1 | 2, to: THREE.Vector3, look: THREE.Vector3 | null, onDone?: () => void): void {
     const k = this.cats[i];
     this.away = i;
+    this.pouncing[i] = -1;
     const below = this.v.copy(to).sub(k.position).setY(0);
     const span = below.length();
     below.multiplyScalar(Math.max(0, span - 0.18) / Math.max(span, 1e-3)).add(k.position);
@@ -173,6 +185,17 @@ export class Kittens {
   update(dt: number): void {
     for (const [i, k] of this.cats.entries()) {
       k.update(dt);
+      const victim = this.pouncing[i] >= 0 ? this.cats[this.pouncing[i]] : null;
+      if (victim && !this.struck[i] && k.flying && k.position.distanceTo(victim.position) < STRIKE * k.scale) {
+        /** It comes down on its sibling, which goes over under it as it lands and stays down a moment. */
+        victim.topple(k.position);
+        this.next[this.pouncing[i]] = Math.max(this.next[this.pouncing[i]], 1.4);
+        this.struck[i] = true;
+      }
+      if (victim && k.heard.some((h) => h.kind === 'land')) {
+        k.bat(victim.position);
+        this.pouncing[i] = -1;
+      }
       this.heard.push(...k.heard);
       k.heard.length = 0;
       if (this.doing !== 'tumble' || i === this.away || k.busy) continue;
@@ -185,22 +208,29 @@ export class Kittens {
 
   private play(i: number): void {
     const k = this.cats[i];
-    const others = this.cats.filter((o, j) => j !== i && j !== this.away);
-    const other = others[Math.floor(Math.random() * others.length)];
-    const r = Math.random();
+    const others = [0, 1, 2].filter((j) => j !== i && j !== this.away);
+    const j = others[this.woken ? 0 : Math.floor(Math.random() * others.length)];
+    const other = j === undefined ? null : this.cats[j];
+    /** Woken into play, the first thing one of them does is pounce. */
+    const r = this.woken && other && !other.busy ? 0.5 : Math.random();
+    this.woken = false;
     const near = other && other.position.distanceTo(k.position) < 0.2;
     if (other && near && r < 0.4) {
       k.look(other.position);
       k.bat(this.v.copy(other.position).setY(other.position.y + 0.05));
-    } else if (other && r < 0.7) {
-      /** A pounce: a wiggle, a spring onto the other one, which is bowled over. */
+    } else if (other && !other.busy && this.pouncing[j] < 0 && r < 0.7) {
+      /**
+       * A pounce: a wiggle and a spring at the other one, which keeps still for it, coming down with its front paws on
+       * the other's flank so that it is bowled over under them.
+       */
+      this.next[j] = Math.max(this.next[j], 2.2);
       const to = this.w.copy(other.position).sub(k.position).setY(0);
       const d = to.length();
-      to.multiplyScalar(Math.max(0, d - 0.08) / Math.max(d, 1e-3)).add(k.position);
+      to.multiplyScalar(Math.max(0, d - CONTACT * k.scale) / Math.max(d, 1e-3)).add(k.position);
       to.y = this.floor();
-      k.leap(to.clone(), { floor: this.floor, then: 'stand', gather: 0.7, look: other.position }, () => {
-        if (!other.busy) other.topple();
-      });
+      this.pouncing[i] = j;
+      this.struck[i] = false;
+      k.leap(to.clone(), { floor: this.floor, then: 'stand', gather: 0.7, look: other.position });
     } else if (r < 0.9) {
       const a = Math.random() * Math.PI * 2, rr = ROOM * Math.sqrt(Math.random());
       k.look(null);

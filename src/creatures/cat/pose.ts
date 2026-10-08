@@ -16,6 +16,8 @@ export interface Drives {
   origin: THREE.Vector3;
   forward: THREE.Vector3;
   up: THREE.Vector3;
+  /** The body carried over to its left, up off what it stands on, and ahead. */
+  bodyX: number;
   bodyY: number;
   bodyZ: number;
   /** Nose up, and over to its left. */
@@ -23,6 +25,10 @@ export interface Drives {
   roll: number;
   /** The back rounded up between the shoulders and the hips (positive) or stretched out long (negative). */
   flex: number;
+  /** The trunk drawn out along the spine (positive) or bunched up short, the shoulders and the hips each taking half. */
+  stretch: number;
+  /** Every leg's length against its own, the paws as they are: a bound draws them out long. */
+  legs: number;
   /** The chest lifted off the line of the back, as a sitting cat holds itself. */
   chestUp: number;
   /** The spine curved round to its left (negative, its right), as a cat curls up to sleep. */
@@ -58,6 +64,10 @@ export interface Drives {
 
 const ORDER = 'YXZ';
 const NECK_AT = SKELETON.find(([bone]) => bone === NECK)![2];
+const PELVIS_AT = SKELETON.find(([bone]) => bone === PELVIS)![2];
+/** The bones of the legs that lengthen, each with its own length (the way to its child). */
+const LONG = LEGS.flatMap((l) => ('meta' in l ? [[l.upper, THIGH, l.lower], [l.lower, SHIN, l.meta], [l.meta, META, l.paw]] : [[l.upper, ARM, l.lower], [l.lower, FORE, l.paw]]));
+const CHEST_AT = SKELETON.find(([bone]) => bone === CHEST)![2];
 /** The face is held a little up from whatever it looks at, the way a small cat looks up at you. */
 const LIFT = 0.05;
 /** How far each joint of a wrapped tail turns: out sideways from the rump, round the haunch, and in to the front paws. */
@@ -89,6 +99,7 @@ export class CatRig {
   private readonly wFwd = new THREE.Vector3();
   private readonly wSide = new THREE.Vector3();
   private readonly e = new THREE.Euler();
+  private readonly long = new THREE.Matrix4();
   private readonly ax = new THREE.Vector3();
   private readonly ay = new THREE.Vector3();
   private readonly az = new THREE.Vector3();
@@ -125,12 +136,14 @@ export class CatRig {
     this.root.matrix.multiplyMatrices(d.frame, this.basis).multiply(this.m);
 
     const body = n[BODY];
-    body.position.set(0, d.bodyY, REST[BODY][2] + d.bodyZ);
+    body.position.set(d.bodyX, d.bodyY, REST[BODY][2] + d.bodyZ);
     body.rotation.set(-d.pitch, 0, d.roll);
     const breathe = Math.sin(d.breath) * 0.012;
     body.scale.set(1 + breathe, 1 + breathe * 1.3, 1);
     n[PELVIS].rotation.set(-d.flex * 0.9, -d.bend * 0.6, 0);
     n[CHEST].rotation.set(d.flex * 0.6 - d.chestUp, d.bend * 0.6, 0);
+    n[PELVIS].position.z = PELVIS_AT[2] - d.stretch / 2;
+    n[CHEST].position.z = CHEST_AT[2] + d.stretch / 2;
 
     n[JAW].rotation.set(d.jaw * 0.26, 0, 0);
     n[HEAD].scale.setScalar(d.headSize);
@@ -172,10 +185,14 @@ export class CatRig {
       n[TAIL_1].quaternion.copy(this.qp).invert().multiply(want);
     }
 
+    for (const [, length, child] of LONG) n[child].position.y = -length * d.legs;
     this.root.updateMatrixWorld(true);
     this.legs(d);
     this.root.updateMatrixWorld(true);
     for (let i = 0; i < BONES; i++) this.bones[i].multiplyMatrices(n[i].matrixWorld, this.unbind[i]);
+    /** A lengthened leg bone draws its own part of the leg out along it, about its joint. */
+    this.long.makeScale(1, d.legs, 1);
+    for (const [bone] of LONG) this.bones[bone].multiplyMatrices(n[bone].matrixWorld, this.long).multiply(this.unbind[bone]);
   }
 
   /**
@@ -202,6 +219,7 @@ export class CatRig {
     /** Knees and elbows hinge across the body, whichever way the body is turned. */
     const across = this.v.setFromMatrixColumn(n[BODY].matrixWorld, 0).normalize();
     this.hinge.copy(across);
+    const long = d.scale * d.legs;
     for (const [i, leg] of LEGS.entries()) {
       const paw = d.paws[i];
       this.target.copy(paw.at).applyMatrix4(d.frame);
@@ -209,16 +227,16 @@ export class CatRig {
       if (leg.front) {
         this.target.addScaledVector(this.wUp, WRIST * d.scale);
         /** Reaching for a paw left far behind, the heel of the paw comes up off the ground before the leg runs out. */
-        this.tiptoe = this.heelUp(this.target, this.hip, (ARM + FORE) * d.scale, 0.025 * d.scale) / (0.03 * d.scale);
-        this.reach(leg.upper, leg.lower, this.hip, this.target, ARM * d.scale, FORE * d.scale, 1, this.knee);
+        this.tiptoe = this.heelUp(this.target, this.hip, (ARM + FORE) * long, 0.025 * d.scale) / (0.03 * d.scale);
+        this.reach(leg.upper, leg.lower, this.hip, this.target, ARM * long, FORE * long, 1, this.knee);
       } else {
         this.tiptoe = 0;
         const tilt = d.hock[i - 2];
         this.target.addScaledVector(this.wUp, TOE * d.scale);
-        this.hockAt.copy(this.target).addScaledVector(this.wUp, Math.cos(tilt) * META * d.scale).addScaledVector(this.wFwd, -Math.sin(tilt) * META * d.scale);
+        this.hockAt.copy(this.target).addScaledVector(this.wUp, Math.cos(tilt) * META * long).addScaledVector(this.wFwd, -Math.sin(tilt) * META * long);
         /** Pushing off, the hock lifts and the foot stands up on its toes, which is most of a hind leg's reach. */
-        this.heelUp(this.hockAt, this.hip, (THIGH + SHIN) * d.scale, META * d.scale * 1.6, this.target);
-        this.reach(leg.upper, leg.lower, this.hip, this.hockAt, THIGH * d.scale, SHIN * d.scale, -1, this.knee);
+        this.heelUp(this.hockAt, this.hip, (THIGH + SHIN) * long, META * long * 1.6, this.target);
+        this.reach(leg.upper, leg.lower, this.hip, this.hockAt, THIGH * long, SHIN * long, -1, this.knee);
         this.qp.copy(this.qb);
         this.aim(this.qa, this.dir.subVectors(this.target, this.hockAt).normalize());
         n[leg.meta].quaternion.copy(this.qp).invert().multiply(this.qa);
