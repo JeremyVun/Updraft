@@ -116,6 +116,8 @@ const NUDGE_AT = 0.8;
 const NUDGE_GAP = 0.45;
 const NUDGE_FOR = 1.4;
 const UP = new THREE.Vector3(0, 1, 0);
+/** How high over the water the crossing's lens is held (m), as the camera holds any shot that does not say. */
+const CROSSING_CLEARANCE = 2.8;
 
 /** Where the dolphins are asked to run this frame, for `SeaLife.dolphinsWith`. */
 export interface PodRun {
@@ -237,6 +239,8 @@ export class NetWhale {
   /** How far along the thwart to port she has slid to lean out over the rail (m), and how far she leans out, 0..1. */
   slide = 0;
   private out = 0;
+  /** How far she has leant out over the port rail toward its eye as it looks at her, 0..1. */
+  private drawn = 0;
   private haulT = 0;
   private hauled = false;
   /** Seconds since a sweep last crossed the cork: the drawn sweep waits for a few. */
@@ -497,9 +501,14 @@ export class NetWhale {
     this.release += (out - this.release) * (1 - Math.exp(-dt * K.holdEase));
     const leaning = this.step === 'line' && (this.haul === 'reaching' || this.haul === 'hauling');
     this.out += ((leaning ? 1 : 0) - this.out) * (1 - Math.exp(-dt * (leaning ? 3 : 1.6)));
-    this.slide = K.haulSlide * THREE.MathUtils.smoothstep(this.out, 0, 1);
+    const t = whale.phase === 'woken' && this.step === 'breath' ? whale.time : 0;
+    const drawing = t > K.eyeOpens + 1 && t < K.eyeOpens + K.lookFor - K.handOff;
+    this.drawn += ((drawing ? 1 : 0) - this.drawn) * (1 - Math.exp(-dt * (drawing ? 0.9 : 1.4)));
+    const drawn = THREE.MathUtils.smoothstep(this.drawn, 0, 1);
+    this.slide = Math.max(K.haulSlide * THREE.MathUtils.smoothstep(this.out, 0, 1), K.lookSlide * drawn);
     const turning = this.step === 'gone' ? 0 : this.turnToward() * (1 - THREE.MathUtils.smootherstep(left, 30, 120));
-    this.turn += (THREE.MathUtils.lerp(turning, K.haulTurn, this.out) - this.turn) * (1 - Math.exp(-dt * 1.2));
+    const toward = THREE.MathUtils.lerp(turning, K.lookTurn, drawn);
+    this.turn += (THREE.MathUtils.lerp(toward, K.haulTurn, this.out) - this.turn) * (1 - Math.exp(-dt * 1.2));
     this.holdT = Math.min(1, this.holdT + dt / (this.looking ? K.lookMove : K.holdMove));
     const lost = this.step === 'approach' ? K.lostFar * (this.led ? THREE.MathUtils.smootherstep(left, K.lostNear, K.lostFrom) : 1) : 0;
     this.lost += (lost - this.lost) * (1 - Math.exp(-dt * K.lostEase));
@@ -641,7 +650,7 @@ export class NetWhale {
     if (this.cygnetIn === 'satchel') cygnet.watch(watching, true);
     // Looked at, she leans a little toward it.
     const looked = whale.phase === 'woken' && whale.time > K.eyeOpens ? 0.05 : 0;
-    child.lean = (this.step === 'approach' ? 0.18 : 0.12 + looked) * near;
+    child.lean = (this.step === 'approach' ? 0.18 : THREE.MathUtils.lerp(0.12 + looked, K.lookLean, THREE.MathUtils.smoothstep(this.drawn, 0, 1))) * near;
     if (this.step === 'approach') this.recognise(time);
     else this.stopPointing();
     if (this.step === 'breath') this.answer();
@@ -701,12 +710,12 @@ export class NetWhale {
       return;
     }
     this.reached = true;
-    // Out over the port rail toward it, so it shows beside her rather than hidden in front of her face.
+    // Out over the port rail toward it at the height of her face, so it shows against its flank beside her.
     const { boat } = this.cast;
     child.face(this.a);
     this.b.subVectors(whale.eye, this.a).setY(0).normalize();
     this.ray.set(Math.cos(boat.yaw), 0, -Math.sin(boat.yaw));
-    child.reachFor(0, this.p.copy(this.a).addScaledVector(this.ray, 0.55).addScaledVector(this.b, 0.35).addScaledVector(UP, -0.2));
+    child.reachFor(0, this.p.copy(this.a).addScaledVector(this.ray, 0.35).addScaledVector(this.b, 0.25).addScaledVector(UP, 0.32));
   }
 
   /**
@@ -1579,16 +1588,16 @@ export class NetWhale {
     const { breath, look, line, flipper } = K.phone;
     if (step === 'look') {
       to.set([K.lookDistance, K.lookHeight, K.lookBearing, K.lookLookY, K.lookToward, 0, look.distance, look.height, look.turn,
-        look.lookY, look.toward]);
+        look.lookY, look.toward, 1]);
     } else if (step === 'line') {
       to.set([K.lineDistance, K.lineHeight, K.lineBearing, K.lineLookY, K.lineToward, 0, line.distance, line.height, line.turn,
-        line.lookY, line.toward]);
+        line.lookY, line.toward, 0]);
     } else if (step === 'flipper') {
       to.set([K.flipperDistance, K.flipperHeight, K.flipperBearing, K.flipperLookY, K.flipperToward, 1, flipper.distance,
-        flipper.height, flipper.turn, flipper.lookY, flipper.toward]);
+        flipper.height, flipper.turn, flipper.lookY, flipper.toward, 0]);
     } else {
       to.set([K.holdDistance, K.holdHeight, K.holdBearing, K.holdLookY, K.holdToward, 0, breath.distance, breath.height,
-        breath.turn, breath.lookY, breath.toward]);
+        breath.turn, breath.lookY, breath.toward, 0]);
     }
     if (now || !this.holdSet) {
       this.holdFrom.set(to);
@@ -1610,6 +1619,7 @@ export class NetWhale {
   frame(shot: Shot): void {
     const h = THREE.MathUtils.smootherstep(this.hold, 0, 1);
     if (!this.holdSet) this.holdFor(this.step, true);
+    shot.clearance = undefined;
     // Led off its line, the view rises to look over the pod at the long low island it is making for.
     const rise = THREE.MathUtils.smootherstep(this.rise, 0, 1);
     shot.height += K.riseHeight * rise;
@@ -1619,6 +1629,8 @@ export class NetWhale {
     shot.target.lerp(this.a.copy(this.whale.eye).setY(K.riseLook), (phone ? K.riseTowardPhone : K.riseToward) * rise);
     shot.distance += Math.hypot(shot.target.x - this.b.x, shot.target.z - this.b.z);
     if (h <= 0.001) return;
+    // Down beside it the lens sits low over the water, so its back stands against the sky.
+    shot.clearance = THREE.MathUtils.lerp(CROSSING_CLEARANCE, K.holdClearance, h);
     const whale = this.whale;
     const boat = this.cast.boat.position;
     const portrait = (this.camera?.aspect ?? 16 / 9) < 1;
@@ -1626,8 +1638,9 @@ export class NetWhale {
     const now = this.holdNow;
     const moved = THREE.MathUtils.smootherstep(this.holdT, 0, 1);
     for (let i = 0; i < now.length; i++) now[i] = THREE.MathUtils.lerp(this.holdFrom[i], this.holdTo[i], moved);
-    const [holdDistance, holdHeight, bearing, lookY, toward, fin, phoneDistance, phoneHeight, phoneTurn, phoneLookY, phoneToward] = now;
-    const head = this.p.copy(whale.eye).lerp(whale.blowhole, 0.5);
+    const [holdDistance, holdHeight, bearing, lookY, toward, fin, phoneDistance, phoneHeight, phoneTurn, phoneLookY, phoneToward, eyeward] = now;
+    // The head's middle, or for the look between them its eye.
+    const head = this.p.copy(whale.eye).lerp(whale.blowhole, 0.5 * (1 - eyeward));
     // At the flipper what matters lies between its tip and where the cygnet holds the loop's end.
     const focus = this.b.copy(head).lerp(this.a.copy(whale.finTip).lerp(this.station, 0.5), fin).setY(portrait ? phoneLookY : lookY);
     this.look.copy(boat).setY(1.2).lerp(focus, portrait ? phoneToward : toward);
@@ -1656,7 +1669,9 @@ export class NetWhale {
     // What the step is about, and its eye, join the travelling pair by degrees.
     const s = this.subjects;
     const pair = shot.subjects;
-    s.primary.copy(this.cast.child.position).y += 1.2;
+    // Leaning out over the rail toward its eye, she is where her face is rather than where she sits.
+    if (this.looking) this.cast.child.face(s.primary);
+    else s.primary.copy(this.cast.child.position).y += 1.2;
     const rest = pair?.secondary ?? s.primary;
     if (this.step === 'line') s.secondary.copy(this.haul === 'out' || this.haul === 'reaching' ? this.net.float.position : this.net.foot);
     else if (this.step === 'flipper') {
@@ -1671,8 +1686,9 @@ export class NetWhale {
     if (glance > 0) s.tertiary.lerp(this.a.copy(whale.flukes).setY(Math.max(whale.flukes.y, 1)), glance * 0.6);
     s.secondary.lerp(rest, 1 - h);
     s.tertiary.lerp(rest, 1 - h);
-    s.margin = THREE.MathUtils.lerp(pair?.margin ?? 0.85, 0.85, h);
-    s.extra = THREE.MathUtils.lerp(pair?.extra ?? 10, this.looking ? 2 : !portrait && this.step === 'free' ? 4 : 10, h);
+    // The look between them is composed as it stands: nothing backs it off or shifts it.
+    s.margin = THREE.MathUtils.lerp(pair?.margin ?? 0.85, this.looking ? 1 : 0.85, h);
+    s.extra = THREE.MathUtils.lerp(pair?.extra ?? 10, this.looking ? 0 : !portrait && this.step === 'free' ? 4 : 10, h);
     shot.subjects = s;
   }
 }

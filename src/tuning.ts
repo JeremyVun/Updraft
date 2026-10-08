@@ -1432,7 +1432,7 @@ export const tuning = {
      * behind the boat and `holdHeight` up, `holdBearing` radians round to port of astern, at `holdEase` a second; and
      * the wider view it eases back out to as it goes free, the plume leaving the top of the frame.
      */
-    holdFrom: 40, holdFull: 6, holdDistance: 20, holdHeight: 8.5, holdBearing: 0.1, holdEase: 0.45,
+    holdFrom: 40, holdFull: 6, holdDistance: 16, holdHeight: 2.8, holdBearing: 0.18, holdEase: 0.45, holdClearance: 1,
     /**
      * Led off its line, the crossing's view rises this much higher (m) at `riseEase` a second, its look going
      * `riseToward` of the way from the boat to the whale's eye (`riseTowardPhone` in a phone's narrow frame), `riseLook` metres up.
@@ -1474,8 +1474,17 @@ export const tuning = {
      * float line `handOff` before the look ends, `lookFor` after its eye opened, and the view goes to the haul.
      */
     lookIn: 2.4, lookMove: 4, eyeOpens: 3, eyeOpening: 0.55, blinkAt: 7.6, reachFrom: 8, callAt: 8.9, peepAt: 10.1, handOff: 1.4, lookFor: 10,
-    /** The view over her left shoulder for the look, close behind her and low, the sail clear to the right: as the step holds are. */
-    lookDistance: 6, lookHeight: 3, lookBearing: 0.5, lookLookY: 1.8, lookToward: 0.55,
+    /**
+     * The look between them, framed as the owl's is: low over her left shoulder, `lookDistance` behind the boat and
+     * `lookHeight` up, `lookBearing` round to port of astern, looking `lookToward` of the way from the boat to its eye,
+     * `lookLookY` up: her whole upper body to the right of its eye, and the mast at the frame's edge with the sail beyond it.
+     */
+    lookDistance: 3.8, lookHeight: 1.75, lookBearing: 0.22, lookLookY: 2.1, lookToward: 0.33,
+    /**
+     * Looked at, she slides along the thwart toward the port rail (m), turns on it to face its eye (radians) and
+     * leans out over the rail toward it (radians), clear of the mast and the sail behind her.
+     */
+    lookSlide: 0.35, lookTurn: 0.95, lookLean: 0.9,
     /**
      * The valve's dolphin: seconds to swim in under water from where the pod waits, how high over the crown its leap
      * carries its beak (m), how fast the gravity of a dream brings it down (m/s²), and how quickly the mesh it flicks
@@ -1511,7 +1520,7 @@ export const tuning = {
      * and how high (m), how far round to port of astern (radians), how far the look goes from the boat toward what
      * matters (the head, then the flipper's tip) and how high on it (m).
      */
-    holdMove: 5, holdLookY: 4.5, holdToward: 0.5,
+    holdMove: 5, holdLookY: 7, holdToward: 0.5,
     lineDistance: 12.5, lineHeight: 7.2, lineBearing: 0.22, lineLookY: 3.2, lineToward: 0.33,
     flipperDistance: 12, flipperHeight: 7.5, flipperBearing: 0.2, flipperLookY: 6.5, flipperToward: 0.4,
     /**
@@ -1524,7 +1533,7 @@ export const tuning = {
      */
     phone: {
       breath: { distance: 19, height: 8, turn: -0.6, lookY: 17, toward: 0.3 },
-      look: { distance: 10, height: 3.8, turn: -0.6, lookY: 2.2, toward: 0.75 },
+      look: { distance: 2.9, height: 2.55, turn: -0.45, lookY: 2.2, toward: 0.5 },
       line: { distance: 11, height: 6, turn: -0.1, lookY: 20, toward: 0.12 },
       flipper: { distance: 13, height: 8, turn: -1.2, lookY: 16, toward: 0.3 },
       release: { distance: 28, height: 11, turn: -0.25 },
