@@ -106,7 +106,7 @@ export class WhaleRig {
     this.uniforms = {
       uSpine: { value: this.spine },
       uWet: { value: this.wet },
-      uPour: { value: new THREE.Vector2(-2, 0) },
+      uPour: { value: new THREE.Vector3(-2, 0, 0) },
       uHeading: { value: this.heading },
       uRoll: { value: 0 },
       uTurn: { value: 0 },

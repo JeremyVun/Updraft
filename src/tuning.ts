@@ -1427,9 +1427,12 @@ export const tuning = {
      * a second at the waterline; and the sea round it swells with it, one low ring of swell `heaveHeight` m high at
      * its flank going out at `heaveSpeed` m/s, `heaveWidth` m from crest to its side there and broadening by
      * `heaveSpread` of each metre it goes (so it lifts the boat gently), lower by half `heaveReach` m out, and settled
-     * `heaveFor` s after the breath; the low sun comes through its crest, `heaveGlow` a metre of it.
+     * `heaveFor` s after the breath; the low sun comes through its crest, `heaveGlow` a metre of it. Only the breaths
+     * that matter (its first full breath, the spout) pour off in falls; at the rest the sea runs off as a faint sheen,
+     * `sheen` of a fall's cover, with `sheenShed` of the drops and the lace at the waterline.
      */
     sheetWet: 0.8, sheetFor: 5.5, pourFrom: 6.5, pourSpeed: 1.2, pourFall: 1.6, falls: 0.8, glints: 2, pourDrops: 260,
+    sheen: 0.28, sheenShed: 0.3,
     heaveHeight: 0.55, heaveSpeed: 2.6, heaveWidth: 2.2, heaveSpread: 0.3, heaveReach: 8, heaveFor: 8, heaveGlow: 2.5,
     /**
      * The seabirds standing far along its back, each at [s along it, radians round from the top of its ring toward
@@ -2274,7 +2277,8 @@ export const tuning = {
     /**
      * Its ancient skin, painted like an old rock: broad soft patches of tone, a soft grain and the long creases round
      * the eye (how strong); lichen (its pale colour and a warmer one some patches take, how much of the skin it covers,
-     * how strongly); old healed scars (colour, the share of the skin's cells that carry one, how strongly); barnacle
+     * how strongly); old healed scars (colour, the share of the skin's cells that carry one, how strongly, and over
+     * what span of pixels across a scar they come in, so they show only close enough to be skin); barnacle
      * crusts on the head, the chin, the lip and the flipper's edges (colour, how thickly the shells sit in a crust); and
      * weed at the waterline (dark and mossy colours, the faint yellow film above it, how far up it reaches in metres).
      */
@@ -2284,7 +2288,7 @@ export const tuning = {
     lichenFlank: 0.2,
     /** Under the flukes: how pale their field is against the belly's colour, and how thickly barnacles sit on their edges. */
     flukePale: 1.12, flukeShells: 0.7,
-    scar: '#aeb7bd', scars: 0.24, scarAmount: 0.65,
+    scar: '#aeb7bd', scars: 0.24, scarAmount: 0.45, scarSeen: [1.5, 4.5],
     crust: '#b5afa1', crustShells: 0.85,
     growth: '#454b2a', moss: '#5d7038', film: '#9e8d50', growthReach: 0.7,
     /** Wet runs down from the top: how much darker and glossier the skin is along them. */

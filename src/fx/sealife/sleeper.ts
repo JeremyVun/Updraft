@@ -212,9 +212,13 @@ export class SleepingWhale extends WhaleRig {
   private headWet = 0;
   private breath = 0;
   private sighed = true;
-  /** Seconds since its back last rose with a breath and shed the sea off its top, and how deep that breath was. */
+  /**
+   * Seconds since its back last rose with a breath and shed the sea off its top, how deep that breath was, and how
+   * much of the sea poured off in falls rather than running off as a sheen (1 for the breaths that matter).
+   */
   private shedT = Infinity;
   private shedBy = 0;
+  private shedFalls = 0;
   private shed = true;
   private liftT = -1;
   /** A sigh seen from far off, still rising: seconds of it left, how far off, how strong. */
@@ -458,7 +462,7 @@ export class SleepingWhale extends WhaleRig {
         * (1 - 0.6 * THREE.MathUtils.smootherstep(t, BREATH_IN, BREATH_OUT + 1));
       if (t >= BREATH_IN && t < BREATH_OUT) this.spray.blowOut(this.blowhole, K.firstBreathHeight, blowing(t - BREATH_IN), dt);
       if (t >= BREATH_IN && t - dt < BREATH_IN) this.onSound?.('whale-blow', this.blowhole.x, this.blowhole.y, this.blowhole.z);
-      if (t >= BREATH_IN * 0.5 && t - dt < BREATH_IN * 0.5) this.rises(1.3);
+      if (t >= BREATH_IN * 0.5 && t - dt < BREATH_IN * 0.5) this.rises(1.3, 1);
       this.breath = 0.6;
       this.sighed = true;
     } else {
@@ -497,7 +501,7 @@ export class SleepingWhale extends WhaleRig {
     const t = this.time;
     const draw = THREE.MathUtils.smootherstep(t, 0, SPOUT_FROM) * (1 - THREE.MathUtils.smootherstep(t, SPOUT_TO, SPOUT_TO + 1.8));
     if (t >= SPOUT_FROM && t - dt < SPOUT_FROM) this.onSound?.('whale-blow', this.blowhole.x, this.blowhole.y, this.blowhole.z);
-    if (t >= SPOUT_FROM - 1 && t - dt < SPOUT_FROM - 1) this.rises(1.5);
+    if (t >= SPOUT_FROM - 1 && t - dt < SPOUT_FROM - 1) this.rises(1.5, 1);
     if (t >= SPOUT_FROM && t < SPOUT_TO) this.spray.blowOut(this.blowhole, K.spoutHeight, blowing(t - SPOUT_FROM), dt, K.spoutBreadth, 1);
     // Its mist comes down over the boat in the gold light.
     const veil = THREE.MathUtils.smoothstep(t, SPOUT_FROM + 1, SPOUT_TO) * (1 - THREE.MathUtils.smoothstep(t, SPOUT_TO + VEIL_FOR - 2, SPOUT_TO + VEIL_FOR));
@@ -699,12 +703,13 @@ export class SleepingWhale extends WhaleRig {
   }
 
   /**
-   * Its back rising with a breath `deep` as a waking breath: the sea sheets off its top and the sea round it swells
-   * out from its flank and settles.
+   * Its back rising with a breath `deep` as a waking breath: the sea runs off its top, in broad falls as much as
+   * `falls` (0..1), and the sea round it swells out from its flank and settles.
    */
-  private rises(deep: number): void {
+  private rises(deep: number, falls = 0): void {
     this.shedT = 0;
     this.shedBy = deep;
+    this.shedFalls = falls;
     const h = this.heading;
     const half = (LYING / 2) * BODY_M;
     const mid = this.point(0, 0, LYING / 2, this.q);
@@ -726,13 +731,15 @@ export class SleepingWhale extends WhaleRig {
     const wet = K.sheetWet * Math.min(1, this.shedBy) * THREE.MathUtils.smoothstep(this.shedT, 0, 0.6)
       * (1 - THREE.MathUtils.smoothstep(this.shedT, 1.5, K.sheetFor));
     this.uniforms.uPour.value.x = Math.max(-2, K.pourFrom - this.shedT * (K.pourSpeed + 0.5 * K.pourFall * this.shedT));
+    this.uniforms.uPour.value.z = this.shedFalls;
     for (let i = 0; i < SPINE_N; i++) {
       const s = (i / (SPINE_N - 1)) * SPINE_END;
       const top = THREE.MathUtils.smoothstep(s, 0.08, 0.2) * (1 - THREE.MathUtils.smoothstep(s, 0.72, 0.86));
       this.wet[i] = Math.max(this.wet[i], wet * top);
     }
     // It reaches the sea as its front comes down to the waterline.
-    const pouring = this.shedBy * THREE.MathUtils.smoothstep(this.shedT, 1.3, 2.1) * (1 - THREE.MathUtils.smoothstep(this.shedT, 3, 5));
+    const pouring = this.shedBy * THREE.MathUtils.lerp(K.sheenShed, 1, this.shedFalls)
+      * THREE.MathUtils.smoothstep(this.shedT, 1.3, 2.1) * (1 - THREE.MathUtils.smoothstep(this.shedT, 3, 5));
     this.drops(pouring, dt);
     const n = Math.floor(dt * 30 * pouring + Math.random());
     const h = this.heading;

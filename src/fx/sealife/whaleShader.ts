@@ -194,9 +194,10 @@ float shows(float size, float px) {
  * The sea pouring off it after a breath, m metres over the skin and h metres above the sea, its front come down to
  * \`front\` m above the sea, as much of it as \`amount\` (0..1): broad falls over the ridge and down the flank, each
  * wandering a little, that part into threads as they near the waterline and narrow to their middles as they drain.
+ * As much as \`full\` (0..1) pours in those falls; the rest runs off as a faint sheen streaming down the whole skin.
  * Gives how much a fall covers here, how full it runs there, the water streaming down it, and where a drop in it glints.
  */
-vec4 falls(vec2 m, float h, float front, float amount, float px) {
+vec4 falls(vec2 m, float h, float front, float amount, float px, float full) {
   float x = m.x + (vnoise(vec2(m.x * 0.18, m.y * 0.3 + 4.0)) - 0.5) * 2.4;
   float lane = vnoise(vec2(x * 0.42, 2.7)) * 0.7 + vnoise(vec2(x * 1.3, 8.1 + m.y * 0.1)) * 0.3;
   float low = 1.0 - smoothstep(0.4, 2.4, h);
@@ -209,7 +210,8 @@ vec4 falls(vec2 m, float h, float front, float amount, float px) {
   float lead = 1.0 - smoothstep(0.0, 0.9, h - tongue);
   float glint = smoothstep(0.86, 0.97, vnoise(vec2(x * 11.0, m.y * 1.3 + uTime * 5.0))) * shows(0.08, px);
   float cover = smoothstep(0.0, 0.12, inside) * reached;
-  return vec4(cover, smoothstep(0.02, 0.3, inside), clamp(run + 0.4 * lead, 0.0, 1.0), glint * cover);
+  float sheen = reached * (0.6 + 0.4 * lane) * ${f(tuning.netWhale.sheen)};
+  return vec4(mix(sheen, cover, full), smoothstep(0.02, 0.3, inside) * full, clamp(run + 0.4 * lead, 0.0, 1.0), glint * cover * full);
 }
 
 /**
@@ -242,31 +244,28 @@ vec3 barnacles(vec2 m, float where, float px) {
 const vec2 SCAR_CELL = vec2(5.0, 2.6);
 
 /**
- * The scar whose cell is id, if that cell has one (a share of them do): a soft pale stroke with rounded ends, drawn out
- * along the body or slanting across it, in a faint pale haze of healed skin. How pale it draws at m, and the shade
- * under its lower edge, where the healed skin stands a little proud.
+ * The scar whose cell is id, if that cell has one (a share of them do): a soft pale mark drawn out along the body,
+ * fading out at its ends and across it into the skin, the old healed skin a little paler. How pale it is at m. Too
+ * small on the screen to be seen as skin it would read as a drawn stroke, so it is only there close enough.
  */
-vec2 scarIn(vec2 m, vec2 id, float share, float px) {
-  if (hash12(id + 41.0) > share) return vec2(0.0);
+float scarIn(vec2 m, vec2 id, float share, float px) {
+  if (hash12(id + 41.0) > share) return 0.0;
   float len = 0.9 + 1.0 * hash12(id + 8.0);
   vec2 p = m - (id + vec2(hash12(id + 11.0), hash12(id + 13.0))) * SCAR_CELL;
-  float slant = hash12(id + 5.0);
-  float a = slant < 0.75 ? (slant - 0.375) * 0.9 : sign(slant - 0.875) * (0.4 + 0.3 * fract(slant * 7.0));
+  float a = (hash12(id + 5.0) - 0.5) * 0.5;
   p = vec2(cos(a) * p.x + sin(a) * p.y, cos(a) * p.y - sin(a) * p.x);
   float h = hash12(id + 2.0);
-  p.y -= (h - 0.5) * 0.3 * p.x * p.x / len + 0.06 * sin(p.x * 1.6 + h * 6.0);
+  p.y -= (h - 0.5) * 0.15 * p.x * p.x / len + 0.05 * sin(p.x * 1.6 + h * 6.0);
   float along = abs(p.x) / len;
-  float w = (0.13 + 0.09 * hash12(id + 29.0)) * sqrt(max(0.0, 1.0 - pow(along, 4.0))) * (0.85 + 0.15 * sin(p.x * 2.7 + h * 9.0));
-  float core = (1.0 - smoothstep(0.15 * w, 1.15 * w + px, abs(p.y))) * min(1.0, 3.0 * w / px);
-  float haze = (1.0 - smoothstep(0.0, 0.45, abs(p.y))) * (1.0 - smoothstep(0.5, 1.15, along));
-  float under = smoothstep(0.6 * w, w, -p.y) * (1.0 - smoothstep(w, w + 0.06 + px, -p.y)) * min(1.0, 3.0 * w / px);
-  return vec2(max(core, 0.2 * haze) * (0.75 + 0.25 * hash12(id + 31.0)), under);
+  float w = (0.2 + 0.12 * hash12(id + 29.0)) * (1.0 - smoothstep(0.3, 1.0, along));
+  float mark = exp(-pow(p.y / max(w, 1e-3), 2.0)) * (1.0 - smoothstep(0.4, 1.0, along));
+  return mark * (0.7 + 0.3 * hash12(id + 31.0)) * smoothstep(${f(L.scarSeen[0])}, ${f(L.scarSeen[1])}, 0.26 / px);
 }
 
 /** Old healed scars, m metres over the skin, in a share of the cells: the strongest of the nine cells round m. */
-vec2 scars(vec2 m, float share, float px) {
+float scars(vec2 m, float share, float px) {
   vec2 i0 = floor(m / SCAR_CELL);
-  vec2 s = vec2(0.0);
+  float s = 0.0;
   for (int i = 0; i < 9; i++) s = max(s, scarIn(m, i0 + vec2(float(i % 3) - 1.0, float(i / 3) - 1.0), share, px));
   return s;
 }
@@ -465,9 +464,8 @@ Skin skin(float far, float dry) {
     if (part == ${BODY}) {
       float above = overRestSea(vRest, s);
       // Its old scars are thicker about the head and down its flanks, where it is seen close.
-      vec2 scar = scars(m, ${f(L.scars)} * (1.0 + smoothstep(0.45, 0.2, s)) * (0.2 + flank), px) * clear * dry;
-      k.albedo *= 1.0 - 0.3 * scar.y;
-      k.albedo = mix(k.albedo, ${rgb(L.scar)} * (0.92 + 0.16 * n2), scar.x * ${f(L.scarAmount)});
+      float scar = scars(m, ${f(L.scars)} * (1.0 + smoothstep(0.45, 0.2, s)) * (0.2 + flank), px) * clear * dry;
+      k.albedo = mix(k.albedo, ${rgb(L.scar)} * (0.92 + 0.16 * n2), scar * ${f(L.scarAmount)});
       // Barnacles crust the head in small tight patches, along the chin and the lip, round its knobs and about the eye,
       // but never on the eye or in its folds; a few stray ones about each patch.
       float head = (1.0 - smoothstep(0.2, 0.3, s)) * dry;
@@ -698,8 +696,11 @@ ${ATMO_GLSL}
 ${SKIN_GLSL}
 ${HAZE_GLSL}
 uniform vec3 uSeaTint;
-/** How far down the sea pouring off its back has come (m above the sea), and how much the bared head streams. */
-uniform vec2 uPour;
+/**
+ * How far down the sea pouring off its back has come (m above the sea), how much the bared head streams, and how much
+ * of the breath's sea pours off in falls rather than a sheen.
+ */
+uniform vec3 uPour;
 in vec3 vWorld;
 in vec3 vNormal;
 in vec3 vAxisX;
@@ -739,8 +740,8 @@ void main() {
   vec4 pour = vec4(0.0);
   if (part == ${BODY} && vWet > 0.01) {
     vec2 m = overSkin(vRest);
-    float front = mix(uPour.x, -2.0, uPour.y * (1.0 - smoothstep(0.24, 0.34, vRig.x)));
-    pour = falls(m, vWorld.y, front, vWet, length(fwidth(m)) + 1e-4) * (1.0 - k.near);
+    float head = uPour.y * (1.0 - smoothstep(0.24, 0.34, vRig.x));
+    pour = falls(m, vWorld.y, mix(uPour.x, -2.0, head), vWet, length(fwidth(m)) + 1e-4, max(uPour.z, head)) * (1.0 - k.near);
     pour.x *= smoothstep(0.0, 0.25, vWet);
     streak = 0.5 * pour.x * pour.z;
   }
