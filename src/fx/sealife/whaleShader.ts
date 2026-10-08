@@ -245,7 +245,7 @@ float dapples(vec2 m, float where, float cell, float rag, float px) {
   float r = 0.24 + 0.18 * hash12(id + 93.0);
   vec2 d = (fract(c) - 0.5 - (vec2(hash12(id + 95.0), hash12(id + 97.0)) - 0.5) * (1.0 - 2.0 * r)) / r;
   float aa = px / (r * cell);
-  return smoothstep(1.0 + aa, 0.55 - aa, length(d * vec2(0.8, 1.0)) + 0.35 * (rag - 0.5)) * shows(2.0 * r * cell, px)
+  return smoothstep(1.0 + aa, 0.72 - aa, length(d * vec2(0.6 + 0.4 * hash12(id + 98.0), 1.0)) + 0.6 * (rag - 0.5)) * shows(2.0 * r * cell, px)
     * (0.55 + 0.45 * hash12(id + 99.0));
 }
 
