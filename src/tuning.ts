@@ -2027,12 +2027,12 @@ export const tuning = {
        * from `leaveFrom` metres past it (over each piece's own stretch, below); to the end's view over the last
        * `endFrom` metres.
        */
-      comeFrom: 3, comeTo: 0, leaveFrom: 0, endFrom: 8,
+      comeFrom: 5, comeTo: 0, leaveFrom: 0, endFrom: 8,
       /**
        * How fast the lens comes round to a piece's view once she has stopped at it (per second), and to the swing's
        * (from the mill's, which brings her to it), by way of a point this far from the swing's pivot (x, height, z).
        */
-      roundRate: 1.1, swingRate: 0.3, swingVia: [-3.5, 9.5, -5.3],
+      roundRate: 0.95, swingRate: 0.25, swingVia: [-3.5, 13, -6.5],
       /** How far past each piece the lens has given it back to her own way, metres. */
       leave: { tree: 4, sheet: 0, mill: 5, swing: 3 },
       /**
