@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { Shot } from '../camera';
 import { screenBrush } from '../creatures/motion';
 import type { Net, NetGrip } from '../fx/sealife/net';
-import { FREE_FLUKES_FROM, type SleepingWhale } from '../fx/sealife/sleeper';
+import { DIVE_AT, FREE_FLUKES_FROM, type SleepingWhale } from '../fx/sealife/sleeper';
 import type { Coax } from '../fx/swirl';
 import { tuning } from '../tuning';
 import type { Cast } from './cast';
@@ -22,9 +22,16 @@ export const WHALE_STEPS: readonly WhaleStep[] = ['approach', 'breath', 'line', 
 
 /** The step the breath hands on to. */
 const AFTER_BREATH: WhaleStep = 'line';
-/** Seconds the empty net takes to drift away once the loop is off. */
+/**
+ * Seconds the empty net takes to drift away once the loop is off, working loose into a raft by the spout; and seconds
+ * into its going free over which the raft sinks away into the deep, gone before it dives.
+ */
 const DRIFT_FROM = 1;
-const DRIFT_TO = 50;
+const DRIFT_TO = 24;
+const SINK_FROM = 8.5;
+/** About how long before it goes free the loop is let go, as the cygnet swims back and is lifted in (s). */
+const FREED_BEFORE = 6;
+const SINK_TO = DIVE_AT - 1;
 /**
  * The valve's dolphin leaps from this far out on the near side of the blowhole, over the crown and down beyond it;
  * the last stretch of its run in rises straight along its leap for `RUN_UP` seconds.
@@ -146,9 +153,8 @@ export class NetWhale {
   readonly yaw: number;
   /** The speed limit holding the boat, eased to nothing as it comes alongside and let go again after. */
   limit = Infinity;
-  /** How far the crossing's view has given way to the hold beside it, 0..1, and to the wider view as it goes. */
+  /** How far the crossing's view has given way to the hold beside it, 0..1. */
   hold = 0;
-  release = 0;
   /** How far the crossing's view has turned to look past the pod leading the boat in, 0..1. */
   private rise = 0;
   /** How far the child has turned on her seat toward it, radians. */
@@ -214,7 +220,7 @@ export class NetWhale {
   private blinked = false;
   private peeped = false;
   private waved = false;
-  private freedAt = -1;
+  private freedAt: number | null = null;
   /** The valve's dolphin: where it left the pod, where it leaves the water, its heading over the crown and its throw. */
   private readonly vFrom = new THREE.Vector3();
   private readonly vLaunch = new THREE.Vector3();
@@ -342,7 +348,7 @@ export class NetWhale {
     const whale = this.whale;
     if (step === 'free') {
       whale.free();
-      if (this.freedAt < 0) this.freedAt = this.clock;
+      this.freedAt ??= this.clock;
     }
     if (step === 'gone' && whale.phase !== 'gone') whale.vanish();
   }
@@ -402,6 +408,8 @@ export class NetWhale {
       if (point === 'whale-flipper') {
         this.net.loop = 1;
         this.bird = 'home';
+        // Let go as the cygnet came back with it, so it is a raft by the spout as it was.
+        this.freedAt = this.clock - FREED_BEFORE;
         if (this.cygnetIn === 'cradle' && !this.cast.cygnet.visible) {
           this.cast.cygnet.rideIn('satchel');
           this.cygnetIn = 'satchel';
@@ -499,8 +507,6 @@ export class NetWhale {
     const want = this.step === 'gone' ? 0 : this.step === 'approach' ? near : 1;
     this.hold += (want - this.hold) * (1 - Math.exp(-dt * K.holdEase));
     this.rise += ((this.led && this.step === 'approach' ? 1 : 0) - this.rise) * (1 - Math.exp(-dt * K.riseEase));
-    const out = this.step === 'free' ? THREE.MathUtils.smootherstep(this.stepTime, 0.5, 5) : this.step === 'gone' ? 1 : 0;
-    this.release += (out - this.release) * (1 - Math.exp(-dt * K.holdEase));
     const leaning = this.step === 'line' && (this.haul === 'reaching' || this.haul === 'hauling');
     this.out += ((leaning ? 1 : 0) - this.out) * (1 - Math.exp(-dt * (leaning ? 3 : 1.6)));
     const t = whale.phase === 'woken' && this.step === 'breath' ? whale.time : 0;
@@ -511,7 +517,7 @@ export class NetWhale {
     const turning = this.step === 'gone' ? 0 : this.turnToward() * (1 - THREE.MathUtils.smootherstep(left, 30, 120));
     const toward = THREE.MathUtils.lerp(turning, K.lookTurn, drawn);
     this.turn += (THREE.MathUtils.lerp(toward, K.haulTurn, this.out) - this.turn) * (1 - Math.exp(-dt * 1.2));
-    this.holdT = Math.min(1, this.holdT + dt / (this.looking ? K.lookMove : K.holdMove));
+    this.holdT = Math.min(1, this.holdT + dt / (this.looking ? K.lookMove : this.step === 'free' ? K.releaseMove : K.holdMove));
     const lost = this.step === 'approach' ? K.lostFar * (this.led ? THREE.MathUtils.smootherstep(left, K.lostNear, K.lostFrom) : 1) : 0;
     this.lost += (lost - this.lost) * (1 - Math.exp(-dt * K.lostEase));
     whale.lost = this.net.lost = this.lost;
@@ -1563,7 +1569,8 @@ export class NetWhale {
     // Once its breath has gone up through it, nothing holds the patch up: it falls back loose and slumps aside.
     if (whale.awake) net.slump = Math.max(net.slump, whale.phase === 'woken' ? THREE.MathUtils.smootherstep(whale.time, K.slumpFrom, K.slumpFrom + K.slumpFor) : 1);
     net.updraft = this.wind;
-    if (this.freedAt >= 0) net.drift = THREE.MathUtils.smoothstep(this.clock - this.freedAt, DRIFT_FROM, DRIFT_TO);
+    if (this.freedAt !== null) net.drift = THREE.MathUtils.smoothstep(this.clock - this.freedAt, DRIFT_FROM, DRIFT_TO);
+    if (whale.phase === 'free') net.sink = THREE.MathUtils.smoothstep(whale.time, SINK_FROM, SINK_TO);
   }
 
   /** Sailing distance still to go before the boat is at rest beside it, along the way it comes in. */
@@ -1584,11 +1591,11 @@ export class NetWhale {
    * The hold for `step`, eased to over `holdMove` from wherever the camera is holding now, or taken at once: high
    * behind the boat for the breath with the blowhole in reach of a circle, closer and lower for the line with her
    * mittens, the cork and the net coming off its head in frame, and closer and lower again for the flipper. Free,
-   * it goes back to the breath's hold and eases out from there.
+   * it eases out in one move to the release's, low and wider, the spout leaving the top of the frame.
    */
   private holdFor(step: WhaleStep | 'look', now: boolean): void {
     const to = this.holdTo;
-    const { breath, look, line, flipper } = K.phone;
+    const { breath, look, line, flipper, release } = K.phone;
     if (step === 'look') {
       to.set([K.lookDistance, K.lookHeight, K.lookBearing, K.lookLookY, K.lookToward, 0, look.distance, look.height, look.turn,
         look.lookY, look.toward, 1, 1]);
@@ -1598,6 +1605,9 @@ export class NetWhale {
     } else if (step === 'flipper') {
       to.set([K.flipperDistance, K.flipperHeight, K.flipperBearing, K.flipperLookY, K.flipperToward, 1, flipper.distance,
         flipper.height, flipper.turn, flipper.lookY, flipper.toward, 0, 0]);
+    } else if (step === 'free' || step === 'gone') {
+      to.set([K.releaseDistance, K.releaseHeight, K.releaseBearing, K.releaseLookY, K.releaseToward, 0, release.distance,
+        release.height, release.turn, release.lookY, release.toward, 0, 0]);
     } else {
       to.set([K.holdDistance, K.holdHeight, K.holdBearing, K.holdLookY, K.holdToward, 0, breath.distance, breath.height,
         breath.turn, breath.lookY, breath.toward, 0, 0]);
@@ -1638,7 +1648,6 @@ export class NetWhale {
     const whale = this.whale;
     const boat = this.cast.boat.position;
     const portrait = (this.camera?.aspect ?? 16 / 9) < 1;
-    const out = THREE.MathUtils.smootherstep(this.release, 0, 1);
     const now = this.holdNow;
     const moved = THREE.MathUtils.smootherstep(this.holdT, 0, 1);
     for (let i = 0; i < now.length; i++) now[i] = THREE.MathUtils.lerp(this.holdFrom[i], this.holdTo[i], moved);
@@ -1653,11 +1662,9 @@ export class NetWhale {
       * (1 - THREE.MathUtils.smoothstep(whale.time, FREE_FLUKES_FROM + 10, FREE_FLUKES_FROM + 14)) : 0;
     if (glance > 0) this.look.lerp(this.a.copy(whale.flukes).setY(Math.max(4, whale.flukes.y * 0.5)), glance * (portrait ? 0.85 : 0.55));
     // Behind the boat: just to port of astern, or in portrait on the line from what matters through the boat.
-    const release = K.phone.release;
-    const aim = portrait ? Math.atan2(focus.x - boat.x, focus.z - boat.z) + THREE.MathUtils.lerp(phoneTurn, release.turn, out)
-      : this.yaw - THREE.MathUtils.lerp(bearing, K.releaseBearing, out);
-    const distance = portrait ? THREE.MathUtils.lerp(phoneDistance, release.distance, out) : THREE.MathUtils.lerp(holdDistance, K.releaseDistance, out);
-    const height = portrait ? THREE.MathUtils.lerp(phoneHeight, release.height, out) : THREE.MathUtils.lerp(holdHeight, K.releaseHeight, out);
+    const aim = portrait ? Math.atan2(focus.x - boat.x, focus.z - boat.z) + phoneTurn : this.yaw - bearing;
+    const distance = portrait ? phoneDistance : holdDistance;
+    const height = portrait ? phoneHeight : holdHeight;
     this.lookFrom.set(boat.x - Math.sin(aim) * distance, boat.y + height,
       boat.z - Math.cos(aim) * distance);
     this.forward.subVectors(this.lookFrom, this.look).setY(0);

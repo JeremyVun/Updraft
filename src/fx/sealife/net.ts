@@ -68,13 +68,8 @@ const STAGGER = 0.5;
 const WATER_MIN = 3;
 /** Points along each row's drape: the sheet across, then the line from its near edge down to the water. */
 const PATH = COLS + BELOW - 1;
-/**
- * How far the empty net drifts, quickest at first, and how far round it turns, as it goes: on along the whale past
- * its snout and out toward the boat's side of it, clear of its head before it spouts.
- */
-const DRIFT_AWAY = 34;
-const DRIFT_TURN = 0.5;
-const DRIFT_OUT = 0.75;
+/** How far down the raft sinks before it is gone (m). */
+const SINK_DEPTH = 4;
 /**
  * Drifting off, the folded mass works loose into a raft this share of the sheet's length and breadth, its edge corks
  * round it, between these shares of the drift.
@@ -155,8 +150,10 @@ export class Net {
   peel = 0;
   /** The last loop slid along the near flipper and off its tip, 0..1. */
   loop = 0;
-  /** The empty net drifted away on the water and gone, 0..1. */
+  /** The empty net drifted away on the water, worked loose into a raft, 0..1. */
   drift = 0;
+  /** The raft sunk away into the deep and gone, 0..1. */
+  sink = 0;
   /** How strongly the wind lifts under the patch right now, 0..1: it flutters in it like a sheet. */
   updraft = 0;
   /** While true whatever drives the net leaves its four parts alone, so they can be posed by hand. */
@@ -405,7 +402,7 @@ export class Net {
     const c = whale.point(0, TOP(sEye), sEye, this.q);
     this.profileFrom(c, 1, sEye);
     this.eyeTop = this.arcNearest(this.offAxis(whale.eye) - this.offAxis(c), whale.eye.y) - EYE_CLEAR;
-    this.lift = this.slump = this.peel = this.loop = this.drift = 0;
+    this.lift = this.slump = this.peel = this.loop = this.drift = this.sink = 0;
     this.peelAt = this.soundPeel = 0;
     this.domeT = 10;
     this.held = this.fallsTo = this.holder = null;
@@ -415,6 +412,7 @@ export class Net {
     this.draped = 0;
     this.snap = true;
     netLook.uFade.value = 1;
+    netLook.uSunk.value = 0;
     for (const o of this.objects) o.visible = false;
     if (now) this.finishDraping();
   }
@@ -486,12 +484,13 @@ export class Net {
       return;
     }
     if (!this.sheet.visible) return;
-    if (this.drift >= 1) {
+    if (this.sink >= 1) {
       for (const o of this.objects) o.visible = false;
       return;
     }
     this.domeT += dt;
-    netLook.uFade.value = 1 - THREE.MathUtils.smoothstep(this.drift, 0.75, 1);
+    netLook.uSunk.value = SINK_DEPTH * this.sink ** 1.4;
+    netLook.uFade.value = 1 - THREE.MathUtils.smoothstep(this.sink, 0.8, 1);
     this.layOn(time);
     this.sounds();
     this.moveLeader(dt, time);
@@ -911,15 +910,18 @@ export class Net {
   /** Where point `k` floats this moment, once peeled: in the folded mass beside the head, or drifting away with it. */
   private floating(k: number, out: THREE.Vector3): THREE.Vector3 {
     const drift = THREE.MathUtils.smoothstep(this.drift, 0, 1);
-    const turn = drift * DRIFT_TURN;
+    const turn = drift * K.raftTurn;
     const c = Math.cos(turn);
     const s = Math.sin(turn);
     const open = THREE.MathUtils.smootherstep(this.drift, OPEN_FROM, OPEN_TO);
     const x = THREE.MathUtils.lerp(this.afloatAt[k * 2] - this.mass.x, this.openAt[k * 2], open);
     const z = THREE.MathUtils.lerp(this.afloatAt[k * 2 + 1] - this.mass.z, this.openAt[k * 2 + 1], open);
-    const away = (1 - (1 - drift) ** 2) * DRIFT_AWAY;
-    return out.set(this.mass.x + c * x + s * z + (this.ahead.x + this.side.x * DRIFT_OUT) * away, THREE.MathUtils.lerp(this.fold[k * 3 + 2], this.openY[k], open),
-      this.mass.z - s * x + c * z + (this.ahead.z + this.side.z * DRIFT_OUT) * away);
+    const away = 1 - (1 - drift) ** 2;
+    const yaw = this.boatYaw;
+    const toX = this.boat.x + Math.sin(yaw) * K.raftAhead + Math.cos(yaw) * K.raftPort - this.mass.x;
+    const toZ = this.boat.z + Math.cos(yaw) * K.raftAhead - Math.sin(yaw) * K.raftPort - this.mass.z;
+    return out.set(this.mass.x + c * x + s * z + toX * away, THREE.MathUtils.lerp(this.fold[k * 3 + 2], this.openY[k], open),
+      this.mass.z - s * x + c * z + toZ * away);
   }
 
   /** Every point of the sheet this frame: on the skin as it breathes, lifted, domed, sliding off, folded, drifting. */

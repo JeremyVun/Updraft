@@ -35,22 +35,27 @@ const SIGH_FOR = 2.2;
 const BREATH_IN = 1.4;
 const BREATH_OUT = 3.6;
 /**
- * Free, in seconds: a long breath drawn while it drifts clear of the boat and the pod comes, the spout, then it rolls
- * onto its back, lifts its flukes and waves them, and goes under.
+ * Free, in seconds: a long breath drawn while it drifts clear of the boat and the pod comes, the spout, its mist coming
+ * down over the boat while the net it wore sinks away, then from `DIVE_AT` it rolls onto its back, lifts its flukes and
+ * waves them, and goes under.
  */
 const SPOUT_FROM = 6;
 const SPOUT_TO = 8.8;
-const ROLL = curve([[0, 0], [10.5, 0], [14.5, 3.05], [21.5, 3.05], [24.5, 2.2], [28.5, 1.2]]);
-const SINK = curve([[0, 0], [10.5, 0], [14.5, -4.2], [20.5, -4.4], [23.5, -6.3], [28.5, -23.5]]);
-const TAIL = curve([[0, 0], [14, 0], [16.5, -0.62], [21, -0.66], [23.5, -0.25], [25.5, 0]]);
-const DIP = curve([[0, 0], [20.5, 0], [23.5, -0.12], [28.5, -0.3]]);
-const WAVE_FROM = 16.5;
-const WAVE_TO = 21.5;
-const SURGE_AT = 21;
-const RELEASE_AT = 20.5;
-const GONE = 29.5;
+/** The spout's mist comes down over the boat for this long after it (s). */
+const VEIL_FOR = 5;
+export const DIVE_AT = 15.5;
+const D = DIVE_AT;
+const ROLL = curve([[0, 0], [D, 0], [D + 4, 3.05], [D + 11, 3.05], [D + 14, 2.2], [D + 18, 1.2]]);
+const SINK = curve([[0, 0], [D, 0], [D + 4, -4.2], [D + 10, -4.4], [D + 13, -6.3], [D + 18, -23.5]]);
+const TAIL = curve([[0, 0], [D + 3.5, 0], [D + 6, -0.62], [D + 10.5, -0.66], [D + 13, -0.25], [D + 15, 0]]);
+const DIP = curve([[0, 0], [D + 10, 0], [D + 13, -0.12], [D + 18, -0.3]]);
+const WAVE_FROM = D + 6;
+const WAVE_TO = D + 11;
+const SURGE_AT = D + 10.5;
+const RELEASE_AT = D + 10;
+const GONE = D + 19;
 /** Seconds into being free when it is looking at its flukes rather than its breath. */
-export const FREE_FLUKES_FROM = 13.5;
+export const FREE_FLUKES_FROM = D + 3;
 /**
  * Free, it drifts clear of the boat before it spouts: its head swung away about the tail stock (radians) and its
  * body slid away sideways (m), over seconds.
@@ -117,6 +122,8 @@ export class SleepingWhale extends WhaleRig {
   private readonly wake: WhaleWake;
   private readonly pivot = new THREE.Vector3();
   private readonly rest = new THREE.Vector3();
+  /** Where the boat rests beside it. */
+  private readonly near = new THREE.Vector3();
   private readonly restHeading = new THREE.Vector3();
   private readonly away = new THREE.Vector3();
   private readonly gazeAt = new THREE.Vector3();
@@ -188,6 +195,7 @@ export class SleepingWhale extends WhaleRig {
     this.lay(0, 0, 0, 0, K.roll);
     this.point(0, 0, 0.5, this.q);
     this.surgeNear = Math.hypot(near.x - this.q.x, near.z - this.q.z);
+    this.near.copy(near);
     this.restHeading.copy(this.heading);
     this.away.set(-this.heading.z, 0, this.heading.x);
     if (this.away.x * (eye.x - near.x) + this.away.z * (eye.z - near.z) < 0) this.away.negate();
@@ -379,15 +387,20 @@ export class SleepingWhale extends WhaleRig {
     if (t >= SPOUT_FROM && t - dt < SPOUT_FROM) this.onSound?.('whale-blow', this.blowhole.x, this.blowhole.y, this.blowhole.z);
     if (t >= SPOUT_FROM && t < SPOUT_TO) {
       const k = (t - SPOUT_FROM) / (SPOUT_TO - SPOUT_FROM);
-      this.spray.jet(this.blowhole, K.spoutHeight, Math.sin(Math.PI * Math.min(1, k * 1.6)) ** 0.5 * (1 - k * 0.3), dt);
+      const strength = Math.sin(Math.PI * Math.min(1, k * 1.6)) ** 0.5 * (1 - k * 0.3);
+      this.spray.jet(this.blowhole, K.spoutHeight, strength, dt);
+      this.spray.column(this.blowhole, K.spoutHeight, strength, dt, K.spoutBreadth);
     }
+    // Its mist comes down over the boat in the gold light.
+    const veil = THREE.MathUtils.smoothstep(t, SPOUT_FROM + 1, SPOUT_TO) * (1 - THREE.MathUtils.smoothstep(t, SPOUT_TO + VEIL_FOR - 2, SPOUT_TO + VEIL_FOR));
+    if (veil > 0) this.spray.veil(this.blowhole, K.spoutHeight, this.near, veil, dt);
     const wave = THREE.MathUtils.smoothstep(t, WAVE_FROM, WAVE_FROM + 1) * (1 - THREE.MathUtils.smoothstep(t, WAVE_TO - 1, WAVE_TO));
     const sway = Math.sin((t - WAVE_FROM) * 2.1) * wave;
     this.driftClear(t);
     this.lay(SINK(t), K.breathRise * 2.4 * draw, DIP(t), TAIL(t) + 0.05 * sway, K.roll + ROLL(t) + 0.22 * sway, 1);
-    this.uniforms.uCurl.value = REST_CURL * (1 - THREE.MathUtils.smoothstep(t, 8.5, 12.5)) + 0.3 * sway;
-    this.uniforms.uHaze.value = 1 - 0.8 * THREE.MathUtils.smoothstep(t, 11, 15);
-    const lower = THREE.MathUtils.smoothstep(t, 6.5, 9.5);
+    this.uniforms.uCurl.value = REST_CURL * (1 - THREE.MathUtils.smoothstep(t, D - 2, D + 2)) + 0.3 * sway;
+    this.uniforms.uHaze.value = 1 - 0.8 * THREE.MathUtils.smoothstep(t, D + 0.5, D + 4.5);
+    const lower = THREE.MathUtils.smoothstep(t, D - 4, D - 1);
     this.uniforms.uFin.value.set(THREE.MathUtils.lerp(K.finRestSweep, FREE_FIN.x, lower), THREE.MathUtils.lerp(-K.finRestRaise, FREE_FIN.y, lower));
     if (t >= SURGE_AT && t - dt < SURGE_AT) this.surge();
   }

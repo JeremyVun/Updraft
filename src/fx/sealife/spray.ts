@@ -65,6 +65,10 @@ void main() {
 
 const FRAG = /* glsl */ `
 ${ATMO_GLSL}
+/** Mist in its own shade: the sky's brightness without its colours, cool down in its folds, paler open to the sky. */
+vec3 mistShade(float open) {
+  return lumaOf(uSkyAmbient) * mix(vec3(1.02, 1.08, 1.28), vec3(1.58, 1.6, 1.7), open);
+}
 in vec2 vQ;
 in vec3 vWorld;
 in float vKind;
@@ -90,7 +94,7 @@ void main() {
     float torn = vAge * 0.55;
     a = pow(1.0 - r, 1.3) * smoothstep(0.3 + torn, 0.75 + torn, wisp + 0.35 - r * 0.45) * vAlpha;
     float glow = min(pow(toSun, 12.0) * 1.8 + pow(toSun, 4.0) * 0.8, 1.2) * (0.7 + 0.6 * fract(vSeed * 7.3));
-    col = cloudShade(0.7) + cloudGlow() * (0.22 + glow) * sun;
+    col = mistShade(0.7) + cloudGlow() * (0.22 + glow) * sun;
     additive = 0.12;
   } else if (vKind > 2.5) {
     vec2 w = vQ * 1.2 + vSeed * 23.0;
@@ -109,7 +113,7 @@ void main() {
     float through = pow(toSun, 3.0) * (0.3 + 0.7 * (1.0 - facing));
     // The sky's brightness without its colours, whose blue and orange together go lilac: white, cool grey-blue in its
     // shade, gold where the sun reaches it.
-    col = cloudShade(clamp(0.5 + 0.35 * N.y + 0.25 * wrap, 0.0, 1.0)) + cloudGlow() * (wrap * wrap * 0.8 + through) * sun;
+    col = mistShade(clamp(0.5 + 0.35 * N.y + 0.25 * wrap, 0.0, 1.0)) + cloudGlow() * (wrap * wrap * 0.8 + through) * sun;
     additive = 0.04;
   } else if (vKind < 1.5) {
     a = (1.0 - smoothstep(0.0, 1.0, r)) * vAlpha;
@@ -149,6 +153,9 @@ export class Spray {
   private readonly calm = new Float32Array(MAX);
   /** Which side of its column a puff left from, as a share of a turn. */
   private readonly side = new Float32Array(MAX);
+  /** Mist carried on its own way rather than the wind's, slowing as it goes (m/s), and whether it is. */
+  private readonly carry = new Float32Array(MAX * 3);
+  private readonly carried = new Uint8Array(MAX);
   private readonly a: THREE.InstancedBufferAttribute;
   private readonly b: THREE.InstancedBufferAttribute;
   private readonly c: THREE.InstancedBufferAttribute;
@@ -204,6 +211,7 @@ export class Spray {
     this.seed[i] = Math.random();
     this.calm[i] = calm;
     this.side[i] = 0;
+    this.carried[i] = 0;
   }
 
   /** A whale's breath: a bushy column of fine mist, a few heavier drops falling out of it, `size` times a 14 m whale's. */
@@ -271,16 +279,16 @@ export class Spray {
    * One frame of a soft column of breath, `height` high: big round puffs thrown straight up clear of the breeze,
    * slowing and opening as they rise, then taken by it and drifting off as they settle and thin.
    */
-  column(at: THREE.Vector3, height: number, strength: number, dt: number): void {
-    const n = Math.floor(strength * 340 * dt + Math.random());
+  column(at: THREE.Vector3, height: number, strength: number, dt: number, wide = 1): void {
+    const n = Math.floor(strength * 340 * wide * dt + Math.random());
     for (let i = 0; i < n; i++) {
       const a = Math.random() * Math.PI * 2;
       const reach = 0.25 + 0.75 * Math.sqrt(Math.random());
       const crown = THREE.MathUtils.smoothstep(reach, 0.7, 1);
-      const out = 0.3 + reach * 0.8 * Math.random() + crown * (1.2 + Math.random() * 1.8);
+      const out = (0.3 + reach * 0.8 * Math.random() + crown * (1.2 + Math.random() * 1.8)) * wide;
       const up = height * DRAG[COLUMN] * reach * strength * (1 + Math.random() * 0.1);
-      this.emit(COLUMN, at.x + Math.cos(a) * 0.5, at.y + 0.2, at.z + Math.sin(a) * 0.5, Math.cos(a) * out, up, Math.sin(a) * out,
-        0.8 + Math.random() * 0.5, 6 + Math.random() * 2.5, 0.35 + reach * 0.4 + crown * 0.6, 0.5 + Math.random() * 0.3,
+      this.emit(COLUMN, at.x + Math.cos(a) * 0.5 * wide, at.y + 0.2, at.z + Math.sin(a) * 0.5 * wide, Math.cos(a) * out, up, Math.sin(a) * out,
+        (0.8 + Math.random() * 0.5) * wide, 6 + Math.random() * 2.5, (0.35 + reach * 0.4 + crown * 0.6) * wide, 0.5 + Math.random() * 0.3,
         1.6 + crown * 0.8 + Math.random() * 0.6);
       this.side[this.count - 1] = a / (Math.PI * 2);
     }
@@ -301,6 +309,50 @@ export class Spray {
         (0.36 + Math.random() * 0.22) * scale, 6.5 + Math.random() * 2.5, (0.12 + reach * 0.14) * scale, 0.36 + Math.random() * 0.2, 2.4);
       this.side[this.count - 1] = a / (Math.PI * 2);
     }
+  }
+
+  /**
+   * One frame of a spout's mist coming down: soft veils from high in its plume, `height` over `at`, carried down over
+   * `onto` and slowing there as they spread and thin, with a few fine drops catching the light as they fall.
+   */
+  veil(at: THREE.Vector3, height: number, onto: THREE.Vector3, strength: number, dt: number): void {
+    const n = Math.floor(strength * 60 * dt + Math.random());
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const r = 1 + Math.random() * 3.5;
+      const x = at.x + Math.cos(a) * r;
+      const y = at.y + height * (0.3 + 0.5 * Math.random());
+      const z = at.z + Math.sin(a) * r;
+      const b = Math.random() * Math.PI * 2;
+      const spread = 7 * Math.sqrt(Math.random());
+      const life = 7 + Math.random() * 3;
+      // Slowing as the square of the life it has left, it covers a third of its first pace's worth of its life, most
+      // of it early: so it comes over the boat while it still shows, and lingers there thinning.
+      const vx = (3 * (onto.x + Math.cos(b) * spread - x)) / life;
+      const vy = (3 * (onto.y + 1.2 + Math.random() * 3.5 - y)) / life;
+      const vz = (3 * (onto.z + Math.sin(b) * spread - z)) / life;
+      this.emit(MIST, x, y, z, vx, vy, vz, 1.4 + Math.random() * 1.4, life, 0.35 + Math.random() * 0.4, 0.06 + Math.random() * 0.05);
+      this.carryOn(vx, vy, vz);
+    }
+    const m = Math.floor(strength * 40 * dt + Math.random());
+    for (let i = 0; i < m; i++) {
+      const b = Math.random() * Math.PI * 2;
+      const spread = 5 * Math.sqrt(Math.random());
+      const vx = (Math.random() - 0.5) * 0.4;
+      const vz = (Math.random() - 0.5) * 0.4;
+      this.emit(DROP, onto.x + Math.cos(b) * spread, onto.y + 4 + Math.random() * 5, onto.z + Math.sin(b) * spread, vx, -0.6, vz,
+        0.012 + Math.random() * 0.01, 5, 0, 0.5 + Math.random() * 0.4);
+      this.carryOn(vx, -0.7 - Math.random() * 0.5, vz);
+    }
+  }
+
+  /** The last particle goes its own way from here, rather than the wind's. */
+  private carryOn(vx: number, vy: number, vz: number): void {
+    const i = this.count - 1;
+    this.carried[i] = 1;
+    this.carry[i * 3] = vx;
+    this.carry[i * 3 + 1] = vy;
+    this.carry[i * 3 + 2] = vz;
   }
 
   /** White water thrown up where something heavy breaks the surface. */
@@ -344,12 +396,20 @@ export class Spray {
       }
       const k = this.kind[i];
       const o = i * 3;
-      if (k === DROP || this.age[i] < this.calm[i]) air.x = air.z = air.lift = 0;
-      else this.wind.sample(p[o], p[o + 2], air);
-      const settle = 1 - Math.exp(-dt * DRAG[k]);
-      v[o] += (air.x - v[o]) * settle;
-      v[o + 1] += (air.lift * 1.5 - v[o + 1]) * settle - GRAVITY[k] * dt * (k === MIST ? Math.min(1, this.age[i]) : 1);
-      v[o + 2] += (air.z - v[o + 2]) * settle;
+      if (this.carried[i]) {
+        const slowing = k === MIST ? (1 - this.age[i] / this.life[i]) ** 2 : 1;
+        const settle = 1 - Math.exp(-dt * 1.5);
+        v[o] += (this.carry[o] * slowing - v[o]) * settle;
+        v[o + 1] += (this.carry[o + 1] * slowing - v[o + 1]) * settle;
+        v[o + 2] += (this.carry[o + 2] * slowing - v[o + 2]) * settle;
+      } else {
+        if (k === DROP || this.age[i] < this.calm[i]) air.x = air.z = air.lift = 0;
+        else this.wind.sample(p[o], p[o + 2], air);
+        const settle = 1 - Math.exp(-dt * DRAG[k]);
+        v[o] += (air.x - v[o]) * settle;
+        v[o + 1] += (air.lift * 1.5 - v[o + 1]) * settle - GRAVITY[k] * dt * (k === MIST ? Math.min(1, this.age[i]) : 1);
+        v[o + 2] += (air.z - v[o + 2]) * settle;
+      }
       p[o] += v[o] * dt;
       p[o + 1] += v[o + 1] * dt;
       p[o + 2] += v[o + 2] * dt;
@@ -400,5 +460,7 @@ export class Spray {
     this.seed[i] = this.seed[last];
     this.calm[i] = this.calm[last];
     this.side[i] = this.side[last];
+    this.carried[i] = this.carried[last];
+    this.carry.copyWithin(i * 3, last * 3, last * 3 + 3);
   }
 }

@@ -28,9 +28,44 @@ vec3 netLight(vec3 alb, vec3 N, vec3 V, vec3 world, float through) {
   return col;
 }`;
 
+/**
+ * Let go, the net sinks away into the deep, unevenly, `uSunk` metres down at most: each point is drawn where it is seen
+ * through the sea, slid up its view ray to the surface, and the deeper it lies the more the sea's own colour takes it.
+ */
+const SINK_VERT = /* glsl */ `
+uniform float uSunk;
+out float vUnder;
+float sunkAt(vec2 xz) {
+  return uSunk * (0.65 + 0.7 * vnoise(xz * 0.11 + 3.7));
+}
+vec3 sunk(vec3 p, float under) {
+  vUnder = under;
+  if (under <= 0.0) return p;
+  float surface = seaSurfaceY(p.xz);
+  vec3 q = vec3(p.x, surface - under, p.z);
+  return cameraPosition + (q - cameraPosition) * (cameraPosition.y - surface - 0.03) / max(cameraPosition.y - q.y, 1e-3);
+}`;
+
+const SINK_FRAG = /* glsl */ `
+uniform vec3 uDeep;
+in float vUnder;
+/** How much of it still shows through the sea, and its colour there. */
+float sunkShows(vec3 world) {
+  if (vUnder <= 0.0) return 1.0;
+  vec3 V = normalize(cameraPosition - world);
+  float F = 0.02 + 0.98 * pow(1.0 - max(V.y, 0.02), 5.0);
+  return mix(1.0, (1.0 - F) * exp(-vUnder * 0.55), smoothstep(0.0, 0.6, vUnder));
+}
+vec3 sunkColour(vec3 col, vec3 world) {
+  if (vUnder <= 0.0) return col;
+  vec3 deep = uDeep * (uSkyAmbient * 1.1 + uSunColor * max(uSunDir.y, 0.0) * 0.6 * cloudShadow(world.xz));
+  return mix(deep, col * exp(-vec3(0.5, 0.13, 0.1) * vUnder * 2.0), exp(-vUnder * 0.9));
+}`;
+
 const SHEET_VERT = /* glsl */ `
 ${ATMO_GLSL}
 ${SWELL_GLSL}
+${SINK_VERT}
 in float afloat;
 in float contact;
 in vec3 edge;
@@ -43,6 +78,7 @@ out float vAfloat;
 void main() {
   vec3 p = position;
   p.y += seaSurfaceY(p.xz) * afloat;
+  p = sunk(p, sunkAt(p.xz));
   vWorld = p;
   vNormal = normal;
   vUv = uv;
@@ -67,6 +103,7 @@ uniform vec3 uRope;
 uniform vec3 uShadow;
 uniform float uFade;
 ${LOST_GLSL}
+${SINK_FRAG}
 in vec2 vUv;
 in vec3 vWorld;
 in vec3 vNormal;
@@ -130,13 +167,14 @@ void main() {
   float age = netHash(floor(kx + 0.5) * 0.37) * 0.25;
   vec3 alb = mix(mix(uStrand * (0.88 + age), uWeed, weed * 0.75), uRope, rope / max(cover, 1e-4) * step(strand, rope)) * round;
   vec3 col = netLight(alb, N, V, vWorld, 0.35);
-  col = (col * cover + uShadow * (1.0 - cover) * shade) / alpha;
-  gl_FragColor = vec4(lost(applyFog(col, vWorld), vWorld), alpha * uFade);
+  col = sunkColour((col * cover + uShadow * (1.0 - cover) * shade) / alpha, vWorld);
+  gl_FragColor = vec4(lost(applyFog(col, vWorld), vWorld), alpha * uFade * sunkShows(vWorld));
 }`;
 
 const ROPE_VERT = /* glsl */ `
 ${ATMO_GLSL}
 ${SWELL_GLSL}
+${SINK_VERT}
 uniform vec2 uRes;
 in vec3 along;
 in float side;
@@ -150,8 +188,11 @@ out float vWeed;
 void main() {
   vec3 p = position;
   p.y += seaSurfaceY(p.xz) * afloat;
+  float under = sunkAt(p.xz);
+  vec3 ahead = sunk(p + along * 0.05, under);
+  p = sunk(p, under);
   vec4 c0 = projectionMatrix * viewMatrix * vec4(p, 1.0);
-  vec4 c1 = projectionMatrix * viewMatrix * vec4(p + along * 0.05, 1.0);
+  vec4 c1 = projectionMatrix * viewMatrix * vec4(ahead, 1.0);
   vec2 s0 = c0.xy / c0.w * uRes;
   vec2 s1 = c1.xy / c1.w * uRes;
   vec2 t = s1 - s0;
@@ -173,6 +214,7 @@ uniform vec3 uStrand;
 uniform vec3 uWeed;
 uniform float uFade;
 ${LOST_GLSL}
+${SINK_FRAG}
 in vec3 vWorld;
 in float vSide;
 in float vCover;
@@ -181,13 +223,14 @@ void main() {
   float a = vCover * (1.0 - smoothstep(0.55, 1.0, abs(vSide)));
   if (a < 0.002) discard;
   vec3 V = normalize(cameraPosition - vWorld);
-  vec3 col = netLight(mix(uStrand, uWeed, vWeed) * mix(1.15, 0.7, vSide * vSide), normalize(V + vec3(0.0, 0.6, 0.0)), V, vWorld, 1.1);
-  gl_FragColor = vec4(lost(applyFog(col, vWorld), vWorld), a * uFade);
+  vec3 col = sunkColour(netLight(mix(uStrand, uWeed, vWeed) * mix(1.15, 0.7, vSide * vSide), normalize(V + vec3(0.0, 0.6, 0.0)), V, vWorld, 1.1), vWorld);
+  gl_FragColor = vec4(lost(applyFog(col, vWorld), vWorld), a * uFade * sunkShows(vWorld));
 }`;
 
 const CORK_VERT = /* glsl */ `
 ${ATMO_GLSL}
 ${SWELL_GLSL}
+${SINK_VERT}
 in vec4 iCork;
 in float iSize;
 out vec3 vWorld;
@@ -196,6 +239,8 @@ out vec3 vLocal;
 void main() {
   vec3 p = iCork.xyz + position * vec3(1.0, 0.82, 1.0) * iSize;
   p.y += seaSurfaceY(iCork.xz) * iCork.w;
+  // A float goes down last, and whole.
+  p = sunk(p, max(0.0, sunkAt(iCork.xz) - 0.3));
   vWorld = p;
   vNormal = normal;
   vLocal = position * 4.5 + iCork.xyz * 1.7;
@@ -211,6 +256,7 @@ uniform vec3 uSpot;
 uniform vec3 uFouled;
 uniform float uFade;
 ${LOST_GLSL}
+${SINK_FRAG}
 in vec3 vWorld;
 in vec3 vNormal;
 in vec3 vLocal;
@@ -230,8 +276,9 @@ void main() {
   alb = mix(alb, uFouled, smoothstep(0.0, -0.8, N.y) * 0.6);
   vec3 col = netLight(alb, N, V, vWorld, 0.15);
   col += uSunColor * pow(max(dot(reflect(-V, N), uSunDir), 0.0), 18.0) * 0.18 * cloudShadow(vWorld.xz);
-  if (uFade < 0.999 && fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453) > uFade) discard;
-  gl_FragColor = vec4(lost(applyFog(col, vWorld), vWorld), 1.0);
+  float shows = uFade * sunkShows(vWorld);
+  if (shows < 0.999 && fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453) > shows) discard;
+  gl_FragColor = vec4(lost(applyFog(sunkColour(col, vWorld), vWorld), vWorld), 1.0);
 }`;
 
 export const netLook = {
@@ -245,6 +292,9 @@ export const netLook = {
   /** How much of it is left as it drifts off into the haze, 1 .. 0. */
   uFade: { value: 1 },
   uLost: { value: 0 },
+  /** How far down the net let go has sunk at most (m). */
+  uSunk: { value: 0 },
+  uDeep: { value: new THREE.Color('#0d4a66') },
   uRes: { value: new THREE.Vector2(800, 450) },
 };
 
