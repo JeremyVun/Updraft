@@ -684,6 +684,10 @@ checks and saves for them. design.md "The room rethought", steps 6 to 8, is the 
   tower's foot.
 - She climbs down the ivy and steps aboard. The cat comes to the sill with a kitten (`toSill`) and looks down; she
   looks up from the boat; the slow blink. Then the fog darkens into the storm's night and the storm plays as built.
+- From the lead's review of 7b's stills: the ivy goes yellow in the low sun (it must stay a deep, old green that reads
+  as ivy); her climb down takes 12.8 s (bring it to about 7 s); she reads lit by the open sun inside the belfry (in
+  the shade she should be lit as the nest is, by the shaft at the sill); her kneel in the opening reads weakly, so
+  give the moment she first sees the kittens a frame that shows it (Phase 8 refines it).
 Gate: `drowned-run-check` from the drift through the belfry and the boat home to the storm, with real gestures; the
 saves; `playthrough.mjs` through the room; a `VIDEO=1` webm of the nave to the storm for the lead.
 Done: [ ]
