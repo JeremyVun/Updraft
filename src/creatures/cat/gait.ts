@@ -24,12 +24,15 @@ export type GaitKind = 'walk' | 'trot' | 'bound' | 'climb';
 type Four = readonly [number, number, number, number];
 const four = (x: number): Four => [x, x, x, x];
 
-/** When in the cycle each paw comes down (front left, front right, hind left, hind right), and the share of it each spends down. */
-const PATTERN: Record<GaitKind, { down: Four; duty: Four }> = {
+/**
+ * When in the cycle each paw comes down (front left, front right, hind left, hind right), the share of it each spends
+ * down, and where in it to set off from standing: the moment that leaves no paw standing under it carried too far back.
+ */
+const PATTERN: Record<GaitKind, { down: Four; duty: Four; setOff?: number }> = {
   /** Hind, fore on the same side, then the other side: the cat's own walk. */
-  walk: { down: [0.75, 0.25, 0, 0.5], duty: four(0.64) },
-  trot: { down: [0, 0.5, 0.5, 0], duty: four(0.5) },
-  bound: { down: BOUND_DOWN, duty: BOUND_DUTY },
+  walk: { down: [0.75, 0.25, 0, 0.5], duty: four(0.64), setOff: 0.35 },
+  trot: { down: [0, 0.5, 0.5, 0], duty: four(0.5), setOff: 0.2 },
+  bound: { down: BOUND_DOWN, duty: BOUND_DUTY, setOff: BOUND_SET_OFF },
   /** Up a wall: both front paws reach together, then both hind paws push. */
   climb: { down: [0.5, 0.45, 0, 0.95], duty: four(0.5) },
 };
@@ -153,10 +156,9 @@ export class CatGait {
     /** Turning on the spot takes steps too: each paw has to go round the body. */
     const travel = moved + turned * 0.12;
     const stepping = this.speed > 0.03 || turned > dt * 0.3;
-    const { down, duty } = PATTERN[this.kind];
+    const { down, duty, setOff } = PATTERN[this.kind];
     const cycle = (i: number) => (((this.phase - down[i]) % 1) + 1) % 1;
-    /** A bound sets off from the middle of the hind paws' push, where paws standing under it already are. */
-    if (bound && stepping && !this.wasStepping && this.still) this.phase = BOUND_SET_OFF;
+    if (setOff !== undefined && stepping && !this.wasStepping && this.still) this.phase = setOff;
     if (stepping) {
       this.phase = (this.phase + travel / stride) % 1;
       this.idle = 0;
