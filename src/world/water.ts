@@ -497,9 +497,9 @@ void main() {
         float row = floor(course);
         float joint = fract(lx / 0.34 + 0.5 * mod(row, 2.0));
         float lap = smoothstep(0.0, 0.12, fract(course)) * smoothstep(0.0, 0.05, min(joint, 1.0 - joint));
-        vec3 slate = vec3(0.06, 0.058, 0.066) * (0.85 + 0.3 * hash12(vec2(row, floor(lx / 0.34 + 0.5 * mod(row, 2.0))))) * mix(0.45, 1.0, lap);
+        vec3 slate = vec3(0.13, 0.125, 0.14) * (0.8 + 0.4 * hash12(vec2(row, floor(lx / 0.34 + 0.5 * mod(row, 2.0))))) * mix(0.4, 1.0, lap);
         vec3 lit = slate * (uSkyAmbient * 1.25 * exp(-uAbsorb * under * 1.4) + uSunColor * max(uSunDir.y, 0.0) * 0.6 * sh * exp(-uAbsorb * under));
-        float seen = exp(-t * 0.25) * (1.0 - smoothstep(${glsl(SUNK_SLATES.half - 0.3)}, ${glsl(SUNK_SLATES.half)}, abs(lx)));
+        float seen = exp(-t * 0.15) * (1.0 - smoothstep(${glsl(SUNK_SLATES.half - 0.3)}, ${glsl(SUNK_SLATES.half)}, abs(lx)));
         body = mix(body, lit * exp(-uAbsorb * t), seen);
       }
     }
