@@ -50,6 +50,10 @@ export function finPoint(t: number, along: number, out: THREE.Vector3): THREE.Ve
 }
 /** Where the flukes hinge on the tail stock, as a fraction of the length. */
 export const FLUKE_HINGE = 0.93;
+/** Along the tail stock over which it can turn its flukes about its own line (as they rise to face her). */
+export const STOCK_TURN = [0.76, 0.93] as const;
+/** The body ends here, inside the root of the flukes, so nothing of it shows in their notch. */
+export const TAIL_END = 0.975;
 export const BLOWHOLE = 0.21;
 /** The near eye in the rest pose: along, and up from the spine. */
 export const EYE_S = 0.16;
@@ -64,29 +68,36 @@ export const EYE_Y = 0.136;
 export const TOP = curve([
   [0, -0.11], [0.005, -0.05], [0.015, 0.01], [0.03, 0.07], [0.06, 0.17], [0.1, 0.3], [0.13, 0.395], [0.16, 0.49],
   [0.19, 0.57], [0.21, 0.615], [0.25, 0.65], [0.3, 0.67], [0.36, 0.68], [0.42, 0.678], [0.5, 0.665], [0.58, 0.635],
-  [0.66, 0.585], [0.74, 0.505], [0.82, 0.39], [0.88, 0.28], [0.93, 0.16], [1, 0.06],
+  [0.66, 0.585], [0.74, 0.505], [0.82, 0.39], [0.86, 0.325], [0.9, 0.245], [0.93, 0.17], [0.955, 0.12], [TAIL_END, 0.07],
 ]);
 export const WIDEST = curve([
   [0, -0.27], [0.015, -0.28], [0.03, -0.275], [0.06, -0.25], [0.1, -0.21], [0.13, -0.185], [0.16, -0.165],
   [0.19, -0.16], [0.21, -0.17], [0.25, -0.23], [0.3, -0.3], [0.36, -0.365], [0.42, -0.39], [0.5, -0.39], [0.58, -0.38],
-  [0.66, -0.34], [0.74, -0.3], [0.82, -0.26], [0.88, -0.235], [0.93, -0.185], [1, -0.105],
+  [0.66, -0.34], [0.74, -0.3], [0.82, -0.26], [0.86, -0.235], [0.9, -0.17], [0.93, -0.07], [0.955, -0.015], [TAIL_END, 0],
 ]);
 export const BOTTOM = curve([
   [0, -0.4], [0.005, -0.49], [0.015, -0.58], [0.03, -0.67], [0.06, -0.78], [0.1, -0.915], [0.13, -1.005],
   [0.16, -1.095], [0.19, -1.175], [0.21, -1.23], [0.25, -1.34], [0.3, -1.45], [0.36, -1.515], [0.42, -1.53],
-  [0.5, -1.465], [0.58, -1.345], [0.66, -1.175], [0.74, -0.995], [0.82, -0.785], [0.88, -0.63], [0.93, -0.445], [1, -0.235],
+  [0.5, -1.465], [0.58, -1.345], [0.66, -1.175], [0.74, -0.995], [0.82, -0.785], [0.86, -0.69], [0.9, -0.52], [0.93, -0.3],
+  [0.955, -0.15], [TAIL_END, -0.07],
 ]);
 export const HALF_WIDTH = curve([
   [0, 0.12], [0.005, 0.26], [0.015, 0.4], [0.03, 0.53], [0.06, 0.71], [0.1, 0.9], [0.13, 1.03], [0.16, 1.15],
   [0.19, 1.255], [0.21, 1.31], [0.25, 1.39], [0.3, 1.45], [0.36, 1.49], [0.42, 1.5], [0.5, 1.46], [0.58, 1.36],
-  [0.66, 1.17], [0.74, 0.86], [0.82, 0.53], [0.88, 0.34], [0.93, 0.23], [1, 0.105],
+  [0.66, 1.17], [0.74, 0.86], [0.82, 0.53], [0.86, 0.4], [0.9, 0.29], [0.93, 0.25], [0.955, 0.2], [TAIL_END, 0.1],
 ]);
 /**
  * How the skin rounds over from the broadest line to the back (above 1 a broad low ridge, below 1 the flat-topped
  * head) and down to the belly (above 1 the keel under the tail stock).
  */
-const ROUND = curve([[0, 0.6], [0.13, 0.6], [0.21, 0.9], [0.3, 1.3], [0.7, 1.3], [0.85, 1.25], [1, 1.2]]);
-const KEEL = curve([[0, 0.85], [0.16, 0.9], [0.3, 1], [0.66, 1], [0.8, 1.35], [1, 1.35]]);
+const ROUND = curve([[0, 0.6], [0.13, 0.6], [0.21, 0.9], [0.3, 1.3], [0.7, 1.3], [0.8, 1.45], [0.88, 1.7], [0.93, 1.3], [TAIL_END, 1]]);
+const KEEL = curve([[0, 0.85], [0.16, 0.9], [0.3, 1], [0.66, 1], [0.8, 1.6], [0.88, 1.9], [0.93, 1.3], [TAIL_END, 1]]);
+/**
+ * Toward the flukes the tail stock flares out sideways in their plane (rest units out, by s, about as high as they are
+ * thick), so they grow out of it with no seam where they hinge.
+ */
+const FLARE = curve([[0.885, 0], [0.915, 0.1], [0.94, 0.2], [0.96, 0.2], [TAIL_END, 0.1]]);
+const FLARE_DEPTH = 0.1;
 
 /**
  * The mouth line in the rest pose: the height where the dark upper jaw meets the pale lower lip, from the snout back
@@ -145,6 +156,7 @@ export function ringPoint(s: number, a: number, out: { x: number; y: number }): 
   out.y = wide + (k > 0 ? TOP(s) - wide : wide - BOTTOM(s)) * k;
   if (k > 0) out.y += MOUND(s) * Math.exp(-((out.x / MOUND_WIDTH) ** 2)) + RIDGE(s) * Math.exp(-((out.x / RIDGE_WIDTH) ** 2));
   out.x *= 1 + lip(s, MOUTH(s) - out.y);
+  out.x += Math.sign(out.x) * FLARE(s) * Math.exp(-((out.y / FLARE_DEPTH) ** 2));
   return out;
 }
 
@@ -217,7 +229,7 @@ function stitch(idx: number[], loops: number, around: number, base = 0): void {
 function ringAt(i: number): number {
   const HEAD = 0.34;
   if (i <= HEAD_RINGS) return HEAD * (1 - Math.cos((Math.PI / 2) * (i / HEAD_RINGS)));
-  return HEAD + (1 - HEAD) * Math.sin((Math.PI / 2) * ((i - HEAD_RINGS) / (RINGS - HEAD_RINGS)));
+  return HEAD + (TAIL_END - HEAD) * Math.sin((Math.PI / 2) * ((i - HEAD_RINGS) / (RINGS - HEAD_RINGS)));
 }
 const RINGS = 200;
 const HEAD_RINGS = 110;
@@ -245,8 +257,8 @@ function body(): THREE.BufferGeometry {
   rig.push(0, BODY, 0, 0);
   for (let j = 0; j < around; j++) idx.push(nose, (j + 1) % around, j);
   const tail = pos.length / 3;
-  pos.push(0, 0, -LENGTH - 0.02);
-  rig.push(1, BODY, 0, 0);
+  pos.push(0, WIDEST(TAIL_END), -TAIL_END * LENGTH - 0.01);
+  rig.push(TAIL_END, BODY, 0, 0);
   const last = rings * around;
   for (let j = 0; j < around; j++) idx.push(tail, last + j, last + ((j + 1) % around));
   return build(pos, rig, idx);
@@ -287,20 +299,50 @@ function fin(): THREE.BufferGeometry {
   return build(pos, rig, idx);
 }
 
-/** Rest z of the leading and trailing edges of the flukes at span t (-1 tip, 0 notch, 1 tip). */
-export function flukeEdges(t: number): { lead: number; trail: number } {
+/**
+ * The soft scallops along the trailing edge either side of the notch: the span (|t|) between each lobe, and how far
+ * each lobe bulges out behind the line of the edge (rest units). The right fluke's are a little unlike the left's.
+ */
+const SCALLOPS = {
+  left: { cusps: [0.1, 0.25, 0.39, 0.545, 0.685, 0.81], bulge: [0.06, 0.07, 0.06, 0.05, 0.035] },
+  right: { cusps: [0.09, 0.235, 0.385, 0.53, 0.67, 0.8], bulge: [0.055, 0.075, 0.055, 0.05, 0.03] },
+};
+
+function scallops(t: number): number {
+  const { cusps, bulge } = t < 0 ? SCALLOPS.left : SCALLOPS.right;
+  const at = Math.abs(t);
+  for (let k = 0; k < bulge.length; k++) {
+    if (at >= cusps[k] && at < cusps[k + 1]) return bulge[k] * Math.sin((Math.PI * (at - cusps[k])) / (cusps[k + 1] - cusps[k]));
+  }
+  return 0;
+}
+
+/** Rest z of the leading edge of the flukes, and of their trailing edge before its scallops, at span t (-1 tip, 0 notch, 1 tip). */
+function flukeLine(t: number): { lead: number; trail: number } {
   const at = Math.abs(t);
   const lead = -FLUKE_HINGE * LENGTH + 0.05 - 1.7 * at ** 1.7;
   const chord = 1.42 * Math.max(1 - at ** 2.3, 0) ** 0.55 + 0.04;
   const notch = 0.3 * Math.exp(-((t / 0.06) ** 2));
-  const ragged = (0.05 * Math.sin(at * 33 + 0.7) + 0.035 * Math.sin(at * 61 + 2.1)) * smoothstep(0.1, 0.25, at) * (1 - at ** 4);
-  return { lead, trail: lead - chord + notch + ragged };
+  return { lead, trail: lead - chord + notch };
 }
 
-/** Broad swept flukes with a notch in the middle and a ragged trailing edge. */
+/** Rest z of the leading and trailing edges of the flukes at span t (-1 tip, 0 notch, 1 tip). */
+export function flukeEdges(t: number): { lead: number; trail: number } {
+  const { lead, trail } = flukeLine(t);
+  return { lead, trail: trail - scallops(t) };
+}
+
+/** Half the thickness of a blade of chord 1 and thickness ratio 1 at `along` its chord: round at the front, fine behind. */
+const blade = (along: number) =>
+  5 * (0.2969 * Math.sqrt(along) - 0.126 * along - 0.3516 * along ** 2 + 0.2843 * along ** 3 - 0.1036 * along ** 4);
+
+/**
+ * A humpback's broad swept flukes: thick and rounded along the leading edge, thinning to a fine trailing edge in soft
+ * scallops either side of the notch, and thickest at the root, where they grow out of the tail stock.
+ */
 function flukes(): THREE.BufferGeometry {
-  const stations = 64;
-  const around = 14;
+  const stations = 200;
+  const around = 36;
   const pos: number[] = [];
   const rig: number[] = [];
   const idx: number[] = [];
@@ -308,12 +350,14 @@ function flukes(): THREE.BufferGeometry {
     const t = -1 + (2 * i) / stations;
     const at = Math.abs(t);
     const { lead, trail } = flukeEdges(t);
-    const thick = 0.25 * (1 - at) ** 0.8 + 0.018;
+    const line = flukeLine(t);
+    const ratio = 0.17 + 0.17 * Math.exp(-((at / 0.14) ** 2)) - 0.05 * at;
+    const thick = ratio * (line.lead - line.trail);
     for (let j = 0; j < around; j++) {
       const a = (j / around) * Math.PI * 2;
       const along = 0.5 - 0.5 * Math.cos(a);
       const z = lead + (trail - lead) * along;
-      const y = Math.sin(a) * thick * 2.4 * Math.sqrt(along + 0.02) * (1 - along * 0.85) - 0.22 * at ** 1.6;
+      const y = Math.sign(Math.sin(a)) * (thick * blade(along) + 0.004 * along) - 0.15 * at ** 1.6;
       pos.push(t * FLUKE_HALF_SPAN, y, z);
       rig.push(-z / LENGTH, FLUKES, t, along);
     }

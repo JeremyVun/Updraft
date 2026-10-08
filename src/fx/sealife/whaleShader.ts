@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { CREATURE_GLSL } from '../../creatures/shading';
 import { ATMO_GLSL } from '../../world/atmosphere';
 import { tuning } from '../../tuning';
-import { BLOWHOLE, BODY, DORSAL, DORSAL_AT, DORSAL_BASE, FIN, FIN_DIR, FIN_ROOT, FLUKES, FLUKE_HALF_SPAN, FLUKE_HINGE, JAW_CORNER, KNOBS, LENGTH, MOUTH, SPINE_END } from './anatomy';
+import { BLOWHOLE, BODY, DORSAL, DORSAL_AT, DORSAL_BASE, FIN, FIN_DIR, FIN_ROOT, FLUKES, FLUKE_HALF_SPAN, FLUKE_HINGE, JAW_CORNER, KNOBS, LENGTH, MOUTH, SPINE_END, STOCK_TURN } from './anatomy';
 import { curve } from './curve';
 
 export const SPINE_N = 44;
@@ -62,6 +62,8 @@ uniform vec4 uSpine[${SPINE_N}];
 uniform float uWet[${SPINE_N}];
 uniform vec3 uHeading;
 uniform float uRoll;
+/** How far the tail stock has turned its flukes about its own line. */
+uniform float uTurn;
 uniform vec2 uFin;
 uniform float uCurl;
 uniform float uScale;
@@ -115,7 +117,8 @@ vec3 rig(vec3 rest, inout vec3 n) {
     s = ${f(DORSAL_AT)} + (s - ${f(DORSAL_AT)}) * uShape.y;
   }
   off *= uScale;
-  float cr = cos(uRoll), sr = sin(uRoll);
+  float roll = uRoll + uTurn * smoothstep(${f(STOCK_TURN[0])}, ${f(STOCK_TURN[1])}, s);
+  float cr = cos(roll), sr = sin(roll);
   off.xy = vec2(cr * off.x - sr * off.y, sr * off.x + cr * off.y);
   n.xy = vec2(cr * n.x - sr * n.y, sr * n.x + cr * n.y);
 

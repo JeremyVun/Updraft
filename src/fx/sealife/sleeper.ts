@@ -71,8 +71,19 @@ const FLUKES_UP = -1.45;
  * it and slip down through it.
  */
 const LIFT_BY = curve([[-4, 0], [-1, 0.12], [3, 0.7], [6, 1], [40, 1]]);
-/** Share of the way round toward the boat it turns as its flukes rise, so their pale undersides face her. */
-const TURN_TO_HER = 0.7;
+/** Share of the way round toward the boat its tail stock turns its flukes as they rise, so their pale undersides face her. */
+const TURN_TO_HER = 1;
+/**
+ * Its tail stock turns them about its own line as they lift, from the start of the lift over `TURN_WITH` of it, but
+ * never so far that they tilt more than `TILT` (the sine of the slope across their span) while they are still low:
+ * so they come up opening toward her, never edge on, and stand level facing her.
+ */
+const TURN_WITH = 0.3;
+const TILT = 0.3;
+const YAW_WITH = [0.1, 0.85] as const;
+const TRAIL = 0.5;
+const TRAIL_UNTIL = [0.35, 0.85] as const;
+const YAW_SHARE = 0.6;
 /** A slow wave of the flukes while they are up: radians of flex at the hinge, and of turn, and its pace. */
 const WAVE_FLEX = 0.16;
 const WAVE_TURN = 0.12;
@@ -363,6 +374,7 @@ export class SleepingWhale extends WhaleRig {
   update(dt: number, time: number): void {
     this.worldTime = time;
     this.time += dt;
+    this.uniforms.uTurn.value = 0;
     if (this.phase === 'gone') {
       if (this.time > 30 && this.time < 1e3) swellUniforms.uSurge.value.w = 0;
       return;
@@ -507,6 +519,7 @@ export class SleepingWhale extends WhaleRig {
     const waving = THREE.MathUtils.smoothstep(t, FLUKES_FROM - D + 1.5, FLUKES_FROM - D + 3.5)
       * (1 - THREE.MathUtils.smoothstep(t, UNDER_AT - D - 3, UNDER_AT - D - 1));
     const wave = Math.sin((t - (FLUKES_FROM - D + 1.5)) * WAVE_PACE) * waving;
+    const trail = TRAIL * THREE.MathUtils.smoothstep(lift, 0, 0.2) * (1 - THREE.MathUtils.smootherstep(lift, TRAIL_UNTIL[0], TRAIL_UNTIL[1]));
     // It sounds more steeply as its tail comes to the bend, so by the time its flukes rise the rest of it is under.
     const steeper = 1 + THREE.MathUtils.smoothstep(stock, -45, -10);
     for (let i = 0; i < SPINE_N; i++) {
@@ -515,7 +528,7 @@ export class SleepingWhale extends WhaleRig {
       const posture = THREE.MathUtils.lerp(1, 1 - THREE.MathUtils.smoothstep(c, -40, -8), down);
       const way = restPitch(s) * posture + down * DIVE_SLOPE(c > 0 ? c * steeper : c);
       const aft = THREE.MathUtils.smoothstep(s, STOCK, STOCK_TO);
-      this.pitch[i] = THREE.MathUtils.lerp(way, FLUKES_UP, aft * lift) + (s > 0.93 ? WAVE_FLEX * wave : 0);
+      this.pitch[i] = THREE.MathUtils.lerp(way, FLUKES_UP, aft * lift) + THREE.MathUtils.smoothstep(s, 0.9, 0.96) * (WAVE_FLEX * wave + trail);
     }
     let u = 0;
     let y = 0;
@@ -534,16 +547,20 @@ export class SleepingWhale extends WhaleRig {
     const f = fi - k;
     const bu = this.u[k] + (this.u[k + 1] - this.u[k]) * f;
     const by = this.y[k] + (this.y[k + 1] - this.y[k]) * f;
-    // It turns about its bend as its flukes come up, never rolling: by then only they and the tail stock stand clear.
-    const turn = this.twist * THREE.MathUtils.smootherstep(lift, 0.1, 0.85);
+    const yaw = this.twist * YAW_SHARE * THREE.MathUtils.smootherstep(lift, YAW_WITH[0], YAW_WITH[1]);
     const h = this.heading;
-    h.set(h.x * Math.cos(turn) + h.z * Math.sin(turn), 0, h.z * Math.cos(turn) - h.x * Math.sin(turn));
+    h.set(h.x * Math.cos(yaw) + h.z * Math.sin(yaw), 0, h.z * Math.cos(yaw) - h.x * Math.sin(yaw));
     const ay = this.bendFrom.y + this.arch * down;
     for (let i = 0; i < SPINE_N; i++) {
       const du = this.u[i] - bu;
       this.spine[i].set(this.bendFrom.x + h.x * du, ay + this.y[i] - by, this.bendFrom.z + h.z * du, this.pitch[i]);
     }
-    this.uniforms.uRoll.value = K.roll * (1 - down) + WAVE_TURN * wave;
+    // Turned about the stock's own line, they tilt across by the sine of the turn times the cosine of how far up they stand.
+    const up = Math.cos(-this.pitch[SPINE_N - 3]);
+    const most = up > TILT ? Math.asin(TILT / up) : Math.PI / 2;
+    const turn = Math.min(Math.abs(this.twist) * (1 - YAW_SHARE) * THREE.MathUtils.smootherstep(lift, 0, TURN_WITH), most);
+    this.uniforms.uRoll.value = K.roll * (1 - down);
+    this.uniforms.uTurn.value = -Math.sign(this.twist) * turn + WAVE_TURN * wave;
     this.uniforms.uCurl.value = 0.25 * wave * lift;
   }
 

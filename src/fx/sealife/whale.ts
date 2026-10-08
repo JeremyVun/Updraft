@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { tuning } from '../../tuning';
 import { atmo } from '../../world/atmosphere';
-import { EYE_S, EYE_Y, FLUKE_HINGE, LENGTH, SPINE_END, flukeEdges, whaleGeometry } from './anatomy';
+import { EYE_S, EYE_Y, FLUKE_HINGE, LENGTH, SPINE_END, STOCK_TURN, flukeEdges, whaleGeometry } from './anatomy';
 import { curve } from './curve';
 import { GHOST_FRAG, GHOST_VERT, SPINE_N, WHALE_FRAG, WHALE_VERT } from './whaleShader';
 
@@ -108,6 +108,7 @@ export class WhaleRig {
       uWet: { value: this.wet },
       uHeading: { value: this.heading },
       uRoll: { value: 0 },
+      uTurn: { value: 0 },
       uFin: { value: new THREE.Vector2() },
       uCurl: { value: 0 },
       uScale: { value: scale },
@@ -178,7 +179,7 @@ export class WhaleRig {
     const a = this.spine[i];
     const b = this.spine[i + 1];
     const pitch = a.w + (b.w - a.w) * t;
-    const roll = this.uniforms.uRoll.value;
+    const roll = this.uniforms.uRoll.value + this.uniforms.uTurn.value * THREE.MathUtils.smoothstep(s, STOCK_TURN[0], STOCK_TURN[1]);
     const rx = (Math.cos(roll) * x - Math.sin(roll) * y) * this.scale;
     const ry = (Math.sin(roll) * x + Math.cos(roll) * y) * this.scale;
     const h = this.heading;
