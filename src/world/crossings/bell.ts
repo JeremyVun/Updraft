@@ -60,6 +60,7 @@ const BELL_FRAG = /* glsl */ `
 ${ATMO_GLSL}
 ${BELFRY_GLSL}
 uniform float uIndoors;
+uniform float uShimmer;
 in vec3 vWorld;
 in vec3 vNormal;
 in vec3 vLocal;
@@ -79,20 +80,26 @@ void main() {
     float a = atan(vLocal.z, vLocal.x);
     float y = vLocal.y;
     float runs = vnoise(vec2(a * 11.0, y * 1.1)) * 0.6 + vnoise(vec2(a * 27.0, y * 4.0)) * 0.4;
-    float green = smoothstep(-1.2, -1.68, y) * (0.55 + 0.6 * runs) + smoothstep(0.66, 0.85, runs) * smoothstep(-0.25, -0.9, y) * 0.6;
+    float green = smoothstep(-1.1, -1.62, y) * (0.65 + 0.6 * runs) + smoothstep(0.6, 0.82, runs) * smoothstep(-0.25, -0.9, y) * 0.7;
     green = clamp(green + 0.25 * smoothstep(0.7, 0.9, vnoise(vec2(a * 6.0, y * 7.0))), 0.0, 1.0);
-    vec3 metal = mix(vec3(0.085, 0.065, 0.045), vec3(0.24, 0.17, 0.095), 0.35 + 0.65 * vnoise(vec2(a * 4.0, y * 2.5)));
+    vec3 metal = mix(vec3(0.075, 0.062, 0.048), vec3(0.2, 0.155, 0.1), 0.35 + 0.65 * vnoise(vec2(a * 4.0, y * 2.5)));
     vec3 verd = mix(vec3(0.1, 0.22, 0.19), vec3(0.2, 0.36, 0.3), runs);
     vec3 alb = mix(metal, verd, green);
     float shine = 1.0 - 0.85 * green;
     col = alb * (ambient + uSunColor * wrap * wrap * sun * mix(1.0, 0.55, shine));
     vec3 h = normalize(uSunDir + V);
-    vec3 tint = mix(vec3(1.0), vec3(1.0, 0.74, 0.48), 0.6);
+    vec3 tint = mix(vec3(1.0), vec3(1.0, 0.8, 0.58), 0.6);
     col += tint * uSunColor * (pow(max(dot(n, h), 0.0), 46.0) * 0.9 + pow(max(dot(n, h), 0.0), 7.0) * 0.12) * sun * shine;
+    /** Bronze shows what is round it: indoors the dim timbers and stone, and the sky only where it looks out through a light. */
     vec3 r = reflect(-V, n);
-    float open = smoothstep(-0.15, 0.2, r.y) * (1.0 - smoothstep(0.35, 0.85, r.y));
+    float sky = smoothstep(-0.15, 0.2, r.y) * (1.0 - smoothstep(0.35, 0.85, r.y));
+    float open = mix(sky, belfryOpen(vWorld + r * 0.05, r), uIndoors);
     float fres = 0.3 + 0.7 * pow(1.0 - clamp(dot(n, V), 0.0, 1.0), 3.0);
-    col += mix(uSkyAmbient * 0.15, mix(uSkyHorizon, uSkyHorizonSun, 0.5) * 0.6, open) * mix(vec3(1.0), metal * 3.0, 0.6) * fres * shine;
+    vec3 room = mix(uSkyAmbient * 0.15, uSunColor * vec3(1.0, 0.7, 0.45) * 0.05 + uSkyAmbient * 0.04, uIndoors);
+    col += mix(room, mix(uSkyHorizon, uSkyHorizonSun, 0.5) * mix(0.7, 0.4, uIndoors), open) * mix(vec3(1.0), metal * 3.0, 0.6) * fres * shine;
+    /** Struck, the bronze shivers: a sheen runs round the sound bow and up the waist as it rings. */
+    float band = 0.5 + 0.5 * sin(a * 6.0 + y * 9.0 - uTime * 40.0);
+    col += uSkyHorizonSun * tint * uShimmer * (0.35 + 0.65 * band) * smoothstep(-0.4, -1.5, y) * shine * 0.6;
   } else if (kind == ${OAK}) {
     float grain = vnoise(vec2(vLocal.x * 1.3, (vLocal.y + vLocal.z) * 26.0)) * 0.6 + vnoise(vec2(vLocal.x * 6.0, (vLocal.y - vLocal.z) * 55.0)) * 0.4;
     vec3 alb = vec3(0.15, 0.095, 0.055) * (0.74 + 0.42 * grain);
@@ -208,6 +215,7 @@ export class Bell {
           uBellPivot: { value: new THREE.Vector3() }, uBellDown: { value: new THREE.Vector3() },
         }),
         uIndoors: { value: light ? 1 : 0 },
+        uShimmer: { value: 0 },
       },
     });
     const mesh = (g: THREE.BufferGeometry) => {
@@ -340,7 +348,7 @@ export class Bell {
       const top = Math.acos(THREE.MathUtils.clamp(Math.cos(this.angle) - (this.speed * this.speed) / (2 * k.pull), -1, 1));
       if (top - Math.abs(this.angle) < Math.abs(this.speed) * 0.07 + 0.003) this.strike(top);
     }
-    this.shudder = Math.max(0, this.shudder - dt * 3.2);
+    this.shudder = Math.max(0, this.shudder - dt * 0.7);
 
     const resting = Math.abs(this.angle) < 0.03 && Math.abs(this.speed) < 0.05;
     const asking = this.quiet > k.inviteAfter && resting && !this.valving;
@@ -398,6 +406,7 @@ export class Bell {
   }
 
   private pose(): void {
+    this.material.uniforms.uShimmer.value = this.shudder * this.shudder;
     const quiver = this.shudder * 0.006 * Math.sin(performance.now() * 0.09);
     this.swing.rotation.set(-(this.angle + quiver), Math.atan2(this.toward.x, this.toward.y), 0);
     this.hanger.rotation.set(-this.clapper, 0, 0);
@@ -428,16 +437,17 @@ void main() {
     vec4 w = uWaves[i];
     if (w.y <= 0.0) continue;
     float x = (d - w.x) / w.w;
-    float crest = exp(-x * x * 3.0);
-    float wake = exp(-(x + 2.2) * (x + 2.2) * 0.7) * 0.3;
-    float ruffle = 0.55 + 0.45 * vnoise(vec2(ang * 16.0 + float(i) * 3.1, d * 0.7));
-    glow += (crest + wake) * ruffle * w.y * (1.0 - smoothstep(0.4, 1.0, w.z));
+    /** A bright leading crest and a fainter second one behind it, broken up along their length like a ripple catching light. */
+    float crest = exp(-x * x * 5.0) + 0.45 * exp(-(x + 2.6) * (x + 2.6) * 4.0);
+    float broken = smoothstep(0.25, 0.75, vnoise(vec2(ang * 34.0 + float(i) * 3.1, d * 1.3 - w.x * 0.2)));
+    float ruffle = 0.35 + 0.65 * broken;
+    glow += crest * ruffle * w.y * (1.0 - smoothstep(0.35, 1.0, w.z));
   }
   if (glow < 0.004) discard;
   vec2 sun = normalize(uSunDir.xz + 1e-5);
   float toward = pow(max(dot(d2 / max(d, 1e-3), sun), 0.0), 2.0);
-  vec3 col = mix(uSkyHorizon * 1.25 + uSkyAmbient * 0.2, uSkyHorizonSun * 1.15, 0.35 + 0.5 * toward);
-  gl_FragColor = vec4(applyFog(col, vWorld), clamp(glow * 0.6, 0.0, 0.85));
+  vec3 col = mix(uSkyHorizon * 1.3 + uSkyAmbient * 0.25, uSkyHorizonSun * 1.25, 0.25 + 0.6 * toward);
+  gl_FragColor = vec4(applyFog(col, vWorld), clamp(glow * 0.5, 0.0, 0.75));
 }`;
 
 /**

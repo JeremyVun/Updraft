@@ -15,8 +15,8 @@ import type { Deck } from './decks';
 export const BELFRY = {
   half: 2.4, wall: 0.45, sill: 8.27, step: 0.12, height: 3.3, top: 11.6,
   light: { width: 1.0, at: 0.65, spring: 2.3, point: 0.55 },
-  hang: 2.85, trestle: 1.38,
-  nest: new THREE.Vector2(1.15, 0.55),
+  hang: 2.85, trestle: 1.16,
+  nest: new THREE.Vector2(-1.56, 0.26),
   trap: new THREE.Vector2(1.15, -1.15),
 } as const;
 
@@ -97,9 +97,8 @@ float bellShade(vec3 world) {
   return smoothstep(r - 0.07, r + 0.07, gap);
 }
 
-/** The low sun inside the room: only what comes in through a light, through the thickness of its wall. */
-float belfrySun(vec3 world) {
-  vec3 d = uSunDir;
+/** Whether a ray from a point inside the room leaves it through a light, through the thickness of its wall. */
+float belfryOpen(vec3 world, vec3 d) {
   vec3 p = world - vec3(uBelfry.x, 0.0, uBelfry.z);
   float inner = uBelfrySize.x, outer = uBelfrySize.y;
   float tx = abs(d.x) > 1e-4 ? (sign(d.x) * inner - p.x) / d.x : 1e6;
@@ -109,6 +108,11 @@ float belfrySun(vec3 world) {
   float t1 = across ? (sign(d.x) * outer - p.x) / d.x : (sign(d.z) * outer - p.z) / d.z;
   vec3 a = p + d * t0, b = p + d * max(t1, t0);
   return belfryLight(across ? a.z : a.x, a.y - uBelfry.w) * belfryLight(across ? b.z : b.x, b.y - uBelfry.w);
+}
+
+/** The low sun inside the room: only what comes in through a light. */
+float belfrySun(vec3 world) {
+  return belfryOpen(world, uSunDir);
 }
 `;
 

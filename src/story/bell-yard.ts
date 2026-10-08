@@ -43,10 +43,10 @@ function glide(at: THREE.Vector3, speed: THREE.Vector3, to: THREE.Vector3, time:
   }
 }
 
-/** The cat curls with the open side of its ring, where the kittens lie, toward the low sun. */
-const CURL_YAW = 2.17;
+/** The cat curls with the open side of its ring, where the kittens lie, toward the opening beside its own. */
+const CURL_YAW = -2.21;
 
-export type BellYardView = 'play' | 'wide' | 'nest' | 'bell' | 'ivy' | 'climb-near' | 'climb-far' | 'climb-side' | 'climb-profile';
+export type BellYardView = 'play' | 'wide' | 'nest' | 'kittens' | 'bell' | 'ivy' | 'climb-near' | 'climb-far' | 'climb-side' | 'climb-profile';
 
 /**
  * QA only: the drowned village's refuge and its bell, set out on the sea off the QA stage (`?chapter=stage&gap=bell`,
@@ -64,7 +64,7 @@ export class BellYard {
   readonly climb: Climb;
   readonly decks: Deck[];
   playing = false;
-  phase: 'waiting' | 'climbing' | 'arriving' | 'nest' | 'opening' | 'ringing' | 'leaving' | 'down' | 'below' = 'waiting';
+  phase: 'waiting' | 'climbing' | 'nest' | 'ringing' | 'leaving' | 'down' | 'below' = 'waiting';
   /** QA: hold the lens on one view for stills. */
   view: BellYardView = 'play';
   private t = 0;
@@ -259,36 +259,31 @@ export class BellYard {
         c.lookAt = null;
         this.climb.up(() => this.arrive());
       }
-    } else if (this.phase === 'nest' || this.phase === 'arriving') {
+    } else if (this.phase === 'nest') {
       c.lookAt = this.look.copy(this.cast.cat.position).setY(this.cast.cat.position.y + 0.15);
     } else if (this.phase === 'ringing') {
-      c.lookAt = this.look.set(this.centre.x - 22, 3, this.centre.z - 26);
+      c.lookAt = this.look.set(this.centre.x - 14, 3, this.centre.z - 30);
     }
   }
 
   /**
-   * In over the sill: a step down onto the boards, and she kneels just inside the opening with the bell over her, where
-   * she can see across under it to the straw and the cat curled round its kittens; then back up into the opening.
+   * In over the sill, she kneels there in the opening and looks down at the straw just inside, where the cat is
+   * curled round its kittens; then she stands in the opening, looking out.
    */
   private arrive(): void {
     const c = this.cast.child;
-    this.phase = 'arriving';
-    const by = this.belfry.inside(FACE, LIGHT, 0.45);
-    c.walkTo(by.x, by.z, false, () => {
-      this.phase = 'nest';
-      c.faceToward(this.kittens.centre.x, this.kittens.centre.z, 1);
-      c.kneeling = 1;
-      this.after = 3.6;
+    this.phase = 'nest';
+    c.faceToward(this.kittens.centre.x, this.kittens.centre.z, 1);
+    c.kneeling = 1;
+    this.after = 3.8;
+    this.then = () => {
+      c.kneeling = 0;
+      this.after = 0.8;
       this.then = () => {
-        c.kneeling = 0;
-        const stand = this.standInOpening();
-        this.after = 0.7;
-        this.then = () => c.walkTo(stand.x, stand.z, false, () => {
-          c.yaw = this.outward;
-          this.phase = 'ringing';
-        }, 0.08);
+        c.yaw = this.outward;
+        this.phase = 'ringing';
       };
-    }, 0.12);
+    };
   }
 
   /** Up the ivy ahead of her, in over the sill and across the boards to its kittens, and curled round them. */
@@ -296,11 +291,11 @@ export class BellYard {
     const cat = this.cast.cat;
     const ledge = this.belfry.sill(FACE, LIGHT, -0.24).add(new THREE.Vector3(0, 0, 0.25));
     this.after = 0.25;
-    this.then = () => cat.climb([...this.ivy.catWay(), ledge], faceOut(FACE), { then: 'stand', speed: 1.0 }, () => {
-      const down = this.belfry.inside(FACE, LIGHT, 0.35).add(new THREE.Vector3(0, 0, 0.3));
+    this.then = () => cat.climb([...this.ivy.catWay(), ledge], faceOut(FACE), { then: 'stand', speed: 1.2 }, () => {
+      const down = this.belfry.inside(FACE, LIGHT, 0.3).add(new THREE.Vector3(0, 0, 0.3));
       cat.hop(down, { then: 'stand', floor: this.floor }, () => {
         const by = this.curlAt();
-        cat.run([by], this.floor, { pace: 'walk', speed: 0.7, then: 'stand' }, () => {
+        cat.run([by], this.floor, { pace: 'trot', speed: 1.3, then: 'stand' }, () => {
           this.kittens.tumble();
           cat.chirrup();
           this.after = 1.4;
@@ -334,7 +329,7 @@ export class BellYard {
   /** Standing in the opening she faces out and a little round toward the last of the sun. */
   private get outward(): number {
     const o = faceOut(FACE);
-    return Math.atan2(o.x, o.z) - 0.55;
+    return Math.atan2(o.x, o.z) - 0.85;
   }
 
   private sunDir(): THREE.Vector3 {
@@ -357,7 +352,7 @@ export class BellYard {
     const y = this.view === 'play' ? this.herY.value : this.cast.child.position.y;
     const view = this.view === 'play' ? this.playView() : this.view;
     /** In and out of the belfry the lens cuts; it never glides through the stone. */
-    const inside = view === 'wide' || view === 'nest';
+    const inside = view === 'wide';
     if (inside !== this.inside) this.cut = true;
     this.inside = inside;
     const S = BELFRY.sill;
@@ -383,17 +378,21 @@ export class BellYard {
         this.target.set(-2.4, RIDGE + 2.8, -0.2);
         break;
       case 'wide':
-        this.eye.set(1.72, this.belfry.floor + 2.35, -1.72);
-        this.target.set(-0.5, this.belfry.floor + 0.95, 0.55);
-        shot.zoom = 0.62;
+        this.eye.set(1.6, this.belfry.floor + 2.5, -1.72);
+        this.target.set(-0.9, this.belfry.floor + 0.95, 0.45);
+        shot.zoom = 0.55;
         break;
       case 'nest':
-        this.eye.set(0.42, this.belfry.floor + 0.72, -0.45);
-        this.target.set(1.2, this.belfry.floor + 0.12, 0.6);
+        this.eye.set(-3.75, this.belfry.floor + 1.25, 1.55);
+        this.target.set(-1.75, this.belfry.floor + 0.45, 0.05);
+        break;
+      case 'kittens':
+        this.eye.set(-2.72, this.belfry.floor + 0.72, 0.98);
+        this.target.set(-1.56, this.belfry.floor + 0.15, 0.24);
         break;
       default:
-        this.eye.set(upright ? -8.2 : -9.6, S + (upright ? 4.6 : 4.2), upright ? 1.4 : 2.7);
-        this.target.set(-1.7, S + (upright ? 0.2 : 0.5), 0.1);
+        this.eye.set(upright ? -13.6 : -11.2, S + (upright ? 5.2 : 3.3), upright ? 3.6 : 4.4);
+        this.target.set(upright ? -2.2 : -1.9, S + (upright ? -1.5 : 0.35), upright ? 0.1 : -0.2);
     }
     this.eye.add(this.centre);
     this.target.add(this.centre);
@@ -416,7 +415,7 @@ export class BellYard {
 
   private playView(): BellYardView {
     if (this.phase === 'waiting' || this.phase === 'climbing' || this.phase === 'down' || this.phase === 'below') return 'climb-side';
-    if (this.phase === 'arriving' || this.phase === 'nest') return 'wide';
+    if (this.phase === 'nest') return 'nest';
     return 'bell';
   }
 

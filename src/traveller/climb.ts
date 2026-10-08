@@ -285,14 +285,14 @@ export class Climb {
     };
     hand[0] = highest(0, 0);
     hand[1] = highest(1, -0.25);
-    move(0, holds[0][hand[0]].hand, 0.5, 0, 0.12);
-    move(1, holds[1][hand[1]].hand, 0.5, 0.28, 0.12);
+    move(0, holds[0][hand[0]].hand, 0.45, 0, 0.12);
+    move(1, holds[1][hand[1]].hand, 0.45, 0.22, 0.12);
 
     const S = sill.y - base;
     const onSill = [false, false];
     const sillHand = (s: number) => sill.clone().addScaledVector(side(s), 0.24).addScaledVector(out, -0.1).addScaledVector(UP, 0.045);
     let foot0 = holds[1][0].up < holds[0][0].up ? 1 : 0;
-    let gap = 0.45;
+    let gap = 0.32;
     const sillGrip = S + 0.045;
     for (let guard = 0; guard < 40 && !(onSill[0] && onSill[1] && rootY - base >= S - 1.3); guard++) {
       const other = 1 - foot0;
