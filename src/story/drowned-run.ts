@@ -1189,8 +1189,8 @@ export class RoofRun {
   }
 
   /**
-   * From the mill's view over the green round to the swing's, `u` of the way: south of her, over the green cottage, so
-   * the lens never passes over her as she gets on.
+   * From the mill's view over the green round to the swing's, `u` of the way: high along the nave's south side, clear
+   * of the old tree's crown and well over her as she gets on.
    */
   private toSwingView(wide: number, u: number): void {
     this.millView(wide);

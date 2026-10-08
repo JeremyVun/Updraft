@@ -1765,7 +1765,7 @@ export const tuning = {
        * the light has gone from it; and how far short of the boat it is when she sets off along the first roof's ridge
        * (QA and the save there).
        */
-      riseFor: 9, comeAfter: 2, riseAway: 95, comeRate: 0.15, comeMost: 5, comePace: 1.8, holdBehind: 20, setOffBehind: 20,
+      riseFor: 7, comeAfter: 1.5, riseAway: 80, comeRate: 0.15, comeMost: 5.5, comePace: 2.2, holdBehind: 20, setOffBehind: 20,
     },
     /** The sea fog the dark is: one field every shader reads, and the light it takes as it comes. */
     fog: {
@@ -1884,7 +1884,7 @@ export const tuning = {
        * Seconds she stands just down off the first roof looking back at the boat as the fog takes it, and on the
        * granary's ridge looking back down at it.
        */
-      lookBackFor: 5.6, lookDownFor: 1.4,
+      lookBackFor: 6.0, lookDownFor: 1.4,
       /** The beat she takes before a hop of her own; within `through` of a turn gentler than `bend` (radians) she walks on through it. */
       hopPause: 0.3, through: 1.1, bend: 0.4,
       /** Seconds she stands once the sheet has set her down before she goes on, while the lens comes round to her way. */
@@ -1998,7 +1998,7 @@ export const tuning = {
       follow: 2.2, followDown: 5, steady: 2, steadiest: 1.4, behind: 6, ahead: 12, churchShare: 0.55, fogAside: 0,
       /** With the fog and the church nearly opposite (beyond `flipFrom` radians apart) it looks across from this side (+1 her right going round to the church). */
       flipFrom: 2.6, side: -1, uprightBack: 1.5, distance: 10, uprightDistance: 12,
-      rise: 1.5, uprightRise: 2.6, lowest: 2.2, highest: 7, lead: 1, aim: 1.0, pace: 0.7, zoom: 0.85, uprightZoom: 0.85,
+      rise: 1.5, uprightRise: 2.6, lowest: 2.8, highest: 7, lead: 1, aim: 1.0, pace: 0.7, zoom: 0.85, uprightZoom: 0.85,
       /** How far it keeps off the side of a house, wall or chimney it stands lower than the top of, and over a chimney, metres. */
       clearOf: 1.6,
       /** How far ahead of the fog's front, along the way it comes, it always stands, metres. */
@@ -2032,7 +2032,7 @@ export const tuning = {
        * How fast the lens comes round to a piece's view once she has stopped at it (per second), and to the swing's
        * (from the mill's, which brings her to it), by way of a point this far from the swing's pivot (x, height, z).
        */
-      roundRate: 1.1, swingRate: 0.3, swingVia: [0.5, 8, 24],
+      roundRate: 1.1, swingRate: 0.3, swingVia: [-3.5, 9.5, -5.3],
       /** How far past each piece the lens has given it back to her own way, metres. */
       leave: { tree: 4, sheet: 0, mill: 5, swing: 3 },
       /**
@@ -2041,7 +2041,7 @@ export const tuning = {
        * to the side (landscape and upright) and above her it stands, and where it looks (a share of the way from her to
        * the boat, and above her feet).
        */
-      backHold: 1, backIn: 1.0, backOut: 1.4, backGone: 1.2, backBehind: 4.2, backSide: 2.4, uprightBackSide: 1.2, backHigh: 2.3, backAt: 0.55, backAim: 0.6,
+      backHold: 1, backIn: 1.5, backOut: 1.4, backGone: 1.2, backBehind: 4.2, backSide: 2.4, uprightBackSide: 1.2, backHigh: 2.3, backAt: 0.55, backAim: 0.6,
       /**
        * The tree's view: how far north of where it lies over her wall and east of it (out over the lane) it stands, and
        * how high (upright, the same, and how far it looks round to her as she crosses, so she stays in the narrow frame).
