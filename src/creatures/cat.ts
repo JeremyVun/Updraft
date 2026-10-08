@@ -94,10 +94,14 @@ const PACE: Record<Pace, { kind: GaitKind; speed: number }> = {
 const NARROW_SPEED = 0.45;
 const NECK_GIVE = 20;
 const CLIMB_SPEED = 0.8;
+/** Backing down a wall, metres a second; seconds it takes to let itself down over a lip; how far its front paws slide back to hold the lip's edge. */
+const DOWN_SPEED = 0.85;
+const LOWER_FOR = 0.95;
+const GRIP = 0.09;
 /** A little lighter than the world, so a leap hangs for a moment at the top as a cat's seems to. */
 const GRAVITY = 8.5;
 
-type Doing = 'still' | 'path' | 'air' | 'climb';
+type Doing = 'still' | 'path' | 'air' | 'climb' | 'lower';
 type Air = 'gather' | 'fly' | 'land';
 
 const clamp = THREE.MathUtils.clamp;
@@ -190,6 +194,17 @@ export class Cat {
 
   private climbing: Route | null = null;
   private readonly wall = new THREE.Vector3();
+  /** Coming down a wall tail first: its way down, how fast, how long it looks down before it drops, and where it drops to. */
+  private descent: { route: Route; pause: number; land: THREE.Vector3; yaw: number; floor: Floor | null; then: CatPose; side: number } | null = null;
+  private lookDownT = -1;
+  private lowerT = 0;
+  private readonly lowerFrom = new THREE.Vector3();
+  private readonly lowerTo = new THREE.Vector3();
+  private readonly lowerQ = [new THREE.Quaternion(), new THREE.Quaternion()];
+  private readonly lowerPaws = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
+  private readonly lowerEnds = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
+  /** Called once a turn on the spot asked for by `turn` is done. */
+  private turned: (() => void) | null = null;
 
   private air: Air = 'gather';
   private airT = 0;
@@ -563,6 +578,134 @@ export class Cat {
   private climbDone: (() => void) | null = null;
   private climbSpeed = CLIMB_SPEED;
 
+  /** Turns round on the spot to face `yaw`, at its own unhurried pace with its head going first, then `onDone`. */
+  turn(yaw: number, onDone?: () => void): void {
+    if (this.airborne(() => this.turn(yaw, onDone))) return;
+    this.cancel();
+    this.toWorld();
+    this.pose = 'stand';
+    this.turnTo = this.heading + wrapAngle(yaw - this.heading);
+    this.turnAge = 0;
+    this.turned = onDone ?? null;
+  }
+
+  /**
+   * Down a near-vertical way as a cat comes down a tree, tail first. From where it stands at the lip of a ledge it
+   * turns its back to the drop and lets itself down over the edge, hind feet feeling for the wall first and the front
+   * paws holding the lip till last; then it comes down facing up the wall, a hind foot and then the front on its side.
+   * At the foot of `path` it stops and looks down over its shoulder, then pushes off and drops onto `land` (on `floor`),
+   * turning in the air to face `yaw`, and holds `then`. `path` runs down the wall's face from just under the lip; `out`
+   * is the wall's outward normal.
+   */
+  backDown(path: readonly THREE.Vector3[], out: THREE.Vector3, land: THREE.Vector3,
+    opts: { yaw: number; floor?: Floor | null; then?: CatPose; look?: THREE.Vector3 | null; speed?: number; pause?: number }, onDone?: () => void): void {
+    if (this.airborne(() => this.backDown(path, out, land, opts, onDone))) return;
+    this.cancel();
+    this.toWorld();
+    this.wall.copy(out).setY(0).normalize();
+    const route = new Route(path);
+    const across = this.v.crossVectors(this.wall, route.tangent(route.length, this.w).negate()).normalize();
+    const side = Math.sign(this.w2.subVectors(land, route.at(route.length, this.w)).dot(across)) || 1;
+    this.descent = { route, pause: opts.pause ?? 0.8, land: land.clone(), yaw: opts.yaw, floor: opts.floor ?? null, then: opts.then ?? 'sit', side };
+    this.cruise = opts.speed ?? DOWN_SPEED;
+    this.onDone = onDone ?? null;
+    if (opts.look !== undefined) this.target = opts.look;
+    const yawIn = Math.atan2(-this.wall.x, -this.wall.z);
+    if (Math.abs(wrapAngle(yawIn - this.heading)) < 0.15) this.lowerOver();
+    else {
+      this.pose = 'stand';
+      this.turnTo = this.heading + wrapAngle(yawIn - this.heading);
+      this.turnAge = 0;
+      this.turned = () => this.lowerOver();
+    }
+  }
+
+  /** From standing at the lip with its back to the drop: where each paw is now, and where each will be on the wall. */
+  private lowerOver(): void {
+    const route = this.descent!.route;
+    this.doing = 'lower';
+    this.lowerT = 0;
+    this.lowerFrom.copy(this.at);
+    route.at(0, this.lowerTo);
+    const upWall = route.tangent(0, this.w2).negate();
+    upWall.addScaledVector(this.wall, -upWall.dot(this.wall)).normalize();
+    this.basisQuat(this.up, this.fwd, this.lowerQ[0]);
+    this.basisQuat(this.wall, upWall, this.lowerQ[1]);
+    const across = this.side.crossVectors(this.wall, upWall).normalize();
+    for (let i = 0; i < 4; i++) {
+      this.lowerPaws[i].copy(this.paws[i]);
+      this.lowerEnds[i].copy(this.lowerTo).addScaledVector(across, this.homes[i].x).addScaledVector(upWall, this.homes[i].y);
+    }
+  }
+
+  /**
+   * Over the lip: the body tips back and down about the edge while the hind feet swing down onto the wall one after
+   * the other; the front paws slide back to hold the edge and let go of it last, then it is on the wall.
+   */
+  private lower(dt: number): void {
+    const k = this.scale;
+    this.lowerT += dt;
+    const t = Math.min(1, this.lowerT / LOWER_FOR);
+    this.flightQ.slerpQuaternions(this.lowerQ[0], this.lowerQ[1], smooth((t - 0.1) / 0.7));
+    this.fwd.set(0, 0, 1).applyQuaternion(this.flightQ);
+    this.up.set(0, 1, 0).applyQuaternion(this.flightQ);
+    const go = smooth(t);
+    this.at.lerpVectors(this.lowerFrom, this.lowerTo, go).addScaledVector(this.wall, 0.03 * k * Math.sin(Math.PI * go));
+    for (let i = 0; i < 4; i++) {
+      const from = this.lowerPaws[i], to = this.lowerEnds[i], paw = this.paws[i];
+      if (i < 2) {
+        const hold = smooth((t - 0.22) / 0.25), off = smooth((t - 0.68 - 0.08 * i) / 0.24);
+        paw.copy(from).addScaledVector(this.wall, GRIP * k * hold).lerp(to, off).addScaledVector(this.wall, 0.035 * k * Math.sin(Math.PI * off));
+        this.d.paws[i].curl = 0.5 * hold * (1 - off) + 0.7 * Math.sin(Math.PI * off);
+      } else {
+        const down = smooth((t - 0.08 - 0.14 * (i - 2)) / 0.38);
+        paw.lerpVectors(from, to, down).addScaledVector(this.wall, 0.07 * k * Math.sin(Math.PI * down));
+        this.d.paws[i].curl = 0.8 * Math.sin(Math.PI * down);
+      }
+    }
+    if (t < 1) return;
+    this.onWall = true;
+    this.at.copy(this.lowerTo);
+    this.climbing = this.descent!.route;
+    this.along = 0;
+    this.speed = 0;
+    this.doing = 'climb';
+    this.gait.kind = 'back';
+    this.gait.plantAt(this.support, this.paws, this.heading);
+  }
+
+  /** Down the wall a foot at a time, its weight dropping onto each hind foot as it takes hold; at the foot it stops to look down. */
+  private descend(dt: number): void {
+    const route = this.climbing!;
+    if (this.lookDownT >= 0) {
+      this.speed = 0;
+      this.lookDownT += dt;
+      if (this.lookDownT >= this.descent!.pause) this.dropOff();
+      return;
+    }
+    const left = route.length - this.along;
+    this.speed = Math.min(ease(this.speed, this.cruise, 3, dt), Math.sqrt(2 * 2 * Math.max(0, left)) + 0.05);
+    const settle = 1 + 0.55 * Math.cos((this.gait.phase - 0.08) * Math.PI * 4);
+    this.along = Math.min(route.length, this.along + this.speed * settle * dt);
+    route.at(this.along, this.at);
+    route.tangent(this.along, this.fwd, 0.1).negate();
+    this.up.copy(this.wall);
+    this.fwd.addScaledVector(this.up, -this.fwd.dot(this.up)).normalize();
+    if (left < 0.01) this.lookDownT = 0;
+  }
+
+  /** It pushes off from the wall and drops, turning, onto its feet below. */
+  private dropOff(): void {
+    const d = this.descent!;
+    this.descent = null;
+    this.climbing = null;
+    this.lookDownT = -1;
+    this.dropping = false;
+    this.gait.kind = 'walk';
+    const then = d.then;
+    this.launch(d.land, null, new THREE.Vector3(Math.sin(d.yaw), 0, Math.cos(d.yaw)), UP, d.floor, 0.03 * this.scale, false, then, () => this.finish(then), 0.12);
+  }
+
   private jump(to: THREE.Vector3, opts: JumpOptions, leap: boolean, onDone?: () => void): void {
     if (this.airborne(() => this.jump(to, opts, leap, onDone))) return;
     this.cancel();
@@ -639,6 +782,9 @@ export class Cat {
     this.route = null;
     this.climbing = null;
     this.turnTo = null;
+    this.turned = null;
+    this.descent = null;
+    this.lookDownT = -1;
     this.rubbing = false;
     if (this.doing !== 'still') {
       this.doing = 'still';
@@ -745,6 +891,7 @@ export class Cat {
     this.homesFor(this.doing !== 'path' ? 0 : this.narrow ? 1 : 0.6 * this.galloping);
 
     if (this.doing === 'air') this.fly(dt);
+    else if (this.doing === 'lower') this.lower(dt);
     else {
       const lift = (this.gait.kind === 'bound' ? 0.042 : this.gait.kind === 'trot' ? 0.03 : 0.024) * this.scale;
       this.gait.scale = this.scale;
@@ -788,6 +935,9 @@ export class Cat {
       if (Math.abs(err) < 0.04 && Math.abs(this.turning) < 0.2) {
         this.turnTo = null;
         this.turning = 0;
+        const next = this.turned;
+        this.turned = null;
+        next?.();
       }
     }
   }
@@ -827,6 +977,10 @@ export class Cat {
   }
 
   private clamber(dt: number): void {
+    if (this.descent) {
+      this.descend(dt);
+      return;
+    }
     const route = this.climbing!;
     const left = route.length - this.along;
     this.speed = Math.min(ease(this.speed, this.climbSpeed, 3, dt), Math.sqrt(2 * 3 * Math.max(0, left)) + 0.15);
@@ -1167,6 +1321,16 @@ export class Cat {
     osc.bodyY = osc.bodyZ = osc.pitch = osc.flex = osc.stretch = osc.roll = osc.neck = osc.head = osc.bend = osc.headRoll = osc.headYaw = osc.hock[0] = osc.hock[1] = 0;
     osc.roll = tremble * 0.035;
     osc.headRoll = tremble * 0.03;
+    if (this.doing === 'lower') {
+      /** Letting itself down over the edge: low and careful, its head down over what it holds, its ears back. */
+      bodyY -= 0.03;
+      flex += 0.2;
+      headPitch = -0.25;
+      headYaw *= 0.2;
+      earBack += 0.35;
+      tailUp = -0.4;
+      tailWrap = 0;
+    }
     if (this.doing === 'path' || this.doing === 'climb') {
       const g = this.gait;
       const ph = g.phase * Math.PI * 2;
@@ -1208,6 +1372,26 @@ export class Cat {
           headPitch = -0.15;
           headYaw *= 0.2;
           tailWave = 0;
+        }
+      } else if (g.kind === 'back') {
+        /** Its weight goes from side to side with each foot it puts down, and drops onto each hind foot as it takes hold. */
+        osc.roll = 0.07 * Math.sin(ph) * k;
+        osc.flex = 0.14 * Math.cos(2 * ph) * k;
+        bodyY -= 0.04;
+        tailUp = -0.3;
+        tailCurl = 0.1;
+        headPitch = 0.1;
+        headYaw *= 0.3;
+        earBack += 0.25;
+        if (this.lookDownT >= 0 && this.descent) {
+          /** Stopped near the foot, it looks down over its shoulder at where it will drop to. */
+          const pause = this.descent.pause, side = this.descent.side;
+          const look = smooth(this.lookDownT / 0.3) * (1 - smooth((this.lookDownT - pause + 0.12) / 0.12));
+          headYaw = THREE.MathUtils.lerp(headYaw, side * 1.5, look);
+          headRoll += side * 0.5 * look;
+          neckLow -= 0.3 * look;
+          osc.bend = side * 0.45 * look;
+          earBack -= 0.25 * look;
         }
       } else {
         osc.flex = 0.32 * Math.cos(ph) * k;
@@ -1296,7 +1480,7 @@ export class Cat {
       headPitch = THREE.MathUtils.lerp(headPitch, -0.35, w.curl);
       headRoll += 0.3 * w.curl;
     }
-    if (gaze && !(this.doing === 'climb')) {
+    if (gaze && this.doing !== 'climb' && this.doing !== 'lower') {
       const local = this.toLocal(gaze, this.w);
       const yaw = Math.atan2(local.x, local.z - 0.11);
       const pitchTo = Math.atan2(local.y - 0.22, Math.hypot(local.x, local.z - 0.11));
@@ -1613,7 +1797,7 @@ export class Cat {
       this.plantedWas.fill(false);
     }
     for (let i = 0; i < 4; i++) {
-      const planted = this.doing !== 'air' && this.gait.paws[i].planted && !(this.idle === 'wash' && i === 1) && !(this.batT >= 0 && i === 0) && this.toppleT < 0;
+      const planted = this.doing !== 'air' && this.doing !== 'lower' && this.gait.paws[i].planted && !(this.idle === 'wash' && i === 1) && !(this.batT >= 0 && i === 0) && this.toppleT < 0;
       this.pawW.copy(this.paws[i]);
       if (planted && this.plantedWas[i]) this.probe.slip = Math.max(this.probe.slip, this.pawW.distanceTo(this.pawsWas[i]));
       this.pawsWas[i].copy(this.pawW);

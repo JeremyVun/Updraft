@@ -19,7 +19,7 @@ export interface Paw {
 
 const paw = (): Paw => ({ at: new THREE.Vector3(), from: new THREE.Vector3(), to: new THREE.Vector3(), planted: true, swing: 0, begun: 0, lift: 0, curl: 0, hock: 1 });
 
-export type GaitKind = 'walk' | 'trot' | 'bound' | 'climb';
+export type GaitKind = 'walk' | 'trot' | 'bound' | 'climb' | 'back';
 
 type Four = readonly [number, number, number, number];
 const four = (x: number): Four => [x, x, x, x];
@@ -35,6 +35,8 @@ const PATTERN: Record<GaitKind, { down: Four; duty: Four; setOff?: number }> = {
   bound: { down: BOUND_DOWN, duty: BOUND_DUTY, setOff: BOUND_SET_OFF },
   /** Up a wall: both front paws reach together, then both hind paws push. */
   climb: { down: [0.5, 0.45, 0, 0.95], duty: four(0.5) },
+  /** Backing down a wall: a hind foot feels for a hold below, then the front paw on its side follows it down. */
+  back: { down: [0.3, 0.8, 0, 0.5], duty: four(0.7) },
 };
 
 /**
@@ -45,6 +47,7 @@ export function strideAt(kind: GaitKind, speed: number): number {
   if (kind === 'walk') return 0.125 + 0.078 * speed;
   if (kind === 'trot') return 0.155 + 0.078 * speed;
   if (kind === 'bound') return 0.3 + 0.19 * speed;
+  if (kind === 'back') return 0.17 + 0.06 * speed;
   return 0.175 + 0.065 * speed;
 }
 
@@ -200,7 +203,7 @@ export class CatGait {
           p.swing = Math.max(0, (mine - p.begun) / (1 - p.begun));
           /** Aimed where the body will be when it lands, so it comes down as far ahead of its home as it will leave behind it. */
           const ahead = (moved / Math.max(travel, 1e-6)) * ((1 - p.swing) * (1 - duty[i]) * stride + duty[i] * stride * 0.5);
-          p.to.copy(home).addScaledVector(s.forward, ahead + (bound ? BOUND_SHIFT[i] * this.scale : 0));
+          p.to.copy(home).addScaledVector(s.forward, (this.kind === 'back' ? -ahead : ahead) + (bound ? BOUND_SHIFT[i] * this.scale : 0));
           s.snap(p.to);
           if (bound) this.reachFor(i, p, s, homes[i].x);
           else {

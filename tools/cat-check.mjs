@@ -66,6 +66,7 @@ const ACTIONS = {
   rail: [2.5, 6.5],
   gap: [1.2, 1.85, 3.2],
   climb: [0.9, 2.4, 5.5],
+  'back-down': [1.2, 2.2, 4.5],
   bolt: [0.7],
   'leap-pot': [0.9, 1.3, 2.2],
   'leap-boat': [0.8, 1.2, 2.2],
@@ -110,7 +111,7 @@ const FILM = {
   gap: { for: 3.6, from: 'side' }, 'leap-pot': { for: 3.2, from: 'side' }, 'leap-roof': { for: 3.2, from: 'side', rise: 2 },
   'leap-boat': { for: 3, from: 'side' }, 'hop-down': { for: 2.6, from: 'side' }, 'hop-tub': { for: 3.5, from: 'side' },
   'ride-tub': { for: 6, from: 'side', rise: 2 }, 'jump-boat': { for: 5, from: 'side' }, boat: { for: 3, from: 0.9 },
-  climb: { for: 5.5, from: [0.8, -1] }, 'climb-trunk': { for: 5, from: 'side' }, 'ride-sail': { for: 6, from: [0, -1] },
+  climb: { for: 5.5, from: [0.8, -1] }, 'back-down': { for: 7.5, from: [0.8, -1] }, 'climb-trunk': { for: 5, from: 'side' }, 'ride-sail': { for: 6, from: [0, -1] },
   'ride-swing': { for: 6, from: [1, 0] },
 };
 const actions = list(process.env.ONLY, Object.keys(ACTIONS));

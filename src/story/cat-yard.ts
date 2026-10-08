@@ -537,6 +537,15 @@ export class CatYard {
         cat.climb([face(1.5), face(2.1, 0.06), face(2.7, -0.05), face(TOWER.sill - 0.25), this.at(RIDGE.x, TOWER.sill, TOWER.z + 0.3)], this.dir(0, 0, -1), { then: 'sit', look });
         return true;
       }
+      case 'back-down': {
+        cat.place(this.at(RIDGE.x, TOWER.sill, TOWER.z + 0.17), yaw + Math.PI, { pose: 'stand' });
+        cat.look(onlooker);
+        const face = (y: number, x = 0) => this.at(RIDGE.x + x, y, TOWER.z);
+        const down = [face(TOWER.sill - 0.3), face(2.6, 0.05), face(2.0, -0.05), face(1.65)];
+        this.after(0.5, () => cat.backDown(down, this.dir(0, 0, -1), this.at(RIDGE.x, WALL_B.top, WALL_B.z1 - 0.4),
+          { yaw: yaw + Math.PI, floor: this.floor, then: 'sit', look }));
+        return true;
+      }
       case 'climb-trunk': {
         cat.place(this.at(STUB.x, STUB.top, STUB.z - 0.1), yaw, { pose: 'stand', floor: this.floor });
         cat.look(null);
