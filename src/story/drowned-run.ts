@@ -1142,9 +1142,8 @@ export class RoofRun {
   }
 
   /**
-   * Three-quarters on to her arc and low, as the birches' swing: off the west of the green and round toward the way
-   * she swings out, the bough over her and the nave she lets go onto across the frame. Upright, nearer and a little
-   * higher, the tower stacked over her.
+   * Low off the west of the green, side on to her arc: the bough over her and the nave she lets go onto across the
+   * frame. Upright, round behind her and a little higher, the tower stacked over her.
    */
   private swingView(wide: number): void {
     const k = tuning.drownedCamera.run, pivot = SWING_SITE.spot.pivot, out = SWING_SITE.spot.toward;

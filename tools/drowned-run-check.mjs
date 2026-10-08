@@ -65,7 +65,8 @@ try {
       const ours = __game.story.name === 'drowned' || last?.name === 'drowned';
       from ??= t;
       if (ours && last && last.story === st && last.cut !== st.cameraCut && t - from > 3) w.cuts.push(where());
-      if (ours && last && t > last.t && (last.cut === st.cameraCut || last.story !== st)) {
+      /** A start straight into the room settles the lens over its first moments; that is not play. */
+      if (ours && last && t > last.t && t - from > 3 && (last.cut === st.cameraCut || last.story !== st)) {
         const dt = t - last.t, turn = Math.acos(Math.min(1, d.dot(last.d))) * 180 / Math.PI / dt, move = p.distanceTo(last.p) / dt;
         if (turn > w.turn) { w.turn = turn; w.turnAt = `${where()}, the lens at ${p.toArray().map((v) => v.toFixed(1))} over ${(dt * 1000).toFixed(0)} ms`; }
         if (move > w.move) { w.move = move; w.moveAt = where(); }
@@ -92,7 +93,16 @@ try {
     const tick = () => (++i >= n ? done() : requestAnimationFrame(tick));
     requestAnimationFrame(tick);
   }), Math.max(1, Math.round(s * 60)));
-  const shot = async (name) => { if (shots) { await page.screenshot({ path: `${shots}-${name}.png` }); console.log(`  ${shots}-${name}.png`); } };
+  /** Each still's lens: how far off her (flat), how high over her feet, the angle down to her head and the vertical field. */
+  const measures = {};
+  const measure = (name) => page.evaluate(() => {
+    const st = __game.story.current, cam = __game.rig.camera, p = cam.position, c = __game.child.position;
+    const flat = Math.hypot(p.x - c.x, p.z - c.z);
+    return { t: +__stats.time.toFixed(1), where: `${st.beat}${st.run && st.run.stage !== 'off' ? '/' + st.run.stage : ''}${st.church && st.church.step !== 'off' ? '/' + st.church.step : ''}`,
+      flat: +flat.toFixed(1), over: +(p.y - c.y).toFixed(1), down: +(Math.atan2(p.y - c.y - 1.2, flat) * 180 / Math.PI).toFixed(1), fov: +cam.fov.toFixed(0) };
+  }).then((m) => { measures[name] = m; });
+  const keep = async () => { if (shots) (await import('node:fs')).writeFileSync(`${shots}-measures.json`, JSON.stringify(measures)); };
+  const shot = async (name) => { if (shots) { await page.screenshot({ path: `${shots}-${name}.png` }); await measure(name); await keep(); console.log(`  ${shots}-${name}.png`); } };
   const film = Number(process.env.FILM ?? 0);
   let filmed = -1, filmFrom = null;
   /** A still every `FILM` seconds of the run, once it has begun. */
@@ -100,7 +110,13 @@ try {
     if (!film || !shots || filmFrom === null) return;
     const t = await page.evaluate(() => __stats.time);
     const n = Math.floor((t - filmFrom) / film);
-    if (n > filmed) { filmed = n; await page.screenshot({ path: `${shots}-film-${String(n).padStart(3, '0')}.png` }); }
+    if (n > filmed) {
+      filmed = n;
+      const name = `film-${String(n).padStart(3, '0')}`;
+      await page.screenshot({ path: `${shots}-${name}.png` });
+      await measure(name);
+      await keep();
+    }
   };
   const state = () => page.evaluate(() => {
     const st = __game.story.current, r = st.run, f = (v) => v.toArray().map((x) => +x.toFixed(2));

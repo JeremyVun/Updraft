@@ -2072,7 +2072,7 @@ export const tuning = {
        * front's edge is taken to be (metres), how far off where the lens looks that edge may stand (radians; upright
        * its own) and what each radian further costs.
        */
-      fogClear: 3, steepFrom: 0.3, steepCost: 60, fogEdge: 8, fogInView: 0.45, uprightFogInView: 0.3, fogCost: 40,
+      fogClear: 3, steepFrom: 0.3, steepCost: 60, fogEdge: 8, fogInView: 0.42, uprightFogInView: 0.3, fogCost: 120,
       /**
        * How it is laid along her way (`layLens`): what it costs to stand a radian (squared) from where it wants, to be
        * drawn in all the way (upright, where drawn in she soon leaves the narrow frame), to stand `lifted` metres
@@ -2123,10 +2123,10 @@ export const tuning = {
       /**
        * The swing's view: how far round from side on to her arc toward the way she swings out (radians), how far from
        * the bough and how high over the seat it stands; it looks this far out along her arc and this high over the
-       * seat. Upright its own.
+       * seat. Upright its own, round behind her. Side on and well back, so her arc reads as the wind's to pump.
        */
-      swingRound: 0.3, swingBack: 13, swingHigh: 2.6, swingAhead: 1.2, swingAim: 0.9,
-      uprightSwingRound: 0.4, uprightSwingBack: 12, uprightSwingHigh: 3.2,
+      swingRound: 0, swingBack: 21, swingHigh: 2.8, swingAhead: 1.4, swingAim: 3.2,
+      uprightSwingRound: -0.33, uprightSwingBack: 17.5, uprightSwingHigh: 3.9,
       /** The end's view: how far back along the nave, how high, and how far out over the green. */
       naveBack: 10, naveHigh: 3.6, naveAside: 11,
     },
