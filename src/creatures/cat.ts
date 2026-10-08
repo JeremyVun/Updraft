@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { ease, Spring, wrapAngle } from './motion';
-import { BODY, catGeometry, CHEST, FPAW_L, FPAW_R, HEAD, HPAW_L, HPAW_R, JAW, PELVIS, TAIL, TOE, WRIST } from './cat/body';
+import { ARM, BODY, catGeometry, CHEST, FORE, FPAW_L, FPAW_R, HEAD, HPAW_L, HPAW_R, JAW, PELVIS, TAIL, TOE, WRIST } from './cat/body';
+import { BOUND_LEGS, boundShape, type BoundShape } from './cat/bound';
 import { CatGait, type GaitKind, type Support } from './cat/gait';
 import { CatRig, type Drives } from './cat/pose';
 import { Route } from './cat/route';
@@ -91,6 +92,7 @@ const PACE: Record<Pace, { kind: GaitKind; speed: number }> = {
   run: { kind: 'bound', speed: 3.2 },
 };
 const NARROW_SPEED = 0.45;
+const NECK_GIVE = 20;
 const CLIMB_SPEED = 0.8;
 /** A little lighter than the world, so a leap hangs for a moment at the top as a cat's seems to. */
 const GRAVITY = 8.5;
@@ -267,7 +269,8 @@ export class Cat {
   private jolted = 0;
 
   /** What shakes and swings too fast to be eased, laid over the eased pose each frame. */
-  private readonly osc = { bodyY: 0, pitch: 0, flex: 0, roll: 0, head: 0, bend: 0, headRoll: 0, headYaw: 0 };
+  private readonly osc = { bodyY: 0, bodyZ: 0, pitch: 0, flex: 0, stretch: 0, roll: 0, neck: 0, head: 0, bend: 0, headRoll: 0, headYaw: 0, hock: [0, 0] };
+  private readonly bound: BoundShape = { rise: 0, flex: 0, stretch: 0, surge: 0, pitch: 0, tail: 0 };
   private readonly v = new THREE.Vector3();
   private readonly w = new THREE.Vector3();
   private readonly q = new THREE.Quaternion();
@@ -291,7 +294,7 @@ export class Cat {
     };
     this.d = {
       frame: new THREE.Matrix4(), scale: 1, origin: new THREE.Vector3(), forward: new THREE.Vector3(0, 0, 1), up: new THREE.Vector3(0, 1, 0),
-      bodyY: STANCES.sit.bodyY, bodyZ: 0, pitch: STANCES.sit.pitch, roll: 0, flex: 0, chestUp: STANCES.sit.chestUp, neckLow: 0,
+      bodyY: STANCES.sit.bodyY, bodyZ: 0, pitch: STANCES.sit.pitch, roll: 0, flex: 0, stretch: 0, legs: 1, chestUp: STANCES.sit.chestUp, neckLow: 0,
       headYaw: 0, headPitch: 0, headRoll: 0, headSize: 1, jaw: 0, earBack: 0, earTwitch: [0, 0],
       tailLift: 0, tailSwing: 0, tailCurl: 0, tailWrap: 1, tailWave: 0, tailFlick: 0,
       paws: this.paws.map((at) => ({ at, curl: 0 })), hock: [1.45, 1.45], breath: 0, bend: 0,
@@ -736,6 +739,7 @@ export class Cat {
     else {
       const lift = (this.gait.kind === 'bound' ? 0.042 : this.gait.kind === 'trot' ? 0.03 : 0.024) * this.scale;
       this.gait.scale = this.scale;
+      this.gait.low = clamp(this.fear, 0, 1);
       this.gait.update(dt, this.support, this.heading, this.homes, lift);
       const tuck = POSES.reduce((sum, p) => sum + STANCES[p].tuck * this.weights[p], 0);
       for (let i = 0; i < 4; i++) {
@@ -1120,8 +1124,8 @@ export class Cat {
     const flinch = this.flinch.step(0, 90, 11, dt);
     /** Shaking itself off it stands up tall on straight legs, however frightened. */
     const shaking = this.shakeT >= 0 ? smooth(this.shakeT / 0.12) * (1 - smooth((this.shakeT - 0.65) / 0.4)) : 0;
-    /** At a gallop it cannot press itself down: its fear is in its ears, its tail and how it stretches out low. */
-    const low = fear * (w.stand + 0.6 * w.sit + 0.5 * w.gather) * (1 - shaking) * (1 - 0.7 * galloping);
+    /** At a gallop it cannot press itself down: its fear is in its ears, its tail and how it bounds on low and long. */
+    const low = fear * (w.stand + 0.6 * w.sit + 0.5 * w.gather) * (1 - shaking) * (1 - galloping);
     bodyY += flinch * 0.05 - low * 0.036 - fear * 0.006 * (1 - galloping);
     flex += low * 0.2;
     neckLow += fear * 0.45 * (1 - 0.6 * galloping);
@@ -1151,7 +1155,7 @@ export class Cat {
     }
 
     const osc = this.osc;
-    osc.bodyY = osc.pitch = osc.flex = osc.roll = osc.head = osc.bend = osc.headRoll = osc.headYaw = 0;
+    osc.bodyY = osc.bodyZ = osc.pitch = osc.flex = osc.stretch = osc.roll = osc.neck = osc.head = osc.bend = osc.headRoll = osc.headYaw = osc.hock[0] = osc.hock[1] = 0;
     osc.roll = tremble * 0.035;
     osc.headRoll = tremble * 0.03;
     if (this.doing === 'path' || this.doing === 'climb') {
@@ -1159,18 +1163,19 @@ export class Cat {
       const ph = g.phase * Math.PI * 2;
       const k = clamp(g.speed / Math.max(this.cruise, 0.3), 0, 1);
       if (g.kind === 'bound') {
-        /**
-         * The half bound: gathered with the hind paws reaching under it just before they land (0.88 of the cycle),
-         * thrown long and high as they push off (0.38), the nose lifting with the push and dipping onto the front paws.
-         */
-        osc.flex = 0.5 * Math.cos(ph - 0.88 * Math.PI * 2) * k;
-        osc.pitch = 0.16 * Math.cos(ph - 0.3 * Math.PI * 2) * k;
-        osc.bodyY = 0.016 * Math.cos(2 * ph - 0.38 * Math.PI * 4) * k;
-        /** The head rides level through it all, as a hunting cat's does, its eyes on where it is going. */
-        osc.head = -0.6 * osc.pitch;
-        bodyY -= 0.006 * k;
+        /** The head is held in the frame of the roof, so it rides level over all of it, its eyes on where it is going. */
+        const b = boundShape(g.phase, clamp(fear, 0, 1), this.bound);
+        osc.bodyY = b.rise * k;
+        osc.bodyZ = b.surge * k;
+        osc.flex = b.flex * k;
+        osc.stretch = b.stretch * k;
+        osc.pitch = b.pitch * k;
+        /** The neck gives against the body's rise and its pitch, so the head travels much more evenly than the body. */
+        osc.neck = NECK_GIVE * (b.rise + 0.12 * b.pitch) * k;
+        for (const i of [0, 1]) osc.hock[i] = k * (g.paws[i + 2].hock - this.d.hock[i]);
+        bodyY -= 0.004 * k;
         neckLow += 0.15 * k;
-        tailUp = THREE.MathUtils.lerp(tailUp, 0.2, k);
+        tailUp = THREE.MathUtils.lerp(tailUp, 0.2 + 1.5 * b.tail, k);
         tailCurl = THREE.MathUtils.lerp(tailCurl, -0.05, k);
         earBack += 0.3 * k;
       } else if (g.kind === 'trot') {
@@ -1455,6 +1460,10 @@ export class Cat {
     bodyY += dip * 0.05;
     flex -= dip * 0.4;
 
+    /** At a bound its legs draw out long and carry it higher, as it gathers speed. */
+    d.legs = ease(d.legs, 1 + (BOUND_LEGS - 1) * this.galloping, 10, dt);
+    osc.bodyY += (d.legs - 1) * (ARM + FORE);
+
     const ears = this.earSpring.step(clamp(earBack, 0, 1), 140, 12, dt);
     const tailRate = this.doing === 'air' || this.doing === 'path' ? 14 : 4;
     const rate = this.doing === 'air' ? 16 : this.doing === 'path' ? 12 : 6;
@@ -1499,6 +1508,11 @@ export class Cat {
 
     /** What the gait swings to and fro is laid over the eased pose rather than eased itself, so it keeps its full stride. */
     d.bodyY += osc.bodyY;
+    d.bodyZ += osc.bodyZ;
+    d.stretch += osc.stretch;
+    d.hock[0] += osc.hock[0];
+    d.hock[1] += osc.hock[1];
+    d.neckLow += osc.neck;
     d.pitch += osc.pitch;
     d.flex += osc.flex;
     d.roll += osc.roll;
@@ -1514,6 +1528,11 @@ export class Cat {
     this.rig.pose(d);
     applyCatLook(this.mat, look, this.rig.nodes[HEAD].getWorldQuaternion(this.q));
     d.bodyY -= osc.bodyY;
+    d.bodyZ -= osc.bodyZ;
+    d.stretch -= osc.stretch;
+    d.hock[0] -= osc.hock[0];
+    d.hock[1] -= osc.hock[1];
+    d.neckLow -= osc.neck;
     d.pitch -= osc.pitch;
     d.flex -= osc.flex;
     d.roll -= osc.roll;

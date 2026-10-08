@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { BOUND_DOWN, BOUND_DUTY, BOUND_SET_OFF, BOUND_SHIFT, boundHock, boundReach } from './bound';
 
 export interface Paw {
   /** Where the pad meets whatever it stands on, in the frame the cat is in. Planted, this does not move. */
@@ -12,21 +13,25 @@ export interface Paw {
   /** How far off the surface it is this frame, and how far it is curled as it comes up. */
   lift: number;
   curl: number;
+  /** At a bound, how far a hind foot lies back from standing on its toes. */
+  hock: number;
 }
 
-const paw = (): Paw => ({ at: new THREE.Vector3(), from: new THREE.Vector3(), to: new THREE.Vector3(), planted: true, swing: 0, begun: 0, lift: 0, curl: 0 });
+const paw = (): Paw => ({ at: new THREE.Vector3(), from: new THREE.Vector3(), to: new THREE.Vector3(), planted: true, swing: 0, begun: 0, lift: 0, curl: 0, hock: 1 });
 
 export type GaitKind = 'walk' | 'trot' | 'bound' | 'climb';
 
-/** When each paw lifts in the cycle (front left, front right, hind left, hind right), and the share of it each spends down. */
-const PATTERN: Record<GaitKind, { offsets: [number, number, number, number]; duty: number }> = {
+type Four = readonly [number, number, number, number];
+const four = (x: number): Four => [x, x, x, x];
+
+/** When in the cycle each paw comes down (front left, front right, hind left, hind right), and the share of it each spends down. */
+const PATTERN: Record<GaitKind, { down: Four; duty: Four }> = {
   /** Hind, fore on the same side, then the other side: the cat's own walk. */
-  walk: { offsets: [0.25, 0.75, 0, 0.5], duty: 0.64 },
-  trot: { offsets: [0, 0.5, 0.5, 0], duty: 0.5 },
-  /** The half bound: the hind paws land almost together and throw it on to the front ones. */
-  bound: { offsets: [0.5, 0.58, 0, 0.07], duty: 0.34 },
+  walk: { down: [0.75, 0.25, 0, 0.5], duty: four(0.64) },
+  trot: { down: [0, 0.5, 0.5, 0], duty: four(0.5) },
+  bound: { down: BOUND_DOWN, duty: BOUND_DUTY },
   /** Up a wall: both front paws reach together, then both hind paws push. */
-  climb: { offsets: [0.5, 0.55, 0, 0.05], duty: 0.5 },
+  climb: { down: [0.5, 0.45, 0, 0.95], duty: four(0.5) },
 };
 
 /**
@@ -36,7 +41,7 @@ const PATTERN: Record<GaitKind, { offsets: [number, number, number, number]; dut
 export function strideAt(kind: GaitKind, speed: number): number {
   if (kind === 'walk') return 0.125 + 0.078 * speed;
   if (kind === 'trot') return 0.155 + 0.078 * speed;
-  if (kind === 'bound') return 0.28 + 0.085 * speed;
+  if (kind === 'bound') return 0.3 + 0.19 * speed;
   return 0.175 + 0.065 * speed;
 }
 
@@ -64,6 +69,8 @@ export class CatGait {
   speed = 0;
   /** How big the cat is: its strides are as long as its legs. */
   scale = 1;
+  /** Fear, 0..1: at a bound it keeps lower and reaches longer. */
+  low = 0;
   private readonly prev = new THREE.Vector3();
   private yawWas = 0;
   private fresh = true;
@@ -140,12 +147,16 @@ export class CatGait {
     this.yawWas = yaw;
     this.prev.copy(s.origin);
     this.speed = moved / dt;
-    const stride = strideAt(this.kind, this.speed / this.scale) * this.scale;
+    const bound = this.kind === 'bound';
+    const stride = strideAt(this.kind, this.speed / this.scale) * this.scale * (bound ? 1 + 0.12 * this.low : 1);
     this.pace += (Math.min(1, this.speed / 3) - this.pace) * (1 - Math.exp(-dt * 6));
     /** Turning on the spot takes steps too: each paw has to go round the body. */
     const travel = moved + turned * 0.12;
     const stepping = this.speed > 0.03 || turned > dt * 0.3;
-    const { offsets, duty } = PATTERN[this.kind];
+    const { down, duty } = PATTERN[this.kind];
+    const cycle = (i: number) => (((this.phase - down[i]) % 1) + 1) % 1;
+    /** A bound sets off from the middle of the hind paws' push, where paws standing under it already are. */
+    if (bound && stepping && !this.wasStepping && this.still) this.phase = BOUND_SET_OFF;
     if (stepping) {
       this.phase = (this.phase + travel / stride) % 1;
       this.idle = 0;
@@ -155,7 +166,7 @@ export class CatGait {
       for (const [i, p] of this.paws.entries()) {
         if (p.planted) continue;
         p.from.copy(p.at).addScaledVector(s.up, -p.lift);
-        p.begun = Math.min((this.phase + offsets[i]) % 1, 0.98);
+        p.begun = Math.min(cycle(i), 0.98);
       }
     }
     if (this.wasStepping && !stepping) {
@@ -172,8 +183,9 @@ export class CatGait {
     for (const [i, p] of this.paws.entries()) {
       const home = this.placeHome(s, homes[i], this.home);
       if (stepping) {
-        const mine = (this.phase + offsets[i]) % 1;
-        const swinging = mine >= duty;
+        const mine = cycle(i);
+        const swinging = mine >= duty[i];
+        if (bound) p.hock = boundHock(mine, duty[i]);
         if (swinging && p.planted) {
           p.planted = false;
           p.from.copy(p.at);
@@ -182,14 +194,17 @@ export class CatGait {
         if (swinging) {
           p.swing = Math.max(0, (mine - p.begun) / (1 - p.begun));
           /** Aimed where the body will be when it lands, so it comes down as far ahead of its home as it will leave behind it. */
-          const ahead = (moved / Math.max(travel, 1e-6)) * ((1 - p.swing) * (1 - duty) * stride + duty * stride * 0.5);
-          p.to.copy(home).addScaledVector(s.forward, ahead);
+          const ahead = (moved / Math.max(travel, 1e-6)) * ((1 - p.swing) * (1 - duty[i]) * stride + duty[i] * stride * 0.5);
+          p.to.copy(home).addScaledVector(s.forward, ahead + (bound ? BOUND_SHIFT[i] * this.scale : 0));
           s.snap(p.to);
-          const k = p.swing * p.swing * (3 - 2 * p.swing);
-          p.at.lerpVectors(p.from, p.to, k);
-          p.lift = Math.sin(p.swing * Math.PI) * lift;
-          p.curl = Math.sin(Math.min(1, p.swing * 1.4) * Math.PI);
-          p.at.addScaledVector(s.up, p.lift);
+          if (bound) this.reachFor(i, p, s, homes[i].x);
+          else {
+            const k = p.swing * p.swing * (3 - 2 * p.swing);
+            p.at.lerpVectors(p.from, p.to, k);
+            p.lift = Math.sin(p.swing * Math.PI) * lift;
+            p.curl = Math.sin(Math.min(1, p.swing * 1.4) * Math.PI);
+            p.at.addScaledVector(s.up, p.lift);
+          }
         } else if (!p.planted) this.plant(p, i, s);
       } else if (p.planted && p.at.distanceTo(home) > 0.03 * this.scale && this.othersDown(i) && (this.idle > 0.08 || p.at.distanceTo(home) > 0.07 * this.scale)) {
         /** Standing, a paw left out of place is put back under it, one at a time; one left well out straight away. */
@@ -206,6 +221,42 @@ export class CatGait {
         if (p.swing >= 1) this.plant(p, i, s);
       }
     }
+  }
+
+  private readonly keys = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
+  private readonly tangents = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
+  private readonly first: number[] = [0, 0];
+  private readonly second: number[] = [0, 0];
+
+  /**
+   * A paw in the air at a bound goes where the body carries it rather than along the ground: one smooth sweep from
+   * where it left the roof, through the two reaches the bound asks of it as the body is now, to where it will land.
+   */
+  private reachFor(i: number, p: Paw, s: Support, across: number): void {
+    const [t1, t2] = boundReach(i, this.phase, this.low, this.first, this.second);
+    const k = this.scale;
+    const [from, a, b, to] = this.keys;
+    from.copy(p.from);
+    to.copy(p.to);
+    for (const [key, [along, up]] of [[a, this.first], [b, this.second]] as const) {
+      key.copy(s.origin).addScaledVector(this.side, across).addScaledVector(s.forward, along * k).addScaledVector(s.up, up * k);
+    }
+    const times = [0, t1, t2, 1];
+    const [m0, m1, m2, m3] = this.tangents;
+    m0.subVectors(a, from).multiplyScalar(0.5 / t1);
+    m1.subVectors(b, from).divideScalar(t2);
+    m2.subVectors(to, a).divideScalar(1 - t1);
+    m3.subVectors(to, b).multiplyScalar(0.3 / (1 - t2));
+    const j = p.swing < t1 ? 0 : p.swing < t2 ? 1 : 2;
+    const h = times[j + 1] - times[j];
+    const u = (p.swing - times[j]) / h;
+    const u2 = u * u, u3 = u2 * u;
+    p.at.copy(this.keys[j]).multiplyScalar(2 * u3 - 3 * u2 + 1)
+      .addScaledVector(this.tangents[j], (u3 - 2 * u2 + u) * h)
+      .addScaledVector(this.keys[j + 1], -2 * u3 + 3 * u2)
+      .addScaledVector(this.tangents[j + 1], (u3 - u2) * h);
+    p.lift = 0;
+    p.curl = i < 2 ? 1.3 * Math.sin(Math.PI * Math.min(1, p.swing / 0.55)) : 0.9 * Math.sin(Math.PI * p.swing);
   }
 
   private plant(p: Paw, i: number, s: Support): void {
