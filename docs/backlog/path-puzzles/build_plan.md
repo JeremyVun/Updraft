@@ -746,7 +746,75 @@ checks and saves for them. design.md "The room rethought", steps 6 to 8, is the 
   it stuck, lantern lit; `church` restores by `RoofRun.skipToEnd`.
 Gate: `drowned-run-check` from the drift through the belfry and the boat home to the storm, with real gestures; the
 saves; `playthrough.mjs` through the room; a `VIDEO=1` webm of the nave to the storm for the lead.
-Done: [ ]
+Done: [x] (branch `proto-drowned-refuge`). The beats, timed from her reaching the tower's foot (`ChurchArrival`,
+steps `foot`, `climb`, `nest`, `sea`, `ring`, `down`, `wait`, `board`, `aboard`):
+- **The climb.** The cat leaps from the churchyard's railings onto the nave's slates beside her and runs up the ivy
+  (`catClimb` 1.9) into the west face's north light, down onto the boards and round its kittens (curled about 13 s in,
+  `kittens.nestle` 1.2 s later). She follows once it is `followAt` 2.4 m up (about 5.7 s), the plane tucked away from
+  the ivy's foot until she is back in the boat, and climbs 8.5 s (`Climb`). The fog (`DarkBank` through `front`,
+  `level` and `faces` only; `faces` is let go at the church) waits `behind` 16 m back along the nave while she is low,
+  comes to the tower as she reaches the sill and on to `past` 55 m beyond it, where it stops, its `level` easing from
+  the run's 7.3 m to `sea` 6.8 m, just under the sills. `darkWayPoint` now runs on past the tower's foot the way the
+  way's last stretch goes, so the front can stand beyond the tower.
+- **The kittens** (`nest`, 6.4 s, about 14.5 s in): she kneels in the opening facing the straw; a kitten (`FOUND`, the
+  ginger) lifts its head and mews, comes to the edge of the straw by her (`kittenAside`), sits looking up and mews
+  again, and she leans to it.
+- **The fog sea** (`sea`, 6 s): she stands in the opening turned `lookRound` toward the north water; a quiet breath.
+- **The bell** (`ring`, live about 27 s in; first rung at 29 s in the recorded play): one firm stroke a ring. Each ring
+  emits `BellWaves` at `wavesAt` of the fog's top and sinks the fog a step over `sinkFor` 3.2 s (6.8, 5.35, 3.9, 2.45,
+  1.0 m); `answerAfter` 0.7 s later the lantern answers: `LanternGlow` (a warm glow drawn over the fog where the boat's
+  flame is, fading as the fog sinks below it) swells and the boat glides a stretch along `HOME_WAY` (`answers` 10, 42,
+  72, 100 %). Measured: the boat 51, 48.6, 40, 30.7 and 21.8 m from the berth before and after each answer; four rings
+  over 12.3 s with four strokes; the lantern on screen each time at about (-0.22, 0.13), (-0.21, 0.04), (-0.24,
+  -0.07), (-0.31, -0.26). `HOME_WAY` comes in from the north-east open water so every answer falls just left of the
+  tower's north-west corner in the bell's view, in both aspects. The bell's own valve (90 s) rings it for a stalled
+  player.
+- **The boat home** (`down`, `wait`, `board`): `answerFor` 3.8 s after the last answer the sail is the player's
+  (`invitesSail`, `bringSpeed` 2.6) round the tower's north side (`BRING_WAY`) to `NAVE_BERTH`, 13.5 s and seven
+  strokes in the recorded play; meanwhile she climbs down (7.1 s, `crossings.climb.down` 0.72 and `feel` 0.16; worst
+  hand gap 0.034 m, foot slip 0.018 m), walks the ridge (`IVY_STEP`) and down `NAVE_NORTH`, and steps aboard when it
+  lies there (18 s after the sail was hers). The cat gets up `catUpAfter` 2.5 s into her climb down and comes to the
+  lip of the sill she climbed out over, the kitten beside it (`Kittens.toSill`).
+- **The look up** (`aboard`, `lookUpFor` 5.5 s): she turns on the thwart to the cat (`lookUpAt` 0.6 s, the side away
+  from the lens), the cat's slow blink at `blinkAt` 2.4 s and a soft chirrup `chirrupAfter` 2.2 s later; the fog closes
+  evenly from `closeAfter` 1.5 s over `closeFor` 20 s, rising to `closedLevel` 6, and darkens into the storm's night, which starts
+  (`gather`) when the look up ends. Measured on to the beach: the light out 6.5 s into the storm and in frame, the
+  frame darkening at most 9.5 a second, landed 51 s after she sat down.
+- **Saves**: `church` through the climb (resumes at the tower's foot), `belfry` (new) from the kittens until she
+  steps aboard (resumes standing in the opening over the fog sea, the cat curled round its kittens, the bell about to
+  be hers, the boat away in the fog), `storm` from boarding (resumes seated at the berth, the cat and kitten on the
+  sill, so the look up plays again). `?chapter=belfry` is the QA start. Schema: one point added, arities unchanged.
+- **The look.** The tower box is cut at `BELFRY_FOOT` and 7b's `Belfry` stands on it (the old lancets, sills, surrounds,
+  cornice and the single ivy stem gone; `BELFRY_SOUTH`/`NORTH` sit in the reveals of the south and north faces' west
+  lights); `IvyFace` covers the west face from the nave's ridge to the north light's sill (`IVY_FOOT`, `IVY_SILL`).
+  Its leaves are a deep, cool green that the low sun pales rather than gilds. In the opening and over the sill she is
+  lit as the room is (`Traveller.room`, the child shader's `uInRoom`: the sky only at the windows and the low sun only
+  as it comes in at her light). The kittens' pats and mews go into the cat's `heard`.
+- **The lens** (`tuning.drownedCamera.church`, views as eye and target from the tower's middle, heights over the sill
+  or over her while she climbs, an optional lens; a critically damped glide of `glide` 1.8 s about the tower's middle,
+  never through it): from the run's lens round the west side to 7b's climb view from the north, rising with her; a cut
+  to the nest, close outside the west face looking past her into the other light at the straw; a cut out to the wide
+  view west of the tower over the fog sea; a glide in to 7b's bell view turned on the tower's north-west corner (her
+  from behind in her light, the bell in the other, the lantern's answers left of the tower; `find` 0.1 leans toward
+  each answer); a glide low over the north water from the west as she climbs down and the boat comes in; the look-up
+  two-shot from the north-west with a 1.3 lens; then the departure goes with her, turns to between her and the
+  lighthouse's lamp as its light falters (`lampFrom`..`lampTo`, `lampZoom` 0.75; upright it favours the lamp) and hands
+  over to the storm's frame from `leaveFrom` 6.6 s over 12 s.
+- **Checks**: `drowned-run-check` (new `FROM=belfry`) climbs, rings the bell with strokes until four rings, sails the
+  boat home, and reports the beats' times, each ring's boat distance before and after its answer and the lantern on
+  screen, the cat and kitten on the sill at the slow blink, and the rings' times into the recording; it fails if the
+  bell does not ring four times, the lantern comes no nearer or is out of frame when it answers, or the cat is off the
+  sill. `progress-check` restores `church` (plays on to her climbing), `belfry` (to the bell live) and `storm`.
+Weak: the kittens read small through the other light and the kitten's coming to her is half behind the shaft, her
+back to the lens; at the slow blink the cat is about 30 px tall at 1600 wide, so the blink reads in motion only; the
+cat's run up beside her at the ivy's foot is behind her in the climb view, and its leap onto the wall is slow (the
+cat's own launch); the fog sea is 7d's to make read (today a pink tableland whose flank shows far roofs on open
+water); `LanternGlow` stands in for the fog's lantern halo, which is faint from above: check the two do not double
+once 7d's halo lands; the hand-over to the storm's frame ends with a one-frame nudge (54 deg/s); the boat comes home
+from the north-east, not the south where it was lost. For Phase 8: the views are the tuning arrays above; `HOME_WAY`
+is laid for the bell's view and moves with it. For Phase 9: `drownedScore` still returns `still` through the church;
+the cues are `church.step` (`climb`, `nest`, `sea`, `ring`, `down`, `aboard`), `rings`, `answered` and `aboardFor`,
+the bell's note is B (MIDI 59).
 
 ### Phase 7d: the fog's body and its first act (after 7a; parallel with 7c)
 Owns: the fog's look (`seaFog` and its helpers in `src/world/atmosphere.ts`, the hues and tints in

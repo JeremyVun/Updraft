@@ -2123,11 +2123,11 @@ export const tuning = {
       find: 0.1, findFor: 3,
       /**
        * Seconds after the look up that the lens looks across to between her and the lighthouse's lamp as its light
-       * falters, and is there; how much of the way it goes, how much it favours her over the lamp (upright, where the
-       * two cannot both be held, the lamp, which must be seen going out) and how wide the lens goes to hold them both;
-       * and when it gives way to the storm's frame, and how long that takes.
+       * falters, and is there; how much of the way it goes, how much it favours her over the lamp and how wide the
+       * lens goes to hold them both (upright, wider); and when it gives way to the storm's frame, and how long that takes.
        */
-      lampFrom: 0.5, lampTo: 4, lampAim: 1, lampHer: 0.55, uprightLampHer: 0.4, lampZoom: 0.75, leaveFrom: 6.6, leaveFor: 12,
+      lampFrom: 0.5, lampTo: 4, lampAim: 1, lampHer: 0.55, uprightLampHer: 0.5, lampZoom: 0.75, uprightLampZoom: 0.62,
+      leaveFrom: 6.6, leaveFor: 12,
     },
     /** Follow the boat into the streets; notice the church from that travelling view. */
     roofFromZ: -1260, roofUntilZ: -1360,

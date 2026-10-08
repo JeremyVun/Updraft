@@ -734,9 +734,10 @@ export class ChurchArrival {
     this.inside = inside;
     const want = this.orbitWant.set(Math.atan2(this.eye.z, this.eye.x), Math.hypot(this.eye.x, this.eye.z), this.eye.y);
     if (!this.bound && !this.lensCut && this.camera) {
+      /** From where the lens is and the way it actually looks, which the rig's framing may have turned off the run's aim. */
       const e = this.camera.position;
       this.orbitNow.set(Math.atan2(e.z - C.z, e.x - C.x), Math.hypot(e.x - C.x, e.z - C.z), e.y);
-      this.targetNow.copy(shot.target);
+      this.targetNow.copy(e).addScaledVector(this.camera.getWorldDirection(this.tmp), e.distanceTo(shot.target));
       this.eyeSpeed.set(0, 0, 0);
       this.targetSpeed.set(0, 0, 0);
     } else if (this.lensCut) {
@@ -802,7 +803,8 @@ export class ChurchArrival {
       + Math.atan2(LAMP.y - from.y, Math.hypot(LAMP.x - from.x, LAMP.z - from.z))) / 2;
     between.y = from.y + Math.tan(up) * flat;
     this.mixTarget.addVectors(head, this.goneAim).lerp(between, light).lerp(shot.target, away);
-    const zoom = THREE.MathUtils.lerp(THREE.MathUtils.lerp(this.zoomNow, k.lampZoom, light), shot.zoom ?? 1, away);
+    const lampZoom = THREE.MathUtils.lerp(k.uprightLampZoom, k.lampZoom, wide);
+    const zoom = THREE.MathUtils.lerp(THREE.MathUtils.lerp(this.zoomNow, lampZoom, light), shot.zoom ?? 1, away);
     this.write(shot, this.mixEye, this.mixTarget, zoom);
   }
 
