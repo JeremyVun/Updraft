@@ -162,6 +162,7 @@ export class StageChapter implements Chapter {
         this.mill = new MillYard(this.cast, c.position);
         this.cast.cat.objects[0].parent?.add(...this.mill.objects);
       }
+      this.mill.catless = new URLSearchParams(location.search).has('catless');
       this.mill.play();
       this.pace = this.mill.frame(this.shot);
       this.cameraCut++;

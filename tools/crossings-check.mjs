@@ -347,11 +347,12 @@ const RUNS = {
     game.notes.push(`one firm stroke: fill ${most.toFixed(2)} within half a second`);
     expect(most > 0.35, `one firm stroke did not visibly fill it (${most})`);
     await game.shot('answering');
-    let strokes = 1;
+    let strokes = 1, clearAt = null;
     let held = null;
     for (; strokes < 30; strokes++) {
       held = await game.until((s) => s.held, 0.6, watch.see);
       if (held) break;
+      if (clearAt === null && (await game.state()).clear) clearAt = strokes;
       const aim = await game.aim('sheet');
       await game.stroke(aim, aim.heading, 0.6, 14);
     }
@@ -370,7 +371,7 @@ const RUNS = {
       strokes++;
     }
     expect(over, `she was never set down (${JSON.stringify(await game.state())})`);
-    game.notes.push(`set down after ${strokes} strokes in all`);
+    game.notes.push(`set down after ${strokes} strokes in all, ${strokes - (clearAt ?? strokes)} of them once the cat was off the line`);
     await game.seconds(0.4);
     await game.shot('across');
     const done = await game.until((s) => s.phase === 'over', 10, watch.see);

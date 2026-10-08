@@ -5,8 +5,7 @@ import type { TreeWay } from './crossings/tree-crossing';
 import type { SwingSpot } from './crossings/rope-swing';
 import type { SwingWay } from './crossings/swing-crossing';
 import type { HouseType } from './drowned-houses';
-import { HUB_HEIGHT, SAIL, railAt } from './crossings/windmill';
-import { tuning } from '../tuning';
+import { HOIST, HUB_ABOVE, type MillSpot } from './crossings/windmill';
 
 /**
  * Her way over the roofs, laid by hand among the generated village: from the roof the becalmed boat drifts against,
@@ -260,17 +259,16 @@ const W3_ON = onFrom(W3_TURN, 3.35, 0.6, COPING);
  * dwells, its top level with that rail; the high roof stands on along the sails' plane beyond the rail's tip as it
  * dwells at the top, its ridge in line with the rail at the tip's height, its gable end just clear of the sweep.
  */
-const MILL_RIDE = tuning.crossings.mill;
-const MILL_BOARD = railAt(MILL_RIDE.board, MILL_RIDE.stand);
-const MILL_TIP = railAt(MILL_RIDE.top, SAIL.to);
+const SAILS = 4.5;
+const RIDGE_Z = 0.42;
 export const MILL = {
-  hub: new THREE.Vector3(21, HUB_HEIGHT, -1491),
+  hub: new THREE.Vector3(21, 5.39 + HUB_ABOVE, -1491),
   facing: -1.7,
   /** Nothing stands within this of the hub in the sails' plane, a hand's breadth beyond the sweep. */
-  reach: SAIL.reach + 0.05,
-  /** Her wall: the line it runs out along, where its end stands clear of the sails, and how far out it begins. */
-  wallX: MILL_BOARD.x + 0.45, wallEnd: 0.8, wallFrom: 6.5,
-  waitTop: MILL_BOARD.y, offRidge: MILL_TIP.y,
+  reach: SAILS + 0.05,
+  /** Her wall: the line of the hoist's rope, from out in front of the sails in under them to the basket. */
+  wallX: HOIST.x, wallEnd: HOIST.z + HOIST.half + 0.25, wallFrom: 6.5,
+  waitTop: 2.82, offRidge: 5.39,
   /** The high roof's gable end, and where she steps off onto its ridge, a stride beyond the rail's tip. */
   gable: -4.5, off: -4.9,
 };
@@ -283,12 +281,12 @@ const MILL_HOUSE = sunk({ yaw: MILL.facing - Math.PI / 2, len: 8, depth: 5.2, wa
   MILL.waitTop + 0.2, { along: -4, across: 0, at: atMill(MILL.wallX, MILL.wallFrom + 0.1, 0) });
 const MILL_FOOT = onRoof(MILL_HOUSE, -1, -acrossAt(MILL_HOUSE, COPING));
 const MILL_WALL_FROM = atMill(MILL.wallX, MILL.wallFrom, MILL.waitTop);
-const MILL_WAIT = atMill(MILL.wallX, 1.02, MILL.waitTop);
+const MILL_WAIT = atMill(MILL.wallX, MILL.wallEnd + 0.2, MILL.waitTop);
 /** The high roof beyond the mill, its gable end to the sails and its ridge in line with the rail. */
 const HIGH = { len: 9, depth: 5.6 };
 const HIGH_HOUSE = sunk({ yaw: MILL.facing, len: HIGH.len, depth: HIGH.depth, wall: 3.4, rise: 3.1, thatched: false, stacks: [-1], stack: 1.2 },
-  MILL.offRidge, { along: 0, across: 0, at: atMill(MILL.gable - HIGH.len / 2, SAIL.forward, 0) });
-const MILL_OFF = atMill(MILL.off, SAIL.forward, MILL.offRidge);
+  MILL.offRidge, { along: 0, across: 0, at: atMill(MILL.gable - HIGH.len / 2, RIDGE_Z, 0) });
+const MILL_OFF = atMill(MILL.off, RIDGE_Z, MILL.offRidge);
 /** Down off the high roof's back over a lean-to, to a hop onto a garden wall beyond. */
 const HIGH_DOWN = 0;
 const HIGH_LEAN: LeanTo = { house: HIGH_HOUSE, side: -1, from: HIGH_DOWN - 1.6, to: HIGH_DOWN + 1.6, out: 2.2,
@@ -408,7 +406,7 @@ export const WAY = {
   millSlope: strip(MILL_FOOT, onRoof(MILL_HOUSE, -1, 0), 0.7),
   millRidge: strip(onRoof(MILL_HOUSE, -1, 0), onRoof(MILL_HOUSE, -3.95, 0), RIDGE),
   millWall: strip(MILL_WALL_FROM, atMill(MILL.wallX, MILL.wallEnd, MILL.waitTop), 0.25),
-  highRidge: strip(atMill(MILL.gable + 0.05, SAIL.forward, MILL.offRidge), onRoof(HIGH_HOUSE, HIGH_DOWN, 0), RIDGE),
+  highRidge: strip(atMill(MILL.gable + 0.05, RIDGE_Z, MILL.offRidge), onRoof(HIGH_HOUSE, HIGH_DOWN, 0), RIDGE),
   highEast: strip(onRoof(HIGH_HOUSE, HIGH_DOWN, 0), HIGH_EAVE, 0.7),
   highLeanTo: strip(leanAt(0.3), LEAN_EAVE, 0.6),
   fieldWall: strip(W4_FROM, W4_TURN, 0.28),
@@ -458,10 +456,8 @@ export const TREE_SITE: { spot: TreeSpot; way: TreeWay } = {
   way: { wait: along(RIDGE_END, ALONG, -1.25), stepOff: TREE_OFF, onward: along(OVER, ALONG, -1.9) },
 };
 export const MILL_SITE = {
-  spot: { hub: MILL.hub, facing: MILL.facing },
-  way: { wait: MILL_WAIT, stepOff: MILL_OFF, onward: atMill(MILL.off - 1.5, SAIL.forward, MILL.offRidge) },
-  /** The stride off the rail's tip onto the high ridge's cap, walked only off the sail. */
-  stride: strip(atMill(MILL_TIP.x + 0.15, SAIL.forward, MILL.offRidge), atMill(MILL.gable + 0.1, SAIL.forward, MILL.offRidge), RIDGE),
+  spot: { hub: new THREE.Vector2(MILL.hub.x, MILL.hub.z), facing: MILL.facing, from: MILL.waitTop, to: MILL.offRidge, reach: SAILS } satisfies MillSpot,
+  way: { wait: MILL_WAIT, stepOff: MILL_OFF, onward: atMill(MILL.off - 1.5, RIDGE_Z, MILL.offRidge) },
 };
 export const SWING_SITE: { spot: SwingSpot; way: SwingWay } = {
   spot: { pivot: new THREE.Vector3(SWING_X, 7.3, GREEN_NORTH - 0.34), toward: new THREE.Vector2(0, -1), rope: 7 },
@@ -478,8 +474,8 @@ export const CAT_WAY = {
   tree: [RIDGE_END, along(RIDGE_END, ALONG, 2.0, RAILINGS_TOP + RAILING_RISE),
     along(along(RIDGE_END, ALONG, 2.0), ACROSS_LANE, LANE - 0.6, RAILINGS_TOP + RAILING_RISE), along(OVER, ALONG, 2.0, COPING)],
   mill: [onRoof(MILL_HOUSE, -3.6, 0), atMill(MILL.wallX, 1.3, MILL.waitTop),
-    atMill(MILL.gable - 0.5, 1.3, slatesAt(HIGH_HOUSE, 1.3 - SAIL.forward)),
-    atMill(MILL.gable - 0.9, SAIL.forward, MILL.offRidge), atMill(MILL.gable - 3.9, SAIL.forward, MILL.offRidge)],
+    atMill(MILL.gable - 0.5, 1.3, slatesAt(HIGH_HOUSE, 1.3 - RIDGE_Z)),
+    atMill(MILL.gable - 0.9, RIDGE_Z, MILL.offRidge), atMill(MILL.gable - 3.9, RIDGE_Z, MILL.offRidge)],
   swing: [onRoof(GREEN_HOUSE, SWING_X + 5 - GREEN_HOUSE.x, 0), onRoof(GREEN_HOUSE, SWING_X + 5 - GREEN_HOUSE.x, -3.1),
     new THREE.Vector3(SWING_X + 5, RAILINGS_TOP + RAILING_RISE, GREEN_NORTH - 0.6),
     new THREE.Vector3(SWING_X + 5, RAILINGS_TOP + RAILING_RISE, TOWER_SOUTH + 0.15)],

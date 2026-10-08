@@ -2130,31 +2130,36 @@ export const tuning = {
     },
     mill: {
       /**
-       * The ride, as the boarding sail's angle above level (radians): it dwells for her at `board` (a little below
-       * level, so the rail slopes gently down toward its tip) and again at `top`, never steeper than she can stand on.
-       * How far out along the rail she stands (m from the hub), and where the empty sails rest.
+       * Where the sails rest, as the first sail's angle above level on the left (radians): its stock's end low over her
+       * roof's chimney, for the cat. How far the basket rises per radian the sails turn (m): about one turn of the
+       * sails winds her up the whole height.
        */
-      board: -0.26, top: 0.44, stand: 3.4, rest: -0.95,
+      rest: -1.05, rise: 1.1,
       /**
-       * Turning: rotor radians a second squared per radian a second the cursor goes round the hub on screen, how
-       * quickly a turning rotor loses speed with nobody turning it (per second), and its speed cap empty and with her
-       * aboard (radians a second). The cursor counts from `near` to `far` screen heights from the hub.
+       * Turning: sail radians a second asked for per radian a second the cursor goes round the hub on screen, the
+       * seconds they take to come up to it (longer with her weight on the hoist), how fast they coast down when it
+       * stops (per second), and their speed cap empty, loaded, and while the cat bounds along a sail. The cursor counts from `near` to `far` screen
+       * heights from the hub.
        */
-      gain: 0.16, drag: 1.1, cap: 0.6, capAboard: 0.24, near: 0.05, far: 0.7,
-      /** Below this speed a coasting rotor brakes to a stop over `brakeFor` seconds. */
-      settleSpeed: 0.07, brakeFor: 0.45,
-      /** How far before a dwell it starts to ease in (radians), and the creep it never eases below. */
-      ease: 0.35, creep: 0.03,
-      /** Wrong-way circling only rocks it: the most it gives back, empty and with her aboard (radians), and the spring it rocks on. */
-      rockMax: 0.07, rockAboard: 0.03, rockStiffness: 14, rockDamping: 4.5,
-      /** The fog's breath on the empty sails: how far they sway either way (radians) and the seconds of one sway. */
-      breath: 0.05, breathFor: 7.5,
-      /** Seconds she looks at the sail before stepping on, and her pace on the rail as a share of a walk. */
-      boardAfter: 0.5, railStroll: 0.45,
+      ratio: 0.3, spinUp: 0.45, spinUpAboard: 0.6, drag: 1.2, dragAboard: 3.5, cap: 1.7, capAboard: 1.45, capCat: 1.0, near: 0.04, far: 0.85,
+      /** Below this speed a coasting rotor brakes to a stop over `brakeFor` seconds, the pawl clicking it home. */
+      settleSpeed: 0.12, brakeFor: 0.35,
+      /** How far before the top it starts to ease in (radians of sail), and the creep it never eases below. */
+      ease: 0.3, creep: 0.3,
+      /** Wrong-way circling only rocks it against the pawl: the most it gives, empty and loaded (radians), and the spring. */
+      rockMax: 0.05, rockAboard: 0.02, rockStiffness: 14, rockDamping: 4.5,
+      /** The fog's breath on the idle sails: how far they sway either way (radians) and the seconds of one sway. */
+      breath: 0.035, breathFor: 7.5,
+      /** The ratchet's teeth round the drum, and the radians of sail between creaks of the cap. */
+      teeth: 12, creakEvery: 0.6,
+      /** Seconds she looks at the basket before stepping in, and her pace stepping in and out as a share of a walk. */
+      boardAfter: 0.4, stroll: 0.55,
       /** Seconds without a useful turn before the drawn spiral, sooner after a wrong-way turn; the world's own breath after `valveAfter`. */
-      inviteAfter: 5, inviteWrong: 1.6, valveAfter: 90, valveDrive: 2.2,
+      inviteAfter: 5, inviteWrong: 1.6, valveAfter: 90, valveDrive: 3.5,
       /** The spiral: seconds to draw it, seconds before it comes again, its inner and outer radius (m) and its turns. */
-      inviteSweep: 2.2, invitePause: 1.2, inviteInner: 0.7, inviteOuter: 2.7, inviteTurns: 1.25, inviteAlpha: 0.8, inviteWidth: 0.07,
+      inviteSweep: 2.4, invitePause: 1.2, inviteInner: 1.4, inviteOuter: 5.2, inviteTurns: 1.25, inviteAlpha: 0.8, inviteWidth: 0.1,
+      /** The first sail's angle above level once the cat, ridden up, leaps from it for the cap. */
+      catLeap: 0.6,
     },
     sheet: {
       /**
@@ -2169,13 +2174,13 @@ export const tuning = {
       /** How fast a stroke's air spreads over the cloth from where it met it (sheet lengths a second). */
       spreadSpeed: 2.4,
       /**
-       * A stroke's air arrives a beat late (s) and ebbs over `hold` s. Fill asked for per screen height a stroke goes
-       * up the line across it, and back down it; how full or how far back it can be pressed. Strokes at `gentle`
-       * screen heights a second count for `soft` of that, at `firm` for all of it. How near the cloth on screen a
-       * stroke must pass (screen heights).
+       * A stroke's air arrives a beat late (s) and ebbs over `hold` s. Fill asked for per sheet length a stroke
+       * sweeps up the line across it (measured on the sheet, so its size on screen does not matter), and back down it;
+       * how full or how far back it can be pressed. Strokes sweeping `gentle` sheet lengths a second count for `soft`
+       * of that, at `firm` for all of it. How near the cloth on screen a stroke must pass (screen heights).
        */
-      lag: 0.14, hold: 1.1, push: 2.3, against: 0.7, pressMax: 1.25, backMax: 0.45,
-      gentle: 0.5, firm: 2.2, soft: 0.3, reach: 0.06,
+      lag: 0.14, hold: 1.1, push: 0.75, against: 0.23, pressMax: 1.25, backMax: 0.45,
+      gentle: 1.3, firm: 7, soft: 0.35, reach: 0.06,
       /** How quickly the fill follows the press (per second), and the fill that sounds full. */
       fillRate: 5, fullAt: 0.55,
       /** The line's slack as a share of its length; how far her weight and the cat's sag it (m). */
@@ -2183,16 +2188,17 @@ export const tuning = {
       /** The low sun through the cloth from behind. */
       through: 0.8,
       /**
-       * She takes hold once it is `takeAt` full for `takeFor` seconds, reaching up for `reachFor` seconds. Full, it
-       * carries her `carry` metres a second up the line, nothing below `carryFrom`; her speed eases over `coast` s.
+       * She takes hold once it is `takeAt` full for `takeFor` seconds, reaching up for `reachFor` seconds. Full and
+       * freshly blown, it carries her `carry` metres a second up the line, nothing below `carryFrom`; her speed eases
+       * over `coast` s. What carries her is the stroke itself: its gust ebbs over `gustFor` s, sooner than the cloth sags.
        */
-      takeAt: 0.55, takeFor: 0.2, reachFor: 0.5, carry: 1.5, carryFrom: 0.3, coast: 0.5,
+      takeAt: 0.55, takeFor: 0.2, reachFor: 0.5, carry: 2.2, carryFrom: 0.3, coast: 0.3, gustFor: 0.8,
       /** How her body swings under her hands as the sheet starts and stops (per second squared, per second). */
       swingPull: 14, swingDamping: 2.2,
-      /** Hanging, how much of the way from up the line toward the lens she turns, so her face is seen. */
-      turnToLens: 0.85,
+      /** Hanging, how much of the way from up the line toward the lens she turns, so her face is seen side on. */
+      turnToLens: 0.6,
       /** Seconds without a useful stroke before the drawn gust; with no progress before the world's own gusts. */
-      inviteAfter: 5, valveAfter: 90, valveEvery: 1.4, valvePush: 0.45,
+      inviteAfter: 5, valveAfter: 90, valveEvery: 1.4, valvePush: 1.5,
     },
   },
   /** One continuous passage from the last drowned houses to the forest beach. */

@@ -16,13 +16,21 @@ export function lineFloor(points: readonly THREE.Vector3[]): (x: number, z: numb
   };
 }
 
+/** Where a cat being driven through a piece's steps has got to: the step it is on or waiting to start, all done at the end. */
+export interface CatSteps {
+  readonly step: number;
+  /** Call every frame: a step that waits on something starts once it holds. */
+  update(): void;
+}
+
 /**
  * QA yards' stand-in for the room's cat driving: the cat through a piece's steps one after another, `onStep` as each
  * begins, then sitting looking at `look` and `onDone`.
  */
 export function playCatSteps(cat: Cat, steps: readonly CatStep[], look: THREE.Vector3, speeds: { run: number; narrow: number },
-  onStep: (i: number) => void, onDone: () => void): void {
-  const step = (i: number) => {
+  onStep: (i: number) => void, onDone: () => void): CatSteps {
+  let at = 0, pending = false;
+  const go = (i: number) => {
     const m = steps[i];
     if (!m) {
       cat.rest('sit', look);
@@ -32,12 +40,28 @@ export function playCatSteps(cat: Cat, steps: readonly CatStep[], look: THREE.Ve
     onStep(i);
     const on = () => step(i + 1);
     const last = i === steps.length - 1;
+    const then = last ? 'sit' : m.frame ? 'crouch' : 'stand';
+    const sight = last ? look : null;
     if ('run' in m) {
       const from = cat.position.clone();
       cat.run(m.run, m.floor ?? lineFloor([from, ...m.run]), { pace: 'run', speed: m.narrow ? speeds.narrow : speeds.run, narrow: m.narrow,
         then: last ? 'sit' : 'stand', look: last ? look : null }, on);
-    } else if ('hop' in m) cat.hop(m.hop, { then: last ? 'sit' : 'stand', arc: 0.25, look: last ? look : null }, on);
-    else cat.leap(m.leap, { then: last ? 'sit' : 'stand', arc: 0.35, look: last ? look : null }, on);
+    } else if ('hop' in m) cat.hop(m.hop, { frame: m.frame, upright: m.upright, then, arc: m.frame ? undefined : 0.25, look: sight, gather: m.gather, yaw: m.yaw }, on);
+    else cat.leap(m.leap, { frame: m.frame, upright: m.upright, then, arc: m.frame ? undefined : 0.35, look: sight, gather: m.gather, yaw: m.yaw }, on);
+  };
+  const step = (i: number) => {
+    at = i;
+    pending = !!steps[i]?.when && !steps[i].when!();
+    if (!pending) go(i);
   };
   step(0);
+  return {
+    get step() { return at; },
+    update() {
+      if (pending && steps[at].when!()) {
+        pending = false;
+        go(at);
+      }
+    },
+  };
 }
