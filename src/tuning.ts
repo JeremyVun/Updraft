@@ -91,9 +91,12 @@ export const tuning = {
     /**
      * The drowned chase's music: the fog's front from `near` metres behind her (the pulse at its tightest) to `far` (at
      * its easiest), the share of that while she walks rather than works a piece, how much of it is eased once she is
-     * across one and over how long (s), and how long the music takes to follow (s).
+     * across one and over how long (s), and how long the music takes to follow (s). Where a phrase begins it turns to
+     * the pressing progression at `press` and back at `relax`; at each bar line its pulse fills to quarters at
+     * `quarters` and to eighths at `eighths`, and thins again `give` below them.
      */
-    drownedChase: { near: 7, far: 19, walking: .75, relief: .6, reliefFor: 5, ease: 1.5 },
+    drownedChase: { near: 7, far: 19, walking: .75, relief: .6, reliefFor: 5, ease: 1.5,
+      press: .55, relax: .3, quarters: .35, eighths: .7, give: .06 },
     /** Approved distant foghorn; source gain excludes the listening export boost. */
     foghorn: { midi:50, level:.036, pan:.24, attack:1.1, duration:4.6,
       hold:2.65, dryLevel:.22, reverbSend:.35, predelay:.18, diffuseLevel:.8, diffuseSeconds:4.4,

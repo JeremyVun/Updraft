@@ -1,12 +1,14 @@
 import { DREAM_NOTES, DREAM_PALETTE, DREAM_HARMONY, type DreamKind } from './dream-score-data';
-import { DROWNED_CUES, type CueNote, type DrownedCuePhase } from './drowned-cues';
+import { DROWNED_CUES, type Conductor, type CueNote, type DrownedCuePhase, type Passage } from './drowned-cues';
 import { phrasePosition, phraseHandoff, schedulePhrase, type Phrase } from './phrasing';
 import { tuning } from '../tuning';
 
 export type MirrorScorePhase = 'approach' | 'search' | 'one' | 'two' | 'three' | 'constellation' | 'depart';
 export type DrownedScorePhase = 'rooftops' | DrownedCuePhase | 'resume' | 'gather' | 'loss' | 'after';
 type Phase = MirrorScorePhase | DrownedScorePhase;
-interface Section extends Phrase<CueNote> { chords: { at: number; tones: readonly number[] }[] }
+interface Section extends Phrase<CueNote> {
+  chords: { at: number; tones: readonly number[] }[]; fade?: number; conduct?: () => Conductor;
+}
 
 function section(kind: DreamKind, from: number, to: number, seconds = to - from): Section {
   const harmony = DREAM_HARMONY[kind];
@@ -48,6 +50,8 @@ interface Part {
   phase: Phase; bus: GainNode; echo: GainNode | null; echoes: AudioNode[];
   epoch: number; cycle: number; next: number; stopped: boolean;
   voices: Set<OscillatorNode>; cleanup: OscillatorNode | null;
+  /** A conducted section's passage now playing, where it began, and the bar and pulse it has reached. */
+  conductor: Conductor | null; passage: Passage | null; start: number; bar: number; fill: number;
 }
 
 /** Approved notes/instruments, with independent phrase clocks following actual story progress. */
@@ -60,22 +64,25 @@ export class DreamScore {
     this.bus=ctx.createGain();this.bus.gain.value=0;this.bus.connect(output);
   }
   chordAt(when: number): readonly number[] {
+    const passage=this.current?.passage;
+    if(passage)return [...passage.chords].reverse().find(c=>c.at<=when-this.current!.start)?.tones??passage.chords[0].tones;
     const pattern=DREAM_SECTIONS[this.current?.phase ?? (this.kind==='mirror'?'approach':'rooftops')];
     const position=this.current?phrasePosition(pattern,this.current.epoch,when):0;
     return [...pattern.chords].reverse().find(c=>c.at<=position)!.tones;
   }
-  /** `tension`, 0 to 1, keeps each note that asks for it to the moments the story presses that hard (the chase). */
+  /** `tension`, 0 to 1, is how hard the story presses (the chase); a conducted section reads it at its boundaries. */
   update(phase: Phase, level: number, until=Infinity, tension=0): void {
     if(this.stopped)return;
-    const now=this.ctx.currentTime;
+    const now=this.ctx.currentTime,section=DREAM_SECTIONS[phase],fade=section.fade??tuning.audio.dreamPhaseFade;
     this.bus.gain.setTargetAtTime(level,now,.8);
     if(this.current?.phase!==phase) {
-      if(this.current)this.release(this.current,tuning.audio.dreamPhaseFade);
+      if(this.current)this.release(this.current,fade);
       const bus=this.ctx.createGain();bus.gain.value=0;bus.connect(this.bus);
       // Explicit anchor prevents a ramp from starting at audio-context creation.
       bus.gain.cancelScheduledValues(now);bus.gain.setValueAtTime(0,now);
-      bus.gain.linearRampToValueAtTime(1,now+tuning.audio.dreamPhaseFade);
-      const part: Part={phase,bus,echo:null,echoes:[],epoch:now+.08,cycle:0,next:0,stopped:false,voices:new Set(),cleanup:null};
+      bus.gain.linearRampToValueAtTime(1,now+fade);
+      const part: Part={phase,bus,echo:null,echoes:[],epoch:now+.08,cycle:0,next:0,stopped:false,voices:new Set(),cleanup:null,
+        conductor:section.conduct?.()??null,passage:null,start:now+.08,bar:-1,fill:0};
       if(this.kind==='mirror') {
         part.echo=this.ctx.createGain();
         for(const [seconds,level,position] of [[.73,.20,.48],[1.47,.115,-.42],[2.21,.065,.3]]) {
@@ -89,9 +96,25 @@ export class DreamScore {
       this.current=part;this.parts.add(part);
     }
     const part=this.current;
-    schedulePhrase(part,DREAM_SECTIONS[phase],now,(note,at)=>{
-      if(!note.tension||(tension>=note.tension[0]&&tension<note.tension[1]))this.play(part,note,at);
-    },until);
+    if(part.conductor)this.conduct(part,part.conductor,now,tension,until);
+    else schedulePhrase(part,section,now,(note,at)=>this.play(part,note,at),until);
+  }
+  /** Each passage is chosen whole as it begins and the pulse's fullness at each bar line, never in between. */
+  private conduct(part:Part,conductor:Conductor,now:number,tension:number,until:number):void {
+    for(;;) {
+      if(!part.passage) {
+        if(part.start>now+.25||part.start>=until)return;
+        part.passage=conductor.next(tension);part.next=0;part.bar=-1;
+      }
+      const {notes,seconds,bar}=part.passage,note=notes[part.next];
+      if(!note){part.start+=seconds;part.passage=null;continue;}
+      const at=part.start+note.at;
+      if(at>now+.25||at>=until)return;
+      const index=Math.floor(note.at/bar+1e-6);
+      if(index!==part.bar){part.bar=index;part.fill=conductor.fill(tension);}
+      if(at>=now-.04&&(note.fill??0)<=part.fill)this.play(part,note,Math.max(now+.008,at));
+      part.next++;
+    }
   }
   /** Only the chapter's real success event calls this; phase entry/checkpoint restore never does. */
   bloom(): void {
@@ -123,14 +146,14 @@ export class DreamScore {
     }
   }
   private play(part:Part,n:CueNote,at:number):void {
-    const ctx=this.ctx,patch=DREAM_PALETTE[n.voice],end=at+n.duration;
+    const ctx=this.ctx,patch=DREAM_PALETTE[n.voice],end=at+n.duration,release=n.release??patch.release;
     const pan=ctx.createStereoPanner();pan.pan.value=n.pan;pan.connect(part.bus);
     if(part.echo&&['starlight','bloom','reflection'].includes(n.voice))pan.connect(part.echo);
     const filter=ctx.createBiquadFilter();filter.type='lowpass';filter.Q.value=.45;filter.frequency.value=patch.cutoff;filter.connect(pan);
     const env=ctx.createGain();env.connect(filter);env.gain.setValueAtTime(0,at);
     env.gain.setValueCurveAtTime(new Float32Array([0,.038,.146,.309,.5,.691,.854,.962,1]).map(v=>v*n.level),at,patch.attack);
-    if(['glass','reflection','felt','starlight'].includes(n.voice))env.gain.exponentialRampToValueAtTime(n.level*.24,end-patch.release);
-    else env.gain.linearRampToValueAtTime(n.level*.84,end-patch.release);
+    if(['glass','reflection','felt','starlight'].includes(n.voice))env.gain.exponentialRampToValueAtTime(n.level*.24,end-release);
+    else env.gain.linearRampToValueAtTime(n.level*.84,end-release);
     env.gain.linearRampToValueAtTime(0,end);
     let left=patch.partials.length;
     const lfo=patch.vibrato?ctx.createOscillator():null,depth=lfo?ctx.createGain():null;

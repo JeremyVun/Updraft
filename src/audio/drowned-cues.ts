@@ -1,24 +1,44 @@
-import type { DreamNote } from './dream-score-data';
+import { DREAM_PALETTE, type DreamNote } from './dream-score-data';
 import { tuning } from '../tuning';
 
 /**
- * The drowned village's music from the air dying to the storm, in the approved drift's B minor, voices and voicings:
- * the water strings' chords, the cello's line, the felt's soft strikes and the undertow. The chase's pulse is the
- * felt in the low strings' register; `tension` keeps a note to the moments the chase presses between those amounts.
+ * The drowned village's music from the air dying to the storm, in the approved drift's B minor (its relative D major
+ * for home) and its instruments: the water strings' chords, the cello, the felt (soft, struck) and the undertow. Every
+ * cue states or develops one theme, the piano's question D–E–F♯ rising to B and its answer B–F♯–E–D, in four-bar
+ * phrases on a steady beat over four chords that come round, so the ear can learn both.
  */
-export type CueNote = Omit<DreamNote, 'role'> & { role: DreamNote['role'] | 'accompaniment'; tension?: readonly [number, number] };
-export interface Cue {
+export type CueNote = Omit<DreamNote, 'role'> & {
+  role: DreamNote['role'] | 'accompaniment';
+  /** How full the chase's pulse must be for this note to sound: 0 halves, 1 quarters, 2 eighths. */
+  fill?: number;
+  /** A shorter bow than the patch's release, so a quick step does not smear into the next. */
+  release?: number;
+};
+interface Harmony { chords: { at: number; tones: readonly number[] }[] }
+/** A stretch of the chase, chosen whole where it begins. */
+export interface Passage extends Harmony { seconds: number; bar: number; notes: CueNote[] }
+export interface Conductor {
+  /** The next passage, from how hard the chase presses as it begins. */
+  next(tension: number): Passage;
+  /** How full the pulse is for the next bar. */
+  fill(tension: number): number;
+}
+export interface Cue extends Harmony {
   seconds: number;
   loopFrom?: number;
-  chords: { at: number; tones: readonly number[] }[];
   notes: CueNote[];
   variants?: CueNote[][];
+  /** Seconds to cross into this cue, both ways, where its first notes come too soon for the usual fade. */
+  fade?: number;
+  conduct?: () => Conductor;
 }
 type Chord = [at: number, tones: readonly number[], hold: number, level: number];
+/** A melody by the beat: where each note starts, its pitch and how many beats it holds. */
+type Line = readonly (readonly [beat: number, midi: number, beats: number])[];
 
 const note = (voice: string, pan: number, role: CueNote['role']) =>
-  (at: number, midi: number, duration: number, level: number, tension?: readonly [number, number]): CueNote =>
-    ({ voice, at, midi, duration, level, pan, role, ...(tension ? { tension } : {}) });
+  (at: number, midi: number, duration: number, level: number, extra: Partial<CueNote> = {}): CueNote =>
+    ({ voice, at, midi, duration, level, pan, role, ...extra });
 const cello = note('cello', -.12, 'melody');
 const felt = note('felt', .17, 'melody');
 const pulse = note('felt', .06, 'accompaniment');
@@ -30,157 +50,238 @@ function strings([at, tones, hold, level]: Chord): CueNote[] {
     level: i ? level : level * .78, pan: (i - (tones.length - 1) / 2) * .18, role: 'harmony' }));
 }
 
-function cue(seconds: number, chords: Chord[], notes: CueNote[], loopFrom?: number): Cue {
+/** A line from `start` at `beat` seconds a beat, `shift` semitones away: the felt rings on; the cello bows on. */
+function sing(voice: 'cello' | 'felt', line: Line, start: number, beat: number, level: number, shift = 0): CueNote[] {
+  return line.map(([at, midi, beats], i) => {
+    const held = beats * beat, t = start + at * beat;
+    if (voice === 'felt') return felt(t, midi + shift, held + DREAM_PALETTE.felt.release, level);
+    const legato = (line[i + 1]?.[0] ?? Infinity) <= at + beats;
+    const release = Math.min(legato ? .45 : DREAM_PALETTE.cello.release, held / 2);
+    return cello(t, midi + shift, held + release, level, { release });
+  });
+}
+
+function cue(seconds: number, chords: Chord[], passes: CueNote[][], extra: Partial<Cue> = {}): Cue {
+  const variants = passes.map((notes) => [...chords.flatMap(strings), ...notes].sort((a, b) => a.at - b.at));
+  return { seconds, chords: chords.map(([at, tones]) => ({ at, tones })), notes: variants[0],
+    ...(variants.length > 1 ? { variants } : {}), ...extra };
+}
+
+const CHORD = {
+  Bm: [47, 54, 59, 62], G: [43, 50, 57, 59], D: [38, 50, 54, 57], A: [45, 52, 57, 61], Asus4: [45, 52, 57, 62],
+  Em: [40, 52, 55, 59], 'F#': [42, 49, 54, 58], 'F#7': [42, 49, 52, 58], Gmaj7: [43, 50, 54, 59],
+} as const;
+const D = 62, E = 64, Fs = 66, G = 67, A = 69, As = 70, B = 71;
+/** The question, D . . E | F♯ . . . | – D E F♯ | B . . . , and the answer, B . . A | F♯ . . . | E . F♯ . | D . . . */
+const QUESTION: Line = [[0, D, 3], [3, E, 1], [4, Fs, 4], [9, D, 1], [10, E, 1], [11, Fs, 1], [12, B, 4]];
+const ANSWER: Line = [[0, B, 3], [3, A, 1], [4, Fs, 4], [8, E, 2], [10, Fs, 2], [12, D, 4]];
+
+const BEAT = .8, BAR = 4 * BEAT;
+
+/**
+ * The air dies and the boat sticks. No pulse: the strings rock B minor to G under the becalmed phrase, and the cello
+ * asks the question at half speed and stops on its F♯ as the chord turns to the dominant, unfinished. There a soft
+ * heartbeat starts, as the cat bolts, and holds on F♯ for her decision. If the story holds, it beats on round the
+ * chords and the cello leaves the question unasked.
+ */
+function stuck(): Cue {
+  const chords: Chord[] = [[0, CHORD.Bm, 2 * BAR, .0075], [2 * BAR, CHORD.G, 2 * BAR, .007],
+    [4 * BAR, CHORD['F#'], 2 * BAR, .0075], [6 * BAR, CHORD['F#7'], 2 * BAR, .0075]];
+  const heart = (bar: number, root: number) => [0, 2].flatMap((beat) => {
+    const at = bar * BAR + beat * BEAT;
+    return [pulse(at, root, 1.8, .0085), pulse(at, root + 12, 1.8, .003), pulse(at + .22, root, 1.8, .0055)];
+  });
+  const first = [...sing('cello', QUESTION.slice(0, 3), 2 * BAR, 2 * BEAT, .013), ...[4, 5, 6, 7].flatMap((bar) => heart(bar, 42))];
+  const held = [47, 47, 43, 43, 42, 42, 42, 42].flatMap((root, bar) => heart(bar, root));
+  return cue(8 * BAR, chords, [first, held]);
+}
+
+/** One bar of the chase's pulse on a chord's root: halves always, its fifth on the quarters, the octave on the eighths. */
+function beats(at: number, root: number): CueNote[] {
+  return [0, 1, 2, 3].flatMap((beat) => {
+    const t = at + beat * BEAT;
+    return [...(beat % 2 ? [pulse(t, root + 7, 2, .0072, { fill: 1 })] : [pulse(t, root, 2, .009), pulse(t, root + 12, 2, .0037)]),
+      pulse(t + BEAT / 2, root + 12, 1.8, .0056, { fill: 2 })];
+  });
+}
+
+function passage(chords: readonly (readonly number[])[], ...lines: CueNote[][]): Passage {
   return {
-    seconds, loopFrom, chords: chords.map(([at, tones]) => ({ at, tones })),
-    notes: [...chords.flatMap(strings), ...notes].sort((a, b) => a.at - b.at),
+    seconds: chords.length * BAR, bar: BAR, chords: chords.map((tones, i) => ({ at: i * BAR, tones })),
+    notes: [...chords.flatMap((tones, i) => [...strings([i * BAR, tones, BAR, .0095]), ...beats(i * BAR, tones[0])]),
+      ...lines.flat()].sort((a, b) => a.at - b.at),
   };
 }
 
-/**
- * The air dies and the boat sticks: the becalmed phrase's A, F♯ and E over the drift's still chord, then the glass
- * (G), the fog rising on a C that does not belong to the key, and her decision on the dominant. Under it the chase's
- * pulse is born, slow at first and quickening as the cat bolts.
- */
-const STUCK = cue(28, [
-  [0, [45, 52, 54, 59], 7, .0075],
-  [7, [43, 50, 54, 59], 6, .0065],
-  [13, [40, 48, 55, 64], 6, .007],
-  [19, [42, 49, 52, 59], 4, .007],
-  [23, [42, 49, 52, 58], 5, .007],
-], [
-  undertow(13, 40, 9, .003),
-  cello(11.5, 59, 5, .010), cello(16.5, 60, 3.2, .011), cello(19.6, 61, 3.8, .011), cello(23.5, 58, 4.4, .010),
-  ...[[11.6, 43], [14.2, 40], [16.6, 40], [18.8, 40], [20.8, 42], [22.6, 42], [24.3, 42], [25.9, 42], [27.3, 42]]
-    .map(([at, midi], i) => pulse(at, midi, 2, .0055 + i * .0003)),
-], 7);
-
-const BEAT = .8;
-/** Two bars a chord; the turn is the dominant's suspension falling to its leading note halfway through. */
-const CHASE_CHORDS: [tones: readonly number[], turn?: readonly [number, number]][] = [
-  [[47, 54, 62, 64]], [[43, 50, 59, 66]], [[42, 50, 57, 64]], [[45, 52, 59, 62]],
-  [[47, 54, 59, 62]], [[43, 50, 59, 64]], [[40, 52, 55, 62]], [[42, 49, 59, 64], [59, 58]],
-  [[43, 50, 57, 59]], [[40, 47, 55, 62]], [[42, 47, 54, 62]], [[48, 55, 62, 64]],
-  [[49, 57, 59, 64]], [[50, 57, 64, 66]], [[43, 52, 59, 66]], [[42, 49, 52, 59], [59, 58]],
+const EASED = [CHORD.Bm, CHORD.G, CHORD.D, CHORD.A], ANSWERED = [CHORD.Bm, CHORD.G, CHORD.D, CHORD.Asus4];
+const PRESSED = [CHORD.Bm, CHORD.G, CHORD.Em, CHORD['F#7']];
+/** The cello's counter-line under the felt: down the scale against the question's rise, up against the answer's fall. */
+const UNDER_QUESTION: Line = [[0, 59, 2], [2, 57, 2], [4, 55, 4], [8, 54, 4], [12, 52, 4]];
+const UNDER_ANSWER: Line = [[0, 54, 4], [4, 55, 4], [8, 57, 4], [12, 52, 4]];
+/** The question's head a step higher each bar (D E F♯, E F♯ G, F♯ G A) to the leading note, which rises to B. */
+const SEQUENCE: Line = [[0, D, 1], [1, E, 1], [2, Fs, 2], [4, E, 1], [5, Fs, 1], [6, G, 2], [8, Fs, 1], [9, G, 1],
+  [10, A, 2], [12, As, 3], [15, B, 1]];
+const SUNG = .0165, STRUCK = .012, UNDER = .011;
+/** Three times round the period before it repeats: the cello; the felt an octave up over the cello's counter-line; both. */
+const CALM: Passage[] = [
+  passage(EASED, sing('cello', QUESTION, 0, BEAT, SUNG)),
+  passage(ANSWERED, sing('cello', ANSWER, 0, BEAT, SUNG)),
+  passage(EASED, sing('felt', QUESTION, 0, BEAT, STRUCK, 12), sing('cello', UNDER_QUESTION, 0, BEAT, UNDER)),
+  passage(ANSWERED, sing('felt', ANSWER, 0, BEAT, STRUCK, 12), sing('cello', UNDER_ANSWER, 0, BEAT, UNDER)),
+  passage(EASED, sing('cello', QUESTION, 0, BEAT, SUNG)),
+  passage(ANSWERED, sing('felt', ANSWER, 0, BEAT, STRUCK, 12), sing('cello', UNDER_ANSWER, 0, BEAT, UNDER)),
 ];
-/** Each chord's sigh: a step falling onto one of its tones that the strings are not holding in that octave. */
-const SIGHS = [[67, 66], [64, 62], [67, 66], [66, 64], [67, 66], [69, 67], [60, 59], [62, 61],
-  [64, 62], [69, 67], [67, 66], [69, 67], [62, 61], [71, 69], [64, 62], [62, 61]];
-const CALM = [0, .55] as const, QUARTERS = [.3, 2] as const, EIGHTHS = [.62, 2] as const;
-const PICKUPS = [.82, 2] as const, TENSE = [.55, 2] as const, SWELL = [.7, 2] as const;
-/** The cello while the fog is far or she is across: the drift's D–E–F♯ and B, in beats. */
-const CHASE_LINES: [beat: number, midi: number, beats: number][][] = [[
-  [1, 66, 4], [5, 64, 2.6], [8, 62, 5], [13, 59, 3], [17, 62, 3], [20, 64, 2.6], [22.5, 66, 4], [27, 64, 3], [30, 62, 3],
-  [33, 66, 3.5], [37, 64, 2.6], [40, 62, 4], [44, 64, 3], [48, 67, 4], [52, 66, 4], [56, 64, 4], [60, 61, 3.5],
-  [65, 62, 3], [68, 64, 3], [72, 67, 4], [76, 66, 3], [80, 62, 5], [85, 59, 2.6], [88, 64, 4], [92, 62, 3],
-  [96, 61, 3], [99, 64, 3], [104, 66, 4], [108, 69, 3], [112, 66, 4], [116, 64, 3], [120, 59, 4], [124, 58, 3.5],
-], [
-  [2, 62, 5], [9, 64, 5], [17, 66, 6], [25, 59, 6], [34, 62, 4], [40, 59, 5], [48, 64, 6], [56, 66, 4], [60, 64, 3.5],
-  [66, 59, 5], [72, 62, 6], [80, 66, 5], [88, 64, 5], [93, 67, 3], [97, 64, 5], [104, 66, 6], [112, 59, 4],
-  [116, 62, 3.5], [120, 61, 4], [124, 58, 3.5],
-]];
+/** Pressing, the undertow swells on the dominant; the second time running the felt doubles the climb an octave up. */
+const PRESS: Passage[] = [
+  passage(PRESSED, sing('cello', SEQUENCE, 0, BEAT, SUNG), [undertow(3 * BAR, 42, 7, .0055)]),
+  passage(PRESSED, sing('cello', SEQUENCE, 0, BEAT, SUNG), sing('felt', SEQUENCE, 0, BEAT, .01, 12),
+    [undertow(3 * BAR, 42, 7, .0055)]),
+];
+/** A bar of the pulse alone on the dominant, carrying the stuck boat's heartbeat into the run. */
+const SET_OFF = passage([CHORD['F#']]);
 
 /**
- * Her run over the roofs: a pulse in the low strings' register under a slow round of B minor that climbs by
- * semitones (C, C♯, D) as it goes on. The nearer the fog, the tighter the pulse (half notes, then quarters, eighths and
- * a pickup into each bar) and the more the cello's line gives way to a held low note under the felt's falling sighs;
- * across a piece it eases and the cello sings again. Two passes, the second with its own line, before anything repeats.
+ * The chase, a passage at a time: the theme over B minor, G, D, A while the fog is far or she is across a piece; the
+ * question's head climbing over B minor, G, E minor, F♯ while it presses. Which one is read only where a phrase
+ * begins, with a margin either way so it does not turn at every phrase, and a return to ease begins at the question.
+ * The pulse fills in or thins bar by bar.
  */
-function chase(): Cue {
-  const chords: Chord[] = [], beats: CueNote[] = [], sighs: CueNote[][] = [[], []], swells: CueNote[] = [];
-  CHASE_CHORDS.forEach(([tones, turn], c) => {
-    const at = c * 8 * BEAT, next = CHASE_CHORDS[(c + 1) % CHASE_CHORDS.length][0];
-    if (turn) {
-      chords.push([at, tones, 4 * BEAT, .0085], [at + 4 * BEAT, tones.map((m) => (m === turn[0] ? turn[1] : m)), 4 * BEAT, .0085]);
-    } else chords.push([at, tones, 8 * BEAT, .0085]);
-    const [low, fifth] = tones;
-    for (let beat = 0; beat < 8; beat++) {
-      const t = at + beat * BEAT;
-      beats.push(...(beat % 2 ? [pulse(t, fifth, 2, .0064, QUARTERS)] : [pulse(t, low, 2, .008), pulse(t, low + 12, 2, .0037)]));
-      beats.push(pulse(t + BEAT / 2, low + 12, 1.8, .005, EIGHTHS));
+class Chase implements Conductor {
+  private begun = false;
+  private pressing = false;
+  private calm = 0;
+  private pressed = 0;
+  private full = 0;
+  next(tension: number): Passage {
+    if (!this.begun) {
+      this.begun = true;
+      return SET_OFF;
     }
-    beats.push(pulse(at + 3.75 * BEAT, low, 1.8, .0055, PICKUPS), pulse(at + 7.75 * BEAT, next[0], 1.8, .0055, PICKUPS));
-    const [high, onto] = SIGHS[c];
-    sighs[0].push(felt(at + 4 * BEAT, high, 1.8, .0116, TENSE), felt(at + 5 * BEAT, onto, 2.4, .0116, TENSE));
-    sighs[1].push(felt(at + 6 * BEAT, high, 1.8, .0116, TENSE), felt(at + 7 * BEAT, onto, 2.4, .0116, TENSE));
-    swells.push(cello(at + .1, fifth, 8 * BEAT + .4, .0107, TENSE));
-    if (c % 4 === 3) swells.push(undertow(at, low, 9, .0049, SWELL));
-  });
-  const passes = CHASE_LINES.map((line, i) => [...chords.flatMap(strings), ...beats, ...swells, ...sighs[i],
-    ...line.map(([beat, midi, held]) => cello(beat * BEAT, midi, held * BEAT, .0147, CALM))].sort((a, b) => a.at - b.at));
-  return { seconds: CHASE_CHORDS.length * 8 * BEAT, chords: chords.map(([at, tones]) => ({ at, tones })), notes: passes[0], variants: passes };
+    const k = tuning.audio.drownedChase;
+    if (this.pressing ? tension < k.relax : tension >= k.press) {
+      this.pressing = !this.pressing;
+      this.pressed = 0;
+      this.calm += this.calm % 2;
+    }
+    return this.pressing ? PRESS[this.pressed++ % PRESS.length] : CALM[this.calm++ % CALM.length];
+  }
+  fill(tension: number): number {
+    const { quarters, eighths, give } = tuning.audio.drownedChase, at = [quarters, eighths];
+    while (this.full < at.length && tension >= at[this.full]) this.full++;
+    while (this.full > 0 && tension < at[this.full - 1] - give) this.full--;
+    return this.full;
+  }
 }
 
-/** She reaches the tower: the pulse slows to nothing and the cello climbs D–E–F♯ with her up the ivy. */
-const CLIMB = cue(16, [
-  [0, [47, 54, 62, 64], 6.5, .008],
-  [6.5, [43, 50, 57, 59], 5.5, .008],
-  [12, [42, 50, 57, 64], 4, .008],
-], [
-  ...[0.3, 1.3, 2.5, 4, 5.8].map((at, i) => pulse(at, 47, 2, .0085 - i * .0008)),
-  cello(6.8, 62, 2.6, .014), cello(9, 64, 2.4, .014), cello(11.2, 66, 4.6, .014),
-], 6.5);
+/** The chase as it runs while the fog stays far: the set-off and the theme once round, for what reads it whole. */
+function chase(): Cue {
+  const easy = new Chase(), passages = [easy.next(0), easy.next(0), easy.next(0)];
+  const chords: Cue['chords'] = [], notes: CueNote[] = [];
+  let at = 0;
+  for (const p of passages) {
+    chords.push(...p.chords.map((c) => ({ at: c.at + at, tones: c.tones })));
+    notes.push(...p.notes.map((n) => ({ ...n, at: n.at + at })));
+    at += p.seconds;
+  }
+  return { seconds: at, loopFrom: SET_OFF.seconds, chords, notes, conduct: () => new Chase() };
+}
 
 /**
- * The belfry: the felt's small figure over the kittens, then the fog sea on the bell's own chord (B, D, F♯), and the
- * strings alone turning slowly (G, E minor, B minor) while the bell waits to be rung: nothing to strike against it.
+ * She reaches the tower and climbs: the question's head goes up a step a bar over B minor, G and A (– D E F♯,
+ * – E F♯ G, – F♯ G A), each top note held over into the next chord, the pulse slowing to nothing under it. It stops at
+ * the top on A over the suspended chord, a step short of B.
  */
-const BELFRY = cue(40.4, [
-  [0, [43, 50, 59, 66], 6.4, .0072],
-  [6.4, [47, 54, 59, 62], 6, .0068],
-  [12.4, [43, 50, 59, 66], 7, .0068],
-  [19.4, [40, 47, 55, 66], 7, .0068],
-  [26.4, [42, 47, 54, 62], 7, .0068],
-  [33.4, [47, 54, 62, 64], 7, .0068],
-], [
-  felt(1.2, 66, 1.8, .009), felt(2, 69, 1.8, .009), felt(3, 71, 3, .009), felt(4.6, 69, 2.4, .008),
-  cello(7.5, 54, 5, .0095),
-], 12.4);
+function climb(): Cue {
+  const bars = [0, 3.2, 6.7, 10.6], beat = [.8, .875, .975];
+  const chords: Chord[] = [[0, CHORD.Bm, 3.2, .008], [3.2, CHORD.G, 3.5, .008], [6.7, CHORD.A, 3.9, .008],
+    [10.6, CHORD.Asus4, 5.4, .008]];
+  const line = [[D, E, Fs], [E, Fs, G], [Fs, G, A]].flatMap((steps, bar) => steps.map((midi, i) => {
+    const at = bars[bar] + (i + 1) * beat[bar], top = i === 2;
+    const held = !top ? beat[bar] : bar < 2 ? bars[bar + 1] + beat[bar + 1] - at : 5;
+    const release = top && bar === 2 ? DREAM_PALETTE.cello.release : Math.min(.45, held / 2);
+    return cello(at, midi, held + release, .014, { release });
+  }));
+  const slowing = ([[0, 47, .009], [1.6, 47, .0075], [3.2, 43, .0065], [4.95, 43, .0045], [6.7, 45, .0035]] as const)
+    .flatMap(([at, root, level]) => [pulse(at, root, 2, level), pulse(at, root + 12, 2, level * .4)]);
+  return cue(16, chords, [[...line, ...slowing], line], { fade: 1 });
+}
 
 /**
- * Each answer of the lantern turns the harmony a step toward D major (G, E minor, the suspended dominant) and sings
- * the next note of the piano's question (D, E, F♯): the felt strikes it once the bell's strike has passed, and the
- * cello swells an octave under it, below the bell's ringing partials, as the glow does. If the next ring is slow in
- * coming, the strings turn through voicings of the chord.
+ * The belfry, hushed: the strings rock B minor to Gmaj7, a chord every 8 s, and once a cycle the felt sings the theme
+ * an octave up and slow, a lullaby for the kittens, then leaves a long space. Every note sits clear of the bell's
+ * ringing partials (B2, B3, D4, F♯4, B4): the felt above them, the strings on them or well away.
+ */
+function belfry(): Cue {
+  const chords = [0, 1, 2, 3, 4, 5].map((i): Chord => [i * 8, i % 2 ? CHORD.Gmaj7 : CHORD.Bm, 8, .0068]);
+  return cue(48, chords, [[...sing('felt', QUESTION, 4, 1, .009, 12), ...sing('felt', ANSWER, 20, 1, .009, 12)]]);
+}
+
+/**
+ * Each answer of the lantern sings the question so far, a note further each time (D over G, D–E over E minor, D–E–F♯
+ * over the suspended A), once the bell's strike has passed: the felt struck, the cello an octave under, below the
+ * bell's ringing partials. If the next ring is slow in coming, the strings turn through voicings of the chord and the
+ * cello recalls the notes so far at half speed.
  */
 function answer(sung: number, level: number, ...voicings: (readonly number[])[]): Cue {
-  return cue(8 * voicings.length + 8, [...voicings, voicings[0]].map((tones, i): Chord => [i * 8, tones, 8, level]),
-    [cello(.6, sung - 12, 5, .012), felt(.9, sung, 2.6, .011)], 8);
+  const so = [D, E, Fs].slice(0, sung), last = sung - 1;
+  const struck: Line = so.map((midi, i) => [i, midi, i === last ? 2 : 1]);
+  const bowed: Line = so.map((midi, i) => [i, midi, i === last ? 5 : 1]);
+  const recalled: Line = so.map((midi, i) => [2 * i, midi, i === last ? 6 : 2]);
+  const chords = [...voicings, voicings[0]].map((tones, i): Chord => [i * 8, tones, 8, level]);
+  return cue(32, chords, [[...sing('felt', struck, .9, BEAT, .011), ...sing('cello', bowed, .6, BEAT, .012, -12),
+    ...sing('cello', recalled, 9, BEAT, .008, -12)]], { loopFrom: 8, fade: 1 });
+}
+
+const HOME_BEAT = .9, HOME_BAR = 4 * HOME_BEAT;
+const UNDER_HOME_QUESTION: Line = [[0, 54, 4], [4, 52, 4], [8, 50, 4], [12, 47, 4]];
+const UNDER_HOME_ANSWER: Line = [[0, 50, 4], [4, 52, 4], [8, 54, 4], [12, 55, 4]];
+
+/**
+ * The fourth answer lands: B over D major, the felt completing the question with the cello an octave under. Then the
+ * theme whole in D major over D, A, B minor and G, question then answer, warm, while she climbs down and the boat
+ * comes in; each time round the orchestration turns (the cello; the felt an octave up over the cello's counter-line;
+ * the cello asking and the felt answering), over a soft beat at the bar.
+ */
+function home(): Cue {
+  const major = [CHORD.D, CHORD.A, CHORD.Bm, CHORD.G];
+  const chords: Chord[] = [[0, [38, 50, 57, 62, 66], HOME_BAR, .010],
+    ...[1, 5].flatMap((from) => major.map((tones, i): Chord => [(from + i) * HOME_BAR, tones, HOME_BAR, .010]))];
+  const ask = HOME_BAR, reply = 5 * HOME_BAR;
+  const beat = [1, 2, 3, 4, 5, 6, 7, 8].flatMap((bar) => {
+    const root = major[(bar - 1) % 4][0], at = bar * HOME_BAR;
+    return [pulse(at, root, 2, .005), pulse(at, root + 12, 2, .002), pulse(at + 2 * HOME_BEAT, root, 2, .0035)];
+  });
+  const passes = [
+    [felt(1, B, 3.4, .011), cello(1.3, B - 12, 4.4, .011),
+      ...sing('cello', QUESTION, ask, HOME_BEAT, .015), ...sing('cello', ANSWER, reply, HOME_BEAT, .015)],
+    [...sing('felt', QUESTION, ask, HOME_BEAT, .012, 12), ...sing('cello', UNDER_HOME_QUESTION, ask, HOME_BEAT, .011),
+      ...sing('felt', ANSWER, reply, HOME_BEAT, .012, 12), ...sing('cello', UNDER_HOME_ANSWER, reply, HOME_BEAT, .011)],
+    [...sing('cello', QUESTION, ask, HOME_BEAT, .015),
+      ...sing('felt', ANSWER, reply, HOME_BEAT, .012, 12), ...sing('cello', UNDER_HOME_ANSWER, reply, HOME_BEAT, .011)],
+  ];
+  return cue(9 * HOME_BAR, chords, passes.map((pass) => [...pass, ...beat]), { loopFrom: HOME_BAR, fade: 1 });
 }
 
 /**
- * The fourth answer lands: D major, the felt on B (the bell's own note) completing the question, the cello answering
- * B–F♯–E–D. Then a warm round (G, E minor, the dominant, D) while she climbs down and the boat comes in.
+ * Aboard, she looks up: the answer's last phrase as a cadence, F♯–E–D over G, A and D, the felt over the cello's bass,
+ * landing on D as the cat gives its slow blink; then D major held until the storm's gathering darkens it.
  */
-const HOME = cue(41, [
-  [0, [38, 50, 57, 62, 66], 9, .009],
-  [9, [47, 55, 57, 62], 8, .010],
-  [17, [40, 47, 55, 62], 8, .010],
-  [25, [45, 52, 55, 62], 4, .010],
-  [29, [45, 52, 55, 61], 4, .010],
-  [33, [50, 57, 62, 66], 8, .010],
-], [
-  felt(1, 71, 3, .011),
-  cello(2.2, 66, 2.4, .015), cello(4.2, 64, 2.2, .015), cello(6, 62, 4.5, .015),
-  cello(9.8, 59, 3, .015), cello(12.8, 62, 2.2, .015), cello(15, 64, 2.5, .015),
-  cello(17.5, 67, 3.5, .014), felt(20, 71, 2.2, .009), cello(21, 66, 2.2, .014), cello(23, 64, 2.5, .014),
-  cello(25.5, 62, 3.5, .014), cello(29, 61, 2.4, .014), cello(31, 64, 2.2, .014),
-  cello(33.5, 66, 4, .015), felt(36, 69, 2.2, .009), cello(37.5, 62, 3.5, .015),
-], 9);
-
-/** Aboard, she looks up: D major held, and at the cat's slow blink the felt rises F♯–A–D, glad, before the storm. */
-const FAREWELL = cue(9, [[0, [50, 57, 62, 66], 9, .010]], [
-  cello(.8, 57, 4.5, .012),
-  felt(2.3, 66, 1.8, .010), felt(2.85, 69, 1.8, .010), felt(3.5, 74, 3, .010),
-]);
+function farewell(): Cue {
+  const cadence = [[43, 59, Fs], [45, 61, E], [50, 57, D]].flatMap(([bass, inner, top], i) => {
+    const at = .9 + i * .95, landing = i === 2;
+    return [cello(at, bass, landing ? 6.4 : 1.35, .012, { release: landing ? DREAM_PALETTE.cello.release : .4 }),
+      felt(at, inner, landing ? 4 : 2.4, .008), felt(at, top, landing ? 4.4 : 2.4, .011)];
+  });
+  return cue(12, [[0, CHORD.G, 2.6, .0085], [1.6, [38, 50, 57, 62, 66], 8, .0095]], [cadence], { fade: 1 });
+}
 
 export type DrownedCuePhase = 'stuck' | 'chase' | 'climb' | 'belfry' | 'answer1' | 'answer2' | 'answer3' | 'home' | 'farewell';
 export const DROWNED_CUES: Record<DrownedCuePhase, Cue> = {
-  stuck: STUCK, chase: chase(), climb: CLIMB, belfry: BELFRY,
-  answer1: answer(62, .006, [43, 50, 59, 66], [43, 52, 59, 62], [43, 50, 57, 66]),
-  answer2: answer(64, .0065, [40, 47, 55, 62, 66], [40, 50, 55, 64], [40, 47, 55, 59]),
-  answer3: answer(66, .007, [45, 52, 57, 62], [45, 55, 59, 62], [45, 52, 57, 64]),
-  home: HOME, farewell: FAREWELL,
+  stuck: stuck(), chase: chase(), climb: climb(), belfry: belfry(),
+  answer1: answer(1, .006, [43, 50, 59, 66], [43, 52, 59, 62], [43, 50, 57, 66]),
+  answer2: answer(2, .0065, [40, 47, 55, 62, 66], [40, 50, 55, 64], [40, 47, 55, 59]),
+  answer3: answer(3, .007, [45, 52, 57, 62], [45, 55, 59, 62], [45, 52, 57, 64]),
+  home: home(), farewell: farewell(),
 };
 
 /** The bell's answers in order: before the first, after each, and the fourth bringing the boat home. */
