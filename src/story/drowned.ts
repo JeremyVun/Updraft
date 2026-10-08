@@ -106,8 +106,6 @@ export class DrownedChapter implements Chapter {
   /** The side the lens has committed to; the sail must stay across a while before the view changes quarter. */
   private side = 1;
   private sideAgainst = 0;
-  /** The bearing the lens stood at when the air died, so it comes round beside the boat from where it was. */
-  private stillBearing = 0;
   /** When the air died: the fog's rise and the lens's coming round beside the boat are timed from it. */
   private stillAt = 0;
   private stirred = false;
@@ -122,7 +120,6 @@ export class DrownedChapter implements Chapter {
   private shook = false;
   private sheltered = false;
   private readonly departure = new THREE.Vector2();
-  private villageBearing = 0;
   /**
    * The hull's heading as the lens rides it. Out in the open water of the storm it is smoothed, so a bow swinging round
    * a waypoint does not swing the view; among the roofs it is the hull's own, so the lens stays in the channel behind.
@@ -164,8 +161,8 @@ export class DrownedChapter implements Chapter {
   private readonly lensWas = new THREE.Vector3();
   /** How fast the fog's front is coming on while the boat lies stuck, m/s. */
   private fogSpeed = 0;
-  /** How far the lens has come in to watch the cat come to her in the boat. */
-  private rescueIn = 0;
+  /** The lens has come in close for the cat's coming aboard. */
+  private closeIn = false;
   /** The player's sweeps on the stuck boat's sail: how full it was last frame, and seconds since it last strained. */
   private strained = 0;
   private strainAge = 10;
@@ -433,10 +430,7 @@ export class DrownedChapter implements Chapter {
           this.to('run');
           this.run.begin(this.fogSpeed);
           /** Restored on the ridge there was no climb for the run to take the lens from: it cuts to her. */
-          if (this.restored) {
-            this.run.cutIn();
-            this.cutIn = 2;
-          }
+          if (this.restored) this.cutIn = 2;
           this.restored = false;
         }
         break;
@@ -552,7 +546,6 @@ export class DrownedChapter implements Chapter {
    */
   private still(): void {
     const { boat } = this.cast;
-    this.stillBearing = this.villageBearing;
     this.stillAt = this.now;
     this.to('still');
     drownedEntry.behindGone = true;
@@ -738,6 +731,7 @@ export class DrownedChapter implements Chapter {
     const s = this.shot;
     s.obstacles = this.cast.village?.cameraObstacles;
     s.eye = undefined;
+    s.orbit = undefined;
     s.attention = undefined;
     s.composition = undefined;
     s.smoothFit = undefined;
@@ -785,10 +779,14 @@ export class DrownedChapter implements Chapter {
       return;
     }
     if (this.beat === 'enter' || this.beat === 'drift') {
-      if (this.aboardFrom >= 0 || this.cat.step === 'aboard') this.aboardFrame(dt);
+      const step = this.cat.step, tub = this.cat.tubTop;
+      if (!this.closeIn && (step === 'boarding' || step === 'aboard'
+        || (step === 'ferried' && Math.hypot(tub.x - boat.position.x, tub.z - boat.position.z) < tuning.drownedCamera.rescueFrom))) this.closeIn = true;
+      if (this.cat.rescuing || (this.closeIn && this.aboardFrom < 0)) this.rescueFrame();
+      else if (this.aboardFrom >= 0 || step === 'aboard') this.driftFrame();
       else {
         this.villageFrame(fx, fz);
-        if (this.cat.step !== 'stranded') this.catFrame(dt);
+        if (step !== 'stranded') this.catFrame(dt);
       }
       this.focus.copy(boat.position);
       return;
@@ -837,54 +835,47 @@ export class DrownedChapter implements Chapter {
   }
 
   /**
-   * Low beside the hull, never above the roofs. As the air dies the lens comes round from astern to the boat's side
-   * away from the roof it comes to rest against, so the stem on the slates, the roof's gable and the open water behind
-   * where the dark will rise are one picture. Once the dark has come on and stopped it turns with her toward the
-   * church, which comes into the other side of the frame. Upright, it stands further off on the same side and looks up
-   * past the boat, so the gable, the boat at its foot and the dark over them stack up the frame. The eye is placed by
-   * hand here, clear of every roof, so the roofs are not asked to push it about.
+   * The stranding, on the ordinary rig so every move is an orbit. As the air dies the lens comes round the boat's open
+   * side from astern and in on the bow, low, so the cat at the bow is near and large, she is beyond it, and past the
+   * stern the fog rises off the sea and grows: the cat's stare, its look to the church and its bolt are one frame.
+   * When the cat bolts the frame goes up onto the roof with it and stands off the ridge's west end, behind her the way
+   * she will go, the cat waiting ahead along the ridge. Upright it stands nearer the bow and looks back along the boat,
+   * so the cat, her and the fog stack up the frame.
    */
   private strandFrame(): void {
-    const k = tuning.drownedCamera, d = tuning.drowned, s = this.shot, boat = this.cast.boat;
+    const k = tuning.drownedCamera, s = this.shot;
     const wide = THREE.MathUtils.smoothstep(this.aspect, 0.7, 1.3);
-    const since = this.now - this.stillAt;
-    const round = THREE.MathUtils.smootherstep(since, 0, d.turnFor);
-    const turned = 0;
-    const settled = THREE.MathUtils.smootherstep(since, d.settleFrom, d.settleFrom + d.settleFor);
-    const dark = THREE.MathUtils.lerp(k.strandUpright, k.strandDark, wide);
-    const from = this.stillBearing + Math.PI;
-    let look = from + Math.atan2(Math.sin(dark - from), Math.cos(dark - from)) * round;
-    look += Math.atan2(Math.sin(k.strandChurch - k.strandDark), Math.cos(k.strandChurch - k.strandDark)) * turned;
-    /**
-     * When the cat bolts the lens holds to the view toward the dark, side on to the slope, so she climbs across the
-     * frame away from the fog she is leaving, never toward the lens nor behind the roof; it lifts to the ridge as she
-     * climbs. Once she is up the run takes the lens round to the tree in one move.
-     */
+    const lerp = THREE.MathUtils.lerp;
+    const boat = this.cast.boat.position, fx = Math.sin(this.cast.boat.yaw), fz = Math.cos(this.cast.boat.yaw);
+    /** The cat's fear as the fog comes: the lens leans in on it at the bow. */
+    const dark = this.cast.village?.dark, c = tuning.drowned.cat;
+    const fear = dark && this.beat === 'becalmed' ? 1 - THREE.MathUtils.smoothstep(DARK_AT_STRAND - dark.front, c.boltFrom, c.uneasyFrom) : 0;
+    const along = lerp(k.stuckAlong, k.stuckOnCat, fear * fear);
+    const aim = this.anchor.set(boat.x + fx * along, k.stuckAim, boat.z + fz * along);
+    const from = lerp(k.uprightStuckFrom, k.stuckFrom, wide), reach = lerp(k.uprightStuckDistance, k.stuckDistance, wide);
+    const eye = this.catEye.set(aim.x + Math.sin(from) * reach, lerp(k.uprightStuckEye, k.stuckEye, wide), aim.z + Math.cos(from) * reach);
+    /** It looks between the bow and the fog coming on behind the boat, so both stand in the frame. */
+    const fog = this.cast.village?.dark.frontAt(this.front, 0) ?? this.front.set(STRAND.x, STRAND.y + 60);
+    const toAim = Math.atan2(aim.x - eye.x, aim.z - eye.z), toFog = Math.atan2(fog.x - eye.x, fog.y - eye.z);
+    const look = toAim + Math.atan2(Math.sin(toFog - toAim), Math.cos(toFog - toAim)) * lerp(k.uprightStuckFog, k.stuckFog, wide) * (1 - fear * fear);
+    const reachAim = Math.hypot(aim.x - eye.x, aim.z - eye.z);
+    s.target.set(eye.x + Math.sin(look) * reachAim, aim.y, eye.z + Math.cos(look) * reachAim);
     const climbed = this.cat.sinceBolt < 0 ? 0 : THREE.MathUtils.smootherstep(this.cat.sinceBolt, 0, k.climbFor);
-    look += Math.atan2(Math.sin(dark - look), Math.cos(dark - look)) * climbed;
-    const b = this.anchor.copy(boat.position).lerp(this.tmp.set(STRAND.x, boat.position.y, STRAND.y), climbed)
-      .lerp(STRAND_TOP, 0.8 * climbed);
-    const back = THREE.MathUtils.lerp(THREE.MathUtils.lerp(k.uprightBack, k.strandBack, wide),
-      THREE.MathUtils.lerp(k.uprightClimbBack, k.climbBack, wide), climbed);
-    const side = k.uprightSide * (1 - wide) * round;
-    const ex = b.x - Math.sin(look) * back - Math.cos(look) * side, ez = b.z - Math.cos(look) * back + Math.sin(look) * side;
-    const reach = Math.hypot(b.x - ex, b.z - ez);
-    const vx = (b.x - ex) / reach, vz = (b.z - ez) / reach;
-    const ahead = THREE.MathUtils.lerp(k.uprightAhead, k.strandAhead, wide);
-    const aside = k.strandAside * wide * (1 - turned);
-    const aim = THREE.MathUtils.lerp(THREE.MathUtils.lerp(k.uprightAim, THREE.MathUtils.lerp(k.strandAim, k.churchAim, turned), wide),
-      k.climbAim, climbed);
-    s.target.set(b.x + vx * ahead - vz * aside, aim, b.z + vz * ahead + vx * aside);
-    const dx = ex - s.target.x, dz = ez - s.target.z, dist = Math.hypot(dx, dz);
-    s.from = this.from.set(dx / dist, 0, dz / dist);
-    s.distance = dist;
-    s.height = THREE.MathUtils.lerp(k.strandLow, THREE.MathUtils.lerp(k.uprightHigh, k.strandHigh, wide), settled) - s.target.y;
-    s.zoom = THREE.MathUtils.lerp(1, k.strandZoom, settled * wide);
+    if (climbed > 0) {
+      const ridge = STRAND_TOP, to = lerp(k.uprightRidgeFrom, k.ridgeFrom, wide), back = lerp(k.uprightRidgeDistance, k.ridgeDistance, wide);
+      this.tmp.set(ridge.x + Math.sin(to) * back, ridge.y + lerp(k.uprightRidgeEye, k.ridgeEye, wide), ridge.z + Math.cos(to) * back);
+      eye.lerp(this.tmp, climbed);
+      const her = this.lensWas.copy(this.cast.child.position).setY(this.cast.child.position.y + 1.1);
+      s.target.lerp(her.lerp(this.cat.eye, k.ridgeAlong), climbed);
+    }
+    s.eye = eye;
+    s.orbit = true;
+    s.zoom = lerp(lerp(k.uprightStuckZoom, k.stuckZoom, wide) * lerp(1, k.stuckCloser, fear * fear), 1, climbed);
     s.obstacles = undefined;
     this.strandSubjects.primary.copy(this.subjects.primary);
-    this.strandSubjects.secondary.copy(climbed > 0.5 ? this.cat.eye : boat.position);
+    this.strandSubjects.secondary.copy(this.cat.eye);
     s.subjects = this.strandSubjects;
-    this.pace = k.strandPace;
+    this.pace = lerp(k.stuckPace, k.ridgePace, climbed);
   }
 
   /**
@@ -940,39 +931,50 @@ export class DrownedChapter implements Chapter {
   }
 
   /**
-   * With the cat aboard the lens rides close beside the boat on its port side, the side it watched the cat from and the
-   * side the stranding is seen from, a little aft of abeam: she and the cat at the bow face each other across the
-   * frame, she turned away from the lens, with the satchel the cygnet peeks out of.
+   * The rescue, close: off the bow's quarter on the side away from the sail, which hangs slack and swings, committed as
+   * the sailing view's side is and going round by the bow when it changes; far enough round that the mast stands clear
+   * of her face, a little over her head so the boards show past the gunwale, with a longer lens: the cat's leap aboard,
+   * its shiver, and it pressing against her shins as she kneels to it, her face and the cat one frame.
    */
-  private aboardFrame(dt: number): void {
+  private rescueFrame(): void {
     const k = tuning.drownedCamera, s = this.shot, seat = this.cast.child.position;
     const wide = THREE.MathUtils.smoothstep(this.aspect, 0.7, 1.3);
     const fx = Math.sin(this.heading), fz = Math.cos(this.heading);
-    const px = Math.cos(this.heading), pz = -Math.sin(this.heading);
-    const a = k.aboardBearing;
-    s.from = this.from.set(fx * Math.cos(a) + px * Math.sin(a), 0, fz * Math.cos(a) + pz * Math.sin(a));
-    this.villageBearing = Math.atan2(s.from.x, s.from.z);
-    s.target.copy(seat).lerp(this.cat.eye, k.aboardAlong).setY(seat.y + k.aboardAim);
-    s.distance = THREE.MathUtils.lerp(k.uprightAboardDistance, k.aboardDistance, wide);
-    s.height = k.aboardHeight;
-    /** While the cat comes to her and she kneels to it, nearer and higher, so the boards show over the gunwale. */
-    this.rescueIn += ((this.cat.rescuing ? 1 : 0) - this.rescueIn) * (1 - Math.exp(-dt * 0.7));
-    const r = THREE.MathUtils.smootherstep(this.rescueIn, 0, 1);
-    if (r > 0) {
-      const b = THREE.MathUtils.lerp(a, k.rescueBearing, r);
-      s.from.set(fx * Math.cos(b) + px * Math.sin(b), 0, fz * Math.cos(b) + pz * Math.sin(b));
-      s.target.lerp(this.tmp.copy(seat).lerp(this.cat.eye, 0.5).setY(seat.y + k.rescueAim), r);
-      s.distance = THREE.MathUtils.lerp(s.distance, THREE.MathUtils.lerp(k.uprightRescueDistance, k.rescueDistance, wide), r);
-      s.height = THREE.MathUtils.lerp(s.height, k.rescueHeight, r);
-    }
-    s.zoom = 1;
+    /** `quarter` +1 is the starboard side, the hull's -x. */
+    const px = -Math.cos(this.heading) * this.quarter, pz = Math.sin(this.heading) * this.quarter;
+    const b = k.rescueBearing;
+    s.from = this.from.set(fx * Math.cos(b) + px * Math.sin(b), 0, fz * Math.cos(b) + pz * Math.sin(b)).normalize();
+    s.target.copy(seat).lerp(this.cat.eye, k.rescueAlong).setY(seat.y + k.rescueAim);
+    s.distance = THREE.MathUtils.lerp(k.uprightRescueDistance, k.rescueDistance, wide);
+    s.height = k.rescueHeight;
+    s.zoom = THREE.MathUtils.lerp(k.uprightRescueZoom, k.rescueZoom, wide);
+    s.obstacles = undefined;
     const c = this.catSubjects;
-    c.primary.copy(this.cat.eye);
-    c.secondary.copy(this.subjects.primary);
+    c.primary.copy(seat).setY(seat.y + 0.9);
+    c.secondary.copy(this.cat.eye);
     c.tertiary = undefined;
     s.subjects = c;
     s.smoothFit = 1.5;
-    this.pace = k.aboardPace;
+    this.pace = k.rescuePace;
+  }
+
+  /**
+   * The drift with the cat aboard is the room's establishing shot: wide behind the boat on the quarter away from the
+   * sail, the village going by beside it, the cat in the bow and the spire ahead.
+   */
+  private driftFrame(): void {
+    const k = tuning.drownedCamera, s = this.shot, seat = this.cast.child.position;
+    const wide = THREE.MathUtils.smoothstep(this.aspect, 0.7, 1.3);
+    const fx = Math.sin(this.heading), fz = Math.cos(this.heading);
+    const bearing = this.heading + Math.PI + this.quarter * k.driftQuarter;
+    s.from = this.from.set(Math.sin(bearing), 0, Math.cos(bearing));
+    s.target.set(seat.x + fx * k.driftAhead, seat.y + 0.9, seat.z + fz * k.driftAhead);
+    s.distance = THREE.MathUtils.lerp(k.uprightDriftDistance, k.driftDistance, wide);
+    s.height = k.driftHeight;
+    s.zoom = 1;
+    this.subjects.secondary.copy(this.cat.eye);
+    s.subjects = this.subjects;
+    this.pace = k.driftPace;
   }
 
   /** The camera notices the village with the child: rooftops at water level, then the church passing overhead. */
@@ -986,8 +988,6 @@ export class DrownedChapter implements Chapter {
     const church = this.stirred ? 0 : THREE.MathUtils.smootherstep(past, -k.spireEnter, -k.spireFull)
       * (1 - THREE.MathUtils.smootherstep(past, -k.spireLeave, -k.spireGone));
     const roofBearing = this.heading + Math.PI + this.quarter * THREE.MathUtils.lerp(k.entryBearing, k.roofBearing, roofs);
-    // The church draws the gaze, not the camera's travelling position out of the channel.
-    this.villageBearing = roofBearing;
     s.from = this.from.set(Math.sin(roofBearing), 0, Math.cos(roofBearing));
     s.distance = THREE.MathUtils.lerp(k.entryDistance, k.roofDistance, roofs);
     s.height = THREE.MathUtils.lerp(k.entryHeight, k.roofHeight, roofs);

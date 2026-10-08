@@ -18,9 +18,9 @@
 //        becalming), FROM=church at the tower's foot (skips the run too), FROM=belfry in the belfry with the bell to
 //        ring, FROM=storm with her just seated aboard at the nave (skips the church too), SHOTS=<prefix> saves stills (at each piece,
 //        two between, and through the church), FILM=<seconds> with SHOTS also
-//        saves a still every that many seconds from the air dying (from the ridge with FROM=roofs, the tower's foot
-//        with FROM=church) to the storm, and with FROM=stairs through the descent in the white and 30 s on,
-//        TO=nave stops at the tower's foot, VIDEO=<dir> records the whole play as a webm there, W/H viewport
+//        saves a still every that many seconds from the air dying (FILMFROM=cat from the tub's puzzle; from the ridge
+//        with FROM=roofs, the tower's foot with FROM=church) to the storm, and with FROM=stairs through the descent in the white and 30 s on,
+//        TO=nave stops at the tower's foot, TO=ridge once she is up on the first roof after the cat, VIDEO=<dir> records the whole play as a webm there, W/H viewport
 //        (default 1600x900), LENS=1 also fails on the lens's measures (a roof hiding her, her walking toward it, her
 //        out of frame, it inside a roof, it whipping round; and at the church, from the tower's foot until the
 //        storm's frame takes over, her out of frame or hidden by the church or a roof).
@@ -35,7 +35,8 @@ const fromStorm = process.env.FROM === 'storm';
 const fromBelfry = process.env.FROM === 'belfry';
 const fromChurch = process.env.FROM === 'church' || fromBelfry || fromStorm;
 const fromRoofs = process.env.FROM === 'roofs' || fromChurch;
-const toNave = process.env.TO === 'nave';
+const toRidge = process.env.TO === 'ridge';
+const toNave = process.env.TO === 'nave' || toRidge;
 
 const browser = await chromium.launch({ channel: 'chromium', headless: true,
   args: ['--enable-gpu', '--use-angle=metal', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
@@ -43,8 +44,9 @@ const errors = [];
 const video = process.env.VIDEO ?? null;
 const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1,
   ...(video ? { recordVideo: { dir: video, size: { width, height } } } : {}) });
+let page = null;
 try {
-  const page = await context.newPage();
+  page = await context.newPage();
   /** When the recording began, so what is heard can be laid under it. */
   const recordedFrom = Date.now();
   page.on('pageerror', (e) => errors.push(e.message));
@@ -53,17 +55,31 @@ try {
 
   /** The lens's own motion every frame in the drowned village and on into the wood: its fastest turn and move, and where. */
   await page.evaluate(() => {
-    const w = window.__lensWatch = { turn: 0, turnAt: '', move: 0, moveAt: '' };
-    let last = null;
+    const w = window.__lensWatch = { turn: 0, turnAt: '', move: 0, moveAt: '', cuts: [], stretches: {}, trace: [] };
+    let last = null, sampled = -1, from = null;
     const tick = () => {
       const st = __game.story.current, cam = __game.rig.camera, t = __stats.time;
       const d = cam.getWorldDirection(cam.position.clone()), p = cam.position.clone();
-      const where = () => `${st.beat ?? __game.story.name}${st.run && st.run.stage !== 'off' ? '/' + st.run.stage : ''}${st.church && st.church.step !== 'off' ? '/' + st.church.step : ''} at ${t.toFixed(1)} s`;
+      const stretch = `${st.beat ?? __game.story.name}${st.run && st.run.stage !== 'off' ? '/' + st.run.stage : ''}${st.church && st.church.step !== 'off' ? '/' + st.church.step : ''}`;
+      const where = () => `${stretch} at ${t.toFixed(1)} s`;
       const ours = __game.story.name === 'drowned' || last?.name === 'drowned';
-      if (ours && last && t > last.t && (last.cut === st.cameraCut || last.story !== st)) {
+      from ??= t;
+      if (ours && last && last.story === st && last.cut !== st.cameraCut && t - from > 3) w.cuts.push(where());
+      /** A start straight into the room settles the lens over its first moments; that is not play. */
+      if (ours && last && t > last.t && t - from > 3 && (last.cut === st.cameraCut || last.story !== st)) {
         const dt = t - last.t, turn = Math.acos(Math.min(1, d.dot(last.d))) * 180 / Math.PI / dt, move = p.distanceTo(last.p) / dt;
         if (turn > w.turn) { w.turn = turn; w.turnAt = `${where()}, the lens at ${p.toArray().map((v) => v.toFixed(1))} over ${(dt * 1000).toFixed(0)} ms`; }
         if (move > w.move) { w.move = move; w.moveAt = where(); }
+        const s = w.stretches[stretch] ??= { turn: 0, at: 0 };
+        if (turn > s.turn) { s.turn = turn; s.at = t; }
+        /** Every quarter second: how far off her, how high over her feet, the angle down to her head, the field, the turn. */
+        if (t - sampled >= 0.25 && st.beat) {
+          sampled = t;
+          const c = __game.child.position, head = c.y + 1.2;
+          const flat = Math.hypot(p.x - c.x, p.z - c.z);
+          w.trace.push({ t: +t.toFixed(2), where: stretch, flat: +flat.toFixed(2), over: +(p.y - c.y).toFixed(2),
+            down: +(Math.atan2(p.y - head, flat) * 180 / Math.PI).toFixed(1), fov: +cam.fov.toFixed(1), turn: +turn.toFixed(1) });
+        }
       }
       last = { t, d, p, cut: st.cameraCut, story: st, name: __game.story.name };
       requestAnimationFrame(tick);
@@ -77,7 +93,16 @@ try {
     const tick = () => (++i >= n ? done() : requestAnimationFrame(tick));
     requestAnimationFrame(tick);
   }), Math.max(1, Math.round(s * 60)));
-  const shot = async (name) => { if (shots) { await page.screenshot({ path: `${shots}-${name}.png` }); console.log(`  ${shots}-${name}.png`); } };
+  /** Each still's lens: how far off her (flat), how high over her feet, the angle down to her head and the vertical field. */
+  const measures = {};
+  const measure = (name) => page.evaluate(() => {
+    const st = __game.story.current, cam = __game.rig.camera, p = cam.position, c = __game.child.position;
+    const flat = Math.hypot(p.x - c.x, p.z - c.z);
+    return { t: +__stats.time.toFixed(1), where: `${st.beat}${st.run && st.run.stage !== 'off' ? '/' + st.run.stage : ''}${st.church && st.church.step !== 'off' ? '/' + st.church.step : ''}`,
+      flat: +flat.toFixed(1), over: +(p.y - c.y).toFixed(1), down: +(Math.atan2(p.y - c.y - 1.2, flat) * 180 / Math.PI).toFixed(1), fov: +cam.fov.toFixed(0) };
+  }).then((m) => { measures[name] = m; });
+  const keep = async () => { if (shots) (await import('node:fs')).writeFileSync(`${shots}-measures.json`, JSON.stringify(measures)); };
+  const shot = async (name) => { if (shots) { await page.screenshot({ path: `${shots}-${name}.png` }); await measure(name); await keep(); console.log(`  ${shots}-${name}.png`); } };
   const film = Number(process.env.FILM ?? 0);
   let filmed = -1, filmFrom = null;
   /** A still every `FILM` seconds of the run, once it has begun. */
@@ -85,7 +110,13 @@ try {
     if (!film || !shots || filmFrom === null) return;
     const t = await page.evaluate(() => __stats.time);
     const n = Math.floor((t - filmFrom) / film);
-    if (n > filmed) { filmed = n; await page.screenshot({ path: `${shots}-film-${String(n).padStart(3, '0')}.png` }); }
+    if (n > filmed) {
+      filmed = n;
+      const name = `film-${String(n).padStart(3, '0')}`;
+      await page.screenshot({ path: `${shots}-${name}.png` });
+      await measure(name);
+      await keep();
+    }
   };
   const state = () => page.evaluate(() => {
     const st = __game.story.current, r = st.run, f = (v) => v.toArray().map((x) => +x.toFixed(2));
@@ -237,7 +268,7 @@ try {
       return { out: tuning.storm.lighthouseOutAt, way: W.STORM_WAY.map((p) => [p.x, p.y]), last: [last.x, last.y], beach: [WOOD_LANDING.x, WOOD_LANDING.y],
         light: [LIGHTHOUSE.x, LIGHTHOUSE.z], sill: W.IVY_SILL.toArray(), legs: DROWNED_CHANNEL.length + 2,
         berth: [W.NAVE_BERTH.x, W.NAVE_BERTH.z], home: [...W.HOME_WAY, ...W.BRING_WAY].map((p) => [p.x, p.y]),
-        rings: tuning.drowned.church.rings, blinkAt: tuning.drowned.church.blinkAt };
+        rings: tuning.drowned.church.rings, blinkAt: tuning.drowned.church.blinkAt, lookUpFor: tuning.drowned.church.lookUpFor };
     });
     const d = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
     const xz = (p) => [p[0], p[2]];
@@ -278,7 +309,7 @@ try {
         if (p.landed) { mark('landed', p, s); break; }
         const since = p.time - aboard.time;
         if (since >= 2.6 && !cat) { cat = s.cat; await shot('church-look-back'); }
-        if (since >= 8 && since < 8.3) assert(s.riding && s.beat === 'gather', `she is not riding the boat into the storm: ${JSON.stringify(s)}`);
+        if (since >= T.lookUpFor + 2.5 && since < T.lookUpFor + 2.8) assert(s.riding && s.beat === 'gather', `she is not riding the boat into the storm: ${JSON.stringify(s)}`);
         if (p.beat !== was.beat) mark(p.beat, p, s);
         if (p.beat === 'snatch' && was.beat !== 'snatch') { await seconds(1); await shot('storm-plane'); }
         if (p.power < 0.6 && was.power >= 0.6) await shot('storm-light');
@@ -314,12 +345,17 @@ try {
       for (const b of beats) console.log(`  ${b.at.toFixed(1).padStart(5)} s  ${b.what}, ${b.toBeach.toFixed(0)} m from the beach`);
       if (out) console.log(`  the light went out ${d(xz(out.boat), T.light).toFixed(0)} m from the lighthouse, its lamp ${out.inFrame ? 'in' : 'out of'} frame at ${out.lamp.slice(0, 2).map((v) => v.toFixed(2)).join(', ')}`);
       if (atNave !== null) console.log(`  landed ${landed.at.toFixed(1)} s after she was aboard, ${(aboard.time - atNave + landed.at).toFixed(1)} s after the tower's foot`);
-      const back = trace.filter((r) => r.second >= 2 && r.second <= 5 && !r.flash);
+      const back = trace.filter((r) => r.second >= trace[0].second && r.second <= T.lookUpFor && !r.flash);
       const lookBack = back.reduce((a, r) => a + r.mean, 0) / Math.max(1, back.length);
-      const lit = trace.filter((r) => r.second > 5 && !r.flash);
+      const lit = trace.filter((r) => r.second > T.lookUpFor && !r.flash);
       const brightest = lit.reduce((a, r) => (r.mean > a.mean ? r : a), { mean: -1, second: -1 });
       console.log(`  mean brightness each second from aboard: ${trace.map((r) => `${r.second}:${r.mean.toFixed(0)}${r.flash ? '*' : r.ashore ? '+' : ''}`).join(' ')}`);
-      const cut = trace.slice(1).reduce((worst, r, i) => (r.flash || trace[i].flash ? worst : Math.max(worst, Math.abs(r.mean - trace[i].mean))), 0);
+      /**
+       * Once the lens has come down from the cat on the sill, 3 s into the storm: that move brings the frame from the
+       * lit stone down to the dark water, continuously; a cut anywhere after it still shows.
+       */
+      const cut = trace.slice(1).reduce((worst, r, i) => (r.flash || trace[i].flash || r.second <= T.lookUpFor + 3 ? worst
+        : Math.max(worst, Math.abs(r.mean - trace[i].mean))), 0);
       console.log(`  the look back ${lookBack.toFixed(1)}; brightest after it ${brightest.mean.toFixed(1)} at ${brightest.second} s; the most it changed in a second ${cut.toFixed(1)} (* a lightning flash, + ashore in the wood)`);
       assert(out, 'the light never went out');
       assert(!unseen, `the light was going out with the lighthouse out of frame at ${unseen?.since.toFixed(1)} s (${unseen?.lamp.map((v) => v.toFixed(2)).join(', ')})`);
@@ -519,6 +555,7 @@ try {
       await seconds(0.6);
     };
     await reach('waiting', 120);
+    if (process.env.FILMFROM === 'cat') filmFrom = (await state()).time;
     await shot('cat');
     for (let i = 0; i < 40 && (await state()).step === 'waiting'; i++) await push();
     await reach('ferried', 30);
@@ -529,11 +566,17 @@ try {
     await reach('aboard', 30);
     console.log('the cat is aboard', JSON.stringify(await state()));
     await until((s) => s.beat === 'still', 120, 'the air dying');
-    filmFrom = (await state()).time;
-    await seconds(4);
+    filmFrom ??= (await state()).time;
+    for (let t = 0; t < 4; t += 0.25) {
+      await seconds(0.25);
+      await reel();
+    }
     await shot('air-dies');
     await until((s) => s.beat === 'becalmed', 30, 'the boat at rest');
-    await seconds(14);
+    for (let t = 0; t < 14; t += 0.25) {
+      await seconds(0.25);
+      await reel();
+    }
     await shot('fog-rising');
     await reach('climbing', 150);
     await seconds(2);
@@ -541,13 +584,10 @@ try {
     await reach('ridge', 150);
     console.log('she is up on the ridge after the cat', JSON.stringify(await state()));
   }
-  if (!fromChurch) {
+  if (!fromChurch && !toRidge) {
     filmFrom ??= (await state()).time;
     await until((s) => s.beat === 'run', 30, 'her setting off');
     await frame();
-    const hand = await page.evaluate(() => { const r = __game.story.current.run, c = __game.child.position;
-      return { t: r.handT, off: r.handFrom ? Math.hypot(r.handFrom.x - c.x, r.handFrom.z - c.z) : null }; });
-    console.log(`the run took the lens ${hand.t === Infinity ? 'by the rig' : 'by its hand-over'} from ${hand.off?.toFixed(1)} m off her`);
 
     // Watches every frame from here: her feet on the decks, her progress, the fog behind her and in the frame, the
     // roofs she leaves going under it, the boat where it lies, and how long she waits on the cat at a piece.
@@ -584,10 +624,14 @@ try {
         if (ahead < w.fogAhead) { w.fogAhead = ahead; w.fogNear = near; w.fogAt = `${r.stage} at ${r.along.toFixed(1)} m, ${t.toFixed(1)} s`; }
         if (r.stage === 'walk') {
           let seen = false;
+          /** Its body low down or its top, which is what a lens up on the high roofs sees of it. */
           for (let a = -40; a <= 40 && !seen; a += 5) {
             for (const deep of [0, 6, 14]) {
-              probe.set(front.x - (dz / dl) * a - (dx / dl) * deep, Math.min(2.5, dark.level * 0.5), front.y + (dx / dl) * a - (dz / dl) * deep).project(cam);
-              if (probe.z < 1 && Math.abs(probe.x) < 0.98 && Math.abs(probe.y) < 0.98) { seen = true; break; }
+              for (const y of [Math.min(2.5, dark.level * 0.5), dark.level * 0.85]) {
+                probe.set(front.x - (dz / dl) * a - (dx / dl) * deep, y, front.y + (dx / dl) * a - (dz / dl) * deep).project(cam);
+                if (probe.z < 1 && Math.abs(probe.x) < 0.98 && Math.abs(probe.y) < 0.98) { seen = true; break; }
+              }
+              if (seen) break;
             }
           }
           w.fogGoneRun = seen ? 0 : w.fogGoneRun + 1 / 60;
@@ -808,10 +852,22 @@ try {
   }
   const motion = await page.evaluate(() => window.__lensWatch);
   console.log(`the lens turned at most ${motion.turn.toFixed(1)} deg/s (${motion.turnAt}) and moved at most ${motion.move.toFixed(1)} m/s (${motion.moveAt})`);
-  if (process.env.LENS) assert(motion.turn < 60, `the lens whipped round at ${motion.turn.toFixed(0)} deg/s (${motion.turnAt})`);
+  console.log(`  its fastest turn in each stretch: ${Object.entries(motion.stretches).map(([k, v]) => `${k} ${v.turn.toFixed(1)} (${v.at.toFixed(1)} s)`).join('; ')}`);
+  console.log(`  cuts in play: ${motion.cuts.length ? motion.cuts.join('; ') : 'none'}`);
+  if (process.env.LENS) {
+    assert(motion.turn < 30, `the lens whipped round at ${motion.turn.toFixed(0)} deg/s (${motion.turnAt})`);
+    assert(!motion.cuts.length, `the lens cut in play: ${motion.cuts.join('; ')}`);
+  }
   assert.deepEqual(errors, [], `page errors: ${errors.join('; ')}`);
   console.log('drowned run check passed');
 } finally {
+  if (process.env.TRACE && page) {
+    const motion = await page.evaluate(() => window.__lensWatch).catch(() => null);
+    if (motion) {
+      (await import('node:fs')).writeFileSync(process.env.TRACE, JSON.stringify(motion));
+      console.log(`the lens traced every quarter second: ${process.env.TRACE}`);
+    }
+  }
   const recorded = video ? context.pages()[0]?.video() : null;
   await context.close();
   if (recorded) console.log(`video: ${await recorded.path()}`);

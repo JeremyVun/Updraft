@@ -628,7 +628,9 @@ clouds, the owl, the boats, the birches, the sea), authored shot by shot to the 
   the spire a glance. It is the room's establishing shot, not a two-shot.
 - Stuck: at the scrape the lens comes round side on and in on the bow (6-8 m, at her eye height), the roof's slates
   under the water below the stem; the fog's rise behind is the secondary subject, growing in frame; the cat's stare,
-  yowl and bolt read large; its leap carries the frame up onto the roof.
+  yowl and bolt read large; its leap carries the frame up onto the roof. (As built the fog rises at the frame's back
+  edge and leaves it as the lens leans in on the cat's fear: the fog comes from dead astern, and no frame side on to
+  the bow holds both.)
 - The boat lost: over her shoulder from the first roof, low, the boat below, the fog taking it; the lantern the last
   light.
 - Each walk: from behind her the way she is going, off the shoulder on the fog's side, the cat ahead, the fog behind
@@ -647,7 +649,8 @@ clouds, the owl, the boats, the birches, the sea), authored shot by shot to the 
   climbs to it.
 - Letting go: from low beside the boat, near her head height, looking up past her face at the sill, a long lens so
   the cat and the kitten read and the blink is seen; the sail out of the line; held for the blink; then the storm's
-  frame over its 12 s.
+  frame over its 12 s. (As built the lens tilts up off her face to the cat, which is all the long lens holds; she is
+  7 m below it, and a frame holding both makes the cat a speck. The blink is held to 5.6 s for the tilt.)
 
 ### How it is made (Claude's calls under that ownership, 2026-10-05)
 
