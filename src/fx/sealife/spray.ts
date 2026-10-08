@@ -312,11 +312,11 @@ export class Spray {
       const a = Math.random() * Math.PI * 2;
       const reach = 0.3 + 0.7 * Math.sqrt(Math.random());
       const crown = THREE.MathUtils.smoothstep(reach, 0.72, 1);
-      const out = (0.2 + reach * 0.4 * Math.random() + crown * (1 + Math.random() * 1.8)) * wide;
+      const out = (0.2 + reach * 0.4 * Math.random() + crown * (1.3 + Math.random() * 2.2)) * wide;
       const up = height * DRAG[SPOUT] * reach * strength * (1 + Math.random() * 0.12);
       this.emit(SPOUT, at.x + Math.cos(a) * 0.4 * wide, at.y + 0.2, at.z + Math.sin(a) * 0.4 * wide, Math.cos(a) * out, up,
-        Math.sin(a) * out, (0.55 + Math.random() * 0.35 + crown * 0.6) * wide, 6.5 + Math.random() * 2.5,
-        (0.15 + reach * 0.25 + crown * 0.55) * wide, 0.6 + Math.random() * 0.3, 2.2 + crown * 1.4 + Math.random() * 0.6);
+        Math.sin(a) * out, (0.55 + Math.random() * 0.35 + crown * 0.8) * wide, 6.5 + Math.random() * 2.5,
+        (0.15 + reach * 0.25 + crown * 0.7) * wide, 0.6 + Math.random() * 0.3, 2.2 + crown * 1.4 + Math.random() * 0.6);
       this.side[this.count - 1] = a / (Math.PI * 2);
     }
     const m = Math.floor(strength * 90 * dt + Math.random());

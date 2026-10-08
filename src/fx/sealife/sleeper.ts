@@ -73,8 +73,6 @@ const TURN_TO_HER = 0.7;
 /** A slow wave of the flukes while they are up: radians of flex at the hinge, and of turn, and its pace. */
 const WAVE_FLEX = 0.16;
 const WAVE_TURN = 0.12;
-/** How far the rising flukes lean their faces toward her before it turns (radians of roll). */
-const FLUKES_LEAN = 0;
 const WAVE_PACE = 1.25;
 /** Seconds after the notch slips under before the boat may go and the pod goes with it, and before it is gone. */
 const GOING_AFTER = 1.2;
@@ -197,7 +195,6 @@ export class SleepingWhale extends WhaleRig {
   private planned = false;
   private readonly bendFrom = new THREE.Vector3();
   private twist = 0;
-  private lean = 0;
   private arch = 0;
   private readonly u = new Float32Array(SPINE_N);
   private readonly y = new Float32Array(SPINE_N);
@@ -490,9 +487,6 @@ export class SleepingWhale extends WhaleRig {
     // Standing up, its underside faces back along the way it goes: turned all the way, that is toward the boat.
     const full = Math.atan2(this.farewell.x - this.near.x, this.farewell.z - this.near.z) - Math.atan2(this.heading.x, this.heading.z);
     this.twist = Math.atan2(Math.sin(full), Math.cos(full)) * TURN_TO_HER;
-    const tx = this.near.x - this.farewell.x;
-    const tz = this.near.z - this.farewell.z;
-    this.lean = Math.sign(tx * this.heading.z - tz * this.heading.x) * FLUKES_LEAN;
     let rise = 0;
     for (let c = -30; c < 0; c += 0.25) rise += Math.sin(DIVE_SLOPE(c + 0.125)) * 0.25;
     this.arch = rise;
@@ -549,9 +543,7 @@ export class SleepingWhale extends WhaleRig {
       const du = this.u[i] - bu;
       this.spine[i].set(this.bendFrom.x + h.x * du, ay + this.y[i] - by, this.bendFrom.z + h.z * du, this.pitch[i]);
     }
-    // Rising, before it has turned, its flukes lean their faces toward her so they never stand edge on.
-    const leaning = THREE.MathUtils.smoothstep(lift, 0, 0.3) * (1 - THREE.MathUtils.smoothstep(lift, 0.45, 1));
-    this.uniforms.uRoll.value = K.roll * (1 - down) + this.lean * leaning + WAVE_TURN * wave;
+    this.uniforms.uRoll.value = K.roll * (1 - down) + WAVE_TURN * wave;
     this.uniforms.uCurl.value = 0.25 * wave * lift;
   }
 

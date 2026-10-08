@@ -279,6 +279,8 @@ export class NetWhale {
   private readonly holdNow = new Float32Array(14);
   /** The view has eased round to the farewell's hold, where it dives. */
   private farewelled = false;
+  /** How far round the hold's view is from the crossing's, unwound from frame to frame. */
+  private apart: number | null = null;
   private holdT = 1;
   private holdSet = false;
   /**
@@ -516,8 +518,9 @@ export class NetWhale {
     this.limit = freed > tuning.sail.topSpeed ? Infinity : Math.max(approach, freed);
     if (this.step !== 'approach' && this.released < 0) this.limit = Math.min(this.limit, approach);
     const near = 1 - THREE.MathUtils.smootherstep(left, K.holdFull, K.holdFrom);
-    const want = this.step === 'gone' ? 0 : this.step === 'approach' ? near : 1;
-    this.hold += (want - this.hold) * (1 - Math.exp(-dt * K.holdEase));
+    // Gone, the view goes back to the crossing's in one even ease from wherever the hold is, however the boat turns.
+    if (this.step === 'gone') this.hold = Math.min(this.hold, Math.max(0, 1 - this.stepTime / K.handBack));
+    else this.hold += ((this.step === 'approach' ? near : 1) - this.hold) * (1 - Math.exp(-dt * K.holdEase));
     this.rise += ((this.led && this.step === 'approach' ? 1 : 0) - this.rise) * (1 - Math.exp(-dt * K.riseEase));
     const leaning = this.step === 'line' && (this.haul === 'reaching' || this.haul === 'hauling');
     this.out += ((leaning ? 1 : 0) - this.out) * (1 - Math.exp(-dt * (leaning ? 3 : 1.6)));
@@ -1687,7 +1690,10 @@ export class NetWhale {
     const phone = (this.camera?.aspect ?? 16 / 9) < 1;
     shot.target.lerp(this.a.copy(this.whale.eye).setY(K.riseLook), (phone ? K.riseTowardPhone : K.riseToward) * rise);
     shot.distance += Math.hypot(shot.target.x - this.b.x, shot.target.z - this.b.z);
-    if (h <= 0.001) return;
+    if (h <= 0.001) {
+      this.apart = null;
+      return;
+    }
     // Down beside it the lens sits low over the water, so its back stands against the sky.
     shot.clearance = THREE.MathUtils.lerp(CROSSING_CLEARANCE, K.holdClearance, h);
     const whale = this.whale;
@@ -1726,7 +1732,12 @@ export class NetWhale {
     const from = shot.from ?? this.a.set(0, 0, 1);
     const was = Math.atan2(from.x, from.z);
     const want = Math.atan2(this.forward.x, this.forward.z);
-    const turned = was + Math.atan2(Math.sin(want - was), Math.cos(want - was)) * h;
+    // The crossing's view swings round as the boat comes about: keep turning between the two the same way round
+    // rather than flip to the other side as they pass opposite each other.
+    let apart = Math.atan2(Math.sin(want - was), Math.cos(want - was));
+    if (this.apart !== null) apart = this.apart + Math.atan2(Math.sin(apart - this.apart), Math.cos(apart - this.apart));
+    this.apart = apart;
+    const turned = was + apart * h;
     shot.from = from.set(Math.sin(turned), 0, Math.cos(turned));
     shot.distance = THREE.MathUtils.lerp(shot.distance, reach, h);
     shot.height = THREE.MathUtils.lerp(shot.height, this.lookFrom.y - this.look.y, h);

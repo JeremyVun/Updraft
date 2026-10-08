@@ -1465,6 +1465,8 @@ export const tuning = {
      * `farewellLookY` up, so its flukes stand whole in the frame over the boat.
      */
     farewellDistance: 25, farewellHeight: 3.2, farewellBearing: 0.5, farewellLookY: 14.5, farewellToward: 0.5, farewellMove: 7,
+    /** Once it has gone, seconds over which the view eases from the farewell's hold back to the crossing's behind the boat. */
+    handBack: 16,
     /**
      * The sea's score thins as the boat comes in, from `hushFrom` to `hushNear` metres short of the rest, to `hushSorrow`
      * of the way to silence at rest beside it, and comes back to `hushCourage` once its eye has found her, at
