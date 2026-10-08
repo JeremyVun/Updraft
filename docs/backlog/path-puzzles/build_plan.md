@@ -784,6 +784,10 @@ Owns: the room's lens from the rescue to the storm's frame (`drowned-run.ts`, `d
 watch, `tuning.drownedCamera`), authored per beat to design.md's shot list, upright composed for itself. First study how the rest of the game frames
 its subjects and interactions (`docs/engine.md` camera direction; the shots of the little boats, the birches' swing,
 the stairs, the dark wood and the sea in play) and take its grammar: framed well for a human.
+From the lead's review of 7a's run: at the rescue the mast stands between the lens and the cat at her shins; the mill
+is seen from high above, so she is tiny, the climb has no ruler and the fog is out of frame; the swing is seen from
+high over the board, looking down on her; on the granary's ridge she walks straight at the lens; the upright lens
+turns at 64 deg/s coming round from the climb and leaves the fog out of the narrow frame for up to 3.8 s on walks.
 Gate: `LENS=1` checks, both aspects; a still at every shot-list line.
 Done: [ ]
 
