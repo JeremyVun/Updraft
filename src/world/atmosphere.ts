@@ -899,18 +899,23 @@ struct SeaFogRay {
  * thin (x), how far behind its face (y) and behind its fingers' tips (z), and its top (w); and how far from the
  * creases between its heaps (heap). Its face bulges and its fingers run on only near its front.
  */
-vec4 seaFogAt(SeaFogRay r, float t, float step, out vec2 heap) {
+vec4 seaFogAt(SeaFogRay r, float t, float step, out vec3 heap) {
   const float BULGE = ${glsl(tuning.drowned.fog.bulge)}, BROAD = ${glsl(tuning.drowned.fog.bulgeBroad)};
   vec3 p = r.ro + r.rd * t;
   float s = r.s0 + r.ds * t, a = r.a0 + r.da * t;
   vec3 top = seaFogTop(p.xz, r.h * mix(0.55, 1.0, seaFogSides(a)), step);
-  heap = top.yz;
+  heap = vec3(top.yz, 0.22);
   top.x += r.bowl * r.horiz * t;
-  float face = r.front + r.lean * t - s;
+  // Its face leans back as it rises, so its foot takes what is low before its body takes what is high.
+  float face = r.front + r.lean * t - s - ${glsl(tuning.drowned.fog.lean)} * clamp(p.y / r.h, 0.0, 1.0);
   float tips = face;
   if (face > -BULGE - ${glsl(tuning.drowned.fog.fingers)} && face < ${glsl(tuning.drowned.fog.front)} + BULGE) {
-    // Its face heaps in broad rolls that climb slowly; low over the water it reaches on ahead in fingers.
-    face += BULGE * 2.0 * (seaFogNoise(vec2(a / BROAD, p.y / (0.5 * BROAD)) + uTime * vec2(0.012, -0.035), step, BROAD) - 0.5);
+    // Its face heaps in broad billowed rolls that climb slowly, round and creased between; low over the water it
+    // reaches on ahead in fingers.
+    float roll = abs(2.0 * seaFogNoise(vec2(a / BROAD, p.y / (0.5 * BROAD)) + uTime * vec2(0.012, -0.035), step, BROAD) - 1.0);
+    roll = mix(roll, 0.22, smoothstep(0.15, 0.5, step / BROAD));
+    heap.z = roll;
+    face += BULGE * 2.5 * (roll - 0.22);
     float finger = smoothstep(0.55, 0.75, seaFogNoise(vec2(a / 5.0, s / 16.0) + uTime * vec2(0.004, -0.02), step, 5.0));
     tips = face + ${glsl(tuning.drowned.fog.fingers)} * finger * (1.0 - smoothstep(0.0, ${glsl(tuning.drowned.fog.fingerLow)}, p.y));
   }
@@ -1000,7 +1005,7 @@ vec4 seaFogMarch(vec3 ro, vec3 rd, float far, float least) {
     const float COVER = ${glsl((tuning.drowned.fog.stepGrow ** tuning.drowned.fog.steps - 1) / (tuning.drowned.fog.stepGrow - 1))};
     float step = clamp(max(reach / COVER, span.x * 0.01), least, max(least, ${glsl(tuning.drowned.fog.stepMost)}));
     float ta = span.x;
-    vec2 ha, hb;
+    vec3 ha, hb;
     vec4 ma = seaFogAt(r, ta, step, ha);
     float ya = ro.y + rd.y * ta;
     for (int i = 0; i <= ${tuning.drowned.fog.steps}; i++) {
@@ -1014,7 +1019,7 @@ vec4 seaFogMarch(vec3 ro, vec3 rd, float far, float least) {
       if (last) {
         float face = r.front + r.lean * tb - (r.s0 + r.ds * tb);
         float top = r.h * MIDDLE * mix(0.55, 1.0, seaFogSides(r.a0 + r.da * tb)) + r.bowl * r.horiz * tb;
-        hb = vec2(0.22, r.h * SPREAD);
+        hb = vec3(0.22, r.h * SPREAD, 0.22);
         mb = vec4(top + THIN_UP + 0.5 * hb.y - pb.y, face, face, top);
       } else mb = seaFogAt(r, tb, step, hb);
       float yb = pb.y;
@@ -1047,8 +1052,10 @@ vec4 seaFogMarch(vec3 ro, vec3 rd, float far, float least) {
           rim = uSeaFogCrest.rgb * facing * smoothstep(${glsl(tuning.drowned.fog.crease)}, ${glsl(3 * tuning.drowned.fog.crease)}, hb.x) * (1.0 - smoothstep(uSeaFogRim, 3.0 * uSeaFogRim, rimDepth));
         }
       }
-      float lit = max(exp(-depth / ${glsl(tuning.drowned.fog.skyDepth)}) * shade,
-        ${glsl(tuning.drowned.fog.faceLit)} * exp(-max(0.5 * (ma.y + mb.y), 0.0) / ${glsl(tuning.drowned.fog.faceDepth)}));
+      float sky = exp(-depth / ${glsl(tuning.drowned.fog.skyDepth)});
+      float rolled = mix(${glsl(1 - tuning.drowned.fog.hollow)}, 1.0, smoothstep(0.0, ${glsl(tuning.drowned.fog.crease)}, 0.5 * (ha.z + hb.z)));
+      float lit = max(sky * shade, ${glsl(tuning.drowned.fog.faceLit)} * (0.7 + 0.3 * sky) * rolled
+        * exp(-max(0.5 * (ma.y + mb.y), 0.0) / ${glsl(tuning.drowned.fog.faceDepth)}));
       vec3 c = mix(uSeaFogBody.rgb, uSeaFogTop, lit) + rim;
       // Looking toward the low sun, its thin top glows with it.
       c += uSeaFogCrest.rgb * toSun * lit * (1.0 - uSeaFogShape.z);

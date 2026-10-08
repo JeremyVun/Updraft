@@ -174,8 +174,9 @@ export class DarkBank {
     // White is what the light makes of it: lit from above by the sky round it, never a white of its own.
     const sky = luminance(u.uSkyAmbient.value) * 0.9 + luminance(u.uSkyHorizon.value) * 0.3;
     this.body.copy(HUE.far).lerp(HUE.near, taken).lerp(HUE.night, night)
-      .multiplyScalar(sky * THREE.MathUtils.lerp(k.body, k.bodyNear, taken));
-    this.top.copy(HUE.top).lerp(HUE.night, night).multiplyScalar(sky * THREE.MathUtils.lerp(k.top, k.topNear, taken));
+      .multiplyScalar(sky * THREE.MathUtils.lerp(THREE.MathUtils.lerp(k.body, k.bodyNear, taken), k.night, night));
+    // Closed round into the night it has no lit top: it is all one slate.
+    this.top.copy(HUE.top).multiplyScalar(sky * THREE.MathUtils.lerp(k.top, k.topNear, taken)).lerp(this.body, night);
     // The low sun on the crests that face it; once the sun has gone from it only a little rose is left there.
     this.crest.copy(HUE.crest).multiplyScalar(luminance(u.uSunColor.value) * k.crest)
       .lerp(tmp.copy(HUE.rose).multiplyScalar(luminance(this.top) * k.roseLeft), crestGone);
