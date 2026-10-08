@@ -508,14 +508,13 @@ Skin skin(float far, float dry) {
         * smoothstep(0.1, 0.25, reach) * (1.0 - smoothstep(0.45, 1.05, reach)) * (1.0 - smoothstep(0.75, 1.1, abs(fan)));
     }
     // Beyond its folds a few long soft creases arch over it and sweep back toward the tail, the skin worn into lines.
-    float px2 = fwidth(e.y) + 0.01;
     float crease = 0.0;
     for (int i = 0; i < 3; i++) {
       float fi = float(i);
       float x = e.x + 0.4 + 0.25 * fi;
       float arc = 1.28 + 0.3 * fi - (0.12 - 0.02 * fi) * x * x + 0.04 * sin(e.x * 3.0 + fi * 2.0);
       float reach = (1.0 - smoothstep(1.0 + 0.3 * fi, 2.0 + 0.4 * fi, abs(x + 0.3))) * (1.0 - 0.3 * fi);
-      crease = max(crease, (1.0 - smoothstep(0.02, 0.05 + px2, abs(e.y - arc))) * reach);
+      crease = max(crease, (1.0 - smoothstep(0.02, 0.04 + aa, abs(e.y - arc))) * reach);
     }
     k.albedo *= (1.0 - 0.32 * folds.y * flank * (1.0 - far)) * (1.0 - 0.3 * lines * flank * (1.0 - far))
       * (1.0 - ${f(L.creases)} * crease * flank * (1.0 - far) * shows(0.06 * R * uScale, px));

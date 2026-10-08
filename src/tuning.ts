@@ -2208,12 +2208,11 @@ export const tuning = {
     /** A slate-blue back, a pale lower jaw and belly, a deep warm brown eye. */
     back: '#526276', belly: '#aea79f', iris: '#82502b',
     /**
-     * Its ancient skin, painted like an old rock: broad soft patches of tone and a soft grain, and the long creases
-     * round the eye (how strong); lichen
-     * (its pale colour and a warmer one some patches take, how much of the skin it covers, how strongly); old healed
-     * scars (colour, the share of the skin's cells that carry one, how strongly); barnacle crusts on the head, the chin,
-     * the lip and the flipper's edges (colour, how thickly the shells sit in a crust); and weed at the waterline (dark
-     * and mossy colours, the faint yellow film above it, how far up it reaches in metres).
+     * Its ancient skin, painted like an old rock: broad soft patches of tone, a soft grain and the long creases round
+     * the eye (how strong); lichen (its pale colour and a warmer one some patches take, how much of the skin it covers,
+     * how strongly); old healed scars (colour, the share of the skin's cells that carry one, how strongly); barnacle
+     * crusts on the head, the chin, the lip and the flipper's edges (colour, how thickly the shells sit in a crust); and
+     * weed at the waterline (dark and mossy colours, the faint yellow film above it, how far up it reaches in metres).
      */
     tone: 0.14, grain: 0.35, creases: 0.3,
     lichen: '#8695a6', lichenWarm: '#9a9c8e', lichenCover: 0.4, lichenAmount: 0.6,
