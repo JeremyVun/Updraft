@@ -71,19 +71,22 @@ const FLUKES_UP = -1.45;
  * it and slip down through it.
  */
 const LIFT_BY = curve([[-4, 0], [-1, 0.14], [2, 0.75], [4.5, 1], [40, 1]]);
-/** Share of the way round toward the boat its tail stock turns its flukes as they rise, so their pale undersides face her. */
-const TURN_TO_HER = 0.75;
 /**
- * Its tail stock turns them about its own line as they lift, from the start of the lift over `TURN_WITH` of it, but
- * never so far that they tilt more than `TILT` (the sine of the slope across their span) while they are still low:
- * so they come up opening toward her, never edge on, and stand level facing her.
+ * As the flukes come up the whale turns `TURN_TO_HER` of the way round toward the boat, so their pale undersides open
+ * toward her. Most of it (`YAW_SHARE`) is the whole body turning about its bend over `YAW_WITH` of their lift; the
+ * rest its tail stock turns them about its own line, from the start of the lift over `TILT_WITH` of it, but never so
+ * far that they tip more than `TILT` (the sine of the slope across their span) while they are still low; standing,
+ * that turn is a turn like the body's. Meanwhile they trail low from the stock by `TRAIL` (radians at the hinge),
+ * straightening over `TRAIL_UNTIL` of the lift, so they rise already opening and never edge on, and never swing out
+ * over the boat.
  */
-const TURN_WITH = 0.3;
-const TILT = 0.2;
+const TURN_TO_HER = 0.75;
+const YAW_SHARE = 0.6;
 const YAW_WITH = [0.1, 0.85] as const;
-const TRAIL = 0.5;
-const TRAIL_UNTIL = [0.35, 0.85] as const;
-const YAW_SHARE = 0.7;
+const TILT = 0.3;
+const TILT_WITH = 0.3;
+const TRAIL = 0.7;
+const TRAIL_UNTIL = [0.4, 0.85] as const;
 /** A slow wave of the flukes while they are up: radians of flex at the hinge, and of turn, and its pace. */
 const WAVE_FLEX = 0.16;
 const WAVE_TURN = 0.12;
@@ -555,10 +558,10 @@ export class SleepingWhale extends WhaleRig {
       const du = this.u[i] - bu;
       this.spine[i].set(this.bendFrom.x + h.x * du, ay + this.y[i] - by, this.bendFrom.z + h.z * du, this.pitch[i]);
     }
-    // Turned about the stock's own line, they tilt across by the sine of the turn times the cosine of how far up they stand.
-    const up = Math.cos(-this.pitch[SPINE_N - 3]);
-    const most = up > TILT ? Math.asin(TILT / up) : Math.PI / 2;
-    const turn = Math.min(Math.abs(this.twist) * (1 - YAW_SHARE) * THREE.MathUtils.smootherstep(lift, 0, TURN_WITH), most);
+    // Turned about the stock's own line they tip across by the sine of the turn times how low they still lie.
+    const low = Math.cos(this.pitch[SPINE_N - 3]);
+    const most = low > TILT ? Math.asin(TILT / low) : Math.PI / 2;
+    const turn = Math.min(Math.abs(this.twist) * (1 - YAW_SHARE) * THREE.MathUtils.smootherstep(lift, 0, TILT_WITH), most);
     this.uniforms.uRoll.value = K.roll * (1 - down);
     this.uniforms.uTurn.value = -Math.sign(this.twist) * turn + WAVE_TURN * wave;
     this.uniforms.uCurl.value = 0.25 * wave * lift;
