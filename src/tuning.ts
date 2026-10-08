@@ -1831,7 +1831,7 @@ export const tuning = {
        * further that glow spreads for each unit of fog between it and the eye; how much of the fog between dims it;
        * and how much of that glow the glassy sea under it gives back.
        */
-      lanternHalo: 0.4, lanternReach: 2, lanternSpread: 0.6, lanternThrough: 0.35, lanternMirror: 0.6,
+      lanternHalo: 0.4, lanternReach: 2, lanternSpread: 1.4, lanternThrough: 0.2, lanternMirror: 0.6,
       /** Closed round, how brightly the lighthouse's lamp glows in it and how far round the lamp that glow reaches, metres. */
       harbourHalo: 0.12, harbourReach: 14,
       /**
