@@ -578,6 +578,27 @@ chase a quiet pulse that tightens as the fog comes closer and eases when she is 
 own note in the score's key); the boat's answer warm; then the storm's cues. Every part of the room has music; nothing
 loops a short section for minutes.
 
+Jeremy on the first study (2026-10-09): "the music sounds a bit... random? I think there's not enough structured
+harmony / melody to it. But it's hard to tell based on an audio clip alone without the game playing as well". The
+cause: each cue wandered (the chase's round was sixteen chords with chromatic turns that never came round in a way the
+ear could learn), its lines were long notes at irregular beats, and the chase gated single notes in and out by the
+fog's distance, so its tune came and went mid-phrase. So the room's music is built on one theme and few, clear
+progressions (Claude's calls):
+- **One theme.** The drift's own question, D-E-F♯ rising to B, and its answer, B-F♯-E-D. Every new cue states or
+  develops it in regular phrases: four bars of question, four of answer, on a steady beat, repeated and varied
+  (sequenced up a step, fragmented, inverted), never a scatter of notes.
+- **Few, diatonic, repeating progressions,** one per cue, four chords cycling so the ear learns them, in B minor
+  (its relative D major for home): the drift as approved (Bm, A, G, F♯m); stuck rocks Bm to G and comes to rest on
+  the dominant F♯ for her decision; the chase drives round Bm, G, D, A, turning to Bm, G, Em, F♯ as it presses; the
+  climb sequences the question up a step over Bm, G, A; the belfry rocks Bm to Gmaj7, the theme slow and high once
+  a cycle for the kittens; the answers step G, Em, A to D; home is the theme whole in D major over D, A, Bm, G; the
+  farewell its last phrase. No chords from outside the key.
+- **Tension changes texture at phrase boundaries, never the tune mid-phrase:** the chase's pulse fills in (halves,
+  quarters, eighths) and a second progression or the theme's fragment takes over from the next phrase as the fog
+  presses; easing returns at the next phrase.
+- Next he hears it in the game: the reworked music goes into the room's playable build so he plays it with the
+  pictures, with the rendered arc alongside.
+
 Jeremy, 2026-10-08, on what the work needs: "yes, you have licence to cut or replace anything you feel doesn't earn
 it's place", and on the camera: "I think it just needs to be framed well for a human is all. The rest of the game does
 a fairly good job if you need to see how it's been done." So any piece above may be cut or replaced if it does not
