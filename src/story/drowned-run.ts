@@ -92,6 +92,9 @@ const CAT_OVER: Record<Piece, CatMove[]> = {
   mill: [{ run: [CAT_WAY.mill[0], CAT_WAY.mill[1]] }, { leap: CAT_WAY.mill[2] }, { hop: CAT_WAY.mill[3] }, { run: [CAT_WAY.mill[4]] }],
   swing: [{ run: [CAT_WAY.swing[0], CAT_WAY.swing[1]] }, { leap: CAT_WAY.swing[2] }, { run: [CAT_WAY.swing[3]], narrow: true }],
 };
+/** Until the room is re-laid round the hoist, the mill's lens looks this much higher and stands this much further off, so its hub is in frame. */
+const HOIST_LOOK = 3.4;
+const HOIST_BACK = 5;
 const ORDER: readonly Piece[] = ['tree', 'mill', 'swing'];
 
 /** The point `s` metres along a way laid as `nodes`. */
@@ -656,7 +659,6 @@ export class RoofRun {
       this.tree.begin();
     } else if (piece === 'mill') {
       village.driven.add(village.mill);
-      c.decks.push(MILL_SITE.stride);
       c.stowPlane(true);
       this.mill.begin();
     } else {
@@ -967,9 +969,9 @@ export class RoofRun {
 
   /**
    * In front of the sails, out to the south side of her wall so the cottage she came over is clear of it, looking past
-   * her at the sail she will ride, the hub and the high roof beyond; it rises with her only enough to show the water
-   * below, and follows her in along the high ridge so the mill leaves the frame and the church and the lighthouse come
-   * into it beyond her. Upright, further to the south side, clear of the cottage's chimney.
+   * her at the hoist and up to the hub, so the circles round it are made on screen; it rises with her only enough to
+   * show the water below, and follows her in along the high ridge so the mill leaves the frame and the church and the
+   * lighthouse come into it beyond her. Upright, further to the south side, clear of the cottage's chimney.
    */
   private millView(wide: number, c: THREE.Vector3 = this.cast.child.position, ahead = THREE.MathUtils.smootherstep(this.millAhead, 0, 1)): void {
     const m = this.mill.mill;
@@ -977,12 +979,13 @@ export class RoofRun {
     const rise = THREE.MathUtils.clamp((p.y - MILL.waitTop) / (MILL.offRidge - MILL.waitTop), 0, 1);
     const x = Math.min(p.x, HOIST.x);
     const k = tuning.drownedCamera.run;
-    const eye = this.stationEye.set(x + k.millAside - k.millOn * ahead, 2.5 + 0.7 * p.y + 0.6 * ahead, k.millOut - 0.8 * rise - k.millIn * ahead);
-    const target = this.stationTarget.set(x + 0.9 - 5.5 * ahead, 0.8 + 0.8 * p.y, 0);
+    const up = HOIST_LOOK * (1 - ahead), back = HOIST_BACK * (1 - ahead);
+    const eye = this.stationEye.set(x + k.millAside - k.millOn * ahead, 2.5 + 0.7 * p.y + 0.6 * ahead, k.millOut + back - 0.8 * rise - k.millIn * ahead);
+    const target = this.stationTarget.set(x + 0.9 - 5.5 * ahead, 0.8 + 0.8 * p.y + up, 0);
     if (wide < 1) {
       eye.lerp(this.tmp2.set(x + k.millAside + k.uprightMillAside - k.millOn * ahead, 2.5 + 0.7 * p.y + 0.6 * ahead,
-        k.millOut - 0.8 * rise - k.millIn * ahead), 1 - wide);
-      target.lerp(this.tmp2.set(x + 0.9 - 5.5 * ahead, 1.3 + 0.8 * p.y, 0), 1 - wide);
+        k.millOut + back - 0.8 * rise - k.millIn * ahead), 1 - wide);
+      target.lerp(this.tmp2.set(x + 0.9 - 5.5 * ahead, 1.3 + 0.8 * p.y + up, 0), 1 - wide);
     }
     m.group.localToWorld(eye);
     m.group.localToWorld(target);

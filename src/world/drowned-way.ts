@@ -458,8 +458,6 @@ export const TREE_SITE: { spot: TreeSpot; way: TreeWay } = {
 export const MILL_SITE = {
   spot: { hub: new THREE.Vector2(MILL.hub.x, MILL.hub.z), facing: MILL.facing, from: MILL.waitTop, to: MILL.offRidge, reach: SAILS } satisfies MillSpot,
   way: { wait: MILL_WAIT, stepOff: MILL_OFF, onward: atMill(MILL.off - 1.5, RIDGE_Z, MILL.offRidge) },
-  /** From the basket at the top across to the high ridge's cap, walked only off the hoist. */
-  stride: strip(atMill(HOIST.x, HOIST.z, MILL.offRidge), atMill(MILL.gable + 0.1, RIDGE_Z, MILL.offRidge), RIDGE),
 };
 export const SWING_SITE: { spot: SwingSpot; way: SwingWay } = {
   spot: { pivot: new THREE.Vector3(SWING_X, 7.3, GREEN_NORTH - 0.34), toward: new THREE.Vector2(0, -1), rope: 7 },
