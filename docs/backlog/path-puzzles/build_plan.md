@@ -472,6 +472,27 @@ shake's spray lit and fogged like everything else in the room, so it reads in th
 bowls its sibling over rather than landing inside it.
 Gate: `cat-check` slip and reach no worse; `far` and `near` strips of run, bolt, scared-run and trot at 30 fps over a
 second (`FPS=30 WINDOW=`) and at 10 fps whole, for the lead to judge; shake and tumble strips.
+Done: [x] (branch `proto-drowned-gallop`). APIs of 6b and 6b2 stand; new: `Cat.flying`, `Cat.topple(from?)`.
+- The bound is its own choreography (`cat/bound.ts`), phased from the hind paws touching down: the bunch (paws
+  gathered under the belly, back arched, body low), the push (nose up, hind legs driving), a long flight with the body
+  up to 8 cm higher at scale 1.8, the spine drawn out and the legs reaching flat out fore and aft, front paws down first
+  with the nose dipping, then the hind paws swing up under it. The shoulders check over the front paws and surge on
+  while the hips keep an even pace, so the trunk itself lengthens and bunches. Paws in the air follow body-relative
+  reaches; planted paws stay where they were put. The legs draw out a fifth longer as it comes up to a gallop (a leg
+  length drive on the rig), so the sit, curl, slow blink and tub keep the sheet's short legs. The neck gives against
+  the body's rise, so the head travels about half as far as the body. At the room's 3 m/s a stride is about 1.1 m at
+  2.7 a second, and at the top of its flight its back is about 0.4 m above the roof. Fear keeps the same bound lower, with a 12%
+  longer stride, ears pinned and tail down.
+- Every gait sets off from standing at its own moment in the cycle, and `place` forgets the last heading and pace, so a
+  run's first strides are the same every time.
+- The shake's drops are small clear balls shaded as the cat is (sun, sky, lantern) with a sun glint and the room's fog.
+- Kittens: a pounce comes down with its front paws at the sibling's flank; the sibling holds still while stalked, goes
+  over away from the pouncer as it lands and stays down a moment, and the pouncer pats it. Woken into play
+  (`tumble()`), the first thing one does is pounce on the next.
+Left: at 12 m the cat is about 40 px tall, so the bound reads most clearly at 30 fps; 10 fps samples its 2.7 Hz rhythm
+unevenly, though every frame shows a distinct pose. At the moment of a pounce the kitten's big head presses into its
+sibling's flank. The trot is unchanged (a short-legged patter). The narrow rail bound at 1.6 m/s runs at about 2 Hz
+with the full flight and can look floaty.
 
 ### Phase 6c: the windmill as a sack hoist (after 6a; owns `src/world/crossings/windmill.ts`, `mill-crossing.ts`, `mill-spiral.ts`, the mill yard, `mill-check`)
 design.md "The windmill, rebuilt": she rides a basket on the hoist, standing, the full height of the mill; the
