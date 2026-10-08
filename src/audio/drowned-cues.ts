@@ -71,7 +71,7 @@ const CHORD = {
   Bm: [47, 54, 59, 62], G: [43, 50, 57, 59], D: [38, 50, 54, 57], A: [45, 52, 57, 61], Asus4: [45, 52, 57, 62],
   Em: [40, 52, 55, 59], 'F#': [42, 49, 54, 58], 'F#7': [42, 49, 52, 58], Gmaj7: [43, 50, 54, 59],
 } as const;
-const D = 62, E = 64, Fs = 66, G = 67, A = 69, As = 70, B = 71;
+const Cs = 61, D = 62, E = 64, Fs = 66, G = 67, A = 69, As = 70, B = 71;
 /** The question, D . . E | F♯ . . . | – D E F♯ | B . . . , and the answer, B . . A | F♯ . . . | E . F♯ . | D . . . */
 const QUESTION: Line = [[0, D, 3], [3, E, 1], [4, Fs, 4], [9, D, 1], [10, E, 1], [11, Fs, 1], [12, B, 4]];
 const ANSWER: Line = [[0, B, 3], [3, A, 1], [4, Fs, 4], [8, E, 2], [10, Fs, 2], [12, D, 4]];
@@ -119,16 +119,19 @@ const PRESSED = [CHORD.Bm, CHORD.G, CHORD.Em, CHORD['F#7']];
 /** The cello's counter-line under the felt: down the scale against the question's rise, up against the answer's fall. */
 const UNDER_QUESTION: Line = [[0, 59, 2], [2, 57, 2], [4, 55, 4], [8, 54, 4], [12, 52, 4]];
 const UNDER_ANSWER: Line = [[0, 54, 4], [4, 55, 4], [8, 57, 4], [12, 52, 4]];
-/** The question's head a step higher each bar (D E F♯, E F♯ G, F♯ G A) to the leading note, which rises to B. */
+/** The question's head a step higher each bar (D E F♯, E F♯ G, F♯ G A) to the leading note, rising to the answer's B. */
 const SEQUENCE: Line = [[0, D, 1], [1, E, 1], [2, Fs, 2], [4, E, 1], [5, Fs, 1], [6, G, 2], [8, Fs, 1], [9, G, 1],
   [10, A, 2], [12, As, 4]];
 /** And the answer from that B, which cannot come home: it ends on C♯ over the dominant and climbs again. */
-const DENIED: Line = [[0, B, 3], [3, A, 1], [4, Fs, 4], [8, E, 2], [10, Fs, 2], [12, 61, 4]];
+const DENIED: Line = [[0, B, 3], [3, A, 1], [4, Fs, 4], [8, E, 2], [10, Fs, 2], [12, Cs, 4]];
 /** Under the felt, the cello on the roots an octave up, or holding B over the round and falling to the leading note. */
 const UNDER_SEQUENCE: Line = [[0, 59, 4], [4, 55, 4], [8, 52, 4], [12, 54, 4]];
 const UNDER_DENIED: Line = [[0, 59, 4], [4, 59, 4], [8, 59, 4], [12, 58, 4]];
 const SUNG = .014, STRUCK = .0105, UNDER = .0095;
-/** Three times round the period before it repeats: the cello; the felt an octave up over the cello's counter-line; both. */
+/**
+ * Three times round the period before it repeats: the cello; the felt an octave up over the cello's counter-line; the
+ * cello asking and the felt answering.
+ */
 const CALM: Passage[] = [
   passage(EASED, sing('cello', QUESTION, 0, BEAT, SUNG)),
   passage(ANSWERED, sing('cello', ANSWER, 0, BEAT, SUNG)),
@@ -156,10 +159,9 @@ const SET_OFF = passage([CHORD['F#']]);
 
 /**
  * The chase, a passage at a time: the theme over B minor, G, D, A while the fog is far or she is across a piece; the
- * question's head climbing over B minor, G, E minor, F♯ while it presses, answered by its denied answer. Which one is
- * read only where a phrase
- * begins, with a margin either way so it does not turn at every phrase, and a return to ease begins at the question.
- * The pulse fills in or thins bar by bar.
+ * question's head climbing over B minor, G, E minor, F♯ while it presses, then its denied answer. Which one is read
+ * only where a phrase begins, with a margin either way so it does not turn at every phrase, and a return to ease
+ * begins at the question. The pulse fills in or thins bar by bar.
  */
 class Chase implements Conductor {
   private begun = false;
