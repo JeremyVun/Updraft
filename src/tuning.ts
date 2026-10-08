@@ -2200,7 +2200,7 @@ export const tuning = {
        * of the way from her up to the sill, on this lens (upright, its own).
        */
       releaseFrom: 7.8, releaseTo: 10.8, releaseRound: 0.5, releaseBack: 15, releaseUp: 2, releaseLook: 0.15, releaseZoom: 1.05,
-      uprightReleaseRound: 0.5, uprightReleaseBack: 12, uprightReleaseUp: 2, uprightReleaseLook: 0.4,
+      uprightReleaseRound: 0.6, uprightReleaseBack: 15, uprightReleaseUp: 2, uprightReleaseLook: 0.4,
       /**
        * The paces it moves at (the kittens', the fog sea's and the look up's slower), how much of the frame she and
        * what she is with keep inside and how far it may draw back to hold them, and upright how much wider the lens.
@@ -2213,7 +2213,7 @@ export const tuning = {
        * falters, and is there; how much of the way it goes, how much it favours her over the lamp and how wide the
        * lens goes to hold them both (upright, wider); and when it gives way to the storm's frame, and how long that takes.
        */
-      lampFrom: 0, lampTo: 3, lampAim: 1, lampHer: 0.55, uprightLampHer: 0.5, lampZoom: 0.68, uprightLampZoom: 0.62,
+      lampFrom: 0, lampTo: 3, lampAim: 1, lampHer: 0.55, uprightLampHer: 0.45, lampZoom: 0.68, uprightLampZoom: 0.62,
       leaveFrom: 6.6, leaveFor: 12,
     },
     /** Follow the boat into the streets; notice the church from that travelling view. */
