@@ -523,40 +523,48 @@ export const STORM_WAY = [new THREE.Vector2(6, -1584), new THREE.Vector2(36, -16
 const STORM_OUT = [new THREE.Vector2(NAVE_BERTH.x, NAVE_BERTH.z - 4), ...STORM_WAY];
 
 /**
- * The line the fog comes on along: in from the sea far behind them, up the drift past the stranded boat and on north up
- * the run to the tower, straight, so its front sweeps across the roofs as a tide, the roofs going under in the order
- * she leaves them. It runs down the middle of her way; its front is measured along it in metres, so it is also how far
- * north the tide has come.
+ * The line the fog comes on along: in from the sea far behind them, up the drift to the stranded boat and on along her
+ * way over the roofs to the tower, so its front takes each roof she leaves just after she is off it. Its front is
+ * measured along it in metres.
  */
 const ON_HER_WAY = [RIDGE_END, W1_FROM, TREE_WAIT, OVER, TREE_REST, deckEnd(WAY.barnRidge), SHEET_SITE.way.stepOff, LANE_TOP, W3_FROM, W3_CORNER,
   W3_TURN, MILL_FOOT, MILL_WAIT, MILL_OFF, GRANARY_TOP, LEAN_FOOT, GREEN_EAST, deckEnd(WAY.greenRidge), BOARD, LANDING, TOWER_FOOT];
 /** Her way over the roofs, as a line on the water, for the village to be laid round. */
 export const HER_WAY: THREE.Vector2[] = ON_HER_WAY.map((p) => new THREE.Vector2(p.x, p.z));
-const FOG_X = (Math.min(...ON_HER_WAY.map((p) => p.x)) + Math.max(...ON_HER_WAY.map((p) => p.x))) / 2;
-const FOG_FAR = 240;
 export const DARK_WAY: THREE.Vector2[] = [
-  new THREE.Vector2(FOG_X, STRAND.y + FOG_FAR),
-  new THREE.Vector2(FOG_X, STRAND.y),
-  new THREE.Vector2(FOG_X, TOWER_FOOT.z - 6),
+  new THREE.Vector2(STRAND.x, STRAND.y + 240),
+  STRAND.clone(),
+  ...HER_WAY,
 ];
 /** How far along `DARK_WAY` each of its points is, and the whole of it. */
 export const DARK_ALONG: number[] = DARK_WAY.map((_, i) => DARK_WAY.slice(1, i + 1).reduce((sum, p, j) => sum + p.distanceTo(DARK_WAY[j]), 0));
 export const DARK_END = DARK_ALONG[DARK_ALONG.length - 1];
-/** How far along `DARK_WAY` a point lies: how far north it is, counted from far out. */
-export function darkAlong(_x: number, z: number): number {
-  return THREE.MathUtils.clamp(FOG_FAR + STRAND.y - z, 0, DARK_END);
+/** How far along `DARK_WAY` the stranded boat lies. */
+export const DARK_AT_STRAND = DARK_ALONG[1];
+/**
+ * How far along `DARK_WAY` a point on her way lies, from the stranding on, given how far along it was a moment ago:
+ * the nearest place on it no more than `back` behind that and `on` beyond it, so a way that doubles back is never
+ * taken for its later stretch.
+ */
+export function darkAlong(x: number, z: number, was = DARK_AT_STRAND, back = 4, on = 30): number {
+  let best = Infinity, along = was;
+  for (let i = 2; i < DARK_WAY.length; i++) {
+    if (DARK_ALONG[i] < was - back || DARK_ALONG[i - 1] > was + on) continue;
+    const a = DARK_WAY[i - 1], b = DARK_WAY[i], ex = b.x - a.x, ez = b.y - a.y, l2 = ex * ex + ez * ez;
+    const t = THREE.MathUtils.clamp(((x - a.x) * ex + (z - a.y) * ez) / l2, 0, 1);
+    const d = Math.hypot(x - a.x - ex * t, z - a.y - ez * t);
+    if (d < best) { best = d; along = DARK_ALONG[i - 1] + t * Math.sqrt(l2); }
+  }
+  return along;
 }
 /**
  * What the fog has to rise over as it comes: how far along `DARK_WAY` each thing stands and how high it is: the
- * stranded boat's masthead, then her way over the roofs, in order along it.
+ * stranded boat's masthead, then her way over the roofs.
  */
 export const DARK_TOPS: { along: number; top: number }[] = [
-  { along: FOG_FAR, top: tuning.drowned.fog.overBoat },
-  ...ON_HER_WAY.map((p) => ({ along: darkAlong(p.x, p.z), top: p.y })),
-].sort((a, b) => a.along - b.along);
-
-/** How far along `DARK_WAY` the stranded boat lies. */
-export const DARK_AT_STRAND = FOG_FAR;
+  { along: DARK_AT_STRAND, top: tuning.drowned.fog.overBoat },
+  ...ON_HER_WAY.map((p, i) => ({ along: DARK_ALONG[i + 2], top: p.y })),
+];
 
 /** The point `front` metres along `DARK_WAY`. */
 export function darkWayPoint(front: number, out: THREE.Vector2): THREE.Vector2 {

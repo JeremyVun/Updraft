@@ -55,8 +55,14 @@ export class DarkBank {
   close = 0;
   /** How far the storm's own night has taken over from the darkness the fog brought, 0 to 1. */
   storm = 0;
-  /** The way it comes where its front is now. */
-  private readonly ahead = new THREE.Vector2().subVectors(DARK_WAY[1], DARK_WAY[0]).normalize();
+  /**
+   * Where its front turns to face as it comes, while it chases her (her, on her way); otherwise it lies across its own
+   * way. And the way its front faces now.
+   */
+  faces: THREE.Vector2 | null = null;
+  readonly ahead = new THREE.Vector2().subVectors(DARK_WAY[1], DARK_WAY[0]).normalize();
+  private readonly want = new THREE.Vector2();
+  private readonly origin = new THREE.Vector2();
   private readonly at = new THREE.Vector2();
   private readonly back = new THREE.Vector2();
   private readonly crest = new THREE.Color();
@@ -127,7 +133,7 @@ export class DarkBank {
   }
 
   /** Lays the fog out for every shader and takes the light it takes; after the palette has been set for the step. */
-  update(_time: number, eye: THREE.Vector3): void {
+  update(_time: number, eye: THREE.Vector3, dt = 1 / 60): void {
     if (QA && params.fog !== null) this.force(params.fog);
     const u = atmo.uniforms;
     // It belongs to the village: it thins off as the forest beach comes up out of it, leaving the storm's own weather.
@@ -146,7 +152,12 @@ export class DarkBank {
 
     darkWayPoint(this.front, this.at);
     darkWayPoint(this.front - d.aheadFrom, this.back);
-    if (this.at.distanceToSquared(this.back) > 1) this.ahead.subVectors(this.at, this.back).normalize();
+    const to = this.faces && this.faces.distanceToSquared(this.at) > 1 ? this.faces : this.at.distanceToSquared(this.back) > 1 ? this.at : null;
+    if (to) {
+      this.want.subVectors(to, to === this.faces ? this.at : this.back).normalize();
+      const turn = Math.atan2(this.ahead.x * this.want.y - this.ahead.y * this.want.x, this.ahead.dot(this.want));
+      this.ahead.rotateAround(this.origin, turn * (1 - Math.exp(-Math.max(dt, 0) * d.turnRate)));
+    }
     u.uSeaFog.value.set(this.at.x, this.at.y, this.ahead.x, this.ahead.y);
     const drawn = smooth(p, far, near);
     const top = this.level * (0.3 + 0.7 * risen) * THREE.MathUtils.lerp(1, k.closedTop, this.close);

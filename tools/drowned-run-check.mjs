@@ -468,7 +468,7 @@ try {
         stallWorst: 0, stallAt: '', last: -1, since: 0, facing: 0, facingRun: 0, facingWorst: 0, facingAt: '', unseen: 0, unseenRun: 0,
         unseenWorst: 0, unseenAt: '', inside: 0, insideAt: '', fogGoneRun: 0, fogGoneWorst: 0, fogGoneAt: '', boatMoved: 0,
         roofs: {}, waits: {}, levelAt: [] };
-      const front = W.DARK_WAY[0].clone(), back = W.DARK_WAY[0].clone();
+      const front = W.DARK_WAY[0].clone();
       const strand = { x: __game.boat.position.x, z: __game.boat.position.z };
       const placed = W.PLACED.map((h, i) => ({ h, i }));
       const cam = __game.rig.camera;
@@ -488,8 +488,7 @@ try {
         /** The fog: how far ahead of its front's line she is, and its front in the frame on her own way. */
         const dark = __game.village.dark;
         W.darkWayPoint(dark.front, front);
-        W.darkWayPoint(dark.front - 40, back);
-        const dx = front.x - back.x, dz = front.y - back.y, dl = Math.hypot(dx, dz) || 1;
+        const dx = dark.ahead.x, dz = dark.ahead.y, dl = 1;
         const ahead = ((p.x - front.x) * dx + (p.z - front.y) * dz) / dl, near = Math.hypot(p.x - front.x, p.z - front.y);
         if (ahead < w.fogAhead) { w.fogAhead = ahead; w.fogNear = near; w.fogAt = `${r.stage} at ${r.along.toFixed(1)} m, ${t.toFixed(1)} s`; }
         if (r.stage === 'walk') {
@@ -503,20 +502,16 @@ try {
           w.fogGoneRun = seen ? 0 : w.fogGoneRun + 1 / 60;
           if (w.fogGoneRun > w.fogGoneWorst) { w.fogGoneWorst = w.fogGoneRun; w.fogGoneAt = `at ${r.along.toFixed(1)} m, until ${t.toFixed(1)} s`; }
         } else w.fogGoneRun = 0;
-        /** The roofs she has been on: when she was last on one, and when the fog has taken all of it, front and top. */
+        /** The roofs she has been on: when she was last on one and where, and when the fog has that place under it, front and top. */
         for (const { h, i } of placed) {
           const top = W.roofUnder(h, p.x, p.z);
           const rec = w.roofs[i];
           if (top !== null && Math.abs(top - p.y) < 0.6) {
-            w.roofs[i] = { name: i, left: t, under: null, ridge: W.ridgeTop(h) };
+            w.roofs[i] = { name: i, left: t, x: p.x, z: p.z, under: null, ridge: W.ridgeTop(h) };
             continue;
           }
           if (!rec || rec.under !== null) continue;
-          const corners = [[-1, -1], [-1, 1], [1, -1], [1, 1]].map(([u, v]) => {
-            const cs = Math.cos(h.yaw), sn = Math.sin(h.yaw), lx = u * h.len / 2, lz = v * h.depth / 2;
-            return [h.x + lx * cs + lz * sn, h.z - lx * sn + lz * cs];
-          });
-          const behind = corners.every(([x, z]) => ((x - front.x) * dx + (z - front.y) * dz) / dl < -2);
+          const behind = (rec.x - front.x) * dx + (rec.z - front.y) * dz < -2;
           if (behind && dark.level > rec.ridge) rec.under = t;
         }
         w.boatMoved = Math.max(w.boatMoved, Math.hypot(__game.boat.position.x - strand.x, __game.boat.position.z - strand.z));
@@ -586,7 +581,12 @@ try {
     for (; pushes < 8 && (await state()).fallen === 'standing'; pushes++) {
       const aim = await page.evaluate(() => {
         const r = __game.story.current.run, cam = __game.rig.camera;
-        const p = r.tree.tree.trunkAt(0.5, cam.position.clone()).project(cam);
+        /** Across the trunk where it is on the screen, as high up it as is in the frame. */
+        let p = null;
+        for (const share of [0.5, 0.4, 0.3, 0.2, 0.12]) {
+          p = r.tree.tree.trunkAt(share, cam.position.clone()).project(cam);
+          if (Math.abs(p.y) < 0.7 && Math.abs(p.x) < 0.8) break;
+        }
         return { at: [(p.x + 1) / 2, (1 - p.y) / 2], heading: r.tree.tree.fallHeading(cam) };
       });
       await stroke(aim.at, aim.heading, 0.62, 15);
@@ -686,7 +686,7 @@ try {
     assert(w.stallWorst < 3, `she stalled on her own way for ${w.stallWorst.toFixed(1)} s (${w.stallAt})`);
     assert(w.fogAhead > 4, `the fog reached her: ${w.fogAhead.toFixed(1)} m ahead of its front (${w.fogAt})`);
     assert(w.fogGoneWorst < 2, `the fog was out of a walk's frame for ${w.fogGoneWorst.toFixed(1)} s (${w.fogGoneAt})`);
-    const late = roofs.slice(0, -2).filter((r) => r.under === null || r.under - r.left > 14);
+    const late = roofs.filter((r) => (r.under ?? end.time) - r.left > 14);
     assert(!late.length, `a roof she left was not taken by the fog in time: ${late.map((r) => names[r.name]).join('; ')}`);
     assert(w.boatMoved < 1.5, `the boat moved ${w.boatMoved.toFixed(2)} m from where it ran aground`);
     assert(towerSouth < 1.5, `the cat is not at the tower's south face (${towerSouth.toFixed(2)} m off)`);

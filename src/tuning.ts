@@ -1751,8 +1751,11 @@ export const tuning = {
        * close and while it is still far off, spread along the horizon.
        */
       halfWidth: 170, flank: 30, wing: 0.3, wingFade: 0.45, wingFar: 0.35, wingFadeFar: 0.4,
-      /** How far back along its way the line its front lies across is taken from, metres: far enough that it sweeps on rather than swinging. */
-      aheadFrom: 30,
+      /**
+       * How far back along its way the line its front lies across is taken from, metres; and how fast its front turns
+       * to that, or to face her while it chases her (per second).
+       */
+      aheadFrom: 30, turnRate: 0.6,
       /**
        * Seconds it takes to rise on the horizon once the boat lies stuck, how far behind the boat it rises, and when it
        * starts to come on: never stopping, at `comePace` (m/s) and `comeRate` a second of however far it still is from
@@ -1895,11 +1898,12 @@ export const tuning = {
       catGo: { tree: 9, sheet: 40, mill: 4, swing: 14 }, catDown: 0.55,
       /**
        * The fog along `DARK_WAY` (how far north it has come): how far behind her it comes on while she is on her own way,
-       * while she looks back at the boat, and while she works each piece; the nearest it ever comes; how near her the
+       * while she looks back at the boat, while she works each piece, and where it waits once she is at the tower's
+       * foot; the nearest it ever comes; how near her the
        * walking lens is laid to expect it; how hard it closes on where it is going (per second a metre), the slowest and
        * fastest it comes on (m/s), and how quickly it changes pace (per second).
        */
-      fogTrail: 16, fogLooked: 9, fogHold: { tree: 10, sheet: 10, mill: 14, swing: 12 }, fogNearest: 7.5, fogLaid: 10,
+      fogTrail: 16, fogLooked: 9, fogHold: { tree: 10, sheet: 10, mill: 14, swing: 12 }, fogEnd: 19, fogNearest: 7.5, fogLaid: 10,
       fogPull: 0.35, fogSlowest: 0.12, fogFastest: 3.2, fogEase: 0.9,
     },
     /** The wash-tub the player's wind carries to the cat's roof and back to the boat. */
@@ -2029,16 +2033,16 @@ export const tuning = {
        * The tree's view: how far north of where it lies over her wall and east of it (out over the lane) it stands, and
        * how high (upright, the same).
        */
-      treeNorth: 7.5, treeEast: 1.2, treeHigh: 3.4, uprightTreeNorth: 8.5, uprightTreeEast: 0.6, uprightTreeHigh: 4.4,
+      treeNorth: 9.5, treeEast: 1.6, treeHigh: 3.6, uprightTreeNorth: 10.5, uprightTreeEast: 0.8, uprightTreeHigh: 4.6,
       /** The sheet's view: which side of the line it stands (+1 the left looking up it), and how far off it in landscape. */
-      sheetSide: -1, sheetOff: 10.5,
+      sheetSide: 1, sheetOff: 10.5,
       /**
-       * The mill's view, in the mill's own frame, as its yard has it: which way it looks from (x, z), how far off at the
-       * start and how much closer at the top, where it looks (across, and up from her roof at the start and how much
-       * higher at the top), and its own height.
+       * The mill's view, in the mill's own frame (x to the right seen from in front, z out of the front, heights above
+       * her roof): where it stands and where it looks while she is low, how much higher it stands and looks as she rises,
+       * and how far it moves on and what it looks along once she is off onto the granary.
        */
-      millWide: { dir: [-0.7, 0.72], far: 12.5, closer: 1.5, x: -3.2, low: 3.4, rise: 2.4, eye: 2.4, eyeRise: 2.2 },
-      millUpright: { dir: [-0.62, 0.78], far: 11, closer: 1.5, x: -1.3, low: 4.6, rise: 2.4, eye: 2.0, eyeRise: 3.4 },
+      millWide: { eye: [-11.8, 4.6, -2.5], at: [-2.2, 3.0, -1.4], eyeRise: 1.4, rise: 2.8, on: [1.5, 0.6, -2.0], onAt: [-1.4, 0, -4.6] },
+      millUpright: { eye: [-10.0, 5.4, -2.2], at: [-2.6, 3.3, -1.6], eyeRise: 2.0, rise: 3.2, on: [1.2, 0.6, -1.6], onAt: [-1.0, 0, -4.2] },
       /** The end's view: how far back along the nave, how high, and how far out over the green. */
       naveBack: 10, naveHigh: 3.6, naveAside: 11,
       /**

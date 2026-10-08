@@ -1655,7 +1655,7 @@ export class DrownedVillage {
     this.storm.value = storm;
     // Its sweep also lights the shared water and creature shaders, so it always keeps time.
     this.lighthouse.update(dt, storm);
-    this.dark.update(time, eye);
+    this.dark.update(time, eye, dt);
     if (this.dark.rise > 0.1) this.fled = true;
     if (Math.abs(boat.z - DROWNED_Z) > NEAR_Z) {
       this.idle = Math.min(CATCH_UP_S, this.idle + dt);
