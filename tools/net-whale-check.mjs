@@ -685,7 +685,7 @@ for (const name of cases) {
     console.log(`ok   ${name} ${JSON.stringify(results[name])}`);
   } catch (error) {
     failed = true;
-    console.log(`FAIL ${name}: ${error.message}`);
+    console.log(`FAIL ${name}: ${error.message} ${JSON.stringify(results[name] ?? {})}`);
   }
 }
 await browser.close();
