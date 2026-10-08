@@ -1926,16 +1926,18 @@ export const tuning = {
       /** Its light in the fog: steady, the swell of an answer and how fast that fades (s), and how big, metres at 30 m off. */
       glow: 0.55, glowSwell: 1.1, answerGlow: 1.6, glowSize: 3.2,
       /**
-       * The cat after her: seconds after she starts down that it gets up from its kittens; how far in from the lip it
-       * stands on the sill and how long it looks down at her there before it turns its back to the drop; how fast it
-       * backs down the ivy (m/s) and how long it looks down over its shoulder before it drops; where it drops from, across
-       * the ivy from her line (her right positive) and up from the ridge, and how far across from her line its way goes
-       * (metres); how far along the ridge from the tower it sits; how long
-       * after it goes over the lip a kitten comes to the sill; and seconds after she sits that it goes back up, and its
-       * gather for the leap onto the ivy.
+       * The cat after her: seconds after the boat answers the last ring that it gets up from its kittens and comes to
+       * just inside the light she goes out by, and how far below the sill she has to be before it hops up onto it; how far
+       * in from the lip it stands there, how long it looks down at her before it turns its back to the drop and how brisk
+       * that turn is against its own pace; how fast
+       * it backs down the ivy (m/s) and how long it looks down over its shoulder before it drops; where it drops from,
+       * across the ivy from her line (her right positive) and up from the ridge, and how far across from her line its way
+       * goes (metres); how far along the ridge from the tower it sits; how long after it goes over the lip a kitten comes
+       * to the sill; and seconds after she sits that it goes back up, how fast it climbs (m/s), and its gather for the
+       * leap onto the ivy.
        */
-      catUpAfter: 0.3, catLip: 0.15, catLooks: 0.4, catDown: 0.95, catPause: 0.8, catFoot: [-0.45, 0.62], catAcross: -0.62, catRidge: 0.5,
-      kittenAfter: 2.4, homeAt: 7.9, homeGather: 0.3,
+      catUpAfter: 1.6, catGap: 0.5, catLip: 0.15, catLooks: 0.2, catTurn: 1.6, catDown: 1.25, catPause: 0.6, catFoot: [-0.45, 0.62], catAcross: -0.62,
+      catRidge: 0.5, kittenAfter: 2.4, homeAt: 7.7, homeClimb: 2.4, homeGather: 0.25,
       /** The most the boat goes under sail, m/s; how near a turn of its way counts as rounded; how near the berth it lies. */
       bringSpeed: 2.6, rounded: 3.5, berthed: 0.6,
       /** Seconds with no progress before the world's air carries it, and how much breeze that is. */
@@ -2194,7 +2196,7 @@ export const tuning = {
        * round toward the bow by this much (radians), this far from her eyes and this far over them, looking this share
        * of the way from her up to the sill, on this lens (upright, its own).
        */
-      releaseFrom: 8.2, releaseTo: 12, releaseRound: 0.3, releaseBack: 15, releaseUp: 2.3, releaseLook: 0.3, releaseZoom: 1.05,
+      releaseFrom: 7.8, releaseTo: 10.8, releaseRound: 0.5, releaseBack: 15, releaseUp: 2.3, releaseLook: 0.3, releaseZoom: 1.05,
       uprightReleaseRound: 0.5, uprightReleaseBack: 12, uprightReleaseUp: 2, uprightReleaseLook: 0.4,
       /**
        * The paces it moves at (the kittens', the fog sea's and the look up's slower), how much of the frame she and
@@ -2208,7 +2210,7 @@ export const tuning = {
        * falters, and is there; how much of the way it goes, how much it favours her over the lamp and how wide the
        * lens goes to hold them both (upright, wider); and when it gives way to the storm's frame, and how long that takes.
        */
-      lampFrom: 1, lampTo: 3.8, lampAim: 1, lampHer: 0.55, uprightLampHer: 0.5, lampZoom: 0.68, uprightLampZoom: 0.62,
+      lampFrom: 0, lampTo: 3, lampAim: 1, lampHer: 0.55, uprightLampHer: 0.5, lampZoom: 0.68, uprightLampZoom: 0.62,
       leaveFrom: 6.6, leaveFor: 12,
     },
     /** Follow the boat into the streets; notice the church from that travelling view. */

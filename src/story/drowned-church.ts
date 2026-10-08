@@ -107,8 +107,12 @@ export class ChurchArrival {
   private answeredAt = -Infinity;
   private sailing = false;
   private blinked = false;
-  /** Where the cat is in the goodbye: with its kittens, on its way down after her, on the ridge, gone back up. */
-  private catAt: 'nest' | 'down' | 'ridge' | 'home' = 'nest';
+  /**
+   * Where the cat is in the goodbye: with its kittens, waiting just inside her light as she goes out over it, on its way
+   * down after her, on the ridge, gone back up.
+   */
+  private catAt: 'nest' | 'light' | 'down' | 'ridge' | 'home' = 'nest';
+  private catReady = false;
   private catStarted = false;
   private firstAnswer = -Infinity;
   /** Leaning down to the kitten that has come to her. */
@@ -299,6 +303,7 @@ export class ChurchArrival {
         break;
       case 'ring':
         c.lookAt = this.rings > 0 ? this.look.copy(this.homeAt) : this.look.copy(C).add(OUT_OVER);
+        if (this.answered >= k.rings && this.catAt === 'nest' && this.since - this.answeredAt > k.catUpAfter) this.catToLight();
         if (this.answered >= k.rings && this.since - this.answeredAt > k.answerFor) this.goDown();
         break;
       case 'down':
@@ -314,6 +319,7 @@ export class ChurchArrival {
       default:
         break;
     }
+    if (this.catAt === 'light' && this.catReady && this.step !== 'ring' && c.position.y < BELFRY.sill - k.catGap) this.catDown();
     this.inRoom();
     this.boatHome(dt);
     this.fog(dt);
@@ -421,7 +427,6 @@ export class ChurchArrival {
       this.to('wait');
       c.walkTo(NAVE_NORTH.x0, NAVE_NORTH.z0, false, () => c.walkTo(NAVE_NORTH.x1, NAVE_NORTH.z1, false, () => c.stop(), 0.12), 0.15);
     }));
-    this.later(k.catUpAfter, () => this.catDown());
     boat.towed = false;
     boat.coastTo = null;
     boat.mooring = null;
@@ -505,27 +510,36 @@ export class ChurchArrival {
     if (this.catAt === 'ridge' && this.aboardFor > k.homeAt) this.catHome();
   }
 
+  /** As the boat answers the last ring the cat gets up from its kittens and comes to just inside the light she will go out by. */
+  private catToLight(): void {
+    const { cat } = this.cast;
+    const v = this.cast.village!;
+    this.catAt = 'light';
+    this.catReady = false;
+    cat.rest('stand', this.head);
+    const inside = v.belfry.inside('west', LIGHT, 0.25).add(this.tmp.set(0, 0, CAT_SIDE));
+    cat.run([inside], () => v.belfry.floor, { pace: 'walk', speed: 1, then: 'stand', look: this.head }, () => {
+      this.catReady = true;
+    });
+  }
+
   /**
-   * The cat comes down after her: up from its kittens to the sill of the light she went out by, a look down at her,
-   * round with its back to the drop and down the ivy tail first, a kitten coming to the sill to watch it go; near the
-   * foot it looks down over its shoulder and drops onto the nave's ridge, where it sits facing the boat.
+   * The cat comes down after her: up onto the sill of the light she went out by once she is a little way down, a look
+   * down at her, round with its back to the drop and down the ivy tail first, a kitten coming to the sill to watch it
+   * go; near the foot it looks down over its shoulder and drops onto the nave's ridge, where it sits facing the boat.
    */
   private catDown(): void {
     const { cat } = this.cast;
     const v = this.cast.village!;
     const k = tuning.drowned.church;
     this.catAt = 'down';
-    cat.rest('stand', this.head);
-    const inside = v.belfry.inside('west', LIGHT, 0.25).add(this.tmp.set(0, 0, CAT_SIDE));
-    cat.run([inside], () => v.belfry.floor, { pace: 'walk', speed: 0.9, then: 'stand' }, () => {
-      cat.hop(this.catSill(k.catLip), { then: 'stand', look: this.head, floor: () => BELFRY.sill }, () => {
-        this.later(k.catLooks, () => {
-          cat.backDown(this.catWayDown(), WEST, this.catRidge(), { yaw: this.catFacing(), floor: NAVE_SLATES, then: 'sit', look: this.head,
-            speed: k.catDown, pause: k.catPause }, () => {
-            this.catAt = 'ridge';
-          });
-          this.later(k.kittenAfter, () => v.kittens.toSill(FOUND, this.kittenSill(), this.catEye));
+    cat.hop(this.catSill(k.catLip), { then: 'stand', look: this.head, floor: () => BELFRY.sill }, () => {
+      this.later(k.catLooks, () => {
+        cat.backDown(this.catWayDown(), WEST, this.catRidge(), { yaw: this.catFacing(), floor: NAVE_SLATES, then: 'sit', look: this.head,
+          speed: k.catDown, pause: k.catPause, turn: k.catTurn }, () => {
+          this.catAt = 'ridge';
         });
+        this.later(k.kittenAfter, () => v.kittens.toSill(FOUND, this.kittenSill(), this.catEye));
       });
     });
   }
@@ -538,7 +552,7 @@ export class ChurchArrival {
     this.catAt = 'home';
     const way = this.catWayUp();
     cat.turn(Math.atan2(way[0].x - cat.position.x, way[0].z - cat.position.z), () => {
-      cat.climb(way, WEST, { then: 'sit', look: this.head, speed: k.catClimb, gather: k.homeGather }, () => {
+      cat.climb(way, WEST, { then: 'sit', look: this.head, speed: k.homeClimb, gather: k.homeGather }, () => {
         cat.chirrup();
         v.kittens.cats[FOUND].mew(0.4);
       });
@@ -694,7 +708,7 @@ export class ChurchArrival {
 
   private catWay(): THREE.Vector3[] {
     const ivy = this.cast.village!.ivy, k = tuning.drowned.church;
-    const across = (y: number) => ivy.drift * THREE.MathUtils.smootherstep(y, 0.3, ivy.height - 0.4) + k.catAcross;
+    const across = (y: number) => THREE.MathUtils.lerp(k.catAcross, ivy.drift + CAT_SIDE, THREE.MathUtils.smootherstep(y, 0.3, ivy.height - 0.4));
     const way = [ivy.toWorld(new THREE.Vector3(k.catFoot[0], k.catFoot[1], 0.2))];
     for (let y = k.catFoot[1] + 0.9; y < ivy.height - 0.9; y += 0.9) way.push(ivy.toWorld(new THREE.Vector3(across(y), y, 0.2)));
     way.push(ivy.toWorld(new THREE.Vector3(ivy.drift + CAT_SIDE, ivy.height - 0.42, 0.2)));

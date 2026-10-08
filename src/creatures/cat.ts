@@ -203,8 +203,9 @@ export class Cat {
   private readonly lowerQ = [new THREE.Quaternion(), new THREE.Quaternion()];
   private readonly lowerPaws = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
   private readonly lowerEnds = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
-  /** Called once a turn on the spot asked for by `turn` is done. */
+  /** Called once a turn on the spot asked for by `turn` is done, and how brisk that turn is against its own pace. */
   private turned: (() => void) | null = null;
+  private turnPace = 1;
 
   private air: Air = 'gather';
   private airT = 0;
@@ -578,15 +579,19 @@ export class Cat {
   private climbDone: (() => void) | null = null;
   private climbSpeed = CLIMB_SPEED;
 
-  /** Turns round on the spot to face `yaw`, at its own unhurried pace with its head going first, then `onDone`. */
-  turn(yaw: number, onDone?: () => void): void {
-    if (this.airborne(() => this.turn(yaw, onDone))) return;
+  /**
+   * Turns round on the spot to face `yaw`, its head going first, then `onDone`: at its own unhurried pace, or `pace`
+   * times as brisk.
+   */
+  turn(yaw: number, onDone?: () => void, pace = 1): void {
+    if (this.airborne(() => this.turn(yaw, onDone, pace))) return;
     this.cancel();
     this.toWorld();
     this.pose = 'stand';
     this.turnTo = this.heading + wrapAngle(yaw - this.heading);
     this.turnAge = 0;
     this.turned = onDone ?? null;
+    this.turnPace = pace;
   }
 
   /**
@@ -598,7 +603,7 @@ export class Cat {
    * is the wall's outward normal.
    */
   backDown(path: readonly THREE.Vector3[], out: THREE.Vector3, land: THREE.Vector3,
-    opts: { yaw: number; floor?: Floor | null; then?: CatPose; look?: THREE.Vector3 | null; speed?: number; pause?: number }, onDone?: () => void): void {
+    opts: { yaw: number; floor?: Floor | null; then?: CatPose; look?: THREE.Vector3 | null; speed?: number; pause?: number; turn?: number }, onDone?: () => void): void {
     if (this.airborne(() => this.backDown(path, out, land, opts, onDone))) return;
     this.cancel();
     this.toWorld();
@@ -617,6 +622,7 @@ export class Cat {
       this.turnTo = this.heading + wrapAngle(yawIn - this.heading);
       this.turnAge = 0;
       this.turned = () => this.lowerOver();
+      this.turnPace = opts.turn ?? 1;
     }
   }
 
@@ -783,6 +789,7 @@ export class Cat {
     this.climbing = null;
     this.turnTo = null;
     this.turned = null;
+    this.turnPace = 1;
     this.descent = null;
     this.lookDownT = -1;
     this.rubbing = false;
@@ -929,7 +936,8 @@ export class Cat {
       const err = wrapAngle(this.turnTo - this.heading);
       this.turnLead = err;
       this.turnAge += dt;
-      this.turning = ease(this.turning, clamp(err * 3, -2.6, 2.6) * smooth((this.turnAge - 0.12) / 0.25), 8, dt);
+      const brisk = this.turnPace;
+      this.turning = ease(this.turning, clamp(err * 3 * brisk, -2.6 * brisk, 2.6 * brisk) * smooth((this.turnAge - 0.12) / 0.25), 8, dt);
       this.heading += this.turning * dt;
       this.fwd.set(Math.sin(this.heading), 0, Math.cos(this.heading));
       if (Math.abs(err) < 0.04 && Math.abs(this.turning) < 0.2) {
@@ -937,6 +945,7 @@ export class Cat {
         this.turning = 0;
         const next = this.turned;
         this.turned = null;
+        this.turnPace = 1;
         next?.();
       }
     }
