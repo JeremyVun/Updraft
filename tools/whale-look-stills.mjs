@@ -134,7 +134,7 @@ const SHOOT = {
     await page.evaluate(() => __game.story.current.whale.liftFin('sweeps'));
     await waitFor(page, () => __game.sealife.sleeper.phase === 'free' && __game.sealife.sleeper.time > 7.2, null, 90);
     await snap('k5');
-    await waitFor(page, () => __game.sealife.sleeper.time > 18.5, null, 60);
+    await waitFor(page, () => __game.sealife.sleeper.time > 31, null, 90);
     await snap('k5-flukes');
   },
   async dive(page, snap) {
