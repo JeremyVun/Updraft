@@ -1440,13 +1440,13 @@ export const tuning = {
      * The soft column of its first full breath, and the tall spout when it is free (m above the blowhole), its mist
      * `spoutBreadth` times as broad as the first column's.
      */
-    firstBreathHeight: 13, spoutHeight: 15, spoutBreadth: 1.2,
+    firstBreathHeight: 13, spoutHeight: 10, spoutBreadth: 1.2,
     /**
      * Its breath's mist against the low sky, in shares of the sky's brightness behind it: `shade` on the side away
      * from the sun (soft grey-blue), `white` on the sun's side and `spoutWhite` more for the free spout (white lit
-     * gold), and how much of the low sun glows `through` its thin edges toward it.
+     * gold, `gold` of the low sun's glow on it), and how much of that glow comes `through` its thin edges toward it.
      */
-    mistLook: { shade: 1, white: 2.1, spoutWhite: 0.3, through: 0.9 },
+    mistLook: { shade: 1, white: 2.1, spoutWhite: 0.3, gold: 0.4, through: 0.9 },
     /** As it spouts free the sea round it brightens, as much as `gladSea`, out to `gladReach` metres from it. */
     gladSea: 0.8, gladReach: 34,
     /**

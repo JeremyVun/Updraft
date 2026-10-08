@@ -106,7 +106,7 @@ void main() {
     vec2 w = vQ * 1.2 + vSeed * 23.0;
     float lumps = vnoise(w + uTime * 0.15) * 0.6 + vnoise(w * 2.4 - uTime * 0.2) * 0.4;
     // Soft all the way from the middle, so overlapping puffs add up to one body of mist, never rings of discs; the
-    // spout's a little firmer at its lumpy edge, so its crown reads as a shape against the bright sky behind it.
+    // spout's firmer at its lumpy edge, so its crown billows as a shape against the bright sky behind it.
     float edge = mix(0.75 + 0.2 * lumps, 0.62 + 0.3 * lumps, spout);
     float body = 1.0 - smoothstep(edge * mix(0.35, 0.72, spout), edge, r);
     a = pow(body, 1.5 - 0.7 * spout) * smoothstep(vAge * 0.6, vAge * 0.6 + 0.5, lumps + 0.2) * vAlpha;
@@ -118,15 +118,15 @@ void main() {
     vec3 N = normalize(mix(ball, vec3(cos(side), 0.25, sin(side)), 0.45));
     // Lit as a painter lights a backlit plume: from the side the sun lies on in the frame, a little from above.
     vec3 across = uSunDir - V * dot(uSunDir, V);
-    float lit = smoothstep(-0.75, 0.7, dot(N, normalize(across + vec3(0.0, 0.3 + 0.2 * spout, 0.0))));
+    float lit = smoothstep(-0.55, 0.75, dot(N, normalize(across + vec3(0.0, 0.3 + 0.2 * spout, 0.0))));
     // As bright as the sky behind it at least, so it reads as white in front of the glow, never a grey cut-out of it.
     float behind = max(lumaOf(skyColor(-V)), lumaOf(uSkyAmbient) * 1.6);
     float open = clamp(0.5 + 0.5 * N.y, 0.0, 1.0);
-    vec3 shade = behind * mix(vec3(0.74, 0.8, 0.98), vec3(0.92, 0.95, 1.04), open) * ${glsl(HUE.shade)};
+    vec3 shade = behind * mix(vec3(0.64, 0.72, 0.94), vec3(0.86, 0.9, 1.02), open) * ${glsl(HUE.shade)};
     vec3 white = behind * vec3(1.0, 0.92, 0.78) * (${glsl(HUE.white)} + ${glsl(HUE.spoutWhite)} * spout);
     // The low sun comes through where it is thin, so its edges glow gold toward it.
     float through = pow(toSun, 3.0) * pow(1.0 - facing, 1.2 + 0.4 * spout) * (0.4 + 0.6 * lit);
-    col = mix(shade, white, lit) + cloudGlow() * (through * ${glsl(HUE.through)} + 0.12 * lit) * sun;
+    col = mix(shade, white, lit) + cloudGlow() * (through * ${glsl(HUE.through)} + ${glsl(HUE.gold)} * lit * lit) * sun;
     // Thinning, it takes on the warmth of the morning it is going into rather than greying against it.
     col *= mix(vec3(1.0), vec3(1.08, 0.98, 0.9), smoothstep(0.3, 0.9, vAge));
     additive = 0.04;
@@ -324,7 +324,7 @@ export class Spray {
       const up = height * DRAG[SPOUT] * reach * strength * (1 + Math.random() * 0.12);
       this.emit(SPOUT, at.x + Math.cos(a) * 0.4 * wide, at.y + 0.2, at.z + Math.sin(a) * 0.4 * wide, Math.cos(a) * out, up,
         Math.sin(a) * out, (0.55 + Math.random() * 0.35 + crown * 0.6) * wide, 6.5 + Math.random() * 2.5,
-        (0.15 + reach * 0.25 + crown * 0.55) * wide, 0.6 + Math.random() * 0.3, 2.2 + crown * 1.4 + Math.random() * 0.6);
+        (0.12 + reach * 0.2 + crown * 0.38) * wide, 0.6 + Math.random() * 0.3, 2.2 + crown * 1.4 + Math.random() * 0.6);
       this.side[this.count - 1] = a / (Math.PI * 2);
     }
     const m = Math.floor(strength * 90 * dt + Math.random());
