@@ -4,25 +4,27 @@ import { ATMO_GLSL, atmo } from '../../world/atmosphere';
 import { glsl, tuning } from '../../tuning';
 
 const HUE = tuning.netWhale.mistLook;
+const BLOWN = tuning.netWhale.blow;
 
 const MAX = 3200;
 export const MIST = 0;
 export const DROP = 1;
 export const SPLASH = 2;
-/** The soft round puffs of a column of breath, lit as solid shapes: gold on the sun's side, cool on the other. */
-export const COLUMN = 3;
-/** The free spout's puffs: a column's, fuller, with a firmer edge that the low sun behind rims rather than fills. */
-const SPOUT = 4;
+/** The soft round puffs of a slow sigh seen from far off, lit as solid shapes: gold on the sun's side, cool on the other. */
+const COLUMN = 3;
+/** The puffs of its blow seen close, the first column's and the free spout's: lit as one column of mist, not puff by puff. */
+const BLOW = 4;
 
 /** How fast each kind settles into the air around it (per second), and how strongly it falls. */
-const DRAG = [1.5, 0.15, 0.9, 1.1, 1.1];
-const GRAVITY = [0.4, 9.8, 6.5, 0.3, 0.3];
+const DRAG = [1.5, 0.15, 0.9, 1.1, BLOWN.drag];
+const GRAVITY = [0.4, 9.8, 6.5, 0.3, BLOWN.fall];
 
 const VERT = /* glsl */ `
 ${ATMO_GLSL}
 in vec4 iA;
 in vec4 iB;
 in vec4 iC;
+in vec4 iD;
 out vec2 vQ;
 out vec3 vWorld;
 out float vKind;
@@ -32,6 +34,7 @@ out float vAge;
 out vec3 vRight;
 out vec3 vUp;
 out float vSide;
+out vec3 vBlow;
 void main() {
   vec3 p = iA.xyz;
   float size = iA.w;
@@ -40,7 +43,15 @@ void main() {
   vec3 along = up;
   vec3 across = right;
   float stretch = 1.0;
-  if (abs(iB.w - ${DROP}.0) < 0.5) {
+  if (abs(iB.w - ${BLOW}.0) < 0.5) {
+    // Bursting up, its puffs draw out along their flight, so the blow reads as thrown rather than grown.
+    float speed = length(iB.xyz);
+    if (speed > 0.01) {
+      along = normalize(iB.xyz - dot(iB.xyz, normalize(cameraPosition - p)) * normalize(cameraPosition - p) + up * 1e-3);
+      across = normalize(cross(along, normalize(cameraPosition - p)));
+      stretch = 1.0 + min(speed * 0.05, 1.5);
+    }
+  } else if (abs(iB.w - ${DROP}.0) < 0.5) {
     vec3 toCam = normalize(cameraPosition - p);
     vec3 across2d = iB.xyz - dot(iB.xyz, toCam) * toCam;
     float speed = length(across2d);
@@ -59,6 +70,7 @@ void main() {
   vRight = right;
   vUp = up;
   vSide = iC.w;
+  vBlow = iD.xyz;
   vQ = position.xy;
   vWorld = world;
   vKind = iB.w;
@@ -83,6 +95,8 @@ in float vAge;
 in vec3 vRight;
 in vec3 vUp;
 in float vSide;
+/** Of a blow's puff: how far out across its column it was thrown (0 the middle .. 1 its edge), how high, how glad. */
+in vec3 vBlow;
 void main() {
   float r = length(vQ);
   if (r > 1.0) discard;
@@ -101,17 +115,40 @@ void main() {
     float glow = min(pow(toSun, 12.0) * 1.8 + pow(toSun, 4.0) * 0.8, 1.2) * (0.7 + 0.6 * fract(vSeed * 7.3));
     col = mistShade(0.7) + cloudGlow() * (0.22 + glow) * sun;
     additive = 0.12;
+  } else if (vKind > 3.5) {
+    float glad = vBlow.z;
+    vec2 w = vQ * 1.3 + vSeed * 23.0;
+    float lumps = vnoise(w + uTime * 0.2) * 0.55 + vnoise(w * 2.5 - uTime * 0.3) * 0.3 + vnoise(w * 5.3 + uTime * 0.1) * 0.15;
+    // Each puff a small soft clump with a lumpy edge, thin enough that the sky shows through where few overlap; torn
+    // into wisps as it thins.
+    float clump = 1.0 - smoothstep(0.6, 0.92, r + (lumps - 0.5) * 0.7);
+    float fray = vAge * 1.1;
+    a = clump * (0.55 + 0.45 * (1.0 - r * r)) * smoothstep(fray, fray + 0.3, lumps + 0.15) * vAlpha;
+    // Lit as one column rather than puff by puff, or it is a heap of cotton balls: its side where the puff was thrown.
+    float side = vSide * 6.2832;
+    vec3 N = normalize(vec3(cos(side), 0.0, sin(side)) * vBlow.x + V * (1.0 - vBlow.x) + vec3(0.0, 0.25 + 0.35 * vBlow.y, 0.0)
+      + (vRight * vQ.x + vUp * vQ.y) * 0.4);
+    vec3 across = uSunDir - V * dot(uSunDir, V);
+    float lit = smoothstep(-0.5, 0.7, dot(N, normalize(normalize(across + 1e-4) + vec3(0.0, 0.25, 0.0))));
+    float behind = max(lumaOf(skyColor(-V)), lumaOf(uSkyAmbient) * 1.6);
+    float open = clamp(0.5 + 0.5 * N.y, 0.0, 1.0);
+    vec3 shade = behind * mix(vec3(0.64, 0.72, 0.94), vec3(0.86, 0.9, 1.02), open) * ${glsl(HUE.shade)};
+    vec3 white = behind * vec3(1.0, 0.92, 0.78) * (${glsl(HUE.white)} + ${glsl(HUE.spoutWhite)} * glad);
+    // Where it is thin, at its edges and as it frays, the low sun comes through it gold.
+    float thin = clamp(0.35 * vBlow.x * vBlow.x + 0.45 * r * r + 0.5 * vAge, 0.0, 1.0);
+    float through = pow(toSun, 3.0) * thin * (0.4 + 0.6 * lit);
+    col = mix(shade, white, lit) + cloudGlow() * (through * ${glsl(HUE.blowThrough)} + ${glsl(HUE.gold)} * lit * lit) * sun;
+    col *= mix(vec3(1.0), vec3(1.08, 0.98, 0.9), smoothstep(0.3, 0.9, vAge));
+    additive = 0.1 + 0.25 * thin;
   } else if (vKind > 2.5) {
-    float spout = step(3.5, vKind);
     vec2 w = vQ * 1.2 + vSeed * 23.0;
     float lumps = vnoise(w + uTime * 0.15) * 0.6 + vnoise(w * 2.4 - uTime * 0.2) * 0.4;
-    // Soft all the way from the middle, so overlapping puffs add up to one body of mist, never rings of discs; the
-    // spout's firmer at its lumpy edge, so its crown billows as a shape against the bright sky behind it.
-    float edge = mix(0.75 + 0.2 * lumps, 0.62 + 0.3 * lumps, spout);
-    float body = 1.0 - smoothstep(edge * mix(0.35, 0.72, spout), edge, r);
+    // Soft all the way from the middle, so overlapping puffs add up to one body of mist, never rings of discs.
+    float edge = 0.75 + 0.2 * lumps;
+    float body = 1.0 - smoothstep(edge * 0.35, edge, r);
     // Thinning, it frays into wisps rather than fading as a ball.
-    float fray = vAge * mix(0.6, 0.8, spout);
-    a = pow(body, 1.5 - 0.7 * spout) * smoothstep(fray, fray + mix(0.5, 0.4, spout), lumps + 0.2) * vAlpha;
+    float fray = vAge * 0.6;
+    a = pow(body, 1.5) * smoothstep(fray, fray + 0.5, lumps + 0.2) * vAlpha;
     // Each puff a soft ball, a little of the column's own side in it.
     float k = min(r, 1.0);
     float facing = sqrt(max(0.0, 1.0 - k * k));
@@ -120,14 +157,14 @@ void main() {
     vec3 N = normalize(mix(ball, vec3(cos(side), 0.25, sin(side)), 0.45));
     // Lit as a painter lights a backlit plume: from the side the sun lies on in the frame, a little from above.
     vec3 across = uSunDir - V * dot(uSunDir, V);
-    float lit = smoothstep(-0.55, 0.75, dot(N, normalize(across + vec3(0.0, 0.3 + 0.2 * spout, 0.0))));
+    float lit = smoothstep(-0.55, 0.75, dot(N, normalize(across + vec3(0.0, 0.3, 0.0))));
     // As bright as the sky behind it at least, so it reads as white in front of the glow, never a grey cut-out of it.
     float behind = max(lumaOf(skyColor(-V)), lumaOf(uSkyAmbient) * 1.6);
     float open = clamp(0.5 + 0.5 * N.y, 0.0, 1.0);
     vec3 shade = behind * mix(vec3(0.64, 0.72, 0.94), vec3(0.86, 0.9, 1.02), open) * ${glsl(HUE.shade)};
-    vec3 white = behind * vec3(1.0, 0.92, 0.78) * (${glsl(HUE.white)} + ${glsl(HUE.spoutWhite)} * spout);
+    vec3 white = behind * vec3(1.0, 0.92, 0.78) * ${glsl(HUE.white)};
     // The low sun comes through where it is thin, so its edges glow gold toward it.
-    float through = pow(toSun, 3.0) * pow(1.0 - facing, 1.2 + 0.4 * spout) * (0.4 + 0.6 * lit);
+    float through = pow(toSun, 3.0) * pow(1.0 - facing, 1.2) * (0.4 + 0.6 * lit);
     col = mix(shade, white, lit) + cloudGlow() * (through * ${glsl(HUE.through)} + ${glsl(HUE.gold)} * lit * lit) * sun;
     // Thinning, it takes on the warmth of the morning it is going into rather than greying against it.
     col *= mix(vec3(1.0), vec3(1.08, 0.98, 0.9), smoothstep(0.3, 0.9, vAge));
@@ -173,9 +210,13 @@ export class Spray {
   /** Mist carried on its own way rather than the wind's, slowing as it goes (m/s), and whether it is. */
   private readonly carry = new Float32Array(MAX * 3);
   private readonly carried = new Uint8Array(MAX);
+  /** The size a blow's puff swells to as it slows, and how far out across its column, how high and how glad it is. */
+  private readonly full = new Float32Array(MAX);
+  private readonly blown = new Float32Array(MAX * 3);
   private readonly a: THREE.InstancedBufferAttribute;
   private readonly b: THREE.InstancedBufferAttribute;
   private readonly c: THREE.InstancedBufferAttribute;
+  private readonly d: THREE.InstancedBufferAttribute;
   private readonly geo = new THREE.InstancedBufferGeometry();
   private readonly air: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
 
@@ -187,9 +228,11 @@ export class Spray {
     this.a = attr();
     this.b = attr();
     this.c = attr();
+    this.d = attr();
     this.geo.setAttribute('iA', this.a);
     this.geo.setAttribute('iB', this.b);
     this.geo.setAttribute('iC', this.c);
+    this.geo.setAttribute('iD', this.d);
     this.geo.instanceCount = 0;
     this.mesh = new THREE.Mesh(
       this.geo,
@@ -229,6 +272,7 @@ export class Spray {
     this.calm[i] = calm;
     this.side[i] = 0;
     this.carried[i] = 0;
+    this.full[i] = 0;
   }
 
   /** A whale's breath: a bushy column of fine mist, a few heavier drops falling out of it, `size` times a 14 m whale's. */
@@ -268,71 +312,36 @@ export class Spray {
   }
 
   /**
-   * One frame of a spout held for a while: a tall column of mist thrown `height` high, straight up clear of the
-   * breeze until it slows and opens into a crown, with drops falling back out of it.
+   * One frame of its blow, `height` m high, as hard as `strength` (0..1): puffs burst up fast from the blowhole and
+   * slow as they reach their height, thrown out the further the higher they go, so the column widens as it rises into
+   * a bushy top; they hang clear of the breeze a while, then drift off on it, fraying as they thin, the low parts
+   * first. Fine drops are thrown up through it and fall back glinting. `glad`, the free spout, is whiter.
    */
-  jet(at: THREE.Vector3, height: number, strength: number, dt: number): void {
-    const n = Math.floor(strength * 600 * dt + Math.random());
+  blowOut(at: THREE.Vector3, height: number, strength: number, dt: number, wide = 1, glad = 0): void {
+    const n = Math.floor(strength * BLOWN.puffs * wide * dt + Math.random());
+    const k = DRAG[BLOW];
     for (let i = 0; i < n; i++) {
       const a = Math.random() * Math.PI * 2;
-      const reach = 0.3 + 0.7 * Math.sqrt(Math.random());
-      const crown = THREE.MathUtils.smoothstep(reach, 0.7, 1);
-      const out = 0.06 + reach * 0.3 * Math.random() + crown * (0.8 + Math.random() * 1.8);
-      const up = height * DRAG[MIST] * reach * strength * (1.05 + Math.random() * 0.12);
-      this.emit(MIST, at.x + Math.cos(a) * 0.1, at.y, at.z + Math.sin(a) * 0.1, Math.cos(a) * out, up, Math.sin(a) * out,
-        0.18 + Math.random() * 0.2, 2.6 + Math.random() * 1.8, 0.2 + reach * 0.5 + crown * 0.9, 0.09 + Math.random() * 0.1,
-        1.1 + crown * 0.5);
+      const reach = (0.1 + 0.9 * Math.random() ** 0.7) * (0.6 + 0.4 * strength);
+      const rim = Math.sqrt(Math.random());
+      const across = (BLOWN.stem + reach ** 1.4 * height * BLOWN.flare) * wide;
+      const out = across * rim * k;
+      // Its top domed and ragged rather than cut flat: the edge falls short, some puffs overshoot.
+      const up = height * reach * k * (1 - 0.3 * rim * rim * reach) * (0.92 + Math.random() * 0.16);
+      this.emit(BLOW, at.x + Math.cos(a) * 0.2 * wide, at.y + 0.1, at.z + Math.sin(a) * 0.2 * wide, Math.cos(a) * out, up, Math.sin(a) * out,
+        (0.25 + Math.random() * 0.15) * wide, BLOWN.life * (0.35 + 0.65 * reach) * (0.85 + Math.random() * 0.3) * (1 + 0.2 * glad),
+        BLOWN.spread * (0.5 + Math.random()), BLOWN.opacity * (0.7 + Math.random() * 0.6), 0.8 + 1.4 * reach + Math.random() * 0.5);
+      const j = this.count - 1;
+      this.side[j] = a / (Math.PI * 2);
+      this.full[j] = across * (0.35 + 0.25 * Math.random()) + 0.2 * wide;
+      this.blown[j * 3] = rim;
+      this.blown[j * 3 + 1] = reach;
+      this.blown[j * 3 + 2] = glad;
     }
-    const m = Math.floor(strength * 160 * dt + Math.random());
+    const m = Math.floor(strength * BLOWN.drops * dt + Math.random());
     for (let i = 0; i < m; i++) {
       const a = Math.random() * Math.PI * 2;
-      const v = Math.sqrt(2 * GRAVITY[DROP] * height * (0.35 + Math.random() * 0.65)) * strength;
-      const out = 0.4 + Math.random() * 1.6;
-      this.emit(DROP, at.x, at.y + 0.1, at.z, Math.cos(a) * out, v, Math.sin(a) * out, 0.04 + Math.random() * 0.04, 2.6, 0, 0.8);
-    }
-  }
-
-  /**
-   * One frame of a soft column of breath, `height` high: big round puffs thrown straight up clear of the breeze,
-   * slowing and opening as they rise, then taken by it and drifting off as they settle and thin.
-   */
-  column(at: THREE.Vector3, height: number, strength: number, dt: number, wide = 1): void {
-    const n = Math.floor(strength * 340 * wide * dt + Math.random());
-    for (let i = 0; i < n; i++) {
-      const a = Math.random() * Math.PI * 2;
-      const reach = 0.25 + 0.75 * Math.sqrt(Math.random());
-      const crown = THREE.MathUtils.smoothstep(reach, 0.7, 1);
-      const out = (0.3 + reach * 0.8 * Math.random() + crown * (1.2 + Math.random() * 1.8)) * wide;
-      const up = height * DRAG[COLUMN] * reach * strength * (1 + Math.random() * 0.1);
-      this.emit(COLUMN, at.x + Math.cos(a) * 0.5 * wide, at.y + 0.2, at.z + Math.sin(a) * 0.5 * wide, Math.cos(a) * out, up, Math.sin(a) * out,
-        (0.8 + Math.random() * 0.5) * wide, 6 + Math.random() * 2.5, (0.35 + reach * 0.4 + crown * 0.6) * wide, 0.5 + Math.random() * 0.3,
-        1.6 + crown * 0.8 + Math.random() * 0.6);
-      this.side[this.count - 1] = a / (Math.PI * 2);
-    }
-  }
-
-  /**
-   * One frame of the tall glad spout it throws up free: the first breath's soft white mist, `height` high and `wide`
-   * times as broad, its puffs slowing as they rise and bushing out into a big rounded crown, with fine drops thrown
-   * up through it and falling back glinting.
-   */
-  spout(at: THREE.Vector3, height: number, strength: number, dt: number, wide = 1): void {
-    const n = Math.floor(strength * 380 * wide * dt + Math.random());
-    for (let i = 0; i < n; i++) {
-      const a = Math.random() * Math.PI * 2;
-      const reach = 0.3 + 0.7 * Math.sqrt(Math.random());
-      const crown = THREE.MathUtils.smoothstep(reach, 0.72, 1);
-      const out = (0.2 + reach * 0.4 * Math.random() + crown * (1 + Math.random() * 1.8)) * wide;
-      const up = height * DRAG[SPOUT] * reach * strength * (1 + Math.random() * 0.12);
-      this.emit(SPOUT, at.x + Math.cos(a) * 0.4 * wide, at.y + 0.2, at.z + Math.sin(a) * 0.4 * wide, Math.cos(a) * out, up,
-        Math.sin(a) * out, (0.55 + Math.random() * 0.35 + crown * 0.6) * wide, 6.5 + Math.random() * 2.5,
-        (0.12 + reach * 0.2 + crown * 0.38) * wide, 0.6 + Math.random() * 0.3, 2.2 + crown * 1.4 + Math.random() * 0.6);
-      this.side[this.count - 1] = a / (Math.PI * 2);
-    }
-    const m = Math.floor(strength * 90 * dt + Math.random());
-    for (let i = 0; i < m; i++) {
-      const a = Math.random() * Math.PI * 2;
-      const v = Math.sqrt(2 * GRAVITY[DROP] * height * (0.25 + Math.random() * 0.5)) * strength;
+      const v = Math.sqrt(2 * GRAVITY[DROP] * height * (0.25 + Math.random() * 0.5));
       const out = 0.4 + Math.random() * 1.8;
       this.emit(DROP, at.x, at.y + 0.1, at.z, Math.cos(a) * out, v, Math.sin(a) * out, 0.03 + Math.random() * 0.035, 3, 0, 0.75);
     }
@@ -458,15 +467,17 @@ export class Spray {
       p[o + 1] += v[o + 1] * dt;
       p[o + 2] += v[o + 2] * dt;
       this.size[i] += this.grow[i] * dt;
+      if (this.full[i] > this.size[i]) this.size[i] += (this.full[i] - this.size[i]) * (1 - Math.exp(-dt * BLOWN.swell));
       i++;
     }
     const A = this.a.array as Float32Array;
     const B = this.b.array as Float32Array;
     const C = this.c.array as Float32Array;
+    const D = this.d.array as Float32Array;
     for (let i = 0; i < this.count; i++) {
       const o = i * 3;
       const t = this.age[i] / this.life[i];
-      const fade = Math.min(1, this.age[i] * 8) * (1 - t) ** 1.6;
+      const fade = Math.min(1, this.age[i] * 8) * (1 - t) ** (this.kind[i] === BLOW ? BLOWN.thinning : 1.6);
       const k = i * 4;
       A[k] = p[o];
       A[k + 1] = p[o + 1];
@@ -480,8 +491,11 @@ export class Spray {
       C[k + 1] = this.seed[i];
       C[k + 2] = t;
       C[k + 3] = this.side[i];
+      D[k] = this.blown[o];
+      D[k + 1] = this.blown[o + 1];
+      D[k + 2] = this.blown[o + 2];
     }
-    for (const attr of [this.a, this.b, this.c]) {
+    for (const attr of [this.a, this.b, this.c, this.d]) {
       attr.clearUpdateRanges();
       attr.addUpdateRange(0, this.count * 4);
       attr.needsUpdate = true;
@@ -506,5 +520,7 @@ export class Spray {
     this.side[i] = this.side[last];
     this.carried[i] = this.carried[last];
     this.carry.copyWithin(i * 3, last * 3, last * 3 + 3);
+    this.full[i] = this.full[last];
+    this.blown.copyWithin(i * 3, last * 3, last * 3 + 3);
   }
 }

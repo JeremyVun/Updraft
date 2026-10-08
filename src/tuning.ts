@@ -1442,16 +1442,29 @@ export const tuning = {
     seabirdSize: 2.2, seabirdsAfter: 0, seabirdFlight: 8.2, seabirdFade: 2.5, seabirdAside: 4, seabirdHeight: 10, seabirdAway: 75,
     seabirdStretch: 1.6,
     /**
-     * The soft column of its first full breath, and the tall spout when it is free (m above the blowhole), its mist
+     * The column of its first full breath, and the taller glad spout when it is free (m above the blowhole), its mist
      * `spoutBreadth` times as broad as the first column's.
      */
-    firstBreathHeight: 13, spoutHeight: 10, spoutBreadth: 1.2,
+    firstBreathHeight: 8.5, spoutHeight: 13.5, spoutBreadth: 1.2,
+    /**
+     * Its blow, close: breathed out hard and easing off over `exhale` s, `puffs` puffs a second at its hardest, thrown
+     * up into air that slows them `drag` a second, so they reach their height in about a second; the column `stem` m
+     * across the middle at the blowhole and `flare` m wider for each metre it rises. Each puff swells `swell` a second
+     * toward its share of the column's breadth there and keeps spreading `spread` m/s; it is `opacity` thick at most,
+     * thinning by the power `thinning` of the life it has left over `life` s (the top's; the low parts go sooner),
+     * falling `fall` m/s² as it drifts. `drops` fine drops a second are thrown up through it.
+     */
+    blow: {
+      exhale: 0.6, puffs: 900, drag: 2.6, stem: 0.35, flare: 0.2, swell: 2.4, spread: 0.25, opacity: 0.2,
+      thinning: 0.9, life: 7, fall: 0.5, drops: 90,
+    },
     /**
      * Its breath's mist against the low sky, in shares of the sky's brightness behind it: `shade` on the side away
      * from the sun (soft grey-blue), `white` on the sun's side and `spoutWhite` more for the free spout (white lit
-     * gold, `gold` of the low sun's glow on it), and how much of that glow comes `through` its thin edges toward it.
+     * gold, `gold` of the low sun's glow on it), and how much of that glow comes `through` its thin edges toward it
+     * (`blowThrough` through the thin parts of its blow seen close).
      */
-    mistLook: { shade: 1, white: 2.1, spoutWhite: 0.3, gold: 0.4, through: 0.9 },
+    mistLook: { shade: 1, white: 2.1, spoutWhite: 0.3, gold: 0.4, through: 0.9, blowThrough: 1.8 },
     /** As it spouts free the sea round it brightens, as much as `gladSea`, out to `gladReach` metres from it. */
     gladSea: 0.8, gladReach: 34,
     /**

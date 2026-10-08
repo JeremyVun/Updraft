@@ -42,6 +42,8 @@ const BREATH_OUT = 3.6;
  */
 export const SPOUT_FROM = 6;
 export const SPOUT_TO = 8.8;
+/** How hard it breathes out, `t` s into a blow: all at once, then easing off. */
+const blowing = (t: number) => THREE.MathUtils.smoothstep(t, 0, 0.15) * Math.exp(-t / K.blow.exhale);
 /** The spout's mist comes down over the boat for this long after it (s). */
 const VEIL_FOR = 5;
 export const DIVE_AT = 15.5;
@@ -454,12 +456,7 @@ export class SleepingWhale extends WhaleRig {
       const t = this.time;
       rise = K.breathRise * 2.6 * THREE.MathUtils.smootherstep(t, 0, BREATH_IN)
         * (1 - 0.6 * THREE.MathUtils.smootherstep(t, BREATH_IN, BREATH_OUT + 1));
-      if (t >= BREATH_IN && t < BREATH_OUT) {
-        const k = (t - BREATH_IN) / (BREATH_OUT - BREATH_IN);
-        const strength = Math.sin(Math.PI * Math.min(1, k * 1.4)) ** 0.5;
-        this.spray.column(this.blowhole, K.firstBreathHeight, strength, dt);
-        this.spray.jet(this.blowhole, K.firstBreathHeight * 0.6, 0.35 * strength, dt);
-      }
+      if (t >= BREATH_IN && t < BREATH_OUT) this.spray.blowOut(this.blowhole, K.firstBreathHeight, blowing(t - BREATH_IN), dt);
       if (t >= BREATH_IN && t - dt < BREATH_IN) this.onSound?.('whale-blow', this.blowhole.x, this.blowhole.y, this.blowhole.z);
       if (t >= BREATH_IN * 0.5 && t - dt < BREATH_IN * 0.5) this.rises(1.3);
       this.breath = 0.6;
@@ -501,11 +498,7 @@ export class SleepingWhale extends WhaleRig {
     const draw = THREE.MathUtils.smootherstep(t, 0, SPOUT_FROM) * (1 - THREE.MathUtils.smootherstep(t, SPOUT_TO, SPOUT_TO + 1.8));
     if (t >= SPOUT_FROM && t - dt < SPOUT_FROM) this.onSound?.('whale-blow', this.blowhole.x, this.blowhole.y, this.blowhole.z);
     if (t >= SPOUT_FROM - 1 && t - dt < SPOUT_FROM - 1) this.rises(1.5);
-    if (t >= SPOUT_FROM && t < SPOUT_TO) {
-      const k = (t - SPOUT_FROM) / (SPOUT_TO - SPOUT_FROM);
-      const strength = Math.sin(Math.PI * Math.min(1, k * 1.6)) ** 0.5 * (1 - k * 0.3);
-      this.spray.spout(this.blowhole, K.spoutHeight, strength, dt, K.spoutBreadth);
-    }
+    if (t >= SPOUT_FROM && t < SPOUT_TO) this.spray.blowOut(this.blowhole, K.spoutHeight, blowing(t - SPOUT_FROM), dt, K.spoutBreadth, 1);
     // Its mist comes down over the boat in the gold light.
     const veil = THREE.MathUtils.smoothstep(t, SPOUT_FROM + 1, SPOUT_TO) * (1 - THREE.MathUtils.smoothstep(t, SPOUT_TO + VEIL_FOR - 2, SPOUT_TO + VEIL_FOR));
     if (veil > 0) this.spray.veil(this.blowhole, K.spoutHeight, this.near, veil, dt);
