@@ -284,12 +284,14 @@ function home(): Cue {
  * landing on D as the cat gives its slow blink; then D major held until the storm's gathering darkens it.
  */
 function farewell(): Cue {
+  const lands = tuning.drowned.church.blinkAt, from = lands - 1.9, dMajor = [38, 50, 57, 62, 66];
   const cadence = [[43, 59, Fs], [45, 61, E], [50, 57, D]].flatMap(([bass, inner, top], i) => {
-    const at = .9 + i * .95, landing = i === 2;
+    const at = from + i * .95, landing = i === 2;
     return [cello(at, bass, landing ? 6.4 : 1.35, .012, { release: landing ? DREAM_PALETTE.cello.release : .4 }),
       felt(at, inner, landing ? 4 : 2.4, .008), felt(at, top, landing ? 4.4 : 2.4, .011)];
   });
-  return cue(12, [[0, CHORD.G, 2.6, .0085], [1.6, [38, 50, 57, 62, 66], 8, .0095]], [cadence], { fade: 1 });
+  return cue(Math.max(12, lands + 6.5),
+    [[0, dMajor, from, .0075], [from - .3, CHORD.G, 2.6, .0085], [lands - .3, dMajor, 8, .0095]], [cadence], { fade: 1 });
 }
 
 export type DrownedCuePhase = 'stuck' | 'chase' | 'climb' | 'belfry' | 'answer1' | 'answer2' | 'answer3' | 'home' | 'farewell';
