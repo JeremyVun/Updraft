@@ -35,6 +35,8 @@ interface Step {
   gap: number;
   /** Her body's lean in to the wall once it is over (going up). */
   lean?: number;
+  /** Where she looks while it moves, if not at where it is going. */
+  look?: THREE.Vector3;
 }
 
 interface Running {
@@ -153,8 +155,8 @@ export class Climb {
       if (u < 1) {
         reaching = Math.max(reaching, Math.sin(u * Math.PI));
         if (limb < 2) twist = (limb === 0 ? 1 : -1) * 0.16 * Math.sin(u * Math.PI);
-        this.lookWant.copy(r.to);
-        if (limb >= 2 && this.phase === 'up') this.lookWant.addScaledVector(UP, 0.9);
+        this.lookWant.copy(r.step.look ?? r.to);
+        if (!r.step.look && limb >= 2 && this.phase === 'up') this.lookWant.addScaledVector(UP, 0.9);
       }
     }
     this.running = this.running.filter((r) => this.t < r.start + r.dur);
@@ -268,8 +270,9 @@ export class Climb {
       return wall.clone().addScaledVector(this.right, across).addScaledVector(out, standOff).setY(rootY);
     };
     let root = root0.clone();
+    let look: THREE.Vector3 | undefined;
     const move = (limb: Limb, to: THREE.Vector3, dur: number, gap: number, lean?: number) => {
-      plan.push({ limb, from: (limb < 0 ? root : limbs[limb]).clone(), to: to.clone(), dur, gap, lean });
+      plan.push({ limb, from: (limb < 0 ? root : limbs[limb]).clone(), to: to.clone(), dur, gap, lean, look });
       if (limb < 0) root = to.clone();
       else limbs[limb] = to.clone();
     };
@@ -340,6 +343,7 @@ export class Climb {
     const stand = inReveal(depth * 0.45, 0, 0);
     const standFoot = (s: number) => stand.clone().addScaledVector(side(s), 0.14).addScaledVector(UP, 0.11);
     /** Up on her arms until her chest is over the sill; her hands to the sides of the opening; a knee up onto it; up into the opening. */
+    look = inReveal(1.6, 0, 0.6);
     rootY = Math.max(rootY, sill.y - 1.02);
     standOff = 0.2;
     const over = rootAt();
@@ -354,7 +358,8 @@ export class Climb {
     move(3, standFoot(1), k.knee * 0.6, k.knee * 0.7, 0.1);
 
     const d = k.down;
-    const step = (limb: Limb, to: THREE.Vector3, dur: number, gap: number, lean?: number): Step => ({ limb, from: to, to: to.clone(), dur, gap, lean });
+    const step = (limb: Limb, to: THREE.Vector3, dur: number, gap: number, lean?: number): Step =>
+      ({ limb, from: to, to: to.clone(), dur, gap, lean, look: limb === 0 || limb === 1 ? look : undefined });
     /** Backing out: hold the sides of the opening, a foot to the edge of the sill, down over it on her arms, a foot feeling for the top fork. */
     const out0 = [
       step(0, jamb(0, 1.4), k.hand * d, 0, 0.2),
@@ -371,7 +376,7 @@ export class Climb {
     ];
     const back = plan.slice(0, ladder).reverse().map((s, i, all): Step => {
       const after = all[i - 1];
-      return { limb: s.limb, from: s.to, to: s.from, dur: s.dur * d + (s.limb >= 2 ? k.feel : 0), gap: (after?.gap ?? 0.3) * d, lean: s.lean };
+      return { limb: s.limb, from: s.to, to: s.from, dur: s.dur * d + (s.limb >= 2 ? k.feel : 0), gap: (after?.gap ?? 0.3) * d, lean: s.lean, look: s.look };
     });
     back[0].gap = k.foot * d + k.feel;
     return { up: plan, down: [...out0, ...back] };

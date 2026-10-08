@@ -75,6 +75,7 @@ try {
     const png = await page.screenshot();
     await page.evaluate(() => { window.__game.params.hold = null; });
     frames.push({ t: now - t0, png, note: st.phase });
+    if (process.env.KEEP) fs.writeFileSync(`${process.env.KEEP}-${(now - t0).toFixed(1).padStart(5, '0')}.png`, png);
     log.push(`${(now - t0).toFixed(1)} ${JSON.stringify(st)}`);
   };
   const ticks = async (seconds) => { const until = now + seconds; while (now < until) await tick(); };

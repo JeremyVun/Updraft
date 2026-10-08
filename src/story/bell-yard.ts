@@ -46,7 +46,7 @@ function glide(at: THREE.Vector3, speed: THREE.Vector3, to: THREE.Vector3, time:
 /** The cat curls with the open side of its ring, where the kittens lie, toward the opening beside its own. */
 const CURL_YAW = -2.21;
 
-export type BellYardView = 'play' | 'wide' | 'nest' | 'kittens' | 'bell' | 'ivy' | 'climb-near' | 'climb-far' | 'climb-side' | 'climb-profile';
+export type BellYardView = 'play' | 'wide' | 'nest' | 'kittens' | 'bell' | 'ivy' | 'climb-near' | 'climb-far' | 'climb-side' | 'climb-down' | 'climb-profile';
 
 /**
  * QA only: the drowned village's refuge and its bell, set out on the sea off the QA stage (`?chapter=stage&gap=bell`,
@@ -343,8 +343,10 @@ export class BellYard {
 
   /**
    * The lens, framed for a person: from the side of the face as she climbs, rising with her, the water below and the
-   * ivy going up ahead of her; inside, low by the straw; and while the bell is hers to ring, out beside the tower
-   * so the bell in its opening, her in the other and the water the rings go out over are in one frame.
+   * ivy going up ahead of her (from the north going up, the south coming down, so she is seen looking up or down and
+   * never at it); round to the other light to look in at the nest while she kneels over it; and while the bell is hers
+   * to ring, out beside the tower so the bell in its opening, her in the other and the water the rings go out over
+   * are in one frame. It glides round the tower, never through it, and cuts only into the belfry.
    */
   frame(shot: Shot): number {
     const upright = window.innerWidth / window.innerHeight < 0.9;
@@ -370,6 +372,10 @@ export class BellYard {
         this.eye.set(-5.3, y + 1.3, -4.4);
         this.target.set(-3.05, y + 1.4, -0.6);
         break;
+      case 'climb-down':
+        this.eye.set(upright ? -8.4 : -9.6, y + 1.4, upright ? 7.2 : 8.6);
+        this.target.set(upright ? -3.2 : -3.7, y + (upright ? 2.1 : 1.45), upright ? -0.2 : 0.1);
+        break;
       case 'climb-profile':
         this.eye.set(-3.4, y + 1.4, -5.4);
         this.target.set(-2.85, y + 1.35, -0.4);
@@ -383,9 +389,9 @@ export class BellYard {
         this.target.set(-2.4, RIDGE + 2.8, -0.2);
         break;
       case 'wide':
-        this.eye.set(1.6, this.belfry.floor + 2.5, -1.72);
-        this.target.set(-0.9, this.belfry.floor + 0.95, 0.45);
-        shot.zoom = 0.55;
+        this.eye.set(-1.78, this.belfry.floor + 1.55, 1.78);
+        this.target.set(0.35, this.belfry.floor + 1.25, -0.35);
+        shot.zoom = 0.6;
         break;
       case 'nest':
         this.eye.set(-3.75, this.belfry.floor + 1.25, 1.55);
@@ -396,8 +402,8 @@ export class BellYard {
         this.target.set(-1.56, this.belfry.floor + 0.15, 0.24);
         break;
       default:
-        this.eye.set(upright ? -13.6 : -11.2, S + (upright ? 5.2 : 3.3), upright ? 3.6 : 4.4);
-        this.target.set(upright ? -2.2 : -1.9, S + (upright ? -1.5 : 0.35), upright ? 0.1 : -0.2);
+        this.eye.set(upright ? -13.6 : -9.8, S + (upright ? 5.2 : 2.9), upright ? 3.6 : 3.8);
+        this.target.set(upright ? -2.2 : -1.9, S + (upright ? -1.5 : 0.45), upright ? 0.1 : -0.15);
     }
     /** The eye goes round the tower, never through it: it glides in its bearing, distance and height about the middle. */
     const want = this.orbitWant.set(Math.atan2(this.eye.z, this.eye.x), Math.hypot(this.eye.x, this.eye.z), this.eye.y);
@@ -423,7 +429,8 @@ export class BellYard {
   }
 
   private playView(): BellYardView {
-    if (this.phase === 'waiting' || this.phase === 'climbing' || this.phase === 'down' || this.phase === 'below') return 'climb-side';
+    if (this.phase === 'waiting' || this.phase === 'climbing') return 'climb-side';
+    if (this.phase === 'down' || this.phase === 'below') return 'climb-down';
     if (this.phase === 'nest') return 'nest';
     return 'bell';
   }

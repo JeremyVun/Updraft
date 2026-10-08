@@ -246,7 +246,7 @@ export class IvyFace {
       && crotches.every((c) => Math.hypot(c.x - x, c.y - y + 0.05) > 0.14);
     const light = { x: this.drift, half: 0.42 };
     let placed = 0;
-    for (let tries = 0; tries < 9000 && placed < 820; tries++) {
+    for (let tries = 0; tries < 16000 && placed < 1150; tries++) {
       const x = line(0) + (rand() * 2 - 1) * (spread + 0.2);
       const base = roof(x) - spot.from.y;
       const y = base - 0.1 + rand() * (H + 0.55 - base);
