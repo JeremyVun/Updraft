@@ -64,6 +64,7 @@ export class SheetCrossing {
   private readonly look = new THREE.Vector3();
   private readonly hands = new THREE.Vector3();
   private readonly lens = new THREE.Vector3();
+  private readonly landAt = new THREE.Vector3();
   /** Hanging, how far she has turned from up the line toward the lens, so her face is seen. */
   private turn = 0;
 
@@ -152,7 +153,7 @@ export class SheetCrossing {
       } else this.stalled += dt;
       if (this.valving) this.blow(dt);
     }
-    if (this.phase === 'landed') c.lookAt = this.look.copy(this.way.wait).setY(this.way.wait.y + 0.8);
+    if (this.phase === 'landed') c.lookAt = this.look.copy(this.way.stepOff).addScaledVector(this.sheet.along, 3).setY(this.way.stepOff.y + 1.1);
     this.sheet.update(dt, camera, wind);
 
     const asking = (this.phase === 'waiting' || this.phase === 'carried') && this.sheet.quiet > k.inviteAfter && !this.valving;
@@ -248,7 +249,10 @@ export class SheetCrossing {
     c.reachFor(1, null);
     c.lookAt = null;
     this.to('landing');
-    const off = this.way.stepOff;
+    /** She drops forward, never back: if her swing has carried her past the step-off she comes down a little beyond it. */
+    const a = this.sheet.along;
+    const ahead = (this.way.stepOff.x - c.position.x) * a.x + (this.way.stepOff.z - c.position.z) * a.z;
+    const off = this.landAt.copy(this.way.stepOff).addScaledVector(a, Math.max(0, 0.2 - ahead));
     const v = this.at.set(off.x - c.position.x, 0.6, off.z - c.position.z);
     c.leap(v, off, 9.81, () => {
       this.to('landed');

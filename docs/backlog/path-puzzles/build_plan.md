@@ -486,7 +486,7 @@ and `firm` in sheet lengths a second), so one firm stroke fills it about 0.65 in
 10 strokes from the first (4 or 5 once the cat is off the line) landscape and upright alike; what carries her is the
 fresh gust of the strokes (`gustFor` 0.8 s), not the cloth's slow sag, so she goes on about 0.65 m after the last
 stroke (was 1.8); hanging she turns `turnToLens` 0.6 toward the lens and back up the line over the last 2.4 m, looking
-along it, and lands looking back across the lane. Left: the cat takes about 8 s on the line before she can take hold.
+along it, and lands looking on along the far ridge (looking back across the lane faced the upright lens). Left: the cat takes about 8 s on the line before she can take hold.
 
 
 ### Phase 7: the room's story re-laid (after 6a, 6b and 6c)

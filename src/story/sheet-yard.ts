@@ -228,7 +228,7 @@ export class SheetYard {
     const go = THREE.MathUtils.smootherstep(THREE.MathUtils.clamp((p.x - WAIT.x) / (END_X - WAIT.x), 0, 1), 0, 1);
     if (upright) {
       this.eye.set(-3.4 + 2.4 * go, R0 + 2.2 + 0.9 * go, 5.6 - 0.6 * go);
-      this.target.set(LANE * 0.55 + 0.6 * go, R0 + 1.9 + 0.5 * go, -0.6);
+      this.target.set(LANE * 0.55 + 1.6 * go, R0 + 1.9 + 0.5 * go, -0.6);
     } else {
       this.eye.set(1.5 + 1.6 * go, R0 + 1.3 + 0.7 * go, 11.2);
       this.target.set(1.7 + 1.4 * go, R0 + 1.75 + 0.6 * go, 0);
