@@ -277,7 +277,7 @@ vec2 lichen(vec2 m, float cover, float px) {
   float tone = vnoise(m * 0.4 + 17.0);
   if (colony <= 0.0) return vec2(0.0, tone);
   float big = rosettes(m, 1.3, colony * 0.9, px) * shows(0.5, px);
-  float small = rosettes(m + 0.31, 0.45, colony * 0.75 + 0.1 * cover, px) * shows(0.18, px);
+  float small = rosettes(m + 0.31, 0.45, colony * 0.75 + 0.1 * cover, px) * shows(0.3, px);
   float far = colony * 0.3 * (1.0 - shows(0.5, px));
   return vec2(max(max(big, small), far), tone);
 }
