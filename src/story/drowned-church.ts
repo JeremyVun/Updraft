@@ -6,6 +6,8 @@ import { BELFRY, faceOut } from '../world/belfry';
 import { BELL_SOUNDS, Bell } from '../world/crossings/bell';
 import type { Deck } from '../world/decks';
 import { LanternGlow } from '../world/lantern-glow';
+import { LIGHTHOUSE } from '../world/drowned';
+import { LIGHTHOUSE_LANTERN_Y } from '../world/lighthouse';
 import {
   BRING_WAY, DARK_END, HOME_WAY, IVY_FOOT, IVY_STEP, NAVE, NAVE_BERTH, NAVE_NORTH, TOWER, roofUnder,
 } from '../world/drowned-way';
@@ -31,6 +33,8 @@ const FOUND = 0;
 const WAY_HOME = [...HOME_WAY, ...BRING_WAY];
 /** Where she looks out over the fog sea from the opening: north, over the water the boat will come home across. */
 const OUT_OVER = new THREE.Vector3(-4, 2, -40);
+/** The lighthouse's lamp, which goes out as they leave. */
+const LAMP = new THREE.Vector3(LIGHTHOUSE.x, LIGHTHOUSE_LANTERN_Y, LIGHTHOUSE.z);
 const HOME_LENGTH = HOME_WAY.reduce((sum, p, i) => (i ? sum + p.distanceTo(HOME_WAY[i - 1]) : 0), 0);
 
 /** A critically damped glide of `at` toward `to` over about `time` seconds, carrying its speed in `speed`. */
@@ -578,7 +582,8 @@ export class ChurchArrival {
       return;
     }
     if (this.step === 'aboard') {
-      this.close = THREE.MathUtils.smootherstep(this.aboardFor, k.closeAfter, k.closeAfter + k.closeFor);
+      /** Evenly: the night it brings already eases in and out of itself. */
+      this.close = THREE.MathUtils.clamp((this.aboardFor - k.closeAfter) / k.closeFor, 0, 1);
       dark.close = this.close;
       dark.level = THREE.MathUtils.lerp(k.drawn, k.closedLevel, this.close);
     }
@@ -667,6 +672,8 @@ export class ChurchArrival {
   private readonly goneFrom = new THREE.Vector3();
   private readonly goneAim = new THREE.Vector3();
   private readonly mixFrom = new THREE.Vector3();
+  private readonly dirHer = new THREE.Vector3();
+  private readonly dirLamp = new THREE.Vector3();
   private readonly mixEye = new THREE.Vector3();
   private readonly mixTarget = new THREE.Vector3();
 
@@ -757,33 +764,45 @@ export class ChurchArrival {
   cut = 0;
 
   /**
-   * Leaving the nave, the lens holds the look up at the cat while she looks back, then gives the storm its own frame,
-   * going round her from the one eye to the other as the boat goes.
+   * Leaving the nave, the lens goes with her from where it stood for the look up, so the boat never sails up to it;
+   * as the lighthouse's light falters it looks across to between her and the lamp, so the light she leaves stands
+   * beside her as it goes;
+   * once the light is out it gives the storm its own frame, going round her from the one eye to the other.
    */
   departure(shot: Shot, dt: number): void {
     if (this.aboardFor < 0) return;
     const k = tuning.drownedCamera.church;
-    const away = THREE.MathUtils.smootherstep(this.aboardFor - tuning.drowned.church.lookUpFor, 0, k.leaveFor);
+    const t = this.aboardFor - tuning.drowned.church.lookUpFor;
+    const away = THREE.MathUtils.smoothstep(t, k.leaveFrom, k.leaveFrom + k.leaveFor);
     if (away >= 1) return;
     const head = this.cast.child.position;
-    /** Under way, the lens goes with her from where it stood as the look up ended, so the boat never sails up to it. */
     if (!this.leaving) {
       this.leaving = true;
       this.goneFrom.subVectors(this.eyeNow, head);
       this.goneAim.subVectors(this.targetNow, head);
     }
+    const light = THREE.MathUtils.smootherstep(t, k.lampFrom, k.lampTo) * k.lampAim;
     const from = this.mixFrom.addVectors(head, this.goneFrom);
     const to = this.tmp.copy(shot.target).addScaledVector(shot.from!, shot.distance).setY(shot.target.y + shot.height);
     const a0 = Math.atan2(from.x - head.x, from.z - head.z), a1 = Math.atan2(to.x - head.x, to.z - head.z);
     const r = THREE.MathUtils.lerp(Math.hypot(from.x - head.x, from.z - head.z), Math.hypot(to.x - head.x, to.z - head.z), away);
     const a = a0 + Math.atan2(Math.sin(a1 - a0), Math.cos(a1 - a0)) * away;
     this.mixEye.set(head.x + Math.sin(a) * r, THREE.MathUtils.lerp(from.y, to.y, away), head.z + Math.cos(a) * r);
-    this.mixTarget.addVectors(head, this.goneAim).lerp(shot.target, away);
-    const zoom = THREE.MathUtils.lerp(this.zoomNow, shot.zoom ?? 1, away);
+    /** Across to between her and the lamp: the way that splits the angle from the eye, at her distance. */
+    const wide = THREE.MathUtils.smoothstep(this.aspect, 0.7, 1.3);
+    const toHer = this.dirHer.subVectors(head, from), reach = toHer.length();
+    const her = THREE.MathUtils.lerp(k.uprightLampHer, k.lampHer, wide);
+    toHer.normalize().multiplyScalar(her);
+    const across = this.dirLamp.subVectors(LAMP, from).normalize().multiplyScalar(1 - her).add(toHer).normalize();
+    const between = this.dirHer.copy(from).addScaledVector(across, reach);
+    /** Upward as far between the two as they stand above and below the eye, so the high lamp keeps inside the frame. */
+    const flat = Math.hypot(between.x - from.x, between.z - from.z);
+    const up = (Math.atan2(head.y + 1 - from.y, Math.hypot(head.x - from.x, head.z - from.z))
+      + Math.atan2(LAMP.y - from.y, Math.hypot(LAMP.x - from.x, LAMP.z - from.z))) / 2;
+    between.y = from.y + Math.tan(up) * flat;
+    this.mixTarget.addVectors(head, this.goneAim).lerp(between, light).lerp(shot.target, away);
+    const zoom = THREE.MathUtils.lerp(THREE.MathUtils.lerp(this.zoomNow, k.lampZoom, light), shot.zoom ?? 1, away);
     this.write(shot, this.mixEye, this.mixTarget, zoom);
-    shot.eye = undefined;
-    shot.exact = false;
-    shot.carry = true;
   }
 
   private write(shot: Shot, eye: THREE.Vector3, target: THREE.Vector3, zoom: number): void {

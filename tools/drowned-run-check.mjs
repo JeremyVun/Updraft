@@ -193,7 +193,7 @@ try {
       const W = await import('/src/world/drowned-way.ts');
       const { tuning } = await import('/src/tuning.ts');
       const k = tuning.drownedCamera.church;
-      window.__leaveBy = tuning.drowned.church.lookUpFor + k.leaveFor;
+      window.__leaveBy = tuning.drowned.church.lookUpFor + k.leaveFrom + k.leaveFor;
       const w = window.__churchWatch = { offWorst: 0, offAt: '', unseenRun: 0, unseenWorst: 0, unseenAt: '', hiddenRun: 0, hiddenWorst: 0, hiddenAt: '' };
       const roofs = [...W.PLACED, W.NAVE];
       /** A roof or the tower between the lens and her. */

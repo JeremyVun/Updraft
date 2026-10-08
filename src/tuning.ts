@@ -1880,7 +1880,7 @@ export const tuning = {
          */
         sea: 6.8, drawn: 1.0, sinkFor: 3.2, wavesAt: 0.92,
         /** Seconds after she is aboard it starts to close round and darken, how long that takes, and how high it rises again. */
-        closeAfter: 3, closeFor: 8, closedLevel: 6,
+        closeAfter: 1.5, closeFor: 20, closedLevel: 6,
       },
       /**
        * Rings the lantern answers before the boat is hers to sail, how far along its way home each answer brings it,
@@ -2121,8 +2121,13 @@ export const tuning = {
       glide: 1.8, pace: 0.7, uprightZoom: 0.85,
       /** When the lantern answers the lens looks this share of the way toward it, for about this many seconds. */
       find: 0.1, findFor: 3,
-      /** Seconds after the look up it takes to give way to the storm's frame. */
-      leaveFor: 7,
+      /**
+       * Seconds after the look up that the lens looks across to between her and the lighthouse's lamp as its light
+       * falters, and is there; how much of the way it goes, how much it favours her over the lamp (upright, where the
+       * two cannot both be held, the lamp, which must be seen going out) and how wide the lens goes to hold them both;
+       * and when it gives way to the storm's frame, and how long that takes.
+       */
+      lampFrom: 0.5, lampTo: 4, lampAim: 1, lampHer: 0.55, uprightLampHer: 0.4, lampZoom: 0.75, leaveFrom: 6.6, leaveFor: 12,
     },
     /** Follow the boat into the streets; notice the church from that travelling view. */
     roofFromZ: -1260, roofUntilZ: -1360,
