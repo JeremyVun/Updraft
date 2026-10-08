@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { WindField, WindSample } from '../../wind/field';
 import { ATMO_GLSL, atmo } from '../../world/atmosphere';
 
-const MAX = 2400;
+const MAX = 3200;
 export const MIST = 0;
 export const DROP = 1;
 export const SPLASH = 2;
@@ -294,6 +294,33 @@ export class Spray {
         (0.8 + Math.random() * 0.5) * wide, 6 + Math.random() * 2.5, (0.35 + reach * 0.4 + crown * 0.6) * wide, 0.5 + Math.random() * 0.3,
         1.6 + crown * 0.8 + Math.random() * 0.6);
       this.side[this.count - 1] = a / (Math.PI * 2);
+    }
+  }
+
+  /**
+   * One frame of the tall glad spout it throws up free: the first breath's soft white mist, `height` high and `wide`
+   * times as broad, its puffs slowing as they rise and bushing out into a big rounded crown, with fine drops thrown
+   * up through it and falling back glinting.
+   */
+  spout(at: THREE.Vector3, height: number, strength: number, dt: number, wide = 1): void {
+    const n = Math.floor(strength * 300 * wide * dt + Math.random());
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const reach = 0.3 + 0.7 * Math.sqrt(Math.random());
+      const crown = THREE.MathUtils.smoothstep(reach, 0.72, 1);
+      const out = (0.25 + reach * 0.5 * Math.random() + crown * (1.6 + Math.random() * 2.6)) * wide;
+      const up = height * DRAG[COLUMN] * reach * strength * (1 + Math.random() * 0.12);
+      this.emit(COLUMN, at.x + Math.cos(a) * 0.45 * wide, at.y + 0.2, at.z + Math.sin(a) * 0.45 * wide, Math.cos(a) * out, up,
+        Math.sin(a) * out, (0.7 + Math.random() * 0.45 + crown * 0.8) * wide, 6.5 + Math.random() * 2.5,
+        (0.3 + reach * 0.35 + crown * 0.9) * wide, 0.55 + Math.random() * 0.3, 2 + crown * 1.2 + Math.random() * 0.6);
+      this.side[this.count - 1] = a / (Math.PI * 2);
+    }
+    const m = Math.floor(strength * 90 * dt + Math.random());
+    for (let i = 0; i < m; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const v = Math.sqrt(2 * GRAVITY[DROP] * height * (0.25 + Math.random() * 0.5)) * strength;
+      const out = 0.4 + Math.random() * 1.8;
+      this.emit(DROP, at.x, at.y + 0.1, at.z, Math.cos(a) * out, v, Math.sin(a) * out, 0.03 + Math.random() * 0.035, 3, 0, 0.75);
     }
   }
 

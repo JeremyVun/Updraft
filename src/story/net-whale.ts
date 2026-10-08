@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { Shot } from '../camera';
 import { screenBrush } from '../creatures/motion';
 import type { Net, NetGrip } from '../fx/sealife/net';
-import { DIVE_AT, FREE_FLUKES_FROM, SPOUT_FROM, SPOUT_TO, type SleepingWhale } from '../fx/sealife/sleeper';
+import { DIVE_AT, SPOUT_FROM, SPOUT_TO, type SleepingWhale } from '../fx/sealife/sleeper';
 import type { Coax } from '../fx/swirl';
 import { tuning } from '../tuning';
 import type { Cast } from './cast';
@@ -792,7 +792,7 @@ export class NetWhale {
     if (this.step === 'line' && this.haul === 'hauling') return this.net.foot;
     if (this.step === 'line' && this.haul === 'letting' && this.haulT > K.sheSees) return this.finAt(0.9, this.look);
     if (this.step === 'free') {
-      if (whale.fluking || whale.time > FREE_FLUKES_FROM) return this.look.copy(whale.flukes).setY(Math.max(whale.flukes.y, 2));
+      if (whale.diving >= 0) return this.farewellLook(whale.diving);
       if (whale.time > MIST_LOOK && whale.time < DIVE_AT) {
         return this.look.copy(this.cast.boat.position).lerp(whale.eye, 0.3).setY(4.5);
       }
@@ -805,6 +805,18 @@ export class NetWhale {
     }
     if (whale.awake) return whale.eye;
     return this.look.copy(whale.blowhole).setY(whale.blowhole.y + 0.6 + this.net.lift * K.netLift * 0.6);
+  }
+
+  /**
+   * Where their eyes go as it dives, `t` seconds in: its eye going down, then the arch where it bends under, then up
+   * with its flukes as they rise.
+   */
+  private farewellLook(t: number): THREE.Vector3 {
+    const whale = this.whale;
+    const arch = this.a.copy(whale.farewell).setY(3);
+    const eye = this.look.copy(whale.eye).setY(Math.max(whale.eye.y, 1.5));
+    eye.lerp(arch, THREE.MathUtils.smoothstep(t, 2.5, 6));
+    return eye.lerp(arch.copy(whale.farewell).setY(Math.max(3, whale.flukes.y * 0.75)), whale.flukesShown);
   }
 
   /**
@@ -1680,9 +1692,6 @@ export class NetWhale {
     // At the flipper what matters lies between its tip and where the cygnet holds the loop's end.
     const focus = this.b.copy(head).lerp(this.a.copy(whale.finTip).lerp(this.station, 0.5), fin).setY(portrait ? phoneLookY : lookY);
     this.look.copy(boat).setY(1.2).lerp(focus, portrait ? phoneToward : toward);
-    const glance = whale.phase === 'free' ? THREE.MathUtils.smoothstep(whale.time, FREE_FLUKES_FROM, FREE_FLUKES_FROM + 3.5)
-      * (1 - THREE.MathUtils.smoothstep(whale.time, FREE_FLUKES_FROM + 10, FREE_FLUKES_FROM + 14)) : 0;
-    if (glance > 0) this.look.lerp(this.a.copy(whale.flukes).setY(Math.max(4, whale.flukes.y * 0.5)), glance * (portrait ? 0.85 : 0.55));
     // Behind the boat: just to port of astern, or in portrait on the line from what matters through the boat.
     // Turned between the head and the flipper by angle rather than through the point between them, which can pass
     // close by the boat and swing the view round fast.
@@ -1730,7 +1739,6 @@ export class NetWhale {
     if ((portrait && (this.step === 'line' || this.step === 'flipper')) || (!portrait && freeing)) s.tertiary.copy(s.secondary);
     else s.tertiary.copy(this.step === 'flipper' ? whale.finTip : whale.eye);
     if (portrait && into < 1) s.tertiary.lerp(whale.finTip, 1 - into);
-    if (glance > 0) s.tertiary.lerp(this.a.copy(whale.flukes).setY(Math.max(whale.flukes.y, 1)), glance * 0.6);
     s.secondary.lerp(rest, 1 - h);
     s.tertiary.lerp(rest, 1 - h);
     // Each hold is composed as it stands: the look is never backed off, the steps only a little if what they ask for strays.
