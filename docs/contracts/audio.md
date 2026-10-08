@@ -116,9 +116,22 @@ through boarding and the crossing to Birches. The arrangement contains its own d
 optional swing is accepted, `scarf` (no lead melody) for the later tangles, and `return` once the sail is finished.
 `return` carries on through boarding and into the stairs room. Checkpoints derive the phase from saved tangles.
 
-**Drowned Village and Sky Mirror** (`dream-score.ts`). Drowned follows rooftops, becalming, resumed drift, the 22 s
-gathering storm, plane loss and the approach to the wood; its composed levels already include the withdrawal, so
-chapter hush is not applied again, and the `becalmed` cue still ducks it. The Mirror follows approach, first play,
+**Drowned Village and Sky Mirror** (`dream-score.ts`; the village's cues from the air dying to the storm in
+`drowned-cues.ts`). Drowned follows the story, never a clock, all of it in the drift's B minor and instruments:
+`rooftops` for the rescue and the drift; `stuck` from the air dying (the `becalmed` phrase still ducks it) until she is
+up on the roof after the cat; `chase` over the roofs; `climb` from the tower's foot up the ivy; `belfry` over the
+kittens, the fog sea and the wait for the bell; `answer1` to `answer3` and `home` by the count of the lantern's answers
+(`church.answered`), `home` carrying on through her climb down and the boat brought in; `farewell` from aboard through
+the slow blink; then the 22 s gathering storm, plane loss and the approach to the wood. The chase's pulse follows
+`SoundState.drownedTension` (0 to 1: how near the fog's front is behind her, less while she walks than at a piece,
+eased for a few seconds once she is across one; `tuning.audio.drownedChase`), and a note may carry the range it plays
+in: eased, half notes under the cello's line; pressed, quarters, eighths and a pickup into each bar, the line giving way
+to a held low note and the felt's sighs. The bell rings B, the score's tonic; each answer turns the harmony a step
+warmer (G, E minor, A suspended) and sings the next note of the piano's question after the strike has passed, and the
+fourth lands on D major. Sections the story can hold repeat a body of at least 20 s (the chase's 102 s in two passes
+with different lines). The composed levels include the withdrawals (the stuck boat about 4 dB, the chase 2 dB, the
+belfry 6 dB under the drift), so chapter hush is not applied again. `node tools/drowned-music-study.mjs [outDir]`
+renders each cue and the room from the rescue into the storm with the bell. The Mirror follows approach, first play,
 one to three returned lights, the full constellation and departure; completed-star count, not order, picks the
 section, the third star reuses the middle verse and only the fourth gets the final bloom. `star` is emitted once per
 real return, never on entry, loops or restore. The departure section carries on over the harbour crossing.
@@ -163,7 +176,8 @@ for permanent silence), disconnects finished voices and buses, and freezes with 
 hidden. Missed frames skip stale attacks rather than bursting.
 
 The piano's D–E–F♯–B question links the rooms: a three-note reed fragment in Lines, the plucked shape in Boats, the
-Meadow melody itself, B–F♯–E–D in Birches, a stretched recollection at sea, and D–E–F on the Sleeping climb.
+Meadow melody itself, B–F♯–E–D in Birches, the drowned village's lantern answering the bell note by note and the cello's
+B–F♯–E–D as the boat comes home, a stretched recollection at sea, and D–E–F on the Sleeping climb.
 
 ## Handoffs between pieces
 
@@ -284,6 +298,7 @@ sections.
 ## Open
 
 - The stairs: the sail's air over the cloud awaits Jeremy's listen in the game.
+- The drowned village's cues from the air dying to the storm (`drowned-cues.ts`) await Jeremy's listen.
 - Artistic sign-off needs a full-journey listen on headphones and a phone speaker (idle, energetic swiping, failed
   attempts, the optional swing), checking that each place is distinguishable by ear and the physical sounds and caring
   chime feel right in context.

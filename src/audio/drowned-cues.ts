@@ -91,23 +91,23 @@ function chase(): Cue {
   CHASE_CHORDS.forEach(([tones, turn], c) => {
     const at = c * 8 * BEAT, next = CHASE_CHORDS[(c + 1) % CHASE_CHORDS.length][0];
     if (turn) {
-      chords.push([at, tones, 4 * BEAT, .0095], [at + 4 * BEAT, tones.map((m) => (m === turn[0] ? turn[1] : m)), 4 * BEAT, .0095]);
-    } else chords.push([at, tones, 8 * BEAT, .0095]);
+      chords.push([at, tones, 4 * BEAT, .0085], [at + 4 * BEAT, tones.map((m) => (m === turn[0] ? turn[1] : m)), 4 * BEAT, .0085]);
+    } else chords.push([at, tones, 8 * BEAT, .0085]);
     const [low, fifth] = tones;
     for (let beat = 0; beat < 8; beat++) {
       const t = at + beat * BEAT;
-      beats.push(beat % 2 ? pulse(t, fifth, 2, .0072, QUARTERS) : pulse(t, low, 2, .009));
-      beats.push(pulse(t + BEAT / 2, low + 12, 1.8, .0056, EIGHTHS));
+      beats.push(...(beat % 2 ? [pulse(t, fifth, 2, .0064, QUARTERS)] : [pulse(t, low, 2, .008), pulse(t, low + 12, 2, .0037)]));
+      beats.push(pulse(t + BEAT / 2, low + 12, 1.8, .005, EIGHTHS));
     }
-    beats.push(pulse(at + 3.75 * BEAT, low, 1.8, .0062, PICKUPS), pulse(at + 7.75 * BEAT, next[0], 1.8, .0062, PICKUPS));
+    beats.push(pulse(at + 3.75 * BEAT, low, 1.8, .0055, PICKUPS), pulse(at + 7.75 * BEAT, next[0], 1.8, .0055, PICKUPS));
     const [high, onto] = SIGHS[c];
-    sighs[0].push(felt(at + 4 * BEAT, high, 1.8, .013, TENSE), felt(at + 5 * BEAT, onto, 2.4, .013, TENSE));
-    sighs[1].push(felt(at + 6 * BEAT, high, 1.8, .013, TENSE), felt(at + 7 * BEAT, onto, 2.4, .013, TENSE));
-    swells.push(cello(at + .1, fifth, 8 * BEAT + .4, .012, TENSE));
-    if (c % 4 === 3) swells.push(undertow(at, low, 9, .0055, SWELL));
+    sighs[0].push(felt(at + 4 * BEAT, high, 1.8, .0116, TENSE), felt(at + 5 * BEAT, onto, 2.4, .0116, TENSE));
+    sighs[1].push(felt(at + 6 * BEAT, high, 1.8, .0116, TENSE), felt(at + 7 * BEAT, onto, 2.4, .0116, TENSE));
+    swells.push(cello(at + .1, fifth, 8 * BEAT + .4, .0107, TENSE));
+    if (c % 4 === 3) swells.push(undertow(at, low, 9, .0049, SWELL));
   });
   const passes = CHASE_LINES.map((line, i) => [...chords.flatMap(strings), ...beats, ...swells, ...sighs[i],
-    ...line.map(([beat, midi, held]) => cello(beat * BEAT, midi, held * BEAT, .0165, CALM))].sort((a, b) => a.at - b.at));
+    ...line.map(([beat, midi, held]) => cello(beat * BEAT, midi, held * BEAT, .0147, CALM))].sort((a, b) => a.at - b.at));
   return { seconds: CHASE_CHORDS.length * 8 * BEAT, chords: chords.map(([at, tones]) => ({ at, tones })), notes: passes[0], variants: passes };
 }
 

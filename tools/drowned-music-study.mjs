@@ -32,6 +32,7 @@ const studies = {
   '4-belfry': { seconds: 82, phases: [[0, 'belfry']] },
   '5-bell': { seconds: 72, phases: [[0, 'belfry'], ...answered([12.4, 16.5, 20.6, 24.7])], rings: [12.4, 16.5, 20.6, 24.7] },
   '5b-bell-slow': { seconds: 112, phases: [[0, 'belfry'], ...answered([10, 28, 46, 64])], rings: [10, 28, 46, 64] },
+  '5c-answer-waiting': { seconds: 80, phases: [[0, 'belfry'], [6.7, 'answer1']], rings: [6] },
   '6-home': { seconds: 80, phases: [[0, 'belfry'], [3.7, 'home']], rings: [3] },
   '7-farewell': { seconds: 30, phases: [[0, 'farewell'], [5.5, 'gather']], cues: [[8.5, 'foghorn']] },
   arc: {
