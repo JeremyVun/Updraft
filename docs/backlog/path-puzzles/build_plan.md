@@ -334,6 +334,32 @@ body's wind response (`tickle`, the shiver and slap). Claude plays the build in 
 Gate: typecheck; build; the whole `net-whale-check` (its tickle assertions become "the body never answers");
 `sea-logic-check`; `CROSSING=toMirror node tools/journey-pacing-check.mjs`; a real-gesture recording of the whole
 open sea with frame strips.
+Done: [x] `f285042d..7c67b8af`. The body never answers the wind (`tickle`, the shiver and the gust slap removed;
+`net-whale-check` watches every resting and woken frame for anything but its breath moving it). `breathEvery` 10 with
+the sputter on the same exhale; the score thins through `Crossing.hush` (`hushSorrow` 0.9 at rest, `hushCourage` 0.45
+once its eye finds her, 0 at free). The haze reveal (`uLost`, `LOST_GLSL`: `lostFar` 0.75 lifting between 80 and 25 m
+short of rest); its far sighs spread with distance (`whale.seenFrom`); she points and the bird peeks at each breath in
+view. The look between them, in seconds after the first full breath: in over her left shoulder at 2.4 (`holdFor('look')`,
+4 s ease), its eye opens on her at 3 (`eyeOpening` 0.55), blinks at 7.6 (`whale.blink()`), her mitten out at 8, its call
+8.9, the bird peeps 10.1, her eyes to the float line 11.6, the line at 13. The bared head runs wet (`whale.stream`);
+let go she sits back, the bird sees the loop (1 s), she looks to it (1.9 s), it goes at 3.4 s; its eye follows the
+bird; the lift slow and heavy (`LIFT` 6.6 s, `slipFor` 5). Holds: sorrow 20 m back, 8.5 up; look 6 back, 3 up; line
+12.5 back, 7.2 up; flipper 12 back, 7.5 up. Played: rest 88.8, line 111.6, flipper 143.8, free 166.8, moored 215.7; idle
+moored about 480. Left (Claude, playing it): the holds above the back look down on it like a map; the lifted patch
+stands as a pyramid of net over the back with corks up its middle; the first column is lost in the glow; the look's
+frame has her as a hood cut off in the corner beside a wall of sail (half out in portrait); the far sigh is not seen;
+her pointing barely reads; the flipper's lift reads as a claw with streaks; the eye's iris glows orange; `wrongway`
+fails as it did on 96137ec2 (a reverse stroke draws the cork in); a phone's swipe along the flipper needs 0.8 screen
+heights a second.
+
+### Phase N3g2: the courage at the bar
+After N3g, on `sea-whale` (Claude's calls after playing N3g, 2026-10-08; design.md, "1. The breath", "3. The cygnet",
+"Camera"). Owns: the holds brought down so the ridge stands against the sky and the approach's descent into them; the
+look's frame as the owl's (landscape and portrait); the patch falling aside off the blowhole once it has breathed; the
+first column reading against the glow; the far sigh in the haze seen and her pointing read; the flipper's lift as one
+pale paddle side-on with water running off it; a reverse stroke pushing the cork away; a phone's swipe along the flipper
+at a phone's pace. Not the eye's colour (N3i), nor free and gone (N3h).
+Gate: as N3g's, `wrongway` included.
 Done: [ ]
 
 ### Phase N3h: the release and the farewell
@@ -348,7 +374,8 @@ Done: [ ]
 
 ### Phase N3i: the ancient skin and its life
 After N3h. Owns the skin (`whaleShader.ts`, `tuning.whaleLook`): barnacle crusts, healed scars, mottling, growth at the
-waterline, wet streaks, the eye's age, drawn as bold simple painted shapes like the rest of the game; water sheeting
+waterline, wet streaks, the eye's age (its iris a deep warm brown with one bright catchlight, not the lit orange N3g
+left), drawn as bold simple painted shapes like the rest of the game; water sheeting
 off the back with each breath; the seabirds on its back.
 Gate: as N3g's, then the playable build for Jeremy.
 Done: [ ]

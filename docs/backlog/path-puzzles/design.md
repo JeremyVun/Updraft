@@ -871,7 +871,8 @@ The sequence:
   - **Ancient skin.** Weathered like an old hull or a reef: barnacle crusts clustered on the head, chin and flipper
     edges, old pale healed scars and scuffs, mottling like lichen, green growth at the waterline, wet streaks. Stylised
     and painted like the rest of the game, never photographic noise; healed and old, never a wound. Fine detail small
-    against its bulk is what makes it read giant. The eye old, wet and kind in folds of age.
+    against its bulk is what makes it read giant. The eye old, wet and kind in folds of age, its iris a deep warm brown catching
+    the sun in one bright point, never a lit orange.
   - **It breathes the sea.** Each slow breath lifts the back a little, water sheeting off its top in glinting streams,
     and the sea round it swells and settles.
   - **Life on it.** A few seabirds stand far along its back as on a rock, never near a step's target, and lift off as
@@ -891,7 +892,11 @@ The sequence:
 - **1. The breath (circles).** The net lies over the blowhole; each breath only domes the mesh and sputters a weak
   mist. `updraftTarget` is the blowhole; circles there lift the patch of mesh off it like a sheet in the wind
   (progress builds while the player winds and is kept when they stop); the whale draws its first full breath, a soft
-  column of mist up through the spiral, and its great eye opens and looks at the child (`k2`).
+  column of mist up through the spiral, and its great eye opens and looks at the child (`k2`). Once it has breathed,
+  the patch falls back loose and slumps off the blowhole to the far side of the crown, so the back's outline is the
+  whale's again, never a tent of net standing on it; the column reads against the bright sky, full and tall, gold on
+  its sun side and cool on its shadow side, drifting as it falls (Claude's call, 2026-10-08, after playing N3g: the
+  patch held up stood as a pyramid of net over the back, and the column was lost in the glow).
 - **2. The child (a sweep).** A line of corks trails from the net across the water by the boat. A sweep pushes the
   nearest cork to the boat; she leans out, catches the line in both mittens and hauls, and the net peels back off the
   jaw and head into the water (`k3`). Hands just outside the rail; she leans, never hangs out.
@@ -904,7 +909,10 @@ The sequence:
   the end beside the flipper's tip, about 4 m out to port of her, at least 1.2 m clear of the flipper's lift, side-on
   to the camera, facing the loop; a sweep before it holds the end lifts
   the flipper but the loop stays on; the lift is lazy, the tip rising about 2 m; as the loop slips off it backs away,
-  lets go, climbs onto the gunwale into her arms and is stowed, and only then does the whale go free.
+  lets go, climbs onto the gunwale into her arms and is stowed, and only then does the whale go free. The lift reads
+  as one long pale paddle rising side-on out of the sea, water running off its trailing edge in sheets and drops, the
+  loop sliding down it (Claude's call, 2026-10-08, after playing N3g: seen end-on with its drips as streaks it read
+  as a claw).
 - **Free.** It spouts a tall plume against the sunrise, the empty net drifting away on the water; the pod leaps round
   it; the child waves (`k5`). Then it dives as a whale does, never rolling over (Jeremy, 2026-10-08: "it "rolls
   over" at the end which is very weird"): the head goes down, the long back arches slowly forward and slides under,
@@ -934,11 +942,15 @@ The sequence:
   cygnet (`k3`, `k4`), where her mittens, the cork and the bird must read, then back out for the release (`k5`, the pod
   in frame). As found in the frames pass (Claude's call, 2026-10-08): the whale lies with its eye about 14.5 m off at
   46° to port and its length running about 72° to starboard, so its back recedes toward the low sun and leaves the
-  frame on the right; every landscape hold looks toward the sun with the whale rimmed against it. The sun stands under
-  a degree above the sea, so from any camera lower than the whale's back (about 7 m) it is hidden behind the crown:
-  the cygnet's hold is about 15 m behind and 7 m up so the sun shows over the back, at the cost of a smaller bird. The
-  breath's hold is about 18 m behind and 9.5 m up, looking down onto the crown so the net lying on the head reads; the
-  release eases out to about 30 m behind and 8.5 m up, the plume leaving the top of the frame. A phone's frame is too
+  frame on the right; every landscape hold looks toward the sun with the whale rimmed against it. A giant breaks the
+  horizon (Claude's call, 2026-10-08, after playing N3g, whose holds 7–8.5 m up looked down on it like a map): the
+  holds sit low enough that the back's ridge stands against the gold sky, the sorrow's and the look's lowest. The sun
+  stands under a degree above the sea, so a camera below the back (about 5.2 m) hides its disc; what must show is its
+  light, glowing along the ridge or over the far back, never the disc for its own sake. The haul's and the bird's
+  holds rise only as far as the cork and the bird on the water need. The approach comes down as the boat slows, so
+  the island rises above the horizon as it nears. The look between them is framed as the owl's is: her whole upper
+  body in three-quarter back view to one side, her hood and reaching mitten clear against its flank, its eye large
+  across clear water, the sail out of frame. The release eases out wide, the plume leaving the top of the frame. A phone's frame is too
   narrow (31° across) to hold the head and the sun together, so its holds look along the line from what matters
   through the boat, each with its own distance, height and turn, stacking boat, step and head up the frame; the
   cygnet's is turned toward astern so the bird stands clear of the sail above the boat (`k2-portrait`).
@@ -949,8 +961,8 @@ The sequence:
   the sunrise ahead through the leap and the swim can hide it. Claude's call (2026-10-07): keep that, since the
   destination glimpsed and then left is what makes the pod's lead read as a detour; from the lead until the whale has
   gone nothing of the mirror is in frame, and the boat comes about for it a few seconds after. Measured on `sea-whale`
-  with all three steps (2026-10-08): the lead about 60 s in, at rest about 89 s; a player making each gesture is moored
-  about 208 s in, one who leaves every step to its valve about 483 s. The open
+  with all three steps and the look between them (2026-10-08, N3g): the lead about 60 s in, at rest about 89 s; a
+  player making each gesture is moored about 216 s in, one who leaves every step to its valve about 480 s. The open
   sea's "at most 100 s" is lifted for this. Music: the sea's score holds through the encounter; the mirror's arrival
   music cannot start until the whale has gone.
 - **Saves.** Checkpoints at rest beside it (before the first step), after each step, and after it has gone (resumes
