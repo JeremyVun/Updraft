@@ -915,9 +915,13 @@ Done: [x] (branch `proto-drowned-fogbody`). As built:
 
 ### Phase 8: the camera to the shot list (after 7c)
 Owns: the room's lens from the rescue to the storm's frame (`drowned-run.ts`, `drowned-church.ts`, `drowned.ts`'s
-watch, `tuning.drownedCamera`), authored per beat to design.md's shot list, upright composed for itself. First study how the rest of the game frames
-its subjects and interactions (`docs/engine.md` camera direction; the shots of the little boats, the birches' swing,
-the stairs, the dark wood and the sea in play) and take its grammar: framed well for a human.
+watch, `tuning.drownedCamera`), authored per beat to design.md's camera rules and shot list, upright composed for itself. The game's grammar is
+measured in `camera-grammar.md` with contact sheets in `comps/camera-*.jpg` (its section 11 reads where this room
+departs from it); take it from there: framed well for a human. The run's laid path and the church's `exact` views
+bypass the rig's turn cap, subjects and safety frame: give them back (orbit where it is a change of side, subjects
+named in every frame) or hold their turns to the bar rooms' speeds. `HOME_WAY` is laid for the bell's view and moves
+with it. The study's capture script ran real gestures with a per-frame camera trace; measure turns, distances and
+the angle down to her the same way.
 From the lead's review of 7a's run: at the rescue the mast stands between the lens and the cat at her shins; the mill
 is seen from high above, so she is tiny, the climb has no ruler and the fog is out of frame; the swing is seen from
 high over the board, looking down on her; on the granary's ridge she walks straight at the lens; the upright lens
@@ -931,7 +935,9 @@ From the lead's review of 7c with 7d's fog: the slow blink, the room's last word
 at the sill and the red sail stands between the lens and her as she looks up. The kittens are seen from outside
 through the other light, small, with her back to the lens. The cat's way up the ivy is hidden behind her. The fog sea
 from the belfry, the rings over it and the lantern coming through it all read; keep them.
-Gate: `LENS=1` checks, both aspects; a still at every shot-list line.
+Gate: `LENS=1` checks, both aspects (no turn over 30 deg/s, she never out of frame, no visible cut); a still at every
+shot-list line in both aspects, judged beside the contact sheets; a `VIDEO=1` webm of the whole room with 2 fps
+strips.
 Done: [ ]
 
 ### Phase 9: the music (parallel with 7c or 8)

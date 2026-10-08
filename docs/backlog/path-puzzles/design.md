@@ -583,28 +583,50 @@ it's place", and on the camera: "I think it just needs to be framed well for a h
 a fairly good job if you need to see how it's been done." So any piece above may be cut or replaced if it does not
 earn its place in play, and the camera takes its grammar from the game's other rooms.
 
-**The camera** is authored shot by shot rather than planned by costs, to a written shot list (below), staged in
-the engine and judged from stills. Rules: the subject is always framed as the shot intends, not merely somewhere in frame; in
-every interaction the thing the player acts on, her, and where she is going are all in frame, with the action moving
-across the screen rather than into it; the fog is in every chase frame, behind or beside; moves happen between beats
-or with her movement, one intention each, never an in-and-out; upright frames compose for the narrow frame, not as a
-cropped landscape.
+**The camera** follows the game's own grammar (`camera-grammar.md`, measured from the rooms Jeremy holds up: the
+clouds, the owl, the boats, the birches, the sea), authored shot by shot to the list below. Its rules here:
+- **She and the thing are named.** She is the primary subject; what she works, follows or fears is the secondary one
+  (the piece, the cat, the fog's front, the bell, the kittens, the boat), the aim leaned 35-60% toward it and the side
+  chosen so it stands beside her, never behind her. A moving occluder (sail, mast) is kept out by bearing.
+- **Distance by the kind of beat.** Walking the roofs 12-14 m behind the way she is going, 3-4.5 m up; sailing 16-23 m
+  astern, 4.5-6 m up; a crossing 12-16 m from the side of the gap, 10-20 degrees down at most; a creature's moment or
+  a feeling 5-8 m with the lens at her head height (a longer lens, zoom 1.3-1.8, for faces and the cat). Never from
+  high above: a climb is seen from low, looking up the way she climbs, the thing climbed the ruler in frame.
+- **Slow, round her, uncut.** A change of side orbits her, no faster than the rig's 17 degrees a second; an authored
+  move takes 4-8 s, one move per beat, never in and out. No visible cut: the lens goes round, up or through. Feeling
+  beats move at pace 0.16-0.3 and hold until the story moves.
+- **The fog is in every chase frame,** behind or beside her, as a secondary subject or a glance whose weight rises as
+  it nears; seen from a little above its top or across its face with sky behind, never from inside its top layer.
+- **Upright composes for itself:** closer, taller, tilted up, the story stacked up the frame (the owl's upright view).
 
 **Shot list.** Each line: the beat, the subject, the frame, how it hands on.
 - Rescue: the tub and the cat's roof in one frame from low over the water, the boat at the edge; as the tub nears the
-  boat the frame comes to the boat and her, the cat leaping in, her kneeling (close, side on).
-- Stuck: side on to the boat, close, the roof under the water visible; the fog rising behind on the horizon; the cat
-  in the bow staring at it, then its leap carries the frame up onto the roof.
-- The boat lost: over her shoulder from the first roof, the boat below, the fog taking it; the lantern the last light.
-- Each walk: three-quarter behind her, the cat ahead and the fog behind or to one side, the next piece already in view.
+  boat the frame comes round to the boat's quarter away from the sail, the cat leaping in at her shins and her
+  kneeling to it, close (5-6 m) at her eye height.
+- The drift: wide behind the boat (16-23 m astern, 4.5-6 m up), the village passing beside it, the cat in the bow,
+  the spire a glance. It is the room's establishing shot, not a two-shot.
+- Stuck: at the scrape the lens comes round side on and in on the bow (6-8 m, at her eye height), the roof's slates
+  under the water below the stem; the fog's rise behind is the secondary subject, growing in frame; the cat's stare,
+  yowl and bolt read large; its leap carries the frame up onto the roof.
+- The boat lost: over her shoulder from the first roof, low, the boat below, the fog taking it; the lantern the last
+  light.
+- Each walk: from behind her the way she is going, off the shoulder on the fog's side, the cat ahead, the fog behind
+  or beside, the next piece already in view. She never walks at the lens.
 - Each piece: from the side of the gap, her on the near edge, the piece and the far side across the frame, the cat's
-  showing in it; held while the player acts; the crossing played across the frame; the next walk picks up from there.
-- The refuge: rising with her up the ivy, the fog below; inside, the kittens and the cat close and warm in the
-  shadow; then the wide frame from the belfry over the fog sea, the lighthouse beam crossing it.
+  showing in it; held while the player acts; the crossing played across the frame. The mill's hoist seen from low
+  beside the basket looking up the mill, the sails and the drum in frame, the lens rising with her slower than she
+  rises; the swing three-quarters on and low, as the birches' swing. The next walk picks up from there.
+- The refuge: the cat's way up the ivy beside her, not behind; rising with her from low and to the side; into the
+  belfry without a cut, round the tower's corner; the kittens seen three-quarter on, her face and the kittens in one
+  frame, close and warm in the shadow; then the wide frame from the belfry over the fog sea, the lighthouse beam
+  crossing it.
 - The bell: the bell and her in the opening, the fog sea beyond; each ring's wave rolling out; the lantern's glow
   appearing in the fog, the frame finding it.
-- The boat home: from the belfry looking down at the boat coming in to the tower's foot, then down with her climbing to
-  it, then the look back up at the cat and kitten on the sill, then the storm's frame.
+- The boat home: from the belfry looking down at the boat coming in to the tower's foot, then down with her as she
+  climbs to it.
+- Letting go: from low beside the boat, near her head height, looking up past her face at the sill, a long lens so
+  the cat and the kitten read and the blink is seen; the sail out of the line; held for the blink; then the storm's
+  frame over its 12 s.
 
 ### How it is made (Claude's calls under that ownership, 2026-10-05)
 
