@@ -284,7 +284,7 @@ export class Cat {
     this.mesh.visible = false;
     /** The coat hangs off the skin as a child of it, so it is shown, hidden and drawn with the cat and never apart. */
     this.mesh.add(coatShells(this.mat));
-    this.spray = new Spray(0.014 * this.scale);
+    this.spray = new Spray(0.002 * this.scale);
     this.mesh.add(this.spray.points);
     this.support = {
       origin: this.at,
