@@ -243,7 +243,8 @@ pan and bounded scheduling; finished nodes disconnect.
   the wet rope through her mittens (`rope-pull`); the mesh slithers off the skin into the sea as fast as it peels
   (`net-slither`); the last loop slides off the flipper's tip into the cygnet's pull (`loop-slip`); the cygnet scrambles
   up out of the sea onto her side (`swimmer-out`; its plunge in is its own `plunge`). Its call (`whale-call`) sounds as
-  its eye opens on her and as it waves goodbye, and as a far echo on the first crossing. The sea runs off its near
+  its eye opens on her and as it waves goodbye, and as a far echo on the first crossing; as its spout falls free it
+  calls once glad (`whale-glad`: the same voice, brighter, rising to E instead of settling on B). The sea runs off its near
   flipper as each lazy lift brings it up out of the water (`flipper-pour`, through `WorldFoley.whale`) before it is laid
   back down (`whale-slap`).
 - Flock wingbeats follow flight and take-off; resting rafts are silent. Beats consumed while inaudible never burst on
