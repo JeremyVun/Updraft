@@ -1623,8 +1623,8 @@ export class NetWhale {
     const h = THREE.MathUtils.smootherstep(this.hold, 0, 1);
     if (!this.holdSet) this.holdFor(this.step, true);
     shot.clearance = undefined;
-    // Led off its line, the view comes down and in toward her, so her arm held up stands against the haze, and the
-    // look goes on toward the long low island it is making for while the eye stays behind the boat.
+    // Led off its line, the view comes down and in toward her, so the way she leans toward it reads against the haze,
+    // and the look goes on toward the long low island it is making for while the eye stays behind the boat.
     const rise = THREE.MathUtils.smootherstep(this.rise, 0, 1);
     shot.height -= K.leadDrop * rise;
     shot.distance -= K.leadIn * rise;

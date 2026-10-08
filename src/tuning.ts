@@ -1433,13 +1433,13 @@ export const tuning = {
      * low as `holdClearance` over the water and backed off at most `holdRoom` metres to keep what a step asks for in
      * frame; and the wider view it eases back out to as it goes free, the plume leaving the top of the frame.
      */
-    holdFrom: 75, holdFull: 6, holdDistance: 13, holdHeight: 2.8, holdBearing: 0.18, holdEase: 0.45, holdClearance: 1, holdRoom: 2,
+    holdFrom: 75, holdFull: 6, holdDistance: 13, holdHeight: 2.8, holdBearing: 0.25, holdEase: 0.45, holdClearance: 1, holdRoom: 2,
     /**
      * Led off its line, the crossing's view comes `leadDrop` lower and `leadIn` nearer (m) at `riseEase` a second, its
      * look going `riseToward` of the way from the boat to the whale's eye (`riseTowardPhone` in a phone's narrow
      * frame), `riseLook` metres up; the hold beside it takes it on down from there.
      */
-    leadDrop: 2.6, leadIn: 8, riseEase: 0.3, riseLook: 2, riseToward: 0.4, riseTowardPhone: 0.12,
+    leadDrop: 2.6, leadIn: 10, riseEase: 0.3, riseLook: 2, riseToward: 0.25, riseTowardPhone: 0.12,
     /**
      * Seconds the cygnet peeks out of the satchel at its first breath in the haze; seconds after the pod turns the
      * boat toward it that it sighs there; and how long before each breath she knows it is coming, leans toward it
