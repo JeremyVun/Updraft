@@ -54,7 +54,7 @@ function surge(r: number, t: number): number {
     * THREE.MathUtils.smoothstep(front, 0, 6) * 12 / (12 + r);
 }
 
-/** How far out from a breathing whale's flank p is, and so its lift t seconds after the breath. */
+/** The lift at (x, z) of the low crest a breathing whale sends out from its flank. */
 function heave(x: number, z: number, time: number): number {
   const g = swellUniforms.uHeave.value;
   const a = swellUniforms.uHeaveAxis.value;
