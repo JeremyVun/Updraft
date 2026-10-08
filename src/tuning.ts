@@ -1528,7 +1528,7 @@ export const tuning = {
      * `lookHeight` up, `lookBearing` round to port of astern, looking `lookToward` of the way from the boat to its eye,
      * `lookLookY` up: her whole upper body to the right of its eye, and the mast at the frame's edge with the sail beyond it.
      */
-    lookDistance: 4.6, lookHeight: 1.6, lookBearing: 0.08, lookLookY: 2.6, lookToward: 0.6,
+    lookDistance: 4.6, lookHeight: 1.6, lookBearing: 0.08, lookLookY: 2.6, lookToward: 0.66,
     /**
      * Looked at, she slides along the thwart toward the port rail (m), turns on it to face its eye (radians) and
      * leans out over the rail toward it (radians), clear of the mast and the sail behind her.
