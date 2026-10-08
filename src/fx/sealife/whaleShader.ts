@@ -218,8 +218,8 @@ const vec2 SCAR_CELL = vec2(5.0, 2.6);
 
 /**
  * The scar whose cell is id, if that cell has one (a share of them do): a soft pale stroke with rounded ends, drawn out
- * along the body or slanting across it, in a faint pale haze of healed skin. How pale it draws at m, and the shade under its lower edge, where the healed skin
- * stands a little proud.
+ * along the body or slanting across it, in a faint pale haze of healed skin. How pale it draws at m, and the shade
+ * under its lower edge, where the healed skin stands a little proud.
  */
 vec2 scarIn(vec2 m, vec2 id, float share, float px) {
   if (hash12(id + 41.0) > share) return vec2(0.0);
@@ -274,10 +274,12 @@ float rosettes(vec2 m, float cell, float where, float px) {
  */
 vec2 lichen(vec2 m, float cover, float px) {
   float colony = smoothstep(0.3, 0.75, vnoise(m * 0.2 + 41.0) * 0.7 + vnoise(m * 0.55 + 7.0) * 0.3 + cover - 0.3);
+  float tone = vnoise(m * 0.4 + 17.0);
+  if (colony <= 0.0) return vec2(0.0, tone);
   float big = rosettes(m, 1.3, colony * 0.9, px) * shows(0.5, px);
   float small = rosettes(m + 0.31, 0.45, colony * 0.75 + 0.1 * cover, px) * shows(0.18, px);
   float far = colony * 0.3 * (1.0 - shows(0.5, px));
-  return vec2(max(max(big, small), far), vnoise(m * 0.4 + 17.0));
+  return vec2(max(max(big, small), far), tone);
 }
 
 struct Skin {
@@ -391,16 +393,16 @@ Skin skin(float far, float dry) {
   // How far out from the eye and the folds round it, 1 at their edge.
   float face = length(e * vec2(0.62, 0.87));
   // Broad soft patches of tone, as a painter lays in a great rock, a soft grain over them, and lichen, thick in some
-  // places and bare in others, thinning round the eye so its face stays clear.
+  // places and bare in others, thicker about the eye but clear of it.
   vec3 base = uBack * (0.94 + 0.12 * mottle) * (${f(1 - L.tone)} + ${f(2 * L.tone)} * smoothstep(0.2, 0.8, n0));
   float grain = (vnoise(m * 6.0 + 1.7) - 0.5) * shows(0.16, px) + 0.6 * (vnoise(m * 15.0 + 4.1) - 0.5) * shows(0.07, px);
   base *= 1.0 + ${f(L.grain)} * grain;
-  float thick = ${f(L.lichenCover)} * (0.3 + 1.1 * smoothstep(0.25, 0.75, n0 + 0.3 * (n1 - 0.5)));
+  float thick = ${f(L.lichenCover)} * (0.3 + 1.1 * smoothstep(0.25, 0.75, n0 + 0.3 * (n1 - 0.5))) + 0.22 * (1.0 - smoothstep(1.2, 3.0, face)) * flank;
   vec2 lich = lichen(m, thick, px);
   vec3 lichTone = mix(${rgb(L.lichen)}, ${rgb(L.lichenWarm)}, smoothstep(0.62, 0.85, lich.y)) * (0.9 + 0.2 * lich.y);
   // Low on its flanks the sea's weed has it rather than lichen.
   float onBody = float(part == ${BODY});
-  float lichOn = ${f(L.lichenAmount)} * mix(0.5, 1.0, dry) * (1.0 - 0.8 * (1.0 - smoothstep(0.75, 1.05, face)) * flank * onBody)
+  float lichOn = ${f(L.lichenAmount)} * mix(0.5, 1.0, dry) * (1.0 - 0.85 * (1.0 - smoothstep(0.8, 1.1, face)) * flank * onBody)
     * (1.0 - onBody * (1.0 - smoothstep(0.6, 1.8, overRestSea(vRest, s))));
   base = mix(base, lichTone, lich.x * lichOn);
   Skin k = Skin(base, 0.0, vec3(0.0), 0.0, 0.0, 0.0, 0.0, vec2(0.0), 0.0, 0.0);
@@ -440,27 +442,29 @@ Skin skin(float far, float dry) {
       // but never on the eye or in its folds; a few stray ones about each patch.
       float head = (1.0 - smoothstep(0.2, 0.3, s)) * dry;
       if (head > 0.0) {
-        float eyeClear = 1.0 - (1.0 - smoothstep(1.0, 1.3, face)) * flank;
+        float eyeClear = 1.0 - (1.0 - smoothstep(0.95, 1.15, face)) * flank;
         float chin = smoothstep(0.0, 0.02, below) * onJaw;
         float lipLine = exp(-pow((below + 0.015) / 0.035, 2.0)) * (1.0 - smoothstep(${f(JAW_CORNER)}, ${f(JAW_CORNER + 0.03)}, s));
         float nearEye = (1.0 - smoothstep(1.6, 2.8, face)) * flank;
-        float bias = max(max(0.24 * smoothstep(0.0, 0.004, knobbed), 0.14 * chin), max(0.16 * lipLine, 0.14 * nearEye));
+        float bias = max(max(0.24 * smoothstep(0.0, 0.004, knobbed), 0.14 * chin), max(0.16 * lipLine, 0.1 * nearEye));
         float crustAt = vnoise(m * 0.9 + 11.0) * 0.6 + vnoise(m * 2.4 + 4.0) * 0.4;
         float near = head * eyeClear * smoothstep(0.52, 0.68, crustAt + bias);
-        float where = near * smoothstep(0.71, 0.74, crustAt + bias);
-        // The crust stands a little proud, so it shades the skin just under its lower edge.
-        vec2 up = m + vec2(0.0, 0.14);
-        float ledge = head * eyeClear * smoothstep(0.71, 0.74, vnoise(up * 0.9 + 11.0) * 0.6 + vnoise(up * 2.4 + 4.0) * 0.4 + bias) * (1.0 - where);
-        k.albedo *= 1.0 - 0.35 * ledge * shows(0.14, px);
-        vec3 crust = barnacles(m, max(where * ${f(L.crustShells)}, 0.12 * near), px);
-        // A patch is one pale lumpy crust, its shells the light and shade over it; strays about it stand on the skin.
-        vec3 crustTone = mix(${rgb(L.crust)}, mix(${rgb(L.crust)}, uBack, 0.4), lip);
-        float lumpy = 0.85 + 0.3 * vnoise(m * 3.0 + 3.0);
-        k.albedo = mix(k.albedo, crustTone * 0.75 * lumpy, where * mix(0.55, 0.4, 1.0 - shows(0.2, px)));
-        k.albedo *= 1.0 - mix(0.3, 0.5, lip) * crust.z;
-        k.albedo = mix(k.albedo, crustTone * crust.y, crust.x * (1.0 - 0.5 * where));
-        k.albedo *= mix(1.0, 0.75 + 0.4 * crust.y, crust.x * where);
-        k.crust = max(crust.x, where);
+        if (near > 0.0) {
+          float where = near * smoothstep(0.71, 0.74, crustAt + bias);
+          // The crust stands a little proud, so it shades the skin just under its lower edge.
+          vec2 up = m + vec2(0.0, 0.14);
+          float overhang = vnoise(up * 0.9 + 11.0) * 0.6 + vnoise(up * 2.4 + 4.0) * 0.4 + bias;
+          k.albedo *= 1.0 - 0.35 * near * smoothstep(0.71, 0.74, overhang) * (1.0 - where) * shows(0.14, px);
+          vec3 crust = barnacles(m, max(where * ${f(L.crustShells)}, 0.12 * near), px);
+          // A patch is one pale lumpy crust, its shells the light and shade over it; strays about it stand on the skin.
+          vec3 crustTone = mix(${rgb(L.crust)}, mix(${rgb(L.crust)}, uBack, 0.4), lip);
+          float lumpy = 0.85 + 0.3 * vnoise(m * 3.0 + 3.0);
+          k.albedo = mix(k.albedo, crustTone * 0.75 * lumpy, where * mix(0.32, 0.4, 1.0 - shows(0.2, px)));
+          k.albedo *= 1.0 - mix(0.3, 0.5, lip) * crust.z;
+          k.albedo = mix(k.albedo, crustTone * crust.y, crust.x * (1.0 - 0.5 * where));
+          k.albedo *= mix(1.0, 0.75 + 0.4 * crust.y, crust.x * where);
+          k.crust = max(crust.x, where);
+        }
       }
       // Weed where the sea lies on it at rest, ragged along its top and dark and mossy by turns, and above it in places
       // the faint yellow film old whales carry; kept off the pale lip.
@@ -503,7 +507,18 @@ Skin skin(float far, float dry) {
       lines = pow(abs(cos(fan * 4.2 + 0.5 * vnoise(vec2(reach * 2.5, fan * 2.0)))), 24.0)
         * smoothstep(0.1, 0.25, reach) * (1.0 - smoothstep(0.45, 1.05, reach)) * (1.0 - smoothstep(0.75, 1.1, abs(fan)));
     }
-    k.albedo *= (1.0 - 0.32 * folds.y * flank * (1.0 - far)) * (1.0 - 0.3 * lines * flank * (1.0 - far));
+    // Beyond its folds a few long soft creases arch over it and sweep back toward the tail, the skin worn into lines.
+    float px2 = fwidth(e.y) + 0.01;
+    float crease = 0.0;
+    for (int i = 0; i < 3; i++) {
+      float fi = float(i);
+      float x = e.x + 0.4 + 0.25 * fi;
+      float arc = 1.28 + 0.3 * fi - (0.12 - 0.02 * fi) * x * x + 0.04 * sin(e.x * 3.0 + fi * 2.0);
+      float reach = (1.0 - smoothstep(1.0 + 0.3 * fi, 2.0 + 0.4 * fi, abs(x + 0.3))) * (1.0 - 0.3 * fi);
+      crease = max(crease, (1.0 - smoothstep(0.02, 0.05 + px2, abs(e.y - arc))) * reach);
+    }
+    k.albedo *= (1.0 - 0.32 * folds.y * flank * (1.0 - far)) * (1.0 - 0.3 * lines * flank * (1.0 - far))
+      * (1.0 - ${f(L.creases)} * crease * flank * (1.0 - far) * shows(0.06 * R * uScale, px));
     k.albedo = mix(k.albedo, eye, opening);
     k.gloss = opening;
     // The wet rim of the lower lid catches the sky.
