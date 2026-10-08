@@ -343,7 +343,7 @@ export const STRAND_HOUSE: PlacedHouse = (() => {
     stacks: [-1], stack: 0.9, gable: -1, stone: true };
   h.sink = h.wall + h.rise + 0.04 - 1.45;
   const along = new THREE.Vector2(Math.cos(h.yaw), -Math.sin(h.yaw));
-  const end = new THREE.Vector2(W1_FROM.x - along.x * 1.05, W1_FROM.z - along.y * 1.05);
+  const end = new THREE.Vector2(W1_FROM.x - along.x * 0.9, W1_FROM.z - along.y * 0.9);
   h.x = end.x - along.x * (h.len / 2 - 0.35);
   h.z = end.y - along.y * (h.len / 2 - 0.35);
   return h;

@@ -1,6 +1,6 @@
 // The drowned village's way over the roofs, walked: sets the child down on the strand's slates and walks her deck to
 // deck to the foot of the church's tower in Chrome for Testing against a running dev server, hopping where the way
-// says she hops and carried across the three pieces (tree, mill, swing) without them. Reports every deck's length,
+// says she hops and carried across the four pieces (tree, sheet, mill, swing) without them. Reports every deck's length,
 // every step between decks and every hop's gap and rise, and fails if a deck floats over nothing built, if a step or a
 // hop is more than she could make (`tuning.drowned.way`), if she stalls short of a deck's end, or if her feet leave
 // the surface under her. Also checks that the cat's own way over each gap is made of leaps a cat makes.
@@ -120,10 +120,13 @@ try {
         const gp = gaps.get(decks[i - 1][0]);
         if (gp?.by === 'hop') await leap(new g.child.position.constructor(gp.to.x, gp.to.y, gp.to.z));
         else if (gp?.by === 'tree') {
-          const t = g.village.tree.deck;
+          /** She steps up onto the fallen trunk at its end over her wall and walks it to the far end. */
+          const t = g.village.tree.deck, h1 = t.height1 ?? t.height;
+          const near = Math.hypot(t.x0 - c.position.x, t.z0 - c.position.z) < Math.hypot(t.x1 - c.position.x, t.z1 - c.position.z);
+          const [a, b] = near ? [[t.x0, t.height, t.z0], [t.x1, h1, t.z1]] : [[t.x1, h1, t.z1], [t.x0, t.height, t.z0]];
           c.decks.push(t);
-          await walk('trunk', t.x0, t.z0);
-          await walk('trunk', t.x1, t.z1);
+          await leap(new g.child.position.constructor(a[0] + (b[0] - a[0]) * 0.08, a[1] + (b[1] - a[1]) * 0.08, a[2] + (b[2] - a[2]) * 0.08));
+          await walk('trunk', b[0], b[2]);
           await leap(new g.child.position.constructor(gp.to.x, gp.to.y, gp.to.z));
         } else if (gp) {
           c.position.y = gp.to.y;

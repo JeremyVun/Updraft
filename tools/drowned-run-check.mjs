@@ -17,9 +17,10 @@
 //        two between, and through the church), FILM=<seconds> with SHOTS also
 //        saves a still every that many seconds from the air dying (from the ridge with FROM=roofs, the tower's foot
 //        with FROM=church) to the storm, and with FROM=stairs through the descent in the white and 30 s on,
-//        TO=nave stops at the tower's foot, W/H viewport (default 1600x900), LENS=1 also fails on the lens's measures (a roof hiding her, her walking
-//        toward it, her out of frame, it inside a roof; and at the church, from the tower's foot until the storm's
-//        frame takes over, her out of frame or hidden by the church or a roof).
+//        TO=nave stops at the tower's foot, VIDEO=<dir> records the whole play as a webm there, W/H viewport
+//        (default 1600x900), LENS=1 also fails on the lens's measures (a roof hiding her, her walking toward it, her
+//        out of frame, it inside a roof, it whipping round; and at the church, from the tower's foot until the
+//        storm's frame takes over, her out of frame or hidden by the church or a roof).
 import { chromium } from 'playwright-core';
 import assert from 'node:assert/strict';
 
@@ -35,8 +36,11 @@ const toNave = process.env.TO === 'nave';
 const browser = await chromium.launch({ channel: 'chromium', headless: true,
   args: ['--enable-gpu', '--use-angle=metal', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
 const errors = [];
+const video = process.env.VIDEO ?? null;
+const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1,
+  ...(video ? { recordVideo: { dir: video, size: { width, height } } } : {}) });
 try {
-  const page = await (await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1 })).newPage();
+  const page = await context.newPage();
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto(`${base}?shot=1&chapter=${fromStorm ? 'storm' : fromChurch ? 'church' : fromRoofs ? 'roofs' : fromStairs ? 'stairs' : 'drowned'}&ratio=1`, { waitUntil: 'load' });
   await page.waitForFunction(() => window.__ready === true, null, { timeout: 60000 });
@@ -720,5 +724,8 @@ try {
   assert.deepEqual(errors, [], `page errors: ${errors.join('; ')}`);
   console.log('drowned run check passed');
 } finally {
+  const recorded = video ? context.pages()[0]?.video() : null;
+  await context.close();
+  if (recorded) console.log(`video: ${await recorded.path()}`);
   await browser.close();
 }
