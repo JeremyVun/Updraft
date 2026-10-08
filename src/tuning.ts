@@ -1481,7 +1481,7 @@ export const tuning = {
      * `farewellHeight` up and `farewellBearing` round to port of astern, looking `farewellToward` of the way there and
      * `farewellLookY` up, so its flukes stand whole in the frame over the boat.
      */
-    farewellDistance: 17, farewellHeight: 1.8, farewellBearing: 0.6, farewellLookY: 19, farewellToward: 0.5, farewellMove: 7,
+    farewellDistance: 21, farewellHeight: 1.2, farewellBearing: 0.3, farewellLookY: 16, farewellToward: 0.5, farewellMove: 7,
     /** Once it has gone, seconds over which the view eases from the farewell's hold back to the crossing's behind the boat. */
     handBack: 16,
     /**
@@ -1534,6 +1534,20 @@ export const tuning = {
      * leans out over the rail toward it (radians), clear of the mast and the sail behind her.
      */
     lookSlide: 0.35, lookTurn: 0.95, lookLean: 0.9,
+    /**
+     * Where she holds her mitten out to its eye, from her face (m): out to port, on toward its eye, and up. Leaning
+     * out she is already over the rail, so nearer than this the arm folds back against her hood.
+     */
+    lookReach: [0.35, 0.25, 0.32],
+    /**
+     * The light lent her (`Traveller.lent`) in the look and the farewell, where the low sun is behind her: the sun
+     * along her outline, the lantern wrapped round her face and side, a lift in her shade; eased at `lightEase` a second.
+     */
+    lookLight: [1.2, 1.5, 0.35], farewellLight: [1.2, 0, 0.2], lightEase: 1,
+    /** Her goodbye as its flukes stand, from her face (m): out to her left, up, swaying either way, and how fast (rad/s). */
+    goodbyeWave: [0.42, 0.38, 0.13, 4.5],
+    /** As it dives she slides this far along the thwart to the port rail (m), at `farewellRailEase` a second. */
+    farewellSlide: 0.35, farewellRailEase: 0.8,
     /**
      * The valve's dolphin: seconds to swim in under water from where the pod waits, how high over the crown its leap
      * carries its beak (m), how fast the gravity of a dream brings it down (m/s²), and how quickly the mesh it flicks
@@ -1588,7 +1602,7 @@ export const tuning = {
       line: { distance: 6, height: 3.2, turn: -0.75, lookY: 3, toward: 0.37, eyeward: 1 },
       flipper: { distance: 12, height: 3.4, turn: -1.5, lookY: 3, toward: 0.5 },
       release: { distance: 12, height: 3, turn: -0.3, lookY: 12, toward: 0.4 },
-      farewell: { distance: 40, height: 2, turn: -0.5, lookY: 26, toward: 0.6 },
+      farewell: { distance: 30, height: 1.4, turn: -0.5, lookY: 20, toward: 0.66 },
       releaseRoom: 4,
     },
     /**

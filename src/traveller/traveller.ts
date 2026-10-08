@@ -109,6 +109,11 @@ export class Traveller {
   lean = 0;
   /** The head tipped toward a shoulder, radians, positive toward their own right. */
   tilt = 0;
+  /**
+   * Light a held frame lends her for this frame only, so a backlit child still reads: the low sun along her outline,
+   * the lantern wrapped round her, and a lift in her shade. Let go after each frame unless lent again.
+   */
+  readonly lent = new THREE.Vector3();
   /** Sat on an edge, how much the hanging feet swing, 0 to 1. */
   dangle = 0;
   /**
@@ -1346,6 +1351,8 @@ export class Traveller {
     const u = r.material.uniforms;
     u.uBlink.value = Math.max(this.blink > 0 ? 1 : 0, shut);
     u.uYawn.value = yawn;
+    u.uLent.value.copy(this.lent);
+    this.lent.set(0, 0, 0);
   }
 
   /**

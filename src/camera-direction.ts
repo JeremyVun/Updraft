@@ -75,7 +75,7 @@ export class CameraDirection {
       this.proposed = this.confirmedFor = this.sinceReview = 0;
       return;
     }
-    if (!shot.subjects) {
+    if (!shot.subjects || shot.authored) {
       this.wanted = this.proposed = this.confirmedFor = this.sinceReview = 0;
     }
     else if (this.untilReview <= 0) {

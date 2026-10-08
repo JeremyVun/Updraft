@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { ATMO_GLSL, atmo } from '../../world/atmosphere';
 import { MAT } from './mesh';
 import { FACE, HEM } from './garments';
+import { glsl, tuning } from '../../tuning';
 
 const f = (x: number) => x.toFixed(4);
 const v3 = (v: THREE.Vector3) => `vec3(${f(v.x)}, ${f(v.y)}, ${f(v.z)})`;
@@ -102,6 +103,7 @@ uniform float uNoseTip;
 /** Which way the hood's opening faces in the world, to keep the sun off a face it cannot reach. */
 uniform vec3 uHoodForward;
 uniform float uChildMoon;
+uniform vec3 uLent;
 in vec3 vWorld;
 in vec3 vNormal;
 in vec3 vRest;
@@ -311,6 +313,16 @@ void main() {
     float lampSide = clamp(dot(N, toLamp) * inversesqrt(max(dot(toLamp, toLamp), 1e-4)) * 0.5 + 0.5, 0.0, 1.0);
     col += alb * lampLight(vWorld, N) * (0.28 + 0.72 * lampSide) * mix(0.5, 1.0, ao);
   }
+  // Lent by a held frame (Traveller.lent) so a child against the low sun reads rather than going dark.
+  if (uLent.x + uLent.y + uLent.z > 0.0) {
+    float toSun = smoothstep(-0.35, 0.45, dot(N, uSunDir));
+    col += uSunColor * (0.35 + 0.65 * alb) * pow(1.0 - facing, 2.0) * toSun * sun * uLent.x * (1.0 - inside);
+    vec3 toLantern = uLantern.xyz - vWorld;
+    float lantern = uLantern.w / (1.0 + dot(toLantern, toLantern) * ${glsl(tuning.lantern.falloff)});
+    float turned = clamp(dot(N, normalize(toLantern)) * 0.5 + 0.5, 0.0, 1.0);
+    col += alb * vec3(1.0, 0.63, 0.29) * lantern * turned * turned * uLent.y * mix(0.5, 1.0, ao);
+    col += alb * hemiLight(N) * uLent.z * ao;
+  }
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;
 
@@ -345,6 +357,7 @@ export function childMaterial(): THREE.ShaderMaterial {
       uFlutter: { value: 0 },
       uFlow: { value: new THREE.Vector3() },
       uHoodForward: { value: new THREE.Vector3(0, 0, 1) },
+      uLent: { value: new THREE.Vector3() },
     },
     side: THREE.DoubleSide,
   });

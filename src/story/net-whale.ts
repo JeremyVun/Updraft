@@ -187,6 +187,9 @@ export class NetWhale {
   private rested = false;
   private rewarded = false;
   private nextWave = 0;
+  private wavingGoodbye = false;
+  /** How far she has gone to the port rail to wave it goodbye, 0..1. */
+  private railward = 0;
   /** When she began pointing toward its breath, or -1. */
   private pointing = -1;
   private nextPoint = 0;
@@ -281,6 +284,9 @@ export class NetWhale {
   private readonly holdNow = new Float32Array(14);
   /** The view has eased round to the farewell's hold, where it dives. */
   private farewelled = false;
+  /** The light lent her in the look and the farewell (`Traveller.lent`), eased in and out with them. */
+  private readonly lit = new THREE.Vector3();
+  private readonly lending = new THREE.Vector3();
   /** How far round the hold's view is from the crossing's, unwound from frame to frame. */
   private apart: number | null = null;
   /** The world's clock this frame, for the swell under the boat. */
@@ -533,14 +539,21 @@ export class NetWhale {
     const drawing = t > K.eyeOpens + 1 && t < K.eyeOpens + K.lookFor - K.handOff;
     this.drawn += ((drawing ? 1 : 0) - this.drawn) * (1 - Math.exp(-dt * (drawing ? 0.9 : 1.4)));
     const drawn = THREE.MathUtils.smoothstep(this.drawn, 0, 1);
-    this.slide = Math.max(K.haulSlide * THREE.MathUtils.smoothstep(this.out, 0, 1), K.lookSlide * drawn);
-    const turning = this.step === 'gone' ? 0 : this.turnToward() * (1 - THREE.MathUtils.smootherstep(left, 30, 120));
+    // As it dives she goes along the thwart to the port rail to wave, out from in front of the mast.
+    this.railward += ((this.farewelled && this.step === 'free' ? 1 : 0) - this.railward) * (1 - Math.exp(-dt * K.farewellRailEase));
+    this.slide = Math.max(K.haulSlide * THREE.MathUtils.smoothstep(this.out, 0, 1), K.lookSlide * drawn,
+      K.farewellSlide * THREE.MathUtils.smoothstep(this.railward, 0, 1));
+    // As it dives she turns to where it goes down, so the mitten she waves is out to her side rather than toward the lens.
+    const turning = this.step === 'gone' ? 0 : this.turnToward(this.farewelled ? whale.farewell : whale.eye) * (1 - THREE.MathUtils.smootherstep(left, 30, 120));
     const toward = THREE.MathUtils.lerp(turning, K.lookTurn, drawn);
     this.turn += (THREE.MathUtils.lerp(toward, K.haulTurn, this.out) - this.turn) * (1 - Math.exp(-dt * 1.2));
     if (this.step === 'free' && whale.diving >= 0 && !this.farewelled) {
       this.farewelled = true;
       this.holdFor('farewell', false);
     }
+    const lend = this.looking ? K.lookLight : this.farewelled ? K.farewellLight : null;
+    this.lit.lerp(lend ? this.lending.fromArray(lend) : this.lending.set(0, 0, 0), 1 - Math.exp(-dt * K.lightEase));
+    this.cast.child.lent.copy(this.lit).multiplyScalar(this.step === 'gone' ? this.hold : 1);
     const move = this.looking ? K.lookMove : this.farewelled ? K.farewellMove : this.step === 'free' ? K.releaseMove : K.holdMove;
     this.holdT = Math.min(1, this.holdT + dt / move);
     const lost = this.step === 'approach' ? K.lostFar * (this.led ? THREE.MathUtils.smootherstep(left, K.lostNear, K.lostFrom) : 1) : 0;
@@ -669,6 +682,7 @@ export class NetWhale {
     if (this.step === 'gone') {
       child.lean = 0;
       this.stopPointing();
+      this.stopWaving();
       if (this.cygnetIn === 'satchel' && this.stepTime > 2 && !carry.busy) {
         this.cygnetIn = 'unstowing';
         carry.unstow(() => (this.cygnetIn = 'cradle'));
@@ -693,7 +707,9 @@ export class NetWhale {
     if (this.step === 'line') this.haulHands();
     if (this.step === 'flipper') this.watchBird();
     const glad = whale.phase === 'free' && whale.time > SPOUT_FROM && whale.time < ANSWER_AT + 1;
-    if (this.step === 'free' && (glad || whale.fluking) && time > this.nextWave) {
+    if (this.step === 'free' && whale.fluking) this.waveGoodbye(time);
+    else this.stopWaving();
+    if (this.step === 'free' && glad && time > this.nextWave) {
       child.wave();
       this.nextWave = time + 2.4;
     }
@@ -756,7 +772,8 @@ export class NetWhale {
     child.face(this.a);
     this.b.subVectors(whale.eye, this.a).setY(0).normalize();
     this.ray.set(Math.cos(boat.yaw), 0, -Math.sin(boat.yaw));
-    child.reachFor(0, this.p.copy(this.a).addScaledVector(this.ray, 0.35).addScaledVector(this.b, 0.25).addScaledVector(UP, 0.32));
+    const [port, toward, up] = K.lookReach;
+    child.reachFor(0, this.p.copy(this.a).addScaledVector(this.ray, port).addScaledVector(this.b, toward).addScaledVector(UP, up));
   }
 
   /**
@@ -785,6 +802,25 @@ export class NetWhale {
     this.b.subVectors(this.whale.blowhole, this.a).setY(0).normalize();
     this.p.copy(this.a).addScaledVector(this.b, 0.55).setY(this.a.y + 0.28);
     child.reachFor(0, this.p);
+  }
+
+  /**
+   * Her goodbye as its flukes stand: a mitten up and out to her side, waving slowly, so from behind it shows beside
+   * her hood against the sky and the sun's glow rather than in front of the sail.
+   */
+  private waveGoodbye(time: number): void {
+    const { child, boat } = this.cast;
+    const [out, up, sway, rate] = K.goodbyeWave;
+    const facing = boat.yaw + this.turn;
+    child.face(this.a);
+    this.b.set(Math.cos(facing), 0, -Math.sin(facing));
+    child.reachFor(0, this.p.copy(this.a).addScaledVector(this.b, out + sway * Math.sin(time * rate)).addScaledVector(UP, up));
+    this.wavingGoodbye = true;
+  }
+
+  private stopWaving(): void {
+    if (this.wavingGoodbye) this.cast.child.reachFor(0, null);
+    this.wavingGoodbye = false;
   }
 
   private stopPointing(): void {
@@ -1632,11 +1668,10 @@ export class NetWhale {
     return (this.rest.x - p.x) * this.dir.x + (this.rest.z - p.z) * this.dir.y;
   }
 
-  /** The seat turned toward its head, at most 0.6 radians. */
-  private turnToward(): number {
+  /** The seat turned toward `at` (its eye, unless given), at most 0.6 radians. */
+  private turnToward(at = this.whale.eye): number {
     const { boat } = this.cast;
-    const eye = this.whale.eye;
-    const bearing = Math.atan2(eye.x - boat.position.x, eye.z - boat.position.z) - boat.yaw;
+    const bearing = Math.atan2(at.x - boat.position.x, at.z - boat.position.z) - boat.yaw;
     return THREE.MathUtils.clamp(Math.atan2(Math.sin(bearing), Math.cos(bearing)), -0.6, 0.6);
   }
 
@@ -1689,6 +1724,8 @@ export class NetWhale {
     const h = THREE.MathUtils.smootherstep(this.hold, 0, 1);
     if (!this.holdSet) this.holdFor(this.step, true);
     shot.clearance = undefined;
+    // Its holds are composed here, the same however the boat came in.
+    shot.authored = h > 0.001;
     // Led off its line, the view comes down and in toward her, so the way she leans toward it reads against the haze,
     // and the look goes on toward the long low island it is making for while the eye stays behind the boat.
     const rise = THREE.MathUtils.smootherstep(this.rise, 0, 1);

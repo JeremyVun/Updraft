@@ -27,6 +27,8 @@ export interface Shot {
   attention?: CameraAttention;
   /** Preserve a staged composition and its approach path while still following its subjects. */
   composition?: 'hold';
+  /** The story frames this view itself: any turn the lens chose for an earlier composition eases out and no new one is chosen. */
+  authored?: boolean;
   /** The point the camera looks at. */
   target: THREE.Vector3;
   /** Horizontal distance from the target. */
