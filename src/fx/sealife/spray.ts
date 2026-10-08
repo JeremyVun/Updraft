@@ -67,7 +67,7 @@ const FRAG = /* glsl */ `
 ${ATMO_GLSL}
 /** Mist in its own shade: the sky's brightness without its colours, cool down in its folds, paler open to the sky. */
 vec3 mistShade(float open) {
-  return lumaOf(uSkyAmbient) * mix(vec3(1.02, 1.08, 1.28), vec3(1.58, 1.6, 1.7), open);
+  return lumaOf(uSkyAmbient) * mix(vec3(1.05, 1.0, 1.12), vec3(1.58, 1.55, 1.58), open);
 }
 in vec2 vQ;
 in vec3 vWorld;
@@ -114,6 +114,8 @@ void main() {
     // The sky's brightness without its colours, whose blue and orange together go lilac: white, cool grey-blue in its
     // shade, gold where the sun reaches it.
     col = mistShade(clamp(0.5 + 0.35 * N.y + 0.25 * wrap, 0.0, 1.0)) + cloudGlow() * (wrap * wrap * 0.8 + through) * sun;
+    // Thinning, it takes on the warmth of the morning it is going into rather than greying against it.
+    col *= mix(vec3(1.0), vec3(1.1, 0.98, 0.9), smoothstep(0.3, 0.9, vAge));
     additive = 0.04;
   } else if (vKind < 1.5) {
     a = (1.0 - smoothstep(0.0, 1.0, r)) * vAlpha;

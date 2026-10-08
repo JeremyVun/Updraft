@@ -1420,6 +1420,8 @@ export const tuning = {
      * `spoutBreadth` times as broad as the first column's.
      */
     firstBreathHeight: 13, spoutHeight: 20, spoutBreadth: 1.5,
+    /** As it spouts free the sea round it brightens, as much as `gladSea`, out to `gladReach` metres from it. */
+    gladSea: 0.8, gladReach: 34,
     /**
      * Circling over the blowhole (the stand-in for the net's first step): the charge that starts to count, the charge
      * that counts fully, progress a second, and how far from the blowhole the column may stand (m).
@@ -1452,9 +1454,10 @@ export const tuning = {
     /**
      * Free, the view eases out over `releaseMove` seconds in one move from the flipper's hold to the release's, still low
      * enough that its back stands against the sky: `releaseDistance` behind the boat, `releaseHeight` up and
-     * `releaseBearing` round to port of astern, looking `releaseToward` of the way to its head and `releaseLookY` up.
+     * `releaseBearing` round to port of astern, looking `releaseToward` of the way to its head and `releaseLookY` up,
+     * backed off at most `releaseRoom` metres to keep the boat, the spout and its eye in frame.
      */
-    releaseDistance: 18, releaseHeight: 3.6, releaseBearing: 0.3, releaseLookY: 5, releaseToward: 0.5, releaseMove: 7,
+    releaseDistance: 18, releaseHeight: 3.6, releaseBearing: 0.3, releaseLookY: 5, releaseToward: 0.5, releaseMove: 7, releaseRoom: 4,
     /**
      * The sea's score thins as the boat comes in, from `hushFrom` to `hushNear` metres short of the rest, to `hushSorrow`
      * of the way to silence at rest beside it, and comes back to `hushCourage` once its eye has found her, at
@@ -1484,7 +1487,7 @@ export const tuning = {
      * goes, its middle coming to `raftPort` metres to port of the boat at rest and `raftAhead` before it, turned
      * `raftTurn` radians.
      */
-    raftPort: 12, raftAhead: 5, raftTurn: 0.5,
+    raftPort: 8, raftAhead: 9, raftTurn: 0.5,
     /** Seconds into its first full breath when the lifted patch, its breath gone up through it, starts to fall aside, and how long it takes. */
     slumpFrom: 3.2, slumpFor: 3,
     /**
@@ -1550,14 +1553,15 @@ export const tuning = {
      * the boat and `height` up, looking from the boat `toward` of the way to what matters and `lookY` up on it (m); for
      * the haul what matters is `eyeward` of the way from the head's middle to its eye.
      * `release` is where the flipper's hold eases out to as it goes free, turned back a little from the sun so the
-     * spout, its eye and the leaps before it stand over the boat.
+     * spout, its eye and the leaps before it stand over the boat, backed off at most `releaseRoom` metres.
      */
     phone: {
       breath: { distance: 18, height: 2.8, turn: -0.2, lookY: 8, toward: 0.35 },
       look: { distance: 2.9, height: 2.55, turn: -0.45, lookY: 2.2, toward: 0.5 },
       line: { distance: 6, height: 3.2, turn: -0.75, lookY: 3, toward: 0.37, eyeward: 1 },
       flipper: { distance: 12, height: 3.4, turn: -1.5, lookY: 3, toward: 0.5 },
-      release: { distance: 22, height: 3.4, turn: -0.3, lookY: 7, toward: 0.45 },
+      release: { distance: 12, height: 3, turn: -0.3, lookY: 12, toward: 0.4 },
+      releaseRoom: 4,
     },
     /**
      * The flipper: a stroke within `finRadius` of its outer part on screen (normalised device units), moving at least

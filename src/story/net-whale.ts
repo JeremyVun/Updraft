@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { Shot } from '../camera';
 import { screenBrush } from '../creatures/motion';
 import type { Net, NetGrip } from '../fx/sealife/net';
-import { DIVE_AT, FREE_FLUKES_FROM, type SleepingWhale } from '../fx/sealife/sleeper';
+import { DIVE_AT, FREE_FLUKES_FROM, SPOUT_FROM, SPOUT_TO, type SleepingWhale } from '../fx/sealife/sleeper';
 import type { Coax } from '../fx/swirl';
 import { tuning } from '../tuning';
 import type { Cast } from './cast';
@@ -28,7 +28,14 @@ const AFTER_BREATH: WhaleStep = 'line';
  */
 const DRIFT_FROM = 1;
 const DRIFT_TO = 24;
-const SINK_FROM = 8.5;
+const SINK_FROM = SPOUT_TO;
+/**
+ * Free, in seconds: its call, glad now, as the spout falls; her eyes on its eye for it, then up into its mist coming
+ * down over her; and the cygnet calling back to it.
+ */
+const GLAD_AT = SPOUT_TO + 0.4;
+const MIST_LOOK = GLAD_AT + 1.3;
+const ANSWER_AT = GLAD_AT + 1.8;
 /** About how long before it goes free the loop is let go, as the cygnet swims back and is lifted in (s). */
 const FREED_BEFORE = 6;
 const SINK_TO = DIVE_AT - 1;
@@ -220,6 +227,8 @@ export class NetWhale {
   private blinked = false;
   private peeped = false;
   private waved = false;
+  private gladCalled = false;
+  private answered = false;
   private freedAt: number | null = null;
   /** The valve's dolphin: where it left the pod, where it leaves the water, its heading over the crown and its throw. */
   private readonly vFrom = new THREE.Vector3();
@@ -664,9 +673,14 @@ export class NetWhale {
     if (this.step === 'breath') this.answer();
     if (this.step === 'line') this.haulHands();
     if (this.step === 'flipper') this.watchBird();
-    if (this.step === 'free' && (whale.spouting || whale.fluking) && time > this.nextWave) {
+    const glad = whale.phase === 'free' && whale.time > SPOUT_FROM && whale.time < ANSWER_AT + 1;
+    if (this.step === 'free' && (glad || whale.fluking) && time > this.nextWave) {
       child.wave();
       this.nextWave = time + 2.4;
+    }
+    if (this.step === 'free' && whale.time > ANSWER_AT && !this.answered && this.cygnetIn === 'satchel') {
+      this.answered = true;
+      cygnet.call(true);
     }
   }
 
@@ -779,6 +793,10 @@ export class NetWhale {
     if (this.step === 'line' && this.haul === 'letting' && this.haulT > K.sheSees) return this.finAt(0.9, this.look);
     if (this.step === 'free') {
       if (whale.fluking || whale.time > FREE_FLUKES_FROM) return this.look.copy(whale.flukes).setY(Math.max(whale.flukes.y, 2));
+      if (whale.time > MIST_LOOK && whale.time < DIVE_AT) {
+        return this.look.copy(this.cast.boat.position).lerp(whale.eye, 0.3).setY(4.5);
+      }
+      if (whale.time > SPOUT_TO && whale.time < DIVE_AT) return whale.eye;
       return this.look.copy(whale.blowhole).setY(whale.blowhole.y + (whale.spouting ? 6 : 1));
     }
     if (this.step === 'breath' && whale.phase === 'woken' && whale.time > K.eyeOpens + K.lookFor - K.handOff) return this.net.float.position;
@@ -1559,6 +1577,10 @@ export class NetWhale {
     this.peeled = net.peel;
     this.wet += ((peeling > 0.01 ? 1 : 0) - this.wet) * (1 - Math.exp(-dt * (peeling > 0.01 ? 2 : 0.4)));
     if (this.wet > 0.02 && whale.phase === 'woken') whale.stream(this.wet * THREE.MathUtils.smoothstep(net.peel, 0.1, 0.5), dt);
+    if (this.step === 'free' && whale.time > GLAD_AT && !this.gladCalled) {
+      this.gladCalled = true;
+      net.sound('whale-glad', whale.eye);
+    }
     if (this.step === 'free' && whale.fluking && !this.waved) {
       this.waved = true;
       net.sound('whale-call', whale.back);
@@ -1700,7 +1722,7 @@ export class NetWhale {
     s.tertiary.lerp(rest, 1 - h);
     // Each hold is composed as it stands: the look is never backed off, the steps only a little if what they ask for strays.
     s.margin = THREE.MathUtils.lerp(pair?.margin ?? 0.85, this.looking ? 1 : 0.85, h);
-    s.extra = THREE.MathUtils.lerp(pair?.extra ?? 10, this.looking ? 0 : !portrait && this.step === 'free' ? 4 : this.step === 'free' ? 10 : K.holdRoom, h);
+    s.extra = THREE.MathUtils.lerp(pair?.extra ?? 10, this.looking ? 0 : this.step === 'free' ? (portrait ? K.phone.releaseRoom : K.releaseRoom) : K.holdRoom, h);
     shot.subjects = s;
   }
 }

@@ -5,7 +5,7 @@ import type { SleeperSound } from '../fx/sealife/sleeper';
 
 export type Surface = 'grass' | 'sand' | 'wood' | 'water';
 export type MaterialSound = 'cloth' | 'wool' | 'sail' | 'sail-settle' | 'water' | 'paper' | 'door' | 'splash' | 'peg'
-  | 'dolphin-surface' | 'leaf-scuff' | 'swing-creak' | SleeperSound | Exclude<NetSound, 'whale-call'>;
+  | 'dolphin-surface' | 'leaf-scuff' | 'swing-creak' | SleeperSound | Exclude<NetSound, 'whale-call' | 'whale-glad'>;
 
 /**
  * The sounds a small body makes, as opposed to a voice. The cygnet never speaks except when it is lost, so this is
@@ -199,9 +199,10 @@ export class Foley {
   /**
    * The whale's voice, once in greeting and once in goodbye: a low soft call rising a fourth from A to D and settling
    * on B, in the sea score's own notes, hollow rather than bright and long in the reverb. `far` is the same call heard
-   * from a long way off over the water: darker, quieter, and coming back once.
+   * from a long way off over the water: darker, quieter, and coming back once. `glad` is the same voice breathing
+   * free: a little brighter, and instead of settling it goes on up to E.
    */
-  call(level: number, pan: number, far = false): void {
+  call(level: number, pan: number, far = false, glad = false): void {
     const out = this.out;
     if (!out || level < 0.005) return;
     const { ctx } = out;
@@ -233,13 +234,13 @@ export class Foley {
       depth.gain.linearRampToValueAtTime(1.6, start + 1.2);
       vibrato.connect(depth);
       const nodes: AudioNode[] = [env, tone, hollow, p, vibrato, depth];
-      for (const [type, share] of [['sawtooth', 0.35], ['sine', 1]] as const) {
+      for (const [type, share] of [['sawtooth', glad ? 0.45 : 0.35], ['sine', 1]] as const) {
         const osc = ctx.createOscillator();
         osc.type = type;
         osc.frequency.setValueAtTime(110, start);
         osc.frequency.exponentialRampToValueAtTime(146.83, start + 1.4);
         osc.frequency.setValueAtTime(146.83, start + 1.9);
-        osc.frequency.exponentialRampToValueAtTime(123.47, start + 3.3);
+        osc.frequency.exponentialRampToValueAtTime(glad ? 164.81 : 123.47, start + 3.3);
         depth.connect(osc.frequency);
         const g = ctx.createGain();
         g.gain.value = share;
@@ -260,7 +261,7 @@ export class Foley {
     if (far) {
       voice(at, level * 0.02, 260, 0.6);
       voice(at + 0.55, level * 0.009, 200, 0.8);
-    } else voice(at, level * 0.035, 620, 0.35);
+    } else voice(at, level * 0.035, glad ? 860 : 620, glad ? 0.45 : 0.35);
   }
 
   /** One burst of filtered noise with its own envelope: the raw material of every sound here. */

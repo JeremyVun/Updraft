@@ -157,7 +157,7 @@ export class WorldFoley {
     const level = this.heard(at, tuning.audio.whaleNear, tuning.audio.whaleFar) * tuning.audio.whaleLevel * strength;
     if (level < 0.015) return;
     const pan = screenPan(this.camera, at);
-    if (kind === 'whale-call') this.foley.call(level, pan);
+    if (kind === 'whale-call' || kind === 'whale-glad') this.foley.call(level, pan, false, kind === 'whale-glad');
     else this.foley.material(kind, level, pan);
   }
 

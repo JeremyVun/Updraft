@@ -16,6 +16,7 @@ import { PlanarReflection } from './water/reflection';
 import { ShoreBake } from './water/shore';
 import { SURF_GLSL, surfUniforms } from './water/surf';
 import { SWELL_GLSL, swellUniforms } from './water/swell';
+import { GLAD_GLSL, gladUniforms } from './water/glad';
 import { rippleTexture } from './water/textures';
 import { WIND_WAVES_GLSL, WindWaves } from './water/wind-waves';
 import { WATERLINE_GLSL, outsideHull, waterlineUniforms } from '../traveller/boat/waterline';
@@ -120,6 +121,7 @@ ${LITTLE_BOATS_GLSL}
 ${WIND_WAVES_GLSL}
 ${MIRROR_LAYOUT_GLSL}
 ${MIRROR_RIPPLES_GLSL}
+${GLAD_GLSL}
 uniform float uSkyMirrorAppearance;
 // This small early exit shares one program for both states; the expensive effects keep their variants.
 uniform bool uLandSkip;
@@ -431,6 +433,9 @@ void main() {
   float backlit = pow(max(dot(-V, normalize(vec3(uSunDir.x, 0.0, uSunDir.z))), 0.0), 3.0);
   body += vec3(0.1, 0.55, 0.45) * uSunColor * crest * (0.02 + 0.3 * backlit) * sh;
   body *= 1.0 - rough * 0.08 - storm * 0.15;
+  // Round the whale breathing free the sea clears and fills with light.
+  float glad = gladAt(xz);
+  body = body * (1.0 + 0.45 * glad) + vec3(0.0, 0.025, 0.03) * glad;
 
   vec3 L = uSunDir;
   vec3 H = halfVector(L, V);
@@ -444,7 +449,7 @@ void main() {
   // Outside the glitter lobe 1.0 - glitter rounds to 1, so every glint cell is exactly dark.
   float sparkle = 0.0;
   if (glitter > 1e-9) sparkle = glints(xz, footprint, glitter) * vis * (8.0 + 10.0 * crisp);
-  vec3 sun = uSunColor * (facet * 0.1 + glitter * vis * mix(0.3, 0.08, crisp) + sparkle) * sh;
+  vec3 sun = uSunColor * (facet * 0.1 + glitter * vis * mix(0.3, 0.08, crisp) + sparkle) * sh * (1.0 + 2.0 * glad);
 
   /**
    * The stars on the water. The sky's own field is far finer than a pixel of sea, so reflecting it would boil
@@ -457,7 +462,7 @@ void main() {
     starlight = vec3(0.72, 0.8, 1.0) * glints(xz + 137.0, footprint, ${glsl(tuning.water.stars)}) * F * caught * ${glsl(tuning.water.starLight)};
   }
 
-  vec3 col = mix(body, refl, F) + sun + starlight;
+  vec3 col = mix(body, refl, F) + sun + starlight + glad * uSunColor * 0.04;
 #if LANTERN_GLINT
   /** The lantern's glint: the ripples break it into a wavering column of light running toward the viewer. */
   if (uLantern.w > 0.001) {
@@ -542,6 +547,7 @@ export class Water {
         ...mirrorUniforms,
         ...waterlineUniforms,
         ...boatsTide,
+        ...gladUniforms,
         uWaterWind: this.windWaves.uniform,
         uSkyMirrorAppearance: { value: 1 },
         uLandSkip: { value: false },

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { tuning } from '../../tuning';
+import { gladUniforms } from '../../world/water/glad';
 import { swellUniforms } from '../../world/water/swell';
 import { BLOWHOLE, EYE_S, EYE_Y, FIN_DIR, FIN_ROOT, FIN_SPAN, LENGTH, SPINE_END, TOP, crown, finPoint as finSurface, flankAt, ringPoint } from './anatomy';
 import { curve } from './curve';
@@ -39,8 +40,8 @@ const BREATH_OUT = 3.6;
  * down over the boat while the net it wore sinks away, then from `DIVE_AT` it rolls onto its back, lifts its flukes and
  * waves them, and goes under.
  */
-const SPOUT_FROM = 6;
-const SPOUT_TO = 8.8;
+export const SPOUT_FROM = 6;
+export const SPOUT_TO = 8.8;
 /** The spout's mist comes down over the boat for this long after it (s). */
 const VEIL_FOR = 5;
 export const DIVE_AT = 15.5;
@@ -209,6 +210,7 @@ export class SleepingWhale extends WhaleRig {
     this.uniforms.uFin.value.set(K.finRestSweep, -K.finRestRaise);
     this.uniforms.uSlap.value.set(1, 0, 0);
     this.uniforms.uHaze.value = 1;
+    gladUniforms.uGlad.value.w = 0;
     this.locate();
     this.mesh.visible = this.ghost.visible = true;
   }
@@ -241,6 +243,7 @@ export class SleepingWhale extends WhaleRig {
     this.time = 1e3;
     this.mesh.visible = this.ghost.visible = false;
     swellUniforms.uSurge.value.w = 0;
+    gladUniforms.uGlad.value.w = 0;
   }
 
   /** The eye opens on `at` (and follows it), or closes again under its heavy lid when `null`. */
@@ -318,6 +321,7 @@ export class SleepingWhale extends WhaleRig {
       this.phase = 'gone';
       this.time = 0;
       this.mesh.visible = this.ghost.visible = false;
+      gladUniforms.uGlad.value.w = 0;
     }
   }
 
@@ -394,6 +398,7 @@ export class SleepingWhale extends WhaleRig {
     // Its mist comes down over the boat in the gold light.
     const veil = THREE.MathUtils.smoothstep(t, SPOUT_FROM + 1, SPOUT_TO) * (1 - THREE.MathUtils.smoothstep(t, SPOUT_TO + VEIL_FOR - 2, SPOUT_TO + VEIL_FOR));
     if (veil > 0) this.spray.veil(this.blowhole, K.spoutHeight, this.near, veil, dt);
+    this.brighten(t);
     const wave = THREE.MathUtils.smoothstep(t, WAVE_FROM, WAVE_FROM + 1) * (1 - THREE.MathUtils.smoothstep(t, WAVE_TO - 1, WAVE_TO));
     const sway = Math.sin((t - WAVE_FROM) * 2.1) * wave;
     this.driftClear(t);
@@ -403,6 +408,14 @@ export class SleepingWhale extends WhaleRig {
     const lower = THREE.MathUtils.smoothstep(t, D - 4, D - 1);
     this.uniforms.uFin.value.set(THREE.MathUtils.lerp(K.finRestSweep, FREE_FIN.x, lower), THREE.MathUtils.lerp(-K.finRestRaise, FREE_FIN.y, lower));
     if (t >= SURGE_AT && t - dt < SURGE_AT) this.surge();
+  }
+
+  /** As it spouts free the sea round it clears and fills with light, spreading out from it, until it dives. */
+  private brighten(t: number): void {
+    const glad = THREE.MathUtils.smoothstep(t, SPOUT_FROM, SPOUT_FROM + 3) * (1 - THREE.MathUtils.smoothstep(t, D + 2, D + 10));
+    const reach = THREE.MathUtils.lerp(8, K.gladReach, THREE.MathUtils.smootherstep(t, SPOUT_FROM, SPOUT_FROM + 5));
+    gladUniforms.uGlad.value.set(this.blowhole.x, this.blowhole.z, reach, glad * K.gladSea);
+    gladUniforms.uGladAxis.value.set(-this.heading.x, -this.heading.z, 0.45 * LENGTH * this.scale);
   }
 
   /** Turned away about its tail stock (the pivot) and slid off sideways, so its head lies clear of the boat as it spouts. */

@@ -43,18 +43,24 @@ vec3 sunk(vec3 p, float under) {
   if (under <= 0.0) return p;
   float surface = seaSurfaceY(p.xz);
   vec3 q = vec3(p.x, surface - under, p.z);
-  return cameraPosition + (q - cameraPosition) * (cameraPosition.y - surface - 0.03) / max(cameraPosition.y - q.y, 1e-3);
+  vec3 ray = q - cameraPosition;
+  vec3 w = q;
+  for (int i = 0; i < 2; i++) {
+    w = cameraPosition + ray * (cameraPosition.y - surface - 0.05) / max(-ray.y, 1e-3);
+    surface = seaSurfaceY(w.xz);
+  }
+  return w;
 }`;
 
 const SINK_FRAG = /* glsl */ `
 uniform vec3 uDeep;
 in float vUnder;
 /** How much of it still shows through the sea, and its colour there. */
-float sunkShows(vec3 world) {
+float sunkShows(vec3 world, float clarity) {
   if (vUnder <= 0.0) return 1.0;
   vec3 V = normalize(cameraPosition - world);
   float F = 0.02 + 0.98 * pow(1.0 - max(V.y, 0.02), 5.0);
-  return mix(1.0, (1.0 - F) * exp(-vUnder * 0.55), smoothstep(0.0, 0.6, vUnder));
+  return mix(1.0, (1.0 - F) * exp(-vUnder * clarity), smoothstep(0.0, 0.6, vUnder));
 }
 vec3 sunkColour(vec3 col, vec3 world) {
   if (vUnder <= 0.0) return col;
@@ -168,7 +174,7 @@ void main() {
   vec3 alb = mix(mix(uStrand * (0.88 + age), uWeed, weed * 0.75), uRope, rope / max(cover, 1e-4) * step(strand, rope)) * round;
   vec3 col = netLight(alb, N, V, vWorld, 0.35);
   col = sunkColour((col * cover + uShadow * (1.0 - cover) * shade) / alpha, vWorld);
-  gl_FragColor = vec4(lost(applyFog(col, vWorld), vWorld), alpha * uFade * sunkShows(vWorld));
+  gl_FragColor = vec4(lost(applyFog(col, vWorld), vWorld), alpha * uFade * sunkShows(vWorld, 0.9));
 }`;
 
 const ROPE_VERT = /* glsl */ `
@@ -224,7 +230,7 @@ void main() {
   if (a < 0.002) discard;
   vec3 V = normalize(cameraPosition - vWorld);
   vec3 col = sunkColour(netLight(mix(uStrand, uWeed, vWeed) * mix(1.15, 0.7, vSide * vSide), normalize(V + vec3(0.0, 0.6, 0.0)), V, vWorld, 1.1), vWorld);
-  gl_FragColor = vec4(lost(applyFog(col, vWorld), vWorld), a * uFade * sunkShows(vWorld));
+  gl_FragColor = vec4(lost(applyFog(col, vWorld), vWorld), a * uFade * sunkShows(vWorld, 0.9));
 }`;
 
 const CORK_VERT = /* glsl */ `
@@ -240,7 +246,7 @@ void main() {
   vec3 p = iCork.xyz + position * vec3(1.0, 0.82, 1.0) * iSize;
   p.y += seaSurfaceY(iCork.xz) * iCork.w;
   // A float goes down last, and whole.
-  p = sunk(p, max(0.0, sunkAt(iCork.xz) - 0.3));
+  p = sunk(p, max(0.0, sunkAt(iCork.xz) - 0.6));
   vWorld = p;
   vNormal = normal;
   vLocal = position * 4.5 + iCork.xyz * 1.7;
@@ -276,7 +282,7 @@ void main() {
   alb = mix(alb, uFouled, smoothstep(0.0, -0.8, N.y) * 0.6);
   vec3 col = netLight(alb, N, V, vWorld, 0.15);
   col += uSunColor * pow(max(dot(reflect(-V, N), uSunDir), 0.0), 18.0) * 0.18 * cloudShadow(vWorld.xz);
-  float shows = uFade * sunkShows(vWorld);
+  float shows = uFade * sunkShows(vWorld, 0.45);
   if (shows < 0.999 && fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453) > shows) discard;
   gl_FragColor = vec4(lost(applyFog(sunkColour(col, vWorld), vWorld), vWorld), 1.0);
 }`;

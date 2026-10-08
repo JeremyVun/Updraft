@@ -10,7 +10,8 @@ import { MIST, type Spray } from './spray';
 
 const K = tuning.netWhale;
 
-export type NetSound = 'net-sputter' | 'net-lift' | 'whale-call' | 'cork-knock' | 'rope-pull' | 'net-slither' | 'loop-slip' | 'swimmer-out';
+export type NetSound = 'net-sputter' | 'net-lift' | 'whale-call' | 'whale-glad' | 'cork-knock' | 'rope-pull' | 'net-slither' | 'loop-slip'
+  | 'swimmer-out';
 
 /** Where the net's front edge lies along the whale (0 snout .. 1 flukes). */
 const FRONT = 0.05;
@@ -489,7 +490,7 @@ export class Net {
       return;
     }
     this.domeT += dt;
-    netLook.uSunk.value = SINK_DEPTH * this.sink ** 1.4;
+    netLook.uSunk.value = SINK_DEPTH * this.sink;
     netLook.uFade.value = 1 - THREE.MathUtils.smoothstep(this.sink, 0.8, 1);
     this.layOn(time);
     this.sounds();
