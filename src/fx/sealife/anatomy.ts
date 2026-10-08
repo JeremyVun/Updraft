@@ -30,6 +30,24 @@ export const FIN_HALF_CHORD = curve([
 ]);
 /** How far the flipper is turned on its edge about its own line, leading edge up (radians). */
 const FIN_EDGE_UP = 0.3;
+/** Across the flipper's line: back along the body, and the third axis, so its chord turns on its edge about the line. */
+const FIN_ACROSS = new THREE.Vector3(0, 0, -1).addScaledVector(FIN_DIR, FIN_DIR.z).normalize();
+const FIN_THROUGH = new THREE.Vector3().crossVectors(FIN_ACROSS, FIN_DIR);
+
+/**
+ * A point on the flipper at its rest size, relative to its root: `t` of the way out along its line (0 root .. 1 tip),
+ * `along` across its chord (0 the knobbly leading edge, 1 the trailing edge), on its middle surface.
+ */
+export function finPoint(t: number, along: number, out: THREE.Vector3): THREE.Vector3 {
+  const half = FIN_HALF_CHORD(t);
+  const knobs = 0.12 * Math.max(0, Math.sin(t * 9 * Math.PI)) ** 0.7 * smoothstep(0.1, 0.22, t) * (1 - smoothstep(0.86, 0.95, t));
+  const chord = (2 * along - 1) * half - knobs * (1 - along) ** 2;
+  // Turned on its edge, the knobbly leading edge up and the trailing edge down, and drooping along its middle.
+  const edge = FIN_EDGE_UP * smoothstep(0, 0.3, t);
+  return out.copy(FIN_DIR).multiplyScalar(t * FIN_SPAN)
+    .addScaledVector(FIN_ACROSS, -0.16 * Math.sin(Math.PI * t) + chord * Math.cos(edge))
+    .addScaledVector(FIN_THROUGH, chord * Math.sin(edge) + 0.1 * Math.sin(Math.PI * t));
+}
 /** Where the flukes hinge on the tail stock, as a fraction of the length. */
 export const FLUKE_HINGE = 0.93;
 export const BLOWHOLE = 0.21;
@@ -241,10 +259,6 @@ function body(): THREE.BufferGeometry {
 function fin(): THREE.BufferGeometry {
   const stations = 44;
   const around = 16;
-  const e1 = FIN_DIR;
-  const back = new THREE.Vector3(0, 0, -1);
-  const e2 = back.clone().addScaledVector(e1, -back.dot(e1)).normalize();
-  const e3 = new THREE.Vector3().crossVectors(e2, e1);
   const pos: number[] = [];
   const rig: number[] = [];
   const idx: number[] = [];
@@ -252,33 +266,20 @@ function fin(): THREE.BufferGeometry {
   const s = -FIN_ROOT.z / LENGTH;
   for (let i = 0; i <= stations; i++) {
     const t = i / stations;
-    const half = FIN_HALF_CHORD(t);
-    const knobs = 0.12 * Math.max(0, Math.sin(t * 9 * Math.PI)) ** 0.7 * smoothstep(0.1, 0.22, t) * (1 - smoothstep(0.86, 0.95, t));
-    const bow = -0.16 * Math.sin(Math.PI * t);
     const thick = 0.14 * (1 - 0.72 * t) + 0.022;
-    // Turned on its edge, the knobbly leading edge up and the trailing edge down, and drooping along its middle, so
-    // lying awash only that edge and the tip break the surface and the broad blade goes down steeply under the glass
-    // rather than lying just under it.
     const edge = FIN_EDGE_UP * smoothstep(0, 0.3, t);
-    const ce = Math.cos(edge);
-    const se = Math.sin(edge);
-    const sag = 0.1 * Math.sin(Math.PI * t);
     for (let j = 0; j < around; j++) {
       const a = (j / around) * Math.PI * 2;
       const along = 0.5 - 0.5 * Math.cos(a);
-      const chord = (2 * along - 1) * half - knobs * (1 - along) ** 2;
       const th = Math.sin(a) * thick * 2.4 * Math.sqrt(along + 0.02) * (1 - along * 0.85);
-      p.copy(FIN_ROOT)
-        .addScaledVector(e1, t * FIN_SPAN)
-        .addScaledVector(e2, bow + chord * ce - th * se)
-        .addScaledVector(e3, chord * se + th * ce + sag);
+      finPoint(t, along, p).add(FIN_ROOT).addScaledVector(FIN_ACROSS, -th * Math.sin(edge)).addScaledVector(FIN_THROUGH, th * Math.cos(edge));
       pos.push(p.x, p.y, p.z);
       rig.push(s, FIN, t, along);
     }
   }
   stitch(idx, stations + 1, around);
   const tip = pos.length / 3;
-  p.copy(FIN_ROOT).addScaledVector(e1, FIN_SPAN + 0.03);
+  p.copy(FIN_ROOT).addScaledVector(FIN_DIR, FIN_SPAN + 0.03);
   pos.push(p.x, p.y, p.z);
   rig.push(s, FIN, 1, 0.5);
   const last = stations * around;

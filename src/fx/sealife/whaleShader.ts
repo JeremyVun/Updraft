@@ -142,10 +142,16 @@ uniform float uEye;
 uniform vec3 uEyeAt;
 /** Where the open eye looks, across its own disc (along the body, up), -1..1. */
 uniform vec2 uGaze;
+uniform vec3 uSlap;
 in vec3 vRest;
 in vec3 vRestNormal;
 in vec4 vRig;
 in float vWet;
+
+/** How far the near flipper is lifted out of the sea, 0..1. */
+float finRaised() {
+  return step(0.5, sign(vRest.x) * uSlap.x) * clamp(uSlap.y / ${f(tuning.netWhale.finLift)}, 0.0, 1.0);
+}
 
 struct Skin {
   vec3 albedo;
@@ -314,6 +320,8 @@ Skin skin(float far) {
     float blotch = smoothstep(0.58, 0.78, vnoise(vRest.xz * 2.6 + 7.0)) * smoothstep(0.45, 0.85, vRig.z);
     float lead = 1.0 - smoothstep(0.0, 0.1, vRig.w);
     k.albedo = mix(uBack * (0.95 + 0.1 * mottle), pale, max(max((1.0 - top) * 0.25, lead * 0.25), blotch * 0.3));
+    // Lifted out of the sea it is one long pale paddle, wet and full of the sky.
+    k.albedo = mix(k.albedo, mix(uBelly, vec3(0.92, 0.94, 0.96), 0.3) * (0.95 + 0.08 * mottle), 0.8 * finRaised());
     k.thin = 0.05;
   } else {
     // Its own marks under the flukes, the same wherever it is met: a ragged dark trailing edge and tips, a dark
@@ -393,7 +401,6 @@ ${ATMO_GLSL}
 ${SKIN_GLSL}
 ${HAZE_GLSL}
 uniform vec3 uSeaTint;
-uniform vec3 uSlap;
 in vec3 vWorld;
 in vec3 vNormal;
 in vec3 vAxisX;
@@ -416,9 +423,10 @@ void main() {
   float sky = dot(uSkyAmbient, vec3(0.3, 0.5, 0.2));
   int part = int(vRig.y + 0.5);
   // The flipper's broad top faces the open sky and the low sun more squarely than the flank it hangs from.
-  vec3 fill = vec3(0.8, 0.88, 1.05) * sky * ${f(L.fill)} * (0.55 + 0.45 * N.y) * (part == ${FIN} ? 0.6 : 1.0);
+  float raised = part == ${FIN} ? finRaised() : 0.0;
+  vec3 fill = vec3(0.8, 0.88, 1.05) * sky * ${f(L.fill)} * (0.55 + 0.45 * N.y) * (part == ${FIN} ? mix(0.6, 1.1, raised) : 1.0);
   vec3 bounce = mix(uSkyHorizon, uSeaTint * sky * 3.0, 0.5) * ${f(L.bounce)} * sky * max(-N.y + 0.15, 0.0);
-  vec3 col = k.albedo * (fill + bounce + uSunColor * (wrap * wrap * wrap * ${f(L.key)} * (part == ${FIN} ? 0.5 : 1.0) + 0.02) * sun);
+  vec3 col = k.albedo * (fill + bounce + uSunColor * (wrap * wrap * wrap * ${f(L.key)} * (part == ${FIN} ? mix(0.5, 0.9, raised) : 1.0) + 0.02) * sun);
   // Low on the flank the sea shades it, so the skin darkens down to the waterline.
   col *= mix(${f(L.waterline)}, 1.0, smoothstep(-0.5, 3.5, vWorld.y));
   col += k.albedo * uSunColor * sun * k.thin * back * max(-ndl, 0.0) * 1.4;

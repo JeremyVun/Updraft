@@ -1429,10 +1429,11 @@ export const tuning = {
     surgeSpeed: 6, surgeLength: 22, surgeWidth: 10, surgeHeight: 0.4,
     /**
      * The camera's hold beside it: eased in between `holdFrom` and `holdFull` metres short of the rest, `holdDistance`
-     * behind the boat and `holdHeight` up, `holdBearing` radians round to port of astern, at `holdEase` a second; and
-     * the wider view it eases back out to as it goes free, the plume leaving the top of the frame.
+     * behind the boat and `holdHeight` up, `holdBearing` radians round to port of astern, at `holdEase` a second, as
+     * low as `holdClearance` over the water and backed off at most `holdRoom` metres to keep what a step asks for in
+     * frame; and the wider view it eases back out to as it goes free, the plume leaving the top of the frame.
      */
-    holdFrom: 40, holdFull: 6, holdDistance: 16, holdHeight: 2.8, holdBearing: 0.18, holdEase: 0.45, holdClearance: 1,
+    holdFrom: 40, holdFull: 6, holdDistance: 16, holdHeight: 2.8, holdBearing: 0.18, holdEase: 0.45, holdClearance: 1, holdRoom: 2,
     /**
      * Led off its line, the crossing's view rises this much higher (m) at `riseEase` a second, its look going
      * `riseToward` of the way from the boat to the whale's eye (`riseTowardPhone` in a phone's narrow frame), `riseLook` metres up.
@@ -1521,8 +1522,8 @@ export const tuning = {
      * matters (the head, then the flipper's tip) and how high on it (m).
      */
     holdMove: 5, holdLookY: 7, holdToward: 0.5,
-    lineDistance: 12.5, lineHeight: 7.2, lineBearing: 0.22, lineLookY: 3.2, lineToward: 0.33,
-    flipperDistance: 12, flipperHeight: 7.5, flipperBearing: 0.2, flipperLookY: 6.5, flipperToward: 0.4,
+    lineDistance: 9, lineHeight: 3.4, lineBearing: 0.3, lineLookY: 2.4, lineToward: 0.3,
+    flipperDistance: 12, flipperHeight: 3.2, flipperBearing: 0.55, flipperLookY: 2.3, flipperToward: 0.28,
     /**
      * A phone's holds: on the line from what matters through the boat, turned `turn` radians round toward the low sun
      * on the bow (toward starboard when negative), as far as the step allows, so its tall frame keeps the gold
@@ -1532,7 +1533,7 @@ export const tuning = {
      * spout, its eye and the leap before it stand over the boat.
      */
     phone: {
-      breath: { distance: 19, height: 8, turn: -0.6, lookY: 17, toward: 0.3 },
+      breath: { distance: 18, height: 2.8, turn: -0.2, lookY: 8, toward: 0.35 },
       look: { distance: 2.9, height: 2.55, turn: -0.45, lookY: 2.2, toward: 0.5 },
       line: { distance: 11, height: 6, turn: -0.1, lookY: 20, toward: 0.12 },
       flipper: { distance: 13, height: 8, turn: -1.2, lookY: 16, toward: 0.3 },

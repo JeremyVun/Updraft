@@ -1,15 +1,15 @@
 import * as THREE from 'three';
 import { tuning } from '../../tuning';
 import { swellUniforms } from '../../world/water/swell';
-import { BLOWHOLE, EYE_S, EYE_Y, FIN_DIR, FIN_ROOT, FIN_SPAN, LENGTH, SPINE_END, TOP, crown, flankAt, ringPoint } from './anatomy';
+import { BLOWHOLE, EYE_S, EYE_Y, FIN_DIR, FIN_ROOT, FIN_SPAN, LENGTH, SPINE_END, TOP, crown, finPoint as finSurface, flankAt, ringPoint } from './anatomy';
 import { curve } from './curve';
 import type { Marks } from './marks';
 import { DROP, MIST, type Spray } from './spray';
 import { WhaleWake, type WhaleSound } from './wake';
 import { DREAM_SHAPE, SPINE_N, SPINE_STEP, WhaleRig } from './whale';
 
-/** Where along the flipper the sea pours off it as it lifts (0 root .. 1 tip). */
-const POURS = [0.38, 0.5, 0.61, 0.73, 0.84, 0.95];
+/** Along the flipper's trailing edge from here to its tip the sea pours off it as it lifts (0 root .. 1 tip). */
+const POURS_FROM = 0.18;
 
 export type SleeperSound = WhaleSound | 'whale-sigh' | 'whale-breath' | 'whale-slap' | 'flipper-pour';
 
@@ -434,17 +434,26 @@ export class SleepingWhale extends WhaleRig {
     if (this.liftT > LIFT_FOR) this.liftT = -1;
   }
 
-  /** The sea running off the flipper as it comes up out of it, in strings of drops from the low places along its edge. */
+  /**
+   * The sea running off the flipper as it comes up out of it: in sheets off the whole of its trailing edge while it
+   * rises, thinning to drops as it drains.
+   */
   private drip(dt: number): void {
     const size = Math.sqrt(this.scale);
-    const n = Math.floor(dt * 90 + Math.random());
+    const pouring = 1 - THREE.MathUtils.smoothstep(this.liftT, 1.2, 3.6);
+    const n = Math.floor(dt * (50 + 700 * pouring) + Math.random());
     for (let k = 0; k < n; k++) {
-      const at = POURS[Math.floor(Math.random() * POURS.length)];
-      const e = this.finPoint(at + (Math.random() - 0.5) * 0.015, this.p);
-      if (e.y < 0.15) continue;
-      this.spray.emit(DROP, e.x + (Math.random() - 0.5) * 0.08, e.y - 0.1, e.z + (Math.random() - 0.5) * 0.08,
-        (Math.random() - 0.5) * 0.05, -0.6 - Math.random() * 0.5, (Math.random() - 0.5) * 0.05,
-        (0.01 + Math.random() * 0.012) * size, 2, 0, 0.5 + Math.random() * 0.4);
+      const e = this.finAt(POURS_FROM + Math.random() * (1 - POURS_FROM), 0.96 + Math.random() * 0.04, this.p);
+      if (e.y < 0.12) continue;
+      const x = e.x + (Math.random() - 0.5) * 0.06;
+      const z = e.z + (Math.random() - 0.5) * 0.06;
+      if (Math.random() < 0.15 + 0.75 * pouring) {
+        this.spray.emit(DROP, x, e.y - 0.02, z, (Math.random() - 0.5) * 0.03, -0.4 - Math.random() * 0.5, (Math.random() - 0.5) * 0.03,
+          (0.0035 + Math.random() * 0.004) * size, 1.6, 0, 0.3 + Math.random() * 0.25);
+      } else {
+        this.spray.emit(DROP, x, e.y - 0.04, z, (Math.random() - 0.5) * 0.06, -0.2 - Math.random() * 0.4, (Math.random() - 0.5) * 0.06,
+          (0.018 + Math.random() * 0.014) * size, 2, 0, 0.65 + Math.random() * 0.3);
+      }
     }
   }
 
@@ -485,6 +494,17 @@ export class SleepingWhale extends WhaleRig {
     this.finPoint(1, this.finTip);
     this.point(0, TOP(0.45), 0.45, this.back);
     this.point(0, 0, 1, this.flukes);
+  }
+
+  /** A point on the near flipper `t` out along it and `along` across its chord, posed as the shader poses it, in the world. */
+  private finAt(t: number, along: number, out: THREE.Vector3): THREE.Vector3 {
+    const fin = this.uniforms.uFin.value;
+    const lift = this.uniforms.uSlap.value;
+    finSurface(t, along, out).multiplyScalar(DREAM_SHAPE.fin).applyAxisAngle(FIN_DIR, -lift.y * tuning.whaleLook.finTurn);
+    rotZ(out, lift.y - fin.y);
+    rotY(out, fin.x + lift.z);
+    out.add(FIN_ROOT);
+    return this.point(out.x, out.y, -out.z / LENGTH, out);
   }
 
   /** A point `t` of the way out along the near flipper, posed as the shader poses it, in the world. */

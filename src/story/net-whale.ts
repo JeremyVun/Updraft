@@ -1686,9 +1686,9 @@ export class NetWhale {
     if (glance > 0) s.tertiary.lerp(this.a.copy(whale.flukes).setY(Math.max(whale.flukes.y, 1)), glance * 0.6);
     s.secondary.lerp(rest, 1 - h);
     s.tertiary.lerp(rest, 1 - h);
-    // The look between them is composed as it stands: nothing backs it off or shifts it.
+    // Each hold is composed as it stands: the look is never backed off, the steps only a little if what they ask for strays.
     s.margin = THREE.MathUtils.lerp(pair?.margin ?? 0.85, this.looking ? 1 : 0.85, h);
-    s.extra = THREE.MathUtils.lerp(pair?.extra ?? 10, this.looking ? 0 : !portrait && this.step === 'free' ? 4 : 10, h);
+    s.extra = THREE.MathUtils.lerp(pair?.extra ?? 10, this.looking ? 0 : !portrait && this.step === 'free' ? 4 : this.step === 'free' ? 10 : K.holdRoom, h);
     shot.subjects = s;
   }
 }
