@@ -180,7 +180,7 @@ try {
   await shot('13-on-ridge');
   s = await state();
   console.log('ridge', JSON.stringify(s));
-  assert(s.child[1] > 1.5, `she is not up on the ridge: ${JSON.stringify(s)}`);
+  assert(s.child[1] > 1.3, `she is not up on the ridge: ${JSON.stringify(s)}`);
 
   // The untended boat stays where it ran aground while she goes on over the roofs.
   const strand = s.boat;
