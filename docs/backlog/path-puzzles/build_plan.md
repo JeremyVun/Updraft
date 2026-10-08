@@ -927,6 +927,10 @@ village passing is the shot; the stranding's wide frame holds about 18 s from th
 far, so the cat's stare, yowl and bolt are a few pixels at the bow and the fog rising behind the houses has no
 weight. Come in on the bow for the cat's fear and keep the fog's rise growing in frame, so the wait reads as the
 threat arriving.
+From the lead's review of 7c with 7d's fog: the slow blink, the room's last word, is unreadable: the cat is about 30 px
+at the sill and the red sail stands between the lens and her as she looks up. The kittens are seen from outside
+through the other light, small, with her back to the lens. The cat's way up the ivy is hidden behind her. The fog sea
+from the belfry, the rings over it and the lantern coming through it all read; keep them.
 Gate: `LENS=1` checks, both aspects; a still at every shot-list line.
 Done: [ ]
 
