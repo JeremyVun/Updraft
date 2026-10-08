@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import type { Shot } from '../camera';
+import { verticalFov, type Shot } from '../camera';
 import type { Deck } from '../world/decks';
 import { tuning } from '../tuning';
 import {
@@ -146,29 +146,6 @@ function unwrap(keys: LensKey[], field: 'facing'): void {
   }
 }
 
-/**
- * Where the walking lens wants to stand at each `LENS_STEP` of her way, as a bearing from her (atan2(x, z)): behind
- * her the way she is going (`heading`), turned `off` toward the side the fog's body lies on as it comes on behind her,
- * so she walks away across the frame with the fog at its back edge. It keeps to the side it was on until the fog is
- * well round on the other.
- */
-function behindHer(nodes: readonly Node[], heading: readonly number[], off: number): number[] {
-  const k = tuning.drownedCamera.run;
-  const p = new THREE.Vector3(), front = new THREE.Vector2();
-  const out: number[] = [];
-  let along = 0, side = k.side;
-  heading.forEach((h, i) => {
-    wayAt(nodes, i * LENS_STEP, p);
-    along = Math.max(along, darkAlong(p.x, p.z, along));
-    darkWayPoint(along - tuning.drowned.run.fogTrail, front);
-    const behind = h + Math.PI, fog = Math.atan2(front.x - p.x, front.y - p.z);
-    const toFog = Math.atan2(Math.sin(fog - behind), Math.cos(fog - behind));
-    if (Math.abs(toFog) > k.flipFrom && Math.sign(toFog) !== side) side = Math.sign(toFog);
-    out.push(behind + side * off);
-  });
-  return out;
-}
-
 /** Where a piece's own view leaves the lens as she walks on from it: how far along her way, and its bearing from her. */
 interface Anchor {
   s: number;
@@ -176,11 +153,11 @@ interface Anchor {
 }
 
 /**
- * Where the walking lens stands at every `LENS_STEP` of her way, as a bearing round her: behind her on the fog's side
- * (`behindHer`), above her; never where she would walk toward it, look down on her steeply or lose the fog behind her;
- * where a roof stands in the way or between it and her, swung round or drawn in as little as will do, and turning
- * between steps as little as it can, so it moves as she does, goes round her rather than through her at a turn, and
- * never jumps.
+ * Where the walking lens stands at every `LENS_STEP` of her way, as a bearing round her: off her shoulder, near side on
+ * to the way she is going, so she walks away across the frame and the fog's front, coming on behind her, reaches back
+ * from that edge of it; never where she would walk toward it, it would look down on her steeply or lose the fog; where
+ * a roof stands in the way or between it and her, swung round or drawn in as little as will do, and turning between
+ * steps as little as it can and never faster than the rig follows, so it comes round a corner before she does.
  */
 function* layLens(nodes: readonly Node[], obstacles: readonly THREE.Box3[], upright: boolean, anchors: readonly Anchor[]): Generator<void, LensKey[]> {
   const k = tuning.drownedCamera.run;
@@ -189,27 +166,57 @@ function* layLens(nodes: readonly Node[], obstacles: readonly THREE.Box3[], upri
   const total = nodes[nodes.length - 1].s;
   const most = upright ? k.uprightDistance : k.distance;
   const rise = upright ? k.uprightRise : k.rise;
-  /** Where the fog's front is at each step of her way as she walks it, and the way it faces: toward her. */
-  const fogAt: { x: number; z: number; dx: number; dz: number }[] = [];
+  const sideOn = upright ? k.uprightSideOn : k.sideOn;
+  /**
+   * Where the fog's front is at each step of her way as she walks it, near and as far back as it lingers after a
+   * piece, and the way it faces: toward her.
+   */
+  const fogAt: { x: number; z: number; dx: number; dz: number }[][] = [];
   for (let s = 0, along = DARK_AT_STRAND, at = new THREE.Vector3(), f = new THREE.Vector2(); s <= total + LENS_STEP * 2; s += LENS_STEP) {
     wayAt(nodes, s, at);
     along = Math.max(along, darkAlong(at.x, at.z, along));
-    darkWayPoint(along - tuning.drowned.run.fogLaid, f);
-    const l = Math.hypot(at.x - f.x, at.z - f.y) || 1;
-    fogAt.push({ x: f.x, z: f.y, dx: (at.x - f.x) / l, dz: (at.z - f.y) / l });
+    fogAt.push([-1, 0, k.fogSlack].map((slack) => {
+      darkWayPoint(along - (slack < 0 ? tuning.drowned.run.fogLaid : tuning.drowned.run.fogTrail + slack), f);
+      const l = Math.hypot(at.x - f.x, at.z - f.y) || 1;
+      return { x: f.x, z: f.y, dx: (at.x - f.x) / l, dz: (at.z - f.y) / l };
+    }));
   }
+  /** The frame's half field, as the tangent of its half angle up and across. */
+  const field = Math.tan(THREE.MathUtils.degToRad(verticalFov(upright ? 9 / 16 : 16 / 9)) / 2) / (upright ? k.uprightZoom : k.zoom);
+  const across = field * (upright ? 9 / 16 : 16 / 9);
   const p = new THREE.Vector3(), a = new THREE.Vector3(), b = new THREE.Vector3(), eye = new THREE.Vector3(), focus = new THREE.Vector3();
-  const sight = new THREE.Vector3(), body = new THREE.Vector3();
-  /** How far ahead along her way `frame` leads the lens as she walks, at most. */
-  const response = Math.min(tuning.cinematography.maxResponse, k.pace * tuning.cinematography.framingResponse);
-  const led = k.steadiest * (1 / k.follow + 2 / response);
-  /** Whether she walks toward a lens at `bearing` and `reach` from her, led on ahead of her, anywhere from `s` to a few strides on. */
-  const toward = (s: number, bearing: number, reach: number) => [s, s + 2, s + 4].some((at) => {
+  const sight = new THREE.Vector3(), body = new THREE.Vector3(), look = new THREE.Vector3();
+  /**
+   * How far out to the frame's edge (1 at it) the nearest of the fog's front stands from `eye` looking at `look`,
+   * once the look has turned toward it as far as `frame`'s glance may: along its line either side of her way, its foot
+   * and back into it.
+   */
+  const room = Math.atan(across * k.herEdge), edge = Math.atan(across);
+  const fogOut = (fog: { x: number; z: number; dx: number; dz: number }) => {
+    const view = Math.atan2(look.x - eye.x, look.z - eye.z), down = Math.atan2(look.y - eye.y, Math.hypot(look.x - eye.x, look.z - eye.z));
+    const herAt = Math.atan2(Math.sin(Math.atan2(p.x - eye.x, p.z - eye.z) - view), Math.cos(Math.atan2(p.x - eye.x, p.z - eye.z) - view));
+    const lo = Math.max(-k.glanceMost, herAt - room), hi = Math.min(k.glanceMost, herAt + room);
+    let nearest = Infinity;
+    for (let aside = -k.fogReach; aside <= k.fogReach; aside += k.fogReach / 5) {
+      for (const deep of [0, k.fogDeep]) {
+        const x = fog.x - fog.dz * aside - fog.dx * deep - eye.x, z = fog.z + fog.dx * aside - fog.dz * deep - eye.z;
+        const off = Math.atan2(Math.sin(Math.atan2(x, z) - view), Math.cos(Math.atan2(x, z) - view));
+        const turned = Math.abs(off - THREE.MathUtils.clamp(off, lo, hi));
+        if (turned > edge * 1.5) continue;
+        const rise = Math.atan2(k.fogLow - eye.y, Math.hypot(x, z)) - down;
+        nearest = Math.min(nearest, Math.max(Math.tan(turned) / across, Math.abs(Math.tan(rise)) / field));
+      }
+    }
+    return nearest;
+  };
+  /**
+   * Whether she walks toward a lens at `bearing` from her while it stands there: it is read `keyAhead` of her, and
+   * comes round a little after it is asked to.
+   */
+  const toward = (s: number, bearing: number) => [s - k.keyAhead, s, s + k.towardAhead].some((at) => {
     wayAt(nodes, at - 0.5, a);
     wayAt(nodes, at + 1, b);
-    const facing = Math.atan2(b.x - a.x, b.z - a.z);
-    const x = Math.sin(bearing) * reach + Math.sin(facing) * led, z = Math.cos(bearing) * reach + Math.cos(facing) * led;
-    return Math.cos(Math.atan2(x, z) - facing) > k.toward;
+    return Math.cos(bearing - Math.atan2(b.x - a.x, b.z - a.z)) > k.toward;
   });
   /** What stands within reach of the lens at the step being laid. */
   let local: THREE.Box3[] = [], roofs: typeof ROOFS = [];
@@ -218,14 +225,16 @@ function* layLens(nodes: readonly Node[], obstacles: readonly THREE.Box3[], upri
    * Her feet at `s`, and what a lens at `bearing`, `reach` and `lift` from there costs: `blocked` where it stands in
    * something or something hides her, otherwise as much as roofs, chimneys and walls crowd in close in front of it.
    */
-  const cost = (s: number, bearing: number, reach: number, lift: number) => {
-    if (toward(s, bearing, reach)) return k.blocked;
+  const cost = (s: number, bearing: number, reach: number, lift: number, facing: number) => {
+    if (toward(s, bearing)) return k.blocked;
     wayAt(nodes, s, p);
     focus.copy(p).setY(p.y + 1.6);
     eye.set(p.x + Math.sin(bearing) * reach, p.y + lift, p.z + Math.cos(bearing) * reach);
-    /** Never back in the fog coming on behind her. */
-    const fog = fogAt[Math.min(fogAt.length - 1, Math.round(s / LENS_STEP))];
-    if ((eye.x - fog.x) * fog.dx + (eye.z - fog.z) * fog.dz < k.fogClear) return k.blocked;
+    /** Never back in the fog coming on behind her, and the nearer its face the more it costs. */
+    const fogs = fogAt[Math.min(fogAt.length - 1, Math.round(s / LENS_STEP))], fog = fogs[0];
+    const clear = (eye.x - fog.x) * fog.dx + (eye.z - fog.z) * fog.dz;
+    if (clear < 0) return k.blocked;
+    const nearFog = Math.max(0, 1 - clear / k.fogClear) * k.fogNearCost;
     sight.lerpVectors(focus, eye, 0.6 / reach);
     body.lerpVectors(focus.setY(p.y + 0.8), eye, 0.6 / reach);
     focus.setY(p.y + 1.6);
@@ -242,20 +251,11 @@ function* layLens(nodes: readonly Node[], obstacles: readonly THREE.Box3[], upri
       if (box.max.y > p.y + 1 && ((!box.containsPoint(sight) && crosses(eye, sight, box, 0.1))
         || (!box.containsPoint(body) && crosses(eye, body, box, 0.1)))) return k.blocked;
     }
-    /**
-     * Looking down on her from high, or with the fog coming on behind her out of the frame, costs: from beside its
-     * front's line on either side, the nearer edge of it must stand within `fogInView` of where the lens looks.
-     */
-    const view = Math.atan2(focus.x - eye.x, focus.z - eye.z);
+    /** Looking down on her from high, or with the fog coming on behind her out of the frame, costs. */
     const steep = Math.max(0, Math.atan2(eye.y - focus.y, reach) - k.steepFrom) * k.steepCost;
-    let fogOff = Infinity;
-    for (const side of [-1, 1]) {
-      const fx = fog.x - fog.dz * side * k.fogEdge, fz = fog.z + fog.dx * side * k.fogEdge;
-      const off = Math.abs(Math.atan2(Math.sin(Math.atan2(fx - eye.x, fz - eye.z) - view), Math.cos(Math.atan2(fx - eye.x, fz - eye.z) - view)));
-      fogOff = Math.min(fogOff, off);
-    }
-    const unseen = Math.max(0, fogOff - (upright ? k.uprightFogInView : k.fogInView)) * k.fogCost;
-    let crowd = (steep + unseen) / k.crowdCost;
+    look.set(p.x + Math.sin(facing) * k.lead, p.y + k.aim, p.z + Math.cos(facing) * k.lead);
+    const unseen = Math.max(0, ...fogs.slice(1).map((f) => Math.min(3, fogOut(f)) - k.fogInFrame)) * k.fogCost;
+    let crowd = (steep + unseen + nearFog) / k.crowdCost;
     /** A chimney close in front of the lens fills the near frame however clear the sightline is. */
     const ahead = probe.subVectors(focus, eye).setY(0).normalize();
     for (const box of local) {
@@ -292,12 +292,10 @@ function* layLens(nodes: readonly Node[], obstacles: readonly THREE.Box3[], upri
     wayAt(nodes, s, p);
     const lift = THREE.MathUtils.clamp(p.y + rise, k.lowest, k.highest) - p.y;
     const handed = anchors.find((h) => s >= h.s && s < h.s + k.anchorFor);
-    steps.push({ want: along, along, lift,
+    steps.push({ want: along + Math.PI, along, lift,
       free: held.some(([from, to]) => s > from && s < to),
       anchor: handed ? { bearing: handed.bearing, weight: 1 - Math.abs(s - handed.s) / k.anchorFor } : null });
   }
-  const wants = behindHer(nodes, steps.map((step) => step.along), upright ? k.uprightOff : k.off);
-  steps.forEach((step, i) => { step.want = wants[i]; });
   for (let i = 1; i < steps.length; i++) {
     const d = steps[i].want - steps[i - 1].want;
     steps[i].want = steps[i - 1].want + Math.atan2(Math.sin(d), Math.cos(d));
@@ -317,15 +315,16 @@ function* layLens(nodes: readonly Node[], obstacles: readonly THREE.Box3[], upri
     roofs = ROOFS.filter((h) => Math.hypot(h.x - p.x, h.z - p.z) < most + 4 + h.len);
     for (let j = 0; j < states; j++) {
       const bearing = bearingOf(i, j), share = shareOf(j), lift = LIFTS[j % LIFTS.length];
-      const off = bearing - steps[i].want;
+      const off = Math.abs(bearing - steps[i].want) - sideOn;
       const anchor = steps[i].anchor, from = anchor ? Math.atan2(Math.sin(bearing - anchor.bearing), Math.cos(bearing - anchor.bearing)) : 0;
-      const here = steps[i].free ? 0 : cost(i * LENS_STEP, bearing, most * share, liftOf(i, j))
+      const here = steps[i].free ? 0 : cost(i * LENS_STEP, bearing, most * share, liftOf(i, j), steps[i].along)
         + off * off * k.offCost + (1 - share) * (upright ? k.uprightInCost : k.inCost) + lift * k.liftCost + (anchor ? from * from * anchor.weight * k.anchorCost : 0);
       let best = i === 0 ? 0 : Infinity, by = 0;
       const per = SHARES.length * LIFTS.length, bi = Math.floor(j / per);
       if (i > 0) for (let q = Math.max(0, bi - TURNS) * per; q < Math.min(BEARINGS, bi + TURNS + 1) * per; q++) {
         const turn = bearing - bearingOf(i - 1, q), pull = shareOf(q) - share, rising = LIFTS[q % LIFTS.length] - lift;
-        const c = sums[q] + turn * turn * k.turnCost + pull * pull * k.pullCost + rising * rising * k.riseCost;
+        const whip = Math.max(0, Math.abs(turn) - k.turnMost);
+        const c = sums[q] + turn * turn * k.turnCost + whip * whip * k.whipCost + pull * pull * k.pullCost + rising * rising * k.riseCost;
         if (c < best) { best = c; by = q; }
       }
       next[j] = best + here;
@@ -448,6 +447,8 @@ export class RoofRun {
   private sheetGo = 0;
   private aspect = 16 / 9;
   private framed = false;
+  /** How far the look has turned toward the fog's front, radians. */
+  private glanced = 0;
 
   constructor(private readonly cast: Cast) {
     const village = cast.village!;
@@ -486,12 +487,13 @@ export class RoofRun {
     const bough = new THREE.Box3().setFromPoints([new THREE.Vector3(tree.x, 6, tree.z), new THREE.Vector3(pivot.x, pivot.y + 1.2, pivot.z)]).expandByScalar(0.8);
     const obstacles = [...village.cameraObstacles, sails, crown, bough];
     village.mill.group.updateMatrixWorld(true);
-    /** Just past the tree, the lens starts out from where the tree's view leaves it. */
-    const anchors = (wide: number): Anchor[] => {
-      const at = PIECES.tree.onward;
-      this.treeView(wide, at, 1);
-      return [{ s: this.nodes[this.pieceAt.tree].s, bearing: Math.atan2(this.stationEye.x - at.x, this.stationEye.z - at.z) }];
-    };
+    /** Just past the tree and the mill, the lens starts out from where each piece's view leaves it. */
+    const anchors = (wide: number): Anchor[] => (['tree', 'mill'] as const).map((piece) => {
+      const at = PIECES[piece].onward;
+      if (piece === 'tree') this.treeView(wide, at, 1);
+      else this.millView(wide, at);
+      return { s: this.nodes[this.pieceAt[piece]].s, bearing: Math.atan2(this.stationEye.x - at.x, this.stationEye.z - at.z) };
+    });
     this.laying = [layLens(this.nodes, obstacles, false, anchors(1)), layLens(this.nodes, obstacles, true, anchors(0))];
   }
 
@@ -992,11 +994,12 @@ export class RoofRun {
     else this.pointAt(this.along + k.lookOn, held.secondary).setY(c.y + 1);
     /** At a piece its view is authored to hold both; it never draws back while she works it. */
     held.extra = at > 0.5 ? 0 : k.extra;
+    shot.zoom = THREE.MathUtils.lerp(THREE.MathUtils.lerp(k.uprightZoom, k.zoom, wide), 1, at);
+    this.fogGlance(shot.zoom, (1 - at) * (this.stage === 'walk' ? 1 : 0), dt);
     shot.subjects = held;
     shot.attention = undefined;
     shot.composition = undefined;
     shot.smoothFit = undefined;
-    shot.zoom = THREE.MathUtils.lerp(THREE.MathUtils.lerp(k.uprightZoom, k.zoom, wide), 1, at);
     shot.fitWidth = false;
     shot.obstacles = undefined;
     shot.eye = (shot.eye ?? new THREE.Vector3()).copy(this.eye);
@@ -1005,6 +1008,46 @@ export class RoofRun {
     shot.distance = Math.hypot(this.eye.x - this.target.x, this.eye.z - this.target.z);
     shot.height = this.eye.y - this.target.y;
     return k.pace;
+  }
+
+  /**
+   * On her own way the look turns about the eye toward the fog's front, as far as it must for the nearest of it, along
+   * its line and a little into it, to stand within `fogEdge` of the frame's edge, never so far that she stands further
+   * out than `herEdge`: a glance that grows as the fog would leave the frame.
+   */
+  private fogGlance(zoom: number, weight: number, dt: number): void {
+    const k = tuning.drownedCamera.run;
+    const dark = this.cast.village!.dark;
+    const eye = this.eye, view = Math.atan2(this.target.x - eye.x, this.target.z - eye.z);
+    const pitch = Math.atan2(this.target.y - eye.y, Math.hypot(this.target.x - eye.x, this.target.z - eye.z));
+    const field = Math.tan(THREE.MathUtils.degToRad(verticalFov(this.aspect)) / 2) / zoom, across = field * this.aspect;
+    const edge = Math.atan(across * k.fogEdge), room = Math.atan(across * k.herEdge);
+    const off = (x: number, z: number) => {
+      const a = Math.atan2(x - eye.x, z - eye.z) - view;
+      return Math.atan2(Math.sin(a), Math.cos(a));
+    };
+    darkWayPoint(dark.front, this.flat);
+    const ax = dark.ahead.x, az = dark.ahead.y;
+    let need = Infinity;
+    for (let aside = -k.fogReach; aside <= k.fogReach; aside += k.fogReach / 4) {
+      for (const deep of [0, k.fogDeep]) {
+        const x = this.flat.x - az * aside - ax * deep, z = this.flat.y + ax * aside - az * deep;
+        const a = off(x, z);
+        if (Math.abs(a) > Math.PI / 2) continue;
+        /** Only what a turn alone brings in: its foot or top within the frame's height. */
+        const far = Math.hypot(x - eye.x, z - eye.z) * Math.cos(a);
+        const up = (y: number) => Math.abs(Math.tan(Math.atan2(y - eye.y, far) - pitch)) / field;
+        if (Math.min(up(Math.min(2.5, dark.level * 0.5)), up(dark.level * 0.85)) > k.fogEdge) continue;
+        const turn = Math.abs(a) <= edge ? 0 : a - Math.sign(a) * edge;
+        if (Math.abs(turn) < Math.abs(need)) need = turn;
+      }
+    }
+    const her = off(this.held.primary.x, this.held.primary.z);
+    const lo = Math.max(-k.glanceMost, her - room), hi = Math.min(k.glanceMost, her + room);
+    const want = Number.isFinite(need) && lo <= hi ? THREE.MathUtils.clamp(need, lo, hi) * weight : 0;
+    this.glanced += (want - this.glanced) * (1 - Math.exp(-dt * k.glanceRate));
+    const r = Math.hypot(this.target.x - eye.x, this.target.z - eye.z), to = view + this.glanced;
+    this.target.set(eye.x + Math.sin(to) * r, this.target.y, eye.z + Math.cos(to) * r);
   }
 
   /**

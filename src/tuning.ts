@@ -1952,7 +1952,7 @@ export const tuning = {
       /** The beat she takes before a hop of her own; within `through` of a turn gentler than `bend` (radians) she walks on through it. */
       hopPause: 0.3, through: 1.1, bend: 0.4,
       /** Seconds she stands once the sheet has set her down before she goes on, while the lens comes round to her way. */
-      setDown: 1.4,
+      setDown: 2.6,
       /**
        * How often she glances back at the fog as she goes, for how long, and how far round toward the lens from straight
        * away from it she may look on her way (radians), at the fog, the cat or ahead, so her face never turns to it.
@@ -2054,20 +2054,18 @@ export const tuning = {
       /**
        * On her own way: how quickly it follows her across and up and down, and steadies its sense of her pace (per
        * second), and the most it takes that to be (m/s); the stretch of way behind and ahead of her whose line is the
-       * way she is going; how far round from straight behind her toward the fog's side it stands (radians; upright
-       * its own), how far off at most, how far above her feet and the lowest and highest it goes, how far along her way
+       * way she is going; how far round from straight behind her it would stand, on either side (radians; upright its
+       * own), how far off at most, how far above her feet and the lowest and highest it goes, how far along her way
        * it looks, how high above her feet, its pace and its lens.
        */
       follow: 2.2, followDown: 3, steady: 2, steadiest: 1.4, behind: 6, ahead: 12,
-      off: 1.35, uprightOff: 1.35, distance: 12.5, uprightDistance: 13.5, rise: 3.5, uprightRise: 4.2, lowest: 2.8, highest: 12,
+      sideOn: 1.45, uprightSideOn: 1.5, distance: 12.5, uprightDistance: 13.5, rise: 3.5, uprightRise: 4.2, lowest: 2.8, highest: 12,
       lead: 0.8, aim: 1.0, pace: 0.6, zoom: 1, uprightZoom: 0.9,
-      /** How far ahead of her on her way the laid lens is read, so the eased lens turns as she does (metres). */
-      keyAhead: 2.5,
       /**
-       * Which side it stands at first (+1 her right going round from behind her), and how far round the fog has to be
-       * on the other side before it changes (radians).
+       * How far ahead of her on her way the laid lens is read, so the eased lens turns as she does, and how far past
+       * that it may still be coming round to where it was laid (metres).
        */
-      side: -1, flipFrom: 0.35,
+      keyAhead: 2.5, towardAhead: 1,
       /**
        * What shares the frame with her (`Shot.subjects`): how much of the frame they keep inside and how far it may
        * draw back to hold them; the cat while it is within `catHeld` metres of her, else her way `lookOn` metres on.
@@ -2076,20 +2074,30 @@ export const tuning = {
       /** How far it keeps off the side of a house, wall or chimney it stands lower than the top of, and over a chimney, metres. */
       clearOf: 1.6,
       /**
-       * How far ahead of the fog's front, along the way it comes, it always stands, metres; the angle down to her past
-       * which it costs to stand (radians) and what each further radian costs; how far either side of the fog's way its
-       * front's edge is taken to be (metres), how far off where the lens looks that edge may stand (radians; upright
-       * its own) and what each radian further costs.
+       * How far ahead of the fog's front, along the way it comes, it would stand, metres, and what standing at the
+       * front itself costs (it never stands behind it); the angle down to her past which it costs to stand (radians)
+       * and what each further radian costs. The fog's front is looked for along its line `fogReach` metres either side
+       * of her way, at its foot and `fogDeep` into it, `fogLow` over the water, where it trails her and `fogSlack`
+       * further back, as it lingers after a piece; the nearest of it, once the look has glanced toward it (below), must
+       * stand within `fogInFrame` of the frame's edge (1), and each further share of the frame costs `fogCost`.
        */
-      fogClear: 3, steepFrom: 0.3, steepCost: 60, fogEdge: 16, fogInView: 0.42, uprightFogInView: 0.3, fogCost: 120,
+      fogClear: 3, fogNearCost: 400, steepFrom: 0.3, steepCost: 300, fogReach: 40, fogDeep: 8, fogLow: 2, fogSlack: 3, fogInFrame: 0.8, fogCost: 120,
+      /**
+       * Walking, the look turns toward the fog's front until the nearest of it stands within `fogEdge` of the frame's
+       * edge (1), never so far she stands further out than `herEdge`, nor more than `glanceMost` radians, easing at
+       * `glanceRate` a second.
+       */
+      fogEdge: 0.82, herEdge: 0.78, glanceMost: 0.55, glanceRate: 0.8,
       /**
        * How it is laid along her way (`layLens`): what it costs to stand a radian (squared) from where it wants, to be
        * drawn in all the way (upright, where drawn in she soon leaves the narrow frame), to stand `lifted` metres
-       * higher to see her over a roof, to turn a radian (squared) between steps of the way, draw in or out or rise or
-       * fall between them, and to stand where a roof hides her or she would walk toward it (within the angle whose
-       * cosine is `toward` of the way she is going).
+       * higher to see her over a roof, to turn a radian (squared) between steps of the way and each radian (squared)
+       * past `turnMost` a step, which is about as quickly as the rig turns as she walks, draw in or out or rise or fall
+       * between them, and to stand where a roof hides her or she would walk toward it (within the angle whose cosine
+       * is `toward` of the way she is going).
        */
-      offCost: 3, inCost: 1.5, uprightInCost: 8, lifted: 1.3, liftCost: 0.6, turnCost: 80, pullCost: 8, riseCost: 6, blocked: 200, toward: 0.35,
+      offCost: 3, inCost: 1.5, uprightInCost: 8, lifted: 1.3, liftCost: 0.6, turnCost: 80, turnMost: 0.25, whipCost: 3000,
+      pullCost: 8, riseCost: 6, blocked: 2000, toward: 0.4,
       /** What it costs for each metre a roof, wall or chimney comes within `crowdNear` of the near half of its sightline. */
       crowdNear: 1.5, crowdCost: 8,
       /**
