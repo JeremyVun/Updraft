@@ -95,7 +95,7 @@ for(const [fps,gust,portrait,circling] of [[60,0,false,false],[30,20,false,true]
     const point=c.checkpoint;if(point&&point!==saves[saves.length-1])saves.push(point);
     rewards+=takeCues().filter(q=>q==='restored').length;
     // At rest the blowhole is held well inside the frame, with room round it to circle.
-    if(w.step==='breath'&&w.stepTime>3)blowholeEdge=Math.max(blowholeEdge,...ndc.copy(w.whale.blowhole).project(rig.camera).toArray().slice(0,2).map(Math.abs));
+    if(w.step==='breath'&&w.stepTime>3&&w.updraftTarget)blowholeEdge=Math.max(blowholeEdge,...ndc.copy(w.whale.blowhole).project(rig.camera).toArray().slice(0,2).map(Math.abs));
     if(w.step==='breath')eyeOpen=Math.max(eyeOpen,w.whale.awake?1:0);
     if(w.step==='breath'&&w.progress>0&&valveAt===null)valveAt=w.stepTime;
     if(w.step==='breath'&&w.stepTime>1)assert(b.speed<0.2,`the boat stays at rest beside it: ${b.speed}`);
