@@ -387,7 +387,7 @@ eased over a few frames (`finPace` 0.45): a 150 px, 0.34 s phone swipe lifts it,
 and her mitten at the look barely read (her lean, her head turned and the cygnet carry them); her hood is a dark
 backlit shape in the look; the sail can show at the look's edge while the boat is still settling or the boom swings;
 on a phone the paper plane on her back hides her hands at the haul and the bird sits at the edge of the bird's hold;
-the eye's orange iris is N3i's.
+the eye's orange iris is N3j's.
 
 ### Phase N3h: the release
 After N3g2, on `sea-whale`, in parallel with N3j (Claude played N3g2, 2026-10-08: the giant now breaks the horizon and
