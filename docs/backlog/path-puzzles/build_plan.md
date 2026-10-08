@@ -777,7 +777,65 @@ Gate: stills at the run's walks (the first roof looking back, the garden wall, t
 nave), from the belfry over the fog sea (a `cam=` from the sill), and of the lantern in it, each before and after;
 `drowned-run-check` (its fog checks still hold); `drowned-fog-check`; a `VIDEO=1` webm of the first act (the rescue to
 the first roof) with 2 fps strips.
-Done: [ ]
+Done: [x] (branch `proto-drowned-fogbody`). As built:
+- **The body** (`seaFogMarch` in `atmosphere.ts`; `seaFog` calls it, `seaFogMirrored` for the glassy sea's mirror). A
+  sightline is marched in up to `fog.steps` (20) steps, each `stepGrow` longer than the last, the first laid so they
+  cover the stretch where its top's relief can be met (never finer than `stepLeast`, coarser far off); each step's share
+  of fog is taken exactly for its top and face going straight between the step's ends (`pastEdge`), so no step shows
+  as a band, and relief a step is too long to follow is folded into a softer top (`seaFogTop`'s third value) rather
+  than aliased. Whatever lies past the last step is taken whole with its top at its usual height. It stops once
+  nearly opaque. Outside the drowned village nothing of it runs (`uSeaFogShape.w` 0, as before).
+- **Its top** rolls: long swells (`swell`, `swellBroad` 30 m) rolling one way under billowed heaps (`heap`,
+  `heapBroad` 10 m; the noise's fold `|2n-1|`, round on top and creased between) rolling another (`swellRoll`,
+  `heapRoll`, about 0.15 m/s). `level` is about where its highest heaps come to (`swellUp`, `heapUp`): they seldom
+  stand more than 17% over it and it usually lies at about 0.63 of it, so roofs and chimneys stand ghosted out of its
+  troughs. It thins into the air from `thinUp` over its top to `thinDown` under it. The shader's highest, lowest, usual
+  and spread are derived from these knobs (`SEA_FOG_TOP`).
+- **Its face** leans back (`lean`, so its foot takes what is low first), bulges in billowed rolls (`bulge`,
+  `bulgeBroad`), is whole `front` (5 m) behind its line, and runs thin fingers on ahead over the water (`fingers` 12 m,
+  `fingerLow`, `fingerThick`).
+- **Its light**: lit from above by the sky, cold white on top (`uSeaFogTop`, `top`/`topNear` of the sky's light)
+  going to the blue-grey body (`uSeaFogBody`, `body`/`bodyNear`) the deeper under its top (`skyDepth`), darker in the
+  hollows and creases between heaps (`hollow`, `crease`), the side of a heap toward the low sun lighter and the other
+  darker (`side`, `sideDepth`); near its face the open air lights it too (`faceLit`, `faceDepth`). The low sun is only
+  a rim on crests that face it (`crest`, `rim`, `rimProbe`, `rimFacing`), a little rose left there once the sun has
+  gone (`roseLeft`); looking toward the sun its thin top glows. Far off it goes into the haze (`farHaze`). Closed round
+  into the night it has no lit top and its body goes to the old slate (`night`), so the storm's frames are unchanged
+  (the run check's brightness per second from aboard matches 4b's).
+- **The lantern** in it: its light scattered where the sightline passes nearest the flame, as thick as the fog is
+  there, spreading wider (`lanternSpread`) and dimming less than the fog between would dim a surface
+  (`lanternThrough`), so the boat's lantern glows from 40 m out in the fog sea for 7c's answer. **The lighthouse's
+  beam** lights the fog where a sightline crosses its cone, taken whole at the sightline's nearest pass to its axis
+  (`beam`). **The sea** reads the fog per pixel while it is out, and its mirror of it (at the grid's points and in the
+  mirror's pass) in steps no finer than `mirrorStep`. The feathered sheets are gone.
+- **Cost**: per pixel of anything the fog reaches (sky, sea, houses): at most 21 steps of 2 noise-tile reads for its
+  top, 1-2 more within a few metres of its face, 2 more within `sideDepth` of its top; most sightlines into it stop
+  after a few steps. The old field was about 12 tile reads and 10 value-noise calls a pixel. The sea's per-pixel read
+  (it was per vertex) is the largest addition. No timings taken.
+- **The first act** (`drowned.ts`): with the cat aboard the breeze freshens and carries the boat at `driftSpeed`
+  9.5 m/s; the drift never rounds the stranding, the air dies `stillFrom` 22 m out and the hull runs on onto the slates
+  braking at most `strandBrake` (`Boat.coastTo.brake`). The fog starts to rise off the sea as the air dies (`riseFor`
+  6 s, `riseAway` 72 m, from `level` 3.5 m) and the boat lies becalmed from the scrape, the fog coming on `comeAfter`
+  0.6 s after it. The lens comes round beside the boat over `turnFor` 8 s and lifts from `settleFrom`. The first roof's
+  slope is drawn going on down under the glass ahead of the stem (`SUNK_SLATES`, in the sea's shader beside the red
+  door). The look back from the first roof is `lookBackFor` 4 s, the fog coming on past the boat to `fogLooked` 5 m from
+  her meanwhile, so the hull goes, then the sail, the lantern's glow last; its lens eases in and out over `backIn`,
+  `backOut`, `backGone`. Measured (`drowned-run-check` from the drift, landscape): the rescue done to the air dying
+  19.6 s and to the scrape 23.9 s; the scrape to the cat's leap 9.1 s; the air dying to her up on the ridge 25.9 s.
+- **Checks**: typecheck; `drowned-run-check FROM=church` passes (the storm's beats and brightness as 4b's);
+  `drowned-run-check` from the drift `TO=nave` holds every fog check but one, which fails on the base too: the barn
+  she leaves for the sheet goes under 19 s after she leaves it (base 18 s; the check allows 14), because the sheet
+  takes about 15 s and the fog holds back while she crosses. `drowned-fog-check` runs clean.
+- **Weak**: the drift is about 20 s, not 15 (it is 175 m from the cat's roof to the strand; 15 s needs about 12 m/s,
+  or the cat's roof nearer the strand). Seen side on from the stranding view its face is a smooth pale wall whose foot
+  runs fairly straight. From a lens at its level its top still reads level; the heaps show from above (the granary,
+  the belfry). At the tower its front is a line through the tower's foot (`darkWayPoint` holds at the way's end), so the
+  fog sea lies on one side of the tower only unless the church turns its front (`faces`); heaps may stand up to 17%
+  over the level, so a level of about 7 m keeps them under the belfry's sills.
+- **For Phase 8**: the fog reads best seen from a little above its top or across its face with sky behind it; a lens
+  inside its top layer (up to about a metre under its level) sees only pale veil, and one 3 m back toward it from her
+  can end up inside its face as it comes; the stranding's wide frame sees it rise behind the houses on the boat's
+  far side.
 
 ### Phase 8: the camera to the shot list (after 7c)
 Owns: the room's lens from the rescue to the storm's frame (`drowned-run.ts`, `drowned-church.ts`, `drowned.ts`'s
