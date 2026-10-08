@@ -75,6 +75,8 @@ export class DrownedChapter implements Chapter {
   readonly focus = new THREE.Vector3();
   private leg = 0;
   private now = 0;
+  /** The game's clock, as the lens has it. */
+  private time = 0;
   private beatStart = 0;
   private lost = 0;
   private readonly seat = new THREE.Vector3();
@@ -367,6 +369,7 @@ export class DrownedChapter implements Chapter {
 
   update(dt: number, time: number): void {
     this.now += dt;
+    this.time = time;
     if (this.cutIn > 0 && --this.cutIn === 0) this.cameraCut++;
     this.muffleSea();
     this.steer();
@@ -763,7 +766,7 @@ export class DrownedChapter implements Chapter {
     s.height = 2.8;
     this.pace = 0.4;
     if (this.beat === 'gather') this.lighthouseFrame(bearing);
-    this.church?.departure(s, dt);
+    this.church?.departure(s, dt, this.time);
     this.focus.copy(boat.position);
   }
 

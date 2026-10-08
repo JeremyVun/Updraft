@@ -12,6 +12,15 @@ export function verticalFov(aspect: number): number {
   const vfovForWidth = THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(hfov / 2) / aspect));
   return THREE.MathUtils.clamp(Math.max(38, vfovForWidth), 38, 62);
 }
+/**
+ * The slow drift an eased lens has about where it is put, `reach` metres from what it looks at; a placed move that
+ * hands over to an eased one carries it in, so nothing moves at the hand-over.
+ */
+export function breathe(time: number, reach: number, out: THREE.Vector3): THREE.Vector3 {
+  const r = Math.min(reach, 60);
+  return out.set(Math.sin(time * 0.07 + 1.3) * 0.02 * r, Math.sin(time * 0.11) * 0.012 * r, 0);
+}
+
 /** The camera always looks roughly north, from a little east of south, unless a shot says otherwise. */
 const FROM = new THREE.Vector3(0.075, 0, 1).normalize();
 /** How far above the ground a shot stands unless it says otherwise. */
@@ -144,6 +153,7 @@ export class CameraRig {
   private readonly back = new THREE.Vector3();
   private readonly fitOffset = new THREE.Vector3();
   private readonly fitOrigin = new THREE.Vector3();
+  private readonly breath = new THREE.Vector3();
 
   constructor() {
     this.fixed = QA && params.cam !== null;
@@ -228,7 +238,9 @@ export class CameraRig {
       this.lastShot = shot;
     }
     if (shot.exact && shot.eye) {
-      this.eye.copy(shot.eye); this.look.copy(shot.target); this.lastTarget.copy(shot.target);
+      // It goes exactly where it is put; what it keeps is the eye before its breathing, as an eased shot keeps it.
+      this.eye.copy(shot.eye).sub(breathe(time, shot.eye.distanceTo(shot.target), this.breath));
+      this.look.copy(shot.target); this.lastTarget.copy(shot.target);
       this.lastCarryAnchor.copy(shot.carryAnchor ?? shot.target);
       this.carrySource = shot.carryAnchor;
       this.turnSpeed = 0; this.direction.reset();
@@ -240,7 +252,7 @@ export class CameraRig {
       this.pullCommitment.reset(); this.liftCommitment.reset(); this.fitCommitment.reset();
       this.fitShift.set(0, 0, 0); this.fitShiftSpeed.set(0, 0, 0);
       this.sceneryOffset.set(0, 0, 0); this.sceneryVelocity.set(0, 0, 0);
-      this.camera.position.copy(this.eye); this.camera.lookAt(this.look);
+      this.camera.position.copy(shot.eye); this.camera.lookAt(this.look);
       return;
     }
     if (dt <= 0) return;
@@ -427,10 +439,7 @@ export class CameraRig {
   }
 
   private place(time: number, dt: number, shot: Shot): void {
-    const reach = Math.min(this.eye.distanceTo(this.look), 60);
-    const want = this.want.copy(this.eye);
-    want.x += Math.sin(time * 0.07 + 1.3) * 0.02 * reach;
-    want.y += Math.sin(time * 0.11) * 0.012 * reach;
+    const want = this.want.copy(this.eye).add(breathe(time, this.eye.distanceTo(this.look), this.breath));
     const clear = Math.max(heightAt(want.x, want.z), heightAt(want.x, want.z - 6), 0) + this.clear;
     if (want.y < clear) want.y = clear;
     /**

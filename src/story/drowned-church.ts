@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import type { Shot } from '../camera';
+import { breathe, type Shot } from '../camera';
 import { tuning } from '../tuning';
 import { atmo } from '../world/atmosphere';
 import { BELFRY, faceOut } from '../world/belfry';
@@ -674,6 +674,7 @@ export class ChurchArrival {
   private readonly goneAim = new THREE.Vector3();
   private readonly mixFrom = new THREE.Vector3();
   private readonly dirHer = new THREE.Vector3();
+  private readonly breath = new THREE.Vector3();
   private readonly dirLamp = new THREE.Vector3();
   private readonly mixEye = new THREE.Vector3();
   private readonly mixTarget = new THREE.Vector3();
@@ -771,7 +772,7 @@ export class ChurchArrival {
    * beside her as it goes;
    * once the light is out it gives the storm its own frame, going round her from the one eye to the other.
    */
-  departure(shot: Shot, dt: number): void {
+  departure(shot: Shot, dt: number, time: number): void {
     if (this.aboardFor < 0) return;
     const k = tuning.drownedCamera.church;
     const t = this.aboardFor - tuning.drowned.church.lookUpFor;
@@ -790,6 +791,7 @@ export class ChurchArrival {
     const r = THREE.MathUtils.lerp(Math.hypot(from.x - head.x, from.z - head.z), Math.hypot(to.x - head.x, to.z - head.z), away);
     const a = a0 + Math.atan2(Math.sin(a1 - a0), Math.cos(a1 - a0)) * away;
     this.mixEye.set(head.x + Math.sin(a) * r, THREE.MathUtils.lerp(from.y, to.y, away), head.z + Math.cos(a) * r);
+    this.mixEye.addScaledVector(breathe(time, this.mixEye.distanceTo(shot.target), this.breath), away);
     /** Across to between her and the lamp: the way that splits the angle from the eye, at her distance. */
     const wide = THREE.MathUtils.smoothstep(this.aspect, 0.7, 1.3);
     const toHer = this.dirHer.subVectors(head, from), reach = toHer.length();
