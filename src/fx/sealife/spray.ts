@@ -90,23 +90,26 @@ void main() {
     float torn = vAge * 0.55;
     a = pow(1.0 - r, 1.3) * smoothstep(0.3 + torn, 0.75 + torn, wisp + 0.35 - r * 0.45) * vAlpha;
     float glow = min(pow(toSun, 12.0) * 1.8 + pow(toSun, 4.0) * 0.8, 1.2) * (0.7 + 0.6 * fract(vSeed * 7.3));
-    col = sky + uSunColor * (0.22 + glow) * sun;
+    col = cloudShade(0.7) + cloudGlow() * (0.22 + glow) * sun;
     additive = 0.12;
   } else if (vKind > 2.5) {
     vec2 w = vQ * 1.2 + vSeed * 23.0;
     float lumps = vnoise(w + uTime * 0.15) * 0.6 + vnoise(w * 2.4 - uTime * 0.2) * 0.4;
-    float torn = vAge * 0.7;
-    a = (1.0 - smoothstep(0.1 + 0.35 * lumps - torn * 0.3, 1.0, r)) * smoothstep(torn * 0.8, torn * 0.8 + 0.4, lumps + 0.3) * vAlpha;
-    // Lit as one soft column, by which side of it each puff left from, and a little as a round puff of its own: the
-    // face toward the low sun gold, the face away cool sky, the thin edges lit through from behind.
-    float facing = sqrt(max(0.0, 1.0 - r * r));
+    // Soft all the way from the middle, so overlapping puffs add up to one body of mist, never rings of discs.
+    float body = 1.0 - smoothstep(0.0, 0.75 + 0.35 * lumps, r);
+    a = pow(body, 1.5) * smoothstep(vAge * 0.6, vAge * 0.6 + 0.5, lumps + 0.2) * vAlpha;
+    // Each puff a soft ball, a little of the column's own side in it.
+    float k = min(r, 1.0);
+    float facing = sqrt(max(0.0, 1.0 - k * k));
+    vec3 ball = normalize(vRight * vQ.x + vUp * vQ.y + V * facing);
     float side = vSide * 6.2832;
-    vec3 N = normalize(mix(normalize(vRight * vQ.x * 0.6 + vUp * vQ.y * 0.6 + V * facing), normalize(vec3(cos(side), 0.25, sin(side))), 0.55));
-    float lit = smoothstep(-0.3, 0.8, dot(N, uSunDir));
-    vec3 sky = hemiLight(N);
-    vec3 shade = mix(sky, vec3(lumaOf(sky)), 0.45) * vec3(0.93, 0.96, 1.08) * 1.55;
-    float edge = pow(1.0 - facing, 1.3) * (0.4 + 0.6 * lit);
-    col = mix(shade, shade * 0.35 + uSunColor * 1.2, lit * sun) + uSunColor * pow(toSun, 3.0) * edge * 2.6 * sun;
+    vec3 N = normalize(mix(ball, vec3(cos(side), 0.2, sin(side)), 0.3));
+    float wrap = clamp(dot(N, uSunDir) * 0.5 + 0.5, 0.0, 1.0);
+    // The low sun comes through where it is thin, so it glows from behind; where it is thick it is in its own shade.
+    float through = pow(toSun, 3.0) * (0.3 + 0.7 * (1.0 - facing));
+    // The sky's brightness without its colours, whose blue and orange together go lilac: white, cool grey-blue in its
+    // shade, gold where the sun reaches it.
+    col = cloudShade(clamp(0.5 + 0.35 * N.y + 0.25 * wrap, 0.0, 1.0)) + cloudGlow() * (wrap * wrap * 0.8 + through) * sun;
     additive = 0.04;
   } else if (vKind < 1.5) {
     a = (1.0 - smoothstep(0.0, 1.0, r)) * vAlpha;
@@ -269,7 +272,7 @@ export class Spray {
    * slowing and opening as they rise, then taken by it and drifting off as they settle and thin.
    */
   column(at: THREE.Vector3, height: number, strength: number, dt: number): void {
-    const n = Math.floor(strength * 210 * dt + Math.random());
+    const n = Math.floor(strength * 340 * dt + Math.random());
     for (let i = 0; i < n; i++) {
       const a = Math.random() * Math.PI * 2;
       const reach = 0.25 + 0.75 * Math.sqrt(Math.random());
@@ -277,7 +280,7 @@ export class Spray {
       const out = 0.3 + reach * 0.8 * Math.random() + crown * (1.2 + Math.random() * 1.8);
       const up = height * DRAG[COLUMN] * reach * strength * (1 + Math.random() * 0.1);
       this.emit(COLUMN, at.x + Math.cos(a) * 0.5, at.y + 0.2, at.z + Math.sin(a) * 0.5, Math.cos(a) * out, up, Math.sin(a) * out,
-        0.9 + Math.random() * 0.6, 6 + Math.random() * 2.5, 0.7 + reach * 0.8 + crown * 0.9, 0.42 + Math.random() * 0.28,
+        0.8 + Math.random() * 0.5, 6 + Math.random() * 2.5, 0.35 + reach * 0.4 + crown * 0.6, 0.5 + Math.random() * 0.3,
         1.6 + crown * 0.8 + Math.random() * 0.6);
       this.side[this.count - 1] = a / (Math.PI * 2);
     }
