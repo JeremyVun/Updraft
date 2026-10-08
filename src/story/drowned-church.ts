@@ -674,8 +674,8 @@ export class ChurchArrival {
   /**
    * Framed for a person, on the ordinary rig, so every change of view is an orbit round her at the rig's own turn and
    * nothing cuts: low off the nave's south-west as the cat comes past her and up the ivy beside her; from the north of
-   * the face as she climbs, rising with her; round the tower's north-west corner to look in through the north face's
-   * light at her kneeling over the kittens, her face and the kitten that comes to her one frame; out west over the fog
+   * the face as she climbs, rising with her; round to close outside the west face, past her in her light and in
+   * through the other at the kittens she has found; out west over the fog
    * sea while she stands looking at it; beside the tower while the bell is hers to ring, the bell, her in the other light
    * and the fog sea where the lantern answers; high off the north water, coming down with her as she climbs to the boat
    * coming in; and low beside the boat, up past her face to the cat and its kitten on the sill, held for the blink.

@@ -2140,11 +2140,8 @@ export const tuning = {
       foot: [-10.5, 1.0, 6.5, -3.0, 1.4, 0.6], uprightFoot: [-9, 1.4, 5.5, -3.0, 2.6, 0.4],
       /** From the north of the west face as she climbs after it, rising with her. */
       climb: [-8.6, 1.2, -10.2, -3.6, 1.55, -1.0], uprightClimb: [-7.8, 1.2, -8.6, -3.2, 2.3, -0.7],
-      /**
-       * Round the north-west corner, close outside the north face, looking in through its west light at her kneeling
-       * in the west face's light: the straw and the kitten that comes to her in front, her face beyond.
-       */
-      nest: [1.95, 1.05, -5.45, -2.1, 0.7, -0.7, 1.4], uprightNest: [1.6, 1.0, -5.0, -2.1, 0.6, -0.7, 1.1], nestMargin: 0.95,
+      /** Close outside the west face, looking past her in her light and in through the other at the kittens she has found. */
+      nest: [-4.9, 2.1, 2.6, -1.95, 0.45, 0], uprightNest: [-5.2, 2.4, 3, -1.95, 0.35, -0.1], nestMargin: 0.95,
       /** Out over the fog sea west of the tower while she stands looking at it. */
       sea: [-16, 5, 6, -2, -0.5, -3], uprightSea: [-18, 7, 7, -2.2, -1.8, -3],
       /**
