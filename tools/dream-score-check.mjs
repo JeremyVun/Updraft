@@ -11,6 +11,7 @@ try {
     const {DreamScore,DREAM_SECTIONS}=await productionModule('/src/audio/dream-score.ts');
     const {DREAM_NOTES,DREAM_PALETTE}=await productionModule('/src/audio/dream-score-data.ts');
     const {ArrivalTransition,ARRIVAL_MUSIC}=await productionModule('/src/audio/arrival-music.ts');
+    const {press,relax}=(await productionModule('/src/tuning.ts')).tuning.audio.drownedChase;
     const checks=[],renders=[];
     const check=(ok,message)=>{if(!ok)throw Error(message);checks.push(message);};
     check(JSON.stringify(DREAM_NOTES)===JSON.stringify(reference.notes),'Both integrated scores retain every approved note, strength, pan and duration');
@@ -66,7 +67,7 @@ try {
       const sung=within.filter(n=>n.role!=='accompaniment').map(key).sort();
       check(JSON.stringify(sung)===JSON.stringify(wanted),'Every chase passage plays its chords and its whole tune, with nothing from another progression');
       const tensions=[];for(let t=start;t<start+passage.seconds;t+=.25)tensions.push(restless.tensionAt(t));
-      if(Math.min(...tensions)<.3&&Math.max(...tensions)>=.55)crossed++;
+      if(Math.min(...tensions)<relax&&Math.max(...tensions)>=press)crossed++;
       for(let bar=0;bar*passage.bar<passage.seconds-1e-6;bar++){
         const from=start+bar*passage.bar,beats=within.filter(n=>n.role==='accompaniment'&&n.when>=from-.01&&n.when<from+passage.bar-.01);
         const count=fill=>beats.filter(n=>(n.fill??0)===fill).length;
@@ -76,7 +77,7 @@ try {
     });
     check(turned>=2&&crossed>=3,'The chase was pressed and eased across many phrases while its tension changed mid-phrase');
     // Between the two thresholds the chase keeps its course: no turning at every phrase.
-    const hovering=t=>t<60?(Math.floor(t/12.8)%2?.5:.35):t<75?.6:(Math.floor(t/12.8)%2?.5:.35);
+    const between=t=>Math.floor(t/12.8)%2?press-.02:relax+.02,hovering=t=>t<60||t>=75?between(t):press+.05;
     const held=conducted(hovering,170).chosen.slice(1);
     check(held.filter(c=>c.start<60).every(c=>!pressing(c.passage))&&held.filter(c=>c.start>=76).every(c=>pressing(c.passage))
       &&held.some(c=>c.start>=76),'The chase turns only past its margin, not at every phrase');

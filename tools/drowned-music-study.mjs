@@ -2,6 +2,7 @@
 // becalmed phrase, the bell through its foley and the foghorn; no wind or sea) for listening: each cue on its own,
 // held long enough to hear its loop, and the whole room from the rescue into the storm at measured story timing,
 // with a spectrogram of the arc. Every file shares one playback gain, so the levels between them are the game's.
+// The chase's passages as chosen (where each begins, which, on which voices) go in the report.
 // Usage: node tools/drowned-music-study.mjs [outDir]   (default /tmp/updraft-music9-study; serves the worktree itself)
 import fs from 'node:fs';
 import path from 'node:path';
@@ -26,8 +27,8 @@ const RINGS = [258.9, 263.0, 267.1, 271.2];
 const studies = {
   '1-stuck': { seconds: 64, phases: [[0, 'stuck']], cues: [[0, 'becalmed']] },
   '2-chase': { seconds: 215, phases: [[0, 'chase']], run: { from: 0, script: LONG_RUN } },
-  '2b-chase-tightening': { seconds: 102, phases: [[0, 'chase']],
-    tension: [[0, 0], [12.8, 0.4], [25.6, 0.7], [38.4, 0.9], [64, 0.2], [76.8, 0.5]] },
+  '2b-chase-tightening': { seconds: 125, phases: [[0, 'chase']],
+    tension: [[0, 0], [20, 0.45], [33, 0.8], [60, 0.2], [75, 0.6], [88, 0.45], [100, 0.1]] },
   '3-climb': { seconds: 40, phases: [[0, 'climb']] },
   '4-belfry': { seconds: 82, phases: [[0, 'belfry']] },
   '5-bell': { seconds: 72, phases: [[0, 'belfry'], ...answered([12.4, 16.5, 20.6, 24.7])], rings: [12.4, 16.5, 20.6, 24.7] },
@@ -68,7 +69,7 @@ try {
       for (const fn of ['cricket', 'owl', 'skylark', 'peep', 'bugle']) sound[fn] = () => {};
       const foley = new Foley();
       foley.setOutput(sound.output);
-      const rings = [...(study.rings ?? [])], cues = [...(study.cues ?? [])], trace = [];
+      const rings = [...(study.rings ?? [])], cues = [...(study.cues ?? [])], trace = [], passages = [];
       let tension = 0, across = Infinity, was = 'off';
       const pressure = (t) => {
         if (study.tension) return study.tension.findLast(([at]) => at <= t)[1];
@@ -98,7 +99,14 @@ try {
           sound[field].gain.cancelScheduledValues(ctx.currentTime);
           sound[field].gain.value = 0;
         }
-        if (i % 4 === 0) trace.push([+t.toFixed(2), phase, +tension.toFixed(3)]);
+        if (i % 4 === 0) trace.push([+t.toFixed(2), phase, +tension.toFixed(3), sound.dreamScore?.current?.fill ?? null]);
+        const part = sound.dreamScore?.current;
+        if (part?.passage && passages.at(-1)?.passage !== part.passage) {
+          const tune = part.passage.notes.filter((n) => n.role === 'melody'), roots = part.passage.chords.map((c) => c.tones[0] % 12);
+          const head = tune[0]?.midi % 12 === 2;
+          const kind = !tune.length ? 'set-off' : roots.includes(4) ? (head ? 'climb' : 'denied answer') : head ? 'question' : 'answer';
+          passages.push({ at: +part.start.toFixed(2), kind, voices: [...new Set(tune.map((n) => n.voice))].join('+'), passage: part.passage });
+        }
       };
       update(0);
       let pause = ctx.suspend(tick);
@@ -109,7 +117,7 @@ try {
         if (i + 1 < ticks) pause = ctx.suspend((i + 1) * tick);
         await ctx.resume();
       }
-      return { ...encodeAudio(await rendering), trace };
+      return { ...encodeAudio(await rendering), trace, passages: passages.map(({ passage, ...p }) => p) };
     }, study);
     const pcm = Buffer.from(result.pcm, 'base64');
     const samples = new Int16Array(pcm.buffer, pcm.byteOffset, pcm.byteLength / 2);
@@ -131,6 +139,7 @@ try {
     }
     report.files[name] = { seconds: study.seconds, rawPeakDbFS: +result.peakDbFS.toFixed(1), peakDbFS: +(20 * Math.log10(peak / 32767)).toFixed(1),
       clipped: peak >= 32767, lufs: loudness(file, 0, study.seconds), sections };
+    if (result.passages.length) report.files[name].chase = result.passages;
     if (name === 'arc') report.trace = result.trace;
     console.log(JSON.stringify({ name, ...report.files[name], sections: sections.map((s) => `${s.phase}@${s.from}: ${s.lufs}`) }));
   }

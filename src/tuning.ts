@@ -96,7 +96,7 @@ export const tuning = {
      * `quarters` and to eighths at `eighths`, and thins again `give` below them.
      */
     drownedChase: { near: 7, far: 19, walking: .75, relief: .6, reliefFor: 5, ease: 1.5,
-      press: .55, relax: .3, quarters: .35, eighths: .7, give: .06 },
+      press: .55, relax: .4, quarters: .35, eighths: .7, give: .06 },
     /** Approved distant foghorn; source gain excludes the listening export boost. */
     foghorn: { midi:50, level:.036, pan:.24, attack:1.1, duration:4.6,
       hold:2.65, dryLevel:.22, reverbSend:.35, predelay:.18, diffuseLevel:.8, diffuseSeconds:4.4,
