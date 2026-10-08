@@ -382,10 +382,6 @@ export class DrownedChapter implements Chapter {
     if (this.beat === 'run' || this.beat === 'nave') this.run!.update(dt);
     else this.run?.tend(dt);
     if (this.church && this.church.step !== 'off') this.church.update(dt);
-    if (this.church && this.church.cut !== this.churchCut) {
-      this.churchCut = this.church.cut;
-      this.cameraCut++;
-    }
 
     const through = this.beat === 'enter' || this.beat === 'drift' || this.beat === 'still' ? (this.held = this.through) : this.held;
     switch (this.beat) {
@@ -737,6 +733,10 @@ export class DrownedChapter implements Chapter {
     }
     if (this.beat === 'church') {
       this.pace = this.church!.frame(s, dt);
+      if (this.church!.cut !== this.churchCut) {
+        this.churchCut = this.church!.cut;
+        this.cameraCut++;
+      }
       this.focus.copy(this.cast.child.position);
       return;
     }

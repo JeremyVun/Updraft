@@ -504,6 +504,7 @@ export class ChurchArrival {
     if (!this.blinked && this.aboardFor > k.blinkAt) {
       this.blinked = true;
       cat.slowBlink();
+      this.later(k.chirrupAfter, () => cat.chirrup());
     }
   }
 
@@ -637,13 +638,13 @@ export class ChurchArrival {
     return this.cast.village!.belfry.sill('west', LIGHT, -BELFRY.wall * 0.45);
   }
 
-  /** The cat sits in the reveal she climbed out of, a little to one side, and the kitten beside it. */
+  /** The cat sits at the lip of the sill she climbed out over, to look down at her, and the kitten beside it. */
   private catSill(): THREE.Vector3 {
-    return this.cast.village!.belfry.sill('west', LIGHT, -0.18).add(new THREE.Vector3(0, 0, 0.2));
+    return this.cast.village!.belfry.sill('west', LIGHT, -0.04).add(new THREE.Vector3(0, 0, 0.2));
   }
 
   private kittenSill(): THREE.Vector3 {
-    return this.cast.village!.belfry.sill('west', LIGHT, -0.2).add(new THREE.Vector3(0, 0, -0.24));
+    return this.cast.village!.belfry.sill('west', LIGHT, -0.06).add(new THREE.Vector3(0, 0, -0.24));
   }
 
   /** Standing in the opening she faces out and round to the north, over the open water the boat comes home across. */

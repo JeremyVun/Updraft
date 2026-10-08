@@ -1897,11 +1897,11 @@ export const tuning = {
       /** Seconds with no progress before the world's air carries it, and how much breeze that is. */
       valve: 90, carryBreeze: 0.45,
       /**
-       * Seated: seconds before she looks back up at the cat, when it gives her its slow blink, and how long before
-       * they go; how she turns round on the thwart to it: beyond what her head turns (radians), the most her body
+       * Seated: seconds before she looks back up at the cat, when it gives her its slow blink and how long after that
+       * its soft chirrup, and how long before they go; how she turns round on the thwart to it: beyond what her head turns (radians), the most her body
        * turns and how fast, and how far behind the cat has to be before she turns the side away from the lens.
        */
-      lookUpAt: 0.6, blinkAt: 2.4, lookUpFor: 5, headTurns: 0.9, seatTurn: 1.7, turnRate: 1.6, turnPast: 2.2,
+      lookUpAt: 0.6, blinkAt: 2.4, chirrupAfter: 2.2, lookUpFor: 5.5, headTurns: 0.9, seatTurn: 1.7, turnRate: 1.6, turnPast: 2.2,
       /** The rain the fog brings as it closes round, and how far gathered the storm's weather is when it starts from here. */
       closeShower: 0.25, stormFrom: 0.35,
     },

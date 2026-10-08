@@ -45,6 +45,8 @@ const context = await browser.newContext({ viewport: { width, height }, deviceSc
   ...(video ? { recordVideo: { dir: video, size: { width, height } } } : {}) });
 try {
   const page = await context.newPage();
+  /** When the recording began, so what is heard can be laid under it. */
+  const recordedFrom = Date.now();
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto(`${base}?shot=1&chapter=${fromStorm ? 'storm' : fromBelfry ? 'belfry' : fromChurch ? 'church' : fromRoofs ? 'roofs' : fromStairs ? 'stairs' : 'drowned'}&ratio=1`, { waitUntil: 'load' });
   await page.waitForFunction(() => window.__ready === true, null, { timeout: 60000 });
@@ -361,6 +363,11 @@ try {
       await shot('refuge-fog-sea');
     }
     beats.ring = (await wait((s) => s.step === 'ring', 30, 'the bell hers to ring')).time;
+    await page.evaluate(() => {
+      const b = __game.story.current.church.bell, was = b.onRing;
+      window.__heard = [];
+      b.onRing = (strength) => { __heard.push({ at: performance.timeOrigin + performance.now(), peak: b.peak }); was?.(strength); };
+    });
     await seconds(1);
     await shot('bell');
     /** Strokes across the bell, each once it has come back near rest, until the lantern has answered four rings. */
@@ -393,6 +400,8 @@ try {
         await shot(`ring-${after.rings}`);
       }
     }
+    const heard = await page.evaluate(() => window.__heard);
+    console.log(`  the rings heard, seconds into the recording: ${JSON.stringify(heard.map((h) => ({ t: +((h.at - recordedFrom) / 1000).toFixed(2), ring: true, peak: +h.peak.toFixed(3) })))}`);
     for (const r of rang) {
       console.log(`  ring ${r.ring} at ${(r.time - beats.ring).toFixed(1)} s: the boat ${r.boatBefore.toFixed(1)} m from the berth, ${r.boatAfter.toFixed(1)} m after it answered; the fog's top ${r.level} m; the lantern on screen at ${r.lantern.slice(0, 2).join(', ')}`);
     }
