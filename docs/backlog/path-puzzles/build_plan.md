@@ -460,6 +460,19 @@ game's own light; the press reads best close to; the gallop is still lower and s
 sheet's soft gallop (its gather and stretch read at 30 fps, not at 10); riding the sail a hind leg falls 3 cm short
 as the sail tips.
 
+### Phase 6b3: the gallop as a bound (after 6b2; owns `src/creatures/cat.ts`, `src/creatures/cat/`, `tools/cat-check.mjs`)
+The lead's review of 6b2's strips: leaps, the slow blink and the shake read; the gallop does not. At the room's
+distance (the `far` strips, 12 m through the game's lens) the cat slides along the roof like a toy pulled on a string:
+the back never rises clear of the roof, the legs barely open, and it is the cat's most-seen move (it runs ahead of her
+at every crossing). Each stride must read at 12 m as a bound: the bunch (all four feet gathered under the belly, back
+arched), the push, a moment with all four feet off the roof and the back lifted clear, the stretch (fore and hind legs
+reaching apart), front feet down first. The scared run is the same bound, lower and longer. If the legs are too short
+for any gallop to read, lengthen them a little, keeping the sit, curl, slow blink and tub silhouettes. Also: the
+shake's spray lit and fogged like everything else in the room, so it reads in the game's light; a kitten's pounce
+bowls its sibling over rather than landing inside it.
+Gate: `cat-check` slip and reach no worse; `far` and `near` strips of run, bolt, scared-run and trot at 30 fps over a
+second (`FPS=30 WINDOW=`) and at 10 fps whole, for the lead to judge; shake and tumble strips.
+
 ### Phase 6c: the windmill as a sack hoist (after 6a; owns `src/world/crossings/windmill.ts`, `mill-crossing.ts`, `mill-spiral.ts`, the mill yard, `mill-check`)
 design.md "The windmill, rebuilt": she rides a basket on the hoist, standing, the full height of the mill; the
 circles turn big sails with weight and carry-on; creak, the rope winding on its drum, a ratchet that holds her; the
