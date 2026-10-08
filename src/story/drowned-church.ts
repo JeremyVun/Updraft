@@ -186,7 +186,6 @@ export class ChurchArrival {
     this.to('sea');
     this.t = k.seaFor - 1.5;
     this.lensCut = true;
-    this.bound = true;
   }
 
   /** QA: on to her just seated aboard at the berth, the cat on the sill above and the fog drawn back to the water. */
@@ -654,19 +653,10 @@ export class ChurchArrival {
 
   // The lens.
 
-  /** How the lens starts: from wherever the run left it, or cut straight to its view (a skip ahead). */
+  /** A skip ahead (QA, a restored save) cuts the lens to where the story is; in play it never cuts. */
   private lensCut = false;
-  private bound = false;
-  private inside = false;
-  private dtNow = 0;
   private readonly eye = new THREE.Vector3();
   private readonly target = new THREE.Vector3();
-  private readonly eyeNow = new THREE.Vector3();
-  private readonly orbitNow = new THREE.Vector3();
-  private readonly orbitWant = new THREE.Vector3();
-  private readonly targetNow = new THREE.Vector3();
-  private readonly eyeSpeed = new THREE.Vector3();
-  private readonly targetSpeed = new THREE.Vector3();
   private readonly herY = { value: IVY_FOOT.y };
   private zoomNow = 1;
   private leaving = false;
@@ -678,93 +668,119 @@ export class ChurchArrival {
   private readonly dirLamp = new THREE.Vector3();
   private readonly mixEye = new THREE.Vector3();
   private readonly mixTarget = new THREE.Vector3();
+  private readonly held = { primary: new THREE.Vector3(), secondary: new THREE.Vector3(), margin: tuning.drownedCamera.church.margin,
+    extra: tuning.drownedCamera.church.extra };
 
   /**
-   * Framed for a person, borrowed from the bell's yard: off the nave's south side as the cat runs up past her; from
-   * the north of the face as she climbs, rising with her, her profile and the fog coming on below; inside, low by the
-   * straw, for the kittens she has found; out west over the fog sea while she stands looking at it; out beside the
-   * tower while the bell is hers to ring, the bell, her in the other light and the fog sea where the lantern answers in
-   * one frame; low off the north water as the boat comes in and she climbs down to it; and from beside the boat, low,
-   * up at the cat on the sill. It glides round the tower, never through it, and cuts only into and out of the belfry.
+   * Framed for a person, on the ordinary rig, so every change of view is an orbit round her at the rig's own turn and
+   * nothing cuts: low off the nave's south-west as the cat comes past her and up the ivy beside her; from the north of
+   * the face as she climbs, rising with her; round the tower's north-west corner to look in through the north face's
+   * light at her kneeling over the kittens, her face and the kitten that comes to her one frame; out west over the fog
+   * sea while she stands looking at it; beside the tower while the bell is hers to ring, the bell, her in the other light
+   * and the fog sea where the lantern answers; high off the north water, coming down with her as she climbs to the boat
+   * coming in; and low beside the boat, up past her face to the cat and its kitten on the sill, held for the blink.
    */
   frame(shot: Shot, dt: number): number {
     const k = tuning.drownedCamera.church;
     const wide = THREE.MathUtils.smoothstep(this.aspect, 0.7, 1.3);
     const c = this.cast.child.position;
-    this.dtNow = dt;
     this.herY.value += (c.y - this.herY.value) * (1 - Math.exp(-dt * 3.5));
     const y = this.herY.value;
-    const S = BELFRY.sill;
     const pick = (a: readonly number[], b: readonly number[]) => a.map((x, i) => THREE.MathUtils.lerp(b[i], x, wide));
+    const held = this.held;
+    held.primary.copy(c).setY(c.y + (this.step === 'nest' ? 0.8 : 1.1));
+    held.margin = k.margin;
+    held.extra = k.extra;
     let view: number[];
-    let inside = false;
+    let pace = k.pace;
     switch (this.step) {
       case 'foot':
+        view = pick(k.foot, k.uprightFoot);
+        held.secondary.copy(this.catEye);
+        break;
       case 'climb':
         view = pick(k.climb, k.uprightClimb);
+        held.secondary.copy(this.catEye.y > c.y + 0.5 && this.catEye.y < BELFRY.sill + 0.5 ? this.catEye : held.primary);
         break;
       case 'nest':
         view = pick(k.nest, k.uprightNest);
-        inside = true;
+        this.cast.village!.kittens.cats[FOUND].eye(held.secondary);
+        pace = k.nestPace;
+        held.margin = k.nestMargin;
+        held.extra = 0;
         break;
       case 'sea':
         view = pick(k.sea, k.uprightSea);
+        held.secondary.copy(held.primary);
+        pace = k.seaPace;
         break;
       case 'ring':
         view = pick(k.ring, k.uprightRing);
+        this.bell.middle(held.secondary);
         break;
       case 'down':
       case 'wait':
       case 'board':
         view = pick(k.bring, k.uprightBring);
+        held.secondary.copy(this.cast.boat.position).setY(this.cast.boat.position.y + 1);
         break;
       default:
-        view = pick(k.up, k.uprightUp);
+        return this.upFrame(shot, wide);
     }
-    const over = this.step === 'foot' || this.step === 'climb' ? y : S;
-    view[1] += over;
-    view[4] += over;
-    this.eye.set(view[0], view[1], view[2]);
-    this.target.set(view[3], view[4], view[5]).add(C);
+    const over = this.step === 'foot' || this.step === 'climb' || this.step === 'down' || this.step === 'wait' || this.step === 'board' ? y : BELFRY.sill;
+    this.eye.set(view[0], view[1] + over, view[2]).add(C);
+    this.target.set(view[3], view[4] + over, view[5]).add(C);
     if (this.step === 'ring' && this.rings > 0) {
       const since = this.since - this.answeredAt;
       const find = THREE.MathUtils.smoothstep(since, -0.3, 1.2) * (1 - THREE.MathUtils.smoothstep(since, k.findFor, k.findFor + 2));
       this.target.lerp(this.homeAt, k.find * find);
     }
-    if (inside !== this.inside) this.lensCut = true;
-    this.inside = inside;
-    const want = this.orbitWant.set(Math.atan2(this.eye.z, this.eye.x), Math.hypot(this.eye.x, this.eye.z), this.eye.y);
-    if (!this.bound && !this.lensCut && this.camera) {
-      /** From where the lens is and the way it actually looks, which the rig's framing may have turned off the run's aim. */
-      const e = this.camera.position;
-      this.orbitNow.set(Math.atan2(e.z - C.z, e.x - C.x), Math.hypot(e.x - C.x, e.z - C.z), e.y);
-      this.targetNow.copy(e).addScaledVector(this.camera.getWorldDirection(this.tmp), e.distanceTo(shot.target));
-      this.eyeSpeed.set(0, 0, 0);
-      this.targetSpeed.set(0, 0, 0);
-    } else if (this.lensCut) {
-      this.orbitNow.copy(want);
-      this.targetNow.copy(this.target);
-      this.eyeSpeed.set(0, 0, 0);
-      this.targetSpeed.set(0, 0, 0);
-      this.lensCut = false;
-      this.cut++;
-    } else {
-      want.x = this.orbitNow.x + Math.atan2(Math.sin(want.x - this.orbitNow.x), Math.cos(want.x - this.orbitNow.x));
-      const time = this.step === 'foot' ? k.glide * 1.6 : k.glide;
-      glide(this.orbitNow, this.eyeSpeed, want, time, this.dtNow);
-      glide(this.targetNow, this.targetSpeed, this.target, time * 0.8, this.dtNow);
+    if (this.step === 'down' || this.step === 'wait' || this.step === 'board') {
+      this.target.copy(held.primary).lerp(held.secondary, k.bringAlong);
     }
-    this.bound = true;
-    const o = this.orbitNow;
-    this.eyeNow.set(C.x + Math.cos(o.x) * o.y, o.z, C.z + Math.sin(o.x) * o.y);
-    const zoomWant = (view[6] ?? 1) * THREE.MathUtils.lerp(k.uprightZoom, 1, wide);
-    this.zoomNow += (zoomWant - this.zoomNow) * (1 - Math.exp(-dt / k.glide));
-    this.write(shot, this.eyeNow, this.targetNow, this.zoomNow);
-    return k.pace;
+    this.write(shot, this.eye, this.target, (view[6] ?? 1) * THREE.MathUtils.lerp(k.uprightZoom, 1, wide));
+    return pace;
   }
 
-  /** Cuts the lens makes into and out of the belfry, for the rig. */
+  /**
+   * Aboard, from low beside the boat on the side away from its bow, so the mast and the sail stand behind her: on her
+   * as she turns on the thwart to look up, then up past her face, the lens lengthening, to the cat and its kitten on the
+   * sill, and held there for the slow blink.
+   */
+  private upFrame(shot: Shot, wide: number): number {
+    const k = tuning.drownedCamera.church, c = this.cast.child.position, boat = this.cast.boat;
+    const head = this.held.primary;
+    const sill = this.catSill();
+    const away = Math.atan2(c.x - sill.x, c.z - sill.z);
+    /** Round from the sill's side of her to the boat's starboard, clear of the nave on her port. */
+    const fx = Math.sin(boat.yaw), fz = Math.cos(boat.yaw);
+    const starboard = Math.atan2(-fz, fx);
+    const turn = Math.atan2(Math.sin(starboard - away), Math.cos(starboard - away));
+    const bearing = away + THREE.MathUtils.clamp(turn, -k.upRound, k.upRound);
+    const back = THREE.MathUtils.lerp(k.uprightUpBack, k.upBack, wide);
+    this.eye.set(c.x + Math.sin(bearing) * back, head.y + THREE.MathUtils.lerp(k.uprightUpHigh, k.upHigh, wide), c.z + Math.cos(bearing) * back);
+    const tilt = this.aboardFor < 0 ? 0 : THREE.MathUtils.smootherstep(this.aboardFor, k.tiltFrom, k.tiltTo);
+    const cat = this.cast.cat.eye(this.held.secondary);
+    this.target.copy(head).lerp(cat, tilt * THREE.MathUtils.lerp(k.uprightUpTilt, k.upTilt, wide));
+
+    let zoom = THREE.MathUtils.lerp(1, THREE.MathUtils.lerp(k.uprightUpZoom, k.upZoom, wide), tilt);
+    /** After the blink it lets go: back out over the water to the west, so the storm's lens can take her from there. */
+    const release = this.aboardFor < 0 ? 0 : THREE.MathUtils.smootherstep(this.aboardFor, k.releaseFrom, k.releaseTo);
+    if (release > 0) {
+      const r = k.release;
+      this.eye.lerp(this.tmp.set(C.x + r[0], BELFRY.sill + r[1], C.z + r[2]), release);
+      this.target.lerp(this.tmp.copy(c).setY(c.y + r[3]), release);
+      zoom = THREE.MathUtils.lerp(zoom, r[4], release);
+    }
+    this.keepInFrame(tilt > 0.5);
+    this.write(shot, this.eye, this.target, zoom);
+    return k.upPace;
+  }
+
+  /** Cuts the lens makes on a skip ahead, for the rig. */
   cut = 0;
+  /** While the cat on the sill is the subject the frame keeps. */
+  private keepingCat = false;
 
   /**
    * Leaving the nave, the lens goes with her from where it stood for the look up, so the boat never sails up to it;
@@ -780,9 +796,12 @@ export class ChurchArrival {
     if (away >= 1) return;
     const head = this.cast.child.position;
     if (!this.leaving) {
+      /** From where the look up lets go to, which the eased lens is still on its way to. */
       this.leaving = true;
-      this.goneFrom.subVectors(this.eyeNow, head);
-      this.goneAim.subVectors(this.targetNow, head);
+      const r = k.release;
+      this.goneFrom.set(C.x + r[0], BELFRY.sill + r[1], C.z + r[2]).sub(head);
+      this.goneAim.set(0, r[3], 0);
+      this.zoomNow = r[4];
     }
     const light = THREE.MathUtils.smootherstep(t, k.lampFrom, k.lampTo) * k.lampAim;
     const from = this.mixFrom.addVectors(head, this.goneFrom);
@@ -807,18 +826,44 @@ export class ChurchArrival {
     this.mixTarget.addVectors(head, this.goneAim).lerp(between, light).lerp(shot.target, away);
     const lampZoom = THREE.MathUtils.lerp(k.uprightLampZoom, k.lampZoom, wide);
     const zoom = THREE.MathUtils.lerp(THREE.MathUtils.lerp(this.zoomNow, lampZoom, light), shot.zoom ?? 1, away);
+    this.held.primary.copy(head).setY(head.y + 1.1);
+    this.cast.cat.eye(this.held.secondary);
+    this.keepInFrame(true);
     this.write(shot, this.mixEye, this.mixTarget, zoom);
   }
 
+  /**
+   * The rig holds the primary subject inside the frame at once, so the cat on the sill is the one it keeps while the
+   * lens is up on it, and she is again only once she is back inside the frame.
+   */
+  private keepInFrame(onCat: boolean): void {
+    const held = this.held;
+    if (!onCat) this.keepingCat = false;
+    else if (!this.leaving) this.keepingCat = true;
+    else if (this.keepingCat && this.camera) {
+      const seen = this.tmp.copy(held.primary).project(this.camera);
+      if (seen.z < 1 && Math.abs(seen.x) < 0.8 && Math.abs(seen.y) < 0.8) this.keepingCat = false;
+    }
+    if (!this.keepingCat) return;
+    this.tmp.copy(held.primary);
+    held.primary.copy(held.secondary);
+    held.secondary.copy(this.tmp);
+  }
+
   private write(shot: Shot, eye: THREE.Vector3, target: THREE.Vector3, zoom: number): void {
-    shot.subjects = undefined;
+    if (this.lensCut) {
+      this.lensCut = false;
+      this.cut++;
+    }
+    if (!this.leaving) this.zoomNow = zoom;
+    shot.subjects = this.held;
     shot.attention = undefined;
     shot.obstacles = undefined;
     shot.smoothFit = undefined;
-    shot.orbit = undefined;
+    shot.orbit = true;
     shot.fitWidth = false;
     shot.free = false;
-    shot.exact = true;
+    shot.exact = false;
     shot.eye = (shot.eye ?? new THREE.Vector3()).copy(eye);
     shot.target.copy(target);
     shot.from = (shot.from ?? new THREE.Vector3()).set(eye.x - target.x, 0, eye.z - target.z).normalize();

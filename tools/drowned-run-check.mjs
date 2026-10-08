@@ -252,7 +252,7 @@ try {
       return { out: tuning.storm.lighthouseOutAt, way: W.STORM_WAY.map((p) => [p.x, p.y]), last: [last.x, last.y], beach: [WOOD_LANDING.x, WOOD_LANDING.y],
         light: [LIGHTHOUSE.x, LIGHTHOUSE.z], sill: W.IVY_SILL.toArray(), legs: DROWNED_CHANNEL.length + 2,
         berth: [W.NAVE_BERTH.x, W.NAVE_BERTH.z], home: [...W.HOME_WAY, ...W.BRING_WAY].map((p) => [p.x, p.y]),
-        rings: tuning.drowned.church.rings, blinkAt: tuning.drowned.church.blinkAt };
+        rings: tuning.drowned.church.rings, blinkAt: tuning.drowned.church.blinkAt, lookUpFor: tuning.drowned.church.lookUpFor };
     });
     const d = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
     const xz = (p) => [p[0], p[2]];
@@ -293,7 +293,7 @@ try {
         if (p.landed) { mark('landed', p, s); break; }
         const since = p.time - aboard.time;
         if (since >= 2.6 && !cat) { cat = s.cat; await shot('church-look-back'); }
-        if (since >= 8 && since < 8.3) assert(s.riding && s.beat === 'gather', `she is not riding the boat into the storm: ${JSON.stringify(s)}`);
+        if (since >= T.lookUpFor + 2.5 && since < T.lookUpFor + 2.8) assert(s.riding && s.beat === 'gather', `she is not riding the boat into the storm: ${JSON.stringify(s)}`);
         if (p.beat !== was.beat) mark(p.beat, p, s);
         if (p.beat === 'snatch' && was.beat !== 'snatch') { await seconds(1); await shot('storm-plane'); }
         if (p.power < 0.6 && was.power >= 0.6) await shot('storm-light');
@@ -329,12 +329,17 @@ try {
       for (const b of beats) console.log(`  ${b.at.toFixed(1).padStart(5)} s  ${b.what}, ${b.toBeach.toFixed(0)} m from the beach`);
       if (out) console.log(`  the light went out ${d(xz(out.boat), T.light).toFixed(0)} m from the lighthouse, its lamp ${out.inFrame ? 'in' : 'out of'} frame at ${out.lamp.slice(0, 2).map((v) => v.toFixed(2)).join(', ')}`);
       if (atNave !== null) console.log(`  landed ${landed.at.toFixed(1)} s after she was aboard, ${(aboard.time - atNave + landed.at).toFixed(1)} s after the tower's foot`);
-      const back = trace.filter((r) => r.second >= 2 && r.second <= 5 && !r.flash);
+      const back = trace.filter((r) => r.second >= trace[0].second && r.second <= T.lookUpFor && !r.flash);
       const lookBack = back.reduce((a, r) => a + r.mean, 0) / Math.max(1, back.length);
-      const lit = trace.filter((r) => r.second > 5 && !r.flash);
+      const lit = trace.filter((r) => r.second > T.lookUpFor && !r.flash);
       const brightest = lit.reduce((a, r) => (r.mean > a.mean ? r : a), { mean: -1, second: -1 });
       console.log(`  mean brightness each second from aboard: ${trace.map((r) => `${r.second}:${r.mean.toFixed(0)}${r.flash ? '*' : r.ashore ? '+' : ''}`).join(' ')}`);
-      const cut = trace.slice(1).reduce((worst, r, i) => (r.flash || trace[i].flash ? worst : Math.max(worst, Math.abs(r.mean - trace[i].mean))), 0);
+      /**
+       * Once the lens has come down from the cat on the sill, 3 s into the storm: that move brings the frame from the
+       * lit stone down to the dark water, continuously; a cut anywhere after it still shows.
+       */
+      const cut = trace.slice(1).reduce((worst, r, i) => (r.flash || trace[i].flash || r.second <= T.lookUpFor + 3 ? worst
+        : Math.max(worst, Math.abs(r.mean - trace[i].mean))), 0);
       console.log(`  the look back ${lookBack.toFixed(1)}; brightest after it ${brightest.mean.toFixed(1)} at ${brightest.second} s; the most it changed in a second ${cut.toFixed(1)} (* a lightning flash, + ashore in the wood)`);
       assert(out, 'the light never went out');
       assert(!unseen, `the light was going out with the lighthouse out of frame at ${unseen?.since.toFixed(1)} s (${unseen?.lamp.map((v) => v.toFixed(2)).join(', ')})`);
