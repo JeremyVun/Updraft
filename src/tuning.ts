@@ -2112,7 +2112,7 @@ export const tuning = {
        * Out beside the tower while the bell is hers to ring: her in her light, the bell in the other, the fog sea
        * where the lantern answers off the tower's north side.
        */
-      ring: [-9.8, 2.9, 3.8, -2.4, 0.6, -1.6], uprightRing: [-12.5, 5.2, 4.5, -1.8, -2.6, -4.5],
+      ring: [-9.8, 2.9, 3.8, -2.4, 0.6, -1.6], uprightRing: [-13, 4.6, 5, -2.2, -0.9, -2.2],
       /** Low off the north water to the west as the boat comes in under the tower and she climbs down to it. */
       bring: [-23, -4, -12, -2, -4.6, -9], uprightBring: [-25, -2.5, -14, -2.5, -4.4, -7.5],
       /** From beside the boat, low, up at the cat on the sill. */

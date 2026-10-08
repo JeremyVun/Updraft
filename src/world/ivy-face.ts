@@ -28,7 +28,8 @@ export interface IvyHold {
 
 const lin = (r: number, g: number, b: number) => new THREE.Color().setRGB(r, g, b);
 const STEM = lin(0.15, 0.115, 0.08);
-const LEAVES = [lin(0.13, 0.18, 0.05), lin(0.18, 0.23, 0.06), lin(0.1, 0.145, 0.045), lin(0.23, 0.25, 0.075)];
+/** Old ivy: a deep green with a cool cast, darker where the leaves are oldest. */
+const LEAVES = [lin(0.062, 0.122, 0.045), lin(0.08, 0.15, 0.056), lin(0.05, 0.1, 0.043), lin(0.096, 0.162, 0.062)];
 const WOOD = 0;
 const LEAF_KIND = 1;
 /** Her way's two old stems, either side of it, and how thick they are (as her wrist) and how far off the stone. */
@@ -96,11 +97,15 @@ void main() {
   float sun = cloudShadow(vWorld.xz);
   float ndl = dot(n, uSunDir);
   float wrap = clamp(ndl * 0.5 + 0.5, 0.0, 1.0);
-  vec3 col = alb * (hemiLight(n) * 0.95 + uSunColor * wrap * wrap * 0.9 * sun);
+  /** Its thick waxy leaves take the low sun's gold only a little: the sun on them is paled toward its own brightness. */
+  vec3 sunOn = leaf ? mix(uSunColor, vec3(dot(uSunColor, vec3(0.2126, 0.7152, 0.0722))), 0.5) * 0.75 : uSunColor;
+  vec3 col = alb * (hemiLight(n) * 1.05 + sunOn * wrap * wrap * 0.9 * sun);
   if (leaf) {
     float back = pow(max(dot(-V, uSunDir), 0.0), 2.0);
-    col += alb * uSunColor * sun * back * 0.7 * (1.0 - max(ndl, 0.0));
-    col += uSunColor * pow(max(dot(n, normalize(uSunDir + V)), 0.0), 28.0) * 0.07 * sun;
+    col += alb * sunOn * sun * back * 0.3 * (1.0 - max(ndl, 0.0));
+    col += sunOn * pow(max(dot(n, normalize(uSunDir + V)), 0.0), 28.0) * 0.06 * sun;
+    /** Glossy, they show the cool sky along their edges. */
+    col += uSkyAmbient * 0.1 * pow(1.0 - clamp(abs(dot(n, V)), 0.0, 1.0), 3.0);
   } else {
     col += uSunColor * pow(1.0 - clamp(dot(n, V), 0.0, 1.0), 3.0) * pow(max(dot(-V, uSunDir), 0.0), 2.0) * 0.12 * sun;
   }

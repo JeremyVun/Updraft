@@ -441,6 +441,9 @@ export class Traveller {
     return this.rig.body.getWorldQuaternion(out).multiply(this.paperLocal);
   }
 
+  /** How far into a room open only at its windows she is (x, 0 out in the open), and how much low sun reaches her there (y). */
+  readonly room = new THREE.Vector2(0, 1);
+
   /** Decks the child may walk on; anywhere else the ground is the terrain. */
   decks: Deck[] = [];
 
@@ -743,6 +746,7 @@ export class Traveller {
     const mattress = this.bedAt.y - tuning.sleeping.lieHigh + 0.68;
     this.scarf.update(dt, neck, this.rig.body.matrixWorld, this.keepOffChild, w, THREE.MathUtils.lerp(floor, mattress, onBed), p, this.yaw, onBed);
     this.rig.material.uniforms.uGroundPos.value.copy(p);
+    this.rig.material.uniforms.uInRoom.value.copy(this.room);
     this.motion.hoodForward(this.rig.material.uniforms.uHoodForward.value);
 
     this.shadow.position.set(p.x, p.y + 0.06, p.z);

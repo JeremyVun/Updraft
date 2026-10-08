@@ -303,6 +303,7 @@ export class ChurchArrival {
         break;
     }
     if (this.step === 'down' || this.step === 'wait' || this.step === 'board' || this.step === 'aboard') this.catToSill();
+    this.inRoom();
     this.boatHome(dt);
     this.fog(dt);
   }
@@ -500,6 +501,18 @@ export class ChurchArrival {
       this.blinked = true;
       cat.slowBlink();
     }
+  }
+
+  /**
+   * In the opening and over the sill she is in the belfry's light as the nest is: the sky only through the openings,
+   * the low sun only as it comes in at the light she stands in.
+   */
+  private inRoom(): void {
+    const c = this.cast.child;
+    const into = c.position.x - (TOWER.x - TOWER.half);
+    const up = THREE.MathUtils.smoothstep(c.position.y, BELFRY.sill - 0.6, BELFRY.sill - 0.1);
+    const sun = atmo.uniforms.uSunDir.value;
+    c.room.set(up * THREE.MathUtils.smoothstep(into, -0.1, BELFRY.wall), THREE.MathUtils.clamp(-sun.x * 1.2, 0, 1) * 0.7);
   }
 
   /** The cat up from its kittens to the sill as she goes down, a kitten after it, to watch her go. */

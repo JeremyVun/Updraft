@@ -515,12 +515,12 @@ export const NAVE_BERTH = { x: BERTH_X - 0.25, z: NAVE.z - acrossAt(NAVE, 0) - 0
 export const NAVE_NORTH: Deck = strip(new THREE.Vector3(BERTH_X, ridgeTop(NAVE), NAVE.z),
   new THREE.Vector3(BERTH_X, 0.4, NAVE.z - acrossAt(NAVE, 0.4)), 0.7);
 /**
- * The lost boat's drift home to the bell, out of the fog over the open water north of the church, where its lantern
- * answers each ring a stretch nearer; then in under the tower's north side and round alongside the nave to the
- * berth, the stretch the player sails it.
+ * The lost boat's drift home to the bell, out of the fog over the open water north-east of the church, where its
+ * lantern answers each ring a stretch nearer, just past the tower's north-west corner as the bell is seen; then in
+ * round the tower's north side and alongside the nave to the berth, the stretch the player sails it.
  */
-export const HOME_WAY = [new THREE.Vector2(TOWER.x + 13, TOWER.z - 50), new THREE.Vector2(TOWER.x + 10, TOWER.z - 39),
-  new THREE.Vector2(TOWER.x + 6, TOWER.z - 29), new THREE.Vector2(TOWER.x + 2.5, TOWER.z - 20)];
+export const HOME_WAY = [new THREE.Vector2(TOWER.x + 30, TOWER.z - 40), new THREE.Vector2(TOWER.x + 22, TOWER.z - 31),
+  new THREE.Vector2(TOWER.x + 15, TOWER.z - 24), new THREE.Vector2(TOWER.x + 8, TOWER.z - 18)];
 export const BRING_WAY = [new THREE.Vector2(TOWER.x - 0.5, TOWER.z - 11), new THREE.Vector2(NAVE_BERTH.x, NAVE_BERTH.z)];
 /**
  * Out from the nave in the storm: round into the open water north of the church, then on past the lighthouse's side
