@@ -822,10 +822,11 @@ Done: [x] (branch `proto-drowned-fogbody`). As built:
   her meanwhile, so the hull goes, then the sail, the lantern's glow last; its lens eases in and out over `backIn`,
   `backOut`, `backGone`. Measured (`drowned-run-check` from the drift, landscape): the rescue done to the air dying
   19.6 s and to the scrape 23.9 s; the scrape to the cat's leap 9.1 s; the air dying to her up on the ridge 25.9 s.
-- **Checks**: typecheck; `drowned-run-check FROM=church` passes (the storm's beats and brightness as 4b's);
-  `drowned-run-check` from the drift `TO=nave` holds every fog check but one, which fails on the base too: the barn
-  she leaves for the sheet goes under 19 s after she leaves it (base 18 s; the check allows 14), because the sheet
-  takes about 15 s and the fog holds back while she crosses. `drowned-fog-check` runs clean.
+- **Checks**: typecheck; `drowned-run-check` from the drift `TO=nave` passes (the fog's front never nearer than 4.5 m,
+  out of a walk's frame at most 0.4 s, each roof she leaves under in 7-13 s, the lens's fastest turn 60 deg/s just after
+  the look back); `FROM=church` passes (the storm's beats and brightness as 4b's); `drowned-fog-check` runs clean. The
+  barn she leaves for the sheet goes under only once the fog has come on past it, so when the sheet takes about 15 s
+  (some runs' strokes) it is 18-19 s and the check's 14 s fails, on the base as well.
 - **Weak**: the drift is about 20 s, not 15 (it is 175 m from the cat's roof to the strand; 15 s needs about 12 m/s,
   or the cat's roof nearer the strand). Seen side on from the stranding view its face is a smooth pale wall whose foot
   runs fairly straight. From a lens at its level its top still reads level; the heaps show from above (the granary,
