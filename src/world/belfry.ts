@@ -26,6 +26,8 @@ export const FACES = Object.keys(TURN) as Face[];
 const INNER = BELFRY.half - BELFRY.wall;
 const FLOOR = BELFRY.sill - BELFRY.step;
 const CEILING = FLOOR + BELFRY.height;
+/** Where the belfry storey stands on the tower below it. */
+export const BELFRY_FOOT = FLOOR - 0.4;
 
 /** Out of a face, level. */
 export function faceOut(face: Face, out = new THREE.Vector3()): THREE.Vector3 {
@@ -329,7 +331,7 @@ export class Belfry {
 
   private build(add: Add): void {
     const { half, wall, sill, light } = BELFRY;
-    const y0 = FLOOR - 0.4;
+    const y0 = BELFRY_FOOT;
     for (const face of FACES) {
       const turn = new THREE.Matrix4().makeRotationY(TURN[face]);
       const reach = face === 'south' || face === 'north' ? half : INNER;

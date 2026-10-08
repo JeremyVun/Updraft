@@ -1878,34 +1878,63 @@ export const tuning = {
      * (radians, bow down and heel), at most once every `strainEvery` seconds.
      */
     stuck: { touch: 0.25, lurch: 0.09, lurchRoll: 0.05, trim: 0.035, strainFrom: 0.6, strain: 0.035, strainRoll: 0.04, strainEvery: 1.4 },
-    /** The church: the cat up the ivy, the fog closing round, the boat brought to the nave, and her look back as they go. */
+    /**
+     * The church: the cat up the ivy and she after it, the kittens, the fog sea, the bell calling the boat home, her
+     * climb down to it and the look back up at the cat.
+     */
     church: {
-      /** Seconds she stands at the tower's foot before the cat goes up, and the cat sits on the sill before the fog comes. */
-      naveFor: 1, climbAfter: 1.2, upFor: 2.5,
+      /** Seconds she stands at the tower's foot before the beat begins, and before the cat goes up past her. */
+      naveFor: 1, catAfter: 0.4,
+      /** She follows once the cat is this far up the ivy (metres), or after this many seconds; the cat climbs at m/s. */
+      followAt: 2.4, followAfter: 6, catClimb: 1.9,
       /**
-       * Seconds into the fog's coming: its front on over the church and `past` metres beyond her; its closing round;
-       * the cat backing into the belfry; the first wind swinging the boat off its tree; her looking round at the fog,
-       * then up at the cat, then out to the boat; and the boat being hers to bring.
+       * Seconds kneeling over the kittens, then standing in the opening looking out over the fog sea; how far round
+       * from straight out of it she turns to the north-west (radians).
        */
-      fog: { comeAfter: 4, comeFor: 9, past: -4, closeFrom: 6, closeFor: 8, catIn: 5, swingAt: 9, lookAtFog: 3, lookAtCat: 9, bringAfter: 16 },
-      /** How far the first wind takes the boat back off its tree, metres, and the most it goes while she brings it, m/s. */
-      swingBack: 1.4, bringSpeed: 2.6,
+      nestFor: 6.4, seaFor: 6, lookRound: 0.75,
+      /** Seconds after she kneels that a kitten lifts its head to her and that it comes over to her, and how long it nuzzles her mitten. */
+      kittenLooks: 0.9, kittenComes: 1.8,
       /**
-       * Its way round the tower: how near a turn counts as rounded; how far off the berth she goes down the slates to
-       * meet it, and how near the berth it has to lie; seconds with no progress before the world's air carries it,
-       * and how much breeze that is.
+       * How far south of the middle of her light the kitten comes to her, so it is seen past the shaft between the
+       * lights, and how far she leans down to it (radians).
        */
-      rounded: 3.5, meetFrom: 9, berthed: 0.6, valve: 90, carryBreeze: 0.45,
+      kittenAside: 0.62, leanTo: 0.14,
+      fog: {
+        /**
+         * How far back along the nave it waits while she is low on the ivy, and how far past the tower it stops
+         * (metres); how fast it closes on where it is wanted (per second) and its fastest, m/s.
+         */
+        behind: 16, past: 55, pull: 0.6, fastest: 4,
+        /**
+         * Its top: just under the sills once it has stopped, and drawn back to the water by the last ring (metres);
+         * seconds each ring takes to push it down; the rings roll out at this share of its top.
+         */
+        sea: 6.8, drawn: 1.0, sinkFor: 3.2, wavesAt: 0.92,
+        /** Seconds after she is aboard it starts to close round and darken, how long that takes, and how high it rises again. */
+        closeAfter: 1.5, closeFor: 20, closedLevel: 6,
+      },
       /**
-       * Seconds after she is seated that she looks back at the cat, for how long, and when in that it mews; and how she
-       * turns round on the thwart to it: beyond what her head turns (radians), the most her body turns and how fast, and
-       * how far behind the cat has to be before she turns the side away from the lens.
+       * Rings the lantern answers before the boat is hers to sail, how far along its way home each answer brings it,
+       * seconds after a ring the answer comes, how long the drift takes to settle (s), and how long after the last
+       * answer she goes down to meet it.
        */
-      lookBackAt: 1.2, lookBackFor: 4.5, mewAfter: 1, headTurns: 0.9, seatTurn: 1.7, turnRate: 1.6, turnPast: 2.2,
+      rings: 4, answers: [0.1, 0.42, 0.72, 1], answerAfter: 0.7, homeGlide: 1.6, answerFor: 3.8,
+      /** Its light in the fog: steady, the swell of an answer and how fast that fades (s), and how big, metres at 30 m off. */
+      glow: 0.55, glowSwell: 1.1, answerGlow: 1.6, glowSize: 3.2,
+      /** Seconds after she starts down that the cat gets up from its kittens and comes to the sill. */
+      catUpAfter: 2.5,
+      /** The most the boat goes under sail, m/s; how near a turn of its way counts as rounded; how near the berth it lies. */
+      bringSpeed: 2.6, rounded: 3.5, berthed: 0.6,
+      /** Seconds with no progress before the world's air carries it, and how much breeze that is. */
+      valve: 90, carryBreeze: 0.45,
+      /**
+       * Seated: seconds before she looks back up at the cat, when it gives her its slow blink and how long after that
+       * its soft chirrup, and how long before they go; how she turns round on the thwart to it: beyond what her head turns (radians), the most her body
+       * turns and how fast, and how far behind the cat has to be before she turns the side away from the lens.
+       */
+      lookUpAt: 0.6, blinkAt: 2.4, chirrupAfter: 2.2, lookUpFor: 5.5, headTurns: 0.9, seatTurn: 1.7, turnRate: 1.6, turnPast: 2.2,
       /** The rain the fog brings as it closes round, and how far gathered the storm's weather is when it starts from here. */
       closeShower: 0.25, stormFrom: 0.35,
-      /** How far the fog has closed round when the lost boat is found waiting at the dead tree, for the bring. */
-      fetchAt: 0.35,
     },
     /** Her run over the roofs after the cat, from the first roof's ridge to the nave's. */
     run: {
@@ -2101,34 +2130,37 @@ export const tuning = {
        */
       handFor: 5, handFar: 22, handOut: 2, handUp: 0.8, uprightHandHold: 0.7,
     },
-    /** The church (`ChurchArrival.frame`). */
+    /**
+     * The church (`ChurchArrival.frame`): each view as [eye x, y, z, target x, y, z, lens], x and z from the tower's
+     * middle, heights over the belfry's sill (over her, while she climbs); then upright's own.
+     */
     church: {
-      /** How fast it eases to each view (per second) and its pace; upright, how much further off it stands. */
-      ease: 0.6, pace: 0.6, uprightFar: 1.3,
-      /** How fast it follows her once the boat is under way (per second). */
-      follow: 4,
+      /** From the north of the west face as the cat runs up past her and she climbs after it, rising with her (heights over her). */
+      climb: [-8.6, 1.2, -10.2, -3.6, 1.55, -1.0], uprightClimb: [-7.8, 1.2, -8.6, -3.2, 2.3, -0.7],
+      /** Close outside the west face, looking past her in her light and in through the other at the kittens she has found. */
+      nest: [-4.9, 2.1, 2.6, -1.95, 0.45, 0], uprightNest: [-5.2, 2.4, 3, -1.95, 0.35, -0.1],
+      /** Out over the fog sea west of the tower while she stands looking at it. */
+      sea: [-16, 5, 6, -2, -0.5, -3], uprightSea: [-18, 7, 7, -2.2, -1.8, -3],
       /**
-       * While the cat climbs, low off the green by the tower's south-west corner: where it stands from the tower's
-       * middle, and how high once the cat is up; where it looks, from her head toward the cat and how far above that;
-       * and its lens.
+       * Out beside the tower while the bell is hers to ring: her in her light, the bell in the other, the fog sea
+       * where the lantern answers off the tower's north side.
        */
-      climbFrom: { x: -8.4, y: 3.6, z: 8.5 }, climbUp: 4.4, climbAlong: 0.42, climbLift: 0.3, climbZoom: 1,
-      /** Round the nave's west end as the fog comes: seconds into the fog it starts and takes, and how much wider it goes. */
-      roundFrom: 1, roundFor: 8.5, roundWide: 11,
+      ring: [-9.8, 2.9, 3.8, -2.4, 0.6, -1.6], uprightRing: [-13, 4.6, 5, -2.2, -0.9, -2.2],
+      /** Low off the north water to the west as the boat comes in under the tower and she climbs down to it. */
+      bring: [-23, -4, -12, -2, -4.6, -9], uprightBring: [-25, -2.5, -14, -2.5, -4.4, -7.5],
+      /** From beside the boat, low, up at the cat on the sill. */
+      up: [-17, -4.2, -15, -4.2, -3, -2.2, 1.3], uprightUp: [-18, -4, -16, -4.4, -3.2, -2.4, 1.15],
+      /** How long it takes to settle on a new view (s), its pace, and upright how much wider the lens. */
+      glide: 1.8, pace: 0.7, uprightZoom: 0.85,
+      /** When the lantern answers the lens looks this share of the way toward it, for about this many seconds. */
+      find: 0.1, findFor: 3,
       /**
-       * Over the water off the nave's west end: where it stands from the tower's middle with the boat still at its tree
-       * and with it come in (upright, further out, clear of the nave's eave); how far from her toward the boat it looks
-       * while it is far off, at what height, and its lens (upright wider rather than further off, so she still reads).
+       * Seconds after the look up that the lens looks across to between her and the lighthouse's lamp as its light
+       * falters, and is there; how much of the way it goes, how much it favours her over the lamp and how wide the
+       * lens goes to hold them both (upright, wider); and when it gives way to the storm's frame, and how long that takes.
        */
-      waterFar: { x: -29, y: 2.8, z: -15 }, waterNear: { x: -18, y: 2.4, z: -7.5 },
-      uprightWaterNear: { x: -23, y: 2.4, z: -11 }, waterToward: 0.45, waterAim: 3, waterZoom: 0.9, uprightWaterZoom: 0.8,
-      /**
-       * Going: seconds after she is seated it starts to give way to the storm's frame, and how long it takes; meanwhile
-       * how far from her toward the cat it looks while she looks back, and seconds after she is seated it starts across
-       * to the light and is there; how far across from the boat to the lighthouse's lamp it then looks and how far up
-       * from the one to the other, and its lens (upright, the same).
-       */
-      leaveFrom: 7, leaveFor: 9, backCat: 0.42, backLightFrom: 1.5, backLightTo: 5, backAcross: 0.5, backUp: 0.62, backZoom: 0.78, backUprightZoom: 0.7,
+      lampFrom: 0.5, lampTo: 4, lampAim: 1, lampHer: 0.55, uprightLampHer: 0.5, lampZoom: 0.75, uprightLampZoom: 0.62,
+      leaveFrom: 6.6, leaveFor: 12,
     },
     /** Follow the boat into the streets; notice the church from that travelling view. */
     roofFromZ: -1260, roofUntilZ: -1360,
@@ -2352,7 +2384,7 @@ export const tuning = {
        * onto it; she goes up by a hold every `beat` seconds. Going down every move takes `down` times as long, and a
        * foot feels about for `feel` seconds before it settles.
        */
-      hand: 0.3, foot: 0.33, push: 0.36, lead: 0.1, beat: 0.4, down: 1.35, feel: 0.3,
+      hand: 0.3, foot: 0.33, push: 0.36, lead: 0.1, beat: 0.4, down: 0.72, feel: 0.16,
       /** How far a hand or a foot comes away from the wall as it moves (m), and how far out from it her body hangs. */
       arc: 0.13, standOff: 0.62,
       /** Over the top (s): the hands onto the sill, up on her arms until her chest is over it, the knee up, onto her feet in the opening. */

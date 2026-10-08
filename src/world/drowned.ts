@@ -17,17 +17,20 @@ import { Windmill } from './crossings/windmill';
 import { MillSpiral } from './crossings/mill-spiral';
 import { WashSheet } from './crossings/wash-sheet';
 import { DarkBank } from './drowned-dark';
+import { BELFRY_FOOT, Belfry, BELFRY, faceOut } from './belfry';
+import { BellWaves } from './crossings/bell';
+import { IvyFace } from './ivy-face';
+import { Kittens } from '../creatures/cat/kittens';
 import { WOOD_LANDING } from './wood';
 import { TALL_AND_TINY, WASHING_PAIR, bandAt, villageShape, type Site } from './drowned-shape';
-import { ivyParts } from './drowned-ivy';
 import { WashTub } from './wash-tub';
 import {
   CLOTH, COURSED, HOLLOW, LIME, MASONRY, OPENING, PLAIN, ROCK, ROPE, SLATE, SLATED, THATCH, THATCHED, TIMBER, VANE,
   buildHouse, fitLot, type HouseType, type Lot, type Stack,
 } from './drowned-houses';
 import {
-  BOAT_TREE, CAT_HOUSE, DARK_WAY, DRAWN_ROUND, GARDEN_WALLS, GREEN_TREE, LEAN_TOS, MILL, NAVE, PLACED, TOWER,
-  HER_WAY, MILL_SITE, SHEET_SITE, STRAND, STRAND_FROM, SWING_SITE, TREE_SITE, inClearing, inDrawnClearing, onCatGround, type GardenWall, type LeanTo, type PlacedHouse,
+  BOAT_TREE, CAT_HOUSE, DARK_WAY, DRAWN_ROUND, GARDEN_WALLS, GREEN_TREE, IVY_FOOT, IVY_SILL, LEAN_TOS, MILL, NAVE, PLACED, TOWER,
+  HER_WAY, eaveAt, roofUnder, MILL_SITE, SHEET_SITE, STRAND, STRAND_FROM, SWING_SITE, TREE_SITE, inClearing, inDrawnClearing, onCatGround, type GardenWall, type LeanTo, type PlacedHouse,
 } from './drowned-way';
 
 /**
@@ -421,11 +424,6 @@ interface HouseSpec {
   mid?: boolean;
 }
 
-/** A dark box sunk into a wall: from the water it reads as an opening with nothing behind it. */
-function opening(w: number, tall: number, deep: number): THREE.BufferGeometry {
-  return new THREE.BoxGeometry(w, tall, deep);
-}
-
 function channelPoint(s: number, out: THREE.Vector2, tangent?: THREE.Vector2): THREE.Vector2 {
   let travelled = 0;
   for (let i = 0; i < DROWNED_CHANNEL.length - 1; i++) {
@@ -599,29 +597,6 @@ const CHURCH_DRESSING = lin(0.34, 0.31, 0.26);
 const CHURCH_QUOIN = lin(0.5, 0.46, 0.385);
 const CLOCK_FACE = lin(0.6, 0.56, 0.46);
 
-/** A pointed arch `w` wide whose sides rise to `spring` and whose point is `point` over that, round (x, y). */
-function archShape(w: number, spring: number, point: number, path: THREE.Shape | THREE.Path = new THREE.Shape()): THREE.Shape | THREE.Path {
-  const h = w / 2;
-  path.moveTo(-h, 0);
-  path.lineTo(h, 0);
-  path.lineTo(h, spring);
-  path.quadraticCurveTo(h, spring + point * 0.7, 0, spring + point);
-  path.quadraticCurveTo(-h, spring + point * 0.7, -h, spring);
-  path.lineTo(-h, 0);
-  return path;
-}
-
-/** One belfry opening on a face (frame `f` facing its +z at the face): its arched head and its proud dressed surround. */
-function belfryOpening(into: Merged, f: THREE.Matrix4): void {
-  const head = new THREE.ExtrudeGeometry(archShape(1.0, 0.1, 0.5) as THREE.Shape, { depth: 0.6, bevelEnabled: false, curveSegments: 5 });
-  into.add(head.translate(0, 10.65, -0.5), HOLLOW, OPENING, f);
-  const ring = archShape(1.36, 2.6, 0.62) as THREE.Shape;
-  ring.holes.push(archShape(1.0, 2.6, 0.5, new THREE.Path()) as THREE.Path);
-  const surround = new THREE.ExtrudeGeometry(ring, { depth: 0.14, bevelEnabled: false, curveSegments: 5 });
-  into.add(surround.translate(0, 8.15, 0), CHURCH_DRESSING, MASONRY, f);
-  into.add(new THREE.BoxGeometry(1.6, 0.12, 0.24).translate(0, 8.15 + 2.6 + 0.66, 0.04), CHURCH_DRESSING, MASONRY, f);
-}
-
 /** A clock with no numbers on a face of the tower, its hands stopped at `at` (hours). */
 function towerClock(into: Merged, f: THREE.Matrix4, at: number): void {
   const disc = (r: number, deep: number) => new THREE.CylinderGeometry(r, r, deep, 20).rotateX(Math.PI / 2);
@@ -686,49 +661,33 @@ function buildSpire(into: Merged, m: THREE.Matrix4): void {
 }
 
 /**
- * The church: a tall limewashed tower with dressed corners, arched belfry openings and a stopped clock, its slate
- * spire the highest thing there is, and the nave roof beside it drowned to its eaves with a wheel window in its gable.
- * The masses, the sills and the ivy are where the cat's climb and the decks need them.
+ * The church: a tall limewashed tower with dressed corners and a stopped clock up to the belfry (its own piece,
+ * `Belfry`, set on top), its slate spire the highest thing there is, and the nave roof beside it drowned to its
+ * eaves with a wheel window in its gable.
  */
 function buildChurch(into: Merged, rand: Rng): void {
   /** The village's later roofs and trees take the chances they were tuned with. */
   rand();
   const m = new THREE.Matrix4().makeTranslation(SPIRE.x, 0, SPIRE.z);
-  into.add(new THREE.BoxGeometry(4.8, 16.6, 4.8).translate(0, 3.6, 0), CHURCH_WASH, PLAIN, m);
-  into.add(new THREE.BoxGeometry(5.3, 0.34, 5.3).translate(0, 11.75, 0), CHURCH_DRESSING, MASONRY, m);
+  const base = -4.7, tall = BELFRY_FOOT - base;
+  into.add(new THREE.BoxGeometry(4.8, tall, 4.8).translate(0, base + tall / 2, 0), CHURCH_WASH, PLAIN, m);
   into.add(new THREE.BoxGeometry(5.2, 0.26, 5.2).translate(0, 5.4, 0), CHURCH_DRESSING, MASONRY, m);
   for (const sx of [-1, 1]) {
     for (const sz of [-1, 1]) {
-      into.add(new THREE.BoxGeometry(0.7, 16.6, 0.7).translate(sx * 2.25, 3.6, sz * 2.25), CHURCH_WASH, PLAIN, m);
-      /** Quoins up the corner, long and short in turn, a little proud and a little uneven. */
-      for (let i = 0, y = 0.2; y < 11.3; i++, y += 0.62) {
+      into.add(new THREE.BoxGeometry(0.7, tall, 0.7).translate(sx * 2.25, base + tall / 2, sz * 2.25), CHURCH_WASH, PLAIN, m);
+      /** Quoins up the corner, long and short in turn, a little proud and a little uneven, on into the belfry's. */
+      for (let i = 0, y = 0.2; y < BELFRY_FOOT - 0.45; i++, y += 0.62) {
         const long = i % 2 === 0;
         const wx = long ? 1.0 : 0.62, wz = long ? 0.62 : 1.0;
         into.add(new THREE.BoxGeometry(wx, 0.5, wz).translate(sx * (2.63 - wx / 2), y + 0.25, sz * (2.63 - wz / 2)), CHURCH_QUOIN, MASONRY, m);
       }
     }
   }
-  /** A corbel table under the cornice, chunky blocks along each face. */
+  /** A corbel table under the belfry's cornice, chunky blocks along each face. */
   for (let k = -3; k <= 3; k++) {
     for (const side of [-1, 1]) {
       into.add(new THREE.BoxGeometry(0.28, 0.3, 0.24).translate(k * 0.62, 11.43, side * 2.48), CHURCH_DRESSING, MASONRY, m);
       into.add(new THREE.BoxGeometry(0.24, 0.3, 0.28).translate(side * 2.48, 11.43, k * 0.62), CHURCH_DRESSING, MASONRY, m);
-    }
-  }
-  for (const side of [-1, 1]) {
-    into.add(opening(1.0, 2.5, 5.0).translate(side * 1.05, 9.5, 0), HOLLOW, OPENING, m);
-    into.add(opening(5.0, 2.5, 1.0).translate(0, 9.5, side * 1.05), HOLLOW, OPENING, m);
-    /** A sill under each opening of the belfry, wide enough for a cat to sit on and look down. */
-    for (const at of [-1.05, 1.05]) {
-      into.add(new THREE.BoxGeometry(1.3, 0.16, 0.5).translate(at, TOWER.sill - 0.08, side * (TOWER.half + 0.2)), CHURCH_DRESSING, MASONRY, m);
-      into.add(new THREE.BoxGeometry(0.5, 0.16, 1.3).translate(side * (TOWER.half + 0.2), TOWER.sill - 0.08, at), CHURCH_DRESSING, MASONRY, m);
-    }
-  }
-  for (let face = 0; face < 4; face++) {
-    const yaw = (face * Math.PI) / 2;
-    for (const at of [-1.05, 1.05]) {
-      belfryOpening(into, new THREE.Matrix4().copy(m).multiply(new THREE.Matrix4().makeRotationY(yaw))
-        .multiply(new THREE.Matrix4().makeTranslation(at, 0, TOWER.half)));
     }
   }
   /** North and east the clock stands at different hours. */
@@ -736,7 +695,6 @@ function buildChurch(into: Merged, rand: Rng): void {
     .multiply(new THREE.Matrix4().makeTranslation(0, 4.15, TOWER.half)), 4.6);
   towerClock(into, new THREE.Matrix4().copy(m).multiply(new THREE.Matrix4().makeRotationY(Math.PI / 2))
     .multiply(new THREE.Matrix4().makeTranslation(0, 4.15, TOWER.half)), 10.15);
-  for (const [geo, colour] of ivyParts()) into.add(geo, colour, PLAIN);
   buildSpire(into, m);
 
   const nave: HouseSpec = { ...NAVE, roll: 0, lime: CHURCH_WASH, roof: SLATE[0] };
@@ -1040,7 +998,7 @@ function plantTrees(houses: HouseSpec[], rand: Rng, twigs: Twig[], cameraObstacl
   return mergeGeometries(limbs);
 }
 
-/** The dead tree standing in the water east of the tower, its fork just out of it, that the drifting boat fetches up on. */
+/** The dead tree standing in the water east of the tower, its fork just out of it. */
 function boatTree(cameraObstacles: THREE.Box3[]): THREE.BufferGeometry[] {
   const parts = drownedTree(BOAT_TREE.x, BOAT_TREE.y, 7.5, mulberry32(1557), []);
   cameraObstacles.push(new THREE.Box3(new THREE.Vector3(BOAT_TREE.x - 1, -1, BOAT_TREE.y - 1), new THREE.Vector3(BOAT_TREE.x + 1, 3, BOAT_TREE.y + 1)));
@@ -1403,6 +1361,12 @@ export class DrownedVillage {
   readonly driven = new Set<ToppleTree | RopeSwing | Windmill>();
   /** The wash-tub adrift by the cat's roof. */
   readonly tub: WashTub;
+  /** The belfry on the church's tower, the ivy up its west face, the cat's kittens in its straw. */
+  readonly belfry = new Belfry(new THREE.Vector3(TOWER.x, 0, TOWER.z));
+  readonly ivy: IvyFace;
+  readonly kittens = new Kittens();
+  /** The rings the belfry's bell sends out over the fog. */
+  readonly bellWaves: BellWaves;
   private readonly storm = { value: 0 };
   /** Once the dark has risen the herons leave ahead of it and do not come back. */
   private fled = false;
@@ -1563,8 +1527,14 @@ export class DrownedVillage {
     this.sheet = new WashSheet(SHEET_SITE.spot);
     this.cameraObstacles.push(millBounds());
     this.tub = new WashTub(wind);
+    this.ivy = new IvyFace({ from: IVY_FOOT, to: IVY_SILL, out: faceOut('west'), spread: 1.45,
+      roof: (across) => roofUnder(NAVE, IVY_FOOT.x - 0.05, IVY_FOOT.z + across) ?? eaveAt(NAVE) });
+    this.bellWaves = new BellWaves(this.belfry.centre, tuning.drowned.fog.level, BELFRY.half + 0.5);
+    this.kittens.lay(this.belfry.nest());
+    this.kittens.nestle();
+    this.kittens.visible = true;
     this.objects.push(...this.tree.objects, ...this.swing.objects, ...this.mill.objects, ...this.millSpiral.objects, ...this.sheet.objects,
-      ...this.dark.objects, ...this.tub.objects);
+      ...this.dark.objects, ...this.tub.objects, ...this.belfry.objects, ...this.ivy.objects, this.bellWaves.mesh, ...this.kittens.objects);
   }
 
   /**
@@ -1664,6 +1634,8 @@ export class DrownedVillage {
     if (!this.driven.has(this.tree)) this.tree.update(dt);
     if (!this.driven.has(this.swing)) this.swing.update(dt, this.wind);
     if (!this.driven.has(this.mill)) this.mill.update(dt);
+    this.kittens.update(dt);
+    this.bellWaves.update(dt);
     if (this.idle > 0) {
       const steps = Math.ceil(this.idle / CATCH_UP_STEP);
       const step = this.idle / steps;

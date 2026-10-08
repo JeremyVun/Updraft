@@ -7,13 +7,16 @@
 // time, each walk's seconds on foot, how long she waits on the cat at each piece, the fog's nearest approach and how
 // soon each roof she goes on from goes under, and fails if she leaves the decks, stalls, the fog reaches her or (in a
 // landscape frame) drops out of a walk's frame, a roof she left is not taken, or the boat leaves where it ran aground. Then (unless TO=nave) the
-// church: the cat climbs the ivy into the belfry, the fog closes round, strokes across the boat's sail bring it to the
-// nave, she steps down into it and looks back at the cat as the storm begins; it plays on to the forest beach and
-// reports when the storm's beats fall and where the boat is then, failing if anything stalls or she leaves the decks.
+// church: the cat runs up the ivy into the belfry and she climbs after it to the kittens, the fog stops under the sills,
+// strokes across the bell ring it four times while the lost boat's lantern answers nearer each time, strokes across its
+// sail bring it the last stretch to the nave, she climbs down and steps aboard, looks up at the cat on the sill and it
+// blinks; the storm plays on to the forest beach. Reports when each beat falls, the boat's distance home after each
+// ring, and when the storm's beats fall, failing if anything stalls, she leaves the decks, the lantern is out of frame
+// when it answers or comes no nearer, or the cat is not on the sill at the slow blink.
 // Usage: node tools/drowned-run-check.mjs
 //   env: BASE (default http://127.0.0.1:5230/), FROM=stairs starts on the stairs and docks their flights first, FROM=roofs starts on the ridge after the cat (skips the tub and the
-//        becalming), FROM=church at the tower's foot (skips the run too), FROM=storm with her just seated aboard at the
-//        nave (skips the church too), SHOTS=<prefix> saves stills (at each piece,
+//        becalming), FROM=church at the tower's foot (skips the run too), FROM=belfry in the belfry with the bell to
+//        ring, FROM=storm with her just seated aboard at the nave (skips the church too), SHOTS=<prefix> saves stills (at each piece,
 //        two between, and through the church), FILM=<seconds> with SHOTS also
 //        saves a still every that many seconds from the air dying (from the ridge with FROM=roofs, the tower's foot
 //        with FROM=church) to the storm, and with FROM=stairs through the descent in the white and 30 s on,
@@ -29,7 +32,8 @@ const width = Number(process.env.W ?? 1600), height = Number(process.env.H ?? 90
 const shots = process.env.SHOTS ?? null;
 const fromStairs = process.env.FROM === 'stairs';
 const fromStorm = process.env.FROM === 'storm';
-const fromChurch = process.env.FROM === 'church' || fromStorm;
+const fromBelfry = process.env.FROM === 'belfry';
+const fromChurch = process.env.FROM === 'church' || fromBelfry || fromStorm;
 const fromRoofs = process.env.FROM === 'roofs' || fromChurch;
 const toNave = process.env.TO === 'nave';
 
@@ -41,8 +45,10 @@ const context = await browser.newContext({ viewport: { width, height }, deviceSc
   ...(video ? { recordVideo: { dir: video, size: { width, height } } } : {}) });
 try {
   const page = await context.newPage();
+  /** When the recording began, so what is heard can be laid under it. */
+  const recordedFrom = Date.now();
   page.on('pageerror', (e) => errors.push(e.message));
-  await page.goto(`${base}?shot=1&chapter=${fromStorm ? 'storm' : fromChurch ? 'church' : fromRoofs ? 'roofs' : fromStairs ? 'stairs' : 'drowned'}&ratio=1`, { waitUntil: 'load' });
+  await page.goto(`${base}?shot=1&chapter=${fromStorm ? 'storm' : fromBelfry ? 'belfry' : fromChurch ? 'church' : fromRoofs ? 'roofs' : fromStairs ? 'stairs' : 'drowned'}&ratio=1`, { waitUntil: 'load' });
   await page.waitForFunction(() => window.__ready === true, null, { timeout: 60000 });
 
   /** The lens's own motion every frame in the drowned village and on into the wood: its fastest turn and move, and where. */
@@ -136,7 +142,8 @@ try {
       if (!ch) return { landed: true, time: +__stats.time.toFixed(1), boat: f(b.position), storm: NaN };
       return { time: +__stats.time.toFixed(1), beat: st.beat, step: ch.step, close: +ch.close.toFixed(2), aboardFor: +ch.aboardFor.toFixed(1),
         carrying: ch.carrying, boat: f(b.position), child: f(c.position), cat: f(__game.cat.position), riding: c.riding,
-        storm: +st.stormTime.toFixed(1), grounded: b.grounded, out: st.out, leg: st.leg };
+        storm: +st.stormTime.toFixed(1), grounded: b.grounded, out: st.out, leg: st.leg, rings: ch.rings, answered: ch.answered,
+        bell: +ch.bell.angle.toFixed(3), level: +__game.village.dark.level.toFixed(2), kitten: f(__game.village.kittens.cats[0].position) };
     });
     const sharp = (await import('sharp')).default;
     /**
@@ -188,7 +195,7 @@ try {
       const W = await import('/src/world/drowned-way.ts');
       const { tuning } = await import('/src/tuning.ts');
       const k = tuning.drownedCamera.church;
-      window.__leaveBy = k.leaveFrom + k.leaveFor;
+      window.__leaveBy = tuning.drowned.church.lookUpFor + k.leaveFrom + k.leaveFor;
       const w = window.__churchWatch = { offWorst: 0, offAt: '', unseenRun: 0, unseenWorst: 0, unseenAt: '', hiddenRun: 0, hiddenWorst: 0, hiddenAt: '' };
       const roofs = [...W.PLACED, W.NAVE];
       /** A roof or the tower between the lens and her. */
@@ -196,13 +203,13 @@ try {
         || roofs.some((h) => y < (W.roofUnder(h, x, z) ?? -Infinity) - 0.05);
       const tick = () => {
         const ch = __game.story.current.church, c = __game.child, p = c.position;
-        if (ch && ch.step !== 'off' && ch.step !== 'board' && ch.aboardFor < 0 && !c.riding && !c.action) {
+        if (ch && ch.step !== 'off' && ch.step !== 'board' && ch.aboardFor < 0 && !c.riding && !c.action && !c.climbing) {
           const beyond = D.beyondDecks(c.decks, p.x, p.z, p.y), under = D.deckGround(c.decks, p.x, p.z, p.y);
           const off = Math.max(beyond === Infinity ? 99 : beyond, Math.abs(under - p.y));
           if (off > w.offWorst) { w.offWorst = off; w.offAt = `${ch.step} at ${p.toArray().map((v) => v.toFixed(2))}`; }
         }
         /** She stays in the frame and in sight from the tower's foot until the lens has given way to the storm's. */
-        if (ch && ch.step !== 'off' && ch.aboardFor < k.leaveFrom + k.leaveFor) {
+        if (ch && ch.step !== 'off' && ch.aboardFor < window.__leaveBy) {
           const cam = __game.rig.camera, e = cam.position, head = p.clone().setY(p.y + 1.1);
           const q = head.clone().project(cam);
           const out = Math.abs(q.x) > 0.95 || Math.abs(q.y) > 0.95 || q.z > 1;
@@ -228,7 +235,9 @@ try {
       const { WOOD_LANDING } = await import('/src/world/wood.ts');
       const last = DROWNED_CHANNEL[DROWNED_CHANNEL.length - 1];
       return { out: tuning.storm.lighthouseOutAt, way: W.STORM_WAY.map((p) => [p.x, p.y]), last: [last.x, last.y], beach: [WOOD_LANDING.x, WOOD_LANDING.y],
-        light: [LIGHTHOUSE.x, LIGHTHOUSE.z], north: W.BELFRY_NORTH.toArray(), legs: DROWNED_CHANNEL.length + 2 };
+        light: [LIGHTHOUSE.x, LIGHTHOUSE.z], sill: W.IVY_SILL.toArray(), legs: DROWNED_CHANNEL.length + 2,
+        berth: [W.NAVE_BERTH.x, W.NAVE_BERTH.z], home: [...W.HOME_WAY, ...W.BRING_WAY].map((p) => [p.x, p.y]),
+        rings: tuning.drowned.church.rings, blinkAt: tuning.drowned.church.blinkAt };
     });
     const d = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1]);
     const xz = (p) => [p[0], p[2]];
@@ -324,18 +333,83 @@ try {
       await storm(await wait((s) => s.aboardFor >= 0, 5, 'her aboard'), null);
       return;
     }
+    /** How far the boat still has to come home along its way to the berth, from where it is. */
+    const homeLeft = (p) => {
+      let best = Infinity, at = 0;
+      for (let i = 1; i < T.home.length; i++) {
+        const a = T.home[i - 1], b = T.home[i], ex = b[0] - a[0], ez = b[1] - a[1], l2 = ex * ex + ez * ez;
+        const u = Math.max(0, Math.min(1, ((p[0] - a[0]) * ex + (p[2] - a[1]) * ez) / l2));
+        const dd = Math.hypot(p[0] - a[0] - ex * u, p[2] - a[1] - ez * u);
+        if (dd < best) { best = dd; at = i; }
+      }
+      let left = d(xz(p), T.home[at]);
+      for (let i = at + 1; i < T.home.length; i++) left += d(T.home[i - 1], T.home[i]);
+      return left;
+    };
     const atNave = (await wait((s) => s.step !== 'off', 30, 'the church beginning')).time;
     filmFrom ??= atNave;
-    await wait((s) => s.cat[1] > 4, 30, 'the cat halfway up the ivy');
-    await shot('church-climbing');
-    const up = await wait((s) => s.step === 'up', 30, 'the cat in the belfry');
-    await seconds(1.5);
-    await shot('church-belfry');
-    const fog = await wait((s) => s.step === 'fog', 10, 'the fog coming');
-    await wait((s) => s.close > 0.12, 30, 'the fog closing round');
-    await shot('church-fog');
-    const bring = await wait((s) => s.step === 'bring', 30, 'the boat being hers to bring');
-    for (let i = 0; i < 14; i++) {
+    const beats = {};
+    if (!fromBelfry) {
+      await wait((s) => s.cat[1] > 4, 30, 'the cat halfway up the ivy');
+      await shot('church-cat-ivy');
+      beats.climbFrom = (await wait((s) => s.step === 'climb', 30, 'her following the cat up the ivy')).time;
+      await wait((s) => s.step === 'climb' && s.child[1] > 5.6, 30, 'her halfway up the ivy');
+      await shot('refuge-climb');
+      beats.nest = (await wait((s) => s.step === 'nest', 30, 'her in the opening over the kittens')).time;
+      await seconds(3.4);
+      await shot('refuge-kittens');
+      beats.sea = (await wait((s) => s.step === 'sea', 20, 'her looking out over the fog sea')).time;
+      await seconds(3);
+      await shot('refuge-fog-sea');
+    }
+    beats.ring = (await wait((s) => s.step === 'ring', 30, 'the bell hers to ring')).time;
+    await page.evaluate(() => {
+      const b = __game.story.current.church.bell, was = b.onRing;
+      window.__heard = [];
+      b.onRing = (strength) => { __heard.push({ at: performance.timeOrigin + performance.now(), peak: b.peak }); was?.(strength); };
+    });
+    await seconds(1);
+    await shot('bell');
+    /** Strokes across the bell, each once it has come back near rest, until the lantern has answered four rings. */
+    const rang = [];
+    let bellStrokes = 0;
+    for (; bellStrokes < 40; bellStrokes++) {
+      const s = await look();
+      if (s.step !== 'ring' || s.rings >= T.rings) break;
+      for (let i = 0; i < 24 && Math.abs((await look()).bell) > 0.08; i++) await seconds(0.25);
+      const aim = await page.evaluate(() => {
+        const b = __game.story.current.church.bell, cam = __game.rig.camera;
+        const a = b.middle(cam.position.clone()).project(cam);
+        return { at: [(a.x + 1) / 2, (1 - a.y) / 2], heading: b.screenHeading(cam) };
+      });
+      await stroke(aim.at, aim.heading, 0.42, 9);
+      await seconds(0.6);
+      await seen();
+      const after = await look();
+      if (after.rings > s.rings) {
+        const before = homeLeft(after.boat);
+        for (let i = 0; i < 20 && (await look()).answered < after.rings; i++) await seconds(0.25);
+        await seconds(2.2);
+        const lantern = await page.evaluate(() => {
+          const l = __game.story.current.church, cam = __game.rig.camera;
+          const q = l.homeAt.clone().project(cam);
+          return [+q.x.toFixed(2), +q.y.toFixed(2), +q.z.toFixed(3)];
+        });
+        const s2 = await look();
+        rang.push({ ring: after.rings, time: after.time, boatBefore: before, boatAfter: homeLeft(s2.boat), level: s2.level, lantern });
+        await shot(`ring-${after.rings}`);
+      }
+    }
+    const heard = await page.evaluate(() => window.__heard);
+    console.log(`  the rings heard, seconds into the recording: ${JSON.stringify(heard.map((h) => ({ t: +((h.at - recordedFrom) / 1000).toFixed(2), ring: true, peak: +h.peak.toFixed(3) })))}`);
+    for (const r of rang) {
+      console.log(`  ring ${r.ring} at ${(r.time - beats.ring).toFixed(1)} s: the boat ${r.boatBefore.toFixed(1)} m from the berth, ${r.boatAfter.toFixed(1)} m after it answered; the fog's top ${r.level} m; the lantern on screen at ${r.lantern.slice(0, 2).join(', ')}`);
+    }
+    assert.equal(rang.length, T.rings, `the bell rang ${rang.length} times in ${bellStrokes} strokes`);
+    for (let i = 1; i < rang.length; i++) assert(rang[i].boatAfter < rang[i - 1].boatAfter - 2, `the lantern did not come nearer at ring ${rang[i].ring}`);
+    for (const r of rang) assert(r.lantern[2] < 1 && Math.abs(r.lantern[0]) < 0.95 && Math.abs(r.lantern[1]) < 0.95, `the lantern was out of frame when it answered ring ${r.ring}`);
+    const bring = await wait((s) => s.step === 'down', 20, 'the boat hers to sail home');
+    for (let i = 0; i < 6; i++) {
       await seconds(0.5);
       await seen();
     }
@@ -343,29 +417,41 @@ try {
     let strokes = 0;
     for (; strokes < 80; strokes++) {
       const s = await look();
-      if (s.step !== 'bring' || s.grounded) break;
+      if (s.grounded || !(s.step === 'down' || s.step === 'wait')) break;
       const aim = await page.evaluate(() => {
         const b = __game.boat, cam = __game.rig.camera;
+        if (!__game.story.current.invitesSail) return null;
         const at = b.sailPoint(cam.position.clone());
         const a = at.clone().project(cam), ahead = at.clone().set(at.x + Math.sin(b.yaw) * 2, at.y, at.z + Math.cos(b.yaw) * 2).project(cam);
         return { at: [(a.x + 1) / 2, (1 - a.y) / 2], heading: Math.atan2(ahead.y - a.y, (ahead.x - a.x) * cam.aspect) };
       });
+      if (!aim) { await seconds(0.5); continue; }
       await stroke(aim.at, aim.heading, 0.35, 12);
       await seen();
       await seconds(0.7);
       await seen();
-      if (strokes === 5) await shot('church-bring');
+      if (strokes === 4) await shot('church-bring');
     }
+    const home = await wait((s) => s.grounded, 40, 'the boat at the tower\'s foot');
+    await shot('boat-at-foot');
     const berthed = await wait((s) => s.step === 'board', 40, 'her stepping down into the boat');
     const berth = (await look()).boat;
     await seconds(1.0);
     await shot('church-boarding');
     const aboard = await wait((s) => s.aboardFor >= 0, 15, 'her seated aboard');
     const pushed = d(xz(aboard.boat), xz(berth));
-    const cat = await storm(aboard, atNave);
+    const blink = await wait((s) => s.aboardFor >= T.blinkAt + 0.5, 10, 'the cat\'s slow blink');
+    await shot('slow-blink');
+    const onSill = Math.hypot(blink.cat[0] - T.sill[0], blink.cat[1] - T.sill[1], blink.cat[2] - T.sill[2]);
+    const kittenSill = Math.hypot(blink.kitten[0] - T.sill[0], blink.kitten[1] - T.sill[1], blink.kitten[2] - T.sill[2]);
+    await storm(aboard, atNave);
     const w = await page.evaluate(() => window.__churchWatch);
-    console.log(`church: the cat up the ivy ${(up.time - atNave).toFixed(1)} s after the tower's foot; the fog came ${(fog.time - atNave).toFixed(1)} s, the boat hers to bring ${(bring.time - atNave).toFixed(1)} s`);
-    console.log(`  the boat brought in ${(berthed.time - bring.time).toFixed(1)} s (7 s of it idle, for the drawn invitation) with ${strokes} strokes; aboard ${(aboard.time - atNave).toFixed(1)} s after the tower's foot${berthed.carrying ? ' (the safety valve carried it)' : ''}`);
+    if (!fromBelfry) {
+      console.log(`church: she followed the cat up the ivy ${(beats.climbFrom - atNave).toFixed(1)} s after the tower's foot, was in over the kittens at ${(beats.nest - atNave).toFixed(1)} s, looking out over the fog sea at ${(beats.sea - atNave).toFixed(1)} s, the bell hers at ${(beats.ring - atNave).toFixed(1)} s and first rung at ${(rang[0].time - atNave).toFixed(1)} s`);
+    }
+    console.log(`  the bell rang four times in ${bellStrokes} strokes over ${(rang[rang.length - 1].time - rang[0].time).toFixed(1)} s; the sail hers ${(bring.time - rang[rang.length - 1].time).toFixed(1)} s after the last ring`);
+    console.log(`  the boat home ${(home.time - bring.time).toFixed(1)} s after it was hers to sail, with ${strokes} strokes; her aboard ${(aboard.time - bring.time).toFixed(1)} s after${berthed.carrying ? ' (the safety valve carried it)' : ''}; the storm ${(aboard.time - atNave).toFixed(1)} s + the look up after the tower's foot`);
+    console.log(`  at the slow blink the cat was ${onSill.toFixed(2)} m from the sill of her light and the kitten ${kittenSill.toFixed(2)} m`);
     console.log(`  her step aboard moved the boat ${pushed.toFixed(2)} m; her feet stayed within ${w.offWorst.toFixed(3)} m of the decks (worst ${w.offAt})`);
     console.log(`  through the church she was out of frame for at most ${w.unseenWorst.toFixed(1)} s at a time (${w.unseenAt}), hidden by the church or a roof for at most ${w.hiddenWorst.toFixed(1)} s (${w.hiddenAt})`);
     console.log(`  her raincoat's warmth against what stands round her each half second: ${sight.trace.join(' ')}`);
@@ -380,7 +466,7 @@ try {
     assert(w.offWorst < 0.4, `she left the decks at the church: ${w.offWorst.toFixed(2)} m (${w.offAt})`);
     assert(!berthed.carrying, 'the strokes never brought the boat: the safety valve carried it');
     assert(pushed < 0.6, `her step aboard pushed the boat ${pushed.toFixed(2)} m`);
-    assert(Math.hypot(cat[0] - T.north[0], cat[1] - T.north[1], cat[2] - T.north[2]) < 0.5, `the cat is not on the belfry's north sill (${cat.join(', ')})`);
+    assert(onSill < 0.8 && Math.abs(blink.cat[1] - T.sill[1]) < 0.25, `the cat is not on the sill at the slow blink (${blink.cat.join(', ')})`);
   };
 
   if (fromStairs) {
@@ -665,6 +751,8 @@ try {
     console.log(`she let go of the swing after ${pumps} pumping strokes`);
 
     await until((s) => s.beat === 'nave', 60, 'her reaching the tower\'s foot');
+    /** Where the run leaves the cat for the church: on the railings below the tower's south face. */
+    const towerSouth = await page.evaluate(() => { const c = window.__game.cat.position; return Math.hypot(c.x - 16.5, c.z - (-1561 + 2.6)); });
     await seconds(3);
     await shot('nave');
     const end = await state();
@@ -687,7 +775,6 @@ try {
     for (const r of roofs) console.log(`  the roof at ${names[r.name]} (ridge ${r.ridge.toFixed(1)} m) ${r.under === null ? 'not under yet' : `under ${(r.under - r.left).toFixed(1)} s after she went on from it`}`);
     console.log(`the boat moved ${w.boatMoved.toFixed(2)} m from where it ran aground`);
     console.log(`at the end: cat at ${end.cat.join(', ')}, her at ${end.child.join(', ')}`);
-    const towerSouth = await page.evaluate(() => { const c = window.__game.cat.position; return Math.hypot(c.x - 16.5, c.z - (-1561 + 2.6)); });
     console.log(`she faced the lens on her way for ${w.facing.toFixed(1)} s in all (longest ${w.facingWorst.toFixed(1)} s ${w.facingAt}); out of frame ${w.unseen.toFixed(1)} s (longest ${w.unseenWorst.toFixed(1)} s ${w.unseenAt}); lens inside a roof ${w.inside.toFixed(1)} s ${w.insideAt}`);
     console.log(`a roof hid her for at most ${(w.hiddenWorst ?? 0).toFixed(1)} s at a time (${w.hiddenAt ?? ''})`);
     /** The lens's measures are reported, and fail only with LENS=1. */

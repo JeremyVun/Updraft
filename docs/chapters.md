@@ -352,11 +352,11 @@ first, and it needs a still and a name.
 ## The drowned village
 
 `story/drowned.ts` runs the room's beats; `story/drowned-cat.ts` (`StrandedCat`) the cat and the tub,
-`story/drowned-run.ts` (`RoofRun`) her way over the roofs, `story/drowned-church.ts` (`ChurchArrival`) the church
-and the boat brought in. Where its pieces live in the world: `docs/contracts/world.md`. The design, Jeremy's brief in
-his words and every ruling: `docs/backlog/path-puzzles/design.md`. `?chapter=drowned` starts where the stairs set
-the boat down on the water (`DESCENT_END`); `roofs` on the ridge after the cat, `church` at the tower's foot,
-`storm` seated aboard at the nave.
+`story/drowned-run.ts` (`RoofRun`) her way over the roofs, `story/drowned-church.ts` (`ChurchArrival`) the refuge in
+the belfry, the bell and the boat home. Where its pieces live in the world: `docs/contracts/world.md`. The design,
+Jeremy's brief in his words and every ruling: `docs/backlog/path-puzzles/design.md`. `?chapter=drowned` starts where
+the stairs set the boat down on the water (`DESCENT_END`); `roofs` on the ridge after the cat, `church` at the tower's
+foot, `belfry` in the opening over the fog sea with the bell to ring, `storm` seated aboard at the nave.
 
 A homeward-looking room about leaving the boat to save a frightened animal, then losing the one thing she brought.
 About five to six minutes, nearly all of it the player's:
@@ -389,14 +389,20 @@ About five to six minutes, nearly all of it the player's:
      high roof, where the church and the lighthouse come back into view. The wrong way only rocks it.
    - **The swing (pump):** a rope swing on the old tree on the drowned green, beside the garden cottage's gable end;
      strokes pump it the birches' way with no timing, and at the top of a forward swing she lets go onto the nave roof.
-5. **The church.** She stands on the nave's ridge at the tower's foot. The cat climbs the tower's ivy to the belfry's
-   south sill, safe and out of her reach, then backs through the belfry to the north sill as the fog comes over the
-   church and closes round her: the sun gone, the light draining, the first rain. The first wind swings the boat off
-   the dead tree it fetched up against east of the tower; strokes across its red sail (`Boat.brushSail`) bring it
-   round the tower's north side to the nave, she walks down the slates and steps aboard, and as they go she turns on
-   the thwart to look back once at the cat, which mews once. After 90 s with no progress the world's breeze comes
-   back to carry the boat in.
-6. **The storm** begins the moment she is aboard, the weather already part gathered by the fog. They go out north of
+5. **The refuge.** She stands on the nave's ridge at the tower's foot. The cat leaps from the churchyard's railings
+   onto the slates beside her and runs up the old ivy on the tower's west face into the belfry, and she climbs after
+   it, hand over hand (`Climb`, the plane tucked in her coat from the ivy's foot until she is back in the boat), the
+   fog coming over the nave below her and on round the tower until it stops just under the sills: the village a cold
+   white sea, the spire and the lighthouse standing out of it. In the straw under the bell are the cat's kittens; it
+   curls round them, and as she kneels in the opening one comes to her and mews up at her.
+6. **The bell.** Strokes across the bell (`Bell`, seen through the other light) ring it; each ring rolls out over the
+   fog's top (`BellWaves`) and pushes it down a step, and out in the fog the lost boat's lantern answers, glowing
+   nearer each time (`LanternGlow`), until after four the fog lies on the water and the boat is there under the
+   tower's north side. Strokes across its red sail bring it round to the nave while she climbs down the ivy; she steps
+   aboard, the cat comes to the sill with a kitten and looks down, she looks back up at it, and it gives her a slow
+   blink. After 90 s with no ring the world's own gust rings the bell; with no progress under sail its air carries
+   the boat in.
+7. **The storm** begins as she turns from the cat, the fog darkening into its night, the weather already part gathered. They go out north of
    the nave past the lighthouse (`STORM_WAY`, 173 m to the beach at the hard-pressed sail's 4.2 m/s): the foghorn,
    the beam faltering and going out about 6 s in while the lamp is still in her look back, the cygnet startled and
    nuzzling under her chin, its shaking in the rain, lightning only once the dark is established, the paper plane
@@ -422,17 +428,20 @@ Rulings:
   would dream it; the plane flies away and is lost, never simply vanishes. The camera stays low near the water and
   never surveys the village from above.
 
-Rules: cursor movement is the only verb (strokes push the tub, the tree, the swing and the sail; circles turn the
-mill); each step has the drawn invitation after idle seconds and a safety valve after about 90 s; the fog never
-reaches her and nothing fails; the camera never jerks or cuts and the child never looks to it.
+Rules: cursor movement is the only verb (strokes push the tub, the tree, the swing and the sail and ring the bell;
+circles turn the mill); each step has the drawn invitation after idle seconds and a safety valve after about 90 s;
+the fog never reaches her and nothing fails; the camera never jerks, cuts only into and out of the belfry, and the
+child never looks to it.
 
 Saves (`docs/contracts/progress.md`): `sail` once the cat is aboard and the drift goes on, `roofs` at the run's start
-on the ridge, `church` at the tower's foot, `storm` seated aboard with the storm to come.
+on the ridge, `church` at the tower's foot, `belfry` in the opening with the bell to ring, `storm` seated aboard with
+the look up and the storm to come.
 
 Knobs: `tuning.drowned` (`cat`, `tub`, `dark`, `fog`, `adrift`, `run`, `church`), `tuning.crossings` (the tree, the swing,
 the mill), `tuning.drownedCamera`, `tuning.storm`. Checks: `tools/drowned-run-check.mjs` (the whole room
-with real gestures from the drift, `FROM=stairs|roofs|church|storm`, `LENS=1` for the lens's measures: on the run
-a roof hiding her, her walking toward it, her out of frame; at the church her out of frame, hidden or lost in the fog),
+with real gestures from the drift, `FROM=stairs|roofs|church|belfry|storm`, `LENS=1` for the lens's measures: on the
+run a roof hiding her, her walking toward it, her out of frame; at the church her out of frame, hidden or lost in the
+fog; it rings the bell, sails the boat home and reports the boat's distance after each ring),
 `drowned-roofs-check.mjs`, `drowned-way-check.mjs`, `crossings-check.mjs`, `cat-check.mjs`, `mill-check.mjs`,
 `drowned-fog-check.mjs`, `storm-check.mjs`, `boat-check.mjs`, `drowned-camera-check.mjs`, `drowned-gating-check.mjs`.
 

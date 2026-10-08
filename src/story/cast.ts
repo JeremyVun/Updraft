@@ -42,8 +42,12 @@ import type { Tree } from '../world/tree';
 
 /** Everyone and everything the story directs. */
 export interface Cast {
-  /** The drowned village: its roofs for the lens to keep clear of, the dark, the wash-tub and the three pieces of her run. */
-  village?: Pick<DrownedVillage, 'cameraObstacles' | 'dark' | 'tub' | 'tree' | 'swing' | 'mill' | 'millSpiral' | 'sheet' | 'driven'>;
+  /**
+   * The drowned village: its roofs for the lens to keep clear of, the dark, the wash-tub, the pieces of her run, and
+   * the belfry with its ivy, its kittens and the rings its bell sends out.
+   */
+  village?: Pick<DrownedVillage, 'cameraObstacles' | 'dark' | 'tub' | 'tree' | 'swing' | 'mill' | 'millSpiral' | 'sheet' | 'driven'
+    | 'belfry' | 'ivy' | 'kittens' | 'bellWaves'>;
   child: Traveller;
   plane: Glider;
   boat: Boat;

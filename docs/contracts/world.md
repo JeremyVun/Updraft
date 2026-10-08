@@ -193,9 +193,10 @@ lighthouse's light. How it plays is in `docs/chapters.md`.
   the houses, walls and lean-tos her way runs over (`PLACED`, `GARDEN_WALLS`, `LEAN_TOS`), the decks she walks
   (`WAY`, read through `world/decks.ts`), the gaps and the pieces' sites (`WAY_GAPS`, `TREE_SITE`, `MILL_SITE` with
   the mill's heights in `MILL`, `SWING_SITE`), the cat's own way over each gap (`CAT_WAY`), the church's tower, sills
-  and ivy (`TOWER`, `BELFRY_SOUTH`, `BELFRY_NORTH`, `IVY`, `NAVE`, `TOWER_FOOT`), the boat's drift and the dead tree it
-  fetches up on (`adriftAt`, `BOAT_TREE`), its way round the tower to the nave (`BRING_WAY`, `NAVE_BERTH`), the storm's
-  way out past the lighthouse (`STORM_WAY`), and the fog's way in from the south (`DARK_WAY`). `inClearing` keeps
+  and ivy (`TOWER`, `BELFRY_SOUTH`, `BELFRY_NORTH`, `IVY_FOOT`, `IVY_SILL`, `IVY_STEP`, `NAVE`, `TOWER_FOOT`), the
+  lost boat's way home to the bell and round to the nave (`HOME_WAY`, `BRING_WAY`, `NAVE_BERTH`), the storm's way out
+  past the lighthouse (`STORM_WAY`), and the fog's way in from the south (`DARK_WAY`, running on past the tower's foot
+  the way its last stretch goes, so the fog can stand round the tower). `inClearing` keeps
   open water round all of these, the boat's water, the mill, the green, the churchyard and the storm's way, and
   everything generated stays out of it.
 - **The village round it** is generated: `drowned.ts`'s own rows (`layout`, whose random draws stay in their order so
@@ -205,9 +206,13 @@ lighthouse's light. How it plays is in `docs/chapters.md`.
   them moves.
 - **A house** is a `Lot` given to `buildHouse` in `world/drowned-houses.ts`, the village's kit in the construction of
   home's cottage: eight types, each by its silhouette, at three levels of detail (near, `mid`, `far` silhouette).
-- **The church** is built in `drowned.ts` (the tower, the spire `SPIRE`, the nave by the kit on its exact slates);
-  its ivy is `world/drowned-ivy.ts`. The lighthouse stands on its rock off the church (`LIGHTHOUSE`); its beam and
-  lamp are `world/lighthouse.ts`.
+- **The church** is built in `drowned.ts` (the tower up to its belfry, the spire `SPIRE`, the nave by the kit on its
+  exact slates). The belfry storey on it, its bell's oak frame and straw, is `world/belfry.ts` (`Belfry`, with the
+  light it lets in shared with the bell); the bell and the rings it sends over the fog are `world/crossings/bell.ts`;
+  the ivy up the west face that she climbs is `world/ivy-face.ts`; the kittens are `creatures/cat/kittens.ts`; all
+  held by the village (`DrownedVillage.belfry`, `ivy`, `kittens`, `bellWaves`). The lantern's answer in the fog is
+  `world/lantern-glow.ts`. The lighthouse stands on its rock off the church (`LIGHTHOUSE`); its beam and lamp are
+  `world/lighthouse.ts`.
 - **The crossings** are `world/crossings/`: the piece (`ToppleTree`, `RopeSwing`, `Windmill`, standing idle in the
   village) and the beat that drives it with her (`TreeCrossing`, `SwingCrossing`, `MillCrossing`, `MillSpiral` for the
   mill's drawn invitation). The QA stage plays each on its own (`?chapter=stage&gap=tree|swing|mill|run`).

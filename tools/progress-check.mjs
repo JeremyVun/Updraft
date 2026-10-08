@@ -24,12 +24,14 @@ try {
       piano: g.story.current.atPiano, wave: g.life.regions.wave.toArray(), waiting: g.life.regions.waiting.toArray(),
       finished: g.story.current.finished ?? false };
   });
-  // A restored drowned point must go on playing: the drift to the becalming, the run onward, the church to the boat, the storm out.
+  // A restored drowned point must go on playing: the drift to the becalming, the run onward, the church up the ivy, the
+  // belfry to the bell, the storm out.
   const playsOn = async point => {
     const goes = {
       sail: `c.beat==='still'||c.beat==='becalmed'`,
       roofs: `c.beat==='run'&&c.run.along>12`,
-      church: `c.beat==='church'&&c.church.close>0.5`,
+      church: `c.beat==='church'&&c.church.step==='climb'`,
+      belfry: `c.beat==='church'&&c.church.step==='ring'&&c.church.bell.live`,
       storm: `c.beat==='snatch'||c.beat==='after'`,
     }[point];
     try {
@@ -51,9 +53,10 @@ try {
     ...[1,2,3,4].map(count => ['birches','birches',`scarf4-${count}`,
       `c.restoreCheckpoint('scarf4-${count}',[${count},0,.65,${count}]);c.holdUntil=1e6;`]),
     ['drowned', 'drowned', 'sail', `const {CAT_HOLD:h}=await import('/src/world/drowned-way.ts');g.boat.beach(h.x,h.y,Math.atan2(19,-41));g.boat.launch();c.cat.aboard();c.aboardFrom=c.now;c.beat='drift';c.leg=2;g.boat.steerFor=(await import('/src/world/drowned.ts')).DROWNED_CHANNEL[2];`],
-    // The run, the church and the storm save as the real play reaches them from their QA starts.
+    // The run, the church, the belfry and the storm save as the real play reaches them from their QA starts.
     ['drowned', 'roofs', 'roofs', ''],
     ['drowned', 'church', 'church', ''],
+    ['drowned', 'belfry', 'belfry', ''],
     ['drowned', 'storm', 'storm', ''],
     ['wood', 'wood', 'found', `c.beat='walk';c.bolted=true;c.leg=2;c.chainAt=55;`],
     ['wood', 'wood', 'dry', `c.beat='out';c.bolted=true;c.leg=4;c.chainAt=100;g.glider.visible=true;g.glider.soggy.value=0;`],

@@ -7,6 +7,7 @@ import type { SwingWay } from './crossings/swing-crossing';
 import type { HouseType } from './drowned-houses';
 import { tuning } from '../tuning';
 import { HOIST, HUB_ABOVE, SAIL, type MillSpot } from './crossings/windmill';
+import { BELFRY } from './belfry';
 import { SHEET_OFF, SHEET_WAIT, sheetLine, type SheetWay } from './crossings/sheet-crossing';
 import type { SheetSpot } from './crossings/wash-sheet';
 
@@ -490,19 +491,21 @@ export const CAT_WAY = {
 export const BOAT_TREE = new THREE.Vector2(30.5, -1557.5);
 
 /** The church tower at the nave's east end: its middle, half its width, and the floor of its belfry's openings. */
-export const TOWER = { x: NAVE.x + NAVE.len / 2 + 2.4, z: NAVE.z, half: 2.4, sill: 8.27 };
+export const TOWER = { x: NAVE.x + NAVE.len / 2 + BELFRY.half, z: NAVE.z, half: BELFRY.half, sill: BELFRY.sill };
 /**
- * The belfry's westward opening on each side, sat on: where the cat looks down from, over the green and over the north
- * water. On the north it sits at the sill's west end, so from the water off the nave's west end it shows over the sill.
+ * The ivy up the tower's west face, from where the nave's ridge meets it to the sill of the face's north light, the
+ * way the cat goes up into the belfry and she follows it.
  */
-export const BELFRY_SOUTH = new THREE.Vector3(TOWER.x - 1.05, TOWER.sill, TOWER.z + TOWER.half + 0.3);
-export const BELFRY_NORTH = new THREE.Vector3(TOWER.x - 1.45, TOWER.sill, TOWER.z - TOWER.half - 0.3);
+export const IVY_FOOT = new THREE.Vector3(TOWER.x - TOWER.half, ridgeTop(NAVE), TOWER.z);
+export const IVY_SILL = new THREE.Vector3(TOWER.x - TOWER.half, TOWER.sill, TOWER.z - BELFRY.light.at);
+/** The last of the nave's ridge, up to the tower's face, where she stands to climb. */
+export const IVY_STEP: Deck = strip(TOWER_FOOT, IVY_FOOT.clone().setX(IVY_FOOT.x - 0.1), 0.3);
 /**
- * The ivy's stem up the tower's south face, from the foot of the churchyard's railings to beside the west opening of
- * the belfry: the way the cat climbs, close against the stone.
+ * Sat on in the reveal of the west light of the south and the north faces: where the cat looks down from, over the
+ * green and over the north water.
  */
-export const IVY = [[16.6, 0.15], [16.62, 0.95], [16.85, 2.6], [17.08, 4.5], [16.98, 6.3], [16.98, 7.85], [17.05, 9.6], [17.25, 10.7]]
-  .map(([x, y]) => new THREE.Vector3(x, y, TOWER.z + TOWER.half + 0.06));
+export const BELFRY_SOUTH = new THREE.Vector3(TOWER.x - BELFRY.light.at, TOWER.sill, TOWER.z + TOWER.half - 0.2);
+export const BELFRY_NORTH = new THREE.Vector3(TOWER.x - BELFRY.light.at, TOWER.sill, TOWER.z - TOWER.half + 0.2);
 /**
  * Where the boat comes alongside the nave's north slates, lying west along them, her seat abreast of the ridge's top
  * there; and her way down the slates to the water's edge beside it.
@@ -511,8 +514,14 @@ const BERTH_X = SWING_X;
 export const NAVE_BERTH = { x: BERTH_X - 0.25, z: NAVE.z - acrossAt(NAVE, 0) - 0.62, yaw: -Math.PI / 2 };
 export const NAVE_NORTH: Deck = strip(new THREE.Vector3(BERTH_X, ridgeTop(NAVE), NAVE.z),
   new THREE.Vector3(BERTH_X, 0.4, NAVE.z - acrossAt(NAVE, 0.4)), 0.7);
-/** Round the tower's north side from the dead tree to the berth: the open water the boat is brought across. */
-export const BRING_WAY = [new THREE.Vector2(TOWER.x + 4, TOWER.z - 7), new THREE.Vector2(NAVE_BERTH.x, NAVE_BERTH.z)];
+/**
+ * The lost boat's drift home to the bell, out of the fog over the open water north-east of the church, where its
+ * lantern answers each ring a stretch nearer, just past the tower's north-west corner as the bell is seen; then in
+ * round the tower's north side and alongside the nave to the berth, the stretch the player sails it.
+ */
+export const HOME_WAY = [new THREE.Vector2(TOWER.x + 30, TOWER.z - 40), new THREE.Vector2(TOWER.x + 22, TOWER.z - 31),
+  new THREE.Vector2(TOWER.x + 15, TOWER.z - 24), new THREE.Vector2(TOWER.x + 8, TOWER.z - 18)];
+export const BRING_WAY = [new THREE.Vector2(TOWER.x - 0.5, TOWER.z - 11), new THREE.Vector2(NAVE_BERTH.x, NAVE_BERTH.z)];
 /**
  * Out from the nave in the storm: round into the open water north of the church, then on past the lighthouse's side
  * before the channel's last leg to the forest beach.
@@ -565,12 +574,12 @@ export const DARK_TOPS: { along: number; top: number }[] = [
   ...ON_HER_WAY.map((p, i) => ({ along: DARK_ALONG[i + 2], top: p.y })),
 ];
 
-/** The point `front` metres along `DARK_WAY`. */
+/** The point `front` metres along `DARK_WAY`; past the tower it runs on the way its last stretch goes. */
 export function darkWayPoint(front: number, out: THREE.Vector2): THREE.Vector2 {
   let left = front;
   for (let i = 0; i < DARK_WAY.length - 1; i++) {
     const a = DARK_WAY[i], b = DARK_WAY[i + 1], len = a.distanceTo(b);
-    if (left <= len || i === DARK_WAY.length - 2) return out.lerpVectors(a, b, THREE.MathUtils.clamp(left / len, 0, 1));
+    if (left <= len || i === DARK_WAY.length - 2) return out.lerpVectors(a, b, Math.max(0, left / len));
     left -= len;
   }
   return out.copy(DARK_WAY[0]);
