@@ -1,12 +1,13 @@
 import { tuning } from '../tuning';
 import type { AudioOut } from '../creatures/voices';
 import type { WhaleSound } from '../fx/sealife/wake';
+import { strikeBell } from './bell';
 
 export type Surface = 'grass' | 'sand' | 'wood' | 'water';
 export type MaterialSound = 'cloth' | 'wool' | 'sail' | 'sail-settle' | 'water' | 'paper' | 'door' | 'splash' | 'peg'
   | 'dolphin-surface' | 'leaf-scuff' | 'swing-creak' | 'tub' | WhaleSound
   | 'tree-creak' | 'roots-give' | 'root-tear' | 'tree-fall' | 'bough-creak' | 'slate-land'
-  | 'mill-start' | 'mill-creak' | 'mill-settle' | 'mill-click' | 'linen-flap';
+  | 'mill-start' | 'mill-creak' | 'mill-settle' | 'mill-click' | 'linen-flap' | 'bell' | 'bell-touch';
 
 /**
  * The sounds a small body makes, as opposed to a voice. The cygnet never speaks except when it is lost, so this is
@@ -44,7 +45,8 @@ export class Foley {
     if (now === undefined || amount < 0.015) return;
     const at = now + 0.005;
     const level = Math.min(1.5, amount) * tuning.audio.materialLevel;
-    if (kind === 'sail-settle') {
+    if (kind === 'bell' || kind === 'bell-touch') strikeBell(this.out!, at, amount, pan, kind === 'bell-touch');
+    else if (kind === 'sail-settle') {
       // Heavy canvas settling: low air movement, with the scratchy upper noise filtered away.
       this.puff({ at, len: 0.5, level: level * 0.085 * 10 ** (tuning.audio.sailSettleBoostDb / 20), pan,
         type: 'lowpass', from: 320, to: 150, q: 0.5, attack: 0.12, wet: 0.04 });

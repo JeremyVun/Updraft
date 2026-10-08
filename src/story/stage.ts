@@ -6,6 +6,7 @@ import type { Cast, Chapter } from './cast';
 import { CatYard } from './cat-yard';
 import { CrossingsYard } from './crossings-yard';
 import { MillYard } from './mill-yard';
+import { BellYard } from './bell-yard';
 import { SheetYard } from './sheet-yard';
 
 export type StageView = 'game' | 'flock' | 'behind' | 'front' | 'side' | 'far-side' | 'close' | 'top' | 'k-front' | 'k-side' | 'k-back' | 'k-34' | 'k-above' | 'k-full' | 'k-low'
@@ -54,9 +55,9 @@ const VIEWS: Record<StageView, { bearing: number; distance: number; height: numb
  * going on, so that every pose, behaviour and shared moment can be played by name and looked at from close up.
  * `__game.story.current.play(name)` and `.look(view)` drive it from the capture tools; `play('cat:<action>')` sets
  * out the drowned village's cat in a yard of its own on the sea beyond the beach, and the `c-` views look at it.
- * `play('crossing:tree' | 'crossing:swing' | 'crossing:run' | 'crossing:mill' | 'crossing:sheet')` (or
- * `&gap=tree|swing|run|mill|sheet`) sets out the village's crossings on the sea and plays them as the room
- * would, with the lens its own.
+ * `play('crossing:tree' | 'crossing:swing' | 'crossing:run' | 'crossing:mill' | 'crossing:sheet' | 'crossing:bell')` (or
+ * `&gap=tree|swing|run|mill|sheet|bell`) sets out the village's crossings on the sea and plays them as the room
+ * would, with the lens its own; `play('bell:ring' | 'bell:down')` starts the bell's yard in the opening or going down.
  */
 export class StageChapter implements Chapter {
   readonly shot: Shot = { target: new THREE.Vector3(), distance: 15, height: 5.2, from: new THREE.Vector3(0, 0, 1), free: true };
@@ -89,6 +90,8 @@ export class StageChapter implements Chapter {
   private mill: MillYard | null = null;
   /** QA stand-in for the drowned village's sheet crossing, set out on the sea when first played. */
   private sheet: SheetYard | null = null;
+  /** QA stand-in for the drowned village's refuge: the ivy, the belfry and its bell, set out on the sea when first played. */
+  bell: BellYard | null = null;
   private camera: THREE.PerspectiveCamera | null = null;
 
   constructor(private readonly cast: Cast) {
@@ -104,16 +107,19 @@ export class StageChapter implements Chapter {
   }
 
   get windInvitation(): THREE.Vector3 | null {
+    if (this.bell?.playing) return this.bell.invitationAt(this.camera);
     if (this.sheet?.playing) return this.sheet.crossing.invitation;
     return this.crossings?.playing ? this.crossings.invitation : null;
   }
 
   get invitationHeading(): number | null {
+    if (this.bell?.playing) return this.bell.bell.invitation ? this.bell.bell.heading : null;
     if (this.sheet?.playing) return this.sheet.crossing.heading;
     return this.crossings?.playing ? this.crossings.heading : null;
   }
 
   get invitationRadius(): number {
+    if (this.bell?.playing) return 1.1;
     if (this.sheet?.playing) return 1.4;
     return this.crossings?.playing ? this.crossings.invitationRadius : 0;
   }
@@ -142,6 +148,24 @@ export class StageChapter implements Chapter {
     const { child: c, cygnet: k, flock, carry } = this.cast;
     const ahead = (d: number, side = 0) =>
       this.tmp.set(c.position.x + Math.sin(c.yaw) * d + Math.cos(c.yaw) * side, 0, c.position.z + Math.cos(c.yaw) * d - Math.sin(c.yaw) * side);
+    if (name === 'crossing:bell' || name.startsWith('bell:')) {
+      this.crossings?.stop();
+      this.mill?.stop();
+      this.sheet?.stop();
+      if (!this.bell) {
+        this.bell = new BellYard(this.cast, c.position);
+        this.cast.cat.objects[0].parent?.add(...this.bell.objects);
+      }
+      if (name === 'bell:down' && this.bell.playing) this.bell.goDown();
+      else {
+        const from = name.startsWith('bell:') ? name.slice(5) : new URLSearchParams(location.search).get('bell') ?? 'climb';
+        this.bell.play(from === 'ring' || from === 'down' ? from : 'climb');
+      }
+      this.pace = this.bell.frame(this.shot);
+      this.cameraCut++;
+      return true;
+    }
+    this.bell?.stop();
     if (name === 'crossing:sheet') {
       this.crossings?.stop();
       this.mill?.stop();
@@ -332,6 +356,15 @@ export class StageChapter implements Chapter {
     const { child: c, cygnet: k } = this.cast;
     this.clock += dt;
     this.yard?.update(dt);
+    if (this.bell?.playing) {
+      this.bell.update(dt, this.camera);
+      this.pace = this.bell.frame(this.shot);
+      this.dusk = 0.88;
+      this.haze = 0.55;
+      this.breeze = 0.04;
+      this.focus.copy(c.position);
+      return;
+    }
     if (this.sheet?.playing) {
       this.sheet.update(dt, this.camera);
       this.pace = this.sheet.frame(this.shot);

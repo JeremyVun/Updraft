@@ -303,6 +303,18 @@ export class Traveller {
    */
   hang = 0;
   private readonly hangGlide = new Glide();
+  /**
+   * On a wall, 0 to 1: her feet go where `footFor` puts them rather than walking, her shadow goes, and whoever has her
+   * climbing places her and turns her body with `climbPose` (leaning in to the wall, turned toward a reaching hand,
+   * the hips swung over the foot she stands on, radians).
+   */
+  climbing = 0;
+  readonly climbPose = { lean: 0, twist: 0, sway: 0 };
+  private readonly climbGlide = new Glide();
+  private readonly footTarget = [new THREE.Vector3(), new THREE.Vector3()];
+  private readonly footWant = [0, 0];
+  private readonly footNow = [0, 0];
+  private readonly footGlide = [new Glide(), new Glide()];
   private readonly balanceGlide = new Glide();
   private balanceTilt = 0;
 
@@ -328,6 +340,23 @@ export class Traveller {
   /** How nearly a mitten has arrived on the point it was sent to, 0 to 1. */
   reached(hand: 0 | 1): number {
     return this.reachNow[hand];
+  }
+
+  /** Puts a foot's ankle on a point in the world and keeps it there until told otherwise (`null`); 0 her left, 1 her right. */
+  footFor(foot: 0 | 1, target: THREE.Vector3 | null): void {
+    if (target) this.footTarget[foot].copy(target);
+    this.footWant[foot] = target ? 1 : 0;
+  }
+
+  /** How nearly a foot has been given over to the point it was sent to, 0 to 1. */
+  footReached(foot: 0 | 1): number {
+    return this.footNow[foot];
+  }
+
+  /** World position of either ankle. */
+  ankle(foot: 0 | 1, out: THREE.Vector3): THREE.Vector3 {
+    this.rig.root.updateMatrixWorld(true);
+    return this.rig.bones[foot === 0 ? BONE.footL : BONE.footR].getWorldPosition(out);
   }
 
   /** World position of either mitten. */
@@ -717,7 +746,7 @@ export class Traveller {
     this.motion.hoodForward(this.rig.material.uniforms.uHoodForward.value);
 
     this.shadow.position.set(p.x, p.y + 0.06, p.z);
-    this.shadowMat.uniforms.uOpacity.value = this.riding ? 0 : 0.3 * (1 - this.hangGlide.value);
+    this.shadowMat.uniforms.uOpacity.value = this.riding ? 0 : 0.3 * (1 - this.hangGlide.value) * (1 - this.climbGlide.value);
   }
 
   private updateGoal(dt: number): void {
@@ -1212,6 +1241,15 @@ export class Traveller {
       }
     }
 
+    const climb = this.climbGlide.step(this.climbing, 0.25, dt);
+    for (const foot of [0, 1] as const) {
+      this.footNow[foot] = THREE.MathUtils.clamp(this.footGlide[foot].step(this.footWant[foot], 0.3, dt), 0, 1);
+      P.feet[foot].w = this.footNow[foot];
+      P.feet[foot].at.copy(this.footTarget[foot]);
+    }
+    P.climb = climb;
+    lean += this.climbPose.lean * climb;
+    twist += this.climbPose.twist * climb;
     const hang = this.hangGlide.step(this.hang, 0.3, dt);
     if (hang > 0.001) {
       /** Hanging from the hands: the legs paddle in turn, slow and uneven, a knee drawn up now and then. */
@@ -1220,7 +1258,7 @@ export class Traveller {
       P.step[1] += hang * (0.16 - 0.14 * paddle);
       lean -= 0.06 * hang;
     }
-    const brace = this.brace * (1 - hang);
+    const brace = this.brace * (1 - hang) * (1 - climb);
     if (brace > 0.02 && !a) {
       /** Into a strong wind: a forearm up across the lower face with the elbow out, leaning into it, chin down. */
       const g = this.grips[1];
@@ -1401,7 +1439,7 @@ export class Traveller {
 
     P.lean = lean;
     P.twist = twist;
-    P.tilt = sway + this.balanceTilt;
+    P.tilt = sway + this.balanceTilt + this.climbPose.sway * climb;
     P.bend = bend;
     P.rise = rise;
     P.sit = sit;

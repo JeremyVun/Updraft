@@ -53,8 +53,17 @@ export interface Pose {
   step: [number, number];
   /** Held up off her feet by what she holds overhead, 0..1: the feet leave the ground and hang, toes down. */
   hang: number;
+  /** Climbing, 0..1: knees out to the wall and toes into it. */
+  climb: number;
+  /** Feet set on something in the world: where each ankle goes, and how far it is given over to it, 0..1. */
+  feet: [FootHold, FootHold];
   /** Breath, 0..1 of a slow cycle's depth. */
   breath: number;
+}
+
+export interface FootHold {
+  at: THREE.Vector3;
+  w: number;
 }
 
 export function restArm(): ArmPose {
@@ -64,7 +73,8 @@ export function restArm(): ArmPose {
 export function newPose(): Pose {
   return {
     rise: 0, lean: 0, twist: 0, tilt: 0, bend: 0, headYaw: 0, headPitch: 0, headRoll: 0,
-    arms: [restArm(), restArm()], sit: 0, lap: 0, kneel: 0, swing: 0, kick: 0, dangle: 0, dangleAt: 0, lie: 0, lieFold: 0, step: [0, 0], hang: 0, breath: 0,
+    arms: [restArm(), restArm()], sit: 0, lap: 0, kneel: 0, swing: 0, kick: 0, dangle: 0, dangleAt: 0, lie: 0, lieFold: 0, step: [0, 0], hang: 0,
+    climb: 0, feet: [{ at: new THREE.Vector3(), w: 0 }, { at: new THREE.Vector3(), w: 0 }], breath: 0,
   };
 }
 
@@ -200,6 +210,7 @@ export class ChildMotion {
   private readonly va = new THREE.Vector3();
   private readonly vb = new THREE.Vector3();
   private readonly vc = new THREE.Vector3();
+  private readonly vd = new THREE.Vector3();
   private readonly ankle = new THREE.Vector3();
   private readonly accel = new THREE.Vector3();
   private readonly hipsGravity = new THREE.Vector3();
@@ -452,11 +463,13 @@ export class ChildMotion {
       const stepUp = pose.step[left ? 0 : 1];
       ankle.y += 0.4 * Math.max(0, stepUp);
       ankle.z += 0.3 * stepUp;
+      const hold = pose.feet[left ? 0 : 1];
+      if (hold.w > 0.001) ankle.lerp(root.worldToLocal(this.vd.copy(hold.at)), hold.w);
 
       // Into the hips' frame, from the hip joint.
       hips.updateMatrixWorld(true);
       const target = hips.worldToLocal(ankle.applyMatrix4(root.matrixWorld)).sub(thigh.position);
-      const pole = this.vb.set(s * 0.12, 0.2 + pose.sit * 0.8, 1);
+      const pole = this.vb.set(s * (0.12 + 0.45 * pose.climb), 0.2 + pose.sit * 0.8 + 0.15 * pose.climb, 1);
       twoBone(target, THIGH, SHIN, pole, this.qa, this.qb, this.t);
 
       // Kneeling (sitting back on the heels), swinging and lying are poses of their own.
@@ -487,7 +500,7 @@ export class ChildMotion {
       const kneelFoot = 2.2 * kneel;
       const swingFoot = swing * (0.5 + 0.3 * pose.kick);
       const sitFoot = pose.sit * -0.15;
-      this.qc.setFromEuler(this.ea.set(pitch * plant + kneelFoot + swingFoot + sitFoot + lie * 0.6 + 0.55 * pose.hang, 0, 0));
+      this.qc.setFromEuler(this.ea.set(pitch * plant + kneelFoot + swingFoot + sitFoot + lie * 0.6 + 0.55 * pose.hang + 0.2 * pose.climb, 0, 0));
       this.qb.multiply(this.qc);
       foot.quaternion.copy(this.qa.invert().multiply(this.qb));
     }

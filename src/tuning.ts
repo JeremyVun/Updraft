@@ -2200,6 +2200,42 @@ export const tuning = {
       /** Seconds without a useful stroke before the drawn gust; with no progress before the world's own gusts. */
       inviteAfter: 5, valveAfter: 90, valveEvery: 1.4, valvePush: 1.5,
     },
+    bell: {
+      /** Its swing: the pull back to rest (per second squared at a right angle) and how fast a swing dies (per second). */
+      pull: 6.4, damping: 0.75,
+      /**
+       * A stroke's sweep across it along its swing, in bell widths, asks for this many radians of swing; strokes at
+       * `gentle` bell widths a second count for `soft` of that, at `firm` for all of it. How near the bronze on
+       * screen a stroke must pass (screen heights). A stroke never adds to a swing, it only sets one: the strongest
+       * stroke wins, and the swing it asks for comes on over `lag` seconds.
+       */
+      perWidth: 0.27, gentle: 2, firm: 9, soft: 0.3, reach: 0.05, most: 0.5, lag: 0.28,
+      /** How hard a stroke pushes it toward the swing it asked for (per second squared). */
+      drive: 5.5,
+      /**
+       * A swing that tops out past `ringAt` radians rings, fully at `fullAt`; one past `touchAt` only touches the
+       * clapper. Only a stroke readies the clapper, and it strikes once, so one stroke is one ring.
+       */
+      ringAt: 0.3, fullAt: 0.44, touchAt: 0.1,
+      /** Seconds without a useful stroke before the drawn gust; with no ring before the world's own gust swings it. */
+      inviteAfter: 5, valveAfter: 90, valveEvery: 4,
+      /** The waves a ring sends out over what lies below the tower: metres a second, seconds they last, crest width. */
+      waveSpeed: 6.5, waveLife: 7, waveWidth: 1.1,
+      /** Its note: the strike note (MIDI), its level, how much of it goes to the reverb, and how long the hum lasts (s). */
+      note: 47, level: 0.6, wet: 0.42, hum: 15,
+    },
+    climb: {
+      /**
+       * Seconds for each move up the ivy: a hand to the next hold, a foot up onto a fork `lead` after it, the push up
+       * onto it; she goes up by a hold every `beat` seconds. Going down every move takes `down` times as long, and a
+       * foot feels about for `feel` seconds before it settles.
+       */
+      hand: 0.32, foot: 0.36, push: 0.4, lead: 0.12, beat: 0.46, down: 1.35, feel: 0.3,
+      /** How far a hand or a foot comes away from the wall as it moves (m), and how far out from it her body hangs. */
+      arc: 0.13, standOff: 0.5,
+      /** Over the top (s): the hands onto the sill, up on her arms until her chest is over it, the knee up, onto her feet in the opening. */
+      reachSill: 0.5, pull: 0.8, knee: 0.6, rise: 0.8,
+    },
   },
   /** One continuous passage from the last drowned houses to the forest beach. */
   storm: {
