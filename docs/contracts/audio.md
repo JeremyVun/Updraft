@@ -246,7 +246,9 @@ pan and bounded scheduling; finished nodes disconnect.
   its eye opens on her and as it waves goodbye, and as a far echo on the first crossing; as its spout falls free it
   calls once glad (`whale-glad`: the same voice, brighter, rising to E instead of settling on B). The sea runs off its near
   flipper as each lazy lift brings it up out of the water (`flipper-pour`, through `WorldFoley.whale`) before it is laid
-  back down (`whale-slap`).
+  back down (`whale-slap`). The seabirds standing on its back go up with a soft flurry of heavy wingbeats as it spouts
+  free (`seabirds-lift`, through `WorldFoley.whale`, from the first of them); the sea running off its back with each
+  breath is silent under its sigh.
 - Flock wingbeats follow flight and take-off; resting rafts are silent. Beats consumed while inaudible never burst on
   return.
 - The Lines pinwheels share one flutter voice; out of reach it fades, stops and disconnects, and a new one is made if
