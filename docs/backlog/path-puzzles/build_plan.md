@@ -547,6 +547,11 @@ saves for these beats. design.md "The room rethought", steps 1 to 5, is the spec
 - The route climbs at every crossing: the tree, the sheet, the windmill's hoist, the swing onto the nave, in that
   order, each landing higher than it started. No walk much over 10 s on foot. The cat goes first at every piece,
   already going as she arrives, never making her wait.
+- The mill at its yard's full size in the room (a 5.2 m climb, 7.3 m sails, the high roof's ridge at the basket's top),
+  the cat riding a sail up to the cap (`catWay`). Riding the basket she faces the tower and looks up at the cat and the
+  top, then down at the fog below, never back toward the lens (in the yard she faced the way she came, into the lens).
+- The sheet's cat is on the line for about 8 s before she can take hold: it must be across or nearly so as she
+  arrives, so she never waits.
 - Hand-on to 7c: she on the nave's ridge at the tower's foot, the cat at the ivy, the fog a few roofs back, the boat
   lost where it stuck, its lantern lit inside the fog. The fog is drivable by its level (the height of its top) and its
   front (how far along her way it has come), named in the as-built note, for 7c to raise round the tower and push back.
