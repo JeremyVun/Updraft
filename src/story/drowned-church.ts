@@ -102,12 +102,13 @@ export class ChurchArrival {
   private catAtSill = false;
   private catStarted = false;
   private firstAnswer = -Infinity;
+  /** Leaning down to the kitten that has come to her. */
+  private leaning = false;
   private readonly homeGlide = new THREE.Vector3();
   private camera: THREE.PerspectiveCamera | null = null;
   private aspect = 16 / 9;
   private readonly head = new THREE.Vector3();
   private readonly look = new THREE.Vector3();
-  private readonly hand = new THREE.Vector3();
   private readonly catEye = new THREE.Vector3();
   private readonly tmp = new THREE.Vector3();
   private readonly flat = new THREE.Vector2();
@@ -193,6 +194,7 @@ export class ChurchArrival {
     this.home = this.homeWant = HOME_LENGTH;
     this.cast.village!.dark.level = k.fog.drawn;
     cat.place(this.catSill(), this.outward, { pose: 'sit', floor: () => BELFRY.sill });
+    this.cast.village!.kittens.cats[FOUND].place(this.kittenSill(), this.outward, { pose: 'sit', floor: () => BELFRY.sill });
     this.catAtSill = true;
     boat.towed = false;
     boat.beach(NAVE_BERTH.x, NAVE_BERTH.z, NAVE_BERTH.yaw);
@@ -267,9 +269,11 @@ export class ChurchArrival {
         if (this.catStarted && (this.catEye.y > IVY_FOOT.y + k.followAt || this.t > k.followAfter)) this.follow();
         break;
       case 'nest':
-        c.lookAt = this.look.copy(v.kittens.centre).setY(v.kittens.centre.y + 0.15);
+        c.lookAt = v.kittens.cats[FOUND].eye(this.look);
+        c.lean = this.leaning ? k.leanTo : 0;
         if (this.t > k.nestFor) {
           c.kneeling = 0;
+          this.leaning = false;
           this.to('sea');
         }
         break;
@@ -304,32 +308,30 @@ export class ChurchArrival {
   }
 
   /**
-   * The cat, seeing her at the tower's foot, goes: off the railings onto the nave's slates, up them past her to the
-   * foot of the ivy and up it, in over the sill of the light she will climb in by, down onto the boards and across to
-   * the straw where its kittens are, and round them.
+   * The cat, seeing her at the tower's foot, goes: off the railings in one leap onto the nave's slates beside her at
+   * the foot of the ivy and up it, in over the sill of the light she will climb in by, down onto the boards and across
+   * to the straw where its kittens are, and round them.
    */
   private catUp(): void {
     const { cat } = this.cast;
     const v = this.cast.village!;
     this.catStarted = true;
     cat.unease = 0.3;
-    const slates = (x: number, z: number) => new THREE.Vector3(x, roofUnder(NAVE, x, z) ?? IVY_FOOT.y, z);
-    const onto = slates(IVY_FOOT.x - 0.5, TOWER.z + 1.75);
-    const top = slates(IVY_FOOT.x - 0.32, TOWER.z + 0.22);
+    const onto = new THREE.Vector3(IVY_FOOT.x - 0.25, 0, TOWER.z + 0.4);
+    onto.y = roofUnder(NAVE, onto.x, onto.z) ?? IVY_FOOT.y;
     const ledge = v.belfry.sill('west', LIGHT, -0.24).add(this.tmp.set(0, 0, 0.25));
     const floor = () => v.belfry.floor;
-    cat.leap(onto, { then: 'stand', arc: 0.35, gather: 0.25, floor: (x, z) => roofUnder(NAVE, x, z) ?? onto.y }, () => {
-      cat.run([top], (x, z) => roofUnder(NAVE, x, z) ?? top.y, { pace: 'run', speed: 2.4, then: 'stand' }, () => {
-        cat.climb([...v.ivy.catWay(), ledge], WEST, { then: 'stand', speed: tuning.drowned.church.catClimb }, () => {
-          const down = v.belfry.inside('west', LIGHT, 0.3).add(this.tmp.set(0, 0, 0.3));
-          cat.hop(down, { then: 'stand', floor }, () => {
-            const at = this.curlAt();
-            const before = at.clone().add(new THREE.Vector3(-Math.sin(CURL_YAW), 0, -Math.cos(CURL_YAW)).multiplyScalar(0.35));
-            cat.run([before, at], floor, { pace: 'walk', speed: 0.8, then: 'stand' }, () => {
-              cat.chirrup();
-              cat.rest('curl', null);
-              this.later(1.2, () => v.kittens.nestle(cat));
-            });
+    cat.leap(onto, { then: 'stand', arc: 0.5, gather: 0.2, floor: (x, z) => roofUnder(NAVE, x, z) ?? onto.y }, () => {
+      cat.climb([...v.ivy.catWay(), ledge], WEST, { then: 'stand', speed: tuning.drowned.church.catClimb, gather: 0.1 }, () => {
+        const down = v.belfry.inside('west', LIGHT, 0.3).add(this.tmp.set(0, 0, 0.3));
+        cat.hop(down, { then: 'stand', floor }, () => {
+          const at = this.curlAt();
+          const before = at.clone().add(new THREE.Vector3(-Math.sin(CURL_YAW), 0, -Math.cos(CURL_YAW)).multiplyScalar(0.35));
+          cat.run([before, at], floor, { pace: 'walk', speed: 0.8, then: 'stand' }, () => {
+            cat.chirrup();
+            cat.unease = 0;
+            cat.rest('curl', null);
+            this.later(1.2, () => v.kittens.nestle(cat));
           });
         });
       });
@@ -350,11 +352,11 @@ export class ChurchArrival {
 
   /**
    * In over the sill, she kneels in the opening and looks down at the straw just inside: the kittens, and the cat
-   * round them. One of them lifts its head and mews at her, comes over the boards to her, and pushes its head up into
-   * the mitten she puts down to it; the cat watches.
+   * round them. One of them lifts its head and mews at her, gets up and comes to the edge of the straw nearest her,
+   * sits looking up at her and mews again; she leans down to it.
    */
   private arrive(): void {
-    const { child: c, cat } = this.cast;
+    const { child: c } = this.cast;
     const v = this.cast.village!;
     const k = tuning.drowned.church;
     const kitten = v.kittens.cats[FOUND];
@@ -366,19 +368,12 @@ export class ChurchArrival {
       kitten.mew(0.35);
     });
     this.later(k.kittenComes, () => {
-      const to = v.belfry.inside('west', LIGHT, 0.17);
+      const to = v.belfry.inside('west', LIGHT, 0.12).add(this.tmp.set(0, 0, k.kittenAside));
       kitten.run([to], () => v.belfry.floor + 0.03, { pace: 'walk', speed: 0.45, then: 'sit', look: this.head }, () => {
-        this.hand.copy(kitten.eye(this.tmp)).setY(this.tmp.y + 0.05);
-        c.reachFor(1, this.hand);
-        kitten.nuzzle(this.hand);
-        this.later(k.nuzzleFor, () => {
-          c.reachFor(1, null);
-          kitten.nuzzle(null);
-          kitten.look(this.head);
-        });
+        kitten.mew(0.5);
+        this.leaning = true;
       });
     });
-    this.later(k.kittenComes + 0.8, () => cat.look(this.head));
   }
 
   /**
@@ -613,6 +608,7 @@ export class ChurchArrival {
     const { cat } = this.cast;
     const v = this.cast.village!;
     const at = this.curlAt();
+    cat.unease = 0;
     cat.place(at, CURL_YAW, { pose: 'curl', floor: () => at.y });
     cat.look(null);
     v.kittens.nestle(cat);
@@ -654,6 +650,10 @@ export class ChurchArrival {
   private readonly targetSpeed = new THREE.Vector3();
   private readonly herY = { value: IVY_FOOT.y };
   private zoomNow = 1;
+  private leaving = false;
+  private readonly goneFrom = new THREE.Vector3();
+  private readonly goneAim = new THREE.Vector3();
+  private readonly mixFrom = new THREE.Vector3();
   private readonly mixEye = new THREE.Vector3();
   private readonly mixTarget = new THREE.Vector3();
 
@@ -680,8 +680,6 @@ export class ChurchArrival {
       case 'foot':
       case 'climb':
         view = pick(k.climb, k.uprightClimb);
-        view[1] += y;
-        view[4] += y;
         break;
       case 'nest':
         view = pick(k.nest, k.uprightNest);
@@ -701,10 +699,9 @@ export class ChurchArrival {
       default:
         view = pick(k.up, k.uprightUp);
     }
-    if (this.step !== 'climb') {
-      view[1] += S;
-      view[4] += S;
-    }
+    const over = this.step === 'foot' || this.step === 'climb' ? y : S;
+    view[1] += over;
+    view[4] += over;
     this.eye.set(view[0], view[1], view[2]);
     this.target.set(view[3], view[4], view[5]).add(C);
     if (this.step === 'ring' && this.rings > 0) {
@@ -737,7 +734,8 @@ export class ChurchArrival {
     this.bound = true;
     const o = this.orbitNow;
     this.eyeNow.set(C.x + Math.cos(o.x) * o.y, o.z, C.z + Math.sin(o.x) * o.y);
-    this.zoomNow = THREE.MathUtils.lerp(k.uprightZoom, 1, wide);
+    const zoomWant = (view[6] ?? 1) * THREE.MathUtils.lerp(k.uprightZoom, 1, wide);
+    this.zoomNow += (zoomWant - this.zoomNow) * (1 - Math.exp(-dt / k.glide));
     this.write(shot, this.eyeNow, this.targetNow, this.zoomNow);
     return k.pace;
   }
@@ -755,12 +753,19 @@ export class ChurchArrival {
     const away = THREE.MathUtils.smootherstep(this.aboardFor - tuning.drowned.church.lookUpFor, 0, k.leaveFor);
     if (away >= 1) return;
     const head = this.cast.child.position;
-    const from = this.eyeNow, to = this.tmp.copy(shot.target).addScaledVector(shot.from!, shot.distance).setY(shot.target.y + shot.height);
+    /** Under way, the lens goes with her from where it stood as the look up ended, so the boat never sails up to it. */
+    if (!this.leaving) {
+      this.leaving = true;
+      this.goneFrom.subVectors(this.eyeNow, head);
+      this.goneAim.subVectors(this.targetNow, head);
+    }
+    const from = this.mixFrom.addVectors(head, this.goneFrom);
+    const to = this.tmp.copy(shot.target).addScaledVector(shot.from!, shot.distance).setY(shot.target.y + shot.height);
     const a0 = Math.atan2(from.x - head.x, from.z - head.z), a1 = Math.atan2(to.x - head.x, to.z - head.z);
     const r = THREE.MathUtils.lerp(Math.hypot(from.x - head.x, from.z - head.z), Math.hypot(to.x - head.x, to.z - head.z), away);
     const a = a0 + Math.atan2(Math.sin(a1 - a0), Math.cos(a1 - a0)) * away;
     this.mixEye.set(head.x + Math.sin(a) * r, THREE.MathUtils.lerp(from.y, to.y, away), head.z + Math.cos(a) * r);
-    this.mixTarget.copy(this.targetNow).lerp(shot.target, away);
+    this.mixTarget.addVectors(head, this.goneAim).lerp(shot.target, away);
     const zoom = THREE.MathUtils.lerp(this.zoomNow, shot.zoom ?? 1, away);
     this.write(shot, this.mixEye, this.mixTarget, zoom);
     shot.eye = undefined;

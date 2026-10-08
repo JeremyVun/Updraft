@@ -1855,14 +1855,19 @@ export const tuning = {
       /** Seconds she stands at the tower's foot before the beat begins, and before the cat goes up past her. */
       naveFor: 1, catAfter: 0.4,
       /** She follows once the cat is this far up the ivy (metres), or after this many seconds; the cat climbs at m/s. */
-      followAt: 2.4, followAfter: 3.5, catClimb: 1.25,
+      followAt: 2.4, followAfter: 6, catClimb: 1.9,
       /**
        * Seconds kneeling over the kittens, then standing in the opening looking out over the fog sea; how far round
        * from straight out of it she turns to the north-west (radians).
        */
       nestFor: 6.4, seaFor: 6, lookRound: 0.75,
       /** Seconds after she kneels that a kitten lifts its head to her and that it comes over to her, and how long it nuzzles her mitten. */
-      kittenLooks: 0.9, kittenComes: 1.8, nuzzleFor: 2.4,
+      kittenLooks: 0.9, kittenComes: 1.8,
+      /**
+       * How far south of the middle of her light the kitten comes to her, so it is seen past the shaft between the
+       * lights, and how far she leans down to it (radians).
+       */
+      kittenAside: 0.62, leanTo: 0.14,
       fog: {
         /**
          * How far back along the nave it waits while she is low on the ivy, and how far past the tower it stops
@@ -2093,14 +2098,14 @@ export const tuning = {
       handFor: 5, handFar: 22, handOut: 2, handUp: 0.8, uprightHandHold: 0.7,
     },
     /**
-     * The church (`ChurchArrival.frame`): each view as [eye x, y, z, target x, y, z], x and z from the tower's middle,
-     * heights over the belfry's sill (over her, while she climbs); then upright's own.
+     * The church (`ChurchArrival.frame`): each view as [eye x, y, z, target x, y, z, lens], x and z from the tower's
+     * middle, heights over the belfry's sill (over her, while she climbs); then upright's own.
      */
     church: {
       /** From the north of the west face as the cat runs up past her and she climbs after it, rising with her (heights over her). */
       climb: [-8.6, 1.2, -10.2, -3.6, 1.55, -1.0], uprightClimb: [-7.8, 1.2, -8.6, -3.2, 2.3, -0.7],
       /** Close outside the west face, looking past her in her light and in through the other at the kittens she has found. */
-      nest: [-4.3, 1.3, 1.95, -1.8, 0.45, -0.15], uprightNest: [-4.4, 1.5, 2.3, -1.8, 0.4, -0.25],
+      nest: [-4.9, 2.1, 2.6, -1.95, 0.45, 0], uprightNest: [-5.2, 2.4, 3, -1.95, 0.35, -0.1],
       /** Out over the fog sea west of the tower while she stands looking at it. */
       sea: [-16, 5, 6, -2, -0.5, -3], uprightSea: [-18, 7, 7, -2.2, -1.8, -3],
       /**
@@ -2111,7 +2116,7 @@ export const tuning = {
       /** Low off the north water to the west as the boat comes in under the tower and she climbs down to it. */
       bring: [-23, -4, -12, -2, -4.6, -9], uprightBring: [-25, -2.5, -14, -2.5, -4.4, -7.5],
       /** From beside the boat, low, up at the cat on the sill. */
-      up: [-13, -6, -9, -4, -1.5, -2], uprightUp: [-13.5, -6, -10, -4, -1.8, -2.5],
+      up: [-17, -4.2, -15, -4.2, -3, -2.2, 1.3], uprightUp: [-18, -4, -16, -4.4, -3.2, -2.4, 1.15],
       /** How long it takes to settle on a new view (s), its pace, and upright how much wider the lens. */
       glide: 1.8, pace: 0.7, uprightZoom: 0.85,
       /** When the lantern answers the lens looks this share of the way toward it, for about this many seconds. */
