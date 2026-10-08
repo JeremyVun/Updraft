@@ -413,6 +413,7 @@ export class SleepingWhale extends WhaleRig {
     this.wake.update(dt, time);
     this.shedSea(dt);
     this.birds.update(dt, this, this.phase === 'free' ? this.time - SPOUT_FROM : -1, this.blowhole, this.away);
+    this.uniforms.uPour.value.y = this.headWet;
     if (this.headWet > 0) {
       for (let i = 0; i < SPINE_N; i++) {
         const head = 1 - THREE.MathUtils.smoothstep((i / (SPINE_N - 1)) * SPINE_END, 0.24, 0.34);
@@ -727,11 +728,12 @@ export class SleepingWhale extends WhaleRig {
   private shedSea(dt: number): void {
     if (this.shedT > K.sheetFor + 1) return;
     this.shedT += dt;
-    const wet = K.sheetWet * Math.min(1, this.shedBy) * THREE.MathUtils.smoothstep(this.shedT, 0, 1)
-      * (1 - THREE.MathUtils.smoothstep(this.shedT, 1, K.sheetFor));
+    const wet = K.sheetWet * Math.min(1, this.shedBy) * THREE.MathUtils.smoothstep(this.shedT, 0, 0.6)
+      * (1 - THREE.MathUtils.smoothstep(this.shedT, 1.5, K.sheetFor));
+    this.uniforms.uPour.value.x = Math.max(-2, K.pourFrom - this.shedT * (K.pourSpeed + 0.5 * K.pourFall * this.shedT));
     for (let i = 0; i < SPINE_N; i++) {
       const s = (i / (SPINE_N - 1)) * SPINE_END;
-      const top = THREE.MathUtils.smoothstep(s, 0.15, 0.35) * (1 - THREE.MathUtils.smoothstep(s, 0.65, 0.82));
+      const top = THREE.MathUtils.smoothstep(s, 0.08, 0.2) * (1 - THREE.MathUtils.smoothstep(s, 0.72, 0.86));
       this.wet[i] = Math.max(this.wet[i], wet * top);
     }
     const pouring = this.shedBy * THREE.MathUtils.smoothstep(this.shedT, 0.6, 1.4) * (1 - THREE.MathUtils.smoothstep(this.shedT, 1.4, 3.5));

@@ -1,6 +1,9 @@
 import * as THREE from 'three';
 import type { WindField, WindSample } from '../../wind/field';
 import { ATMO_GLSL, atmo } from '../../world/atmosphere';
+import { glsl, tuning } from '../../tuning';
+
+const HUE = tuning.netWhale.mistLook;
 
 const MAX = 3200;
 export const MIST = 0;
@@ -104,23 +107,28 @@ void main() {
     float lumps = vnoise(w + uTime * 0.15) * 0.6 + vnoise(w * 2.4 - uTime * 0.2) * 0.4;
     // Soft all the way from the middle, so overlapping puffs add up to one body of mist, never rings of discs; the
     // spout's a little firmer at its lumpy edge, so its crown reads as a shape against the bright sky behind it.
-    float body = mix(1.0 - smoothstep(0.0, 0.75 + 0.35 * lumps, r), 1.0 - smoothstep(0.25, 0.8 + 0.2 * lumps, r), spout);
-    a = pow(body, 1.5 - 0.5 * spout) * smoothstep(vAge * 0.6, vAge * 0.6 + 0.5, lumps + 0.2) * vAlpha;
+    float edge = mix(0.75 + 0.2 * lumps, 0.62 + 0.3 * lumps, spout);
+    float body = 1.0 - smoothstep(edge * mix(0.35, 0.72, spout), edge, r);
+    a = pow(body, 1.5 - 0.7 * spout) * smoothstep(vAge * 0.6, vAge * 0.6 + 0.5, lumps + 0.2) * vAlpha;
     // Each puff a soft ball, a little of the column's own side in it.
     float k = min(r, 1.0);
     float facing = sqrt(max(0.0, 1.0 - k * k));
     vec3 ball = normalize(vRight * vQ.x + vUp * vQ.y + V * facing);
     float side = vSide * 6.2832;
-    vec3 N = normalize(mix(ball, vec3(cos(side), 0.2, sin(side)), 0.3));
-    float wrap = clamp(dot(N, uSunDir) * 0.5 + 0.5, 0.0, 1.0);
-    // The low sun comes through where it is thin, so it glows from behind; where it is thick it is in its own shade.
-    float through = pow(toSun, 2.0) * mix(0.3 + 0.7 * (1.0 - facing), 0.22 + 0.78 * pow(1.0 - facing, 1.2), spout);
-    // The sky's brightness without its colours, whose blue and orange together go lilac: white, cool grey-blue in its
-    // shade, gold where the sun reaches it.
-    // Some of the low sun is scattered all through it, so even its shaded side is a warm white, never smoke.
-    col = mistShade(clamp(0.5 + 0.35 * N.y + 0.25 * wrap, 0.0, 1.0)) * (1.1 + 0.15 * spout) + cloudGlow() * (0.28 + wrap * wrap * 0.7 + through) * sun;
+    vec3 N = normalize(mix(ball, vec3(cos(side), 0.25, sin(side)), 0.45));
+    // Lit as a painter lights a backlit plume: from the side the sun lies on in the frame, a little from above.
+    vec3 across = uSunDir - V * dot(uSunDir, V);
+    float lit = smoothstep(-0.75, 0.7, dot(N, normalize(across + vec3(0.0, 0.3 + 0.2 * spout, 0.0))));
+    // As bright as the sky behind it at least, so it reads as white in front of the glow, never a grey cut-out of it.
+    float behind = max(lumaOf(skyColor(-V)), lumaOf(uSkyAmbient) * 1.6);
+    float open = clamp(0.5 + 0.5 * N.y, 0.0, 1.0);
+    vec3 shade = behind * mix(vec3(0.74, 0.8, 0.98), vec3(0.92, 0.95, 1.04), open) * ${glsl(HUE.shade)};
+    vec3 white = behind * vec3(1.0, 0.92, 0.78) * (${glsl(HUE.white)} + ${glsl(HUE.spoutWhite)} * spout);
+    // The low sun comes through where it is thin, so its edges glow gold toward it.
+    float through = pow(toSun, 3.0) * pow(1.0 - facing, 1.2 + 0.4 * spout) * (0.4 + 0.6 * lit);
+    col = mix(shade, white, lit) + cloudGlow() * (through * ${glsl(HUE.through)} + 0.12 * lit) * sun;
     // Thinning, it takes on the warmth of the morning it is going into rather than greying against it.
-    col *= mix(vec3(1.0), vec3(1.1, 0.98, 0.9), smoothstep(0.3, 0.9, vAge));
+    col *= mix(vec3(1.0), vec3(1.08, 0.98, 0.9), smoothstep(0.3, 0.9, vAge));
     additive = 0.04;
   } else if (vKind < 1.5) {
     a = (1.0 - smoothstep(0.0, 1.0, r)) * vAlpha;

@@ -1416,12 +1416,14 @@ export const tuning = {
     /** Seconds between its weak breaths, how far its back rises with one (m), and how much mist each sputters. */
     breathEvery: 10, breathRise: 0.45, mist: 1,
     /**
-     * As each breath lifts its back the sea sheets off the top, as wet as `sheetWet`, running off over `sheetFor`
-     * seconds in threads that mirror the dawn (`rills` of it) and glint (`glints`); and the sea round it swells with it,
-     * one low crest `heaveHeight` m high at its flank going out at `heaveSpeed` m/s, `heaveWidth` m across, settled
-     * `heaveFor` s after the breath.
+     * As each breath lifts its back the sea pours off the top, as much as `sheetWet`, draining over `sheetFor` seconds:
+     * its front comes down from `pourFrom` m above the sea at `pourSpeed` m/s, gathering `pourFall` m/s², in broad
+     * falls that mirror the dawn (`falls` of the skin they cover) and glint (`glints`); and the sea round it swells
+     * with it, one low crest `heaveHeight` m high at its flank going out at `heaveSpeed` m/s, `heaveWidth` m across,
+     * settled `heaveFor` s after the breath.
      */
-    sheetWet: 0.8, sheetFor: 4, rills: 0.4, glints: 2.5, heaveHeight: 0.3, heaveSpeed: 3.5, heaveWidth: 6, heaveFor: 6,
+    sheetWet: 0.8, sheetFor: 4, pourFrom: 6.5, pourSpeed: 1.2, pourFall: 1.6, falls: 0.9, glints: 2,
+    heaveHeight: 0.3, heaveSpeed: 3.5, heaveWidth: 6, heaveFor: 6,
     /**
      * The seabirds standing far along its back, each at [s along it, radians round from the top of its ring toward
      * the boat, facing in radians from its heading], `seabirdSize` times a gull. They go up from `seabirdsAfter` s
@@ -1437,6 +1439,12 @@ export const tuning = {
      * `spoutBreadth` times as broad as the first column's.
      */
     firstBreathHeight: 13, spoutHeight: 15, spoutBreadth: 1.2,
+    /**
+     * Its breath's mist against the low sky, in shares of the sky's brightness behind it: `shade` on the side away
+     * from the sun (soft grey-blue), `white` on the sun's side and `spoutWhite` more for the free spout (white lit
+     * gold), and how much of the low sun glows `through` its thin edges toward it.
+     */
+    mistLook: { shade: 1, white: 2.1, spoutWhite: 0.3, through: 0.9 },
     /** As it spouts free the sea round it brightens, as much as `gladSea`, out to `gladReach` metres from it. */
     gladSea: 0.8, gladReach: 34,
     /**

@@ -191,22 +191,25 @@ float shows(float size, float px) {
 }
 
 /**
- * The sea running off it at m metres over the skin: threads about 1.4 m apart along it, each wandering as it runs down
- * the flank and carrying its water in pulses that run down it; and where a pulse catches the low sun, a glint.
- * Threads finer than a pixel give way to the faint sheen they would add up to.
+ * The sea pouring off it after a breath, m metres over the skin and h metres above the sea, its front come down to
+ * \`front\` m above the sea, as much of it as \`amount\` (0..1): broad falls over the ridge and down the flank, each
+ * wandering a little, that part into threads as they near the waterline and narrow to their middles as they drain.
+ * Gives how much a fall covers here, how full it runs there, the water streaming down it, and where a drop in it glints.
  */
-vec2 rills(vec2 m) {
-  float px = length(fwidth(m)) + 1e-4;
-  float lane = m.x * 0.7 + (vnoise(vec2(m.x * 0.3, m.y * 0.25)) - 0.5) * 1.4;
-  float id = floor(lane);
-  float w = 0.035 + 0.035 * hash12(vec2(id, 3.0));
-  float x = abs(fract(lane) - 0.5);
-  float fine = shows(w * 2.8, px);
-  float core = 1.0 - smoothstep(0.0, w + px * 0.7, x);
-  float thread = mix(w * 2.0, core, fine) * step(0.5, hash12(vec2(id, 7.0)));
-  float pulse = smoothstep(0.3, 0.75, vnoise(vec2(id * 1.7, m.y * 0.7 + uTime * 2.2)));
-  float spark = smoothstep(0.86, 0.96, vnoise(vec2(id * 5.3, m.y * 6.0 + uTime * 5.0))) * core * fine;
-  return vec2(thread * pulse, spark * pulse * step(0.5, hash12(vec2(id, 7.0))));
+vec4 falls(vec2 m, float h, float front, float amount, float px) {
+  float x = m.x + (vnoise(vec2(m.x * 0.18, m.y * 0.3 + 4.0)) - 0.5) * 2.4;
+  float lane = vnoise(vec2(x * 0.42, 2.7)) * 0.7 + vnoise(vec2(x * 1.3, 8.1 + m.y * 0.1)) * 0.3;
+  float low = 1.0 - smoothstep(0.4, 2.4, h);
+  float parted = mix(1.0, 0.45 + 0.85 * vnoise(vec2(x * 2.6, m.y * 0.2 + 5.0)), low * shows(0.4, px));
+  float inside = lane * parted - mix(0.72, 0.46, amount * 1.25);
+  // Each fall's front comes down at its own pace.
+  float tongue = front + (vnoise(vec2(x * 0.55, 9.0)) - 0.5) * 1.4;
+  float reached = smoothstep(tongue - 0.3, tongue + 0.35, h);
+  float run = vnoise(vec2(x * 5.0, m.y * 0.45 + uTime * 2.4)) * 0.65 + vnoise(vec2(x * 12.0, m.y * 1.1 + uTime * 3.8)) * 0.35 * shows(0.12, px);
+  float lead = 1.0 - smoothstep(0.0, 0.9, h - tongue);
+  float glint = smoothstep(0.86, 0.97, vnoise(vec2(x * 11.0, m.y * 1.3 + uTime * 5.0))) * shows(0.08, px);
+  float cover = smoothstep(0.0, 0.12, inside) * reached;
+  return vec4(cover, smoothstep(0.02, 0.3, inside), clamp(run + 0.4 * lead, 0.0, 1.0), glint * cover);
 }
 
 /**
@@ -695,6 +698,8 @@ ${ATMO_GLSL}
 ${SKIN_GLSL}
 ${HAZE_GLSL}
 uniform vec3 uSeaTint;
+/** How far down the sea pouring off its back has come (m above the sea), and how much the bared head streams. */
+uniform vec2 uPour;
 in vec3 vWorld;
 in vec3 vNormal;
 in vec3 vAxisX;
@@ -730,14 +735,17 @@ void main() {
   float dry = smoothstep(0.0, 0.25, vWorld.y);
   vec2 flow = vec2(dot(vRest.xz, vec2(5.0, 2.0)), vWorld.y * 1.1 + uTime * 1.9);
   float streak = smoothstep(0.7, 0.95, vnoise(vec2(flow.x * 2.5, flow.y)) * 0.75 + vnoise(vec2(flow.x * 7.0, flow.y * 3.0)) * 0.25);
-  // Over its back and flanks the sea runs off in threads, side by side along it, each wandering down from the top.
-  vec2 running = vec2(0.0);
-  if (part == ${BODY}) {
-    running = rills(overSkin(vRest));
-    streak = running.x;
+  // Over its back and flanks the sea pours off in broad falls; the head, bared at the haul, streams with them.
+  vec4 pour = vec4(0.0);
+  if (part == ${BODY} && vWet > 0.01) {
+    vec2 m = overSkin(vRest);
+    float front = mix(uPour.x, -2.0, uPour.y * (1.0 - smoothstep(0.24, 0.34, vRig.x)));
+    pour = falls(m, vWorld.y, front, vWet, length(fwidth(m)) + 1e-4) * (1.0 - k.near);
+    pour.x *= smoothstep(0.0, 0.25, vWet);
+    streak = 0.5 * pour.x * pour.z;
   }
   // Lifted out of the sea, the flipper streams with it.
-  float sheet = max(vWet, part == ${FIN} ? clamp(uSlap.y * 30.0, 0.0, 1.0) : 0.0) * dry;
+  float sheet = max(pour.x, part == ${FIN} ? clamp(uSlap.y * 30.0, 0.0, 1.0) : 0.0) * dry;
 
   vec3 R = reflect(-V, N);
   vec3 env = skyColor(vec3(R.x, max(R.y, 0.02), R.z));
@@ -749,15 +757,22 @@ void main() {
   float low = (1.0 - smoothstep(0.0, 2.5, vWorld.y)) * smoothstep(0.3, 0.45, vRig.x) * float(part == ${BODY});
   col *= (1.0 - 0.25 * wet) * (1.0 - 0.3 * ${f(L.runs)} * k.run);
   col = mix(col, env, F * (0.25 + (part == ${FIN} ? 0.5 : 0.15) * sheet + ${f(L.wet)} * wet + 0.6 * k.gloss) * (part == ${FIN} ? 0.45 : 1.0));
-  // Each thread a strip of the dawn it mirrors, darker skin between them.
-  col = mix(col * (1.0 - 0.12 * sheet), env * 1.15 + uSunColor * sun * (0.06 + 0.2 * back), streak * sheet * ${f(tuning.netWhale.rills)} * float(part == ${BODY}));
+  // A fall is a clear sheet of the dawn it mirrors, streaming down, lit through gold where it pours over the ridge
+  // toward the sun; the skin shows through it but where it runs full.
+  float streaming = smoothstep(0.45, 0.9, pour.z);
+  vec3 water = env * (0.75 + 0.5 * streaming) + uSkyAmbient * 0.5 + uSkyHorizonSun * 0.2 * streaming
+    + uSunColor * sun * (0.04 + 0.5 * back * smoothstep(0.55, 0.9, vRig.w)) * (0.5 + streaming);
+  // Where it pours back into the sea it churns white.
+  float churn = pour.x * (1.0 - smoothstep(0.05, 0.6, vWorld.y)) * smoothstep(0.35, 0.7, vnoise(vec2(overSkin(vRest).x * 2.0, uTime * 1.5)));
+  water = mix(water, vec3(0.9, 0.92, 0.95) * (lumaOf(uSkyHorizon) * 1.6 + uSunColor * 0.25 * sun), churn * 0.7);
+  col = mix(col, water, pour.x * (0.2 + 0.35 * pour.y + 0.45 * streaming * (0.4 + 0.6 * pour.y)) * (0.65 + 0.35 * vWet) * dry * ${f(tuning.netWhale.falls)});
   vec3 H = halfVector(uSunDir, V);
   float nh = max(dot(N, H), 0.0);
   // Lying awash the flipper's blade faces the sky, and a sheen on it as broad as the back's would make it a pale thing.
   float sheen = (part == ${FIN} ? ${f(L.sheen)} * 0.3 : ${f(L.sheen)}) * (1.0 - k.crust);
   col += uSunColor * pow(nh, mix(mix(24.0, 70.0, wet), 160.0, sheet)) * (sheen * (1.0 + wet) * (1.0 - 0.7 * low) + (0.8 + 3.0 * streak) * sheet) * sun * (1.0 - k.gloss) * (1.0 - 0.7 * k.near);
   col += vec3(0.85, 0.9, 0.95) * (uSkyAmbient * 0.7 + uSunColor * (0.1 + back * 0.8) * sun) * streak * sheet * 0.45;
-  col += uSunColor * vec3(1.0, 0.9, 0.7) * running.y * sheet * ${f(tuning.netWhale.glints)} * sun;
+  col += (uSunColor * vec3(1.0, 0.9, 0.7) + uSkyHorizon) * pour.w * dry * ${f(tuning.netWhale.glints)} * (0.3 + 0.7 * sun);
   // A flipper lying flat is seen edge on all over, so only the body takes the rim along its silhouette.
   float rim = pow(1.0 - nv, ${f(L.rimPower)}) * smoothstep(-0.2, 0.5, N.y + ndl) * (part == ${FIN} ? 0.2 : 1.0) * (1.0 - low);
   col += uSunColor * mix(vec3(1.0), k.albedo * 2.0, 0.35) * rim * (0.2 + back) * ${f(L.rim)} * sun * (1.0 - k.near);
