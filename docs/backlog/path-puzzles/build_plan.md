@@ -798,20 +798,27 @@ steps `foot`, `climb`, `nest`, `sea`, `ring`, `down`, `wait`, `board`, `aboard`)
   from behind in her light, the bell in the other, the lantern's answers left of the tower; `find` 0.1 leans toward
   each answer); a glide low over the north water from the west as she climbs down and the boat comes in; the look-up
   two-shot from the north-west with a 1.3 lens; then the departure goes with her, turns to between her and the
-  lighthouse's lamp as its light falters (`lampFrom`..`lampTo`, `lampZoom` 0.75; upright it favours the lamp) and hands
-  over to the storm's frame from `leaveFrom` 6.6 s over 12 s.
+  lighthouse's lamp as its light falters (`lampFrom`..`lampTo`, `lampZoom` 0.75, upright wider) and hands over to
+  the storm's frame from `leaveFrom` 6.6 s over 12 s, carrying the rig's breathing in (`breathe` in `camera.ts`; a
+  placed shot now keeps the eye before its breathing, so any placed move handing over to an eased one is seamless).
 - **Checks**: `drowned-run-check` (new `FROM=belfry`) climbs, rings the bell with strokes until four rings, sails the
   boat home, and reports the beats' times, each ring's boat distance before and after its answer and the lantern on
   screen, the cat and kitten on the sill at the slow blink, and the rings' times into the recording; it fails if the
   bell does not ring four times, the lantern comes no nearer or is out of frame when it answers, or the cat is off the
   sill. `progress-check` restores `church` (plays on to her climbing), `belfry` (to the bell live) and `storm`.
+  Measured from the drift with real gestures, landscape with `LENS=1`: the bell hers 24.4 s after the tower's foot and
+  first rung at 26.7 s; four rings in four strokes over 12.3 s; the boat home 14 s and eight strokes after the sail was
+  hers; her aboard about 62 s after the tower's foot; the cat 0.2 m and the kitten 0.25 m from the sill at the blink;
+  she was never out of frame or hidden through the church; the lens's fastest turn from the tower's foot to the beach
+  25 deg/s; the frame darkening into the storm at most 9.9 a second. The one failure is the run's own walking lens just
+  after the sheet, 60.1 deg/s against the 60 limit, as on the base commit (60.3). Upright (900x1600) passes, the church
+  never losing her.
 Weak: the kittens read small through the other light and the kitten's coming to her is half behind the shaft, her
 back to the lens; at the slow blink the cat is about 30 px tall at 1600 wide, so the blink reads in motion only; the
 cat's run up beside her at the ivy's foot is behind her in the climb view, and its leap onto the wall is slow (the
 cat's own launch); the fog sea is 7d's to make read (today a pink tableland whose flank shows far roofs on open
 water); `LanternGlow` stands in for the fog's lantern halo, which is faint from above: check the two do not double
-once 7d's halo lands; the hand-over to the storm's frame ends with a one-frame nudge (54 deg/s); the boat comes home
-from the north-east, not the south where it was lost. For Phase 8: the views are the tuning arrays above; `HOME_WAY`
+once 7d's halo lands; the boat comes home from the north-east, not the south where it was lost. For Phase 8: the views are the tuning arrays above; `HOME_WAY`
 is laid for the bell's view and moves with it. For Phase 9: `drownedScore` still returns `still` through the church;
 the cues are `church.step` (`climb`, `nest`, `sea`, `ring`, `down`, `aboard`), `rings`, `answered` and `aboardFor`,
 the bell's note is B (MIDI 59).
