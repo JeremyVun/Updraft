@@ -938,7 +938,57 @@ from the belfry, the rings over it and the lantern coming through it all read; k
 Gate: `LENS=1` checks, both aspects (no turn over 30 deg/s, she never out of frame, no visible cut); a still at every
 shot-list line in both aspects, judged beside the contact sheets; a `VIDEO=1` webm of the whole room with 2 fps
 strips.
-Done: [ ]
+Done: [~] (branch `proto-drowned-camera`; the turns, cuts and most frames done, three gate failures left, below). As
+built, every beat from the rescue to the storm is on the ordinary rig (`orbit: true` eyes or follow shots, `subjects`
+named), so every change of side is an orbit at the rig's 17 deg/s and nothing cuts in play (`cameraCut` only on QA
+skips and restored saves):
+- **Rescue** (`DrownedChapter.rescueFrame`, `drownedCamera.rescue*`): once the tub is `rescueFrom` 5 m from the boat
+  the lens comes round to the bow's quarter (0.95 rad off the bow) on the side away from the sail, committed as the
+  sailing view's side (`quarter`): forward of the sail, the mast clear of her face, 5.4 m, 2.5 m over the boards so the
+  cat shows past the gunwale, lens 1.25: the leap aboard, the shiver, the cat at her shins and her kneeling, her face.
+- **Drift** (`driftFrame`, `drift*`): 19 m astern on the quarter away from the sail, 4.2 m over the aim, the spire,
+  windmill and lighthouse ahead: the room's establishing shot.
+- **Stuck** (`strandFrame`, `stuck*`, `ridge*`): from the air dying the lens comes round the boat's open (west) side
+  and in, side on to the bow, 5.6 m, 1.5 m over the water; as the fog comes on the cat's fear leans it onto the cat
+  (`stuckOnCat`) and lengthens the lens (`stuckCloser`); at the bolt it rises and comes round to the south-west of the
+  ridge's west end, behind her the way she will go, the fog beyond. Upright from the bow's quarter.
+- **Run** (`RoofRun.frame`): the laid lens (`layLens`) now wants to stand behind her on the fog's side (`behindHer`,
+  `off` 1.35 rad from straight behind, 12.5 m, 3.5 m up) and costs a steep look down (`steepFrom`), the fog's front
+  out of view (`fogInView`, `fogEdge`) and her walking at it (three strides ahead); it is read `keyAhead` 2.5 m ahead
+  of her so the turn-capped lens comes round corners as she does. Pieces: the tree and sheet as before; the mill low
+  beside the basket looking up the tower, rising slower than she does (`millWide`), only once she is at the basket;
+  the swing side on from 21 m as its pumping was tuned for; the end along the nave. The old tree's crown and bough are
+  obstacles for the laid lens. Subjects: her and the piece, the cat ahead within `catHeld`, or her way on; no draw back
+  at a piece.
+- **Church** (`ChurchArrival.frame`, `drownedCamera.church`): view tables as before but written as orbit eyes with
+  subjects (her and the cat, kitten, bell or boat), per-step paces: the foot from the south-west (the cat past her
+  and up the ivy), the climb from the north, the kittens past her through the other light (7c's), the fog sea, the
+  bell, the boat home from high off the north water coming down with her (`bring`, `bringAlong`). Aboard
+  (`upFrame`): low beside the boat on its starboard, 4.2 m, on her as she turns, then from `tiltFrom` 1.2 s to
+  `tiltTo` 5 s up past her face to the cat and kitten on the sill with a lens of 2.2, held for the blink (the blink
+  moved from 2.4 to 5.6 s and the look up from 5.5 to 10.6 s to hold it), then let go from `releaseFrom` out to the
+  west (`release`), where the storm's departure takes it.
+Measured (`drowned-run-check`, real gestures, landscape): the fastest turn anywhere 25.4 deg/s (drift; run 21, church
+18, storm 18.5), p95 17-20 everywhere; no cut in play; she never out of frame on the run, no roof hiding her; the rings,
+lantern in frame at each answer, the boat home and the storm's light and landing all pass; upright the same within
+25.3 deg/s. Stills and lens measures per beat: contact sheets `/tmp/updraft-cam8-sheet-*.jpg`.
+Left (gate failures and weak frames):
+- The fog leaves a walk's frame for 7-10 s on the walk from the granary to the swing (and 8 s on the walk to the mill
+  in some runs): the lens behind her looks the way she goes and the fog is behind it there; the laid lens's fog cost
+  does not win against the turn and off costs on that stretch. Upright the same (reported, not gated).
+- She walks toward the lens 1.1-1.5 s at one corner of her way (58.9 m, onto the wall before the mill, or 39 m at the
+  tree's end): the turn-capped lens comes round after her.
+- At the slow blink she is out of the frame for 6.5-8 s by design (the long lens on the cat, about 70 px tall); the
+  church check asks for her in frame throughout, so `LENS=1` fails there. Holding both in one landscape frame puts the
+  cat at about 35 px.
+- The kittens are 7c's view (her back, the kitten small): a view in through the north face's west light never showed
+  her (she sits behind its jamb from anywhere that sees through it); going inside the belfry needs an authored path.
+- From the kittens to the fog sea the orbit round the north-west corner hides her behind the tower for up to 7.6 s.
+- Boarding: the mast crosses her as she steps in; the swing's pumping took 9 to more than 40 strokes across runs
+  (unchanged view; the variance is the puzzle's).
+For Phase 9: the look up now runs 10.6 s (`lookUpFor`), the blink at 5.6 s, so the storm's `gather` starts 5.1 s later
+than before. For Phase 10: the run check's `FILMFROM=cat`, `TO=ridge`, `TRACE=<file>` (per-quarter-second lens trace
+and per-stretch fastest turns), stills' lens measures (`<prefix>-measures.json`), and `LENS=1` gating 30 deg/s and cuts.
 
 ### Phase 9: the music (parallel with 7c or 8)
 Owns: the drowned score (`src/audio/dream-score.ts` and its notes, the room's `drownedScore` phases): a cue for every
