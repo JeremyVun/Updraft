@@ -1542,7 +1542,7 @@ export const tuning = {
       breath: { distance: 18, height: 2.8, turn: -0.2, lookY: 8, toward: 0.35 },
       look: { distance: 2.9, height: 2.55, turn: -0.45, lookY: 2.2, toward: 0.5 },
       line: { distance: 6, height: 3.2, turn: -0.75, lookY: 3, toward: 0.37, eyeward: 1 },
-      flipper: { distance: 12, height: 3.4, turn: -1.5, lookY: 3, toward: 0.3 },
+      flipper: { distance: 12, height: 3.4, turn: -1.5, lookY: 3, toward: 0.5 },
       release: { distance: 28, height: 11, turn: -0.25 },
     },
     /**
