@@ -847,6 +847,11 @@ From the lead's review of 7a's run: at the rescue the mast stands between the le
 is seen from high above, so she is tiny, the climb has no ruler and the fog is out of frame; the swing is seen from
 high over the board, looking down on her; on the granary's ridge she walks straight at the lens; the upright lens
 turns at 64 deg/s coming round from the climb and leaves the fog out of the narrow frame for up to 3.8 s on walks.
+From the lead's review of 7d's first act: the drift holds one close frame on her in the boat for its 20 s, where the
+village passing is the shot; the stranding's wide frame holds about 18 s from the scrape to her climbing out, low and
+far, so the cat's stare, yowl and bolt are a few pixels at the bow and the fog rising behind the houses has no
+weight. Come in on the bow for the cat's fear and keep the fog's rise growing in frame, so the wait reads as the
+threat arriving.
 Gate: `LENS=1` checks, both aspects; a still at every shot-list line.
 Done: [ ]
 
