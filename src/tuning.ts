@@ -1880,6 +1880,8 @@ export const tuning = {
       lookBackFor: 5.6,
       /** The beat she takes before a hop of her own; within `through` of a turn gentler than `bend` (radians) she walks on through it. */
       hopPause: 0.3, through: 1.1, bend: 0.4,
+      /** Seconds she stands once the sheet has set her down before she goes on, while the lens comes round to her way. */
+      setDown: 1.4,
       /**
        * How often she glances back at the fog as she goes, for how long, and how far round toward the lens from straight
        * away from it she may look on her way (radians), at the fog, the cat or ahead, so her face never turns to it.
@@ -1903,8 +1905,8 @@ export const tuning = {
        * it; how hard it closes on where it is going (per second a metre), the slowest and fastest it comes on (m/s), and
        * how quickly it changes pace (per second), quicker while she looks back.
        */
-      fogTrail: 12, fogHold: { tree: 10, sheet: 10, mill: 18, swing: 12 }, fogEnd: 19, fogNearest: 7.5, fogLaid: 10,
-      fogPull: 0.35, fogSlowest: 0.12, fogFastest: 3.2, fogEase: 0.9, fogLookedEase: 3,
+      fogTrail: 12, fogHold: { tree: 10, sheet: 8, mill: 18, swing: 12 }, fogEnd: 19, fogNearest: 7.5, fogLaid: 10,
+      fogPull: 0.5, fogSlowest: 0.12, fogFastest: 3.2, fogEase: 0.9, fogLookedEase: 3,
     },
     /** The wash-tub the player's wind carries to the cat's roof and back to the boat. */
     tub: {
@@ -2021,11 +2023,11 @@ export const tuning = {
       comeFrom: 3, comeTo: 0, leaveFrom: 0, endFrom: 8,
       /**
        * How fast the lens comes round to a piece's view once she has stopped at it (per second), and to the swing's
-       * (from the mill's, which brings her to it).
+       * (from the mill's, which brings her to it), by way of a point this far from the swing's pivot (x, height, z).
        */
-      roundRate: 1.1, swingRate: 0.7,
+      roundRate: 1.1, swingRate: 0.3, swingVia: [0.5, 8, 24],
       /** How far past each piece the lens has given it back to her own way, metres. */
-      leave: { tree: 4, sheet: 5, mill: 5, swing: 3 },
+      leave: { tree: 4, sheet: 0, mill: 5, swing: 3 },
       /**
        * Her look back from the first roof's end: how strongly it holds the lens, how quickly it comes and goes (s) and
        * how long before she turns to go on it has gone, so it is back beside her before she walks; how far behind her,
@@ -2037,7 +2039,7 @@ export const tuning = {
        * The tree's view: how far north of where it lies over her wall and east of it (out over the lane) it stands, and
        * how high (upright, the same).
        */
-      treeNorth: 9.5, treeEast: 1.6, treeHigh: 3.6, uprightTreeNorth: 10.5, uprightTreeEast: 0.8, uprightTreeHigh: 4.6,
+      treeNorth: 9.5, treeEast: 1.6, treeHigh: 4.4, uprightTreeNorth: 10.5, uprightTreeEast: 0.8, uprightTreeHigh: 4.6,
       /** The sheet's view: which side of the line it stands (+1 the left looking up it), and how far off it in landscape. */
       sheetSide: 1, sheetOff: 10.5,
       /**

@@ -52,7 +52,7 @@ try {
       const ours = __game.story.name === 'drowned' || last?.name === 'drowned';
       if (ours && last && t > last.t && (last.cut === st.cameraCut || last.story !== st)) {
         const dt = t - last.t, turn = Math.acos(Math.min(1, d.dot(last.d))) * 180 / Math.PI / dt, move = p.distanceTo(last.p) / dt;
-        if (turn > w.turn) { w.turn = turn; w.turnAt = where(); }
+        if (turn > w.turn) { w.turn = turn; w.turnAt = `${where()}, the lens at ${p.toArray().map((v) => v.toFixed(1))} over ${(dt * 1000).toFixed(0)} ms`; }
         if (move > w.move) { w.move = move; w.moveAt = where(); }
       }
       last = { t, d, p, cut: st.cameraCut, story: st, name: __game.story.name };
@@ -532,7 +532,10 @@ try {
         const toward = (fx * tx + fz * tz) / tl > 0.5 && r.stage === 'walk' && c.moving;
         w.facingRun = toward ? w.facingRun + 1 / 60 : 0;
         if (toward) w.facing += 1 / 60;
-        if (w.facingRun > w.facingWorst) { w.facingWorst = w.facingRun; w.facingAt = `at ${r.along.toFixed(1)} m, ${p.toArray().map((v) => v.toFixed(2))}`; }
+        if (w.facingRun > w.facingWorst) {
+          w.facingWorst = w.facingRun;
+          w.facingAt = `at ${r.along.toFixed(1)} m, ${p.toArray().map((v) => v.toFixed(2))}, the lens at ${lens.toArray().map((v) => v.toFixed(1))}`;
+        }
         const head = p.clone().setY(p.y + 1.2).project(cam);
         const out = Math.abs(head.x) > 0.95 || Math.abs(head.y) > 0.95 || head.z > 1;
         w.unseenRun = out ? w.unseenRun + 1 / 60 : 0;
@@ -540,7 +543,10 @@ try {
         if (w.unseenRun > w.unseenWorst) { w.unseenWorst = w.unseenRun; w.unseenAt = `${r.stage} at ${r.along.toFixed(1)} m, until ${t.toFixed(1)} s`; }
         /** Under a roof's slates, or a roof between the lens and her: a march along the line of sight. */
         const under = (x, z) => [...W.PLACED, W.NAVE].reduce((top, h) => Math.max(top, W.roofUnder(h, x, z) ?? -Infinity), -Infinity);
-        if (lens.y < under(lens.x, lens.z) + 0.2) { w.inside += 1 / 60; w.insideAt = `${r.stage} at ${r.along.toFixed(1)} m`; }
+        if (lens.y < under(lens.x, lens.z) + 0.2) {
+          w.inside += 1 / 60;
+          w.insideAt = `${r.stage} at ${r.along.toFixed(1)} m, the lens at ${lens.toArray().map((v) => v.toFixed(1))}`;
+        }
         let hidden = false;
         for (let i = 1; i < 24 && !hidden; i++) {
           const u = i / 24, x = lens.x + (p.x - lens.x) * u, z = lens.z + (p.z - lens.z) * u, y = lens.y + (p.y + 1.4 - lens.y) * u;
