@@ -1545,7 +1545,7 @@ export const tuning = {
      */
     lookLight: [2.2, 2.5, 0.6], farewellLight: [1.5, 0, 0.3], lightEase: 1,
     /** Her goodbye as its flukes stand, from her face (m): out to her left, up, swaying either way, and how fast (rad/s). */
-    goodbyeWave: [0.42, 0.38, 0.13, 4.5],
+    goodbyeWave: [0.55, 0.12, 0.15, 4.5],
     /** As it dives she slides this far along the thwart to the port rail (m), at `farewellRailEase` a second. */
     farewellSlide: 0.35, farewellRailEase: 0.8,
     /**
@@ -1602,7 +1602,7 @@ export const tuning = {
       line: { distance: 6, height: 3.2, turn: -0.75, lookY: 3, toward: 0.37, eyeward: 1 },
       flipper: { distance: 12, height: 3.4, turn: -1.5, lookY: 3, toward: 0.5 },
       release: { distance: 12, height: 3, turn: -0.3, lookY: 12, toward: 0.4 },
-      farewell: { distance: 30, height: 1.4, turn: -0.5, lookY: 20, toward: 0.66 },
+      farewell: { distance: 22, height: 1.2, turn: -0.6, lookY: 24, toward: 0.25 },
       releaseRoom: 4,
     },
     /**
