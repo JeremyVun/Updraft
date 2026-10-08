@@ -50,47 +50,6 @@ function glide(at: THREE.Vector3, speed: THREE.Vector3, to: THREE.Vector3, time:
   }
 }
 
-/**
- * A lens moved along `way` while it looks at `look(share)`, paced so its view never turns faster than `turn` (rad/s)
- * nor its eye moves faster than `speed` (m/s), building up to that and easing off over `ease` of the move.
- */
-class PacedMove {
-  private readonly times: number[] = [];
-  readonly duration: number;
-
-  constructor(private readonly way: THREE.Curve<THREE.Vector3>, look: (share: number, out: THREE.Vector3) => THREE.Vector3,
-    turn: number, speed: number, private readonly ease: number) {
-    const STEPS = 240;
-    const eye = new THREE.Vector3(), at = new THREE.Vector3(), was = new THREE.Vector3(), dir = new THREE.Vector3(), last = new THREE.Vector3();
-    let total = 0;
-    for (let i = 0; i <= STEPS; i++) {
-      way.getPointAt(i / STEPS, eye);
-      dir.subVectors(look(i / STEPS, at), eye).normalize();
-      if (i > 0) total += Math.max(Math.acos(THREE.MathUtils.clamp(dir.dot(last), -1, 1)) / turn, eye.distanceTo(was) / speed);
-      this.times.push(total);
-      was.copy(eye);
-      last.copy(dir);
-    }
-    this.duration = total / (1 - ease);
-  }
-
-  /** How far along the way the eye is `t` seconds in (0 to 1). */
-  share(t: number): number {
-    const d = this.duration, e = this.ease * d, all = this.times[this.times.length - 1];
-    const x = THREE.MathUtils.clamp(t, 0, d);
-    /** The paced time covered: at the pace laid out between the ramps, building up and easing off over them. */
-    const want = x < e ? (x * x) / (2 * e) : x > d - e ? all - (d - x) ** 2 / (2 * e) : x - e / 2;
-    let i = 1;
-    while (i < this.times.length - 1 && this.times[i] < want) i++;
-    const a = this.times[i - 1], b = this.times[i];
-    return (i - 1 + (b > a ? (want - a) / (b - a) : 0)) / (this.times.length - 1);
-  }
-
-  point(share: number, out: THREE.Vector3): THREE.Vector3 {
-    return this.way.getPointAt(THREE.MathUtils.clamp(share, 0, 1), out);
-  }
-}
-
 /** The point `s` metres along a way of points on the water, and the way it heads there. */
 function along(way: readonly THREE.Vector2[], s: number, out: THREE.Vector2): number {
   let left = Math.max(0, s);
@@ -714,12 +673,6 @@ export class ChurchArrival {
   private readonly upShoulder = new THREE.Vector3();
   private readonly upTarget = new THREE.Vector3();
   private readonly upHood = new THREE.Vector3();
-  /** The move in to the kittens or back out to the fog sea, which of them it is, where it looked as it set off, and its lens then. */
-  private belfryMove: PacedMove | null = null;
-  private belfryLeg: Step | 'off' = 'off';
-  private readonly belfryFrom = new THREE.Vector3();
-  private readonly belfryFace = new THREE.Vector3();
-  private belfryZoom = 1;
   private readonly held = { primary: new THREE.Vector3(), secondary: new THREE.Vector3(), margin: tuning.drownedCamera.church.margin,
     extra: tuning.drownedCamera.church.extra };
 
@@ -755,8 +708,17 @@ export class ChurchArrival {
         held.secondary.copy(this.catEye.y > c.y + 0.5 && this.catEye.y < BELFRY.sill + 0.5 ? this.catEye : held.primary);
         break;
       case 'nest':
+        view = pick(k.nest, k.uprightNest);
+        this.cast.village!.kittens.cats[FOUND].eye(held.secondary);
+        pace = k.nestPace;
+        held.margin = k.nestMargin;
+        held.extra = 0;
+        break;
       case 'sea':
-        return this.belfryFrame(shot, wide);
+        view = pick(k.sea, k.uprightSea);
+        held.secondary.copy(held.primary);
+        pace = k.seaPace;
+        break;
       case 'ring':
         view = pick(k.ring, k.uprightRing);
         this.bell.middle(held.secondary);
@@ -786,44 +748,6 @@ export class ChurchArrival {
     if (this.alongside) this.boardEye(wide, this.eye);
     this.write(shot, this.eye, this.target, (view[6] ?? 1) * THREE.MathUtils.lerp(k.uprightZoom, 1, wide));
     return pace;
-  }
-
-  /**
-   * In to the kittens and back out to the fog sea, one authored move each way and never a cut: from where the climb
-   * leaves the lens, along the west face to the other light of her opening and in through it, round the shaft between
-   * the lights, to low in the room's south-west corner looking up at her face over the cat and kittens in the straw;
-   * and once she stands to look out, back out the same way and away west over the fog sea, where it holds.
-   */
-  private belfryFrame(shot: Shot, wide: number): number {
-    const k = tuning.drownedCamera.church;
-    const lerp = THREE.MathUtils.lerp;
-    const nest = this.step === 'nest';
-    const at = (p: readonly number[], out = new THREE.Vector3()) => out.set(C.x + p[0], BELFRY.sill + p[1], C.z + p[2]);
-    const sea = this.pick(k.sea, k.uprightSea, wide);
-    /** Her face as the move sets off: her small movements would swing a lens this close. */
-    const face = this.belfryFace;
-    /** Where it looks a share of the way along: from where it looked as it set off, to her face, to where it ends. */
-    const look = (share: number, out: THREE.Vector3) => {
-      const end = nest ? this.tmp2.copy(face).setY(lerp(face.y, BELFRY.sill, k.nestAim)) : this.tmp2.set(C.x + sea[3], BELFRY.sill + sea[4], C.z + sea[5]);
-      return out.copy(this.belfryFrom).lerp(face, THREE.MathUtils.smoothstep(share, 0, 0.35)).lerp(end, THREE.MathUtils.smoothstep(share, 0.5, 1));
-    };
-    if (this.belfryLeg !== this.step || !this.belfryMove) {
-      this.belfryLeg = this.step;
-      this.cast.child.face(face);
-      const from = (this.camera?.position ?? this.eye).clone();
-      const ahead = this.camera ? this.camera.getWorldDirection(this.tmp) : this.tmp.subVectors(this.target, this.eye).normalize();
-      this.belfryFrom.copy(from).addScaledVector(ahead, Math.max(1, from.distanceTo(face)));
-      const inner = k.nestWay.map((p) => at(p));
-      const points = nest ? [from, ...inner, at(this.pick(k.nestCorner, k.uprightNestCorner, wide))] : [from, ...inner.slice(1).reverse(), at(sea)];
-      this.belfryMove = new PacedMove(new THREE.CatmullRomCurve3(points, false, 'centripetal'), look, k.wayTurn, k.waySpeed, k.wayEase);
-      this.belfryZoom = this.zoomNow;
-    }
-    const share = this.belfryMove.share(this.t);
-    this.belfryMove.point(share, this.eye);
-    look(share, this.target);
-    const zoom = nest ? lerp(k.uprightNestZoom, k.nestZoom, wide) : (sea[6] ?? 1) * lerp(k.uprightZoom, 1, wide);
-    this.write(shot, this.eye, this.target, lerp(this.belfryZoom, zoom, THREE.MathUtils.smoothstep(share, nest ? 0.3 : 0, nest ? 1 : 0.7)), true);
-    return k.pace;
   }
 
   /**
@@ -957,7 +881,7 @@ export class ChurchArrival {
     return a.map((x, i) => THREE.MathUtils.lerp(b[i], x, wide));
   }
 
-  private write(shot: Shot, eye: THREE.Vector3, target: THREE.Vector3, zoom: number, exact = false): void {
+  private write(shot: Shot, eye: THREE.Vector3, target: THREE.Vector3, zoom: number): void {
     if (this.lensCut) {
       this.lensCut = false;
       this.cut++;
@@ -970,7 +894,7 @@ export class ChurchArrival {
     shot.orbit = true;
     shot.fitWidth = false;
     shot.free = false;
-    shot.exact = exact;
+    shot.exact = false;
     shot.eye = (shot.eye ?? new THREE.Vector3()).copy(eye);
     shot.target.copy(target);
     shot.from = (shot.from ?? new THREE.Vector3()).set(eye.x - target.x, 0, eye.z - target.z).normalize();

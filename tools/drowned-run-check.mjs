@@ -231,22 +231,10 @@ try {
       const k = tuning.drownedCamera.church;
       window.__leaveBy = tuning.drowned.church.lookUpFor + k.leaveFrom + k.leaveFor;
       const w = window.__churchWatch = { offWorst: 0, offAt: '', unseenRun: 0, unseenWorst: 0, unseenAt: '', hiddenRun: 0, hiddenWorst: 0, hiddenAt: '' };
-      const { BELFRY } = await import('/src/world/belfry.ts');
       const roofs = [...W.PLACED, W.NAVE];
-      const inner = BELFRY.half - BELFRY.wall, floor = BELFRY.sill - BELFRY.step;
-      /** The tower's stone: open in the belfry's room and through each light of its openings. */
-      const tower = (x, y, z) => {
-        const dx = x - W.TOWER.x, dz = z - W.TOWER.z;
-        if (Math.abs(dx) >= W.TOWER.half || Math.abs(dz) >= W.TOWER.half || y >= W.TOWER.sill + 3.5) return false;
-        if (y < floor) return true;
-        const inX = Math.abs(dx) < inner, inZ = Math.abs(dz) < inner;
-        if (inX && inZ) return false;
-        if (inX === inZ) return true;
-        const along = Math.abs(Math.abs(inX ? dx : dz) - BELFRY.light.at);
-        return !(along < BELFRY.light.width / 2 && y > BELFRY.sill && y < BELFRY.sill + BELFRY.light.spring);
-      };
       /** A roof or the tower between the lens and her. */
-      const solid = (x, y, z) => tower(x, y, z) || roofs.some((h) => y < (W.roofUnder(h, x, z) ?? -Infinity) - 0.05);
+      const solid = (x, y, z) => Math.abs(x - W.TOWER.x) < W.TOWER.half && Math.abs(z - W.TOWER.z) < W.TOWER.half && y < W.TOWER.sill + 3.5
+        || roofs.some((h) => y < (W.roofUnder(h, x, z) ?? -Infinity) - 0.05);
       const tick = () => {
         const ch = __game.story.current.church, c = __game.child, p = c.position;
         if (ch && ch.step !== 'off' && ch.step !== 'board' && ch.aboardFor < 0 && !c.riding && !c.action && !c.climbing) {
