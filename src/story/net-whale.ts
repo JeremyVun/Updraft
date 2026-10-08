@@ -1770,7 +1770,10 @@ export class NetWhale {
     if (into < 1) s.secondary.lerp(whale.finTip, 1 - into);
     // A phone's narrow frame stacks the step over the boat; fitting the eye in beside them would only back it off.
     // Going free the boat comes near and the whale lies across the middle distance, its plume leaving the frame.
-    if ((portrait && (this.step === 'line' || this.step === 'flipper')) || (!portrait && freeing)) s.tertiary.copy(s.secondary);
+    // Diving, its eye goes down into the deep: what it keeps in frame is where it went down, on a phone too.
+    if ((portrait && (this.step === 'line' || this.step === 'flipper')) || (!portrait && freeing) || farewell > 0) {
+      s.tertiary.copy(s.secondary);
+    }
     else s.tertiary.copy(this.step === 'flipper' ? whale.finTip : whale.eye);
     if (portrait && into < 1) s.tertiary.lerp(whale.finTip, 1 - into);
     s.secondary.lerp(rest, 1 - h);
@@ -1778,7 +1781,8 @@ export class NetWhale {
     // Each hold is composed as it stands: the look is never backed off, the steps only a little if what they ask for strays.
     s.margin = THREE.MathUtils.lerp(pair?.margin ?? 0.85, this.looking ? 1 : 0.85, h);
     const room = freeing ? THREE.MathUtils.lerp(K.holdRoom, portrait ? K.phone.releaseRoom : K.releaseRoom, into) : K.holdRoom;
-    s.extra = THREE.MathUtils.lerp(pair?.extra ?? 10, this.looking ? 0 : room, h);
+    // Handing back, what it held lets go rather than backing the view away from the boat to keep it.
+    s.extra = THREE.MathUtils.lerp(pair?.extra ?? (this.step === 'gone' ? 0 : 10), this.looking ? 0 : room, h);
     shot.subjects = s;
   }
 }
