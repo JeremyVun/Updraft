@@ -92,7 +92,10 @@ export class CatGait {
       this.settle(p);
     }
     this.prev.copy(s.origin);
+    this.yawWas = Math.atan2(s.forward.x, s.forward.z);
     this.fresh = false;
+    this.wasStepping = false;
+    this.speed = 0;
   }
 
   /** Every paw down where it already is, as after a landing: any out of place are then walked home one at a time. */
