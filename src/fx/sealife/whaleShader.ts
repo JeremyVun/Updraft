@@ -750,7 +750,7 @@ void main() {
   col *= (1.0 - 0.25 * wet) * (1.0 - 0.3 * ${f(L.runs)} * k.run);
   col = mix(col, env, F * (0.25 + (part == ${FIN} ? 0.5 : 0.15) * sheet + ${f(L.wet)} * wet + 0.6 * k.gloss) * (part == ${FIN} ? 0.45 : 1.0));
   // Each thread a strip of the dawn it mirrors, darker skin between them.
-  col = mix(col * (1.0 - 0.12 * sheet), env * 1.15, streak * sheet * ${f(tuning.netWhale.rills)} * float(part == ${BODY}));
+  col = mix(col * (1.0 - 0.12 * sheet), env * 1.15 + uSunColor * sun * (0.06 + 0.2 * back), streak * sheet * ${f(tuning.netWhale.rills)} * float(part == ${BODY}));
   vec3 H = halfVector(uSunDir, V);
   float nh = max(dot(N, H), 0.0);
   // Lying awash the flipper's blade faces the sky, and a sheen on it as broad as the back's would make it a pale thing.
