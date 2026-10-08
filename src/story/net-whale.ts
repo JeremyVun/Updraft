@@ -579,6 +579,7 @@ export class NetWhale {
       if (!this.podGone && whale.diving >= 0) this.podYaw = Math.atan2(whale.farewell.x - this.anchor.x, whale.farewell.z - this.anchor.z);
       this.podGone = true;
       out.heading = this.podYaw ?? this.escortYaw();
+      out.leaps = this.podYaw !== null;
       return out;
     }
     // It sets off round the whale as the cygnet is lifted in, so it is in the frame as the whale spouts.

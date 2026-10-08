@@ -114,11 +114,11 @@ void main() {
     vec3 N = normalize(mix(ball, vec3(cos(side), 0.2, sin(side)), 0.3));
     float wrap = clamp(dot(N, uSunDir) * 0.5 + 0.5, 0.0, 1.0);
     // The low sun comes through where it is thin, so it glows from behind; where it is thick it is in its own shade.
-    float through = pow(toSun, 2.0) * mix(0.3 + 0.7 * (1.0 - facing), 0.12 + 0.88 * pow(1.0 - facing, 1.5), spout);
+    float through = pow(toSun, 2.0) * mix(0.3 + 0.7 * (1.0 - facing), 0.22 + 0.78 * pow(1.0 - facing, 1.2), spout);
     // The sky's brightness without its colours, whose blue and orange together go lilac: white, cool grey-blue in its
     // shade, gold where the sun reaches it.
     // Some of the low sun is scattered all through it, so even its shaded side is a warm white, never smoke.
-    col = mistShade(clamp(0.5 + 0.35 * N.y + 0.25 * wrap, 0.0, 1.0)) * 1.1 + cloudGlow() * (0.28 + wrap * wrap * 0.7 + through) * sun;
+    col = mistShade(clamp(0.5 + 0.35 * N.y + 0.25 * wrap, 0.0, 1.0)) * (1.1 + 0.15 * spout) + cloudGlow() * (0.28 + wrap * wrap * 0.7 + through) * sun;
     // Thinning, it takes on the warmth of the morning it is going into rather than greying against it.
     col *= mix(vec3(1.0), vec3(1.1, 0.98, 0.9), smoothstep(0.3, 0.9, vAge));
     additive = 0.04;
@@ -312,11 +312,11 @@ export class Spray {
       const a = Math.random() * Math.PI * 2;
       const reach = 0.3 + 0.7 * Math.sqrt(Math.random());
       const crown = THREE.MathUtils.smoothstep(reach, 0.72, 1);
-      const out = (0.2 + reach * 0.4 * Math.random() + crown * (1.3 + Math.random() * 2.2)) * wide;
+      const out = (0.2 + reach * 0.4 * Math.random() + crown * (1 + Math.random() * 1.8)) * wide;
       const up = height * DRAG[SPOUT] * reach * strength * (1 + Math.random() * 0.12);
       this.emit(SPOUT, at.x + Math.cos(a) * 0.4 * wide, at.y + 0.2, at.z + Math.sin(a) * 0.4 * wide, Math.cos(a) * out, up,
-        Math.sin(a) * out, (0.55 + Math.random() * 0.35 + crown * 0.8) * wide, 6.5 + Math.random() * 2.5,
-        (0.15 + reach * 0.25 + crown * 0.7) * wide, 0.6 + Math.random() * 0.3, 2.2 + crown * 1.4 + Math.random() * 0.6);
+        Math.sin(a) * out, (0.55 + Math.random() * 0.35 + crown * 0.6) * wide, 6.5 + Math.random() * 2.5,
+        (0.15 + reach * 0.25 + crown * 0.55) * wide, 0.6 + Math.random() * 0.3, 2.2 + crown * 1.4 + Math.random() * 0.6);
       this.side[this.count - 1] = a / (Math.PI * 2);
     }
     const m = Math.floor(strength * 90 * dt + Math.random());

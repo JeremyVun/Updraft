@@ -57,7 +57,7 @@ const DIVE_SLOPE = curve([[-30, 0], [-24, 0], [-12, 0.1], [0, 0], [14, -0.55], [
 /** Seconds into the dive over which its head goes down off the surface onto the way. */
 const HEAD_DOWN = 6.5;
 /** Its glide along its own length, in metres a second, from the dive's start. */
-const GLIDE = curve([[0, 0], [1, 0.3], [4, 4.4], [7, 7.6], [10, 7.6], [11.8, 3], [13, 2], [16, 1.8], [18.5, 1.4], [19.5, 2.4], [21.5, 5.5], [23.5, 6.5], [30, 6.5]]);
+const GLIDE = curve([[0, 0], [1, 0.3], [4, 4.6], [6.5, 8.6], [9.5, 8.6], [11.3, 3.2], [12.3, 2.2], [14.5, 1.6], [16.5, 1.3], [17.5, 2.4], [19.5, 5.5], [21.5, 6.5], [30, 6.5]]);
 /** Where along it the tail stock bends to lift the flukes, and how far into the flukes the lift has all of them. */
 const STOCK = 0.84;
 const STOCK_TO = 0.95;
@@ -76,7 +76,7 @@ const WAVE_TURN = 0.12;
 const WAVE_PACE = 1.25;
 /** Seconds after the notch slips under before the boat may go and the pod goes with it, and before it is gone. */
 const GOING_AFTER = 1.2;
-const GONE_AFTER = 4;
+const GONE_AFTER = 3;
 /** Metres along its length it has glided, by seconds into the dive, integrated once from the glide. */
 const GLIDED = (() => {
   const dt = 1 / 30;
