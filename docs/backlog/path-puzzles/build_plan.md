@@ -434,8 +434,9 @@ are filmed in `half` light (`dusk=1.45`). All APIs of 6b stand; new: `new Cat({ 
   passes their mews to hers to be heard). The mother's curl is a ring (bent further, rolled onto her side) with the
   kittens inside it against her belly.
 Left: the far strips show the cat's motion only roughly (it is 40 px tall at 12 m); the shake's spray is faint in the
-game's own light; the press reads best close to; the bolt is still low and its legs short against the model sheet's
-soft gallop.
+game's own light; the press reads best close to; the gallop is still lower and shorter in the leg than the model
+sheet's soft gallop (its gather and stretch read at 30 fps, not at 10); riding the sail a hind leg falls 3 cm short
+as the sail tips.
 
 ### Phase 6c: the windmill as a sack hoist (after 6a; owns `src/world/crossings/windmill.ts`, `mill-crossing.ts`, `mill-spiral.ts`, the mill yard, `mill-check`)
 design.md "The windmill, rebuilt": she rides a basket on the hoist, standing, the full height of the mill; the
