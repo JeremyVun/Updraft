@@ -92,6 +92,8 @@ export interface SoundState {
   /** Only the long dolphin crossing uses the approved adaptive sea arrangement. */
   mirrorScore?: MirrorScorePhase;
   drownedScore?: DrownedScorePhase;
+  /** How hard the drowned chase presses, 0 to 1: its pulse tightens with it. */
+  drownedTension?: number;
   seaScore?: SeaScorePhase;
   sleepingScore?: SleepingScorePhase;
   /** The approved arrangement starts after the piano and continues until the next arrival handoff. */
@@ -1101,7 +1103,7 @@ export class Soundscape {
         this.dreamScore?.stop(); this.dreamScore = new DreamScore(ctx, this.backgroundBus, dreamKind);
       }
       // Dynamics are already composed into these arrangements; hush must not attenuate them twice.
-      this.dreamScore.update(dreamPhase, (dreamKind === 'mirror' ? tuning.audio.mirrorScoreLevel : tuning.audio.drownedScoreLevel) * roomTrim(dreamKind) * (1-piano), arrival.handoffAt);
+      this.dreamScore.update(dreamPhase, (dreamKind === 'mirror' ? tuning.audio.mirrorScoreLevel : tuning.audio.drownedScoreLevel) * roomTrim(dreamKind) * (1-piano), arrival.handoffAt, s.drownedTension);
     } else if (this.dreamScore) {
       this.dreamScore.stop(s.silence ? .12 : arrival.legato ? tuning.audio.forestMusicBlend : tuning.audio.dreamPhaseFade);
       this.dreamScore = null;

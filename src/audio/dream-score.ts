@@ -1,11 +1,12 @@
-import { DREAM_NOTES, DREAM_PALETTE, DREAM_HARMONY, type DreamKind, type DreamNote } from './dream-score-data';
+import { DREAM_NOTES, DREAM_PALETTE, DREAM_HARMONY, type DreamKind } from './dream-score-data';
+import { DROWNED_CUES, type CueNote, type DrownedCuePhase } from './drowned-cues';
 import { phrasePosition, phraseHandoff, schedulePhrase, type Phrase } from './phrasing';
 import { tuning } from '../tuning';
 
 export type MirrorScorePhase = 'approach' | 'search' | 'one' | 'two' | 'three' | 'constellation' | 'depart';
-export type DrownedScorePhase = 'rooftops' | 'still' | 'resume' | 'gather' | 'loss' | 'after';
+export type DrownedScorePhase = 'rooftops' | DrownedCuePhase | 'resume' | 'gather' | 'loss' | 'after';
 type Phase = MirrorScorePhase | DrownedScorePhase;
-interface Section extends Phrase<DreamNote> { chords: { at: number; tones: readonly number[] }[] }
+interface Section extends Phrase<CueNote> { chords: { at: number; tones: readonly number[] }[] }
 
 function section(kind: DreamKind, from: number, to: number, seconds = to - from): Section {
   const harmony = DREAM_HARMONY[kind];
@@ -40,7 +41,7 @@ function section(kind: DreamKind, from: number, to: number, seconds = to - from)
 export const DREAM_SECTIONS: Record<Phase, Section> = {
   approach: section('mirror',0,16), search: section('mirror',16,36), one: section('mirror',36,56),
   two: section('mirror',56,76), three: section('mirror',56,76), constellation: section('mirror',76,84), depart: section('mirror',84,100,18),
-  rooftops: section('drowned',0,32), still: section('drowned',32,46), resume: section('drowned',46,62),
+  rooftops: section('drowned',0,32), ...DROWNED_CUES, resume: section('drowned',46,62),
   gather: section('drowned',62,84), loss: section('drowned',84,100), after: section('drowned',100,109,14),
 };
 interface Part {
@@ -63,7 +64,8 @@ export class DreamScore {
     const position=this.current?phrasePosition(pattern,this.current.epoch,when):0;
     return [...pattern.chords].reverse().find(c=>c.at<=position)!.tones;
   }
-  update(phase: Phase, level: number, until=Infinity): void {
+  /** `tension`, 0 to 1, keeps each note that asks for it to the moments the story presses that hard (the chase). */
+  update(phase: Phase, level: number, until=Infinity, tension=0): void {
     if(this.stopped)return;
     const now=this.ctx.currentTime;
     this.bus.gain.setTargetAtTime(level,now,.8);
@@ -87,7 +89,9 @@ export class DreamScore {
       this.current=part;this.parts.add(part);
     }
     const part=this.current;
-    schedulePhrase(part,DREAM_SECTIONS[phase],now,(note,at)=>this.play(part,note,at),until);
+    schedulePhrase(part,DREAM_SECTIONS[phase],now,(note,at)=>{
+      if(!note.tension||(tension>=note.tension[0]&&tension<note.tension[1]))this.play(part,note,at);
+    },until);
   }
   /** Only the chapter's real success event calls this; phase entry/checkpoint restore never does. */
   bloom(): void {
@@ -118,7 +122,7 @@ export class DreamScore {
         if(this.stopped&&!this.parts.size)this.bus.disconnect();};
     }
   }
-  private play(part:Part,n:DreamNote,at:number):void {
+  private play(part:Part,n:CueNote,at:number):void {
     const ctx=this.ctx,patch=DREAM_PALETTE[n.voice],end=at+n.duration;
     const pan=ctx.createStereoPanner();pan.pan.value=n.pan;pan.connect(part.bus);
     if(part.echo&&['starlight','bloom','reflection'].includes(n.voice))pan.connect(part.echo);

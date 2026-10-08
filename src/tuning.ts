@@ -88,6 +88,12 @@ export const tuning = {
     linesScoreLevel: 7.5858, linesMelodyDb: -1.5, linesCueSpace: 4,
     /** Approved revised study gains, excluding listening-file normalization; the mirror 4 dB up after playtest. */
     mirrorScoreLevel: 10 ** (4 / 20), drownedScoreLevel: 1.8, dreamPhaseFade: 2.8, forestMusicBlend: 4,
+    /**
+     * The drowned chase's music: the fog's front from `near` metres behind her (the pulse at its tightest) to `far` (at
+     * its easiest), the share of that while she walks rather than works a piece, how much of it is eased once she is
+     * across one and over how long (s), and how long the music takes to follow (s).
+     */
+    drownedChase: { near: 7, far: 19, walking: .75, relief: .6, reliefFor: 5, ease: 1.5 },
     /** Approved distant foghorn; source gain excludes the listening export boost. */
     foghorn: { midi:50, level:.036, pan:.24, attack:1.1, duration:4.6,
       hold:2.65, dryLevel:.22, reverbSend:.35, predelay:.18, diffuseLevel:.8, diffuseSeconds:4.4,
