@@ -1895,9 +1895,9 @@ export const tuning = {
        * Seconds kneeling over the kittens, then standing in the opening looking out over the fog sea; how far round
        * from straight out of it she turns to the north-west (radians).
        */
-      nestFor: 6.4, seaFor: 6, lookRound: 0.75,
+      nestFor: 10, seaFor: 6, lookRound: 0.75,
       /** Seconds after she kneels that a kitten lifts its head to her and that it comes over to her, and how long it nuzzles her mitten. */
-      kittenLooks: 0.9, kittenComes: 1.8,
+      kittenLooks: 4.6, kittenComes: 5.4,
       /**
        * How far south of the middle of her light the kitten comes to her, so it is seen past the shaft between the
        * lights, and how far she leans down to it (radians).
@@ -2157,9 +2157,16 @@ export const tuning = {
       foot: [-10.5, 1.0, 6.5, -3.0, 1.4, 0.6], uprightFoot: [-9, 1.4, 5.5, -3.0, 2.6, 0.4],
       /** From the north of the west face as she climbs after it, rising with her. */
       climb: [-8.6, 1.2, -10.2, -3.6, 1.55, -1.0], uprightClimb: [-7.8, 1.2, -8.6, -3.2, 2.3, -0.7],
-      /** Close outside the west face, looking past her in her light and in through the other at the kittens she has found. */
-      nest: [-4.9, 2.1, 2.6, -1.95, 0.45, 0], uprightNest: [-5.2, 2.4, 3, -1.95, 0.35, -0.1], nestMargin: 0.95,
-      /** Out over the fog sea west of the tower while she stands looking at it. */
+      /**
+       * In to the kittens she has found: along the west face and in through the other light of her opening, round the
+       * shaft between the lights ([x, height over the sill, z] from the tower's middle), to low in the room's south-west
+       * corner (upright its own), looking up at her face this share of the way down to the sill, where the kitten comes
+       * to her, on a wide lens (upright its own). Each way it turns no faster than `wayTurn` (rad/s) and moves no faster than
+       * `waySpeed` (m/s), building up and easing off over `wayEase` of the move.
+       */
+      nestWay: [[-6.5, 1.3, -1.6], [-4.4, 1.05, 1.4], [-2.2, 0.85, 0.9]], nestCorner: [-1.35, 0.53, 1.4], uprightNestCorner: [-1.4, 0.4, 1.5],
+      nestAim: 0.5, nestZoom: 0.58, uprightNestZoom: 0.8, wayTurn: 0.4, waySpeed: 4.5, wayEase: 0.15,
+      /** Back out the same way to out over the fog sea west of the tower while she stands looking at it. */
       sea: [-16, 5, 6, -2, -0.5, -3], uprightSea: [-18, 7, 7, -2.2, -1.8, -3],
       /**
        * Out beside the tower while the bell is hers to ring: her in her light, the bell in the other, the fog sea
@@ -2190,10 +2197,10 @@ export const tuning = {
        */
       releaseFrom: 6.6, releaseTo: 10.6, release: [-17, -4.2, -15, 1.2, 1.1],
       /**
-       * The paces it moves at (the kittens', the fog sea's and the look up's slower), how much of the frame she and
+       * The paces it moves at (the look up's slower), how much of the frame she and
        * what she is with keep inside and how far it may draw back to hold them, and upright how much wider the lens.
        */
-      pace: 0.45, nestPace: 0.3, seaPace: 0.35, upPace: 0.6, margin: 0.8, extra: 1.5, uprightZoom: 0.85,
+      pace: 0.45, upPace: 0.6, margin: 0.8, extra: 1.5, uprightZoom: 0.85,
       /** When the lantern answers the lens looks this share of the way toward it, for about this many seconds. */
       find: 0.1, findFor: 3,
       /**
