@@ -467,7 +467,18 @@ near frames see it: barnacle crusts on the chin, the lip and the head near the e
 enough to read as old healed marks, the dapple painted with edges like lichen on a rock (the owl's rock is the
 reference), the growth with life in it. Still gentle to a child.
 Gate: as N3j's.
-Done: [ ]
+Done: [x] `a8aafc13..9d5cb9c3` on `sea-whale-skin` (`whaleShader.ts`, `tuning.whaleLook` only). Lichen replaces the
+dapple: colonies of crisp-edged rosettes (about 0.3–1.1 m, and small flecks), paler at the rim, dense at a colony's
+heart and thicker about the face, never on the eye or the low flank (`lichen`, `lichenWarm`, `lichenCover`,
+`lichenAmount`); scars as soft pale strokes 2–4 m with rounded ends, a pale haze and a thin shade under the lower edge,
+mostly along the body (`scar`, `scars`, `scarAmount`; raked pairs and tapers dropped, they read as claws); barnacles as
+tight lumpy pale crusts of soft domes on the knobs, the chin, the lip line and round the eye clear of its folds, greyer
+on the pale lip, shading the skin under them (`crust`, `crustShells`); the weed a ragged band on the rest waterline with
+moss and a faint yellow film above (`growth`, `moss`, `film`, `growthReach`; upright fronds dropped, they read as trees);
+a soft grain (`grain`) and three long creases arching over the eye (`creases`). The eye's clearance is one measure,
+`face`, 1 at the edge of its folds. Claude's judgement, 2026-10-08: it now reads as an old weathered whale, like an old
+hull from the bird's hold; the lichen is a little decal-like beside the owl's rock, a crust behind the eye is prominent
+at the look, and the weed can read as a dark hedge along a shore at a glance.
 
 ### Phase N3l: its life, her light, and the playable build
 After N3i, and N3k merged on `sea-whale`. Water sheeting off the back with each breath in glinting streams (N3j's wet
