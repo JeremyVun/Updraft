@@ -718,6 +718,7 @@ export class SleepingWhale extends WhaleRig {
     const at = this.spine[this.at(0.3)];
     const flank = halfWidthAt(0.3, -at.y / (Math.cos(at.w) * this.scale)) * this.scale;
     swellUniforms.uHeaveBefore.value.copy(swellUniforms.uHeave.value);
+    swellUniforms.uHeaveAxisBefore.value.copy(swellUniforms.uHeaveAxis.value);
     swellUniforms.uHeave.value.set(mid.x, mid.z, this.worldTime, K.heaveHeight * deep);
     swellUniforms.uHeaveAxis.value.set(h.x, h.z, half, flank);
   }

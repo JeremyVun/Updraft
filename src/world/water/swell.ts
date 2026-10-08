@@ -36,6 +36,8 @@ export const swellUniforms = {
   uHeaveBefore: { value: new THREE.Vector4(0, 0, -1e4, 0) },
   /** The whale's direction in xz, half its length, and how far out from that line its flank meets the sea. */
   uHeaveAxis: { value: new THREE.Vector4(1, 0, 0, 0) },
+  /** The same, as it lay when the ring before went out: a new breath must not move a ring already on its way. */
+  uHeaveAxisBefore: { value: new THREE.Vector4(1, 0, 0, 0) },
 };
 
 const S = tuning.netWhale;
@@ -63,9 +65,8 @@ const HEAVE_SPREADS = 12;
 const HEAVE_EDGE = (d: number) => THREE.MathUtils.smoothstep(-d, -2.6, -2.0) * THREE.MathUtils.smoothstep(d, -4.4, -3.6);
 
 /** The lift at (x, z) of the low ring of swell a breathing whale sends out from its flank. */
-function heave(g: THREE.Vector4, x: number, z: number, time: number): number {
+function heave(g: THREE.Vector4, a: THREE.Vector4, x: number, z: number, time: number): number {
   if (g.w <= 0) return 0;
-  const a = swellUniforms.uHeaveAxis.value;
   const t = time - g.z;
   const along = THREE.MathUtils.clamp((x - g.x) * a.x + (z - g.y) * a.y, -a.z, a.z);
   const off = Math.hypot(x - g.x - a.x * along, z - g.y - a.y * along) - a.w;
@@ -90,6 +91,7 @@ uniform vec3 uSurgeAxis;
 uniform vec4 uHeave;
 uniform vec4 uHeaveBefore;
 uniform vec4 uHeaveAxis;
+uniform vec4 uHeaveAxisBefore;
 
 float surgeLift(vec2 p) {
   if (uSurge.w <= 0.0) return 0.0;
@@ -101,11 +103,11 @@ float surgeLift(vec2 p) {
     * smoothstep(0.0, 6.0, front) * 12.0 / (12.0 + r);
 }
 
-float heaveRing(vec2 p, vec4 g) {
+float heaveRing(vec2 p, vec4 g, vec4 a) {
   if (g.w <= 0.0) return 0.0;
   float t = uTime - g.z;
   vec2 q = p - g.xy;
-  float off = length(q - uHeaveAxis.xy * clamp(dot(q, uHeaveAxis.xy), -uHeaveAxis.z, uHeaveAxis.z)) - uHeaveAxis.w;
+  float off = length(q - a.xy * clamp(dot(q, a.xy), -a.z, a.z)) - a.w;
   float d = (off - t * ${glsl(S.heaveSpeed)}) / (${glsl(S.heaveWidth)} + ${glsl(S.heaveSpread)} * clamp(off, 0.0, ${glsl(HEAVE_SPREADS)}));
   if (d > 2.6 || d < -4.4) return 0.0;
   return g.w * (exp(-d * d) - ${glsl(HEAVE_TROUGH)} * exp(-(d + 1.6) * (d + 1.6))) * (1.0 - smoothstep(2.0, 2.6, d)) * smoothstep(-4.4, -3.6, d) * smoothstep(0.0, 1.5, t)
@@ -113,7 +115,7 @@ float heaveRing(vec2 p, vec4 g) {
 }
 
 float heaveLift(vec2 p) {
-  return heaveRing(p, uHeave) + heaveRing(p, uHeaveBefore);
+  return heaveRing(p, uHeave, uHeaveAxis) + heaveRing(p, uHeaveBefore, uHeaveAxisBefore);
 }
 
 /** Where the swell carries the water that would lie at p: sideways in xz, and up in y. */
@@ -190,7 +192,8 @@ function shift(ux: number, uz: number, time: number, out: Shift): Shift {
   }
   const g = swellUniforms.uSurge.value;
   if (g.w > 0) out.y += g.w * surge(surgeDistance(ux, uz), time - g.z);
-  out.y += heave(swellUniforms.uHeave.value, ux, uz, time) + heave(swellUniforms.uHeaveBefore.value, ux, uz, time);
+  const u = swellUniforms;
+  out.y += heave(u.uHeave.value, u.uHeaveAxis.value, ux, uz, time) + heave(u.uHeaveBefore.value, u.uHeaveAxisBefore.value, ux, uz, time);
   return out;
 }
 
