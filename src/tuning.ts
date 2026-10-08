@@ -1528,15 +1528,16 @@ export const tuning = {
      * A phone's holds: on the line from what matters through the boat, turned `turn` radians round toward the low sun
      * on the bow (toward starboard when negative), as far as the step allows, so its tall frame keeps the gold
      * morning over the whale's back though it is too narrow to hold the head and the sun together; `distance` behind
-     * the boat and `height` up, looking from the boat `toward` of the way to what matters and `lookY` up on it (m).
+     * the boat and `height` up, looking from the boat `toward` of the way to what matters and `lookY` up on it (m); for
+     * the haul what matters is `eyeward` of the way from the head's middle to its eye.
      * `release` is where the breath's hold eases out to as it goes free, turned back a little from the sun so the
      * spout, its eye and the leap before it stand over the boat.
      */
     phone: {
       breath: { distance: 18, height: 2.8, turn: -0.2, lookY: 8, toward: 0.35 },
       look: { distance: 2.9, height: 2.55, turn: -0.45, lookY: 2.2, toward: 0.5 },
-      line: { distance: 11, height: 6, turn: -0.1, lookY: 20, toward: 0.12 },
-      flipper: { distance: 13, height: 8, turn: -1.2, lookY: 16, toward: 0.3 },
+      line: { distance: 6, height: 3.2, turn: -0.75, lookY: 3, toward: 0.37, eyeward: 1 },
+      flipper: { distance: 12, height: 3.4, turn: -1.5, lookY: 3, toward: 0.3 },
       release: { distance: 28, height: 11, turn: -0.25 },
     },
     /**

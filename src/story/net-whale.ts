@@ -259,9 +259,9 @@ export class NetWhale {
   private readonly hand = [new THREE.Vector3(), new THREE.Vector3()];
   private readonly ray = new THREE.Vector3();
   /** The holds the camera eases between: what it was holding when the step changed, what it is going to, and how far. */
-  private readonly holdFrom = new Float32Array(12);
-  private readonly holdTo = new Float32Array(12);
-  private readonly holdNow = new Float32Array(12);
+  private readonly holdFrom = new Float32Array(13);
+  private readonly holdTo = new Float32Array(13);
+  private readonly holdNow = new Float32Array(13);
   private holdT = 1;
   private holdSet = false;
   /**
@@ -1588,16 +1588,16 @@ export class NetWhale {
     const { breath, look, line, flipper } = K.phone;
     if (step === 'look') {
       to.set([K.lookDistance, K.lookHeight, K.lookBearing, K.lookLookY, K.lookToward, 0, look.distance, look.height, look.turn,
-        look.lookY, look.toward, 1]);
+        look.lookY, look.toward, 1, 1]);
     } else if (step === 'line') {
       to.set([K.lineDistance, K.lineHeight, K.lineBearing, K.lineLookY, K.lineToward, 0, line.distance, line.height, line.turn,
-        line.lookY, line.toward, 0]);
+        line.lookY, line.toward, 0, line.eyeward]);
     } else if (step === 'flipper') {
       to.set([K.flipperDistance, K.flipperHeight, K.flipperBearing, K.flipperLookY, K.flipperToward, 1, flipper.distance,
-        flipper.height, flipper.turn, flipper.lookY, flipper.toward, 0]);
+        flipper.height, flipper.turn, flipper.lookY, flipper.toward, 0, 0]);
     } else {
       to.set([K.holdDistance, K.holdHeight, K.holdBearing, K.holdLookY, K.holdToward, 0, breath.distance, breath.height,
-        breath.turn, breath.lookY, breath.toward, 0]);
+        breath.turn, breath.lookY, breath.toward, 0, 0]);
     }
     if (now || !this.holdSet) {
       this.holdFrom.set(to);
@@ -1638,9 +1638,10 @@ export class NetWhale {
     const now = this.holdNow;
     const moved = THREE.MathUtils.smootherstep(this.holdT, 0, 1);
     for (let i = 0; i < now.length; i++) now[i] = THREE.MathUtils.lerp(this.holdFrom[i], this.holdTo[i], moved);
-    const [holdDistance, holdHeight, bearing, lookY, toward, fin, phoneDistance, phoneHeight, phoneTurn, phoneLookY, phoneToward, eyeward] = now;
-    // The head's middle, or for the look between them its eye.
-    const head = this.p.copy(whale.eye).lerp(whale.blowhole, 0.5 * (1 - eyeward));
+    const [holdDistance, holdHeight, bearing, lookY, toward, fin, phoneDistance, phoneHeight, phoneTurn, phoneLookY, phoneToward, eyeward,
+      phoneEyeward] = now;
+    // The head's middle, or its eye: for the look between them, and on a phone for the haul its eye is on.
+    const head = this.p.copy(whale.eye).lerp(whale.blowhole, 0.5 * (1 - (portrait ? phoneEyeward : eyeward)));
     // At the flipper what matters lies between its tip and where the cygnet holds the loop's end.
     const focus = this.b.copy(head).lerp(this.a.copy(whale.finTip).lerp(this.station, 0.5), fin).setY(portrait ? phoneLookY : lookY);
     this.look.copy(boat).setY(1.2).lerp(focus, portrait ? phoneToward : toward);
