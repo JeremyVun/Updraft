@@ -1076,19 +1076,7 @@ walking toward the lens at corners (1.5 s at 58.9 m); the kittens three-quarter 
 in through her light if no outside eye sees it; the kittens to the fog sea never behind the tower.
 Gate: `drowned-run-check` `LENS=1` from the drift to the nave and `FROM=church`, both aspects, no exceptions; before
 and after stills per item, both aspects; 2 fps strips of the two walks and the kittens.
-Done: [~] (branch `proto-drowned-walks`; the belfry done, the walks partly). As built:
-- **The belfry** (`ChurchArrival.belfryFrame`, `drownedCamera.church` `nestWay`…`wayEase`): no eye outside sees her
-  face over the kittens (she kneels behind the shaft between the lights), so the lens goes in. One authored move
-  (`exact`) from where the climb leaves it, along the west face and in through the other light of her opening, round
-  the shaft, to low in the room's south-west corner (2.4 m, 0.5 m over the sill, looking a little up on a 0.58 lens):
-  her face beside the shaft looking down, the kitten that came to her and the cat curled in the straw below, the bell
-  and the far lights beyond. When she stands to look out it goes back out the same way to the fog-sea view west of
-  the tower, where the ring's view takes it. Each move is paced (`PacedMove`) so its view never turns faster than
-  `wayTurn` (23°/s) nor moves faster than `waySpeed`, easing over `wayEase`. The way in takes about 8 s, so the kittens'
-  beat is longer (`nestFor` 10 s; the kitten lifts its head at `kittenLooks` 4.6 s and comes at 5.4 s, as the lens
-  arrives). Measured (`drowned-run-check FROM=church LENS=1`): passes landscape and upright; her out of frame 0.0 s,
-  hidden 0.1 s (passing the shaft), fastest turn 27 deg/s (the way out), no cut. The check sees through the belfry's
-  room and lights. The way in passes close behind her outside, and the way out close past her coat.
+Done: [~] (branch `proto-drowned-walks`; the walks partly). As built:
 - **The walks** (`layLens`, `RoofRun.fogGlance`): the laid lens wants to stand near side on (`sideOn`), either side,
   so the fog's front reaches back from the frame's edge; it is costed on the front as the run check sees it, where
   the fog trails her (`fogTrail` and `fogSlack` further), after the glance; standing at the fog's face costs
@@ -1107,6 +1095,11 @@ Left:
   the lens north of her coming round over her as she turns.
 - **Walking toward the lens** 1.4 s at 43.5 m, just after the sheet (the lens off the sheet's view comes round about
   10° short of where it was laid); 58.9 m and the tree's end are clear.
+- **The kittens**: 7c's view from outside stands (her back, the kitten small). The lead turned down a lens that goes
+  in through the other light: inside, the shaft between the lights filled a third of the frame, the kittens never
+  showed, and the way out passed through her coat. As with the blink, the answer is in the staging: the kitten comes
+  out to her where an outside eye sees them both (her turned on the sill, the kitten at its lip), three-quarter on.
+- From the kittens to the fog sea the orbit round the tower's corner can still hide her (7.6 s in Phase 8).
 - Not yet run: the gate from the drift to the nave, and the walks upright.
 - Seen in the strips, not gated: the hoist's beam crosses the lens as it leaves the mill's view, and the green tree's
   trunk as it comes round to the swing's view.
