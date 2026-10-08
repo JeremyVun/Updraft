@@ -20,9 +20,19 @@ for(const [progress,phase] of [[0,'search'],[1,'one'],[2,'two'],[3,'three'],[4,'
 m.beat='jetty';assert.equal(mirror.call(m),'depart');
 room.progress=0;room.holdingWand=false;assert.equal(mirror.call(m),'approach');
 for(const [beat,stirred,t,phase] of [['enter',false,0,'rooftops'],['drift',false,2,'rooftops'],
-  ['still',false,40,'still'],['drift',true,0,'resume'],['gather',true,15,'gather'],
+  ['still',false,4,'stuck'],['becalmed',false,40,'stuck'],['run',false,90,'chase'],['nave',false,0,'climb'],
+  ['drift',true,0,'resume'],['gather',true,15,'gather'],
   ['snatch',true,2,'loss'],['after',true,3,'loss'],['after',true,13,'after']])
   assert.equal(drowned.call({beat,stirred,t}),phase);
+// The church follows its steps, and the bell's answers by count, not by time.
+for(const [step,answered,phase] of [['foot',0,'climb'],['climb',0,'climb'],['nest',0,'belfry'],['sea',0,'belfry'],
+  ['ring',0,'belfry'],['ring',1,'answer1'],['ring',2,'answer2'],['ring',3,'answer3'],['ring',4,'home'],['down',4,'home'],
+  ['wait',4,'home'],['board',4,'home'],['aboard',4,'farewell']])
+  assert.equal(drowned.call({beat:'church',church:{step,answered}}),phase);
+const {chaseTension}=await import('../src/audio/drowned-cues.ts');
+assert.ok(chaseTension(7,true,Infinity)>.99&&chaseTension(19,true,Infinity)<.01,'the chase presses hardest with the fog at her heels');
+assert.ok(chaseTension(12,false,Infinity)<chaseTension(12,true,Infinity),'it presses less while she walks than at a piece');
+assert.ok(chaseTension(10,false,0)<.5*chaseTension(10,false,Infinity),'it eases just after she is across a piece');
 
 // Four actual returns must each emit exactly one star cue; an existing completed save emits none.
 const child={},plane={held:false},cygnet={};

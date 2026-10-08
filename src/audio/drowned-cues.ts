@@ -141,10 +141,10 @@ const BELFRY = cue(40.4, [
  * Each answer of the lantern turns the harmony a step toward D major (G, E minor, the suspended dominant) and sings
  * the next note of the piano's question (D, E, F♯): the felt strikes it once the bell's strike has passed, and the
  * cello swells an octave under it, below the bell's ringing partials, as the glow does. If the next ring is slow in
- * coming, the strings rock between two voicings of the chord.
+ * coming, the strings turn through voicings of the chord.
  */
-function answer(tones: readonly number[], rocking: readonly number[], sung: number, level: number): Cue {
-  return cue(24, [[0, tones, 8, level], [8, rocking, 8, level], [16, tones, 8, level]],
+function answer(sung: number, level: number, ...voicings: (readonly number[])[]): Cue {
+  return cue(8 * voicings.length + 8, [...voicings, voicings[0]].map((tones, i): Chord => [i * 8, tones, 8, level]),
     [cello(.6, sung - 12, 5, .012), felt(.9, sung, 2.6, .011)], 8);
 }
 
@@ -177,9 +177,9 @@ const FAREWELL = cue(9, [[0, [50, 57, 62, 66], 9, .010]], [
 export type DrownedCuePhase = 'stuck' | 'chase' | 'climb' | 'belfry' | 'answer1' | 'answer2' | 'answer3' | 'home' | 'farewell';
 export const DROWNED_CUES: Record<DrownedCuePhase, Cue> = {
   stuck: STUCK, chase: chase(), climb: CLIMB, belfry: BELFRY,
-  answer1: answer([43, 50, 59, 66], [43, 52, 59, 62], 62, .006),
-  answer2: answer([40, 47, 55, 62, 66], [40, 50, 55, 64], 64, .0065),
-  answer3: answer([45, 52, 57, 62], [45, 55, 59, 62], 66, .007),
+  answer1: answer(62, .006, [43, 50, 59, 66], [43, 52, 59, 62], [43, 50, 57, 66]),
+  answer2: answer(64, .0065, [40, 47, 55, 62, 66], [40, 50, 55, 64], [40, 47, 55, 59]),
+  answer3: answer(66, .007, [45, 52, 57, 62], [45, 55, 59, 62], [45, 52, 57, 64]),
   home: HOME, farewell: FAREWELL,
 };
 

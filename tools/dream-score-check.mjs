@@ -20,6 +20,21 @@ try {
       check(!section.notes.some(n=>n.role==='star'),`${name}: repeated phases never replay star rewards`);
       check(section.notes.every(n=>n.duration>DREAM_PALETTE[n.voice].attack+DREAM_PALETTE[n.voice].release),`${name}: valid envelopes after section slicing`);
     }
+    // Sections the story can hold for a while repeat a body long enough not to be heard looping.
+    for(const name of ['stuck','chase','belfry','answer1','answer2','answer3','home'])
+      check(DREAM_SECTIONS[name].seconds-(DREAM_SECTIONS[name].loopFrom??0)>=20,`${name}: repeats a body of at least 20 s`);
+    // The chase's pressure picks what plays: its sung line while the fog is far, its tight pulse and sighs when near.
+    const heard=tension=>{
+      const ctx=new OfflineAudioContext(2,24000,24000),score=new DreamScore(ctx,ctx.destination,'drowned'),played=[];
+      score.play=(part,note)=>played.push(note);
+      for(let t=0;t<52;t+=.125){Object.defineProperty(ctx,'currentTime',{configurable:true,value:t});score.update('chase',1,Infinity,tension);}
+      return played;
+    };
+    const eased=heard(0),pressed=heard(1),sung=notes=>notes.filter(n=>n.voice==='cello'&&n.midi>=59).length;
+    const pulse=notes=>notes.filter(n=>n.role==='accompaniment').length;
+    check(sung(eased)>=15&&sung(pressed)===0,'The chase sings its line only while the fog is far');
+    check(pulse(pressed)>=2.5*pulse(eased),'The chase pulse tightens as the fog nears');
+    check(pressed.some(n=>n.voice==='felt'&&n.role==='melody')&&!eased.some(n=>n.voice==='felt'&&n.role==='melody'),'The felt sighs only when pressed');
     const t=new ArrivalTransition(),v={...baseState,music:'drowned',drownedScore:'after',hush:.85};
     t.update(v,0);
     const first=t.update({...v,arrivalMusic:'wood'},10);

@@ -86,7 +86,8 @@ try {
     const rows=[];
     for(const [music,field,url,key] of tables){const table=(await import(url))[key];rows.push({music,field,phases:Object.keys(table)});}
     rows.push({music:'mirror',field:'mirrorScore',phases:['approach','search','one','two','three','constellation','depart']},
-      {music:'drowned',field:'drownedScore',phases:['rooftops','still','resume','gather','loss','after']},
+      {music:'drowned',field:'drownedScore',phases:['rooftops','stuck','chase','climb','belfry','answer1','answer2','answer3',
+        'home','farewell','resume','gather','loss','after']},
       {music:'home',field:'summitScore',phases:['approach','flight','farewell','home']});
     const reports=[];
     for(const row of rows){
