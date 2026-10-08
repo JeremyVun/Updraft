@@ -741,8 +741,42 @@ checks and saves for them. design.md "The room rethought", steps 6 to 8, is the 
   as ivy); her climb down takes 12.8 s (bring it to about 7 s); she reads lit by the open sun inside the belfry (in
   the shade she should be lit as the nest is, by the shaft at the sill); her kneel in the opening reads weakly, so
   give the moment she first sees the kittens a frame that shows it (Phase 8 refines it).
+- From 7a: drive the fog only through `DarkBank`'s `front`, `level`, `close` and `faces` (7d owns its look);
+  `fetchForChurch()` in `src/story/drowned.ts` is a stand-in that the bell's drift home replaces; the boat lies where
+  it stuck, lantern lit; `church` restores by `RoofRun.skipToEnd`.
 Gate: `drowned-run-check` from the drift through the belfry and the boat home to the storm, with real gestures; the
 saves; `playthrough.mjs` through the room; a `VIDEO=1` webm of the nave to the storm for the lead.
+Done: [ ]
+
+### Phase 7d: the fog's body and its first act (after 7a; parallel with 7c)
+Owns: the fog's look (`seaFog` and its helpers in `src/world/atmosphere.ts`, the hues and tints in
+`src/world/drowned-dark.ts`, the look numbers in `tuning.drowned.fog` and `tuning.drowned.dark`), and its first act
+in `src/story/drowned.ts` (the drift after the rescue, `still`, `becalmed`) and the look back at the start of
+`src/story/drowned-run.ts`. It keeps `DarkBank`'s API (`front`, `level`, `close`, `faces`, `comeOn`) as 7a left it,
+which 7c drives.
+The lead's review of 7a's run: the chase is now in every walk, but the fog does not read as fog. From the roofs its
+flat top lies across the frame as a pink tableland under the sky, chimney tops standing out of it like posts in sand
+(the low sun's crest colour lights its whole top); its near face is a dark wavy band; only seen from within it, at
+the tree, does it read as a cold veil. The design asks for a rising white tide, low and cold-bodied, never the stairs
+room's luminous cloud. Make it read as sea fog at dusk in every frame of the run:
+- Its body cold white to blue-grey, lit from above by the sky and darker beneath; the sun's warmth only a thin rim
+  on the crests that face it, never the whole top.
+- No flat top: it heaps and rolls, swells a few metres high moving slowly, its top thinning into the air over a
+  couple of metres rather than ending at a surface; where it is thin, roofs and chimneys show ghosted through it.
+- Its front a soft leaning wall with fingers running ahead over the water and up walls, so what it takes dissolves
+  (nearer things soften first, then are gone), never cut off by a line.
+- The lantern's glow through it (`seaFogHalo`) a soft warm halo that dims as it thickens; 7c's answering lantern
+  relies on it.
+- Seen from above (the belfry's sill, 8.3 m, over a level about 7 to 8 m), a fog sea: billowed, the spire and the
+  lighthouse out of it, the beam able to light a band across its top.
+Its first act, paced: the drift from the rescue to the strand about 15 s (it is about 30); from the scrape to the
+cat's leap about 10 s (the same wide frame holds about 20 s now), the fog seen rising off the sea in it; the slates
+the boat runs onto drawn under the water; the look back from the first roof about 4 s (6.5 s now), close enough that
+the fog is seen taking the hull, then the sail, the lantern's glow last.
+Gate: stills at the run's walks (the first roof looking back, the garden wall, the trunk, the granary's ridge, the
+nave), from the belfry over the fog sea (a `cam=` from the sill), and of the lantern in it, each before and after;
+`drowned-run-check` (its fog checks still hold); `drowned-fog-check`; a `VIDEO=1` webm of the first act (the rescue to
+the first roof) with 2 fps strips.
 Done: [ ]
 
 ### Phase 8: the camera to the shot list (after 7c)
