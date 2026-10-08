@@ -320,7 +320,7 @@ export class Spray {
    * first. Fine drops are thrown up through it and fall back glinting. `glad`, the free spout, is whiter.
    */
   blowOut(at: THREE.Vector3, height: number, strength: number, dt: number, wide = 1, glad = 0): void {
-    const n = Math.floor(strength * BLOWN.puffs * wide * dt + Math.random());
+    const n = Math.floor(strength * BLOWN.puffs * height * wide * dt + Math.random());
     const k = DRAG[BLOW];
     for (let i = 0; i < n; i++) {
       const a = Math.random() * Math.PI * 2;
