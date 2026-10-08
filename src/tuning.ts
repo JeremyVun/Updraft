@@ -1781,7 +1781,7 @@ export const tuning = {
        * (`closedSoft` of its height under it once closed round), so it thins into the air rather than ending at a
        * surface; and how deep behind its face it is whole, metres, so what it takes softens before it is gone.
        */
-      level: 2.5, closedTop: 0.6, thinUp: 0.25, thinDown: 1.1, closedSoft: 0.9, front: 5,
+      level: 3.5, closedTop: 0.6, thinUp: 0.25, thinDown: 1.1, closedSoft: 0.9, front: 5,
       /**
        * As it comes it rises over all it has taken `levelBehind` metres behind its front by `levelOver` metres, the
        * stranded boat's masthead (`overBoat` above the water) first, and never lower than a steady climb from
@@ -1793,9 +1793,10 @@ export const tuning = {
       /**
        * Its top as a tide: long swells, how far either way as a share of its level and how broad (metres), and the
        * billowed heaps on them, how high as a share of its level and how broad; each rolls its own way (m/s), so it
-       * heaps and rolls rather than sliding.
+       * heaps and rolls rather than sliding. Its level is about where its highest heaps come to: `swellUp` and
+       * `heapUp` set its swells and heaps under it (shares of their noise's reach).
        */
-      swell: 0.3, swellBroad: 30, heap: 0.32, heapBroad: 9, swellRoll: [0.16, 0.07], heapRoll: [-0.1, 0.12],
+      swell: 0.35, swellBroad: 30, heap: 0.4, heapBroad: 10, swellUp: 0.18, heapUp: 0.46, swellRoll: [0.16, 0.07], heapRoll: [-0.1, 0.12],
       /** Once it has closed round, how much its top rises for each metre away from the eye: a bowl she stands in. */
       closedBowl: 0.5,
       /** How far its front heaves to and fro across its line, metres. */
@@ -1805,7 +1806,7 @@ export const tuning = {
        * they are, metres; and the fingers it runs on ahead over the water: how far, how high they lie, and how thick
        * against its body.
        */
-      lean: 2, bulge: 2.5, bulgeBroad: 7, fingers: 12, fingerLow: 1.2, fingerThick: 0.15,
+      lean: 2, bulge: 3.5, bulgeBroad: 10, fingers: 12, fingerLow: 1.3, fingerThick: 0.35,
       /**
        * Its light: how deep under its top the sky's light reaches, metres, and how much less of it reaches the hollows
        * between its heaps and how narrow the creases between them are (a share of the noise's reach); how much its face takes from the open air in front of it, and how deep behind its face that
