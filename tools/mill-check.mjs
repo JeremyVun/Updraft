@@ -10,7 +10,8 @@
 //   env: BASE (default http://127.0.0.1:5311/), W/H viewport (default 1600x900), OUT (stills prefix, default
 //        /tmp/updraft-mill-check), SHOTS=1 saves stills at the moments that matter.
 // Gestures are paced in game time (with `shot` the game steps a fixed 1/60 s a frame): the cursor's place on its
-// circle comes from the game's clock, so the circles are as fast in the game however slowly the tool drives it.
+// circle comes from the game's clock, so the circles are as fast in the game however slowly the tool drives it. On an
+// upright screen the circles are as wide as they would be on a landscape one of the same width.
 import { openBrowser } from './lib/browser.mjs';
 
 const base = process.env.BASE ?? 'http://127.0.0.1:5311/';
@@ -87,6 +88,7 @@ class Game {
    * stops early once `until(state)` holds.
    */
   async circle(seconds, perTurn = 1.25, radius = 0.22, way = 1, until = null) {
+    radius *= Math.min(1, width / height);
     const from = await this.frame();
     while (this.now - from < seconds) {
       const s = await this.page.evaluate(() => {

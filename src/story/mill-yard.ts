@@ -34,7 +34,7 @@ const ALONG_Z = new THREE.Matrix4().makeRotationY(Math.PI / 2);
  */
 const FRAMES = {
   wide: { dir: new THREE.Vector2(-0.7, 0.72).normalize(), far: 19, closer: 3, x: -2.4, low: 4.6, rise: 1.4, eye: 2.6, eyeRise: 1.4 },
-  upright: { dir: new THREE.Vector2(-0.62, 0.78).normalize(), far: 12, closer: 2, x: -1.9, low: 5.0, rise: 2.4, eye: 2.0, eyeRise: 3.4 },
+  upright: { dir: new THREE.Vector2(-0.62, 0.78).normalize(), far: 12.5, closer: 2, x: -1.3, low: 5.0, rise: 2.4, eye: 2.0, eyeRise: 3.4 },
 };
 /** Once she is off, the lens comes round after her along the high ridge. */
 const ON = new THREE.Vector3(-0.8, 0, -3.0);

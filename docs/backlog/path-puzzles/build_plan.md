@@ -444,7 +444,50 @@ Also, the sheet (6a) as Jeremy will play it: in upright it took 29 strokes becau
 screen (count strokes by their sweep across the sheet in the world, not its size on screen); she turns her face to
 the lens as she lands (no fourth wall: she looks where she is going or back at the fog); the dying gust carries her on
 up to 2 m after the last stroke (stop sooner, so the player's stroke is what moves her).
-Done: [ ]
+Done: [x] (branch `proto-drowned-hoist`). The hoist as built: `MillCrossing(spot | Windmill, {wait, stepOff, onward},
+cast, spiral?)` over `Windmill` (`windmill.ts`), phases `waiting`, `boarding`, `riding`, `leaving`, `over`. The mill is
+laid in its own frame (x right seen from in front of the sails, z out of their front, the hub over the origin):
+`MillSpot {hub (x, z), facing, from, to, reach?}`; `from` is the basket's floor at the bottom (her roof's edge), `to` at
+the top (level with the hoist door's sill), and the tower is built to suit: the curb 3.4 m and the hub `HUB_ABOVE`
+4.2 m over `to`, the tower 1.6 m in radius at the water and 1.3 under the cap, its middle 1.9 m behind the sails.
+Four sails of `SAIL.reach` 7.3 m (lattice from 1.3 to 7.2 m out; `reach` shrinks them for a smaller site). The hoist
+(`HOIST`): a beam out of a door on the tower's left at `to` + 2.95, a drum with a 12-tooth ratchet and pawl at its
+root driven by a belt from the cap, the rope over a sheave at x -3.6, z -1.9 (behind the sails' plane, so the sweep
+never comes near it) down to a 1 m slatted basket, open front and back, with a bar overhead at 2.45 m and a rope from
+each end of it to the middle of each side; she walks in from her roof's edge in front of it (+z), turns to face back
+the way she came and holds a rope in each mitten at her shoulders (1.45 m), and at the top walks out of the back (-z)
+onto the high roof. The crossing lays one deck for her: into the basket, under her while it rises, out onto the high
+roof. Circles round the hub on screen turn the sails one way (`tuning.crossings.mill`: they come up toward
+`ratio` x the cursor's turning over `spinUp`/`spinUpAboard` s, coast with `drag`/`dragAboard`, brake on the pawl
+below `settleSpeed`); the drum winds `rise` 1.1 m per radian of sail, so about two thirds of a turn of the sails winds
+her the whole way; the pawl clicks every tooth (`mill-click`) and holds her wherever they stop; the wrong way rocks
+them `rockAboard` against it; at the top they ease into the stop. The cap creaks every `creakEvery` rad. The drawn
+spiral (`MillSpiral`, now 1.4 to 5.2 m round the hub) is offered while she rides and the player is still; the safety
+valve turns them after 90 s with no progress. Measured (`mill-check`, real circles): a steady hand at 1.25 s a circle
+5.0 to 6.7 s of circling (4 to 5.3 circles) for 5.2 m; a hesitant one (1.8 s circles, smaller, a stop) 6.3 to 7.2 s;
+let go mid-climb they coast about 0.1 to 0.25 rad (0.1 to 0.4 m) and hold. Cat hook: `catWay()` returns `CatStep`s
+(`cat-way.ts` now carries `frame`, `upright`, `yaw`, `gather` and `when`): a leap from within reach of the low sail's
+end (the yard's chimney, 2 m stack on her ridge just in front of the sails' plane) onto `Windmill.perch` (the first
+sail's stock end, resting low over it at `rest`), two hops in along the stock as the sails start, and a leap onto the
+cap (`capTop`) once the sail is `catLeap` above level. Whoever drives the cat sets `clear` once it is on the sail (the
+brake stays on until then) and `catOn` while it bounds (the sails turn no faster than `capCat`). `playCatSteps` now
+returns a driver with `update()` and `step` for steps that wait. The yard (`?chapter=stage&gap=mill`, `&catless`;
+`mill-yard.ts`): her roof at 3.0 m running in under the sails to the basket, a tall granary behind it with its ridge
+at 8.2 m, a 5.2 m climb; the lens wide in front and to the hoist's side, rising less than she does so she climbs up
+the frame and closing in a little, upright nearer with the hub mid-frame (`closeUp = 'her' | 'mill'` for QA). The run
+keeps its old heights until Phase 7 (`MILL_SITE` from 2.82 to 5.39 m, sails `reach` 4.5 m, her wall in under them to
+the basket, the lens raised to the hub; its cat still runs the wall and leaps to the high roof, not yet the sail).
+`tools/crossing-film.mjs <mill|sheet>` films a yard at 10 fps from its own lens with real gestures into labelled
+sheets and a state log. Left: in the wide frame the sails' top and the cat's ride over the cap leave the frame; she
+reads small there (upright is the stronger frame); the sails sweep in front of her as she passes the hub's height
+(lattice, so she shows through); the cat reaches the cap only a second or so before she tops out on a fast hand.
+The sheet as tuned: strokes count by the share of the sheet's own length they sweep (`push` per sheet length, `gentle`
+and `firm` in sheet lengths a second), so one firm stroke fills it about 0.65 in both aspects and the crossing takes
+10 strokes from the first (4 or 5 once the cat is off the line) landscape and upright alike; what carries her is the
+fresh gust of the strokes (`gustFor` 0.8 s), not the cloth's slow sag, so she goes on about 0.65 m after the last
+stroke (was 1.8); hanging she turns `turnToLens` 0.6 toward the lens and back up the line over the last 2.4 m, looking
+along it, and lands looking back across the lane. Left: the cat takes about 8 s on the line before she can take hold.
+
 
 ### Phase 7: the room's story re-laid (after 6a, 6b and 6c)
 Owns: `src/world/drowned-way.ts` (the route climbing over five piece sites, short walks), `src/world/drowned.ts`
