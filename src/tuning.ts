@@ -2214,7 +2214,7 @@ export const tuning = {
      * waterline (colour, how far up it reaches in metres).
      */
     tone: 0.1, dapple: '#7f8fa0', dappleCover: 0.3, dappleAmount: 0.4,
-    scar: '#b3bcc2', scars: 0.3, scarAmount: 0.65,
+    scar: '#aab3ba', scars: 0.3, scarAmount: 0.6,
     crust: '#d2cbbb',
     growth: '#4c5a2b', growthReach: 0.7,
     /** Wet runs down from the top: how much darker and glossier the skin is along them. */

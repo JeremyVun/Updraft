@@ -199,7 +199,7 @@ vec3 shells(vec2 m, float where, float cell, float px) {
   vec2 d = (fract(c) - 0.5 - (vec2(hash12(id + 9.7), hash12(id + 2.9)) - 0.5) * (1.0 - 2.0 * r)) / r;
   float q = dot(d, d);
   float aa = 2.0 * px / (r * cell);
-  float seen = smoothstep(2.0, 5.0, 2.0 * r * cell / px);
+  float seen = smoothstep(3.0, 7.0, 2.0 * r * cell / px);
   vec2 below = d + vec2(0.0, 0.45);
   float under = smoothstep(0.9, 1.1, q) * (1.0 - smoothstep(0.8, 1.6, dot(below, below))) * seen;
   return vec3((1.0 - smoothstep(1.0 - aa, 1.0, q)) * seen, 0.74 + 0.24 * d.y - 0.1 * q, under);
@@ -221,16 +221,17 @@ float scars(vec2 m, float px) {
   vec2 id = floor(m / CELL);
   if (hash12(id + 41.0) > ${f(L.scars)}) return 0.0;
   float len = 1.6 + 2.6 * hash12(id + 8.0);
-  float rake = floor(hash12(id + 23.0) * 1.8);
+  float rake = floor(hash12(id + 23.0) * 1.45);
   float gap = 0.45;
   vec2 room = max(CELL * 0.5 - vec2(len + 0.4, 0.3 + 0.3 * len + gap * rake), 0.0);
   vec2 p = (fract(m / CELL) - 0.5) * CELL - (vec2(hash12(id + 11.0), hash12(id + 13.0)) - 0.5) * 2.0 * room;
   float a = (hash12(id + 5.0) - 0.5) * 0.7;
   p = vec2(cos(a) * p.x + sin(a) * p.y, cos(a) * p.y - sin(a) * p.x);
-  p.y -= (hash12(id + 2.0) - 0.5) * 0.2 * p.x * p.x / len;
+  float h = hash12(id + 2.0);
+  p.y -= (h - 0.5) * 0.2 * p.x * p.x / len + 0.07 * sin(p.x * 1.6 + h * 6.0);
   p.y -= clamp(floor(p.y / gap + 0.5), 0.0, rake) * gap;
-  float w = (0.07 + 0.07 * hash12(id + 29.0)) * (1.0 - smoothstep(0.3, 1.0, abs(p.x) / len));
-  return (1.0 - smoothstep(w, w + px, abs(p.y))) * min(1.0, 3.0 * w / px);
+  float w = (0.07 + 0.07 * hash12(id + 29.0)) * (1.0 - smoothstep(0.3, 1.0, abs(p.x) / len)) * (0.75 + 0.25 * sin(p.x * 2.3 + h * 9.0));
+  return (1.0 - smoothstep(0.3 * w, w + px, abs(p.y))) * min(1.0, 3.0 * w / px) * (0.6 + 0.4 * hash12(id + 31.0));
 }
 
 /**
@@ -395,7 +396,7 @@ Skin skin(float far, float dry) {
       float scar = scars(m, px) * clear * dry;
       k.albedo = mix(k.albedo, ${rgb(L.scar)} * (0.9 + 0.2 * n2), scar * ${f(L.scarAmount)});
       // Barnacles crust the head in ragged clusters, round its knobs, along the chin and here and there.
-      float head = (1.0 - smoothstep(0.1, 0.2, s)) * clear * dry;
+      float head = (1.0 - smoothstep(0.12, 0.24, s)) * clear * dry;
       if (head > 0.0) {
         float chin = smoothstep(0.0, 0.03, below) * (1.0 - smoothstep(0.05, 0.11, s));
         float bias = max(0.3 * smoothstep(0.0, 0.004, knobbed), 0.15 * chin);
@@ -433,11 +434,14 @@ Skin skin(float far, float dry) {
     eye *= 1.0 - 0.7 * under;
     vec2 folds = eyeFolds(e, l);
     // Lines of age fan back from its rear corner: an old face that has smiled, never a stern one.
+    float lines = 0.0;
     vec2 c = e - vec2(-1.02, -0.02);
-    float fan = atan(c.y, -c.x);
-    float reach = length(c * vec2(1.0, 1.4));
-    float lines = pow(abs(cos(fan * 4.2 + 0.5 * vnoise(vec2(reach * 2.5, fan * 2.0)))), 24.0)
-      * smoothstep(0.1, 0.25, reach) * (1.0 - smoothstep(0.45, 1.05, reach)) * (1.0 - smoothstep(0.75, 1.1, abs(fan))) * step(c.x, 0.0);
+    if (c.x < 0.0 && c.x > -1.2) {
+      float fan = atan(c.y, -c.x);
+      float reach = length(c * vec2(1.0, 1.4));
+      lines = pow(abs(cos(fan * 4.2 + 0.5 * vnoise(vec2(reach * 2.5, fan * 2.0)))), 24.0)
+        * smoothstep(0.1, 0.25, reach) * (1.0 - smoothstep(0.45, 1.05, reach)) * (1.0 - smoothstep(0.75, 1.1, abs(fan)));
+    }
     k.albedo *= (1.0 - 0.32 * folds.y * flank * (1.0 - far)) * (1.0 - 0.3 * lines * flank * (1.0 - far));
     k.albedo = mix(k.albedo, eye, opening);
     k.gloss = opening;
