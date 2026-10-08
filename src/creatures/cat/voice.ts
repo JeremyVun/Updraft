@@ -288,14 +288,15 @@ export class CatVoice {
   /**
    * A mew `length` seconds long, the mouth keeping time with it. `plea` 0 is a kitten's ordinary mew; towards 1 it
    * becomes the call of something stuck and asking: lower, a higher arch, a bright pressed start and more breath.
+   * `voice` above 1 is a kitten's own: higher, thinner and nearer its ordinary mew whatever it asks.
    */
-  mew(pan: number, loudness: number, plea = 1, length = 0.6 + 0.3 * plea): void {
+  mew(pan: number, loudness: number, plea = 1, length = 0.6 + 0.3 * plea, voice = 1): void {
     const now = this.out?.ctx.currentTime ?? 0;
-    if (now - this.lastMew < 0.4) return;
+    if (now - this.lastMew < (voice > 1 ? 0.12 : 0.4)) return;
     this.lastMew = now;
-    const k = Math.max(0, Math.min(1, plea));
-    const f0 = (1100 - 250 * k) * (0.94 + Math.random() * 0.12);
-    this.sing(pan, 0.057 * loudness, blend(MEW, PLEA, k), f0, length, 0.55);
+    const k = Math.max(0, Math.min(1, plea)) / voice;
+    const f0 = (1100 - 250 * k) * voice * (0.94 + Math.random() * 0.12);
+    this.sing(pan, 0.057 * loudness, blend(MEW, PLEA, k), f0, length, voice > 1 ? 0.4 : 0.55);
   }
 
   /** "Mrrp": a short rolled note, the sound a cat makes arriving somewhere it wanted to be, or greeting. */

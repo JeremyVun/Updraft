@@ -326,6 +326,8 @@ export class CatYard {
     this.place();
     this.tub.update(dt, atmo.uniforms.uTime.value);
     this.kittens.update(dt);
+    /** Their mews are heard through hers; the pats of their paws are too small to carry. */
+    for (const h of this.kittens.heard) if (h.kind === 'mew') this.cat?.heard.push(h);
     this.kittens.heard.length = 0;
     const cat = this.cat, child = this.child;
     if (this.kneelAt >= 0 && cat && child) {
@@ -506,7 +508,7 @@ export class CatYard {
       case 'run':
         cat.place(onRidge(1.2), yaw, { pose: 'stand', floor: this.floor });
         cat.look(null);
-        cat.run([onRidge(3), onRidge(5, 0.15), onRidge(8.7)], this.floor, { pace: name, then: 'sit', look });
+        cat.run(name === 'walk' ? [onRidge(2.6), onRidge(4.2, 0.1)] : [onRidge(3), onRidge(5, 0.15), onRidge(8.7)], this.floor, { pace: name, then: 'sit', look });
         return true;
       case 'scared-run':
       case 'bolt':

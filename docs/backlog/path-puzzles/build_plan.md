@@ -420,9 +420,8 @@ perched cat's are), sits in the tub with its head and ears over the rim, and at 
   wash, curious, mew, chirrup, afraid, strand, shiver, shake, stare, slow-blink, press, curl, kittens, tumble, sill,
   walk, trot, run, bolt, scared-run, rail, gap, hop-down, leap-pot, leap-boat, leap-roof, hop-tub, ride-tub, jump-boat
   (leap, shake, shiver), boat, tub, climb, climb-trunk, ride-sail, ride-swing. `cat-check` shoots them all.
-Left: the curl is a loaf turned round on itself rather than a full ring; kittens use the mother's voice; the shake
-throws no water; the rescue (shake, shiver, press, her kneel), the stare at the fog, the kittens and the slow blink are
-not yet in the room's story (Phase 7).
+Left: the rescue (shake, shiver, press, her kneel), the stare at the fog, the kittens and the slow blink are not yet
+in the room's story (Phase 7).
 
 ### Phase 6b2: the cat in motion (after 6b)
 Owns as 6b. 6b's stills read (size, slow blink, the tub dry inside) but motion was never judged, and Jeremy's note
@@ -433,7 +432,33 @@ landing's give, the bolt's low stretch, the climb's reach and pull, the press's 
 blink's timing. The kittens read in the belfry's half light (lighter coats, one ginger, one with white socks, about a
 third of her size) and the curl is a ring round them, not a loaf; the shake throws a little water.
 Gate: `cat-check`; film strips of every action and feeling for the lead to judge.
-Done: [ ]
+Done: [x] (branch `proto-drowned-catmotion`). `FILM=1 node tools/cat-check.mjs <dir>` films every action and feeling
+from its start until settled at 10 fps (`FPS`, `WINDOW=0.8-1.6` for a close look at a few frames), one contact strip
+per action and view: `near` 4 m off with the cat filling most of the frame, `far` 12 m off through the game's lens cut
+at full size; a first pass learns where the action goes, so the lens holds still or glides along with it. The kittens
+are filmed in `half` light (`dusk=1.45`). All APIs of 6b stand; new: `new Cat({ coat, kitten })`, `Cat.voice`, the
+`voice` on a heard mew (and `CatVoice.mew(..., voice)`), `Coat` in `cat/shader.ts`.
+- Leaps: down low with its eyes on the far side, the hindquarters swaying as the back feet tread, the tail tip
+  twitching, then a load (rump drops, chest lifts) and the spring; in the air it watches where it will land; front paws
+  first, the shoulders and head take it, the weight carries on forward, the tail whips up. Hops get half the give.
+- Gallop: the back gathers and stretches further and the head rides level; fear no longer flattens it to the roof at a
+  gallop (it shows in the ears and tail). Trot: a lighter bounce, tail up and hooked. Climb: in surges, the hind legs
+  driving it up while the front paws reach. Turns on the spot: the head goes first, the body a moment after; the tail
+  swings out of every turn.
+- Feelings: frightened and sitting it hunches and keeps glancing about; on its pot or adrift, the flinch starts it back
+  with its ears pinned and then it stretches its neck to peer down at the water; riding, it keeps its head over the rim
+  and an uneasy cat flinches at a lurch. Shiver: a fine tremor and a shudder every second or two. Slow blink: eyes
+  narrow over 0.75 s, stay shut 0.8 s, open half way and soften over a second. Shake: head, then body, then tail, and
+  drops thrown off the coat (`cat/spray.ts`). The press bends its body round her shin and hooks its tail tip after it.
+  Shakes and tremors are laid over the eased pose (they were eased to a tenth of their size before).
+- Kittens: a ginger, a grey with white socks to its knees, and a pale tabby, each lighter than her; heads 1.32 times a
+  grown cat's; a wobble through everything they do; a longer wiggle before a pounce; each its own high mew (the yard
+  passes their mews to hers to be heard). The mother's curl is a ring (bent further, rolled onto her side) with the
+  kittens inside it against her belly.
+Left: the far strips show the cat's motion only roughly (it is 40 px tall at 12 m); the shake's spray is faint in the
+game's own light; the press reads best close to; the gallop is still lower and shorter in the leg than the model
+sheet's soft gallop (its gather and stretch read at 30 fps, not at 10); riding the sail a hind leg falls 3 cm short
+as the sail tips.
 
 ### Phase 6c: the windmill as a sack hoist (after 6a; owns `src/world/crossings/windmill.ts`, `mill-crossing.ts`, `mill-spiral.ts`, the mill yard, `mill-check`)
 design.md "The windmill, rebuilt": she rides a basket on the hoist, standing, the full height of the mill; the

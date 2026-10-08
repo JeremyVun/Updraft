@@ -2,10 +2,20 @@ import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { Cat, type CatSound } from '../cat';
 import { CREATURE_GLSL } from '../shading';
+import type { Coat } from './shader';
 import { ATMO_GLSL, atmo } from '../../world/atmosphere';
 
-/** A kitten beside its mother: the same tabby, about a third of her size. */
+/** A kitten beside its mother: about a third of her size. */
 const KITTEN = 0.62;
+/**
+ * Lighter than their mother so they read in the belfry's half light: a ginger, a grey with white socks to its knees,
+ * and a pale tabby. Each has a voice of its own, all high.
+ */
+const LITTER: { coat: Coat; voice: number }[] = [
+  { coat: { fawn: [0.47, 0.25, 0.095], back: [0.41, 0.205, 0.07], stripe: [0.25, 0.11, 0.04], socks: 0 }, voice: 1.55 },
+  { coat: { fawn: [0.38, 0.365, 0.345], back: [0.3, 0.29, 0.28], stripe: [0.13, 0.125, 0.12], socks: 0.052 }, voice: 1.8 },
+  { coat: { fawn: [0.4, 0.31, 0.225], back: [0.33, 0.25, 0.18], stripe: [0.15, 0.105, 0.08], socks: 0 }, voice: 1.67 },
+];
 /** How far from the middle of the straw they wander while they play. */
 const ROOM = 0.38;
 
@@ -71,7 +81,7 @@ type Doing = 'nestle' | 'tumble';
  * `Cat` at a kitten's size, so everything a cat can do, a kitten can.
  */
 export class Kittens {
-  readonly cats: [Cat, Cat, Cat] = [new Cat(), new Cat(), new Cat()];
+  readonly cats = LITTER.map(({ coat }) => new Cat({ coat, kitten: true })) as [Cat, Cat, Cat];
   readonly straw: THREE.Mesh;
   /** What they did this frame that makes a sound (pats, tiny mews); whoever plays them empties the list. */
   readonly heard: CatSound[] = [];
@@ -83,7 +93,10 @@ export class Kittens {
   private readonly w = new THREE.Vector3();
 
   constructor() {
-    for (const k of this.cats) k.scale = KITTEN;
+    for (const [i, k] of this.cats.entries()) {
+      k.scale = KITTEN;
+      k.voice = LITTER[i].voice;
+    }
     this.straw = new THREE.Mesh(strawGeometry(0.55), new THREE.ShaderMaterial({
       uniforms: { ...atmo.uniforms }, vertexShader: STRAW_VERT, fragmentShader: STRAW_FRAG, side: THREE.DoubleSide,
     }));
@@ -116,7 +129,7 @@ export class Kittens {
     this.away = -1;
     const at = mother ? mother.hollow(this.v) : this.v.copy(this.centre);
     const yaw = mother ? mother.yaw : 0;
-    const spots: [number, number, number][] = [[0.0, 0.02, 0.4], [0.09, -0.08, 2.2], [-0.03, 0.12, -1.6]];
+    const spots: [number, number, number][] = [[0.0, 0.0, 0.4], [0.07, -0.1, 2.2], [0.1, 0.04, -2.6]];
     for (const [i, k] of this.cats.entries()) {
       const [x, z, turn] = spots[i];
       const c = Math.cos(yaw), s = Math.sin(yaw);
@@ -185,7 +198,7 @@ export class Kittens {
       const d = to.length();
       to.multiplyScalar(Math.max(0, d - 0.08) / Math.max(d, 1e-3)).add(k.position);
       to.y = this.floor();
-      k.leap(to.clone(), { floor: this.floor, then: 'stand', gather: 0.45, look: other.position }, () => {
+      k.leap(to.clone(), { floor: this.floor, then: 'stand', gather: 0.7, look: other.position }, () => {
         if (!other.busy) other.topple();
       });
     } else if (r < 0.9) {
