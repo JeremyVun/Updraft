@@ -17,10 +17,12 @@ const luminance = (c: THREE.Color) => c.r * 0.2126 + c.g * 0.7152 + c.b * 0.0722
 
 /** The hues it and the light it takes go toward, each at the brightness of what it tints. */
 const HUE = {
-  /** Its body risen far off, lilac grey; come close, steel blue; closed round, slate violet. */
+  /** Its body deep in it risen far off, lilac grey; come close, steel blue; closed round, slate violet. */
   far: new THREE.Color(0.86, 0.84, 1.14),
   near: new THREE.Color(0.74, 0.85, 1.16),
   night: new THREE.Color(0.86, 0.86, 1.1),
+  /** Its top where the sky lights it from above: a cold white. */
+  top: new THREE.Color(0.93, 0.96, 1.07),
   /** The low sun on its billows' tops. */
   crest: new THREE.Color(2.4, 0.85, 0.5),
   /** What is left of the sunset aloft once the sun has gone. */
@@ -67,6 +69,7 @@ export class DarkBank {
   private readonly back = new THREE.Vector2();
   private readonly crest = new THREE.Color();
   private readonly body = new THREE.Color();
+  private readonly top = new THREE.Color();
 
   get objects(): THREE.Object3D[] {
     return [];
@@ -168,16 +171,18 @@ export class DarkBank {
     const taken = THREE.MathUtils.clamp((p - far) / (near - far), 0, 1) * here;
     const night = smooth(p, near + 0.05, 1) * here * (1 - this.storm);
     const crestGone = smooth(p, far, near + 0.1);
-    // White is what the light makes of it: as bright as the sky round it lights it, never a white of its own.
+    // White is what the light makes of it: lit from above by the sky round it, never a white of its own.
     const sky = luminance(u.uSkyAmbient.value) * 0.9 + luminance(u.uSkyHorizon.value) * 0.3;
     this.body.copy(HUE.far).lerp(HUE.near, taken).lerp(HUE.night, night)
       .multiplyScalar(sky * THREE.MathUtils.lerp(k.body, k.bodyNear, taken));
-    // Once the sun has gone from it only a little rose is left along its top, a touch lighter than its body.
+    this.top.copy(HUE.top).lerp(HUE.night, night).multiplyScalar(sky * THREE.MathUtils.lerp(k.top, k.topNear, taken));
+    // The low sun on the crests that face it; once the sun has gone from it only a little rose is left there.
     this.crest.copy(HUE.crest).multiplyScalar(luminance(u.uSunColor.value) * k.crest)
-      .lerp(tmp.copy(HUE.rose).multiplyScalar(luminance(this.body) * 1.25), crestGone);
+      .lerp(tmp.copy(HUE.rose).multiplyScalar(luminance(this.top) * k.roseLeft), crestGone);
     u.uSeaFogBody.value.set(this.body.r, this.body.g, this.body.b, k.air * risen * THREE.MathUtils.lerp(k.airFar, 1, drawn) * (1 - 0.6 * this.close));
+    u.uSeaFogTop.value.copy(this.top);
     u.uSeaFogCrest.value.set(this.crest.r, this.crest.g, this.crest.b, k.stir * night);
-    u.uSeaFogRim.value = THREE.MathUtils.lerp(0.32, 0.12, crestGone) * top;
+    u.uSeaFogRim.value = k.rim * (1 - this.close);
     u.uSeaFogGlow.value = THREE.MathUtils.lerp(1, k.glowNear, crestGone);
     u.uSeaFogHaze.value = THREE.MathUtils.lerp(k.haze, k.hazeNear, drawn) * (1 - this.close);
     u.uSeaFogReach.value = THREE.MathUtils.lerp(k.airReachFar, k.airReach, drawn);
