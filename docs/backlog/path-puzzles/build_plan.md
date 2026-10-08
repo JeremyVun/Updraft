@@ -629,10 +629,11 @@ Done: [x] (branch `proto-drowned-belfry`). As built, for 7c to mount:
   90 s with no ring the world's own gust rings it every `valveEvery` 4 s. `BellWaves(centre, level, from)`: `emit`,
   `level` (the water on the yard; the fog's top in the room), up to six crests of broken pale light rolling out at
   6 m/s for 7.5 s. Tuning: `tuning.crossings.bell`.
-- **Its sound** (`src/audio/bell.ts`, `strikeBell`, registered in `foley.ts`): a minor-third bell on B (MIDI 47, the
-  drowned score's B minor tonic): hum, prime, tierce, quint and nominal with slow doublet beats, the brighter partials
+- **Its sound** (`src/audio/bell.ts`, `strikeBell`, registered in `foley.ts`): a minor-third bell on B (strike note MIDI
+  59, nominal B4, the drowned score's B minor tonic; a bell about a metre across, as drawn, and above what a phone's
+  speaker drops): hum, prime, tierce, quint and nominal with slow doublet beats, the brighter partials
   and the clapper's clang and knock scaled by the stroke, the hum lasting about half a minute; a touch is a soft knock
-  and the note barely woken. Four rings through the game's own reverb: about -23 LUFS, peak -6 dBFS
+  and the note barely woken. Four rings through the game's own reverb peak at about -5 dBFS
   (`node tools/bell-render.mjs [out.wav] [rings] [seconds]`).
 - **The ivy** (`src/world/ivy-face.ts`): `new IvyFace({ from, to, out, roof, spread })`, `from` on the face at the foot
   (the nave's ridge, 2.84), `to` the middle of the light's sill (8.27), `roof(across)` the slates' height under the

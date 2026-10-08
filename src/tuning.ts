@@ -2222,7 +2222,7 @@ export const tuning = {
       /** The waves a ring sends out over what lies below the tower: metres a second, seconds they last, crest width. */
       waveSpeed: 6, waveLife: 7.5, waveWidth: 0.6,
       /** Its note: the strike note (MIDI), its level, how much of it goes to the reverb, and how long the hum lasts (s). */
-      note: 47, level: 0.3, wet: 0.42, hum: 15,
+      note: 59, level: 0.3, wet: 0.42, hum: 15,
     },
     climb: {
       /**
