@@ -2208,15 +2208,17 @@ export const tuning = {
     /** A slate-blue back, a pale lower jaw and belly, a deep warm brown eye. */
     back: '#526276', belly: '#aea79f', iris: '#82502b',
     /**
-     * Its ancient skin, painted: broad soft patches of tone (how strong), a pale lichen dapple (colour, how much of the
-     * skin it covers, how strongly), old healed scars and scuffs (colour, the share of the skin's cells that carry one,
-     * how strongly), barnacle crusts (colour) on the head, the chin and the flipper's edges, and green growth at the
-     * waterline (colour, how far up it reaches in metres).
+     * Its ancient skin, painted like an old rock: broad soft patches of tone and a soft grain (how strong); lichen
+     * (its pale colour and a warmer one some patches take, how much of the skin it covers, how strongly); old healed
+     * scars (colour, the share of the skin's cells that carry one, how strongly); barnacle crusts on the head, the chin,
+     * the lip and the flipper's edges (colour, how thickly the shells sit in a crust); and weed at the waterline (dark
+     * and mossy colours, the faint yellow film above it, how far up it reaches in metres).
      */
-    tone: 0.1, dapple: '#7f8fa0', dappleCover: 0.3, dappleAmount: 0.5,
-    scar: '#aab3ba', scars: 0.3, scarAmount: 0.6,
-    crust: '#d2cbbb',
-    growth: '#4c5a2b', growthReach: 0.7,
+    tone: 0.14, grain: 0.35,
+    lichen: '#8695a6', lichenWarm: '#9a9c8e', lichenCover: 0.4, lichenAmount: 0.6,
+    scar: '#aeb7bd', scars: 0.24, scarAmount: 0.65,
+    crust: '#bab8ae', crustShells: 0.85,
+    growth: '#454b2a', moss: '#5d7038', film: '#9e8d50', growthReach: 0.7,
     /** Wet runs down from the top: how much darker and glossier the skin is along them. */
     runs: 0.5,
     /** Cool light from the open sky on its skin, as a multiple of the sky's own ambient brightness. */

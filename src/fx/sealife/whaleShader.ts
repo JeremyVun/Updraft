@@ -195,58 +195,89 @@ vec3 shells(vec2 m, float where, float cell, float px) {
   vec2 c = m / cell;
   vec2 id = floor(c);
   if (hash12(id + 17.3) > where) return vec3(0.0, 1.0, 0.0);
-  float r = 0.16 + 0.26 * hash12(id + 4.1);
+  float r = min(0.5, (0.16 + 0.26 * hash12(id + 4.1)) * (0.8 + 0.4 * where));
   vec2 d = (fract(c) - 0.5 - (vec2(hash12(id + 9.7), hash12(id + 2.9)) - 0.5) * (1.0 - 2.0 * r)) / r;
-  float q = dot(d, d);
-  float aa = 2.0 * px / (r * cell);
+  float q = dot(d, d) * (1.0 + 0.14 * sin(3.0 * atan(d.y, d.x) + 6.2832 * hash12(id + 5.3)));
+  float aa = 2.0 * px / (r * cell) + 0.12;
   float seen = smoothstep(3.0, 7.0, 2.0 * r * cell / px);
   vec2 below = d + vec2(0.0, 0.45);
   float under = smoothstep(0.9, 1.1, q) * (1.0 - smoothstep(0.8, 1.6, dot(below, below))) * seen;
-  return vec3((1.0 - smoothstep(1.0 - aa, 1.0, q)) * seen, 0.74 + 0.24 * d.y - 0.1 * q, under);
+  return vec3((1.0 - smoothstep(1.0 - aa, 1.0, q)) * seen, (0.78 + 0.2 * d.y - 0.12 * q) * (0.88 + 0.2 * hash12(id + 1.3)), under);
 }
 
-/** Barnacles: two scatters of shells of their own sizes, so no grid shows; soft domes, never pits. */
+/** Barnacles: three scatters of shells of their own sizes, so no grid shows; soft domes, never pits. */
 vec3 barnacles(vec2 m, float where, float px) {
-  vec3 a = shells(m, where, 0.36, px);
-  vec3 b = shells(m + vec2(0.13, 0.27), where * 0.9, 0.22, px);
-  return a.x > b.x ? vec3(a.xy, max(a.z, b.z * (1.0 - a.x))) : vec3(b.xy, max(b.z, a.z * (1.0 - b.x)));
+  vec3 a = shells(m, where, 0.62, px);
+  vec3 b = shells(m + vec2(0.13, 0.27), where * 0.9, 0.38, px);
+  vec3 c = shells(m + vec2(0.41, 0.07), where * 0.8, 0.22, px);
+  vec3 ab = a.x > b.x ? vec3(a.xy, max(a.z, b.z * (1.0 - a.x))) : vec3(b.xy, max(b.z, a.z * (1.0 - b.x)));
+  return ab.x > c.x ? vec3(ab.xy, max(ab.z, c.z * (1.0 - ab.x))) : vec3(c.xy, max(c.z, ab.z * (1.0 - c.x)));
 }
+
+const vec2 SCAR_CELL = vec2(5.0, 2.6);
 
 /**
- * Old healed scars, m metres over the skin: in some cells one soft pale stroke drawn out along the body, tapering at
- * its ends like a brush's, or two side by side where something once raked it.
+ * The scar whose cell is id, if that cell has one (a share of them do): a soft pale stroke with rounded ends, drawn out
+ * along the body or slanting across it, in a faint pale haze of healed skin. How pale it draws at m, and the shade under its lower edge, where the healed skin
+ * stands a little proud.
  */
-float scars(vec2 m, float px) {
-  const vec2 CELL = vec2(11.0, 3.4);
-  vec2 id = floor(m / CELL);
-  if (hash12(id + 41.0) > ${f(L.scars)}) return 0.0;
-  float len = 1.6 + 2.6 * hash12(id + 8.0);
-  float rake = floor(hash12(id + 23.0) * 1.45);
-  float gap = 0.45;
-  vec2 room = max(CELL * 0.5 - vec2(len + 0.4, 0.3 + 0.3 * len + gap * rake), 0.0);
-  vec2 p = (fract(m / CELL) - 0.5) * CELL - (vec2(hash12(id + 11.0), hash12(id + 13.0)) - 0.5) * 2.0 * room;
-  float a = (hash12(id + 5.0) - 0.5) * 0.7;
+vec2 scarIn(vec2 m, vec2 id, float share, float px) {
+  if (hash12(id + 41.0) > share) return vec2(0.0);
+  float len = 0.9 + 1.0 * hash12(id + 8.0);
+  vec2 p = m - (id + vec2(hash12(id + 11.0), hash12(id + 13.0))) * SCAR_CELL;
+  float slant = hash12(id + 5.0);
+  float a = slant < 0.75 ? (slant - 0.375) * 0.9 : sign(slant - 0.875) * (0.4 + 0.3 * fract(slant * 7.0));
   p = vec2(cos(a) * p.x + sin(a) * p.y, cos(a) * p.y - sin(a) * p.x);
   float h = hash12(id + 2.0);
-  p.y -= (h - 0.5) * 0.2 * p.x * p.x / len + 0.07 * sin(p.x * 1.6 + h * 6.0);
-  p.y -= clamp(floor(p.y / gap + 0.5), 0.0, rake) * gap;
-  float w = (0.07 + 0.07 * hash12(id + 29.0)) * (1.0 - smoothstep(0.3, 1.0, abs(p.x) / len)) * (0.75 + 0.25 * sin(p.x * 2.3 + h * 9.0));
-  return (1.0 - smoothstep(0.3 * w, w + px, abs(p.y))) * min(1.0, 3.0 * w / px) * (0.6 + 0.4 * hash12(id + 31.0));
+  p.y -= (h - 0.5) * 0.3 * p.x * p.x / len + 0.06 * sin(p.x * 1.6 + h * 6.0);
+  float along = abs(p.x) / len;
+  float w = (0.13 + 0.09 * hash12(id + 29.0)) * sqrt(max(0.0, 1.0 - pow(along, 4.0))) * (0.85 + 0.15 * sin(p.x * 2.7 + h * 9.0));
+  float core = (1.0 - smoothstep(0.15 * w, 1.15 * w + px, abs(p.y))) * min(1.0, 3.0 * w / px);
+  float haze = (1.0 - smoothstep(0.0, 0.45, abs(p.y))) * (1.0 - smoothstep(0.5, 1.15, along));
+  float under = smoothstep(0.6 * w, w, -p.y) * (1.0 - smoothstep(w, w + 0.06 + px, -p.y)) * min(1.0, 3.0 * w / px);
+  return vec2(max(core, 0.2 * haze) * (0.75 + 0.25 * hash12(id + 31.0)), under);
+}
+
+/** Old healed scars, m metres over the skin, in a share of the cells: the strongest of the nine cells round m. */
+vec2 scars(vec2 m, float share, float px) {
+  vec2 i0 = floor(m / SCAR_CELL);
+  vec2 s = vec2(0.0);
+  for (int i = 0; i < 9; i++) s = max(s, scarIn(m, i0 + vec2(float(i % 3) - 1.0, float(i / 3) - 1.0), share, px));
+  return s;
 }
 
 /**
- * Pale dapples where \`where\` (0..1) calls for them, m metres over the skin, in cells \`cell\` metres across: soft
- * round spots, their edges a little ragged (rag), each its own size.
+ * The lichen rosette in cell id of a scatter \`cell\` metres across, if it has one (more where \`where\` is high, and
+ * larger): its cover at m, round with a lobed edge, paler at its rim than its heart.
  */
-float dapples(vec2 m, float where, float cell, float rag, float px) {
-  vec2 c = m / cell;
-  vec2 id = floor(c);
+float rosette(vec2 m, vec2 id, float cell, float where, float px) {
   if (hash12(id + 91.0) > where) return 0.0;
-  float r = 0.24 + 0.18 * hash12(id + 93.0);
-  vec2 d = (fract(c) - 0.5 - (vec2(hash12(id + 95.0), hash12(id + 97.0)) - 0.5) * (1.0 - 2.0 * r)) / r;
-  float aa = px / (r * cell);
-  return smoothstep(1.0 + aa, 0.72 - aa, length(d * vec2(0.6 + 0.4 * hash12(id + 98.0), 1.0)) + 0.6 * (rag - 0.5)) * shows(2.0 * r * cell, px)
-    * (0.55 + 0.45 * hash12(id + 99.0));
+  vec2 d = m - (id + 0.25 + 0.5 * vec2(hash12(id + 95.0), hash12(id + 97.0))) * cell;
+  float r = cell * (0.16 + 0.24 * hash12(id + 93.0)) * (0.7 + 0.4 * where);
+  float q = length(d * vec2(1.0, 0.8 + 0.4 * hash12(id + 98.0))) / r;
+  float edge = 1.0 + 0.5 * (vnoise(d / r * 1.6 + id * 7.31) - 0.5) + 0.2 * (vnoise(d / r * 4.0 + id * 3.7) - 0.5);
+  float aa = px / r;
+  return (1.0 - smoothstep(edge - aa, edge + aa, q)) * (0.85 + 0.15 * smoothstep(0.3, 0.9, q / edge));
+}
+
+/** The strongest of the four rosettes round m in a scatter \`cell\` metres across. */
+float rosettes(vec2 m, float cell, float where, float px) {
+  vec2 i0 = floor(m / cell - 0.5);
+  return max(max(rosette(m, i0, cell, where, px), rosette(m, i0 + vec2(1.0, 0.0), cell, where, px)),
+    max(rosette(m, i0 + vec2(0.0, 1.0), cell, where, px), rosette(m, i0 + vec2(1.0, 1.0), cell, where, px)));
+}
+
+/**
+ * Lichen as on an old rock, m metres over the skin, in colonies covering about \`cover\` (0..1) of it: rosettes with
+ * lobed, painted edges, each its own size, crowding and merging at a colony's heart and scattering into small flecks
+ * at its edges. How much covers here, and a tone that varies patch to patch (0..1).
+ */
+vec2 lichen(vec2 m, float cover, float px) {
+  float colony = smoothstep(0.3, 0.75, vnoise(m * 0.2 + 41.0) * 0.7 + vnoise(m * 0.55 + 7.0) * 0.3 + cover - 0.3);
+  float big = rosettes(m, 1.3, colony * 0.9, px) * shows(0.5, px);
+  float small = rosettes(m + 0.31, 0.45, colony * 0.75 + 0.1 * cover, px) * shows(0.18, px);
+  float far = colony * 0.3 * (1.0 - shows(0.5, px));
+  return vec2(max(max(big, small), far), vnoise(m * 0.4 + 17.0));
 }
 
 struct Skin {
@@ -354,12 +385,24 @@ Skin skin(float far, float dry) {
   float n0 = vnoise(m * 0.06 + 5.3);
   float n1 = vnoise(m * 0.8 + 31.0);
   float n2 = vnoise(m * 2.3 + 7.0);
-  // Broad soft patches of tone, as a painter lays in a great rock, and over them a pale lichen dapple with soft but
-  // certain edges, thicker in some places than others.
+  float R = uEyeAt.z * 0.08;
+  vec2 e = vec2(vRest.z + uEyeAt.x * ${f(LENGTH)}, vRest.y - uEyeAt.y) / R;
+  float flank = smoothstep(0.25, 0.45, abs(rn.x));
+  // How far out from the eye and the folds round it, 1 at their edge.
+  float face = length(e * vec2(0.62, 0.87));
+  // Broad soft patches of tone, as a painter lays in a great rock, a soft grain over them, and lichen, thick in some
+  // places and bare in others, thinning round the eye so its face stays clear.
   vec3 base = uBack * (0.94 + 0.12 * mottle) * (${f(1 - L.tone)} + ${f(2 * L.tone)} * smoothstep(0.2, 0.8, n0));
-  float thick = ${f(2 * L.dappleCover)} * (0.3 + 0.7 * smoothstep(0.25, 0.75, n0 + 0.3 * (n1 - 0.5)));
-  float dapple = max(dapples(m, thick, 1.7, n2, px), dapples(m + 0.37, thick, 0.75, n2, px));
-  base = mix(base, ${rgb(L.dapple)} * (0.92 + 0.16 * n2), (dapple + thick * 0.3 * (1.0 - shows(0.4, px))) * ${f(L.dappleAmount)});
+  float grain = (vnoise(m * 6.0 + 1.7) - 0.5) * shows(0.16, px) + 0.6 * (vnoise(m * 15.0 + 4.1) - 0.5) * shows(0.07, px);
+  base *= 1.0 + ${f(L.grain)} * grain;
+  float thick = ${f(L.lichenCover)} * (0.3 + 1.1 * smoothstep(0.25, 0.75, n0 + 0.3 * (n1 - 0.5)));
+  vec2 lich = lichen(m, thick, px);
+  vec3 lichTone = mix(${rgb(L.lichen)}, ${rgb(L.lichenWarm)}, smoothstep(0.62, 0.85, lich.y)) * (0.9 + 0.2 * lich.y);
+  // Low on its flanks the sea's weed has it rather than lichen.
+  float onBody = float(part == ${BODY});
+  float lichOn = ${f(L.lichenAmount)} * mix(0.5, 1.0, dry) * (1.0 - 0.8 * (1.0 - smoothstep(0.75, 1.05, face)) * flank * onBody)
+    * (1.0 - onBody * (1.0 - smoothstep(0.6, 1.8, overRestSea(vRest, s))));
+  base = mix(base, lichTone, lich.x * lichOn);
   Skin k = Skin(base, 0.0, vec3(0.0), 0.0, 0.0, 0.0, 0.0, vec2(0.0), 0.0, 0.0);
   if (part == ${BODY} || part == ${DORSAL}) {
     float h = part == ${BODY} ? vRig.w : 1.0;
@@ -386,31 +429,50 @@ Skin skin(float far, float dry) {
     vec2 slit = vec2(b.x - 0.07 - 0.04 * clamp(b.y / 0.2, -1.0, 1.0), b.y) / vec2(0.045, 0.2);
     k.albedo *= 1.0 - 0.75 * (1.0 - smoothstep(0.6, 1.0, length(slit))) * smoothstep(0.4, 0.7, rn.y);
 
-    float R = uEyeAt.z * 0.08;
-    vec2 e = vec2(vRest.z + uEyeAt.x * ${f(LENGTH)}, vRest.y - uEyeAt.y) / R;
-    float flank = smoothstep(0.25, 0.45, abs(rn.x));
-    float ring = length(e * vec2(0.8, 1.0));
-    float clear = 1.0 - (1.0 - smoothstep(1.4, 2.2, ring)) * flank;
+    float clear = 1.0 - (1.0 - smoothstep(1.05, 1.4, face)) * flank;
     if (part == ${BODY}) {
       float above = overRestSea(vRest, s);
-      float scar = scars(m, px) * clear * dry;
-      k.albedo = mix(k.albedo, ${rgb(L.scar)} * (0.9 + 0.2 * n2), scar * ${f(L.scarAmount)});
-      // Barnacles crust the head in ragged clusters, round its knobs, along the chin and here and there.
-      float head = (1.0 - smoothstep(0.12, 0.24, s)) * clear * dry;
+      // Its old scars are thicker about the head and down its flanks, where it is seen close.
+      vec2 scar = scars(m, ${f(L.scars)} * (1.0 + smoothstep(0.45, 0.2, s)) * (0.2 + flank), px) * clear * dry;
+      k.albedo *= 1.0 - 0.3 * scar.y;
+      k.albedo = mix(k.albedo, ${rgb(L.scar)} * (0.92 + 0.16 * n2), scar.x * ${f(L.scarAmount)});
+      // Barnacles crust the head in small tight patches, along the chin and the lip, round its knobs and about the eye,
+      // but never on the eye or in its folds; a few stray ones about each patch.
+      float head = (1.0 - smoothstep(0.2, 0.3, s)) * dry;
       if (head > 0.0) {
-        float chin = smoothstep(0.0, 0.03, below) * (1.0 - smoothstep(0.05, 0.11, s));
-        float bias = max(0.3 * smoothstep(0.0, 0.004, knobbed), 0.15 * chin);
-        float where = head * smoothstep(0.5, 0.64, vnoise(m * 0.35 + 11.0) * 0.7 + n2 * 0.3 + bias);
-        vec3 crust = barnacles(m, where * 0.9, px);
-        k.albedo = mix(k.albedo, ${rgb(L.crust)} * 0.75, where * 0.35 * (1.0 - shows(0.2, px)));
-        k.albedo *= 1.0 - 0.35 * crust.z;
-        k.albedo = mix(k.albedo, ${rgb(L.crust)} * crust.y, crust.x);
-        k.crust = crust.x;
+        float eyeClear = 1.0 - (1.0 - smoothstep(1.0, 1.3, face)) * flank;
+        float chin = smoothstep(0.0, 0.02, below) * onJaw;
+        float lipLine = exp(-pow((below + 0.015) / 0.035, 2.0)) * (1.0 - smoothstep(${f(JAW_CORNER)}, ${f(JAW_CORNER + 0.03)}, s));
+        float nearEye = (1.0 - smoothstep(1.6, 2.8, face)) * flank;
+        float bias = max(max(0.24 * smoothstep(0.0, 0.004, knobbed), 0.14 * chin), max(0.16 * lipLine, 0.14 * nearEye));
+        float crustAt = vnoise(m * 0.9 + 11.0) * 0.6 + vnoise(m * 2.4 + 4.0) * 0.4;
+        float near = head * eyeClear * smoothstep(0.52, 0.68, crustAt + bias);
+        float where = near * smoothstep(0.71, 0.74, crustAt + bias);
+        // The crust stands a little proud, so it shades the skin just under its lower edge.
+        vec2 up = m + vec2(0.0, 0.14);
+        float ledge = head * eyeClear * smoothstep(0.71, 0.74, vnoise(up * 0.9 + 11.0) * 0.6 + vnoise(up * 2.4 + 4.0) * 0.4 + bias) * (1.0 - where);
+        k.albedo *= 1.0 - 0.35 * ledge * shows(0.14, px);
+        vec3 crust = barnacles(m, max(where * ${f(L.crustShells)}, 0.12 * near), px);
+        // A patch is one pale lumpy crust, its shells the light and shade over it; strays about it stand on the skin.
+        vec3 crustTone = mix(${rgb(L.crust)}, mix(${rgb(L.crust)}, uBack, 0.4), lip);
+        float lumpy = 0.85 + 0.3 * vnoise(m * 3.0 + 3.0);
+        k.albedo = mix(k.albedo, crustTone * 0.75 * lumpy, where * mix(0.55, 0.4, 1.0 - shows(0.2, px)));
+        k.albedo *= 1.0 - mix(0.3, 0.5, lip) * crust.z;
+        k.albedo = mix(k.albedo, crustTone * crust.y, crust.x * (1.0 - 0.5 * where));
+        k.albedo *= mix(1.0, 0.75 + 0.4 * crust.y, crust.x * where);
+        k.crust = max(crust.x, where);
       }
-      // Green growth along the line where the sea lies on it at rest, its top edge ragged, kept off the pale lip.
-      float reach = ${f(L.growthReach)} * (0.35 + 0.9 * n1 * (0.4 + n2));
-      float grown = (1.0 - smoothstep(reach - 0.06 - px, reach + 0.06 + px, above)) * smoothstep(-1.6, -0.4, above) * (1.0 - 0.7 * lip);
-      k.albedo = mix(k.albedo, ${rgb(L.growth)} * (0.75 + 0.5 * n2), grown * 0.8 * clear);
+      // Weed where the sea lies on it at rest, ragged along its top and dark and mossy by turns, and above it in places
+      // the faint yellow film old whales carry; kept off the pale lip.
+      float top = ${f(L.growthReach)} * (0.4 + 0.9 * vnoise(vec2(m.x * 0.3, 1.3)))
+        + 0.35 * (vnoise(m * vec2(1.4, 2.0) + 7.7) - 0.5) + 0.18 * (vnoise(m * 4.5 + 3.3) - 0.5) * shows(0.12, px);
+      float grown = (1.0 - smoothstep(top - 0.02 - px, top + 0.02 + px, above)) * smoothstep(-1.6, -0.4, above) * (1.0 - 0.7 * lip);
+      float moss = smoothstep(0.45, 0.6, vnoise(m * vec2(1.1, 1.6) + 4.0)) * smoothstep(-0.4, 0.2, above);
+      vec3 weed = mix(${rgb(L.growth)}, ${rgb(L.moss)}, moss) * (0.85 + 0.3 * n2);
+      float film = smoothstep(0.5, 0.72, vnoise(m * vec2(0.22, 0.5) + 13.0)) * smoothstep(top - 0.1, top + 0.1, above)
+        * (1.0 - smoothstep(top, top + 1.6 * ${f(L.growthReach)} + 0.6, above));
+      k.albedo = mix(k.albedo, ${rgb(L.film)}, film * 0.25 * clear * (1.0 - lip));
+      k.albedo = mix(k.albedo, weed, grown * 0.85 * clear);
       k.run = smoothstep(0.7, 0.85, vnoise(vec2(m.x * 0.45, m.y * 0.12 + 3.0))) * smoothstep(1.5, 3.5, above) * (1.0 - k.crust);
     }
 
