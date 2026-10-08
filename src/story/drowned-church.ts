@@ -218,6 +218,7 @@ export class ChurchArrival {
     boat.finishBoarding();
     c.ride(boat.seat(this.tmp), boat.yaw, boat);
     this.showPlane();
+    this.makeFast();
     this.to('aboard');
     this.aboardFor = 0;
     this.lensCut = true;
@@ -310,11 +311,16 @@ export class ChurchArrival {
         c.lookAt = null;
         break;
       case 'wait':
-        this.waiting();
+        this.waiting(dt);
         break;
       case 'aboard':
         this.aboardFor += dt;
         this.lookUp(dt);
+        if (this.madeFast && this.aboardFor >= k.lookUpFor) {
+          this.madeFast = false;
+          this.cast.boat.mooring = null;
+          this.cast.boat.grounded = false;
+        }
         break;
       default:
         break;
@@ -438,16 +444,21 @@ export class ChurchArrival {
     this.sailing = true;
   }
 
-  /** The boat under sail to the berth: round the tower's corner, alongside, and her stepping down into it once it lies there. */
-  private waiting(): void {
+  /**
+   * The boat under sail to the berth: round the tower's corner, alongside, and her stepping down into it once it has
+   * come to rest there.
+   */
+  private waiting(dt: number): void {
     const { boat, child: c } = this.cast;
     const k = tuning.drowned.church;
     c.lookAt = this.look.copy(boat.position).setY(boat.position.y + 0.8);
     if (!c.busy) c.faceToward(boat.position.x, boat.position.z, 0.05);
     const p = boat.position;
     const berthed = boat.grounded && Math.hypot(p.x - NAVE_BERTH.x, p.z - NAVE_BERTH.z) < k.berthed;
-    if (berthed && !c.busy) this.board();
+    this.berthedFor = berthed ? this.berthedFor + dt : 0;
+    if (this.berthedFor > k.boardAfter && !c.busy) this.board();
   }
+  private berthedFor = 0;
 
   private sail(dt: number): void {
     const { boat } = this.cast;
@@ -481,8 +492,18 @@ export class ChurchArrival {
       this.showPlane();
       this.to('aboard');
       this.aboardFor = 0;
+      this.makeFast();
     }, true);
   }
+
+  /** Seated, the boat lies along the slates while she looks back at the cat, whatever air is in its sail, until the storm takes it. */
+  private makeFast(): void {
+    const { boat } = this.cast;
+    boat.mooring = { ...NAVE_BERTH };
+    boat.grounded = true;
+    this.madeFast = true;
+  }
+  private madeFast = false;
 
   /**
    * Seated, she turns round on the thwart to look back up at the cat and its kitten on the sill, the way that keeps
@@ -832,10 +853,11 @@ export class ChurchArrival {
       this.target.copy(held.primary).lerp(held.secondary, k.bringAlong);
     }
     if (this.step === 'wait' || this.step === 'board') {
-      /** As the boat comes in alongside, round to the boarding view, so it is there as she steps down into it. */
+      /** Once the boat is on its way in alongside, round to the boarding view in one move, so it is there as she steps down into it. */
       const p = this.cast.boat.position;
-      const near = this.alongside ? 1 : THREE.MathUtils.smoothstep(Math.hypot(p.x - NAVE_BERTH.x, p.z - NAVE_BERTH.z), k.boardFrom, k.boardBy);
-      if (near > 0) this.eye.lerp(this.boardEye(wide, this.tmp), near);
+      if (this.comeRound > 0 || this.alongside || Math.hypot(p.x - NAVE_BERTH.x, p.z - NAVE_BERTH.z) < k.boardFrom) this.comeRound += dt;
+      const round = THREE.MathUtils.smootherstep(this.comeRound, 0, k.boardFor);
+      if (round > 0) this.eye.lerp(this.boardEye(wide, this.tmp), round);
     }
     this.write(shot, this.eye, this.target, (view[6] ?? 1) * THREE.MathUtils.lerp(k.uprightZoom, 1, wide));
     return pace;
@@ -890,7 +912,7 @@ export class ChurchArrival {
    * tower and the lighthouse both stand beyond her for the storm's lens to take her from.
    */
   private releaseEye(wide: number, out: THREE.Vector3): THREE.Vector3 {
-    const k = tuning.drownedCamera.church, eyes = this.cast.child.face(out), yaw = this.cast.boat.yaw;
+    const k = tuning.drownedCamera.church, eyes = this.cast.child.face(out), yaw = NAVE_BERTH.yaw;
     const from = this.shoulderBearing(wide), bow = Math.atan2(Math.sin(yaw), Math.cos(yaw));
     const a = from + Math.sign(Math.sin(bow - from)) * THREE.MathUtils.lerp(k.uprightReleaseRound, k.releaseRound, wide);
     const back = THREE.MathUtils.lerp(k.uprightReleaseBack, k.releaseBack, wide);
@@ -965,12 +987,14 @@ export class ChurchArrival {
    * the sail hanging off it stand to the side of the frame.
    */
   private shoulderBearing(wide: number): number {
-    const k = tuning.drownedCamera.church, c = this.cast.child.position, yaw = this.cast.boat.yaw;
+    const k = tuning.drownedCamera.church, c = this.cast.child.position, yaw = NAVE_BERTH.yaw;
     const cat = this.catSeen(this.tmp2);
     const away = Math.atan2(c.x - cat.x, c.z - cat.z);
     const starboard = Math.atan2(-Math.cos(yaw), Math.sin(yaw));
     return away + Math.sign(Math.sin(starboard - away)) * THREE.MathUtils.lerp(k.uprightUpRound, k.upRound, wide);
   }
+
+  private comeRound = 0;
 
   /** The boat lies at the berth for her to step down into. */
   private get alongside(): boolean {
@@ -982,7 +1006,7 @@ export class ChurchArrival {
    * down the slates and steps in, never between.
    */
   private boardEye(wide: number, out: THREE.Vector3): THREE.Vector3 {
-    const k = tuning.drownedCamera.church, c = this.cast.child.position, yaw = this.cast.boat.yaw;
+    const k = tuning.drownedCamera.church, c = this.cast.child.position, yaw = NAVE_BERTH.yaw;
     const starboard = Math.atan2(-Math.cos(yaw), Math.sin(yaw)), stern = Math.atan2(-Math.sin(yaw), -Math.cos(yaw));
     const a = starboard + Math.atan2(Math.sin(stern - starboard), Math.cos(stern - starboard)) * k.boardQuarter;
     const back = THREE.MathUtils.lerp(k.uprightBoardBack, k.boardBack, wide);

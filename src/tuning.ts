@@ -1938,8 +1938,11 @@ export const tuning = {
        */
       catUpAfter: 1.6, catGap: 0.5, catLip: 0.15, catLooks: 0.2, catTurn: 1.6, catDown: 1.25, catPause: 0.6, catFoot: [-0.45, 0.62], catAcross: -0.62,
       catRidge: 0.5, kittenAfter: 2.4, homeAt: 7.7, homeClimb: 2.4, homeGather: 0.25,
-      /** The most the boat goes under sail, m/s; how near a turn of its way counts as rounded; how near the berth it lies. */
-      bringSpeed: 2.6, rounded: 3.5, berthed: 0.6,
+      /**
+       * The most the boat goes under sail, m/s; how near a turn of its way counts as rounded; how near the berth it lies,
+       * and how long it lies there before she steps down into it (seconds).
+       */
+      bringSpeed: 2.6, rounded: 3.5, berthed: 0.6, boardAfter: 1,
       /** Seconds with no progress before the world's air carries it, and how much breeze that is. */
       valve: 90, carryBreeze: 0.45,
       /**
@@ -2175,11 +2178,11 @@ export const tuning = {
        */
       bring: [-11, 1.6, -10, 0, 0, 0], uprightBring: [-10, 2.4, -9, 0, 0, 0], bringAlong: 0.45,
       /**
-       * As the boat comes in alongside it comes round, from when the boat is `boardFrom` metres from the berth until
-       * `boardBy`, toward the boat's starboard quarter, this share of the way from the beam to the stern, to stand this
-       * far off her (upright, its own) and this high over her feet as she steps aboard.
+       * Once the boat is `boardFrom` metres from the berth it comes round in one move of `boardFor` seconds toward the
+       * boat's starboard quarter, this share of the way from the beam to the stern, to stand this far off her (upright,
+       * its own) and this high over her feet as she steps aboard.
        */
-      boardFrom: 7, boardBy: 2.5, boardQuarter: 0.2, boardBack: 7.5, uprightBoardBack: 7, boardHigh: 2.2,
+      boardFrom: 14, boardFor: 4, boardQuarter: 0.22, boardBack: 9, uprightBoardBack: 8, boardHigh: 2.2,
       /**
        * Aboard, over her shoulder looking at the cat on the ridge: how high its eyes are as it sits there; how far
        * behind her eyes the lens stands and how far over them, how far round from straight behind toward the boat's
@@ -2188,21 +2191,21 @@ export const tuning = {
        * comes round and in there from the boarding view; how low it may go over the water, and how far along its look it
        * aims, metres.
        */
-      catEyes: 0.3, upBack: 3.4, upOver: 0.15, upRound: 0.45, hoodOver: 0.12, upAim: 0.5, upZoom: 1.5,
+      catEyes: 0.3, upBack: 3.4, upOver: 0.15, upRound: 0.6, hoodOver: 0.12, upAim: 0.5, upZoom: 1.5,
       uprightUpBack: 2.2, uprightUpOver: 0.2, uprightUpRound: 0.35, uprightUpAim: 0.55, uprightUpZoom: 1.5,
-      tiltFrom: 0.3, tiltTo: 4.2, upClear: 0.35, upLook: 8,
+      tiltFrom: 0.2, tiltTo: 4, upClear: 0.35, upLook: 8,
       /**
        * After the blink, from `releaseFrom` to `releaseTo` seconds after she sits, it lets her go as the cat goes home:
        * round toward the bow by this much (radians), this far from her eyes and this far over them, looking this share
        * of the way from her up to the sill, on this lens (upright, its own).
        */
-      releaseFrom: 7.8, releaseTo: 10.8, releaseRound: 0.5, releaseBack: 15, releaseUp: 2.3, releaseLook: 0.3, releaseZoom: 1.05,
+      releaseFrom: 7.8, releaseTo: 10.8, releaseRound: 0.5, releaseBack: 15, releaseUp: 2, releaseLook: 0.12, releaseZoom: 1.05,
       uprightReleaseRound: 0.5, uprightReleaseBack: 12, uprightReleaseUp: 2, uprightReleaseLook: 0.4,
       /**
        * The paces it moves at (the kittens', the fog sea's and the look up's slower), how much of the frame she and
        * what she is with keep inside and how far it may draw back to hold them, and upright how much wider the lens.
        */
-      pace: 0.45, nestPace: 0.3, seaPace: 0.35, upPace: 0.6, margin: 0.8, extra: 1.5, uprightZoom: 0.85,
+      pace: 0.45, nestPace: 0.3, seaPace: 0.35, upPace: 0.8, margin: 0.8, extra: 1.5, uprightZoom: 0.85,
       /** When the lantern answers the lens looks this share of the way toward it, for about this many seconds. */
       find: 0.1, findFor: 3,
       /**
