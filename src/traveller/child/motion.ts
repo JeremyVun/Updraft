@@ -123,6 +123,8 @@ class Spring {
 const FLAP_OPEN = [2.3, 2.25, 0.3];
 
 const Y = new THREE.Vector3(0, 1, 0);
+/** How far the collarbone turns up with an arm raised over the shoulder, radians. */
+const SHRUG = 0.45;
 const DOWN = new THREE.Vector3(0, -1, 0);
 const SIDES = [true, false] as const;
 const coatSample: CoatSample = { p: new THREE.Vector3(), n: new THREE.Vector3(), fold: 0 };
@@ -352,7 +354,7 @@ export class ChildMotion {
     const clav = b[left ? BONE.clavL : BONE.clavR];
     /** Above the shoulder the collarbone comes up with the arm, so a raised arm does not break at the armpit. */
     const high = THREE.MathUtils.smoothstep(p.raise, 1.3, 2.9) + THREE.MathUtils.smoothstep(p.out, 0.9, 2.0);
-    clav.rotation.set(0, -s * 0.12 * THREE.MathUtils.smoothstep(p.raise, 0.6, 1.8), s * 0.45 * Math.min(1, high));
+    clav.rotation.set(0, -s * 0.12 * THREE.MathUtils.smoothstep(p.raise, 0.6, 1.8), s * SHRUG * Math.min(1, high));
     this.ea.set(-p.raise, s * p.twist, s * p.out, 'XYZ');
     upper.quaternion.setFromEuler(this.ea);
     fore.rotation.set(-p.elbow, 0, 0);
@@ -371,9 +373,14 @@ export class ChildMotion {
     const upper = b[left ? BONE.upperL : BONE.upperR];
     const fore = b[left ? BONE.foreL : BONE.foreR];
     const hand = b[left ? BONE.handL : BONE.handR];
+    const s = left ? 1 : -1;
+    clav.updateMatrixWorld(true);
+    // A mitten held up over the hood takes the shoulder with it, as a posed arm does; the shoulder alone stops at her face.
+    const up = clav.worldToLocal(this.va.copy(world)).sub(upper.position).normalize();
+    const shrug = s * SHRUG * THREE.MathUtils.smoothstep(Math.acos(THREE.MathUtils.clamp(-up.y, -1, 1)), 1.3, 2.9);
+    clav.rotation.z = THREE.MathUtils.lerp(clav.rotation.z, shrug, w);
     clav.updateMatrixWorld(true);
     const target = clav.worldToLocal(this.va.copy(world)).sub(upper.position);
-    const s = left ? 1 : -1;
     if (elbow) this.vb.set(s * elbow.x, elbow.y, elbow.z).applyQuaternion(this.qc.copy(clav.quaternion).invert());
     else this.vb.set(s * 0.75, -0.45, -0.5);
     twoBone(target, UPPER_ARM, FOREARM, this.vb, this.qa, this.qb, this.t);
