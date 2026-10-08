@@ -150,6 +150,12 @@ function shift(ux: number, uz: number, time: number, out: Shift): Shift {
   return out;
 }
 
+/** How much of the water's height at a point is the swell something huge left going under. */
+export function surgeAt(x: number, z: number, time: number): number {
+  const g = swellUniforms.uSurge.value;
+  return g.w > 0 ? g.w * surge(surgeDistance(x, z), time - g.z) : 0;
+}
+
 /** Just how high the water is at a point, for the many small things that ride it without lying along it. */
 export function swellLift(x: number, z: number, time: number): number {
   let ux = x;

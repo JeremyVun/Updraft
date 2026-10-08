@@ -1431,7 +1431,7 @@ export const tuning = {
     inviteAfter: 6, valveAfter: 90,
     coaxUrgency: 0.7, coaxRadius: 2.2,
     /** The swell it leaves going under: speed (m/s), crest spacing (m), width of the packet (m) and height at the boat (m). */
-    surgeSpeed: 6, surgeLength: 22, surgeWidth: 10, surgeHeight: 0.4,
+    surgeSpeed: 6, surgeLength: 22, surgeWidth: 10, surgeHeight: 0.6,
     /**
      * The camera's hold beside it: eased in between `holdFrom` and `holdFull` metres short of the rest, `holdDistance`
      * behind the boat and `holdHeight` up, `holdBearing` radians round to port of astern, at `holdEase` a second, as
@@ -1570,7 +1570,7 @@ export const tuning = {
       line: { distance: 6, height: 3.2, turn: -0.75, lookY: 3, toward: 0.37, eyeward: 1 },
       flipper: { distance: 12, height: 3.4, turn: -1.5, lookY: 3, toward: 0.5 },
       release: { distance: 12, height: 3, turn: -0.3, lookY: 12, toward: 0.4 },
-      farewell: { distance: 16, height: 3, turn: 0, lookY: 12, toward: 0.45 },
+      farewell: { distance: 26, height: 3, turn: -0.32, lookY: 15, toward: 0.5 },
       releaseRoom: 4,
     },
     /**

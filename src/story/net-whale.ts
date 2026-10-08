@@ -7,7 +7,7 @@ import type { Coax } from '../fx/swirl';
 import { tuning } from '../tuning';
 import type { Cast } from './cast';
 import { completeObjective } from './cues';
-import { swellLift } from '../world/water/swell';
+import { surgeAt, swellLift } from '../world/water/swell';
 import { mirrorWater } from '../world/sky-mirror-layout';
 
 const K = tuning.netWhale;
@@ -198,6 +198,8 @@ export class NetWhale {
   private peeled = 0;
   private cygnetIn: 'cradle' | 'stowing' | 'satchel' | 'unstowing' | 'swimming' = 'cradle';
   private podGone = false;
+  /** The way the pod goes once the whale has, or null to carry on along its way round. */
+  private podYaw: number | null = null;
   /** How far round its wait, and how far along its way past the boat, the pod's anchor has come. */
   private waited = 0;
   private escort = 0;
@@ -281,6 +283,8 @@ export class NetWhale {
   private farewelled = false;
   /** How far round the hold's view is from the crossing's, unwound from frame to frame. */
   private apart: number | null = null;
+  /** The world's clock this frame, for the swell under the boat. */
+  private now = 0;
   private holdT = 1;
   private holdSet = false;
   /**
@@ -489,6 +493,7 @@ export class NetWhale {
 
   update(dt: number, time: number): void {
     this.clock += dt;
+    this.now = time;
     this.stepTime += dt;
     const { boat } = this.cast;
     const whale = this.whale;
@@ -570,8 +575,10 @@ export class NetWhale {
       return out;
     }
     if ((this.step === 'free' && whale.going) || this.step === 'gone' || this.podGone) {
+      // The pod goes with it: away over where it went down.
+      if (!this.podGone && whale.diving >= 0) this.podYaw = Math.atan2(whale.farewell.x - this.anchor.x, whale.farewell.z - this.anchor.z);
       this.podGone = true;
-      out.heading = this.escortYaw();
+      out.heading = this.podYaw ?? this.escortYaw();
       return out;
     }
     // It sets off round the whale as the cygnet is lifted in, so it is in the frame as the whale spouts.
@@ -1606,7 +1613,7 @@ export class NetWhale {
     }
     if (this.step === 'free' && whale.fluking && !this.waved) {
       this.waved = true;
-      net.sound('whale-call', whale.back);
+      net.sound('whale-call', whale.flukes);
     }
     if (net.posed) return;
     const held = this.progress >= 1 ? 1 : this.progress * (K.netSettle + (1 - K.netSettle) * this.wind);
@@ -1723,7 +1730,8 @@ export class NetWhale {
     }
     const distance = portrait ? phoneDistance : holdDistance;
     const height = portrait ? phoneHeight : holdHeight;
-    this.lookFrom.set(boat.x - Math.sin(aim) * distance, boat.y + height,
+    // The lens rides the sea's own swell with the boat, but not the swell it leaves going under, which lifts the boat.
+    this.lookFrom.set(boat.x - Math.sin(aim) * distance, boat.y - surgeAt(boat.x, boat.z, this.now) + height,
       boat.z - Math.cos(aim) * distance);
     this.forward.subVectors(this.lookFrom, this.look).setY(0);
     const reach = this.forward.length();
