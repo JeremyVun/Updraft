@@ -604,7 +604,71 @@ face, in `src/traveller/child/motion.ts`, staged on the yard with a stand-in wal
   the same way, looking for her footing. Reads at the room's distance; no hand or foot slips (`probe.report()`).
 Gate: `crossings-check` `gap=bell` with real strokes; yard stills of the belfry and of every climb pose; a recorded
 clip of four rings for the lead to watch and hear.
-Done: [ ]
+Done: [x] (branch `proto-drowned-belfry`). As built, for 7c to mount:
+- **The belfry** (`src/world/belfry.ts`): `new Belfry(towerMiddle)`, square to the world at the room's own heights
+  (`BELFRY`: half-width 2.4, walls 0.45 thick, sills at 8.27 with the boards 0.12 below them, the room 3.3 high to its
+  ceiling boards, walls from 7.75 to 11.6, the cornice at 11.75 as today's). It is the whole belfry storey, outside and
+  in: one opening a face of two pointed lights 1.0 wide either side of a slender shaft (their middles ±0.65 off the
+  face's middle, the arches springing 2.3 above the sill, points 0.55 higher), dressed surrounds, quoins, a 0.12 drip
+  ledge under each opening (the four sills; the cat sits in the reveal, 0.45 deep). It differs from today's tower,
+  which shows two lancets a face at ±1.05: 7c cuts the tower box at 7.75 and puts this on it (and moves
+  `BELFRY_SOUTH`/`NORTH`). Inside: boards, straw, joists, the trap (north-east), and two oak A-trestles east and west
+  of the bell at ±1.16, so the bell swings north–south across the west face's two lights. `pivot()`, `nest()` (just
+  inside the west face's north light, where she climbs in), `sill(face, light, out)`, `inside(face, light, inward)`,
+  `decks` (her floor), `light` (uniforms shared with the bell). Its shader lets the low sun in only through a light and
+  round the bell's shadow (`BELFRY_GLSL`: `belfryOpen`, `belfrySun`, `bellShade`), keeps the inside warm and close, and
+  needs `shadeBell(bell.pivot, bell.down(v))` every frame. `sunAt()` checks a point; the nest is lit at the room's low
+  sun from the north-west (dusk 0.88 on the yard, azimuth about 34°).
+- **The bell** (`src/world/crossings/bell.ts`): `new Bell({ pivot, toward: (0, 1), half: BELFRY.trestle }, cast,
+  belfry.light)`, 1.94 across the lip and 1.75 from crown to lip, crown 0.22 under the gudgeons, old bronze gone green
+  at the lip and in runs, with a headstock, straps and a clapper. Each stroke across it on screen asks for a swing in
+  proportion to the bell widths it sweeps along its swing (firmer for faster) and never adds to one; as the swing
+  tops out the clapper strikes once: a ring past `ringAt` 0.3 rad, a touch past `touchAt` 0.07. `live` gates it (on
+  only while she rings); `onRing(strength)` is the hook for the waves, the fog and the lantern; `onEvent` raises
+  `BELL_SOUNDS` (`bell`, `bell-touch`) through `cast.knock`. The drawn stroke after `inviteAfter` 5 s; after `valveAfter`
+  90 s with no ring the world's own gust rings it every `valveEvery` 4 s. `BellWaves(centre, level, from)`: `emit`,
+  `level` (the water on the yard; the fog's top in the room), up to six crests of broken pale light rolling out at
+  6 m/s for 7.5 s. Tuning: `tuning.crossings.bell`.
+- **Its sound** (`src/audio/bell.ts`, `strikeBell`, registered in `foley.ts`): a minor-third bell on B (MIDI 47, the
+  drowned score's B minor tonic): hum, prime, tierce, quint and nominal with slow doublet beats, the brighter partials
+  and the clapper's clang and knock scaled by the stroke, the hum lasting about half a minute; a touch is a soft knock
+  and the note barely woken. Four rings through the game's own reverb: about -23 LUFS, peak -6 dBFS
+  (`node tools/bell-render.mjs [out.wav] [rings] [seconds]`).
+- **The ivy** (`src/world/ivy-face.ts`): `new IvyFace({ from, to, out, roof, spread })`, `from` on the face at the foot
+  (the nave's ridge, 2.84), `to` the middle of the light's sill (8.27), `roof(across)` the slates' height under the
+  face. Two wrist-thick old stems ±0.44 either side of her line (radius 0.052, 0.075 off the stone) forking inward
+  every 0.7 m into crotches, the right stem's 0.35 lower, a few more old stems over the face, and up to 1150 leaves in
+  `drowned-ivy.ts`'s shape and palette, kept off the grips. `holds` (her left stem, her right: `hand`, `foot`, `up`),
+  `catWay()`. In the room: the tower's west face from the nave's ridge to the west face's north light.
+- **The climb** (`src/traveller/climb.ts`; the child gained `climbing`, `climbPose`, `footFor`, `footReached` and
+  `ankle`, and her legs take world foot holds in `child/motion.ts`): `new Climb(child, { wall, out, holds, sill, depth })`,
+  `start()`, `facing`, `up(onDone)`, `down(onDone)`, `update(dt)` every frame, `worst`. Planned from the holds so that
+  every limb is in reach where it is put: a hand to the highest hold it can reach before her body rises, the lower
+  foot up a fork (a knee up), the push; hands onto the sill, up on her arms, her hands to the sides of the opening, a
+  knee onto the sill, up into the opening, where she ends standing in the reveal; down, she backs out over the sill
+  and the ladder plays backwards, each foot feeling for its fork. `tuning.crossings.climb`. 8.5 s from the ridge to
+  standing in the opening (about 6.5 on the face), 12.8 s down; worst mitten gap 0.02 m, foot slip 0.02 m up and down.
+  The plane is tucked in her coat (`cast.plane.visible = false`) from the ivy's foot until she is back in the boat.
+- **The yard** (`src/story/bell-yard.ts`, `?chapter=stage&gap=bell`, `&bell=ring|down`, `&bellView=<view>`; the stage's
+  `play('crossing:bell' | 'bell:ring' | 'bell:down')`): the nave's ridge into the tower's west face over open water,
+  the cat up the ivy first and in to curl round its sleeping kittens (it comes in on the heading it curls on, so the
+  kittens' heap is in the curl's hollow, open toward the opening), her climb, her kneeling in the opening over the nest,
+  then standing there looking out toward the last of the sun while the player rings. The lens glides round the tower in
+  bearing, distance and height (never through it): from the north going up (her profile, a knee up, the sea behind),
+  round to look in at the nest through the other light, out west of the tower for the bell (her in the north light,
+  the bronze swinging across the south light, the rings rolling out below); from the south coming down.
+  `crossings-check` `bell`, `bell-weak`, `bell-idle`, `climb`, `climb-down`; `crossing-film.mjs bell` (`BELL=`,
+  `VIEW=`, `KEEP=`, `CLIP=` for a clip with the bell rendered into its sound track).
+Left: from outside, the bell is a dim shape in its light, best read as it swings and shivers; the depth blur keeps
+her, the cygnet and the cat sharp, so a bell nearer the lens than they are blurs (the interior's wide frame is taken
+past the nest for that reason). She and the creatures are shaded by the open sun even inside, so the nest sits in the
+sun's shaft to agree; she reads as outdoor-lit in the belfry's shade. There is no room inside for her (the frame
+leaves a 0.8 m strip by the west wall), so she kneels in the opening; the kneel reads weakly from the lens. The kittens
+are small and half hidden in the curl; `nestle(cat)` re-places them a few centimetres. From behind she is all satchel
+and cygnet, so the climb reads side-on. The ivy goes yellow-green in the low sun. A firm stroke's swing is larger
+upright than landscape (the bell is smaller on screen). The bell's sound was judged only by its partials and
+loudness; Phase 9 retunes its note. The cygnet's own glance at the cat (`peer`) pops once near the top (the probe's
+worst jerk, 0.09, is that, not the climb).
 
 ### Phase 7c: the refuge and the boat home (after 7a and 7b)
 Owns: `src/story/drowned-church.ts`, `src/story/drowned.ts` from `nave` to the storm's `gather`, the belfry mounted
