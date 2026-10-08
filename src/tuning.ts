@@ -1448,7 +1448,7 @@ export const tuning = {
      * The column of its first full breath, and the taller glad spout when it is free (m above the blowhole), its mist
      * `spoutBreadth` times as broad as the first column's.
      */
-    firstBreathHeight: 8.5, spoutHeight: 13.5, spoutBreadth: 1.2,
+    firstBreathHeight: 10, spoutHeight: 13.5, spoutBreadth: 1.2,
     /**
      * Its blow, close: breathed out hard and easing off over `exhale` s, `puffs` puffs a second at its hardest, thrown
      * up into air that slows them `drag` a second, so they reach their height in about a second; the column `stem` m
