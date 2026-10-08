@@ -304,7 +304,7 @@ export class SleepingWhale extends WhaleRig {
     this.uniforms.uSlap.value.set(1, 0, 0);
     this.uniforms.uHaze.value = 1;
     gladUniforms.uGlad.value.w = 0;
-    swellUniforms.uHeave.value.w = 0;
+    swellUniforms.uHeave.value.w = swellUniforms.uHeaveBefore.value.w = 0;
     this.shedT = Infinity;
     this.shed = true;
     this.locate();
@@ -340,7 +340,7 @@ export class SleepingWhale extends WhaleRig {
     this.time = 1e3;
     this.mesh.visible = this.ghost.visible = false;
     swellUniforms.uSurge.value.w = 0;
-    swellUniforms.uHeave.value.w = 0;
+    swellUniforms.uHeave.value.w = swellUniforms.uHeaveBefore.value.w = 0;
     gladUniforms.uGlad.value.w = 0;
     this.birds.hide();
   }
@@ -717,6 +717,7 @@ export class SleepingWhale extends WhaleRig {
     const mid = this.point(0, 0, LYING / 2, this.q);
     const at = this.spine[this.at(0.3)];
     const flank = halfWidthAt(0.3, -at.y / (Math.cos(at.w) * this.scale)) * this.scale;
+    swellUniforms.uHeaveBefore.value.copy(swellUniforms.uHeave.value);
     swellUniforms.uHeave.value.set(mid.x, mid.z, this.worldTime, K.heaveHeight * deep);
     swellUniforms.uHeaveAxis.value.set(h.x, h.z, half, flank);
   }
@@ -736,7 +737,9 @@ export class SleepingWhale extends WhaleRig {
       const top = THREE.MathUtils.smoothstep(s, 0.08, 0.2) * (1 - THREE.MathUtils.smoothstep(s, 0.72, 0.86));
       this.wet[i] = Math.max(this.wet[i], wet * top);
     }
-    const pouring = this.shedBy * THREE.MathUtils.smoothstep(this.shedT, 0.6, 1.4) * (1 - THREE.MathUtils.smoothstep(this.shedT, 1.4, 3.5));
+    // It reaches the sea as its front comes down to the waterline.
+    const pouring = this.shedBy * THREE.MathUtils.smoothstep(this.shedT, 1.3, 2.1) * (1 - THREE.MathUtils.smoothstep(this.shedT, 3, 5));
+    this.drops(pouring, dt);
     const n = Math.floor(dt * 30 * pouring + Math.random());
     const h = this.heading;
     for (let k = 0; k < n; k++) {
@@ -747,8 +750,35 @@ export class SleepingWhale extends WhaleRig {
       if (half <= 0) continue;
       const side = Math.random() < 0.7 ? 1 : -1;
       const out = half + 0.2 + Math.random() * 0.8;
-      this.foam.add(FOAM, P.x + h.z * side * out, P.z - h.x * side * out, 0.6 + Math.random() * 0.8, 3 + Math.random() * 2.5,
+      const x = P.x + h.z * side * out;
+      const z = P.z - h.x * side * out;
+      // Lace laid over the flipper lying awash would draw as white threads across its dark blade.
+      if (side > 0 && this.overFin(x, z)) continue;
+      this.foam.add(FOAM, x, z, 0.6 + Math.random() * 0.8, 3 + Math.random() * 2.5,
         this.worldTime, 0.2 + Math.random() * 0.2, 0.3 + Math.random() * 0.3, Math.atan2(h.z, h.x), 1.2 + Math.random() * 0.6);
+    }
+  }
+
+  /** Whether (x, z) lies within reach of the near flipper's blade. */
+  private overFin(x: number, z: number): boolean {
+    const r = this.finRoot;
+    const dx = this.finTip.x - r.x;
+    const dz = this.finTip.z - r.z;
+    const t = THREE.MathUtils.clamp(((x - r.x) * dx + (z - r.z) * dz) / (dx * dx + dz * dz || 1), 0, 1);
+    return Math.hypot(x - r.x - dx * t, z - r.z - dz * t) < 2.8;
+  }
+
+  /** Where its falls meet the sea, strings of drops running off the flank just over the waterline, mostly on the near side. */
+  private drops(pouring: number, dt: number): void {
+    const size = Math.sqrt(this.scale);
+    const n = Math.floor(dt * K.pourDrops * pouring + Math.random());
+    for (let k = 0; k < n; k++) {
+      const s = 0.12 + Math.random() * 0.66;
+      const y = TOP(s) * Math.random() * 0.45;
+      const e = this.point(flankAt(s, y) * 1.01 * (Math.random() < 0.75 ? 1 : -1), y, s, this.p);
+      if (e.y < 0.1 || e.y > 1.6) continue;
+      this.spray.emit(DROP, e.x, e.y, e.z, (Math.random() - 0.5) * 0.1, -0.5 - Math.random() * 0.8, (Math.random() - 0.5) * 0.1,
+        (0.01 + Math.random() * 0.012) * size, 1.2, 0, 0.55 + Math.random() * 0.35);
     }
   }
 

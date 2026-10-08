@@ -1418,12 +1418,14 @@ export const tuning = {
     /**
      * As each breath lifts its back the sea pours off the top, as much as `sheetWet`, draining over `sheetFor` seconds:
      * its front comes down from `pourFrom` m above the sea at `pourSpeed` m/s, gathering `pourFall` m/s², in broad
-     * falls that mirror the dawn (`falls` of the skin they cover) and glint (`glints`); and the sea round it swells
-     * with it, one low crest `heaveHeight` m high at its flank going out at `heaveSpeed` m/s, `heaveWidth` m across,
-     * settled `heaveFor` s after the breath.
+     * falls that mirror the dawn (`falls` of the skin they cover) and glint (`glints`), running off in `pourDrops` drops
+     * a second at the waterline; and the sea round it swells with it, one low ring of swell `heaveHeight` m high at
+     * its flank going out at `heaveSpeed` m/s, `heaveWidth` m from crest to its side there and broadening by
+     * `heaveSpread` of each metre it goes (so it lifts the boat gently), lower by half `heaveReach` m out, and settled
+     * `heaveFor` s after the breath; the low sun comes through its crest, `heaveGlow` a metre of it.
      */
-    sheetWet: 0.8, sheetFor: 4, pourFrom: 6.5, pourSpeed: 1.2, pourFall: 1.6, falls: 0.9, glints: 2,
-    heaveHeight: 0.3, heaveSpeed: 3.5, heaveWidth: 6, heaveFor: 6,
+    sheetWet: 0.8, sheetFor: 5.5, pourFrom: 6.5, pourSpeed: 1.2, pourFall: 1.6, falls: 0.8, glints: 2, pourDrops: 260,
+    heaveHeight: 0.55, heaveSpeed: 2.6, heaveWidth: 2.2, heaveSpread: 0.3, heaveReach: 8, heaveFor: 8, heaveGlow: 2.5,
     /**
      * The seabirds standing far along its back, each at [s along it, radians round from the top of its ring toward
      * the boat, facing in radians from its heading], `seabirdSize` times a gull. They go up from `seabirdsAfter` s

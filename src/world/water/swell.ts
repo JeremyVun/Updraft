@@ -30,8 +30,10 @@ export const swellUniforms = {
   uSurge: { value: new THREE.Vector4(0, 0, -1e4, 0) },
   /** The length of what went under, which the swell spreads from: its direction in xz and half its length. */
   uSurgeAxis: { value: new THREE.Vector3(1, 0, 0) },
-  /** One low crest going out from a breathing whale's flank: the middle of its length in x and z, when, and its height. */
+  /** One low ring of swell going out from a breathing whale's flank: the middle of its length in x and z, when, and its height. */
   uHeave: { value: new THREE.Vector4(0, 0, -1e4, 0) },
+  /** The ring its breath before sent out, still going. */
+  uHeaveBefore: { value: new THREE.Vector4(0, 0, -1e4, 0) },
   /** The whale's direction in xz, half its length, and how far out from that line its flank meets the sea. */
   uHeaveAxis: { value: new THREE.Vector4(1, 0, 0, 0) },
 };
@@ -54,16 +56,19 @@ function surge(r: number, t: number): number {
     * THREE.MathUtils.smoothstep(front, 0, 6) * 12 / (12 + r);
 }
 
-/** The lift at (x, z) of the low crest a breathing whale sends out from its flank. */
-function heave(x: number, z: number, time: number): number {
-  const g = swellUniforms.uHeave.value;
+/** A shallow trough follows the ring out, as the sea it heaped up settles back. */
+const HEAVE_TROUGH = 0.35;
+
+/** The lift at (x, z) of the low ring of swell a breathing whale sends out from its flank. */
+function heave(g: THREE.Vector4, x: number, z: number, time: number): number {
+  if (g.w <= 0) return 0;
   const a = swellUniforms.uHeaveAxis.value;
   const t = time - g.z;
   const along = THREE.MathUtils.clamp((x - g.x) * a.x + (z - g.y) * a.y, -a.z, a.z);
   const off = Math.hypot(x - g.x - a.x * along, z - g.y - a.y * along) - a.w;
-  const d = off - t * S.heaveSpeed;
-  return g.w * Math.exp(-(d * d) / (S.heaveWidth * S.heaveWidth)) * THREE.MathUtils.smoothstep(t, 0, 1.5)
-    * (1 - THREE.MathUtils.smoothstep(t, S.heaveFor * 0.6, S.heaveFor)) * 12 / (12 + Math.max(off, 0));
+  const d = (off - t * S.heaveSpeed) / (S.heaveWidth + S.heaveSpread * Math.max(off, 0));
+  return g.w * (Math.exp(-d * d) - HEAVE_TROUGH * Math.exp(-(d + 1.6) * (d + 1.6))) * THREE.MathUtils.smoothstep(t, 0, 1.5)
+    * (1 - THREE.MathUtils.smoothstep(t, S.heaveFor * 0.6, S.heaveFor)) * S.heaveReach / (S.heaveReach + Math.max(off, 0));
 }
 
 const wave = (w: (typeof WAVES)[number]) => /* glsl */ `
@@ -79,6 +84,7 @@ uniform float uSwell;
 uniform vec4 uSurge;
 uniform vec3 uSurgeAxis;
 uniform vec4 uHeave;
+uniform vec4 uHeaveBefore;
 uniform vec4 uHeaveAxis;
 
 float surgeLift(vec2 p) {
@@ -91,14 +97,18 @@ float surgeLift(vec2 p) {
     * smoothstep(0.0, 6.0, front) * 12.0 / (12.0 + r);
 }
 
-float heaveLift(vec2 p) {
-  if (uHeave.w <= 0.0) return 0.0;
-  float t = uTime - uHeave.z;
-  vec2 q = p - uHeave.xy;
+float heaveRing(vec2 p, vec4 g) {
+  if (g.w <= 0.0) return 0.0;
+  float t = uTime - g.z;
+  vec2 q = p - g.xy;
   float off = length(q - uHeaveAxis.xy * clamp(dot(q, uHeaveAxis.xy), -uHeaveAxis.z, uHeaveAxis.z)) - uHeaveAxis.w;
-  float d = off - t * ${glsl(S.heaveSpeed)};
-  return uHeave.w * exp(-d * d / ${glsl(S.heaveWidth * S.heaveWidth)}) * smoothstep(0.0, 1.5, t)
-    * (1.0 - smoothstep(${glsl(S.heaveFor * 0.6)}, ${glsl(S.heaveFor)}, t)) * 12.0 / (12.0 + max(off, 0.0));
+  float d = (off - t * ${glsl(S.heaveSpeed)}) / (${glsl(S.heaveWidth)} + ${glsl(S.heaveSpread)} * max(off, 0.0));
+  return g.w * (exp(-d * d) - ${glsl(HEAVE_TROUGH)} * exp(-(d + 1.6) * (d + 1.6))) * smoothstep(0.0, 1.5, t)
+    * (1.0 - smoothstep(${glsl(S.heaveFor * 0.6)}, ${glsl(S.heaveFor)}, t)) * ${glsl(S.heaveReach)} / (${glsl(S.heaveReach)} + max(off, 0.0));
+}
+
+float heaveLift(vec2 p) {
+  return heaveRing(p, uHeave) + heaveRing(p, uHeaveBefore);
 }
 
 /** Where the swell carries the water that would lie at p: sideways in xz, and up in y. */
@@ -175,7 +185,7 @@ function shift(ux: number, uz: number, time: number, out: Shift): Shift {
   }
   const g = swellUniforms.uSurge.value;
   if (g.w > 0) out.y += g.w * surge(surgeDistance(ux, uz), time - g.z);
-  if (swellUniforms.uHeave.value.w > 0) out.y += heave(ux, uz, time);
+  out.y += heave(swellUniforms.uHeave.value, ux, uz, time) + heave(swellUniforms.uHeaveBefore.value, ux, uz, time);
   return out;
 }
 

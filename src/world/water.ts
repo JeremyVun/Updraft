@@ -76,6 +76,8 @@ vec3 surfaceShift(vec2 p, float distanceToCamera) {
 out vec3 vWorld;
 /** The swell's surface tilt here, and how much of it this far out is geometry rather than a normal. */
 out vec3 vSwell;
+/** How high a breathing whale's ring of swell stands here (m). */
+out float vHeave;
 /** The haze toward this vertex: it changes slowly enough across a triangle of sea to be interpolated. */
 out vec4 vFog;
 void main() {
@@ -90,6 +92,7 @@ void main() {
   vec3 across = vec3(0.0, 0.0, E) + surfaceShift(xz + vec2(0.0, E), fromCamera) - at;
   vec3 n = normalize(cross(across, along));
   vSwell = vec3(-n.x / n.y, -n.z / n.y, uSwell > 0.0 ? height / uSwell : 0.0);
+  vHeave = max(heaveLift(xz), 0.0);
   vWorld = w + at;
   vFog = fogOf(vWorld);
   gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
@@ -137,6 +140,7 @@ uniform vec3 uSand;
 uniform vec3 uWetSand;
 in vec3 vWorld;
 in vec3 vSwell;
+in float vHeave;
 in vec4 vFog;
 
 /**
@@ -432,6 +436,8 @@ void main() {
   float crest = surf.y * swellAmp * 6.0;
   float backlit = pow(max(dot(-V, normalize(vec3(uSunDir.x, 0.0, uSunDir.z))), 0.0), 3.0);
   body += vec3(0.1, 0.55, 0.45) * uSunColor * crest * (0.02 + 0.3 * backlit) * sh;
+  // A breathing whale's ring of swell: the low sun comes through its crest as it goes out.
+  body += vec3(0.3, 0.5, 0.42) * uSunColor * vHeave * ${glsl(tuning.netWhale.heaveGlow)} * (0.15 + backlit) * sh;
   body *= 1.0 - rough * 0.08 - storm * 0.15;
   // Round the whale breathing free the sea clears and fills with light.
   float glad = gladAt(xz);

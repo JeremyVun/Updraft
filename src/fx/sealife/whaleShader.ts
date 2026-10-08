@@ -201,7 +201,7 @@ vec4 falls(vec2 m, float h, float front, float amount, float px) {
   float lane = vnoise(vec2(x * 0.42, 2.7)) * 0.7 + vnoise(vec2(x * 1.3, 8.1 + m.y * 0.1)) * 0.3;
   float low = 1.0 - smoothstep(0.4, 2.4, h);
   float parted = mix(1.0, 0.45 + 0.85 * vnoise(vec2(x * 2.6, m.y * 0.2 + 5.0)), low * shows(0.4, px));
-  float inside = lane * parted - mix(0.72, 0.46, amount * 1.25);
+  float inside = lane * parted - mix(0.74, 0.5, amount * 1.25);
   // Each fall's front comes down at its own pace.
   float tongue = front + (vnoise(vec2(x * 0.55, 9.0)) - 0.5) * 1.4;
   float reached = smoothstep(tongue - 0.3, tongue + 0.35, h);
