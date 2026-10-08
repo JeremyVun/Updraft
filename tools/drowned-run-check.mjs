@@ -742,6 +742,8 @@ try {
     console.log(`she let go of the swing after ${pumps} pumping strokes`);
 
     await until((s) => s.beat === 'nave', 60, 'her reaching the tower\'s foot');
+    /** Where the run leaves the cat for the church: on the railings below the tower's south face. */
+    const towerSouth = await page.evaluate(() => { const c = window.__game.cat.position; return Math.hypot(c.x - 16.5, c.z - (-1561 + 2.6)); });
     await seconds(3);
     await shot('nave');
     const end = await state();
@@ -764,7 +766,6 @@ try {
     for (const r of roofs) console.log(`  the roof at ${names[r.name]} (ridge ${r.ridge.toFixed(1)} m) ${r.under === null ? 'not under yet' : `under ${(r.under - r.left).toFixed(1)} s after she went on from it`}`);
     console.log(`the boat moved ${w.boatMoved.toFixed(2)} m from where it ran aground`);
     console.log(`at the end: cat at ${end.cat.join(', ')}, her at ${end.child.join(', ')}`);
-    const towerSouth = await page.evaluate(() => { const c = window.__game.cat.position; return Math.hypot(c.x - 16.5, c.z - (-1561 + 2.6)); });
     console.log(`she faced the lens on her way for ${w.facing.toFixed(1)} s in all (longest ${w.facingWorst.toFixed(1)} s ${w.facingAt}); out of frame ${w.unseen.toFixed(1)} s (longest ${w.unseenWorst.toFixed(1)} s ${w.unseenAt}); lens inside a roof ${w.inside.toFixed(1)} s ${w.insideAt}`);
     console.log(`a roof hid her for at most ${(w.hiddenWorst ?? 0).toFixed(1)} s at a time (${w.hiddenAt ?? ''})`);
     /** The lens's measures are reported, and fail only with LENS=1. */

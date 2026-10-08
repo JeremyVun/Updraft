@@ -998,7 +998,7 @@ function plantTrees(houses: HouseSpec[], rand: Rng, twigs: Twig[], cameraObstacl
   return mergeGeometries(limbs);
 }
 
-/** The dead tree standing in the water east of the tower, its fork just out of it, that the drifting boat fetches up on. */
+/** The dead tree standing in the water east of the tower, its fork just out of it. */
 function boatTree(cameraObstacles: THREE.Box3[]): THREE.BufferGeometry[] {
   const parts = drownedTree(BOAT_TREE.x, BOAT_TREE.y, 7.5, mulberry32(1557), []);
   cameraObstacles.push(new THREE.Box3(new THREE.Vector3(BOAT_TREE.x - 1, -1, BOAT_TREE.y - 1), new THREE.Vector3(BOAT_TREE.x + 1, 3, BOAT_TREE.y + 1)));

@@ -34,9 +34,12 @@ Every chapter has an entry checkpoint. The additional points:
   a save from before then resumes at the entry, the cat on its chimney); `roofs` from her setting off over the roofs
   (resumes on the strand's ridge with the cat a roof ahead, the fog risen and held behind her and the boat against the
   slates, about to drift; the lens starts in the climb's view and the run takes it round to the tree's);
-  `church` from the tower's foot until she is aboard (resumes at the tower's foot, the boat against its dead tree);
-  `storm` from her seated aboard to the beach (resumes seated at the nave with the fog closed round and the storm to
-  come, so the light, the plane and the landing play again). All four carry the drift's leg; only `sail` reads it.
+  `church` from the tower's foot until she is in the belfry (resumes at the tower's foot, the cat on the railings
+  below the ivy, the boat lost in the fog); `belfry` from her kneeling over the kittens until she steps aboard
+  (resumes with her standing in the opening over the fog sea, the cat curled round its kittens and the bell about to
+  be hers to ring, the boat out of sight in the fog); `storm` from her stepping aboard to the beach (resumes seated at
+  the nave, the cat and a kitten on the sill, so the look up, the slow blink, the light, the plane and the landing
+  play again). All five carry the drift's leg; only `sail` reads it.
 - Dark wood: `found` (companion found and gathered) and `dry` (plane recovered and dried), with leg and path distance;
   restore rebuilds the earned light and leaves the next ember unlit.
 - Sleeping island: `feather` (the feather leaves the bed; resumes the assisted climb with the summit curtains closed)
