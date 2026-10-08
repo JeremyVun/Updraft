@@ -60,6 +60,8 @@ export const tuning = {
     openingReturn: 4,
     /** Share of player wind's level taken off a full stroke, easing to nothing for gentle ones: −6 dB at the top, −1 dB at half. */
     playerWindEase: .5,
+    /** Under a fog lying over the water the sea is this much quieter and its wash this much duller (shares, at the most). */
+    seaMuffleLevel: 0.55, seaMuffleCutoff: 0.6,
     /** Reduce how far cursor wind opens its filters, keeping strong gestures less shrill. */
     playerWindFilterRange: .8,
     gestureLevel: .7 * 10 ** (6 / 20), gestureAttack: .006, gestureTailRelease: .3,
@@ -1780,6 +1782,8 @@ export const tuning = {
        * `levelFrom` at the stranding to `levelTo` at the tower; it rises at most `levelRate` metres a second.
        */
       levelBehind: 3, levelOver: 0.9, overBoat: 5.3, levelFrom: 4.5, levelTo: 7.2, levelRate: 0.6,
+      /** The sea muffles under it from when the lens is this far ahead of its front to when it is this far (metres). */
+      muffleFrom: 30, muffleTo: 0,
       /**
        * Its top as a tide: the lowest and highest its long swells lie against its level, as shares of it, and how
        * broad they are at least, metres.

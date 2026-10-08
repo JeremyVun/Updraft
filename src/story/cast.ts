@@ -108,6 +108,8 @@ export interface Chapter {
   readonly mirrorArrival?: number;
   /** How far the music pulls back, so a moment can be heard on its own. */
   readonly hush?: number;
+  /** How far a fog lying over the water muffles the sea, 0 to 1. */
+  readonly seaMuffle?: number;
   /** The piano owns both the melody and the player's gesture sound during its duet. */
   readonly pianoMix?: number;
   /** The piano supplies gesture notes while engaged, independently of its fading mix. */

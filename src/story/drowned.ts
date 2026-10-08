@@ -295,9 +295,21 @@ export class DrownedChapter implements Chapter {
     this.aboard();
   }
 
+  /** How far the fog over the water muffles the sea: as it comes on toward the lens and once the lens is in it. */
+  seaMuffle = 0;
+  private muffleSea(): void {
+    const dark = this.cast.village?.dark, eye = this.camera?.position;
+    if (!dark || !eye) return;
+    const k = tuning.drowned.fog;
+    const at = dark.frontAt(this.muffleAt);
+    const ahead = (eye.x - at.x) * dark.ahead.x + (eye.z - at.y) * dark.ahead.y;
+    this.seaMuffle = dark.rise * (1 - THREE.MathUtils.smoothstep(ahead, k.muffleTo, k.muffleFrom));
+  }
+
   /** QA: a skip ahead cuts the lens there once the chapter has begun. */
   cameraCut = 0;
   private cutIn = 0;
+  private readonly muffleAt = new THREE.Vector2();
   private restored = false;
 
   private to(beat: Beat): void {
@@ -339,6 +351,7 @@ export class DrownedChapter implements Chapter {
   update(dt: number, time: number): void {
     this.now += dt;
     if (this.cutIn > 0 && --this.cutIn === 0) this.cameraCut++;
+    this.muffleSea();
     this.steer();
     const { child: c, plane: p, boat } = this.cast;
     if (!this.cat.ashore || this.church?.done) {

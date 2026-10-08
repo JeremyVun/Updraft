@@ -368,8 +368,6 @@ const landingA = houseLocal(STRAND_HOUSE, -(STRAND_HOUSE.len / 2 - 0.9), STEP_DO
 const landingB = houseLocal(STRAND_HOUSE, STEP_ALONG + 2.4, STEP_DOWN);
 const strandEnd = houseLocal(STRAND_HOUSE, STRAND_HOUSE.len / 2 - 0.35, 0);
 const RIDGE_END = new THREE.Vector3(strandEnd.x, ridgeTop(STRAND_HOUSE), strandEnd.y);
-/** The first roof's slates as they go on under the water ahead of the stem, for the sea to draw down through the glass. */
-export const SUNK_SLATES = { house: STRAND_HOUSE, from: STEP_ALONG - 2.6, to: STEP_ALONG + 2.6 };
 
 /**
  * Roofs round the way that are not on it: different sizes, angles and depths of water, so the way reads as picked

@@ -559,7 +559,57 @@ Gate: `drowned-run-check` from the drift to the nave with real gestures (its fog
 every walk's frame, never on her, each roof she leaves going under after she is off it; each walk's seconds on foot
 reported); `crossings-check`; the saves (`progress-check`, `progress-schema-check`, `drowned-gating-check`); a
 `VIDEO=1` webm of the whole run from the rescue to the nave for the lead to watch.
-Done: [ ]
+Done: [x] `f6ba0bcd..HEAD` on `proto-drowned-chase`. The beats: the cat in the tub, head over the rim; carried to the
+boat it leaps aboard, shakes, shivers, hops down and presses against her shins; she kneels (`child.kneeling`), reaches
+for it (`reachFor`, the cat's `nuzzle`) and it goes back to sit at the bow (`DrownedCat.rescue`/`rescued`, the lens
+closing in to `rescue*` while it happens). The air dies and the boat runs onto the first roof's slates where they go
+under the water (`STRAND`, worked out from that roof's waterline): `Boat.knock(pitch, roll, trim)` lurches and trims
+it, `hull-scrape` sounds; a stroke on the sail only strains it (`brushSail`, `hull-strain` every `stuck.strainEvery`)
+and it never comes off. The fog rises on the way they came and comes on; the cat stares at it (`dread`: `stare` from
+`cat.uneasyFrom`), looks toward the church within `churchFrom`, bolts onto the first roof at `boltFrom` and runs; she
+climbs out after it. Her way (`HER_WAY`, laid backward from the green in `drowned-way.ts`): the first roof's ridge, a
+hop down onto the garden wall where she stops and looks back at the boat for `lookBackFor` as the fog comes onto it
+(the lens over her shoulder, `back*`); the wall north to the fallen tree (`TreeWay.climb`: she steps up onto the trunk
+and walks it, 0.6 m up, to the barn's ridge); the sheet over the lane to the high roof, then a breath (`setDown`); down
+its far slope and a hop onto the next wall, round to the mill; the basket wound 5.2 m up to the granary's ridge (the
+mill at the yard's size, `facing` 0, its hoist on the west; she holds the tower-side rope, looks up at the cap and the
+cat, then down at the fog); on the granary's ridge she stops and looks back down at it (`lookDownFor`); down the
+lean-to, a hop onto the green cottage, its ridge to the swing; the swing onto the nave; the nave's ridge to the tower's
+foot. The cat goes first by `CAT_WAY` (composed from `run`, `hop`, `leap`, `rest`; nothing new in `cat.ts`): along the
+lane's railing to the barn's chimney, across the sheet's caps, up the low sail to the cap, the bough and the nave to
+the tower's south face. The boat stays where it stuck (`boat moved 0.00 m`).
+The fog (`DarkBank`, `drowned-dark.ts`) is driven by two numbers: `front`, metres along `DARK_WAY` (from far south of
+the stranding, through `STRAND`, then `HER_WAY` to `TOWER_FOOT`; `darkAlong(x, z, was)` projects a place onto it), and
+`level`, the height of its top. `comeOn(front, dt)` moves the front on (never back) and raises the level toward
+`tide(front)` at `fog.levelRate` (never down): over everything it has taken (`DARK_TOPS`, each place of her way's
+height) by `levelOver`, and never below a climb from `levelFrom` 4.5 m to `levelTo` 7.2 m. `faces` (a point; the run
+sets her) turns its front to face her, eased (`dark.turnRate`), so it comes on behind her round every corner; `ahead` is
+the way it faces and `frontAt()` where its front is. The run paces it (`run.fog`): toward `fogTrail` 12 m behind her on
+her way, `fogHold` (tree 10, sheet 8, mill 18, swing 12) at the pieces, `fogNearest` 7.5 m at the closest, `fogEnd`
+19 m at the tower's foot, closing at `fogPull` within `fogSlowest`..`fogFastest`; while she looks back it comes in to
+`fogNearest` so it is on the boat. Its level is 7.3 m at the hand-on. For 7c: set `dark.front` and `dark.level`
+directly (assignment may go back; `comeOn` never does), and `dark.faces` to what it should close on. The sea under it
+muffles (`Story.seaMuffle` from how far the lens is ahead of its front, `fog.muffleFrom`..`muffleTo`;
+`audio.seaMuffleLevel`, `seaMuffleCutoff`). The lens: on her way the laid walking lens, kept `fogClear` ahead of where
+the fog will be and clear of her way once `frame` leads it (`toward`); each piece's own view (the tree's from north of
+it, the sheet's from the lane's side away from the fog, the mill's high off the sails' left over the fog's top, which
+then glides round the granary's west side to stand over the green and hands round to the swing's south of her,
+`toSwingView`); upright it always holds her (`shot.subjects`). Saves: `sail` (the drift, the cat aboard), `roofs` (on
+the ridge after the cat, the boat aground, the fog coming; a restore cuts the lens to her, `RoofRun.cutIn`), `church`
+(the hand-on: `RoofRun.skipToEnd`); the schema is unchanged. Measured (`drowned-run-check FROM=roofs TO=nave`, real
+gestures, 1600x900): 95 m of way in about 100 s; on foot to the tree 16.1 s (10.5 s walking and the 5.6 s look back),
+to the sheet 0.3 s, to the mill 10.6 s, to the swing 9.4 s (11 s with the look down), to the tower's foot 1.6 s; the
+tree about 17 s, the sheet about 10 s, the mill about 20 s, the swing 15 to 22 s; she waited on the cat 0.4 s at the
+mill and not at all at the sheet; the fog's front never nearer than 5.4 m; each roof she went on from under it 7.3,
+13.5, 8.5, 7.7 and 10.5 s later (the green cottage's not yet: the fog waits short of it for the church); the fog out
+of a walk's frame for at most 1.6 s; the lens passes `LENS=1` landscape. Weak: upright the lens whips at about 66
+deg/s just after the sheet's hop (`LENS=1` upright fails on that alone) and the fog is behind the narrow frame on
+every walk (the check asks it only of the wide frame); the mill's view stands above the fog, so the fog is out of its
+frame while she rides; from the wall she is only 8 m from the boat, so the fog is just onto it as she turns away,
+the lantern still showing; the barn goes under 13.5 s after she leaves it, at the edge of the check; the drift from
+the rescue to the stranding is about 30 s (`driftBreeze`); the slates the boat runs onto are not drawn under the
+water. For 7c: `fetchForChurch` in `drowned.ts` is a stand-in that sets the boat 2.5 m off the old tree once the
+church's fog has closed (`church.fetchAt`); the bell's drift home replaces it.
 
 ### Phase 7b: the belfry and the bell, staged (after 6b3; parallel with 7a; new files only)
 Owns new files: `src/world/belfry.ts` (the belfry's inside: the bell in its oak frame, old straw under it, the four
