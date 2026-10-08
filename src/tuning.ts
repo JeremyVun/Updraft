@@ -1528,7 +1528,7 @@ export const tuning = {
      * `lookHeight` up, `lookBearing` round to port of astern, looking `lookToward` of the way from the boat to its eye,
      * `lookLookY` up: her whole upper body to the right of its eye, and the mast at the frame's edge with the sail beyond it.
      */
-    lookDistance: 3.8, lookHeight: 1.75, lookBearing: 0.22, lookLookY: 2.1, lookToward: 0.33,
+    lookDistance: 4.6, lookHeight: 1.6, lookBearing: 0.08, lookLookY: 2.6, lookToward: 0.6,
     /**
      * Looked at, she slides along the thwart toward the port rail (m), turns on it to face its eye (radians) and
      * leans out over the rail toward it (radians), clear of the mast and the sail behind her.
@@ -1543,7 +1543,7 @@ export const tuning = {
      * The light lent her (`Traveller.lent`) in the look and the farewell, where the low sun is behind her: the sun
      * along her outline, the lantern wrapped round her face and side, a lift in her shade; eased at `lightEase` a second.
      */
-    lookLight: [1.2, 1.5, 0.35], farewellLight: [1.2, 0, 0.2], lightEase: 1,
+    lookLight: [2.2, 2.5, 0.6], farewellLight: [1.5, 0, 0.3], lightEase: 1,
     /** Her goodbye as its flukes stand, from her face (m): out to her left, up, swaying either way, and how fast (rad/s). */
     goodbyeWave: [0.42, 0.38, 0.13, 4.5],
     /** As it dives she slides this far along the thwart to the port rail (m), at `farewellRailEase` a second. */
@@ -1598,7 +1598,7 @@ export const tuning = {
      */
     phone: {
       breath: { distance: 18, height: 2.8, turn: -0.2, lookY: 8, toward: 0.35 },
-      look: { distance: 2.9, height: 2.55, turn: -0.45, lookY: 2.2, toward: 0.5 },
+      look: { distance: 3.8, height: 2.1, turn: -0.42, lookY: 2.5, toward: 0.5 },
       line: { distance: 6, height: 3.2, turn: -0.75, lookY: 3, toward: 0.37, eyeward: 1 },
       flipper: { distance: 12, height: 3.4, turn: -1.5, lookY: 3, toward: 0.5 },
       release: { distance: 12, height: 3, turn: -0.3, lookY: 12, toward: 0.4 },
