@@ -438,7 +438,44 @@ mist, taller and glad, bushing out at its crown against the sunrise. And the han
 goes jerks (about 9 m/s²); it becomes one ease. Owns the dive and gone in `net-whale.ts` and `sleeper.ts`, the swell,
 the free spout in `spray.ts`, the camera through it.
 Gate: as N3g's.
-Done: [ ]
+Done: [x] `c201f8eb..b9aaae07`. The dive (`sleeper.ts`, from `DIVE_AT` 15.5): one forward glide down a way the whole
+body follows, with no roll. Each spine sample's pitch comes from the way at its distance past the bend, `DIVE_SLOPE`:
+a 1.5 m arch rising behind the bend, then down to 69°, steeper as the tail comes. The pitches are integrated from the
+bend, which stays where it lay on the water at `BEND_AT` 0.22, its blowhole (`farewell`, known from `DIVE_AT` − 3).
+Its rest posture fades as each part reaches the bend; the head eases onto the way over `HEAD_DOWN` 6.5 s.
+`GLIDE` is its speed in m/s, 8.6 at most through the arch, slowing to about 1.3 round the flukes (`glided`,
+`glidedAt`). The tail stock (`STOCK` 0.84 to `STOCK_TO` 0.95) lifts by `LIFT_BY` (metres it lies past the bend) to
+`FLUKES_UP` −1.45. As the flukes rise the whole body turns `TURN_TO_HER` 0.7 of the way about the bend's vertical, so
+their undersides face the boat. The wave is a hinge flex `WAVE_FLEX` 0.16 and a slight roll `WAVE_TURN` 0.12.
+`fluking`, `going` (`GOING_AFTER` 1.2 s after the notch is under), gone 3 s after it, `diving`, `flukesShown`.
+The swell (`surgeHeight` 0.6) spreads from the arch and reaches the boat just after the flukes are under. The lens
+leaves out the swell's lift (`surgeAt`), so the boat rises in frame. The pod leaps away over where it went (`podYaw`).
+The sea's brightening gathers to the bend and fades out by the notch's going under.
+The spout: `spray.spout`, its own kind (`SPOUT`), the first column's puffs with a firmer lumpy edge, the backlight on
+their rims, `spoutHeight` 15 and `spoutBreadth` 1.2, its crown in the release's frame (`releaseLookY` 10). `MAX` 3200.
+The camera: as it dives the view eases once over `farewellMove` 7 s to the farewell's hold, framed on the bend (hold
+entry 14, `farewell*`; phone `farewell`). Once gone, the hand-back is one linear ramp of the hold (`handBack` 16 s,
+smootherstep on screen). The blend's turn is unwound frame to frame. Gone, the hold's subjects let go (`extra` → 0).
+A phone's farewell keeps the bend in frame, not its sunk eye, whose 80 m depth had shoved the view down.
+Camera from free to the hand-back's end, worst acceleration: landscape 1.97 m/s², in the middle of the swing
+round behind the boat as it comes about; portrait 3.75 m/s², the same swing's turn. N3h's was about 9.
+Played (`full`): rest 88.7, line 111.5, flipper 144.7, free 167.4, spout 173.5, gone 206.7, moored 233.1. Idle,
+moored about 496 (pacing `calm` arrivalReady 496.5). Beats in seconds of being free: spout 6, its eye going under
+about 19, the arch at its height about 22, the flukes up from about 27 and highest about 31 (notch about 12 m),
+under 36.1, going 37.3, the swell under the boat about 38.5, gone 39.1.
+Left:
+- In the webm the spout reads paler lilac-white than the render, and at its full height its crown reaches the top
+  of the release frame.
+- For about a second the rising flukes stand edge on, a thin blade, before the turn opens them.
+- In the landscape recording, the left fluke tip touches the top of the frame at its height.
+- The sail stands near the stock as the flukes rise; their tips overflow a phone's frame.
+- She is small in the farewell's frame, so her waves barely read.
+- The hinge shows a seam, and the tail stock's pale underside reads as a stalk; both are the skin's.
+- From the flukes under to the hand-back, about 8 s of quiet sea, sun and boat.
+Claude's judgement, 2026-10-08, in motion: the dive is one continuous whale's movement and the arch under the low sun
+is lovely; the flukes standing over the boat with the sun beside the sail are the encounter's strongest image, and
+its weakest form: flat faceted boards with a saw edge against the sky, a cow's patches, a pale round stalk, a seam.
+The quiet after they go under is right, the sea stilling. The spout reads as soft mist, a little grey.
 
 ### Phase N3j: the ancient skin and the eye
 In parallel with N3h, on its own branch `sea-whale-skin` off `sea-whale` (merged back before N3k). Owns the skin and the
@@ -480,13 +517,33 @@ a soft grain (`grain`) and three long creases arching over the eye (`creases`). 
 hull from the bird's hold; the lichen is a little decal-like beside the owl's rock, a crust behind the eye is prominent
 at the look, and the weed can read as a dark hedge along a shore at a glance.
 
-### Phase N3l: its life, her light, and the playable build
-After N3i, and N3k merged on `sea-whale`. Water sheeting off the back with each breath in glinting streams (N3j's wet
-runs folded into it) and the sea swelling and settling round it; the seabirds standing far along its back, lifting off
-as it spouts free; the look's frame finished (N3g2 left her a dark backlit hood filling a quarter of the frame): her
-whole seated figure smaller in it, the sun's rim on her hood and the lantern warm on her cheek, her head and mitten
-turned to the eye, the eye large. Then Claude plays the whole open sea beside the clouds and the owl, and the playable
-build goes to Jeremy.
+### Phase N3l: the flukes
+After N3i, with N3k merged on `sea-whale`; in parallel with N3m. The flukes made the farewell's finished image (the
+design's form section): a humpback's swept pair, a thick rounded leading edge thinning to a fine trailing edge in
+soft scallops either side of the notch, the tail stock a deep narrow keel flowing into them with no seam; their
+underside pale with a dark margin and a few old marks of its own, barnacles along the edges, the same pattern on the
+first crossing's whale. The second where they rise edge-on opened by the turn. The farewell's frame holding their
+tips in landscape and on a phone, the sail clear of the stock, her waves plain. And the lichen gathered on the head
+and the top of the back, thinning down the flank. Owns `flukes()` and the tail stock's rings in `anatomy.ts`, the
+skin in `whaleShader.ts` (not its wet terms), the dive's turn in `sleeper.ts`, the farewell's hold in `net-whale.ts`,
+their tuning.
+Gate: as N3g's, with stills of the flukes high and slipping (landscape and portrait) and the first crossing's dive.
+Done: [ ]
+
+### Phase N3m: its life
+After N3i, on `sea-whale-life` off `sea-whale`; in parallel with N3l. Each slow breath lifts the back a little and
+water sheets off its top in glinting streams, the sea swelling and settling round it; a few seabirds stand far along
+its back as on a rock, never near a step's target, and lift off as it spouts free, gone before the dive arches the
+back. Owns the breath's lift and the water off it in `sleeper.ts` (not the dive), `spray.ts`, `wake.ts`, the whale's
+`uWet` sheeting, the seabirds (the gulls in `src/creatures/creatures.ts` or a few of their own), their tuning.
+Gate: as N3g's.
+Done: [ ]
+
+### Phase N3n: her light, and the playable build
+After N3l and N3m merged on `sea-whale`. The look's frame finished (N3g2 left her a dark backlit hood filling a
+quarter of the frame): her whole seated figure smaller in it, the sun's rim on her hood and the lantern warm on her
+cheek, her head and mitten turned to the eye, the eye large. Then Claude plays the whole open sea beside the clouds
+and the owl, and the playable build goes to Jeremy.
 Gate: as N3g's.
 Done: [ ]
 

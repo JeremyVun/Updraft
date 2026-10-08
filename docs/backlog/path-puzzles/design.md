@@ -741,7 +741,7 @@ the pod leaves at 60 s; the mirror's jetty is already in frame by 58 s; the sun 
      The cygnet, who swam earlier in this chapter, goes in and swims to it and takes the loop's end in its bill; a sweep
      along the flipper makes it lift lazily (the tickle already built), and the loop slides off into the cygnet's pull.
 - Free: it spouts a tall golden plume against the sunrise, the empty net drifting away; the pod leaps round it; the
-  cygnet is lifted back in; the child waves; it rolls, lifts its flukes high as if waving and sinks, and its swell lifts
+  cygnet is lifted back in; the child waves; it dives, lifts its flukes high as if waving and sinks, and its swell lifts
   the boat. Then the pod goes with it and the sea goes still into the mirror's glass.
 - Each step has the usual drawn invitation and a safety valve after about 90 s with a cause on screen: a dolphin lifts
   the mesh with its nose, noses the float to the boat, nudges the flipper. The gull of the first build is not needed.
@@ -859,6 +859,13 @@ The sequence:
     - The section changes along the body. The head is broad and flat-topped, wider than it is tall, a long flat
       wedge from above with a ridge down the snout; the body is broadest just behind the flippers; the tail stock is
       narrow side to side and deep.
+    - The flukes are the farewell's image, standing whole against the sun over the boat, so they are the most
+      finished part of it: a humpback's broad swept pair, thick and rounded along the leading edge and thinning to a
+      fine trailing edge in a few soft scallops either side of the notch, never a faceted saw edge against the sky;
+      the tail stock a deep narrow keel flowing into them with no seam at the hinge, never a round stalk; their
+      underside pale with a dark margin and a few old marks of its own (the first crossing's pattern), a few
+      barnacles along the edges, never a cow's patches (Claude's call, 2026-10-08, after N3i: they stood as flat
+      faceted boards on a pale stalk).
     - The back is a broad, gently rounded ridge, not a tube's rim: from the hold its flanks curve up so slowly that
       it reads as a long low island, not a wall. It runs long and nearly level at about the blowhole's height, the
       blowhole's raised guard a gentle rise on it, never a hump the body falls away from; far along a small low
@@ -871,7 +878,9 @@ The sequence:
   - **Ancient skin.** Weathered like an old hull or a reef: barnacle crusts clustered on the head, chin and flipper
     edges, old pale healed scars and scuffs, mottling like lichen, green growth at the waterline, wet streaks. Stylised
     and painted like the rest of the game, never photographic noise; healed and old, never a wound. Fine detail small
-    against its bulk is what makes it read giant. The eye old, wet and kind in folds of age, its iris a deep warm brown catching
+    against its bulk is what makes it read giant. The lichen gathers on the head and the top of the back and thins
+    down the flank, so the near flank reads as one old surface rather than a scatter of decals (Claude's call,
+    2026-10-08, after N3k). The eye old, wet and kind in folds of age, its iris a deep warm brown catching
     the sun in one bright point, never a lit orange.
   - **It breathes the sea.** Each slow breath lifts the back a little, water sheeting off its top in glinting streams,
     and the sea round it swells and settles.
@@ -928,7 +937,15 @@ The sequence:
   (Claude's call, N3h): the spout, then its mist drifting down over the boat in the gold light with fine drops
   glinting, the sea brightening round it, its call turned glad (the same voice, rising instead of settling) with her
   eyes on its eye, then her look up into the mist and the cygnet calling back; about ten seconds from the spout to
-  the dive.
+  the dive. The spout is the first breath's white mist lit gold, taller, with a rounded crown in the frame. The dive
+  as built (Claude's call, N3i): one slow forward glide down a way through the sea that the whole body follows, its
+  bend where the spout stood, so the flukes rise in the sun's own glow; its head tips down into the sea with its eye
+  on her, the long back rises into an arch over the bend and slides forward under it, the low sun cresting the
+  arch; the tail stock comes to the bend and the flukes lift and stand high there, the whale turning about the
+  bend as they rise so their pale undersides open toward her (it turns, never rolls), flexing once or twice in a
+  slow wave with its goodbye call and her waves; they slip straight down, and its swell comes back and lifts the
+  boat; the pod leaps away over where it went; the boat comes about. About 20 s from the head going down to the
+  flukes under.
 - **Gestures.** Each step's answer starts at the wind's target and is plainly the biggest thing on screen: the boat is
   at rest, so nothing may read as the boat speeding up. The ambient breeze does nothing to the net, the corks or the
   flipper. The whale's body never answers the wind (Jeremy, 2026-10-08: "I also saw that the whale's body responds to
@@ -956,8 +973,11 @@ The sequence:
   holds rise only as far as the cork and the bird on the water need. The approach comes down as the boat slows, so
   the island rises above the horizon as it nears. The look between them is framed as the owl's is: her whole upper
   body in three-quarter back view to one side, her hood and reaching mitten clear against its flank, its eye large
-  across clear water, the sail out of frame. The release eases out wide, the plume leaving the top of the frame. A phone's frame is too
-  narrow (31° across) to hold the head and the sun together, so its holds look along the line from what matters
+  across clear water, the sail out of frame. The release eases out wide, the plume's crown in the frame; as it dives
+  the view eases once to the farewell's hold, framed on where it goes down, the flukes standing whole over the boat
+  against the sun with their tips inside the frame on a phone as in landscape, the sail clear of the stock and her
+  waving mitten plain; once it has gone the view goes back to the crossing's in one long even ease as the boat comes
+  about. A phone's frame is too narrow (31° across) to hold the head and the sun together, so its holds look along the line from what matters
   through the boat, each with its own distance, height and turn, stacking boat, step and head up the frame; the
   cygnet's is turned toward astern so the bird stands clear of the sail above the boat (`k2-portrait`).
 - **Reward.** Freeing the whale is the open sea's major conclusion, so the reward phrase (`completeObjective()`) plays
