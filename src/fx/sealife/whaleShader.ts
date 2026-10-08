@@ -400,7 +400,7 @@ Skin skin(float far, float dry) {
       if (head > 0.0) {
         float chin = smoothstep(0.0, 0.03, below) * (1.0 - smoothstep(0.05, 0.11, s));
         float bias = max(0.3 * smoothstep(0.0, 0.004, knobbed), 0.15 * chin);
-        float where = head * smoothstep(0.56, 0.7, vnoise(m * 0.35 + 11.0) * 0.7 + n2 * 0.3 + bias);
+        float where = head * smoothstep(0.5, 0.64, vnoise(m * 0.35 + 11.0) * 0.7 + n2 * 0.3 + bias);
         vec3 crust = barnacles(m, where * 0.9, px);
         k.albedo = mix(k.albedo, ${rgb(L.crust)} * 0.75, where * 0.35 * (1.0 - shows(0.2, px)));
         k.albedo *= 1.0 - 0.35 * crust.z;

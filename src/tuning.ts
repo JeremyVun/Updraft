@@ -2213,7 +2213,7 @@ export const tuning = {
      * how strongly), barnacle crusts (colour) on the head, the chin and the flipper's edges, and green growth at the
      * waterline (colour, how far up it reaches in metres).
      */
-    tone: 0.1, dapple: '#7f8fa0', dappleCover: 0.3, dappleAmount: 0.4,
+    tone: 0.1, dapple: '#7f8fa0', dappleCover: 0.3, dappleAmount: 0.5,
     scar: '#aab3ba', scars: 0.3, scarAmount: 0.6,
     crust: '#d2cbbb',
     growth: '#4c5a2b', growthReach: 0.7,
