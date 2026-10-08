@@ -149,7 +149,7 @@ interface Bird {
   stretch: number;
   nextStretch: number;
   /** Its way up and off, laid as it goes, and seconds along it. */
-  way: THREE.Vector3[] | null;
+  way: THREE.CatmullRomCurve3 | null;
   flown: number;
   flapPhase: number;
   flapAmp: number;
@@ -212,7 +212,7 @@ export class Seabirds {
     this.lifted = false;
     this.birds.forEach((b, i) => {
       const r = b.rand;
-      b.liftAt = K.seabirdsAfter + i * 0.2 + r() * 0.25;
+      b.liftAt = K.seabirdsAfter + i * 0.18 + r() * 0.2;
       b.turn = 0;
       b.headYaw = b.headGoal = 0;
       b.nextLook = 0.5 + r() * 3;
@@ -284,17 +284,19 @@ export class Seabirds {
     if (b.stretch > K.seabirdStretch) b.stretch = -1;
   }
 
-  /** Up off the back: a few hard strokes clear of it, round past its spout and away into the morning. */
+  /** Up off the back: a few hard strokes clear of it, round beside its spout and away into the morning. */
   private layWay(b: Bird, blowhole: THREE.Vector3, away: THREE.Vector3, h: THREE.Vector3): void {
     const r = b.rand;
     const from = this.at.clone();
     const up = from.clone().addScaledVector(h, 2 + r() * 2).addScaledVector(away, 1 + r() * 2);
     up.y += 5 + r() * 2;
-    const past = blowhole.clone().addScaledVector(away, K.seabirdPast + r() * 6).addScaledVector(h, (r() - 0.5) * 8);
-    past.y = blowhole.y + K.seabirdHeight + r() * 4;
-    const off = past.clone().addScaledVector(away, 40 + r() * 15).addScaledVector(h, 6 + r() * 10);
-    off.y += 14 + r() * 6;
-    b.way = [from, up, past, off];
+    // Round beside the spout on its tail side, clear of its mist, then off into the low sun.
+    const past = blowhole.clone().addScaledVector(h, -K.seabirdAside - r() * 4).addScaledVector(away, 2 + r() * 3);
+    past.y = blowhole.y + K.seabirdHeight + r() * 3;
+    const sun = atmo.uniforms.uSunDir.value;
+    const off = past.clone().addScaledVector(this.a.set(sun.x, 0, sun.z).normalize(), K.seabirdAway + r() * 15);
+    off.y += 8 + r() * 5;
+    b.way = new THREE.CatmullRomCurve3([from, up, past, off], false, 'centripetal');
     b.flapPhase = r() * 6;
     if (!this.lifted) {
       this.lifted = true;
@@ -308,11 +310,9 @@ export class Seabirds {
     const k = Math.min(1, t / K.seabirdFlight);
     // Slow off the back, then steady.
     const u = k * k * (2 - k);
-    const [p0, p1, p2, p3] = b.way!;
-    bezier(p0, p1, p2, p3, u, this.at);
-    bezier(p0, p1, p2, p3, Math.min(1, u + 0.01), this.a);
-    this.b.subVectors(this.a, this.at);
-    if (k >= 1) this.b.subVectors(p3, p2);
+    const way = b.way!;
+    way.getPointAt(u, this.at);
+    way.getTangentAt(u, this.b);
     const yaw = Math.atan2(this.b.x, this.b.z);
     const turning = wrapAngle(yaw - b.yaw);
     b.yaw += turning * (1 - Math.exp(-dt * (t < 0.6 ? 3 : 5)));
@@ -323,7 +323,6 @@ export class Seabirds {
     const flapping = t < 2.2 || Math.sin(t * 0.9 + b.liftAt * 7) > 0.35;
     b.flapAmp = ease(b.flapAmp, flapping ? 1 : 0, 4, dt);
     b.flapPhase += dt * Math.PI * 2 * (t < 2.2 ? 2.6 : 2.1) * (flapping ? 1 : b.flapAmp);
-    if (k >= 1) this.at.addScaledVector(this.b.normalize(), (t - K.seabirdFlight) * 9);
     return THREE.MathUtils.smoothstep(t, K.seabirdFlight - K.seabirdFade, K.seabirdFlight);
   }
 
@@ -340,10 +339,4 @@ export class Seabirds {
     this.instances.set(2, i, inner, outer, flying ? 0.1 : 0, flying ? 0 : b.headYaw);
     this.instances.set(3, i, b.s, fade, 0, 0);
   }
-}
-
-/** A point `t` of the way along the cubic from `a` to `d` drawn toward `b` and `c`. */
-function bezier(a: THREE.Vector3, b: THREE.Vector3, c: THREE.Vector3, d: THREE.Vector3, t: number, out: THREE.Vector3): THREE.Vector3 {
-  const u = 1 - t;
-  return out.copy(a).multiplyScalar(u * u * u).addScaledVector(b, 3 * u * u * t).addScaledVector(c, 3 * u * t * t).addScaledVector(d, t * t * t);
 }

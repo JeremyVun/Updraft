@@ -735,7 +735,7 @@ export class SleepingWhale extends WhaleRig {
       this.wet[i] = Math.max(this.wet[i], wet * top);
     }
     const pouring = this.shedBy * THREE.MathUtils.smoothstep(this.shedT, 0.6, 1.4) * (1 - THREE.MathUtils.smoothstep(this.shedT, 1.4, 3.5));
-    const n = Math.floor(dt * 40 * pouring + Math.random());
+    const n = Math.floor(dt * 30 * pouring + Math.random());
     const h = this.heading;
     for (let k = 0; k < n; k++) {
       const s = 0.18 + Math.random() * 0.5;
@@ -745,8 +745,8 @@ export class SleepingWhale extends WhaleRig {
       if (half <= 0) continue;
       const side = Math.random() < 0.7 ? 1 : -1;
       const out = half + 0.2 + Math.random() * 0.8;
-      this.foam.add(FOAM, P.x + h.z * side * out, P.z - h.x * side * out, 0.5 + Math.random() * 0.7, 3 + Math.random() * 2.5,
-        this.worldTime, 0.35 + Math.random() * 0.3, 0.25 + Math.random() * 0.3, Math.atan2(h.z, h.x), 1.6 + Math.random() * 0.8);
+      this.foam.add(FOAM, P.x + h.z * side * out, P.z - h.x * side * out, 0.6 + Math.random() * 0.8, 3 + Math.random() * 2.5,
+        this.worldTime, 0.2 + Math.random() * 0.2, 0.3 + Math.random() * 0.3, Math.atan2(h.z, h.x), 1.2 + Math.random() * 0.6);
     }
   }
 
