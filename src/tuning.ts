@@ -1465,6 +1465,8 @@ export const tuning = {
      * and left, how much of that it keeps while the wind is still; and how high each weak breath domes it (m).
      */
     netLift: 3.5, netSettle: 0.8, netDome: 0.4,
+    /** Seconds into its first full breath when the lifted patch, its breath gone up through it, starts to fall aside, and how long it takes. */
+    slumpFrom: 3.2, slumpFor: 3,
     /**
      * The look between them, in seconds into its first full breath: the view comes in over her shoulder from
      * `lookIn` over `lookMove` seconds; its eye opens on her from `eyeOpens`, slowly (`eyeOpening` a second); it blinks at `blinkAt`; she holds

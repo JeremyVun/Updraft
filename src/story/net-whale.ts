@@ -385,7 +385,7 @@ export class NetWhale {
         this.progress = 1;
         this.breathed = this.greeted = true;
         this.whale.awaken(this.cast.child.position);
-        this.net.lift = 1;
+        this.net.lift = this.net.slump = 1;
       }
       if (point === 'whale-line' || point === 'whale-flipper') {
         this.step = 'flipper';
@@ -1548,6 +1548,8 @@ export class NetWhale {
     if (net.posed) return;
     const held = this.progress >= 1 ? 1 : this.progress * (K.netSettle + (1 - K.netSettle) * this.wind);
     net.lift += (held - net.lift) * (1 - Math.exp(-dt * 2.5));
+    // Once its breath has gone up through it, nothing holds the patch up: it falls back loose and slumps aside.
+    if (whale.awake) net.slump = Math.max(net.slump, whale.phase === 'woken' ? THREE.MathUtils.smootherstep(whale.time, K.slumpFrom, K.slumpFrom + K.slumpFor) : 1);
     net.updraft = this.wind;
     if (this.freedAt >= 0) net.drift = THREE.MathUtils.smoothstep(this.clock - this.freedAt, DRIFT_FROM, DRIFT_TO);
   }

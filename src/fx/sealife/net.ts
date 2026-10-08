@@ -40,6 +40,12 @@ const FOLDS = 7;
 const PATCH = new THREE.Vector2(5, 3.5);
 const DOME = new THREE.Vector2(1.6, 1.1);
 /**
+ * Fallen back off the blowhole, the patch slides this far down the far side of the crown at its middle (m), bunching
+ * there in loose folds that stand this far off the skin (m).
+ */
+const SLUMP_FAR = 4.2;
+const SLUMP_HEAP = 0.35;
+/**
  * Peeled, each row slides off into the water and folds back and forth `FOLD_WIDE` metres out from the waterline,
  * the near edge furthest out. Hauled by the leader, the sheet doubles over at the leader's row: both halves trail
  * from that corner toward the snout, gathered to `GATHER` of their length, so the corner she hauled lies nearest
@@ -143,6 +149,8 @@ export class Net {
   readonly objects: THREE.Object3D[];
   /** The patch over the blowhole lifted clear of the crown, 0..1. */
   lift = 0;
+  /** Once it has breathed, the lifted patch fallen back loose and slumped off the blowhole over the crown, 0..1. */
+  slump = 0;
   /** Peeled back off the jaw and head into a floating mass beside it, 0..1. */
   peel = 0;
   /** The last loop slid along the near flipper and off its tip, 0..1. */
@@ -397,7 +405,7 @@ export class Net {
     const c = whale.point(0, TOP(sEye), sEye, this.q);
     this.profileFrom(c, 1, sEye);
     this.eyeTop = this.arcNearest(this.offAxis(whale.eye) - this.offAxis(c), whale.eye.y) - EYE_CLEAR;
-    this.lift = this.peel = this.loop = this.drift = 0;
+    this.lift = this.slump = this.peel = this.loop = this.drift = 0;
     this.peelAt = this.soundPeel = 0;
     this.domeT = 10;
     this.held = this.fallsTo = this.holder = null;
@@ -440,6 +448,11 @@ export class Net {
 
   get shown(): boolean {
     return this.sheet.visible;
+  }
+
+  /** How far the patch stands lifted off the blowhole this frame: held up by the wind, or fallen aside. */
+  private get raised(): number {
+    return this.lift * (1 - THREE.MathUtils.smoothstep(this.slump, 0, 0.55));
   }
 
   /** A weak breath out under it, as strong as `strength`: the mesh domes over the blowhole, and sputters while it lies on it. */
@@ -914,8 +927,11 @@ export class Net {
     const P = this.pos.array as Float32Array;
     const A = this.afloat.array as Float32Array;
     const C = this.contact.array as Float32Array;
-    const dome = K.netDome * this.domeStrength * THREE.MathUtils.smoothstep(this.domeT, 0, 0.35) * Math.exp(-Math.max(0, this.domeT - 0.35) * 1.6);
-    const flutter = this.lift * (0.12 + 0.3 * this.updraft);
+    const dome = K.netDome * this.domeStrength * THREE.MathUtils.smoothstep(this.domeT, 0, 0.35) * Math.exp(-Math.max(0, this.domeT - 0.35) * 1.6)
+      * (1 - this.slump);
+    const raised = this.raised;
+    const flutter = raised * (0.12 + 0.3 * this.updraft);
+    const aside = THREE.MathUtils.smootherstep(this.slump, 0.2, 1);
     const blow = this.whale.blowhole;
     const uLeader = (this.leaderRow / (ROWS - 1)) * NET.long;
     const far = Math.max(uLeader, NET.long - uLeader);
@@ -928,18 +944,20 @@ export class Net {
       // Pulled along, the patch the wind holds up comes down with it.
       const tent = 1 - THREE.MathUtils.smoothstep(slide, 0, 4);
       this.tent[i] = tent;
-      const lift = this.lift * tent;
+      const lift = raised * tent;
       for (let j = 0; j < COLS; j++) {
         const k = i * COLS + j;
         const arc = this.pathArc[i * PATH + j];
-        const q = arc + slide;
+        const wl = this.lifts[k];
+        // Slumped, the patch lies over to the far side of the crown, the middle of it furthest.
+        const q = arc + slide - (wl > 0 ? aside * SLUMP_FAR * Math.pow(wl, 0.7) : 0);
         if (q <= end) {
           const water = this.alongPath(i, q, this.t);
           let up = 0;
-          const wl = this.lifts[k];
           if (wl > 0) {
             const shape = Math.pow(wl, 0.65);
             up = lift * K.netLift * shape + flutter * tent * Math.sin(time * 2.4 + i * 0.8 - j * 0.6) * shape * (1 - shape) * 4 * 0.6;
+            up += aside * SLUMP_HEAP * shape * (0.6 + 0.4 * Math.sin(i * 1.7 + j * 0.9));
             this.t.x += (blow.x - this.t.x) * lift * wl * 0.12;
             this.t.z += (blow.z - this.t.z) * lift * wl * 0.12;
           }
@@ -1185,7 +1203,7 @@ export class Net {
         this.sheetPoint(at.i, at.j, this.p).lerp(this.sheetPoint(i1, at.j, this.q), at.f);
         const k = at.i * COLS + at.j;
         afloat = A[k];
-        const lifted = THREE.MathUtils.smoothstep(this.lifts[k] * this.lift * this.tent[at.i] * K.netLift, 0.15, 0.6);
+        const lifted = THREE.MathUtils.smoothstep(this.lifts[k] * this.raised * this.tent[at.i] * K.netLift, 0.15, 0.6);
         this.q.fromArray(N, k * 3);
         this.t.copy(this.p).addScaledVector(this.q, size * 0.8 * (1 - lifted) * (1 - afloat));
         this.t.y += afloat ? size * 0.3 - this.p.y * afloat : 0;
@@ -1364,7 +1382,7 @@ export class Net {
       this.p.fromArray(P, k * 3);
       this.q.fromArray(N, k * 3);
       const afloat = A[k];
-      const lifted = THREE.MathUtils.smoothstep(this.lifts[k] * this.lift * this.tent[Math.floor(k / COLS)] * K.netLift, 0.15, 0.6);
+      const lifted = THREE.MathUtils.smoothstep(this.lifts[k] * this.raised * this.tent[Math.floor(k / COLS)] * K.netLift, 0.15, 0.6);
       // Down the slope of the skin, straight down under the lifted mesh, out along the water afloat.
       this.r.set(0, -1, 0).addScaledVector(this.q, this.q.y).normalize();
       if (this.r.lengthSq() < 0.5) this.r.set(Math.cos(at.turn), 0, Math.sin(at.turn));
