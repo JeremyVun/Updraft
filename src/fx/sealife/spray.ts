@@ -110,10 +110,11 @@ void main() {
     vec3 N = normalize(mix(ball, vec3(cos(side), 0.2, sin(side)), 0.3));
     float wrap = clamp(dot(N, uSunDir) * 0.5 + 0.5, 0.0, 1.0);
     // The low sun comes through where it is thin, so it glows from behind; where it is thick it is in its own shade.
-    float through = pow(toSun, 3.0) * (0.3 + 0.7 * (1.0 - facing));
+    float through = pow(toSun, 2.0) * (0.3 + 0.7 * (1.0 - facing));
     // The sky's brightness without its colours, whose blue and orange together go lilac: white, cool grey-blue in its
     // shade, gold where the sun reaches it.
-    col = mistShade(clamp(0.5 + 0.35 * N.y + 0.25 * wrap, 0.0, 1.0)) + cloudGlow() * (wrap * wrap * 0.8 + through) * sun;
+    // Some of the low sun is scattered all through it, so even its shaded side is a warm white, never smoke.
+    col = mistShade(clamp(0.5 + 0.35 * N.y + 0.25 * wrap, 0.0, 1.0)) * 1.1 + cloudGlow() * (0.28 + wrap * wrap * 0.7 + through) * sun;
     // Thinning, it takes on the warmth of the morning it is going into rather than greying against it.
     col *= mix(vec3(1.0), vec3(1.1, 0.98, 0.9), smoothstep(0.3, 0.9, vAge));
     additive = 0.04;
@@ -333,7 +334,7 @@ export class Spray {
       const vx = (3 * (onto.x + Math.cos(b) * spread - x)) / life;
       const vy = (3 * (onto.y + 1.2 + Math.random() * 3.5 - y)) / life;
       const vz = (3 * (onto.z + Math.sin(b) * spread - z)) / life;
-      this.emit(MIST, x, y, z, vx, vy, vz, 1.4 + Math.random() * 1.4, life, 0.35 + Math.random() * 0.4, 0.06 + Math.random() * 0.05);
+      this.emit(MIST, x, y, z, vx, vy, vz, 1.4 + Math.random() * 1.4, life, 0.35 + Math.random() * 0.4, 0.05 + Math.random() * 0.045);
       this.carryOn(vx, vy, vz);
     }
     const m = Math.floor(strength * 40 * dt + Math.random());

@@ -39,10 +39,15 @@ float sunkAt(vec2 xz) {
   return uSunk * (0.65 + 0.7 * vnoise(xz * 0.11 + 3.7));
 }
 vec3 sunk(vec3 p, float under) {
-  vUnder = under;
+  vUnder = 0.0;
   if (under <= 0.0) return p;
   float surface = seaSurfaceY(p.xz);
-  vec3 q = vec3(p.x, surface - under, p.z);
+  vec3 q = vec3(p.x, p.y - under, p.z);
+  vUnder = surface - q.y;
+  if (vUnder <= 0.0) {
+    vUnder = 0.0;
+    return q;
+  }
   vec3 ray = q - cameraPosition;
   vec3 w = q;
   for (int i = 0; i < 2; i++) {
@@ -65,7 +70,7 @@ float sunkShows(vec3 world, float clarity) {
 vec3 sunkColour(vec3 col, vec3 world) {
   if (vUnder <= 0.0) return col;
   vec3 deep = uDeep * (uSkyAmbient * 1.1 + uSunColor * max(uSunDir.y, 0.0) * 0.6 * cloudShadow(world.xz));
-  return mix(deep, col * exp(-vec3(0.5, 0.13, 0.1) * vUnder * 2.0), exp(-vUnder * 0.9));
+  return mix(deep, col * exp(-vec3(0.5, 0.13, 0.1) * vUnder * 2.0), exp(-vUnder * 0.6));
 }`;
 
 const SHEET_VERT = /* glsl */ `
@@ -174,7 +179,7 @@ void main() {
   vec3 alb = mix(mix(uStrand * (0.88 + age), uWeed, weed * 0.75), uRope, rope / max(cover, 1e-4) * step(strand, rope)) * round;
   vec3 col = netLight(alb, N, V, vWorld, 0.35);
   col = sunkColour((col * cover + uShadow * (1.0 - cover) * shade) / alpha, vWorld);
-  gl_FragColor = vec4(lost(applyFog(col, vWorld), vWorld), alpha * uFade * sunkShows(vWorld, 0.9));
+  gl_FragColor = vec4(lost(applyFog(col, vWorld), vWorld), alpha * uFade * sunkShows(vWorld, 1.3));
 }`;
 
 const ROPE_VERT = /* glsl */ `
@@ -230,7 +235,7 @@ void main() {
   if (a < 0.002) discard;
   vec3 V = normalize(cameraPosition - vWorld);
   vec3 col = sunkColour(netLight(mix(uStrand, uWeed, vWeed) * mix(1.15, 0.7, vSide * vSide), normalize(V + vec3(0.0, 0.6, 0.0)), V, vWorld, 1.1), vWorld);
-  gl_FragColor = vec4(lost(applyFog(col, vWorld), vWorld), a * uFade * sunkShows(vWorld, 0.9));
+  gl_FragColor = vec4(lost(applyFog(col, vWorld), vWorld), a * uFade * sunkShows(vWorld, 1.3));
 }`;
 
 const CORK_VERT = /* glsl */ `
@@ -282,9 +287,9 @@ void main() {
   alb = mix(alb, uFouled, smoothstep(0.0, -0.8, N.y) * 0.6);
   vec3 col = netLight(alb, N, V, vWorld, 0.15);
   col += uSunColor * pow(max(dot(reflect(-V, N), uSunDir), 0.0), 18.0) * 0.18 * cloudShadow(vWorld.xz);
-  float shows = uFade * sunkShows(vWorld, 0.45);
-  if (shows < 0.999 && fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453) > shows) discard;
-  gl_FragColor = vec4(lost(applyFog(sunkColour(col, vWorld), vWorld), vWorld), 1.0);
+  float shows = uFade * sunkShows(vWorld, 0.35);
+  if (shows < 0.004) discard;
+  gl_FragColor = vec4(lost(applyFog(sunkColour(col, vWorld), vWorld), vWorld), shows);
 }`;
 
 export const netLook = {
@@ -334,5 +339,7 @@ export function corkMaterial(): THREE.ShaderMaterial {
     vertexShader: CORK_VERT,
     fragmentShader: CORK_FRAG,
     uniforms: { ...atmo.uniforms, ...swellUniforms, ...netLook },
+    // Opaque until it fades into the haze or the deep.
+    transparent: true,
   });
 }

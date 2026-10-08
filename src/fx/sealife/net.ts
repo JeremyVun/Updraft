@@ -490,7 +490,8 @@ export class Net {
       return;
     }
     this.domeT += dt;
-    netLook.uSunk.value = SINK_DEPTH * this.sink;
+    // It settles first, its floats awash a while, and then goes down.
+    netLook.uSunk.value = SINK_DEPTH * this.sink ** 2;
     netLook.uFade.value = 1 - THREE.MathUtils.smoothstep(this.sink, 0.8, 1);
     this.layOn(time);
     this.sounds();
