@@ -1,7 +1,7 @@
 import { range, type Rng } from '../creatures/motion';
 import type { HouseType } from './drowned-houses';
 import { mulberry32 } from './noise';
-import { STRAND_HOUSE, houseLocal } from './drowned-way';
+import { OVERHANG, STRAND_HOUSE, eaveAt, houseLocal, ridgeTop } from './drowned-way';
 
 /** A house of the village beyond the drift and her way: where it stands, its frame and which of the kit's houses. */
 export interface Site {
@@ -28,6 +28,16 @@ export const SUNK_DOOR = (() => {
   return { x: at.x, z: at.y, facing: Math.atan2(-Math.cos(STRAND_HOUSE.yaw), Math.sin(STRAND_HOUSE.yaw)),
     half: 0.62, top: -0.72, foot: -2.95, wallHalf: STRAND_HOUSE.depth / 2, wallFoot: -3.6 };
 })();
+
+/**
+ * The first roof's slope on the boat's side, going on down under the glass from where it meets the water to its eaves,
+ * where the boat runs aground: its middle, its heading (the house's yaw), half its length, its ridge and eaves heights
+ * and how far across from the ridge the eaves are. Seen only down through the surface.
+ */
+export const SUNK_SLATES = {
+  x: STRAND_HOUSE.x, z: STRAND_HOUSE.z, yaw: STRAND_HOUSE.yaw, half: STRAND_HOUSE.len / 2 + 0.1,
+  ridge: ridgeTop(STRAND_HOUSE), eave: eaveAt(STRAND_HOUSE), run: STRAND_HOUSE.depth / 2 + OVERHANG,
+};
 
 /** The tall hat with the little pocket beside it, both gables to the drift as it comes in. */
 export const TALL_AND_TINY = { x: -44, z: -1334, yaw: -0.95, apart: 5.6 };

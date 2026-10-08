@@ -891,21 +891,22 @@ export class RoofRun {
 
   /**
    * The fog comes on along `DARK_WAY` behind her at her pace, never stopping and never rushing: toward `fogTrail`
-   * behind her on her own way and `fogHold` while she works a piece, never nearer than `fogNearest`, and as near as
-   * that while she looks back, so it takes the boat as she watches; it rises as it comes (`DarkBank.comeOn`).
+   * behind her on her own way and `fogHold` while she works a piece, never nearer than `fogNearest`, and on past the
+   * boat to `fogLooked` while she looks back, so it takes the boat as she watches; it rises as it comes
+   * (`DarkBank.comeOn`).
    */
   private fog(dt: number): void {
     const k = tuning.drowned.run;
     const dark = this.cast.village!.dark;
     const looking = this.lookingBack >= 0 && this.lookingBack < k.lookBackFor;
     const hold = this.stage === 'tree' || this.stage === 'sheet' || this.stage === 'mill' || this.stage === 'swing' ? k.fogHold[this.stage]
-      : this.stage === 'nave' ? k.fogEnd : looking ? k.fogNearest : k.fogTrail;
+      : this.stage === 'nave' ? k.fogEnd : looking ? k.fogLooked : k.fogTrail;
     const want = this.dark - hold;
     /** At the tower's foot it comes on to a few roofs back and waits there for the church. */
     const pull = THREE.MathUtils.clamp((want - dark.front) * k.fogPull, this.stage === 'nave' ? 0 : k.fogSlowest, k.fogFastest);
     this.fogSpeed += (pull - this.fogSpeed) * (1 - Math.exp(-dt * (looking ? k.fogLookedEase : k.fogEase)));
     dark.faces = this.her.set(this.cast.child.position.x, this.cast.child.position.z);
-    dark.comeOn(Math.min(dark.front + this.fogSpeed * dt, this.dark - k.fogNearest), dt);
+    dark.comeOn(Math.min(dark.front + this.fogSpeed * dt, this.dark - (looking ? k.fogLooked : k.fogNearest)), dt);
   }
 
   /**

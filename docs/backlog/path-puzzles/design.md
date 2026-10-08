@@ -633,8 +633,8 @@ cropped landscape.
 - **The dark is a sea fog** (Jeremy, 2026-10-05, doubting the black smoke: "im not sure if the dark cloud look make
   sense given the lighting and time of day... what do you think? would a white fog / mist / haze make more sense?"; on
   Astra's fog study: "yea that fog looks way better"). A haar rolls in low off the sea from behind (south, the way they
-  came; `src/world/drowned-dark.ts`, "the dark" in code). It obeys the dusk: its crest takes the low sun's gold and rose,
-  its body is cool blue-grey, and roofs at its edge fade into it and are gone rather than being covered. As it nears it
+  came; `src/world/drowned-dark.ts`, "the dark" in code). It obeys the dusk: lit from above by the sky, cold white on top
+  and blue-grey beneath, the low sun only a thin rim on the crests that face it; roofs at its edge fade into it and are gone rather than being covered. As it nears it
   takes the sun: the warmth drains from the boat, the roofs and the water, and the lantern is the warmest thing left.
   At the church it closes round her and darkens into the storm's night, the first wind breaking up the glass. The
   threat is what it takes away, so it never sits still: one roof, then the next, then the sun, with the cat's panic
@@ -642,9 +642,9 @@ cropped landscape.
   reads as land or rock, and smoke implies a fire that is not there. The target is Astra's study in `comps/fog/`
   (`fog-far`, `fog-near`, `fog-arrives`, `fog-portrait`, painted over `today.jpg`). It is built as one fog field every
   shader reads (a moving front, a height profile and slow low-frequency variation, surfaces mixing toward the fog's
-  colour by transmittance), so things truly fade into it; three to five large feathered sheets give the crest and
-  wisps but never do the hiding themselves; the fog's colour, the sun, the sky light and the water's reflection are
-  driven from one progression, and the lantern's light stays its own. It stays low, flat and cold-bodied, with a clear
+  colour by transmittance), so things truly fade into it; its top heaps and rolls in slow swells and billows and
+  thins into the air over a metre or two, and its face leans back with fingers running on over the water; the fog's colour, the sun, the sky light and the water's reflection are
+  driven from one progression, and the lantern's light stays its own. It stays low and cold-bodied, with a clear
   stretch of open dusk air before it rises, so it never echoes the stairs room's luminous cloud.
 - **The tree and the swing, from the spike** (`proto-drowned-crossings`, playable on the QA stage with
   `?chapter=stage&gap=tree|swing|run`; `src/world/crossings/`). Kept: the push arriving a beat late, the rock and

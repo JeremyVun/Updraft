@@ -81,7 +81,7 @@ export function houseLocal(h: PlacedHouse, lx: number, lz: number, out = new THR
 export const ridgeTop = (h: PlacedHouse) => h.wall + h.rise + 0.04 - h.sink;
 export const eaveAt = (h: PlacedHouse) => h.wall - 0.1 - h.sink;
 /** How far the slates overhang the wall at the eaves. */
-const OVERHANG = 0.28;
+export const OVERHANG = 0.28;
 /** The height of a slate roof `lz` across from its ridge. */
 const slatesAt = (h: PlacedHouse, lz: number) =>
   THREE.MathUtils.lerp(ridgeTop(h), eaveAt(h), Math.min(1, Math.abs(lz) / (h.depth / 2 + OVERHANG)));

@@ -75,10 +75,11 @@ export class Boat {
   /** Afloat on something other than the sea, such as the top of a cloud: the height it floats at, or null. */
   altitude: number | null = null;
   /**
-   * Becalmed: where it comes to rest and the way it lies there. It coasts in on the way it has, and from then on
-   * nothing the wind does moves it. Null while it sails.
+   * Becalmed: where it comes to rest and the way it lies there, and how hard it may brake to stop there (m/s², the
+   * drowned village's own coast if not given). It coasts in on the way it has, and from then on nothing the wind does
+   * moves it. Null while it sails.
    */
-  coastTo: { x: number; z: number; yaw: number } | null = null;
+  coastTo: { x: number; z: number; yaw: number; brake?: number } | null = null;
   /**
    * The wind the sail has, smoothed, and the only reading the cloth and the hull are allowed: `blowing` is the
    * air moving in the cloth, `taken` the part of it the sail is holding (an eased sheet spills the rest), `along`
@@ -311,7 +312,7 @@ export class Boat {
   private comeToRest(s: NonNullable<Boat['coastTo']>, dt: number): void {
     const p = this.position, k = tuning.drowned;
     const dx = s.x - p.x, dz = s.z - p.z, left = Math.hypot(dx, dz);
-    const most = Math.sqrt(2 * k.coastBrake * left);
+    const most = Math.sqrt(2 * (s.brake ?? k.coastBrake) * left);
     this.speed = Math.min(Math.max(this.speed, Math.min(k.coastCreep, most)), most);
     const step = Math.min(left, this.speed * dt);
     if (left > 1e-4) {

@@ -90,6 +90,8 @@ export class DrownedChapter implements Chapter {
   private sideAgainst = 0;
   /** The bearing the lens stood at when the air died, so it comes round beside the boat from where it was. */
   private stillBearing = 0;
+  /** When the air died: the fog's rise and the lens's coming round beside the boat are timed from it. */
+  private stillAt = 0;
   private stirred = false;
   /** The screen's shape, from the last frame: an upright phone composes the stranding differently. */
   private aspect = 16 / 9;
@@ -189,7 +191,7 @@ export class DrownedChapter implements Chapter {
   private goOn(): void {
     const { boat } = this.cast;
     boat.coastTo = null;
-    boat.speedLimit = tuning.storm.passageSpeed;
+    boat.speedLimit = tuning.drowned.driftSpeed;
     boat.steerFor = PASSAGE[this.leg];
     this.aboardFrom = this.now;
   }
@@ -244,7 +246,7 @@ export class DrownedChapter implements Chapter {
     }
     this.leg = THREE.MathUtils.clamp(Math.floor(data[0]), 0, TO_STRAND);
     this.beat = 'drift';
-    this.cast.boat.speedLimit = tuning.storm.passageSpeed;
+    this.cast.boat.speedLimit = tuning.drowned.driftSpeed;
     this.cast.boat.steerFor = PASSAGE[this.leg];
     this.cat.aboard();
     this.aboardFrom = this.now - 30;
@@ -264,6 +266,7 @@ export class DrownedChapter implements Chapter {
     this.to('becalmed');
     this.held = this.through;
     this.beatStart = this.now - (k.riseFor + 10);
+    this.stillAt = this.beatStart - tuning.drowned.stillFor;
     this.come = 1;
     this.breeze = 0;
     if (this.cast.village) {
@@ -341,7 +344,9 @@ export class DrownedChapter implements Chapter {
       this.out++;
       boat.steerFor = STORM_WAY[this.out] ?? PASSAGE[this.leg];
     }
-    if (sailing && !STORM_WAY[this.out] && this.leg < PASSAGE.length - 1 && roundedWaypoint(boat.position.x, boat.position.z, from.x, from.y, wp.x, wp.y, ROUNDED)) {
+    /** The drift never rounds the stranding: the air dies short of it and the hull runs on onto its slates. */
+    const stranding = this.leg === TO_STRAND && this.beat === 'drift';
+    if (sailing && !stranding && !STORM_WAY[this.out] && this.leg < PASSAGE.length - 1 && roundedWaypoint(boat.position.x, boat.position.z, from.x, from.y, wp.x, wp.y, ROUNDED)) {
       this.leg++;
       boat.steerFor = PASSAGE[this.leg];
     }
@@ -375,7 +380,7 @@ export class DrownedChapter implements Chapter {
         if (this.leg === TO_STRAND && Math.hypot(boat.position.x - STRAND.x, boat.position.z - STRAND.y) < tuning.drowned.stillFrom) this.still();
         break;
       case 'still':
-        if (this.t > tuning.drowned.stillFor) this.to('becalmed');
+        if (this.touched || this.t > tuning.drowned.stillFor) this.to('becalmed');
         break;
       case 'becalmed':
         if (this.run && this.cat.step === 'ridge' && this.cat.t > tuning.drowned.run.setOff) {
@@ -493,23 +498,25 @@ export class DrownedChapter implements Chapter {
   }
 
   /**
-   * The air dies among the roofs. The breeze goes out of the sail, the water goes to glass, and the hull coasts on,
-   * slowing, until it runs up onto the slates of a roof lying just under the water, with a scrape and a lurch, and is
-   * fast there, its stem against the slates still out of it.
+   * The air dies among the roofs. The breeze goes out of the sail, the water goes to glass, and the hull runs on,
+   * slowing, until it rides up onto the slates of a roof lying just under the water, with a scrape and a lurch, and is
+   * fast there, its stem against the slates still out of it. Behind them, the way they came, the fog starts to rise
+   * off the sea.
    */
   private still(): void {
     const { boat } = this.cast;
     this.stillBearing = this.villageBearing;
+    this.stillAt = this.now;
     this.to('still');
     drownedEntry.behindGone = true;
-    boat.coastTo = { x: STRAND.x, z: STRAND.y, yaw: STRAND_YAW };
+    boat.coastTo = { x: STRAND.x, z: STRAND.y, yaw: STRAND_YAW, brake: tuning.drowned.strandBrake };
     cue('becalmed');
   }
 
   /**
-   * Once the boat lies stuck the fog rises where they came from and comes on over the water, never stopping: a little
-   * quicker while it is still far off, slowing as it nears to a walk's pace, rising as it comes. The cat stares at it
-   * until it bolts. The boat stays where it lies.
+   * As the air dies the fog rises off the sea where they came from, and once the boat lies stuck it comes on over the
+   * water, never stopping: a little quicker while it is still far off, slowing as it nears to a walk's pace, rising as
+   * it comes. The cat stares at it until it bolts. The boat stays where it lies.
    */
   private darkComes(dt: number): void {
     const { boat, cygnet } = this.cast;
@@ -517,9 +524,11 @@ export class DrownedChapter implements Chapter {
     if (!village) return;
     const k = tuning.drowned.dark;
     const dark = village.dark;
-    if (this.beat === 'becalmed') {
-      dark.rise = THREE.MathUtils.smoothstep(this.t, 0, k.riseFor);
+    if (this.beat === 'still' || this.beat === 'becalmed') {
+      dark.rise = THREE.MathUtils.smoothstep(this.now - this.stillAt, 0, k.riseFor);
       if (dark.front <= 0) dark.front = DARK_AT_STRAND - k.riseAway;
+    }
+    if (this.beat === 'becalmed') {
       if (this.t > k.comeAfter) {
         const left = DARK_AT_STRAND - dark.front - tuning.drowned.cat.boltFrom;
         const pace = Math.min(k.comeMost, k.comePace + Math.max(0, left) * k.comeRate);
@@ -807,10 +816,10 @@ export class DrownedChapter implements Chapter {
   private strandFrame(): void {
     const k = tuning.drownedCamera, d = tuning.drowned, s = this.shot, boat = this.cast.boat;
     const wide = THREE.MathUtils.smoothstep(this.aspect, 0.7, 1.3);
-    const since = this.beat === 'still' ? this.t : d.stillFor + this.t;
+    const since = this.now - this.stillAt;
     const round = THREE.MathUtils.smootherstep(since, 0, d.turnFor);
     const turned = 0;
-    const settled = THREE.MathUtils.smootherstep(since, d.stillFor, d.stillFor + 6);
+    const settled = THREE.MathUtils.smootherstep(since, d.settleFrom, d.settleFrom + d.settleFor);
     const dark = THREE.MathUtils.lerp(k.strandUpright, k.strandDark, wide);
     const from = this.stillBearing + Math.PI;
     let look = from + Math.atan2(Math.sin(dark - from), Math.cos(dark - from)) * round;

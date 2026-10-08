@@ -17,7 +17,7 @@ import { ShoreBake } from './water/shore';
 import { SURF_GLSL, surfUniforms } from './water/surf';
 import { SWELL_GLSL, swellUniforms } from './water/swell';
 import { rippleTexture } from './water/textures';
-import { SUNK_DOOR } from './drowned-shape';
+import { SUNK_DOOR, SUNK_SLATES } from './drowned-shape';
 import { WIND_WAVES_GLSL, WindWaves } from './water/wind-waves';
 import { WATERLINE_GLSL, outsideHull, waterlineUniforms } from '../traveller/boat/waterline';
 
@@ -97,7 +97,7 @@ void main() {
   vWorld = w + at;
   vFog = fogOf(vWorld);
 #if CLOUD_DECK
-  vSeaSky = uSeaFogShape.w > 0.0 ? seaFog(vWorld, reflect(normalize(vWorld - cameraPosition), vec3(0.0, 1.0, 0.0)), 4000.0) : vec4(0.0);
+  vSeaSky = uSeaFogShape.w > 0.0 ? seaFogMirrored(vWorld, reflect(normalize(vWorld - cameraPosition), vec3(0.0, 1.0, 0.0))) : vec4(0.0);
 #endif
   gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
 }`;
@@ -323,8 +323,13 @@ void main() {
     return;
   }
   // Fog per vertex is close enough until the grid opens into cells hundreds of metres wide near the horizon, where
-  // a sliver just short of opaque lets the sun's grazing glint through as a line under it.
-  vec4 fog = vFog.a > 0.9 ? fogOf(vWorld) : vFog;
+  // a sliver just short of opaque lets the sun's grazing glint through as a line under it. The drowned village's sea
+  // fog heaps and runs in fingers finer than the grid's cells, so while it is out it is read per pixel.
+  bool perPixel = vFog.a > 0.9;
+#if CLOUD_DECK
+  perPixel = perPixel || uSeaFogShape.w > 0.0;
+#endif
+  vec4 fog = perPixel ? fogOf(vWorld) : vFog;
   // Ordinary sea under fully opaque fog contributes only the fog colour.
   // The sky mirror is composed AFTER fog, so it must retain its own reflection.
   if (fog.a == 1.0 && glass <= 0.001) {
@@ -468,6 +473,34 @@ void main() {
         vec3 lit = wallAlb * (uSkyAmbient * 1.25 * exp(-uAbsorb * down * 1.4) + uSunColor * max(uSunDir.y, 0.0) * 0.6 * sh * exp(-uAbsorb * down));
         float seenWall = exp(-t * 0.2) * (1.0 - smoothstep(${glsl(SUNK_DOOR.wallHalf - 0.4)}, ${glsl(SUNK_DOOR.wallHalf)}, abs(along)));
         body = mix(body, lit * exp(-uAbsorb * t), seenWall);
+      }
+    }
+  }
+  {
+    /**
+     * The first roof's slates going on down under the glass ahead of the stem, where the boat runs aground: courses of
+     * dark slate with staggered joints, going with depth.
+     */
+    vec2 rel = xz - vec2(${glsl(SUNK_SLATES.x)}, ${glsl(SUNK_SLATES.z)});
+    if (dot(rel, rel) < 49.0) {
+      const float C = ${glsl(Math.cos(SUNK_SLATES.yaw))}, S = ${glsl(Math.sin(SUNK_SLATES.yaw))};
+      const float RIDGE = ${glsl(SUNK_SLATES.ridge)}, FALL = ${glsl((SUNK_SLATES.ridge - SUNK_SLATES.eave) / SUNK_SLATES.run)};
+      vec3 Ts = refract(-V, N, 0.75);
+      float lx0 = rel.x * C - rel.y * S, lz0 = rel.x * S + rel.y * C;
+      float dlx = Ts.x * C - Ts.z * S, dlz = Ts.x * S + Ts.z * C;
+      float meet = Ts.y + FALL * dlz;
+      float t = abs(meet) > 1e-4 ? (RIDGE - FALL * lz0 - vWorld.y) / meet : -1.0;
+      float lx = lx0 + dlx * t, lz = lz0 + dlz * t;
+      float under = -(vWorld.y + Ts.y * t);
+      if (t > 0.0 && under > 0.0 && abs(lx) < ${glsl(SUNK_SLATES.half)} && lz > 0.0 && lz < ${glsl(SUNK_SLATES.run)}) {
+        float course = lz * ${glsl(Math.hypot(1, (SUNK_SLATES.ridge - SUNK_SLATES.eave) / SUNK_SLATES.run) / 0.24)};
+        float row = floor(course);
+        float joint = fract(lx / 0.34 + 0.5 * mod(row, 2.0));
+        float lap = smoothstep(0.0, 0.12, fract(course)) * smoothstep(0.0, 0.05, min(joint, 1.0 - joint));
+        vec3 slate = vec3(0.13, 0.125, 0.14) * (0.8 + 0.4 * hash12(vec2(row, floor(lx / 0.34 + 0.5 * mod(row, 2.0))))) * mix(0.4, 1.0, lap);
+        vec3 lit = slate * (uSkyAmbient * 1.25 * exp(-uAbsorb * under * 1.4) + uSunColor * max(uSunDir.y, 0.0) * 0.6 * sh * exp(-uAbsorb * under));
+        float seen = exp(-t * 0.15) * (1.0 - smoothstep(${glsl(SUNK_SLATES.half - 0.3)}, ${glsl(SUNK_SLATES.half)}, abs(lx)));
+        body = mix(body, lit * exp(-uAbsorb * t), seen);
       }
     }
   }

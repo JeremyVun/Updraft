@@ -473,7 +473,9 @@ Rules:
   rest of the array.
 - The sea's fog is computed per vertex and interpolated (Jeremy could not tell it from per pixel); the fragment
   recomputes it only where the interpolated fog is nearly opaque, because near the horizon the grid's cells are so
-  wide that a sliver short of opaque lets a glint line through.
+  wide that a sliver short of opaque lets a glint line through. While the drowned village's sea fog is out the sea
+  reads it per pixel (its heaps and fingers are finer than the grid's cells), and mirrors it in broad steps
+  (`seaFogMirrored`, and `uMirrorPass` in the mirror's own pass).
 - An exact skip is proven by frame difference against the old path in the same page, static and along a moving
   camera. On ANGLE/Metal: an early return cannot come before implicit derivatives a quad neighbour needs, and
   explicit gradients (`textureGrad`) are not bit-identical to implicit ones; an edit nearby can move a result by an

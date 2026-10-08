@@ -1725,12 +1725,15 @@ export const tuning = {
   },
   /** The drowned village round the church: the air dying, the boat coming to rest against a roof, and the dark. */
   drowned: {
-    /** The air dies this far short of where the boat comes to rest (metres of drift); it coasts in over the last of it. */
-    stillFrom: 26,
-    /** The breeze, against the room's own, on the drift with the cat aboard. */
-    driftBreeze: 1.28,
-    /** Seconds from the air dying to the dark starting to rise, as the boat comes to rest and everything goes still. */
-    stillFor: 7,
+    /**
+     * The air dies this far short of where the boat runs aground (metres of drift); it runs on over the last of it,
+     * braking at most `strandBrake` (m/s²) so it rides up onto the slates rather than stopping short of them.
+     */
+    stillFrom: 22, strandBrake: 1.9,
+    /** The breeze, against the room's own, on the drift with the cat aboard, freshening to carry them in, and how fast it takes them (m/s). */
+    driftBreeze: 2.6, driftSpeed: 9.5,
+    /** The most seconds from the air dying to the boat lying stuck, if it has not run aground by then. */
+    stillFor: 8,
     /** The hull coming to rest: how hard it brakes (m/s²) and the least way it keeps till its stem is on the slates. */
     coastBrake: 0.5, coastCreep: 0.35,
     /** How far past the drift's dusk the light goes while the dark comes on. */
@@ -1744,8 +1747,11 @@ export const tuning = {
      * from the lens, never toward it.
      */
     darkGlance: 26,
-    /** Seconds the camera takes to come round beside the boat once the air has died, and to turn from the dark to the church. */
-    turnFor: 12, lookFor: 9,
+    /**
+     * Seconds the camera takes to come round beside the boat once the air has died, and to turn from the dark to the
+     * church; and when after the air has died it lifts to its wider view of the stuck boat, and over how long.
+     */
+    turnFor: 8, lookFor: 9, settleFrom: 4, settleFor: 5,
     dark: {
       /**
        * Its front: half its width and how far its flanks run on ahead, in metres; and how far it reaches on the
@@ -1759,23 +1765,23 @@ export const tuning = {
        */
       aheadFrom: 30, turnRate: 0.6,
       /**
-       * Seconds it takes to rise on the horizon once the boat lies stuck, how far behind the boat it rises, and when it
-       * starts to come on: never stopping, at `comePace` (m/s) and `comeRate` a second of however far it still is from
-       * where the cat bolts, at most `comeMost` m/s, so it slows as it nears; how far short of the boat its front is when
-       * the light has gone from it; and how far short of the boat it is when she sets off along the first roof's ridge
-       * (QA and the save there).
+       * Seconds it takes to rise off the sea once the air has died, how far behind the boat it rises, and how long after
+       * the boat runs aground it starts to come on: never stopping, at `comePace` (m/s) and `comeRate` a second of
+       * however far it still is from where the cat bolts, at most `comeMost` m/s, so it slows as it nears; how far short
+       * of the boat its front is when the light has gone from it; and how far short of the boat it is when she sets off
+       * along the first roof's ridge (QA and the save there).
        */
-      riseFor: 7, comeAfter: 1.5, riseAway: 80, comeRate: 0.15, comeMost: 5.5, comePace: 2.2, holdBehind: 20, setOffBehind: 20,
+      riseFor: 6, comeAfter: 0.6, riseAway: 72, comeRate: 0.15, comeMost: 5.5, comePace: 2.2, holdBehind: 20, setOffBehind: 20,
     },
     /** The sea fog the dark is: one field every shader reads, and the light it takes as it comes. */
     fog: {
       /**
        * How high its top stands over the water until the story raises it (its `level`), metres, and `closedTop` times
-       * that once it has closed round; how deep under its top it gives out, a share of its height (`closedSoft` closed
-       * round); and how deep its front is soft (what stands in that first stretch of it fades rather than being
-       * covered), metres.
+       * that once it has closed round; how far over its top it begins and how far under it it is whole, metres
+       * (`closedSoft` of its height under it once closed round), so it thins into the air rather than ending at a
+       * surface; and how deep behind its face it is whole, metres, so what it takes softens before it is gone.
        */
-      level: 2.5, closedTop: 0.6, topSoft: 0.15, closedSoft: 0.9, front: 12,
+      level: 3.5, closedTop: 0.6, thinUp: 0.25, thinDown: 1.1, closedSoft: 0.9, front: 5,
       /**
        * As it comes it rises over all it has taken `levelBehind` metres behind its front by `levelOver` metres, the
        * stranded boat's masthead (`overBoat` above the water) first, and never lower than a steady climb from
@@ -1785,32 +1791,54 @@ export const tuning = {
       /** The sea muffles under it from when the lens is this far ahead of its front to when it is this far (metres). */
       muffleFrom: 30, muffleTo: 0,
       /**
-       * Its top as a tide: the lowest and highest its long swells lie against its level, as shares of it, and how
-       * broad they are at least, metres.
+       * Its top as a tide: long swells, how far either way as a share of its level and how broad (metres), and the
+       * billowed heaps on them, how high as a share of its level and how broad; each rolls its own way (m/s), so it
+       * heaps and rolls rather than sliding. Its level is about where its highest heaps come to: `swellUp` and
+       * `heapUp` set its swells and heaps under it (shares of their noise's reach).
        */
-      swellLow: 0.82, swellHigh: 1.18, swellBroad: 16,
+      swell: 0.35, swellBroad: 30, heap: 0.4, heapBroad: 10, swellUp: 0.18, heapUp: 0.46, swellRoll: [0.16, 0.07], heapRoll: [-0.1, 0.12],
       /** Once it has closed round, how much its top rises for each metre away from the eye: a bowl she stands in. */
       closedBowl: 0.5,
-      /** How far its front heaves to and fro across its line, metres; and how far its face heaps in and out with height, seen edge-on. */
-      heave: 8, faceHeap: 8,
+      /** How far its front heaves to and fro across its line, metres. */
+      heave: 8,
       /**
-       * Its feathered sheets, nearest first: metres behind its front (the first is a wisp low on the water, lying
-       * `wispAhead` times as far ahead of it as its mist reaches) and how tall against the field; how raggedly their
-       * tops break, a share of their height; and how much the wisp covers.
+       * Its face: how far its top leans back behind its foot, how far its billowed rolls bulge out of it and how broad
+       * they are, metres; and the fingers it runs on ahead over the water: how far, how high they lie, and how thick
+       * against its body.
        */
-      sheetBack: [0, 8, 40, 100], sheetTall: [0.15, 0.8, 0.9, 1.0], sheetRough: 1.8, wispAhead: 1.75, wisp: 0.4,
+      lean: 2, bulge: 3.5, bulgeBroad: 10, fingers: 12, fingerLow: 1.3, fingerThick: 0.35,
       /**
-       * How brightly the fog round her takes the lantern's light, how far round the flame it shows, metres, and how
-       * much of that glow the glassy sea under it gives back.
+       * Its light: how deep under its top the sky's light reaches, metres, and how much less of it reaches the hollows
+       * between its heaps and how narrow the creases between them are (a share of the noise's reach); how much its face takes from the open air in front of it, and how deep behind its face that
+       * reaches; how much lighter and darker the sides of its heaps are toward and away from the low sun, and how deep
+       * under its top that shows (metres); how far toward the sun a slope is read, metres, and how sharply a slope
+       * facing the sun takes its rim.
        */
-      lanternHalo: 0.4, lanternReach: 2, lanternMirror: 0.6,
+      skyDepth: 3.5, hollow: 0.5, crease: 0.12, faceLit: 0.7, faceDepth: 6, side: 0.35, sideDepth: 2.5, rimProbe: 1.5, rimFacing: 3,
+      /** How much of the haze over the water its body far off takes, and from and to how far off, metres. */
+      farHaze: 0.45, farFrom: 60, farTo: 700,
+      /**
+       * The march through it: steps, the least and most the first is (metres), and how much each is longer than the
+       * last; the first is laid so the steps cover the stretch where its top's relief can be met. The glassy sea's
+       * mirror of it, read at the water grid's points and in the mirror's own pass, steps no finer than `mirrorStep`, so its
+       * heaps blur away there.
+       */
+      steps: 20, stepLeast: 0.45, stepMost: 6, stepGrow: 1.15, mirrorStep: 9,
+      /** How much of the lighthouse's beam its top takes where the beam passes through it. */
+      beam: 0.9,
+      /**
+       * How brightly the fog round the lantern takes its light, how far round the flame it shows, metres, and how much
+       * further that glow spreads for each unit of fog between it and the eye; how much of the fog between dims it;
+       * and how much of that glow the glassy sea under it gives back.
+       */
+      lanternHalo: 0.4, lanternReach: 2, lanternSpread: 1.4, lanternThrough: 0.2, lanternMirror: 0.6,
       /** Closed round, how brightly the lighthouse's lamp glows in it and how far round the lamp that glow reaches, metres. */
       harbourHalo: 0.12, harbourReach: 14,
       /**
        * Per metre: how thick it is through its body as a bank, and once it has closed round (thinner, so she can still
        * see her way), and how much thicker low over the water, falling away over `low` metres.
        */
-      density: 0.25, closed: 0.03, floor: 0.035, low: 3,
+      density: 0.35, closed: 0.03, floor: 0.035, low: 3,
       /** How much of its closing round thins its body to the closed fog's, before its front runs on past the eye. */
       closedBy: 0.3,
       /** How far from the forest beach it starts to thin off as the forest comes up out of it, and where it has gone, metres. */
@@ -1823,11 +1851,14 @@ export const tuning = {
       /** How far past the eye its front has gone once it has closed round. */
       closeRun: 500,
       /**
-       * Its body's light against the sky's, far off and come close; the low sun on its billows' tops against the sun's;
-       * how far its foot and the mist ahead of it go into the pale haze over the water, far off and come close;
-       * how far the first wind under it breaks up the glass once it has closed round, and the slope of the ripples it raises.
+       * Its light against the sky's: deep in its body far off, come close and closed round into the night, and on its
+       * top where the sky lights it, far off and come close; the low sun on the crests that face it against the sun's, how deep under them that rim reaches
+       * (metres), and the rose left on them against its top once the sun has gone; how far the mist ahead of it goes
+       * into the pale haze over the water, far off and come close; how far the first wind under it breaks up the glass
+       * once it has closed round, and the slope of the ripples it raises.
        */
-      body: 0.32, bodyNear: 0.3, crest: 0.55, haze: 0.3, hazeNear: 0.12, stir: 1, ripple: 0.18,
+      body: 0.5, bodyNear: 0.47, night: 0.3, top: 1.05, topNear: 1.0, crest: 0.8, rim: 0.7, roseLeft: 0.25, haze: 0.3, hazeNear: 0.12,
+      stir: 1, ripple: 0.18,
       /** How much of what is left of the light comes through it where it is thin once the sun has gone from it. */
       glowNear: 0.1,
       /**
@@ -1884,7 +1915,7 @@ export const tuning = {
        * Seconds she stands just down off the first roof looking back at the boat as the fog takes it, and on the
        * granary's ridge looking back down at it.
        */
-      lookBackFor: 6.5, lookDownFor: 1.4,
+      lookBackFor: 4, lookDownFor: 1.4,
       /** The beat she takes before a hop of her own; within `through` of a turn gentler than `bend` (radians) she walks on through it. */
       hopPause: 0.3, through: 1.1, bend: 0.4,
       /** Seconds she stands once the sheet has set her down before she goes on, while the lens comes round to her way. */
@@ -1914,6 +1945,8 @@ export const tuning = {
        */
       fogTrail: 12, fogHold: { tree: 10, sheet: 8, mill: 18, swing: 12 }, fogEnd: 19, fogNearest: 7.5, fogLaid: 10,
       fogPull: 0.5, fogSlowest: 0.12, fogFastest: 3.2, fogEase: 0.9, fogLookedEase: 3,
+      /** How near her the fog comes while she looks back at the boat, past the boat, so it takes the boat as she watches. */
+      fogLooked: 5,
     },
     /** The wash-tub the player's wind carries to the cat's roof and back to the boat. */
     tub: {
@@ -2041,7 +2074,7 @@ export const tuning = {
        * to the side (landscape and upright) and above her it stands, and where it looks (a share of the way from her to
        * the boat, and above her feet).
        */
-      backHold: 1, backIn: 2.2, backOut: 1.4, backGone: 1.2, backBehind: 4.2, backSide: 2.4, uprightBackSide: 1.2, backHigh: 2.3, backAt: 0.55, backAim: 0.6,
+      backHold: 1, backIn: 1.4, backOut: 1.0, backGone: 0.6, backBehind: 4.2, backSide: 2.4, uprightBackSide: 1.2, backHigh: 2.3, backAt: 0.55, backAim: 0.6,
       /**
        * The tree's view: how far north of where it lies over her wall and east of it (out over the lane) it stands, and
        * how high (upright, the same, and how far it looks round to her as she crosses, so she stays in the narrow frame).
