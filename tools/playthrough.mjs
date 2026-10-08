@@ -44,7 +44,7 @@ const snapshot=()=>page.evaluate(()=>{
     checkpoint:JSON.parse(localStorage.getItem('updraft.progress.v1')??'null')?.point,
     trodden:c.trodden?.toArray()??null,
     bird:project(g.cygnet.position),coax:project(c.coax?.at),wind:project(c.windInvitation),
-    fleet:project(g.littleBoats.invitation),feather:project(g.sleeping.feather.position),
+    fleet:project(g.littleBoats.invitation),pinwheel:project(g.shorePinwheel),feather:project(g.sleeping.feather.position),
     snag,scarf:snag>=0?project(g.birches.scarf.snags[snag].center):null,
     bubble:project(bubble?.position),carried:!!g.skyMirror.carried,wand:project(g.skyMirror.wand),direction,
     flight:piece?{at:project(g.cloudStairs.pointOn(piece,home.clone(),home.clone())),to:project(home),settling:piece.settling}:null,
@@ -126,6 +126,7 @@ try {
     let acted=false;
     if(s.chapter==='island'&&['still','play'].includes(s.beat)&&s.life<.99)acted=await sweep({x:width*.5,y:height*(.38+(strokes%8)*.055),z:0},strokes%2?-1:1,0,width*.65,850);
     else if(s.chapter==='lines'&&s.beat==='curtain')acted=await sweep({x:width*.5,y:height*(.37+(strokes%3)*.08),z:0},strokes%2?-1:1,0,width*.56,600);
+    else if(s.chapter==='lines'&&s.beat==='haul')acted=await sweep(s.pinwheel,strokes%2?-1:1,0,width*.3,600);
     else if(s.chapter==='boats'&&s.beat==='sailing')acted=await sweep(s.fleet,1,0,200,500);
     else if(s.chapter==='meadow'&&s.piano){
       const forward=s.piano.expect.at(-1)>s.piano.expect[0],a=s.piano.path[forward?0:1],b=s.piano.path[forward?1:0];
