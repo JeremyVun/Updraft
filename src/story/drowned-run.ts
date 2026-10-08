@@ -1043,15 +1043,15 @@ export class RoofRun {
     for (const piece of ORDER) {
       const i = this.pieceAt[piece];
       const wait = this.nodes[i - 1].s, over = this.nodes[i].s;
-      const come = piece === 'swing' ? k.swingFrom : k.comeFrom;
-      const coming = THREE.MathUtils.smootherstep(this.along, wait - come, wait - k.comeTo);
+      const coming = piece === 'swing' ? 0 : THREE.MathUtils.smootherstep(this.along, wait - k.comeFrom, wait - k.comeTo);
       const leave = k.leave[piece];
       const going = this[piece].done && this.stage !== piece ? THREE.MathUtils.smootherstep(this.along, over + k.leaveFrom, over + leave) : 0;
       /** The mill's view, once she is off it, follows her on to the swing and hands her straight to the swing's own. */
       const toSwing = piece === 'mill' && this.mill.done && this.stage !== 'mill';
       /** Once she has stopped at a piece the lens goes on round to its view, never while she walks toward it. */
       const want = this.stage === piece || toSwing ? 1 : coming * (1 - going);
-      this.pieceIn[piece] += (want - this.pieceIn[piece]) * (want > this.pieceIn[piece] ? 1 - Math.exp(-dt * k.roundRate) : 1);
+      const rate = piece === 'swing' ? k.swingRate : k.roundRate;
+      this.pieceIn[piece] += (want - this.pieceIn[piece]) * (want > this.pieceIn[piece] ? 1 - Math.exp(-dt * rate) : 1);
       const w = THREE.MathUtils.smootherstep(this.pieceIn[piece], 0, 1);
       const swing = this.stage === 'swing' || this.swing.done ? 1 : THREE.MathUtils.smootherstep(this.pieceIn.swing, 0, 1);
       add(toSwing ? w * (1 - swing) : w, () => this.view(piece, wide));
@@ -1131,7 +1131,7 @@ export class RoofRun {
    * the granary's west side to stand north of the green, looking down at her on her way to the swing with the fog
    * beyond. Upright, nearer, the basket and the hub stacked up the narrow frame.
    */
-  private millView(wide: number, c: THREE.Vector3 = this.cast.child.position, ahead = THREE.MathUtils.smootherstep(this.millAhead, 0, 1)): void {
+  private millView(wide: number, c: THREE.Vector3 = this.cast.child.position, off = this.millAhead): void {
     const m = this.mill.mill;
     const k = tuning.drownedCamera.run;
     const from = MILL.waitTop, to = MILL.offRidge;
@@ -1139,10 +1139,12 @@ export class RoofRun {
     const rise = THREE.MathUtils.smootherstep(THREE.MathUtils.clamp((p.y - from) / (to - from), 0, 1), 0, 1);
     const f = wide >= 0.5 ? k.millWide : k.millUpright;
     const [ex, ey, ez] = f.eye, [tx, ty, tz] = f.at;
+    /** Once she is off it looks at her straight away, and glides on after her. */
+    const ahead = THREE.MathUtils.smootherstep(off, 0, 1), onHer = THREE.MathUtils.smoothstep(off, 0, k.millLook);
     this.stationEye.set(ex + f.on[0] * ahead, from + ey + f.eyeRise * rise + f.on[1] * ahead, ez + f.on[2] * ahead);
     this.stationTarget.set(tx, from + ty + f.rise * rise, tz);
     m.group.localToWorld(this.stationEye);
-    m.group.localToWorld(this.stationTarget).lerp(this.tmp.copy(c).setY(c.y + k.aim), Math.min(1, ahead * 2));
+    m.group.localToWorld(this.stationTarget).lerp(this.tmp.copy(c).setY(c.y + k.aim), onHer);
   }
 
   /**
