@@ -1395,7 +1395,7 @@ export class Dolphins {
         s.along += s.va * dt;
         s.across += s.vc * dt;
       } else this.glide(s, k.leapFrom, s.side * k.leapBeside, 0.55, dt);
-      if (s.t > k.leapRunFor && !s.asked) {
+      if (s.t > k.leapRunFor && !s.asked && Math.abs(s.along - k.leapFrom) < k.leapMarkNear) {
         s.asked = true;
         /** A slow boat asks for a lower leap, never a steeper one. */
         d.lift = Math.min(k.leapLift * rand(0.96, 1.06), k.leapSpeed * Math.tan(k.leapSteepest));

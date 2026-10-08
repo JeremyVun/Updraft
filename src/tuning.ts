@@ -1760,9 +1760,13 @@ export const tuning = {
     leapSpread: 1.5,
     leapRecovery: 1,
     nudgeAfter: 3,
-    /** Seconds the leaper takes going out to its mark, and running alongside, before it is asked to throw. */
+    /**
+     * Seconds the leaper takes going out to its mark, and running alongside, before it is asked to throw; and how near
+     * its mark along the boat it must be by then, so a leaper that set out far astern never throws close under the lens.
+     */
     leapOutFor: 2.8,
     leapRunFor: 3.2,
+    leapMarkNear: 1.5,
     /**
      * Where the leaper runs beside the boat before the throw, along and out from it, the speed through the water it
      * leaves at, how far off the boat's course it turns out through the last dip (so the arc is seen from the side,
