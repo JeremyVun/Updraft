@@ -48,10 +48,11 @@ const video = process.env.VIDEO ?? null;
 const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1,
   ...(video ? { recordVideo: { dir: video, size: { width, height } } } : {}) });
 let page = null;
+/** When the recording began, so what is heard and the lens's trace can be laid under it. */
+let recordedFrom = 0;
 try {
   page = await context.newPage();
-  /** When the recording began, so what is heard can be laid under it. */
-  const recordedFrom = Date.now();
+  recordedFrom = Date.now();
   page.on('pageerror', (e) => errors.push(e.message));
   await page.goto(`${base}?shot=1&chapter=${fromStorm ? 'storm' : fromBelfry ? 'belfry' : fromChurch ? 'church' : fromRoofs ? 'roofs' : fromStairs ? 'stairs' : 'drowned'}&ratio=1`, { waitUntil: 'load' });
   await page.waitForFunction(() => window.__ready === true, null, { timeout: 60000 });
@@ -80,8 +81,10 @@ try {
           sampled = t;
           const c = __game.child.position, head = c.y + 1.2;
           const flat = Math.hypot(p.x - c.x, p.z - c.z);
-          w.trace.push({ t: +t.toFixed(2), where: stretch, flat: +flat.toFixed(2), over: +(p.y - c.y).toFixed(2),
-            down: +(Math.atan2(p.y - head, flat) * 180 / Math.PI).toFixed(1), fov: +cam.fov.toFixed(1), turn: +turn.toFixed(1) });
+          w.trace.push({ t: +t.toFixed(2), wall: Math.round(performance.timeOrigin + performance.now()), where: stretch, flat: +flat.toFixed(2), over: +(p.y - c.y).toFixed(2),
+            down: +(Math.atan2(p.y - head, flat) * 180 / Math.PI).toFixed(1), fov: +cam.fov.toFixed(1), turn: +turn.toFixed(1),
+            lens: p.toArray().map((v) => +v.toFixed(2)), her: c.toArray().map((v) => +v.toFixed(2)), along: st.run ? +st.run.along.toFixed(1) : null,
+            fogOut: window.__runWatch ? +window.__runWatch.fogGoneRun.toFixed(2) : null, fog: [+__game.village.dark.front.toFixed(1), +__game.village.dark.ahead.x.toFixed(3), +__game.village.dark.ahead.y.toFixed(3), +__game.village.dark.level.toFixed(2)], look: d.toArray().map((v) => +v.toFixed(3)), toward: window.__runWatch ? +window.__runWatch.facingRun.toFixed(2) : null });
         }
       }
       last = { t, d, p, cut: st.cameraCut, story: st, name: __game.story.name };
@@ -634,7 +637,7 @@ try {
       const w = window.__runWatch = { frames: 0, offWorst: 0, offAt: '', fogAhead: Infinity, fogNear: Infinity, fogAt: '',
         stallWorst: 0, stallAt: '', last: -1, since: 0, facing: 0, facingRun: 0, facingWorst: 0, facingAt: '', unseen: 0, unseenRun: 0,
         unseenWorst: 0, unseenAt: '', inside: 0, insideAt: '', fogGoneRun: 0, fogGoneWorst: 0, fogGoneAt: '', boatMoved: 0,
-        roofs: {}, waits: {}, levelAt: [] };
+        roofs: {}, waits: {}, levelAt: [], fogByWalk: {} };
       const front = W.DARK_WAY[0].clone();
       const strand = { x: __game.boat.position.x, z: __game.boat.position.z };
       const placed = W.PLACED.map((h, i) => ({ h, i }));
@@ -672,6 +675,8 @@ try {
           }
           w.fogGoneRun = seen ? 0 : w.fogGoneRun + 1 / 60;
           const f = (v) => v.toArray().map((x) => x.toFixed(1)).join(',');
+          const walk = `her way to the ${['tree', 'sheet', 'mill', 'swing'].find((piece) => r[piece].phase !== 'over') ?? 'nave'}`;
+          w.fogByWalk[walk] = Math.max(w.fogByWalk[walk] ?? 0, w.fogGoneRun);
           if (w.fogGoneRun > w.fogGoneWorst) {
             w.fogGoneWorst = w.fogGoneRun;
             w.fogGoneAt = `at ${r.along.toFixed(1)} m, until ${t.toFixed(1)} s; her at ${f(p)}, the lens at ${f(cam.position)}, the front at ${front.x.toFixed(1)},${front.y.toFixed(1)} coming ${dx.toFixed(2)},${dz.toFixed(2)}, its top ${dark.level.toFixed(1)} m`;
@@ -822,8 +827,13 @@ try {
     await until((s) => s.swing === 'riding', 10, 'her getting on the swing');
     let pumps = 0, swung = false;
     for (; pumps < 40 && (await state()).swing === 'riding'; pumps++) {
-      /** As a player pumps: each stroke as the seat comes back through and starts out toward the far side. */
-      for (let i = 0; i < 40 && !(await page.evaluate(() => { const s = __game.story.current.run.swing.swing; return s.speed > 0 && s.angle < 0.05; })); i++) await seconds(0.05);
+      /**
+       * As a player pumps: each stroke as the seat starts out toward the far side again, once it has swung back from
+       * the last (or at once, while it hangs nearly still).
+       */
+      const seat = () => page.evaluate(() => { const s = __game.story.current.run.swing.swing; return { v: s.speed, a: s.angle }; });
+      for (let i = 0; i < 60 && pumps > 0 && (await seat()).v > 0.02; i++) await seconds(0.05);
+      for (let i = 0; i < 60 && (await seat()).v <= 0.02 && Math.abs((await seat()).v) + Math.abs((await seat()).a) > 0.05; i++) await seconds(0.05);
       const aim = await page.evaluate(() => {
         const r = __game.story.current.run, cam = __game.rig.camera, s = r.swing.swing;
         const at = s.seat(cam.position.clone());
@@ -856,6 +866,7 @@ try {
     console.log(`her feet stayed within ${w.offWorst.toFixed(3)} m of the decks (worst ${w.offAt}); longest stall on her own way ${w.stallWorst.toFixed(1)} s`);
     console.log(`the fog's front came within ${w.fogAhead.toFixed(1)} m of her across its line, ${w.fogNear.toFixed(1)} m as the crow flies (${w.fogAt}); its level ${end.level} m at the end, its front ${end.front} m`);
     console.log(`on her own way the fog was out of the frame for at most ${w.fogGoneWorst.toFixed(1)} s at a time (${w.fogGoneAt})`);
+    console.log(`  on each walk at most ${Object.entries(w.fogByWalk).map(([k, v]) => `${v.toFixed(1)} s on ${k}`).join(', ')}`);
     const names = await page.evaluate(() => import('/src/world/drowned-way.ts').then((W) => W.PLACED.map((h) => `${h.x.toFixed(0)},${h.z.toFixed(0)}`)));
     const roofs = Object.values(w.roofs);
     for (const r of roofs) console.log(`  the roof at ${names[r.name]} (ridge ${r.ridge.toFixed(1)} m) ${r.under === null ? 'not under yet' : `under ${(r.under - r.left).toFixed(1)} s after she went on from it`}`);
@@ -875,8 +886,7 @@ try {
     assert(w.offWorst < 0.4, `she left the decks: ${w.offWorst.toFixed(2)} m (${w.offAt})`);
     assert(w.stallWorst < 3, `she stalled on her own way for ${w.stallWorst.toFixed(1)} s (${w.stallAt})`);
     assert(w.fogAhead > 4, `the fog reached her: ${w.fogAhead.toFixed(1)} m ahead of its front (${w.fogAt})`);
-    /** Upright the lens stands behind her looking along her way, the fog behind it: only the wide frame holds both. */
-    if (width > height) assert(w.fogGoneWorst < 2, `the fog was out of a walk's frame for ${w.fogGoneWorst.toFixed(1)} s (${w.fogGoneAt})`);
+    assert(w.fogGoneWorst < 2, `the fog was out of a walk's frame for ${w.fogGoneWorst.toFixed(1)} s (${w.fogGoneAt})`);
     /** Each roof she went on from is taken within 14 s, but for the one the fog waits short of at the tower's foot. */
     const waits = (r) => r.under === null && Math.hypot(r.x - end.child[0], r.z - end.child[2]) < 22;
     const late = roofs.filter((r) => !waits(r) && (r.under ?? end.time) - r.left > 14);
@@ -906,7 +916,7 @@ try {
   if (process.env.TRACE && page) {
     const motion = await page.evaluate(() => window.__lensWatch).catch(() => null);
     if (motion) {
-      (await import('node:fs')).writeFileSync(process.env.TRACE, JSON.stringify(motion));
+      (await import('node:fs')).writeFileSync(process.env.TRACE, JSON.stringify({ ...motion, recordedFrom }));
       console.log(`the lens traced every quarter second: ${process.env.TRACE}`);
     }
   }

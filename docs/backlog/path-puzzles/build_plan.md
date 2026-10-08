@@ -1112,7 +1112,35 @@ walking toward the lens at corners (1.5 s at 58.9 m); the kittens three-quarter 
 in through her light if no outside eye sees it; the kittens to the fog sea never behind the tower.
 Gate: `drowned-run-check` `LENS=1` from the drift to the nave and `FROM=church`, both aspects, no exceptions; before
 and after stills per item, both aspects; 2 fps strips of the two walks and the kittens.
-Done: [ ]
+Done: [~] (branch `proto-drowned-walks`; the walks partly). As built:
+- **The walks** (`layLens`, `RoofRun.fogGlance`): the laid lens wants to stand near side on (`sideOn`), either side,
+  so the fog's front reaches back from the frame's edge; it is costed on the front as the run check sees it, where
+  the fog trails her (`fogTrail` and `fogSlack` further), after the glance; standing at the fog's face costs
+  (`fogNearCost`), behind it is ruled out; turns past `turnMost` a step cost steeply (`whipCost`); her walking toward
+  it is tested where she is when the key is read (`keyAhead`, `towardAhead`). On her own way the look glances toward
+  the fog's front (`fogEdge`, `herEdge`, `glanceMost`) as it would leave the frame. She takes a longer breath after
+  the sheet (`setDown` 2.6 s) while the lens comes round off the sheet's view. The run check gates the fog upright too,
+  reports it per walk, and traces the fog and the look.
+  Measured (landscape, from the roofs): the fog out of frame 0.0 s on the walks to the tree and the sheet, 0.7 s to the
+  mill (was 3.2, 3.1 and 2.8), 7.5 s to the swing (was 7.8-11.2).
+Left:
+- **The walk from the granary to the swing**: the fog in play lies across the mill's foot facing north as she goes
+  west, so only a lens north of her is clear of it with it in view, but she turns north to the swing's board at 79 m
+  and the swing's view is west of it: no lens side satisfies the fog, never walking at the lens and the turn to the
+  swing's view at once. Likely answers: the swing seen from the north-west or the board approached from the west, or
+  the lens north of her coming round over her as she turns.
+- **Walking toward the lens** 1.4 s at 43.5 m, just after the sheet (the lens off the sheet's view comes round about
+  10° short of where it was laid); 58.9 m and the tree's end are clear.
+- **The kittens**: 7c's view from outside stands (her back, the kitten small). The lead turned down a lens that goes
+  in through the other light: inside, the shaft between the lights filled a third of the frame, the kittens never
+  showed, and the way out passed through her coat. As with the blink, the answer is in the staging: the kitten comes
+  out to her where an outside eye sees them both (her turned on the sill, the kitten at its lip), three-quarter on.
+- From the kittens to the fog sea the orbit round the tower's corner can still hide her (7.6 s in Phase 8).
+- Not yet run: the gate from the drift to the nave, and the walks upright.
+- Seen in the strips, not gated: the hoist's beam crosses the lens as it leaves the mill's view, and the green tree's
+  trunk as it comes round to the swing's view.
+- The swing's pumping in the run check depends on the wind's readback, which a busy GPU (another session's capture)
+  starves in `shot` mode; it took 8 to more than 40 strokes, and up to 143 s, across runs.
 
 ### Phase 9: the music (parallel with 7c or 8)
 Owns: the drowned score (`src/audio/dream-score.ts` and its notes, the room's `drownedScore` phases): a cue for every
