@@ -1,10 +1,17 @@
 // Capture the complete sea passage with real simulation and verify the swimmer's framing, then the whale in the net:
 // the pod's lead into the mist, the whale heard there, its blow seen and its shape coming out of it, the rest beside
-// its head, real circles over the blowhole (the stand-in for the net's first step), its eye, the spout, the flukes
-// and the arrival at the mirror.
-// Usage: node tools/sea-check.mjs [out-prefix]. BASE selects a stable dev server; W/H select the viewport.
-// Reuses play.mjs's machine-wide GPU lock. All captures belong in /tmp.
-import { spawn } from 'node:child_process';
+// its head, its five steps played with real gestures as each is drawn (circles over the blowhole, strokes across its
+// eye, the cork, the net on its head and the flipper), the spout, the flukes and the arrival at the mirror.
+// Usage: node tools/sea-check.mjs [out-prefix]. BASE selects a stable dev server; W/H select the viewport (1600×900;
+// 430×932 for a phone); VIDEO=1 also records <prefix>.webm.
+// Reuses the machine-wide GPU lock. All captures belong in /tmp.
+import { openBrowser } from './lib/browser.mjs';
+import { away, whaleGo } from './lib/whale-gestures.mjs';
+import fs from 'node:fs';
+
+const prefix = process.argv[2] ?? '/tmp/updraft-sea';
+const base = process.env.BASE ?? 'http://127.0.0.1:5230/';
+const width = Number(process.env.W ?? 1600), height = Number(process.env.H ?? 900);
 
 function observe() {
   const g = __game;
@@ -14,8 +21,8 @@ function observe() {
   g.sealife.pod.update = (dt, time) => {
     update(dt, time);
     const c = g.story.current;
-    const beat = `${g.story.name}:${c.swim}`;
-    if (beat !== log.last) { log.beats.push({ beat, time: c.time, boat: g.boat.position.toArray() }); log.last = beat; }
+    const beat = `${g.story.name}:${c.swim}:${c.whale?.step ?? ''}`;
+    if (beat !== log.last) { log.beats.push({ beat, time: +c.time?.toFixed(1), boat: g.boat.position.toArray().map((v) => +v.toFixed(1)) }); log.last = beat; }
     if (c.swim === 'in' && c.swimT > 3) {
       const p = g.cygnet.position.clone().project(g.rig.camera);
       log.swimFrames++;
@@ -26,45 +33,79 @@ function observe() {
   };
 }
 
-const wait = (condition, seconds = 60) => ({ eval: `new Promise((resolve,reject)=>{
-  const until=performance.now()+${seconds * 1000};
-  const id=setInterval(()=>{
-    if(${condition}) {clearInterval(id);resolve({chapter:__game.story.name,time:__game.story.current.time,swim:__game.story.current.swim,whale:__game.story.current.whale?.step});}
-    else if(performance.now()>until) {clearInterval(id);reject(new Error('Sea capture timed out: '+${JSON.stringify(condition)}));}
-  },30);
-})` });
-const whale = '__game.story.current.whale';
-/** The blowhole on screen, as fractions of the viewport, a little above it where the column stands. */
-const blowhole = `(()=>{const p=__game.sealife.sleeper.blowhole.clone();p.y+=1.2;p.project(__game.rig.camera);return [p.x*0.5+0.5,0.5-p.y*0.5]})()`;
-
-const steps = [
-  { eval: `(${observe.toString()})()` },
-  wait('__game.story.current.time>12'), { shot: 'arrival' },
-  wait("__game.sealife.pod.stunt?.phase==='act' && __game.sealife.pod.stunt.kind==='leap'"),
-  { burst: 'leap', n: 6, every: 180 },
-  wait('__game.story.current.time>24'), { shot: 'open-water' },
-  wait("['restless','side','in'].includes(__game.story.current.swim)", 90), { shot: 'curious' },
-  wait("__game.story.current.swim==='in' && __game.story.current.swimT>4"), { shot: 'swim' },
-  wait("__game.story.current.swim==='in' && __game.story.current.swimT>9"), { shot: 'alongside' },
-  wait("['drying','done'].includes(__game.story.current.swim)"), { shot: 'return' },
-  wait("__game.story.current.swim==='done'"), { shot: 'together' },
-  { eval: `(() => {const s=window.seaLog;if(!s.swimFrames||s.clipped>0||s.maxGap>11.5)throw Error(JSON.stringify(s));return s;})()` },
-  wait(`${whale}.led`, 60), { shot: 'lead' },
-  { wait: 3000 }, { shot: 'heard' },
-  wait(`${whale}.sighs>=2`, 40), { wait: 3500 }, { shot: 'blow' },
-  wait(`${whale}.remaining()<60`, 40), { shot: 'shape' },
-  wait(`${whale}.step==='breath' && ${whale}.stepTime>3`, 90), { shot: 'beside' },
-  { circle: blowhole, until: `${whale}.progress>=1`, radius: 0.06, seconds: 60 },
-  { move: [0.98, 0.04] },
-  wait('__game.sealife.sleeper.awake && __game.sealife.sleeper.time>3', 30), { shot: 'eye' },
-  wait('__game.sealife.sleeper.spouting', 30), { shot: 'spout' },
-  wait('__game.sealife.sleeper.fluking && __game.sealife.sleeper.time>15', 40), { shot: 'flukes' },
-  wait(`${whale}.step==='gone'`, 40), { shot: 'gone' },
-  wait("__game.story.name==='mirror'", 120), { shot: 'mirror-arrival' },
-  { eval: 'window.seaLog' },
-];
-const child = spawn(process.execPath, ['tools/play.mjs', process.argv[2] ?? '/tmp/updraft-sea', JSON.stringify(steps)], {
-  stdio: 'inherit',
-  env: { ...process.env, BASE: process.env.BASE ?? 'http://127.0.0.1:5230/', QUERY: 'chapter=sea&ratio=1&msaa=2', VIDEO: '1' },
+const { browser, close } = await openBrowser();
+const videoDir = process.env.VIDEO ? fs.mkdtempSync('/tmp/updraft-video-') : null;
+const context = await browser.newContext({
+  viewport: { width, height }, deviceScaleFactor: 1,
+  ...(videoDir ? { recordVideo: { dir: videoDir, size: { width, height } } } : {}),
 });
-child.on('exit', code => process.exit(code ?? 1));
+const errors = [];
+try {
+  const page = await context.newPage();
+  page.on('pageerror', (e) => errors.push(e.message));
+  await page.goto(`${base}?shot=1&chapter=sea&ratio=1&msaa=2`, { waitUntil: 'load' });
+  await page.waitForFunction(() => window.__ready === true, null, { timeout: 90000 });
+  await page.evaluate(`(${observe.toString()})()`);
+  const shot = async (name) => { await page.screenshot({ path: `${prefix}-${name}.png` }); console.log(`${prefix}-${name}.png`); };
+  // Timed in game seconds: with `shot` the game steps 1/60 s a frame, so on a loaded machine it runs slower than the wall.
+  const wait = async (condition, seconds = 60) => {
+    const met = await page.evaluate(([condition, seconds]) => new Promise((resolve) => {
+      const g = __game, start = g.story.current.time, name = g.story.name;
+      const tick = () => {
+        if (eval(condition)) return resolve(true);
+        const c = g.story.current;
+        if (g.story.name === name && c.time - start > seconds) return resolve({ chapter: g.story.name, time: c.time, swim: c.swim, whale: c.whale?.step });
+        requestAnimationFrame(tick);
+      };
+      tick();
+    }), [condition, seconds]);
+    if (met !== true) throw new Error(`Sea capture timed out: ${condition} ${JSON.stringify(met)}`);
+  };
+  const whale = '__game.story.current.whale';
+
+  await wait('__game.story.current.time>12'); await shot('arrival');
+  await wait("__game.sealife.pod.stunt?.phase==='act' && __game.sealife.pod.stunt.kind==='leap'");
+  for (let i = 1; i <= 6; i++) { await shot(`leap-${i}`); await page.waitForTimeout(180); }
+  await wait('__game.story.current.time>24'); await shot('open-water');
+  await wait("['restless','side','in'].includes(__game.story.current.swim)", 90); await shot('curious');
+  await wait("__game.story.current.swim==='in' && __game.story.current.swimT>4"); await shot('swim');
+  await wait("__game.story.current.swim==='in' && __game.story.current.swimT>9"); await shot('alongside');
+  await wait("['drying','done'].includes(__game.story.current.swim)"); await shot('return');
+  await wait("__game.story.current.swim==='done'"); await shot('together');
+  const swim = await page.evaluate(() => window.seaLog);
+  if (!swim.swimFrames || swim.clipped > 0 || swim.maxGap > 11.5) throw Error(JSON.stringify(swim));
+  await wait(`${whale}.led`, 60); await shot('lead');
+  await page.waitForTimeout(3000); await shot('heard');
+  await wait(`${whale}.sighs>=2`, 40); await page.waitForTimeout(3500); await shot('blow');
+  await wait(`${whale}.remaining()<60`, 40); await shot('shape');
+  await wait(`${whale}.step==='breath' && ${whale}.stepTime>3`, 90); await shot('beside');
+
+  // Each step as a prompt player plays it: a go once its gesture is drawn, a still as each new step is reached.
+  const tries = {};
+  let step = 'breath';
+  const playUntil = Date.now() + 360_000;
+  for (;;) {
+    const now = await page.evaluate(() => __game.story.current.whale?.step);
+    if (now !== step) { step = now; if (['eye', 'line', 'heave', 'flipper'].includes(step)) await shot(step); }
+    if (step === 'free' || step === 'gone') break;
+    if (Date.now() > playUntil) throw Error(`The five steps never finished: at ${step}, ${JSON.stringify(tries)}`);
+    if (!(await whaleGo(page, tries))) await page.waitForTimeout(250);
+  }
+  await away(page);
+  await wait('__game.sealife.sleeper.spouting', 30); await shot('spout');
+  await wait('__game.sealife.sleeper.fluking && __game.sealife.sleeper.time>15', 60); await shot('flukes');
+  await wait(`${whale}.step==='gone'`, 60); await shot('gone');
+  await wait("__game.story.name==='mirror'", 150); await shot('mirror-arrival');
+  const log = await page.evaluate(() => window.seaLog);
+  console.log(JSON.stringify({ tries, swimFrames: log.swimFrames, clipped: log.clipped, maxGap: +log.maxGap.toFixed(2), beats: log.beats }));
+  if (videoDir) {
+    const video = page.video();
+    await context.close();
+    fs.renameSync(await video.path(), `${prefix}.webm`);
+    fs.rmSync(videoDir, { recursive: true, force: true });
+    console.log(`${prefix}.webm`);
+  }
+} finally {
+  await close();
+  if (errors.length) console.log(`page errors:\n${[...new Set(errors)].slice(0, 4).join('\n')}`);
+}
