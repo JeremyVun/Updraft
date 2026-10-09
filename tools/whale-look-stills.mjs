@@ -1,21 +1,24 @@
 // Stills of the dream-sized whale beside the concept paintings it is judged against
 // (docs/backlog/path-puzzles/comps/crossings/whale-net/), for the whale's look.
 // Usage: BASE=http://127.0.0.1:5230/ node tools/whale-look-stills.mjs <out-prefix> [shots] [orientations]
-//   shots: comma list of k1, k2, k3, k4, k5, dive (default all); orientations: land (1600×900), port (430×932) (default both).
+//   shots: comma list of k1, k2, eye, k3, heave, k4, k5, dive (default k1, k2, k5, dive); orientations: land (1600×900),
+//   port (430×932) (default both).
 //   Writes <prefix>-<shot>-<orientation>.png and <prefix>-compare-<shot>-<orientation>.jpg (concept left, game right).
 //   k1: the open sea (`?chapter=sea`) as the pod leads the boat in, `K1_LEFT` metres short of the rest (default 24).
-//   k2: at rest (`?chapter=whale`); `k2-shut` before its eye opens, then `k2` circled at its blowhole with real
-//     strokes until the patch is up, it has drawn its first full breath and its eye has opened on the child.
-//   k3: resumed after its breath, the cork swept in with real strokes and the still taken mid-haul.
-//   k4: resumed after the line, the cygnet holding the loop's end: `k4-held` once the drawn strokes show along the
-//     flipper, then `k4` as the lift it is given (`liftFin`, as a sweep along it would) slides the loop to the tip.
+//   k2: at rest (`?chapter=whale`); `k2-shut` before it breathes, then `k2` circled at its blowhole with real
+//     strokes until the patch is up and it has drawn its first full breath, its eye still shut under the fold.
+//   eye: resumed after its breath, the fold over its eye, 1.5 s after the drawn sweep is first shown across it.
+//   k3: resumed after its eye, the cork swept in with real strokes, `k3` as her mittens close on the line.
+//   heave: resumed with the line in her mittens, strokes over the net on its head until it billows up mid-heave.
+//   k4: resumed after the heave, the cygnet holding the loop's end: `k4-held` once the drawn sweep shows along the
+//     flipper, then `k4` as the lift it is given (`liftFin`, as a stroke at it would) slides the loop to the tip.
 //   k5: played on from there to the release, `k5` at the spout and `k5-flukes` as they wave.
 //   dive: the first crossing (`?chapter=toLines`), its flukes at their highest as it dives far off, when it comes.
 // Traps:
 //   - k1 sails the open sea from the start (about 80 s) and dive waits for the crossing's sighting (about 45 s): a
 //     full set takes about six minutes, so pass only the shots needed.
 //   - The browser lock is shared with every capture tool: a run may wait for another session's capture first.
-//   - k3, k4 and k5 resume a save in the running page (`restoreCheckpoint`), as the net check does; k4 and k5 lift
+//   - eye, k3, heave, k4 and k5 resume a save in the running page (`restoreCheckpoint`), as the net check does; k4 and k5 lift
 //     the flipper by `liftFin` rather than a stroke, so no drawn wind of the player's crosses the frame.
 //   - Run it against your own dev server: a server that hot-reloads mid-capture yields a frame of the start screen.
 //   - Portrait shots are composed beside `k2-portrait` for k2 and beside the landscape painting otherwise.
@@ -25,6 +28,7 @@
 //   - A frame-rate step-down mid-run (another session's capture on the GPU) shows as `pairs` in the printed stats:
 //     render-target pairs at the lower sample count, not new programs. Rerun on a quiet machine.
 import { openBrowser } from './lib/browser.mjs';
+import { circle, sweepCork, sweepHead } from './lib/whale-gestures.mjs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -38,13 +42,16 @@ const base = process.env.BASE ?? 'http://127.0.0.1:5230/';
 const k1Left = Number(process.env.K1_LEFT ?? 24);
 const comps = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../docs/backlog/path-puzzles/comps/crossings/whale-net');
 const SIZES = { land: [1600, 900], port: [430, 932] };
-const CONCEPT = { k1: 'k1-island', k2: 'k2-the-breath', 'k2-shut': 'k2-the-breath', k3: 'k3-the-child', k4: 'k4-the-cygnet', 'k4-held': 'k4-the-cygnet',
+const CONCEPT = { k1: 'k1-island', k2: 'k2-the-breath', 'k2-shut': 'k2-the-breath', eye: 'k2-the-breath', k3: 'k3-the-child', heave: 'k3-the-child',
+  k4: 'k4-the-cygnet', 'k4-held': 'k4-the-cygnet',
   k5: 'k5-free', 'k5-flukes': 'k5-free', dive: 'k1-island' };
 
 const STARTS = {
   k1: 'sea',
   k2: 'whale',
+  eye: 'whale',
   k3: 'whale',
+  heave: 'whale',
   k4: 'whale',
   k5: 'whale',
   dive: 'toLines',
@@ -59,11 +66,25 @@ const atRest = (page) => waitFor(page, () => {
   return w && w.step === 'breath' && w.stepTime > 1.2;
 }, null, 120);
 
-/** At rest, resumed after the line, until the cygnet holds the loop's end with the camera come round to it. */
-async function held(page) {
+/** At rest beside it, resumed at the save `point`. */
+async function resume(page, point) {
   await atRest(page);
-  await page.evaluate(() => { const c = __game.story.current; c.restoreCheckpoint('whale-line', [c.leg, c.time]); });
+  await page.evaluate((p) => { const c = __game.story.current; c.restoreCheckpoint(p, [c.leg, c.time]); }, point);
+}
+
+/** Resumed after the heave, until the cygnet holds the loop's end with the camera come round to it. */
+async function held(page) {
+  await resume(page, 'whale-heave');
   await waitFor(page, () => { const w = __game.story.current.whale; return w.bird === 'holding' && w.birdT > 3; }, null, 120);
+}
+
+/** Strokes `sweep` until `done` holds in the page, at most `most` of them. */
+async function strokesUntil(page, sweep, done, most, what) {
+  for (let n = 0; n < most; n++) {
+    if (await page.evaluate(done)) return;
+    await sweep(page);
+  }
+  if (!(await page.evaluate(done))) throw new Error(`${most} strokes never ${what}`);
 }
 
 /** Each shot's moments: its own frames, named, taken from one page. */
@@ -79,50 +100,39 @@ const SHOOT = {
     await atRest(page);
     await page.waitForTimeout(5000);
     await snap('k2-shut');
-    const view = page.viewportSize();
-    const end = Date.now() + 90000;
-    for (let a = 0; ;) {
-      const [cx, cy] = await page.evaluate(() => {
-        const p = __game.sealife.sleeper.blowhole.clone().project(__game.rig.camera);
-        return [(p.x * 0.5 + 0.5) * innerWidth, (0.5 - p.y * 0.5) * innerHeight];
-      });
-      for (let i = 0; i < 24; i++) {
-        a += (Math.PI * 2) / 24;
-        await page.mouse.move(cx + Math.cos(a) * 0.06 * view.height, cy + Math.sin(a) * 0.06 * view.height);
-        await page.waitForTimeout(28);
-      }
-      if (await page.evaluate(() => { const s = __game.sealife.sleeper; return s.phase === 'woken' && s.time > 4.4; })) break;
-      if (Date.now() > end) throw new Error('the circles never woke it');
-    }
+    await circle(page, () => page.evaluate(() => { const s = __game.sealife.sleeper; return s.phase === 'woken' && s.time > 4.4; }), 90);
     await snap('k2');
   },
+  async eye(page, snap) {
+    await resume(page, 'whale-breath');
+    await waitFor(page, () => !!__game.story.current.whale.offered, null, 60);
+    await page.waitForTimeout(1500);
+    await snap('eye');
+  },
   async k3(page, snap) {
-    await atRest(page);
-    await page.evaluate(() => { const c = __game.story.current; c.restoreCheckpoint('whale-breath', [c.leg, c.time]); });
-    await waitFor(page, () => __game.story.current.whale.stepTime > 6, null, 30);
-    const view = page.viewportSize();
-    for (let i = 0; i < 12; i++) {
-      if (await page.evaluate(() => __game.story.current.whale.haul !== 'out')) break;
-      const [cx, cy, bx, by] = await page.evaluate(() => {
-        const s = (v) => { const p = v.clone().project(__game.rig.camera); return [(p.x * 0.5 + 0.5) * innerWidth, (0.5 - p.y * 0.5) * innerHeight]; };
-        return [...s(__game.sealife.net.float.position), ...s(__game.boat.position)];
-      });
-      const d = Math.hypot(bx - cx, by - cy) || 1, reach = view.height * 0.14;
-      await page.mouse.move(cx - ((bx - cx) / d) * reach, cy - ((by - cy) / d) * reach);
-      for (let k = 1; k <= 24; k++) {
-        const f = -1 + (k / 24) * 2.3;
-        await page.mouse.move(cx + ((bx - cx) / d) * reach * f, cy + ((by - cy) / d) * reach * f);
-        await page.waitForTimeout(10);
-      }
-      await page.mouse.move(view.width - 5, view.height - 5);
-      await page.waitForTimeout(1200);
-    }
-    await waitFor(page, () => __game.story.current.whale.hauledIn >= 1.8, null, 40);
+    await resume(page, 'whale-eye');
+    await waitFor(page, () => !!__game.story.current.whale.offered, null, 60);
+    await strokesUntil(page, (p) => sweepCork(p, 1), () => __game.story.current.whale.haul !== 'out', 4, 'brought the cork');
+    await waitFor(page, () => __game.sealife.net.grip !== null, null, 30);
     await snap('k3');
+  },
+  async heave(page, snap) {
+    await resume(page, 'whale-line');
+    await waitFor(page, () => !!__game.story.current.whale.offered, null, 60);
+    // The mesh falls back within a fraction of a second of a stroke, so the still is taken during one.
+    for (let n = 0; n < 6; n++) {
+      const swept = sweepHead(page);
+      const up = await page.waitForFunction(() => __game.story.current.whale.haul === 'heaving' && __game.sealife.net.billow > 0.6, null,
+        { timeout: 3000, polling: 'raf' }).then(() => true, () => false);
+      if (up) await snap('heave');
+      await swept;
+      if (up) return;
+    }
+    throw new Error('six strokes over its head never billowed the net up as she heaves');
   },
   async k4(page, snap) {
     await held(page);
-    await waitFor(page, () => !!__game.story.current.windInvitation, null, 60);
+    await waitFor(page, () => !!__game.story.current.whale.offered, null, 60);
     await page.waitForTimeout(1500);
     await snap('k4-held');
     await page.evaluate(() => __game.story.current.whale.liftFin('sweeps'));
