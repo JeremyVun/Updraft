@@ -105,6 +105,8 @@ const DEBRIS_BOX = new THREE.Vector3(48, 22, 48);
 const RIBBON_GLSL = /* glsl */ `
 uniform sampler2D uSegs;
 uniform float uStorm;
+/** Phases the CPU advances at the storm's rate: uTime times a changing rate races whenever the storm eases. */
+uniform vec2 uLash;
 uniform vec2 uStormDir;
 uniform float uPixel;
 /** Where this level of detail gives up: segments past x thin away between y and z metres, instead of popping. */
@@ -144,7 +146,7 @@ vec3 place(vec3 p) {
  */
 vec3 bend(vec3 world, float up, float thin) {
   float k = pow(clamp(up, 0.0, 1.0), 1.55) * gTilt.x;
-  float lash = sin(uTime * (2.2 + uStorm * 4.5) + world.x * 1.1 + world.z * 0.8 + gSeed * 12.0);
+  float lash = sin(uLash.x + world.x * 1.1 + world.z * 0.8 + gSeed * 12.0);
   vec2 whip = vec2(-uStormDir.y, uStormDir.x) * lash * (0.012 + 0.7 * length(gPush)) * thin;
   vec3 off = vec3(gPush.x + whip.x, 0.0, gPush.y + whip.y) * k * aForm.y;
   off.y -= dot(off.xz, off.xz) / (2.0 * aForm.y);
@@ -180,7 +182,7 @@ void main() {
   if (vLeaf > 0.5) {
     vec3 c = place(A.xyz);
     c += bend(c, A.y, 1.0);
-    float spin = uTime * (1.1 + uStorm * 7.0) + vSeed * 40.0;
+    float spin = uLash.y + vSeed * 40.0;
     vec2 t = vec2(cos(spin), sin(spin));
     vec2 corner = vec2(position.x, position.y * 2.0 - 1.0);
     vec3 right = vec3(viewMatrix[0][0], viewMatrix[1][0], viewMatrix[2][0]);
@@ -718,6 +720,7 @@ export class DarkWood {
       ...shapeUniforms,
       uSegs: { value: segTex },
       uStorm: { value: 0 },
+      uLash: { value: new THREE.Vector2() },
       uViewA: { value: new THREE.Vector3() },
       uViewB: { value: new THREE.Vector3() },
       uViewClear: { value: 0 },
@@ -990,6 +993,8 @@ export class DarkWood {
     u.uViewClear.value += ((sight ? 1 : 0) - u.uViewClear.value) * (1 - Math.exp(-dt * 4));
     if (sight) { u.uViewA.value.copy(sight.primary); u.uViewB.value.copy(sight.secondary); }
     u.uStorm.value = this.storm;
+    u.uLash.value.x += dt * (2.2 + this.storm * 4.5);
+    u.uLash.value.y += dt * (1.1 + this.storm * 7.0);
     const breeze = this.field.breeze;
     if (breeze.lengthSq() > 1e-4) u.uStormDir.value.copy(breeze).normalize();
     const proj = (camera as THREE.PerspectiveCamera).projectionMatrix.elements[5];

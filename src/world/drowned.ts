@@ -63,6 +63,8 @@ const VILLAGE_VERT = /* glsl */ `
 ${ATMO_GLSL}
 uniform float uVane;
 uniform float uStorm;
+/** Advanced by the CPU at the storm's rate, so the ropes don't race as the squall builds. */
+uniform float uRopeSwing;
 in vec3 color;
 in vec3 aLocal;
 in float aKind;
@@ -88,7 +90,7 @@ void main() {
     vec2 w = texture(uWindTex, domainUv(p.xz)).xy;
     float belly = sin(aLocal.x * 3.14159);
     p.xz += w * belly * (0.014 + uStorm * 0.04);
-    p.y += belly * (sin(uTime * (2.2 + uStorm * 9.0) + aLocal.x * 7.0) * (0.03 + uStorm * 0.32) + length(w) * 0.02);
+    p.y += belly * (sin(uRopeSwing + aLocal.x * 7.0) * (0.03 + uStorm * 0.32) + length(w) * 0.02);
   }
   vWorld = p;
   vNormal = n;
@@ -1097,6 +1099,7 @@ export class DrownedVillage {
   readonly objects: THREE.Object3D[] = [];
   readonly cameraObstacles: THREE.Box3[] = [];
   private readonly storm = { value: 0 };
+  private readonly ropeSwing = { value: 0 };
   private readonly lighthouse = new LighthouseLight(LIGHTHOUSE);
   private readonly vaneAngle = { value: 0 };
   private vaneSpin = 0;
@@ -1130,7 +1133,7 @@ export class DrownedVillage {
     this.objects.push(this.lighthouse.object);
     buildLine(body, houses);
     buildGate(body, rand, houses);
-    const shared = { ...atmo.uniforms, uStorm: this.storm, uVane: this.vaneAngle };
+    const shared = { ...atmo.uniforms, uStorm: this.storm, uRopeSwing: this.ropeSwing, uVane: this.vaneAngle };
     this.objects.push(
       new THREE.Mesh(
         body.build(),
@@ -1246,6 +1249,7 @@ export class DrownedVillage {
    */
   update(dt: number, time: number, boat: THREE.Vector3, storm: number): void {
     this.storm.value = storm;
+    this.ropeSwing.value += dt * (2.2 + storm * 9.0);
     // Its sweep also lights the shared water and creature shaders, so it always keeps time.
     this.lighthouse.update(dt, storm);
     if (Math.abs(boat.z - DROWNED_Z) > NEAR_Z) {
