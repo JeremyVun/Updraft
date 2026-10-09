@@ -361,9 +361,12 @@ export class CrossingChapter implements Chapter {
     return this.homeward ? tuning.homeApproach.falloff : 1;
   }
 
-  /** Until its blow is called for the mist is as deep high up as low down, so nothing of it shows before then. */
+  /**
+   * As the boat is led in the mist lies low on the sea once its blow is called for; before then it is as deep high up as
+   * low down, so nothing of it shows.
+   */
   get veilLift(): number {
-    return this.whale?.sighted ? tuning.seaPassage.mist.lift * this.seaMist() : 0;
+    return this.whale?.step === 'approach' && this.whale.sighted ? tuning.seaPassage.mist.lift * this.seaMist() : 0;
   }
 
   /**

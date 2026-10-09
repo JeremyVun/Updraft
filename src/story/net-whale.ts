@@ -533,9 +533,9 @@ export class NetWhale {
     }
   }
 
-  /** Its blow has been called for over the mist, or it has been found. */
+  /** Its blow has been called for over the mist as the boat is led in. */
   get sighted(): boolean {
-    return this.step !== 'approach' || this.sighs >= 2;
+    return this.sighs >= 2;
   }
 
   /** The boat may round its hold waypoint and sail on. */
