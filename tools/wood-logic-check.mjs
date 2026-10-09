@@ -50,6 +50,16 @@ console.log('Progressive forest illumination stays separate from the ignition ga
   for (let i = 0; i < 20; i++) e.lay(-20, -1700 - i * 10);
   assert.equal(reserved.reveal, 0); assert(reserved.p.equals(at));
 }
+// A coal that has burnt out stays out: the room may still hold it, and the next coal in its slot is another coal.
+{
+  const still = { sample(_x, _z, out) { return Object.assign(out, { x: 0, z: 0, energy: 0, lift: 0 }); } };
+  const e = new Embers(still), spent = e.lay(-20, -1700);
+  e.blow(spent); e.takeCaught();
+  while (spent.live) e.update(1 / 30, spent.p, 1);
+  const next = e.lay(-30, -1720);
+  assert.equal(e.coals.indexOf(next), 0);
+  assert(next !== spent && !spent.live && !spent.lit, 'a burnt-out coal must never come back as the next coal laid in its slot');
+}
 const invitation = new EmberInvitation();
 const camera = new THREE.PerspectiveCamera(50, 16 / 9, 0.1, 200);
 camera.position.set(0, 4, 10); camera.lookAt(0, 0, 0); camera.updateMatrixWorld();
@@ -347,6 +357,41 @@ for (const portrait of [false, true]) {
   assert(worstBirdStep < 0.35, `bird teleported during separation: ${worstBirdStep} units in one frame`);
   assert.deepEqual([...resumed], portrait ? ['found', 'dry'] : []);
   console.log(`${portrait ? 'portrait' : 'desktop'} full route, continuous separation (${worstBirdStep.toFixed(3)} max step), wet plane in full wind, boarding and framing passed`);
+}
+
+// A slow player, waiting long at every coal: the bend's coals burn out before the rescue and later coals take their
+// slots. Taken for the bend's side coal, the first coal after the rescue once never laid the next and left her in the dark.
+for (const wait of [15, 25]) {
+  const child = new Traveller(calm), cygnet = new Cygnet(), boat = new Boat(calm), embers = new Embers(calm);
+  const carry = new Carry(child, cygnet), rig = new CameraRig();
+  rig.resize(1440, 900);
+  child.place(-26, -1688, Math.PI); cygnet.mount = child; cygnet.rideIn('satchel');
+  const plane = new Glider(planeWind, []);
+  const c = new WoodChapter({ child, cygnet, boat, embers, carry, plane, wind: calm, input: { gust: 0, charge: 0 } });
+  c.update(0, 0); rig.cut(c.shot);
+  const dt = 1 / 30;
+  let waited = 0, previous = null, bend = null, retaken = 0, time = 0;
+  for (let frame = 1; frame <= 30 * 600 && !c.done; frame++) {
+    time = frame * dt;
+    const target = c.updraftTarget ?? c.windInvitation;
+    waited = target === previous ? waited + dt : 0; previous = target;
+    for (const coal of embers.coals) coal.breath = coal.p === target && waited > wait ? 1 : 0;
+    c.brushDry(c.beat === 'snag' && waited > 2 ? 1 : 0);
+    c.update(dt, time); boat.update(dt, time); child.update(dt); plane.update(dt, time); carry.update(dt);
+    cygnet.update(dt, time, child.position, calm.sample(0, 0, {})); carry.after();
+    embers.update(dt, child.position, c.embers); rig.update(dt, time, c.shot, c.pace); c.afterCamera(rig.camera);
+    takeCues(); cygnet.heard.length = 0;
+    if (c.sideCoal && !bend) bend = { slots: [c.throwCoal, c.sideCoal].map((k) => embers.coals.indexOf(k)), laid: c.sideCoal.laid };
+    for (const slot of bend?.slots ?? []) {
+      const coal = embers.coals[slot];
+      if (coal.laid <= bend.laid) continue;
+      retaken++;
+      assert(coal !== c.throwCoal && coal !== c.sideCoal, `${wait}s: the coal laid at ${coal.p.x.toFixed(1)}, ${coal.p.z.toFixed(1)} in ${c.beat} was taken for one of the bend's`);
+    }
+  }
+  assert(retaken > 0, `${wait}s: the bend's coals must burn out and their slots be laid again`);
+  assert(c.done, `${wait}s: route must complete: ${c.beat} at ${time.toFixed(1)}s, leg ${c.leg}, child ${child.position.toArray()}`);
+  console.log(`${wait}s at every coal: coals laid in the bend's burnt-out slots carry the chain on; route complete at ${time.toFixed(1)}s`);
 }
 
 // Wherever she stops for an unlit coal, the coal stays beside her on screen, never behind her: the centre of its orb
