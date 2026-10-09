@@ -1016,15 +1016,14 @@ export class RoofRun {
 
   /**
    * The fog comes on along `DARK_WAY` behind her at her pace, never stopping and never rushing: toward `fogTrail`
-   * behind her on her own way, `fogHold` while she works a piece and `fogBeat` while she stands looking, never nearer
-   * than `fogNearest`; it rises as it comes (`DarkBank.comeOn`).
+   * behind her on her own way, `fogHold` while she works a piece and `fogBeat` while she stands on the granary's ridge
+   * looking back down at it, never nearer than `fogNearest`; it rises as it comes (`DarkBank.comeOn`).
    */
   private fog(dt: number): void {
     const k = tuning.drowned.run;
     const dark = this.cast.village!.dark;
-    const beat = (t: number, length: number) => t >= 0 && t < length;
     const hold = this.stage === 'tree' || this.stage === 'sheet' || this.stage === 'mill' || this.stage === 'swing' ? k.fogHold[this.stage]
-      : this.stage === 'nave' ? k.fogEnd : beat(this.lookingDown, k.lookDownFor) || beat(this.lookingSwing, k.lookSwingFor) ? k.fogBeat : k.fogTrail;
+      : this.stage === 'nave' ? k.fogEnd : this.lookingDown >= 0 && this.lookingDown < k.lookDownFor ? k.fogBeat : k.fogTrail;
     const want = this.dark - hold;
     /** At the tower's foot it comes on to a few roofs back and waits there for the church. */
     const slowest = this.stage === 'nave' ? 0 : this.stage === 'walk' ? k.fogCreep : k.fogSlowest;
