@@ -2164,7 +2164,7 @@ export const tuning = {
        */
       comeFrom: { tree: 1.5, sheet: 5, mill: 0.5, swing: 0.5 }, comeTo: 0, leaveFrom: 0, endFrom: 8, roundRate: 0.95,
       /** How far past each piece the lens has given it back to her own way, metres. */
-      leave: { tree: 2, sheet: 0, mill: 2, swing: 3 },
+      leave: { tree: 2, sheet: 0, mill: 6, swing: 3 },
       /**
        * The views laying out the mill and the swing as she comes to them: from how far along her way before each (metres)
        * they come in, and how quickly (per second), until the piece's own view takes over; how far the mill's look leans
