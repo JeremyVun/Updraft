@@ -1,8 +1,9 @@
 // Run the real sea chapter, boat, child, cygnet, pod and whale without a renderer.
-// Usage: node tools/sea-logic-check.mjs. Covers strong wind, 30/60fps, portrait, the whale in the net's sequence
-// (idle to each valve's dolphin, and a player who circles over the blowhole, sweeps the cork in and sweeps along the
-// flipper), the cygnet's second swim keeping clear of the flipper, passage completion, saves at the whale, after its
-// breath, after the line, after the flipper and after it has gone, and old saves.
+// Usage: SEA_SEED=<n> node tools/sea-logic-check.mjs (default 147). Covers strong wind, 30/60fps, portrait, the whale
+// in the net's five steps (idle to each valve's dolphin, and a player who circles over the blowhole and strokes across
+// its eye, the cork, the net on its head and the flipper as each sweep is drawn), the cygnet's second swim keeping
+// clear of the flipper, passage completion, each save at the whale (at rest, after each step, after it has gone)
+// resumed played or idle, and old saves.
 import './lib/typescript.mjs';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
@@ -29,6 +30,42 @@ const { swellUniforms } = await import('../src/world/water/swell.ts');
 const { takeCues } = await import('../src/story/cues.ts');
 swellUniforms.uSwell.value = 0.25;
 
+/**
+ * A player who plays each step from the moment its gesture is drawn: circles over the blowhole (full charge there),
+ * then strokes the way each drawn sweep goes, across its eye, the cork, the net on its head and the flipper, a stroke
+ * of 0.3 s with the pointer off the screen for 0.6 s between, until the step is done. Without `circling`, nobody plays.
+ */
+function player(chapter,input,rig,sealife,circling){
+  const begun=new Set(),strokes={},target=new THREE.Vector3(),at=new THREE.Vector2();
+  let stroke=null,off=0;
+  const wants=(w)=>({breath:w.progress<1,eye:w.foldT<0,line:w.haul==='out',
+    heave:w.heaves+w.owed+(w.haul==='heaving'?1:0)<tuning.netWhale.heaves,flipper:w.bird==='holding'&&w.slipT<0})[w.step]??false;
+  const over=(w)=>{const s=w.whale;
+    if(w.step==='eye')return target.copy(s.eye);
+    if(w.step==='line')return target.copy(sealife.net.float.position);
+    if(w.step==='heave')return target.copy(s.eye).lerp(s.blowhole,0.45);
+    return target.copy(s.finRoot).lerp(s.finTip,0.75);};
+  const along=(f)=>{const w=chapter.whale,k=rig.camera.aspect,p=over(w).project(rig.camera),L=0.5*(f-0.5);
+    return at.set(p.x+Math.cos(stroke.heading)*L/k,p.y+Math.sin(stroke.heading)*L);};
+  const play=(dt)=>{
+    const w=chapter.whale;
+    input.present=false;input.charge=0;
+    if(!circling||!w||!wants(w)){stroke=null;return;}
+    if(w.offered||(w.step==='breath'&&chapter.coax))begun.add(w.step);
+    if(!begun.has(w.step))return;
+    if(w.step==='breath'){input.present=true;input.charge=1;input.updraftAt.copy(w.whale.blowhole);strokes.breath=1;return;}
+    if(!stroke){
+      if((off-=dt)>0)return;
+      stroke={t:0,heading:w.inviteHeading};strokes[w.step]=(strokes[w.step]??0)+1;
+      input.prevNdc.copy(along(0));
+    }else input.prevNdc.copy(input.ndc);
+    stroke.t+=dt;
+    input.present=true;input.ndc.copy(along(Math.min(1,stroke.t/0.3)));
+    if(stroke.t>=0.3){stroke=null;off=0.6;}
+  };
+  play.strokes=strokes;
+  return play;
+}
 function fixture(gust, portrait, legacy = false, circling = false) {
   let chapter;
   const wind = { breeze: new THREE.Vector2(2.47,-0.8), calm: 3, addSplat() {},
@@ -46,18 +83,7 @@ function fixture(gust, portrait, legacy = false, circling = false) {
   chapter = legacy ? new CrossingChapter(cast,{route:ROUTES.toHome,dolphins:true,
     swimAt:tuning.seaPassage.swimAt,moor:HOME_MOORING,haze:tuning.seaPassage.haze}) : Journey.prototype.make.call({cast},'toMirror');
   chapter.update(0,0);rig.cut(chapter.shot);
-  // A player who circles over the blowhole once the boat is at rest beside the whale, then sweeps across the cork
-  // toward the boat, then along the flipper once the cygnet holds the loop's end; otherwise nobody plays.
-  const play=()=>{const w=chapter.whale;
-    const breath=circling&&w?.step==='breath'&&w.progress<1, sweep=circling&&w?.step==='line'&&w.haul==='out'&&w.stepTime>4;
-    const fin=circling&&w?.step==='flipper'&&w.bird==='holding'&&w.slipT<0&&w.birdT>3;
-    input.present=breath||sweep||fin;input.charge=breath?1:0;input.gust=fin?10:0;
-    if(breath)input.updraftAt.copy(w.whale.blowhole);
-    if(fin){const s=w.whale,a=s.finRoot.clone().lerp(s.finTip,0.55).project(rig.camera),b=s.finRoot.clone().lerp(s.finTip,0.95).project(rig.camera);
-      input.prevNdc.set(a.x+(b.x-a.x)*0.45,a.y+(b.y-a.y)*0.45);input.ndc.set(a.x+(b.x-a.x)*0.55,a.y+(b.y-a.y)*0.55);}
-    if(sweep){const a=sealife.net.float.position.clone().project(rig.camera),b=boat.position.clone().project(rig.camera),k=rig.camera.aspect;
-      const d=new THREE.Vector2((b.x-a.x)*k,b.y-a.y).normalize();
-      input.prevNdc.set(a.x-d.x*0.05/k,a.y-d.y*0.05);input.ndc.set(a.x+d.x*0.05/k,a.y+d.y*0.05);}};
+  const play=player(chapter,input,rig,sealife,circling);
   return {chapter,wind,boat,child,cygnet,carry,rig,sealife,play};
 }
 /** How much clear water there is between the cygnet's body and the near flipper, posed this frame (m). */
@@ -74,9 +100,24 @@ function frame(f,dt,time){
   const {chapter:c,wind,boat:b,child,cygnet:k,carry,rig,sealife,play}=f;
   atmo.uniforms.uTime.value=time;
   wind.breeze.set(2.47*c.breeze,-.8*c.breeze);wind.calm=wind.breeze.length()*tuning.wind.calm;
-  play();c.update(dt,time);b.update(dt,time);child.update(dt);carry.update(dt);
+  play(dt);c.update(dt,time);b.update(dt,time);child.update(dt);carry.update(dt);
   k.update(dt,time,child.position,wind.sample(0,0,{x:0,z:0,energy:0,lift:0}));carry.after();
   rig.update(dt,time,c.shot,c.pace);c.afterCamera(rig.camera);rig.camera.updateMatrixWorld();sealife.update(dt,time);
+}
+const WHALE_STEPS=['approach','breath','eye','line','heave','flipper','free','gone'];
+const PLAYED=['breath','eye','line','heave','flipper'];
+const WHALE_SAVES=['whale-rest','whale-breath','whale-eye','whale-line','whale-heave','whale-flipper','whale-gone'];
+/** Each step's first move, and when it began to wait for one: the flipper waits from the cygnet holding the loop's end. */
+const MOVED={breath:(w)=>w.progress>0,eye:(w)=>w.fold>0,line:(w)=>w.haul!=='out',heave:(w)=>w.heaves>0||w.haul==='heaving',flipper:(w)=>w.slipT>=0};
+function watchSteps(w,time,asked,moved){
+  const s=w.step;if(!MOVED[s])return;
+  if(asked[s]===undefined&&(s!=='flipper'||w.bird==='holding'))asked[s]=time;
+  if(asked[s]!==undefined&&moved[s]===undefined&&MOVED[s](w))moved[s]=time;
+}
+function assertPlayedBy(w,played,from=0){
+  const by=[w.liftedBy,w.foldedBy,w.broughtBy,w.heavedBy,w.finnedBy].slice(from);
+  assert.deepEqual(by,['circles','sweeps','sweeps','sweeps','sweeps'].slice(from).map((p)=>played?p:'dolphin'),
+    `each step done by ${played?'the player':'its valve\'s dolphin'}: ${by}`);
 }
 const results=[];
 for(const [fps,gust,portrait,circling] of [[60,0,false,false],[30,20,false,true],[60,20,true,true]]) {
@@ -84,9 +125,10 @@ for(const [fps,gust,portrait,circling] of [[60,0,false,false],[30,20,false,true]
   const {chapter:c,boat:b,cygnet:k,rig,sealife}=f;
   let swimEdge=0,swimWorst=null;let heroEdge=0,worstGap=0,clipped=0,swimFrames=0,swimStart=0,leapAt=0,completed=false,lastProgress=0;
   const transitions=[],steps=[],saves=[];
-  let last='',step='',rewards=0,blowholeEdge=0,eyeOpen=0,lastSeen=0,valveAt=null,finClear=Infinity,heldFrom=null,slipAt=null;
+  let last='',step='',rewards=0,blowholeEdge=0,eyeOpen=0,finClear=Infinity;
+  const asked={},moved={};
   const ndc=new THREE.Vector3();
-  for(let i=0;i<fps*720;i++) {
+  for(let i=0;i<fps*900;i++) {
     const dt=1/fps,time=i*dt;
     frame(f,dt,time);
     if(c.swim!==last){transitions.push([c.swim,+time.toFixed(2)]);last=c.swim;}
@@ -94,14 +136,12 @@ for(const [fps,gust,portrait,circling] of [[60,0,false,false],[30,20,false,true]
     if(w.step!==step){steps.push([w.step,+time.toFixed(1)]);step=w.step;}
     const point=c.checkpoint;if(point&&point!==saves[saves.length-1])saves.push(point);
     rewards+=takeCues().filter(q=>q==='restored').length;
-    // At rest the blowhole is held well inside the frame, with room round it to circle.
-    if(w.step==='breath'&&w.stepTime>3&&w.updraftTarget)blowholeEdge=Math.max(blowholeEdge,...ndc.copy(w.whale.blowhole).project(rig.camera).toArray().slice(0,2).map(Math.abs));
-    if(w.step==='breath')eyeOpen=Math.max(eyeOpen,w.whale.awake?1:0);
-    if(w.step==='breath'&&w.progress>0&&valveAt===null)valveAt=w.stepTime;
-    if(w.step==='breath'&&w.stepTime>1)assert(b.speed<0.2,`the boat stays at rest beside it: ${b.speed}`);
+    // While the breath is asked, the blowhole is held well inside the frame, with room round it to circle.
+    if(w.step==='breath'&&w.progress<1&&(c.coax||w.progress>0))blowholeEdge=Math.max(blowholeEdge,...ndc.copy(w.whale.blowhole).project(rig.camera).toArray().slice(0,2).map(Math.abs));
+    if(w.step==='breath'||w.step==='eye')eyeOpen=Math.max(eyeOpen,w.eyeT>0?1:0);
+    if(PLAYED.includes(w.step)&&w.stepTime>1)assert(b.speed<0.2,`the boat stays at rest beside it: ${w.step} ${b.speed}`);
     if(w.step==='flipper'&&k.state==='swimming')finClear=Math.min(finClear,clearOfFin(w.whale,k.position));
-    if(w.step==='flipper'&&w.bird==='holding'&&heldFrom===null)heldFrom=time;
-    if(w.step==='flipper'&&w.slipT>=0&&slipAt===null)slipAt=time;
+    watchSteps(w,time,asked,moved);
     // seaScore now turns 'arrival' once the dolphin pod has actually left (podLeftAt), not at a route fraction (ac4de1c).
     const scorePhase = !['before','done'].includes(c.swim) ? 'swim'
       : c.podLeftAt !== null ? 'arrival' : c.swim === 'done' ? 'return' : 'open';
@@ -127,18 +167,21 @@ for(const [fps,gust,portrait,circling] of [[60,0,false,false],[30,20,false,true]
     }
     if(c.done){completed=true;results.push({fps,gust,portrait,seconds:+time.toFixed(1),heroEdge,worstGap,clipped,transitions});break;}
   }
-  assert(completed,'passage reaches home');assert.equal(c.swim,'done');
+  assert(completed,`passage reaches home: ${JSON.stringify({fps,gust,portrait,steps,swim:c.swim,haul:c.whale.haul,strokes:f.play.strokes})}`);assert.equal(c.swim,'done');
   assert(swimFrames>=fps*(tuning.seaPassage.swimFor-3)-1,'keeps the authored swim after its entry');assert(worstGap<3.5,`bird fell behind ${worstGap}`);
   assert(heroEdge>0 && heroEdge<0.95,`featured leap must play and stay in frame: ${heroEdge}`);
   assert.equal(clipped,0,`swimmer stays inside the safe frame: ${JSON.stringify({fps,gust,portrait,swimWorst,transitions})}`);
   assert(leapAt>0&&swimStart>leapAt&&swimStart>tuning.seaPassage.swimNotBefore,'the pod arrives and plays its leap before the swim');
-  assert.deepEqual(steps.map(([s])=>s),['approach','breath','line','flipper','free','gone'],'the whale\'s steps go in order');
-  assert.deepEqual(saves,['swim','whale-rest','whale-breath','whale-line','whale-flipper','whale-gone'],'saves after the swim, at rest beside it, after its breath, after the line, after the flipper, and after it has gone, never back');
-  assert.equal(c.whale.liftedBy,circling?'circles':'dolphin',`the net is lifted by ${circling?'the circles':'the valve\'s dolphin'}`);
-  assert.equal(c.whale.broughtBy,circling?'sweeps':'dolphin',`the cork is brought in by ${circling?'the sweeps':'the valve\'s dolphin'}`);
-  if(!circling)assert(valveAt>=tuning.netWhale.valveAfter,`nothing lifts the net before the valve: ${valveAt}`);
-  assert.equal(c.whale.finnedBy,circling?'sweeps':'dolphin',`the flipper is lifted by ${circling?'the sweeps':'the valve\'s dolphin'}`);
-  if(!circling)assert(slipAt-heldFrom>=tuning.netWhale.valveAfter,`nothing lifts the loop off before the valve: ${(slipAt-heldFrom).toFixed(1)} s`);
+  assert.deepEqual(steps.map(([s])=>s),WHALE_STEPS,'the whale\'s steps go in order');
+  assert.deepEqual(saves,['swim',...WHALE_SAVES],'a save after the swim, at rest beside it and after each step, and after it has gone, never back');
+  assertPlayedBy(c.whale,circling);
+  const waited=Object.fromEntries(PLAYED.map((s)=>[s,+(moved[s]-asked[s]).toFixed(1)]));
+  if(!circling)for(const s of PLAYED)assert(waited[s]>=tuning.netWhale.valveAfter,`nothing does the ${s} before its valve: ${waited[s]} s`);
+  if(circling){
+    const strokes=f.play.strokes;
+    for(const s of PLAYED)assert(waited[s]<(s==='heave'?20:10),`a prompt player does the ${s} in moments: ${waited[s]} s`);
+    assert(strokes.eye<=2&&strokes.line<=3&&strokes.flipper<=3&&strokes.heave<=6,`a stroke or two a step, about four for the heave: ${JSON.stringify(strokes)}`);
+  }
   assert(finClear>=1,`the cygnet keeps a metre of clear water from the flipper: ${finClear.toFixed(2)} m`);
   assert(eyeOpen,'its first full breath opens its eye before it is free');
   assert.equal(rewards,1,'freeing it is rewarded once');
@@ -146,72 +189,36 @@ for(const [fps,gust,portrait,circling] of [[60,0,false,false],[30,20,false,true]
   assert(c.podLeftAt!==null&&c.podLeftAt>=steps.find(([s])=>s==='free')[1],'the pod goes with the whale');
   results[results.length-1].steps=steps;results[results.length-1].blowholeEdge=+blowholeEdge.toFixed(2);
   results[results.length-1].finClear=+finClear.toFixed(2);
+  results[results.length-1].waited=waited;if(circling)results[results.length-1].strokes=f.play.strokes;
 }
-// Resumed beside the whale, it is lying there still and the boat waits; circled, it goes and the boat sails on.
-{
-  const f=fixture(0,false,false,true);
-  const {chapter:c,boat:b}=f;
-  const rest=c.whale.rest;
-  b.beach(rest.x-Math.sin(c.whale.yaw)*1.5,rest.z-Math.cos(c.whale.yaw)*1.5,c.whale.yaw);b.afloat=true;b.grounded=false;
-  c.restoreCheckpoint('whale-rest',[3,95]);
-  assert.equal(c.whale.step,'breath');assert.equal(c.whale.whale.phase,'resting');assert.equal(c.swim,'done');
-  let gone=0;
-  for(let i=0;i<60*300&&!c.done;i++){frame(f,1/60,95+i/60);if(c.whale.step==='breath'&&c.whale.stepTime>1)assert(b.speed<0.2,'a save at rest resumes at rest');
-    if(c.whale.step==='gone'&&!gone)gone=c.time;}
-  assert(gone>0&&c.done,'from the save at rest it is freed and the boat moors at the mirror');
-  assert.equal(takeCues().filter(q=>q==='restored').length,1,'and is rewarded once');
-}
-// Resumed after its first breath, the patch is up and its eye open on her from the first frame; it goes on without
-// another breath, and the boat sails on.
-{
-  const f=fixture(0,false,false,false);
-  const {chapter:c,boat:b,sealife}=f;
-  const rest=c.whale.rest;
-  b.beach(rest.x-Math.sin(c.whale.yaw)*1.5,rest.z-Math.cos(c.whale.yaw)*1.5,c.whale.yaw);b.afloat=true;b.grounded=false;
-  c.restoreCheckpoint('whale-breath',[3,110]);
-  assert.equal(c.whale.step,'line');assert.equal(c.whale.whale.phase,'woken');assert.equal(sealife.net.lift,1);
-  frame(f,1/60,110);
-  assert(sealife.net.shown,'the net is on it from the first frame');assert.equal(c.checkpoint,'whale-breath');
-  let gone=0;
-  for(let i=0;i<60*380&&!c.done;i++){frame(f,1/60,110+i/60);if(c.whale.step==='line'&&c.whale.stepTime>1)assert(b.speed<0.2,'a save after the breath resumes at rest');
-    if(c.whale.step==='gone'&&!gone)gone=c.time;}
-  assert(gone>0&&c.done,'from the save after its breath it is freed and the boat moors at the mirror');
-  assert.equal(c.whale.broughtBy,'dolphin','with nobody playing, the line comes in by its valve');
-  assert.equal(takeCues().filter(q=>q==='restored').length,1,'and is rewarded once');
-}
-// Resumed after the line, the net is off its head in the water and the line let go; it goes on to the flipper.
-{
-  const f=fixture(0,false,false,false);
-  const {chapter:c,boat:b,sealife}=f;
-  const rest=c.whale.rest;
-  b.beach(rest.x-Math.sin(c.whale.yaw)*1.5,rest.z-Math.cos(c.whale.yaw)*1.5,c.whale.yaw);b.afloat=true;b.grounded=false;
-  c.restoreCheckpoint('whale-line',[3,120]);
-  assert.equal(c.whale.step,'flipper');assert.equal(c.whale.whale.phase,'woken');assert.equal(sealife.net.peel,1);assert.equal(sealife.net.grip,null);
-  frame(f,1/60,120);
-  assert(sealife.net.shown,'the net is in the water from the first frame');assert.equal(c.checkpoint,'whale-line');
-  let gone=0;
-  for(let i=0;i<60*460&&!c.done;i++){frame(f,1/60,120+i/60);if(c.whale.step==='flipper')assert(b.speed<0.2,'a save after the line resumes at rest');
-    if(c.whale.step==='gone'&&!gone)gone=c.time;}
-  assert(gone>0&&c.done,'from the save after the line it is freed and the boat moors at the mirror');
-  assert.equal(c.whale.finnedBy,'dolphin','with nobody playing, the flipper lifts by its valve');
-  assert.equal(takeCues().filter(q=>q==='restored').length,1,'and is rewarded once');
-}
-// Resumed after the flipper, the net is loose on the water, the cygnet in the satchel and the whale free.
-{
-  const f=fixture(0,false,false,false);
+// Each save beside the whale resumes as it was, with the boat held beside it; played or left to its valves from
+// there, it is freed and the boat moors at the mirror, rewarded once.
+for(const [point,played,state] of [
+  ['whale-rest',true,(w,net)=>w.step==='breath'&&w.whale.phase==='resting'],
+  ['whale-breath',false,(w,net)=>w.step==='eye'&&w.whale.phase==='woken'&&net.lift===1&&w.fold===0&&w.foldT<0&&w.eyeT<0],
+  ['whale-eye',true,(w,net)=>w.step==='line'&&w.fold===1&&w.eyeT>0&&net.flap===1&&w.haul==='out'],
+  ['whale-line',false,(w,net)=>w.step==='heave'&&w.haul==='bracing'&&net.grip!==null&&net.peel===0],
+  ['whale-heave',true,(w,net)=>w.step==='flipper'&&w.heaves===tuning.netWhale.heaves&&net.grip===null&&net.peel===1],
+  ['whale-flipper',false,(w,net)=>w.step==='free'&&w.whale.phase==='free'&&net.peel===1&&net.loop===1],
+]){
+  const f=fixture(0,false,false,played);
   const {chapter:c,boat:b,cygnet:k,sealife}=f;
-  const rest=c.whale.rest;
-  b.beach(rest.x-Math.sin(c.whale.yaw)*1.5,rest.z-Math.cos(c.whale.yaw)*1.5,c.whale.yaw);b.afloat=true;b.grounded=false;
-  c.restoreCheckpoint('whale-flipper',[3,140]);
-  assert.equal(c.whale.step,'free');assert.equal(c.whale.whale.phase,'free');assert.equal(sealife.net.peel,1);assert.equal(sealife.net.loop,1);
-  frame(f,1/60,140);
-  assert.equal(c.checkpoint,'whale-flipper');
+  const w=c.whale,rest=w.rest,t0=95;
+  b.beach(rest.x-Math.sin(w.yaw)*1.5,rest.z-Math.cos(w.yaw)*1.5,w.yaw);b.afloat=true;b.grounded=false;
+  c.restoreCheckpoint(point,[3,t0]);
+  frame(f,1/60,t0);
+  const resumed={step:w.step,phase:w.whale.phase,fold:w.fold,eyeT:w.eyeT,haul:w.haul,lift:sealife.net.lift,peel:sealife.net.peel,loop:sealife.net.loop,gripped:sealife.net.grip!==null};
+  assert(state(w,sealife.net),`${point} resumes as it was saved: ${JSON.stringify(resumed)}`);
+  assert(sealife.net.shown,`${point}: the net is there from the first frame`);assert.equal(c.checkpoint,point);
   let gone=0,inSatchel=0;
-  for(let i=0;i<60*300&&!c.done;i++){frame(f,1/60,140+i/60);if(c.whale.step==='free'&&!c.whale.passed){assert(b.speed<0.2,'a save after the flipper resumes at rest');if(k.seat==='satchel')inSatchel++;}
-    if(c.whale.step==='gone'&&!gone)gone=c.time;}
-  assert(inSatchel>0,'the cygnet rides in the satchel as it goes');
-  assert(gone>0&&c.done,'from the save after the flipper it goes and the boat moors at the mirror');
-  assert.equal(takeCues().filter(q=>q==='restored').length,1,'and is rewarded once');
+  for(let i=1;i<60*800&&!c.done;i++){frame(f,1/60,t0+i/60);
+    if((PLAYED.includes(w.step)&&w.stepTime>1)||(w.step==='free'&&!w.passed))assert(b.speed<0.2,`${point}: the boat held beside it in ${w.step}: ${b.speed}`);
+    if(w.step==='free'&&!w.passed&&k.seat==='satchel')inSatchel++;
+    if(w.step==='gone'&&!gone)gone=c.time;}
+  assert(gone>0&&c.done,`from ${point} it is freed and the boat moors at the mirror`);
+  assertPlayedBy(w,played,WHALE_SAVES.indexOf(point));
+  assert(inSatchel>0,`${point}: the cygnet rides in the satchel as it goes`);
+  assert.equal(takeCues().filter(q=>q==='restored').length,1,`${point}: rewarded once`);
 }
 // Resumed after it has gone, there is no whale and the boat sails on to the mirror.
 {
