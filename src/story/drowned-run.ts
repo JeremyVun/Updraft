@@ -1333,8 +1333,8 @@ export class RoofRun {
   /**
    * Side on from the side of the sheet's lane away from the fog, a little above her: her under the sheet at the near
    * edge, both chimneys and the line climbing across the frame, the cat on the far roof; it drifts with her as she is
-   * carried so the far roof stays in. Upright, it stands behind her other shoulder and looks up the line, so the sheet,
-   * the lane and the high roof stack up the narrow frame.
+   * carried so the far roof stays in. Upright, it stands behind her on her side of the line and looks up it, so the
+   * sheet, the lane and the high roof stack up the narrow frame.
    */
   private sheetView(wide: number, go = this.sheetGo): void {
     const k = tuning.drownedCamera.run;

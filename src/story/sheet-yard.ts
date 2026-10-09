@@ -13,8 +13,9 @@ import type { Cast } from './cast';
 /**
  * The yard, in its own frame: x across the lane from her roof to the higher one, z toward the lens's side, the water
  * at 0. Her roof's ridge ends at its gable at x 0; the lane is `LANE` wide; the high roof's ridge starts at its gable
- * across it. The line is strung from a chimney on her ridge behind her to one on the high ridge, each with a prop, so
- * that it clears her hood where she waits and hangs her feet just over each ridge at either end of the ride.
+ * across it. The line is strung from a chimney on her ridge behind her to one on the high ridge, each with a prop, off
+ * the ridges on the side away from the lens, so the sheet hangs beside her where she waits and she hangs over each
+ * ridge at either end of the ride.
  */
 const LANE = 4.0;
 const RISE = 1.3;
@@ -31,7 +32,7 @@ const STEP_OFF = new THREE.Vector3(LANE + SHEET_OFF, R1, 0);
 const SLOPE = 2.6 / (FAR.depth / 2 + 0.28);
 const ONWARD = new THREE.Vector3(LANE + 1.3, R1 - SLOPE, 1.0);
 
-const LINE = sheetLine(new THREE.Vector3(0, R0, 0), new THREE.Vector2(1, 0), LANE, R1, -NEAR_STACK, FAR_STACK - LANE);
+const LINE = sheetLine(new THREE.Vector3(0, R0, 0), new THREE.Vector2(1, 0), new THREE.Vector2(0, 1), LANE, R1, -NEAR_STACK, FAR_STACK - LANE);
 
 const WAY = {
   near: { x0: NEAR.x - NEAR.len / 2 + 0.6, z0: 0, x1: 0.1, z1: 0, halfWidth: 0.45, height: R0 },
@@ -83,10 +84,11 @@ export class SheetYard {
     this.group.add(scenery);
     this.nearCap = this.at(caps[0].clone().setY(caps[0].y + 0.02));
     this.farCap = this.at(caps[1].clone().setY(caps[1].y + 0.02));
-    const prop = (cap: THREE.Vector3) => this.at(cap.clone().setZ(cap.z - 0.22));
+    const prop = (cap: THREE.Vector3) => this.at(cap.clone().setZ(cap.z - 0.3));
     const crossingCast = { child: cast.child, wind: cast.wind, lines: cast.lines, input: cast.input };
     this.crossing = new SheetCrossing({
       from: this.at(LINE.from.clone()), to: this.at(LINE.to.clone()), start: LINE.start, stop: LINE.stop,
+      side: LINE.side.clone().applyAxisAngle(new THREE.Vector3(0, 1, 0), facing),
       props: [prop(caps[0]), prop(caps[1])],
     }, { wait: this.at(WAIT.clone()), stepOff: this.at(STEP_OFF.clone()), onward: this.at(ONWARD.clone()) }, crossingCast);
     this.crossing.onEvent = (kind, where, strength) => cast.knock?.(SHEET_SOUNDS[kind], where, strength);
