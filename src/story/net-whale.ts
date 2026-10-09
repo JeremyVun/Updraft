@@ -167,8 +167,6 @@ export class NetWhale {
   private rise = 0;
   /** How far the child has turned on her seat toward it, radians. */
   turn = 0;
-  /** How lost in the morning haze it is: none, for the sea's mist hides it and gives it up as the boat comes in. */
-  private lost = 0;
   /** How far the sea's score has thinned, 0..1: to almost nothing in its sorrow, a little way back once it knows her. */
   hush = 0;
   /** The pod has nudged the boat and now leads it; from here the encounter says where the dolphins run. */
@@ -450,7 +448,6 @@ export class NetWhale {
       this.net.finishDraping();
       this.corkLaid = false;
       this.led = true;
-      this.lost = 0;
       this.rested = true;
       this.waited = 1e-3;
       this.step = 'breath';
@@ -510,7 +507,6 @@ export class NetWhale {
       this.podGone = true;
       this.whale.vanish();
       this.net.hide();
-      this.lost = 0;
       this.step = 'gone';
       this.stepTime = 100;
       this.released = 1e3;
@@ -690,7 +686,6 @@ export class NetWhale {
     this.cast.child.lent.copy(this.lit).multiplyScalar(this.step === 'gone' ? this.hold : 1);
     const move = this.looking ? K.lookMove : this.farewelled ? K.farewellMove : this.step === 'free' ? K.releaseMove : K.holdMove;
     this.holdT = Math.min(1, this.holdT + dt / move);
-    whale.lost = this.net.lost = this.lost;
     whale.seenFrom = this.camera ? this.camera.position.distanceTo(whale.blowhole) : 0;
     const sorrow = this.step === 'approach' ? 1 - THREE.MathUtils.smootherstep(left, K.hushNear, K.hushFrom)
       : (this.step === 'breath' || this.step === 'eye') && !this.greeted ? 1 : this.step === 'free' || this.step === 'gone' ? 0 : K.hushCourage / K.hushSorrow;
