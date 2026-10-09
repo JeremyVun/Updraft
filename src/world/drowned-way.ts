@@ -589,8 +589,8 @@ const CAT_EDGE_ALONG = 1.1;
  * its chimney stands at the end away from the strand.
  */
 export const CAT_HOUSE: PlacedHouse = (() => {
-  const h: PlacedHouse = { x: 0, z: 0, yaw: Math.atan2(-CAT_TOWARD.x, -CAT_TOWARD.y) - CAT_TURN, len: 6.5, depth: 5.6, wall: 3.4, rise: 3.0,
-    sink: 4.25, thatched: false, stacks: [1], stack: 1.0, pots: 1, quiet: true };
+  const h: PlacedHouse = { x: 0, z: 0, yaw: Math.atan2(-CAT_TOWARD.x, -CAT_TOWARD.y) - CAT_TURN, len: 6.5, depth: 5.6,
+    wall: 3.4, rise: 3.0, sink: 4.25, thatched: false, stacks: [1], stack: 1.0, pots: 1, quiet: true };
   const edge = CAT_HOLD.clone().addScaledVector(CAT_TOWARD, CAT_REACH);
   const off = houseLocal(h, CAT_EDGE_ALONG, acrossAt(h, 0));
   h.x = edge.x - off.x;

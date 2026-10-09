@@ -1771,11 +1771,10 @@ export const tuning = {
       aheadFrom: 30, turnRate: 0.6,
       /**
        * Seconds it takes to rise off the sea once the air has died, over the becalmed drift, how far behind the boat it
-       * rises, and how long after
-       * the boat runs aground it starts to come on: never stopping, at `comePace` (m/s) and `comeRate` a second of
-       * however far it still is from where the cat bolts, at most `comeMost` m/s, so it slows as it nears; how far short
-       * of the boat its front is when the light has gone from it; and how far short of the boat it is when she sets off
-       * along the first roof's ridge (QA and the save there).
+       * rises, and how long after the boat runs aground it starts to come on: never stopping, at `comePace` (m/s) and
+       * `comeRate` a second of however far it still is from where the cat bolts, at most `comeMost` m/s, so it slows as
+       * it nears; how far short of the boat its front is when the light has gone from it; and how far short of the boat
+       * it is when she sets off along the first roof's ridge (QA and the save there).
        */
       riseFor: 14, comeAfter: 0.6, riseAway: 72, comeRate: 0.15, comeMost: 5.5, comePace: 2.2, holdBehind: 20, setOffBehind: 20,
     },
@@ -2269,7 +2268,8 @@ export const tuning = {
      */
     catGlance: 0.3, catTurnFrom: 40, catPace: 0.55,
     catAlong: 0.58, catSide: 12.5, catEye: 3.8, catLook: 0.5, catAim: 1.0, catLift: 0.9, catZoom: 1.25,
-    uprightCatAlong: -1.35, uprightCatSide: 4, uprightCatEye: 6.2, uprightCatLook: 0.95, uprightCatAim: 0.8, uprightCatLift: 0.6, uprightCatZoom: 1.4,
+    uprightCatAlong: -1.35, uprightCatSide: 4, uprightCatEye: 6.2, uprightCatLook: 0.95, uprightCatAim: 0.8, uprightCatLift: 0.6,
+    uprightCatZoom: 1.4,
     /**
      * The cat brought aboard: once the tub is this near the boat the lens comes round toward the bow, its bearing from
      * ahead (radians), how far off (upright, nearer) and how high over where it looks, which is this share of the way

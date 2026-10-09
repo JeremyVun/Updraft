@@ -35,12 +35,12 @@ const STRAND_TOP = new THREE.Vector3(WAY.strandSlope.x1, WAY.strandSlope.height1
 
 /**
  * `still` the air dying once the cat is aboard, the becalmed hull ghosting on until it runs aground on a roof just under
- * the water; `becalmed` the boat stuck
- * there while the fog rises where they came from and comes on, until the cat bolts onto the roof and she is up on it
- * after the cat; `run` her way over the roofs to the church, the fog coming on behind her, the boat lost to it where it
- * lies; `nave` her on the nave's ridge at the tower's foot, the cat on the railings below the tower, the fog a few roofs
- * back; `church` the cat and her up the ivy into the belfry, the fog sea, the bell calling the boat home, her climb down
- * into it and the look back up at the cat. The storm (`gather`, `snatch`, `after`) begins as they leave the nave.
+ * the water; `becalmed` the boat stuck there while the fog rises where they came from and comes on, until the cat bolts
+ * onto the roof and she is up on it after the cat; `run` her way over the roofs to the church, the fog coming on behind
+ * her, the boat lost to it where it lies; `nave` her on the nave's ridge at the tower's foot, the cat on the railings
+ * below the tower, the fog a few roofs back; `church` the cat and her up the ivy into the belfry, the fog sea, the bell
+ * calling the boat home, her climb down into it and the look back up at the cat. The storm (`gather`, `snatch`,
+ * `after`) begins as they leave the nave.
  */
 type Beat = 'enter' | 'drift' | 'still' | 'becalmed' | 'run' | 'nave' | 'church' | 'gather' | 'snatch' | 'after';
 
@@ -378,7 +378,7 @@ export class DrownedChapter implements Chapter {
       this.out++;
       boat.steerFor = STORM_WAY[this.out] ?? PASSAGE[this.leg];
     }
-    /** The drift never rounds the stranding: the air dies short of it and the hull runs on onto its slates. */
+    /** The drift never rounds the stranding: the boat holds short of it for the cat, then ghosts on onto its slates. */
     const stranding = this.leg === TO_STRAND && this.beat === 'drift';
     if (sailing && !stranding && !STORM_WAY[this.out] && this.leg < PASSAGE.length - 1 && roundedWaypoint(boat.position.x, boat.position.z, from.x, from.y, wp.x, wp.y, ROUNDED)) {
       this.leg++;

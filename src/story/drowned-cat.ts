@@ -449,7 +449,7 @@ export class StrandedCat {
       tub.docked = false;
       tub.laden = false;
       tub.carry = null;
-      /** Out from the hull and back along it, out from under the lens watching from off the bow. */
+      /** Out from the hull and back along it, out from in front of the lens watching the rescue. */
       const away = this.v.set(tub.position.x - boat.position.x, 0, tub.position.z - boat.position.z).normalize()
         .addScaledVector(this.lens.set(Math.sin(boat.yaw), 0, Math.cos(boat.yaw)), -0.8).normalize();
       tub.velocity.set(away.x * 0.5, away.z * 0.5);
