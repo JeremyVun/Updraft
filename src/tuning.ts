@@ -1905,7 +1905,7 @@ export const tuning = {
        * kneels that a kitten comes to her, how near her it sits (metres), how far she leans down to it, and where the
        * cat lies from the middle of the straw (east and south, metres) and which way (radians).
        */
-      nestFor: 7, seaFor: 5, kittenComes: 1.0, kittenNear: 0.6, leanTo: 0.14, curlBack: [0.45, -0.1], curlYaw: 2.4,
+      nestFor: 7, seaFor: 5, kittenComes: 1.0, kittenNear: 0.8, leanTo: 0.14, curlBack: [0.45, -0.1], curlYaw: 2.4,
       fog: {
         /**
          * How far back along the nave it waits while she is low on the ivy, and how far past the tower it stops
