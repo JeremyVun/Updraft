@@ -2254,6 +2254,8 @@ export const tuning = {
     stuckAlong: 1.2, stuckOnCat: 1.8, stuckCloser: 1.4, stuckAim: 1.0, stuckFrom: -1.75, stuckDistance: 5.6, stuckEye: 1.5,
     stuckFog: 0.35, stuckZoom: 1.05, stuckPace: 0.35,
     uprightStuckFrom: -2.0, uprightStuckDistance: 6.2, uprightStuckEye: 1.7, uprightStuckFog: 0.3, uprightStuckZoom: 0.9,
+    /** While the becalmed boat ghosts on, how far round toward the slates ahead it looks instead (upright, its own). */
+    driftAhead: 0.12, uprightDriftAhead: 0.06,
     /**
      * Once the cat bolts, over `climbFor` seconds up onto the roof with it: the lens's bearing from the ridge's west
      * end, how far off and how high over the ridge, how far from her toward the cat it looks, and its pace.
@@ -2265,11 +2267,11 @@ export const tuning = {
      * place the boat waits the lens starts to come round, and its pace. Where it stands: this share of the way along the
      * line from her head to the edge where the cat waits (behind her where less than 0), this far out from that line on
      * the side away from the sail, and this high over the water; it looks this share of the way along the line, this high
-     * over the water, on this lens. Upright, its own.
+     * over the water and this much higher while the cat is up on its pot, on this lens. Upright, its own.
      */
-    catGlance: 0.3, catTurnFrom: 16, catPace: 0.55,
-    catAlong: 0.58, catSide: 10, catEye: 3.4, catLook: 0.5, catAim: 1.0, catZoom: 1.4,
-    uprightCatAlong: -1.0, uprightCatSide: 4.8, uprightCatEye: 5.8, uprightCatLook: 0.62, uprightCatAim: 0.5, uprightCatZoom: 1.25,
+    catGlance: 0.3, catTurnFrom: 40, catPace: 0.55,
+    catAlong: 0.58, catSide: 12.5, catEye: 3.8, catLook: 0.5, catAim: 1.0, catLift: 0.9, catZoom: 1.25,
+    uprightCatAlong: -1.0, uprightCatSide: 4.8, uprightCatEye: 5.8, uprightCatLook: 0.62, uprightCatAim: 0.5, uprightCatLift: 0.6, uprightCatZoom: 1.25,
     /**
      * The cat brought aboard: once the tub is this near the boat the lens comes round to the bow's quarter, its bearing
      * from ahead (radians), how far off (upright, nearer) and how high over where it looks, which is this share of the

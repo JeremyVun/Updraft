@@ -666,6 +666,10 @@ export class DrownedChapter implements Chapter {
     }
     if (this.beat === 'still' || this.beat === 'becalmed') {
       c.lookAt = this.strandGaze();
+      if (this.beat === 'still') {
+        c.lookAt = this.look.copy(c.lookAt);
+        lookAwayFrom(this.look, c.position, this.lensAt);
+      }
       return;
     }
     if (this.beat === 'snatch') {
@@ -867,8 +871,12 @@ export class DrownedChapter implements Chapter {
     const eye = this.catEye.set(aim.x + Math.sin(from) * reach, lerp(k.uprightStuckEye, k.stuckEye, wide), aim.z + Math.cos(from) * reach);
     /** It looks between the bow and the fog coming on behind the boat, so both stand in the frame. */
     const fog = this.cast.village?.dark.frontAt(this.front, 0) ?? this.front.set(STRAND.x, STRAND.y + 60);
-    const toAim = Math.atan2(aim.x - eye.x, aim.z - eye.z), toFog = Math.atan2(fog.x - eye.x, fog.y - eye.z);
-    const look = toAim + Math.atan2(Math.sin(toFog - toAim), Math.cos(toFog - toAim)) * lerp(k.uprightStuckFog, k.stuckFog, wide) * (1 - fear * fear);
+    /** While it ghosts on it looks a little ahead to the slates it will run onto; once it is stuck, back to the fog. */
+    const drifting = this.beat === 'still';
+    const toAim = Math.atan2(aim.x - eye.x, aim.z - eye.z);
+    const toward = drifting ? Math.atan2(STRAND_STEP.x - eye.x, STRAND_STEP.z - eye.z) : Math.atan2(fog.x - eye.x, fog.y - eye.z);
+    const share = drifting ? lerp(k.uprightDriftAhead, k.driftAhead, wide) : lerp(k.uprightStuckFog, k.stuckFog, wide) * (1 - fear * fear);
+    const look = toAim + Math.atan2(Math.sin(toward - toAim), Math.cos(toward - toAim)) * share;
     const reachAim = Math.hypot(aim.x - eye.x, aim.z - eye.z);
     s.target.set(eye.x + Math.sin(look) * reachAim, aim.y, eye.z + Math.cos(look) * reachAim);
     const climbed = this.cat.sinceBolt < 0 ? 0 : THREE.MathUtils.smootherstep(this.cat.sinceBolt, 0, k.climbFor);
@@ -904,16 +912,24 @@ export class DrownedChapter implements Chapter {
     const toHold = Math.hypot(boat.position.x - CAT_HOLD.x, boat.position.z - CAT_HOLD.y);
     this.catRound = Math.max(this.catRound, THREE.MathUtils.smootherstep(1 - (toHold - 1) / k.catTurnFrom, 0, 1));
     const round = this.catRound;
-    const was = this.lensWas.copy(s.target).addScaledVector(s.from!, s.distance).setY(s.target.y + s.height);
     const head = this.catHead.copy(seat).setY(seat.y + 1.1);
     const across = Math.hypot(CAT_EDGE.x - head.x, CAT_EDGE.z - head.z) || 1;
     const ux = (CAT_EDGE.x - head.x) / across, uz = (CAT_EDGE.z - head.z) / across;
     const along = lerp(k.uprightCatAlong, k.catAlong, wide) * across, out = lerp(k.uprightCatSide, k.catSide, wide);
     /** Out on the port side of the line from her to the cat, which is the side away from the sail. */
-    const eye = this.catEye.set(head.x + ux * along + uz * out, lerp(k.uprightCatEye, k.catEye, wide), head.z + uz * along - ux * out)
-      .lerp(was, 1 - round);
+    const eye = this.catEye.set(head.x + ux * along + uz * out, lerp(k.uprightCatEye, k.catEye, wide), head.z + uz * along - ux * out);
+    /** It looks a little higher while the cat is still up on its pot, and comes down with it to the water's edge. */
     const aim = this.anchor.copy(head).lerp(CAT_EDGE, lerp(k.uprightCatLook, k.catLook, wide));
-    aim.y = lerp(k.uprightCatAim, k.catAim, wide);
+    aim.y = lerp(k.uprightCatAim, k.catAim, wide) + lerp(k.uprightCatLift, k.catLift, wide) * THREE.MathUtils.smoothstep(this.cat.eye.y, 1, 3);
+    /**
+     * Round her from the drift's view, never across or in and out: its bearing from her, how far from her and how high
+     * each go their own way there, while what it looks at goes over from ahead of her to between her and the cat.
+     */
+    const was = this.lensWas.copy(s.target).addScaledVector(s.from!, s.distance).setY(s.target.y + s.height);
+    const from = Math.atan2(was.x - head.x, was.z - head.z), to = Math.atan2(eye.x - head.x, eye.z - head.z);
+    const bearing = from + Math.atan2(Math.sin(to - from), Math.cos(to - from)) * round;
+    const reach = lerp(Math.hypot(was.x - head.x, was.z - head.z), Math.hypot(eye.x - head.x, eye.z - head.z), round);
+    eye.set(head.x + Math.sin(bearing) * reach, lerp(was.y, eye.y, round), head.z + Math.cos(bearing) * reach);
     s.target.lerp(aim, round);
     s.eye = eye;
     s.orbit = true;
@@ -946,8 +962,11 @@ export class DrownedChapter implements Chapter {
     const k = tuning.drownedCamera, s = this.shot, seat = this.cast.child.position;
     const wide = THREE.MathUtils.smoothstep(this.aspect, 0.7, 1.3);
     const fx = Math.sin(this.heading), fz = Math.cos(this.heading);
-    /** `quarter` +1 is the starboard side, the hull's -x. */
-    const px = -Math.cos(this.heading) * this.quarter, pz = Math.sin(this.heading) * this.quarter;
+    /**
+     * Away from the sail, which hangs over the hull's +x while `sailSide` (minus `quarter`) is +1: the side the tub's
+     * frame watched from, so the lens only comes round her toward the bow.
+     */
+    const px = Math.cos(this.heading) * this.quarter, pz = -Math.sin(this.heading) * this.quarter;
     const b = k.rescueBearing;
     s.from = this.from.set(fx * Math.cos(b) + px * Math.sin(b), 0, fz * Math.cos(b) + pz * Math.sin(b)).normalize();
     s.target.copy(seat).lerp(this.cat.eye, k.rescueAlong).setY(seat.y + k.rescueAim);
@@ -958,7 +977,7 @@ export class DrownedChapter implements Chapter {
     const c = this.catSubjects;
     c.primary.copy(seat).setY(seat.y + 0.9);
     c.secondary.copy(this.cat.eye);
-    c.tertiary = undefined;
+    c.tertiary = this.catHead.copy(this.cast.child.position).setY(this.cast.child.position.y + 1.25);
     c.points = undefined;
     s.subjects = c;
     s.smoothFit = 1.5;

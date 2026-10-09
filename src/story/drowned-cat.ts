@@ -425,7 +425,7 @@ export class StrandedCat {
     });
   }
 
-  /** A moment held at the bow, then the leap aboard; the tub bobs away from the push of it. */
+  /** A moment held at the bow, then the leap aboard; the tub bobs away aft from the push of it. */
   private jumpAboard(): void {
     const { cat, boat, cygnet } = this.cast;
     const k = tuning.drowned.cat;
@@ -447,7 +447,9 @@ export class StrandedCat {
       tub.docked = false;
       tub.laden = false;
       tub.carry = null;
-      const away = this.v.set(tub.position.x - boat.position.x, 0, tub.position.z - boat.position.z).normalize();
+      /** Out from the hull and back along it, out from under the lens watching from off the bow. */
+      const away = this.v.set(tub.position.x - boat.position.x, 0, tub.position.z - boat.position.z).normalize()
+        .addScaledVector(this.lens.set(Math.sin(boat.yaw), 0, Math.cos(boat.yaw)), -0.8).normalize();
       tub.velocity.set(away.x * 0.5, away.z * 0.5);
       tub.water.x = tub.position.x + away.x * 2;
       tub.water.z = tub.position.z + away.z * 2;
