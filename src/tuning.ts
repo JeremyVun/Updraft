@@ -2271,7 +2271,7 @@ export const tuning = {
      */
     catGlance: 0.3, catTurnFrom: 40, catPace: 0.55,
     catAlong: 0.58, catSide: 12.5, catEye: 3.8, catLook: 0.5, catAim: 1.0, catLift: 0.9, catZoom: 1.25,
-    uprightCatAlong: -1.0, uprightCatSide: 4.8, uprightCatEye: 5.8, uprightCatLook: 0.62, uprightCatAim: 0.5, uprightCatLift: 0.6, uprightCatZoom: 1.25,
+    uprightCatAlong: -1.25, uprightCatSide: 3.8, uprightCatEye: 6.2, uprightCatLook: 0.42, uprightCatAim: 0.5, uprightCatLift: 0.6, uprightCatZoom: 1.25,
     /**
      * The cat brought aboard: once the tub is this near the boat the lens comes round toward the bow, its bearing from
      * ahead (radians), how far off (upright, nearer) and how high over where it looks, which is this share of the way

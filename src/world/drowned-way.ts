@@ -566,7 +566,7 @@ export const CAT_HOLD = STRAND.clone().addScaledVector(DRIFT_ON, -CAT_SHORT);
  * round this far toward it as it waits, so it has little to swing back once the cat is aboard: the room's breeze comes
  * over its port quarter, so the sail it lets go hangs out to starboard, and the cat's slates stand off its starboard bow.
  */
-const CAT_BEARING = 0.62;
+const CAT_BEARING = 0.78;
 const CAT_FACING = 0.2;
 export const CAT_HOLD_YAW = Math.atan2(DRIFT_ON.x, DRIFT_ON.y) - CAT_FACING;
 const CAT_TOWARD = (() => {
@@ -658,7 +658,7 @@ export const CAT_EDGE = onCatRoof(CAT_EDGE_ALONG, CAT_ROOF.depth - 0.25);
  * from her across the water to the cat; and the water it is kept to (a middle and a reach) round the bow and the cat's
  * slates.
  */
-const OFF_BOW = atHold(2.4, 0.9);
+const OFF_BOW = atHold(2.4, 1.6);
 const EDGE_ON_WATER = new THREE.Vector2(CAT_EDGE.x, CAT_EDGE.z);
 export const TUB_START = OFF_BOW.clone().lerp(EDGE_ON_WATER, 0.42);
 export const TUB_WATER = (() => {

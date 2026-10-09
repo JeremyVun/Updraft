@@ -910,17 +910,19 @@ export class DrownedChapter implements Chapter {
     const lerp = THREE.MathUtils.lerp;
     const wide = THREE.MathUtils.smoothstep(this.aspect, 0.7, 1.3);
     const toHold = Math.hypot(boat.position.x - CAT_HOLD.x, boat.position.z - CAT_HOLD.y);
-    this.catRound = Math.max(this.catRound, THREE.MathUtils.smootherstep(1 - (toHold - 1) / k.catTurnFrom, 0, 1));
+    /** All the way round once the boat is within a couple of metres of where it holds, wherever it comes to rest. */
+    this.catRound = Math.max(this.catRound, THREE.MathUtils.smootherstep(1 - (toHold - 2) / k.catTurnFrom, 0, 1));
     const round = this.catRound;
     const head = this.catHead.copy(seat).setY(seat.y + 1.1);
     const across = Math.hypot(CAT_EDGE.x - head.x, CAT_EDGE.z - head.z) || 1;
     const ux = (CAT_EDGE.x - head.x) / across, uz = (CAT_EDGE.z - head.z) / across;
+    const up = THREE.MathUtils.smoothstep(this.cat.eye.y, 1, 3);
     const along = lerp(k.uprightCatAlong, k.catAlong, wide) * across, out = lerp(k.uprightCatSide, k.catSide, wide);
     /** Out on the port side of the line from her to the cat, which is the side away from the sail. */
     const eye = this.catEye.set(head.x + ux * along + uz * out, lerp(k.uprightCatEye, k.catEye, wide), head.z + uz * along - ux * out);
     /** It looks a little higher while the cat is still up on its pot, and comes down with it to the water's edge. */
     const aim = this.anchor.copy(head).lerp(CAT_EDGE, lerp(k.uprightCatLook, k.catLook, wide));
-    aim.y = lerp(k.uprightCatAim, k.catAim, wide) + lerp(k.uprightCatLift, k.catLift, wide) * THREE.MathUtils.smoothstep(this.cat.eye.y, 1, 3);
+    aim.y = lerp(k.uprightCatAim, k.catAim, wide) + lerp(k.uprightCatLift, k.catLift, wide) * up;
     /**
      * Round her from the drift's view, never across or in and out: its bearing from her, how far from her and how high
      * each go their own way there, while what it looks at goes over from ahead of her to between her and the cat.
@@ -946,7 +948,7 @@ export class DrownedChapter implements Chapter {
     c.points = this.catPoints;
     /** The roofs keep it out of them while it comes round; once there, its own frame is clear of them. */
     if (round > 0.3) s.subjects = c;
-    if (round > 0.97) s.obstacles = undefined;
+    if (round > 0.9) s.obstacles = undefined;
     s.smoothFit = 1.5;
     this.pace = lerp(this.pace, k.catPace, round);
   }
