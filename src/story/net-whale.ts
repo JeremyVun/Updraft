@@ -282,11 +282,13 @@ export class NetWhale {
   foldedBy: 'sweeps' | 'dolphin' | null = null;
   eyeT = -1;
   /**
-   * The heave: heaves made, the stroke gathered toward the next, how far the mesh over its head billows, which mitten
-   * pulls this heave, and what made the heaves.
+   * The heave: heaves made, the stroke on its head so far and whether it has made its heave, the heaves asked for that
+   * she has still to haul, how far the mesh over its head billows, which mitten pulls this heave, and what made them.
    */
   heaves = 0;
   private heaveSwept = 0;
+  private strokeHeaved = false;
+  private owed = 0;
   private billow = 0;
   private puller: 0 | 1 = 0;
   heavedBy: 'sweeps' | 'dolphin' | null = null;
@@ -1683,7 +1685,10 @@ export class NetWhale {
     if (this.valveStep === 'heave' || (this.haul === 'bracing' && this.valveT < 0 && this.waiting > K.valveAfter)) this.nudgeHead(dt);
     if (this.haul === 'bracing') {
       if (this.still > 0) this.waiting += dt;
-      if (this.heaveSwept >= K.heaveSweep && this.haulT > K.braceFor) this.heaveNow('sweeps');
+      if (this.owed > 0 && this.haulT > K.braceFor) {
+        this.owed--;
+        this.heaveNow('sweeps');
+      }
       this.inviteHead();
     } else if (this.haul === 'heaving') {
       const w = Math.min(1, this.haulT / K.heaveTime);
@@ -1716,7 +1721,6 @@ export class NetWhale {
   /** The mesh is up off its head: she hauls. */
   private heaveNow(by: 'sweeps' | 'dolphin'): void {
     this.heavedBy ??= by;
-    this.heaveSwept = 0;
     this.waiting = 0;
     this.puller = this.heaves % 2 === 0 ? 0 : 1;
     this.billow = Math.max(this.billow, 0.8);
@@ -1747,10 +1751,20 @@ export class NetWhale {
     for (let i = 1; i < 6; i++) pts[n++].copy(this.net.foot).lerp(this.catchAt, i / 6).setY(0.1);
     this.headNet(pts[n]).lerp(this.net.foot, 0.5);
     const hit = this.landed(K.heaveRadius, pts, n + 1);
-    if (hit <= 0) return;
+    if (hit <= 0) {
+      if (this.sinceStroke > K.heaveGap) {
+        this.heaveSwept = 0;
+        this.strokeHeaved = false;
+      }
+      return;
+    }
     this.sinceStroke = 0;
     this.billow = Math.min(1, this.billow + hit * K.billowGain);
     this.heaveSwept += hit;
+    if (this.heaveSwept < (this.strokeHeaved ? K.heaveStroke : K.heaveSweep)) return;
+    this.heaveSwept = 0;
+    this.strokeHeaved = true;
+    this.owed = Math.max(0, Math.min(this.owed + 1, K.heaves - this.heaves - (this.haul === 'heaving' ? 1 : 0)));
   }
 
   /** The drawn sweep runs from its head toward her, over the water between. */

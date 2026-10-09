@@ -1587,7 +1587,7 @@ export const tuning = {
      * valve's dolphin rises beside its head this
      * far out from the waterline under the eye (m) and lifts the fold with its beak.
      */
-    eyeTry: 0.32, eyeTryLifted: 0.3, foldRadius: 0.45, foldSweep: 0.6, foldPart: 0.4, foldSettle: 0.6, foldEase: 2.5,
+    eyeTry: 0.32, eyeTryLifted: 0.3, foldRadius: 0.7, foldSweep: 0.35, foldPart: 0.4, foldSettle: 0.6, foldEase: 2.5,
     foldFlip: 1.5, foldOpens: 0.9, foldNoseOut: 0.9,
     /**
      * The look between them, framed as the owl's is: `lookDistance` behind the boat and `lookHeight` up, `lookBearing`
@@ -1630,19 +1630,22 @@ export const tuning = {
      * pushed out past where it lay it drifts back at `corkSettle` metres a second for each metre out, at most
      * `corkSettleMax`.
      */
-    corkRadius: 0.32, corkCome: 4, corkComeMax: 2.5, corkGlide: 1.8, corkBend: 0.35, corkSettle: 0.35, corkSettleMax: 0.4,
+    corkRadius: 0.55, corkCome: 4, corkComeMax: 2.5, corkGlide: 1.8, corkBend: 0.35, corkSettle: 0.35, corkSettleMax: 0.4,
     /**
      * The heave: she hauls `heaves` times, each a long arm's length (`pullTake` m) over `heaveTime` seconds, the share
      * `pullDraw` of it spent drawing, braced at least `braceFor` seconds between, leaning back `braceBack` (radians)
      * against the net that will not come; she holds on `haulHold` seconds after the last before letting go, and the
      * line takes `letGo` seconds to go. A stroke in any direction over the net on its head or the water between it and
      * the boat, within `heaveRadius` of them on screen (normalised device units), billows the mesh up off the head
-     * (`billowGain` for each unit of stroke, `billowHeight` m at most, settling at `billowFall` a second), and
-     * `heaveSweep` of such stroke makes a heave. The heave's hold stands `heaveBack` metres further back
-     * than the line's. The valve's dolphin comes up under the net's edge every `nudgeEvery` seconds.
+     * (`billowGain` for each unit of stroke, `billowHeight` m at most, settling at `billowFall` a second). Each stroke
+     * that sweeps `heaveSweep` of it asks for one heave, and one kept going over the head another every `heaveStroke`;
+     * a stroke ends `heaveGap` seconds after it leaves the head, and heaves asked for while she hauls follow in turn.
+     * The heave's hold stands `heaveBack` metres further back than the line's. The valve's dolphin comes up under the
+     * net's edge every `nudgeEvery` seconds.
      */
     heaves: 4, pullTake: 0.9, heaveTime: 1.5, pullDraw: 0.6, braceFor: 0.4, braceBack: 0.32, haulHold: 0.8, letGo: 3.4,
-    heaveRadius: 0.32, billowGain: 3, billowHeight: 1.7, billowFall: 1.6, heaveSweep: 0.15, heaveBack: 0,
+    heaveRadius: 0.45, billowGain: 3, billowHeight: 1.7, billowFall: 1.6, heaveSweep: 0.1, heaveStroke: 0.5, heaveGap: 0.25,
+    heaveBack: 0,
     nudgeEvery: 2.8,
     /** Seconds after she lets the line go that the cygnet sees the loop on the flipper and peeps, and that she looks to it. */
     birdSees: 1, sheSees: 1.9,
@@ -1687,7 +1690,7 @@ export const tuning = {
      * metres to port of the boat at rest and `endAhead` before it, and holds it from `birdOut`/`birdAhead`, clear of
      * the flipper's lift; the loop comes off its tip `slipFor` seconds into the lift.
      */
-    finRadius: 0.3, finSweep: 0.2,
+    finRadius: 0.5, finSweep: 0.2,
     endOut: 5.1, endAhead: 0.2, birdOut: 5.3, birdAhead: -0.5, slipFor: 5,
     /**
      * The near flipper at rest, about its root under the jaw: swept round toward the head and raised, so it reaches

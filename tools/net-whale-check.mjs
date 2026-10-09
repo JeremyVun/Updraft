@@ -10,7 +10,9 @@
 // heave (the line let go), flipper (free) and gone each resume.
 // Usage: BASE=http://127.0.0.1:5230/ node tools/net-whale-check.mjs [case ...]
 //   cases: sweeps steps child idle eye eyeidle line anyway lineidle heave heaveidle fin finearly finidle saves full fullidle
-//   BREAK=<case> loosens that case's guard (a valve sent at 10 s, or strokes counted anywhere) to prove it bites.
+//   BREAK=<case,...> sends each named idle case's valve at 10 s, and `anywhere` in it counts any stroke for every step
+//   (the breath lifting under any pointer), so `sweeps` and each idle case's strokes elsewhere fail: each proves its
+//   guard bites.
 // The default set takes about 25 minutes; `fullidle` waits out every valve and is not in it.
 import { openBrowser } from './lib/browser.mjs';
 import assert from 'node:assert/strict';
@@ -21,7 +23,8 @@ const W = Number(process.env.W ?? 1600);
 const H = Number(process.env.H ?? 900);
 const cases = process.argv.slice(2).length ? process.argv.slice(2)
   : ['sweeps', 'steps', 'child', 'idle', 'eye', 'eyeidle', 'line', 'anyway', 'lineidle', 'heave', 'heaveidle', 'fin', 'finearly', 'finidle', 'saves', 'full'];
-const BREAK = process.env.BREAK ?? '';
+const BREAK = (process.env.BREAK ?? '').split(',').filter(Boolean);
+let running = '';
 
 const { browser, close } = await openBrowser();
 
@@ -41,7 +44,8 @@ const STATE = `(() => {
     finnedBy: w ? w.finnedBy : null, loop: n.loop, held: n.held !== null, seat: __game.cygnet.seat, swimming: __game.cygnet.state === 'swimming',
     drift: n.drift, spouting: s.spouting, fold: w ? w.fold : 0, foldT: w ? w.foldT : -1, foldedBy: w ? w.foldedBy : null,
     flap: n.flap, lid: s.skin.uEye.value, eyeT: w ? w.eyeT : -1, heaves: w ? w.heaves : 0, heavedBy: w ? w.heavedBy : null,
-    billow: n.billow, offered: w ? !!w.offered : false };
+    billow: n.billow, offered: w ? !!w.offered : false,
+    asked: w ? Math.min(__game.tuning.netWhale.heaves, w.heaves + w.owed + (w.haul === 'heaving' ? 1 : 0)) : 0 };
 })()`;
 
 async function open(context, query) {
@@ -52,11 +56,15 @@ async function open(context, query) {
   await page.goto(`${base}?shot=1&chapter=whale${query}`, { waitUntil: 'load' });
   await page.waitForFunction(() => window.__ready === true, null, { timeout: 90000 });
   await watchBody(page);
-  await page.evaluate((b) => {
+  await page.evaluate(([valve, anywhere]) => {
     const k = __game.tuning.netWhale;
-    if (b.endsWith('idle')) k.valveAfter = 10;
-    else if (b) k.foldRadius = k.corkRadius = k.heaveRadius = k.finRadius = 9;
-  }, BREAK);
+    if (valve) k.valveAfter = 10;
+    if (anywhere) {
+      k.foldRadius = k.corkRadius = k.heaveRadius = k.finRadius = 9;
+      k.liftFrom = -1;
+      k.reach = 1e3;
+    }
+  }, [running.endsWith('idle') && BREAK.includes(running), BREAK.includes('anywhere')]);
   return { page, errors };
 }
 
@@ -260,7 +268,17 @@ async function stroke(page, points, ms, started = false) {
   }
 }
 
-/** Round and round over the blowhole, re-aimed each turn, until `done` or the wall clock runs out. */
+/**
+ * Until `seconds` of game time have passed. The game steps 1/60 s a frame here, so on a loaded machine its clock runs
+ * slow, and a hand paced by the wall clock would circle faster than any player could.
+ */
+const gameWait = (page, seconds) => page.evaluate((seconds) => new Promise((resolve) => {
+  const end = __game.story.current.time + seconds;
+  const tick = () => (__game.story.current.time >= end ? resolve() : requestAnimationFrame(tick));
+  tick();
+}), seconds);
+
+/** Round and round over the blowhole, a loop each 0.8 s of game time, re-aimed each turn, until `done` or the wall clock runs out. */
 async function circle(page, done, wallSeconds = 60) {
   const end = Date.now() + wallSeconds * 1000;
   let a = 0;
@@ -269,7 +287,7 @@ async function circle(page, done, wallSeconds = 60) {
     for (let i = 0; i < 24; i++) {
       a += (Math.PI * 2) / 24;
       await page.mouse.move(cx + Math.cos(a) * 60, cy + Math.sin(a) * 50);
-      await page.waitForTimeout(28);
+      await gameWait(page, 0.029);
     }
     const s = await read(page);
     if (done(s)) return s;
@@ -327,7 +345,8 @@ async function steps() {
   await until(page, (s) => s.step === 'line' && s.offered, 'the line asked', 40);
   const line = await strokesUntil(page, (p) => sweepCork(p, 1), (s) => s.haul !== 'out', 4, 'brought the cork');
   await until(page, (s) => s.step === 'heave' && s.haul === 'bracing', 'the heave', 20);
-  const heave = await strokesUntil(page, sweepHead, (s) => s.haul === 'letting' || s.step === 'flipper', 10, 'heaved the net off');
+  const heave = await strokesUntil(page, sweepHead, (s) => s.asked === 4, 10, 'asked for every heave');
+  await until(page, (s) => s.haul === 'letting' || s.step === 'flipper', 'the net heaved off', 20);
   const heaved = await read(page);
   await until(page, (s) => s.bird === 'holding' && s.birdT > 1, 'the cygnet to hold the loop\'s end', 120);
   const fin = await strokesUntil(page, sweepFin, (s) => s.slipT >= 0 || s.step !== 'flipper', 4, 'lifted the flipper');
@@ -354,14 +373,14 @@ async function child() {
     const s = await read(page);
     if (s.step === 'free') break;
     const asking = (s.step === 'breath' && s.progress < 1) || (s.step === 'eye' && s.foldT < 0) || (s.step === 'line' && s.haul === 'out')
-      || (s.step === 'heave' && s.haul === 'bracing') || (s.step === 'flipper' && s.bird === 'holding' && s.slipT < 0);
+      || (s.step === 'heave' && s.asked < 4) || (s.step === 'flipper' && s.bird === 'holding' && s.slipT < 0);
     if (!asking) { await page.waitForTimeout(400); continue; }
     tries[s.step] = (tries[s.step] ?? 0) + 1;
     if (s.step === 'breath') {
       const [cx, cy] = await onScreen(page, 'blowhole', 1.2);
       const x = cx + (rnd() - 0.5) * W * 0.25, y = cy + (rnd() - 0.5) * H * 0.25, r = Math.min(W, H) * (0.04 + 0.06 * rnd()), way = rnd() < 0.5 ? 1 : -1;
       await jumpTo(page, x + r, y);
-      for (let i = 1; i <= 48; i++) { await page.mouse.move(x + Math.cos(way * i * Math.PI / 12) * r, y + Math.sin(way * i * Math.PI / 12) * r); await page.waitForTimeout(30); }
+      for (let i = 1; i <= 48; i++) { await page.mouse.move(x + Math.cos(way * i * Math.PI / 12) * r, y + Math.sin(way * i * Math.PI / 12) * r); await gameWait(page, 0.03); }
     } else {
       const x = W * (0.15 + 0.7 * rnd()), y = H * (0.2 + 0.65 * rnd()), a = rnd() * Math.PI * 2, L = Math.min(W, H) * (0.15 + 0.3 * rnd());
       await jumpTo(page, x, y);
@@ -381,13 +400,32 @@ async function child() {
   await context.close();
 }
 
-/** Strokes far along its back, away from every target, under three times the sea's breeze. */
+/**
+ * Strokes on screen as far from the step's target as the frame allows, well outside the area that counts, under three
+ * times the sea's breeze. The target is what the step's strokes are measured against (`reach`), or the blowhole.
+ */
 async function elsewhere(page) {
   await page.evaluate(() => { __game.story.current.breeze = 3; });
+  const [x, y, clear] = await page.evaluate(() => {
+    const w = __game.story.current.whale, cam = __game.rig.camera, K = __game.tuning.netWhale;
+    const [count, radius] = { breath: [0, 0], eye: [3, K.foldRadius], line: [5, K.corkRadius], heave: [17, K.heaveRadius], flipper: [9, K.finRadius] }[w.step];
+    const pts = (count ? w.reach.slice(0, count) : [__game.sealife.sleeper.blowhole]).map((p) => {
+      const q = p.clone().project(cam);
+      return [(q.x + 1) / 2 * innerWidth, (1 - q.y) / 2 * innerHeight];
+    });
+    let best = [0, 0, -Infinity];
+    for (let i = 0; i <= 10; i++) for (let j = 0; j <= 10; j++) {
+      const x = innerWidth * (0.1 + 0.08 * i), y = innerHeight * (0.15 + 0.07 * j);
+      const d = Math.min(...pts.map(([px, py]) => Math.hypot(px - x, py - y)));
+      if (d > best[2]) best = [x, y, d];
+    }
+    return [best[0], best[1], best[2] / (innerHeight / 2) - radius];
+  });
+  assert(clear > 0.3, `no clear water on screen for strokes elsewhere: ${clear.toFixed(2)}`);
   for (let i = 0; i < 8; i++) {
-    const [x, y] = await onScreen(page, 0.5 + (i % 4) * 0.07);
-    await jumpTo(page, x - 40, y - 100);
-    await stroke(page, [[x - 40, y - 100], [x + 40, y + 40]], 260, true);
+    const a = (i * Math.PI) / 4;
+    await jumpTo(page, x - Math.cos(a) * 60, y - Math.sin(a) * 60);
+    await stroke(page, [[x - Math.cos(a) * 60, y - Math.sin(a) * 60], [x + Math.cos(a) * 60, y + Math.sin(a) * 60]], 260, true);
     await away(page);
     await page.waitForTimeout(400);
   }
@@ -485,7 +523,7 @@ async function heave() {
   let strokes = 0;
   for (; strokes < 12; strokes++) {
     const s = await read(page);
-    if (s.haul === 'letting' || s.step === 'flipper') break;
+    if (s.asked === 4) break;
     await sweepHead(page);
     for (let i = 0; i < 6; i++) { const t = await read(page); pulls.push([t.heaves, t.peel, t.billow]); await page.waitForTimeout(150); }
   }
@@ -564,7 +602,7 @@ async function saves() {
   await until(page, (s) => s.step === 'heave', 'the heave', 20);
   const lined = await reopen('whale-line');
   assert(lined.step === 'heave' && lined.gripped && lined.haul === 'bracing' && lined.peel === 0, `line: the cork in her mittens, ${JSON.stringify(lined)}`);
-  await strokesUntil(page, sweepHead, (s) => s.haul === 'letting' || s.step === 'flipper', 10, 'heaved it off');
+  await strokesUntil(page, sweepHead, (s) => s.asked === 4, 10, 'asked for every heave');
   const heaved = await reopen('whale-heave');
   assert(heaved.step === 'flipper' && heaved.peel === 1 && !heaved.gripped && heaved.eye, `heave: the line let go, ${JSON.stringify(heaved)}`);
   await until(page, (s) => s.bird === 'holding' && s.birdT > 1, 'the cygnet to hold the end', 120);
@@ -606,7 +644,7 @@ async function voyage(idle) {
   mark('eye', await until(page, (s) => s.step === 'line', 'the line', wait));
   if (!idle) { await until(page, (s) => s.stepTime > 6, 'the line held', 20); await strokesUntil(page, (p) => sweepCork(p, 1), (s) => s.haul !== 'out', 4, 'brought the cork'); }
   mark('line', await until(page, (s) => s.step === 'heave', 'the heave', wait));
-  if (!idle) await strokesUntil(page, sweepHead, (s) => s.haul === 'letting' || s.step === 'flipper', 10, 'heaved it off');
+  if (!idle) await strokesUntil(page, sweepHead, (s) => s.asked === 4, 10, 'asked for every heave');
   mark('heave', await until(page, (s) => s.step === 'flipper', 'the flipper', wait));
   await watchBird(page);
   if (!idle) { await until(page, (s) => s.bird === 'holding' && s.birdT > 1, 'the cygnet to hold the end', 120); await strokesUntil(page, sweepFin, (s) => s.slipT >= 0, 4, 'lifted the flipper'); }
@@ -639,6 +677,7 @@ const fullidle = () => voyage(true);
 const run = { sweeps, steps, child, idle, eye, eyeidle, line, anyway, lineidle, heave, heaveidle, fin, finearly, finidle, saves, full, fullidle };
 let failed = false;
 for (const name of cases) {
+  running = name;
   try {
     await run[name]();
     console.log(`ok   ${name} ${JSON.stringify(results[name])}`);
