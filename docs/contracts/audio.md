@@ -244,14 +244,24 @@ pan and bounded scheduling; finished nodes disconnect.
   lifts the mesh off its head in the wind as the rope creaks taut, under one soft rising note (`net-heave`), and each
   of her pulls draws the wet rope through her mittens (`rope-pull`); the mesh slithers off the skin into the sea as
   fast as it peels (`net-slither`); the last loop slides off the flipper's tip into the cygnet's pull (`loop-slip`);
-  the cygnet scrambles up out of the sea onto her side (`swimmer-out`; its plunge in is its own `plunge`). Its call
-  (`whale-call`) sounds as
-  its eye opens on her and as it waves goodbye, and as a far echo on the first crossing; as its spout falls free it
-  calls once glad (`whale-glad`: the same voice, brighter, rising to E instead of settling on B). The sea runs off its near
+  the cygnet scrambles up out of the sea onto her side (`swimmer-out`; its plunge in is its own `plunge`). The sea runs off its near
   flipper as each lazy lift brings it up out of the water (`flipper-pour`, through `WorldFoley.whale`) before it is laid
-  back down (`whale-slap`). The seabirds standing on its back go up with a soft flurry of heavy wingbeats as it spouts
+  back down (`whale-slap`), and as it lifts it high to wave goodbye. The seabirds standing on its back go up with a soft flurry of heavy wingbeats as it spouts
   free (`seabirds-lift`, through `WorldFoley.whale`, from the first of them); the sea running off its back with each
   breath is silent under its sigh.
+- The whale's voice (`whale-voice.ts`, `WhaleVoice`, owned by `Foley.whale`): a humpback's manner at dream size, slow
+  moans that glide in pitch in the sea score's key (D), fundamentals from about 41 to 165 Hz with a sub-octave to be
+  felt and the harmonics a phone's speaker carries, shaped by two throat resonances that open as it rises, a rasp in
+  the tired calls, the shared reverb and a slow darkening echo of the sea. Its calls: a tired sagging moan heard in the
+  mist before it is seen (`whale-moan`, with the sigh after the pod turns the boat toward it, `sighIn(…, true)`, or
+  `moan()` at once); a soft rise as its eye opens on her (`whale-greet`, from the net's `whale-call`); a long glad song
+  in two rising phrases as it breathes free (`whale-song`, ending on E); goodbye, down and up again, as it waves its
+  flipper and again as its flukes stand and flex (`whale-goodbye`); and its last and lowest, muffled, from under the sea
+  as its swell reaches the boat (`whale-deep`). The first crossing's far dive has at most its echo (`whale-echo`).
+  `WorldFoley` gives the voice its own distance (`whaleVoice.near` 40 m to `far` 600 m, never below `farthest`), so the
+  moan carries from the mist; farther, it is more muffled and more of it is echo. While it calls the encounter's
+  `hush` rises to at least `netWhale.voiceRoom` (0.6, about −7 dB on the sea score) and eases back after, so the score
+  makes room under it rather than burying it.
 - Flock wingbeats follow flight and take-off; resting rafts are silent. Beats consumed while inaudible never burst on
   return.
 - The Lines pinwheels share one flutter voice; out of reach it fades, stops and disconnects, and a new one is made if
