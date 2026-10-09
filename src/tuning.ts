@@ -1928,8 +1928,11 @@ export const tuning = {
          * seconds each ring takes to push it down; the rings roll out at this share of its top.
          */
         sea: 6.8, drawn: 1.0, sinkFor: 3.2, wavesAt: 0.92,
-        /** Seconds after she is aboard it starts to close round and darken, how long that takes, and how high it rises again. */
-        closeAfter: 5, closeFor: 16, closedLevel: 6,
+        /**
+         * Seconds after she is aboard it starts to close round and darken (the storm 25 s out, as the lighthouse's
+         * light begins to fail), how long that takes, and how high it rises again.
+         */
+        closeAfter: 35.6, closeFor: 18, closedLevel: 6,
       },
       /**
        * Rings the lantern answers before the boat is hers to sail, how far along its way home each answer brings it,
@@ -1957,8 +1960,8 @@ export const tuning = {
        * turns and how fast, and how far behind the cat has to be before she turns the side away from the lens.
        */
       lookUpAt: 0.6, blinkAt: 5.6, chirrupAfter: 2.0, lookUpFor: 10.6, headTurns: 0.9, seatTurn: 1.7, turnRate: 1.6, turnPast: 2.2,
-      /** The rain the fog brings as it closes round, and how far gathered the storm's weather is when it starts from here. */
-      closeShower: 0.25, stormFrom: 0.35,
+      /** The rain the fog brings as it closes round. */
+      closeShower: 0.25,
     },
     /** Her run over the roofs after the cat, from the first roof's ridge to the nave's. */
     run: {
@@ -2272,13 +2275,6 @@ export const tuning = {
       pace: 0.45, nestPace: 0.3, seaPace: 0.3, upPace: 0.8, margin: 0.8, extra: 1.5, uprightZoom: 0.85,
       /** When the lantern answers the lens looks this share of the way toward it (upright, its own), for about this many seconds. */
       find: 0.1, uprightFind: 0.25, findFor: 3,
-      /**
-       * Seconds after the look up that the lens looks across to between her and the lighthouse's lamp as its light
-       * falters, and is there; how much of the way it goes, how much it favours her over the lamp and how wide the
-       * lens goes to hold them both (upright, wider); and when it gives way to the storm's frame, and how long that takes.
-       */
-      lampFrom: 0, lampTo: 3, lampAim: 1, lampHer: 0.55, uprightLampHer: 0.45, lampZoom: 0.68, uprightLampZoom: 0.62,
-      leaveFrom: 6.6, leaveFor: 12,
     },
     /** Follow the boat into the streets; notice the church from that travelling view. */
     roofFromZ: -1260, roofUntilZ: -1360,
@@ -2541,45 +2537,75 @@ export const tuning = {
       reachSill: 0.42, pull: 0.62, knee: 0.5, rise: 0.68,
     },
   },
-  /** One continuous passage from the last drowned houses to the forest beach. */
+  /**
+   * The storm, from her seated aboard at the nave to the forest beach, in seconds from casting off: the calm turning to
+   * wind by `windBy`, the lighthouse's call at `foghornAt`, its light failing and out at `lighthouseOutAt` as the fog
+   * closes round (`drowned.church.fog.closeAfter`), the night come by `darkBy`, the cygnet's shaking at
+   * `shakeAt`, the plane taken at `gatherFor`, and the beach about 80 s out.
+   */
   storm: {
+    /** How fast the drift goes through the village before the cat, m/s. */
     passageSpeed: 5.8,
     /**
-     * The most the boat makes in the storm from the nave, hard-pressed with its sail spilling most of the wind, m/s;
-     * and how near a turn of its way out counts as rounded, metres.
+     * The most the boat makes leaving the nave on the first air, rising to `speed` as the wind comes up, hard-pressed
+     * with its sail spilling most of the wind, m/s; and how near a turn of its way out counts as rounded, metres.
      */
-    speed: 4.2, outRounded: 7,
-    gatherFor: 23,
-    /** One distant ship call, with its tail clear before the first thunder. */
-    foghornAt: 3, foghornLateAllowance: 0.25,
-    weatherGatherFor: 20,
+    calmSpeed: 1.1, speed: 2.5, outRounded: 7,
+    /** The air coming back as they cast off, a share of the storm's wind, and seconds until all of it has come. */
+    breezeFrom: 0.12, windBy: 24,
+    gatherFor: 55,
+    /** The lighthouse's one call, across the calm while it is lit, its tail clear before the first thunder. */
+    foghornAt: 9, foghornLateAllowance: 0.25,
+    /** Seconds until the weather (the sea running, the rain, the veil) has gathered from nothing. */
+    weatherGatherFor: 56,
     /**
-     * The lens's one move for the lighthouse: out over `openFor` seconds to `distance`, down to `eyeRise` over the
-     * drift's aim and the lens widened to `zoom`, tilted up to `tilt` radians toward the crown. The tower is watched from
-     * within `arc` radians of astern (`offset` puts it beside the travellers) and let go over `pass` beyond it. From
-     * `inFrom` seconds after the light is out it lets the tower go over `inFor` seconds, drawn in to `near` metres
-     * behind the boat so she and the lantern carry the dark.
+     * Casting off, the lens goes in one move over `leaveFor` seconds from where the look up at the cat lets her go,
+     * down to the lighthouse's view. That stands on the line from the tower through the boat turned `offset` radians
+     * round it, `distance` metres beyond her (upright, its own) and `rise` over the water, at most `arc` radians off
+     * astern and letting the tower go over `pass` beyond that; within `naveClearBy` metres of the nave the line turns
+     * `offsetAtNave` and may stand `arcAtNave` off astern, so the lens sees her past the nave's roof. On a lens of
+     * `zoom` it turns toward the tower only as far as brings it `margin` radians inside the frame's side, keeping her
+     * `herMargin` inside the other, and looks up from the storm's own aim only as far as keeps the lamp `margin` inside
+     * the frame's top, never above `tilt`. From `holdFor` seconds after the light is out it comes in over `letGoFor`
+     * seconds to the storm's frame.
      */
-    lighthouseCamera: { openFor: 6, distance: 24, eyeRise: 1.7, zoom: 0.82, tilt: 0.21, arc: 0.7, pass: 0.9,
-      offset: 0.24, pace: 0.8, inFrom: 1, inFor: 10, near: 12 },
+    leaveFor: 9,
+    lighthouseCamera: { distance: 18, uprightDistance: 15, rise: 3, arc: 1.75, pass: 0.5, offset: -0.2, offsetAtNave: -0.7,
+      arcAtNave: 2.15, naveClearBy: 14, zoom: 0.86, uprightZoom: 1, margin: 0.1, herMargin: 0.14, tilt: 0.26, pace: 0.6,
+      holdFor: 3, letGoFor: 14 },
     /** How quickly the storm's lens takes up the hull's turns (critically damped, per second). */
     lensTurn: 0.6,
-    lighthouseComfortFor: 2.6,
+    /** Seconds she takes turning round on the thwart from the cat to the way they go, as they cast off. */
+    turnFromCat: 3,
+    /** Seconds she holds the startled cygnet as the light goes out. */
+    lighthouseComfortFor: 3,
     /** She watches the lighthouse, lit and then dark, until it is this far behind abeam (the cosine off her bow). */
     lighthouseWatched: -0.2,
     lighthouseStartle: 0.18,
-    darkBy: 22,
-    lighthouseOutAt: 6.5,
-    lighthouseFadeFor: 2.5,
+    /** Seconds until the storm's night has taken over from the dusk, coming on from the first. */
+    darkBy: 48,
+    /**
+     * When the light is out, and the seconds it takes failing before that: a long sag, a half recovery, a deeper sag, a
+     * last glow, gone. Its beam turns at `lighthouseSweep` radians a second from `lighthouseSweepStart`, dipping
+     * `lighthouseDip` radians below level, so it sweeps over the fog and the boat rather than along the water under them.
+     */
+    lighthouseOutAt: 30,
+    lighthouseFadeFor: 5,
     lighthouseSweep: 0.38,
     lighthouseSweepStart: 1.7,
+    lighthouseDip: 0.26,
+    /**
+     * Closed round for the storm, the fog's top rises away from her in a bowl; it stops rising this many metres over its
+     * top, so looking up the sky shows through it faintly and evenly, never through a hole with an edge.
+     */
+    fogBowlTop: 12,
     stormVeil: 62,
     stormVeilDensity: 0.045,
     moonThroughCloud: 0.2,
     shadowSoftenFrom: 0.8,
     shadowCovered: 0.98,
     snatchFor: 4,
-    shakeAt: 14,
+    shakeAt: 46,
     cameraQuarter: 0.16,
     lookAhead: 1.3,
     planeAhead: 2,

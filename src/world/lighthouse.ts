@@ -10,10 +10,24 @@ export const LIGHTHOUSE_BASE_Y = 4.5;
 export const LIGHTHOUSE_LANTERN_Y = LIGHTHOUSE_BASE_Y + 13.85 * LIGHTHOUSE_SCALE.y;
 export const LIGHTHOUSE_TOP_Y = LIGHTHOUSE_BASE_Y + 16.6 * LIGHTHOUSE_SCALE.y;
 
-/** A turning light made visible by rain. Its last sweep falters out as the paper plane is taken. */
+/** How strong the failing light is through its last seconds (0 to 1 of them): sags, a half recovery, a last glow, out. */
+const FAILING = [[0, 1], [0.24, 0.42], [0.46, 0.82], [0.7, 0.16], [0.82, 0.3], [1, 0]];
+
+function failing(u: number): number {
+  if (u <= 0) return 1;
+  if (u >= 1) return 0;
+  let i = 1;
+  while (FAILING[i][0] < u) i++;
+  const [u0, p0] = FAILING[i - 1], [u1, p1] = FAILING[i];
+  return THREE.MathUtils.lerp(p0, p1, THREE.MathUtils.smootherstep(u, u0, u1));
+}
+
+/** A turning light made visible by rain. In the storm its light fails and goes out, in sight, as they pass it. */
 export class LighthouseLight {
   readonly object = new THREE.Group();
+  /** Seconds since the storm began, and seconds the beam has been turning. */
   private elapsed = 0;
+  private turned = 0;
   private readonly strength = { value: 1 };
   private readonly beam: THREE.Mesh;
   private readonly glow = { value: new THREE.Color('#ffe6ad') };
@@ -71,16 +85,18 @@ export class LighthouseLight {
   }
 
   update(dt: number, storm: number): void {
+    const s = tuning.storm;
+    /** A storm already whole (the dark wood) put it out long ago. */
+    if (storm >= 1 && this.elapsed === 0) this.elapsed = s.lighthouseOutAt;
     if (storm > 0) this.elapsed += dt;
     else this.elapsed = 0;
-    const s = tuning.storm;
-    const dying = THREE.MathUtils.smoothstep(this.elapsed, s.lighthouseOutAt - s.lighthouseFadeFor, s.lighthouseOutAt);
-    // One slow sag and recovery, then the lamp goes out; no rapid flicker.
-    const falter = 1 - 0.65 * Math.pow(Math.sin(dying * Math.PI), 2);
-    const power = (1 - dying) * falter;
+    this.turned += dt;
+    // Slow sags, never a rapid flicker.
+    const left = failing((this.elapsed - s.lighthouseOutAt + s.lighthouseFadeFor) / s.lighthouseFadeFor);
+    const power = left < 1e-3 ? 0 : left;
     this.strength.value = power;
     this.glow.value.setRGB(1.8, 1.15, 0.5).multiplyScalar(power);
-    this.beam.rotation.set(0.48, this.elapsed * s.lighthouseSweep + s.lighthouseSweepStart, 0);
+    this.beam.rotation.set(s.lighthouseDip, this.turned * s.lighthouseSweep + s.lighthouseSweepStart, 0);
     this.beam.visible = power > 0.001;
     atmo.uniforms.uHarbourLight.value.set(this.object.position.x, this.object.position.y, this.object.position.z, power);
     atmo.uniforms.uHarbourDirection.value.set(0, 0, 1).applyEuler(this.beam.rotation);

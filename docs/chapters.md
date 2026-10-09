@@ -402,13 +402,17 @@ About five to six minutes, nearly all of it the player's:
    aboard, the cat comes to the sill with a kitten and looks down, she looks back up at it, and it gives her a slow
    blink. After 90 s with no ring the world's own gust rings the bell; with no progress under sail its air carries
    the boat in.
-7. **The storm** begins as she turns from the cat, the fog darkening into its night, the weather already part gathered. They go out north of
-   the nave past the lighthouse (`STORM_WAY`, 173 m to the beach at the hard-pressed sail's 4.2 m/s): the foghorn,
-   the beam faltering and going out about 6 s in while the lamp is still in her look back, the cygnet startled and
-   nuzzling under her chin, its shaking in the rain, lightning only once the dark is established, the paper plane
-   taken off her hand by a gust about mid-way and carried off fast and low over the wood, and the landing on the
-   forest beach about 45 s after she boarded. The storm's night takes over from the fog's dark without lifting, and
-   the fog thins off as the forest comes up out of it. The landing is relief that turns into the wood's fear.
+7. **The storm** begins as she turns from the cat, out of the goodbye's calm. They go out north of the nave past the
+   lighthouse (`STORM_WAY`, 173 m to the beach) on the first air, the player's wind still filling the sail until the
+   storm's comes up; the lens comes down off the cat's sill in one move to look along the water at the boat with the
+   church and the lighthouse beyond. The dusk deepens into night, the first stars come out over the fog lying on the
+   water, the sea roughens and the rain begins; the lighthouse's beam turns over the fog and the boat, its horn
+   calls, and as they pass it its light fails and goes out in frame (30 s out) while the fog rises round the tower
+   and closes round them into the storm's night, lightning once the dark is established, the cygnet startled at the
+   light going and nuzzling under her chin, its shaking in the rain, the paper plane taken off her hand by a gust
+   (55 s out) and carried off fast and low over the wood, and the landing on the forest beach about 78 s after
+   casting off. The storm's night takes over from the fog's dark without lifting, and the fog thins off as the forest comes
+   up out of it. The landing is relief that turns into the wood's fear.
 
 Rulings:
 - Coming down from the stairs, the stairs are never seen from the village (their room goes while the boat is still

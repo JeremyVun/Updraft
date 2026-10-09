@@ -998,6 +998,8 @@ vec4 seaFogMarch(vec3 ro, vec3 rd, float far, float least) {
   float ceiling = r.h * RELIEF + THIN_UP;
   float climb = rd.y - r.bowl * r.horiz;
   vec2 span = deckSlab(ro, vec3(rd.x, climb, rd.z), -1e5, ceiling, far);
+  // The bowl stops rising at a height, so a sightline up out of it thins away evenly instead of ending at a rim.
+  if (rd.y > 1e-4) span.y = min(span.y, (ceiling + ${glsl(tuning.storm.fogBowlTop)} - ro.y) / rd.y);
   float out_ = r.ds - r.lean, room = r.front + ${glsl(tuning.drowned.fog.bulge + tuning.drowned.fog.fingers)} - r.s0;
   if (abs(out_) > 1e-5) {
     if (out_ > 0.0) span.y = min(span.y, room / out_);
