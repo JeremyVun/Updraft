@@ -1480,7 +1480,7 @@ export const tuning = {
      * fully, progress a second at full charge (about two loops of ordinary circling), and how far from the blowhole
      * the column may stand (m).
      */
-    liftFrom: 0.12, liftFull: 0.5, liftRate: 0.65, reach: 6,
+    liftFrom: 0.12, liftFull: 0.5, liftRate: 0.8, reach: 6,
     /**
      * A step is asked once the camera is `inviteHeld` of the way through its move to the step's hold; its drawn sweep
      * shows `inviteSettle` seconds later, goes as a stroke lands on what it asks for, and
@@ -1587,7 +1587,7 @@ export const tuning = {
      * valve's dolphin rises beside its head this
      * far out from the waterline under the eye (m) and lifts the fold with its beak.
      */
-    eyeTry: 0.32, eyeTryLifted: 0.3, foldRadius: 0.45, foldSweep: 0.9, foldPart: 0.4, foldSettle: 0.6, foldEase: 2.5,
+    eyeTry: 0.32, eyeTryLifted: 0.3, foldRadius: 0.45, foldSweep: 0.6, foldPart: 0.4, foldSettle: 0.6, foldEase: 2.5,
     foldFlip: 1.5, foldOpens: 0.9, foldNoseOut: 0.9,
     /**
      * The look between them, framed as the owl's is: `lookDistance` behind the boat and `lookHeight` up, `lookBearing`
@@ -1642,7 +1642,7 @@ export const tuning = {
      * than the line's. The valve's dolphin comes up under the net's edge every `nudgeEvery` seconds.
      */
     heaves: 4, pullTake: 0.9, heaveTime: 1.5, pullDraw: 0.6, braceFor: 0.4, braceBack: 0.32, haulHold: 0.8, letGo: 3.4,
-    heaveRadius: 0.32, billowGain: 3, billowHeight: 1.7, billowFall: 1.6, heaveSweep: 0.3, heaveBack: 0,
+    heaveRadius: 0.32, billowGain: 3, billowHeight: 1.7, billowFall: 1.6, heaveSweep: 0.15, heaveBack: 0,
     nudgeEvery: 2.8,
     /** Seconds after she lets the line go that the cygnet sees the loop on the flipper and peeps, and that she looks to it. */
     birdSees: 1, sheSees: 1.9,
