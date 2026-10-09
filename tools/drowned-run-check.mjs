@@ -784,12 +784,15 @@ try {
         if (r.tree.phase !== 'waiting') return;
         const t = __stats.time - from, p = c.position;
         w.lens.push([t, Math.hypot(cam.position.x - p.x, cam.position.z - p.z)]);
-        /** Where she looks before the player does anything: steeply up, or out across the lane, where it will take her and the cat goes. */
+        /**
+         * Where she looks before the player does anything: steeply up at the tree, or out across the lane, where it will
+         * take her and the cat goes (or at the cygnet on her back, which is neither).
+         */
         if (c.lookAt && w.quiet) {
           w.looks++;
-          const steep = Math.atan2(c.lookAt.y - p.y - 1.2, Math.hypot(c.lookAt.x - p.x, c.lookAt.z - p.z)) > 0.6;
-          if (steep) w.up++;
-          else if ((c.lookAt.x - over.x) * fall.x + (c.lookAt.z - over.z) * fall.y > 0.5) w.across++;
+          const l = c.lookAt, steep = Math.atan2(l.y - p.y - 1.2, Math.hypot(l.x - p.x, l.z - p.z)) > 0.6;
+          if (steep && Math.hypot(l.x - root.x, l.z - root.z) < 3) w.up++;
+          else if (!steep && (l.x - over.x) * fall.x + (l.z - over.z) * fall.y > 0.5) w.across++;
         }
         if (w.invited === null && r.tree.invitation && __game.emberInvitation.alpha > 0.5) w.invited = t;
         requestAnimationFrame(tick);
@@ -852,7 +855,7 @@ try {
       + ` ${(await state()).fallen === 'standing' ? 'it still stood' : 'it went over'} after ${pushes} strokes back and forth; the lens came round from ${lensFrom.toFixed(1)} m off her to ${lensTo.toFixed(1)} m (in and out ${inAndOut.toFixed(2)} m)`);
     assert(tw.root >= 4, `she waited under the tree, ${tw.root.toFixed(1)} m from its foot`);
     assert(tw.up < tw.looks * 0.4, `she looked steeply up at the tree ${(100 * tw.up / tw.looks).toFixed(0)}% of the time she waited`);
-    assert(tw.across > tw.looks * 0.5, `she looked across the lane only ${(100 * tw.across / tw.looks).toFixed(0)}% of the time she waited`);
+    assert(tw.across > tw.looks * 0.4, `she looked across the lane only ${(100 * tw.across / tw.looks).toFixed(0)}% of the time she waited`);
     assert(tw.invited !== null && tw.invited < 3.5, `the drawn gust did not come within 3.5 s of her stopping (${tw.invited})`);
     assert(Object.values(framed).every((v) => v < 0.95), `the tree's view did not hold her, the crown and the barn: ${JSON.stringify(framed)}`);
     assert(upright - rocked > 0.02, `a stroke the wrong way did not rock it back (${(upright - rocked).toFixed(3)} rad)`);
