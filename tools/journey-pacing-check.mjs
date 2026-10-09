@@ -1,5 +1,6 @@
 // Measure current passages with real boat/chapter code: ordinary breeze, sustained gusts, direction and frame rate.
-// Usage: node tools/journey-pacing-check.mjs; durations in /tmp/updraft-journey-pacing.json.
+// Usage: node tools/journey-pacing-check.mjs; durations in /tmp/updraft-journey-pacing.json. CROSSING=<name> runs one
+// passage, SEA_SEED=<n> seeds the pod's chances (147 by default), SOFT=1 lists every open-sea failure of a run.
 import './lib/typescript.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -91,7 +92,7 @@ function run(name, fps, gust, veer=0, waitInVillage=false, arrivalGust=false, ci
   if(rig){chapter.update(0,0);rig.cut(chapter.shot);}
   let hazeShown=NaN,openShown=NaN,lastStep='',restGap=Infinity,restSpeed=Infinity,shownDuringWhale=0,worstBrake=0,lastSpeed=boat.speed;const ndc=new THREE.Vector3();
   // The open sea as the whale is found: the boat's pace, what of the whale and the mirror shows and when, and the way on.
-  const reach={gap:1e9,at:0};let leastHidden=1,nudgeOut=null,falloffShown=NaN,mistShown=0,underWay=false,slowest=Infinity,slowestAt=null,whaleShownAt=null,mirrorShownBeforeDive=0,heading=0,mostStarboard=0,portTurn=0,lastYaw=null;
+  let leastHidden=1,nudgeOut=null,falloffShown=NaN,mistShown=0,underWay=false,slowest=Infinity,slowestAt=null,whaleShownAt=null,mirrorShownBeforeDive=0,heading=0,mostStarboard=0,portTurn=0,lastYaw=null;
   const sea={sighs:[],covers:[]};
   if(rig)sealife.onWhaleSound=(kind)=>{if(kind==='whale-sigh'&&chapter.whale?.step==='approach'&&chapter.whale.led)sea.sighs.push(+time.toFixed(1));};
   let time=0;
@@ -142,7 +143,6 @@ function run(name, fps, gust, veer=0, waitInVillage=false, arrivalGust=false, ci
         if(whale.step==='approach'&&whale.remaining()<=20&&events.last20===undefined)events.last20=+time.toFixed(1);
         if(events.last20!==undefined&&events.stopped===undefined&&boat.speed<0.3)events.stopped=+time.toFixed(1);
         const marks=whaleMarks();
-        {const r=whale.remaining();if(r>90&&r<250){const near=Math.min(...marks.map(p=>p.distanceTo(rig.camera.position)));if(near-r<reach.gap)Object.assign(reach,{gap:+(near-r).toFixed(1),at:+r.toFixed(0)});}}
         if(!whale.led){const seen=onScreen(marks).map(p=>hazeOver(p,rig.camera,hazeShown,openShown,falloffShown,mistShown));
           if(seen.length)leastHidden=Math.min(leastHidden,...seen);
           if(whaleShownAt===null&&seen.some(c=>c<0.97))whaleShownAt=+time.toFixed(1);}
@@ -204,7 +204,7 @@ function run(name, fps, gust, veer=0, waitInVillage=false, arrivalGust=false, ci
         check(time-events.letGo<=50,`from the boat let go to the mooring at most 50 s, with the dive about 60: ${(time-events.letGo).toFixed(1)} s`);
         check(portTurn<0.15&&-mostStarboard<1.9,`sails straight on and curves in to the jetty, never coming about: ${JSON.stringify({portTurn,starboard:-mostStarboard})}`);}
       return {seconds:+time.toFixed(1),musicLead:+musicLead.toFixed(2),sailed:+sailed.toFixed(1),peak:+peak.toFixed(2),swimSeconds:+(swimFrames/fps).toFixed(1),stillSeconds:+stillFor.toFixed(1),whaleCalled:chapter.whaleCalled,
-        ...(chapter.whale?{hiddenBeforeNudge:+leastHidden.toFixed(4),reach,nudgeOut,whaleBrake:+worstBrake.toFixed(2),restGap:+restGap.toFixed(2),slowest:+slowest.toFixed(2),slowestAt,lead:+(events['whale-breath']-events.whaleLed).toFixed(1),
+        ...(chapter.whale?{hiddenBeforeNudge:+leastHidden.toFixed(4),nudgeOut,whaleBrake:+worstBrake.toFixed(2),restGap:+restGap.toFixed(2),slowest:+slowest.toFixed(2),slowestAt,lead:+(events['whale-breath']-events.whaleLed).toFixed(1),
           last20:+(events.stopped-events.last20).toFixed(1),diveToMooring:+(time-events.dive).toFixed(1),letGoToMooring:+(time-events.letGo).toFixed(1),
           portTurn:+portTurn.toFixed(3),starboardTurn:+(-mostStarboard).toFixed(2),sighs:sea.covers}:{}),beats,events,dolphinActs};
     }
@@ -214,7 +214,6 @@ function run(name, fps, gust, veer=0, waitInVillage=false, arrivalGust=false, ci
 }
 const results=[];
 for(const name of (process.env.CROSSING ? [process.env.CROSSING] : Object.keys(starts))) {
-  if(process.env.ONE){console.log(JSON.stringify({name,calm:run(name,60,0)}));continue;}
   const calm=run(name,60,0),gust=run(name,60,8),lowFps=run(name,30,0);
   const windLeft=run(name,30,0,-.35),windRight=run(name,30,0,.35);
   const lateGust=run(name,60,0,0,false,true);

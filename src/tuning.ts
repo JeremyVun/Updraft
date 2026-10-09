@@ -1789,7 +1789,7 @@ export const tuning = {
      * How far short of the rest the pod may set off to nudge the boat once its leap and the swim are done (m): its nudge
      * lands about 13 s and 60 m on.
      */
-    nudgeFrom: 204,
+    nudgeFrom: 190,
   },
   /** The pod that runs with the boat on the long crossing, and the two set-pieces it plays. */
   dolphins: {
