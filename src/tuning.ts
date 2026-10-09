@@ -2273,12 +2273,12 @@ export const tuning = {
     catAlong: 0.58, catSide: 12.5, catEye: 3.8, catLook: 0.5, catAim: 1.0, catLift: 0.9, catZoom: 1.25,
     uprightCatAlong: -1.0, uprightCatSide: 4.8, uprightCatEye: 5.8, uprightCatLook: 0.62, uprightCatAim: 0.5, uprightCatLift: 0.6, uprightCatZoom: 1.25,
     /**
-     * The cat brought aboard: once the tub is this near the boat the lens comes round to the bow's quarter, its bearing
-     * from ahead (radians), how far off (upright, nearer) and how high over where it looks, which is this share of the
-     * way from her to the cat and this high over her seat; the lens it takes, and its pace.
+     * The cat brought aboard: once the tub is this near the boat the lens comes round toward the bow, its bearing from
+     * ahead (radians), how far off (upright, nearer) and how high over where it looks, which is this share of the way
+     * from her to the cat and this high over her seat; the lens it takes, and its pace.
      */
-    rescueFrom: 2.5, rescueBearing: 0.95, rescueDistance: 5.4, uprightRescueDistance: 4.8, rescueHeight: 2.5, rescueAlong: 0.5,
-    rescueAim: 0.1, rescueZoom: 1.25, uprightRescueZoom: 1.05, rescuePace: 0.35,
+    rescueFrom: 2.5, rescueBearing: 1.3, rescueDistance: 5.2, uprightRescueDistance: 4.8, rescueHeight: 2.6, rescueAlong: 0.5,
+    rescueAim: 0.3, rescueZoom: 1.25, uprightRescueZoom: 1.05, rescuePace: 0.35,
   },
   /** The two crossings of the drowned village's run over the roofs: the dead tree pushed over, the swing pumped. */
   crossings: {

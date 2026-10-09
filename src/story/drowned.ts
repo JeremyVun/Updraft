@@ -952,10 +952,10 @@ export class DrownedChapter implements Chapter {
   }
 
   /**
-   * The rescue, close: off the bow's quarter on the side away from the sail, which hangs slack and swings, committed as
-   * the sailing view's side is and going round by the bow when it changes; far enough round that the mast stands clear
-   * of her face, a little over her head so the boards show past the gunwale, with a longer lens: the cat's leap aboard,
-   * its shiver, and it pressing against her shins as she kneels to it, her face and the cat one frame.
+   * The rescue, close: nearly abeam on the side away from the sail, which hangs slack and swings, committed as the
+   * sailing view's side is; far enough aft of the mast that it stands clear of her face, a little over her head so the
+   * boards show past the gunwale, with a longer lens: the cat's leap aboard, its shiver, and it pressing against her
+   * shins as she kneels to it, her face and the cat one frame.
    */
   private rescueFrame(): void {
     const k = tuning.drownedCamera, s = this.shot, seat = this.cast.child.position;

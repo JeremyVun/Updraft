@@ -24,6 +24,8 @@ const FOREDECK = new THREE.Vector3(0, 0.668, 1.85);
 const AT_HER_FEET = new THREE.Vector3(0, FLOOR_Y + 0.01, 0.95);
 const HER_LEGS = new THREE.Vector3(0, FLOOR_Y + 0.01, 0.22);
 export const KNEEL_AT = new THREE.Vector3(0, FLOOR_Y + 0.02, 0.02);
+/** How far either side of the middle the boards she stands on run, where the cat goes along her shins. */
+const BOARDS_HALF = 0.36;
 /** The hull at the waterline as the tub meets it: half its beam, and half its length about its middle. */
 const HULL_HALF = 0.8;
 const HULL_MID = (BOW_Z + STERN_Z) / 2;
@@ -482,7 +484,7 @@ export class StrandedCat {
       cat.hop(to.clone(), { floor, then: 'stand', arc: 0.15, look: this.head }, () => {
         const legs = this.v.copy(HER_LEGS).applyMatrix4(boat.group.matrixWorld);
         legs.y = floor(legs.x, legs.z);
-        cat.press(legs.clone(), boat.yaw, floor, this.head, () => { this.kneelFrom = this.rescue; });
+        cat.press(legs.clone(), boat.yaw, floor, this.head, () => { this.kneelFrom = this.rescue; }, BOARDS_HALF);
       });
     }
     const kneeling = this.kneelFrom >= 0 ? this.rescue - this.kneelFrom : -1;

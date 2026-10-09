@@ -456,14 +456,18 @@ export class Cat {
   /**
    * Rubs against her legs: comes to the front of them (`legs`, between her feet; `facing`, the way she faces) and
    * goes along her shins leaning its flank and cheek into them, tail straight up, turns at the end and comes back the
-   * other way, then sits at her feet looking up at `face` and calls `onDone`. About six seconds.
+   * other way, then sits at her feet looking up at `face` and calls `onDone`. About six seconds. It keeps within `room`
+   * metres to either side of her, as between a boat's sides.
    */
-  press(legs: THREE.Vector3, facing: number, floor: Floor, face: THREE.Vector3, onDone?: () => void): void {
+  press(legs: THREE.Vector3, facing: number, floor: Floor, face: THREE.Vector3, onDone?: () => void, room = Infinity): void {
     this.legs.copy(legs);
     const fx = Math.sin(facing), fz = Math.cos(facing);
     const side = (this.position.x - legs.x) * fz - (this.position.z - legs.z) * fx >= 0 ? 1 : -1;
     const k = this.scale / 1.8;
-    const at = (ahead: number, across: number) => new THREE.Vector3(legs.x + fx * ahead + fz * across * side, legs.y, legs.z + fz * ahead - fx * across * side);
+    const at = (ahead: number, out: number) => {
+      const across = THREE.MathUtils.clamp(out, -room, room) * side;
+      return new THREE.Vector3(legs.x + fx * ahead + fz * across, legs.y, legs.z + fz * ahead - fx * across);
+    };
     const pass = [at(0.3 * k, 0.55 * k), at(0.2 * k, 0.2 * k), at(0.19 * k, -0.2 * k), at(0.3 * k, -0.42 * k), at(0.48 * k, -0.3 * k), at(0.42 * k, 0)];
     this.run([at(0.42 * k, 0.75 * k)], floor, { pace: 'walk', speed: 0.8, then: 'stand' }, () => {
       this.rubbing = true;
