@@ -676,6 +676,22 @@ much noise too often."
 26. The cat's and kittens' sounds have no call marks. Fix: every mew, purr or call from the cat or a kitten shows the
     cygnet's call marks (`src/fx/call-marks.ts`) at the one that made it.
 27. The kittens are too noisy. Fix: fewer and sparser kitten sounds, each one meaning something.
+Jeremy, playing on (2026-10-10, verbatim): "Then, while she's on the swing, the fog keeps coming in and and out really
+quickly. Also, the entire scene has some really bad performance issue. Switching between ultra and low i dont see much
+visual difference, but there is a very very noticeable drop in framerates at ultra. Then in the bellfry, the boat and
+hte red sail just appear out of nowhere. Also, shouldn't the fog cover the entire village and then recede with the
+bell? I thought that was the idea?"
+28. On the swing the fog flickers in and out of the frame quickly. Fix: the fog's place in the frame changes only as
+    slowly as the fog itself moves.
+29. The whole room runs badly at ultra, and ultra looks little different from low. Fix: find what ultra costs here;
+    ultra either shows what it pays for or stops paying it, and the room holds its frame rate. Measured with the GPU
+    quiet (no other captures running).
+30. In the belfry the boat and its red sail appear out of nowhere. Fix: the boat comes out of the fog, its lantern
+    first, as step 7 says; nothing pops in.
+31. Yes, that is the idea (step 6 and 7): the fog closes round the tower to below the sills, the village a white sea
+    with only the spire and the lighthouse out of it; each ring pushes it back round the tower and the lantern answers
+    nearer each time, until the fog has drawn back to the water round the nave. In play it does not read that way.
+    Fix: the player sees the village go under, and sees each ring push the fog back.
 
 ### The room rethought (Claude, 2026-10-08; Jeremy: "yea lets see how this works")
 
