@@ -605,7 +605,7 @@ the action is for (where the tub goes, where the tree falls, what the bell answe
    way she must go, and no gesture fells it.
 5. ~~The sheet's hold~~ (`proto-drowned-fix-pieces`: she gathers the slack hem's middle in both mittens and hangs in front of its lower middle as it carries her; the drawn gust now shows, it had restarted every frame). Was: she hangs by one hand off the sheet's side edge, which reads wrong. Fix: she holds it as one
    rides a sail, centred on it with both hands, the filled sheet carrying her.
-6. Through the run the cat is hardly seen. Fix: the cat a roof ahead in every walking frame and its own crossing of
+6. ~~The cat through the run~~ (`proto-drowned-fix-walks`: it leads 7.5 m ahead, sits facing her and mews, waits across each piece calling until she is over; the walking lens leans toward it and keeps it in frame; median 46-56 px). Was: through the run the cat is hardly seen. Fix: the cat a roof ahead in every walking frame and its own crossing of
    each piece in view (design step 5: "the cat goes first wherever a cat can").
 7. ~~The mill's frame~~ (the board's view from the north, eye 20.5,9,-1520 at 26,7.5,-1541, rising as she climbs: the sails, the drawn circle, her in the basket, the top and the bell tower). Was: the lens low behind her in the basket crops the sails' hub and the drawn circles off the top. Fix: wider,
    the sails, their hub with the drawn circles, and her in the basket in one frame.
@@ -625,12 +625,12 @@ Found reading the room's storyboard (a frame every 2 s of `drowned-run-check` fr
 12. ~~The swing~~ (it stalled because it felt the player only through the wind's CPU copy, which starves in `shot` mode; now a stroke along the arc across the ropes or seat on screen is one pump, about four take her to the let-go; side-on from the west 13.4 m off the bough, the nave's slope and the cat waiting above her landing in frame). Was: the lens stands 21 m off, she is a few dozen pixels tall, the seat hardly moves through two minutes of
     pumping, the nave she lands on does not read, and the check's run never reached the tower's foot after it (a
     stall). Fix: closer, the seat's arc and the nave's roof she leaps to in one frame; it must carry her over.
-13. The cat unreadable (boat section ~~done~~: a longer lens on the approach, 100-145 px at the bow through the drift and stuck, the bolt carried up onto the ridge; the run is with the walks parcel): from the rescue on, not only on the run (item 6): in the drift it is out of the wide frame,
+13. ~~The cat unreadable~~ (boat section: a longer lens on the approach, 100-145 px at the bow through the drift and stuck, the bolt carried up onto the ridge; the run is with the walks parcel): from the rescue on, not only on the run (item 6): in the drift it is out of the wide frame,
     stuck it is a speck at the bow, on the ridge and the walks it does not show at all.
-14. The fog dropping out (boat section ~~done~~: it comes on behind the boat from off its starboard quarter, creeping through the drift; on the ridge she looks back as it takes the boat, the lantern last; the run is with the walks parcel): absent from the stuck frame until she climbs out, and from every mill frame; the room's logic
+14. ~~The fog dropping out~~ (boat section: it comes on behind the boat from off its starboard quarter, creeping through the drift; on the ridge she looks back as it takes the boat, the lantern last; the run is with the walks parcel): absent from the stuck frame until she climbs out, and from every mill frame; the room's logic
     (get higher than the fog) cannot be read from the lens.
 15. ~~The rescue close-up~~ (`proto-drowned-fix-boat`: the cat comes up into her arms and pushes its head under her chin as its shivering eases, both faces in profile against the water; then back to the bow). Was: the sail and her hood hide her face, and the cat at her shins is out of frame or small.
-16. No piece is seen before she is at it: each walk looks at her back and the fog, so the next obstacle and the way
+16. ~~No piece seen before she is at it~~ (each walk ends on a frame laying out the next piece: the tree with the cat across on the barn's gable, the board's walk-to-the-mill frame, her stopping at the top of the green's slope to look at the swing; the wall look-back is gone, the boat lost once, on the ridge). Was: each walk looks at her back and the fog, so the next obstacle and the way
     over it arrive unannounced. Fix: each walk ends on a frame that lays out the next piece (what is in the way, where
     she must get to) before the puzzle begins.
 17. The church's storyboard (`FROM=church`): the cat is never seen climbing the ivy ahead of her; through the ringing
@@ -639,7 +639,7 @@ Found reading the room's storyboard (a frame every 2 s of `drowned-run-check` fr
 18. ~~The long sail before the cat~~ (the stairs set the hull down on the drift's last leg, turned in the white so nothing is seen to turn; 2.8 m/s; the cat noticed about 5 s in and mewing the whole way; the boat holds for it 30 s into the room). Was: found fixing 3: with the cat's roof by the strand, the sail through the village before the cat is 59 s and 253 m
     at 4.7 m/s (it was 27 s). Lead's call: about 30 s, by bringing the room's entry nearer along the channel, and the
     sail given its purpose early: the cat heard mewing and seen ahead on its pot, the boat making for it.
-19. The drawn gust is the shared invitation's thin cream stroke and is faint against the lilac sky (at the tree it is
+19. ~~The faint gust~~ (bold in this room only: 15-21 px with a darker halo and a brighter core). Was: the drawn gust is the shared invitation's thin cream stroke and is faint against the lilac sky (at the tree it is
     barely there in stills): it may be why Jeremy saw "no invitational wind gesture". Fix: in this room it reads at a
     glance against sky, fog and roofs.
 20. The goodbye frame (after 11): her and the pair on the sill in one frame leaves the cat about 50 px, so the slow
@@ -649,6 +649,9 @@ Found reading the room's storyboard (a frame every 2 s of `drowned-run-check` fr
     the side away from the sail, 1.4 m over her seat, a 14 degree lens, the cat, the kitten, the bell over them and the
     ivy she climbed read well (`comps/board/goodbye-pov.png`), but she is out of frame: it is her look, after the frame
     that shows her looking up. The release that follows starts from the old `upEye` and must be re-routed with it.
+21. Left after the walks: the cat is a ninth of her height (0.27 m standing), so at walking distances it is 30-55 px
+    however the lens leans; at the tree's barn gable it is about 31-36 px against the fog. For Jeremy's play to judge:
+    if it still reads small, cheat it larger through the whole room (one constant scale, never growing in view).
 
 ### The room rethought (Claude, 2026-10-08; Jeremy: "yea lets see how this works")
 
