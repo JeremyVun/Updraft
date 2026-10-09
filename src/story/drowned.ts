@@ -871,12 +871,8 @@ export class DrownedChapter implements Chapter {
     const eye = this.catEye.set(aim.x + Math.sin(from) * reach, lerp(k.uprightStuckEye, k.stuckEye, wide), aim.z + Math.cos(from) * reach);
     /** It looks between the bow and the fog coming on behind the boat, so both stand in the frame. */
     const fog = this.cast.village?.dark.frontAt(this.front, 0) ?? this.front.set(STRAND.x, STRAND.y + 60);
-    /** While it ghosts on it looks a little ahead to the slates it will run onto; once it is stuck, back to the fog. */
-    const drifting = this.beat === 'still';
-    const toAim = Math.atan2(aim.x - eye.x, aim.z - eye.z);
-    const toward = drifting ? Math.atan2(STRAND_STEP.x - eye.x, STRAND_STEP.z - eye.z) : Math.atan2(fog.x - eye.x, fog.y - eye.z);
-    const share = drifting ? lerp(k.uprightDriftAhead, k.driftAhead, wide) : lerp(k.uprightStuckFog, k.stuckFog, wide) * (1 - fear * fear);
-    const look = toAim + Math.atan2(Math.sin(toward - toAim), Math.cos(toward - toAim)) * share;
+    const toAim = Math.atan2(aim.x - eye.x, aim.z - eye.z), toFog = Math.atan2(fog.x - eye.x, fog.y - eye.z);
+    const look = toAim + Math.atan2(Math.sin(toFog - toAim), Math.cos(toFog - toAim)) * lerp(k.uprightStuckFog, k.stuckFog, wide) * (1 - fear * fear);
     const reachAim = Math.hypot(aim.x - eye.x, aim.z - eye.z);
     s.target.set(eye.x + Math.sin(look) * reachAim, aim.y, eye.z + Math.cos(look) * reachAim);
     const climbed = this.cat.sinceBolt < 0 ? 0 : THREE.MathUtils.smootherstep(this.cat.sinceBolt, 0, k.climbFor);

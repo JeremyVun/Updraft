@@ -2254,8 +2254,6 @@ export const tuning = {
     stuckAlong: 1.2, stuckOnCat: 1.8, stuckCloser: 1.4, stuckAim: 1.0, stuckFrom: -1.75, stuckDistance: 5.6, stuckEye: 1.5,
     stuckFog: 0.35, stuckZoom: 1.05, stuckPace: 0.35,
     uprightStuckFrom: -2.0, uprightStuckDistance: 6.2, uprightStuckEye: 1.7, uprightStuckFog: 0.3, uprightStuckZoom: 0.9,
-    /** While the becalmed boat ghosts on, how far round toward the slates ahead it looks instead (upright, its own). */
-    driftAhead: 0.12, uprightDriftAhead: 0.06,
     /**
      * Once the cat bolts, over `climbFor` seconds up onto the roof with it: the lens's bearing from the ridge's west
      * end, how far off and how high over the ridge, how far from her toward the cat it looks, and its pace.
