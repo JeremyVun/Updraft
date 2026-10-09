@@ -9,7 +9,8 @@
 //     strokes until the patch is up and it has drawn its first full breath, its eye still shut under the fold.
 //   eye: resumed after its breath, the fold over its eye, 1.5 s after the drawn sweep is first shown across it.
 //   k3: resumed after its eye, the cork swept in with real strokes, `k3` as her mittens close on the line.
-//   heave: resumed with the line in her mittens, strokes over the net on its head until it billows up mid-heave.
+//   heave: resumed with the line in her mittens, strokes over the net on its head until it billows up, half a second
+//     into the heave it asks for.
 //   k4: resumed after the heave, the cygnet holding the loop's end: `k4-held` once the drawn sweep shows along the
 //     flipper, then `k4` as the lift it is given (`liftFin`, as a stroke at it would) slides the loop to the tip.
 //   k5: played on from there to the release, `k5` at the spout and `k5-flukes` as they wave.
@@ -28,7 +29,7 @@
 //   - A frame-rate step-down mid-run (another session's capture on the GPU) shows as `pairs` in the printed stats:
 //     render-target pairs at the lower sample count, not new programs. Rerun on a quiet machine.
 import { openBrowser } from './lib/browser.mjs';
-import { circle, sweepCork, sweepHead } from './lib/whale-gestures.mjs';
+import { circle, gameWait, sweepCork, sweepHead } from './lib/whale-gestures.mjs';
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -119,11 +120,12 @@ const SHOOT = {
   async heave(page, snap) {
     await resume(page, 'whale-line');
     await waitFor(page, () => !!__game.story.current.whale.offered, null, 60);
-    // The mesh falls back within a fraction of a second of a stroke, so the still is taken during one.
+    // The still is taken as she draws, once the sheet has had a moment to stand up off its head.
     for (let n = 0; n < 6; n++) {
       const swept = sweepHead(page);
       const up = await page.waitForFunction(() => __game.story.current.whale.haul === 'heaving' && __game.sealife.net.billow > 0.6, null,
         { timeout: 3000, polling: 'raf' }).then(() => true, () => false);
+      if (up) await gameWait(page, 0.5);
       if (up) await snap('heave');
       await swept;
       if (up) return;
