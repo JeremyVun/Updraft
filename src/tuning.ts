@@ -2002,7 +2002,7 @@ export const tuning = {
        * second).
        */
       fogTrail: 12, fogHold: { tree: 10, sheet: 5, mill: 10, swing: 12 }, fogBeat: 8, fogEnd: 19, fogNearest: 7.5, fogLaid: 8,
-      fogPull: 0.5, fogSlowest: 0.12, fogFastest: 3.2, fogEase: 0.9,
+      fogPull: 0.5, fogSlowest: 0.5, fogFastest: 3.2, fogEase: 0.9,
     },
     /** The wash-tub the player's wind carries to the cat's roof and back to the boat. */
     tub: {
