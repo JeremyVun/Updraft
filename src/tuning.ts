@@ -1499,8 +1499,8 @@ export const tuning = {
      */
     leadDrop: 2.6, leadIn: 10, riseEase: 0.3, riseLook: 2, riseToward: 0.25, riseTowardPhone: 0.12,
     /**
-     * Seconds the cygnet peeks out of the satchel at its first breath in the haze; seconds after the boat is led in
-     * near enough for each sigh in the mist that it comes; and how long before each breath she knows it is coming,
+     * Seconds the cygnet peeks out of the satchel at its first breath in the haze; seconds on that each sigh in the
+     * mist comes once it is called for as the boat is led in; and how long before each breath she knows it is coming,
      * leans toward it (radians) and points.
      */
     peekFor: 2.5, leadSigh: 2, knowsFirst: 1.2, knowsLean: 0.32,
