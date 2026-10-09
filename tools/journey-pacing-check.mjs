@@ -96,7 +96,7 @@ function run(name, fps, gust, veer=0, waitInVillage=false, arrivalGust=false, ci
     for(let i=1;i<6;i++)m.push(w.blowhole.clone().lerp(w.back,i/6),w.back.clone().lerp(w.flukes,i/6));return m;};
   const covered=(points)=>Math.min(...points.map(p=>hazeOver(p,rig.camera,hazeShown,openShown,falloffShown,mistShown)));
   const onScreen=(points)=>points.filter(p=>{ndc.copy(p).project(rig.camera);return Math.abs(ndc.x)<1&&Math.abs(ndc.y)<1&&ndc.z<1;});
-  for(let i=0;i<fps*600;i++) {
+  for(let i=0;i<fps*900;i++) {
     const dt=1/fps;time=i*dt;wind.breeze.copy(baseWind).multiplyScalar(chapter.breeze);wind.calm=wind.breeze.length()*tuning.wind.calm;
     // A repeatable attentive player supplies wind only during the village's interaction.
     const approaching=events[`music-${name==='drowned'?'wood':chapter.destinationMusic}`]!==undefined;
