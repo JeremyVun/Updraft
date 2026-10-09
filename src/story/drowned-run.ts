@@ -314,12 +314,13 @@ function* layLens(nodes: readonly Node[], obstacles: readonly THREE.Box3[], upri
   /**
    * Every bearing within reach of the one it wants and every share of its distance, at each step: the path through them
    * that stays clear and sees her, wanting least to be away from where it wants to be, drawn in, or turning between steps.
-   * While she is at a piece its own view holds the lens, so there the path goes wherever suits the steps either side,
-   * and just past it the path starts out from where that view leaves the lens.
+   * While she is at a piece, or coming to it in the view that lays it out, that view holds the lens, so there the path
+   * goes wherever suits the steps either side, and just past it the path starts out from where that view leaves it.
    */
   const SHARES = [1, 0.82, 0.66, 0.52, 0.4];
   const ARC = 2.4, BEARINGS = 33, TURNS = 5;
-  const held = nodes.flatMap((n, i) => (n.by === 'walk' || n.by === 'hop' ? [] : [[nodes[i - 1].s, n.s]]));
+  const held = nodes.flatMap((n, i) => (n.by === 'walk' || n.by === 'hop' ? []
+    : [[nodes[i - 1].s - 0.7 * (k.approach[n.by as keyof typeof k.approach]?.from ?? 0), n.s]]));
   const steps: { want: number; along: number; lift: number; free: boolean; anchor: { bearing: number; weight: number } | null }[] = [];
   for (let s = 0; s <= total + LENS_STEP; s += LENS_STEP) {
     wayAt(nodes, s - k.behind, a);
@@ -434,6 +435,9 @@ export class RoofRun {
   private readonly lookBackFrom: number;
   private readonly lookDownFrom: number;
   private lookingDown = -1;
+  /** At the top of the green cottage's slope down to the swing's board she stops and looks at the swing: from where on her way, and seconds of it. */
+  private readonly lookSwingFrom: number;
+  private lookingSwing = -1;
   private readonly head = new THREE.Vector3();
   private readonly look = new THREE.Vector3();
   private readonly scratch = new THREE.Vector3();
@@ -485,8 +489,9 @@ export class RoofRun {
     extra: tuning.drownedCamera.run.extra };
   /** How far the tree's view has gone round to the sheet's, 0 to 1, from when she is up on the trunk. */
   private treeRound = 0;
-  /** How far round to each piece's own view the lens has come. */
+  /** How far round to each piece's own view the lens has come, and to the view laying it out as she comes to it. */
   private readonly pieceIn: Record<Piece, number> = { tree: 0, sheet: 0, mill: 0, swing: 0 };
+  private readonly approachIn: Record<Piece, number> = { tree: 0, sheet: 0, mill: 0, swing: 0 };
   private sheetGo = 0;
   private aspect = 16 / 9;
   private framed = false;
@@ -523,6 +528,10 @@ export class RoofRun {
     };
     this.lookBackFrom = this.sOf(LOOK_BACK);
     this.lookDownFrom = this.sOf(GRANARY_TOP);
+    const board = this.nodes[this.pieceAt.swing - 1].at;
+    let top = this.pieceAt.swing - 1;
+    while (top > 0 && this.nodes[top].at.y < board.y + 1) top--;
+    this.lookSwingFrom = this.nodes[top].s;
     this.catAt = this.nodes[1].s;
     /** It waits for her just short of where its own way leaves hers: the tree's railings, the green cottage's ridge. */
     this.catFrom = {
@@ -669,6 +678,7 @@ export class RoofRun {
     }
     this.lookingBack = Infinity;
     this.lookingDown = Infinity;
+    this.lookingSwing = Infinity;
     this.treeRound = 1;
     this.dark = DARK_END;
     const dark = this.cast.village!.dark;
@@ -734,7 +744,8 @@ export class RoofRun {
   /**
    * A turn gentle enough she takes it in her stride: on toward the place after without stopping at it. Just down off the
    * first roof onto the wall she stops and looks back at the boat as the fog takes it; at the top of her way, on the
-   * granary's ridge, she stops and looks back down at the fog below.
+   * granary's ridge, she stops and looks back down at the fog below; at the top of the slope down to the swing's board
+   * she stops and looks at the swing, while the lens comes round to lay it out.
    */
   private walking(dt: number): void {
     const { child: c } = this.cast;
@@ -753,6 +764,21 @@ export class RoofRun {
       c.faceToward(fog.x, fog.z, 1 - Math.exp(-dt * 3));
       c.lookAt = fog.setY(c.position.y - 2);
       if (this.lookingDown >= k.lookDownFor) {
+        c.lookAt = null;
+        this.go();
+      }
+      return;
+    }
+    if (this.lookingSwing < 0 && this.stage === 'walk' && this.along >= this.lookSwingFrom - 0.2 && !c.acting && this.pause < 0) {
+      this.lookingSwing = 0;
+      c.stop();
+    }
+    if (this.lookingSwing >= 0 && this.lookingSwing < k.lookSwingFor) {
+      this.lookingSwing += dt;
+      const seat = this.swing.swing.seat(this.look);
+      c.faceToward(seat.x, seat.z, 1 - Math.exp(-dt * 3));
+      c.lookAt = seat;
+      if (this.lookingSwing >= k.lookSwingFor) {
         c.lookAt = null;
         this.go();
       }
@@ -1199,13 +1225,20 @@ export class RoofRun {
     for (const piece of ORDER) {
       const i = this.pieceAt[piece];
       const wait = this.nodes[i - 1].s, over = this.nodes[i].s;
+      /** The last of her way to a piece is seen from where it lays out, until the piece's own view takes over. */
+      const ahead = k.approach[piece as keyof typeof k.approach];
+      if (ahead) {
+        const want = this.along >= wait - ahead.from && !this[piece].done ? 1 - this.pieceIn[piece] : 0;
+        this.approachIn[piece] += (want - this.approachIn[piece]) * (1 - Math.exp(-dt * ahead.rate));
+        add(THREE.MathUtils.smootherstep(this.approachIn[piece], 0, 1), () => this.approachView(piece, wide));
+      }
       const coming = THREE.MathUtils.smootherstep(this.along, wait - k.comeFrom[piece], wait - k.comeTo);
       const leave = k.leave[piece];
       const going = this[piece].done && this.stage !== piece && (piece !== 'tree' || rounded)
         ? THREE.MathUtils.smootherstep(this.along, over + k.leaveFrom, over + leave) : 0;
       /** Set down by the sheet she takes a breath while the lens goes round to her own way. */
       const setDown = piece === 'sheet' && this.stage === 'sheet' && this.sheet.done
-        ? 1 - THREE.MathUtils.smoothstep(this.settled, 0, tuning.drowned.run.setDown) : null;
+        ? 1 - THREE.MathUtils.smoothstep(this.settled, 0, tuning.drowned.run.setDown - tuning.drowned.run.setDownLens) : null;
       /**
        * Once she has stopped at a piece the lens goes on round to its view, never while she walks toward it. The tree's
        * view goes round to the sheet's itself, so the sheet's never blends in on a line through the high roof.
@@ -1221,6 +1254,21 @@ export class RoofRun {
       this.stationZoom = zoom / total;
     }
     return Math.min(1, total);
+  }
+
+  /**
+   * Where the last of her way to a piece is seen from, set off from where she waits for it: the mill from over the fog
+   * behind her as she goes up the wall toward it, the hoist, the sails and the bell tower beyond; the swing from beyond
+   * its board as she stands at the top of the slope down to it, the rope, the nave she will let go onto and the cat
+   * waiting there, the fog behind her.
+   */
+  private approachView(piece: Piece, wide: number): void {
+    const a = tuning.drownedCamera.run.approach[piece as keyof typeof tuning.drownedCamera.run.approach];
+    const at = PIECES[piece].wait, lerp = THREE.MathUtils.lerp;
+    const set = (wideAt: readonly number[], uprightAt: readonly number[], out: THREE.Vector3) =>
+      out.set(at.x + lerp(uprightAt[0], wideAt[0], wide), at.y + lerp(uprightAt[1], wideAt[1], wide), at.z + lerp(uprightAt[2], wideAt[2], wide));
+    set(a.eye, a.uprightEye, this.stationEye);
+    set(a.at, a.uprightAt, this.stationTarget);
   }
 
   private view(piece: Piece, wide: number): void {

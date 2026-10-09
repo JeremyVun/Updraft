@@ -1963,14 +1963,17 @@ export const tuning = {
       /** Seconds she stands on the ridge looking after the cat before she goes, and her pace as a share of a walk. */
       setOff: 1.2, stroll: 1.05,
       /**
-       * Seconds she stands just down off the first roof looking back at the boat as the fog takes it, and on the
-       * granary's ridge looking back down at it.
+       * Seconds she stands just down off the first roof looking back at the boat as the fog takes it, on the granary's
+       * ridge looking back down at it, and at the top of the slope down to the swing's board looking at the swing.
        */
-      lookBackFor: 4, lookDownFor: 1.4,
+      lookBackFor: 4, lookDownFor: 1.4, lookSwingFor: 2.6,
       /** The beat she takes before a hop of her own; within `through` of a turn gentler than `bend` (radians) she walks on through it. */
       hopPause: 0.3, through: 1.1, bend: 0.4,
-      /** Seconds she stands once the sheet has set her down before she goes on, while the lens comes round to her way. */
-      setDown: 2.6,
+      /**
+       * Seconds she stands once the sheet has set her down before she goes on, while the lens comes round to her way, and
+       * how long before she goes on it is round, so she never sets off toward it.
+       */
+      setDown: 3.4, setDownLens: 0.9,
       /**
        * How often she glances back at the fog as she goes, for how long, and how far round toward the lens from straight
        * away from it she may look on her way (radians), at the fog, the cat or ahead, so her face never turns to it.
@@ -2106,7 +2109,7 @@ export const tuning = {
        * it before that costs, and what each share of the frame it stands further out, each metre further off, and a
        * roof between them cost.
        */
-      catLean: 0.3, catLeanRate: 1.2, catEdge: 0.78, catAhead: 6.5, catFar: 13, catOutCost: 300, catFarCost: 30, catHiddenCost: 200,
+      catLean: 0.4, catLeanRate: 1.2, catEdge: 0.78, catAhead: 8, catFar: 13, catOutCost: 300, catFarCost: 30, catHiddenCost: 200,
       /** How far it keeps off the side of a house, wall or chimney it stands lower than the top of, and over a chimney, metres. */
       clearOf: 1.6,
       /**
@@ -2146,14 +2149,23 @@ export const tuning = {
       /** Milliseconds a frame spends laying it from the start of the room, so it is ready long before she sets off. */
       layFor: 2,
       /**
-       * Round to each piece's own view from `comeFrom` to `comeTo` metres before she reaches it (the tree's and the
-       * mill's only as she stops, their views standing ahead of her as she comes), and back to her own way
+       * Round to each piece's own view from `comeFrom` to `comeTo` metres before she reaches it (the tree's, the mill's
+       * and the swing's only as she stops, their views standing ahead of her as she comes), and back to her own way
        * from `leaveFrom` metres past it (over each piece's own stretch, below); to the end's view over the last
        * `endFrom` metres; and how fast it comes round to a piece's view once she has stopped at it (per second).
        */
-      comeFrom: { tree: 1.5, sheet: 5, mill: 0.5, swing: 5 }, comeTo: 0, leaveFrom: 0, endFrom: 8, roundRate: 0.95,
+      comeFrom: { tree: 1.5, sheet: 5, mill: 0.5, swing: 0.5 }, comeTo: 0, leaveFrom: 0, endFrom: 8, roundRate: 0.95,
       /** How far past each piece the lens has given it back to her own way, metres. */
       leave: { tree: 2, sheet: 0, mill: 2, swing: 3 },
+      /**
+       * The views laying out the mill and the swing as she comes to them, as [east, up, south] metres from where she
+       * waits at each (landscape, then upright): from how far along her way before it (metres) they come in, and how
+       * quickly (per second), until the piece's own view takes over.
+       */
+      approach: {
+        mill: { from: 12.3, rate: 0.7, eye: [-7.8, 7.8, 20], at: [1.2, 5.3, -1], uprightEye: [-5.5, 6.8, 15], uprightAt: [0.8, 5.6, -1] },
+        swing: { from: 3.9, rate: 0.9, eye: [-9, 5.6, -2.3], at: [-0.6, 2.9, 0.2], uprightEye: [-8, 5.2, -2], uprightAt: [-0.4, 3.2, -0.4] },
+      },
       /**
        * Her look back from the first roof's end: how strongly it holds the lens, how quickly it comes and goes (s) and
        * how long before she turns to go on it has gone, so it is back beside her before she walks; and where it looks (a

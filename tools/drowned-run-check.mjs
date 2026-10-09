@@ -785,7 +785,8 @@ try {
         if (r.stage === 'walk' && !c.action && r.lookingBack !== undefined) {
           if (r.along > w.last + 0.05) { w.last = r.along; w.since = 0; } else w.since += 1 / 60;
           const k = tuning.drowned.run;
-          const looking = (r.lookingBack >= 0 && r.lookingBack < k.lookBackFor) || (r.lookingDown >= 0 && r.lookingDown < k.lookDownFor);
+          const looking = (r.lookingBack >= 0 && r.lookingBack < k.lookBackFor) || (r.lookingDown >= 0 && r.lookingDown < k.lookDownFor)
+            || (r.lookingSwing >= 0 && r.lookingSwing < k.lookSwingFor);
           if (!looking && w.since > w.stallWorst) { w.stallWorst = w.since; w.stallAt = `at ${r.along.toFixed(1)} m, ${p.toArray().map((v) => v.toFixed(2))}`; }
           if (looking) w.since = 0;
         } else w.since = 0;
