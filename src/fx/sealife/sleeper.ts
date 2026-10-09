@@ -145,6 +145,9 @@ const SHEDS_AT = 0.2;
 const LYING = 0.75;
 /** A slow blink: the lid down over half a second, a moment shut, and up again over most of a second. */
 const BLINK = curve([[0, 0], [0.5, 0.9], [0.75, 0.9], [1.6, 0]]);
+/** Under the weight on it, one try to open its eye: the lid strains up, holds trembling, and falls back (of the try's height). */
+const TRY = curve([[0, 0], [1.1, 1], [1.6, 0.92], [2.1, 0.1], [2.4, 0], [3.4, 0]]);
+const TRY_EVERY = 3.4;
 
 /**
  * Lying at rest: the head carried a little high so the eye and the jaw stand clear, the back level behind the
@@ -175,6 +178,8 @@ export class SleepingWhale extends WhaleRig {
   time = 0;
   /** How far toward its first full breath the player's wind has brought it, 0..1: it breathes deeper as it does. */
   stir = 0;
+  /** How far up each of its tries to open its eye under the weight on it lifts the lid, 0 when it is not trying. */
+  struggle = 0;
   /** The lazy lifts of the near flipper since it lay down. */
   lifts = 0;
   /** Where the parts that matter are this frame, in the world. */
@@ -209,6 +214,7 @@ export class SleepingWhale extends WhaleRig {
   /** How far open its eye is, and seconds into a blink, or -1. */
   private opened = 0;
   private blinkT = -1;
+  private tryT = 0;
   private headWet = 0;
   private breath = 0;
   private sighed = true;
@@ -379,14 +385,17 @@ export class SleepingWhale extends WhaleRig {
     this.onSound?.('whale-breath', this.blowhole.x, this.blowhole.y, this.blowhole.z);
   }
 
-  /** Already past its first full breath, as a save after it resumes: awake, its eye open on `at` from the first frame. */
-  awaken(at: THREE.Vector3): void {
+  /**
+   * Already past its first full breath, as a save after it resumes: awake, its eye open on `at` from the first frame,
+   * or still shut under the weight on it when `at` is null.
+   */
+  awaken(at: THREE.Vector3 | null): void {
     if (this.phase !== 'resting' && this.phase !== 'woken') return;
     this.phase = 'woken';
     this.time = BREATH_OUT + 1;
     this.stir = 1;
     this.look(at);
-    this.skin.uEye.value = this.opened = 1;
+    this.skin.uEye.value = this.opened = at ? 1 : 0;
   }
 
   /** Free: the spout, then its dive: the head down, the back arching under, the flukes raised high once, and away. */
@@ -650,7 +659,9 @@ export class SleepingWhale extends WhaleRig {
     this.opened += (open - this.opened) * (1 - Math.exp(-dt * (open > this.opened ? K.eyeOpening : 0.6)));
     if (this.blinkT >= 0) this.blinkT += dt;
     if (this.blinkT > 1.6) this.blinkT = -1;
-    this.skin.uEye.value = this.opened * (1 - (this.blinkT < 0 ? 0 : BLINK(this.blinkT)));
+    this.tryT = this.struggle > 0 ? (this.tryT + dt) % TRY_EVERY : 0;
+    const trying = this.struggle * TRY(this.tryT) * (1 + 0.04 * Math.sin(this.tryT * 23) * THREE.MathUtils.smoothstep(this.tryT, 0.9, 1.2));
+    this.skin.uEye.value = Math.max(trying, this.opened * (1 - (this.blinkT < 0 ? 0 : BLINK(this.blinkT))));
     if (!this.gazing) return;
     const d = Math.max(1, this.p.subVectors(this.gazeAt, this.eye).length());
     const g = this.skin.uGaze.value;

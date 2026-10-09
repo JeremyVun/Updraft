@@ -11,7 +11,7 @@ import { MIST, type Spray } from './spray';
 const K = tuning.netWhale;
 
 export type NetSound = 'net-sputter' | 'net-lift' | 'whale-call' | 'whale-glad' | 'cork-knock' | 'rope-pull' | 'net-slither' | 'loop-slip'
-  | 'swimmer-out';
+  | 'swimmer-out' | 'fold-lift' | 'net-heave';
 
 /** Where the net's front edge lies along the whale (0 snout .. 1 flukes). */
 const FRONT = 0.05;
@@ -101,6 +101,22 @@ const RING = 14;
 const WEEDS = 40;
 const WEED_POINTS = 6;
 const HANG = 0.16;
+/**
+ * The fold over its eye: a doubled flap of the net hanging from the near edge above the eye, `FOLD_HALF` metres
+ * either side of it along the whale, down across the eye to `FOLD_BELOW` metres below its middle along the skin,
+ * standing off the skin, and further where it bridges the eye; the second layer lies on the first. Weed hangs off
+ * its lower part.
+ */
+const FOLD_ROWS = 11;
+const FOLD_COLS = 9;
+const FOLD_HALF = 3.4;
+const FOLD_BELOW = 1.9;
+const FOLD_STAND = 0.1;
+const FOLD_BRIDGE = 0.4;
+const FOLD_LAYER = 0.07;
+const FOLD_WEEDS = 22;
+/** Billowing, the mesh over the head rises off it toward the near edge, along the head as far as this past the eye (m). */
+const BILLOW_PAST_EYE = 9;
 
 const bump = (x: number) => (Math.abs(x) >= 1 ? 0 : 0.5 + 0.5 * Math.cos(Math.PI * x));
 
@@ -157,6 +173,13 @@ export class Net {
   sink = 0;
   /** How strongly the wind lifts under the patch right now, 0..1: it flutters in it like a sheet. */
   updraft = 0;
+  /** The fold over its eye: lying across it at 0, lifted part way, flipped up and over onto the brow at 1. */
+  flap = 0;
+  /** The mesh over its head billowing up off it in the wind, 0..1. */
+  billow = 0;
+  /** The middle of the fold's lower edge, and of the fold, in the world. */
+  readonly foldTip = new THREE.Vector3();
+  readonly foldMid = new THREE.Vector3();
   /** While true whatever drives the net leaves its four parts alone, so they can be posed by hand. */
   posed = false;
   /** Where the bill holds the loop's free end, or null while it lies on the water. */
@@ -179,6 +202,7 @@ export class Net {
   onSound: ((kind: NetSound, at: THREE.Vector3, strength: number) => void) | null = null;
 
   private readonly sheet: THREE.Mesh;
+  private readonly fold: THREE.Mesh;
   private readonly ropes: THREE.Mesh;
   private readonly corks: THREE.Mesh;
   private readonly n = ROWS * COLS;
@@ -202,7 +226,7 @@ export class Net {
   private readonly slid = new Float32Array(ROWS);
   private readonly tent = new Float32Array(ROWS);
   /** Where each point lies in the folded mass, along and across it and how high in the fold. */
-  private readonly fold = new Float32Array(ROWS * COLS * 3);
+  private readonly folded = new Float32Array(ROWS * COLS * 3);
   /** Where each point floats once it is all peeled, before it drifts. */
   private readonly afloatAt = new Float32Array(ROWS * COLS * 2);
   private readonly openAt = new Float32Array(ROWS * COLS * 2);
@@ -288,6 +312,23 @@ export class Net {
   /** How far the free end has come up into the bill, eased. */
   private holding = 0;
   private readonly profile = { h: new Float32Array(64), y: new Float32Array(64), skin: new Uint8Array(64), n: 0 };
+  /** The fold as it lies across the eye, with the body's breathing taken out, and how far across each point is. */
+  private readonly foldRest = new Float32Array(FOLD_ROWS * FOLD_COLS * 3);
+  private readonly foldAcross = new Float32Array(FOLD_ROWS * FOLD_COLS);
+  /** Each of its rows: where along the net, how far down from its hinge it hangs, and which way it turns to flip off. */
+  private readonly foldU = new Float32Array(FOLD_ROWS);
+  private readonly foldLong = new Float32Array(FOLD_ROWS);
+  private readonly foldTurn = new Float32Array(FOLD_ROWS);
+  private readonly foldPos: THREE.BufferAttribute;
+  private readonly foldNormals: THREE.BufferAttribute;
+  private readonly foldContact: THREE.BufferAttribute;
+  private readonly foldAfloat: THREE.BufferAttribute;
+  /** How much each point of the sheet billows: on the head, rising toward the near edge. */
+  private readonly billows = new Float32Array(ROWS * COLS);
+  private readonly foldWeeds: Polyline[] = [];
+  private readonly foldWeedAt: { fr: number; m: number; length: number; turn: number }[] = [];
+  private readonly hinge = new THREE.Vector3();
+  private readonly axis = new THREE.Vector3();
 
   constructor(private readonly whale: SleepingWhale, private readonly spray: Spray) {
     const geo = new THREE.BufferGeometry();
@@ -313,6 +354,32 @@ export class Net {
     geo.setIndex(index);
     this.sheet = new THREE.Mesh(geo, sheetMaterial());
     this.sheet.renderOrder = 4;
+
+    const fn = FOLD_ROWS * FOLD_COLS * 2;
+    const foldGeo = new THREE.BufferGeometry();
+    this.foldPos = new THREE.BufferAttribute(new Float32Array(fn * 3), 3).setUsage(THREE.DynamicDrawUsage);
+    this.foldNormals = new THREE.BufferAttribute(new Float32Array(fn * 3), 3).setUsage(THREE.DynamicDrawUsage);
+    this.foldContact = new THREE.BufferAttribute(new Float32Array(fn), 1).setUsage(THREE.DynamicDrawUsage);
+    const foldIndex: number[] = [];
+    for (let l = 0; l < 2; l++) {
+      for (let i = 0; i < FOLD_ROWS - 1; i++) {
+        for (let j = 0; j < FOLD_COLS - 1; j++) {
+          const k = l * FOLD_ROWS * FOLD_COLS + i * FOLD_COLS + j;
+          foldIndex.push(k, k + FOLD_COLS, k + 1, k + 1, k + FOLD_COLS, k + FOLD_COLS + 1);
+        }
+      }
+    }
+    foldGeo.setAttribute('position', this.foldPos);
+    foldGeo.setAttribute('normal', this.foldNormals);
+    foldGeo.setAttribute('uv', new THREE.BufferAttribute(new Float32Array(fn * 2), 2));
+    this.foldAfloat = new THREE.BufferAttribute(new Float32Array(fn), 1).setUsage(THREE.DynamicDrawUsage);
+    foldGeo.setAttribute('afloat', this.foldAfloat);
+    foldGeo.setAttribute('contact', this.foldContact);
+    foldGeo.setAttribute('edge', new THREE.BufferAttribute(new Float32Array(fn * 3), 3));
+    foldGeo.setIndex(foldIndex);
+    // The same material as the sheet, so the fold is drawn by the program already compiled for it.
+    this.fold = new THREE.Mesh(foldGeo, this.sheet.material);
+    this.fold.renderOrder = 4;
 
     this.chain = new Float32Array((this.links + 1) * 3);
     this.chainVel = new Float32Array((this.links + 1) * 2);
@@ -342,6 +409,11 @@ export class Net {
     // Two more points than links: where the line comes up into each mitten.
     this.leaderLine = this.polyline(BELOW + this.links + 2);
     this.loopLine = this.polyline(BELOW + 1 + RING + END_POINTS);
+    for (let w = 0; w < FOLD_WEEDS; w++) {
+      this.foldWeeds.push(this.polyline(WEED_POINTS));
+      const seed = Math.sin(w * 57.1) * 0.5 + 0.5;
+      this.foldWeedAt.push({ fr: 1 + ((w * 7) % (FOLD_ROWS - 2)), m: FOLD_COLS - 1 - (w % 4), length: 0.7 + seed * 0.9, turn: seed * 6.28 });
+    }
     for (let w = 0; w < WEEDS; w++) {
       this.weedLines.push(this.polyline(WEED_POINTS));
       const seed = Math.sin(w * 91.7) * 0.5 + 0.5;
@@ -377,7 +449,7 @@ export class Net {
       renderer.getDrawingBufferSize(size);
       netLook.uRes.value.set(size.x / 2, size.y / 2);
     };
-    this.objects = [this.sheet, this.ropes, this.corks];
+    this.objects = [this.sheet, this.fold, this.ropes, this.corks];
     for (const o of this.objects) {
       o.frustumCulled = false;
       o.visible = false;
@@ -403,7 +475,7 @@ export class Net {
     const c = whale.point(0, TOP(sEye), sEye, this.q);
     this.profileFrom(c, 1, sEye);
     this.eyeTop = this.arcNearest(this.offAxis(whale.eye) - this.offAxis(c), whale.eye.y) - EYE_CLEAR;
-    this.lift = this.slump = this.peel = this.loop = this.drift = this.sink = 0;
+    this.lift = this.slump = this.peel = this.loop = this.drift = this.sink = this.flap = this.billow = 0;
     this.peelAt = this.soundPeel = 0;
     this.domeT = 10;
     this.held = this.fallsTo = this.holder = null;
@@ -494,6 +566,7 @@ export class Net {
     netLook.uSunk.value = SINK_DEPTH * this.sink ** 2;
     netLook.uFade.value = 1 - THREE.MathUtils.smoothstep(this.sink, 0.8, 1);
     this.layOn(time);
+    this.layFold();
     this.sounds();
     this.moveLeader(dt, time);
     this.hangCorks(dt);
@@ -559,7 +632,7 @@ export class Net {
           const cloth = near - a;
           const layer = Math.floor(cloth / FOLD_WIDE);
           const into = cloth - layer * FOLD_WIDE;
-          this.fold[k * 3 + 1] = FOLD_FROM + (layer % 2 ? into : FOLD_WIDE - into) + Math.sin(u * 0.9 + a) * 0.3;
+          this.folded[k * 3 + 1] = FOLD_FROM + (layer % 2 ? into : FOLD_WIDE - into) + Math.sin(u * 0.9 + a) * 0.3;
         }
         const end = Math.max(near, water);
         for (let k = 0; k < BELOW; k++) {
@@ -737,6 +810,9 @@ export class Net {
         const da = this.acrossOf(k);
         this.lifts[k] = bump(du / PATCH.x) * bump(da / PATCH.y);
         this.domes[k] = bump(du / DOME.x) * bump(da / DOME.y);
+        const u = (i / (ROWS - 1)) * NET.long;
+        this.billows[k] = (1 - THREE.MathUtils.smoothstep(u, this.uEye + 2, this.uEye + BILLOW_PAST_EYE))
+          * THREE.MathUtils.smoothstep(da, -3, this.edge.getX(k));
       }
     }
     // The leader comes down off the cheek in front of the eye and the loop's line behind it, toward the flipper: never across the eye.
@@ -747,6 +823,7 @@ export class Net {
     this.loopRow = THREE.MathUtils.clamp(Math.round(eyeRow + LOOP_BEHIND_EYE * perRow), 0, ROWS - 1);
     this.layLeader();
     this.layAfloat();
+    this.foldOn();
     const sizes = this.corkSize.array as Float32Array;
     this.corkAt.forEach((at, c) => {
       sizes[c] = at.leader >= 0 ? NET.float : at.patch && Math.abs(this.acrossOf(at.i * COLS + at.j)) > PATCH.y * 0.75 ? 0 : NET.cork;
@@ -875,9 +952,9 @@ export class Net {
       const across = this.acrossOf(k);
       const near = this.edge.getX(k);
       const along = uLeader - Math.abs(u - uLeader) * GATHER + Math.sin(across * 1.3 + u * 0.2) * 0.3;
-      this.fold[k * 3] = along;
+      this.folded[k * 3] = along;
       const layer = Math.floor((near - across) / FOLD_WIDE);
-      this.fold[k * 3 + 2] = 0.04 + layer * 0.06 + Math.max(0, Math.sin(u * 1.7 + across * 0.8)) * 0.06 + (u < uLeader ? OVER : 0);
+      this.folded[k * 3 + 2] = 0.04 + layer * 0.06 + Math.max(0, Math.sin(u * 1.7 + across * 0.8)) * 0.06 + (u < uLeader ? OVER : 0);
       const row = THREE.MathUtils.clamp((along / NET.long) * (ROWS - 1), 0, ROWS - 1);
       const i0 = Math.floor(row);
       const i1 = Math.min(ROWS - 1, i0 + 1);
@@ -886,7 +963,7 @@ export class Net {
       const f = row - i0;
       // Ahead of the net's front edge it floats on past the snout.
       const ahead = Math.min(0, along);
-      const out = this.fold[k * 3 + 1];
+      const out = this.folded[k * 3 + 1];
       let x = this.below[a] + (this.below[b] - this.below[a]) * f + this.side.x * out - this.ahead.x * ahead;
       let z = this.below[a + 2] + (this.below[b + 2] - this.below[a + 2]) * f + this.side.z * out - this.ahead.z * ahead;
       const d = Math.hypot(x - this.boat.x, z - this.boat.z);
@@ -922,7 +999,7 @@ export class Net {
     const yaw = this.boatYaw;
     const toX = this.boat.x + Math.sin(yaw) * K.raftAhead + Math.cos(yaw) * K.raftPort - this.mass.x;
     const toZ = this.boat.z + Math.cos(yaw) * K.raftAhead - Math.sin(yaw) * K.raftPort - this.mass.z;
-    return out.set(this.mass.x + c * x + s * z + toX * away, THREE.MathUtils.lerp(this.fold[k * 3 + 2], this.openY[k], open),
+    return out.set(this.mass.x + c * x + s * z + toX * away, THREE.MathUtils.lerp(this.folded[k * 3 + 2], this.openY[k], open),
       this.mass.z - s * x + c * z + toZ * away);
   }
 
@@ -966,6 +1043,12 @@ export class Net {
             this.t.z += (blow.z - this.t.z) * lift * wl * 0.12;
           }
           up += dome * this.domes[k] * tent;
+          if (this.billow > 0.001 && this.billows[k] > 0) {
+            const b = this.billow * K.billowHeight * this.billows[k] * (0.65 + 0.35 * Math.sin(time * 3.3 + u * 0.5 - this.acrossOf(k) * 0.4));
+            up += b;
+            this.t.x += this.side.x * b * 0.5;
+            this.t.z += this.side.z * b * 0.5;
+          }
           P[k * 3] = this.t.x;
           P[k * 3 + 1] = this.t.y + up;
           P[k * 3 + 2] = this.t.z;
@@ -1267,6 +1350,7 @@ export class Net {
     this.drawLeader();
     this.drawLoop();
     this.drawWeed();
+    this.drawFoldWeed();
     const L = this.line;
     L.pos.needsUpdate = L.along.needsUpdate = L.width.needsUpdate = L.afloat.needsUpdate = L.weed.needsUpdate = true;
   }
@@ -1371,6 +1455,192 @@ export class Net {
     }
     this.loopEnd.copy(point);
     this.tangents(l);
+  }
+
+  /** The fold over its eye laid on, as it lies across the eye: hanging from the near edge above it down past it. */
+  private foldOn(): void {
+    const w = this.whale;
+    const perRow = (ROWS - 1) / NET.long;
+    const uv = this.fold.geometry.getAttribute('uv') as THREE.BufferAttribute;
+    const edge = this.fold.geometry.getAttribute('edge') as THREE.BufferAttribute;
+    const plane = FOLD_ROWS * FOLD_COLS;
+    for (let fr = 0; fr < FOLD_ROWS; fr++) {
+      const du = ((fr / (FOLD_ROWS - 1)) * 2 - 1) * FOLD_HALF;
+      const u = this.uEye + du;
+      this.foldU[fr] = u;
+      const s = FRONT + u / this.whaleLength;
+      const c = w.point(0, TOP(s), s, this.q);
+      this.profileFrom(c, 1, s);
+      const near = this.nearAt(u * perRow);
+      const eyeArc = this.arcNearest(this.offAxis(w.eye) - this.offAxis(c), w.eye.y);
+      const reach = Math.min(eyeArc + FOLD_BELOW, this.profileWater() - 0.9) - near;
+      const long = Math.max(0.3, reach * (0.2 + 0.8 * bump(du / (FOLD_HALF * 1.05)) ** 0.6));
+      this.foldLong[fr] = long;
+      for (let m = 0; m < FOLD_COLS; m++) {
+        const k = fr * FOLD_COLS + m;
+        this.alongProfile(near + (long * m) / (FOLD_COLS - 1), c, 1, -1);
+        const skin = w.surfaceAt(this.p.x, this.p.z, this.skin);
+        const n = skin.height === -Infinity ? this.t.set(this.side.x, 0.4, this.side.z).normalize() : skin.normal;
+        this.p.addScaledVector(n, FOLD_STAND + FOLD_BRIDGE * bump(this.p.distanceTo(w.eye) / 2.6));
+        this.p.toArray(this.foldRest, k * 3);
+        this.foldAcross[k] = this.r.x;
+        for (let l = 0; l < 2; l++) {
+          uv.setXY(l * plane + k, u + l * 0.43, near + (long * m) / (FOLD_COLS - 1) + l * 0.61);
+          edge.setXYZ(l * plane + k, near + long + l * 0.61, 1, 0);
+        }
+      }
+    }
+    for (let fr = 0; fr < FOLD_ROWS; fr++) {
+      const a = Math.max(0, fr - 1) * FOLD_COLS * 3;
+      const b = Math.min(FOLD_ROWS - 1, fr + 1) * FOLD_COLS * 3;
+      this.axis.set(this.foldRest[b] - this.foldRest[a], this.foldRest[b + 1] - this.foldRest[a + 1], this.foldRest[b + 2] - this.foldRest[a + 2]);
+      const h = fr * FOLD_COLS * 3;
+      const mid = (fr * FOLD_COLS + FOLD_COLS - 1) * 3;
+      this.p.set(this.foldRest[mid] - this.foldRest[h], this.foldRest[mid + 1] - this.foldRest[h + 1], this.foldRest[mid + 2] - this.foldRest[h + 2]);
+      // Turned the way that swings it out from the skin first, toward the boat and up.
+      const swing = this.r.crossVectors(this.axis, this.p);
+      this.foldTurn[fr] = swing.x * this.side.x + swing.z * this.side.z + swing.y * 0.3 >= 0 ? 1 : -1;
+    }
+    uv.needsUpdate = edge.needsUpdate = true;
+  }
+
+  /** How far across the near edge of the sheet lies at fractional row `row`. */
+  private nearAt(row: number): number {
+    const i0 = THREE.MathUtils.clamp(Math.floor(row), 0, ROWS - 1);
+    const i1 = Math.min(ROWS - 1, i0 + 1);
+    const f = THREE.MathUtils.clamp(row - i0, 0, 1);
+    return this.edge.getX(i0 * COLS) * (1 - f) + this.edge.getX(i1 * COLS) * f;
+  }
+
+  /** The sheet as laid this frame at fractional row `row` and `across` metres from the crown line, and its facing. */
+  private sheetAcross(row: number, across: number, out: THREE.Vector3, normal: THREE.Vector3): void {
+    const P = this.pos.array as Float32Array;
+    const N = this.normals.array as Float32Array;
+    const A = this.afloat.array as Float32Array;
+    const i0 = THREE.MathUtils.clamp(Math.floor(row), 0, ROWS - 1);
+    const i1 = Math.min(ROWS - 1, i0 + 1);
+    const f = THREE.MathUtils.clamp(row - i0, 0, 1);
+    out.set(0, 0, 0);
+    normal.set(0, 0, 0);
+    let afloat = 0;
+    for (const [i, wi] of [[i0, 1 - f], [i1, f]] as const) {
+      const near = this.edge.getX(i * COLS);
+      const jf = THREE.MathUtils.clamp(((across + NET.far) / (near + NET.far)) * (COLS - 1), 0, COLS - 1);
+      const j0 = Math.floor(jf);
+      const j1 = Math.min(COLS - 1, j0 + 1);
+      const g = jf - j0;
+      for (const [j, wj] of [[j0, 1 - g], [j1, g]] as const) {
+        const k = i * COLS + j;
+        out.x += P[k * 3] * wi * wj;
+        out.y += P[k * 3 + 1] * wi * wj;
+        out.z += P[k * 3 + 2] * wi * wj;
+        normal.x += N[k * 3] * wi * wj;
+        normal.y += N[k * 3 + 1] * wi * wj;
+        normal.z += N[k * 3 + 2] * wi * wj;
+        afloat += A[k] * wi * wj;
+      }
+    }
+    normal.normalize();
+    this.foldFloat = afloat;
+  }
+
+  private foldFloat = 0;
+
+  /**
+   * The fold this frame: lying across the eye with the body as it breathes, swung up off it about the near edge it
+   * hangs from as it is lifted, and flipped right over onto the brow, lying doubled on the sheet there and going
+   * wherever the sheet goes after.
+   */
+  private layFold(): void {
+    const P = this.foldPos.array as Float32Array;
+    const C = this.foldContact.array as Float32Array;
+    const F = this.foldAfloat.array as Float32Array;
+    const plane = FOLD_ROWS * FOLD_COLS;
+    const angle = Math.PI * THREE.MathUtils.clamp(this.flap, 0, 1);
+    const toBrow = THREE.MathUtils.smoothstep(this.flap, 0.6, 1);
+    const perRow = (ROWS - 1) / NET.long;
+    const R = this.foldRest;
+    for (let fr = 0; fr < FOLD_ROWS; fr++) {
+      const u = this.foldU[fr];
+      const s = FRONT + u / this.whaleLength;
+      const row = u * perRow;
+      const near = this.nearAt(row);
+      this.sheetAcross(row, near, this.hinge, this.curl);
+      const h = fr * FOLD_COLS;
+      this.q.fromArray(R, h * 3);
+      this.q.y += this.bodyShift(this.foldAcross[h], s);
+      this.drop.subVectors(this.hinge, this.q);
+      const a = Math.max(0, fr - 1) * FOLD_COLS * 3;
+      const b = Math.min(FOLD_ROWS - 1, fr + 1) * FOLD_COLS * 3;
+      this.axis.set(R[b] - R[a], R[b + 1] - R[a + 1], R[b + 2] - R[a + 2]).normalize().multiplyScalar(this.foldTurn[fr]);
+      for (let m = 0; m < FOLD_COLS; m++) {
+        const k = h + m;
+        this.p.fromArray(R, k * 3).add(this.drop);
+        this.p.y += this.bodyShift(this.foldAcross[k], s);
+        this.p.sub(this.hinge).applyAxisAngle(this.axis, angle).add(this.hinge);
+        let afloat = 0;
+        if (toBrow > 0) {
+          this.sheetAcross(row, near - (this.foldLong[fr] * m) / (FOLD_COLS - 1), this.lie, this.curl);
+          this.lie.addScaledVector(this.curl, 0.09);
+          this.p.lerp(this.lie, toBrow);
+          afloat = this.foldFloat * toBrow;
+        }
+        this.p.toArray(P, k * 3);
+        F[k] = F[plane + k] = afloat;
+        C[k] = C[plane + k] = (1 - THREE.MathUtils.smoothstep(this.flap, 0.02, 0.2)) + 0.5 * toBrow;
+      }
+    }
+    const N = this.foldNormals.array as Float32Array;
+    for (let fr = 0; fr < FOLD_ROWS; fr++) {
+      for (let m = 0; m < FOLD_COLS; m++) {
+        const k = fr * FOLD_COLS + m;
+        const a = (Math.min(FOLD_ROWS - 1, fr + 1) * FOLD_COLS + m) * 3;
+        const b = (Math.max(0, fr - 1) * FOLD_COLS + m) * 3;
+        const c = (fr * FOLD_COLS + Math.min(FOLD_COLS - 1, m + 1)) * 3;
+        const d = (fr * FOLD_COLS + Math.max(0, m - 1)) * 3;
+        this.p.set(P[a] - P[b], P[a + 1] - P[b + 1], P[a + 2] - P[b + 2]);
+        this.q.set(P[c] - P[d], P[c + 1] - P[d + 1], P[c + 2] - P[d + 2]);
+        this.r.crossVectors(this.q, this.p).normalize();
+        this.r.toArray(N, k * 3);
+        this.r.toArray(N, (plane + k) * 3);
+        P[(plane + k) * 3] = P[k * 3] + this.r.x * FOLD_LAYER;
+        P[(plane + k) * 3 + 1] = P[k * 3 + 1] + this.r.y * FOLD_LAYER;
+        P[(plane + k) * 3 + 2] = P[k * 3 + 2] + this.r.z * FOLD_LAYER;
+      }
+    }
+    const mid = Math.floor(FOLD_ROWS / 2) * FOLD_COLS;
+    this.foldTip.fromArray(P, (mid + FOLD_COLS - 1) * 3);
+    this.foldMid.fromArray(P, (mid + Math.floor(FOLD_COLS / 2)) * 3);
+    this.foldPos.needsUpdate = this.foldNormals.needsUpdate = this.foldContact.needsUpdate = this.foldAfloat.needsUpdate = true;
+  }
+
+  /** Weed hanging off the fold's lower part: down its face as it lies, straight down as it swings up off the eye. */
+  private drawFoldWeed(): void {
+    const time = this.clock;
+    const P = this.foldPos.array as Float32Array;
+    const N = this.foldNormals.array as Float32Array;
+    const F = this.foldAfloat.array as Float32Array;
+    const hanging = THREE.MathUtils.smoothstep(this.flap, 0.05, 0.3) * (1 - THREE.MathUtils.smoothstep(this.flap, 0.6, 1));
+    for (let w = 0; w < FOLD_WEEDS; w++) {
+      const at = this.foldWeedAt[w];
+      const l = this.foldWeeds[w];
+      const k = at.fr * FOLD_COLS + at.m;
+      this.p.fromArray(P, k * 3);
+      this.q.fromArray(N, k * 3);
+      if (this.q.dot(this.side) < 0) this.q.negate();
+      this.r.set(0, -1, 0).addScaledVector(this.q, this.q.y * (1 - hanging));
+      if (this.r.lengthSq() < 0.05) this.r.set(Math.cos(at.turn), -0.2, Math.sin(at.turn));
+      this.r.normalize();
+      this.flat.crossVectors(this.q, this.r).normalize();
+      const afloat = F[k];
+      for (let m = 0; m < WEED_POINTS; m++) {
+        const f = m / (WEED_POINTS - 1);
+        const wave = Math.sin(f * 3.2 + at.turn + time * 0.8) * 0.14 * f * at.length;
+        this.t.copy(this.p).addScaledVector(this.r, f * at.length).addScaledVector(this.flat, wave).addScaledVector(this.q, 0.05);
+        this.setPoint(l, m, this.t, 0.12 * (0.45 + 0.75 * Math.sin(Math.PI * (0.15 + f * 0.7))) * (1 - f * 0.4), afloat, 1);
+      }
+      this.tangents(l);
+    }
   }
 
   /** Strands of weed caught in it: lying down the skin, hanging under the lifted mesh, trailing on the water. */

@@ -171,6 +171,19 @@ export class Foley {
       this.puff({ at, len: 0.6, level: level * 0.05, pan, type: 'bandpass', from: 520, to: 880, q: 2.2, attack: 0.15 });
       this.puff({ at: at + 0.55, len: 0.35, level: level * 0.06, pan, type: 'bandpass', from: 1300, to: 600, q: 0.7, attack: 0.01, wet: 0.05 });
       this.puff({ at: at + 0.6, len: 0.5, level: level * 0.025, pan, type: 'bandpass', from: 2400, to: 1000, q: 0.5, attack: 0.04 });
+    } else if (kind === 'fold-lift') {
+      // A heavy fold of wet net and weed peeling up off skin, turning over, and slapping down wet on the brow.
+      this.puff({ at, len: 0.7, level: level * 0.07, pan, type: 'bandpass', from: 280, to: 720, q: 1.6, attack: 0.2, wet: 0.03 });
+      this.puff({ at: at + 0.25, len: 0.6, level: level * 0.03, pan, type: 'bandpass', from: 1600, to: 900, q: 0.7, attack: 0.15, wet: 0.04 });
+      this.puff({ at: at + 1.05, len: 0.14, level: level * 0.1, pan, type: 'bandpass', from: 1200, to: 650, q: 0.8, attack: 0.006, wet: 0.06 });
+      this.blip(at + 1.05, 120, 70, 0.2, level * 0.04, pan, 'triangle', 0.02);
+      for (let i = 0; i < 4; i++) this.puff({ at: at + 1.25 + i * 0.16 + Math.random() * 0.08, len: 0.05, level: level * 0.02 * (1 - i * 0.15), pan,
+        type: 'bandpass', from: 2200 + Math.random() * 900, q: 3, attack: 0.003 });
+    } else if (kind === 'net-heave') {
+      // The mesh lifting off its head in the wind, the rope creaking taut through her mittens, and one soft rise in tone.
+      this.puff({ at, len: 0.8, level: level * 0.06, pan, type: 'bandpass', from: 380, to: 950, q: 0.6, attack: 0.22, wet: 0.04 });
+      this.puff({ at: at + 0.1, len: 0.45, level: level * 0.05, pan, type: 'bandpass', from: 300, to: 200, q: 3.5, attack: 0.08 });
+      this.blip(at + 0.05, 196, 262, 0.9, level * 0.022, pan, 'triangle', 0.1);
     } else if (kind === 'swimmer-out') {
       // A small bird scrambling up out of the sea: a quick wet slap and the water running off it.
       this.puff({ at, len: 0.2, level: level * 0.09, pan, type: 'bandpass', from: 1700, to: 900, q: 0.7, attack: 0.006, wet: 0.2 });
