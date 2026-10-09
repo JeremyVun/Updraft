@@ -19,7 +19,7 @@ import { BirchesChapter } from './birches';
 import { DrownedChapter } from './drowned';
 import { SleepingChapter } from './sleeping';
 import { StairsChapter } from './stairs';
-import { DESCENT_END, STAIRS_LANDING } from '../world/stairs-layout';
+import { DESCENT_END, DESCENT_YAW, STAIRS_LANDING } from '../world/stairs-layout';
 import { StageChapter } from './stage';
 import { WoodChapter } from './wood';
 import { WOOD_BERTH, WOOD_LANDING } from '../world/wood';
@@ -182,10 +182,10 @@ export class Journey {
       this.begin('stairs');
     } else if (choice === 'drowned' || choice === 'village') {
       /** The drift into the village begins where the stairs let the boat down through the cloud onto the water. */
-      this.sail(DESCENT_END.x, DESCENT_END.y, -1.9);
+      this.sail(DESCENT_END.x, DESCENT_END.y, DESCENT_YAW);
       this.begin('drowned');
     } else if (choice === 'roofs' || choice === 'church' || choice === 'belfry' || choice === 'storm') {
-      this.sail(DESCENT_END.x, DESCENT_END.y, -1.9);
+      this.sail(DESCENT_END.x, DESCENT_END.y, DESCENT_YAW);
       this.begin('drowned');
       const drowned = this.chapter as DrownedChapter;
       drowned.skipToRun();
