@@ -15,6 +15,7 @@
 //   guard bites.
 // The default set takes about 25 minutes; `fullidle` waits out every valve and is not in it.
 import { openBrowser } from './lib/browser.mjs';
+import { away, circle as circleOver, gameWait, jumpTo, onScreen, stroke, sweepCork, sweepEye, sweepFin, sweepHead } from './lib/whale-gestures.mjs';
 import assert from 'node:assert/strict';
 
 
@@ -110,26 +111,6 @@ const atLine = (page) => resume(page, 'whale-eye', (s) => s.step === 'line' && s
 const atEye = (page) => resume(page, 'whale-breath', (s) => s.step === 'eye' && s.offered, 'the eye asked');
 const atHeave = (page) => resume(page, 'whale-line', (s) => s.step === 'heave' && s.stepTime > 3, 'the heave, braced');
 
-/** One stroke up across its eye from below the fold, a long one or (`weak`) a short slow one. */
-async function sweepEye(page, weak = false) {
-  const [ex, ey] = await screenOf(page, '__game.sealife.sleeper.eye');
-  const L = weak ? 50 : 260;
-  await jumpTo(page, ex - 20, ey + L * 0.5);
-  await stroke(page, [[ex - 20, ey + L * 0.5], [ex + 20, ey - L * 0.6]], weak ? 300 : 280, true);
-  await away(page);
-  await page.waitForTimeout(700);
-}
-
-/** One stroke from the net on its head toward her, over the water between. */
-async function sweepHead(page) {
-  const [hx, hy] = await screenOf(page, '(() => { const s = __game.sealife.sleeper; return s.eye.clone().lerp(s.blowhole, 0.45); })()');
-  const [bx, by] = await screenOf(page, '__game.boat.position');
-  await jumpTo(page, hx, hy);
-  await stroke(page, [[hx, hy], [(hx + bx) / 2, (hy + by) / 2]], 300, true);
-  await away(page);
-  await page.waitForTimeout(500);
-}
-
 /** Strokes until `done`, at most `most` of them; the number it took. */
 async function strokesUntil(page, sweep, done, most, what) {
   for (let n = 0; n <= most; n++) {
@@ -138,80 +119,6 @@ async function strokesUntil(page, sweep, done, most, what) {
     await sweep(page);
   }
   throw new Error(`${most} strokes never ${what}: ${JSON.stringify(await read(page))}`);
-}
-
-/** A point in the world on screen, in pixels. */
-const screenOf = (page, expr) => page.evaluate((e) => {
-  const p = eval(e).clone().project(__game.rig.camera);
-  return [(p.x * 0.5 + 0.5) * innerWidth, (0.5 - p.y * 0.5) * innerHeight];
-}, expr);
-
-/**
- * One sweep across the near cork on screen, `way` 1 toward the boat or -1 away from it, from well short to well past.
- * The pointer comes in at the start and leaves at the end, as a hand does: a bare move to or from a parked corner is
- * a stroke of its own, back across the cork.
- */
-async function sweepCork(page, way = 1) {
-  const [cx, cy] = await screenOf(page, '__game.sealife.net.float.position');
-  const [bx, by] = await screenOf(page, '__game.boat.position');
-  const d = Math.hypot(bx - cx, by - cy) || 1;
-  const ux = ((bx - cx) / d) * way, uy = ((by - cy) / d) * way;
-  await jumpTo(page, cx - ux * 110, cy - uy * 110);
-  await stroke(page, [[cx - ux * 110, cy - uy * 110], [cx + ux * 150, cy + uy * 150]], 240, true);
-  await away(page);
-  await page.mouse.move(W - 10, H - 10);
-  await page.waitForTimeout(1200);
-}
-
-/** Where a point on the whale is on screen, in pixels: the blowhole, or `s` along its back (0 snout, 1 flukes). */
-async function onScreen(page, s, up = 0) {
-  return page.evaluate(([s, up]) => {
-    const w = __game.sealife.sleeper;
-    const p = s === 'blowhole' ? w.blowhole.clone() : w.point(0, 1.1, s, w.blowhole.clone());
-    p.y += up;
-    p.project(__game.rig.camera);
-    return [(p.x * 0.5 + 0.5) * innerWidth, (0.5 - p.y * 0.5) * innerHeight];
-  }, [s, up]);
-}
-
-/**
- * The pointer taken off the window and brought back in at (x, y), as a hand leaves the mouse and comes back: no stroke
- * in between. A bare move from wherever it was parked is a stroke of its own across whatever lies between.
- */
-async function jumpTo(page, x, y) {
-  await page.evaluate(() => __game.renderer.domElement.dispatchEvent(new PointerEvent('pointerleave', { pointerType: 'mouse' })));
-  await page.mouse.move(x, y);
-  await page.waitForTimeout(100);
-}
-
-/** Off the window: nothing it does is wind. */
-const away = (page) => page.evaluate(() => __game.renderer.domElement.dispatchEvent(new PointerEvent('pointerleave', { pointerType: 'mouse' })));
-
-/** Points `t` of the way out along the near flipper (0 root .. 1 tip) on screen, in pixels. */
-const finOnScreen = (page, ...ts) => page.evaluate((ts) => {
-  const s = __game.sealife.sleeper;
-  return ts.map((t) => {
-    const p = s.finRoot.clone().lerp(s.finTip, t).project(__game.rig.camera);
-    return [(p.x * 0.5 + 0.5) * innerWidth, (0.5 - p.y * 0.5) * innerHeight];
-  });
-}, ts);
-
-/**
- * One sweep along the flipper on screen, from inside its outer half out past its tip; or, `across`, a scrub back and
- * forth across it, which stays on it as long as a sweep along it does.
- */
-async function sweepFin(page, across = false) {
-  const [[ax, ay], [bx, by]] = await finOnScreen(page, 0.5, 1);
-  const d = Math.hypot(bx - ax, by - ay) || 1;
-  const ux = (bx - ax) / d, uy = (by - ay) / d;
-  const [mx, my] = [(ax + bx) / 2, (ay + by) / 2];
-  const half = Math.max(160, d * 0.65);
-  const points = across ? Array.from({ length: 9 }, (_, i) => [mx - uy * 45 * (i % 2 ? 1 : -1) + ux * (i - 4) * 12, my + ux * 45 * (i % 2 ? 1 : -1) + uy * (i - 4) * 12])
-    : [[mx - ux * half, my - uy * half], [mx + ux * half, my + uy * half]];
-  await jumpTo(page, ...points[0]);
-  await stroke(page, points, across ? 640 : 320, true);
-  await away(page);
-  await page.waitForTimeout(900);
 }
 
 /** At rest beside it, resumed as the save after the line does, until the cygnet holds the loop's end. */
@@ -256,44 +163,8 @@ const watchBird = (page) => page.evaluate((HALF) => {
 }, FIN_HALF);
 const birdWatch = (page) => page.evaluate(() => ({ clear: +window.__bird.clear.toFixed(2), clearAt: window.__bird.at, clearWhen: window.__bird.bird, gap: +window.__bird.gap.toFixed(3), frames: window.__bird.frames }));
 
-async function stroke(page, points, ms, started = false) {
-  const n = Math.max(2, Math.round(ms / 8));
-  if (!started) await page.mouse.move(...points[0]);
-  for (let i = 1; i <= n; i++) {
-    const f = (i / n) * (points.length - 1);
-    const k = Math.min(points.length - 2, Math.floor(f));
-    const t = f - k;
-    await page.mouse.move(points[k][0] + (points[k + 1][0] - points[k][0]) * t, points[k][1] + (points[k + 1][1] - points[k][1]) * t);
-    await page.waitForTimeout(ms / n);
-  }
-}
-
-/**
- * Until `seconds` of game time have passed. The game steps 1/60 s a frame here, so on a loaded machine its clock runs
- * slow, and a hand paced by the wall clock would circle faster than any player could.
- */
-const gameWait = (page, seconds) => page.evaluate((seconds) => new Promise((resolve) => {
-  const end = __game.story.current.time + seconds;
-  const tick = () => (__game.story.current.time >= end ? resolve() : requestAnimationFrame(tick));
-  tick();
-}), seconds);
-
-/** Round and round over the blowhole, a loop each 0.8 s of game time, re-aimed each turn, until `done` or the wall clock runs out. */
-async function circle(page, done, wallSeconds = 60) {
-  const end = Date.now() + wallSeconds * 1000;
-  let a = 0;
-  for (;;) {
-    const [cx, cy] = await onScreen(page, 'blowhole', 1.2);
-    for (let i = 0; i < 24; i++) {
-      a += (Math.PI * 2) / 24;
-      await page.mouse.move(cx + Math.cos(a) * 60, cy + Math.sin(a) * 50);
-      await gameWait(page, 0.029);
-    }
-    const s = await read(page);
-    if (done(s)) return s;
-    if (Date.now() > end) throw new Error(`circling never got there: ${JSON.stringify(s)}`);
-  }
-}
+/** Circles over the blowhole until `done` holds for the game's state after a loop. */
+const circle = (page, done) => circleOver(page, async () => { const s = await read(page); return done(s) && s; });
 
 const results = {};
 const ctx = () => browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
