@@ -578,6 +578,16 @@ checked against. The lens reaches each by the rig's slow orbit; the numbers are 
   them, the bell over the three, and the lost boat's lantern answering in the fog seen through the far openings (the
   lens stands on the side away from the boat's return). The goodbye is the same window seen from the boat below: the
   cat and a kitten on that sill.
+- *The belfry rebuilt for it* (Jeremy, 2026-10-09: "with re: to the bell, i think the issue is that it's hidden a bit
+  because the child stands in one of the windows instead of inside the room looking out, and that room is a bit too
+  small for that kind of thing?"; Claude agreed and ruled): she stands in a light and blocks the one opening the bell
+  could be seen through, and the room (about 4 m across, the bell, its frame and a pillar in each pair of lights) has
+  no space to stage her, the kittens and the bell together. The belfry is cheated larger, a room she, the kittens,
+  the cat and the bell fit in with space between, with one wide arch to a face in place of the paired lights and their
+  pillar; she climbs in over the sill and stands on the floor by the bell, the kittens in the straw beside her, looking
+  out over the fog sea. The lens, low outside an arch, sees into the room: her, the kittens and the bell lit against
+  the sky through the arch opposite, the boat's lantern answering in the fog beyond. At the goodbye the cat and a
+  kitten come to that arch's sill. This supersedes the paired lights and her standing in one.
 
 **His rule for every interaction frame** (binding on all of them): judge the puzzle as a first-time player sees it
 through the lens. The thing the player acts on and the drawn gust must both be plainly in frame, and so must what
