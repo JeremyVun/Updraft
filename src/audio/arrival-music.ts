@@ -12,7 +12,7 @@ export const ARRIVAL_MUSIC: Record<ArrivalMusic, Background> = {
   // The meadow must still be grey and unawakened before the piano.
   meadow: { ...empty, music: 'meadow', hush: 0 },
   birches: { ...empty, music: 'birches', hush: 0, birchesScore: 'walk' },
-  drowned: { ...empty, music: 'drowned', hush: .3, drownedScore: 'rooftops' },
+  drowned: { ...empty, music: 'drowned', hush: .3, drownedScore: 'drift' },
   wood: { ...empty, music: 'wood', hush: .6 },
   sleeping: { ...empty, music: 'wood', hush: .5, sleepingScore: 'shelter' },
   sea: { ...empty, music: 'sea', hush: 0, seaScore: 'open' },

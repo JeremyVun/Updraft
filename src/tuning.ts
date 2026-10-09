@@ -86,17 +86,10 @@ export const tuning = {
     birchesScoreLevel: 10.35,
     /** Approved Lines balance (+17.6 dB), excluding preview playback gain; a separate, small melody trim. */
     linesScoreLevel: 7.5858, linesMelodyDb: -1.5, linesCueSpace: 4,
-    /** Approved revised study gains, excluding listening-file normalization; the mirror 4 dB up after playtest. */
-    mirrorScoreLevel: 10 ** (4 / 20), drownedScoreLevel: 1.8, dreamPhaseFade: 2.8, forestMusicBlend: 4,
-    /**
-     * The drowned chase's music: the fog's front from `near` metres behind her (the pulse at its tightest) to `far` (at
-     * its easiest), the share of that while she walks rather than works a piece, how much of it is eased once she is
-     * across one and over how long (s), and how long the music takes to follow (s). Where a phrase begins it turns to
-     * the pressing progression at `press` and back at `relax`; at each bar line its pulse fills to quarters at
-     * `quarters` and to eighths at `eighths`, and thins again `give` below them.
-     */
-    drownedChase: { near: 7, far: 19, walking: .75, relief: .6, reliefFor: 5, ease: 1.5,
-      press: .55, relax: .4, quarters: .35, eighths: .7, give: .06 },
+    /** The mirror's approved study gain, excluding listening-file normalization, 4 dB up after playtest. */
+    mirrorScoreLevel: 10 ** (4 / 20), dreamPhaseFade: 2.8, forestMusicBlend: 4,
+    /** The drowned village's pieces at the room reference, and how long one takes to give way to the next (s). */
+    drownedScoreLevel: 6.7, drownedCrossFade: 2.5,
     /** Approved distant foghorn; source gain excludes the listening export boost. */
     foghorn: { midi:50, level:.036, pan:.24, attack:1.1, duration:4.6,
       hold:2.65, dryLevel:.22, reverbSend:.35, predelay:.18, diffuseLevel:.8, diffuseSeconds:4.4,

@@ -1,4 +1,5 @@
-import type { MirrorScorePhase, DrownedScorePhase } from '../audio/dream-score';
+import type { MirrorScorePhase } from '../audio/dream-score';
+import type { DrownedScorePhase } from '../audio/drowned-score';
 import type { StormStrike } from '../fx/storm';
 import type { SkyMirror } from '../world/sky-mirror';
 import type { LittleBoats } from '../world/little-boats';
@@ -143,7 +144,6 @@ export interface Chapter {
   /** The long sea arrangement follows actual swimming and coastal approach. */
   readonly mirrorScore?: MirrorScorePhase;
   readonly drownedScore?: DrownedScorePhase;
-  readonly drownedTension?: number;
   readonly seaScore?: SeaScorePhase;
   /** Sleeping's shelter, cold, climb, summit pause and morning follow actual story beats. */
   readonly sleepingScore?: SleepingScorePhase;

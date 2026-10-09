@@ -269,7 +269,7 @@ try {
       'The arrival keeps the shared reverb, making and analysing no convolver');
 
     // The foghorn's buffers and diffuse field are made during Drowned, so the cue's frame only connects nodes.
-    const storm = offline(1), drowned = { ...baseState, music: 'drowned', drownedScore: 'gather', sea: 1, land: 0 };
+    const storm = offline(1), drowned = { ...baseState, music: 'drowned', drownedScore: 'farewell', sea: 1, land: 0 };
     let frames = 0;
     for (; frames < 400 && !storm.s.foghornWork?.ready; frames++) storm.s.update(FRAME, { ...drowned, cues: [] });
     check(storm.s.foghornWork?.ready, `The horn is prepared ${(frames * FRAME).toFixed(1)} s into Drowned`);

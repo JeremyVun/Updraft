@@ -12,7 +12,7 @@ const cases=[
   ['boats-meadow','Little Boats → grey Meadow',{music:'boats',hush:.28},'meadow'],
   ['meadow-birches','Meadow → Birches',{music:'meadow',meadowScore:'return'},'birches'],
   ['birches-drowned','Birches → Drowned Village',{music:'birches',birchesScore:'return'},'drowned'],
-  ['drowned-wood','Drowned Village → Wood',{music:'drowned',drownedScore:'after',hush:.85},'wood'],
+  ['drowned-wood','Drowned Village → Wood',{music:'drowned',drownedScore:'farewell',hush:.85},'wood'],
   ['wood-sleeping','Wood → Sleeping',{music:'wood',hush:.55},'sleeping'],
   ['sleeping-sea','Sleeping morning → open sea',{music:'sea',sleepingScore:'morning',hush:.1},'sea'],
   ['sea-mirror','Open sea → Sky Mirror',{music:'sea',seaScore:'arrival'},'mirror'],
@@ -28,7 +28,7 @@ try {
       const {ctx,sound}=offlineSound(50),phases=[];
       backgroundOnly(ctx,sound);
       let outgoing,incoming,epoch,reverb;
-      const score=()=>sound.openingScore??sound.summitScore??sound.dreamScore??sound.linesScore??sound.boatsScore
+      const score=()=>sound.openingScore??sound.summitScore??sound.dreamScore??sound.drownedScore??sound.linesScore??sound.boatsScore
         ??sound.meadowScore??sound.birchesScore??sound.sleepingScore??sound.seaScore;
       const update=tick=>{
         const t=tick/8,landed=t>=42;
@@ -86,8 +86,7 @@ try {
     const rows=[];
     for(const [music,field,url,key] of tables){const table=(await import(url))[key];rows.push({music,field,phases:Object.keys(table)});}
     rows.push({music:'mirror',field:'mirrorScore',phases:['approach','search','one','two','three','constellation','depart']},
-      {music:'drowned',field:'drownedScore',phases:['rooftops','stuck','chase','climb','belfry','answer1','answer2','answer3',
-        'home','farewell','resume','gather','loss','after']},
+      {music:'drowned',field:'drownedScore',phases:['drift','fog','refuge','home','farewell']},
       {music:'home',field:'summitScore',phases:['approach','flight','farewell','home']});
     const reports=[];
     for(const row of rows){
@@ -100,7 +99,7 @@ try {
       for(let tick=1;tick<seconds*8;tick++){await pause;update(tick);if(tick+1<seconds*8)pause=ctx.suspend((tick+1)/8);await ctx.resume();}
       const buffer=await rendering;let peak=0;for(let ch=0;ch<2;ch++)for(const value of buffer.getChannelData(ch))peak=Math.max(peak,Math.abs(value));
       if(peak>=1)throw Error(`${row.field}: phase render clipped`);
-      if(sound[['mirrorScore','drownedScore'].includes(row.field)?'dreamScore':row.field]!==null)throw Error(`${row.field}: permanent silence did not retire the score`);
+      if(sound[row.field==='mirrorScore'?'dreamScore':row.field]!==null)throw Error(`${row.field}: permanent silence did not retire the score`);
       reports.push({...row,starts,peakDbFS:20*Math.log10(peak),released:true});
     }
     return reports;

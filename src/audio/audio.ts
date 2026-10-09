@@ -1,4 +1,5 @@
-import { DreamScore, DREAM_SECTIONS, type MirrorScorePhase, type DrownedScorePhase } from './dream-score';
+import { DreamScore, DREAM_SECTIONS, type MirrorScorePhase } from './dream-score';
+import { DrownedScore, DROWNED_SECTIONS, type DrownedScorePhase } from './drowned-score';
 import { SummitScore, type SummitScorePhase } from './summit-score';
 import { HOME_ENDING } from '../story/home-ending';
 import { OpeningScore, type OpeningScorePhase } from './opening-score';
@@ -92,8 +93,6 @@ export interface SoundState {
   /** Only the long dolphin crossing uses the approved adaptive sea arrangement. */
   mirrorScore?: MirrorScorePhase;
   drownedScore?: DrownedScorePhase;
-  /** How hard the drowned chase presses, 0 to 1: its pulse tightens with it. */
-  drownedTension?: number;
   seaScore?: SeaScorePhase;
   sleepingScore?: SleepingScorePhase;
   /** The approved arrangement starts after the piano and continues until the next arrival handoff. */
@@ -330,6 +329,7 @@ export class Soundscape {
   private stairsSound: StairsSound | null = null;
   private linesScore: LinesScore | null = null;
   private dreamScore: DreamScore | null = null;
+  private drownedScore: DrownedScore | null = null;
   private summitScore: SummitScore | null = null;
   private openingScore: OpeningScore | null = null;
   private summitFinale = false;
@@ -1008,12 +1008,12 @@ export class Soundscape {
     this.fade(this.liftGain.gain, s.charge * (1 - tuning.audio.playerWindEase * s.charge * s.charge) * 0.35 * air, now, 0.15);
     this.liftFilter.frequency.setTargetAtTime(220 + s.charge * 1500 * tuning.audio.playerWindFilterRange, now, 0.2);
 
-    const activeScore = this.openingScore ?? this.summitScore ?? this.dreamScore ?? this.linesScore ?? this.boatsScore ?? this.meadowScore ?? this.birchesScore ?? this.sleepingScore ?? this.seaScore ?? this.stairsScore;
+    const activeScore = this.openingScore ?? this.summitScore ?? this.dreamScore ?? this.drownedScore ?? this.linesScore ?? this.boatsScore ?? this.meadowScore ?? this.birchesScore ?? this.sleepingScore ?? this.seaScore ?? this.stairsScore;
     const arrival = this.arrivalTransition.update(s, now, s.arrivalMusic ? activeScore?.handoffAt(now) : now), bg = arrival.background;
     if (arrival.changed && (arrival.stage === 'fade' || arrival.stage === 'gap')) {
       // Retire every outgoing source before the short rest ends; do not let long tails reopen with the next room.
       const fade = arrival.stage === 'fade' ? (arrival.fadeOut ?? tuning.audio.arrivalFadeOut) : .08;
-      for (const score of [this.openingScore, this.summitScore, this.dreamScore, this.linesScore, this.boatsScore, this.meadowScore, this.birchesScore, this.sleepingScore, this.seaScore, this.stairsScore]) score?.stop(fade);
+      for (const score of [this.openingScore, this.summitScore, this.dreamScore, this.drownedScore, this.linesScore, this.boatsScore, this.meadowScore, this.birchesScore, this.sleepingScore, this.seaScore, this.stairsScore]) score?.stop(fade);
     }
     const backgroundPaused = arrival.stage === 'gap';
     const homeMusicForward = !!bg.summitScore && !tuning.audio.homeMusicDucking;
@@ -1096,17 +1096,22 @@ export class Soundscape {
     }
     const forestEntry = arrival.legato && arrival.stage === 'blend' && arrival.changed;
     if (forestEntry) this.forestBlendUntil = now + tuning.audio.forestMusicBlend;
-    const dreamKind = bg.mirrorScore ? 'mirror' : bg.drownedScore ? 'drowned' : null;
-    const dreamPhase = bg.mirrorScore ?? bg.drownedScore;
-    if (dreamKind && dreamPhase && !s.silence && !backgroundPaused) {
-      if (this.dreamScore?.kind !== dreamKind) {
-        this.dreamScore?.stop(); this.dreamScore = new DreamScore(ctx, this.backgroundBus, dreamKind);
-      }
-      // Dynamics are already composed into these arrangements; hush must not attenuate them twice.
-      this.dreamScore.update(dreamPhase, (dreamKind === 'mirror' ? tuning.audio.mirrorScoreLevel : tuning.audio.drownedScoreLevel) * roomTrim(dreamKind) * (1-piano), arrival.handoffAt, s.drownedTension);
+    // Dynamics are already composed into these arrangements; hush must not attenuate them twice.
+    if (bg.mirrorScore && !s.silence && !backgroundPaused) {
+      this.dreamScore ??= new DreamScore(ctx, this.backgroundBus);
+      this.dreamScore.update(bg.mirrorScore, tuning.audio.mirrorScoreLevel * roomTrim('mirror') * (1 - piano), arrival.handoffAt);
     } else if (this.dreamScore) {
-      this.dreamScore.stop(s.silence ? .12 : arrival.legato ? tuning.audio.forestMusicBlend : tuning.audio.dreamPhaseFade);
+      this.dreamScore.stop(s.silence ? .12 : tuning.audio.dreamPhaseFade);
       this.dreamScore = null;
+    }
+    if (bg.drownedScore && !s.silence && !backgroundPaused) {
+      this.drownedScore ??= new DrownedScore({ ctx, bus: this.backgroundDry, reverb: this.backgroundWet }, out => {
+        const piano = new PianoStrings(); piano.setOutput(out); return piano;
+      });
+      this.drownedScore.update(bg.drownedScore, tuning.audio.drownedScoreLevel * roomTrim('drowned') * (1 - piano), arrival.handoffAt);
+    } else if (this.drownedScore) {
+      this.drownedScore.stop(s.silence ? .12 : arrival.legato ? tuning.audio.forestMusicBlend : 1.8);
+      this.drownedScore = null;
     }
     if (!bg.summitScore) this.summitFinale = false;
     if (bg.music === 'home' && bg.summitScore && !this.summitFinale && !s.silence && !backgroundPaused) {
@@ -1154,19 +1159,20 @@ export class Soundscape {
     // The opening grows less with life; wind warms it in the same proportion.
     const lifeLevel = this.openingScore ? 0.012 + tuning.audio.openingPadRise * s.life : padLife;
     this.fade(this.padGain.gain,
-      backgroundPaused || stairsMusic || this.summitScore || this.dreamScore || this.sleepingScore || this.meadowScore || this.birchesScore || this.linesScore ? 0 : (lifeLevel * (1 - 0.35 * s.night * (finale ? 0 : 1)) + this.activity * tuning.audio.padActivityLevel * lifeLevel / padLife) * hush * mood.level * swell * (this.openingScore ? this.openingScore.gainAt(now) * 10 ** (tuning.audio.openingScoreDb / 20) : 1),
+      backgroundPaused || stairsMusic || this.summitScore || this.dreamScore || this.drownedScore || this.sleepingScore || this.meadowScore || this.birchesScore || this.linesScore ? 0 : (lifeLevel * (1 - 0.35 * s.night * (finale ? 0 : 1)) + this.activity * tuning.audio.padActivityLevel * lifeLevel / padLife) * hush * mood.level * swell * (this.openingScore ? this.openingScore.gainAt(now) * 10 ** (tuning.audio.openingScoreDb / 20) : 1),
       now,
       piano > 0 ? tuning.piano.mixResponse : now < this.forestBlendUntil ? tuning.audio.forestMusicBlend / 3 : bg.hush > 0.5 ? 0.7 : 1.5,
     );
     this.padFilter.frequency.setTargetAtTime(mood.cutoff + 260 * s.life - 200 * s.night, now, 2.5);
 
     const harmonyAt = (at: number): readonly number[] => {
-      const composed = this.openingScore?.chordAt(at) ?? this.summitScore?.chordAt() ?? this.dreamScore?.chordAt(at) ?? this.linesScore?.chordAt(at) ?? this.birchesScore?.chordAt(at)
+      const composed = this.openingScore?.chordAt(at) ?? this.summitScore?.chordAt() ?? this.dreamScore?.chordAt(at) ?? this.drownedScore?.chordAt(at) ?? this.linesScore?.chordAt(at) ?? this.birchesScore?.chordAt(at)
         ?? this.meadowScore?.chordAt(at) ?? this.sleepingScore?.chordAt(at) ?? this.stairsScore?.chordAt(at);
       if (composed) return composed;
       // During the music-free arrival gap, use the opening harmony of the incoming composition.
       if (backgroundPaused) {
-        if (bg.mirrorScore || bg.drownedScore) return DREAM_SECTIONS[(bg.mirrorScore ?? bg.drownedScore)!].chords[0].tones;
+        if (bg.mirrorScore) return DREAM_SECTIONS[bg.mirrorScore].chords[0].tones;
+        if (bg.drownedScore) return DROWNED_SECTIONS[bg.drownedScore].chords[0].tones;
         if (bg.linesScore) return LINES_SECTIONS[bg.linesScore].chords[0].tones;
         if (bg.birchesScore) return BIRCHES_SECTIONS[bg.birchesScore].chords[0].tones;
         if (bg.meadowScore) return MEADOW_SECTIONS[bg.meadowScore].chords[0].tones;
@@ -1408,6 +1414,7 @@ export class PianoStrings {
         if (strings === 2) o.detune.value = k === 0 ? -2.2 : 2.6;
         const g = ctx.createGain();
         const top = (peak * amp) / strings;
+        g.gain.value = 0;
         g.gain.setValueAtTime(0, t0);
         g.gain.linearRampToValueAtTime(top, t0 + 0.004);
         g.gain.exponentialRampToValueAtTime(top * 0.3, t0 + 0.06 + life * 0.09);
@@ -1434,6 +1441,8 @@ export class PianoStrings {
     wood.frequency.value = 180 + Math.random() * 90;
     wood.Q.value = 1.4;
     const thump = ctx.createGain();
+    // A gain left at 1 until its first event lets one sample of a sub-sample start through as a click.
+    thump.gain.value = 0;
     thump.gain.setValueAtTime(0.05 * velocity * level, t0);
     thump.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.09);
     src.connect(wood).connect(thump).connect(panner);
@@ -1445,6 +1454,7 @@ export class PianoStrings {
     bite.frequency.value = Math.min(6000, 1400 + f * 2);
     bite.Q.value = 0.8;
     const click = ctx.createGain();
+    click.gain.value = 0;
     click.gain.setValueAtTime(0.09 * velocity * velocity * level, t0);
     click.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.03);
     hammer.connect(bite).connect(click).connect(panner);
