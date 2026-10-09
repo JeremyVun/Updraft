@@ -2,10 +2,10 @@ import type { DrownedScorePhase } from '../audio/dream-score';
 import { BELL_ANSWERS, chaseTension } from '../audio/drowned-cues';
 import type { CheckpointPayload } from './checkpoint-data';
 import * as THREE from 'three';
-import type { Shot } from '../camera';
+import { verticalFov, type Shot } from '../camera';
 import { DROWNED_CHANNEL, SPIRE, LIGHTHOUSE } from '../world/drowned';
-import { STORM_WAY, CAT_CHIMNEY, CAT_EDGE, CAT_HOLD, CAT_HOLD_YAW, DARK_AT_STRAND, STRAND, STRAND_YAW, WAY } from '../world/drowned-way';
-import { LIGHTHOUSE_TOP_Y } from '../world/lighthouse';
+import { STORM_WAY, CAT_CHIMNEY, CAT_EDGE, CAT_HOLD, CAT_HOLD_YAW, DARK_AT_STRAND, NAVE_BERTH, STRAND, STRAND_YAW, WAY } from '../world/drowned-way';
+import { LIGHTHOUSE_LANTERN_Y } from '../world/lighthouse';
 import { WOOD_LANDING } from '../world/wood';
 import { atmo } from '../world/atmosphere';
 import { drownedEntry } from '../world/journey-rooms';
@@ -433,7 +433,9 @@ export class DrownedChapter implements Chapter {
     this.steer();
     const { child: c, plane: p, boat } = this.cast;
     if (!this.cat.ashore || this.church?.aboard) {
-      c.ride(this.cat.seatIn(this.seat, boat.seat(this.seat)), boat.yaw + (this.church?.seatTurn ?? 0), boat);
+      /** Casting off she turns round from the cat to face the way they go. */
+      const turned = this.stormTime > 0 ? 1 - THREE.MathUtils.smootherstep(this.stormTime, 0, tuning.storm.turnFromCat) : 1;
+      c.ride(this.cat.seatIn(this.seat, boat.seat(this.seat)), boat.yaw + (this.church?.seatTurn ?? 0) * turned, boat);
       if (this.cat.kneel > 0.05) c.sitting = false;
     }
     if (p.held) p.hold(c);
@@ -505,8 +507,13 @@ export class DrownedChapter implements Chapter {
     this.quarter += (this.side - this.quarter) * (1 - Math.exp(-dt * sideResponse));
     const open = this.beat === 'gather' || this.beat === 'snatch' || this.beat === 'after';
     if (open && dt > 0) {
-      /** Critically damped, so a bow swinging round the lighthouse turns the lens with built-up speed, never at once. */
-      const w = tuning.storm.lensTurn, off = Math.atan2(Math.sin(boat.yaw - this.heading), Math.cos(boat.yaw - this.heading));
+      /**
+       * Critically damped, so a bow swinging round the lighthouse turns the lens with built-up speed, never at once.
+       * Casting off, the hull comes round in its own length off the nave: the lens takes the way out, not the swing.
+       */
+      const way = this.stormTime < tuning.storm.leaveFor && boat.steerFor;
+      const yaw = way ? Math.atan2(way.x - boat.position.x, way.y - boat.position.z) : boat.yaw;
+      const w = tuning.storm.lensTurn, off = Math.atan2(Math.sin(yaw - this.heading), Math.cos(yaw - this.heading));
       this.headingSpeed += (w * w * off - 2 * w * this.headingSpeed) * dt;
       this.heading += this.headingSpeed * dt;
     } else {
@@ -527,9 +534,10 @@ export class DrownedChapter implements Chapter {
       // Never replay a stale call into thunder or the plane loss after a large time jump.
       if (this.beat === 'gather' && this.stormTime <= tuning.storm.foghornAt + tuning.storm.foghornLateAllowance) cue('foghorn');
     }
-    /** From the church the weather is already most of the way gathered: the fog brought it. */
-    const from = this.church?.done ? ch.stormFrom : 0;
-    this.storm = gathering ? THREE.MathUtils.lerp(from, 1, THREE.MathUtils.smoothstep(this.stormTime, 0, tuning.storm.weatherGatherFor)) : 0;
+    /** Out of the goodbye's calm: the weather gathers from nothing, the wind comes up and the boat with it. */
+    this.storm = gathering ? THREE.MathUtils.smoothstep(this.stormTime, 0, tuning.storm.weatherGatherFor) : 0;
+    const rising = THREE.MathUtils.smoothstep(this.stormTime, 0, tuning.storm.windBy);
+    if (gathering) this.cast.boat.speedLimit = THREE.MathUtils.lerp(tuning.storm.calmSpeed, tuning.storm.speed, rising);
     if (!this.shook && this.stormTime > tuning.storm.shakeAt) {
       this.shook = true;
       this.cast.cygnet.mind.perform('shake', 1.1);
@@ -550,14 +558,14 @@ export class DrownedChapter implements Chapter {
     /** Waiting on the cat she lets the sheet go, so the sail hangs while the breeze goes on blowing. */
     const slack = (still && !carried) || (this.cat.holding && this.cat.step !== 'easing');
     boat.becalmed += ((slack ? 1 : 0) - boat.becalmed) * (1 - Math.exp(-dt * (slack ? 0.7 : 1.1)));
-    const air = still ? (carried ? ch.carryBreeze : 0) : 1;
+    const air = still ? (carried ? ch.carryBreeze : 0) : gathering ? THREE.MathUtils.lerp(tuning.storm.breezeFrom, 1, rising) : 1;
     this.breeze += (air - this.breeze) * (1 - Math.exp(-dt * (still ? 0.6 : 0.5)));
     /**
      * The light goes on going down while the dark comes, a little further than the drift would have taken it; as the
      * fog closes round it takes the rest of the light itself, and the storm's night takes over from it as it gathers,
      * one darkening rather than one on top of the other.
      */
-    const night = THREE.MathUtils.smoothstep(this.stormTime, 0, tuning.storm.darkBy);
+    const night = 1 - (1 - THREE.MathUtils.clamp(this.stormTime / tuning.storm.darkBy, 0, 1)) ** 2;
     if (this.cast.village) this.cast.village.dark.storm = night;
     this.dusk = 0.75 + through * 0.25 + this.come * tuning.drowned.dusk + night;
     this.haze = 0.6 + this.storm * 0.36 + (1 - this.breeze) * 0.12;
@@ -688,13 +696,15 @@ export class DrownedChapter implements Chapter {
     this.leg = ON_FROM_NAVE;
     this.out = 0;
     boat.steerFor = STORM_WAY[0];
-    boat.speedLimit = tuning.storm.speed;
+    boat.speedLimit = tuning.storm.calmSpeed;
+    this.heading = Math.atan2(STORM_WAY[0].x - boat.position.x, STORM_WAY[0].y - boat.position.z);
+    this.headingSpeed = 0;
     this.to('gather');
   }
 
   /** What the child is looking at: the spire while it is near, otherwise the houses going by. */
   private watch(): void {
-    if (this.beat === 'run' || this.beat === 'nave' || this.beat === 'church' || this.church?.lookingUp) return;
+    if (this.beat === 'run' || this.beat === 'nave' || this.beat === 'church') return;
     const { child: c, boat, plane: p } = this.cast;
     const onCat = this.beat === 'becalmed' ? (['bolting', 'waits', 'climbing', 'ridge'].includes(this.cat.step) ? this.cat.gaze() : null)
       : this.beat === 'drift' || this.beat === 'enter' ? this.cat.gaze() : null;
@@ -858,39 +868,55 @@ export class DrownedChapter implements Chapter {
     s.distance = 16;
     s.height = 2.8;
     this.pace = 0.4;
-    if (this.beat === 'gather') this.lighthouseFrame(bearing);
-    this.church?.departure(s, dt, this.time);
+    if (this.beat === 'gather') this.lighthouseFrame(this.heading + Math.PI);
+    this.church?.departure(s, this.time);
     this.focus.copy(boat.position);
   }
 
   /**
-   * The lighthouse is the storm's one landmark, and the lens makes one move for it: out to a lower, wider view as the
-   * weather gathers, turned so the tower stands over the travellers and tilted up to hold its crown. The tower is
-   * glanced at from within an arc of the travelling view, never chased round the boat; as they come abeam of it the
-   * lens lets it slide past and settles in behind them before the wind takes the plane. Everything here follows from
-   * where the boat is, never from where the lens has got to, so there is nothing for it to hunt.
+   * The lighthouse is the storm's landmark, and the lens holds it from casting off until its light has gone: on the line
+   * from the tower through the boat and beyond her, so the tower stands over the travellers across the water, looking
+   * along the water and up only as far as keeps the lamp in frame. It is watched from within an arc of astern and never
+   * chased round the boat; once the light is out the lens lets the tower go and comes in behind them, so she and the
+   * lantern carry the dark. Everything here follows from where the boat is, never from where the lens has got to.
    */
   private lighthouseFrame(astern: number): void {
-    const k = tuning.storm.lighthouseCamera, s = this.shot, boat = this.cast.boat, seat = this.cast.child.position;
-    /** Once the light is out the tower has had its look: the lens lets it go and comes in to the boat and its lantern. */
-    const out = tuning.storm.lighthouseOutAt + k.inFrom;
-    const opening = THREE.MathUtils.smootherstep(this.stormTime, 0, k.openFor) * (1 - THREE.MathUtils.smootherstep(this.stormTime, out, out + k.inFor));
-    const toward = Math.atan2(boat.position.x - LIGHTHOUSE.x, boat.position.z - LIGHTHOUSE.z) + k.offset;
+    const k = tuning.storm.lighthouseCamera, s = this.shot, boat = this.cast.boat;
+    const lerp = THREE.MathUtils.lerp, wide = THREE.MathUtils.smoothstep(this.aspect, 0.7, 1.3);
+    const gone = tuning.storm.lighthouseOutAt + k.holdFor;
+    const held = 1 - THREE.MathUtils.smootherstep(this.stormTime, gone, gone + k.letGoFor);
+    /**
+     * Leaving the nave the line turns further round and may stand forward of her beam, so the lens sees her past the
+     * nave's roof rather than over it, from about where the look up let her go.
+     */
+    const clear = THREE.MathUtils.smoothstep(Math.hypot(boat.position.x - NAVE_BERTH.x, boat.position.z - NAVE_BERTH.z), 0, k.naveClearBy);
+    const arc = lerp(k.arcAtNave, k.arc, clear);
+    const toward = Math.atan2(boat.position.x - LIGHTHOUSE.x, boat.position.z - LIGHTHOUSE.z) + lerp(k.offsetAtNave, k.offset, clear);
     const passing = Math.atan2(Math.sin(toward - astern), Math.cos(toward - astern));
-    const glance = opening * (1 - THREE.MathUtils.smootherstep(Math.abs(passing), k.arc, k.arc + k.pass));
-    const bearing = astern + THREE.MathUtils.clamp(passing, -k.arc, k.arc) * glance;
+    const glance = held * (1 - THREE.MathUtils.smootherstep(Math.abs(passing), arc, arc + k.pass));
+    const bearing = astern + THREE.MathUtils.clamp(passing, -arc, arc) * glance;
     s.from = this.from.set(Math.sin(bearing), 0, Math.cos(bearing));
-    s.distance = k.near;
-    s.zoom = THREE.MathUtils.lerp(1, k.zoom, glance);
-    /** Tilt up from the travellers toward the crown, as far as the lens can while they keep the lower frame. */
+    s.distance = lerp(s.distance, lerp(k.uprightDistance, k.distance, wide), glance);
+    const zoom = lerp(1, lerp(k.uprightZoom, k.zoom, wide), glance);
+    s.zoom = zoom;
     const eyeX = s.target.x + s.from.x * s.distance, eyeZ = s.target.z + s.from.z * s.distance;
-    const eyeY = s.target.y + THREE.MathUtils.lerp(s.height, k.eyeRise, opening);
-    const below = Math.atan2(seat.y + 1.2 - eyeY, s.distance);
-    const crown = Math.atan2(LIGHTHOUSE_TOP_Y - eyeY, Math.hypot(LIGHTHOUSE.x - eyeX, LIGHTHOUSE.z - eyeZ));
-    const tilt = Math.min(k.tilt, (crown - below) / 2) * glance;
-    s.target.y = THREE.MathUtils.lerp(s.target.y, eyeY + Math.tan(below + tilt) * s.distance, opening);
+    const eyeY = lerp(s.target.y + s.height, k.rise, glance);
+    const half = Math.atan(Math.tan(THREE.MathUtils.degToRad(verticalFov(this.aspect)) / 2) / zoom);
+    /** Across: turned toward the tower only as far as brings it inside the frame's side, never losing her (upright, narrow). */
+    const side = Math.atan(Math.tan(half) * this.aspect), toHer = Math.atan2(s.target.x - eyeX, s.target.z - eyeZ);
+    const toTower = Math.atan2(LIGHTHOUSE.x - eyeX, LIGHTHOUSE.z - eyeZ) - toHer;
+    const apart = Math.atan2(Math.sin(toTower), Math.cos(toTower));
+    const turn = Math.sign(apart) * Math.min(Math.max(0, Math.abs(apart) - side + k.margin), side - k.herMargin) * glance;
+    if (turn !== 0) {
+      s.target.set(eyeX + Math.sin(toHer + turn) * s.distance, s.target.y, eyeZ + Math.cos(toHer + turn) * s.distance);
+      s.from = this.from.set(eyeX - s.target.x, 0, eyeZ - s.target.z).normalize();
+    }
+    const aim = Math.atan2(s.target.y - eyeY, s.distance);
+    const lamp = Math.atan2(LIGHTHOUSE_LANTERN_Y - eyeY, Math.hypot(LIGHTHOUSE.x - eyeX, LIGHTHOUSE.z - eyeZ));
+    const look = lerp(aim, THREE.MathUtils.clamp(lamp - half + k.margin, aim, k.tilt), glance);
+    s.target.y = eyeY + Math.tan(look) * s.distance;
     s.height = eyeY - s.target.y;
-    this.pace = k.pace;
+    this.pace = lerp(this.pace, k.pace, held);
   }
 
   /**

@@ -27,7 +27,7 @@
 //        ring, FROM=storm with her just seated aboard at the nave (skips the church too), SHOTS=<prefix> saves stills (at each piece,
 //        two between, and through the church), FILM=<seconds> with SHOTS also
 //        saves a still every that many seconds from the air dying (FILMFROM=cat from the tub's puzzle; from the ridge
-//        with FROM=roofs, the tower's foot with FROM=church) to the storm, and with FROM=stairs through the descent in the white and 30 s on,
+//        with FROM=roofs, the tower's foot with FROM=church, her aboard with FROM=storm) to the forest beach, and with FROM=stairs through the descent in the white and 30 s on,
 //        TO=nave stops at the tower's foot, TO=tree once she is over the tree and the lens has gone round to the sheet, TO=swing once
 //        she is on the swing (with the walks' measures), TO=ridge once she is up on the first roof after the cat, VIDEO=<dir> records the whole play as a webm there, W/H viewport
 //        (default 1600x900), LENS=1 also fails on the lens's measures (a roof hiding her, her walking toward it, her
@@ -271,8 +271,7 @@ try {
       const D = await import('/src/world/decks.ts');
       const W = await import('/src/world/drowned-way.ts');
       const { tuning } = await import('/src/tuning.ts');
-      const k = tuning.drownedCamera.church;
-      window.__leaveBy = tuning.drowned.church.lookUpFor + k.leaveFrom + k.leaveFor;
+      window.__leaveBy = tuning.drowned.church.lookUpFor + tuning.storm.leaveFor;
       const { Belfry, BELFRY } = await import('/src/world/belfry.ts');
       const w = window.__churchWatch = { offWorst: 0, offAt: '', unseenRun: 0, unseenWorst: 0, unseenAt: '', hiddenRun: 0, hiddenWorst: 0, hiddenAt: '',
         catArch: null, archHer: null, catIn: null, woke: null, kittenCame: null, catSill: null, catHome: null, herDown: null, seated: null };
@@ -340,7 +339,7 @@ try {
       return { out: tuning.storm.lighthouseOutAt, way: W.STORM_WAY.map((p) => [p.x, p.y]), last: [last.x, last.y], beach: [WOOD_LANDING.x, WOOD_LANDING.y],
         light: [LIGHTHOUSE.x, LIGHTHOUSE.z], sill: W.IVY_SILL.toArray(), legs: DROWNED_CHANNEL.length + 2, wall: (await import('/src/world/belfry.ts')).BELFRY.wall,
         arch: (await import('/src/world/belfry.ts')).BELFRY.arch.width / 2,
-        leaveBy: tuning.drowned.church.lookUpFor + tuning.drownedCamera.church.leaveFrom,
+        leaveBy: tuning.drowned.church.lookUpFor + tuning.storm.leaveFor, landBy: tuning.drowned.church.lookUpFor + 90,
         berth: [W.NAVE_BERTH.x, W.NAVE_BERTH.z], home: [...W.HOME_WAY, ...W.BRING_WAY].map((p) => [p.x, p.y]),
         rings: tuning.drowned.church.rings, blinkAt: tuning.drowned.church.blinkAt, lookUpFor: tuning.drowned.church.lookUpFor };
     });
@@ -378,6 +377,7 @@ try {
       const trace = [];
       let was = { beat: 'gather', shook: false, sheltered: false, horn: false, flash: 0, plane: true }, cat = null, out = null, unseen = null;
       let second = -1, still = -1;
+      filmFrom ??= aboard.time;
       for (let t = 0; t < 120; t += 0.25) {
         const [p, s] = [await probe(), await look()];
         if (p.landed) { mark('landed', p, s); break; }
@@ -405,6 +405,7 @@ try {
         if (Math.floor(since / 5) > still) { still = Math.floor(since / 5); await shot(`storm-${String(still * 5).padStart(2, '0')}`); }
         was = p;
         await seconds(0.25);
+        await reel();
         await seen();
       }
       const landed = beats.at(-1);
@@ -419,22 +420,26 @@ try {
       for (const b of beats) console.log(`  ${b.at.toFixed(1).padStart(5)} s  ${b.what}, ${b.toBeach.toFixed(0)} m from the beach`);
       if (out) console.log(`  the light went out ${d(xz(out.boat), T.light).toFixed(0)} m from the lighthouse, its lamp ${out.inFrame ? 'in' : 'out of'} frame at ${out.lamp.slice(0, 2).map((v) => v.toFixed(2)).join(', ')}`);
       if (atNave !== null) console.log(`  landed ${landed.at.toFixed(1)} s after she was aboard, ${(aboard.time - atNave + landed.at).toFixed(1)} s after the tower's foot`);
-      const back = trace.filter((r) => r.second >= trace[0].second && r.second <= T.lookUpFor && !r.flash);
-      const lookBack = back.reduce((a, r) => a + r.mean, 0) / Math.max(1, back.length);
-      const lit = trace.filter((r) => r.second > T.lookUpFor && !r.flash);
+      /**
+       * The look back, and the lens coming down off it onto the fog sea as they cast off: from there on the storm only
+       * darkens the frame.
+       */
+      const back = trace.filter((r) => r.second >= trace[0].second && r.second <= T.leaveBy && !r.flash);
+      const lookBack = back.reduce((a, r) => Math.max(a, r.mean), 0);
+      const lit = trace.filter((r) => r.second > T.leaveBy && !r.flash);
       const brightest = lit.reduce((a, r) => (r.mean > a.mean ? r : a), { mean: -1, second: -1 });
       console.log(`  mean brightness each second from aboard: ${trace.map((r) => `${r.second}:${r.mean.toFixed(0)}${r.flash ? '*' : r.ashore ? '+' : ''}`).join(' ')}`);
       /**
-       * Once the lens has come down from the cat on the sill, 3 s into the storm: that move brings the frame from the
-       * lit stone down to the dark water, continuously; a cut anywhere after it still shows.
+       * Once the lens has come down from the cat on the sill as they cast off: that move brings the frame from the lit
+       * stone down to the dark water, continuously; a cut anywhere after it still shows.
        */
-      const cut = trace.slice(1).reduce((worst, r, i) => (r.flash || trace[i].flash || r.second <= T.lookUpFor + 3 ? worst
+      const cut = trace.slice(1).reduce((worst, r, i) => (r.flash || trace[i].flash || r.second <= T.leaveBy ? worst
         : Math.max(worst, Math.abs(r.mean - trace[i].mean))), 0);
-      console.log(`  the look back ${lookBack.toFixed(1)}; brightest after it ${brightest.mean.toFixed(1)} at ${brightest.second} s; the most it changed in a second ${cut.toFixed(1)} (* a lightning flash, + ashore in the wood)`);
+      console.log(`  the look back and coming down off it at most ${lookBack.toFixed(1)}; brightest after it ${brightest.mean.toFixed(1)} at ${brightest.second} s; the most it changed in a second ${cut.toFixed(1)} (* a lightning flash, + ashore in the wood)`);
       assert(out, 'the light never went out');
       assert(!unseen, `the light was going out with the lighthouse out of frame at ${unseen?.since.toFixed(1)} s (${unseen?.lamp.map((v) => v.toFixed(2)).join(', ')})`);
       assert(out.inFrame, 'the light went out with the lighthouse out of frame');
-      assert(landed.at < 60, `the landing came ${landed.at.toFixed(1)} s after she was aboard`);
+      assert(landed.at < T.landBy, `the landing came ${landed.at.toFixed(1)} s after she was aboard`);
       assert(cut < 12, `the frame's brightness jumped by ${cut.toFixed(1)} in a second`);
       assert(brightest.mean < lookBack + 6, `the storm brightened the frame to ${brightest.mean.toFixed(1)} at ${brightest.second} s against ${lookBack.toFixed(1)} at the look back`);
       return cat;

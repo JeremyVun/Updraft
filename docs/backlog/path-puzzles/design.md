@@ -459,11 +459,17 @@ there by sea.
 9. **Bring the boat (fill the sail):** the first wind swings it off its tree; the player fills its red sail
    (`Boat.brushSail`) and brings it round the tower's north side to the nave; she steps down into it. She looks back
    once at the cat in the belfry as they go.
-10. **The storm:** the boat goes out from the nave by the open water to its north and past the lighthouse, 173 m to the
-   beach, so main's storm plays from the moment she is aboard, re-timed to that shorter way: the weather already part
-   gathered, the lighthouse about 55 m off as she boards and its beam going out about 6 s in while it is still in view
-   (a glow through the fog, then gone), the cygnet's shaking, the plane taken about mid-way, rain, the landing at the
-   forest about 45 s after she boards. The
+10. **The storm:** the boat goes out from the nave by the open water to its north and past the lighthouse, 173 m to
+   the beach, and the goodbye's calm turns into the storm over time the player sees (seconds from casting off, the
+   look back at the cat 10.6 s before it). They cast off on the first air, the player's wind still filling the sail
+   until the storm's has come up, over 24 s; the lens comes down off the cat's sill to look along the water at the
+   boat, the church and the lighthouse beyond, about 60 m off. The dusk deepens into night from the first second, the
+   first stars come out over the fog lying on the water, the sea roughens and the first rain falls; the lighthouse's
+   beam turns over the fog and the boat and its horn calls (9 s). They sail toward it, and its light fails (a sag, a
+   half recovery, a deeper sag, a last glow) and is out 30 s out, in frame, as they pass it 38 m off, while the fog
+   rises and closes round them and swallows the tower (25-43 s); the stars go, lightning from about 42 s, the
+   cygnet's shaking in the rain at 46 s, the plane taken at 55 s, and the landing at the forest about 78 s out, 87 s
+   after she sat down. The
    night takes over from the fog's dark without ever lifting. The storm never lets go until the beach, the fog thins
    off as the forest comes up out of it, and the landing is relief that turns into the wood's fear.
 
@@ -730,16 +736,24 @@ bell? I thought that was the idea?"
     In play it does not read that way. Fix: the player sees the village go under, and sees each ring push the fog back.
 Jeremy, playing on (2026-10-10, verbatim): "at the beginning of the storm sequence, the camera is looking up and you can
 see a hole in the "fog" so to speak. it looks like a bug. also the lighthouse turns off too quickly."
-32. As the storm begins the lens looks up and a hole shows in the fog overhead; it reads as a bug. Fix: no frame shows
-    the fog's edge or a gap in it; the storm's opening frame looks along the water, not up through the fog.
-33. The lighthouse goes out too quickly. Fix: it holds long enough to be seen and taken in as the storm's landmark,
-    then goes out as an event the player sees.
-34. Jeremy (2026-10-10, verbatim): "And the continuity into the storm feels a bit strange, it's a bit too rushed,
-    instant storm for like what feels like 10-20 seconds and then you're at the woods, pacing doesn't match what
-    happened before." Lead's call: the goodbye's calm turns into the storm over time the player sees (the fog darkening
-    into the night, the wind rising, the water roughening), and the storm is given the length and the beats of the
-    journey it ends (the lighthouse, the plane taken, the dark) before the forest beach; it must not feel shorter or
-    thinner than the room before it.
+32. ~~The hole in the fog as the storm begins~~ (`proto-drowned-fix-storm`: casting off, the lens comes down in one move
+    from where the look up lets her go to look along the water at the boat, the church and the lighthouse beyond, never
+    tilting up into the fog; the fog closes round as the light fails, and the bowl its top rises in stops 12 m over its
+    top, so a look up thins into the sky instead of meeting a rim). Was: as the storm begins the lens looks up and a
+    hole shows in the fog overhead; it reads as a bug.
+33. ~~The lighthouse goes out too quickly~~ (`proto-drowned-fix-storm`: lit and in frame from about 10 s after casting
+    off, its beam turning over the fog and the boat; it fails over 5 s, a sag, a half recovery, a deeper sag, a last
+    glow, and is out 30 s out, 38 m off and in frame, as the fog rises round the tower and swallows it). Was: it goes
+    out about 6 s after she boards, seen lit for two or three seconds.
+34. ~~The rushed storm~~ (`proto-drowned-fix-storm`: they cast off into the goodbye's calm on the first air, the wind,
+    the sea, the rain and the night coming up over the first half minute while the lighthouse is the landmark; the fog
+    closes round as the light fails at 25-43 s, the plane is taken at 55 s, the beach about 78 s out; boarding to the
+    beach about 87 s, was 55). Jeremy (2026-10-10, verbatim): "And the continuity into the storm feels a bit strange,
+    it's a bit too rushed, instant storm for like what feels like 10-20 seconds and then you're at the woods, pacing
+    doesn't match what happened before." Lead's call: the goodbye's calm turns into the storm over time the player sees
+    (the fog darkening into the night, the wind rising, the water roughening), and the storm is given the length and the
+    beats of the journey it ends (the lighthouse, the plane taken, the dark) before the forest beach; it must not feel
+    shorter or thinner than the room before it.
 35. Jeremy (2026-10-10, verbatim): "And last of all, i need the music rethought and redesigned for the drowned village.
     it doesn't fit with the music style of the rest of the game. We don't need it to be perfectly synced with what's
     happening in hte drowned village sequence, but it does need to match the narrative emotion that the drowned
@@ -908,7 +922,7 @@ clouds, the owl, the boats, the birches, the sea), authored shot by shot to the 
 - **Pacing.** Arrival and calm drift about 30 s; the cat about 30–60 s; a short drift with the cat aboard (the cygnet
   ducking into the satchel, the cat washing a paw at the bow) about 15 s; the air dying and the dark rising about 20 s,
   slow and eerie; the run about 2.5 min with its three pieces; the church, the dark arriving and the boat brought in
-  about 50 s; the storm about 45 s to the beach. The room grows from about 3 minutes to 5–6, nearly all of it the player's.
+  about 50 s; the storm about 80 s to the beach. The room grows from about 3 minutes to 5–6, nearly all of it the player's.
 - **The cat.** A small soft tabby with a white chest and socks, round-faced, a little bedraggled, built as soft
   rounded shapes like the game's other animals, to the model sheet in `comps/cat/`. It mews from the chimney, hates the
   water, rides the tub hunched with its ears flat, and on the boat sits at the bow as far from the water as it can. It
@@ -1038,8 +1052,9 @@ each house's character carried by its shape and by stylised detail (Jeremy, 2026
   other, easing between crossings and never cutting; on an upright phone it looks along her way so it stacks up the
   frame. While she waits at a gap, the gap, the thing to push and her are all in frame. With the cat aboard the lens
   comes round to the side so the cat at the bow is not hidden behind her and the sail.
-- **The storm from aboard.** The dark has already arrived, so the storm starts with the weather mostly gathered rather
-  than gathering from clear; its beats keep their order and their spacing along the way.
+- **The storm from aboard.** It gathers from the goodbye's calm, not from a storm already half there: the wind, the
+  sea, the rain and the night come up over the first half minute while the lighthouse is the landmark, and its beats
+  keep their order with room between them (item 34).
 - **Saves.** Once the cat is aboard a save resumes the drift with the cat at the bow; a save during the run resumes at
   its start on the strand's ridge, the cat a roof ahead, the fog risen and the boat against the slates about to
   drift; a save at the church resumes at the tower's foot; a save after she is aboard resumes aboard with the storm to

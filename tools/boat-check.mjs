@@ -34,8 +34,9 @@ const { drownedCast, stormCast } = await import('./lib/storm-cast.mjs');
 /** The drowned village's wind for the storm checks: its breeze plus a steady push. */
 const drownedWind = (gust) => ({ breeze: new THREE.Vector2(2.47, -0.80), calm: 3, addSplat() {},
   sample(_x, _z, out) { return Object.assign(out, { x: this.breeze.x + gust, z: this.breeze.y - gust, energy: gust !== 0 ? 0.8 : 0, lift: 0 }); } });
-// The storm from her seated aboard at the nave to the forest beach: out round the church, past the lighthouse's side,
-// the plane lost and the landing about 45 s on, whatever the player's wind and the frame rate.
+// The storm from her seated aboard at the nave to the forest beach: the look back at the cat, out round the church on
+// the first air, past the lighthouse's side as its light goes out, the plane lost in the dark and the landing about 80 s
+// after casting off, whatever the player's wind and the frame rate.
 const report = [];
 for (const [gust, fps] of [[0,60], [8,60], [0,30], [8,30], [40,60], [-40,60]]) {
   const wind = drownedWind(gust);
@@ -57,11 +58,13 @@ for (const [gust, fps] of [[0,60], [8,60], [0,30], [8,30], [40,60], [-40,60]]) {
       report.push({ gust, fps, stormToShore: +time.toFixed(2), stormTurns: +(turns / (2 * Math.PI)).toFixed(3), lightGap: +lightGap.toFixed(1),
         lightOutFrom: +outAt.toFixed(1), beats });
       assert(snatch !== null, 'must lose the plane before landing');
-      assert(snatch > time * 0.35 && snatch < time * 0.65, `the plane must be taken about mid-way: ${snatch} of ${time}`);
+      const castOff = tuning.drowned.church.lookUpFor;
+      assert(snatch > castOff + tuning.storm.lighthouseOutAt + 15 && snatch < time - 15,
+        `the plane must be taken in the dark, with the last stretch still to go: ${snatch} of ${time}`);
       assert.equal(cast.plane.visible, false, 'plane must be gone before shore');
-      assert(time >= 40 && time <= 52, `storm duration ${time}`);
+      assert(time >= castOff + 70 && time <= castOff + 90, `storm duration ${time}`);
       assert(turns < Math.PI * 2, `no circle during the storm: ${turns}`);
-      assert(outAt < 70, `the light must go out while the lighthouse is near: ${outAt}`);
+      assert(outAt < 50, `the light must go out as they pass the lighthouse: ${outAt}`);
       assert(lightGap > 15 && lightGap < 40, `must pass the lighthouse safely and closely: ${lightGap}`);
       break;
     }
@@ -118,7 +121,7 @@ const flashes=[],thunder=[];
 const weather=new StormWeather(() => thunder.push(clock));
 for(let i=0;i<47*60;i++) {
   clock=i/60;
-  const strength=clock<43?THREE.MathUtils.smoothstep(clock,0,tuning.storm.weatherGatherFor):0;
+  const strength=clock<43?THREE.MathUtils.smoothstep(clock,0,20):0;
   applyPalette(1,1.8,strength,strength);
   weather.update(1/60,strength,Math.PI);
   const lit=atmo.uniforms.uLightning.value.w>0;
@@ -165,13 +168,18 @@ for (let dusk = 1.5; dusk <= 2; dusk += 0.001) {
   assert(previousSun.angleTo(atmo.uniforms.uSunDir.value) < 0.006, 'abrupt key-light turn');
   previousSun = atmo.uniforms.uSunDir.value.clone();
 }
-// The lamp goes out as the storm takes the plane; its light cannot turn itself back on in the forest.
+// The lamp goes out as they pass it; its light cannot turn itself back on in the forest, nor be lit there at all.
 const { LighthouseLight } = await import('../src/world/lighthouse.ts');
 const lighthouse = new LighthouseLight(new THREE.Vector3(65,0,-1580));
 lighthouse.update(0,0);
 assert(atmo.uniforms.uHarbourLight.value.w > 0.9);
-for(let i=0;i<Math.ceil(tuning.storm.lighthouseOutAt*60);i++) lighthouse.update(1/60,1);
+for(let i=0;i<Math.ceil((tuning.storm.lighthouseOutAt-tuning.storm.lighthouseFadeFor)*60)-1;i++) lighthouse.update(1/60,0.3);
+assert(atmo.uniforms.uHarbourLight.value.w > 0.9, 'the light holds until it fails');
+for(let i=0;i<Math.ceil(tuning.storm.lighthouseFadeFor*60)+1;i++) lighthouse.update(1/60,1);
 assert.equal(atmo.uniforms.uHarbourLight.value.w,0);
 assert.equal(lighthouse.beam.visible,false);
+const inTheWood = new LighthouseLight(new THREE.Vector3(65,0,-1580));
+inTheWood.update(1/60,1);
+assert.equal(atmo.uniforms.uHarbourLight.value.w,0);
 console.log(JSON.stringify({storm:report,crossings,weather:{flashes,thunder}}, null, 2));
 console.log('Boat steering and storm pacing passed.');
