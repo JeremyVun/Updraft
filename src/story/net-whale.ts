@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { Shot } from '../camera';
 import { screenBrush } from '../creatures/motion';
 import type { Net, NetGrip } from '../fx/sealife/net';
+import { NET } from '../fx/sealife/netShader';
 import { DIVE_AT, GOODBYE_AT, SONG_AT, SPOUT_FROM, SPOUT_TO, WAVE_AT, type Skin, type SleepingWhale } from '../fx/sealife/sleeper';
 import type { Coax } from '../fx/swirl';
 import { tuning } from '../tuning';
@@ -10,6 +11,7 @@ import type { Cast } from './cast';
 import { completeObjective } from './cues';
 import { surgeAt, swellLift } from '../world/water/swell';
 import { mirrorWater } from '../world/sky-mirror-layout';
+import { gunwaleHalf, stationU } from '../traveller/boat/form';
 
 const K = tuning.netWhale;
 /** Its saves, in the order they are taken. */
@@ -96,8 +98,12 @@ const REACH_TO = new THREE.Vector2(2.1, 1.4);
 const REACH_HANDS = { out: 1.1, low: 0.45, back: -0.1, ahead: 0.35 };
 /** Seconds her mittens take to go down to the cork, and to bring it up to the rail once they have it. */
 const REACH_FOR = 0.7;
-/** How far out from the boat's middle the cork is once it lies against the planking beside her (m). */
-const AGAINST = 1.18;
+/**
+ * How far out from the boat's middle, its heel left out, the cork lies once it has come in against the planking beside
+ * her, bobbing (m), and how far beyond the stretch of side her mittens go down over it may lie along the boat.
+ */
+const AGAINST = 1.32;
+const ALONG = 0.25;
 const LIFT_FOR = 0.45;
 /** The valve's dolphin, nosing in: how near behind the cork its beak keeps, and how long it takes to turn away and go under. */
 const NOSE_GAP = 0.3;
@@ -1653,7 +1659,7 @@ export class NetWhale {
       }
     } else if (this.haul === 'reaching') {
       this.drawCork();
-      if (this.haulT > REACH_FOR && this.gripped()) {
+      if ((this.haulT > REACH_FOR && this.underHands()) || this.haulT > K.reachGive) {
         for (const h of [0, 1] as const) boat.group.worldToLocal(child.mitten(h, this.hand[h]));
         this.grip.by = child;
         this.grip.out = this.net.lineLength;
@@ -1871,26 +1877,32 @@ export class NetWhale {
     return g.localToWorld(local);
   }
 
-  /** Her reach draws the cork the last little way in, up against the planking under her mittens. */
+  /**
+   * Her reach draws the cork the last little way in along the side, to where it lies against the planking under her
+   * outer mitten, wherever her lean and the boat's heel have put it. It is drawn to the planking, never pressed into
+   * it, so the line behind it is not hauled in round the bow.
+   */
   private drawCork(): void {
+    const { boat, child } = this.cast;
     const float = this.net.float;
-    const g = this.cast.boat.group;
-    g.localToWorld(g.worldToLocal(this.reachPoint(this.b)).setX(0.9)).sub(float.position).setY(0);
-    const want = this.b.multiplyScalar(3);
+    const z = THREE.MathUtils.clamp(boat.group.worldToLocal(child.mitten(0, this.b)).z, REACH_HANDS.back, REACH_HANDS.ahead);
+    const x = gunwaleHalf(stationU(z)) + NET.float + 0.03;
+    const s = Math.sin(boat.yaw), c = Math.cos(boat.yaw);
+    const want = this.b.set(boat.position.x + c * x + s * z, 0, boat.position.z - s * x + c * z).sub(float.position).setY(0).multiplyScalar(3);
     if (want.length() > 1.5) want.setLength(1.5);
     float.push(want.sub(float.velocity).setY(0));
   }
 
-  /** The cork has come in against the planking under her mittens, and a mitten has closed on the line there. */
-  private gripped(): boolean {
-    const { child, boat } = this.cast;
-    const cork = this.net.float.position;
-    if (boat.group.worldToLocal(this.a.copy(cork)).x > AGAINST) return false;
-    for (const h of [0, 1] as const) {
-      child.mitten(h, this.a);
-      if (Math.hypot(this.a.x - cork.x, this.a.z - cork.z) < 0.4) return true;
-    }
-    return false;
+  /**
+   * The cork has come in against the planking along the stretch of side her mittens go down over: judged from the
+   * boat, level, so neither her pose in the wind nor the heel decides whether she takes it.
+   */
+  private underHands(): boolean {
+    const { boat } = this.cast;
+    const dx = this.net.float.position.x - boat.position.x, dz = this.net.float.position.z - boat.position.z;
+    const s = Math.sin(boat.yaw), c = Math.cos(boat.yaw);
+    const along = dx * s + dz * c;
+    return dx * c - dz * s < AGAINST && along > REACH_HANDS.back - ALONG && along < REACH_HANDS.ahead + ALONG;
   }
 
   /**

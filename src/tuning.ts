@@ -1666,9 +1666,10 @@ export const tuning = {
     /**
      * Leaning out for it: how far along the thwart to port she slides (m), how far round toward the port rail she
      * turns (radians), and how far forward she leans (radians), reaching and hauling. Further over and her boots go
-     * through the planking.
+     * through the planking. She takes the line once the cork has come in under her mittens, or `reachGive` seconds
+     * after she leant out for it, wherever it has come to: nothing it snags on keeps her reaching.
      */
-    haulSlide: 0.15, haulTurn: 0.1, reachLean: 0.6, haulLean: 0.5,
+    haulSlide: 0.15, haulTurn: 0.1, reachLean: 0.6, haulLean: 0.5, reachGive: 4,
     /** The valve's dolphin rises this far behind the cork and noses it in at this pace (m, m/s). */
     noseFrom: 2.6, noseSpeed: 1.3,
     /**
