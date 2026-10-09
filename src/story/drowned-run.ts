@@ -1278,7 +1278,7 @@ export class RoofRun {
     if ('track' in a && !this.catPiece && !this.catAcross) this.stationTarget.lerp(this.catEye, tuning.drownedCamera.run.catLean * this.leaned);
     if ('downAt' in a && this.lookingDown >= 0) {
       const t = this.lookingDown, length = tuning.drowned.run.lookDownFor, smooth = THREE.MathUtils.smoothstep;
-      this.stationTarget.lerp(this.fogFront(this.tmp2), a.downAt * smooth(t, 0, 1) * (1 - smooth(t, length - 1, length)));
+      this.stationTarget.lerp(this.fogFront(this.tmp2), a.downAt * smooth(t, 0, 0.6) * (1 - smooth(t, length - 1, length)));
     }
     if ('lookAt' in a && this.lookingSwing >= 0) {
       /** Round her, not across: the bearing and reach from her eased, and the height. */

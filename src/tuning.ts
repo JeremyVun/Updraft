@@ -2166,8 +2166,8 @@ export const tuning = {
        * stopped to look at the swing.
        */
       approach: {
-        mill: { from: 12.3, rate: 0.7, eye: [-7.8, 7.8, 20], at: [1.2, 5.3, -1], uprightEye: [-5.5, 6.8, 15], uprightAt: [0.8, 5.6, -1] },
-        swing: { from: 20, rate: 0.9, track: true, top: 9.5, downAt: 0.45, eye: [-1.5, 3.5, -8.5], at: [-3, 1.0, 0], uprightEye: [-1.2, 3.8, -7.5], uprightAt: [-2, 1.4, 0],
+        mill: { from: 12.3, rate: 0.7, eye: [-6.5, 6.5, 15.5], at: [1.2, 4.6, -1], uprightEye: [-5, 6.2, 13], uprightAt: [0.8, 5.2, -1] },
+        swing: { from: 20, rate: 0.9, track: true, top: 9.5, downAt: 0.6, eye: [-1.5, 3.5, -8.5], at: [-3, 1.0, 0], uprightEye: [-1.2, 3.8, -7.5], uprightAt: [-2, 1.4, 0],
           lookEye: [-10, 3.0, -4], lookAt: [-1.5, 1.6, -2.5], uprightLookEye: [-8.5, 3.2, -3.5], uprightLookAt: [-1.2, 2.2, -2.2] },
       },
       /**
