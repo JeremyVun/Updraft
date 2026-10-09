@@ -1045,7 +1045,53 @@ step keys of `tuning.netWhale`, `src/story/checkpoint-data.ts` (the new checkpoi
   - stills of each step's frame in both orientations, taken about 1.5 s after it is asked, show the drawn gesture, the
     target and the goal;
   - one smoke play of the whole encounter.
-Done: [ ]
+Done: [x] `5a7e9bce..5fd07363` and this entry on `sea-n5b`. Steps `approach`, `breath`, `eye`, `line`, `heave`, `flipper`,
+`free`, `gone`; saves `whale-rest`, `-breath` (resumes at the eye, the fold over it), `-eye` (fold off, eye open, cork
+out), `-line` (cork in her mittens, braced), `-heave` (line let go), `-flipper`, `-gone`. Breath: `liftRate` 0.8. Eye:
+the fold is its own doubled mesh hinged on the net's near edge over the eye with 22 weed strands (`net.flap`,
+`foldOn`/`layFold`); its lid tries under it (`sleeper.struggle`, `TRY`); any stroke within `foldRadius` 0.7 of it lifts
+it, part way and sagging back (`foldPart`, `foldSettle`), and `foldSweep` 0.35 of stroke flips it over onto the brow in
+`foldFlip` 1.5 s; the look plays from its eye opening (`eyeT`; `blinkAt` etc. re-based). Line: any stroke across the
+cork or the line behind it (`corkRadius` 0.55) sends it gliding toward her (`corkCome` 4 m per unit, `glideCork`), bent
+by the stroke (`corkBend`); a shove drags the last links (`DRAGGED`). Heave: braced, the net will not come; a stroke over
+its head or the water to her (`heaveRadius` 0.45, a triangle of points between eye, crown and jaw and a strip to her)
+billows the mesh (`net.billow`, `billowHeight` 1.7 m) and asks for one heave once it has swept `heaveSweep` 0.1, a stroke
+kept going another every `heaveStroke` 0.5; a stroke ends `heaveGap` 0.25 s off the head, and heaves asked for while
+she hauls follow in turn (`owed`), so none is lost (`heaveTime` 1.5 s, `pullTake` 0.9 m, four `heaves`). Flipper: any
+stroke near the flipper or the bird (`finRadius` 0.5, `finSweep` 0.2); `finAlong`/`finPace` gone. Invitations: a step
+is asked once the hold is `inviteHeld` 0.8 through its move (`askedFor`), the sweep shows `inviteSettle` 0.5 s later and
+again `inviteBack` 4 s after the last stroke; the whale draws its own sweeps (`net.gesture`, `drawSweep`, sized to the
+frame along their heading, `sweep*`), the shared `windInvitation` returns null; the spiral is the shared coax with
+`Coax.bold`. Valves: `noseFold` (a dolphin rises nose-up under the eye and lifts the fold), `nudgeHead` (comes up under
+the net's edge each brace), the others as before, run to their end across a step change (`valveStep`, `runValve`,
+`valveDone`). Sounds `fold-lift`, `net-heave` in `foley.ts` and `docs/contracts/audio.md`.
+`net-whale-check`: a failed case had left its page playing in the shared browser, and a second running page slows the
+next boot's compiles from a few seconds to over 80, past the 90 s wait for `__ready`, so every case after the first
+failure timed out (the base's check does the same: its `circles` failing against this branch, its `sweeps` then never
+readied). Each case's pages now close whatever happens, the check takes the shared GPU lock, paces its circles in game
+time (the game steps 1/60 s a frame, so a loaded machine's slow clock had made wall-clock circles too fast), strokes
+elsewhere on screen as far from the target as the frame allows, and takes `BREAK` as a list (idle cases' valves at 10 s,
+or `anywhere`).
+Measured, landscape, with real gestures: all 16 default cases pass in one run (27 min). `steps` loops 2, eye 1, line 1,
+heave 4 strokes for 4 heaves, flipper 1, free 60.6 s after rest; `heave` 4 strokes, billow 0.74; `eye` lid tries 0.34,
+a weak stroke 0.43 part way, one good stroke; `line` 1 stroke from 3.62 m, `anyway` brings it to 1.29 m; `fin` 1 stroke,
+the cygnet 1.61 m clear, bill gap 0.014 m; `finearly` lifts it with the loop kept on. `child` random strokes (seed 7 /
+seed 3): breath 1 / 1 go, eye 7 / 4 strokes, line 3 / 2, heave 7 / 5 for four heaves, flipper 1 / 1. Each idle case's
+valve went at 90.1–90.8 s and its dolphin did the step; the breeze at three times and strokes elsewhere did nothing
+before it. `BREAK` (valves at 10 s) fails all five idle cases, `BREAK=anywhere` fails `sweeps` and all five on their
+strokes elsewhere. `saves`: all seven resume as "Saves" says. `full` rest 88.6 s into the sea, free 153.2, gone 192.2,
+moored 218.9, every step the player's; `fullidle` every step by its dolphin, moored 697.7. Smoke plays from
+`?chapter=whale` landscape (recorded) and phone moored with no errors, a go of circles and then 1, 1–2, 4 and 1 strokes; `bootStrayPrograms` 0 and
+first-drawn programs 0, and at fixed quality (`ratio=1`) no first-drawn target pairs either (unfixed, the governor's
+step to 2× MSAA on the loaded machine draws into a new target). Stills 1.5 s after each ask, both orientations, show the
+sweep, the target and the goal; the phone's flipper frame (the base's hold, unchanged) has the bird small at the left
+edge and its streak short. Left: `sea-logic-check` (N5a's) still expects the old steps and saves.
+
+Claude's judgement, 2026-10-10, from the step stills: each step's sweep lies on its target with her and the goal in
+frame, and the fold of net and weed reads over its shut eye. Merged into `sea-whale` with N5a (`fdda6594`). The sea
+check, `whale-look-stills` and the playthrough still play the old steps (the shared invitation is null at the whale,
+so the playthrough would wait out four valves there); they are integration work before N5d. The phone's flipper
+frame is N5d's.
 
 ### Phase N5c: the goodbye and its voice
 Beside N5a and N5b (Jeremy's waiver above), branch `sea-n5c` off `sea-whale`; the lead merges it after N5b. Owns

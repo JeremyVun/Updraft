@@ -1061,6 +1061,11 @@ The sequence:
     her, the flipper stirs), so the player sees what they touched. Progress is kept between strokes.
   - Each step asks for a few seconds of play: about two loops of circles, or one to three strokes.
   - The valve after about 90 s without progress stays.
+  - As built (N5b): a step is asked once the camera is most of the way into its hold, and its sweep is drawn half a
+    second later, sized to the frame along the way the help goes and drawn by the whale itself (`net.gesture`), so
+    the other rooms' sweeps are unchanged; the spiral over the blowhole is the shared one, drawn bolder. Each step's
+    area reaches a quarter to a third of the frame's height out round its target, so on the landscape frame it covers
+    about the near half of the scene, and strokes across the far side of the frame do nothing.
 - **1. The breath (circles).** The net lies over the blowhole; each breath only domes the mesh and sputters a weak
   mist. `updraftTarget` is the blowhole; circles there lift the patch of mesh off it like a sheet in the wind
   (progress builds while the player winds and is kept when they stop). About two loops of ordinary circling anywhere
@@ -1089,7 +1094,9 @@ The sequence:
   arm's length, the net slides toward the boat, and she braces for the next. About four heaves bring it off the jaw
   and head into the water (`k3`). Her body sells the effort, and between heaves she looks up at the net, ready. The
   drawn sweep runs from the head toward her; each heave is one lift in the score. This is everyone pulling together,
-  as on the river spirit's thorn.
+  as on the river spirit's thorn. As built (N5b): each stroke that lands asks for one heave, and one kept going over
+  the head asks for another every ordinary stroke's length; heaves asked for while she hauls follow in turn, so no
+  stroke is lost and four ordinary strokes bring the net off.
 - **5. The flipper (any stroke at the flipper or the bird).** The last loop is round the near flipper, out of her
   reach. The cygnet, which swam earlier in this chapter, goes in, swims to it and takes the loop's end in its bill.
   The drawn strokes go up along the flipper from the moment it holds the end. A stroke anywhere near the flipper or the
