@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { CREATURE_GLSL } from '../../creatures/shading';
 import { ATMO_GLSL } from '../../world/atmosphere';
 import { tuning } from '../../tuning';
-import { BLOWHOLE, BODY, DORSAL, DORSAL_AT, DORSAL_BASE, FIN, FIN_DIR, FIN_ROOT, FLUKES, FLUKE_HALF_SPAN, FLUKE_HINGE, JAW_CORNER, KNOBS, LENGTH, MOUTH, SPINE_END, STOCK_TURN } from './anatomy';
+import { BLOWHOLE, BODY, DORSAL, DORSAL_AT, DORSAL_BASE, FIN, FIN_DIR, FIN_ROOT, FLUKES, FLUKE_HALF_SPAN, FLUKE_HINGE, JAW_CORNER, KNOBS, LENGTH, MOUTH, SPINE_END, STOCK_TURN, taken } from './anatomy';
 import { curve } from './curve';
 
 export const SPINE_N = 44;
@@ -57,7 +57,11 @@ float knobs(vec3 r) {
 }
 `;
 
+const TAKEN_N = 48;
+
 const RIG_GLSL = /* glsl */ `
+/** Rest units of its length left out of the laid-out body up to s, by s from 0 to the spine's end. */
+const float TAKEN[${TAKEN_N}] = float[](${Array.from({ length: TAKEN_N }, (_, i) => f(taken((i / (TAKEN_N - 1)) * SPINE_END))).join(', ')});
 uniform vec4 uSpine[${SPINE_N}];
 uniform float uWet[${SPINE_N}];
 uniform vec3 uHeading;
@@ -100,7 +104,7 @@ vec3 rig(vec3 rest, inout vec3 n) {
     float sweep = side * (uFin.x + uSlap.z * own);
     // Lifted, it also turns over a little along its length, its broad top toward the boat.
     vec3 axis = vec3(side * ${f(FIN_DIR.x)}, ${f(FIN_DIR.y)}, ${f(FIN_DIR.z)});
-    float turn = -side * uSlap.y * own * ${f(L.finTurn)};
+    float turn = -side * min(uSlap.y, ${f(tuning.netWhale.finLift)}) * own * ${f(L.finTurn)};
     vec3 p = alongFin((rest - root) * uShape.x, axis, turn);
     p = rotY(rotZ(p, raise), sweep);
     n = rotY(rotZ(alongFin(n, axis, turn), raise), sweep);
@@ -133,6 +137,12 @@ vec3 rig(vec3 rest, inout vec3 n) {
   vec3 S = cross(U, F);
   n = S * n.x + U * n.y + F * n.z;
   vRest = rest;
+  // Its skin's marks keep their shape on the body as it is laid out, shortened behind the head.
+  if (part == ${BODY} || part == ${DORSAL}) {
+    float x = clamp(aRig.x / ${f(SPINE_END)}, 0.0, 1.0) * ${f(TAKEN_N - 1)};
+    int k = min(int(x), ${TAKEN_N - 2});
+    vRest.z += mix(TAKEN[k], TAKEN[k + 1], x - float(k));
+  }
   vRestNormal = normal;
   vRig = aRig;
   vWet = mix(uWet[i], uWet[i + 1], t);

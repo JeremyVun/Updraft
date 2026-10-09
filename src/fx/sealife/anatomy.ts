@@ -8,6 +8,8 @@ import { curve } from './curve';
 export const LENGTH = 14;
 /** The rig's spine runs on past the notch, through the flukes, to this fraction of the length. */
 export const SPINE_END = 1.08;
+/** Past the spine's end, for whatever is posed out there (the flukes' tips). */
+const SPINE_LIMIT = 1.12;
 export const BODY = 0;
 export const FIN = 1;
 export const FLUKES = 2;
@@ -54,6 +56,27 @@ export const FLUKE_HINGE = 0.93;
 export const STOCK_TURN = [0.76, 0.93] as const;
 /** The body ends here, inside the root of the flukes, so nothing of it shows in their notch. */
 export const TAIL_END = 0.975;
+/**
+ * Dreamt this big, a blue whale's long back slid under like an eel's: behind the forward back the net lies on, the
+ * rig lays the body out at `KEEP` of its rest length (by s), so the head and the flukes keep their size and it is about
+ * 90 m nose to flukes rather than 110.
+ */
+export const KEEP = curve([[0.5, 1], [0.56, 0.45], [0.74, 0.45], [0.84, 0.65], [0.93, 1]]);
+const ALONG_N = 256;
+const ALONG = (() => {
+  const out = new Float32Array(ALONG_N + 1);
+  const ds = SPINE_LIMIT / ALONG_N;
+  for (let i = 0; i < ALONG_N; i++) out[i + 1] = out[i] + KEEP((i + 0.5) * ds) * ds * LENGTH;
+  return out;
+})();
+/** Rest units along the laid-out body from the snout to s: s × `LENGTH` over the head, less behind it. */
+export function along(s: number): number {
+  const x = THREE.MathUtils.clamp(s / SPINE_LIMIT, 0, 1) * ALONG_N;
+  const i = Math.min(Math.floor(x), ALONG_N - 1);
+  return ALONG[i] + (ALONG[i + 1] - ALONG[i]) * (x - i) + Math.max(0, s - SPINE_LIMIT) * LENGTH;
+}
+/** Rest units of its length left out of the laid-out body between the snout and s. */
+export const taken = (s: number) => s * LENGTH - along(s);
 export const BLOWHOLE = 0.21;
 /** The near eye in the rest pose: along, and up from the spine. */
 export const EYE_S = 0.16;
@@ -210,7 +233,12 @@ function build(pos: number[], rig: number[], idx: number[]): THREE.BufferGeometr
   geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   geo.setAttribute('aRig', new THREE.Float32BufferAttribute(rig, 4));
   geo.setIndex(idx);
+  // Lit as it is laid out, shortened behind the head.
+  const laid = pos.slice();
+  for (let k = 0; k < laid.length / 3; k++) laid[k * 3 + 2] += taken(rig[k * 4]);
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(laid, 3));
   geo.computeVertexNormals();
+  geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   return geo;
 }
 

@@ -2,9 +2,10 @@ import * as THREE from 'three';
 import type { Shot } from '../camera';
 import { screenBrush } from '../creatures/motion';
 import type { Net, NetGrip } from '../fx/sealife/net';
-import { DIVE_AT, SPOUT_FROM, SPOUT_TO, type Skin, type SleepingWhale } from '../fx/sealife/sleeper';
+import { DIVE_AT, GOODBYE_AT, SONG_AT, SPOUT_FROM, SPOUT_TO, WAVE_AT, type Skin, type SleepingWhale } from '../fx/sealife/sleeper';
 import type { Coax } from '../fx/swirl';
 import { tuning } from '../tuning';
+import { callLength } from '../audio/whale-voice';
 import type { Cast } from './cast';
 import { completeObjective } from './cues';
 import { surgeAt, swellLift } from '../world/water/swell';
@@ -29,12 +30,15 @@ const DRIFT_FROM = 1;
 const DRIFT_TO = 24;
 const SINK_FROM = SPOUT_TO;
 /**
- * Free, in seconds: its call, glad now, as the spout falls; her eyes on its eye for it, then up into its mist coming
- * down over her; and the cygnet calling back to it.
+ * Free, in seconds: her eyes on its eye as it sings, then up into its mist coming down over her, and the cygnet calling
+ * back to its song; then her eyes on its flipper as it waves, both her arms up waving back from `WAVE_BACK` until
+ * it dives, and the cygnet calling with her.
  */
-const GLAD_AT = SPOUT_TO + 0.4;
-const MIST_LOOK = GLAD_AT + 1.3;
-const ANSWER_AT = GLAD_AT + 1.8;
+const MIST_LOOK = SONG_AT + 2.3;
+const ANSWER_AT = SONG_AT + 3.3;
+const FIN_LOOK = WAVE_AT + 0.6;
+const WAVE_BACK = WAVE_AT + 2;
+const CALL_WITH = GOODBYE_AT + 0.8;
 /** About how long before it goes free the loop is let go, as the cygnet swims back and is lifted in (s). */
 const FREED_BEFORE = 7.5;
 const SINK_TO = DIVE_AT - 1;
@@ -234,12 +238,10 @@ export class NetWhale {
   /** Through the look between them: the view over her shoulder, its blink, and the cygnet's peep. */
   private looking = false;
   /** The mitten she waves goodbye with: the one on the side of her toward where it went down. */
-  private waveHand: 0 | 1 = 0;
   private blinked = false;
   private peeped = false;
-  private waved = false;
-  private gladCalled = false;
   private answered = false;
+  private calledWith = false;
   private freedAt: number | null = null;
   /** The valve's dolphin: where it left the pod, where it leaves the water, its heading over the crown and its throw. */
   private readonly vFrom = new THREE.Vector3();
@@ -630,7 +632,7 @@ export class NetWhale {
     if (this.led && this.step === 'approach' && this.sighs < 2
       && (this.sighs === 0 || (left < K.seenAt && this.clock - this.heard > K.seenAfter))) {
       // A breath just gone serves for its blow: it never breathes twice in a moment.
-      if (this.sighs === 0 || whale.untilSigh < K.breathEvery - K.leadSigh) whale.sighIn(K.leadSigh);
+      if (this.sighs === 0 || whale.untilSigh < K.breathEvery - K.leadSigh) whale.sighIn(K.leadSigh, this.sighs === 0);
       if (this.sighs === 0) this.heard = this.clock;
       this.sighs++;
     }
@@ -690,6 +692,7 @@ export class NetWhale {
     const sorrow = this.step === 'approach' ? 1 - THREE.MathUtils.smootherstep(left, K.hushNear, K.hushFrom)
       : (this.step === 'breath' || this.step === 'eye') && !this.greeted ? 1 : this.step === 'free' || this.step === 'gone' ? 0 : K.hushCourage / K.hushSorrow;
     this.hush += (K.hushSorrow * sorrow - this.hush) * (1 - Math.exp(-dt * K.hushEase));
+    this.hush = Math.max(this.hush, K.voiceRoom * this.sung());
   }
 
   /**
@@ -836,7 +839,8 @@ export class NetWhale {
     if (this.step === 'line' || this.step === 'heave') this.haulHands();
     if (this.step === 'flipper') this.watchBird();
     const glad = whale.phase === 'free' && whale.time > SPOUT_FROM && whale.time < ANSWER_AT + 1;
-    if (this.step === 'free' && whale.fluking) this.waveGoodbye(time);
+    const thanked = whale.phase === 'free' && whale.time > WAVE_BACK && whale.time < DIVE_AT - 0.5;
+    if (this.step === 'free' && (thanked || whale.fluking)) this.waveGoodbye(time);
     else this.stopWaving();
     if (this.step === 'free' && glad && time > this.nextWave) {
       child.wave();
@@ -844,6 +848,10 @@ export class NetWhale {
     }
     if (this.step === 'free' && whale.time > ANSWER_AT && !this.answered && this.cygnetIn === 'satchel') {
       this.answered = true;
+      cygnet.call(true);
+    }
+    if (this.step === 'free' && whale.time > CALL_WITH && !this.calledWith && this.cygnetIn === 'satchel') {
+      this.calledWith = true;
       cygnet.call(true);
     }
   }
@@ -934,22 +942,26 @@ export class NetWhale {
   }
 
   /**
-   * Her goodbye as its flukes stand: the mitten on the side toward where it went down held up and out across the view,
-   * waving slowly, so from behind it rises beside her hood against the sky and the sun's glow rather than her coat.
+   * Her goodbye, as it waves its flipper and as its flukes stand: both arms up in a wide V over her hood, swaying
+   * together from side to side, as a child waves to someone going away.
    */
   private waveGoodbye(time: number): void {
     const { child } = this.cast;
     const [out, up, sway, rate] = K.goodbyeWave;
-    child.face(this.a);
-    if (this.camera) this.b.setFromMatrixColumn(this.camera.matrixWorld, 0).setY(0).normalize().negate();
-    else this.b.set(Math.cos(this.cast.boat.yaw + this.turn), 0, -Math.sin(this.cast.boat.yaw + this.turn));
-    if (!this.wavingGoodbye) this.waveHand = child.toBody(this.p.copy(this.a).add(this.b), this.ray).x >= child.toBody(this.a, this.p).x ? 0 : 1;
-    child.reachFor(this.waveHand, this.p.copy(this.a).addScaledVector(this.b, out + sway * Math.sin(time * rate)).addScaledVector(UP, up));
+    child.toBody(child.face(this.a), this.b);
+    const swing = sway * Math.sin(time * rate);
+    for (const hand of [0, 1] as const) {
+      this.p.set(this.b.x + (hand === 0 ? out : -out) + swing, this.b.y + up, this.b.z);
+      child.reachFor(hand, child.fromBody(this.p, this.hand[hand]));
+    }
     this.wavingGoodbye = true;
   }
 
   private stopWaving(): void {
-    if (this.wavingGoodbye) this.cast.child.reachFor(this.waveHand, null);
+    if (this.wavingGoodbye) {
+      this.cast.child.reachFor(0, null);
+      this.cast.child.reachFor(1, null);
+    }
     this.wavingGoodbye = false;
   }
 
@@ -979,10 +991,9 @@ export class NetWhale {
     if (this.step === 'heave') return this.haul === 'heaving' ? this.net.foot : this.headNet(this.look);
     if (this.step === 'free') {
       if (whale.diving >= 0) return this.farewellLook(whale.diving);
-      if (whale.time > MIST_LOOK && whale.time < DIVE_AT) {
-        return this.look.copy(this.cast.boat.position).lerp(whale.eye, 0.3).setY(4.5);
-      }
-      if (whale.time > SPOUT_TO && whale.time < DIVE_AT) return whale.eye;
+      if (whale.time > FIN_LOOK) return this.look.copy(whale.finTip).lerp(whale.eye, 0.3);
+      if (whale.time > MIST_LOOK) return this.look.copy(this.cast.boat.position).lerp(whale.eye, 0.3).setY(4.5);
+      if (whale.time > SONG_AT) return whale.eye;
       return this.look.copy(whale.blowhole).setY(whale.blowhole.y + (whale.spouting ? 6 : 1));
     }
     if (this.step === 'eye' && this.eyeT > K.lookFor - K.handOff) return this.net.float.position;
@@ -2066,14 +2077,6 @@ export class NetWhale {
     this.peeled = net.peel;
     this.wet += ((peeling > 0.01 ? 1 : 0) - this.wet) * (1 - Math.exp(-dt * (peeling > 0.01 ? 2 : 0.4)));
     if (this.wet > 0.02 && whale.phase === 'woken') whale.stream(this.wet * THREE.MathUtils.smoothstep(net.peel, 0.1, 0.5), dt);
-    if (this.step === 'free' && whale.time > GLAD_AT && !this.gladCalled) {
-      this.gladCalled = true;
-      net.sound('whale-glad', whale.eye);
-    }
-    if (this.step === 'free' && whale.fluking && !this.waved) {
-      this.waved = true;
-      net.sound('whale-call', whale.flukes);
-    }
     if (net.posed) return;
     const held = this.progress >= 1 ? 1 : this.progress * (K.netSettle + (1 - K.netSettle) * this.wind);
     net.lift += (held - net.lift) * (1 - Math.exp(-dt * 2.5));
@@ -2094,6 +2097,14 @@ export class NetWhale {
   private comingIn(left: number): number {
     const carry = tuning.sail.carries, kept = K.slowing / carry, from = K.restShort + kept / carry;
     return left > from ? Math.sqrt(kept * kept + 2 * K.slowing * (left - from)) - kept : 0;
+  }
+
+  /** How much of a call it is making now, swelling in and dying away: the score makes room under it. */
+  private sung(): number {
+    const { called, sinceCall } = this.whale;
+    if (!called) return 0;
+    const length = callLength(called);
+    return THREE.MathUtils.smoothstep(sinceCall, 0, 1) * (1 - THREE.MathUtils.smoothstep(sinceCall, length - 1, length + 1.5));
   }
 
   /** Sailing distance still to go before the boat is at rest beside it, along the way it comes in. */

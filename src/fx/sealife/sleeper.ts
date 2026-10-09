@@ -2,18 +2,20 @@ import * as THREE from 'three';
 import { tuning } from '../../tuning';
 import { gladUniforms } from '../../world/water/glad';
 import { swellUniforms } from '../../world/water/swell';
-import { BLOWHOLE, EYE_S, EYE_Y, FIN_DIR, FIN_ROOT, FIN_SPAN, LENGTH, SPINE_END, TOP, crown, finPoint as finSurface, flankAt, halfWidthAt, ringPoint } from './anatomy';
+import { BLOWHOLE, EYE_S, EYE_Y, FIN_DIR, FIN_ROOT, FIN_SPAN, KEEP, LENGTH, SPINE_END, TOP, along, crown, finPoint as finSurface, flankAt, halfWidthAt, ringPoint } from './anatomy';
 import { curve } from './curve';
 import { FOAM, type Marks } from './marks';
 import { Seabirds } from './seabirds';
 import { DROP, MIST, type Spray } from './spray';
 import { WhaleWake, type WhaleSound } from './wake';
-import { DREAM_SCALE, DREAM_SHAPE, SPINE_N, SPINE_STEP, WhaleRig } from './whale';
+import { DREAM_SCALE, DREAM_SHAPE, SPINE_AT, SPINE_GAP, SPINE_N, WhaleRig } from './whale';
 
 /** Along the flipper's trailing edge from here to its tip the sea pours off it as it lifts (0 root .. 1 tip). */
 const POURS_FROM = 0.18;
 
-export type SleeperSound = WhaleSound | 'whale-sigh' | 'whale-breath' | 'whale-slap' | 'flipper-pour' | 'seabirds-lift';
+/** Its voice: tired in the mist, glad as it breathes free, goodbye with its flipper and its flukes, and last from the deep. */
+export type WhaleCall = 'whale-moan' | 'whale-song' | 'whale-goodbye' | 'whale-deep';
+export type SleeperSound = WhaleSound | WhaleCall | 'whale-sigh' | 'whale-breath' | 'whale-slap' | 'flipper-pour' | 'seabirds-lift';
 
 const K = tuning.netWhale;
 /** The tail stock, behind the hump: what the body tips over as it lifts its flukes. */
@@ -38,31 +40,54 @@ const BREATH_IN = 1.4;
 const BREATH_OUT = 3.6;
 /**
  * Free, in seconds: a long breath drawn while it drifts clear of the boat and the pod comes, the spout, its mist coming
- * down over the boat while the net it wore sinks away, then from `DIVE_AT` it dives as a whale does.
+ * down over the boat while the net it wore sinks away and it sings glad (from `SONG_AT`); then its thanks, the freed
+ * flipper lifted high and waved (from `WAVE_AT`), and from `DIVE_AT` it dives as a whale does.
  */
 export const SPOUT_FROM = 6;
 export const SPOUT_TO = 8.8;
+export const SONG_AT = 7.2;
 /** How hard it breathes out, `t` s into a blow: all at once, then easing off. */
 const blowing = (t: number) => THREE.MathUtils.smoothstep(t, 0, 0.15) * Math.exp(-t / K.blow.exhale);
 /** The spout's mist comes down over the boat for this long after it (s). */
 const VEIL_FOR = 5;
-export const DIVE_AT = 15.5;
+/** Free of the net's weight it rides this much higher in the water (m), coming up over these seconds of being free. */
+const RIDE = 0.6;
+const RIDE_UP = [0.5, 5] as const;
+/**
+ * Its thanks: the freed flipper lifted high about its root (radians, by seconds from `WAVE_AT`), waved slowly twice
+ * (`WAVES`: from, to, radians of raise and of sweep), held, and laid gently back on the water before it dives; it
+ * rolls `WAVE_ROLL` away from the boat to lift it. With the second wave it calls goodbye.
+ */
+export const WAVE_AT = 11.2;
+const WAVE_RAISE = curve([[0, 0], [0.5, 0.08], [2.2, 0.78], [2.8, 0.85], [6.6, 0.85], [7.6, 0.4], [8.4, 0.06], [8.8, 0]]);
+const WAVE_FOR = 8.8;
+const WAVES = { from: 2.2, to: 6.6, raise: 0.16, sweep: 0.2 };
+const WAVE_ROLL = 0.12;
+export const GOODBYE_AT = WAVE_AT + 2.6;
+export const DIVE_AT = WAVE_AT + WAVE_FOR - 0.4;
 const D = DIVE_AT;
 /**
- * The dive: one slow forward glide down a way through the sea that the whole body follows. Its head goes down where
- * it lies, bending about `BEND_AT` along it (the dive's way starts there, where its spout stood); the long back rises
- * into an arch over that bend and slides forward and under; the flukes rise high there once, turning to face her as
- * if waving, and slip straight down.
+ * The dive, a whale's, never an eel's: it swims on a little and its head goes down, its front half pitching steeply
+ * into the deep while its back rolls up into one short high arch where `ARCH_AT` lay (its way through the sea starts
+ * there); the rest of it rolls forward over the arch, its flukes come up out of it turning to face her, stand a breath,
+ * flex once as it calls and slip straight down.
  */
-const BEND_AT = 0.22;
-/** The way's slope down from the bend, by metres ahead of it: rising a little into the arch, then down steeply. */
-const DIVE_SLOPE = curve([[-30, 0], [-24, 0], [-12, 0.1], [0, 0], [14, -0.55], [28, -1.15], [40, -1.2], [60, -1.2]]);
-/** Seconds into the dive over which its head goes down off the surface onto the way. */
-const HEAD_DOWN = 6.5;
-/** Its glide along its own length, in metres a second, from the dive's start. */
+const ARCH_AT = 0.44;
+/** The way's pitch by metres ahead of the arch (behind it, negative): rising steeply to its top, and steeply down past it. */
+const DIVE_SLOPE = curve([[-40, 0.38], [-14, 0.38], [-6, 0.24], [0, 0], [6, -0.3], [14, -0.75], [24, -1.05], [60, -1.1]]);
+/**
+ * How far it has gone over into its dive by seconds: its head going down slowly first, then its back rolling up into
+ * the arch; and how high its spine rises there (m).
+ */
+const DOWN = curve([[0, 0], [1, 0.03], [2.6, 0.17], [3.8, 0.55], [5.2, 0.9], [6.2, 1]]);
+const ROLL_UP = 6.2;
+const ARCH_RISE = 2.5;
+/**
+ * Its glide along its own length through the arch, in metres a second from the dive's start: rolling forward over
+ * it, slowing as its flukes stand, and sounding.
+ */
 const GLIDE = curve([
-  [0, 0], [1, 0.3], [4, 4.6], [6.5, 8.6], [9.5, 8.6], [11.3, 3.2], [12.3, 2.2], [14.5, 1.6], [16.5, 1.3], [17.5, 2.4],
-  [19.5, 5.5], [21.5, 6.5], [30, 6.5],
+  [0, 0], [1, 1], [2.5, 4.5], [4, 7.5], [5, 6.5], [6, 4], [6.8, 1.2], [7.4, 0.6], [8.2, 0.6], [9, 5], [10, 9], [14, 9],
 ]);
 /** Where along it the tail stock bends to lift the flukes, and how far into the flukes the lift has all of them. */
 const STOCK = 0.84;
@@ -70,13 +95,13 @@ const STOCK_TO = 0.95;
 /** The flukes' pitch held up out of the sea (radians, nose up): a little short of straight up, undersides to the sky. */
 const FLUKES_UP = -1.45;
 /**
- * The lift, by metres the tail stock lies ahead of the bend: coming up as it nears it, held as the flukes stand over
+ * The lift, by metres the tail stock lies ahead of the arch: coming up as it nears it, held as the flukes stand over
  * it and slip down through it.
  */
 const LIFT_BY = curve([[-4, 0], [-1, 0.14], [2, 0.75], [4.5, 1], [40, 1]]);
 /**
  * As the flukes come up the whale turns `TURN_TO_HER` of the way round toward the boat, so their pale undersides open
- * toward her. Most of it (`YAW_SHARE`) is the whole body turning about its bend over `YAW_WITH` of their lift; the
+ * toward her. Most of it (`YAW_SHARE`) is the whole body turning about its arch over `YAW_WITH` of their lift; the
  * rest its tail stock turns them about its own line, from the start of the lift over `TILT_WITH` of it, but never so
  * far that they tip more than `TILT` (the sine of the slope across their span) while they are still low; standing,
  * that turn is a turn like the body's. Meanwhile they trail low from the stock by `TRAIL` (radians at the hinge),
@@ -90,10 +115,10 @@ const TILT = 0.3;
 const TILT_WITH = 0.3;
 const TRAIL = 0.7;
 const TRAIL_UNTIL = [0.4, 0.85] as const;
-/** A slow wave of the flukes while they are up: radians of flex at the hinge, and of turn, and its pace. */
+/** The flukes' one slow flex as they stand and it calls: radians of flex at the hinge, and of turn, over seconds. */
 const WAVE_FLEX = 0.16;
 const WAVE_TURN = 0.12;
-const WAVE_PACE = 1.25;
+const FLEX_FOR = 2.6;
 /** Seconds after the notch slips under before the boat may go and the pod goes with it, and before it is gone. */
 const GOING_AFTER = 1.2;
 const GONE_AFTER = 3;
@@ -119,11 +144,18 @@ const glidedAt = (m: number) => {
   while (i < GLIDED.length - 1 && GLIDED[i + 1] < m) i++;
   return (i + (m - GLIDED[i]) / Math.max(1e-6, GLIDED[i + 1] - GLIDED[i])) / 30;
 };
-const BODY_M = LENGTH * DREAM_SCALE;
-/** Seconds into being free when the flukes start up out of the sea, when the notch slips under, and the swell goes out. */
-const FLUKES_FROM = D + glidedAt((STOCK - BEND_AT) * BODY_M - 1);
-const UNDER_AT = D + glidedAt((1 - BEND_AT) * BODY_M + 4);
-const SURGE_AT = D + glidedAt((STOCK - BEND_AT) * BODY_M + 12);
+/** Metres from the snout along the laid-out body to s. */
+const metres = (s: number) => along(s) * DREAM_SCALE;
+const ARCH_M = metres(ARCH_AT);
+const STOCK_M = metres(STOCK);
+/**
+ * Seconds into being free when the flukes start up out of the sea, when they stand highest and flex as it calls, when
+ * the notch slips under, and when the swell goes out.
+ */
+const FLUKES_FROM = D + glidedAt(STOCK_M - ARCH_M - 1);
+const FLEX_AT = D + glidedAt(STOCK_M - ARCH_M + 2.5);
+const UNDER_AT = D + glidedAt(metres(1) - ARCH_M + 4);
+const SURGE_AT = D + glidedAt(STOCK_M - ARCH_M + 12);
 const GOING_AT = UNDER_AT + GOING_AFTER;
 const GONE = UNDER_AT + GONE_AFTER;
 /**
@@ -143,6 +175,8 @@ const STREAMS = [[0.05, 0.55], [0.08, 0.7], [0.11, 0.5], [0.14, 0.75], [0.17, 0.
 const SHEDS_AT = 0.2;
 /** The part of it lying along the surface, from the snout: what the sea round it swells out from as it breathes. */
 const LYING = 0.75;
+/** Free, its eye is wide: its lids drawn back this much further than open. */
+const FREE_EYE = 1.15;
 /** A slow blink: the lid down over half a second, a moment shut, and up again over most of a second. */
 const BLINK = curve([[0, 0], [0.5, 0.9], [0.75, 0.9], [1.6, 0]]);
 /** Under the weight on it, one try to open its eye: the lid strains up, holds trembling, and falls back (of the try's height). */
@@ -155,7 +189,8 @@ const TRY_EVERY = 3.4;
  */
 function restPitch(s: number): number {
   const sm = THREE.MathUtils.smoothstep;
-  return 0.08 * (1 - sm(s, 0.12, 0.32)) + 0.08 * sm(s, 0.6, 1);
+  // Its shortened back lowers as far as its full length did, so the sea meets it where its weed has grown.
+  return 0.08 * (1 - sm(s, 0.12, 0.32)) + (0.08 * sm(s, 0.6, 1)) / KEEP(s);
 }
 
 /** How much of a breath lifts the body at s: the back swells with it, the head only by `head` of it. */
@@ -197,6 +232,9 @@ export class SleepingWhale extends WhaleRig {
   flipperLift = 0;
   /** How far off it is seen from (m): its sighs spread wider and slower so they show in the haze from far off. */
   seenFrom = 0;
+  /** Its last call, and seconds since it began: the score makes room under it. */
+  called: WhaleCall | null = null;
+  sinceCall = Infinity;
   /** Each weak breath out, with how strong it was: what the net over the blowhole has to answer. */
   onExhale: ((strength: number) => void) | null = null;
   onSound: ((kind: SleeperSound, x: number, y: number, z: number) => void) | null = null;
@@ -218,6 +256,7 @@ export class SleepingWhale extends WhaleRig {
   private headWet = 0;
   private breath = 0;
   private sighed = true;
+  private moaning = false;
   /**
    * Seconds since its back last rose with a breath and shed the sea off its top, how deep that breath was, and how
    * much of the sea poured off in falls rather than running off as a sheen (1 for the breaths that matter).
@@ -234,7 +273,8 @@ export class SleepingWhale extends WhaleRig {
   private planned = false;
   private readonly bendFrom = new THREE.Vector3();
   private twist = 0;
-  private arch = 0;
+  /** Seconds until its last call comes up from under the sea, once it has dived. */
+  private deepIn = Infinity;
   private readonly u = new Float32Array(SPINE_N);
   private readonly y = new Float32Array(SPINE_N);
   private readonly pitch = new Float32Array(SPINE_N);
@@ -319,6 +359,9 @@ export class SleepingWhale extends WhaleRig {
     swellUniforms.uHeave.value.w = swellUniforms.uHeaveBefore.value.w = 0;
     this.shedT = Infinity;
     this.shed = true;
+    this.deepIn = Infinity;
+    this.moaning = false;
+    this.called = null;
     this.locate();
     this.mesh.visible = this.ghost.visible = true;
     this.birds.settle();
@@ -335,11 +378,23 @@ export class SleepingWhale extends WhaleRig {
     return (this.breath < SIGH_AT ? SIGH_AT - this.breath : 1 + SIGH_AT - this.breath) * this.breathPeriod();
   }
 
-  /** Its next weak breath out comes `seconds` from now, while it lies resting. */
-  sighIn(seconds: number): void {
+  /** Its next weak breath out comes `seconds` from now, while it lies resting, and it moans with it if `moaning`. */
+  sighIn(seconds: number, moaning = false): void {
     if (this.phase !== 'resting') return;
     this.breath = SIGH_AT - Math.min(SIGH_AT - 0.02, seconds / this.breathPeriod());
     this.sighed = false;
+    this.moaning = moaning;
+  }
+
+  /** Its tired low moan, heard from wherever it lies: in the mist before it is seen. */
+  moan(): void {
+    this.call('whale-moan', this.eye);
+  }
+
+  private call(kind: WhaleCall, at: THREE.Vector3): void {
+    this.called = kind;
+    this.sinceCall = 0;
+    this.onSound?.(kind, at.x, at.y, at.z);
   }
 
   private breathPeriod(): number {
@@ -350,6 +405,7 @@ export class SleepingWhale extends WhaleRig {
   vanish(): void {
     this.phase = 'gone';
     this.time = 1e3;
+    this.deepIn = Infinity;
     this.mesh.visible = this.ghost.visible = false;
     swellUniforms.uSurge.value.w = 0;
     swellUniforms.uHeave.value.w = swellUniforms.uHeaveBefore.value.w = 0;
@@ -411,7 +467,12 @@ export class SleepingWhale extends WhaleRig {
   update(dt: number, time: number): void {
     this.worldTime = time;
     this.time += dt;
+    this.sinceCall += dt;
     this.uniforms.uTurn.value = 0;
+    if (this.deepIn < Infinity && (this.deepIn -= dt) <= 0) {
+      this.deepIn = Infinity;
+      this.call('whale-deep', this.q.copy(this.farewell).setY(-12));
+    }
     if (this.phase === 'gone') {
       if (this.time > 30 && this.time < 1e3) swellUniforms.uSurge.value.w = 0;
       return;
@@ -494,6 +555,10 @@ export class SleepingWhale extends WhaleRig {
         this.mist(strength);
         this.onExhale?.(strength);
         this.onSound?.('whale-sigh', this.blowhole.x, this.blowhole.y, this.blowhole.z);
+        if (this.moaning) {
+          this.moaning = false;
+          this.moan();
+        }
       }
     }
     const liftRoll = this.liftT < 0 ? 0 : 0.06 * LIFT(this.liftT);
@@ -505,69 +570,94 @@ export class SleepingWhale extends WhaleRig {
       -K.finRestRaise + awash + Math.sin(this.worldTime * 0.23 + 1) * 0.015);
   }
 
-  /** Free: the deep breath and the spout, its mist over the boat, then its dive. */
+  /** Free: the deep breath and the spout, its mist over the boat and its song, its thanks, then its dive. */
   private leave(dt: number): void {
     const t = this.time;
     const draw = THREE.MathUtils.smootherstep(t, 0, SPOUT_FROM) * (1 - THREE.MathUtils.smootherstep(t, SPOUT_TO, SPOUT_TO + 1.8));
     if (t >= SPOUT_FROM && t - dt < SPOUT_FROM) this.onSound?.('whale-blow', this.blowhole.x, this.blowhole.y, this.blowhole.z);
     if (t >= SPOUT_FROM - 1 && t - dt < SPOUT_FROM - 1) this.rises(1.5, 1);
     if (t >= SPOUT_FROM && t < SPOUT_TO) this.spray.blowOut(this.blowhole, K.spoutHeight, blowing(t - SPOUT_FROM), dt, K.spoutBreadth, 1);
+    if (t >= SONG_AT && t - dt < SONG_AT) this.call('whale-song', this.eye);
+    if (t >= GOODBYE_AT && t - dt < GOODBYE_AT) this.call('whale-goodbye', this.eye);
     // Its mist comes down over the boat in the gold light.
     const veil = THREE.MathUtils.smoothstep(t, SPOUT_FROM + 1, SPOUT_TO) * (1 - THREE.MathUtils.smoothstep(t, SPOUT_TO + VEIL_FOR - 2, SPOUT_TO + VEIL_FOR));
     if (veil > 0) this.spray.veil(this.blowhole, K.spoutHeight, this.near, veil, dt);
     this.driftClear(t);
-    this.lay(0, K.breathRise * 2.4 * draw, 0, 0, K.roll, 1);
+    const raised = this.thank(t, dt);
+    const ride = RIDE * THREE.MathUtils.smootherstep(t, RIDE_UP[0], RIDE_UP[1]);
+    this.lay(ride, K.breathRise * 2.4 * draw, 0, 0, K.roll + WAVE_ROLL * raised, 1);
     if (!this.planned && t >= D - 3) this.plan();
     if (t >= D) this.dive(t - D);
     this.brighten(t);
     this.uniforms.uCurl.value = REST_CURL * (1 - THREE.MathUtils.smoothstep(t, D - 2, D + 2));
     this.uniforms.uHaze.value = 1 - 0.8 * THREE.MathUtils.smoothstep(t, D + 0.5, D + 6);
-    const lower = THREE.MathUtils.smoothstep(t, D - 4, D - 1);
+    const lower = THREE.MathUtils.smoothstep(t, D - 1, D + 1.5);
     this.uniforms.uFin.value.set(THREE.MathUtils.lerp(K.finRestSweep, FREE_FIN.x, lower), THREE.MathUtils.lerp(-K.finRestRaise, FREE_FIN.y, lower));
     if (t >= SURGE_AT && t - dt < SURGE_AT) this.surge();
+    if (t >= FLEX_AT && t - dt < FLEX_AT) this.call('whale-goodbye', this.flukes);
   }
 
   /**
-   * The dive's way, from where it lies clear of the boat: its bend on the water at its blowhole, and how far round
-   * it turns as its flukes rise, so their pale undersides open toward the boat rather than stand edge on.
+   * Its thanks, `t` seconds into being free: the freed flipper lifted high out of the sea, waved slowly twice with the
+   * sea pouring off it, and laid back on the water. How far it is lifted, 0..1.
+   */
+  private thank(t: number, dt: number): number {
+    const w = t - WAVE_AT;
+    if (w < 0 || w > WAVE_FOR) {
+      this.flipperLift = 0;
+      this.uniforms.uSlap.value.set(1, 0, 0);
+      return 0;
+    }
+    const waving = THREE.MathUtils.smoothstep(w, WAVES.from - 0.4, WAVES.from + 0.4) * (1 - THREE.MathUtils.smoothstep(w, WAVES.to - 0.6, WAVES.to));
+    const swing = Math.sin(((w - WAVES.from) / (WAVES.to - WAVES.from)) * Math.PI * 4) * waving;
+    const raise = WAVE_RAISE(w) + WAVES.raise * swing;
+    this.flipperLift = THREE.MathUtils.clamp(raise / WAVE_RAISE(WAVES.from), 0, 1);
+    this.uniforms.uSlap.value.set(1, raise, WAVES.sweep * swing);
+    if (w >= 0.6 && w - dt < 0.6) {
+      const mid = this.finPoint(0.7, this.p);
+      this.onSound?.('flipper-pour', mid.x, Math.max(0, mid.y), mid.z);
+    }
+    if (w > 0.3 && w < WAVE_FOR - 0.6) this.drip(dt, 1 - THREE.MathUtils.smoothstep(w, 1.2, 3.6) + 0.35 * Math.abs(swing));
+    return THREE.MathUtils.smoothstep(WAVE_RAISE(w), 0, 0.8);
+  }
+
+  /**
+   * The dive's way, from where it lies clear of the boat: the arch on the water where its back will rise, and how far
+   * round it turns as its flukes rise there, so their pale undersides open toward the boat rather than stand edge on.
    */
   private plan(): void {
     this.planned = true;
-    this.bendFrom.copy(this.point(0, 0, BEND_AT, this.p));
+    this.bendFrom.copy(this.point(0, 0, ARCH_AT, this.p));
     this.farewell.copy(this.bendFrom).setY(0);
     // Standing up, its underside faces back along the way it goes: turned all the way, that is toward the boat.
     const full = Math.atan2(this.farewell.x - this.near.x, this.farewell.z - this.near.z) - Math.atan2(this.heading.x, this.heading.z);
     this.twist = Math.atan2(Math.sin(full), Math.cos(full)) * TURN_TO_HER;
-    let rise = 0;
-    for (let c = -30; c < 0; c += 0.25) rise += Math.sin(DIVE_SLOPE(c + 0.125)) * 0.25;
-    this.arch = rise;
+    // Its last call comes up from the deep as the swell it leaves reaches the boat.
+    this.deepIn = SURGE_AT - this.time + Math.hypot(this.farewell.x - this.near.x, this.farewell.z - this.near.z) / K.surgeSpeed - 1;
   }
 
   /**
    * `t` seconds into its dive: each part of it lies where the dive's way has taken it, glided along its own length
-   * through the bend, its head eased down onto the way, its flukes held up over the bend and turned toward her.
+   * through the arch, its head going down and its back rolling up as it starts, its flukes held up over the arch and
+   * turned toward her.
    */
   private dive(t: number): void {
-    const step = SPINE_STEP * this.scale;
-    const down = THREE.MathUtils.smootherstep(t, 0, HEAD_DOWN);
-    const glide = glided(t);
-    // How far back along it from the snout the bend now lies.
-    const at = BEND_AT * BODY_M + glide;
-    const stock = at - STOCK * BODY_M;
-    const lift = LIFT_BY(stock) * THREE.MathUtils.smoothstep(t, 2, 6);
-    const waving = THREE.MathUtils.smoothstep(t, FLUKES_FROM - D + 1.5, FLUKES_FROM - D + 3.5)
-      * (1 - THREE.MathUtils.smoothstep(t, UNDER_AT - D - 3, UNDER_AT - D - 1));
-    const wave = -Math.sin((t - (FLUKES_FROM - D + 1.5)) * WAVE_PACE) * waving;
+    const k = this.scale;
+    const down = DOWN(t);
+    // How far back along it from the snout the arch now lies, and how far past it the tail stock has come (m).
+    const at = ARCH_M + glided(t);
+    const stock = at - STOCK_M;
+    const lift = LIFT_BY(stock) * THREE.MathUtils.smoothstep(t, 2, 4);
+    const flex = Math.sin(THREE.MathUtils.clamp((t - (FLEX_AT - D)) / FLEX_FOR, 0, 1) * Math.PI * 2);
     const trail = TRAIL * THREE.MathUtils.smoothstep(lift, 0, 0.2) * (1 - THREE.MathUtils.smootherstep(lift, TRAIL_UNTIL[0], TRAIL_UNTIL[1]));
-    // It sounds more steeply as its tail comes to the bend, so by the time its flukes rise the rest of it is under.
-    const steeper = 1 + THREE.MathUtils.smoothstep(stock, -45, -10);
+    // It sounds more steeply as its tail comes to the arch, so by the time its flukes rise the rest of it is under.
+    const steeper = 1 + THREE.MathUtils.smoothstep(stock, -30, -6);
     for (let i = 0; i < SPINE_N; i++) {
       const s = (i / (SPINE_N - 1)) * SPINE_END;
-      const c = at - i * step;
-      const posture = THREE.MathUtils.lerp(1, 1 - THREE.MathUtils.smoothstep(c, -40, -8), down);
-      const way = restPitch(s) * posture + down * DIVE_SLOPE(c > 0 ? c * steeper : c);
+      const c = at - SPINE_AT[i] * k;
+      const way = THREE.MathUtils.lerp(restPitch(s), DIVE_SLOPE(c > 0 ? c * steeper : c), down);
       const aft = THREE.MathUtils.smoothstep(s, STOCK, STOCK_TO);
-      this.pitch[i] = THREE.MathUtils.lerp(way, FLUKES_UP, aft * lift) + THREE.MathUtils.smoothstep(s, 0.9, 0.96) * (WAVE_FLEX * wave + trail);
+      this.pitch[i] = THREE.MathUtils.lerp(way, FLUKES_UP, aft * lift) - THREE.MathUtils.smoothstep(s, 0.9, 0.96) * (WAVE_FLEX * flex - trail);
     }
     let u = 0;
     let y = 0;
@@ -576,20 +666,20 @@ export class SleepingWhale extends WhaleRig {
       this.y[i] = y;
       if (i < SPINE_N - 1) {
         const mid = (this.pitch[i] + this.pitch[i + 1]) / 2;
-        u -= Math.cos(mid) * step;
-        y -= Math.sin(mid) * step;
+        u -= Math.cos(mid) * SPINE_GAP[i] * k;
+        y -= Math.sin(mid) * SPINE_GAP[i] * k;
       }
     }
-    // The bend stays where it was on the water, rising a little into its arch, and the body slides through it.
-    const fi = at / step;
-    const k = Math.min(Math.floor(fi), SPINE_N - 2);
-    const f = fi - k;
-    const bu = this.u[k] + (this.u[k + 1] - this.u[k]) * f;
-    const by = this.y[k] + (this.y[k + 1] - this.y[k]) * f;
+    // The arch stays where its back lay on the water, rising as the head goes down, and the body rolls through it.
+    let j = 0;
+    while (j < SPINE_N - 2 && SPINE_AT[j + 1] * k < at) j++;
+    const f = (at - SPINE_AT[j] * k) / (SPINE_GAP[j] * k);
+    const bu = this.u[j] + (this.u[j + 1] - this.u[j]) * f;
+    const by = this.y[j] + (this.y[j + 1] - this.y[j]) * f;
     const yaw = this.twist * YAW_SHARE * THREE.MathUtils.smootherstep(lift, YAW_WITH[0], YAW_WITH[1]);
     const h = this.heading;
     h.set(h.x * Math.cos(yaw) + h.z * Math.sin(yaw), 0, h.z * Math.cos(yaw) - h.x * Math.sin(yaw));
-    const ay = this.bendFrom.y + this.arch * down;
+    const ay = this.bendFrom.y + ARCH_RISE * down;
     for (let i = 0; i < SPINE_N; i++) {
       const du = this.u[i] - bu;
       this.spine[i].set(this.bendFrom.x + h.x * du, ay + this.y[i] - by, this.bendFrom.z + h.z * du, this.pitch[i]);
@@ -599,15 +689,15 @@ export class SleepingWhale extends WhaleRig {
     const most = low > TILT ? Math.asin(TILT / low) : Math.PI / 2;
     const turn = Math.min(Math.abs(this.twist) * (1 - YAW_SHARE) * THREE.MathUtils.smootherstep(lift, 0, TILT_WITH), most);
     this.uniforms.uRoll.value = K.roll * (1 - down);
-    this.uniforms.uTurn.value = -Math.sign(this.twist) * turn + WAVE_TURN * wave;
-    this.uniforms.uCurl.value = 0.25 * wave * lift;
+    this.uniforms.uTurn.value = -Math.sign(this.twist) * turn - WAVE_TURN * flex;
+    this.uniforms.uCurl.value = -0.25 * flex * lift;
   }
 
   /** As it spouts free the sea round it clears and fills with light, gathering to where it goes down as it dives. */
   private brighten(t: number): void {
     const glad = THREE.MathUtils.smoothstep(t, SPOUT_FROM, SPOUT_FROM + 3) * (1 - THREE.MathUtils.smootherstep(t, D + 1, UNDER_AT));
     const reach = THREE.MathUtils.lerp(8, K.gladReach, THREE.MathUtils.smootherstep(t, SPOUT_FROM, SPOUT_FROM + 5));
-    const into = this.planned ? THREE.MathUtils.smootherstep(t, D, D + HEAD_DOWN) : 0;
+    const into = this.planned ? THREE.MathUtils.smootherstep(t, D, D + ROLL_UP) : 0;
     const x = THREE.MathUtils.lerp(this.blowhole.x, this.farewell.x, into);
     const z = THREE.MathUtils.lerp(this.blowhole.z, this.farewell.z, into);
     gladUniforms.uGlad.value.set(x, z, reach, glad * K.gladSea);
@@ -627,7 +717,7 @@ export class SleepingWhale extends WhaleRig {
   /** The swell it leaves going down, spreading from the arch it bent under through. */
   private surge(): void {
     const h = this.heading;
-    const half = 0.12 * BODY_M;
+    const half = 0.12 * LENGTH * this.scale;
     const centre = this.q.copy(this.farewell).addScaledVector(h, -half);
     const along = THREE.MathUtils.clamp((this.near.x - centre.x) * h.x + (this.near.z - centre.z) * h.z, -half, half);
     const near = Math.hypot(this.near.x - centre.x - h.x * along, this.near.z - centre.z - h.z * along);
@@ -661,12 +751,17 @@ export class SleepingWhale extends WhaleRig {
     if (this.blinkT > 1.6) this.blinkT = -1;
     this.tryT = this.struggle > 0 ? (this.tryT + dt) % TRY_EVERY : 0;
     const trying = this.struggle * TRY(this.tryT) * (1 + 0.04 * Math.sin(this.tryT * 23) * THREE.MathUtils.smoothstep(this.tryT, 0.9, 1.2));
-    this.skin.uEye.value = Math.max(trying, this.opened * (1 - (this.blinkT < 0 ? 0 : BLINK(this.blinkT))));
+    this.skin.uEye.value = Math.max(trying, this.opened * (1 - (this.blinkT < 0 ? 0 : BLINK(this.blinkT)))) * (this.phase === 'free' ? FREE_EYE : 1);
     if (!this.gazing) return;
     const d = Math.max(1, this.p.subVectors(this.gazeAt, this.eye).length());
+    // Along and up its own head, so its eye stays on her as its head goes down.
+    const pitch = this.spine[this.at(EYE_S)].w;
+    const c = Math.cos(pitch);
+    const sn = Math.sin(pitch);
+    const ahead = this.p.x * this.heading.x + this.p.z * this.heading.z;
     const g = this.skin.uGaze.value;
-    g.x += (THREE.MathUtils.clamp(this.p.dot(this.heading) / d, -1, 1) - g.x) * (1 - Math.exp(-dt * 2));
-    g.y += (THREE.MathUtils.clamp((2 * this.p.y) / d, -1, 1) - g.y) * (1 - Math.exp(-dt * 2));
+    g.x += (THREE.MathUtils.clamp((ahead * c + this.p.y * sn) / d, -1, 1) - g.x) * (1 - Math.exp(-dt * 2));
+    g.y += (THREE.MathUtils.clamp((2 * (this.p.y * c - ahead * sn)) / d, -1, 1) - g.y) * (1 - Math.exp(-dt * 2));
   }
 
   private lift(dt: number): void {
@@ -685,18 +780,17 @@ export class SleepingWhale extends WhaleRig {
       const mid = this.finPoint(0.7, this.p);
       this.onSound?.('flipper-pour', mid.x, Math.max(0, mid.y), mid.z);
     }
-    if (this.liftT > 0.3 && this.liftT < LIFT_HITS - 0.2) this.drip(dt);
+    if (this.liftT > 0.3 && this.liftT < LIFT_HITS - 0.2) this.drip(dt, 1 - THREE.MathUtils.smoothstep(this.liftT, 1.2, 3.6));
     if (was < LIFT_HITS && this.liftT >= LIFT_HITS) this.splashFin();
     if (this.liftT > LIFT_FOR) this.liftT = -1;
   }
 
   /**
    * The sea running off the flipper as it comes up out of it: in sheets off the whole of its trailing edge while it
-   * rises, thinning to drops as it drains.
+   * rises (`pouring` 1), thinning to drops as it drains.
    */
-  private drip(dt: number): void {
+  private drip(dt: number, pouring: number): void {
     const size = Math.sqrt(this.scale);
-    const pouring = 1 - THREE.MathUtils.smoothstep(this.liftT, 1.2, 3.6);
     const n = Math.floor(dt * (50 + 700 * pouring) + Math.random());
     for (let k = 0; k < n; k++) {
       const e = this.finAt(POURS_FROM + Math.random() * (1 - POURS_FROM), 0.96 + Math.random() * 0.04, this.p);
@@ -722,8 +816,8 @@ export class SleepingWhale extends WhaleRig {
     this.shedBy = deep;
     this.shedFalls = falls;
     const h = this.heading;
-    const half = (LYING / 2) * BODY_M;
-    const mid = this.point(0, 0, LYING / 2, this.q);
+    const half = (metres(LYING) / 2);
+    const mid = this.point(0, 0, along(LYING) / 2 / LENGTH, this.q);
     const at = this.spine[this.at(0.3)];
     const flank = halfWidthAt(0.3, -at.y / (Math.cos(at.w) * this.scale)) * this.scale;
     swellUniforms.uHeaveBefore.value.copy(swellUniforms.uHeave.value);
@@ -837,7 +931,7 @@ export class SleepingWhale extends WhaleRig {
   private finAt(t: number, along: number, out: THREE.Vector3): THREE.Vector3 {
     const fin = this.uniforms.uFin.value;
     const lift = this.uniforms.uSlap.value;
-    finSurface(t, along, out).multiplyScalar(DREAM_SHAPE.fin).applyAxisAngle(FIN_DIR, -lift.y * tuning.whaleLook.finTurn);
+    finSurface(t, along, out).multiplyScalar(DREAM_SHAPE.fin).applyAxisAngle(FIN_DIR, -Math.min(lift.y, K.finLift) * tuning.whaleLook.finTurn);
     rotZ(out, lift.y - fin.y);
     rotY(out, fin.x + lift.z);
     out.add(FIN_ROOT);
@@ -905,8 +999,8 @@ export class SleepingWhale extends WhaleRig {
       this.y[i] = y;
       if (i < SPINE_N - 1) {
         const mid = (this.pitch[i] + this.pitch[i + 1]) / 2;
-        u -= Math.cos(mid) * SPINE_STEP * this.scale;
-        y -= Math.sin(mid) * SPINE_STEP * this.scale;
+        u -= Math.cos(mid) * SPINE_GAP[i] * this.scale;
+        y -= Math.sin(mid) * SPINE_GAP[i] * this.scale;
       }
     }
   }

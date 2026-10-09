@@ -1,9 +1,11 @@
 import type * as THREE from 'three';
+import { MathUtils } from 'three';
 import { screenPan } from '../creatures/motion';
 import { tuning } from '../tuning';
 import type { Foley, MaterialSound } from './foley';
 import type { NetSound } from '../fx/sealife/net';
-import type { SleeperSound } from '../fx/sealife/sleeper';
+import type { SleeperSound, WhaleCall } from '../fx/sealife/sleeper';
+import type { WhaleVoiceKind } from './whale-voice';
 import { feltWind, Sway, type WindField, type WindSample } from '../wind/field';
 
 interface Motion {
@@ -152,23 +154,34 @@ export class WorldFoley {
     this.foley.material(surfacing ? 'dolphin-surface' : 'splash', level, screenPan(this.camera, at));
   }
 
-  /** The net on the whale, and the whale's call: as loud as its breath, by how near it is. */
+  /** The net on the whale, as loud as its breath by how near it is; and its greeting as its eye opens on her. */
   net(kind: NetSound, at: THREE.Vector3, strength: number): void {
+    if (kind === 'whale-call' || kind === 'whale-glad') return this.voice(kind === 'whale-call' ? 'whale-greet' : 'whale-song', at);
     const level = this.heard(at, tuning.audio.whaleNear, tuning.audio.whaleFar) * tuning.audio.whaleLevel * strength;
     if (level < 0.015) return;
-    const pan = screenPan(this.camera, at);
-    if (kind === 'whale-call' || kind === 'whale-glad') this.foley.call(level, pan, false, kind === 'whale-glad');
-    else this.foley.material(kind, level, pan);
+    this.foley.material(kind, level, screenPan(this.camera, at));
   }
 
   /** Its call heard from far off as it dives on the first crossing: at most an echo. */
   farCall(at: THREE.Vector3): void {
-    this.foley.call(tuning.audio.whaleLevel * 0.3, screenPan(this.camera, at), true);
+    this.voice('whale-echo', at);
   }
 
   whale(kind: SleeperSound, at: THREE.Vector3): void {
+    if (isCall(kind)) return this.voice(kind, at);
     const level = this.heard(at, tuning.audio.whaleNear, tuning.audio.whaleFar) * tuning.audio.whaleLevel;
     if (level < 0.015) return;
     this.foley.material(kind, level, screenPan(this.camera, at));
   }
+
+  /** Its voice carries far over the water, darker and more echo the farther it comes from. */
+  private voice(kind: WhaleVoiceKind, at: THREE.Vector3): void {
+    const { near, far, farthest } = tuning.audio.whaleVoice;
+    const d = this.camera.position.distanceTo(at);
+    const level = MathUtils.lerp(farthest, 1, this.heard(at, near, far));
+    this.foley.whale.call(kind, level, screenPan(this.camera, at), MathUtils.smoothstep(d, near, far * 0.6));
+  }
 }
+
+const CALLS: readonly string[] = ['whale-moan', 'whale-song', 'whale-goodbye', 'whale-deep'] satisfies WhaleCall[];
+const isCall = (kind: SleeperSound): kind is WhaleCall => CALLS.includes(kind);

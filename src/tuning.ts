@@ -118,6 +118,13 @@ export const tuning = {
     dolphinSurfaceEvery: 0.6, dolphinLevel: 0.65, dolphinAttack: 0.065,
     /** The whale breathes ahead of the boat; keep its scale audible across that stretch of water. */
     whaleLevel: 0.65, whaleAttack: 0.2, whaleNear: 35, whaleFar: 190,
+    /**
+     * Its voice (`whale-voice.ts`), heard in full within `near` metres and carrying `far` metres, never quieter than
+     * `farthest` of it out there: `level` at its loudest; a sub-octave `sub` of it to be felt; its `body` under the
+     * throat's resonances; `wet` of it into the shared reverb, and the sea's echo of it every `echo` s, each repeat
+     * `echoBack` of the last, at `echoLevel`.
+     */
+    whaleVoice: { level: 0.06, near: 40, far: 600, farthest: 0.35, sub: 0.45, body: 0.5, wet: 0.45, echo: 0.31, echoBack: 0.42, echoLevel: 0.3 },
     clothSources: 3, clothReach: 60, clothLevel: 0.35,
     /** The stairs in the clouds (a proposal awaiting audition): the air round the travellers, a flight knocking home, the score. */
     stairsAirLevel: 1,
@@ -1539,6 +1546,8 @@ export const tuning = {
      * `hushEase` a second.
      */
     hushFrom: 70, hushNear: 8, hushSorrow: 0.9, hushCourage: 0.45, hushEase: 0.3,
+    /** While it calls, the score makes room under its voice, at least `voiceRoom` of the way to silence. */
+    voiceRoom: 0.6,
     /**
      * Found in the mist rather than seen: it sighs unseen as the pod turns the boat toward it, and its blow stands up
      * over the mist once the boat is `seenAt` metres short of the rest and at least `seenAfter` seconds on, each
@@ -1611,8 +1620,11 @@ export const tuning = {
      * along her outline, the lantern wrapped round her face and side, a lift in her shade; eased at `lightEase` a second.
      */
     lookLight: [2.2, 2.5, 0.6], farewellLight: [1.5, 0, 0.3], lightEase: 1,
-    /** Her goodbye as its flukes stand, from her face (m): out across the view toward where it went down, up, swaying, and how fast (rad/s). */
-    goodbyeWave: [0.45, 0.45, 0.2, 4.5],
+    /**
+     * Her goodbye as it waves its flipper and as its flukes stand, both mittens from her face (m): out to each side, up,
+     * swaying together from side to side, and how fast (rad/s).
+     */
+    goodbyeWave: [0.4, 0.35, 0.12, 7],
     /** As it dives she slides this far along the thwart to the port rail (m), at `farewellRailEase` a second. */
     farewellSlide: 0.35, farewellRailEase: 0.8,
     /**

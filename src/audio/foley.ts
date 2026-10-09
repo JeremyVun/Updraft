@@ -1,11 +1,12 @@
 import { tuning } from '../tuning';
 import type { AudioOut } from '../creatures/voices';
 import type { NetSound } from '../fx/sealife/net';
-import type { SleeperSound } from '../fx/sealife/sleeper';
+import type { SleeperSound, WhaleCall } from '../fx/sealife/sleeper';
+import { WhaleVoice } from './whale-voice';
 
 export type Surface = 'grass' | 'sand' | 'wood' | 'water';
 export type MaterialSound = 'cloth' | 'wool' | 'sail' | 'sail-settle' | 'water' | 'paper' | 'door' | 'splash' | 'peg'
-  | 'dolphin-surface' | 'leaf-scuff' | 'swing-creak' | SleeperSound | Exclude<NetSound, 'whale-call' | 'whale-glad'>;
+  | 'dolphin-surface' | 'leaf-scuff' | 'swing-creak' | Exclude<SleeperSound, WhaleCall> | Exclude<NetSound, 'whale-call' | 'whale-glad'>;
 
 /**
  * The sounds a small body makes, as opposed to a voice. The cygnet never speaks except when it is lost, so this is
@@ -14,6 +15,8 @@ export type MaterialSound = 'cloth' | 'wool' | 'sail' | 'sail-settle' | 'water' 
  * The same physical palette gives cloth, boats, paper and doors restrained sounds of their own.
  */
 export class Foley {
+  /** The whale's voice. */
+  readonly whale = new WhaleVoice();
   private out: AudioOut | null = null;
   private noise: AudioBuffer | null = null;
   private lastStep = -1;
@@ -35,6 +38,7 @@ export class Foley {
       this.hearthBed = null;
     }
     this.out = out;
+    this.whale.setOutput(out);
   }
 
   /** Brief physical sounds, driven by object motion rather than the pointer or a story reward. */
@@ -214,74 +218,6 @@ export class Foley {
       this.puff({ at: at + 0.09, len: 0.4, level: dolphin * 0.024, pan,
         type: 'bandpass', from: 1500, to: 650, q: 0.5, attack: 0.07, wet: 0.04 });
     }
-  }
-
-  /**
-   * The whale's voice, once in greeting and once in goodbye: a low soft call rising a fourth from A to D and settling
-   * on B, in the sea score's own notes, hollow rather than bright and long in the reverb. `far` is the same call heard
-   * from a long way off over the water: darker, quieter, and coming back once. `glad` is the same voice breathing
-   * free: a little brighter, and instead of settling it goes on up to E.
-   */
-  call(level: number, pan: number, far = false, glad = false): void {
-    const out = this.out;
-    if (!out || level < 0.005) return;
-    const { ctx } = out;
-    const at = ctx.currentTime + 0.02;
-    const len = 3.6;
-    const voice = (start: number, gain: number, cutoff: number, wet: number) => {
-      const env = ctx.createGain();
-      env.gain.setValueAtTime(0, start);
-      env.gain.linearRampToValueAtTime(gain, start + 0.6);
-      env.gain.setValueAtTime(gain, start + len - 1.4);
-      env.gain.exponentialRampToValueAtTime(0.0001, start + len);
-      const tone = ctx.createBiquadFilter();
-      tone.type = 'lowpass';
-      tone.Q.value = 0.7;
-      tone.frequency.setValueAtTime(cutoff * 0.6, start);
-      tone.frequency.linearRampToValueAtTime(cutoff, start + 1.3);
-      tone.frequency.linearRampToValueAtTime(cutoff * 0.7, start + len);
-      const hollow = ctx.createBiquadFilter();
-      hollow.type = 'peaking';
-      hollow.frequency.value = 340;
-      hollow.Q.value = 2.5;
-      hollow.gain.value = 7;
-      const p = ctx.createStereoPanner();
-      p.pan.value = Math.max(-0.85, Math.min(0.85, pan));
-      const vibrato = ctx.createOscillator();
-      vibrato.frequency.value = 4.2;
-      const depth = ctx.createGain();
-      depth.gain.setValueAtTime(0, start);
-      depth.gain.linearRampToValueAtTime(1.6, start + 1.2);
-      vibrato.connect(depth);
-      const nodes: AudioNode[] = [env, tone, hollow, p, vibrato, depth];
-      for (const [type, share] of [['sawtooth', glad ? 0.45 : 0.35], ['sine', 1]] as const) {
-        const osc = ctx.createOscillator();
-        osc.type = type;
-        osc.frequency.setValueAtTime(110, start);
-        osc.frequency.exponentialRampToValueAtTime(146.83, start + 1.4);
-        osc.frequency.setValueAtTime(146.83, start + 1.9);
-        osc.frequency.exponentialRampToValueAtTime(glad ? 164.81 : 123.47, start + 3.3);
-        depth.connect(osc.frequency);
-        const g = ctx.createGain();
-        g.gain.value = share;
-        osc.connect(g).connect(env);
-        osc.start(start);
-        osc.stop(start + len + 0.05);
-        nodes.push(osc, g);
-        osc.onended = () => nodes.forEach((n) => n.disconnect());
-      }
-      env.connect(tone).connect(hollow).connect(p).connect(out.bus);
-      const send = ctx.createGain();
-      send.gain.value = wet;
-      p.connect(send).connect(out.reverb);
-      nodes.push(send);
-      vibrato.start(start);
-      vibrato.stop(start + len + 0.05);
-    };
-    if (far) {
-      voice(at, level * 0.02, 260, 0.6);
-      voice(at + 0.55, level * 0.009, 200, 0.8);
-    } else voice(at, level * 0.035, glad ? 860 : 620, glad ? 0.45 : 0.35);
   }
 
   /** One burst of filtered noise with its own envelope: the raw material of every sound here. */

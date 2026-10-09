@@ -1,16 +1,19 @@
 import * as THREE from 'three';
 import { tuning } from '../../tuning';
 import { atmo } from '../../world/atmosphere';
-import { EYE_S, EYE_Y, FLUKE_HINGE, LENGTH, SPINE_END, STOCK_TURN, flukeEdges, whaleGeometry } from './anatomy';
+import { EYE_S, EYE_Y, FLUKE_HINGE, LENGTH, SPINE_END, STOCK_TURN, along, flukeEdges, whaleGeometry } from './anatomy';
 import { curve } from './curve';
 import { GHOST_FRAG, GHOST_VERT, SPINE_N, WHALE_FRAG, WHALE_VERT } from './whaleShader';
 
 export { SPINE_N };
 export const SPINE_STEP = (SPINE_END * LENGTH) / (SPINE_N - 1);
+/** Rest units along the laid-out body from the snout to each spine sample, and from each to the next. */
+export const SPINE_AT = Float32Array.from({ length: SPINE_N }, (_, i) => along((i / (SPINE_N - 1)) * SPINE_END));
+export const SPINE_GAP = Float32Array.from({ length: SPINE_N - 1 }, (_, i) => SPINE_AT[i + 1] - SPINE_AT[i]);
 
 /** The one whale of the journey: short flippers and a small dorsal fin on a long body, its flukes a little reduced. */
 export const DREAM_SHAPE = { fin: 0.28, dorsal: 0.35, flukes: 0.8 } as const;
-/** Scale of the rest pose that makes it `tuning.netWhale.length` from nose to fluke tips. */
+/** Scale of the rest pose that dreams it `tuning.netWhale.length` from nose to fluke tips before its body is shortened. */
 export const DREAM_SCALE = tuning.netWhale.length
   / (FLUKE_HINGE * LENGTH + (-flukeEdges(1).trail - FLUKE_HINGE * LENGTH) * DREAM_SHAPE.flukes);
 
@@ -232,7 +235,7 @@ export class Whale extends WhaleRig {
     const beat = Math.sin(t * 1.7) * 0.05 * (1 - Math.min(1, Math.abs(tail) * 3));
     for (let i = 0; i < SPINE_N; i++) {
       const s = (i / (SPINE_N - 1)) * SPINE_END;
-      TRACK_PATH.at(head - s * LENGTH, this.sample);
+      TRACK_PATH.at(head - SPINE_AT[i], this.sample);
       const tailward = Math.min(Math.max((s - 0.55) / 0.4, 0), 1);
       const bend = tailward * tailward * (3 - 2 * tailward);
       this.pitch[i] = this.sample.angle + (tail + beat) * bend + (s > FLUKE_HINGE ? fluke : 0);
@@ -245,8 +248,8 @@ export class Whale extends WhaleRig {
       p.set(this.origin.x + this.heading.x * u, y, this.origin.z + this.heading.z * u, this.pitch[i]);
       if (i < SPINE_N - 1) {
         const mid = (this.pitch[i] + this.pitch[i + 1]) / 2;
-        u -= Math.cos(mid) * SPINE_STEP * k;
-        y -= Math.sin(mid) * SPINE_STEP * k;
+        u -= Math.cos(mid) * SPINE_GAP[i] * k;
+        y -= Math.sin(mid) * SPINE_GAP[i] * k;
       }
     }
     this.uniforms.uRoll.value = Math.sin(t * 0.4 + 1) * 0.05;
