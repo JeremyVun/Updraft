@@ -508,6 +508,32 @@ These reopen the room's design from the air dying to the boat leaving; the secti
 what they contradict. Found on reading the code: the run, the church and the bring loop the score's 14 s becalmed
 section (`drownedScore` returns `still` for `run`, `nave` and `church`), which is the one tone.
 
+### Jeremy's second play (2026-10-09, verbatim)
+
+> - [a still from the lens off the cat's gable end: the cat on its pot at the left, the boat at the right, the tub
+>   below the bottom edge] in this shot the player can't even see the bucket they are supposed to interact with.
+> - And if they do figure it out, they have no idea where they are supposed to move the bucket to
+> - After the rescue, the boat then starts sailing at an absurdly fast rate through the drwoning village before bumping
+>   into the roof. it's very strange.
+> - It should have a becalming and then slowly drift into the roof, with the player unable to make wind
+> - [a still from behind her on the garden wall's coping, the dead tree's trunk beside her] The child is literally
+>   standing underneath the tree that you're supposed to blow down, there's no invitational wind gesture, and they are
+>   looking striaght up at the tree the whole time instead of where they need to go, which is very strange. Trying to
+>   blow down the tree is impossible as well. no matter what i do, whether updrafts, random wind, or right to left fast
+>   cursor movements, it literally won't blow down. fix this as well. btw, im going to be just pasting in issues as i
+>   find them. i need you to keep a list of all of them and fix them
+
+**The list from this play** (Claude keeps it; each item is struck through with its commit when fixed and checked):
+1. The tub out of frame while it waits for the player: the lens off the gable end stands 7 m from the chimney and the
+   tub floats below the frame's bottom edge, with the drawn gust under it. Fix: one frame holds her, the tub, the
+   cat's slates where they meet the water and the cat; the drawn gust in view.
+2. Where the tub goes is not shown. Fix: the destination reads in the world (the cat at it), not only in the gust.
+3. After the rescue the boat sails 180 m at up to 9.5 m/s (`driftSpeed`, `driftBreeze` 2.6) to the strand. Fix: the
+   air dies once the cat is aboard and the becalmed boat drifts slowly onto the roof, the player's wind making nothing;
+   the cat's roof comes near enough to the strand for that drift to be short.
+4. At the tree: she stands under it, no drawn gust shows, she looks straight up at it the whole time instead of the
+   way she must go, and no gesture fells it.
+
 ### The room rethought (Claude, 2026-10-08; Jeremy: "yea lets see how this works")
 
 One idea holds the middle of the room together: **the fog is a rising white tide and the only safe place is higher
