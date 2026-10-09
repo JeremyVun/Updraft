@@ -1168,6 +1168,14 @@ N5a lays it; N5d hears it there.
 After N5a, N5b and N5c are merged on `sea-whale`. Claude plays the whole open sea in motion, landscape and phone, from
 the sleeping island to the mooring at the mirror, beside the clouds and the owl. Claude fixes what that turns up,
 folds it into the docs, and puts the build up for Jeremy on 5330.
+Found so far (2026-10-10), on `sea-whale` at `98e69212` with the tools brought to the five steps (`sea-tools`: the
+sea check, `whale-look-stills` and the playthrough play them; `tools/lib/whale-gestures.mjs`; the dead `lost` gone):
+- A softlock at the line: in strong wind her mitten stops about 0.5 m short of the cork, `'reaching'` has no valve,
+  and the whale is never freed (`sea-logic-check` seeds 148 and 150, portrait). Branch `sea-catch`, with the eye's
+  drawn sweep, which is drawn in the sky above its brow rather than across the fold.
+- The heave's billow barely lifts the mesh; the phone's line frame cuts the boat at the right edge; the phone's
+  flipper frame has the bird small at the left edge. Branch `sea-frames`.
+- The playthrough's open sea: rest 102.1 s, free 164.1, gone 203.1, moored 247.4, every step the player's.
 Done: [ ]
 
 ### Phase N4: docs on approval
