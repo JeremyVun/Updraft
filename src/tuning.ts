@@ -2168,15 +2168,16 @@ export const tuning = {
       /**
        * The views laying out the mill and the swing as she comes to them: from how far along her way before each (metres)
        * they come in, and how quickly (per second), until the piece's own view takes over; how far the mill's look leans
-       * toward the fog's front, so it stays in as she walks away from it; where they stand and look, as
-       * [east, up, south] metres (landscape, then upright) from where she waits at the mill, and for the swing from her
-       * as she goes, off her right shoulder with the fog coming on behind her, never higher than `top`, how far it looks
-       * toward the fog as she looks back down at it from the granary's ridge, and where it goes round to, from where she
-       * waits at the board, once she has stopped to look at the swing: where the swing's own view stands.
+       * toward the fog's front, so it stays in as she walks away from it; where they stand and look, as [east, up, south]
+       * metres (landscape, then upright) from where she waits at the mill, and for the swing from her as she goes, off
+       * her right shoulder with the fog coming on behind her, never higher than `top`; how far it looks toward the fog as
+       * she looks back down at it from the granary's ridge, and how high over her feet, so she stays in the frame; and
+       * where it goes round to, from where she waits at the board, once she has stopped to look at the swing: where the
+       * swing's own view stands.
        */
       approach: {
         mill: { from: 12.3, rate: 0.7, fogAt: 0.3, eye: [-6.5, 6.5, 15.5], at: [1.2, 4.6, -1], uprightEye: [-5, 6.2, 13], uprightAt: [0.8, 5.2, -1] },
-        swing: { from: 20, rate: 0.5, track: true, top: 9.5, downAt: 0.25, eye: [-3, 3.4, -7], at: [-3, 1.0, 0], uprightEye: [-3, 3.8, -7], uprightAt: [-2, 1.4, 0],
+        swing: { from: 20, rate: 0.5, track: true, top: 9.5, downAt: 0.35, downHigh: 3.5, eye: [-3, 3.4, -7], at: [-3, 1.0, 0], uprightEye: [-3, 3.8, -7], uprightAt: [-2, 1.4, 0],
           lookEye: [-14.1, 4.25, 2.7], lookAt: [-1.1, 2.45, -2.95], uprightLookEye: [-12.4, 4.15, 5.0], uprightLookAt: [-1.1, 2.45, -2.95] },
       },
       /**
