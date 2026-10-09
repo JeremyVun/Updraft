@@ -2002,7 +2002,7 @@ export const tuning = {
        * the roofs she leaves, and the fastest (m/s), and how quickly it changes pace (per second).
        */
       fogTrail: 12, fogHold: { tree: 10, sheet: 5, mill: 10, swing: 12 }, fogBeat: 8, fogEnd: 19, fogNearest: 7.5, fogLaid: 8,
-      fogPull: 0.5, fogSlowest: 0.12, fogCreep: 0.5, fogFastest: 3.2, fogEase: 0.9,
+      fogPull: 0.5, fogSlowest: 0.12, fogCreep: 1.1, fogFastest: 3.2, fogEase: 0.9,
     },
     /** The wash-tub the player's wind carries to the cat's roof and back to the boat. */
     tub: {
