@@ -684,8 +684,15 @@ much noise too often."
     0.3 m out over the slope, her grip hidden in the cloth through her hood, then hopped up and slid onto the ridge; now
     she hangs straight over the ridge 0.4-0.55 m up, lets go and drops 0.37 s onto it). Was: she lands from the sheet in
     mid air on the far roof. Fix: her feet on the slates when she lets go and lands.
-25. Right after the mill the lens dollies round the wrong way and the cat leaves the frame (likely the reported swoop
-    coming off the mill's north view). Fix: one move on toward where she and the cat go, the cat kept in frame.
+25. ~~The lens off the mill~~ (`proto-drowned-fix-millexit`: the mill's view hands straight to the swing's approach as
+    she steps out at the hoist's top, never falling back to the walking lens between; one 11 s move round her right,
+    drawn in behind her along the granary's ridge so it passes between her and the old tree, behind her shoulder while
+    she looks back down at the fog (9 s, was 6.6) with the cat waiting below, and on to her side as she goes west after
+    it; the look leans to the cat and widens to 0.8, so the cat is in frame throughout, was out about 6 s; the lens
+    peaks at 6 m/s, was 10). Was: right after the mill the lens dollies round the wrong way and the cat leaves the
+    frame. Left for his play: it still goes round her about 160 degrees, the only way to her side the fog is seen from
+    (the mill and its sails stand on the other side, and from the mill's side the old tree's crown blocks the way to the
+    swing's view).
 26. ~~The cat's and kittens' sounds have no call marks~~ (`proto-drowned-fix-calls`: every mew, mrrow and chirrup
     shows the cygnet's three strokes over the head of the one that made it, for the length of the sound and at least
     0.45 s, edged darker to hold against the lilac sky and the fog, never under 8% of the frame's height from afar;
@@ -698,8 +705,9 @@ quickly. Also, the entire scene has some really bad performance issue. Switching
 visual difference, but there is a very very noticeable drop in framerates at ultra. Then in the bellfry, the boat and
 hte red sail just appear out of nowhere. Also, shouldn't the fog cover the entire village and then recede with the
 bell? I thought that was the idea?"
-28. On the swing the fog flickers in and out of the frame quickly. Fix: the fog's place in the frame changes only as
-    slowly as the fog itself moves.
+28. ~~The fog flickering on the swing~~ (`proto-drowned-fix-millexit`: the fog turned to face her as she swung to and
+    fro, its front sweeping about 20 degrees each way every swing; while she boards and swings it faces where she got
+    on, so its front only drifts as it comes on). Was: on the swing the fog flickers in and out of the frame quickly.
 29. The whole room runs badly at ultra, and ultra looks little different from low. Fix: find what ultra costs here;
     ultra either shows what it pays for or stops paying it, and the room holds its frame rate. Measured with the GPU
     quiet (no other captures running).

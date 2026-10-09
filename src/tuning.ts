@@ -1983,7 +1983,7 @@ export const tuning = {
        * Seconds she stands on the granary's ridge looking back down at the fog, and at the top of the slope down to the
        * swing's board looking at the swing; and of the first that she spends turning to her way before she goes on.
        */
-      lookDownFor: 6.6, lookSwingFor: 4.2, turnOn: 1,
+      lookDownFor: 9, lookSwingFor: 4.2, turnOn: 1,
       /** The beat she takes before a hop of her own; within `through` of a turn gentler than `bend` (radians) she walks on through it. */
       hopPause: 0.3, through: 1.1, bend: 0.4,
       /**
@@ -2178,21 +2178,26 @@ export const tuning = {
        * `endFrom` metres; and how fast it comes round to a piece's view once she has stopped at it (per second).
        */
       comeFrom: { tree: 1.5, sheet: 5, mill: 0.5, swing: 0.5 }, comeTo: 0, leaveFrom: 0, endFrom: 8, roundRate: 0.95,
-      /** How far past each piece the lens has given it back to her own way, metres. */
-      leave: { tree: 2, sheet: 0, mill: 2, swing: 3 },
+      /** How far past each piece the lens has given it back to her own way, metres; the mill gives it to the swing's approach. */
+      leave: { tree: 2, sheet: 0, swing: 3 },
       /**
        * The views laying out the mill and the swing as she comes to them: from how far along her way before each (metres)
-       * they come in, and how quickly (per second), until the piece's own view takes over; how far the mill's look leans
-       * toward the fog's front (landscape, then upright), so it stays in as she walks away from it; where they stand and
+       * they come in (the swing's as the mill hands over, below), and how quickly (per second), until the piece's own
+       * view takes over; how far the mill's look leans toward the fog's front (landscape, then upright), so it stays in
+       * as she walks away from it; where they stand and
        * look, as [east, up, south] metres (landscape, then upright) from where she waits at the mill, and for the swing
-       * from her as she goes, off her right shoulder with the fog coming on behind her, never higher than `top`; how far
-       * it looks toward the fog as she looks back down at it from the granary's ridge, and how high over her feet, so she
-       * stays in the frame; and where it goes round to, from where she waits at the board, once she has stopped to look
-       * at the swing: where the swing's own view stands.
+       * from her as she goes, off her right shoulder with the fog coming on behind her, and its lens; and where it goes
+       * round to, from where she waits at the board, once she has stopped to look at the swing: where the swing's own
+       * view stands. The swing's takes over from the mill's view as she steps out at the hoist's top, in one move round
+       * her right over `handFor` seconds: drawn in from the mill's reach to the reach of `via` (from her) over the first
+       * `closeBy` of them, so it passes between her and the old tree's crown; round, from `turnFrom` of them, through
+       * `via`, behind her right shoulder as she looks back down at the fog with the cat waiting below, to its place at
+       * her side as she sets off; its look leaning `catDown` further toward the cat on the way, so it stays in.
        */
       approach: {
         mill: { from: 12.3, rate: 0.7, fogAt: 0.3, uprightFogAt: 0.5, eye: [-6.5, 6.5, 15.5], at: [1.2, 4.6, -1], uprightEye: [-5, 6.2, 13], uprightAt: [0.8, 5.2, -1] },
-        swing: { from: 20, rate: 0.5, track: true, top: 9.5, downAt: 0.35, downHigh: 3.5, eye: [-3, 3.4, -7], at: [-3, 1.0, 0], uprightEye: [-3, 3.8, -7], uprightAt: [-2, 1.4, 0],
+        swing: { from: 20, rate: 0.5, track: true, handFor: 11, closeBy: 0.6, turnFrom: 0.1, catDown: 0.15, via: [-10.9, 1.8, -5.1], uprightVia: [-10.9, 2.4, -5.1], zoom: 0.8, uprightZoom: 0.75,
+          eye: [-2.6, 2.8, -7.1], at: [-3, 1.0, 0], uprightEye: [-2.6, 3.2, -7.1], uprightAt: [-2, 1.4, 0],
           lookEye: [-14.1, 4.25, 2.7], lookAt: [-1.1, 2.45, -2.95], uprightLookEye: [-12.4, 4.15, 5.0], uprightLookAt: [-1.1, 2.45, -2.95] },
       },
       /**
