@@ -2091,7 +2091,7 @@ export const tuning = {
        */
       follow: 2.2, followDown: 3, steady: 2, steadiest: 1.4, behind: 6, ahead: 12,
       sideOn: 1.45, uprightSideOn: 1.5, distance: 12.5, uprightDistance: 13.5, rise: 3.5, uprightRise: 4.2, lowest: 2.8, highest: 12,
-      lead: 0.8, aim: 1.0, pace: 0.6, zoom: 0.92, uprightZoom: 0.9,
+      lead: 0.8, aim: 1.0, pace: 0.6, zoom: 0.86, uprightZoom: 0.86,
       /**
        * How far ahead of her on her way the laid lens is read, so the eased lens turns as she does, and how far past
        * that it may still be coming round to where it was laid (metres).
