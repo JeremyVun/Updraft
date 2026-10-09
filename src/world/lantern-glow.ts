@@ -9,8 +9,8 @@ void main() {
   vUv = position.xy;
   vec4 view = viewMatrix * vec4(uAt, 1.0);
   view.xy += position.xy * uSize;
-  /** Drawn a little toward the eye, so the stone and the fog it hangs in never cut its edge. */
-  view.xyz *= 1.0 - min(uSize, length(view.xyz) * 0.5) / length(view.xyz);
+  /** Drawn well toward the eye, so neither the fog it hangs in nor the water in front of the flame cuts its edge. */
+  view.xyz *= 1.0 - max(min(uSize, length(view.xyz) * 0.5), length(view.xyz) * 0.4) / length(view.xyz);
   gl_Position = projectionMatrix * view;
 }`;
 

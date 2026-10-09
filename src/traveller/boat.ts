@@ -74,6 +74,8 @@ export class Boat {
   swell = 0;
   /** Afloat on something other than the sea, such as the top of a cloud: the height it floats at, or null. */
   altitude: number | null = null;
+  /** How much of its lantern's light the story hides this frame, 0 to 1; it lapses unless set again before each update. */
+  lanternHidden = 0;
   /**
    * Becalmed: where it comes to rest and the way it lies there, and how hard it may brake to stop there (m/s², the
    * drowned village's own coast if not given). It coasts in on the way it has, and from then on nothing the wind does
@@ -598,7 +600,8 @@ export class Boat {
     const gutter = 0.5 + 0.25 * Math.sin(time * 2.3) + 0.15 * Math.sin(time * 5.1 + 1.7) + 0.1 * Math.sin(time * 8.7 + 0.4);
     this.glass.value = 1 - tuning.lantern.glassFlicker * gutter;
     const at = this.contact.copy(this.flame).applyMatrix4(this.group.matrixWorld);
-    u.uLantern.value.set(at.x, at.y, at.z, tuning.lantern.glow * lit * (1 - tuning.lantern.flicker * gutter));
+    u.uLantern.value.set(at.x, at.y, at.z, tuning.lantern.glow * lit * (1 - this.lanternHidden) * (1 - tuning.lantern.flicker * gutter));
+    this.lanternHidden = 0;
   }
 
   /** The sea breaking against the hull, and a short tail of foam behind it while it is under way that spreads and fades. */

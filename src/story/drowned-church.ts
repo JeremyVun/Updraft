@@ -71,11 +71,11 @@ function along(way: readonly THREE.Vector2[], s: number, out: THREE.Vector2): nu
  * her and waits in the belfry's arch, calling down to her; as she nears the top it goes in to its kittens and they wake
  * and tumble about it, and she climbs in over the sill to find them: one comes to her and she kneels to it. She stands
  * by the bell looking out over the fog sea, which has closed round the tower and stopped just under the sills. The bell
- * is the player's to ring; each ring rolls out over the fog and pushes it down a little, and out in it the lost boat's
- * lantern answers, nearer each time, until the fog has drawn back to the water and the player sails the boat the last
- * stretch round the tower to the nave. She climbs down and steps aboard; the cat stays with its kittens and comes to the
- * sill with one of them to see her off. She looks back up at the two of them and the cat gives her a slow blink, then
- * they go back in. Then the fog closes round and darkens into the storm.
+ * is the player's to ring; each ring rolls out over the fog and pushes it back round the tower, and out in it the lost
+ * boat's lantern answers, nearer each time, until the fog has drawn back to the water round the nave and the player
+ * sails the boat the last stretch round the tower to the nave. She climbs down and steps aboard; the cat stays with its
+ * kittens and comes to the sill with one of them to see her off. She looks back up at the two of them and the cat gives
+ * her a slow blink, then they go back in. Then the fog closes round and darkens into the storm.
  */
 export class ChurchArrival {
   step: Step | 'off' = 'off';
@@ -105,8 +105,16 @@ export class ChurchArrival {
   private leg = 0;
   private best = Infinity;
   private stall = 0;
-  private sinkFrom = 0;
   private sinkAt = -Infinity;
+  /** The fog closing round: since when, from what level, and how high it lies round the tower beneath her. */
+  private closeFrom = -1;
+  private closeLevel = 0;
+  private dipFloor = 0;
+  /** How far round the tower the last ring found it pushed back, and when she started down. */
+  private clearFrom = 0;
+  private downAt = Infinity;
+  /** While the boat is away in the fog, before the bell has called it in. */
+  private lost = false;
   private homeWant = 0;
   private readonly homeSpeed = new THREE.Vector3();
   private answeredAt = -Infinity;
@@ -145,6 +153,9 @@ export class ChurchArrival {
     this.climb = new Climb(cast.child, { wall: IVY_FOOT, out: WEST, holds: v.ivy.holds, sill: v.belfry.sill('west', 0), depth: BELFRY.wall, wide: true });
     const a = v.belfry.sill('west', 0.05), b = v.belfry.sill('west', -BELFRY.wall - 0.08);
     this.upDecks = [{ x0: a.x, z0: a.z, x1: b.x, z1: b.z, halfWidth: BELFRY.arch.width / 2 - 0.06, height: BELFRY.sill }, ...v.belfry.decks];
+    v.dark.relief = 1;
+    v.dark.round = 0;
+    Object.assign(v.dark.clearing, { x: TOWER.x, z: TOWER.z, radius: 0 });
   }
 
   /** She has reached the tower's foot, the cat sitting on the churchyard's railings below the tower's south face. */
@@ -188,8 +199,12 @@ export class ChurchArrival {
     v.kittens.tumble();
     this.catStarted = true;
     dark.front = DARK_END + k.fog.past;
-    dark.level = k.fog.sea;
+    dark.level = this.closeLevel = this.dipFloor = k.fog.sea;
+    dark.relief = k.fog.still;
+    dark.round = 1;
+    dark.clearing.radius = 0;
     this.since = 1e3;
+    this.closeFrom = this.since - k.fog.roundFor;
     this.hidePlane();
     const stand = this.standAt();
     c.standUp();
@@ -208,9 +223,12 @@ export class ChurchArrival {
     const k = tuning.drowned.church;
     const v = this.cast.village!;
     this.skipToBelfry();
+    this.lost = false;
     this.rings = this.answered = k.rings;
     this.home = this.homeWant = HOME_LENGTH;
     v.dark.level = k.fog.drawn;
+    v.dark.relief = 1;
+    v.dark.round = 0;
     cat.place(this.sillAt(SEE_OFF), this.outward2(), { pose: 'sit', floor: () => BELFRY.sill });
     cat.look(this.head);
     const kitten = v.kittens.cats[FOUND];
@@ -427,7 +445,7 @@ export class ChurchArrival {
   }
 
   /**
-   * Each ring rolls out over the fog's top and pushes it down a step, and out in the fog the boat's lantern answers,
+   * Each ring rolls out over the fog's top and pushes it back round the tower, and out in the fog the boat's lantern answers,
    * a stretch nearer than the last time.
    */
   private rang(strength: number): void {
@@ -437,7 +455,7 @@ export class ChurchArrival {
     v.bellWaves.emit(strength);
     if (this.step !== 'ring' || this.rings >= k.rings) return;
     this.rings++;
-    this.sinkFrom = v.dark.level;
+    this.clearFrom = v.dark.clearing.radius;
     this.sinkAt = this.since;
     this.later(k.answerAfter, () => {
       this.answeredAt = this.since;
@@ -456,6 +474,7 @@ export class ChurchArrival {
     this.to('down');
     c.kneeling = 0;
     c.lookAt = null;
+    this.downAt = this.since;
     const stand = this.standInOpening();
     c.walkTo(stand.x, stand.z, false, () => {
       c.stop();
@@ -466,6 +485,7 @@ export class ChurchArrival {
         c.walkTo(NAVE_NORTH.x0, NAVE_NORTH.z0, false, () => c.walkTo(NAVE_NORTH.x1, NAVE_NORTH.z1, false, () => c.stop(), 0.12), 0.15);
       }));
     }, 0.06);
+    this.lost = false;
     boat.towed = false;
     boat.coastTo = null;
     boat.mooring = null;
@@ -620,6 +640,9 @@ export class ChurchArrival {
   private boatHome(dt: number): void {
     const { boat } = this.cast;
     const k = tuning.drowned.church;
+    const shown = this.firstAnswer > -Infinity ? THREE.MathUtils.smoothstep(this.since - this.firstAnswer, 0, 1.5) : 0;
+    /** Lost deep in the fog its lantern is not seen until it answers the bell. */
+    if (this.lost) boat.lanternHidden = 1 - shown;
     if (this.step === 'off' || this.step === 'foot' || this.step === 'climb' || this.step === 'nest' || this.step === 'sea') {
       this.glow.show(this.homeAt, 1, 0);
       return;
@@ -636,39 +659,60 @@ export class ChurchArrival {
     if (this.sailing) this.sail(dt);
     const lantern = atmo.uniforms.uLantern.value;
     this.homeAt.set(lantern.x, lantern.y, lantern.z);
-    const level = this.cast.village!.dark.level;
-    const under = THREE.MathUtils.smoothstep(level - lantern.y, -0.6, 1.4);
+    const under = THREE.MathUtils.smoothstep(this.cast.village!.dark.topAt(lantern.x, lantern.z) - lantern.y, -0.6, 1.4);
     const since = this.since - this.answeredAt;
     const swell = since >= 0 ? Math.exp(-since / k.answerGlow) * THREE.MathUtils.smoothstep(since, 0, 0.5) : 0;
-    const shown = this.firstAnswer > -Infinity ? THREE.MathUtils.smoothstep(this.since - this.firstAnswer, 0, 1.5) : 0;
     const far = this.camera ? this.camera.position.distanceTo(this.homeAt) : 30;
     this.glow.show(this.homeAt, k.glowSize * THREE.MathUtils.clamp(far / 30, 0.4, 2), (shown * k.glow + k.glowSwell * swell) * under);
   }
 
   /**
-   * The fog: while she is low on the ivy it waits a little back along the nave; as she climbs it comes on, reaching
-   * the tower as she reaches the sill, and on round the tower until it has stopped well past it, its top just under the
-   * sills. Each ring pushes it down a step until it lies on the water. Once she is aboard it closes round and darkens
-   * into the storm's night.
+   * The fog: while she stands at the tower's foot it waits a little back along the nave. As she climbs it closes round
+   * the tower and runs on over the village, rising and stilling into a white sea just under the sills, with only the
+   * tower and the lighthouse standing out of it; round the tower it rises beneath her, never over her feet, and once she
+   * is in it rises the rest of the way. Each ring pushes it back round the tower to lie on the water, further each time;
+   * once the sail is hers it settles to the water all round. Once she is aboard it closes round and darkens into the
+   * storm's night.
    */
   private fog(dt: number): void {
     const k = tuning.drowned.church.fog;
     const dark = this.cast.village!.dark;
     const c = this.cast.child;
-    if (this.step === 'foot' || this.step === 'climb' || this.step === 'nest' || this.step === 'sea') {
-      const up = THREE.MathUtils.smoothstep(c.position.y, IVY_FOOT.y + 0.5, BELFRY.sill);
-      const want = this.step === 'foot' || this.step === 'climb' ? DARK_END - THREE.MathUtils.lerp(k.behind, 0, up) : DARK_END + k.past;
-      const pull = THREE.MathUtils.clamp((want - dark.front) * k.pull, 0, k.fastest);
-      dark.front = Math.min(dark.front + pull * dt, DARK_END + k.past);
-      dark.level += (k.sea - dark.level) * (1 - Math.exp(-dt * 0.25));
+    const lerp = THREE.MathUtils.lerp;
+    if (this.step === 'foot') {
+      dark.front = Math.min(dark.front + THREE.MathUtils.clamp((DARK_END - k.behind - dark.front) * k.pull, 0, k.spreadFrom) * dt, DARK_END - k.behind);
+      return;
+    }
+    if (this.step === 'climb' || this.step === 'nest' || this.step === 'sea') {
+      if (this.closeFrom < 0) {
+        this.closeFrom = this.since;
+        this.closeLevel = dark.level;
+        this.dipFloor = 0;
+      }
+      const fastest = Math.min(k.spreadMost, k.spreadFrom + k.spreadRate * Math.max(0, dark.front - DARK_END));
+      dark.front = Math.min(dark.front + THREE.MathUtils.clamp((DARK_END + k.past - dark.front) * k.pull, 0, fastest) * dt, DARK_END + k.past);
+      const closing = THREE.MathUtils.smoothstep(this.since - this.closeFrom, 0, k.roundFor);
+      dark.round = closing;
+      dark.relief = lerp(1, k.still, closing);
+      dark.level = lerp(this.closeLevel, k.sea, closing);
+      const lens = this.camera ? this.camera.position.y - k.underLens : Infinity;
+      const under = this.step === 'climb' ? Math.min(c.position.y - k.underHer, lens) / dark.heaped : dark.level;
+      this.dipFloor = Math.min(this.step === 'climb' ? Math.max(this.dipFloor, under) : this.dipFloor + k.dipRise * dt, under);
+      dark.clearing.floor = this.dipFloor;
+      dark.clearing.radius = this.dipFloor < dark.level ? k.dip : 0;
       return;
     }
     if (this.step === 'ring' || this.step === 'down' || this.step === 'wait' || this.step === 'board') {
-      const want = THREE.MathUtils.lerp(k.sea, k.drawn, this.rings / tuning.drowned.church.rings);
-      dark.level = THREE.MathUtils.lerp(this.sinkFrom || dark.level, want, THREE.MathUtils.smootherstep(this.since - this.sinkAt, 0, k.sinkFor));
+      const settle = THREE.MathUtils.smoothstep(this.since - this.downAt, 0, k.settleFor);
+      dark.clearing.floor = lerp(k.cleared, k.drawn, settle);
+      dark.clearing.radius = lerp(this.clearFrom, k.clearAt[this.rings], THREE.MathUtils.smootherstep(this.since - this.sinkAt, 0, k.sinkFor));
+      dark.level = lerp(k.sea, k.drawn, settle);
+      dark.relief = lerp(k.still, 1, settle);
+      dark.round = 1 - settle;
       return;
     }
     if (this.step === 'aboard') {
+      dark.clearing.radius = 0;
       /** Evenly: the night it brings already eases in and out of itself. */
       this.close = THREE.MathUtils.clamp((this.aboardFor - k.closeAfter) / k.closeFor, 0, 1);
       dark.close = this.close;
@@ -679,6 +723,7 @@ export class ChurchArrival {
   /** Away in the fog off the tower's east side, where it will first answer the bell from. */
   private placeBoatAway(): void {
     const { boat } = this.cast;
+    this.lost = true;
     boat.coastTo = null;
     boat.mooring = null;
     boat.steerFor = null;
