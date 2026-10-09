@@ -21,8 +21,8 @@ export type CatStep = 'stranded' | 'seen' | 'easing' | 'waiting' | 'coming' | 'f
 /** Where the cat sits on the boat: on the foredeck, as high and dry as it can get, facing her. */
 const FOREDECK = new THREE.Vector3(0, 0.668, 1.85);
 /**
- * In the boat's frame: on the mast thwart beside the mast, where it comes down to her, high enough to be seen over the
- * gunwale and to push its head up into her hand (its side, across, is the side the lens is on); and where she kneels to it.
+ * In the boat's frame: on the mast thwart beside the mast, on the side the lens is on, where it comes down to her and
+ * sits, high enough to be seen over the gunwale; and where she kneels to it.
  */
 const ON_THWART = new THREE.Vector3(0.22, SEAT_Y + 0.045, MAST_Z);
 export const KNEEL_AT = new THREE.Vector3(0, FLOOR_Y + 0.02, 0.02);
@@ -106,7 +106,6 @@ export class StrandedCat {
   private kneelFrom = -1;
   kneel = 0;
   private readonly hand = new THREE.Vector3();
-  private readonly face = new THREE.Vector3();
   private turned = false;
   private gathered = false;
 
@@ -498,7 +497,6 @@ export class StrandedCat {
     const down = kneeling >= k.kneelAfter && kneeling < k.kneelAfter + k.kneelFor;
     this.kneel += ((down ? 1 : 0) - this.kneel) * (1 - Math.exp(-dt * k.kneelRate));
     child.kneeling = down ? 1 : 0;
-    cat.eye(this.face);
     if (down && kneeling >= k.kneelAfter + k.reachAfter && !this.turned) {
       if (!this.gathered) {
         this.gathered = true;
@@ -613,7 +611,7 @@ export class StrandedCat {
         return this.eye;
       }
       case 'ridge': {
-        /** Up, she looks back down at the boat as the fog comes over it, then at the cat, over the roofs to the church it is making for, and back. */
+        /** Up, she looks back down at the boat as the fog comes over it, then at the cat and the church it makes for. */
         const k = tuning.drowned.cat;
         if (this.since < k.lostFor) return this.lens.copy(this.cast.boat.position).setY(this.cast.boat.position.y + 0.8);
         const beat = (this.since - k.lostFor - 1.6) % 7;
