@@ -465,7 +465,7 @@ export class LittleBoats {
       if (Math.abs(t.s - this.progress) < k.fleetReach) push = Math.max(push, effort);
     }
     this.idle = push > 0.1 ? 0 : this.idle + dt;
-    if (this.launched) {
+    if (this.launched && dt > 0) {
       const hero = this.toys[0];
       this.heldLimit = limit >= this.heldLimit ? limit
         : Math.max(limit, Math.min(this.heldLimit, hero.s + hero.speed * k.followEase));
@@ -551,7 +551,7 @@ export class LittleBoats {
         }
       }
       for (const t of this.fleet) if (t.previousS <= gate) t.s = Math.min(t.s, Math.max(t.previousS, gate));
-      for (const t of this.fleet) t.speed = dt > 0 ? Math.max(0, (t.s - t.previousS) / dt) : 0;
+      for (const t of this.fleet) t.speed = Math.max(0, (t.s - t.previousS) / dt);
       this.progress = Math.min(L.length, hero.s);
       if (this.progress >= L.length) this.departing = this.toys.some((t) => t.s < k.offshoreEnd);
     }
