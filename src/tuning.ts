@@ -2128,7 +2128,7 @@ export const tuning = {
        * further back, as it lingers after a piece; the nearest of it, once the look has glanced toward it (below), must
        * stand within `fogInFrame` of the frame's edge (1), and each further share of the frame costs `fogCost`.
        */
-      fogClear: 3, fogNearCost: 400, steepFrom: 0.3, steepCost: 300, fogReach: 40, fogDeep: 8, fogLow: 2, fogSlack: 3, fogInFrame: 0.8, fogCost: 120,
+      fogClear: 3, fogNearCost: 400, steepFrom: 0.3, steepCost: 300, fogReach: 40, fogDeep: 8, fogLow: 2, fogSlack: 3, fogInFrame: 0.72, fogCost: 120,
       /**
        * Walking, the look turns toward the fog's front until the nearest of it stands within `fogEdge` of the frame's
        * edge (1), never so far she stands further out than `herEdge`, nor more than `glanceMost` radians, easing at
