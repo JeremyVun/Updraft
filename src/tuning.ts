@@ -2067,11 +2067,14 @@ export const tuning = {
       /** Seconds after it lands aboard that it shakes, starts to shiver (and how hard), and comes down to her. */
       shakeAt: 0.35, shiverAt: 1.4, shiver: 0.7, downAt: 2.1,
       /**
-       * Once it sits at her feet: seconds before she gets down onto her knees, how long she stays down, when her hand
-       * goes out; how fast she goes down and back up (per second); how its shivering eases under her hand (per second,
-       * and down to); and seconds after it is back at the bow before the boat goes on.
+       * Once it sits on the thwart in front of her: seconds before she gets down onto her knees, how long she stays
+       * down, when her hands go out and it comes up into her arms; how fast she goes down and back up (per second); how
+       * its shivering eases in her arms (per second, and down to); and seconds after it is back at the bow before the
+       * boat goes on. Her mittens go this far either side of it and this high up it (shares of its size), and it pushes
+       * its head this far under her face (metres).
        */
-      kneelAfter: 0.2, kneelFor: 3.8, reachAfter: 0.8, kneelRate: 3, calming: 0.3, calmed: 0.12, goOnAfter: 0.4,
+      kneelAfter: 0.2, kneelFor: 4.4, reachAfter: 0.8, kneelRate: 3, calming: 0.3, calmed: 0.12, goOnAfter: 0.4,
+      holdAcross: 0.07, holdUp: 0.07, chinBelow: 0.1,
     },
   },
   drownedCamera: {
@@ -2279,12 +2282,15 @@ export const tuning = {
     uprightCatAlong: -1.35, uprightCatSide: 4, uprightCatEye: 6.2, uprightCatLook: 0.95, uprightCatAim: 0.8, uprightCatLift: 0.6,
     uprightCatZoom: 1.4,
     /**
-     * The cat brought aboard: once the tub is this near the boat the lens comes round toward the bow, its bearing from
-     * ahead (radians), how far off (upright, nearer) and how high over where it looks, which is this share of the way
-     * from her to the cat and this high over her seat; the lens it takes, and its pace.
+     * The cat brought aboard: once the tub is this near the boat the lens comes in beside her: its bearing from ahead
+     * toward the side it watched the tub from (radians), how far from where she kneels and how high over the hull, and
+     * its bearing and height once she is down on her knees with the cat in her arms, the least it keeps over the water;
+     * it looks this share of the way from her face to the cat's eye, on this lens, at this pace. Upright, its own.
      */
-    rescueFrom: 2.5, rescueBearing: 1.3, rescueDistance: 5.2, uprightRescueDistance: 4.8, rescueHeight: 2.6, rescueAlong: 0.5,
-    rescueAim: 0.45, rescueZoom: 1.1, uprightRescueZoom: 0.95, rescuePace: 0.35,
+    rescueFrom: 2.5, rescueBearing: 1.35, rescueDistance: 4.8, rescueEye: 1.85, rescueKneelBearing: 1.05, rescueKneelEye: 1.3,
+    rescueClear: 0.8, rescueAlong: 0.4,
+    rescueZoom: 1.5, rescuePace: 0.35,
+    uprightRescueBearing: 0.75, uprightRescueDistance: 4.0, uprightRescueEye: 1.9, uprightRescueZoom: 0.95,
   },
   /** The two crossings of the drowned village's run over the roofs: the dead tree pushed over, the swing pumped. */
   crossings: {

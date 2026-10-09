@@ -13,7 +13,7 @@ import { tuning } from '../tuning';
 import { roundedWaypoint } from '../traveller/navigation';
 import type { Cast, Chapter } from './cast';
 import { cue } from './cues';
-import { StrandedCat } from './drowned-cat';
+import { KNEEL_AT, StrandedCat } from './drowned-cat';
 import { RoofRun, lookAwayFrom } from './drowned-run';
 import { ChurchArrival } from './drowned-church';
 
@@ -170,8 +170,9 @@ export class DrownedChapter implements Chapter {
   private readonly lensWas = new THREE.Vector3();
   /** How fast the fog's front is coming on while the boat lies stuck, m/s. */
   private fogSpeed = 0;
-  /** The lens has come in close for the cat's coming aboard. */
+  /** The lens has come in close for the cat's coming aboard, on this side of the boat (+1 its port). */
   private closeIn = false;
+  private rescueSide = 1;
   /** The player's sweeps on the stuck boat's sail: how full it was last frame, and seconds since it last strained. */
   private strained = 0;
   private strainAge = 10;
@@ -817,7 +818,11 @@ export class DrownedChapter implements Chapter {
     if (this.beat === 'enter' || this.beat === 'drift') {
       const step = this.cat.step, tub = this.cat.tubTop;
       if (!this.closeIn && (step === 'boarding' || step === 'aboard'
-        || (step === 'ferried' && Math.hypot(tub.x - boat.position.x, tub.z - boat.position.z) < tuning.drownedCamera.rescueFrom))) this.closeIn = true;
+        || (step === 'ferried' && Math.hypot(tub.x - boat.position.x, tub.z - boat.position.z) < tuning.drownedCamera.rescueFrom))) {
+        this.closeIn = true;
+        /** The side the lens watched the tub from, so it only comes in toward the bow. */
+        this.rescueSide = (this.lensAt.x - boat.position.x) * Math.cos(boat.yaw) - (this.lensAt.z - boat.position.z) * Math.sin(boat.yaw) < 0 ? -1 : 1;
+      }
       if (this.cat.rescuing || this.closeIn) this.rescueFrame();
       else {
         this.villageFrame(fx, fz);
@@ -970,31 +975,33 @@ export class DrownedChapter implements Chapter {
   }
 
   /**
-   * The rescue, close: nearly abeam on the side away from the sail, which hangs slack and swings, committed as the
-   * sailing view's side is; far enough aft of the mast that it stands clear of her face, a little over her head so the
-   * boards show past the gunwale, with a longer lens: the cat's leap aboard, its shiver, and it pressing against her
-   * shins as she kneels to it, her face and the cat one frame.
+   * The rescue, close and low off the bow on the side the tub came in on: forward of the mast, so it stands clear of
+   * her face and the slack sail hangs behind her, and just high enough over the gunwale that the boards at her knees
+   * show. The cat's leap onto the foredeck near the lens, its shiver, and it pressing against her as she kneels and
+   * puts out her hand, her face over it: the one exchange that shows it trusts her.
    */
   private rescueFrame(): void {
-    const k = tuning.drownedCamera, s = this.shot, seat = this.cast.child.position;
-    const wide = THREE.MathUtils.smoothstep(this.aspect, 0.7, 1.3);
-    const fx = Math.sin(this.heading), fz = Math.cos(this.heading);
-    /**
-     * Away from the sail, which hangs over the hull's +x while `sailSide` (minus `quarter`) is +1: the side the tub's
-     * frame watched from, so the lens only comes round her toward the bow.
-     */
-    const px = Math.cos(this.heading) * this.quarter, pz = -Math.sin(this.heading) * this.quarter;
-    const b = k.rescueBearing;
-    s.from = this.from.set(fx * Math.cos(b) + px * Math.sin(b), 0, fz * Math.cos(b) + pz * Math.sin(b)).normalize();
-    s.target.copy(seat).lerp(this.cat.eye, k.rescueAlong).setY(seat.y + k.rescueAim);
-    s.distance = THREE.MathUtils.lerp(k.uprightRescueDistance, k.rescueDistance, wide);
-    s.height = k.rescueHeight;
-    s.zoom = THREE.MathUtils.lerp(k.uprightRescueZoom, k.rescueZoom, wide);
+    const k = tuning.drownedCamera, s = this.shot, boat = this.cast.boat;
+    const wide = THREE.MathUtils.smoothstep(this.aspect, 0.7, 1.3), lerp = THREE.MathUtils.lerp;
+    const fx = Math.sin(boat.yaw), fz = Math.cos(boat.yaw);
+    const px = Math.cos(boat.yaw) * this.rescueSide, pz = -Math.sin(boat.yaw) * this.rescueSide;
+    const down = THREE.MathUtils.smootherstep(this.cat.kneel, 0, 1);
+    const b = lerp(lerp(k.uprightRescueBearing, k.rescueBearing, wide), k.rescueKneelBearing, down);
+    const reach = lerp(k.uprightRescueDistance, k.rescueDistance, wide);
+    boat.group.updateMatrixWorld(true);
+    const at = this.anchor.copy(KNEEL_AT).applyMatrix4(boat.group.matrixWorld);
+    const high = lerp(lerp(k.uprightRescueEye, k.rescueEye, wide), k.rescueKneelEye, down);
+    s.eye = this.catEye.set(at.x + (fx * Math.cos(b) + px * Math.sin(b)) * reach, boat.position.y + high,
+      at.z + (fz * Math.cos(b) + pz * Math.sin(b)) * reach);
+    s.orbit = true;
+    s.clearance = k.rescueClear;
+    s.target.copy(this.cat.head).lerp(this.cat.eye, k.rescueAlong);
+    s.zoom = lerp(k.uprightRescueZoom, k.rescueZoom, wide);
     s.obstacles = undefined;
     const c = this.catSubjects;
-    c.primary.copy(seat).setY(seat.y + 0.9);
+    c.primary.copy(this.cat.head);
     c.secondary.copy(this.cat.eye);
-    c.tertiary = this.catHead.copy(this.cast.child.position).setY(this.cast.child.position.y + 1.25);
+    c.tertiary = undefined;
     c.points = undefined;
     s.subjects = c;
     s.smoothFit = 1.5;
