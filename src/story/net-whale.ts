@@ -96,8 +96,12 @@ const COIL_AT = new THREE.Vector3(0.42, -0.17, 0.45);
 const REACH_FROM = new THREE.Vector2(0.85, -0.9);
 const REACH_TO = new THREE.Vector2(2.1, 1.4);
 const REACH_HANDS = { out: 1.1, low: 0.45, back: -0.1, ahead: 0.35 };
-/** Seconds her mittens take to go down to the cork, and to bring it up to the rail once they have it. */
+/**
+ * Seconds her mittens take to go down to the cork, and to bring it up to the rail once they have it; and after how
+ * long leaning out she takes the line wherever the cork has come to, so nothing it snags on keeps her reaching.
+ */
 const REACH_FOR = 0.7;
+const REACH_GIVE = 4;
 /**
  * How far out from the boat's middle, its heel left out, the cork lies once it has come in against the planking beside
  * her, bobbing (m), and how far beyond the stretch of side her mittens go down over it may lie along the boat.
@@ -115,12 +119,14 @@ const FIN_STEPS = 9;
 /**
  * The cygnet's way into the water from the satchel on its own side and round the stern to port, in the boat's own
  * frame (x to port, z forward); how near each waypoint it comes before making for the next, and how near the loop's
- * end it comes to take it (m).
+ * end it comes to take it (m). Each leg of a swim is a few seconds; after `SWIM_GIVE` it goes on from wherever it is,
+ * so nothing in the water keeps it from the loop or from her.
  */
 const ROUND_STERN = [new THREE.Vector3(-1.75, 0, -0.9), new THREE.Vector3(-1.3, 0, -2.5), new THREE.Vector3(1.3, 0, -2.5),
   new THREE.Vector3(2.1, 0, -0.8)];
 const WAY_NEAR = 0.8;
 const TAKES_AT = 0.3;
+const SWIM_GIVE = 12;
 /** Seconds it holds on as the loop comes free, backing off this far from it (m), and turning for the boat after. */
 const PULL_FOR = 1.2;
 const PULL_BACK = 0.8;
@@ -1500,8 +1506,11 @@ export class NetWhale {
       // Its second swim is a sure one: it sits high on the water and its down stays dry enough to show grey.
       cygnet.swimTo(aim, 0.6, 0.3);
       const gap = Math.hypot(aim.x - cygnet.position.x, aim.z - cygnet.position.z);
-      if (!last && gap < WAY_NEAR) this.wayPoint++;
-      else if (last && gap < TAKES_AT) this.birdTo('holding');
+      const given = this.birdT > SWIM_GIVE;
+      if (!last && (gap < WAY_NEAR || given)) {
+        this.wayPoint++;
+        this.birdT = 0;
+      } else if (last && (gap < TAKES_AT || given)) this.birdTo('holding');
     } else if (this.bird === 'holding') {
       net.holder = cygnet;
       net.fallsTo = this.falls.copy(tip).lerp(this.station, 0.55);
@@ -1527,7 +1536,7 @@ export class NetWhale {
     } else if (this.bird === 'back') {
       const water = this.besideWater(this.a);
       cygnet.swimTo(water);
-      if (Math.hypot(water.x - cygnet.position.x, water.z - cygnet.position.z) < 0.45) {
+      if (Math.hypot(water.x - cygnet.position.x, water.z - cygnet.position.z) < 0.45 || this.birdT > SWIM_GIVE) {
         net.sound('swimmer-out', cygnet.position);
         cygnet.bind(0.15);
         this.birdTo('side');
@@ -1659,7 +1668,7 @@ export class NetWhale {
       }
     } else if (this.haul === 'reaching') {
       this.drawCork();
-      if ((this.haulT > REACH_FOR && this.underHands()) || this.haulT > K.reachGive) {
+      if ((this.haulT > REACH_FOR && this.underHands()) || this.haulT > REACH_GIVE) {
         for (const h of [0, 1] as const) boat.group.worldToLocal(child.mitten(h, this.hand[h]));
         this.grip.by = child;
         this.grip.out = this.net.lineLength;
