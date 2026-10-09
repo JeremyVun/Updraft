@@ -7,8 +7,8 @@ import { mulberry32 } from './noise';
 /**
  * Where the ivy grows: on a wall's face, from where she starts at its foot (on a ridge) up to the middle of the sill
  * she climbs over, both on the face's plane; the face's outward normal; how high the roof under the face stands
- * at a distance across it from the foot (to her right positive), so the old growth comes up out of the slates; and
- * how far the mat spreads either side of her way.
+ * at a distance across it from the foot (to her right positive), so the old growth comes up out of the slates; how
+ * far the mat spreads either side of her way; and half the width of the opening over the sill, which it leaves clear.
  */
 export interface IvySpot {
   from: THREE.Vector3;
@@ -16,6 +16,7 @@ export interface IvySpot {
   out: THREE.Vector3;
   roof?: (across: number) => number;
   spread?: number;
+  opening?: number;
 }
 
 /** A place on the ivy she climbs by: where a mitten closes round the stem, and where a boot's ankle sits with its toe in the fork. */
@@ -213,12 +214,13 @@ export class IvyFace {
     }
 
     const spread = spot.spread ?? 1.5;
+    const opening = spot.opening ?? 0.42;
     const roof = spot.roof ?? (() => 0);
     for (let i = 0; i < 7; i++) {
       const across = (i / 6 - 0.5) * 2 * spread * 1.05 + (rand() - 0.5) * 0.3;
       if (Math.abs(across - line(0)) < 0.45) continue;
       const base = roof(across) - spot.from.y - 0.2;
-      const top = THREE.MathUtils.lerp(H * 0.55, H + 0.3, rand());
+      const top = Math.min(THREE.MathUtils.lerp(H * 0.55, H + 0.3, rand()), Math.abs(across - this.drift) < opening ? H - 0.3 : Infinity);
       const way: THREE.Vector3[] = [];
       let x = across;
       for (let y = base; y < top; y += 0.35) {
@@ -249,7 +251,7 @@ export class IvyFace {
     const grips = [...this.holds[0], ...this.holds[1]].map((h) => this.toFace(h.hand.clone()));
     const clear = (x: number, y: number) => grips.every((g) => Math.hypot(g.x - x, g.y - y) > 0.13)
       && crotches.every((c) => Math.hypot(c.x - x, c.y - y + 0.05) > 0.14);
-    const light = { x: this.drift, half: 0.42 };
+    const light = { x: this.drift, half: opening };
     let placed = 0;
     for (let tries = 0; tries < 16000 && placed < 1150; tries++) {
       const x = line(0) + (rand() * 2 - 1) * (spread + 0.2);
@@ -257,7 +259,7 @@ export class IvyFace {
       const y = base - 0.1 + rand() * (H + 0.55 - base);
       const reach = spread * (0.75 + 0.35 * Math.sin(y * 0.9 + 1.2)) * (0.85 + 0.3 * THREE.MathUtils.smoothstep(y, 0, H * 0.4));
       if (Math.abs(x - line(y)) > reach) continue;
-      if (y > H - 0.08 && Math.abs(x - light.x) < light.half) continue;
+      if (y > H - 0.2 && Math.abs(x - light.x) < light.half) continue;
       const d = near(x, y);
       const keep = (1 - THREE.MathUtils.smoothstep(d, 0.12, 0.55)) * (0.55 + 0.45 * Math.sin(x * 3.1 + y * 2.3) ** 2);
       if (rand() > keep || !clear(x, y)) continue;

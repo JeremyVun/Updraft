@@ -48,8 +48,11 @@ export const DROWNED_CHANNEL: THREE.Vector2[] = [
   new THREE.Vector2(-4, -1650),
 ];
 
+/** The spire's foot over the belfry's cornice, and how tall it rises from there. */
+const SPIRE_FOOT = BELFRY.top + 0.35;
+const SPIRE_TALL = 10.6;
 /** The church spire: the one vertical in the village, its tower at the east end of the nave, near the lighthouse. */
-export const SPIRE = new THREE.Vector3(TOWER.x, 21, TOWER.z);
+export const SPIRE = new THREE.Vector3(TOWER.x, SPIRE_FOOT + SPIRE_TALL + 0.35, TOWER.z);
 /** The boat follows the harbour light, then passes the rock it stands on. */
 export const LIGHTHOUSE = new THREE.Vector3(65, 0, -1580);
 /** The village comes alive within this far (along the journey) of its middle: the leaves always started here. */
@@ -618,8 +621,8 @@ function towerClock(into: Merged, f: THREE.Matrix4, at: number): void {
  */
 function buildSpire(into: Merged, m: THREE.Matrix4): void {
   const rings = 10;
-  const base = 11.95, tall = 8.7;
-  const radiusAt = (t: number) => 2.62 * Math.pow(1 - t, 1.14) + 0.32 * Math.pow(1 - t, 7);
+  const base = SPIRE_FOOT, tall = SPIRE_TALL, wide = TOWER.half / 2.4;
+  const radiusAt = (t: number) => wide * (2.62 * Math.pow(1 - t, 1.14) + 0.32 * Math.pow(1 - t, 7));
   const turnAt = (t: number) => Math.PI / 8 + 0.42 * t * t;
   const pos: number[] = [];
   const idx: number[] = [];
@@ -669,25 +672,27 @@ function buildChurch(into: Merged, rand: Rng): void {
   /** The village's later roofs and trees take the chances they were tuned with. */
   rand();
   const m = new THREE.Matrix4().makeTranslation(SPIRE.x, 0, SPIRE.z);
+  const h = TOWER.half;
   const base = -4.7, tall = BELFRY_FOOT - base;
-  into.add(new THREE.BoxGeometry(4.8, tall, 4.8).translate(0, base + tall / 2, 0), CHURCH_WASH, PLAIN, m);
-  into.add(new THREE.BoxGeometry(5.2, 0.26, 5.2).translate(0, 5.4, 0), CHURCH_DRESSING, MASONRY, m);
+  into.add(new THREE.BoxGeometry(2 * h, tall, 2 * h).translate(0, base + tall / 2, 0), CHURCH_WASH, PLAIN, m);
+  into.add(new THREE.BoxGeometry(2 * h + 0.4, 0.26, 2 * h + 0.4).translate(0, 5.4, 0), CHURCH_DRESSING, MASONRY, m);
   for (const sx of [-1, 1]) {
     for (const sz of [-1, 1]) {
-      into.add(new THREE.BoxGeometry(0.7, tall, 0.7).translate(sx * 2.25, base + tall / 2, sz * 2.25), CHURCH_WASH, PLAIN, m);
+      into.add(new THREE.BoxGeometry(0.7, tall, 0.7).translate(sx * (h - 0.15), base + tall / 2, sz * (h - 0.15)), CHURCH_WASH, PLAIN, m);
       /** Quoins up the corner, long and short in turn, a little proud and a little uneven, on into the belfry's. */
       for (let i = 0, y = 0.2; y < BELFRY_FOOT - 0.45; i++, y += 0.62) {
         const long = i % 2 === 0;
         const wx = long ? 1.0 : 0.62, wz = long ? 0.62 : 1.0;
-        into.add(new THREE.BoxGeometry(wx, 0.5, wz).translate(sx * (2.63 - wx / 2), y + 0.25, sz * (2.63 - wz / 2)), CHURCH_QUOIN, MASONRY, m);
+        into.add(new THREE.BoxGeometry(wx, 0.5, wz).translate(sx * (h + 0.23 - wx / 2), y + 0.25, sz * (h + 0.23 - wz / 2)), CHURCH_QUOIN, MASONRY, m);
       }
     }
   }
   /** A corbel table under the belfry's cornice, chunky blocks along each face. */
-  for (let k = -3; k <= 3; k++) {
+  const corbels = Math.floor((h - 0.5) / 0.62);
+  for (let k = -corbels; k <= corbels; k++) {
     for (const side of [-1, 1]) {
-      into.add(new THREE.BoxGeometry(0.28, 0.3, 0.24).translate(k * 0.62, 11.43, side * 2.48), CHURCH_DRESSING, MASONRY, m);
-      into.add(new THREE.BoxGeometry(0.24, 0.3, 0.28).translate(side * 2.48, 11.43, k * 0.62), CHURCH_DRESSING, MASONRY, m);
+      into.add(new THREE.BoxGeometry(0.28, 0.3, 0.24).translate(k * 0.62, BELFRY.top - 0.17, side * (h + 0.08)), CHURCH_DRESSING, MASONRY, m);
+      into.add(new THREE.BoxGeometry(0.24, 0.3, 0.28).translate(side * (h + 0.08), BELFRY.top - 0.17, k * 0.62), CHURCH_DRESSING, MASONRY, m);
     }
   }
   /** North and east the clock stands at different hours. */
@@ -1526,7 +1531,7 @@ export class DrownedVillage {
     this.sheet = new WashSheet(SHEET_SITE.spot);
     this.cameraObstacles.push(millBounds());
     this.tub = new WashTub(wind);
-    this.ivy = new IvyFace({ from: IVY_FOOT, to: IVY_SILL, out: faceOut('west'), spread: 1.45,
+    this.ivy = new IvyFace({ from: IVY_FOOT, to: IVY_SILL, out: faceOut('west'), spread: 1.45, opening: BELFRY.arch.width / 2 + 0.2,
       roof: (across) => roofUnder(NAVE, IVY_FOOT.x - 0.05, IVY_FOOT.z + across) ?? eaveAt(NAVE) });
     this.bellWaves = new BellWaves(this.belfry.centre, tuning.drowned.fog.level, BELFRY.half + 0.5);
     this.kittens.lay(this.belfry.nest());
