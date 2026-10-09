@@ -895,23 +895,55 @@ The sequence:
     so the final crossing keeps its shape and length. They move out along the sea until the mirror's landing lies
     straight on past the whale on the boat's heading at rest. With the islands where they were, that line ran past
     the sleeping island, and turning the encounter instead would have changed every hold's relation to the sun.
-    The other islands keep their places, and saves migrate as in earlier revisions.
+    The other islands keep their places, and saves migrate as in earlier revisions. As built (N5a): the whale moves
+    out too, off the line the boat sails from the sleeping island (`WHALE_MOVE`, 108 m west and 79 m south), and the
+    mirror and home move 236 m west and 192 m south (`PAST_THE_WHALE`). The mirror's jetty runs square to the
+    heading the boat rests on (both are fixed: the jetty by the mirror's own layout, the heading by the sun), so the
+    boat sails straight on about 110 m over where the whale lay, curves about 84° to starboard at about 30 m radius,
+    and comes the last 30 m straight in alongside the jetty as before; it never turns to port. The jetty stands about 20° to
+    35° to starboard of the bow as it comes out of its mist, at the right of a landscape frame and out of a phone's
+    until the curve (the sky mirror's water, which comes with it, is all round them); the island lies at least 1.25 of its radii from every
+    part of the whale, so the mist over it never touches the whale.
   - From leaving the sleeping island until the nudge, nothing of the whale (its far back and flukes included) and
     nothing of the mirror's island is on screen in either orientation.
   - The mirror's island lies in its own isle mist (`ISLE_MISTS`, as `toSleeping` keeps the sleeping island) for the
-    whole of `toMirror` until the whale has dived, then comes out of it ahead.
+    whole of `toMirror` until the whale has dived, then comes out of it ahead. As built (N5a): `ISLE_MISTS.mirror`
+    covers everything seen across the inner 0.85 of its flat (`tuning.world.mirrorMist`), its jetties included, and
+    lifts once the whale has gone under, as the mirror's water starts to come (`mirrorArrival`).
   - A low morning mist lies on the sea. It thickens through the pod's play, so by the nudge the sea is seen only a
     couple of hundred metres round, while the sky and the low sun stay clear above it. It lifts as the whale dives.
+    As built (N5a, Claude's call): from the sea's own distance veil (the crossing's `haze` and `hazeFalloff`), not
+    `uMist`, whose thinning with height is keyed to the lower of the eye and the point, so with the lens low over the
+    water its blow and its back were misted alike, and whose fog grows from the boat outward and would have misted
+    the holds. The veil has a clear edge: by the nudge (`tuning.seaPassage.mist`, haze 1.064, its veil 1.3 times as
+    deep) nothing within about 70 m is touched and nothing past about 160 m shows; from 80 to 30 m short of the rest
+    it draws back to haze 0.985 (clear to about 130 m), so the holds and its far length keep their look; it lifts as
+    the whale dives. The whale's own haze silhouette (`uLost`) is no longer used: drawn over the veil, it showed the
+    whale as a darker shape however far off it was, which is what Jeremy saw.
   - The whale lies far enough off the line to be out of sight until the lead, and near enough that the lead runs
-    about 30 to 45 s at ordinary sailing.
+    about 30 to 45 s at ordinary sailing. As built (N5a): the pod turns the boat about 34° to starboard, 128 m out
+    from the rest (`tuning.seaPassage.leadFor`); the nudge comes 115 to 160 m out (the pod's play ends when it
+    does, so its nudge comes when it comes), and from it to rest takes 33 to 44 s in the pacing check's seven runs
+    and about 32 s with the latest nudge seen in play.
   - At rest, its lie relative to the boat and to the low sun is exactly as built, and so is the time of day (the
-    sun's bearing and height), so every hold carries over unchanged.
+    sun's bearing and height), so every hold carries over unchanged. As built (N5a): the boat comes in on the lead's
+    heading, steering for a point 12 m on along its line so the wind's leeway never sets it off it, and the dawn is
+    eased onto `tuning.seaPassage.restDusk` (1.224, the sun about 0.6° up, as `?chapter=whale` had it) at the rest
+    however long the way in, then on to the mirror's.
   - From the dive to the mooring at the mirror takes at most about 60 s at ordinary sailing, sailing on along the
-    heading it rested on, with only the gentle curve the landing's approach needs at the end.
+    heading it rested on, with only the gentle curve the landing's approach needs at the end. As built (N5a): about
+    185 m; from the boat being let go to the mooring 42 to 48 s, so about 55 to 60 s from the dive with N5c's dive of
+    about 9 s (63 to 70 s with the dive as it was, which lets the boat go 22 s in).
 - **The boat's pace.** It sails at least at its ordinary 4.5 m/s through the whole open sea; the only exceptions are
   the swim's own trim and the last few metres coming to rest. The player's gusts fill the sail as on any crossing, up
   to the cap the pod's play needs. It comes to rest beside the head without a creep: the last 20 m take about 8 s at
-  most (`Boat.speedLimit` eased to zero, never braked).
+  most (`Boat.speedLimit` eased to zero, never braked). As built (N5a): the pod's play is paced at ordinary sailing
+  (`leastSpeed` 4.5) and the boat is kept to that from the end of its play until the nudge, so the pod can come
+  alongside a gusting boat; where a whale waits the boat is never held back for a late pod (a boat that reaches it
+  first is led in all the same). Led in, and sailing on after, it makes no more than the pod's pace
+  (`tuning.netWhale.leadSpeed` 5.5). Coming in, its limit takes way off at 1.2 m/s² (`slowing`) until the hull's own
+  carry takes it the rest of the way: the last 20 m take 8.5 to 8.8 s to under 0.3 m/s (the carry alone needs about
+  7 s from 4.5 m/s, so this is close to the least there is), never losing way faster than 0.85 m/s².
 - **The pod leads, and the whale is found.** After the swim a dolphin nudges the planking (main's nudge, now asking)
   and the pod turns off the line ahead of the bow; the boat follows them into the mist. The whale comes in three
   stages, each a little later than the last:
@@ -919,6 +951,13 @@ The sequence:
   2. Then seen: its blow rising white above the mist, lit by the low sun.
   3. Then the long low shape forming out of the mist as an island that breathes (`k1`): a whale, dream-sized, lying
      still and worn out.
+  As built (N5a): it sighs 2 s after the nudge, about 150 m out and wholly hidden (for now the sleeper's sigh, faint at
+  that range: the foley's whale sounds fade out between 35 and 190 m; N5c gives it its moan), and goes on breathing
+  unseen every 10 s; once the boat is 95 m short of the rest and at least 6 s on (`seenAt`, `seenAfter`) a breath
+  comes for its blow, its far plume standing over the mist while its body is still about 85% covered; its shape is
+  half out of the mist 5 to 10 s later, about 55 m out. The view comes down and turns to it only over the last 70 to 20 m
+  (`riseFrom`, `riseNear`), once its shape has formed: turning at the nudge pushed the boat out of a phone's frame
+  toward a mist with nothing in it.
   Come to rest beside it with the nudge never landed, it counts as led all the same.
 - **The whale.** About 110 m nose to flukes as first built, shortened behind the flippers for the dive (see "The
   dive, a whale's"; the head end keeps its size), too big for the frame: the back recedes across and away into the haze and
