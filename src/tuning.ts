@@ -1422,12 +1422,13 @@ export const tuning = {
     /** The crown round its blowhole above the water at rest (m), and how far it lies rolled with its near side up (radians). */
     crown: 5.3, roll: 0.087,
     /**
-     * The boat coming to rest beside it, and sailing on once it has gone: never more than `leadSpeed` (m/s), the pod's
-     * own pace; coming in, its limit takes way off at `slowing` (m/s²) until the hull's own carry can take it the rest
+     * The boat coming to rest beside it, and sailing on once it has gone: led in, never more than `ledSpeed` (m/s),
+     * about ordinary sailing, so the lead takes about as long however hard the player blows; sailing on, never more
+     * than `leadSpeed`, the pod's own pace. Coming in, its limit takes way off at `slowing` (m/s²) until the hull's own carry can take it the rest
      * of the way, and is nothing `restShort` metres short of the rest (past it when negative), so it is never braked;
      * and how fast the limit climbs back (m/s²) once the whale is going under.
      */
-    leadSpeed: 5.5, slowing: 1.2, restShort: -1.9, release: 0.6,
+    ledSpeed: 4.7, leadSpeed: 5.5, slowing: 1.2, restShort: -1.9, release: 0.6,
     /** Seconds between its weak breaths, how far its back rises with one (m), and how much mist each sputters. */
     breathEvery: 10, breathRise: 0.45, mist: 1,
     /**
@@ -1778,7 +1779,17 @@ export const tuning = {
      * `restFalloff` from `clearFrom` to `clearAt` metres short of the rest, clear of the whale's far length, and lifts
      * as the whale dives.
      */
-    mist: { haze: 1.064, falloff: 1.3, restHaze: 0.985, restFalloff: 1.05, clearFrom: 80, clearAt: 30 },
+    mist: { haze: 1.064, falloff: 1.3, restHaze: 0.985, restFalloff: 1.05, clearFrom: 80, clearAt: 30,
+      /**
+       * How deep the veil is where it is whole, its smoothstep's top; and from `hiddenTo` metres short of the rest to
+       * the blow it eases off holding that by the whale's head (`veilLeast` keeps the depth finite).
+       */
+      wholeVeil: 4, hiddenTo: 120, veilLeast: 20 },
+    /**
+     * How far short of the rest the pod may set off to nudge the boat once its leap and the swim are done (m): its nudge
+     * lands about 13 s and 60 m on.
+     */
+    nudgeFrom: 204,
   },
   /** The pod that runs with the boat on the long crossing, and the two set-pieces it plays. */
   dolphins: {

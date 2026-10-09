@@ -14,6 +14,7 @@ import type { Cast, Chapter } from './cast';
 import { roundedWaypoint } from '../traveller/navigation';
 import { HOME_JETTY } from '../world/home-layout';
 import { mirrorWater } from '../world/sky-mirror-layout';
+import { veilClear, veilDensity } from '../world/atmosphere';
 import type { Coax } from '../fx/swirl';
 import { sightingHeading, whaleSighting } from '../fx/sealife/sighting';
 import { NetWhale, type PodRun } from './net-whale';
@@ -378,7 +379,19 @@ export class CrossingChapter implements Chapter {
 
   private mistFalloff(): number {
     const m = tuning.seaPassage.mist;
-    return THREE.MathUtils.lerp(m.falloff, m.restFalloff, this.besideWhale());
+    return Math.max(THREE.MathUtils.lerp(m.falloff, m.restFalloff, this.besideWhale()), this.hidingFalloff());
+  }
+
+  /**
+   * Until its blow is due the veil is whole by the whale's head however near the boat has come, so a late nudge never
+   * shows it early; the nearest of it lies about 20 m farther from the lens than that.
+   */
+  private hidingFalloff(): number {
+    const m = tuning.seaPassage.mist, whale = this.whale!;
+    if (whale.step !== 'approach') return 0;
+    const left = whale.remaining(), haze = this.mistHaze();
+    const whole = m.wholeVeil / (Math.max(left - veilClear(haze), m.veilLeast) * veilDensity(haze));
+    return whole * THREE.MathUtils.smoothstep(left, tuning.netWhale.seenAt, m.hiddenTo);
   }
 
   /** How far the mist has drawn back from the whale as the boat comes in beside it, 0..1. */
@@ -574,13 +587,16 @@ export class CrossingChapter implements Chapter {
     // The nudge may begin its approach, under water, while the cygnet is climbing back aboard. The first leap
     // waits for the light: the sleeping island's night lifts only once it is well astern.
     const light = this.podProgress() >= tuning.seaPassage.leapFrom;
+    // Where a whale waits, its leap and the swim done, the pod sets off to nudge the boat only at a place on its line,
+    // so however long its play took the whale is as far ahead when it asks.
+    const ready = light && (!this.whale || !sealife.dolphinLeapComplete || this.whale.remaining() <= tuning.seaPassage.nudgeFrom);
     if (this.whale?.led) {
       const run = this.whale.pod(this.podRun, dt);
       sealife.dolphinsWith(run.near, run.heading, run.camera, run.busy, run.ready, run.lead, run.leaps, run.spread);
       if (this.whale.passed && this.podLeftAt === null) this.podLeftAt = this.time;
     } else {
       if (this.wantsDolphins && !withPod && this.swim === 'done' && this.podLeftAt === null) this.podLeftAt = this.time;
-      sealife.dolphinsWith(withPod ? boat.position : null, boat.yaw, -this.quarter, swimming && this.swim !== 'drying', light);
+      sealife.dolphinsWith(withPod ? boat.position : null, boat.yaw, -this.quarter, swimming && this.swim !== 'drying', ready);
     }
     if (this.wantsDolphins && withPod && light && this.playFrom === null) this.playFrom = this.time;
     /** The night ends somewhere out here, by degrees, with nobody watching for it. */

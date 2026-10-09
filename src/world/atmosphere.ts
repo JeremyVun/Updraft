@@ -35,6 +35,10 @@ function hdr(hex: string, intensity: number): THREE.Color {
   return new THREE.Color(hex).multiplyScalar(intensity);
 }
 
+/** How near the distance veil of a haze `seen` leaves the world untouched (m), and how fast it deepens past that, a metre. */
+export const veilClear = (seen: number): number => 900 - 780 * seen;
+export const veilDensity = (seen: number): number => 0.002 + 0.03 * seen;
+
 /**
  * Uniforms shared by reference between every world material, so one update per frame reaches all of them.
  * Spread them into a material's uniforms: `{ ...atmo.uniforms, ownUniform: {...} }`.

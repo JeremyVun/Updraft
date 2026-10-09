@@ -33,6 +33,9 @@ const { tuning } = await import('../src/tuning.ts');
 const { swellUniforms } = await import('../src/world/water/swell.ts');
 const { heightAt } = await import('../src/world/island.ts');
 swellUniforms.uSwell.value = 0.25;
+// SOFT=1 reports the open sea's failures after each run rather than stopping at the first.
+const failures=[];
+const check=(ok,message)=>{if(ok)return;if(process.env.SOFT)failures.push(message);else assert.fail(message);};
 // What of the sky mirror could be made out: its jetties' ends and its fallen lights, lifted to where they show.
 const MIRROR_MARKS=[[MIRROR_ENTRY_DECK.x0,MIRROR_ENTRY_DECK.z0],[MIRROR_ENTRY_DECK.x1,MIRROR_ENTRY_DECK.z1],
   [MIRROR_DECK.x0,MIRROR_DECK.z0],[MIRROR_DECK.x1,MIRROR_DECK.z1],...MIRROR_STARS.map(s=>[s.x,s.z])].map(([x,z])=>new THREE.Vector3(x,0.6,z));
@@ -88,7 +91,7 @@ function run(name, fps, gust, veer=0, waitInVillage=false, arrivalGust=false, ci
   if(rig){chapter.update(0,0);rig.cut(chapter.shot);}
   let hazeShown=NaN,openShown=NaN,lastStep='',restGap=Infinity,restSpeed=Infinity,shownDuringWhale=0,worstBrake=0,lastSpeed=boat.speed;const ndc=new THREE.Vector3();
   // The open sea as the whale is found: the boat's pace, what of the whale and the mirror shows and when, and the way on.
-  let falloffShown=NaN,mistShown=0,underWay=false,slowest=Infinity,slowestAt=null,whaleShownAt=null,mirrorShownBeforeDive=0,heading=0,mostStarboard=0,portTurn=0,lastYaw=null;
+  const reach={gap:1e9,at:0};let leastHidden=1,nudgeOut=null,falloffShown=NaN,mistShown=0,underWay=false,slowest=Infinity,slowestAt=null,whaleShownAt=null,mirrorShownBeforeDive=0,heading=0,mostStarboard=0,portTurn=0,lastYaw=null;
   const sea={sighs:[],covers:[]};
   if(rig)sealife.onWhaleSound=(kind)=>{if(kind==='whale-sigh'&&chapter.whale?.step==='approach'&&chapter.whale.led)sea.sighs.push(+time.toFixed(1));};
   let time=0;
@@ -139,7 +142,11 @@ function run(name, fps, gust, veer=0, waitInVillage=false, arrivalGust=false, ci
         if(whale.step==='approach'&&whale.remaining()<=20&&events.last20===undefined)events.last20=+time.toFixed(1);
         if(events.last20!==undefined&&events.stopped===undefined&&boat.speed<0.3)events.stopped=+time.toFixed(1);
         const marks=whaleMarks();
-        if(!whale.led&&whaleShownAt===null&&onScreen(marks).some(p=>hazeOver(p,rig.camera,hazeShown,openShown,falloffShown,mistShown)<0.97))whaleShownAt=+time.toFixed(1);
+        {const r=whale.remaining();if(r>90&&r<250){const near=Math.min(...marks.map(p=>p.distanceTo(rig.camera.position)));if(near-r<reach.gap)Object.assign(reach,{gap:+(near-r).toFixed(1),at:+r.toFixed(0)});}}
+        if(!whale.led){const seen=onScreen(marks).map(p=>hazeOver(p,rig.camera,hazeShown,openShown,falloffShown,mistShown));
+          if(seen.length)leastHidden=Math.min(leastHidden,...seen);
+          if(whaleShownAt===null&&seen.some(c=>c<0.97))whaleShownAt=+time.toFixed(1);}
+        else if(nudgeOut===null)nudgeOut=+whale.remaining().toFixed(1);
         if(whale.step==='approach'&&whale.led&&events.shape===undefined&&covered([sealife.sleeper.eye,sealife.sleeper.back])<0.5)events.shape=+time.toFixed(1);
         if(sea.sighs.length>sea.covers.length){const plume=sealife.sleeper.blowhole.clone();plume.y+=8;
           sea.covers.push({at:sea.sighs.at(-1),body:+covered(marks).toFixed(3),blow:+covered([plume]).toFixed(3)});}
@@ -175,29 +182,29 @@ function run(name, fps, gust, veer=0, waitInVillage=false, arrivalGust=false, ci
       if(route)assert(shallow<-.3,`${name}: hull crossed land (${shallow}) at ${shallowAt}, time ${time}`);
       assert(Math.max(turn,worstTurn)<Math.PI*2,`${name}: circled a waypoint`);
       assert(peak<=10.000001,`${name}: exceeds approved forward speed cap`);
-      if(name==='toMirror'){assert.equal(chapter.swim,'done');assert(swimFrames/fps>=tuning.seaPassage.swimFor,'keeps the authored open-water swim');
-        assert(dolphinActs.some(([act])=>act==='push:act:contact'),'the nudge makes physical contact');
-        assert(events.whaleLed>events['music-sea']&&events['whale-breath']>events.whaleLed,'the nudge leads the boat to rest beside the whale');
-        assert(events['whale-free']>events['whale-breath']&&events['whale-gone']>events['whale-free'],'the whale is freed and goes');
-        assert(restGap<3&&restSpeed<0.2,`the boat rests beside its head (${restGap.toFixed(2)} m off the rest, ${restSpeed.toFixed(2)} m/s)`);
-        assert(worstBrake<1,`the boat is eased to rest, never braked (${worstBrake.toFixed(2)} m/s²)`);
-        assert.equal(shownDuringWhale,0,'nothing of the mirror shows from the lead until the whale has gone');
-        assert(events['music-mirror']>=events['whale-gone']-0.05,`the mirror's arrival music waits for the whale: ${JSON.stringify(events)}`);
-        assert(chapter.mirrorArrival > .99,'mirror transition finishes before mooring');
-        assert.equal(whaleShownAt,null,`nothing of the whale shows before the nudge: seen at ${whaleShownAt} s`);
-        assert.equal(mirrorShownBeforeDive,0,`nothing of the mirror shows before the whale dives: ${mirrorShownBeforeDive.toFixed(1)} s`);
-        assert(underWay&&slowest>=4.45,`the boat sails at its ordinary pace but for the swim: ${slowest.toFixed(2)} m/s at ${slowestAt} s`);
+      if(name==='toMirror'){check(chapter.swim==='done','the swim is done');check(swimFrames/fps>=tuning.seaPassage.swimFor,'keeps the authored open-water swim');
+        check(dolphinActs.some(([act])=>act==='push:act:contact'),'the nudge makes physical contact');
+        check(events.whaleLed>events['music-sea']&&events['whale-breath']>events.whaleLed,'the nudge leads the boat to rest beside the whale');
+        check(events['whale-free']>events['whale-breath']&&events['whale-gone']>events['whale-free'],'the whale is freed and goes');
+        check(restGap<3&&restSpeed<0.2,`the boat rests beside its head (${restGap.toFixed(2)} m off the rest, ${restSpeed.toFixed(2)} m/s)`);
+        check(worstBrake<1,`the boat is eased to rest, never braked (${worstBrake.toFixed(2)} m/s²)`);
+        check(shownDuringWhale===0,'nothing of the mirror shows from the lead until the whale has gone');
+        check(events['music-mirror']>=events['whale-gone']-0.05,`the mirror's arrival music waits for the whale: ${JSON.stringify(events)}`);
+        check(chapter.mirrorArrival > .99,'mirror transition finishes before mooring');
+        check(whaleShownAt===null,`nothing of the whale shows before the nudge: seen at ${whaleShownAt} s`);
+        check(mirrorShownBeforeDive===0,`nothing of the mirror shows before the whale dives: ${mirrorShownBeforeDive.toFixed(1)} s`);
+        check(underWay&&slowest>=4.45,`the boat sails at its ordinary pace but for the swim: ${slowest.toFixed(2)} m/s at ${slowestAt} s`);
         const lead=events['whale-breath']-events.whaleLed;
-        assert(lead>=30&&lead<=45,`from the nudge to rest beside it takes 30 to 45 s: ${lead.toFixed(1)} s`);
-        assert(events.stopped-events.last20<=9,`the last 20 m take about 8 s: ${(events.stopped-events.last20).toFixed(1)} s`);
+        check(lead>=30&&lead<=45,`from the nudge to rest beside it takes 30 to 45 s: ${lead.toFixed(1)} s`);
+        check(events.stopped-events.last20<=9,`the last 20 m take about 8 s: ${(events.stopped-events.last20).toFixed(1)} s`);
         const [heard,blow]=sea.covers;
-        assert(heard&&heard.body>=0.97,`it is heard in the mist before anything of it is seen: ${JSON.stringify(sea.covers)}`);
-        assert(blow&&blow.at>heard.at&&events.shape>blow.at,`its blow is seen before its shape forms: ${JSON.stringify({covers:sea.covers,shape:events.shape})}`);
-        assert(events.mirrorSeen>events.dive,`the mirror comes out of its mist only once the whale has dived: ${JSON.stringify(events)}`);
-        assert(time-events.letGo<=50,`from the boat let go to the mooring at most 50 s, with the dive about 60: ${(time-events.letGo).toFixed(1)} s`);
-        assert(portTurn<0.15&&-mostStarboard<1.9,`sails straight on and curves in to the jetty, never coming about: ${JSON.stringify({portTurn,starboard:-mostStarboard})}`);}
+        check(heard&&heard.body>=0.97,`it is heard in the mist before anything of it is seen: ${JSON.stringify(sea.covers)}`);
+        check(blow&&blow.at>heard.at&&events.shape>blow.at,`its blow is seen before its shape forms: ${JSON.stringify({covers:sea.covers,shape:events.shape})}`);
+        check(events.mirrorSeen>events.dive,`the mirror comes out of its mist only once the whale has dived: ${JSON.stringify(events)}`);
+        check(time-events.letGo<=50,`from the boat let go to the mooring at most 50 s, with the dive about 60: ${(time-events.letGo).toFixed(1)} s`);
+        check(portTurn<0.15&&-mostStarboard<1.9,`sails straight on and curves in to the jetty, never coming about: ${JSON.stringify({portTurn,starboard:-mostStarboard})}`);}
       return {seconds:+time.toFixed(1),musicLead:+musicLead.toFixed(2),sailed:+sailed.toFixed(1),peak:+peak.toFixed(2),swimSeconds:+(swimFrames/fps).toFixed(1),stillSeconds:+stillFor.toFixed(1),whaleCalled:chapter.whaleCalled,
-        ...(chapter.whale?{whaleBrake:+worstBrake.toFixed(2),restGap:+restGap.toFixed(2),slowest:+slowest.toFixed(2),slowestAt,lead:+(events['whale-breath']-events.whaleLed).toFixed(1),
+        ...(chapter.whale?{hiddenBeforeNudge:+leastHidden.toFixed(4),reach,nudgeOut,whaleBrake:+worstBrake.toFixed(2),restGap:+restGap.toFixed(2),slowest:+slowest.toFixed(2),slowestAt,lead:+(events['whale-breath']-events.whaleLed).toFixed(1),
           last20:+(events.stopped-events.last20).toFixed(1),diveToMooring:+(time-events.dive).toFixed(1),letGoToMooring:+(time-events.letGo).toFixed(1),
           portTurn:+portTurn.toFixed(3),starboardTurn:+(-mostStarboard).toFixed(2),sighs:sea.covers}:{}),beats,events,dolphinActs};
     }
@@ -207,6 +214,7 @@ function run(name, fps, gust, veer=0, waitInVillage=false, arrivalGust=false, ci
 }
 const results=[];
 for(const name of (process.env.CROSSING ? [process.env.CROSSING] : Object.keys(starts))) {
+  if(process.env.ONE){console.log(JSON.stringify({name,calm:run(name,60,0)}));continue;}
   const calm=run(name,60,0),gust=run(name,60,8),lowFps=run(name,30,0);
   const windLeft=run(name,30,0,-.35),windRight=run(name,30,0,.35);
   const lateGust=run(name,60,0,0,false,true);
@@ -219,6 +227,7 @@ for(const name of (process.env.CROSSING ? [process.env.CROSSING] : Object.keys(s
   }
   if(name==='drowned')entry.noResponse=run(name,30,0,0,true);
   results.push(entry);console.log(JSON.stringify(entry));
+  if(failures.length)throw Error(`${name}:\n${failures.join('\n')}`);
 }
 fs.writeFileSync('/tmp/updraft-journey-pacing.json',JSON.stringify(results,null,2));
 console.log('Passage completion, navigation, shore clearance, speed cap and authored swim passed.');

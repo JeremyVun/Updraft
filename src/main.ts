@@ -47,7 +47,7 @@ import { createReadout, percentile } from './gl/readout';
 import { Post } from './post/post';
 import { createWindDebug } from './wind/debug';
 import { WindField, type WindSample } from './wind/field';
-import { CLOUD_SPAN, atmo } from './world/atmosphere';
+import { CLOUD_SPAN, atmo, veilClear, veilDensity } from './world/atmosphere';
 import { bakeNoiseTiles } from './world/noise-tiles';
 import { CloudShadows } from './world/clouds';
 import { Grass } from './world/grass';
@@ -865,8 +865,8 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   updateCloudDeck(dt);
   const seen = haze * (1 - 0.7 * atmo.uniforms.uStarlight.value);
   atmo.uniforms.uVeil.value.set(
-    THREE.MathUtils.lerp(900 - 780 * seen, tuning.storm.stormVeil, squall),
-    THREE.MathUtils.lerp((0.002 + 0.03 * seen) * shown.hazeFalloff, tuning.storm.stormVeilDensity, squall) * (1 - atmo.uniforms.uLightning.value.w * 0.8),
+    THREE.MathUtils.lerp(veilClear(seen), tuning.storm.stormVeil, squall),
+    THREE.MathUtils.lerp(veilDensity(seen) * shown.hazeFalloff, tuning.storm.stormVeilDensity, squall) * (1 - atmo.uniforms.uLightning.value.w * 0.8),
   );
   post.saturation = (0.62 + 0.38 * story.worldLife) * (1 - 0.3 * squall);
   surfUniforms.uSeaState.value = story.breeze;

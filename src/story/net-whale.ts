@@ -672,7 +672,7 @@ export class NetWhale {
     const approach = this.comingIn(left);
     const freed = this.released >= 0 ? K.release * this.released : 0;
     // Led in, and let go after, it sails no faster than the pod leads, so it comes round into the mirror's jetty gently.
-    this.limit = Math.min(Math.max(approach, freed), K.leadSpeed);
+    this.limit = Math.min(Math.max(approach, freed), this.step === 'approach' ? K.ledSpeed : K.leadSpeed);
     if (this.step !== 'approach' && this.released < 0) this.limit = Math.min(this.limit, approach);
     const near = 1 - THREE.MathUtils.smootherstep(left, K.holdFull, K.holdFrom);
     // Gone, the view goes back to the crossing's in one even ease from wherever the hold is, however the boat turns.
