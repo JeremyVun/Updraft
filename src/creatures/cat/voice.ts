@@ -130,7 +130,6 @@ export class CatVoice {
   private out: AudioOut | null = null;
   private noise: AudioBuffer | null = null;
   private wobble: AudioBuffer | null = null;
-  private lastMew = -Infinity;
   private lastPat = -Infinity;
 
   setOutput(out: AudioOut | null): void {
@@ -291,9 +290,6 @@ export class CatVoice {
    * `voice` above 1 is a kitten's own: higher, thinner and nearer its ordinary mew whatever it asks.
    */
   mew(pan: number, loudness: number, plea = 1, length = 0.6 + 0.3 * plea, voice = 1): void {
-    const now = this.out?.ctx.currentTime ?? 0;
-    if (now - this.lastMew < (voice > 1 ? 0.12 : 0.4)) return;
-    this.lastMew = now;
     const k = Math.max(0, Math.min(1, plea)) / voice;
     const f0 = (1100 - 250 * k) * voice * (0.94 + Math.random() * 0.12);
     this.sing(pan, 0.057 * loudness, blend(MEW, PLEA, k), f0, length, voice > 1 ? 0.4 : 0.55);
@@ -307,9 +303,6 @@ export class CatVoice {
 
   /** A frightened mrrow, low and drawn out, `length` seconds. */
   yowl(pan: number, loudness: number, length = 0.75 + Math.random() * 0.2): void {
-    const now = this.out?.ctx.currentTime ?? 0;
-    if (now - this.lastMew < 0.4) return;
-    this.lastMew = now;
     this.sing(pan, 0.073 * loudness, YOWL, 500 * (0.94 + Math.random() * 0.12), length, 0.55);
   }
 

@@ -33,7 +33,8 @@
 //        (default 1600x900), LENS=1 also fails on the lens's measures (a roof hiding her, her walking toward it, her
 //        out of frame, it inside a roof, it whipping round; and at the church, from the tower's foot until the
 //        storm's frame takes over, her out of frame or hidden by the church or a roof; at the blink the cat, the kitten
-//        and her face out of frame or the cat under 45 px tall).
+//        and her face out of frame or the cat under 45 px tall), VOICES=<file> writes every sound the cat and each kitten
+//        makes (seconds, which animal, kind, the story step) with the strongest its call marks showed in the 0.6 s after.
 import { chromium } from 'playwright-core';
 import assert from 'node:assert/strict';
 
@@ -66,6 +67,34 @@ try {
   await page.goto(`${base}?shot=1&chapter=${fromStorm ? 'storm' : fromBelfry ? 'belfry' : fromChurch ? 'church' : fromRoofs ? 'roofs' : fromStairs ? 'stairs' : 'drowned'}&ratio=1`, { waitUntil: 'load' });
   await page.waitForFunction(() => window.__ready === true, null, { timeout: 60000 });
 
+  /** VOICES=<file>: every sound the cat and each kitten makes, and how strongly its call marks showed through each call. */
+  if (process.env.VOICES) await page.evaluate(() => {
+    const log = window.__voices = [];
+    const kittens = __game.village.kittens.cats, seen = new WeakSet();
+    const watch = (animal, who) => {
+      const push = animal.heard.push.bind(animal.heard);
+      animal.heard.push = (...items) => {
+        for (const h of items) {
+          if (seen.has(h)) continue;
+          seen.add(h);
+          const st = __game.story.current;
+          log.push({ t: +__stats.time.toFixed(2), who, kind: h.kind, step: st.church?.step ?? st.run?.stage ?? __game.story.name, mark: 0, animal });
+        }
+        return push(...items);
+      };
+    };
+    watch(__game.cat, 'cat');
+    kittens.forEach((k, i) => watch(k, `kitten${i}`));
+    const tick = () => {
+      const t = __stats.time;
+      for (const e of log) if (e.animal && t - e.t < 0.6) {
+        const m = e.animal.callMarks?.sprite.material.opacity ?? 0;
+        if (m > e.mark) e.mark = +m.toFixed(2);
+      }
+      requestAnimationFrame(tick);
+    };
+    tick();
+  });
   /** The lens's own motion every frame in the drowned village and on into the wood: its fastest turn and move, and where. */
   await page.evaluate(() => {
     const w = window.__lensWatch = { turn: 0, turnAt: '', move: 0, moveAt: '', cuts: [], stretches: {}, trace: [] };
@@ -1104,6 +1133,10 @@ try {
   assert.deepEqual(errors, [], `page errors: ${errors.join('; ')}`);
   console.log('drowned run check passed');
 } finally {
+  if (process.env.VOICES && page) {
+    const voices = await page.evaluate(() => window.__voices.map(({ animal, ...e }) => e)).catch(() => null);
+    if (voices) (await import('node:fs')).writeFileSync(process.env.VOICES, JSON.stringify(voices));
+  }
   if (process.env.TRACE && page) {
     const motion = await page.evaluate(() => window.__lensWatch).catch(() => null);
     if (motion) {

@@ -81,7 +81,8 @@ type Doing = 'nestle' | 'tumble';
 
 /**
  * The cat's three kittens in their straw: asleep in a heap, curled against their mother or each other, or awake and
- * tumbling, pouncing on each other, batting and bowled over. One can be sent to sit beside her on a sill. Each is a
+ * tumbling, pouncing on each other, batting and bowled over. They play without a sound but their paws; a kitten mews
+ * only when it means something. One can be sent to sit beside her on a sill. Each is a
  * `Cat` at a kitten's size, so everything a cat can do, a kitten can.
  */
 export class Kittens {
@@ -264,12 +265,10 @@ export class Kittens {
       this.pouncing[i] = j;
       this.struck[i] = false;
       k.leap(to.clone(), { floor: this.floor, then: 'stand', gather: 0.7, look: other.position });
-    } else if (r < 0.9) {
+    } else {
       const a = Math.random() * Math.PI * 2, rr = ROOM * Math.sqrt(Math.random());
       k.look(null);
       k.run([this.w.set(this.centre.x + Math.cos(a) * rr, 0, this.centre.z + Math.sin(a) * rr).clone()], this.floor, { pace: 'trot', speed: 0.55, then: Math.random() < 0.5 ? 'sit' : 'stand' });
-    } else {
-      k.mew(0.3);
     }
   }
 }
