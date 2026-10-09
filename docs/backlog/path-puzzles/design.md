@@ -698,6 +698,12 @@ see a hole in the "fog" so to speak. it looks like a bug. also the lighthouse tu
     the fog's edge or a gap in it; the storm's opening frame looks along the water, not up through the fog.
 33. The lighthouse goes out too quickly. Fix: it holds long enough to be seen and taken in as the storm's landmark,
     then goes out as an event the player sees.
+34. Jeremy (2026-10-10, verbatim): "And the continuity into the storm feels a bit strange, it's a bit too rushed,
+    instant storm for like what feels like 10-20 seconds and then you're at the woods, pacing doesn't match what
+    happened before." Lead's call: the goodbye's calm turns into the storm over time the player sees (the fog darkening
+    into the night, the wind rising, the water roughening), and the storm is given the length and the beats of the
+    journey it ends (the lighthouse, the plane taken, the dark) before the forest beach; it must not feel shorter or
+    thinner than the room before it.
 
 ### The room rethought (Claude, 2026-10-08; Jeremy: "yea lets see how this works")
 
