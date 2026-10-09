@@ -68,26 +68,28 @@ export const DIVE_AT = WAVE_AT + WAVE_FOR - 0.4;
 const D = DIVE_AT;
 /**
  * The dive, a whale's, never an eel's: it swims on a little and its head goes down, its front half pitching steeply
- * into the deep while its back rolls up into one short high arch where `ARCH_AT` lay (its way through the sea starts
- * there); the rest of it rolls forward over the arch, its flukes come up out of it turning to face her, stand a breath,
- * flex once as it calls and slip straight down.
+ * into the deep where `ARCH_AT` lay (its way through the sea bends there); its broad back rolls forward over the bend
+ * low and awash, the small dorsal knuckle riding over, and only its rear arches up: the tail stock rises out of the
+ * sea with the flukes hanging from it, and they come up turning to face her, stand a breath, flex once as it calls and
+ * slip straight down.
  */
 const ARCH_AT = 0.36;
 /** The way's pitch by metres ahead of the arch (behind it, negative): rising steeply to its top, and steeply down past it. */
 const DIVE_SLOPE = curve([[-40, 0.42], [-12, 0.55], [-5, 0.36], [0, 0], [6, -0.3], [14, -0.75], [24, -1.05], [60, -1.1]]);
-/**
- * How far it has gone over into its dive by seconds: its head going down slowly first, then its back rolling up into
- * the arch; and how high its spine rises there (m).
- */
+/** How far it has gone over into its dive by seconds: its head going down slowly first, then its back rolling over. */
 const DOWN = curve([[0, 0], [1, 0.05], [2.4, 0.3], [3.5, 0.6], [4.8, 0.9], [5.8, 1]]);
 const ROLL_UP = 5.8;
-const ARCH_RISE = 4;
+/**
+ * How high its spine rides at the arch (m from where it lay), by metres the tail stock is short of it: its broad back
+ * rolls over low and awash, never a dome, and only the stock rises out of the sea.
+ */
+const ARCH_RISE = curve([[-34, 0], [-31, 0], [-26, -2.5], [-20, -4], [-12, -4], [-6, -3], [-3, -1.5], [0, 0]]);
 /**
  * Its glide along its own length through the arch, in metres a second from the dive's start: rolling forward over
  * it, slowing as its flukes stand, and sounding.
  */
 const GLIDE = curve([
-  [0, 0], [1, 1.5], [2.5, 6.5], [3.8, 9], [4.6, 6.5], [5.6, 4], [6.4, 1.5], [6.9, 0.5], [7.4, 0.5], [8.2, 7], [8.9, 13], [14, 13],
+  [0, 0], [1, 1.5], [2.5, 7], [3.6, 10], [4.6, 8], [5.6, 4], [6.4, 1.5], [6.9, 0.4], [7.8, 0.4], [8.5, 7], [9.2, 13], [14, 13],
 ]);
 /** Where along it the tail stock bends to lift the flukes, and how far into the flukes the lift has all of them. */
 const STOCK = 0.84;
@@ -98,8 +100,10 @@ const FLUKES_UP = -1.45;
  * The lift, by seconds from when the tail stock has rolled up to `LIFT_SHORT` metres short of the arch's top: the
  * flukes coming up out of the arch slowly, as heavy things do, held as they stand over it and slip down through it.
  */
-const LIFT_SHORT = 11;
+const LIFT_SHORT = 9;
 const LIFT_UP = curve([[0, 0], [0.5, 0.1], [2.2, 0.68], [3, 0.93], [3.5, 1]]);
+/** The stock arches up ahead of them, all the way by this much of their lift, while they still hang from it. */
+const STOCK_LEADS = 0.5;
 /**
  * As the flukes come up the whale turns `TURN_TO_HER` of the way round toward the boat, so their pale undersides open
  * toward her. Most of it (`YAW_SHARE`) is the whole body turning about its arch over `YAW_WITH` of their lift; the
@@ -114,7 +118,7 @@ const YAW_SHARE = 0.6;
 const YAW_WITH = [0.1, 0.85] as const;
 const TILT = 0.3;
 const TILT_WITH = 0.3;
-const TRAIL = 0.7;
+const TRAIL = 1.3;
 const TRAIL_UNTIL = [0.4, 0.85] as const;
 /** The flukes' one slow flex as they stand and it calls: radians of flex at the hinge, and of turn, over seconds. */
 const WAVE_FLEX = 0.16;
@@ -626,7 +630,7 @@ export class SleepingWhale extends WhaleRig {
   }
 
   /**
-   * The dive's way, from where it lies clear of the boat: the arch on the water where its back will rise, and how far
+   * The dive's way, from where it lies clear of the boat: the arch on the water where its back will bend, and how far
    * round it turns as its flukes rise there, so their pale undersides open toward the boat rather than stand edge on.
    */
   private plan(): void {
@@ -642,8 +646,8 @@ export class SleepingWhale extends WhaleRig {
 
   /**
    * `t` seconds into its dive: each part of it lies where the dive's way has taken it, glided along its own length
-   * through the arch, its head going down and its back rolling up as it starts, its flukes held up over the arch and
-   * turned toward her.
+   * through the arch, its head going down as it starts and its back rolling over low, its flukes held up over the arch
+   * and turned toward her.
    */
   private dive(t: number): void {
     const k = this.scale;
@@ -652,6 +656,7 @@ export class SleepingWhale extends WhaleRig {
     const at = ARCH_M + glided(t);
     const stock = at - STOCK_M;
     const lift = LIFT_UP(t - LIFT_AT);
+    const arched = THREE.MathUtils.smoothstep(lift, 0, STOCK_LEADS);
     const flex = Math.sin(THREE.MathUtils.clamp((t - (FLEX_AT - D)) / FLEX_FOR, 0, 1) * Math.PI * 2);
     const trail = TRAIL * THREE.MathUtils.smoothstep(lift, 0, 0.2) * (1 - THREE.MathUtils.smootherstep(lift, TRAIL_UNTIL[0], TRAIL_UNTIL[1]));
     // It sounds more steeply as its tail comes to the arch, so by the time its flukes rise the rest of it is under.
@@ -660,8 +665,9 @@ export class SleepingWhale extends WhaleRig {
       const s = (i / (SPINE_N - 1)) * SPINE_END;
       const c = at - SPINE_AT[i] * k;
       const way = THREE.MathUtils.lerp(restPitch(s), DIVE_SLOPE(c > 0 ? c * steeper : c), down);
-      const aft = THREE.MathUtils.smoothstep(s, STOCK, STOCK_TO);
-      this.pitch[i] = THREE.MathUtils.lerp(way, FLUKES_UP, aft * lift) - THREE.MathUtils.smoothstep(s, 0.9, 0.96) * (WAVE_FLEX * flex - trail);
+      const hinge = THREE.MathUtils.smoothstep(s, 0.9, 0.96);
+      const up = THREE.MathUtils.smoothstep(s, STOCK, STOCK_TO) * THREE.MathUtils.lerp(arched, lift, hinge);
+      this.pitch[i] = THREE.MathUtils.lerp(way, FLUKES_UP, up) - hinge * (WAVE_FLEX * flex - trail);
     }
     let u = 0;
     let y = 0;
@@ -683,7 +689,7 @@ export class SleepingWhale extends WhaleRig {
     const yaw = this.twist * YAW_SHARE * THREE.MathUtils.smootherstep(lift, YAW_WITH[0], YAW_WITH[1]);
     const h = this.heading;
     h.set(h.x * Math.cos(yaw) + h.z * Math.sin(yaw), 0, h.z * Math.cos(yaw) - h.x * Math.sin(yaw));
-    const ay = this.bendFrom.y + ARCH_RISE * down;
+    const ay = this.bendFrom.y + ARCH_RISE(stock);
     for (let i = 0; i < SPINE_N; i++) {
       const du = this.u[i] - bu;
       this.spine[i].set(this.bendFrom.x + h.x * du, ay + this.y[i] - by, this.bendFrom.z + h.z * du, this.pitch[i]);
