@@ -186,7 +186,7 @@ function run(name, fps, gust, veer=0, waitInVillage=false, arrivalGust=false, ci
         assert(chapter.mirrorArrival > .99,'mirror transition finishes before mooring');
         assert.equal(whaleShownAt,null,`nothing of the whale shows before the nudge: seen at ${whaleShownAt} s`);
         assert.equal(mirrorShownBeforeDive,0,`nothing of the mirror shows before the whale dives: ${mirrorShownBeforeDive.toFixed(1)} s`);
-        assert(slowest>=4.45,`the boat sails at its ordinary pace but for the swim: ${slowest.toFixed(2)} m/s at ${slowestAt} s`);
+        assert(underWay&&slowest>=4.45,`the boat sails at its ordinary pace but for the swim: ${slowest.toFixed(2)} m/s at ${slowestAt} s`);
         const lead=events['whale-breath']-events.whaleLed;
         assert(lead>=30&&lead<=45,`from the nudge to rest beside it takes 30 to 45 s: ${lead.toFixed(1)} s`);
         assert(events.stopped-events.last20<=9,`the last 20 m take about 8 s: ${(events.stopped-events.last20).toFixed(1)} s`);
