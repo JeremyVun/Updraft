@@ -1654,14 +1654,17 @@ export const tuning = {
      * against the net that will not come; she holds on `haulHold` seconds after the last before letting go, and the
      * line takes `letGo` seconds to go. A stroke in any direction over the net on its head or the water between it and
      * the boat, within `heaveRadius` of them on screen (normalised device units), billows the mesh up off the head
-     * (`billowGain` for each unit of stroke, `billowHeight` m at most, settling at `billowFall` a second). Each stroke
+     * (`billowGain` for each unit of stroke, falling at `billowFall` a second once she has drawn), `billowHeight` m up
+     * at most and `billowOut` of that out toward the boat, the sheet rising at `billowRise` and settling at
+     * `billowSettle` a second; it stays up while she draws and comes down as she braces. Each stroke
      * that sweeps `heaveSweep` of it asks for one heave, and one kept going over the head another every `heaveStroke`;
      * a stroke ends `heaveGap` seconds after it leaves the head, and heaves asked for while she hauls follow in turn.
      * The heave's hold stands `heaveBack` metres further back than the line's. The valve's dolphin comes up under the
      * net's edge every `nudgeEvery` seconds.
      */
     heaves: 4, pullTake: 0.9, heaveTime: 1.5, pullDraw: 0.6, braceFor: 0.4, braceBack: 0.32, haulHold: 0.8, letGo: 3.4,
-    heaveRadius: 0.45, billowGain: 3, billowHeight: 1.7, billowFall: 1.6, heaveSweep: 0.1, heaveStroke: 0.5, heaveGap: 0.25,
+    heaveRadius: 0.45, billowGain: 3, billowHeight: 3, billowOut: 0.55, billowRise: 7, billowSettle: 1.6, billowFall: 1.6,
+    heaveSweep: 0.1, heaveStroke: 0.5, heaveGap: 0.25,
     heaveBack: 0,
     nudgeEvery: 2.8,
     /** Seconds after she lets the line go that the cygnet sees the loop on the flipper and peeps, and that she looks to it. */
@@ -1695,8 +1698,8 @@ export const tuning = {
     phone: {
       breath: { distance: 18, height: 2.8, turn: -0.2, lookY: 8, toward: 0.35 },
       look: { distance: 4.8, height: 2.2, turn: -0.55, lookY: 2.5, toward: 0.28 },
-      line: { distance: 6, height: 3.2, turn: -0.75, lookY: 3, toward: 0.37, eyeward: 1 },
-      flipper: { distance: 12, height: 3.4, turn: -1.5, lookY: 3, toward: 0.5 },
+      line: { distance: 9, height: 3.2, turn: -0.45, lookY: 3, toward: 0.33, eyeward: 1 },
+      flipper: { distance: 11.5, height: 3.2, turn: -1.1, lookY: 4, toward: 0.6 },
       release: { distance: 12, height: 3, turn: -0.3, lookY: 12, toward: 0.4 },
       farewell: { distance: 24, height: 1.2, turn: -0.45, lookY: 22, toward: 0.3 },
       releaseRoom: 4,

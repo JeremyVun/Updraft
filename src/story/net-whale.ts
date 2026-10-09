@@ -11,7 +11,7 @@ import type { Cast } from './cast';
 import { completeObjective } from './cues';
 import { surgeAt, swellLift } from '../world/water/swell';
 import { mirrorWater } from '../world/sky-mirror-layout';
-import { gunwaleHalf, stationU } from '../traveller/boat/form';
+import { gunwaleHalf, stationU, MAST_TOP, MAST_Z, SAIL_SPAN, SAIL_TACK } from '../traveller/boat/form';
 
 const K = tuning.netWhale;
 /** Its saves, in the order they are taken. */
@@ -239,6 +239,7 @@ export class NetWhale {
   private readonly forward = new THREE.Vector3();
   /** What the release keeps in frame besides her and the spout: its eye and its waving flipper. */
   private readonly freeing = [new THREE.Vector3(), new THREE.Vector3()];
+  private readonly hull = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
   private readonly subjects: NonNullable<Shot['subjects']> & { tertiary: THREE.Vector3 } = { primary: new THREE.Vector3(),
     secondary: new THREE.Vector3(), tertiary: new THREE.Vector3(), margin: 0.85, extra: 10 };
   /** Seconds since the encounter began. */
@@ -1731,6 +1732,8 @@ export class NetWhale {
     } else if (this.haul === 'heaving') {
       const w = Math.min(1, this.haulT / K.heaveTime);
       const drawn = THREE.MathUtils.smootherstep(w / K.pullDraw, 0, 1);
+      // The mesh stays up off its head while she draws, and comes down as she braces for the next.
+      this.billow = Math.max(this.billow, 1 - THREE.MathUtils.smoothstep(w, K.pullDraw, 1));
       this.hauledIn = Math.min(K.heaves, this.heaves + drawn) * K.pullTake;
       this.grip.out = net.lineLength - this.hauledIn;
       if (!net.posed) net.peel = this.hauledIn / (K.heaves * K.pullTake);
@@ -1761,7 +1764,7 @@ export class NetWhale {
     this.heavedBy ??= by;
     this.waiting = 0;
     this.puller = this.heaves % 2 === 0 ? 0 : 1;
-    this.billow = Math.max(this.billow, 0.8);
+    this.billow = 1;
     this.to('heaving');
     this.net.sound('net-heave', this.headNet(this.a));
     this.net.sound('rope-pull', this.cast.child.mitten(this.puller, this.b), 1);
@@ -2206,6 +2209,17 @@ export class NetWhale {
     this.holdT = 0;
   }
 
+  /** The boat's bow, stern, masthead and the clew of its sail, joining the framing by `h` from `rest`. */
+  private wholeBoat(rest: THREE.Vector3, h: number): THREE.Vector3[] {
+    const boat = this.cast.boat;
+    const [bow, stern, head, clew] = this.hull;
+    boat.hullEnds(bow, stern);
+    head.set(0, MAST_TOP, MAST_Z).applyMatrix4(boat.group.matrixWorld);
+    clew.set(-boat.sailSide * SAIL_SPAN * 0.6, SAIL_TACK + 0.4, MAST_Z - SAIL_SPAN * 0.8).applyMatrix4(boat.group.matrixWorld);
+    for (const p of this.hull) p.lerp(rest, 1 - h);
+    return this.hull;
+  }
+
   /**
    * Eases the crossing's view from behind the sail to the step's hold beside the boat: a little to port of astern
    * in landscape, so what the step asks for stands clear of the sail; in portrait on the line from its head through
@@ -2286,8 +2300,12 @@ export class NetWhale {
     if (this.looking) this.cast.child.face(s.primary);
     else s.primary.copy(this.cast.child.position).y += 1.2;
     const rest = pair?.secondary ?? s.primary;
-    if (this.step === 'line') s.secondary.copy(this.haul === 'out' || this.haul === 'reaching' ? this.net.float.position : this.net.foot);
-    else if (this.step === 'heave') s.secondary.copy(this.net.foot);
+    // A phone's narrow frame keeps the net on its head rather than its foot at the cheek, which lies off to the side.
+    if (this.step === 'line' && (this.haul === 'out' || this.haul === 'reaching')) s.secondary.copy(this.net.float.position);
+    else if (this.step === 'line' || this.step === 'heave') {
+      if (portrait) this.headNet(s.secondary);
+      else s.secondary.copy(this.net.foot);
+    }
     else if (this.step === 'flipper') {
       const out = this.bird !== 'satchel' && this.bird !== 'lifted' && this.bird !== 'home';
       s.secondary.copy(out ? this.cast.cygnet.position : whale.finTip).y += out ? 0.4 : 0;
@@ -2306,9 +2324,11 @@ export class NetWhale {
     }
     else if (this.step === 'heave') this.headNet(s.tertiary);
     else s.tertiary.copy(this.step === 'flipper' ? whale.finTip : whale.eye);
-    // Free, its eye stays in the frame with her, and the flipper it waves as it thanks her.
-    s.points = this.step === 'free' && farewell < 1 ? this.freeing : undefined;
-    if (s.points) {
+    // Free, its eye stays in the frame with her, and the flipper it waves as it thanks her. On a phone the haul keeps
+    // the whole boat in, sail and all.
+    const whole = portrait && (this.step === 'line' || this.step === 'heave');
+    s.points = this.step === 'free' && farewell < 1 ? this.freeing : whole ? this.wholeBoat(rest, h) : undefined;
+    if (s.points === this.freeing) {
       this.freeing[0].copy(whale.eye).lerp(rest, 1 - h);
       this.freeing[1].copy(whale.finTip).lerp(whale.eye, 1 - whale.flipperLift).lerp(rest, 1 - h);
     }

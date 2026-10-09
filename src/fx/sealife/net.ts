@@ -118,8 +118,15 @@ const FOLD_STAND = 0.1;
 const FOLD_BRIDGE = 0.4;
 const FOLD_LAYER = 0.07;
 const FOLD_WEEDS = 22;
-/** Billowing, the mesh over the head rises off it toward the near edge, along the head as far as this past the eye (m). */
-const BILLOW_PAST_EYE = 9;
+/**
+ * Billowing, the mesh over the head bellies up and out toward the boat, along the head as far as `BILLOW_PAST_EYE`
+ * past the eye (m), across from `BILLOW_FAR` beyond the crown line on the far side, highest `BILLOW_CREST` of the way
+ * down the near flank and still `BILLOW_EDGE` as high at the near edge, held there by the line she hauls.
+ */
+const BILLOW_PAST_EYE = 10;
+const BILLOW_FAR = 2.5;
+const BILLOW_CREST = 0.35;
+const BILLOW_EDGE = 0.4;
 
 const bump = (x: number) => (Math.abs(x) >= 1 ? 0 : 0.5 + 0.5 * Math.cos(Math.PI * x));
 
@@ -330,8 +337,10 @@ export class Net {
   private readonly foldNormals: THREE.BufferAttribute;
   private readonly foldContact: THREE.BufferAttribute;
   private readonly foldAfloat: THREE.BufferAttribute;
-  /** How much each point of the sheet billows: on the head, rising toward the near edge. */
+  /** How much each point of the sheet billows: on the head, a belly standing highest on the upper near flank. */
   private readonly billows = new Float32Array(ROWS * COLS);
+  /** How far the sheet stands up off the head this moment, following `billow`: up with the gust, settling slower. */
+  private billowed = 0;
   private readonly foldWeeds: Polyline[] = [];
   private readonly foldWeedAt: { fr: number; m: number; length: number; turn: number }[] = [];
   private readonly hinge = new THREE.Vector3();
@@ -486,7 +495,7 @@ export class Net {
     const c = whale.point(0, TOP(sEye), sEye, this.q);
     this.profileFrom(c, 1, sEye);
     this.eyeTop = this.arcNearest(this.offAxis(whale.eye) - this.offAxis(c), whale.eye.y) - EYE_CLEAR;
-    this.lift = this.slump = this.peel = this.loop = this.drift = this.sink = this.flap = this.billow = 0;
+    this.lift = this.slump = this.peel = this.loop = this.drift = this.sink = this.flap = this.billow = this.billowed = 0;
     this.peelAt = this.soundPeel = 0;
     this.domeT = 10;
     this.held = this.fallsTo = this.holder = null;
@@ -573,6 +582,8 @@ export class Net {
       return;
     }
     this.domeT += dt;
+    this.billowed = this.snap ? this.billow
+      : this.billowed + (this.billow - this.billowed) * (1 - Math.exp(-dt * (this.billow > this.billowed ? K.billowRise : K.billowSettle)));
     // It settles first, its floats awash a while, and then goes down.
     netLook.uSunk.value = SINK_DEPTH * this.sink ** 2;
     netLook.uFade.value = 1 - THREE.MathUtils.smoothstep(this.sink, 0.8, 1);
@@ -822,8 +833,10 @@ export class Net {
         this.lifts[k] = bump(du / PATCH.x) * bump(da / PATCH.y);
         this.domes[k] = bump(du / DOME.x) * bump(da / DOME.y);
         const u = (i / (ROWS - 1)) * NET.long;
-        this.billows[k] = (1 - THREE.MathUtils.smoothstep(u, this.uEye + 2, this.uEye + BILLOW_PAST_EYE))
-          * THREE.MathUtils.smoothstep(da, -3, this.edge.getX(k));
+        const crest = this.edge.getX(k) * BILLOW_CREST;
+        this.billows[k] = (1 - THREE.MathUtils.smoothstep(u, this.uEye + 3, this.uEye + BILLOW_PAST_EYE))
+          * (da < crest ? THREE.MathUtils.smoothstep(da, -BILLOW_FAR, crest)
+            : 1 - (1 - BILLOW_EDGE) * THREE.MathUtils.smoothstep(da, crest, this.edge.getX(k)));
       }
     }
     // The leader comes down off the cheek in front of the eye and the loop's line behind it, toward the flipper: never across the eye.
@@ -1037,6 +1050,7 @@ export class Net {
       const tent = 1 - THREE.MathUtils.smoothstep(slide, 0, 4);
       this.tent[i] = tent;
       const lift = raised * tent;
+      let v = 1;
       for (let j = 0; j < COLS; j++) {
         const k = i * COLS + j;
         const arc = this.pathArc[i * PATH + j];
@@ -1054,11 +1068,14 @@ export class Net {
             this.t.z += (blow.z - this.t.z) * lift * wl * 0.12;
           }
           up += dome * this.domes[k] * tent;
-          if (this.billow > 0.001 && this.billows[k] > 0) {
-            const b = this.billow * K.billowHeight * this.billows[k] * (0.65 + 0.35 * Math.sin(time * 3.3 + u * 0.5 - this.acrossOf(k) * 0.4));
+          const billows = this.billowed > 0.001 ? this.billowAt(i, q, (v = this.pathIndex(i, q, v)), end) : 0;
+          if (billows > 0) {
+            // Ripples run across it toward the boat with the wind, as through a sheet held up on a line.
+            const ripple = Math.sin(time * 5.2 - q * 0.9 - u * 0.35) + 0.5 * Math.sin(time * 8.1 - u * 0.8 + j * 0.5);
+            const b = this.billowed * K.billowHeight * billows * (0.82 + 0.12 * ripple);
             up += b;
-            this.t.x += this.side.x * b * 0.5;
-            this.t.z += this.side.z * b * 0.5;
+            this.t.x += this.side.x * b * K.billowOut;
+            this.t.z += this.side.z * b * K.billowOut;
           }
           P[k * 3] = this.t.x;
           P[k * 3 + 1] = this.t.y + up;
@@ -1079,6 +1096,27 @@ export class Net {
     }
     this.normalsFrom(P);
     this.pos.needsUpdate = this.afloat.needsUpdate = this.contact.needsUpdate = this.normals.needsUpdate = true;
+  }
+
+  /** The first of row `i`'s cloth points at least `q` along its drape, searching from `from`. */
+  private pathIndex(i: number, q: number, from: number): number {
+    let v = from;
+    while (v > 1 && this.pathArc[i * PATH + v - 1] >= q) v--;
+    while (v < COLS - 1 && this.pathArc[i * PATH + v] < q) v++;
+    return v;
+  }
+
+  /**
+   * How much the mesh billows at `q` along row `i`'s drape, by where it lies on the head now rather than which part of
+   * the cloth it is, so the belly stays over the head as the net slides through it, fading to the water below.
+   */
+  private billowAt(i: number, q: number, v: number, end: number): number {
+    const base = i * PATH;
+    const a = this.pathArc[base + v - 1];
+    const f = THREE.MathUtils.clamp((q - a) / Math.max(1e-6, this.pathArc[base + v] - a), 0, 1);
+    const w = this.billows[i * COLS + v - 1] * (1 - f) + this.billows[i * COLS + v] * f;
+    const edge = this.pathArc[base + COLS - 1];
+    return q > edge ? w * (1 - THREE.MathUtils.smoothstep(q, edge, end)) : w;
   }
 
   private normalsFrom(P: Float32Array): void {
@@ -1314,8 +1352,9 @@ export class Net {
         now[o + 2] = this.t.z;
         vel[o] = vel[o + 1] = vel[o + 2] = 0;
       } else {
-        // A cork on its short line swings after what it hangs from; one lying on something follows it closely.
-        const w = afloat > 0.5 || at.leader >= 0 ? 30 : 8;
+        // A cork on its short line swings after what it hangs from; one lying on something, or tied into a sheet
+        // billowing in the wind, follows it closely.
+        const w = afloat > 0.5 || at.leader >= 0 ? 30 : THREE.MathUtils.lerp(8, 30, THREE.MathUtils.smoothstep(this.billowed, 0, 0.2));
         for (let e = 0; e < 3; e++) {
           const pull = (this.t.getComponent(e) - now[o + e]) * w * w - vel[o + e] * 2 * 0.55 * w;
           vel[o + e] += pull * dt;
