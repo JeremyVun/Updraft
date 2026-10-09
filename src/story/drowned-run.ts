@@ -1045,8 +1045,10 @@ export class RoofRun {
       c.lookAt = cat.eye(this.look);
       return;
     }
-    if (this.stage !== 'walk' || this.pause >= 0 || (this.lookingBack >= 0 && this.lookingBack < tuning.drowned.run.lookBackFor)) return;
     const k = tuning.drowned.run;
+    const beat = (t: number, length: number) => t >= 0 && t < length;
+    if (this.stage !== 'walk' || this.pause >= 0 || beat(this.lookingBack, k.lookBackFor) || beat(this.lookingDown, k.lookDownFor)
+      || beat(this.lookingSwing, k.lookSwingFor)) return;
     this.glance += dt;
     if (this.glance > k.glanceEvery + k.glanceFor) this.glance = 0;
     if (this.glance > k.glanceEvery) c.lookAt = this.fogFront(this.look).setY(c.position.y + 1);
@@ -1258,9 +1260,9 @@ export class RoofRun {
 
   /**
    * Where the last of her way to a piece is seen from: the mill from over the fog behind her as she goes up the wall
-   * toward it, the hoist, the sails and the bell tower beyond; the swing from over the fog coming on behind her as she
-   * goes along the green cottage's ridge, the cat and the swing ahead of her, and once she stops at the top of the
-   * slope, the swing, the nave she will let go onto and the bell tower beyond her.
+   * toward it, the hoist, the sails and the bell tower beyond; the swing from off her right shoulder as she goes along
+   * the green cottage's ridge, the fog coming on behind her and the cat and the swing ahead, going round her as she
+   * stops at the top of the slope to the far side of the swing, the nave she will let go onto beyond it.
    */
   private approachView(piece: Piece, wide: number): void {
     const a = tuning.drownedCamera.run.approach[piece as keyof typeof tuning.drownedCamera.run.approach];
@@ -1269,10 +1271,17 @@ export class RoofRun {
       out.set(from.x + lerp(uprightAt[0], wideAt[0], wide), from.y + lerp(uprightAt[1], wideAt[1], wide), from.z + lerp(uprightAt[2], wideAt[2], wide));
     set(a.eye, a.uprightEye, this.stationEye);
     set(a.at, a.uprightAt, this.stationTarget);
-    if ('top' in a) this.stationEye.y = Math.min(this.stationEye.y, a.top);
     if ('lookAt' in a && this.lookingSwing >= 0) {
-      this.stationTarget.lerp(set(a.lookAt, a.uprightLookAt, this.tmp2), THREE.MathUtils.smoothstep(this.lookingSwing, 0, tuning.drowned.run.lookSwingFor));
+      /** Round her, not across: the bearing and reach from her eased, and the height. */
+      const u = THREE.MathUtils.smoothstep(this.lookingSwing, 0, tuning.drowned.run.lookSwingFor);
+      const to = set(a.lookEye, a.uprightLookEye, this.tmp2), e = this.stationEye;
+      const was = Math.atan2(e.x - from.x, e.z - from.z), then = Math.atan2(to.x - from.x, to.z - from.z);
+      const bearing = was + Math.atan2(Math.sin(then - was), Math.cos(then - was)) * u;
+      const reach = lerp(Math.hypot(e.x - from.x, e.z - from.z), Math.hypot(to.x - from.x, to.z - from.z), u);
+      e.set(from.x + Math.sin(bearing) * reach, lerp(e.y, to.y, u), from.z + Math.cos(bearing) * reach);
+      this.stationTarget.lerp(set(a.lookAt, a.uprightLookAt, this.tmp2), u);
     }
+    if ('top' in a) this.stationEye.y = Math.min(this.stationEye.y, a.top);
   }
 
   private view(piece: Piece, wide: number): void {
