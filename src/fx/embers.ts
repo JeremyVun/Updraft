@@ -174,28 +174,27 @@ export class Embers {
     fixInPlace(this.mesh, this.veils.mesh);
   }
 
-  /** Lays an unlit coal in the litter, taking the oldest slot back if they are all in use. */
+  /**
+   * Lays an unlit coal in the litter, taking the oldest slot back if they are all in use. Each one is a new coal,
+   * so a room still holding a coal that has burnt out never finds it turned into the next one laid in its slot.
+   */
   lay(x: number, z: number): Coal {
-    let coal = this.coals.find((c) => !c.live);
-    if (!coal) {
-      coal = this.coals[0];
+    let old = this.coals.find((c) => !c.live);
+    if (!old) {
+      old = this.coals[0];
       // An unlit, concealed story ember is reserved for its reveal, even when every slot is occupied.
       const reusable = this.coals.filter(c => c.reveal >= 1);
-      coal = reusable[0] ?? coal;
-      for (const c of reusable) if (c.heat + c.wake < coal.heat + coal.wake) coal = c;
+      old = reusable[0] ?? old;
+      for (const c of reusable) if (c.heat + c.wake < old.heat + old.wake) old = c;
     }
-    coal.p.set(x, Math.max(heightAt(x, z), 0) + tuning.wood.orbHover, z);
-    coal.heat = 0;
-    coal.flare = 0;
-    coal.wake = 0;
-    coal.breath = 0;
-    coal.lit = false;
-    coal.live = true;
-    coal.reveal = 1;
-    coal.laid = this.clock;
-    const j = (SPARKS + this.coals.indexOf(coal)) * 4;
+    this.douse(old);
+    const i = this.coals.indexOf(old);
+    const coal: Coal = { p: new THREE.Vector3(x, Math.max(heightAt(x, z), 0) + tuning.wood.orbHover, z), heat: 0, flare: 0,
+      lit: false, wake: 0, live: true, reveal: 1, laid: this.clock, breath: 0, seed: old.seed };
+    this.coals[i] = coal;
+    const j = (SPARKS + i) * 4;
     (this.motion.array as Float32Array).fill(0, j, j + 4);
-    this.glowPower[this.coals.indexOf(coal)] = 0;
+    this.glowPower[i] = 0;
     return coal;
   }
 
