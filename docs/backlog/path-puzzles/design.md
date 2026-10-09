@@ -551,6 +551,14 @@ cat ahead, the fog behind carried across); every story beat (the cat leaving the
 happens in frame or did not happen. The room's storyboard, a frame every 2 s of a real run with its beat, is read
 as a stranger reads a comic, and every break in it goes on the list below.
 
+**The cat is the compass** (Claude's call, 2026-10-09, answering items 2, 6, 13 and 16 together): wherever the cat
+is, that is where she is going. At every obstacle the cat crosses first, in frame, which shows the way over, and then
+waits on the far side facing her, calling, which marks the goal: on the slates' edge where the tub must go, on the
+barn roof the tree must fall to, on the chimney at the sheet line's far end, at the top of the mill's hoist, on the
+nave's roof past the swing, in the belfry's opening. Each walk ends on a frame laying out her, the obstacle and the
+cat across it, the fog behind; the puzzle frame keeps those and the drawn gust. The cat is read at every distance the
+room takes (large enough on screen to be a cat, never a speck), and between obstacles it is in frame, a roof ahead.
+
 **His rule for every interaction frame** (binding on all of them): judge the puzzle as a first-time player sees it
 through the lens. The thing the player acts on and the drawn gust must both be plainly in frame, and so must what
 the action is for (where the tub goes, where the tree falls, what the bell answers).
