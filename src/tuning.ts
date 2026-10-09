@@ -1691,7 +1691,7 @@ export const tuning = {
      */
     holdMove: 5, holdLookY: 7, holdToward: 0.5,
     lineDistance: 9, lineHeight: 3.4, lineBearing: 0.3, lineLookY: 2.4, lineToward: 0.3,
-    flipperDistance: 12, flipperHeight: 3.2, flipperBearing: 0.55, flipperLookY: 2.3, flipperToward: 0.28,
+    flipperDistance: 12, flipperHeight: 3.2, flipperBearing: 0.55, flipperLookY: 2.3, flipperToward: 0.78,
     /**
      * A phone's holds: on the line from what matters through the boat, turned `turn` radians round toward the low sun
      * on the bow (toward starboard when negative), as far as the step allows, so its tall frame keeps the gold
