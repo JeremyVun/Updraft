@@ -1890,15 +1890,16 @@ export const tuning = {
       /** Seconds she stands at the tower's foot before the beat begins, and before the cat goes up past her. */
       naveFor: 1, catAfter: 0.4,
       /**
-       * She follows once the cat has called down to her from the arch for this many seconds, or after this many seconds
-       * at the foot whatever it is doing; the cat climbs at m/s.
+       * She follows once the cat is this near the top of the ivy (metres under the sill), so it is round in the arch
+       * calling down to her as she starts up, or after this many seconds at the foot whatever it is doing; the cat
+       * climbs at m/s.
        */
-      followCalled: 0.9, followAfter: 12, catClimb: 2.6,
+      followFrom: 0.6, followAfter: 12, catClimb: 2.6,
       /**
        * The cat in the arch: seconds between its calls down to her, how far below the sill she is when it goes in to
        * its kittens (metres), and seconds after it is down among them that they wake.
        */
-      callEvery: 1.7, catInFrom: 1.8, wakeAfter: 0.5,
+      callEvery: 1.5, catInFrom: 1.5, wakeAfter: 0.3,
       /**
        * Seconds she kneels to the kittens, then stands by the bell looking out over the fog sea; seconds after she
        * kneels that a kitten comes to her, how near her it sits (metres), how far she leans down to it, and which way
@@ -2173,12 +2174,12 @@ export const tuning = {
        * Low outside the arch while the bell is hers to ring: her, the kittens and the bell against the sky through the
        * east arch, and the fog sea off the tower's north-west corner where the lantern answers.
        */
-      ring: [-15, 2.0, 2.2, -0.8, 1.4, -2.2], uprightRing: [-16, 2.3, 0.5, -2.0, 0.5, -5.0],
+      ring: [-15, 2.0, 2.2, -0.8, 1.4, -2.2], uprightRing: [-16, 2.3, 0.5, -1.6, 0.4, -3.6],
       /**
        * Off the north water to the west, coming down with her as she climbs to the boat coming in (heights over her); it
-       * looks this share of the way from her to the boat.
+       * looks this share of the way from her to the boat (upright, its own).
        */
-      bring: [-17, 1.2, -15, 0, 0, 0], uprightBring: [-15, 2.2, -13, 0, 0, 0], bringAlong: 0.45,
+      bring: [-17, 1.2, -15, 0, 0, 0], uprightBring: [-17, 2.6, -15, 0, 0, 0], bringAlong: 0.45, uprightBringAlong: 0.75,
       /**
        * Once the boat is `boardFrom` metres from the berth it comes round in one move of `boardFor` seconds toward the
        * boat's starboard quarter, this share of the way from the beam to the stern, to stand this far off her (upright,
@@ -2194,7 +2195,7 @@ export const tuning = {
        * over the water.
        */
       catEyes: 0.32, upBack: 8, upOver: -0.2, upRound: 0.62, upAim: 0.52, upZoom: 1.5,
-      uprightUpBack: 5, uprightUpOver: -0.1, uprightUpRound: 0.16, uprightUpAim: 0.6, uprightUpZoom: 1.0,
+      uprightUpBack: 9, uprightUpOver: 0.2, uprightUpRound: 0.55, uprightUpAim: 0.5, uprightUpZoom: 1.2,
       tiltFrom: 0.2, tiltTo: 5, upMargin: 0.94, upClear: 0.35,
       /**
        * After the blink, from `releaseFrom` to `releaseTo` seconds after she sits, it lets her go as the two go back in:

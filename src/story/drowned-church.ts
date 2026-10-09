@@ -114,7 +114,6 @@ export class ChurchArrival {
   private blinked = false;
   private catStarted = false;
   private calledAt = -Infinity;
-  private archAt = Infinity;
   private firstAnswer = -Infinity;
   /** Leaning down to the kitten that has come to her. */
   private leaning = false;
@@ -290,7 +289,7 @@ export class ChurchArrival {
     switch (this.step) {
       case 'foot':
         c.lookAt = this.look.copy(this.catEye);
-        if (this.catStarted && ((this.catAt === 'arch' && this.since - this.archAt > k.followCalled) || this.t > k.followAfter)) this.follow();
+        if (this.catStarted && (this.catEye.y > BELFRY.sill - k.followFrom || this.t > k.followAfter)) this.follow();
         break;
       case 'climb':
         if (this.catAt === 'arch' && c.position.y > BELFRY.sill - k.catInFrom) this.catIn();
@@ -363,9 +362,8 @@ export class ChurchArrival {
           cat.rest('sit', this.head);
           cat.unease = 0;
           this.catAt = 'arch';
-          this.archAt = this.since;
           this.calledAt = this.since - tuning.drowned.church.callEvery + 0.3;
-        }, 1.4);
+        }, 2.6);
       });
     });
   }
@@ -849,7 +847,7 @@ export class ChurchArrival {
       this.target.lerp(this.homeAt, THREE.MathUtils.lerp(k.uprightFind, k.find, wide) * find);
     }
     if (this.step === 'down' || this.step === 'wait' || this.step === 'board') {
-      this.target.copy(held.primary).lerp(held.secondary, k.bringAlong);
+      this.target.copy(held.primary).lerp(held.secondary, THREE.MathUtils.lerp(k.uprightBringAlong, k.bringAlong, wide));
     }
     if (this.step === 'wait' || this.step === 'board') {
       /** Once the boat is on its way in alongside, round to the boarding view in one move, so it is there as she steps down into it. */

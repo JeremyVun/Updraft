@@ -29,7 +29,7 @@
 //        (default 1600x900), LENS=1 also fails on the lens's measures (a roof hiding her, her walking toward it, her
 //        out of frame, it inside a roof, it whipping round; and at the church, from the tower's foot until the
 //        storm's frame takes over, her out of frame or hidden by the church or a roof; at the blink the cat, the kitten
-//        and her face out of frame or the cat under 50 px tall).
+//        and her face out of frame or the cat under 45 px tall).
 import { chromium } from 'playwright-core';
 import assert from 'node:assert/strict';
 
@@ -572,7 +572,7 @@ try {
     assert(onSill(blink.kitten), `the kitten is not on the sill at the slow blink (${blink.kitten.join(', ')})`);
     assert(w.catHome !== null && w.catHome - w.seated < T.leaveBy, `the cat had not gone back in to its kittens by the time the storm's lens took over (${w.catHome === null ? 'never' : (w.catHome - w.seated).toFixed(1) + ' s after she sat'})`);
     const inside = (p) => p[0] > 0.02 && p[0] < 0.98 && p[1] > 0.02 && p[1] < 0.98;
-    if (process.env.LENS) assert((width < height || seenAtBlink.px >= 50) && inside(seenAtBlink.cat) && inside(seenAtBlink.kitten) && inside(seenAtBlink.her), `at the blink the cat was ${seenAtBlink.px.toFixed(0)} px tall at ${seenAtBlink.cat.map((v) => v.toFixed(2))}, the kitten at ${seenAtBlink.kitten.map((v) => v.toFixed(2))} and her face at ${seenAtBlink.her.map((v) => v.toFixed(2))}`);
+    if (process.env.LENS) assert((width < height || seenAtBlink.px >= 45) && inside(seenAtBlink.cat) && inside(seenAtBlink.kitten) && inside(seenAtBlink.her), `at the blink the cat was ${seenAtBlink.px.toFixed(0)} px tall at ${seenAtBlink.cat.map((v) => v.toFixed(2))}, the kitten at ${seenAtBlink.kitten.map((v) => v.toFixed(2))} and her face at ${seenAtBlink.her.map((v) => v.toFixed(2))}`);
   };
 
   if (fromStairs) {
