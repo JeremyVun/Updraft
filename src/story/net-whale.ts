@@ -630,7 +630,7 @@ export class NetWhale {
     const upward = Math.abs(uy) > Math.abs(ux);
     const cycle = K.sweepFor + K.sweepRest;
     gesture.draw(camera, centre, (this.sweepT % cycle) / K.sweepFor, span, this.sweepAlpha, K.sweepWidth, upward ? 'lift' : 'across', 1,
-      upward ? h - Math.PI / 2 : h, K.sweepBold);
+      upward ? h - Math.PI / 2 : h, this.step === 'eye' ? K.eyeSweepBold : K.sweepBold);
   }
 
   update(dt: number, time: number): void {
@@ -1155,7 +1155,7 @@ export class NetWhale {
     to.project(camera);
     const across = (to.x - from.x) * camera.aspect;
     this.inviteHeading = Math.atan2(to.y - from.y, across);
-    this.inviteLength = Math.hypot(across, to.y - from.y);
+    this.inviteLength = Math.max(K.eyeSweepLeast, Math.hypot(across, to.y - from.y));
   }
 
   /** Whichever valve dolphin is out, carried on to its end once its own step has passed. */

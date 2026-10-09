@@ -1503,10 +1503,11 @@ export const tuning = {
      * half-heights long at most, kept within `sweepFrame` of the frame's middle, `sweepWidth` m wide drawn `sweepBold`
      * times as bold as the shared sweeps allow on screen, and `sweepLift` m in front of what it crosses. The eye's is
      * as long as the fold over it, from `eyeSweepUnder` of the fold's height under its lower edge to the edge it hangs
-     * from, and carries on over the brow as it fades.
+     * from, and carries on over the brow as it fades; never shorter than `eyeSweepLeast` screen half-heights about the
+     * fold's middle, and `eyeSweepBold` times as bold.
      */
     sweepFor: 1.6, sweepRest: 0.9, sweepScreen: 1.1, sweepFrame: 0.85, sweepWidth: 0.45, sweepBold: 2.8, sweepLift: 1.2,
-    eyeSweepUnder: 0.4,
+    eyeSweepUnder: 0.4, eyeSweepLeast: 0.75, eyeSweepBold: 5,
     /** The drawn spiral over the blowhole: how plainly it asks, its loops' radius (m), and how much bolder it is drawn. */
     coaxUrgency: 0.85, coaxRadius: 2.4, coaxBold: 2,
     /** The swell it leaves going under: speed (m/s), crest spacing (m), width of the packet (m) and height at the boat (m). */
@@ -1703,7 +1704,7 @@ export const tuning = {
      */
     phone: {
       breath: { distance: 18, height: 2.8, turn: -0.2, lookY: 8, toward: 0.35 },
-      look: { distance: 4.8, height: 2.2, turn: -0.55, lookY: 2.5, toward: 0.28 },
+      look: { distance: 9.5, height: 2.8, turn: -0.35, lookY: 3.4, toward: 0.32 },
       line: { distance: 9, height: 3.2, turn: -0.45, lookY: 3, toward: 0.33, eyeward: 1 },
       flipper: { distance: 11.5, height: 3.2, turn: -1.1, lookY: 4, toward: 0.6 },
       release: { distance: 12, height: 3, turn: -0.3, lookY: 12, toward: 0.4 },
