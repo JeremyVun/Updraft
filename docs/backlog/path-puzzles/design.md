@@ -595,6 +595,9 @@ Found reading the room's storyboard (a frame every 2 s of `drowned-run-check` fr
 16. No piece is seen before she is at it: each walk looks at her back and the fog, so the next obstacle and the way
     over it arrive unannounced. Fix: each walk ends on a frame that lays out the next piece (what is in the way, where
     she must get to) before the puzzle begins.
+17. The church's storyboard (`FROM=church`): the cat is never seen climbing the ivy ahead of her; through the ringing
+    the lens sees her back in the opening and the bell never; as she boards the lens closes in until the back of her
+    hood fills the frame, and the cat's goodbye on the ridge does not read at that scale.
 
 ### The room rethought (Claude, 2026-10-08; Jeremy: "yea lets see how this works")
 
