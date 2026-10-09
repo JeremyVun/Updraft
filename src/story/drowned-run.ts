@@ -328,14 +328,13 @@ function* layLens(nodes: readonly Node[], obstacles: readonly THREE.Box3[], upri
   /**
    * Every bearing within reach of the one it wants and every share of its distance, at each step: the path through them
    * that stays clear and sees her, wanting least to be away from where it wants to be, drawn in, or turning between steps.
-   * While she is at a piece, or on the last of her way to it where the view laying it out holds the lens, the path goes
-   * wherever suits the steps either side, and just past it the path starts out from where that view leaves it; where
-   * that view is still coming in, the path is laid as ever, since the lens is between them.
+   * While she is at a piece, or coming to it in the view that lays it out, that view holds the lens, so there the path
+   * goes wherever suits the steps either side, and just past it the path starts out from where that view leaves it.
    */
   const SHARES = [1, 0.82, 0.66, 0.52, 0.4];
   const ARC = 2.4, BEARINGS = 33, TURNS = 5;
   const held = nodes.flatMap((n, i) => (n.by === 'walk' || n.by === 'hop' ? []
-    : [[nodes[i - 1].s - (k.approach[n.by as keyof typeof k.approach] ? k.approachHeld : 0), n.s]]));
+    : [[nodes[i - 1].s - (k.approach[n.by as keyof typeof k.approach]?.from ?? 0), n.s]]));
   const steps: { want: number; along: number; lift: number; free: boolean; anchor: { bearing: number; weight: number } | null }[] = [];
   for (let s = 0; s <= total + LENS_STEP; s += LENS_STEP) {
     wayAt(nodes, s - k.behind, a);
