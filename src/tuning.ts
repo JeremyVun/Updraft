@@ -2278,7 +2278,7 @@ export const tuning = {
      * from her to the cat and this high over her seat; the lens it takes, and its pace.
      */
     rescueFrom: 2.5, rescueBearing: 1.3, rescueDistance: 5.2, uprightRescueDistance: 4.8, rescueHeight: 2.6, rescueAlong: 0.5,
-    rescueAim: 0.3, rescueZoom: 1.25, uprightRescueZoom: 1.05, rescuePace: 0.35,
+    rescueAim: 0.45, rescueZoom: 1.1, uprightRescueZoom: 0.95, rescuePace: 0.35,
   },
   /** The two crossings of the drowned village's run over the roofs: the dead tree pushed over, the swing pumped. */
   crossings: {

@@ -52,7 +52,7 @@ try {
         next += 0.5;
       } else await page.waitForTimeout(15);
     }
-  })();
+  })().catch(() => {});
   const state = () => page.evaluate(() => {
     const s = __game.story.current, c = s.cat, t = __game.village.tub, r = (v) => v.toArray().map((x) => +x.toFixed(2));
     return { time: +__stats.time.toFixed(1), beat: s.beat, step: c.step, tub: r(t.position), docked: t.docked, carried: !!t.carry,
@@ -142,7 +142,7 @@ try {
   let s = await state();
   const start = s.tub, began = s.time;
   console.log('waiting', JSON.stringify(s));
-  await page.waitForTimeout(3500);
+  await play(3.5);
   await shot('1-cat-on-chimney');
 
   if (process.env.VALVE) {
@@ -163,7 +163,7 @@ try {
   }
 
   // Waiting does nothing but bring the cat down to the edge and the drawn gust: the breeze alone never carries the tub.
-  await page.waitForTimeout(Math.max(0, idle - 3.5) * 1000);
+  await play(Math.max(0, idle - 3.5));
   s = await state();
   assert.equal(s.step, 'waiting', 'still waiting on the tub after idling');
   const roofGoal = s.goal;
