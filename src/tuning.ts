@@ -124,7 +124,7 @@ export const tuning = {
      * throat's resonances; `wet` of it into the shared reverb, and the sea's echo of it every `echo` s, each repeat
      * `echoBack` of the last, at `echoLevel`.
      */
-    whaleVoice: { level: 0.06, near: 40, far: 600, farthest: 0.35, sub: 0.45, body: 0.5, wet: 0.45, echo: 0.31, echoBack: 0.42, echoLevel: 0.3 },
+    whaleVoice: { level: 0.09, near: 40, far: 600, farthest: 0.35, sub: 0.45, body: 0.5, wet: 0.45, echo: 0.31, echoBack: 0.42, echoLevel: 0.3 },
     clothSources: 3, clothReach: 60, clothLevel: 0.35,
     /** The stairs in the clouds (a proposal awaiting audition): the air round the travellers, a flight knocking home, the score. */
     stairsAirLevel: 1,
