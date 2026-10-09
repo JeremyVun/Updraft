@@ -2,14 +2,15 @@ import * as THREE from 'three';
 import { BOW_Z, FLOOR_Y, STERN_Z } from '../traveller/boat/form';
 import { tuning } from '../tuning';
 import {
-  CAT_CHIMNEY, CAT_EAVES, CAT_HOLD, CAT_LANDING, CAT_ROOF, TOWER_FOOT, TUB_START, TUB_WATER, WAY, catRoof, onCatRoof, strandRoof,
+  CAT_CHIMNEY, CAT_EDGE, CAT_HOLD, CAT_HOLD_YAW, CAT_LANDING, CAT_ROOF, TOWER_FOOT, TUB_START, TUB_WATER, WAY, catRoof, strandRoof,
 } from '../world/drowned-way';
 import { WashTub, type TubWall } from '../world/wash-tub';
 import type { Cast } from './cast';
 
 /**
  * `stranded` on its chimney before the boat comes; `seen` she has noticed it; `easing` the boat slowing into its hold;
- * `waiting` for the tub to be brought to its roof; `coming` down into it; `ferried` the tub on its way to the boat;
+ * `waiting` for the tub to be brought to its roof, down at the water's edge once the boat holds; `coming` into the tub
+ * once it is there; `ferried` the tub on its way to the boat;
  * `boarding` the tub at the bow; `aboard` in the boat, first coming to her and then at the bow. Then, once the fog has
  * come on, `bolting` off the bow and over the first roof, `waits` at its end looking back at her, `climbing` she goes
  * after it, and `ridge` she is up.
@@ -31,6 +32,14 @@ const HULL_LEN = (BOW_Z - STERN_Z) / 2 - 0.2;
 const BOW_DOCK = new THREE.Vector3(HULL_HALF + WashTub.radius + 0.05, 0, 1.3);
 /** On its boards in the middle of the tub. */
 const IN_TUB = new THREE.Vector3(0, WashTub.floor, 0);
+/** Where the tub comes up against the cat's slates, just below where it waits at the water's edge. */
+const CAT_DOCK = (() => {
+  const r = CAT_ROOF, c = Math.cos(r.yaw), s = Math.sin(r.yaw);
+  const along = (CAT_EDGE.x - r.x) * c - (CAT_EDGE.z - r.z) * s, out = r.depth + WashTub.radius + 0.03;
+  return new THREE.Vector3(r.x + along * c + out * s, 0, r.z - along * s + out * c);
+})();
+/** Just out over the water in front of it, where it puts a paw toward the water and snatches it back. */
+const PAW_AT = CAT_EDGE.clone().lerp(CAT_DOCK, 0.32).setY(0.03);
 /** Where she steps out onto the slates by the stem, the ridge above it, and the west end of the ridge over the lane. */
 const STEP = new THREE.Vector3(WAY.strandSlope.x0, WAY.strandSlope.height, WAY.strandSlope.z0);
 const RIDGE = new THREE.Vector3(WAY.strand.x0, WAY.strand.height, WAY.strand.z0);
@@ -78,7 +87,10 @@ export class StrandedCat {
   private stall = 0;
   /** How far through what it is doing in this step. */
   private phase = 0;
-  private atEdge = 0;
+  /** Its way down off the chimney to the water's edge: 0 on its pot, 1 on its way down, 2 waiting at the edge. */
+  private down = 0;
+  private edgeAt = -1;
+  private pawAt = Infinity;
   private released = false;
   private bolted: number | null = null;
   private washed = false;
@@ -228,14 +240,16 @@ export class StrandedCat {
         this.ease(toHold);
         break;
       case 'waiting':
-        this.bringTo(dt, this.toRoof(), k.roofReach);
+        if (this.down === 0 && this.since > k.downAfter) this.comeDown();
+        this.bringTo(dt, this.goal.copy(CAT_DOCK), k.roofReach);
         if (tub.docked) {
           tub.held = true;
           this.to('coming');
         }
         break;
       case 'coming':
-        this.comeDown();
+        if (this.down === 0) this.comeDown();
+        this.getIn();
         break;
       case 'ferried':
         this.bringTo(dt, this.toBow(), k.bowReach);
@@ -278,6 +292,7 @@ export class StrandedCat {
       default:
         break;
     }
+    if (this.down === 2 && this.step === 'waiting') this.plead();
     if (!this.puzzling) {
       tub.goal = null;
       this.invitation = null;
@@ -301,7 +316,7 @@ export class StrandedCat {
     const fx = Math.sin(boat.yaw), fz = Math.cos(boat.yaw);
     const on = Math.min(1.5, boat.speed * boat.speed / (2 * tuning.drowned.coastBrake));
     const x = boat.position.x + fx * on, z = boat.position.z + fz * on;
-    boat.coastTo = { x, z, yaw: Math.atan2(CAT_EAVES.x - x, CAT_EAVES.z - z) };
+    boat.coastTo = { x, z, yaw: CAT_HOLD_YAW };
     this.to('waiting');
   }
 
@@ -314,24 +329,17 @@ export class StrandedCat {
     w.yaw = boat.yaw;
   }
 
-  /** Where on the cat's eaves the tub is nearest: it is drawn in there once it comes within reach. */
-  private toRoof(): THREE.Vector3 {
-    const p = this.tub.position, r = CAT_ROOF;
-    const c = Math.cos(r.yaw), s = Math.sin(r.yaw);
-    const dx = p.x - r.x, dz = p.z - r.z;
-    const along = THREE.MathUtils.clamp(dx * c - dz * s, -r.len + 1, r.len - 1);
-    const out = r.depth + WashTub.radius + 0.03;
-    return this.goal.set(r.x + along * c + out * s, 0, r.z - along * s + out * c);
-  }
-
-  /** Alongside the bow on the side toward the lens, unless the tub has been taken well round the other side. */
+  /**
+   * Alongside the bow on the side toward the lens, unless the tub has been taken well round alongside the other side;
+   * coming back from the cat's roof off the other bow it is still the near side.
+   */
   private toBow(): THREE.Vector3 {
     const { boat } = this.cast;
     boat.group.updateMatrixWorld(true);
     const local = this.v.copy(this.tub.position);
     boat.group.worldToLocal(local);
     const near = boat.group.worldToLocal(this.lens.copy(this.lensAt).setY(0)).x < 0 ? -1 : 1;
-    if (!this.tub.dock) this.side = local.x * near < -1.5 ? -near : near;
+    if (!this.tub.dock) this.side = local.x * near < -1.5 && local.z < BOW_DOCK.z + 1 ? -near : near;
     return this.goal.set(BOW_DOCK.x * this.side, 0, BOW_DOCK.z).applyMatrix4(boat.group.matrixWorld).setY(0);
   }
 
@@ -355,44 +363,66 @@ export class StrandedCat {
     } else this.stall += dt;
     if (this.stall > k.carryAfter && !tub.carry) tub.carry = new THREE.Vector2(goal.x, goal.z);
     if (tub.carry) tub.carry.set(goal.x, goal.z);
-    const idle = Math.min(tub.sinceBrushed, this.since) > k.inviteAfter && !tub.dock && !tub.carry;
+    const idle = Math.min(tub.sinceBrushed, this.step === 'waiting' ? this.since - this.edgeAt : this.since) > k.inviteAfter
+      && (this.step !== 'waiting' || this.down === 2) && !tub.dock && !tub.carry;
     this.invitation = idle ? this.tubTop : null;
   }
 
-  /** It looks at the tub, comes down off the chimney, picks its way down the slates to the edge, and hops in. */
+  /**
+   * Once the boat holds it comes down off its chimney and picks its way down the slates to the water's edge where the
+   * tub has to come, and waits there sitting up, mewing at her: across the water a crouch is a loaf, and a sitting cat
+   * is a cat.
+   */
   private comeDown(): void {
     const { cat } = this.cast;
+    this.down = 1;
+    cat.look(this.head);
+    cat.hop(CAT_LANDING, { floor: catRoof, then: 'crouch', arc: 0.2, look: this.head }, () => {
+      cat.run([CAT_EDGE], catRoof, { pace: 'walk', speed: 0.55, then: 'sit', look: this.head }, () => {
+        this.down = 2;
+        this.edgeAt = this.since;
+        this.pawAt = this.since + tuning.drowned.cat.pawFirst - tuning.drowned.cat.pawEvery;
+      });
+    });
+  }
+
+  /** At the edge, now and then it puts a paw out toward the water and snatches it back, and mews at her again. */
+  private plead(): void {
+    const { cat } = this.cast;
     const k = tuning.drowned.cat;
-    const tub = this.tub;
-    if (this.phase === 0) {
+    if (this.phase === 0 && this.since - this.pawAt > k.pawEvery && !cat.busy) {
       this.phase = 1;
-      cat.mewing = false;
-      cat.look(this.tubTop);
-    } else if (this.phase === 1 && this.since > k.looks) {
+      this.pawAt = this.since + Math.random() * 1.5;
+      cat.look(PAW_AT);
+    } else if (this.phase === 1 && this.since > this.pawAt) {
       this.phase = 2;
-      const r = CAT_ROOF, c = Math.cos(r.yaw), s = Math.sin(r.yaw);
-      const dx = tub.position.x - r.x, dz = tub.position.z - r.z;
-      onCatRoof(THREE.MathUtils.clamp(dx * c - dz * s, -r.len + 0.9, r.len - 0.9), r.depth - 0.25, this.edge);
-      cat.hop(CAT_LANDING, { floor: catRoof, then: 'crouch', arc: 0.2, look: this.tubTop }, () => {
-        cat.run([this.edge], catRoof, { pace: 'walk', speed: 0.55, then: 'crouch', look: this.tubTop }, () => {
-          this.phase = 3;
-          this.atEdge = this.since;
-        });
-      });
-    } else if (this.phase === 3 && this.since - this.atEdge > k.edge) {
-      this.phase = 4;
-      /** It sits, ears flat: crouched, the tub's sides hide it from every view the room takes. */
-      cat.hop(IN_TUB, { frame: tub.group, then: 'sit', look: this.head }, () => {
-        cat.mewing = false;
-        cat.unease = 0.8;
-        tub.laden = true;
-        tub.held = false;
-        tub.dock = null;
-        tub.docked = false;
-        tub.carry = null;
-        this.to('ferried');
-      });
+      cat.bat(PAW_AT);
+    } else if (this.phase === 2 && this.since - this.pawAt > k.pawFor) {
+      this.phase = 0;
+      cat.afraid(k.pawFlinch);
+      cat.look(this.head);
+      cat.mew(1.2);
     }
+  }
+
+  /** At the edge with the tub against the slates below it, it hops straight in. */
+  private getIn(): void {
+    const { cat } = this.cast;
+    const tub = this.tub;
+    if (this.down !== 2 || this.phase > 0 || this.since < tuning.drowned.cat.edge) return;
+    this.phase = 1;
+    cat.look(this.tubTop);
+    /** It sits, ears flat: crouched, the tub's sides hide it from every view the room takes. */
+    cat.hop(IN_TUB, { frame: tub.group, then: 'sit', look: this.head }, () => {
+      cat.mewing = false;
+      cat.unease = 0.8;
+      tub.laden = true;
+      tub.held = false;
+      tub.dock = null;
+      tub.docked = false;
+      tub.carry = null;
+      this.to('ferried');
+    });
   }
 
   /** A moment held at the bow, then the leap aboard; the tub bobs away from the push of it. */

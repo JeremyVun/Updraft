@@ -115,37 +115,6 @@ const onFrom = (from: THREE.Vector3 | THREE.Vector2, bearing: number, len: numbe
 /** A garden wall's coping from `a` to `b`, at `a`'s height. */
 const coping = (a: THREE.Vector3, b: THREE.Vector3, railed = false): GardenWall => ({ x0: a.x, z0: a.z, x1: b.x, z1: b.z, top: a.y, railed });
 
-
-/** Where the boat waits while the cat is brought over to it, off the drift as it comes round toward the church. */
-export const CAT_HOLD = new THREE.Vector2(-15, -1331);
-
-/** The cat's chimney, across the water from where the boat waits; and where the lens watching the cat stands. */
-const CAT_TOWARD = new THREE.Vector2(0.915, -0.403);
-const CAT_ACROSS = 9;
-/**
- * The lens stands this far from the chimney, turned this far (radians) round from her toward the church: near enough
- * for the cat to read, and so far round that she looks across the frame at it and never toward the lens.
- */
-const CAT_LENS_OFF = 7;
-const CAT_LENS_TURN = 1.66;
-
-/**
- * The roof the cat is stranded on: a cottage nearly gone under, only its ridge and a gable-end chimney out of the
- * water, so the cat on its pot is low enough to be seen at the same time as her. Its slope faces her, turned a little
- * toward the lens, and its chimney stands at the end toward the lens, so the cat, the slates it comes down and the
- * water the tub crosses are all in view.
- */
-export const CAT_HOUSE: PlacedHouse = (() => {
-  const pot = CAT_HOLD.clone().addScaledVector(CAT_TOWARD, CAT_ACROSS);
-  const yaw = Math.atan2(-CAT_TOWARD.x, -CAT_TOWARD.y) - 0.3 * CAT_LENS_TURN;
-  const h: PlacedHouse = { x: 0, z: 0, yaw, len: 6.5, depth: 5.6, wall: 3.4, rise: 3.0, sink: 4.8, thatched: false,
-    stacks: [-1], stack: 1.0, pots: 1, quiet: true };
-  const end = -(h.len / 2 - 0.75);
-  h.x = pot.x - end * Math.cos(yaw);
-  h.z = pot.y + end * Math.sin(yaw);
-  return h;
-})();
-
 const COPING = 0.45;
 /** Railings standing out of the water on drowned walls: their wall's top, and how far they stand above it. */
 const RAILINGS_TOP = -0.3;
@@ -585,6 +554,50 @@ export function darkWayPoint(front: number, out: THREE.Vector2): THREE.Vector2 {
   return out.copy(DARK_WAY[0]);
 }
 
+/**
+ * Where the boat waits while the cat is brought over: on the drift's last leg, this far short of where it strands, so
+ * that once the cat is aboard and the air has died the becalmed hull has only a short way to ghost on onto the slates.
+ */
+const CAT_SHORT = 20;
+const DRIFT_ON = new THREE.Vector2().subVectors(STRAND, DRIFT_FROM).normalize();
+export const CAT_HOLD = STRAND.clone().addScaledVector(DRIFT_ON, -CAT_SHORT);
+/**
+ * The cat's roof stands off the drift to the east, this far round from straight ahead (radians), and the boat comes
+ * round this far toward it as it waits, so it has little to swing back once the cat is aboard: the room's breeze comes
+ * over its port quarter, so the sail it lets go hangs out to starboard, and the cat's slates stand off its starboard bow.
+ */
+const CAT_BEARING = 0.62;
+const CAT_FACING = 0.2;
+export const CAT_HOLD_YAW = Math.atan2(DRIFT_ON.x, DRIFT_ON.y) - CAT_FACING;
+const CAT_TOWARD = (() => {
+  const a = Math.atan2(DRIFT_ON.x, DRIFT_ON.y) - CAT_BEARING;
+  return new THREE.Vector2(Math.sin(a), Math.cos(a));
+})();
+/** How far from the boat's middle as it waits the cat's slates meet the water where the tub comes in. */
+const CAT_REACH = 5.6;
+/**
+ * How far its slope is turned from facing the boat toward the lens off her port side (radians), so it is seen rather
+ * than edge on, and toward the low sun.
+ */
+const CAT_TURN = 0.75;
+/** How far along the ridge from its middle, toward the chimney, the cat comes down to the water. */
+const CAT_EDGE_ALONG = 1.1;
+
+/**
+ * The roof the cat is stranded on: a cottage nearly gone under, only its slates and a gable-end chimney out of the
+ * water, so the cat on its pot is low enough to be seen at the same time as her. Its slope faces her and the lens, and
+ * its chimney stands at the end away from the strand.
+ */
+export const CAT_HOUSE: PlacedHouse = (() => {
+  const h: PlacedHouse = { x: 0, z: 0, yaw: Math.atan2(-CAT_TOWARD.x, -CAT_TOWARD.y) - CAT_TURN, len: 6.5, depth: 5.6, wall: 3.4, rise: 3.0,
+    sink: 4.25, thatched: false, stacks: [1], stack: 1.0, pots: 1, quiet: true };
+  const edge = CAT_HOLD.clone().addScaledVector(CAT_TOWARD, CAT_REACH);
+  const off = houseLocal(h, CAT_EDGE_ALONG, acrossAt(h, 0));
+  h.x = edge.x - off.x;
+  h.z = edge.y - off.y;
+  return h;
+})();
+
 /** How far along the cat's ridge its chimney stands from the middle, as the house builder places it. */
 const CAT_STACK = CAT_HOUSE.stacks[0] * (CAT_HOUSE.len / 2 - 0.75);
 
@@ -631,26 +644,26 @@ export const CAT_ROOF = {
   x: CAT_HOUSE.x, z: CAT_HOUSE.z, yaw: CAT_HOUSE.yaw, len: CAT_HOUSE.len / 2 + 0.11, depth: CAT_WATERLINE + 0.1,
 };
 
+/** `ahead` metres in front of the boat's middle as it waits for the cat and `port` metres to its port side (- starboard). */
+export function atHold(ahead: number, port: number, out = new THREE.Vector2()): THREE.Vector2 {
+  const fx = Math.sin(CAT_HOLD_YAW), fz = Math.cos(CAT_HOLD_YAW);
+  return out.set(CAT_HOLD.x + fx * ahead + fz * port, CAT_HOLD.y + fz * ahead - fx * port);
+}
+
+/** Where the cat waits for the tub at the water's edge, on the slates just out of it. */
+export const CAT_EDGE = onCatRoof(CAT_EDGE_ALONG, CAT_ROOF.depth - 0.25);
+
 /**
- * The wash-tub: where it floats when the boat comes, and the water it is kept to (a middle and a reach), between the
- * boat's bow and the cat's slates.
+ * The wash-tub: where it floats when the boat comes, off the bow between her and the cat, so the first trip is away
+ * from her across the water to the cat; and the water it is kept to (a middle and a reach) round the bow and the cat's
+ * slates.
  */
-export const TUB_START = houseLocal(CAT_HOUSE, -2.6, CAT_ROOF.depth + 3.4);
+const OFF_BOW = atHold(2.4, 0.9);
+const EDGE_ON_WATER = new THREE.Vector2(CAT_EDGE.x, CAT_EDGE.z);
+export const TUB_START = OFF_BOW.clone().lerp(EDGE_ON_WATER, 0.42);
 export const TUB_WATER = (() => {
-  const mid = houseLocal(CAT_HOUSE, 0, CAT_ROOF.depth + 3);
+  const mid = OFF_BOW.clone().lerp(EDGE_ON_WATER, 0.5);
   return { x: mid.x, z: mid.y, r: 5 };
-})();
-
-/** The slates' edge below the chimney, which the boat comes round to face. */
-export const CAT_EAVES = (() => {
-  const at = houseLocal(CAT_HOUSE, CAT_STACK * 0.5, CAT_ROOF.depth);
-  return new THREE.Vector3(at.x, 0, at.y);
-})();
-
-/** Where the lens stands while the tub is brought over: off the chimney's gable end, low over the water. */
-export const CAT_LENS = (() => {
-  const a = Math.atan2(-CAT_TOWARD.x, -CAT_TOWARD.y) - CAT_LENS_TURN;
-  return new THREE.Vector2(CAT_CHIMNEY.x + Math.sin(a) * CAT_LENS_OFF, CAT_CHIMNEY.z + Math.cos(a) * CAT_LENS_OFF);
 })();
 
 /**
@@ -703,18 +716,22 @@ export function inClearing(x: number, z: number, room: number): boolean {
 }
 
 /**
- * The cat's roof, the water the tub crosses and the lens watching it. The generated village is laid out without
- * them, so every other roof and tree stands where it always has, and whatever of it falls here is left unbuilt.
+ * The cat's roof, the water the tub crosses and the lens watching it off her port side, or upright from behind her.
+ * The generated village is laid out without them, so every other roof and tree stands where it always has, and
+ * whatever of it falls here is left unbuilt.
  */
 const CAT_GROUND = [
-  { x: -2.5, z: -1336.5, r: 13 },
   { x: CAT_HOUSE.x, z: CAT_HOUSE.z, r: CAT_HOUSE.len / 2 + 4 },
-  { x: -8.75, z: -1333.75, r: 8.5 },
   { x: TUB_WATER.x, z: TUB_WATER.z, r: TUB_WATER.r + 2 },
-  { x: -12.78, z: -1321.4, r: 1 },
-  { x: CAT_LENS.x, z: CAT_LENS.y, r: 1 },
-  /** Behind the cat and her as the lens sees them, so no other roof stands up between them to be taken for the cat's. */
-  { x: -12, z: -1320, r: 6 },
+  ...[[0, 0, 6], [3, 10, 5], [2, 5, 4], [-6, 3, 5]].map(([ahead, port, r]) => {
+    const at = atHold(ahead, port);
+    return { x: at.x, z: at.y, r };
+  }),
+  /** Behind the cat's roof as the lens sees it, so no other roof stands up there to be taken for the cat's. */
+  ...[[7, -8, 6]].map(([ahead, port, r]) => {
+    const at = atHold(ahead, port);
+    return { x: at.x, z: at.y, r };
+  }),
 ];
 export const onCatGround = (x: number, z: number, room: number) =>
   CAT_GROUND.some((c) => Math.hypot(x - c.x, z - c.z) < c.r + room);
