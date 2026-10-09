@@ -1533,7 +1533,7 @@ export const tuning = {
      * `riseNear` metres short of the rest, not before: from farther off it would only turn the boat out of a phone's
      * frame toward a mist with nothing in it.
      */
-    seenAt: 120, seenAfter: 6, riseFrom: 115, riseNear: 70,
+    seenAt: 95, seenAfter: 6, riseFrom: 115, riseNear: 70,
     /** How far ahead of the bow the pod runs while it leads the boat in (m). */
     podLead: 18,
     /**
