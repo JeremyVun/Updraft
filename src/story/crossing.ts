@@ -44,6 +44,8 @@ export interface ArrivalView {
 
 /** How near a waypoint counts as rounded. */
 const ROUNDED = 22;
+/** Coming in beside the whale the boat steers for a point this far on along its line in (m), so it rests on it. */
+const ON_THE_LINE = 12;
 /** How quickly the lens catches up with route progress, which jumps when a waypoint is passed early in its channel. */
 const FRAMED_RESPONSE = 1.2;
 /** How long the camera takes to swing round from the farewell to behind the sail. */
@@ -98,9 +100,10 @@ export interface CrossingOpts {
   arrivalView?: ArrivalView;
   /**
    * The whale in the net: after the swim the pod leads the boat off its line at the `lead` waypoint, and it comes to
-   * rest at `rest` beside the whale's head; the waypoint after `lead` lies on past `rest` the same way.
+   * rest at `rest` beside the whale's head at the time of day `dusk`, holding there on for the `hold` waypoint, which
+   * lies on past `rest` the way it came in from `lead`.
    */
-  netWhale?: { lead: THREE.Vector2; rest: THREE.Vector2 };
+  netWhale?: { lead: THREE.Vector2; rest: THREE.Vector2; hold: THREE.Vector2; dusk: number };
 }
 
 /** How long it stands on the side of the boat making up its mind, how long it swims, and how long it dries off on the side afterwards. */
@@ -216,8 +219,12 @@ export class CrossingChapter implements Chapter {
   private readonly podRun: PodRun = { near: null, heading: 0, camera: 1, busy: false, ready: false, lead: 0, leaps: false, spread: 1 };
   /** The length of route the pod's play is paced along: to where it leads the boat off, or the whole way. */
   private readonly podLine: number;
+  /** How far along the route the boat comes to rest beside the whale, and the time of day there. */
+  private readonly restSail: number;
+  private readonly restDusk: number;
   /** How far the view has turned back to the voyage once the whale has gone. */
   private landing = 0;
+  private readonly onLine = new THREE.Vector2();
 
   constructor(
     private readonly cast: Cast,
@@ -281,10 +288,13 @@ export class CrossingChapter implements Chapter {
     cast.boat.canGround = this.route.length === 1 && !opts.moor;
     cast.boat.grounded = false;
     cast.plane.homeRadius = 1e9;
-    const lead = opts.netWhale ? this.route.findIndex((p) => p.equals(opts.netWhale!.lead)) : -1;
+    const lead = opts.netWhale ? this.route.indexOf(opts.netWhale.lead) : -1;
     this.whale = opts.netWhale && lead >= 0 ? new NetWhale(cast, opts.netWhale.lead, opts.netWhale.rest) : null;
-    this.whaleHold = this.whale ? lead + 1 : -1;
+    this.whaleHold = this.whale ? this.route.indexOf(opts.netWhale!.hold) : -1;
     this.podLine = this.whale ? (this.distances[lead] + this.spans[lead]) / tuning.seaPassage.holdAt : this.routeLength;
+    this.restSail = this.whale
+      ? this.distances[this.whaleHold] + this.spans[this.whaleHold] - opts.netWhale!.hold.distanceTo(opts.netWhale!.rest) : 0;
+    this.restDusk = opts.netWhale?.dusk ?? this.duskFrom;
   }
 
   get updraftTarget(): THREE.Vector3 | null {
@@ -334,6 +344,7 @@ export class CrossingChapter implements Chapter {
       return THREE.MathUtils.lerp(k.dockHaze, this.departureHaze,
         THREE.MathUtils.smootherstep(gap, k.clearAt, k.clearFrom));
     }
+    if (this.whale) return THREE.MathUtils.lerp(this.departureHaze, this.mistHaze(), this.seaMist());
     const arrival = this.arrivalHaze;
     if (!arrival) return this.departureHaze;
     const shore = this.route[this.route.length - 1], boat = this.cast.boat.position;
@@ -345,7 +356,35 @@ export class CrossingChapter implements Chapter {
   }
 
   get hazeFalloff(): number {
+    if (this.whale) return THREE.MathUtils.lerp(1, this.mistFalloff(), this.seaMist());
     return this.homeward ? tuning.homeApproach.falloff : 1;
+  }
+
+  /**
+   * How thick the morning mist on the open sea is, 0..1: it comes up through the pod's play, lies round the boat as it
+   * is led in to the whale and while it lies there, and lifts as the whale dives.
+   */
+  private seaMist(): number {
+    const k = tuning.seaPassage, whale = this.whale!;
+    if (whale.step === 'gone' || whale.whale.diving >= 0) return 0;
+    return whale.led ? 1 : THREE.MathUtils.smoothstep(this.podProgress(), k.leapFrom, k.farewellAt);
+  }
+
+  /** The mist's haze, and how deep its veil is: thickest as the boat is led in, thinner beside the whale. */
+  private mistHaze(): number {
+    const m = tuning.seaPassage.mist;
+    return THREE.MathUtils.lerp(m.haze, m.restHaze, this.besideWhale());
+  }
+
+  private mistFalloff(): number {
+    const m = tuning.seaPassage.mist;
+    return THREE.MathUtils.lerp(m.falloff, m.restFalloff, this.besideWhale());
+  }
+
+  /** How far the mist has drawn back from the whale as the boat comes in beside it, 0..1. */
+  private besideWhale(): number {
+    const m = tuning.seaPassage.mist, whale = this.whale!;
+    return whale.step === 'approach' ? 1 - THREE.MathUtils.smootherstep(whale.remaining(), m.clearAt, m.clearFrom) : 1;
   }
 
   get done(): boolean {
@@ -421,6 +460,10 @@ export class CrossingChapter implements Chapter {
     // A one-off whale already surfaced before this save; the resumed passage must not bring it up again.
     if (this.whaleAt !== null && this.whaleEvery === 0 && this.time >= this.whaleAt) { this.whaleCalled = true; this.nextWhale = 1e9; }
     this.whale?.restore(point);
+    // Resumed beside the whale it holds on there; before it, it is still to be led in, never sailed past.
+    if (this.whale && this.whale.step !== 'gone') {
+      this.leg = this.whale.step === 'approach' ? Math.min(this.leg, this.whaleHold - 1) : this.whaleHold;
+    }
     if (this.whale?.step === 'gone') {
       this.podLeftAt = this.time - 100;
       this.landing = 1;
@@ -441,6 +484,11 @@ export class CrossingChapter implements Chapter {
       this.leg++;
       boat.steerFor = this.route[this.leg];
       boat.canGround = this.leg === this.route.length - 1 && !boat.mooring;
+    } else if (holding) {
+      // The wind sets it off its line as any boat; it keeps coming back onto it, so it rests on the heading it came in on.
+      const dx = wp.x - from.x, dz = wp.y - from.y, length = Math.hypot(dx, dz);
+      const along = ((boat.position.x - from.x) * dx + (boat.position.z - from.y) * dz) / length + ON_THE_LINE;
+      boat.steerFor = this.onLine.set(from.x + (dx / length) * along, from.y + (dz / length) * along);
     }
     if (this.leg >= this.route.length - 2) boat.speedLimit = Math.min(boat.speedLimit, this.arrivalSpeed);
     const channel = this.departureChannel;
@@ -536,7 +584,12 @@ export class CrossingChapter implements Chapter {
     }
     if (this.wantsDolphins && withPod && light && this.playFrom === null) this.playFrom = this.time;
     /** The night ends somewhere out here, by degrees, with nobody watching for it. */
-    if (this.duskTo !== this.duskFrom) {
+    if (this.whale) {
+      // Beside the whale it is the morning every hold there is lit for, however long the way in was.
+      const sailed = this.progress() * this.routeLength;
+      this.dusk = sailed < this.restSail ? THREE.MathUtils.lerp(this.duskFrom, this.restDusk, sailed / this.restSail)
+        : THREE.MathUtils.lerp(this.restDusk, this.duskTo, (sailed - this.restSail) / Math.max(1, this.routeLength - this.restSail));
+    } else if (this.duskTo !== this.duskFrom) {
       this.dusk = THREE.MathUtils.lerp(this.duskFrom, this.duskTo, this.progress());
     }
     const whale = sealife.whale;

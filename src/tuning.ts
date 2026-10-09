@@ -680,6 +680,8 @@ export const tuning = {
      */
     woodMist: { clear: 110, hidden: 165, edge: 1.32 },
     sleepingMist: { clear: 40, hidden: 72, edge: 2.4 },
+    /** The sky mirror's, on the open sea until the whale has gone: all of it, over the `core` of its flat its jetties stand on. */
+    mirrorMist: { clear: 0, hidden: 1, edge: 1.32, core: 0.85 },
     isleMistLift: 0.45,
     /** Birches-style distance veil near Lines; the first island farewell keeps the original clear haze. */
     linesCrossingHaze: 1.03,
@@ -1413,11 +1415,12 @@ export const tuning = {
     /** The crown round its blowhole above the water at rest (m), and how far it lies rolled with its near side up (radians). */
     crown: 5.3, roll: 0.087,
     /**
-     * The boat's speed limit coming to rest beside it: never more than it could lose slowing at `slowing` (m/s²), nor
-     * more than `settling` times the distance left, so the hull's own carry brings it to rest without braking; and
-     * how fast the limit climbs back (m/s²) once the whale is going under.
+     * The boat coming to rest beside it: led, it makes no more than `leadSpeed` (m/s), the pod's own pace; coming in,
+     * its limit takes way off at `slowing` (m/s²) until the hull's own carry can take it the rest of the way, and is
+     * nothing `restShort` metres short of the rest (past it when negative), so it is never braked; and how fast the
+     * limit climbs back (m/s²) once the whale is going under.
      */
-    slowing: 0.35, settling: 0.13, release: 0.6,
+    leadSpeed: 5.5, slowing: 1.2, restShort: -1.9, release: 0.6,
     /** Seconds between its weak breaths, how far its back rises with one (m), and how much mist each sputters. */
     breathEvery: 10, breathRise: 0.45, mist: 1,
     /**
@@ -1524,10 +1527,12 @@ export const tuning = {
      */
     hushFrom: 70, hushNear: 8, hushSorrow: 0.9, hushCourage: 0.45, hushEase: 0.3,
     /**
-     * The haze does the first reveal: until the pod leads the boat in it is `lostFar` of the way lost in the low sky
-     * beyond it, and the haze lifts off it from `lostFrom` to `lostNear` metres short of the rest, eased at `lostEase` a second.
+     * Found in the mist rather than seen: it sighs unseen once the boat is `heardAt` metres short of the rest, and its
+     * blow stands up over the mist from `seenAt`, each `leadSigh` seconds on. Its long shape forms out of the mist as an
+     * island in the haze, `lostFar` of the way lost in the low sky from `lostOut` to `lostFrom` metres short of the rest
+     * and none by `lostNear`, eased at `lostEase` a second; while the mist still covers it, none, or the haze would show it.
      */
-    lostFar: 0.75, lostFrom: 80, lostNear: 25, lostEase: 0.6,
+    heardAt: 160, seenAt: 125, lostFar: 0, lostOut: 150, lostFrom: 110, lostNear: 25, lostEase: 0.6,
     /** How far ahead of the bow the pod runs while it leads the boat in (m). */
     podLead: 18,
     /**
@@ -1682,14 +1687,15 @@ export const tuning = {
     leapFrom: 0.28,
     /**
      * Where along the route the pod says goodbye, and about how long its play takes from `leapFrom`: the leap, the
-     * swim and the nudge. A boat ahead of that is eased toward it, never below `leastSpeed`. Only a pod still
-     * playing past `farewellAt` slows it further, to `holdSpeed` by `holdAt`. The cap eases down at `limitEase` a second.
+     * swim and the nudge. A boat ahead of that is eased toward it, never below `leastSpeed`, ordinary sailing. Only a
+     * pod still playing past `farewellAt` slows it further, to `holdSpeed` by `holdAt`. The cap eases down at
+     * `limitEase` a second. Where a whale waits, the pod's line runs to where it leads the boat off toward it.
      */
-    farewellAt: 0.8,
+    farewellAt: 0.86,
     playFor: 41,
     /** The most the boat makes as it leaves the island, from which it settles by `leapFrom` into the pod's pace. */
     openSpeed: 5.5,
-    leastSpeed: 3,
+    leastSpeed: 4.5,
     holdSpeed: 1,
     holdAt: 0.92,
     limitEase: 0.6,
@@ -1703,6 +1709,18 @@ export const tuning = {
     swimCameraBearing: 0.65,
     childTurn: 0.7,
     haze: 0.94,
+    /**
+     * The whale's lead: how far the boat sails in toward it once the pod has turned it off its line (m), and the time
+     * of day at rest beside it, which every hold there is lit for.
+     */
+    leadFor: 140, restDusk: 1.224,
+    /**
+     * The morning mist on the open sea: it thickens through the pod's play to `haze` with its veil `falloff` times as
+     * deep, so by the nudge the sea is seen only a couple of hundred metres round; it thins to `restHaze` and
+     * `restFalloff` from `clearFrom` to `clearAt` metres short of the rest, clear of the whale's far length, and lifts
+     * as the whale dives.
+     */
+    mist: { haze: 1.064, falloff: 1.18, restHaze: 0.985, restFalloff: 1.05, clearFrom: 80, clearAt: 30 },
   },
   /** The pod that runs with the boat on the long crossing, and the two set-pieces it plays. */
   dolphins: {

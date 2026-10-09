@@ -166,13 +166,14 @@ export class NetWhale {
   private rise = 0;
   /** How far the child has turned on her seat toward it, radians. */
   turn = 0;
-  /** How lost in the morning haze it is: nearly all of it until the pod leads the boat in, and none at rest. */
-  private lost = K.lostFar;
+  /** How lost in the morning haze it is: none while the mist still hides it, most as its shape forms, none at rest. */
+  private lost = 0;
   /** How far the sea's score has thinned, 0..1: to almost nothing in its sorrow, a little way back once it knows her. */
   hush = 0;
   /** The pod has nudged the boat and now leads it; from here the encounter says where the dolphins run. */
   led = false;
-  private ledSeen = false;
+  /** How many times it has sighed in the mist ahead as the boat is led in: heard, then its blow seen. */
+  private sighs = 0;
   /** How far the patch of net over the blowhole has been lifted clear by circling, or by the valve's dolphin, 0..1. */
   progress = 0;
   /** What lifted it: the player's circles, or the dolphin sent once nothing had for a long while. */
@@ -509,10 +510,10 @@ export class NetWhale {
     const resting = left < 1.5 && boat.speed < 0.2;
     this.still = resting ? this.still + dt : 0;
     if (this.step === 'approach' && this.still > 1) this.goTo('breath');
-    // As the pod turns the boat toward it, it sighs in the haze ahead while they watch.
-    if (this.led && !this.ledSeen) {
-      this.ledSeen = true;
-      if (this.step === 'approach') whale.sighIn(K.leadSigh);
+    // Led in through the mist, it is heard before it is seen, and then its blow stands up white over the mist.
+    if (this.led && this.step === 'approach' && this.sighs < 2 && left < (this.sighs === 0 ? K.heardAt : K.seenAt)) {
+      this.sighs++;
+      whale.sighIn(K.leadSigh);
     }
     if (this.step === 'breath') this.breathe(dt);
     if (this.step === 'line') this.haulLine(dt);
@@ -526,10 +527,11 @@ export class NetWhale {
     if (this.step === 'free' && whale.phase === 'gone') this.goTo('gone');
     if (this.released < 0 && whale.going) this.released = 0;
     if (this.released >= 0) this.released += dt;
-    const approach = Math.min(Math.sqrt(2 * K.slowing * Math.max(0, left)), K.settling * Math.max(0, left));
+    const approach = this.comingIn(left);
     const freed = this.released >= 0 ? K.release * this.released : 0;
     this.limit = freed > tuning.sail.topSpeed ? Infinity : Math.max(approach, freed);
     if (this.step !== 'approach' && this.released < 0) this.limit = Math.min(this.limit, approach);
+    if (this.step === 'approach' && this.led) this.limit = Math.min(this.limit, K.leadSpeed);
     const near = 1 - THREE.MathUtils.smootherstep(left, K.holdFull, K.holdFrom);
     // Gone, the view goes back to the crossing's in one even ease from wherever the hold is, however the boat turns.
     if (this.step === 'gone') this.hold = Math.min(this.hold, Math.max(0, 1 - this.stepTime / K.handBack));
@@ -558,7 +560,8 @@ export class NetWhale {
     this.cast.child.lent.copy(this.lit).multiplyScalar(this.step === 'gone' ? this.hold : 1);
     const move = this.looking ? K.lookMove : this.farewelled ? K.farewellMove : this.step === 'free' ? K.releaseMove : K.holdMove;
     this.holdT = Math.min(1, this.holdT + dt / move);
-    const lost = this.step === 'approach' ? K.lostFar * (this.led ? THREE.MathUtils.smootherstep(left, K.lostNear, K.lostFrom) : 1) : 0;
+    const lost = this.step === 'approach' && this.led ? K.lostFar * THREE.MathUtils.smootherstep(left, K.lostNear, K.lostFrom)
+      * (1 - THREE.MathUtils.smootherstep(left, K.lostFrom, K.lostOut)) : 0;
     this.lost += (lost - this.lost) * (1 - Math.exp(-dt * K.lostEase));
     whale.lost = this.net.lost = this.lost;
     whale.seenFrom = this.camera ? this.camera.position.distanceTo(whale.blowhole) : 0;
@@ -586,6 +589,8 @@ export class NetWhale {
       if (this.remaining() > POD_PARTS) {
         out.near = boat.position;
         out.lead = K.podLead;
+        // It turns off the boat's line toward the whale ahead of the bow, and the boat follows.
+        out.heading = Math.atan2(this.rest.x - boat.position.x, this.rest.z - boat.position.z);
       }
       return out;
     }
@@ -1663,6 +1668,15 @@ export class NetWhale {
     net.updraft = this.wind;
     if (this.freedAt !== null) net.drift = THREE.MathUtils.smoothstep(this.clock - this.freedAt, DRIFT_FROM, DRIFT_TO);
     if (whale.phase === 'free') net.sink = THREE.MathUtils.smoothstep(whale.time, SINK_FROM, SINK_TO);
+  }
+
+  /**
+   * The most the boat may make `left` metres short of the rest: way taken off at `slowing` until the hull's own carry
+   * can take it the rest of the way, so it comes to rest there in a few seconds without a creep and is never braked.
+   */
+  private comingIn(left: number): number {
+    const carry = tuning.sail.carries, kept = K.slowing / carry, from = K.restShort + kept / carry;
+    return left > from ? Math.sqrt(kept * kept + 2 * K.slowing * (left - from)) - kept : 0;
   }
 
   /** Sailing distance still to go before the boat is at rest beside it, along the way it comes in. */

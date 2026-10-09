@@ -91,6 +91,7 @@ import { Cottage } from './world/cottage';
 import { createJetty } from './world/jetty';
 import { createHomeToy } from './world/home-toy';
 import { COTTAGE, ISLES, meadowPoint } from './world/heightfield';
+import { SKY_MIRROR } from './world/sky-mirror-layout';
 import { Pond } from './world/pond';
 import { Feather } from './fx/feather';
 import { harebells } from './world/harebells';
@@ -612,6 +613,8 @@ const shown = { rainbow: 0, dusk: NaN, haze: NaN, hazeFalloff: NaN, shower: NaN,
 const ISLE_MISTS = {
   wood: { isle: ISLES.wood, range: tuning.world.woodMist },
   sleeping: { isle: ISLES.sleeping, range: tuning.world.sleepingMist },
+  mirror: { isle: { ...SKY_MIRROR, rx: SKY_MIRROR.rx * tuning.world.mirrorMist.core, rz: SKY_MIRROR.rz * tuning.world.mirrorMist.core },
+    range: tuning.world.mirrorMist },
 };
 let isleMist: (typeof ISLE_MISTS)[keyof typeof ISLE_MISTS] = ISLE_MISTS.wood;
 function ease(from: number, to: number, rate: number, dt: number): number {
@@ -850,8 +853,10 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   atmo.uniforms.uIslandVeil.value.set(ISLES.meadow.x, ISLES.meadow.z, ISLES.meadow.rx, ISLES.meadow.rz);
   atmo.uniforms.uIslandVeilAmount.value = shown.islandVeil;
   // The island ahead is seen only as near as its detail is drawn, and not at all from across the water.
+  // The mirror's own mist lifts only once the whale has gone and the pod with it.
   const mistAhead = story.name === 'drowned' || story.name === 'toWood' ? ISLE_MISTS.wood
-    : story.name === 'toSleeping' ? ISLE_MISTS.sleeping : null;
+    : story.name === 'toSleeping' ? ISLE_MISTS.sleeping
+    : story.name === 'toMirror' && story.current.mirrorArrival === 0 ? ISLE_MISTS.mirror : null;
   if (mistAhead) isleMist = mistAhead;
   shown.isleMist = mistAhead ? 1 : ease(shown.isleMist, 0, tuning.world.isleMistLift, dt);
   if (shown.isleMist < 0.001) shown.isleMist = 0;

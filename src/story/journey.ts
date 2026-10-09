@@ -27,6 +27,7 @@ import { SLEEP_BERTH, SLEEP_LANDING } from '../world/sleeping';
 import { BIRCHES_LANDING } from '../world/birches';
 import { placeProgress, restoreLife, saveProgress, type Progress } from './progress';
 import { restoreWingCare } from './wing-care';
+import { WHALE_MOVE } from '../world/geography';
 
 export type ChapterName =
   | 'island'
@@ -53,12 +54,16 @@ export type ChapterName =
   | 'stage';
 
 /**
- * On the open sea, where the pod leads the boat off its line toward the whale, where the boat comes to rest beside
- * its head, and the waypoint just beyond on the same heading that it holds while it waits.
+ * On the open sea, where the boat comes to rest beside the whale's head, where the pod leads it off its line toward
+ * it, out in the mist, and the waypoint on ahead that it holds while it waits. The heading it comes in on frames the
+ * whale's lie and every hold beside it.
  */
-export const WHALE_LEAD = new THREE.Vector2(-450, -1987);
-export const WHALE_REST = new THREE.Vector2(-480, -2020);
-const WHALE_HOLD = WHALE_REST.clone().addScaledVector(WHALE_REST.clone().sub(WHALE_LEAD).normalize(), 3);
+const WHALE_HEADING = new THREE.Vector2(-30, -33).normalize();
+export const WHALE_REST = new THREE.Vector2(-480 + WHALE_MOVE.x, -2020 + WHALE_MOVE.z);
+export const WHALE_LEAD = WHALE_REST.clone().addScaledVector(WHALE_HEADING, -tuning.seaPassage.leadFor);
+const WHALE_HOLD = WHALE_REST.clone().addScaledVector(WHALE_HEADING, 40);
+/** Halfway in, so the boat is on the heading it rests on long before it comes to rest. */
+const WHALE_LINE = WHALE_LEAD.clone().lerp(WHALE_REST, 0.5);
 
 /** Where the boat goes on each crossing, including the long open passage after the sleeping island. */
 export const ROUTES: Record<string, THREE.Vector2[]> = {
@@ -89,12 +94,14 @@ export const ROUTES: Record<string, THREE.Vector2[]> = {
   ],
   /**
    * The offshore passage keeps the dolphins and the brave swim; the pod leads the boat off its line to rest beside
-   * the whale, and once it has gone the boat comes about and moors beside the entry jetty.
+   * the whale, and once it has gone the boat sails straight on over where it lay and curves in to the entry jetty.
    */
   toMirror: [
     new THREE.Vector2(-300, -1950), new THREE.Vector2(-375, -1970),
-    WHALE_LEAD, WHALE_HOLD,
-    new THREE.Vector2(-421, -2034), new THREE.Vector2(MIRROR_LANDING.x, MIRROR_LANDING.z),
+    WHALE_LEAD, WHALE_LINE, WHALE_HOLD,
+    new THREE.Vector2(MIRROR_LANDING.x - 9.9, MIRROR_LANDING.z + 51.4), new THREE.Vector2(MIRROR_LANDING.x - 16.8, MIRROR_LANDING.z + 38.6),
+    new THREE.Vector2(MIRROR_LANDING.x - 16.8, MIRROR_LANDING.z + 24), new THREE.Vector2(MIRROR_LANDING.x - 10, MIRROR_LANDING.z + 11.2),
+    new THREE.Vector2(MIRROR_LANDING.x, MIRROR_LANDING.z),
   ],
   toHarbour: [
     // Stay offshore before curving in; running along the beach cuts the hill across the fog's near edge.
@@ -409,7 +416,7 @@ export class Journey {
           dusk: 1.02, duskTo: tuning.skyMirror.duskFrom, dolphins: true,
           swimAt: tuning.seaPassage.swimAt, season: 0.45,
           moor: MIRROR_LANDING, arrivalSpeed: tuning.seaPassage.arrivalSpeed,
-          netWhale: { lead: WHALE_LEAD, rest: WHALE_REST },
+          netWhale: { lead: WHALE_LEAD, rest: WHALE_REST, hold: WHALE_HOLD, dusk: tuning.seaPassage.restDusk },
         });
       case 'mirror': return new SkyMirrorChapter(cast);
       case 'toHarbour':
