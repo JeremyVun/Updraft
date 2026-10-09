@@ -533,6 +533,11 @@ export class NetWhale {
     }
   }
 
+  /** Its blow has been called for over the mist, or it has been found. */
+  get sighted(): boolean {
+    return this.step !== 'approach' || this.sighs >= 2;
+  }
+
   /** The boat may round its hold waypoint and sail on. */
   get passed(): boolean {
     return this.whale.going;
@@ -647,7 +652,8 @@ export class NetWhale {
     if (this.led && this.step === 'approach' && this.sighs < 2
       && (this.sighs === 0 || (left < K.seenAt && this.clock - this.heard > K.seenAfter))) {
       // A breath just gone serves for its blow: it never breathes twice in a moment.
-      if (this.sighs === 0 || whale.untilSigh < K.breathEvery - K.leadSigh) whale.sighIn(K.leadSigh, this.sighs === 0);
+      if (this.sighs === 0 || whale.untilSigh < K.breathEvery - K.leadSigh) whale.sighIn(K.leadSigh, this.sighs === 0, this.sighs === 1);
+      else whale.blowFar();
       if (this.sighs === 0) this.heard = this.clock;
       this.sighs++;
     }

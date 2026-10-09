@@ -1459,9 +1459,10 @@ export const tuning = {
     seabirdStretch: 1.6,
     /**
      * The column of its first full breath, and the taller glad spout when it is free (m above the blowhole), its mist
-     * `spoutBreadth` times as broad as the first column's.
+     * `spoutBreadth` times as broad as the first column's; and its blow seen far off over the mist as the boat is led
+     * in, `sightedHeight` high and `sightedBreadth` times as broad, so it reads at that distance.
      */
-    firstBreathHeight: 10, spoutHeight: 13.5, spoutBreadth: 1.2,
+    firstBreathHeight: 10, spoutHeight: 13.5, spoutBreadth: 1.2, sightedHeight: 13, sightedBreadth: 1,
     /**
      * Its blow, close: breathed out hard and easing off over `exhale` s, `puffs` puffs a second for each metre of its
      * height at its hardest, thrown up into air that slows them `drag` a second, so they reach their height in about a
@@ -1787,10 +1788,17 @@ export const tuning = {
      */
     mist: { haze: 1.064, falloff: 1.3, restHaze: 0.985, restFalloff: 1.05, clearFrom: 80, clearAt: 30,
       /**
-       * How deep the veil is where it is whole, its smoothstep's top; and from `hiddenTo` metres short of the rest to
-       * the blow it eases off holding that by the whale's head (`veilLeast` keeps the depth finite).
+       * How deep the veil is where it is whole, its smoothstep's top; and from `hiddenTo` to `shownAt` metres short of
+       * the rest, past its blow, it eases off holding that by the whale's head (`veilLeast` keeps the depth finite).
        */
-      wholeVeil: 4, hiddenTo: 120, veilLeast: 20 },
+      wholeVeil: 4, hiddenTo: 92, shownAt: 68, veilLeast: 20,
+      /**
+       * Lying low on the sea: once its blow is called for, `lift` of the veil thins away above `liftFrom` metres over
+       * the water (its body lies under that), to a third every `liftScale` metres higher, out to `liftNear` and no
+       * longer by `liftFar` metres from the eye, so nothing standing high farther off comes out of it; it thins
+       * `liftEase` a second.
+       */
+      lift: 1, liftFrom: 5.8, liftScale: 0.9, liftNear: 170, liftFar: 240, liftEase: 8 },
     /**
      * How far short of the rest the pod may set off to nudge the boat once its leap and the swim are done (m): its nudge
      * lands about 13 s and 60 m on.

@@ -868,6 +868,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
     THREE.MathUtils.lerp(veilClear(seen), tuning.storm.stormVeil, squall),
     THREE.MathUtils.lerp(veilDensity(seen) * shown.hazeFalloff, tuning.storm.stormVeilDensity, squall) * (1 - atmo.uniforms.uLightning.value.w * 0.8),
   );
+  atmo.uniforms.uVeilLift.value = ease(atmo.uniforms.uVeilLift.value, story.current.veilLift ?? 0, tuning.seaPassage.mist.liftEase, dt);
   post.saturation = (0.62 + 0.38 * story.worldLife) * (1 - 0.3 * squall);
   surfUniforms.uSeaState.value = story.breeze;
   surfUniforms.uSquall.value = squall;

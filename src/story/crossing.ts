@@ -361,6 +361,11 @@ export class CrossingChapter implements Chapter {
     return this.homeward ? tuning.homeApproach.falloff : 1;
   }
 
+  /** Until its blow is called for the mist is as deep high up as low down, so nothing of it shows before then. */
+  get veilLift(): number {
+    return this.whale?.sighted ? tuning.seaPassage.mist.lift * this.seaMist() : 0;
+  }
+
   /**
    * How thick the morning mist on the open sea is, 0..1: it comes up through the pod's play, lies round the boat as it
    * is led in to the whale and while it lies there, and lifts as the whale dives.
@@ -383,15 +388,16 @@ export class CrossingChapter implements Chapter {
   }
 
   /**
-   * Until its blow is due the veil is whole by the whale's head however near the boat has come, so a late nudge never
-   * shows it early; the nearest of it lies about 20 m farther from the lens than that.
+   * Until its blow has stood over the mist the veil is whole by the whale's head however near the boat has come, so a
+   * late nudge never shows it early and its blow is seen before its shape; the nearest of it lies about 20 m farther
+   * from the lens than that.
    */
   private hidingFalloff(): number {
     const m = tuning.seaPassage.mist, whale = this.whale!;
     if (whale.step !== 'approach') return 0;
     const left = whale.remaining(), haze = this.mistHaze();
     const whole = m.wholeVeil / (Math.max(left - veilClear(haze), m.veilLeast) * veilDensity(haze));
-    return whole * THREE.MathUtils.smoothstep(left, tuning.netWhale.seenAt, m.hiddenTo);
+    return whole * THREE.MathUtils.smoothstep(left, m.shownAt, m.hiddenTo);
   }
 
   /** How far the mist has drawn back from the whale as the boat comes in beside it, 0..1. */

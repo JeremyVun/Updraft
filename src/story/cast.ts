@@ -95,6 +95,8 @@ export interface Chapter {
   readonly haze?: number;
   /** Distance-haze density multiplier; lower values spread the veil over a longer depth. */
   readonly hazeFalloff?: number;
+  /** How far the sea's low mist thins above the water, 0..1. */
+  readonly veilLift?: number;
   /** At open sea, distant land dissolves into the sky without leaving a tinted silhouette. */
   readonly openSea?: number;
   readonly mirrorArrival?: number;

@@ -38,6 +38,7 @@ function hdr(hex: string, intensity: number): THREE.Color {
 /** How near the distance veil of a haze `seen` leaves the world untouched (m), and how fast it deepens past that, a metre. */
 export const veilClear = (seen: number): number => 900 - 780 * seen;
 export const veilDensity = (seen: number): number => 0.002 + 0.03 * seen;
+const SEA_MIST = tuning.seaPassage.mist;
 
 /**
  * Uniforms shared by reference between every world material, so one update per frame reaches all of them.
@@ -94,6 +95,8 @@ export const atmo = {
      * Unlike mist it does not care about height, so the island ahead is a rumour until you are nearly on it.
      */
     uVeil: { value: new THREE.Vector2(1e5, 0) },
+    /** How far the sea's low morning mist thins above the water, 0..1, so a far blow stands up out of it. */
+    uVeilLift: { value: 0 },
     /** Offshore fog converges to the sky itself, then releases on the approach to home. */
     uOpenSea: { value: 0 },
     uHomeHaze: { value: 0 },
@@ -281,6 +284,7 @@ uniform float uMirrorPass;
 uniform float uShower;
 uniform float uMist;
 uniform vec2 uVeil;
+uniform float uVeilLift;
 uniform float uOpenSea;
 uniform float uHomeHaze;
 uniform vec4 uIslandVeil;
@@ -860,6 +864,9 @@ vec4 fogOf(vec3 wpos, float landscape) {
   float heightFactor = exp(-max(wpos.y, 0.0) * 0.06);
   float mist = uMist * exp(-max(min(wpos.y, cameraPosition.y), 0.0) * 0.22);
   float veil = max(0.0, fogDistance - uVeil.x) * uVeil.y;
+  // Kept to the near sea, so the far veil still hides whatever stands high beyond it; its mirror image lies under it.
+  veil *= 1.0 - uVeilLift * (1.0 - uMirrorPass) * (1.0 - exp(-max(wpos.y - ${glsl(SEA_MIST.liftFrom)}, 0.0) / ${glsl(SEA_MIST.liftScale)}))
+    * (1.0 - smoothstep(${glsl(SEA_MIST.liftNear)}, ${glsl(SEA_MIST.liftFar)}, dist));
   float amt = 1.0 - exp(-fogDistance * (uFogDensity * (0.55 + 0.65 * heightFactor) + mist * 0.0075) - veil);
   vec3 fogCol = skyColor(normalize(vec3(rd.x, 0.015 + max(rd.y, 0.0) * 0.25, rd.z))) * vec3(0.84, 0.87, 0.92);
   float arriving = journeyVeilAt(wpos);
