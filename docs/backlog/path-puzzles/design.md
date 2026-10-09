@@ -538,6 +538,8 @@ section (`drownedScore` returns `still` for `run`, `nave` and `church`), which i
 >   puzzle from the perspective of a human playing and seeing the puzzle from the perspective of the camera view. I also
 >   never noticed the cat and her kittens, it just looks like the cat just randomly went to sleep or is lying there. its
 >   very strange.
+> - And then suddenly, when you get into the boat after climbing down from the bellfry tower, the cat is on the roof?
+>   how did it go from sleeping to coming down somehow
 
 **His rule for every interaction frame** (binding on all of them): judge the puzzle as a first-time player sees it
 through the lens. The thing the player acts on and the drawn gust must both be plainly in frame, and so must what
@@ -566,6 +568,10 @@ the action is for (where the tub goes, where the tree falls, what the bell answe
 10. The kittens go unnoticed: the cat lying in the straw reads as gone to sleep. Fix: the kittens seen and read as
     kittens (the reveal staged to an outside eye, as 8b's Left list ruled: her turned on the sill, a kitten coming
     to its lip, three-quarter on), the cat plainly curled round them.
+11. The goodbye: the cat turns up on the roof below as she boards, never seen leaving the kittens or coming down.
+    Lead's call: the cat stays with its kittens and sees her off from the belfry's sill, a kitten beside it, in the
+    belfry's light (it would not leave them); the goodbye frame looks up from the boat to the two at the sill. This
+    supersedes step 8's re-staging (the cat coming down to the roof).
 
 ### The room rethought (Claude, 2026-10-08; Jeremy: "yea lets see how this works")
 
