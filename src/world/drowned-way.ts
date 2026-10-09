@@ -276,17 +276,18 @@ export const SHEET_SITE = (() => {
 
 /**
  * The dead tree in a walled garden across the lane from the barn: it falls east, square across the lane, onto the
- * barn's ridge near its north end. She waits on the garden's wall just past where it will come down across it, and
- * steps back onto the trunk and walks up it onto the barn.
+ * barn's ridge near its north end. She waits at the end of the garden's wall, far enough past where it will come down
+ * across it that she is clear of its crown, then goes back along the wall onto the trunk and walks up it onto the barn.
  */
 const FALL = new THREE.Vector2(Math.sin(EAST), Math.cos(EAST));
 const TREE_LANE = 6.7;
 const TREE_REST = onRoof(BARN, BARN_LEN / 2 - BARN_REST, 0);
 const OVER = new THREE.Vector3(TREE_REST.x - FALL.x * TREE_LANE, COPING, TREE_REST.z - FALL.y * TREE_LANE);
 const TREE_ROOT = new THREE.Vector3(OVER.x - FALL.x * 2.4, -0.15, OVER.z - FALL.y * 2.4);
-const TREE_WAIT = onFrom(OVER, NORTH, 1.35, COPING);
+const TREE_CLEAR = 4.6;
+const TREE_WAIT = onFrom(OVER, NORTH, TREE_CLEAR, COPING);
 const TREE_OFF = onRoof(BARN, BARN_LEN / 2 - BARN_REST + 0.55, 0);
-const W1_END = onFrom(OVER, NORTH, 2.4, COPING);
+const W1_END = onFrom(OVER, NORTH, TREE_CLEAR + 0.6, COPING);
 /** The garden wall she comes north along, beside the lane, from the first roof. */
 const W1_LENGTH = 16;
 const W1_FROM = onFrom(OVER, NORTH, -W1_LENGTH, COPING);
@@ -502,16 +503,21 @@ const STORM_OUT = [new THREE.Vector2(NAVE_BERTH.x, NAVE_BERTH.z - 4), ...STORM_W
 /**
  * The line the fog comes on along: in from the sea far behind them, up the drift to the stranded boat and on along her
  * way over the roofs to the tower, so its front takes each roof she leaves just after she is off it. Its front is
- * measured along it in metres.
+ * measured along it in metres. From her wall it goes straight over the lane where the tree comes down, not out to the
+ * wall's end where she waits and back.
  */
-const ON_HER_WAY = [RIDGE_END, W1_FROM, TREE_WAIT, OVER, TREE_REST, deckEnd(WAY.barnRidge), SHEET_SITE.way.stepOff, LANE_TOP, W3_FROM, W3_CORNER,
+const ON_HER_WAY = [RIDGE_END, W1_FROM, OVER, TREE_REST, deckEnd(WAY.barnRidge), SHEET_SITE.way.stepOff, LANE_TOP, W3_FROM, W3_CORNER,
   W3_TURN, MILL_FOOT, MILL_WAIT, MILL_OFF, GRANARY_TOP, LEAN_FOOT, GREEN_EAST, deckEnd(WAY.greenRidge), BOARD, LANDING, TOWER_FOOT];
-/** Her way over the roofs, as a line on the water, for the village to be laid round. */
-export const HER_WAY: THREE.Vector2[] = ON_HER_WAY.map((p) => new THREE.Vector2(p.x, p.z));
+const flat = (p: THREE.Vector3) => new THREE.Vector2(p.x, p.z);
+/**
+ * Her way over the roofs, as a line on the water, for the village to be laid round. Along her wall it goes only a step
+ * past where the tree comes down: the generated village was tuned laid round that line, and a longer one redraws it.
+ */
+export const HER_WAY: THREE.Vector2[] = [RIDGE_END, W1_FROM, onFrom(OVER, NORTH, 1.35, COPING), ...ON_HER_WAY.slice(2)].map(flat);
 export const DARK_WAY: THREE.Vector2[] = [
   new THREE.Vector2(STRAND.x, STRAND.y + 240),
   STRAND.clone(),
-  ...HER_WAY,
+  ...ON_HER_WAY.map(flat),
 ];
 /** How far along `DARK_WAY` each of its points is, and the whole of it. */
 export const DARK_ALONG: number[] = DARK_WAY.map((_, i) => DARK_WAY.slice(1, i + 1).reduce((sum, p, j) => sum + p.distanceTo(DARK_WAY[j]), 0));

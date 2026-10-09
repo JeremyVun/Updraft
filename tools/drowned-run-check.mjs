@@ -1,7 +1,10 @@
 // The drowned village's run over the roofs, played with real pointer gestures in Chrome for Testing against a running
 // dev server: from the drift (strokes bring the wash-tub to the cat and back, the cat comes to her and she kneels to
 // it), the air dying and the boat running aground, the fog coming on, the cat's bolt and her climb out, then her way
-// over the roofs after the cat: strokes push the dead tree down across the lane and she walks up it, strokes up the
+// over the roofs after the cat: at the dead tree (where she must wait clear of it, look across to the barn more than up at
+// it, be shown the drawn gust within seconds and again after a wrong-way try, which must rock it back, and the frame
+// must hold her, its crown and the barn) strokes back and forth across it, as an eager player makes them, must push it
+// down across the lane within ten, and she walks up it; strokes up the
 // sheet's line fill it to carry her over, circles round the hub turn the mill's sails to wind her up its hoist,
 // strokes pump the swing until she lets go over the nave, and she walks on to the tower's foot. Reports the run's
 // time, each walk's seconds on foot, how long she waits on the cat at each piece, the fog's nearest approach and how
@@ -23,7 +26,8 @@
 //        two between, and through the church), FILM=<seconds> with SHOTS also
 //        saves a still every that many seconds from the air dying (FILMFROM=cat from the tub's puzzle; from the ridge
 //        with FROM=roofs, the tower's foot with FROM=church) to the storm, and with FROM=stairs through the descent in the white and 30 s on,
-//        TO=nave stops at the tower's foot, TO=ridge once she is up on the first roof after the cat, VIDEO=<dir> records the whole play as a webm there, W/H viewport
+//        TO=nave stops at the tower's foot, TO=tree once she is over the tree and the lens has gone round to the sheet, TO=ridge once she is
+//        up on the first roof after the cat, VIDEO=<dir> records the whole play as a webm there, W/H viewport
 //        (default 1600x900), LENS=1 also fails on the lens's measures (a roof hiding her, her walking toward it, her
 //        out of frame, it inside a roof, it whipping round; and at the church, from the tower's foot until the
 //        storm's frame takes over, her out of frame or hidden by the church or a roof).
@@ -39,7 +43,8 @@ const fromBelfry = process.env.FROM === 'belfry';
 const fromChurch = process.env.FROM === 'church' || fromBelfry || fromStorm;
 const fromRoofs = process.env.FROM === 'roofs' || fromChurch;
 const toRidge = process.env.TO === 'ridge';
-const toNave = process.env.TO === 'nave' || toRidge;
+const toTree = process.env.TO === 'tree';
+const toNave = process.env.TO === 'nave' || toRidge || toTree;
 
 const browser = await chromium.launch({ channel: 'chromium', headless: true,
   args: ['--enable-gpu', '--use-angle=metal', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
@@ -623,7 +628,7 @@ try {
     await reach('ridge', 150);
     console.log('she is up on the ridge after the cat', JSON.stringify(await state()));
   }
-  if (!fromChurch && !toRidge) {
+  run: if (!fromChurch && !toRidge) {
     filmFrom ??= (await state()).time;
     await until((s) => s.beat === 'run', 30, 'her setting off');
     await frame();
@@ -765,29 +770,116 @@ try {
       assert.fail(`she never reached the ${stage}: ${JSON.stringify(await state())}`);
     };
 
-    // The tree: firm strokes across it the way it can fall, until it goes over; she walks up it.
+    // The tree. She stops clear of it at the wall's end, looking across to the barn and up at it now and then; the
+    // drawn gust across its crown comes within seconds, the frame holding her, its crown and the barn. A try the wrong
+    // way rocks it back and the gust comes again; then strokes the way it falls, back and forth without a pause as an
+    // eager player makes them, bring it down within a few, and she walks up it.
     await walkTo('tree', 60);
-    await seconds(2.5);
-    await shot('tree');
-    let pushes = 0;
-    for (; pushes < 8 && (await state()).fallen === 'standing'; pushes++) {
-      const aim = await page.evaluate(() => {
-        const r = __game.story.current.run, cam = __game.rig.camera;
-        /** Across the trunk where it is on the screen, as high up it as is in the frame. */
-        let p = null;
-        for (const share of [0.5, 0.4, 0.3, 0.2, 0.12]) {
-          p = r.tree.tree.trunkAt(share, cam.position.clone()).project(cam);
-          if (Math.abs(p.y) < 0.7 && Math.abs(p.x) < 0.8) break;
+    await page.evaluate(() => {
+      const r = __game.story.current.run, c = __game.child, cam = __game.rig.camera, from = __stats.time;
+      const root = r.tree.tree.spot.root, over = r.tree.tree.spot.over, fall = r.tree.tree.fall;
+      const w = window.__treeWatch = { root: Math.hypot(c.position.x - root.x, c.position.z - root.z), quiet: true, looks: 0, up: 0,
+        across: 0, invited: null, lens: [] };
+      const tick = () => {
+        if (r.tree.phase !== 'waiting') return;
+        const t = __stats.time - from, p = c.position;
+        w.lens.push([t, Math.hypot(cam.position.x - p.x, cam.position.z - p.z)]);
+        /**
+         * Where she looks before the player does anything: steeply up at the tree, or out across the lane, where it will
+         * take her and the cat goes (or at the cygnet on her back, which is neither).
+         */
+        if (c.lookAt && w.quiet) {
+          w.looks++;
+          const l = c.lookAt, steep = Math.atan2(l.y - p.y - 1.2, Math.hypot(l.x - p.x, l.z - p.z)) > 0.6;
+          if (steep && Math.hypot(l.x - root.x, l.z - root.z) < 3) w.up++;
+          else if (!steep && (l.x - over.x) * fall.x + (l.z - over.z) * fall.y > 0.5) w.across++;
         }
-        return { at: [(p.x + 1) / 2, (1 - p.y) / 2], heading: r.tree.tree.fallHeading(cam) };
-      });
-      await stroke(aim.at, aim.heading, 0.62, 15);
-      await seconds(1.8);
+        if (w.invited === null && r.tree.invitation && __game.emberInvitation.alpha > 0.5) w.invited = t;
+        requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    });
+    await seconds(6);
+    await shot('tree');
+    /** Once the lens has come round: how far out toward the frame's edge (1) her head, the top of the crown and the barn's ridge stand. */
+    const framed = await page.evaluate(() => {
+      const r = __game.story.current.run, cam = __game.rig.camera, p = __game.child.position;
+      window.__treeWatch.quiet = false;
+      const edge = (q) => { q.project(cam); return q.z > 1 ? 9 : Math.max(Math.abs(q.x), Math.abs(q.y)); };
+      return { her: edge(p.clone().setY(p.y + 1.2)), crown: edge(r.tree.tree.trunkAt(0.95, p.clone())), barn: edge(r.tree.tree.spot.rest.clone()) };
+    });
+    /** Across the trunk where it is on the screen, as high up it into the crown as is in the frame. */
+    const crown = () => page.evaluate(() => {
+      const r = __game.story.current.run, cam = __game.rig.camera;
+      let p = null;
+      for (const share of [0.72, 0.6, 0.5, 0.4, 0.3, 0.2]) {
+        p = r.tree.tree.trunkAt(share, cam.position.clone()).project(cam);
+        if (Math.abs(p.y) < 0.7 && Math.abs(p.x) < 0.8) break;
+      }
+      return { at: [(p.x + 1) / 2, (1 - p.y) / 2], heading: r.tree.tree.fallHeading(cam) };
+    });
+    const lean = () => page.evaluate(() => __game.story.current.run.tree.tree.lean);
+    const invited = () => page.evaluate(() => !!__game.story.current.run.tree.invitation && __game.emberInvitation.alpha > 0.5);
+    const upright = await lean();
+    let aim = await crown();
+    await stroke(aim.at, aim.heading + Math.PI, 0.5, 8);
+    let rocked = upright;
+    for (let t = 0; t < 1.5; t += 0.25) { await seconds(0.25); rocked = Math.min(rocked, await lean()); }
+    let again = null;
+    for (let t = 1.5; t < 6 && again === null; t += 0.25) { if (await invited()) again = t; else await seconds(0.25); }
+    await shot('tree-again');
+    /** The pointer straight on from where it is to `to` over `frames` frames, making wind all the way. */
+    const sweepTo = async (to, frames) => {
+      const from = pointer;
+      for (let i = 1; i <= frames; i++) {
+        pointer = [from[0] + (to[0] - from[0]) * i / frames, from[1] + (to[1] - from[1]) * i / frames];
+        await page.mouse.move(pointer[0] * width, pointer[1] * height);
+        await frame();
+      }
+      await reel();
+    };
+    aim = await crown();
+    const ax = (Math.cos(aim.heading) * 0.25 * height) / width, ay = -Math.sin(aim.heading) * 0.25;
+    await drift([aim.at[0] - ax, aim.at[1] - ay]);
+    let pushes = 0;
+    for (; pushes < 12 && (await state()).fallen === 'standing'; pushes++) {
+      await sweepTo([aim.at[0] + ax, aim.at[1] + ay], 5);
+      await sweepTo([aim.at[0] - ax, aim.at[1] - ay], 8);
     }
-    console.log(`the tree went over after ${pushes} strokes`);
+    const tw = await page.evaluate(() => window.__treeWatch);
+    const lensFrom = tw.lens[0]?.[1] ?? 0, lensTo = tw.lens.at(-1)?.[1] ?? 0, near = Math.min(...tw.lens.map((l) => l[1])), far = Math.max(...tw.lens.map((l) => l[1]));
+    const inAndOut = Math.max(Math.min(lensFrom - near, lensTo - near), Math.min(far - lensFrom, far - lensTo));
+    console.log(`the tree: she waited ${tw.root.toFixed(1)} m from its foot; before any stroke she looked steeply up ${(100 * tw.up / tw.looks).toFixed(0)}% of the time and across the lane ${(100 * tw.across / tw.looks).toFixed(0)}%;`
+      + ` the drawn gust ${tw.invited === null ? 'never came' : `came ${tw.invited.toFixed(1)} s after she stopped`}; ${Object.entries(framed).map(([k, v]) => `${k} ${v.toFixed(2)}`).join(', ')} out to the frame's edge;`
+      + ` a wrong-way try rocked it back ${(upright - rocked).toFixed(3)} rad and the gust came again ${again === null ? 'never' : `${again.toFixed(1)} s after`};`
+      + ` ${(await state()).fallen === 'standing' ? 'it still stood' : 'it went over'} after ${pushes} strokes back and forth; the lens came round from ${lensFrom.toFixed(1)} m off her to ${lensTo.toFixed(1)} m (in and out ${inAndOut.toFixed(2)} m)`);
+    assert(tw.root >= 4, `she waited under the tree, ${tw.root.toFixed(1)} m from its foot`);
+    assert(tw.up < tw.looks * 0.4, `she looked steeply up at the tree ${(100 * tw.up / tw.looks).toFixed(0)}% of the time she waited`);
+    assert(tw.across > tw.looks * 0.4, `she looked across the lane only ${(100 * tw.across / tw.looks).toFixed(0)}% of the time she waited`);
+    assert(tw.invited !== null && tw.invited < 3.5, `the drawn gust did not come within 3.5 s of her stopping (${tw.invited})`);
+    assert(Object.values(framed).every((v) => v < 0.95), `the tree's view did not hold her, the crown and the barn: ${JSON.stringify(framed)}`);
+    assert(upright - rocked > 0.02, `a stroke the wrong way did not rock it back (${(upright - rocked).toFixed(3)} rad)`);
+    assert(again !== null, 'the drawn gust did not come again after a wrong-way try');
+    assert(pushes <= 10, `${pushes} strokes back and forth the way it falls did not bring it down`);
+    assert(inAndOut < 1, `the lens went in and out by ${inAndOut.toFixed(2)} m coming round to the tree's view`);
     await until((s) => s.tree === 'crossing', 30, 'her on the trunk');
     await seconds(1.5);
     await shot('tree-crossing');
+    if (toTree) {
+      await until((s) => s.tree === 'over', 30, 'her over the tree');
+      await seconds(9);
+      await shot('tree-over');
+      const w = await page.evaluate(() => window.__runWatch);
+      console.log(`her feet stayed within ${w.offWorst.toFixed(3)} m of the decks (worst ${w.offAt}); out of the frame at most ${w.unseenWorst.toFixed(1)} s;`
+        + ` a roof hid her at most ${(w.hiddenWorst ?? 0).toFixed(1)} s; the lens inside a roof ${w.inside.toFixed(1)} s`);
+      assert(w.offWorst < 0.4, `she left the decks: ${w.offWorst.toFixed(2)} m (${w.offAt})`);
+      if (process.env.LENS) {
+        assert(w.unseenWorst < 0.5, `she was out of the frame for ${w.unseenWorst.toFixed(1)} s (${w.unseenAt})`);
+        assert((w.hiddenWorst ?? 0) < 1, `a roof hid her for ${(w.hiddenWorst ?? 0).toFixed(1)} s (${w.hiddenAt})`);
+        assert(w.inside < 0.2, `the lens was inside a roof for ${w.inside.toFixed(1)} s (${w.insideAt})`);
+      }
+      break run;
+    }
 
     // The sheet: firm strokes up the line across it, until she has been carried over and set down.
     await walkTo('sheet', 60);

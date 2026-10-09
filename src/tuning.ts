@@ -1983,7 +1983,7 @@ export const tuning = {
        * it is already going as she arrives and never keeps her waiting; and how far up the hoist she is (a share of the
        * climb) before it comes down off the mill's cap ahead of her.
        */
-      catGo: { tree: 9, sheet: 40, mill: 4, swing: 14 }, catDown: 0.55,
+      catGo: { tree: 15, sheet: 40, mill: 4, swing: 14 }, catDown: 0.55,
       /**
        * The fog along its way (`DARK_WAY`): how far behind her it comes on while she is on her own way, while she works
        * each piece, and where it waits once she is at the tower's foot; the nearest it ever comes (and where it comes
@@ -2149,10 +2149,15 @@ export const tuning = {
        */
       backHold: 1, backIn: 1.4, backOut: 1.0, backGone: 0.6, backBehind: 4.2, backSide: 2.4, uprightBackSide: 1.2, backHigh: 2.3, backAt: 0.55, backAim: 0.6,
       /**
-       * The tree's view: how far north of where it lies over her wall and east of it (out over the lane) it stands, and
-       * how high (upright, the same, and how far it looks round to her as she crosses, so she stays in the narrow frame).
+       * The tree's view, as [north, east, height] from where it will lie over her wall (east across the lane, the way it
+       * falls): where it stands, off the end of the wall under the old tree's crown by the green, and where it looks, so
+       * the whole tree, her at the wall's end and the barn's gable all stand in the frame; upright, its own. Once she is
+       * `treeRoundFrom` of the way up the trunk it goes round to the sheet's view over `treeRoundFor` seconds, drawn
+       * toward the two places in `treeRound`: south of the old tree's trunk, and over the far end of the high roof.
        */
-      treeNorth: 9.5, treeEast: 1.6, treeHigh: 4.4, uprightTreeNorth: 10.5, uprightTreeEast: 0.8, uprightTreeHigh: 4.6, uprightTreeOnHer: 0.85,
+      treeEye: [17.2, -5.6, 5.3], treeAt: [1.6, 0.1, 5.0], uprightTreeEye: [16.2, -5.0, 5.0], uprightTreeAt: [1.2, 1.1, 3.9],
+      treeRound: [[13.0, 1.2, 6.0], [12.8, 10.8, 7.8]], uprightTreeRound: [[9.9, -3.0, 5.1], [3.5, -0.9, 4.8]],
+      treeRoundFrom: 0.1, treeRoundFor: 8,
       /** The sheet's view: which side of the line it stands (+1 the left looking up it), and how far off it in landscape. */
       sheetSide: 1, sheetOff: 10.5,
       /**
@@ -2298,8 +2303,8 @@ export const tuning = {
        * Rotten roots: they let it lean `holdAt` past rest and hold hard beyond (`rootStiffness`). A push that has
        * pressed past `giveAt` when the lean meets them tears them a step, `giveMin` for one that only just does it
        * to `giveMax` for the firmest, so it takes two or three; nearly all gone, it goes. Each step leans it
-       * `looseLean` further for good, with a lurch (radians a second); the roots bite again once that push has
-       * ebbed and `settleFor` seconds have passed. The water bubbles for `bubbleFor` seconds after.
+       * `looseLean` further for good, with a lurch (radians a second); the roots bite again `settleFor` seconds
+       * later, so a push kept up tears them again. The water bubbles for `bubbleFor` seconds after.
        */
       holdAt: 0.1, rootStiffness: 30, giveAt: 0.42, giveMin: 0.36, giveMax: 0.52, looseLean: 0.2, lurch: 0.22,
       settleFor: 1, bubbleFor: 4.5,
@@ -2320,8 +2325,17 @@ export const tuning = {
        * how far short of where it rests on the far roof she steps off it, metres.
        */
       climbOn: 0.45, climbReach: 0.65, climbShort: 0.35,
-      /** Seconds without a useful stroke before the drawn gust; seconds with no progress before the world's own gust brings it down. */
-      inviteAfter: 6, valveAfter: 90, valveEvery: 1.6, valvePush: 0.32,
+      /**
+       * Waiting, she looks across to where it will take her, and up at it (`glanceAt` of the way up) for `glanceFor`
+       * seconds every `glanceEvery` and whenever it stirs past `stirs`.
+       */
+      glanceEvery: 5, glanceFor: 1.6, glanceAt: 0.72, stirs: 0.12,
+      /**
+       * The drawn gust across its crown (`inviteAt` of the way up) is offered `inviteAfter` seconds after she stops,
+       * and again once `inviteQuiet` seconds have passed without a useful stroke (it shows `invitation.resumeAfter`
+       * later, the pointer away from it); seconds with no progress before the world's own gust brings it down.
+       */
+      inviteAfter: 0.6, inviteQuiet: 0.6, inviteAt: 0.74, valveAfter: 90, valveEvery: 1.6, valvePush: 0.32,
     },
     swing: {
       /**
