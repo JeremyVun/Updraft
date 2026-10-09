@@ -2134,7 +2134,7 @@ export const tuning = {
        * edge (1), never so far she stands further out than `herEdge`, nor more than `glanceMost` radians, easing at
        * `glanceRate` a second.
        */
-      fogEdge: 0.82, herEdge: 0.84, glanceMost: 0.55, glanceRate: 0.8,
+      fogEdge: 0.82, herEdge: 0.84, glanceMost: 0.55, glanceRate: 1.4,
       /**
        * How it is laid along her way (`layLens`): what it costs to stand a radian (squared) from where it wants, to be
        * drawn in all the way (upright, where drawn in she soon leaves the narrow frame), to stand `lifted` metres
