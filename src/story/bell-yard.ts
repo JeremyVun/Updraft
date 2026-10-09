@@ -21,7 +21,6 @@ const NAVE: Roof = { x: -BELFRY.half - 6, z: 0, len: 12, depth: 7.6, wall: 3.2, 
 const RIDGE = NAVE.wall + NAVE.rise + 0.04 - NAVE.sink;
 const EAVE = NAVE.wall - 0.1 - NAVE.sink;
 const FACE: 'west' = 'west';
-const LIGHT: -1 | 1 = -1;
 const WASH = new THREE.Color().setRGB(0.45, 0.405, 0.33);
 const QUOIN = new THREE.Color().setRGB(0.5, 0.46, 0.385);
 const DRESSING = new THREE.Color().setRGB(0.34, 0.31, 0.26);
@@ -95,28 +94,26 @@ export class BellYard {
     this.group.position.copy(this.centre);
     this.belfry = new Belfry(this.centre);
     const crossingCast = { child: cast.child, wind: cast.wind, lines: cast.lines, input: cast.input };
-    this.bell = new Bell({ pivot: this.belfry.pivot(), toward: new THREE.Vector2(0, 1), half: BELFRY.trestle }, crossingCast, this.belfry.light);
+    this.bell = new Bell({ pivot: this.belfry.pivot(), toward: new THREE.Vector2(1, 0), half: BELFRY.bearing }, crossingCast, this.belfry.light);
     this.bell.onEvent = (kind, at, strength) => cast.knock?.(BELL_SOUNDS[kind], at, strength);
     this.waves = new BellWaves(this.centre, 0.12, BELFRY.half + 0.5);
     this.bell.onRing = (strength) => this.waves.emit(strength);
     const out = faceOut(FACE);
     const foot = this.at(-BELFRY.half, RIDGE, 0);
     this.ivy = new IvyFace({
-      from: foot, to: this.belfry.sill(FACE, LIGHT, 0), out,
+      from: foot, to: this.belfry.sill(FACE, 0), out,
       roof: (across) => THREE.MathUtils.lerp(RIDGE, EAVE, Math.min(1, Math.abs(across) / (NAVE.depth / 2 + OVERHANG))),
       spread: 1.45,
     });
-    this.climb = new Climb(cast.child, { wall: foot, out, holds: this.ivy.holds, sill: this.belfry.sill(FACE, LIGHT, 0), depth: BELFRY.wall });
+    this.climb = new Climb(cast.child, { wall: foot, out, holds: this.ivy.holds, sill: this.belfry.sill(FACE, 0), depth: BELFRY.wall });
     const scenery = yardMesh((add) => this.tower(add));
     scenery.layers.enable(REFLECTION_LAYER);
     this.group.add(scenery);
     this.floor = () => this.belfry.floor;
-    const sill = (light: -1 | 1): Deck => {
-      const a = this.belfry.sill(FACE, light, 0.05), b = this.belfry.sill(FACE, light, -BELFRY.wall - 0.08);
-      return { x0: a.x, z0: a.z, x1: b.x, z1: b.z, halfWidth: BELFRY.light.width / 2 - 0.06, height: BELFRY.sill };
-    };
+    const a = this.belfry.sill(FACE, 0.05), b = this.belfry.sill(FACE, -BELFRY.wall - 0.08);
+    const sill: Deck = { x0: a.x, z0: a.z, x1: b.x, z1: b.z, halfWidth: BELFRY.arch.width / 2 - 0.06, height: BELFRY.sill };
     const ridge = { x0: this.centre.x - 14, z0: this.centre.z, x1: foot.x - 0.15, z1: this.centre.z, halfWidth: 0.45, height: RIDGE };
-    this.decks = [sill(-1), sill(1), ...this.belfry.decks, ridge];
+    this.decks = [sill, ...this.belfry.decks, ridge];
   }
 
   get objects(): THREE.Object3D[] {
@@ -227,7 +224,7 @@ export class BellYard {
         this.phase = 'down';
         this.climb.down(() => {
           this.phase = 'below';
-          c.lookAt = this.look.copy(this.belfry.sill(FACE, LIGHT, 0)).setY(BELFRY.sill + 0.3);
+          c.lookAt = this.look.copy(this.belfry.sill(FACE, 0)).setY(BELFRY.sill + 0.3);
         });
       });
     }, 0.08);
@@ -290,9 +287,9 @@ export class BellYard {
    */
   private catClimbs(): void {
     const cat = this.cast.cat;
-    const ledge = this.belfry.sill(FACE, LIGHT, -0.24).add(new THREE.Vector3(0, 0, 0.25));
+    const ledge = this.belfry.sill(FACE, -0.24).add(new THREE.Vector3(0, 0, 0.25));
     this.later(0.25, () => cat.climb([...this.ivy.catWay(), ledge], faceOut(FACE), { then: 'stand', speed: 1.2 }, () => {
-      const down = this.belfry.inside(FACE, LIGHT, 0.3).add(new THREE.Vector3(0, 0, 0.3));
+      const down = this.belfry.inside(FACE, 0.3).add(new THREE.Vector3(0, 0, 0.3));
       cat.hop(down, { then: 'stand', floor: this.floor }, () => {
         const at = this.curlAt();
         const before = at.clone().add(new THREE.Vector3(-Math.sin(CURL_YAW), 0, -Math.cos(CURL_YAW)).multiplyScalar(0.35));
@@ -328,7 +325,7 @@ export class BellYard {
 
   /** On the sill in the opening she climbed in by, halfway through the wall. */
   private standInOpening(): THREE.Vector3 {
-    return this.belfry.sill(FACE, LIGHT, -BELFRY.wall * 0.45);
+    return this.belfry.sill(FACE, -BELFRY.wall * 0.45);
   }
 
   /** Standing in the opening she faces out and a little round toward the last of the sun. */

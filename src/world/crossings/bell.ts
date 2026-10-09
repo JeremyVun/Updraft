@@ -90,7 +90,7 @@ void main() {
     vec3 h = normalize(uSunDir + V);
     vec3 tint = mix(vec3(1.0), vec3(1.0, 0.8, 0.58), 0.6);
     col += tint * uSunColor * (pow(max(dot(n, h), 0.0), 46.0) * 0.9 + pow(max(dot(n, h), 0.0), 7.0) * 0.12) * sun * shine;
-    /** Bronze shows what is round it: indoors the dim timbers and stone, and the sky only where it looks out through a light. */
+    /** Bronze shows what is round it: indoors the dim timbers and stone, and the sky only where it looks out through an arch. */
     vec3 r = reflect(-V, n);
     float sky = smoothstep(-0.15, 0.2, r.y) * (1.0 - smoothstep(0.35, 0.85, r.y));
     /** Old bronze is not a mirror: the openings it reflects are blurred, five looks a little apart. */
@@ -221,7 +221,7 @@ export class Bell {
       uniforms: {
         ...atmo.uniforms,
         ...(light ?? {
-          uBelfry: { value: new THREE.Vector4() }, uBelfrySize: { value: new THREE.Vector4() }, uBelfryLight: { value: new THREE.Vector4() },
+          uBelfry: { value: new THREE.Vector4() }, uBelfrySize: { value: new THREE.Vector4() }, uBelfryArch: { value: new THREE.Vector3() },
           uBellPivot: { value: new THREE.Vector3() }, uBellDown: { value: new THREE.Vector3() },
         }),
         uIndoors: { value: light ? 1 : 0 },

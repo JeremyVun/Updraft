@@ -5,19 +5,22 @@ import { REFLECTION_LAYER } from './water/reflection';
 import type { Deck } from './decks';
 
 /**
- * The belfry storey of the drowned church's tower, at the room's own size (`TOWER` in drowned-way.ts): its outside
- * half-width, its walls' thickness, the top of its sills (the floor inside stands `step` below them), the height of
- * the room to its ceiling boards and the top of its walls. Each face has one opening of two pointed lights either
- * side of a slender shaft: their width, their middles off the face's middle, the spring of their arches above the
- * sill and the rise of the points. The bell hangs from gudgeons `hang` above the floor on two oak trestles `trestle`
- * east and west of it, swinging north and south; the nest and the trap lie at these places off the middle of the room.
+ * The belfry storey of the drowned church's tower, cheated larger than the tower's real size so that she, the cat, the
+ * kittens and the bell fit in it with room between: its outside half-width, its walls' thickness, the top of its sills
+ * (the floor inside stands `step` below them), the height of the room to its ceiling boards and the top of its walls.
+ * Each face has one wide pointed arch over its sill: its width, the spring of its arch above the sill and the rise of
+ * the point. The bell hangs `hang` above the floor from a headstock whose gudgeons rest on two oak beams `bearing`
+ * east and west of it, high across the room over the arches' points, and swings north and south between them. The
+ * kittens' nest, where she stands by the bell and the trap lie at these places off the middle of the room (x east,
+ * z south).
  */
 export const BELFRY = {
-  half: 2.4, wall: 0.45, sill: 8.27, step: 0.12, height: 3.3, top: 11.6,
-  light: { width: 1.0, at: 0.65, spring: 2.3, point: 0.55 },
-  hang: 2.85, trestle: 1.16,
-  nest: new THREE.Vector2(-1.56, 0.26),
-  trap: new THREE.Vector2(1.15, -1.15),
+  half: 3.6, wall: 0.5, sill: 8.27, step: 0.12, height: 4.35, top: 13.1,
+  arch: { width: 3.0, spring: 2.4, point: 1.1 },
+  hang: 3.95, bearing: 1.0,
+  nest: new THREE.Vector2(-1.75, 0.05),
+  stand: new THREE.Vector2(-1.35, -1.75),
+  trap: new THREE.Vector2(2.1, 2.1),
 } as const;
 
 export type Face = 'south' | 'east' | 'north' | 'west';
@@ -57,22 +60,22 @@ const STALKS = 4;
 const METAL = 5;
 
 /**
- * The belfry's light, shared with whatever hangs in it: where the room is, its openings, and the bell's axis, so
- * that inside only the low sun that comes in through a light reaches anything, and the bell throws its shadow.
+ * The belfry's light, shared with whatever hangs in it: where the room is, its arches, and the bell's axis, so that
+ * inside only the low sun that comes in through an arch reaches anything, and the bell throws its shadow.
  */
 export const BELFRY_GLSL = /* glsl */ `
 uniform vec4 uBelfry;
 uniform vec4 uBelfrySize;
-uniform vec4 uBelfryLight;
+uniform vec3 uBelfryArch;
 uniform vec3 uBellPivot;
 uniform vec3 uBellDown;
 
-/** Inside one of a face's two pointed lights: u along the face from its middle, v above the sill; soft at the edges. */
+/** Inside a face's arch: u along the face from its middle, v above the sill; soft at the edges. */
 float belfryLight(float u, float v) {
-  float h = uBelfryLight.y;
-  float du = abs(abs(u) - uBelfryLight.x);
+  float h = uBelfryArch.x;
+  float du = abs(u);
   float t = sqrt(clamp(1.0 - du / h, 0.0, 1.0));
-  float top = uBelfryLight.z + uBelfryLight.w * (1.4 * t - 0.4 * t * t);
+  float top = uBelfryArch.y + uBelfryArch.z * (1.4 * t - 0.4 * t * t);
   return (1.0 - smoothstep(h - 0.05, h + 0.02, du)) * smoothstep(-0.03, 0.02, v) * (1.0 - smoothstep(top - 0.06, top + 0.02, v));
 }
 
@@ -99,7 +102,7 @@ float bellShade(vec3 world) {
   return smoothstep(r - 0.07, r + 0.07, gap);
 }
 
-/** Whether a ray from a point inside the room leaves it through a light, through the thickness of its wall. */
+/** Whether a ray from a point inside the room leaves it through an arch, through the thickness of its wall. */
 float belfryOpen(vec3 world, vec3 d) {
   vec3 p = world - vec3(uBelfry.x, 0.0, uBelfry.z);
   float inner = uBelfrySize.x, outer = uBelfrySize.y;
@@ -112,7 +115,7 @@ float belfryOpen(vec3 world, vec3 d) {
   return belfryLight(across ? a.z : a.x, a.y - uBelfry.w) * belfryLight(across ? b.z : b.x, b.y - uBelfry.w);
 }
 
-/** The low sun inside the room: only what comes in through a light. */
+/** The low sun inside the room: only what comes in through an arch. */
 float belfrySun(vec3 world) {
   return belfryOpen(world, uSunDir);
 }
@@ -121,7 +124,7 @@ float belfrySun(vec3 world) {
 export type BelfryLight = {
   uBelfry: { value: THREE.Vector4 };
   uBelfrySize: { value: THREE.Vector4 };
-  uBelfryLight: { value: THREE.Vector4 };
+  uBelfryArch: { value: THREE.Vector3 };
   uBellPivot: { value: THREE.Vector3 };
   uBellDown: { value: THREE.Vector3 };
 };
@@ -186,7 +189,7 @@ void main() {
   float sun = mix(cloudShadow(vWorld.xz), sunIn, inside);
   float ndl = max(dot(n, uSunDir), 0.0);
   float wrap = max(dot(n, uSunDir) * 0.5 + 0.5, 0.0);
-  /** Inside it is close and warm: the sky comes in only through the openings, and the sunlit straw throws light back. */
+  /** Inside it is close and warm: the sky comes in only through the arches, and the sunlit straw throws light back. */
   vec3 warm = uSunColor * vec3(1.0, 0.76, 0.48) * 0.075;
   vec3 ambient = hemiLight(n) * mix(1.0, 0.3, inside) + warm * inside * (0.7 + 0.3 * n.y);
   vec3 col = alb * (ambient + uSunColor * mix(ndl, wrap * wrap, 0.2) * sun);
@@ -217,7 +220,7 @@ function built(build: (add: Add) => void): THREE.BufferGeometry {
   return mergeGeometries(parts);
 }
 
-/** A pointed arch `w` wide, its sides rising `spring` from y0 and its point `point` higher, as the tower's lights are drawn. */
+/** A pointed arch `w` wide, its sides rising `spring` from y0 and its point `point` higher, as the tower's arches are drawn. */
 function arch(cx: number, y0: number, w: number, spring: number, point: number, path: THREE.Path): THREE.Path {
   const h = w / 2;
   path.moveTo(cx - h, y0);
@@ -243,11 +246,11 @@ function seeded(seed: number): () => number {
 }
 
 /**
- * The belfry: four walls each with an opening of two pointed lights over its sill, the dressed stone round them and a
- * sill outside under each opening wide enough for a cat to walk along; boards for a floor with old straw over them,
- * the trap in one corner down into the tower; joists and boards overhead; the oak frame the bell swings in. Laid
- * round the tower's middle (`at`, its height ignored) at the room's own heights, square to the world like the tower.
- * The bell itself is its own piece (`crossings/bell.ts`), hung from `pivot`, and shares this room's light.
+ * The belfry: four walls each with one wide pointed arch over its sill, the dressed stone round it and a ledge outside
+ * under it; boards for a floor with old straw over them, the trap in one corner down into the tower; joists and boards
+ * overhead; the two oak beams the bell's headstock rests on. Laid round the tower's middle (`at`, its height ignored)
+ * at the room's own heights, square to the world like the tower. The bell itself is its own piece
+ * (`crossings/bell.ts`), hung from `pivot`, and shares this room's light.
  */
 export class Belfry {
   readonly group = new THREE.Group();
@@ -255,15 +258,16 @@ export class Belfry {
   readonly centre = new THREE.Vector3();
   readonly floor = FLOOR;
   readonly light: BelfryLight;
-  /** Her floor inside, and a step onto each opening's sill. */
+  /** Her floor inside. */
   readonly decks: Deck[];
 
   constructor(at: THREE.Vector3) {
     this.centre.set(at.x, 0, at.z);
+    const { arch } = BELFRY;
     this.light = {
       uBelfry: { value: new THREE.Vector4(at.x, FLOOR, at.z, BELFRY.sill) },
       uBelfrySize: { value: new THREE.Vector4(INNER, BELFRY.half, CEILING, 0) },
-      uBelfryLight: { value: new THREE.Vector4(BELFRY.light.at, BELFRY.light.width / 2, BELFRY.light.spring, BELFRY.light.point) },
+      uBelfryArch: { value: new THREE.Vector3(arch.width / 2, arch.spring, arch.point) },
       uBellPivot: { value: new THREE.Vector3(at.x, FLOOR + BELFRY.hang, at.z) },
       uBellDown: { value: new THREE.Vector3(0, -1, 0) },
     };
@@ -292,16 +296,34 @@ export class Belfry {
     return out.set(this.centre.x + BELFRY.nest.x, FLOOR, this.centre.z + BELFRY.nest.y);
   }
 
-  /** On a light's sill (`light` -1 or 1 along the face), `out` metres from the wall's outer face (negative is inside it). */
-  sill(face: Face, light: -1 | 1, out: number, into = new THREE.Vector3()): THREE.Vector3 {
+  /** On a face's sill, `out` metres from the wall's outer face (negative is inside it) and `along` from the arch's middle. */
+  sill(face: Face, out: number, along = 0, into = new THREE.Vector3()): THREE.Vector3 {
     const n = faceOut(face), u = faceAlong(face);
-    return into.copy(this.centre).addScaledVector(n, BELFRY.half + out).addScaledVector(u, light * BELFRY.light.at).setY(BELFRY.sill);
+    return into.copy(this.centre).addScaledVector(n, BELFRY.half + out).addScaledVector(u, along).setY(BELFRY.sill);
   }
 
-  /** On the floor just inside a light, `inward` metres in from the inner face of its wall. */
-  inside(face: Face, light: -1 | 1, inward: number, into = new THREE.Vector3()): THREE.Vector3 {
+  /** On the floor just inside a face's arch, `inward` metres in from the inner face of its wall and `along` from its middle. */
+  inside(face: Face, inward: number, along = 0, into = new THREE.Vector3()): THREE.Vector3 {
     const n = faceOut(face), u = faceAlong(face);
-    return into.copy(this.centre).addScaledVector(n, INNER - inward).addScaledVector(u, light * BELFRY.light.at).setY(FLOOR);
+    return into.copy(this.centre).addScaledVector(n, INNER - inward).addScaledVector(u, along).setY(FLOOR);
+  }
+
+  /** On the floor at a place off the middle of the room, x east and z south. */
+  onFloor(x: number, z: number, into = new THREE.Vector3()): THREE.Vector3 {
+    return into.set(this.centre.x + x, FLOOR, this.centre.z + z);
+  }
+
+  /** Whether a point is within the room's walls, above its floor and under its ceiling. */
+  holds(p: THREE.Vector3, margin = 0): boolean {
+    return Math.abs(p.x - this.centre.x) < INNER - margin && Math.abs(p.z - this.centre.z) < INNER - margin && p.y > FLOOR - 0.3 && p.y < CEILING;
+  }
+
+  /** Whether a point in the thickness of a wall is in its arch's opening, so a line through it passes. */
+  static open(u: number, v: number): boolean {
+    const { arch } = BELFRY;
+    const h = arch.width / 2, du = Math.abs(u);
+    const k = Math.sqrt(THREE.MathUtils.clamp(1 - du / h, 0, 1));
+    return du < h && v > 0 && v < arch.spring + arch.point * (1.4 * k - 0.4 * k * k);
   }
 
   /** Where the bell is, so the room's light can find its shadow. */
@@ -310,7 +332,7 @@ export class Belfry {
     this.light.uBellDown.value.copy(down);
   }
 
-  /** How much of the low sun from `sun` (toward it) gets in through a light to a point inside, as the shader has it. */
+  /** How much of the low sun from `sun` (toward it) gets in through an arch to a point inside, as the shader has it. */
   sunAt(world: THREE.Vector3, sun: THREE.Vector3): number {
     const p = new THREE.Vector3(world.x - this.centre.x, world.y, world.z - this.centre.z);
     const tx = Math.abs(sun.x) > 1e-4 ? (Math.sign(sun.x) * INNER - p.x) / sun.x : 1e6;
@@ -320,36 +342,29 @@ export class Belfry {
     const t1 = across ? (Math.sign(sun.x) * BELFRY.half - p.x) / sun.x : (Math.sign(sun.z) * BELFRY.half - p.z) / sun.z;
     const open = (t: number) => {
       const q = p.clone().addScaledVector(sun, t);
-      const u = across ? q.z : q.x, v = q.y - BELFRY.sill;
-      const h = BELFRY.light.width / 2, du = Math.abs(Math.abs(u) - BELFRY.light.at);
-      const k = Math.sqrt(THREE.MathUtils.clamp(1 - du / h, 0, 1));
-      const top = BELFRY.light.spring + BELFRY.light.point * (1.4 * k - 0.4 * k * k);
-      return du < h && v > 0 && v < top ? 1 : 0;
+      return Belfry.open(across ? q.z : q.x, q.y - BELFRY.sill) ? 1 : 0;
     };
     return open(t0) * open(Math.max(t0, t1));
   }
 
   private build(add: Add): void {
-    const { half, wall, sill, light } = BELFRY;
+    const { half, wall, sill, arch: a } = BELFRY;
     const y0 = BELFRY_FOOT;
     for (const face of FACES) {
       const turn = new THREE.Matrix4().makeRotationY(TURN[face]);
       const reach = face === 'south' || face === 'north' ? half : INNER;
       const shape = new THREE.Shape([new THREE.Vector2(-reach, y0), new THREE.Vector2(reach, y0), new THREE.Vector2(reach, BELFRY.top),
         new THREE.Vector2(-reach, BELFRY.top)]);
-      for (const side of [-1, 1]) shape.holes.push(arch(side * light.at, sill, light.width, light.spring, light.point, new THREE.Path()) as THREE.Path);
-      add(new THREE.ExtrudeGeometry(shape, { depth: wall, bevelEnabled: false, curveSegments: 6 }).translate(0, 0, INNER), WASH, PLAIN, turn);
+      shape.holes.push(arch(0, sill, a.width, a.spring, a.point, new THREE.Path()) as THREE.Path);
+      add(new THREE.ExtrudeGeometry(shape, { depth: wall, bevelEnabled: false, curveSegments: 8 }).translate(0, 0, INNER), WASH, PLAIN, turn);
+      const ring = arch(0, sill - 0.02, a.width + 0.36, a.spring + 0.02, a.point + 0.16, new THREE.Shape()) as THREE.Shape;
+      ring.holes.push(arch(0, sill - 0.02, a.width, a.spring + 0.02, a.point, new THREE.Path()) as THREE.Path);
+      add(new THREE.ExtrudeGeometry(ring, { depth: 0.12, bevelEnabled: false, curveSegments: 8 }).translate(0, 0, half), DRESSING, STONE, turn);
       for (const side of [-1, 1]) {
-        const ring = arch(side * light.at, sill - 0.02, light.width + 0.3, light.spring + 0.02, light.point + 0.12, new THREE.Shape()) as THREE.Shape;
-        ring.holes.push(arch(side * light.at, sill - 0.02, light.width, light.spring + 0.02, light.point, new THREE.Path()) as THREE.Path);
-        add(new THREE.ExtrudeGeometry(ring, { depth: 0.12, bevelEnabled: false, curveSegments: 6 }).translate(0, 0, half), DRESSING, STONE, turn);
+        add(new THREE.BoxGeometry(0.34, 0.16, wall + 0.14).translate(side * (a.width / 2 + 0.1), sill + a.spring - 0.06, INNER + wall / 2), DRESSING, STONE, turn);
       }
-      const between = light.at - light.width / 2;
-      add(new THREE.BoxGeometry(between * 2 + 0.14, 0.14, wall + 0.1).translate(0, sill + light.spring + 0.07, INNER + wall / 2), DRESSING, STONE, turn);
-      add(new THREE.BoxGeometry(between * 2 + 0.1, 0.1, wall + 0.06).translate(0, sill + 0.05, INNER + wall / 2), DRESSING, STONE, turn);
-      const ledge = 2 * (light.at + light.width / 2) + 0.4;
-      add(new THREE.BoxGeometry(ledge, 0.16, 0.26).translate(0, sill - 0.08, half + 0.02), DRESSING, STONE, turn);
-      add(new THREE.BoxGeometry(ledge + 0.3, 0.12, 0.2).translate(0, BELFRY.top - 0.5, half + 0.06), DRESSING, STONE, turn);
+      add(new THREE.BoxGeometry(a.width + 0.7, 0.18, 0.3).translate(0, sill - 0.09, half + 0.04), DRESSING, STONE, turn);
+      add(new THREE.BoxGeometry(2 * half - 1.1, 0.12, 0.2).translate(0, BELFRY.top - 0.5, half + 0.06), DRESSING, STONE, turn);
     }
     for (const sx of [-1, 1]) {
       for (const sz of [-1, 1]) {
@@ -363,7 +378,7 @@ export class Belfry {
     add(new THREE.BoxGeometry(2 * half + 0.5, 0.34, 2 * half + 0.5).translate(0, BELFRY.top + 0.15, 0), DRESSING, STONE);
     add(new THREE.BoxGeometry(2 * INNER, 0.1, 2 * INNER).translate(0, FLOOR - 0.05, 0), BOARDS, PLANKS);
     add(new THREE.BoxGeometry(2 * INNER, 0.08, 2 * INNER).translate(0, CEILING + 0.04, 0), BOARDS, PLANKS);
-    for (const z of [-1.25, 0, 1.25]) {
+    for (const z of [-2.2, -0.75, 0.75, 2.2]) {
       const [g, m] = beam(new THREE.Vector3(-INNER, CEILING - 0.11, z), new THREE.Vector3(INNER, CEILING - 0.11, z), 0.18, 0.22);
       add(g, OAK, WOOD, m);
     }
@@ -372,20 +387,16 @@ export class Belfry {
     this.straw(add);
   }
 
-  /** Two trestles of old oak either side of the bell, east and west of it, each an A on a sill beam; it swings north and south between them. */
+  /**
+   * The two great oak beams across the room from wall to wall east and west of the bell, set into the stone over the
+   * arches' points, with an iron bearing on each for a gudgeon; the bell swings north and south between them.
+   */
   private frame(add: Add): void {
-    const f = FLOOR, T = BELFRY.trestle, top = f + BELFRY.hang;
-    const piece = (a: THREE.Vector3, b: THREE.Vector3, w: number, h: number) => {
-      const [g, m] = beam(a, b, w, h);
+    const top = FLOOR + BELFRY.hang, b = BELFRY.bearing;
+    for (const x of [-b, b]) {
+      const [g, m] = beam(new THREE.Vector3(x, top - 0.19, -INNER - 0.2), new THREE.Vector3(x, top - 0.19, INNER + 0.2), 0.26, 0.28);
       add(g, OAK, WOOD, m);
-    };
-    for (const x of [-T, T]) {
-      piece(new THREE.Vector3(x, f + 0.1, -1.75), new THREE.Vector3(x, f + 0.1, 1.75), 0.2, 0.22);
-      for (const sz of [-1, 1]) piece(new THREE.Vector3(x, f + 0.18, sz * 1.55), new THREE.Vector3(x, top - 0.14, sz * 0.13), 0.2, 0.2);
-      piece(new THREE.Vector3(x, f + 1.35, -0.98), new THREE.Vector3(x, f + 1.35, 0.98), 0.17, 0.17);
-      piece(new THREE.Vector3(x, top - 0.42, -0.35), new THREE.Vector3(x, top - 0.42, 0.35), 0.15, 0.16);
-      add(new THREE.BoxGeometry(0.34, 0.2, 0.46).translate(x, top - 0.1, 0), OAK, WOOD);
-      add(new THREE.BoxGeometry(0.36, 0.06, 0.3).translate(x, top + 0.02, 0), IRON, METAL);
+      add(new THREE.BoxGeometry(0.3, 0.09, 0.3).translate(x, top - 0.005, 0), IRON, METAL);
     }
   }
 
@@ -402,19 +413,19 @@ export class Belfry {
   private straw(add: Add): void {
     const rand = seeded(4093);
     const n = BELFRY.nest;
-    for (let i = 0; i < 1500; i++) {
+    for (let i = 0; i < 2600; i++) {
       let x: number, z: number;
       const r = rand();
-      if (r < 0.45) {
-        const a = rand() * Math.PI * 2, d = 0.4 + Math.sqrt(rand()) * 0.75;
+      if (r < 0.4) {
+        const a = rand() * Math.PI * 2, d = 0.4 + Math.sqrt(rand()) * 0.9;
         x = n.x + Math.cos(a) * d;
         z = n.y + Math.sin(a) * d;
-      } else if (r < 0.7) {
-        const a = rand() * Math.PI * 2, d = Math.sqrt(rand()) * 1.3;
+      } else if (r < 0.65) {
+        const a = rand() * Math.PI * 2, d = Math.sqrt(rand()) * 1.8;
         x = Math.cos(a) * d;
         z = Math.sin(a) * d;
       } else {
-        const side = Math.floor(rand() * 4), along = (rand() * 2 - 1) * (INNER - 0.1), off = INNER - 0.05 - rand() ** 2 * 0.5;
+        const side = Math.floor(rand() * 4), along = (rand() * 2 - 1) * (INNER - 0.1), off = INNER - 0.05 - rand() ** 2 * 0.6;
         x = side < 2 ? (side ? off : -off) : along;
         z = side < 2 ? along : (side === 2 ? off : -off);
       }
@@ -426,7 +437,7 @@ export class Belfry {
         .translate(x, FLOOR + 0.006 + rand() * 0.03, z);
       add(g, STRAW.clone().lerp(GREY_STRAW, rand() * 0.6).multiplyScalar(shade), STALKS);
     }
-    for (const [x, z, rx, rz] of [[-INNER + 0.35, 1.2, 0.5, 0.75], [0.6, INNER - 0.3, 0.8, 0.4], [-INNER + 0.3, -1.4, 0.4, 0.5]] as const) {
+    for (const [x, z, rx, rz] of [[-INNER + 0.4, 0.9, 0.55, 0.9], [0.9, INNER - 0.35, 0.95, 0.45], [INNER - 0.4, -1.6, 0.45, 0.7]] as const) {
       add(new THREE.SphereGeometry(1, 14, 5, 0, Math.PI * 2, 0, Math.PI / 2).scale(rx, 0.12, rz).translate(x, FLOOR, z), STRAW.clone().multiplyScalar(0.8), STALKS);
     }
   }

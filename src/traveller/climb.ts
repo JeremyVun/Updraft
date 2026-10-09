@@ -12,7 +12,8 @@ export interface ClimbHold {
 /**
  * A wall she climbs up and over the sill of an opening at its top: a point on the wall's face at the foot of the
  * climb (the ridge she starts from) and the wall's outward normal; each side's holds, low to high, her left first as
- * she faces the wall; the middle of the sill's outer edge, and how deep the wall is there.
+ * she faces the wall; the middle of the sill's outer edge, and how deep the wall is there; and whether the opening is
+ * too wide for her hands to find its sides, so she pushes up off the sill instead.
  */
 export interface ClimbWay {
   wall: THREE.Vector3;
@@ -20,6 +21,7 @@ export interface ClimbWay {
   holds: [ClimbHold[], ClimbHold[]];
   sill: THREE.Vector3;
   depth: number;
+  wide?: boolean;
 }
 
 /** Her limbs, as the climb moves them: her left hand, her right hand, her left foot, her right foot; -1 is her body. */
@@ -338,7 +340,9 @@ export class Climb {
     const ladderRoot = root.clone();
     const inReveal = (deep: number, across: number, up: number) =>
       sill.clone().addScaledVector(out, -deep).addScaledVector(this.right, across).addScaledVector(UP, up);
-    const jamb = (s: number, up: number) => inReveal(0.14, s ? 0.47 : -0.47, up + (s ? 0.06 : 0));
+    const jamb = (s: number, up: number) => (this.way.wide
+      ? (up < 1 ? inReveal(0.22, s ? 0.34 : -0.34, 0.04) : inReveal(depth * 0.45 - 0.05, s ? 0.36 : -0.36, 0.95))
+      : inReveal(0.14, s ? 0.47 : -0.47, up + (s ? 0.06 : 0)));
     const knee = inReveal(0.26, 0.12, 0.13);
     const stand = inReveal(depth * 0.45, 0, 0);
     const standFoot = (s: number) => stand.clone().addScaledVector(side(s), 0.14).addScaledVector(UP, 0.11);

@@ -171,7 +171,7 @@ const LANDING = new THREE.Vector3(SWING_X, slatesAt(NAVE, LANDING_Z - NAVE.z), L
 /** The old tree on the green, off the cottage's corner beyond the swing, its bough out over the water to the ropes. */
 export const GREEN_TREE = new THREE.Vector3(SWING_X - 4.65, -3.2, GREEN_HOUSE.z + 3.28 + 0.95);
 /** The tower's south face, where the churchyard's railings run up to it from the green. */
-const TOWER_SOUTH = NAVE.z + 2.45;
+const TOWER_SOUTH = NAVE.z + BELFRY.half + 0.05;
 const GREEN_EAST = onRoof(GREEN_HOUSE, GREEN_HOUSE.len / 2 - 0.15, 0);
 
 /**
@@ -493,35 +493,31 @@ export const BOAT_TREE = new THREE.Vector2(30.5, -1557.5);
 /** The church tower at the nave's east end: its middle, half its width, and the floor of its belfry's openings. */
 export const TOWER = { x: NAVE.x + NAVE.len / 2 + BELFRY.half, z: NAVE.z, half: BELFRY.half, sill: BELFRY.sill };
 /**
- * The ivy up the tower's west face, from where the nave's ridge meets it to the sill of the face's north light, the
- * way the cat goes up into the belfry and she follows it.
+ * The ivy up the tower's west face, from where the nave's ridge meets it to the middle of the sill of the face's arch,
+ * the way the cat goes up into the belfry and she follows it.
  */
 export const IVY_FOOT = new THREE.Vector3(TOWER.x - TOWER.half, ridgeTop(NAVE), TOWER.z);
-export const IVY_SILL = new THREE.Vector3(TOWER.x - TOWER.half, TOWER.sill, TOWER.z - BELFRY.light.at);
+export const IVY_SILL = new THREE.Vector3(TOWER.x - TOWER.half, TOWER.sill, TOWER.z);
 /** The last of the nave's ridge, up to the tower's face, where she stands to climb. */
 export const IVY_STEP: Deck = strip(TOWER_FOOT, IVY_FOOT.clone().setX(IVY_FOOT.x - 0.1), 0.3);
 /**
- * Sat on in the reveal of the west light of the south and the north faces: where the cat looks down from, over the
- * green and over the north water.
- */
-export const BELFRY_SOUTH = new THREE.Vector3(TOWER.x - BELFRY.light.at, TOWER.sill, TOWER.z + TOWER.half - 0.2);
-export const BELFRY_NORTH = new THREE.Vector3(TOWER.x - BELFRY.light.at, TOWER.sill, TOWER.z - TOWER.half + 0.2);
-/**
  * Where the boat comes alongside the nave's north slates, lying west along them, her seat abreast of the ridge's top
- * there; and her way down the slates to the water's edge beside it.
+ * there, far enough along the nave from the tower that the belfry's arch is seen from it without craning; her way
+ * back along the ridge to above it, and down the slates to the water's edge beside it.
  */
-const BERTH_X = SWING_X;
+const BERTH_X = TOWER_FOOT.x - 8.6;
 export const NAVE_BERTH = { x: BERTH_X - 0.25, z: NAVE.z - acrossAt(NAVE, 0) - 0.62, yaw: -Math.PI / 2 };
+export const NAVE_RIDGE: Deck = strip(new THREE.Vector3(BERTH_X - 0.4, ridgeTop(NAVE), NAVE.z), TOWER_FOOT, 0.3);
 export const NAVE_NORTH: Deck = strip(new THREE.Vector3(BERTH_X, ridgeTop(NAVE), NAVE.z),
   new THREE.Vector3(BERTH_X, 0.4, NAVE.z - acrossAt(NAVE, 0.4)), 0.7);
 /**
  * The lost boat's drift home to the bell, out of the fog over the open water north-east of the church, where its
- * lantern answers each ring a stretch nearer, just past the tower's north-west corner as the bell is seen; then in
- * round the tower's north side and alongside the nave to the berth, the stretch the player sails it.
+ * lantern answers each ring a stretch nearer, beside the tower's north-west corner as the bell is seen from the west;
+ * then in along the tower's north side and alongside the nave to the berth, the stretch the player sails it.
  */
-export const HOME_WAY = [new THREE.Vector2(TOWER.x + 30, TOWER.z - 40), new THREE.Vector2(TOWER.x + 22, TOWER.z - 31),
-  new THREE.Vector2(TOWER.x + 15, TOWER.z - 24), new THREE.Vector2(TOWER.x + 8, TOWER.z - 18)];
-export const BRING_WAY = [new THREE.Vector2(TOWER.x - 0.5, TOWER.z - 11), new THREE.Vector2(NAVE_BERTH.x, NAVE_BERTH.z)];
+export const HOME_WAY = [new THREE.Vector2(TOWER.x + 36, TOWER.z - 33), new THREE.Vector2(TOWER.x + 28, TOWER.z - 28),
+  new THREE.Vector2(TOWER.x + 19, TOWER.z - 21.5), new THREE.Vector2(TOWER.x + 12, TOWER.z - 16.5)];
+export const BRING_WAY = [new THREE.Vector2(TOWER.x, TOWER.z - 11.5), new THREE.Vector2(NAVE_BERTH.x, NAVE_BERTH.z)];
 /**
  * Out from the nave in the storm: round into the open water north of the church, then on past the lighthouse's side
  * before the channel's last leg to the forest beach.

@@ -9,33 +9,32 @@ import { LanternGlow } from '../world/lantern-glow';
 import { LIGHTHOUSE } from '../world/drowned';
 import { LIGHTHOUSE_LANTERN_Y } from '../world/lighthouse';
 import {
-  BRING_WAY, DARK_END, HOME_WAY, IVY_FOOT, IVY_STEP, NAVE, NAVE_BERTH, NAVE_NORTH, TOWER, roofUnder,
+  BRING_WAY, DARK_END, HOME_WAY, IVY_FOOT, IVY_STEP, NAVE, NAVE_BERTH, NAVE_NORTH, NAVE_RIDGE, TOWER, roofUnder,
 } from '../world/drowned-way';
 import { Climb } from '../traveller/climb';
 import type { Cast } from './cast';
 
 /**
- * `foot` her at the tower's foot as the cat runs up the ivy; `climb` her going up after it; `nest` kneeling in the
- * opening over the kittens; `sea` standing in it looking out over the fog sea; `ring` the bell hers to ring, the lost
- * boat's lantern answering out in the fog; `down` her climbing down to it as the player sails it the last stretch;
- * `wait` on the slates for it; `board` stepping down into it; `aboard` looking back up at the cat on the nave's ridge.
+ * `foot` her at the tower's foot as the cat runs up the ivy; `climb` her going up after it while it calls from the
+ * arch; `nest` in over the sill and kneeling to the kittens; `sea` standing by the bell looking out over the fog sea;
+ * `ring` the bell hers to ring, the lost boat's lantern answering out in the fog; `down` her climbing down to it as the
+ * player sails it the last stretch; `wait` on the slates for it; `board` stepping down into it; `aboard` looking back
+ * up at the cat and a kitten on the arch's sill.
  */
 type Step = 'foot' | 'climb' | 'nest' | 'sea' | 'ring' | 'down' | 'wait' | 'board' | 'aboard';
 
 const C = new THREE.Vector3(TOWER.x, 0, TOWER.z);
 const WEST = faceOut('west');
-/** The light she climbs in by: the west face's north light. */
-const LIGHT: -1 | 1 = -1;
-/** The cat curls with the open side of its ring, where the kittens lie, toward the opening she comes in by. */
-const CURL_YAW = -2.21;
-/** The kitten that comes to her, and later to the sill to watch its mother go down. */
+/** The kitten that comes to her, and later to the sill with its mother to see her off. */
 const FOUND = 0;
-/** The cat's side of the light, metres along the face from its middle (south positive): its way up and down the ivy is on that side. */
-const CAT_SIDE = -0.2;
-const NAVE_SLATES = (x: number, z: number): number => roofUnder(NAVE, x, z) ?? IVY_FOOT.y;
+/**
+ * Along the west arch from its middle (south positive): the cat's side, where its way up the ivy comes out and it waits
+ * calling; and where it and the kitten sit on the sill to see her off.
+ */
+const CAT_SIDE = 0.78;
+const SEE_OFF = -0.5;
+const KITTEN_OFF = -1.0;
 const WAY_HOME = [...HOME_WAY, ...BRING_WAY];
-/** Where she looks out over the fog sea from the opening: north, over the water the boat will come home across. */
-const OUT_OVER = new THREE.Vector3(-4, 2, -40);
 /** The lighthouse's lamp, which goes out as they leave. */
 const LAMP = new THREE.Vector3(LIGHTHOUSE.x, LIGHTHOUSE_LANTERN_Y, LIGHTHOUSE.z);
 const HOME_LENGTH = HOME_WAY.reduce((sum, p, i) => (i ? sum + p.distanceTo(HOME_WAY[i - 1]) : 0), 0);
@@ -68,14 +67,15 @@ function along(way: readonly THREE.Vector2[], s: number, out: THREE.Vector2): nu
 }
 
 /**
- * The church, from her reaching the tower's foot to her aboard her boat again. The cat runs up the tower's ivy into
- * the belfry and she follows it, climbing; inside are its kittens, and the cat curls round them. The fog closes round
- * the tower below them and stops just under the sills: the village a cold white sea in the last light. The bell is
- * the player's to ring; each ring rolls out over the fog and pushes it down a little, and out in it the lost boat's
+ * The church, from her reaching the tower's foot to her aboard her boat again. The cat runs up the tower's ivy ahead of
+ * her and waits in the belfry's arch, calling down to her; as she nears the top it goes in to its kittens and they wake
+ * and tumble about it, and she climbs in over the sill to find them: one comes to her and she kneels to it. She stands
+ * by the bell looking out over the fog sea, which has closed round the tower and stopped just under the sills. The bell
+ * is the player's to ring; each ring rolls out over the fog and pushes it down a little, and out in it the lost boat's
  * lantern answers, nearer each time, until the fog has drawn back to the water and the player sails the boat the last
- * stretch round the tower to the nave. She climbs down and the cat comes down the ivy after her, a kitten at the sill
- * watching it go, and sits on the nave's ridge as she steps aboard; she looks back up at it and it gives her a slow
- * blink, then goes back up to its kittens. Then the fog closes round and darkens into the storm.
+ * stretch round the tower to the nave. She climbs down and steps aboard; the cat stays with its kittens and comes to the
+ * sill with one of them to see her off. She looks back up at the two of them and the cat gives her a slow blink, then
+ * they go back in. Then the fog closes round and darkens into the storm.
  */
 export class ChurchArrival {
   step: Step | 'off' = 'off';
@@ -91,8 +91,14 @@ export class ChurchArrival {
   rings = 0;
   answered = 0;
   home = 0;
+  /**
+   * Where the cat is: on its way up, waiting in the arch calling, with its kittens, on the sill with a kitten seeing her
+   * off, gone back in to the others.
+   */
+  catAt: 'foot' | 'arch' | 'nest' | 'sill' | 'home' = 'foot';
   readonly bell: Bell;
   readonly climb: Climb;
+  readonly homeAt = new THREE.Vector3();
   private readonly glow = new LanternGlow();
   private t = 0;
   private since = 0;
@@ -103,20 +109,16 @@ export class ChurchArrival {
   private sinkAt = -Infinity;
   private homeWant = 0;
   private readonly homeSpeed = new THREE.Vector3();
-  private readonly homeAt = new THREE.Vector3();
   private answeredAt = -Infinity;
   private sailing = false;
   private blinked = false;
-  /**
-   * Where the cat is in the goodbye: with its kittens, waiting just inside her light as she goes out over it, on its way
-   * down after her, on the ridge, gone back up.
-   */
-  private catAt: 'nest' | 'light' | 'down' | 'ridge' | 'home' = 'nest';
-  private catReady = false;
   private catStarted = false;
+  private calledAt = -Infinity;
+  private archAt = Infinity;
   private firstAnswer = -Infinity;
   /** Leaning down to the kitten that has come to her. */
   private leaning = false;
+  private sunOn = 0;
   private readonly homeGlide = new THREE.Vector3();
   private camera: THREE.PerspectiveCamera | null = null;
   private aspect = 16 / 9;
@@ -130,20 +132,20 @@ export class ChurchArrival {
   private readonly inviteDir = new THREE.Vector3();
   private readonly down = new THREE.Vector3();
   private readonly timers: { at: number; go: () => void }[] = [];
-  /** Her floor up there: the sill of the light she climbs in by and the boards inside. */
+  /** Her floor up there: the sill of the arch she climbs in by and the boards inside. */
   private readonly upDecks: Deck[];
 
   constructor(private readonly cast: Cast) {
     const v = cast.village!;
     const crossingCast = { child: cast.child, wind: cast.wind, lines: cast.lines, input: cast.input };
-    this.bell = new Bell({ pivot: v.belfry.pivot(), toward: new THREE.Vector2(0, 1), half: BELFRY.trestle }, crossingCast, v.belfry.light);
+    this.bell = new Bell({ pivot: v.belfry.pivot(), toward: new THREE.Vector2(0, 1), half: BELFRY.bearing }, crossingCast, v.belfry.light);
     this.bell.onEvent = (kind, at, strength) => cast.knock?.(BELL_SOUNDS[kind], at, strength);
     this.bell.onRing = (strength) => this.rang(strength);
     this.bell.live = false;
     v.belfry.group.add(...this.bell.objects, this.glow.mesh);
-    this.climb = new Climb(cast.child, { wall: IVY_FOOT, out: WEST, holds: v.ivy.holds, sill: v.belfry.sill('west', LIGHT, 0), depth: BELFRY.wall });
-    const a = v.belfry.sill('west', LIGHT, 0.05), b = v.belfry.sill('west', LIGHT, -BELFRY.wall - 0.08);
-    this.upDecks = [{ x0: a.x, z0: a.z, x1: b.x, z1: b.z, halfWidth: BELFRY.light.width / 2 - 0.06, height: BELFRY.sill }, ...v.belfry.decks];
+    this.climb = new Climb(cast.child, { wall: IVY_FOOT, out: WEST, holds: v.ivy.holds, sill: v.belfry.sill('west', 0), depth: BELFRY.wall, wide: true });
+    const a = v.belfry.sill('west', 0.05), b = v.belfry.sill('west', -BELFRY.wall - 0.08);
+    this.upDecks = [{ x0: a.x, z0: a.z, x1: b.x, z1: b.z, halfWidth: BELFRY.arch.width / 2 - 0.06, height: BELFRY.sill }, ...v.belfry.decks];
   }
 
   /** She has reached the tower's foot, the cat sitting on the churchyard's railings below the tower's south face. */
@@ -153,7 +155,7 @@ export class ChurchArrival {
     this.to('foot');
     this.since = 0;
     dark.faces = null;
-    c.decks = [...c.decks, IVY_STEP, NAVE_NORTH, ...this.upDecks];
+    c.decks = [...c.decks, IVY_STEP, NAVE_RIDGE, NAVE_NORTH, ...this.upDecks];
     c.face(this.head);
     cat.look(this.head);
     cat.unease = 0.6;
@@ -174,44 +176,49 @@ export class ChurchArrival {
     return this.step === 'nest' || this.step === 'sea' || this.step === 'ring';
   }
 
-  /** QA and the save in the belfry: her standing in the opening over the fog sea, the cat curled round its kittens. */
+  /** QA and the save in the belfry: her standing by the bell looking out over the fog sea, the kittens awake round the cat. */
   skipToBelfry(): void {
     const { child: c } = this.cast;
     const k = tuning.drowned.church;
-    const dark = this.cast.village!.dark;
+    const v = this.cast.village!;
+    const dark = v.dark;
     if (this.step === 'off') this.begin();
     this.timers.length = 0;
     this.climb.stop();
     this.curl();
+    v.kittens.tumble();
     this.catStarted = true;
     dark.front = DARK_END + k.fog.past;
     dark.level = k.fog.sea;
     this.since = 1e3;
     this.hidePlane();
-    const stand = this.standInOpening();
+    const stand = this.standAt();
     c.standUp();
+    c.kneeling = 0;
     c.place(stand.x, stand.z, this.outward);
-    c.position.y = BELFRY.sill;
+    c.position.y = v.belfry.floor;
     this.placeBoatAway();
     this.to('sea');
     this.t = k.seaFor - 1.5;
     this.lensCut = true;
   }
 
-  /** QA: on to her just seated aboard at the berth, the cat on the ridge above and the fog drawn back to the water. */
+  /** QA: on to her just seated aboard at the berth, the cat and a kitten on the sill above and the fog drawn back to the water. */
   skipToAboard(): void {
     const { boat, child: c, cat } = this.cast;
     const k = tuning.drowned.church;
+    const v = this.cast.village!;
     this.skipToBelfry();
     this.rings = this.answered = k.rings;
     this.home = this.homeWant = HOME_LENGTH;
-    this.cast.village!.dark.level = k.fog.drawn;
-    cat.place(this.catRidge(), this.catFacing(), { pose: 'sit', floor: NAVE_SLATES });
+    v.dark.level = k.fog.drawn;
+    cat.place(this.sillAt(SEE_OFF), this.outward2(), { pose: 'sit', floor: () => BELFRY.sill });
     cat.look(this.head);
-    const kitten = this.cast.village!.kittens.cats[FOUND];
-    kitten.place(this.kittenSill(), this.outward, { pose: 'sit', floor: () => BELFRY.sill });
-    kitten.look(this.catEye);
-    this.catAt = 'ridge';
+    const kitten = v.kittens.cats[FOUND];
+    v.kittens.hold(FOUND);
+    kitten.place(this.sillAt(KITTEN_OFF), this.outward2(), { pose: 'sit', floor: () => BELFRY.sill });
+    kitten.look(this.head);
+    this.catAt = 'sill';
     boat.towed = false;
     boat.beach(NAVE_BERTH.x, NAVE_BERTH.z, NAVE_BERTH.yaw);
     boat.takeWeight(0);
@@ -239,7 +246,7 @@ export class ChurchArrival {
     const at = this.step === 'ring' ? this.bell.invitation : null;
     if (!at || !this.camera) return at;
     const toward = this.inviteDir.copy(this.camera.position).sub(at).normalize();
-    return this.inviteAt.copy(at).addScaledVector(toward, Math.min(at.distanceTo(this.camera.position) * 0.5, 2.9));
+    return this.inviteAt.copy(at).addScaledVector(toward, Math.min(at.distanceTo(this.camera.position) * 0.5, 4.5));
   }
 
   get inviteHeading(): number {
@@ -283,32 +290,36 @@ export class ChurchArrival {
     switch (this.step) {
       case 'foot':
         c.lookAt = this.look.copy(this.catEye);
-        if (this.catStarted && (this.catEye.y > IVY_FOOT.y + k.followAt || this.t > k.followAfter)) this.follow();
+        if (this.catStarted && ((this.catAt === 'arch' && this.since - this.archAt > k.followCalled) || this.t > k.followAfter)) this.follow();
+        break;
+      case 'climb':
+        if (this.catAt === 'arch' && c.position.y > BELFRY.sill - k.catInFrom) this.catIn();
         break;
       case 'nest':
         c.lookAt = v.kittens.cats[FOUND].eye(this.look);
         c.lean = this.leaning ? k.leanTo : 0;
         if (this.t > k.nestFor) {
           c.kneeling = 0;
+          c.lean = 0;
           this.leaning = false;
+          v.kittens.release(FOUND);
           this.to('sea');
         }
         break;
       case 'sea':
-        if (this.t > 0.6) c.yaw += Math.atan2(Math.sin(this.outward - c.yaw), Math.cos(this.outward - c.yaw)) * (1 - Math.exp(-dt * 2));
-        c.lookAt = this.look.copy(C).add(OUT_OVER);
+        if (this.t > 0.8) c.yaw += Math.atan2(Math.sin(this.outward - c.yaw), Math.cos(this.outward - c.yaw)) * (1 - Math.exp(-dt * 1.6));
+        c.lookAt = this.look.copy(this.standAt()).add(this.tmp.set(0, 2.3, -40));
         if (this.t > k.seaFor) {
           this.placeBoatAway();
           this.to('ring');
         }
         break;
       case 'ring':
-        c.lookAt = this.rings > 0 ? this.look.copy(this.homeAt) : this.look.copy(C).add(OUT_OVER);
-        if (this.answered >= k.rings && this.catAt === 'nest' && this.since - this.answeredAt > k.catUpAfter) this.catToLight();
+        c.lookAt = this.rings > 0 ? this.look.copy(this.homeAt) : this.look.copy(this.standAt()).add(this.tmp.set(0, 2.3, -40));
         if (this.answered >= k.rings && this.since - this.answeredAt > k.answerFor) this.goDown();
         break;
       case 'down':
-        c.lookAt = null;
+        if (this.catAt === 'nest' && c.position.y < BELFRY.sill - k.catGap) this.seeOff();
         break;
       case 'wait':
         this.waiting(dt);
@@ -325,39 +336,36 @@ export class ChurchArrival {
       default:
         break;
     }
-    if (this.catAt === 'light' && this.catReady && this.step !== 'ring' && c.position.y < BELFRY.sill - k.catGap) this.catDown();
-    this.inRoom();
+    if (this.catAt === 'arch' && this.since - this.calledAt > k.callEvery) {
+      this.calledAt = this.since;
+      cat.mew(0.75);
+    }
+    this.inRoom(dt);
     this.boatHome(dt);
     this.fog(dt);
   }
 
   /**
    * The cat, seeing her at the tower's foot, goes: off the railings in one leap onto the nave's slates beside her at
-   * the foot of the ivy and up it, in over the sill of the light she will climb in by, down onto the boards and across
-   * to the straw where its kittens are, and round them.
+   * the foot of the ivy and up it ahead of her, out onto the arch's sill on its side, round to face her, and sits there
+   * calling down to her.
    */
   private catUp(): void {
     const { cat } = this.cast;
     const v = this.cast.village!;
     this.catStarted = true;
     cat.unease = 0.3;
-    const onto = new THREE.Vector3(IVY_FOOT.x - 0.25, 0, TOWER.z + 0.4);
+    const onto = new THREE.Vector3(IVY_FOOT.x - 0.25, 0, TOWER.z + 0.6);
     onto.y = roofUnder(NAVE, onto.x, onto.z) ?? IVY_FOOT.y;
-    const ledge = v.belfry.sill('west', LIGHT, -0.24).add(this.tmp.set(0, 0, 0.25));
-    const floor = () => v.belfry.floor;
     cat.leap(onto, { then: 'stand', arc: 0.5, gather: 0.2, floor: (x, z) => roofUnder(NAVE, x, z) ?? onto.y }, () => {
-      cat.climb([...v.ivy.catWay(), ledge], WEST, { then: 'stand', speed: tuning.drowned.church.catClimb, gather: 0.1 }, () => {
-        const down = v.belfry.inside('west', LIGHT, 0.3).add(this.tmp.set(0, 0, 0.3));
-        cat.hop(down, { then: 'stand', floor }, () => {
-          const at = this.curlAt();
-          const before = at.clone().add(new THREE.Vector3(-Math.sin(CURL_YAW), 0, -Math.cos(CURL_YAW)).multiplyScalar(0.35));
-          cat.run([before, at], floor, { pace: 'walk', speed: 0.8, then: 'stand' }, () => {
-            cat.chirrup();
-            cat.unease = 0;
-            cat.rest('curl', null);
-            this.later(1.2, () => v.kittens.nestle(cat));
-          });
-        });
+      cat.climb([...v.ivy.catWay(), this.sillAt(CAT_SIDE, 0.24)], WEST, { then: 'stand', speed: tuning.drowned.church.catClimb, gather: 0.1 }, () => {
+        cat.turn(this.outward2(), () => {
+          cat.rest('sit', this.head);
+          cat.unease = 0;
+          this.catAt = 'arch';
+          this.archAt = this.since;
+          this.calledAt = this.since - tuning.drowned.church.callEvery + 0.3;
+        }, 1.4);
       });
     });
   }
@@ -370,34 +378,54 @@ export class ChurchArrival {
     c.walkTo(start.x, start.z, false, () => {
       c.yaw = this.climb.facing;
       this.hidePlane();
+      c.lookAt = null;
       this.climb.up(() => this.arrive());
     }, 0.08);
   }
 
   /**
-   * In over the sill, she kneels in the opening and looks down at the straw just inside: the kittens, and the cat
-   * round them. One of them lifts its head and mews at her, gets up and comes to the edge of the straw nearest her,
-   * sits looking up at her and mews again; she leans down to it.
+   * As she nears the top the cat goes in: round off the sill and down onto the boards, across to the straw, and down
+   * among its kittens, which wake to it mewing and tumble about it.
+   */
+  private catIn(): void {
+    const { cat } = this.cast;
+    const v = this.cast.village!;
+    const k = tuning.drowned.church;
+    this.catAt = 'nest';
+    const floor = () => v.belfry.floor;
+    cat.hop(v.belfry.inside('west', 0.35, CAT_SIDE * 0.7), { then: 'stand', floor }, () => {
+      cat.run([this.curlAt()], floor, { pace: 'trot', speed: 1.1, then: 'stand' }, () => {
+        cat.chirrup();
+        cat.rest('curl', null);
+        this.later(k.wakeAfter, () => {
+          v.kittens.tumble();
+          v.kittens.cats.forEach((kitten, i) => this.later(0.2 + i * 0.35, () => kitten.mew(0.5)));
+        });
+      });
+    });
+  }
+
+  /**
+   * In over the sill she steps down onto the boards to where the kittens are tumbling round their mother, and kneels;
+   * one of them comes to her, sits looking up at her and mews, and she leans down to it.
    */
   private arrive(): void {
     const { child: c } = this.cast;
     const v = this.cast.village!;
     const k = tuning.drowned.church;
-    const kitten = v.kittens.cats[FOUND];
     this.to('nest');
-    c.faceToward(v.kittens.centre.x, v.kittens.centre.z, 1);
-    c.kneeling = 1;
-    this.later(k.kittenLooks, () => {
-      kitten.look(this.head);
-      kitten.mew(0.35);
-    });
-    this.later(k.kittenComes, () => {
-      const to = v.belfry.inside('west', LIGHT, 0.12).add(this.tmp.set(0, 0, k.kittenAside));
-      kitten.run([to], () => v.belfry.floor + 0.03, { pace: 'walk', speed: 0.45, then: 'sit', look: this.head }, () => {
-        kitten.mew(0.5);
-        this.leaning = true;
+    const stand = this.standAt();
+    const nest = v.belfry.nest();
+    c.lookAt = this.look.copy(nest).setY(nest.y + 0.3);
+    c.walkTo(stand.x, stand.z, false, () => {
+      c.stop();
+      c.faceToward(nest.x, nest.z, 1);
+      c.kneeling = 1;
+      this.later(k.kittenComes, () => {
+        const to = this.tmp2.copy(nest).sub(stand).setY(0).normalize().multiplyScalar(k.kittenNear).add(stand).setY(v.belfry.floor);
+        v.kittens.come(FOUND, to.clone(), this.head, () => { this.leaning = true; });
       });
-    });
+    }, 0.12);
   }
 
   /**
@@ -420,19 +448,26 @@ export class ChurchArrival {
     });
   }
 
-  /** The bell has called it in: she turns back into the opening and climbs down to meet it, and the boat is the player's to sail. */
+  /**
+   * The bell has called it in: she goes back to the arch she came in by, turns her back to the drop and climbs down to
+   * meet it, and the boat is the player's to sail.
+   */
   private goDown(): void {
     const { child: c, boat } = this.cast;
     const k = tuning.drowned.church;
     this.to('down');
     c.kneeling = 0;
     c.lookAt = null;
-    c.yaw = this.climb.facing;
-    this.later(0.5, () => this.climb.down(() => {
-      c.lookAt = null;
-      this.to('wait');
-      c.walkTo(NAVE_NORTH.x0, NAVE_NORTH.z0, false, () => c.walkTo(NAVE_NORTH.x1, NAVE_NORTH.z1, false, () => c.stop(), 0.12), 0.15);
-    }));
+    const stand = this.standInOpening();
+    c.walkTo(stand.x, stand.z, false, () => {
+      c.stop();
+      c.yaw = this.climb.facing;
+      this.later(0.4, () => this.climb.down(() => {
+        c.lookAt = null;
+        this.to('wait');
+        c.walkTo(NAVE_NORTH.x0, NAVE_NORTH.z0, false, () => c.walkTo(NAVE_NORTH.x1, NAVE_NORTH.z1, false, () => c.stop(), 0.12), 0.15);
+      }));
+    }, 0.06);
     boat.towed = false;
     boat.coastTo = null;
     boat.mooring = null;
@@ -442,6 +477,22 @@ export class ChurchArrival {
     this.leg = 0;
     boat.steerFor = BRING_WAY[0];
     this.sailing = true;
+  }
+
+  /**
+   * The cat sees her off: once she is a little way down the ivy it gets up from its kittens and comes to the sill she
+   * went out over, the kitten that found her with it, and the two sit at its lip looking down after her.
+   */
+  private seeOff(): void {
+    const { cat } = this.cast;
+    const v = this.cast.village!;
+    this.catAt = 'sill';
+    const floor = () => v.belfry.floor;
+    cat.rest('stand', this.head);
+    cat.run([v.belfry.inside('west', 0.3, SEE_OFF)], floor, { pace: 'walk', speed: 0.9, then: 'stand', look: this.head }, () => {
+      cat.hop(this.sillAt(SEE_OFF), { then: 'sit', look: this.head, floor: () => BELFRY.sill });
+    });
+    this.later(tuning.drowned.church.kittenAfter, () => v.kittens.toSill(FOUND, this.sillAt(KITTEN_OFF), this.head));
   }
 
   /**
@@ -496,7 +547,7 @@ export class ChurchArrival {
     }, true);
   }
 
-  /** Seated, the boat lies along the slates while she looks back at the cat, whatever air is in its sail, until the storm takes it. */
+  /** Seated, the boat lies along the slates while she looks back up at the cat, whatever air is in its sail, until the storm takes it. */
   private makeFast(): void {
     const { boat } = this.cast;
     boat.mooring = { ...NAVE_BERTH };
@@ -506,8 +557,8 @@ export class ChurchArrival {
   private madeFast = false;
 
   /**
-   * Seated, she turns round on the thwart to look back up at the cat on the ridge, the way that keeps her face from the
-   * lens; the cat looks down at her and gives her a slow blink, then goes home.
+   * Seated, she turns round on the thwart to look back up at the cat and the kitten on the sill, the way that keeps her
+   * face from the lens; the cat looks down at her and gives her a slow blink, then the two go back in to the others.
    */
   private lookUp(dt: number): void {
     const { child: c, cat, boat } = this.cast;
@@ -522,74 +573,48 @@ export class ChurchArrival {
       if (Math.abs(to) > k.headTurns) want = THREE.MathUtils.clamp(to - Math.sign(to) * k.headTurns, -k.seatTurn, k.seatTurn);
     }
     this.seatTurn += (want - this.seatTurn) * (1 - Math.exp(-dt * k.turnRate));
-    if (this.catAt === 'ridge') cat.look(this.head);
+    if (this.catAt === 'sill') cat.look(this.head);
     if (!this.blinked && this.aboardFor > k.blinkAt) {
       this.blinked = true;
       cat.slowBlink();
       this.later(k.chirrupAfter, () => cat.chirrup());
     }
-    if (this.catAt === 'ridge' && this.aboardFor > k.homeAt) this.catHome();
+    if (this.catAt === 'sill' && this.aboardFor > k.homeAt) this.catHome();
   }
 
-  /** As the boat answers the last ring the cat gets up from its kittens and comes to just inside the light she will go out by. */
-  private catToLight(): void {
-    const { cat } = this.cast;
-    const v = this.cast.village!;
-    this.catAt = 'light';
-    this.catReady = false;
-    cat.rest('stand', this.head);
-    const inside = v.belfry.inside('west', LIGHT, 0.25).add(this.tmp.set(0, 0, CAT_SIDE));
-    cat.run([inside], () => v.belfry.floor, { pace: 'walk', speed: 1, then: 'stand', look: this.head }, () => {
-      this.catReady = true;
-    });
-  }
-
-  /**
-   * The cat comes down after her: up onto the sill of the light she went out by once she is a little way down, a look
-   * down at her, round with its back to the drop and down the ivy tail first, a kitten coming to the sill to watch it
-   * go; near the foot it looks down over its shoulder and drops onto the nave's ridge, where it sits facing the boat.
-   */
-  private catDown(): void {
-    const { cat } = this.cast;
-    const v = this.cast.village!;
-    const k = tuning.drowned.church;
-    this.catAt = 'down';
-    cat.hop(this.catSill(k.catLip), { then: 'stand', look: this.head, floor: () => BELFRY.sill }, () => {
-      this.later(k.catLooks, () => {
-        cat.backDown(this.catWayDown(), WEST, this.catRidge(), { yaw: this.catFacing(), floor: NAVE_SLATES, then: 'sit', look: this.head,
-          speed: k.catDown, pause: k.catPause, turn: k.catTurn }, () => {
-          this.catAt = 'ridge';
-        });
-        this.later(k.kittenAfter, () => v.kittens.toSill(FOUND, this.kittenSill(), this.catEye));
-      });
-    });
-  }
-
-  /** After the blink it turns and goes back up the ivy to the sill, where the kitten is waiting for it. */
+  /** After the blink the cat turns from the sill and goes back in to its kittens, the one beside it after it. */
   private catHome(): void {
     const { cat } = this.cast;
     const v = this.cast.village!;
-    const k = tuning.drowned.church;
     this.catAt = 'home';
-    const way = this.catWayUp();
-    cat.turn(Math.atan2(way[0].x - cat.position.x, way[0].z - cat.position.z), () => {
-      cat.climb(way, WEST, { then: 'sit', look: this.head, speed: k.homeClimb, gather: k.homeGather }, () => {
-        cat.chirrup();
-        v.kittens.cats[FOUND].mew(0.4);
+    const floor = () => v.belfry.floor;
+    cat.hop(v.belfry.inside('west', 0.35, SEE_OFF), { then: 'stand', floor }, () => {
+      cat.run([this.curlAt()], floor, { pace: 'walk', speed: 0.8, then: 'stand' }, () => cat.rest('curl', null));
+    });
+    this.later(0.7, () => {
+      const kitten = v.kittens.cats[FOUND];
+      kitten.hop(v.belfry.inside('west', 0.3, KITTEN_OFF), { then: 'stand', floor: () => v.belfry.floor + 0.03 }, () => {
+        kitten.mew(0.4);
+        v.kittens.release(FOUND);
       });
     });
   }
 
   /**
-   * In the opening and over the sill she is in the belfry's light as the nest is: the sky only through the openings,
-   * the low sun only as it comes in at the light she stands in.
+   * In the belfry she is in its light as the nest is: the sky only through the arches, and the low sun brighter on her
+   * where its shaft through an arch falls.
    */
-  private inRoom(): void {
+  private inRoom(dt: number): void {
     const c = this.cast.child;
-    const into = c.position.x - (TOWER.x - TOWER.half);
-    const up = THREE.MathUtils.smoothstep(c.position.y, BELFRY.sill - 0.6, BELFRY.sill - 0.1);
+    const v = this.cast.village!;
     const sun = atmo.uniforms.uSunDir.value;
-    c.room.set(up * THREE.MathUtils.smoothstep(into, -0.1, BELFRY.wall), THREE.MathUtils.clamp(-sun.x * 1.2, 0, 1) * 0.7);
+    const dx = TOWER.half - Math.abs(c.position.x - TOWER.x), dz = TOWER.half - Math.abs(c.position.z - TOWER.z);
+    const into = THREE.MathUtils.smoothstep(Math.min(dx, dz), -0.1, BELFRY.wall);
+    const up = THREE.MathUtils.smoothstep(c.position.y, BELFRY.sill - 0.6, BELFRY.sill - 0.1);
+    const chest = this.tmp.copy(c.position).setY(c.position.y + 1.4);
+    const lit = v.belfry.holds(chest) ? v.belfry.sunAt(chest, sun) : 1;
+    this.sunOn += (lit - this.sunOn) * (1 - Math.exp(-dt * 3));
+    c.room.set(up * into, THREE.MathUtils.lerp(0.35, 0.85, this.sunOn));
   }
 
   /**
@@ -682,77 +707,44 @@ export class ChurchArrival {
     this.cast.plane.visible = true;
   }
 
-  /** Where the cat lies so that the hollow of its curl is round the kittens' heap in the middle of the straw. */
+  /** Where the cat lies among its kittens in the straw. */
   private curlAt(): THREE.Vector3 {
     const v = this.cast.village!;
-    const fx = Math.sin(CURL_YAW), fz = Math.cos(CURL_YAW), s = this.cast.cat.scale;
-    return v.belfry.nest().setY(v.belfry.floor + 0.03).add(new THREE.Vector3(-fz * 0.1 * s - fx * 0.01 * s, 0, fx * 0.1 * s - fz * 0.01 * s));
+    return v.belfry.nest().setY(v.belfry.floor + 0.03);
   }
 
   private curl(): void {
     const { cat } = this.cast;
-    const v = this.cast.village!;
     const at = this.curlAt();
     cat.unease = 0;
-    cat.place(at, CURL_YAW, { pose: 'curl', floor: () => at.y });
+    cat.place(at, tuning.drowned.church.curlYaw, { pose: 'curl', floor: () => at.y });
     cat.look(null);
-    v.kittens.nestle(cat);
+    this.catAt = 'nest';
   }
 
-  /** On the sill in the opening she climbed in by, a little way into the wall. */
+  /** Where she stands by the bell, the kittens beside her. */
+  private standAt(): THREE.Vector3 {
+    return this.cast.village!.belfry.onFloor(BELFRY.stand.x, BELFRY.stand.y);
+  }
+
+  /** In the arch she climbed in by, a little way into the wall: where her climb down starts. */
   private standInOpening(): THREE.Vector3 {
-    return this.cast.village!.belfry.sill('west', LIGHT, -BELFRY.wall * 0.45);
+    return this.cast.village!.belfry.sill('west', -BELFRY.wall * 0.45);
   }
 
-  /** On the sill she climbed out over, `inward` metres in from its lip on the cat's side, and the kitten's place beside it. */
-  private catSill(inward = 0.04): THREE.Vector3 {
-    return this.cast.village!.belfry.sill('west', LIGHT, -inward).add(new THREE.Vector3(0, 0, CAT_SIDE));
+  /** On the west arch's sill, `along` its face from the middle and `inward` from the lip. */
+  private sillAt(along: number, inward = 0.16): THREE.Vector3 {
+    return this.cast.village!.belfry.sill('west', -inward, along);
   }
 
-  private kittenSill(): THREE.Vector3 {
-    return this.cast.village!.belfry.sill('west', LIGHT, -0.06).add(new THREE.Vector3(0, 0, -CAT_SIDE * 1.2));
-  }
-
-  /**
-   * The cat's way down the ivy beside hers, on her left, the side the boat comes in on: from just under the sill's
-   * lip on its side of the light down to a little over the ridge, where it drops off; and its way back up.
-   */
-  private catWayDown(): THREE.Vector3[] {
-    return this.catWay().reverse();
-  }
-
-  private catWayUp(): THREE.Vector3[] {
-    const ivy = this.cast.village!.ivy, way = this.catWay();
-    way[way.length - 1] = ivy.toWorld(new THREE.Vector3(ivy.drift + CAT_SIDE, ivy.height - 0.22, 0.2));
-    return [...way, this.catSill()];
-  }
-
-  private catWay(): THREE.Vector3[] {
-    const ivy = this.cast.village!.ivy, k = tuning.drowned.church;
-    const across = (y: number) => THREE.MathUtils.lerp(k.catAcross, ivy.drift + CAT_SIDE, THREE.MathUtils.smootherstep(y, 0.3, ivy.height - 0.4));
-    const way = [ivy.toWorld(new THREE.Vector3(k.catFoot[0], k.catFoot[1], 0.2))];
-    for (let y = k.catFoot[1] + 0.9; y < ivy.height - 0.9; y += 0.9) way.push(ivy.toWorld(new THREE.Vector3(across(y), y, 0.2)));
-    way.push(ivy.toWorld(new THREE.Vector3(ivy.drift + CAT_SIDE, ivy.height - 0.42, 0.2)));
-    return way;
-  }
-
-  /** On the nave's ridge at the ivy's foot, where it sits to see her off. */
-  private catRidge(): THREE.Vector3 {
-    const k = tuning.drowned.church;
-    const at = new THREE.Vector3(IVY_FOOT.x - k.catRidge, 0, IVY_FOOT.z + 0.04);
-    at.y = NAVE_SLATES(at.x, at.z);
-    return at;
-  }
-
-  /** Facing the boat at its berth below. */
-  private catFacing(): number {
-    const at = this.catRidge();
-    return Math.atan2(NAVE_BERTH.x - at.x, NAVE_BERTH.z - at.z);
-  }
-
-  /** Standing in the opening she faces out and round to the north, over the open water the boat comes home across. */
+  /** Standing by the bell she looks out north over the fog sea, the way the lost boat is. */
   private get outward(): number {
-    return Math.atan2(WEST.x, WEST.z) - tuning.drowned.church.lookRound;
+    return Math.PI;
+  }
+
+  /** Out of the west arch, over the nave and the boat's berth. */
+  private outward2(): number {
+    return Math.atan2(WEST.x, WEST.z);
   }
 
   // The lens.
@@ -773,82 +765,88 @@ export class ChurchArrival {
   private readonly mixEye = new THREE.Vector3();
   private readonly mixTarget = new THREE.Vector3();
   private readonly upEyes = new THREE.Vector3();
-  private readonly upShoulder = new THREE.Vector3();
+  private readonly upLens = new THREE.Vector3();
   private readonly upTarget = new THREE.Vector3();
-  private readonly upHood = new THREE.Vector3();
   private readonly held: { primary: THREE.Vector3; secondary: THREE.Vector3; tertiary?: THREE.Vector3; margin: number; extra: number } = {
     primary: new THREE.Vector3(), secondary: new THREE.Vector3(), margin: tuning.drownedCamera.church.margin, extra: tuning.drownedCamera.church.extra };
-  private readonly catHeld = new THREE.Vector3();
+  private readonly third = new THREE.Vector3();
 
   /**
    * Framed for a person, on the ordinary rig, so every change of view is an orbit round her at the rig's own turn and
-   * nothing cuts: low off the nave's south-west as the cat comes past her and up the ivy beside her; from the north of
-   * the face as she climbs, rising with her; round to close outside the west face, past her in her light and in
-   * through the other at the kittens she has found; out west over the fog
-   * sea while she stands looking at it; beside the tower while the bell is hers to ring, the bell, her in the other light
-   * and the fog sea where the lantern answers; high off the north water, coming down with her as she climbs to the boat
-   * coming in; off the boat's starboard quarter as she steps in; and over her shoulder at the cat on the ridge, held for
-   * the blink.
+   * nothing cuts: low off the nave's south-west as the cat comes past her and up the ivy beside her; from low off the
+   * west face as she climbs, the cat calling from the arch above her, rising with her; level with the arch as she comes
+   * in over the sill, looking in through it at her and the kittens; drawing back to the bell's frame, low outside the
+   * arch looking in at her, the kittens and the bell against the sky through the arch opposite, the fog sea beside the
+   * tower where the lantern answers; off the north water as she climbs down and the boat comes in under sail; off the
+   * boat's starboard quarter as she steps in; and from low behind the boat looking up past her at the cat and the kitten
+   * on the sill, held for the blink.
    */
   frame(shot: Shot, dt: number): number {
     const k = tuning.drownedCamera.church;
     const wide = THREE.MathUtils.smoothstep(this.aspect, 0.7, 1.3);
     const c = this.cast.child.position;
+    const v = this.cast.village!;
     this.herY.value += (c.y - this.herY.value) * (1 - Math.exp(-dt * 3.5));
     const y = this.herY.value;
     const pick = (a: readonly number[], b: readonly number[]) => this.pick(a, b, wide);
     const held = this.held;
-    held.primary.copy(c).setY(c.y + (this.step === 'nest' ? 0.8 : 1.1));
+    held.primary.copy(c).setY(c.y + (this.step === 'nest' ? 1.0 : 1.4));
     held.margin = k.margin;
     held.extra = k.extra;
     held.tertiary = undefined;
     let view: number[];
     let pace = k.pace;
+    let over: number = BELFRY.sill;
     switch (this.step) {
       case 'foot':
         view = pick(k.foot, k.uprightFoot);
         held.secondary.copy(this.catEye);
+        over = y;
         break;
       case 'climb':
         view = pick(k.climb, k.uprightClimb);
-        held.secondary.copy(this.catEye.y > c.y + 0.5 && this.catEye.y < BELFRY.sill + 0.5 ? this.catEye : held.primary);
+        held.secondary.copy(this.catAt === 'arch' || this.catEye.y > c.y + 0.5 ? this.catEye : held.primary);
+        over = y;
         break;
       case 'nest':
         view = pick(k.nest, k.uprightNest);
-        this.cast.village!.kittens.cats[FOUND].eye(held.secondary);
+        v.kittens.cats[FOUND].eye(held.secondary);
+        held.tertiary = this.curlAt();
         pace = k.nestPace;
         held.margin = k.nestMargin;
         held.extra = 0;
         break;
       case 'sea':
         view = pick(k.sea, k.uprightSea);
-        held.secondary.copy(held.primary);
+        held.secondary.copy(this.curlAt());
         pace = k.seaPace;
         break;
       case 'ring':
         view = pick(k.ring, k.uprightRing);
         this.bell.middle(held.secondary);
+        held.tertiary = this.curlAt();
+        pace = k.seaPace;
         break;
       case 'down':
       case 'wait':
       case 'board':
         view = pick(k.bring, k.uprightBring);
         held.secondary.copy(this.cast.boat.position).setY(this.cast.boat.position.y + 1);
-        /** The cat coming down the ivy after her is kept in the frame with her and the boat. */
-        if (this.catAt === 'down') held.tertiary = this.cast.cat.eye(this.catHeld);
+        over = y;
+        /** The cat and the kitten coming to the sill to see her off are kept in frame with her and the boat. */
+        if (this.catAt === 'sill' && this.step === 'down') held.tertiary = this.cast.cat.eye(this.third);
         /** Room it makes is held for seconds after; the look up that follows wants none. */
         if (this.alongside) held.extra = 0;
         break;
       default:
         return this.upFrame(shot, wide);
     }
-    const over = this.step === 'foot' || this.step === 'climb' || this.step === 'down' || this.step === 'wait' || this.step === 'board' ? y : BELFRY.sill;
     this.eye.set(view[0], view[1] + over, view[2]).add(C);
     this.target.set(view[3], view[4] + over, view[5]).add(C);
     if (this.step === 'ring' && this.rings > 0) {
       const since = this.since - this.answeredAt;
       const find = THREE.MathUtils.smoothstep(since, -0.3, 1.2) * (1 - THREE.MathUtils.smoothstep(since, k.findFor, k.findFor + 2));
-      this.target.lerp(this.homeAt, k.find * find);
+      this.target.lerp(this.homeAt, THREE.MathUtils.lerp(k.uprightFind, k.find, wide) * find);
     }
     if (this.step === 'down' || this.step === 'wait' || this.step === 'board') {
       this.target.copy(held.primary).lerp(held.secondary, k.bringAlong);
@@ -865,42 +863,36 @@ export class ChurchArrival {
   }
 
   /**
-   * Aboard, one move from where the boarding view leaves it, round her and in to just behind her shoulder at her eyes'
-   * height, looking past her hood at the cat on the ridge on a longer lens, so her hood keeps a lower corner and the cat
-   * the upper third for the slow blink; then it lets her go, drawing back and rising a little as the cat goes home.
+   * Aboard, one move from where the boarding view leaves it: round her and down to low behind the boat, looking up past
+   * her at the cat and the kitten on the sill on a longer lens, her a lower corner and the two of them the upper third,
+   * held for the slow blink; then it lets her go, drawing back and round as the two go back in.
    */
   private upFrame(shot: Shot, wide: number): number {
     const k = tuning.drownedCamera.church, child = this.cast.child, c = child.position, boat = this.cast.boat;
     const lerp = THREE.MathUtils.lerp;
     const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
     const eyes = child.face(this.upEyes);
-    const cat = this.catSeen(this.held.secondary);
-    const bearing = this.shoulderBearing(wide);
-    const back = lerp(k.uprightUpBack, k.upBack, wide);
-    const shoulder = this.upShoulder.set(eyes.x + Math.sin(bearing) * back, eyes.y + lerp(k.uprightUpOver, k.upOver, wide),
-      eyes.z + Math.cos(bearing) * back);
-    /** Looking the share of the way round from her hood to the cat, so she keeps a lower corner and it the upper third. */
-    const hood = this.upHood.copy(eyes).setY(eyes.y + k.hoodOver);
-    const toHer = this.dirHer.copy(hood).sub(shoulder).normalize();
-    const toCat = this.dirLamp.copy(cat).sub(shoulder).normalize();
-    const up = this.upTarget.copy(shoulder).addScaledVector(toHer.lerp(toCat, lerp(k.uprightUpAim, k.upAim, wide)).normalize(), k.upLook);
+    const pair = this.seenOff(this.held.secondary);
+    const lens = this.upEye(wide, this.upLens);
+    const up = this.upTarget.copy(eyes).lerp(pair, lerp(k.uprightUpAim, k.upAim, wide));
 
     const fromEye = this.boardEye(wide, this.tmp);
     const move = this.aboardFor < 0 ? 0 : THREE.MathUtils.smootherstep(this.aboardFor, k.tiltFrom, k.tiltTo);
-    /** Round her and in, not across: round first and in after, and down as it comes in. */
-    const a0 = Math.atan2(fromEye.x - eyes.x, fromEye.z - eyes.z);
-    const round = THREE.MathUtils.smootherstep(move, 0, 0.6), closer = THREE.MathUtils.smootherstep(move, 0.35, 1);
-    const a = a0 + wrap(bearing - a0) * round;
-    const r = lerp(Math.hypot(fromEye.x - eyes.x, fromEye.z - eyes.z), back, closer);
-    this.eye.set(eyes.x + Math.sin(a) * r, lerp(fromEye.y, shoulder.y, closer), eyes.z + Math.cos(a) * r);
+    /** Round her first and down after, never in toward her. */
+    const a0 = Math.atan2(fromEye.x - eyes.x, fromEye.z - eyes.z), a1 = Math.atan2(lens.x - eyes.x, lens.z - eyes.z);
+    const round = THREE.MathUtils.smootherstep(move, 0, 0.7), lower = THREE.MathUtils.smootherstep(move, 0.3, 1);
+    const a = a0 + wrap(a1 - a0) * round;
+    const r = lerp(Math.hypot(fromEye.x - eyes.x, fromEye.z - eyes.z), Math.hypot(lens.x - eyes.x, lens.z - eyes.z), round);
+    this.eye.set(eyes.x + Math.sin(a) * r, lerp(fromEye.y, lens.y, lower), eyes.z + Math.cos(a) * r);
     this.target.copy(c).setY(c.y + 1.1).lerp(this.tmp.copy(boat.position).setY(boat.position.y + 1), k.bringAlong).lerp(up, move);
 
     let zoom = lerp(1, lerp(k.uprightUpZoom, k.upZoom, wide), move);
-    this.held.primary.lerp(hood, move);
+    this.held.primary.copy(eyes);
+    this.held.tertiary = this.cast.village!.kittens.cats[FOUND].eye(this.third);
     this.held.extra = 0;
+    this.held.margin = k.upMargin;
     const release = this.aboardFor < 0 ? 0 : THREE.MathUtils.smootherstep(this.aboardFor, k.releaseFrom, k.releaseTo);
     if (release > 0) {
-      /** Back first and round after, so it is well clear before the mast and the sail on it come near her line. */
       const back = THREE.MathUtils.smootherstep(release, 0, 0.65), across = THREE.MathUtils.smootherstep(release, 0.35, 1);
       this.eye.copy(this.releaseEye(wide, this.tmp, back, across));
       this.target.lerp(this.releaseAim(wide, this.tmp), release);
@@ -911,7 +903,19 @@ export class ChurchArrival {
   }
 
   /**
-   * Where the look up lets her go to as the cat goes home: back and a little higher, round toward the bow, where the
+   * Where the look up stands: behind her on the line from the sill down through her, turned toward the boat's starboard
+   * so she keeps a lower corner and the sill the upper third, and low over the water.
+   */
+  private upEye(wide: number, out: THREE.Vector3): THREE.Vector3 {
+    const k = tuning.drownedCamera.church, lerp = THREE.MathUtils.lerp;
+    const bearing = this.shoulderBearing(wide);
+    const eyes = this.cast.child.face(this.tmp2);
+    const back = lerp(k.uprightUpBack, k.upBack, wide);
+    return out.set(eyes.x + Math.sin(bearing) * back, eyes.y + lerp(k.uprightUpOver, k.upOver, wide), eyes.z + Math.cos(bearing) * back);
+  }
+
+  /**
+   * Where the look up lets her go to as the two go back in: back and a little higher, round toward the bow, where the
    * tower and the lighthouse both stand beyond her for the storm's lens to take her from.
    */
   private releaseEye(wide: number, out: THREE.Vector3, back = 1, across = 1): THREE.Vector3 {
@@ -923,15 +927,15 @@ export class ChurchArrival {
     return eyes.set(eyes.x + Math.sin(a) * r, eyes.y + up, eyes.z + Math.cos(a) * r);
   }
 
-  /** Looking this share of the way from her up to the sill the cat goes home to. */
+  /** Looking this share of the way from her up to the sill the cat goes home from. */
   private releaseAim(wide: number, out: THREE.Vector3): THREE.Vector3 {
     const k = tuning.drownedCamera.church;
-    return this.cast.child.face(out).lerp(this.catSill(), THREE.MathUtils.lerp(k.uprightReleaseLook, k.releaseLook, wide));
+    return this.cast.child.face(out).lerp(this.sillAt(SEE_OFF), THREE.MathUtils.lerp(k.uprightReleaseLook, k.releaseLook, wide));
   }
 
-  /** The cat's eyes as it sits on the ridge to see her off. */
-  private catSeen(out: THREE.Vector3): THREE.Vector3 {
-    return out.copy(this.catRidge()).setY(out.y + tuning.drownedCamera.church.catEyes);
+  /** Between the cat's eyes and the kitten's as they sit on the sill to see her off. */
+  private seenOff(out: THREE.Vector3): THREE.Vector3 {
+    return out.copy(this.sillAt(SEE_OFF)).lerp(this.sillAt(KITTEN_OFF), 0.35).setY(BELFRY.sill + tuning.drownedCamera.church.catEyes);
   }
 
   /** Cuts the lens makes on a skip ahead, for the rig. */
@@ -983,17 +987,18 @@ export class ChurchArrival {
     const zoom = THREE.MathUtils.lerp(THREE.MathUtils.lerp(this.zoomNow, lampZoom, light), shot.zoom ?? 1, away);
     this.held.primary.copy(head).setY(head.y + 1.1);
     this.cast.cat.eye(this.held.secondary);
+    this.held.tertiary = undefined;
     this.write(shot, this.mixEye, this.mixTarget, zoom);
   }
 
   /**
-   * Behind her, away from the cat on the ridge, turned toward the boat's starboard, so the mast just forward of her and
+   * Behind her, away from the cat on the sill, turned toward the boat's starboard, so the mast just forward of her and
    * the sail hanging off it stand to the side of the frame.
    */
   private shoulderBearing(wide: number): number {
     const k = tuning.drownedCamera.church, c = this.cast.child.position, yaw = NAVE_BERTH.yaw;
-    const cat = this.catSeen(this.tmp2);
-    const away = Math.atan2(c.x - cat.x, c.z - cat.z);
+    const pair = this.seenOff(this.tmp2);
+    const away = Math.atan2(c.x - pair.x, c.z - pair.z);
     const starboard = Math.atan2(-Math.cos(yaw), Math.sin(yaw));
     return away + Math.sign(Math.sin(starboard - away)) * THREE.MathUtils.lerp(k.uprightUpRound, k.upRound, wide);
   }
