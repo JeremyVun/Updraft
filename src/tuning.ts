@@ -2069,7 +2069,7 @@ export const tuning = {
       /** Seconds she looks at the fog, down at the stuck boat, then at the cat, before she climbs out after it. */
       looksBack: 1.4, looksAtBoat: 1.0, looksAtCat: 1.0,
       /** Seconds she stands on the ridge looking back down at the boat as the fog comes over it, before she turns to the cat. */
-      lostFor: 4,
+      lostFor: 3,
     },
     /** The rescue, once the cat is aboard. */
     rescue: {
