@@ -559,6 +559,26 @@ nave's roof past the swing, in the belfry's opening. Each walk ends on a frame l
 cat across it, the fog behind; the puzzle frame keeps those and the drawn gust. The cat is read at every distance the
 room takes (large enough on screen to be a cat, never a speck), and between obstacles it is in frame, a roof ahead.
 
+**The target storyboard** (Claude, 2026-10-09; stills in `comps/board/`, eyes and aims in world metres, staged with
+the lens pinned at real moments of `drowned-run-check`): the frames below are the targets the camera is built to and
+checked against. The lens reaches each by the rig's slow orbit; the numbers are where it lands, not a cut.
+- *Walk to the mill* (`walk-to-mill-north.png`, eye 17,9,-1520 at 26,6.5,-1541): from the north over the fog, the mill
+  with its hoist and basket, her on the roofs before it, the bell tower beyond: the next piece and the goal laid out.
+- *The sheet* (`sheet-east-side.png`, eye 22,5.5,-1528 at 10,4.5,-1528.8): side-on from the east, both chimneys, the
+  line and sheet, her at the near one, the cat waiting on the far roof, the fog behind. The frame stands; her hold on
+  the sheet is the defect (item 5).
+- *The mill* (`mill-north-mid.png`, eye 20.5,9,-1520 at 26,7.5,-1541): the whole sails and the drawn circle round the
+  hub, her in the basket at the tower's foot, the bell tower ahead on the left, the fog below.
+- *The swing* (`swing-west-high.png`, eye -4,6,-1552 at 11.5,3,-1554.5, a direction, not yet a target): side-on so the
+  arc reads left and right; closer, and the nave's roof she lands on, with the cat on it, plainly in frame.
+- *The bell, the kittens and the goodbye* (`bell-north-low.png`, eye 17.4,8.8,-1550 at 17.4,10,-1561): low, looking
+  through a pair of openings, the bell reads as a silhouette against the sky through the openings opposite; from
+  outside and above, the belfry's inside is dark and the bell never shows. The staging that follows (items 9-11): the
+  kittens' straw on the sill of the opening the lens looks through, the cat curled round them there, her kneeling by
+  them, the bell over the three, and the lost boat's lantern answering in the fog seen through the far openings (the
+  lens stands on the side away from the boat's return). The goodbye is the same window seen from the boat below: the
+  cat and a kitten on that sill.
+
 **His rule for every interaction frame** (binding on all of them): judge the puzzle as a first-time player sees it
 through the lens. The thing the player acts on and the drawn gust must both be plainly in frame, and so must what
 the action is for (where the tub goes, where the tree falls, what the bell answers).
