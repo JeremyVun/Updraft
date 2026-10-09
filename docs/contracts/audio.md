@@ -239,10 +239,13 @@ pan and bounded scheduling; finished nodes disconnect.
   emergence and re-entry have separate budgets. Muted or hidden events are dropped.
 - The whale in the net (`Net.onSound`, through `WorldFoley.net` at the whale's level and distance): each weak breath
   under the mesh sputters (`net-sputter`); the lifted patch takes the weight of its wet rope and corks as fast as it
-  rises (`net-lift`); the near cork knocks on the planking when it comes in hard (`cork-knock`); each of her pulls draws
-  the wet rope through her mittens (`rope-pull`); the mesh slithers off the skin into the sea as fast as it peels
-  (`net-slither`); the last loop slides off the flipper's tip into the cygnet's pull (`loop-slip`); the cygnet scrambles
-  up out of the sea onto her side (`swimmer-out`; its plunge in is its own `plunge`). Its call (`whale-call`) sounds as
+  rises (`net-lift`); the heavy fold of net and weed over its eye peels up, turns over and slaps down wet on its brow
+  as it flips (`fold-lift`); the near cork knocks on the planking when it comes in hard (`cork-knock`); each heave
+  lifts the mesh off its head in the wind as the rope creaks taut, under one soft rising note (`net-heave`), and each
+  of her pulls draws the wet rope through her mittens (`rope-pull`); the mesh slithers off the skin into the sea as
+  fast as it peels (`net-slither`); the last loop slides off the flipper's tip into the cygnet's pull (`loop-slip`);
+  the cygnet scrambles up out of the sea onto her side (`swimmer-out`; its plunge in is its own `plunge`). Its call
+  (`whale-call`) sounds as
   its eye opens on her and as it waves goodbye, and as a far echo on the first crossing; as its spout falls free it
   calls once glad (`whale-glad`: the same voice, brighter, rising to E instead of settling on B). The sea runs off its near
   flipper as each lazy lift brings it up out of the water (`flipper-pour`, through `WorldFoley.whale`) before it is laid
