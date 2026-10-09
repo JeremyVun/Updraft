@@ -705,10 +705,10 @@ export class ChurchArrival {
     this.cast.plane.visible = true;
   }
 
-  /** Where the cat lies among its kittens in the straw. */
+  /** Where the cat lies in the straw, at the back of it as the lens looks in, so its kittens play in front of it. */
   private curlAt(): THREE.Vector3 {
-    const v = this.cast.village!;
-    return v.belfry.nest().setY(v.belfry.floor + 0.03);
+    const v = this.cast.village!, k = tuning.drowned.church;
+    return v.belfry.nest().add(this.tmp2.set(k.curlBack[0], 0, k.curlBack[1])).setY(v.belfry.floor + 0.03);
   }
 
   private curl(): void {

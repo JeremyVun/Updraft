@@ -1902,10 +1902,10 @@ export const tuning = {
       callEvery: 1.5, catInFrom: 1.5, wakeAfter: 0.3,
       /**
        * Seconds she kneels to the kittens, then stands by the bell looking out over the fog sea; seconds after she
-       * kneels that a kitten comes to her, how near her it sits (metres), how far she leans down to it, and which way
-       * the cat lies among them (radians).
+       * kneels that a kitten comes to her, how near her it sits (metres), how far she leans down to it, and where the
+       * cat lies from the middle of the straw (east and south, metres) and which way (radians).
        */
-      nestFor: 7, seaFor: 5, kittenComes: 1.0, kittenNear: 0.6, leanTo: 0.14, curlYaw: 2.4,
+      nestFor: 7, seaFor: 5, kittenComes: 1.0, kittenNear: 0.6, leanTo: 0.14, curlBack: [0.45, -0.1], curlYaw: 2.4,
       fog: {
         /**
          * How far back along the nave it waits while she is low on the ivy, and how far past the tower it stops
