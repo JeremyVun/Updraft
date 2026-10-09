@@ -704,6 +704,16 @@ see a hole in the "fog" so to speak. it looks like a bug. also the lighthouse tu
     into the night, the wind rising, the water roughening), and the storm is given the length and the beats of the
     journey it ends (the lighthouse, the plane taken, the dark) before the forest beach; it must not feel shorter or
     thinner than the room before it.
+35. Jeremy (2026-10-10, verbatim): "And last of all, i need the music rethought and redesigned for the drowned village.
+    it doesn't fit with the music style of the rest of the game. We don't need it to be perfectly synced with what's
+    happening in hte drowned village sequence, but it does need to match the narrative emotion that the drowned
+    village is supposed to give." Lead's call: the cue-per-beat score (`stuck`, `chase`, `climb`, `belfry`,
+    `answer1-3`, `home`, `farewell`) is replaced by a few long pieces in the game's own voice (the detuned pad moving
+    through structured harmony, a theme in regular phrases, the piano's D-E-F#-B question as the link), following the
+    room's emotional arc loosely and crossing at phrase ends: the dusk drift and the rescue (wonder at a drowned world,
+    tenderness for the cat); the fog and the run over the roofs (unease rising, never a chase cue); the refuge and the
+    boat answering the bell (hush, then warmth and relief: nothing is lost); the goodbye into the storm (letting go,
+    then the dark coming). Judged by Jeremy's listen to rendered studies before it goes in.
 
 ### The room rethought (Claude, 2026-10-08; Jeremy: "yea lets see how this works")
 
