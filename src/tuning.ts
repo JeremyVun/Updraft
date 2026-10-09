@@ -2151,7 +2151,7 @@ export const tuning = {
        * higher both go as she is carried; upright its own.
        */
       sheetSide: 1, sheetEye: [1.9, 3.5, 12.2], sheetAt: [2.1, 2.9], sheetGo: [1.5, 0.5],
-      uprightSheetEye: [-3.4, 2.8, -5.6], uprightSheetAt: [2.2, 2.6, 0.6],
+      uprightSheetEye: [-7, 4.6, -3.2], uprightSheetAt: [3, 3, 0.3],
       /**
        * The mill's view, in the mill's own frame (x to the right seen from in front, z out of the front, heights above
        * her roof): where it stands and looks while she is low, and how much higher it stands and looks once she is up.
