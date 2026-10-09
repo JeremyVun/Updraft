@@ -644,7 +644,11 @@ Found reading the room's storyboard (a frame every 2 s of `drowned-run-check` fr
     glance against sky, fog and roofs.
 20. The goodbye frame (after 11): her and the pair on the sill in one frame leaves the cat about 50 px, so the slow
     blink barely reads, and her hood crowds the corner. Lead's call: over her shoulder with a longer lens, her hood a
-    soft shape in the lower corner and the arch with the cat and kitten large.
+    soft shape in the lower corner and the arch with the cat and kitten large. Staged (2026-10-10): straight over her
+    shoulder the mast and sail stand between her and the tower; 5 m back from her along the line to the sill, 2.8 m to
+    the side away from the sail, 1.4 m over her seat, a 14 degree lens, the cat, the kitten, the bell over them and the
+    ivy she climbed read well (`comps/board/goodbye-pov.png`), but she is out of frame: it is her look, after the frame
+    that shows her looking up. The release that follows starts from the old `upEye` and must be re-routed with it.
 
 ### The room rethought (Claude, 2026-10-08; Jeremy: "yea lets see how this works")
 
