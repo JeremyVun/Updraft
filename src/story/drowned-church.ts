@@ -383,7 +383,7 @@ export class ChurchArrival {
 
   /**
    * As she nears the top the cat goes in: round off the sill and down onto the boards, across to the straw, and down
-   * among its kittens, which wake to it mewing and tumble about it.
+   * among its kittens, which wake to it and tumble about it, the ginger one mewing.
    */
   private catIn(): void {
     const { cat } = this.cast;
@@ -397,7 +397,7 @@ export class ChurchArrival {
         cat.rest('curl', null);
         this.later(k.wakeAfter, () => {
           v.kittens.tumble();
-          v.kittens.cats.forEach((kitten, i) => this.later(0.2 + i * 0.35, () => kitten.mew(0.5)));
+          this.later(0.2, () => v.kittens.cats[FOUND].mew(0.5));
         });
       });
     });
@@ -591,10 +591,7 @@ export class ChurchArrival {
     });
     this.later(0.7, () => {
       const kitten = v.kittens.cats[FOUND];
-      kitten.hop(v.belfry.inside('west', 0.3, KITTEN_OFF), { then: 'stand', floor: () => v.belfry.floor + 0.03 }, () => {
-        kitten.mew(0.4);
-        v.kittens.release(FOUND);
-      });
+      kitten.hop(v.belfry.inside('west', 0.3, KITTEN_OFF), { then: 'stand', floor: () => v.belfry.floor + 0.03 }, () => v.kittens.release(FOUND));
     });
   }
 

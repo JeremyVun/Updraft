@@ -673,9 +673,13 @@ much noise too often."
 24. She lands from the sheet in mid air on the far roof. Fix: her feet on the slates when she lets go and lands.
 25. Right after the mill the lens dollies round the wrong way and the cat leaves the frame (likely the reported swoop
     coming off the mill's north view). Fix: one move on toward where she and the cat go, the cat kept in frame.
-26. The cat's and kittens' sounds have no call marks. Fix: every mew, purr or call from the cat or a kitten shows the
-    cygnet's call marks (`src/fx/call-marks.ts`) at the one that made it.
-27. The kittens are too noisy. Fix: fewer and sparser kitten sounds, each one meaning something.
+26. ~~The cat's and kittens' sounds have no call marks~~ (`proto-drowned-fix-calls`: every mew, mrrow and chirrup
+    shows the cygnet's three strokes over the head of the one that made it, for the length of the sound and at least
+    0.45 s, edged darker to hold against the lilac sky and the fog, never under 8% of the frame's height from afar;
+    `tuning.catSounds`). Was: the cat's and kittens' voices had no marks.
+27. ~~The kittens are too noisy~~ (no mews at play; the ginger one mews as they wake to the cat, as it comes and looks
+    up at her, and on the sill seeing her off; their paws a third of their mother's: kitten voices in the belfry 11.5 a
+    minute to 3.8). Was: the three mewed as they woke, at random through their play and as they went back in.
 Jeremy, playing on (2026-10-10, verbatim): "Then, while she's on the swing, the fog keeps coming in and and out really
 quickly. Also, the entire scene has some really bad performance issue. Switching between ultra and low i dont see much
 visual difference, but there is a very very noticeable drop in framerates at ultra. Then in the bellfry, the boat and

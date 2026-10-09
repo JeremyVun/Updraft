@@ -7,6 +7,8 @@ import { CatRig, type Drives } from './cat/pose';
 import { Route } from './cat/route';
 import { applyCatLook, catMaterial, coatShells, type CatLook, type Coat } from './cat/shader';
 import { Spray } from './cat/spray';
+import { CallMarks } from '../fx/call-marks';
+import { tuning } from '../tuning';
 
 export type CatPose = 'stand' | 'sit' | 'crouch' | 'curl';
 export type Pace = 'walk' | 'trot' | 'run';
@@ -256,6 +258,10 @@ export class Cat {
   private mewT = -1;
   private mewFor = 0.8;
   private chirpT = -1;
+  private readonly callMarks = new CallMarks(tuning.catSounds);
+  private readonly callAt = new THREE.Vector3();
+  /** Seconds its call marks still show for the voice it last made. */
+  private callFor = 0;
   private idle: 'wash' | 'flick' | 'glance' | 'blink' | null = null;
   private idleT = 0;
   private idleFor = 0;
@@ -320,7 +326,7 @@ export class Cat {
   }
 
   get objects(): THREE.Object3D[] {
-    return [this.mesh];
+    return [this.mesh, this.callMarks.sprite];
   }
 
   /** True until the action it was last given has finished. */
@@ -412,6 +418,7 @@ export class Cat {
     this.mewT = 0;
     this.mewFor = (0.3 + 0.1 * plea + Math.random() * 0.05) * (this.kitten ? 0.7 : 1);
     this.heard.push({ kind: 'mew', amount: this.kitten ? 0.6 : 1, length: this.mewFor, plea, voice: this.voice });
+    this.called(this.mewFor);
   }
 
   /** A frightened mrrow, low and drawn out, the mouth held open through it. */
@@ -419,6 +426,7 @@ export class Cat {
     this.mewT = 0;
     this.mewFor = 0.75 + Math.random() * 0.2;
     this.heard.push({ kind: 'yowl', amount: 1, length: this.mewFor });
+    this.called(this.mewFor);
   }
 
   /** Washes a paw now, if it is sitting: licks it and wipes it over its face. */
@@ -432,6 +440,16 @@ export class Cat {
   chirrup(): void {
     this.chirpT = 0;
     this.heard.push({ kind: 'chirrup', amount: 1 });
+    this.called(0.3);
+  }
+
+  private called(length: number): void {
+    this.callFor = Math.max(length, tuning.catSounds.hold);
+  }
+
+  /** Its paws on something: a kitten's are a whisper of its mother's. */
+  private tread(kind: 'pat' | 'land' | 'scrabble', amount: number): void {
+    this.heard.push({ kind, amount: amount * (this.kitten ? tuning.catSounds.kittenTread : 1) });
   }
 
   /** Shakes the water off as a wet cat does, a twist running from its head down its body to its tail and throwing drops, about a second. */
@@ -883,7 +901,11 @@ export class Cat {
 
   update(dt: number): void {
     this.mesh.visible = this.visible;
-    if (!this.visible) return;
+    if (!this.visible) {
+      this.callFor = 0;
+      this.callMarks.hide();
+      return;
+    }
     this.time += dt;
     this.updateFrame();
     if (this.upright && this.frame && this.doing === 'still') {
@@ -913,7 +935,7 @@ export class Cat {
         this.paws[i].copy(this.gait.paws[i].at);
         this.d.paws[i].curl = Math.max(this.gait.paws[i].curl, i < 2 && this.gait.paws[i].planted ? tuck : 0);
       }
-      if (this.gait.landed.length) this.heard.push(this.onWall ? { kind: 'scrabble', amount: 0.6 } : { kind: 'pat', amount: 0.4 + this.gait.pace });
+      if (this.gait.landed.length) this.tread(this.onWall ? 'scrabble' : 'pat', this.onWall ? 0.6 : 0.4 + this.gait.pace);
     }
 
     this.moods(dt);
@@ -921,6 +943,8 @@ export class Cat {
     this.spray.update(dt);
     this.syncWorld();
     this.measure();
+    this.callFor = Math.max(0, this.callFor - dt);
+    this.callMarks.update(dt, this.eye(this.callAt), this.callFor > 0 ? 1 : 0, Math.sqrt(this.scale / 1.8));
   }
 
   /** Standing still: turning to face what it is told to look at before it settles, and its idles once it has. */
@@ -1079,7 +1103,7 @@ export class Cat {
     this.reframed = true;
     this.updateFrame();
     this.flightPitch = 0;
-    this.heard.push({ kind: 'pat', amount: 0.8 });
+    this.tread('pat', 0.8);
   }
 
   /** Where it will come down, in the world this frame: the thing it lands on may have moved since it set off. */
@@ -1184,7 +1208,7 @@ export class Cat {
     this.dip.velocity -= this.leaping ? 1.5 : 0.8;
     this.frameFresh = true;
     this.pose = this.toThen;
-    this.heard.push({ kind: 'land', amount: this.leaping ? 1 : 0.6 });
+    this.tread('land', this.leaping ? 1 : 0.6);
   }
 
   /** How it feels, eased: fear spent over a few seconds back down to the unease underneath it. */

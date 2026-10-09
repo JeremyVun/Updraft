@@ -552,6 +552,21 @@ export const tuning = {
     height: 2.1,
     size: 1.05,
   },
+  catSounds: {
+    /**
+     * The cygnet's call marks over the cat's head and each kitten's whenever it mews, calls or chirrups, for a grown
+     * cat (metres; a kitten's smaller by the root of its size, so they still read), never less than `least` of the
+     * view's height from afar, edged darker to hold against the lilac sky and the fog. `hold` is the least time they
+     * show, seconds, so a kitten's quick mew still reads.
+     */
+    height: 0.2,
+    size: 0.6,
+    least: 0.08,
+    halo: 'rgba(52, 36, 62, 0.5)',
+    hold: 0.45,
+    /** How loud a kitten's paws are against its mother's: it weighs a fraction of her, and three at play are many feet. */
+    kittenTread: 0.3,
+  },
   paperCarry: {
     /** Small enough to carry against the bag; the larger airborne silhouette remains easy to follow. */
     scale: 0.5,

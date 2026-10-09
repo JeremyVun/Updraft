@@ -11,7 +11,8 @@
 //        W/H viewport (default 1600x900), IDLE seconds of waiting at the tub first (default 18), VALVE=1 instead
 //        waits out the safety valve with no input at all (both trips), DEBUG=1 prints each stroke, NEAR=1 starts the
 //        boat on the drift's last leg 70 m short of the cat, STRIP=<dir> saves a frame every half second of game time
-//        from the room's start to the end, the boat lost behind her (<dir>/0000.jpg on).
+//        from the room's start to the end, the boat lost behind her (<dir>/0000.jpg on; frames.jsonl gives each one's
+//        time, beat, step and how strongly the cat's call marks showed).
 import { chromium } from 'playwright-core';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -48,7 +49,7 @@ try {
     while (filming) {
       const t = await page.evaluate(() => __stats.time);
       if (t >= next) {
-        const at = await page.evaluate(() => { const s = __game.story.current; return { time: +__stats.time.toFixed(1), beat: s.beat, step: s.cat?.step }; });
+        const at = await page.evaluate(() => { const s = __game.story.current; return { time: +__stats.time.toFixed(1), beat: s.beat, step: s.cat?.step, marks: +(__game.cat.callMarks?.sprite.material.opacity ?? 0).toFixed(2) }; });
         fs.appendFileSync(`${process.env.STRIP}/frames.jsonl`, JSON.stringify({ frame: frames, ...at }) + '\n');
         await page.screenshot({ path: `${process.env.STRIP}/${String(frames++).padStart(4, '0')}.jpg`, type: 'jpeg', quality: 70 });
         next += 0.5;
