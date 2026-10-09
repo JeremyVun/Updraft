@@ -22,7 +22,8 @@ globalThis.window = {matchMedia:()=>({matches:false})};
 const {ROOMS,visibleRooms,drawJourneyRooms} = await import('../src/world/journey-rooms.ts');
 const {mirrorWater,SKY_MIRROR,MIRROR_LANDING,MIRROR_BERTH} = await import('../src/world/sky-mirror-layout.ts');
 const {migrateGeography} = await import('../src/story/geography-progress.ts');
-const {BOATS_SHIFT,BOATS_OFFSHORE_SHIFT,BOATS_SHORTENING,SHORE_SHIFT,HOME_SHIFT,MIRROR_SHIFT,SEA_SHORTENING,GEOGRAPHY_VERSION} = await import('../src/world/geography.ts');
+const {BOATS_SHIFT,BOATS_OFFSHORE_SHIFT,BOATS_SHORTENING,SHORE_SHIFT,HOME_SHIFT,MIRROR_SHIFT,SEA_SHORTENING,PAST_THE_WHALE,WHALE_MOVE,GEOGRAPHY_VERSION} = await import('../src/world/geography.ts');
+const plus=(a,b)=>({x:a.x+b.x,z:a.z+b.z});
 const {Dolphins} = await import('../src/fx/sealife/dolphin.ts');
 const {tuning} = await import('../src/tuning.ts');
 const {worldHeight} = await import('../src/world/heightfield.ts');
@@ -89,14 +90,15 @@ console.log('Pre-Little-Boats and northern-mirror-shelf saves resume at safe dep
 
 // Revision 1 saves receive every later relocation, each exactly once.
 const boatsFromV2={x:BOATS_OFFSHORE_SHIFT.x+BOATS_SHORTENING.x,z:BOATS_OFFSHORE_SHIFT.z+BOATS_SHORTENING.z};
+const lateFromV1=plus(SEA_SHORTENING,PAST_THE_WHALE);
 for (const chapter of ['boats','toMeadow','toSleeping','sleeping','mirror','toHarbour','home']) {
  const late=['mirror','toHarbour','home'].includes(chapter), x=late?-330:233,z=late?-2233:-557;
  const saved={version:1,geography:1,chapter,point:'entry',data:[],child:[x,2,z,0,1],boat:[x,z,0,1,0],bird:[x,2,z,0,0,0,1],life:[[-395,-2220,1,2],[-150,-2500,1,2],[233,-495,1,2]]};
  const p=migrateGeography(saved);
  assert.equal(p.geography,GEOGRAPHY_VERSION);
- const move=late?SEA_SHORTENING:['boats','toMeadow'].includes(chapter)?boatsFromV2:{x:0,z:0};
+ const move=late?lateFromV1:['boats','toMeadow'].includes(chapter)?boatsFromV2:{x:0,z:0};
  assert.equal(p.boat[0],x+move.x);assert.equal(p.boat[1],z+move.z);
- assert.deepEqual(p.life,[[-345,-2090,1,2],[-100,-2370,1,2],[233+boatsFromV2.x,-495+boatsFromV2.z,1,2]]);
+ assert.deepEqual(p.life,[[-345+PAST_THE_WHALE.x,-2090+PAST_THE_WHALE.z,1,2],[-100+PAST_THE_WHALE.x,-2370+PAST_THE_WHALE.z,1,2],[233+boatsFromV2.x,-495+boatsFromV2.z,1,2]]);
  const once=JSON.stringify(p);migrateGeography(p);assert.equal(JSON.stringify(p),once);
 }
 for (const geography of [undefined,1]) {
@@ -106,8 +108,8 @@ for (const geography of [undefined,1]) {
 }
 // The offshore curve changes the passage, while the relocated berth and safe water stay fixed.
 const homeEnd=ROUTES.toHarbour.at(-1);
-assert(Math.abs(homeEnd.x-SEA_SHORTENING.x-(-150.3))<1e-6);
-assert(Math.abs(homeEnd.y-SEA_SHORTENING.z-(-2306.25))<1e-6);
+assert(Math.abs(homeEnd.x-lateFromV1.x-(-150.3))<1e-6);
+assert(Math.abs(homeEnd.y-lateFromV1.z-(-2306.25))<1e-6);
 let homeFrom=new THREE.Vector2(MIRROR_BERTH.x,MIRROR_BERTH.z);
 for(const point of ROUTES.toHarbour) {
  const span=point.distanceTo(homeFrom);
@@ -120,11 +122,11 @@ for(const point of ROUTES.toHarbour) {
 console.log('Revision 1 saves, open-sea resumes, home berth and offshore route clearance passed.');
 
 const {readProgress}=await import('../src/story/progress.ts');
-for(const geography of [undefined,1,2,3,4,5,6,-1,1.5,'1']) {
+for(const geography of [undefined,1,2,3,4,5,6,7,-1,1.5,'1']) {
  const saved={version:1,geography,chapter:'home',point:'entry',data:[],child:[-150,2,-2500,0,0],boat:[-150,-2306,0,0,1],bird:[-150,2,-2500,0,1,0,1],seat:'cradle',life:[[0,0,0,0],[0,0,0,0],[0,0,0,0]],plane:[1,0]};
  globalThis.localStorage={getItem(){return JSON.stringify(saved);}};
  const p=readProgress();
- if(geography===undefined||[1,2,3,4,5].includes(geography))assert.equal(p?.geography,GEOGRAPHY_VERSION,'supported saves reach migration through the reader');
+ if(geography===undefined||[1,2,3,4,5,6].includes(geography))assert.equal(p?.geography,GEOGRAPHY_VERSION,'supported saves reach migration through the reader');
  else assert.equal(p,null,'reject malformed or future geography');
 }
 console.log('Save reader accepts all supported geography revisions and rejects unknown versions.');
@@ -132,7 +134,7 @@ console.log('Save reader accepts all supported geography revisions and rejects u
  const {LINES_SHIFT}=await import('../src/world/geography.ts');
  const p=migrateGeography({version:1,geography:4,chapter:'lines',point:'curtain-1',data:[1,0],child:[0,2,-330,0,1],boat:[14,-308,0,1,0],bird:[1,2,-331,0,0,0,1],life:[[14,-368,1,2],[0,0,1,2],[-150,-2500,1,2]]});
  assert.deepEqual([p.child[0],p.child[2],p.boat[0],p.boat[1],p.bird[2]],[0,-330+LINES_SHIFT.z,14,-308+LINES_SHIFT.z,-331+LINES_SHIFT.z],'revision 4 lines saves move with the island');
- assert.deepEqual(p.life.map(r=>r.slice(0,2)),[[14,-368+LINES_SHIFT.z],[0,0],[-150,-2500]],'only life on the island of lines moves with it');
+ assert.deepEqual(p.life.map(r=>r.slice(0,2)),[[14,-368+LINES_SHIFT.z],[0,0],[-150+PAST_THE_WHALE.x,-2500+PAST_THE_WHALE.z]],'only life on the island of lines moves with it, and life at home with home');
  const door=migrateGeography({version:1,geography:4,chapter:'lines',point:'family',data:[2,1],child:[240,2,-371,0,1],boat:[240,-388.5,0,1,0],bird:[241,2,-372,0,0,0,1],life:[[0,0,1,2],[0,0,1,2],[0,0,1,2]]});
  assert.deepEqual([door.child[2],door.boat[1]],[-371,-388.5],'the door shore stays put');
 }
@@ -140,7 +142,7 @@ console.log('Revision 4 saves on the island of lines move with it; the door shor
 
 // Revisions 2/3 only move Little Boats; late-island positions and swim progress stay intact.
 for (const geography of [2,3]) for (const chapter of ['boats','toMeadow','toBoats','lines','meadow','sleeping','toMirror','mirror','toHarbour','home']) {
- const boats=['boats','toMeadow'].includes(chapter), swim=chapter==='toMirror';
+ const boats=['boats','toMeadow'].includes(chapter), swim=chapter==='toMirror', late=['mirror','toHarbour','home'].includes(chapter);
  const start=geography===2?{x:233,z:-557}:{x:203,z:-292};
  const shift=geography===2?boatsFromV2:BOATS_SHORTENING;
  const p={version:1,geography,chapter,point:swim?'swim':chapter==='boats'?'pool-2':'entry',data:swim?[3,84]:chapter==='boats'?[79]:[],
@@ -148,13 +150,32 @@ for (const geography of [2,3]) for (const chapter of ['boats','toMeadow','toBoat
   life:[[start.x-3,start.z+62,100,1],[-345,-2090,1,2],[-100,-2370,1,2]]};
  const data=structuredClone(p.data);migrateGeography(p);
  for (const [v,z] of [[p.child,2],[p.bird,2],[p.boat,1]]) {
-  assert.equal(v[0],start.x+(boats?shift.x:0));
-  assert.equal(v[z],start.z+(boats?shift.z:0));
+  assert.equal(v[0],start.x+(boats?shift.x:late?PAST_THE_WHALE.x:0));
+  assert.equal(v[z],start.z+(boats?shift.z:late?PAST_THE_WHALE.z:0));
  }
  assert.deepEqual(p.data,data,'keeps completed pools and revision 2 swim data');
- assert.deepEqual(p.life,[[130,-420,100,1],[-345,-2090,1,2],[-100,-2370,1,2]]);
+ assert.deepEqual(p.life,[[130,-420,100,1],[-345+PAST_THE_WHALE.x,-2090+PAST_THE_WHALE.z,1,2],[-100+PAST_THE_WHALE.x,-2370+PAST_THE_WHALE.z,1,2]]);
  const once=JSON.stringify(p);migrateGeography(p);assert.equal(JSON.stringify(p),once);
 }
+
+// Revision 5 saves: the mirror and home move on past the whale together, a save beside the whale moves with it, and
+// main's swim save on the open sea resumes where it was, on the line the new passage still sails.
+{
+ const at=(chapter,point,x,z,data=[])=>migrateGeography({version:1,geography:5,chapter,point,data,child:[x,2,z,0,1],boat:[x,z,0,1,0],bird:[x,2,z,0,0,0,1],
+  life:[[-345,-2090,1,2],[-100,-2370,1,2],[-175,-1922,1,2]]});
+ for(const [chapter,point,x,z,move] of [['mirror','star-2',-455,-2290,PAST_THE_WHALE],['toHarbour','entry',-280,-2103,PAST_THE_WHALE],['home','summit',-120,-2300,PAST_THE_WHALE],
+   ['toMirror','swim',-390,-1975,{x:0,z:0}],['toMirror','whale-rest',-480,-2020,WHALE_MOVE],['toMirror','whale-gone',-470,-2025,WHALE_MOVE],['sleeping','entry',-175,-1922,{x:0,z:0}]]) {
+  const p=at(chapter,point,x,z,chapter==='toMirror'?[2,80]:[]);
+  assert.deepEqual([p.boat[0],p.boat[1],p.child[0],p.child[2]],[x+move.x,z+move.z,x+move.x,z+move.z],`a revision 5 ${chapter} ${point} save moves by ${JSON.stringify(move)}`);
+  assert.deepEqual(p.life.map(r=>r.slice(0,2)),[[-345+PAST_THE_WHALE.x,-2090+PAST_THE_WHALE.z],[-100+PAST_THE_WHALE.x,-2370+PAST_THE_WHALE.z],[-175,-1922]],'life on the mirror and home moves with them');
+  assert(chapter!=='toMirror'||worldHeight(p.boat[0],p.boat[1])<-.3,'an open-sea save resumes in open water');
+  const once=JSON.stringify(p);migrateGeography(p);assert.equal(JSON.stringify(p),once);
+ }
+ const {WHALE_REST}=await import('../src/story/journey.ts');
+ const rest=at('toMirror','whale-rest',-480,-2020);
+ assert(Math.hypot(rest.boat[0]-WHALE_REST.x,rest.boat[1]-WHALE_REST.y)<1e-9,'a save at rest beside the whale resumes beside it where it lies now');
+}
+console.log('Revision 5 saves on the mirror, home and the open sea move as the islands and the whale have.');
 
 // Separation is measured to actual dry terrain, not centres or the length of a detour.
 function dryPoints(room) {

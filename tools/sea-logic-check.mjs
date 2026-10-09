@@ -156,7 +156,7 @@ for(const [fps,gust,portrait,circling] of [[60,0,false,false],[30,20,false,true]
   c.restoreCheckpoint('whale-rest',[3,95]);
   assert.equal(c.whale.step,'breath');assert.equal(c.whale.whale.phase,'resting');assert.equal(c.swim,'done');
   let gone=0;
-  for(let i=0;i<60*240&&!c.done;i++){frame(f,1/60,95+i/60);if(c.whale.step==='breath'&&c.whale.stepTime>1)assert(b.speed<0.2,'a save at rest resumes at rest');
+  for(let i=0;i<60*300&&!c.done;i++){frame(f,1/60,95+i/60);if(c.whale.step==='breath'&&c.whale.stepTime>1)assert(b.speed<0.2,'a save at rest resumes at rest');
     if(c.whale.step==='gone'&&!gone)gone=c.time;}
   assert(gone>0&&c.done,'from the save at rest it is freed and the boat moors at the mirror');
   assert.equal(takeCues().filter(q=>q==='restored').length,1,'and is rewarded once');
@@ -173,7 +173,7 @@ for(const [fps,gust,portrait,circling] of [[60,0,false,false],[30,20,false,true]
   frame(f,1/60,110);
   assert(sealife.net.shown,'the net is on it from the first frame');assert.equal(c.checkpoint,'whale-breath');
   let gone=0;
-  for(let i=0;i<60*320&&!c.done;i++){frame(f,1/60,110+i/60);if(c.whale.step==='line'&&c.whale.stepTime>1)assert(b.speed<0.2,'a save after the breath resumes at rest');
+  for(let i=0;i<60*380&&!c.done;i++){frame(f,1/60,110+i/60);if(c.whale.step==='line'&&c.whale.stepTime>1)assert(b.speed<0.2,'a save after the breath resumes at rest');
     if(c.whale.step==='gone'&&!gone)gone=c.time;}
   assert(gone>0&&c.done,'from the save after its breath it is freed and the boat moors at the mirror');
   assert.equal(c.whale.broughtBy,'dolphin','with nobody playing, the line comes in by its valve');
@@ -190,7 +190,7 @@ for(const [fps,gust,portrait,circling] of [[60,0,false,false],[30,20,false,true]
   frame(f,1/60,120);
   assert(sealife.net.shown,'the net is in the water from the first frame');assert.equal(c.checkpoint,'whale-line');
   let gone=0;
-  for(let i=0;i<60*400&&!c.done;i++){frame(f,1/60,120+i/60);if(c.whale.step==='flipper')assert(b.speed<0.2,'a save after the line resumes at rest');
+  for(let i=0;i<60*460&&!c.done;i++){frame(f,1/60,120+i/60);if(c.whale.step==='flipper')assert(b.speed<0.2,'a save after the line resumes at rest');
     if(c.whale.step==='gone'&&!gone)gone=c.time;}
   assert(gone>0&&c.done,'from the save after the line it is freed and the boat moors at the mirror');
   assert.equal(c.whale.finnedBy,'dolphin','with nobody playing, the flipper lifts by its valve');
@@ -207,7 +207,7 @@ for(const [fps,gust,portrait,circling] of [[60,0,false,false],[30,20,false,true]
   frame(f,1/60,140);
   assert.equal(c.checkpoint,'whale-flipper');
   let gone=0,inSatchel=0;
-  for(let i=0;i<60*240&&!c.done;i++){frame(f,1/60,140+i/60);if(c.whale.step==='free'&&!c.whale.passed){assert(b.speed<0.2,'a save after the flipper resumes at rest');if(k.seat==='satchel')inSatchel++;}
+  for(let i=0;i<60*300&&!c.done;i++){frame(f,1/60,140+i/60);if(c.whale.step==='free'&&!c.whale.passed){assert(b.speed<0.2,'a save after the flipper resumes at rest');if(k.seat==='satchel')inSatchel++;}
     if(c.whale.step==='gone'&&!gone)gone=c.time;}
   assert(inSatchel>0,'the cygnet rides in the satchel as it goes');
   assert(gone>0&&c.done,'from the save after the flipper it goes and the boat moors at the mirror');

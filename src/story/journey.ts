@@ -61,7 +61,7 @@ export type ChapterName =
 const WHALE_HEADING = new THREE.Vector2(-30, -33).normalize();
 export const WHALE_REST = new THREE.Vector2(-480 + WHALE_MOVE.x, -2020 + WHALE_MOVE.z);
 export const WHALE_LEAD = WHALE_REST.clone().addScaledVector(WHALE_HEADING, -tuning.seaPassage.leadFor);
-const WHALE_HOLD = WHALE_REST.clone().addScaledVector(WHALE_HEADING, 40);
+const WHALE_HOLD = WHALE_REST.clone().addScaledVector(WHALE_HEADING, 3);
 /** Halfway in, so the boat is on the heading it rests on long before it comes to rest. */
 const WHALE_LINE = WHALE_LEAD.clone().lerp(WHALE_REST, 0.5);
 
@@ -217,8 +217,7 @@ export class Journey {
       this.begin('toMirror');
     } else if (choice === 'whale') {
       /** QA: at rest beside the whale on the open sea, as the save there resumes, the swim behind them. */
-      const toward = WHALE_REST.clone().sub(WHALE_LEAD).normalize();
-      this.sail(WHALE_REST.x - toward.x * 1.5, WHALE_REST.y - toward.y * 1.5, Math.atan2(toward.x, toward.y));
+      this.sail(WHALE_REST.x - WHALE_HEADING.x * 0.5, WHALE_REST.y - WHALE_HEADING.y * 0.5, Math.atan2(WHALE_HEADING.x, WHALE_HEADING.y));
       this.cast.cygnet.rideIn('satchel');
       this.begin('toMirror');
       this.chapter.restoreCheckpoint?.('whale-rest', [ROUTES.toMirror.indexOf(WHALE_HOLD), 90]);
