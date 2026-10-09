@@ -773,9 +773,13 @@ try {
             continue;
           }
           if (!rec || rec.under !== null) continue;
-          /** Beside it in the mill's basket, or carried off it by the sheet until she is set down across, she has not yet gone on from it. */
-          const carried = r.stage === 'sheet' && (r.sheet.hanging || r.sheet.phase === 'carried' || r.sheet.phase === 'landing');
-          if ((r.stage === 'mill' || carried) && Math.hypot(rec.x - p.x, rec.z - p.z) < (carried ? 8 : 3)) rec.left = t;
+          /**
+           * Carried off it by the sheet or wound up off it in the mill's basket, she has not yet gone on from it until the
+           * piece sets her down: the fog holds back while she works a piece.
+           */
+          const carried = (r.stage === 'sheet' && (r.sheet.hanging || r.sheet.phase === 'carried' || r.sheet.phase === 'landing'))
+            || (r.stage === 'mill' && r.mill.phase !== 'over');
+          if (carried && Math.hypot(rec.x - p.x, rec.z - p.z) < 8) rec.left = t;
           const behind = (rec.x - front.x) * dx + (rec.z - front.y) * dz < -2;
           if (behind && dark.level > rec.ridge) rec.under = t;
         }
