@@ -94,7 +94,7 @@ export class BellYard {
     this.group.position.copy(this.centre);
     this.belfry = new Belfry(this.centre);
     const crossingCast = { child: cast.child, wind: cast.wind, lines: cast.lines, input: cast.input };
-    this.bell = new Bell({ pivot: this.belfry.pivot(), toward: new THREE.Vector2(1, 0), half: BELFRY.bearing }, crossingCast, this.belfry.light);
+    this.bell = new Bell({ pivot: this.belfry.pivot(), toward: new THREE.Vector2(0, 1), half: BELFRY.bearing }, crossingCast, this.belfry.light);
     this.bell.onEvent = (kind, at, strength) => cast.knock?.(BELL_SOUNDS[kind], at, strength);
     this.waves = new BellWaves(this.centre, 0.12, BELFRY.half + 0.5);
     this.bell.onRing = (strength) => this.waves.emit(strength);
