@@ -99,8 +99,8 @@ export const ROUTES: Record<string, THREE.Vector2[]> = {
   toMirror: [
     new THREE.Vector2(-300, -1950), new THREE.Vector2(-375, -1970),
     WHALE_LEAD, WHALE_LINE, WHALE_HOLD,
-    new THREE.Vector2(MIRROR_LANDING.x - 9.9, MIRROR_LANDING.z + 51.4), new THREE.Vector2(MIRROR_LANDING.x - 16.8, MIRROR_LANDING.z + 38.6),
-    new THREE.Vector2(MIRROR_LANDING.x - 16.8, MIRROR_LANDING.z + 24), new THREE.Vector2(MIRROR_LANDING.x - 10, MIRROR_LANDING.z + 11.2),
+    new THREE.Vector2(MIRROR_LANDING.x - 20.3, MIRROR_LANDING.z + 62.7), new THREE.Vector2(MIRROR_LANDING.x - 27.2, MIRROR_LANDING.z + 49.9),
+    new THREE.Vector2(MIRROR_LANDING.x - 27.3, MIRROR_LANDING.z + 35.3), new THREE.Vector2(MIRROR_LANDING.x - 20.5, MIRROR_LANDING.z + 22.5),
     new THREE.Vector2(MIRROR_LANDING.x, MIRROR_LANDING.z),
   ],
   toHarbour: [

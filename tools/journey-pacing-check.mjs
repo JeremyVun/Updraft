@@ -194,7 +194,7 @@ function run(name, fps, gust, veer=0, waitInVillage=false, arrivalGust=false, ci
         assert(heard&&heard.body>=0.97,`it is heard in the mist before anything of it is seen: ${JSON.stringify(sea.covers)}`);
         assert(blow&&blow.at>heard.at&&events.shape>blow.at,`its blow is seen before its shape forms: ${JSON.stringify({covers:sea.covers,shape:events.shape})}`);
         assert(events.mirrorSeen>events.dive,`the mirror comes out of its mist only once the whale has dived: ${JSON.stringify(events)}`);
-        assert(time-events.letGo<=48,`from the boat let go to the mooring at most 48 s, with the dive about 60: ${(time-events.letGo).toFixed(1)} s`);
+        assert(time-events.letGo<=50,`from the boat let go to the mooring at most 50 s, with the dive about 60: ${(time-events.letGo).toFixed(1)} s`);
         assert(portTurn<0.15&&-mostStarboard<1.9,`sails straight on and curves in to the jetty, never coming about: ${JSON.stringify({portTurn,starboard:-mostStarboard})}`);}
       return {seconds:+time.toFixed(1),musicLead:+musicLead.toFixed(2),sailed:+sailed.toFixed(1),peak:+peak.toFixed(2),swimSeconds:+(swimFrames/fps).toFixed(1),stillSeconds:+stillFor.toFixed(1),whaleCalled:chapter.whaleCalled,
         ...(chapter.whale?{whaleBrake:+worstBrake.toFixed(2),restGap:+restGap.toFixed(2),slowest:+slowest.toFixed(2),slowestAt,lead:+(events['whale-breath']-events.whaleLed).toFixed(1),
