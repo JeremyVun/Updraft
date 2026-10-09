@@ -2337,10 +2337,22 @@ export class NetWhale {
     const whole = portrait && (this.step === 'line' || this.step === 'heave' || this.step === 'flipper');
     s.points = this.step === 'free' && farewell < 1 ? this.freeing : whole ? this.wholeBoat(this.step !== 'flipper', rest, h) : undefined;
     if (s.points === this.freeing) {
-      this.freeing[0].copy(whale.eye).lerp(rest, 1 - h);
-      this.freeing[1].copy(whale.finTip).lerp(whale.eye, 1 - whale.flipperLift).lerp(rest, 1 - h);
+      this.freeing[0].copy(whale.eye);
+      this.freeing[1].copy(whale.finTip).lerp(whale.eye, 1 - whale.flipperLift);
     }
     if (portrait && into < 1) s.tertiary.lerp(whale.finTip, 1 - into);
+    // Going under, what it kept in frame stays where it went down rather than dragging the view down after it, and
+    // its eye and flipper let go as its head goes under.
+    if (freeing) {
+      const under = Math.max(farewell, THREE.MathUtils.smootherstep(whale.diving, 0, K.releaseUnder));
+      s.secondary.y = Math.max(s.secondary.y, K.releaseWater);
+      s.tertiary.y = Math.max(s.tertiary.y, K.releaseWater);
+      s.tertiary.lerp(s.secondary, under);
+      for (const p of this.freeing) {
+        p.y = Math.max(p.y, K.releaseWater);
+        p.lerp(s.secondary, under).lerp(rest, 1 - h);
+      }
+    }
     s.secondary.lerp(rest, 1 - h);
     s.tertiary.lerp(rest, 1 - h);
     // Each hold is composed as it stands: the look is never backed off, the steps only a little if what they ask for strays.

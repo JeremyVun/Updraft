@@ -417,7 +417,7 @@ export class Journey {
           moor: MIRROR_LANDING, arrivalSpeed: tuning.seaPassage.arrivalSpeed,
           netWhale: { lead: WHALE_LEAD, rest: WHALE_REST, hold: WHALE_HOLD, dusk: tuning.seaPassage.restDusk },
         });
-      case 'mirror': return new SkyMirrorChapter(cast);
+      case 'mirror': return new SkyMirrorChapter(cast, this.chapter.done ? this.chapter.shot : undefined);
       case 'toHarbour':
         if (cast.skyMirror.progress < cast.skyMirror.stars.length) cast.skyMirror.restore(cast.skyMirror.stars.length);
         return new CrossingChapter(cast, {

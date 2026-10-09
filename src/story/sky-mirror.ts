@@ -61,9 +61,18 @@ export class SkyMirrorChapter implements Chapter {
   private readonly entryDeck={...MIRROR_ENTRY_DECK};
   private readonly oldRadius: number;
 
-  constructor(private readonly cast: Cast) {
+  /**
+   * Sailed in, the view the boat came in under, as an offset from the child and its angle, distance and height, eased
+   * out over `arriveFor` seconds into the room's own so the jetty is not swung onto.
+   */
+  private readonly handed: { offset: THREE.Vector3; bearing: number; distance: number; height: number } | null;
+  private arrived=0;
+
+  constructor(private readonly cast: Cast, handed?: Shot) {
     this.companion = new MirrorCompanion(cast);
     const {child,plane,cygnet,skyMirror,sealife,boat}=cast;
+    this.handed=handed?{offset:handed.target.clone().sub(child.position),bearing:Math.atan2(handed.from?.x??0,handed.from?.z??1),
+      distance:handed.distance,height:handed.height}:null;
     skyMirror.reset(); skyMirror.active=true;
     sealife.dolphinsWith(null,0); sealife.onDolphinShove=()=>{};
     child.decks.push(this.deck,this.entryDeck);
@@ -157,6 +166,7 @@ export class SkyMirrorChapter implements Chapter {
 
   update(dt: number,time: number): void {
     this.elapsed+=dt;
+    this.arrived+=dt;
     const {child:c,cygnet:k,skyMirror:room,plane:p}=this.cast;
     this.skyHold=room.stars.some(s=>s.state==='rising')?T.cameraSkyHold:Math.max(0,this.skyHold-dt);
     p.guided = this.beat === 'throw' || this.beat === 'walk';
@@ -330,6 +340,23 @@ export class SkyMirrorChapter implements Chapter {
       this.shot.from!.copy(child.position).sub(this.skyAim).setY(0).normalize();
       if(!rising)this.framePlay.copy(this.skyAim);
     }
+    this.easeIn();
     this.focus.copy(child.position);
+  }
+
+  /** Coming in, the view eases from the one it sailed in under, carried with the boat until it has come alongside. */
+  private easeIn(): void {
+    const handed=this.handed,shot=this.shot;
+    const coming=handed!==null && this.arrived<T.arriveFor;
+    shot.carryAnchor=coming?this.cast.boat.position:undefined;
+    shot.carry=coming;
+    if(!coming)return;
+    const k=1-THREE.MathUtils.smootherstep(this.arrived,0,T.arriveFor);
+    shot.target.addScaledVector(handed.offset,k);
+    const own=Math.atan2(shot.from!.x,shot.from!.z);
+    const bearing=own+Math.atan2(Math.sin(handed.bearing-own),Math.cos(handed.bearing-own))*k;
+    shot.from!.set(Math.sin(bearing),0,Math.cos(bearing));
+    shot.distance=THREE.MathUtils.lerp(shot.distance,handed.distance,k);
+    shot.height=THREE.MathUtils.lerp(shot.height,handed.height,k);
   }
 }
