@@ -1176,6 +1176,16 @@ sea check, `whale-look-stills` and the playthrough play them; `tools/lib/whale-g
 - The heave's billow barely lifts the mesh; the phone's line frame cuts the boat at the right edge; the phone's
   flipper frame has the bird small at the left edge. Branch `sea-frames`.
 - The playthrough's open sea: rest 102.1 s, free 164.1, gone 203.1, moored 247.4, every step the player's.
+- Fixed and merged: the catch (`sea-catch`: the cork drawn to rest under her mitten, the catch judged from the boat,
+  a 4 s give; the cygnet's swims go on after 12 s; nothing waits forever) and the eye's sweep the fold's length; the
+  heave's billow up to 3 m and held through her draw, the phone's line and flipper holds (`sea-frames`); the pacing
+  check's run long enough for five valves (`sea-verify`).
+- Claude's play of the merged build (`a69b1c45`), landscape and phone, real gestures, to the mooring: every step the
+  player's in one go or a stroke (four for the heave), no errors, no stray programs. Found: the lens drops onto its
+  1 m floor easing to the farewell (6.0 m/s² landscape, 5.3 m/s on a phone); the swing onto the mirror's jetty 6.8 /
+  8.0 m/s² (main 5.5 / 6.7); the phone's look crowded by her hood and the plane; the shortened back's end showing as
+  a round end in the landscape flipper hold; the eye's sweep thin. Branch `sea-polish`. The pod's late nudge (the
+  pacing check's margins) and the sea check's five steps on `sea-pace`.
 Done: [ ]
 
 ### Phase N4: docs on approval
