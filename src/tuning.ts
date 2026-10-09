@@ -2146,7 +2146,7 @@ export const tuning = {
        * `treeRoundFrom` of the way up the trunk it goes round to the sheet's view over `treeRoundFor` seconds, drawn
        * toward the two places in `treeRound`: south of the old tree's trunk, and over the far end of the high roof.
        */
-      treeEye: [17.2, -5.6, 5.3], treeAt: [1.6, 0.1, 5.0], uprightTreeEye: [16.2, -5.0, 5.4], uprightTreeAt: [1.2, 1.1, 4.6],
+      treeEye: [17.2, -5.6, 5.3], treeAt: [1.6, 0.1, 5.0], uprightTreeEye: [16.2, -5.0, 5.0], uprightTreeAt: [1.2, 1.1, 3.9],
       treeRound: [[13.0, 1.2, 6.0], [12.8, 10.8, 7.8]], uprightTreeRound: [[9.9, -3.0, 5.1], [3.5, -0.9, 4.8]],
       treeRoundFrom: 0.1, treeRoundFor: 8,
       /** The sheet's view: which side of the line it stands (+1 the left looking up it), and how far off it in landscape. */
