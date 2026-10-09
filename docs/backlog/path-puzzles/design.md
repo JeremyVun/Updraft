@@ -652,6 +652,10 @@ Found reading the room's storyboard (a frame every 2 s of `drowned-run-check` fr
 21. Left after the walks: the cat is a ninth of her height (0.27 m standing), so at walking distances it is 30-55 px
     however the lens leans; at the tree's barn gable it is about 31-36 px against the fog. For Jeremy's play to judge:
     if it still reads small, cheat it larger through the whole room (one constant scale, never growing in view).
+22. Jeremy, playing the merged build (2026-10-10, verbatim): "right at the beginning of the sequence, the camera zooms
+    so far in it's really disorientating." Likely (unverified): the boat parcel's approach lens, which lengthens with
+    the cat's distance (one zoom step per `makingSee` 26 m, up to 2.5) while the boat makes for the cat from the room's
+    new entry (`villageFrame`, `a67ae81a`), on top of the first 8 s nearly dead astern (`entryBearing`).
 
 ### The room rethought (Claude, 2026-10-08; Jeremy: "yea lets see how this works")
 
