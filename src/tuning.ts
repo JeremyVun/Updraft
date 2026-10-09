@@ -2290,11 +2290,12 @@ export const tuning = {
      * place the boat waits the lens starts to come round, and its pace. Where it stands: this share of the way along the
      * line from her head to the edge where the cat waits (behind her where less than 0), this far out from that line on
      * the side away from the sail, and this high over the water; it looks this share of the way along the line, this high
-     * over the water and this much higher while the cat is up on its pot, on this lens. Upright, its own.
+     * over the water and this much higher while the cat is up on its pot, on this lens. Upright, its own, and further
+     * out while the cat is up on its pot, so the sail never stands between the lens and the cat.
      */
     catGlance: 0.3, catTurnFrom: 40, catPace: 0.55,
     catAlong: 0.58, catSide: 12.5, catEye: 3.8, catLook: 0.5, catAim: 1.0, catLift: 0.9, catZoom: 1.25,
-    uprightCatAlong: -1.35, uprightCatSide: 4, uprightCatEye: 6.2, uprightCatLook: 0.95, uprightCatAim: 0.8, uprightCatLift: 0.6,
+    uprightCatAlong: -1.35, uprightCatSide: 4, uprightCatPotSide: 5.8, uprightCatEye: 6.2, uprightCatLook: 0.95, uprightCatAim: 0.8, uprightCatLift: 0.6,
     uprightCatZoom: 1.4,
     /**
      * The cat brought aboard: once the tub is this near the boat the lens comes in beside her: its bearing from ahead
@@ -2305,7 +2306,7 @@ export const tuning = {
     rescueFrom: 2.5, rescueBearing: 1.35, rescueDistance: 4.8, rescueEye: 1.85, rescueKneelBearing: 1.05, rescueKneelEye: 1.3,
     rescueClear: 0.8, rescueAlong: 0.4,
     rescueZoom: 1.5, rescuePace: 0.35,
-    uprightRescueBearing: 0.75, uprightRescueDistance: 4.0, uprightRescueEye: 1.9, uprightRescueZoom: 0.95,
+    uprightRescueBearing: 1.2, uprightRescueDistance: 4.0, uprightRescueEye: 1.9, uprightRescueZoom: 0.95,
   },
   /** The two crossings of the drowned village's run over the roofs: the dead tree pushed over, the swing pumped. */
   crossings: {

@@ -963,7 +963,7 @@ export class DrownedChapter implements Chapter {
     const across = Math.hypot(CAT_EDGE.x - head.x, CAT_EDGE.z - head.z) || 1;
     const ux = (CAT_EDGE.x - head.x) / across, uz = (CAT_EDGE.z - head.z) / across;
     const up = THREE.MathUtils.smoothstep(this.cat.eye.y, 1, 3);
-    const along = lerp(k.uprightCatAlong, k.catAlong, wide) * across, out = lerp(k.uprightCatSide, k.catSide, wide);
+    const along = lerp(k.uprightCatAlong, k.catAlong, wide) * across, out = lerp(lerp(k.uprightCatSide, k.uprightCatPotSide, up), k.catSide, wide);
     /** Out on the port side of the line from her to the cat, which is the side away from the sail. */
     const eye = this.catEye.set(head.x + ux * along + uz * out, lerp(k.uprightCatEye, k.catEye, wide), head.z + uz * along - ux * out);
     /** It looks a little higher while the cat is still up on its pot, and comes down with it to the water's edge. */
