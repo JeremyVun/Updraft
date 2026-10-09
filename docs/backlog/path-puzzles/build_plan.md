@@ -895,15 +895,22 @@ How it runs (lessons from N1 to N3r):
   drawn gesture and the goal all plainly in frame.
 
 ### Phase N5a: the sea laid out again (found, not seen; the boat's pace)
-In parallel with N5b. Owns: `src/story/journey.ts` (`WHALE_LEAD`, `WHALE_REST`, `toMirror`, the QA `whale`
-start), `src/story/crossing.ts` (the pod's pacing, the sea mist, the mirror's isle mist), the isle mist table and
+In parallel with N5b. Owns: `src/world/geography.ts`, `src/story/geography-progress.ts`, `src/story/journey.ts` (`WHALE_LEAD`,
+`WHALE_REST`, `toMirror`, the QA `whale` start), `src/story/crossing.ts` (the pod's pacing, the sea mist, the mirror's isle mist), the isle mist table and
 its hook in `src/main.ts` (`ISLE_MISTS`), and in `src/story/net-whale.ts` only the approach: the speed limit in `update()`, `pod()`,
 the lead's way (`wayAt`, `layWay`, `escortYaw`, `local`) and the haze lifting off it. In `src/tuning.ts` it owns
 `seaPassage` and the approach keys of `netWhale` (`slowing`, `settling`, `release`, the `lost*` keys). Also
 `tools/sea-check.mjs`, `tools/sea-logic-check.mjs` and `tools/journey-pacing-check.mjs`.
-- The whale and the boat's line move so that the doc's "Where it lies" holds; the rest of the world keeps its places
-  (no geography revision). The whale's pose and every hold are defined relative to `WHALE_REST` and the lead's
-  heading; keep the boat's heading at rest and the time of day at rest as built, so the holds come out unchanged.
+- The whale, the boat's line, the mirror's island and home move so that the doc's "Where it lies" holds. Geography
+  revision 6 (`src/world/geography.ts`, `GEOGRAPHY_VERSION` 6, save migration in `src/story/geography-progress.ts`)
+  shifts the mirror and home together, so `toHarbour` keeps its shape and length, until the mirror's landing lies
+  straight on past the whale on the boat's heading at rest. A first estimate is about (-270, -215), about 350 m, but
+  compute it. The sleeping island and everything before it keep their places. The whale's pose and every hold are
+  defined relative to `WHALE_REST` and the lead's heading; keep the boat's heading at rest and the time of day at
+  rest as built, so the holds come out unchanged.
+- The mirror's and home's own checks must pass after the move: `tools/geography-check.mjs` (migrations, clearance,
+  continuity), `tools/boat-ground-check.mjs`, `tools/boat-shores-check.mjs`, `tools/landing-check.mjs`, and
+  `CROSSING=toHarbour` pacing unchanged. A completed save and saves at the mirror and home must migrate and resume.
 - Facts to work from. The sea's haze (0.94) begins its veil at about 167 m and, with `uOpenSea`, has converged on the
   sky by about 300 m. The whale rested about 300 m from the sleeping island and 150 m from the mirror's centre,
   (-345, -2090). A low mist that lies on the sea while the sky stays clear may be built from the existing `uMist`
@@ -921,7 +928,9 @@ the lead's way (`wayAt`, `layWay`, `escortYaw`, `local`) and the haze lifting of
   - the heard, the blow and the shape come in that order;
   - stills of each hold (breath, look, line, flipper, release, farewell) matching `sea-whale`'s before the move, side
     by side;
-  - the mirror out of its mist only after the dive, and from the dive to the mooring at most about 60 s;
+  - the mirror out of its mist only after the dive, straight ahead with no turn away, and from the dive to the
+    mooring at most about 60 s;
+  - stills at the mirror's arrival and at home matching main's, side by side;
   - `sea-logic-check` at seeds 147 to 150, the pacing check, and `net-whale-check` (its positions updated).
 Done: [ ]
 

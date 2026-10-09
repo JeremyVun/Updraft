@@ -884,19 +884,30 @@ The sequence:
   swim and its drying. The sea's distant surfacing whale (`whaleAt: 27`) is cut: the sleeper is the whale. The leap
   is thrown only from its mark beside the boat (Claude's call, N3o): a leaper that set out far astern runs up to it
   first, so the whole arc stays in the frame, never close under the lens.
-- **Where it lies** (Claude's call, 2026-10-09, from Jeremy's first play). Out on the open sea, found rather than
-  seen. The rest of the world keeps its places; the whale and the boat's line move.
+- **Where it lies** (from Jeremy's first play, 2026-10-09). Out on the open sea, found rather than seen, with the
+  mirror's island straight on beyond it. Jeremy, the same day, on the plan to come about for the mirror afterwards:
+  "yea, i feel like the sky mirror shoudl be behind the whale. so you solve the whale and then the sky mirror island
+  appears. so it feels again like discovery. instead of veering off artificially towards another island".
+  - So the voyage runs one way: the pod leads the boat to the whale, and once the whale has dived the boat sails
+    straight on over where it lay, and the mirror's island comes out of the lifting mist ahead. It never turns away
+    toward the island.
+  - Claude's call on how: geography revision 6 moves the mirror's island and home together, as `SEA_SHORTENING` did,
+    so the final crossing keeps its shape and length. They move out along the sea until the mirror's landing lies
+    straight on past the whale on the boat's heading at rest. With the islands where they were, that line ran past
+    the sleeping island, and turning the encounter instead would have changed every hold's relation to the sun.
+    The other islands keep their places, and saves migrate as in earlier revisions.
   - From leaving the sleeping island until the nudge, nothing of the whale (its far back and flukes included) and
     nothing of the mirror's island is on screen in either orientation.
   - The mirror's island lies in its own isle mist (`ISLE_MISTS`, as `toSleeping` keeps the sleeping island) for the
-    whole of `toMirror` until the whale has dived, then comes out of it ahead as the boat comes about.
+    whole of `toMirror` until the whale has dived, then comes out of it ahead.
   - A low morning mist lies on the sea. It thickens through the pod's play, so by the nudge the sea is seen only a
     couple of hundred metres round, while the sky and the low sun stay clear above it. It lifts as the whale dives.
   - The whale lies far enough off the line to be out of sight until the lead, and near enough that the lead runs
     about 30 to 45 s at ordinary sailing.
   - At rest, its lie relative to the boat and to the low sun is exactly as built, and so is the time of day (the
     sun's bearing and height), so every hold carries over unchanged.
-  - From the dive to the mooring at the mirror takes at most about 60 s at ordinary sailing.
+  - From the dive to the mooring at the mirror takes at most about 60 s at ordinary sailing, sailing on along the
+    heading it rested on, with only the gentle curve the landing's approach needs at the end.
 - **The boat's pace.** It sails at least at its ordinary 4.5 m/s through the whole open sea; the only exceptions are
   the swim's own trim and the last few metres coming to rest. The player's gusts fill the sail as on any crossing, up
   to the cap the pod's play needs. It comes to rest beside the head without a creep: the last 20 m take about 8 s at
@@ -1088,7 +1099,7 @@ The sequence:
   - The flukes still rise in the sun's own glow, their pale undersides opening toward her as they come up (it turns,
     never rolls; as built in N3l, never more than about 17° across while low, so never a blade edge on to her), and
     she goes along the thwart to the port rail and waves to where it went down. The pod leaps away over where it
-    went, and the boat comes about.
+    went, and the boat sails on over where it lay.
 - **The net let go.** The net starts drifting as the loop slips off, working loose into a raft with its corks round
   its edges, so it is its own shape by the spout, then sinks slowly away into the deep and is gone by the dive
   (Claude's call, 2026-10-08: the past let go). As built (N3h), the raft lies in the open water between the boat and
@@ -1162,7 +1173,8 @@ The sequence:
   against the sun's glow rather than in front of the sail; the mitten is the one on the side toward where it went
   down, held up and out across the view, so it rises beside her hood. A phone's stands 22 m behind, 1.2 m up, turned −0.6, so she
   is about 70 px tall: the flukes tower past the frame's left edge and the sun stands between the stock and the boat.
-  Once it has gone the view goes back to the crossing's in one long even ease as the boat comes about. A phone's frame is too narrow (31° across) to hold the head and the sun together, so its holds look along the line from what matters
+  Once it has gone the view goes back to the crossing's in one long even ease as the boat sails on toward the
+  mirror coming out of the mist. A phone's frame is too narrow (31° across) to hold the head and the sun together, so its holds look along the line from what matters
   through the boat, each with its own distance, height and turn, stacking boat, step and head up the frame; the
   cygnet's is turned toward astern so the bird stands clear of the sail above the boat (`k2-portrait`).
 - **Reward.** Freeing the whale is the open sea's major conclusion, so the reward phrase (`completeObjective()`) plays
