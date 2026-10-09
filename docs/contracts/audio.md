@@ -258,7 +258,8 @@ pan and bounded scheduling; finished nodes disconnect.
   in two rising phrases as it breathes free (`whale-song`, ending on E); goodbye, down and up again, as it waves its
   flipper and again as its flukes stand and flex (`whale-goodbye`); and its last and lowest, muffled, from under the sea
   as its swell reaches the boat (`whale-deep`). The first crossing's far dive has at most its echo (`whale-echo`).
-  `WorldFoley` gives the voice its own distance (`whaleVoice.near` 40 m to `far` 600 m, never below `farthest`), so the
+  `WorldFoley` gives the voice its own level and distance (`whaleVoice.level` 0.09 at its loudest, `near` 40 m to
+  `far` 600 m, never below `farthest`), so the
   moan carries from the mist; farther, it is more muffled and more of it is echo. While it calls the encounter's
   `hush` rises to at least `netWhale.voiceRoom` (0.6, about −7 dB on the sea score) and eases back after, so the score
   makes room under it rather than burying it.
