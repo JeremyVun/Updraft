@@ -714,6 +714,41 @@ see a hole in the "fog" so to speak. it looks like a bug. also the lighthouse tu
     tenderness for the cat); the fog and the run over the roofs (unease rising, never a chase cue); the refuge and the
     boat answering the bell (hush, then warmth and relief: nothing is lost); the goodbye into the storm (letting go,
     then the dark coming). Judged by Jeremy's listen to rendered studies before it goes in.
+    Jeremy (2026-10-10, verbatim): "yea it just needs to have a nice harmony and melody is all".
+    Why the old score did not fit (measured against the opening, meadow, birches, stairs, sleeping and sea): every
+    other room is the detuned pad (a triangle and a sine a few cents apart, no vibrato) with chords every 8-10 s, and
+    a sparse tune of a note every 2-4 s on the piano, a soft sine or a pluck, the music swelling and easing with each
+    chord; the old cues were a string section (a cello and strings with a 4 Hz vibrato, measured at 2-3 times the
+    other rooms' wobble), a felt heartbeat pulse at 75 bpm filling to eighths, chords every 3.2 s, a tune on a steady
+    0.8 s beat, minor-key dominants (F♯7, A♯) and one theme developed like a film score (sequenced, denied, conducted by
+    the fog's distance), at an even level with little of the other rooms' breathing. It sounded like a film's chase,
+    not like the game.
+    Built (`proto-drowned-fix-music`, `src/audio/drowned-score.ts`; awaiting Jeremy's listen): five pieces in the
+    game's own voices (the shared pad, the meadow's piano, its soft sung voice and pluck), one key family (B minor and
+    D major, the dark in D minor), a chord every 8 s, and one tune that belongs to the boat, in a lilt of six to a
+    four-second bar (long-short, then long). A piece the story leaves plays to its next chord change and the next
+    begins there.
+    - `drift` (the stairs' fog to the cat aboard): the boat's tune on the piano. It sighs down over the drift's
+      falling B minor, A, G, F♯ minor (D C♯ B, C♯ B A), climbs a sixth over G and stops on F♯ minor's C♯; then over
+      Gmaj7, D/F♯, E minor 7, A it asks the piano's question D-E-F♯-B and comes down G F♯ E, D C♯ A. Second time the
+      soft voice sings it; third time sparer.
+    - `fog` (the air dying to the top of the ivy): the boat's tune is lost with the boat. Over B minor, G, E minor,
+      F♯ sus (twice round) a sung line tries a step up and falls back, a step higher each bar (F♯ G F♯, G A G, B C♯ B,
+      C♯ D C♯), then sighs down the scale (D C♯ B, B A G, G F♯ E) to F♯, unresolved; under it the low piano tolls each
+      root and its fifth a bar apart, as on the Sleeping climb. Unease builds by passes (the falling half alone, then
+      the whole line, then the piano doubling it), never by a pulse.
+    - `refuge` (the belfry until the lantern first answers): a lullaby on the bell's own notes, F♯ D B, F♯ D A,
+      E D B, D C♯ A, over Gmaj7, B minor 7, E minor 7, A, quiet and high.
+    - `home` (the first answer to boarding): the boat's tune comes back in D major, its first half a third higher
+      (F♯ E D, E D C♯) over a bass walking down from D (D, A/C♯, B minor, B minor/A, G, D/F♯, E minor 7, A), its
+      question unchanged, the soft voice an octave under it. The warmth starts at the first answer: the first light
+      in the fog is the relief.
+    - `farewell` (aboard to the wood): the answer B A F♯, E F♯ D, G F♯ E C♯ landing on D; D turns minor; D minor,
+      B♭, G minor, D over the storm's low D with the question gone cold to D-E-F (the Sleeping climb's fragment), then
+      the same round fainter for as long as the storm takes; every dark chord keeps D and A for the wood's drone.
+      Letting go and the dark are one piece, so the storm never cuts the goodbye off.
+    Levels: the drift at the room's reference, the fog about 1 dB under, the refuge 3, home level, the dark 3 then 6
+    under. Studies: `node tools/drowned-music-study.mjs`.
 
 ### The room rethought (Claude, 2026-10-08; Jeremy: "yea lets see how this works")
 
@@ -785,31 +820,10 @@ circles at once, gather speed with weight and keep turning a little when the cir
 rope winds visibly on its drum, and a ratchet clicks and holds her wherever the sails stop (she never sinks back).
 The cat goes first by riding a sail up and leaping onto the cap, which shows that the turning sails are the way up.
 
-**The music** follows the story, not one loop: the drift as now; the stuck and the cat's flight a held breath; the
-chase a quiet pulse that tightens as the fog comes closer and eases when she is across; the belfry hushed (the bell's
-own note in the score's key); the boat's answer warm; then the storm's cues. Every part of the room has music; nothing
-loops a short section for minutes.
-
-Jeremy on the first study (2026-10-09): "the music sounds a bit... random? I think there's not enough structured
-harmony / melody to it. But it's hard to tell based on an audio clip alone without the game playing as well". The
-cause: each cue wandered (the chase's round was sixteen chords with chromatic turns that never came round in a way the
-ear could learn), its lines were long notes at irregular beats, and the chase gated single notes in and out by the
-fog's distance, so its tune came and went mid-phrase. So the room's music is built on one theme and few, clear
-progressions (Claude's calls):
-- **One theme.** The drift's own question, D-E-F♯ rising to B, and its answer, B-F♯-E-D. Every new cue states or
-  develops it in regular phrases: four bars of question, four of answer, on a steady beat, repeated and varied
-  (sequenced up a step, fragmented, inverted), never a scatter of notes.
-- **Few, diatonic, repeating progressions,** one per cue, four chords cycling so the ear learns them, in B minor
-  (its relative D major for home): the drift as approved (Bm, A, G, F♯m); stuck rocks Bm to G and comes to rest on
-  the dominant F♯ for her decision; the chase drives round Bm, G, D, A, turning to Bm, G, Em, F♯ as it presses; the
-  climb sequences the question up a step over Bm, G, A; the belfry rocks Bm to Gmaj7, the theme slow and high once
-  a cycle for the kittens; the answers step G, Em, A to D; home is the theme whole in D major over D, A, Bm, G; the
-  farewell its last phrase. No chords from outside the key.
-- **Tension changes texture at phrase boundaries, never the tune mid-phrase:** the chase's pulse fills in (halves,
-  quarters, eighths) and a second progression or the theme's fragment takes over from the next phrase as the fog
-  presses; easing returns at the next phrase.
-- Next he hears it in the game: the reworked music goes into the room's playable build so he plays it with the
-  pictures, with the rendered arc alongside.
+**The music** is a few long pieces in the game's own voice following the room's feeling, not a cue per beat (the
+design is under item 35 above). Jeremy on the first study (2026-10-09): "the music sounds a bit... random? I think
+there's not enough structured harmony / melody to it. But it's hard to tell based on an audio clip alone without the
+game playing as well". So every piece has a tune in regular phrases over a clear progression that comes round.
 
 Jeremy, 2026-10-08, on what the work needs: "yes, you have licence to cut or replace anything you feel doesn't earn
 it's place", and on the camera: "I think it just needs to be framed well for a human is all. The rest of the game does

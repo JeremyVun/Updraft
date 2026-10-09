@@ -1,95 +1,79 @@
-// Approved-score parity, the drowned cues' key and phrasing, real Web Audio chapter timing and the Drowned → Wood handoff.
+// The Sky Mirror's approved-score parity; the drowned village's pieces (key, phrasing, the boat's tune coming home,
+// crossings at chord changes) and real Web Audio chapter timing into the Drowned → Wood handoff.
 // node tools/dream-score-check.mjs (local Vite, no GPU).
 import fs from 'node:fs';
-import assert from 'node:assert/strict';
 import {execFileSync} from 'node:child_process';
 import {audioPage,wav} from './lib/audio-render.mjs';
 import {composition,palette} from './lib/mirror-drowned-score-proposals.mjs';
 const {browser,page}=await audioPage();
 try {
   const result=await page.evaluate(async reference=>{
-    const {DreamScore,DREAM_SECTIONS}=await productionModule('/src/audio/dream-score.ts');
+    const {DREAM_SECTIONS}=await productionModule('/src/audio/dream-score.ts');
     const {DREAM_NOTES,DREAM_PALETTE}=await productionModule('/src/audio/dream-score-data.ts');
+    const {DrownedScore,DROWNED_SECTIONS}=await productionModule('/src/audio/drowned-score.ts');
     const {ArrivalTransition,ARRIVAL_MUSIC}=await productionModule('/src/audio/arrival-music.ts');
-    const {press,relax}=(await productionModule('/src/tuning.ts')).tuning.audio.drownedChase;
-    const checks=[],renders=[];
+    const checks=[],renders=[],W=78;
     const check=(ok,message)=>{if(!ok)throw Error(message);checks.push(message);};
-    check(JSON.stringify(DREAM_NOTES)===JSON.stringify(reference.notes),'Both integrated scores retain every approved note, strength, pan and duration');
-    check(JSON.stringify(DREAM_PALETTE)===JSON.stringify(reference.palette),'Every approved instrument envelope and partial is retained');
-    const envelope=n=>n.duration>DREAM_PALETTE[n.voice].attack+(n.release??DREAM_PALETTE[n.voice].release);
+    check(JSON.stringify(DREAM_NOTES)===JSON.stringify(reference.notes),'The Sky Mirror retains every approved note, strength, pan and duration');
+    check(JSON.stringify(DREAM_PALETTE)===JSON.stringify(Object.fromEntries(Object.keys(DREAM_PALETTE).map(k=>[k,reference.palette[k]])))
+      &&DREAM_NOTES.every(n=>DREAM_PALETTE[n.voice]),'Every approved mirror instrument envelope and partial is retained');
+    const envelope=n=>n.duration>DREAM_PALETTE[n.voice].attack+DREAM_PALETTE[n.voice].release;
     for(const [name,section] of Object.entries(DREAM_SECTIONS)) {
       check(section.chords.length>0&&section.notes.some(n=>n.role==='harmony'&&n.at<.25),`${name}: harmony starts with the phase`);
       check(!section.notes.some(n=>n.role==='star'),`${name}: repeated phases never replay star rewards`);
       check((section.variants??[section.notes]).every(notes=>notes.every(envelope)),`${name}: valid envelopes after section slicing`);
     }
-    // Sections the story can hold for a while repeat a body long enough not to be heard looping.
-    for(const name of ['stuck','chase','belfry','answer1','answer2','answer3','home'])
-      check(DREAM_SECTIONS[name].seconds-(DREAM_SECTIONS[name].loopFrom??0)>=20,`${name}: repeats a body of at least 20 s`);
-    // Every passage the chase can choose, so the checks below see all of it.
-    const passages=[],conductor=DREAM_SECTIONS.chase.conduct();
-    for(const tension of [0,0,0,0,0,0,0,1,1])passages.push(conductor.next(tension));
-    const chase=passages.map(p=>p.chords.map(c=>c.tones[0]%12).join());
-    const EASED='11,7,2,9',PRESSED='11,7,4,6';
-    check(chase.slice(1).every(roots=>roots===EASED||roots===PRESSED)&&chase.includes(EASED)&&chase.includes(PRESSED),
-      'The chase has two progressions only: B minor, G, D, A eased and B minor, G, E minor, F♯ pressing');
-    // B minor and its relative D major share one scale; the leading note A♯ belongs only to the dominant F♯.
-    const scale=new Set([11,1,2,4,6,7,9]);
-    const diatonic=(notes,chords)=>notes.every(n=>scale.has(n.midi%12)||n.midi%12===10&&
-      [...chords].reverse().find(c=>c.at<=n.at+.05).tones[0]%12===6);
-    for(const name of ['stuck','chase','climb','belfry','answer1','answer2','answer3','home','farewell']) {
-      const section=DREAM_SECTIONS[name];
-      check((section.variants??[section.notes]).every(notes=>diatonic(notes,section.chords))
-        &&(name!=='chase'||passages.every(p=>diatonic(p.notes,p.chords)&&p.notes.every(envelope))),
-        `${name}: its harmony and melody are diatonic to B minor (D major), A♯ only over the dominant`);
+
+    // The drowned village: the pad under every piece, moving at least every eight seconds.
+    const sections=Object.entries(DROWNED_SECTIONS);
+    for(const [name,section] of sections) {
+      const all=section.variants??[section.notes];
+      check(all.every(notes=>notes.some(n=>n.voice==='pad'&&n.at<.25)&&notes.some(n=>n.role==='melody')),`${name}: the pad begins with the piece and every pass has a tune`);
+      const times=[...section.chords.map(c=>c.at),section.seconds];
+      check(times.slice(1).every((at,i)=>at-times[i]<=8+1e-6)&&new Set(section.chords.map(c=>c.tones.join())).size>=4,
+        `${name}: its harmony moves at least every eight seconds through at least four chords`);
+      check((section.handoffs??[]).every(at=>times.includes(at)),`${name}: it hands over only where its chord changes`);
     }
-    // The chase as the game drives it: what it played, and each passage as it was chosen.
-    const conducted=(tensionAt,seconds)=>{
-      const ctx=new OfflineAudioContext(2,24000,24000),score=new DreamScore(ctx,ctx.destination,'drowned'),played=[],chosen=[];
-      score.play=(part,note,at)=>played.push({...note,when:at});
-      const section=DREAM_SECTIONS.chase,conduct=section.conduct;
-      section.conduct=()=>{const c=conduct(),next=c.next.bind(c);
-        c.next=tension=>{const passage=next(tension);chosen.push({start:score.current.start,passage});return passage;};return c;};
-      try{for(let t=0;t<seconds;t+=.125){Object.defineProperty(ctx,'currentTime',{configurable:true,value:t});score.update('chase',1,Infinity,tensionAt(t));}}
-      finally{section.conduct=conduct;}
-      return {played,chosen:chosen.filter(c=>c.start+c.passage.seconds<seconds-.5),tensionAt};
+    // One key: B minor and its relative D major, then D minor for the dark after the farewell.
+    const major=new Set([11,1,2,4,6,7,9]),minor=new Set([2,4,5,7,9,10,0]);
+    for(const [name,section] of sections) {
+      const dark=section.chords.find(c=>c.tones.some(m=>m%12===5))?.at??Infinity;
+      check((section.variants??[section.notes]).every(notes=>notes.every(n=>(n.at<dark?major:minor).has(n.midi%12))),
+        `${name}: every note is diatonic to B minor and D major${name==='farewell'?', the dark to D minor':''}`);
+    }
+    // Regular phrases: the boat's lilt (six to a four-second bar) or a steady beat, never a scatter of times.
+    const grid=(t,unit)=>Math.abs(t/unit-Math.round(t/unit))<1e-6;
+    for(const [name,section] of sections) {
+      const from=name==='drift'?8:0,melody=section.notes.filter(n=>n.role==='melody');
+      check(melody.every(n=>grid(n.at-from,4/6)||grid(n.at-from,.5)),`${name}: its tune keeps to the bar's grid`);
+    }
+    const tune=(name,from,to,offset=0)=>DROWNED_SECTIONS[name].notes.filter(n=>n.voice==='piano'&&n.role==='melody'&&n.at-offset>=from&&n.at-offset<to)
+      .map(n=>`${n.midi}@${(n.at-offset-from).toFixed(3)}`).join();
+    check(tune('drift',32,56,8)===tune('home',32,56),'The boat\'s question comes back unchanged when the boat comes home');
+    const question=DROWNED_SECTIONS.drift.notes.filter(n=>n.voice==='piano'&&n.at>=40&&n.at<44.1).map(n=>n.midi%12);
+    check(JSON.stringify(question)===JSON.stringify([2,4,6,11]),'The drift asks the piano\'s question, D–E–F♯–B');
+    const storm=DROWNED_SECTIONS.farewell.chords.filter(c=>c.at>=DROWNED_SECTIONS.farewell.chords.find(c=>c.tones.some(m=>m%12===5)).at);
+    check(storm.every(c=>c.tones.some(m=>m%12===2)&&c.tones.some(m=>m%12===9)),'Every chord of the dark keeps D and A for the wood\'s drone');
+
+    // Crossings: a piece the story leaves plays on to its next chord change, and the next one starts there.
+    const conducted=(script,seconds)=>{
+      const ctx=new OfflineAudioContext(2,24000,24000),out={ctx,bus:ctx.createGain(),reverb:ctx.createGain()};
+      const score=new DrownedScore(out,()=>({note:()=>[]})),played=[];
+      score.play=(part,note,at)=>played.push({...note,phase:part.phase,when:at});
+      for(let t=0;t<seconds;t+=.125){Object.defineProperty(ctx,'currentTime',{configurable:true,value:t});score.update(script(t),1);}
+      return played;
     };
-    const pressing=passage=>passage.chords.map(c=>c.tones[0]%12).join()===PRESSED;
-    const key=n=>`${n.voice}:${n.midi}:${n.when.toFixed(3)}`;
-    const noise=k=>{const x=Math.sin(k*12.9898)*43758.5453;return x-Math.floor(x);};
-    const restless=conducted(t=>noise(Math.floor(t/.7)),240);
-    let turned=0,crossed=0;
-    restless.chosen.forEach(({start,passage},i)=>{
-      const next=restless.chosen[i+1];
-      if(next){check(Math.abs(next.start-start-passage.seconds)<1e-6,'The chase\'s passages follow each other without a gap or overlap');
-        if(pressing(next.passage)!==pressing(passage))turned++;}
-      const within=restless.played.filter(n=>n.when>=start-.01&&n.when<start+passage.seconds-.01);
-      const wanted=passage.notes.filter(n=>n.role!=='accompaniment').map(n=>key({...n,when:start+n.at})).sort();
-      const sung=within.filter(n=>n.role!=='accompaniment').map(key).sort();
-      check(JSON.stringify(sung)===JSON.stringify(wanted),'Every chase passage plays its chords and its whole tune, with nothing from another progression');
-      const tensions=[];for(let t=start;t<start+passage.seconds;t+=.25)tensions.push(restless.tensionAt(t));
-      if(Math.min(...tensions)<relax&&Math.max(...tensions)>=press)crossed++;
-      for(let bar=0;bar*passage.bar<passage.seconds-1e-6;bar++){
-        const from=start+bar*passage.bar,beats=within.filter(n=>n.role==='accompaniment'&&n.when>=from-.01&&n.when<from+passage.bar-.01);
-        const count=fill=>beats.filter(n=>(n.fill??0)===fill).length;
-        check(count(0)===4&&[0,2].includes(count(1))&&[0,4].includes(count(2))&&(count(2)===0||count(1)===2),
-          'The chase\'s pulse fills or thins only at a bar line, never within a bar');
-      }
-    });
-    check(turned>=2&&crossed>=3,'The chase was pressed and eased across many phrases while its tension changed mid-phrase');
-    // Between the two thresholds the chase keeps its course: no turning at every phrase.
-    const between=t=>Math.floor(t/12.8)%2?press-.02:relax+.02,hovering=t=>t<60||t>=75?between(t):press+.05;
-    const held=conducted(hovering,170).chosen.slice(1);
-    check(held.filter(c=>c.start<60).every(c=>!pressing(c.passage))&&held.filter(c=>c.start>=76).every(c=>pressing(c.passage))
-      &&held.some(c=>c.start>=76),'The chase turns only past its margin, not at every phrase');
-    // The fog far, the theme over the eased round; near, the question's head climbing over the pressing one.
-    const notes=tension=>conducted(()=>tension,52).played,eased=notes(0),pressed=notes(1);
-    const melody=list=>list.filter(n=>n.role==='melody').map(n=>n.midi%12);
-    check([2,4,6,11].every(pc=>melody(eased).includes(pc))&&!melody(eased).includes(10),'Eased, the chase sings the question D–E–F♯–B');
-    check(melody(pressed).includes(10)&&melody(pressed).includes(7)&&eased.some(n=>n.midi===38)&&!pressed.some(n=>n.midi===38),
-      'Pressed, its head climbs to the leading note over the pressing round');
-    const pulse=list=>list.filter(n=>n.role==='accompaniment').length;
-    check(pulse(pressed)>=2.4*pulse(eased),'The chase pulse tightens as the fog nears');
-    const t=new ArrivalTransition(),v={...baseState,music:'drowned',drownedScore:'after',hush:.85};
+    const crossed=conducted(t=>t<21?'drift':'fog',40);
+    const fogFrom=Math.min(...crossed.filter(n=>n.phase==='fog').map(n=>n.when));
+    check(Math.abs(fogFrom-24.08)<.01&&crossed.filter(n=>n.phase==='drift').every(n=>n.when<fogFrom),
+      'Asked for mid-chord, the fog begins at the drift\'s next chord change and the drift starts nothing after it');
+    check(crossed.some(n=>n.phase==='fog'&&n.voice==='pad'&&Math.abs(n.when-fogFrom)<.2),'The new piece comes in with its own chord');
+    const back=conducted(t=>t>=17&&t<19?'fog':'drift',40);
+    check(back.every(n=>n.phase==='drift'),'A request withdrawn before the chord change leaves the piece playing');
+    const quick=conducted(t=>t<5?'refuge':t<6?'home':'farewell',30);
+    check(!quick.some(n=>n.phase==='home')&&quick.some(n=>n.phase==='farewell'&&Math.abs(n.when-8.08)<.2),'Several requests before a change go straight to the latest');
+
+    const t=new ArrivalTransition(),v={...baseState,music:'drowned',drownedScore:'farewell',hush:.85};
     t.update(v,0);
     const first=t.update({...v,arrivalMusic:'wood'},10);
     check(first.legato&&first.stage==='blend'&&first.background.music==='wood','Drowned to Wood begins an overlap without a gap');
@@ -105,6 +89,7 @@ try {
       sound.chime=(...a)=>{notes.push(a);originalChime(...a);};
       for(const method of ['cricket','owl','skylark','peep','bugle'])sound[method]=()=>{};
       if(kind==='music')backgroundOnly(ctx,sound);
+      const scoreOf=()=>name==='mirror'?sound.dreamScore:sound.drownedScore;
       const update=tick=>{
         const now=tick/8;
         let state;
@@ -115,28 +100,28 @@ try {
             cues:[42,64,86].includes(now)?['star']:[],silence:now>=114,
             gust:now>=20&&now<21?6:0,charge:now>=66&&now<67?.2:0};
         } else {
-          const phase=now<22?'gather':now<38?'loss':'after';
-          state={...baseState,music:'drowned',drownedScore:phase,hush:now<22?.6:.85,land:0,sea:1,
+          // The storm reaches the wood once the farewell's dark has gone round to its fainter body.
+          state={...baseState,music:'drowned',drownedScore:'farewell',hush:now<22?.6:.85,land:0,sea:1,
             night:.55+Math.min(1,now/20)*.45,shower:Math.min(1,now/14),breeze:1,
-            arrivalMusic:now>=46&&now<54?'wood':undefined,
-            ...(now>=54?ARRIVAL_MUSIC.wood:{}),
-            forestWind:now>=54,
-            cues:now===58?['kindled']:now===64?['comfort']:[],
-            gust:now>=47&&now<48?7:0,charge:now>=55&&now<56?.18:0};
+            arrivalMusic:now>=W&&now<W+8?'wood':undefined,
+            ...(now>=W+8?ARRIVAL_MUSIC.wood:{}),
+            forestWind:now>=W+8,
+            cues:now===W+12?['kindled']:now===W+18?['comfort']:[],
+            gust:now>=W+1&&now<W+2?7:0,charge:now>=W+9&&now<W+10?.18:0};
         }
-        if(sound.dreamScore && oldScore!==sound.dreamScore){oldScore=sound.dreamScore;retiring.push(oldScore);}
+        if(scoreOf() && oldScore!==scoreOf()){oldScore=scoreOf();retiring.push(oldScore);}
         sound.update(.125,{...state,flockChatter:false});
-        if(sound.dreamScore&&!sound.dreamScore.probed) {
+        if(name==='mirror'&&sound.dreamScore&&!sound.dreamScore.probed) {
           sound.dreamScore.probed=true;const bloom=sound.dreamScore.bloom.bind(sound.dreamScore);
           sound.dreamScore.bloom=()=>{blooms++;bloom();};
         }
         if(name==='drowned') {
-          if(now===45)reverb=sound.reverbConvolver;
-          if(now>=46){gateMin=Math.min(gateMin,sound.backgroundGate.gain.value,sound.wetGate.gain.value);check(sound.reverbConvolver===reverb,`wood ${now}: the shared reverb survives`);}
-          if(now===46.125)check(sound.padVoices.every((v,i)=>Math.abs(v.osc[0].frequency.value-440*2**(([38,45,50,57][i]-69)/12))<.01),
+          if(now===W-1)reverb=sound.reverbConvolver;
+          if(now>=W){gateMin=Math.min(gateMin,sound.backgroundGate.gain.value,sound.wetGate.gain.value);check(sound.reverbConvolver===reverb,`wood ${now}: the shared reverb survives`);}
+          if(now===W+.125)check(sound.padVoices.every((v,i)=>Math.abs(v.osc[0].frequency.value-440*2**(([38,45,50,57][i]-69)/12))<.01),
             'Forest pad starts on the shared D/A pitches before becoming audible');
         }
-        const phase=sound.dreamScore?.current?.phase??sound.mood;
+        const phase=scoreOf()?.current?.phase??sound.mood;
         if(history.at(-1)?.phase!==phase)history.push({now,phase,stage:sound.arrivalTransition.stage});
       };
       update(0);let pause=ctx.suspend(.125);const rendering=ctx.startRendering();
@@ -152,19 +137,19 @@ try {
         check(windows.slice(5,110).every(db=>db>-65),`${kind}: mirror loops and phase changes have no accidental silence`);
       } else {
         check(gateMin>.99,`${kind}: background gate stays open throughout the forest overlap`);
-        check(windows.slice(43,59).every(db=>db>-65),`${kind}: music remains audible across the village/forest boundary`);
-        check(!notes.some(n=>n[6]&&n[3]>=47&&n[3]<48)&&notes.some(n=>n[6]&&n[3]>=55&&n[3]<56),`${kind}: musical wind begins in the actual forest, not the departing village`);
-        const jumps=windows.slice(44,57).slice(1).map((db,i)=>Math.abs(db-windows[44+i]));
+        check(windows.slice(W-3,W+13).every(db=>db>-65),`${kind}: music remains audible across the village/forest boundary`);
+        check(!notes.some(n=>n[6]&&n[3]>=W+1&&n[3]<W+2)&&notes.some(n=>n[6]&&n[3]>=W+9&&n[3]<W+10),`${kind}: musical wind begins in the actual forest, not the departing village`);
+        const jumps=windows.slice(W-2,W+11).slice(1).map((db,i)=>Math.abs(db-windows[W-2+i]));
         if(kind==='music')check(Math.max(...jumps)<6,'Forest overlap has no one-second loudness jump over 6 dB');
       }
       const encoded=encodeAudio(buffer);check(encoded.clipped===0,`${name}/${kind}: no clipping`);
       renders.push({name,kind,history,gateMin,blooms,windows,...encoded});
     }
     await render('mirror','music',120);
-    await render('drowned','music',72);
-    await render('drowned','scene',72);
+    await render('drowned','music',W+26);
+    await render('drowned','scene',W+26);
     return {checks,renders};
-  },{notes:{mirror:composition('mirror'),drowned:composition('drowned')},palette});
+  },{notes:composition('mirror'),palette});
   for(const r of result.renders){
     const stem=r.name==='drowned'?`/tmp/updraft-drowned-forest-${r.kind}`:'/tmp/updraft-mirror-integrated';
     fs.writeFileSync(stem+'.wav',wav(Buffer.from(r.pcm,'base64')));

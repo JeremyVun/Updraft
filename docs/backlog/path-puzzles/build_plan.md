@@ -1143,32 +1143,14 @@ Left:
   starves in `shot` mode; it took 8 to more than 40 strokes, and up to 143 s, across runs.
 
 ### Phase 9: the music (parallel with 7c or 8)
-Owns: the drowned score (`src/audio/dream-score.ts` and its notes, the room's `drownedScore` phases): a cue for every
-part of the room per design.md, the bell's note in key; renders for Jeremy to judge by ear.
-Done: [x] built on `proto-drowned-music`, reworked after Jeremy's first listen ("the music sounds a bit... random?"),
-awaiting his listen again (not approved). The cues (`src/audio/drowned-cues.ts`, in the drift's B minor and
-instruments): `stuck` (the still and becalmed beats), `chase` (the run), `climb` (the nave, the tower's foot, the
-ivy), `belfry` (the kittens, the fog sea, the bell until its first answer), `answer1`-`answer3` and `home` by
-`church.answered` (`home` on through the climb down and the boat brought in), `farewell` (aboard). All of them are
-built on the question D-E-F♯-B and the answer B-F♯-E-D in four-bar phrases at the chase's 75 bpm (home 67, the
-belfry 60), over four-chord rounds diatonic to B minor, per design.md's rework: stuck B minor, G, F♯; the chase eased
-B minor, G, D, A (the theme) and pressed B minor, G, E minor, F♯ (the head climbing to A♯, then an answer that ends on
-C♯ instead of D), each three times round with different voices; the climb B minor, G, A; the belfry B minor, Gmaj7;
-the answers G, E minor, A, then D; home D, A, B minor, G; the farewell G, A, D. The chase is conducted
-(`Conductor` in `drowned-cues.ts`, run by `DreamScore.conduct`): it reads `DrownedChapter.drownedTension` (from the
-fog's gap behind her on `DARK_WAY`, whether she walks or works a piece, and seconds since she was last across one;
-`chaseTension`, `tuning.audio.drownedChase`) only where a phrase begins, pressing at 0.55 and easing below 0.4, and
-its pulse fills at bar lines (quarters at 0.35, eighths at 0.7). The bell keeps its note, B (MIDI 59), the score's
-tonic; the answers' felt sings above its ringing partials and the cello below them. A cue may cross in quicker than
-the usual phase fade (`fade`; the climb, the answers, home and the farewell take 1 s), and a cello note may bow short
-(`release`). Levels against the drift: stuck -4 dB, chase -2, climb -3.5, belfry -6, home -1. The study:
-`node tools/drowned-music-study.mjs` (each cue held through its repeats, the chase's tightening by hand, the room from
-the rescue into the storm at the as-built timings with the bell, a spectrogram, each chase passage as chosen).
-Checks: typecheck, `dream-story-check`, `dream-score-check` (new: every new cue diatonic to B minor with A♯ only over
-the dominant; the chase's two progressions, each passage played whole with nothing from the other, its pulse changing
-only at bar lines, its margin; bodies of at least 20 s), `music-transition-audit` (every new phase edge),
-`check:audio` (all but `lines-score`, which fails the same way on e28e4b5e, before this branch: the Lines shore
-pulley's restore reads an undefined vector).
+Owns: the drowned score (`src/audio/drowned-score.ts`, the room's `drownedScore` pieces); renders for Jeremy to judge
+by ear.
+Done: [x] rebuilt for design.md item 35 on `proto-drowned-fix-music` (five pieces in the game's own voices, crossing at
+chord changes), awaiting Jeremy's listen. Study: `node tools/drowned-music-study.mjs`. Checks: typecheck,
+`dream-story-check`, `dream-score-check` (the key, the tunes on the bar's grid, the boat's question coming home
+unchanged, the dark keeping D and A, crossings at chord changes, the overlap into the wood), `music-transition-audit`,
+`check:audio` (all but `lines-score`, which fails the same way before the branch: the Lines shore pulley's restore
+reads an undefined vector).
 
 ### Phase 10: polish, saves, docs and the full play
 Done: [ ]

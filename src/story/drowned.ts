@@ -1,5 +1,4 @@
-import type { DrownedScorePhase } from '../audio/dream-score';
-import { BELL_ANSWERS, chaseTension } from '../audio/drowned-cues';
+import type { DrownedScorePhase } from '../audio/drowned-score';
 import type { CheckpointPayload } from './checkpoint-data';
 import * as THREE from 'three';
 import type { Shot } from '../camera';
@@ -88,29 +87,20 @@ export class DrownedChapter implements Chapter {
   hush = 0.3;
   readonly shot: Shot = { target: new THREE.Vector3(), distance: 20, height: 3.2, carry: true };
   readonly music = 'drowned' as const;
+  /** The room's music by feeling, not by beat: the score moves on at its next chord change. */
   get drownedScore(): DrownedScorePhase {
     switch (this.beat) {
-      /** Up on the ridge, looking back at the boat going into the fog, the chase's first bar carries the heartbeat on: the stuck boat's cue never comes round again. */
-      case 'still': case 'becalmed': return this.cat.step === 'ridge' ? 'chase' : 'stuck';
-      case 'run': return 'chase';
-      case 'nave': return 'climb';
+      case 'still': case 'becalmed': case 'run': case 'nave': return 'fog';
       case 'church': {
         const { step, answered } = this.church!;
-        if (step === 'foot' || step === 'climb') return 'climb';
+        if (step === 'foot' || step === 'climb') return 'fog';
         if (step === 'aboard') return 'farewell';
-        return answered >= tuning.drowned.church.rings ? 'home' : BELL_ANSWERS[Math.min(answered, BELL_ANSWERS.length - 2)];
+        return answered > 0 ? 'home' : 'refuge';
       }
-      case 'gather': return 'gather';
-      case 'snatch': return 'loss';
-      case 'after': return this.t < 12 ? 'loss' : 'after';
-      default: return this.stirred ? 'resume' : 'rooftops';
+      case 'gather': case 'snatch': case 'after': return 'farewell';
+      default: return 'drift';
     }
   }
-  /** How hard the chase presses on her, for its music: 0 to 1, eased (`tuning.audio.drownedChase`). */
-  drownedTension = 0;
-  /** Seconds since she was last across a piece, and where on her way she was a frame ago. */
-  private across = Infinity;
-  private runStage = 'off';
   private arrivalHeard = false;
   get arrivalMusic(): 'drowned' | 'wood' { return this.arrivalHeard ? 'wood' : 'drowned'; }
   readonly season = 0.56;
@@ -354,16 +344,6 @@ export class DrownedChapter implements Chapter {
     this.church!.skipToAboard();
   }
 
-  private tense(dt: number): void {
-    const run = this.run, dark = this.cast.village?.dark;
-    if (this.beat !== 'run' || !run || !dark) return;
-    const working = run.stage !== 'walk';
-    this.across = !working && this.runStage !== 'walk' && this.runStage !== 'off' ? 0 : this.across + dt;
-    this.runStage = run.stage;
-    const want = chaseTension(run.darkAt - dark.front, working, this.across);
-    this.drownedTension += (want - this.drownedTension) * (1 - Math.exp(-dt / tuning.audio.drownedChase.ease));
-  }
-
   /** How far the fog over the water muffles the sea: as it comes on toward the lens and once the lens is in it. */
   seaMuffle = 0;
   private muffleSea(): void {
@@ -490,7 +470,6 @@ export class DrownedChapter implements Chapter {
 
     this.weather(dt, through);
     this.darkComes(dt);
-    this.tense(dt);
     // The lost-plane scene owns its score; the forest takes over only after that scene has ended.
     if (this.beat === 'after' && this.leg === PASSAGE.length - 1 &&
       Math.hypot(boat.position.x - WOOD_LANDING.x, boat.position.z - WOOD_LANDING.y) <

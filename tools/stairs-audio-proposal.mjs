@@ -93,7 +93,7 @@ async function render(page, musicOnly) {
         sound.update(step, { ...baseState, ...wind, charge: 0, overLand: onFoot && t < T.follow, breeze: .35,
           life: 1, night: 0, sea: 1, meadow: 0, land: onFoot ? 1 : 0, cold: 0, shower: 0,
           music: down ? 'drowned' : 'birches', birchesScore: down ? undefined : 'return',
-          drownedScore: down ? 'rooftops' : undefined, hush: down ? .3 : .35,
+          drownedScore: down ? 'drift' : undefined, hush: down ? .3 : .35,
           arrivalMusic: air.phase === 'fog' || down ? 'drowned' : undefined,
           stairsAir: down ? undefined : { ...air },
           cygnet, flock, scripted: t >= T.hesitate && t < T.follow || t >= T.emerge && t < T.board,
