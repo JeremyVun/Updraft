@@ -1112,7 +1112,57 @@ shares the form.
   - the whale's voice rendered from the game at each of its moments, its level against the score measured and
     plainly heard;
   - `net-whale-check` and `cygnet-gates`.
-Done: [ ]
+Done: [x] `f5cd37c6..2042d1e0`. The body (`anatomy.ts` `KEEP`, `along`, `taken`; `whale.ts` `SPINE_AT`, `SPINE_GAP`;
+`whaleShader.ts` `TAKEN`): behind the net's back (s 0.5) the rig lays it out at 0.45 of its rest length through the
+back and 0.65 at the stock, so it is about 90 m nose to fluke tips, the head, eye, flipper, flukes and `surfaceAt`
+unchanged, its skin's marks keeping their shape; `restPitch` is divided by `KEEP` so its back still lowers as far.
+The first crossing's whale shares it. Free (`sleeper.ts`, in seconds of being free): it rides `RIDE` 0.6 m higher,
+spouts at 6, sings at `SONG_AT` 7.2, lifts the freed flipper from `WAVE_AT` 11.2 (`WAVE_RAISE`, the tip about 10 m
+up) and waves it twice from 13.4 to 17.8 (`WAVES`), rolling `WAVE_ROLL` 0.15 away from the boat, calling goodbye at
+13.8; its lids are drawn back (`FREE_EYE` 1.15) and its gaze is taken along its own head (`lookOut`). The dive from
+`DIVE_AT` 19.6: its way bends where s 0.36 lay; the spine there rides by `ARCH_RISE` (by metres the stock is short of
+the bend: level, then 4 m down as the broad back rolls over, back up as the stock comes), so the back passes as a low
+line awash about 1.5 m high with the dorsal knuckle riding over, never a dome; the stock arches up ahead of the
+flukes (`STOCK_LEADS` 0.5 of their lift) with them hanging from it (`TRAIL` 1.3), and they lift on `LIFT_UP` from
+`LIFT_SHORT` 9 m short of the bend; `GLIDE` brings the stock's root to the bend as they stand, so standing only the
+stock and the flukes are out of the sea. Headless: eye under 1.75 s into the dive, flukes break 6.1, notch highest
+11.9 m from 6.9 to 8.5, notch under 9.6, tips gone 10.3: 8.5 s from the head going under to the flukes gone (the
+first pass's arch rose 4 m: the back stood 8.6 m high as a dome and 7.8 m beside the standing stock). Her part
+(`net-whale.ts`): her looks retimed, both arms up in a V with her back to the view (`waveGoodbye`, `goodbyeWave`
+[0.75, 0.45, 0.25, 6], `goodbyeTurn` 0.25, `toView()`), the cygnet calling twice; the release's subjects take its eye
+and the flipper's tip. Holds: landscape farewell 24 / 1.2 / bearing 0.85 / lookY 15 (sun left, flukes middle, boat
+right); phone `farewell` 24 / 1.2 / turn −0.45 / lookY 22 / toward 0.3, the sail beside the stock. The voice
+(`src/audio/whale-voice.ts`, `Foley.whale`; `tuning.audio.whaleVoice`, `level` 0.09): `whale-moan` with the sigh as
+the pod leads (`sighIn(K.leadSigh, true)`), `whale-greet`, `whale-song`, `whale-goodbye` (twice), `whale-deep`,
+`whale-echo` on the first crossing; the score makes room (`voiceRoom` 0.6).
+Gate, measured: typecheck and build pass. Strips at 4 fps from the flipper's save, 1600×900 and 430×932: its eye in
+frame with its lids at or past open in every frame from the spout to its head going under, the flipper's tip in frame
+through the whole wave, in both. The first crossing's far dive reads as a fluke-up in the haze (back, flukes up,
+slipping under). The voice rendered from the game (call against the score in its window, RMS dB): song −37.6 / −37.1,
+goodbye −36.9 / −40.5 and −37.9 / −37.0, deep −38.2 / −37.9, greet −44.0 / −44.0, mist moan −39.5 / −37.8 (at this
+branch's whale distance), peaks about 13 dB over, 35 to 51% under 150 Hz; the first crossing's echo −60.4 / −35.3.
+`net-whale-check` `full` passes (rest 88.7, breath 111.4, line 144.6, flipper 167.5, free 173.5, gone 199.9, moored
+226.4, fin clearance 1.5 m) and `saves` passes (each resumes; after the dive at `gone`). `cygnet-gates` passes (a first
+run failed idle and gather turns at about 12.2 s following; the rerun passed all 27). Stills of the breath, look and
+flipper holds beside `04ce3b5a`: the same in both orientations but for the far back in the landscape flipper hold.
+Left:
+- In the landscape flipper hold the far back curves down into the sea in frame, rounder and about 140 px short of
+  where the longer back faded into the haze.
+- As the flukes rise and turn, the near one spreads flat over the boat for about half a second before it stands (the
+  N3l paddle, longer now that the stock is up first).
+- While its broad back rolls over (about 2.5 to 5.5 s into the dive) only a low line of back shows, small in the
+  landscape frame; near the sun it catches the sky at a glancing look and reads pale and smooth.
+- The flukes stand lower than the first pass's (notch 11.9 m against 15.8, N3l 13).
+- The first crossing's echo sits about 25 dB under the score, so it is heard only in a quiet moment.
+- No camera trace this phase; the full `net-whale-check` with N5b's steps runs at integration.
+
+Claude's judgement, 2026-10-10, from the strips: the first pass's dive swelled the back into a smooth dome and then
+stood a long pale body above the sea with the stock rising out of it like a neck, a serpent rearing; now the back rolls
+over awash and the stock and flukes come up out of it, a whale's fluke-up dive, and on a phone the flukes stand whole
+beside the sail. The release reads glad: the spout, the flipper raised and waving beside its open eye. Merged into
+`sea-whale` with N5a and N5b (`29d51e8a`): N5c's moan is the first sigh heard in N5a's mist (`sighIn(K.leadSigh, true)`
+for the first), its wide free eye joins N5b's struggle under the fold in one `uEye`. The moan was measured nearer than
+N5a lays it; N5d hears it there.
 
 ### Phase N5d: the playable build
 After N5a, N5b and N5c are merged on `sea-whale`. Claude plays the whole open sea in motion, landscape and phone, from

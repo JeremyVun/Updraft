@@ -959,8 +959,8 @@ The sequence:
   (`riseFrom`, `riseNear`), once its shape has formed: turning at the nudge pushed the boat out of a phone's frame
   toward a mist with nothing in it.
   Come to rest beside it with the nudge never landed, it counts as led all the same.
-- **The whale.** About 110 m nose to flukes as first built, shortened behind the flippers for the dive (see "The
-  dive, a whale's"; the head end keeps its size), too big for the frame: the back recedes across and away into the haze and
+- **The whale.** About 110 m nose to flukes as first built, shortened behind the flippers for the dive to about 90 m
+  (see "The dive, a whale's"; the head end keeps its size), too big for the frame: the back recedes across and away into the haze and
   is never shown whole near the boat. Slate-blue, paler underside, the low sun on its rim, cool sky fill so the eye
   still reads; no sharp ridge, no face-like smile. Its eye, near the boat, is larger than the
   boat is wide, under a heavy tired lid. `notes.md`'s heights scaled to 110 m: crown about 5.3 m above the water, eye
@@ -1129,6 +1129,14 @@ The sequence:
     both arms up and the cygnet calls.
   - It eases a little clear of the boat (so the dive and the flukes never come near her), but never so far that its
     eye stops reading in the release frame.
+  - As built (N5c), in seconds of being free: it rides 0.6 m higher from the first seconds (`RIDE`); the spout at 6;
+    its glad song at 7.2; from 11.2 the flipper lifts high, its tip about 10 m up against the sky behind its eye,
+    the sea pouring off it, and waves slowly twice (13.4 to 17.8) before it is laid gently back by 20, rolling it
+    0.15 rad away from the boat; with the second rise it calls goodbye (13.8). From 11.8 she turns her back to the
+    view (a little toward it) and from 13.2 waves with both arms up in a wide V, swaying together; the cygnet calls at
+    14.6. Its lids are drawn back wide (`FREE_EYE` 1.15) and its gaze is taken along and up its own head, so the eye
+    stays on her as the head goes down. In this child's rig a raised mitten tops out about level with her hood's
+    crown, so the V reads by its width and its sway rather than its height.
 - **The dive, a whale's, not an eel's** (Claude's call, 2026-10-09, from Jeremy's "it slides into the water like a
   very long snake rather than a whale (it's body is way too long, or it disappears too slowly)"). A fluke-up dive,
   short and steep:
@@ -1142,6 +1150,21 @@ The sequence:
     flukes. The head, eye, flipper and flukes keep their size, so the steps' frames hold. The first crossing's far
     whale is the same animal and shortens with it.
   - A last deep call comes from under the sea as its swell lifts the boat.
+  - As built (N5c): behind the forward back the net lies on (s 0.5) the rig lays the body out at `KEEP` of its rest
+    length (0.45 through the back, 0.65 at the stock, 1 from the hinge), so it is about 90 m nose to fluke tips (the
+    notch at 87 m) with the head, the net's back, the flipper and the flukes unchanged and `surfaceAt` true. It dives
+    from `DIVE_AT` 19.6 s free. Its way bends where s 0.36 lay (about 38 m from the snout): its head goes down slowly
+    first (`DOWN`), the front pitching into the deep, and the body glides through the bend (`GLIDE`, up to 10 m/s as it rolls over, 13 as it sounds).
+    How high its spine rides there follows how far the tail stock still is from it (`ARCH_RISE`): level while the head
+    goes under, then 4 m lower as the broad back rolls over, so the back shows only as a low line awash about 1.5 m
+    high with the small dorsal knuckle riding over it, never a dome; it comes back up only as the stock reaches the
+    bend. The stock arches up out of the sea ahead of the flukes (`STOCK_LEADS`, all the way by half their lift) with
+    the flukes hanging from it (`TRAIL` 1.3 rad), and they come up on their own clock (`LIFT_UP`, from when the stock
+    is `LIFT_SHORT` 9 m short of the bend), stand, flex once as it calls goodbye, and slip straight down. Standing,
+    only the stock and the flukes are out of the sea, the back ahead of the stock awash. Measured: its eye under about
+    1.75 s into the dive, the flukes breaking the water about 6.1, their notch highest (about 11.9 m) from about 6.9 to
+    8.5, the notch under about 9.6 and the tips gone about 10.3: about 8.5 s from the head going under to the flukes
+    gone. Its last call comes up as the swell reaches the boat, about 13 s into the dive.
   - The flukes still rise in the sun's own glow, their pale undersides opening toward her as they come up (it turns,
     never rolls; as built in N3l, never more than about 17° across while low, so never a blade edge on to her), and
     she goes along the thwart to the port rail and waves to where it went down. The pod leaps away over where it
@@ -1212,13 +1235,16 @@ The sequence:
   (`Shot.authored`): any turn the lens chose for the approach eases out, so they frame the same however the boat came
   in. The release eases out wide, the plume's crown in the frame; as it dives the view eases once to the farewell's
   hold, framed on where it goes down, the flukes towering over the boat against the sun, the sail clear of the stock,
-  the boat whole above the bottom edge and her waving mitten against the sky or the sun's glow, never lost against
-  the sail. As built (N3n): the landscape hold sits low (1.2 m), 21 m behind the boat and 0.3 to port, the flukes'
-  tips inside the frame and the sun between the stock and the sail; as it dives she turns to where it goes down, goes
-  along the thwart to the port rail and holds a mitten out at her side, waving slowly, so it shows beside her hood
-  against the sun's glow rather than in front of the sail; the mitten is the one on the side toward where it went
-  down, held up and out across the view, so it rises beside her hood. A phone's stands 22 m behind, 1.2 m up, turned −0.6, so she
-  is about 70 px tall: the flukes tower past the frame's left edge and the sun stands between the stock and the boat.
+  the boat whole above the bottom edge and her waving arms against the sky or the sun's glow, never lost against the
+  sail. As built (N5c): the release holds its eye and the waving flipper's tip in the frame as well as the plume (the
+  framing's subjects), so its eye stays on her in frame from the spout until its head goes under, in both orientations.
+  The landscape farewell sits low (1.2 m), 24 m behind the boat and 0.85 round to port, looking 15 m up: the sun at the
+  left, the flukes standing in the middle over a back awash, the boat whole at the right with the sail clear of the
+  stock. The sun stands left of the flukes rather than between the stock and the sail: the bend lies further to
+  starboard than the sun, so no view from behind the boat holds them that way round. As it dives she turns to where it goes down, goes along the
+  thwart to the port rail and waves with both arms up in a wide V, her back to the view. A phone's stands 24 m behind
+  and 1.2 m up on the line from where it goes down through the boat, turned −0.45, looking 22 m up: the flukes whole
+  over the boat, the sail beside the stock rather than in front of it, the sun at the left edge as they rise.
   Once it has gone the view goes back to the crossing's in one long even ease as the boat sails on toward the
   mirror coming out of the mist. A phone's frame is too narrow (31° across) to hold the head and the sun together, so its holds look along the line from what matters
   through the boat, each with its own distance, height and turn, stacking boat, step and head up the frame; the
@@ -1243,7 +1269,13 @@ The sequence:
   burying it. Its moments: a tired low moan heard in the mist before it is seen; a soft low call as its eye opens on
   her (the friend's greeting); a long glad rising song as it breathes free; its goodbye call with the waving flipper
   and the flukes; and a last call from under the sea after the dive. Synthesised like every sound, never a cartoon
-  voice; on the first crossing, at most a far echo of it as it dives.
+  voice; on the first crossing, at most a far echo of it as it dives. As built (N5c): `src/audio/whale-voice.ts`
+  (`WhaleVoice`, held as `Foley.whale`) with its own distance law (`tuning.audio.whaleVoice`, `level` 0.09), the score
+  making room under each call (`voiceRoom`); its moments `whale-moan` (the sigh as the pod leads, `sighIn(…, true)`),
+  `whale-greet`, `whale-song` (7.2 s free), `whale-goodbye` (with the second wave, 13.8, and again as the flukes flex),
+  `whale-deep` (as the swell reaches the boat) and `whale-echo` on the first crossing. Rendered from the game, each
+  call sits between 1.6 dB under and 3.6 dB over the score in its window, its peaks about 13 dB over its own level and
+  35 to 50% of it under 150 Hz; the first crossing's echo sits about 25 dB under the score. Details in `docs/contracts/audio.md`.
 - **The cygnet's second swim** (Claude's call). Its first swim in this chapter is the hesitant brave one; at the
   flipper it goes in at once, without the climbing and deciding: the same bird after the sleeping island.
 - **No first-use stalls.** The whale's new programs and the net are compiled at boot like every other program
