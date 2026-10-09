@@ -1043,7 +1043,7 @@ export class DrownedChapter implements Chapter {
   /**
    * The camera notices the village with the child: rooftops at water level, then the church passing overhead. Making
    * for the cat it comes out on the quarter away from the cat's side, the side it will come round to for the tub, so
-   * the boat is seen heading across the frame for the cat on its pot ahead, clear of the mast and sail, on a longer lens.
+   * the boat is seen heading across the frame for the cat on its pot ahead, clear of the mast and sail.
    */
   private villageFrame(fx: number, fz: number): void {
     const { boat, child } = this.cast;
@@ -1061,12 +1061,9 @@ export class DrownedChapter implements Chapter {
     const roofBearing = this.heading + Math.PI + THREE.MathUtils.lerp(this.quarter * THREE.MathUtils.lerp(k.entryBearing, k.roofBearing, roofs), awayFromCat * k.makingBearing, making);
     s.from = this.from.set(Math.sin(roofBearing), 0, Math.cos(roofBearing));
     s.distance = THREE.MathUtils.lerp(k.entryDistance, k.roofDistance, roofs);
-    /** A lens long enough that the cat on its pot is a cat, not a speck, however far ahead it still is. */
     const wide = THREE.MathUtils.smoothstep(this.aspect, 0.7, 1.3);
     /** Upright it rises as it makes for the cat, so the cat stands over the slack sail rather than behind it. */
     s.height = THREE.MathUtils.lerp(THREE.MathUtils.lerp(k.entryHeight, k.roofHeight, roofs), k.uprightMakingHeight, making * (1 - wide));
-    const sees = THREE.MathUtils.clamp(this.lensAt.distanceTo(this.cat.eye) / THREE.MathUtils.lerp(k.uprightMakingSee, k.makingSee, wide), 1, k.makingZoom);
-    s.zoom = THREE.MathUtils.lerp(1, sees, making);
     s.target.set(child.position.x + fx * tuning.storm.lookAhead, child.position.y + 0.9,
       child.position.z + fz * tuning.storm.lookAhead);
     this.churchAttention.strength = church;
