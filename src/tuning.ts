@@ -2101,7 +2101,7 @@ export const tuning = {
        * What shares the frame with her (`Shot.subjects`): how much of the frame they keep inside and how far it may
        * draw back to hold them; the cat while it is within `catHeld` metres of her, else her way `lookOn` metres on.
        */
-      margin: 0.8, extra: 3, catHeld: 14, lookOn: 8,
+      margin: 0.8, extra: 1.5, catHeld: 14, lookOn: 8,
       /**
        * The cat ahead of her: how far the look leans toward it (a share of the way from her to it) and how quickly that
        * comes and goes (per second); the share of the frame's half width it is kept inside; and how the walking lens is
@@ -2109,7 +2109,7 @@ export const tuning = {
        * it before that costs, and what each share of the frame it stands further out, each metre further off, and a
        * roof between them cost.
        */
-      catLean: 0.35, catLeanRate: 1.2, catEdge: 0.86, catAhead: 7, catFar: 14, catOutCost: 300, catFarCost: 10, catHiddenCost: 200,
+      catLean: 0.35, catLeanRate: 1.2, catEdge: 0.8, catAhead: 7, catFar: 14, catOutCost: 300, catFarCost: 10, catHiddenCost: 200,
       /** How far it keeps off the side of a house, wall or chimney it stands lower than the top of, and over a chimney, metres. */
       clearOf: 1.6,
       /**
@@ -2174,7 +2174,7 @@ export const tuning = {
        * how long before she turns to go on it has gone, so it is back beside her before she walks; and where it looks (a
        * share of the way from her to the boat, landscape and upright, and above her feet).
        */
-      backHold: 1, backIn: 1.4, backOut: 1.0, backGone: 0.6, backAt: 0.5, uprightBackAt: 0.4, backAim: 0.6,
+      backHold: 1, backIn: 1.4, backOut: 1.0, backGone: 0.6, backAt: 0.6, uprightBackAt: 0.45, backAim: 0.6,
       /**
        * The tree's view, as [north, east, height] from where it will lie over her wall (east across the lane, the way it
        * falls): where it stands, north-west of the lane, west of the old tree by the green, and where it looks (over
