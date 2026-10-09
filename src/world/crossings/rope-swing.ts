@@ -88,6 +88,7 @@ export class RopeSwing {
   best = 0;
   /** Swing asked of it by strokes and still to come, radians; and what this swing out or back has already taken. */
   private asked = 0;
+  private stroked = 0;
   private taken = 0;
   private way = 1;
   private readonly air: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
@@ -127,7 +128,7 @@ export class RopeSwing {
   }
 
   reset(): void {
-    this.angle = this.speed = this.aside = this.rider = this.asked = this.taken = 0;
+    this.angle = this.speed = this.aside = this.rider = this.asked = this.stroked = this.taken = 0;
     this.way = 1;
     this.held = this.ridden = false;
     this.brushAge = Infinity;
@@ -174,10 +175,10 @@ export class RopeSwing {
   }
 
   /**
-   * A stroke across its ropes or seat on screen pumps it: the share of the rope's own length on screen it sweeps
-   * along the way the seat swings, firmer for faster, asks for that much more swing; against the seat's way it counts
-   * for less, never against it. It lays its air at the seat too, so the water and the grass answer. Returns the swing
-   * asked for (radians).
+   * A stroke across its ropes or seat on screen, going the way the seat swings, pumps it once: one good stroke asks
+   * for a pump's worth more swing, a gentle or slanting one less, one against the seat's way less again, and never
+   * any against it, however large or small the swing is on screen. It lays its air at the seat too, so the water and
+   * the grass answer. Returns the swing asked for (radians).
    */
   brush(camera: THREE.PerspectiveCamera, input: PointerInput, wind: WindField, dt: number): number {
     if (input.muted || !input.present || dt <= 0) return 0;
@@ -195,18 +196,20 @@ export class RopeSwing {
     const seat = this.seat(this.seatAt);
     screen(seat, this.foot);
     screen(this.seatAt.lerp(this.pivot, 0.7), this.top);
-    const rope = Math.max(0.02, this.top.distanceTo(this.foot) / 0.7);
     const hit = 1 - THREE.MathUtils.smoothstep(segmentGap(this.from, this.to, this.top, this.foot), 0, k.reach);
     if (hit <= 0) return 0;
     const c = Math.cos(this.angle);
     this.seat(this.seatAt).add(this.projected.set(this.toward.x * c, Math.sin(this.angle), this.toward.y * c));
     screen(this.seatAt, this.ahead).sub(this.foot).normalize();
-    const along = ((this.to.x - this.from.x) * this.ahead.x + (this.to.y - this.from.y) * this.ahead.y) / rope;
+    const along = ((this.to.x - this.from.x) * this.ahead.x + (this.to.y - this.from.y) * this.ahead.y) / travel;
     const going = Math.abs(this.speed) < 0.03 || along * this.speed >= 0 ? 1 : k.against;
     const firm = THREE.MathUtils.lerp(k.soft, 1, THREE.MathUtils.smoothstep(travel / dt, k.gentle, k.firm));
-    const ask = Math.abs(along) * hit * firm * going * k.push;
-    this.asked += ask;
+    const want = k.push * hit * firm * going * THREE.MathUtils.smoothstep(Math.abs(along), k.slant, 0.9);
+    if (this.brushAge > 0.3) this.stroked = 0;
     this.brushAge = 0;
+    const ask = Math.max(0, want - this.stroked);
+    this.stroked += ask;
+    this.asked += ask;
     this.seat(this.seatAt);
     wind.addSplat({ source: this, ax: this.seatAt.x, az: this.seatAt.z, bx: this.seatAt.x, bz: this.seatAt.z,
       vx: input.gustDir.x * input.gust, vz: input.gustDir.y * input.gust,

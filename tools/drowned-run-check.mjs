@@ -848,8 +848,8 @@ try {
     assert.notEqual((await state()).swing, 'riding', `she was still on the swing after ${pumps} pumping strokes`);
 
     await until((s) => s.beat === 'nave', 60, 'her reaching the tower\'s foot');
-    /** Where the run leaves the cat for the church: on the nave's slope by the tower's foot. */
-    const catWaits = await page.evaluate(() => { const c = window.__game.cat.position; return Math.hypot(c.x - 13.9, c.z - (-1561 + 1.6)); });
+    /** Where the run leaves the cat for the church: on the nave's slates by the tower's foot. */
+    const catWaits = await page.evaluate(() => { const c = window.__game.cat.position; return Math.hypot(c.x - 14.6, c.z - (-1561 + 0.45)); });
     await seconds(3);
     await shot('nave');
     const end = await state();
@@ -893,7 +893,7 @@ try {
     const late = roofs.filter((r) => !waits(r) && (r.under ?? end.time) - r.left > 14);
     assert(!late.length, `a roof she left was not taken by the fog in time: ${late.map((r) => names[r.name]).join('; ')}`);
     assert(w.boatMoved < 1.5, `the boat moved ${w.boatMoved.toFixed(2)} m from where it ran aground`);
-    assert(catWaits < 1.5, `the cat is not waiting on the nave's slope by the tower's foot (${catWaits.toFixed(2)} m off)`);
+    assert(catWaits < 1.5, `the cat is not waiting on the nave by the tower's foot (${catWaits.toFixed(2)} m off)`);
   }
   if (!toNave) {
     await church();

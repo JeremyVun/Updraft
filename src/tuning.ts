@@ -1990,7 +1990,7 @@ export const tuning = {
        * it; how hard it closes on where it is going (per second a metre), the slowest and fastest it comes on (m/s), and
        * how quickly it changes pace (per second), quicker while she looks back.
        */
-      fogTrail: 12, fogHold: { tree: 10, sheet: 8, mill: 10, swing: 14 }, fogEnd: 19, fogNearest: 7.5, fogLaid: 10,
+      fogTrail: 12, fogHold: { tree: 10, sheet: 8, mill: 10, swing: 12 }, fogEnd: 19, fogNearest: 7.5, fogLaid: 10,
       fogPull: 0.5, fogSlowest: 0.12, fogFastest: 3.2, fogEase: 0.9, fogLookedEase: 3,
       /** How near her the fog comes while she looks back at the boat, past the boat, so it takes the boat as she watches. */
       fogLooked: 5,
@@ -2125,11 +2125,12 @@ export const tuning = {
       layFor: 2,
       /**
        * Round to each piece's own view from `comeFrom` to `comeTo` metres before she reaches it (the mill's only once she
-       * is at its basket, its view standing ahead of her as she comes), and back to her own way
+       * is at its basket, its view standing ahead of her as she comes, and the swing's once she is at its board), and back
+       * to her own way
        * from `leaveFrom` metres past it (over each piece's own stretch, below); to the end's view over the last
        * `endFrom` metres; and how fast it comes round to a piece's view once she has stopped at it (per second).
        */
-      comeFrom: { tree: 5, sheet: 5, mill: 0.5, swing: 5 }, comeTo: 0, leaveFrom: 0, endFrom: 8, roundRate: 0.95,
+      comeFrom: { tree: 5, sheet: 5, mill: 0.5, swing: 1.5 }, comeTo: 0, leaveFrom: 0, endFrom: 8, roundRate: 0.95,
       /** How far past each piece the lens has given it back to her own way, metres. */
       leave: { tree: 2, sheet: 0, mill: 2, swing: 3 },
       /**
@@ -2161,10 +2162,10 @@ export const tuning = {
        * The swing's view: how far round from side on to her arc toward the way she swings out (radians), how far from
        * the bough and how high over the seat it stands; it looks this far out along her arc and this high over the
        * seat. Upright its own, round behind her. Side on from the west and near, so her arc reads left and right as the
-       * wind's to pump. Coming round from behind her it keeps within `swingNear` of the bough, inside the old tree and
-       * under its bough, and draws back to its place over the last of the way round from `swingOut`.
+       * wind's to pump. Coming round from behind her it keeps `swingFar` off, out past the old tree's crown, and comes in
+       * to its place over the last of the way round from `swingIn`.
        */
-      swingRound: 0, swingBack: 13.5, swingHigh: 3.4, swingAhead: 2.2, swingAim: 3.1, swingNear: 7.5, swingOut: 0.55,
+      swingRound: -0.24, swingBack: 13.4, swingHigh: 4.3, swingAhead: 2.5, swingAim: 2.5, swingFar: 24, swingIn: 0.7,
       uprightSwingRound: -0.45, uprightSwingBack: 12.5, uprightSwingHigh: 4.2,
       /** The end's view: how far back along the nave, how high, and how far out over the green. */
       naveBack: 10, naveHigh: 3.6, naveAside: 11,
@@ -2335,12 +2336,13 @@ export const tuning = {
       /** Push per unit of the felt wind along its way, and of its own way through still air, only while it is empty. */
       along: 0.25,
       /**
-       * A stroke across it on screen (within `reach` screen heights of its ropes or seat) asks for `push` radians more
-       * swing per length of its rope on screen it sweeps along the way the seat swings, `against` of that against it;
-       * strokes at `gentle` screen heights a second count for `soft` of it, at `firm` for all of it. What a stroke asks
-       * comes on over `lag` seconds; each swing out or back takes at most `perSwing` radians, up to `most` in all.
+       * One stroke across it on screen (within `reach` screen heights of its ropes or seat) along the way the seat
+       * swings asks for `push` radians more swing, `against` of that against it, none for one slanting more than the
+       * angle whose cosine is `slant` off its way; strokes at `gentle` screen heights a second count for `soft` of it,
+       * at `firm` for all of it. What a stroke asks comes on over `lag` seconds; each swing out or back takes at most
+       * `perSwing` radians, up to `most` in all: four good pumps from her push-off carry her over.
        */
-      push: 0.7, against: 0.6, reach: 0.06, gentle: 0.5, firm: 2.2, soft: 0.35, lag: 0.25, perSwing: 0.11, most: 0.95,
+      push: 0.14, against: 0.6, slant: 0.35, reach: 0.06, gentle: 0.5, firm: 2.2, soft: 0.35, lag: 0.25, perSwing: 0.11, most: 0.95,
       /** Seconds she takes to catch hold and sit, and the start she gives it pushing off the eave (radians a second). */
       boardFor: 1.6, pushOff: 0.32,
       /** She lets go this near the top of a forward swing (radians), when the leap would carry her this far past the landing. */

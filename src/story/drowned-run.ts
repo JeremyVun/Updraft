@@ -87,15 +87,18 @@ const roofOr = (y: number) => (x: number, z: number) => {
 };
 
 /**
- * Past the swing the cat comes off the churchyard's railings onto the nave's slope by the tower's foot and sits there
- * looking back at her, where she lets go to: its leap off the railings (clear of the tower's corner), where it lands
- * and where it sits.
+ * Past the swing the cat comes off the churchyard's railings onto the nave's slope by the tower's foot, along the slope
+ * and sits a little above where she lets go to, looking back at her; once she is over it goes on up to the tower's
+ * foot. Its leap off the railings (clear of the tower's corner), where it lands, where it sits, and where it waits at
+ * the foot.
  */
 const CAT_OFF_RAILS = new THREE.Vector3(16.5, CAT_WAY.swing[2].y, NAVE.z + 4.8);
 const CAT_ON_NAVE = new THREE.Vector3(14.6, 0, NAVE.z + 3.1);
 CAT_ON_NAVE.y = roofOr(0)(CAT_ON_NAVE.x, CAT_ON_NAVE.z);
-const CAT_PAST_SWING = new THREE.Vector3(TOWER_FOOT.x - 0.2, 0, NAVE.z + 1.6);
+const CAT_PAST_SWING = new THREE.Vector3(SWING_SITE.way.landing.x - 0.6, 0, SWING_SITE.way.landing.z - 1.7);
 CAT_PAST_SWING.y = roofOr(0)(CAT_PAST_SWING.x, CAT_PAST_SWING.z);
+const CAT_AT_FOOT = new THREE.Vector3(TOWER_FOOT.x + 0.5, 0, NAVE.z + 0.45);
+CAT_AT_FOOT.y = roofOr(0)(CAT_AT_FOOT.x, CAT_AT_FOOT.z);
 
 /** The point `s` metres along a way laid as `nodes`. */
 function wayAt(nodes: readonly Node[], s: number, out: THREE.Vector3): THREE.Vector3 {
@@ -432,6 +435,8 @@ export class RoofRun {
   /** The piece the cat is going over, while it is, and whether it is on the sheet's line. */
   private catPiece: Piece | null = null;
   private catOnLine = false;
+  /** Gone on along the nave's ridge to the tower's foot once she is over the swing. */
+  private catHome = false;
   /** The fog: her place along `DARK_WAY`, and how fast its front is coming on. */
   private dark = 0;
   private fogSpeed = 0;
@@ -596,13 +601,14 @@ export class RoofRun {
     }
     this.lookingBack = Infinity;
     this.lookingDown = Infinity;
+    this.catHome = true;
     this.dark = DARK_END;
     const dark = this.cast.village!.dark;
     dark.front = this.dark - k.fogEnd;
     dark.level = dark.tide(dark.front);
     c.place(TOWER_FOOT.x, TOWER_FOOT.z, Math.PI / 2);
     c.position.y = TOWER_FOOT.y;
-    const at = CAT_PAST_SWING;
+    const at = CAT_AT_FOOT;
     cat.place(at, Math.atan2(TOWER_FOOT.x - at.x, TOWER_FOOT.z - at.z), { pose: 'sit', floor: roofOr(at.y) });
     this.stage = 'nave';
     c.stop();
@@ -792,6 +798,11 @@ export class RoofRun {
     if (this.cat) {
       this.cat.update();
       if (this.catPiece) this.pieceHooks(this.catPiece, this.catStep);
+      return;
+    }
+    if (!this.catHome && this.catOver.has('swing') && (this.swing.phase === 'leaving' || this.swing.done)) {
+      this.catHome = true;
+      this.catGoes([{ run: [CAT_AT_FOOT], floor: roofOr(CAT_AT_FOOT.y) }], () => {});
       return;
     }
     if (this.catAt >= this.nodes.length - 1) return;
@@ -1194,15 +1205,15 @@ export class RoofRun {
   /**
    * Off the west of the green, side on to her arc and near enough that it reads left and right: the bough over her, the
    * back of the swing by the cottage's gable, and the nave's slope she lets go onto with the cat waiting on it, across
-   * the frame. It comes round from behind her close in, inside the old tree, and draws back once round. Upright, round
-   * behind her and a little higher, the nave and the cat stacked over her.
+   * the frame. It comes round from behind her well out, past the old tree's crown, and comes in once round. Upright,
+   * round behind her and a little higher, the nave and the cat stacked over her.
    */
   private swingView(wide: number): void {
     const k = tuning.drownedCamera.run, pivot = SWING_SITE.spot.pivot, out = SWING_SITE.spot.toward;
     const lerp = THREE.MathUtils.lerp;
     const round = lerp(k.uprightSwingRound, k.swingRound, wide);
     const phase = this.swing.phase, going = phase === 'flying' || phase === 'landed' || phase === 'leaving' || phase === 'over';
-    const back = lerp(k.swingNear, lerp(k.uprightSwingBack, k.swingBack, wide), going ? 1 : THREE.MathUtils.smoothstep(this.pieceIn.swing, k.swingOut, 1));
+    const back = lerp(k.swingFar, lerp(k.uprightSwingBack, k.swingBack, wide), going ? 1 : THREE.MathUtils.smoothstep(this.pieceIn.swing, k.swingIn, 1));
     /** Side on is across her arc, from the west; round turns from there toward the way she swings out. */
     const sx = out.y, sz = -out.x, a = Math.cos(round), b = Math.sin(round);
     const dx = sx * a + out.x * b, dz = sz * a + out.y * b;
