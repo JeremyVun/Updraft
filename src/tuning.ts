@@ -1529,9 +1529,11 @@ export const tuning = {
     /**
      * Found in the mist rather than seen: it sighs unseen as the pod turns the boat toward it, and its blow stands up
      * over the mist once the boat is `seenAt` metres short of the rest and at least `seenAfter` seconds on, each
-     * `leadSigh` seconds after that.
+     * `leadSigh` seconds after that. The view comes down and turns to it as its shape forms, from `riseFrom` to
+     * `riseNear` metres short of the rest, not before: from farther off it would only turn the boat out of a phone's
+     * frame toward a mist with nothing in it.
      */
-    seenAt: 120, seenAfter: 6,
+    seenAt: 120, seenAfter: 6, riseFrom: 115, riseNear: 70,
     /** How far ahead of the bow the pod runs while it leads the boat in (m). */
     podLead: 18,
     /**

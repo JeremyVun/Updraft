@@ -540,7 +540,8 @@ export class NetWhale {
     // Gone, the view goes back to the crossing's in one even ease from wherever the hold is, however the boat turns.
     if (this.step === 'gone') this.hold = Math.min(this.hold, Math.max(0, 1 - this.stepTime / K.handBack));
     else this.hold += ((this.step === 'approach' ? near : 1) - this.hold) * (1 - Math.exp(-dt * K.holdEase));
-    this.rise += ((this.led && this.step === 'approach' ? 1 : 0) - this.rise) * (1 - Math.exp(-dt * K.riseEase));
+    const rising = this.led && this.step === 'approach' ? 1 - THREE.MathUtils.smootherstep(left, K.riseNear, K.riseFrom) : 0;
+    this.rise += (rising - this.rise) * (1 - Math.exp(-dt * K.riseEase));
     const leaning = this.step === 'line' && (this.haul === 'reaching' || this.haul === 'hauling');
     this.out += ((leaning ? 1 : 0) - this.out) * (1 - Math.exp(-dt * (leaning ? 3 : 1.6)));
     const t = whale.phase === 'woken' && this.step === 'breath' ? whale.time : 0;
