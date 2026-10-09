@@ -215,7 +215,7 @@ export class NetWhale {
   private readonly wayLengths = new Float32Array(POD_WAY.length);
   private wayLaid = false;
   private camera: THREE.PerspectiveCamera | null = null;
-  private readonly asking: Coax = { at: new THREE.Vector3(), urgency: K.coaxUrgency, radius: K.coaxRadius };
+  private readonly asking: Coax = { at: new THREE.Vector3(), urgency: K.coaxUrgency, radius: K.coaxRadius, bold: K.coaxBold };
   private readonly anchor = new THREE.Vector3();
   private readonly look = new THREE.Vector3();
   private readonly lookFrom = new THREE.Vector3();
@@ -534,7 +534,7 @@ export class NetWhale {
    * lands on what it asks for; they come back a few seconds after the last one.
    */
   private get invites(): boolean {
-    return this.asks && this.valveT < 0 && this.askedFor > 0 && this.sinceStroke > K.inviteBack;
+    return this.asks && this.valveT < 0 && this.askedFor > K.inviteSettle && this.sinceStroke > K.inviteBack;
   }
 
   /** Circling over the blowhole stands the column there, while the breath is what is asked. */
@@ -543,7 +543,7 @@ export class NetWhale {
   }
 
   get coax(): Coax | null {
-    if (this.step !== 'breath' || !this.invites || this.askedFor < K.inviteSettle) return null;
+    if (this.step !== 'breath' || !this.invites) return null;
     this.asking.at.copy(this.whale.blowhole);
     return this.asking;
   }
@@ -590,13 +590,28 @@ export class NetWhale {
       gesture.hide();
       return;
     }
-    const radius = this.step === 'flipper' ? K.finInviteRadius : this.step === 'eye' ? K.foldInviteRadius
-      : this.step === 'heave' ? K.heaveInviteRadius : K.corkInviteRadius;
-    const cycle = K.sweepFor + K.sweepRest;
     // In front of what it crosses, so the surface never buries it.
-    this.p.subVectors(camera.position, at).normalize().multiplyScalar(K.sweepLift).add(at);
-    gesture.draw(camera, this.p, (this.sweepT % cycle) / K.sweepFor, radius * 2.3, this.sweepAlpha, K.sweepWidth, 'across', 1,
-      this.inviteHeading, K.sweepBold);
+    const centre = this.p.subVectors(camera.position, at).normalize().multiplyScalar(K.sweepLift).add(at).project(camera);
+    // As long on screen as the frame allows along its heading, slid along it to stay whole in the frame.
+    const aspect = camera.aspect;
+    const h = this.inviteHeading;
+    const ux = Math.cos(h);
+    const uy = Math.sin(h);
+    const roomX = K.sweepFrame * aspect;
+    const length = Math.min(K.sweepScreen, (2 * roomX) / Math.max(Math.abs(ux), 1e-3), (2 * K.sweepFrame) / Math.max(Math.abs(uy), 1e-3));
+    let x = centre.x * aspect;
+    let y = centre.y;
+    const half = length / 2;
+    x = THREE.MathUtils.clamp(x, -roomX + half * Math.abs(ux), roomX - half * Math.abs(ux));
+    y = THREE.MathUtils.clamp(y, -K.sweepFrame + half * Math.abs(uy), K.sweepFrame - half * Math.abs(uy));
+    const along = (x - centre.x * aspect) * ux + (y - centre.y) * uy;
+    centre.set(centre.x + (along * ux) / aspect, centre.y + along * uy, centre.z).unproject(camera);
+    const depth = -this.a.copy(centre).applyMatrix4(camera.matrixWorldInverse).z;
+    const span = length * depth * Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2);
+    const upward = Math.abs(uy) > Math.abs(ux);
+    const cycle = K.sweepFor + K.sweepRest;
+    gesture.draw(camera, centre, (this.sweepT % cycle) / K.sweepFor, span, this.sweepAlpha, K.sweepWidth, upward ? 'lift' : 'across', 1,
+      upward ? h - Math.PI / 2 : h, K.sweepBold);
   }
 
   update(dt: number, time: number): void {
@@ -1396,11 +1411,11 @@ export class NetWhale {
     this.inviteFin();
   }
 
-  /** The drawn strokes go along the flipper's outer part, root to tip, and which way that is on screen. */
+  /** The drawn strokes go up along the flipper's outer part toward the bird holding the loop, root to tip on screen. */
   private inviteFin(): void {
     const camera = this.camera;
-    this.finAt(0.72, this.inviting);
-    this.inviting.y = Math.max(this.inviting.y, 0.1);
+    this.finAt(0.85, this.inviting).lerp(this.cast.cygnet.position, 0.35);
+    this.inviting.y = Math.max(this.inviting.y, 0.3);
     if (!camera) return;
     this.finAt(0.45, this.a).project(camera);
     this.finAt(1, this.b).project(camera);

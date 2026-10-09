@@ -1483,17 +1483,19 @@ export const tuning = {
     liftFrom: 0.12, liftFull: 0.5, liftRate: 0.65, reach: 6,
     /**
      * A step is asked once the camera is `inviteHeld` of the way through its move to the step's hold; its drawn sweep
-     * shows at once (the drawn spiral `inviteSettle` seconds after), goes as a stroke lands on what it asks for, and
+     * shows `inviteSettle` seconds later, goes as a stroke lands on what it asks for, and
      * comes back `inviteBack` seconds after the last one. A safety valve comes after `valveAfter` seconds at rest with
      * no progress.
      */
-    inviteSettle: 1, inviteHeld: 0.8, inviteBack: 4, valveAfter: 90,
+    inviteSettle: 0.5, inviteHeld: 0.8, inviteBack: 4, valveAfter: 90,
     /**
-     * The drawn sweeps: each crosses in `sweepFor` seconds and comes again after `sweepRest`, `sweepWidth` m wide drawn
-     * `sweepBold` times as bold as the shared sweeps allow on screen, and `sweepLift` m in front of what it crosses.
+     * The drawn sweeps: each crosses in `sweepFor` seconds and comes again after `sweepRest`, `sweepScreen` screen
+     * half-heights long at most, kept within `sweepFrame` of the frame's middle, `sweepWidth` m wide drawn `sweepBold`
+     * times as bold as the shared sweeps allow on screen, and `sweepLift` m in front of what it crosses.
      */
-    sweepFor: 1.6, sweepRest: 0.9, sweepWidth: 0.16, sweepBold: 1.8, sweepLift: 1.2,
-    coaxUrgency: 0.85, coaxRadius: 2.4,
+    sweepFor: 1.6, sweepRest: 0.9, sweepScreen: 1.1, sweepFrame: 0.85, sweepWidth: 0.45, sweepBold: 2.8, sweepLift: 1.2,
+    /** The drawn spiral over the blowhole: how plainly it asks, its loops' radius (m), and how much bolder it is drawn. */
+    coaxUrgency: 0.85, coaxRadius: 2.4, coaxBold: 2,
     /** The swell it leaves going under: speed (m/s), crest spacing (m), width of the packet (m) and height at the boat (m). */
     surgeSpeed: 6, surgeLength: 22, surgeWidth: 10, surgeHeight: 0.6,
     /**
@@ -1582,11 +1584,11 @@ export const tuning = {
      * lifts the fold: `foldSweep` of such stroke (the same units) flips it; lifted part way it stands `foldPart` of the
      * way up and sags back to `foldSettle` of that once the stroke has passed, at `foldEase` a second. Flipped, it goes
      * up and over onto the brow over `foldFlip` seconds, and its eye comes out from under it `foldOpens` seconds in. The
-     * drawn sweep spans `foldInviteRadius` metres either side of the eye. The valve's dolphin rises beside its head this
+     * valve's dolphin rises beside its head this
      * far out from the waterline under the eye (m) and lifts the fold with its beak.
      */
     eyeTry: 0.32, eyeTryLifted: 0.3, foldRadius: 0.45, foldSweep: 0.9, foldPart: 0.4, foldSettle: 0.6, foldEase: 2.5,
-    foldFlip: 1.5, foldOpens: 0.9, foldInviteRadius: 2.2, foldNoseOut: 0.9,
+    foldFlip: 1.5, foldOpens: 0.9, foldNoseOut: 0.9,
     /**
      * The look between them, framed as the owl's is: `lookDistance` behind the boat and `lookHeight` up, `lookBearing`
      * round to port of astern, so she is seen three-quarters from behind her left shoulder, looking `lookToward` of the
@@ -1626,10 +1628,9 @@ export const tuning = {
      * normalised device units) sends the cork gliding toward her, `corkCome` metres for each unit of stroke (at most
      * `corkComeMax` asked at once), at up to `corkGlide` m/s, its path bent `corkBend` of the way the stroke went;
      * pushed out past where it lay it drifts back at `corkSettle` metres a second for each metre out, at most
-     * `corkSettleMax`. The drawn sweep spans `corkInviteRadius` metres either side of its middle.
+     * `corkSettleMax`.
      */
     corkRadius: 0.32, corkCome: 4, corkComeMax: 2.5, corkGlide: 1.8, corkBend: 0.35, corkSettle: 0.35, corkSettleMax: 0.4,
-    corkInviteRadius: 1.4,
     /**
      * The heave: she hauls `heaves` times, each a long arm's length (`pullTake` m) over `heaveTime` seconds, the share
      * `pullDraw` of it spent drawing, braced at least `braceFor` seconds between, leaning back `braceBack` (radians)
@@ -1637,12 +1638,11 @@ export const tuning = {
      * line takes `letGo` seconds to go. A stroke in any direction over the net on its head or the water between it and
      * the boat, within `heaveRadius` of them on screen (normalised device units), billows the mesh up off the head
      * (`billowGain` for each unit of stroke, `billowHeight` m at most, settling at `billowFall` a second), and
-     * `heaveSweep` of such stroke makes a heave. The drawn sweep runs from the head toward her, spanning
-     * `heaveInviteRadius` metres either side of its middle; the heave's hold stands `heaveBack` metres further back
+     * `heaveSweep` of such stroke makes a heave. The heave's hold stands `heaveBack` metres further back
      * than the line's. The valve's dolphin comes up under the net's edge every `nudgeEvery` seconds.
      */
     heaves: 4, pullTake: 0.9, heaveTime: 1.5, pullDraw: 0.6, braceFor: 0.4, braceBack: 0.32, haulHold: 0.8, letGo: 3.4,
-    heaveRadius: 0.32, billowGain: 3, billowHeight: 1.7, billowFall: 1.6, heaveSweep: 0.3, heaveInviteRadius: 3, heaveBack: 0,
+    heaveRadius: 0.32, billowGain: 3, billowHeight: 1.7, billowFall: 1.6, heaveSweep: 0.3, heaveBack: 0,
     nudgeEvery: 2.8,
     /** Seconds after she lets the line go that the cygnet sees the loop on the flipper and peeps, and that she looks to it. */
     birdSees: 1, sheSees: 1.9,
@@ -1683,12 +1683,11 @@ export const tuning = {
     },
     /**
      * The flipper: a stroke in any direction within `finRadius` of its outer part or the cygnet on screen (normalised
-     * device units) lifts it once `finSweep` of such stroke have crossed them; its drawn strokes span
-     * `finInviteRadius` metres either side of their middle. The cygnet takes the loop's end where it lies, `endOut`
+     * device units) lifts it once `finSweep` of such stroke have crossed them. The cygnet takes the loop's end where it lies, `endOut`
      * metres to port of the boat at rest and `endAhead` before it, and holds it from `birdOut`/`birdAhead`, clear of
      * the flipper's lift; the loop comes off its tip `slipFor` seconds into the lift.
      */
-    finRadius: 0.3, finSweep: 0.2, finInviteRadius: 2.6,
+    finRadius: 0.3, finSweep: 0.2,
     endOut: 5.1, endAhead: 0.2, birdOut: 5.3, birdAhead: -0.5, slipFor: 5,
     /**
      * The near flipper at rest, about its root under the jaw: swept round toward the head and raised, so it reaches

@@ -14,6 +14,8 @@ export interface Coax {
   radius?: number;
   /** How much of the invitation keeps winding under the player's own trace, 0 giving way to it entirely. */
   keep?: number;
+  /** How much bolder than usual its loops are drawn on screen. */
+  bold?: number;
 }
 
 /** Lengths of ribbon in one column, and the radians of turn drawn before the next length is laid down. */
@@ -252,7 +254,7 @@ export class Swirl {
       /** It comes in over a breath, holds while it winds, and blows out with its last loops still climbing. */
       const env = Math.min(1, this.cycle / 0.7) * (1 - THREE.MathUtils.smoothstep(this.cycle, T.coaxWind, T.coaxWind + 1.1));
       want = T.coaxAlpha * (0.5 + 0.5 * urgency) * env;
-      this.ghostPen = windPen(camera, coax.at, Math.min(camera.position.distanceTo(coax.at) * T.pen, 0.8));
+      this.ghostPen = windPen(camera, coax.at, Math.min(camera.position.distanceTo(coax.at) * T.pen * (coax.bold ?? 1), 0.8), coax.bold);
     } else {
       this.cycle = 0;
     }
