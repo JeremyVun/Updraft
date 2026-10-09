@@ -2156,20 +2156,20 @@ export const tuning = {
       leave: { tree: 2, sheet: 0, mill: 2, swing: 3 },
       /**
        * Her look back from the first roof's end: how strongly it holds the lens, how quickly it comes and goes (s) and
-       * how long before she turns to go on it has gone, so it is back beside her before she walks; how far behind her,
-       * to the side (landscape and upright) and above her it stands, and where it looks (a share of the way from her to
-       * the boat, and above her feet).
+       * how long before she turns to go on it has gone, so it is back beside her before she walks; and where it looks (a
+       * share of the way from her to the boat, landscape and upright, and above her feet).
        */
-      backHold: 1, backIn: 1.4, backOut: 1.0, backGone: 0.6, backBehind: 4.2, backSide: 2.4, uprightBackSide: 1.2, backHigh: 2.3, backAt: 0.55, backAim: 0.6,
+      backHold: 1, backIn: 1.4, backOut: 1.0, backGone: 0.6, backAt: 0.5, uprightBackAt: 0.4, backAim: 0.6,
       /**
        * The tree's view, as [north, east, height] from where it will lie over her wall (east across the lane, the way it
-       * falls): where it stands, north of the lane just short of the old tree by the green, and where it looks, so the
-       * whole tree, her at the wall's end, the barn's gable and the cat waiting on it all stand in the frame, the tree
-       * falling across it and the fog beyond; its lens, a little wide to hold the tree; upright, its own. Once she is
+       * falls): where it stands, north-west of the lane, west of the old tree by the green, and where it looks (over
+       * where she waits, so it comes round her at about the walking lens's reach), so the whole tree, her at the wall's
+       * end, the barn's gable and the cat waiting on it all stand in the frame, the tree falling across it and the fog
+       * beyond; its lens, a little wide to hold the tree; upright, its own. Once she is
        * `treeRoundFrom` of the way up the trunk it goes round to the sheet's view over `treeRoundFor` seconds, drawn
        * toward the two places in `treeRound`: south of the old tree's trunk, and over the far end of the high roof.
        */
-      treeEye: [14.8, 1.4, 5.6], treeAt: [1.6, 2.0, 4.6], uprightTreeEye: [13.5, 1.0, 4.6], uprightTreeAt: [1.8, 2.5, 3.3], treeZoom: 0.86, uprightTreeZoom: 0.86,
+      treeEye: [14.8, -4.4, 5.2], treeAt: [4.6, 0.2, 4.4], uprightTreeEye: [14.0, -3.6, 4.8], uprightTreeAt: [4.6, 0.6, 3.7], treeZoom: 0.9, uprightTreeZoom: 0.86,
       treeRound: [[13.0, 1.2, 6.0], [12.8, 10.8, 7.8]], uprightTreeRound: [[9.9, -3.0, 5.1], [3.5, -0.9, 4.8]],
       treeRoundFrom: 0.1, treeRoundFor: 8,
       /** The sheet's view: which side of the line it stands (+1 the left looking up it), and how far off it in landscape. */

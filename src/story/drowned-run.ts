@@ -171,7 +171,7 @@ interface Anchor {
  * steps as little as it can and never faster than the rig follows, so it comes round a corner before she does.
  */
 function* layLens(nodes: readonly Node[], obstacles: readonly THREE.Box3[], upright: boolean, anchors: readonly Anchor[],
-  catAt: (s: number, out: THREE.Vector3) => THREE.Vector3): Generator<void, LensKey[]> {
+  catAt: (s: number, out: THREE.Vector3) => boolean): Generator<void, LensKey[]> {
   const k = tuning.drownedCamera.run;
   const near = obstacles.filter((box) => nodes.some((n) => n.at.x > box.min.x - 30 && n.at.x < box.max.x + 30
     && n.at.z > box.min.z - 30 && n.at.z < box.max.z + 30));
@@ -275,7 +275,8 @@ function* layLens(nodes: readonly Node[], obstacles: readonly THREE.Box3[], upri
     /** Looking down on her from high, or with the fog coming on behind her out of the frame, costs. */
     const steep = Math.max(0, Math.atan2(eye.y - focus.y, reach) - k.steepFrom) * k.steepCost;
     look.set(p.x + Math.sin(facing) * k.lead, p.y + k.aim, p.z + Math.cos(facing) * k.lead);
-    catHeld = catAt(s, cat).distanceTo(p) < k.catHeld;
+    const leading = catAt(s, cat);
+    catHeld = cat.distanceTo(p) < k.catHeld;
     if (catHeld) look.lerp(cat, k.catLean);
     const unseen = Math.max(0, ...fogs.slice(1).map((f) => Math.min(3, fogOut(f)) - k.fogInFrame)) * k.fogCost;
     let crowd = (steep + unseen + nearFog) / k.crowdCost;
@@ -283,7 +284,7 @@ function* layLens(nodes: readonly Node[], obstacles: readonly THREE.Box3[], upri
     if (catHeld) {
       const off = Math.abs(turnTo(cat.x, cat.z, Math.atan2(look.x - eye.x, look.z - eye.z)));
       const out = Math.max(0, Math.tan(Math.min(off, 1.4)) / across - k.catEdge);
-      const far = Math.max(0, cat.distanceTo(eye) - k.catFar);
+      const far = leading ? Math.max(0, cat.distanceTo(eye) - k.catFar) : 0;
       let hidden = 0;
       for (let u = 0.1; u < 0.95 && !hidden; u += 0.1) {
         const x = eye.x + (cat.x - eye.x) * u, z = eye.z + (cat.z - eye.z) * u, y = eye.y + (cat.y - eye.y) * u;
@@ -537,7 +538,10 @@ export class RoofRun {
     const tree = GREEN_TREE, pivot = SWING_SITE.spot.pivot;
     const crown = new THREE.Box3(new THREE.Vector3(tree.x - 6, 3.5, tree.z - 6), new THREE.Vector3(tree.x + 6, 11, tree.z + 6));
     const bough = new THREE.Box3().setFromPoints([new THREE.Vector3(tree.x, 6, tree.z), new THREE.Vector3(pivot.x, pivot.y + 1.2, pivot.z)]).expandByScalar(0.8);
-    const obstacles = [...village.cameraObstacles, sails, crown, bough];
+    /** The dead tree standing in its garden by her wall, which she walks past on her way to it. */
+    const root = TREE_SITE.spot.root;
+    const dead = new THREE.Box3(new THREE.Vector3(root.x - 0.45, root.y, root.z - 0.45), new THREE.Vector3(root.x + 0.45, root.y + this.tree.tree.height, root.z + 0.45));
+    const obstacles = [...village.cameraObstacles, sails, crown, bough, dead];
     village.mill.group.updateMatrixWorld(true);
     /** Just past the tree and the mill, the lens starts out from where each piece's view leaves it. */
     const anchors = (wide: number): Anchor[] => (['tree', 'mill'] as const).map((piece) => {
@@ -556,18 +560,25 @@ export class RoofRun {
   }
 
   /**
-   * Where the cat will be, its eyes, when she is `s` metres along her way: a few metres ahead of her on her own way,
-   * short of where it goes off over the next piece, and once it has gone over a piece, waiting at the end of its way.
+   * Where the cat will be, its eyes, when she is `s` metres along her way, and whether it is leading her: a few metres
+   * ahead of her on her own way, short of where it goes off over the next piece; once it has gone over a piece, waiting
+   * at the end of its way, which that piece's own view frames.
    */
-  private catPlan(s: number, out: THREE.Vector3): THREE.Vector3 {
+  private catPlan(s: number, out: THREE.Vector3): boolean {
     const k = tuning.drowned.run;
     const go = (p: Piece) => this.nodes[this.pieceAt[p] - 1].s - k.catGo[p];
     for (let i = 0; i < ORDER.length; i++) {
       const p = ORDER[i], q = ORDER[i + 1];
-      if (s < go(p)) return this.pointAt(Math.min(this.catFrom[p], s + tuning.drownedCamera.run.catAhead), out).setY(out.y + 0.2);
-      if (!q || s < Math.min(go(q), this.nodes[this.pieceAt[p]].s - k.catNear)) return out.copy(this.catSeats[p]).setY(this.catSeats[p].y + 0.2);
+      if (s < go(p)) {
+        this.pointAt(Math.min(this.catFrom[p], s + tuning.drownedCamera.run.catAhead), out).y += 0.2;
+        return true;
+      }
+      if (!q || s < Math.min(go(q), this.nodes[this.pieceAt[p]].s - k.catNear)) {
+        out.copy(this.catSeats[p]).y += 0.2;
+        return false;
+      }
     }
-    return out.copy(this.catSeats.swing);
+    return false;
   }
 
   /** Lays the walking lens for up to `ms` milliseconds, or to the end. */
@@ -1219,19 +1230,20 @@ export class RoofRun {
     else this.swingView(wide);
   }
 
-  /** Over her shoulder from the first roof's end: her, the boat aground below, the fog coming over it. */
+  /**
+   * Her look back from the first roof's end, from where the walking lens stands, the look turned to hold her in profile
+   * and the boat aground below, the fog coming over it: a turn of the head, so the lens is still beside her way when she
+   * walks on, never left ahead of her by a swing round to her shoulder.
+   */
   private backView(wide: number): void {
     const k = tuning.drownedCamera.run;
     const c = this.cast.child.position, boat = this.cast.boat.position;
-    const ax = boat.x - c.x, az = boat.z - c.z, d = Math.hypot(ax, az) || 1;
-    const sx = -az / d, sz = ax / d;
-    const side = THREE.MathUtils.lerp(k.uprightBackSide, k.backSide, wide);
-    this.stationEye.set(c.x - (ax / d) * k.backBehind + sx * side, c.y + k.backHigh, c.z - (az / d) * k.backBehind + sz * side);
-    this.stationTarget.copy(c).lerp(boat, k.backAt).setY(c.y + k.backAim);
+    this.stationEye.copy(this.eye);
+    this.stationTarget.copy(c).lerp(boat, THREE.MathUtils.lerp(k.uprightBackAt, k.backAt, wide)).setY(c.y + k.backAim);
   }
 
   /**
-   * North of the lane over the open water, just short of the old tree by the green, looking back past her to the tree
+   * North-west of the lane over the open water, west of the old tree by the green, looking back past her to the tree
    * in its garden: her at the wall's end, the whole tree, the barn's gable it will come down beside with the cat
    * waiting on it, and the sheet on its line, the fog beyond, where she came from; the tree falls right to left across
    * the frame onto the barn, and she walks up it across the frame. Then it goes round to the sheet's view, in south of
