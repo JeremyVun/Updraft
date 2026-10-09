@@ -16,6 +16,8 @@ export interface SheetSpot {
   props?: (THREE.Vector3 | null)[];
   /** How far short of the far pulley the knot on the line stops the leading ring (m). */
   stop?: number;
+  /** Level, from the line toward the side she stands and holds it from. */
+  side: THREE.Vector3;
 }
 
 /** The sheet: its length along the line, its drop, how many rings carry it, and how close they bunch at the far end. */
@@ -25,9 +27,11 @@ const NX = 16;
 const NY = 13;
 /** The two threads either side of the hem's middle, gathered into her mittens. */
 const HOLD_COLS = [NX / 2 - 1, NX / 2];
-/** How far under the line her mittens hold the hem, and how far they draw it out of the sheet toward the lens. */
+/** How far under the line her mittens hold the hem, and how far they draw it out of the sheet toward her. */
 export const HOLD_DROP = SHEET.drop;
 const HOLD_OUT = 0.28;
+/** Round her, over her feet: her hood is about half a metre round, and her knees are under her hands as she hangs. */
+const KEEP_OFF = { radius: 0.58, from: 0.4, to: 2.9 };
 const RING_EVERY = (NX - 1) / (SHEET.rings - 1);
 const LINE_SAMPLES = 48;
 const LINE_SIDES = 5;
@@ -149,8 +153,10 @@ export class WashSheet {
   /** Set while she hangs from it, and where the cat is while it runs the line. */
   held = false;
   cat: THREE.Vector3 | null = null;
-  /** Level, out of the sheet's face toward the side it is seen from: the side she holds it from. */
+  /** Level, out of the sheet's face toward the side she holds it from. */
   readonly seen = new THREE.Vector3();
+  /** Where her feet are while she is at it: the cloth is kept off her, out to the far side of her. */
+  keepOff: THREE.Vector3 | null = null;
   /** Where her mittens are while she holds it, which the hem's middle is gathered into; and how far it is drawn out to them. */
   readonly grips = [new THREE.Vector3(), new THREE.Vector3()];
   private drawn = 0;
@@ -196,7 +202,7 @@ export class WashSheet {
     this.to.copy(spot.to);
     this.length = this.from.distanceTo(this.to);
     this.along.set(this.to.x - this.from.x, 0, this.to.z - this.from.z).normalize();
-    this.seen.set(-this.along.z, 0, this.along.x);
+    this.seen.copy(spot.side);
     this.start = this.travel = spot.start;
     this.stop = spot.stop ?? 0.22;
 
@@ -409,7 +415,7 @@ export class WashSheet {
     this.spread = 0;
   }
 
-  update(dt: number, camera: THREE.Camera, wind: WindField): void {
+  update(dt: number, wind: WindField): void {
     if (dt <= 0) return;
     const k = tuning.crossings.sheet;
     this.quiet += dt;
@@ -430,10 +436,6 @@ export class WashSheet {
     }
     this.catDip += ((this.cat ? k.catDip : 0) - this.catDip) * (1 - Math.exp(-dt * 10));
 
-    if (!this.held) {
-      this.seen.set(-this.along.z, 0, this.along.x);
-      if (this.seen.dot(this.tmp.subVectors(camera.position, this.from)) < 0) this.seen.negate();
-    }
     this.drawn = THREE.MathUtils.clamp(this.drawn + (this.held ? dt : -dt) / tuning.crossings.sheet.liftFor, 0, 1);
     this.layRings(dt);
     const steps = Math.min(4, Math.max(1, Math.ceil(dt * 120)));
@@ -482,12 +484,12 @@ export class WashSheet {
 
   /**
    * One step of the cloth: gravity, the air on each part of it across its face and along it, and its threads held to
-   * their lengths. The player's air comes up the line, out of the side it is seen from, and lifts the hem.
+   * their lengths. The player's air comes up the line, bellies it out away from her side, and lifts the hem.
    */
   private step(dt: number, ambient: number): void {
     const k = tuning.crossings.sheet;
     this.normalsNow();
-    const out = this.out.copy(this.seen);
+    const out = this.out.copy(this.seen).negate();
     const g = 9.81 * k.gravity;
     const t = atmo.uniforms.uTime.value;
     const press = this.press;
@@ -540,6 +542,24 @@ export class WashSheet {
         const f = (over / d) * stiff / (ma + mb);
         pa.x += dx * f * ma; pa.y += dy * f * ma; pa.z += dz * f * ma;
         pb.x -= dx * f * mb; pb.y -= dy * f * mb; pb.z -= dz * f * mb;
+      }
+    }
+    if (this.keepOff) this.clearOf(this.keepOff);
+  }
+
+  /** Any of the cloth that has come into her, from her knees to over her hood, goes back out behind her. */
+  private clearOf(feet: THREE.Vector3): void {
+    const r = KEEP_OFF.radius;
+    for (let i = 0; i < this.pos.length; i++) {
+      const p = this.pos[i];
+      if (this.pins.has(i) || p.y < feet.y + KEEP_OFF.from || p.y > feet.y + KEEP_OFF.to) continue;
+      const dx = p.x - feet.x, dz = p.z - feet.z;
+      const along = dx * this.along.x + dz * this.along.z, out = dx * this.seen.x + dz * this.seen.z;
+      if (along * along + out * out >= r * r) continue;
+      const back = -Math.sqrt(r * r - along * along);
+      if (out > back) {
+        p.x += this.seen.x * (back - out);
+        p.z += this.seen.z * (back - out);
       }
     }
   }

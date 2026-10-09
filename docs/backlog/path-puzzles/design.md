@@ -668,9 +668,9 @@ chimney looking up, the sheet hanging off the line with its lower edge through h
 then right after the wind mill, the camera dollies around weirdly in the wrong direction so the cat goes out of view.
 Also, everytime the cat or the kittens makes a sound, it should have the noise marks. And i think the kittens make too
 much noise too often."
-23. The sheet through her head: waiting at the near chimney, the sheet hangs low enough off the line that its lower
+23. ~~The sheet through her head~~ (`proto-drowned-fix-sheet`: her hood is 2.75 m tall and half a metre round, the hem 2.25 m over her feet, and the line ran straight over her ridge, so the cloth hung through her whatever its height; the line now runs 0.9 m off the ridges on the side away from the lens, so she waits beside the sheet and hangs in front of it over each ridge, it bellies away from her, and any cloth that comes into her is put back behind her; the upright lens and its way round from the tree moved to her side of the line). Was: waiting at the near chimney, the sheet hangs low enough off the line that its lower
     edge passes through her hood. Fix: the sheet never intersects her; it hangs clear above her or she stands clear of it.
-24. She lands from the sheet in mid air on the far roof. Fix: her feet on the slates when she lets go and lands.
+24. ~~She lands in mid air~~ (`proto-drowned-fix-sheet`: at the ride's end she hung 0.25 m over the ridge's height but 0.3 m out over the slope, her grip hidden in the cloth through her hood, then hopped up and slid onto the ridge; now she hangs straight over the ridge 0.4-0.55 m up, lets go and drops 0.37 s onto it). Was: she lands from the sheet in mid air on the far roof. Fix: her feet on the slates when she lets go and lands.
 25. Right after the mill the lens dollies round the wrong way and the cat leaves the frame (likely the reported swoop
     coming off the mill's north view). Fix: one move on toward where she and the cat go, the cat kept in frame.
 26. The cat's and kittens' sounds have no call marks. Fix: every mew, purr or call from the cat or a kitten shows the

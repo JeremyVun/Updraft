@@ -2191,7 +2191,7 @@ export const tuning = {
        * enough that the far chimney passes under her as it crosses the line to her.
        */
       treeEye: [14.8, -4.4, 5.2], treeAt: [4.6, 0.2, 4.7], uprightTreeEye: [14.0, -3.6, 4.8], uprightTreeAt: [4.6, 0.6, 3.7], treeZoom: 0.87, uprightTreeZoom: 0.86,
-      treeRound: [[13.0, 1.2, 7.2], [12.8, 10.8, 8.8]], uprightTreeRound: [[9.9, -3.0, 5.1], [3.5, -0.9, 4.8]],
+      treeRound: [[13.0, 1.2, 7.2], [12.8, 10.8, 8.8]], uprightTreeRound: [[12.8, 2.8, 6.5], [8.8, 11.8, 7.0]],
       treeRoundFrom: 0.1, treeRoundFor: 8,
       /**
        * The sheet's view, from her gable's end: which side of the line it stands (+1 the left looking up it); where it
@@ -2199,7 +2199,7 @@ export const tuning = {
        * higher both go as she is carried; upright its own.
        */
       sheetSide: 1, sheetEye: [1.9, 3.5, 12.2], sheetAt: [2.1, 2.9], sheetGo: [1.5, 0.5],
-      uprightSheetEye: [-7, 4.6, -3.2], uprightSheetAt: [3, 3, 0.3],
+      uprightSheetEye: [-7, 4.6, 3.2], uprightSheetAt: [3, 3, -0.3],
       /**
        * The mill's view, in the mill's own frame (x to the right seen from in front, z out of the front, heights above
        * her roof): where it stands and looks while she is low, and how much higher it stands and looks once she is up.

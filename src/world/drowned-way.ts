@@ -263,12 +263,14 @@ const capOf = (h: PlacedHouse, i: number) => {
 export const SHEET_SITE = (() => {
   const back = BARN.len / 2 - BARN.stacks[0] * (BARN.len / 2 - 0.75);
   const beyond = HIGH_LANE.stacks[0] * (HIGH_LANE.len / 2 - 0.75) + HIGH_LANE.len / 2;
-  const line = sheetLine(SHEET_EDGE, SHEET_ALONG, SHEET_LANE, ridgeTop(HIGH_LANE), back, beyond);
+  /** She stands on the side of the line the lens looks from. */
+  const side = new THREE.Vector2(-SHEET_ALONG.y, SHEET_ALONG.x);
+  const line = sheetLine(SHEET_EDGE, SHEET_ALONG, side, SHEET_LANE, ridgeTop(HIGH_LANE), back, beyond);
   const caps = [capOf(BARN, 0), capOf(HIGH_LANE, 0)];
-  const prop = (cap: THREE.Vector3) => cap.clone().add(new THREE.Vector3(-SHEET_ALONG.y * 0.3, 0, SHEET_ALONG.x * 0.3));
+  const prop = (cap: THREE.Vector3) => cap.clone().add(new THREE.Vector3(-side.x * 0.3, 0, -side.y * 0.3));
   const on = (u: number, y: number) => new THREE.Vector3(SHEET_EDGE.x + SHEET_ALONG.x * u, y, SHEET_EDGE.z + SHEET_ALONG.y * u);
   return {
-    spot: { from: line.from, to: line.to, start: line.start, stop: line.stop, props: caps.map(prop) } satisfies SheetSpot,
+    spot: { from: line.from, to: line.to, start: line.start, stop: line.stop, side: line.side, props: caps.map(prop) } satisfies SheetSpot,
     way: { wait: on(SHEET_WAIT, ridgeTop(BARN)), stepOff: on(SHEET_LANE + SHEET_OFF, ridgeTop(HIGH_LANE)), onward: LANE_TOP } satisfies SheetWay,
     caps,
   };
