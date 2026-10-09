@@ -723,7 +723,7 @@ export function inClearing(x: number, z: number, room: number): boolean {
 const CAT_GROUND = [
   { x: CAT_HOUSE.x, z: CAT_HOUSE.z, r: CAT_HOUSE.len / 2 + 4 },
   { x: TUB_WATER.x, z: TUB_WATER.z, r: TUB_WATER.r + 2 },
-  ...[[0, 0, 6], [3, 10, 5], [2, 5, 4], [-6, 3, 5]].map(([ahead, port, r]) => {
+  ...[[0, 0, 6], [2, 6, 4], [4, 13, 5], [-6, 3, 5]].map(([ahead, port, r]) => {
     const at = atHold(ahead, port);
     return { x: at.x, z: at.y, r };
   }),

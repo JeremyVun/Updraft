@@ -944,10 +944,9 @@ export class DrownedChapter implements Chapter {
     c.secondary.copy(this.cat.eye);
     c.tertiary = this.cat.tubTop;
     c.points = this.catPoints;
-    if (round > 0.3) {
-      s.subjects = c;
-      s.obstacles = undefined;
-    }
+    /** The roofs keep it out of them while it comes round; once there, its own frame is clear of them. */
+    if (round > 0.3) s.subjects = c;
+    if (round > 0.97) s.obstacles = undefined;
     s.smoothFit = 1.5;
     this.pace = lerp(this.pace, k.catPace, round);
   }
