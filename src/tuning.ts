@@ -611,8 +611,11 @@ export const tuning = {
     anchorNear: 0.6,
   },
   invitation: {
-    /** Readable air at game distance, including the unlit wood. Widths are CSS pixels. */
-    minPixels: 6, maxPixels: 10, lightFloor: 0.8,
+    /**
+     * Readable air at game distance, including the unlit wood, and drawn bold where the sky is bright and busy (the
+     * drowned village). Widths are CSS pixels.
+     */
+    minPixels: 6, maxPixels: 10, boldMinPixels: 15, boldMaxPixels: 21, lightFloor: 0.8,
     tail: 0.48, curl: 0.12, spread: 0.045,
     handover: 12, resumeAfter: 1.4,
     screenMargin: 0.08,
@@ -1974,16 +1977,18 @@ export const tuning = {
        */
       glanceEvery: 6, glanceFor: 1.2, glanceOff: 1.1,
       /**
-       * The cat: how far ahead of her along the way it waits, how near she comes before it goes on, and how fast it goes
-       * along ridges and walls and along the railings and the line (m/s).
+       * The cat: how far ahead of her along the way it waits, how near she comes before it goes on and the least it goes
+       * on by short of a piece, and how fast it goes along ridges and walls and along the railings and the line (m/s);
+       * seconds after it sits before it calls to her, and between calls while it waits across a piece for her.
        */
-      catLead: 13, catNear: 6, catSpeed: 3.0, railSpeed: 2.2,
+      catLead: 9, catNear: 4, catLeast: 3, catSpeed: 4.2, railSpeed: 2.2, catCallFirst: 0.5, catCallEvery: 3.2,
       /**
        * How near she is to each piece (metres along her way to where she waits at it) when the cat sets off over it, so
-       * it is already going as she arrives and never keeps her waiting; and how far up the hoist she is (a share of the
-       * climb) before it comes down off the mill's cap ahead of her.
+       * it is already going as she arrives and never keeps her waiting (the sheet's once she sets off for the fallen
+       * tree, so it waits on the barn while she works the tree); and how far up the hoist she is (a share of the climb)
+       * before it comes down off the mill's cap ahead of her.
        */
-      catGo: { tree: 15, sheet: 40, mill: 4, swing: 14 }, catDown: 0.55,
+      catGo: { tree: 11, sheet: 7.5, mill: 4, swing: 10 }, catDown: 0.55,
       /**
        * The fog along its way (`DARK_WAY`): how far behind her it comes on while she is on her own way, while she works
        * each piece, and where it waits once she is at the tower's foot; the nearest it ever comes (and where it comes
@@ -2094,6 +2099,14 @@ export const tuning = {
        * draw back to hold them; the cat while it is within `catHeld` metres of her, else her way `lookOn` metres on.
        */
       margin: 0.8, extra: 3, catHeld: 14, lookOn: 8,
+      /**
+       * The cat ahead of her: how far the look leans toward it (a share of the way from her to it) and how quickly that
+       * comes and goes (per second); the share of the frame's half width it is kept inside; and how the walking lens is
+       * laid to keep it (`layLens`): how far ahead of her on her way it expects it, the farthest off it may stand from
+       * it before that costs, and what each share of the frame it stands further out, each metre further off, and a
+       * roof between them cost.
+       */
+      catLean: 0.3, catLeanRate: 1.2, catEdge: 0.78, catAhead: 6.5, catFar: 13, catOutCost: 300, catFarCost: 30, catHiddenCost: 200,
       /** How far it keeps off the side of a house, wall or chimney it stands lower than the top of, and over a chimney, metres. */
       clearOf: 1.6,
       /**
@@ -2133,12 +2146,12 @@ export const tuning = {
       /** Milliseconds a frame spends laying it from the start of the room, so it is ready long before she sets off. */
       layFor: 2,
       /**
-       * Round to each piece's own view from `comeFrom` to `comeTo` metres before she reaches it (the mill's only once she
-       * is at its basket, its view standing ahead of her as she comes), and back to her own way
+       * Round to each piece's own view from `comeFrom` to `comeTo` metres before she reaches it (the tree's and the
+       * mill's only as she stops, their views standing ahead of her as she comes), and back to her own way
        * from `leaveFrom` metres past it (over each piece's own stretch, below); to the end's view over the last
        * `endFrom` metres; and how fast it comes round to a piece's view once she has stopped at it (per second).
        */
-      comeFrom: { tree: 5, sheet: 5, mill: 0.5, swing: 5 }, comeTo: 0, leaveFrom: 0, endFrom: 8, roundRate: 0.95,
+      comeFrom: { tree: 1.5, sheet: 5, mill: 0.5, swing: 5 }, comeTo: 0, leaveFrom: 0, endFrom: 8, roundRate: 0.95,
       /** How far past each piece the lens has given it back to her own way, metres. */
       leave: { tree: 2, sheet: 0, mill: 2, swing: 3 },
       /**
@@ -2150,12 +2163,13 @@ export const tuning = {
       backHold: 1, backIn: 1.4, backOut: 1.0, backGone: 0.6, backBehind: 4.2, backSide: 2.4, uprightBackSide: 1.2, backHigh: 2.3, backAt: 0.55, backAim: 0.6,
       /**
        * The tree's view, as [north, east, height] from where it will lie over her wall (east across the lane, the way it
-       * falls): where it stands, off the end of the wall under the old tree's crown by the green, and where it looks, so
-       * the whole tree, her at the wall's end and the barn's gable all stand in the frame; upright, its own. Once she is
+       * falls): where it stands, north of the lane just short of the old tree by the green, and where it looks, so the
+       * whole tree, her at the wall's end, the barn's gable and the cat waiting on it all stand in the frame, the tree
+       * falling across it and the fog beyond; its lens, a little wide to hold the tree; upright, its own. Once she is
        * `treeRoundFrom` of the way up the trunk it goes round to the sheet's view over `treeRoundFor` seconds, drawn
        * toward the two places in `treeRound`: south of the old tree's trunk, and over the far end of the high roof.
        */
-      treeEye: [17.2, -5.6, 5.3], treeAt: [1.6, 0.1, 5.0], uprightTreeEye: [16.2, -5.0, 5.0], uprightTreeAt: [1.2, 1.1, 3.9],
+      treeEye: [14.8, 1.4, 5.6], treeAt: [1.6, 2.0, 4.6], uprightTreeEye: [13.5, 1.0, 4.6], uprightTreeAt: [1.8, 2.5, 3.3], treeZoom: 0.86, uprightTreeZoom: 0.86,
       treeRound: [[13.0, 1.2, 6.0], [12.8, 10.8, 7.8]], uprightTreeRound: [[9.9, -3.0, 5.1], [3.5, -0.9, 4.8]],
       treeRoundFrom: 0.1, treeRoundFor: 8,
       /** The sheet's view: which side of the line it stands (+1 the left looking up it), and how far off it in landscape. */

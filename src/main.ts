@@ -1019,7 +1019,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   fireflies.update(dt, atmo.uniforms.uNight.value * overLand * flyWeather * (1 - sleeping.presence), story.focus, inWood);
   emberInvitation.update(dt, rig.camera, story.current.windInvitation ?? null, input,
     undefined, story.name === 'mirror' ? tuning.skyMirror.bubbleRadius : story.current.invitationRadius ?? 0,
-    story.current.invitationHeading ?? null);
+    story.current.invitationHeading ?? null, story.name === 'drowned');
   embers.update(dt, child.visible ? child.position : story.focus, story.current.embers ?? 0);
   const emberLit = embers.illumination(emberAt);
   const coalLight = Math.min(2.6, emberLit * 0.5);

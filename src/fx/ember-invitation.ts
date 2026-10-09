@@ -4,7 +4,7 @@ import type { PointerInput } from '../input/pointer';
 import { screenBrush } from '../creatures/motion';
 import { WindGesture } from './wind-gesture';
 
-/** Shared sweeps for embers, wet paper, toy sails and soap bubbles. Drawing only. */
+/** Shared sweeps for embers, wet paper, toy sails and soap bubbles; `bold` for a room whose sky is bright and busy. Drawing only. */
 export class EmberInvitation {
   private readonly gesture = new WindGesture('ember-invitation');
   readonly batch = this.gesture.batch;
@@ -19,7 +19,7 @@ export class EmberInvitation {
   private readonly screen = new THREE.Vector3();
 
   update(dt: number, camera: THREE.Camera, target: THREE.Vector3 | null, input: PointerInput,
-    alternate?: THREE.Vector3, surfaceRadius = 0, heading: number | null = null): void {
+    alternate?: THREE.Vector3, surfaceRadius = 0, heading: number | null = null, bold = false): void {
     this.gesture.hide();
     if (target !== this.target) { this.target = target; this.elapsed = 0; this.quiet = 0; this.alpha = 0; }
     if (!target) return;
@@ -46,6 +46,6 @@ export class EmberInvitation {
     // A large target such as a soap bubble must not bury the demonstration inside its opaque surface.
     this.center.copy(target).addScaledVector(this.toward.subVectors(camera.position, target).normalize(), surfaceRadius);
     this.gesture.draw(camera, this.center, (at % cycle) / k.inviteSweep, Math.max(k.inviteSpan, surfaceRadius * 2.3), this.alpha,
-      k.inviteWidth, 'across', heading !== null || Math.floor(at / cycle) % 2 === 0 ? 1 : -1, heading ?? 0);
+      k.inviteWidth, 'across', heading !== null || Math.floor(at / cycle) % 2 === 0 ? 1 : -1, heading ?? 0, bold);
   }
 }

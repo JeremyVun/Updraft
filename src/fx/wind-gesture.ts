@@ -10,14 +10,14 @@ const STRANDS = [
   { delay: 0.19, length: 0.45, width: 0.42, alpha: 0.38, offset: -0.7 },
 ];
 
-/** Keep an invitation readable without enlarging it into a solid band near the camera. */
-export function windPen(camera: THREE.Camera, at: THREE.Vector3, width: number): number {
+/** Keep an invitation readable without enlarging it into a solid band near the camera; `bold` draws it wider. */
+export function windPen(camera: THREE.Camera, at: THREE.Vector3, width: number, bold = false): number {
   const k = tuning.invitation;
   const depth = Math.max(0.1, -(at.x * camera.matrixWorldInverse.elements[2]
     + at.y * camera.matrixWorldInverse.elements[6] + at.z * camera.matrixWorldInverse.elements[10]
     + camera.matrixWorldInverse.elements[14]));
   const pixel = 2 * depth / (camera.projectionMatrix.elements[5] * Math.max(1, window.innerHeight));
-  return THREE.MathUtils.clamp(width, pixel * k.minPixels, pixel * k.maxPixels);
+  return THREE.MathUtils.clamp(width, pixel * (bold ? k.boldMinPixels : k.minPixels), pixel * (bold ? k.boldMaxPixels : k.maxPixels));
 }
 
 /** One gust crosses the useful target, its unequal wakes curling apart as it leaves. Drawing only. */
@@ -34,9 +34,12 @@ export class WindGesture {
   constructor(name: string) { this.batch.mesh.name = name; this.hide(); }
   hide(): void { this.batch.mesh.visible = false; }
 
-  /** `tilt` turns an `across` sweep in the screen's plane, radians anticlockwise, so it can run up or down the frame. */
+  /**
+   * `tilt` turns an `across` sweep in the screen's plane, radians anticlockwise, so it can run up or down the frame;
+   * `bold` draws it wider in a dark halo, to read at a glance against a bright, busy sky.
+   */
   draw(camera: THREE.Camera, at: THREE.Vector3, phase: number, span: number, alpha: number,
-    width: number, kind: SweepKind = 'across', direction = 1, tilt = 0): void {
+    width: number, kind: SweepKind = 'across', direction = 1, tilt = 0, bold = false): void {
     this.hide();
     const fade = THREE.MathUtils.smoothstep(phase, 0, 0.12)
       * (1 - THREE.MathUtils.smoothstep(phase, 0.82, 1.22));
@@ -44,7 +47,8 @@ export class WindGesture {
     this.right.setFromMatrixColumn(camera.matrixWorld, 0);
     this.up.setFromMatrixColumn(camera.matrixWorld, 1);
     this.toward.setFromMatrixColumn(camera.matrixWorld, 2);
-    const pen = windPen(camera, at, width);
+    const pen = windPen(camera, at, width, bold);
+    this.batch.halo = bold ? 1 : 0;
     const k = tuning.invitation;
     const depth = this.projected.copy(at).applyMatrix4(camera.matrixWorldInverse).z;
     this.projected.copy(at).project(camera);
