@@ -12,11 +12,9 @@
 //   cases: sweeps steps child idle eye eyeidle line anyway lineidle heave heaveidle fin finearly finidle saves full fullidle
 //   BREAK=<case> loosens that case's guard (a valve sent at 10 s, or strokes counted anywhere) to prove it bites.
 // The default set takes about 25 minutes; `fullidle` waits out every valve and is not in it.
-import { chromium } from 'playwright-core';
+import { openBrowser } from './lib/browser.mjs';
 import assert from 'node:assert/strict';
 
-process.on('SIGINT', () => process.exit(130));
-process.on('SIGTERM', () => process.exit(143));
 
 const base = process.env.BASE ?? 'http://127.0.0.1:5230/';
 const W = Number(process.env.W ?? 1600);
@@ -25,11 +23,7 @@ const cases = process.argv.slice(2).length ? process.argv.slice(2)
   : ['sweeps', 'steps', 'child', 'idle', 'eye', 'eyeidle', 'line', 'anyway', 'lineidle', 'heave', 'heaveidle', 'fin', 'finearly', 'finidle', 'saves', 'full'];
 const BREAK = process.env.BREAK ?? '';
 
-const browser = await chromium.launch({
-  channel: 'chromium',
-  headless: true,
-  args: ['--enable-gpu', '--use-angle=metal', '--ignore-gpu-blocklist'],
-});
+const { browser, close } = await openBrowser();
 
 /** Everything the check reads from the running game, in one place. */
 const STATE = `(() => {
@@ -652,6 +646,8 @@ for (const name of cases) {
     failed = true;
     console.log(`FAIL ${name}: ${error.message} ${JSON.stringify(results[name] ?? {})}`);
   }
+  // A failed case's page would keep playing, and a second running page slows the next boot's compiles past the wait.
+  for (const context of browser.contexts()) await context.close();
 }
-await browser.close();
+await close();
 process.exit(failed ? 1 : 0);
