@@ -11,7 +11,7 @@ import type { Cast } from './cast';
 import { completeObjective } from './cues';
 import { surgeAt, swellLift } from '../world/water/swell';
 import { mirrorWater } from '../world/sky-mirror-layout';
-import { gunwaleHalf, stationU, MAST_TOP, MAST_Z, SAIL_SPAN, SAIL_TACK } from '../traveller/boat/form';
+import { BOW_Z, MAST_TOP, MAST_Z, SAIL_SPAN, SAIL_TACK, STERN_Z, gunwale, gunwaleHalf, stationU } from '../traveller/boat/form';
 
 const K = tuning.netWhale;
 /** Its saves, in the order they are taken. */
@@ -239,7 +239,8 @@ export class NetWhale {
   private readonly forward = new THREE.Vector3();
   /** What the release keeps in frame besides her and the spout: its eye and its waving flipper. */
   private readonly freeing = [new THREE.Vector3(), new THREE.Vector3()];
-  private readonly hull = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
+  private readonly hull = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
+  private readonly hullAlone = this.hull.slice(0, 4);
   private readonly subjects: NonNullable<Shot['subjects']> & { tertiary: THREE.Vector3 } = { primary: new THREE.Vector3(),
     secondary: new THREE.Vector3(), tertiary: new THREE.Vector3(), margin: 0.85, extra: 10 };
   /** Seconds since the encounter began. */
@@ -2209,15 +2210,22 @@ export class NetWhale {
     this.holdT = 0;
   }
 
-  /** The boat's bow, stern, masthead and the clew of its sail, joining the framing by `h` from `rest`. */
-  private wholeBoat(rest: THREE.Vector3, h: number): THREE.Vector3[] {
+  /**
+   * The boat's bow, the corners of its transom and its masthead, and with `sail` the clew of its sail, joining the
+   * framing by `h` from `rest`.
+   */
+  private wholeBoat(sail: boolean, rest: THREE.Vector3, h: number): THREE.Vector3[] {
     const boat = this.cast.boat;
-    const [bow, stern, head, clew] = this.hull;
-    boat.hullEnds(bow, stern);
-    head.set(0, MAST_TOP, MAST_Z).applyMatrix4(boat.group.matrixWorld);
-    clew.set(-boat.sailSide * SAIL_SPAN * 0.6, SAIL_TACK + 0.4, MAST_Z - SAIL_SPAN * 0.8).applyMatrix4(boat.group.matrixWorld);
+    const [bow, port, starboard, head, clew] = this.hull;
+    boat.group.updateMatrixWorld(true);
+    const m = boat.group.matrixWorld;
+    bow.set(0, gunwale(1), BOW_Z).applyMatrix4(m);
+    port.set(gunwaleHalf(0), gunwale(0), STERN_Z).applyMatrix4(m);
+    starboard.set(-gunwaleHalf(0), gunwale(0), STERN_Z).applyMatrix4(m);
+    head.set(0, MAST_TOP, MAST_Z).applyMatrix4(m);
+    clew.set(-boat.sailSide * SAIL_SPAN * 0.6, SAIL_TACK + 0.4, MAST_Z - SAIL_SPAN * 0.8).applyMatrix4(m);
     for (const p of this.hull) p.lerp(rest, 1 - h);
-    return this.hull;
+    return sail ? this.hull : this.hullAlone;
   }
 
   /**
@@ -2324,10 +2332,10 @@ export class NetWhale {
     }
     else if (this.step === 'heave') this.headNet(s.tertiary);
     else s.tertiary.copy(this.step === 'flipper' ? whale.finTip : whale.eye);
-    // Free, its eye stays in the frame with her, and the flipper it waves as it thanks her. On a phone the haul keeps
-    // the whole boat in, sail and all.
-    const whole = portrait && (this.step === 'line' || this.step === 'heave');
-    s.points = this.step === 'free' && farewell < 1 ? this.freeing : whole ? this.wholeBoat(rest, h) : undefined;
+    // Free, its eye stays in the frame with her, and the flipper it waves as it thanks her. On a phone the steps keep
+    // the whole hull in, and the haul its sail too; beside the bird there is no room for the sail.
+    const whole = portrait && (this.step === 'line' || this.step === 'heave' || this.step === 'flipper');
+    s.points = this.step === 'free' && farewell < 1 ? this.freeing : whole ? this.wholeBoat(this.step !== 'flipper', rest, h) : undefined;
     if (s.points === this.freeing) {
       this.freeing[0].copy(whale.eye).lerp(rest, 1 - h);
       this.freeing[1].copy(whale.finTip).lerp(whale.eye, 1 - whale.flipperLift).lerp(rest, 1 - h);
