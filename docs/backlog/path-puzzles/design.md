@@ -692,6 +692,12 @@ bell? I thought that was the idea?"
     with only the spire and the lighthouse out of it; each ring pushes it back round the tower and the lantern answers
     nearer each time, until the fog has drawn back to the water round the nave. In play it does not read that way.
     Fix: the player sees the village go under, and sees each ring push the fog back.
+Jeremy, playing on (2026-10-10, verbatim): "at the beginning of the storm sequence, the camera is looking up and you can
+see a hole in the "fog" so to speak. it looks like a bug. also the lighthouse turns off too quickly."
+32. As the storm begins the lens looks up and a hole shows in the fog overhead; it reads as a bug. Fix: no frame shows
+    the fog's edge or a gap in it; the storm's opening frame looks along the water, not up through the fog.
+33. The lighthouse goes out too quickly. Fix: it holds long enough to be seen and taken in as the storm's landmark,
+    then goes out as an event the player sees.
 
 ### The room rethought (Claude, 2026-10-08; Jeremy: "yea lets see how this works")
 
