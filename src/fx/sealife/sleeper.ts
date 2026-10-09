@@ -59,10 +59,10 @@ const RIDE_UP = [0.5, 5] as const;
  * rolls `WAVE_ROLL` away from the boat to lift it. With the second wave it calls goodbye.
  */
 export const WAVE_AT = 11.2;
-const WAVE_RAISE = curve([[0, 0], [0.5, 0.08], [2.2, 0.78], [2.8, 0.85], [6.6, 0.85], [7.6, 0.4], [8.4, 0.06], [8.8, 0]]);
+const WAVE_RAISE = curve([[0, 0], [0.5, 0.1], [2.2, 1.15], [2.8, 1.25], [6.6, 1.25], [7.6, 0.6], [8.4, 0.08], [8.8, 0]]);
 const WAVE_FOR = 8.8;
-const WAVES = { from: 2.2, to: 6.6, raise: 0.16, sweep: 0.2 };
-const WAVE_ROLL = 0.12;
+const WAVES = { from: 2.2, to: 6.6, raise: 0.2, sweep: 0.25 };
+const WAVE_ROLL = 0.15;
 export const GOODBYE_AT = WAVE_AT + 2.6;
 export const DIVE_AT = WAVE_AT + WAVE_FOR - 0.4;
 const D = DIVE_AT;
@@ -72,22 +72,22 @@ const D = DIVE_AT;
  * there); the rest of it rolls forward over the arch, its flukes come up out of it turning to face her, stand a breath,
  * flex once as it calls and slip straight down.
  */
-const ARCH_AT = 0.44;
+const ARCH_AT = 0.36;
 /** The way's pitch by metres ahead of the arch (behind it, negative): rising steeply to its top, and steeply down past it. */
-const DIVE_SLOPE = curve([[-40, 0.38], [-14, 0.38], [-6, 0.24], [0, 0], [6, -0.3], [14, -0.75], [24, -1.05], [60, -1.1]]);
+const DIVE_SLOPE = curve([[-40, 0.42], [-12, 0.55], [-5, 0.36], [0, 0], [6, -0.3], [14, -0.75], [24, -1.05], [60, -1.1]]);
 /**
  * How far it has gone over into its dive by seconds: its head going down slowly first, then its back rolling up into
  * the arch; and how high its spine rises there (m).
  */
-const DOWN = curve([[0, 0], [1, 0.03], [2.6, 0.17], [3.8, 0.55], [5.2, 0.9], [6.2, 1]]);
-const ROLL_UP = 6.2;
-const ARCH_RISE = 2.5;
+const DOWN = curve([[0, 0], [1, 0.05], [2.4, 0.3], [3.5, 0.6], [4.8, 0.9], [5.8, 1]]);
+const ROLL_UP = 5.8;
+const ARCH_RISE = 4;
 /**
  * Its glide along its own length through the arch, in metres a second from the dive's start: rolling forward over
  * it, slowing as its flukes stand, and sounding.
  */
 const GLIDE = curve([
-  [0, 0], [1, 1], [2.5, 4.5], [4, 7.5], [5, 6.5], [6, 4], [6.8, 1.2], [7.4, 0.6], [8.2, 0.6], [9, 5], [10, 9], [14, 9],
+  [0, 0], [1, 1.5], [2.5, 6.5], [3.8, 9], [4.6, 6.5], [5.6, 4], [6.4, 1.5], [6.9, 0.5], [7.4, 0.5], [8.2, 7], [8.9, 13], [14, 13],
 ]);
 /** Where along it the tail stock bends to lift the flukes, and how far into the flukes the lift has all of them. */
 const STOCK = 0.84;
@@ -95,10 +95,11 @@ const STOCK_TO = 0.95;
 /** The flukes' pitch held up out of the sea (radians, nose up): a little short of straight up, undersides to the sky. */
 const FLUKES_UP = -1.45;
 /**
- * The lift, by metres the tail stock lies ahead of the arch: coming up as it nears it, held as the flukes stand over
- * it and slip down through it.
+ * The lift, by seconds from when the tail stock has rolled up to `LIFT_SHORT` metres short of the arch's top: the
+ * flukes coming up out of the arch slowly, as heavy things do, held as they stand over it and slip down through it.
  */
-const LIFT_BY = curve([[-4, 0], [-1, 0.14], [2, 0.75], [4.5, 1], [40, 1]]);
+const LIFT_SHORT = 11;
+const LIFT_UP = curve([[0, 0], [0.5, 0.1], [2.2, 0.68], [3, 0.93], [3.5, 1]]);
 /**
  * As the flukes come up the whale turns `TURN_TO_HER` of the way round toward the boat, so their pale undersides open
  * toward her. Most of it (`YAW_SHARE`) is the whole body turning about its arch over `YAW_WITH` of their lift; the
@@ -152,8 +153,9 @@ const STOCK_M = metres(STOCK);
  * Seconds into being free when the flukes start up out of the sea, when they stand highest and flex as it calls, when
  * the notch slips under, and when the swell goes out.
  */
-const FLUKES_FROM = D + glidedAt(STOCK_M - ARCH_M - 1);
-const FLEX_AT = D + glidedAt(STOCK_M - ARCH_M + 2.5);
+const LIFT_AT = glidedAt(STOCK_M - ARCH_M - LIFT_SHORT);
+const FLUKES_FROM = D + LIFT_AT + 0.6;
+const FLEX_AT = D + LIFT_AT + 2.4;
 const UNDER_AT = D + glidedAt(metres(1) - ARCH_M + 4);
 const SURGE_AT = D + glidedAt(STOCK_M - ARCH_M + 12);
 const GOING_AT = UNDER_AT + GOING_AFTER;
@@ -479,7 +481,7 @@ export class SleepingWhale extends WhaleRig {
     }
     if (this.phase === 'free') this.leave(dt);
     else this.lieThere(dt);
-    this.lift(dt);
+    if (this.phase !== 'free' || this.liftT >= 0) this.lift(dt);
     this.locate();
     if (this.sigh.left > 0) {
       this.spray.plume(this.blowhole, this.sigh.far, this.sigh.strength * (this.sigh.left / SIGH_FOR) ** 0.6, dt);
@@ -604,8 +606,10 @@ export class SleepingWhale extends WhaleRig {
   private thank(t: number, dt: number): number {
     const w = t - WAVE_AT;
     if (w < 0 || w > WAVE_FOR) {
-      this.flipperLift = 0;
-      this.uniforms.uSlap.value.set(1, 0, 0);
+      if (this.liftT < 0) {
+        this.flipperLift = 0;
+        this.uniforms.uSlap.value.set(1, 0, 0);
+      }
       return 0;
     }
     const waving = THREE.MathUtils.smoothstep(w, WAVES.from - 0.4, WAVES.from + 0.4) * (1 - THREE.MathUtils.smoothstep(w, WAVES.to - 0.6, WAVES.to));
@@ -647,7 +651,7 @@ export class SleepingWhale extends WhaleRig {
     // How far back along it from the snout the arch now lies, and how far past it the tail stock has come (m).
     const at = ARCH_M + glided(t);
     const stock = at - STOCK_M;
-    const lift = LIFT_BY(stock) * THREE.MathUtils.smoothstep(t, 2, 4);
+    const lift = LIFT_UP(t - LIFT_AT);
     const flex = Math.sin(THREE.MathUtils.clamp((t - (FLEX_AT - D)) / FLEX_FOR, 0, 1) * Math.PI * 2);
     const trail = TRAIL * THREE.MathUtils.smoothstep(lift, 0, 0.2) * (1 - THREE.MathUtils.smootherstep(lift, TRAIL_UNTIL[0], TRAIL_UNTIL[1]));
     // It sounds more steeply as its tail comes to the arch, so by the time its flukes rise the rest of it is under.

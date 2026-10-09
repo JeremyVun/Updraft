@@ -227,8 +227,10 @@ export class NetWhale {
   private readonly a = new THREE.Vector3();
   private readonly b = new THREE.Vector3();
   private readonly forward = new THREE.Vector3();
-  private readonly subjects = { primary: new THREE.Vector3(), secondary: new THREE.Vector3(), tertiary: new THREE.Vector3(),
-    margin: 0.85, extra: 10 };
+  /** What the release keeps in frame besides her and the spout: its eye and its waving flipper. */
+  private readonly freeing = [new THREE.Vector3(), new THREE.Vector3()];
+  private readonly subjects: NonNullable<Shot['subjects']> & { tertiary: THREE.Vector3 } = { primary: new THREE.Vector3(),
+    secondary: new THREE.Vector3(), tertiary: new THREE.Vector3(), margin: 0.85, extra: 10 };
   /** Seconds since the encounter began. */
   private clock = 0;
   /** How strongly the player's updraft is lifting under the patch right now, eased. */
@@ -2263,6 +2265,12 @@ export class NetWhale {
     }
     else if (this.step === 'heave') this.headNet(s.tertiary);
     else s.tertiary.copy(this.step === 'flipper' ? whale.finTip : whale.eye);
+    // Free, its eye stays in the frame with her, and the flipper it waves as it thanks her.
+    s.points = this.step === 'free' && farewell < 1 ? this.freeing : undefined;
+    if (s.points) {
+      this.freeing[0].copy(whale.eye).lerp(rest, 1 - h);
+      this.freeing[1].copy(whale.finTip).lerp(whale.eye, 1 - whale.flipperLift).lerp(rest, 1 - h);
+    }
     if (portrait && into < 1) s.tertiary.lerp(whale.finTip, 1 - into);
     s.secondary.lerp(rest, 1 - h);
     s.tertiary.lerp(rest, 1 - h);
