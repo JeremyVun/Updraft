@@ -1314,6 +1314,7 @@ export class RoofRun {
       e.set(from.x + Math.sin(bearing) * reach, lerp(e.y, to.y, u), from.z + Math.cos(bearing) * reach);
       this.stationTarget.lerp(set(a.lookAt, a.uprightLookAt, this.tmp2, wait), u);
     }
+    if ('fogAt' in a) this.stationTarget.lerp(this.fogFront(this.tmp2).setY(this.stationTarget.y), a.fogAt);
     if ('top' in a) this.stationEye.y = Math.min(this.stationEye.y, a.top);
   }
 
