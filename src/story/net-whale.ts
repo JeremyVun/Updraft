@@ -166,7 +166,7 @@ export class NetWhale {
   private rise = 0;
   /** How far the child has turned on her seat toward it, radians. */
   turn = 0;
-  /** How lost in the morning haze it is: none while the mist still hides it, most as its shape forms, none at rest. */
+  /** How lost in the morning haze it is: none, for the sea's mist hides it and gives it up as the boat comes in. */
   private lost = 0;
   /** How far the sea's score has thinned, 0..1: to almost nothing in its sorrow, a little way back once it knows her. */
   hush = 0;
@@ -510,10 +510,11 @@ export class NetWhale {
     const resting = left < 1.5 && boat.speed < 0.2;
     this.still = resting ? this.still + dt : 0;
     if (this.step === 'approach' && this.still > 1) this.goTo('breath');
-    // Led in through the mist, it is heard before it is seen, and then its blow stands up white over the mist.
-    if (this.led && this.step === 'approach' && this.sighs < 2 && left < (this.sighs === 0 ? K.heardAt : K.seenAt)) {
+    // As the pod turns the boat toward it, it is heard in the mist ahead; then, nearer, its blow stands up white over it.
+    if (this.led && this.step === 'approach' && this.sighs < 2 && (this.sighs === 0 || left < K.seenAt)) {
+      // A breath just gone serves for its blow: it never breathes twice in a moment.
+      if (this.sighs === 0 || whale.untilSigh < K.breathEvery - K.leadSigh) whale.sighIn(K.leadSigh);
       this.sighs++;
-      whale.sighIn(K.leadSigh);
     }
     if (this.step === 'breath') this.breathe(dt);
     if (this.step === 'line') this.haulLine(dt);
@@ -529,9 +530,9 @@ export class NetWhale {
     if (this.released >= 0) this.released += dt;
     const approach = this.comingIn(left);
     const freed = this.released >= 0 ? K.release * this.released : 0;
-    this.limit = freed > tuning.sail.topSpeed ? Infinity : Math.max(approach, freed);
+    // Led in, and let go after, it sails no faster than the pod leads, so it comes round into the mirror's jetty gently.
+    this.limit = Math.min(Math.max(approach, freed), K.leadSpeed);
     if (this.step !== 'approach' && this.released < 0) this.limit = Math.min(this.limit, approach);
-    if (this.step === 'approach' && this.led) this.limit = Math.min(this.limit, K.leadSpeed);
     const near = 1 - THREE.MathUtils.smootherstep(left, K.holdFull, K.holdFrom);
     // Gone, the view goes back to the crossing's in one even ease from wherever the hold is, however the boat turns.
     if (this.step === 'gone') this.hold = Math.min(this.hold, Math.max(0, 1 - this.stepTime / K.handBack));
@@ -560,9 +561,6 @@ export class NetWhale {
     this.cast.child.lent.copy(this.lit).multiplyScalar(this.step === 'gone' ? this.hold : 1);
     const move = this.looking ? K.lookMove : this.farewelled ? K.farewellMove : this.step === 'free' ? K.releaseMove : K.holdMove;
     this.holdT = Math.min(1, this.holdT + dt / move);
-    const lost = this.step === 'approach' && this.led ? K.lostFar * THREE.MathUtils.smootherstep(left, K.lostNear, K.lostFrom)
-      * (1 - THREE.MathUtils.smootherstep(left, K.lostFrom, K.lostOut)) : 0;
-    this.lost += (lost - this.lost) * (1 - Math.exp(-dt * K.lostEase));
     whale.lost = this.net.lost = this.lost;
     whale.seenFrom = this.camera ? this.camera.position.distanceTo(whale.blowhole) : 0;
     const sorrow = this.step === 'approach' ? 1 - THREE.MathUtils.smootherstep(left, K.hushNear, K.hushFrom)

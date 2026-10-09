@@ -1415,10 +1415,10 @@ export const tuning = {
     /** The crown round its blowhole above the water at rest (m), and how far it lies rolled with its near side up (radians). */
     crown: 5.3, roll: 0.087,
     /**
-     * The boat coming to rest beside it: led, it makes no more than `leadSpeed` (m/s), the pod's own pace; coming in,
-     * its limit takes way off at `slowing` (m/s²) until the hull's own carry can take it the rest of the way, and is
-     * nothing `restShort` metres short of the rest (past it when negative), so it is never braked; and how fast the
-     * limit climbs back (m/s²) once the whale is going under.
+     * The boat coming to rest beside it, and sailing on once it has gone: never more than `leadSpeed` (m/s), the pod's
+     * own pace; coming in, its limit takes way off at `slowing` (m/s²) until the hull's own carry can take it the rest
+     * of the way, and is nothing `restShort` metres short of the rest (past it when negative), so it is never braked;
+     * and how fast the limit climbs back (m/s²) once the whale is going under.
      */
     leadSpeed: 5.5, slowing: 1.2, restShort: -1.9, release: 0.6,
     /** Seconds between its weak breaths, how far its back rises with one (m), and how much mist each sputters. */
@@ -1499,11 +1499,11 @@ export const tuning = {
      */
     leadDrop: 2.6, leadIn: 10, riseEase: 0.3, riseLook: 2, riseToward: 0.25, riseTowardPhone: 0.12,
     /**
-     * Seconds the cygnet peeks out of the satchel at its first breath in the haze; seconds after the pod turns the
-     * boat toward it that it sighs there; and how long before each breath she knows it is coming, leans toward it
-     * (radians) and points.
+     * Seconds the cygnet peeks out of the satchel at its first breath in the haze; seconds after the boat is led in
+     * near enough for each sigh in the mist that it comes; and how long before each breath she knows it is coming,
+     * leans toward it (radians) and points.
      */
-    peekFor: 2.5, leadSigh: 4, knowsFirst: 1.2, knowsLean: 0.32,
+    peekFor: 2.5, leadSigh: 2, knowsFirst: 1.2, knowsLean: 0.32,
     /**
      * Free, the view eases out over `releaseMove` seconds in one move from the flipper's hold to the release's, still low
      * enough that its back stands against the sky: `releaseDistance` behind the boat, `releaseHeight` up and
@@ -1527,12 +1527,10 @@ export const tuning = {
      */
     hushFrom: 70, hushNear: 8, hushSorrow: 0.9, hushCourage: 0.45, hushEase: 0.3,
     /**
-     * Found in the mist rather than seen: it sighs unseen once the boat is `heardAt` metres short of the rest, and its
-     * blow stands up over the mist from `seenAt`, each `leadSigh` seconds on. Its long shape forms out of the mist as an
-     * island in the haze, `lostFar` of the way lost in the low sky from `lostOut` to `lostFrom` metres short of the rest
-     * and none by `lostNear`, eased at `lostEase` a second; while the mist still covers it, none, or the haze would show it.
+     * Found in the mist rather than seen: it sighs unseen as the pod turns the boat toward it, and its blow stands up
+     * over the mist once the boat is `seenAt` metres short of the rest, each `leadSigh` seconds on.
      */
-    heardAt: 160, seenAt: 125, lostFar: 0, lostOut: 150, lostFrom: 110, lostNear: 25, lostEase: 0.6,
+    seenAt: 120,
     /** How far ahead of the bow the pod runs while it leads the boat in (m). */
     podLead: 18,
     /**
@@ -1684,15 +1682,16 @@ export const tuning = {
      * How far along the route the first leap may begin: the sleeping island's night lifts only once it is well
      * astern (its palette clears 110 to 150 units from the hollow), and the leap belongs to the first light.
      */
-    leapFrom: 0.28,
+    leapFrom: 0.265,
     /**
      * Where along the route the pod says goodbye, and about how long its play takes from `leapFrom`: the leap, the
-     * swim and the nudge. A boat ahead of that is eased toward it, never below `leastSpeed`, ordinary sailing. Only a
-     * pod still playing past `farewellAt` slows it further, to `holdSpeed` by `holdAt`. The cap eases down at
-     * `limitEase` a second. Where a whale waits, the pod's line runs to where it leads the boat off toward it.
+     * swim and the nudge, which can come a few seconds late. A boat ahead of that is eased toward it, never below
+     * `leastSpeed`, ordinary sailing, and kept to that until the nudge. Only a pod still playing past `farewellAt`
+     * slows it further, to `holdSpeed` by `holdAt`. The cap eases down at `limitEase` a second. Where a whale waits,
+     * the pod's line runs to where it turns the boat off toward it, `holdAt` of the way along.
      */
     farewellAt: 0.86,
-    playFor: 41,
+    playFor: 45,
     /** The most the boat makes as it leaves the island, from which it settles by `leapFrom` into the pod's pace. */
     openSpeed: 5.5,
     leastSpeed: 4.5,
@@ -1713,14 +1712,14 @@ export const tuning = {
      * The whale's lead: how far the boat sails in toward it once the pod has turned it off its line (m), and the time
      * of day at rest beside it, which every hold there is lit for.
      */
-    leadFor: 140, restDusk: 1.224,
+    leadFor: 128, restDusk: 1.224,
     /**
      * The morning mist on the open sea: it thickens through the pod's play to `haze` with its veil `falloff` times as
      * deep, so by the nudge the sea is seen only a couple of hundred metres round; it thins to `restHaze` and
      * `restFalloff` from `clearFrom` to `clearAt` metres short of the rest, clear of the whale's far length, and lifts
      * as the whale dives.
      */
-    mist: { haze: 1.064, falloff: 1.18, restHaze: 0.985, restFalloff: 1.05, clearFrom: 80, clearAt: 30 },
+    mist: { haze: 1.064, falloff: 1.3, restHaze: 0.985, restFalloff: 1.05, clearFrom: 80, clearAt: 30 },
   },
   /** The pod that runs with the boat on the long crossing, and the two set-pieces it plays. */
   dolphins: {

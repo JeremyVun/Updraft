@@ -719,10 +719,13 @@ export class CrossingChapter implements Chapter {
       if (this.playFrom === null) {
         limit = Math.min(limit, THREE.MathUtils.lerp(k.openSpeed, pace, THREE.MathUtils.smoothstep(progress, 0, k.leapFrom)));
       } else {
+        // Its play over, the pod is still to nudge the boat: it keeps to ordinary sailing until it does, so the pod can
+        // still come alongside it.
         const left = this.playFrom + k.playFor - this.time;
-        if (ahead > 0 && left > 0) limit = Math.min(limit, Math.max(k.leastSpeed, ahead / left));
+        limit = Math.min(limit, ahead > 0 && left > 0 ? Math.max(k.leastSpeed, ahead / left) : k.leastSpeed);
       }
-      if (this.swim !== 'done' || !this.cast.sealife.dolphinFarewellReady) {
+      // Where a whale waits, a boat that reaches it before the pod has nudged it is led in all the same.
+      if (!this.whale && (this.swim !== 'done' || !this.cast.sealife.dolphinFarewellReady)) {
         limit = THREE.MathUtils.lerp(limit, Math.min(limit, k.holdSpeed), THREE.MathUtils.smoothstep(progress, k.farewellAt, k.holdAt));
       }
     }
