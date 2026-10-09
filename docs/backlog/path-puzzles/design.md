@@ -541,6 +541,16 @@ section (`drownedScore` returns `still` for `run`, `nave` and `church`), which i
 > - And then suddenly, when you get into the boat after climbing down from the bellfry tower, the cat is on the roof?
 >   how did it go from sleeping to coming down somehow
 
+> - (asked whether the lead sees where the complaints come from) From the perspective of the camera port, which is
+>   what the player sees, it lacks cohesion. The player doesn't see what is outside the camera
+
+**The room is what the lens shows** (Claude's reading of that, the spec from here on): the room is authored as a
+storyboard, the sequence of frames the player sees, not as a world the lens visits. Before each puzzle one frame
+lays out where she is, what is in the way and where she must get to; each frame hands on to the next (her look, the
+cat ahead, the fog behind carried across); every story beat (the cat leaving the kittens, the boat drifting off)
+happens in frame or did not happen. The room's storyboard, a frame every 2 s of a real run with its beat, is read
+as a stranger reads a comic, and every break in it goes on the list below.
+
 **His rule for every interaction frame** (binding on all of them): judge the puzzle as a first-time player sees it
 through the lens. The thing the player acts on and the drawn gust must both be plainly in frame, and so must what
 the action is for (where the tub goes, where the tree falls, what the bell answers).
