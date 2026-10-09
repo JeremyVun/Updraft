@@ -20,18 +20,26 @@ export type SheetEvent = SheetSound | 'land';
 export const SHEET_SOUNDS = { fill: 'sail', sag: 'sail-settle', flap: 'linen-flap', land: 'slate-land' } as const satisfies Record<SheetEvent, MaterialSound>;
 
 /**
- * Hanging, her mittens close in front of her face (higher, the big hood swallows them): how far below them her feet
- * are, and how far behind them her body hangs (m).
+ * Hanging from the middle of the hem, her mittens close in front of her face (higher, the big hood swallows them): how
+ * far below them her feet are, and how far behind them, along the way she faces, her body hangs (m). Waiting under it,
+ * the slack hem hangs just over her hood, `REACH` over her feet, for her to reach up to.
  */
 export const HANG = 1.93;
-export const UNDER = 0.33;
+export const UNDER = 0.2;
+const REACH = 2.25;
 
-/** Where her mittens close on the trailing edge at the start of the ride, and where they are at its end, past each gable (m). */
-const TAKE_FROM = 0.04;
+/**
+ * Where her mittens close on the middle of the hem at the start of the ride, just short of her gable, the sheet hanging
+ * out over the lane; and where they are at its end, past the far gable (m).
+ */
+const TAKE_FROM = -0.3;
 const LET_GO = 0.62;
 /** Where she waits, a reach short of the trailing edge at her gable; and where her feet come down past the far one (m). */
 export const SHEET_WAIT = TAKE_FROM - UNDER;
 export const SHEET_OFF = 0.36;
+/** Her mittens either side of the gathered hem, and the highest she reaches for it standing, over her feet (m). */
+const GRIP = 0.07;
+const STRETCH = 2.12;
 
 /**
  * A sheet's line over a lane, laid level along `along` from `edge` (the end of her ridge at its gable, at the ridge's
@@ -47,16 +55,16 @@ export function sheetLine(edge: THREE.Vector3, along: THREE.Vector2, lane: numbe
   let from = new THREE.Vector3(), to = new THREE.Vector3(), start = 0, stop = 0;
   let sagS = 0.07, sagE = 0.05;
   for (let i = 0; i < 4; i++) {
-    const s = at(TAKE_FROM, edge.y + HANG + HOLD_DROP + sagS);
+    const s = at(TAKE_FROM, edge.y + REACH + HOLD_DROP + sagS);
     const e = at(lane + LET_GO, far + 0.28 + HANG + HOLD_DROP + k.holdDip + sagE);
     const rise = (e.y - s.y) / (lane + LET_GO - TAKE_FROM);
     from = at(-back, s.y + rise * (-back - TAKE_FROM));
     to = at(lane + beyond, s.y + rise * (lane + beyond - TAKE_FROM));
     const L = from.distanceTo(to);
-    start = from.distanceTo(s);
-    stop = L - from.distanceTo(e) - (SHEET.rings - 1) * SHEET.bunch;
+    start = from.distanceTo(s) - SHEET.length / 2;
+    stop = L - from.distanceTo(e) - ((SHEET.rings - 1) / 2) * SHEET.bunch;
     const sag = (d: number) => k.slack * L * 4 * (d / L) * (1 - d / L);
-    sagS = sag(start);
+    sagS = sag(from.distanceTo(s));
     sagE = sag(from.distanceTo(e));
   }
   return { from, to, start, stop };
@@ -128,9 +136,9 @@ export class SheetCrossing {
     return this.valveOn;
   }
 
-  /** Off her feet and in the sheet's keeping. */
+  /** Off her feet and in the sheet's keeping: from the moment it takes her weight. */
   get hanging(): boolean {
-    return this.phase === 'carried';
+    return this.phase === 'carried' || (this.phase === 'taking' && this.sheet.held);
   }
 
   reset(): void {
@@ -201,34 +209,45 @@ export class SheetCrossing {
       this.full = this.sheet.fill >= k.takeAt ? this.full + dt : 0;
       if (this.full >= k.takeFor && this.clear && !c.busy) this.take();
     } else if (this.phase === 'taking') {
-      this.reach();
-      if (this.t >= k.reachFor && Math.min(c.reached(0), c.reached(1)) > 0.97) {
-        this.sheet.held = true;
-        this.from.copy(c.position);
-        c.stop();
-        this.to('carried');
+      const turn = Math.atan2(Math.sin(this.facing - c.yaw), Math.cos(this.facing - c.yaw));
+      c.yaw += turn * Math.min(1, this.t * 6);
+      if (this.sheet.held) this.hang(dt);
+      else {
+        this.reach();
+        if (this.t >= k.reachFor && Math.min(c.reached(0), c.reached(1)) > 0.97) {
+          this.sheet.held = true;
+          this.from.copy(c.position);
+          c.stop();
+        }
       }
+      if (this.lift >= 1) this.to('carried');
     } else if (this.phase === 'carried') {
       this.carry(dt);
     }
   }
 
-  /** Round to face up the line, and both mittens up onto the trailing edge beside her face. */
+  /**
+   * Round to face up the line, and both mittens up onto the middle of the hem over her head; once she has it, the sheet
+   * takes her weight and lifts her off her feet before it runs.
+   */
   private take(): void {
     const c = this.cast.child;
     this.to('taking');
+    this.lift = 0;
     c.stop();
     c.lookAt = null;
     this.reach();
   }
 
+  /** Her mittens either side of the middle of the hem, as high as she can reach while she still stands; the hem gathered into them. */
   private reach(): void {
     const c = this.cast.child;
-    const turn = Math.atan2(Math.sin(this.facing - c.yaw), Math.cos(this.facing - c.yaw));
-    c.yaw += turn * Math.min(1, this.t * 6);
     this.sheet.hold(this.hands);
-    c.reachFor(0, this.at.copy(this.hands).setY(this.hands.y + 0.07));
-    c.reachFor(1, this.at.copy(this.hands).setY(this.hands.y - 0.07));
+    if (!this.sheet.held) this.hands.y = Math.min(this.hands.y, c.position.y + STRETCH);
+    const lx = Math.cos(c.yaw) * GRIP, lz = -Math.sin(c.yaw) * GRIP;
+    c.reachFor(0, this.at.set(this.hands.x + lx, this.hands.y, this.hands.z + lz));
+    c.reachFor(1, this.at.set(this.hands.x - lx, this.hands.y, this.hands.z - lz));
+    for (const hand of [0, 1] as const) c.mitten(hand, this.sheet.grips[hand]);
   }
 
   /**
@@ -237,7 +256,6 @@ export class SheetCrossing {
    */
   private carry(dt: number): void {
     const k = tuning.crossings.sheet;
-    const c = this.cast.child;
     const s = this.sheet;
     const want = s.travel >= s.end ? 0 : k.carry * THREE.MathUtils.smoothstep(Math.min(s.fill, this.gust), k.carryFrom, 1);
     this.speed += (want - this.speed) * (1 - Math.exp(-dt / k.coast));
@@ -247,8 +265,26 @@ export class SheetCrossing {
     this.lastSpeed = this.speed;
     this.swingSpeed += (-k.swingPull * Math.sin(this.swing) - accel / HANG - k.swingDamping * this.swingSpeed) * dt;
     this.swing += this.swingSpeed * dt;
+    this.hang(dt);
 
-    this.lift = Math.min(1, this.lift + dt / 0.35);
+    if (s.travel < s.end) {
+      this.endFor = 0;
+      return;
+    }
+    this.endFor += dt;
+    if (this.swingSpeed > 0.05) this.swungForward = true;
+    if ((this.swungForward && this.swingSpeed <= 0) || this.endFor > 1.2) this.letGo();
+  }
+
+  /**
+   * Under the middle of the hem, in front of the sheet on the side it is seen from, swinging under her hands; lifted
+   * there off her feet as it takes her, and turned partly toward the lens so her face is seen side on.
+   */
+  private hang(dt: number): void {
+    const k = tuning.crossings.sheet;
+    const c = this.cast.child;
+    const s = this.sheet;
+    this.lift = Math.min(1, this.lift + dt / k.liftFor);
     c.hang = 1;
     const toLens = Math.atan2(this.lens.x - c.position.x, this.lens.z - c.position.z) - this.facing;
     /** Coming in to the far roof she turns back to face where she is going, so she lands looking at it. */
@@ -266,14 +302,6 @@ export class SheetCrossing {
     const lift = THREE.MathUtils.smootherstep(this.lift, 0, 1);
     c.position.lerpVectors(this.from, this.at, lift);
     c.lookAt = s.travel < s.end - 1.2 ? s.middle(this.look) : this.look.copy(this.hands).addScaledVector(s.along, 2.5).setY(this.hands.y - 0.6);
-
-    if (s.travel < s.end) {
-      this.endFor = 0;
-      return;
-    }
-    this.endFor += dt;
-    if (this.swingSpeed > 0.05) this.swungForward = true;
-    if ((this.swungForward && this.swingSpeed <= 0) || this.endFor > 1.2) this.letGo();
   }
 
   /** Her mittens open at the top of the swing and she drops the last step onto the high roof. */

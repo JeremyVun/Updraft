@@ -2416,6 +2416,8 @@ export const tuning = {
        * over `coast` s. What carries her is the stroke itself: its gust ebbs over `gustFor` s, sooner than the cloth sags.
        */
       takeAt: 0.55, takeFor: 0.2, reachFor: 0.5, carry: 2.2, carryFrom: 0.3, coast: 0.3, gustFor: 0.8,
+      /** Seconds the sheet takes to lift her off her feet once she has hold of it, drawing its hem out to her. */
+      liftFor: 0.45,
       /** How her body swings under her hands as the sheet starts and stops (per second squared, per second). */
       swingPull: 14, swingDamping: 2.2,
       /** Hanging, how much of the way from up the line toward the lens she turns, so her face is seen side on. */
