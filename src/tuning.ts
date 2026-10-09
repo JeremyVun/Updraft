@@ -1999,7 +1999,7 @@ export const tuning = {
        * it; how hard it closes on where it is going (per second a metre), the slowest and fastest it comes on (m/s), and
        * how quickly it changes pace (per second), quicker while she looks back.
        */
-      fogTrail: 12, fogHold: { tree: 10, sheet: 8, mill: 18, swing: 12 }, fogEnd: 19, fogNearest: 7.5, fogLaid: 10,
+      fogTrail: 12, fogHold: { tree: 10, sheet: 8, mill: 18, swing: 12 }, fogEnd: 19, fogNearest: 7.5, fogLaid: 8,
       fogPull: 0.5, fogSlowest: 0.12, fogFastest: 3.2, fogEase: 0.9, fogLookedEase: 3,
       /** How near her the fog comes while she looks back at the boat, past the boat, so it takes the boat as she watches. */
       fogLooked: 5,
