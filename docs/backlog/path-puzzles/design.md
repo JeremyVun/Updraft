@@ -916,15 +916,18 @@ The sequence:
     `uMist`, whose thinning with height is keyed to the lower of the eye and the point, so with the lens low over the
     water its blow and its back were misted alike, and whose fog grows from the boat outward and would have misted
     the holds. The veil has a clear edge: by the nudge (`tuning.seaPassage.mist`, haze 1.064, its veil 1.3 times as
-    deep) nothing within about 70 m is touched and nothing past about 160 m shows; from 80 to 30 m short of the rest
-    it draws back to haze 0.985 (clear to about 130 m), so the holds and its far length keep their look; it lifts as
-    the whale dives. The whale's own haze silhouette (`uLost`) is no longer used: drawn over the veil, it showed the
+    deep) nothing within about 70 m is touched and nothing past about 160 m shows. From about 165 m short of the rest
+    its veil deepens so it is whole by the whale's head however near the boat has come (whole at about 140 m round
+    by the nudge), and from 120 m to the blow it eases back to that 1.3, so the whale is found by distance, not by
+    when the nudge came; from 80 to 30 m short of the rest it draws back to haze 0.985 (clear to about 130 m), so the
+    holds and its far length keep their look; it lifts as the whale dives. The whale's own haze silhouette (`uLost`) is no longer used: drawn over the veil, it showed the
     whale as a darker shape however far off it was, which is what Jeremy saw.
   - The whale lies far enough off the line to be out of sight until the lead, and near enough that the lead runs
     about 30 to 45 s at ordinary sailing. As built (N5a): the pod turns the boat about 34° to starboard, 128 m out
-    from the rest (`tuning.seaPassage.leadFor`); the nudge comes 115 to 160 m out (the pod's play ends when it
-    does, so its nudge comes when it comes), and from it to rest takes 33 to 44 s in the pacing check's seven runs
-    and about 32 s with the latest nudge seen in play.
+    from the rest (`tuning.seaPassage.leadFor`). The nudge is tied to a place: its leap and the swim done, the pod
+    sets off to nudge the boat only once it is 190 m short of the rest (`tuning.seaPassage.nudgeFrom`), swimming on
+    with it until then, so its nudge lands 127 to 152 m out (about 140) however long its play took, and from it to
+    rest takes 33 to 41 s. Only a play that runs later than that place (a slow first leap) nudges nearer.
   - At rest, its lie relative to the boat and to the low sun is exactly as built, and so is the time of day (the
     sun's bearing and height), so every hold carries over unchanged. As built (N5a): the boat comes in on the lead's
     heading, steering for a point 12 m on along its line so the wind's leeway never sets it off it, and the dawn is
@@ -940,8 +943,9 @@ The sequence:
   most (`Boat.speedLimit` eased to zero, never braked). As built (N5a): the pod's play is paced at ordinary sailing
   (`leastSpeed` 4.5) and the boat is kept to that from the end of its play until the nudge, so the pod can come
   alongside a gusting boat; where a whale waits the boat is never held back for a late pod (a boat that reaches it
-  first is led in all the same). Led in, and sailing on after, it makes no more than the pod's pace
-  (`tuning.netWhale.leadSpeed` 5.5). Coming in, its limit takes way off at 1.2 m/s² (`slowing`) until the hull's own
+  first is led in all the same). Led in, it keeps to about ordinary sailing however hard the player blows
+  (`tuning.netWhale.ledSpeed` 4.7), so the lead takes about as long gusting or not; sailing on after, it makes no more
+  than the pod's pace (`leadSpeed` 5.5). Coming in, its limit takes way off at 1.2 m/s² (`slowing`) until the hull's own
   carry takes it the rest of the way: the last 20 m take 8.5 to 8.8 s to under 0.3 m/s (the carry alone needs about
   7 s from 4.5 m/s, so this is close to the least there is), never losing way faster than 0.85 m/s².
 - **The pod leads, and the whale is found.** After the swim a dolphin nudges the planking (main's nudge, now asking)
@@ -1062,7 +1066,9 @@ The sequence:
   - Each step asks for a few seconds of play: about two loops of circles, or one to three strokes.
   - The valve after about 90 s without progress stays.
   - As built (N5b): a step is asked once the camera is most of the way into its hold, and its sweep is drawn half a
-    second later, sized to the frame along the way the help goes and drawn by the whale itself (`net.gesture`), so
+    second later, sized to the frame along the way the help goes (the eye's to the fold over it, from just under its
+    lower edge to the edge it hangs from and fading on over the brow, so it lies on the fold, not in the sky) and drawn
+    by the whale itself (`net.gesture`), so
     the other rooms' sweeps are unchanged; the spiral over the blowhole is the shared one, drawn bolder. Each step's
     area reaches a quarter to a third of the frame's height out round its target, so on the landscape frame it covers
     about the near half of the scene, and strokes across the far side of the frame do nothing.
@@ -1087,7 +1093,9 @@ The sequence:
 - **3. The line (a sweep at the cork).** A line of corks trails from the net across the water by the boat. Any
   stroke across the near cork or the line behind it brings the cork toward her (the stroke's direction only bends
   its path), and she leans out and catches the line in both mittens. Hands just outside the rail; she leans, never
-  hangs out.
+  hangs out. As built (sea-catch): the cork is drawn the last way in along the side to the planking under her outer
+  mitten, and she takes the line once it lies there, judged from the boat and never from where the wind has put her
+  mittens; after 4 s leaning out she takes it wherever it lies.
 - **4. The heave (sweeps with her pulls).** She hauls, but the net is heavy and caught on the knobs of its head; she
   leans back and it will not come. Each stroke over the net on its head, or over the water between the head and the
   boat, in any direction, billows the mesh up off the head like a sheet in the wind. While it is up she hauls a long
@@ -1096,7 +1104,11 @@ The sequence:
   drawn sweep runs from the head toward her; each heave is one lift in the score. This is everyone pulling together,
   as on the river spirit's thorn. As built (N5b): each stroke that lands asks for one heave, and one kept going over
   the head asks for another every ordinary stroke's length; heaves asked for while she hauls follow in turn, so no
-  stroke is lost and four ordinary strokes bring the net off.
+  stroke is lost and four ordinary strokes bring the net off. As built (Claude's call, 2026-10-10, from the frames
+  pass: the N5b billow was a modest lift at the crown that fell in a fifth of a second): each heave's billow is the
+  biggest thing moving on screen, the sheet bellying up to 3 m off the head and out toward her, highest on the upper
+  near flank so it stands against the gold sky, rippling toward the boat; it rises at once with the stroke, stays up
+  while she draws and settles as she braces, and the belly stays over the head as the net slides through it.
 - **5. The flipper (any stroke at the flipper or the bird).** The last loop is round the near flipper, out of her
   reach. The cygnet, which swam earlier in this chapter, goes in, swims to it and takes the loop's end in its bill.
   The drawn strokes go up along the flipper from the moment it holds the end. A stroke anywhere near the flipper or the
@@ -1203,7 +1215,8 @@ The sequence:
 - **Invitations and valves.** Each step's drawn gesture shows the moment it is asked (see "What every step keeps"),
   and a safety valve comes after about 90 s with no progress, with a cause on screen: a dolphin lifts the mesh with
   its nose, noses the fold off its eye, noses the cork to the boat, nudges the net over its head, nudges the flipper.
-  No gull. Nothing is timed, nothing fails.
+  No gull. Nothing is timed, nothing fails, and nothing waits forever: what the encounter does on its own (her
+  reach for the cork, each leg of the cygnet's swims) goes on after a few seconds whatever snags it.
 - **Camera.** The crossing camera eases (never jerks, never cuts, no reverse angle or underwater shot) from the rear
   view in `k1` to a hold beside the boat for the breath (`k2`), then the look's hold for the eye (the fold over it is
   the target, so its eye, her figure and the drawn sweep are all in that frame), then closer and lower for the line,
@@ -1228,8 +1241,9 @@ The sequence:
   three-quarters from behind her left shoulder at the frame's right third, the sail behind her at the right edge,
   its eye large at the left across clear water and the whale's back against the gold sky. Her face stays inside her
   hood from behind, as the owl's frame has it; what reads is her small figure turned to the eye with a mitten raised
-  toward it. A phone's stands 4.8 m back and 2.2 up, turned −0.55, her seated in the boat under its eye with the
-  mitten up beside her hood. Backlit by the low sun she would read as a dark lump, so the held frames lend her light of their own
+  toward it. A phone's stands 9.5 m back and 2.8 up, turned −0.35, looking a third of the way to its eye 3.4 m up: the
+  whole boat and her small seated figure at the right, its eye large above at the left over clear water, the sail
+  behind her at the right edge. Backlit by the low sun she would read as a dark lump, so the held frames lend her light of their own
   (`Traveller.lent`, only while they hold): the sun along her outline where it turns toward it, the lantern wrapped
   round her face and side, a lift in her shade so her coat stays yellow. The encounter composes its holds itself
   (`Shot.authored`): any turn the lens chose for the approach eases out, so they frame the same however the boat came
@@ -1238,17 +1252,32 @@ The sequence:
   the boat whole above the bottom edge and her waving arms against the sky or the sun's glow, never lost against the
   sail. As built (N5c): the release holds its eye and the waving flipper's tip in the frame as well as the plume (the
   framing's subjects), so its eye stays on her in frame from the spout until its head goes under, in both orientations.
-  The landscape farewell sits low (1.2 m), 24 m behind the boat and 0.85 round to port, looking 15 m up: the sun at the
+  As it dives what the release keeps in frame stays above the sea where it went down (`releaseWater`), and its eye
+  and flipper let go as its head goes under (`releaseUnder`), so the move to the farewell is one ease that never
+  drags the lens down to its 1 m floor (the frames as approved had sat on that floor, backed off 4 m by the dip).
+  The landscape farewell sits low (1.9 m, the lens's breathing never bringing it to its floor), 28 m behind the boat
+  and 0.78 round to port, looking 16.8 m up: the sun at the
   left, the flukes standing in the middle over a back awash, the boat whole at the right with the sail clear of the
   stock. The sun stands left of the flukes rather than between the stock and the sail: the bend lies further to
   starboard than the sun, so no view from behind the boat holds them that way round. As it dives she turns to where it goes down, goes along the
-  thwart to the port rail and waves with both arms up in a wide V, her back to the view. A phone's stands 24 m behind
-  and 1.2 m up on the line from where it goes down through the boat, turned −0.45, looking 22 m up: the flukes whole
+  thwart to the port rail and waves with both arms up in a wide V, her back to the view. A phone's stands 28 m behind
+  and 1.9 m up on the line from where it goes down through the boat, turned −0.4, looking 25 m up: the flukes whole
   over the boat, the sail beside the stock rather than in front of it, the sun at the left edge as they rise.
   Once it has gone the view goes back to the crossing's in one long even ease as the boat sails on toward the
-  mirror coming out of the mist. A phone's frame is too narrow (31° across) to hold the head and the sun together, so its holds look along the line from what matters
+  mirror coming out of the mist; moored at its jetty, the mirror's own view eases out of the one the boat came in under over `skyMirror.arriveFor`
+  (7 s), carried with the boat until it has come alongside, so the jetty is never swung onto. The eye's drawn sweep is
+  never shorter than `eyeSweepLeast` (0.75 screen half-heights) about the fold's middle and `eyeSweepBold` (5) times as bold. A phone's frame is too narrow (31° across) to hold the head and the sun together, so its holds look along the line from what matters
   through the boat, each with its own distance, height and turn, stacking boat, step and head up the frame; the
-  cygnet's is turned toward astern so the bird stands clear of the sail above the boat (`k2-portrait`).
+  cygnet's is turned toward astern so the bird stands clear of the sail above the boat (`k2-portrait`). As found in
+  the frames pass (Claude's call, 2026-10-10): the line's and the heave's phone hold stands 9 m back and 3.2 up,
+  turned −0.45, looking a third of the way to its eye 3 m up, so the boat, sail and all, stands whole at the right
+  with her mittens and the cork, the eye and the net on its head at the left; the landscape flipper hold looks 0.78 of the way to the flipper and the bird, so its eye stands large at the left
+  and the shortened back runs out of the frame at the right before its end shows; the phone's flipper hold stands 11.5 m back and
+  3.2 up, turned −1.1 toward astern, looking 0.6 of the way to the bird 4 m up, so the flipper lifts side-on between
+  the bird at the left and her in the whole hull at the right, the eye above, the gold sky over the back and the
+  sail cut by the right edge. On a phone these holds keep the hull (and in the haul its sail) inside the framing.
+  From astern the bird stays small on a phone: it holds the loop's end about 4 m from her, and any frame holding
+  both side by side fixes its size by that.
 - **Reward.** Freeing the whale is the open sea's major conclusion, so the reward phrase (`completeObjective()`) plays
   as it spouts free.
 - **Pacing.** The mirror stays hidden in its isle mist until the whale has dived (see "Where it lies"; this replaces
