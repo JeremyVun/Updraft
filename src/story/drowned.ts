@@ -212,7 +212,7 @@ export class DrownedChapter implements Chapter {
     /** Down from the stairs the room begins on the drift's last leg, the cat's roof ahead; older saves sail the whole channel. */
     if (onLastLeg(boat.position.x, boat.position.z)) this.leg = TO_STRAND;
     boat.steerFor = PASSAGE[this.leg];
-    boat.speedLimit = tuning.drowned.cat.sailSpeed;
+    boat.speedLimit = this.leg === TO_STRAND ? tuning.drowned.cat.sailSpeed : tuning.storm.passageSpeed;
     this.startLeft = this.leftToStrand();
     boat.canGround = false;
     boat.grounded = false;
@@ -420,6 +420,7 @@ export class DrownedChapter implements Chapter {
     if (sailing && !stranding && !STORM_WAY[this.out] && this.leg < PASSAGE.length - 1 && roundedWaypoint(boat.position.x, boat.position.z, from.x, from.y, wp.x, wp.y, ROUNDED)) {
       this.leg++;
       boat.steerFor = PASSAGE[this.leg];
+      if (this.leg === TO_STRAND) boat.speedLimit = tuning.drowned.cat.sailSpeed;
     }
     boat.canGround = this.leg === PASSAGE.length - 1 && this.beat === 'after';
   }

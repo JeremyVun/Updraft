@@ -2037,7 +2037,7 @@ export const tuning = {
     /** The stranded cat, the tub's two trips, and the cat's bolt from the bow when the dark has come on. */
     cat: {
       /**
-       * The most the boat sails at on its way in to the cat, m/s; she notices it this far from the place the boat waits;
+       * The most the boat sails at on the drift's last leg, making for the cat, m/s; she notices it this far from the place the boat waits;
        * how hard the boat slows into it, m/s².
        */
       sailSpeed: 2.8, seeFrom: 70, holdBrake: 0.42,
