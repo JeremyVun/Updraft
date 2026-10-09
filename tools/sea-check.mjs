@@ -1,6 +1,7 @@
 // Capture the complete sea passage with real simulation and verify the swimmer's framing, then the whale in the net:
-// the pod's lead, the rest beside its head, real circles over the blowhole (the stand-in for the net's first step),
-// its eye, the spout, the flukes and the arrival at the mirror.
+// the pod's lead into the mist, the whale heard there, its blow seen and its shape coming out of it, the rest beside
+// its head, real circles over the blowhole (the stand-in for the net's first step), its eye, the spout, the flukes
+// and the arrival at the mirror.
 // Usage: node tools/sea-check.mjs [out-prefix]. BASE selects a stable dev server; W/H select the viewport.
 // Reuses play.mjs's machine-wide GPU lock. All captures belong in /tmp.
 import { spawn } from 'node:child_process';
@@ -49,6 +50,9 @@ const steps = [
   wait("__game.story.current.swim==='done'"), { shot: 'together' },
   { eval: `(() => {const s=window.seaLog;if(!s.swimFrames||s.clipped>0||s.maxGap>11.5)throw Error(JSON.stringify(s));return s;})()` },
   wait(`${whale}.led`, 60), { shot: 'lead' },
+  { wait: 3000 }, { shot: 'heard' },
+  wait(`${whale}.sighs>=2`, 40), { wait: 3500 }, { shot: 'blow' },
+  wait(`${whale}.remaining()<60`, 40), { shot: 'shape' },
   wait(`${whale}.step==='breath' && ${whale}.stepTime>3`, 90), { shot: 'beside' },
   { circle: blowhole, until: `${whale}.progress>=1`, radius: 0.06, seconds: 60 },
   { move: [0.98, 0.04] },

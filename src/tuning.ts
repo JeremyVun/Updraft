@@ -1528,9 +1528,10 @@ export const tuning = {
     hushFrom: 70, hushNear: 8, hushSorrow: 0.9, hushCourage: 0.45, hushEase: 0.3,
     /**
      * Found in the mist rather than seen: it sighs unseen as the pod turns the boat toward it, and its blow stands up
-     * over the mist once the boat is `seenAt` metres short of the rest, each `leadSigh` seconds on.
+     * over the mist once the boat is `seenAt` metres short of the rest and at least `seenAfter` seconds on, each
+     * `leadSigh` seconds after that.
      */
-    seenAt: 120,
+    seenAt: 120, seenAfter: 6,
     /** How far ahead of the bow the pod runs while it leads the boat in (m). */
     podLead: 18,
     /**

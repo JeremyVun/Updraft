@@ -172,8 +172,9 @@ export class NetWhale {
   hush = 0;
   /** The pod has nudged the boat and now leads it; from here the encounter says where the dolphins run. */
   led = false;
-  /** How many times it has sighed in the mist ahead as the boat is led in: heard, then its blow seen. */
+  /** How many times it has sighed in the mist ahead as the boat is led in, heard and then its blow seen, and when it was heard. */
   private sighs = 0;
+  private heard = 0;
   /** How far the patch of net over the blowhole has been lifted clear by circling, or by the valve's dolphin, 0..1. */
   progress = 0;
   /** What lifted it: the player's circles, or the dolphin sent once nothing had for a long while. */
@@ -511,9 +512,11 @@ export class NetWhale {
     this.still = resting ? this.still + dt : 0;
     if (this.step === 'approach' && this.still > 1) this.goTo('breath');
     // As the pod turns the boat toward it, it is heard in the mist ahead; then, nearer, its blow stands up white over it.
-    if (this.led && this.step === 'approach' && this.sighs < 2 && (this.sighs === 0 || left < K.seenAt)) {
+    if (this.led && this.step === 'approach' && this.sighs < 2
+      && (this.sighs === 0 || (left < K.seenAt && this.clock - this.heard > K.seenAfter))) {
       // A breath just gone serves for its blow: it never breathes twice in a moment.
       if (this.sighs === 0 || whale.untilSigh < K.breathEvery - K.leadSigh) whale.sighIn(K.leadSigh);
+      if (this.sighs === 0) this.heard = this.clock;
       this.sighs++;
     }
     if (this.step === 'breath') this.breathe(dt);
