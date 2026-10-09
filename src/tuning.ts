@@ -2109,7 +2109,7 @@ export const tuning = {
        * it before that costs, and what each share of the frame it stands further out, each metre further off, and a
        * roof between them cost.
        */
-      catLean: 0.4, catLeanRate: 1.2, catEdge: 0.78, catAhead: 8, catFar: 13, catOutCost: 300, catFarCost: 30, catHiddenCost: 200,
+      catLean: 0.35, catLeanRate: 1.2, catEdge: 0.86, catAhead: 7, catFar: 14, catOutCost: 300, catFarCost: 10, catHiddenCost: 200,
       /** How far it keeps off the side of a house, wall or chimney it stands lower than the top of, and over a chimney, metres. */
       clearOf: 1.6,
       /**
@@ -2158,13 +2158,16 @@ export const tuning = {
       /** How far past each piece the lens has given it back to her own way, metres. */
       leave: { tree: 2, sheet: 0, mill: 2, swing: 3 },
       /**
-       * The views laying out the mill and the swing as she comes to them, as [east, up, south] metres from where she
-       * waits at each (landscape, then upright): from how far along her way before it (metres) they come in, and how
-       * quickly (per second), until the piece's own view takes over.
+       * The views laying out the mill and the swing as she comes to them: from how far along her way before each (metres)
+       * they come in, and how quickly (per second), until the piece's own view takes over; where they stand and look, as
+       * [east, up, south] metres (landscape, then upright) from where she waits at the mill, and for the swing from her
+       * as she goes, over the fog coming on behind her, never higher than `top`, and where it looks once she has stopped
+       * to look at the swing.
        */
       approach: {
         mill: { from: 12.3, rate: 0.7, eye: [-7.8, 7.8, 20], at: [1.2, 5.3, -1], uprightEye: [-5.5, 6.8, 15], uprightAt: [0.8, 5.6, -1] },
-        swing: { from: 3.9, rate: 0.9, eye: [-9, 5.6, -2.3], at: [-0.6, 2.9, 0.2], uprightEye: [-8, 5.2, -2], uprightAt: [-0.4, 3.2, -0.4] },
+        swing: { from: 20, rate: 0.7, track: true, top: 8.6, eye: [3, 4.6, 11], at: [-3, 1.2, -1], uprightEye: [2.2, 4.8, 9], uprightAt: [-2, 1.6, -1],
+          lookAt: [-1.5, 1.6, -2.5], uprightLookAt: [-1.2, 2.2, -2.2] },
       },
       /**
        * Her look back from the first roof's end: how strongly it holds the lens, how quickly it comes and goes (s) and

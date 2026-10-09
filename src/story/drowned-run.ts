@@ -320,7 +320,7 @@ function* layLens(nodes: readonly Node[], obstacles: readonly THREE.Box3[], upri
   const SHARES = [1, 0.82, 0.66, 0.52, 0.4];
   const ARC = 2.4, BEARINGS = 33, TURNS = 5;
   const held = nodes.flatMap((n, i) => (n.by === 'walk' || n.by === 'hop' ? []
-    : [[nodes[i - 1].s - 0.7 * (k.approach[n.by as keyof typeof k.approach]?.from ?? 0), n.s]]));
+    : [[nodes[i - 1].s - (k.approach[n.by as keyof typeof k.approach]?.from ?? 0), n.s]]));
   const steps: { want: number; along: number; lift: number; free: boolean; anchor: { bearing: number; weight: number } | null }[] = [];
   for (let s = 0; s <= total + LENS_STEP; s += LENS_STEP) {
     wayAt(nodes, s - k.behind, a);
@@ -1257,18 +1257,22 @@ export class RoofRun {
   }
 
   /**
-   * Where the last of her way to a piece is seen from, set off from where she waits for it: the mill from over the fog
-   * behind her as she goes up the wall toward it, the hoist, the sails and the bell tower beyond; the swing from beyond
-   * its board as she stands at the top of the slope down to it, the rope, the nave she will let go onto and the cat
-   * waiting there, the fog behind her.
+   * Where the last of her way to a piece is seen from: the mill from over the fog behind her as she goes up the wall
+   * toward it, the hoist, the sails and the bell tower beyond; the swing from over the fog coming on behind her as she
+   * goes along the green cottage's ridge, the cat and the swing ahead of her, and once she stops at the top of the
+   * slope, the swing, the nave she will let go onto and the bell tower beyond her.
    */
   private approachView(piece: Piece, wide: number): void {
     const a = tuning.drownedCamera.run.approach[piece as keyof typeof tuning.drownedCamera.run.approach];
-    const at = PIECES[piece].wait, lerp = THREE.MathUtils.lerp;
+    const from = 'track' in a ? this.cast.child.position : PIECES[piece].wait, lerp = THREE.MathUtils.lerp;
     const set = (wideAt: readonly number[], uprightAt: readonly number[], out: THREE.Vector3) =>
-      out.set(at.x + lerp(uprightAt[0], wideAt[0], wide), at.y + lerp(uprightAt[1], wideAt[1], wide), at.z + lerp(uprightAt[2], wideAt[2], wide));
+      out.set(from.x + lerp(uprightAt[0], wideAt[0], wide), from.y + lerp(uprightAt[1], wideAt[1], wide), from.z + lerp(uprightAt[2], wideAt[2], wide));
     set(a.eye, a.uprightEye, this.stationEye);
     set(a.at, a.uprightAt, this.stationTarget);
+    if ('top' in a) this.stationEye.y = Math.min(this.stationEye.y, a.top);
+    if ('lookAt' in a && this.lookingSwing >= 0) {
+      this.stationTarget.lerp(set(a.lookAt, a.uprightLookAt, this.tmp2), THREE.MathUtils.smoothstep(this.lookingSwing, 0, tuning.drowned.run.lookSwingFor));
+    }
   }
 
   private view(piece: Piece, wide: number): void {
