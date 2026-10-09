@@ -2179,10 +2179,11 @@ export const tuning = {
        * end, the barn's gable and the cat waiting on it all stand in the frame, the tree falling across it and the fog
        * beyond; its lens, a little wide to hold the tree; upright, its own. Once she is
        * `treeRoundFrom` of the way up the trunk it goes round to the sheet's view over `treeRoundFor` seconds, drawn
-       * toward the two places in `treeRound`: south of the old tree's trunk, and over the far end of the high roof.
+       * toward the two places in `treeRound`: south of the old tree's trunk, and over the far end of the high roof, high
+       * enough that the far chimney passes under her as it crosses the line to her.
        */
       treeEye: [14.8, -4.4, 5.2], treeAt: [4.6, 0.2, 4.7], uprightTreeEye: [14.0, -3.6, 4.8], uprightTreeAt: [4.6, 0.6, 3.7], treeZoom: 0.87, uprightTreeZoom: 0.86,
-      treeRound: [[13.0, 1.2, 6.0], [12.8, 10.8, 7.8]], uprightTreeRound: [[9.9, -3.0, 5.1], [3.5, -0.9, 4.8]],
+      treeRound: [[13.0, 1.2, 7.2], [12.8, 10.8, 8.8]], uprightTreeRound: [[9.9, -3.0, 5.1], [3.5, -0.9, 4.8]],
       treeRoundFrom: 0.1, treeRoundFor: 8,
       /**
        * The sheet's view, from her gable's end: which side of the line it stands (+1 the left looking up it); where it
