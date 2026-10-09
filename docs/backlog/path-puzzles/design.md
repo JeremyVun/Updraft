@@ -671,11 +671,21 @@ much noise too often."
 23. The sheet through her head: waiting at the near chimney, the sheet hangs low enough off the line that its lower
     edge passes through her hood. Fix: the sheet never intersects her; it hangs clear above her or she stands clear of it.
 24. She lands from the sheet in mid air on the far roof. Fix: her feet on the slates when she lets go and lands.
-25. Right after the mill the lens dollies round the wrong way and the cat leaves the frame (likely the reported swoop
-    coming off the mill's north view). Fix: one move on toward where she and the cat go, the cat kept in frame.
+25. ~~The lens off the mill~~ (`proto-drowned-fix-millexit`: the mill's view hands straight to the swing's approach as she
+    steps out at the hoist's top, never falling back to the walking lens between; one 11 s move round her right, drawn
+    in behind her along the granary's ridge so it passes between her and the old tree, behind her shoulder while she
+    looks back down at the fog (9 s, was 6.6) with the cat waiting below, and on to her side as she goes west after it;
+    the look leans to the cat and widens to 0.8, so the cat is in frame throughout, was out about 6 s; the lens peaks at
+    6 m/s, was 10). Was: right after the mill the lens dollies round the wrong way and the cat leaves the frame. Left
+    for his play: it still goes round her about 160 degrees, the only way to her side the fog is seen from (the mill
+    and its sails stand on the other side, and from the mill's side the old tree's crown blocks the way to the swing's
+    view).
 26. The cat's and kittens' sounds have no call marks. Fix: every mew, purr or call from the cat or a kitten shows the
     cygnet's call marks (`src/fx/call-marks.ts`) at the one that made it.
 27. The kittens are too noisy. Fix: fewer and sparser kitten sounds, each one meaning something.
+28. ~~The fog flickering on the swing~~ (`proto-drowned-fix-millexit`: the fog turned to face her as she swung to and fro,
+    its front sweeping about 20 degrees each way every swing; while she boards and swings it faces where she got on,
+    so its front only drifts as it comes on). Was: on the swing the fog flickers in and out of the frame quickly.
 
 ### The room rethought (Claude, 2026-10-08; Jeremy: "yea lets see how this works")
 
