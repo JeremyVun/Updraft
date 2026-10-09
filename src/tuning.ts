@@ -1966,9 +1966,9 @@ export const tuning = {
       setOff: 1.2, stroll: 1.05,
       /**
        * Seconds she stands on the granary's ridge looking back down at the fog, and at the top of the slope down to the
-       * swing's board looking at the swing.
+       * swing's board looking at the swing; and of the first that she spends turning to her way before she goes on.
        */
-      lookDownFor: 6, lookSwingFor: 4.2,
+      lookDownFor: 6, lookSwingFor: 4.2, turnOn: 1,
       /** The beat she takes before a hop of her own; within `through` of a turn gentler than `bend` (radians) she walks on through it. */
       hopPause: 0.3, through: 1.1, bend: 0.4,
       /**

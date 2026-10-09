@@ -766,9 +766,10 @@ export class RoofRun {
     }
     if (this.lookingDown >= 0 && this.lookingDown < k.lookDownFor) {
       this.lookingDown += dt;
-      const fog = this.fogFront(this.look);
-      c.faceToward(fog.x, fog.z, 1 - Math.exp(-dt * 3));
-      c.lookAt = fog.setY(c.position.y - 2);
+      /** She turns to her way before she goes on, so she never sets off turning toward the lens behind her. */
+      const fog = this.fogFront(this.look), on = this.pointAt(this.along + 3, this.tmp), turning = this.lookingDown > k.lookDownFor - k.turnOn;
+      c.faceToward(turning ? on.x : fog.x, turning ? on.z : fog.z, 1 - Math.exp(-dt * 3));
+      c.lookAt = turning ? null : fog.setY(c.position.y - 2);
       if (this.lookingDown >= k.lookDownFor) {
         c.lookAt = null;
         this.go();
