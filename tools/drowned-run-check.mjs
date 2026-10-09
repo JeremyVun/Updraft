@@ -750,10 +750,9 @@ try {
         } else w.fogGoneRun = 0;
         /**
          * The cat on her own way: in the frame, clear of the roofs and big enough to read as a cat (but while she looks
-         * back at the boat or down at the fog, where the lens looks away from it by design).
+         * back down at the fog from the granary's ridge, where the lens goes round her by design).
          */
-        const looking = (r.lookingBack >= 0 && r.lookingBack < tuning.drowned.run.lookBackFor)
-          || (r.lookingDown >= 0 && r.lookingDown < tuning.drowned.run.lookDownFor);
+        const looking = r.lookingDown >= 0 && r.lookingDown < tuning.drowned.run.lookDownFor;
         if (r.stage === 'walk' && !looking) {
           const walk = `her way to the ${['tree', 'sheet', 'mill', 'swing'].find((piece) => r[piece].phase !== 'over') ?? 'nave'}`;
           const seen = catSeen(), readable = seen.inFrame && !seen.hidden && seen.px >= window.__catPx;
@@ -774,8 +773,8 @@ try {
             continue;
           }
           if (!rec || rec.under !== null) continue;
-          /** Beside it in the mill's basket, or looking back from just off it, she has not yet gone on from it. */
-          if ((r.stage === 'mill' && Math.hypot(rec.x - p.x, rec.z - p.z) < 3) || (r.lookingBack >= 0 && r.lookingBack < tuning.drowned.run.lookBackFor)) rec.left = t;
+          /** Beside it in the mill's basket she has not yet gone on from it. */
+          if (r.stage === 'mill' && Math.hypot(rec.x - p.x, rec.z - p.z) < 3) rec.left = t;
           const behind = (rec.x - front.x) * dx + (rec.z - front.y) * dz < -2;
           if (behind && dark.level > rec.ridge) rec.under = t;
         }
@@ -813,11 +812,10 @@ try {
         }
         w.hiddenRun = hidden && !flying ? (w.hiddenRun ?? 0) + 1 / 60 : 0;
         if (w.hiddenRun > (w.hiddenWorst ?? 0)) { w.hiddenWorst = w.hiddenRun; w.hiddenAt = `${r.stage} at ${r.along.toFixed(1)} m`; }
-        if (r.stage === 'walk' && !c.action && r.lookingBack !== undefined) {
+        if (r.stage === 'walk' && !c.action) {
           if (r.along > w.last + 0.05) { w.last = r.along; w.since = 0; } else w.since += 1 / 60;
           const k = tuning.drowned.run;
-          const looking = (r.lookingBack >= 0 && r.lookingBack < k.lookBackFor) || (r.lookingDown >= 0 && r.lookingDown < k.lookDownFor)
-            || (r.lookingSwing >= 0 && r.lookingSwing < k.lookSwingFor);
+          const looking = (r.lookingDown >= 0 && r.lookingDown < k.lookDownFor) || (r.lookingSwing >= 0 && r.lookingSwing < k.lookSwingFor);
           if (!looking && w.since > w.stallWorst) { w.stallWorst = w.since; w.stallAt = `at ${r.along.toFixed(1)} m, ${p.toArray().map((v) => v.toFixed(2))}`; }
           if (looking) w.since = 0;
         } else w.since = 0;

@@ -1965,10 +1965,10 @@ export const tuning = {
       /** Seconds she stands on the ridge looking after the cat before she goes, and her pace as a share of a walk. */
       setOff: 1.2, stroll: 1.05,
       /**
-       * Seconds she stands just down off the first roof looking back at the boat as the fog takes it, on the granary's
-       * ridge looking back down at it, and at the top of the slope down to the swing's board looking at the swing.
+       * Seconds she stands on the granary's ridge looking back down at the fog, and at the top of the slope down to the
+       * swing's board looking at the swing.
        */
-      lookBackFor: 4, lookDownFor: 6, lookSwingFor: 4.2,
+      lookDownFor: 6, lookSwingFor: 4.2,
       /** The beat she takes before a hop of her own; within `through` of a turn gentler than `bend` (radians) she walks on through it. */
       hopPause: 0.3, through: 1.1, bend: 0.4,
       /**
@@ -1996,15 +1996,13 @@ export const tuning = {
       catGo: { tree: 11, sheet: 7, mill: 4, swing: 4 }, catDown: 0.55,
       /**
        * The fog along its way (`DARK_WAY`): how far behind her it comes on while she is on her own way, while she works
-       * each piece, and where it waits once she is at the tower's foot; the nearest it ever comes (and where it comes
-       * while she looks back at the boat, so the boat goes into it); how near her the walking lens is laid to expect
-       * it; how hard it closes on where it is going (per second a metre), the slowest and fastest it comes on (m/s), and
-       * how quickly it changes pace (per second), quicker while she looks back.
+       * each piece, while she stands looking down at it or at the swing, and where it waits once she is at the tower's
+       * foot; the nearest it ever comes; how near her the walking lens is laid to expect it; how hard it closes on where
+       * it is going (per second a metre), the slowest and fastest it comes on (m/s), and how quickly it changes pace (per
+       * second).
        */
-      fogTrail: 12, fogHold: { tree: 10, sheet: 8, mill: 10, swing: 12 }, fogEnd: 19, fogNearest: 7.5, fogLaid: 8,
-      fogPull: 0.5, fogSlowest: 0.12, fogFastest: 3.2, fogEase: 0.9, fogLookedEase: 3,
-      /** How near her the fog comes while she looks back at the boat, past the boat, so it takes the boat as she watches. */
-      fogLooked: 5,
+      fogTrail: 12, fogHold: { tree: 10, sheet: 5, mill: 10, swing: 12 }, fogBeat: 8, fogEnd: 19, fogNearest: 7.5, fogLaid: 8,
+      fogPull: 0.5, fogSlowest: 0.12, fogFastest: 3.2, fogEase: 0.9,
     },
     /** The wash-tub the player's wind carries to the cat's roof and back to the boat. */
     tub: {
@@ -2181,12 +2179,6 @@ export const tuning = {
         swing: { from: 20, rate: 0.9, track: true, top: 9.5, downAt: 0.6, eye: [-3.5, 3.5, -8], at: [-3, 1.0, 0], uprightEye: [-3, 3.8, -7], uprightAt: [-2, 1.4, 0],
           lookEye: [-14.1, 4.25, 2.7], lookAt: [-1.1, 2.45, -2.95], uprightLookEye: [-12.4, 4.15, 5.0], uprightLookAt: [-1.1, 2.45, -2.95] },
       },
-      /**
-       * Her look back from the first roof's end: how strongly it holds the lens, how quickly it comes and goes (s) and
-       * how long before she turns to go on it has gone, so it is back beside her before she walks; and where it looks (a
-       * share of the way from her to the boat, landscape and upright, and above her feet).
-       */
-      backHold: 1, backIn: 1.4, backOut: 1.0, backGone: 0.6, backAt: 0.6, uprightBackAt: 0.45, backAim: 0.6,
       /**
        * The tree's view, as [north, east, height] from where it will lie over her wall (east across the lane, the way it
        * falls): where it stands, north-west of the lane, west of the old tree by the green, and where it looks (over
