@@ -1966,7 +1966,7 @@ export const tuning = {
        * Seconds she stands just down off the first roof looking back at the boat as the fog takes it, on the granary's
        * ridge looking back down at it, and at the top of the slope down to the swing's board looking at the swing.
        */
-      lookBackFor: 4, lookDownFor: 5, lookSwingFor: 3.4,
+      lookBackFor: 4, lookDownFor: 5, lookSwingFor: 4.2,
       /** The beat she takes before a hop of her own; within `through` of a turn gentler than `bend` (radians) she walks on through it. */
       hopPause: 0.3, through: 1.1, bend: 0.4,
       /**
@@ -1991,7 +1991,7 @@ export const tuning = {
        * tree, so it waits on the barn while she works the tree); and how far up the hoist she is (a share of the climb)
        * before it comes down off the mill's cap ahead of her.
        */
-      catGo: { tree: 11, sheet: 7.5, mill: 4, swing: 10 }, catDown: 0.55,
+      catGo: { tree: 11, sheet: 7.5, mill: 4, swing: 6 }, catDown: 0.55,
       /**
        * The fog along its way (`DARK_WAY`): how far behind her it comes on while she is on her own way, while she works
        * each piece, and where it waits once she is at the tower's foot; the nearest it ever comes (and where it comes
@@ -2166,7 +2166,7 @@ export const tuning = {
        */
       approach: {
         mill: { from: 12.3, rate: 0.7, eye: [-7.8, 7.8, 20], at: [1.2, 5.3, -1], uprightEye: [-5.5, 6.8, 15], uprightAt: [0.8, 5.6, -1] },
-        swing: { from: 20, rate: 0.5, track: true, top: 9.5, eye: [1.5, 3.5, -8.5], at: [-3, 1.0, 0], uprightEye: [1.2, 3.8, -7.5], uprightAt: [-2, 1.4, 0],
+        swing: { from: 20, rate: 0.9, track: true, top: 9.5, eye: [-1.5, 3.5, -8.5], at: [-3, 1.0, 0], uprightEye: [-1.2, 3.8, -7.5], uprightAt: [-2, 1.4, 0],
           lookEye: [-9.5, 3.0, -5.5], lookAt: [-1.5, 1.6, -2.5], uprightLookEye: [-8, 3.2, -5], uprightLookAt: [-1.2, 2.2, -2.2] },
       },
       /**
