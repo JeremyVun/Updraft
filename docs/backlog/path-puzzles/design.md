@@ -522,6 +522,10 @@ section (`drownedScore` returns `still` for `run`, `nave` and `church`), which i
 >   blow down the tree is impossible as well. no matter what i do, whether updrafts, random wind, or right to left fast
 >   cursor movements, it literally won't blow down. fix this as well. btw, im going to be just pasting in issues as i
 >   find them. i need you to keep a list of all of them and fix them
+>
+> - [a still side on to the sheet crossing: her hanging by one hand at the sheet's trailing edge, feet dangling, the
+>   sheet beside her] This looks very weird, it doesn't look right at all with the child hanging onto the side of the
+>   cloth. I'm also noting that throughout all of this, i hardly see the cat.
 
 **The list from this play** (Claude keeps it; each item is struck through with its commit when fixed and checked):
 1. The tub out of frame while it waits for the player: the lens off the gable end stands 7 m from the chimney and the
@@ -533,6 +537,10 @@ section (`drownedScore` returns `still` for `run`, `nave` and `church`), which i
    the cat's roof comes near enough to the strand for that drift to be short.
 4. At the tree: she stands under it, no drawn gust shows, she looks straight up at it the whole time instead of the
    way she must go, and no gesture fells it.
+5. The sheet crossing: she hangs by one hand off the sheet's side edge, which reads wrong. Fix: she holds it as one
+   rides a sail, centred on it with both hands, the filled sheet carrying her.
+6. Through the run the cat is hardly seen. Fix: the cat a roof ahead in every walking frame and its own crossing of
+   each piece in view (design step 5: "the cat goes first wherever a cat can").
 
 ### The room rethought (Claude, 2026-10-08; Jeremy: "yea lets see how this works")
 
