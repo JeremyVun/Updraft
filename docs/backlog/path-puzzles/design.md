@@ -603,26 +603,26 @@ the action is for (where the tub goes, where the tree falls, what the bell answe
    the cat's roof comes near enough to the strand for that drift to be short.
 4. ~~At the tree~~ (`proto-drowned-fix-tree`: the roots give again a second after each give however hard she is pushed, so continuous strokes fell it; the gust 0.6 s after she stops and after each useful stroke; she waits 5.2 m from the root at the wall's end, looking across to the barn with glances up; the view from the north-west holds her, the tree, the barn and the sheet beyond). Was: she stands under it, no drawn gust shows, she looks straight up at it the whole time instead of the
    way she must go, and no gesture fells it.
-5. The sheet crossing: she hangs by one hand off the sheet's side edge, which reads wrong. Fix: she holds it as one
+5. ~~The sheet's hold~~ (`proto-drowned-fix-pieces`: she gathers the slack hem's middle in both mittens and hangs in front of its lower middle as it carries her; the drawn gust now shows, it had restarted every frame). Was: she hangs by one hand off the sheet's side edge, which reads wrong. Fix: she holds it as one
    rides a sail, centred on it with both hands, the filled sheet carrying her.
 6. Through the run the cat is hardly seen. Fix: the cat a roof ahead in every walking frame and its own crossing of
    each piece in view (design step 5: "the cat goes first wherever a cat can").
-7. The mill: the lens low behind her in the basket crops the sails' hub and the drawn circles off the top. Fix: wider,
+7. ~~The mill's frame~~ (the board's view from the north, eye 20.5,9,-1520 at 26,7.5,-1541, rising as she climbs: the sails, the drawn circle, her in the basket, the top and the bell tower). Was: the lens low behind her in the basket crops the sails' hub and the drawn circles off the top. Fix: wider,
    the sails, their hub with the drawn circles, and her in the basket in one frame.
 8. ~~A leaf floating off the swing bough's bare tip~~ (the tip's twig leaves scatter off it into the air; the tip is
    now bare).
-9. The bell: the lens outside the belfry sees her back in the opening and never the bell she rings. Fix: the bell,
+9. ~~The bell~~ (`proto-drowned-fix-belfry`: the belfry 7.2 m square, one pointed arch 3 m wide a face, the bell on oak beams swinging north-south; the lens low outside the west arch sees her, the bell and the kittens against the east arch's sky, the drawn gust across the bell, the lantern answering past the tower's north-west corner. The board's lens from the north was rejected: the low sun backlights the room from there and a lantern on the water never shows through the far arch). Was: the lens outside the belfry sees her back in the opening and never the bell she rings. Fix: the bell,
    her and the fog beyond (what the ringing answers) in one frame.
-10. The kittens go unnoticed: the cat lying in the straw reads as gone to sleep. Fix: the kittens seen and read as
+10. ~~The kittens go unnoticed~~ (kittens 0.92 of the cat's scale; they wake as the cat comes to them, tumble and mew; the ginger one comes and sits looking up at her as she kneels). Was: the cat lying in the straw reads as gone to sleep. Fix: the kittens seen and read as
     kittens (the reveal staged to an outside eye, as 8b's Left list ruled: her turned on the sill, a kitten coming
     to its lip, three-quarter on), the cat plainly curled round them.
-11. The goodbye: the cat turns up on the roof below as she boards, never seen leaving the kittens or coming down.
+11. ~~The cat turning up on the roof~~ (it never comes down: the cat and the ginger kitten come to the west arch's sill as she climbs down, see her off and go back in). Was: the cat turns up on the roof below as she boards, never seen leaving the kittens or coming down.
     Lead's call: the cat stays with its kittens and sees her off from the belfry's sill, a kitten beside it, in the
     belfry's light (it would not leave them); the goodbye frame looks up from the boat to the two at the sill. This
     supersedes step 8's re-staging (the cat coming down to the roof).
 
 Found reading the room's storyboard (a frame every 2 s of `drowned-run-check` from the tub to the swing, 2026-10-09):
-12. The swing: the lens stands 21 m off, she is a few dozen pixels tall, the seat hardly moves through two minutes of
+12. ~~The swing~~ (it stalled because it felt the player only through the wind's CPU copy, which starves in `shot` mode; now a stroke along the arc across the ropes or seat on screen is one pump, about four take her to the let-go; side-on from the west 13.4 m off the bough, the nave's slope and the cat waiting above her landing in frame). Was: the lens stands 21 m off, she is a few dozen pixels tall, the seat hardly moves through two minutes of
     pumping, the nave she lands on does not read, and the check's run never reached the tower's foot after it (a
     stall). Fix: closer, the seat's arc and the nave's roof she leaps to in one frame; it must carry her over.
 13. The cat is unreadable from the rescue on, not only on the run (item 6): in the drift it is out of the wide frame,
@@ -642,6 +642,13 @@ Found reading the room's storyboard (a frame every 2 s of `drowned-run-check` fr
 19. The drawn gust is the shared invitation's thin cream stroke and is faint against the lilac sky (at the tree it is
     barely there in stills): it may be why Jeremy saw "no invitational wind gesture". Fix: in this room it reads at a
     glance against sky, fog and roofs.
+20. The goodbye frame (after 11): her and the pair on the sill in one frame leaves the cat about 50 px, so the slow
+    blink barely reads, and her hood crowds the corner. Lead's call: over her shoulder with a longer lens, her hood a
+    soft shape in the lower corner and the arch with the cat and kitten large. Staged (2026-10-10): straight over her
+    shoulder the mast and sail stand between her and the tower; 5 m back from her along the line to the sill, 2.8 m to
+    the side away from the sail, 1.4 m over her seat, a 14 degree lens, the cat, the kitten, the bell over them and the
+    ivy she climbed read well (`comps/board/goodbye-pov.png`), but she is out of frame: it is her look, after the frame
+    that shows her looking up. The release that follows starts from the old `upEye` and must be re-routed with it.
 
 ### The room rethought (Claude, 2026-10-08; Jeremy: "yea lets see how this works")
 

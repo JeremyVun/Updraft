@@ -5,8 +5,8 @@ import { CREATURE_GLSL } from '../shading';
 import type { Coat } from './shader';
 import { ATMO_GLSL, atmo } from '../../world/atmosphere';
 
-/** A kitten beside its mother: about a third of her size. */
-const KITTEN = 0.62;
+/** A kitten beside its mother: about half her size, cheated large enough to read across the belfry. */
+const KITTEN = 0.92;
 /**
  * Lighter than their mother so they read in the belfry's half light: a ginger, a grey with white socks to its knees,
  * and a pale tabby. Each has a voice of its own, all high.
@@ -17,7 +17,7 @@ const LITTER: { coat: Coat; voice: number }[] = [
   { coat: { fawn: [0.4, 0.31, 0.225], back: [0.33, 0.25, 0.18], stripe: [0.15, 0.105, 0.08], socks: 0 }, voice: 1.67 },
 ];
 /** How far from the middle of the straw they wander while they play. */
-const ROOM = 0.38;
+const ROOM = 0.55;
 /** How far short of a sibling's middle a pounce comes down, before scale: its front paws on the other's flank. */
 const CONTACT = 0.22;
 /** How near it is in the air when the other starts to go over, so that it is going as the pounce lands. */
@@ -105,7 +105,7 @@ export class Kittens {
       k.scale = KITTEN;
       k.voice = LITTER[i].voice;
     }
-    this.straw = new THREE.Mesh(strawGeometry(0.55), new THREE.ShaderMaterial({
+    this.straw = new THREE.Mesh(strawGeometry(0.75), new THREE.ShaderMaterial({
       uniforms: { ...atmo.uniforms }, vertexShader: STRAW_VERT, fragmentShader: STRAW_FRAG, side: THREE.DoubleSide,
     }));
     this.straw.visible = false;
@@ -113,6 +113,11 @@ export class Kittens {
 
   get objects(): THREE.Object3D[] {
     return [this.straw, ...this.cats.flatMap((k) => k.objects)];
+  }
+
+  /** Awake and playing. */
+  get awake(): boolean {
+    return this.doing === 'tumble';
   }
 
   set visible(on: boolean) {
@@ -150,17 +155,46 @@ export class Kittens {
     }
   }
 
-  /** Awake and playing: they pounce on each other, bat, roll over and scamper about the straw. */
+  /**
+   * Awake and playing: they pounce on each other, bat, roll over and scamper about the straw. Woken where they lie,
+   * they get up there; otherwise they are set out round the middle of the straw.
+   */
   tumble(): void {
+    const woken = this.doing === 'nestle' && this.cats.every((k) => k.visible);
     this.doing = 'tumble';
     this.away = -1;
     this.pouncing.fill(-1);
     this.woken = true;
     for (const [i, k] of this.cats.entries()) {
-      const a = (i / 3) * Math.PI * 2 + 0.4;
-      k.place(this.w.set(this.centre.x + Math.cos(a) * 0.2, this.floor(), this.centre.z + Math.sin(a) * 0.2), a + Math.PI * 0.8, { pose: i === 1 ? 'sit' : 'stand', floor: this.floor });
-      this.next[i] = 0.3 + i * 0.45;
+      if (woken) k.rest(i === 1 ? 'sit' : 'stand', null);
+      else {
+        const a = (i / 3) * Math.PI * 2 + 0.4;
+        k.place(this.w.set(this.centre.x + Math.cos(a) * 0.2, this.floor(), this.centre.z + Math.sin(a) * 0.2), a + Math.PI * 0.8, { pose: i === 1 ? 'sit' : 'stand', floor: this.floor });
+      }
+      this.next[i] = 0.6 + i * 0.45;
     }
+  }
+
+  /** Kitten `i` leaves off playing and goes to `to` on the straw's floor, where it sits looking up at `look` and mews. */
+  come(i: 0 | 1 | 2, to: THREE.Vector3, look: THREE.Vector3 | null, onDone?: () => void): void {
+    const k = this.cats[i];
+    this.hold(i);
+    k.run([to], this.floor, { pace: 'walk', speed: 0.5, then: 'sit', look }, () => {
+      k.mew(0.5);
+      onDone?.();
+    });
+  }
+
+  /** Kitten `i` leaves off playing for whatever it is given to do. */
+  hold(i: 0 | 1 | 2): void {
+    this.away = i;
+    this.pouncing[i] = -1;
+  }
+
+  /** Kitten `i` goes back to playing with the others. */
+  release(i: 0 | 1 | 2): void {
+    if (this.away === i) this.away = -1;
+    this.next[i] = Math.max(this.next[i], 0.8);
   }
 
   /**
@@ -169,8 +203,7 @@ export class Kittens {
    */
   toSill(i: 0 | 1 | 2, to: THREE.Vector3, look: THREE.Vector3 | null, onDone?: () => void): void {
     const k = this.cats[i];
-    this.away = i;
-    this.pouncing[i] = -1;
+    this.hold(i);
     const below = this.v.copy(to).sub(k.position).setY(0);
     const span = below.length();
     below.multiplyScalar(Math.max(0, span - 0.18) / Math.max(span, 1e-3)).add(k.position);

@@ -4,8 +4,7 @@ import { ATMO_GLSL, atmo } from '../atmosphere';
 import { REFLECTION_LAYER } from '../water/reflection';
 import { feltWind, type WindField, type WindSample } from '../../wind/field';
 import type { PointerInput } from '../../input/pointer';
-import { screenBrush } from '../../creatures/motion';
-import { PLANK, ROPE, merged, tagged, tube } from './shapes';
+import { PLANK, ROPE, merged, segmentGap, tagged, tube } from './shapes';
 
 const SWING_VERT = /* glsl */ `
 in float aKind;
@@ -61,9 +60,10 @@ export interface SwingSpot {
 const SEAT_HALF = 0.36;
 
 /**
- * A rope swing hanging from a bough over open water: two old ropes and a plank. It swings in one plane, pushed
- * along its travel by whatever gust reaches its seat, whichever way the gust is blowing, so a player who keeps at it
- * always gets height and never has to time a thing.
+ * A rope swing hanging from a bough over open water: two old ropes and a plank. It swings in one plane. A stroke
+ * across it on screen pumps it higher along its travel and never takes height away, so a player who keeps at it
+ * always gets height and never has to time a thing; each swing takes one pump's worth. The player pushes what they
+ * see, so the pump never waits on the wind field's copy on the CPU; the stroke still lays its air at the seat.
  */
 export class RopeSwing {
   readonly group = new THREE.Group();
@@ -86,8 +86,19 @@ export class RopeSwing {
   brushAge = Infinity;
   /** The highest it has swung toward the far side since it was last set going, radians. */
   best = 0;
+  /** Swing asked of it and still to come, what the stroke under way has asked, and what this swing `way` has taken (radians). */
+  private asked = 0;
+  private stroked = 0;
+  private taken = 0;
+  private way = 1;
   private readonly air: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
   private readonly seatAt = new THREE.Vector3();
+  private readonly projected = new THREE.Vector3();
+  private readonly from = new THREE.Vector2();
+  private readonly to = new THREE.Vector2();
+  private readonly top = new THREE.Vector2();
+  private readonly foot = new THREE.Vector2();
+  private readonly ahead = new THREE.Vector2();
 
   constructor(spot: SwingSpot) {
     this.pivot.copy(spot.pivot);
@@ -117,7 +128,8 @@ export class RopeSwing {
   }
 
   reset(): void {
-    this.angle = this.speed = this.aside = this.rider = 0;
+    this.angle = this.speed = this.aside = this.rider = this.asked = this.stroked = this.taken = 0;
+    this.way = 1;
     this.held = this.ridden = false;
     this.brushAge = Infinity;
     this.best = 0;
@@ -155,43 +167,100 @@ export class RopeSwing {
     return Math.acos(THREE.MathUtils.clamp(c, -1, 1));
   }
 
-  /** A stroke that crosses the seat or the ropes on screen lays a gust there, as on the birches' swing. */
-  brush(camera: THREE.Camera, input: PointerInput, wind: WindField): void {
-    if (input.muted || !input.present || input.gust < 1.4) return;
+  /** How high it swings now, either way, if nothing more pushes it or holds it back (radians). */
+  get swingHeight(): number {
+    const L = this.rope, g = this.gravity;
+    const energy = 0.5 * (L * this.speed) ** 2 + g * L * (1 - Math.cos(this.angle));
+    return Math.acos(THREE.MathUtils.clamp(1 - energy / (g * L), -1, 1));
+  }
+
+  /**
+   * A stroke across its ropes or seat on screen, going the way the seat swings, pumps it once: one good stroke asks
+   * for a pump's worth more swing, a gentle or slanting one less, one against the seat's way less again, and never
+   * any against it, however large or small the swing is on screen. It lays its air at the seat too, so the water and
+   * the grass answer. Returns the swing asked for (radians).
+   */
+  brush(camera: THREE.PerspectiveCamera, input: PointerInput, wind: WindField, dt: number): number {
+    if (input.muted || !input.present || dt <= 0) return 0;
+    const k = tuning.crossings.swing;
+    const aspect = camera.aspect;
+    this.from.set(input.prevNdc.x * aspect * 0.5, input.prevNdc.y * 0.5);
+    this.to.set(input.ndc.x * aspect * 0.5, input.ndc.y * 0.5);
+    const travel = this.from.distanceTo(this.to);
+    if (travel < 1e-5) return 0;
+    const screen = (p: THREE.Vector3, out: THREE.Vector2) => {
+      this.projected.copy(p).project(camera);
+      return out.set(this.projected.x * aspect * 0.5, this.projected.y * 0.5);
+    };
+    if (this.projected.copy(this.pivot).project(camera).z > 1) return 0;
     const seat = this.seat(this.seatAt);
-    let touch = screenBrush(camera, seat, input.prevNdc, input.ndc, 0.25);
-    const mid = this.seatAt.lerp(this.pivot, 0.45);
-    touch = Math.max(touch, screenBrush(camera, mid, input.prevNdc, input.ndc, 0.2) * 0.7);
-    if (touch < 0.01) return;
+    screen(seat, this.foot);
+    screen(this.seatAt.lerp(this.pivot, 0.7), this.top);
+    const hit = 1 - THREE.MathUtils.smoothstep(segmentGap(this.from, this.to, this.top, this.foot), 0, k.reach);
+    if (hit <= 0) return 0;
+    const c = Math.cos(this.angle);
+    this.seat(this.seatAt).add(this.projected.set(this.toward.x * c, Math.sin(this.angle), this.toward.y * c));
+    screen(this.seatAt, this.ahead).sub(this.foot).normalize();
+    const along = ((this.to.x - this.from.x) * this.ahead.x + (this.to.y - this.from.y) * this.ahead.y) / travel;
+    const going = Math.abs(this.speed) < 0.03 || along * this.speed >= 0 ? 1 : k.against;
+    const firm = THREE.MathUtils.lerp(k.soft, 1, THREE.MathUtils.smoothstep(travel / dt, k.gentle, k.firm));
+    const want = k.push * hit * firm * going * THREE.MathUtils.smoothstep(Math.abs(along), k.slant, 0.9);
+    if (this.brushAge > 0.3) this.stroked = 0;
     this.brushAge = 0;
+    const ask = Math.max(0, want - this.stroked);
+    this.stroked += ask;
+    this.asked += ask;
     this.seat(this.seatAt);
     wind.addSplat({ source: this, ax: this.seatAt.x, az: this.seatAt.z, bx: this.seatAt.x, bz: this.seatAt.z,
       vx: input.gustDir.x * input.gust, vz: input.gustDir.y * input.gust,
-      radius: 3, energy: Math.min(0.8, input.gust / 20) * Math.sqrt(touch), lift: 0, swirl: 0 });
+      radius: 3, energy: Math.min(0.8, input.gust / 20) * hit, lift: 0, swirl: 0 });
+    return ask;
   }
 
-  /** A gust of the world's own at the seat, carrying `energy`. */
-  blow(wind: WindField, energy: number): void {
+  /** A gust of the world's own along its travel at the seat, asking for `grow` radians more swing. */
+  blow(wind: WindField, grow: number): void {
     this.seat(this.seatAt);
     const way = this.speed >= 0 ? 1 : -1;
     wind.addSplat({ source: this, impulse: true, ax: this.seatAt.x, az: this.seatAt.z, bx: this.seatAt.x, bz: this.seatAt.z,
-      vx: this.toward.x * way * 8, vz: this.toward.y * way * 8, radius: 3.5, energy, lift: 0, swirl: 0 });
+      vx: this.toward.x * way * 8, vz: this.toward.y * way * 8, radius: 3.5, energy: 1, lift: 0, swirl: 0 });
+    this.asked += grow;
   }
 
+  /**
+   * Up to `by` radians more swing, as much as this swing out or back has left to take, put into its speed along the
+   * way it is going (from the top of a swing, the way it will fall).
+   */
+  private raise(by: number): void {
+    const k = tuning.crossings.swing;
+    const L = this.rope, g = this.gravity;
+    const way = Math.abs(this.speed) > 0.03 ? Math.sign(this.speed) : this.angle > 0.02 ? -1 : this.angle < -0.02 ? 1 : this.way;
+    const height = this.swingHeight;
+    const add = Math.min(by, Math.max(0, k.perSwing - this.taken), Math.max(0, k.most - height));
+    if (add <= 0) return;
+    this.taken += add;
+    const more = g * L * (Math.cos(height) - Math.cos(height + add));
+    this.speed = way * Math.sqrt(this.speed * this.speed + (2 * more) / (L * L));
+  }
+
+  /** The world's own felt air only moves it empty; with her on it, only strokes pump it. */
   update(dt: number, wind: WindField): void {
     if (dt <= 0) return;
     const k = tuning.crossings.swing;
     this.brushAge += dt;
-    this.seat(this.seatAt);
-    const w = feltWind(wind.sample(this.seatAt.x, this.seatAt.z, this.air), wind.calm);
+    const arriving = this.asked * (1 - Math.exp(-dt / k.lag));
+    this.asked -= arriving;
     if (!this.held) {
-      const load = 1 + this.rider * 0.8;
-      const along = (w.x * this.toward.x + w.z * this.toward.y) - this.rope * this.speed * Math.cos(this.angle) * 0.5;
-      const way = Math.abs(this.speed) > 0.03 ? Math.sign(this.speed) : Math.sign(along) || 1;
-      const push = along * k.along + w.energy * k.pump * way;
-      this.speed += ((-this.gravity * Math.sin(this.angle)) + push / load) / this.rope * dt;
+      if (arriving > 0) this.raise(arriving);
+      this.seat(this.seatAt);
+      const w = this.rider > 0 ? null : feltWind(wind.sample(this.seatAt.x, this.seatAt.z, this.air), wind.calm);
+      const air = w ? (w.x * this.toward.x + w.z * this.toward.y - this.rope * this.speed * Math.cos(this.angle) * 0.5) * k.along : 0;
+      this.speed += (air - this.gravity * Math.sin(this.angle)) / this.rope * dt;
       if (this.rider > 0) this.ridden = true;
       this.speed *= Math.exp(-dt * (this.ridden && this.rider === 0 ? k.emptyDamping : k.damping));
+      if (this.speed * this.way < 0) {
+        this.way = -this.way;
+        this.taken = 0;
+      }
       this.angle += this.speed * dt;
       if (Math.abs(this.angle) > 1.25) {
         this.angle = Math.sign(this.angle) * 1.25;
