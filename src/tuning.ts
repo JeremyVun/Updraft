@@ -2174,7 +2174,7 @@ export const tuning = {
        * Low outside the arch while the bell is hers to ring: her, the kittens and the bell against the sky through the
        * east arch, and the fog sea off the tower's north-west corner where the lantern answers.
        */
-      ring: [-15, 2.0, 2.2, -0.8, 1.4, -2.2], uprightRing: [-16, 2.6, 0.5, -1.6, 1.1, -3.6, 1.1],
+      ring: [-15, 2.0, 2.2, -0.8, 1.4, -2.2], uprightRing: [-14, 2.4, 0.3, -1.5, 1.7, -3.2, 1.3],
       /**
        * Off the north water to the west, coming down with her as she climbs to the boat coming in (heights over her); it
        * looks this share of the way from her to the boat (upright, its own).
