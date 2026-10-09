@@ -662,6 +662,20 @@ Found reading the room's storyboard (a frame every 2 s of `drowned-run-check` fr
     zoom 0.86, upright 0.78): the approach lengthens to 2.5, the tub frame is at 1.25 (upright 1.4), the rescue 1.5 at
     4.8 m, the stuck and ridge frames 6.5-7.5 m off. Lead's call: the room's start to the ridge is framed on the run's
     scale, the long lens gone; the cat reads by being nearer the lens and by item 21's cheat, not by zoom.
+Jeremy, playing on (2026-10-10, verbatim, with a still side-on to the sheet line: her on the near roof by the near
+chimney looking up, the sheet hanging off the line with its lower edge through her hood, the cat on the far roof):
+"also, why is the childs head being cut by the cloth? And when the child lands on the other side, she's in mid air...
+then right after the wind mill, the camera dollies around weirdly in the wrong direction so the cat goes out of view.
+Also, everytime the cat or the kittens makes a sound, it should have the noise marks. And i think the kittens make too
+much noise too often."
+23. The sheet through her head: waiting at the near chimney, the sheet hangs low enough off the line that its lower
+    edge passes through her hood. Fix: the sheet never intersects her; it hangs clear above her or she stands clear of it.
+24. She lands from the sheet in mid air on the far roof. Fix: her feet on the slates when she lets go and lands.
+25. Right after the mill the lens dollies round the wrong way and the cat leaves the frame (likely the reported swoop
+    coming off the mill's north view). Fix: one move on toward where she and the cat go, the cat kept in frame.
+26. The cat's and kittens' sounds have no call marks. Fix: every mew, purr or call from the cat or a kitten shows the
+    cygnet's call marks (`src/fx/call-marks.ts`) at the one that made it.
+27. The kittens are too noisy. Fix: fewer and sparser kitten sounds, each one meaning something.
 
 ### The room rethought (Claude, 2026-10-08; Jeremy: "yea lets see how this works")
 
