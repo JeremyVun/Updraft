@@ -1760,6 +1760,8 @@ export const tuning = {
      * from the lens, never toward it.
      */
     darkGlance: 26,
+    /** From the air dying until she sets off over the roofs, how far off the lens what she looks at always is (radians). */
+    gazeOffLens: 1.2,
     dark: {
       /**
        * Its front: half its width and how far its flanks run on ahead, in metres; and how far it reaches on the
@@ -1774,12 +1776,17 @@ export const tuning = {
       aheadFrom: 30, turnRate: 0.6,
       /**
        * Seconds it takes to rise off the sea once the air has died, over the becalmed drift, how far behind the boat it
-       * rises, and how long after the boat runs aground it starts to come on: never stopping, at `comePace` (m/s) and
+       * rises, and how long after the boat runs aground it comes on faster: never stopping, at `comePace` (m/s) and
        * `comeRate` a second of however far it still is from where the cat bolts, at most `comeMost` m/s, so it slows as
        * it nears; how far short of the boat its front is when the light has gone from it; and how far short of the boat
        * it is when she sets off along the first roof's ridge (QA and the save there).
        */
-      riseFor: 14, comeAfter: 0.6, riseAway: 72, comeRate: 0.15, comeMost: 5.5, comePace: 2.2, holdBehind: 20, setOffBehind: 20,
+      riseFor: 14, comeAfter: 0.6, riseAway: 72, comeRate: 0.05, comeMost: 4, comePace: 2.6, holdBehind: 20, setOffBehind: 20,
+      /**
+       * How fast it is already coming while the boat ghosts on, once half risen, m/s; and how far past the stranded boat's
+       * middle it comes before she sets off over the roofs, metres.
+       */
+      creep: 0.5, lostPast: 1,
     },
     /** The sea fog the dark is: one field every shader reads, and the light it takes as it comes. */
     fog: {
@@ -2032,8 +2039,11 @@ export const tuning = {
     },
     /** The stranded cat, the tub's two trips, and the cat's bolt from the bow when the dark has come on. */
     cat: {
-      /** She notices it this far from the place the boat waits; how hard the boat slows into it, m/s². */
-      seeFrom: 46, holdBrake: 0.42,
+      /**
+       * The most the boat sails at on the drift's last leg, making for the cat, m/s; she notices it this far from the place the boat waits;
+       * how hard the boat slows into it, m/s².
+       */
+      sailSpeed: 2.8, seeFrom: 70, holdBrake: 0.42,
       /** How near (metres) the tub must come to the eaves, or to the bow, to be drawn in. */
       roofReach: 1.1, bowReach: 1.6,
       /**
@@ -2061,17 +2071,22 @@ export const tuning = {
       runSpeed: 2.6,
       /** Seconds she looks at the fog, down at the stuck boat, then at the cat, before she climbs out after it. */
       looksBack: 1.4, looksAtBoat: 1.0, looksAtCat: 1.0,
+      /** Seconds she stands on the ridge looking back down at the boat as the fog comes over it, before she turns to the cat. */
+      lostFor: 3,
     },
     /** The rescue, once the cat is aboard. */
     rescue: {
       /** Seconds after it lands aboard that it shakes, starts to shiver (and how hard), and comes down to her. */
       shakeAt: 0.35, shiverAt: 1.4, shiver: 0.7, downAt: 2.1,
       /**
-       * Once it sits at her feet: seconds before she gets down onto her knees, how long she stays down, when her hand
-       * goes out; how fast she goes down and back up (per second); how its shivering eases under her hand (per second,
-       * and down to); and seconds after it is back at the bow before the boat goes on.
+       * Once it sits on the thwart in front of her: seconds before she gets down onto her knees, how long she stays
+       * down, when her hands go out and it comes up into her arms; how fast she goes down and back up (per second); how
+       * its shivering eases in her arms (per second, and down to); and seconds after it is back at the bow before the
+       * boat goes on. Her mittens go this far either side of it and this high up it (shares of its size), and it pushes
+       * its head this far under her face (metres).
        */
-      kneelAfter: 0.2, kneelFor: 3.8, reachAfter: 0.8, kneelRate: 3, calming: 0.3, calmed: 0.12, goOnAfter: 0.4,
+      kneelAfter: 0.2, kneelFor: 4.4, reachAfter: 0.8, kneelRate: 3, calming: 0.3, calmed: 0.12, goOnAfter: 0.4,
+      holdAcross: 0.07, holdUp: 0.07, chinBelow: 0.1,
     },
   },
   drownedCamera: {
@@ -2276,6 +2291,14 @@ export const tuning = {
     roofFromZ: -1260, roofUntilZ: -1360,
     entryBearing: 0.16, roofBearing: 0.10,
     entryDistance: 23, roofDistance: 16, entryHeight: 5, roofHeight: 2.8,
+    /**
+     * Making for the cat: from `makingFrom` to `makingTo` metres short of where the boat waits for it, the lens comes
+     * this far round onto the quarter away from the cat's side (radians), so the cat ahead is seen clear of the boat;
+     * it gives the cat this share of its look (upright more, and on through its coming round), and lengthens by one for every `makingSee` metres the cat is from it
+     * (upright, its own), at most to `makingZoom`, so the cat on its pot is a cat however far off. Upright it rises to
+     * this over where it looks.
+     */
+    makingFrom: 78, makingTo: 60, makingBearing: 0.4, makingLook: 0.35, uprightMakingLook: 0.6, makingSee: 26, uprightMakingSee: 19, makingZoom: 2.5, uprightMakingHeight: 6,
     /** Let the church pass beside us, then return to the channel instead of looking backwards after it. */
     spireEnter: 110, spireFull: 55, spireLeave: 25, spireGone: -5,
     spireDistance: 20, spireHeight: 3.4, spireWeight: 0.3,
@@ -2283,39 +2306,49 @@ export const tuning = {
     spireFrameMargin: 0.7,
     sideResponse: 1.2,
     /**
-     * The stranding: where the lens looks (metres ahead of the boat's middle, and over the water), its bearing from
-     * there (atan2(x, z): side on from the open water west of the boat), how far off and how high over the water it
-     * stands, how far round toward the fog coming on behind the boat it looks (a share of the angle between the two),
-     * the lens it takes and its pace; upright its own. As the cat's fear grows it looks this far ahead, at the cat,
-     * and the lens lengthens by this much.
+     * The air dying and the stranding: where the lens looks (metres ahead of the boat's middle, and over the water),
+     * its bearing from ahead toward the boat's open side (radians), how far off and how high over the water it stands
+     * and the least it keeps over the water, how far round toward the fog coming on behind the boat it looks (a share
+     * of the angle between the two), the lens it takes and its pace; upright its own. As the cat's fear grows it looks
+     * this far ahead, at the cat, and the lens lengthens by this much.
      */
-    stuckAlong: 1.2, stuckOnCat: 1.8, stuckCloser: 1.4, stuckAim: 1.0, stuckFrom: -1.75, stuckDistance: 5.6, stuckEye: 1.5,
-    stuckFog: 0.35, stuckZoom: 1.05, stuckPace: 0.35,
-    uprightStuckFrom: -2.0, uprightStuckDistance: 6.2, uprightStuckEye: 1.7, uprightStuckFog: 0.3, uprightStuckZoom: 0.9,
+    stuckAlong: 0.9, stuckOnCat: 1.4, stuckCloser: 1.3, stuckAim: 1.1, stuckBearing: 1.3, stuckDistance: 6.5, stuckEye: 1.7,
+    stuckClear: 0.8, stuckFog: 0.5, stuckZoom: 0.9, stuckPace: 0.35,
+    uprightStuckBearing: 1.1, uprightStuckDistance: 5.5, uprightStuckEye: 1.5, uprightStuckFog: 0.2, uprightStuckZoom: 0.95,
+    /**
+     * Once the boat is fast against the roof, over `fastFor` seconds it comes round to this bearing, this far from where
+     * it looks and this high over the water (upright, its own).
+     */
+    fastFor: 5, fastBearing: 1.75, fastDistance: 7, fastEye: 2.0, uprightFastBearing: 1.6, uprightFastDistance: 6, uprightFastEye: 2.2,
     /**
      * Once the cat bolts, over `climbFor` seconds up onto the roof with it: the lens's bearing from the ridge's west
-     * end, how far off and how high over the ridge, how far from her toward the cat it looks, and its pace.
+     * end (atan2(x, z)), how far off and how high over the ridge, how far from her toward the cat it looks, and how far
+     * toward the boat below while she looks back at it, its lens and its pace.
      */
-    climbFor: 7, ridgeFrom: -1.0, ridgeDistance: 8, ridgeEye: 1.8, ridgeAlong: 0.4, ridgePace: 0.3,
-    uprightRidgeFrom: -1.1, uprightRidgeDistance: 7, uprightRidgeEye: 2.2,
+    climbFor: 7, ridgeFrom: -1.2, ridgeDistance: 7.5, ridgeEye: 2.1, ridgeAlong: 0.4, ridgeBoat: 0.35, ridgeZoom: 0.9, ridgePace: 0.3,
+    uprightRidgeFrom: -1.25, uprightRidgeDistance: 6.5, uprightRidgeEye: 1.8, uprightRidgeZoom: 0.9,
     /**
      * While the cat is brought over: how much of its gaze the lens gives the cat as she notices it, how far from the
      * place the boat waits the lens starts to come round, and its pace. Where it stands: this share of the way along the
      * line from her head to the edge where the cat waits (behind her where less than 0), this far out from that line on
      * the side away from the sail, and this high over the water; it looks this share of the way along the line, this high
-     * over the water and this much higher while the cat is up on its pot, on this lens. Upright, its own.
+     * over the water and this much higher while the cat is up on its pot, on this lens. Upright, its own, and further
+     * forward and out while the cat is up on its pot, so the sail never stands between the lens and the cat.
      */
-    catGlance: 0.3, catTurnFrom: 40, catPace: 0.55,
+    catGlance: 0.3, catTurnFrom: 40, catPace: 0.55, uprightCatPace: 1.0,
     catAlong: 0.58, catSide: 12.5, catEye: 3.8, catLook: 0.5, catAim: 1.0, catLift: 0.9, catZoom: 1.25,
-    uprightCatAlong: -1.35, uprightCatSide: 4, uprightCatEye: 6.2, uprightCatLook: 0.95, uprightCatAim: 0.8, uprightCatLift: 0.6,
+    uprightCatAlong: -1.35, uprightCatPotAlong: -0.5, uprightCatSide: 4, uprightCatPotSide: 5.8, uprightCatEye: 6.2, uprightCatLook: 0.95, uprightCatAim: 0.8, uprightCatLift: 0.6,
     uprightCatZoom: 1.4,
     /**
-     * The cat brought aboard: once the tub is this near the boat the lens comes round toward the bow, its bearing from
-     * ahead (radians), how far off (upright, nearer) and how high over where it looks, which is this share of the way
-     * from her to the cat and this high over her seat; the lens it takes, and its pace.
+     * The cat brought aboard: once the tub is this near the boat the lens comes in beside her: its bearing from ahead
+     * toward the side it watched the tub from (radians), how far from where she kneels and how high over the hull, and
+     * its bearing and height once she is down on her knees with the cat in her arms, the least it keeps over the water;
+     * it looks this share of the way from her face to the cat's eye, on this lens, at this pace. Upright, its own.
      */
-    rescueFrom: 2.5, rescueBearing: 1.3, rescueDistance: 5.2, uprightRescueDistance: 4.8, rescueHeight: 2.6, rescueAlong: 0.5,
-    rescueAim: 0.45, rescueZoom: 1.1, uprightRescueZoom: 0.95, rescuePace: 0.35,
+    rescueFrom: 2.5, rescueBearing: 1.35, rescueDistance: 4.8, rescueEye: 1.85, rescueKneelBearing: 1.05, rescueKneelEye: 1.3,
+    rescueClear: 0.8, rescueAlong: 0.4,
+    rescueZoom: 1.5, rescuePace: 0.35,
+    uprightRescueBearing: 1.2, uprightRescueDistance: 4.0, uprightRescueEye: 1.9, uprightRescueZoom: 0.95,
   },
   /** The two crossings of the drowned village's run over the roofs: the dead tree pushed over, the swing pumped. */
   crossings: {

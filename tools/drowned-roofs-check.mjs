@@ -3,14 +3,15 @@
 // strokes across the wash-tub on screen carry it there, the cat gets in, more strokes bring the tub to the bow, the cat
 // jumps aboard and comes to her, the air dies and the becalmed boat ghosts slowly on onto the first roof's slates
 // while the player's strokes make no wind at all, the dark comes on, the cat bolts over the roof and the child climbs
-// out after it to the ridge, and the untended boat stays where it stuck as she goes on.
+// out after it to the ridge, looks back at the boat as the fog takes it, and the untended boat stays where it stuck as
+// she goes on.
 // Fails if waiting moves the tub toward the roof, if no drawn gust is offered, if the tub's puzzle leaves the frame, if
 // the becalmed drift is fast or short or answers a stroke, or if any of those steps does not happen.
 // Usage: node tools/drowned-roofs-check.mjs   env: BASE (default http://127.0.0.1:5230/), SHOTS=<prefix> saves stills,
 //        W/H viewport (default 1600x900), IDLE seconds of waiting at the tub first (default 18), VALVE=1 instead
 //        waits out the safety valve with no input at all (both trips), DEBUG=1 prints each stroke, NEAR=1 starts the
 //        boat on the drift's last leg 70 m short of the cat, STRIP=<dir> saves a frame every half second of game time
-//        from the cat seen to the boat aground (<dir>/0000.jpg on).
+//        from the room's start to the end, the boat lost behind her (<dir>/0000.jpg on).
 import { chromium } from 'playwright-core';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -43,11 +44,12 @@ try {
   const filmed = (async () => {
     if (!filming) return;
     fs.mkdirSync(process.env.STRIP, { recursive: true });
-    await page.waitForFunction(() => __game.story.current.cat?.step !== 'stranded', null, { timeout: 300000, polling: 100 });
     let next = await page.evaluate(() => __stats.time);
     while (filming) {
       const t = await page.evaluate(() => __stats.time);
       if (t >= next) {
+        const at = await page.evaluate(() => { const s = __game.story.current; return { time: +__stats.time.toFixed(1), beat: s.beat, step: s.cat?.step }; });
+        fs.appendFileSync(`${process.env.STRIP}/frames.jsonl`, JSON.stringify({ frame: frames, ...at }) + '\n');
         await page.screenshot({ path: `${process.env.STRIP}/${String(frames++).padStart(4, '0')}.jpg`, type: 'jpeg', quality: 70 });
         next += 0.5;
       } else await page.waitForTimeout(15);
@@ -138,6 +140,8 @@ try {
 
   await reach('seen', 120000);
   console.log('seen', JSON.stringify(await state()));
+  await play(8);
+  await shot('0-cat-seen');
   await reach('waiting', 60000);
   let s = await state();
   const start = s.tub, began = s.time;
@@ -199,8 +203,9 @@ try {
   s = await state();
   assert.equal(s.seat, 'satchel', 'the cygnet ducked into the satchel');
   console.log('aboard', JSON.stringify(s));
-  await page.waitForTimeout(3000);
-  await shot('7-cat-at-bow');
+  await waitFor(() => __game.story.current.cat.kneel > 0.95, 30000, 'her kneeling to the cat');
+  await play(1.6);
+  await shot('7-rescue');
 
   // Once it has come to her the air dies, and the becalmed boat ghosts slowly onto the slates; nothing the player does
   // makes any wind: no gust, no fill in the sail, nothing in the water.
@@ -248,10 +253,9 @@ try {
   assert(took > 12 && took < 32, `the becalmed drift took ${took.toFixed(1)}s`);
   assert(gust < 0.02 && fill < 0.05 && unmuted === 0, 'a stroke made wind while the air was dead');
   await page.waitForTimeout(4000);
-  filming = false;
-  await filmed;
-  if (process.env.STRIP) console.log(`${frames} frames in ${process.env.STRIP}`);
   await shot('9-at-rest');
+  await waitFor(() => __game.cat.unease > 0.6 || __game.story.current.cat.step !== 'aboard', 120000, 'the cat staring at the fog');
+  if (await still('aboard')) await shot('9b-stare');
   await reach('bolting', 120000);
   console.log('bolting', JSON.stringify(await state()));
   await waitFor(() => __game.story.current.cat.step !== 'bolting' || __game.story.current.cat.t > 1.6, 10000, 'the cat leaping');
@@ -263,8 +267,8 @@ try {
   await waitFor(() => __game.story.current.cat.step !== 'climbing' || __game.story.current.cat.t > 1.3, 10000, 'her stepping out');
   if (await still('climbing')) await shot('12-climbing-out');
   await reach('ridge', 40000);
-  await page.waitForTimeout(1500);
-  await shot('13-on-ridge');
+  await play(2.5);
+  await shot('13-boat-lost');
   s = await state();
   console.log('ridge', JSON.stringify(s));
   assert(s.child[1] > 1.3, `she is not up on the ridge: ${JSON.stringify(s)}`);
@@ -274,6 +278,9 @@ try {
   await play(30);
   const late = await state();
   await shot('14-boat-stuck');
+  filming = false;
+  await filmed;
+  if (process.env.STRIP) console.log(`${frames} frames in ${process.env.STRIP}`);
   console.log(`stuck: ${distance(late.boat, strand).toFixed(2)}m off where it ran aground after 30s`);
   assert(distance(late.boat, strand) < 1.5, `the boat has left where it ran aground: ${JSON.stringify(late)}`);
   assert(errors.length === 0, `page errors: ${errors.join('\n')}`);

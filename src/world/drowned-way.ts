@@ -307,11 +307,11 @@ const STEP_IN = 2.2;
  * The first roof, the one the boat runs aground on and the cat leaps onto: a cottage nearly gone under, lying across
  * the drift south of the garden, its slates going on down under the glass ahead of the stem, so the hull rides up onto
  * them and she can step out onto those still out of the water and climb its ridge. Its ridge's east end is a hop from
- * the garden wall's foot.
+ * the garden wall's foot. Its chimney is a stub, so it never stands between the lens and her on the ridge or the boat.
  */
 export const STRAND_HOUSE: PlacedHouse = (() => {
   const h: PlacedHouse = { x: 0, z: 0, yaw: -0.22, len: 8.4, depth: 4.6, wall: 3.4, rise: 2.5, sink: 0, thatched: false,
-    stacks: [-1], stack: 0.9, gable: -1, stone: true };
+    stacks: [-1], stack: 0.35, gable: -1, stone: true };
   h.sink = h.wall + h.rise + 0.04 - 1.45;
   const along = new THREE.Vector2(Math.cos(h.yaw), -Math.sin(h.yaw));
   const end = new THREE.Vector2(W1_FROM.x - along.x * 0.9, W1_FROM.z - along.y * 0.9);
@@ -510,8 +510,13 @@ const flat = (p: THREE.Vector3) => new THREE.Vector2(p.x, p.z);
  * past where the tree comes down: the generated village was tuned laid round that line, and a longer one redraws it.
  */
 export const HER_WAY: THREE.Vector2[] = [RIDGE_END, W1_FROM, onFrom(OVER, NORTH, 1.35, COPING), ...ON_HER_WAY.slice(2)].map(flat);
+/**
+ * Where the fog comes from onto the stranded boat (atan2(x, z)): behind them, off the starboard quarter, so from the
+ * open water off the boat's port side it is seen coming on behind the boat.
+ */
+const FOG_FROM = 0.6;
 export const DARK_WAY: THREE.Vector2[] = [
-  new THREE.Vector2(STRAND.x, STRAND.y + 240),
+  new THREE.Vector2(STRAND.x + Math.sin(FOG_FROM) * 240, STRAND.y + Math.cos(FOG_FROM) * 240),
   STRAND.clone(),
   ...ON_HER_WAY.map(flat),
 ];
