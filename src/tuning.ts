@@ -1482,12 +1482,17 @@ export const tuning = {
      */
     liftFrom: 0.12, liftFull: 0.5, liftRate: 0.65, reach: 6,
     /**
-     * Each step's drawn gesture shows once the step is asked and its hold has settled: `inviteSettle` seconds after it
-     * is asked and `inviteHeld` of the way through the camera's move to its hold; it goes as a stroke lands on what it
-     * asks for and comes back `inviteBack` seconds after the last one. A safety valve comes after `valveAfter` seconds
-     * at rest with no progress.
+     * A step is asked once the camera is `inviteHeld` of the way through its move to the step's hold; its drawn sweep
+     * shows at once (the drawn spiral `inviteSettle` seconds after), goes as a stroke lands on what it asks for, and
+     * comes back `inviteBack` seconds after the last one. A safety valve comes after `valveAfter` seconds at rest with
+     * no progress.
      */
     inviteSettle: 1, inviteHeld: 0.8, inviteBack: 4, valveAfter: 90,
+    /**
+     * The drawn sweeps: each crosses in `sweepFor` seconds and comes again after `sweepRest`, `sweepWidth` m wide drawn
+     * `sweepBold` times as bold as the shared sweeps allow on screen, and `sweepLift` m in front of what it crosses.
+     */
+    sweepFor: 1.6, sweepRest: 0.9, sweepWidth: 0.16, sweepBold: 1.8, sweepLift: 1.2,
     coaxUrgency: 0.85, coaxRadius: 2.4,
     /** The swell it leaves going under: speed (m/s), crest spacing (m), width of the packet (m) and height at the boat (m). */
     surgeSpeed: 6, surgeLength: 22, surgeWidth: 10, surgeHeight: 0.6,
@@ -1618,12 +1623,13 @@ export const tuning = {
     floatDrag: 0.8,
     /**
      * A stroke in any direction across the near cork or the line behind it on screen (within `corkRadius` of them, in
-     * normalised device units) sets the cork moving toward her at `corkPush` metres a second for each screen height a
-     * second the stroke travels, at most `corkPushMax`, its path bent `corkBend` of the way the stroke goes; pushed
-     * out past where it lay it drifts back at `corkSettle` metres a second for each metre out, at most `corkSettleMax`.
-     * The drawn sweep spans `corkInviteRadius` metres either side of its middle.
+     * normalised device units) sends the cork gliding toward her, `corkCome` metres for each unit of stroke (at most
+     * `corkComeMax` asked at once), at up to `corkGlide` m/s, its path bent `corkBend` of the way the stroke went;
+     * pushed out past where it lay it drifts back at `corkSettle` metres a second for each metre out, at most
+     * `corkSettleMax`. The drawn sweep spans `corkInviteRadius` metres either side of its middle.
      */
-    corkRadius: 0.32, corkPush: 2.6, corkPushMax: 3.2, corkBend: 0.35, corkSettle: 0.35, corkSettleMax: 0.4, corkInviteRadius: 1.4,
+    corkRadius: 0.32, corkCome: 4, corkComeMax: 2.5, corkGlide: 1.8, corkBend: 0.35, corkSettle: 0.35, corkSettleMax: 0.4,
+    corkInviteRadius: 1.4,
     /**
      * The heave: she hauls `heaves` times, each a long arm's length (`pullTake` m) over `heaveTime` seconds, the share
      * `pullDraw` of it spent drawing, braced at least `braceFor` seconds between, leaning back `braceBack` (radians)

@@ -292,7 +292,10 @@ export class NetWhale {
   heavedBy: 'sweeps' | 'dolphin' | null = null;
   private eyed = false;
   private heaved = false;
-  private readonly reach = Array.from({ length: 10 }, () => new THREE.Vector3());
+  private readonly reach = Array.from({ length: 24 }, () => new THREE.Vector3());
+  /** How much further the strokes have asked the cork to come toward her (m), and the way the last one bent it. */
+  private corkCome = 0;
+  private readonly corkBend = new THREE.Vector3();
   private readonly skin: Skin = { height: 0, normal: new THREE.Vector3() };
   /** Where the near cork lay when the line began: pushed out past it, away from the boat, it settles back. */
   private readonly corkHome = new THREE.Vector3();
@@ -310,6 +313,11 @@ export class NetWhale {
   private readonly holdFrom = new Float32Array(14);
   private readonly holdTo = new Float32Array(14);
   private readonly holdNow = new Float32Array(14);
+  private readonly holdNext = new Float32Array(14);
+  /** The drawn sweep: the encounter's clock when it was last drawn, seconds it has been offered, and how plainly it shows. */
+  private sweptAt = 0;
+  private sweepT = 0;
+  private sweepAlpha = 0;
   /** The view has eased round to the farewell's hold, where it dives. */
   private farewelled = false;
   /** The light lent her in the look and the farewell (`Traveller.lent`), eased in and out with them. */
@@ -526,7 +534,7 @@ export class NetWhale {
    * lands on what it asks for; they come back a few seconds after the last one.
    */
   private get invites(): boolean {
-    return this.asks && this.valveT < 0 && this.askedFor > K.inviteSettle && this.holdT > K.inviteHeld && this.sinceStroke > K.inviteBack;
+    return this.asks && this.valveT < 0 && this.askedFor > 0 && this.sinceStroke > K.inviteBack;
   }
 
   /** Circling over the blowhole stands the column there, while the breath is what is asked. */
@@ -535,34 +543,60 @@ export class NetWhale {
   }
 
   get coax(): Coax | null {
-    if (this.step !== 'breath' || !this.invites) return null;
+    if (this.step !== 'breath' || !this.invites || this.askedFor < K.inviteSettle) return null;
     this.asking.at.copy(this.whale.blowhole);
     return this.asking;
   }
 
-  /**
-   * The drawn sweep up across its eye and over its brow; across the cork toward her; from its head toward her as she
-   * braces; and along the flipper once the cygnet holds the loop's end.
-   */
+  /** The whale draws its own sweeps (`net.gesture`), drawn the moment each is asked; the shared ones draw nothing here. */
   get windInvitation(): THREE.Vector3 | null {
+    return null;
+  }
+
+  get invitationRadius(): number {
+    return 0;
+  }
+
+  get invitationHeading(): number | null {
+    return null;
+  }
+
+  /**
+   * Where the drawn sweep is offered now: up across its eye and over its brow; across the cork toward her; from its
+   * head toward her as she braces; along the flipper once the cygnet holds the loop's end.
+   */
+  get offered(): THREE.Vector3 | null {
     return this.step !== 'breath' && this.invites ? this.inviting : null;
   }
 
-  /** How far either side of its middle the drawn sweep spans (m). */
-  get invitationRadius(): number {
-    if (!this.windInvitation) return 0;
-    return this.step === 'flipper' ? K.finInviteRadius : this.step === 'eye' ? K.foldInviteRadius
-      : this.step === 'heave' ? K.heaveInviteRadius : K.corkInviteRadius;
-  }
-
-  /** Which way it is drawn on screen: the way the help goes. */
-  get invitationHeading(): number | null {
-    return this.windInvitation ? this.inviteHeading : null;
-  }
-
-  /** The rendered camera, for what a gust crosses on screen. */
+  /** The rendered camera, for what a stroke crosses on screen and to draw the sweeps over what they ask for. */
   sees(camera: THREE.PerspectiveCamera): void {
     this.camera = camera;
+    this.drawSweep(camera);
+  }
+
+  /**
+   * The drawn sweep, from its first stroke the moment it is offered, across what the step asks the wind to touch
+   * the way the help goes, again and again, large and bold enough to read against the gold sky and the sea.
+   */
+  private drawSweep(camera: THREE.PerspectiveCamera): void {
+    const gesture = this.net.gesture;
+    const dt = Math.max(0, this.clock - this.sweptAt);
+    this.sweptAt = this.clock;
+    const at = this.offered;
+    this.sweepT = at ? this.sweepT + dt : 0;
+    this.sweepAlpha += ((at ? 1 : 0) - this.sweepAlpha) * (1 - Math.exp(-dt * (at ? 6 : 12)));
+    if (!at || this.sweepAlpha < 0.003) {
+      gesture.hide();
+      return;
+    }
+    const radius = this.step === 'flipper' ? K.finInviteRadius : this.step === 'eye' ? K.foldInviteRadius
+      : this.step === 'heave' ? K.heaveInviteRadius : K.corkInviteRadius;
+    const cycle = K.sweepFor + K.sweepRest;
+    // In front of what it crosses, so the surface never buries it.
+    this.p.subVectors(camera.position, at).normalize().multiplyScalar(K.sweepLift).add(at);
+    gesture.draw(camera, this.p, (this.sweepT % cycle) / K.sweepFor, radius * 2.3, this.sweepAlpha, K.sweepWidth, 'across', 1,
+      this.inviteHeading, K.sweepBold);
   }
 
   update(dt: number, time: number): void {
@@ -584,7 +618,8 @@ export class NetWhale {
       this.sighs++;
     }
     this.sinceStroke += dt;
-    this.askedFor = this.asks ? this.askedFor + dt : 0;
+    // A step is asked once the view has come to its hold.
+    this.askedFor = this.asks && this.holdT > K.inviteHeld ? this.askedFor + dt : this.asks ? this.askedFor : 0;
     if (this.valveStep !== null && this.valveStep !== this.step) this.runValve(dt);
     if (this.step === 'breath') this.breathe(dt);
     if (this.step === 'eye') this.openEye(dt);
@@ -1578,6 +1613,7 @@ export class NetWhale {
     if (this.haul === 'out') {
       if (this.still > 0) this.waiting += dt;
       this.brushCork(dt);
+      this.glideCork(dt);
       this.settleCork(dt);
       if (this.waiting > K.valveAfter && this.valveT < 0) this.noseCork(dt);
       this.invite();
@@ -1685,14 +1721,17 @@ export class NetWhale {
     if (dt <= 0) return;
     const whale = this.whale;
     const pts = this.reach;
-    this.headNet(pts[0]);
-    pts[1].copy(whale.eye);
-    pts[2].copy(whale.blowhole);
-    pts[3].copy(whale.jaw);
-    pts[4].copy(this.net.foot);
-    for (let i = 0; i < 4; i++) pts[5 + i].copy(this.net.foot).lerp(this.catchAt, (i + 1) / 5).setY(0.1);
-    pts[9].copy(pts[0]).lerp(this.net.foot, 0.5);
-    const hit = this.landed(K.heaveRadius, pts);
+    // Over the whole of its head between its eye, its crown and its jaw, and on across the water to her.
+    let n = 0;
+    for (let i = 0; i <= 3; i++) {
+      for (let j = 0; i + j <= 3; j++) {
+        pts[n++].copy(whale.eye).multiplyScalar(1 - (i + j) / 3).addScaledVector(whale.blowhole, i / 3).addScaledVector(whale.jaw, j / 3);
+      }
+    }
+    pts[n++].copy(this.net.foot);
+    for (let i = 1; i < 6; i++) pts[n++].copy(this.net.foot).lerp(this.catchAt, i / 6).setY(0.1);
+    this.headNet(pts[n]).lerp(this.net.foot, 0.5);
+    const hit = this.landed(K.heaveRadius, pts, n + 1);
     if (hit <= 0) return;
     this.sinceStroke = 0;
     this.billow = Math.min(1, this.billow + hit * K.billowGain);
@@ -1813,8 +1852,8 @@ export class NetWhale {
   }
 
   /**
-   * A stroke in any direction across the near cork on screen, or across the line behind it, sets it moving across the
-   * water toward her as fast as the stroke goes, its path bent a little the way the stroke goes.
+   * A stroke in any direction across the near cork on screen, or across the line behind it, sets it gliding across
+   * the water toward her at once, the further the longer the stroke, its path bent a little the way the stroke goes.
    */
   private brushCork(dt: number): void {
     const { input } = this.cast;
@@ -1826,26 +1865,30 @@ export class NetWhale {
     for (let i = 1; i < 5; i++) this.net.link(i, pts[i]);
     const hit = this.landed(K.corkRadius, pts, 5);
     if (hit <= 0) return;
-    this.sinceStroke = 0;
+    this.sinceStroke = this.waiting = 0;
+    this.corkCome = Math.min(K.corkComeMax, this.corkCome + hit * K.corkCome);
     const dx = input.ndc.x - input.prevNdc.x;
     const dy = input.ndc.y - input.prevNdc.y;
-    const toward = this.a.subVectors(this.catchAt, float.position).setY(0).normalize();
     // The stroke's way across the water at the cork: a step along it on screen, followed down onto the water.
     const step = 0.02 / Math.max(Math.hypot(dx, dy), 1e-6);
     this.p.copy(float.position).project(camera);
     this.b.set(this.p.x + dx * step, this.p.y + dy * step, 0.5).unproject(camera).sub(camera.position);
-    const bend = this.ray.set(0, 0, 0);
-    if (this.b.y < -1e-3) {
-      this.b.multiplyScalar((float.position.y - camera.position.y) / this.b.y).add(camera.position).sub(float.position).setY(0);
-      if (this.b.lengthSq() > 1e-8) bend.copy(this.b.normalize()).addScaledVector(toward, -this.b.dot(toward));
-    }
-    const way = toward.addScaledVector(bend, K.corkBend).normalize();
-    const moved = Math.hypot(dx * camera.aspect, dy);
-    const pace = Math.min(K.corkPushMax, (K.corkPush * moved) / 2 / dt) * Math.min(1, hit / moved);
+    if (this.b.y > -1e-3) return;
+    this.b.multiplyScalar((float.position.y - camera.position.y) / this.b.y).add(camera.position).sub(float.position).setY(0);
+    if (this.b.lengthSq() > 1e-8) this.corkBend.copy(this.b.normalize());
+  }
+
+  /** What the strokes have asked of the cork, it does: it glides toward her that far, bent a little their way. */
+  private glideCork(dt: number): void {
+    const float = this.net.float;
+    this.corkBend.multiplyScalar(Math.exp(-dt * 1.5));
+    if (this.corkCome <= 0) return;
+    const toward = this.a.subVectors(this.catchAt, float.position).setY(0).normalize();
+    const way = this.b.copy(this.corkBend).addScaledVector(toward, -this.corkBend.dot(toward)).multiplyScalar(K.corkBend).add(toward).normalize();
+    const pace = Math.min(K.corkGlide, 0.6 + 1.8 * this.corkCome);
     const more = pace - float.velocity.dot(way);
-    if (more <= 0) return;
-    float.push(this.b.copy(way).multiplyScalar(more));
-    this.waiting = 0;
+    if (more > 0) float.push(this.ray.copy(way).multiplyScalar(more * (1 - Math.exp(-dt * 8))));
+    this.corkCome = Math.max(0, this.corkCome - Math.max(0.2, float.velocity.dot(toward)) * dt);
   }
 
   /** Pushed out past where it lay, the weight of the net on its line draws the cork back there, and no nearer. */
@@ -2066,6 +2109,9 @@ export class NetWhale {
       to.set([K.holdDistance, K.holdHeight, K.holdBearing, K.holdLookY, K.holdToward, 0, breath.distance, breath.height,
         breath.turn, breath.lookY, breath.toward, 0, 0, 0]);
     }
+    const same = this.holdSet && this.holdNext.every((v, i) => v === to[i]);
+    this.holdNext.set(to);
+    if (same && !now) return;
     if (now || !this.holdSet) {
       this.holdFrom.set(to);
       this.holdNow.set(to);

@@ -7,6 +7,7 @@ import { SPINE_N } from './whaleShader';
 import { NET, corkMaterial, netLook, ropeMaterial, sheetMaterial } from './netShader';
 import type { SleepingWhale, Skin } from './sleeper';
 import { MIST, type Spray } from './spray';
+import { WindGesture } from '../wind-gesture';
 
 const K = tuning.netWhale;
 
@@ -89,6 +90,8 @@ const CORK_AHEAD = 0.6;
 /** How close to the planking a cork floats, and how hard it must knock to be heard (m/s). */
 const CORK_CLEAR = NET.float + 0.03;
 const KNOCK_FROM = 0.25;
+/** A shove to the cork carries this much of itself along the last links of the line behind it. */
+const DRAGGED = [1, 0.8, 0.6, 0.4, 0.2];
 /** The line hauled in lies in a small coil on the boards this wide, and pays back out over the rail this fast (m/s). */
 const COIL = 0.16;
 const PAY_OUT = 1.6;
@@ -159,6 +162,9 @@ interface Polyline {
  */
 export class Net {
   readonly objects: THREE.Object3D[];
+  /** The whale's own drawn gestures, laid over whatever its steps ask the wind to touch. */
+  readonly gesture = new WindGesture('whale-invitation');
+  private readonly parts: THREE.Object3D[];
   /** The patch over the blowhole lifted clear of the crown, 0..1. */
   lift = 0;
   /** Once it has breathed, the lifted patch fallen back loose and slumped off the blowhole over the crown, 0..1. */
@@ -390,8 +396,11 @@ export class Net {
       position: at,
       velocity: vel,
       push(impulse: THREE.Vector3): void {
-        float.chainVel[float.links * 2] += impulse.x;
-        float.chainVel[float.links * 2 + 1] += impulse.z;
+        // The line behind it comes with it, so it is not held back on a taut tether.
+        for (let m = 0; m < DRAGGED.length; m++) {
+          float.chainVel[(float.links - m) * 2] += impulse.x * DRAGGED[m];
+          float.chainVel[(float.links - m) * 2 + 1] += impulse.z * DRAGGED[m];
+        }
       },
     };
 
@@ -449,8 +458,9 @@ export class Net {
       renderer.getDrawingBufferSize(size);
       netLook.uRes.value.set(size.x / 2, size.y / 2);
     };
-    this.objects = [this.sheet, this.fold, this.ropes, this.corks];
-    for (const o of this.objects) {
+    this.parts = [this.sheet, this.fold, this.ropes, this.corks];
+    this.objects = [...this.parts, this.gesture.batch.mesh];
+    for (const o of this.parts) {
       o.frustumCulled = false;
       o.visible = false;
     }
@@ -486,7 +496,7 @@ export class Net {
     this.snap = true;
     netLook.uFade.value = 1;
     netLook.uSunk.value = 0;
-    for (const o of this.objects) o.visible = false;
+    for (const o of this.parts) o.visible = false;
     if (now) this.finishDraping();
   }
 
@@ -499,7 +509,7 @@ export class Net {
   /** Taken off the world with the whale. */
   hide(): void {
     this.draped = ROWS;
-    for (const o of this.objects) o.visible = false;
+    for (const o of this.parts) o.visible = false;
   }
 
   /** The leader's link `back` links in from its near cork, in the world. */
@@ -558,7 +568,7 @@ export class Net {
     }
     if (!this.sheet.visible) return;
     if (this.sink >= 1) {
-      for (const o of this.objects) o.visible = false;
+      for (const o of this.parts) o.visible = false;
       return;
     }
     this.domeT += dt;
@@ -829,7 +839,7 @@ export class Net {
       sizes[c] = at.leader >= 0 ? NET.float : at.patch && Math.abs(this.acrossOf(at.i * COLS + at.j)) > PATCH.y * 0.75 ? 0 : NET.cork;
     });
     this.corkSize.needsUpdate = true;
-    for (const o of this.objects) o.visible = true;
+    for (const o of this.parts) o.visible = true;
     this.snap = true;
   }
 
