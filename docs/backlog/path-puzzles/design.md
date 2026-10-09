@@ -782,9 +782,10 @@ off. Five movements, each with its own feeling, each handing on to the next on s
    it before the player does. The camera comes down as the boat slows, so it grows above the horizon.
 2. **Sorrow.** At rest beside its head: an old faded net grown with weed lies over it, its breath sputtering through
    the mesh, the eye heavy and tired. The camera holds still and the score thins.
-3. **Courage.** The breath (the player's circles; the eye opens and finds her; its low call, the friend's greeting);
-   the haul (her pulls; the net slides off the bared head, water streaming; its eye on her); the bird's swim and the
-   flipper it lifts for the wind's touch.
+3. **Courage.** The breath (the player's circles); the eye (the player's sweep lifts the weed off it; it opens and
+   finds her; its low call, the friend's greeting); the line and the heave (her pulls and the player's gusts
+   together; the net slides off the bared head, water streaming; its eye on her); the bird's swim and the flipper it
+   lifts for the wind's touch.
 4. **Release.** The river-spirit moment: it breathes free; the plume's mist drifts down over the boat in the gold
    light; its call turns glad; the sea round it brightens; the net, let go, sinks slowly away into the deep and is
    gone; the dolphins leap; she waves and the bird calls.
@@ -804,6 +805,57 @@ stylised throughout: bold simple shapes with character, a soft-toy staircase, no
 whale's structure drawn as bold, simple, characterful shapes; the eye's opening on her is the held exchange of
 looks at the heart of it (over her shoulder, a slow blink, she reaches a mitten toward it, the bird peeps); the haze
 does the first reveal; the score thins to almost nothing in the sorrow and blooms once at the release.
+
+**Jeremy's first play** (2026-10-09, of `sea-whale` at `0fbab59d`, verbatim):
+> - You can see the whale the moment you leave the island. My direction was to have the whale be a discovered
+>   sequence in open sea where the dolphins nudge you and lead you to it. I could also see the sky mirror island (i
+>   shouldn't be able to see the sky mirror if the whale is the next sequence). The positioning of these things in the
+>   world needs to be rethought.
+> - The boat ride seemed to be moving much slower than it otherwise does
+> - The puzzles with the whale are kinda boring or not enough, and they don't have indicative wind gestures
+> - The updraft you need to do to get the net out of it's blowhole is way overtuned - it takes way too many wind
+>   cycles.
+> - When the cygnet goes out and holds something, it's not clear waht the player needs to do. Maybe indicative wind
+>   gestures will be helpful here. Children will generally just touch the screen in random directions so we should be
+>   a bit generous about what counts as "wind" towards the objective e.g. lifting it's flipper
+> - Have a think about what other small interactions we can do with the wind to save the whale. Right now it's very
+>   short.
+
+> one other issue i found was when the whale disappears, it slides into the water like a very long snake rather than
+> a whale (it's body is way too long, or it disappears too slowly). It also doesn't convey any emotion, doesn't make
+> any deep whale sounds, doesn't look at the player. Infact, sometimes it looks like it's falling asleep.
+
+Claude's reading, measured on that build:
+- The whale rested about 300 m from the sleeping island and 150 m from the mirror's island, on the line the boat
+  already sails. The sea's haze hides only what is past about 250 to 300 m, so both stood on the horizon from the
+  first seconds and nothing was found.
+- From `?chapter=sea` the pod's pacing held the boat at about 3.3 m/s for half a minute (ordinary sailing is 4.5, and
+  gusts could not lift it past the cap), then it crept the last 18 m to the whale over 15 s.
+- The player made three gestures of a few seconds each, and between them the story played itself: once the cork was
+  caught, the haul was a cutscene. The drawn gestures waited for six seconds of stillness, so a player who kept moving
+  never saw one. At the flipper only a stroke running along the flipper counted, which nobody watching the bird
+  would guess.
+- The breath needed over six seconds of strong circling at the blowhole (`liftRate` 0.16 at full charge) and much
+  more at an ordinary pace.
+- The dive slid 110 m of body through one bend for about 20 s, so it read as an eel going into a tunnel. Its eye was
+  out of the farewell's frames, its lid tipped down with its head, and its voice was two soft calls under the score,
+  so it read as going back to sleep.
+
+**The rework** (Claude's calls under the ownership above, 2026-10-09). The bullets below are rewritten to it; in
+short:
+- **Found, not seen.** The whale lies out on the open sea, beyond sight of the sleeping island's line and the mirror's
+  coast. After the swim the pod nudges the boat and leads it off into a morning sea mist, where the whale is heard
+  before it is seen. The mirror's island stays hidden in its own mist until the whale has gone. The boat sails at
+  least at its ordinary pace, and comes to rest beside the whale without a long creep.
+- **Five things the wind does**, each on a different part of it and each answered at once where the wind touches:
+  the breath (circles over the blowhole), the eye (a sweep lifts a weedy fold of net off its eye, so the look between
+  them is the player's doing), the line (a sweep brings the cork to her), the heave (sweeps billow the net up off its
+  head while she hauls, so everyone pulls together as on the river spirit's thorn), and the flipper (any stroke at the
+  flipper or the bird). Each is drawn the moment it is asked, takes a few seconds and is generous about what counts.
+  They are small acts of help, not riddles: what a child should feel here is that they are helping.
+- **A goodbye with feeling.** Free, it rides higher in the water, keeps its wide bright eye on her, sings deep and
+  glad, and waves the freed flipper. Then it dives as a whale does: a short steep arch and its flukes, gone in about
+  8 s, never a long slide.
 
 This consolidates the above for the build. The concept frames `comps/crossings/whale-net/k1–k5` and `k2-portrait`
 (Astra, 2026-10-07, painted over real frames of this chapter, `ref-sea-*.png`) are now only a reference for
@@ -826,17 +878,39 @@ The sequence:
   friend, never as a stranger or a danger: on the first crossing she watches it go (her gaze follows it and she sits
   up as it blows), and on the open sea she knows it before the player does: as it breathes in the haze she leans
   toward it and points, and the cygnet, wary of everything else that size, is not afraid of it. When its eye opens
-  after the first breath it knows her too; the look between them is the warmest beat of the sequence, and the
+  from under the weed it knows her too; the look between them is the warmest beat of the sequence, and the
   goodbye is a friend's.
 - **The open sea as on main up to the swim.** The pod rises and rides the bow, the leap at first light, the cygnet's
   swim and its drying. The sea's distant surfacing whale (`whaleAt: 27`) is cut: the sleeper is the whale. The leap
   is thrown only from its mark beside the boat (Claude's call, N3o): a leaper that set out far astern runs up to it
   first, so the whole arc stays in the frame, never close under the lens.
-- **The pod leads.** After the swim a dolphin nudges the planking (main's nudge, now asking) and the pod leads the boat
-  off its line toward what looks like a long low island in the sunrise haze (`k1`). It breathes: a whale, dream-sized,
-  lying still and worn out. The boat eases to rest beside its head (`Boat.speedLimit` eased to zero, never braked).
+- **Where it lies** (Claude's call, 2026-10-09, from Jeremy's first play). Out on the open sea, found rather than
+  seen. The rest of the world keeps its places; the whale and the boat's line move.
+  - From leaving the sleeping island until the nudge, nothing of the whale (its far back and flukes included) and
+    nothing of the mirror's island is on screen in either orientation.
+  - The mirror's island lies in its own isle mist (`ISLE_MISTS`, as `toSleeping` keeps the sleeping island) for the
+    whole of `toMirror` until the whale has dived, then comes out of it ahead as the boat comes about.
+  - A low morning mist lies on the sea. It thickens through the pod's play, so by the nudge the sea is seen only a
+    couple of hundred metres round, while the sky and the low sun stay clear above it. It lifts as the whale dives.
+  - The whale lies far enough off the line to be out of sight until the lead, and near enough that the lead runs
+    about 30 to 45 s at ordinary sailing.
+  - At rest, its lie relative to the boat and to the low sun is exactly as built, and so is the time of day (the
+    sun's bearing and height), so every hold carries over unchanged.
+  - From the dive to the mooring at the mirror takes at most about 60 s at ordinary sailing.
+- **The boat's pace.** It sails at least at its ordinary 4.5 m/s through the whole open sea; the only exceptions are
+  the swim's own trim and the last few metres coming to rest. The player's gusts fill the sail as on any crossing, up
+  to the cap the pod's play needs. It comes to rest beside the head without a creep: the last 20 m take about 8 s at
+  most (`Boat.speedLimit` eased to zero, never braked).
+- **The pod leads, and the whale is found.** After the swim a dolphin nudges the planking (main's nudge, now asking)
+  and the pod turns off the line ahead of the bow; the boat follows them into the mist. The whale comes in three
+  stages, each a little later than the last:
+  1. Heard first: a deep, slow, tired breath somewhere ahead in the mist. She sits up and the cygnet peeks out.
+  2. Then seen: its blow rising white above the mist, lit by the low sun.
+  3. Then the long low shape forming out of the mist as an island that breathes (`k1`): a whale, dream-sized, lying
+     still and worn out.
   Come to rest beside it with the nudge never landed, it counts as led all the same.
-- **The whale.** About 110 m nose to flukes (see Ownership above; `notes.md` says 75 m), too big for the frame: the back recedes across and away into the haze and
+- **The whale.** About 110 m nose to flukes as first built, shortened behind the flippers for the dive (see "The
+  dive, a whale's"; the head end keeps its size), too big for the frame: the back recedes across and away into the haze and
   is never shown whole near the boat. Slate-blue, paler underside, the low sun on its rim, cool sky fill so the eye
   still reads; no sharp ridge, no face-like smile. Its eye, near the boat, is larger than the
   boat is wide, under a heavy tired lid. `notes.md`'s heights scaled to 110 m: crown about 5.3 m above the water, eye
@@ -925,10 +999,23 @@ The sequence:
   the rope knotted in irregular diamonds and standing off the skin in folds and over hollows. A sparse
   deforming mesh, instanced corks and a few boundary ropes, never a general cloth simulation. Tired, never hurt: no
   injury shown.
+- **What every step keeps** (Claude's calls, 2026-10-09, from Jeremy's first play: "Children will generally just
+  touch the screen in random directions so we should be a bit generous about what counts as "wind" towards the
+  objective"):
+  - The drawn gesture shows the moment the step is asked, once its hold has settled (about a second). It repeats
+    gently until a stroke lands on the target, and comes back after about 4 s without one. It is drawn large and bright
+    enough to read against the gold sky and the water, in both orientations.
+  - A stroke counts wherever it touches a wide area round the target on screen, far larger than the target itself,
+    and in any direction. Direction only shapes how the answer looks. A child's random swipes over the scene get there.
+  - Every stroke that lands is answered at once at the target (the mesh lifts, the weed sways, the cork bobs toward
+    her, the flipper stirs), so the player sees what they touched. Progress is kept between strokes.
+  - Each step asks for a few seconds of play: about two loops of circles, or one to three strokes.
+  - The valve after about 90 s without progress stays.
 - **1. The breath (circles).** The net lies over the blowhole; each breath only domes the mesh and sputters a weak
   mist. `updraftTarget` is the blowhole; circles there lift the patch of mesh off it like a sheet in the wind
-  (progress builds while the player winds and is kept when they stop); the whale draws its first full breath, a soft
-  column of mist up through the spiral, and its great eye opens and looks at the child (`k2`). Once it has breathed,
+  (progress builds while the player winds and is kept when they stop). About two loops of ordinary circling anywhere
+  near the blowhole on screen lift it clear; partial circling lifts it part way. The whale draws its first full
+  breath, a soft column of mist up through the spiral (`k2`). Once it has breathed,
   the patch falls back loose and slumps off the blowhole to the far side of the crown, so the back's outline is the
   whale's again, never a tent of net standing on it; the column reads against the bright sky, full and tall, white
   mist lit gold on its sun side and soft grey-blue on its shadow side, never coloured smoke, drifting as it falls (Claude's call, 2026-10-08, after playing N3g: the
@@ -936,13 +1023,30 @@ The sequence:
   the spout's kind, smaller (Claude's call, 2026-10-09): as built (N3r), burst up through the spiral to about 9 m in
   about a second, widening as it rises into a bushy top, then torn by the air and drifting off as it frays, gone in
   about five seconds.
-- **2. The child (a sweep).** A line of corks trails from the net across the water by the boat. A sweep pushes the
-  nearest cork to the boat; she leans out, catches the line in both mittens and hauls, and the net peels back off the
-  jaw and head into the water (`k3`). Hands just outside the rail; she leans, never hangs out.
-- **3. The cygnet (a sweep along the flipper).** The last loop is round the near flipper, out of her reach. The cygnet,
-  which swam earlier in this chapter, goes in, swims to it and takes the loop's end in its bill; a sweep along the
-  flipper and the whale, awake now and knowing her, lifts it lazily, and the loop slides off into the cygnet's pull,
-  slack in the rope so the bird never reads as hauling a giant (`k4`). The child watches, mittens to her mouth. The
+- **2. The eye (a sweep across it).** Breathing again, it tries to open its eye, but a heavy fold of the net hung with
+  weed lies across it. Under the fold the lid lifts and sinks back, struggling, never drowsing; she leans toward it.
+  The drawn sweep crosses the eye. A stroke anywhere over or near the eye lifts the fold: a weak stroke lifts it part
+  way and it sags back a little, and one or two good strokes flip it up and over off the brow in one wet sheet. Only
+  the net moves, never the whale's body. Its eye opens wide, wet and bright, and finds her: the look between them, as
+  built. So the warmest beat of the sequence is the player's own doing.
+- **3. The line (a sweep at the cork).** A line of corks trails from the net across the water by the boat. Any
+  stroke across the near cork or the line behind it brings the cork toward her (the stroke's direction only bends
+  its path), and she leans out and catches the line in both mittens. Hands just outside the rail; she leans, never
+  hangs out.
+- **4. The heave (sweeps with her pulls).** She hauls, but the net is heavy and caught on the knobs of its head; she
+  leans back and it will not come. Each stroke over the net on its head, or over the water between the head and the
+  boat, in any direction, billows the mesh up off the head like a sheet in the wind. While it is up she hauls a long
+  arm's length, the net slides toward the boat, and she braces for the next. About four heaves bring it off the jaw
+  and head into the water (`k3`). Her body sells the effort, and between heaves she looks up at the net, ready. The
+  drawn sweep runs from the head toward her; each heave is one lift in the score. This is everyone pulling together,
+  as on the river spirit's thorn.
+- **5. The flipper (any stroke at the flipper or the bird).** The last loop is round the near flipper, out of her
+  reach. The cygnet, which swam earlier in this chapter, goes in, swims to it and takes the loop's end in its bill.
+  The drawn strokes go up along the flipper from the moment it holds the end. A stroke anywhere near the flipper or the
+  bird, in any direction, counts: the player's natural wish to help the bird is the right one. The whale, awake now
+  and knowing her, answers the wind's touch by lifting the flipper lazily (Jeremy's own example), and the loop slides
+  off into the cygnet's pull, slack in the rope so the bird never reads as hauling a giant (`k4`). The child watches,
+  mittens to her mouth. The
   cygnet swims back and is lifted in; the bird stays its own size and keeps clear water between it and the fin. As
   built (Claude's call, 2026-10-08): it drops in on its own side and swims round the stern, never through her; it holds
   the end beside the flipper's tip, about 4 m out to port of her, at least 1.2 m clear of the flipper's lift, side-on
@@ -953,56 +1057,78 @@ The sequence:
   loop sliding down it (Claude's call, 2026-10-08, after playing N3g: seen end-on with its drips as streaks it read
   as a claw).
 - **Free.** It spouts a tall plume against the sunrise, the empty net drifting away on the water; the pod leaps round
-  it; the child waves (`k5`). Then it dives as a whale does, never rolling over (Jeremy, 2026-10-08: "it "rolls
-  over" at the end which is very weird"): the head goes down, the long back arches slowly forward and slides under,
-  the flukes rise high once as if waving and slip under; its swell lifts the boat. The pod
-  goes with it, the limit eases off, and the sea goes still into the mirror's glass. The net starts drifting as the
-  loop slips off, working loose into a raft with its corks round its edges, so it is its own shape by the spout, then
-  sinks slowly away into the deep and is gone by the dive (Claude's call, 2026-10-08: the past let go); as built
-  (N3h), the raft lies in the open water between the boat and its head, where both frames see it, settles awash as
-  the spout falls and goes down through the glass, its floats last; the
-  pod sets off as the bird is lifted in, and three dolphins leap clear of the water round the head at the spout,
-  caught by the sun. Free, the whale first swings its head away and slides clear of the boat (the eye from about 15.6
-  to 19 m off), so by the spout it lies whole in the middle distance; the boat stays at rest. The release as built
-  (Claude's call, N3h): the spout, then its mist drifting down over the boat in the gold light with fine drops
-  glinting, the sea brightening round it, its call turned glad (the same voice, rising instead of settling) with her
-  eyes on its eye, then her look up into the mist and the cygnet calling back; about ten seconds from the spout to
-  the dive. The spout is a whale's blow of the first breath's white mist, glad and taller: a tall bushy column burst up
-  fast and widening as it rises, lit gold on its sun side and soft grey-blue in its shade, the low sun glowing
-  through its thin parts, then drifting and fraying; never a ball, opaque wool or smoke (Claude's call, 2026-10-09,
-  after playing it: a plume that swelled over seconds became a round opaque ball like cotton wool sitting on the
-  back, a cloud rather than a blow). Its crown is held in the release frame (Claude's call, N3o: as tall as fits,
-  about 14 m at most, not taller). As built (N3r): it stands at its full height, about 13 m, within a second of the
-  blow, holds about two seconds, then its top tears apart and drifts off fraying into the sun's glow, thin about five
-  seconds after the blow and gone by about seven. The dive
-  as built (Claude's call, N3i): one slow forward glide down a way through the sea that the whole body follows, its
-  bend where the spout stood, so the flukes rise in the sun's own glow; its head tips down into the sea with its eye
-  on her, the long back rises into an arch over the bend and slides forward under it, the low sun cresting the
-  arch; the tail stock comes to the bend and the flukes lift and stand high there, the whale turning about the
-  bend as they rise so their pale undersides open toward her (it turns, never rolls), flexing once or twice in a
-  slow wave with its goodbye call and her waves; as built (N3l), they trail low from the stock as it arches and its
-  stock tips them open toward her while they are still low (never more than about 17° across), so they come up
-  already opening, never a blade edge on to her, and stand level three-quarters toward her; they slip straight down, and its swell comes back and lifts the
-  boat; the pod leaps away over where it went; the boat comes about. About 20 s from the head going down to the
-  flukes under.
+  it; the child waves (`k5`). Then it says goodbye and dives as a whale does, never rolling over (Jeremy, 2026-10-08:
+  "it "rolls over" at the end which is very weird"). Its swell lifts the boat, the pod goes with it, the limit eases
+  off, the mist lifts and the sea goes still into the mirror's glass.
+- **Its goodbye, with feeling** (Claude's calls, 2026-10-09, from Jeremy's "It also doesn't convey any emotion,
+  doesn't make any deep whale sounds, doesn't look at the player. Infact, sometimes it looks like it's falling
+  asleep."). From the spout to the flukes it is plainly awake, glad and looking at her:
+  - Free of the weight, it rides a little higher in the water, the sea pouring off its back.
+  - Its head stays turned to the boat. Its eye, wide and wet with the sun's bright point in it, is on her and in frame
+    through the whole release and goodbye. The lid never lowers and the eye never closes, not even as the head goes
+    down.
+  - It sings: a deep, long, glad call, rising, loud and close enough to be felt under the score.
+  - It lifts the freed flipper high and waves it slowly, twice, water pouring off it: its thanks. She waves back with
+    both arms up and the cygnet calls.
+  - It eases a little clear of the boat (so the dive and the flukes never come near her), but never so far that its
+    eye stops reading in the release frame.
+- **The dive, a whale's, not an eel's** (Claude's call, 2026-10-09, from Jeremy's "it slides into the water like a
+  very long snake rather than a whale (it's body is way too long, or it disappears too slowly)"). A fluke-up dive,
+  short and steep:
+  - It swims slowly forward a little and its head goes under. Its body pitches down steeply, so its front half is
+    already deep while the back rolls up into one short, high arch: only the rear of the body shows, the tail stock
+    thick and keeled.
+  - The flukes come up out of the arch already opening toward her. They stand for a breath with their pale undersides
+    toward her, flex once with its goodbye call, and slip straight down.
+  - About 8 s from the head going under to the flukes gone, never a long length sliding through one point.
+  - The body behind the flippers is shortened until the arch reads as a whale's, starting from about 90 m nose to
+    flukes. The head, eye, flipper and flukes keep their size, so the steps' frames hold. The first crossing's far
+    whale is the same animal and shortens with it.
+  - A last deep call comes from under the sea as its swell lifts the boat.
+  - The flukes still rise in the sun's own glow, their pale undersides opening toward her as they come up (it turns,
+    never rolls; as built in N3l, never more than about 17° across while low, so never a blade edge on to her), and
+    she goes along the thwart to the port rail and waves to where it went down. The pod leaps away over where it
+    went, and the boat comes about.
+- **The net let go.** The net starts drifting as the loop slips off, working loose into a raft with its corks round
+  its edges, so it is its own shape by the spout, then sinks slowly away into the deep and is gone by the dive
+  (Claude's call, 2026-10-08: the past let go). As built (N3h), the raft lies in the open water between the boat and
+  its head, where both frames see it, settles awash as the spout falls and goes down through the glass, its floats
+  last. The pod sets off as the bird is lifted in, and three dolphins leap clear of the water round the head at the
+  spout, caught by the sun.
+- **The spout.** The release as built (Claude's call, N3h): the spout, then its mist drifting down over the boat in
+  the gold light with fine drops glinting, the sea brightening round it, its call turned glad, then her look up into
+  the mist and the cygnet calling back. The spout is a whale's blow of the first breath's white mist, glad and
+  taller: a tall bushy column burst up fast and widening as it rises, lit gold on its sun side and soft grey-blue in
+  its shade, the low sun glowing through its thin parts, then drifting and fraying; never a ball, opaque wool or smoke
+  (Claude's call, 2026-10-09, after playing it: a plume that swelled over seconds became a round opaque ball like
+  cotton wool sitting on the back, a cloud rather than a blow). Its crown is held in the release frame (Claude's call,
+  N3o: as tall as fits, about 14 m at most, not taller). As built (N3r): it stands at its full height, about 13 m,
+  within a second of the blow, holds about two seconds, then its top tears apart and drifts off fraying into the
+  sun's glow, thin about five seconds after the blow and gone by about seven.
 - **Gestures.** Each step's answer starts at the wind's target and is plainly the biggest thing on screen: the boat is
   at rest, so nothing may read as the boat speeding up. The ambient breeze does nothing to the net, the corks or the
   flipper. The whale's body never answers the wind (Jeremy, 2026-10-08: "I also saw that the whale's body responds to
-  the wind, which is weird"): no shiver, no slap, nothing from gusts on it or the breeze. What moves on it is the net,
-  the breath it draws through the player's circles, and the flipper it lifts for a sweep along it once awake.
+  the wind, which is weird"): no shiver, no slap, nothing from gusts on it or the breeze. What moves on it is the net
+  (the patch over the blowhole, the fold over its eye, the mesh over its head), the breath it draws through the
+  player's circles, and the flipper it chooses to lift at the wind's touch once awake. The wind moves the net; the
+  whale answers as an animal, never as an object pushed.
 - **One encounter, seamless** (Jeremy, 2026-10-08: "the interactions need a pass as well so that the whole encounter
-  feels seamless"). Each step's end hands on to the next on screen, with no dead air and nothing popping: the eye
-  opens and finds her, and her look goes to the float line by the boat; the net sliding off the head bares the loop on
-  the flipper, and the bird sees it and goes; the bird aboard, the whale drifts clear. The next target is plain the
+  feels seamless"). Each step's end hands on to the next on screen, with no dead air and nothing popping: the full
+  breath falls and its eye struggles under the weed, and her look goes to it; the eye opens and finds her, and after
+  the look her eyes go to the float line by the boat; the cork in her mittens, she braces and the net will not come;
+  the net sliding off the head bares the loop on the flipper, and the bird sees it and goes; the bird aboard, the
+  whale breathes free. The next target is plain the
   moment the last step ends; the whale's eye follows what matters (her, the bird); the camera's moves between holds
   are each one unbroken ease; the child and the bird answer each step's end.
-- **Invitations and valves.** Each step has the usual drawn invitation after a few idle seconds and a safety valve after
-  about 90 s with no progress, with a cause on screen: a dolphin lifts the mesh with its nose, noses the cork to the
-  boat, nudges the flipper. No gull. Nothing is timed, nothing fails.
+- **Invitations and valves.** Each step's drawn gesture shows the moment it is asked (see "What every step keeps"),
+  and a safety valve comes after about 90 s with no progress, with a cause on screen: a dolphin lifts the mesh with
+  its nose, noses the fold off its eye, noses the cork to the boat, nudges the net over its head, nudges the flipper.
+  No gull. Nothing is timed, nothing fails.
 - **Camera.** The crossing camera eases (never jerks, never cuts, no reverse angle or underwater shot) from the rear
-  view in `k1` to a hold beside the boat for the breath (`k2`), then closer and lower for the child's haul and the
-  cygnet (`k3`, `k4`), where her mittens, the cork and the bird must read, then back out for the release (`k5`, the pod
-  in frame). As found in the frames pass (Claude's call, 2026-10-08): the whale lies with its eye about 14.5 m off at
+  view in `k1` to a hold beside the boat for the breath (`k2`), then the look's hold for the eye (the fold over it is
+  the target, so its eye, her figure and the drawn sweep are all in that frame), then closer and lower for the line,
+  the heave and the cygnet (`k3`, `k4`), where her mittens, the cork, the net on its head and the bird must read,
+  then back out for the release (`k5`, the pod in frame, its eye on her and the waving flipper in frame). As found in the frames pass (Claude's call, 2026-10-08): the whale lies with its eye about 14.5 m off at
   46° to port and its length running about 72° to starboard, so its back recedes toward the low sun and leaves the
   frame on the right; every landscape hold looks toward the sun with the whale rimmed against it. A giant breaks the
   horizon (Claude's call, 2026-10-08, after playing N3g, whose holds 7–8.5 m up looked down on it like a map): the
@@ -1041,23 +1167,25 @@ The sequence:
   cygnet's is turned toward astern so the bird stands clear of the sail above the boat (`k2-portrait`).
 - **Reward.** Freeing the whale is the open sea's major conclusion, so the reward phrase (`completeObjective()`) plays
   as it spouts free.
-- **Pacing.** The mirror's jetty is on the horizon from the first seconds of the open sea, as on main: it lies only
-  about 250 m from the sleeping island's berth and about 25° off the sunrise the sea sails toward, so no route that keeps
-  the sunrise ahead through the leap and the swim can hide it. Claude's call (2026-10-07): keep that, since the
-  destination glimpsed and then left is what makes the pod's lead read as a detour; from the lead until the whale has
-  gone nothing of the mirror is in frame, and the boat comes about for it a few seconds after. Measured on `sea-whale`
-  with all three steps and the look between them (2026-10-08, N3g): the lead about 60 s in, at rest about 89 s; a
-  player making each gesture is moored about 216 s in, one who leaves every step to its valve about 480 s. The open
-  sea's "at most 100 s" is lifted for this. Music: the sea's score holds through the encounter; the mirror's arrival
-  music cannot start until the whale has gone.
+- **Pacing.** The mirror stays hidden in its isle mist until the whale has dived (see "Where it lies"; this replaces
+  Claude's 2026-10-07 call to leave its jetty on the horizon, which Jeremy ruled out). Targets: the leap and the swim
+  as on main; the lead about 30 to 45 s from the nudge to rest; a player making each gesture promptly through the
+  five steps and the goodbye takes about two and a half to three minutes at rest; from the dive to the mooring at
+  most about 60 s. The open sea's "at most 100 s" is lifted for this. Music: the sea's score holds through the
+  encounter; the mirror's arrival music cannot start until the whale has gone.
 - **Saves.** Checkpoints at rest beside it (before the first step), after each step, and after it has gone (resumes
-  sailing on toward the mirror with no whale). The haul's is taken as she lets go of the line, before the bird goes
-  in; the flipper's resumes at free with the bird in the satchel and the net loose.
+  sailing on toward the mirror with no whale, the mist lifted). The eye's resumes with the fold off and its eye open
+  on her; the line's with the cork in her mittens before the first heave; the heave's is taken as she lets go of the
+  line, before the bird goes in; the flipper's resumes at free with the bird in the satchel and the net loose.
 - **Sounds.** Its slow breath and the sputter through the mesh, the full breath, the spout (`whale-blow`), the net's
   wet rope and corks, the cygnet's splash; all synthesised (`docs/contracts/audio.md`).
-- **Its voice** (Jeremy, 2026-10-07: "yea, lets give it a voice"). One low, soft call when its eye opens and it knows
-  her, the friend's greeting, and the same call once more as it waves goodbye. Synthesised like every sound, shaped
-  to sit in the sea's score, never a cartoon voice; on the first crossing, at most a far echo of it as it dives.
+- **Its voice** (Jeremy, 2026-10-07: "yea, lets give it a voice"; 2026-10-09: it "doesn't make any deep whale
+  sounds"). A whale's song, deep and long, in a humpback's manner: slow moans that glide in pitch, low enough to be
+  felt, with the sea's reverberation round them. It is heard and felt, and the score makes room under it rather than
+  burying it. Its moments: a tired low moan heard in the mist before it is seen; a soft low call as its eye opens on
+  her (the friend's greeting); a long glad rising song as it breathes free; its goodbye call with the waving flipper
+  and the flukes; and a last call from under the sea after the dive. Synthesised like every sound, never a cartoon
+  voice; on the first crossing, at most a far echo of it as it dives.
 - **The cygnet's second swim** (Claude's call). Its first swim in this chapter is the hesitant brave one; at the
   flipper it goes in at once, without the climbing and deciding: the same bird after the sleeping island.
 - **No first-use stalls.** The whale's new programs and the net are compiled at boot like every other program

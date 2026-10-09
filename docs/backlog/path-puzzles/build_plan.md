@@ -870,6 +870,117 @@ the path and no next coal laid (from the `found` save it passed on main and the 
 Left for Jeremy's eye: the phone's line frame stands the boat half out at the right edge (as before N3n), and the
 paper plane standing in her satchel is the loudest shape in the near frames after the sail.
 
+## The rework after Jeremy's first play (2026-10-09)
+
+Design: design.md, "Jeremy's first play" and "The rework", then the rewritten bullets they point to ("Where it
+lies", "The boat's pace", "The pod leads, and the whale is found", "What every step keeps", the five steps, "Its
+goodbye, with feeling", "The dive, a whale's, not an eel's", "Its voice"). Jeremy's notes there are verbatim; every
+brief cites the doc, never the chat.
+
+How it runs (lessons from N1 to N3r):
+- Base: `sea-whale` (worktree `/private/tmp/updraft-sea-whale`). First merge main into it, because main has moved
+  since `0fbab59d`. Each phase forks its own branch and worktree under `/private/tmp` from `sea-whale`; check the base
+  with a landmark file. The lead merges each phase back into `sea-whale`.
+- Agents: Opus at xhigh, at most two at once on file-disjoint lanes, each committing after every step. Each aims to
+  finish under 400k tokens and must stop and hand off at 450k. Every brief carries the comment rule verbatim.
+  Agents write Done entries on their branch but never "Claude's judgement" lines; the lead adds those on main.
+- Ports: 5321 and 5324 for agents, 5330 for Jeremy's play build. Peers use 5317 to 5319 and 5323. Check a
+  listener's cwd before trusting a port.
+- Instruments: `net-whale-check` (about 25 min, run in the background), `sea-logic-check` at seeds 147 to 150
+  (`SEA_SEED`), `CROSSING=toMirror node tools/journey-pacing-check.mjs`, and `cygnet-gates` with `BASE`. For play
+  in motion: `/tmp/updraft-seawhale-n3m-review-rNP7/play.mjs <prefix> sea|whale <WxH> <port>` records real
+  gestures with a 4 Hz state log (boat speed, step, screen positions of the targets) and a camera trace;
+  `acc.py` reports camera acceleration. Copy both into the phase's own scratch directory before changing them.
+- Every interaction frame is judged as a first-time player sees it, in both orientations: the thing acted on, the
+  drawn gesture and the goal all plainly in frame.
+
+### Phase N5a: the sea laid out again (found, not seen; the boat's pace)
+In parallel with N5b. Owns: `src/story/journey.ts` (`WHALE_LEAD`, `WHALE_REST`, `toMirror`, the QA `whale`
+start), `src/story/crossing.ts` (the pod's pacing, the sea mist, the mirror's isle mist), the isle mist table and
+its hook in `src/main.ts` (`ISLE_MISTS`), and in `src/story/net-whale.ts` only the approach: the speed limit in `update()`, `pod()`,
+the lead's way (`wayAt`, `layWay`, `escortYaw`, `local`) and the haze lifting off it. In `src/tuning.ts` it owns
+`seaPassage` and the approach keys of `netWhale` (`slowing`, `settling`, `release`, the `lost*` keys). Also
+`tools/sea-check.mjs`, `tools/sea-logic-check.mjs` and `tools/journey-pacing-check.mjs`.
+- The whale and the boat's line move so that the doc's "Where it lies" holds; the rest of the world keeps its places
+  (no geography revision). The whale's pose and every hold are defined relative to `WHALE_REST` and the lead's
+  heading; keep the boat's heading at rest and the time of day at rest as built, so the holds come out unchanged.
+- Facts to work from. The sea's haze (0.94) begins its veil at about 167 m and, with `uOpenSea`, has converged on the
+  sky by about 300 m. The whale rested about 300 m from the sleeping island and 150 m from the mirror's centre,
+  (-345, -2090). A low mist that lies on the sea while the sky stays clear may be built from the existing `uMist`
+  (it thins with height) rather than from the haze.
+- The heard-first breath in the mist uses the existing breath sound for now; N5c gives it the whale's voice.
+- Seam: N5b and N5c read nothing new from this phase. The whale's step machine and its saves keep their names, and
+  `whale-rest` resumes at rest beside it in the mist.
+- Main's own `swim` save on `toMirror` (`[leg, time]`) must still resume on the new route.
+- Gate:
+  - typecheck and build;
+  - stills every 5 s, landscape and phone, from `?chapter=sea` and from a real departure off the sleeping island, up
+    to the nudge: no whale and no mirror in any of them;
+  - the boat-speed log at or above 4.5 m/s except during the swim and the last few metres;
+  - from the nudge to rest 30 to 45 s, and the last 20 m in at most about 8 s;
+  - the heard, the blow and the shape come in that order;
+  - stills of each hold (breath, look, line, flipper, release, farewell) matching `sea-whale`'s before the move, side
+    by side;
+  - the mirror out of its mist only after the dive, and from the dive to the mooring at most about 60 s;
+  - `sea-logic-check` at seeds 147 to 150, the pacing check, and `net-whale-check` (its positions updated).
+Done: [ ]
+
+### Phase N5b: the five steps
+In parallel with N5a. Owns, in `src/story/net-whale.ts`, the steps and everything they drive: `breathe`, the new
+eye step, `exchange`, `haulLine` and the new heave, `lastLoop`, `brushFin`, `brushCork`, the invitations, the
+valves, `checkpoint` and `restore`. Also `src/fx/sealife/net.ts` (the fold over its eye, the mesh billowing off its
+head), the eye's struggle under the fold in `src/fx/sealife/sleeper.ts` (the eye only), the child's heave and the
+step keys of `tuning.netWhale`, `src/story/checkpoint-data.ts` (the new checkpoints) and `tools/net-whale-check.mjs`.
+- Build the doc's "What every step keeps" and the five steps: the breath in about two loops; the eye; the line taking
+  any stroke across the cork; the heave; the flipper taking any stroke at the flipper or the bird.
+- Drawn gestures show the moment a step is asked. This is the whale's own rule; other rooms keep "after a few idle
+  seconds".
+- Seam: the step machine runs `approach`, `breath`, `eye`, `line`, `heave`, `flipper`, `free`, `gone`. The pod, the
+  camera holds and the crossing read `step`. The eye step uses the look's hold; the heave uses the line's hold,
+  widened only as far as the net on its head needs.
+- Saves: `whale-eye` and `whale-heave` are added. `whale-line` now resumes with the cork in her mittens before the
+  first heave, since the branch never shipped. Each resumes as the doc's "Saves" says.
+- Facts to work from. The breath's progress was `liftRate` 0.16 a second at full charge (`liftFrom` 0.12,
+  `liftFull` 0.5, `reach` 6 m). Invitations waited for `inviteAfter` 6 s of stillness, and any lifting reset the wait.
+  The flipper counted only strokes running along it (`finAlong`). After the cork was caught, the haul played itself
+  (`haulPulls`, `pullTime`).
+- Gate:
+  - typecheck and build;
+  - `net-whale-check` plays all five steps with real gestures, and also with strokes in random directions across
+    the scene (the way a child plays), each step completing within a few strokes or about two loops;
+  - each step's valve still frees it;
+  - every new save resumes;
+  - stills of each step's frame in both orientations, taken about 1.5 s after it is asked, show the drawn gesture, the
+    target and the goal;
+  - one smoke play of the whole encounter.
+Done: [ ]
+
+### Phase N5c: the goodbye and its voice
+After N5b merges into `sea-whale`, because both drive the whale through `net-whale.ts`; it may run beside N5a's
+verification. Owns `src/fx/sealife/sleeper.ts` (the dive, the body behind the flippers, riding higher, the flipper's
+wave, the eye open on her through the release), `salute()` and the release's direction in `net-whale.ts`, the
+release and farewell holds, the whale's voice in `src/audio/` and its notes in `docs/contracts/audio.md` (branch
+copy), the body's shape in `src/fx/sealife/anatomy.ts`, and the first crossing's whale (`src/fx/sealife/whale.ts`), which
+shares the form.
+- Build the doc's "Its goodbye, with feeling", "The dive, a whale's, not an eel's" and "Its voice", including the
+  moan heard in N5a's mist.
+- Gate:
+  - typecheck and build;
+  - a strip at 4 fps of the release and the dive, landscape and phone: its eye open and on her in frame from the
+    spout to the head going under, the waving flipper in frame, the arch short and thick, and from the head under to
+    the flukes gone at most about 9 s;
+  - the first crossing's far dive still reads;
+  - the whale's voice rendered from the game at each of its moments, its level against the score measured and
+    plainly heard;
+  - `net-whale-check` and `cygnet-gates`.
+Done: [ ]
+
+### Phase N5d: the playable build
+After N5a, N5b and N5c are merged on `sea-whale`. Claude plays the whole open sea in motion, landscape and phone, from
+the sleeping island to the mooring at the mirror, beside the clouds and the owl. Claude fixes what that turns up,
+folds it into the docs, and puts the build up for Jeremy on 5330.
+Done: [ ]
+
 ### Phase N4: docs on approval
 Once Jeremy approves: the open sea's chapter-select still regenerated with the whale (from the game, not Astra: Jeremy, 2026-10-08, "don't use astra anymore"); the open sea's section in
 `docs/chapters.md` (its ruling "at most 100 s, nothing asked" replaced),
