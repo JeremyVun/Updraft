@@ -2324,9 +2324,16 @@ export const tuning = {
        * A slower, dreamier gravity than the world's (a share of it), and how fast a swing dies away with nobody
        * pushing: hardly at all with her on it, and over about ten seconds once it is empty.
        */
-      gravity: 0.8, damping: 0.05, emptyDamping: 0.6,
-      /** Push along its travel per unit of gust energy at the seat, and per unit of the felt wind along its way. */
-      pump: 1.5, along: 0.25,
+      gravity: 0.8, damping: 0.02, emptyDamping: 0.6,
+      /** Push per unit of the felt wind along its way, and of its own way through still air, only while it is empty. */
+      along: 0.25,
+      /**
+       * A stroke across it on screen (within `reach` screen heights of its ropes or seat) asks for `push` radians more
+       * swing per length of its rope on screen it sweeps along the way the seat swings, `against` of that against it;
+       * strokes at `gentle` screen heights a second count for `soft` of it, at `firm` for all of it. What a stroke asks
+       * comes on over `lag` seconds; each swing out or back takes at most `perSwing` radians, up to `most` in all.
+       */
+      push: 0.7, against: 0.6, reach: 0.06, gentle: 0.5, firm: 2.2, soft: 0.35, lag: 0.25, perSwing: 0.11, most: 0.95,
       /** Seconds she takes to catch hold and sit, and the start she gives it pushing off the eave (radians a second). */
       boardFor: 1.6, pushOff: 0.32,
       /** She lets go this near the top of a forward swing (radians), when the leap would carry her this far past the landing. */
@@ -2335,8 +2342,8 @@ export const tuning = {
       leapForward: 0.9, leapUp: 1.6, leapGravity: 7.5,
       /** Seconds for the stumble and getting up on the slope after landing, and for her look back at the swing. */
       landFor: 1.3, lookBack: 3.2,
-      /** Seconds riding without a push before the drawn push; with no new height before the world's own gusts carry her. */
-      inviteAfter: 5, valveAfter: 90, valveEvery: 1.2, valveEnergy: 1.5,
+      /** Seconds riding without a push before the drawn push; with no new height before the world's own gusts pump it, and how much each asks (radians). */
+      inviteAfter: 5, valveAfter: 90, valveEvery: 1.2, valveGrow: 0.12,
     },
     mill: {
       /**
