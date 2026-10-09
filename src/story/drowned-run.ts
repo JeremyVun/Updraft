@@ -435,7 +435,7 @@ export class RoofRun {
   /** The piece the cat is going over, while it is, and whether it is on the sheet's line. */
   private catPiece: Piece | null = null;
   private catOnLine = false;
-  /** Gone on along the nave's ridge to the tower's foot once she is over the swing. */
+  /** Gone on to the tower's foot once she is over the swing. */
   private catHome = false;
   /** The fog: her place along `DARK_WAY`, and how fast its front is coming on. */
   private dark = 0;
@@ -856,8 +856,8 @@ export class RoofRun {
    * The cat's own way over each piece: along the railings across the tree's lane and up onto the barn by its chimney;
    * up onto the chimney, along the sheet's line and down off the far chimney; off its chimney onto the mill's low sail,
    * riding it up and onto the cap, then down by the hoist's beam onto the granary ahead of her; along the green
-   * cottage's ridge, down onto the churchyard's railings and along them, and over onto the nave's slope where she lets
-   * go to, waiting there by the tower's foot.
+   * cottage's ridge, down onto the churchyard's railings and along them, and over onto the nave's slope, waiting a
+   * little above where she lets go to.
    */
   private catSteps(piece: Piece): CatStep[] {
     const w = CAT_WAY;
@@ -1163,8 +1163,8 @@ export class RoofRun {
   /**
    * Side on from the side of the sheet's lane away from the fog, a little above her: her under the sheet at the near
    * edge, both chimneys and the line climbing across the frame, the cat on the far roof; it drifts with her as she is
-   * carried so the far roof stays in. Upright, it stands behind her near shoulder and looks up the line, so the lane
-   * and the high roof stack up the narrow frame.
+   * carried so the far roof stays in. Upright, it stands behind her other shoulder and looks up the line, so the sheet,
+   * the lane and the high roof stack up the narrow frame.
    */
   private sheetView(wide: number, go = this.sheetGo): void {
     const k = tuning.drownedCamera.run;

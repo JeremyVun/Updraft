@@ -34,7 +34,7 @@ const REACH = 2.25;
  */
 const TAKE_FROM = -0.3;
 const LET_GO = 0.62;
-/** Where she waits, a reach short of the trailing edge at her gable; and where her feet come down past the far one (m). */
+/** Where she waits, under the middle of the hem short of her gable; and where her feet come down past the far one (m). */
 export const SHEET_WAIT = TAKE_FROM - UNDER;
 export const SHEET_OFF = 0.36;
 /** Her mittens either side of the gathered hem, and the highest she reaches for it standing, over her feet (m). */

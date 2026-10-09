@@ -23,7 +23,7 @@ export const SHEET = { length: 2.7, drop: 1.8, rings: 7, bunch: 0.1, fullness: 1
 
 const NX = 16;
 const NY = 13;
-/** Her mittens close on the middle of the hem, gathering it between them: the two threads either side of its middle. */
+/** The two threads either side of the hem's middle, gathered into her mittens. */
 const HOLD_COLS = [NX / 2 - 1, NX / 2];
 /** How far under the line her mittens hold the hem, and how far they draw it out of the sheet toward the lens. */
 export const HOLD_DROP = SHEET.drop;
@@ -148,12 +148,12 @@ export class WashSheet {
   fill = 0;
   /** Set while she hangs from it, and where the cat is while it runs the line. */
   held = false;
+  cat: THREE.Vector3 | null = null;
   /** Level, out of the sheet's face toward the side it is seen from: the side she holds it from. */
   readonly seen = new THREE.Vector3();
   /** Where her mittens are while she holds it, which the hem's middle is gathered into; and how far it is drawn out to them. */
   readonly grips = [new THREE.Vector3(), new THREE.Vector3()];
   private drawn = 0;
-  cat: THREE.Vector3 | null = null;
   /** Seconds since a stroke last filled it; the way the last stroke went (1 up the line, -1 back). */
   quiet = Infinity;
   onSound: ((kind: SheetSound, at: THREE.Vector3, strength: number) => void) | null = null;
@@ -328,12 +328,9 @@ export class WashSheet {
     return (this.travel + Math.min(this.travel + SHEET.length, this.length - this.stop)) / 2;
   }
 
-  /**
-   * Where she holds the middle of the hem, under the middle of its rings and drawn out of the sheet toward her, with
-   * `side` (m) along the line either way.
-   */
-  hold(out: THREE.Vector3, side = 0): THREE.Vector3 {
-    this.lineAt(this.holdAlong + side, out);
+  /** Where she holds the middle of the hem: under the middle of its rings, drawn out of the sheet toward her. */
+  hold(out: THREE.Vector3): THREE.Vector3 {
+    this.lineAt(this.holdAlong, out);
     out.y -= HOLD_DROP;
     return out.addScaledVector(this.seen, HOLD_OUT * THREE.MathUtils.smoothstep(this.drawn, 0, 1));
   }

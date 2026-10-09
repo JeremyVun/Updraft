@@ -61,7 +61,7 @@ const SEAT_HALF = 0.36;
 
 /**
  * A rope swing hanging from a bough over open water: two old ropes and a plank. It swings in one plane. A stroke
- * across it on screen pumps it higher along its travel, whichever way the stroke goes, so a player who keeps at it
+ * across it on screen pumps it higher along its travel and never takes height away, so a player who keeps at it
  * always gets height and never has to time a thing; each swing takes one pump's worth. The player pushes what they
  * see, so the pump never waits on the wind field's copy on the CPU; the stroke still lays its air at the seat.
  */
@@ -86,7 +86,7 @@ export class RopeSwing {
   brushAge = Infinity;
   /** The highest it has swung toward the far side since it was last set going, radians. */
   best = 0;
-  /** Swing asked of it by strokes and still to come, radians; and what this swing out or back has already taken. */
+  /** Swing asked of it and still to come, what the stroke under way has asked, and what this swing `way` has taken (radians). */
   private asked = 0;
   private stroked = 0;
   private taken = 0;
