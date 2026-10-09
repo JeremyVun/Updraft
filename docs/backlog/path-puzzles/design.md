@@ -594,11 +594,11 @@ through the lens. The thing the player acts on and the drawn gust must both be p
 the action is for (where the tub goes, where the tree falls, what the bell answers).
 
 **The list from this play** (Claude keeps it; each item is struck through with its commit when fixed and checked):
-1. The tub out of frame while it waits for the player: the lens off the gable end stands 7 m from the chimney and the
+1. ~~The tub out of frame~~ (`proto-drowned-fix-tub`: the lens 12.5 m out from the line between her and the cat, side-on, away from the sail; her, the tub, the cat at the slates' edge and the drawn gust in one frame). Was: the tub out of frame while it waits for the player: the lens off the gable end stands 7 m from the chimney and the
    tub floats below the frame's bottom edge, with the drawn gust under it. Fix: one frame holds her, the tub, the
    cat's slates where they meet the water and the cat; the drawn gust in view.
-2. Where the tub goes is not shown. Fix: the destination reads in the world (the cat at it), not only in the gust.
-3. After the rescue the boat sails 180 m at up to 9.5 m/s (`driftSpeed`, `driftBreeze` 2.6) to the strand. Fix: the
+2. ~~Where the tub goes is not shown~~ (the cat comes down to the water's edge where the tub docks, sits facing her, mews and paws at the water; the gust waits until it is there). Fix: the destination reads in the world (the cat at it), not only in the gust.
+3. ~~The fast sail after the rescue~~ (the cat's roof 20 m short of the strand; once the cat has come to her the air dies and the boat ghosts 20 m in 24 s at up to 0.95 m/s onto the slates, the player's input off; the fog rises through it). Was: after the rescue the boat sails 180 m at up to 9.5 m/s (`driftSpeed`, `driftBreeze` 2.6) to the strand. Fix: the
    air dies once the cat is aboard and the becalmed boat drifts slowly onto the roof, the player's wind making nothing;
    the cat's roof comes near enough to the strand for that drift to be short.
 4. At the tree: she stands under it, no drawn gust shows, she looks straight up at it the whole time instead of the
@@ -636,6 +636,9 @@ Found reading the room's storyboard (a frame every 2 s of `drowned-run-check` fr
 17. The church's storyboard (`FROM=church`): the cat is never seen climbing the ivy ahead of her; through the ringing
     the lens sees her back in the opening and the bell never; as she boards the lens closes in until the back of her
     hood fills the frame, and the cat's goodbye on the ridge does not read at that scale.
+18. Found fixing 3: with the cat's roof by the strand, the sail through the village before the cat is 59 s and 253 m
+    at 4.7 m/s (it was 27 s). Lead's call: about 30 s, by bringing the room's entry nearer along the channel, and the
+    sail given its purpose early: the cat heard mewing and seen ahead on its pot, the boat making for it.
 
 ### The room rethought (Claude, 2026-10-08; Jeremy: "yea lets see how this works")
 
