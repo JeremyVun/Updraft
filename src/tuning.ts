@@ -2001,7 +2001,7 @@ export const tuning = {
        * near her the walking lens is laid to expect it; how hard it closes on where it is going (per second a metre), the
        * slowest and fastest it comes on (m/s), and how quickly it changes pace (per second).
        */
-      fogTrail: 12, fogHold: { tree: 10, sheet: 5, mill: 8, swing: 12 }, fogBeat: 8, fogEnd: 19, fogNearest: 7.5, fogBelow: 6, fogLaid: 8,
+      fogTrail: 12, fogHold: { tree: 10, sheet: 5, mill: 8, swing: 12 }, fogBeat: 8, fogEnd: 19, fogNearest: 7.5, fogBelow: 4.8, fogLaid: 8,
       fogPull: 0.5, fogSlowest: 0.12, fogFastest: 3.2, fogEase: 0.9,
     },
     /** The wash-tub the player's wind carries to the cat's roof and back to the boat. */
