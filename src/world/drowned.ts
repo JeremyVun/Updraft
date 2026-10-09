@@ -1031,7 +1031,6 @@ function greenTree(rand: Rng, twigs: Twig[], cameraObstacles: THREE.Box3[]): THR
   parts.push(limb(new THREE.Vector3(fork.x + Math.cos(toSwing) * 0.2, fork.y - 0.4, fork.z + Math.sin(toSwing) * 0.2), knot, 0.8, 0.44, 0.2, 8, 8));
   const reach = knot.clone().add(new THREE.Vector3(Math.cos(toSwing + 0.25) * 1.95, 0.6, Math.sin(toSwing + 0.25) * 1.95));
   parts.push(limb(knot, reach, 0.05, 0.2, 0.06, 6, 3));
-  twigs.push({ p: reach, base: base.y, phase });
   const bough = new THREE.Vector3();
   const tip = new THREE.Vector3();
   for (let i = 0; i < 6; i++) {

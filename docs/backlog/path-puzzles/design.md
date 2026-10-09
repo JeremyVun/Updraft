@@ -530,6 +530,18 @@ section (`drownedScore` returns `still` for `run`, `nave` and `church`), which i
 > - [a still from low behind her in the mill's sack basket against the tower, the sails' hub out of the top of frame]
 >   this scene with the windmill needs to be zoomed out a bit, i can't even see the indicative wind gestures, they are
 >   off screen above me, i can't see the bloody thing im supposed to interact with.
+>
+> - [a close still of the swing's bough against the sky, a leaf and a speck floating off its tip circled] what is this
+>   weird thing i've circled in red?
+> - [a still from outside the belfry: her back in one light of the opening, the kittens' straw a speck in the other,
+>   the bell out of sight inside] Again, the subject of the interaction is completely hidden. you must think about the
+>   puzzle from the perspective of a human playing and seeing the puzzle from the perspective of the camera view. I also
+>   never noticed the cat and her kittens, it just looks like the cat just randomly went to sleep or is lying there. its
+>   very strange.
+
+**His rule for every interaction frame** (binding on all of them): judge the puzzle as a first-time player sees it
+through the lens. The thing the player acts on and the drawn gust must both be plainly in frame, and so must what
+the action is for (where the tub goes, where the tree falls, what the bell answers).
 
 **The list from this play** (Claude keeps it; each item is struck through with its commit when fixed and checked):
 1. The tub out of frame while it waits for the player: the lens off the gable end stands 7 m from the chimney and the
@@ -547,6 +559,13 @@ section (`drownedScore` returns `still` for `run`, `nave` and `church`), which i
    each piece in view (design step 5: "the cat goes first wherever a cat can").
 7. The mill: the lens low behind her in the basket crops the sails' hub and the drawn circles off the top. Fix: wider,
    the sails, their hub with the drawn circles, and her in the basket in one frame.
+8. ~~A leaf floating off the swing bough's bare tip~~ (the tip's twig leaves scatter off it into the air; the tip is
+   now bare).
+9. The bell: the lens outside the belfry sees her back in the opening and never the bell she rings. Fix: the bell,
+   her and the fog beyond (what the ringing answers) in one frame.
+10. The kittens go unnoticed: the cat lying in the straw reads as gone to sleep. Fix: the kittens seen and read as
+    kittens (the reveal staged to an outside eye, as 8b's Left list ruled: her turned on the sill, a kitten coming
+    to its lip, three-quarter on), the cat plainly curled round them.
 
 ### The room rethought (Claude, 2026-10-08; Jeremy: "yea lets see how this works")
 
