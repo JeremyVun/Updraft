@@ -1695,7 +1695,7 @@ export const tuning = {
       line: { distance: 6, height: 3.2, turn: -0.75, lookY: 3, toward: 0.37, eyeward: 1 },
       flipper: { distance: 12, height: 3.4, turn: -1.5, lookY: 3, toward: 0.5 },
       release: { distance: 12, height: 3, turn: -0.3, lookY: 12, toward: 0.4 },
-      farewell: { distance: 24, height: 1.2, turn: -0.25, lookY: 22, toward: 0.3 },
+      farewell: { distance: 24, height: 1.2, turn: -0.45, lookY: 22, toward: 0.3 },
       releaseRoom: 4,
     },
     /**
