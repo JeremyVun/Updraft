@@ -2117,7 +2117,7 @@ export const tuning = {
        * it before that costs, and what each share of the frame it stands further out, each metre further off, and a
        * roof between them cost.
        */
-      catLean: 0.35, catLeanRate: 1.2, catEdge: 0.86, catAhead: 6, catFar: 16, catOutCost: 300, catFarCost: 10, catHiddenCost: 200,
+      catLean: 0.35, catLeanRate: 1.2, catEdge: 0.92, catAhead: 6, catFar: 16, catOutCost: 300, catFarCost: 10, catHiddenCost: 200,
       /** How far it keeps off the side of a house, wall or chimney it stands lower than the top of, and over a chimney, metres. */
       clearOf: 1.6,
       /**
