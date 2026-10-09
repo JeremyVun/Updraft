@@ -31,8 +31,9 @@ export interface CrossingCast {
 
 /**
  * The first crossing: she stops at the end of a ridge with deep water between her and a garden wall, and the dead
- * tree beside the gap is the way over once the player has pushed it down. She waits as long as it takes; a stalled
- * player is shown the push across the tree, and after long enough with nothing gained the world's own gust does it.
+ * tree beside the gap is the way over once the player has pushed it down. She waits as long as it takes, looking across
+ * to where it would take her and up at it now and then; the push across its crown is drawn soon after she stops and
+ * again whenever a try has not brought it down, and after long enough with nothing gained the world's own gust does it.
  */
 export class TreeCrossing {
   readonly tree: ToppleTree;
@@ -43,6 +44,7 @@ export class TreeCrossing {
   /** Seconds in the current phase. */
   t = 0;
   private quiet = 0;
+  private stirred = 0;
   private stalled = 0;
   private best = 0;
   private valveClock = 0;
@@ -70,7 +72,7 @@ export class TreeCrossing {
     this.tree.reset();
     this.phase = 'off';
     this.invitation = null;
-    this.t = this.quiet = this.stalled = this.best = this.valveClock = 0;
+    this.t = this.quiet = this.stirred = this.stalled = this.best = this.valveClock = 0;
     this.valveOn = false;
     const decks = this.cast.child.decks;
     const i = decks.indexOf(this.tree.deck);
@@ -80,7 +82,7 @@ export class TreeCrossing {
   /** She has come to the end of the ridge: from here the gap is hers to wait at. */
   begin(): void {
     this.phase = 'waiting';
-    this.t = this.quiet = this.stalled = 0;
+    this.t = this.quiet = this.stirred = this.stalled = 0;
     this.best = this.tree.progress;
   }
 
@@ -112,8 +114,12 @@ export class TreeCrossing {
       this.best = progress;
       this.stalled = 0;
     } else this.stalled += dt;
-    child.lookAt = this.tree.trunkAt(0.55 + 0.1 * Math.sin(this.t * 0.4), this.look);
-    this.invitation = this.quiet > k.inviteAfter && !this.valving ? this.tree.trunkAt(0.5, this.at) : null;
+    this.stirred = this.tree.stirring > k.stirs ? k.glanceFor : Math.max(0, this.stirred - dt);
+    const glancing = this.stirred > 0 || this.t % k.glanceEvery > k.glanceEvery - k.glanceFor;
+    const across = this.way.stepOff;
+    child.lookAt = glancing ? this.tree.trunkAt(k.glanceAt, this.look) : this.look.set(across.x, across.y + 0.4, across.z);
+    const invited = this.t > k.inviteAfter && this.quiet > k.inviteQuiet && !this.valving;
+    this.invitation = invited ? this.tree.trunkAt(k.inviteAt, this.at) : null;
     this.heading = this.tree.fallHeading(camera);
     if (this.valving) this.blow(dt);
     if (this.tree.state === 'falling') {
@@ -170,13 +176,16 @@ export class TreeCrossing {
       child.walkTo(deck.x0 + ux * on, deck.z0 + uz * on, false, () => along(() => child.walkTo(deck.x1, deck.z1, false, off, 0.12)), 0.12);
       return;
     }
-    /** Up onto the trunk where it lies over her wall, as thick as she is tall to the waist, and up it on all fours of balance. */
+    /**
+     * Back along her wall to beside the trunk where it lies over it, as thick as she is tall to the waist, up onto it and
+     * up it on all fours of balance.
+     */
     const foot = this.look.set(deck.x1 - ux * k.climbOn, 0, deck.z1 - uz * k.climbOn);
     foot.y = deck.height1! + (deck.height - deck.height1!) * (k.climbOn / len);
-    const from = this.lineDir.set(child.position.x - foot.x, child.position.z - foot.z);
-    const near = Math.max(0, from.length() - k.climbReach);
-    from.normalize();
-    child.walkTo(foot.x + from.x * k.climbReach, foot.z + from.y * k.climbReach, false, () => {
+    const back = this.lineDir.set(this.way.wait.x - deck.x1, this.way.wait.z - deck.z1).normalize();
+    const fromX = deck.x1 + back.x * k.climbReach, fromZ = deck.z1 + back.y * k.climbReach;
+    const near = Math.hypot(child.position.x - fromX, child.position.z - fromZ);
+    child.walkTo(fromX, fromZ, false, () => {
       const way = this.lineDir.set(foot.x - child.position.x, foot.z - child.position.z).normalize();
       child.leap(this.at.set(way.x * 0.8, 1.6, way.y * 0.8), foot.clone(), 9.81, () => {}, () => along(() =>
         child.walkTo(deck.x0 + ux * k.climbShort, deck.z0 + uz * k.climbShort, false, off, 0.12)), true);

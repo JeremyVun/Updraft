@@ -25,6 +25,12 @@ interface Node {
   s: number;
 }
 
+/** Where she faces while she waits for the tree: the lane it will come down across, a third of the way over. */
+const TREE_FACING = TREE_SITE.spot.over.clone().lerp(TREE_SITE.way.stepOff, 0.33);
+/** The way the dead tree falls, level, and how far it reaches across the lane from her wall to the barn. */
+const TREE_FALL = new THREE.Vector2(TREE_SITE.spot.rest.x - TREE_SITE.spot.root.x, TREE_SITE.spot.rest.z - TREE_SITE.spot.root.z).normalize();
+const TREE_LANE = (TREE_SITE.spot.rest.x - TREE_SITE.spot.over.x) * TREE_FALL.x + (TREE_SITE.spot.rest.z - TREE_SITE.spot.over.z) * TREE_FALL.y;
+
 /** Where she waits for each piece and where she is once over it. */
 const PIECES: Record<Piece, { wait: THREE.Vector3; onward: THREE.Vector3 }> = {
   tree: TREE_SITE.way,
@@ -408,6 +414,8 @@ export class RoofRun {
   private readonly below = new THREE.Vector3();
   private readonly her = new THREE.Vector2();
   private readonly treeTarget = new THREE.Vector3();
+  private readonly roundFrom = new THREE.Vector3();
+  private readonly roundTo = new THREE.Vector3();
   /**
    * The cat: the place on her way it has got to, what it is going through now, the pieces it is over, and for each
    * piece the place on her way it goes off over it from.
@@ -441,7 +449,8 @@ export class RoofRun {
   private readonly sumTarget = new THREE.Vector3();
   private readonly held = { primary: new THREE.Vector3(), secondary: new THREE.Vector3(), margin: tuning.drownedCamera.run.margin,
     extra: tuning.drownedCamera.run.extra };
-  private onTrunk = 0;
+  /** How far the tree's view has gone round to the sheet's, 0 to 1, from when she is up on the trunk. */
+  private treeRound = 0;
   /** How far round to each piece's own view the lens has come. */
   private readonly pieceIn: Record<Piece, number> = { tree: 0, sheet: 0, mill: 0, swing: 0 };
   private sheetGo = 0;
@@ -490,7 +499,7 @@ export class RoofRun {
     /** Just past the tree and the mill, the lens starts out from where each piece's view leaves it. */
     const anchors = (wide: number): Anchor[] => (['tree', 'mill'] as const).map((piece) => {
       const at = PIECES[piece].onward;
-      if (piece === 'tree') this.treeView(wide, at, 1);
+      if (piece === 'tree') this.treeView(wide, 1);
       else this.millView(wide, at);
       return { s: this.nodes[this.pieceAt[piece]].s, bearing: Math.atan2(this.stationEye.x - at.x, this.stationEye.z - at.z) };
     });
@@ -554,7 +563,7 @@ export class RoofRun {
   }
 
   get invitationRadius(): number {
-    return this.stage === 'tree' ? 2.2 : this.stage === 'sheet' ? 1.6 : 1.2;
+    return this.stage === 'tree' ? 2.8 : this.stage === 'sheet' ? 1.6 : 1.2;
   }
 
   /** She is on the first roof's ridge, the cat at its end, the fog coming on `fogSpeed` m/s: from here the way is hers. */
@@ -585,6 +594,7 @@ export class RoofRun {
     }
     this.lookingBack = Infinity;
     this.lookingDown = Infinity;
+    this.treeRound = 1;
     this.dark = DARK_END;
     const dark = this.cast.village!.dark;
     dark.front = this.dark - k.fogEnd;
@@ -741,10 +751,13 @@ export class RoofRun {
     }
   }
 
-  /** Waiting at the tree or the mill she turns to face what she is waiting on. */
+  /**
+   * Waiting at the tree she turns to the lane it will come down across, the barn on one hand and the tree on the
+   * other; at the mill, to the basket.
+   */
   private facePiece(dt: number): void {
     const { child: c } = this.cast;
-    const at = this.stage === 'tree' && this.tree.phase === 'waiting' ? TREE_SITE.spot.root
+    const at = this.stage === 'tree' && this.tree.phase === 'waiting' ? TREE_FACING
       : this.stage === 'mill' && this.mill.phase === 'waiting' ? this.mill.mill.basketFloor(this.scratch) : null;
     if (at && !c.busy) c.faceToward(at.x, at.z, 1 - Math.exp(-dt * 3));
   }
@@ -1057,7 +1070,10 @@ export class RoofRun {
    */
   private station(wide: number, dt: number): number {
     const k = tuning.drownedCamera.run;
-    this.onTrunk += ((this.tree.phase === 'crossing' || this.tree.phase === 'over' ? 1 : 0) - this.onTrunk) * (1 - Math.exp(-dt * 0.8));
+    const c = this.cast.child.position, lies = TREE_SITE.spot.over;
+    const up = ((c.x - lies.x) * TREE_FALL.x + (c.z - lies.z) * TREE_FALL.y) / TREE_LANE;
+    if (this.tree.phase === 'over' || (this.tree.phase === 'crossing' && up > k.treeRoundFrom)) this.treeRound = Math.min(1, this.treeRound + dt / k.treeRoundFor);
+    const rounded = this.treeRound >= 1;
     this.sheetGo += ((this.sheet.phase === 'carried' || this.sheet.phase === 'landing' || this.sheet.phase === 'landed'
       || this.sheet.phase === 'leaving' || this.sheet.phase === 'over' ? 1 : 0) - this.sheetGo) * (1 - Math.exp(-dt * 0.6));
     /** Where two views overlap (the swing's going as the end's comes) each takes its share, so the lens never jumps between them. */
@@ -1078,12 +1094,16 @@ export class RoofRun {
       const wait = this.nodes[i - 1].s, over = this.nodes[i].s;
       const coming = THREE.MathUtils.smootherstep(this.along, wait - k.comeFrom[piece], wait - k.comeTo);
       const leave = k.leave[piece];
-      const going = this[piece].done && this.stage !== piece ? THREE.MathUtils.smootherstep(this.along, over + k.leaveFrom, over + leave) : 0;
+      const going = this[piece].done && this.stage !== piece && (piece !== 'tree' || rounded)
+        ? THREE.MathUtils.smootherstep(this.along, over + k.leaveFrom, over + leave) : 0;
       /** Set down by the sheet she takes a breath while the lens goes round to her own way. */
       const setDown = piece === 'sheet' && this.stage === 'sheet' && this.sheet.done
         ? 1 - THREE.MathUtils.smoothstep(this.settled, 0, tuning.drowned.run.setDown) : null;
-      /** Once she has stopped at a piece the lens goes on round to its view, never while she walks toward it. */
-      const want = setDown ?? (this.stage === piece ? 1 : coming * (1 - going));
+      /**
+       * Once she has stopped at a piece the lens goes on round to its view, never while she walks toward it. The tree's
+       * view goes round to the sheet's itself, so the sheet's never blends in on a line through the high roof.
+       */
+      const want = piece === 'sheet' && !rounded ? 0 : setDown ?? (this.stage === piece ? 1 : coming * (1 - going));
       this.pieceIn[piece] += (want - this.pieceIn[piece]) * (want > this.pieceIn[piece] ? 1 - Math.exp(-dt * k.roundRate) : 1);
       add(THREE.MathUtils.smootherstep(this.pieceIn[piece], 0, 1), () => this.view(piece, wide));
     }
@@ -1114,23 +1134,28 @@ export class RoofRun {
   }
 
   /**
-   * North of her over the open water past the wall's end, looking back past her to the tree in its garden: the fog
-   * beyond, where she came from, and the tree falling across the frame onto the barn; as she walks up the trunk it
-   * comes round to the sheet's view.
+   * North-west of her over the open water past the wall's end, under the old tree's crown by the green, looking back
+   * past her to the tree in its garden: her at the wall's end, the whole tree, the barn's gable it will come down beside
+   * and the high roof with the sheet on its line, the fog beyond, where she came from; the tree falls right to left
+   * across the frame onto the barn, and she walks up it across the frame. Then it goes round to the sheet's view, in
+   * south of the old tree's trunk under its boughs and over the high roof's far end.
    */
-  private treeView(wide: number, c: THREE.Vector3 = this.cast.child.position, on = this.onTrunk): void {
-    const k = tuning.drownedCamera.run;
-    const root = TREE_SITE.spot.root, rest = TREE_SITE.spot.rest, over = TREE_SITE.spot.over;
-    const fx = rest.x - root.x, fz = rest.z - root.z, fl = Math.hypot(fx, fz);
-    const ex = fx / fl, ez = fz / fl, nx = ez, nz = -ex;
-    const crossed = on * THREE.MathUtils.smoothstep(((c.x - over.x) * ex + (c.z - over.z) * ez) / (fl - 2.4), 0, 0.8);
-    const north = THREE.MathUtils.lerp(k.uprightTreeNorth, k.treeNorth, wide), east = THREE.MathUtils.lerp(k.uprightTreeEast, k.treeEast, wide);
-    const eye = this.treeEye.set(over.x + nx * north + ex * east, THREE.MathUtils.lerp(k.uprightTreeHigh, k.treeHigh, wide), over.z + nz * north + ez * east);
-    const target = this.treeTarget.copy(over).lerp(rest, 0.25).setY(1.9).lerp(this.tmp.copy(c).setY(c.y + 1), THREE.MathUtils.lerp(k.uprightTreeOnHer, 0.45, wide));
-    if (crossed > 0) {
+  private treeView(wide: number, round = THREE.MathUtils.smoothstep(this.treeRound, 0, 1)): void {
+    const k = tuning.drownedCamera.run, lerp = THREE.MathUtils.lerp;
+    const over = TREE_SITE.spot.over, ex = TREE_FALL.x, ez = TREE_FALL.y, nx = ez, nz = -ex;
+    const site = ([north, east, high]: readonly number[], [uprightNorth, uprightEast, uprightHigh]: readonly number[], out: THREE.Vector3) => {
+      const n = lerp(uprightNorth, north, wide), e = lerp(uprightEast, east, wide);
+      return out.set(over.x + nx * n + ex * e, lerp(uprightHigh, high, wide), over.z + nz * n + ez * e);
+    };
+    const eye = site(k.treeEye, k.uprightTreeEye, this.treeEye);
+    const target = site(k.treeAt, k.uprightTreeAt, this.treeTarget);
+    if (round > 0) {
       this.sheetView(wide, 0);
-      eye.lerp(this.stationEye, crossed);
-      target.lerp(this.stationTarget, crossed);
+      const from = site(k.treeRound[0], k.uprightTreeRound[0], this.roundFrom), to = site(k.treeRound[1], k.uprightTreeRound[1], this.roundTo);
+      const u = 1 - round;
+      eye.multiplyScalar(u * u * u).addScaledVector(from, 3 * u * u * round).addScaledVector(to, 3 * u * round * round)
+        .addScaledVector(this.stationEye, round * round * round);
+      target.lerp(this.stationTarget, round);
     }
     this.stationEye.copy(eye);
     this.stationTarget.copy(target);

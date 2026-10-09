@@ -193,9 +193,8 @@ export class ToppleTree {
   private press = 0;
   private incoming = 0;
   private sideIncoming = 0;
-  /** The most the push has pressed since the roots last gave; ready again once that push has ebbed. */
+  /** The most the push has pressed since the roots last bit again. */
   private pushPeak = 0;
-  private armed = true;
   private settle = 0;
   private fellFrom = 0;
   private tornUp = false;
@@ -295,7 +294,6 @@ export class ToppleTree {
     this.leanV = this.side = this.sideV = this.press = this.incoming = this.sideIncoming = 0;
     this.loose = this.tear = this.soak = this.shudder = this.shiver = this.dripFor = 0;
     this.gives = this.pushPeak = this.settle = this.heave = this.bubbling = this.silt = this.siltAge = 0;
-    this.armed = true;
     this.tornUp = false;
     this.sinceDown = 0;
     this.base.copy(this.spot.root);
@@ -309,6 +307,11 @@ export class ToppleTree {
   /** How near it is to going over, 0 to 1: what counts as progress. */
   get progress(): number {
     return this.state === 'standing' ? this.loose * 0.95 : 1;
+  }
+
+  /** How much it is moving, 0 standing still: rocking, lurching or shuddering. */
+  get stirring(): number {
+    return this.shiver;
   }
 
   /** A point a share of the way up the standing trunk, in the world. */
@@ -373,11 +376,9 @@ export class ToppleTree {
       this.incoming -= this.incoming * take;
       this.press = THREE.MathUtils.clamp(this.press * Math.exp(-dt / k.hold), -k.backMax, k.pressMax);
       this.settle = Math.max(0, this.settle - dt);
-      if (!this.armed && this.settle <= 0 && this.press < k.giveAt * 0.4) {
-        this.armed = true;
-        this.pushPeak = 0;
-      }
-      if (this.armed) this.pushPeak = Math.max(this.pushPeak, this.press + Math.max(0, this.incoming));
+      /** The roots bite again a moment after they give whether or not the push has let up, so pushing on gets there. */
+      const biting = this.settle <= 0;
+      if (biting) this.pushPeak = Math.max(this.pushPeak, this.press + Math.max(0, this.incoming));
       /** The roots let it lean so far and hold hard beyond. */
       const strain = Math.max(0, this.lean - rest - k.holdAt);
       this.leanV += (-k.stiffness * (this.lean - rest - this.press) - k.rootStiffness * strain - k.damping * this.leanV) * dt;
@@ -387,7 +388,7 @@ export class ToppleTree {
         this.onEvent?.('creak', this.trunkAt(0.3, this.tmp), strength);
         this.ring(0.6 * strength, time);
       }
-      if (this.armed && strain > 0 && this.pushPeak >= k.giveAt) this.give(time);
+      if (biting && strain > 0 && this.pushPeak >= k.giveAt) this.give(time);
     } else if (this.state === 'falling') {
       const torn = THREE.MathUtils.clamp((this.lean - this.fellFrom) / k.tearOver, 0, 1);
       const hold = THREE.MathUtils.lerp(k.tearHold, 1, THREE.MathUtils.smoothstep(torn, 0.2, 1));
@@ -436,7 +437,7 @@ export class ToppleTree {
     const step = THREE.MathUtils.lerp(k.giveMin, k.giveMax, THREE.MathUtils.smoothstep(this.pushPeak, k.giveAt, k.pressMax));
     this.loose = Math.min(1, this.loose + step);
     this.gives++;
-    this.armed = false;
+    this.pushPeak = 0;
     this.settle = k.settleFor;
     this.press *= 0.3;
     this.incoming *= 0.3;
