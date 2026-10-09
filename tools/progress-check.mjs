@@ -20,7 +20,7 @@ try {
   const state = () => page.evaluate(() => {
     const g = __game;
     return { chapter: g.story.name, beat: g.story.current.beat, point: g.story.current.checkpoint,
-      child: g.child.position.toArray(), bird: g.cygnet.state, seat: g.cygnet.seat, busy: g.carry.busy,
+      child: g.child.position.toArray(), focus: g.story.focus.toArray(), eye: g.rig.camera.position.toArray(), bird: g.cygnet.state, seat: g.cygnet.seat, busy: g.carry.busy,
       piano: g.story.current.atPiano, wave: g.life.regions.wave.toArray(), waiting: g.life.regions.waiting.toArray(),
       finished: g.story.current.finished ?? false };
   });
@@ -73,6 +73,7 @@ try {
     assert.equal(restored.chapter, chapter);
     assert.equal((await read()).point, point, 'must not overwrite a restored checkpoint with entry');
     assert(restored.child.every(Number.isFinite));
+    assert([...restored.focus, ...restored.eye].every(Number.isFinite), `the resumed shot must be finite: ${JSON.stringify({ chapter, point, focus: restored.focus, eye: restored.eye })}`);
     assert(Math.hypot(restored.child[0]-saved.child[0],restored.child[2]-saved.child[2])<4,
       `resume at the saved place, allowing the first second of walking/sailing: ${JSON.stringify({chapter,point,saved:saved.child,restored:restored.child})}`);
     assert(!restored.busy, 'arrival carry callback must not run after a POI restore');
