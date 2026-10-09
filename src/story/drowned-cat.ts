@@ -205,6 +205,7 @@ export class StrandedCat {
     child.place(RIDGE.x, RIDGE.z, Math.atan2(GAP.x - RIDGE.x, GAP.z - RIDGE.z));
     child.position.y = RIDGE.y;
     this.to('ridge');
+    this.since = tuning.drowned.cat.lostFor;
   }
 
   private to(step: CatStep): void {
@@ -292,6 +293,13 @@ export class StrandedCat {
         break;
       case 'waits':
         this.goAfter();
+        break;
+      case 'ridge':
+        /** Up, she turns back to the boat below as the fog comes over it, then to the cat, until she sets off after it. */
+        if (this.since < k.lostFor + tuning.drowned.run.setOff) {
+          const at = this.since < k.lostFor ? boat.position : cat.position;
+          child.faceToward(at.x, at.z, 1 - Math.exp(-dt * 2.5));
+        }
         break;
       default:
         break;
@@ -605,9 +613,11 @@ export class StrandedCat {
         return this.eye;
       }
       case 'ridge': {
-        /** Up, she looks at the cat, then over the roofs to the church it is making for, and back. */
-        const beat = (this.since - 1.6) % 7;
-        return this.since < 1.6 || beat > 4.2 ? this.eye : TOWER;
+        /** Up, she looks back down at the boat as the fog comes over it, then at the cat, over the roofs to the church it is making for, and back. */
+        const k = tuning.drowned.cat;
+        if (this.since < k.lostFor) return this.lens.copy(this.cast.boat.position).setY(this.cast.boat.position.y + 0.8);
+        const beat = (this.since - k.lostFor - 1.6) % 7;
+        return this.since < k.lostFor + 1.6 || beat > 4.2 ? this.eye : TOWER;
       }
       default:
         return this.eye;
