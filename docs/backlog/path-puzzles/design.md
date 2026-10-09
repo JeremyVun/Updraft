@@ -601,7 +601,7 @@ the action is for (where the tub goes, where the tree falls, what the bell answe
 3. ~~The fast sail after the rescue~~ (the cat's roof 20 m short of the strand; once the cat has come to her the air dies and the boat ghosts 20 m in 24 s at up to 0.95 m/s onto the slates, the player's input off; the fog rises through it). Was: after the rescue the boat sails 180 m at up to 9.5 m/s (`driftSpeed`, `driftBreeze` 2.6) to the strand. Fix: the
    air dies once the cat is aboard and the becalmed boat drifts slowly onto the roof, the player's wind making nothing;
    the cat's roof comes near enough to the strand for that drift to be short.
-4. At the tree: she stands under it, no drawn gust shows, she looks straight up at it the whole time instead of the
+4. ~~At the tree~~ (`proto-drowned-fix-tree`: the roots give again a second after each give however hard she is pushed, so continuous strokes fell it; the gust 0.6 s after she stops and after each useful stroke; she waits 5.2 m from the root at the wall's end, looking across to the barn with glances up; the view from the north-west holds her, the tree, the barn and the sheet beyond). Was: she stands under it, no drawn gust shows, she looks straight up at it the whole time instead of the
    way she must go, and no gesture fells it.
 5. The sheet crossing: she hangs by one hand off the sheet's side edge, which reads wrong. Fix: she holds it as one
    rides a sail, centred on it with both hands, the filled sheet carrying her.
@@ -639,6 +639,9 @@ Found reading the room's storyboard (a frame every 2 s of `drowned-run-check` fr
 18. Found fixing 3: with the cat's roof by the strand, the sail through the village before the cat is 59 s and 253 m
     at 4.7 m/s (it was 27 s). Lead's call: about 30 s, by bringing the room's entry nearer along the channel, and the
     sail given its purpose early: the cat heard mewing and seen ahead on its pot, the boat making for it.
+19. The drawn gust is the shared invitation's thin cream stroke and is faint against the lilac sky (at the tree it is
+    barely there in stills): it may be why Jeremy saw "no invitational wind gesture". Fix: in this room it reads at a
+    glance against sky, fog and roofs.
 
 ### The room rethought (Claude, 2026-10-08; Jeremy: "yea lets see how this works")
 
