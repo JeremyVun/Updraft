@@ -583,6 +583,19 @@ the action is for (where the tub goes, where the tree falls, what the bell answe
     belfry's light (it would not leave them); the goodbye frame looks up from the boat to the two at the sill. This
     supersedes step 8's re-staging (the cat coming down to the roof).
 
+Found reading the room's storyboard (a frame every 2 s of `drowned-run-check` from the tub to the swing, 2026-10-09):
+12. The swing: the lens stands 21 m off, she is a few dozen pixels tall, the seat hardly moves through two minutes of
+    pumping, the nave she lands on does not read, and the check's run never reached the tower's foot after it (a
+    stall). Fix: closer, the seat's arc and the nave's roof she leaps to in one frame; it must carry her over.
+13. The cat is unreadable from the rescue on, not only on the run (item 6): in the drift it is out of the wide frame,
+    stuck it is a speck at the bow, on the ridge and the walks it does not show at all.
+14. The fog drops out: absent from the stuck frame until she climbs out, and from every mill frame; the room's logic
+    (get higher than the fog) cannot be read from the lens.
+15. The rescue close-up: the sail and her hood hide her face, and the cat at her shins is out of frame or small.
+16. No piece is seen before she is at it: each walk looks at her back and the fog, so the next obstacle and the way
+    over it arrive unannounced. Fix: each walk ends on a frame that lays out the next piece (what is in the way, where
+    she must get to) before the puzzle begins.
+
 ### The room rethought (Claude, 2026-10-08; Jeremy: "yea lets see how this works")
 
 One idea holds the middle of the room together: **the fog is a rising white tide and the only safe place is higher
