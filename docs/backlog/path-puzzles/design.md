@@ -526,6 +526,10 @@ section (`drownedScore` returns `still` for `run`, `nave` and `church`), which i
 > - [a still side on to the sheet crossing: her hanging by one hand at the sheet's trailing edge, feet dangling, the
 >   sheet beside her] This looks very weird, it doesn't look right at all with the child hanging onto the side of the
 >   cloth. I'm also noting that throughout all of this, i hardly see the cat.
+>
+> - [a still from low behind her in the mill's sack basket against the tower, the sails' hub out of the top of frame]
+>   this scene with the windmill needs to be zoomed out a bit, i can't even see the indicative wind gestures, they are
+>   off screen above me, i can't see the bloody thing im supposed to interact with.
 
 **The list from this play** (Claude keeps it; each item is struck through with its commit when fixed and checked):
 1. The tub out of frame while it waits for the player: the lens off the gable end stands 7 m from the chimney and the
@@ -541,6 +545,8 @@ section (`drownedScore` returns `still` for `run`, `nave` and `church`), which i
    rides a sail, centred on it with both hands, the filled sheet carrying her.
 6. Through the run the cat is hardly seen. Fix: the cat a roof ahead in every walking frame and its own crossing of
    each piece in view (design step 5: "the cat goes first wherever a cat can").
+7. The mill: the lens low behind her in the basket crops the sails' hub and the drawn circles off the top. Fix: wider,
+   the sails, their hub with the drawn circles, and her in the basket in one frame.
 
 ### The room rethought (Claude, 2026-10-08; Jeremy: "yea lets see how this works")
 
