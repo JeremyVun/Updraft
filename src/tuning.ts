@@ -1498,9 +1498,12 @@ export const tuning = {
     /**
      * The drawn sweeps: each crosses in `sweepFor` seconds and comes again after `sweepRest`, `sweepScreen` screen
      * half-heights long at most, kept within `sweepFrame` of the frame's middle, `sweepWidth` m wide drawn `sweepBold`
-     * times as bold as the shared sweeps allow on screen, and `sweepLift` m in front of what it crosses.
+     * times as bold as the shared sweeps allow on screen, and `sweepLift` m in front of what it crosses. The eye's is
+     * as long as the fold over it, from `eyeSweepUnder` of the fold's height under its lower edge to the edge it hangs
+     * from, and carries on over the brow as it fades.
      */
     sweepFor: 1.6, sweepRest: 0.9, sweepScreen: 1.1, sweepFrame: 0.85, sweepWidth: 0.45, sweepBold: 2.8, sweepLift: 1.2,
+    eyeSweepUnder: 0.4,
     /** The drawn spiral over the blowhole: how plainly it asks, its loops' radius (m), and how much bolder it is drawn. */
     coaxUrgency: 0.85, coaxRadius: 2.4, coaxBold: 2,
     /** The swell it leaves going under: speed (m/s), crest spacing (m), width of the packet (m) and height at the boat (m). */

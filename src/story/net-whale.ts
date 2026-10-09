@@ -323,6 +323,8 @@ export class NetWhale {
   private readonly catchAt = new THREE.Vector3();
   private readonly inviting = new THREE.Vector3();
   private inviteHeading = 0;
+  /** How long the drawn sweep is on screen (half-heights): as long as what it crosses, or 0 to fill the frame. */
+  private inviteLength = 0;
   private readonly hand = [new THREE.Vector3(), new THREE.Vector3()];
   private readonly ray = new THREE.Vector3();
   /** The holds the camera eases between: what it was holding when the step changed, what it is going to, and how far. */
@@ -415,6 +417,7 @@ export class NetWhale {
     this.stepTime = 0;
     this.waiting = this.askedFor = 0;
     this.sinceStroke = Infinity;
+    this.inviteLength = 0;
     // A valve's dolphin still out finishes what it is doing before the next step may send one of its own.
     if (this.valveStep === null) {
       this.valveT = -1;
@@ -463,7 +466,7 @@ export class NetWhale {
       this.rested = true;
       this.waited = 1e-3;
       this.step = 'breath';
-      this.stepTime = this.waiting = this.askedFor = 0;
+      this.stepTime = this.waiting = this.askedFor = this.inviteLength = 0;
       this.sinceStroke = Infinity;
       this.limit = 0;
       this.hold = 1;
@@ -612,7 +615,7 @@ export class NetWhale {
     const ux = Math.cos(h);
     const uy = Math.sin(h);
     const roomX = K.sweepFrame * aspect;
-    const length = Math.min(K.sweepScreen, (2 * roomX) / Math.max(Math.abs(ux), 1e-3), (2 * K.sweepFrame) / Math.max(Math.abs(uy), 1e-3));
+    const length = Math.min(this.inviteLength || K.sweepScreen, (2 * roomX) / Math.max(Math.abs(ux), 1e-3), (2 * K.sweepFrame) / Math.max(Math.abs(uy), 1e-3));
     let x = centre.x * aspect;
     let y = centre.y;
     const half = length / 2;
@@ -1135,15 +1138,22 @@ export class NetWhale {
     this.foldGust = 1;
   }
 
-  /** The drawn sweep goes up across its eye from the fold's lower edge and on over its brow. */
+  /**
+   * The drawn sweep goes up across the fold from just under its lower edge, over its eye, to the edge it hangs from,
+   * and fades on over the brow the way the fold will flip: as long as the fold, so it lies on it rather than the sky.
+   */
   private inviteEye(): void {
     const camera = this.camera;
-    const whale = this.whale;
-    this.inviting.copy(whale.eye).lerp(this.net.foldMid, 0.4);
+    const net = this.net;
+    const from = this.p.copy(net.foldTip).addScaledVector(this.a.subVectors(net.foldTop, net.foldTip), -K.eyeSweepUnder);
+    const to = this.b.copy(net.foldTop);
+    this.inviting.addVectors(from, to).multiplyScalar(0.5);
     if (!camera) return;
-    this.a.copy(this.net.foldTip).project(camera);
-    this.b.copy(whale.eye).lerp(whale.blowhole, 0.25).setY(whale.eye.y + 3).project(camera);
-    this.inviteHeading = Math.atan2(this.b.y - this.a.y, (this.b.x - this.a.x) * camera.aspect);
+    from.project(camera);
+    to.project(camera);
+    const across = (to.x - from.x) * camera.aspect;
+    this.inviteHeading = Math.atan2(to.y - from.y, across);
+    this.inviteLength = Math.hypot(across, to.y - from.y);
   }
 
   /** Whichever valve dolphin is out, carried on to its end once its own step has passed. */

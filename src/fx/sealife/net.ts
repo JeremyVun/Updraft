@@ -183,9 +183,10 @@ export class Net {
   flap = 0;
   /** The mesh over its head billowing up off it in the wind, 0..1. */
   billow = 0;
-  /** The middle of the fold's lower edge, and of the fold, in the world. */
+  /** The middle of the fold's lower edge, of the fold, and of the near edge it hangs from, in the world. */
   readonly foldTip = new THREE.Vector3();
   readonly foldMid = new THREE.Vector3();
+  readonly foldTop = new THREE.Vector3();
   /** While true whatever drives the net leaves its four parts alone, so they can be posed by hand. */
   posed = false;
   /** Where the bill holds the loop's free end, or null while it lies on the water. */
@@ -1621,6 +1622,7 @@ export class Net {
     const mid = Math.floor(FOLD_ROWS / 2) * FOLD_COLS;
     this.foldTip.fromArray(P, (mid + FOLD_COLS - 1) * 3);
     this.foldMid.fromArray(P, (mid + Math.floor(FOLD_COLS / 2)) * 3);
+    this.foldTop.fromArray(P, mid * 3);
     this.foldPos.needsUpdate = this.foldNormals.needsUpdate = this.foldContact.needsUpdate = this.foldAfloat.needsUpdate = true;
   }
 
