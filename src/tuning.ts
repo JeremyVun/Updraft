@@ -1982,7 +1982,7 @@ export const tuning = {
        * it is already going as she arrives and never keeps her waiting; and how far up the hoist she is (a share of the
        * climb) before it comes down off the mill's cap ahead of her.
        */
-      catGo: { tree: 9, sheet: 40, mill: 4, swing: 14 }, catDown: 0.55,
+      catGo: { tree: 15, sheet: 40, mill: 4, swing: 14 }, catDown: 0.55,
       /**
        * The fog along its way (`DARK_WAY`): how far behind her it comes on while she is on her own way, while she works
        * each piece, and where it waits once she is at the tower's foot; the nearest it ever comes (and where it comes
