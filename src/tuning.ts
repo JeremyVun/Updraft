@@ -2029,8 +2029,11 @@ export const tuning = {
     },
     /** The stranded cat, the tub's two trips, and the cat's bolt from the bow when the dark has come on. */
     cat: {
-      /** She notices it this far from the place the boat waits; how hard the boat slows into it, m/s². */
-      seeFrom: 46, holdBrake: 0.42,
+      /**
+       * The most the boat sails at on its way in to the cat, m/s; she notices it this far from the place the boat waits;
+       * how hard the boat slows into it, m/s².
+       */
+      sailSpeed: 2.8, seeFrom: 70, holdBrake: 0.42,
       /** How near (metres) the tub must come to the eaves, or to the bow, to be drawn in. */
       roofReach: 1.1, bowReach: 1.6,
       /**
@@ -2237,6 +2240,11 @@ export const tuning = {
     roofFromZ: -1260, roofUntilZ: -1360,
     entryBearing: 0.16, roofBearing: 0.10,
     entryDistance: 23, roofDistance: 16, entryHeight: 5, roofHeight: 2.8,
+    /**
+     * Making for the cat: from `makingFrom` to `makingTo` metres short of where the boat waits for it, the lens comes
+     * this far round onto the quarter away from the sail (radians), so the cat ahead is seen past the mast, on this lens.
+     */
+    makingFrom: 78, makingTo: 60, makingBearing: 0.4, makingZoom: 1.3,
     /** Let the church pass beside us, then return to the channel instead of looking backwards after it. */
     spireEnter: 110, spireFull: 55, spireLeave: 25, spireGone: -5,
     spireDistance: 20, spireHeight: 3.4, spireWeight: 0.3,

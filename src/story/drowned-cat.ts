@@ -311,7 +311,7 @@ export class StrandedCat {
     const k = tuning.drowned.cat;
     const most = Math.sqrt(2 * k.holdBrake * Math.max(0, toHold - 0.4));
     boat.speed = Math.min(boat.speed, most);
-    boat.speedLimit = Math.max(0.05, Math.min(tuning.storm.passageSpeed, most));
+    boat.speedLimit = Math.max(0.05, Math.min(k.sailSpeed, most));
     const passing = toHold > this.nearest + 0.01;
     this.nearest = Math.min(this.nearest, toHold);
     if (toHold > 1 && !passing && boat.speed > 0.2) return;

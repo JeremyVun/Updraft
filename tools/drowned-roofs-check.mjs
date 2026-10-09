@@ -10,7 +10,7 @@
 //        W/H viewport (default 1600x900), IDLE seconds of waiting at the tub first (default 18), VALVE=1 instead
 //        waits out the safety valve with no input at all (both trips), DEBUG=1 prints each stroke, NEAR=1 starts the
 //        boat on the drift's last leg 70 m short of the cat, STRIP=<dir> saves a frame every half second of game time
-//        from the cat seen to the boat aground (<dir>/0000.jpg on).
+//        from the room's start to the end, the boat lost behind her (<dir>/0000.jpg on).
 import { chromium } from 'playwright-core';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -43,11 +43,12 @@ try {
   const filmed = (async () => {
     if (!filming) return;
     fs.mkdirSync(process.env.STRIP, { recursive: true });
-    await page.waitForFunction(() => __game.story.current.cat?.step !== 'stranded', null, { timeout: 300000, polling: 100 });
     let next = await page.evaluate(() => __stats.time);
     while (filming) {
       const t = await page.evaluate(() => __stats.time);
       if (t >= next) {
+        const at = await page.evaluate(() => { const s = __game.story.current; return { time: +__stats.time.toFixed(1), beat: s.beat, step: s.cat?.step }; });
+        fs.appendFileSync(`${process.env.STRIP}/frames.jsonl`, JSON.stringify({ frame: frames, ...at }) + '\n');
         await page.screenshot({ path: `${process.env.STRIP}/${String(frames++).padStart(4, '0')}.jpg`, type: 'jpeg', quality: 70 });
         next += 0.5;
       } else await page.waitForTimeout(15);
@@ -248,9 +249,6 @@ try {
   assert(took > 12 && took < 32, `the becalmed drift took ${took.toFixed(1)}s`);
   assert(gust < 0.02 && fill < 0.05 && unmuted === 0, 'a stroke made wind while the air was dead');
   await page.waitForTimeout(4000);
-  filming = false;
-  await filmed;
-  if (process.env.STRIP) console.log(`${frames} frames in ${process.env.STRIP}`);
   await shot('9-at-rest');
   await reach('bolting', 120000);
   console.log('bolting', JSON.stringify(await state()));
@@ -274,6 +272,9 @@ try {
   await play(30);
   const late = await state();
   await shot('14-boat-stuck');
+  filming = false;
+  await filmed;
+  if (process.env.STRIP) console.log(`${frames} frames in ${process.env.STRIP}`);
   console.log(`stuck: ${distance(late.boat, strand).toFixed(2)}m off where it ran aground after 30s`);
   assert(distance(late.boat, strand) < 1.5, `the boat has left where it ran aground: ${JSON.stringify(late)}`);
   assert(errors.length === 0, `page errors: ${errors.join('\n')}`);

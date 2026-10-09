@@ -27,8 +27,19 @@ const SPIRE_NEAR = 80;
  */
 const PASSAGE = [...DROWNED_CHANNEL.slice(0, 3), STRAND, ...DROWNED_CHANNEL.slice(3), WOOD_LANDING];
 const TO_STRAND = 3;
+/** How far through the village the light has gone by the time the drift strands, wherever it began. */
+const STRAND_THROUGH = TO_STRAND / (PASSAGE.length - 2);
+/** Saves from before the stairs begin the room at the birches' beach, north of all of it. */
+const FROM_BIRCHES_Z = -1240;
 /** Once she is aboard at the nave they go out by `STORM_WAY` and on along the channel's last leg. */
 const ON_FROM_NAVE = PASSAGE.indexOf(DROWNED_CHANNEL[DROWNED_CHANNEL.length - 1]);
+/** True if (x, z) lies along the drift's last leg, from the channel's third point to where it strands. */
+function onLastLeg(x: number, z: number): boolean {
+  const a = PASSAGE[TO_STRAND - 1], b = PASSAGE[TO_STRAND], ex = b.x - a.x, ez = b.y - a.y;
+  const u = ((x - a.x) * ex + (z - a.y) * ez) / (ex * ex + ez * ez);
+  return u > 0 && u < 1 && Math.abs((x - a.x) * ez - (z - a.y) * ex) / Math.hypot(ex, ez) < 20;
+}
+
 /** Where she will step out onto the slates by the stem, and the ridge above it. */
 const STRAND_STEP = new THREE.Vector3(WAY.strandSlope.x0, WAY.strandSlope.height, WAY.strandSlope.z0);
 const STRAND_TOP = new THREE.Vector3(WAY.strandSlope.x1, WAY.strandSlope.height1, WAY.strandSlope.z1);
@@ -115,6 +126,8 @@ export class DrownedChapter implements Chapter {
   private camera: THREE.PerspectiveCamera | null = null;
   /** How far the dark has come on since it rose, 0 to 1. */
   private come = 0;
+  /** How far the drift had to go to where it strands when the room began. */
+  private startLeft = 1;
   private touched = false;
   private stormTime = 0;
   private hornPassed = false;
@@ -172,15 +185,18 @@ export class DrownedChapter implements Chapter {
     this.shot.obstacles = cast.village?.cameraObstacles;
     const { boat, plane } = cast;
     boat.becalmed = 0;
-    boat.speedLimit = tuning.storm.passageSpeed;
     boat.mooring = null;
     this.departure.set(boat.position.x, boat.position.z);
-    drownedEntry.fromBirches = boat.position.x < 8;
+    drownedEntry.fromBirches = boat.position.z > FROM_BIRCHES_Z;
     drownedEntry.behindGone = false;
     this.shot.carryAnchor = boat.position;
     this.quarter = this.side = -boat.sailSide || 1;
     this.heading = boat.yaw;
-    boat.steerFor = DROWNED_CHANNEL[0];
+    /** Down from the stairs the room begins on the drift's last leg, the cat's roof ahead; older saves sail the whole channel. */
+    if (onLastLeg(boat.position.x, boat.position.z)) this.leg = TO_STRAND;
+    boat.steerFor = PASSAGE[this.leg];
+    boat.speedLimit = tuning.drowned.cat.sailSpeed;
+    this.startLeft = this.leftToStrand();
     boat.canGround = false;
     boat.grounded = false;
     boat.coastTo = null;
@@ -358,14 +374,18 @@ export class DrownedChapter implements Chapter {
     return this.now - this.beatStart;
   }
 
-  /** How far through the village they are, 0 at the first roof to 1 at the last. */
+  /** How far the drift has still to go to where it strands, along its way. */
+  private leftToStrand(): number {
+    const b = this.cast.boat.position;
+    let left = Math.hypot(b.x - PASSAGE[this.leg].x, b.z - PASSAGE[this.leg].y);
+    for (let i = this.leg; i < TO_STRAND; i++) left += PASSAGE[i].distanceTo(PASSAGE[i + 1]);
+    return left;
+  }
+
+  /** How far through the village the light has gone: from where the room began to `STRAND_THROUGH` where it strands. */
   private get through(): number {
-    const legs = PASSAGE.length - 2;
-    const wp = PASSAGE[Math.min(this.leg, legs)];
-    const prev = PASSAGE[Math.max(0, this.leg - 1)];
-    const span = Math.hypot(wp.x - prev.x, wp.y - prev.y) || 1;
-    const gone = 1 - Math.min(1, Math.hypot(this.cast.boat.position.x - wp.x, this.cast.boat.position.z - wp.y) / span);
-    return THREE.MathUtils.clamp((this.leg - 1 + gone) / legs, 0, 1);
+    if (this.leg > TO_STRAND) return STRAND_THROUGH;
+    return STRAND_THROUGH * THREE.MathUtils.clamp(1 - this.leftToStrand() / this.startLeft, 0, 1);
   }
 
   private steer(): void {
@@ -931,7 +951,7 @@ export class DrownedChapter implements Chapter {
     s.target.lerp(aim, round);
     s.eye = eye;
     s.orbit = true;
-    s.zoom = lerp(1, lerp(k.uprightCatZoom, k.catZoom, wide), round);
+    s.zoom = lerp(s.zoom ?? 1, lerp(k.uprightCatZoom, k.catZoom, wide), round);
     const step = this.cat.step;
     this.churchAttention.strength *= 1 - round;
     this.catAttention.point.copy(this.cat.eye);
@@ -981,7 +1001,11 @@ export class DrownedChapter implements Chapter {
     this.pace = k.rescuePace;
   }
 
-  /** The camera notices the village with the child: rooftops at water level, then the church passing overhead. */
+  /**
+   * The camera notices the village with the child: rooftops at water level, then the church passing overhead. Making
+   * for the cat it comes out on the quarter away from the sail, so the cat on its pot ahead is seen past the mast
+   * rather than behind the sail, on a longer lens.
+   */
   private villageFrame(fx: number, fz: number): void {
     const { boat, child } = this.cast;
     const k = tuning.drownedCamera, s = this.shot;
@@ -991,10 +1015,13 @@ export class DrownedChapter implements Chapter {
     // pull us back out of the street just as the player has set the journey moving.
     const church = this.stirred ? 0 : THREE.MathUtils.smootherstep(past, -k.spireEnter, -k.spireFull)
       * (1 - THREE.MathUtils.smootherstep(past, -k.spireLeave, -k.spireGone));
-    const roofBearing = this.heading + Math.PI + this.quarter * THREE.MathUtils.lerp(k.entryBearing, k.roofBearing, roofs);
+    const toHold = Math.hypot(boat.position.x - CAT_HOLD.x, boat.position.z - CAT_HOLD.y);
+    const making = this.cat.ashore ? 0 : 1 - THREE.MathUtils.smoothstep(toHold, k.makingTo, k.makingFrom);
+    const roofBearing = this.heading + Math.PI + this.quarter * THREE.MathUtils.lerp(THREE.MathUtils.lerp(k.entryBearing, k.roofBearing, roofs), k.makingBearing, making);
     s.from = this.from.set(Math.sin(roofBearing), 0, Math.cos(roofBearing));
     s.distance = THREE.MathUtils.lerp(k.entryDistance, k.roofDistance, roofs);
     s.height = THREE.MathUtils.lerp(k.entryHeight, k.roofHeight, roofs);
+    s.zoom = THREE.MathUtils.lerp(1, k.makingZoom, making);
     s.target.set(child.position.x + fx * tuning.storm.lookAhead, child.position.y + 0.9,
       child.position.z + fz * tuning.storm.lookAhead);
     this.churchAttention.strength = church;
