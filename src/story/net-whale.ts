@@ -676,8 +676,9 @@ export class NetWhale {
     this.railward += ((this.farewelled && this.step === 'free' ? 1 : 0) - this.railward) * (1 - Math.exp(-dt * K.farewellRailEase));
     this.slide = Math.max(K.haulSlide * THREE.MathUtils.smoothstep(this.out, 0, 1), K.lookSlide * drawn,
       K.farewellSlide * THREE.MathUtils.smoothstep(this.railward, 0, 1));
-    // As it dives she turns to where it goes down, so the mitten she waves is out to her side rather than toward the lens.
-    const turning = this.step === 'gone' ? 0 : this.turnToward(this.farewelled ? whale.farewell : whale.eye) * (1 - THREE.MathUtils.smootherstep(left, 30, 120));
+    let turning = this.step === 'gone' ? 0 : this.turnToward(this.farewelled ? whale.farewell : whale.eye) * (1 - THREE.MathUtils.smootherstep(left, 30, 120));
+    // Waving goodbye, she turns her back to the view, a little toward it, so both her arms stand clear of her hood.
+    if (this.step === 'free' && whale.time > FIN_LOOK) turning = this.turn + this.toView() + K.goodbyeTurn;
     const toward = THREE.MathUtils.lerp(turning, K.lookTurn, drawn);
     this.turn += (THREE.MathUtils.lerp(toward, K.haulTurn, this.out) - this.turn) * (1 - Math.exp(-dt * 1.2));
     if (this.step === 'free' && whale.diving >= 0 && !this.farewelled) {
@@ -950,11 +951,15 @@ export class NetWhale {
   private waveGoodbye(time: number): void {
     const { child } = this.cast;
     const [out, up, sway, rate] = K.goodbyeWave;
-    child.toBody(child.face(this.a), this.b);
+    child.face(this.a);
+    // Out to either side as the view sees her, so the V of her arms stands clear of her hood whichever way she sits.
+    if (this.camera) this.b.setFromMatrixColumn(this.camera.matrixWorld, 0).setY(0).normalize();
+    else this.b.set(Math.cos(this.cast.boat.yaw), 0, -Math.sin(this.cast.boat.yaw));
+    const left = child.fromBody(this.p.set(1, 0, 0), this.ray).sub(child.fromBody(this.p.set(0, 0, 0), this.hand[0])).dot(this.b) < 0 ? 1 : -1;
     const swing = sway * Math.sin(time * rate);
     for (const hand of [0, 1] as const) {
-      this.p.set(this.b.x + (hand === 0 ? out : -out) + swing, this.b.y + up, this.b.z);
-      child.reachFor(hand, child.fromBody(this.p, this.hand[hand]));
+      const side = hand === 0 ? -left : left;
+      child.reachFor(hand, this.hand[hand].copy(this.a).addScaledVector(this.b, side * out + swing).addScaledVector(UP, up));
     }
     this.wavingGoodbye = true;
   }
@@ -2113,6 +2118,16 @@ export class NetWhale {
   remaining(): number {
     const p = this.cast.boat.position;
     return (this.rest.x - p.x) * this.dir.x + (this.rest.z - p.z) * this.dir.y;
+  }
+
+  /** How far round her seat must turn for her to face the way the view looks (radians). */
+  private toView(): number {
+    if (!this.camera) return 0;
+    const { child } = this.cast;
+    this.b.setFromMatrixColumn(this.camera.matrixWorld, 2).negate();
+    child.fromBody(this.p.set(0, 0, 1), this.a).sub(child.fromBody(this.p.set(0, 0, 0), this.ray));
+    const want = Math.atan2(this.b.x, this.b.z) - Math.atan2(this.a.x, this.a.z);
+    return Math.atan2(Math.sin(want), Math.cos(want));
   }
 
   /** The seat turned toward `at` (its eye, unless given), at most 0.6 radians. */

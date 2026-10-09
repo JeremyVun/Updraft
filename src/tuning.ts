@@ -1537,7 +1537,7 @@ export const tuning = {
      * `farewellHeight` up and `farewellBearing` round to port of astern, looking `farewellToward` of the way there and
      * `farewellLookY` up, so its flukes stand whole in the frame over the boat.
      */
-    farewellDistance: 21, farewellHeight: 1.2, farewellBearing: 0.3, farewellLookY: 16, farewellToward: 0.5, farewellMove: 7,
+    farewellDistance: 24, farewellHeight: 1.2, farewellBearing: 0.85, farewellLookY: 15, farewellToward: 0.5, farewellMove: 7,
     /** Once it has gone, seconds over which the view eases from the farewell's hold back to the crossing's behind the boat. */
     handBack: 16,
     /**
@@ -1624,7 +1624,9 @@ export const tuning = {
      * Her goodbye as it waves its flipper and as its flukes stand, both mittens from her face (m): out to each side, up,
      * swaying together from side to side, and how fast (rad/s).
      */
-    goodbyeWave: [0.4, 0.35, 0.12, 7],
+    goodbyeWave: [0.75, 0.45, 0.25, 6],
+    /** Waving back to its flipper she sits with her back to the view, turned this much further toward it (radians, to port). */
+    goodbyeTurn: 0.25,
     /** As it dives she slides this far along the thwart to the port rail (m), at `farewellRailEase` a second. */
     farewellSlide: 0.35, farewellRailEase: 0.8,
     /**
@@ -1693,7 +1695,7 @@ export const tuning = {
       line: { distance: 6, height: 3.2, turn: -0.75, lookY: 3, toward: 0.37, eyeward: 1 },
       flipper: { distance: 12, height: 3.4, turn: -1.5, lookY: 3, toward: 0.5 },
       release: { distance: 12, height: 3, turn: -0.3, lookY: 12, toward: 0.4 },
-      farewell: { distance: 22, height: 1.2, turn: -0.6, lookY: 24, toward: 0.25 },
+      farewell: { distance: 24, height: 1.2, turn: -0.25, lookY: 22, toward: 0.3 },
       releaseRoom: 4,
     },
     /**
