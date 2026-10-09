@@ -1998,11 +1998,11 @@ export const tuning = {
        * The fog along its way (`DARK_WAY`): how far behind her it comes on while she is on her own way, while she works
        * each piece, while she stands looking down at it or at the swing, and where it waits once she is at the tower's
        * foot; the nearest it ever comes; how near her the walking lens is laid to expect it; how hard it closes on where
-       * it is going (per second a metre), the slowest and fastest it comes on (m/s), and how quickly it changes pace (per
-       * second).
+       * it is going (per second a metre), the slowest it comes on while she works a piece and while she walks, so it takes
+       * the roofs she leaves, and the fastest (m/s), and how quickly it changes pace (per second).
        */
       fogTrail: 12, fogHold: { tree: 10, sheet: 5, mill: 10, swing: 12 }, fogBeat: 8, fogEnd: 19, fogNearest: 7.5, fogLaid: 8,
-      fogPull: 0.5, fogSlowest: 0.5, fogFastest: 3.2, fogEase: 0.9,
+      fogPull: 0.5, fogSlowest: 0.12, fogCreep: 0.5, fogFastest: 3.2, fogEase: 0.9,
     },
     /** The wash-tub the player's wind carries to the cat's roof and back to the boat. */
     tub: {
