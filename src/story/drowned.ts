@@ -930,7 +930,7 @@ export class DrownedChapter implements Chapter {
       this.tmp.set(ridge.x + Math.sin(to) * back, ridge.y + lerp(k.uprightRidgeEye, k.ridgeEye, wide), ridge.z + Math.cos(to) * back);
       eye.lerp(this.tmp, climbed);
       const her = this.lensWas.copy(this.cast.child.position).setY(this.cast.child.position.y + 1.1);
-      her.lerp(this.cat.eye, k.ridgeAlong).lerp(this.seen.copy(boat.position).setY(1), k.ridgeBoat * this.lostLook);
+      her.lerp(this.cat.eye, k.ridgeAlong).lerp(this.seen.copy(boat.position).setY(her.y), k.ridgeBoat * this.lostLook);
       s.target.lerp(her, climbed);
       s.zoom = lerp(s.zoom, lerp(k.uprightRidgeZoom, k.ridgeZoom, wide), climbed);
     }

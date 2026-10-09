@@ -2285,7 +2285,7 @@ export const tuning = {
      * end (atan2(x, z)), how far off and how high over the ridge, how far from her toward the cat it looks, and how far
      * toward the boat below while she looks back at it, its lens and its pace.
      */
-    climbFor: 7, ridgeFrom: -1.2, ridgeDistance: 7, ridgeEye: 1.5, ridgeAlong: 0.4, ridgeBoat: 0.35, ridgeZoom: 1.15, ridgePace: 0.3,
+    climbFor: 7, ridgeFrom: -1.2, ridgeDistance: 7.5, ridgeEye: 2.1, ridgeAlong: 0.4, ridgeBoat: 0.35, ridgeZoom: 0.9, ridgePace: 0.3,
     uprightRidgeFrom: -1.25, uprightRidgeDistance: 6.5, uprightRidgeEye: 1.8, uprightRidgeZoom: 0.9,
     /**
      * While the cat is brought over: how much of its gaze the lens gives the cat as she notices it, how far from the
