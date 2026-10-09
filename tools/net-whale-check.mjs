@@ -421,7 +421,7 @@ async function elsewhere(page) {
     }
     return [best[0], best[1], best[2] / (innerHeight / 2) - radius];
   });
-  assert(clear > 0.3, `no clear water on screen for strokes elsewhere: ${clear.toFixed(2)}`);
+  assert(BREAK.includes('anywhere') || clear > 0.3, `no clear water on screen for strokes elsewhere: ${clear.toFixed(2)}`);
   for (let i = 0; i < 8; i++) {
     const a = (i * Math.PI) / 4;
     await jumpTo(page, x - Math.cos(a) * 60, y - Math.sin(a) * 60);
