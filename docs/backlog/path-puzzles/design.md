@@ -714,6 +714,8 @@ see a hole in the "fog" so to speak. it looks like a bug. also the lighthouse tu
     tenderness for the cat); the fog and the run over the roofs (unease rising, never a chase cue); the refuge and the
     boat answering the bell (hush, then warmth and relief: nothing is lost); the goodbye into the storm (letting go,
     then the dark coming). Judged by Jeremy's listen to rendered studies before it goes in.
+    Jeremy, on that (2026-10-10, verbatim): "yea it just needs to have a nice harmony and melody is all". So the
+    measure is a beautiful tune over lovely harmony in each section; the arc is only the colour it takes.
 
 ### The room rethought (Claude, 2026-10-08; Jeremy: "yea lets see how this works")
 
