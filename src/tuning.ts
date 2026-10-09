@@ -1778,7 +1778,7 @@ export const tuning = {
        * it nears; how far short of the boat its front is when the light has gone from it; and how far short of the boat
        * it is when she sets off along the first roof's ridge (QA and the save there).
        */
-      riseFor: 14, comeAfter: 0.6, riseAway: 72, comeRate: 0.03, comeMost: 4, comePace: 2.6, holdBehind: 20, setOffBehind: 20,
+      riseFor: 14, comeAfter: 0.6, riseAway: 72, comeRate: 0.05, comeMost: 4, comePace: 2.6, holdBehind: 20, setOffBehind: 20,
       /**
        * How fast it is already coming while the boat ghosts on, once half risen, m/s; and how far past the stranded boat's
        * middle it comes before she sets off over the roofs, metres.
@@ -2254,7 +2254,7 @@ export const tuning = {
     entryDistance: 23, roofDistance: 16, entryHeight: 5, roofHeight: 2.8,
     /**
      * Making for the cat: from `makingFrom` to `makingTo` metres short of where the boat waits for it, the lens comes
-     * this far round onto the quarter away from the sail (radians), so the cat ahead is seen past the mast, on this lens.
+     * this far round onto the quarter away from the cat's side (radians), so the cat ahead is seen clear of the boat, on this lens.
      */
     makingFrom: 78, makingTo: 60, makingBearing: 0.4, makingZoom: 1.3,
     /** Let the church pass beside us, then return to the channel instead of looking backwards after it. */
@@ -2283,7 +2283,7 @@ export const tuning = {
      * end (atan2(x, z)), how far off and how high over the ridge, how far from her toward the cat it looks, and how far
      * toward the boat below while she looks back at it, its lens and its pace.
      */
-    climbFor: 7, ridgeFrom: -1.2, ridgeDistance: 7, ridgeEye: 1.5, ridgeAlong: 0.4, ridgeBoat: 0.35, ridgeZoom: 1, ridgePace: 0.3,
+    climbFor: 7, ridgeFrom: -1.2, ridgeDistance: 7, ridgeEye: 1.5, ridgeAlong: 0.4, ridgeBoat: 0.35, ridgeZoom: 1.15, ridgePace: 0.3,
     uprightRidgeFrom: -1.25, uprightRidgeDistance: 6.5, uprightRidgeEye: 1.8, uprightRidgeZoom: 0.9,
     /**
      * While the cat is brought over: how much of its gaze the lens gives the cat as she notices it, how far from the

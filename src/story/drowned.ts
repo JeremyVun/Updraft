@@ -4,7 +4,7 @@ import type { CheckpointPayload } from './checkpoint-data';
 import * as THREE from 'three';
 import type { Shot } from '../camera';
 import { DROWNED_CHANNEL, SPIRE, LIGHTHOUSE } from '../world/drowned';
-import { STORM_WAY, CAT_EDGE, CAT_HOLD, CAT_HOLD_YAW, DARK_AT_STRAND, STRAND, STRAND_YAW, WAY } from '../world/drowned-way';
+import { STORM_WAY, CAT_CHIMNEY, CAT_EDGE, CAT_HOLD, CAT_HOLD_YAW, DARK_AT_STRAND, STRAND, STRAND_YAW, WAY } from '../world/drowned-way';
 import { LIGHTHOUSE_TOP_Y } from '../world/lighthouse';
 import { WOOD_LANDING } from '../world/wood';
 import { atmo } from '../world/atmosphere';
@@ -90,7 +90,8 @@ export class DrownedChapter implements Chapter {
   readonly music = 'drowned' as const;
   get drownedScore(): DrownedScorePhase {
     switch (this.beat) {
-      case 'still': case 'becalmed': return 'stuck';
+      /** Up on the ridge, looking back at the boat going into the fog, the chase's first bar carries the heartbeat on: the stuck boat's cue never comes round again. */
+      case 'still': case 'becalmed': return this.cat.step === 'ridge' ? 'chase' : 'stuck';
       case 'run': return 'chase';
       case 'nave': return 'climb';
       case 'church': {
@@ -1035,8 +1036,8 @@ export class DrownedChapter implements Chapter {
 
   /**
    * The camera notices the village with the child: rooftops at water level, then the church passing overhead. Making
-   * for the cat it comes out on the quarter away from the sail, so the cat on its pot ahead is seen past the mast
-   * rather than behind the sail, on a longer lens.
+   * for the cat it comes out on the quarter away from the cat's side, the side it will come round to for the tub, so
+   * the boat is seen heading across the frame for the cat on its pot ahead, clear of the mast and sail, on a longer lens.
    */
   private villageFrame(fx: number, fz: number): void {
     const { boat, child } = this.cast;
@@ -1049,7 +1050,9 @@ export class DrownedChapter implements Chapter {
       * (1 - THREE.MathUtils.smootherstep(past, -k.spireLeave, -k.spireGone));
     const toHold = Math.hypot(boat.position.x - CAT_HOLD.x, boat.position.z - CAT_HOLD.y);
     const making = this.cat.ashore ? 0 : 1 - THREE.MathUtils.smoothstep(toHold, k.makingTo, k.makingFrom);
-    const roofBearing = this.heading + Math.PI + this.quarter * THREE.MathUtils.lerp(THREE.MathUtils.lerp(k.entryBearing, k.roofBearing, roofs), k.makingBearing, making);
+    /** Astern and round toward +1 is the starboard quarter: this is the port quarter when the cat is to starboard. */
+    const awayFromCat = (CAT_CHIMNEY.x - boat.position.x) * Math.cos(this.heading) - (CAT_CHIMNEY.z - boat.position.z) * Math.sin(this.heading) > 0 ? 1 : -1;
+    const roofBearing = this.heading + Math.PI + THREE.MathUtils.lerp(this.quarter * THREE.MathUtils.lerp(k.entryBearing, k.roofBearing, roofs), awayFromCat * k.makingBearing, making);
     s.from = this.from.set(Math.sin(roofBearing), 0, Math.cos(roofBearing));
     s.distance = THREE.MathUtils.lerp(k.entryDistance, k.roofDistance, roofs);
     s.height = THREE.MathUtils.lerp(k.entryHeight, k.roofHeight, roofs);
