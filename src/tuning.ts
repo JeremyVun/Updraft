@@ -1978,7 +1978,7 @@ export const tuning = {
        * it is already going as she arrives and never keeps her waiting; and how far up the hoist she is (a share of the
        * climb) before it comes down off the mill's cap ahead of her.
        */
-      catGo: { tree: 15, sheet: 40, mill: 4, swing: 14 }, catDown: 0.55,
+      catGo: { tree: 15, sheet: 7, mill: 4, swing: 14 }, catDown: 0.55,
       /**
        * The fog along its way (`DARK_WAY`): how far behind her it comes on while she is on her own way, while she works
        * each piece, and where it waits once she is at the tower's foot; the nearest it ever comes (and where it comes
@@ -1986,7 +1986,7 @@ export const tuning = {
        * it; how hard it closes on where it is going (per second a metre), the slowest and fastest it comes on (m/s), and
        * how quickly it changes pace (per second), quicker while she looks back.
        */
-      fogTrail: 12, fogHold: { tree: 10, sheet: 8, mill: 18, swing: 12 }, fogEnd: 19, fogNearest: 7.5, fogLaid: 10,
+      fogTrail: 12, fogHold: { tree: 10, sheet: 8, mill: 10, swing: 12 }, fogEnd: 19, fogNearest: 7.5, fogLaid: 10,
       fogPull: 0.5, fogSlowest: 0.12, fogFastest: 3.2, fogEase: 0.9, fogLookedEase: 3,
       /** How near her the fog comes while she looks back at the boat, past the boat, so it takes the boat as she watches. */
       fogLooked: 5,
@@ -2129,11 +2129,12 @@ export const tuning = {
       layFor: 2,
       /**
        * Round to each piece's own view from `comeFrom` to `comeTo` metres before she reaches it (the mill's only once she
-       * is at its basket, its view standing ahead of her as she comes), and back to her own way
+       * is at its basket, its view standing ahead of her as she comes, and the swing's once she is at its board), and back
+       * to her own way
        * from `leaveFrom` metres past it (over each piece's own stretch, below); to the end's view over the last
        * `endFrom` metres; and how fast it comes round to a piece's view once she has stopped at it (per second).
        */
-      comeFrom: { tree: 5, sheet: 5, mill: 0.5, swing: 5 }, comeTo: 0, leaveFrom: 0, endFrom: 8, roundRate: 0.95,
+      comeFrom: { tree: 5, sheet: 5, mill: 0.5, swing: 1.5 }, comeTo: 0, leaveFrom: 0, endFrom: 8, roundRate: 0.95,
       /** How far past each piece the lens has given it back to her own way, metres. */
       leave: { tree: 2, sheet: 0, mill: 2, swing: 3 },
       /**
@@ -2153,21 +2154,28 @@ export const tuning = {
       treeEye: [17.2, -5.6, 5.3], treeAt: [1.6, 0.1, 5.0], uprightTreeEye: [16.2, -5.0, 5.0], uprightTreeAt: [1.2, 1.1, 3.9],
       treeRound: [[13.0, 1.2, 6.0], [12.8, 10.8, 7.8]], uprightTreeRound: [[9.9, -3.0, 5.1], [3.5, -0.9, 4.8]],
       treeRoundFrom: 0.1, treeRoundFor: 8,
-      /** The sheet's view: which side of the line it stands (+1 the left looking up it), and how far off it in landscape. */
-      sheetSide: 1, sheetOff: 10.5,
+      /**
+       * The sheet's view, from her gable's end: which side of the line it stands (+1 the left looking up it); where it
+       * stands and looks [up the line, above her ridge, off the line] (landscape), and how far up the line and how much
+       * higher both go as she is carried; upright its own.
+       */
+      sheetSide: 1, sheetEye: [1.9, 3.5, 12.2], sheetAt: [2.1, 2.9], sheetGo: [1.5, 0.5],
+      uprightSheetEye: [-7, 4.6, -3.2], uprightSheetAt: [3, 3, 0.3],
       /**
        * The mill's view, in the mill's own frame (x to the right seen from in front, z out of the front, heights above
        * her roof): where it stands and looks while she is low, and how much higher it stands and looks once she is up.
        */
-      millWide: { eye: [-10, 1.6, 6], at: [-2.8, 3.6, -1.4], eyeRise: 2.4, rise: 3.2 },
-      millUpright: { eye: [-8, 1.8, 5], at: [-3.0, 4.2, -1.6], eyeRise: 2.6, rise: 3.4 },
+      millWide: { eye: [-7.86, 7.8, 19.14], at: [-2.36, 6.3, -1.86], eyeRise: 0.6, rise: 1.0 },
+      millUpright: { eye: [-6.6, 6.4, 15.6], at: [-2.6, 6.6, -1.86], eyeRise: 0.8, rise: 1.4 },
       /**
        * The swing's view: how far round from side on to her arc toward the way she swings out (radians), how far from
        * the bough and how high over the seat it stands; it looks this far out along her arc and this high over the
-       * seat. Upright its own, round behind her. Side on and well back, so her arc reads as the wind's to pump.
+       * seat. Upright its own, round behind her. Side on from the west and near, so her arc reads left and right as the
+       * wind's to pump. Coming round from behind her it keeps `swingFar` off, out past the old tree's crown, and comes in
+       * to its place over the last of the way round from `swingIn`.
        */
-      swingRound: 0, swingBack: 21, swingHigh: 2.8, swingAhead: 1.4, swingAim: 3.2,
-      uprightSwingRound: -0.33, uprightSwingBack: 17.5, uprightSwingHigh: 3.9,
+      swingRound: -0.24, swingBack: 13.4, swingHigh: 4.3, swingAhead: 2.5, swingAim: 2.5, swingFar: 24, swingIn: 0.7,
+      uprightSwingRound: -0.45, uprightSwingBack: 12.5, uprightSwingHigh: 4.2,
       /** The end's view: how far back along the nave, how high, and how far out over the green. */
       naveBack: 10, naveHigh: 3.6, naveAside: 11,
     },
@@ -2337,9 +2345,17 @@ export const tuning = {
        * A slower, dreamier gravity than the world's (a share of it), and how fast a swing dies away with nobody
        * pushing: hardly at all with her on it, and over about ten seconds once it is empty.
        */
-      gravity: 0.8, damping: 0.05, emptyDamping: 0.6,
-      /** Push along its travel per unit of gust energy at the seat, and per unit of the felt wind along its way. */
-      pump: 1.5, along: 0.25,
+      gravity: 0.8, damping: 0.02, emptyDamping: 0.6,
+      /** Push per unit of the felt wind along its way, and of its own way through still air, only while it is empty. */
+      along: 0.25,
+      /**
+       * One stroke across it on screen (within `reach` screen heights of its ropes or seat) along the way the seat
+       * swings asks for `push` radians more swing, `against` of that against it, none for one slanting more than the
+       * angle whose cosine is `slant` off its way; strokes at `gentle` screen heights a second count for `soft` of it,
+       * at `firm` for all of it. What a stroke asks comes on over `lag` seconds; each swing out or back takes at most
+       * `perSwing` radians, up to `most` in all: four good pumps from her push-off carry her over.
+       */
+      push: 0.14, against: 0.6, slant: 0.35, reach: 0.06, gentle: 0.5, firm: 2.2, soft: 0.35, lag: 0.25, perSwing: 0.11, most: 0.95,
       /** Seconds she takes to catch hold and sit, and the start she gives it pushing off the eave (radians a second). */
       boardFor: 1.6, pushOff: 0.32,
       /** She lets go this near the top of a forward swing (radians), when the leap would carry her this far past the landing. */
@@ -2348,8 +2364,8 @@ export const tuning = {
       leapForward: 0.9, leapUp: 1.6, leapGravity: 7.5,
       /** Seconds for the stumble and getting up on the slope after landing, and for her look back at the swing. */
       landFor: 1.3, lookBack: 3.2,
-      /** Seconds riding without a push before the drawn push; with no new height before the world's own gusts carry her. */
-      inviteAfter: 5, valveAfter: 90, valveEvery: 1.2, valveEnergy: 1.5,
+      /** Seconds riding without a push before the drawn push; with no new height before the world's own gusts pump it, and how much each asks (radians). */
+      inviteAfter: 5, valveAfter: 90, valveEvery: 1.2, valveGrow: 0.12,
     },
     mill: {
       /**
@@ -2422,6 +2438,8 @@ export const tuning = {
        * over `coast` s. What carries her is the stroke itself: its gust ebbs over `gustFor` s, sooner than the cloth sags.
        */
       takeAt: 0.55, takeFor: 0.2, reachFor: 0.5, carry: 2.2, carryFrom: 0.3, coast: 0.3, gustFor: 0.8,
+      /** Seconds the sheet takes to lift her off her feet once she has hold of it, drawing its hem out to her. */
+      liftFor: 0.45,
       /** How her body swings under her hands as the sheet starts and stops (per second squared, per second). */
       swingPull: 14, swingDamping: 2.2,
       /** Hanging, how much of the way from up the line toward the lens she turns, so her face is seen side on. */

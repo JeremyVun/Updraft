@@ -19,14 +19,15 @@ export interface SheetSpot {
 }
 
 /** The sheet: its length along the line, its drop, how many rings carry it, and how close they bunch at the far end. */
-export const SHEET = { length: 2.7, drop: 2.05, rings: 7, bunch: 0.1, fullness: 1.14 } as const;
+export const SHEET = { length: 2.7, drop: 1.8, rings: 7, bunch: 0.1, fullness: 1.14 } as const;
 
 const NX = 16;
 const NY = 13;
-/** The row of the trailing edge her mittens close on, beside her face: far enough down that the line clears her hood. */
-const HOLD_ROW = 5;
-/** How far under the line her mittens close on the trailing edge. */
-export const HOLD_DROP = (HOLD_ROW * SHEET.drop) / (NY - 1);
+/** The two threads either side of the hem's middle, gathered into her mittens. */
+const HOLD_COLS = [NX / 2 - 1, NX / 2];
+/** How far under the line her mittens hold the hem, and how far they draw it out of the sheet toward the lens. */
+export const HOLD_DROP = SHEET.drop;
+const HOLD_OUT = 0.28;
 const RING_EVERY = (NX - 1) / (SHEET.rings - 1);
 const LINE_SAMPLES = 48;
 const LINE_SIDES = 5;
@@ -138,7 +139,7 @@ export class WashSheet {
   /** Along the line, level, from her side to the far side. */
   readonly along = new THREE.Vector3();
   readonly length: number;
-  /** How far along the line the trailing ring is, which is where she holds. */
+  /** How far along the line the trailing ring is. */
   travel: number;
   readonly start: number;
   readonly stop: number;
@@ -148,6 +149,11 @@ export class WashSheet {
   /** Set while she hangs from it, and where the cat is while it runs the line. */
   held = false;
   cat: THREE.Vector3 | null = null;
+  /** Level, out of the sheet's face toward the side it is seen from: the side she holds it from. */
+  readonly seen = new THREE.Vector3();
+  /** Where her mittens are while she holds it, which the hem's middle is gathered into; and how far it is drawn out to them. */
+  readonly grips = [new THREE.Vector3(), new THREE.Vector3()];
+  private drawn = 0;
   /** Seconds since a stroke last filled it; the way the last stroke went (1 up the line, -1 back). */
   quiet = Infinity;
   onSound: ((kind: SheetSound, at: THREE.Vector3, strength: number) => void) | null = null;
@@ -190,6 +196,7 @@ export class WashSheet {
     this.to.copy(spot.to);
     this.length = this.from.distanceTo(this.to);
     this.along.set(this.to.x - this.from.x, 0, this.to.z - this.from.z).normalize();
+    this.seen.set(-this.along.z, 0, this.along.x);
     this.start = this.travel = spot.start;
     this.stop = spot.stop ?? 0.22;
 
@@ -304,7 +311,7 @@ export class WashSheet {
     const u = THREE.MathUtils.clamp(d / L, 0, 1);
     out.lerpVectors(this.from, this.to, u);
     out.y -= tuning.crossings.sheet.slack * L * 4 * u * (1 - u);
-    out.y -= this.holdDip * vee(u, this.travel / L);
+    out.y -= this.holdDip * vee(u, this.holdAlong / L);
     out.y -= this.catDip * vee(u, this.catAlong / L);
     return out;
   }
@@ -316,11 +323,16 @@ export class WashSheet {
     return this.lineAt((d / level) * this.length, this.tmp2).y;
   }
 
-  /** Where she holds the trailing edge, just under its ring, with `side` (m) along the line either way for each mitten. */
-  hold(out: THREE.Vector3, side = 0): THREE.Vector3 {
-    this.lineAt(this.travel + side, out);
+  /** How far along the line the middle of the sheet is: between its trailing and leading rings, however bunched. */
+  get holdAlong(): number {
+    return (this.travel + Math.min(this.travel + SHEET.length, this.length - this.stop)) / 2;
+  }
+
+  /** Where she holds the middle of the hem: under the middle of its rings, drawn out of the sheet toward her. */
+  hold(out: THREE.Vector3): THREE.Vector3 {
+    this.lineAt(this.holdAlong, out);
     out.y -= HOLD_DROP;
-    return out;
+    return out.addScaledVector(this.seen, HOLD_OUT * THREE.MathUtils.smoothstep(this.drawn, 0, 1));
   }
 
   /** How far the trailing ring can go before the rings ahead of it are bunched against the far pulley. */
@@ -418,10 +430,15 @@ export class WashSheet {
     }
     this.catDip += ((this.cat ? k.catDip : 0) - this.catDip) * (1 - Math.exp(-dt * 10));
 
-    this.layRings();
+    if (!this.held) {
+      this.seen.set(-this.along.z, 0, this.along.x);
+      if (this.seen.dot(this.tmp.subVectors(camera.position, this.from)) < 0) this.seen.negate();
+    }
+    this.drawn = THREE.MathUtils.clamp(this.drawn + (this.held ? dt : -dt) / tuning.crossings.sheet.liftFor, 0, 1);
+    this.layRings(dt);
     const steps = Math.min(4, Math.max(1, Math.ceil(dt * 120)));
     const ambient = wind.sample(this.middle(this.tmp).x, this.tmp.z, this.sample);
-    for (let s = 0; s < steps; s++) this.step(dt / steps, Math.hypot(ambient.x, ambient.z), camera);
+    for (let s = 0; s < steps; s++) this.step(dt / steps, Math.hypot(ambient.x, ambient.z));
     this.draw();
 
     const full = this.fill > k.fullAt;
@@ -435,8 +452,11 @@ export class WashSheet {
     }
   }
 
-  /** The rings along the line: spread as pegged from the trailing one, bunching against the far pulley. */
-  private layRings(): void {
+  /**
+   * The rings along the line: spread as pegged from the trailing one, bunching against the far pulley; held, the hem's
+   * middle drawn into her mittens from wherever the air had it.
+   */
+  private layRings(dt = 0): void {
     const space = SHEET.length / (SHEET.rings - 1);
     for (let r = 0; r < SHEET.rings; r++) {
       const d = Math.min(this.travel + r * space, this.length - this.stop - (SHEET.rings - 1 - r) * SHEET.bunch);
@@ -448,23 +468,26 @@ export class WashSheet {
       this.ringMesh.setMatrixAt(r, this.matrix);
     }
     this.ringMesh.instanceMatrix.needsUpdate = true;
-    const holdAt = HOLD_ROW * NX;
-    if (this.held) {
-      let pin = this.pins.get(holdAt);
-      if (!pin) this.pins.set(holdAt, pin = new THREE.Vector3());
-      this.hold(pin);
-    } else this.pins.delete(holdAt);
+    for (const [i, col] of HOLD_COLS.entries()) {
+      const at = (NY - 1) * NX + col;
+      if (!this.held) {
+        this.pins.delete(at);
+        continue;
+      }
+      let pin = this.pins.get(at);
+      if (!pin) this.pins.set(at, pin = this.pos[at].clone());
+      pin.lerp(this.grips[i], 1 - Math.exp(-dt * 12));
+    }
   }
 
   /**
    * One step of the cloth: gravity, the air on each part of it across its face and along it, and its threads held to
    * their lengths. The player's air comes up the line, out of the side it is seen from, and lifts the hem.
    */
-  private step(dt: number, ambient: number, camera?: THREE.Camera): void {
+  private step(dt: number, ambient: number): void {
     const k = tuning.crossings.sheet;
     this.normalsNow();
-    const out = this.out.set(-this.along.z, 0, this.along.x);
-    if (camera && out.dot(this.tmp.subVectors(camera.position, this.from)) < 0) out.negate();
+    const out = this.out.copy(this.seen);
     const g = 9.81 * k.gravity;
     const t = atmo.uniforms.uTime.value;
     const press = this.press;

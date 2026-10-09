@@ -20,8 +20,9 @@ export const SWING_SOUNDS = { creak: 'bough-creak', leap: 'cloth', land: 'slate-
 
 /**
  * The second crossing: a rope swing over open water from an old tree's bough. She gets on by herself; the player's
- * gusts pump it; when a forward swing will carry her far enough she lets go near its top and lands on the far
- * slope. Nothing is timed: the player only pumps, she chooses the moment, and if they stop she waits on it.
+ * strokes across it pump it, each swing a little higher; when a forward swing will carry her far enough she lets go
+ * near its top and lands on the far slope. Nothing is timed: the player only pumps, she chooses the moment, and if
+ * they stop she waits on it.
  */
 export class SwingCrossing {
   readonly swing: RopeSwing;
@@ -92,7 +93,7 @@ export class SwingCrossing {
   update(dt: number, camera: THREE.PerspectiveCamera): void {
     const { child: c, input, wind } = this.cast;
     this.t += dt;
-    if (this.phase === 'riding') this.swing.brush(camera, input, wind);
+    if (this.phase === 'riding') this.swing.brush(camera, input, wind, dt);
     if (this.swing.brushAge < 0.4) this.quiet = 0;
     this.quiet += dt;
     if (this.phase === 'boarding') this.board();
@@ -226,7 +227,7 @@ export class SwingCrossing {
     if (onward) c.walkTo(onward.x, onward.z, false, () => { this.phase = 'over'; }, 0.3);
   }
 
-  /** The world's own gusts at the seat, one each way it swings, until she is carried over. */
+  /** The world's own gusts at the seat, pumping it as a good stroke would, until she is carried over. */
   private blow(dt: number): void {
     const k = tuning.crossings.swing;
     this.valveClock -= dt;
@@ -236,6 +237,6 @@ export class SwingCrossing {
     const seat = s.seat(this.seatNow);
     const way = s.speed >= 0 ? 1 : -1;
     this.cast.lines.gust(seat.x - s.toward.x * way * 2, seat.z - s.toward.y * way * 2, s.toward.x * way, s.toward.y * way, 5, 8);
-    s.blow(this.cast.wind, k.valveEnergy);
+    s.blow(this.cast.wind, k.valveGrow);
   }
 }
