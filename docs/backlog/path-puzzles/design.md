@@ -656,6 +656,12 @@ Found reading the room's storyboard (a frame every 2 s of `drowned-run-check` fr
     so far in it's really disorientating." Likely (unverified): the boat parcel's approach lens, which lengthens with
     the cat's distance (one zoom step per `makingSee` 26 m, up to 2.5) while the boat makes for the cat from the room's
     new entry (`villageFrame`, `a67ae81a`), on top of the first 8 s nearly dead astern (`entryBearing`).
+    Then (2026-10-10, verbatim): "I have some issues with the camera. most of the time in this scene is too zoomed in.
+    It only starts getting better around the time when the child is walking towards the first tree puzzle". Lead's
+    reading: every frame from the room's start to the ridge is tighter than the walking lens he likes (the run: 14 m off,
+    zoom 0.86, upright 0.78): the approach lengthens to 2.5, the tub frame is at 1.25 (upright 1.4), the rescue 1.5 at
+    4.8 m, the stuck and ridge frames 6.5-7.5 m off. Lead's call: the room's start to the ridge is framed on the run's
+    scale, the long lens gone; the cat reads by being nearer the lens and by item 21's cheat, not by zoom.
 
 ### The room rethought (Claude, 2026-10-08; Jeremy: "yea lets see how this works")
 
