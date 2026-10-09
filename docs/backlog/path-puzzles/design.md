@@ -603,11 +603,11 @@ the action is for (where the tub goes, where the tree falls, what the bell answe
    the cat's roof comes near enough to the strand for that drift to be short.
 4. ~~At the tree~~ (`proto-drowned-fix-tree`: the roots give again a second after each give however hard she is pushed, so continuous strokes fell it; the gust 0.6 s after she stops and after each useful stroke; she waits 5.2 m from the root at the wall's end, looking across to the barn with glances up; the view from the north-west holds her, the tree, the barn and the sheet beyond). Was: she stands under it, no drawn gust shows, she looks straight up at it the whole time instead of the
    way she must go, and no gesture fells it.
-5. The sheet crossing: she hangs by one hand off the sheet's side edge, which reads wrong. Fix: she holds it as one
+5. ~~The sheet's hold~~ (`proto-drowned-fix-pieces`: she gathers the slack hem's middle in both mittens and hangs in front of its lower middle as it carries her; the drawn gust now shows, it had restarted every frame). Was: she hangs by one hand off the sheet's side edge, which reads wrong. Fix: she holds it as one
    rides a sail, centred on it with both hands, the filled sheet carrying her.
 6. Through the run the cat is hardly seen. Fix: the cat a roof ahead in every walking frame and its own crossing of
    each piece in view (design step 5: "the cat goes first wherever a cat can").
-7. The mill: the lens low behind her in the basket crops the sails' hub and the drawn circles off the top. Fix: wider,
+7. ~~The mill's frame~~ (the board's view from the north, eye 20.5,9,-1520 at 26,7.5,-1541, rising as she climbs: the sails, the drawn circle, her in the basket, the top and the bell tower). Was: the lens low behind her in the basket crops the sails' hub and the drawn circles off the top. Fix: wider,
    the sails, their hub with the drawn circles, and her in the basket in one frame.
 8. ~~A leaf floating off the swing bough's bare tip~~ (the tip's twig leaves scatter off it into the air; the tip is
    now bare).
@@ -622,7 +622,7 @@ the action is for (where the tub goes, where the tree falls, what the bell answe
     supersedes step 8's re-staging (the cat coming down to the roof).
 
 Found reading the room's storyboard (a frame every 2 s of `drowned-run-check` from the tub to the swing, 2026-10-09):
-12. The swing: the lens stands 21 m off, she is a few dozen pixels tall, the seat hardly moves through two minutes of
+12. ~~The swing~~ (it stalled because it felt the player only through the wind's CPU copy, which starves in `shot` mode; now a stroke along the arc across the ropes or seat on screen is one pump, about four take her to the let-go; side-on from the west 13.4 m off the bough, the nave's slope and the cat waiting above her landing in frame). Was: the lens stands 21 m off, she is a few dozen pixels tall, the seat hardly moves through two minutes of
     pumping, the nave she lands on does not read, and the check's run never reached the tower's foot after it (a
     stall). Fix: closer, the seat's arc and the nave's roof she leaps to in one frame; it must carry her over.
 13. The cat is unreadable from the rescue on, not only on the run (item 6): in the drift it is out of the wide frame,
