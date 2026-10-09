@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { atmo } from './atmosphere';
+import { SEA_FOG_TOP, atmo } from './atmosphere';
 import { params } from '../params';
 import { QA } from '../qa';
 import { tuning } from '../tuning';
@@ -57,6 +57,12 @@ export class DarkBank {
   close = 0;
   /** How far the storm's own night has taken over from the darkness the fog brought, 0 to 1. */
   storm = 0;
+  /** How much of its swells' and heaps' height it keeps: 1 as it chases her, less lying still round the tower. */
+  relief = 1;
+  /** 0 to 1: how far its wing on the church's side has spread to its full width, so it lies all round the tower. */
+  round = 0;
+  /** Where it lies lower round a point: how far round (metres, 0 nowhere) and how high it lies there over the water. */
+  readonly clearing = { x: 0, z: 0, radius: 0, floor: 1 };
   /**
    * Where its front turns to face as it comes, while it chases her (her, on her way); otherwise it lies across its own
    * way. And the way its front faces now.
@@ -106,6 +112,23 @@ export class DarkBank {
     for (const t of DARK_TOPS) if (t.along <= front - k.levelBehind) over = Math.max(over, t.top);
     const climb = THREE.MathUtils.lerp(k.levelFrom, k.levelTo, THREE.MathUtils.clamp((front - DARK_AT_STRAND) / (DARK_END - DARK_AT_STRAND), 0, 1));
     return Math.max(k.level, climb, over + k.levelOver);
+  }
+
+  /** Where its top usually lies at a point behind its front, metres over the water; its heaps stand over that. */
+  topAt(x: number, z: number): number {
+    return this.levelAt(x, z) * (1 - this.relief * (1 - SEA_FOG_TOP.middle));
+  }
+
+  /** The most its heaps rise over its level, as a share of it. */
+  get heaped(): number {
+    return 1 + this.relief * (SEA_FOG_TOP.highest - 1);
+  }
+
+  private levelAt(x: number, z: number): number {
+    const c = this.clearing, k = tuning.drowned.church.fog;
+    if (c.radius <= 0) return this.level;
+    const rim = smooth(Math.hypot(x - c.x, z - c.z), c.radius, c.radius * k.clearRim + k.clearSoft);
+    return THREE.MathUtils.lerp(Math.min(this.level, c.floor), this.level, rim);
   }
 
   /** Where its front is, `aside` metres along it from the way (+ to its right as it comes), for whoever watches it. */
@@ -165,8 +188,11 @@ export class DarkBank {
     const drawn = smooth(p, far, near);
     const top = this.level * (0.3 + 0.7 * risen) * THREE.MathUtils.lerp(1, k.closedTop, this.close);
     u.uSeaFogShape.value.set(top, d.flank / (d.halfWidth * d.halfWidth), this.close, amount);
-    const wing = THREE.MathUtils.lerp(d.wingFar, d.wing, drawn), fade = THREE.MathUtils.lerp(d.wingFadeFar, d.wingFade, drawn);
+    const wing = THREE.MathUtils.lerp(THREE.MathUtils.lerp(d.wingFar, d.wing, drawn), 1, this.round);
+    const fade = THREE.MathUtils.lerp(THREE.MathUtils.lerp(d.wingFadeFar, d.wingFade, drawn), 0.8, this.round);
     u.uSeaFogSides.value.set(d.halfWidth, d.halfWidth * 1.8, wing * d.halfWidth, (wing + fade) * d.halfWidth);
+    u.uSeaFogRelief.value = this.relief;
+    u.uSeaFogClear.value.set(this.clearing.x, this.clearing.z, this.clearing.radius, this.clearing.floor);
 
     const taken = THREE.MathUtils.clamp((p - far) / (near - far), 0, 1) * here;
     const night = smooth(p, near + 0.05, 1) * here * (1 - this.storm);

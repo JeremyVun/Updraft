@@ -455,6 +455,10 @@ void main() {
     float ruffle = 0.35 + 0.65 * broken;
     glow += crest * ruffle * w.y * (1.0 - smoothstep(0.35, 1.0, w.z));
   }
+  // Over the fog it rolls on its top, so where the bell has pushed the fog back to the water there is nothing to roll on.
+#if CLOUD_DECK
+  if (uSeaFogShape.w > 0.0) glow *= smoothstep(vWorld.y - 1.5, vWorld.y, seaFogLevel(vWorld.xz, uSeaFogShape.x));
+#endif
   if (glow < 0.004) discard;
   vec2 sun = normalize(uSunDir.xz + 1e-5);
   float toward = pow(max(dot(d2 / max(d, 1e-3), sun), 0.0), 2.0);

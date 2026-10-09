@@ -1919,15 +1919,30 @@ export const tuning = {
       nestFor: 7, seaFor: 5, kittenComes: 1.0, kittenNear: 0.8, leanTo: 0.14, curlBack: [0.45, -0.1], curlYaw: 2.4,
       fog: {
         /**
-         * How far back along the nave it waits while she is low on the ivy, and how far past the tower it stops
-         * (metres); how fast it closes on where it is wanted (per second) and its fastest, m/s.
+         * How far back along the nave it waits while she stands at the tower's foot; once she starts up, how far past
+         * the tower it runs on over the village (metres), how fast it closes on that (per second), and its fastest:
+         * `spreadFrom` m/s at the tower and `spreadRate` more for every metre it is past, so seen from the tower it
+         * goes on at an even pace, but never more than `spreadMost` m/s.
          */
-        behind: 16, past: 55, pull: 0.6, fastest: 4,
+        behind: 16, past: 240, pull: 0.6, spreadFrom: 7, spreadRate: 0.12, spreadMost: 18,
         /**
-         * Its top: just under the sills once it has stopped, and drawn back to the water by the last ring (metres);
-         * seconds each ring takes to push it down; the rings roll out at this share of its top.
+         * The white sea it lies as once it has closed round: its level, just under the sills, and how much of its
+         * swells' and heaps' height it keeps, so the roofs go under it; and seconds from her starting up the ivy until
+         * it lies so.
          */
-        sea: 6.8, drawn: 1.0, sinkFor: 3.2, wavesAt: 0.92,
+        sea: 7.6, still: 0.3, roundFor: 14,
+        /**
+         * While she climbs it rises round the tower beneath her: this far round the tower it lies lower, its heaps this
+         * far under her feet and the lens (metres); once she is in, it rises the rest of the way at m/s.
+         */
+        dip: 20, underHer: 0.7, underLens: 1.2, dipRise: 0.35,
+        /**
+         * Each ring pushes it back round the tower to lie on the water this high (metres), out to these distances
+         * after each ring (metres) over a rim this much wider and this many metres more, in `sinkFor` seconds; once the
+         * sail is hers it settles all round over `settleFor` seconds to lie `drawn` metres high. The rings roll out at
+         * this share of its level.
+         */
+        drawn: 1.0, cleared: 0.3, clearAt: [0, 17, 24, 31, 46], clearRim: 1.3, clearSoft: 6, sinkFor: 3.2, settleFor: 10, wavesAt: 0.92,
         /** Seconds after she is aboard it starts to close round and darken, how long that takes, and how high it rises again. */
         closeAfter: 5, closeFor: 16, closedLevel: 6,
       },
