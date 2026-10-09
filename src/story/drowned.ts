@@ -986,6 +986,7 @@ export class DrownedChapter implements Chapter {
     const step = this.cat.step;
     this.churchAttention.strength *= 1 - round;
     this.catAttention.point.copy(this.cat.eye);
+    this.catAttention.weight = tuning.drownedCamera.catGlance;
     this.catAttention.strength = THREE.MathUtils.smoothstep(step === 'seen' ? this.cat.t : 3, 0, 2.5) * (1 - round);
     if (this.catAttention.strength > (s.attention?.strength ?? 0)) s.attention = this.catAttention;
     const c = this.catSubjects;
@@ -1056,11 +1057,20 @@ export class DrownedChapter implements Chapter {
     s.from = this.from.set(Math.sin(roofBearing), 0, Math.cos(roofBearing));
     s.distance = THREE.MathUtils.lerp(k.entryDistance, k.roofDistance, roofs);
     s.height = THREE.MathUtils.lerp(k.entryHeight, k.roofHeight, roofs);
-    s.zoom = THREE.MathUtils.lerp(1, k.makingZoom, making);
+    /** A lens long enough that the cat on its pot is a cat, not a speck, however far ahead it still is. */
+    const wide = THREE.MathUtils.smoothstep(this.aspect, 0.7, 1.3);
+    const sees = THREE.MathUtils.clamp(this.lensAt.distanceTo(this.cat.eye) / THREE.MathUtils.lerp(k.uprightMakingSee, k.makingSee, wide), 1, k.makingZoom);
+    s.zoom = THREE.MathUtils.lerp(1, sees, making);
     s.target.set(child.position.x + fx * tuning.storm.lookAhead, child.position.y + 0.9,
       child.position.z + fz * tuning.storm.lookAhead);
     this.churchAttention.strength = church;
     s.attention = this.churchAttention;
+    if (making > church) {
+      this.catAttention.point.copy(this.cat.eye);
+      this.catAttention.strength = making;
+      this.catAttention.weight = k.makingLook;
+      s.attention = this.catAttention;
+    }
     if (church > 0) {
       this.churchSubjects.primary.copy(this.subjects.primary);
       this.churchSubjects.secondary.copy(SPIRE).setY(1).lerp(this.subjects.secondary, 1 - church);

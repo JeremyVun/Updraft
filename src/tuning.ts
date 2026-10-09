@@ -2254,9 +2254,11 @@ export const tuning = {
     entryDistance: 23, roofDistance: 16, entryHeight: 5, roofHeight: 2.8,
     /**
      * Making for the cat: from `makingFrom` to `makingTo` metres short of where the boat waits for it, the lens comes
-     * this far round onto the quarter away from the cat's side (radians), so the cat ahead is seen clear of the boat, on this lens.
+     * this far round onto the quarter away from the cat's side (radians), so the cat ahead is seen clear of the boat;
+     * it gives the cat this share of its look, and lengthens by one for every `makingSee` metres the cat is from it
+     * (upright, its own), at most to `makingZoom`, so the cat on its pot is a cat however far off.
      */
-    makingFrom: 78, makingTo: 60, makingBearing: 0.4, makingZoom: 1.3,
+    makingFrom: 78, makingTo: 60, makingBearing: 0.4, makingLook: 0.35, makingSee: 26, uprightMakingSee: 19, makingZoom: 2.5,
     /** Let the church pass beside us, then return to the channel instead of looking backwards after it. */
     spireEnter: 110, spireFull: 55, spireLeave: 25, spireGone: -5,
     spireDistance: 20, spireHeight: 3.4, spireWeight: 0.3,
