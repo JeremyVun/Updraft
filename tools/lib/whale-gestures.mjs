@@ -150,28 +150,20 @@ export const whaleNow = (page) => page.evaluate(() => {
   return { step: w.step, stepTime: w.stepTime, asks, shown: !!w.offered || !!c.coax, time: c.time };
 });
 
+const SWEEP = { eye: sweepEye, line: (p) => sweepCork(p, 1), heave: sweepHead, flipper: sweepFin };
+
 /**
- * Plays the whale as a prompt player does, from wherever it stands until it is free: each step once its gesture is
- * drawn, circling over the blowhole or stroking across what the step asks for until it stops asking. Returns the game
- * time each step began (`at`) and the strokes, or goes of circling, each took (`tries`).
+ * One go at the whale's current step, as a prompt player has: once its gesture has been drawn (or after a first go),
+ * circling over the blowhole until the breath is done, or one stroke across what the step asks for. False when the
+ * step asks nothing yet. `tries` counts the goes each step took.
  */
-export async function playWhale(page, wallSeconds = 600) {
-  const end = Date.now() + wallSeconds * 1000;
-  const SWEEP = { eye: sweepEye, line: (p) => sweepCork(p, 1), heave: sweepHead, flipper: sweepFin };
-  const tries = {}, at = {};
-  for (;;) {
-    const s = await whaleNow(page);
-    if (s) at[s.step] ??= +(s.time - s.stepTime).toFixed(1);
-    if (!s || s.step === 'free' || s.step === 'gone') return { tries, at };
-    if (Date.now() > end) throw new Error(`the whale never came free: ${JSON.stringify(s)}`);
-    if (!s.asks || (!s.shown && !tries[s.step])) {
-      await page.waitForTimeout(250);
-      continue;
-    }
-    tries[s.step] = (tries[s.step] ?? 0) + 1;
-    if (s.step === 'breath') {
-      await circle(page, async () => !(await whaleNow(page))?.asks, 60);
-      await away(page);
-    } else await SWEEP[s.step](page);
-  }
+export async function whaleGo(page, tries = {}) {
+  const s = await whaleNow(page);
+  if (!s?.asks || (!s.shown && !tries[s.step])) return false;
+  tries[s.step] = (tries[s.step] ?? 0) + 1;
+  if (s.step === 'breath') {
+    await circle(page, async () => !(await whaleNow(page))?.asks, 60);
+    await away(page);
+  } else await SWEEP[s.step](page);
+  return true;
 }

@@ -8,6 +8,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {openBrowser} from './lib/browser.mjs';
+import {whaleGo} from './lib/whale-gestures.mjs';
 const prefix=process.argv[2]??'/tmp/updraft-playthrough';
 const base=process.env.BASE??'http://127.0.0.1:5230/';
 const review=process.env.REVIEW==='1';
@@ -25,7 +26,7 @@ const context=await browser.newContext({viewport:{width,height},
     localStorage:[{name:'updraft.progress.v1',value:JSON.stringify(saved)}]}]}}:{}),
   ...(review?{recordVideo:{dir:prefix+'-video',size:{width,height}}}:{})});
 const page=await context.newPage();
-const report={chapters:[],beats:[],checkpoints:[],errors:[],completed:false,replayed:false};
+const report={chapters:[],beats:[],checkpoints:[],whale:[],errors:[],completed:false,replayed:false};
 if(saved)report.startCheckpoint={chapter:saved.chapter,point:saved.point};
 page.on('pageerror',e=>report.errors.push(e.message));
 page.on('console',m=>{if(m.type()==='error'&&!m.text().includes('favicon.ico'))report.errors.push(m.text())});
@@ -40,7 +41,7 @@ const snapshot=()=>page.evaluate(()=>{
   if(bubble && !g.skyMirror.carried && g.skyMirror.stars[c.target]) {
     const a=project(bubble.position),b=project(g.skyMirror.stars[c.target].origin.clone().setY(bubble.position.y));direction={x:b.x-a.x,y:b.y-a.y};
   }
-  return {chapter:g.story.name,beat:c.beat,life:g.story.worldLife,scripted:c.scripted,finished:!!c.finished,
+  return {chapter:g.story.name,beat:c.beat,whale:c.whale?.step??null,life:g.story.worldLife,scripted:c.scripted,finished:!!c.finished,
     checkpoint:JSON.parse(localStorage.getItem('updraft.progress.v1')??'null')?.point,
     trodden:c.trodden?.toArray()??null,
     bird:project(g.cygnet.position),coax:project(c.coax?.at),wind:project(c.windInvitation),
@@ -103,7 +104,7 @@ try {
         side:r(rig.sceneryOffset),offset:+rig.direction.offset.toFixed(4),pace,hold,placed:rig.placed,transition:!!g.story.transitionView});
     };
   });}
-  const started=Date.now();let chapterAt=started,lastBeat='',lastSave='';
+  const started=Date.now();let chapterAt=started,lastBeat='',lastSave='',lastWhale=null;const whaleTries={};
   while(Date.now()-started<60*60*1000){
     const s=await snapshot();
     if(trace)fs.appendFileSync(prefix+'-camera.jsonl',(await page.evaluate(()=>window.__cameraTrace.splice(0).map(e=>JSON.stringify(e)).join('\n')+'\n')).replace(/^\n$/,''));
@@ -118,8 +119,9 @@ try {
       await page.screenshot({path:`${prefix}-${String(index).padStart(2,'0')}-${s.chapter}.png`});
     }
     if(lastBeat!==s.chapter+'/'+s.beat){lastBeat=s.chapter+'/'+s.beat;report.beats.push({name:lastBeat,seconds:(Date.now()-started)/1000,gameSeconds:s.stats?.time});console.log(JSON.stringify({beat:lastBeat,life:s.life}));}
+    if(s.whale!==lastWhale){lastWhale=s.whale;if(s.whale){report.whale.push({step:s.whale,gameSeconds:s.stats?.time});console.log(JSON.stringify({whale:s.whale,game:s.stats?.time}));}}
     if(lastSave!==s.chapter+'/'+s.checkpoint){lastSave=s.chapter+'/'+s.checkpoint;report.checkpoints.push(lastSave);}
-    report.last=s;report.strokes=strokes;fs.writeFileSync(prefix+'.json',JSON.stringify(report,null,2));
+    report.last=s;report.strokes=strokes;report.whaleTries=whaleTries;fs.writeFileSync(prefix+'.json',JSON.stringify(report,null,2));
     if(until&&s.chapter===until){report.reached=until;break;}
     assert(Date.now()-chapterAt<15*60*1000,`Chapter stalled: ${JSON.stringify(s)}`);
     if(s.finished){report.completed=true;break;}
@@ -156,6 +158,7 @@ try {
       else if(s.bubble&&s.direction)acted=await sweep(s.bubble,s.direction.x,s.direction.y,110,450);
       else acted=await sweep(s.wand,1,0,140,450);
     }else if(s.chapter==='home'&&['tries','flying'].includes(s.beat))acted=await circle(s.bird,height*.065,850,'bird');
+    else if(s.chapter==='toMirror'&&['breath','eye','line','heave','flipper'].includes(s.whale))acted=await whaleGo(page,whaleTries);
     else if(visible(s.coax))acted=await circle(s.coax,height*.065,850);
     if(!acted)await page.waitForTimeout(500);
   }
