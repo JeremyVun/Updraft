@@ -1982,7 +1982,7 @@ export const tuning = {
        * it is already going as she arrives and never keeps her waiting; and how far up the hoist she is (a share of the
        * climb) before it comes down off the mill's cap ahead of her.
        */
-      catGo: { tree: 9, sheet: 40, mill: 4, swing: 14 }, catDown: 0.55,
+      catGo: { tree: 9, sheet: 7, mill: 4, swing: 14 }, catDown: 0.55,
       /**
        * The fog along its way (`DARK_WAY`): how far behind her it comes on while she is on her own way, while she works
        * each piece, and where it waits once she is at the tower's foot; the nearest it ever comes (and where it comes
@@ -1990,7 +1990,7 @@ export const tuning = {
        * it; how hard it closes on where it is going (per second a metre), the slowest and fastest it comes on (m/s), and
        * how quickly it changes pace (per second), quicker while she looks back.
        */
-      fogTrail: 12, fogHold: { tree: 10, sheet: 8, mill: 18, swing: 12 }, fogEnd: 19, fogNearest: 7.5, fogLaid: 10,
+      fogTrail: 12, fogHold: { tree: 10, sheet: 8, mill: 10, swing: 14 }, fogEnd: 19, fogNearest: 7.5, fogLaid: 10,
       fogPull: 0.5, fogSlowest: 0.12, fogFastest: 3.2, fogEase: 0.9, fogLookedEase: 3,
       /** How near her the fog comes while she looks back at the boat, past the boat, so it takes the boat as she watches. */
       fogLooked: 5,
@@ -2144,21 +2144,28 @@ export const tuning = {
        * how high (upright, the same, and how far it looks round to her as she crosses, so she stays in the narrow frame).
        */
       treeNorth: 9.5, treeEast: 1.6, treeHigh: 4.4, uprightTreeNorth: 10.5, uprightTreeEast: 0.8, uprightTreeHigh: 4.6, uprightTreeOnHer: 0.85,
-      /** The sheet's view: which side of the line it stands (+1 the left looking up it), and how far off it in landscape. */
-      sheetSide: 1, sheetOff: 10.5,
+      /**
+       * The sheet's view, from her gable's end: which side of the line it stands (+1 the left looking up it); where it
+       * stands and looks [up the line, above her ridge, off the line] (landscape), and how far up the line and how much
+       * higher both go as she is carried; upright its own.
+       */
+      sheetSide: 1, sheetEye: [1.9, 3.5, 12.2], sheetAt: [2.1, 2.9], sheetGo: [1.5, 0.5],
+      uprightSheetEye: [-3.4, 2.8, -5.6], uprightSheetAt: [2.2, 2.6, 0.6],
       /**
        * The mill's view, in the mill's own frame (x to the right seen from in front, z out of the front, heights above
        * her roof): where it stands and looks while she is low, and how much higher it stands and looks once she is up.
        */
-      millWide: { eye: [-10, 1.6, 6], at: [-2.8, 3.6, -1.4], eyeRise: 2.4, rise: 3.2 },
-      millUpright: { eye: [-8, 1.8, 5], at: [-3.0, 4.2, -1.6], eyeRise: 2.6, rise: 3.4 },
+      millWide: { eye: [-7.86, 7.8, 19.14], at: [-2.36, 6.3, -1.86], eyeRise: 0.6, rise: 1.0 },
+      millUpright: { eye: [-6.6, 6.4, 15.6], at: [-2.6, 6.6, -1.86], eyeRise: 0.8, rise: 1.4 },
       /**
        * The swing's view: how far round from side on to her arc toward the way she swings out (radians), how far from
        * the bough and how high over the seat it stands; it looks this far out along her arc and this high over the
-       * seat. Upright its own, round behind her. Side on and well back, so her arc reads as the wind's to pump.
+       * seat. Upright its own, round behind her. Side on from the west and near, so her arc reads left and right as the
+       * wind's to pump. Coming round from behind her it keeps within `swingNear` of the bough, inside the old tree and
+       * under its bough, and draws back to its place over the last of the way round from `swingOut`.
        */
-      swingRound: 0, swingBack: 21, swingHigh: 2.8, swingAhead: 1.4, swingAim: 3.2,
-      uprightSwingRound: -0.33, uprightSwingBack: 17.5, uprightSwingHigh: 3.9,
+      swingRound: 0, swingBack: 13.5, swingHigh: 3.4, swingAhead: 2.2, swingAim: 3.1, swingNear: 7.5, swingOut: 0.55,
+      uprightSwingRound: -0.45, uprightSwingBack: 12.5, uprightSwingHigh: 4.2,
       /** The end's view: how far back along the nave, how high, and how far out over the green. */
       naveBack: 10, naveHigh: 3.6, naveAside: 11,
     },

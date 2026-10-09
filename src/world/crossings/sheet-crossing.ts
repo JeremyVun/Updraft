@@ -109,6 +109,8 @@ export class SheetCrossing {
   private readonly hands = new THREE.Vector3();
   private readonly lens = new THREE.Vector3();
   private readonly landAt = new THREE.Vector3();
+  /** The one point the drawn gust is offered at, moved with the sheet: a new point each frame would restart it. */
+  private readonly asked = new THREE.Vector3();
   /** Hanging, how far she has turned from up the line toward the lens, so her face is seen. */
   private turn = 0;
 
@@ -201,7 +203,7 @@ export class SheetCrossing {
     this.sheet.update(dt, camera, wind);
 
     const asking = (this.phase === 'waiting' || this.phase === 'carried') && this.sheet.quiet > k.inviteAfter && !this.valving;
-    this.invitation = asking ? this.sheet.middle(this.at).clone() : null;
+    this.invitation = asking ? this.sheet.middle(this.asked) : null;
     if (asking) this.heading = this.sheet.heading(camera);
 
     if (this.phase === 'waiting') {
