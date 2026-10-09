@@ -2255,10 +2255,11 @@ export const tuning = {
     /**
      * Making for the cat: from `makingFrom` to `makingTo` metres short of where the boat waits for it, the lens comes
      * this far round onto the quarter away from the cat's side (radians), so the cat ahead is seen clear of the boat;
-     * it gives the cat this share of its look, and lengthens by one for every `makingSee` metres the cat is from it
-     * (upright, its own), at most to `makingZoom`, so the cat on its pot is a cat however far off.
+     * it gives the cat this share of its look (upright more, and on through its coming round), and lengthens by one for every `makingSee` metres the cat is from it
+     * (upright, its own), at most to `makingZoom`, so the cat on its pot is a cat however far off. Upright it rises to
+     * this over where it looks.
      */
-    makingFrom: 78, makingTo: 60, makingBearing: 0.4, makingLook: 0.35, makingSee: 26, uprightMakingSee: 19, makingZoom: 2.5,
+    makingFrom: 78, makingTo: 60, makingBearing: 0.4, makingLook: 0.35, uprightMakingLook: 0.6, makingSee: 26, uprightMakingSee: 19, makingZoom: 2.5, uprightMakingHeight: 6,
     /** Let the church pass beside us, then return to the channel instead of looking backwards after it. */
     spireEnter: 110, spireFull: 55, spireLeave: 25, spireGone: -5,
     spireDistance: 20, spireHeight: 3.4, spireWeight: 0.3,
@@ -2293,11 +2294,11 @@ export const tuning = {
      * line from her head to the edge where the cat waits (behind her where less than 0), this far out from that line on
      * the side away from the sail, and this high over the water; it looks this share of the way along the line, this high
      * over the water and this much higher while the cat is up on its pot, on this lens. Upright, its own, and further
-     * out while the cat is up on its pot, so the sail never stands between the lens and the cat.
+     * forward and out while the cat is up on its pot, so the sail never stands between the lens and the cat.
      */
-    catGlance: 0.3, catTurnFrom: 40, catPace: 0.55,
+    catGlance: 0.3, catTurnFrom: 40, catPace: 0.55, uprightCatPace: 1.0,
     catAlong: 0.58, catSide: 12.5, catEye: 3.8, catLook: 0.5, catAim: 1.0, catLift: 0.9, catZoom: 1.25,
-    uprightCatAlong: -1.35, uprightCatSide: 4, uprightCatPotSide: 5.8, uprightCatEye: 6.2, uprightCatLook: 0.95, uprightCatAim: 0.8, uprightCatLift: 0.6,
+    uprightCatAlong: -1.35, uprightCatPotAlong: -0.5, uprightCatSide: 4, uprightCatPotSide: 5.8, uprightCatEye: 6.2, uprightCatLook: 0.95, uprightCatAim: 0.8, uprightCatLift: 0.6,
     uprightCatZoom: 1.4,
     /**
      * The cat brought aboard: once the tub is this near the boat the lens comes in beside her: its bearing from ahead

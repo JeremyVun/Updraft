@@ -964,7 +964,8 @@ export class DrownedChapter implements Chapter {
     const across = Math.hypot(CAT_EDGE.x - head.x, CAT_EDGE.z - head.z) || 1;
     const ux = (CAT_EDGE.x - head.x) / across, uz = (CAT_EDGE.z - head.z) / across;
     const up = THREE.MathUtils.smoothstep(this.cat.eye.y, 1, 3);
-    const along = lerp(k.uprightCatAlong, k.catAlong, wide) * across, out = lerp(lerp(k.uprightCatSide, k.uprightCatPotSide, up), k.catSide, wide);
+    const along = lerp(lerp(k.uprightCatAlong, k.uprightCatPotAlong, up), k.catAlong, wide) * across;
+    const out = lerp(lerp(k.uprightCatSide, k.uprightCatPotSide, up), k.catSide, wide);
     /** Out on the port side of the line from her to the cat, which is the side away from the sail. */
     const eye = this.catEye.set(head.x + ux * along + uz * out, lerp(k.uprightCatEye, k.catEye, wide), head.z + uz * along - ux * out);
     /** It looks a little higher while the cat is still up on its pot, and comes down with it to the water's edge. */
@@ -978,7 +979,9 @@ export class DrownedChapter implements Chapter {
     const from = Math.atan2(was.x - head.x, was.z - head.z), to = Math.atan2(eye.x - head.x, eye.z - head.z);
     const bearing = from + Math.atan2(Math.sin(to - from), Math.cos(to - from)) * round;
     const reach = lerp(Math.hypot(was.x - head.x, was.z - head.z), Math.hypot(eye.x - head.x, eye.z - head.z), round);
-    eye.set(head.x + Math.sin(bearing) * reach, lerp(was.y, eye.y, round), head.z + Math.cos(bearing) * reach);
+    /** Upright it rises before it comes round, so the slack sail never stands between it and the cat on its pot. */
+    const rise = lerp(Math.min(1, round * 2), round, wide);
+    eye.set(head.x + Math.sin(bearing) * reach, lerp(was.y, eye.y, rise), head.z + Math.cos(bearing) * reach);
     s.target.lerp(aim, round);
     s.eye = eye;
     s.orbit = true;
@@ -986,8 +989,9 @@ export class DrownedChapter implements Chapter {
     const step = this.cat.step;
     this.churchAttention.strength *= 1 - round;
     this.catAttention.point.copy(this.cat.eye);
-    this.catAttention.weight = tuning.drownedCamera.catGlance;
-    this.catAttention.strength = THREE.MathUtils.smoothstep(step === 'seen' ? this.cat.t : 3, 0, 2.5) * (1 - round);
+    /** Upright the narrow frame keeps its look on the cat until it has come round, so the cat never slips out past the sail. */
+    this.catAttention.weight = lerp(k.uprightMakingLook, k.catGlance, wide);
+    this.catAttention.strength = THREE.MathUtils.smoothstep(step === 'seen' ? this.cat.t : 3, 0, 2.5) * (1 - lerp(round * round, round, wide));
     if (this.catAttention.strength > (s.attention?.strength ?? 0)) s.attention = this.catAttention;
     const c = this.catSubjects;
     c.primary.copy(head);
@@ -998,7 +1002,7 @@ export class DrownedChapter implements Chapter {
     if (round > 0.3) s.subjects = c;
     if (round > 0.9) s.obstacles = undefined;
     s.smoothFit = 1.5;
-    this.pace = lerp(this.pace, k.catPace, round);
+    this.pace = lerp(this.pace, lerp(k.uprightCatPace, k.catPace, wide), round);
   }
 
   /**
@@ -1056,9 +1060,10 @@ export class DrownedChapter implements Chapter {
     const roofBearing = this.heading + Math.PI + THREE.MathUtils.lerp(this.quarter * THREE.MathUtils.lerp(k.entryBearing, k.roofBearing, roofs), awayFromCat * k.makingBearing, making);
     s.from = this.from.set(Math.sin(roofBearing), 0, Math.cos(roofBearing));
     s.distance = THREE.MathUtils.lerp(k.entryDistance, k.roofDistance, roofs);
-    s.height = THREE.MathUtils.lerp(k.entryHeight, k.roofHeight, roofs);
     /** A lens long enough that the cat on its pot is a cat, not a speck, however far ahead it still is. */
     const wide = THREE.MathUtils.smoothstep(this.aspect, 0.7, 1.3);
+    /** Upright it rises as it makes for the cat, so the cat stands over the slack sail rather than behind it. */
+    s.height = THREE.MathUtils.lerp(THREE.MathUtils.lerp(k.entryHeight, k.roofHeight, roofs), k.uprightMakingHeight, making * (1 - wide));
     const sees = THREE.MathUtils.clamp(this.lensAt.distanceTo(this.cat.eye) / THREE.MathUtils.lerp(k.uprightMakingSee, k.makingSee, wide), 1, k.makingZoom);
     s.zoom = THREE.MathUtils.lerp(1, sees, making);
     s.target.set(child.position.x + fx * tuning.storm.lookAhead, child.position.y + 0.9,
@@ -1068,7 +1073,7 @@ export class DrownedChapter implements Chapter {
     if (making > church) {
       this.catAttention.point.copy(this.cat.eye);
       this.catAttention.strength = making;
-      this.catAttention.weight = k.makingLook;
+      this.catAttention.weight = THREE.MathUtils.lerp(k.uprightMakingLook, k.makingLook, wide);
       s.attention = this.catAttention;
     }
     if (church > 0) {
