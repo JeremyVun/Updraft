@@ -1021,8 +1021,10 @@ export class RoofRun {
     const k = tuning.drowned.run;
     const dark = this.cast.village!.dark;
     const looking = this.lookingBack >= 0 && this.lookingBack < k.lookBackFor;
+    /** Off the mill it stays where it waited until she turns on the granary's ridge to look down at it come on. */
+    const offMill = this.stage === 'walk' && this.mill.done && this.lookingDown < 0;
     const hold = this.stage === 'tree' || this.stage === 'sheet' || this.stage === 'mill' || this.stage === 'swing' ? k.fogHold[this.stage]
-      : this.stage === 'nave' ? k.fogEnd : looking ? k.fogLooked : k.fogTrail;
+      : this.stage === 'nave' ? k.fogEnd : looking ? k.fogLooked : offMill ? k.fogHold.mill : k.fogTrail;
     const want = this.dark - hold;
     /** At the tower's foot it comes on to a few roofs back and waits there for the church. */
     const pull = THREE.MathUtils.clamp((want - dark.front) * k.fogPull, this.stage === 'nave' ? 0 : k.fogSlowest, k.fogFastest);
