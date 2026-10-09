@@ -354,7 +354,7 @@ async function steps() {
   results.steps = { loops: loopsTaken, eye, line, heave, fin, eyeAt: +(opened.time - rest.time).toFixed(1), freeAt: +(free.time - rest.time).toFixed(1) };
   assert(loopsTaken <= 3, `about two loops lift the patch: ${loopsTaken}`);
   assert(eye <= 2 && line <= 3 && fin <= 3, 'one to three strokes a step');
-  assert(heave <= 6, `about four heaves, a stroke each: ${heave}`);
+  assert(heave <= 5, `about four heaves, a stroke each: ${heave}`);
   assert.deepEqual([free.liftedBy, free.foldedBy, free.broughtBy, free.heavedBy, free.finnedBy], ['circles', 'sweeps', 'sweeps', 'sweeps', 'sweeps']);
   assert.equal(heaved.answers, rest.answers, 'nothing on its body answers the wind before its flipper');
   assert.deepEqual(errors, []);
@@ -531,7 +531,7 @@ async function heave() {
   results.heave = { strokes, heaves: after.heaves, billowed: +Math.max(...pulls.map((p) => p[2])).toFixed(2) };
   assert(stuck.gripped && stuck.haul === 'bracing' && stuck.peel === 0, 'braced, the net will not come');
   assert.equal(after.heaves, 4, 'four heaves');
-  assert(strokes <= 6, `a stroke a heave: ${strokes}`);
+  assert(strokes <= 5, `a stroke a heave: ${strokes}`);
   assert.equal(after.peel, 1, 'the net off its head');
   const peels = [...new Set(pulls.filter((p) => p[1] > 0 && p[1] < 1).map((p) => p[1].toFixed(2)))];
   assert(peels.length >= 3, 'it comes off heave by heave');
