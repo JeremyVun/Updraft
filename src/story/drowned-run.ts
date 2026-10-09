@@ -1026,7 +1026,8 @@ export class RoofRun {
       : this.stage === 'nave' ? k.fogEnd : this.lookingDown >= 0 && this.lookingDown < k.lookDownFor ? k.fogBeat : k.fogTrail;
     const want = this.dark - hold;
     /** At the tower's foot it comes on to a few roofs back and waits there for the church. */
-    const slowest = this.stage === 'nave' ? 0 : this.stage === 'walk' ? k.fogCreep : k.fogSlowest;
+    const looking = this.lookingSwing >= 0 && this.lookingSwing < k.lookSwingFor;
+    const slowest = this.stage === 'nave' ? 0 : this.stage === 'walk' && !looking ? k.fogCreep : k.fogSlowest;
     const pull = THREE.MathUtils.clamp((want - dark.front) * k.fogPull, slowest, k.fogFastest);
     this.fogSpeed += (pull - this.fogSpeed) * (1 - Math.exp(-dt * k.fogEase));
     dark.faces = this.her.set(this.cast.child.position.x, this.cast.child.position.z);
