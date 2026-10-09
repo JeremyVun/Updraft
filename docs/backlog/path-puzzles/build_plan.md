@@ -881,8 +881,10 @@ How it runs (lessons from N1 to N3r):
 - Base: `sea-whale` (worktree `/private/tmp/updraft-sea-whale`). First merge main into it, because main has moved
   since `0fbab59d`. Each phase forks its own branch and worktree under `/private/tmp` from `sea-whale`; check the base
   with a landmark file. The lead merges each phase back into `sea-whale`.
-- Agents: Opus at xhigh, at most two at once on file-disjoint lanes, each committing after every step. Each aims to
-  finish under 400k tokens and must stop and hand off at 450k. Every brief carries the comment rule verbatim.
+- Agents: Opus at xhigh on file-disjoint lanes, each committing after every step. Jeremy lifted the two-at-once limit
+  (2026-10-09: "im waiving the 2 session limit. i want all the work completed quickly"), so N5a, N5b and N5c run
+  together and the lead resolves their seams in `net-whale.ts` at merge. Each aims to finish under 400k tokens and must
+  stop and hand off at 450k. Every brief carries the comment rule verbatim.
   Agents write Done entries on their branch but never "Claude's judgement" lines; the lead adds those on main.
 - Ports: 5321 and 5324 for agents, 5330 for Jeremy's play build. Peers use 5317 to 5319 and 5323. Check a
   listener's cwd before trusting a port.
@@ -965,10 +967,11 @@ step keys of `tuning.netWhale`, `src/story/checkpoint-data.ts` (the new checkpoi
 Done: [ ]
 
 ### Phase N5c: the goodbye and its voice
-After N5b merges into `sea-whale`, because both drive the whale through `net-whale.ts`; it may run beside N5a's
-verification. Owns `src/fx/sealife/sleeper.ts` (the dive, the body behind the flippers, riding higher, the flipper's
-wave, the eye open on her through the release), `salute()` and the release's direction in `net-whale.ts`, the
-release and farewell holds, the whale's voice in `src/audio/` and its notes in `docs/contracts/audio.md` (branch
+Beside N5a and N5b (Jeremy's waiver above), branch `sea-n5c` off `sea-whale`; the lead merges it after N5b. Owns
+`src/fx/sealife/sleeper.ts` (the dive, the body behind the flippers, riding higher, the flipper's wave, the eye open
+on her through the release; not the eye under the fold, N5b's), the `free` and `gone` steps in `net-whale.ts`
+(`salute()`, the release's direction, her goodbye wave), the release and farewell holds (`release*` and `farewell*`
+keys, not the approach's bare `release`), the child's arm where her goodbye needs it, the whale's voice in `src/audio/` and its notes in `docs/contracts/audio.md` (branch
 copy), the body's shape in `src/fx/sealife/anatomy.ts`, and the first crossing's whale (`src/fx/sealife/whale.ts`), which
 shares the form.
 - Build the doc's "Its goodbye, with feeling", "The dive, a whale's, not an eel's" and "Its voice", including the
