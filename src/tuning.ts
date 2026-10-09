@@ -1984,7 +1984,7 @@ export const tuning = {
        * on by short of a piece, and how fast it goes along ridges and walls and along the railings and the line (m/s);
        * seconds after it sits before it calls to her, and between calls while it waits across a piece for her.
        */
-      catLead: 9, catNear: 4, catLeast: 3, catSpeed: 4.2, railSpeed: 2.2, catCallFirst: 0.5, catCallEvery: 3.2,
+      catLead: 7.5, catNear: 3, catLeast: 3, catSpeed: 4.2, railSpeed: 2.2, catCallFirst: 0.5, catCallEvery: 3.2,
       /**
        * How near she is to each piece (metres along her way to where she waits at it) when the cat sets off over it, so
        * it is already going as she arrives and never keeps her waiting (the sheet's once she sets off for the fallen
@@ -2090,7 +2090,7 @@ export const tuning = {
        * it looks, how high above her feet, its pace and its lens.
        */
       follow: 2.2, followDown: 3, steady: 2, steadiest: 1.4, behind: 6, ahead: 12,
-      sideOn: 1.45, uprightSideOn: 1.5, distance: 12.5, uprightDistance: 13.5, rise: 3.5, uprightRise: 4.2, lowest: 2.8, highest: 12,
+      sideOn: 1.45, uprightSideOn: 1.5, distance: 14, uprightDistance: 13.5, rise: 3.5, uprightRise: 4.2, lowest: 2.8, highest: 12,
       lead: 0.8, aim: 1.0, pace: 0.6, zoom: 0.86, uprightZoom: 0.86,
       /**
        * How far ahead of her on her way the laid lens is read, so the eased lens turns as she does, and how far past
@@ -2101,7 +2101,7 @@ export const tuning = {
        * What shares the frame with her (`Shot.subjects`): how much of the frame they keep inside and how far it may
        * draw back to hold them; the cat while it is within `catHeld` metres of her, else her way `lookOn` metres on.
        */
-      margin: 0.8, extra: 1.5, catHeld: 14, lookOn: 8,
+      margin: 0.8, extra: 2, catHeld: 14, lookOn: 8,
       /**
        * The cat ahead of her: how far the look leans toward it (a share of the way from her to it) and how quickly that
        * comes and goes (per second); the share of the frame's half width it is kept inside; and how the walking lens is
@@ -2109,7 +2109,7 @@ export const tuning = {
        * it before that costs, and what each share of the frame it stands further out, each metre further off, and a
        * roof between them cost.
        */
-      catLean: 0.35, catLeanRate: 1.2, catEdge: 0.86, catAhead: 7, catFar: 14, catOutCost: 300, catFarCost: 10, catHiddenCost: 200,
+      catLean: 0.35, catLeanRate: 1.2, catEdge: 0.86, catAhead: 6, catFar: 16, catOutCost: 300, catFarCost: 10, catHiddenCost: 200,
       /** How far it keeps off the side of a house, wall or chimney it stands lower than the top of, and over a chimney, metres. */
       clearOf: 1.6,
       /**
