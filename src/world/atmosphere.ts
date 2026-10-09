@@ -848,8 +848,10 @@ vec4 fogOf(vec3 wpos, float landscape) {
   }
 #if CLOUD_DECK
   vec4 deck = uCloudDeck.w > 0.0 ? cloudDeck(cameraPosition, rd, dist) : vec4(0.0);
+  // From inside the bank of mist its white is nearer than any haze, which lies beyond it as it does behind the sky.
+  float mistFirst = uFogBankShape.w > 0.0 ? clamp(uFogBankEye.y / uFogBankShape.w, 0.0, 1.0) : 0.0;
   // Haze lies between the eye and the cloud, not behind a deck that has already covered the view.
-  fogDistance = mix(fogDistance, min(fogDistance, 40.0), deck.a);
+  fogDistance = mix(fogDistance, min(fogDistance, 40.0), deck.a * (1.0 - mistFirst));
 #endif
   float heightFactor = exp(-max(wpos.y, 0.0) * 0.06);
   float mist = uMist * exp(-max(min(wpos.y, cameraPosition.y), 0.0) * 0.22);
@@ -901,7 +903,7 @@ vec4 fogOf(vec3 wpos, float landscape) {
 #if CLOUD_DECK
   if (deck.a > 0.0) {
     float total = 1.0 - (1.0 - amt) * (1.0 - deck.a);
-    fogCol = (deck.rgb * deck.a * (1.0 - amt) + fogCol * amt) / max(total, 1e-4);
+    fogCol = (deck.rgb * deck.a * mix(1.0 - amt, 1.0, mistFirst) + fogCol * amt * mix(1.0, 1.0 - deck.a, mistFirst)) / max(total, 1e-4);
     amt = total;
   }
 #endif

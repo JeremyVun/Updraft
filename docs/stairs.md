@@ -201,11 +201,12 @@ brings the light. Courage passes back and forth between them, and the stairs are
    - *The look out* (about 7 s). The lens rises out of the mist behind her and draws back as the cloud opens out
      to the sun, and settles low behind her with the sun in the frame. A step from the edge she stops and looks
      slowly right across it all, then at the bird beside her.
-   - *Sitting* (about 11 s). A pair of slippers; the bird settles in one and she lowers herself onto the lip beside it
+   - *Sitting* (about 16 s). A pair of slippers; the bird settles in one and she lowers herself onto the lip beside it
      (over 1.4 s, not a drop), her feet hanging over the cloud and swinging in little runs (Jeremy: "the child should
      set on the lip with her feet dangling in the cloud, and the cygnet next to her"). As she sits the lens drifts
-     round her right, away from the sun (`toHerSide`), keeping its height until it is past the rail and then coming
-     down a little in front of her side: her face, her feet over the lip, the bird beside her. The slippers are on
+     round her right, away from the sun, over 12 s so it reads as a slow camera move rather than a swing
+     (`toHerSide`), keeping its height until it is past the rail and then coming down a little in front of her side:
+     her face, her feet over the lip, the bird beside her. The slippers are on
      her right, where the stowed paper does not hide the bird, and a bird's width clear of her coat.
    - *The swans.* A skein comes from behind the landing, low over the cloud off to her left, and flies on toward the
      sun, where the boat will take them. It comes in at the top left of her side view; once it is well into the
@@ -223,7 +224,9 @@ brings the light. Courage passes back and forth between them, and the stairs are
    little). Off the landing in one slow turn to port, then a long wander across the open cloud toward the low sun:
    out to port among the heaps, back across to starboard between towers of cumulus, and straight on into a bank of
    mist standing on the cloud (about 350 m, two minutes). The hull rides the billows, down in the tops, parting them.
-   Under way the bird hops up onto the gunwale on the sunward side and the child turns to that side, arms on the
+   Under way the bird hops up onto the gunwale on the sunward side, forward of the mast so the mast never stands
+   behind it in the close shot from the beam, with the sail set over to port for the voyage (`sailMirrored`, put
+   over while the boat waits hidden in its tower) so it never covers the bird; the child turns to that side, arms on the
    rail, both looking out toward the sun; now and then she looks at the bird. The lens is mostly far off, so the
    cloud is seen going on for ever round a small boat: ahead of them looking back at the stair; up and away on the
    sunward side; down beside them, low over the tops; up and round astern while they sail between the towers; and

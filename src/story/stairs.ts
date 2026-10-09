@@ -85,8 +85,8 @@ const HIDE_IN = 0.45;
 /** How much faster the kite brings the boat on while it is still far out, metres a second. */
 const FAR_OUT_SPEED = 7;
 /** How long the lens takes to drift round her right to her side as she sits, and when the swans are sent; seconds into the sit. */
-const TO_HER_SIDE = 7;
-const SWANS_AT = 7;
+const TO_HER_SIDE = 12;
+const SWANS_AT = 12;
 /** Her side: turned from straight out ahead of her round toward her right, how far off, how high, and how high it looks. */
 const SIDE_TURN = -1.13;
 const SIDE_REACH = 6;
@@ -642,7 +642,8 @@ export class StairsChapter implements Chapter {
     this.world.bank.amount = this.cast.child.position.y > levelHeight(LOOP.corner - 1) - 1 ? 1 : 0;
     const k = this.cast.cygnet;
     const drawn = k.scale < 1;
-    k.nudge = this.beat === 'loop' || this.lofted ? drawn ? this.drawnDepth(k.position) : 0 : null;
+    // Up on the gunwale the usual pull toward the lens draws it through the mast.
+    k.nudge = this.beat === 'loop' || this.lofted ? drawn ? this.drawnDepth(k.position) : 0 : this.perched ? 0 : null;
     k.nudgeSlope.set(0, 0, 0);
     if (k.nudge === null || !drawn) return;
     // The flight is pushed back more the higher up it is, so the bird is too, or its tail sinks behind the treads.
@@ -1070,6 +1071,8 @@ export class StairsChapter implements Chapter {
     boat.speed = 0;
     boat.steerFor = null;
     boat.mooring = null;
+    // Out of sight in the tower the sail goes over to port, so it never covers the bird on the starboard rail.
+    boat.sailMirrored = true;
     this.world.group.add(this.lantern.glow);
     this.lantern.brightness = 1;
   }
@@ -1172,9 +1175,9 @@ export class StairsChapter implements Chapter {
   }
 
   /**
-   * Under way they look out. The bird hops up onto the gunwale on the sunward side, just forward of her, and the
-   * child turns on the thwart toward it, arms folded on the rail, both of them watching the cloud go by; now and then
-   * she looks at the bird. As the bank of mist comes up it goes back into her arms and she sits round again.
+   * Under way they look out. The bird hops up onto the gunwale on the sunward side, forward of the mast so that seen
+   * from the beam the mast never stands behind it, and the child turns on the thwart toward it, arms folded on the
+   * rail, both of them watching the cloud go by; now and then she looks at the bird. As the bank of mist comes up it goes back into her arms and she sits round again.
    */
   private lookOut(dt: number): void {
     const { boat, child: c, cygnet: k, carry } = this.cast;
@@ -1198,7 +1201,7 @@ export class StairsChapter implements Chapter {
     this.outThere.set(boat.position.x + sun.x / flat * 40, boat.position.y + 4, boat.position.z + sun.z / flat * 40);
     c.lean = 0.14 * turned;
     if (this.perched) {
-      k.perch(this.onRail(0.25, 0.08, this.tmp2), boat.yaw - 0.9);
+      k.perch(this.onRail(1.15, 0.08, this.tmp2), boat.yaw - 0.9);
       k.watch(this.outThere);
     }
     if (turned > 0.35) {
@@ -1247,6 +1250,7 @@ export class StairsChapter implements Chapter {
     boat.group.position.set(boat.group.position.x + dx, boat.group.position.y + dy, boat.group.position.z + dz);
     boat.group.updateMatrixWorld(true);
     boat.altitude = null;
+    boat.sailMirrored = false;
     fog.at.x += dx;
     fog.at.y += dz;
     this.world.cloud.wake.shift(dx, dy, dz);
