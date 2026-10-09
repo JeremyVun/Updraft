@@ -1021,10 +1021,8 @@ export class RoofRun {
     const k = tuning.drowned.run;
     const dark = this.cast.village!.dark;
     const looking = this.lookingBack >= 0 && this.lookingBack < k.lookBackFor;
-    /** Off the mill it stays where it waited until she turns on the granary's ridge to look down at it come on. */
-    const offMill = this.stage === 'walk' && this.mill.done && this.lookingDown < 0;
     const hold = this.stage === 'tree' || this.stage === 'sheet' || this.stage === 'mill' || this.stage === 'swing' ? k.fogHold[this.stage]
-      : this.stage === 'nave' ? k.fogEnd : looking ? k.fogLooked : offMill ? k.fogHold.mill : k.fogTrail;
+      : this.stage === 'nave' ? k.fogEnd : looking ? k.fogLooked : k.fogTrail;
     const want = this.dark - hold;
     /** At the tower's foot it comes on to a few roofs back and waits there for the church. */
     const pull = THREE.MathUtils.clamp((want - dark.front) * k.fogPull, this.stage === 'nave' ? 0 : k.fogSlowest, k.fogFastest);
@@ -1273,8 +1271,15 @@ export class RoofRun {
       out.set(from.x + lerp(uprightAt[0], wideAt[0], wide), from.y + lerp(uprightAt[1], wideAt[1], wide), from.z + lerp(uprightAt[2], wideAt[2], wide));
     set(a.eye, a.uprightEye, this.stationEye);
     set(a.at, a.uprightAt, this.stationTarget);
-    /** Following her, it leans toward the cat while it leads her on her own way. */
+    /**
+     * Following her, it leans toward the cat while it leads her on her own way, and toward the fog while she stands on
+     * the granary's ridge looking back down at it.
+     */
     if ('track' in a && !this.catPiece && !this.catAcross) this.stationTarget.lerp(this.catEye, tuning.drownedCamera.run.catLean * this.leaned);
+    if ('downAt' in a && this.lookingDown >= 0) {
+      const t = this.lookingDown, length = tuning.drowned.run.lookDownFor, smooth = THREE.MathUtils.smoothstep;
+      this.stationTarget.lerp(this.fogFront(this.tmp2), a.downAt * smooth(t, 0, 1) * (1 - smooth(t, length - 1, length)));
+    }
     if ('lookAt' in a && this.lookingSwing >= 0) {
       /** Round her, not across: the bearing and reach from her eased, and the height. */
       const t = Math.min(1, this.lookingSwing / (0.8 * tuning.drowned.run.lookSwingFor)), u = 1 - (1 - t) * (1 - t);

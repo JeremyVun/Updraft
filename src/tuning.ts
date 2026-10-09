@@ -2161,12 +2161,13 @@ export const tuning = {
        * The views laying out the mill and the swing as she comes to them: from how far along her way before each (metres)
        * they come in, and how quickly (per second), until the piece's own view takes over; where they stand and look, as
        * [east, up, south] metres (landscape, then upright) from where she waits at the mill, and for the swing from her
-       * as she goes, off her right shoulder with the fog coming on behind her, never higher than `top`, and where it
-       * goes round to once she has stopped to look at the swing.
+       * as she goes, off her right shoulder with the fog coming on behind her, never higher than `top`, how far it looks
+       * toward the fog as she looks back down at it from the granary's ridge, and where it goes round to once she has
+       * stopped to look at the swing.
        */
       approach: {
         mill: { from: 12.3, rate: 0.7, eye: [-7.8, 7.8, 20], at: [1.2, 5.3, -1], uprightEye: [-5.5, 6.8, 15], uprightAt: [0.8, 5.6, -1] },
-        swing: { from: 20, rate: 0.9, track: true, top: 9.5, eye: [-1.5, 3.5, -8.5], at: [-3, 1.0, 0], uprightEye: [-1.2, 3.8, -7.5], uprightAt: [-2, 1.4, 0],
+        swing: { from: 20, rate: 0.9, track: true, top: 9.5, downAt: 0.45, eye: [-1.5, 3.5, -8.5], at: [-3, 1.0, 0], uprightEye: [-1.2, 3.8, -7.5], uprightAt: [-2, 1.4, 0],
           lookEye: [-10, 3.0, -4], lookAt: [-1.5, 1.6, -2.5], uprightLookEye: [-8.5, 3.2, -3.5], uprightLookAt: [-1.2, 2.2, -2.2] },
       },
       /**
