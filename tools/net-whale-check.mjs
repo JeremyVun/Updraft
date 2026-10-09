@@ -9,7 +9,7 @@
 // Saves: rest, breath (the fold over its eye), eye (the fold off, the cork out), line (the cork in her mittens),
 // heave (the line let go), flipper (free) and gone each resume.
 // Usage: BASE=http://127.0.0.1:5230/ node tools/net-whale-check.mjs [case ...]
-//   cases: sweeps steps child idle eye eyeidle line anyway lineidle heave heaveidle fin finearly finidle saves full fullidle
+//   cases: sweeps steps child idle eye eyeidle line anyway catches lineidle heave heaveidle fin finearly finidle saves full fullidle
 //   BREAK=<case,...> sends each named idle case's valve at 10 s, and `anywhere` in it counts any stroke for every step
 //   (the breath lifting under any pointer), so `sweeps` and each idle case's strokes elsewhere fail: each proves its
 //   guard bites.
@@ -23,7 +23,7 @@ const base = process.env.BASE ?? 'http://127.0.0.1:5230/';
 const W = Number(process.env.W ?? 1600);
 const H = Number(process.env.H ?? 900);
 const cases = process.argv.slice(2).length ? process.argv.slice(2)
-  : ['sweeps', 'steps', 'child', 'idle', 'eye', 'eyeidle', 'line', 'anyway', 'lineidle', 'heave', 'heaveidle', 'fin', 'finearly', 'finidle', 'saves', 'full'];
+  : ['sweeps', 'steps', 'child', 'idle', 'eye', 'eyeidle', 'line', 'anyway', 'catches', 'lineidle', 'heave', 'heaveidle', 'fin', 'finearly', 'finidle', 'saves', 'full'];
 const BREAK = (process.env.BREAK ?? '').split(',').filter(Boolean);
 let running = '';
 
@@ -383,6 +383,53 @@ async function anyway() {
   await context.close();
 }
 
+/**
+ * Nothing about her reach strands her at the line. Her mittens sent half a metre short and aft of where she reaches,
+ * as a strong gust's heel once left them, she still takes it once the cork is in under them; and with the cork kept
+ * from coming in under them (its pushes dropped while she reaches), she takes it where it lies once she has reached a
+ * few seconds.
+ */
+async function catches() {
+  results.catches = {};
+  for (const snag of [false, true]) {
+    const context = await ctx();
+    const { page, errors } = await open(context, '');
+    await atLine(page);
+    await page.evaluate((snag) => {
+      const w = __game.story.current.whale, child = __game.child, g = __game.boat.group, float = __game.sealife.net.float;
+      const reachFor = child.reachFor.bind(child), push = float.push;
+      child.reachFor = (hand, target) => {
+        const short = target && w.haul === 'reaching' ? g.worldToLocal(target.clone()) : null;
+        reachFor(hand, short ? g.localToWorld(short.set(short.x - 0.5, short.y, short.z - 0.3)) : target);
+      };
+      if (snag) float.push = (impulse) => { if (w.haul !== 'reaching') push(impulse); };
+      window.__reach = { gap: Infinity };
+      const m = new g.position.constructor();
+      const tick = () => {
+        if (w.haul === 'reaching') {
+          for (const h of [0, 1]) {
+            child.mitten(h, m);
+            window.__reach.gap = Math.min(window.__reach.gap, Math.hypot(m.x - float.position.x, m.z - float.position.z));
+          }
+          window.__reach.from ??= __game.story.current.time;
+        }
+        requestAnimationFrame(tick);
+      };
+      tick();
+    }, snag);
+    await strokesUntil(page, (p) => sweepCork(p, 1), (s) => s.haul !== 'out', 3, 'brought the cork');
+    const braced = await until(page, (s) => s.step === 'heave', 'her to take the line', 30);
+    const reach = await page.evaluate(() => window.__reach);
+    const took = +(braced.time - braced.stepTime - reach.from).toFixed(1);
+    results.catches[snag ? 'snagged' : 'short'] = { took, gap: +reach.gap.toFixed(2) };
+    assert(braced.gripped && braced.haul === 'bracing', `${snag ? 'snagged' : 'short'}: the line in her mittens`);
+    assert(took < 6, `${snag ? 'snagged' : 'short'}: she takes it within moments of reaching: ${took} s`);
+    assert(snag || reach.gap > 0.4, `her mittens were held off the cork, level: ${reach.gap.toFixed(2)} m`);
+    assert.deepEqual(errors, []);
+    await context.close();
+  }
+}
+
 /** Braced, the net will not come; each stroke over its head billows it and she heaves; four heaves bring it off. */
 async function heave() {
   const context = await ctx();
@@ -545,7 +592,7 @@ async function voyage(idle) {
 const full = () => voyage(false);
 const fullidle = () => voyage(true);
 
-const run = { sweeps, steps, child, idle, eye, eyeidle, line, anyway, lineidle, heave, heaveidle, fin, finearly, finidle, saves, full, fullidle };
+const run = { sweeps, steps, child, idle, eye, eyeidle, line, anyway, catches, lineidle, heave, heaveidle, fin, finearly, finidle, saves, full, fullidle };
 let failed = false;
 for (const name of cases) {
   running = name;
