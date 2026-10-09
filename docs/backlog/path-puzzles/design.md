@@ -611,12 +611,12 @@ the action is for (where the tub goes, where the tree falls, what the bell answe
    the sails, their hub with the drawn circles, and her in the basket in one frame.
 8. ~~A leaf floating off the swing bough's bare tip~~ (the tip's twig leaves scatter off it into the air; the tip is
    now bare).
-9. The bell: the lens outside the belfry sees her back in the opening and never the bell she rings. Fix: the bell,
+9. ~~The bell~~ (`proto-drowned-fix-belfry`: the belfry 7.2 m square, one pointed arch 3 m wide a face, the bell on oak beams swinging north-south; the lens low outside the west arch sees her, the bell and the kittens against the east arch's sky, the drawn gust across the bell, the lantern answering past the tower's north-west corner. The board's lens from the north was rejected: the low sun backlights the room from there and a lantern on the water never shows through the far arch). Was: the lens outside the belfry sees her back in the opening and never the bell she rings. Fix: the bell,
    her and the fog beyond (what the ringing answers) in one frame.
-10. The kittens go unnoticed: the cat lying in the straw reads as gone to sleep. Fix: the kittens seen and read as
+10. ~~The kittens go unnoticed~~ (kittens 0.92 of the cat's scale; they wake as the cat comes to them, tumble and mew; the ginger one comes and sits looking up at her as she kneels). Was: the cat lying in the straw reads as gone to sleep. Fix: the kittens seen and read as
     kittens (the reveal staged to an outside eye, as 8b's Left list ruled: her turned on the sill, a kitten coming
     to its lip, three-quarter on), the cat plainly curled round them.
-11. The goodbye: the cat turns up on the roof below as she boards, never seen leaving the kittens or coming down.
+11. ~~The cat turning up on the roof~~ (it never comes down: the cat and the ginger kitten come to the west arch's sill as she climbs down, see her off and go back in). Was: the cat turns up on the roof below as she boards, never seen leaving the kittens or coming down.
     Lead's call: the cat stays with its kittens and sees her off from the belfry's sill, a kitten beside it, in the
     belfry's light (it would not leave them); the goodbye frame looks up from the boat to the two at the sill. This
     supersedes step 8's re-staging (the cat coming down to the roof).
@@ -642,6 +642,9 @@ Found reading the room's storyboard (a frame every 2 s of `drowned-run-check` fr
 19. The drawn gust is the shared invitation's thin cream stroke and is faint against the lilac sky (at the tree it is
     barely there in stills): it may be why Jeremy saw "no invitational wind gesture". Fix: in this room it reads at a
     glance against sky, fog and roofs.
+20. The goodbye frame (after 11): her and the pair on the sill in one frame leaves the cat about 50 px, so the slow
+    blink barely reads, and her hood crowds the corner. Lead's call: over her shoulder with a longer lens, her hood a
+    soft shape in the lower corner and the arch with the cat and kitten large.
 
 ### The room rethought (Claude, 2026-10-08; Jeremy: "yea lets see how this works")
 
