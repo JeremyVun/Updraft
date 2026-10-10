@@ -341,7 +341,7 @@ export class Glider {
     const fx = Math.sin(this.yaw);
     const fz = Math.cos(this.yaw);
     const glide = resting ? 0 : 3.2;
-    const grip = resting ? 0.15 : 1.4 + w.energy * 1.5;
+    const grip = resting ? 4 : 1.4 + w.energy * 1.5;
     /**
      * It leans toward wherever the story wants them next, and leans harder the higher it is: send it up and it
      * comes down nearer whatever there is to do. Over water it turns for land whatever height it is at, because
