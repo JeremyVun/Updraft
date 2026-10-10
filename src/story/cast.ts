@@ -1,9 +1,12 @@
-import type { MirrorScorePhase, DrownedScorePhase } from '../audio/dream-score';
+import type { MirrorScorePhase } from '../audio/dream-score';
+import type { DrownedScorePhase } from '../audio/drowned-score';
 import type { StormStrike } from '../fx/storm';
 import type { SkyMirror } from '../world/sky-mirror';
 import type { LittleBoats } from '../world/little-boats';
+import type { DrownedVillage } from '../world/drowned';
 import * as THREE from 'three';
 import type { Mood } from '../audio/audio';
+import type { MaterialSound } from '../audio/foley';
 import type { SeaScorePhase } from '../audio/sea-score';
 import type { SummitScorePhase } from '../audio/summit-score';
 import type { SleepingScorePhase } from '../audio/sleeping-score';
@@ -17,6 +20,7 @@ import type { Shot } from '../camera';
 import type { Glider } from '../glider/glider';
 import type { PointerInput } from '../input/pointer';
 import type { Carry } from '../companion/carry';
+import type { Cat } from '../creatures/cat';
 import type { Cygnet } from '../creatures/cygnet';
 import type { Embers } from '../fx/embers';
 import type { Feather } from '../fx/feather';
@@ -39,7 +43,12 @@ import type { Tree } from '../world/tree';
 
 /** Everyone and everything the story directs. */
 export interface Cast {
-  village?: { cameraObstacles: readonly THREE.Box3[] };
+  /**
+   * The drowned village: its roofs for the lens to keep clear of, the dark, the wash-tub, the pieces of her run, and
+   * the belfry with its ivy, its kittens and the rings its bell sends out.
+   */
+  village?: Pick<DrownedVillage, 'cameraObstacles' | 'dark' | 'tub' | 'tree' | 'swing' | 'mill' | 'millSpiral' | 'sheet' | 'driven'
+    | 'belfry' | 'prepareBell' | 'ivy' | 'kittens' | 'bellWaves'>;
   child: Traveller;
   plane: Glider;
   boat: Boat;
@@ -55,6 +64,8 @@ export interface Cast {
   /** The cygnet that cannot keep up with its flock, and the flock that goes on without it. */
   cygnet: Cygnet;
   flock: SwanFlock;
+  /** The stranded cat of the drowned village. */
+  cat: Cat;
   /** Everything the two of them do with their hands on each other: gathering up, holding, setting down, the satchel. */
   carry: Carry;
   /** The one white feather the family leaves behind on the meadow's pond. */
@@ -71,6 +82,8 @@ export interface Cast {
   skyMirror: SkyMirror;
   /** The nearest animal worth a glance within `radius` of (x, z), written into `out`. */
   nearby(x: number, z: number, radius: number, out: THREE.Vector3): boolean;
+  /** A physical sound at a place in the world, heard as near as it is: for things a chapter builds and moves itself. */
+  knock?(kind: MaterialSound, at: THREE.Vector3, strength: number): void;
 }
 
 /** What a chapter tells the rest of the game each frame. */
@@ -102,6 +115,8 @@ export interface Chapter {
   readonly mirrorArrival?: number;
   /** How far the music pulls back, so a moment can be heard on its own. */
   readonly hush?: number;
+  /** How far a fog lying over the water muffles the sea, 0 to 1. */
+  readonly seaMuffle?: number;
   /** The piano owns both the melody and the player's gesture sound during its duet. */
   readonly pianoMix?: number;
   /** The piano supplies gesture notes while engaged, independently of its fading mix. */
@@ -131,6 +146,7 @@ export interface Chapter {
   /** The long sea arrangement follows actual swimming and coastal approach. */
   readonly mirrorScore?: MirrorScorePhase;
   readonly drownedScore?: DrownedScorePhase;
+  readonly drownedQuiet?: boolean;
   readonly seaScore?: SeaScorePhase;
   /** Sleeping's shelter, cold, climb, summit pause and morning follow actual story beats. */
   readonly sleepingScore?: SleepingScorePhase;

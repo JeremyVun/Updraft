@@ -10,10 +10,27 @@ const { PointerInput } = await import('../src/input/pointer.ts');
 const { frameTiming } = await import('../src/gl/frame-time.ts');
 const { EmberInvitation } = await import('../src/fx/ember-invitation.ts');
 const { Swirl } = await import('../src/fx/swirl.ts');
+const { WindGesture, windPen } = await import('../src/fx/wind-gesture.ts');
+const { tuning } = await import('../src/tuning.ts');
 const scarf = new BirchScarf(); scarf.active = 1;
 const center = scarf.snags[1].center;
 const camera = new THREE.PerspectiveCamera(50, 16/9, .1, 1000);
 camera.position.copy(center).add(new THREE.Vector3(0, 3.8, 17)); camera.lookAt(center); camera.updateMatrixWorld();
+{
+  const pixel = 2 * center.distanceTo(camera.position) / (camera.projectionMatrix.elements[5] * window.innerHeight);
+  const gesture = new WindGesture('merge-styles');
+  for (const [style, min, max, halo] of [
+    [false, 6, 10, 0], [1, 6, 10, 0], [1.5, 9, 15, 0],
+    [true, tuning.invitation.boldMinPixels, tuning.invitation.boldMaxPixels, 1],
+    [2, 12, 20, 0],
+  ]) {
+    assert(Math.abs(windPen(camera, center, 0, style) / pixel - min) < 1e-6);
+    assert(Math.abs(windPen(camera, center, 100, style) / pixel - max) < 1e-6);
+    gesture.draw(camera, center, .5, 3, 1, .1, 'across', 1, 0, style);
+    assert.equal(gesture.batch.mesh.material.uniforms.uHalo.value, halo,
+      'Sea width multipliers keep their original edges; village bold invitations retain their halo');
+  }
+}
 const el = { addEventListener() {} };
 const wind = { addSplat() {} };
 {

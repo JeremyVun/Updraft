@@ -19,7 +19,7 @@ try {
       for (const name of ['breezeGain', 'rainGain', 'patterGain', 'seaGain', 'gustGain', 'whistleGain', 'rustleGain', 'liftGain', 'musicBus', 'padGain', 'backgroundDuck', 'wetDuck']) {
         sound[name] = { gain: parameter() };
       }
-      for (const name of ['gustFilter', 'whistleFilter', 'liftFilter', 'padFilter']) sound[name] = { frequency: parameter() };
+      for (const name of ['gustFilter', 'whistleFilter', 'liftFilter', 'padFilter', 'seaFilter']) sound[name] = { frequency: parameter() };
       sound.gustPan = { pan: parameter() };
       if (overrides.music === 'boats') sound.boatsScore = { update() {}, handoffAt: now => now, chordAt: () => 0, stop() {} };
       for (const name of ['chime', 'cricket', 'owl', 'skylark', 'phrase', 'flare', 'peep', 'bugle']) {

@@ -25,6 +25,7 @@ const bones = Array.from({length: count}, () => new THREE.Matrix4());
 const wing = new THREE.Matrix4().makeTranslation(2, 3, 4);
 const wind = { x: 2, z: -1, energy: .2, lift: .3 };
 const rotation = new THREE.Quaternion(), at = new THREE.Vector3(), scale = new THREE.Vector3();
+const nudgeSlope = new THREE.Vector3(.02, 0, -.01), nudgeAt = new THREE.Vector3(2, 3, 4);
 optimized.restore('wrapped', .8); original.restore('wrapped', .8);
 let worst = 0, normalsChecked = 0;
 const reference = optimized.mesh.geometry.clone();
@@ -33,7 +34,7 @@ for (let frame = 0; frame < 620; frame++) {
   bones.forEach((bone, i) => bone.compose(at.set(2+i*.01, 3+Math.sin(t+i)*.02, 4),
     rotation.setFromEuler(new THREE.Euler(Math.sin(t+i)*.3, i*.02, Math.cos(t)*.2)), scale.set(1.3, .8, 1.1)));
   if (frame === 60) { optimized.release(); original.release(); }
-  for (const b of [optimized, original]) b.update(1/60, t, wing, bones, wind, true, .02);
+  for (const b of [optimized, original]) b.update(1/60, t, wing, bones, wind, true, .02, nudgeSlope, nudgeAt);
   assert.equal(optimized.state, original.state);
   assert.equal(optimized.mesh.visible, original.mesh.visible);
   for (const name of ['position', 'normal']) {
@@ -54,7 +55,7 @@ assert(normalsChecked > 500, 'too few visible frames to compare normals');
 const ms = b => {
   b.restore('wrapped');
   const start = performance.now();
-  for (let i = 0; i < 1000; i++) b.update(1/60, i/60, wing, bones, wind, true, .02);
+  for (let i = 0; i < 1000; i++) b.update(1/60, i/60, wing, bones, wind, true, .02, nudgeSlope, nudgeAt);
   return performance.now()-start;
 };
 ms(original); ms(optimized);

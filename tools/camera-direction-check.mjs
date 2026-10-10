@@ -88,15 +88,23 @@ for(const fps of [10,30,60,120]) {
     if(i>1)assert(Math.sign(r.turnSpeed)===sign,'route noise reversed the orbit');
   }
 }
-// Fast legitimate travel is carried even at 10 Hz. A new chapter's differently offset anchor is not a teleport.
+// A boat gathers speed before steady travel; an instantaneous jump is deliberately eased out.
 for(const fps of [10,30,60,120]) {
   const s=shot(),r=new CameraRig(),anchor=origin.clone();s.carry=true;s.carryAnchor=anchor;r.cut(s);
   const before=r.eye.clone().sub(anchor);
-  for(let i=1;i<=fps*2;i++){anchor.x+=12/fps;s.target.x+=12/fps;r.update(1/fps,i/fps,s,.6);}
+  for(let i=1;i<=fps*4;i++){
+    const distance=Math.min(12,6*i/fps)/fps;
+    anchor.x+=distance;s.target.x+=distance;r.update(1/fps,i/fps,s,.6);
+  }
   assert(r.eye.clone().sub(anchor).distanceTo(before)<1e-7,`carry at ${fps} Hz`);
   const eye=r.eye.clone();s.carryAnchor=anchor.clone().add(new THREE.Vector3(.8,0,0));
-  r.update(1/fps,2,s,.6);assert(r.eye.distanceTo(eye)<1e-7,'anchor identity change does not carry an offset');
+  r.update(1/fps,4+1/fps,s,.6);assert(r.eye.distanceTo(eye)<1e-7,'anchor identity change does not carry an offset');
   const frozen=r.camera.position.clone();r.update(0,100,s,.6);assert(r.camera.position.equals(frozen),'zero-time updates do not move');
+}
+{
+  const s=shot(),r=new CameraRig(),anchor=origin.clone();s.carry=true;s.carryAnchor=anchor;r.cut(s);
+  const before=r.eye.clone();anchor.x+=.3;s.target.x+=.3;r.update(1/60,1/60,s,.6);
+  assert(r.eye.distanceTo(before)<.05,'a one-frame hull displacement must not jerk the lens');
 }
 // A world-placed reunion eye can return around the child without crossing their position.
 for (const fps of [30, 60, 120]) {
@@ -174,9 +182,9 @@ for (const fps of [30, 60, 120]) {
   assert(Math.abs(primary.x)<=.801&&Math.abs(primary.y)<=.801,'primary wins when the group cannot fit');
 }
 // Slow coverage must keep a moving primary visible without snapping a newly introduced secondary into view.
-for(const fps of [30,60,120]){
+for(const fps of [30,60,120]) for(const radius of [0,.6]){
   const r=new CameraRig(),s=shot();r.resize(390,844);s.smoothFit=.6;
-  s.subjects={primary:origin.clone(),secondary:origin.clone(),margin:.7,extra:30};r.cut(s);
+  s.subjects={primary:origin.clone(),secondary:origin.clone(),primaryRadius:radius,margin:.7,extra:30};r.cut(s);
   s.subjects.secondary.x+=30;
   const before=r.camera.position.clone();r.update(1/fps,0,s,.3);
   assert(r.camera.position.distanceTo(before)<.1,'new secondary jumps the eased fit');
@@ -184,6 +192,10 @@ for(const fps of [30,60,120]){
     s.subjects.primary.x+=3/fps;r.update(1/fps,i/fps,s,.3);
     const p=s.subjects.primary.clone().project(r.camera);
     assert(Math.max(Math.abs(p.x),Math.abs(p.y))<.90001,'eased coverage loses its primary');
+    for(const axis of [0,1]) for(const sign of [-1,1]) {
+      const bound=new THREE.Vector3().setFromMatrixColumn(r.camera.matrixWorld,axis).multiplyScalar(sign*radius).add(s.subjects.primary).project(r.camera);
+      assert(Math.max(Math.abs(bound.x),Math.abs(bound.y))<.90001,'eased coverage crops the primary extent');
+    }
   }
 }
 // Amortized CPU cost of attention and candidate evaluation, including the twice-a-second terrain samples.

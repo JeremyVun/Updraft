@@ -35,6 +35,7 @@ const { Journey, ROUTES } = await import('../src/story/journey.ts');
 if(process.env.MUTATE==='sideways') {
   ROUTES.toMirror[0].set(-300,-1950);ROUTES.toMirror[1].set(-340,-1948);
 }
+const { stormCast } = await import('./lib/storm-cast.mjs');
 const { CameraRig } = await import('../src/camera.ts');
 const { SeaLife } = await import('../src/fx/sealife.ts');
 const { SLEEP_BERTH } = await import('../src/world/sleeping.ts');
@@ -93,20 +94,21 @@ const starts = {
 // On the open sea the boat waits beside the whale until it is free: `circling` winds an updraft over its blowhole
 // once the boat is at rest and then sweeps the cork in to her; otherwise nobody plays and each step comes by itself
 // after its safety valve.
-function run(name, fps, gust, veer=0, waitInVillage=false, arrivalGust=false, circling=false) {
+function run(name, fps, gust, veer=0, arrivalGust=false, circling=false) {
   let push=gust;
   const baseWind=new THREE.Vector2(Math.cos(-Math.PI/10+veer),Math.sin(-Math.PI/10+veer)).multiplyScalar(tuning.wind.breeze);
   const wind={breeze:baseWind.clone(),calm:3,addSplat(){},sample(x,z,out){return Object.assign(out,{x:this.breeze.x+push,z:this.breeze.y-push,energy:push?.8:0,lift:0});}};
-  const boat=new Boat(wind), child=new Traveller(wind), cygnet=new Cygnet(),carry=new Carry(child,cygnet);
+  const storm=name==='drowned'?stormCast(wind):null;
+  const boat=storm?.cast.boat??new Boat(wind), child=storm?.cast.child??new Traveller(wind), cygnet=storm?.cast.cygnet??new Cygnet(),carry=new Carry(child,cygnet);
   cygnet.mount=child;cygnet.visible=true;cygnet.rideIn('cradle');
-  boat.beach(...starts[name]);boat.launch();child.ride(boat.seat(new THREE.Vector3()),boat.yaw);
+  if(!storm){boat.beach(...starts[name]);boat.launch();child.ride(boat.seat(new THREE.Vector3()),boat.yaw);}
   const plane={held:true,position:new THREE.Vector3(),hold(){},homeRadius:0,launch(p){this.position.copy(p);this.held=false;},depart(){}};
   const rig=name==='toMirror'?new CameraRig():null;
   rig?.resize(process.env.PORTRAIT?430:1600,process.env.PORTRAIT?932:900);
   const sealife=rig?new SeaLife(wind,rig.camera):{dolphinsWith(){},fishNear(){},swimmerNear(){},surfaceWhale(){},whale:null,dolphinShow:null};
   const input={present:false,muted:false,gust:0,charge:0,updraftAt:new THREE.Vector3(),prevNdc:new THREE.Vector2(),ndc:new THREE.Vector2()};
   const cast={boat,child,cygnet,carry,wind,plane,input,lines:{gust(){}},skyMirror:{progress:3,stars:[0,1,2]},sealife};
-  const chapter=Journey.prototype.make.call({cast},name);
+  const chapter=storm?.chapter??Journey.prototype.make.call({cast},name);
   let shallowAt=[];const air={};let swimFrames=0,shallow=-Infinity,turn=0,yaw=boat.yaw,lastLeg=0,worstTurn=0,peak=0,sailed=0;
   const prev=boat.position.clone(),beats=[],dolphinActs=[],events={};let lastBeat='',stillFor=0,lastAct='';
   if(rig){chapter.update(0,0);rig.cut(chapter.shot);}
@@ -143,9 +145,8 @@ function run(name, fps, gust, veer=0, waitInVillage=false, arrivalGust=false, ci
   };
   for(let i=0;i<fps*900;i++) {
     const dt=1/fps;time=i*dt;wind.breeze.copy(baseWind).multiplyScalar(chapter.breeze);wind.calm=wind.breeze.length()*tuning.wind.calm;
-    // A repeatable attentive player supplies wind only during the village's interaction.
     const approaching=events[`music-${name==='drowned'?'wood':chapter.destinationMusic}`]!==undefined;
-    push=gust || (arrivalGust&&approaching?8:0) || (name==='drowned' && chapter.beat==='still' && !waitInVillage?8:0);
+    push=gust || (arrivalGust&&approaching?8:0);
     const whale=chapter.whale;
     const breath=circling&&whale?.step==='breath'&&whale.progress<1, sweep=circling&&whale?.step==='line'&&whale.haul==='out'&&whale.stepTime>4;
     input.present=breath||sweep;input.charge=breath?1:0;
@@ -247,7 +248,8 @@ function run(name, fps, gust, veer=0, waitInVillage=false, arrivalGust=false, ci
     const route=chapter.route;
     if(i%5===0 && route && chapter.leg<route.length-1 && Math.hypot(boat.position.x-starts[name][0],boat.position.z-starts[name][1])>35){const h=heightAt(boat.position.x,boat.position.z);if(h>shallow){shallow=h;shallowAt=boat.position.toArray();}}
     turn+=Math.abs(Math.atan2(Math.sin(boat.yaw-yaw),Math.cos(boat.yaw-yaw)));yaw=boat.yaw;
-    if(lastLeg!==chapter.leg){worstTurn=Math.max(turn,worstTurn);turn=0;lastLeg=chapter.leg;}
+    const leg = name === 'drowned' ? `${chapter.leg}:${chapter.out}` : chapter.leg;
+    if(lastLeg!==leg){worstTurn=Math.max(turn,worstTurn);turn=0;lastLeg=leg;}
     if(process.env.APPROACH_ONLY&&chapter.whale?.step==='breath') {
       return {seconds:+time.toFixed(1),swimSeconds:+(swimFrames/fps).toFixed(1),podFrames:sea.podFrames,
         podAngle:sea.podAngle,podWorst:sea.podWorst,framing:sea.framing,voices:sea.audio,events,dolphinActs};
@@ -305,15 +307,14 @@ const results=[];
 for(const name of (process.env.CROSSING ? [process.env.CROSSING] : Object.keys(starts))) {
   const calm=run(name,60,0),gust=run(name,60,8),lowFps=run(name,30,0);
   const windLeft=run(name,30,0,-.35),windRight=run(name,30,0,.35);
-  const lateGust=run(name,60,0,0,false,true);
+  const lateGust=run(name,60,0,0,true);
   const entry={name,calm,gust,lowFps,windLeft,windRight,lateGust};
-  if(name==='toMirror')entry.circling=run(name,60,0,0,false,false,true);
+  if(name==='toMirror')entry.circling=run(name,60,0,0,false,true);
   if(name==='toBoats'||name==='toMeadow') {
     const target=name==='toBoats'?30:40;
     for(const result of [calm,lowFps,windLeft,windRight])
       assert(Math.abs(result.seconds-target)<5,`${name}: ordinary passage exceeds its ${target}s pacing target (${result.seconds}s)`);
   }
-  if(name==='drowned')entry.noResponse=run(name,30,0,0,true);
   results.push(entry);console.log(JSON.stringify(entry));
   if(failures.length)throw Error(`${name}:\n${failures.join('\n')}`);
 }

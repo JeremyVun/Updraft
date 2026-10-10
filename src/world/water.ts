@@ -18,6 +18,7 @@ import { SURF_GLSL, surfUniforms } from './water/surf';
 import { SWELL_GLSL, swellUniforms } from './water/swell';
 import { GLAD_GLSL, gladUniforms } from './water/glad';
 import { rippleTexture } from './water/textures';
+import { SUNK_DOOR, SUNK_SLATES } from './drowned-shape';
 import { WIND_WAVES_GLSL, WindWaves } from './water/wind-waves';
 import { WATERLINE_GLSL, outsideHull, waterlineUniforms } from '../traveller/boat/waterline';
 
@@ -80,6 +81,10 @@ out vec3 vSwell;
 out float vHeave;
 /** The haze toward this vertex: it changes slowly enough across a triangle of sea to be interpolated. */
 out vec4 vFog;
+#if CLOUD_DECK
+/** The drowned village's sea fog as the sea mirrors it here: soft enough to be taken at the vertices. */
+out vec4 vSeaSky;
+#endif
 void main() {
   vec3 w = (modelMatrix * vec4(position, 1.0)).xyz;
   vec2 xz = w.xz;
@@ -94,7 +99,10 @@ void main() {
   vSwell = vec3(-n.x / n.y, -n.z / n.y, uSwell > 0.0 ? height / uSwell : 0.0);
   vHeave = max(heaveLift(xz), 0.0);
   vWorld = w + at;
-  vFog = fogOf(vWorld);
+  vFog = fogOf(vWorld, 0.0);
+#if CLOUD_DECK
+  vSeaSky = uSeaFogShape.w > 0.0 ? seaFogMirrored(vWorld, reflect(normalize(vWorld - cameraPosition), vec3(0.0, 1.0, 0.0))) : vec4(0.0);
+#endif
   gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
 }`;
 
@@ -142,6 +150,9 @@ in vec3 vWorld;
 in vec3 vSwell;
 in float vHeave;
 in vec4 vFog;
+#if CLOUD_DECK
+in vec4 vSeaSky;
+#endif
 
 /**
  * The world above the sea seen along reflected ray R; nearby content is taken to lie ~48 units out. The last
@@ -321,8 +332,13 @@ void main() {
     return;
   }
   // Fog per vertex is close enough until the grid opens into cells hundreds of metres wide near the horizon, where
-  // a sliver just short of opaque lets the sun's grazing glint through as a line under it.
-  vec4 fog = vFog.a > 0.9 ? fogOf(vWorld) : vFog;
+  // a sliver just short of opaque lets the sun's grazing glint through as a line under it. The drowned village's sea
+  // fog heaps and runs in fingers finer than the grid's cells, so while it is out it is read per pixel.
+  bool perPixel = vFog.a > 0.9;
+#if CLOUD_DECK
+  perPixel = perPixel || uSeaFogShape.w > 0.0;
+#endif
+  vec4 fog = perPixel ? fogOf(vWorld, 0.0) : vFog;
   // Ordinary sea under fully opaque fog contributes only the fog colour.
   // The sky mirror is composed AFTER fog, so it must retain its own reflection.
   if (fog.a == 1.0 && glass <= 0.001) {
@@ -360,6 +376,15 @@ void main() {
   float hidden = r0.z * a0 * a0 + r1.z * a1 * a1 + r2.z * a2 * a2 + swell.z * A_SWELL * A_SWELL;
   /** The ruffle tilts the surface but stays out of the hidden-roughness sum, so it cannot change the shine. */
   slope += windWaveSlope(xz, footprint);
+#if CLOUD_DECK
+  if (uSeaFogCrest.w > 0.0) {
+    // The first wind of the night comes in with the sea fog: long cold ripples running before it break up the glass.
+    vec2 q = vec2(dot(xz, uSeaFog.zw), dot(xz, vec2(-uSeaFog.w, uSeaFog.z)));
+    float phase = q.x * 2.4 - uTime * 2.6 + vnoise(q * vec2(0.15, 0.4)) * 8.0;
+    float gusts = smoothstep(0.1, 0.6, vnoise(vec2(q.x * 0.06 - uTime * 0.25, q.y * 0.15)));
+    slope += uSeaFog.zw * cos(phase) * ${glsl(tuning.drowned.fog.ripple)} * uSeaFogCrest.w * gusts * (1.0 - smoothstep(0.15, 0.6, footprint));
+  }
+#endif
 
   vec3 surf = vec3(0.0);
   float swellAmp = 0.0;
@@ -379,6 +404,9 @@ void main() {
   vec3 R = reflect(-V, N);
   R = normalize(vec3(R.x, abs(R.y) + sqrt(unresolved) * 1.2 * (1.0 - nv), R.z));
   vec3 sky = skyColor(R);
+#if CLOUD_DECK
+  if (uSeaFogShape.w > 0.0) sky = mix(sky, vSeaSky.rgb, vSeaSky.a);
+#endif
 #if SEA_REFLECTION
   float seen;
   vec3 mirror = mirrored(R, clamp(log2(1.0 + sqrt(alpha2) * 60.0), 0.0, 6.0), seen);
@@ -435,6 +463,55 @@ void main() {
     vec3 skyBed = uSkyAmbient * 1.25 * exp(-uAbsorb * bedDepth * 1.4);
     vec3 seen = bed * (sunBed + skyBed) * exp(-uAbsorb * path);
     body = mix(body, seen, exp(-path * 0.2) * (1.0 - smoothstep(6.0, 9.0, bedDepth)));
+  }
+  {
+    /** Her door on a drowned wall, seen down through the surface: the wall's stone, then the red, going with depth. */
+    vec2 doorAt = vec2(${glsl(SUNK_DOOR.x)}, ${glsl(SUNK_DOOR.z)});
+    if (distance(xz, doorAt) < 12.0) {
+      vec2 face = vec2(${glsl(Math.sin(SUNK_DOOR.facing))}, ${glsl(Math.cos(SUNK_DOOR.facing))});
+      vec3 Td = refract(-V, N, 0.75);
+      float toward = dot(Td.xz, face);
+      float t = dot(doorAt - xz, face) / min(toward, -1e-3);
+      vec3 hit = vWorld + Td * t;
+      float along = dot(hit.xz - doorAt, vec2(face.y, -face.x));
+      if (toward < -0.02 && t > 0.0 && abs(along) < ${glsl(SUNK_DOOR.wallHalf)} && hit.y > ${glsl(SUNK_DOOR.wallFoot)}) {
+        float door = (1.0 - smoothstep(${glsl(SUNK_DOOR.half - 0.04)}, ${glsl(SUNK_DOOR.half)}, abs(along)))
+          * (1.0 - smoothstep(${glsl(SUNK_DOOR.top - 0.04)}, ${glsl(SUNK_DOOR.top)}, hit.y)) * smoothstep(${glsl(SUNK_DOOR.foot)}, ${glsl(SUNK_DOOR.foot + 0.04)}, hit.y);
+        vec3 wallAlb = mix(vec3(0.15, 0.14, 0.125), vec3(0.46, 0.04, 0.028), door);
+        float down = -hit.y;
+        vec3 lit = wallAlb * (uSkyAmbient * 1.25 * exp(-uAbsorb * down * 1.4) + uSunColor * max(uSunDir.y, 0.0) * 0.6 * sh * exp(-uAbsorb * down));
+        float seenWall = exp(-t * 0.2) * (1.0 - smoothstep(${glsl(SUNK_DOOR.wallHalf - 0.4)}, ${glsl(SUNK_DOOR.wallHalf)}, abs(along)));
+        body = mix(body, lit * exp(-uAbsorb * t), seenWall);
+      }
+    }
+  }
+  {
+    /**
+     * The first roof's slates going on down under the glass ahead of the stem, where the boat runs aground: courses of
+     * dark slate with staggered joints, going with depth.
+     */
+    vec2 rel = xz - vec2(${glsl(SUNK_SLATES.x)}, ${glsl(SUNK_SLATES.z)});
+    if (dot(rel, rel) < 49.0) {
+      const float C = ${glsl(Math.cos(SUNK_SLATES.yaw))}, S = ${glsl(Math.sin(SUNK_SLATES.yaw))};
+      const float RIDGE = ${glsl(SUNK_SLATES.ridge)}, FALL = ${glsl((SUNK_SLATES.ridge - SUNK_SLATES.eave) / SUNK_SLATES.run)};
+      vec3 Ts = refract(-V, N, 0.75);
+      float lx0 = rel.x * C - rel.y * S, lz0 = rel.x * S + rel.y * C;
+      float dlx = Ts.x * C - Ts.z * S, dlz = Ts.x * S + Ts.z * C;
+      float meet = Ts.y + FALL * dlz;
+      float t = abs(meet) > 1e-4 ? (RIDGE - FALL * lz0 - vWorld.y) / meet : -1.0;
+      float lx = lx0 + dlx * t, lz = lz0 + dlz * t;
+      float under = -(vWorld.y + Ts.y * t);
+      if (t > 0.0 && under > 0.0 && abs(lx) < ${glsl(SUNK_SLATES.half)} && lz > 0.0 && lz < ${glsl(SUNK_SLATES.run)}) {
+        float course = lz * ${glsl(Math.hypot(1, (SUNK_SLATES.ridge - SUNK_SLATES.eave) / SUNK_SLATES.run) / 0.24)};
+        float row = floor(course);
+        float joint = fract(lx / 0.34 + 0.5 * mod(row, 2.0));
+        float lap = smoothstep(0.0, 0.12, fract(course)) * smoothstep(0.0, 0.05, min(joint, 1.0 - joint));
+        vec3 slate = vec3(0.13, 0.125, 0.14) * (0.8 + 0.4 * hash12(vec2(row, floor(lx / 0.34 + 0.5 * mod(row, 2.0))))) * mix(0.4, 1.0, lap);
+        vec3 lit = slate * (uSkyAmbient * 1.25 * exp(-uAbsorb * under * 1.4) + uSunColor * max(uSunDir.y, 0.0) * 0.6 * sh * exp(-uAbsorb * under));
+        float seen = exp(-t * 0.15) * (1.0 - smoothstep(${glsl(SUNK_SLATES.half - 0.3)}, ${glsl(SUNK_SLATES.half)}, abs(lx)));
+        body = mix(body, lit * exp(-uAbsorb * t), seen);
+      }
+    }
   }
   float crest = surf.y * swellAmp * 6.0;
   float backlit = pow(max(dot(-V, normalize(vec3(uSunDir.x, 0.0, uSunDir.z))), 0.0), 3.0);

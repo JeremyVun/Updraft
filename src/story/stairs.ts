@@ -12,7 +12,7 @@ import { lanternFlame } from '../traveller/boat/parts';
 import { DRAFT, gunwale, gunwaleHalf, stationU } from '../traveller/boat/form';
 import { LOOP_EYE, LOOP_LOOK, LOOP_ZOOM, drawIn, fromCopy, sizeOnBack, upBack } from '../world/stairs-penrose';
 import {
-  BELOW_CLOUD, CLOUD, CLOUD_BERTH, CLOUD_ROUTE, DESCENT_END, FOG_BANK, FLIGHTS, LOOSE, RUN_YAW, SIT, SLIPPERS, STAIRS_ARRIVAL, STAIRS_LOOK_FROM,
+  BELOW_CLOUD, CLOUD, CLOUD_BERTH, CLOUD_ROUTE, DESCENT_END, DESCENT_YAW, FOG_BANK, FLIGHTS, LOOSE, RUN_YAW, SIT, SLIPPERS, STAIRS_ARRIVAL, STAIRS_LOOK_FROM,
   STAIRS_LOOK_UP, STAIRS_LOOK_ZOOM, STAIRS_FOOT, STAIRS_GROUND, STEP, TOP, TOP_EDGE, TOP_OUT, LOOP, LOOP_BACK, LOOP_FAR, along, flight, landingOf, leftOf,
   levelHeight, onLanding,
 } from '../world/stairs-layout';
@@ -1237,22 +1237,29 @@ export class StairsChapter implements Chapter {
 
   /**
    * In the white the hull is let down onto the sea where the drowned village begins, as far short of it as the
-   * white takes to thin, on the heading it had; the bank of mist, the spray off the hull and the camera go with it.
+   * white takes to thin, turned onto the way the village's drift goes; the bank of mist, the spray off the hull and the
+   * camera go with it, turned with it, so nothing in the white is seen to turn.
    */
   private downOntoTheSea(): void {
     const { boat } = this.cast;
     const fog = this.world.cloud.fog;
     const short = tuning.stairs.fogLift * 3;
-    const x = DESCENT_END.x - Math.sin(boat.yaw) * short, z = DESCENT_END.y - Math.cos(boat.yaw) * short;
+    const turn = Math.atan2(Math.sin(DESCENT_YAW - boat.yaw), Math.cos(DESCENT_YAW - boat.yaw));
+    const x = DESCENT_END.x - Math.sin(DESCENT_YAW) * short, z = DESCENT_END.y - Math.cos(DESCENT_YAW) * short;
     const dx = x - boat.position.x, dy = SEA_RIDE - boat.position.y, dz = z - boat.position.z;
     boat.position.set(x, SEA_RIDE, z);
+    boat.yaw = DESCENT_YAW;
     // The hull as drawn goes with it now, so the child is seated in it where it is this very frame.
     boat.group.position.set(boat.group.position.x + dx, boat.group.position.y + dy, boat.group.position.z + dz);
+    boat.group.rotateOnWorldAxis(THREE.Object3D.DEFAULT_UP, turn);
     boat.group.updateMatrixWorld(true);
     boat.altitude = null;
     boat.sailMirrored = false;
-    fog.at.x += dx;
-    fog.at.y += dz;
+    const c = Math.cos(turn), s = Math.sin(turn);
+    const ax = fog.at.x + dx - x, az = fog.at.y + dz - z;
+    fog.at.set(x + ax * c + az * s, z - ax * s + az * c);
+    fog.into.set(fog.into.x * c + fog.into.y * s, fog.into.y * c - fog.into.x * s);
+    this.voyageYaw += turn;
     this.world.cloud.wake.shift(dx, dy, dz);
     this.world.sailing(null, 0);
     boat.steerFor = DESCENT_END;

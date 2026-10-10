@@ -74,6 +74,14 @@ export class Boat {
   swell = 0;
   /** Afloat on something other than the sea, such as the top of a cloud: the height it floats at, or null. */
   altitude: number | null = null;
+  /** How much of its lantern's light the story hides this frame, 0 to 1; it lapses unless set again before each update. */
+  lanternHidden = 0;
+  /**
+   * Becalmed: where it comes to rest and the way it lies there, and how hard it may brake to stop there (m/s², the
+   * drowned village's own coast if not given). It coasts in on the way it has, and from then on nothing the wind does
+   * moves it. Null while it sails.
+   */
+  coastTo: { x: number; z: number; yaw: number; brake?: number } | null = null;
   /**
    * The wind the sail has, smoothed, and the only reading the cloth and the hull are allowed: `blowing` is the
    * air moving in the cloth, `taken` the part of it the sail is holding (an eased sheet spills the rest), `along`
@@ -141,6 +149,15 @@ export class Boat {
   /** While a foot is still crossing the gunwale, the hull may drift from the shove but the sail may not take it. */
   private boardingPush = false;
   private pushAlignment = PUSH_OFF_UNTIL;
+  /** Someone's weight come aboard from a deck alongside: the side it came over (+1 the hull's +x), how long ago. */
+  private weightSide = 0;
+  private weightAge = 1e3;
+  /** Run aground: how far its bow is lifted (radians), and the jolt of each knock against what it lies on. */
+  private trim = 0;
+  private trimNow = 0;
+  private joltAge = 1e3;
+  private joltPitch = 0;
+  private joltRoll = 0;
 
   constructor(private readonly wind: WindField) {
     const hullMat = new THREE.ShaderMaterial({
@@ -188,6 +205,8 @@ export class Boat {
 
   beach(x: number, z: number, yaw: number): void {
     this.towed = false;
+    this.coastTo = null;
+    this.trim = this.trimNow = 0;
     this.speedLimit = Infinity;
     this.shelter = 0;
     this.position.set(x, Math.max(heightAt(x, z), 0) + DRAFT, z);
@@ -201,6 +220,7 @@ export class Boat {
 
   launch(holdForBoarding = false, course?: THREE.Vector2): void {
     this.towed = false;
+    this.trim = 0;
     this.afloat = true;
     this.grounded = false;
     this.beaching = false;
@@ -218,6 +238,22 @@ export class Boat {
       this.mooring = null;
     } else if (Math.hypot(gx, gz) > 0.05) this.pushDir.set(-gx, -gz).normalize();
     else this.pushDir.set(-Math.sin(this.yaw), -Math.cos(this.yaw));
+  }
+
+  /**
+   * Afloat where it lies, taking a weight stepping in from a deck alongside over its `side` (+1 its own +x): it dips
+   * under it and rocks, and nothing pushes it off.
+   */
+  takeWeight(side: number): void {
+    this.towed = false;
+    this.afloat = true;
+    this.grounded = false;
+    this.beaching = false;
+    this.speed = 0;
+    this.pushingFor = -1;
+    this.boardingPush = true;
+    this.weightSide = side;
+    this.weightAge = 0;
   }
 
   /** The child has settled: the shove may now give way to the wind already waiting in the sail. */
@@ -276,6 +312,31 @@ export class Boat {
     this.shoveAge = 0;
   }
 
+  /**
+   * Its keel has met something under the water: the hull jolts, bow up by `pitch` and heeling by `roll` (radians),
+   * shuddering out over a second or so; `trim` is how far its bow then stays lifted while it lies there.
+   */
+  knock(pitch: number, roll: number, trim = this.trim): void {
+    this.joltAge = 0;
+    this.joltPitch = pitch;
+    this.joltRoll = roll;
+    this.trim = trim;
+  }
+
+  /** Coasting on the way it has, braking so that it stops just where it will lie. */
+  private comeToRest(s: NonNullable<Boat['coastTo']>, dt: number): void {
+    const p = this.position, k = tuning.drowned;
+    const dx = s.x - p.x, dz = s.z - p.z, left = Math.hypot(dx, dz);
+    const most = Math.sqrt(2 * (s.brake ?? k.coastBrake) * left);
+    this.speed = Math.min(Math.max(this.speed, Math.min(k.coastCreep, most)), most);
+    const step = Math.min(left, this.speed * dt);
+    if (left > 1e-4) {
+      p.x += (dx / left) * step;
+      p.z += (dz / left) * step;
+    }
+    this.yaw += Math.atan2(Math.sin(s.yaw - this.yaw), Math.cos(s.yaw - this.yaw)) * (1 - Math.exp(-dt * 0.9));
+  }
+
   /** World position of the seat, where the child rides. */
   seat(out: THREE.Vector3): THREE.Vector3 {
     this.group.updateMatrixWorld(true);
@@ -316,7 +377,9 @@ export class Boat {
     const u = this.shoveAge / tuning.dolphins.shovePeak;
     const kick = this.shove * u * Math.exp(1 - u);
 
-    if (this.afloat && !this.grounded && !this.towed) {
+    if (this.afloat && this.coastTo) {
+      this.comeToRest(this.coastTo, dt);
+    } else if (this.afloat && !this.grounded && !this.towed) {
       let dy = 0;
       if (this.steerFor) {
         const want = Math.atan2(this.steerFor.x - p.x, this.steerFor.y - p.z);
@@ -331,6 +394,9 @@ export class Boat {
         if (!this.boardingPush && ((this.steerFor && Math.abs(dy) < this.pushAlignment) || this.pushingFor > PUSH_OFF_LONGEST)) {
           this.pushingFor = -1;
         }
+      } else if (this.boardingPush) {
+        /** Taking a weight from alongside: it lies where it is until they have sat down. */
+        this.speed = 0;
       } else if (this.beaching) {
         this.speed = Math.max(0, this.speed - tuning.sail.beachGrip * dt);
         p.x += fx * this.speed * dt;
@@ -404,10 +470,17 @@ export class Boat {
     const bow = this.sea.slopeX * fx + this.sea.slopeZ * fz;
     const beam = this.sea.slopeX * fz - this.sea.slopeZ * fx;
     const settle = 1 - Math.exp(-dt * 3.5);
-    const waterRoll = heel + kick * tuning.dolphins.shoveHeel + Math.sin(t * 1.3) * (this.afloat ? 0.05 : 0.0) + beam;
-    const waterPitch = this.afloat ? Math.sin(t * 0.9 + 1) * 0.04 - this.speed * 0.004 - bow : -0.05;
+    this.weightAge += dt;
+    const k = tuning.boarding, wu = this.weightAge / k.weightPeak, weighed = Math.exp(-this.weightAge / k.weightSettle);
+    const rock = -this.weightSide * k.weightRoll * Math.sin(this.weightAge * k.weightRock) * weighed;
+    this.joltAge += dt;
+    this.trimNow += (this.trim - this.trimNow) * (1 - Math.exp(-dt * 4));
+    const shudder = Math.exp(-this.joltAge / tuning.boarding.joltSettle) * Math.cos(this.joltAge * tuning.boarding.joltRock);
+    const dip = -k.weightDip * wu * Math.exp(1 - wu);
+    const waterRoll = heel + kick * tuning.dolphins.shoveHeel + Math.sin(t * 1.3) * (this.afloat ? 0.05 : 0.0) + beam + rock + this.joltRoll * shudder;
+    const waterPitch = (this.afloat ? Math.sin(t * 0.9 + 1) * 0.04 - this.speed * 0.004 - bow : -0.05) - this.trimNow - this.joltPitch * shudder;
     this.lieOnShore(settle, this.altitude === null ? lift : 1e3, waterRoll, waterPitch);
-    const bob = this.afloat ? Math.sin(t * 1.1) * 0.045 + Math.sin(t * 2.3) * 0.02 : 0;
+    const bob = this.afloat ? Math.sin(t * 1.1) * 0.045 + Math.sin(t * 2.3) * 0.02 + dip : 0;
     p.y = this.afloat ? bob + lift + (this.altitude === null ? DRAFT : CLOUD_DRAFT) : Math.max(heightAt(p.x, p.z), 0) + DRAFT + 0.1;
 
     const sail = this.sailMat.uniforms;
@@ -548,7 +621,8 @@ export class Boat {
     const gutter = 0.5 + 0.25 * Math.sin(time * 2.3) + 0.15 * Math.sin(time * 5.1 + 1.7) + 0.1 * Math.sin(time * 8.7 + 0.4);
     this.glass.value = 1 - tuning.lantern.glassFlicker * gutter;
     const at = this.contact.copy(this.flame).applyMatrix4(this.group.matrixWorld);
-    u.uLantern.value.set(at.x, at.y, at.z, tuning.lantern.glow * lit * (1 - tuning.lantern.flicker * gutter));
+    u.uLantern.value.set(at.x, at.y, at.z, tuning.lantern.glow * lit * (1 - this.lanternHidden) * (1 - tuning.lantern.flicker * gutter));
+    this.lanternHidden = 0;
   }
 
   /** The sea breaking against the hull, and a short tail of foam behind it while it is under way that spreads and fades. */

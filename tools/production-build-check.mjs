@@ -13,7 +13,7 @@ const entry = path.join(output, 'params.mjs');
 fs.writeFileSync(entry, `import { params } from ${JSON.stringify(path.join(root, 'src/params.ts').replaceAll('\\', '/'))}; globalThis.result = params;`);
 const overrides = '?shot&chapter=stage&progress=0&debug=wind&ratio=3&cam=1,2,3,4,5,6&sun=90,30'
   + '&grass=0&msaa=0&dusk=2&shower=1&storm=1&lite&mirror=0&mirrorlod=full&blades=direct'
-  + '&heights=direct&grasslod=0&hold=1&stats&whale&lines&coldshaders&depth=1&stale=0&start=0';
+  + '&heights=direct&grasslod=0&hold=1&stats&whale&lines&coldshaders&depth=1&stale=0&start=0&fog=1&villagefog=0';
 const variants = {};
 for (const qa of [false, true]) {
   const fixture = await build({
@@ -31,6 +31,8 @@ for (const qa of [false, true]) {
     return JSON.parse(JSON.stringify(context.result));
   };
   const defaults = read('');
+  assert.equal(defaults.villageFog, true);
+  assert(!Object.hasOwn(defaults, 'villageMist'), 'no alternate village fog renderer');
   const changed = read(overrides);
   if (qa) {
     assert.deepEqual(defaults, variants.production.defaults);
@@ -43,6 +45,9 @@ for (const qa of [false, true]) {
     assert.equal(changed.blades, 'direct');
     assert.equal(changed.stats, true);
     assert.equal(changed.coldshaders, true);
+    assert.equal(changed.villageFog, false);
+    assert.deepEqual(read('?villagefog=1'), defaults);
+    assert.deepEqual(read('?villagefog=mist'), defaults);
   } else {
     assert.deepEqual(changed, defaults);
     assert.equal(defaults.chapter, null);
@@ -56,7 +61,9 @@ for (const qa of [false, true]) {
   });
   const js = built.output.filter(item => item.type === 'chunk').map(item => item.code).join('\n');
   const css = built.output.filter(item => item.type === 'asset' && item.fileName.endsWith('.css')).map(item => item.source).join('\n');
-  for (const marker of ['__game', '__stats', '__ready', 'uScalars', 'k-above', 'footWas', 'frame p50', 'uPoints[', 'h *= mix(0.72, 1.0, life) * stand;']) {
+  assert(js.includes('float mistOptical('), `${mode}: approved mist is included`);
+  assert(!js.includes('seaFogMarch') && !js.includes('SeaFogRay'), `${mode}: expensive fog is removed`);
+  for (const marker of ['__game', '__stats', '__ready', 'uScalars', 'k-above', 'footWas', 'frame p50', 'uPoints[', 's hand ', 'h *= mix(0.72, 1.0, life) * stand;']) {
     assert.equal(js.includes(marker), qa, `${mode}: QA code marker ${marker}`);
   }
   assert.equal(css.includes('body.shot'), qa, `${mode}: QA styles`);

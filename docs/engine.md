@@ -180,6 +180,8 @@ like there wasn't an authored system in place". What intention means:
   and a boat running aground does not stop the lens dead.
 - **A side is chosen, not flipped.** The sailing camera rides the quarter away from the sail, but the sail must stay
   across for `crossingCamera.sideCommit` seconds before the view changes quarter, and a look back never changes side.
+  Trace the preceding playable transition as well as the destination shot: a restored aboard pose misses the
+  boarding movement that can reverse a pan. Boarding and the belfry look-up share their horizontal composition.
 - **A look toward something is a glance, not a chase.** The whale is watched within `crossingCamera.whaleArc` of the
   travelling view, the storm's lighthouse within `storm.lighthouseCamera.arc` of astern; the lens never circles the
   boat to keep them.
@@ -200,7 +202,9 @@ How the rig does it:
   velocities on; cuts and `exact` paths clear them. `Shot.orbit` lets an explicit eye travel round its focus.
 - Subject fitting and ground occlusion go through `Commitment`: an eased move toward what is needed that keeps the room
   it made until the need has stayed smaller for `fitHold` / `occlusionHold` seconds, then settles slowly. Only the
-  primary's 0.9 NDC safety frame (`primarySafetyMargin`) is enforced at once. Chapters size room for play with the
+  primary's 0.9 NDC safety frame (`primarySafetyMargin`) is enforced at once. Optional `subjects.primaryRadius`
+  reserves world-space padding around its point in both fitting and that safety frame: a close face needs room for
+  its hood, even when the face centre passes the framing gate. Chapters size room for play with the
   same class (`reach*`, the still island's plane).
 - A follow carries `followShare` of its target's smoothed travel. Boat carry (`carryAnchor`) takes up the anchor's
   speed at once but brakes no harder than `carryBrake`, rejects anchor changes and teleports, and accepts real
@@ -376,9 +380,10 @@ effect that is off is compiled out, not branched round. Each such effect is a sw
   the original afterwards (the grass's per-draw program pick, uniforms replaced, visibility) would miss the twin.
 
 The cloud deck (`CLOUD_DECK`): its GLSL in `ATMO_GLSL` (the deck, the bank of mist, their helpers, the sun dimming in
-`cloudShadow`, the deck in `fogOf`) and the sky's use of it are compiled only where it is 1. The sea, the terrain
+`cloudShadow`, the deck in `fogOf`, and the drowned village's sea fog, `seaFog`) and the sky's and the sea's use of
+them are compiled only where it is 1. The sea, the terrain
 (main view and the sea's mirror) and the sky have both programs, and
-`prepareFrame` selects the deck while `uCloudDeck.w > 0`, before the doorway view, the reflection and the scene are
+`prepareFrame` selects the deck while `uCloudDeck.w > 0` or the sea fog is out (`uSeaFogShape.w > 0`), before the doorway view, the reflection and the scene are
 drawn. Every other material keeps the deck; the grass's blade table includes `ATMO_GLSL` but never reaches the deck,
 and the blades' per-frame pass (`FRAME_FRAG`) reads it only while it is there, so the blades need no variant.
 That is three programs more and about 80 ms more behind the veil on the Mac, for 6 to 9% of the GPU's frame wherever
@@ -472,7 +477,9 @@ Rules:
   rest of the array.
 - The sea's fog is computed per vertex and interpolated (Jeremy could not tell it from per pixel); the fragment
   recomputes it only where the interpolated fog is nearly opaque, because near the horizon the grid's cells are so
-  wide that a sliver short of opaque lets a glint line through.
+  wide that a sliver short of opaque lets a glint line through. While the drowned village's sea fog is out the sea
+  reads the approved analytic mist per pixel to keep its edge and clearing continuous. `seaFogMirrored` and
+  `uMirrorPass` use the same mist without scattering the lantern twice; there is no alternate ray-marched renderer.
 - An exact skip is proven by frame difference against the old path in the same page, static and along a moving
   camera. On ANGLE/Metal: an early return cannot come before implicit derivatives a quad neighbour needs, and
   explicit gradients (`textureGrad`) are not bit-identical to implicit ones; an edit nearby can move a result by an

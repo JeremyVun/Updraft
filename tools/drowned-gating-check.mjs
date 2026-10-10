@@ -6,7 +6,8 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 
 globalThis.location = { search: '' };
-const { DrownedVillage } = await import('../src/world/drowned.ts');
+globalThis.document = { createElement: () => ({ getContext: () => ({ beginPath() {}, moveTo() {}, quadraticCurveTo() {}, stroke() {} }) }) };
+const { DrownedVillage, SPIRE } = await import('../src/world/drowned.ts');
 
 let now = 0;
 const wind = {
@@ -45,7 +46,7 @@ const stormAt = t => THREE.MathUtils.smoothstep(t, 500, 530);
 let steps = 0, restingSteps = 0, arrived = null, entered = null;
 const snapshot = v => ({
   lighthouse: [v.lighthouse.elapsed, v.lighthouse.strength.value],
-  vane: v.vaneAngle.value, spin: v.vaneSpin,
+  vane: v.vaneAngle.value, spin: v.vaneSpin, wind: (() => { const w = wind.sample(SPIRE.x, SPIRE.z, {}); return Math.atan2(-w.x, -w.z); })(),
   herons: v.birds.map(h => ({ mode: h.mode, roost: h.roost, x: h.x, y: h.y, z: h.z, open: h.open, legs: h.legs, amp: h.amp, neck: h.neck })),
   leaves: v.drift.map(l => [l.x, l.z, l.yaw]),
   instances: Array.from(v.herons.geometry.attributes.iPos.array),
@@ -57,7 +58,7 @@ while (now < 560) {
   const storm = stormAt(now);
   const far = Math.abs(boat.z + 1440) > 320;
   if (far) restingSteps++;
-  gated.update(dt, now, boat, storm);
+  gated.update(dt, now, boat, storm, boat);
   updateEvery(every, dt, now, boat, storm);
   steps++;
   if (!far && !entered) entered = { at: now, gated: snapshot(gated), every: snapshot(every) };
@@ -69,10 +70,19 @@ for (const [label, state] of [['coming near', entered], ['in the village', arriv
   const { gated: g, every: e } = state;
   assert.deepEqual(g.lighthouse, e.lighthouse, `${label}: the lighthouse keeps time exactly`);
   assert.deepEqual(g.leaves, e.leaves, `${label}: the drifting leaves are unchanged`);
-  const vaneGap = Math.abs(Math.atan2(Math.sin(g.vane - e.vane), Math.cos(g.vane - e.vane)));
-  assert(vaneGap < 0.05 && Math.abs(g.spin - e.spin) < 0.05, `${label}: vane ${g.vane} vs ${e.vane}`);
+  const gap = (a, b) => Math.abs(Math.atan2(Math.sin(a - b), Math.cos(a - b)));
+  const vaneGap = gap(g.vane, e.vane);
+  /**
+   * Coming near, the vane has lived only the last of the time, into the wind as it is then, while the one turned all
+   * along is still hunting about it; both are to be settled into the wind, as near it as a hunting vane comes.
+   */
+  if (state === entered) assert(gap(g.vane, g.wind) < 0.1 && gap(e.vane, e.wind) < 0.1 && Math.abs(g.spin) < 0.05 && Math.abs(e.spin) < 0.05,
+    `${label}: vane ${g.vane} and ${e.vane} into the wind at ${g.wind}`);
+  else assert(vaneGap < 0.05 && Math.abs(g.spin - e.spin) < 0.05, `${label}: vane ${g.vane} vs ${e.vane}`);
   g.herons.forEach((h, i) => {
     const o = e.herons[i];
+    /** The storm sends them all off, each by its own rolls, which the time lived only in part has drawn differently. */
+    if (state === final) return assert(h.mode !== 'perched' && o.mode !== 'perched', `${label}: heron ${i} still perched`);
     assert.equal(h.mode, o.mode, `${label}: heron ${i} mode`);
     assert.equal(h.roost, o.roost, `${label}: heron ${i} roost`);
     if (h.mode === 'perched') {
@@ -81,7 +91,7 @@ for (const [label, state] of [['coming near', entered], ['in the village', arriv
       assert(h.neck >= 0 && h.neck <= 1);
     }
   });
-  console.log(`${label} (t=${state.at?.toFixed(1) ?? 'end'}): vane differs by ${vaneGap.toFixed(4)} rad; herons ${g.herons.map(h => h.mode).join(',')}`);
+  console.log(`${label} (t=${state.at?.toFixed(1) ?? 'end'}): vane differs by ${vaneGap.toFixed(4)} rad (${gap(g.vane, g.wind).toFixed(4)} off the wind); herons ${g.herons.map(h => h.mode).join(',')}`);
 }
 assert(final.gated.herons.every(h => h.mode !== 'perched'), 'the storm still sends the herons off');
 console.log(`Vane and herons rested for ${restingSteps} of ${steps} world steps (${(100 * restingSteps / steps).toFixed(0)}%); lighthouse and leaves identical, arrival state equivalent.`);

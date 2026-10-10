@@ -8,7 +8,7 @@ globalThis.location = { search: '?shot' };
 globalThis.window = { matchMedia: () => ({ matches: false }) };
 const { Boat } = await import('../src/traveller/boat.ts');
 const { CrossingChapter } = await import('../src/story/crossing.ts');
-const { DrownedChapter } = await import('../src/story/drowned.ts');
+const { stormCast } = await import('./lib/storm-cast.mjs');
 const { BOATS_BERTH } = await import('../src/world/little-boats-layout.ts');
 const { ROUTES } = await import('../src/story/journey.ts');
 const { BOAT_BERTH } = await import('../src/story/island.ts');
@@ -99,8 +99,8 @@ for(const [name,start] of Object.entries(starts)) for(const gust of [0,8]) {
   record(`${name}, gust ${gust}`,worst,{position:b.position.toArray()});
 }
 for(const gust of [0,8]) {
-  const cast=fixture(gust),b=cast.boat;b.beach(BIRCHES_BERTH.x,BIRCHES_BERTH.z-6,Math.PI);b.launch();
-  const c=new DrownedChapter(cast);let worst=Infinity,reached=false;
+  const {cast,chapter:c}=stormCast({...fixture(gust).wind,addSplat(){}}),b=cast.boat;
+  let worst=Infinity,reached=false;
   for(let i=0;i<300*60;i++) {
     cast.wind.breeze.set(2.47,-0.80).multiplyScalar(c.breeze);cast.wind.calm=cast.wind.breeze.length()*tuning.wind.calm;
     c.update(1/60,i/60);b.swell=c.storm;b.update(1/60,i/60);

@@ -14,21 +14,21 @@ const quick = [
 const mechanics = [
   ...quick, 'bandage-cost', 'boat', 'boat-ground', 'flock-flight', 'dolphin-leap', 'journey-pacing', 'kite-logic',
   'little-boats-logic', 'meadow-plane', 'meadow-route', 'piano-frame', 'pond-view', 'sail-flutter',
-  'scarf-geometry', 'sea-logic', 'sky-mirror-logic', 'sky-mirror-pointer', 'sky-mirror-touch',
+  'scarf-geometry', 'sea-logic', 'sheet-contact', 'sky-mirror-logic', 'sky-mirror-pointer', 'sky-mirror-touch',
   'sleeping-logic', 'wing-care', 'wood-logic', 'ending-view',
-  'camera-direction', 'crossing-camera', 'crossing-haze', 'dream-story', 'drowned-camera',
+  'camera-direction', 'crossing-camera', 'crossing-haze', 'dream-story', 'drowned-camera', 'drowned-fog-motion',
   'foghorn-story', 'frame-pacer', 'geography', 'journey-reveal', 'piano-growth', 'piano-logic',
-  'plane-routing', 'scarf-normals', 'pointer-pick', 'drowned-gating',
+  'plane-routing', 'scarf-normals', 'pointer-pick', 'cat-events', 'drowned-gating', 'drowned-contact', 'drowned-tower', 'drowned-boarding', 'drowned-return', 'drowned-lantern', 'drowned-rescue-polish', 'drowned-rescue-sequence', 'drowned-bell', 'drowned-farewell',
 ];
 const browser = [
-  'shader-browser', 'sky-mirror-star', 'stairs-fog', 'touch-viewport', 'chapter-view-browser', 'context-loss', 'start',
+  'shader-browser', 'sky-mirror-star', 'drowned-mist', 'lantern-fog', 'stairs-fog', 'touch-viewport', 'chapter-view-browser', 'context-loss', 'start',
   'progress', 'frame-time-browser', 'journey-view',
 ];
 // Audio/score checks render through a headless dev server (no GPU); BASE selects it.
 const audio = [
   'arrival-audio', 'audio', 'audio-continuity', 'audio-direction', 'birches-foley', 'birches-score',
   'boats-score', 'dream-score', 'gesture-harmony', 'homeward-audio', 'lines-score', 'marine-audio',
-  'meadow-score', 'opening-score', 'piano-audio', 'sea-score', 'sleeping-score', 'whale-voice',
+  'meadow-score', 'opening-score', 'piano-audio', 'sea-score', 'sleeping-score', 'whale-voice', 'drowned-audio-regression',
 ];
 const groups = { quick, mechanics, browser, audio, release: [...mechanics, ...browser, ...audio, 'playthrough'] };
 const group = process.argv[2] ?? 'quick';

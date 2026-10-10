@@ -423,6 +423,14 @@ about (−9, −1398), some 40 m short of the church (`SPIRE`, 14, −1436). Mai
 (`tuning.storm.startsFromShore`), about 50 m past the church; the light goes out 23 s later, beside the lighthouse
 (65, −1580); then the plane is taken and they land. Houses stand 11–30 m off the channel, 15–40 m apart, sunk 1.7–5.4 m.
 
+Arriving: the boat comes out of the white the stairs let it down into, and from then on the village is all there is.
+The stairs' room goes while the boat is still in the white, never seen from the village (Jeremy, 2026-10-08, of the
+bare staircase standing over its island in the cat's view): "we want to keep the illusion of having appeared out of
+the fog into the drowned village. By this point, the player has climbed the stairs and then went on a guided journey
+through teh clouds, emerging into the drowned village. In their mind, the stairs chapter is out of sight behind them."
+Old saves that sail in from the birches' beach still see the birches behind them until the air dies: they came from
+there by sea.
+
 1. **The calm drift and the stranded cat** (about 150 m): dusk among the roofs as on main, with small answers to the
    wind (herons lift, the spire's vane swings). A cat crouches on a chimney pot along the drift, mewing (animals may be
    as loud as they like). A wooden wash-tub floats nearby; the player's gusts carry it to the cat's roof, the cat hops
@@ -434,23 +442,34 @@ about (−9, −1398), some 40 m short of the church (`SPIRE`, 14, −1436). Mai
    coming on, its crest gold in the last sun, roofs fading into it one by one. The cat panics, leaps onto the roof and bolts over the roofs toward the church, the
    highest thing there is. A child does not leave a frightened cat: she climbs out after it. The boat was never stuck;
    she left it to save the cat. She follows the cat's run, so the plane never leads; she clutches it the whole way.
-4. **Crossing 1, the tree (push):** a lane of deep water to a walled garden; the cat crosses its own way (a leap she
-   could never make); a dead tree rotted at the roots in the garden, rocked by gusts to show which way it can fall,
+4. **Crossing 1, the tree (push):** a lane of deep water to a walled garden; the cat runs the railing tops over it
+   and up the dead tree, which leans her way under its weight; a dead tree rotted at the roots in the garden, rocked by gusts to show which way it can fall,
    pushed over, is her bridge.
-5. **Crossing 2, the swing (pump):** the drowned village green between the garden cottage and the church; the cat goes
-   along a railing top; the rope swing hangs from the old tree on the green; pumped, she lets go at the top of the arc
+5. **Crossing 2, the windmill (circle):** a small worn tower mill in the water between two roofs; the cat rides a sail up first; circled
+   round its hub, its sail comes level beside her roof edge, she walks onto it and is lifted to the high roof beyond.
+6. **Crossing 3, the swing (pump):** the drowned village green between the garden cottage and the church; the cat leaps
+   onto the swing's seat and springs from it onto the nave; the rope swing hangs from the old tree on the green; pumped, she lets go at the top of the arc
    onto the nave roof.
-6. **The church:** the cat climbs the tower's ivy into the belfry, safe and out of her reach, and looks down. She is
+7. **The church:** the cat climbs the tower's ivy into the belfry, safe and out of her reach, and looks down. She is
    left on the nave ridge at the tower's foot. While she waits at a crossing the dark creeps up and stops a little
    behind her, heaving; as she crosses it swallows the place she left. It never reaches her and nothing fails.
-7. **The dark arrives:** the fog rolls over the church, the sun gone, and darkens into the storm's night; the wind
-   comes and the first rain falls. Now she needs her boat, still resting against the cottage roof back along the way.
-8. **Bring the boat (fill the sail):** the player fills its red sail (`Boat.brushSail`) and brings it across the water
-   to the nave; she steps down into it. She looks back once at the cat in the belfry as they go.
-9. **The storm:** the boat leaves the nave about 145 m from the beach, so main's storm plays from the moment she is
-   aboard, re-timed to that shorter way: the weather already half gathered, the lighthouse about 55 m off as she boards
-   and its beam going out in the first seconds while it is still in view (a glow through the fog, then gone), the
-   cygnet's shaking, the plane taken about mid-way, rain, the landing at the forest about 45 s after she boards. The
+8. **The dark arrives:** the fog rolls over the church, the sun gone, and darkens into the storm's night; the wind
+   comes and the first rain falls. Now she needs her boat, which the fog's breath took off the cottage's slates and
+   drifted ahead of her to fetch up against a dead tree east of the tower.
+9. **Bring the boat (fill the sail):** the first wind swings it off its tree; the player fills its red sail
+   (`Boat.brushSail`) and brings it round the tower's north side to the nave; she steps down into it. She looks back
+   once at the cat in the belfry as they go.
+10. **The storm:** the boat goes out from the nave by the open water to its north and past the lighthouse, 173 m to
+   the beach, and the goodbye's calm turns into the storm over time the player sees (seconds from casting off, the
+   look back at the cat 10.6 s before it). They cast off on the first air, the player's wind still filling the sail
+   until the storm's has come up, over 24 s; the lens comes down off the cat's sill to look along the water at the
+   boat, the church and the lighthouse beyond, about 60 m off. The dusk deepens into night from the first second, the
+   first stars come out over the fog lying on the water, the sea roughens and the first rain falls; the lighthouse's
+   beam turns over the fog and the boat and its horn calls (9 s). They sail toward it, and its light fails (a sag, a
+   half recovery, a deeper sag, a last glow) and is out 30 s out, in frame, as they pass it 38 m off, while the fog
+   rises and closes round them and swallows the tower (25-43 s); the stars go, lightning from about 42 s, the
+   cygnet's shaking in the rain at 46 s, the plane taken at 55 s, and the landing at the forest about 78 s out, 87 s
+   after she sat down. The
    night takes over from the fog's dark without ever lifting. The storm never lets go until the beach, the fog thins
    off as the forest comes up out of it, and the landing is relief that turns into the wood's fear.
 
@@ -472,12 +491,979 @@ it is built and keeping open water between the houses.
 So the existing drowned village and storm code may be refactored as far as the room needs; the concept frames in
 `comps/drowned/` are a guide to take from, not a target to match (they still show the drained village, which is cut).
 
+### Jeremy's first play (2026-10-08, verbatim)
+
+> good first start, but it needs a ton more polish. Some isues i'm seeing
+>
+> - it's not clear why the child doesn't just ride the boat, why does the boat keep following them?
+> - The cat is as small as a rate, the animations aren't on point, It's not emotive enough to signal the rescue, the
+>   bucket it rides in has no water masking, it's hard to move around with wind.
+> - I thought the child would have to climb into the tower to "hide" from the fog
+> - the child just kind of abandons the cat in the tower
+> - there's too much dead space with the child just walking from the tree to the swing. We need more puzzles /
+>   challenges
+> - The pacing of the fog doesn't make sense. It rushes out, then stops, then I basically forget that it was even there
+>   while the child was walking over the roofs. This is probably the one thing i need you to take a look at connecting
+>   to the narrative. The fog as it stands is currently confusing and not at all connected to the over the roof
+>   sequence.
+> - The background music is just one single tone
+> - Camera direction and choreography needs a deep rethink. Subjects aren't framed properly, and in the player
+>   interactivity sequences it's not framed properly either.
+
+These reopen the room's design from the air dying to the boat leaving; the sections below answer them and supersede
+what they contradict. Found on reading the code: the run, the church and the bring loop the score's 14 s becalmed
+section (`drownedScore` returns `still` for `run`, `nave` and `church`), which is the one tone.
+
+### Jeremy's second play (2026-10-09, verbatim)
+
+> - [a still from the lens off the cat's gable end: the cat on its pot at the left, the boat at the right, the tub
+>   below the bottom edge] in this shot the player can't even see the bucket they are supposed to interact with.
+> - And if they do figure it out, they have no idea where they are supposed to move the bucket to
+> - After the rescue, the boat then starts sailing at an absurdly fast rate through the drwoning village before bumping
+>   into the roof. it's very strange.
+> - It should have a becalming and then slowly drift into the roof, with the player unable to make wind
+> - [a still from behind her on the garden wall's coping, the dead tree's trunk beside her] The child is literally
+>   standing underneath the tree that you're supposed to blow down, there's no invitational wind gesture, and they are
+>   looking striaght up at the tree the whole time instead of where they need to go, which is very strange. Trying to
+>   blow down the tree is impossible as well. no matter what i do, whether updrafts, random wind, or right to left fast
+>   cursor movements, it literally won't blow down. fix this as well. btw, im going to be just pasting in issues as i
+>   find them. i need you to keep a list of all of them and fix them
+>
+> - [a still side on to the sheet crossing: her hanging by one hand at the sheet's trailing edge, feet dangling, the
+>   sheet beside her] This looks very weird, it doesn't look right at all with the child hanging onto the side of the
+>   cloth. I'm also noting that throughout all of this, i hardly see the cat.
+>
+> - [a still from low behind her in the mill's sack basket against the tower, the sails' hub out of the top of frame]
+>   this scene with the windmill needs to be zoomed out a bit, i can't even see the indicative wind gestures, they are
+>   off screen above me, i can't see the bloody thing im supposed to interact with.
+>
+> - [a close still of the swing's bough against the sky, a leaf and a speck floating off its tip circled] what is this
+>   weird thing i've circled in red?
+> - [a still from outside the belfry: her back in one light of the opening, the kittens' straw a speck in the other,
+>   the bell out of sight inside] Again, the subject of the interaction is completely hidden. you must think about the
+>   puzzle from the perspective of a human playing and seeing the puzzle from the perspective of the camera view. I also
+>   never noticed the cat and her kittens, it just looks like the cat just randomly went to sleep or is lying there. its
+>   very strange.
+> - And then suddenly, when you get into the boat after climbing down from the bellfry tower, the cat is on the roof?
+>   how did it go from sleeping to coming down somehow
+
+> - (asked whether the lead sees where the complaints come from) From the perspective of the camera port, which is
+>   what the player sees, it lacks cohesion. The player doesn't see what is outside the camera
+
+**The room is what the lens shows** (Claude's reading of that, the spec from here on): the room is authored as a
+storyboard, the sequence of frames the player sees, not as a world the lens visits. Before each puzzle one frame
+lays out where she is, what is in the way and where she must get to; each frame hands on to the next (her look, the
+cat ahead, the fog behind carried across); every story beat (the cat leaving the kittens, the boat drifting off)
+happens in frame or did not happen. The room's storyboard, a frame every 2 s of a real run with its beat, is read
+as a stranger reads a comic, and every break in it goes on the list below.
+
+**The cat is the compass** (Claude's call, 2026-10-09, answering items 2, 6, 13 and 16 together): wherever the cat
+is, that is where she is going. At every obstacle the cat crosses first, in frame, which shows the way over, and then
+waits on the far side facing her, calling, which marks the goal: on the slates' edge where the tub must go, on the
+barn roof the tree must fall to, on the chimney at the sheet line's far end, at the top of the mill's hoist, on the
+nave's roof past the swing, in the belfry's opening. Each walk ends on a frame laying out her, the obstacle and the
+cat across it, the fog behind; the puzzle frame keeps those and the drawn gust. The cat is read at every distance the
+room takes (large enough on screen to be a cat, never a speck), and between obstacles it is in frame, a roof ahead.
+
+**The target storyboard** (Claude, 2026-10-09; stills in `comps/board/`, eyes and aims in world metres, staged with
+the lens pinned at real moments of `drowned-run-check`): the frames below are the targets the camera is built to and
+checked against. The lens reaches each by the rig's slow orbit; the numbers are where it lands, not a cut.
+- *Walk to the mill* (`walk-to-mill-north.png`, eye 17,9,-1520 at 26,6.5,-1541): from the north over the fog, the mill
+  with its hoist and basket, her on the roofs before it, the bell tower beyond: the next piece and the goal laid out.
+- *The sheet* (`sheet-east-side.png`, eye 22,5.5,-1528 at 10,4.5,-1528.8): side-on from the east, both chimneys, the
+  line and sheet, her at the near one, the cat waiting on the far roof, the fog behind. The frame stands; her hold on
+  the sheet is the defect (item 5).
+- *The mill* (`mill-north-mid.png`, eye 20.5,9,-1520 at 26,7.5,-1541): the whole sails and the drawn circle round the
+  hub, her in the basket at the tower's foot, the bell tower ahead on the left, the fog below.
+- *The swing* (`swing-west-high.png`, eye -4,6,-1552 at 11.5,3,-1554.5, a direction, not yet a target): side-on so the
+  arc reads left and right; closer, and the nave's roof she lands on, with the cat on it, plainly in frame.
+- *The bell, the kittens and the goodbye* (`bell-north-low.png`, eye 17.4,8.8,-1550 at 17.4,10,-1561): low, looking
+  through a pair of openings, the bell reads as a silhouette against the sky through the openings opposite; from
+  outside and above, the belfry's inside is dark and the bell never shows. The staging that follows (items 9-11): the
+  kittens' straw on the sill of the opening the lens looks through, the cat curled round them there, her kneeling by
+  them, the bell over the three, and the lost boat's lantern answering in the fog seen through the far openings (the
+  lens stands on the side away from the boat's return). The goodbye is the same window seen from the boat below: the
+  cat and a kitten on that sill.
+- *The belfry rebuilt for it* (Jeremy, 2026-10-09: "with re: to the bell, i think the issue is that it's hidden a bit
+  because the child stands in one of the windows instead of inside the room looking out, and that room is a bit too
+  small for that kind of thing?"; Claude agreed and ruled): she stands in a light and blocks the one opening the bell
+  could be seen through, and the room (about 4 m across, the bell, its frame and a pillar in each pair of lights) has
+  no space to stage her, the kittens and the bell together. The belfry is cheated larger, a room she, the kittens,
+  the cat and the bell fit in with space between, with one wide arch to a face in place of the paired lights and their
+  pillar; she climbs in over the sill and stands on the floor by the bell, the kittens in the straw beside her, looking
+  out over the fog sea. The lens, low outside an arch, sees into the room: her, the kittens and the bell lit against
+  the sky through the arch opposite, the boat's lantern answering in the fog beyond. At the goodbye the cat and a
+  kitten come to that arch's sill. This supersedes the paired lights and her standing in one.
+
+**His rule for every interaction frame** (binding on all of them): judge the puzzle as a first-time player sees it
+through the lens. The thing the player acts on and the drawn gust must both be plainly in frame, and so must what
+the action is for (where the tub goes, where the tree falls, what the bell answers).
+
+**The list from this play** (Claude keeps it; each item is struck through with its commit when fixed and checked):
+1. ~~The tub out of frame~~ (`proto-drowned-fix-tub`: the lens 12.5 m out from the line between her and the cat, side-on, away from the sail; her, the tub, the cat at the slates' edge and the drawn gust in one frame). Was: the tub out of frame while it waits for the player: the lens off the gable end stands 7 m from the chimney and the
+   tub floats below the frame's bottom edge, with the drawn gust under it. Fix: one frame holds her, the tub, the
+   cat's slates where they meet the water and the cat; the drawn gust in view.
+2. ~~Where the tub goes is not shown~~ (the cat comes down to the water's edge where the tub docks, sits facing her, mews and paws at the water; the gust waits until it is there). Fix: the destination reads in the world (the cat at it), not only in the gust.
+3. ~~The fast sail after the rescue~~ (the cat's roof 20 m short of the strand; once the cat has come to her the air dies and the boat ghosts 20 m in 24 s at up to 0.95 m/s onto the slates, the player's input off; the fog rises through it). Was: after the rescue the boat sails 180 m at up to 9.5 m/s (`driftSpeed`, `driftBreeze` 2.6) to the strand. Fix: the
+   air dies once the cat is aboard and the becalmed boat drifts slowly onto the roof, the player's wind making nothing;
+   the cat's roof comes near enough to the strand for that drift to be short.
+4. ~~At the tree~~ (`proto-drowned-fix-tree`: the roots give again a second after each give however hard she is pushed, so continuous strokes fell it; the gust 0.6 s after she stops and after each useful stroke; she waits 5.2 m from the root at the wall's end, looking across to the barn with glances up; the view from the north-west holds her, the tree, the barn and the sheet beyond). Was: she stands under it, no drawn gust shows, she looks straight up at it the whole time instead of the
+   way she must go, and no gesture fells it.
+5. ~~The sheet's hold~~ (`proto-drowned-fix-pieces`: she gathers the slack hem's middle in both mittens and hangs in front of its lower middle as it carries her; the drawn gust now shows, it had restarted every frame). Was: she hangs by one hand off the sheet's side edge, which reads wrong. Fix: she holds it as one
+   rides a sail, centred on it with both hands, the filled sheet carrying her.
+6. ~~The cat through the run~~ (`proto-drowned-fix-walks`: it leads 7.5 m ahead, sits facing her and mews, waits across each piece calling until she is over; the walking lens leans toward it and keeps it in frame; median 46-56 px). Was: through the run the cat is hardly seen. Fix: the cat a roof ahead in every walking frame and its own crossing of
+   each piece in view (design step 5: "the cat goes first wherever a cat can").
+7. ~~The mill's frame~~ (the board's view from the north, eye 20.5,9,-1520 at 26,7.5,-1541, rising as she climbs: the sails, the drawn circle, her in the basket, the top and the bell tower). Was: the lens low behind her in the basket crops the sails' hub and the drawn circles off the top. Fix: wider,
+   the sails, their hub with the drawn circles, and her in the basket in one frame.
+8. ~~A leaf floating off the swing bough's bare tip~~ (the tip's twig leaves scatter off it into the air; the tip is
+   now bare).
+9. ~~The bell~~ (`proto-drowned-fix-belfry`: the belfry 7.2 m square, one pointed arch 3 m wide a face, the bell on oak beams swinging north-south; the lens low outside the west arch sees her, the bell and the kittens against the east arch's sky, the drawn gust across the bell, the lantern answering past the tower's north-west corner. The board's lens from the north was rejected: the low sun backlights the room from there and a lantern on the water never shows through the far arch). Was: the lens outside the belfry sees her back in the opening and never the bell she rings. Fix: the bell,
+   her and the fog beyond (what the ringing answers) in one frame.
+10. ~~The kittens go unnoticed~~ (kittens 0.92 of the cat's scale; they wake as the cat comes to them, tumble and mew; the ginger one comes and sits looking up at her as she kneels). Was: the cat lying in the straw reads as gone to sleep. Fix: the kittens seen and read as
+    kittens (the reveal staged to an outside eye, as 8b's Left list ruled: her turned on the sill, a kitten coming
+    to its lip, three-quarter on), the cat plainly curled round them.
+11. ~~The cat turning up on the roof~~ (it never comes down: the cat and the ginger kitten come to the west arch's sill as she climbs down, see her off and go back in). Was: the cat turns up on the roof below as she boards, never seen leaving the kittens or coming down.
+    Lead's call: the cat stays with its kittens and sees her off from the belfry's sill, a kitten beside it, in the
+    belfry's light (it would not leave them); the goodbye frame looks up from the boat to the two at the sill. This
+    supersedes step 8's re-staging (the cat coming down to the roof).
+
+Found reading the room's storyboard (a frame every 2 s of `drowned-run-check` from the tub to the swing, 2026-10-09):
+12. ~~The swing~~ (it stalled because it felt the player only through the wind's CPU copy, which starves in `shot` mode; now a stroke along the arc across the ropes or seat on screen is one pump, about four take her to the let-go; side-on from the west 13.4 m off the bough, the nave's slope and the cat waiting above her landing in frame). Was: the lens stands 21 m off, she is a few dozen pixels tall, the seat hardly moves through two minutes of
+    pumping, the nave she lands on does not read, and the check's run never reached the tower's foot after it (a
+    stall). Fix: closer, the seat's arc and the nave's roof she leaps to in one frame; it must carry her over.
+13. ~~The cat unreadable~~ (boat section: a longer lens on the approach, 100-145 px at the bow through the drift and stuck, the bolt carried up onto the ridge; the run is with the walks parcel): from the rescue on, not only on the run (item 6): in the drift it is out of the wide frame,
+    stuck it is a speck at the bow, on the ridge and the walks it does not show at all.
+14. ~~The fog dropping out~~ (boat section: it comes on behind the boat from off its starboard quarter, creeping through the drift; on the ridge she looks back as it takes the boat, the lantern last; the run is with the walks parcel): absent from the stuck frame until she climbs out, and from every mill frame; the room's logic
+    (get higher than the fog) cannot be read from the lens.
+15. ~~The rescue close-up~~ (`proto-drowned-fix-boat`: the cat comes up into her arms and pushes its head under her chin as its shivering eases, both faces in profile against the water; then back to the bow). Was: the sail and her hood hide her face, and the cat at her shins is out of frame or small.
+16. ~~No piece seen before she is at it~~ (each walk ends on a frame laying out the next piece: the tree with the cat across on the barn's gable, the board's walk-to-the-mill frame, her stopping at the top of the green's slope to look at the swing; the wall look-back is gone, the boat lost once, on the ridge). Was: each walk looks at her back and the fog, so the next obstacle and the way
+    over it arrive unannounced. Fix: each walk ends on a frame that lays out the next piece (what is in the way, where
+    she must get to) before the puzzle begins.
+17. The church's storyboard (`FROM=church`): the cat is never seen climbing the ivy ahead of her; through the ringing
+    the lens sees her back in the opening and the bell never; as she boards the lens closes in until the back of her
+    hood fills the frame, and the cat's goodbye on the ridge does not read at that scale.
+18. ~~The long sail before the cat~~ (the stairs set the hull down on the drift's last leg, turned in the white so nothing is seen to turn; 2.8 m/s; the cat noticed about 5 s in and mewing the whole way; the boat holds for it 30 s into the room). Was: found fixing 3: with the cat's roof by the strand, the sail through the village before the cat is 59 s and 253 m
+    at 4.7 m/s (it was 27 s). Lead's call: about 30 s, by bringing the room's entry nearer along the channel, and the
+    sail given its purpose early: the cat heard mewing and seen ahead on its pot, the boat making for it.
+19. ~~The faint gust~~ (bold in this room only: 15-21 px with a darker halo and a brighter core). Was: the drawn gust is the shared invitation's thin cream stroke and is faint against the lilac sky (at the tree it is
+    barely there in stills): it may be why Jeremy saw "no invitational wind gesture". Fix: in this room it reads at a
+    glance against sky, fog and roofs.
+20. The goodbye frame (after 11): her and the pair on the sill in one frame leaves the cat about 50 px, so the slow
+    blink barely reads, and her hood crowds the corner. Lead's call: over her shoulder with a longer lens, her hood a
+    soft shape in the lower corner and the arch with the cat and kitten large. Staged (2026-10-10): straight over her
+    shoulder the mast and sail stand between her and the tower; 5 m back from her along the line to the sill, 2.8 m to
+    the side away from the sail, 1.4 m over her seat, a 14 degree lens, the cat, the kitten, the bell over them and the
+    ivy she climbed read well (`comps/board/goodbye-pov.png`), but she is out of frame: it is her look, after the frame
+    that shows her looking up. The release that follows starts from the old `upEye` and must be re-routed with it.
+21. Left after the walks: the cat is a ninth of her height (0.27 m standing), so at walking distances it is 30-55 px
+    however the lens leans; at the tree's barn gable it is about 31-36 px against the fog. For Jeremy's play to judge:
+    if it still reads small, cheat it larger through the whole room (one constant scale, never growing in view).
+22. ~~Too zoomed in from the room's start to the ridge~~ (`proto-drowned-fix-zoom`: the long lens is gone, no zoom over
+    1 before the run: the approach on the plain lens, the tub frame 0.95 (upright 1), the rescue 7 m off at 1 (upright
+    6 m at 0.85), stuck 10 m off at 0.86 leaning only to 0.99, fast 10.5 m, the ridge 11 m at 0.86 (upright 0.8), so the
+    ridge hands the run its own scale; the cat on its pot is a speck until about 30 m out, heard mewing and glanced at,
+    since no modest cheat makes it 25 px at 60 m). Was: Jeremy, playing the merged build (2026-10-10, verbatim): "right
+    at the beginning of the sequence, the camera zooms so far in it's really disorientating." Likely (unverified): the
+    boat parcel's approach lens, which lengthens with the cat's distance (one zoom step per `makingSee` 26 m, up to 2.5)
+    while the boat makes for the cat from the room's new entry (`villageFrame`, `a67ae81a`), on top of the first 8 s
+    nearly dead astern (`entryBearing`).
+    Then (2026-10-10, verbatim): "I have some issues with the camera. most of the time in this scene is too zoomed in.
+    It only starts getting better around the time when the child is walking towards the first tree puzzle". Lead's
+    reading: every frame from the room's start to the ridge is tighter than the walking lens he likes (the run: 14 m off,
+    zoom 0.86, upright 0.78): the approach lengthens to 2.5, the tub frame is at 1.25 (upright 1.4), the rescue 1.5 at
+    4.8 m, the stuck and ridge frames 6.5-7.5 m off. Lead's call: the room's start to the ridge is framed on the run's
+    scale, the long lens gone; the cat reads by being nearer the lens and by item 21's cheat, not by zoom.
+Jeremy, playing on (2026-10-10, verbatim, with a still side-on to the sheet line: her on the near roof by the near
+chimney looking up, the sheet hanging off the line with its lower edge through her hood, the cat on the far roof):
+"also, why is the childs head being cut by the cloth? And when the child lands on the other side, she's in mid air...
+then right after the wind mill, the camera dollies around weirdly in the wrong direction so the cat goes out of view.
+Also, everytime the cat or the kittens makes a sound, it should have the noise marks. And i think the kittens make too
+much noise too often."
+23. ~~The sheet through her head~~ (`proto-drowned-fix-sheet`: her hood is 2.75 m tall and half a metre round, the hem
+    2.25 m over her feet, and the line ran straight over her ridge, so the cloth hung through her whatever its height;
+    the line now runs 0.9 m off the ridges on the side away from the lens, so she waits beside the sheet and hangs in
+    front of it over each ridge, it bellies away from her, and any cloth that comes into her is put back behind her; the
+    upright lens and its way round from the tree moved to her side of the line). Was: waiting at the near chimney, the
+    sheet hangs low enough off the line that its lower edge passes through her hood. Fix: the sheet never intersects
+    her; it hangs clear above her or she stands clear of it.
+24. ~~She lands in mid air~~ (`proto-drowned-fix-sheet`: at the ride's end she hung 0.25 m over the ridge's height but
+    0.3 m out over the slope, her grip hidden in the cloth through her hood, then hopped up and slid onto the ridge; now
+    she hangs straight over the ridge 0.4-0.55 m up, lets go and drops 0.37 s onto it). Was: she lands from the sheet in
+    mid air on the far roof. Fix: her feet on the slates when she lets go and lands.
+25. ~~The lens off the mill~~ (`proto-drowned-fix-millexit`: the mill's view hands straight to the swing's approach as
+    she steps out at the hoist's top, never falling back to the walking lens between; one 11 s move round her right,
+    drawn in behind her along the granary's ridge so it passes between her and the old tree, behind her shoulder while
+    she looks back down at the fog (9 s, was 6.6) with the cat waiting below, and on to her side as she goes west after
+    it; the look leans to the cat and widens to 0.8, so the cat is in frame throughout, was out about 6 s; the lens
+    peaks at 6 m/s, was 10). Was: right after the mill the lens dollies round the wrong way and the cat leaves the
+    frame. Left for his play: it still goes round her about 160 degrees, the only way to her side the fog is seen from
+    (the mill and its sails stand on the other side, and from the mill's side the old tree's crown blocks the way to the
+    swing's view).
+26. ~~The cat's and kittens' sounds have no call marks~~ (`proto-drowned-fix-calls`: every mew, mrrow and chirrup
+    shows the cygnet's three strokes over the head of the one that made it, for the length of the sound and at least
+    0.45 s, edged darker to hold against the lilac sky and the fog, never under 8% of the frame's height from afar;
+    `tuning.catSounds`). Was: the cat's and kittens' voices had no marks.
+27. ~~The kittens are too noisy~~ (no mews at play; the ginger one mews as they wake to the cat, as it comes and looks
+    up at her, and on the sill seeing her off; their paws a third of their mother's: kitten voices in the belfry 11.5 a
+    minute to 3.8). Was: the three mewed as they woke, at random through their play and as they went back in.
+Jeremy, playing on (2026-10-10, verbatim): "Then, while she's on the swing, the fog keeps coming in and and out really
+quickly. Also, the entire scene has some really bad performance issue. Switching between ultra and low i dont see much
+visual difference, but there is a very very noticeable drop in framerates at ultra. Then in the bellfry, the boat and
+hte red sail just appear out of nowhere. Also, shouldn't the fog cover the entire village and then recede with the
+bell? I thought that was the idea?"
+28. ~~The fog flickering on the swing~~ (`proto-drowned-fix-millexit`: the fog turned to face her as she swung to and
+    fro, its front sweeping about 20 degrees each way every swing; while she boards and swings it faces where she got
+    on, so its front only drifts as it comes on). Was: on the swing the fog flickers in and out of the frame quickly.
+29. The whole room runs badly at ultra, and ultra looks little different from low. Fix: find what ultra costs here;
+    ultra either shows what it pays for or stops paying it, and the room holds its frame rate. Measured with the GPU
+    quiet (no other captures running).
+30. ~~The boat popping in at the bell~~ (`proto-drowned-fix-bellfog`: it is set down out in a white sea whose troughs
+    stay over its masthead, its lantern hidden until it answers: ring 1 a glow, ring 2 the glow nearer, ring 3 the sail
+    and hull coming out at the rim the ring pushed back, ring 4 the boat in clear water; the glow is no longer cut flat
+    by the water in front of it). Was: in the belfry the boat and its red sail appear out of nowhere: it was set down in
+    frame at the first ring where the fog's top lay about 4.3 m over the water, under its 5.3 m masthead, so the sail
+    showed at once. Fix: the boat comes out of the fog, its lantern first, as step 7 says; nothing pops in.
+31. ~~The fog and the bell~~ (`proto-drowned-fix-bellfog`: as she climbs it runs on past the tower over the whole
+    village and spreads to its full width on the church's side, rising round the tower beneath her and the lens; once
+    she is in it lies as a still white sea under the sills, the tower, the lighthouse and a few chimney tips out of it
+    (roof cells within 200 m out of it: 348 of 566 at the tower's foot, 9 by the first ring); each ring pushes it back
+    round the tower to lie on the water, out to 17, 24, 31 and 46 m, the rings' crests riding only on fog; once the sail
+    is hers it settles to the water all round). Was: it stopped 55 m past the tower with its side toward the church cut
+    off, so the village beyond stood clear, its top lay about 4.3 m with heaps to 8 m, so most roofs stood out of it,
+    and each ring lowered it everywhere at once. Yes, that is the idea (step 6 and 7): the fog closes round the tower to
+    below the sills, the village a white sea with only the spire and the lighthouse out of it; each ring pushes it back
+    round the tower and the lantern answers nearer each time, until the fog has drawn back to the water round the nave.
+    In play it does not read that way. Fix: the player sees the village go under, and sees each ring push the fog back.
+Jeremy, playing on (2026-10-10, verbatim): "at the beginning of the storm sequence, the camera is looking up and you can
+see a hole in the "fog" so to speak. it looks like a bug. also the lighthouse turns off too quickly."
+32. ~~The hole in the fog as the storm begins~~ (`proto-drowned-fix-storm`: casting off, the lens comes down in one move
+    from where the look up lets her go to look along the water at the boat, the church and the lighthouse beyond, never
+    tilting up into the fog; the fog closes round as the light fails, and the bowl its top rises in stops 12 m over its
+    top, so a look up thins into the sky instead of meeting a rim). Was: as the storm begins the lens looks up and a
+    hole shows in the fog overhead; it reads as a bug.
+33. ~~The lighthouse goes out too quickly~~ (`proto-drowned-fix-storm`: lit and in frame from about 10 s after casting
+    off, its beam turning over the fog and the boat; it fails over 5 s, a sag, a half recovery, a deeper sag, a last
+    glow, and is out 30 s out, 38 m off and in frame, as the fog rises round the tower and swallows it). Was: it goes
+    out about 6 s after she boards, seen lit for two or three seconds.
+34. ~~The rushed storm~~ (`proto-drowned-fix-storm`: they cast off into the goodbye's calm on the first air, the wind,
+    the sea, the rain and the night coming up over the first half minute while the lighthouse is the landmark; the fog
+    closes round as the light fails at 25-43 s, the plane is taken at 55 s, the beach about 78 s out; boarding to the
+    beach about 87 s, was 55). Jeremy (2026-10-10, verbatim): "And the continuity into the storm feels a bit strange,
+    it's a bit too rushed, instant storm for like what feels like 10-20 seconds and then you're at the woods, pacing
+    doesn't match what happened before." Lead's call: the goodbye's calm turns into the storm over time the player sees
+    (the fog darkening into the night, the wind rising, the water roughening), and the storm is given the length and the
+    beats of the journey it ends (the lighthouse, the plane taken, the dark) before the forest beach; it must not feel
+    shorter or thinner than the room before it.
+35. Jeremy (2026-10-10, verbatim): "And last of all, i need the music rethought and redesigned for the drowned village.
+    it doesn't fit with the music style of the rest of the game. We don't need it to be perfectly synced with what's
+    happening in hte drowned village sequence, but it does need to match the narrative emotion that the drowned
+    village is supposed to give." Lead's call: the cue-per-beat score (`stuck`, `chase`, `climb`, `belfry`,
+    `answer1-3`, `home`, `farewell`) is replaced by a few long pieces in the game's own voice (the detuned pad moving
+    through structured harmony, a theme in regular phrases, the piano's D-E-F#-B question as the link), following the
+    room's emotional arc loosely and crossing at phrase ends: the dusk drift and the rescue (wonder at a drowned world,
+    tenderness for the cat); the fog and the run over the roofs (unease rising, never a chase cue); the refuge and the
+    boat answering the bell (hush, then warmth and relief: nothing is lost); the goodbye into the storm (letting go,
+    then the dark coming). Judged by Jeremy's listen to rendered studies before it goes in.
+    Jeremy, on that (2026-10-10, verbatim): "yea it just needs to have a nice harmony and melody is all". So the
+    measure is a beautiful tune over lovely harmony in each section; the arc is only the colour it takes.
+    Why the old score did not fit (measured against the opening, meadow, birches, stairs, sleeping and sea): every
+    other room is the detuned pad (a triangle and a sine a few cents apart, no vibrato) with chords every 8-10 s, and
+    a sparse tune of a note every 2-4 s on the piano, a soft sine or a pluck, the music swelling and easing with each
+    chord; the old cues were a string section (a cello and strings with a 4 Hz vibrato, measured at 2-3 times the
+    other rooms' wobble), a felt heartbeat pulse at 75 bpm filling to eighths, chords every 3.2 s, a tune on a steady
+    0.8 s beat, minor-key dominants (F♯7, A♯) and one theme developed like a film score (sequenced, denied, conducted by
+    the fog's distance), at an even level with little of the other rooms' breathing. It sounded like a film's chase,
+    not like the game.
+    Built (`proto-drowned-fix-music`, `src/audio/drowned-score.ts`; awaiting Jeremy's listen): five pieces in the
+    game's own voices (the shared pad, the meadow's piano, its soft sung voice and pluck), one key family (B minor and
+    D major, the dark in D minor), a chord every 8 s, and one tune that belongs to the boat, in a lilt of six to a
+    four-second bar (long-short, then long). A piece the story leaves plays to its next chord change and the next
+    begins there.
+    - `drift` (the stairs' fog to the cat aboard): the boat's tune on the piano. It sighs down over the drift's
+      falling B minor, A, G, F♯ minor (D C♯ B, C♯ B A), climbs a sixth over G and stops on F♯ minor's C♯; then over
+      Gmaj7, D/F♯, E minor 7, A it asks the piano's question D-E-F♯-B and comes down G F♯ E, D C♯ A. Second time the
+      soft voice sings it; third time sparer.
+    - `fog` (the air dying to the top of the ivy): the boat's tune is lost with the boat. Over B minor, G, E minor,
+      F♯ sus (twice round) a sung line tries a step up and falls back, a step higher each bar (F♯ G F♯, G A G, B C♯ B,
+      C♯ D C♯), then sighs down the scale (D C♯ B, B A G, G F♯ E) to F♯, unresolved; under it the low piano tolls each
+      root and its fifth a bar apart, as on the Sleeping climb. Unease builds by passes (the falling half alone, then
+      the whole line, then the piano doubling it), never by a pulse.
+    - `refuge` (the belfry until the lantern first answers): a lullaby on the bell's own notes, F♯ D B, F♯ D A,
+      E D B, D C♯ A, over Gmaj7, B minor 7, E minor 7, A, quiet and high.
+    - `home` (the first answer to boarding): the boat's tune comes back in D major, its first half a third higher
+      (F♯ E D, E D C♯) over a bass walking down from D (D, A/C♯, B minor, B minor/A, G, D/F♯, E minor 7, A), its
+      question unchanged, the soft voice an octave under it. The warmth starts at the first answer: the first light
+      in the fog is the relief.
+    - `farewell` (aboard to the wood): the answer B A F♯, E F♯ D, G F♯ E C♯ landing on D; D turns minor; D minor,
+      B♭, G minor, D over the storm's low D with the question gone cold to D-E-F (the Sleeping climb's fragment), then
+      the same round fainter for as long as the storm takes; every dark chord keeps D and A for the wood's drone.
+      Letting go and the dark are one piece, so the storm never cuts the goodbye off.
+    Levels: the drift at the room's reference, the fog about 1 dB under, the refuge 3, home level, the dark 3 then 6
+    under. Studies: `node tools/drowned-music-study.mjs`.
+
+### Takeover review — 2026-10-10
+
+Jeremy's further instruction, verbatim:
+
+> if you find any issues also keep a list and present to me so that i can approve what needs to be fixed. For example, i think that when the child drifts into the roof, the camera is a bit strangely set up to look backwards instead dollying around to look forward.
+
+New findings are proposals for Jeremy to approve before they are changed. Continue the agreed integration checks.
+
+Jeremy approved the six proposals below on 2026-10-10: "proceed". Implement items 36–39 and 41, repair the
+incomplete fixtures in 40 and investigate its remaining assertions. Any additional gameplay changes uncovered
+outside those proposals still come back as new review items. Main merge and deployment remain separate.
+
+36. **Camera as the becalmed boat reaches the roof — implemented and verified.** The camera previously stayed
+    broadside until contact, making the destination clear late. It now turns forward during seconds 5–19 of the
+    drift, before the boat touches the roof. The drift, cat's departure and climb remain intact. Both browser
+    orientations pass; at portrait contact the forward-direction dot product is 0.825 and the ridge is on screen.
+    Before/after: `/tmp/updraft-approved-Ad2y4S/arrival-before-after.jpg`; portrait: `arrival-port-final-9-at-rest.png`.
+37. **Portrait camera after the sheet — implemented and verified.** A local setback and revised mill approach aim
+    reduce the fog's disappearance from 2.3 seconds to 1.2, retaining the child and cat. Baseline:
+    `/tmp/updraft-takeover-TUMeWz/sheet-exit-before.jpg`; full follow-up replay in `/tmp/updraft-approved-Ad2y4S/`.
+38. **After the mill — implemented and verified.** Removed the extra nine-second
+    look back. The camera carries the mill view into a six-second handoff while she walks on, draws inside the old
+    tree's branches, then rises to see the cat descend the cottage. The close approach fits her face; portrait opens
+    earlier and reserves a 0.6 m head bound to keep her hood inside the frame. Both complete roof-route replays pass,
+    with no cuts or tree obstruction. In portrait, fog is absent at most 1.7 s on this transition and the cat is
+    unreadable at most 1.8 s. Evidence: `run13-port` and `run-final-land` in the follow-up directory.
+39. **Ultra performance — warmup fixed; fog cost remains open.** The belfry at a 1600×900 viewport on a 2× display runs
+    at about 54–57 fps on Ultra, with occasional 33 ms frames; Low and Ultra with the sea fog disabled stay at
+    60 fps in this sample. The repeated Ultra measurement slows over the run, so this is evidence of fog cost,
+    not a precise performance estimate. Neither tested fog optimisation produced a useful gain, so the original fog
+    remains. The late shader was the bell's bronze: preparing one reusable bell before warmup eliminates its late
+    first draw. The belfry save restores and plays on. Sustained Ultra and iPad performance are not yet established.
+40. **Regression checks outside the integrated sequence — repaired and verified.** Corrected outdated fixtures in
+    Lines, little boats, journey pacing, bandage cost, kite placement and village update gating. All 50 mechanics
+    checks pass together, without gameplay changes. Repairs and evidence are recorded in build_plan.md.
+41. **Portrait goodbye — implemented and verified.** The cat at its slow blink is now 50 px tall in a 900×1600
+    capture, up from 39 px, with the child's face at (0.76, 0.80). The 45 px readability gate now covers both aspects.
+    Both full church-to-wood replays pass, retaining the 88-second farewell. Before/after:
+    `/tmp/updraft-approved-Ad2y4S/farewell-before-after.jpg`.
+42. **Intermittent tree-gaze check — fixture corrected.** The old check sampled `lookAt` after Carry's idle response,
+    although the child is posed before Carry updates and the story restores her puzzle target before the next pose.
+    In one six-second live sample the target actually used for her pose looked across the lane 279/375 frames (74%);
+    the old sampling point reported 145/374 (39%), failing the unchanged 40% minimum on those same frames. The check
+    now samples at the pose update. Her gaze behaviour and the six-second default remain unchanged. Evidence:
+    `/tmp/updraft-final-findings-WhJDz0/run-port-first.log`. The final landscape replay's 24-second sample confirms
+    70% across and 30% up over several cycles, passing the unchanged limits.
+
+Follow-up evidence: `/tmp/updraft-approved-Ad2y4S/`. All 50 mechanics checks pass together. The portrait church
+sequence passes with the new 45 px readability gate: the cat is 50 px tall, her face at (0.76, 0.80), with no cuts
+through the farewell and storm. The bell is now prepared during boot; the belfry reports zero late shader programs.
+Two fog optimisations were discarded because they did not improve measured performance. The original fog remains.
+The mill camera needs screenshot inspection as well as roof checks: an intermediate candidate passed those checks
+while the old tree's branches filled the foreground. The run check now also raycasts that tree's geometry.
+
+Already completed during the takeover: silent restoration of the `sail` checkpoint to the designed air-dies
+beat; verification of the music handoff after the 88-second farewell; equivalent ascending `smoothstep`
+expressions in the cat, tree and bell shaders to remove undefined GLSL behaviour. The shader corrections were
+applied before the further approval instruction above. The new music still awaits Jeremy's listening approval.
+
+### Integration playtest — 2026-10-10
+
+Jeremy's next brief, verbatim:
+
+> image 1: The rock from the woods chapter is visible.
+> image 2: i need you to polish up this sequence when the cat gets into the boat. it jumps up onto the front of the boat, and then into the boat, then back onto the front of the boat. it looks a bit strange. can you make this a more natural sequence?
+> image 3: the cat is often clipping into parts of the roofs, and when it runs down roofs, the back half of its body clips into the roof - it doesn't run down at an angle, it runs down with it's body still horizontal
+> image 4: I can also see that the child is walking on air most of the time
+
+43. **Woodland rock visible from the village — implemented and verified.** The rock's reduced local haze now
+    respects the full chapter veil. A frozen wide entrance compared with the rock mesh absent differs by at most
+    1/255 on the formerly exposed silhouette. Before/after: `/tmp/updraft-contact-diLDtA/wood-veil-before.png` and
+    `wood-veil-after.png`.
+44. **Cat boarding — implemented and verified.** It leaps from the tub onto the thwart beside her, shakes and
+    shivers, comes into her arms, then settles at the bow once. The extra bow-to-thwart hop is gone. The full rescue,
+    becalmed drift and climb-out pass in both aspects. Sequence: `/tmp/updraft-contact-diLDtA/rescue-review.jpg`.
+45. **Cat roof contact — implemented and verified.** Its body follows the supporting slope and its paw support
+    distinguishes a descent from a roof edge. The seated haunches also clear the surface. Posed-body checks pass
+    at 30/60/120 fps, with at least 11 mm clearance on the rescue roof's descent.
+46. **Child foot contact — implemented and verified.** Boot soles fit the physical roof surface separately from
+    the navigation height; her hips lower smoothly to keep the feet within reach. The six tested roofs and coping
+    have a planted sole within 20 mm of the surface, including 5 mm on the coping Jeremy pictured. Close moving
+    frames of both characters: `/tmp/updraft-contact-diLDtA/contact-review.jpg`. Root-height checks alone missed this.
+47. **Portrait cat visibility after the mill — implemented and verified.** With the corrected body and foot poses, the earlier
+    portrait replay reported the cat unreadable for 2.1 seconds on the walk to the swing (limit 2.0; previously 1.8).
+    The child stayed in frame and clear of the tree, and the fog gap remained within its limit. Original evidence:
+    `/tmp/updraft-contact-diLDtA/final-port.log` and `mill-port-strip.jpg`. The portrait turn toward the swing now
+    tightens its lens gently as she looks down toward it, keeping the earlier wider close approach for her hood.
+    The complete portrait roof route passes: cat unreadable at most 1.9 s, fog absent at most 1.6 s, no child crop or tree
+    obstruction. The camera position and existing limits are unchanged. Evidence:
+    `/tmp/updraft-final-findings-WhJDz0/portrait-final.log`.
+48. **Brief step-up gap at the mill — implemented and verified.** The earlier landscape contact trace recorded one sample at
+    10 Hz with both soles 56 mm above the support surface, between grounded samples, as her navigation height
+    jumps from the mill slope onto its ridge. This differs from the sustained boot hover corrected in 46. It is a
+    measured transition issue, checked with a close motion capture and the mill approach camera and hoist boarding.
+    Original evidence: `/tmp/updraft-contact-diLDtA/final-land.json`, at 58.17 s, position
+    `(24.57, 1.20, -1539.45)`. A focused replay confirms a 22 cm navigation jump at the overlap. The mill's two
+    strips now follow their physical roof surface for navigation, removing that jump. Across four stride phases
+    at 30/60/120 Hz, at least one sole stays within 24 mm of support; restoring the former navigation fails the
+    vertical-speed regression. Both complete roof-route replays pass. Evidence:
+    `/tmp/updraft-final-findings-WhJDz0/mill-contact.log`, `mill-negative.log`, and the close `mill-before.mp4` /
+    `mill-after.mp4` captures in the same folder.
+
+Continue in the integration worktree. Any additional findings join the approval list; main merge and deployment remain separate.
+
+### Departure playtest — 2026-10-10
+
+Jeremy's next brief, verbatim:
+
+> - before they get into the bellfry tower, the child walks straight through a chimney. fix that, it looks buggy.
+> - the cat and the kitten should stay in the window as the child leaves
+> - the boat is travelling too slowly towards the woods island. It's supposed to be a stormy sea, and it's tuned well already in current main branch. The boat should travel at roughly the same speed as every other crossing, and the lighthouse should keep shining for longer. What i wanted was for the actual journey to be slightly longer i.e. the distance...
+> - there's too many wind lines when the paper plane flies away and it's too sudden. It actually looks very confusing.
+
+49. **Chimney on the approach to the tower — implemented and verified.** Moved the green cottage's chimney 1.35 m onto its unused
+    roof slope, clearing the walking ridge. The posed child clears the rendered shaft and cap by 27 cm. The regression
+    check fails with the old chimney placement. Close moving evidence: `chimney-final.webm` in the departure folder.
+50. **Cat and kitten at the window — implemented and verified.** Removed their timed retreat after the slow blink. Both stay on
+    the sill and the cat keeps looking after her. The browser check tracks both positions through the departure.
+51. **Storm sailing and distance — implemented and verified.** Restored main's 5.8 m/s passage ceiling and 14-second weather
+    build-up. The new 233 m course makes a wider bend past the lighthouse and returns to the original landing from
+    open water. The hull travels about 228 m in calm input, about 53 m farther than the earlier course at normal speed.
+    The crossing takes about 49 seconds after casting off; the lighthouse stays lit until 34 seconds rather than 30.
+    Its camera keeps the lamp visible through the fade, with sufficient open water around the new course for that
+    view. No island, berth or saved coordinate moved.
+52. **Plane departure — implemented and verified.** Two narrow wind traces, 0.65 seconds apart, replace the simultaneous eight.
+    The plane starts 1.8 m/s faster than the hull and accelerates gently away; its upward release clears the hood.
+    The portrait release stays in frame. Evidence: `plane-port-final.webm` and `plane-port-final-plane.png`.
+53. **Landscape farewell crops the child — implemented and verified.** The earlier landscape replay passed its
+    automated framing check with her face centre at (0.82, 0.97), but the slow-blink still cut off much of her face
+    and chin below the bottom edge. The cat and kitten remained readable. This was found by inspecting the whole
+    silhouette; an in-frame centre is insufficient. The shot now reserves a
+    0.55 m head bound and the regression measures posed hood and face vertices. At 30/60 Hz both aspects pass,
+    with the cat at least 59 px tall; restoring the old framing fails. Both browser farewell replays pass: the full
+    head sits within the frame, with the cat 58 px tall in landscape and 60 px in portrait. Before:
+    `/tmp/updraft-departure-Y5m3eS/church-land-final-slow-blink.png`. After:
+    `/tmp/updraft-final-findings-WhJDz0/landscape-final-slow-blink.png` and `portrait-departure-slow-blink.png`.
+54. **Intermittent brightness surge during the portrait storm — new review item.** One full portrait replay recorded
+    a 20.3/255 mean-brightness change between seconds 35 and 36 after boarding (limit 12). Nearby film frames show
+    pale mist covering the hull and intensifying the lantern halo. The exact cause is not established: the original
+    check could miss lightning starting during its asynchronous screenshot. It now records flashes throughout
+    capture without changing the limit. The landscape replay passes at 7.2; a portrait departure rerun passes at
+    11.1, with no flashes first detected during capture. That rerun does not explain the earlier surge. Proposal:
+    reproduce the mist/lantern transition across wave phases before deciding whether to soften its opacity or light
+    response. No storm visuals changed in this round. Evidence: `/tmp/updraft-final-findings-WhJDz0/portrait-final.log`,
+    `portrait-final-film-115.png`, `portrait-final-film-116.png`, and `portrait-departure.log`.
+55. **Circular foreground edge in the storm — fixed in review.** Jeremy asked, verbatim:
+    "why is there some sort of \"circle\" in the foreground?" It is a discontinuity in the lantern's fog glow.
+    `seaFogMarch` estimates the fog density at the sightline's closest point to the lantern (`tc`). When the water
+    ends the sightline before that point, the density (`sc`) remains zero; crossing `tc == far` suddenly adds it.
+    That boundary forms the curved dark patch across the water. A frozen browser comparison reproduces it:
+    disabling the lantern halo removes the edge; disabling only its reflection does not. A diagnostic colour
+    mask for `tc > far` follows the edge exactly. Clamping the sample to the visible sightline removes the edge
+    while retaining the glow. The game now uses that clamped sample, including its endpoint. The reflection
+    follows the actual water surface instead of switching at ±0.4 m, and reflected views no longer enable a
+    direct halo when waves rise above 1 m. The real-shader continuity check passes; restoring either old boundary
+    fails it. Moving landscape and portrait inspection shows the hard edges gone. Landscape passes its storm
+    replay; portrait still fails the separate brightness gate at 16.0/255 (item 54 remains open). Evidence:
+    `/tmp/updraft-fog-circle-jkq4FF/` (`probe.mjs`, `state.json`, `time-233.2.png`, `light-boundary.png`,
+    `clamped-light-sample.png`). The frozen run starts at the storm checkpoint, then uses the earlier capture's
+    shader time to reproduce its wave phase; it is not a reconstruction of every state in that earlier run.
+    Jeremy then instructed, verbatim: "then fix it.. omg". Applied and verified in the review build; final
+    shader tests, builds and moving captures: `/tmp/updraft-lantern-fix-U0Lxxo/`.
+
+### Further rescue and contact polish — 2026-10-10
+
+Jeremy's next brief, verbatim:
+
+> few more polish points,
+> 1) during the cat rescue, the cat waits really low down on the roof so that when the eaves sort of come up, it actually goes over the cat. Also, for some reason without me doing anything, the tub already floats towards the roof by itself. The player should be the one that pushes it to the roof.
+> 2) It's not exactly clear where to put the bucket for the rescue. Same way that there was a sort of outline for where the flight of stairs needed to be positioned in the stairs chapter, i want the same but for the tub checkpoint positions. make sense?
+> 3) image 1: the cat is sitting in mid air.
+> 4) image 2: the cat is STILL walking around clipping into the roof. I saw this when it got off the boat onto the roof, and when it sits down.
+
+56. Keep the waiting rescue cat clear of the roof's eaves throughout its motion; the tub must require player wind
+    to reach the roof instead of drifting there automatically.
+57. Mark the tub's current destination with the established stairs-style outline, including the rescue and return
+    positions, so the player can see where to steer it.
+58. Correct the cat's seated contact with the boat, using the actual posed body and supporting boat surface.
+59. Recheck and correct the cat's boat-to-roof landing, walking and sitting contact with the rendered roof geometry.
+
+These requested fixes are implemented in the integration review at port 5331. The later brief below supersedes
+the earlier pickup sequence: the child stays seated while the cat shakes dry and hops to the bow.
+
+Jeremy's additional brief, verbatim:
+
+> more issues i need you to fix as well
+>
+> 5. the cat meows too often
+> 6. as per image, the cat is weirdly resting on the windmill
+> 7. i think the fog is causing a huge drop in performance during this scene. please disable it so i can test.
+
+60. Reduce recurring cat calls, including overlapping pleading and idle-call timers.
+61. Correct the windmill sail perch so its feet and body follow the supporting stock while it turns.
+62. Temporarily disable village fog rendering in development/QA by default for Jeremy's performance test;
+    `?villagefog=1` restores it for comparison. Keep story progression and lighting the same and production unchanged.
+
+Implementation: the idle rescue valve is removed, and docking requires a recent player stroke. The cat waits
+about 0.76 m above calm water. A golden ghost of the tub marks the active dock and fades when it is occupied.
+The bow uses its raked deck surface; the cat's skinned haunches and paws fit their supporting surface after its
+pose is applied. The mill's cat follows the stock's pitch. Recurring roof calls are 18 s apart; every mew shares
+a 12 s minimum gap after rescue. The later ruling below allows 7 s between stranded calls. CPU checks cover both 180 s idle waits and both
+player-driven trips at 30/60/120 Hz, actual roof and boat meshes, and the rotating stock. Evidence:
+`/tmp/updraft-cat-polish-gJ6o1k/`. Real-pointer rescue replays pass in both aspects, and the final portrait replay
+shows the raised rescue camera, supported bow pose and clear landing. Close windmill captures show the cat
+following the stock. The final landscape first-tree replay passes with the route around the chimney.
+
+### Rescue pacing and cheaper mist — 2026-10-10
+
+Jeremy's further brief, verbatim:
+
+> more issues
+>
+> 8. before even getting to the rescue scene, the player can use their wind to blow the bucket away. Disable the ability to interact with the bucket until the rescue scene starts.
+> 9. when the child picks up the cat in the boat, it literally clips into the mast. i dont think the child should pick it up. just let the cat shake itself off, then jump onto the front of the boat
+> 10. when the cat jumps off the boat, it jumps onto a place on the roof that clips into the boat.
+> 11. during the first tree challenge, the cat walks through a white chimney
+> 12. It's ok for the cat to meow a tiny bit more when it hasn't been rescued yet. The problem i raised with it meowing too much was after it was already rescued.
+> 13. after the boat runs ashore onto the roof, theres too much delay until the cat jumps off and the rest of the sequence continues.
+> 14. after rescuing the cat, the boat should sailing again for a second or two before the "becalming" tone and effect come into play. And while it's sailing into the roof with no wind, there should be no music playing.
+> 15. When the cat reaches inside the bellfry, it shouldn't just be sleeping. that looks really weird
+> 16. the fog is a huge performance issue. disabling it removed the performance drop issue. However, now I need to figure out what to do with the bellfry bell ringing part of the sequence.
+
+Asked whether to call the boat across open water or test cheaper mist, Jeremy answered:
+
+> Test a cheaper mist effect
+
+63–70 track requests 8–15 above, in order. Lock input until the rescue; replace the pickup with a shake and
+hop to the bow; land clear of the hull and route around the tree challenge's chimney; distinguish stranded
+calls from rescued calls; shorten the stranded pause; sail for two seconds before the cue and silence the
+windless drift's score; keep the mother cat attentive among the kittens, including checkpoint restoration.
+71 tracks request 16: prototype a much cheaper mist rendering, preserving the bell's hidden-boat reveal,
+and compare the same camera/time against fog off and the original fog. Keep the no-fog review available.
+The owner's observed improvement with fog disabled is the performance baseline. No island changes.
+
+Current verification: the tub rejects pre-rescue strokes (the negative control fails with the input gate removed).
+The new sequence is shake → bow, with no cradle/pickup; its nearest skinned point stays 11 cm off the mast.
+It sails for 2.00–2.03 s, moving 1.81–1.91 m before the cue, then silences the score throughout the windless drift.
+The cat reacts 1.30–1.32 s after grounding, lands on the ridge clear of the hull (21–24 cm vertical/horizontal
+clearance), and routes around the first tree's white chimney with at least 20 cm skin clearance. The belfry cat
+sits alert both on arrival and restoration. Checks cover 30/60/120 Hz.
+The cheaper mist is available at `villagefog=mist`: four analytic height layers, no density march or noise-texture
+sampling, with the existing story front, rising height and bell clearing. First matched belfry Ultra samples:
+original 53.9 fps, p95 33.3 ms; mist 60.0 fps, p95 16.8 ms; fog off 60.0 fps, p95 16.7–16.8 ms. These are local
+six-second samples at 1600×900, Ultra's render scale 1.5, not a device-wide performance guarantee.
+The matching early-rooftop samples give mist 60.0 fps, fog off 60.0 fps and original 59.5 fps; the large local
+improvement is in the denser belfry view. No frames exceeded 25 ms in either mist sample.
+The final portrait belfry-to-woods replay passes with the trial mist: four rings reveal the lantern and bring
+the boat in, the cats stay at the window, and the crossing reaches the woods. Its largest non-lightning brightness
+change is 10.7/255, within the existing 12/255 gate. This closes the observed surge for the mist trial; item 54
+remains reproducible with the original fog fallback (16.0/255). The mist looks flatter and less billowy than
+the original; Jeremy's visual and device-performance review is still needed before adopting it in production.
+
+Typecheck, production build, the 14 quick checks, boat, camera, contact, farewell and the new rescue sequence
+checks pass. The 53-check mechanics batch passed before the latest pacing/mist changes; the focused checks
+above cover the final changes. No merge or deployment. Evidence: `/tmp/updraft-cat-polish-gJ6o1k/`, especially
+`rescue-portrait-final.log`, `tree-final.log`, `bell-mist.log`, `sequence.log` and `contact-six-pass.log`.
+
+
+### Tub control and rescue sound correction — 2026-10-10
+
+Jeremy's follow-up, verbatim:
+
+> the tub is still auto drifting towards it's checkpoint. I told you to remove that holy shit.
+
+> omg you even removed the cat shaking off it's water, you literally cut the music off in hte middle of what it was playing after the rescue sequence, and you removed the becalming tone. That was NOT what i asked you to do.
+
+Jeremy corrected the interpretation before any attraction changes were made:
+
+> holy shit, checkpoint attraction is fine. I literally did not move the tub and it started drifting on it's own
+
+Keep checkpoint attraction. Reopen items 56 and 69 and verify the actual sound and visible sequence, not only
+state flags. Reproduce and fix movement before the player has touched the tub. Make the cat's shake visible and
+let it complete before the bow hop, give the rescue music a natural ending, retain the becalming tone, then keep
+the windless drift free of music. Work remains on the port 5331 review branch.
+
+> also, now when the child reaches the bellfry tower, the red boat literally appears out of thin air. I thought you said you were going to test a cheaper fog? where the hell is that cheaper fog? stop being lazy. do a good job
+
+Make cheaper mist the review default, with `villagefog=0` explicitly disabling it for comparison, and verify
+the whole tower approach and boat relocation/reveal instead of beginning the visual check at the bell checkpoint.
+
+> also, if the player rapidly makes wind with the bell in the, it gets stuck on one side and never actually plays anything.
+
+Verify repeated and alternating bell strokes, including sustained fast wind, and prevent a pinned silent bell.
+
+> - also add a kite in the water or something where the child gets picked up.
+> - when the child sets up during the storm sequence, the same godahm music is playing instead of getting darker like on main branch, and the boat is moving way too fast. you made it into a speed boat.
+
+Clarify the pickup marker's intended appearance; compare the storm's actual speed and music transition to main
+and restore the intended darkening and pace. No island relocation; the earlier request was a modestly longer
+distance, not a faster crossing.
+
+Jeremy clarified:
+
+> throughout the entire game, each exit point is marked by the kite motif. for this drowned village scene, at the pick up point, there should be a kite floating in the water or something
+
+Use the established kite motif as a floating marker at the belfry pickup, not a generic light or outline.
+
+Jeremy reiterated after the review pass:
+
+> didn't i already tell you before that the becalming and the tone shouldn't instantly play after the cat is rescued, but maybe ~2 seconds after
+
+The delay begins after the cat's shake and bow hop finish: a short settle, then about two seconds of sailing.
+The becalming effect and its tone start together after that interval. Verify the actual cue timestamp as well
+as the story state; counting one cue somewhere in the sequence is insufficient.
+
+Jeremy's next playtest findings, verbatim:
+
+> image 1: The cat jumps through the wall in this corner here. tidy this up.
+> image 2: there is some kind of z level conflict that is causing the beam to artifact in and out at the edges.
+
+The first image marks the tower's south-west corner where the cat comes off the churchyard railings onto the nave.
+The second marks the stone band around the tower below the belfry, especially its ends at the dressed corners.
+
+> also, the clothes line takes a bit too much wind to get going. can you tone it down a bit.
+
+Reduce the sheet's required wind effort modestly, preserving its gradual lift. Verify the tower route against the
+posed cat, the stone band's real mesh surfaces, and the sheet with actual pointer strokes.
+
+> when the child gets into the boat, the camera pans to the left, then pans to the right, and then looks up. a golden rule of this game is that every camera movement must be intentional and cinematic. I dont know what  you did, but you broke the camera cinematography at this point.
+
+The belfry pickup's boarding-to-farewell camera must make one continuous, intentional move to the cats at the
+window, with no left-right correction between state changes. Preserve whole-character framing in both aspects.
+
+> image 1: You've also decided for some reason to completely ruin the lamp effect and make it a glowing orb
+> image 2: Once it gets closer to the woods, the proper shader is used. I need this shader to e used, not whatever on gods earth you used in image 1 during the stomr sequence.
+
+Preserve the normal visible lantern and its shader's light on the boat and water throughout the storm, matching
+the woods approach. Remove the extra orb obscuring the lantern; the distant bell-answer reveal must still read.
+
+Jeremy's mist follow-ups, verbatim:
+
+> there's strange banding in the cheap fog, and the fog seems a bit blue. I took this screenshot when the boat was in the becalming sequence.
+
+> blah, as the child is going through the sequence and the camera is moving, the fog's position moves as well! do you see this issue?
+
+The cheaper mist must be a continuous world-space field. Camera movement must not reposition its height or
+front. Verify frozen-time camera motion, the actual becalming sequence, the bell reveal and performance;
+remove discrete bands and let the sunset light colour the mist.
+
+Jeremy, verbatim, on the boat summoned by the bell:
+
+> The more i play through this, the more i think that the player shouldn't need to create wind to blow the boat in. because it's been "summoned" by the bell, it should continue to drift in to the boarding point by itself.
+
+The final bell answer carries the boat all the way to the berth while she climbs down. Remove the extra sail
+invitation; verify arrival and boarding with no player input after ringing, including the full camera transition.
+
+Jeremy's next playtest, verbatim:
+
+> didn't i already tell you before that the becalming and the tone shouldn't instantly play after the cat is rescued, but maybe ~2 seconds after
+>
+> did you do this? I can't believe i'm going to ask this for the fourth time
+
+> well it DOESNT
+
+> and your fog is still moving based on camera position
+
+> in different parts of the drowned sequence i am literally seeing the fog advance and/or recede very quickly
+
+> quite literally as the child gets off the very first roof she climbs on, the fog recedes, then when she gets to the tree, the fog has advanced all the way forward
+
+Items 69 and 82 were reopened. Verify the audible rescue transition and actual sailing interval together, and
+the whole scene's fog uniforms through the first-roof → tree camera move. Isolated cue and shader tests did
+not establish the player's observed result. The scene controller still fades the fog by the camera's distance
+from the church; remove camera-driven changes to the bank, not only ray-dependent shader density.
+
+Jeremy's ruling on the later bend after the fixed-direction replay, verbatim:
+
+> thats ok, i saw it. leave that
+
+> im ok with, in fact prefer it to have the fog overtaking the child's route a bit.
+
+Keep the bank overtaking parts of her route. Do not add a protective gap or pull the fog back as she crosses a bend.
+The defect to remove is the bank pivoting, retreating or changing with the camera, not her entering some mist.
+
+Jeremy's final rescue-delay instruction, verbatim:
+
+> what i need you to do is make it so that the becalming and the tone don't instantly play after the cat is rescued. If you are saying it already happens 2 seconds after, then can you add another 2 seconds ontop.
+
+Add two more seconds to the sailing interval: four seconds after regaining sailing speed. Keep the music playing
+for the added time, then its existing two-second fade; tone and becalming begin together afterwards.
+
+Jeremy's boarding-framing tweak, verbatim:
+
+> only one tweak. during this part of the sequence where the child is getting into the boat, i'd like for the cat in the window to be in frame. I think a problem with this part is that it might be too zoomed in. A symptom of that being that when the camera does rotate up to see the cat, only the top of the child is in frame. understand what imean?
+
+Keep the cat at the window visible while she boards and the whole child framed through the look-up. Widen the
+existing composition, preserving its shared bearing and single deliberate move. Verify boarding through the
+farewell in landscape and portrait, including body bounds rather than only her face.
+
+Jeremy's bell-effect polish, verbatim:
+
+> one last polish point, im not convinced by the bell ringing effects with it turning red and having that red aura effect when it rings out. I don't think the bell should have it's colour changed when it rings. And in terms of the red circle aura that expands out, can you make it look better or more fitting?
+
+Keep the bronze material unchanged on a strike. Replace the saturated expanding aura with a soft, broken,
+pale ripple through the mist. Preserve the swing, sound, fog clearing and boat response.
+
+Jeremy approved the new ripple and refined it, verbatim:
+
+> that pale ripple is nice, can you make it do that for each bell ring?
+
+Every strike produces the ripple, including inside the area cleared by previous rings.
+
+Jeremy's review: "ok looks good. next question, whats the chapter to skip to the fallen tree challenge?"
+The boarding framing and bell polish are approved on the review server.
+
+Jeremy's fog-boundary polish, verbatim:
+
+> ok this was what i was trying to capture. it's a very straight cut fog boundary. any cheap ways to soften that boundary to look a bit more natural?
+
+Trial a wider front fade plus a few broad, rounded wisps with analytic optical depth. They are part of the same
+world-space bank, with no camera-driven placement or density and no return to the expensive marching renderer.
+Compare the fallen-tree exit in play and measure performance before accepting the change.
+
+Jeremy's next belfry findings, verbatim:
+
+> i just noticed one other bug. when the child climbs the vines into the belfry, she was holding the paper plane, which disappears when she climbs the vines. So when the child gets into the top of the tower, the paper plane is gone. But then it magically appears again as she's getting into the boat at the end of the belfry sequence. She needs to put the paper plane back onto her backpack when she's climbing up and down the vines.
+>
+> Also, i dont know what you did with the fog, but there's a bug where when the camera settles into looking up at the cat in the tower, it gets blurred by fog (see attached). Infact, when she's coming down the vine, more fog suddenly renders in instantly.
+
+> note that i do like the feel of the fog and mist that is part of the storm sequence as she leaves though, so please don't cause a regression there.
+
+Keep the plane visible on the backpack from the approach to the ivy through both climbs and the belfry visit.
+Preserve the bell's local clearing through the farewell, blend it away as she leaves, and repair the density
+discontinuity while the bank lowers. Keep the storm's existing density, colour, timing and lighting.
+
+Jeremy's final climbing-route polish, verbatim:
+
+> great, one last issue. do you think we should remove this single bar ontop of the vines since the child and cat are climbing up and down the vines?
+
+Remove the lower stone belt from the west, ivy-covered tower face so it no longer crosses their climb.
+Keep the window sill and the belt on the other three faces.
+
+Jeremy reopened the farewell and bell interaction, verbatim:
+
+> - The issue with the fog at the deepest point when the camera looks up at the cat still isn't fixed see attached image. The camera seems to go a step lower than it should.
+> - Also, the interaction with the bell is super annoying. If i try to slowly move my mouse with the sway of the bells, the bells actually end up slowing down. It's very confusing interaction. can you just simplify this somehow. When i do very strong and fast gestures, it just rings on one side all the time as well. It seems buggy.
+
+Raise and open the farewell composition enough that the final fitted camera stays above the water-level mist
+through its lowest point, keeping the child and window cats framed. Preserve the storm mist. Bell strokes
+now build bounded swing momentum without requiring timing or counteracting its motion; the clapper rings at
+either end of a sufficient swing. Gentle movement can sustain it, fast repeated strokes cannot pin it, and
+it settles naturally when input stops. Keep the bronze and pale ripple on every ring.
+
+Jeremy's final pre-merge review brief, verbatim:
+
+> great, do one last code review for bugs, code duplication, dead code, simplification opportunities, performance optimisations, or even gameplay issues. As long as there isn't much noticeable visual regression. This is the last step before we merge things into main
+
+Review the complete drowned branch against its main ancestor and current main's shared seams. Fix proven bugs
+and safe simplifications, preserving the approved visuals and pacing. Verify production matches the reviewed
+game, saves and puzzle progression work, and relevant regression gates pass. Findings and evidence are in
+[final-review.md](final-review.md). Merge remains a separate step.
+
+Jeremy's fog cleanup instruction during the review, verbatim:
+
+> yea, we aren't using the expensive fog anymore, you can delete that. make sure we use the new approved cheaper fog
+
+Remove the original ray-marched renderer and its unused controls. The approved analytic mist is the single
+renderer in development, QA and production, including the storm. Keep `villagefog=0` for comparison with no fog;
+both `villagefog=1` and the existing `villagefog=mist` links enable the approved mist.
+
+Current follow-up list (all authorized):
+- 56 reopened: the approaching hull pushed the untouched tub. Start it outside that path, retaining attraction
+  after player input. Full-entry CPU tests now measure zero drift; the old start fails at 0.389 m.
+- 69: visible shake and bow hop, sail recovery, then four seconds of sailing before the becalming tone and
+  effect together. Music continues for the first two seconds and fades over the next two; the drift is quiet.
+  The live portrait replay measures 4.00 seconds from sailing speed to the actual audio cue, with all three
+  notes scheduled and 9.25 m travelled since release. The previous release-based timer included acceleration.
+- 71 reopened: cheap mist is the review default. Full tower-foot → woods capture shows the boat hidden before
+  ringing and its lantern answering through the mist; no extra query parameter is needed.
+- 72: rapid strokes pinned the bell before a strike. Each swing now completes before another is accepted;
+  30/60/120 Hz rapid and alternating tests ring repeatedly and settle after input stops.
+- 73: reuse the paper kite and its bow tail, floating clear of the belfry pickup berth.
+- 74: storm music follows the weather instead of a 32-second major passage. Sail at 4.5 m/s through the same
+  modest bend, retaining the lighthouse's longer shine and every island's position. Main measures about
+  5.8 m/s too, but the review's closer camera makes that speed feel faster. The crossing now takes 53–56 s.
+- 75 found during verification: fading note envelopes dropped out before the forest crossfade ended. Hold
+  sustained notes through that fade; the rendered continuity check now passes (497 score checks total).
+- 76: the cat's railing-to-nave leap cut through the tower corner. Take off earlier and land farther west;
+  posed-mesh clearance is about 0.29 m at 30/60/120 Hz. Both endpoints stay on the existing railing and roof.
+- 77: the tower band was coplanar with the corner posts. Its stone now projects beyond the posts and quoins;
+  real-mesh ray checks measure 5–8 cm between competing faces.
+- 78: reduce clothesline effort modestly: stroke response 0.75 → 0.95, about 21% less wind for the same fill.
+  The lift time, idle behaviour and wrong-way response remain the same.
+- 79: the boarding shot aimed to one side, then the farewell aimed back. They now share their horizontal eye
+  and aim; the look-up lowers the lens and tilts toward the cats. Framing bounds and zoom blend continuously.
+  Verify the full boat return through boarding, not only a restored storm checkpoint.
+- 80: the bell-answer sprite stayed visible in the storm and covered the normal lantern. Fade it as the boat
+  approaches the berth and disable it for boarding and departure. The ordinary lantern shader lights the boat
+  and water throughout the storm.
+- 81 found during verification: the sheet's pinned hem lagged behind the hands by about 25 cm at full travel
+  speed, with both old and new sensitivity. Pin the grasped cloth directly to the hands. Measure the actual hem
+  in contact checks; the nominal gathering point is not where the deformed cloth is held.
+- 82: cheap mist used a camera ray to place its front and height, then four discrete layers to fill it. Replace
+  that with continuous world-space density and an exact line integral; the bell clears a soft world-space circle.
+  Neutralise the blue body and include the sunset's crest light. Frozen-camera movement, optical-depth
+  additivity and reverse-ray checks cover anchoring; the old shader fails these checks.
+  The subsequent controller correction fixes the bank's heading and projects progress monotonically along
+  it. Village/woods fade follows the boat, and the belfry clearing follows the child, never the lens. The live
+  first-roof → tree replay confirms no pivot, retreat or opacity change, and at most 3.20 m/s advance.
+  Fog overtaking the route remains intentional, as Jeremy requested.
+- 83: after answering the bell, the boat continues drifting to the boarding point without another wind gesture.
+
+
+Latest evidence and verification limits: build_plan.md, “Visible sailing delay and steady fog — 2026-10-10”,
+and `/tmp/updraft-calm-fog-1UEjg3/README.md`. Work stays on the review branch; no merge or deployment.
+
+### Earlier departure rulings and verification
+
+Asked whether to move the later islands together or use a longer curved route, Jeremy answered, verbatim:
+
+> not too curved, but slightly more curved. Im worried about your ability to move the islands properly
+
+Keep every island and berth in place. Extend the existing bend past the lighthouse modestly; normal hull speed
+and a clear approach to the unchanged woods landing take precedence over the previous slow crossing's 80-second
+duration. The lighthouse must remain readable as its light fades, and the plane must be readable during release.
+
+The four requested changes are complete. Jeremy approved findings 42, 47, 48 and 53 on 2026-10-10, verbatim:
+
+> you are approved to address all identified issues
+
+Those four findings are resolved. Items 54–55 are new findings for review. Work remains on the integration branch,
+without merge or deployment. Island coordinates and save geography are unchanged.
+
+Departure evidence: `/tmp/updraft-departure-Y5m3eS/`. All 51 mechanics checks pass after correcting the journey
+pacing fixture to track each storm waypoint independently; the original batch recorded 50 passes and that one
+failure, followed by the successful targeted rerun in `journey-pacing-final.log`. Typecheck and production build
+pass. The focused camera check passes at 30/60 fps, in both aspects, with calm input and strong gusts. The full
+church-to-wood replays pass in both aspects, as does the separate portrait plane capture. Both cats stay on the
+sill throughout each departure; the lamp stays in frame through its fade. Screenshot inspection additionally
+found item 53 despite the passing centre-point gate. No Ultra performance or physical iPad claim is added.
+
+### The room rethought (Claude, 2026-10-08; Jeremy: "yea lets see how this works")
+
+One idea holds the middle of the room together: **the fog is a rising white tide and the only safe place is higher
+than it.** The cat knows where that is (the church, where its kittens are); the boat cannot go there; every crossing
+takes her higher; the tower is the refuge; and the boat, lost to the fog, comes home when she calls it. This supersedes
+the steps from the air dying to the boat leaving in "The whole room, from the beginning" and the cat bullet below
+where they differ; the drift, the village, the look and the storm stand.
+
+1. **The rescue.** The cat is a proper cat, about knee-high to her (cheated larger than life, as background animals
+   may be), soaked and frightened on its chimney pot: hunched, ears flat, mewing toward the church, flinching from the
+   water. The tub sits in the water (its inside masked from the sea) and answers the wind readily, easing toward the
+   cat's roof and the boat once it is near. In the tub the cat crouches with its head over the rim; at the boat it
+   leaps onto the thwart beside her, shakes and shivers, then comes into her arms as she kneels. It pushes its head
+   under her chin. That one exchange is the rescue: the player sees that it trusts her. It then settles at the bow once.
+2. **Stuck.** The air dies. The becalmed boat drifts onto a roof lying just under the surface: a scrape, a lurch, the
+   lantern swinging, and it is fast; a sweep of wind on the sail only makes it strain and creak. Behind them the fog
+   is rising off the sea. The cat stares at it, then toward the church, and leaps onto the nearest roof and runs. She
+   looks at the dark, at the stuck boat, and goes after the cat with the plane clutched to her.
+3. **The boat is lost.** Nothing follows them. The stuck boat is left where it lies, and from the first roof she
+   looks back as the fog takes it: the hull, the sail, and last the lantern's glow. From here the boat is gone.
+4. **The fog chases them upward.** It never stops and never rushes. It comes on behind at a walking pace, rising as
+   it comes, so the roofs she leaves go under it one by one, each just after she is off it: the low roof she left,
+   then the wall, then the high roof. Its pace follows hers (it keeps a few roofs behind, closer while she works a
+   crossing, never reaching her, nothing failing). It is in the edge of every walking frame; it is heard (the sea
+   muffled, a foghorn far off); she and the cat glance back at it. The route climbs at every crossing, so its logic
+   needs no words: get higher than the fog.
+5. **Four crossings, little walking.** Short runs between pieces, none much over 10 s on foot; each piece takes her
+   higher; the cat goes first wherever a cat can, quickly, already going as she arrives, never making anyone wait
+   (Jeremy's pacing ruling in the cat bullet). The pieces, each a different use of the wind:
+   - **the tree (push)**, as built, the cat scrambling up it so it leans her way;
+   - **the sheet (fill)**: a sheet on a line between two chimneys across a lane; gusts fill it and it carries her
+     over, holding on, like a sail; the cat runs the line first;
+   - **the windmill (circle)**, rebuilt as the mill's sack hoist (below), the cat riding a sail up first;
+   - **the swing (pump)**, as built, the cat springing from its seat onto the nave first.
+   The umbrella (her lifted over a gap by the player's updraft) was cut under the licence to cut: a second
+   crossing worked by circles beside the mill's hoist, and more length, for an image the room did not need. Their order
+   and places come from the re-laid route; the two new pieces are staged and judged on the stage's yards
+   (`?chapter=stage`) before they go into the room.
+6. **The refuge.** The cat climbs the tower's ivy into the belfry and she follows it in (the child can climb what she
+   could not before: the ivy is thick and stepped, and the cat shows the way). In the belfry, in old straw under the
+   bell, are the cat's kittens; the cat curls round them. The fog closes round the tower and rises to just below the
+   belfry's sills, and stops. They are above it: where the village was is a cold white sea in the last light, only the
+   spire and the lighthouse standing out of it, the lighthouse beam sweeping over its top. A
+   quiet breath after the chase. It stays low and cold-bodied in colour, never the stairs room's luminous cloud.
+7. **The boat comes home.** The bell hangs over them. Moving across it builds its swing without needing to time
+   strokes; it rings at either end and settles when left alone (Jeremy's simplification, 2026-10-10). Each ring
+   rolls out over the fog and pushes it back a little round the tower, and out in the fog a lantern glows in
+   answer, nearer each time: the lost boat drifting home to the sound (things drift home: nothing is lost). When it is
+   near, the fog has drawn back to the water round the nave and the boat keeps drifting to the boarding point by
+   itself. She climbs down the ivy and steps aboard.
+8. **Letting go.** While she climbs down the ivy, the cat and the kitten come to the belfry's window to see her off.
+   She steps aboard, turns on the thwart and looks back up at them; the cat gives her a slow blink. They stay together
+   on the sill watching her leave. She has brought them home and leaves them there safe. The camera holds her face
+   and the cat's blink in both viewport shapes, then carries her out toward the lighthouse as the storm gathers.
+
+**The windmill, rebuilt** (Jeremy, 2026-10-08: "spekaing of the windmill, that reminds me. I'm also not happy with how
+it works right now. The child effectively has a wedgie riding it up. it's very strange looking and feeling, and it
+doesn't feel nice to actually move the windmill with wind either. Because the distance is so small, it actually
+doesn't feel satisfying to solve the puzzle either, more like "oh, that's it?""). She no longer rides a sail. The
+mill keeps its sack hoist: a beam out of a door high under its cap, a rope down to a slatted basket at her roof's
+edge. She steps into the basket and holds the rope, standing. The player's circles turn the sails, the sails wind the
+hoist, and she rises the full height of the mill, the biggest climb of the run, to step off at the top onto the high
+roof (or a plank from the mill's door across to it). Turning it must feel good: the sails are big and catch the
+circles at once, gather speed with weight and keep turning a little when the circling stops, the cap creaks, the
+rope winds visibly on its drum, and a ratchet clicks and holds her wherever the sails stop (she never sinks back).
+The cat goes first by riding a sail up and leaping onto the cap, which shows that the turning sails are the way up.
+
+**The music** is a few long pieces in the game's own voice following the room's feeling, not a cue per beat (the
+design is under item 35 above). Jeremy on the first study (2026-10-09): "the music sounds a bit... random? I think
+there's not enough structured harmony / melody to it. But it's hard to tell based on an audio clip alone without the
+game playing as well". So every piece has a tune in regular phrases over a clear progression that comes round.
+
+Jeremy, 2026-10-08, on what the work needs: "yes, you have licence to cut or replace anything you feel doesn't earn
+it's place", and on the camera: "I think it just needs to be framed well for a human is all. The rest of the game does
+a fairly good job if you need to see how it's been done." So any piece above may be cut or replaced if it does not
+earn its place in play, and the camera takes its grammar from the game's other rooms.
+
+**The camera** follows the game's own grammar (`camera-grammar.md`, measured from the rooms Jeremy holds up: the
+clouds, the owl, the boats, the birches, the sea), authored shot by shot to the list below. Its rules here:
+- **She and the thing are named.** She is the primary subject; what she works, follows or fears is the secondary one
+  (the piece, the cat, the fog's front, the bell, the kittens, the boat), the aim leaned 35-60% toward it and the side
+  chosen so it stands beside her, never behind her. A moving occluder (sail, mast) is kept out by bearing.
+- **Distance by the kind of beat.** Walking the roofs 12-14 m behind the way she is going, 3-4.5 m up; sailing 16-23 m
+  astern, 4.5-6 m up; a crossing 12-16 m from the side of the gap, 10-20 degrees down at most; a creature's moment or
+  a feeling 5-8 m with the lens at her head height (a longer lens, zoom 1.3-1.8, for faces and the cat). Never from
+  high above: a climb is seen from low, looking up the way she climbs, the thing climbed the ruler in frame.
+- **Slow, round her, uncut.** A change of side orbits her, no faster than the rig's 17 degrees a second; an authored
+  move takes 4-8 s, one move per beat, never in and out. No visible cut: the lens goes round, up or through. Feeling
+  beats move at pace 0.16-0.3 and hold until the story moves.
+- **The fog is in every chase frame,** behind or beside her, as a secondary subject or a glance whose weight rises as
+  it nears; seen from a little above its top or across its face with sky behind, never from inside its top layer.
+- **Upright composes for itself:** closer, taller, tilted up, the story stacked up the frame (the owl's upright view).
+
+**Shot list.** Each line: the beat, the subject, the frame, how it hands on.
+- Rescue: the tub and the cat's roof in one frame from low over the water, the boat at the edge; as the tub nears the
+  boat the frame comes round to the boat's quarter away from the sail, the cat leaping in at her shins and her
+  kneeling to it, close (5-6 m) at her eye height.
+- The drift: wide behind the boat (16-23 m astern, 4.5-6 m up), the village passing beside it, the cat in the bow,
+  the spire a glance. It is the room's establishing shot, not a two-shot.
+- Stuck: at the scrape the lens comes round side on and in on the bow (6-8 m, at her eye height), the roof's slates
+  under the water below the stem; the fog's rise behind is the secondary subject, growing in frame; the cat's stare,
+  yowl and bolt read large; its leap carries the frame up onto the roof. (As built the fog rises at the frame's back
+  edge and leaves it as the lens leans in on the cat's fear: the fog comes from dead astern, and no frame side on to
+  the bow holds both.)
+- The boat lost: over her shoulder from the first roof, low, the boat below, the fog taking it; the lantern the last
+  light.
+- Each walk: from behind her the way she is going, off the shoulder on the fog's side, the cat ahead, the fog behind
+  or beside, the next piece already in view. She never walks at the lens.
+- Each piece: from the side of the gap, her on the near edge, the piece and the far side across the frame, the cat's
+  showing in it; held while the player acts; the crossing played across the frame. The mill's hoist seen from low
+  beside the basket looking up the mill, the sails and the drum in frame, the lens rising with her slower than she
+  rises; the swing three-quarters on and low, as the birches' swing. The next walk picks up from there.
+- The refuge: the cat's way up the ivy beside her, not behind; rising with her from low and to the side; into the
+  belfry without a cut, round the tower's corner; the kittens seen three-quarter on, her face and the kittens in one
+  frame, close and warm in the shadow; then the wide frame from the belfry over the fog sea, the lighthouse beam
+  crossing it.
+- The bell: the bell and her in the opening, the fog sea beyond; each ring's wave rolling out; the lantern's glow
+  appearing in the fog, the frame finding it.
+- The boat home: from the belfry looking down at the boat coming in to the tower's foot, then down with her as she
+  climbs to it.
+- Letting go: the cat backing down the ivy behind her as she climbs down, seen in the frame that comes down with her;
+  aboard, low over her shoulder from behind the boat's quarter, her hood large in a lower corner and the cat on the
+  nave's ridge a few metres off in the upper third, both in one frame (the cat well over 80 px landscape); held for
+  the look and the blink; then the lens lets her go and rises with the cat going back up the ivy to the kitten at the
+  sill, and hands to the storm's frame.
+
 ### How it is made (Claude's calls under that ownership, 2026-10-05)
 
 - **Pacing.** Arrival and calm drift about 30 s; the cat about 30–60 s; a short drift with the cat aboard (the cygnet
   ducking into the satchel, the cat washing a paw at the bow) about 15 s; the air dying and the dark rising about 20 s,
-  slow and eerie; the run about 2 min with both crossings; the dark arriving and the boat brought in about 45 s; the
-  storm about 45 s to the beach. The room grows from about 3 minutes to 5–6, nearly all of it the player's.
+  slow and eerie; the run about 2.5 min with its three pieces; the church, the dark arriving and the boat brought in
+  about 50 s; the storm about 80 s to the beach. The room grows from about 3 minutes to 5–6, nearly all of it the player's.
 - **The cat.** A small soft tabby with a white chest and socks, round-faced, a little bedraggled, built as soft
   rounded shapes like the game's other animals, to the model sheet in `comps/cat/`. It mews from the chimney, hates the
   water, rides the tub hunched with its ears flat, and on the boat sits at the bow as far from the water as it can. It
@@ -499,8 +1485,8 @@ So the existing drowned village and storm code may be refactored as far as the r
 - **The dark is a sea fog** (Jeremy, 2026-10-05, doubting the black smoke: "im not sure if the dark cloud look make
   sense given the lighting and time of day... what do you think? would a white fog / mist / haze make more sense?"; on
   Astra's fog study: "yea that fog looks way better"). A haar rolls in low off the sea from behind (south, the way they
-  came; `src/world/drowned-dark.ts`, "the dark" in code). It obeys the dusk: its crest takes the low sun's gold and rose,
-  its body is cool blue-grey, and roofs at its edge fade into it and are gone rather than being covered. As it nears it
+  came; `src/world/drowned-dark.ts`, "the dark" in code). It obeys the dusk: lit from above by the sky, cold white on top
+  and blue-grey beneath, the low sun only a thin rim on the crests that face it; roofs at its edge fade into it and are gone rather than being covered. As it nears it
   takes the sun: the warmth drains from the boat, the roofs and the water, and the lantern is the warmest thing left.
   At the church it closes round her and darkens into the storm's night, the first wind breaking up the glass. The
   threat is what it takes away, so it never sits still: one roof, then the next, then the sun, with the cat's panic
@@ -508,9 +1494,9 @@ So the existing drowned village and storm code may be refactored as far as the r
   reads as land or rock, and smoke implies a fire that is not there. The target is Astra's study in `comps/fog/`
   (`fog-far`, `fog-near`, `fog-arrives`, `fog-portrait`, painted over `today.jpg`). It is built as one fog field every
   shader reads (a moving front, a height profile and slow low-frequency variation, surfaces mixing toward the fog's
-  colour by transmittance), so things truly fade into it; three to five large feathered sheets give the crest and
-  wisps but never do the hiding themselves; the fog's colour, the sun, the sky light and the water's reflection are
-  driven from one progression, and the lantern's light stays its own. It stays low, flat and cold-bodied, with a clear
+  colour by transmittance), so things truly fade into it; its top heaps and rolls in slow swells and billows and
+  thins into the air over a metre or two, and its face leans back with fingers running on over the water; the fog's colour, the sun, the sky light and the water's reflection are
+  driven from one progression, and the lantern's light stays its own. It stays low and cold-bodied, with a clear
   stretch of open dusk air before it rises, so it never echoes the stairs room's luminous cloud.
 - **The tree and the swing, from the spike** (`proto-drowned-crossings`, playable on the QA stage with
   `?chapter=stage&gap=tree|swing|run`; `src/world/crossings/`). Kept: the push arriving a beat late, the rock and
@@ -528,18 +1514,19 @@ So the existing drowned village and storm code may be refactored as far as the r
   themselves cover very little ground. There's a lot of ground between the drowning village and the woods island... i
   hope you have a plan here."; on the plan below: "proceed with your plan with the tree, and swing"). As first planned
   she walked about 45 m of the roughly 445 m from the stairs to the forest beach, and the last 255 m was watched from
-  the boat. Instead her way on foot grows to about 165 m: the church moves on about 120 m to stand near the
+  the boat. Instead her way on foot grows to about 165 m (214 m as built): the church moves on about 120 m to stand near the
   lighthouse (as the room painting has them, together), and the old church site becomes ordinary roofs. In order: she
   climbs out at the cottage; the tree (Phase 1's lane and walled garden); her own way over ridges, wall copings and a
   lean-to, small hops she makes herself, the cat a roof ahead and the fog behind, never a puzzle and never a single
-  line of houses; a middle piece (below); her own way again; the swing on the green onto the nave; the church. The storm from the church to the beach is about 140 m, past the lighthouse soon after she boards. The
+  line of houses; a middle piece (below); her own way again; the swing on the green onto the nave; the church. The storm from the church to the beach is about 173 m, past the lighthouse soon after she boards. The
   village keeps its open water and scattered roofs; the way adds only hand-placed roofs, walls and copings where it
   needs them. Plan: `comps/run/` (from `route-plan.png`, north up).
 - **The boat goes ahead of the fog.** With the church that far on, a boat left at the cottage would be out of reach
   and out of frame. So the cold breath that comes with the fog swings the untended boat off the slates and drifts it
   away along the open water, the same way she runs; she sees it go and still follows the cat. It fetches up against a
-  dead tree in the fog near the church, its lantern glowing, and the player fills its sail to bring it the last stretch
-  to the nave. Everything on the water is driven the same way, so the boat's drift is also a sign of the fog's breath.
+  dead tree in the fog near the church. The bell calls it back; its lantern answers, and it drifts all the way to
+  the nave without another gesture. Everything on the water is driven the same way, so the boat's drift is also a
+  sign of the fog's breath.
 - **The middle piece is a drowned windmill** (Jeremy, 2026-10-05, on Astra's route frames in `comps/run/`: "this makes
   sense. i think it's be nice to have a third player interaction way though in addition to the tree and the swing").
   The door ride down a flooded lane (`lane.jpg`) is cut: it repeats gusting a floating thing (the tub, the boat), forty
@@ -607,10 +1594,13 @@ each house's character carried by its shape and by stylised detail (Jeremy, 2026
   other, easing between crossings and never cutting; on an upright phone it looks along her way so it stacks up the
   frame. While she waits at a gap, the gap, the thing to push and her are all in frame. With the cat aboard the lens
   comes round to the side so the cat at the bow is not hidden behind her and the sail.
-- **The storm from aboard.** The dark has already arrived, so the storm starts with the weather mostly gathered rather
-  than gathering from clear; its beats keep their order and their spacing along the way.
-- **Saves.** A save during the run resumes with the boat at rest against the cottage, the cat aboard and the dark
-  risen; a save after she is aboard resumes aboard with the storm to come.
+- **The storm from aboard.** It gathers from the goodbye's calm, not from a storm already half there: the wind, the
+  sea, the rain and the night come up over the first half minute while the lighthouse is the landmark, and its beats
+  keep their order with room between them (item 34).
+- **Saves.** Once the cat is aboard a save resumes the drift with the cat at the bow; a save during the run resumes at
+  its start on the strand's ridge, the cat a roof ahead, the fog risen and the boat against the slates about to
+  drift; a save at the church resumes at the tower's foot; a save after she is aboard resumes aboard with the storm to
+  come.
 - **The cat comes home** (Jeremy, 2026-10-05: yes). At the very end, as she walks down to the cottage with the red door,
   the same tabby sits in its lit window, waiting: home's cat all along. No remark and no beat of its own; it is built
   once the drowned village is judged.
@@ -1519,3 +2509,13 @@ Jeremy approved all three corrections: "Approve all three". Use equivalent suppo
 settled net geometry with waves still driven by its shader, and calculate call durations once. Preserve the
 approved appearance, sound, camera, rescue and pacing. Verify geometry parity, checkpoints and real-gesture
 play before rebasing and merging into main. No deployment is requested.
+
+### Drowned village main merge — 2026-10-11
+
+Jeremy's approval after the final review, verbatim:
+
+> cool merge it into main
+
+Merge `proto-drowned-integrate` at `79c8c621` into local main at `97f7e4d4`, retaining the approved analytic
+mist and main's newer sea, boarding, stair-sail and character-lighting changes. Validate the combined code;
+no remote push or deployment is requested. Evidence and outcome: [final-review.md](final-review.md).

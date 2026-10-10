@@ -30,7 +30,16 @@ Every chapter has an entry checkpoint. The additional points:
   sail. Independent cygnet play makes no checkpoint.
 - Stairs in the clouds: `flight-1` to `flight-3`, the number of flights docked; restore rebuilds the docked stairs and
   stands the pair at the matching landing.
-- Drowned village: `sail`, once the wind has filled the sail and the boat moves again.
+- Drowned village: `sail` once the rescued cat has settled aboard (resumes beside its roof as the air dies, with the cat at the bow and no repeated sound cue;
+  a save from before then resumes at the entry, the cat on its chimney); `roofs` from her setting off over the roofs
+  (resumes on the strand's ridge with the cat a roof ahead, the fog risen and held behind her and the boat against the
+  slates, about to drift; the lens starts in the climb's view and the run takes it round to the tree's);
+  `church` from the tower's foot until she is in the belfry (resumes at the tower's foot, the cat on the railings
+  below the ivy, the boat lost in the fog); `belfry` from her kneeling over the kittens until she steps aboard
+  (resumes with her standing in the opening over the fog sea, the cat curled round its kittens and the bell about to
+  be hers to ring, the boat out of sight in the fog); `storm` from her stepping aboard to the beach (resumes seated at
+  the nave, the cat and a kitten on the sill, so the look up, the slow blink, the light, the plane and the landing
+  play again). All five retain the drift's leg in their payload for compatibility; restore uses each checkpoint's fixed place.
 - Dark wood: `found` (companion found and gathered) and `dry` (plane recovered and dried), with leg and path distance;
   restore rebuilds the earned light and leaves the next ember unlit.
 - Sleeping island: `feather` (the feather leaves the bed; resumes the assisted climb with the summit curtains closed)

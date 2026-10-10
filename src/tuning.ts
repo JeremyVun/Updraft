@@ -3,6 +3,9 @@
  * for scale, the prevailing breeze blows at `wind.breeze` and the hardest stroke makes `pointer.maxGust`.
  */
 export const tuning = {
+  catGround: { sample: 0.07, edge: 0.2, follow: 14 },
+  catVoice: { minimumGap: 12, callEvery: 18, callVariation: 8, strandedGap: 7, strandedEvery: 9, strandedVariation: 4 },
+  childGround: { follow: 2 },
   cinematography: {
     /** Radians either side of the story's preferred view; never an unsolicited reverse angle. */
     freedom: 0.18, reviewEvery: 0.5, holdFor: 6, confirmFor: 1.5, improvement: 0.045,
@@ -65,6 +68,8 @@ export const tuning = {
     openingReturn: 4,
     /** Share of player wind's level taken off a full stroke, easing to nothing for gentle ones: −6 dB at the top, −1 dB at half. */
     playerWindEase: .5,
+    /** Under a fog lying over the water the sea is this much quieter and its wash this much duller (shares, at the most). */
+    seaMuffleLevel: 0.55, seaMuffleCutoff: 0.6,
     /** Reduce how far cursor wind opens its filters, keeping strong gestures less shrill. */
     playerWindFilterRange: .8,
     gestureLevel: .7 * 10 ** (6 / 20), gestureAttack: .006, gestureTailRelease: .3,
@@ -89,8 +94,10 @@ export const tuning = {
     birchesScoreLevel: 10.35,
     /** Approved Lines balance (+17.6 dB), excluding preview playback gain; a separate, small melody trim. */
     linesScoreLevel: 7.5858, linesMelodyDb: -1.5, linesCueSpace: 4,
-    /** Approved revised study gains, excluding listening-file normalization; the mirror 4 dB up after playtest. */
-    mirrorScoreLevel: 10 ** (4 / 20), drownedScoreLevel: 1.8, dreamPhaseFade: 2.8, forestMusicBlend: 4,
+    /** The mirror's approved study gain, excluding listening-file normalization, 4 dB up after playtest. */
+    mirrorScoreLevel: 10 ** (4 / 20), dreamPhaseFade: 2.8, forestMusicBlend: 4,
+    /** The drowned village's pieces at the room reference, and how long one takes to give way to the next (s). */
+    drownedScoreLevel: 6.7, drownedCrossFade: 2.5,
     /** Approved distant foghorn; source gain excludes the listening export boost. */
     foghorn: { midi:50, level:.036, pan:.24, attack:1.1, duration:4.6,
       hold:2.65, dryLevel:.22, reverbSend:.35, predelay:.18, diffuseLevel:.8, diffuseSeconds:4.4,
@@ -538,11 +545,34 @@ export const tuning = {
     ashoreInside: 0.16,
     ashoreOut: 1.25,
     ashoreAhead: 0.25,
+    /**
+     * Stepping down into a boat lying alongside a deck: how far the hull dips under the weight (m) and how soon after
+     * the step that is deepest (s); how far it rolls toward the side the weight came over (radians), how fast it rocks
+     * (radians a second), and how long the rocking takes to die away (s).
+     */
+    weightDip: 0.08, weightPeak: 0.5, weightRoll: 0.08, weightRock: 3, weightSettle: 1.2,
+    /** A knock against something under the water: how fast its shudder rocks (radians a second) and dies away (s). */
+    joltRock: 9, joltSettle: 0.45,
   },
   cygnetCalls: {
     /** Three cream strokes accompany the cygnet's voice throughout the journey. */
     height: 2.1,
     size: 1.05,
+  },
+  catSounds: {
+    /**
+     * The cygnet's call marks over the cat's head and each kitten's whenever it mews, calls or chirrups, for a grown
+     * cat (metres; a kitten's smaller by the root of its size, so they still read), never less than `least` of the
+     * view's height from afar, edged darker to hold against the lilac sky and the fog. `hold` is the least time they
+     * show, seconds, so a kitten's quick mew still reads.
+     */
+    height: 0.2,
+    size: 0.6,
+    least: 0.08,
+    halo: 'rgba(52, 36, 62, 0.5)',
+    hold: 0.45,
+    /** How loud a kitten's paws are against its mother's: it weighs a fraction of her, and three at play are many feet. */
+    kittenTread: 0.3,
   },
   paperCarry: {
     /** Small enough to carry against the bag; the larger airborne silhouette remains easy to follow. */
@@ -603,8 +633,11 @@ export const tuning = {
     anchorNear: 0.6,
   },
   invitation: {
-    /** Readable air at game distance, including the unlit wood. Widths are CSS pixels. */
-    minPixels: 6, maxPixels: 10, lightFloor: 0.8,
+    /**
+     * Readable air at game distance, including the unlit wood, and drawn bold where the sky is bright and busy (the
+     * drowned village). Widths are CSS pixels.
+     */
+    minPixels: 6, maxPixels: 10, boldMinPixels: 15, boldMaxPixels: 21, lightFloor: 0.8,
     tail: 0.48, curl: 0.12, spread: 0.045,
     handover: 12, resumeAfter: 1.4,
     screenMargin: 0.08,
@@ -2072,47 +2105,786 @@ export const tuning = {
     moonHandoffFrom: 1.5,
     moonHandoffTo: 1.85,
   },
+  /** The drowned village round the church: the air dying, the boat coming to rest against a roof, and the dark. */
+  drowned: {
+    /**
+     * Once the cat is aboard the air dies and the becalmed hull ghosts on from the cat's roof onto the slates of the roof
+     * it strands on: the way it gathers (m/s) over how many seconds, how fast it swings toward them (radians a second),
+     * how near them it lines up to run straight on up them, and the most it brakes there (m/s²) so it rides up onto
+     * them rather than stopping short.
+     */
+    ghostSpeed: 0.95, ghostGathers: 5, ghostTurn: 0.045, ghostLineUp: 5, strandBrake: 1.9,
+    /** The hull coming to rest: how hard it brakes (m/s²) and the least way it keeps till its stem is on the slates. */
+    coastBrake: 0.5, coastCreep: 0.35,
+    /** How far past the drift's dusk the light goes while the dark comes on. */
+    dusk: 0.2,
+    /** How much of the low sun the washing's cloths let through when it is behind them. */
+    clothThrough: 0.75,
+    /**
+     * How hard the cygnet starts when the stem touches the slates, how long she looks at one thing before the other, and
+     * how long she looks up the roof to its ridge once they are stuck.
+     */
+    touchStartle: 0.12, glanceEvery: 4.5, ridgeLookFor: 2.1,
+    /**
+     * Where along the dark's front she looks, metres to the side the church is: looking back at it she turns away
+     * from the lens, never toward it.
+     */
+    darkGlance: 26,
+    /** From the air dying until she sets off over the roofs, how far off the lens what she looks at always is (radians). */
+    gazeOffLens: 1.2,
+    dark: {
+      /**
+       * Its front: half its width and how far its flanks run on ahead, in metres; and how far it reaches on the
+       * church's side and how far on from there it has thinned away, as shares of its half width, once it has come
+       * close and while it is still far off, spread along the horizon.
+       */
+      halfWidth: 170, flank: 30, wing: 0.3, wingFade: 0.45, wingFar: 0.35, wingFadeFar: 0.4,
+      /**
+       * Seconds it takes to rise off the sea once the air has died, over the becalmed drift, how far behind the boat it
+       * rises, and how long after the boat runs aground it comes on faster: never stopping, at `comePace` (m/s) and
+       * `comeRate` a second of however far it still is from where the cat bolts, at most `comeMost` m/s, so it slows as
+       * it nears; how far short of the boat its front is when the light has gone from it; and how far short of the boat
+       * it is when she sets off along the first roof's ridge (QA and the save there).
+       */
+      riseFor: 14, comeAfter: 0.6, riseAway: 72, comeRate: 0.05, comeMost: 4, comePace: 2.6, holdBehind: 20, setOffBehind: 20,
+      /**
+       * How fast it is already coming while the boat ghosts on, once half risen, m/s; and how far past the stranded boat's
+       * middle it comes before she sets off over the roofs, metres.
+       */
+      creep: 0.5, lostPast: 1,
+    },
+    /** The sea fog the dark is: one field every shader reads, and the light it takes as it comes. */
+    fog: {
+      mistDensity: 0.22, mistSoftness: 2.8, mistFrontSoftness: 10, mistNeutral: 0.65, mistSun: 0.12,
+      mistWispDensity: 0.24,
+      mistWisps: [
+        { across: -132, ahead: 1, width: 58, depth: 14, height: 1.05 },
+        { across: -48, ahead: 4, width: 45, depth: 11, height: 0.9 },
+        { across: 44, ahead: 1, width: 54, depth: 16, height: 1.15 },
+        { across: 126, ahead: 6, width: 46, depth: 13, height: 0.95 },
+      ],
+      /** Initial height and the scale it settles to during the storm. */
+      level: 3.5, closedTop: 0.6,
+      /** Height shares retained by the approved mist field and route clearance. */
+      mistTop: 0.634, mistPeak: 1.17,
+      /**
+       * As it comes it rises over all it has taken `levelBehind` metres behind its front by `levelOver` metres, the
+       * stranded boat's masthead (`overBoat` above the water) first, and never lower than a steady climb from
+       * `levelFrom` at the stranding to `levelTo` at the tower; it rises at most `levelRate` metres a second.
+       */
+      levelBehind: 3, levelOver: 0.9, overBoat: 5.3, levelFrom: 4.5, levelTo: 7.2, levelRate: 0.6,
+      /** The sea muffles under it from when the lens is this far ahead of its front to when it is this far (metres). */
+      muffleFrom: 30, muffleTo: 0,
+      /** How far the lantern light scatters, metres. */
+      lanternReach: 2,
+      /** How much of its closing round thins its body to the closed fog's, before its front runs on past the eye. */
+      closedBy: 0.3,
+      /** How far from the forest beach it starts to thin off as the forest comes up out of it, and where it has gone, metres. */
+      shoreFrom: 90, shoreGone: 25,
+      /** How far past the eye its front has gone once it has closed round. */
+      closeRun: 500,
+      /** Body and crest lighting, then the ripples raised by the storm. */
+      body: 0.5, bodyNear: 0.47, night: 0.3, top: 1.05, topNear: 1.0, crest: 0.8, roseLeft: 0.25, stir: 1, ripple: 0.18,
+      /**
+       * Where the progression stands with the bank risen far off and come close with the sun taken, the light going
+       * steadily between; and how much of its rise shows it risen in full.
+       */
+      far: 0.3, near: 0.6, risen: 0.6,
+    },
+    /**
+     * What she can make by herself on her way over the roofs: a hop from one surface to the next across at most
+     * `hopReach` metres of water, at most `hopUp` up and `hopDown` down. Decks that touch she simply walks on between.
+     */
+    way: { hopReach: 1.0, hopUp: 0.4, hopDown: 1.1 },
+    /**
+     * The becalmed boat running aground: how near its resting place it touches, the lurch as it rides up (bow up and
+     * heel, radians) and how far its bow stays lifted; a sweep on its sail fills it past `strainFrom` and the hull strains
+     * (radians, bow down and heel), at most once every `strainEvery` seconds.
+     */
+    stuck: { touch: 0.25, lurch: 0.09, lurchRoll: 0.05, trim: 0.035, strainFrom: 0.6, strain: 0.035, strainRoll: 0.04, strainEvery: 1.4 },
+    /**
+     * The church: the cat up the ivy and she after it, the kittens, the fog sea, the bell calling the boat home, her
+     * climb down to it and the look back up at the cat.
+     */
+    church: {
+      /** Seconds she stands at the tower's foot before the beat begins, and before the cat goes up past her. */
+      naveFor: 1, catAfter: 0.4,
+      /**
+       * She follows once the cat is this near the top of the ivy (metres under the sill), so it is round in the arch
+       * calling down to her as she starts up, or after this many seconds at the foot whatever it is doing; the cat
+       * climbs at m/s.
+       */
+      followFrom: 0.6, followAfter: 12, catClimb: 2.6,
+      /**
+       * The cat in the arch: seconds between its calls down to her, how far below the sill she is when it goes in to
+       * its kittens (metres), and seconds after it is down among them that they wake.
+       */
+      callEvery: 1.5, catInFrom: 1.5, wakeAfter: 0.3,
+      /**
+       * Seconds she kneels to the kittens, then stands by the bell looking out over the fog sea; seconds after she
+       * kneels that a kitten comes to her, how near her it sits (metres), how far she leans down to it, and where the
+       * cat lies from the middle of the straw (east and south, metres) and which way (radians).
+       */
+      nestFor: 7, seaFor: 5, kittenComes: 1.0, kittenNear: 0.8, leanTo: 0.14, curlBack: [0.45, -0.1], curlYaw: 2.4,
+      fog: {
+        /**
+         * How far back along the nave it waits while she stands at the tower's foot; once she starts up, how far past
+         * the tower it runs on over the village (metres), how fast it closes on that (per second), and its fastest:
+         * `spreadFrom` m/s at the tower and `spreadRate` more for every metre it is past, so seen from the tower it
+         * goes on at an even pace, but never more than `spreadMost` m/s.
+         */
+        behind: 16, past: 240, pull: 0.6, spreadFrom: 7, spreadRate: 0.12, spreadMost: 18,
+        /**
+         * The white sea it lies as once it has closed round: its level, just under the sills, and how much of its
+         * swells' and heaps' height it keeps, so the roofs go under it; and seconds from her starting up the ivy until
+         * it lies so.
+         */
+        sea: 7.6, still: 0.3, roundFor: 14,
+        /**
+         * While she climbs it rises round the tower beneath her: this far round the tower it lies lower, its heaps this
+         * far under her feet (metres); once she is in, it rises the rest of the way at m/s.
+         */
+        dip: 20, underHer: 0.7, dipRise: 0.35,
+        /**
+         * Each ring pushes it back round the tower to lie on the water this high (metres), out to these distances
+         * after each ring (metres) over a rim this much wider and this many metres more, in `sinkFor` seconds; once the
+         * child climbs down it settles all round over `settleFor` seconds to lie `drawn` metres high. The rings roll out at
+         * this share of its level.
+         */
+        drawn: 1.0, cleared: 0.3, clearAt: [0, 17, 24, 31, 46], clearRim: 1.3, clearSoft: 6, sinkFor: 3.2, settleFor: 10, clearLeaveFor: 4, wavesAt: 0.92,
+        /**
+         * Seconds after she is aboard it starts to close round and darken (the storm 25 s out, as the lighthouse's
+         * light begins to fail), how long that takes, and how high it rises again.
+         */
+        closeAfter: 35.6, closeFor: 18, closedLevel: 6,
+      },
+      /**
+       * Rings the lantern answers before the boat drifts in, how far along its way home each answer brings it,
+       * seconds after a ring the answer comes, how long the drift takes to settle (s), and how long after the last
+       * answer she goes down to meet it.
+       */
+      rings: 4, answers: [0.1, 0.42, 0.72, 1], answerAfter: 0.7, homeGlide: 1.6, answerFor: 3.8,
+      /** Its light in the fog: steady, the swell of an answer and how fast that fades (s), and how big, metres at 30 m off. */
+      glow: 0.55, glowSwell: 1.1, answerGlow: 1.6, glowSize: 3.2, glowNear: 8, glowFar: 18,
+      /**
+       * The cat seeing her off: how far below the sill she has to be before it gets up from its kittens and comes to it
+       * (metres), seconds after that that the kitten follows it, while both stay on the sill through her departure.
+       */
+      catGap: 0.6, kittenAfter: 1.4,
+      /**
+       * The most the boat goes under sail, m/s; how near a turn of its way counts as rounded; how near the berth it lies,
+       * and how long it lies there before she steps down into it (seconds).
+       */
+      bringSpeed: 2.6, rounded: 3.5, berthed: 0.6, boardAfter: 1,
+      /** The gentle breeze carrying the summoned boat to the berth. */
+      carryBreeze: 0.45,
+      /**
+       * Seated: seconds before she looks back up at the cat, when it gives her its slow blink and how long after that
+       * its soft chirrup, and how long before they go; how she turns round on the thwart to it: beyond what her head turns (radians), the most her body
+       * turns and how fast, and how far behind the cat has to be before she turns the side away from the lens.
+       */
+      lookUpAt: 0.6, blinkAt: 5.6, chirrupAfter: 2.0, lookUpFor: 10.6, headTurns: 0.9, seatTurn: 1.7, turnRate: 1.6, turnPast: 2.2,
+      /** The rain the fog brings as it closes round. */
+      closeShower: 0.25,
+    },
+    /** Her run over the roofs after the cat, from the first roof's ridge to the nave's. */
+    run: {
+      /** Seconds she stands on the ridge looking after the cat before she goes, and her pace as a share of a walk. */
+      setOff: 1.2, stroll: 1.05,
+      /** Her pause to look at the swing from the top of its approach. */
+      lookSwingFor: 4.2,
+      /** The beat she takes before a hop of her own; within `through` of a turn gentler than `bend` (radians) she walks on through it. */
+      hopPause: 0.3, through: 1.1, bend: 0.4,
+      /**
+       * Seconds she stands once the sheet has set her down before she goes on, while the lens comes round to her way, and
+       * how long before she goes on it is round, so she never sets off toward it.
+       */
+      setDown: 3.8, setDownLens: 0.9,
+      /**
+       * How often she glances back at the fog as she goes, for how long, and how far round toward the lens from straight
+       * away from it she may look on her way (radians), at the fog, the cat or ahead, so her face never turns to it.
+       */
+      glanceEvery: 6, glanceFor: 1.2, glanceOff: 1.1,
+      /**
+       * The cat: how far ahead of her along the way it waits, how near she comes before it goes on and the least it goes
+       * on by short of a piece, and how fast it goes along ridges and walls and along the railings and the line (m/s);
+       * seconds after it sits before it calls to her, and between calls while it waits across a piece for her.
+       */
+      catLead: 7.5, catNear: 3, catLeast: 3, catSpeed: 4.2, railSpeed: 2.2, catCallFirst: 0.5, catCallEvery: 18,
+      /**
+       * How near she is to each piece (metres along her way to where she waits at it) when the cat sets off over it, so
+       * it is already going as she arrives and never keeps her waiting (the sheet's once she sets off for the fallen
+       * tree, so it waits on the barn while she works the tree); and how far up the hoist she is (a share of the climb)
+       * before it comes down off the mill's cap ahead of her.
+       */
+      catGo: { tree: 11, sheet: 7, mill: 4, swing: 4 }, catDown: 0.55,
+      /**
+       * The fog along its way (`DARK_WAY`): how far behind her it comes on while she is on her own way, while she works
+       * each piece, while she stands looking at the swing, and where it waits once she is at the tower's foot; the nearest
+       * it ever comes, and how near it climbs to the foot of the granary while she looks down at it from the ridge; how
+       * near her the walking lens is laid to expect it; how hard it closes on where it is going (per second a metre), the
+       * slowest and fastest it comes on (m/s), and how quickly it changes pace (per second).
+       */
+      fogTrail: 12, fogHold: { tree: 10, sheet: 5, mill: 8, swing: 12 }, fogBeat: 8, fogEnd: 19, fogNearest: 7.5, fogLaid: 8,
+      fogPull: 0.5, fogSlowest: 0.12, fogFastest: 3.2, fogEase: 0.9,
+    },
+    /** The wash-tub the player's wind carries to the cat's roof and back to the boat. */
+    tub: {
+      /**
+       * A stroke passing within `brushReach` metres of it on screen (and never less than `brushFloor` of the screen's
+       * half height) pushes it, and lays a gust of `windRadius` at it with gust energy at `energyScale` stroke speed a unit.
+       */
+      brushReach: 2.4, brushFloor: 0.2, windRadius: 2.6, energyScale: 20,
+      /**
+       * The share of the stroke's speed over the water it goes at, the most it goes, how quickly it takes the stroke
+       * up, and how fast it loses its way once the stroke has gone, per second: it slows and settles where it is left.
+       */
+      take: 0.3, topSpeed: 2.2, grip: 9, drag: 0.9,
+      /** Screen heights a second a stroke starts to push it at, and pushes it in full at. */
+      flickFrom: 0.12, flickFull: 0.45,
+      /**
+       * Nearing where it is being brought: within `easeFrom` metres a stroke whose way is within `aimFrom` (the cosine
+       * of the angle) of it is bent toward it, and for `easeFor` seconds after a stroke it drifts on in by
+       * itself at up to `easeSpeed` m/s.
+       */
+      easeFrom: 4.5, aimFrom: -0.2, easeSpeed: 0.5, easeFor: 3,
+      /** Out of its water it drifts back at up to `homeSpeed` m/s, `homePull` m/s a metre beyond the edge. */
+      homeSpeed: 0.45, homePull: 0.3,
+      /** How hard it is drawn into a dock it has come within reach of, m/s a metre. */
+      dockPull: 1.3,
+      /** How much it turns for its way through the water. */
+      turn: 0.7,
+      /** How deep it floats empty and with the cat in it. */
+      draft: 0.085, ladenDraft: 0.14,
+    },
+    /** The stranded cat, the tub's two trips, and the cat's bolt from the bow when the dark has come on. */
+    cat: {
+      /**
+       * The most the boat sails at on the drift's last leg, making for the cat, m/s; she notices it this far from the place the boat waits;
+       * how hard the boat slows into it, m/s².
+       */
+      sailSpeed: 2.8, seeFrom: 70, holdBrake: 0.42,
+      /** How near (metres) the tub must come to the eaves, or to the bow, to be drawn in. */
+      roofReach: 1.1, bowReach: 1.6,
+      /**
+       * Seconds after the boat holds that it comes down off its chimney to the water's edge; at the edge, seconds before
+       * it first puts a paw out toward the water and then every so often (and a little more at random), how long the paw
+       * is out before it snatches it back, and how hard it flinches; seconds it stands with the tub against the slates
+       * below before it hops in.
+       */
+      downAfter: 2.2, pawFirst: 1.6, pawEvery: 4.5, pawFor: 0.5, pawFlinch: 0.45, edge: 0.35,
+      /** Seconds the tub is held at the bow before the cat leaps, and of the leap's settling before the boat goes on. */
+      ready: 0.7, settles: 2.6,
+      /**
+       * Seconds of nothing near the tub (the first time, from when the cat is waiting at the edge) before the drawn gust.
+       */
+      inviteAfter: 6,
+      /**
+       * How far off the boat the fog's front is (metres) when the cat starts to stare at it, when it looks round toward
+       * the church, and when it bolts.
+       */
+      uneasyFrom: 85, churchFrom: 48, boltFrom: 40,
+      /** The cat's run up the slates and along the ridge, m/s. */
+      runSpeed: 2.6, leaveAfter: 1.3,
+      /** Seconds she looks at the fog, down at the stuck boat, then at the cat, before she climbs out after it. */
+      looksBack: 0.7, looksAtBoat: 0.5, looksAtCat: 0.6,
+      /** Seconds she stands on the ridge looking back down at the boat as the fog comes over it, before she turns to the cat. */
+      lostFor: 3,
+    },
+    rescue: {
+      shakeAt: 0.65, bowAfter: 2.5, goOnAfter: 0.4, sailingSpeed: 1.2, sailFor: 4, musicFade: 2,
+    },
+  },
   drownedCamera: {
+    /** Her run over the roofs (`RoofRun.frame`). */
+    run: {
+      /**
+       * On her own way: how quickly it follows her across and up and down, and steadies its sense of her pace (per
+       * second), and the most it takes that to be (m/s); the stretch of way behind and ahead of her whose line is the
+       * way she is going; how far round from straight behind her it would stand, on either side (radians; upright its
+       * own), how far off at most, how far above her feet and the lowest and highest it goes, how far along her way
+       * it looks, how high above her feet, its pace and its lens.
+       */
+      follow: 2.2, followDown: 3, steady: 2, steadiest: 1.4, behind: 6, ahead: 12,
+      sideOn: 1.45, uprightSideOn: 1.5, distance: 14, uprightDistance: 13.5, rise: 3.5, uprightRise: 4.2, lowest: 2.8, highest: 12,
+      lead: 0.8, aim: 1.0, pace: 0.6, zoom: 0.86, uprightZoom: 0.78,
+      /**
+       * How far ahead of her on her way the laid lens is read, so the eased lens turns as she does, and how far past
+       * that it may still be coming round to where it was laid (metres).
+       */
+      keyAhead: 2.5, towardAhead: 1,
+      /**
+       * What shares the frame with her (`Shot.subjects`): how much of the frame they keep inside and how far it may
+       * draw back to hold them; the cat while it is within `catHeld` metres of her, else her way `lookOn` metres on.
+       */
+      margin: 0.8, extra: 2, catHeld: 14, lookOn: 8,
+      /**
+       * The cat ahead of her: how far the look leans toward it (a share of the way from her to it) and how quickly that
+       * comes and goes (per second); the share of the frame's half width it is kept inside; and how the walking lens is
+       * laid to keep it (`layLens`): how far ahead of her on her way it expects it, the farthest off it may stand from
+       * it before that costs, and what each share of the frame it stands further out, each metre further off, and a
+       * roof between them cost.
+       */
+      catLean: 0.35, catLeanRate: 1.2, catEdge: 0.92, catAhead: 6, catFar: 16, catOutCost: 300, catFarCost: 10, catHiddenCost: 200,
+      /** How far it keeps off the side of a house, wall or chimney it stands lower than the top of, and over a chimney, metres. */
+      clearOf: 1.6,
+      /**
+       * How far ahead of the fog's front, along the way it comes, it would stand, metres, and what standing at the
+       * front itself costs (it never stands behind it); the angle down to her past which it costs to stand (radians)
+       * and what each further radian costs. The fog's front is looked for along its line `fogReach` metres either side
+       * of her way, at its foot and `fogDeep` into it, `fogLow` over the water, where it trails her and `fogSlack`
+       * further back, as it lingers after a piece; the nearest of it, once the look has glanced toward it (below), must
+       * stand within `fogInFrame` of the frame's edge (1), and each further share of the frame costs `fogCost`.
+       */
+      fogClear: 3, fogNearCost: 400, steepFrom: 0.3, steepCost: 300, fogReach: 40, fogDeep: 8, fogLow: 2, fogSlack: 3, fogInFrame: 0.72, fogCost: 120,
+      /**
+       * Walking, the look turns toward the fog's front until the nearest of it stands within `fogEdge` of the frame's
+       * edge (1), never so far she stands further out than `herEdge`, nor more than `glanceMost` radians, easing at
+       * `glanceRate` a second.
+       */
+      fogEdge: 0.82, herEdge: 0.84, glanceMost: 0.55, glanceRate: 1.4,
+      /**
+       * How it is laid along her way (`layLens`): what it costs to stand a radian (squared) from where it wants, to be
+       * drawn in all the way (upright, where drawn in she soon leaves the narrow frame), to stand `lifted` metres
+       * higher to see her over a roof, to turn a radian (squared) between steps of the way and each radian (squared)
+       * past `turnMost` a step, which is about as quickly as the rig turns as she walks, draw in or out or rise or fall
+       * between them, and to stand where a roof hides her or she would walk toward it (within the angle whose cosine
+       * is `toward` of the way she is going).
+       */
+      offCost: 3, inCost: 1.5, uprightInCost: 8, lifted: 1.3, liftCost: 0.6, turnCost: 80, turnMost: 0.25, whipCost: 3000,
+      pullCost: 8, riseCost: 6, blocked: 2000, toward: 0.4,
+      /** What it costs for each metre a roof, wall or chimney comes within `crowdNear` of the near half of its sightline. */
+      crowdNear: 1.5, crowdCost: 8,
+      /**
+       * What it costs for each metre a chimney comes within `chimneyNear` of it in front (within the angle whose cosine
+       * is `chimneyCone` of its look).
+       */
+      chimneyNear: 4, chimneyCone: 0.7, chimneyCost: 14,
+      /** Over how many metres past a piece it is drawn to start from where that piece's view leaves it, and how strongly. */
+      anchorFor: 10, anchorCost: 40,
+      /** Milliseconds a frame spends laying it from the start of the room, so it is ready long before she sets off. */
+      layFor: 2,
+      /**
+       * Round to each piece's own view from `comeFrom` to `comeTo` metres before she reaches it (the tree's, the mill's
+       * and the swing's only as she stops, their views standing ahead of her as she comes), and back to her own way
+       * from `leaveFrom` metres past it (over each piece's own stretch, below); to the end's view over the last
+       * `endFrom` metres; and how fast it comes round to a piece's view once she has stopped at it (per second).
+       */
+      comeFrom: { tree: 1.5, sheet: 5, mill: 0.5, swing: 0.5 }, comeTo: 0, leaveFrom: 0, endFrom: 8, roundRate: 0.95,
+      /** How far past each piece the lens has given it back to her own way, metres; the mill gives it to the swing's approach. */
+      leave: { tree: 2, sheet: 0, swing: 3 },
+      /** Camera positions and targets from the piece's wait, or from her while tracking to the swing. */
+      approach: {
+        mill: { from: 18.3, rate: 0.7, fogAt: 0.3, uprightFogAt: 0.3, eye: [-6.5, 6.5, 15.5], at: [1.2, 4.6, -1], uprightEye: [-5, 6.2, 13], uprightAt: [0.8, 5.2, -1] },
+        swing: { from: 20, rate: 0.5, track: true, handFor: 6, closeBy: 0.5, turnFrom: 0, catDown: 0.15, via: [-5, 3.5, 12], uprightVia: [-5, 3.5, 12], zoom: 0.9, uprightZoom: 0.85, uprightLookZoom: 1, uprightCloseZoom: 0.8, uprightCloseFrom: 8, uprightHeadRadius: 0.6, margin: 0.6, lookCloseFrom: 4, lookScale: 0.4, lookRiseFrom: 0.65,
+          eye: [-7, 0.5, 10], at: [-3, 0.7, 0], uprightEye: [-6, 0.5, 10], uprightAt: [-2, 0.7, 0],
+          lookEye: [-10.7, 4.15, 0.5], lookAt: [1.5, 2.45, -1], uprightLookEye: [-12.4, 4.15, 0.5], uprightLookAt: [1.5, 2.45, -1] },
+      },
+      /**
+       * The tree's view, as [north, east, height] from where it will lie over her wall (east across the lane, the way it
+       * falls): where it stands, north-west of the lane, west of the old tree by the green, and where it looks (over
+       * where she waits, so it comes round her at about the walking lens's reach), so the whole tree, her at the wall's
+       * end, the barn's gable and the cat waiting on it all stand in the frame, the tree falling across it and the fog
+       * beyond; its lens, a little wide to hold the tree; upright, its own. Once she is
+       * `treeRoundFrom` of the way up the trunk it goes round to the sheet's view over `treeRoundFor` seconds, drawn
+       * toward the two places in `treeRound`: south of the old tree's trunk, and over the far end of the high roof, high
+       * enough that the far chimney passes under her as it crosses the line to her.
+       */
+      treeEye: [14.8, -4.4, 5.2], treeAt: [4.6, 0.2, 4.7], uprightTreeEye: [14.0, -3.6, 4.8], uprightTreeAt: [4.6, 0.6, 3.7], treeZoom: 0.87, uprightTreeZoom: 0.86,
+      treeRound: [[13.0, 1.2, 7.2], [12.8, 10.8, 8.8]], uprightTreeRound: [[12.8, 2.8, 6.5], [8.8, 11.8, 7.0]],
+      treeRoundFrom: 0.1, treeRoundFor: 8,
+      /**
+       * The sheet's view, from her gable's end: which side of the line it stands (+1 the left looking up it); where it
+       * stands and looks [up the line, above her ridge, off the line] (landscape), and how far up the line and how much
+       * higher both go as she is carried; upright its own.
+       */
+      sheetSide: 1, sheetEye: [1.9, 3.5, 12.2], sheetAt: [2.1, 2.9], sheetGo: [1.5, 0.5],
+      uprightSheetEye: [-7, 4.6, 3.2], uprightSheetAt: [3, 3, -0.3], uprightSheetExitBack: 4,
+      /**
+       * The mill's view, in the mill's own frame (x to the right seen from in front, z out of the front, heights above
+       * her roof): where it stands and looks while she is low, and how much higher it stands and looks once she is up.
+       */
+      millWide: { eye: [-7.86, 7.8, 19.14], at: [-2.36, 6.3, -1.86], eyeRise: 0.6, rise: 1.0 },
+      millUpright: { eye: [-6.6, 6.4, 15.6], at: [-2.6, 6.6, -1.86], eyeRise: 0.8, rise: 1.4 },
+      /**
+       * The swing's view: how far round from side on to her arc toward the way she swings out (radians), how far from
+       * the bough and how high over the seat it stands; it looks this far out along her arc and this high over the
+       * seat. Upright its own, round behind her. Side on from the west and near, so her arc reads left and right as the
+       * wind's to pump. Coming round from behind her it keeps `swingFar` off, out past the old tree's crown, and comes in
+       * to its place over the last of the way round from `swingIn`.
+       */
+      swingRound: -0.24, swingBack: 13.4, swingHigh: 4.3, swingAhead: 2.5, swingAim: 2.5, swingFar: 24, swingIn: 0.7,
+      uprightSwingRound: -0.45, uprightSwingBack: 12.5, uprightSwingHigh: 4.2,
+      /** The end's view: how far back along the nave, how high, and how far out over the green. */
+      naveBack: 10, naveHigh: 3.6, naveAside: 11,
+    },
+    /**
+     * The church (`ChurchArrival.frame`): each view as [eye x, y, z, target x, y, z, lens], x and z from the tower's
+     * middle, heights over her (at the foot, climbing and coming down) or over the belfry's sill; then upright's own.
+     */
+    church: {
+      /** Low off the nave's south-west as the cat comes past her and up the ivy beside her. */
+      foot: [-12.5, 1.2, 7.0, -4.0, 2.9, 0.4], uprightFoot: [-11, 1.4, 6, -4.0, 3.6, 0.4],
+      /** Low off the west face's south-west as she climbs after it, the cat calling from the arch above her, rising with her. */
+      climb: [-15, 0.8, 6, -3.6, 3.0, 0.2], uprightClimb: [-12.5, 0.9, 5, -3.6, 3.6, 0.2],
+      /** Level with the arch she comes in by, looking in through it at her kneeling and the kittens round their mother. */
+      nest: [-11.5, 2.0, 1.8, -1.5, 0.3, -0.7, 1.6], uprightNest: [-10, 2.1, 1.6, -1.7, 0.5, -0.6, 1.35], nestMargin: 0.92,
+      /** Drawing back while she stands by the bell looking out over the fog sea. */
+      sea: [-14, 2.0, 2.0, -1.2, 1.2, -1.2, 1.15], uprightSea: [-15, 2.2, 1.2, -1.8, 0.9, -2.4, 1],
+      /**
+       * Low outside the arch while the bell is hers to ring: her, the kittens and the bell against the sky through the
+       * east arch, and the fog sea off the tower's north-west corner where the lantern answers.
+       */
+      ring: [-15, 2.0, 2.2, -0.8, 1.4, -2.2], uprightRing: [-14, 2.4, 0.3, -1.5, 1.7, -3.2, 1.3],
+      /**
+       * Off the north water to the west, coming down with her as she climbs to the boat coming in (heights over her); it
+       * looks this share of the way from her to the boat (upright, its own).
+       */
+      bring: [-17, 1.2, -15, 0, 0, 0], uprightBring: [-17, 2.6, -15, 0, 0, 0], bringAlong: 0.45, uprightBringAlong: 0.75,
+      /**
+       * Once the boat is `boardFrom` metres from the berth it comes round in one move of `boardFor` seconds toward the
+       * same horizontal position as the look up, this high over her feet as she steps aboard.
+       */
+      boardFrom: 14, boardFor: 4, boardHigh: 2.2, boardZoom: 0.92, boardLook: 0.36, uprightBoardLook: 0.32,
+      /**
+       * Aboard, looking up from behind the boat at the cat and the kitten on the sill: how high their eyes are over it as
+       * they sit there; how far behind her eyes the lens stands and how far over them (under, negative), how far round
+       * from straight behind toward the boat's starboard (radians), what share of the way from her eyes up to the two
+       * of them it looks, and its lens (upright, its own); from `tiltFrom` to `tiltTo` seconds after she sits it moves
+       * there from the boarding view; how much of the frame the three keep inside, and how low it may go
+       * over the water.
+       */
+      catEyes: 0.32, upBack: 14, upOver: 1.8, upRound: 0.62, upAim: 0.52, upZoom: 1.25,
+      uprightUpBack: 16, uprightUpOver: 2.5, uprightUpRound: 0.3, uprightUpAim: 0.4, uprightUpZoom: 1.8,
+      tiltFrom: 0.2, tiltTo: 5, upMargin: 0.9, upBodyHeight: 1.2, upBodyRadius: 1.3, upClear: 2.05,
+      /**
+       * After the blink, from `releaseFrom` to `releaseTo` seconds after she sits, it lets her go as the two go back in:
+       * round toward the bow by this much (radians), this far from her eyes and this far over them, looking this share
+       * of the way from her up to the sill, on this lens (upright, its own).
+       */
+      releaseFrom: 8.6, releaseTo: 11.4, releaseRound: 0.5, releaseBack: 15, releaseUp: 2, releaseLook: 0.15, releaseZoom: 1.05,
+      uprightReleaseRound: 0.6, uprightReleaseBack: 15, uprightReleaseUp: 2, uprightReleaseLook: 0.4,
+      /**
+       * The paces it moves at (the kittens' and the fog sea's slower, the look up's quicker), how much of the frame she
+       * and what she is with keep inside and how far it may draw back to hold them, and upright how much wider the lens.
+       */
+      pace: 0.45, nestPace: 0.3, seaPace: 0.3, upPace: 0.8, margin: 0.8, extra: 1.5, uprightZoom: 0.85,
+      /** When the lantern answers the lens looks this share of the way toward it (upright, its own), for about this many seconds. */
+      find: 0.1, uprightFind: 0.25, findFor: 3,
+    },
     /** Follow the boat into the streets; notice the church from that travelling view. */
     roofFromZ: -1260, roofUntilZ: -1360,
     entryBearing: 0.16, roofBearing: 0.10,
     entryDistance: 23, roofDistance: 16, entryHeight: 5, roofHeight: 2.8,
+    /**
+     * Making for the cat: from `makingFrom` to `makingTo` metres short of where the boat waits for it, the lens comes
+     * this far round onto the quarter away from the cat's side (radians), so the cat ahead is seen clear of the boat;
+     * and gives the cat this share of its look (upright more, and on through its coming round). Upright it rises to
+     * this over where it looks.
+     */
+    makingFrom: 78, makingTo: 60, makingBearing: 0.4, makingLook: 0.35, uprightMakingLook: 0.6, uprightMakingHeight: 6,
     /** Let the church pass beside us, then return to the channel instead of looking backwards after it. */
     spireEnter: 110, spireFull: 55, spireLeave: 25, spireGone: -5,
     spireDistance: 20, spireHeight: 3.4, spireWeight: 0.3,
     /** Reserve room for the bow and stern while the church reveal eases into place. */
     spireFrameMargin: 0.7,
     sideResponse: 1.2,
+    /**
+     * The air dying and the stranding: where the lens looks (metres ahead of the boat's middle, and over the water),
+     * its bearing from ahead toward the boat's open side (radians), how far off and how high over the water it stands
+     * and the least it keeps over the water, how far round toward the fog coming on behind the boat it looks (a share
+     * of the angle between the two), the lens it takes and its pace; upright its own. As the cat's fear grows it looks
+     * this far ahead, at the cat, and the lens lengthens by this much.
+     */
+    stuckAlong: 0.9, stuckOnCat: 1.4, stuckCloser: 1.15, stuckAim: 1.1, stuckBearing: 1.3, stuckDistance: 10, stuckEye: 2.4,
+    stuckClear: 0.8, stuckFog: 0.5, stuckZoom: 0.86, stuckPace: 0.35,
+    uprightStuckBearing: 1.1, uprightStuckDistance: 9, uprightStuckEye: 2.2, uprightStuckFog: 0.2, uprightStuckZoom: 0.8,
+    /** Turn toward the destination during the drift, before the boat touches the roof. */
+    fastFrom: 5, fastTo: 19, fastBearing: 2.5, fastDistance: 10.5, fastEye: 3.4, uprightFastBearing: 2.5, uprightFastDistance: 9.5, uprightFastEye: 3.5,
+    /**
+     * Once the cat bolts, over `climbFor` seconds up onto the roof with it: the lens's bearing from the ridge's west
+     * end (atan2(x, z)), how far off and how high over the ridge, how far from her toward the cat it looks, and how far
+     * toward the boat below while she looks back at it, its lens and its pace.
+     */
+    climbFor: 7, ridgeFrom: -1.2, ridgeDistance: 11, ridgeEye: 3, ridgeAlong: 0.4, ridgeBoat: 0.35, ridgeZoom: 0.86, ridgePace: 0.3,
+    uprightRidgeFrom: -1.25, uprightRidgeDistance: 11, uprightRidgeEye: 3, uprightRidgeZoom: 0.8,
+    /**
+     * While the cat is brought over: how much of its gaze the lens gives the cat as she notices it, how far from the
+     * place the boat waits the lens starts to come round, and its pace. Where it stands: this share of the way along the
+     * line from her head to the edge where the cat waits (behind her where less than 0), this far out from that line on
+     * the side away from the sail, and this high over the water; it looks this share of the way along the line, this high
+     * over the water and this much higher while the cat is up on its pot, on this lens. Upright, its own, and further
+     * forward and out while the cat is up on its pot, so the sail never stands between the lens and the cat.
+     */
+    catGlance: 0.3, catTurnFrom: 40, catPace: 0.55, uprightCatPace: 1.0,
+    catAlong: 0.58, catSide: 12.5, catEye: 3.8, catLook: 0.5, catAim: 1.5, catLift: 0.9, catZoom: 0.95,
+    uprightCatAlong: -1.35, uprightCatPotAlong: -0.5, uprightCatSide: 4, uprightCatPotSide: 5.8, uprightCatEye: 6.2, uprightCatLook: 0.95, uprightCatAim: 0.8, uprightCatLift: 0.6,
+    uprightCatZoom: 1,
+    /** Look into the boat so the cat shaking on the thwart clears the gunwale. */
+    rescueFrom: 2.5, rescueBearing: 1.35, rescueDistance: 6.2, rescueEye: 3.6,
+    rescueClear: 0.8, rescueAlong: 0.4,
+    rescueZoom: 1, rescuePace: 0.35,
+    uprightRescueBearing: 1.2, uprightRescueDistance: 6, uprightRescueEye: 3.6, uprightRescueZoom: 0.85,
   },
-  /** One continuous passage from the last drowned houses to the forest beach. */
+  /** The two crossings of the drowned village's run over the roofs: the dead tree pushed over, the swing pumped. */
+  crossings: {
+    tree: {
+      /** How far it leans toward the gap of its own accord, radians, and the spring it rocks on (per second squared, per second). */
+      restLean: 0.07, stiffness: 4.2, damping: 1.5,
+      /** A push arrives a beat after the stroke (seconds), and a held push ebbs away over `hold` seconds. */
+      lag: 0.2, hold: 1.1,
+      /**
+       * Radians of lean asked for per screen height a stroke travels across it toward the gap, against it, and
+       * across the way it falls; how far it can be held over either way. Strokes at `gentle` screen heights a
+       * second count for `soft` of that, at `firm` for all of it.
+       */
+      push: 2.4, against: 0.45, side: 0.5, pressMax: 0.8, backMax: 0.16,
+      gentle: 0.5, firm: 2.2, soft: 0.3,
+      /** How near the trunk a stroke has to pass to move it, in screen heights. */
+      reach: 0.2,
+      /**
+       * Rotten roots: they let it lean `holdAt` past rest and hold hard beyond (`rootStiffness`). A push that has
+       * pressed past `giveAt` when the lean meets them tears them a step, `giveMin` for one that only just does it
+       * to `giveMax` for the firmest, so it takes two or three; nearly all gone, it goes. Each step leans it
+       * `looseLean` further for good, with a lurch (radians a second); the roots bite again `settleFor` seconds
+       * later, so a push kept up tears them again. The water bubbles for `bubbleFor` seconds after.
+       */
+      holdAt: 0.1, rootStiffness: 30, giveAt: 0.42, giveMin: 0.36, giveMax: 0.52, looseLean: 0.2, lurch: 0.22,
+      settleFor: 1, bubbleFor: 4.5,
+      /**
+       * Going over: the pull of its own weight (per second squared at a right angle), held back at first by the
+       * roots (`tearHold` of it while `tearOver` radians of fall tear them), and the share of its fall speed kept
+       * when it lands, then the spring it settles on.
+       */
+      fallPull: 1.0, tearHold: 0.25, tearOver: 0.3, bounce: 0.18, settle: 60, settleDamping: 9,
+      /** How far its foot slides toward the gap as the roots tear out of the bed. */
+      rootShift: 0.45,
+      /** Seconds the trunk shudders after it lands. */
+      shudderFor: 1.1,
+      /** Seconds she waits after it lands, and her pace across it as a share of a walk. */
+      lookFor: 0.9, crossStroll: 0.42,
+      /**
+       * Walking up a fallen trunk: how far from where it lies over her wall she hops up onto it, from how far off, and
+       * how far short of where it rests on the far roof she steps off it, metres.
+       */
+      climbOn: 0.45, climbReach: 0.65, climbShort: 0.35,
+      /**
+       * Waiting, she looks across to where it will take her, and up at it (`glanceAt` of the way up) for `glanceFor`
+       * seconds every `glanceEvery` and whenever it stirs past `stirs`.
+       */
+      glanceEvery: 5, glanceFor: 1.6, glanceAt: 0.72, stirs: 0.12,
+      /**
+       * The drawn gust across its crown (`inviteAt` of the way up) is offered `inviteAfter` seconds after she stops,
+       * and again once `inviteQuiet` seconds have passed without a useful stroke (it shows `invitation.resumeAfter`
+       * later, the pointer away from it); seconds with no progress before the world's own gust brings it down.
+       */
+      inviteAfter: 0.6, inviteQuiet: 0.6, inviteAt: 0.74, valveAfter: 90, valveEvery: 1.6, valvePush: 0.32,
+    },
+    swing: {
+      /**
+       * A slower, dreamier gravity than the world's (a share of it), and how fast a swing dies away with nobody
+       * pushing: hardly at all with her on it, and over about ten seconds once it is empty.
+       */
+      gravity: 0.8, damping: 0.02, emptyDamping: 0.6,
+      /** Push per unit of the felt wind along its way, and of its own way through still air, only while it is empty. */
+      along: 0.25,
+      /**
+       * One stroke across it on screen (within `reach` screen heights of its ropes or seat) along the way the seat
+       * swings asks for `push` radians more swing, `against` of that against it, none for one slanting more than the
+       * angle whose cosine is `slant` off its way; strokes at `gentle` screen heights a second count for `soft` of it,
+       * at `firm` for all of it. What a stroke asks comes on over `lag` seconds; each swing out or back takes at most
+       * `perSwing` radians, up to `most` in all: four good pumps from her push-off carry her over.
+       */
+      push: 0.14, against: 0.6, slant: 0.35, reach: 0.06, gentle: 0.5, firm: 2.2, soft: 0.35, lag: 0.25, perSwing: 0.11, most: 0.95,
+      /** Seconds she takes to catch hold and sit, and the start she gives it pushing off the eave (radians a second). */
+      boardFor: 1.6, pushOff: 0.32,
+      /** She lets go this near the top of a forward swing (radians), when the leap would carry her this far past the landing. */
+      releaseLead: 0.14, releaseSpare: 0.15,
+      /** Her own push off the seat as she lets go, forward and up (units a second), and the gravity she flies under. */
+      leapForward: 0.9, leapUp: 1.6, leapGravity: 7.5,
+      /** Seconds for the stumble and getting up on the slope after landing, and for her look back at the swing. */
+      landFor: 1.3, lookBack: 3.2,
+      /** Seconds riding without a push before the drawn push; with no new height before the world's own gusts pump it, and how much each asks (radians). */
+      inviteAfter: 5, valveAfter: 90, valveEvery: 1.2, valveGrow: 0.12,
+    },
+    mill: {
+      /**
+       * Where the sails rest, as the first sail's angle above level on the left (radians): its stock's end low over her
+       * roof's chimney, for the cat. How far the basket rises per radian the sails turn (m): about one turn of the
+       * sails winds her up the whole height.
+       */
+      rest: -1.05, rise: 1.1,
+      /**
+       * Turning: sail radians a second asked for per radian a second the cursor goes round the hub on screen, the
+       * seconds they take to come up to it (longer with her weight on the hoist), how fast they coast down when it
+       * stops (per second), and their speed cap empty, loaded, and while the cat bounds along a sail. The cursor counts from `near` to `far` screen
+       * heights from the hub.
+       */
+      ratio: 0.3, spinUp: 0.45, spinUpAboard: 0.6, drag: 1.2, dragAboard: 3.5, cap: 1.7, capAboard: 1.45, capCat: 1.0, near: 0.04, far: 0.85,
+      /** Below this speed a coasting rotor brakes to a stop over `brakeFor` seconds, the pawl clicking it home. */
+      settleSpeed: 0.12, brakeFor: 0.35,
+      /** How far before the top it starts to ease in (radians of sail), and the creep it never eases below. */
+      ease: 0.3, creep: 0.3,
+      /** Wrong-way circling only rocks it against the pawl: the most it gives, empty and loaded (radians), and the spring. */
+      rockMax: 0.05, rockAboard: 0.02, rockStiffness: 14, rockDamping: 4.5,
+      /** The fog's breath on the idle sails: how far they sway either way (radians) and the seconds of one sway. */
+      breath: 0.035, breathFor: 7.5,
+      /** The ratchet's teeth round the drum, and the radians of sail between creaks of the cap. */
+      teeth: 12, creakEvery: 0.6,
+      /** Seconds she looks at the basket before stepping in, and her pace stepping in and out as a share of a walk. */
+      boardAfter: 0.4, stroll: 0.55,
+      /**
+       * Riding, facing the tower: how high above the floor her mittens hold the rope in front of her; how far up (a share
+       * of the climb) she stops looking up at the cat and the top and looks down over her shoulder, and when on to where
+       * she steps off; and how far round toward the lens from straight away from it she ever looks (radians).
+       */
+      gripHigh: 1.55, gripLow: 1.25, lookDown: 0.3, lookOn: 0.78, lookOff: 1.25,
+      /** Seconds without a useful turn before the drawn spiral, sooner after a wrong-way turn; the world's own breath after `valveAfter`. */
+      inviteAfter: 5, inviteWrong: 1.6, valveAfter: 90, valveDrive: 3.5,
+      /** The spiral: seconds to draw it, seconds before it comes again, its inner and outer radius (m) and its turns. */
+      inviteSweep: 2.4, invitePause: 1.2, inviteInner: 1.4, inviteOuter: 5.2, inviteTurns: 1.25, inviteAlpha: 0.8, inviteWidth: 0.1,
+      /** The first sail's angle above level once the cat, ridden up, leaps from it for the cap. */
+      catLeap: 0.6,
+    },
+    sheet: {
+      /**
+       * The cloth: its gravity as a share of the world's, the air's grip across its face and along it (per second),
+       * how fast it loses movement (per second), and how many passes hold its threads to their lengths.
+       */
+      gravity: 0.75, face: 2.2, drag: 0.4, damping: 1.4, iterations: 8,
+      /** The player's air in it at full press (m/s): up the line, out of its face, lifting the hem; and its flutter. */
+      forward: 7.5, belly: 2.6, lift: 2.6, flutter: 1.1,
+      /** The still evening air's slow breath out of its face (m/s), so it never hangs dead. */
+      breath: 0.5,
+      /** How fast a stroke's air spreads over the cloth from where it met it (sheet lengths a second). */
+      spreadSpeed: 2.4,
+      /**
+       * A stroke's air arrives a beat late (s) and ebbs over `hold` s. Fill asked for per sheet length a stroke
+       * sweeps up the line across it (measured on the sheet, so its size on screen does not matter), and back down it;
+       * how full or how far back it can be pressed. Strokes sweeping `gentle` sheet lengths a second count for `soft`
+       * of that, at `firm` for all of it. How near the cloth on screen a stroke must pass (screen heights).
+       */
+      lag: 0.14, hold: 1.1, push: 0.95, against: 0.23, pressMax: 1.25, backMax: 0.45,
+      gentle: 1.3, firm: 7, soft: 0.35, reach: 0.06,
+      /** How quickly the fill follows the press (per second), and the fill that sounds full. */
+      fillRate: 5, fullAt: 0.55,
+      /** The line's slack as a share of its length; how far her weight and the cat's sag it (m). */
+      slack: 0.012, holdDip: 0.12, catDip: 0.04,
+      /** The low sun through the cloth from behind. */
+      through: 0.8,
+      /**
+       * She takes hold once it is `takeAt` full for `takeFor` seconds, reaching up for `reachFor` seconds. Full and
+       * freshly blown, it carries her `carry` metres a second up the line, nothing below `carryFrom`; her speed eases
+       * over `coast` s. What carries her is the stroke itself: its gust ebbs over `gustFor` s, sooner than the cloth sags.
+       */
+      takeAt: 0.55, takeFor: 0.2, reachFor: 0.5, carry: 2.2, carryFrom: 0.3, coast: 0.3, gustFor: 0.8,
+      /** Seconds the sheet takes to lift her off her feet once she has hold of it, drawing its hem out to her. */
+      liftFor: 0.45,
+      /** How her body swings under her hands as the sheet starts and stops (per second squared, per second). */
+      swingPull: 14, swingDamping: 2.2,
+      /** Hanging, how much of the way from up the line toward the lens she turns, so her face is seen side on. */
+      turnToLens: 0.6,
+      /** Seconds without a useful stroke before the drawn gust; with no progress before the world's own gusts. */
+      inviteAfter: 5, valveAfter: 90, valveEvery: 1.4, valvePush: 1.5,
+    },
+    bell: {
+      /** Its swing: the pull back to rest (per second squared at a right angle) and how fast a swing dies (per second). */
+      pull: 6.4, damping: 0.75,
+      /** Travel across a bell width adds energy regardless of stroke speed; the swing stays bounded. */
+      energyPerWidth: 1.8, reach: 0.05, most: 0.5, lag: 0.18, pushWithin: 0.22,
+      /** Maximum angular acceleration from wind (radians per second squared). */
+      drive: 5.5,
+      /** Either end rings past `ringAt`, fully at `fullAt`; smaller swings only touch the clapper. */
+      ringAt: 0.3, fullAt: 0.44, touchAt: 0.07,
+      /** Seconds without a useful stroke before the drawn gust; with no ring before the world's own gust swings it. */
+      inviteAfter: 5, valveAfter: 90, valveEvery: 4,
+      /** The waves a ring sends out over what lies below the tower: metres a second, seconds they last, crest width. */
+      waveSpeed: 6, waveLife: 7.5, waveWidth: 1.1,
+      /** Its note: the strike note (MIDI), its level, how much of it goes to the reverb, and how long the hum lasts (s). */
+      note: 59, level: 0.3, wet: 0.42, hum: 15,
+    },
+    climb: {
+      /**
+       * Seconds for each move up the ivy: a hand to the next hold, a foot up onto a fork `lead` after it, the push up
+       * onto it; she goes up by a hold every `beat` seconds. Going down every move takes `down` times as long, and a
+       * foot feels about for `feel` seconds before it settles.
+       */
+      hand: 0.3, foot: 0.33, push: 0.36, lead: 0.1, beat: 0.4, down: 0.72, feel: 0.16,
+      /** How far a hand or a foot comes away from the wall as it moves (m), and how far out from it her body hangs. */
+      arc: 0.13, standOff: 0.62,
+      /** Over the top (s): the hands onto the sill, up on her arms until her chest is over it, the knee up, onto her feet in the opening. */
+      reachSill: 0.42, pull: 0.62, knee: 0.5, rise: 0.68,
+    },
+  },
+  /**
+   * The storm, from her seated aboard at the nave to the forest beach, in seconds from casting off: the calm turning to
+   * wind by `windBy`, the lighthouse's call at `foghornAt`, its light failing and out at `lighthouseOutAt` as the fog
+   * closes round (`drowned.church.fog.closeAfter`), the night come by `darkBy`, the cygnet's shaking at
+   * `shakeAt`, the plane taken at `gatherFor`, and the beach about 55 s out.
+   */
   storm: {
+    /** Normal arrival speed, then the storm's closer-view sailing pace, m/s. */
     passageSpeed: 5.8,
-    startsFromShore: 210,
-    gatherFor: 22,
-    /** One distant ship call, with its tail clear before the first thunder. */
-    foghornAt: 8, foghornLateAllowance: 0.25,
+    sailingSpeed: 4.5,
+    /**
+     * How near a turn of its way out counts as rounded, metres; enough lead for the hull at normal sailing speed.
+     */
+    outRounded: 14,
+    /** The air coming back as they cast off, a share of the storm's wind, and seconds until all of it has come. */
+    breezeFrom: 0.3, windBy: 10,
+    gatherFor: 39,
+    /** The lighthouse's one call, across the calm while it is lit, its tail clear before the first thunder. */
+    foghornAt: 9, foghornLateAllowance: 0.25,
+    /** Seconds until the weather (the sea running, the rain, the veil) has gathered from nothing. */
     weatherGatherFor: 14,
     /**
-     * The lens's one move for the lighthouse: out over `openFor` seconds to `distance`, down to `eyeRise` over the
-     * drift's aim and the lens widened to `zoom`, tilted up to `tilt` radians toward the crown. The tower is watched from
-     * within `arc` radians of astern (`offset` puts it beside the travellers) and let go over `pass` beyond it.
+     * Casting off, the lens goes in one move over `leaveFor` seconds from where the look up at the cat lets her go,
+     * down to the lighthouse's view. That stands on the line from the tower through the boat turned `offset` radians
+     * round it, `distance` metres beyond her (upright, its own) and `rise` over the water, at most `arc` radians off
+     * astern and letting the tower go over `pass` beyond that; within `naveClearBy` metres of the nave the line turns
+     * `offsetAtNave` and may stand `arcAtNave` off astern, so the lens sees her past the nave's roof. On a lens of
+     * `zoom` it turns toward the tower only as far as brings it `margin` radians inside the frame's side, keeping her
+     * `herMargin` inside the other, and looks up from the storm's own aim only as far as keeps the lamp `margin` inside
+     * the frame's top, never above `tilt`. From `holdFor` seconds after the light is out it comes in over `letGoFor`
+     * seconds to the storm's frame.
      */
-    lighthouseCamera: { openFor: 6, distance: 24, eyeRise: 1.7, zoom: 0.82, tilt: 0.21, arc: 0.7, pass: 0.9,
-      offset: 0.24, pace: 0.8 },
-    lighthouseComfortFor: 2.6,
+    leaveFor: 9,
+    lighthouseCamera: { distance: 18, uprightDistance: 15, rise: 3, arc: 3.2, pass: 0.5, offset: -0.2, offsetAtNave: -0.7,
+      arcAtNave: 2.15, naveClearBy: 14, zoom: 0.86, uprightZoom: 1, margin: 0.14, herMargin: 0.14, tilt: 0.26, pace: 0.6,
+      holdFor: 1, letGoFor: 5 },
+    /** How quickly the storm's lens takes up the hull's turns (critically damped, per second). */
+    lensTurn: 0.6,
+    /** Seconds she takes turning round on the thwart from the cat to the way they go, as they cast off. */
+    turnFromCat: 3,
+    /** Seconds she holds the startled cygnet as the light goes out. */
+    lighthouseComfortFor: 3,
+    /** She watches the lighthouse, lit and then dark, until it is this far behind abeam (the cosine off her bow). */
+    lighthouseWatched: -0.2,
     lighthouseStartle: 0.18,
+    /** Seconds until the storm's night has taken over from the dusk, coming on from the first. */
     darkBy: 33,
-    lighthouseOutAt: 23,
-    lighthouseFadeFor: 2.5,
+    /**
+     * When the light is out, and the seconds it takes failing before that: a long sag, a half recovery, a deeper sag, a
+     * last glow, gone. Its beam turns at `lighthouseSweep` radians a second from `lighthouseSweepStart`, dipping
+     * `lighthouseDip` radians below level, so it sweeps over the fog and the boat rather than along the water under them.
+     */
+    lighthouseOutAt: 34,
+    lighthouseFadeFor: 5,
     lighthouseSweep: 0.38,
     lighthouseSweepStart: 1.7,
+    lighthouseDip: 0.26,
+    /**
+     * Closed round for the storm, the fog's top rises away from her in a bowl; it stops rising this many metres over its
+     * top, so looking up the sky shows through it faintly and evenly, never through a hole with an edge.
+     */
+    fogBowlTop: 12,
     stormVeil: 62,
     stormVeilDensity: 0.045,
     moonThroughCloud: 0.2,
     shadowSoftenFrom: 0.8,
     shadowCovered: 0.98,
     snatchFor: 4,
-    shakeAt: 7.5,
+    shakeAt: 29,
     cameraQuarter: 0.16,
     lookAhead: 1.3,
     planeAhead: 2,
@@ -2120,12 +2892,13 @@ export const tuning = {
     planeLookFor: 2,
     /** The storm carries the plane off ahead of the boat, low over the wood, until the rain swallows it (this many
         fog lengths deep) or it leaves the frame; whatever happens, it is gone by the fallback. */
-    planeAway: { speed: 15, grip: 2.5, rise: 1.2 },
+    planeAway: { speed: 17, grip: 1.2, rise: 1.2 },
+    planeRelease: { ahead: 1.8, rise: 1.4 },
     /** The gust that takes it, shown as wind lines sweeping past the child's hand. */
-    snatchGust: { lines: 8, speed: 17 },
+    snatchGust: { lead: 0.65, lines: 1, speed: 12, width: 0.08 },
     planeLostInFog: 2.5,
-    planeLostAfter: 14,
-    firstLightning: 16,
+    planeLostAfter: 4.5,
+    firstLightning: 18,
     lightningStormFrom: 0.85,
     lightningNightFrom: 0.06,
     lightningRainFrom: 0.8,

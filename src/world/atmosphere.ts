@@ -192,6 +192,28 @@ export const atmo = {
      * into its white the eye is, 0 to 1 (y).
      */
     uFogBankEye: { value: new THREE.Vector2() },
+    /** The drowned village's sea fog: a point on its front (x, z) and the way it comes (z, w). Drawn with the deck. */
+    uSeaFog: { value: new THREE.Vector4(0, 0, 0, 1) },
+    /**
+     * Its top over the water, how far its flanks lead (metres a square metre across), how far it has closed round
+     * the eye (0 a bank with a front, 1 all round), and how much of it there is: at 0 every other room pays nothing.
+     */
+    uSeaFogShape: { value: new THREE.Vector4(1, 0, 0, 0) },
+    /** Across its front, where it thins away on the far side (x from, y gone) and on the church's side (z, w). */
+    uSeaFogSides: { value: new THREE.Vector4(1e4, 2e4, 1e4, 2e4) },
+    /** How much of its swells' and heaps' height it keeps: 1 as it chases her, less where it lies as a still white sea. */
+    uSeaFogRelief: { value: 1 },
+    /**
+     * Where it lies lower round the tower (beneath her as she climbs, and where the bell has pushed it back): the
+     * tower's middle (x, z), how far round that (z, metres, 0 nowhere) and how high it lies there (w, metres).
+     */
+    uSeaFogClear: { value: new THREE.Vector4(0, 0, 0, 1) },
+    /** The light of its body deep in the mist (rgb). */
+    uSeaFogBody: { value: new THREE.Vector4() },
+    /** The light of its top, where the sky lights it from above. */
+    uSeaFogTop: { value: new THREE.Color() },
+    /** The low sun on its crest (rgb), and how far the first wind under it has broken up the glass (a). */
+    uSeaFogCrest: { value: new THREE.Vector4() },
     uCloudTex: { value: null as THREE.Texture | null },
     uCloudDomain: { value: new THREE.Vector4(-CLOUD_SPAN / 2, -CLOUD_SPAN / 2, 1 / CLOUD_SPAN, 1 / CLOUD_SPAN) },
     uNoiseTile: noiseTileUniforms.uNoiseTile,
@@ -255,6 +277,9 @@ vec3 vnoiseGrad(vec2 p) {
   return vec3(a + (b - a) * u.x + (c - a) * u.y + k * u.x * u.y, du * vec2(b - a + k * u.y, c - a + k * u.x));
 }
 `;
+
+/** Height shares used by the mist field and the story's clearance checks. */
+export const SEA_FOG_TOP = { middle: tuning.drowned.fog.mistTop, highest: tuning.drowned.fog.mistPeak };
 
 /** Declares the shared uniforms and the sky, fog, lighting and wind helpers. Include once per shader stage. */
 export const ATMO_GLSL = /* glsl */ `
@@ -340,6 +365,14 @@ uniform vec4 uFogBank;
 uniform vec4 uFogBankShape;
 uniform vec4 uFogBankLight;
 uniform vec2 uFogBankEye;
+uniform vec4 uSeaFog;
+uniform vec4 uSeaFogShape;
+uniform vec4 uSeaFogSides;
+uniform float uSeaFogRelief;
+uniform vec4 uSeaFogClear;
+uniform vec4 uSeaFogBody;
+uniform vec3 uSeaFogTop;
+uniform vec4 uSeaFogCrest;
 uniform sampler2D uCloudTex;
 uniform vec4 uCloudDomain;
 
@@ -815,6 +848,156 @@ vec4 cloudDeck(vec3 ro, vec3 rd, float far) {
   float a = 1.0 - (1.0 - bank.a) * (1.0 - deck.a);
   return vec4((bank.rgb * bank.a + deck.rgb * deck.a * (1.0 - bank.a)) / max(a, 1e-4), a);
 }
+
+/** Its level h at xz, lower round the tower where it lies low there, rising to h over a soft rim. */
+float seaFogLevel(vec2 xz, float h) {
+  if (uSeaFogClear.z <= 0.0) return h;
+  float rim = smoothstep(uSeaFogClear.z, uSeaFogClear.z * ${glsl(tuning.drowned.church.fog.clearRim)} + ${glsl(tuning.drowned.church.fog.clearSoft)}, length(xz - uSeaFogClear.xy));
+  return mix(min(h, uSeaFogClear.w), h, rim);
+}
+
+/** How much light from a flame at l a sightline gathers between t0 and t1 through fog round it: falling off with distance, gone about reach off. */
+float seaFogHalo(vec3 ro, vec3 rd, vec3 l, float t0, float t1, float reach) {
+  vec3 to = l - ro;
+  float at = dot(to, rd);
+  float d = sqrt(max(dot(to, to) - at * at, 0.04));
+  return (atan((t1 - at) / d) - atan((t0 - at) / d)) / d * exp(-d / reach);
+}
+
+float mistDensityAt(vec4 value) {
+  vec4 d = clamp(value, 0.0, 1.0);
+  d.zw = mix(d.zw, vec2(1.0), uSeaFogShape.z);
+  return d.x * d.y * d.z * d.w;
+}
+
+float mistSample(vec4 value, vec4 slope, vec3 weight, float t) {
+  return mistDensityAt(value + slope * t) * clamp((weight.x * t + weight.y) * t + weight.z, 0.0, 1.0);
+}
+
+// Between ramp boundaries the density is a polynomial; four Gauss points integrate it exactly.
+float mistIntegral(vec4 value, vec4 slope, float start, float end, vec3 weight) {
+  if (end <= start) return 0.0;
+  vec4 safeSlope = mix(vec4(1e-8), slope, step(vec4(1e-8), abs(slope)));
+  vec4 enter = -value / safeSlope, leave = (1.0 - value) / safeSlope;
+  float optical = 0.0;
+  for (int i = 0; i < 9; i++) {
+    vec4 nextIn = mix(vec4(end), enter, step(vec4(start + 0.0001), enter));
+    vec4 nextOut = mix(vec4(end), leave, step(vec4(start + 0.0001), leave));
+    vec4 next = min(nextIn, nextOut);
+    float finish = min(end, min(min(next.x, next.y), min(next.z, next.w)));
+    float middle = (start + finish) * 0.5, halfSpan = (finish - start) * 0.5;
+    optical += halfSpan * (
+      0.3478548451 * (mistSample(value, slope, weight, middle - halfSpan * 0.8611363116) +
+                      mistSample(value, slope, weight, middle + halfSpan * 0.8611363116)) +
+      0.6521451549 * (mistSample(value, slope, weight, middle - halfSpan * 0.3399810436) +
+                      mistSample(value, slope, weight, middle + halfSpan * 0.3399810436)));
+    start = finish;
+    if (start >= end) break;
+  }
+  return optical;
+}
+
+float mistCleared(vec4 value, vec4 slope, vec2 offset, vec2 direction, float reach) {
+  float inner = uSeaFogClear.z;
+  float outer = inner * ${glsl(tuning.drowned.church.fog.clearRim)} + ${glsl(tuning.drowned.church.fog.clearSoft)};
+  float a = dot(direction, direction), b = dot(offset, direction), c = dot(offset, offset);
+  float width = outer * outer - inner * inner;
+  vec3 weight = vec3(-a, -2.0 * b, outer * outer - c) / width;
+  if (a < 1e-8) return mistIntegral(value, slope, 0.0, reach, vec3(0.0, 0.0, clamp(weight.z, 0.0, 1.0)));
+  float disc = b * b - a * (c - outer * outer);
+  if (disc <= 0.0) return 0.0;
+  float start = max(0.0, (-b - sqrt(disc)) / a), end = min(reach, (-b + sqrt(disc)) / a);
+  float core = b * b - a * (c - inner * inner);
+  if (core <= 0.0) return mistIntegral(value, slope, start, end, weight);
+  float coreStart = clamp((-b - sqrt(core)) / a, start, max(start, end));
+  float coreEnd = clamp((-b + sqrt(core)) / a, start, max(start, end));
+  return mistIntegral(value, slope, start, coreStart, weight) +
+    mistIntegral(value, slope, coreStart, coreEnd, vec3(0.0, 0.0, 1.0)) +
+    mistIntegral(value, slope, coreEnd, end, weight);
+}
+
+float mistWispPrimitive(float t) {
+  float t2 = t * t;
+  return t * (1.0 + t2 * (-2.0 / 3.0 + t2 * 0.2));
+}
+
+// Integrate a rounded wisp exactly, so moving the eye never changes its world density.
+float mistWisp(vec3 ro, vec3 rd, float reach, vec3 centre, vec3 radius) {
+  vec3 o = (ro - centre) / radius, v = rd / radius;
+  float a = dot(v, v), middle = -dot(o, v) / a;
+  vec3 nearest = o + v * middle;
+  float fill = 1.0 - dot(nearest, nearest);
+  if (fill <= 0.0) return 0.0;
+  float halfSpan = sqrt(fill / a);
+  float start = max(0.0, middle - halfSpan), end = min(reach, middle + halfSpan);
+  if (end <= start) return 0.0;
+  return fill * fill * halfSpan * (mistWispPrimitive((end - middle) / halfSpan) -
+    mistWispPrimitive((start - middle) / halfSpan));
+}
+
+float mistOptical(vec3 ro, vec3 rd, float far) {
+  vec2 n = uSeaFog.zw, side = vec2(-n.y, n.x), offset = ro.xz - uSeaFog.xy;
+  float across = dot(offset, side), acrossSlope = dot(rd.xz, side);
+  float top = uSeaFogShape.x * (1.0 - uSeaFogRelief * ${glsl(1 - SEA_FOG_TOP.middle)});
+  float softness = ${glsl(tuning.drowned.fog.mistSoftness)}, frontSoftness = ${glsl(tuning.drowned.fog.mistFrontSoftness)};
+  float front = smoothstep(${glsl(tuning.drowned.fog.closedBy)}, 1.0, uSeaFogShape.z) * ${glsl(tuning.drowned.fog.closeRun)};
+  vec2 widths = vec2(uSeaFogSides.y - uSeaFogSides.x, uSeaFogSides.w - uSeaFogSides.z);
+  vec4 value = vec4((top + softness * 0.5 - ro.y) / softness,
+    (front + frontSoftness * 0.5 - dot(offset, n)) / frontSoftness,
+    (across + uSeaFogSides.y) / widths.x, (uSeaFogSides.w - across) / widths.y);
+  vec4 slope = vec4(-rd.y / softness, -dot(rd.xz, n) / frontSoftness,
+    acrossSlope / widths.x, -acrossSlope / widths.y);
+  float reach = min(far, 4000.0);
+  float optical = mistIntegral(value, slope, 0.0, reach, vec3(0.0, 0.0, 1.0));
+  if (uSeaFogClear.z > 0.0 && uSeaFogClear.w < top) {
+    vec2 clearing = ro.xz - uSeaFogClear.xy;
+    optical -= mistCleared(value, slope, clearing, rd.xz, reach);
+    float lowSoftness = max(0.1, softness * clamp(uSeaFogClear.w / top, 0.0, 1.0));
+    value.x = (uSeaFogClear.w + lowSoftness * 0.5 - ro.y) / lowSoftness;
+    slope.x = -rd.y / lowSoftness;
+    optical += mistCleared(value, slope, clearing, rd.xz, reach);
+  }
+  if (uSeaFogShape.z < 1.0) {
+    vec3 localEye = vec3(across, ro.y, dot(offset, n));
+    vec3 localRay = vec3(acrossSlope, rd.y, dot(rd.xz, n));
+    float wisps = 0.0;
+    ${tuning.drowned.fog.mistWisps.map(w => `{
+      float height = max(top, 0.1) * ${glsl(w.height)};
+      float edge = clamp((${glsl(w.across)} + uSeaFogSides.y) / widths.x, 0.0, 1.0) *
+        clamp((uSeaFogSides.w - ${glsl(w.across)}) / widths.y, 0.0, 1.0);
+      wisps += edge * mistWisp(localEye, localRay, reach,
+        vec3(${glsl(w.across)}, height * 0.32, front + ${glsl(w.ahead)}),
+        vec3(${glsl(w.width)}, height * 0.68, ${glsl(w.depth)}));
+    }`).join('\n')}
+    optical += wisps * ${glsl(tuning.drowned.fog.mistWispDensity)} * pow(1.0 - uSeaFogShape.z, 2.0);
+  }
+  return max(0.0, optical);
+}
+
+vec4 seaMist(vec3 ro, vec3 rd, float far, bool lighting) {
+  float optical = mistOptical(ro, rd, far);
+  float alpha = (1.0 - exp(-optical * ${glsl(tuning.drowned.fog.mistDensity)})) * uSeaFogShape.w;
+  vec3 body = mix(uSeaFogBody.rgb, vec3(dot(uSeaFogBody.rgb, vec3(0.2126, 0.7152, 0.0722))), ${glsl(tuning.drowned.fog.mistNeutral)});
+  vec3 colour = mix(body, uSeaFogTop, 0.35 * (1.0 - uSeaFogShape.z));
+  colour += uSeaFogCrest.rgb * ${glsl(tuning.drowned.fog.mistSun)} * (1.0 - uSeaFogShape.z);
+  if (lighting && alpha > 0.0) {
+    float glow = seaFogHalo(ro, rd, uLantern.xyz, 0.0, min(far, 200.0), ${glsl(tuning.drowned.fog.lanternReach)});
+    float top = uSeaFogShape.x * (1.0 - uSeaFogRelief * ${glsl(1 - SEA_FOG_TOP.middle)});
+    float buried = smoothstep(0.0, 1.0, seaFogLevel(uLantern.xz, top) - uLantern.y);
+    glow *= exp(-max(0.0, distance(ro, uLantern.xyz) - 5.0) * 0.12 * buried);
+    colour += vec3(1.0, 0.7, 0.35) * glow * uLantern.w * 0.12;
+  }
+  return vec4(colour, alpha);
+}
+
+vec4 seaFog(vec3 ro, vec3 rd, float far) {
+  return seaMist(ro, rd, far, uMirrorPass < 0.5);
+}
+
+/** The mist reflected by the water, without scattering the lantern twice. */
+vec4 seaFogMirrored(vec3 ro, vec3 rd) {
+  return seaMist(ro, rd, 4000.0, false);
+}
 #endif
 
 /** How much of a sightline to wpos passes over a coast; sea behind a hill must have the same cover as the hill. */
@@ -922,6 +1105,15 @@ vec4 fogOf(vec3 wpos, float landscape) {
     fogCol = mix(fogCol, clearSky, arriving);
     amt = mix(amt, 1.0, arriving);
   }
+#if CLOUD_DECK
+  // The sea fog lies nearer than any of it: what it covers, the distance cannot show through.
+  if (uSeaFogShape.w > 0.0) {
+    vec4 sea = seaFog(cameraPosition, rd, dist);
+    float total = mix(amt, 1.0, sea.a);
+    fogCol = mix(fogCol, sea.rgb, sea.a / max(total, 1e-4));
+    amt = total;
+  }
+#endif
   return vec4(fogCol, clamp(amt, 0.0, 1.0));
 }
 

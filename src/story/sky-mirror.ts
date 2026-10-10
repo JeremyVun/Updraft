@@ -216,7 +216,7 @@ export class SkyMirrorChapter implements Chapter {
         k.mayFly=true; k.stay=false; k.watch(null);
         p.landingGround=null; p.homeRadius=this.oldRadius;
         room.active=false; room.ready=false; this.to('aboard');
-      },new THREE.Vector2(MIRROR_SAIL_OUT.x,MIRROR_SAIL_OUT.z));
+      },{ course: new THREE.Vector2(MIRROR_SAIL_OUT.x,MIRROR_SAIL_OUT.z) });
     }
     if (this.beat === 'play' || this.beat === 'walk') this.companion.update(time, this.target, this.beat === 'play');
     this.frame();

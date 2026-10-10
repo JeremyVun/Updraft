@@ -42,7 +42,7 @@ try{
         }
         const update=tick=>{
           const time=tick/8;
-          sound.update(.125,{...baseState,music:'drowned',drownedScore:time<22?'gather':'loss',hush:time<22?.6:.85,
+          sound.update(.125,{...baseState,music:'drowned',drownedScore:'farewell',hush:time<22?.6:.85,
             sea:1,land:0,overLand:false,breeze:1,night:.55+Math.min(1,time/20)*.45,shower:Math.min(1,time/14),
             flockChatter:false,scripted:time>=22&&time<26,cues:kind==='integrated'&&tick===64?['foghorn']:[]});
           if(kind==='isolated')for(const field of ['breezeGain','seaGain','rainGain','patterGain','gustGain','whistleGain','rustleGain','liftGain']){

@@ -300,8 +300,12 @@ export const TOWER_GATE = (() => {
   const from = onRun(RUN_FROM, 150, -6), to = onRun(RUN_FROM, 240, 18);
   return { from: new THREE.Vector2(from.x, from.z), to: new THREE.Vector2(to.x, to.z) } as const;
 })();
-/** Where the hull is sailing on the sea when the drowned village takes over. */
-export const DESCENT_END = new THREE.Vector2(16, -1254);
+/**
+ * Where the hull is sailing on the sea when the drowned village takes over, and the way it is going: on the drift's
+ * last leg (`drowned-way.ts`, `DRIFT_ON`), 80 m short of where it waits for the cat, the cat's roof ahead.
+ */
+export const DESCENT_END = new THREE.Vector2(1.555, -1408.19);
+export const DESCENT_YAW = -3.0741;
 
 /**
  * Where each loose flight is hanging when the room begins, as an offset from where it belongs (x and z in the

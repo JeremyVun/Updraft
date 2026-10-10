@@ -1,7 +1,7 @@
 // Profile the full storm without screenshots or recording overhead. BASE/W/H use perf.mjs defaults.
 // Usage: node tools/storm-profile.mjs. Reports stalls, lighting discontinuities and story boundaries.
 import { spawn } from 'node:child_process';
-import { setup } from './storm-fixture.mjs';
+import { setup, STORM_QUERY } from './storm-fixture.mjs';
 
 function instrument() {
   const g = __game, u = g.boat.sailMat.uniforms;
@@ -42,10 +42,10 @@ function instrument() {
 
 const steps = [
   { eval: `(${setup.toString()})(); (${instrument.toString()})();` },
-  { wait: 46000 },
+  { wait: 50000 },
   { eval: 'window.stormProfile' },
 ];
-const child = spawn(process.execPath, ['tools/perf.mjs', 'frames', '46', 'chapter=drowned&ratio=1&msaa=2', JSON.stringify(steps)], {
+const child = spawn(process.execPath, ['tools/perf.mjs', 'frames', '50', STORM_QUERY, JSON.stringify(steps)], {
   stdio: 'inherit', env: process.env,
 });
 child.on('exit', code => process.exit(code ?? 1));

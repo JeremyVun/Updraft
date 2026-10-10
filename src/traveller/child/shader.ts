@@ -104,6 +104,8 @@ uniform float uNoseTip;
 uniform vec3 uHoodForward;
 uniform float uChildMoon;
 uniform vec3 uLent;
+/** In a room open only at its windows: how far in she is (0 out in the open), and how much of the low sun reaches her there. */
+uniform vec2 uInRoom;
 in vec3 vWorld;
 in vec3 vNormal;
 in vec3 vRest;
@@ -264,7 +266,7 @@ void main() {
   }
   float ndl = dot(N, uSunDir);
   float wrap = clamp(ndl * 0.55 + 0.45, 0.0, 1.0);
-  float sun = groundAt(uGroundPos.xz).w * cloudShadow(uGroundPos.xz);
+  float sun = groundAt(uGroundPos.xz).w * cloudShadow(uGroundPos.xz) * mix(1.0, uInRoom.y, uInRoom.x);
   /** Inside the hood the face only takes the sun that comes in through the opening. */
   if (m == ${MAT.skin} || m == ${MAT.hair}) {
     float into = dot(uSunDir, uHoodForward);
@@ -281,7 +283,9 @@ void main() {
   float facing = clamp(dot(N, V), 0.0, 1.0);
   float back = max(dot(-V, uSunDir), 0.0);
   float rim = pow(1.0 - facing, 3.0) * (0.35 + 0.65 * back);
-  vec3 col = alb * (hemiLight(N) * 1.05 * ao + uSunColor * wrap * wrap * sun * 0.95 * mix(0.6, 1.0, ao) + lining);
+  /** In a room the sky comes in only at the windows, and the light the sunlit floor throws back is warm, as in the belfry. */
+  vec3 sky = hemiLight(N) * (1.0 - 0.45 * uInRoom.x) + uSunColor * vec3(1.0, 0.76, 0.48) * 0.075 * uInRoom.x;
+  vec3 col = alb * (sky * 1.05 * ao + uSunColor * wrap * wrap * sun * 0.95 * mix(0.6, 1.0, ao) + lining);
   /** A face turning away from the eye darkens a little toward its edge, so it reads round in the hood's shade. */
   if (m == ${MAT.skin}) col *= mix(0.78, 1.04, pow(facing, 0.6));
   /** Wool catches the low sun along its edge: the soft halo that makes the coat read as cloth. */
@@ -334,6 +338,7 @@ export function childMaterial(): THREE.ShaderMaterial {
     uniforms: {
       ...atmo.uniforms,
       uGroundPos: { value: new THREE.Vector3() },
+      uInRoom: { value: new THREE.Vector2(0, 1) },
       uCoat: c(PALETTE.coat),
       uLining: c(PALETTE.lining),
       uScarf: c(PALETTE.scarf),

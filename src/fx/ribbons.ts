@@ -33,17 +33,19 @@ const FRAG = /* glsl */ `
 ${ATMO_GLSL}
 uniform vec3 uColor;
 uniform float uLightFloor;
+uniform float uHalo;
 in float vAlpha;
 in float vEdge;
 in vec3 vWorld;
 void main() {
   float soft = (1.0 - smoothstep(0.35, 1.0, abs(vEdge)));
   vec3 col = uColor * max(vec3(uLightFloor), hemiLight(vec3(0.0, 1.0, 0.0)) * 0.9 + uSunColor * 0.55);
-  // A soft, cool edge keeps ivory air legible over pale cloth without lighting the surrounding world.
+  // A soft, cool edge keeps ivory air legible over pale cloth without lighting the surrounding world; a halo
+  // widens and deepens it where the air must read against a bright, busy sky.
   if (uLightFloor > 0.0) {
-    float core = 1.0 - smoothstep(0.12, 0.6, abs(vEdge));
-    col = mix(vec3(0.035, 0.075, 0.09), col, core);
-    soft *= mix(0.85, 1.0, core);
+    float core = 1.0 - smoothstep(mix(0.12, 0.1, uHalo), mix(0.6, 0.4, uHalo), abs(vEdge));
+    col = mix(vec3(0.035, 0.075, 0.09) * (1.0 - 0.5 * uHalo), col * (1.0 + 0.2 * uHalo), core);
+    soft *= mix(mix(0.85, 1.0, uHalo), 1.0, core);
   }
   float fog = 1.0 - exp(-length(vWorld - cameraPosition) * uFogDensity);
   gl_FragColor = vec4(col, vAlpha * soft * (1.0 - fog));
@@ -73,7 +75,8 @@ export class RibbonBatch {
     const mat = new THREE.ShaderMaterial({
       vertexShader: VERT,
       fragmentShader: FRAG,
-      uniforms: { ...atmo.uniforms, uColor: { value: new THREE.Color(color).multiplyScalar(opacity) }, uFlat: { value: flat ? 1 : 0 }, uLightFloor: { value: lightFloor } },
+      uniforms: { ...atmo.uniforms, uColor: { value: new THREE.Color(color).multiplyScalar(opacity) }, uFlat: { value: flat ? 1 : 0 }, uLightFloor: { value: lightFloor },
+        uHalo: { value: 0 } },
       transparent: true,
       depthWrite: false,
       side: THREE.DoubleSide,
@@ -82,6 +85,11 @@ export class RibbonBatch {
     this.mesh.frustumCulled = false;
     this.mesh.renderOrder = 5;
     fixInPlace(this.mesh);
+  }
+
+  /** How strongly a lit ribbon's dark edge is widened into a halo, 0 to 1. */
+  set halo(amount: number) {
+    (this.mesh.material as THREE.ShaderMaterial).uniforms.uHalo.value = amount;
   }
 
   /** Returns whether anything is drawn. */

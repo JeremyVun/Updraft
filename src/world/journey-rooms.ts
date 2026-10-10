@@ -62,15 +62,23 @@ const passages: Partial<Record<ChapterName, Room[]>> = {
 };
 const STAGE: Room[] = ['meadow'];
 const DROWNED_FROM_BIRCHES: Room[] = ['birches', 'drowned'];
-const DROWNED_FROM_STAIRS: Room[] = ['stairs', 'drowned'];
+/**
+ * Down from the stairs the village is all there is: they climbed into the cloud and came out of it here, and the
+ * stairs are out of sight behind them. Their room goes while the boat is still in the white.
+ */
+const DROWNED_FROM_STAIRS: Room[] = ['drowned'];
 const DROWNED_TO_WOOD: Room[] = ['drowned', 'wood'];
 const alone = Object.fromEntries(names.map(room => [room, [room]])) as Record<Room, Room[]>;
-/** Saves from before the stairs still sail into the village from the birches' beach. */
-export const drownedEntry = { fromBirches: false };
+/**
+ * Saves from before the stairs still sail into the village from the birches' beach. Once the air has died, where they
+ * came from is gone: the dark rises there instead.
+ */
+export const drownedEntry = { fromBirches: false, behindGone: false };
 export function visibleRooms(chapter: ChapterName, z: number): readonly Room[] {
   if (chapter === 'stage') return STAGE;
   if (chapter === 'stairs' && stairsDescent.down) return DROWNED_FROM_STAIRS;
-  if (chapter === 'drowned') return z > ISLES.drowned.z ? drownedEntry.fromBirches ? DROWNED_FROM_BIRCHES : DROWNED_FROM_STAIRS : DROWNED_TO_WOOD;
+  if (chapter === 'drowned') return z > ISLES.drowned.z && !drownedEntry.behindGone
+    ? drownedEntry.fromBirches ? DROWNED_FROM_BIRCHES : DROWNED_FROM_STAIRS : DROWNED_TO_WOOD;
   return passages[chapter] ?? alone[chapter as Room] ?? [chapter as Room];
 }
 export function setJourneyRooms(rooms: Room[]): void {

@@ -59,7 +59,7 @@ vec2 hullWaterline(vec2 xz) {
 `;
 
 /** The stencil bit the hull's opening marks, so the sea and what floats on it are not drawn inside the boat. */
-const INSIDE_HULL = 1;
+export const INSIDE_HULL = 1;
 
 /**
  * A lid over the hull's opening, drawn only into the stencil before the sea: any line of sight through it goes

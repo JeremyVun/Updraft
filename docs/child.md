@@ -133,7 +133,10 @@ Each from one of Jeremy's rounds; do not retry what he rejected.
 In `traveller.ts` unless noted.
 
 - **Walk, run, idle** with weight: a planted-foot walk with leg IK on the terrain (`motion.ts`), hips rising and
-  falling, shoulders countering, a lagging arm swing, a steady head; the run pumps the elbows (`pump`). Standing a
+  falling, shoulders countering, a lagging arm swing, a steady head; the run pumps the elbows (`pump`). The sole's
+  outline fits the supporting slope and the hips lower smoothly when either leg would run out of reach. Roof decks
+  supply their physical surface to the feet separately from the navigation height; check posed boot vertices, since
+  a correct character-root height can still leave both boots floating. Standing a
   while, a free hand holds a strap at the chest (`straps`) and glances go to the sides or up (`glanceYaw`,
   `glancePitch`); they draw no `Math.random`, because seeded story checks are chaotic in the random sequence.
 - **Turns on the spot** ease round with the feet stepping and the head leading (`yawLag`, `stepping` in

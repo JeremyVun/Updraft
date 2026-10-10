@@ -20,12 +20,16 @@ type Action =
   | { kind: 'reach'; t: number }
   | { kind: 'push'; t: number }
   | {
-      kind: 'board'; t: number; boat: Boat; from: THREE.Vector3; local: THREE.Vector3; course?: THREE.Vector2;
+      kind: 'board'; t: number; boat: Boat; from: THREE.Vector3; local: THREE.Vector3; course?: THREE.Vector2; fromDeck: boolean;
       fromYaw: number; side: number; launched: boolean; onDone: () => void;
     }
   | {
       kind: 'alight'; t: number; boat: Boat; to: THREE.Vector3; rail: THREE.Vector3;
       fromYaw: number; toYaw: number; side: number; inside: number; shoved: boolean; hop: number; onDone: () => void;
+    }
+  | {
+      kind: 'leap'; t: number; from: THREE.Vector3; v: THREE.Vector3; to: THREE.Vector3; flight: number; gravity: number;
+      way: THREE.Vector2; landed: boolean; small: boolean; onLand: () => void; onDone: () => void;
     };
 
 interface Goal {
@@ -296,6 +300,28 @@ export class Traveller {
    */
   swing = 0;
   kick = 0;
+  /** Walking something narrow, 0 to 1: arms held out to the sides, giving a little either way as they go. */
+  balance = 0;
+  /**
+   * Held up off her feet by what her mittens hold overhead (`reachFor`), 0 to 1: the legs hang and paddle a little,
+   * toes down, and nothing she stands on is under her feet. Whoever holds her up places her.
+   */
+  hang = 0;
+  private readonly hangGlide = new Glide();
+  /**
+   * On a wall, 0 to 1: her feet go where `footFor` puts them rather than walking, her shadow goes, and whoever has her
+   * climbing places her and turns her body with `climbPose` (leaning in to the wall, turned toward a reaching hand,
+   * the hips swung over the foot she stands on, radians), which eases out with `climbing` when she is let go.
+   */
+  climbing = 0;
+  readonly climbPose = { lean: 0, twist: 0, sway: 0 };
+  private readonly climbGlide = new Glide();
+  private readonly footTarget = [new THREE.Vector3(), new THREE.Vector3()];
+  private readonly footWant = [0, 0];
+  private readonly footNow = [0, 0];
+  private readonly footGlide = [new Glide(), new Glide()];
+  private readonly balanceGlide = new Glide();
+  private balanceTilt = 0;
 
   /** Where the child's face is, for something small to look up at. */
   face(out: THREE.Vector3): THREE.Vector3 {
@@ -319,6 +345,23 @@ export class Traveller {
   /** How nearly a mitten has arrived on the point it was sent to, 0 to 1. */
   reached(hand: 0 | 1): number {
     return this.reachNow[hand];
+  }
+
+  /** Puts a foot's ankle on a point in the world and keeps it there until told otherwise (`null`); 0 her left, 1 her right. */
+  footFor(foot: 0 | 1, target: THREE.Vector3 | null): void {
+    if (target) this.footTarget[foot].copy(target);
+    this.footWant[foot] = target ? 1 : 0;
+  }
+
+  /** How nearly a foot has been given over to the point it was sent to, 0 to 1. */
+  footReached(foot: 0 | 1): number {
+    return this.footNow[foot];
+  }
+
+  /** World position of either ankle. */
+  ankle(foot: 0 | 1, out: THREE.Vector3): THREE.Vector3 {
+    this.rig.root.updateMatrixWorld(true);
+    return this.rig.bones[foot === 0 ? BONE.footL : BONE.footR].getWorldPosition(out);
   }
 
   /** World position of either mitten. */
@@ -403,6 +446,9 @@ export class Traveller {
     return this.rig.body.getWorldQuaternion(out).multiply(this.paperLocal);
   }
 
+  /** How far into a room open only at its windows she is (x, 0 out in the open), and how much low sun reaches her there (y). */
+  readonly room = new THREE.Vector2(0, 1);
+
   /** Decks the child may walk on; anywhere else the ground is the terrain. */
   decks: Deck[] = [];
 
@@ -413,7 +459,7 @@ export class Traveller {
 
   /** `keepScarf` carries the scarf's sway along, for a move nobody sees (through the island of lines' door). */
   place(x: number, z: number, yaw: number, keepScarf = false): void {
-    if (this.action?.kind === 'alight') {
+    if (this.action?.kind === 'alight' || this.action?.kind === 'leap') {
       this.action = null;
       this.riding = false;
     }
@@ -550,16 +596,17 @@ export class Traveller {
 
   /**
    * One continuous departure: push until the hull gives, travel with it while stepping over the gunwale, and only
-   * hand control back to the story once the child has put their weight down on the thwart.
+   * hand control back to the story once the child has put their weight down on the thwart. From a deck alongside
+   * there is nothing to push off: the hull only takes the weight.
    */
-  board(boat: Boat, onDone: () => void, course?: THREE.Vector2): void {
+  board(boat: Boat, onDone: () => void, { course, fromDeck = false }: { course?: THREE.Vector2; fromDeck?: boolean } = {}): void {
     this.goal = null;
     this.sitting = false;
     this.riding = false;
     boat.group.updateMatrixWorld(true);
     const from = boat.group.worldToLocal(this.position.clone());
     this.action = {
-      kind: 'board', t: 0, boat, from, local: new THREE.Vector3(), fromYaw: this.yaw, course,
+      kind: 'board', t: 0, boat, from, local: new THREE.Vector3(), fromYaw: this.yaw, course, fromDeck,
       side: from.x < 0 ? -1 : 1, launched: false, onDone,
     };
   }
@@ -623,6 +670,28 @@ export class Traveller {
     };
   }
 
+  /**
+   * Off a swing and through the air to `to`, where the feet come down: away with the swing's own speed `velocity`
+   * as it was when she let go, the arc bent only as much as it must be to land there. Then a stumble forward onto
+   * her hands, and up. `onLand` comes as the feet touch, `onDone` once she is standing. A `small` one is a hop
+   * down off something, landing on bent knees.
+   */
+  leap(velocity: THREE.Vector3, to: THREE.Vector3, gravity: number, onLand: () => void, onDone: () => void, small = false): void {
+    this.goal = null;
+    this.riding = false;
+    this.sitting = false;
+    this.hull = null;
+    const from = this.position.clone();
+    from.y += this.hipPivot.y - SIT_DROP * this.sit;
+    const drop = from.y - (to.y + this.hipPivot.y);
+    const up = Math.max(velocity.y, Math.sqrt(Math.max(0, -2 * gravity * drop)) + 0.4);
+    const flight = (up + Math.sqrt(up * up + 2 * gravity * drop)) / gravity;
+    const v = new THREE.Vector3((to.x - from.x) / flight, up, (to.z - from.z) / flight);
+    const way = new THREE.Vector2(v.x, v.z).normalize();
+    this.yaw = Math.atan2(way.x, way.y);
+    this.action = { kind: 'leap', t: 0, from, v, to: to.clone(), flight, gravity, way, landed: false, small, onLand, onDone };
+  }
+
   faceToward(x: number, z: number, amount: number): void {
     const target = Math.atan2(x - this.position.x, z - this.position.z);
     let d = target - this.yaw;
@@ -636,7 +705,7 @@ export class Traveller {
     this.keepSeat();
     this.hull = null;
     this.prev.copy(p);
-    if (!this.riding && this.action?.kind !== 'alight') this.updateGoal(dt);
+    if (!this.riding && this.action?.kind !== 'alight' && this.action?.kind !== 'leap') this.updateGoal(dt);
     /** Stopping, the feet finish the step they are in and come together under them rather than sliding back. */
     const past = ((this.gait - PASSING) % Math.PI + Math.PI) % Math.PI;
     if (this.speed < 0.4 && past > 0.12) this.gait += Math.min(Math.PI - past, dt * 9);
@@ -682,10 +751,11 @@ export class Traveller {
     const mattress = this.bedAt.y - tuning.sleeping.lieHigh + 0.68;
     this.scarf.update(dt, neck, this.rig.body.matrixWorld, this.keepOffChild, w, THREE.MathUtils.lerp(floor, mattress, onBed), p, this.yaw, onBed);
     this.rig.material.uniforms.uGroundPos.value.copy(p);
+    this.rig.material.uniforms.uInRoom.value.copy(this.room);
     this.motion.hoodForward(this.rig.material.uniforms.uHoodForward.value);
 
     this.shadow.position.set(p.x, p.y + 0.06, p.z);
-    this.shadowMat.uniforms.uOpacity.value = this.riding ? 0 : 0.3;
+    this.shadowMat.uniforms.uOpacity.value = this.riding ? 0 : 0.3 * (1 - this.hangGlide.value) * (1 - this.climbGlide.value);
   }
 
   private updateGoal(dt: number): void {
@@ -839,7 +909,8 @@ export class Traveller {
       const boat = a.boat;
       if (!a.launched && a.t >= k.launch) {
         a.launched = true;
-        boat.launch(true, a.course);
+        if (a.fromDeck) boat.takeWeight(a.side);
+        else boat.launch(true, a.course);
       }
 
       /** Stay in the boat's frame once it starts to move: there is no interval in which the hull sails underneath. */
@@ -913,6 +984,28 @@ export class Traveller {
         this.position.copy(a.to);
         a.onDone();
       }
+    } else if (a.kind === 'leap') {
+      this.riding = false;
+      this.sitting = false;
+      if (a.t < a.flight) {
+        const t = a.t;
+        this.position.set(a.from.x + a.v.x * t, a.from.y + a.v.y * t - 0.5 * a.gravity * t * t - this.hipPivot.y + SIT_DROP * this.sit,
+          a.from.z + a.v.z * t);
+      } else {
+        if (!a.landed) {
+          a.landed = true;
+          a.onLand();
+        }
+        /** Carried on a step by what is left of the leap, low, then up off the hands. */
+        const u = a.t - a.flight;
+        const on = (a.small ? 0.1 : LEAP_STUMBLE) * THREE.MathUtils.smootherstep(u, 0, 0.45);
+        const x = a.to.x + a.way.x * on, z = a.to.z + a.way.y * on;
+        this.position.set(x, Math.max(this.ground(x, z), 0), z);
+        if (u >= (a.small ? LEAP_HOP_SETTLE : tuning.crossings.swing.landFor)) {
+          this.action = null;
+          a.onDone();
+        }
+      }
     }
   }
 
@@ -922,13 +1015,14 @@ export class Traveller {
    * reaches in under it.
    */
   private floorAt(x: number, z: number): number {
-    const ground = Math.max(this.ground(x, z), 0);
+    const ground = Math.max(deckGround(this.decks, x, z, this.position.y, true), 0);
     const level = this.position.y - 0.26 * this.sit;
     const a = this.action;
     if (a?.kind === 'alight') {
       const local = a.boat.group.worldToLocal(this.footLocal.set(x, 0, z));
       return Math.abs(local.x) < gunwaleHalf(stationU(local.z)) + 0.04 ? level : Math.max(ground, level);
     }
+    if (a?.kind === 'leap' && a.t < a.flight) return level;
     if (!this.riding) return ground;
     return Math.max(this.ground(x, z), level);
   }
@@ -1084,6 +1178,43 @@ export class Traveller {
         m.raise = lerp(m.raise, 0.75, reach);
         m.out = lerp(m.out, 0.62, reach);
       }
+    } else if (a?.kind === 'leap') {
+      /** Away with everything flung wide, knees up; reaching for the slates as they come up; down on a hand, and up. */
+      const T = a.flight;
+      const landing = a.t - T;
+      const big = a.small ? 0 : 1;
+      const fling = big * smooth(a.t, 0, 0.16) * (1 - smooth(a.t, T * 0.55, T * 0.95));
+      const brace = (0.4 + 0.6 * big) * smooth(a.t, T * 0.5, T) * (1 - smooth(landing, 0.45, 1.0));
+      const low = (0.5 + 0.5 * big) * smooth(landing, 0, 0.08)
+        * (1 - smooth(landing, 0.15 + 0.15 * big, a.small ? LEAP_HOP_SETTLE : tuning.crossings.swing.landFor * 0.9));
+      for (const hand of [0, 1] as const) {
+        const g = this.grips[hand];
+        g.w = fling;
+        g.world = false;
+        g.at.set(0.62, 1.3 + 0.05 * Math.sin(a.t * 9 + hand), 0.18);
+        g.elbow.set(1, -0.4, -0.5);
+      }
+      for (const m of [L, R]) {
+        m.raise = lerp(m.raise, 1.05, brace);
+        m.out = lerp(m.out, 0.55, brace);
+        m.elbow = lerp(m.elbow, 0.35, brace);
+      }
+      const palm = big * smooth(landing, 0.04, 0.16) * (1 - smooth(landing, 0.5, 0.85));
+      if (palm > 0) {
+        const g = this.grips[1];
+        g.w = palm;
+        g.world = true;
+        const x = this.position.x + a.way.x * 0.5 - a.way.y * 0.12, z = this.position.z + a.way.y * 0.5 + a.way.x * 0.12;
+        g.at.set(x, Math.max(this.ground(x, z), 0) + 0.06, z);
+        g.elbow.set(0.6, 0.3, -1);
+      }
+      const air = Math.sin(THREE.MathUtils.clamp(a.t / T, 0, 1) * Math.PI);
+      P.step[0] = (0.4 + 0.4 * big) * air + 0.55 * big * Math.sin(smooth(landing, 0.05, 0.45) * Math.PI);
+      P.step[1] = (0.3 + 0.2 * big) * air;
+      lean = -0.16 * fling + 0.3 * brace + 0.35 * low;
+      bend = 0.3 * low;
+      crouch = 0.36 * low;
+      this.gazeAt(0, 0.15 + 0.3 * brace, Math.max(brace, fling * 0.6));
     }
 
     if (this.pickupT < PICKUP) {
@@ -1119,7 +1250,24 @@ export class Traveller {
       }
     }
 
-    const brace = this.brace;
+    const climb = this.climbGlide.step(this.climbing, 0.25, dt);
+    for (const foot of [0, 1] as const) {
+      this.footNow[foot] = THREE.MathUtils.clamp(this.footGlide[foot].step(this.footWant[foot], 0.3, dt), 0, 1);
+      P.feet[foot].w = this.footNow[foot];
+      P.feet[foot].at.copy(this.footTarget[foot]);
+    }
+    P.climb = climb;
+    lean += this.climbPose.lean * climb;
+    twist += this.climbPose.twist * climb;
+    const hang = this.hangGlide.step(this.hang, 0.3, dt);
+    if (hang > 0.001) {
+      /** Hanging from the hands: the legs paddle in turn, slow and uneven, a knee drawn up now and then. */
+      const paddle = Math.sin(t * 2.1) * 0.6 + Math.sin(t * 3.3 + 0.8) * 0.4;
+      P.step[0] += hang * (0.16 + 0.14 * paddle);
+      P.step[1] += hang * (0.16 - 0.14 * paddle);
+      lean -= 0.06 * hang;
+    }
+    const brace = this.brace * (1 - hang) * (1 - climb);
     if (brace > 0.02 && !a) {
       /** Into a strong wind: a forearm up across the lower face with the elbow out, leaning into it, chin down. */
       const g = this.grips[1];
@@ -1171,6 +1319,21 @@ export class Traveller {
       L.elbow = lerp(L.elbow, 0.45, carry);
       L.twist = lerp(L.twist, 0, carry);
     }
+    const balance = this.balanceGlide.step(this.balance, 0.35, dt);
+    if (balance > 0.001) {
+      /** Out wide and a little forward, see-sawing as the weight is caught, and a sway through the body with it. */
+      const give = Math.sin(t * 2.3) * 0.6 + Math.sin(t * 3.9 + 1.3) * 0.4;
+      L.raise = lerp(L.raise, 0.35, balance);
+      R.raise = lerp(R.raise, 0.35, balance);
+      L.out = lerp(L.out, 1.2 + 0.22 * give, balance);
+      R.out = lerp(R.out, 1.2 - 0.22 * give, balance);
+      L.elbow = lerp(L.elbow, 0.3, balance);
+      R.elbow = lerp(R.elbow, 0.3, balance);
+      L.twist = lerp(L.twist, 0, balance);
+      tiltHead -= 0.06 * give * balance;
+      lean += 0.06 * balance;
+    }
+    this.balanceTilt = 0.05 * Math.sin(t * 2.3) * balance;
     this.lapPaper = lap * carry;
     if (lap > 0.001) {
       const [l, r] = this.grips;
@@ -1285,7 +1448,7 @@ export class Traveller {
 
     P.lean = lean;
     P.twist = twist;
-    P.tilt = sway;
+    P.tilt = sway + this.balanceTilt + this.climbPose.sway * climb;
     P.bend = bend;
     P.rise = rise;
     P.sit = sit;
@@ -1298,6 +1461,7 @@ export class Traveller {
     P.dangleAt = this.dangleT;
     P.lie = 0;
     P.lieFold = 0;
+    P.hang = hang;
 
     r.root.position.copy(this.position);
     r.root.position.y += rise - crouch - sit * SIT_DROP - kneel * KNEEL_DROP + this.hop;
@@ -1500,4 +1664,8 @@ const ARM_REACH = (UPPER_ARM + FOREARM) * 1.12 - 0.02;
 
 /** How far the root comes down when they sit (on the ground, a thwart, a stool) and when they kneel back on their heels. */
 const SIT_DROP = 0.67;
+/** How far the last of a leap carries her on along the ground after her feet come down. */
+const LEAP_STUMBLE = 0.32;
+/** Seconds a hop down takes to come up off its bent knees. */
+const LEAP_HOP_SETTLE = 0.5;
 const KNEEL_DROP = 0.54;

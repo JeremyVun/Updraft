@@ -78,8 +78,9 @@ function paperPlane(): THREE.BufferGeometry {
 const SCALE = 0.85;
 /** The pinch point on the centre fold, below the wings and forward of the tail. */
 export const PAPER_GRIP = new THREE.Vector3(0, -0.2, -0.45);
-/** How long a wingtip trail lingers in the air. */
+/** How long a wingtip trail lingers in the air, and the most of the air it strings across, metres. */
 const TRAIL_SECONDS = 1.6;
+const TRAIL_REACH = 7;
 /**
  * How a plane that is let go leaves: ground speed along its heading, how firmly it holds that against the air
  * (per second), and a climb rate, or null to keep its own lift.
@@ -606,7 +607,10 @@ export class Glider {
     } else {
       pts[n - 1].copy(tip);
     }
-    while (pts.length > 2 && this.clock - laid[0] > TRAIL_SECONDS) {
+    let reach = 0;
+    for (let i = 1; i < pts.length; i++) reach += pts[i].distanceTo(pts[i - 1]);
+    while (pts.length > 2 && (this.clock - laid[0] > TRAIL_SECONDS || reach > TRAIL_REACH)) {
+      reach -= pts[1].distanceTo(pts[0]);
       pts.shift();
       laid.shift();
     }

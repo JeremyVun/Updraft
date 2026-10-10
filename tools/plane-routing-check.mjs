@@ -19,6 +19,7 @@ const {Carry}=await import('../src/companion/carry.ts');
 const {Boat}=await import('../src/traveller/boat.ts');
 const {LinesChapter,LINES_BERTH}=await import('../src/story/lines.ts');
 const {DOOR_EXIT}=await import('../src/world/doorway.ts');
+const {shoreHaul}=await import('../src/world/shore-pulley.ts');
 const {PlaneArrival}=await import('../src/story/plane-arrival.ts');
 const {heightAt}=await import('../src/world/island.ts');
 const {mulberry32}=await import('../src/world/noise.ts');
@@ -35,8 +36,17 @@ function fixture() {
   cygnet.mount=child;cygnet.visible=true;cygnet.wing.restore('wrapped');
   const carry=new Carry(child,cygnet);
   const cast={child,plane,boat,cygnet,carry,wind};
-  let time=0;
+  const haulCamera=new THREE.PerspectiveCamera(50,16/9,.1,100);
+  haulCamera.position.copy(shoreHaul.pinwheel).add(new THREE.Vector3(0,3,10));
+  haulCamera.lookAt(shoreHaul.pinwheel);haulCamera.updateMatrixWorld();
+  const hub=shoreHaul.pinwheel.clone().project(haulCamera);
+  const sweep={present:true,muted:false,gust:18,gustDir:new THREE.Vector2(1,0),
+    prevNdc:new THREE.Vector2(hub.x-.08,hub.y),ndc:new THREE.Vector2(hub.x+.08,hub.y)};
+  let time=0,nextSweep=0;
   return {air,cast,get time(){return time;},step(chapter,dt){
+    if(chapter instanceof LinesChapter&&chapter.beat==='haul'&&time>=nextSweep){
+      shoreHaul.brush(haulCamera,sweep,wind);nextSweep=time+.6;
+    }
     time+=dt;chapter.update(dt,time);boat.update(dt,time);child.update(dt);carry.update(dt);
     cygnet.update(dt,time,child.position,air);carry.after();plane.update(dt,time);cygnet.heard.length=0;
   }};
@@ -66,7 +76,7 @@ for(const fps of [30,60,120]) for(const bearing of [0,Math.PI/2,Math.PI,Math.PI*
 console.log('PASS: portal checkpoint to boarding with the paper in hand, four wind bearings plus gust, 30/60/120fps.');
 console.log(JSON.stringify(results));
 
-// A restored shore must also finish when wind never settles: its fallback is independent of pickup.
+// The player can wind the boat in under sustained wind without losing the paper.
 {
   const f=fixture(),{cast,air}=f,{child,plane,cygnet}=cast;
   const chapter=new LinesChapter(cast);

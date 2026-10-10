@@ -12,6 +12,15 @@ export function verticalFov(aspect: number): number {
   const vfovForWidth = THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(hfov / 2) / aspect));
   return THREE.MathUtils.clamp(Math.max(38, vfovForWidth), 38, 62);
 }
+/**
+ * The slow drift an eased lens has about where it is put, `reach` metres from what it looks at; a placed move that
+ * hands over to an eased one carries it in, so nothing moves at the hand-over.
+ */
+export function breathe(time: number, reach: number, out: THREE.Vector3): THREE.Vector3 {
+  const r = Math.min(reach, 60);
+  return out.set(Math.sin(time * 0.07 + 1.3) * 0.02 * r, Math.sin(time * 0.11) * 0.012 * r, 0);
+}
+
 /** The camera always looks roughly north, from a little east of south, unless a shot says otherwise. */
 const FROM = new THREE.Vector3(0.075, 0, 1).normalize();
 /** How far above the ground a shot stands unless it says otherwise. */
@@ -62,6 +71,8 @@ export interface Shot {
   exact?: boolean;
   /** Optional playable pair. Fit both within a bounded retreat; the primary always keeps the frame. */
   subjects?: { primary: THREE.Vector3; secondary: THREE.Vector3; tertiary?: THREE.Vector3;
+    /** World-space radius around the primary that must stay inside the frame. */
+    primaryRadius?: number;
     /** Additional meaningful bounds, such as the returned stars of a constellation. */
     points?: readonly THREE.Vector3[]; margin: number; extra: number };
 }
@@ -146,6 +157,7 @@ export class CameraRig {
   private readonly back = new THREE.Vector3();
   private readonly fitOffset = new THREE.Vector3();
   private readonly fitOrigin = new THREE.Vector3();
+  private readonly breath = new THREE.Vector3();
 
   constructor() {
     this.fixed = QA && params.cam !== null;
@@ -185,6 +197,8 @@ export class CameraRig {
   /** Jumps straight to a shot (used once at the start). */
   cut(shot: Shot): void {
     if (this.fixed) return;
+    this.zoomed = shot.zoom ?? 1;
+    this.lens();
     if (shot.exact && shot.eye) {
       this.eye.copy(shot.eye); this.wantLook.copy(shot.target);
     } else this.desired(shot, this.eye);
@@ -228,7 +242,9 @@ export class CameraRig {
       this.lastShot = shot;
     }
     if (shot.exact && shot.eye) {
-      this.eye.copy(shot.eye); this.look.copy(shot.target); this.lastTarget.copy(shot.target);
+      // It goes exactly where it is put; what it keeps is the eye before its breathing, as an eased shot keeps it.
+      this.eye.copy(shot.eye).sub(breathe(time, shot.eye.distanceTo(shot.target), this.breath));
+      this.look.copy(shot.target); this.lastTarget.copy(shot.target);
       this.lastCarryAnchor.copy(shot.carryAnchor ?? shot.target);
       this.carrySource = shot.carryAnchor;
       this.turnSpeed = 0; this.direction.reset();
@@ -240,7 +256,7 @@ export class CameraRig {
       this.pullCommitment.reset(); this.liftCommitment.reset(); this.fitCommitment.reset();
       this.fitShift.set(0, 0, 0); this.fitShiftSpeed.set(0, 0, 0);
       this.sceneryOffset.set(0, 0, 0); this.sceneryVelocity.set(0, 0, 0);
-      this.camera.position.copy(this.eye); this.camera.lookAt(this.look);
+      this.camera.position.copy(shot.eye); this.camera.lookAt(this.look);
       return;
     }
     if (dt <= 0) return;
@@ -370,13 +386,15 @@ export class CameraRig {
     }
     const vertical = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * pair.margin;
     const horizontal = vertical * camera.aspect;
+    const radius = pair.primaryRadius ?? 0;
     let needed = 0;
     for (let i = 0; i < 3 + (pair.points?.length ?? 0); i++) {
       const point = i === 0 ? pair.primary : i === 1 ? pair.secondary : i === 2 ? pair.tertiary : pair.points![i - 3];
       if (!point) continue;
       this.local.copy(point).applyMatrix4(camera.matrixWorldInverse);
-      needed = Math.max(needed, Math.abs(this.local.x) / horizontal + this.local.z,
-        Math.abs(this.local.y) / vertical + this.local.z);
+      const padding = i === 0 ? radius : 0;
+      needed = Math.max(needed, (Math.abs(this.local.x) + padding) / horizontal + this.local.z,
+        (Math.abs(this.local.y) + padding) / vertical + this.local.z);
     }
     needed = Math.min(pair.extra, needed);
     this.fitBack = this.fitCommitment.update(Math.max(0, needed), dt, open, settle, c.fitHold);
@@ -386,8 +404,8 @@ export class CameraRig {
     const depth = Math.max(1, -this.local.z);
     // Recompose within the available room before asking for any more distance. If an old runaway
     // cannot fit, the child's interval wins until the plane has flown back into reach.
-    const primaryLeft = this.local.x - depth * horizontal, primaryRight = this.local.x + depth * horizontal;
-    const primaryBottom = this.local.y - depth * vertical, primaryTop = this.local.y + depth * vertical;
+    const primaryLeft = this.local.x + radius - depth * horizontal, primaryRight = this.local.x - radius + depth * horizontal;
+    const primaryBottom = this.local.y + radius - depth * vertical, primaryTop = this.local.y - radius + depth * vertical;
     let left = primaryLeft, right = primaryRight, bottom = primaryBottom, top = primaryTop;
     for (let i = 1; i < 3 + (pair.points?.length ?? 0); i++) {
       const point = i === 1 ? pair.secondary : i === 2 ? pair.tertiary : pair.points![i - 3];
@@ -409,9 +427,9 @@ export class CameraRig {
     this.local.copy(pair.primary).applyMatrix4(camera.matrixWorldInverse);
     const safeDepth = Math.max(1, -this.local.z);
     const safeV = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * Math.max(pair.margin, c.primarySafetyMargin);
-    const safeH = safeV * camera.aspect;
-    const sx = this.local.x - THREE.MathUtils.clamp(this.local.x, -safeDepth * safeH, safeDepth * safeH);
-    const sy = this.local.y - THREE.MathUtils.clamp(this.local.y, -safeDepth * safeV, safeDepth * safeV);
+    const safeH = Math.max(0, safeDepth * safeV * camera.aspect - radius), safeY = Math.max(0, safeDepth * safeV - radius);
+    const sx = this.local.x - THREE.MathUtils.clamp(this.local.x, -safeH, safeH);
+    const sy = this.local.y - THREE.MathUtils.clamp(this.local.y, -safeY, safeY);
     if (sx || sy) {
       this.probe.copy(this.right).multiplyScalar(sx).addScaledVector(this.up, sy);
       camera.position.add(this.probe);
@@ -428,10 +446,7 @@ export class CameraRig {
   }
 
   private place(time: number, dt: number, shot: Shot): void {
-    const reach = Math.min(this.eye.distanceTo(this.look), 60);
-    const want = this.want.copy(this.eye);
-    want.x += Math.sin(time * 0.07 + 1.3) * 0.02 * reach;
-    want.y += Math.sin(time * 0.11) * 0.012 * reach;
+    const want = this.want.copy(this.eye).add(breathe(time, this.eye.distanceTo(this.look), this.breath));
     const clear = Math.max(heightAt(want.x, want.z), heightAt(want.x, want.z - 6), 0) + this.clear;
     if (want.y < clear) want.y = clear;
     /**

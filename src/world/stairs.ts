@@ -493,6 +493,11 @@ export interface LoosePiece {
  */
 export class CloudStairs {
   readonly group: THREE.Group;
+  /**
+   * What stands in the stairs' room, drawn only while it is in view: all of it but the spray off the hull, which goes
+   * down with the boat onto the sea.
+   */
+  readonly scenery: THREE.Object3D[];
   readonly pieces: LoosePiece[] = [];
   /** The deck's underside over the island and its top under the sunset. */
   readonly cloud: StairsCloud;
@@ -621,6 +626,8 @@ export class CloudStairs {
     this.group.add(this.cloud.group);
     this.group.add(this.wisps.mesh);
     fixInPlace(this.group, standing, this.trick, this.wisps.mesh);
+    this.scenery = [...this.group.children.filter((o) => o !== this.cloud.group),
+      ...this.cloud.group.children.filter((o) => o !== this.cloud.wake.mesh)];
     this.pose();
   }
 

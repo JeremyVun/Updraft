@@ -75,7 +75,7 @@ try {
         held: s.fades ? [...s.fades].filter(([, f]) => f.held).length : null,
         convolvers: reg.nodes.filter(n => n.type === 'Convolver').map(n => ({ seconds: n.node.buffer?.duration ?? null, channels: n.node.buffer?.numberOfChannels ?? null,
           role: n.node === s.reverbConvolver ? 'reverb' : 'other' })),
-        scores: ['openingScore', 'summitScore', 'dreamScore', 'linesScore', 'boatsScore', 'meadowScore', 'birchesScore', 'sleepingScore', 'seaScore'].filter(k => s[k]),
+        scores: ['openingScore', 'summitScore', 'dreamScore', 'drownedScore', 'linesScore', 'boatsScore', 'meadowScore', 'birchesScore', 'sleepingScore', 'seaScore'].filter(k => s[k]),
       };
     });
     const windows = [];

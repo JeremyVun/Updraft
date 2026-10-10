@@ -123,8 +123,9 @@ The order is `ORDER` in `src/story/journey.ts`; each room has its section in [ch
    the trees is freed to become the boat's sail.
 6. **The stairs in the clouds.** Bedtime: a staircase climbing into cloud. The cygnet goes up first. Above the cloud,
    the last sun of the year; then down into the mist ([stairs.md](stairs.md)).
-7. **The drowned village and the storm.** A dusk drift between rooftops; the air dies and the player is the wind in
-   the sail; a lighthouse; the storm takes the paper plane.
+7. **The drowned village and the storm.** A dusk drift between rooftops and a stranded cat brought aboard in a
+   wash-tub; the air dies, a sea fog rises, the cat bolts and she leaves the boat to follow it over the roofs to the
+   church; the boat brought back to her, a lighthouse going out, and the storm takes the paper plane.
 8. **The dark wood.** Night and the first winter storm. The player's updrafts breathe embers alight; the child walks
    as far as there is light; the cygnet, frightened into hiding, is found by putting light on it.
 9. **The sleeping island.** The child falls asleep and the player guides the bird: a feather, a winter climb, a

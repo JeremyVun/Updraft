@@ -3,10 +3,14 @@ import type { AudioOut } from '../creatures/voices';
 import type { NetSound } from '../fx/sealife/net';
 import type { SleeperSound, WhaleCall } from '../fx/sealife/sleeper';
 import { WhaleVoice } from './whale-voice';
+import { strikeBell } from './bell';
 
 export type Surface = 'grass' | 'sand' | 'wood' | 'water';
 export type MaterialSound = 'cloth' | 'wool' | 'sail' | 'sail-settle' | 'water' | 'paper' | 'door' | 'splash' | 'peg'
-  | 'dolphin-surface' | 'leaf-scuff' | 'swing-creak' | Exclude<SleeperSound, WhaleCall> | Exclude<NetSound, 'whale-call' | 'whale-glad'>;
+  | 'dolphin-surface' | 'leaf-scuff' | 'swing-creak' | Exclude<SleeperSound, WhaleCall> | Exclude<NetSound, 'whale-call' | 'whale-glad'> | 'tub'
+  | 'tree-creak' | 'roots-give' | 'root-tear' | 'tree-fall' | 'bough-creak' | 'slate-land'
+  | 'mill-start' | 'mill-creak' | 'mill-settle' | 'mill-click' | 'linen-flap' | 'bell' | 'bell-touch' | 'hull-scrape'
+  | 'hull-strain';
 
 /**
  * The sounds a small body makes, as opposed to a voice. The cygnet never speaks except when it is lost, so this is
@@ -47,7 +51,8 @@ export class Foley {
     if (now === undefined || amount < 0.015) return;
     const at = now + 0.005;
     const level = Math.min(1.5, amount) * tuning.audio.materialLevel;
-    if (kind === 'sail-settle') {
+    if (kind === 'bell' || kind === 'bell-touch') strikeBell(this.out!, at, amount, pan, kind === 'bell-touch');
+    else if (kind === 'sail-settle') {
       // Heavy canvas settling: low air movement, with the scratchy upper noise filtered away.
       this.puff({ at, len: 0.5, level: level * 0.085 * 10 ** (tuning.audio.sailSettleBoostDb / 20), pan,
         type: 'lowpass', from: 320, to: 150, q: 0.5, attack: 0.12, wet: 0.04 });
@@ -63,6 +68,12 @@ export class Foley {
       const colour = 0.9 + Math.random() * 0.2;
       this.puff({ at, len: 0.035, level: level * 0.07, pan, type: 'bandpass', from: 2600 * colour, q: 1.2, attack: 0.002 });
       this.blip(at + 0.012, 1250 * colour, 900 * colour, 0.05, level * 0.02, pan, 'triangle', 0.04);
+    } else if (kind === 'tub') {
+      // A wooden tub knocking against slates or a hull: a hollow low knock, and the water slapping in round it.
+      const colour = 0.9 + Math.random() * 0.2;
+      this.blip(at, 210 * colour, 150 * colour, 0.16, level * 0.05, pan, 'triangle', 0.06);
+      this.puff({ at, len: 0.06, level: level * 0.05, pan, type: 'bandpass', from: 900 * colour, q: 1.4, attack: 0.002 });
+      this.puff({ at: at + 0.05, len: 0.3, level: level * 0.03, pan, type: 'bandpass', from: 700, to: 380, q: 0.6, attack: 0.03, wet: 0.05 });
     } else if (kind === 'leaf-scuff') {
       // A few dry folds under a foot, never a continuous bed of crackle.
       const colour = 0.9 + Math.random() * 0.2;
@@ -79,6 +90,119 @@ export class Foley {
         from: 290 * colour, to: 190 * colour, q: 3.5, attack: 0.065, wet: 0.03 });
       this.puff({ at: at + 0.04, len: 0.19, level: level * 0.022, pan,
         type: 'bandpass', from: 720 * colour, to: 460 * colour, q: 2, attack: 0.045 });
+    } else if (kind === 'tree-creak') {
+      // A dead trunk working on rotten roots: a slow, deep stick-slip creak, never a door's squeal.
+      const colour = 0.88 + Math.random() * 0.24, rising = Math.random() < 0.6;
+      const len = 0.55 + 0.5 * Math.min(1, amount);
+      this.rasp({ at, len, from: (rising ? 24 : 36) * colour, to: (rising ? 36 : 25) * colour, jitter: 0.22,
+        bodies: [[200 * colour, 7, 1], [460 * colour, 6, 0.8], [1100 * colour, 5, 0.4]], level: level * 0.11, pan, attack: 0.12, wet: 0.06 });
+      this.puff({ at: at + 0.05, len: len * 0.8, level: level * 0.006, pan, type: 'bandpass', from: 900 * colour, to: 650 * colour, q: 1, attack: 0.15 });
+    } else if (kind === 'roots-give') {
+      // Roots tearing a step under the water: a deep groan, a few muffled snaps in the earth, then mud bubbling up.
+      const colour = 0.9 + Math.random() * 0.2;
+      this.rasp({ at, len: 1.2, from: 17 * colour, to: 12 * colour, jitter: 0.25,
+        bodies: [[135 * colour, 6, 1], [320 * colour, 5, 0.55], [780 * colour, 4, 0.18]], level: level * 0.18, pan, attack: 0.08, wet: 0.08 });
+      for (let i = 0, t = at + 0.06; i < 5; i++, t += 0.04 + Math.random() * 0.12) {
+        this.puff({ at: t, len: 0.035, level: level * (0.04 + Math.random() * 0.03), pan, type: 'lowpass', from: 900 + Math.random() * 600, attack: 0.001 });
+        if (i % 2 === 0) this.blip(t, 210 * colour, 130 * colour, 0.05, level * 0.016, pan, 'triangle');
+      }
+      this.puff({ at: at + 0.1, len: 0.9, level: level * 0.015, pan, type: 'bandpass', from: 420, to: 250, q: 0.7, attack: 0.15, wet: 0.05 });
+      this.bubbles(at + 0.35, 9, 1.8, 260, 520, level * 0.02, pan);
+    } else if (kind === 'root-tear') {
+      // The whole plate tearing out: roots ripping in a run of snaps over a fibrous rip and a long groan, water sucked in after.
+      const colour = 0.9 + Math.random() * 0.2;
+      this.rasp({ at, len: 1.7, from: 13 * colour, to: 22 * colour, jitter: 0.28,
+        bodies: [[115 * colour, 6, 1], [290 * colour, 5, 0.6], [690 * colour, 4, 0.25]], level: level * 0.21, pan, attack: 0.25, wet: 0.08 });
+      this.puff({ at: at + 0.1, len: 1.4, level: level * 0.03, pan, type: 'bandpass', from: 480, to: 1100, q: 0.8, attack: 0.4 });
+      for (let i = 0, t = at + 0.05; i < 26; i++) {
+        const u = i / 25;
+        this.puff({ at: t, len: 0.012 + Math.random() * 0.025, level: level * (0.03 + Math.random() * 0.05) * (1 - 0.5 * u), pan: pan + (Math.random() - 0.5) * 0.2,
+          type: 'bandpass', from: 700 + Math.random() * 1900, q: 1.2, attack: 0.001 });
+        if (Math.random() < 0.25) this.blip(t, 150 + Math.random() * 110, 100, 0.045, level * 0.02, pan, 'triangle');
+        t += 0.015 + 0.09 * Math.abs(u - 0.35) * Math.random();
+      }
+      this.puff({ at: at + 0.5, len: 1.3, level: level * 0.0175, pan, type: 'lowpass', from: 320, to: 150, attack: 0.2, wet: 0.06 });
+      this.bubbles(at + 0.7, 10, 1.4, 180, 380, level * 0.025, pan);
+    } else if (kind === 'tree-fall') {
+      // A heavy trunk landing across the gap: a deep thud and a knock of wood on stone, its crown cracking, then the splash.
+      this.blip(at, 85, 45, 0.55, level * 0.12, pan, 'sine', 0.12);
+      this.puff({ at, len: 0.42, level: level * 0.1, pan, type: 'lowpass', from: 260, to: 90, attack: 0.004, wet: 0.08 });
+      this.puff({ at, len: 0.25, level: level * 0.08, pan, type: 'lowpass', from: 520, to: 170, attack: 0.003 });
+      this.blip(at + 0.01, 160, 100, 0.24, level * 0.07, pan, 'triangle', 0.05);
+      this.puff({ at: at + 0.005, len: 0.05, level: level * 0.042, pan, type: 'bandpass', from: 750, q: 1.4, attack: 0.001 });
+      for (let i = 0; i < 6; i++) this.puff({ at: at + 0.02 + Math.random() * 0.25, len: 0.02, level: level * (0.014 + Math.random() * 0.021), pan: pan + (Math.random() - 0.5) * 0.3,
+        type: 'bandpass', from: 1800 + Math.random() * 1500, q: 1.4, attack: 0.001 });
+      this.puff({ at: at + 0.03, len: 1.1, level: level * 0.1, pan, type: 'bandpass', from: 1500, to: 480, q: 0.5, attack: 0.015, wet: 0.15 });
+      this.puff({ at: at + 0.04, len: 0.4, level: level * 0.021, pan, type: 'highpass', from: 2600, attack: 0.01 });
+      for (let i = 0; i < 12; i++) {
+        const f = 1000 + Math.random() * 1600;
+        this.blip(at + 0.25 + Math.random() * 1.05, f, f * 0.55, 0.05, level * 0.012, pan + (Math.random() - 0.5) * 0.5);
+      }
+      this.puff({ at: at + 0.3, len: 1.6, level: level * 0.035, pan, type: 'bandpass', from: 520, to: 260, q: 0.6, attack: 0.25, wet: 0.1 });
+    } else if (kind === 'bough-creak') {
+      // Thick old rope working round a bough as the swing turns: a soft, low, fibrous creak, slower than the dead tree's.
+      const colour = 0.9 + Math.random() * 0.2, rising = Math.random() < 0.5;
+      this.rasp({ at, len: 0.5, from: (rising ? 26 : 36) * colour, to: (rising ? 34 : 24) * colour, jitter: 0.14,
+        bodies: [[300 * colour, 6, 1], [720 * colour, 5, 0.6]], level: level * 0.06, pan, attack: 0.1, wet: 0.04 });
+      this.puff({ at: at + 0.04, len: 0.32, level: level * 0.0028, pan, type: 'bandpass', from: 1400 * colour, to: 900 * colour, q: 1, attack: 0.09 });
+    } else if (kind === 'mill-start') {
+      // The old windshaft taking up: a dull knock as the brake lets go, then a dry axle groan whose stick-slip quickens.
+      const colour = 0.9 + Math.random() * 0.2;
+      this.blip(at, 120 * colour, 85 * colour, 0.18, level * 0.05, pan, 'triangle', 0.05);
+      this.puff({ at, len: 0.06, level: level * 0.05, pan, type: 'bandpass', from: 650 * colour, q: 1.3, attack: 0.002 });
+      this.rasp({ at: at + 0.08, len: 1.3, from: 9 * colour, to: 26 * colour, jitter: 0.3,
+        bodies: [[150 * colour, 6, 1], [370 * colour, 5, 0.7], [880 * colour, 4, 0.3]], level: level * 0.12, pan, attack: 0.18, wet: 0.05 });
+      this.puff({ at: at + 0.15, len: 1.1, level: level * 0.008, pan, type: 'bandpass', from: 1100, to: 1500, q: 1.2, attack: 0.3 });
+    } else if (kind === 'mill-creak') {
+      // Wood working through the turn: the stock in its canister, drier and higher than the dead tree, and short.
+      const colour = 0.88 + Math.random() * 0.24, rising = Math.random() < 0.5;
+      this.rasp({ at, len: 0.42 + 0.25 * Math.min(1, amount), from: (rising ? 30 : 44) * colour, to: (rising ? 42 : 30) * colour, jitter: 0.18,
+        bodies: [[260 * colour, 6, 1], [620 * colour, 5, 0.7], [1350 * colour, 4, 0.3]], level: level * 0.07, pan, attack: 0.08, wet: 0.04 });
+    } else if (kind === 'mill-settle') {
+      // Coming to rest as if braked: the shaft dragging to a stop in a slowing judder, then a soft wooden settle.
+      const colour = 0.9 + Math.random() * 0.2;
+      this.rasp({ at, len: 0.75, from: 30 * colour, to: 8 * colour, jitter: 0.2,
+        bodies: [[180 * colour, 6, 1], [440 * colour, 5, 0.6], [1000 * colour, 4, 0.25]], level: level * 0.1, pan, attack: 0.04, wet: 0.05 });
+      this.puff({ at, len: 0.7, level: level * 0.02, pan, type: 'bandpass', from: 900, to: 420, q: 0.9, attack: 0.05 });
+      this.blip(at + 0.72, 105 * colour, 80 * colour, 0.2, level * 0.04, pan, 'triangle', 0.06);
+      this.puff({ at: at + 0.72, len: 0.08, level: level * 0.03, pan, type: 'lowpass', from: 500, attack: 0.003 });
+    } else if (kind === 'mill-click') {
+      // The hoist's pawl dropping over a tooth of the drum's ratchet: a small dry iron tick on a wooden knock.
+      const colour = 0.94 + Math.random() * 0.12;
+      this.puff({ at, len: 0.018, level: level * 0.05, pan, type: 'bandpass', from: 3200 * colour, q: 5, attack: 0.0008 });
+      this.blip(at, 1700 * colour, 1500 * colour, 0.03, level * 0.012, pan, 'triangle');
+      this.blip(at + 0.004, 240 * colour, 190 * colour, 0.05, level * 0.025, pan, 'triangle', 0.02);
+    } else if (kind === 'hull-scrape') {
+      // The keel running up onto slates under the water: a grinding drag that slows, a hollow knock in the hull as it stops.
+      const colour = 0.9 + Math.random() * 0.2;
+      this.rasp({ at, len: 0.9, from: 34 * colour, to: 11 * colour, jitter: 0.35,
+        bodies: [[170 * colour, 5, 1], [420 * colour, 4, 0.7], [1500 * colour, 3, 0.35]], level: level * 0.16, pan, attack: 0.03, wet: 0.06 });
+      this.puff({ at, len: 0.8, level: level * 0.04, pan, type: 'bandpass', from: 2400 * colour, to: 900 * colour, q: 0.8, attack: 0.02 });
+      this.blip(at + 0.82, 95 * colour, 60 * colour, 0.32, level * 0.09, pan, 'triangle', 0.08);
+      this.puff({ at: at + 0.82, len: 0.1, level: level * 0.04, pan, type: 'lowpass', from: 420, attack: 0.002 });
+      this.puff({ at: at + 0.86, len: 0.6, level: level * 0.02, pan, type: 'bandpass', from: 650, to: 340, q: 0.6, attack: 0.05, wet: 0.06 });
+    } else if (kind === 'hull-strain') {
+      // The hull pressed by its sail against what holds it: planks and keel working on the slates, a slow deep creak.
+      const colour = 0.9 + Math.random() * 0.2;
+      this.rasp({ at, len: 0.8, from: 16 * colour, to: 26 * colour, jitter: 0.24,
+        bodies: [[150 * colour, 6, 1], [380 * colour, 5, 0.6], [900 * colour, 4, 0.25]], level: level * 0.11, pan, attack: 0.15, wet: 0.05 });
+      this.puff({ at: at + 0.3, len: 0.35, level: level * 0.015, pan, type: 'bandpass', from: 1300 * colour, to: 700 * colour, q: 1.1, attack: 0.08 });
+    } else if (kind === 'linen-flap') {
+      // Torn scraps of old sail-cloth lifting and falling back: two or three soft, papery flaps, never a snap.
+      const colour = 0.9 + Math.random() * 0.2;
+      for (let i = 0, t = at; i < 2 + Math.floor(Math.random() * 2); i++, t += 0.09 + Math.random() * 0.08) {
+        this.puff({ at: t, len: 0.12, level: level * (0.05 - i * 0.012), pan, type: 'bandpass', from: 1100 * colour, to: 600 * colour, q: 0.6, attack: 0.02, wet: 0.04 });
+      }
+    } else if (kind === 'slate-land') {
+      // Small boots and a hand coming down on wet slates: a soft thump, a clack or two of slate, a short scuff.
+      const colour = 0.92 + Math.random() * 0.16;
+      this.blip(at, 150 * colour, 80, 0.12, level * 0.04, pan, 'sine', 0.04);
+      this.puff({ at, len: 0.07, level: level * 0.051, pan, type: 'lowpass', from: 600, attack: 0.002 });
+      for (const [dt, f] of [[0, 2900], [0.028, 3300], [0.075, 2500]] as const) {
+        this.puff({ at: at + dt, len: 0.03, level: level * 0.075, pan, type: 'bandpass', from: f * colour, q: 4, attack: 0.001 });
+        this.blip(at + dt, 1900 * colour, 1600 * colour, 0.05, level * 0.012, pan, 'triangle');
+      }
+      this.puff({ at: at + 0.06, len: 0.2, level: level * 0.03, pan, type: 'bandpass', from: 1900, to: 900, q: 0.7, attack: 0.03 });
     } else if (kind === 'water') {
       this.puff({ at, len: 0.58, level: level * 0.055, pan, type: 'bandpass', from: 620,
         to: 320, q: 0.65, attack: 0.1, wet: 0.08 });
@@ -250,6 +374,65 @@ export class Foley {
     src.onended = () => { src.disconnect(); filter.disconnect(); env.disconnect(); pan.disconnect(); send?.disconnect(); };
     src.start(o.at, Math.random() * 0.4);
     src.stop(o.at + o.len + 0.05);
+  }
+
+  /**
+   * Stick-slip friction, the heart of a creak: a train of pulses at a rate gliding `from` to `to` (with `jitter`, as
+   * wood and rope grab unevenly), rung through the resonances of what is creaking (`bodies`: hertz, Q, gain).
+   */
+  private rasp(o: { at: number; len: number; from: number; to: number; jitter: number; bodies: readonly (readonly [number, number, number])[]; level: number; pan: number; attack: number; wet: number }): void {
+    const out = this.out;
+    if (!out || o.level <= 0.0002) return;
+    const { ctx } = out;
+    const steps = Math.max(8, Math.round(o.len * 24));
+    const rate = new Float32Array(steps), grip = new Float32Array(steps);
+    for (let i = 0; i < steps; i++) {
+      rate[i] = o.from * (o.to / o.from) ** (i / (steps - 1)) * (1 + (Math.random() - 0.5) * 2 * o.jitter);
+      grip[i] = 0.5 + 0.5 * Math.random();
+    }
+    const osc = ctx.createOscillator();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueCurveAtTime(rate, o.at, o.len);
+    const grab = ctx.createGain();
+    grab.gain.setValueCurveAtTime(grip, o.at, o.len);
+    const env = ctx.createGain();
+    env.gain.setValueAtTime(0, o.at);
+    env.gain.linearRampToValueAtTime(o.level, o.at + o.attack);
+    env.gain.setValueAtTime(o.level, o.at + Math.max(o.attack, o.len * 0.55));
+    env.gain.exponentialRampToValueAtTime(0.0001, o.at + o.len);
+    const p = ctx.createStereoPanner();
+    p.pan.value = Math.max(-0.85, Math.min(0.85, o.pan));
+    osc.connect(grab);
+    const nodes: AudioNode[] = [osc, grab, env, p];
+    for (const [f, q, gain] of o.bodies) {
+      const body = ctx.createBiquadFilter();
+      body.type = 'bandpass';
+      body.frequency.value = f;
+      body.Q.value = q;
+      const g = ctx.createGain();
+      g.gain.value = gain;
+      grab.connect(body).connect(g).connect(env);
+      nodes.push(body, g);
+    }
+    env.connect(p).connect(out.bus);
+    if (o.wet) {
+      const send = ctx.createGain();
+      send.gain.value = o.wet;
+      p.connect(send).connect(out.reverb);
+      nodes.push(send);
+    }
+    osc.onended = () => { for (const n of nodes) n.disconnect(); };
+    osc.start(o.at);
+    osc.stop(o.at + o.len + 0.05);
+  }
+
+  /** Bubbles breaking the surface, `count` of them over `over` seconds and thinning out: each a little rising tone. */
+  private bubbles(at: number, count: number, over: number, low: number, high: number, level: number, pan: number): void {
+    for (let i = 0; i < count; i++) {
+      const t = at + over * (i / count) ** 1.6 + Math.random() * 0.06;
+      const f = low + Math.random() * (high - low);
+      this.blip(t, f, f * (1.5 + Math.random() * 0.4), 0.04 + Math.random() * 0.05, level * (1 - 0.5 * i / count) * (0.6 + 0.4 * Math.random()), pan + (Math.random() - 0.5) * 0.3);
+    }
   }
 
   private blip(at: number, from: number, to: number, len: number, level: number, pan: number, type: OscillatorType = 'sine', wet = 0): void {

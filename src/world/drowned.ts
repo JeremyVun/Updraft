@@ -1,15 +1,38 @@
 import * as THREE from 'three';
-import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
+import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { ease, range, wrapAngle, type Rng } from '../creatures/motion';
 import { CREATURE_GLSL } from '../creatures/shading';
 import { Instances, blob, flipWinding, merge, mirrored, tag, type BlobSpec } from '../creatures/shapes';
 import type { WindField, WindSample } from '../wind/field';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { mulberry32 } from './noise';
+import { glsl, tuning } from '../tuning';
 import { swellLift } from './water/swell';
 import { LighthouseLight, LIGHTHOUSE_BASE_Y, LIGHTHOUSE_SCALE } from './lighthouse';
 import { REFLECTION_LAYER } from './water/reflection';
 import { fixInPlace } from '../gl/fixed';
+import { ToppleTree } from './crossings/topple-tree';
+import { RopeSwing } from './crossings/rope-swing';
+import { Windmill } from './crossings/windmill';
+import { MillSpiral } from './crossings/mill-spiral';
+import { WashSheet } from './crossings/wash-sheet';
+import { DarkBank } from './drowned-dark';
+import { BELFRY_FOOT, Belfry, BELFRY, faceOut } from './belfry';
+import { Bell, BellWaves } from './crossings/bell';
+import type { CrossingCast } from './crossings/tree-crossing';
+import { IvyFace } from './ivy-face';
+import { Kittens } from '../creatures/cat/kittens';
+import { WOOD_LANDING } from './wood';
+import { TALL_AND_TINY, WASHING_PAIR, bandAt, villageShape, type Site } from './drowned-shape';
+import { WashTub } from './wash-tub';
+import {
+  CLOTH, COURSED, HOLLOW, LIME, MASONRY, OPENING, PLAIN, ROCK, ROPE, SLATE, SLATED, THATCH, THATCHED, TIMBER, VANE,
+  buildHouse, fitLot, type HouseType, type Lot, type Stack,
+} from './drowned-houses';
+import {
+  BOAT_TREE, CAT_HOUSE, DARK_WAY, DRAWN_ROUND, GARDEN_WALLS, GREEN_TREE, IVY_FOOT, IVY_SILL, LEAN_TOS, MILL, NAVE, PLACED, TOWER,
+  HER_WAY, eaveAt, roofUnder, MILL_SITE, SHEET_SITE, STRAND, STRAND_FROM, SWING_SITE, TREE_SITE, inClearing, inDrawnClearing, onCatGround, type GardenWall, type LeanTo, type PlacedHouse,
+} from './drowned-way';
 
 /**
  * The way the boat drifts through the flooded village, south to north. The whole island lies under the water, so
@@ -26,12 +49,17 @@ export const DROWNED_CHANNEL: THREE.Vector2[] = [
   new THREE.Vector2(-4, -1650),
 ];
 
-/** The church spire: the one vertical in the village, standing east of the channel at its midpoint. */
-export const SPIRE = new THREE.Vector3(14, 21, -1436);
+/** The spire's foot over the belfry's cornice, and how tall it rises from there. */
+const SPIRE_FOOT = BELFRY.top + 0.35;
+const SPIRE_TALL = 10.6;
+/** The church spire: the one vertical in the village, its tower at the east end of the nave, near the lighthouse. */
+export const SPIRE = new THREE.Vector3(TOWER.x, SPIRE_FOOT + SPIRE_TALL + 0.35, TOWER.z);
 /** The boat follows the harbour light, then passes the rock it stands on. */
 export const LIGHTHOUSE = new THREE.Vector3(65, 0, -1580);
 /** The village comes alive within this far (along the journey) of its middle: the leaves always started here. */
 const DROWNED_Z = -1440;
+/** The way the dark comes on: the herons fly from it. */
+const DARK_AHEAD = new THREE.Vector2().subVectors(DARK_WAY[1], DARK_WAY[0]).normalize();
 const NEAR_Z = 320;
 const CATCH_UP_S = 10;
 const CATCH_UP_STEP = 1 / 30;
@@ -39,25 +67,9 @@ const CATCH_UP_STEP = 1 / 30;
 /** Albedos are written linear: the renderer never tone-maps on the way in, so an sRGB hex would clip to white. */
 const lin = (r: number, g: number, b: number) => new THREE.Color().setRGB(r, g, b);
 
-/** The cottage's rendered lime and thatch, taken down to what has stood a winter in the water. */
-const LIME = [lin(0.36, 0.325, 0.265), lin(0.33, 0.305, 0.265), lin(0.37, 0.3, 0.225), lin(0.28, 0.275, 0.26)];
-const THATCH = [lin(0.145, 0.118, 0.072), lin(0.12, 0.1, 0.066), lin(0.17, 0.132, 0.075)];
-const SLATE = [lin(0.052, 0.058, 0.07), lin(0.044, 0.046, 0.055)];
 const STONE = lin(0.125, 0.12, 0.112);
-const HOLLOW = lin(0.014, 0.016, 0.021);
-const TIMBER = lin(0.082, 0.06, 0.042);
-const POT = lin(0.135, 0.072, 0.042);
 const IRON = lin(0.05, 0.05, 0.055);
 const LEAF_COLOURS = [lin(0.4, 0.22, 0.075), lin(0.32, 0.13, 0.05), lin(0.46, 0.32, 0.11), lin(0.2, 0.13, 0.062), lin(0.37, 0.18, 0.062)];
-
-const PLAIN = 0;
-const THATCHED = 1;
-const SLATED = 2;
-const OPENING = 3;
-const MASONRY = 4;
-const ROCK = 5;
-const ROPE = 6;
-const VANE = 7;
 
 const VILLAGE_VERT = /* glsl */ `
 ${ATMO_GLSL}
@@ -83,10 +95,17 @@ vec3 turn(vec3 p, float a) {
 void main() {
   vec3 p = position;
   vec3 n = normal;
-  if (aKind > ${VANE - 0.5}) {
+  if (aKind > ${VANE - 0.5} && aKind < ${VANE + 0.5}) {
     p = position - aLocal + turn(aLocal, uVane);
     n = turn(normal, uVane);
-  } else if (aKind > ${ROPE - 0.5}) {
+  } else if (aKind > ${CLOTH - 0.5} && aKind < ${CLOTH + 0.5}) {
+    vec2 w = texture(uWindTex, domainUv(p.xz)).xy;
+    float belly = sin(clamp(aLocal.x, 0.0, 1.0) * 3.14159);
+    float hang = aLocal.y * aLocal.y;
+    p.xz += w * (belly * (0.014 + uStorm * 0.04) + hang * (0.05 + uStorm * 0.5));
+    p.xz += hang * 0.03 * vec2(sin(uTime * 0.7 + aLocal.x * 9.0), cos(uTime * 0.55 + aLocal.x * 7.0));
+    p.y += belly * (sin(uTime * (2.2 + uStorm * 9.0) + aLocal.x * 7.0) * (0.03 + uStorm * 0.32) + length(w) * 0.02);
+  } else if (aKind > ${ROPE - 0.5} && aKind < ${ROPE + 0.5}) {
     vec2 w = texture(uWindTex, domainUv(p.xz)).xy;
     float belly = sin(aLocal.x * 3.14159);
     p.xz += w * belly * (0.014 + uStorm * 0.04);
@@ -113,14 +132,24 @@ void main() {
   if (!gl_FrontFacing) n = -n;
   int kind = int(vKind + 0.5);
   vec3 alb = vColor;
-  float grain = vnoise(vLocal.xy * 2.3 + vLocal.z) * 0.6 + vnoise(vLocal.xz * 5.5 + vLocal.y) * 0.4;
-  alb *= 0.9 + 0.17 * grain;
+  /** Broad, low-contrast colour over a whole face, as a painter would lay it; no grain, no grime. */
+  float grain = vnoise(vLocal.xz * 0.35 + vLocal.y * 0.25);
+  alb *= 0.93 + 0.12 * grain;
   if (kind == ${THATCHED}) {
-    float strands = vnoise(vec2(vLocal.x * 6.5, vLocal.y * 1.2)) * 0.55 + vnoise(vec2(vLocal.x * 19.0, vLocal.y * 2.6)) * 0.45;
-    alb *= (0.76 + 0.44 * strands) * (0.86 + 0.28 * vnoise(vLocal.xz * 0.8));
+    /** Sparse strokes down the slope, the way a brush lays thatch. */
+    float stroke = vnoise(vec2(vLocal.x * 3.0, vLocal.y * 0.6)) * 0.65 + vnoise(vec2(vLocal.x * 8.0, vLocal.y * 1.1)) * 0.35;
+    alb *= (0.76 + 0.38 * smoothstep(0.3, 0.8, stroke)) * (0.9 + 0.2 * vnoise(vLocal.xz * 0.5));
   } else if (kind == ${SLATED}) {
-    float row = vLocal.y * 3.4;
-    alb *= (0.8 + 0.4 * vnoise(vec2(vLocal.x * 4.5, floor(row)))) * (0.8 + 0.25 * smoothstep(0.0, 0.2, fract(row)));
+    /** A few long flat strokes along the slope, never courses of tiles. */
+    float stroke = smoothstep(0.58, 0.8, vnoise(vec2((vLocal.x + vLocal.z) * 0.55, vLocal.y * 2.6)));
+    alb *= 0.93 + 0.22 * stroke;
+  } else if (kind == ${COURSED}) {
+    float course = vLocal.y * 3.4;
+    float row = floor(course);
+    float run = (vLocal.x + vLocal.z) * 1.5 + fract(row * 0.37) * 3.0;
+    float stone = floor(run + 0.5 * vnoise(vec2(row * 1.7, run)));
+    float joint = max(1.0 - smoothstep(0.0, 0.09, fract(course)), 1.0 - smoothstep(0.0, 0.07, fract(run + 0.5 * vnoise(vec2(row * 1.7, run)))));
+    alb *= (0.76 + 0.4 * fract(sin(dot(vec2(row, stone), vec2(12.9898, 78.233))) * 43758.5)) * (1.0 - 0.45 * joint);
   } else if (kind == ${ROCK}) {
     float strata = sin(vWorld.y * 2.4 + vnoise(vWorld.xz * 0.4) * 3.0) * 0.5 + 0.5;
     alb *= 0.9 + 0.14 * strata;
@@ -128,12 +157,11 @@ void main() {
     alb = mix(alb, vec3(0.085, 0.105, 0.045) * (0.8 + 0.4 * grain), turf);
   }
 
-  /** Where the flood has stood: dark, green and slick, with the tide mark the water keeps washing. */
+  /** Where the flood stands the wall darkens a little toward the water. */
   float lap = 0.09 * sin(vWorld.x * 0.8 + uTime * 1.3) + 0.06 * sin(vWorld.z * 1.1 - uTime * 0.9);
   if (kind != ${OPENING}) {
-    float wet = 1.0 - smoothstep(0.0, 0.85, vWorld.y - lap);
-    alb = mix(alb, alb * vec3(0.3, 0.38, 0.29), wet * 0.92);
-    alb += vec3(0.022, 0.026, 0.015) * (1.0 - smoothstep(0.0, 0.25, abs(vWorld.y - lap - 0.85)));
+    float wet = 1.0 - smoothstep(0.0, 0.6, vWorld.y - lap);
+    alb = mix(alb, alb * vec3(0.5, 0.52, 0.58), wet * 0.8);
   }
 
   float ndl = max(dot(n, uSunDir), 0.0);
@@ -145,6 +173,11 @@ void main() {
   float back = pow(max(dot(-V, uSunDir), 0.0), 3.0);
   float edge = pow(1.0 - clamp(dot(n, V), 0.0, 1.0), 3.0);
   col += uSunColor * edge * back * sun * (kind == ${THATCHED} ? 0.55 : 0.16) * (0.35 + alb);
+  if (kind == ${CLOTH}) {
+    /** Thin cloth: the low sun comes through it from behind, warm, and the sky lights both its faces. */
+    float through = abs(dot(n, uSunDir));
+    col = alb * (0.5 * (hemiLight(n) + hemiLight(-n)) + uSunColor * sun * (ndl + ${glsl(tuning.drowned.clothThrough)} * through * (1.0 - step(0.0, dot(n, uSunDir)))));
+  }
   if (kind == ${OPENING}) col = vColor * uSkyAmbient * 0.5;
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;
@@ -160,9 +193,9 @@ void main() {
   float k = pow(max(position.y - aBase.y, 0.0) / 7.0, 1.7);
   float phase = aBase.x * 0.7 + aBase.z * 0.3;
   vec2 lean = w * 0.03 + vec2(sin(uTime * 1.05 + phase), cos(uTime * 0.81 + phase * 1.7)) * (0.05 + 0.02 * length(w)) * (1.0 + uStorm * 2.2);
-  vec3 p = position + vec3(lean.x, -dot(lean, lean) * 0.03, lean.y) * k;
+  vec3 p = (modelMatrix * vec4(position + vec3(lean.x, -dot(lean, lean) * 0.03, lean.y) * k, 1.0)).xyz;
   vWorld = p;
-  vNormal = normal;
+  vNormal = mat3(modelMatrix) * normal;
   gl_Position = projectionMatrix * viewMatrix * vec4(p, 1.0);
 }`;
 
@@ -372,26 +405,6 @@ class Merged {
   }
 }
 
-function extrude(shape: THREE.Shape, len: number, curve: number, bevel = 0): THREE.BufferGeometry {
-  let geo: THREE.BufferGeometry = new THREE.ExtrudeGeometry(shape, {
-    depth: len,
-    bevelEnabled: bevel > 0,
-    bevelThickness: bevel,
-    bevelSize: bevel * 0.8,
-    bevelSegments: 2,
-    curveSegments: curve,
-  });
-  /** Thatch is a rounded shape, and an extrusion's flat facets band it like decking under a grazing sun. */
-  if (curve > 1) {
-    geo.deleteAttribute('uv');
-    geo = mergeVertices(geo, 1e-3);
-    geo.computeVertexNormals();
-  }
-  geo.rotateY(Math.PI / 2);
-  geo.translate(-len / 2, 0, 0);
-  return geo;
-}
-
 interface HouseSpec {
   x: number;
   z: number;
@@ -405,57 +418,17 @@ interface HouseSpec {
   thatched: boolean;
   lime: THREE.Color;
   roof: THREE.Color;
-}
-
-function wallShape(h: HouseSpec): THREE.Shape {
-  const half = h.depth / 2;
-  const s = new THREE.Shape();
-  s.moveTo(-half, -2.6);
-  s.lineTo(half, -2.6);
-  s.lineTo(half, h.wall);
-  s.lineTo(0, h.wall + h.rise - 0.35);
-  s.lineTo(-half, h.wall);
-  s.closePath();
-  return s;
-}
-
-function thatchShape(h: HouseSpec): THREE.Shape {
-  const half = h.depth / 2;
-  const over = 0.5;
-  const t = 0.5;
-  const eave = h.wall - 0.4;
-  const brow = h.wall + h.rise * 0.55;
-  const apex = h.wall + h.rise;
-  const s = new THREE.Shape();
-  s.moveTo(-half - over, eave);
-  s.quadraticCurveTo(-half * 0.5, brow, 0, apex);
-  s.quadraticCurveTo(half * 0.5, brow, half + over, eave);
-  s.lineTo(half + over - 0.22, eave - t * 0.7);
-  s.quadraticCurveTo(half * 0.5, brow - t, 0, apex - t * 1.05);
-  s.quadraticCurveTo(-half * 0.5, brow - t, -half - over + 0.22, eave - t * 0.7);
-  s.closePath();
-  return s;
-}
-
-function slateShape(h: HouseSpec): THREE.Shape {
-  const half = h.depth / 2 + 0.28;
-  const eave = h.wall - 0.1;
-  const apex = h.wall + h.rise;
-  const t = 0.2;
-  const s = new THREE.Shape();
-  s.moveTo(-half, eave);
-  s.lineTo(0, apex);
-  s.lineTo(half, eave);
-  s.lineTo(half - 0.14, eave - t);
-  s.lineTo(0, apex - t * 1.4);
-  s.lineTo(-half + 0.14, eave - t);
-  s.closePath();
-  return s;
-}
-
-/** A dark box sunk into a wall: from the water it reads as an opening with nothing behind it. */
-function opening(w: number, tall: number, deep: number): THREE.BufferGeometry {
-  return new THREE.BoxGeometry(w, tall, deep);
+  /** A placed house says where its chimneys go and how tall, and how many pots each carries. */
+  stacks?: number[];
+  stack?: number;
+  stackAcross?: number;
+  pots?: number;
+  gable?: number;
+  /** Which of the kit's houses stands here; a roof she walks on is `exact`, its slates where the way says. */
+  look?: HouseType;
+  exact?: boolean;
+  far?: boolean;
+  mid?: boolean;
 }
 
 function channelPoint(s: number, out: THREE.Vector2, tangent?: THREE.Vector2): THREE.Vector2 {
@@ -534,7 +507,7 @@ function layout(rand: Rng): HouseSpec[] {
     const bucket = Math.min(BUCKETS - 1, Math.floor((c.s / CHANNEL_LENGTH) * BUCKETS));
     const distant = c.d > 30;
     if (distant ? far[bucket] >= 1 || bucket % 2 === 0 || c.d > 82 : near[bucket] >= 3 || c.d < 11) continue;
-    if (Math.hypot(c.x - SPIRE.x, c.z - SPIRE.z) < 16 || Math.hypot(c.x - SPIRE.x + 13, c.z - SPIRE.z) < 13) continue;
+    if (Math.hypot(c.x - DRAWN_ROUND.church.x, c.z - DRAWN_ROUND.church.y) < 16 || inDrawnClearing(c.x, c.z, 5)) continue;
     if (houses.some((h) => Math.hypot(h.x - c.x, h.z - c.z) < 11)) continue;
     if (distant) far[bucket]++;
     else near[bucket]++;
@@ -560,6 +533,15 @@ function layout(rand: Rng): HouseSpec[] {
   return houses;
 }
 
+/** Whether any corner of a house, or its middle, stands in the water the village leaves open round her way. */
+function inOpenWater(h: HouseSpec): boolean {
+  const c = Math.cos(h.yaw), s = Math.sin(h.yaw);
+  return [[0, 0], [-1, -1], [-1, 1], [1, -1], [1, 1]].some(([a, b]) => {
+    const lx = (a * h.len) / 2, lz = (b * h.depth) / 2;
+    return inClearing(h.x + lx * c + lz * s, h.z - lx * s + lz * c, 0.5);
+  });
+}
+
 function houseMatrix(h: HouseSpec): THREE.Matrix4 {
   return new THREE.Matrix4()
     .makeTranslation(h.x, -h.sink, h.z)
@@ -567,74 +549,93 @@ function houseMatrix(h: HouseSpec): THREE.Matrix4 {
     .multiply(new THREE.Matrix4().makeRotationX(h.roll));
 }
 
-/** Builds one house and returns the chimney tops a heron could stand on. */
-function buildHouse(into: Merged, h: HouseSpec, rand: Rng, m: THREE.Matrix4): THREE.Vector3[] {
-  const ridge = h.wall + h.rise;
-  into.add(extrude(wallShape(h), h.len, 1), h.lime, PLAIN, m);
-  if (h.thatched) into.add(extrude(thatchShape(h), h.len + 0.85, 8, 0.22), h.roof, THATCHED, m);
-  else {
-    into.add(extrude(slateShape(h), h.len + 0.22, 1), h.roof, SLATED, m);
-    into.add(new THREE.BoxGeometry(h.len + 0.4, 0.16, 0.36).translate(0, ridge - 0.04, 0), h.roof, SLATED, m);
-  }
-
-  const perches: THREE.Vector3[] = [];
-  const stacks = h.len > 14 ? [-1, 1] : [rand() < 0.5 ? -1 : 1];
-  for (const side of stacks) {
-    const cx = side * (h.len / 2 - 0.75);
-    const top = ridge + range(rand, 1, 2.1);
-    const shaft = top - (h.wall - 0.6);
-    into.add(new THREE.BoxGeometry(0.82, shaft, 0.78).translate(cx, h.wall - 0.6 + shaft / 2, 0), STONE, MASONRY, m);
-    into.add(new THREE.BoxGeometry(1.04, 0.18, 1.0).translate(cx, top + 0.09, 0), STONE, MASONRY, m);
-    for (const pz of rand() < 0.5 ? [0] : [-0.24, 0.24]) {
-      into.add(new THREE.CylinderGeometry(0.13, 0.15, 0.4, 6).translate(cx, top + 0.38, pz), POT, MASONRY, m);
-    }
-    perches.push(new THREE.Vector3(cx, top + 0.2, 0).applyMatrix4(m));
-  }
-
-  /** Thatch overhangs its gable, so only a slate verge leaves an attic window anything to be seen through. */
-  if (!h.thatched && ridge - h.sink > 3.2) {
-    into.add(opening(0.5, 0.9, 0.75).translate((rand() < 0.5 ? -1 : 1) * (h.len / 2 - 0.2), h.wall + 0.55, 0), HOLLOW, OPENING, m);
-  }
-  if (h.wall - h.sink > -0.9) {
-    /** The upstairs windows are set at the flood line, so the water stands in them. */
-    const sill = Math.min(h.sink + 0.8, h.wall - 0.55);
-    const count = h.len > 14 ? 2 : 1;
-    for (const side of [-1, 1]) {
-      for (let i = 0; i < count; i++) {
-        const wx = (i - (count - 1) / 2) * h.len * 0.42 + range(rand, -0.6, 0.6);
-        into.add(opening(0.85, 1.0, 0.5).translate(wx, sill, side * (h.depth / 2 - 0.16)), HOLLOW, OPENING, m);
-        into.add(new THREE.BoxGeometry(1.1, 0.1, 0.24).translate(wx, sill + 0.58, side * (h.depth / 2 + 0.02)), TIMBER, PLAIN, m);
-      }
-    }
-  }
-  return perches;
+/** A house's bounds, for the lens to keep out of. */
+function houseBounds(h: HouseSpec): THREE.Box3 {
+  return new THREE.Box3(
+    new THREE.Vector3(-h.len / 2 - 0.5, 0, -h.depth / 2 - 0.5),
+    new THREE.Vector3(h.len / 2 + 0.5, h.wall + h.rise + 0.4, h.depth / 2 + 0.5)).applyMatrix4(houseMatrix(h));
 }
 
-/** The church: a squat tower with a slate spire and the nave roof beside it, drowned to its eaves. */
-function buildChurch(into: Merged, rand: Rng): void {
-  const m = new THREE.Matrix4().makeTranslation(SPIRE.x, 0, SPIRE.z);
-  const stone = lin(0.21, 0.192, 0.165);
-  const slate = SLATE[0];
-  into.add(new THREE.BoxGeometry(4.8, 16.6, 4.8).translate(0, 3.6, 0), stone, PLAIN, m);
-  into.add(new THREE.BoxGeometry(5.3, 0.34, 5.3).translate(0, 11.75, 0), stone, MASONRY, m);
-  into.add(new THREE.BoxGeometry(5.2, 0.26, 5.2).translate(0, 5.4, 0), stone, MASONRY, m);
-  for (const side of [-1, 1]) {
-    into.add(new THREE.BoxGeometry(0.7, 16.6, 0.7).translate(side * 2.25, 3.6, 2.25), stone, PLAIN, m);
-    into.add(new THREE.BoxGeometry(0.7, 16.6, 0.7).translate(side * 2.25, 3.6, -2.25), stone, PLAIN, m);
-    into.add(opening(1.0, 2.5, 5.0).translate(side * 1.05, 9.5, 0), HOLLOW, OPENING, m);
-    into.add(opening(5.0, 2.5, 1.0).translate(0, 9.5, side * 1.05), HOLLOW, OPENING, m);
-  }
+/**
+ * The chances each house was first built with, still drawn in the same order so every later roof, tree and gate takes
+ * the chances it was tuned with. Returns its chimneys.
+ */
+function chances(h: HouseSpec, rand: Rng): Stack[] {
+  const sides = h.stacks ?? (h.len > 14 ? [-1, 1] : [rand() < 0.5 ? -1 : 1]);
+  const stacks = sides.map((side) => ({ side, across: h.stackAcross, above: h.stack ?? range(rand, 1, 2.1), pots: h.pots ?? (rand() < 0.5 ? 1 : 2) }));
+  if (!h.gable && !h.thatched && h.wall + h.rise - h.sink > 3.2) rand();
+  if (h.wall - h.sink > -0.9) for (let i = 0; i < (h.len > 14 ? 4 : 2); i++) rand();
+  return stacks;
+}
 
-  const rings = 5;
+/** The kit's rarer houses, dealt in turn round the generated village; most of it stays modest. */
+const SLATE_LOOKS: HouseType[] = ['swayback', 'tallHat', 'openShutter', 'cottage', 'pocket', 'roundKeeper', 'cottage', 'cottage'];
+const THATCH_LOOKS: HouseType[] = ['lowCap', 'thatch', 'lowCap', 'thatch', 'thatch'];
+function dealLooks(houses: HouseSpec[]): void {
+  let slate = 0;
+  let thatch = 0;
+  for (const h of houses) {
+    if (h.thatched) h.look = h.len > 14 ? 'thatch' : THATCH_LOOKS[thatch++ % THATCH_LOOKS.length];
+    else h.look = h.len > 14 ? 'tucked' : SLATE_LOOKS[slate++ % SLATE_LOOKS.length];
+  }
+}
+
+/** Fits a house to its look, then builds it; returns its chimney tops for herons. */
+function raise(into: Merged, h: HouseSpec, rand: Rng): THREE.Vector3[] {
+  const stacks = chances(h, rand);
+  const look = h.look ?? (h.thatched ? 'thatch' : 'cottage');
+  const own = mulberry32((Math.round(h.x * 10) * 7919) ^ (Math.round(h.z * 10) * 104729));
+  const lot: Lot = { len: h.len, depth: h.depth, wall: h.wall, rise: h.rise, sink: h.sink, lime: h.lime, roof: h.roof, stacks,
+    gable: h.gable, exact: h.exact, far: h.far, mid: h.mid };
+  const generated = !h.stacks;
+  const fit = generated ? fitLot(look, lot, own) : lot;
+  Object.assign(h, { len: fit.len, depth: fit.depth, wall: fit.wall, rise: fit.rise, sink: fit.sink });
+  /** A tall hat turns its gable, its hat's brim, to the drift. */
+  if (generated && look === 'tallHat') {
+    const { s } = offChannel(h.x, h.z);
+    const at = channelPoint(s, new THREE.Vector2());
+    h.yaw = Math.atan2(at.x - h.x, at.y - h.z) - Math.PI / 2;
+  }
+  return buildHouse(into, look, fit, own, houseMatrix(h));
+}
+
+const CHURCH_WASH = lin(0.45, 0.405, 0.33);
+const CHURCH_DRESSING = lin(0.34, 0.31, 0.26);
+const CHURCH_QUOIN = lin(0.5, 0.46, 0.385);
+const CLOCK_FACE = lin(0.6, 0.56, 0.46);
+
+/** A clock with no numbers on a face of the tower, its hands stopped at `at` (hours). */
+function towerClock(into: Merged, f: THREE.Matrix4, at: number): void {
+  const disc = (r: number, deep: number) => new THREE.CylinderGeometry(r, r, deep, 20).rotateX(Math.PI / 2);
+  into.add(disc(0.86, 0.1).translate(0, 0, 0.05), CHURCH_DRESSING, MASONRY, f);
+  into.add(disc(0.7, 0.06).translate(0, 0, 0.11), CLOCK_FACE, PLAIN, f);
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2;
+    into.add(new THREE.BoxGeometry(0.06, i % 3 ? 0.1 : 0.18, 0.03).translate(0, 0.56, 0).rotateZ(a).translate(0, 0, 0.15), IRON, MASONRY, f);
+  }
+  const hand = (len: number, w: number, turn: number) =>
+    into.add(new THREE.BoxGeometry(w, len, 0.03).translate(0, len / 2 - 0.08, 0).rotateZ(-turn).translate(0, 0, 0.17), IRON, MASONRY, f);
+  hand(0.38, 0.08, (at / 12) * Math.PI * 2);
+  hand(0.56, 0.05, (at % 1) * Math.PI * 2);
+}
+
+/**
+ * The spire, octagonal slate with a bell-cast foot that turns a little as it rises, as a dream remembers a crooked
+ * spire, its point still over the tower; with a small gabled light on four of its faces.
+ */
+function buildSpire(into: Merged, m: THREE.Matrix4): void {
+  const rings = 10;
+  const base = SPIRE_FOOT, tall = SPIRE_TALL, wide = TOWER.half / 2.4;
+  const radiusAt = (t: number) => wide * (2.62 * Math.pow(1 - t, 1.14) + 0.32 * Math.pow(1 - t, 7));
+  const turnAt = (t: number) => Math.PI / 8 + 0.42 * t * t;
   const pos: number[] = [];
   const idx: number[] = [];
   for (let r = 0; r <= rings; r++) {
     const t = r / rings;
-    const radius = 2.62 * Math.pow(1 - t, 1.14);
-    const y = 11.95 + t * 8.7;
+    const radius = radiusAt(t);
     for (let k = 0; k < 8; k++) {
-      const a = (k / 8) * Math.PI * 2 + Math.PI / 8;
-      pos.push(Math.cos(a) * radius, y, Math.sin(a) * radius);
+      const a = (k / 8) * Math.PI * 2 + turnAt(t);
+      pos.push(Math.cos(a) * radius, base + t * tall - 0.12 * Math.pow(1 - t, 7), Math.sin(a) * radius);
     }
   }
   for (let r = 0; r < rings; r++) {
@@ -647,28 +648,82 @@ function buildChurch(into: Merged, rand: Rng): void {
   const cone = new THREE.BufferGeometry();
   cone.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   cone.setIndex(idx);
-  cone.computeVertexNormals();
-  into.add(cone, slate, SLATED, m);
+  into.add(cone.toNonIndexed(), SLATE[0], SLATED, m);
+  const t = 0.2;
+  for (let k = 0; k < 4; k++) {
+    /** The middle of every other face of the octagon, where it stands at that height. */
+    const a = ((2 * k + 0.5) / 8) * Math.PI * 2 + turnAt(t);
+    const out = radiusAt(t) * Math.cos(Math.PI / 8) - 0.05;
+    const f = new THREE.Matrix4().copy(m).multiply(new THREE.Matrix4().makeTranslation(Math.cos(a) * out, base + t * tall, Math.sin(a) * out))
+      .multiply(new THREE.Matrix4().makeRotationY(Math.PI / 2 - a));
+    into.add(new THREE.BoxGeometry(0.62, 0.7, 0.9).translate(0, 0.35, -0.2), CHURCH_WASH, PLAIN, f);
+    const roof = new THREE.Shape();
+    roof.moveTo(-0.46, 0.66);
+    roof.lineTo(0.46, 0.66);
+    roof.lineTo(0, 1.12);
+    roof.lineTo(-0.46, 0.66);
+    into.add(new THREE.ExtrudeGeometry(roof, { depth: 1.0, bevelEnabled: false }).translate(0, 0, -0.7), SLATE[1], SLATED, f);
+    into.add(new THREE.BoxGeometry(0.3, 0.42, 0.1).translate(0, 0.34, 0.27), HOLLOW, OPENING, f);
+  }
+}
 
-  const nave: HouseSpec = {
-    x: SPIRE.x - 9.6,
-    z: SPIRE.z,
-    yaw: Math.PI / 2,
-    roll: 0,
-    len: 17,
-    depth: 7.6,
-    wall: 3.2,
-    rise: 3.2,
-    sink: 3.6,
-    thatched: false,
-    lime: stone,
-    roof: slate,
-  };
+/**
+ * The church: a tall limewashed tower with dressed corners and a stopped clock up to the belfry (its own piece,
+ * `Belfry`, set on top), its slate spire the highest thing there is, and the nave roof beside it drowned to its
+ * eaves with a wheel window in its gable.
+ */
+function buildChurch(into: Merged, rand: Rng): void {
+  /** The village's later roofs and trees take the chances they were tuned with. */
+  rand();
+  const m = new THREE.Matrix4().makeTranslation(SPIRE.x, 0, SPIRE.z);
+  const h = TOWER.half;
+  const base = -4.7, tall = BELFRY_FOOT - base;
+  into.add(new THREE.BoxGeometry(2 * h, tall, 2 * h).translate(0, base + tall / 2, 0), CHURCH_WASH, PLAIN, m);
+  into.add(new THREE.BoxGeometry(0.28, 0.26, 2 * h + 0.56).translate(h + 0.14, 5.4, 0), CHURCH_DRESSING, MASONRY, m);
+  for (const side of [-1, 1]) {
+    into.add(new THREE.BoxGeometry(2 * h, 0.26, 0.28).translate(0, 5.4, side * (h + 0.14)), CHURCH_DRESSING, MASONRY, m);
+  }
+  for (const sx of [-1, 1]) {
+    for (const sz of [-1, 1]) {
+      into.add(new THREE.BoxGeometry(0.7, tall, 0.7).translate(sx * (h - 0.15), base + tall / 2, sz * (h - 0.15)), CHURCH_WASH, PLAIN, m);
+      /** Quoins up the corner, long and short in turn, a little proud and a little uneven, on into the belfry's. */
+      for (let i = 0, y = 0.2; y < BELFRY_FOOT - 0.45; i++, y += 0.62) {
+        const long = i % 2 === 0;
+        const wx = long ? 1.0 : 0.62, wz = long ? 0.62 : 1.0;
+        into.add(new THREE.BoxGeometry(wx, 0.5, wz).translate(sx * (h + 0.23 - wx / 2), y + 0.25, sz * (h + 0.23 - wz / 2)), CHURCH_QUOIN, MASONRY, m);
+      }
+    }
+  }
+  /** A corbel table under the belfry's cornice, chunky blocks along each face. */
+  const corbels = Math.floor((h - 0.5) / 0.62);
+  for (let k = -corbels; k <= corbels; k++) {
+    for (const side of [-1, 1]) {
+      into.add(new THREE.BoxGeometry(0.28, 0.3, 0.24).translate(k * 0.62, BELFRY.top - 0.17, side * (h + 0.08)), CHURCH_DRESSING, MASONRY, m);
+      into.add(new THREE.BoxGeometry(0.24, 0.3, 0.28).translate(side * (h + 0.08), BELFRY.top - 0.17, k * 0.62), CHURCH_DRESSING, MASONRY, m);
+    }
+  }
+  /** North and east the clock stands at different hours. */
+  towerClock(into, new THREE.Matrix4().copy(m).multiply(new THREE.Matrix4().makeRotationY(Math.PI))
+    .multiply(new THREE.Matrix4().makeTranslation(0, 4.15, TOWER.half)), 4.6);
+  towerClock(into, new THREE.Matrix4().copy(m).multiply(new THREE.Matrix4().makeRotationY(Math.PI / 2))
+    .multiply(new THREE.Matrix4().makeTranslation(0, 4.15, TOWER.half)), 10.15);
+  buildSpire(into, m);
+
+  const nave: HouseSpec = { ...NAVE, roll: 0, lime: CHURCH_WASH, roof: SLATE[0] };
   const nm = houseMatrix(nave);
-  into.add(extrude(wallShape(nave), nave.len, 1), stone, PLAIN, nm);
-  into.add(extrude(slateShape(nave), nave.len + 0.22, 1), slate, SLATED, nm);
-  into.add(new THREE.BoxGeometry(nave.len + 0.4, 0.16, 0.4).translate(0, nave.wall + nave.rise - 0.04, 0), slate, SLATED, nm);
-  into.add(opening(0.6, 1.3, 0.9).translate(range(rand, -5, 5), nave.wall + 0.5, 0), HOLLOW, OPENING, nm);
+  buildHouse(into, 'cottage', { len: nave.len, depth: nave.depth, wall: nave.wall, rise: nave.rise, sink: nave.sink,
+    lime: CHURCH_WASH, roof: SLATE[0], stacks: [], gable: 1, exact: true }, mulberry32(4471), nm);
+  /** A wheel window in the west gable, the water at its foot. */
+  const wheel = new THREE.Matrix4().copy(nm).multiply(new THREE.Matrix4().makeTranslation(-nave.len / 2 - 0.02, nave.sink + 1.05, 0))
+    .multiply(new THREE.Matrix4().makeRotationY(-Math.PI / 2));
+  into.add(new THREE.CylinderGeometry(0.62, 0.62, 0.3, 18).rotateX(Math.PI / 2).translate(0, 0, -0.1), HOLLOW, OPENING, wheel);
+  const rim = new THREE.Shape().absarc(0, 0, 0.78, 0, Math.PI * 2, false);
+  rim.holes.push(new THREE.Path().absarc(0, 0, 0.62, 0, Math.PI * 2, true));
+  into.add(new THREE.ExtrudeGeometry(rim, { depth: 0.14, bevelEnabled: false, curveSegments: 18 }), CHURCH_DRESSING, MASONRY, wheel);
+  for (let k = 0; k < 3; k++) {
+    into.add(new THREE.BoxGeometry(1.24, 0.07, 0.08).rotateZ((k * Math.PI) / 3).translate(0, 0, 0.04), CHURCH_DRESSING, MASONRY, wheel);
+  }
+  into.add(new THREE.CylinderGeometry(0.14, 0.14, 0.12, 10).rotateX(Math.PI / 2).translate(0, 0, 0.06), CHURCH_DRESSING, MASONRY, wheel);
 
   const top = new THREE.Matrix4().makeTranslation(SPIRE.x, SPIRE.y - 1.5, SPIRE.z);
   into.add(new THREE.CylinderGeometry(0.06, 0.09, 2.4, 5).translate(0, 0.9, 0), IRON, MASONRY, top);
@@ -748,40 +803,15 @@ function buildSkerry(into: Merged): void {
   }
 }
 
-/** The apexes of a house's two gables, where a line could be tied. */
-function gables(h: HouseSpec): THREE.Vector3[] {
-  const y = h.wall + h.rise - h.sink - 0.25;
-  return [-1, 1].map((s) => new THREE.Vector3(h.x + Math.cos(h.yaw) * s * h.len * 0.47, y, h.z - Math.sin(h.yaw) * s * h.len * 0.47));
-}
-
-/** A line strung between two gables with nothing left on it. */
-function buildLine(into: Merged, houses: HouseSpec[]): void {
-  let from: THREE.Vector3 | null = null;
-  let to: THREE.Vector3 | null = null;
-  let bestGap = 1e9;
-  for (const a of houses) {
-    if (a.wall + a.rise - a.sink < 2.8) continue;
-    for (const b of houses) {
-      if (a === b || b.wall + b.rise - b.sink < 2.8) continue;
-      for (const p of gables(a)) {
-        for (const q of gables(b)) {
-          const gap = p.distanceTo(q);
-          if (gap < 9 || gap > 19 || Math.abs(gap - 14) > bestGap) continue;
-          bestGap = Math.abs(gap - 14);
-          from = p;
-          to = q;
-        }
-      }
-    }
-  }
-  if (!from || !to) return;
+/** A slack line from `from` to `to`, sagging `slack` of its length. */
+function buildLine(into: Merged, from: THREE.Vector3, to: THREE.Vector3, slack = 0.08): void {
   const segments = 14;
   const around = 4;
   const pos: number[] = [];
   const local: number[] = [];
   const idx: number[] = [];
   const centre = new THREE.Vector3();
-  const sag = from.distanceTo(to) * 0.08;
+  const sag = from.distanceTo(to) * slack;
   for (let i = 0; i <= segments; i++) {
     const t = i / segments;
     centre.lerpVectors(from, to, t);
@@ -807,8 +837,32 @@ function buildLine(into: Merged, houses: HouseSpec[]): void {
   into.add(geo, TIMBER, ROPE);
 }
 
+const CLOTH_PALE = lin(0.6, 0.57, 0.5);
+const HEM = lin(0.3, 0.075, 0.06);
+const WASHING_SLACK = 0.07;
+
+/** Washing left out between two chimneys: a slack line and two pale cloths with a faded red hem. */
+function buildWashing(into: Merged, from: THREE.Vector3, to: THREE.Vector3): void {
+  buildLine(into, from, to, WASHING_SLACK);
+  const sag = from.distanceTo(to) * WASHING_SLACK;
+  const yaw = Math.atan2(-(to.z - from.z), to.x - from.x);
+  for (const [t, w, h] of [[0.33, 0.85, 0.95], [0.64, 0.7, 0.8]]) {
+    const top = new THREE.Vector3().lerpVectors(from, to, t);
+    top.y -= Math.sin(t * Math.PI) * sag + 0.02;
+    const frame = new THREE.Matrix4().makeTranslation(top.x, top.y, top.z).multiply(new THREE.Matrix4().makeRotationY(yaw));
+    for (const [y0, y1, colour] of [[0, h - 0.11, CLOTH_PALE], [h - 0.11, h, HEM]] as const) {
+      const cloth = new THREE.BoxGeometry(w, y1 - y0, 0.025, 2, 2, 1).translate(0, -(y0 + y1) / 2, 0);
+      const p = cloth.attributes.position;
+      const local = new Float32Array(p.count * 3);
+      for (let i = 0; i < p.count; i++) local.set([t + p.getX(i) / from.distanceTo(to), -p.getY(i) / h, 0], i * 3);
+      cloth.setAttribute('aLocal', new THREE.BufferAttribute(local, 3));
+      into.add(cloth, colour, CLOTH, frame);
+    }
+  }
+}
+
 /** A field gate standing open in open water, with no field left on either side of it. */
-function buildGate(into: Merged, rand: Rng, houses: HouseSpec[]): void {
+function buildGate(into: Merged, rand: Rng, houses: HouseSpec[]): THREE.Vector2 | null {
   const at = new THREE.Vector2();
   const tangent = new THREE.Vector2();
   for (let attempt = 0; attempt < 60; attempt++) {
@@ -817,16 +871,19 @@ function buildGate(into: Merged, rand: Rng, houses: HouseSpec[]): void {
     const off = range(rand, 12, 19);
     const x = at.x - tangent.y * off * side;
     const z = at.y + tangent.x * off * side;
-    if (houses.some((h) => Math.hypot(h.x - x, h.z - z) < 14) || Math.hypot(x - SPIRE.x, z - SPIRE.z) < 28) continue;
+    if (houses.some((h) => Math.hypot(h.x - x, h.z - z) < 14) || Math.hypot(x - DRAWN_ROUND.church.x, z - DRAWN_ROUND.church.y) < 28
+      || inDrawnClearing(x, z, 3)) continue;
     const m = new THREE.Matrix4().makeTranslation(x, -0.9, z).multiply(new THREE.Matrix4().makeRotationY(rand() * Math.PI));
     m.multiply(new THREE.Matrix4().makeRotationZ(0.07));
+    if (inClearing(x, z, 2)) return null;
     for (const px of [-1.85, 1.85]) into.add(new THREE.BoxGeometry(0.22, 4.2, 0.22).translate(px, 0.5, 0), TIMBER, PLAIN, m);
     for (let bar = 0; bar < 5; bar++) into.add(new THREE.BoxGeometry(3.7, 0.15, 0.1).translate(0, 0.35 + bar * 0.42, 0), TIMBER, PLAIN, m);
     const brace = new THREE.BoxGeometry(4.1, 0.13, 0.08).translate(0, 1.2, 0.08);
     brace.rotateZ(0.5);
     into.add(brace, TIMBER, PLAIN, m);
-    return;
+    return new THREE.Vector2(x, z);
   }
+  return null;
 }
 
 function limb(a: THREE.Vector3, b: THREE.Vector3, lift: number, r0: number, r1: number, radial: number, segments: number): THREE.BufferGeometry {
@@ -914,7 +971,7 @@ function tube(part: number, mat: number, a: THREE.Vector3, b: THREE.Vector3, lif
 }
 
 /** Eight crowns along the drift, standing clear of the roofs; half of them still have leaves to give the water. */
-function plantTrees(houses: HouseSpec[], rand: Rng, twigs: Twig[], cameraObstacles: THREE.Box3[]): THREE.BufferGeometry {
+function plantTrees(houses: HouseSpec[], rand: Rng, twigs: Twig[], cameraObstacles: THREE.Box3[], stands: THREE.Vector2[]): THREE.BufferGeometry {
   const limbs: THREE.BufferGeometry[] = [];
   const at = new THREE.Vector2();
   const tangent = new THREE.Vector2();
@@ -926,10 +983,16 @@ function plantTrees(houses: HouseSpec[], rand: Rng, twigs: Twig[], cameraObstacl
       const x = at.x - tangent.y * off * side;
       const z = at.y + tangent.x * off * side;
       if (houses.some((h) => Math.hypot(h.x - x, h.z - z) < 9.5)) continue;
-      if (Math.hypot(x - SPIRE.x, z - SPIRE.z) < 18) continue;
+      if (Math.hypot(x - DRAWN_ROUND.church.x, z - DRAWN_ROUND.church.y) < 18 || inDrawnClearing(x, z, 5)) continue;
       if (Math.hypot(x - LIGHTHOUSE.x, z - LIGHTHOUSE.z) < 22) continue;
       const bare = twigs.length;
-      for (const part of drownedTree(x, z, range(rand, 7, 10), rand, twigs)) {
+      const parts = drownedTree(x, z, range(rand, 7, 10), rand, twigs);
+      if (onCatGround(x, z, 4) || inClearing(x, z, 2)) {
+        twigs.length = bare;
+        break;
+      }
+      stands.push(new THREE.Vector2(x, z));
+      for (const part of parts) {
         part.computeBoundingBox();
         const bounds = part.boundingBox!;
         if (Math.max(bounds.max.x - bounds.min.x, bounds.max.y - bounds.min.y, bounds.max.z - bounds.min.z) > 3)
@@ -945,6 +1008,127 @@ function plantTrees(houses: HouseSpec[], rand: Rng, twigs: Twig[], cameraObstacl
     }
   }
   return mergeGeometries(limbs);
+}
+
+/** The dead tree standing in the water east of the tower, its fork just out of it. */
+function boatTree(cameraObstacles: THREE.Box3[]): THREE.BufferGeometry[] {
+  const parts = drownedTree(BOAT_TREE.x, BOAT_TREE.y, 7.5, mulberry32(1557), []);
+  cameraObstacles.push(new THREE.Box3(new THREE.Vector3(BOAT_TREE.x - 1, -1, BOAT_TREE.y - 1), new THREE.Vector3(BOAT_TREE.x + 1, 3, BOAT_TREE.y + 1)));
+  return swaying(parts, new THREE.Vector3(BOAT_TREE.x, -2.4, BOAT_TREE.y));
+}
+
+/** Tags each limb with the foot it sways about, so the wind bends it from there. */
+function swaying(parts: THREE.BufferGeometry[], foot: THREE.Vector3): THREE.BufferGeometry[] {
+  return parts.map((part) => {
+    const count = part.attributes.position.count;
+    const base = new Float32Array(count * 3);
+    for (let k = 0; k < count; k++) base.set([foot.x, foot.y, foot.z], k * 3);
+    part.setAttribute('aBase', new THREE.BufferAttribute(base, 3));
+    return part.toNonIndexed();
+  });
+}
+
+/**
+ * The big old tree on the green, standing in the flood to its fork, with one long bough reaching out over where the
+ * swing hangs. Only its trunk is in the lens's way: the crown is all well above any view the room takes.
+ */
+function greenTree(rand: Rng, twigs: Twig[], cameraObstacles: THREE.Box3[]): THREE.BufferGeometry[] {
+  const base = GREEN_TREE;
+  const phase = base.x * 0.7 + base.z * 0.3;
+  const fork = new THREE.Vector3(base.x - 0.3, 4.3, base.z + 0.2);
+  const parts = [limb(base, fork, 0, 0.9, 0.62, 10, 5)];
+  const pivot = SWING_SITE.spot.pivot;
+  const knot = new THREE.Vector3(pivot.x, pivot.y + 0.12, pivot.z);
+  const toSwing = Math.atan2(knot.z - fork.z, knot.x - fork.x);
+  parts.push(limb(new THREE.Vector3(fork.x + Math.cos(toSwing) * 0.2, fork.y - 0.4, fork.z + Math.sin(toSwing) * 0.2), knot, 0.8, 0.44, 0.2, 8, 8));
+  const reach = knot.clone().add(new THREE.Vector3(Math.cos(toSwing + 0.25) * 1.95, 0.6, Math.sin(toSwing + 0.25) * 1.95));
+  parts.push(limb(knot, reach, 0.05, 0.2, 0.06, 6, 3));
+  const bough = new THREE.Vector3();
+  const tip = new THREE.Vector3();
+  for (let i = 0; i < 6; i++) {
+    /** Every way but the swing's. */
+    const a = toSwing + 0.7 + ((i + 0.5) / 6) * (Math.PI * 2 - 1.4) + range(rand, -0.15, 0.15);
+    const from = fork.clone().setY(fork.y - range(rand, 0, 0.9));
+    const out = range(rand, 3, 4.6);
+    bough.set(fork.x + Math.cos(a) * out, fork.y + range(rand, 2.4, 4), fork.z + Math.sin(a) * out);
+    parts.push(limb(from, bough, -0.5, 0.42, 0.17, 7, 5));
+    for (let k = 0; k < 3; k++) {
+      const b = a + range(rand, -1, 1);
+      const far = range(rand, 1.8, 3.2);
+      tip.set(bough.x + Math.cos(b) * far, bough.y + range(rand, 0.8, 2.2), bough.z + Math.sin(b) * far);
+      parts.push(limb(bough, tip, -0.4, 0.16, 0.05, 5, 4));
+      twigs.push({ p: tip.clone(), base: base.y, phase });
+      for (let j = 0; j < 2; j++) {
+        const c = b + range(rand, -1.3, 1.3);
+        const spur = range(rand, 0.7, 1.4);
+        const end = new THREE.Vector3(tip.x + Math.cos(c) * spur, tip.y + range(rand, 0, 0.8), tip.z + Math.sin(c) * spur);
+        parts.push(limb(tip, end, -0.15, 0.05, 0.018, 4, 3));
+        twigs.push({ p: end, base: base.y, phase });
+      }
+    }
+  }
+  cameraObstacles.push(new THREE.Box3(new THREE.Vector3(base.x - 1.1, base.y, base.z - 1.1), new THREE.Vector3(base.x + 1.1, fork.y, base.z + 1.1)));
+  /** An old tree is stiff: it sways about a foot well up its trunk. */
+  return swaying(parts, base.clone().setY(base.y + 4));
+}
+
+const WALL_STONE = lin(0.15, 0.14, 0.125);
+
+/** A garden wall up out of the flood to its coping, with railings along it if it has them; returns its bounds. */
+function buildWall(into: Merged, w: GardenWall): THREE.Box3 {
+  const dx = w.x1 - w.x0, dz = w.z1 - w.z0, len = Math.hypot(dx, dz);
+  const m = new THREE.Matrix4().makeTranslation((w.x0 + w.x1) / 2, 0, (w.z0 + w.z1) / 2)
+    .multiply(new THREE.Matrix4().makeRotationY(Math.atan2(-dz, dx)));
+  const foot = -4;
+  const body = w.top - 0.1 - foot;
+  into.add(new THREE.BoxGeometry(len, body, 0.42).translate(0, foot + body / 2, 0), WALL_STONE, COURSED, m);
+  into.add(new THREE.BoxGeometry(len + 0.12, 0.14, 0.56).translate(0, w.top - 0.07, 0), STONE, MASONRY, m);
+  let top = w.top;
+  if (w.railed) {
+    const bars = Math.max(2, Math.round(len / 0.26));
+    for (let i = 0; i <= bars; i++) {
+      into.add(new THREE.BoxGeometry(0.035, 0.92, 0.035).translate(-len / 2 + (i * len) / bars, w.top + 0.46, 0), IRON, MASONRY, m);
+    }
+    into.add(new THREE.BoxGeometry(len, 0.045, 0.05).translate(0, w.top + 0.86, 0), IRON, MASONRY, m);
+    into.add(new THREE.BoxGeometry(len, 0.04, 0.045).translate(0, w.top + 0.16, 0), IRON, MASONRY, m);
+    top += 0.92;
+  }
+  return new THREE.Box3(new THREE.Vector3(Math.min(w.x0, w.x1) - 0.3, foot, Math.min(w.z0, w.z1) - 0.3),
+    new THREE.Vector3(Math.max(w.x0, w.x1) + 0.3, top, Math.max(w.z0, w.z1) + 0.3));
+}
+
+/** A lean-to's slates falling from the house wall to its eaves, on its walls down into the flood. */
+function buildLeanTo(into: Merged, l: LeanTo, roof: THREE.Color, lime: THREE.Color): THREE.Box3 {
+  const h = l.house;
+  const wallFace = h.depth / 2;
+  const shape = new THREE.Shape([new THREE.Vector2(0, -4), new THREE.Vector2(l.out, -4), new THREE.Vector2(l.out, l.low - 0.12),
+    new THREE.Vector2(0, l.high - 0.12)]);
+  const slates = new THREE.Shape([new THREE.Vector2(-0.05, l.high + 0.02), new THREE.Vector2(l.out + 0.3, l.low - 0.04),
+    new THREE.Vector2(l.out + 0.3, l.low - 0.16), new THREE.Vector2(-0.05, l.high - 0.1)]);
+  const span = l.to - l.from;
+  const m = new THREE.Matrix4().makeTranslation(h.x, 0, h.z).multiply(new THREE.Matrix4().makeRotationY(h.yaw))
+    .multiply(new THREE.Matrix4().makeTranslation((l.from + l.to) / 2, 0, l.side * wallFace))
+    .multiply(new THREE.Matrix4().makeRotationY(l.side > 0 ? -Math.PI / 2 : Math.PI / 2));
+  const body = new THREE.ExtrudeGeometry(shape, { depth: span, bevelEnabled: false }).translate(0, 0, -span / 2);
+  const top = new THREE.ExtrudeGeometry(slates, { depth: span + 0.2, bevelEnabled: false }).translate(0, 0, -span / 2 - 0.1);
+  into.add(body, lime, PLAIN, m);
+  into.add(top, roof, SLATED, m);
+  return new THREE.Box3().setFromObject(new THREE.Mesh(body.clone().applyMatrix4(m)));
+}
+
+/** The mill's tower behind its sails, for the lens to keep out of. */
+function millBounds(): THREE.Box3 {
+  const behind = new THREE.Vector3(Math.sin(MILL.facing), 0, Math.cos(MILL.facing)).multiplyScalar(-1.9).add(MILL.hub);
+  return new THREE.Box3(new THREE.Vector3(behind.x - 1.7, -1, behind.z - 1.7), new THREE.Vector3(behind.x + 1.7, MILL.hub.y + 1.8, behind.z + 1.7));
+}
+
+/** A house laid by hand, in the generated village's materials. */
+function placedSpec(p: PlacedHouse, i: number): HouseSpec {
+  return {
+    ...p, roll: p.roll ?? 0, lime: p.stone ? WALL_STONE : LIME[i % LIME.length],
+    roof: p.thatched ? THATCH[i % THATCH.length] : SLATE[i % SLATE.length],
+    pots: p.pots, exact: !p.look,
+  };
 }
 
 function wingPanel(part: number, span: number, chord: (s: number) => number, lead: (s: number) => number, s0: number, s1: number): THREE.BufferGeometry {
@@ -1095,11 +1279,110 @@ interface Drifter {
  * with herons on them, the crowns of drowned trees, and a spire with a weathervane still turning on the wind.
  * Nobody is here and nobody says what happened. It is the room that makes a lit window at the end mean something.
  */
+/** A house's footprint: its middle, its turn and its half length and depth. */
+interface Footprint {
+  x: number;
+  z: number;
+  yaw: number;
+  hl: number;
+  hd: number;
+}
+
+/** Whether two footprints stand clear of each other. */
+function apart(a: Footprint, b: Footprint): boolean {
+  const axes = [a.yaw, a.yaw + Math.PI / 2, b.yaw, b.yaw + Math.PI / 2].map((y) => [Math.cos(y), -Math.sin(y)]);
+  const reach = (f: Footprint, nx: number, nz: number) =>
+    f.hl * Math.abs(Math.cos(f.yaw) * nx - Math.sin(f.yaw) * nz) + f.hd * Math.abs(Math.sin(f.yaw) * nx + Math.cos(f.yaw) * nz);
+  return axes.some(([nx, nz]) => Math.abs((b.x - a.x) * nx + (b.z - a.z) * nz) > reach(a, nx, nz) + reach(b, nx, nz));
+}
+
+function toSegment(x: number, z: number, a: THREE.Vector2, b: THREE.Vector2): number {
+  const dx = b.x - a.x, dz = b.y - a.y;
+  const u = THREE.MathUtils.clamp(((x - a.x) * dx + (z - a.y) * dz) / (dx * dx + dz * dz), 0, 1);
+  return Math.hypot(x - a.x - dx * u, z - a.y - dz * u);
+}
+
+/** The pair at the end of her way, and where the run and the drift look at them from. */
+const PAIR = [new THREE.Vector2(SPIRE.x - 4, SPIRE.z), new THREE.Vector2(LIGHTHOUSE.x, LIGHTHOUSE.z),
+  new THREE.Vector2((SPIRE.x + LIGHTHOUSE.x) / 2, (SPIRE.z + LIGHTHOUSE.z) / 2)];
+const LOOKOUTS = [new THREE.Vector2(-3.5, -1277), new THREE.Vector2(-12.5, -1395), new THREE.Vector2(-30, -1420),
+  new THREE.Vector2(22.5, -1492)];
+/** The dark's way in from far out to the stranding, carried on past it, and the storm's way from the nave to the wood. */
+const STORM_OUT = [new THREE.Vector2(NAVE.x, NAVE.z), ...DROWNED_CHANNEL.slice(5), WOOD_LANDING];
+const STAIRS_FOOT = new THREE.Vector2(100, -1236);
+/** How far beyond the church or the lighthouse, seen from where she goes, a house may stand as their backdrop. */
+const BACKDROP = 24;
+/** North of this the village beyond the church is filled as its backdrop. */
+const BEYOND_CHURCH = NAVE.z - 12;
+
+/** How far the drift has come when the boat strands; the channel beyond it is never sailed. */
+const STRANDED_AT = offChannel(STRAND.x, STRAND.y).s;
+
+/** How far a point is from where she goes: the drift in, then her way over the roofs to the tower. */
+function reach(x: number, z: number): number {
+  const drift = offChannel(x, z);
+  let d = drift.s < STRANDED_AT ? drift.d : 1e9;
+  for (let i = 1; i < HER_WAY.length; i++) d = Math.min(d, toSegment(x, z, HER_WAY[i - 1], HER_WAY[i]));
+  d = Math.min(d, toSegment(x, z, STRAND, HER_WAY[0]));
+  return d;
+}
+
+/**
+ * Whether a house of the fuller village may stand here: off every way, sight line, clearing and landmark. `behind`
+ * lets it stand on a sight line well beyond the pair, where it is their backdrop rather than in front of them.
+ */
+function free(f: Footprint, stands: THREE.Vector2[], behind = false): boolean {
+  const r = Math.hypot(f.hl, f.hd);
+  const c = Math.cos(f.yaw), s = Math.sin(f.yaw);
+  const corners = [[0, 0], [-1, -1], [-1, 1], [1, -1], [1, 1]].map(([a, b]) =>
+    new THREE.Vector2(f.x + a * f.hl * c + b * f.hd * s, f.z - a * f.hl * s + b * f.hd * c));
+  if (corners.some((p) => inClearing(p.x, p.y, 1.5) || onCatGround(p.x, p.y, 3))) return false;
+  const drift = offChannel(f.x, f.z);
+  if ((drift.s < STRANDED_AT && drift.d < 15 + r) || toSegment(f.x, f.z, STRAND_FROM, STRAND) < 15 + r
+    || STORM_OUT.some((p, i) => i > 0 && toSegment(f.x, f.z, STORM_OUT[i - 1], p) < 16 + r)) return false;
+  if (f.z > -1250 || f.z < -1680 || Math.hypot(f.x - STAIRS_FOOT.x, f.z - STAIRS_FOOT.y) < 60) return false;
+  if (Math.hypot(f.x - PAIR[0].x, f.z - PAIR[0].y) < 32 || Math.hypot(f.x - PAIR[1].x, f.z - PAIR[1].y) < 30) return false;
+  if (stands.some((t) => Math.hypot(f.x - t.x, f.z - t.y) < 6 + r)) return false;
+  for (const eye of LOOKOUTS) {
+    const away = Math.hypot(f.x - eye.x, f.z - eye.y);
+    const bearing = Math.atan2(f.x - eye.x, f.z - eye.y);
+    for (const p of PAIR) {
+      const off = Math.abs(wrapAngle(bearing - Math.atan2(p.x - eye.x, p.y - eye.y)));
+      if (off < Math.atan2(9, p.distanceTo(eye)) + Math.atan2(r, away) && !(behind && away > p.distanceTo(eye) + BACKDROP)) return false;
+    }
+  }
+  return true;
+}
+
 export class DrownedVillage {
   readonly objects: THREE.Object3D[] = [];
   readonly cameraObstacles: THREE.Box3[] = [];
+  /** The dark coming on over the water under its smoke. */
+  readonly dark = new DarkBank();
+  /** The dead tree in the garden across the lane, standing, until the player brings it down. */
+  readonly tree: ToppleTree;
+  /** The swing on the green tree's bough, hanging still over the green. */
+  readonly swing: RopeSwing;
+  /** The sheet on its line across the lane from the barn's chimney to the high roof's. */
+  readonly sheet: WashSheet;
+  /** The drowned mill, its sails swaying in the fog's breath, and the spiral drawn round its hub to turn it. */
+  readonly mill: Windmill;
+  readonly millSpiral = new MillSpiral();
+  /** The pieces the story is driving itself: the village leaves those alone. */
+  readonly driven = new Set<ToppleTree | RopeSwing | Windmill>();
+  /** The wash-tub adrift by the cat's roof. */
+  readonly tub: WashTub;
+  /** The belfry on the church's tower, the ivy up its west face, the cat's kittens in its straw. */
+  readonly belfry = new Belfry(new THREE.Vector3(TOWER.x, 0, TOWER.z));
+  readonly ivy: IvyFace;
+  readonly kittens = new Kittens();
+  /** The rings the belfry's bell sends out over the fog. */
+  readonly bellWaves: BellWaves;
+  private bell: Bell | null = null;
   private readonly storm = { value: 0 };
   private readonly ropeSwing = { value: 0 };
+  /** Once the dark has risen the herons leave ahead of it and do not come back. */
+  private fled = false;
   private readonly lighthouse = new LighthouseLight(LIGHTHOUSE);
   private readonly vaneAngle = { value: 0 };
   private vaneSpin = 0;
@@ -1116,35 +1399,45 @@ export class DrownedVillage {
     const rand = mulberry32(3140);
     const houses = layout(rand);
     const body = new Merged();
+    /** What stands on the cat's ground is drawn up and left unbuilt, so every later roof and tree takes the same chances. */
+    const built = houses.filter((h) => !onCatGround(h.x, h.z, h.len / 2) && !inOpenWater(h));
+    dealLooks(built);
     for (const h of houses) {
-      const m = houseMatrix(h);
-      this.cameraObstacles.push(new THREE.Box3(
-        new THREE.Vector3(-h.len / 2 - 0.5, 0, -h.depth / 2 - 0.5),
-        new THREE.Vector3(h.len / 2 + 0.5, h.wall + h.rise + 0.4, h.depth / 2 + 0.5)).applyMatrix4(m));
-      for (const perch of buildHouse(body, h, rand, m)) {
-        this.cameraObstacles.push(new THREE.Box3(
-          new THREE.Vector3(perch.x - 0.65, 0, perch.z - 0.65),
-          new THREE.Vector3(perch.x + 0.65, perch.y + 0.5, perch.z + 0.65)));
-        if (perch.y > 2.2 && perch.y < 8 && offChannel(perch.x, perch.z).d < 34) this.roosts.push(perch);
-      }
+      if (built.includes(h)) this.addHouse(body, h, rand, true);
+      else chances(h, rand);
     }
     buildChurch(body, rand);
-    buildLighthouse(body);
+    this.cameraObstacles.push(houseBounds({ ...NAVE, roll: 0, lime: STONE, roof: SLATE[0] }));
+    const placing = mulberry32(9104);
+    PLACED.forEach((p, i) => this.addHouse(body, placedSpec(p, i), placing, !p.quiet));
+    this.addHouse(body, { ...placedSpec(CAT_HOUSE, 2), look: 'catShoulder' }, mulberry32(5150), false);
+    for (const w of GARDEN_WALLS) this.cameraObstacles.push(buildWall(body, w));
+    for (const l of LEAN_TOS) this.cameraObstacles.push(buildLeanTo(body, l, SLATE[1], LIME[1]));
+    const rock = new Merged();
+    buildLighthouse(rock);
     this.objects.push(this.lighthouse.object);
-    buildLine(body, houses);
-    buildGate(body, rand, houses);
+    const gate = buildGate(body, rand, houses);
+    const twigs: Twig[] = [];
+    const stands: THREE.Vector2[] = gate ? [gate] : [];
+    const trees = plantTrees(houses, rand, twigs, this.cameraObstacles, stands);
+    const touches = this.touches(body);
+    this.spread(body, [...built, ...PLACED.map(placedSpec), placedSpec(CAT_HOUSE, 2), ...touches], stands);
     const shared = { ...atmo.uniforms, uStorm: this.storm, uRopeSwing: this.ropeSwing, uVane: this.vaneAngle };
     this.objects.push(
       new THREE.Mesh(
         body.build(),
         new THREE.ShaderMaterial({ vertexShader: VILLAGE_VERT, fragmentShader: VILLAGE_FRAG, uniforms: shared }),
       ),
+      new THREE.Mesh(
+        rock.build(),
+        new THREE.ShaderMaterial({ vertexShader: VILLAGE_VERT, fragmentShader: VILLAGE_FRAG, uniforms: shared }),
+      ),
     );
 
-    const twigs: Twig[] = [];
     this.objects.push(
       new THREE.Mesh(
-        plantTrees(houses, rand, twigs, this.cameraObstacles),
+        mergeGeometries([trees, ...greenTree(placing, twigs, this.cameraObstacles),
+          ...boatTree(this.cameraObstacles)]),
         new THREE.ShaderMaterial({ vertexShader: TREE_VERT, fragmentShader: TREE_FRAG, uniforms: shared }),
       ),
     );
@@ -1240,10 +1533,112 @@ export class DrownedVillage {
       o.layers.enable(REFLECTION_LAYER);
       if (o instanceof THREE.Mesh && !o.geometry.boundingSphere) o.geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(-10, 0, -1440), 400);
     }
+
+    this.tree = new ToppleTree(TREE_SITE.spot, wind);
+    this.swing = new RopeSwing(SWING_SITE.spot);
+    this.mill = new Windmill(MILL_SITE.spot);
+    this.sheet = new WashSheet(SHEET_SITE.spot);
+    this.cameraObstacles.push(millBounds());
+    this.tub = new WashTub(wind);
+    this.ivy = new IvyFace({ from: IVY_FOOT, to: IVY_SILL, out: faceOut('west'), spread: 1.45, opening: BELFRY.arch.width / 2 + 0.2,
+      roof: (across) => roofUnder(NAVE, IVY_FOOT.x - 0.05, IVY_FOOT.z + across) ?? eaveAt(NAVE) });
+    this.bellWaves = new BellWaves(this.belfry.centre, tuning.drowned.fog.level, BELFRY.half + 0.5);
+    this.kittens.lay(this.belfry.nest());
+    this.kittens.nestle();
+    this.kittens.visible = true;
+    this.objects.push(...this.tree.objects, ...this.swing.objects, ...this.mill.objects, ...this.millSpiral.objects, ...this.sheet.objects,
+      ...this.dark.objects, ...this.tub.objects, ...this.belfry.objects, ...this.ivy.objects, this.bellWaves.mesh, ...this.kittens.objects);
   }
 
   /**
-   * `boat` is where the boat is, so herons lift off as it comes by; `storm` is 0 calm to 1 the squall at the end.
+   * The village beyond the drift and her way, from its own streams: lanes and huddles in the middle distance and far
+   * groups out into the haze, wherever they leave open what `free` keeps open.
+   */
+  private spread(into: Merged, standing: HouseSpec[], stands: THREE.Vector2[]): void {
+    const taken: Footprint[] = standing.map((h) => ({ x: h.x, z: h.z, yaw: h.yaw, hl: h.len / 2 + 1.5, hd: h.depth / 2 + 1.5 }));
+    const sites = villageShape(mulberry32(6203), reach, (s) => {
+      const f = { x: s.x, z: s.z, yaw: s.yaw, hl: s.len / 2 + 0.3, hd: s.depth / 2 + 0.3 };
+      if (!free(f, stands) || taken.some((t) => !apart(t, f))) return false;
+      taken.push(f);
+      return true;
+    });
+    /**
+     * Then, from streams of their own so nothing above moves, the houses beyond the pair as their backdrop: the broad
+     * water there is filled, round the storm's way out.
+     */
+    const backdrop = villageShape(mulberry32(6203), reach, (s) => {
+      const f = { x: s.x, z: s.z, yaw: s.yaw, hl: s.len / 2 + 0.3, hd: s.depth / 2 + 0.3 };
+      if (!free(f, stands, true) || taken.some((t) => !apart(t, f))) return false;
+      taken.push(f);
+      return true;
+    }, (d, _x, z) => (z < BEYOND_CHURCH ? Math.max(bandAt(d), 0.85) : bandAt(d)));
+    this.dress(into, sites, mulberry32(8817));
+    this.dress(into, backdrop, mulberry32(8818));
+  }
+
+  private dress(into: Merged, sites: Site[], dress: Rng): void {
+    for (const s of sites) {
+      const h: HouseSpec = {
+        ...s, wall: 3.4, roll: !s.far && dress() < 0.1 ? range(dress, 0.08, 0.18) * (dress() < 0.5 ? -1 : 1) : 0,
+        lime: LIME[Math.floor(dress() * LIME.length)],
+        roof: s.thatched ? THATCH[Math.floor(dress() * THATCH.length)] : SLATE[Math.floor(dress() * SLATE.length)],
+      };
+      if (s.far) raise(into, h, dress);
+      else this.addHouse(into, h, dress, false);
+    }
+  }
+
+  /** The dream's touches, each once: the tall hat beside the little pocket, and washing between two chimneys. */
+  private touches(into: Merged): HouseSpec[] {
+    const { x, z, yaw, apart } = TALL_AND_TINY;
+    const side = new THREE.Vector2(Math.sin(yaw), Math.cos(yaw));
+    const tall: HouseSpec = { x, z, yaw, roll: 0, len: 3.6, depth: 4.4, wall: 3.2, rise: 6.8, sink: 3.1, thatched: false,
+      lime: LIME[0], roof: SLATE[1], stacks: [-1], stack: 0.9, pots: 2, gable: 1, look: 'tallHat' };
+    const tiny: HouseSpec = { x: x + side.x * apart, z: z + side.y * apart, yaw: yaw + 0.06, roll: 0, len: 4.6, depth: 3.8, wall: 3,
+      rise: 1.5, sink: 1.7, thatched: false, lime: LIME[2], roof: SLATE[0], stacks: [1], stack: 1.1, pots: 1, gable: 1, look: 'pocket' };
+    const along = new THREE.Vector2(Math.cos(WASHING_PAIR.yaw), -Math.sin(WASHING_PAIR.yaw));
+    const len = 8.2;
+    const off = (len + WASHING_PAIR.gap) / 2;
+    const pair = [-1, 1].map((s, i): HouseSpec => ({
+      x: WASHING_PAIR.x + along.x * off * s, z: WASHING_PAIR.z + along.y * off * s, yaw: WASHING_PAIR.yaw + s * 0.04, roll: 0,
+      len, depth: 5.4 - i * 0.3, wall: 3.4, rise: 3.1 + i * 0.2, sink: 2.3 + i * 0.1, thatched: false, lime: LIME[1 + i],
+      roof: SLATE[i], stacks: [-s], stack: 1.3 + i * 0.2, pots: 2 - i, gable: s, look: 'cottage',
+    }));
+    const quiet = mulberry32(2716);
+    for (const h of [tall, tiny]) this.addHouse(into, h, quiet, false);
+    const [a, b] = pair.map((h) => {
+      const top = raise(into, h, quiet)[0];
+      this.cameraObstacles.push(houseBounds(h));
+      return top;
+    });
+    const toward = new THREE.Vector3().subVectors(b, a).setY(0).normalize().multiplyScalar(0.42);
+    buildWashing(into, a.clone().add(toward).setY(a.y + 0.22), b.clone().sub(toward).setY(b.y + 0.22));
+    return [tall, tiny, ...pair];
+  }
+
+  /** A house and its chimneys, with their bounds for the lens; chimneys off the drift may take a heron. */
+  private addHouse(into: Merged, h: HouseSpec, rand: Rng, roosting: boolean): void {
+    const perches = raise(into, h, rand);
+    this.cameraObstacles.push(houseBounds(h));
+    for (const perch of perches) {
+      this.cameraObstacles.push(new THREE.Box3(
+        new THREE.Vector3(perch.x - 0.65, 0, perch.z - 0.65),
+        new THREE.Vector3(perch.x + 0.65, perch.y + 0.5, perch.z + 0.65)));
+      if (roosting && perch.y > 2.2 && perch.y < 8 && offChannel(perch.x, perch.z).d < 34) this.roosts.push(perch);
+    }
+  }
+
+  prepareBell(cast: CrossingCast): Bell {
+    if (!this.bell) {
+      this.bell = new Bell({ pivot: this.belfry.pivot(), toward: new THREE.Vector2(0, 1), half: BELFRY.bearing }, cast, this.belfry.light);
+      this.bell.live = false;
+      this.belfry.group.add(...this.bell.objects);
+    }
+    return this.bell;
+  }
+
+  /**
+   * `boat` is where the boat is, so herons lift off as it comes by; `storm` is 0 calm to 1 the squall at the end;
    * While the boat is far off, the vane and herons only count the time; when it comes near they live through the
    * last `CATCH_UP_S` of it, so the vane has settled into the wind and the herons are mid-habit on arrival.
    */
@@ -1252,10 +1647,17 @@ export class DrownedVillage {
     this.ropeSwing.value += dt * (2.2 + storm * 9.0);
     // Its sweep also lights the shared water and creature shaders, so it always keeps time.
     this.lighthouse.update(dt, storm);
+    this.dark.update(time, boat, dt);
+    if (this.dark.rise > 0.1) this.fled = true;
     if (Math.abs(boat.z - DROWNED_Z) > NEAR_Z) {
       this.idle = Math.min(CATCH_UP_S, this.idle + dt);
       return;
     }
+    if (!this.driven.has(this.tree)) this.tree.update(dt);
+    if (!this.driven.has(this.swing)) this.swing.update(dt, this.wind);
+    if (!this.driven.has(this.mill)) this.mill.update(dt);
+    this.kittens.update(dt);
+    this.bellWaves.update(dt);
     if (this.idle > 0) {
       const steps = Math.ceil(this.idle / CATCH_UP_STEP);
       const step = this.idle / steps;
@@ -1310,14 +1712,15 @@ export class DrownedVillage {
         }
         h.pitch = ease(h.pitch, Math.sin(time * 0.6 + h.seed * 9) * 0.03, 1, dt);
         const spooked = Math.hypot(boat.x - h.x, boat.z - h.z) < 22 && airborne < 2;
-        if (spooked || storm > 0.22) {
+        if (spooked || storm > 0.22 || this.fled) {
           h.mode = 'lifting';
           h.t = 0;
-          h.delay = range(rand, 0.2, 1.1);
+          h.delay = this.fled ? range(rand, 0.4, 3) : range(rand, 0.2, 1.1);
           h.neckGoal = 0;
-          h.yaw = Math.atan2(h.x - boat.x, h.z - boat.z);
+          /** Away from the dark once it has risen, as birds go before weather. */
+          h.yaw = this.fled ? Math.atan2(DARK_AHEAD.x, DARK_AHEAD.y) + range(rand, -0.5, 0.5) : Math.atan2(h.x - boat.x, h.z - boat.z);
           airborne++;
-          h.target = storm > 0.22 ? -1 : this.pickRoost(h, boat, rand);
+          h.target = storm > 0.22 || this.fled ? -1 : this.pickRoost(h, boat, rand);
         }
       } else if (h.mode === 'lifting') {
         h.t += dt;
@@ -1333,6 +1736,7 @@ export class DrownedVillage {
           h.pitch = ease(h.pitch, -0.18, 5, dt);
         }
       } else {
+        if (this.fled) h.target = -1;
         const tx = h.target < 0 ? h.x * 0.2 - 40 : roost.x;
         const tz = h.target < 0 ? h.z - 400 : roost.z;
         const ty = h.target < 0 ? 34 : roost.y + STAND;
