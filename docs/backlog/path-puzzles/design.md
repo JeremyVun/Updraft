@@ -1506,3 +1506,16 @@ Jeremy clarified the second net's legibility, verbatim:
 
 Use a tighter weave and let its near edge drape visibly over the orange net; inspect its colour and silhouette
 from the player's normal view before lifting, in both orientations.
+
+### Sea review and main merge — 2026-10-10
+
+Jeremy's approval and instruction, verbatim:
+
+> ok finally this is approved to merge into main. commit, look for code simplification, code quality, and performance optimisation opportunities for the sea chapter code, rebase, then merge it in
+
+The review found five reversed GLSL smoothstep ranges that fail the current shader check, repeated geometry
+updates after the blue net settles, and per-frame allocation while reading constant whale-call durations.
+Jeremy approved all three corrections: "Approve all three". Use equivalent supported shader ramps, retain the
+settled net geometry with waves still driven by its shader, and calculate call durations once. Preserve the
+approved appearance, sound, camera, rescue and pacing. Verify geometry parity, checkpoints and real-gesture
+play before rebasing and merging into main. No deployment is requested.

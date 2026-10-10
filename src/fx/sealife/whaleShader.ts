@@ -474,7 +474,7 @@ Skin skin(float far, float dry) {
     if (part == ${BODY}) {
       float above = overRestSea(vRest, s);
       // Its old scars are thicker about the head and down its flanks, where it is seen close.
-      float scar = scars(m, ${f(L.scars)} * (1.0 + smoothstep(0.45, 0.2, s)) * (0.2 + flank), px) * clear * dry;
+      float scar = scars(m, ${f(L.scars)} * (2.0 - smoothstep(0.2, 0.45, s)) * (0.2 + flank), px) * clear * dry;
       k.albedo = mix(k.albedo, ${rgb(L.scar)} * (0.92 + 0.16 * n2), scar * ${f(L.scarAmount)});
       // Barnacles crust the head in small tight patches, along the chin and the lip, round its knobs and about the eye,
       // but never on the eye or in its folds; a few stray ones about each patch.
@@ -530,7 +530,7 @@ Skin skin(float far, float dry) {
     float iris = 1.0 - smoothstep(0.5 - aa, 0.5 + aa, rr);
     float pupil = 1.0 - smoothstep(0.19 - aa, 0.19 + aa, length(g * vec2(0.85, 1.15)));
     // At its corners only a dark wet rim, never a white: a white makes it a person's eye.
-    vec3 white = vec3(0.1, 0.06, 0.045) * mix(0.35, 1.0, smoothstep(0.98, 0.6, abs(e.x)));
+    vec3 white = vec3(0.1, 0.06, 0.045) * mix(0.35, 1.0, 1.0 - smoothstep(0.6, 0.98, abs(e.x)));
     float fibres = 0.8 + 0.4 * vnoise(vec2(atan(g.y, g.x) * 9.0, rr * 5.0));
     // Deep warm brown, lighter in a ring round the pupil and darkening to its edge.
     vec3 brown = uIris * fibres * (1.0 + 0.9 * (1.0 - smoothstep(0.2, 0.38, rr))) * (1.0 - 0.6 * smoothstep(0.38, 0.5, rr));
@@ -565,7 +565,7 @@ Skin skin(float far, float dry) {
     // The top of the lower lip faces the sun, but a gold line along it would draw a mouth.
     float ledge = onJaw * (1.0 - smoothstep(0.0, 0.06, abs(below - 0.02)));
     k.near = max((1.0 - smoothstep(1.0, 1.6, length(e * vec2(0.8, 1.0)))) * flank, ledge);
-    k.caustic = opening * iris * (1.0 - pupil) * smoothstep(0.1, -0.35, g.y) * (1.0 - under);
+    k.caustic = opening * iris * (1.0 - pupil) * (1.0 - smoothstep(-0.35, 0.1, g.y)) * (1.0 - under);
     k.iris = g * iris * opening;
     if (part == ${BODY}) {
       float d = 0.006;

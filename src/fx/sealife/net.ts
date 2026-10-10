@@ -231,6 +231,7 @@ export class Net {
   private readonly breathBounds = { i0: 0, i1: 0, j0: 0, j1: 0 };
   private readonly breathRest = new Float32Array(ROWS * COLS * 3);
   private breathReleased = false;
+  private breathSettled = false;
   private breathHeight = 0;
   private readonly fold: THREE.Mesh;
   private readonly ropes: THREE.Mesh;
@@ -536,6 +537,7 @@ export class Net {
     this.peelAt = this.soundPeel = 0;
     this.domeT = 10;
     this.breathReleased = false;
+    this.breathSettled = false;
     this.held = this.fallsTo = this.holder = null;
     this.curlFrom.set(0, 0, 0);
     this.endDropped = false;
@@ -1102,6 +1104,8 @@ export class Net {
   }
 
   private layBreathNet(time: number): void {
+    // Once afloat, the shader supplies all its motion.
+    if (this.breathSettled && this.slump === 1) return;
     const b = this.breathBounds;
     if (!this.breathReleased) {
       if (this.slump === 0) {
@@ -1131,6 +1135,7 @@ export class Net {
     }
     this.breathPos.needsUpdate = this.breathAfloat.needsUpdate = this.breathContact.needsUpdate = true;
     this.breathNet.geometry.computeVertexNormals();
+    this.breathSettled = this.slump === 1;
   }
 
   /** The orange sheet follows the skin, then slides off with the later heaves. */

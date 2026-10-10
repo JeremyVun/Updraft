@@ -162,7 +162,7 @@ void main() {
   float strand = ax.x + ay.x - ax.x * ay.x;
   vec2 knotAt = kx - floor(kx + 0.5);
   float kfw = max(fwidth(kx.x), 1e-5);
-  float knot = (1.0 - smoothstep(w * 1.1 - kfw, w * 1.1 + kfw, length(knotAt))) * smoothstep(0.6, 0.2, kfw);
+  float knot = (1.0 - smoothstep(w * 1.1 - kfw, w * 1.1 + kfw, length(knotAt))) * (1.0 - smoothstep(0.2, 0.6, kfw));
   strand = max(strand, knot);
   float edge = min(min(vUv.x, uSize.x - vUv.x), min(vUv.y + uSize.y, (hang - vUv.y) / sqrt(1.0 + vEdge.z * vEdge.z)));
   float rope = band(edge - ${glsl(NET.rope * 0.5)}, ${glsl(NET.rope)});
@@ -286,7 +286,7 @@ void main() {
   vec3 V = normalize(cameraPosition - vWorld);
   float spot = smoothstep(0.7, 0.76, corkNoise(vLocal));
   vec3 alb = mix(uCork, uSpot, spot * 0.85);
-  alb = mix(alb, uFouled, smoothstep(0.0, -0.8, N.y) * 0.6);
+  alb = mix(alb, uFouled, (1.0 - smoothstep(-0.8, 0.0, N.y)) * 0.6);
   vec3 col = netLight(alb, N, V, vWorld, 0.15);
   col += uSunColor * pow(max(dot(reflect(-V, N), uSunDir), 0.0), 18.0) * 0.18 * cloudShadow(vWorld.xz);
   float shows = uFade * sunkShows(vWorld, 0.35);

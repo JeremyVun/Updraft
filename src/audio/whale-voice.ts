@@ -70,8 +70,11 @@ const CALLS: Record<WhaleVoiceKind, readonly Moan[]> = {
   }],
 };
 
+const CALL_LENGTHS = Object.fromEntries(Object.entries(CALLS).map(([kind, phrases]) =>
+  [kind, Math.max(...phrases.map((m) => m.swell[m.swell.length - 1][0]))])) as Record<WhaleVoiceKind, number>;
+
 /** How long each call goes on (s), for the room the score makes under it. */
-export const callLength = (kind: WhaleVoiceKind) => Math.max(...CALLS[kind].map((m) => m.swell[m.swell.length - 1][0]));
+export const callLength = (kind: WhaleVoiceKind) => CALL_LENGTHS[kind];
 
 const PARTIALS = [[0.35, 0.75, 0.5], [0.58, 0.3, 0.08], [0.03, 0.16, 0.025], [0.008, 0.035, 0]] as const;
 

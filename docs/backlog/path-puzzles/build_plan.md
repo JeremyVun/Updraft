@@ -1516,3 +1516,22 @@ settled Mirror arrival with no browser errors, unexpected shader programs, or sw
 Typecheck, production and QA builds, sea mechanics/checkpoints and voice checks pass. Evidence, final screenshots,
 videos and before/after sound clips: `/tmp/updraft-sea-n13-Oltlpe/README.md`. Port 5330 serves this revision.
 N9's unrelated release-check failures remain open. N13 is complete on `sea-whale`, unmerged and undeployed.
+
+### Phase N14: approved sea review and main merge
+
+Astra implements Jeremy's three approved review corrections personally; his merge brief is in design.md.
+
+- [x] Replace the five reversed shader ranges with equivalent supported ramps.
+- [x] Stop settled blue-net geometry work and cache fixed call durations; verify parity and checkpoint reuse.
+- [ ] Run focused checks and both sea orientations, rebase against current main and merge the approved chapter.
+
+The pre-change quick suite passes 13 of 14 checks; only the five sea shader bounds fail. An instrumented
+mechanics run measures the redundant settled blue-net update at about 0.036 ms per frame on this Mac, an
+isolated routine cost rather than a whole-frame speedup. Evidence: `/tmp/updraft-sea-merge-TojNOy/`.
+
+The corrected quick suite passes all 14 checks. The blue-net buffers match the approved implementation exactly
+over 102,964 updates, including 36,215 settled frames, across rescue phases and all tested checkpoint restores.
+An alternating six-round benchmark reduces its settled update from 0.0345–0.0350 ms to the early-return cost;
+the regression also proves unchanged buffers are not uploaded and redraping resumes updates. Fixed call lengths
+are now computed once. All seven production whale voice renders pass. Sea mechanics, fourteen pacing cases,
+geography/save migration, crossing camera/haze and dolphin flight checks pass, as do production and QA builds.

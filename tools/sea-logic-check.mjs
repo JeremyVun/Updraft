@@ -156,6 +156,15 @@ function coveredBlowhole(net, blowhole) {
   assert(!coveredBlowhole(net,sealife.sleeper.blowhole),'the upper net is carried completely aside');
   net.lift=0;net.updraft=0;net.update(0,70);
   assert(!coveredBlowhole(net,sealife.sleeper.blowhole),'the upper net cannot fall back over the blowhole');
+  const upper=[net.breathPos,net.breathNormals,net.breathAfloat,net.breathContact];
+  const settled=upper.map(a=>({values:Array.from(a.array),version:a.version}));
+  for(let i=0;i<120;i++)net.update(1/60,70+i/60);
+  assert.deepEqual(upper.map(a=>({values:Array.from(a.array),version:a.version})),settled,
+    'a settled upper net keeps its geometry without uploading unchanged buffers; waves run in its shader');
+  net.drape(chapter.whale.rest,chapter.whale.yaw,true);
+  net.update(0,80);
+  assert(coveredBlowhole(net,sealife.sleeper.blowhole),'restarting the encounter drapes the upper net again');
+  assert(net.breathPos.version>settled[0].version,'the redraped net resumes geometry updates');
 }
 {
   const f=fixture(0,false), {chapter:c,boat:b,cygnet:k,sealife}=f, w=c.whale;
