@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 
 globalThis.location = { search: '' };
+globalThis.document = { createElement: () => ({ getContext: () => ({ beginPath() {}, moveTo() {}, quadraticCurveTo() {}, stroke() {} }) }) };
 const { DrownedVillage, SPIRE } = await import('../src/world/drowned.ts');
 
 let now = 0;

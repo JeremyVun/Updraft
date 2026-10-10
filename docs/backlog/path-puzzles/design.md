@@ -801,6 +801,49 @@ see a hole in the "fog" so to speak. it looks like a bug. also the lighthouse tu
     Levels: the drift at the room's reference, the fog about 1 dB under, the refuge 3, home level, the dark 3 then 6
     under. Studies: `node tools/drowned-music-study.mjs`.
 
+### Takeover review — 2026-10-10
+
+Jeremy's further instruction, verbatim:
+
+> if you find any issues also keep a list and present to me so that i can approve what needs to be fixed. For example, i think that when the child drifts into the roof, the camera is a bit strangely set up to look backwards instead dollying around to look forward.
+
+New findings are proposals for Jeremy to approve before they are changed. Continue the agreed integration checks.
+
+36. **Camera as the becalmed boat reaches the roof — awaiting review.** Jeremy's report above. Capture the full
+    movement, including the look back at the fog and the cat's departure; propose a continuous dolly toward the
+    direction of travel without losing those story beats. The captured camera stays broadside with the water
+    behind her prominent; the destination roof becomes clear late. Evidence:
+    `/tmp/updraft-takeover-TUMeWz/roof-arrival-review.jpg` and `roof-arrival.mp4` (sampled at 2 fps) in the same directory.
+37. **Portrait camera after the sheet — confirmed, awaiting approval.** The integrated run loses the fog below
+    the frame for 2.3 seconds between the sheet landing and the approach to the mill. Adjust this transition's
+    framing locally and retain both the child and the approaching fog. Evidence:
+    `/tmp/updraft-takeover-TUMeWz/sheet-exit-before.jpg`, `run-port.log` and `run-port-trace.json` in the same directory.
+38. **After the mill — remaining concern from item 25, awaiting Jeremy's judgement.** The merged fix makes the
+    move continuous and keeps the cat visible, but the camera still circles around her while she looks back at
+    the fog. The prior session proposed dropping that look back if the remaining orbit reads wrong in play.
+    Current integrated capture: `/tmp/updraft-takeover-TUMeWz/mill-exit-review.jpg`.
+39. **Ultra performance — item 29, investigation only.** The belfry at a 1600×900 viewport on a 2× display runs
+    at about 54–57 fps on Ultra, with occasional 33 ms frames; Low and Ultra with the sea fog disabled stay at
+    60 fps in this sample. The repeated Ultra measurement slows over the run, so this is evidence of fog cost,
+    not a precise performance estimate. Proposal: profile and reduce the fog's per-pixel cost while preserving
+    its shape and coverage, with matching captures and frame timings. The same belfry sample reports one shader
+    first drawn after boot (`ShaderMaterial #233`); identify that missing warmup before claiming a visible hitch.
+    Present these findings for approval before changing the renderer or boot sequence.
+40. **Regression checks outside the integrated sequence — awaiting triage.** Broad checks expose outdated
+    fixtures and failures in Lines, little boats, journey pacing, bandage cost and village update gating. Exact
+    failures are recorded in build_plan.md below the takeover. Proposal: repair the incomplete fixtures first,
+    then investigate the remaining assertions; bring any resulting gameplay changes back for approval.
+41. **Portrait goodbye — visual concern, awaiting approval.** At the slow blink the cat is only 39 px tall in a
+    900×1600 capture, with the child close to the lower-right edge. Both remain on screen, so the current LENS gate
+    passes; its 45 px cat-size minimum applies only in landscape. The blink is difficult to read at this scale.
+    Proposal: reframe the portrait goodbye to make the cat's face legible while retaining her look up at it, then
+    add a portrait readability gate. Evidence: `/tmp/updraft-takeover-TUMeWz/church-port-slow-blink.png`.
+
+Already completed during the takeover: silent restoration of the `sail` checkpoint to the designed air-dies
+beat; verification of the music handoff after the 88-second farewell; equivalent ascending `smoothstep`
+expressions in the cat, tree and bell shaders to remove undefined GLSL behaviour. The shader corrections were
+applied before the further approval instruction above. The new music still awaits Jeremy's listening approval.
+
 ### The room rethought (Claude, 2026-10-08; Jeremy: "yea lets see how this works")
 
 One idea holds the middle of the room together: **the fog is a rising white tide and the only safe place is higher

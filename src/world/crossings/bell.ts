@@ -80,7 +80,7 @@ void main() {
     float a = atan(vLocal.z, vLocal.x);
     float y = vLocal.y;
     float runs = vnoise(vec2(a * 11.0, y * 1.1)) * 0.6 + vnoise(vec2(a * 27.0, y * 4.0)) * 0.4;
-    float green = smoothstep(-1.1, -1.62, y) * (0.65 + 0.6 * runs) + smoothstep(0.6, 0.82, runs) * smoothstep(-0.25, -0.9, y) * 0.7;
+    float green = (1.0 - smoothstep(-1.62, -1.1, y)) * (0.65 + 0.6 * runs) + smoothstep(0.6, 0.82, runs) * (1.0 - smoothstep(-0.9, -0.25, y)) * 0.7;
     green = clamp(green + 0.25 * smoothstep(0.7, 0.9, vnoise(vec2(a * 6.0, y * 7.0))), 0.0, 1.0);
     vec3 metal = mix(vec3(0.075, 0.062, 0.048), vec3(0.2, 0.155, 0.1), 0.35 + 0.65 * vnoise(vec2(a * 4.0, y * 2.5)));
     vec3 verd = mix(vec3(0.1, 0.22, 0.19), vec3(0.2, 0.36, 0.3), runs);
@@ -106,7 +106,7 @@ void main() {
     col += mix(room, mix(uSkyHorizon, uSkyHorizonSun, 0.5) * mix(0.7, 0.45, uIndoors), open) * mix(vec3(1.0), metal * 3.0, 0.6) * fres * shine;
     /** Struck, the bronze shivers: a sheen runs round the sound bow and up the waist as it rings. */
     float band = 0.5 + 0.5 * sin(a * 6.0 + y * 9.0 - uTime * 40.0);
-    col += uSkyHorizonSun * tint * uShimmer * (0.35 + 0.65 * band) * smoothstep(-0.4, -1.5, y) * shine * 0.6;
+    col += uSkyHorizonSun * tint * uShimmer * (0.35 + 0.65 * band) * (1.0 - smoothstep(-1.5, -0.4, y)) * shine * 0.6;
   } else if (kind == ${OAK}) {
     float grain = vnoise(vec2(vLocal.x * 1.3, (vLocal.y + vLocal.z) * 26.0)) * 0.6 + vnoise(vec2(vLocal.x * 6.0, (vLocal.y - vLocal.z) * 55.0)) * 0.4;
     vec3 alb = vec3(0.15, 0.095, 0.055) * (0.74 + 0.42 * grain);

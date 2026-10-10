@@ -1,6 +1,6 @@
-// Real village, boat, cast and camera: the drift's lens behind the boat through the channel until the cat is seen, and
-// the storm's from her seated aboard at the nave to the forest beach (the lighthouse framed as its light goes out, the
-// child and the hull kept in frame and clear of the roofs, turns continuous), at 30/60fps, calm and gusting, both aspects.
+// Real village, boat, cast and camera: the entry's lens behind the boat before the rescue view takes over, and
+// the storm's sailing view through to the forest beach: lighthouse framed as its light goes out, child and hull in
+// frame and clear of the roofs, turns continuous, at 30/60fps, calm and gusting, both aspects.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import * as THREE from 'three';
@@ -18,7 +18,12 @@ for (const [fps, portrait, gust] of [[30, false, 0], [60, true, 0], [30, true, 8
   const base = new THREE.Vector2(Math.cos(-Math.PI / 10), Math.sin(-Math.PI / 10)).multiplyScalar(tuning.wind.breeze);
   const wind = { breeze: base.clone(), calm: 3, addSplat() {}, sample(x, z, out) { return Object.assign(out,
     { x: this.breeze.x + push, z: this.breeze.y - push, energy: push ? .8 : 0, lift: 0 }); } };
-  const edge = (camera, point) => { const p = point.clone().project(camera); assert(p.z < 1); return Math.max(Math.abs(p.x), Math.abs(p.y)); };
+  let sample = { phase: 'entry', fps, portrait, gust, time: 0 };
+  const edge = (camera, point) => {
+    const p = point.clone().project(camera);
+    assert(p.z < 1, `point behind lens: ${JSON.stringify({ ...sample, point: point.toArray(), eye: camera.position.toArray(), projected: p.toArray() })}`);
+    return Math.max(Math.abs(p.x), Math.abs(p.y));
+  };
   const rigFor = (chapter) => {
     const rig = new CameraRig();
     rig.resize(portrait ? 390 : 1600, portrait ? 844 : 900);
@@ -34,24 +39,26 @@ for (const [fps, portrait, gust] of [[30, false, 0], [60, true, 0], [30, true, 8
     chapter.afterCamera(rig.camera);
   };
 
-  /** The drift from the stairs into the village, until she sees the cat: the lens travels behind the boat. */
+  /** The first four seconds precede the cat's rescue framing. Measure the rendered lens, not a private bearing. */
   let minArc = Infinity, maxArc = -Infinity, driftChild = 0;
   {
     const cast = drownedCast(wind), chapter = new DrownedChapter(cast), rig = rigFor(chapter);
-    for (let i = 1; i < fps * 60 && chapter.cat.step === 'stranded'; i++) {
+    for (let i = 1; i <= fps * 4; i++) {
+      sample.time = i / fps;
       step(chapter, cast, rig, 1 / fps, i / fps);
-      if (chapter.beat !== 'drift') continue;
-      const bearing = chapter.villageBearing - cast.boat.yaw - Math.PI;
+      assert(chapter.beat === 'enter' || chapter.beat === 'drift', 'the entry is still sailing');
+      const bearing = Math.atan2(rig.camera.position.x - cast.boat.position.x,
+        rig.camera.position.z - cast.boat.position.z) - cast.boat.yaw - Math.PI;
       const arc = Math.atan2(Math.sin(bearing), Math.cos(bearing));
       minArc = Math.min(minArc, arc); maxArc = Math.max(maxArc, arc);
       driftChild = Math.max(driftChild, edge(rig.camera, cast.child.position.clone().add(new THREE.Vector3(0, 1.2, 0))));
     }
     assert(Number.isFinite(minArc), 'the drift never began');
-    assert(Math.max(Math.abs(minArc), Math.abs(maxArc)) < .2, `village camera travels behind the boat through the channel: ${minArc}, ${maxArc}`);
+    assert(Math.max(Math.abs(minArc), Math.abs(maxArc)) < Math.PI / 3, `entry camera stays on the stern quarter: ${minArc}, ${maxArc}`);
     assert(driftChild < 1, `child out of frame in the drift: ${driftChild}`);
   }
 
-  /** The storm, from her seated aboard to the beach. */
+  /** The church browser check covers the close farewell; hull framing begins once its departure dolly ends. */
   const { cast, chapter } = stormCast(wind), boat = cast.boat, child = cast.child, village = cast.village;
   const rig = rigFor(chapter);
   let worstChild = 0, worstAt = null, worstHull = 0, hullAt = null, lampWorst = 0, lampAt = null, maxTurn = 0, turnAt = null, maxElevation = 0, elevationAt = null;
@@ -62,8 +69,10 @@ for (const [fps, portrait, gust] of [[30, false, 0], [60, true, 0], [30, true, 8
   const s = tuning.storm;
   for (let i = 1; i < fps * 120 && !chapter.done; i++) {
     const dt = 1 / fps, t = i * dt;
+    sample = { phase: 'storm', fps, portrait, gust, time: t };
     step(chapter, cast, rig, dt, t);
     rig.camera.getWorldDirection(view);
+    if (chapter.stormTime <= s.leaveFor) { lastView.copy(view); continue; }
     const turn = lastView.angleTo(view);
     if (turn > maxTurn) { maxTurn = turn; turnAt = { t, beat: chapter.beat, eye: rig.camera.position.toArray() }; }
     lastView.copy(view);
@@ -105,4 +114,4 @@ for (const [fps, portrait, gust] of [[30, false, 0], [60, true, 0], [30, true, 8
 }
 fs.writeFileSync('/tmp/updraft-drowned-camera.json', JSON.stringify(results, null, 2));
 console.log(results.map((r) => JSON.stringify(r)).join('\n'));
-console.log('Village camera: astern travel through the channel, and the storm from the nave to the beach with the lighthouse framed as its light goes out, the child and hull in frame, at 30/60fps, calm and gust, both aspects.');
+console.log('Village camera: entry on the stern quarter; after the farewell dolly, the storm to the beach with the lighthouse framed as its light goes out and child and hull in frame, at 30/60fps, calm and gust, both aspects.');

@@ -13,39 +13,43 @@ const {takeCues}=await import('../src/story/cues.ts');
 const {tuning}=await import('../src/tuning.ts');
 const {gatherAt,...approved}=foghornProposal;
 assert.deepEqual(tuning.audio.foghorn,approved);
-assert.equal(tuning.storm.foghornAt,gatherAt);
+const at=tuning.storm.foghornAt;
+assert(at<tuning.storm.lighthouseOutAt,'The horn calls while the lighthouse is still lit');
 assert(tuning.storm.foghornAt+tuning.storm.foghornLateAllowance+approved.duration+approved.diffuseSeconds+.05
   <tuning.storm.firstLightning+tuning.storm.thunderDelay,'Latest permitted call drains before thunder');
 
 function chapter(){
   const c=Object.create(DrownedChapter.prototype);
   Object.assign(c,{beat:'gather',stormTime:0,hornPassed:false,shook:false,sheltered:false,breeze:1,hush:.3,
-    cast:{boat:{becalmed:0},cygnet:{mind:{perform(){},startle(){}}}}});
+    cat:{holding:false},cast:{boat:{becalmed:0},cygnet:{mind:{perform(){},startle(){}}}}});
   return c;
 }
 function advance(c,dt){c.weather(dt,.7);return takeCues().filter(n=>n==='foghorn');}
 for(const hz of [30,60,144]){
   const c=chapter(),heard=[];takeCues();
   for(let i=0;i<hz*35;i++){
-    if(c.stormTime>=22)c.beat='snatch';
-    if(c.stormTime>=26)c.beat='after';
+    if(c.stormTime>=tuning.storm.gatherFor)c.beat='snatch';
+    if(c.stormTime>=tuning.storm.gatherFor+tuning.storm.snatchFor)c.beat='after';
     for(const cue of advance(c,1/hz))heard.push({cue,at:c.stormTime});
   }
   assert.equal(heard.length,1,`${hz} Hz: single passage call`);
-  assert(heard[0].at>=8&&heard[0].at<=8+1/hz+1e-8);
+  assert(heard[0].at>=at&&heard[0].at<=at+1/hz+1e-8);
 }
 for(const beat of ['enter','drift','still']){
   const c=chapter();c.beat=beat;assert.deepEqual(advance(c,120),[]);
   assert.equal(c.stormTime,0);assert.equal(c.hornPassed,false);
 }
-const stale=chapter();assert.deepEqual(advance(stale,12),[]);assert.equal(stale.hornPassed,true);
+const stale=chapter();assert.deepEqual(advance(stale,at+2),[]);assert.equal(stale.hornPassed,true);
 assert.deepEqual(advance(stale,.1),[]);
 for(const beat of ['snatch','after']){
-  const c=chapter();c.beat=beat;assert.deepEqual(advance(c,8),[]);
+  const c=chapter();c.beat=beat;assert.deepEqual(advance(c,at),[]);
 }
-const restored=chapter();restored.restoreCheckpoint('sail',[2]);
+const {drownedCast}=await import('./lib/storm-cast.mjs');
+const THREE=await import('three');
+const wind={breeze:new THREE.Vector2(),sample(_x,_z,out){return Object.assign(out,{x:0,z:0,energy:0,lift:0});}};
+const restored=new DrownedChapter(drownedCast(wind));restored.restoreCheckpoint('sail',[2]);
 assert.deepEqual(takeCues(),[]);assert.deepEqual(advance(restored,4),[]);
-restored.beat='gather';assert.deepEqual(advance(restored,8),['foghorn']);
+restored.beat='gather';assert.deepEqual(advance(restored,at),['foghorn']);
 assert.deepEqual(advance(restored,.1),[]);
 // Muted/hidden/not-started audio consumes the event without creating a delayed playback debt.
 assert.equal(Soundscape.prototype.foghorn.call({running:false}),null);

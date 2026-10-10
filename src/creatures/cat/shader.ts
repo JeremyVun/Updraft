@@ -212,7 +212,7 @@ void main() {
     alb = NOSE_PINK;
     fuzz = 0.1;
   } else if (m == ${MOUTH}) {
-    alb = mix(MOUTH_IN, TONGUE, smoothstep(0.0, -0.004, vRest.y - ${(MUZZLE[1] - 0.0095 * HEAD_K).toFixed(4)}));
+    alb = mix(MOUTH_IN, TONGUE, (1.0 - smoothstep(-0.004, 0.0, vRest.y - ${(MUZZLE[1] - 0.0095 * HEAD_K).toFixed(4)})));
     fuzz = 0.0;
     ao = 0.5;
   } else if (m == ${WHISKER}) {
@@ -232,7 +232,7 @@ void main() {
     float r = length(e);
     float pupil = 1.0 - smoothstep(uPupil - 0.03, uPupil + 0.015, length(e - vec2(-0.07, 0.06)));
     vec3 fur = alb;
-    vec3 iris = mix(IRIS_DEEP, IRIS, smoothstep(0.5, -0.7, e.y));
+    vec3 iris = mix(IRIS_DEEP, IRIS, (1.0 - smoothstep(-0.7, 0.5, e.y)));
     /** Wet and catching the light low on the outer side, as the sheet's eyes do. */
     iris = mix(iris, IRIS * 1.5 + 0.05, smoothstep(0.74, 0.93, r) * smoothstep(-0.1, 0.7, e.x - e.y) * 0.6);
     alb = mix(iris, vec3(0.005, 0.004, 0.004), pupil);

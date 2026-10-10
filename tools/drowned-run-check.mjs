@@ -35,7 +35,7 @@
 //        storm's frame takes over, her out of frame or hidden by the church or a roof; at the blink the cat, the kitten
 //        and her face out of frame or the cat under 45 px tall), VOICES=<file> writes every sound the cat and each kitten
 //        makes (seconds, which animal, kind, the story step) with the strongest its call marks showed in the 0.6 s after.
-import { chromium } from 'playwright-core';
+import { openBrowser } from './lib/browser.mjs';
 import assert from 'node:assert/strict';
 
 const base = process.env.BASE ?? 'http://127.0.0.1:5230/';
@@ -51,8 +51,7 @@ const toTree = process.env.TO === 'tree';
 const toSwing = process.env.TO === 'swing';
 const toNave = process.env.TO === 'nave' || toRidge || toTree || toSwing;
 
-const browser = await chromium.launch({ channel: 'chromium', headless: true,
-  args: ['--enable-gpu', '--use-angle=metal', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
+const { browser, close } = await openBrowser();
 const errors = [];
 const video = process.env.VIDEO ?? null;
 const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1,
@@ -1152,5 +1151,5 @@ try {
   const recorded = video ? context.pages()[0]?.video() : null;
   await context.close();
   if (recorded) console.log(`video: ${await recorded.path()}`);
-  await browser.close();
+  await close();
 }

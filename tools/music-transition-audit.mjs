@@ -106,6 +106,6 @@ try {
     }
     return reports;
   });
-  fs.writeFileSync(path.join(dir,'report.json'),JSON.stringify({method:'Production audio fixtures, not full gameplay recordings or perceptual listening approval. Files isolate background and reverb. Common playback boost capped for headroom. Handoffs requested at 0:18; arranged landing at 0:42.',handoffs:reports,internal},null,2));
+  fs.writeFileSync(path.join(dir,'report.json'),JSON.stringify({method:'Production audio fixtures, not full gameplay recordings or perceptual listening approval. Files isolate background and reverb. Common playback boost capped for headroom. Handoffs requested at 0:18, except Drowned to Wood at 1:28; arranged landings 24 seconds later.',handoffs:reports,internal},null,2));
   console.log(JSON.stringify({handoffs:reports.length,internalSections:internal.reduce((n,r)=>n+r.starts,0),dir}));
 }finally{await browser.close();}

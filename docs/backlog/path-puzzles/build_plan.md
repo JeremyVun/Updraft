@@ -1165,10 +1165,59 @@ The seven fix branches are already merged. The previous session hit its weekly l
 `boat-check`; the combined browser checks had not run. Keep Jeremy's existing play build on the roofs branch
 until the integrated result is ready for review. Main merge and deployment remain separate.
 
-Remaining: verify the restored `sail` checkpoint against the rescue→air-dies design; check the new music through
-the longer storm and into the wood; check the merged fog through the storm; run the roofs, run, storm and audio
-gates; resolve the portrait fog framing gap after the sheet; investigate item 29 with the GPU otherwise quiet;
-finish saves and documentation. Results and captures: `/tmp/updraft-takeover-TUMeWz/`.
+The restored `sail` checkpoint now resumes the designed air-dies beat silently, and its boat check passes.
+The music-transition audit passes the longer 88-second farewell into the wood. The merged fog, rescue and storm
+have been checked in both aspects, the landscape roof route passes, and all five browser checkpoint round-trips
+pass. The portrait sheet exit and the review findings below remain open.
+
+Jeremy subsequently asked for a list of issues to approve before fixes, and flagged the roof-arrival camera.
+His instruction is preserved verbatim in design.md, "Takeover review", with review items 36–41. Keep new camera,
+fog and performance findings as proposals pending his approval. Results and captures:
+`/tmp/updraft-takeover-TUMeWz/`.
+
+Integration verification:
+
+| Check | Result |
+| --- | --- |
+| Production build (includes TypeScript) | Pass; existing bundle-size warning |
+| Boat mechanics and restored `sail` | Pass |
+| Browser save/reload | Pass for all five drowned checkpoints: sail, roofs, church, belfry and storm; each plays on |
+| Boat ground contact | Pass after replacing the obsolete passive-village fixture with the real storm cast |
+| Foghorn timing and restore | Pass; uses the longer storm's timing, retaining the approved sound parameters |
+| Camera mechanics | Pass at 30/60 Hz, landscape/portrait, calm/gust; see fixture corrections below |
+| Landscape and portrait rescue/stranding | Pass, including 30 seconds with the stranded boat stationary in each |
+| Landscape roof crossings | Pass including LENS gates; no camera cuts and cat retained after the mill |
+| Portrait roof crossings | Reaches the nave; fails the fog-framing gate after the sheet (review item 37) |
+| Landscape and portrait church through storm into wood | Pass including LENS gates, four bell answers, kittens, farewell and fog; both land 88 seconds after boarding |
+| Portrait goodbye readability | Automated framing passes, but the cat is only 39 px tall at its slow blink; review item 41 |
+| Cat/kitten call marks | All seven vocal calls in the church-through-wood capture have visible marks; footsteps excluded |
+| Music transitions | Pass: ten handoffs and 39 internal sections, including the full 88-second farewell |
+| Shader gate | Pass after seven equivalent ascending-ramp corrections |
+| Broad mechanics | Initially 40/50 pass; shader, boat-ground, camera and foghorn now pass on focused reruns |
+| Audio group | 16/17 pass; Lines score fixture fails before its restored-state assertions |
+
+The camera check referenced the removed `villageBearing` field and applied whole-hull framing to the close
+farewell looking up at the cat. It now measures the actual entry lens on the stern quarter (within 60°, instead
+of a 0.2-radian constraint on the removed internal bearing), and starts storm hull/elevation checks after the
+departure dolly. The church's browser LENS gate covers the farewell. The entry limit follows the authored
+quarter view while the boat changes heading after the stairs; it does not require the lens to track that turn
+instantly. No game camera values were changed. Roofs/run browser checks now use the shared GPU lock.
+
+Still failing, proposed triage under review item 40:
+
+| Check | Failure and current understanding |
+| --- | --- |
+| `bandage-cost` | Its fixture omits the `nudgeAt` and `nudgeSlope` vectors now required by `WingBandage.update` |
+| `journey-pacing` | The passive drowned crossing fixture has no village/tub and predates the interactive roof sequence |
+| `lines-score` | Its restored Lines fixture lacks a vector used by `ShoreHaul.boatPose` (`lerpVectors`) |
+| `kite-logic` | A post fails the dry-ground assertion; needs investigation |
+| `little-boats-logic` | Playful swim does not satisfy the faster-paddles/wing-flick assertion; needs investigation |
+| `plane-routing` | The 30 Hz calm Lines shore case stalls in `haul`; needs investigation |
+| `drowned-gating` | After supplying the canvas stub for call marks, the approach comparison fails its vane convergence assertion; needs investigation |
+
+Phase 10 remains open pending Jeremy's review, approved fixes and their verification. The whole-journey release
+playthrough has not been run during this takeover, and the listed failures prevent a release pass. The integration
+dev server is on `http://127.0.0.1:5331/`; the original roofs play build and main remain separate.
 
 ### Later
 The cat in the lit window of the cottage with the red door at the very end (design.md "The cat comes home"); a small

@@ -13,7 +13,7 @@
 //        boat on the drift's last leg 70 m short of the cat, STRIP=<dir> saves a frame every half second of game time
 //        from the room's start to the end, the boat lost behind her (<dir>/0000.jpg on; frames.jsonl gives each one's
 //        time, beat, step and how strongly the cat's call marks showed).
-import { chromium } from 'playwright-core';
+import { openBrowser } from './lib/browser.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
@@ -22,8 +22,7 @@ const width = Number(process.env.W ?? 1600), height = Number(process.env.H ?? 90
 const shots = process.env.SHOTS ?? null;
 const idle = Number(process.env.IDLE ?? 18);
 
-const browser = await chromium.launch({ channel: 'chromium', headless: true,
-  args: ['--enable-gpu', '--use-angle=metal', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
+const { browser, close } = await openBrowser();
 const errors = [];
 try {
   const page = await (await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1 })).newPage();
@@ -287,5 +286,5 @@ try {
   assert(errors.length === 0, `page errors: ${errors.join('\n')}`);
   console.log('drowned roofs check passed');
 } finally {
-  await browser.close();
+  await close();
 }

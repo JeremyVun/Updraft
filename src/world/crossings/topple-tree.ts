@@ -34,7 +34,7 @@ void main() {
   vec3 p = position;
   if (aKind > ${ROOT - 0.5} && aKind < ${EARTH + 0.5}) {
     /** The side of the plate away from the fall breaks up out of the bed as the roots give. */
-    float heel = smoothstep(0.1, -0.9, p.z) * smoothstep(0.3, 0.8, length(p.xz)) * smoothstep(-0.5, 0.0, p.y);
+    float heel = (1.0 - smoothstep(-0.9, 0.1, p.z)) * smoothstep(0.3, 0.8, length(p.xz)) * smoothstep(-0.5, 0.0, p.y);
     p.y += uHeave * heel * ${HEAVE};
     p.z -= uHeave * heel * 0.08;
   }
@@ -72,7 +72,7 @@ void main() {
     float lumps = vnoise(vLocal.xz * 3.1 + vLocal.y) * 0.6 + vnoise(vLocal.xz * 9.0) * 0.4;
     alb = mix(vec3(0.062, 0.045, 0.031), vec3(0.12, 0.092, 0.064), smoothstep(0.3, 0.8, lumps) * smoothstep(-0.25, 0.05, vLocal.y));
     alb = mix(alb, vec3(0.13, 0.12, 0.105), smoothstep(0.8, 0.86, vnoise(vLocal.xz * 7.0 + 3.0)) * 0.7);
-    float heel = smoothstep(0.1, -0.9, vLocal.z) * smoothstep(0.3, 0.8, length(vLocal.xz));
+    float heel = (1.0 - smoothstep(-0.9, 0.1, vLocal.z)) * smoothstep(0.3, 0.8, length(vLocal.xz));
     float crack = abs(vnoise(vec2(around * 3.0, length(vLocal.xz) * 2.2) + 7.0) - 0.5);
     alb *= 1.0 - 0.85 * (1.0 - smoothstep(0.0, 0.03 * uHeave * heel + 0.001, crack));
     wet = 0.75 + 0.25 * (1.0 - smoothstep(-0.2, 0.05, vLocal.y));
