@@ -97,7 +97,8 @@ export const ROUTES: Record<string, THREE.Vector2[]> = {
    * the whale, and once it has gone the boat sails straight on over where it lay and curves in to the entry jetty.
    */
   toMirror: [
-    new THREE.Vector2(-300, -1950), new THREE.Vector2(-340, -1948),
+    // Begin the turn before the reveal so the pod's course points toward the visible whale.
+    new THREE.Vector2(-300, -1910), new THREE.Vector2(-340, -1930),
     WHALE_LEAD, WHALE_LINE, WHALE_HOLD,
     new THREE.Vector2(MIRROR_LANDING.x - 30.45, MIRROR_LANDING.z + 94.05), new THREE.Vector2(MIRROR_LANDING.x - 40.8, MIRROR_LANDING.z + 74.85),
     new THREE.Vector2(MIRROR_LANDING.x - 40.95, MIRROR_LANDING.z + 52.95), new THREE.Vector2(MIRROR_LANDING.x - 30.75, MIRROR_LANDING.z + 33.75),

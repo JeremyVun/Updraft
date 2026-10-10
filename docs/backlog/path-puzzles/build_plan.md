@@ -1419,3 +1419,31 @@ unrelated baseline terrain and marine-audio failures remain open.
 
 Evidence, reports, videos and audio: `/tmp/updraft-sea-n10-WtbK2q/README.md`. Port 5330 serves the corrected QA
 build. N10 is implemented on `sea-whale`; no merge or deployment yet.
+
+### Phase N11: dolphins lead toward the visible whale
+
+Jeremy's report and approved camera correction are in design.md. Astra owns the approach waypoints in journey.ts,
+the camera handoff in crossing.ts/tuning.ts and their reveal/pacing checks. Preserve the whale's position, resting
+frame, normal speed, full swim and onward route.
+
+- [x] Curve the initial approach toward the whale before its silhouette is visible.
+- [x] Ease from the swimmer's side view toward the boat-to-whale line, keeping both visible in portrait.
+- [x] Check actual pod movement, swim, nudge, reveal and pacing; compare landscape and portrait captures.
+- [x] Build and refresh port 5330; record evidence and keep the branch unmerged.
+
+The first two waypoints turn the approach earlier. Actual pod movement stays within 32 degrees of the whale's
+bearing across landscape and portrait checks; restoring the old route produces a 54-degree divergence and fails
+the guard. The camera turns toward the revealed whale while retaining room beside the hull for the swimmer,
+then eases behind the boat as the bird returns. Restoring the old handoff puts the whale's head outside portrait
+and fails the framing guard. The portrait trace's maximum turn rate over seconds 24–61 falls from 10.7 to 5.8
+degrees/second; maximum camera acceleration falls from 3.3 to 2.3 m/s². The horizon remains level.
+
+Seven pacing cases preserve the twelve-second swim and normal speed. Ordinary runs reach the first puzzle in
+61.8–62.4 seconds and sail from whale-gone to Mirror in 38.1–40.7 seconds. Both full GPU runs complete all five
+puzzles and the settled Mirror arrival without swim/pull clipping, browser errors or unexpected shader compilation.
+Invitations remain 0.50–0.52 seconds. Mechanics, saves, geography, navigation, typecheck and production/QA builds
+pass. N9's unrelated baseline terrain and marine-audio failures remain open; this batch does not change audio.
+
+Final captures are `camera-land-*` and `camera-port-*` in `/tmp/updraft-sea-n11-F2TBFa/`; the evidence README
+distinguishes them from intermediate route-only captures. Port 5330 serves the revised QA build. N11 is implemented
+on `sea-whale`; no merge or deployment.

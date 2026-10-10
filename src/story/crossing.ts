@@ -882,7 +882,14 @@ export class CrossingChapter implements Chapter {
           ? THREE.MathUtils.smootherstep(progress, tuning.seaPassage.farewellAt, 1) : 0;
         const encounterBearing = THREE.MathUtils.lerp(tuning.seaPassage.cameraBearing,
           tuning.seaPassage.swimCameraBearing, this.swimFrame);
-        const bearing = this.heading + Math.PI + this.quarter * THREE.MathUtils.lerp(encounterBearing, angle, land);
+        let bearing = this.heading + Math.PI + this.quarter * THREE.MathUtils.lerp(encounterBearing, angle, land);
+        if (this.whale?.step === 'approach') {
+          const sea = tuning.seaPassage, mist = sea.mist, head = this.whale.whale.blowhole;
+          const revealed = THREE.MathUtils.smootherstep(this.whale.sightAge, mist.revealAfter, mist.revealAfter + mist.revealFor);
+          const toward = Math.atan2(boat.position.x - head.x, boat.position.z - head.z) + this.quarter * sea.whaleCameraBearing;
+          const share = revealed * THREE.MathUtils.lerp(1, sea.whaleCameraSwim, this.swimFrame);
+          bearing += Math.atan2(Math.sin(toward - bearing), Math.cos(toward - bearing)) * share;
+        }
         this.from.set(Math.sin(bearing), 0, Math.cos(bearing));
         this.shot.target.lerp(this.look.set(seat.x + fx * lead, seat.y + 1.15, seat.z + fz * lead), land);
         this.shot.distance = THREE.MathUtils.lerp(this.shot.distance, distance, land);

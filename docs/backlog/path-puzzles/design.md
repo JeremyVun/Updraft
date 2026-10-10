@@ -1437,3 +1437,23 @@ boat, taking the rope and pulling backward, preserving the physical pull. Correc
 tone and review the greeting and farewell too; the low voice must remain audible. Compare against the previous
 reveal in motion and inspect actual poses and production sound, not just event ordering and audio levels.
 Finish the rebase first; keep the branch unmerged while these corrections are verified. Astra implements personally.
+
+### Dolphins and visible whale agree — 2026-10-10
+
+Jeremy's report, verbatim:
+
+> the dolphins are leading the child in a different direction than the whale even though it's in sight.
+
+The earlier reveal exposes the old sideways approach before the turn toward the whale. Curve the boat and pod's
+approach toward the whale sooner, preserving ordinary speed, the full swim and approximately 60/40-second pacing.
+Verify actual dolphin travel during the visible reveal in landscape and portrait, including the later nudge.
+Astra implements personally; no main merge or deployment.
+
+Jeremy then asked, over the return-from-swim capture:
+
+> this shot worries me. why is the camera slanted at an angle like that???
+
+The swim view's side offset and the camera's delayed following of the turn compound; in portrait the whale's
+head also leaves the frame. Jeremy approved the correction: keep the cygnet visible during the swim, then ease
+toward a view behind the boat facing the whale as the bird returns, with the whale visible in portrait too.
+Use the boat-to-whale bearing as the reveal develops, leaving some side room for the swimmer until it is aboard.

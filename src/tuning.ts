@@ -1755,6 +1755,9 @@ export const tuning = {
     cameraBearing: 0.16,
     /** Open a little beside the boat only while the cygnet is swimming. */
     swimCameraBearing: 0.65,
+    /** As the whale emerges, keep it ahead of the boat while leaving room beside the hull for the swimmer. */
+    whaleCameraBearing: 0.1,
+    whaleCameraSwim: 0.75,
     childTurn: 0.7,
     haze: 0.94,
     /**
