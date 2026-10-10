@@ -1207,6 +1207,20 @@ sea check, `whale-look-stills` and the playthrough play them; `tools/lib/whale-g
 - Review build: stable QA preview on port 5330, `?chapter=sea` for the passage or `?chapter=whale` for the rescue.
   Jeremy's workflow ruling: "before any fix or change you want to make, present me a list so i can approve".
   Merging the encounter into main still needs his approval.
+- Performance follow-up, 2026-10-10: Jeremy approved both proposed net CPU optimisations: "yep please do the
+  optimisations you identified". Cache repeated spine/lift-weight calculations and streamline sheet normals and
+  rope tangents, preserving geometry and behaviour. Before/after measurement and geometry parity are required;
+  this does not authorise the main merge. Baseline audit: `/tmp/updraft-whale-perf-NNMYa6/README.md`.
+  Implemented with per-call spine values, double-precision cached lift powers, fixed neighbour tables and scalar
+  normal/tangent loops. Production and QA builds pass. The full real-gesture sea replay through settled Mirror
+  passed; 48,774 sampled comparisons against the previous implementation across every live-net phase found zero
+  difference in mesh positions, normals, contact/afloat weights and rope tangents (128,890,468 numeric comparisons).
+  Alternating old/new CPU batches on identical frozen poses reduced sheet + fold + rope-tangent work from
+  0.188–0.228 ms to 0.048–0.088 ms (61–75%, about 0.14 ms saved). These are the changed routines' isolated costs,
+  not whole-frame speedups; mesh detail, shaders, particles and render resolution are unchanged.
+  The rebuilt QA preview at 430×932, ratio 2 held 60 fps for 20 seconds after warmup (p99/max 16.8 ms, no hitches
+  or long tasks on this Mac; not a physical-phone measurement).
+  Evidence and alternating old/new benchmarks: `/tmp/updraft-net-opt-rqMjR6/`.
 Done: [x]
 
 ### Phase N4: docs on approval

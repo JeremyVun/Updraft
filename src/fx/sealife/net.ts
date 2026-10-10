@@ -18,6 +18,16 @@ export type NetSound = 'net-sputter' | 'net-lift' | 'whale-call' | 'whale-glad' 
 const FRONT = 0.05;
 const ROWS = 46;
 const COLS = 28;
+const NORMAL_NEIGHBOURS = new Uint16Array(ROWS * COLS * 4);
+for (let i = 0; i < ROWS; i++) {
+  for (let j = 0; j < COLS; j++) {
+    const k = (i * COLS + j) * 4;
+    NORMAL_NEIGHBOURS[k] = (Math.min(ROWS - 1, i + 1) * COLS + j) * 3;
+    NORMAL_NEIGHBOURS[k + 1] = (Math.max(0, i - 1) * COLS + j) * 3;
+    NORMAL_NEIGHBOURS[k + 2] = (i * COLS + Math.min(COLS - 1, j + 1)) * 3;
+    NORMAL_NEIGHBOURS[k + 3] = (i * COLS + Math.max(0, j - 1)) * 3;
+  }
+}
 /** Rows draped a frame while it lies far off, so laying it on costs no frame much. */
 const ROWS_A_FRAME = 1;
 /** How far out either side the skin is looked for across a row, and how finely (m). */
@@ -159,6 +169,7 @@ export interface NetGrip {
 interface Polyline {
   start: number;
   count: number;
+  neighbours: Uint32Array;
 }
 
 /**
@@ -230,6 +241,8 @@ export class Net {
   private readonly onSkin = new Float32Array(ROWS * COLS);
   private readonly onWater = new Float32Array(ROWS * COLS);
   private readonly lifts = new Float32Array(ROWS * COLS);
+  private readonly liftShape = new Float64Array(ROWS * COLS);
+  private readonly slumpShape = new Float64Array(ROWS * COLS);
   private readonly domes = new Float32Array(ROWS * COLS);
   /** Each row's drape as a path from its far edge to the water on the near side, and how far along it each point is (m). */
   private readonly path = new Float32Array(ROWS * PATH * 3);
@@ -739,7 +752,7 @@ export class Net {
   }
 
   /** The point `q` metres along row `i`'s drape, as the body lies this frame, and whether it is on the water there. */
-  private alongPath(i: number, q: number, out: THREE.Vector3): number {
+  private alongPath(i: number, q: number, out: THREE.Vector3, spine: number, roll: number): number {
     const base = i * PATH;
     let v = 1;
     while (v < PATH - 1 && this.pathArc[base + v] < q) v++;
@@ -750,7 +763,7 @@ export class Net {
     out.set(this.path[a * 3] + (this.path[b * 3] - this.path[a * 3]) * f, this.path[a * 3 + 1] + (this.path[b * 3 + 1] - this.path[a * 3 + 1]) * f,
       this.path[a * 3 + 2] + (this.path[b * 3 + 2] - this.path[a * 3 + 2]) * f);
     const water = f < 0.5 ? this.pathWater[a] : this.pathWater[b];
-    if (!water) out.y += this.bodyShift(this.pathAcross[a] + (this.pathAcross[b] - this.pathAcross[a]) * f, this.rowS(i));
+    if (!water) out.y += spine + ((this.pathAcross[a] + (this.pathAcross[b] - this.pathAcross[a]) * f) / this.eyeAcross) * roll;
     return water;
   }
 
@@ -831,6 +844,8 @@ export class Net {
         const du = (i / (ROWS - 1)) * NET.long - uBlow;
         const da = this.acrossOf(k);
         this.lifts[k] = bump(du / PATCH.x) * bump(da / PATCH.y);
+        this.liftShape[k] = Math.pow(this.lifts[k], 0.65);
+        this.slumpShape[k] = Math.pow(this.lifts[k], 0.7);
         this.domes[k] = bump(du / DOME.x) * bump(da / DOME.y);
         const u = (i / (ROWS - 1)) * NET.long;
         const crest = this.edge.getX(k) * BILLOW_CREST;
@@ -1038,6 +1053,7 @@ export class Net {
     const flutter = raised * (0.12 + 0.3 * this.updraft);
     const aside = THREE.MathUtils.smootherstep(this.slump, 0.2, 1);
     const blow = this.whale.blowhole;
+    const roll = this.whale.eye.y - this.refEye - this.spineShift(this.sEye);
     const uLeader = (this.leaderRow / (ROWS - 1)) * NET.long;
     const far = Math.max(uLeader, NET.long - uLeader);
     for (let i = 0; i < ROWS; i++) {
@@ -1050,18 +1066,19 @@ export class Net {
       const tent = 1 - THREE.MathUtils.smoothstep(slide, 0, 4);
       this.tent[i] = tent;
       const lift = raised * tent;
+      const spine = this.spineShift(this.rowS(i));
       let v = 1;
       for (let j = 0; j < COLS; j++) {
         const k = i * COLS + j;
         const arc = this.pathArc[i * PATH + j];
         const wl = this.lifts[k];
         // Slumped, the patch lies over to the far side of the crown, the middle of it furthest.
-        const q = arc + slide - (wl > 0 ? aside * SLUMP_FAR * Math.pow(wl, 0.7) : 0);
+        const q = arc + slide - (wl > 0 ? aside * SLUMP_FAR * this.slumpShape[k] : 0);
         if (q <= end) {
-          const water = this.alongPath(i, q, this.t);
+          const water = this.alongPath(i, q, this.t, spine, roll);
           let up = 0;
           if (wl > 0) {
-            const shape = Math.pow(wl, 0.65);
+            const shape = this.liftShape[k];
             up = lift * K.netLift * shape + flutter * tent * Math.sin(time * 2.4 + i * 0.8 - j * 0.6) * shape * (1 - shape) * 4 * 0.6;
             up += aside * SLUMP_HEAP * shape * (0.6 + 0.4 * Math.sin(i * 1.7 + j * 0.9));
             this.t.x += (blow.x - this.t.x) * lift * wl * 0.12;
@@ -1121,23 +1138,17 @@ export class Net {
 
   private normalsFrom(P: Float32Array): void {
     const N = this.normals.array as Float32Array;
-    for (let i = 0; i < ROWS; i++) {
-      const i0 = Math.max(0, i - 1);
-      const i1 = Math.min(ROWS - 1, i + 1);
-      for (let j = 0; j < COLS; j++) {
-        const j0 = Math.max(0, j - 1);
-        const j1 = Math.min(COLS - 1, j + 1);
-        const a = (i1 * COLS + j) * 3;
-        const b = (i0 * COLS + j) * 3;
-        const c = (i * COLS + j1) * 3;
-        const d = (i * COLS + j0) * 3;
-        this.p.set(P[a] - P[b], P[a + 1] - P[b + 1], P[a + 2] - P[b + 2]);
-        this.q.set(P[c] - P[d], P[c + 1] - P[d + 1], P[c + 2] - P[d + 2]);
-        this.r.crossVectors(this.q, this.p);
-        if (this.r.y < 0) this.r.negate();
-        this.r.normalize();
-        this.r.toArray(N, (i * COLS + j) * 3);
-      }
+    for (let k = 0; k < this.n; k++) {
+      const a = NORMAL_NEIGHBOURS[k * 4], b = NORMAL_NEIGHBOURS[k * 4 + 1];
+      const c = NORMAL_NEIGHBOURS[k * 4 + 2], d = NORMAL_NEIGHBOURS[k * 4 + 3];
+      const px = P[a] - P[b], py = P[a + 1] - P[b + 1], pz = P[a + 2] - P[b + 2];
+      const qx = P[c] - P[d], qy = P[c + 1] - P[d + 1], qz = P[c + 2] - P[d + 2];
+      let x = qy * pz - qz * py, y = qz * px - qx * pz, z = qx * py - qy * px;
+      if (y < 0) { x = -x; y = -y; z = -z; }
+      const inverse = 1 / (Math.sqrt(x * x + y * y + z * z) || 1);
+      N[k * 3] = x * inverse;
+      N[k * 3 + 1] = y * inverse;
+      N[k * 3 + 2] = z * inverse;
     }
   }
 
@@ -1390,7 +1401,12 @@ export class Net {
 
   private polyline(count: number): Polyline {
     const start = this.polylines.reduce((n, l) => n + l.count, 0);
-    const l = { start, count };
+    const neighbours = new Uint32Array(count * 2);
+    for (let m = 0; m < count; m++) {
+      neighbours[m * 2] = (start + Math.max(0, m - 1)) * 6;
+      neighbours[m * 2 + 1] = (start + Math.min(count - 1, m + 1)) * 6;
+    }
+    const l = { start, count, neighbours };
     this.polylines.push(l);
     return l;
   }
@@ -1427,10 +1443,13 @@ export class Net {
     const P = this.line.pos.array as Float32Array;
     const T = this.line.along.array as Float32Array;
     for (let m = 0; m < l.count; m++) {
-      const a = (l.start + Math.max(0, m - 1)) * 6;
-      const b = (l.start + Math.min(l.count - 1, m + 1)) * 6;
-      this.p.set(P[b] - P[a], P[b + 1] - P[a + 1], P[b + 2] - P[a + 2]).normalize();
-      for (let e = 0; e < 2; e++) this.p.toArray(T, ((l.start + m) * 2 + e) * 3);
+      const a = l.neighbours[m * 2], b = l.neighbours[m * 2 + 1];
+      const x = P[b] - P[a], y = P[b + 1] - P[a + 1], z = P[b + 2] - P[a + 2];
+      const inverse = 1 / (Math.sqrt(x * x + y * y + z * z) || 1);
+      const k = (l.start + m) * 6;
+      T[k] = T[k + 3] = x * inverse;
+      T[k + 1] = T[k + 4] = y * inverse;
+      T[k + 2] = T[k + 5] = z * inverse;
     }
   }
 
@@ -1610,15 +1629,17 @@ export class Net {
     const toBrow = THREE.MathUtils.smoothstep(this.flap, 0.6, 1);
     const perRow = (ROWS - 1) / NET.long;
     const R = this.foldRest;
+    const roll = this.whale.eye.y - this.refEye - this.spineShift(this.sEye);
     for (let fr = 0; fr < FOLD_ROWS; fr++) {
       const u = this.foldU[fr];
       const s = FRONT + u / this.whaleLength;
+      const spine = this.spineShift(s);
       const row = u * perRow;
       const near = this.nearAt(row);
       this.sheetAcross(row, near, this.hinge, this.curl);
       const h = fr * FOLD_COLS;
       this.q.fromArray(R, h * 3);
-      this.q.y += this.bodyShift(this.foldAcross[h], s);
+      this.q.y += spine + (this.foldAcross[h] / this.eyeAcross) * roll;
       this.drop.subVectors(this.hinge, this.q);
       const a = Math.max(0, fr - 1) * FOLD_COLS * 3;
       const b = Math.min(FOLD_ROWS - 1, fr + 1) * FOLD_COLS * 3;
@@ -1626,7 +1647,7 @@ export class Net {
       for (let m = 0; m < FOLD_COLS; m++) {
         const k = h + m;
         this.p.fromArray(R, k * 3).add(this.drop);
-        this.p.y += this.bodyShift(this.foldAcross[k], s);
+        this.p.y += spine + (this.foldAcross[k] / this.eyeAcross) * roll;
         this.p.sub(this.hinge).applyAxisAngle(this.axis, angle).add(this.hinge);
         let afloat = 0;
         if (toBrow > 0) {
