@@ -4,6 +4,10 @@ Status: choosing ideas. Nothing is designed yet; each accepted idea becomes its 
 
 ## Jeremy's words (verbatim)
 
+2026-10-11, after merging the approved village into main:
+
+> can you fix those pre-existing test failures then? did you have any trouble with the merge conflicts?
+
 2026-10-04:
 
 > I think i'm looking for more puzzles and challenges so to speak. I like that the game is meditative and very

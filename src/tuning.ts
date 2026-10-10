@@ -783,10 +783,10 @@ export const tuning = {
      * her waist `gazeKeep` of the way down it, and lets the V leave the top of it.
      */
     viewSide: -0.32,
-    viewPortraitSide: -0.06,
-    viewPortraitScale: 0.75,
+    viewPortraitSide: -0.32,
+    viewPortraitScale: 0.85,
     viewBack: 10.5,
-    viewUp: 5.6,
+    viewUp: 5.9,
     viewToward: 0.36,
     edgeSide: -0.8,
     edgeFrom: 10,

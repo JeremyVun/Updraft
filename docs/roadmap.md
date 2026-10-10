@@ -41,9 +41,10 @@ Known issues:
   `world/stairs-puffs.ts`).
 - `storm-check` can fail under heavy machine load ("Plane did not disappear into the storm"), on old and new builds.
 
-Checks ([testing.md](testing.md)). On `main` every mechanics (49) and audio (17) check passes, and 7 of the 8 browser
-checks; `start-check` fails on the veil's boot freeze ([backlog/boot-veil](backlog/boot-veil/)). `cygnet-gates`
-passes three runs in three.
+Checks ([testing.md](testing.md)). The 2026-10-11 merge run and focused fixes leave passing results for all 63
+mechanics and 19 audio checks; the inherited pond-framing and marine-audio failures are fixed
+([review](backlog/path-puzzles/final-review.md)). The full browser/release suite has not been rerun. The earlier
+`start-check` failure on the veil's boot freeze remains open ([backlog/boot-veil](backlog/boot-veil/)).
 
 Engineering, not scheduled:
 - The main chunk carries a bundle-size warning.

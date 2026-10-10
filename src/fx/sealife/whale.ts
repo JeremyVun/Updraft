@@ -198,7 +198,7 @@ export class WhaleRig {
   }
 }
 
-/** The whale surfacing far off: it rolls up to breathe twice, arches, lifts its flukes and dives. */
+/** The whale surfacing far off: it breathes once, arches, lifts its flukes and dives. */
 export class Whale extends WhaleRig {
   /** Seconds into the current surfacing; above WHALE_DURATION it is gone. */
   time = WHALE_DURATION;

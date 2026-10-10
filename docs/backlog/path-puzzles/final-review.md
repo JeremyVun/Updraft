@@ -126,4 +126,33 @@ Merged-tree evidence: `/tmp/updraft-drowned-merge-6sLLVd/`.
 
 The reviewed work is merged into local main. No push or deployment was performed. The pre-existing untracked
 `assets/art-direction/drowned-dusk-2026-10-11/` remains outside the merge. The two unrelated baseline failures
-above remain open; this merge verification is not a whole-game release certification.
+were then fixed as described below; this verification is not a whole-game release certification.
+
+## Baseline failures fixed after the merge
+
+Jeremy requested both fixes on 2026-10-11. Evidence: `/tmp/updraft-baseline-fixes-hVoE9o/`.
+
+- **Marine audio:** the test still expected the old whale's two breaths. The approved first-crossing animation
+  breathes once (the design's first-crossing whale section already records this). Its exact expected order is now
+  surface, breath, fluke drainage, dive. All 56 assertions and seven offline renders pass, including two successive
+  surfacings at 10/30/60/144 Hz, attenuation, stereo placement, muted output, source cleanup and peak limits.
+  Actual animation and sound code are unchanged. `marine-before.log`, `marine-after.log`, `marine-report.json`.
+- **Pond framing:** continuing past the first failed assertion exposed waiting swans outside the portrait frame
+  and brief bank occlusion on one approach. The approach lens is 0.3 m higher; portrait starts at −0.32 radians
+  around the approach axis with a 0.85 distance scale, easing into the existing shore composition. The unchanged
+  pond check passes all twelve cases: two approaches, both aspect ratios, 30/60/120 Hz. Every bird is seen running
+  and lifting, then the V is allowed to leave. No assertion or margin was relaxed. `pond-before.log`,
+  `pond-context.log`, `pond-final.log`.
+- **Browser review fixture:** it previously skipped the piano without waking the island, so its captures showed
+  an invisible flock. It now uses `skipToCrest()` and asserts the family is visible. The real-renderer check passes
+  in landscape and portrait, including terrain parity and crossing visibility. `journey-view.log`, `journey-view.json`.
+- **Visual comparison:** seeded before/after captures at 4, 13.5, 16 and 32 seconds show the same child positions
+  in every pair. Both cameras return to the same shore position by 32 seconds. The family, take-off and companions
+  remain readable; landscape keeps its composition and portrait gives the birds room beside the child.
+  `pond-render-final.json`, `pond-final-*-before-*.png`, `pond-final-*-after-*.png`; reviewed pairs opened in Preview.
+- Related meadow-route, meadow-plane, piano-frame, flock-flight and camera-direction checks pass. Production
+  build (including TypeScript) passes, with the existing bundle-size advisory. `build-final.log`.
+
+Together with the merge run and focused reruns, all 63 registered mechanics and 19 audio checks now have passing
+results. The complete browser/release suite and physical-device checks were not rerun. The approved village mist,
+camera, animation and audio were not changed by these fixes.

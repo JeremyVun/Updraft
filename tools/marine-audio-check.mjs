@@ -20,7 +20,7 @@ try {
     const wind = { breeze: new THREE.Vector2(2, -0.8), sample(_x, _z, out) {
       return Object.assign(out, { x: 2, z: -0.8, energy: 0, lift: 0 });
     } };
-    const sequence = ['whale-surface', 'whale-blow', 'whale-blow', 'whale-drain', 'whale-dive'];
+    const sequence = ['whale-surface', 'whale-blow', 'whale-drain', 'whale-dive'];
     for (const fps of [10, 30, 60, 144]) {
       const life = new SeaLife(wind, camera), events = [];
       life.onWhaleSound = (kind, x, y, z) => events.push({ kind, at: life.body.time, x, y, z });
@@ -30,7 +30,8 @@ try {
         events.length = 0;
         life.surfaceWhale(new THREE.Vector3(12, 0, -60), Math.PI);
         for (let i = 0; i < fps * 32; i++) life.update(1 / fps, pass * 40 + i / fps);
-        check(events.map(e => e.kind).join() === sequence.join(), `${fps} Hz pass ${pass}: one surface, two breaths, tail drain and dive`);
+        check(events.map(e => e.kind).join() === sequence.join(),
+          `${fps} Hz pass ${pass}: one surface, one breath, tail drain and dive; got ${events.map(e => e.kind).join(', ')}`);
         check(events.every(e => [e.x, e.y, e.z].every(Number.isFinite)), `${fps} Hz pass ${pass}: finite body positions`);
         check(events.filter(e => e.kind === 'whale-blow').every(e => e.y > 0.05), `${fps} Hz pass ${pass}: breath follows visible blowhole`);
       }

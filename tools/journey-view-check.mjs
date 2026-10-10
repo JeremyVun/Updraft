@@ -17,10 +17,11 @@ try {
     await page.waitForFunction(()=>window.__ready,null,{timeout:60000});
     await page.evaluate(()=>{
       const g=__game,c=g.story.current;
-      g.child.stop();g.child.place(40,-842,Math.PI);g.cygnet.rideIn('satchel');g.glider.hold(g.child);
-      c.leg=3;c.piano.restoreDone();c.reveal();c.frame();g.rig.cut(c.shot);
+      c.skipToCrest();g.child.stop();g.child.place(innerHeight>innerWidth?8:40,-842,Math.PI);
+      c.reveal();c.frame();g.rig.cut(c.shot);
     });
     await page.waitForTimeout(3800);
+    assert(await page.evaluate(()=>__game.flock.shown>.99),'the piano has woken the family before its camera review');
     await page.screenshot({path:`${prefix}-${width}-family.png`});
     await page.waitForFunction(()=>__game.story.current.beat==='down'&&__game.story.current.t>1,null,{timeout:15000});
     assert.equal(await page.evaluate(()=>__game.child.moving),false,'migration begins before the child approaches');

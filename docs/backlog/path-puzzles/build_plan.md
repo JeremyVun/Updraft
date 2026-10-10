@@ -5,7 +5,8 @@ this file only orders the work.
 
 Final pre-merge review (2026-10-10–11): [findings and verification](final-review.md). Complete: verified bugs and
 safe cleanup fixed; approved mist preserved and the old renderer removed. Landscape and portrait replays pass.
-Merge with current main is still separate: resolve the recorded conflicts and check the resulting tree.
+Merged into local main as `7c66739b`; both viewport replays and the merged village checks pass.
+The subsequent pond and marine baseline fixes are recorded below.
 
 ## The drowned village: the cat and the roofs (prototype)
 
@@ -3107,3 +3108,22 @@ Both landscape and portrait roof-to-woods replays, all five village checkpoint r
 continuity checks pass. The reviewed village is merged into local main. Details: [final-review.md](final-review.md).
 Evidence: `/tmp/updraft-drowned-merge-6sLLVd/`. No push or deployment was performed. The pre-existing untracked
 drowned-dusk artwork folder is preserved outside the merge.
+
+### Post-merge baseline failures (2026-10-11)
+
+Jeremy asked to fix the two pre-existing failures; his exact request is in `design.md`.
+
+- [x] First-crossing marine audio: update the obsolete two-breath expectation to the approved single-breath
+  surfacing documented above. Keep the exact event order and repeated-surfacing checks at 10/30/60/144 Hz.
+  All 56 assertions and seven offline renders pass; production sound and animation are unchanged.
+- [x] Pond framing: hold the waiting family and every take-off inside the existing margins, with the bank clear
+  of the sight lines. The portrait approach moves slightly around and back; the approach lens is 0.3 m higher.
+  All twelve 30/60/120 Hz, landscape/portrait, two-approach cases pass without weakening an assertion.
+- [x] Repair the browser review setup to wake the island before judging the flock; it previously captured
+  invisible birds on an unwoken pond. The new visibility assertion makes that mistake fail explicitly.
+- [x] Review the final rendered comparisons and run the corrected browser check: both aspects pass, the family
+  is visible, and the child positions match the baseline. Both cameras return to the existing shore position.
+
+Evidence: `/tmp/updraft-baseline-fixes-hVoE9o/`. Related meadow route, plane, piano framing, flock flight and
+camera-direction checks pass. This work changes the pond framing and test fixtures, not the village's approved
+camera, mist, sound or animation.
