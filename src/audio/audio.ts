@@ -93,6 +93,7 @@ export interface SoundState {
   /** Only the long dolphin crossing uses the approved adaptive sea arrangement. */
   mirrorScore?: MirrorScorePhase;
   drownedScore?: DrownedScorePhase;
+  drownedQuiet?: boolean;
   seaScore?: SeaScorePhase;
   sleepingScore?: SleepingScorePhase;
   /** The approved arrangement starts after the piano and continues until the next arrival handoff. */
@@ -1104,13 +1105,13 @@ export class Soundscape {
       this.dreamScore.stop(s.silence ? .12 : tuning.audio.dreamPhaseFade);
       this.dreamScore = null;
     }
-    if (bg.drownedScore && !s.silence && !backgroundPaused) {
+    if (bg.drownedScore && !s.drownedQuiet && !s.silence && !backgroundPaused) {
       this.drownedScore ??= new DrownedScore({ ctx, bus: this.backgroundDry, reverb: this.backgroundWet }, out => {
         const piano = new PianoStrings(); piano.setOutput(out); return piano;
       });
       this.drownedScore.update(bg.drownedScore, tuning.audio.drownedScoreLevel * roomTrim('drowned') * (1 - piano), arrival.handoffAt);
     } else if (this.drownedScore) {
-      this.drownedScore.stop(s.silence ? .12 : arrival.legato ? tuning.audio.forestMusicBlend : 1.8);
+      this.drownedScore.stop(s.drownedQuiet ? tuning.drowned.rescue.sailFor : s.silence ? .12 : arrival.legato ? tuning.audio.forestMusicBlend : 1.8);
       this.drownedScore = null;
     }
     if (!bg.summitScore) this.summitFinale = false;
@@ -1159,7 +1160,7 @@ export class Soundscape {
     // The opening grows less with life; wind warms it in the same proportion.
     const lifeLevel = this.openingScore ? 0.012 + tuning.audio.openingPadRise * s.life : padLife;
     this.fade(this.padGain.gain,
-      backgroundPaused || stairsMusic || this.summitScore || this.dreamScore || this.drownedScore || this.sleepingScore || this.meadowScore || this.birchesScore || this.linesScore ? 0 : (lifeLevel * (1 - 0.35 * s.night * (finale ? 0 : 1)) + this.activity * tuning.audio.padActivityLevel * lifeLevel / padLife) * hush * mood.level * swell * (this.openingScore ? this.openingScore.gainAt(now) * 10 ** (tuning.audio.openingScoreDb / 20) : 1),
+      backgroundPaused || s.drownedQuiet || stairsMusic || this.summitScore || this.dreamScore || this.drownedScore || this.sleepingScore || this.meadowScore || this.birchesScore || this.linesScore ? 0 : (lifeLevel * (1 - 0.35 * s.night * (finale ? 0 : 1)) + this.activity * tuning.audio.padActivityLevel * lifeLevel / padLife) * hush * mood.level * swell * (this.openingScore ? this.openingScore.gainAt(now) * 10 ** (tuning.audio.openingScoreDb / 20) : 1),
       now,
       piano > 0 ? tuning.piano.mixResponse : now < this.forestBlendUntil ? tuning.audio.forestMusicBlend / 3 : bg.hush > 0.5 ? 0.7 : 1.5,
     );

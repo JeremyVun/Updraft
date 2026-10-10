@@ -118,24 +118,28 @@ through boarding and the crossing to Birches. The arrangement contains its own d
 optional swing is accepted, `scarf` (no lead melody) for the later tangles, and `return` once the sail is finished.
 `return` carries on through boarding and into the stairs room. Checkpoints derive the phase from saved tangles.
 
-**Drowned Village** (`drowned-score.ts`). Five pieces in the game's own voices: the shared detuned pad (a chord every
+**Drowned Village** (`drowned-score.ts`). Six pieces in the game's own voices: the shared detuned pad (a chord every
 8 s, each held into the next one's swell), the meadow's piano, its soft sung voice and its pluck, all in B minor and
 D major with the dark in D minor, and the boat's lilt of six to a four-second bar, long-short then long.
-`DrownedChapter.drownedScore` names a piece by feeling, never by beat or clock: `drift` from the stairs' fog through
+`DrownedChapter.drownedScore` follows the scene: `drift` from the stairs' fog through
 the rescue (the boat's tune on the piano over the falling B minor, A, G, F♯ minor, then the piano's question D–E–F♯–B
-over G and down by E minor to A; its repeats sung by the soft voice, then sparer); `fog` from the air dying to the top
+over G and down by E minor to A; its repeats sung by the soft voice, then sparer). `drownedQuiet` releases that score
+over the two seconds of sailing after the rescue, leaves the becalming cue audible, and keeps the windless drift
+quiet until the cat is ashore. Never use permanent `silence` for this rest: it also mutes later cue sounds. `fog` then plays to the top
 of the ivy (the boat's tune gone with the boat: over B minor, G, E minor and F♯ a sung line climbs in sighs a step at a
 time, then falls down the scale to F♯, over the low piano tolling each root and its fifth a bar apart; its passes add
 the line and then the piano, never a pulse); `refuge` in the belfry until the lantern first answers (a lullaby on the
 bell's own notes over Gmaj7, B minor 7, E minor 7 and A); `home` from the first answer to boarding (the boat's tune back
-in D major over a bass walking down from D, its question unchanged); `farewell` from aboard into the wood (the answer
-B–A–F♯, E–F♯–D, G–F♯–E–C♯ landing on D; then D minor, B♭, G minor and D over the storm's low D with the question gone
-cold to D–E–F, then the same round fainter until the wood; every chord of the dark keeps D and A for the wood's drone).
+in D major over a bass walking down from D, its question unchanged); `farewell` while she looks back aboard (the answer
+B–A–F♯, E–F♯–D, G–F♯–E–C♯ landing on D); `storm` as they cast off (D minor, B♭, G minor and D over a low D with the
+question gone cold to D–E–F, then the same round fainter until the wood; every chord keeps D and A for the wood's drone).
+The storm starts within 0.3 seconds of the weather beginning, crossfading the farewell over `drownedCrossFade`.
 A piece the story leaves plays on to its next chord change and the next begins there, the old one fading over
 `drownedCrossFade`; requests that change again before then go straight to the latest. Levels are composed (the drift
 at the room reference, the fog about 1 dB under, the refuge 3 dB under, home level with the drift, the dark 3 and then
 6 dB under), so chapter hush is not applied. `node tools/drowned-music-study.mjs [outDir]` renders each piece and a
 sweep of the room from the drift into the wood with the becalmed phrase, the bell and the foghorn.
+`tools/drowned-audio-regression-check.mjs` renders the rescue rest and cue, the resumed score and storm transition.
 
 **Sky Mirror** (`dream-score.ts`, notes in `dream-score-data.ts`). The Mirror follows approach, first play, one to
 three returned lights, the full constellation and departure; completed-star count, not order, picks the section, the

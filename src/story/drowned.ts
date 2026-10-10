@@ -87,9 +87,10 @@ export class DrownedChapter implements Chapter {
   hush = 0.3;
   readonly shot: Shot = { target: new THREE.Vector3(), distance: 20, height: 3.2, carry: true };
   readonly music = 'drowned' as const;
-  get silence(): boolean {
-    return this.beat === 'still' || (this.beat === 'becalmed' && !this.cat.ashore);
+  get drownedQuiet(): boolean {
+    return (this.beat === 'drift' && this.aboardFrom >= 0) || this.beat === 'still' || (this.beat === 'becalmed' && !this.cat.ashore);
   }
+  get departureKite(): boolean { return this.beat === 'church' || this.beat === 'gather'; }
   /** The room's music by feeling, not by beat: the score moves on at its next chord change. */
   get drownedScore(): DrownedScorePhase {
     switch (this.beat) {
@@ -100,7 +101,7 @@ export class DrownedChapter implements Chapter {
         if (step === 'aboard') return 'farewell';
         return answered > 0 ? 'home' : 'refuge';
       }
-      case 'gather': case 'snatch': case 'after': return 'farewell';
+      case 'gather': case 'snatch': case 'after': return 'storm';
       default: return 'drift';
     }
   }
@@ -689,7 +690,7 @@ export class DrownedChapter implements Chapter {
     this.leg = ON_FROM_NAVE;
     this.out = 0;
     boat.steerFor = STORM_WAY[0];
-    boat.speedLimit = tuning.storm.passageSpeed;
+    boat.speedLimit = tuning.storm.sailingSpeed;
     this.heading = Math.atan2(STORM_WAY[0].x - boat.position.x, STORM_WAY[0].y - boat.position.z);
     this.headingSpeed = 0;
     this.to('gather');

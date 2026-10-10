@@ -11,6 +11,7 @@ import { MIRROR_BERTH, MIRROR_DECK } from '../world/sky-mirror-layout';
 import { BOAT_BERTH } from './island';
 import { LINES_BERTH } from './lines';
 import { SHORE_PILING } from '../world/shore-pulley';
+import { NAVE_BERTH } from '../world/drowned-way';
 import { FAR_SHORE } from './meadow';
 import type { Journey, ChapterName } from './journey';
 
@@ -34,6 +35,7 @@ export class DepartureKites {
       birches: new Kite(wind, BIRCHES_BERTH, { offset: [-9, 7], stringLength: tuning.linesToys.shoreKiteStringLength }),
       // Flies over the boat waiting on the cloud, tied off on the top landing's rail.
       stairs: new Kite(wind, CLOUD_BERTH, { offset: [KITE_TIE.x - CLOUD_BERTH.x, KITE_TIE.z - CLOUD_BERTH.z], ground: TOP.y, stringLength: tuning.linesToys.shoreKiteStringLength, tiedTo: 'rail' }),
+      drowned: new Kite(wind, NAVE_BERTH, { offset: [-0.6, -1.7], floating: true, azimuth: 2.8 }),
       wood: new Kite(wind, WOOD_BERTH, { offset: [-8, 7], stringLength: tuning.linesToys.shoreKiteStringLength }),
       sleeping: new Kite(wind, SLEEP_BERTH, { offset: [2, 4], stringLength: tuning.linesToys.shoreKiteStringLength }),
       // Tie off on the landing stage and start north of it in the near-still air, within the star-play views.
@@ -57,7 +59,8 @@ export class DepartureKites {
     this.markers.stairs.follow = tow?.at ?? null;
     this.markers.stairs.ahead = tow?.heading ?? null;
     for (const [name, kite] of Object.entries(this.markers)) {
-      const enabled = name === story.name ? story.current.departureKite !== false : name === this.crossing;
+      const enabled = name === story.name ? story.current.departureKite !== false
+        : name === this.crossing && (!this.markers[story.name] || story.current.departureKite === false);
       kite.update(dt, time, camera, enabled);
     }
   }

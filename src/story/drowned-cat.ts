@@ -20,7 +20,7 @@ export type CatStep = 'stranded' | 'seen' | 'easing' | 'waiting' | 'coming' | 'f
 
 /** Where the cat sits on the boat: on the foredeck, as high and dry as it can get, facing her. */
 const FOREDECK = new THREE.Vector3(0, foredeckAt(0, 2.12), 2.12);
-// The near half of the thwart keeps the shake clear of the mast.
+// The far half of the thwart shows the shake above the near gunwale.
 const ON_THWART = new THREE.Vector3(0.60, SEAT_Y + 0.045, MAST_Z);
 /** The hull at the waterline as the tub meets it: half its beam, and half its length about its middle. */
 const HULL_HALF = 0.8;
@@ -421,7 +421,7 @@ export class StrandedCat {
     if (this.since > k.ready && this.phase === 0) {
       this.phase = 1;
       const near = boat.group.worldToLocal(this.lens.copy(this.lensAt)).x < 0 ? -1 : 1;
-      cat.leap(ON_THWART.clone().setX(ON_THWART.x * near), { frame: boat.group, yaw: Math.PI, then: 'stand', look: this.head }, () => {
+      cat.leap(ON_THWART.clone().setX(-ON_THWART.x * near), { frame: boat.group, yaw: 0, then: 'stand' }, () => {
         cat.unease = 0.3;
         cat.wet = 1;
         cat.chirrup();
@@ -451,7 +451,7 @@ export class StrandedCat {
     const was = this.rescue;
     this.rescue += dt;
     if (was < k.shakeAt && this.rescue >= k.shakeAt) cat.shake();
-    if (this.rescue >= k.bowAfter && !this.turned && !cat.busy) {
+    if (this.rescue >= k.bowAfter && !this.turned && !cat.busy && !cat.shaking) {
       this.turned = true;
       cat.hop(FOREDECK, { frame: boat.group, floor: foredeckAt, yaw: Math.PI, then: 'sit', look: this.head, arc: 0.3 }, () => {
         cat.curious = this.satchel;

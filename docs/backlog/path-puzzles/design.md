@@ -1059,6 +1059,65 @@ above cover the final changes. No merge or deployment. Evidence: `/tmp/updraft-c
 `rescue-portrait-final.log`, `tree-final.log`, `bell-mist.log`, `sequence.log` and `contact-six-pass.log`.
 
 
+### Tub control and rescue sound correction — 2026-10-10
+
+Jeremy's follow-up, verbatim:
+
+> the tub is still auto drifting towards it's checkpoint. I told you to remove that holy shit.
+
+> omg you even removed the cat shaking off it's water, you literally cut the music off in hte middle of what it was playing after the rescue sequence, and you removed the becalming tone. That was NOT what i asked you to do.
+
+Jeremy corrected the interpretation before any attraction changes were made:
+
+> holy shit, checkpoint attraction is fine. I literally did not move the tub and it started drifting on it's own
+
+Keep checkpoint attraction. Reopen items 56 and 69 and verify the actual sound and visible sequence, not only
+state flags. Reproduce and fix movement before the player has touched the tub. Make the cat's shake visible and
+let it complete before the bow hop, give the rescue music a natural ending, retain the becalming tone, then keep
+the windless drift free of music. Work remains on the port 5331 review branch.
+
+> also, now when the child reaches the bellfry tower, the red boat literally appears out of thin air. I thought you said you were going to test a cheaper fog? where the hell is that cheaper fog? stop being lazy. do a good job
+
+Make cheaper mist the review default, with `villagefog=0` explicitly disabling it for comparison, and verify
+the whole tower approach and boat relocation/reveal instead of beginning the visual check at the bell checkpoint.
+
+> also, if the player rapidly makes wind with the bell in the, it gets stuck on one side and never actually plays anything.
+
+Verify repeated and alternating bell strokes, including sustained fast wind, and prevent a pinned silent bell.
+
+> - also add a kite in the water or something where the child gets picked up.
+> - when the child sets up during the storm sequence, the same godahm music is playing instead of getting darker like on main branch, and the boat is moving way too fast. you made it into a speed boat.
+
+Clarify the pickup marker's intended appearance; compare the storm's actual speed and music transition to main
+and restore the intended darkening and pace. No island relocation; the earlier request was a modestly longer
+distance, not a faster crossing.
+
+Jeremy clarified:
+
+> throughout the entire game, each exit point is marked by the kite motif. for this drowned village scene, at the pick up point, there should be a kite floating in the water or something
+
+Use the established kite motif as a floating marker at the belfry pickup, not a generic light or outline.
+
+Current follow-up list (all authorized):
+- 56 reopened: the approaching hull pushed the untouched tub. Start it outside that path, retaining attraction
+  after player input. Full-entry CPU tests now measure zero drift; the old start fails at 0.389 m.
+- 69 reopened: visible shake, two seconds of sailing, the becalming tone, then a quiet drift. Use a temporary
+  score rest rather than permanent silence, which also muted later cues. Rendered audio contains the tone;
+  visual verification includes the shake itself rather than only the aboard state.
+- 71 reopened: cheap mist is the review default. Full tower-foot → woods capture shows the boat hidden before
+  ringing and its lantern answering through the mist; no extra query parameter is needed.
+- 72: rapid strokes pinned the bell before a strike. Each swing now completes before another is accepted;
+  30/60/120 Hz rapid and alternating tests ring repeatedly and settle after input stops.
+- 73: reuse the paper kite and its bow tail, floating clear of the belfry pickup berth.
+- 74: storm music follows the weather instead of a 32-second major passage. Sail at 4.5 m/s through the same
+  modest bend, retaining the lighthouse's longer shine and every island's position. Main measures about
+  5.8 m/s too, but the review's closer camera makes that speed feel faster. The crossing now takes 53–56 s.
+- 75 found during verification: fading note envelopes dropped out before the forest crossfade ended. Hold
+  sustained notes through that fade; the rendered continuity check now passes (497 score checks total).
+
+Evidence and final verification status: build_plan.md, “Follow-up regressions — 2026-10-10”, and
+`/tmp/updraft-tub-manual-ImGNBj/`. Work stays on the review branch; no merge or deployment.
+
 ### Earlier departure rulings and verification
 
 Asked whether to move the later islands together or use a longer curved route, Jeremy answered, verbatim:

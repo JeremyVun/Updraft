@@ -682,7 +682,7 @@ export const CAT_EDGE = onCatRoof(CAT_EDGE_ALONG, CAT_ROOF.depth - 0.85);
  */
 const OFF_BOW = atHold(2.4, 1.6);
 const EDGE_ON_WATER = new THREE.Vector2(CAT_EDGE.x, CAT_EDGE.z);
-export const TUB_START = OFF_BOW.clone().lerp(EDGE_ON_WATER, 0.42);
+export const TUB_START = atHold(2.4, -1.6).lerp(EDGE_ON_WATER, 0.42);
 export const TUB_WATER = (() => {
   const mid = OFF_BOW.clone().lerp(EDGE_ON_WATER, 0.5);
   return { x: mid.x, z: mid.y, r: 5 };

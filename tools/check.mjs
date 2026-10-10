@@ -18,7 +18,7 @@ const mechanics = [
   'sleeping-logic', 'wing-care', 'wood-logic', 'ending-view',
   'camera-direction', 'crossing-camera', 'crossing-haze', 'dream-story', 'drowned-camera',
   'foghorn-story', 'frame-pacer', 'geography', 'journey-reveal', 'piano-growth', 'piano-logic',
-  'plane-routing', 'scarf-normals', 'pointer-pick', 'drowned-gating', 'drowned-contact', 'drowned-rescue-polish', 'drowned-rescue-sequence', 'drowned-farewell',
+  'plane-routing', 'scarf-normals', 'pointer-pick', 'drowned-gating', 'drowned-contact', 'drowned-rescue-polish', 'drowned-rescue-sequence', 'drowned-bell', 'drowned-farewell',
 ];
 const browser = [
   'shader-browser', 'lantern-fog', 'stairs-fog', 'touch-viewport', 'chapter-view-browser', 'context-loss', 'start',
@@ -28,7 +28,7 @@ const browser = [
 const audio = [
   'arrival-audio', 'audio', 'audio-continuity', 'audio-direction', 'birches-foley', 'birches-score',
   'boats-score', 'dream-score', 'gesture-harmony', 'homeward-audio', 'lines-score', 'marine-audio',
-  'meadow-score', 'opening-score', 'piano-audio', 'sea-score', 'sleeping-score',
+  'meadow-score', 'opening-score', 'piano-audio', 'sea-score', 'sleeping-score', 'drowned-audio-regression',
 ];
 const groups = { quick, mechanics, browser, audio, release: [...mechanics, ...browser, ...audio, 'playthrough'] };
 const group = process.argv[2] ?? 'quick';

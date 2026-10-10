@@ -35,7 +35,7 @@ const { drownedCast, stormCast } = await import('./lib/storm-cast.mjs');
 const drownedWind = (gust) => ({ breeze: new THREE.Vector2(2.47, -0.80), calm: 3, addSplat() {},
   sample(_x, _z, out) { return Object.assign(out, { x: this.breeze.x + gust, z: this.breeze.y - gust, energy: gust !== 0 ? 0.8 : 0, lift: 0 }); } });
 // The storm from her seated aboard at the nave to the forest beach: the look back at the cat, out round the church on
-// the first air, past the lighthouse's side as its light goes out, the plane lost in the dark and the landing about 49 s
+// the first air, past the lighthouse's side as its light goes out, the plane lost in the dark and the landing about 55 s
 // after casting off, whatever the player's wind and the frame rate.
 const report = [];
 for (const [gust, fps] of [[0,60], [8,60], [0,30], [8,30], [40,60], [-40,60]]) {
@@ -71,9 +71,9 @@ for (const [gust, fps] of [[0,60], [8,60], [0,30], [8,30], [40,60], [-40,60]]) {
       assert(snatch > castOff + tuning.storm.lighthouseOutAt + 4 && snatch < time - 7,
         `the plane must be taken in the dark, with the last stretch still to go: ${snatch} of ${time}`);
       assert.equal(cast.plane.visible, false, 'plane must be gone before shore');
-      assert(time >= castOff + 44 && time <= castOff + 62, `storm duration ${time}`);
+      assert(time >= castOff + 52 && time <= castOff + 78, `storm duration ${time}`);
       assert(mostLegTurn < Math.PI, `boat circles a waypoint: ${mostLegTurn}`);
-      assert(sailingSpeed / sailingFrames > 4.5, `ordinary sailing speed: ${sailingSpeed / sailingFrames}`);
+      assert(sailingSpeed / sailingFrames > 3.7 && sailingSpeed / sailingFrames <= 4.51, `storm sailing speed: ${sailingSpeed / sailingFrames}`);
       assert.equal(gusts.reduce((sum, g) => sum + g.count, 0), 2, 'two wind traces across the release');
       assert(gusts[1].time - gusts[0].time >= 0.6, 'wind traces arrive separately');
       assert(outAt < 115, `the light must remain near enough to see: ${outAt}`);

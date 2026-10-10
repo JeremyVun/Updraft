@@ -7,10 +7,10 @@ import { tuning } from '../tuning';
  * The drowned village's music, in the game's own voices: the detuned pad of the other rooms, the meadow's piano, its
  * soft sung voice and pluck. One tune belongs to the boat. It drifts in B minor turning to D; it is lost with the boat
  * in the fog, where only a sighing line climbs over a low tolling piano; a lullaby waits with the kittens; and when the
- * boat answers the bell it comes back in D major. The farewell sings its last phrase home to D, then the dark comes.
- * A piece the story leaves plays on to its next chord change, and the next begins there.
+ * boat answers the bell it comes back in D major. The farewell accompanies her look back; the storm brings D minor.
+ * Pieces hand over at chord changes, except the storm, whose darkening follows the weather immediately.
  */
-export type DrownedScorePhase = 'drift' | 'fog' | 'refuge' | 'home' | 'farewell';
+export type DrownedScorePhase = 'drift' | 'fog' | 'refuge' | 'home' | 'farewell' | 'storm';
 
 type Voice = 'pad' | 'piano' | 'soft' | 'pluck';
 /** For the piano `level` is how hard the key is struck. */
@@ -174,22 +174,22 @@ const ANSWER: Line = [
 ];
 const COLD: Line = [[1, 62, 2], [3, 64, 1], [4, 65, 4], [16.5, 67, 2.5], [19, 65, 1], [20, 64, 4], [25, 62, 5]];
 function farewell(): Section {
-  const dark = 32, fainter = 64, goodbye: Chord[] = [[0, [43, 50, 59, 66]], [8, [42, 50, 57, 64]], [16, [40, 47, 55, 62]],
+  const goodbye: Chord[] = [[0, [43, 50, 59, 66]], [8, [42, 50, 57, 64]], [16, [40, 47, 55, 62]],
     [20, [45, 52, 57, 64]], [24, [38, 50, 57, 66]]];
+  return section(32, goodbye, [[...pad(goodbye, 32, .005), ...sing('piano', ANSWER, EIGHTH, .25, { pan: .08 }),
+    ...sing('soft', ANSWER, EIGHTH, .0018, { shift: -12, pan: -.06 })]], 24);
+}
+
+function storm(): Section {
   const round: Chord[] = [[0, [38, 45, 53, 64]], [8, [38, 46, 53, 57]], [16, [38, 46, 55, 57]], [24, [38, 45, 50, 52]]];
-  const at = (from: number) => round.map(([t, tones]): Chord => [from + t, tones]);
-  const storm = (from: number, level: number) => pad(round, 32, level).map((n) => ({ ...n, at: n.at + from }));
-  const cold = (from: number, level: number) => sing('soft', COLD, 1, level, { from });
-  const first = [...pad(goodbye, dark, .005), ...sing('piano', ANSWER, EIGHTH, .25, { pan: .08 }),
-    ...sing('soft', ANSWER, EIGHTH, .0018, { shift: -12, pan: -.06 }), ...storm(dark, .0036), ...cold(dark, .0024)];
-  return section(fainter + 32, [...goodbye, ...at(dark), ...at(fainter)], [
-    [...first, ...storm(fainter, .0024), ...cold(fainter, .0015)],
-    [...first, ...storm(fainter, .0024)],
-  ], fainter);
+  return section(32, round, [
+    [...pad(round, 32, .0036), ...sing('soft', COLD, 1, .0024)],
+    [...pad(round, 32, .0024), ...sing('soft', COLD, 1, .0015)],
+  ]);
 }
 
 export const DROWNED_SECTIONS: Record<DrownedScorePhase, Section> = {
-  drift: drift(), fog: fog(), refuge: refuge(), home: home(), farewell: farewell(),
+  drift: drift(), fog: fog(), refuge: refuge(), home: home(), farewell: farewell(), storm: storm(),
 };
 
 interface Part {
@@ -203,6 +203,7 @@ interface Part {
   until: number;
   stopped: boolean;
   voices: Set<AudioScheduledSourceNode>;
+  envelopes: Set<AudioParam>;
 }
 const hz = (midi: number) => 440 * 2 ** ((midi - 69) / 12);
 /** The tune's piano a little nearer than the bedside piano's 0.32: high notes die quickly and the tune is the point. */
@@ -232,7 +233,7 @@ export class DrownedScore {
     if (!this.current) this.current = this.begin(phase, now + .08);
     let part = this.current;
     if (phase === part.phase) part.until = Infinity;
-    else if (part.until === Infinity) part.until = this.nextChange(part, now + .3);
+    else if (part.until === Infinity) part.until = phase === 'storm' ? now + .3 : this.nextChange(part, now + .3);
     if (part.until <= now + .25) {
       this.release(part, part.until, tuning.audio.drownedCrossFade);
       part = this.current = this.begin(phase, part.until);
@@ -273,7 +274,7 @@ export class DrownedScore {
   private begin(phase: DrownedScorePhase, epoch: number): Part {
     const out = this.gates(this.output, 1);
     const part: Part = { phase, out, piano: this.makePiano(out), epoch, cycle: 0, next: 0, until: Infinity,
-      stopped: false, voices: new Set() };
+      stopped: false, voices: new Set(), envelopes: new Set() };
     this.parts.add(part);
     return part;
   }
@@ -283,6 +284,8 @@ export class DrownedScore {
     part.stopped = true;
     part.until = at;
     const now = this.output.ctx.currentTime;
+    // Let the bus fade carry held notes across the handoff instead of losing their tails underneath it.
+    for (const envelope of part.envelopes) envelope.cancelAndHoldAtTime(Math.max(now, at));
     for (const gain of [part.out.bus, part.out.reverb]) {
       // A crossing scheduled for a later phrase end can be brought forward by a stop.
       gain.gain.cancelAndHoldAtTime(Math.max(now, at));
@@ -326,6 +329,7 @@ export class DrownedScore {
     const attack = pad ? 1.8 : .4, release = pad ? 2.4 : 1.6;
     const envelope = pluck ? null : ctx.createGain();
     if (envelope) {
+      part.envelopes.add(envelope.gain);
       envelope.gain.setValueAtTime(0, at);
       envelope.gain.linearRampToValueAtTime(note.level, at + attack);
       envelope.gain.setValueAtTime(note.level, at + Math.max(attack, note.duration));
@@ -350,7 +354,10 @@ export class DrownedScore {
       osc.connect(gain).connect(envelope ?? filter);
       osc.onended = () => {
         osc.disconnect(); gain.disconnect();
-        if (--remaining === 0) { envelope?.disconnect(); filter.disconnect(); pan.disconnect(); send.disconnect(); }
+        if (--remaining === 0) {
+          if (envelope) part.envelopes.delete(envelope.gain);
+          envelope?.disconnect(); filter.disconnect(); pan.disconnect(); send.disconnect();
+        }
       };
       this.track(part, osc); osc.start(at); osc.stop(end);
     }

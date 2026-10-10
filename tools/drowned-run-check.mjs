@@ -28,7 +28,7 @@
 //        two between, and through the church), FILM=<seconds> with SHOTS also
 //        saves a still every that many seconds from the air dying (FILMFROM=cat from the tub's puzzle; from the ridge
 //        with FROM=roofs, the tower's foot with FROM=church, her aboard with FROM=storm) to the forest beach, and with FROM=stairs through the descent in the white and 30 s on,
-//        TO=nave stops at the tower's foot, TO=tree once she is over the tree and the lens has gone round to the sheet, TO=swing once
+//        TO=pickup stops as she boards the returned boat, TO=nave stops at the tower's foot, TO=tree once she is over the tree and the lens has gone round to the sheet, TO=swing once
 //        she is on the swing (with the walks' measures), TO=ridge once she is up on the first roof after the cat, VIDEO=<dir> records the whole play as a webm there, W/H viewport
 //        (default 1600x900), LENS=1 also fails on the lens's measures (a roof hiding her, her walking toward it, her
 //        out of frame, it inside a roof, it whipping round, the old tree hiding her after the mill; and at the church, from the tower's foot until the
@@ -64,7 +64,7 @@ try {
   page = await context.newPage();
   recordedFrom = Date.now();
   page.on('pageerror', (e) => errors.push(e.message));
-  await page.goto(`${base}?shot=1&chapter=${fromStorm ? 'storm' : fromBelfry ? 'belfry' : fromChurch ? 'church' : fromRoofs ? 'roofs' : fromStairs ? 'stairs' : 'drowned'}&ratio=1&villagefog=${process.env.FOG ?? '1'}`, { waitUntil: 'load' });
+  await page.goto(`${base}?shot=1&chapter=${fromStorm ? 'storm' : fromBelfry ? 'belfry' : fromChurch ? 'church' : fromRoofs ? 'roofs' : fromStairs ? 'stairs' : 'drowned'}&ratio=1${process.env.FOG ? `&villagefog=${process.env.FOG}` : ''}`, { waitUntil: 'load' });
   await page.waitForFunction(() => window.__ready === true, null, { timeout: 60000 });
 
   /** VOICES=<file>: every sound the cat and each kitten makes, and how strongly its call marks showed through each call. */
@@ -511,14 +511,33 @@ try {
     await page.evaluate(() => {
       const b = __game.story.current.church.bell, was = b.onRing;
       window.__heard = [];
-      b.onRing = (strength) => { __heard.push({ at: performance.timeOrigin + performance.now(), peak: b.peak }); was?.(strength); };
+      b.onRing = (strength) => { __heard.push({ at: performance.timeOrigin + performance.now(), time: __stats.time, peak: b.peak }); was?.(strength); };
     });
     await seconds(1);
     await shot('bell');
     /** Strokes across the bell, each once it has come back near rest, until the lantern has answered four rings. */
     const rang = [];
     let bellStrokes = 0;
-    for (; bellStrokes < 40; bellStrokes++) {
+    if (process.env.RAPID) {
+      const start = Date.now();
+      while ((await look()).rings < T.rings && Date.now() - start < 30000) {
+        const aim = await page.evaluate(() => {
+          const b = __game.story.current.church.bell, cam = __game.rig.camera;
+          const p = b.middle(cam.position.clone()).project(cam), h = b.screenHeading(cam);
+          return { x: (p.x + 1) * .5, y: (1 - p.y) * .5, dx: Math.cos(h), dy: -Math.sin(h) };
+        });
+        const direction = bellStrokes++ % 2 ? -1 : 1;
+        for (let i = 0; i <= 8; i++) {
+          const along = (i / 8 - .5) * height * .22 * direction;
+          await page.mouse.move(aim.x * width + aim.dx * along, aim.y * height + aim.dy * along);
+          await page.waitForTimeout(12);
+        }
+      }
+      assert.equal((await look()).rings, T.rings, 'rapid alternating strokes ring the bell four times');
+      await wait(s => s.answered === T.rings, 8, 'the boat answering rapid rings');
+      await shot('rapid-bell');
+    }
+    for (; !process.env.RAPID && bellStrokes < 40; bellStrokes++) {
       const s = await look();
       if (s.step !== 'ring' || s.rings >= T.rings) break;
       for (let i = 0; i < 24 && Math.abs((await look()).bell) > 0.08; i++) await seconds(0.25);
@@ -550,7 +569,7 @@ try {
     for (const r of rang) {
       console.log(`  ring ${r.ring} at ${(r.time - beats.ring).toFixed(1)} s: the boat ${r.boatBefore.toFixed(1)} m from the berth, ${r.boatAfter.toFixed(1)} m after it answered; the fog's top ${r.level} m; the lantern on screen at ${r.lantern.slice(0, 2).join(', ')}`);
     }
-    assert.equal(rang.length, T.rings, `the bell rang ${rang.length} times in ${bellStrokes} strokes`);
+    assert.equal(process.env.RAPID ? heard.length : rang.length, T.rings, `the bell rang ${rang.length} times in ${bellStrokes} strokes`);
     for (let i = 1; i < rang.length; i++) assert(rang[i].boatAfter < rang[i - 1].boatAfter - 2, `the lantern did not come nearer at ring ${rang[i].ring}`);
     for (const r of rang) assert(r.lantern[2] < 1 && Math.abs(r.lantern[0]) < 0.95 && Math.abs(r.lantern[1]) < 0.95, `the lantern was out of frame when it answered ring ${r.ring}`);
     const bring = await wait((s) => s.step === 'down', 20, 'the boat hers to sail home');
@@ -583,6 +602,17 @@ try {
     const berth = (await look()).boat;
     await seconds(1.0);
     await shot('church-boarding');
+    const kite = await page.evaluate(() => {
+      const marker = __game.departureKites.markers.drowned, mesh = marker.sail.children[0];
+      const positions = mesh.geometry.getAttribute('position'), p = marker.position.clone();
+      mesh.updateWorldMatrix(true, false);
+      const corners = Array.from({ length: positions.count }, (_, i) =>
+        p.fromBufferAttribute(positions, i).applyMatrix4(mesh.matrixWorld).project(__game.rig.camera).toArray());
+      return { visible: marker.group.visible, corners };
+    });
+    assert(kite.visible && kite.corners.every(([x, y, z]) => Math.abs(x) < .98 && Math.abs(y) < .98 && z < 1),
+      `the floating pickup kite is cropped: ${JSON.stringify(kite)}`);
+    if (process.env.TO === 'pickup') return;
     const aboard = await wait((s) => s.aboardFor >= 0, 15, 'her seated aboard');
     const pushed = d(xz(aboard.boat), xz(berth));
     const blink = await wait((s) => s.aboardFor >= T.blinkAt + 0.5, 10, 'the cat\'s slow blink');
@@ -611,10 +641,10 @@ try {
     await storm(aboard, atNave);
     const w = await page.evaluate(() => window.__churchWatch);
     if (!fromBelfry) {
-      console.log(`church: she followed the cat up the ivy ${(beats.climbFrom - atNave).toFixed(1)} s after the tower's foot, was in over the kittens at ${(beats.nest - atNave).toFixed(1)} s, looking out over the fog sea at ${(beats.sea - atNave).toFixed(1)} s, the bell hers at ${(beats.ring - atNave).toFixed(1)} s and first rung at ${(rang[0].time - atNave).toFixed(1)} s`);
+      console.log(`church: she followed the cat up the ivy ${(beats.climbFrom - atNave).toFixed(1)} s after the tower's foot, was in over the kittens at ${(beats.nest - atNave).toFixed(1)} s, looking out over the fog sea at ${(beats.sea - atNave).toFixed(1)} s, the bell hers at ${(beats.ring - atNave).toFixed(1)} s and first rung at ${(heard[0].time - atNave).toFixed(1)} s`);
       console.log(`  the cat waited in the arch from ${(w.catArch - atNave).toFixed(1)} s (her feet ${w.archHer.toFixed(1)} m up), went in to its kittens at ${(w.catIn - atNave).toFixed(1)} s, they woke at ${(w.woke - atNave).toFixed(1)} s, and one came to her at ${w.kittenCame === null ? 'never' : (w.kittenCame - atNave).toFixed(1) + ' s'}`);
     }
-    console.log(`  the bell rang four times in ${bellStrokes} strokes over ${(rang[rang.length - 1].time - rang[0].time).toFixed(1)} s; the sail hers ${(bring.time - rang[rang.length - 1].time).toFixed(1)} s after the last ring`);
+    console.log(`  the bell rang four times in ${bellStrokes} strokes over ${(heard.at(-1).time - heard[0].time).toFixed(1)} s; the sail hers ${(bring.time - heard.at(-1).time).toFixed(1)} s after the last ring`);
     console.log(`  the boat home ${(home.time - bring.time).toFixed(1)} s after it was hers to sail, with ${strokes} strokes; her aboard ${(aboard.time - bring.time).toFixed(1)} s after${berthed.carrying ? ' (the safety valve carried it)' : ''}; the storm ${(aboard.time - atNave).toFixed(1)} s + the look up after the tower's foot`);
     console.log(`  the cat was on the sill to see her off ${w.catSill === null ? 'never' : (w.catSill - bring.time).toFixed(1) + ' s after the sail was hers, ' + (w.seated - w.catSill).toFixed(1) + ' s before she sat down'}; both stayed at the window: ${w.sillLeft === null}`);
     console.log(`  at the slow blink the cat was ${onSill(blink.cat) ? 'on' : 'off'} the sill, ${seenAtBlink.px.toFixed(0)} px tall at ${seenAtBlink.cat.map((v) => v.toFixed(2)).join(', ')} in the frame, the kitten ${onSill(blink.kitten) ? 'on' : 'off'} it at ${seenAtBlink.kitten.map((v) => v.toFixed(2)).join(', ')}, her face at ${seenAtBlink.her.map((v) => v.toFixed(2)).join(', ')}`);
@@ -1191,11 +1221,13 @@ try {
   }
   if (!toNave) {
     await church();
-    for (let t = 0; t < 30 && (await page.evaluate(() => __game.story.name)) !== 'wood'; t += 0.25) await seconds(0.25);
-    assert.equal(await page.evaluate(() => __game.story.name), 'wood', 'the landing never handed on to the dark wood');
-    await seconds(3);
-    await shot('wood');
-    console.log(`on into the dark wood at ${(await page.evaluate(() => __stats.time)).toFixed(1)} s`);
+    if (process.env.TO !== 'pickup') {
+      for (let t = 0; t < 30 && (await page.evaluate(() => __game.story.name)) !== 'wood'; t += 0.25) await seconds(0.25);
+      assert.equal(await page.evaluate(() => __game.story.name), 'wood', 'the landing never handed on to the dark wood');
+      await seconds(3);
+      await shot('wood');
+      console.log(`on into the dark wood at ${(await page.evaluate(() => __stats.time)).toFixed(1)} s`);
+    }
   }
   const motion = await page.evaluate(() => window.__lensWatch);
   console.log(`the lens turned at most ${motion.turn.toFixed(1)} deg/s (${motion.turnAt}) and moved at most ${motion.move.toFixed(1)} m/s (${motion.moveAt})`);

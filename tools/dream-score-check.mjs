@@ -52,7 +52,7 @@ try {
     check(tune('drift',32,56,8)===tune('home',32,56),'The boat\'s question comes back unchanged when the boat comes home');
     const question=DROWNED_SECTIONS.drift.notes.filter(n=>n.voice==='piano'&&n.at>=40&&n.at<44.1).map(n=>n.midi%12);
     check(JSON.stringify(question)===JSON.stringify([2,4,6,11]),'The drift asks the piano\'s question, D–E–F♯–B');
-    const storm=DROWNED_SECTIONS.farewell.chords.filter(c=>c.at>=DROWNED_SECTIONS.farewell.chords.find(c=>c.tones.some(m=>m%12===5)).at);
+    const storm=DROWNED_SECTIONS.storm.chords;
     check(storm.every(c=>c.tones.some(m=>m%12===2)&&c.tones.some(m=>m%12===9)),'Every chord of the dark keeps D and A for the wood\'s drone');
 
     // Crossings: a piece the story leaves plays on to its next chord change, and the next one starts there.
@@ -73,7 +73,7 @@ try {
     const quick=conducted(t=>t<5?'refuge':t<6?'home':'farewell',30);
     check(!quick.some(n=>n.phase==='home')&&quick.some(n=>n.phase==='farewell'&&Math.abs(n.when-8.08)<.2),'Several requests before a change go straight to the latest');
 
-    const t=new ArrivalTransition(),v={...baseState,music:'drowned',drownedScore:'farewell',hush:.85};
+    const t=new ArrivalTransition(),v={...baseState,music:'drowned',drownedScore:'storm',hush:.85};
     t.update(v,0);
     const first=t.update({...v,arrivalMusic:'wood'},10);
     check(first.legato&&first.stage==='blend'&&first.background.music==='wood','Drowned to Wood begins an overlap without a gap');
@@ -84,7 +84,7 @@ try {
 
     async function render(name,kind,seconds) {
       const {ctx,sound}=offlineSound(seconds),history=[],retiring=[];
-      let reverb=null,oldScore=null,gateMin=1,blooms=0;
+      let reverb=null,oldScore=null,gateMin=1,blooms=0,forestStarted=null,forestTuned=false;
       const originalChime=sound.chime.bind(sound),notes=[];
       sound.chime=(...a)=>{notes.push(a);originalChime(...a);};
       for(const method of ['cricket','owl','skylark','peep','bugle'])sound[method]=()=>{};
@@ -100,8 +100,8 @@ try {
             cues:[42,64,86].includes(now)?['star']:[],silence:now>=114,
             gust:now>=20&&now<21?6:0,charge:now>=66&&now<67?.2:0};
         } else {
-          // The storm reaches the wood once the farewell's dark has gone round to its fainter body.
-          state={...baseState,music:'drowned',drownedScore:'farewell',hush:now<22?.6:.85,land:0,sea:1,
+          // The farewell darkens with the storm before the forest handoff.
+          state={...baseState,music:'drowned',drownedScore:now<10?'farewell':'storm',hush:now<22?.6:.85,land:0,sea:1,
             night:.55+Math.min(1,now/20)*.45,shower:Math.min(1,now/14),breeze:1,
             arrivalMusic:now>=W&&now<W+8?'wood':undefined,
             ...(now>=W+8?ARRIVAL_MUSIC.wood:{}),
@@ -118,8 +118,12 @@ try {
         if(name==='drowned') {
           if(now===W-1)reverb=sound.reverbConvolver;
           if(now>=W){gateMin=Math.min(gateMin,sound.backgroundGate.gain.value,sound.wetGate.gain.value);check(sound.reverbConvolver===reverb,`wood ${now}: the shared reverb survives`);}
-          if(now===W+.125)check(sound.padVoices.every((v,i)=>Math.abs(v.osc[0].frequency.value-440*2**(([38,45,50,57][i]-69)/12))<.01),
-            'Forest pad starts on the shared D/A pitches before becoming audible');
+          if(sound.arrivalTransition.stage==='blend')forestStarted??=now;
+          if(forestStarted!==null&&!forestTuned&&now>=forestStarted+.125) {
+            check(sound.padVoices.every((v,i)=>Math.abs(v.osc[0].frequency.value-440*2**(([38,45,50,57][i]-69)/12))<.01),
+              'Forest pad starts on the shared D/A pitches at the musical handoff');
+            forestTuned=true;
+          }
         }
         const phase=scoreOf()?.current?.phase??sound.mood;
         if(history.at(-1)?.phase!==phase)history.push({now,phase,stage:sound.arrivalTransition.stage});
@@ -140,7 +144,7 @@ try {
         check(windows.slice(W-3,W+13).every(db=>db>-65),`${kind}: music remains audible across the village/forest boundary`);
         check(!notes.some(n=>n[6]&&n[3]>=W+1&&n[3]<W+2)&&notes.some(n=>n[6]&&n[3]>=W+9&&n[3]<W+10),`${kind}: musical wind begins in the actual forest, not the departing village`);
         const jumps=windows.slice(W-2,W+11).slice(1).map((db,i)=>Math.abs(db-windows[W-2+i]));
-        if(kind==='music')check(Math.max(...jumps)<6,'Forest overlap has no one-second loudness jump over 6 dB');
+        if(kind==='music')check(Math.max(...jumps)<6,`Forest overlap has no one-second loudness jump over 6 dB: ${Math.max(...jumps).toFixed(2)}; ${JSON.stringify(windows.slice(W-2,W+11).map(n=>+n.toFixed(1)))}; ${JSON.stringify(history)}`);
       }
       const encoded=encodeAudio(buffer);check(encoded.clipped===0,`${name}/${kind}: no clipping`);
       renders.push({name,kind,history,gateMin,blooms,windows,...encoded});

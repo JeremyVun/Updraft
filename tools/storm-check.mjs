@@ -33,7 +33,7 @@ function verify() {
   const end = window.stormLog.find(b => b.beat === 'wood:ashore');
   const seconds = end.time - start.time;
   if (__game.glider.group.visible) throw new Error('Lost plane still visible at shore');
-  if (seconds < 44 || seconds > 62) throw new Error(`Storm-to-shore took ${seconds}s`);
+  if (seconds < 52 || seconds > 78) throw new Error(`Storm-to-shore took ${seconds}s`);
   if (window.thunderLog.length < 3 || window.thunderLog.some(t => !t.running)) throw new Error('Missing audible thunder event');
   // The foghorn's tail has gone before the first thunder.
   if (window.thunderLog.some(t => t.time - start.time < 15)) throw new Error('Thunder before the storm is established');

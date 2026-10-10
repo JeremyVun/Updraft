@@ -952,6 +952,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   soundState.homeEndingTime = story.current.homeEndingTime;
   soundState.mirrorScore = story.current.mirrorScore;
   soundState.drownedScore = story.current.drownedScore;
+  soundState.drownedQuiet = story.current.drownedQuiet;
   soundState.seaScore = story.current.seaScore;
   soundState.sleepingScore = story.current.sleepingScore;
   soundState.meadowScore = story.current.meadowScore;

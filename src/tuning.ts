@@ -2095,7 +2095,7 @@ export const tuning = {
       lostFor: 3,
     },
     rescue: {
-      shakeAt: 0.35, bowAfter: 2.1, goOnAfter: 0.4, sailFor: 2,
+      shakeAt: 0.65, bowAfter: 2.5, goOnAfter: 0.4, sailFor: 2,
     },
   },
   drownedCamera: {
@@ -2532,11 +2532,12 @@ export const tuning = {
    * The storm, from her seated aboard at the nave to the forest beach, in seconds from casting off: the calm turning to
    * wind by `windBy`, the lighthouse's call at `foghornAt`, its light failing and out at `lighthouseOutAt` as the fog
    * closes round (`drowned.church.fog.closeAfter`), the night come by `darkBy`, the cygnet's shaking at
-   * `shakeAt`, the plane taken at `gatherFor`, and the beach about 49 s out.
+   * `shakeAt`, the plane taken at `gatherFor`, and the beach about 55 s out.
    */
   storm: {
-    /** The normal passage ceiling through the village and the storm, m/s. */
+    /** Normal arrival speed, then the storm's closer-view sailing pace, m/s. */
     passageSpeed: 5.8,
+    sailingSpeed: 4.5,
     /**
      * How near a turn of its way out counts as rounded, metres; enough lead for the hull at normal sailing speed.
      */

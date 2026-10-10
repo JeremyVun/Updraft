@@ -1291,6 +1291,39 @@ Port 5331 remains the review server: `villagefog=mist` selects the trial, `villa
 default omits fog for comparison. Production remains on the original renderer. No merge/deploy.
 Evidence and captures: `/tmp/updraft-cat-polish-gJ6o1k/`.
 
+#### Follow-up regressions — 2026-10-10
+
+Jeremy's verbatim corrections are in design.md, “Tub control and rescue sound correction”. Keep checkpoint
+attraction: the untouched movement came from the approaching boat pushing the tub, not that assistance.
+The tub starts outside the hull's approach; its horizontal displacement is zero over 90 seconds including the
+entire approach at 30/60/120 Hz. Restoring the old start fails with 0.389 m of movement. The previous test began
+after the hull stopped and missed the defect.
+
+The shake lands on the far half of the thwart facing the bow, settles for 0.65 s, completes before the bow hop,
+and the child stays seated. The temporary rest uses `drownedQuiet`, releasing the score over the two seconds
+of sailing without muting the cue bus. Actual Web Audio renders contain the becalming tone (-34.3 dBFS RMS),
+resume the fog score, and enter the storm score 0.125 s after the storm request. The farewell can no longer
+hold its major melody for 32 seconds into the storm. Sustained notes hold through the handoff fade so their
+natural envelopes cannot drop out early; the score's 497 checks, including the forest overlap, pass.
+Storm sailing is capped at 4.5 m/s (main measured 5.8 m/s;
+the review's closer camera makes that pace feel faster). The same curved route takes 53–56 seconds from casting
+off, the lighthouse stays lit until 34 seconds, and no islands or later crossings move.
+
+The cheaper mist is now the dev/QA default, `villagefog=0` explicitly disables it, and `villagefog=1` selects
+the original. Production remains on the original. A full tower-foot → woods replay with the mist passes;
+captures show the boat hidden before ringing and the lantern answering through the mist. Rapid bell strokes
+no longer reset the active swing: sustained/alternating input rings 8–9 times in 12 seconds at 30/60/120 Hz,
+then comes to rest. Single input rings once; weak/absent input does not ring.
+
+The complete rescue/stranding replay passes in both aspects, with the portrait capture showing the wet shake
+and its water droplets before the bow hop. Four rapid real-pointer rings take 4.7 seconds and the portrait
+tower-foot → woods replay passes: the boat answers, returns, and both cats stay at the window.
+The existing paper kite and bow tail float beside the pickup, on the bow's water side. Actual pickup replays
+pass in both aspects; a posed-corner framing check keeps the full diamond onscreen when she boards.
+Typecheck, production build, quick checks, focused mechanics and rendered audio pass. Evidence and the selected
+captures: `/tmp/updraft-tub-manual-ImGNBj/README.md`. The cheaper mist remains a review trial; original-fog
+fallback item 54 is still open, and no merge or deployment has been performed.
+
 #### Integration takeover — 2026-10-10
 
 Jeremy: "ok proceed". For this takeover he also approved Codex doing the remaining visual work:

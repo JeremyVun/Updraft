@@ -20,6 +20,22 @@ for (const fps of [30, 60, 120]) {
   const cast = drownedCast(wind); cast.carry = { stow() {} };
   const chapter = new DrownedChapter(cast), { cat, boat, child, village } = cast;
   const rescue = chapter.cat, tub = village.tub;
+  if (process.env.NEGATIVE === 'approach') {
+    const old = W.atHold(2.4, 1.6).lerp(new THREE.Vector2(W.CAT_EDGE.x, W.CAT_EDGE.z), .42);
+    tub.place(old.x, old.y, 0);
+  }
+  const untouched = tub.position.clone();
+  let untouchedDrift = 0;
+  for (let i = 0; i < fps * 90; i++) {
+    const dt = 1 / fps, t = i * dt;
+    wind.breeze.set(2.47, -.8).multiplyScalar(chapter.breeze);
+    chapter.update(dt, t); boat.update(dt, t); child.update(dt); cat.update(dt);
+    untouchedDrift = Math.max(untouchedDrift, Math.hypot(tub.position.x - untouched.x, tub.position.z - untouched.z));
+  }
+  assert(untouchedDrift < .001, `untouched tub moved during the boat approach: ${untouchedDrift}`);
+  assert.equal(rescue.step, 'waiting');
+  assert.equal(tub.sinceBrushed, Infinity);
+  rescue.begin();
   if(process.env.NEGATIVE==='input')tub.interactive=true;
   const camera = new THREE.PerspectiveCamera(50,16/9,.1,100);
   camera.position.copy(tub.position).add(new THREE.Vector3(0,10,10));camera.lookAt(tub.position);camera.updateMatrixWorld(true);
@@ -44,8 +60,11 @@ for (const fps of [30, 60, 120]) {
     if(chapter.beat==='still'&&calm===null){calm=t;moved=boat.position.distanceTo(releaseAt);}
     if(chapter.beat==='becalmed'&&grounded===null)grounded=t;
     if(rescue.step==='bolting'&&bolt===null)bolt=t;
-    if(chapter.beat==='still')assert(chapter.silence,'windless drift has no music');
-    if(rescue.rescuing&&i%Math.max(1,fps/30)===0) {
+    if(chapter.beat==='still') {
+      assert(chapter.drownedQuiet,'windless drift has no music');
+      assert(!chapter.silence,'temporary quiet must not mute cue sounds');
+    }
+    if((rescue.rescuing || rescue.step === 'boarding')&&i%Math.max(1,fps/30)===0) {
       const inverse=boat.group.matrixWorld.clone().invert();
       skin(cat,p=>{p.applyMatrix4(inverse);if(p.y>-.1&&p.y<4.8){const gap=Math.hypot(p.x,p.z-MAST_Z)-.07;if(gap<mast){mast=gap;mastAt={t,at:p.toArray(),doing:cat.doing,air:cat.air};}};});
       assert.equal(child.kneeling,0,'no pickup');

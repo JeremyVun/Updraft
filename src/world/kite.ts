@@ -7,6 +7,7 @@ import { Sway, feltWind, type WindField, type WindSample } from '../wind/field';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { heightAt } from './island';
 import { REFLECTION_LAYER } from './water/reflection';
+import { swellAt, type Swell } from './water/swell';
 
 const PAPER_VERT = /* glsl */ `
 in vec3 aPaper;
@@ -47,7 +48,11 @@ void main() {
   float through = max(-ndl, 0.0) * 0.5;
   float rim = pow(1.0 - clamp(dot(N, V), 0.0, 1.0), 3.0);
   vec3 col = alb * (hemiLight(N) * 1.05 + uSunColor * (max(ndl, 0.0) * 0.65 + through * 0.8) * sun) + uSunColor * rim * 0.18;
+  #ifdef WATER_KITE
+  gl_FragColor = vec4(applyFog(col, vWorld), nearFade(vWorld, 0.8, 1.5));
+  #else
   gl_FragColor = vec4(applyFog(col, vWorld), nearFade(vWorld, 3.0, 8.0));
+  #endif
 }`;
 
 const DRIFT_VERT = /* glsl */ `
@@ -112,6 +117,7 @@ const HALF = 1.72;
 const BOWS = 7;
 const TAIL_POINTS = 16;
 const TAIL_LENGTH = 9;
+const FLOAT_SCALE = 0.32;
 const CORD_POINTS = 18;
 const UP = new THREE.Vector3(0, 1, 0);
 
@@ -234,6 +240,8 @@ export class Kite {
   private shown = 0;
   private phase = 0;
   private asleep = true;
+  private readonly floating: boolean;
+  private readonly sea: Swell = { height: 0, slopeX: 0, slopeZ: 0 };
   /** Tied to something that moves (the bow of a boat) instead of its post, and flying ahead of it on this heading. */
   follow: THREE.Vector3 | null = null;
   ahead: number | null = null;
@@ -241,10 +249,11 @@ export class Kite {
   constructor(
     private readonly wind: WindField,
     berth: { x: number; z: number },
-    options: { offset?: readonly [number, number]; ground?: number; stringLength?: number; azimuth?: number; tiedTo?: 'post' | 'rail' } = {},
+    options: { offset?: readonly [number, number]; ground?: number; stringLength?: number; azimuth?: number; tiedTo?: 'post' | 'rail'; floating?: boolean } = {},
   ) {
     /** The original Lines tie-off is the default; each shore can put its post on dry ground. */
     this.stringLength = options.stringLength ?? tuning.linesToys.stringLength;
+    this.floating = options.floating ?? false;
     this.azimuth = options.azimuth ?? this.azimuth;
     const [dx, dz] = options.offset ?? [-11, 3];
     const x = berth.x + dx;
@@ -255,14 +264,15 @@ export class Kite {
     const drift = new THREE.ShaderMaterial({ uniforms: atmo.uniforms, vertexShader: DRIFT_VERT, fragmentShader: DRIFT_FRAG });
     const post = new THREE.CylinderGeometry(0.075, 0.095, 1.3, 6).rotateZ(0.16).translate(x, ground + 0.52, z);
     const log = new THREE.CylinderGeometry(0.16, 0.13, 1.8, 6).rotateZ(Math.PI / 2).rotateY(0.6).translate(x + 0.8, ground + 0.12, z + 0.55);
-    if (options.tiedTo !== 'rail') this.group.add(new THREE.Mesh(mergeGeometries([post, log]), drift));
+    if (options.tiedTo !== 'rail' && !this.floating) this.group.add(new THREE.Mesh(mergeGeometries([post, log]), drift));
 
-    const paper = new THREE.ShaderMaterial({ uniforms: atmo.uniforms, vertexShader: PAPER_VERT, fragmentShader: PAPER_FRAG, side: THREE.DoubleSide, alphaToCoverage: true });
+    const paper = new THREE.ShaderMaterial({ uniforms: atmo.uniforms, vertexShader: PAPER_VERT, fragmentShader: PAPER_FRAG, defines: this.floating ? { WATER_KITE: 1 } : {}, side: THREE.DoubleSide, alphaToCoverage: true });
     this.sail.add(new THREE.Mesh(sailGeometry(), paper));
     // A kite a few paces from the lens fills the frame, so the sail and its sticks give way early.
-    const spars = new THREE.ShaderMaterial({ uniforms: atmo.uniforms, vertexShader: DRIFT_VERT, fragmentShader: DRIFT_FRAG, defines: { LENS_FADE: 1 }, alphaToCoverage: true });
+    const spars = new THREE.ShaderMaterial({ uniforms: atmo.uniforms, vertexShader: DRIFT_VERT, fragmentShader: DRIFT_FRAG, defines: this.floating ? {} : { LENS_FADE: 1 }, alphaToCoverage: true });
     this.sail.add(new THREE.Mesh(sparGeometry(), spars));
     this.group.add(this.sail);
+    if (this.floating) this.sail.scale.setScalar(FLOAT_SCALE);
     this.group.add(this.cord.mesh);
     this.group.add(this.tailBatch.mesh);
 
@@ -309,6 +319,7 @@ export class Kite {
       return;
     }
     if (dt < 1e-4) return;
+    if (this.floating) { this.floatOnWater(time); return; }
     const k = tuning.linesToys;
     const air = feltWind(this.wind.sample(this.position.x, this.position.z, this.sample), this.wind.calm);
     this.sway.update(air.x, air.z, dt);
@@ -357,6 +368,28 @@ export class Kite {
     }
     this.streamTail(dt, time, air, speed);
     this.runCord(time, span, speed);
+  }
+
+  private floatOnWater(time: number): void {
+    swellAt(this.anchor.x, this.anchor.z, time, this.sea);
+    this.position.set(this.anchor.x, this.sea.height + 0.11, this.anchor.z);
+    this.sail.position.copy(this.position);
+    this.sail.rotation.set(-Math.PI / 2 + this.sea.slopeZ, -this.sea.slopeX, this.azimuth + Math.sin(time * 0.24) * 0.05);
+    this.sail.updateMatrixWorld();
+    this.cord.mesh.visible = false;
+    this.tail[0].copy(this.sail.localToWorld(this.a.set(0, -FOOT, 0)));
+    this.b.set(0, -1, 0).transformDirection(this.sail.matrixWorld).setY(0).normalize();
+    const dx = this.b.x, dz = this.b.z;
+    for (let i = 1; i < TAIL_POINTS; i++) {
+      const along = i * TAIL_LENGTH * FLOAT_SCALE / (TAIL_POINTS - 1);
+      const bend = Math.sin(along * 0.9 - time * 0.35) * 0.24 * Math.min(1, along);
+      const p = this.tail[i];
+      p.set(this.tail[0].x + dx * along - dz * bend, 0, this.tail[0].z + dz * along + dx * bend);
+      p.y = swellAt(p.x, p.z, time, this.sea).height + 0.045;
+    }
+    this.ribbon.width = 0.05;
+    this.tailBatch.update(this.ribbons);
+    this.dressTail();
   }
 
   /** Nose up the string, belly into the wind, banked into whichever way it is swinging. */
@@ -442,8 +475,9 @@ export class Kite {
         const dir = s === 0 ? -1 : 1;
         for (let v = 0; v < 3; v++) {
           const j = o + s * 9 + v * 3;
-          const out = v === 2 ? 0 : 0.52 * dir;
-          const along = v === 0 ? 0.3 : v === 1 ? -0.3 : 0;
+          const scale = this.floating ? FLOAT_SCALE : 1;
+          const out = v === 2 ? 0 : 0.52 * dir * scale;
+          const along = (v === 0 ? 0.3 : v === 1 ? -0.3 : 0) * scale;
           this.bowPos[j] = p.x + this.b.x * out + this.a.x * along;
           this.bowPos[j + 1] = p.y + this.b.y * out + this.a.y * along;
           this.bowPos[j + 2] = p.z + this.b.z * out + this.a.z * along;

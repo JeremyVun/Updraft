@@ -22,11 +22,12 @@ const studies = {
   '2-fog': { seconds: 200, phases: [[0, 'fog']], cues: [[0.5, 'becalmed']] },
   '3-refuge': { seconds: 72, phases: [[0, 'refuge']] },
   '4-home': { seconds: 136, phases: [[0, 'home']] },
-  '5-farewell': { seconds: 112, phases: [[0, 'farewell']], cues: [[14, 'foghorn']] },
+  '5-farewell': { seconds: 112, phases: [[0, 'farewell'], [10.6, 'storm']], cues: [[19.6, 'foghorn']] },
   '6-bell': { seconds: 96, phases: [[0, 'refuge'], [24.7, 'home']], rings: [24, 28.5, 33, 37.5] },
   sweep: {
     seconds: 500,
-    phases: [[0, 'drift'], [82, 'fog'], [282, 'refuge'], [RINGS[0] + 0.7, 'home'], [384, 'farewell']],
+    phases: [[0, 'drift'], [110, 'fog'], [282, 'refuge'], [RINGS[0] + 0.7, 'home'], [384, 'farewell'], [394.6, 'storm']],
+    quiet: [80, 110],
     cues: [[82, 'becalmed'], [398, 'foghorn']], rings: RINGS, wood: { from: 462, landed: 472 },
   },
 };
@@ -68,7 +69,8 @@ try {
         const now = [];
         while (cues.length && cues[0][0] <= t) now.push(cues.shift()[1]);
         const landed = wood && t >= study.wood.landed;
-        sound.update(tick, { ...baseState, music: 'drowned', drownedScore: phase, hush: 0.3,
+        sound.update(tick, { ...baseState, music: 'drowned', drownedScore: phase,
+          drownedQuiet: !!study.quiet && t >= study.quiet[0] && t < study.quiet[1], hush: 0.3,
           ...(landed ? ARRIVAL_MUSIC.wood : {}), arrivalMusic: wood && !landed ? 'wood' : undefined,
           sea: 1, land: 0, overLand: false, breeze: 0, night: 0.3, flockChatter: false, scripted: true, cues: now });
         for (const field of ['breezeGain', 'seaGain', 'rainGain', 'patterGain', 'gustGain', 'whistleGain', 'rustleGain', 'liftGain']) {

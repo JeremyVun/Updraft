@@ -345,6 +345,8 @@ export class Cat {
     return this.doing === 'air' && this.air === 'fly';
   }
 
+  get shaking(): boolean { return this.shakeT >= 0; }
+
   /** Where its eyes are, in the world: for the child's gaze and the camera. */
   eye(out: THREE.Vector3): THREE.Vector3 {
     return this.rig.joint(HEAD, out);

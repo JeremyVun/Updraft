@@ -317,6 +317,11 @@ export class Bell {
     this.sweep += along * hit * firm;
     const want = Math.min(k.most, Math.abs(this.sweep) * k.perWidth);
     if (want > 0.02) this.quiet = 0;
+    // Let the current swing reach its strike and return, even while strokes keep arriving.
+    if (this.armed || Math.abs(this.angle) > k.touchAt) {
+      if (this.armed && this.askAge < k.lag && want > this.ask) this.ask = want;
+      return;
+    }
     if (want > this.ask || this.askAge > k.lag * 3) {
       this.ask = want;
       this.askWay = Math.sign(this.sweep) || 1;
@@ -356,7 +361,7 @@ export class Bell {
       this.clapperSpeed *= -0.35;
     }
 
-    if (this.armed && !driving && this.strokeAge > 0.12 && this.angle * this.speed > 0) {
+    if (this.armed && !driving && this.angle * this.speed > 0) {
       const top = Math.acos(THREE.MathUtils.clamp(Math.cos(this.angle) - (this.speed * this.speed) / (2 * k.pull), -1, 1));
       if (top - Math.abs(this.angle) < Math.abs(this.speed) * 0.07 + 0.003) this.strike(top);
     }

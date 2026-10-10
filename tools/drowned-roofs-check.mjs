@@ -26,9 +26,31 @@ const { browser, close } = await openBrowser();
 const errors = [];
 try {
   const page = await (await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1 })).newPage();
+  await page.addInitScript(() => {
+    const raf = window.requestAnimationFrame.bind(window);
+    window.requestAnimationFrame = callback => raf(time => {
+      if (window.pauseForShake) { window.shakeFrame = callback; return; }
+      callback(time);
+    });
+    window.resumeShake = () => {
+      window.pauseForShake = false;
+      if (window.shakeFrame) { raf(window.shakeFrame); window.shakeFrame = null; }
+    };
+  });
   page.on('pageerror', (e) => errors.push(e.message));
-  await page.goto(`${base}?shot=1&chapter=drowned&ratio=1&villagefog=${process.env.FOG ?? '1'}`, { waitUntil: 'load' });
+  await page.goto(`${base}?shot=1&chapter=drowned&ratio=1${process.env.FOG ? `&villagefog=${process.env.FOG}` : ''}`, { waitUntil: 'load' });
   await page.waitForFunction(() => window.__ready === true, null, { timeout: 60000 });
+  const untouchedTub = await page.evaluate(() => __game.village.tub.position.toArray());
+  await page.evaluate(() => {
+    const render = __game.post.render.bind(__game.post);
+    __game.post.render = (...args) => {
+      const result = render(...args);
+      if (!window.sawShake && __game.cat.shakeT > .3 && __game.cat.shakeT < .6) {
+        window.sawShake = true; window.pauseForShake = true;
+      }
+      return result;
+    };
+  });
   if (process.env.NEAR) await page.evaluate(async () => {
     const { CAT_HOLD, STRAND } = await import('/src/world/drowned-way.ts');
     const s = __game.story.current, b = __game.boat, dx = STRAND.x - CAT_HOLD.x, dz = STRAND.y - CAT_HOLD.y, d = Math.hypot(dx, dz);
@@ -144,7 +166,7 @@ try {
   await shot('0-cat-seen');
   await reach('waiting', 60000);
   let s = await state();
-  const start = s.tub, began = s.time;
+  const start = untouchedTub, began = s.time;
   console.log('waiting', JSON.stringify(s));
   await play(3.5);
   await shot('1-cat-on-chimney');
@@ -154,7 +176,7 @@ try {
   s = await state();
   assert.equal(s.step, 'waiting', 'still waiting on the tub after idling');
   const roofGoal = s.goal;
-  assert(distance(s.tub, start) < 1, `the tub drifted ${distance(s.tub, start).toFixed(2)}m by itself: ${JSON.stringify(s)}`);
+  assert(distance(s.tub, start) < .015, `the tub drifted ${distance(s.tub, start).toFixed(2)}m by itself: ${JSON.stringify(s)}`);
   assert(s.invited && s.heading !== null, `no drawn gust after ${idle}s of nothing: ${JSON.stringify(s)}`);
   assert(s.cat[1] > 0.6 && distance(s.cat, roofGoal) < 1.5, `the cat must wait up the slope within a hop of the tub: ${JSON.stringify(s)}`);
   const view = await framed();
@@ -186,9 +208,11 @@ try {
   s = await state();
   assert.equal(s.seat, 'satchel', 'the cygnet ducked into the satchel');
   console.log('aboard', JSON.stringify(s));
-  await play(0.8);
+  await page.waitForFunction(() => window.sawShake === true, null, { timeout: 10000, polling: 100 });
   assert.equal(await page.evaluate(() => __game.child.kneeling), 0, 'the child stays seated');
   await shot('7-rescue');
+  console.log('visible shake', await page.evaluate(() => ({ shakeT: __game.cat.shakeT, wet: __game.cat.wet, doing: __game.cat.doing })));
+  await page.evaluate(() => window.resumeShake());
 
   // Once it has come to her the air dies, and the becalmed boat ghosts slowly onto the slates; nothing the player does
   // makes any wind: no gust, no fill in the sail, nothing in the water.
@@ -202,7 +226,7 @@ try {
       let energy = 0;
       for (const [dx, dz] of [[0, 0], [2, 0], [-2, 0], [0, 2], [0, -2]]) energy = Math.max(energy, __game.wind.sample(b.position.x + dx, b.position.z + dz, out).energy);
       return { beat: __game.story.current.beat, speed: b.speed, made: b.sailWind.made, energy, muted: __game.input.muted,
-        silence: __game.story.current.silence, time: __stats.time, at: [b.position.x, b.position.z] };
+        silence: __game.story.current.drownedQuiet, time: __stats.time, at: [b.position.x, b.position.z] };
     });
     if (process.env.DEBUG) console.log('  drift', JSON.stringify(x));
     fastest = Math.max(fastest, x.speed);
