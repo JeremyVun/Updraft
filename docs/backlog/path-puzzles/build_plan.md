@@ -1359,6 +1359,32 @@ bell ring and with a 31 m clearing. These are local desktop measurements, not de
 Evidence: `/tmp/updraft-mist-Cq6Qis/README.md`. The portrait bell → woods replay also passes, with no camera
 cuts. The field checks pass on Metal and SwiftShader; restoring the old shader fails as expected.
 
+#### Softer mist edge and belfry continuity — 2026-10-10
+
+Jeremy's new tree-exit still showed the continuous mist's straight front. The cheap renderer now spreads that
+front fade over 10 m and adds four broad, rounded wisps. Their density is integrated analytically in world
+coordinates, with no new render passes, noise texture reads or ray marching. The fixed bank heading and steady
+advance are retained. The tree-to-sheet replay passes; its frame `after-film-035.png` shows the same view as the
+reported edge. Paired six-second 1600×900, ratio 1.5 samples both held 60 fps, p99 16.8 ms, with no intervals over
+25 ms. This is a bounded local desktop sample, not a claim about all devices.
+
+Jeremy then reported the plane disappearing during the ivy climbs and fog suddenly returning during descent
+and the window farewell. The plane was explicitly hidden; it now moves to the backpack on the approach and
+stays visible through both climbs and the belfry visit. The fog clearing used a narrower height fade than the
+surrounding bank, then switched it off when their heights met, producing a 0.0404 opacity jump in the actual
+shader probe. Its fade now scales continuously with the bank; the same probe's largest step is 0.000443.
+
+The bell's clearing stays low through descent and the farewell, then blends out over the first four seconds
+of sailing. It is fully gone before the storm closes in. The storm's density, colour, height, light and timing
+are unchanged by this clearing fix. The skip directly to boarding initializes the same clearing as natural play.
+
+Typecheck, production build, fog motion/clearing, 54 shader reversal/split-ray cases, and boat return at
+30/60/120 Hz pass. The natural landscape tower → four rings → descent → boarding → farewell replay passes,
+with zero hidden plane frames and the plane held at the backpack on both climbs. The capture now keeps the
+window cats clear above the water-level mist. The portrait four-ring → descent → farewell → storm → woods
+replay also passes, with no camera cuts; the departure and storm captures retain the mist and lantern lighting.
+Evidence: `/tmp/updraft-fog-edge-g2HYUh/`. No merge or deployment.
+
 #### Wider boarding view and bell ripple — 2026-10-10
 
 Jeremy approved the review: "ok looks good". Boarding now includes the window cats throughout, with a higher

@@ -1234,11 +1234,30 @@ float mistCleared(vec4 value, vec4 slope, vec2 offset, vec2 direction, float rea
     mistIntegral(value, slope, coreEnd, end, weight);
 }
 
+float mistWispPrimitive(float t) {
+  float t2 = t * t;
+  return t * (1.0 + t2 * (-2.0 / 3.0 + t2 * 0.2));
+}
+
+// Integrate a rounded wisp exactly, so moving the eye never changes its world density.
+float mistWisp(vec3 ro, vec3 rd, float reach, vec3 centre, vec3 radius) {
+  vec3 o = (ro - centre) / radius, v = rd / radius;
+  float a = dot(v, v), middle = -dot(o, v) / a;
+  vec3 nearest = o + v * middle;
+  float fill = 1.0 - dot(nearest, nearest);
+  if (fill <= 0.0) return 0.0;
+  float halfSpan = sqrt(fill / a);
+  float start = max(0.0, middle - halfSpan), end = min(reach, middle + halfSpan);
+  if (end <= start) return 0.0;
+  return fill * fill * halfSpan * (mistWispPrimitive((end - middle) / halfSpan) -
+    mistWispPrimitive((start - middle) / halfSpan));
+}
+
 float mistOptical(vec3 ro, vec3 rd, float far) {
   vec2 n = uSeaFog.zw, side = vec2(-n.y, n.x), offset = ro.xz - uSeaFog.xy;
   float across = dot(offset, side), acrossSlope = dot(rd.xz, side);
   float top = uSeaFogShape.x * (1.0 - uSeaFogRelief * ${glsl(1 - SEA_FOG_TOP.middle)});
-  float softness = ${glsl(tuning.drowned.fog.mistSoftness)}, frontSoftness = ${glsl(tuning.drowned.fog.front)};
+  float softness = ${glsl(tuning.drowned.fog.mistSoftness)}, frontSoftness = ${glsl(tuning.drowned.fog.mistFrontSoftness)};
   float front = smoothstep(${glsl(tuning.drowned.fog.closedBy)}, 1.0, uSeaFogShape.z) * ${glsl(tuning.drowned.fog.closeRun)};
   vec2 widths = vec2(uSeaFogSides.y - uSeaFogSides.x, uSeaFogSides.w - uSeaFogSides.z);
   vec4 value = vec4((top + softness * 0.5 - ro.y) / softness,
@@ -1251,10 +1270,24 @@ float mistOptical(vec3 ro, vec3 rd, float far) {
   if (uSeaFogClear.z > 0.0 && uSeaFogClear.w < top) {
     vec2 clearing = ro.xz - uSeaFogClear.xy;
     optical -= mistCleared(value, slope, clearing, rd.xz, reach);
-    float lowSoftness = min(softness, max(0.1, uSeaFogClear.w));
+    float lowSoftness = max(0.1, softness * clamp(uSeaFogClear.w / top, 0.0, 1.0));
     value.x = (uSeaFogClear.w + lowSoftness * 0.5 - ro.y) / lowSoftness;
     slope.x = -rd.y / lowSoftness;
     optical += mistCleared(value, slope, clearing, rd.xz, reach);
+  }
+  if (uSeaFogShape.z < 1.0) {
+    vec3 localEye = vec3(across, ro.y, dot(offset, n));
+    vec3 localRay = vec3(acrossSlope, rd.y, dot(rd.xz, n));
+    float wisps = 0.0;
+    ${tuning.drowned.fog.mistWisps.map(w => `{
+      float height = max(top, 0.1) * ${glsl(w.height)};
+      float edge = clamp((${glsl(w.across)} + uSeaFogSides.y) / widths.x, 0.0, 1.0) *
+        clamp((uSeaFogSides.w - ${glsl(w.across)}) / widths.y, 0.0, 1.0);
+      wisps += edge * mistWisp(localEye, localRay, reach,
+        vec3(${glsl(w.across)}, height * 0.32, front + ${glsl(w.ahead)}),
+        vec3(${glsl(w.width)}, height * 0.68, ${glsl(w.depth)}));
+    }`).join('\n')}
+    optical += wisps * ${glsl(tuning.drowned.fog.mistWispDensity)} * pow(1.0 - uSeaFogShape.z, 2.0);
   }
   return max(0.0, optical);
 }

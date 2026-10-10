@@ -196,7 +196,7 @@ export class ChurchArrival {
     dark.clearing.radius = 0;
     this.since = 1e3;
     this.closeFrom = this.since - k.fog.roundFor;
-    this.hidePlane();
+    this.stowPlane(true);
     const stand = this.standAt();
     c.standUp();
     c.kneeling = 0;
@@ -220,6 +220,8 @@ export class ChurchArrival {
     v.dark.level = k.fog.drawn;
     v.dark.relief = 1;
     v.dark.round = 0;
+    v.dark.clearing.floor = k.fog.cleared;
+    v.dark.clearing.radius = k.fog.clearAt[k.rings];
     cat.place(this.sillAt(SEE_OFF), this.outward2(), { pose: 'sit', floor: () => BELFRY.sill });
     cat.look(this.head);
     const kitten = v.kittens.cats[FOUND];
@@ -377,14 +379,15 @@ export class ChurchArrival {
     });
   }
 
-  /** She goes up after it: to the foot of the ivy, the plane tucked away in her coat, and up hand over hand. */
+  /** She secures the plane on her backpack as she approaches the ivy. */
   private follow(): void {
     const { child: c } = this.cast;
     this.to('climb');
+    this.stowPlane();
     const start = this.climb.start(this.tmp);
     c.walkTo(start.x, start.z, false, () => {
       c.yaw = this.climb.facing;
-      this.hidePlane();
+      this.stowPlane(true);
       c.lookAt = null;
       this.climb.up(() => this.arrive());
     }, 0.08);
@@ -672,7 +675,7 @@ export class ChurchArrival {
     }
     if (this.step === 'ring' || this.step === 'down' || this.step === 'wait' || this.step === 'board') {
       const settle = THREE.MathUtils.smoothstep(this.since - this.downAt, 0, k.settleFor);
-      dark.clearing.floor = lerp(k.cleared, k.drawn, settle);
+      dark.clearing.floor = k.cleared;
       dark.clearing.radius = lerp(this.clearFrom, k.clearAt[this.rings], THREE.MathUtils.smootherstep(this.since - this.sinkAt, 0, k.sinkFor));
       dark.level = lerp(k.sea, k.drawn, settle);
       dark.relief = lerp(k.still, 1, settle);
@@ -680,7 +683,9 @@ export class ChurchArrival {
       return;
     }
     if (this.step === 'aboard') {
-      dark.clearing.radius = 0;
+      const leaving = THREE.MathUtils.smootherstep(this.aboardFor - tuning.drowned.church.lookUpFor, 0, k.clearLeaveFor);
+      dark.clearing.floor = lerp(k.cleared, k.drawn, leaving);
+      dark.clearing.radius = leaving < 1 ? k.clearAt[this.rings] : 0;
       /** Evenly: the night it brings already eases in and out of itself. */
       this.close = THREE.MathUtils.clamp((this.aboardFor - k.closeAfter) / k.closeFor, 0, 1);
       dark.close = this.close;
@@ -705,9 +710,9 @@ export class ChurchArrival {
     boat.position.set(this.flat.x, boat.position.y, this.flat.y);
   }
 
-  private hidePlane(): void {
-    this.cast.child.stowPlane(true, true);
-    this.cast.plane.visible = false;
+  private stowPlane(immediate = false): void {
+    this.cast.child.stowPlane(true, immediate);
+    this.cast.plane.visible = true;
   }
 
   private showPlane(): void {

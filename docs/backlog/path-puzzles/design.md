@@ -1206,6 +1206,26 @@ Every strike produces the ripple, including inside the area cleared by previous 
 Jeremy's review: "ok looks good. next question, whats the chapter to skip to the fallen tree challenge?"
 The boarding framing and bell polish are approved on the review server.
 
+Jeremy's fog-boundary polish, verbatim:
+
+> ok this was what i was trying to capture. it's a very straight cut fog boundary. any cheap ways to soften that boundary to look a bit more natural?
+
+Trial a wider front fade plus a few broad, rounded wisps with analytic optical depth. They are part of the same
+world-space bank, with no camera-driven placement or density and no return to the expensive marching renderer.
+Compare the fallen-tree exit in play and measure performance before accepting the change.
+
+Jeremy's next belfry findings, verbatim:
+
+> i just noticed one other bug. when the child climbs the vines into the belfry, she was holding the paper plane, which disappears when she climbs the vines. So when the child gets into the top of the tower, the paper plane is gone. But then it magically appears again as she's getting into the boat at the end of the belfry sequence. She needs to put the paper plane back onto her backpack when she's climbing up and down the vines.
+>
+> Also, i dont know what you did with the fog, but there's a bug where when the camera settles into looking up at the cat in the tower, it gets blurred by fog (see attached). Infact, when she's coming down the vine, more fog suddenly renders in instantly.
+
+> note that i do like the feel of the fog and mist that is part of the storm sequence as she leaves though, so please don't cause a regression there.
+
+Keep the plane visible on the backpack from the approach to the ivy through both climbs and the belfry visit.
+Preserve the bell's local clearing through the farewell, blend it away as she leaves, and repair the density
+discontinuity while the bank lowers. Keep the storm's existing density, colour, timing and lighting.
+
 Current follow-up list (all authorized):
 - 56 reopened: the approaching hull pushed the untouched tub. Start it outside that path, retaining attraction
   after player input. Full-entry CPU tests now measure zero drift; the old start fails at 0.389 m.

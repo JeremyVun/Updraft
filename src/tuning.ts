@@ -1796,7 +1796,14 @@ export const tuning = {
     },
     /** The sea fog the dark is: one field every shader reads, and the light it takes as it comes. */
     fog: {
-      mistDensity: 0.22, mistSoftness: 2.8, mistNeutral: 0.65, mistSun: 0.12,
+      mistDensity: 0.22, mistSoftness: 2.8, mistFrontSoftness: 10, mistNeutral: 0.65, mistSun: 0.12,
+      mistWispDensity: 0.24,
+      mistWisps: [
+        { across: -132, ahead: 1, width: 58, depth: 14, height: 1.05 },
+        { across: -48, ahead: 4, width: 45, depth: 11, height: 0.9 },
+        { across: 44, ahead: 1, width: 54, depth: 16, height: 1.15 },
+        { across: 126, ahead: 6, width: 46, depth: 13, height: 0.95 },
+      ],
       /**
        * How high its top stands over the water until the story raises it (its `level`), metres, and `closedTop` times
        * that once it has closed round; how far over its top it begins and how far under it it is whole, metres
@@ -1949,7 +1956,7 @@ export const tuning = {
          * child climbs down it settles all round over `settleFor` seconds to lie `drawn` metres high. The rings roll out at
          * this share of its level.
          */
-        drawn: 1.0, cleared: 0.3, clearAt: [0, 17, 24, 31, 46], clearRim: 1.3, clearSoft: 6, sinkFor: 3.2, settleFor: 10, wavesAt: 0.92,
+        drawn: 1.0, cleared: 0.3, clearAt: [0, 17, 24, 31, 46], clearRim: 1.3, clearSoft: 6, sinkFor: 3.2, settleFor: 10, clearLeaveFor: 4, wavesAt: 0.92,
         /**
          * Seconds after she is aboard it starts to close round and darken (the storm 25 s out, as the lighthouse's
          * light begins to fail), how long that takes, and how high it rises again.

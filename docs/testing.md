@@ -144,7 +144,10 @@ edit.
   `FROM=belfry LENS=1 node tools/drowned-run-check.mjs` checks this through the real bell gestures, passive
   approach, boarding camera and onward storm; `W=900 H=1600` checks portrait.
 - `drowned-fog-motion-check`: the whole bank advances without pivoting or retreating, camera motion cannot
-  change its field or belfry clearing, and the actual boat reaching the woods fades it out.
+  change its field or belfry clearing, the bell clearing survives descent and the farewell before blending out,
+  and the actual boat reaching the woods fades it out. `drowned-mist-check` probes the actual shader for
+  camera-independent density and continuous lowering through the clearing height. The live church replay also
+  checks that the paper stays visible and attached to the backpack on both ivy climbs.
 - `AUDIT=/tmp/drowned TO=tree-arrival node tools/drowned-run-check.mjs` records the natural rescue's real audio
   and live fog uniforms through the first roof and tree. `node tools/drowned-audit-check.mjs /tmp/drowned.json`
   checks the four-second sailing interval, matching tone/effect onset, music fade and fog motion.

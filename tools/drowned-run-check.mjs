@@ -277,10 +277,11 @@ try {
       window.__leaveBy = tuning.drowned.church.lookUpFor + tuning.storm.leaveFor;
       const { Belfry, BELFRY } = await import('/src/world/belfry.ts');
       const { childBody } = await import('/tools/lib/child-head.mjs');
+      const { PAPER_STOW } = await import('/src/traveller/traveller.ts');
       const body = childBody(__game.child);
       let lastBounds = -1;
       const w = window.__churchWatch = { offWorst: 0, offAt: '', unseenRun: 0, unseenWorst: 0, unseenAt: '', hiddenRun: 0, hiddenWorst: 0, hiddenAt: '',
-        boardingBodyEdge: 0, boardingCatEdge: 0,
+        boardingBodyEdge: 0, boardingCatEdge: 0, hiddenPlane: 0, climbPaperGap: 0,
         catArch: null, archHer: null, catIn: null, woke: null, kittenCame: null, catSill: null, sillLeft: null, herDown: null, seated: null };
       const roofs = [...W.PLACED, W.NAVE];
       const inner = W.TOWER.half - BELFRY.wall, floor = BELFRY.sill - BELFRY.step;
@@ -302,6 +303,11 @@ try {
          */
         if (ch && ch.step !== 'off') {
           const t = __stats.time, cat = __game.cat, kittens = __game.village.kittens;
+          if (ch.aboardFor < 0 && !__game.glider.visible) w.hiddenPlane++;
+          if (ch.climb.busy) {
+            const bag = c.rig.body.localToWorld(PAPER_STOW.clone());
+            w.climbPaperGap = Math.max(w.climbPaperGap, c.handPosition(p.clone()).distanceTo(bag));
+          }
           if (ch.catAt === 'arch' && w.catArch === null) { w.catArch = t; w.archHer = p.y; }
           if (ch.catAt === 'nest' && w.catArch !== null && w.catIn === null) w.catIn = t;
           if (kittens.awake && w.catIn !== null && w.woke === null) w.woke = t;
@@ -653,6 +659,9 @@ try {
     const w = await page.evaluate(() => window.__churchWatch);
     console.log(`boarding through look-up bounds: child ${w.boardingBodyEdge.toFixed(3)}, window cats ${w.boardingCatEdge.toFixed(3)}`);
     assert(w.boardingBodyEdge < .98 && w.boardingCatEdge < .96, 'boarding/look-up cropped the child or window cats');
+    console.log(`paper through belfry: ${w.hiddenPlane} hidden frames; climb backpack gap ${w.climbPaperGap.toFixed(3)} m`);
+    assert.equal(w.hiddenPlane, 0, 'the carried plane disappeared in the belfry');
+    assert(w.climbPaperGap < .03, 'the plane left the backpack during the climb');
     if (!fromBelfry) {
       console.log(`church: she followed the cat up the ivy ${(beats.climbFrom - atNave).toFixed(1)} s after the tower's foot, was in over the kittens at ${(beats.nest - atNave).toFixed(1)} s, looking out over the fog sea at ${(beats.sea - atNave).toFixed(1)} s, the bell hers at ${(beats.ring - atNave).toFixed(1)} s and first rung at ${(heard[0].time - atNave).toFixed(1)} s`);
       console.log(`  the cat waited in the arch from ${(w.catArch - atNave).toFixed(1)} s (her feet ${w.archHer.toFixed(1)} m up), went in to its kittens at ${(w.catIn - atNave).toFixed(1)} s, they woke at ${(w.woke - atNave).toFixed(1)} s, and one came to her at ${w.kittenCame === null ? 'never' : (w.kittenCame - atNave).toFixed(1) + ' s'}`);

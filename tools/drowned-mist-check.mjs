@@ -75,21 +75,36 @@ try {
       if (last !== null) maxJump = Math.max(maxJump, Math.abs(alpha - last));
       last = alpha;
     }
-    u.uSeaFogShape.value.z = 1;
+    u.uSeaFogClear.value.set(12, -18, 46, .3);
+    let lastLowering = null, maxLoweringStep = 0;
+    for (let i = 0; i <= 1000; i++) {
+      const t = i / 1000;
+      u.uSeaFogShape.value.x = 7.6 - 6.6 * t;
+      u.uSeaFogRelief.value = .3 + .7 * t;
+      u.uSeaFogClear.value.w = .3 + .7 * t;
+      const d = read([12, 1.3, -18], [12, 8, -18]);
+      const alpha = 1 - Math.exp(-d * tuning.drowned.fog.mistDensity);
+      if (lastLowering !== null) maxLoweringStep = Math.max(maxLoweringStep, Math.abs(alpha - lastLowering));
+      lastLowering = alpha;
+    }
+    u.uSeaFogShape.value.set(5, 30 / 170 ** 2, 1, 1);
+    u.uSeaFogRelief.value = 1;
+    u.uSeaFogClear.value.set(12, -18, 0, .3);
     const vertical = read([12, 9, -18], [12, .1, -18]);
     u.uSeaFogClear.value.z = 46;
     const clearedVertical = read([12, 9, -18], [12, .1, -18]);
     const empty = read([12, 9, -18], [14, 9, -18]);
     geometry.dispose(); material.dispose(); target.dispose(); renderer.dispose();
-    return { cases, maxJump, vertical, expectedVertical: 5 * SEA_FOG_TOP.middle - .1, clearedVertical, empty };
+    return { cases, maxJump, maxLoweringStep, vertical, expectedVertical: 5 * SEA_FOG_TOP.middle - .1, clearedVertical, empty };
   }, process.env.OLD_SHADER ? fs.readFileSync(process.env.OLD_SHADER, 'utf8') : null);
   const worstSplit = Math.max(...result.cases.map(c => c.splitError));
   const worstReverse = Math.max(...result.cases.map(c => c.reverseError));
-  console.log(JSON.stringify({ cases: result.cases.length, worstSplit, worstReverse, maxOpacityStep: result.maxJump, errors }));
+  console.log(JSON.stringify({ cases: result.cases.length, worstSplit, worstReverse, maxOpacityStep: result.maxJump, maxLoweringStep: result.maxLoweringStep, errors }));
   assert.equal(errors.length, 0, 'shader must compile');
   assert(result.cases.every(c => Number.isFinite(c.whole) && c.whole >= 0), 'finite optical depths');
   assert(worstSplit < .003 && worstReverse < .003, 'moving the eye must retain the same world density');
   assert(result.maxJump < .01, 'no discrete fog layers across a 2 mm height change');
+  assert(result.maxLoweringStep < .01, 'lowering the mist through the clearing height must not add a wall of fog');
   assert(Math.abs(result.vertical - result.expectedVertical) < .001, 'the bank retains its authored height and density');
   assert(Math.abs(result.clearedVertical - .2) < .001, 'the bell leaves the thin water-level mist');
   assert.equal(result.empty, 0, 'clear air above the bank');
