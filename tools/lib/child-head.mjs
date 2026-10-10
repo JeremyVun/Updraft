@@ -11,6 +11,15 @@ export function childHead(child) {
     if (weight >= 0.5) indices.push(i);
   }
   if (!indices.length) throw new Error('No head vertices found');
+  return projectedBounds(child, indices);
+}
+
+export function childBody(child) {
+  return projectedBounds(child, Array.from({ length: child.rig.mesh.geometry.attributes.position.count }, (_, i) => i));
+}
+
+function projectedBounds(child, indices) {
+  const mesh = child.rig.mesh;
   const v = child.position.clone();
   return camera => {
     child.rig.root.updateMatrixWorld(true); mesh.skeleton.update();

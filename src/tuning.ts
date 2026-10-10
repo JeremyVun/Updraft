@@ -2243,7 +2243,7 @@ export const tuning = {
        * Once the boat is `boardFrom` metres from the berth it comes round in one move of `boardFor` seconds toward the
        * same horizontal position as the look up, this high over her feet as she steps aboard.
        */
-      boardFrom: 14, boardFor: 4, boardHigh: 2.2, boardZoom: 0.92,
+      boardFrom: 14, boardFor: 4, boardHigh: 2.2, boardZoom: 0.92, boardLook: 0.36, uprightBoardLook: 0.32,
       /**
        * Aboard, looking up from behind the boat at the cat and the kitten on the sill: how high their eyes are over it as
        * they sit there; how far behind her eyes the lens stands and how far over them (under, negative), how far round
@@ -2252,9 +2252,9 @@ export const tuning = {
        * down there from the boarding view; how much of the frame the three keep inside, and how low it may go
        * over the water.
        */
-      catEyes: 0.32, upBack: 8, upOver: -0.2, upRound: 0.62, upAim: 0.52, upZoom: 1.5,
-      uprightUpBack: 14, uprightUpOver: 2.5, uprightUpRound: 0.3, uprightUpAim: 0.4, uprightUpZoom: 2,
-      tiltFrom: 0.2, tiltTo: 5, upMargin: 0.94, upHeadRadius: 0.55, upClear: 0.35,
+      catEyes: 0.32, upBack: 14, upOver: -0.2, upRound: 0.62, upAim: 0.52, upZoom: 1.4,
+      uprightUpBack: 16, uprightUpOver: 2.5, uprightUpRound: 0.3, uprightUpAim: 0.4, uprightUpZoom: 1.8,
+      tiltFrom: 0.2, tiltTo: 5, upMargin: 0.9, upBodyHeight: 1.2, upBodyRadius: 1.3, upClear: 0.35,
       /**
        * After the blink, from `releaseFrom` to `releaseTo` seconds after she sits, it lets her go as the two go back in:
        * round toward the bow by this much (radians), this far from her eyes and this far over them, looking this share
@@ -2505,7 +2505,7 @@ export const tuning = {
       /** Seconds without a useful stroke before the drawn gust; with no ring before the world's own gust swings it. */
       inviteAfter: 5, valveAfter: 90, valveEvery: 4,
       /** The waves a ring sends out over what lies below the tower: metres a second, seconds they last, crest width. */
-      waveSpeed: 6, waveLife: 7.5, waveWidth: 0.6,
+      waveSpeed: 6, waveLife: 7.5, waveWidth: 1.1,
       /** Its note: the strike note (MIDI), its level, how much of it goes to the reverb, and how long the hum lasts (s). */
       note: 59, level: 0.3, wet: 0.42, hum: 15,
     },

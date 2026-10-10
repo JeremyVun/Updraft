@@ -29,12 +29,12 @@
 //        two between, and through the church), FILM=<seconds> with SHOTS also
 //        saves a still every that many seconds from the air dying (FILMFROM=cat from the tub's puzzle; from the ridge
 //        with FROM=roofs, the tower's foot with FROM=church, her aboard with FROM=storm) to the forest beach, and with FROM=stairs through the descent in the white and 30 s on,
-//        TO=pickup stops as she boards the returned boat, TO=nave stops at the tower's foot, TO=tree once she is over the tree and the lens has gone round to the sheet, TO=swing once
+//        TO=pickup stops as she boards the returned boat, TO=farewell after the cat's blink, TO=nave stops at the tower's foot, TO=tree once she is over the tree and the lens has gone round to the sheet, TO=swing once
 //        she is on the swing (with the walks' measures), TO=ridge once she is up on the first roof after the cat, VIDEO=<dir> records the whole play as a webm there, W/H viewport
 //        (default 1600x900), LENS=1 also fails on the lens's measures (a roof hiding her, her walking toward it, her
 //        out of frame, it inside a roof, it whipping round, the old tree hiding her after the mill; and at the church, from the tower's foot until the
 //        storm's frame takes over, her out of frame or hidden by the church or a roof; at the blink the cat, the kitten
-//        and her face out of frame or the cat under 45 px tall), VOICES=<file> writes every sound the cat and each kitten
+//        and her body out of frame or the cat under 35 px tall in the wider farewell), VOICES=<file> writes every sound the cat and each kitten
 //        makes (seconds, which animal, kind, the story step) with the strongest its call marks showed in the 0.6 s after.
 //        TREE_QUIET=<seconds> extends the initial six-second tree gaze sample for checking complete attention cycles.
 import { openBrowser } from './lib/browser.mjs';
@@ -276,7 +276,11 @@ try {
       const { tuning } = await import('/src/tuning.ts');
       window.__leaveBy = tuning.drowned.church.lookUpFor + tuning.storm.leaveFor;
       const { Belfry, BELFRY } = await import('/src/world/belfry.ts');
+      const { childBody } = await import('/tools/lib/child-head.mjs');
+      const body = childBody(__game.child);
+      let lastBounds = -1;
       const w = window.__churchWatch = { offWorst: 0, offAt: '', unseenRun: 0, unseenWorst: 0, unseenAt: '', hiddenRun: 0, hiddenWorst: 0, hiddenAt: '',
+        boardingBodyEdge: 0, boardingCatEdge: 0,
         catArch: null, archHer: null, catIn: null, woke: null, kittenCame: null, catSill: null, sillLeft: null, herDown: null, seated: null };
       const roofs = [...W.PLACED, W.NAVE];
       const inner = W.TOWER.half - BELFRY.wall, floor = BELFRY.sill - BELFRY.step;
@@ -312,6 +316,19 @@ try {
           }
           if (ch.step === 'wait' && w.herDown === null) w.herDown = t;
           if (ch.aboardFor >= 0 && w.seated === null) w.seated = t;
+          if ((ch.step === 'board' || (ch.step === 'aboard' && ch.aboardFor < tuning.drownedCamera.church.releaseFrom)) && t - lastBounds >= .1) {
+            lastBounds = t;
+            const camera = __game.rig.camera;
+            w.boardingBodyEdge = Math.max(w.boardingBodyEdge, ...body(camera).map(x => Math.abs(x * 2 - 1)));
+            for (const animal of [cat, kittens.cats[0]]) {
+              for (const rise of [0, .75]) {
+                const q = animal.position.clone();
+                q.y += rise;
+                q.project(camera);
+                w.boardingCatEdge = Math.max(w.boardingCatEdge, Math.abs(q.x), Math.abs(q.y));
+              }
+            }
+          }
         }
         if (ch && ch.step !== 'off' && ch.step !== 'board' && ch.aboardFor < 0 && !c.riding && !c.action && !c.climbing) {
           const beyond = D.beyondDecks(c.decks, p.x, p.z, p.y), under = D.deckGround(c.decks, p.x, p.z, p.y);
@@ -605,7 +622,10 @@ try {
       `the floating pickup kite is cropped: ${JSON.stringify(kite)}`);
     if (process.env.TO === 'pickup') return;
     const aboard = await wait((s) => s.aboardFor >= 0, 15, 'her seated aboard');
+    await shot('church-aboard');
     const pushed = d(xz(aboard.boat), xz(berth));
+    await wait((s) => s.aboardFor >= 2.5, 5, 'midway through the look-up');
+    await shot('church-looking-up');
     const blink = await wait((s) => s.aboardFor >= T.blinkAt + 0.5, 10, 'the cat\'s slow blink');
     await shot('slow-blink');
     /** How tall the cat stands on screen at the blink, feet to ear tips by its bones, and where it and she are in the frame. */
@@ -629,8 +649,10 @@ try {
     console.log(`her whole head bounds at the blink: ${seenAtBlink.head.map(v => v.toFixed(3)).join(', ')}`);
     if (process.env.LENS) assert(seenAtBlink.head.slice(0, 2).every(v => v > 0.02) && seenAtBlink.head.slice(2).every(v => v < 0.98),
       `her hood or face is cropped at the blink: ${JSON.stringify(seenAtBlink.head)}`);
-    await storm(aboard, atNave);
+    if (process.env.TO !== 'farewell') await storm(aboard, atNave);
     const w = await page.evaluate(() => window.__churchWatch);
+    console.log(`boarding through look-up bounds: child ${w.boardingBodyEdge.toFixed(3)}, window cats ${w.boardingCatEdge.toFixed(3)}`);
+    assert(w.boardingBodyEdge < .98 && w.boardingCatEdge < .96, 'boarding/look-up cropped the child or window cats');
     if (!fromBelfry) {
       console.log(`church: she followed the cat up the ivy ${(beats.climbFrom - atNave).toFixed(1)} s after the tower's foot, was in over the kittens at ${(beats.nest - atNave).toFixed(1)} s, looking out over the fog sea at ${(beats.sea - atNave).toFixed(1)} s, the bell hers at ${(beats.ring - atNave).toFixed(1)} s and first rung at ${(heard[0].time - atNave).toFixed(1)} s`);
       console.log(`  the cat waited in the arch from ${(w.catArch - atNave).toFixed(1)} s (her feet ${w.archHer.toFixed(1)} m up), went in to its kittens at ${(w.catIn - atNave).toFixed(1)} s, they woke at ${(w.woke - atNave).toFixed(1)} s, and one came to her at ${w.kittenCame === null ? 'never' : (w.kittenCame - atNave).toFixed(1) + ' s'}`);
@@ -661,7 +683,7 @@ try {
     assert(onSill(blink.kitten), `the kitten is not on the sill at the slow blink (${blink.kitten.join(', ')})`);
     assert(w.sillLeft === null, `the cat or kitten left the window ${(w.sillLeft - w.seated).toFixed(1)} s after she sat down`);
     const inside = (p) => p[0] > 0.02 && p[0] < 0.98 && p[1] > 0.02 && p[1] < 0.98;
-    if (process.env.LENS) assert((seenAtBlink.px >= 45 * Math.min(width, height) / 900) && inside(seenAtBlink.cat) && inside(seenAtBlink.kitten) && inside(seenAtBlink.her), `at the blink the cat was ${seenAtBlink.px.toFixed(0)} px tall at ${seenAtBlink.cat.map((v) => v.toFixed(2))}, the kitten at ${seenAtBlink.kitten.map((v) => v.toFixed(2))} and her face at ${seenAtBlink.her.map((v) => v.toFixed(2))}`);
+    if (process.env.LENS) assert((seenAtBlink.px >= 35 * Math.min(width, height) / 900) && inside(seenAtBlink.cat) && inside(seenAtBlink.kitten) && inside(seenAtBlink.her), `at the blink the cat was ${seenAtBlink.px.toFixed(0)} px tall at ${seenAtBlink.cat.map((v) => v.toFixed(2))}, the kitten at ${seenAtBlink.kitten.map((v) => v.toFixed(2))} and her face at ${seenAtBlink.her.map((v) => v.toFixed(2))}`);
   };
 
   if (fromStairs) {
@@ -1212,7 +1234,7 @@ try {
   }
   if (!toNave) {
     await church();
-    if (process.env.TO !== 'pickup') {
+    if (process.env.TO !== 'pickup' && process.env.TO !== 'farewell') {
       for (let t = 0; t < 30 && (await page.evaluate(() => __game.story.name)) !== 'wood'; t += 0.25) await seconds(0.25);
       assert.equal(await page.evaluate(() => __game.story.name), 'wood', 'the landing never handed on to the dark wood');
       await seconds(3);

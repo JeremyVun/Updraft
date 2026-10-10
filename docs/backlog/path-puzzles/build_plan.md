@@ -1359,6 +1359,27 @@ bell ring and with a 31 m clearing. These are local desktop measurements, not de
 Evidence: `/tmp/updraft-mist-Cq6Qis/README.md`. The portrait bell → woods replay also passes, with no camera
 cuts. The field checks pass on Metal and SwiftShader; restoring the old shader fails as expected.
 
+#### Wider boarding view and bell ripple — 2026-10-10
+
+Jeremy approved the review: "ok looks good". Boarding now includes the window cats throughout, with a higher
+aim and a wider shared camera position for the look-up. The framing protects the child's whole body rather
+than only her hood. The normal bronze material remains unchanged when the bell rings; its physical quiver
+remains. A softer, pale, uneven ripple replaces the saturated double ring and remains visible after earlier
+rings clear the mist.
+
+Whole-body CPU framing passes in 2:1, 16:9 and portrait, with at most 0.2° reverse camera movement. The
+farewell cat measures 42 px in landscape and 50 px in portrait; the former close-up's 45 px minimum is now
+35 px to accommodate the requested wider composition. Restoring the old camera tuning fails the new
+body and window bounds (1.47 and 1.37 NDC). Bell input checks pass at 30/60/120 Hz; production build passes.
+
+Real four-ring captures show the pale ripple on later strikes and the cats visible during boarding and the
+look-up. Portrait body/window bounds pass at 0.793/0.502; its new farewell-only stop initially hit an
+unrelated final woods-arrival assertion, corrected in the harness. Landscape continued to the woods and
+flagged a 12.1/255 one-second brightness change against the existing 12 threshold; do not claim the full
+storm gate passed. Its camera trace shows 5.49° pan, 0.25° reverse tracking, and no cuts. The brightness
+finding remains on the review list; no visual change was made after Jeremy's approval.
+Evidence: `/tmp/updraft-boarding-wide-7EC5Eu/`. No merge or deployment.
+
 #### Visible sailing delay and steady fog — 2026-10-10
 
 Jeremy's latest timing instruction adds another two seconds. The old two-second timer started when the boat

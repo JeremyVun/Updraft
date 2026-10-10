@@ -1182,6 +1182,30 @@ Jeremy's final rescue-delay instruction, verbatim:
 Add two more seconds to the sailing interval: four seconds after regaining sailing speed. Keep the music playing
 for the added time, then its existing two-second fade; tone and becalming begin together afterwards.
 
+Jeremy's boarding-framing tweak, verbatim:
+
+> only one tweak. during this part of the sequence where the child is getting into the boat, i'd like for the cat in the window to be in frame. I think a problem with this part is that it might be too zoomed in. A symptom of that being that when the camera does rotate up to see the cat, only the top of the child is in frame. understand what imean?
+
+Keep the cat at the window visible while she boards and the whole child framed through the look-up. Widen the
+existing composition, preserving its shared bearing and single deliberate move. Verify boarding through the
+farewell in landscape and portrait, including body bounds rather than only her face.
+
+Jeremy's bell-effect polish, verbatim:
+
+> one last polish point, im not convinced by the bell ringing effects with it turning red and having that red aura effect when it rings out. I don't think the bell should have it's colour changed when it rings. And in terms of the red circle aura that expands out, can you make it look better or more fitting?
+
+Keep the bronze material unchanged on a strike. Replace the saturated expanding aura with a soft, broken,
+pale ripple through the mist. Preserve the swing, sound, fog clearing and boat response.
+
+Jeremy approved the new ripple and refined it, verbatim:
+
+> that pale ripple is nice, can you make it do that for each bell ring?
+
+Every strike produces the ripple, including inside the area cleared by previous rings.
+
+Jeremy's review: "ok looks good. next question, whats the chapter to skip to the fallen tree challenge?"
+The boarding framing and bell polish are approved on the review server.
+
 Current follow-up list (all authorized):
 - 56 reopened: the approaching hull pushed the untouched tub. Start it outside that path, retaining attraction
   after player input. Full-entry CPU tests now measure zero drift; the old start fails at 0.389 m.

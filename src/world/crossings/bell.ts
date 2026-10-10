@@ -60,7 +60,6 @@ const BELL_FRAG = /* glsl */ `
 ${ATMO_GLSL}
 ${BELFRY_GLSL}
 uniform float uIndoors;
-uniform float uShimmer;
 in vec3 vWorld;
 in vec3 vNormal;
 in vec3 vLocal;
@@ -104,9 +103,6 @@ void main() {
     float fres = 0.15 + 0.85 * pow(1.0 - clamp(dot(n, V), 0.0, 1.0), 4.0);
     vec3 room = mix(uSkyAmbient * 0.15, uSunColor * vec3(1.0, 0.7, 0.45) * 0.05 + uSkyAmbient * 0.04, uIndoors);
     col += mix(room, mix(uSkyHorizon, uSkyHorizonSun, 0.5) * mix(0.7, 0.45, uIndoors), open) * mix(vec3(1.0), metal * 3.0, 0.6) * fres * shine;
-    /** Struck, the bronze shivers: a sheen runs round the sound bow and up the waist as it rings. */
-    float band = 0.5 + 0.5 * sin(a * 6.0 + y * 9.0 - uTime * 40.0);
-    col += uSkyHorizonSun * tint * uShimmer * (0.35 + 0.65 * band) * (1.0 - smoothstep(-1.5, -0.4, y)) * shine * 0.6;
   } else if (kind == ${OAK}) {
     float grain = vnoise(vec2(vLocal.x * 1.3, (vLocal.y + vLocal.z) * 26.0)) * 0.6 + vnoise(vec2(vLocal.x * 6.0, (vLocal.y - vLocal.z) * 55.0)) * 0.4;
     vec3 alb = vec3(0.15, 0.095, 0.055) * (0.74 + 0.42 * grain);
@@ -225,7 +221,6 @@ export class Bell {
           uBellPivot: { value: new THREE.Vector3() }, uBellDown: { value: new THREE.Vector3() },
         }),
         uIndoors: { value: light ? 1 : 0 },
-        uShimmer: { value: 0 },
       },
     });
     const mesh = (g: THREE.BufferGeometry) => {
@@ -423,7 +418,6 @@ export class Bell {
   }
 
   private pose(): void {
-    this.material.uniforms.uShimmer.value = this.shudder * this.shudder;
     const quiver = this.shudder * 0.006 * Math.sin(performance.now() * 0.09);
     this.swing.rotation.set(-(this.angle + quiver), Math.atan2(this.toward.x, this.toward.y), 0);
     this.hanger.rotation.set(-this.clapper, 0, 0);
@@ -448,33 +442,28 @@ in vec3 vWorld;
 void main() {
   vec2 d2 = vWorld.xz - uCentre.xz;
   float d = length(d2);
-  float ang = atan(d2.y, d2.x);
+  float billow = vnoise(d2 * 0.16);
   float glow = 0.0;
   for (int i = 0; i < ${WAVES}; i++) {
     vec4 w = uWaves[i];
     if (w.y <= 0.0) continue;
-    float x = (d - w.x) / w.w;
-    /** A bright leading crest and a fainter second one behind it, broken up along their length like a ripple catching light. */
-    float crest = exp(-x * x * 5.0) + 0.45 * exp(-(x + 2.6) * (x + 2.6) * 4.0);
-    float broken = smoothstep(0.25, 0.75, vnoise(vec2(ang * 34.0 + float(i) * 3.1, d * 1.3 - w.x * 0.2)));
-    float ruffle = 0.35 + 0.65 * broken;
+    float x = (d - w.x + (billow - 0.5) * 1.4) / w.w;
+    float crest = exp(-x * x * 1.8);
+    float broken = smoothstep(0.2, 0.85, vnoise(d2 * 0.42 + vec2(w.z * 0.6)));
+    float ruffle = 0.15 + 0.85 * broken;
     glow += crest * ruffle * w.y * (1.0 - smoothstep(0.35, 1.0, w.z));
   }
-  // Over the fog it rolls on its top, so where the bell has pushed the fog back to the water there is nothing to roll on.
-#if CLOUD_DECK
-  if (uSeaFogShape.w > 0.0) glow *= smoothstep(vWorld.y - 1.5, vWorld.y, seaFogLevel(vWorld.xz, uSeaFogShape.x));
-#endif
   if (glow < 0.004) discard;
-  vec2 sun = normalize(uSunDir.xz + 1e-5);
-  float toward = pow(max(dot(d2 / max(d, 1e-3), sun), 0.0), 2.0);
-  vec3 col = mix(uSkyHorizon * 1.3 + uSkyAmbient * 0.25, uSkyHorizonSun * 1.25, 0.25 + 0.6 * toward);
-  gl_FragColor = vec4(applyFog(col, vWorld), clamp(glow * 0.5, 0.0, 0.75));
+  vec3 light = mix(uSkyHorizon, uSeaFogTop, uSeaFogShape.w);
+  float pearl = dot(light + uSkyAmbient * 0.25, vec3(0.2126, 0.7152, 0.0722));
+  vec3 col = vec3(1.04, 1.02, 0.98) * pearl * 1.35;
+  gl_FragColor = vec4(applyFog(col, vWorld), clamp(glow * 0.28, 0.0, 0.4));
 }`;
 
 /**
  * The rings a bell sends out over what lies below its tower: each a crest of pale light, a little ruffled, rolling
  * out at walking pace's ten times from the tower's foot and fading as it goes. `level` is the surface it rolls over
- * (the water on the stage's yard; the fog's top in the room).
+ * (the water on the stage's yard; above the mist and its clearing in the room).
  */
 export class BellWaves {
   readonly mesh: THREE.Mesh;
