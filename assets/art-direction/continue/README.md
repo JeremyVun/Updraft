@@ -22,7 +22,10 @@ duplicate masters, embedded-image comparison pages and this chat's temporary cap
 
 ## Refreshing a painting
 
-Use the built-in imagegen tool with the final prompt and an authoritative game capture. The original shared
+Use the built-in imagegen tool with the final prompt and an authoritative game capture, then derive the tile from
+the resulting landscape painting; screenshots are scene references, never finished chapter tiles. Keep the title,
+hover painting and tile consistent (Jeremy's 2026-10-10 correction: "look at how the other chapters are done and
+follow that pattern"). The original shared
 brief (`common.txt`), room descriptions (`rooms/`) and knitted-sail reference (`sail-closeup.jpg`) remain as source
 material; the final prompts and current rules below supersede their older composition advice. `paint.sh` is the
 original capture/generation helper, not the workflow that produced the current masters.
@@ -30,11 +33,22 @@ original capture/generation helper, not the workflow that produced the current m
 Start camera corrections from the original prompt and scene references: repeated image edits introduced visible
 artifacts. Make small changes to viewpoint while retaining the close subject scale. Keep the scene's objects,
 proportions, light and painterly finish, with clear focal edges and varied marks that follow the forms. No people,
-animals, text, UI or invented props unless Jeremy specifically requests them; the approved sea painting includes one dolphin.
+animals, text, UI or invented props unless Jeremy specifically requests them; the sea painting features the whale
+rescue and its empty boat.
 
 The drowned village uses study 07, accepted on 2026-10-05 after Jeremy identified diagonal swatching in study 3. Its landscape and matching portrait use clean continuous surface shading and broad soft sail folds. This supersedes the older room brief's insistence on visible knitted courses for the paintings; the in-game sail is unchanged. The [repair record](../drowned-study-2026-10-05/round-3.json) preserves his brief.
 
-Sea uses approved study 06, a blue-water bow view of the game's rounded boat with one dolphin alongside. Mirror uses approved study 05, a low human viewpoint across a visible horizon, trapped light points, soap objects and one rising bubble. Both have matching portraits and chapter tiles. The [approval and exact prompts](../sea-mirror-study-2026-10-05/round-3.json) preserve Jeremy's brief; the [game-reference revision](../sea-mirror-study-2026-10-05/round-2.json) records the captures. Capture and inspect the actual level before prompting: preserve the boat's white bow post and fittings; mirror stars are bright light points beneath the reflection, never five-sided objects. The rejected overhead mirror view removed the horizon and made the props seem to float among clouds.
+Sea now shows the ancient whale's kind amber eye, old net and the small red-sailed boat at sunset, matching the
+rebuilt encounter. Its landscape and separately composed portrait were made with built-in imagegen from actual
+game captures and the existing sea/drowned paintings; the tile comes from the landscape. The
+[2026-10-10 record](../sea-whale-2026-10-10/record.json) retains Jeremy's correction, references and generation
+provenance. Mirror still uses approved study 05, a low human viewpoint across a visible horizon, trapped light
+points, soap objects and one rising bubble. The [earlier approval and prompts](../sea-mirror-study-2026-10-05/round-3.json)
+retain the previous dolphin sea artwork's history and mirror approval; the
+[game-reference revision](../sea-mirror-study-2026-10-05/round-2.json) records their captures. Capture and inspect the
+actual level before prompting: preserve the boat's white fittings; mirror stars are bright light points beneath
+the reflection, never five-sided objects. The rejected overhead mirror view removed the horizon and made the
+props seem to float among clouds.
 
 The foreground should soften subtly and continuously into natural shade, with recognisable grass, water or clouds.
 Avoid an empty blurred lower third, bright foreground rims, a horizontal blur boundary or repeated texture.
@@ -43,5 +57,6 @@ move the overlay before shrinking the subject to make space.
 
 Check the PNG at full size, inspect enlarged middle-band details for repeated diagonal or diamond-shaped tonal swatches across unrelated surfaces, and check behind the real veil on wide, 16:10 and phone screens. Jeremy found this artifact in drowned study 3 after it passed the initial review; quieter ripples alone do not fix it ([repair studies](../drowned-study-2026-10-05/round-3.json)). Begin/Continue sits around
 82% down in landscape, 86% for landscape Stairs, and 74% in portrait, with minimum bottom space for secondary
-actions. At 2:1 or wider, Sea and Sky mirror put the invitation and secondary actions at 77% across, clear of their focal subjects. Finished saves reserve more space. Check `start over` and the corner controls too; the 400x250 tile must
+actions. At 2:1 or wider, Sky mirror puts the invitation and secondary actions at 77% across; Sea centres them over
+the quiet water below the whale, clear of the boat. Finished saves reserve more space. Check `start over` and the corner controls too; the 400x250 tile must
 still read clearly as the room. These are release paintings, refreshed when a room's look changes for good.

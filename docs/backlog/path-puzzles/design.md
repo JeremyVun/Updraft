@@ -1286,16 +1286,13 @@ The sequence:
   both side by side fixes its size by that.
 - **Reward.** Freeing the whale is the open sea's major conclusion, so the reward phrase (`completeObjective()`) plays
   as it spouts free.
-- **Pacing.** The mirror stays hidden in its isle mist until the whale has dived (see "Where it lies"; this replaces
-  Claude's 2026-10-07 call to leave its jetty on the horizon, which Jeremy ruled out). Targets: the leap and the swim
-  as on main; the lead about 30 to 45 s from the nudge to rest; a player making each gesture promptly through the
-  five steps and the goodbye takes about two and a half to three minutes at rest; from the dive to the mooring at
-  most about 60 s. The open sea's "at most 100 s" is lifted for this. Music: the sea's score holds through the
-  encounter; the mirror's arrival music cannot start until the whale has gone.
-- **Saves.** Checkpoints at rest beside it (before the first step), after each step, and after it has gone (resumes
-  sailing on toward the mirror with no whale, the mist lifted). The eye's resumes with the fold off and its eye open
-  on her; the line's with the cork in her mittens before the first heave; the heave's is taken as she lets go of the
-  line, before the bird goes in; the flipper's resumes at free with the bird in the satchel and the net loose.
+- **Pacing.** Player-paced, replacing the old 100-second passive crossing. Integrated prompt play reaches rest
+  beside the whale at about 102 s, frees it at 167 s, sees it gone at 199 s and reaches the mirror at 244–245 s.
+  These are observed timings, not a deadline on the player. The mirror stays hidden until the dive; its arrival
+  music cannot start until the whale has gone. The durable sequence and tuning references are in
+  `docs/chapters.md` (The open sea), and the route and mist rules in `docs/contracts/world.md`.
+- **Saves.** Rest beside the whale, each completed step and the onward sail have safe checkpoints; exact names and
+  restored poses are in `docs/contracts/progress.md` (Long crossing).
 - **Sounds.** Its slow breath and the sputter through the mesh, the full breath, the spout (`whale-blow`), the net's
   wet rope and corks, the cygnet's splash; all synthesised (`docs/contracts/audio.md`).
 - **Its voice** (Jeremy, 2026-10-07: "yea, lets give it a voice"; 2026-10-09: it "doesn't make any deep whale
@@ -1315,9 +1312,15 @@ The sequence:
   flipper it goes in at once, without the climbing and deciding: the same bird after the sleeping island.
 - **No first-use stalls.** The whale's new programs and the net are compiled at boot like every other program
   (`docs/backlog/boot-veil/`; `__stats.bootStrayPrograms` and `playFirstDraws` stay at 0).
-- **The chapter-select still** for the open sea becomes the whale; regenerated after the build is judged (Jeremy,
-  2026-10-07: "the picture will need to be regenerated, but lets build it out first").
+- **The chapter art** follows the other rooms: built-in imagegen landscape and separately composed portrait,
+  with the chapter tile derived from the landscape. The subject is the ancient netted whale beside the empty
+  red-sailed boat, painted from game references in the existing set's style. Jeremy corrected the screenshot
+  substitution on 2026-10-10: "what do you mean approve that correction? You made a mistake. fix it. look at how
+  the other chapters are done and follow that pattern." This supersedes the earlier interpretation of "from the
+  game, not Astra" as a request to use a screenshot. The original request was 2026-10-07: "the picture will need to
+  be regenerated, but lets build it out first". Masters, prompts and provenance follow
+  `assets/art-direction/continue/README.md`.
 
 **QA starts.** `?chapter=toMirror` (and any `to*` crossing) starts that crossing at its first waypoint, cygnet in the
-satchel (branch `crossings-start`, also carried by `crossing-whale`); `?chapter=sea` starts the open sea as on main;
+satchel; `?chapter=sea` starts the whole open-sea passage;
 `?chapter=whale` starts at rest beside the whale, as its first save (`whale-rest`) resumes.

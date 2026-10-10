@@ -36,7 +36,12 @@ Every chapter has an entry checkpoint. The additional points:
 - Sleeping island: `feather` (the feather leaves the bed; resumes the assisted climb with the summit curtains closed)
   and `morning` (the walk to the boat, curtains open). Neither replays the bedside gesture.
 - Long crossing (`toMirror`): `swim`, once the companion's swim is over, with leg and time; restore finds the nearest
-  waypoint to the saved boat.
+  waypoint to the saved boat. The whale adds seven safe points, with the same leg/time payload: `whale-rest`
+  (held beside its head before the first gesture), `whale-breath` (blowhole clear, eye still covered), `whale-eye`
+  (eye open, cork on the water), `whale-line` (cork in her mittens before the heave), `whale-heave` (net off the head,
+  line let go, bird still aboard), `whale-flipper` (whale free, net loose, bird back in the satchel), and `whale-gone`
+  (bird gathered, whale and net gone, sailing toward the mirror). Each earned step remains the checkpoint until
+  the next safe point; partial gestures and swims are rebuilt from that point rather than saved mid-action.
 - Sky mirror: `stars4-<mask>` (0–15), the completed-star bitmask and current destination. Restore rebuilds the pair
   with the wand and paper and the lights already overhead, and drops transient bubbles. A partial constellation
   restores the boat offshore; only all four stars open the final approach.
@@ -69,8 +74,10 @@ disables it.
 Once the game has been finished, the title screen offers a faint `chapters` under Begin/Continue. It opens the rooms
 as two rows of six small, soft-edged tiles (four rows of three on a phone), each with a one- or two-word name, laid
 over the title's own painting; a pick begins that room. The tiles are the title screen's room paintings cut to
-400x250 (`src/chapter-select/stills/<room>.webp`), so a room has one picture everywhere; `tools/chapter-stills.mjs`
-captures the rooms the paintings are made from (`assets/art-direction/continue/`). It must cost new players nothing,
+400x250 (`src/chapter-select/stills/<room>.webp`), so a room has one picture everywhere. Open sea's painting shows
+the ancient netted whale beside the red-sailed boat, with matching landscape and portrait compositions.
+`tools/chapter-stills.mjs` captures scene references for the paintings (`assets/art-direction/continue/`);
+the captures themselves are not chapter artwork. It must cost new players nothing,
 so `src/chapter-select/` (script, CSS and tiles) is a separate chunk that only a finished player's title screen
 imports, and the tiles download only when `chapters` is opened.
 

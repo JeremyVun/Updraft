@@ -25,9 +25,11 @@ Matching chapter-select tiles are 400 x 250 WebP at quality 90.
 Drowned was refreshed on 2026-10-05 from approved study 07, with a matching portrait:
 soft painted sail folds and clean surfaces without diagonal swatches. Its WebP derivatives use quality 94;
 the manifest records their updated checksums, sizes and generation prompts.
-Sea and mirror were refreshed on 2026-10-05 from approved studies 06 and 05, with matching portraits:
-blue open water, the game's rounded boat and one dolphin; a low human viewpoint across the sky mirror,
-trapped light points and a rising bubble. Their WebP derivatives use quality 94.
+Mirror was refreshed on 2026-10-05 from approved study 05: a low human viewpoint across the sky mirror,
+trapped light points and a rising bubble. Sea was refreshed on 2026-10-10 for the whale rescue: the ancient
+netted whale's gentle eye beside the small empty red-sailed boat, replacing the earlier dolphin scene.
+Both have matching portraits and quality-94 WebP derivatives. The sea's built-in imagegen prompts and
+provenance are recorded in manifest.json and ../../../sea-whale-2026-10-10/record.json.
 
 Jeremy will handle any subsequent upscale manually. After upscaling, encode the larger files
 under the same src/paintings filenames; preserve these original native masters.

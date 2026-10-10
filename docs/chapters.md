@@ -503,26 +503,40 @@ and `morning`.
 
 ## The open sea
 
-`toMirror`: `story/crossing.ts` with `dolphins` and `swimAt`, `fx/sealife/dolphin.ts`, `fx/sealife/whale.ts`.
-`?chapter=sea`.
+`toMirror`: `story/crossing.ts`, `story/net-whale.ts`, `fx/sealife/dolphin.ts`, `fx/sealife/sleeper.ts`,
+`fx/sealife/net.ts`. `?chapter=sea` starts the passage; `?chapter=whale` starts at rest beside the whale.
 
-The exhale after the worst of the journey: the one crossing that takes its time, and nothing is asked of the
-player but to sail. The boat leaves in the last of the night and the sleeping island's palette lifts astern. The
-pod rises round the boat in staggered groups and rides the bow; the featured leap runs up alongside and turns out
-so it is seen side-on, at first light; a whale surfaces far ahead. The boat settles into a pace that fits the pod's
-play: a boat running ahead of it is eased back, never below `leastSpeed` until the pod's farewell. Then the cygnet's
-brave swim: it grows restless, climbs onto the side, makes
-up its mind, goes in and swims in the wave along the hull while the boat sails on, and is lifted back in to dry. A
-dolphin comes in and nudges the planking; then the pod dives away ahead before the mirror's still water develops.
-Distant land dissolves into the sky until the pod has gone (`Chapter.openSea`). The paper stays stowed.
+The ancient whale is the past, burdened by an old net: freeing it puts the past right before the sky mirror puts
+the future right. The boat leaves the sleeping island in the last of the night. Dolphins gather, ride the bow and
+leap at first light. The cygnet climbs onto the side, decides to swim alongside the moving hull, and is lifted back
+in to dry. The boat keeps an ordinary sailing pace for this play. A dolphin nudges the planking and the pod leads
+them into mist: first the whale's low moan, then its blow above the mist, then its vast shape. The boat comes to
+rest beside its head, the far length lost in haze. It is the whale from the first crossing, now found in trouble.
 
-Rulings: the passage takes at most 100 s. Dolphins are big, never swim in the air, and never turn faster than a
-body allows. The boat never crawls for the swim.
+Five steps share the rescue between wind, child and bird:
 
-Rules: the pod follows its own stations rather than being swung with the boat.
+1. Circles over the blowhole lift the net's patch so it can breathe.
+2. A sweep across the fold clears its eye; it opens and finds her.
+3. Strokes bring a cork to her reaching mitten so she can take the line.
+4. Gusts lift the net as she heaves it off the head, then lets the line go.
+5. The cygnet swims out and holds the last loop; a sweep lifts the flipper so the loop slips free.
 
-Knobs: `tuning.seaPassage`, `tuning.dolphins`. Checks: `tools/sea-check.mjs`, `sea-logic-check.mjs`,
-`CROSSING=toMirror node tools/journey-pacing-check.mjs`.
+The whale spouts and sings, waves its flipper, then rolls under and raises its flukes beside the sun. Its swell
+lifts the boat; the loose net sinks away. The cygnet returns to her arms, the mist lifts and they sail on to the
+mirror. Its jetty and reflections stay hidden until the whale has gone. Arrival carries the sailing view into a
+seven-second ease toward the mirror's own camera (`tuning.skyMirror.arriveFor`). The paper stays stowed at sea.
+
+Rulings: player-paced, replacing the former 100-second limit and passive crossing. A prompt play takes about four
+minutes to the mooring; the rescue waits for the player, with physical dolphin help after 90 seconds without
+progress at a step (`tuning.netWhale.valveAfter`). The whale is kind and immense, its movement slow and heavy.
+Dolphins follow their own stations, never swim in the air and never turn faster than a body allows. The boat never
+crawls for the first swim. The drawn gestures appear on the object they act on after its camera has settled.
+
+Knobs: `tuning.seaPassage` (pod pacing and mist), `tuning.dolphins`, `tuning.netWhale` (rescue, holds and farewell),
+`tuning.audio.whaleVoice`. Checks: `tools/sea-check.mjs` (both orientations, through the settled mirror view, with
+camera trace and browser/shader errors), `sea-logic-check.mjs`, `net-whale-check.mjs`,
+`CROSSING=toMirror node tools/journey-pacing-check.mjs`. Saves: `swim`, `whale-rest`, each completed rescue step and
+`whale-gone`; restoration details in `contracts/progress.md`.
 
 ## The sky mirror
 

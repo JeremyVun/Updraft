@@ -214,7 +214,7 @@ body.starting #plane-guide { visibility: hidden; }
   #veil.painted:not(.finished):has(.veil-painting[data-room="stairs"]) { --low: max(120px, 14vh); }
 }
 @media (min-aspect-ratio: 2/1) {
-  #veil.painted:not(.choosing):has(.veil-painting:is([data-room="sea"], [data-room="mirror"]))
+  #veil.painted:not(.choosing):has(.veil-painting[data-room="mirror"])
     :is(#begin, .chapters-toggle, .start-over) { left: 77%; }
 }
 

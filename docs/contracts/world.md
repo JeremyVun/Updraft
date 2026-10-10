@@ -39,8 +39,8 @@ and half-sizes are in `ISLES` (`heightfield.ts`) unless noted:
 | drowned village | (−10, −1440) | 210 × 175, all under water | `ISLES.drowned` |
 | dark wood | (−30, −1800) | 130 × 115 | `ISLES.wood` |
 | sleeping island | (−175, −1922) | 42 × 46 | `ISLES.sleeping` |
-| sky mirror | (−345, −2090) | 82 × 70, a flat just under the water | `SKY_MIRROR` (`sky-mirror-layout.ts`) |
-| home | (−100, −2370) | 190 × 165 | `ISLES.home` |
+| sky mirror | (−581, −2282) | 82 × 70, a flat just under the water | `SKY_MIRROR` (`sky-mirror-layout.ts`) |
+| home | (−336, −2562) | 190 × 165 | `ISLES.home` |
 
 `world/geography.ts` holds each moved room's shift from its original placement, and `GEOGRAPHY_VERSION` migrates
 saved coordinates on load. Moving a room means moving its terrain, props, walking
@@ -64,10 +64,13 @@ cygnet's swim slow the boat naturally. Targets at the ordinary breeze:
 | birches → stairs | short | under the cloud deck |
 | drowned village to the wood | player-paced | the becalming waits for the player; the storm is about 40 s |
 | wood → sleeping | 40 s | a sheltered bend |
-| sleeping → sky mirror (the sea) | at most 100 s | includes the pod's leap, the swim and the nudge |
+| sleeping → sky mirror (the sea) | player-paced; about 4 min with prompt gestures | pod's leap and swim, lead through mist, five-step whale rescue and farewell; about 45 s from the dive to the mooring |
 | sky mirror → home | 40 s | curves offshore before turning in to the jetty |
 
-A crossing is never shortened by losing an encounter: the sea's departure waits for the swim and the nudge.
+A crossing is never shortened by losing an encounter: the sea includes the swim and the whale rescue before the
+mirror approach. The pod normally nudges the boat to lead it in; a missed nudge cannot strand it before the whale.
+Geography revision 6 moves the mirror and home together (`PAST_THE_WHALE`), placing the mirror straight on beyond
+the whale while preserving the final crossing's shape and length.
 `tools/journey-pacing-check.mjs` sails the real boat through the passages (`CROSSING=` for one) at several wind
 bearings and frame rates; `tools/boat-check.mjs` checks navigation and storm pacing.
 
@@ -91,6 +94,11 @@ The player never sees the next island before it is time.
   everything outside the meadow's shore into the sky, from the piano to the departure.
 - **Open sea.** On the long crossing `Chapter.openSea` (eased into `uOpenSea` by `main.ts`) makes distant fog
   converge fully on the sky backdrop, so hidden islands leave no tinted outline; it releases on the approach home.
+  The whale approach has its own low mist (`tuning.seaPassage.mist`): its blow clears the veil above the still-hidden
+  body, then its shape emerges as the boat comes alongside. This lifted veil is confined to the whale approach.
+  The mirror has a separate island veil and stays hidden through the rescue and dive; its reflections develop only
+  on the onward sail. At the mooring, the mirror inherits the crossing's camera and eases into its own view over
+  `tuning.skyMirror.arriveFor` (7 s).
 - **Nothing snaps into colour.** Everything north of `LIVING_BEYOND` (`atmosphere.ts`) is already alive before the
   child reaches it; only the still island starts grey, and the meadow is held back by its waiting region.
   `main.ts` eases time of day, haze, season and rain toward what each chapter asks, so a chapter change is never a

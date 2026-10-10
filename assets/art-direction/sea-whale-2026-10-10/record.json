@@ -1,0 +1,101 @@
+{
+  "date": "2026-10-10",
+  "brief": "what do you mean approve that correction? You made a mistake. fix it. look at how the other chapters are done and follow that pattern.",
+  "context": "Jeremy rejected a screenshot tile and directed imagegen artwork following the existing chapter-painting workflow.",
+  "mode": "built-in image_gen",
+  "gameplayRevision": "e0b7ad56",
+  "subjects": "Ancient netted whale with a gentle amber eye beside the small empty red-sailed boat at sunset. No travellers, matching the other chapter paintings.",
+  "outputs": [
+    {
+      "room": "sea",
+      "aspect": "land",
+      "name": "sea-land",
+      "file": "sea-land.png",
+      "width": 1672,
+      "height": 941,
+      "bytes": 1965063,
+      "sha256": "8ab394baac9808e125e719b8390281f920b9b64ab0f4de780cc32ec71bb412e5",
+      "sourceRevision": "sea-whale-2026-10-10-land",
+      "prompt": "prompts/sea-land.txt",
+      "generation": {
+        "source": "/Users/jeremy/.codex/generated_images/01a12343-1002-7690-9141-d21453efa806/exec-abaa1ab0-484a-42ee-ac64-f6080739fcfc.png",
+        "historicalInputPaths": [
+          "assets/art-direction/sea-whale-2026-10-10/references/land.png",
+          "src/paintings/sea-land.webp at e0b7ad56",
+          "src/paintings/drowned-land.webp at e0b7ad56"
+        ],
+        "mode": "built-in image_gen",
+        "record": "assets/art-direction/sea-whale-2026-10-10/record.json"
+      },
+      "webp": {
+        "file": "src/paintings/sea-land.webp",
+        "bytes": 282900,
+        "sha256": "c0b1b045ae0b396f195043e5104ce91cdf0022815a33cb9b03c220c5125c1c96",
+        "quality": 94
+      },
+      "tile": {
+        "file": "src/chapter-select/stills/sea.webp",
+        "width": 400,
+        "height": 250,
+        "bytes": 26176,
+        "quality": 90,
+        "sha256": "810f063bdc28f7bba59b5790d51e93c51d00aeb60ef1b7dc8a0dcf2318185249",
+        "crop": [
+          83,
+          0,
+          1506,
+          941
+        ]
+      }
+    },
+    {
+      "room": "sea",
+      "aspect": "port",
+      "name": "sea-port",
+      "file": "sea-port.png",
+      "width": 852,
+      "height": 1846,
+      "bytes": 2022724,
+      "sha256": "f6212d5c2458790465f273708959c74ccbf5772de66b8766dbc9b40ad59f7685",
+      "sourceRevision": "sea-whale-2026-10-10-port",
+      "prompt": "prompts/sea-port.txt",
+      "generation": {
+        "source": "/Users/jeremy/.codex/generated_images/01a12343-1002-7690-9141-d21453efa806/exec-66fb95dd-c381-4ee0-9275-3f93b518261c.png",
+        "historicalInputPaths": [
+          "assets/art-direction/continue/remade/masters/sea-land.png",
+          "assets/art-direction/sea-whale-2026-10-10/references/port.png"
+        ],
+        "mode": "built-in image_gen",
+        "record": "assets/art-direction/sea-whale-2026-10-10/record.json"
+      },
+      "webp": {
+        "file": "src/paintings/sea-port.webp",
+        "bytes": 301682,
+        "sha256": "f1256f388990fa74a465ca92d8c1d8f78b88f706ca8d768f256ac5eb1daa5cc8",
+        "quality": 94
+      }
+    }
+  ],
+  "derivatives": {
+    "webp": "cwebp -q 94 -m 6 -sharp_yuv, native dimensions",
+    "tile": "cwebp -crop 83 0 1506 941 -resize 400 250 -q 90 -m 6 -sharp_yuv"
+  },
+  "validation": {
+    "status": "Generated, installed and checked on sea-whale; not merged into main.",
+    "viewports": [
+      "1600x1000",
+      "2000x800",
+      "390x844"
+    ],
+    "checks": [
+      "Native landscape and portrait visually inspected; no repeated cross-surface swatching seen.",
+      "Actual title and chapter-select captures checked for subject crop and control placement.",
+      "Sea wide controls centred over water; start-over confirmation checked; Mirror remains at 77%.",
+      "All chapter tiles decode at 400x250; zero browser errors in artwork checks.",
+      "Production and QA builds passed.",
+      "Native dimensions, SHA-256 master/derivative checksums and exact retained prompts verified.",
+      "Twelve-portrait collage rebuilt."
+    ],
+    "evidence": "/tmp/updraft-sea-takeover-V1Gw4P/art-*"
+  }
+}

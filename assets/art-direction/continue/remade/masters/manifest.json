@@ -522,31 +522,39 @@
     "file": "sea-land.png",
     "width": 1672,
     "height": 941,
-    "bytes": 1764461,
-    "sha256": "dc0c8044fe7a17807cb4e15a634709f1aa0b16f99a287967a582e9610ddf8aa8",
-    "sourceRevision": "sea-study06-dolphin-land",
+    "bytes": 1965063,
+    "sha256": "8ab394baac9808e125e719b8390281f920b9b64ab0f4de780cc32ec71bb412e5",
+    "sourceRevision": "sea-whale-2026-10-10-land",
     "prompt": "prompts/sea-land.txt",
     "generation": {
-      "source": "/Users/jeremy/.codex/generated_images/01a10a1f-6dd6-72c2-8ee3-1448b191d071/exec-cc6dd519-e301-4c50-bc33-6f9744293d21.png",
+      "source": "/Users/jeremy/.codex/generated_images/01a12343-1002-7690-9141-d21453efa806/exec-abaa1ab0-484a-42ee-ac64-f6080739fcfc.png",
       "historicalInputPaths": [
-        "/Users/jeremy/projects/updraft/assets/art-direction/sea-mirror-study-2026-10-05/03-sea-game-boat.png"
+        "assets/art-direction/sea-whale-2026-10-10/references/land.png",
+        "src/paintings/sea-land.webp at e0b7ad56",
+        "src/paintings/drowned-land.webp at e0b7ad56"
       ],
       "mode": "built-in image_gen",
-      "record": "assets/art-direction/sea-mirror-study-2026-10-05/round-3.json"
+      "record": "assets/art-direction/sea-whale-2026-10-10/record.json"
     },
     "webp": {
       "file": "src/paintings/sea-land.webp",
-      "bytes": 249338,
-      "sha256": "b9694eb6ca45560f9342d67521c23f0645be014deb35ddd22916bbbfd2049ee6",
+      "bytes": 282900,
+      "sha256": "c0b1b045ae0b396f195043e5104ce91cdf0022815a33cb9b03c220c5125c1c96",
       "quality": 94
     },
     "tile": {
       "file": "src/chapter-select/stills/sea.webp",
       "width": 400,
       "height": 250,
-      "bytes": 22502,
+      "bytes": 26176,
       "quality": 90,
-      "sha256": "afaf9806c77078f9ded0a15862c789bd800288475b80e494a1e1d310467a7eee"
+      "sha256": "810f063bdc28f7bba59b5790d51e93c51d00aeb60ef1b7dc8a0dcf2318185249",
+      "crop": [
+        83,
+        0,
+        1506,
+        941
+      ]
     }
   },
   {
@@ -554,25 +562,25 @@
     "aspect": "port",
     "name": "sea-port",
     "file": "sea-port.png",
-    "width": 853,
-    "height": 1844,
-    "bytes": 1820863,
-    "sha256": "7f68e64e7c6e8aeee9fd2d30ed7a418fec8b13e0cc92f95075dd5bd8088eba6d",
-    "sourceRevision": "sea-study06-dolphin-port",
+    "width": 852,
+    "height": 1846,
+    "bytes": 2022724,
+    "sha256": "f6212d5c2458790465f273708959c74ccbf5772de66b8766dbc9b40ad59f7685",
+    "sourceRevision": "sea-whale-2026-10-10-port",
     "prompt": "prompts/sea-port.txt",
     "generation": {
-      "source": "/Users/jeremy/.codex/generated_images/01a10a1f-6dd6-72c2-8ee3-1448b191d071/exec-2aa335d1-5e04-4975-b201-2722c10aa599.png",
+      "source": "/Users/jeremy/.codex/generated_images/01a12343-1002-7690-9141-d21453efa806/exec-66fb95dd-c381-4ee0-9275-3f93b518261c.png",
       "historicalInputPaths": [
-        "/Users/jeremy/.codex/generated_images/01a10a1f-6dd6-72c2-8ee3-1448b191d071/exec-96488da0-16cb-4b90-b376-eb8475c23119.png",
-        "/Users/jeremy/projects/updraft/assets/art-direction/sea-mirror-study-2026-10-05/06-sea-dolphin.png"
+        "assets/art-direction/continue/remade/masters/sea-land.png",
+        "assets/art-direction/sea-whale-2026-10-10/references/port.png"
       ],
       "mode": "built-in image_gen",
-      "record": "assets/art-direction/sea-mirror-study-2026-10-05/round-3.json"
+      "record": "assets/art-direction/sea-whale-2026-10-10/record.json"
     },
     "webp": {
       "file": "src/paintings/sea-port.webp",
-      "bytes": 252000,
-      "sha256": "b8a1026d1096b1280bf4acd74b022907f652cf050ae028813f447c41d45ff1a2",
+      "bytes": 301682,
+      "sha256": "f1256f388990fa74a465ca92d8c1d8f78b88f706ca8d768f256ac5eb1daa5cc8",
       "quality": 94
     }
   },

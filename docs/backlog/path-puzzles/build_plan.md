@@ -1186,10 +1186,50 @@ sea check, `whale-look-stills` and the playthrough play them; `tools/lib/whale-g
   8.0 m/s² (main 5.5 / 6.7); the phone's look crowded by her hood and the plane; the shortened back's end showing as
   a round end in the landscape flipper hold; the eye's sweep thin. Branch `sea-polish`. The pod's late nudge (the
   pacing check's margins) and the sea check's five steps on `sea-pace`.
-Done: [ ]
+- Recovery, 2026-10-10: Jeremy asked Codex to take over "Open sea: whale rescue and final playthrough" after
+  Claude's weekly limit. His model ruling: "you can use sol for review, but i'd like you to do any remaining work
+  yourself as astra". This chat runs `gpt-6-astra`. `sea-pace` and `sea-polish`
+  were already merged at `29960fd5`. The final `sea-blow` agent left two code commits (`4af09c8b`, `25772c46`),
+  passing checks and captures, plus an uncommitted design amendment. That amendment is preserved in `859c316f`,
+  and the work is merged on `sea-whale` at `4aa6bca3`. Production and QA builds pass.
+- Integrated verification, 2026-10-10: real-gesture sea play completed at 1600×900 and 430×932 through all five steps,
+  the farewell and the mirror's seven-second arrival plus three seconds settled. Each took one go per step except
+  four heave strokes; both saw 539 swim frames, no clipping and a maximum 1.03 m gap from the hull-side swim point.
+  No browser errors, stray shader programs or unwarmed program/target pairs. Saved camera traces and arrival
+  strips show a gradual handoff; peak acceleration across the arrival and first walk was 1.41 / 1.58 m/s² with
+  the previous agent's 0.5 s velocity-window measure. No further gameplay change arose. Audio was not freshly
+  auditioned; N5c's existing audio review remains the evidence for it.
+- Jeremy approved extending `tools/sea-check.mjs` to cover the settled mirror, camera trace and runtime/compile
+  errors (`e0b7ad56`). All six new report assertions reject injected failures. The first landscape run exposed a
+  report-format mistake in the assertion; the corrected assertion passes its saved report, and the phone run
+  passes end to end. Pacing seeds 147/148, sea logic seed 147 and the sleeping-island crossing also passed at the
+  integrated gameplay head. Captures, traces, videos and logs: `/tmp/updraft-sea-takeover-V1Gw4P/`.
+- Review build: stable QA preview on port 5330, `?chapter=sea` for the passage or `?chapter=whale` for the rescue.
+  Jeremy's workflow ruling: "before any fix or change you want to make, present me a list so i can approve".
+  Merging the encounter into main still needs his approval.
+Done: [x]
 
 ### Phase N4: docs on approval
-Once Jeremy approves: the open sea's chapter-select still regenerated with the whale (from the game, not Astra: Jeremy, 2026-10-08, "don't use astra anymore"); the open sea's section in
+Once Jeremy approves: the open sea's landscape and portrait paintings regenerated with the whale using built-in
+imagegen and game references, with the chapter tile derived from the landscape; the open sea's section in
 `docs/chapters.md` (its ruling "at most 100 s, nothing asked" replaced),
 the crossing table in `docs/contracts/world.md`, the new tuning names; this item's crossing sections trimmed.
-Done: [ ]
+Jeremy approved both documentation and thumbnail work on 2026-10-10: "approved both". The chapter, world and save
+contracts now describe the five steps, mist and camera handoff, geography revision 6 and seven whale checkpoints.
+The design's pacing/save summary points to these durable contracts.
+
+Jeremy rejected the screenshot substitution and directed the correction: "what do you mean approve that
+correction? You made a mistake. fix it. look at how the other chapters are done and follow that pattern."
+The replacement follows that pattern: built-in imagegen landscape and portrait paintings, native PNG masters and
+exact prompts retained, q94 full-size WebPs and a q90 400×250 tile derived from the landscape. Scene references
+come from the integrated whale playthrough; existing sea and drowned paintings supply the finish and boat design.
+The whale's eye and net are the subject, beside the empty red-sailed boat; the title, hover painting and tile agree.
+Provenance: `assets/art-direction/sea-whale-2026-10-10/record.json`.
+
+Verification: production and QA builds pass. Actual title and chapter-select captures at 1600×1000, 2000×800 and
+390×844 show the matching paintings and 400×250 tile loaded without browser errors. Wide Sea controls were
+returned to the centre over open water, clear of the boat; the start-over confirmation was checked there too,
+and Mirror's 77% control position was verified unchanged. Native masters, exact prompts, dimensions and derivative
+checksums are retained and verified. The portrait collage is rebuilt. Evidence:
+`/tmp/updraft-sea-takeover-V1Gw4P/art-*`. N4 is complete on `sea-whale`; main merge still awaits Jeremy's approval.
+Done: [x]
