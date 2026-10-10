@@ -567,6 +567,11 @@ flows into the same sky composition. Fitting may retreat up to 8 m; it must not 
 with a large zoom-out. Camera checks cover earlier stars during later ascents and the horizon at every stop;
 `CONTINUOUS=1 node tools/sky-mirror-check.mjs` plays all four without resetting the camera between them.
 
+The fallen lights breathe over six seconds, between 92% and full brightness. Jeremy: "if we want to have them blink,
+they should pulse slowly, not just blink in and out really fast." Their cores and rays are filtered across pixels,
+so camera movement must not make the almost edge-on lights flash; `sky-mirror-star-check.mjs` checks constant-light
+camera movement at normal and Ultra render scales separately from the intended pulse.
+
 Knobs: `tuning.skyMirror`, `tuning.mirrorCompanion`. Checks: `tools/sky-mirror-logic-check.mjs`,
 `sky-mirror-check.mjs`, `sky-mirror-pointer-check.mjs`, `sky-mirror-visibility-check.mjs`. Saves: `stars4-<mask>`
 holds the returned stars and the current destination.

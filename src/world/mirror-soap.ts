@@ -57,12 +57,24 @@ export function starLight(floor = false): THREE.Mesh<THREE.PlaneGeometry, THREE.
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
     vertexShader: `varying vec2 vUv;
       void main() { vUv=uv; gl_Position=projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
-    fragmentShader: `varying vec2 vUv; uniform float uFade; uniform float uTime;
+    fragmentShader: `varying vec2 vUv; uniform float uFade;
+      float rayIntegral(float x, float sharpness) {
+        return sign(x)*(1.0-exp(-abs(x)*sharpness))/sharpness;
+      }
+      float ray(float x, float width, float sharpness) {
+        return (rayIntegral(x+width*0.5,sharpness)-rayIntegral(x-width*0.5,sharpness))/width;
+      }
+      float glow(vec2 p, vec2 width, float sharpness) {
+        vec2 spread=1.0+sharpness*width*width*0.5;
+        return exp(-dot(p*p,sharpness/spread))/sqrt(spread.x*spread.y);
+      }
       void main() {
         vec2 p=(vUv-0.5)*2.0;
-        float core=exp(-dot(p,p)*95.0);
-        float rays=exp(-abs(p.x)*65.0-abs(p.y)*5.0)+exp(-abs(p.y)*65.0-abs(p.x)*7.0);
-        float halo=exp(-dot(p,p)*12.0)*0.16;
+        // The light lies almost edge-on to the camera; integrate thin rays across each pixel.
+        vec2 width=max(fwidth(p),vec2(0.0001));
+        float core=glow(p,width,95.0);
+        float rays=ray(p.x,width.x,65.0)*ray(p.y,width.y,5.0)+ray(p.y,width.y,65.0)*ray(p.x,width.x,7.0);
+        float halo=glow(p,width,12.0)*0.16;
         float a=(core+rays*0.75+halo)*uFade;
         gl_FragColor=vec4(vec3(1.0,0.79,0.43)*1.65,a);
       }`,

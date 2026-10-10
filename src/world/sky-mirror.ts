@@ -467,7 +467,7 @@ export class SkyMirror {
           if (rising) { this.completedMask|=1<<i; this.lastReturned=i; }
         }
       }
-      s.floor.material.uniforms.uFade.value=0.85+Math.sin(time*1.8+i*2)*0.15;
+      s.floor.material.uniforms.uFade.value=1-T.starPulseDepth*(0.5-0.5*Math.sin(time*Math.PI*2/T.starPulsePeriod+i*2));
     }
     this.updateGuide(dt);
   }

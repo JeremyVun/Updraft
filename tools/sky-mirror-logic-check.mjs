@@ -196,8 +196,15 @@ for(const [fps,portrait] of (process.env.RESTORE_ONLY?[]:[[60,false],[30,true]])
   f.cast.input.prevNdc.set(-0.99,-0.99);f.cast.input.ndc.set(-0.9,-0.99);
   room.brush(1/fps,f.time,f.cast.input,f.rig.camera);assert.equal(room.bubbles.length,0);
   let previous='',transitions=[];
+  const fades=room.stars.map(s=>s.floor.material.uniforms.uFade.value);
   for(let i=0;i<fps*320 && !c.done;i++) {
     f.step(true);
+    room.stars.forEach((s,index)=>{
+      const fade=s.floor.material.uniforms.uFade.value;
+      assert(fade>=0.9 && fade<=1,'fallen lights never pulse close to disappearing');
+      assert(Math.abs(fade-fades[index])*fps<0.1,'the intentional star pulse changes gently');
+      fades[index]=fade;
+    });
     if(c.beat!==previous){transitions.push([c.beat,c.target,+f.time.toFixed(2),room.progress]);previous=c.beat;}
     assert(Number.isFinite(f.cast.child.position.y));
     for(const b of room.bubbles) assert(b.position.toArray().every(Number.isFinite));

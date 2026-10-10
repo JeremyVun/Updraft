@@ -253,6 +253,7 @@ export const tuning = {
     bubbleLift: 4.5, bubbleRelease: 8.5, bubbleReach: 19,
     bubbleHitPadding: 0.055, captureRadius: 2.1, wandRadius: 0.62,
     liftFrom: 0.2, liftFull: 0.65, starRise: 3.2, starHeight: 18,
+    starPulsePeriod: 6, starPulseDepth: 0.08,
     boatDriftSpeed: 6, duskFrom: 1.27, duskTo: 1.72, stroll: 1,
     cameraDistance: 27, cameraPortraitDistance: 29,
     cameraLiftFollow: 0.28, constellationReveal: 6,

@@ -63,6 +63,9 @@ edit.
 
 - `shader-check` (literal GLSL edge order) and `shader-browser-check` (float ramps on Chrome/Metal and software
   Vulkan, texture bytes in the browser; another compiler, not another GPU family or Safari).
+- `sky-mirror-star-check`: renders the fallen star shader at constant brightness while the low camera crosses
+  pixel boundaries, nearby and distant, at normal and Ultra render scales. Needs a dev server; `SOFTWARE=1`
+  uses SwiftShader without the GPU lock. The intentional slow pulse is covered by `sky-mirror-logic-check`.
 - `stairs-fog-check`: renders the shared fog-bank shader along near sightlines, including downward rays to the
   foreground. Checks continuous coverage inside the bank at cloud and sea height, with the boat's clearing,
   and clear surfaces outside it. Needs a dev server for the shader import.
