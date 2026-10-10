@@ -796,6 +796,7 @@ try {
       const D = await import('/src/world/decks.ts');
       const W = await import('/src/world/drowned-way.ts');
       const { tuning } = await import('/src/tuning.ts');
+      const { atmo } = await import('/src/world/atmosphere.ts');
       const w = window.__runWatch = { frames: 0, offWorst: 0, offAt: '', fogAhead: Infinity, fogNear: Infinity, fogAt: '',
         stallWorst: 0, stallAt: '', last: -1, since: 0, facing: 0, facingRun: 0, facingWorst: 0, facingAt: '', unseen: 0, unseenRun: 0,
         unseenWorst: 0, unseenAt: '', inside: 0, insideAt: '', fogGoneRun: 0, fogGoneWorst: 0, fogGoneAt: '', boatMoved: 0,
@@ -869,9 +870,12 @@ try {
         if (ahead < w.fogAhead) { w.fogAhead = ahead; w.fogNear = near; w.fogAt = `${r.stage} at ${r.along.toFixed(1)} m, ${t.toFixed(1)} s`; }
         if (r.stage === 'walk') {
           let seen = false;
-          /** Its body low down or its top, which is what a lens up on the high roofs sees of it. */
-          for (let a = -40; a <= 40 && !seen; a += 5) {
-            for (const deep of [0, 6, 14]) {
+          /** The bank can overtake her, leaving its body in view after its front has passed the lens. */
+          const sides = atmo.uniforms.uSeaFogSides.value;
+          for (let a = -sides.y; a <= sides.w && !seen; a += 5) {
+            const density = Math.min(1, (a + sides.y) / (sides.y - sides.x), (sides.w - a) / (sides.w - sides.z));
+            if (density < 0.2) continue;
+            for (const deep of [0, 6, 14, 40, 80, 160]) {
               for (const y of [Math.min(2.5, dark.level * 0.5), dark.level * 0.85]) {
                 probe.set(front.x - (dz / dl) * a - (dx / dl) * deep, y, front.y + (dx / dl) * a - (dz / dl) * deep).project(cam);
                 if (probe.z < 1 && Math.abs(probe.x) < 0.98 && Math.abs(probe.y) < 0.98) { seen = true; break; }
@@ -1245,10 +1249,10 @@ try {
     for (const r of roofs) console.log(`  the roof at ${names[r.name]} (ridge ${r.ridge.toFixed(1)} m) ${r.under === null ? 'not under yet' : `under ${(r.under - r.left).toFixed(1)} s after she went on from it`}`);
     console.log(`the boat moved ${w.boatMoved.toFixed(2)} m from where it ran aground`);
     console.log(`at the end: cat at ${end.cat.join(', ')}, her at ${end.child.join(', ')}`);
-    /** Each roof she went on from is taken within 14 s, but for the one the fog waits short of at the tower's foot. */
+    // The bank holds at puzzles and advances steadily; earlier roofs must be covered by the tower arrival.
     const waits = (r) => r.under === null && Math.hypot(r.x - end.child[0], r.z - end.child[2]) < 22;
-    const late = roofs.filter((r) => !waits(r) && (r.under ?? end.time) - r.left > 14);
-    assert(!late.length, `a roof she left was not taken by the fog in time: ${late.map((r) => names[r.name]).join('; ')}`);
+    const uncovered = roofs.filter((r) => r.under === null && !waits(r));
+    assert(!uncovered.length, `a roof she left was not taken by the fog: ${uncovered.map((r) => names[r.name]).join('; ')}`);
     assert(w.boatMoved < 1.5, `the boat moved ${w.boatMoved.toFixed(2)} m from where it ran aground`);
     assert(catWaits < 1.5, `the cat is not waiting on the nave by the tower's foot (${catWaits.toFixed(2)} m off)`);
   }

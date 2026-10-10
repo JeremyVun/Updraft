@@ -218,9 +218,11 @@ lighthouse's light. How it plays is in `docs/chapters.md`.
   mill's drawn invitation). The QA stage plays each on its own (`?chapter=stage&gap=tree|swing|mill|run`).
 - **The tub** is `world/wash-tub.ts`; **the cat** is `creatures/cat.ts` with `creatures/cat/`, one animal driven by
   the story.
-- **The dark** is `world/drowned-dark.ts` (`DarkBank`: `rise`, `reach` along `DARK_WAY`, `close`, `storm`), which
+- **The dark** is `world/drowned-dark.ts` (`DarkBank`: `rise`, `front` along `DARK_WAY`, `close`, `storm`), which
   drives the sea fog every shader reads (`seaFog` and the `uSeaFog*` uniforms in `world/atmosphere.ts`, knobs in
-  `tuning.drowned.fog`); `?fog=` forces it.
+  `tuning.drowned.fog`). The approved analytic mist is the only renderer, including production and the storm;
+  its continuous world-space field includes the bell's clearing and soft wisps at the front. The original
+  ray-marched fog has been removed. QA `?fog=` forces its progression; `villagefog=0` disables it for comparison.
 
 ## The sky mirror
 

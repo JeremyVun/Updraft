@@ -18,7 +18,7 @@ const mechanics = [
   'sleeping-logic', 'wing-care', 'wood-logic', 'ending-view',
   'camera-direction', 'crossing-camera', 'crossing-haze', 'dream-story', 'drowned-camera', 'drowned-fog-motion',
   'foghorn-story', 'frame-pacer', 'geography', 'journey-reveal', 'piano-growth', 'piano-logic',
-  'plane-routing', 'scarf-normals', 'pointer-pick', 'drowned-gating', 'drowned-contact', 'drowned-tower', 'drowned-boarding', 'drowned-return', 'drowned-lantern', 'drowned-rescue-polish', 'drowned-rescue-sequence', 'drowned-bell', 'drowned-farewell',
+  'plane-routing', 'scarf-normals', 'pointer-pick', 'cat-events', 'drowned-gating', 'drowned-contact', 'drowned-tower', 'drowned-boarding', 'drowned-return', 'drowned-lantern', 'drowned-rescue-polish', 'drowned-rescue-sequence', 'drowned-bell', 'drowned-farewell',
 ];
 const browser = [
   'shader-browser', 'drowned-mist', 'lantern-fog', 'stairs-fog', 'touch-viewport', 'chapter-view-browser', 'context-loss', 'start',

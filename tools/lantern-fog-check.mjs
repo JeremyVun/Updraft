@@ -1,5 +1,5 @@
 // Render the real fog shader on either side of a surface passing the lantern's closest sightline point.
-// BASE selects Vite; NEGATIVE=1 or reflection restores a former cutoff to prove the continuity gates catch it.
+// BASE selects Vite; NEGATIVE=1 inserts a hard cutoff into the lantern halo.
 import assert from 'node:assert/strict';
 import { openBrowser } from './lib/browser.mjs';
 const base = process.env.BASE ?? 'http://127.0.0.1:5230/';
@@ -21,10 +21,8 @@ try {
     u.uSeaFogTop.value.setRGB(0.067, 0.069, 0.077);
     u.uSeaFogCrest.value.set(0, 0, 0, 0);
     u.uLantern.value.set(2, 1.25, 14, 1.34);
-    const source = negative === '1' ? ATMO_GLSL
-      .replace('clamp(dot(uLantern.xyz - ro, rd), 0.0, far)', 'dot(uLantern.xyz - ro, rd)')
-      .replace('tc >= ta && tc <= tb', 'tc >= ta && tc < tb') : negative === 'reflection' ? ATMO_GLSL
-      .replace('seaSurface && rd.y < 0.0 && far < 200.0', 'rd.y < 0.0 && far < 200.0 && abs(ro.y + rd.y * far) < 0.4') : ATMO_GLSL;
+    const source = negative ? ATMO_GLSL.replace('float d = sqrt(max(dot(to, to) - at * at, 0.04));',
+      'if (t1 < at) return 0.0; float d = sqrt(max(dot(to, to) - at * at, 0.04));') : ATMO_GLSL;
     if (negative && source === ATMO_GLSL) throw new Error('Negative control did not change the shader');
     const material = new THREE.ShaderMaterial({
       uniforms: { ...u, probeHeight: { value: 3 }, probeEpsilon: { value: 0.001 }, probeMode: { value: 0 } },
@@ -43,7 +41,7 @@ try {
             far = distance(ro, surface); rd = normalize(surface - ro);
           }
           if (probeMode == 2) { ro.y = 1.0 + offset; far = 14.0; }
-          vec4 fog = seaFog(ro, rd, far, probeMode == 1);
+          vec4 fog = seaFog(ro, rd, far);
           gl_FragColor = vec4(fog.rgb * fog.a, fog.a);
         }`,
     });

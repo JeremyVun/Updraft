@@ -10,6 +10,7 @@ import { applyCatLook, catMaterial, coatShells, type CatLook, type Coat } from '
 import { Spray } from './cat/spray';
 import { CallMarks } from '../fx/call-marks';
 import { tuning } from '../tuning';
+import { QA } from '../qa';
 
 export type CatPose = 'stand' | 'sit' | 'crouch' | 'curl';
 export type Pace = 'walk' | 'trot' | 'run';
@@ -972,7 +973,7 @@ export class Cat {
     this.drive(dt);
     this.spray.update(dt);
     this.syncWorld();
-    this.measure();
+    if (QA) this.measure();
     this.callFor = Math.max(0, this.callFor - dt);
     this.callMarks.update(dt, this.eye(this.callAt), this.callFor > 0 ? 1 : 0, Math.sqrt(this.scale / 1.8));
   }
@@ -1823,9 +1824,12 @@ export class Cat {
       let lift = 0;
       this.pawLift.fill(0);
       for (const i of this.contacts) {
+        const blend = skin.getZ(i);
         this.v.fromBufferAttribute(p, i);
-        this.w.copy(this.v).applyMatrix4(this.rig.bones[skin.getY(i)]);
-        this.v.applyMatrix4(this.rig.bones[skin.getX(i)]).lerp(this.w, skin.getZ(i)).applyMatrix4(this.frameInverse);
+        if (blend > 0) this.w.copy(this.v).applyMatrix4(this.rig.bones[skin.getY(i)]);
+        this.v.applyMatrix4(this.rig.bones[skin.getX(i)]);
+        if (blend > 0) this.v.lerp(this.w, blend);
+        this.v.applyMatrix4(this.frameInverse);
         const floor = this.floor ? this.floor(this.v.x, this.v.z) : this.level;
         const paw = PAWS.indexOf(skin.getX(i));
         if (paw < 0) lift = Math.max(lift, floor + 0.004 - this.v.y);
@@ -1890,6 +1894,7 @@ export class Cat {
 
   /** QA: how far each planted paw moved since the last frame, and how far the leg fell short of where it was put down. */
   private measure(): void {
+    if (!QA) return;
     if (this.reframed) {
       this.reframed = false;
       this.plantedWas.fill(false);

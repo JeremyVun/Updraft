@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { tuning } from '../tuning';
+import { QA } from '../qa';
 import type { Traveller } from './traveller';
 
 /** A place she climbs by: where a mitten closes on it, where an ankle sits with the boot's toe in it, and its height. */
@@ -174,7 +175,7 @@ export class Climb {
     c.lookAt = this.look;
     for (const hand of [0, 1] as const) c.reachFor(hand, this.limbs[hand]);
     for (const foot of [0, 1] as const) c.footFor(foot, this.limbs[foot + 2]);
-    this.measure();
+    if (QA) this.measure();
 
     if (this.next >= this.plan.length && this.running.length === 0) this.finish();
   }
@@ -229,6 +230,7 @@ export class Climb {
   }
 
   private measure(): void {
+    if (!QA) return;
     const c = this.child;
     for (const hand of [0, 1] as const) {
       if (c.reached(hand) < 0.99 || this.running.some((r) => r.step.limb === hand)) continue;

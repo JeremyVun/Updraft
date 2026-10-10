@@ -20,7 +20,7 @@ for(const [progress,phase] of [[0,'search'],[1,'one'],[2,'two'],[3,'three'],[4,'
 m.beat='jetty';assert.equal(mirror.call(m),'depart');
 room.progress=0;room.holdingWand=false;assert.equal(mirror.call(m),'approach');
 for(const [beat,phase] of [['enter','drift'],['drift','drift'],['still','fog'],['becalmed','fog'],['run','fog'],
-  ['nave','fog'],['gather','farewell'],['snatch','farewell'],['after','farewell']])
+  ['nave','fog'],['gather','storm'],['snatch','storm'],['after','storm']])
   assert.equal(drowned.call({beat}),phase);
 // The church: the fog's music up the ivy, the refuge until the lantern first answers the bell, home from then on.
 for(const [step,answered,phase] of [['foot',0,'fog'],['climb',0,'fog'],['nest',0,'refuge'],['sea',0,'refuge'],

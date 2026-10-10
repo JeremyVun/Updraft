@@ -172,11 +172,6 @@ export class ChurchArrival {
     return this.aboardFor >= 0;
   }
 
-  /** In the belfry: the save point there. */
-  get inBelfry(): boolean {
-    return this.step === 'nest' || this.step === 'sea' || this.step === 'ring';
-  }
-
   /** QA and the save in the belfry: her standing by the bell looking out over the fog sea, the kittens awake round the cat. */
   skipToBelfry(): void {
     const { child: c } = this.cast;

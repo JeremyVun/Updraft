@@ -192,13 +192,9 @@ export class DarkBank {
     // The low sun on the crests that face it; once the sun has gone from it only a little rose is left there.
     this.crest.copy(HUE.crest).multiplyScalar(luminance(u.uSunColor.value) * k.crest)
       .lerp(tmp.copy(HUE.rose).multiplyScalar(luminance(this.top) * k.roseLeft), crestGone);
-    u.uSeaFogBody.value.set(this.body.r, this.body.g, this.body.b, k.air * risen * THREE.MathUtils.lerp(k.airFar, 1, drawn) * (1 - 0.6 * this.close));
+    u.uSeaFogBody.value.set(this.body.r, this.body.g, this.body.b, 0);
     u.uSeaFogTop.value.copy(this.top);
     u.uSeaFogCrest.value.set(this.crest.r, this.crest.g, this.crest.b, k.stir * night);
-    u.uSeaFogRim.value = k.rim * (1 - this.close);
-    u.uSeaFogGlow.value = THREE.MathUtils.lerp(1, k.glowNear, crestGone);
-    u.uSeaFogHaze.value = THREE.MathUtils.lerp(k.haze, k.hazeNear, drawn) * (1 - this.close);
-    u.uSeaFogReach.value = THREE.MathUtils.lerp(k.airReachFar, k.airReach, drawn);
 
     if (taken <= 0) return;
     tint(u.uSunColor.value, HUE.cold, 0.5 * taken, 1 - 0.88 * taken);

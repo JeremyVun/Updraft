@@ -217,6 +217,7 @@ export class Kittens {
   }
 
   update(dt: number): void {
+    this.heard.length = 0;
     for (const [i, k] of this.cats.entries()) {
       k.update(dt);
       const victim = this.pouncing[i] >= 0 ? this.cats[this.pouncing[i]] : null;

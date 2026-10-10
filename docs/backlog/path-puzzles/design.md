@@ -1244,6 +1244,23 @@ now build bounded swing momentum without requiring timing or counteracting its m
 either end of a sufficient swing. Gentle movement can sustain it, fast repeated strokes cannot pin it, and
 it settles naturally when input stops. Keep the bronze and pale ripple on every ring.
 
+Jeremy's final pre-merge review brief, verbatim:
+
+> great, do one last code review for bugs, code duplication, dead code, simplification opportunities, performance optimisations, or even gameplay issues. As long as there isn't much noticeable visual regression. This is the last step before we merge things into main
+
+Review the complete drowned branch against its main ancestor and current main's shared seams. Fix proven bugs
+and safe simplifications, preserving the approved visuals and pacing. Verify production matches the reviewed
+game, saves and puzzle progression work, and relevant regression gates pass. Findings and evidence are in
+[final-review.md](final-review.md). Merge remains a separate step.
+
+Jeremy's fog cleanup instruction during the review, verbatim:
+
+> yea, we aren't using the expensive fog anymore, you can delete that. make sure we use the new approved cheaper fog
+
+Remove the original ray-marched renderer and its unused controls. The approved analytic mist is the single
+renderer in development, QA and production, including the storm. Keep `villagefog=0` for comparison with no fog;
+both `villagefog=1` and the existing `villagefog=mist` links enable the approved mist.
+
 Current follow-up list (all authorized):
 - 56 reopened: the approaching hull pushed the untouched tub. Start it outside that path, retaining attraction
   after player input. Full-entry CPU tests now measure zero drift; the old start fails at 0.389 m.

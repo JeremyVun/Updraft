@@ -3,6 +3,10 @@
 Each room's puzzle gets its own section. The design, Jeremy's words and every ruling are in [design.md](design.md);
 this file only orders the work.
 
+Final pre-merge review (2026-10-10–11): [findings and verification](final-review.md). Complete: verified bugs and
+safe cleanup fixed; approved mist preserved and the old renderer removed. Landscape and portrait replays pass.
+Merge with current main is still separate: resolve the recorded conflicts and check the resulting tree.
+
 ## The drowned village: the cat and the roofs (prototype)
 
 Design: the sections of design.md from "The whole room, from the beginning" on. Concept frames: `comps/drowned/` (a
