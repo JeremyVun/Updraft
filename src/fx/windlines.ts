@@ -103,13 +103,13 @@ export class WindLines {
   }
 
   /** A burst of lines sweeping through (x, z) along (dx, dz): a gust the story plays, not one the player makes. */
-  gust(x: number, z: number, dx: number, dz: number, count: number, pace: number): void {
+  gust(x: number, z: number, dx: number, dz: number, count: number, pace: number, width = 0.2): void {
     const len = Math.hypot(dx, dz) || 1;
     const ux = dx / len, uz = dz / len;
     for (let i = 0; i < count; i++) {
       const back = -3 + Math.random() * 4;
       const side = (Math.random() - 0.5) * 5;
-      this.spawn(x + ux * back - uz * side, z + uz * back + ux * side, 0.8 + Math.random() * 2.2, 0.9 + Math.random() * 0.7, 0.2);
+      this.spawn(x + ux * back - uz * side, z + uz * back + ux * side, 0.8 + Math.random() * 2.2, 0.9 + Math.random() * 0.7, width);
       const line = this.lines[this.lines.length - 1];
       if (!line || line.age > 0) continue;
       line.drive = new THREE.Vector2(ux, uz);

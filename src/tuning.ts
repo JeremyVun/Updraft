@@ -1969,9 +1969,9 @@ export const tuning = {
       glow: 0.55, glowSwell: 1.1, answerGlow: 1.6, glowSize: 3.2,
       /**
        * The cat seeing her off: how far below the sill she has to be before it gets up from its kittens and comes to it
-       * (metres), seconds after that that the kitten follows it, and seconds after she sits that the two go back in.
+       * (metres), seconds after that that the kitten follows it, while both stay on the sill through her departure.
        */
-      catGap: 0.6, kittenAfter: 1.4, homeAt: 8.4,
+      catGap: 0.6, kittenAfter: 1.4,
       /**
        * The most the boat goes under sail, m/s; how near a turn of its way counts as rounded; how near the berth it lies,
        * and how long it lies there before she steps down into it (seconds).
@@ -2551,23 +2551,22 @@ export const tuning = {
    * The storm, from her seated aboard at the nave to the forest beach, in seconds from casting off: the calm turning to
    * wind by `windBy`, the lighthouse's call at `foghornAt`, its light failing and out at `lighthouseOutAt` as the fog
    * closes round (`drowned.church.fog.closeAfter`), the night come by `darkBy`, the cygnet's shaking at
-   * `shakeAt`, the plane taken at `gatherFor`, and the beach about 80 s out.
+   * `shakeAt`, the plane taken at `gatherFor`, and the beach about 49 s out.
    */
   storm: {
-    /** How fast the drift goes through the village before the cat, m/s. */
+    /** The normal passage ceiling through the village and the storm, m/s. */
     passageSpeed: 5.8,
     /**
-     * The most the boat makes leaving the nave on the first air, rising to `speed` as the wind comes up, hard-pressed
-     * with its sail spilling most of the wind, m/s; and how near a turn of its way out counts as rounded, metres.
+     * How near a turn of its way out counts as rounded, metres; enough lead for the hull at normal sailing speed.
      */
-    calmSpeed: 1.1, speed: 2.5, outRounded: 7,
+    outRounded: 14,
     /** The air coming back as they cast off, a share of the storm's wind, and seconds until all of it has come. */
-    breezeFrom: 0.12, windBy: 24,
-    gatherFor: 55,
+    breezeFrom: 0.3, windBy: 10,
+    gatherFor: 39,
     /** The lighthouse's one call, across the calm while it is lit, its tail clear before the first thunder. */
     foghornAt: 9, foghornLateAllowance: 0.25,
     /** Seconds until the weather (the sea running, the rain, the veil) has gathered from nothing. */
-    weatherGatherFor: 56,
+    weatherGatherFor: 14,
     /**
      * Casting off, the lens goes in one move over `leaveFor` seconds from where the look up at the cat lets her go,
      * down to the lighthouse's view. That stands on the line from the tower through the boat turned `offset` radians
@@ -2580,9 +2579,9 @@ export const tuning = {
      * seconds to the storm's frame.
      */
     leaveFor: 9,
-    lighthouseCamera: { distance: 18, uprightDistance: 15, rise: 3, arc: 1.75, pass: 0.5, offset: -0.2, offsetAtNave: -0.7,
-      arcAtNave: 2.15, naveClearBy: 14, zoom: 0.86, uprightZoom: 1, margin: 0.1, herMargin: 0.14, tilt: 0.26, pace: 0.6,
-      holdFor: 3, letGoFor: 14 },
+    lighthouseCamera: { distance: 18, uprightDistance: 15, rise: 3, arc: 3.2, pass: 0.5, offset: -0.2, offsetAtNave: -0.7,
+      arcAtNave: 2.15, naveClearBy: 14, zoom: 0.86, uprightZoom: 1, margin: 0.14, herMargin: 0.14, tilt: 0.26, pace: 0.6,
+      holdFor: 1, letGoFor: 5 },
     /** How quickly the storm's lens takes up the hull's turns (critically damped, per second). */
     lensTurn: 0.6,
     /** Seconds she takes turning round on the thwart from the cat to the way they go, as they cast off. */
@@ -2593,13 +2592,13 @@ export const tuning = {
     lighthouseWatched: -0.2,
     lighthouseStartle: 0.18,
     /** Seconds until the storm's night has taken over from the dusk, coming on from the first. */
-    darkBy: 48,
+    darkBy: 33,
     /**
      * When the light is out, and the seconds it takes failing before that: a long sag, a half recovery, a deeper sag, a
      * last glow, gone. Its beam turns at `lighthouseSweep` radians a second from `lighthouseSweepStart`, dipping
      * `lighthouseDip` radians below level, so it sweeps over the fog and the boat rather than along the water under them.
      */
-    lighthouseOutAt: 30,
+    lighthouseOutAt: 34,
     lighthouseFadeFor: 5,
     lighthouseSweep: 0.38,
     lighthouseSweepStart: 1.7,
@@ -2615,7 +2614,7 @@ export const tuning = {
     shadowSoftenFrom: 0.8,
     shadowCovered: 0.98,
     snatchFor: 4,
-    shakeAt: 46,
+    shakeAt: 29,
     cameraQuarter: 0.16,
     lookAhead: 1.3,
     planeAhead: 2,
@@ -2623,11 +2622,12 @@ export const tuning = {
     planeLookFor: 2,
     /** The storm carries the plane off ahead of the boat, low over the wood, until the rain swallows it (this many
         fog lengths deep) or it leaves the frame; whatever happens, it is gone by the fallback. */
-    planeAway: { speed: 15, grip: 2.5, rise: 1.2 },
+    planeAway: { speed: 17, grip: 1.2, rise: 1.2 },
+    planeRelease: { ahead: 1.8, rise: 1.4 },
     /** The gust that takes it, shown as wind lines sweeping past the child's hand. */
-    snatchGust: { lines: 8, speed: 17 },
+    snatchGust: { lead: 0.65, lines: 1, speed: 12, width: 0.08 },
     planeLostInFog: 2.5,
-    planeLostAfter: 14,
+    planeLostAfter: 4.5,
     firstLightning: 18,
     lightningStormFrom: 0.85,
     lightningNightFrom: 0.06,

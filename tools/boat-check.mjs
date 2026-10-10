@@ -35,13 +35,16 @@ const { drownedCast, stormCast } = await import('./lib/storm-cast.mjs');
 const drownedWind = (gust) => ({ breeze: new THREE.Vector2(2.47, -0.80), calm: 3, addSplat() {},
   sample(_x, _z, out) { return Object.assign(out, { x: this.breeze.x + gust, z: this.breeze.y - gust, energy: gust !== 0 ? 0.8 : 0, lift: 0 }); } });
 // The storm from her seated aboard at the nave to the forest beach: the look back at the cat, out round the church on
-// the first air, past the lighthouse's side as its light goes out, the plane lost in the dark and the landing about 80 s
+// the first air, past the lighthouse's side as its light goes out, the plane lost in the dark and the landing about 49 s
 // after casting off, whatever the player's wind and the frame rate.
 const report = [];
 for (const [gust, fps] of [[0,60], [8,60], [0,30], [8,30], [40,60], [-40,60]]) {
   const wind = drownedWind(gust);
   const { cast, chapter } = stormCast(wind), boat = cast.boat;
   let snatch = null, lastBeat = '', turns = 0, lastYaw = boat.yaw, lightGap = Infinity, outAt = null;
+  let turnLeg = -1, legTurn = 0, mostLegTurn = 0, sailingSpeed = 0, sailingFrames = 0;
+  const gusts = [];
+  cast.lines.gust = (...args) => gusts.push({ time: chapter.stormTime, count: args[4] });
   const beats = [];
   for (let frame = 0; frame < fps * 120; frame++) {
     const dt = 1 / fps, time = frame * dt;
@@ -52,19 +55,28 @@ for (const [gust, fps] of [[0,60], [8,60], [0,30], [8,30], [40,60], [-40,60]]) {
     if (chapter.beat !== lastBeat) { beats.push([chapter.beat, +time.toFixed(2)]); lastBeat = chapter.beat; }
     if (chapter.beat === 'snatch' && snatch === null) snatch = time;
     if (outAt === null && chapter.stormTime >= tuning.storm.lighthouseOutAt) outAt = Math.hypot(boat.position.x - LIGHTHOUSE.x, boat.position.z - LIGHTHOUSE.z);
-    turns += Math.abs(Math.atan2(Math.sin(boat.yaw - lastYaw), Math.cos(boat.yaw - lastYaw)));
+    const turned = Math.abs(Math.atan2(Math.sin(boat.yaw - lastYaw), Math.cos(boat.yaw - lastYaw)));
+    if (chapter.out !== turnLeg) { legTurn = 0; turnLeg = chapter.out; }
+    legTurn += turned;
+    mostLegTurn = Math.max(mostLegTurn, legTurn);
+    turns += turned;
     lastYaw = boat.yaw;
+    if (chapter.stormTime > 15 && chapter.stormTime < 35) { sailingSpeed += boat.speed; sailingFrames++; }
+    if (chapter.stormTime > 0) assert.equal(chapter.church.catAt, 'sill', 'cat stays at the window after cast-off');
     if (chapter.done) {
       report.push({ gust, fps, stormToShore: +time.toFixed(2), stormTurns: +(turns / (2 * Math.PI)).toFixed(3), lightGap: +lightGap.toFixed(1),
         lightOutFrom: +outAt.toFixed(1), beats });
       assert(snatch !== null, 'must lose the plane before landing');
       const castOff = tuning.drowned.church.lookUpFor;
-      assert(snatch > castOff + tuning.storm.lighthouseOutAt + 15 && snatch < time - 15,
+      assert(snatch > castOff + tuning.storm.lighthouseOutAt + 4 && snatch < time - 7,
         `the plane must be taken in the dark, with the last stretch still to go: ${snatch} of ${time}`);
       assert.equal(cast.plane.visible, false, 'plane must be gone before shore');
-      assert(time >= castOff + 70 && time <= castOff + 90, `storm duration ${time}`);
-      assert(turns < Math.PI * 2, `no circle during the storm: ${turns}`);
-      assert(outAt < 50, `the light must go out as they pass the lighthouse: ${outAt}`);
+      assert(time >= castOff + 44 && time <= castOff + 62, `storm duration ${time}`);
+      assert(mostLegTurn < Math.PI, `boat circles a waypoint: ${mostLegTurn}`);
+      assert(sailingSpeed / sailingFrames > 4.5, `ordinary sailing speed: ${sailingSpeed / sailingFrames}`);
+      assert.equal(gusts.reduce((sum, g) => sum + g.count, 0), 2, 'two wind traces across the release');
+      assert(gusts[1].time - gusts[0].time >= 0.6, 'wind traces arrive separately');
+      assert(outAt < 115, `the light must remain near enough to see: ${outAt}`);
       assert(lightGap > 15 && lightGap < 40, `must pass the lighthouse safely and closely: ${lightGap}`);
       break;
     }

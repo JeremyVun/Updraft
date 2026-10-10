@@ -33,7 +33,7 @@ function verify() {
   const end = window.stormLog.find(b => b.beat === 'wood:ashore');
   const seconds = end.time - start.time;
   if (__game.glider.group.visible) throw new Error('Lost plane still visible at shore');
-  if (seconds < 70 || seconds > 90) throw new Error(`Storm-to-shore took ${seconds}s`);
+  if (seconds < 44 || seconds > 62) throw new Error(`Storm-to-shore took ${seconds}s`);
   if (window.thunderLog.length < 3 || window.thunderLog.some(t => !t.running)) throw new Error('Missing audible thunder event');
   // The foghorn's tail has gone before the first thunder.
   if (window.thunderLog.some(t => t.time - start.time < 15)) throw new Error('Thunder before the storm is established');
@@ -44,14 +44,14 @@ const LAMP = 'LIGHTHOUSE.clone().setY(LIGHTHOUSE_LANTERN_Y)';
 const steps = [
   { eval: `(${setup.toString()})()` },
   wait(`__game.story.current.stormTime>${S.leaveFor + 3}`), { shot: 'lighthouse' }, inFrame('lighthouse lamp', LAMP),
+  wait(`__game.story.current.stormTime>${S.shakeAt + 0.2}`), { shot: 'shake' },
   wait(`__game.story.current.stormTime>${lit + 1}`), { shot: 'light-failing' }, inFrame('lighthouse lamp', LAMP),
   wait(`__game.story.current.stormTime>${S.lighthouseOutAt + 0.5}`), { shot: 'light-out' }, inFrame('lighthouse lamp', LAMP),
   { eval: `(()=>{if(__game.village.lighthouse.strength.value>0)throw new Error('The light is still on');return 'out';})()` },
-  wait(`__game.story.current.stormTime>${S.shakeAt + 0.2}`), { shot: 'shake' },
   { eval: `({state:__game.cygnet.state,seat:__game.cygnet.seat,visible:__game.cygnet.visible,act:__game.cygnet.mind.act})` },
   wait('__game.boat.sailMat.uniforms.uLightning.value.w>0.2'), { shot: 'lightning' },
   wait("__game.story.current.beat==='snatch'"), { wait: 800 }, { shot: 'plane' }, inFrame('plane', '__game.glider.group.position'),
-  wait(`__game.story.current.stormTime>${S.gatherFor + S.snatchFor + S.planeLostAfter + 1}`), { shot: 'shore' },
+  wait(`__game.story.name==='wood'||__game.story.current.stormTime>${S.gatherFor + S.snatchFor + S.planeLostAfter + 1}`), { shot: 'shore' },
   { eval: `(() => {if(__game.glider.group.visible)throw new Error('Plane did not disappear into the storm');return 'plane lost';})()` },
   wait("__game.story.name==='wood'"), { shot: 'landed' },
   { eval: `(${verify.toString()})()` },

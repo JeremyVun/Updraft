@@ -14,12 +14,12 @@
 // kittens as she nears the top and they wake, she climbs in over the sill and a kitten comes to her, the fog stops under
 // the sills, strokes across the bell ring it four times while the lost boat's lantern answers nearer each time, strokes
 // across its sail bring it the last stretch to the nave, she climbs down and the cat and a kitten come to the sill to see
-// her off, she steps aboard and looks back up at them and the cat blinks, then they go back in; the storm plays on to
+// her off, she steps aboard and looks back up at them and the cat blinks; both stay at the window; the storm plays on to
 // the forest beach. Reports when each beat falls, the boat's distance home after each ring, when the cat is in the arch,
-// in with its kittens, on the sill and back in, how tall the cat stands on screen at the blink and where it, the kitten
+// in with its kittens, on the sill through departure, how tall the cat stands on screen at the blink and where it, the kitten
 // and she are then, and when the storm's beats fall, failing if anything stalls, she leaves the decks, the cat never
 // waits in the arch or the kittens never wake while she climbs, the lantern is out of frame when it answers or comes no
-// nearer, the cat or the kitten is not on the sill at the slow blink, or the two have not gone back in by the time the
+// nearer, the cat or the kitten is not on the sill at the slow blink, or either has left the sill by the time the
 // storm's lens takes over.
 // Usage: node tools/drowned-run-check.mjs
 //   env: BASE (default http://127.0.0.1:5230/), FROM=stairs starts on the stairs and docks their flights first, FROM=roofs starts on the ridge after the cat (skips the tub and the
@@ -273,7 +273,7 @@ try {
       window.__leaveBy = tuning.drowned.church.lookUpFor + tuning.storm.leaveFor;
       const { Belfry, BELFRY } = await import('/src/world/belfry.ts');
       const w = window.__churchWatch = { offWorst: 0, offAt: '', unseenRun: 0, unseenWorst: 0, unseenAt: '', hiddenRun: 0, hiddenWorst: 0, hiddenAt: '',
-        catArch: null, archHer: null, catIn: null, woke: null, kittenCame: null, catSill: null, catHome: null, herDown: null, seated: null };
+        catArch: null, archHer: null, catIn: null, woke: null, kittenCame: null, catSill: null, sillLeft: null, herDown: null, seated: null };
       const roofs = [...W.PLACED, W.NAVE];
       const inner = W.TOWER.half - BELFRY.wall, floor = BELFRY.sill - BELFRY.step;
       /** The tower's stone: solid below the belfry's floor, and its walls round the room but for each face's arch. */
@@ -290,7 +290,7 @@ try {
         const ch = __game.story.current.church, c = __game.child, p = c.position;
         /**
          * When the cat waits in the arch (and how far up the ivy she is then), goes in to its kittens, they wake, the
-         * kitten comes to her; when it is on the sill to see her off and back in again; when she is down and seated.
+         * kitten comes to her; when it is on the sill to see her off; when she is down and seated.
          */
         if (ch && ch.step !== 'off') {
           const t = __stats.time, cat = __game.cat, kittens = __game.village.kittens;
@@ -299,7 +299,13 @@ try {
           if (kittens.awake && w.catIn !== null && w.woke === null) w.woke = t;
           if (ch.step === 'nest' && w.kittenCame === null && kittens.cats[0].position.distanceTo(p) < 1.0 && !kittens.cats[0].busy) w.kittenCame = t;
           if (ch.catAt === 'sill' && w.catSill === null && !cat.busy && cat.position.y > W.TOWER.sill - 0.1) w.catSill = t;
-          if (ch.catAt === 'home' && w.catHome === null && !cat.busy && cat.position.y < W.TOWER.sill - 0.05) w.catHome = t;
+          if (ch.aboardFor > tuning.drowned.church.blinkAt && w.sillLeft === null) {
+            for (const animal of [cat, kittens.cats[0]]) {
+              const at = animal.position;
+              if (Math.abs(at.y - BELFRY.sill) > 0.15 || at.x < W.IVY_SILL.x - 0.1
+                || at.x > W.IVY_SILL.x + BELFRY.wall + 0.1 || Math.abs(at.z - W.IVY_SILL.z) > BELFRY.arch.width / 2) w.sillLeft = t;
+            }
+          }
           if (ch.step === 'wait' && w.herDown === null) w.herDown = t;
           if (ch.aboardFor >= 0 && w.seated === null) w.seated = t;
         }
@@ -348,8 +354,9 @@ try {
       const p = xz(s.boat);
       if (s.landed) return d(p, T.beach);
       if (s.leg === undefined) return NaN;
-      if (s.out < T.way.length) {
-        const ahead = [...T.way.slice(s.out), T.last, T.beach];
+      const out = s.beat === 'church' ? 0 : s.out;
+      if (out < T.way.length) {
+        const ahead = [...T.way.slice(out), T.beach];
         return ahead.reduce((sum, q, i) => sum + d(i ? ahead[i - 1] : p, q), 0);
       }
       return s.leg < T.legs - 1 ? d(p, T.last) + d(T.last, T.beach) : d(p, T.beach);
@@ -587,7 +594,7 @@ try {
     }
     console.log(`  the bell rang four times in ${bellStrokes} strokes over ${(rang[rang.length - 1].time - rang[0].time).toFixed(1)} s; the sail hers ${(bring.time - rang[rang.length - 1].time).toFixed(1)} s after the last ring`);
     console.log(`  the boat home ${(home.time - bring.time).toFixed(1)} s after it was hers to sail, with ${strokes} strokes; her aboard ${(aboard.time - bring.time).toFixed(1)} s after${berthed.carrying ? ' (the safety valve carried it)' : ''}; the storm ${(aboard.time - atNave).toFixed(1)} s + the look up after the tower's foot`);
-    console.log(`  the cat was on the sill to see her off ${w.catSill === null ? 'never' : (w.catSill - bring.time).toFixed(1) + ' s after the sail was hers, ' + (w.seated - w.catSill).toFixed(1) + ' s before she sat down'}, and back in with its kittens ${w.catHome === null ? 'never' : (w.catHome - w.seated).toFixed(1) + ' s after she sat down'}`);
+    console.log(`  the cat was on the sill to see her off ${w.catSill === null ? 'never' : (w.catSill - bring.time).toFixed(1) + ' s after the sail was hers, ' + (w.seated - w.catSill).toFixed(1) + ' s before she sat down'}; both stayed at the window: ${w.sillLeft === null}`);
     console.log(`  at the slow blink the cat was ${onSill(blink.cat) ? 'on' : 'off'} the sill, ${seenAtBlink.px.toFixed(0)} px tall at ${seenAtBlink.cat.map((v) => v.toFixed(2)).join(', ')} in the frame, the kitten ${onSill(blink.kitten) ? 'on' : 'off'} it at ${seenAtBlink.kitten.map((v) => v.toFixed(2)).join(', ')}, her face at ${seenAtBlink.her.map((v) => v.toFixed(2)).join(', ')}`);
     console.log(`  her step aboard moved the boat ${pushed.toFixed(2)} m; her feet stayed within ${w.offWorst.toFixed(3)} m of the decks (worst ${w.offAt})`);
     console.log(`  through the church she was out of frame for at most ${w.unseenWorst.toFixed(1)} s at a time (${w.unseenAt}), hidden by the church or a roof for at most ${w.hiddenWorst.toFixed(1)} s (${w.hiddenAt})`);
@@ -610,7 +617,7 @@ try {
     }
     assert(onSill(blink.cat), `the cat is not on the sill at the slow blink (${blink.cat.join(', ')})`);
     assert(onSill(blink.kitten), `the kitten is not on the sill at the slow blink (${blink.kitten.join(', ')})`);
-    assert(w.catHome !== null && w.catHome - w.seated < T.leaveBy, `the cat had not gone back in to its kittens by the time the storm's lens took over (${w.catHome === null ? 'never' : (w.catHome - w.seated).toFixed(1) + ' s after she sat'})`);
+    assert(w.sillLeft === null, `the cat or kitten left the window ${(w.sillLeft - w.seated).toFixed(1)} s after she sat down`);
     const inside = (p) => p[0] > 0.02 && p[0] < 0.98 && p[1] > 0.02 && p[1] < 0.98;
     if (process.env.LENS) assert((seenAtBlink.px >= 45 * Math.min(width, height) / 900) && inside(seenAtBlink.cat) && inside(seenAtBlink.kitten) && inside(seenAtBlink.her), `at the blink the cat was ${seenAtBlink.px.toFixed(0)} px tall at ${seenAtBlink.cat.map((v) => v.toFixed(2))}, the kitten at ${seenAtBlink.kitten.map((v) => v.toFixed(2))} and her face at ${seenAtBlink.her.map((v) => v.toFixed(2))}`);
   };

@@ -39,6 +39,7 @@ export type HouseType = 'cottage' | 'thatch' | 'swayback' | 'tallHat' | 'lowCap'
 /** A chimney: where along the ridge (-1 one gable end, 1 the other), how far its top stands above the ridge, its pots. */
 export interface Stack {
   side: number;
+  across?: number;
   above: number;
   pots: number;
 }
@@ -435,7 +436,7 @@ function gableHouse(into: PartSink, g: Gable, lot: Lot, rand: Rng, m: THREE.Matr
     const t = r.t(x);
     const top = r.ridge(t) - (g.thatched ? 0 : 0.04) + s.above;
     const base = Math.min(g.wall - 0.6, r.eaves(t));
-    perch(chimney(into, x, r.lean(t), base, top, s.pots, stackWidth, lot.lime, g.tilt * s.side, m));
+    perch(chimney(into, x, r.lean(t) + (s.across ?? 0), base, top, s.pots, stackWidth, lot.lime, g.tilt * s.side, m));
   }
 
   const showing = (y: number) => y > lot.sink + 0.15;

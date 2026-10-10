@@ -71,7 +71,7 @@ function along(way: readonly THREE.Vector2[], s: number, out: THREE.Vector2): nu
  * boat's lantern answers, nearer each time, until the fog has drawn back to the water round the nave and the player
  * sails the boat the last stretch round the tower to the nave. She climbs down and steps aboard; the cat stays with its
  * kittens and comes to the sill with one of them to see her off. She looks back up at the two of them and the cat gives
- * her a slow blink, then they go back in. Then the fog closes round and darkens into the storm.
+ * her a slow blink. They stay at the window as the fog closes round and darkens into the storm.
  */
 export class ChurchArrival {
   step: Step | 'off' = 'off';
@@ -91,7 +91,7 @@ export class ChurchArrival {
    * Where the cat is: on its way up, waiting in the arch calling, with its kittens, on the sill with a kitten seeing her
    * off, gone back in to the others.
    */
-  catAt: 'foot' | 'arch' | 'nest' | 'sill' | 'home' = 'foot';
+  catAt: 'foot' | 'arch' | 'nest' | 'sill' = 'foot';
   readonly bell: Bell;
   readonly climb: Climb;
   readonly homeAt = new THREE.Vector3();
@@ -573,7 +573,7 @@ export class ChurchArrival {
 
   /**
    * Seated, she turns round on the thwart to look back up at the cat and the kitten on the sill, the way that keeps her
-   * face from the lens; the cat looks down at her and gives her a slow blink, then the two go back in to the others.
+   * face from the lens; the cat gives her a slow blink and the two stay at the window watching her leave.
    */
   private lookUp(dt: number): void {
     const { child: c, cat, boat } = this.cast;
@@ -594,22 +594,6 @@ export class ChurchArrival {
       cat.slowBlink();
       this.later(k.chirrupAfter, () => cat.chirrup());
     }
-    if (this.catAt === 'sill' && this.aboardFor > k.homeAt) this.catHome();
-  }
-
-  /** After the blink the cat turns from the sill and goes back in to its kittens, the one beside it after it. */
-  private catHome(): void {
-    const { cat } = this.cast;
-    const v = this.cast.village!;
-    this.catAt = 'home';
-    const floor = () => v.belfry.floor;
-    cat.hop(v.belfry.inside('west', 0.35, SEE_OFF), { then: 'stand', floor }, () => {
-      cat.run([this.curlAt()], floor, { pace: 'walk', speed: 0.8, then: 'stand' }, () => cat.rest('curl', null));
-    });
-    this.later(0.7, () => {
-      const kitten = v.kittens.cats[FOUND];
-      kitten.hop(v.belfry.inside('west', 0.3, KITTEN_OFF), { then: 'stand', floor: () => v.belfry.floor + 0.03 }, () => v.kittens.release(FOUND));
-    });
   }
 
   /**

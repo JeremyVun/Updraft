@@ -1187,6 +1187,30 @@ item 48 and requires a close motion capture before deciding the navigation corre
 largest sole gap is 30 mm at the sheet transition. Shared character tests and the physical roof samples pass, but do
 not claim every transition has perfect contact. The full release playthrough and physical iPad checks were not rerun.
 
+#### Departure playtest follow-up — 2026-10-10
+
+Items 49–52 in design.md preserve Jeremy's brief and route preference verbatim. Work starts at `27ef6c4b` in
+`/private/tmp/updraft-drowned-integrate`. Clear the green cottage's chimney from the walking ridge; keep the cat
+and kitten on the sill; restore ordinary sailing and add distance through a modest bend, keeping all islands in
+place; reduce and space the plane's wind traces and ease its release. Review remains at port 5331, without merge
+or deployment. Evidence: `/tmp/updraft-departure-Y5m3eS/`.
+
+Implemented and checked: [x]. The posed child clears the rendered chimney by 27 cm; restoring its old location
+fails the check with zero clearance. The cat and kitten stay on the sill through both full church-to-wood replays.
+The 233 m course uses main's normal 5.8 m/s ceiling and reaches the woods about 49 seconds after cast-off. It adds
+about 53 m of actual sailing compared with the former course at normal speed, without moving islands or berths.
+The lighthouse remains lit until 34 seconds, with its lamp in frame through the fade. The plane's two traces are
+thin and spaced, and the lifted, gentler release remains visible in portrait. The final captures are prefixed
+`chimney-final`, `church-land-final`, `church-port-final` and `plane-port-final` in the evidence folder.
+
+Typecheck and production build pass. The mechanics batch passed 50 of 51; `journey-pacing` incorrectly accumulated
+all storm waypoints as one turn. It now keys each leg independently without relaxing its circling limit, and the
+targeted rerun passes (`journey-pacing-final.log`). All 51 checks therefore pass. The dedicated boat check also
+requires normal speed, fewer than half a turn per waypoint, two spaced gust traces and the cat at the sill.
+
+The landscape still revealed a cropped child at the slow blink despite the passing face-centre gate. This is new
+approval item 53, with no camera change made. Findings 42, 47, 48 and 53 remain pending approval; Phase 10 stays open.
+
 #### Integration takeover — 2026-10-10
 
 Jeremy: "ok proceed". For this takeover he also approved Codex doing the remaining visual work:

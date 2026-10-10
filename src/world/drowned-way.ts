@@ -32,6 +32,7 @@ export interface PlacedHouse {
   thatched: boolean;
   /** Where along the ridge each chimney stands, along local x from -1 at one end to 1 at the other. */
   stacks: number[];
+  stackAcross?: number;
   /** How far the chimney stands above the ridge. */
   stack: number;
   roll?: number;
@@ -133,7 +134,7 @@ export const TOWER_FOOT = new THREE.Vector3(NAVE.x + NAVE.len / 2 - 0.9, ridgeTo
 const SWING_X = NAVE.x + NAVE.len / 2 - 3.5;
 const LANDING_Z = NAVE.z + 2.88;
 const GREEN_NORTH = LANDING_Z + 6.8;
-export const GREEN_HOUSE: PlacedHouse = { ...sunk({ yaw: 0, len: 9, depth: 6, wall: 3.4, rise: 2.5, thatched: false, stacks: [-0.55], stack: 1.1 }, 2.99),
+export const GREEN_HOUSE: PlacedHouse = { ...sunk({ yaw: 0, len: 9, depth: 6, wall: 3.4, rise: 2.5, thatched: false, stacks: [-0.55], stackAcross: 1.35, stack: 1.1 }, 2.99),
   x: SWING_X + 1.05 + 4.5, z: GREEN_NORTH + 3.28 };
 const BOARD = new THREE.Vector3(GREEN_HOUSE.x - 4.42, eaveAt(GREEN_HOUSE), GREEN_NORTH + 0.12);
 const LANDING = new THREE.Vector3(SWING_X, slatesAt(NAVE, LANDING_Z - NAVE.z), LANDING_Z);
@@ -503,7 +504,7 @@ export const BRING_WAY = [new THREE.Vector2(TOWER.x, TOWER.z - 11.5), new THREE.
  * Out from the nave in the storm: round into the open water north of the church, then on past the lighthouse's side
  * before the channel's last leg to the forest beach.
  */
-export const STORM_WAY = [new THREE.Vector2(6, -1584), new THREE.Vector2(36, -1602), new THREE.Vector2(38, -1622)];
+export const STORM_WAY = [new THREE.Vector2(6, -1584), new THREE.Vector2(70, -1620), new THREE.Vector2(46, -1654), new THREE.Vector2(-20, -1660)];
 /** The water the storm's way out and the lens following it keep open: from the berth round to the lighthouse's side. */
 const STORM_OUT = [new THREE.Vector2(NAVE_BERTH.x, NAVE_BERTH.z - 4), ...STORM_WAY];
 
@@ -728,7 +729,7 @@ export function inClearing(x: number, z: number, room: number): boolean {
   if (Object.values(WAY).some((d: Deck) => toSegment(x, z, d.x0, d.z0, d.x1, d.z1) < 5 + room)) return true;
   for (let i = 1; i < STORM_OUT.length; i++) {
     const a = STORM_OUT[i - 1], b = STORM_OUT[i];
-    if (toSegment(x, z, a.x, a.y, b.x, b.y) < 14 + room) return true;
+    if (toSegment(x, z, a.x, a.y, b.x, b.y) < 26 + room) return true;
   }
   return toSegment(x, z, DRIFT_FROM.x, DRIFT_FROM.y, STRAND.x, STRAND.y) < DRIFT_ROOM + room;
 }

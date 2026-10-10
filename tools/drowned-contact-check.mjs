@@ -6,7 +6,7 @@ import { drownedCast } from './lib/storm-cast.mjs';
 const { Cat } = await import('../src/creatures/cat.ts');
 const { Traveller } = await import('../src/traveller/traveller.ts');
 const { StrandedCat } = await import('../src/story/drowned-cat.ts');
-const { CAT_LANDING, CAT_EDGE, CAT_HOLD, CAT_HOLD_YAW, WAY, catRoof } = await import('../src/world/drowned-way.ts');
+const { CAT_LANDING, CAT_EDGE, CAT_HOLD, CAT_HOLD_YAW, WAY, catRoof, GREEN_HOUSE } = await import('../src/world/drowned-way.ts');
 const { FLOOR_Y, SEAT_Y, MAST_Z } = await import('../src/traveller/boat/form.ts');
 const wind = { breeze: new THREE.Vector2(), calm: 0, addSplat() {}, sample(x, z, out) { return Object.assign(out, { x: 0, z: 0, lift: 0, energy: 0 }); } };
 const v = new THREE.Vector3(), w = new THREE.Vector3();
@@ -20,6 +20,35 @@ function catVertices(cat, visit) {
   }
 }
 const only = process.env.ONLY;
+if (!only || only === 'chimney') {
+  const { buildHouse, LIME, SLATE } = await import('../src/world/drowned-houses.ts');
+  const h = GREEN_HOUSE, localX = h.stacks[0] * (h.len / 2 - 0.75), localZ = h.stackAcross ?? 0;
+  const frame = new THREE.Matrix4().makeRotationY(h.yaw).setPosition(h.x, -h.sink, h.z), boxes = [];
+  buildHouse({ add(g, _colour, _material, m) {
+    g.computeBoundingBox();
+    const centre = g.boundingBox.getCenter(new THREE.Vector3());
+    if (Math.abs(centre.x - localX) < 0.05 && Math.abs(centre.z - localZ) < 0.05) boxes.push(g.boundingBox.clone().applyMatrix4(m));
+  } }, 'cottage', { ...h, exact: true, lime: LIME[0], roof: SLATE[0],
+    stacks: [{ side: h.stacks[0], across: h.stackAcross, above: h.stack, pots: 2 }] }, () => 0.5, frame);
+  assert(boxes.length >= 3, 'check the rendered chimney shaft and cap');
+  const child = new Traveller(wind), d = WAY.greenRidge;
+  child.decks = [d]; child.dismount(); child.sitting = false;
+  child.place(d.x0, d.z0, -Math.PI / 2);
+  child.walkTo(d.x1, d.z1, false, undefined, 0.1);
+  let nearest = Infinity;
+  for (let i = 0; i < 420; i++) {
+    child.update(1 / 60);
+    if (i % 6) continue;
+    child.rig.root.updateMatrixWorld(true);
+    const mesh = child.rig.mesh; mesh.skeleton.update();
+    for (let j = 0; j < mesh.geometry.attributes.position.count; j++) {
+      mesh.getVertexPosition(j, v).applyMatrix4(mesh.matrixWorld);
+      for (const box of boxes) nearest = Math.min(nearest, box.distanceToPoint(v));
+    }
+  }
+  assert(nearest > 0.15, `child intersects or brushes chimney: ${nearest} m`);
+  console.log(`green cottage: posed child clears rendered chimney by ${nearest.toFixed(3)} m`);
+}
 for (const fps of !only || only === 'cat' ? [30, 60, 120] : []) {
   for (const pace of ['walk', 'run']) {
     const cat = new Cat(); cat.visible = true;

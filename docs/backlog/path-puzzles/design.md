@@ -899,6 +899,55 @@ Jeremy's next brief, verbatim:
 
 Continue in the integration worktree. Any additional findings join the approval list; main merge and deployment remain separate.
 
+### Departure playtest — 2026-10-10
+
+Jeremy's next brief, verbatim:
+
+> - before they get into the bellfry tower, the child walks straight through a chimney. fix that, it looks buggy.
+> - the cat and the kitten should stay in the window as the child leaves
+> - the boat is travelling too slowly towards the woods island. It's supposed to be a stormy sea, and it's tuned well already in current main branch. The boat should travel at roughly the same speed as every other crossing, and the lighthouse should keep shining for longer. What i wanted was for the actual journey to be slightly longer i.e. the distance...
+> - there's too many wind lines when the paper plane flies away and it's too sudden. It actually looks very confusing.
+
+49. **Chimney on the approach to the tower — implemented and verified.** Moved the green cottage's chimney 1.35 m onto its unused
+    roof slope, clearing the walking ridge. The posed child clears the rendered shaft and cap by 27 cm. The regression
+    check fails with the old chimney placement. Close moving evidence: `chimney-final.webm` in the departure folder.
+50. **Cat and kitten at the window — implemented and verified.** Removed their timed retreat after the slow blink. Both stay on
+    the sill and the cat keeps looking after her. The browser check tracks both positions through the departure.
+51. **Storm sailing and distance — implemented and verified.** Restored main's 5.8 m/s passage ceiling and 14-second weather
+    build-up. The new 233 m course makes a wider bend past the lighthouse and returns to the original landing from
+    open water. The hull travels about 228 m in calm input, about 53 m farther than the earlier course at normal speed.
+    The crossing takes about 49 seconds after casting off; the lighthouse stays lit until 34 seconds rather than 30.
+    Its camera keeps the lamp visible through the fade, with sufficient open water around the new course for that
+    view. No island, berth or saved coordinate moved.
+52. **Plane departure — implemented and verified.** Two narrow wind traces, 0.65 seconds apart, replace the simultaneous eight.
+    The plane starts 1.8 m/s faster than the hull and accelerates gently away; its upward release clears the hood.
+    The portrait release stays in frame. Evidence: `plane-port-final.webm` and `plane-port-final-plane.png`.
+53. **Landscape farewell crops the child — new finding, pending approval.** The full landscape replay passes its
+    automated framing check with her face centre at (0.82, 0.97), but the slow-blink still cuts off much of her face
+    and chin below the bottom edge. The cat and kitten remain readable. This was found by inspecting the whole
+    silhouette; an in-frame centre is insufficient. Proposal: lower or widen the landscape farewell composition
+    enough to retain her whole hood and face, while preserving both cats' readability. No farewell camera change
+    has been made for this finding. Evidence: `/tmp/updraft-departure-Y5m3eS/church-land-final-slow-blink.png`.
+
+Asked whether to move the later islands together or use a longer curved route, Jeremy answered, verbatim:
+
+> not too curved, but slightly more curved. Im worried about your ability to move the islands properly
+
+Keep every island and berth in place. Extend the existing bend past the lighthouse modestly; normal hull speed
+and a clear approach to the unchanged woods landing take precedence over the previous slow crossing's 80-second
+duration. The lighthouse must remain readable as its light fades, and the plane must be readable during release.
+
+The four requested changes are complete. Findings 42, 47, 48 and 53 await Jeremy's review. Work remains on the
+integration branch, without merge or deployment. Island coordinates and save geography are unchanged.
+
+Departure evidence: `/tmp/updraft-departure-Y5m3eS/`. All 51 mechanics checks pass after correcting the journey
+pacing fixture to track each storm waypoint independently; the original batch recorded 50 passes and that one
+failure, followed by the successful targeted rerun in `journey-pacing-final.log`. Typecheck and production build
+pass. The focused camera check passes at 30/60 fps, in both aspects, with calm input and strong gusts. The full
+church-to-wood replays pass in both aspects, as does the separate portrait plane capture. Both cats stay on the
+sill throughout each departure; the lamp stays in frame through its fade. Screenshot inspection additionally
+found item 53 despite the passing centre-point gate. No Ultra performance or physical iPad claim is added.
+
 ### The room rethought (Claude, 2026-10-08; Jeremy: "yea lets see how this works")
 
 One idea holds the middle of the room together: **the fog is a rising white tide and the only safe place is higher
@@ -948,14 +997,10 @@ where they differ; the drift, the village, the look and the storm stand.
    answer, nearer each time: the lost boat drifting home to the sound (things drift home: nothing is lost). When it is
    near, the fog has drawn back to the water round the nave and the player fills its sail for the last stretch to the
    tower's foot. She climbs down the ivy and steps aboard.
-8. **Letting go.** The cat follows her down. While she climbs down the ivy it leaves its kittens and comes down
-   after her, backing down the ivy as cats do, to its foot on the nave's ridge above the boat, and sits there as she
-   walks down the slates and steps aboard. She turns on the thwart and looks back up at it, a few metres off and a
-   little above her; they look at each other and it gives her a slow blink. Then it turns and goes back up the ivy to
-   its kittens, a kitten's head over the sill waiting for it. She has brought it home; it came down to see her off and
-   went home, and she leaves it there glad. Then the fog darkens into the storm's night and the storm plays as built.
-   (Claude, 2026-10-09: the cat on the sill was 7 m above her and 5 m off, so no frame held her face and the blink;
-   a cat that comes down to see her off is also the warmer goodbye.)
+8. **Letting go.** While she climbs down the ivy, the cat and the kitten come to the belfry's window to see her off.
+   She steps aboard, turns on the thwart and looks back up at them; the cat gives her a slow blink. They stay together
+   on the sill watching her leave. She has brought them home and leaves them there safe. The camera holds her face
+   and the cat's blink in both viewport shapes, then carries her out toward the lighthouse as the storm gathers.
 
 **The windmill, rebuilt** (Jeremy, 2026-10-08: "spekaing of the windmill, that reminds me. I'm also not happy with how
 it works right now. The child effectively has a wedgie riding it up. it's very strange looking and feeling, and it

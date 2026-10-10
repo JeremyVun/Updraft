@@ -419,6 +419,7 @@ interface HouseSpec {
   /** A placed house says where its chimneys go and how tall, and how many pots each carries. */
   stacks?: number[];
   stack?: number;
+  stackAcross?: number;
   pots?: number;
   gable?: number;
   /** Which of the kit's houses stands here; a roof she walks on is `exact`, its slates where the way says. */
@@ -559,7 +560,7 @@ function houseBounds(h: HouseSpec): THREE.Box3 {
  */
 function chances(h: HouseSpec, rand: Rng): Stack[] {
   const sides = h.stacks ?? (h.len > 14 ? [-1, 1] : [rand() < 0.5 ? -1 : 1]);
-  const stacks = sides.map((side) => ({ side, above: h.stack ?? range(rand, 1, 2.1), pots: h.pots ?? (rand() < 0.5 ? 1 : 2) }));
+  const stacks = sides.map((side) => ({ side, across: h.stackAcross, above: h.stack ?? range(rand, 1, 2.1), pots: h.pots ?? (rand() < 0.5 ? 1 : 2) }));
   if (!h.gable && !h.thatched && h.wall + h.rise - h.sink > 3.2) rand();
   if (h.wall - h.sink > -0.9) for (let i = 0; i < (h.len > 14 ? 4 : 2); i++) rand();
   return stacks;

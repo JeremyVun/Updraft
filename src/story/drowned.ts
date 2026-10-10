@@ -30,8 +30,8 @@ const TO_STRAND = 3;
 const STRAND_THROUGH = TO_STRAND / (PASSAGE.length - 2);
 /** Saves from before the stairs begin the room at the birches' beach, north of all of it. */
 const FROM_BIRCHES_Z = -1240;
-/** Once she is aboard at the nave they go out by `STORM_WAY` and on along the channel's last leg. */
-const ON_FROM_NAVE = PASSAGE.indexOf(DROWNED_CHANNEL[DROWNED_CHANNEL.length - 1]);
+/** Once she is aboard at the nave they go out by `STORM_WAY` and approach the forest beach from open water. */
+const ON_FROM_NAVE = PASSAGE.length - 1;
 /**
  * Turns a place she looks at round, level, until it is at least `least` radians off the lens as seen from her, so her
  * face can be seen but she never looks into it.
@@ -111,6 +111,7 @@ export class DrownedChapter implements Chapter {
   private time = 0;
   private beatStart = 0;
   private lost = 0;
+  private planeGustStarted = false;
   private readonly seat = new THREE.Vector3();
   private readonly hand = new THREE.Vector3();
   private readonly look = new THREE.Vector3();
@@ -459,6 +460,10 @@ export class DrownedChapter implements Chapter {
         if (this.church!.done) this.aboard();
         break;
       case 'gather':
+        if (!this.planeGustStarted && this.t > tuning.storm.gatherFor - tuning.storm.snatchGust.lead) {
+          this.planeGustStarted = true;
+          this.planeGust();
+        }
         if (this.t > tuning.storm.gatherFor) this.snatch();
         break;
       case 'snatch':
@@ -517,7 +522,6 @@ export class DrownedChapter implements Chapter {
     /** Out of the goodbye's calm: the weather gathers from nothing, the wind comes up and the boat with it. */
     this.storm = gathering ? THREE.MathUtils.smoothstep(this.stormTime, 0, tuning.storm.weatherGatherFor) : 0;
     const rising = THREE.MathUtils.smoothstep(this.stormTime, 0, tuning.storm.windBy);
-    if (gathering) this.cast.boat.speedLimit = THREE.MathUtils.lerp(tuning.storm.calmSpeed, tuning.storm.speed, rising);
     if (!this.shook && this.stormTime > tuning.storm.shakeAt) {
       this.shook = true;
       this.cast.cygnet.mind.perform('shake', 1.1);
@@ -676,7 +680,7 @@ export class DrownedChapter implements Chapter {
     this.leg = ON_FROM_NAVE;
     this.out = 0;
     boat.steerFor = STORM_WAY[0];
-    boat.speedLimit = tuning.storm.calmSpeed;
+    boat.speedLimit = tuning.storm.passageSpeed;
     this.heading = Math.atan2(STORM_WAY[0].x - boat.position.x, STORM_WAY[0].y - boat.position.z);
     this.headingSpeed = 0;
     this.to('gather');
@@ -748,11 +752,18 @@ export class DrownedChapter implements Chapter {
     const away = boat.yaw + 0.4;
     const dir = this.tmp.set(Math.sin(away), 0.14, Math.cos(away)).normalize();
     const hand = c.handPosition(this.hand);
-    this.cast.lines.gust(hand.x, hand.z, dir.x, dir.z, tuning.storm.snatchGust.lines, tuning.storm.snatchGust.speed);
-    p.launch(hand, this.from.copy(dir).multiplyScalar(11).setY(2.2));
+    this.planeGust();
+    p.launch(hand, this.from.copy(dir).multiplyScalar(boat.speed + tuning.storm.planeRelease.ahead).setY(tuning.storm.planeRelease.rise));
     p.depart(dir, tuning.storm.planeAway);
     this.lost = boat.position.x + dir.x * 60;
     c.reach();
+  }
+
+  private planeGust(): void {
+    const { child, boat, lines } = this.cast;
+    const hand = child.handPosition(this.hand), away = boat.yaw + 0.4;
+    const k = tuning.storm.snatchGust;
+    lines.gust(hand.x, hand.z, Math.sin(away), Math.cos(away), k.lines, k.speed, k.width);
   }
 
   /** Once the rain has it, it is gone: never while it can still be seen. It turns up again in the wood. */
@@ -856,9 +867,9 @@ export class DrownedChapter implements Chapter {
   /**
    * The lighthouse is the storm's landmark, and the lens holds it from casting off until its light has gone: on the line
    * from the tower through the boat and beyond her, so the tower stands over the travellers across the water, looking
-   * along the water and up only as far as keeps the lamp in frame. It is watched from within an arc of astern and never
-   * chased round the boat; once the light is out the lens lets the tower go and comes in behind them, so she and the
-   * lantern carry the dark. Everything here follows from where the boat is, never from where the lens has got to.
+   * along the water and up only as far as keeps the lamp in frame. Once the light is out the lens lets the tower go
+   * and comes in behind them, so she and the lantern carry the dark. Everything here follows from where the boat is,
+   * never from where the lens has got to.
    */
   private lighthouseFrame(astern: number): void {
     const k = tuning.storm.lighthouseCamera, s = this.shot, boat = this.cast.boat;

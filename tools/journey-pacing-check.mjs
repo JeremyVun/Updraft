@@ -81,7 +81,8 @@ function run(name, fps, gust, veer=0, arrivalGust=false) {
     const route=chapter.route;
     if(i%5===0 && route && chapter.leg<route.length-1 && Math.hypot(boat.position.x-starts[name][0],boat.position.z-starts[name][1])>35){const h=heightAt(boat.position.x,boat.position.z);if(h>shallow){shallow=h;shallowAt=boat.position.toArray();}}
     turn+=Math.abs(Math.atan2(Math.sin(boat.yaw-yaw),Math.cos(boat.yaw-yaw)));yaw=boat.yaw;
-    if(lastLeg!==chapter.leg){worstTurn=Math.max(turn,worstTurn);turn=0;lastLeg=chapter.leg;}
+    const leg = name === 'drowned' ? `${chapter.leg}:${chapter.out}` : chapter.leg;
+    if(lastLeg!==leg){worstTurn=Math.max(turn,worstTurn);turn=0;lastLeg=leg;}
     if(chapter.done){
       const target=name==='drowned'?'wood':chapter.destinationMusic;
       const requestAt=events[`music-${target}`];
