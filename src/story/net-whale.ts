@@ -248,6 +248,7 @@ export class NetWhale {
   /** How strongly the player's updraft is lifting under the patch right now, eased. */
   private wind = 0;
   private breathed = false;
+  private lineFramed = false;
   private greeted = false;
   /** Through the look between them: the view over her shoulder, its blink, and the cygnet's peep. */
   private looking = false;
@@ -426,7 +427,7 @@ export class NetWhale {
       this.vDone = this.diverSeen = false;
     }
     // The eye's hold is the look's, already easing in as the column falls.
-    if (step !== 'eye' || !this.looking) this.holdFor(step, false);
+    if (!(step === 'eye' && this.looking || step === 'line' && this.lineFramed)) this.holdFor(step, false);
     const whale = this.whale;
     if (step === 'free') {
       whale.free();
@@ -464,6 +465,7 @@ export class NetWhale {
     if (after >= 0) {
       this.net.finishDraping();
       this.corkLaid = false;
+      this.lineFramed = false;
       this.led = true;
       this.rested = true;
       this.waited = 1e-3;
@@ -554,7 +556,7 @@ export class NetWhale {
   }
 
   /**
-   * The whale's drawn gestures show the moment a step is asked, once its hold has settled, and repeat until a stroke
+   * The whale's drawn gestures show the moment a step is asked and repeat until a stroke
    * lands on what it asks for; they come back a few seconds after the last one.
    */
   private get invites(): boolean {
@@ -658,8 +660,7 @@ export class NetWhale {
       this.sighs++;
     }
     this.sinceStroke += dt;
-    // A step is asked once the view has come to its hold.
-    this.askedFor = this.asks && this.holdT > K.inviteHeld ? this.askedFor + dt : this.asks ? this.askedFor : 0;
+    this.askedFor = this.asks ? this.askedFor + dt : 0;
     if (this.valveStep !== null && this.valveStep !== this.step) this.runValve(dt);
     if (this.step === 'breath') this.breathe(dt);
     if (this.step === 'eye') this.openEye(dt);
@@ -1260,6 +1261,10 @@ export class NetWhale {
       this.peeped = true;
       cygnet.does('peer', whale.eye, K.peekFor);
       cygnet.call(false, 'puzzled');
+    }
+    if (!this.lineFramed && t > K.lookFor - K.handOff) {
+      this.lineFramed = true;
+      this.holdFor('line', false);
     }
     if (t > K.lookFor) {
       this.looking = false;
@@ -2123,7 +2128,7 @@ export class NetWhale {
     if (net.posed) return;
     const held = this.progress >= 1 ? 1 : this.progress * (K.netSettle + (1 - K.netSettle) * this.wind);
     net.lift += (held - net.lift) * (1 - Math.exp(-dt * 2.5));
-    // Once its breath has gone up through it, nothing holds the patch up: it falls back loose and slumps aside.
+    // The first full breath turns the lifted flap aside; the opening stays clear after the wind stops.
     if (whale.awake) net.slump = Math.max(net.slump, whale.phase === 'woken' ? THREE.MathUtils.smootherstep(whale.time, K.slumpFrom, K.slumpFrom + K.slumpFor) : 1);
     net.updraft = this.wind;
     net.flap = this.foldT >= 0 ? THREE.MathUtils.lerp(this.flapFrom, 1, THREE.MathUtils.smootherstep(this.foldT / K.foldFlip, 0, 1))

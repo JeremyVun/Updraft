@@ -1324,3 +1324,27 @@ The sequence:
 **QA starts.** `?chapter=toMirror` (and any `to*` crossing) starts that crossing at its first waypoint, cygnet in the
 satchel; `?chapter=sea` starts the whole open-sea passage;
 `?chapter=whale` starts at rest beside the whale, as its first save (`whale-rest`) resumes.
+
+
+### Approved playtest corrections — 2026-10-10
+
+Jeremy’s brief, verbatim:
+
+> 1) the updraft to clear the blowhole needs to make more narrative sense. Right now it just lifts the net, and then the net falls back down. Doesn't make sense. The updraft should have accomplished something consequential
+>
+> 2) the indicative wind gestures are too delayed. for example, after the blowhole puzzle, it felt like 10 seconds or something before i saw the indicative / invitational wind gesture for the next puzzle. As a player, they spend that time inbetween confused
+>
+> 3) For the cygnets turn, it's not clear on screen what needs to be solved since the flipper is under water so the player can't actually see the knot.
+>
+> 4) there seems to be a "kink" or "bend" in the whales tail so when it lifts it up, at the end, it looks a bit strange. can you confirm if you see the same issue?
+>
+> 5) the journey from the whale to the sky mirror is a bit too short still. You could maybe steal 10 seconds from the journey to the whale and give it to the journey from the whale to the sky mirror, or just look to increase the time from whale to sky mirror, or a combination of both.
+>
+
+Approval: "approved. for 5. do it carefully so that the pacing of the game is not affected".
+
+The blowhole must remain visibly uncovered after its flap turns aside; show the next invitation while its camera
+settles, within 0.5–1 s of accepting input; expose the flipper’s trapped loop above water with the cygnet beside it;
+spread the tail lift into a continuous curve. Redistribute only quiet sailing (aim about 10 s less approaching the
+whale and 20 s more after departure), preserving the dolphin play, both swims, the farewell and mirror arrival.
+Verify actual timings before accepting those targets; smooth pace takes priority over hitting an exact number.

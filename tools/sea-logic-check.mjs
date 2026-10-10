@@ -26,8 +26,9 @@ const { HOME_MOORING } = await import('../src/story/home.ts');
 const { SLEEP_BERTH } = await import('../src/world/sleeping.ts');
 const { tuning } = await import('../src/tuning.ts');
 const { atmo } = await import('../src/world/atmosphere.ts');
-const { swellUniforms } = await import('../src/world/water/swell.ts');
+const { swellUniforms, swellLift } = await import('../src/world/water/swell.ts');
 const { takeCues } = await import('../src/story/cues.ts');
+const { FLUKES, FLUKE_HALF_SPAN, FLUKE_HINGE } = await import('../src/fx/sealife/anatomy.ts');
 swellUniforms.uSwell.value = 0.25;
 
 /**
@@ -120,6 +121,18 @@ function assertPlayedBy(w,played,from=0){
     `each step done by ${played?'the player':'its valve\'s dolphin'}: ${by}`);
 }
 const results=[];
+function coveredBlowhole(net, blowhole) {
+  const ray = new THREE.Ray(blowhole.clone().add(new THREE.Vector3(0, 30, 0)), new THREE.Vector3(0, -1, 0));
+  const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3(), hit = new THREE.Vector3();
+  for (const mesh of [net.sheet, net.breathFlap]) {
+    const p = mesh.geometry.attributes.position, index = mesh.geometry.index;
+    for (let i = 0; i < index.count; i += 3) {
+      a.fromBufferAttribute(p, index.getX(i)); b.fromBufferAttribute(p, index.getX(i + 1)); c.fromBufferAttribute(p, index.getX(i + 2));
+      if (ray.intersectTriangle(a, b, c, false, hit) && hit.y >= blowhole.y - 0.25) return true;
+    }
+  }
+  return false;
+}
 for(const [fps,gust,portrait,circling] of [[60,0,false,false],[30,20,false,true],[60,20,true,true]]) {
   const f=fixture(gust,portrait,false,circling);
   const {chapter:c,boat:b,cygnet:k,rig,sealife}=f;
@@ -127,12 +140,48 @@ for(const [fps,gust,portrait,circling] of [[60,0,false,false],[30,20,false,true]
   const transitions=[],steps=[],saves=[];
   let last='',step='',rewards=0,blowholeEdge=0,eyeOpen=0,finClear=Infinity;
   const asked={},moved={};
+  const actionable={}, invitations={};
+  let openSamples=0, blockedSamples=0, loopClear=Infinity, tailBend=0, flukeEdge=0;
+  const flukeVertices=[];
+  const geometry=sealife.sleeper.mesh.geometry, positions=geometry.attributes.position, rigs=geometry.attributes.aRig;
+  for(let i=0;i<positions.count;i++)if(rigs.getY(i)===FLUKES)flukeVertices.push(i);
   const ndc=new THREE.Vector3();
   for(let i=0;i<fps*900;i++) {
     const dt=1/fps,time=i*dt;
     frame(f,dt,time);
     if(c.swim!==last){transitions.push([c.swim,+time.toFixed(2)]);last=c.swim;}
     const w=c.whale;
+    if(w.asks && actionable[w.step]===undefined)actionable[w.step]=time;
+    if((w.offered||w.coax)&&invitations[w.step]===undefined)invitations[w.step]=time-actionable[w.step];
+    if(!blockedSamples&&w.step==='breath'&&w.progress===0){
+      assert(coveredBlowhole(sealife.net,w.whale.blowhole),'the flap covers the blowhole before the updraft');
+      blockedSamples++;
+    }
+    if(w.step==='eye'&&sealife.net.slump>0.999&&i%Math.ceil(fps/10)===0){
+      assert(!coveredBlowhole(sealife.net,w.whale.blowhole),'the folded flap leaves a real opening above the blowhole');
+      openSamples++;
+    }
+    if(w.step==='flipper'&&w.bird==='holding'&&w.slipT<0){
+      const net=sealife.net,p=net.line.pos;
+      for(let m=0;m<=14;m++){
+        const k=(net.loopLine.start+5+m)*2;
+        loopClear=Math.min(loopClear,p.getY(k)-swellLift(p.getX(k),p.getZ(k),time));
+      }
+    }
+    if(w.step==='free'&&w.whale.diving>=0){
+      const p=w.whale.pitch;
+      for(let j=Math.floor(p.length*.65);j<p.length-1;j++)tailBend=Math.max(tailBend,Math.abs(p[j+1]-p[j]));
+      if(w.whale.time>=26.8&&w.whale.time<=28.8&&i%6===0){
+        const whale=w.whale,shape=whale.uniforms.uShape.value.z;
+        for(const j of flukeVertices){
+          const x=positions.getX(j),y=positions.getY(j),s=rigs.getX(j);
+          whale.point(x*shape,(y+whale.uniforms.uCurl.value*(x/FLUKE_HALF_SPAN)**2)*shape,
+            FLUKE_HINGE+(s-FLUKE_HINGE)*shape,ndc);
+          if(ndc.y<0)continue;
+          ndc.project(rig.camera);flukeEdge=Math.max(flukeEdge,Math.abs(ndc.x),Math.abs(ndc.y));
+        }
+      }
+    }
     if(w.step!==step){steps.push([w.step,+time.toFixed(1)]);step=w.step;}
     const point=c.checkpoint;if(point&&point!==saves[saves.length-1])saves.push(point);
     rewards+=takeCues().filter(q=>q==='restored').length;
@@ -187,6 +236,12 @@ for(const [fps,gust,portrait,circling] of [[60,0,false,false],[30,20,false,true]
   assert.equal(rewards,1,'freeing it is rewarded once');
   assert(blowholeEdge>0&&blowholeEdge<0.75,`the blowhole is an easy target at rest: ${blowholeEdge.toFixed(2)}`);
   assert(c.podLeftAt!==null&&c.podLeftAt>=steps.find(([s])=>s==='free')[1],'the pod goes with the whale');
+  for(const s of PLAYED)assert(invitations[s]<=0.7,`${s} invitation follows its actionable target promptly: ${invitations[s]} s`);
+  assert(blockedSamples>0&&openSamples>0,`observed the blowhole covered, then cleared: ${JSON.stringify({fps,gust,portrait,steps})}`);
+  assert(loopClear>0.25,`the entire caught loop stays above the swell: ${loopClear.toFixed(2)} m`);
+  assert(tailBend<0.5,`the tail spreads its bend over the stock: ${tailBend.toFixed(3)} radians between spine joints`);
+  assert(flukeEdge>0&&flukeEdge<0.99,`the raised flukes fit the farewell frame: ${flukeEdge.toFixed(3)}`);
+  results[results.length-1].clarity={invitations,blockedSamples,openSamples,loopClear,tailBend,flukeEdge};
   results[results.length-1].steps=steps;results[results.length-1].blowholeEdge=+blowholeEdge.toFixed(2);
   results[results.length-1].finClear=+finClear.toFixed(2);
   results[results.length-1].waited=waited;if(circling)results[results.length-1].strokes=f.play.strokes;

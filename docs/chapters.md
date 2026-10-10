@@ -515,22 +515,24 @@ rest beside its head, the far length lost in haze. It is the whale from the firs
 
 Five steps share the rescue between wind, child and bird:
 
-1. Circles over the blowhole lift the net's patch so it can breathe.
+1. Circles over the blowhole lift a loose flap. Its first full breath turns the flap aside, leaving a lasting opening.
 2. A sweep across the fold clears its eye; it opens and finds her.
 3. Strokes bring a cork to her reaching mitten so she can take the line.
 4. Gusts lift the net as she heaves it off the head, then lets the line go.
-5. The cygnet swims out and holds the last loop; a sweep lifts the flipper so the loop slips free.
+5. The cygnet swims out and holds the last loop, visible around the raised flipper tip; a sweep lifts it further so the loop slips free.
 
 The whale spouts and sings, waves its flipper, then rolls under and raises its flukes beside the sun. Its swell
 lifts the boat; the loose net sinks away. The cygnet returns to her arms, the mist lifts and they sail on to the
-mirror. Its jetty and reflections stay hidden until the whale has gone. Arrival carries the sailing view into a
+mirror, with about a minute of quiet sailing after the whale disappears. Its jetty and reflections stay hidden
+until the whale has gone. Arrival carries the sailing view into a
 seven-second ease toward the mirror's own camera (`tuning.skyMirror.arriveFor`). The paper stays stowed at sea.
 
 Rulings: player-paced, replacing the former 100-second limit and passive crossing. A prompt play takes about four
 minutes to the mooring; the rescue waits for the player, with physical dolphin help after 90 seconds without
 progress at a step (`tuning.netWhale.valveAfter`). The whale is kind and immense, its movement slow and heavy.
 Dolphins follow their own stations, never swim in the air and never turn faster than a body allows. The boat never
-crawls for the first swim. The drawn gestures appear on the object they act on after its camera has settled.
+crawls for the first swim. The drawn gestures appear half a second after their target becomes actionable, while
+the camera finishes moving, and return two seconds after the last relevant stroke if more help is needed.
 
 Knobs: `tuning.seaPassage` (pod pacing and mist), `tuning.dolphins`, `tuning.netWhale` (rescue, holds and farewell),
 `tuning.audio.whaleVoice`. Checks: `tools/sea-check.mjs` (both orientations, through the settled mirror view, with

@@ -1247,3 +1247,39 @@ and Mirror's 77% control position was verified unchanged. Native masters, exact 
 checksums are retained and verified. The portrait collage is rebuilt. Evidence:
 `/tmp/updraft-sea-takeover-V1Gw4P/art-*`. N4 is complete on `sea-whale`; main merge still awaits Jeremy's approval.
 Done: [x]
+
+
+### Phase N6: approved whale playtest corrections
+
+Jeremy approved all five fixes on 2026-10-10, with the pacing constraint quoted in design.md. Work on sea-whale;
+main merge remains a separate approval. Files: net.ts, sleeper.ts, net-whale.ts, tuning.ts, focused checks and
+corresponding sea contracts. Preserve the measured net CPU improvements and existing save semantics.
+
+- [x] Permanently turn the blowhole flap aside with visible breathing clearance.
+- [x] Prompt invitations and overlapping camera/reaction handoffs.
+- [x] Flipper loop clearly above water and framed with the cygnet.
+- [x] Continuous tail bend through the farewell.
+- [x] Carefully redistribute quiet approach/departure time; compare ordinary/gust/30–60 fps pacing.
+- [x] Build, save/interaction checks and landscape/portrait play through settled Mirror; inspect captures and timings.
+
+Implementation: the loose patch is a hinged part of the existing net, covering a real opening until the updraft
+and first breath turn it aside. It stays folded as the remaining net is hauled away. Invitations begin 0.50–0.53 s
+after each target becomes actionable; the eye/line camera handoff overlaps the end of their exchange. The loop is
+thicker and its entire ring clears the swell by at least 0.36 m in the idle check. The tail's maximum neighbouring
+spine-angle change falls from 1.040 to 0.295 radians, spreading the former elbow over the stock.
+
+Pacing decision: preserve the approach rather than speeding it up to recover an arbitrary ten seconds. Keep the
+route, geography revision, authored twelve-second swim and farewell clock. A 3 m/s onward cap changes the time
+from the whale disappearing to the mooring from 40–46 s to 62–64 s across ordinary/gust wind, wind bearings and
+30/60 fps. The rescue starts at the same time to 0.1 s. Passage gates and all interaction/save logic checks pass.
+Evidence: `/tmp/updraft-whale-fixes-OtdqgR/README.md`.
+
+Verification: production and QA builds pass. Full landscape/portrait real-gesture runs pass through the settled
+Mirror: one circle, one eye sweep, one cork sweep, four heaves and one flipper sweep in each; no browser errors or
+unexpected shader compilation. Breath-flap rotation, exposed loop and tail rise/turn were inspected in both
+orientations. The broader tail needed a little more room in the phone farewell: that hold is wider and looks
+further toward it, keeping the whole raised span in frame. The final phone hold was replayed from the release
+through the settled Mirror, with clean runtime/shader checks. Geometry/framing gates pass at the final settings.
+The rebuilt preview at 430×932, ratio 2 holds 60 fps for 20 s after warmup (p99/max 16.8 ms; no hitches or long tasks
+on this Mac, not a physical-phone measurement). Stable playtest preview remains on port 5330.
+N6 is complete on `sea-whale`; main merge still awaits Jeremy's approval.

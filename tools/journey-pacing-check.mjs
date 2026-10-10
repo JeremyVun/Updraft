@@ -208,7 +208,8 @@ function run(name, fps, gust, veer=0, waitInVillage=false, arrivalGust=false, ci
         check(seen&&seen.blow<=0.3&&seen.body>=0.97,`its blow stands white over the mist while its body is still hidden: ${JSON.stringify(seen)}`);
         check(seen&&seen.at>heard.at&&events.shape>seen.at,`its blow is seen before its shape forms: ${JSON.stringify({heard,seen,shape:events.shape})}`);
         check(events.mirrorSeen>events.dive,`the mirror comes out of its mist only once the whale has dived: ${JSON.stringify(events)}`);
-        check(time-events.letGo<=50,`from the boat let go to the mooring at most 50 s, with the dive about 60: ${(time-events.letGo).toFixed(1)} s`);
+        check(time-events['whale-gone']>=60&&time-events['whale-gone']<=66,
+          `a quiet 60 to 66 s from the whale disappearing to the mooring: ${(time-events['whale-gone']).toFixed(1)} s`);
         check(portTurn<0.15&&-mostStarboard<1.9,`sails straight on and curves in to the jetty, never coming about: ${JSON.stringify({portTurn,starboard:-mostStarboard})}`);}
       return {seconds:+time.toFixed(1),musicLead:+musicLead.toFixed(2),sailed:+sailed.toFixed(1),peak:+peak.toFixed(2),swimSeconds:+(swimFrames/fps).toFixed(1),stillSeconds:+stillFor.toFixed(1),whaleCalled:chapter.whaleCalled,
         ...(chapter.whale?{hiddenBeforeNudge:+leastHidden.toFixed(4),nudgeOut,whaleBrake:+worstBrake.toFixed(2),restGap:+restGap.toFixed(2),slowest:+slowest.toFixed(2),slowestAt,lead:+(events['whale-breath']-events.whaleLed).toFixed(1),

@@ -1426,11 +1426,12 @@ export const tuning = {
     /**
      * The boat coming to rest beside it, and sailing on once it has gone: led in, never more than `ledSpeed` (m/s),
      * about ordinary sailing, so the lead takes about as long however hard the player blows; sailing on, never more
-     * than `leadSpeed`, the pod's own pace. Coming in, its limit takes way off at `slowing` (m/s²) until the hull's own carry can take it the rest
+     * than `leadSpeed`, giving the farewell a quiet minute before the mirror. Coming in, its limit takes way off at
+     * `slowing` (m/s²) until the hull's own carry can take it the rest
      * of the way, and is nothing `restShort` metres short of the rest (past it when negative), so it is never braked;
      * and how fast the limit climbs back (m/s²) once the whale is going under.
      */
-    ledSpeed: 4.7, leadSpeed: 5.5, slowing: 1.2, restShort: -1.9, release: 0.6,
+    ledSpeed: 4.7, leadSpeed: 3, slowing: 1.2, restShort: -1.9, release: 0.6,
     /** Seconds between its weak breaths, how far its back rises with one (m), and how much mist each sputters. */
     breathEvery: 10, breathRise: 0.45, mist: 1,
     /**
@@ -1493,12 +1494,12 @@ export const tuning = {
      */
     liftFrom: 0.12, liftFull: 0.5, liftRate: 0.8, reach: 6,
     /**
-     * A step is asked once the camera is `inviteHeld` of the way through its move to the step's hold; its drawn sweep
-     * shows `inviteSettle` seconds later, goes as a stroke lands on what it asks for, and
+     * An actionable step's drawn sweep shows after `inviteSettle` seconds, while the camera finishes moving.
+     * It goes as a stroke lands on what it asks for, and
      * comes back `inviteBack` seconds after the last one. A safety valve comes after `valveAfter` seconds at rest with
      * no progress.
      */
-    inviteSettle: 0.5, inviteHeld: 0.8, inviteBack: 4, valveAfter: 90,
+    inviteSettle: 0.5, inviteBack: 2, valveAfter: 90,
     /**
      * The drawn sweeps: each crosses in `sweepFor` seconds and comes again after `sweepRest`, `sweepScreen` screen
      * half-heights long at most, kept within `sweepFrame` of the frame's middle, `sweepWidth` m wide drawn `sweepBold`
@@ -1586,8 +1587,10 @@ export const tuning = {
      * `raftTurn` radians.
      */
     raftPort: 8, raftAhead: 9, raftTurn: 0.5,
-    /** Seconds into its first full breath when the lifted patch, its breath gone up through it, starts to fall aside, and how long it takes. */
-    slumpFrom: 3.2, slumpFor: 3,
+    /** Seconds into its first full breath when the lifted patch turns aside, and how long it takes. */
+    slumpFrom: 1.8, slumpFor: 1.8,
+    /** Half length and width of the loose flap over the blowhole (m). */
+    breathFlapAlong: 3.5, breathFlapAcross: 3.2,
     /**
      * The look between them. In seconds into its first full breath: its lid starts to struggle under the fold at
      * `struggleFrom`, the view comes in over her shoulder from `lookIn` over `lookMove` seconds, and the eye is asked
@@ -1596,8 +1599,8 @@ export const tuning = {
      * peeps up at `peepAt`; her eyes go to the float line `handOff` before the look ends at `lookFor`, and the view goes
      * to the line.
      */
-    struggleFrom: 1.6, lookIn: 2.4, lookMove: 4, eyeAsk: 5.4, eyeOpening: 0.55, blinkAt: 4.6, reachFrom: 5, callAt: 5.9, peepAt: 7.1,
-    handOff: 1.4, lookFor: 10,
+    struggleFrom: 1.6, lookIn: 2.1, lookMove: 4, eyeAsk: 3.6, eyeOpening: 0.55, blinkAt: 2.6, reachFrom: 3.2, callAt: 4, peepAt: 4.9,
+    handOff: 1.2, lookFor: 6.2,
     /**
      * Under the fold its lid tries to lift, `eyeTry` of the way open (more by `eyeTryLifted` as the fold is lifted off
      * it), and falls back. A stroke over or near the eye, within `foldRadius` of it on screen (normalised device units),
@@ -1709,7 +1712,7 @@ export const tuning = {
       line: { distance: 9, height: 3.2, turn: -0.45, lookY: 3, toward: 0.33, eyeward: 1 },
       flipper: { distance: 11.5, height: 3.2, turn: -1.1, lookY: 4, toward: 0.6 },
       release: { distance: 12, height: 3, turn: -0.3, lookY: 12, toward: 0.4 },
-      farewell: { distance: 28, height: 1.9, turn: -0.4, lookY: 25, toward: 0.3 },
+      farewell: { distance: 34, height: 1.9, turn: -0.4, lookY: 25, toward: 0.6 },
       releaseRoom: 4,
     },
     /**
@@ -1722,9 +1725,9 @@ export const tuning = {
     endOut: 5.1, endAhead: 0.2, birdOut: 5.3, birdAhead: -0.5, slipFor: 5,
     /**
      * The near flipper at rest, about its root under the jaw: swept round toward the head and raised, so it reaches
-     * out toward the boat's bow with its tip at the surface (radians).
+     * out toward the boat's bow with the caught loop clear of the surface (radians).
      */
-    finRestSweep: -0.45, finRestRaise: 0.27,
+    finRestSweep: -0.45, finRestRaise: 0.5,
     /** How far its lazy lift raises the near flipper about its root and swings it back along its flank (radians). */
     finLift: 0.16, finSwing: 0.05,
   },

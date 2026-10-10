@@ -93,7 +93,8 @@ const GLIDE = curve([
 ]);
 /** Where along it the tail stock bends to lift the flukes, and how far into the flukes the lift has all of them. */
 const STOCK = 0.84;
-const STOCK_TO = 0.95;
+const STOCK_FROM = 0.69;
+const STOCK_TO = 0.97;
 /** The flukes' pitch held up out of the sea (radians, nose up): a little short of straight up, undersides to the sky. */
 const FLUKES_UP = -1.45;
 /**
@@ -118,7 +119,7 @@ const YAW_SHARE = 0.6;
 const YAW_WITH = [0.1, 0.85] as const;
 const TILT = 0.3;
 const TILT_WITH = 0.3;
-const TRAIL = 1.3;
+const TRAIL = 0.55;
 const TRAIL_UNTIL = [0.4, 0.85] as const;
 /** The flukes' one slow flex as they stand and it calls: radians of flex at the hinge, and of turn, over seconds. */
 const WAVE_FLEX = 0.16;
@@ -593,7 +594,7 @@ export class SleepingWhale extends WhaleRig {
     const liftRoll = this.liftT < 0 ? 0 : 0.06 * LIFT(this.liftT);
     this.lay(0, rise, 0, 0, K.roll + liftRoll);
     this.uniforms.uCurl.value = REST_CURL;
-    // The flipper lies awash: as the body rises with a breath it floats there rather than lifting out of the sea.
+    // Keep the trapped tip clear of the swell while the body's breath rises beneath it.
     const awash = (rise * breathAt(FIN_S)) / (FIN_LENGTH * this.scale * 0.95);
     this.uniforms.uFin.value.set(K.finRestSweep + Math.sin(this.worldTime * 0.17) * 0.03,
       -K.finRestRaise + awash + Math.sin(this.worldTime * 0.23 + 1) * 0.015);
@@ -688,8 +689,8 @@ export class SleepingWhale extends WhaleRig {
       const s = (i / (SPINE_N - 1)) * SPINE_END;
       const c = at - SPINE_AT[i] * k;
       const way = THREE.MathUtils.lerp(restPitch(s), DIVE_SLOPE(c > 0 ? c * steeper : c), down);
-      const hinge = THREE.MathUtils.smoothstep(s, 0.9, 0.96);
-      const up = THREE.MathUtils.smoothstep(s, STOCK, STOCK_TO) * THREE.MathUtils.lerp(arched, lift, hinge);
+      const hinge = THREE.MathUtils.smootherstep(s, 0.8, 0.98);
+      const up = THREE.MathUtils.smootherstep(s, STOCK_FROM, STOCK_TO) * THREE.MathUtils.lerp(arched, lift, hinge);
       this.pitch[i] = THREE.MathUtils.lerp(way, FLUKES_UP, up) - hinge * (WAVE_FLEX * flex - trail);
     }
     let u = 0;

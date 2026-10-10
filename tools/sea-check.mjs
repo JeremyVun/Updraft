@@ -29,12 +29,15 @@ function observe() {
     requestAnimationFrame(trace);
   };
   trace();
-  window.seaLog = { swimFrames: 0, clipped: 0, maxGap: 0, beats: [], last: '' };
+  window.seaLog = { swimFrames: 0, clipped: 0, maxGap: 0, beats: [], last: '', actionable: {}, invitations: {} };
   const log = window.seaLog;
   const update = g.sealife.pod.update.bind(g.sealife.pod);
   g.sealife.pod.update = (dt, time) => {
     update(dt, time);
     const c = g.story.current;
+    const w = c.whale;
+    if (w?.asks && log.actionable[w.step] === undefined) log.actionable[w.step] = c.time;
+    if (w && (w.offered || w.coax) && log.invitations[w.step] === undefined) log.invitations[w.step] = c.time - log.actionable[w.step];
     const beat = `${g.story.name}:${c.swim}:${c.whale?.step ?? ''}`;
     if (beat !== log.last) { log.beats.push({ beat, time: +c.time?.toFixed(1), boat: g.boat.position.toArray().map((v) => +v.toFixed(1)) }); log.last = beat; }
     if (c.swim === 'in' && c.swimT > 3) {
@@ -54,6 +57,9 @@ function assertHealthy(report) {
   assert.equal(report.mirror.handed, true, 'Mirror did not inherit the sea camera');
   assert.ok(report.mirror.arrived >= report.mirror.arriveFor + 3, 'Mirror arrival was not fully observed');
   assert.equal(report.mirror.carry, false, 'Mirror camera is still in its arrival transition');
+  for (const step of ['breath', 'eye', 'line', 'heave', 'flipper']) {
+    assert.ok(report.invitations[step] <= 0.7, `${step} invitation took ${report.invitations[step]} seconds`);
+  }
 }
 
 const { browser, close } = await openBrowser();
@@ -109,11 +115,15 @@ try {
   // Each step as a prompt player plays it: a go once its gesture is drawn, a still as each new step is reached.
   const tries = {};
   let step = 'breath';
+  let loopShown = false;
   const playUntil = Date.now() + 360_000;
   for (;;) {
     const now = await page.evaluate(() => __game.story.current.whale?.step);
     if (now !== step) { step = now; if (['eye', 'line', 'heave', 'flipper'].includes(step)) await shot(step); }
     if (step === 'free' || step === 'gone') break;
+    if (!loopShown && step === 'flipper' && await page.evaluate(() => !!__game.story.current.whale.offered)) {
+      await shot('flipper-held'); loopShown = true;
+    }
     if (Date.now() > playUntil) throw Error(`The five steps never finished: at ${step}, ${JSON.stringify(tries)}`);
     if (!(await whaleGo(page, tries))) await page.waitForTimeout(250);
   }
@@ -131,7 +141,8 @@ try {
     mirror: { handed: __game.story.current.handed != null, arrived: __game.story.current.arrived,
       arriveFor: __game.tuning.skyMirror.arriveFor, carry: __game.story.current.shot.carry },
   }));
-  const report = { tries, swimFrames: log.swimFrames, clipped: log.clipped, maxGap: +log.maxGap.toFixed(2), beats: log.beats, ...health, errors };
+  const report = { tries, swimFrames: log.swimFrames, clipped: log.clipped, maxGap: +log.maxGap.toFixed(2), beats: log.beats,
+    invitations: log.invitations, ...health, errors };
   fs.writeFileSync(`${prefix}-trace.json`, JSON.stringify(await page.evaluate(() => window.seaTrace)));
   fs.writeFileSync(`${prefix}-report.json`, JSON.stringify(report, null, 2));
   console.log(JSON.stringify(report));
