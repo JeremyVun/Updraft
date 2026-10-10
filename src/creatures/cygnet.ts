@@ -187,6 +187,8 @@ export class Cygnet {
   private swimLaunch = 0;
   private readonly swimVel = new THREE.Vector2();
   private towing = false;
+  private watchFace = true;
+  private working = 0;
   private readonly towFace = new THREE.Vector3();
   private towSpeed = 0;
   private towEffort = 0;
@@ -803,6 +805,12 @@ export class Cygnet {
   watch(target: THREE.Vector3 | null, hushed = false): void {
     this.mind.told = target;
     this.hushed = hushed;
+    this.watchFace = true;
+  }
+
+  watchPoint(target: THREE.Vector3 | null, hushed = false): void {
+    this.watch(target, hushed);
+    this.watchFace = false;
   }
 
   /** QA: where a foot is in the world and whether it is meant to be standing still, left (0) or right (1). */
@@ -1450,6 +1458,7 @@ export class Cygnet {
    * behind it falls, and rides whatever the sea is doing. Nothing about this can go wrong: it floats.
    */
   private paddling(dt: number): void {
+    this.doze = 0;
     this.swum += dt;
     const entering = this.seating.move !== null;
     if (!entering && this.dunk === 1) {
@@ -1619,7 +1628,9 @@ export class Cygnet {
     s.dark = w.dark;
     /** On the side of the boat it is riding too: a gust may ruffle it there, but never bowl it off the gunwale into the sea. */
     s.where = this.carried || st === 'perched' || st === 'swimming' ? 'riding' : st === 'following' ? 'afoot' : st === 'fallen' || st === 'downed' ? 'down' : 'airborne';
-    s.locked = this.steadyLift || this.hopT > 0 || this.landing > 0 || this.seating.move !== null || this.seating.held;
+    const working = st === 'swimming' && !this.watchFace && this.mind.told !== null;
+    this.working = ease(this.working, working ? 1 : 0, 8, dt);
+    s.locked = working || this.steadyLift || this.hopT > 0 || this.landing > 0 || this.seating.move !== null || this.seating.held;
     s.busy = s.locked || this.callT > 0 || this.doze > 0.3 || this.hope > 0.3;
     this.mind.update(dt, s);
   }
@@ -1687,7 +1698,7 @@ export class Cygnet {
     d.call.long = this.callLong;
     d.act = m.act;
     d.actK = m.actK;
-    d.actEnv = m.actEnv;
+    d.actEnv = m.actEnv * (1 - this.working);
     d.actSide = m.actSide;
     d.breath = this.breath;
     d.blink = this.blink;
@@ -1842,7 +1853,7 @@ export class Cygnet {
     this.to.copy(m.gaze);
     /** Told to watch someone standing near it, it looks at their face, not their boots. */
     const near = Math.hypot(m.gaze.x - this.seating.shown.p.x, m.gaze.z - this.seating.shown.p.z) < 4;
-    if (g.firm && near && Math.abs(m.gaze.y - Math.max(this.ground(m.gaze.x, m.gaze.z), 0)) < 0.6) this.to.y += 1.9;
+    if (this.watchFace && g.firm && near && Math.abs(m.gaze.y - Math.max(this.ground(m.gaze.x, m.gaze.z), 0)) < 0.6) this.to.y += 1.9;
     this.to.sub(this.eye(this.tmp2));
     g.yaw = clamp(wrapAngle(Math.atan2(this.to.x, this.to.z) - yaw), -1.5, 1.5);
     g.pitch = -clamp(Math.atan2(this.to.y, Math.hypot(this.to.x, this.to.z)), -1.1, 0.9);

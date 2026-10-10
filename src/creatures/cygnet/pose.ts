@@ -161,7 +161,7 @@ export class Poser {
     p.held = ease(p.held, riding || climbing ? 1 : 0, perching ? 8 : 5, dt);
     p.stowed = ease(p.stowed, d.seat === 'satchel' && riding ? 1 : 0, 4, dt);
     p.hunch = ease(p.hunch, hunch, act('flinch') > p.hunch ? 14 : 2, dt);
-    p.sleep = ease(p.sleep, d.doze, 1.5, dt);
+    p.sleep = ease(p.sleep, d.doze, d.afloat || d.move === 'hop' ? 6 : 1.5, dt);
     /** Reaching out along the line of flight is what a flying bird's neck does — until it turns to look at somebody. */
     p.reach = ease(p.reach, flying || dashing ? 1 - d.look * 0.8 : 0, 4, dt);
     p.beg = ease(p.beg, Math.min(1, d.beg), 8, dt);

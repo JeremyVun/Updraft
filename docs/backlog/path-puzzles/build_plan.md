@@ -1387,12 +1387,35 @@ QA build. N9 is implemented on `sea-whale`; main merge and deployment remain out
 
 Jeremy's reports are verbatim in design.md. The 60/40-second sailing targets remain binding.
 
-- [x] Rebase sea-whale onto committed main (`4d7a40f9`), preserving all sea work and upstream fixes.
-- [ ] Restore the distant silhouette and gradual reveal, with clear water around the boat; compare in motion.
-- [ ] Correct the cygnet's neck through hop-out, rope pickup and backward pull, retaining the active pull.
-- [ ] Remove the freed song's mechanical tone while keeping audible low calls; check all call variants in context.
-- [ ] Verify both orientations, pacing, saves, source integration, sound and builds; refresh port 5330.
+- [x] Rebase sea-whale onto committed main (`3f7a237a`), preserving all sea work and upstream fixes.
+- [x] Restore the distant silhouette and gradual reveal, with clear water around the boat; compare in motion.
+- [x] Correct the cygnet's neck through hop-out, rope pickup and backward pull, retaining the active pull.
+- [x] Remove the freed song's mechanical synthesis features while keeping audible low calls; render all variants in context.
+- [x] Verify both orientations, pacing, saves, source integration, sound and builds; refresh port 5330.
 
-Rebase audit: the resulting tree differs from pre-rebase `f6a46f18` only by main's four new commits after the
+Rebase audit: the resulting tree differs from pre-rebase `f6a46f18` only by main's five new commits after the
 reconstructed whale-eye expression is restored. Historical doc conflicts preserve the later approved notes.
-Evidence and ongoing captures: `/tmp/updraft-sea-n10-WtbK2q/`. No merge or deployment yet.
+The distance-driven mist no longer crowds the boat to conceal the whale until a late dolphin cue. Its first
+silhouette appears about 112 m short of the rest, gaining detail over about twelve seconds; the nearest veil
+stays at least 77.6 m from the camera. The low call and distant blow precede that silhouette. All seven pacing
+cases pass: ordinary first puzzle 60.3–60.8 s, onward 38.0–40.7 s, with normal speed and the twelve-second swim.
+
+Literal point gaze removes the person-height adjustment from the rope. The bird looks along its swim path,
+suppresses idle preening during the task and wakes from its passenger doze as it hops out. That last cause was
+caught in the first full capture, then corrected and rerun. Both final full runs keep the bill within 0.39 radians
+of the rope through the pull. Freezing the bird still prevents loop removal: backward paddling remains causal.
+
+The voice now uses rounded harmonics, eased pitch arches and diffuse reverb. Fixed throat resonances, the
+sub-octave and discrete repeats are removed; the freed song ends before the flipper goodbye. The first low moan
+lasts 10.2 s and retains its measured speaker-band body. All six production call variants pass clipping, level
+and rapid modulation checks; the real game release mix is recorded through the final deep call. No direct
+listening approval is claimed: this session has no audio-listening tool.
+
+Final landscape and portrait runs complete all five puzzles and the settled Mirror arrival, with no clipping,
+browser errors or unexpected shader compilation. Invitations appear in 0.50–0.52 s. Mechanics, saves, geography,
+Mirror navigation, typecheck and production/QA builds pass. Restoring close fog, person-height gaze, idle preening,
+retained sleep, pulsing voice or weak upper harmonics deliberately fails the relevant regression guard. N9's
+unrelated baseline terrain and marine-audio failures remain open.
+
+Evidence, reports, videos and audio: `/tmp/updraft-sea-n10-WtbK2q/README.md`. Port 5330 serves the corrected QA
+build. N10 is implemented on `sea-whale`; no merge or deployment yet.

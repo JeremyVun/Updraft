@@ -59,7 +59,12 @@ may be loud: bugling and the whistle of their wings.
   child does nothing but stay, and swimming in the wave along the hull (`CrossingOpts.swimAt`, `story/crossing.ts`).
   At the whale it takes the last rope in its bill and back-paddles: first taking up slack, then drawing the loop
   off the lifted flipper and towing it clear. `towTo` keeps its body facing the rope while its velocity runs
-  backwards; eased effort braces its body and strengthens the foot strokes. Normal `swimTo` ends that mode.
+  backwards; eased effort braces its body and strengthens the foot strokes. `watchPoint` follows the actual rope
+  height rather than applying the face-height adjustment used when watching people. A swimming task suppresses
+  idle preening and wind reactions, fading out any existing act so it cannot twist away while holding the rope.
+  Paddling clears passenger drowsiness and wakes the pose through the hop; a long wait in the satchel must not leave
+  its head curled into a sleeping pose while it swims.
+  Normal `swimTo` ends the towing mode.
 
 ## Where it rides
 

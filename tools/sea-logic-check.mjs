@@ -17,6 +17,7 @@ Math.random = () => ((seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0) / 42
 const { Boat } = await import('../src/traveller/boat.ts');
 const { Traveller } = await import('../src/traveller/traveller.ts');
 const { Cygnet } = await import('../src/creatures/cygnet.ts');
+const { HEAD } = await import('../src/creatures/cygnet/body.ts');
 const { Carry } = await import('../src/companion/carry.ts');
 const { SeaLife } = await import('../src/fx/sealife.ts');
 const { CameraRig } = await import('../src/camera.ts');
@@ -138,7 +139,21 @@ function coveredBlowhole(net, blowhole) {
   b.beach(w.rest.x-Math.sin(w.yaw)*1.5,w.rest.z-Math.cos(w.yaw)*1.5,w.yaw);b.afloat=true;b.grounded=false;
   c.restoreCheckpoint('whale-heave',[3,95]);
   let time=95;
-  const advance=()=>frame(f,1/60,time+=1/60);
+  const forward=new THREE.Vector3(),toward=new THREE.Vector3(),bill=new THREE.Vector3();
+  let neckSamples=0,neckError=0,neckWorst,dozed=false;
+  const advance=()=>{
+    frame(f,1/60,time+=1/60);
+    if(!dozed&&k.state==='swimming'){k.doze=1;dozed=true;}
+    if(w.bird==='out'&&w.birdT>.4) {
+      assert(Math.abs(k.drives.gaze.yaw)<.65&&k.drives.gaze.pitch>-.5,'the swimmer looks along its path without craning backwards or upwards');
+    }
+    if((w.bird==='holding'&&w.birdT>1.5)||w.bird==='pulling') {
+      forward.set(0,0,1).transformDirection(k.nodes[HEAD].matrixWorld);
+      toward.subVectors(sealife.net.loopTie,k.billTip(bill)).normalize();
+      const error=forward.angleTo(toward);
+      if(error>neckError){neckError=error;neckWorst={time,bird:w.bird,birdT:w.birdT,gaze:{...k.drives.gaze},act:k.mind.act,forward:forward.toArray(),toward:toward.toArray(),rope:sealife.net.loopTie.toArray(),at:k.position.toArray()};}neckSamples++;
+    }
+  };
   while(w.bird!=='holding'&&time<125)advance();
   assert.equal(w.bird,'holding','the bird takes the rope');
   const pickup=k.position.clone();
@@ -147,6 +162,7 @@ function coveredBlowhole(net, blowhole) {
   assert(slack>0.4,'backward paddling visibly takes up slack');
   assert.equal(sealife.net.loop,0,'taking up slack cannot remove the loop before the wind lifts the fin');
   assert(sealife.net.tension>0.8,'backward paddling tightens the rope');
+  k.mind.perform('preen-wing',12);
   assert(w.liftFin('sweeps'),'wind lifts the flipper');
   const held=k.position.clone(), update=k.update.bind(k);
   k.update=(...args)=>{update(...args);k.position.copy(held);};
@@ -162,8 +178,9 @@ function coveredBlowhole(net, blowhole) {
   assert.equal(w.bird,'letting','the bird tows the freed loop clear before letting go');
   assert.equal(sealife.net.loop,1,'the backward pull removes the loop');
   assert(backward>1.8,'it pulls while facing the rope, rather than turning and swimming forwards');
+  assert(neckSamples>120&&neckError<.55,`the bill follows the rope without twisting the neck: ${neckError} radians ${JSON.stringify(neckWorst)}`);
   takeCues();
-  console.log(JSON.stringify({cygnetPull:{slack,backward,heldLoop:0}}));
+  console.log(JSON.stringify({cygnetPull:{slack,backward,heldLoop:0,neckSamples,neckError}}));
 }
 for(const [fps,gust,portrait,circling] of [[60,0,false,false],[30,20,false,true],[60,20,true,true]]) {
   const f=fixture(gust,portrait,false,circling);

@@ -3,7 +3,8 @@
 // its head, its five steps played with real gestures as each is drawn (circles over the blowhole, strokes across its
 // eye, the cork, the net on its head and the flipper), the spout, the flukes and the settled arrival at the mirror.
 // Usage: node tools/sea-check.mjs [out-prefix]. BASE selects a stable dev server; W/H select the viewport (1600×900;
-// 430×932 for a phone); VIDEO=1 also records <prefix>.webm. Saves a camera trace and a JSON report.
+// 430×932 for a phone); VIDEO=1 records <prefix>.webm; AUDIO=1 records the release mix through the last deep call.
+// Saves a camera trace and a JSON report.
 // Reuses the machine-wide GPU lock. All captures belong in /tmp.
 import { openBrowser } from './lib/browser.mjs';
 import { away, whaleGo } from './lib/whale-gestures.mjs';
@@ -29,8 +30,13 @@ function observe() {
     requestAnimationFrame(trace);
   };
   trace();
-  window.seaLog = { swimFrames: 0, clipped: 0, maxGap: 0, pullFrames: 0, pullClipped: 0, beats: [], last: '', actionable: {}, invitations: {} };
+  window.seaLog = { swimFrames: 0, clipped: 0, maxGap: 0, pullFrames: 0, pullClipped: 0, neckError: 0, voices: [], beats: [], last: '', actionable: {}, invitations: {} };
   const log = window.seaLog;
+  const heard = g.sealife.sleeper.onSound;
+  g.sealife.sleeper.onSound = (kind,x,y,z) => {
+    log.voices.push({kind,time:__stats.time,at:[x,y,z],camera:g.rig.camera.position.toArray(),free:g.story.current.whale?.step==='free'});
+    heard?.(kind,x,y,z);
+  };
   const update = g.sealife.pod.update.bind(g.sealife.pod);
   g.sealife.pod.update = (dt, time) => {
     update(dt, time);
@@ -51,6 +57,12 @@ function observe() {
       const p = g.cygnet.position.clone(); p.y += 0.3; p.project(g.rig.camera);
       log.pullFrames++;
       if (Math.abs(p.x) > 0.9 || Math.abs(p.y) > 0.9 || p.z > 1) log.pullClipped++;
+      if(w.bird==='pulling') {
+        const forward=p.set(0,0,1).transformDirection(g.cygnet.nodes[6].matrixWorld);
+        const target=g.sealife.net.loopTie.clone().sub(g.cygnet.billTip(direction)).normalize();
+        const angle=forward.angleTo(target);
+        if(angle>log.neckError){log.neckError=angle;log.neckWorst={time:__stats.time,birdT:w.birdT,act:g.cygnet.mind.act,env:g.cygnet.drives.actEnv,working:g.cygnet.working,sleep:g.cygnet.poser.p.sleep,face:g.cygnet.watchFace,gaze:{...g.cygnet.drives.gaze},forward:forward.toArray(),target:target.toArray()};}
+      }
     }
   };
 }
@@ -63,6 +75,7 @@ function assertHealthy(report) {
   assert.ok(report.mirror.arrived >= report.mirror.arriveFor + 3, 'Mirror arrival was not fully observed');
   assert.equal(report.mirror.carry, false, 'Mirror camera is still in its arrival transition');
   assert.ok(report.pullFrames > 120 && report.pullClipped === 0, 'The cygnet must stay fully visible throughout its pull');
+  assert.ok(report.neckError < .55, `The cygnet twists away from the rope (${report.neckError} radians)`);
   for (const step of ['breath', 'eye', 'line', 'heave', 'flipper']) {
     assert.ok(report.invitations[step] <= 0.7, `${step} invitation took ${report.invitations[step]} seconds`);
   }
@@ -81,6 +94,12 @@ try {
   page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
   await page.goto(`${base}?shot=1&chapter=sea&ratio=1&msaa=2`, { waitUntil: 'load' });
   await page.waitForFunction(() => window.__ready === true, null, { timeout: 90000 });
+  if(process.env.AUDIO) await page.evaluate(async()=>{
+    const sound=__game.sound;sound.start();await sound.ready;
+    const capture=sound.ctx.createMediaStreamDestination();sound.master.connect(capture);
+    window.seaAudio={recorder:new MediaRecorder(capture.stream),chunks:[]};
+    seaAudio.recorder.ondataavailable=e=>seaAudio.chunks.push(e.data);
+  });
   await page.evaluate(`(${observe.toString()})()`);
   const shot = async (name) => { await page.screenshot({ path: `${prefix}-${name}.png` }); console.log(`${prefix}-${name}.png`); };
   // Timed in game seconds: with `shot` the game steps 1/60 s a frame, so on a loaded machine it runs slower than the wall.
@@ -108,17 +127,17 @@ try {
   await wait("['restless','side','in'].includes(__game.story.current.swim)", 90); await shot('curious');
   await wait("__game.story.current.swim==='side' && __game.story.current.swimT>0.65"); await shot('rail-out');
   await wait("__game.story.current.swim==='side' && __game.story.current.swimT>1.5"); await shot('rail-settled');
+  await wait("__game.sealife.sleeper.called==='whale-moan'", 10); await shot('heard');
+  await wait('__game.sealife.sleeper.sighting>=1', 10); await shot('blow');
   await wait("__game.story.current.swim==='in' && __game.story.current.swimT>4"); await shot('swim');
   await wait("__game.story.current.swim==='in' && __game.story.current.swimT>9"); await shot('alongside');
+  await shot('shape');
   await wait("['drying','done'].includes(__game.story.current.swim)"); await shot('return');
   await wait("__game.story.current.swim==='drying' && __game.story.current.swimT>0.8"); await shot('rail-return');
   await wait("__game.story.current.swim==='done'"); await shot('together');
   const swim = await page.evaluate(() => window.seaLog);
   if (!swim.swimFrames || swim.clipped > 0 || swim.maxGap > 11.5) throw Error(JSON.stringify(swim));
   await wait(`${whale}.led`, 60); await shot('lead');
-  await wait("__game.sealife.sleeper.called==='whale-moan'", 10); await shot('heard');
-  await wait('__game.sealife.sleeper.sighting>=1', 10); await shot('blow');
-  await wait(`${whale}.sightAge>3.5`, 10); await shot('shape');
   await wait(`${whale}.step==='breath' && ${whale}.stepTime>3`, 90); await shot('beside');
 
   // Each step as a prompt player plays it: a go once its gesture is drawn, a still as each new step is reached.
@@ -141,9 +160,20 @@ try {
     if (!(await whaleGo(page, tries))) await page.waitForTimeout(250);
   }
   await away(page);
+  if(process.env.AUDIO) await page.evaluate(()=>seaAudio.recorder.start());
   await wait('__game.sealife.sleeper.spouting', 30); await shot('spout');
   await wait('__game.sealife.sleeper.fluking && __game.sealife.sleeper.time>15', 60); await shot('flukes');
   await wait(`${whale}.step==='gone'`, 60); await shot('gone');
+  if(process.env.AUDIO) {
+    await wait(`${whale}.stepTime>8`, 20);
+    const encoded=await page.evaluate(()=>new Promise(resolve=>{
+      seaAudio.recorder.onstop=()=>{
+        const reader=new FileReader();reader.onload=()=>resolve(reader.result.split(',')[1]);
+        reader.readAsDataURL(new Blob(seaAudio.chunks,{type:'audio/webm'}));
+      };seaAudio.recorder.stop();
+    }));
+    fs.writeFileSync(`${prefix}-release-audio.webm`,Buffer.from(encoded,'base64'));
+  }
   await wait(`${whale}.stepTime>20`, 40); await shot('onward-sun');
   await wait("__game.story.name==='mirror'", 150); await shot('mirror-arrival');
   await wait("__game.story.name==='mirror' && __game.story.current.arrived>=__game.tuning.skyMirror.arriveFor+3", 20);
@@ -155,7 +185,7 @@ try {
     mirror: { handed: __game.story.current.handed != null, arrived: __game.story.current.arrived,
       arriveFor: __game.tuning.skyMirror.arriveFor, carry: __game.story.current.shot.carry },
   }));
-  const report = { tries, swimFrames: log.swimFrames, clipped: log.clipped, maxGap: +log.maxGap.toFixed(2), pullFrames: log.pullFrames, pullClipped: log.pullClipped, beats: log.beats,
+  const report = { tries, swimFrames: log.swimFrames, clipped: log.clipped, maxGap: +log.maxGap.toFixed(2), pullFrames: log.pullFrames, pullClipped: log.pullClipped, neckError:log.neckError,neckWorst:log.neckWorst,voices:log.voices,beats: log.beats,
     invitations: log.invitations, ...health, errors };
   fs.writeFileSync(`${prefix}-trace.json`, JSON.stringify(await page.evaluate(() => window.seaTrace)));
   fs.writeFileSync(`${prefix}-report.json`, JSON.stringify(report, null, 2));

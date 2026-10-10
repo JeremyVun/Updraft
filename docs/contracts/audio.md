@@ -250,24 +250,25 @@ pan and bounded scheduling; finished nodes disconnect.
   free (`seabirds-lift`, through `WorldFoley.whale`, from the first of them); the sea running off its back with each
   breath is silent under its sigh.
 - The whale's voice (`whale-voice.ts`, `WhaleVoice`, owned by `Foley.whale`): a humpback's manner at dream size, slow
-  moans that glide in pitch in the sea score's key (D), fundamentals from about 41 to 165 Hz with a sub-octave to be
-  felt and soft upper harmonics a phone's speaker carries, shaped by two throat resonances that open as it rises,
-  filtered breath in the tired calls, the shared reverb and a slow darkening echo of the sea. A single fundamental
-  and quieter sub keep it smooth; detuned beating and periodic amplitude pulses sounded like a motor. Keep enough
+  moans that glide in pitch in the sea score's key (D), fundamentals from about 41 to 147 Hz with rounded upper
+  harmonics a phone's speaker carries, filtered breath and the shared diffuse reverb. Pitch eases through each
+  turn. Fixed throat resonances, a sub-octave and discrete delayed glides made the rising calls pulse like a motor;
+  they are removed. The freed song finishes before the flipper's goodbye begins. Keep enough
   upper harmonics for small speakers: removing the roughness must not remove the audible voice. Its calls: a tired sagging moan heard in the
-  mist before it is seen (`whale-moan`, with the sigh after the pod turns the boat toward it, `sighIn(…, true)`, or
-  `moan()` at once), lasting 8.2 s so one continuous call carries through the first sight of its body; a soft rise
+  mist before it is seen (`whale-moan`, on the distant approach, `sighIn(…, true)`, or
+  `moan()` at once), lasting 10.2 s so one continuous call carries through the first silhouette; a soft rise
   as its eye opens on her (`whale-greet`, from the net's `whale-call`); a long glad song
-  in two rising phrases as it breathes free (`whale-song`, ending on E); goodbye, down and up again, as it waves its
+  in two gently arched phrases as it breathes free (`whale-song`); goodbye, down and up again, as it waves its
   flipper and again as its flukes stand and flex (`whale-goodbye`); and its last and lowest, muffled, from under the sea
   as its swell reaches the boat (`whale-deep`). The first crossing's far dive has at most its echo (`whale-echo`).
-  `WorldFoley` gives the voice its own level and distance (`whaleVoice.level` 0.09 at its loudest, `near` 40 m to
+  `WorldFoley` gives the voice its own level and distance (`whaleVoice.level` 0.11 at its loudest, `near` 40 m to
   `far` 600 m, never below `farthest`), so the moan carries from the mist; farther, it is more muffled and more of it
-  is echo. While it calls the encounter's
+  is reverberation. While it calls the encounter's
   `hush` rises to at least `netWhale.voiceRoom` (0.6, about −7 dB on the sea score) and eases back after, so the score
   makes room under it rather than burying it.
-  `tools/whale-voice-check.mjs` renders the production calls through WorldFoley and checks clipping, level and the
-  moan's body above 180 Hz. The passage check requires the call to continue through the reveal; listening remains
+  `tools/whale-voice-check.mjs` renders all six production calls through WorldFoley and checks clipping, level,
+  rapid amplitude modulation and the moan's body above 180 Hz. `MUTATE=motor` and `MUTATE=thin` prove those guards.
+  The passage check requires the call to continue through the silhouette; listening remains
   part of the playtest.
 - Flock wingbeats follow flight and take-off; resting rafts are silent. Beats consumed while inaudible never burst on
   return.

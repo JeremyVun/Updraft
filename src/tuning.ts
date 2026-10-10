@@ -118,13 +118,8 @@ export const tuning = {
     dolphinSurfaceEvery: 0.6, dolphinLevel: 0.65, dolphinAttack: 0.065,
     /** The whale breathes ahead of the boat; keep its scale audible across that stretch of water. */
     whaleLevel: 0.65, whaleAttack: 0.2, whaleNear: 35, whaleFar: 190,
-    /**
-     * Its voice (`whale-voice.ts`), heard in full within `near` metres and carrying `far` metres, never quieter than
-     * `farthest` of it out there: `level` at its loudest; a sub-octave `sub` of it to be felt; its `body` under the
-     * throat's resonances; `wet` of it into the shared reverb, and the sea's echo of it every `echo` s, each repeat
-     * `echoBack` of the last, at `echoLevel`.
-     */
-    whaleVoice: { level: 0.09, near: 40, far: 600, farthest: 0.35, sub: 0.18, body: 0.5, wet: 0.45, echo: 0.31, echoBack: 0.42, echoLevel: 0.3 },
+    /** The low voice carries across the water; diffuse reverb preserves its scale without pulsing echoes. */
+    whaleVoice: { level: 0.11, near: 40, far: 600, farthest: 0.35, wet: 0.45 },
     clothSources: 3, clothReach: 60, clothLevel: 0.35,
     /** The stairs in the clouds (a proposal awaiting audition): the air round the travellers, a flight knocking home, the score. */
     stairsAirLevel: 1,
@@ -1553,14 +1548,8 @@ export const tuning = {
     hushFrom: 70, hushNear: 8, hushSorrow: 0.9, hushCourage: 0.45, hushEase: 0.3,
     /** While it calls, the score makes room under its voice, at least `voiceRoom` of the way to silence. */
     voiceRoom: 0.6,
-    /**
-     * Found in the mist rather than seen: it sighs unseen as the pod turns the boat toward it, and its blow stands up
-     * over the mist once the boat is `seenAt` metres short of the rest and at least `seenAfter` seconds on, each
-     * `leadSigh` seconds after that. The view comes down and turns to it as its shape forms, from `riseFrom` to
-     * `riseNear` metres short of the rest, not before: from farther off it would only turn the boat out of a phone's
-     * frame toward a mist with nothing in it.
-     */
-    seenAt: 95, seenAfter: 3, riseFrom: 70, riseNear: 20,
+    /** Hear it before the distant blow; close the view only once its shape is visible, keeping the boat in frame. */
+    heardAt: 140, seenAt: 125, seenAfter: 3, riseFrom: 70, riseNear: 20,
     /** How far ahead of the bow the pod runs while it leads the boat in (m). */
     podLead: 18,
     /**
@@ -1779,12 +1768,8 @@ export const tuning = {
      * `restFalloff` from `clearFrom` to `clearAt` metres short of the rest, clear of the whale's far length, and lifts
      * as the whale dives.
      */
-    mist: { haze: 1.12, falloff: 1.3, restHaze: 0.985, restFalloff: 1.05, clearFrom: 55, clearAt: 22, wholeAt: 0.68, initial: 0.8,
-      /**
-       * How deep the veil is where it is whole, its smoothstep's top; and from `hiddenTo` to `shownAt` metres short of
-       * the rest, past its blow, it eases off holding that by the whale's head (`veilLeast` keeps the depth finite).
-       */
-      wholeVeil: 4, hiddenTo: 58, shownAt: 38, veilLeast: 8, revealAfter: 2, revealFor: 4,
+    mist: { haze: 1.055, falloff: 1.1, restHaze: 0.985, restFalloff: 1.05, clearFrom: 110, clearAt: 22, wholeAt: 0.68, initial: 0.8,
+      revealAfter: 2, revealFor: 4,
       /**
        * Lying low on the sea: once its blow is called for, `lift` of the veil thins away above `liftFrom` metres over
        * the water (its body lies under that), to a third every `liftScale` metres higher, out to `liftNear` and no

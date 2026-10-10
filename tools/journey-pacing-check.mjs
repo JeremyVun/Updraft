@@ -96,10 +96,10 @@ function run(name, fps, gust, veer=0, waitInVillage=false, arrivalGust=false, ci
   let hazeShown=NaN,openShown=NaN,lastStep='',restGap=Infinity,restSpeed=Infinity,shownDuringWhale=0,worstBrake=0,lastSpeed=boat.speed;const ndc=new THREE.Vector3();
   // The open sea as the whale is found: the boat's pace, what of the whale and the mirror shows and when, and the way on.
   let leastHidden=1,nudgeOut=null,falloffShown=NaN,mistShown=0,liftShown=0,underWay=false,slowest=Infinity,slowestAt=null,whaleShownAt=null,mirrorShownBeforeDive=0,heading=0,mostStarboard=0,portTurn=0,lastYaw=null;
-  const sea={sighs:[],covers:[],seen:null,calls:[]};
+  const sea={sighs:[],covers:[],seen:null,calls:[],silhouette:null,detail:null,foreground:Infinity};
   let onwardLimit=Infinity,onwardPeak=0;
   if(rig)sealife.onWhaleSound=(kind)=>{
-    if(chapter.whale?.step!=='approach'||!chapter.whale.led)return;
+    if(chapter.whale?.step!=='approach')return;
     if(kind==='whale-sigh')sea.sighs.push(+time.toFixed(1));
     if(kind==='whale-moan')sea.calls.push(+time.toFixed(1));
   };
@@ -153,11 +153,18 @@ function run(name, fps, gust, veer=0, waitInVillage=false, arrivalGust=false, ci
         if(whale.step==='approach'&&whale.remaining()<=20&&events.last20===undefined)events.last20=+time.toFixed(1);
         if(events.last20!==undefined&&events.stopped===undefined&&boat.speed<0.3)events.stopped=+time.toFixed(1);
         const marks=whaleMarks();
+        if(whale.step==='approach') {
+          sea.foreground=Math.min(sea.foreground,900-780*hazeShown);
+          const visible=onScreen([sealife.sleeper.eye,sealife.sleeper.back]);
+          const body=visible.length?covered(visible):1;
+          if(!sea.silhouette&&body<.94)sea.silhouette={at:time,left:whale.remaining(),body};
+          if(!sea.detail&&body<.5)sea.detail={at:time,left:whale.remaining(),body};
+        }
         if(!whale.led){const seen=onScreen(marks).map(p=>hazeOver(p,rig.camera,hazeShown,openShown,falloffShown,mistShown,liftShown));
           if(seen.length)leastHidden=Math.min(leastHidden,...seen);
           if(whaleShownAt===null&&seen.some(c=>c<0.97))whaleShownAt=+time.toFixed(1);}
         else if(nudgeOut===null)nudgeOut=+whale.remaining().toFixed(1);
-        if(whale.step==='approach'&&whale.led&&events.shape===undefined&&covered([sealife.sleeper.eye,sealife.sleeper.back])<0.5)events.shape=+time.toFixed(1);
+        if(whale.step==='approach'&&events.shape===undefined&&sea.detail)events.shape=+time.toFixed(1);
         if(sea.sighs.length>sea.covers.length){const plume=sealife.sleeper.blowhole.clone();plume.y+=8;
           sea.covers.push({at:sea.sighs.at(-1),body:+covered(marks).toFixed(3),blow:+covered([plume]).toFixed(3)});}
         // Its blow seen from far off, once it stands at its height: its upper half over the mist, its body under it.
@@ -204,7 +211,10 @@ function run(name, fps, gust, veer=0, waitInVillage=false, arrivalGust=false, ci
         check(shownDuringWhale===0,'nothing of the mirror shows from the lead until the whale has gone');
         check(events['music-mirror']>=events['whale-gone']-0.05,`the mirror's arrival music waits for the whale: ${JSON.stringify(events)}`);
         check(chapter.mirrorArrival > .99,'mirror transition finishes before mooring');
-        check(whaleShownAt===null,`nothing of the whale shows before the nudge: seen at ${whaleShownAt} s`);
+        check(sea.foreground>=70,`the concealing mist stays well ahead of the boat: ${sea.foreground.toFixed(1)} m from camera`);
+        check(sea.silhouette?.left>80,`the whale first forms a distant silhouette: ${JSON.stringify(sea.silhouette)}`);
+        check(sea.detail&&sea.detail.at-sea.silhouette.at>5&&events['whale-breath']-sea.detail.at>12,
+          `silhouette, gradual detail, then approach: ${JSON.stringify({silhouette:sea.silhouette,detail:sea.detail})}`);
         check(mirrorShownBeforeDive===0,`nothing of the mirror shows before the whale dives: ${mirrorShownBeforeDive.toFixed(1)} s`);
         check(underWay&&slowest>=4.45,`the boat sails at its ordinary pace but for the swim: ${slowest.toFixed(2)} m/s at ${slowestAt} s`);
         const lead=events['whale-breath']-events.whaleLed;
@@ -212,11 +222,11 @@ function run(name, fps, gust, veer=0, waitInVillage=false, arrivalGust=false, ci
         check(events['whale-breath']>=57&&events['whale-breath']<=63,`first whale puzzle at about 60 s: ${events['whale-breath']} s`);
         check(events.stopped-events.last20<=9,`the last 20 m take about 8 s: ${(events.stopped-events.last20).toFixed(1)} s`);
         const [heard]=sea.covers,seen=sea.seen;
-        check(heard&&heard.body>=0.97&&heard.blow>=0.97,`it is heard in the mist before anything of it is seen: ${JSON.stringify(sea.covers)}`);
-        check(seen&&seen.blow<=0.3&&seen.body>=0.97,`its blow stands white over the mist while its body is still hidden: ${JSON.stringify(seen)}`);
+        check(heard&&heard.body>=0.93,`its low call begins while the body is still lost in haze: ${JSON.stringify(sea.covers)}`);
+        check(seen&&seen.blow<=0.45&&seen.body>=0.85,`its blow stands above the mist before the body gains definition: ${JSON.stringify(seen)}`);
         check(seen&&seen.at>heard.at&&events.shape>seen.at,`its blow is seen before its shape forms: ${JSON.stringify({heard,seen,shape:events.shape})}`);
-        check(sea.calls.length===1&&sea.calls[0]<seen?.at&&sea.calls[0]+callLength('whale-moan')>=events.shape+2,
-          `one low call carries from the mist through first sight: ${JSON.stringify({calls:sea.calls,blow:seen?.at,shape:events.shape,length:callLength('whale-moan')})}`);
+        check(sea.calls.length===1&&sea.calls[0]<seen?.at&&sea.calls[0]+callLength('whale-moan')>=sea.silhouette.at+2,
+          `one low call carries from the mist through the first silhouette: ${JSON.stringify({calls:sea.calls,blow:seen?.at,silhouette:sea.silhouette,length:callLength('whale-moan')})}`);
         check(events.mirrorSeen>events.dive,`the mirror comes out of its mist only once the whale has dived: ${JSON.stringify(events)}`);
         const onward=time-events['whale-gone'];
         check(onwardLimit>=tuning.seaPassage.speed-0.001,`normal boat speed throughout the onward sail: cap ${onwardLimit}`);
@@ -226,7 +236,7 @@ function run(name, fps, gust, veer=0, waitInVillage=false, arrivalGust=false, ci
       return {seconds:+time.toFixed(1),musicLead:+musicLead.toFixed(2),sailed:+sailed.toFixed(1),peak:+peak.toFixed(2),swimSeconds:+(swimFrames/fps).toFixed(1),stillSeconds:+stillFor.toFixed(1),whaleCalled:chapter.whaleCalled,
         ...(chapter.whale?{hiddenBeforeNudge:+leastHidden.toFixed(4),nudgeOut,whaleBrake:+worstBrake.toFixed(2),restGap:+restGap.toFixed(2),slowest:+slowest.toFixed(2),slowestAt,lead:+(events['whale-breath']-events.whaleLed).toFixed(1),
           last20:+(events.stopped-events.last20).toFixed(1),diveToMooring:+(time-events.dive).toFixed(1),letGoToMooring:+(time-events.letGo).toFixed(1),
-          onwardLimit,onwardPeak:+onwardPeak.toFixed(2),portTurn:+portTurn.toFixed(3),starboardTurn:+(-mostStarboard).toFixed(2),sighs:sea.covers,blow:sea.seen,calls:sea.calls}:{}),beats,events,dolphinActs};
+          onwardLimit,onwardPeak:+onwardPeak.toFixed(2),portTurn:+portTurn.toFixed(3),starboardTurn:+(-mostStarboard).toFixed(2),sighs:sea.covers,blow:sea.seen,calls:sea.calls,reveal:{silhouette:sea.silhouette,detail:sea.detail,foreground:sea.foreground}}:{}),beats,events,dolphinActs};
     }
   }
   const w=chapter.whale;

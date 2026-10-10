@@ -376,6 +376,7 @@ export class NetWhale {
   private readonly falls = new THREE.Vector3();
   private readonly endRest = new THREE.Vector3();
   private readonly birdEye = new THREE.Vector3();
+  private readonly birdLook = new THREE.Vector3();
   private readonly herFace = new THREE.Vector3();
   private readonly mouth = new THREE.Vector3();
   private readonly mitts = [new THREE.Vector3(), new THREE.Vector3()];
@@ -655,8 +656,8 @@ export class NetWhale {
     const resting = left < 1.5 && boat.speed < 0.2;
     this.still = resting ? this.still + dt : 0;
     if (this.step === 'approach' && this.still > 1) this.goTo('breath');
-    // As the pod turns the boat toward it, it is heard in the mist ahead; then, nearer, its blow stands up white over it.
-    if (this.led && this.step === 'approach' && this.sighs < 2
+    // The shortened crossing reaches its distant voice before the pod's nudge.
+    if (left < K.heardAt && this.step === 'approach' && this.sighs < 2
       && (this.sighs === 0 || (left < K.seenAt && this.clock - this.heard > K.seenAfter))) {
       // A breath just gone serves for its blow: it never breathes twice in a moment.
       if (this.sighs === 0 || whale.untilSigh < K.breathEvery - K.leadSigh) whale.sighIn(K.leadSigh, this.sighs === 0, this.sighs === 1);
@@ -893,7 +894,8 @@ export class NetWhale {
     if (this.bird === 'satchel' || this.bird === 'lifted' || this.bird === 'home') return;
     child.lookAt = cygnet.eye(this.birdEye);
     if (this.bird === 'out' || this.bird === 'taking' || this.bird === 'holding' || this.bird === 'pulling' || this.bird === 'clearing') {
-      cygnet.watch(this.bird === 'out' || this.bird === 'taking' ? this.endRest : this.net.loopTie);
+      this.birdLook.copy(cygnet.position).add(this.a.set(Math.sin(cygnet.yaw) * 2, 0.6, Math.cos(cygnet.yaw) * 2));
+      cygnet.watchPoint(this.bird === 'out' ? this.birdLook : this.net.loopTie, true);
       child.lean = 0.16;
       const mouth = child.breathFrom(this.mouth);
       const ahead = this.mitts[0].subVectors(mouth, child.face(this.mitts[1])).normalize();

@@ -6,8 +6,7 @@ import type { WhaleCall } from '../fx/sealife/sleeper';
 export type WhaleVoiceKind = WhaleCall | 'whale-greet' | 'whale-echo';
 
 /**
- * One moan: its pitch through the call (seconds, Hz), how loud it swells (seconds, 0..1), how bright its throat opens
- * (0 a closed "oo" .. 1 an open "ah"), how much it rasps, and how muffled it is (a lowpass, Hz).
+ * Pitch and swell through each phrase; breath brightness, breath amount, lowpass and relative level.
  */
 interface Moan {
   pitch: readonly (readonly [number, number])[];
@@ -25,8 +24,8 @@ interface Moan {
  */
 const CALLS: Record<WhaleVoiceKind, readonly Moan[]> = {
   'whale-moan': [{
-    pitch: [[0, 52], [2, 69], [3.8, 73.4], [5.8, 64], [8, 49]],
-    swell: [[0, 0], [0.9, 0.85], [2.4, 1], [5.8, 0.9], [8.2, 0]],
+    pitch: [[0, 52], [2.5, 69], [4.8, 73.4], [7.6, 64], [10, 49]],
+    swell: [[0, 0], [0.9, 0.85], [2.8, 1], [7.6, 0.9], [10.2, 0]],
     open: 0.25, rasp: 0.3, muffle: 900, level: 1,
   }],
   'whale-greet': [{
@@ -36,13 +35,13 @@ const CALLS: Record<WhaleVoiceKind, readonly Moan[]> = {
   }],
   'whale-song': [
     {
-      pitch: [[0, 55], [1.1, 73.4], [2.2, 110], [2.9, 98]],
+      pitch: [[0, 92.5], [1.1, 110], [2.2, 104], [2.9, 98]],
       swell: [[0, 0], [0.5, 0.7], [2.1, 1], [3.1, 0]],
       open: 0.6, rasp: 0.1, muffle: 2200, level: 0.9,
     },
     {
-      pitch: [[3.3, 73.4], [4.4, 110], [5.6, 146.8], [6.9, 164.8], [7.6, 160]],
-      swell: [[3.3, 0], [3.9, 0.75], [5.6, 1], [6.9, 0.95], [7.9, 0]],
+      pitch: [[3.3, 98], [4.4, 123.5], [5.3, 146.8], [5.9, 138.6], [6.4, 130.8]],
+      swell: [[3.3, 0], [3.9, 0.75], [5.1, 1], [5.7, 0.85], [6.5, 0]],
       open: 0.8, rasp: 0.06, muffle: 2600, level: 1,
     },
   ],
@@ -66,7 +65,7 @@ const CALLS: Record<WhaleVoiceKind, readonly Moan[]> = {
 /** How long each call goes on (s), for the room the score makes under it. */
 export const callLength = (kind: WhaleVoiceKind) => Math.max(...CALLS[kind].map((m) => m.swell[m.swell.length - 1][0]));
 
-const HARMONICS = [0, 1, 0.5, 0.3, 0.22, 0.13, 0.075, 0.045, 0.028, 0.018];
+const HARMONICS = [0, 1, 0.42, 0.28, 0.1, 0.035];
 
 /** The whale's voice: its moans, synthesised whole for each call and let go when it ends. */
 export class WhaleVoice {
@@ -107,16 +106,11 @@ export class WhaleVoice {
 
     const sum = keep(ctx.createGain());
     const oscillators: OscillatorNode[] = [];
-    for (const [detune, gain, octave] of [[0, 1, 1], [0, V.sub, 0.5]] as const) {
-      const osc = keep(ctx.createOscillator());
-      if (octave === 1) osc.setPeriodicWave(this.wave!);
-      osc.detune.value = detune;
-      glide(osc.frequency, m.pitch, at, octave);
-      const g = keep(ctx.createGain());
-      g.gain.value = gain;
-      osc.connect(g).connect(sum);
-      oscillators.push(osc);
-    }
+    const voice = keep(ctx.createOscillator());
+    voice.setPeriodicWave(this.wave!);
+    glide(voice.frequency, m.pitch, at, 1);
+    voice.connect(sum);
+    oscillators.push(voice);
     // A slow wander in its pitch, never a singer's vibrato.
     const wander = keep(ctx.createOscillator());
     wander.frequency.value = 0.19;
@@ -137,27 +131,12 @@ export class WhaleVoice {
     breathGain.gain.value = m.rasp * 0.16;
     breath.connect(air).connect(breathGain).connect(sum);
 
-    // Its throat: two resonances that open as it rises, over a body kept whole underneath.
+    // Fixed throat peaks and delayed glides made the harmonics surge like a revving engine.
     const muffle = keep(ctx.createBiquadFilter());
     muffle.type = 'lowpass';
     muffle.Q.value = 0.6;
     muffle.frequency.value = m.muffle * (1 - 0.6 * far);
-    const throat = keep(ctx.createGain());
-    for (const [base, span, q, gain] of [[260, 140, 3.5, 2.2], [640, 360, 4.5, 1.3]] as const) {
-      const f = keep(ctx.createBiquadFilter());
-      f.type = 'bandpass';
-      f.Q.value = q;
-      f.frequency.setValueAtTime(base + span * m.open * 0.5, from);
-      f.frequency.linearRampToValueAtTime(base + span * m.open, from + (end - from) * 0.6);
-      f.frequency.linearRampToValueAtTime(base + span * m.open * 0.7, end);
-      const g = keep(ctx.createGain());
-      g.gain.value = gain;
-      sum.connect(f).connect(g).connect(throat);
-    }
-    const body = keep(ctx.createGain());
-    body.gain.value = V.body;
-    sum.connect(body).connect(throat);
-    throat.connect(muffle);
+    sum.connect(muffle);
 
     const env = keep(ctx.createGain());
     env.gain.value = 0;
@@ -173,20 +152,6 @@ export class WhaleVoice {
     const wet = keep(ctx.createGain());
     wet.gain.value = V.wet + (1 - V.wet) * 0.6 * far;
     p.connect(wet).connect(out.reverb);
-    // The sea's own echo of it: a few slow, darkening repeats.
-    const echo = keep(ctx.createDelay(1));
-    echo.delayTime.value = V.echo;
-    const back = keep(ctx.createGain());
-    back.gain.value = V.echoBack;
-    const dark = keep(ctx.createBiquadFilter());
-    dark.type = 'lowpass';
-    dark.frequency.value = 700;
-    const echoed = keep(ctx.createGain());
-    echoed.gain.value = V.echoLevel * (1 + far);
-    p.connect(echo).connect(dark).connect(back).connect(echo);
-    dark.connect(echoed).connect(out.bus);
-    echoed.connect(wet);
-
     const stop = end + 0.05;
     breath.start(from);
     breath.stop(stop);
@@ -194,13 +159,20 @@ export class WhaleVoice {
       osc.start(from);
       osc.stop(stop);
     }
-    // The echo rings on a little after the voice has stopped.
-    oscillators[0].onended = () => setTimeout(() => nodes.forEach((n) => n.disconnect()), 4000);
+    oscillators[0].onended = () => nodes.forEach((n) => n.disconnect());
   }
 }
 
-/** Sets `param` gliding through (seconds, Hz) from `at`, scaled by `by`: smooth exponential steps between the keys. */
 function glide(param: AudioParam, keys: readonly (readonly [number, number])[], at: number, by: number): void {
-  param.setValueAtTime(keys[0][1] * by, at + keys[0][0]);
-  for (let i = 1; i < keys.length; i++) param.exponentialRampToValueAtTime(keys[i][1] * by, at + keys[i][0]);
+  const from = keys[0][0], duration = keys[keys.length - 1][0] - from;
+  const count = Math.ceil(duration * 128) + 1;
+  let segment = 1;
+  const values = Float32Array.from({ length: count }, (_, j) => {
+    const time = from + duration * j / (count - 1);
+    while (segment < keys.length - 1 && time > keys[segment][0]) segment++;
+    const [start, a] = keys[segment - 1], [end, b] = keys[segment];
+    const t = (time - start) / (end - start), eased = t * t * (3 - 2 * t);
+    return a * (b / a) ** eased * by;
+  });
+  param.setValueCurveAtTime(values, at + from, duration);
 }
