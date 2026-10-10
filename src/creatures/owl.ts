@@ -32,7 +32,7 @@ const TUFT = new THREE.Vector3(0.1, 0.46, 0.0);
 /** Larger than life, as the game's creatures are, so it reads from where the camera stands. */
 const SCALE = 2.1;
 /** The wing as built, spread: from the shoulder out to its tip, how far it reaches, and its chord. */
-const WING_REACH = 0.44;
+const WING_REACH = 0.308;
 /** Where the wing's feathers are along it (0 at the shoulder, 1 at the tip) and across it (-1 trailing edge, 1 leading). */
 const WING_GLSL = /* glsl */ `
 float wingSpan(vec3 rest) { return clamp((abs(rest.x) - ${SHOULDER.x.toFixed(3)}) / ${WING_REACH.toFixed(3)}, 0.0, 1.0); }
@@ -44,10 +44,11 @@ float wingHalf(float s) { return 0.11 * (1.0 - 0.45 * pow(s, 2.5)) + 0.004; }`;
  */
 const CARD_SHOULDER = [4, 256];
 const CARD_ROWS = [64, 452];
-const CARD_REACH = 0.44;
+const CARD_REACH = WING_REACH;
 /** Where the spread wings join it: lower and further back than the folded wing's shoulder, at the top of its body. */
 const CARD_ROOT = new THREE.Vector3(0.11, 0.2, -0.025);
-const CARD_PX = CARD_REACH / 495;
+const CARD_PX_ALONG = CARD_REACH / 495;
+const CARD_PX_ACROSS = 0.44 / 495;
 /** Where the wing bends, as a share of its reach: the wrist, out past which the hand bends, sweeps and twists. */
 const WRIST = 0.42;
 /** Beyond this the eyeshine stops shrinking with distance. */
@@ -282,7 +283,7 @@ void main() {
   vec3 n = normalize(cross(across, along)) * side;
   vWorld = owlFrame(p);
   vNormal = rotY(rotX(rotZ(n, uOwlBody.x), uOwlWing.z), uOwl.w);
-  vCard = vec2(ac.x / ${CARD_PX.toFixed(6)} + ${CARD_SHOULDER[0].toFixed(1)}, ${CARD_SHOULDER[1].toFixed(1)} - ac.y / ${CARD_PX.toFixed(6)}) / 512.0;
+  vCard = vec2(ac.x / ${CARD_PX_ALONG.toFixed(6)} + ${CARD_SHOULDER[0].toFixed(1)}, ${CARD_SHOULDER[1].toFixed(1)} - ac.y / ${CARD_PX_ACROSS.toFixed(6)}) / 512.0;
   gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
 }`;
 
@@ -335,7 +336,7 @@ function cardGeometry(): THREE.BufferGeometry {
     for (let j = 0; j <= ACROSS; j++) {
       const row = THREE.MathUtils.lerp(CARD_ROWS[0], CARD_ROWS[1], j / ACROSS);
       for (let i = 0; i <= ALONG; i++) {
-        pos.push((i / ALONG * 508 - CARD_SHOULDER[0]) * CARD_PX, (CARD_SHOULDER[1] - row) * CARD_PX, side);
+        pos.push((i / ALONG * 508 - CARD_SHOULDER[0]) * CARD_PX_ALONG, (CARD_SHOULDER[1] - row) * CARD_PX_ACROSS, side);
       }
     }
     for (let j = 0; j < ACROSS; j++) {
