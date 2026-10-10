@@ -1523,7 +1523,7 @@ Astra implements Jeremy's three approved review corrections personally; his merg
 
 - [x] Replace the five reversed shader ranges with equivalent supported ramps.
 - [x] Stop settled blue-net geometry work and cache fixed call durations; verify parity and checkpoint reuse.
-- [ ] Run focused checks and both sea orientations, rebase against current main and merge the approved chapter.
+- [x] Run focused checks and both sea orientations, rebase against current main and merge the approved chapter.
 
 The pre-change quick suite passes 13 of 14 checks; only the five sea shader bounds fail. An instrumented
 mechanics run measures the redundant settled blue-net update at about 0.036 ms per frame on this Mac, an
@@ -1535,3 +1535,12 @@ An alternating six-round benchmark reduces its settled update from 0.0345–0.03
 the regression also proves unchanged buffers are not uploaded and redraping resumes updates. Fixed call lengths
 are now computed once. All seven production whale voice renders pass. Sea mechanics, fourteen pacing cases,
 geography/save migration, crossing camera/haze and dolphin flight checks pass, as do production and QA builds.
+
+Both full real-gesture GPU replays complete the five puzzles, farewell and settled Mirror arrival, with zero
+browser errors, unexpected shader programs, or swimmer/pull clipping. The supported shader ramps also pass on
+Metal and software Vulkan. Source and evidence index: `/tmp/updraft-sea-merge-TojNOy/README.md`.
+
+Committed as `fdb9864d`, rebased against current main (already up to date), then fast-forwarded into clean local
+main from `3f7a237a`. This sea work is merged. No deployment or remote push was performed. N9's previously
+recorded unrelated terrain and marine-audio failures remain open; this was a focused merge check, not a fresh
+whole-game release certification. Other path-puzzles work remains in this backlog.
