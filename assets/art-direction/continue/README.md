@@ -1,7 +1,7 @@
 # The room paintings
 
 The veil and chapter tiles use the same twelve rooms, each with a separately composed landscape and portrait.
-Keep only the latest selected painting in each orientation. Experimental generations belong in temporary storage.
+Keep only the latest selected painting in each orientation, except an explicitly requested fallback. Experimental generations belong in temporary storage.
 
 ## Final files
 
@@ -36,7 +36,7 @@ proportions, light and painterly finish, with clear focal edges and varied marks
 animals, text, UI or invented props unless Jeremy specifically requests them; the sea painting features the whale
 rescue and its empty boat.
 
-The drowned village uses study 07, accepted on 2026-10-05 after Jeremy identified diagonal swatching in study 3. Its landscape and matching portrait use clean continuous surface shading and broad soft sail folds. This supersedes the older room brief's insistence on visible knitted courses for the paintings; the in-game sail is unchanged. The [repair record](../drowned-study-2026-10-05/round-3.json) preserves his brief.
+The drowned village uses the stormy belfry scene approved on 2026-10-11: a small lamp-lit boat beneath the lighthouse and looming church, with a tabby mother and kitten in the window. The landscape is the exact approved generation; its matching portrait leaves water below the boat for the existing controls. The [selection record](../drowned-dusk-2026-10-11/selection.md) preserves the brief and provenance. At Jeremy's request, the previous study 07 landscape, portrait, prompts and shipped WebPs remain in [previous/](../drowned-dusk-2026-10-11/previous/). Rejected studies from this round were deleted. The earlier [repair record](../drowned-study-2026-10-05/round-3.json) preserves the surface-rendering brief; the in-game sail is unchanged.
 
 Sea now shows the ancient whale's kind amber eye, old net and the small red-sailed boat at sunset, matching the
 rebuilt encounter. Its landscape and separately composed portrait were made with built-in imagegen from actual
@@ -52,8 +52,8 @@ props seem to float among clouds.
 
 The foreground should soften subtly and continuously into natural shade, with recognisable grass, water or clouds.
 Avoid an empty blurred lower third, bright foreground rims, a horizontal blur boundary or repeated texture.
-Landscape and portrait need their own compositions. Preserve the showcase subject through wide-screen cropping;
-move the overlay before shrinking the subject to make space.
+Landscape and portrait need their own compositions. Preserve the showcase subject through wide-screen cropping.
+For the drowned village, leave water beneath the boat for the existing overlay; Jeremy rejected moving the controls to compensate for cramped artwork.
 
 Check the PNG at full size, inspect enlarged middle-band details for repeated diagonal or diamond-shaped tonal swatches across unrelated surfaces, and check behind the real veil on wide, 16:10 and phone screens. Jeremy found this artifact in drowned study 3 after it passed the initial review; quieter ripples alone do not fix it ([repair studies](../drowned-study-2026-10-05/round-3.json)). Begin/Continue sits around
 82% down in landscape, 86% for landscape Stairs, and 74% in portrait, with minimum bottom space for secondary

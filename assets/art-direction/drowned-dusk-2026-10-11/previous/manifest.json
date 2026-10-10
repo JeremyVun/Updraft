@@ -1,0 +1,62 @@
+[
+  {
+    "room": "drowned",
+    "aspect": "land",
+    "name": "drowned-land",
+    "file": "drowned-land.png",
+    "width": 1672,
+    "height": 941,
+    "bytes": 1631827,
+    "sha256": "1ea573460e06866f0a57a32d948dc5610d6f30a572415950e10854f9941bcc0e",
+    "sourceRevision": "drowned-study-07-approved-2026-10-05",
+    "prompt": "prompts/drowned-land.txt",
+    "generation": {
+      "source": "/Users/jeremy/.codex/generated_images/01a10a1f-6dd6-72c2-8ee3-1448b191d071/exec-bde59003-2c54-42c8-8dcb-1ab10d786e37.png",
+      "mode": "built-in image_gen",
+      "historicalInputPaths": [
+        "assets/art-direction/drowned-study-2026-10-05/06-surface-repair.png"
+      ],
+      "historicalStudyPath": "assets/art-direction/drowned-study-2026-10-05/07-clean-surfaces.png"
+    },
+    "webp": {
+      "file": "src/paintings/drowned-land.webp",
+      "bytes": 212356,
+      "sha256": "a7927023c5d058651cf839cc4672dec4708b666b659ad186ac54b63f055293b1",
+      "quality": 94
+    },
+    "tile": {
+      "file": "src/chapter-select/stills/drowned.webp",
+      "width": 400,
+      "height": 250,
+      "bytes": 21336,
+      "quality": 90,
+      "sha256": "de2301351c1d845170fb54b363763fba04b734443352e2380697331e2e15078d"
+    }
+  },
+  {
+    "room": "drowned",
+    "aspect": "port",
+    "name": "drowned-port",
+    "file": "drowned-port.png",
+    "width": 853,
+    "height": 1843,
+    "bytes": 1641787,
+    "sha256": "62980f8b9fda292c4beef77bd818c435f706c26d4d52579f33e6d09b4f3c0a3e",
+    "sourceRevision": "drowned-study-07-portrait-2026-10-05",
+    "prompt": "prompts/drowned-port.txt",
+    "generation": {
+      "source": "/Users/jeremy/.codex/generated_images/01a10a1f-6dd6-72c2-8ee3-1448b191d071/exec-16db777b-d517-4e0f-9d2d-3aec5ae27dc6.png",
+      "mode": "built-in image_gen",
+      "historicalInputPaths": [
+        "assets/art-direction/drowned-study-2026-10-05/07-clean-surfaces.png",
+        "assets/art-direction/continue/remade/masters/drowned-port.png"
+      ]
+    },
+    "webp": {
+      "file": "src/paintings/drowned-port.webp",
+      "bytes": 201060,
+      "sha256": "4a0861c2804b5b08cf023dac99cc37b98c0464972152752528f4896eeb5612a2",
+      "quality": 94
+    }
+  }
+]

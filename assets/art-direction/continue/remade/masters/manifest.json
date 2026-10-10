@@ -350,31 +350,30 @@
     "file": "drowned-land.png",
     "width": 1672,
     "height": 941,
-    "bytes": 1631827,
-    "sha256": "1ea573460e06866f0a57a32d948dc5610d6f30a572415950e10854f9941bcc0e",
-    "sourceRevision": "drowned-study-07-approved-2026-10-05",
+    "bytes": 2067441,
+    "sha256": "e35abf8cac1d8759481ae052b8f24c8c95154b19f94e462f41f8a84809a323e5",
+    "sourceRevision": "drowned-belfry-tabby-land-2026-10-11",
     "prompt": "prompts/drowned-land.txt",
     "generation": {
-      "source": "/Users/jeremy/.codex/generated_images/01a10a1f-6dd6-72c2-8ee3-1448b191d071/exec-bde59003-2c54-42c8-8dcb-1ab10d786e37.png",
+      "source": "/Users/jeremy/.codex/generated_images/01a12602-e28f-7be1-a8b0-65a44866a6e4/exec-58792ff1-b72f-444e-8306-d304985fa0d0.png",
       "mode": "built-in image_gen",
       "historicalInputPaths": [
-        "assets/art-direction/drowned-study-2026-10-05/06-surface-repair.png"
-      ],
-      "historicalStudyPath": "assets/art-direction/drowned-study-2026-10-05/07-clean-surfaces.png"
+        "/var/folders/2w/krx53_8d0wz9bnc02rvllb8w0000gn/T/codex-clipboard-1dbf6d2e-33f2-4b9d-a0c3-e644ac5e86f0.png"
+      ]
     },
     "webp": {
       "file": "src/paintings/drowned-land.webp",
-      "bytes": 212356,
-      "sha256": "a7927023c5d058651cf839cc4672dec4708b666b659ad186ac54b63f055293b1",
+      "bytes": 253074,
+      "sha256": "5a23426d64b5463115ab09dce4eb67baafd423efd6692c0c6e650309d6b19ebf",
       "quality": 94
     },
     "tile": {
       "file": "src/chapter-select/stills/drowned.webp",
       "width": 400,
       "height": 250,
-      "bytes": 21336,
+      "bytes": 14096,
       "quality": 90,
-      "sha256": "de2301351c1d845170fb54b363763fba04b734443352e2380697331e2e15078d"
+      "sha256": "f9c2fb7e630ce54ee7d52573052700614508482e8ce6dcb0a79d5f1167b2e2f5"
     }
   },
   {
@@ -382,24 +381,23 @@
     "aspect": "port",
     "name": "drowned-port",
     "file": "drowned-port.png",
-    "width": 853,
-    "height": 1843,
-    "bytes": 1641787,
-    "sha256": "62980f8b9fda292c4beef77bd818c435f706c26d4d52579f33e6d09b4f3c0a3e",
-    "sourceRevision": "drowned-study-07-portrait-2026-10-05",
+    "width": 829,
+    "height": 1898,
+    "bytes": 2091303,
+    "sha256": "4d3554dec3abc9d4e7e99d02f1e41591623487892ba1a0f926694ab02a17e561",
+    "sourceRevision": "drowned-belfry-tabby-port-2026-10-11",
     "prompt": "prompts/drowned-port.txt",
     "generation": {
-      "source": "/Users/jeremy/.codex/generated_images/01a10a1f-6dd6-72c2-8ee3-1448b191d071/exec-16db777b-d517-4e0f-9d2d-3aec5ae27dc6.png",
+      "source": "/Users/jeremy/.codex/generated_images/01a12602-e28f-7be1-a8b0-65a44866a6e4/exec-3fa88e07-e6d8-4c7f-a441-ffed7c3146f1.png",
       "mode": "built-in image_gen",
       "historicalInputPaths": [
-        "assets/art-direction/drowned-study-2026-10-05/07-clean-surfaces.png",
-        "assets/art-direction/continue/remade/masters/drowned-port.png"
+        "assets/art-direction/continue/remade/masters/drowned-land.png"
       ]
     },
     "webp": {
       "file": "src/paintings/drowned-port.webp",
-      "bytes": 201060,
-      "sha256": "4a0861c2804b5b08cf023dac99cc37b98c0464972152752528f4896eeb5612a2",
+      "bytes": 310208,
+      "sha256": "68090375ff6f40da3fc97bdd57c932be9c2add59ed4b27ce9a5507c3511e021f",
       "quality": 94
     }
   },
