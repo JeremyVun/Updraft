@@ -946,6 +946,19 @@ Jeremy's next brief, verbatim:
     reproduce the mist/lantern transition across wave phases before deciding whether to soften its opacity or light
     response. No storm visuals changed in this round. Evidence: `/tmp/updraft-final-findings-WhJDz0/portrait-final.log`,
     `portrait-final-film-115.png`, `portrait-final-film-116.png`, and `portrait-departure.log`.
+55. **Circular foreground edge in the storm — diagnosed, proposed fix.** Jeremy asked, verbatim:
+    "why is there some sort of \"circle\" in the foreground?" It is a discontinuity in the lantern's fog glow.
+    `seaFogMarch` estimates the fog density at the sightline's closest point to the lantern (`tc`). When the water
+    ends the sightline before that point, the density (`sc`) remains zero; crossing `tc == far` suddenly adds it.
+    That boundary forms the curved dark patch across the water. A frozen browser comparison reproduces it:
+    disabling the lantern halo removes the edge; disabling only its reflection does not. A diagnostic colour
+    mask for `tc > far` follows the edge exactly. Clamping the sample to the visible sightline removes the edge
+    while retaining the glow. This is a browser-only diagnostic, not an applied game fix. Proposal: correct the
+    density and attenuation sampling at truncated sightlines, then verify moving waves, the lantern reflection,
+    both camera aspects and item 54. A connection to the earlier brightness surge remains unproven. Evidence:
+    `/tmp/updraft-fog-circle-jkq4FF/` (`probe.mjs`, `state.json`, `time-233.2.png`, `light-boundary.png`,
+    `clamped-light-sample.png`). The frozen run starts at the storm checkpoint, then uses the earlier capture's
+    shader time to reproduce its wave phase; it is not a reconstruction of every state in that earlier run.
 
 Asked whether to move the later islands together or use a longer curved route, Jeremy answered, verbatim:
 
@@ -959,7 +972,7 @@ The four requested changes are complete. Jeremy approved findings 42, 47, 48 and
 
 > you are approved to address all identified issues
 
-Those four findings are resolved. Item 54 is a new finding for review. Work remains on the integration branch,
+Those four findings are resolved. Items 54–55 are new findings for review. Work remains on the integration branch,
 without merge or deployment. Island coordinates and save geography are unchanged.
 
 Departure evidence: `/tmp/updraft-departure-Y5m3eS/`. All 51 mechanics checks pass after correcting the journey

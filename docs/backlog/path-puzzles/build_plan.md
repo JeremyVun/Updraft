@@ -1235,6 +1235,11 @@ with flashes measured throughout each screenshot capture, passes at 11.1/255 (`p
 changing the 12/255 limit. The intermittent surge remains recorded as new review item 54 rather than being
 declared fixed. The close mill clips and final farewell stills are in the same evidence directory.
 
+Jeremy subsequently pointed out a circular foreground edge in the storm capture. Read-only diagnosis isolates
+the lantern's fog density sample: it switches at the closest point to the lantern crossing the water endpoint.
+A frozen shader comparison and an exact boundary mask confirm item 55; the proposed sampling correction is
+recorded in design.md. Only the diagnostic browser's shader was changed. Evidence: `/tmp/updraft-fog-circle-jkq4FF/`.
+
 #### Integration takeover — 2026-10-10
 
 Jeremy: "ok proceed". For this takeover he also approved Codex doing the remaining visual work:
@@ -1344,7 +1349,7 @@ Resolved fixture failures under review item 40 (no gameplay changes):
 | `plane-routing` | Supplies repeated player strokes across the real pinwheel to haul the boat in; passes |
 | `drowned-gating` | Bounds each vane's settling speed on distant entry, preserves pairwise parity on arrival; passes |
 
-Phase 10 remains open for Jeremy's playtest and music listen, the Ultra investigation and new review item 54. The
+Phase 10 remains open for Jeremy's playtest and music listen, the Ultra investigation and new review items 54–55. The
 whole-journey release playthrough has not been run during this takeover. Ultra fog cost is not a claimed fix. The integration
 dev server is on `http://127.0.0.1:5331/`; the original roofs play build and main remain separate.
 
