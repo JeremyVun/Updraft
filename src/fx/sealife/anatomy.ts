@@ -50,6 +50,17 @@ export function finPoint(t: number, along: number, out: THREE.Vector3): THREE.Ve
     .addScaledVector(FIN_ACROSS, -0.16 * Math.sin(Math.PI * t) + chord * Math.cos(edge))
     .addScaledVector(FIN_THROUGH, chord * Math.sin(edge) + 0.1 * Math.sin(Math.PI * t));
 }
+
+export function finRim(t: number, angle: number, out: THREE.Vector3, clearance = 0): THREE.Vector3 {
+  const along = 0.5 - 0.5 * Math.cos(angle);
+  const thick = 0.14 * (1 - 0.72 * t) + 0.022;
+  const edge = FIN_EDGE_UP * smoothstep(0, 0.3, t);
+  const th = Math.sin(angle) * (thick * 2.4 * Math.sqrt(along + 0.02) * (1 - along * 0.85) + clearance);
+  const across = -Math.cos(angle) * clearance;
+  return finPoint(t, along, out)
+    .addScaledVector(FIN_ACROSS, across * Math.cos(edge) - th * Math.sin(edge))
+    .addScaledVector(FIN_THROUGH, across * Math.sin(edge) + th * Math.cos(edge));
+}
 /** Where the flukes hinge on the tail stock, as a fraction of the length. */
 export const FLUKE_HINGE = 0.93;
 /** Along the tail stock over which it can turn its flukes about its own line (as they rise to face her). */
@@ -306,13 +317,10 @@ function fin(): THREE.BufferGeometry {
   const s = -FIN_ROOT.z / LENGTH;
   for (let i = 0; i <= stations; i++) {
     const t = i / stations;
-    const thick = 0.14 * (1 - 0.72 * t) + 0.022;
-    const edge = FIN_EDGE_UP * smoothstep(0, 0.3, t);
     for (let j = 0; j < around; j++) {
       const a = (j / around) * Math.PI * 2;
       const along = 0.5 - 0.5 * Math.cos(a);
-      const th = Math.sin(a) * thick * 2.4 * Math.sqrt(along + 0.02) * (1 - along * 0.85);
-      finPoint(t, along, p).add(FIN_ROOT).addScaledVector(FIN_ACROSS, -th * Math.sin(edge)).addScaledVector(FIN_THROUGH, th * Math.cos(edge));
+      finRim(t, a, p).add(FIN_ROOT);
       pos.push(p.x, p.y, p.z);
       rig.push(s, FIN, t, along);
     }

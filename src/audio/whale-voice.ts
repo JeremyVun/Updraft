@@ -66,18 +66,21 @@ const CALLS: Record<WhaleVoiceKind, readonly Moan[]> = {
 /** How long each call goes on (s), for the room the score makes under it. */
 export const callLength = (kind: WhaleVoiceKind) => Math.max(...CALLS[kind].map((m) => m.swell[m.swell.length - 1][0]));
 
-/** Soft-sawtooth harmonics with a hollow in the third, so it is a throat rather than a reed. */
-const HARMONICS = [0, 1, 0.75, 0.38, 0.42, 0.3, 0.2, 0.16, 0.11, 0.08, 0.06, 0.045, 0.035, 0.025, 0.02, 0.015];
+const HARMONICS = [0, 1, 0.22, 0.08, 0.035, 0.015, 0.006];
 
 /** The whale's voice: its moans, synthesised whole for each call and let go when it ends. */
 export class WhaleVoice {
   private out: AudioOut | null = null;
   private wave: PeriodicWave | null = null;
+  private breath: AudioBuffer | null = null;
 
   setOutput(out: AudioOut | null): void {
     if (out && out.ctx !== this.out?.ctx) {
       const imag = new Float32Array(HARMONICS.length);
       this.wave = out.ctx.createPeriodicWave(Float32Array.from(HARMONICS), imag);
+      this.breath = out.ctx.createBuffer(1, out.ctx.sampleRate * 4, out.ctx.sampleRate);
+      const samples = this.breath.getChannelData(0);
+      for (let i = 0; i < samples.length; i++) samples[i] = Math.random() * 2 - 1;
     }
     this.out = out;
   }
@@ -104,7 +107,7 @@ export class WhaleVoice {
 
     const sum = keep(ctx.createGain());
     const oscillators: OscillatorNode[] = [];
-    for (const [detune, gain, octave] of [[-4, 0.55, 1], [5, 0.55, 1], [0, V.sub, 0.5]] as const) {
+    for (const [detune, gain, octave] of [[0, 1, 1], [0, V.sub, 0.5]] as const) {
       const osc = keep(ctx.createOscillator());
       if (octave === 1) osc.setPeriodicWave(this.wave!);
       osc.detune.value = detune;
@@ -116,23 +119,23 @@ export class WhaleVoice {
     }
     // A slow wander in its pitch, never a singer's vibrato.
     const wander = keep(ctx.createOscillator());
-    wander.frequency.value = 0.35;
+    wander.frequency.value = 0.19;
     const wanderBy = keep(ctx.createGain());
-    wanderBy.gain.value = 14;
+    wanderBy.gain.value = 9;
     wander.connect(wanderBy);
     for (const osc of oscillators) wanderBy.connect(osc.detune);
     oscillators.push(wander);
 
-    // The rasp of a groan: its sound pulsing in the throat.
-    const rasp = keep(ctx.createGain());
-    rasp.gain.value = 1 - m.rasp * 0.5;
-    const pulse = keep(ctx.createOscillator());
-    pulse.frequency.value = 27;
-    const pulseBy = keep(ctx.createGain());
-    pulseBy.gain.value = m.rasp * 0.5;
-    pulse.connect(pulseBy).connect(rasp.gain);
-    oscillators.push(pulse);
-    sum.connect(rasp);
+    const breath = keep(ctx.createBufferSource());
+    breath.buffer = this.breath;
+    breath.loop = true;
+    const air = keep(ctx.createBiquadFilter());
+    air.type = 'bandpass';
+    air.frequency.value = 420 + m.open * 280;
+    air.Q.value = 0.6;
+    const breathGain = keep(ctx.createGain());
+    breathGain.gain.value = m.rasp * 0.16;
+    breath.connect(air).connect(breathGain).connect(sum);
 
     // Its throat: two resonances that open as it rises, over a body kept whole underneath.
     const muffle = keep(ctx.createBiquadFilter());
@@ -149,11 +152,11 @@ export class WhaleVoice {
       f.frequency.linearRampToValueAtTime(base + span * m.open * 0.7, end);
       const g = keep(ctx.createGain());
       g.gain.value = gain;
-      rasp.connect(f).connect(g).connect(throat);
+      sum.connect(f).connect(g).connect(throat);
     }
     const body = keep(ctx.createGain());
     body.gain.value = V.body;
-    rasp.connect(body).connect(throat);
+    sum.connect(body).connect(throat);
     throat.connect(muffle);
 
     const env = keep(ctx.createGain());
@@ -185,6 +188,8 @@ export class WhaleVoice {
     echoed.connect(wet);
 
     const stop = end + 0.05;
+    breath.start(from);
+    breath.stop(stop);
     for (const osc of oscillators) {
       osc.start(from);
       osc.stop(stop);

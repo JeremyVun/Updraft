@@ -201,7 +201,8 @@ function run(name, fps, gust, veer=0, waitInVillage=false, arrivalGust=false, ci
         check(mirrorShownBeforeDive===0,`nothing of the mirror shows before the whale dives: ${mirrorShownBeforeDive.toFixed(1)} s`);
         check(underWay&&slowest>=4.45,`the boat sails at its ordinary pace but for the swim: ${slowest.toFixed(2)} m/s at ${slowestAt} s`);
         const lead=events['whale-breath']-events.whaleLed;
-        check(lead>=30&&lead<=45,`from the nudge to rest beside it takes 30 to 45 s: ${lead.toFixed(1)} s`);
+        check(lead>=24&&lead<=34,`the shorter lead keeps 24 to 34 s for the reveal and gentle stop: ${lead.toFixed(1)} s`);
+        check(events['whale-breath']>=87&&events['whale-breath']<=95,`rescue begins 10–15 s earlier: ${events['whale-breath']} s`);
         check(events.stopped-events.last20<=9,`the last 20 m take about 8 s: ${(events.stopped-events.last20).toFixed(1)} s`);
         const [heard]=sea.covers,seen=sea.seen;
         check(heard&&heard.body>=0.97&&heard.blow>=0.97,`it is heard in the mist before anything of it is seen: ${JSON.stringify(sea.covers)}`);

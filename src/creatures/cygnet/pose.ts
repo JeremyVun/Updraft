@@ -137,7 +137,8 @@ export class Poser {
     const lifting = d.inHands || d.move === 'lift' || d.move === 'hop';
     const dashing = d.move === 'dash';
     const riding = d.carried && d.move === null && !d.inHands;
-    const afoot = d.afoot && d.move === null && d.landing <= 0;
+    const perching = d.perched && d.gait.on;
+    const afoot = (d.afoot || perching) && d.move === null && d.landing <= 0;
 
     for (const name of ACTS) this.acts.set(name, ease(this.acts.get(name) ?? 0, d.act === name ? d.actEnv : 0, 10, dt));
     const act = (name: Act) => this.acts.get(name) ?? 0;
@@ -154,8 +155,8 @@ export class Poser {
     const push = (0.5 + 0.5 * Math.sin(t * 2.4)) * nudge;
 
     const hunch = clamp(d.fear * (d.carried ? 0.35 : 1) * (1 - d.effort) + act('flinch') * 0.8 + act('brace') * 0.45 + shiver * 0.55, 0, 1);
-    p.sit = ease(p.sit, riding ? (d.seat === 'satchel' ? 0.6 : 0.9) : flying || d.move ? (lifting ? 0.4 : 0) : d.settle, riding ? 3 : 4, dt);
-    p.held = ease(p.held, riding || climbing ? 1 : 0, 5, dt);
+    p.sit = ease(p.sit, perching ? 0 : riding ? (d.seat === 'satchel' ? 0.6 : 0.9) : flying || d.move ? (lifting ? 0.4 : 0) : d.settle, perching ? 8 : riding ? 3 : 4, dt);
+    p.held = ease(p.held, riding || climbing ? 1 : 0, perching ? 8 : 5, dt);
     p.stowed = ease(p.stowed, d.seat === 'satchel' && riding ? 1 : 0, 4, dt);
     p.hunch = ease(p.hunch, hunch, act('flinch') > p.hunch ? 14 : 2, dt);
     p.sleep = ease(p.sleep, d.doze, 1.5, dt);
@@ -207,7 +208,7 @@ export class Poser {
 
     const tuck = Math.max(p.sit, p.held);
     const stretch = act('stretch');
-    p.walk = ease(p.walk, d.gait.on && afoot && d.faceplant <= 0 ? 1 : 0, 8, dt);
+    p.walk = ease(p.walk, d.gait.on && (afoot || perching) && d.faceplant <= 0 ? 1 : 0, 8, dt);
     const walk = p.walk * (1 - tuck);
     const bodyY = lerp(0.072, STANDING - d.gait.dip, 1 - tuck);
     const nibble = act('nibble');

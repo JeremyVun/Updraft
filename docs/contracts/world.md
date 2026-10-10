@@ -64,15 +64,17 @@ cygnet's swim slow the boat naturally. Targets at the ordinary breeze:
 | birches → stairs | short | under the cloud deck |
 | drowned village to the wood | player-paced | the becalming waits for the player; the storm is about 40 s |
 | wood → sleeping | 40 s | a sheltered bend |
-| sleeping → sky mirror (the sea) | player-paced; about 4 min with prompt gestures | pod's leap and swim, lead through mist, five-step whale rescue and farewell; 62–64 s from the whale disappearing to the mooring |
+| sleeping → sky mirror (the sea) | player-paced; about 4 min with prompt gestures | pod's leap and swim, lead through mist, five-step whale rescue and farewell; 63–65 s from the whale disappearing to the mooring |
 | sky mirror → home | 40 s | curves offshore before turning in to the jetty |
 
 A crossing is never shortened by losing an encounter: the sea includes the swim and the whale rescue before the
 mirror approach. The pod normally nudges the boat to lead it in; a missed nudge cannot strand it before the whale.
 Geography revision 6 moves the mirror and home together (`PAST_THE_WHALE`), placing the mirror straight on beyond
 the whale while preserving the final crossing's shape and length.
-The 2026-10-10 pacing adjustment preserves that geography, the approach and the first swim. Only the onward speed
-cap changes (3 m/s), adding about 18–23 seconds after the whale disappears across ordinary wind, gusts and 30/60 fps.
+The second 2026-10-10 playtest adjustment brings the whale 52 m closer (revision 7), shortening the approach by
+about 12 seconds while retaining the dolphin beats and twelve-second swim. The mist keeps the same reveal order:
+heard, blow visible, then body. The onward cap is 3.9 m/s over the longer remaining distance, keeping roughly a
+minute of quiet sailing after the whale disappears.
 `tools/journey-pacing-check.mjs` sails the real boat through the passages (`CROSSING=` for one) at several wind
 bearings and frame rates; `tools/boat-check.mjs` checks navigation and storm pacing.
 

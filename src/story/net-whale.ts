@@ -183,6 +183,7 @@ export class NetWhale {
   hush = 0;
   /** The pod has nudged the boat and now leads it; from here the encounter says where the dolphins run. */
   led = false;
+  private sightClock = -1;
   /** How many times it has sighed in the mist ahead as the boat is led in, heard and then its blow seen, and when it was heard. */
   private sighs = 0;
   private heard = 0;
@@ -354,7 +355,7 @@ export class NetWhale {
    * The cygnet's second swim: in at once and round the stern to the loop's free end, holding it, pulling it off as
    * the loop comes free, letting go, back to her, up her side, and lifted in.
    */
-  bird: 'satchel' | 'out' | 'holding' | 'pulling' | 'letting' | 'back' | 'side' | 'lifted' | 'home' = 'satchel';
+  bird: 'satchel' | 'out' | 'taking' | 'holding' | 'pulling' | 'letting' | 'back' | 'side' | 'lifted' | 'home' = 'satchel';
   private birdT = 0;
   private wayPoint = 0;
   private stationed = false;
@@ -540,6 +541,10 @@ export class NetWhale {
     return this.sighs >= 2;
   }
 
+  get sightAge(): number {
+    return this.sightClock < 0 ? 0 : this.clock - this.sightClock;
+  }
+
   /** The boat may round its hold waypoint and sail on. */
   get passed(): boolean {
     return this.whale.going;
@@ -658,6 +663,7 @@ export class NetWhale {
       else whale.blowFar();
       if (this.sighs === 0) this.heard = this.clock;
       this.sighs++;
+      if (this.sighs === 2) this.sightClock = this.clock;
     }
     this.sinceStroke += dt;
     this.askedFor = this.asks ? this.askedFor + dt : 0;
@@ -887,8 +893,8 @@ export class NetWhale {
     const { child, cygnet } = this.cast;
     if (this.bird === 'satchel' || this.bird === 'lifted' || this.bird === 'home') return;
     child.lookAt = cygnet.eye(this.birdEye);
-    if (this.bird === 'out' || this.bird === 'holding' || this.bird === 'pulling') {
-      cygnet.watch(this.bird === 'out' ? this.endRest : this.whale.finTip);
+    if (this.bird === 'out' || this.bird === 'taking' || this.bird === 'holding' || this.bird === 'pulling') {
+      cygnet.watch(this.bird === 'out' || this.bird === 'taking' ? this.endRest : this.net.loopTie);
       child.lean = 0.16;
       const mouth = child.breathFrom(this.mouth);
       const ahead = this.mitts[0].subVectors(mouth, child.face(this.mitts[1])).normalize();
@@ -1533,7 +1539,11 @@ export class NetWhale {
       if (!last && (gap < WAY_NEAR || given)) {
         this.wayPoint++;
         this.birdT = 0;
-      } else if (last && (gap < TAKES_AT || given)) this.birdTo('holding');
+      } else if (last && (gap < TAKES_AT || given)) this.birdTo('taking');
+    } else if (this.bird === 'taking') {
+      this.keepBird(cygnet.position, this.net.loopTie, dt);
+      if (this.birdT > K.birdTake * 0.45) net.holder = cygnet;
+      if (this.birdT > K.birdTake) this.birdTo('holding');
     } else if (this.bird === 'holding') {
       net.holder = cygnet;
       net.fallsTo = this.falls.copy(tip).lerp(this.station, 0.55);
@@ -1566,7 +1576,7 @@ export class NetWhale {
       }
     }
     if (this.bird === 'side') {
-      cygnet.perch(this.beside(this.a), boat.yaw - Math.PI / 2);
+      cygnet.perch(this.beside(this.a), boat.yaw - Math.PI / 2, boat.group);
       if (this.birdT > ON_THE_SIDE) {
         this.cast.child.reachFor(0, null);
         this.cast.child.reachFor(1, null);
@@ -1606,8 +1616,7 @@ export class NetWhale {
   }
 
   private beside(out: THREE.Vector3): THREE.Vector3 {
-    const { boat } = this.cast;
-    return boat.seat(out).add(this.ray.set(Math.cos(boat.yaw), 0, -Math.sin(boat.yaw)).multiplyScalar(0.82)).setY(boat.position.y + 0.1);
+    return this.cast.boat.rail(1, out);
   }
 
   /**

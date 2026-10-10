@@ -102,9 +102,10 @@ const PAY_OUT = 1.6;
 const LOOP_END = 2;
 const END_POINTS = 10;
 /** Where along the near flipper the loop sits, and how far past its tip it has gone once it is off (0 root .. 1 tip). */
-const LOOP_FROM = 0.9;
+const LOOP_FROM = 0.86;
 const LOOP_PAST = 1.04;
-const RING = 14;
+const RING = 40;
+const KNOT = 16;
 const WEEDS = 40;
 const WEED_POINTS = 6;
 const HANG = 0.16;
@@ -212,6 +213,7 @@ export class Net {
   fallsTo: THREE.Vector3 | null = null;
   /** The loop's free end. */
   readonly loopEnd = new THREE.Vector3();
+  readonly loopTie = new THREE.Vector3();
   /** Where the leader leaves the net for the water: what she hauls toward her. */
   readonly foot = new THREE.Vector3();
   readonly float: NetFloat;
@@ -454,7 +456,7 @@ export class Net {
 
     // Two more points than links: where the line comes up into each mitten.
     this.leaderLine = this.polyline(BELOW + this.links + 2);
-    this.loopLine = this.polyline(BELOW + 1 + RING + END_POINTS);
+    this.loopLine = this.polyline(BELOW + 1 + RING + KNOT + END_POINTS);
     for (let w = 0; w < FOLD_WEEDS; w++) {
       this.foldWeeds.push(this.polyline(WEED_POINTS));
       const seed = Math.sin(w * 57.1) * 0.5 + 0.5;
@@ -1553,26 +1555,24 @@ export class Net {
     const slide = THREE.MathUtils.smoothstep(this.loop, 0, 0.8);
     const off = THREE.MathUtils.smoothstep(this.loop, 0.75, 1);
     const along = THREE.MathUtils.lerp(LOOP_FROM, LOOP_PAST, slide);
-    const axis = this.p.subVectors(w.finTip, w.finRoot);
-    const span = axis.length();
-    axis.divideScalar(span || 1);
-    const centre = this.q.copy(w.finRoot).addScaledVector(axis, span * along);
-    const chord = this.r.crossVectors(axis, THREE.Object3D.DEFAULT_UP).normalize();
-    const flat = this.flat.crossVectors(chord, axis).normalize();
-    const half = (0.32 + 2.1 * Math.max(0, 1 - along) ** 0.8) * (1 - off * 0.5);
-    const thick = 0.25 + 0.5 * Math.max(0, 1 - along);
     this.floating(this.loopRow * COLS + COLS - 1, this.t).addScaledVector(this.side, 1.2);
     if (this.fallsTo) this.curlFrom.subVectors(this.fallsTo, this.t).setY(0);
     const fall = this.fall.copy(this.t).add(this.curlFrom);
     const point = this.point;
     for (let m = 0; m <= RING; m++) {
-      const a = (m / RING) * Math.PI * 2 + Math.PI / 2;
-      point.copy(centre).addScaledVector(chord, Math.cos(a) * (half + 0.25)).addScaledVector(flat, Math.sin(a) * (thick + 0.2));
-      if (Math.sin(a) < 0) point.y += Math.sin(a) * 0.25;
+      const a = (m / RING) * Math.PI * 2;
+      w.flipperRim(along + 0.004 * Math.sin(a), a, NET.loop * 0.7, point);
       if (off > 0) point.lerp(this.curl.set(fall.x + Math.cos(a) * 0.9, 0.02, fall.z + Math.sin(a) * 0.6), off);
       this.setPoint(l, BELOW + m, point, NET.loop, off > 0.5 ? 1 : 0, 0);
     }
+    for (let m = 1; m <= KNOT; m++) {
+      const u = m / KNOT, turn = u * Math.PI * 2;
+      w.flipperRim(along + 0.009 * Math.sin(turn), 0.22 * Math.sin(turn * 2), NET.loop * (1.5 + 0.65 * Math.cos(turn)), point);
+      if (off > 0) point.lerp(this.curl.set(fall.x + 0.9, 0.02, fall.z), off);
+      this.setPoint(l, BELOW + RING + m, point, NET.loop, off > 0.5 ? 1 : 0, 0);
+    }
     const tail = this.tail.copy(point);
+    this.loopTie.copy(tail);
     const out = this.side;
     if (this.held) {
       this.endFrom.subVectors(this.held, this.t);
@@ -1580,7 +1580,7 @@ export class Net {
     }
     const dropped = this.endDropped ? this.drop.copy(this.t).add(this.endFrom) : null;
     const bill = this.held ?? dropped;
-    const sag = bill ? Math.min(1.2, 0.16 * tail.distanceTo(bill)) : 0;
+    const sag = bill ? Math.min(1.2, 0.24 * tail.distanceTo(bill)) : 0;
     for (let m = 1; m <= END_POINTS; m++) {
       const f = m / END_POINTS;
       if (dropped && off > 0) this.lie.lerpVectors(tail, dropped, f);
@@ -1592,7 +1592,7 @@ export class Net {
         this.hang.lerpVectors(tail, bill, f).y -= Math.sin(f * Math.PI) * sag;
         point.lerp(this.hang, this.holding);
       }
-      this.setPoint(l, BELOW + RING + m, point, NET.line, f * (1 - this.holding), 0);
+      this.setPoint(l, BELOW + RING + KNOT + m, point, NET.loop * 0.7, f * (1 - this.holding), 0);
     }
     this.loopEnd.copy(point);
     this.tangents(l);

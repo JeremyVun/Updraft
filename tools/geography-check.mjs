@@ -22,7 +22,7 @@ globalThis.window = {matchMedia:()=>({matches:false})};
 const {ROOMS,visibleRooms,drawJourneyRooms} = await import('../src/world/journey-rooms.ts');
 const {mirrorWater,SKY_MIRROR,MIRROR_LANDING,MIRROR_BERTH} = await import('../src/world/sky-mirror-layout.ts');
 const {migrateGeography} = await import('../src/story/geography-progress.ts');
-const {BOATS_SHIFT,BOATS_OFFSHORE_SHIFT,BOATS_SHORTENING,SHORE_SHIFT,HOME_SHIFT,MIRROR_SHIFT,SEA_SHORTENING,PAST_THE_WHALE,WHALE_MOVE,GEOGRAPHY_VERSION} = await import('../src/world/geography.ts');
+const {BOATS_SHIFT,BOATS_OFFSHORE_SHIFT,BOATS_SHORTENING,SHORE_SHIFT,HOME_SHIFT,MIRROR_SHIFT,SEA_SHORTENING,PAST_THE_WHALE,WHALE_MOVE,WHALE_NEARER,GEOGRAPHY_VERSION} = await import('../src/world/geography.ts');
 const plus=(a,b)=>({x:a.x+b.x,z:a.z+b.z});
 const {Dolphins} = await import('../src/fx/sealife/dolphin.ts');
 const {tuning} = await import('../src/tuning.ts');
@@ -122,11 +122,11 @@ for(const point of ROUTES.toHarbour) {
 console.log('Revision 1 saves, open-sea resumes, home berth and offshore route clearance passed.');
 
 const {readProgress}=await import('../src/story/progress.ts');
-for(const geography of [undefined,1,2,3,4,5,6,7,-1,1.5,'1']) {
+for(const geography of [undefined,1,2,3,4,5,6,7,8,-1,1.5,'1']) {
  const saved={version:1,geography,chapter:'home',point:'entry',data:[],child:[-150,2,-2500,0,0],boat:[-150,-2306,0,0,1],bird:[-150,2,-2500,0,1,0,1],seat:'cradle',life:[[0,0,0,0],[0,0,0,0],[0,0,0,0]],plane:[1,0]};
  globalThis.localStorage={getItem(){return JSON.stringify(saved);}};
  const p=readProgress();
- if(geography===undefined||[1,2,3,4,5,6].includes(geography))assert.equal(p?.geography,GEOGRAPHY_VERSION,'supported saves reach migration through the reader');
+ if(geography===undefined||[1,2,3,4,5,6,7].includes(geography))assert.equal(p?.geography,GEOGRAPHY_VERSION,'supported saves reach migration through the reader');
  else assert.equal(p,null,'reject malformed or future geography');
 }
 console.log('Save reader accepts all supported geography revisions and rejects unknown versions.');
@@ -164,7 +164,7 @@ for (const geography of [2,3]) for (const chapter of ['boats','toMeadow','toBoat
  const at=(chapter,point,x,z,data=[])=>migrateGeography({version:1,geography:5,chapter,point,data,child:[x,2,z,0,1],boat:[x,z,0,1,0],bird:[x,2,z,0,0,0,1],
   life:[[-345,-2090,1,2],[-100,-2370,1,2],[-175,-1922,1,2]]});
  for(const [chapter,point,x,z,move] of [['mirror','star-2',-455,-2290,PAST_THE_WHALE],['toHarbour','entry',-280,-2103,PAST_THE_WHALE],['home','summit',-120,-2300,PAST_THE_WHALE],
-   ['toMirror','swim',-390,-1975,{x:0,z:0}],['toMirror','whale-rest',-480,-2020,WHALE_MOVE],['toMirror','whale-gone',-470,-2025,WHALE_MOVE],['sleeping','entry',-175,-1922,{x:0,z:0}]]) {
+   ['toMirror','swim',-390,-1975,{x:0,z:0}],['toMirror','whale-rest',-480,-2020,plus(WHALE_MOVE,WHALE_NEARER)],['toMirror','whale-gone',-470,-2025,plus(WHALE_MOVE,WHALE_NEARER)],['sleeping','entry',-175,-1922,{x:0,z:0}]]) {
   const p=at(chapter,point,x,z,chapter==='toMirror'?[2,80]:[]);
   assert.deepEqual([p.boat[0],p.boat[1],p.child[0],p.child[2]],[x+move.x,z+move.z,x+move.x,z+move.z],`a revision 5 ${chapter} ${point} save moves by ${JSON.stringify(move)}`);
   assert.deepEqual(p.life.map(r=>r.slice(0,2)),[[-345+PAST_THE_WHALE.x,-2090+PAST_THE_WHALE.z],[-100+PAST_THE_WHALE.x,-2370+PAST_THE_WHALE.z],[-175,-1922]],'life on the mirror and home moves with them');
@@ -176,6 +176,17 @@ for (const geography of [2,3]) for (const chapter of ['boats','toMeadow','toBoat
  assert(Math.hypot(rest.boat[0]-WHALE_REST.x,rest.boat[1]-WHALE_REST.y)<1e-9,'a save at rest beside the whale resumes beside it where it lies now');
 }
 console.log('Revision 5 saves on the mirror, home and the open sea move as the islands and the whale have.');
+
+for(const [chapter,point] of [['toMirror','whale-rest'],['toMirror','whale-gone'],['toMirror','swim'],['mirror','star-2'],['home','summit'],['boats','pool-2']]) {
+ const p={version:1,geography:6,chapter,point,data:[2,90],child:[-588,2,-2099,0,1],boat:[-588,-2099,0,1,0],bird:[-588,2,-2099,0,0,0,1],life:[[-345,-2090,1,2]]};
+ const before=structuredClone(p),move=chapter==='toMirror'&&point.startsWith('whale-')?WHALE_NEARER:{x:0,z:0};
+ migrateGeography(p);
+ for(const [v,z] of [['child',2],['bird',2],['boat',1]]) {
+  assert.equal(p[v][0],before[v][0]+move.x);assert.equal(p[v][z],before[v][z]+move.z);
+ }
+ assert.deepEqual(p.life,before.life);assert.deepEqual(p.data,before.data);
+ const once=JSON.stringify(p);migrateGeography(p);assert.equal(JSON.stringify(p),once,'revision 7 migration applies once');
+}
 
 // Separation is measured to actual dry terrain, not centres or the length of a detour.
 function dryPoints(room) {

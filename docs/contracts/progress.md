@@ -53,6 +53,8 @@ Legacy saves stay playable: older point names and payloads (`scarf-*`, `swing` a
 `toMirror`) map onto the current ones in each chapter's restore. Saves from earlier island layouts carry a geography
 revision: `src/story/geography-progress.ts` translates travellers, boat and local life regions to the current
 `GEOGRAPHY_VERSION` once, before chapter restoration.
+Revision 7 brings the whale 52 m closer along the approach. It moves only the travellers and boat in `whale-*`
+checkpoints; the first swim, Mirror, home and local life regions retain their positions.
 
 Wing care is reconstructed from chapter and checkpoint by `src/story/wing-care.ts`: bare before the fall, wrapped from
 `companion` through Sleeping's `feather`, free from `morning` on. No checkpoint falls inside the treatment or the

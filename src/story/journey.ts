@@ -27,7 +27,7 @@ import { SLEEP_BERTH, SLEEP_LANDING } from '../world/sleeping';
 import { BIRCHES_LANDING } from '../world/birches';
 import { placeProgress, restoreLife, saveProgress, type Progress } from './progress';
 import { restoreWingCare } from './wing-care';
-import { WHALE_MOVE } from '../world/geography';
+import { WHALE_MOVE, WHALE_NEARER } from '../world/geography';
 
 export type ChapterName =
   | 'island'
@@ -59,7 +59,7 @@ export type ChapterName =
  * whale's lie and every hold beside it.
  */
 const WHALE_HEADING = new THREE.Vector2(-30, -33).normalize();
-export const WHALE_REST = new THREE.Vector2(-480 + WHALE_MOVE.x, -2020 + WHALE_MOVE.z);
+export const WHALE_REST = new THREE.Vector2(-480 + WHALE_MOVE.x + WHALE_NEARER.x, -2020 + WHALE_MOVE.z + WHALE_NEARER.z);
 export const WHALE_LEAD = WHALE_REST.clone().addScaledVector(WHALE_HEADING, -tuning.seaPassage.leadFor);
 const WHALE_HOLD = WHALE_REST.clone().addScaledVector(WHALE_HEADING, 3);
 /** Halfway in, so the boat is on the heading it rests on long before it comes to rest. */

@@ -99,7 +99,9 @@ a gust; `grown` brings white to the wing edges late in the journey.
 standing foot and the tail counters (the waddle); the head holds steady between steps; hurrying is a patter with
 wings out; it turns almost on the spot. `cygnet.ts` holds the states and mechanics: the fall, the run-up and
 face-plant, the glide, clumsy landings, perching, swimming (`swimTo`, `ashore`, `swimLevel`, `swimPlay`) and
-leaving.
+leaving. At sea `Boat.rail` supplies the actual gunwale surface. A supported perch follows the hull's translation,
+pitch and roll after the boat updates; feet extend during the hop and plant on that surface. Hops leaving the rail
+or the child's arms retain their source in the moving boat's frame, so it cannot sail out from under the bird.
 
 **The adults** (`creatures/flock.ts`, `SwanFlock`): white, necks straight out, black feet trailing, articulated
 wings with a slow deep beat. They rest on the meadow pond and leave in a staggered pattering take-off; at home they

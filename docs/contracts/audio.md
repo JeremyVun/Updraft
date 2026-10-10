@@ -251,8 +251,9 @@ pan and bounded scheduling; finished nodes disconnect.
   breath is silent under its sigh.
 - The whale's voice (`whale-voice.ts`, `WhaleVoice`, owned by `Foley.whale`): a humpback's manner at dream size, slow
   moans that glide in pitch in the sea score's key (D), fundamentals from about 41 to 165 Hz with a sub-octave to be
-  felt and the harmonics a phone's speaker carries, shaped by two throat resonances that open as it rises, a rasp in
-  the tired calls, the shared reverb and a slow darkening echo of the sea. Its calls: a tired sagging moan heard in the
+  felt and soft upper harmonics a phone's speaker carries, shaped by two throat resonances that open as it rises,
+  filtered breath in the tired calls, the shared reverb and a slow darkening echo of the sea. A single fundamental
+  and quieter sub keep it smooth; detuned beating and periodic amplitude pulses sounded like a motor. Its calls: a tired sagging moan heard in the
   mist before it is seen (`whale-moan`, with the sigh after the pod turns the boat toward it, `sighIn(…, true)`, or
   `moan()` at once); a soft rise as its eye opens on her (`whale-greet`, from the net's `whale-call`); a long glad song
   in two rising phrases as it breathes free (`whale-song`, ending on E); goodbye, down and up again, as it waves its

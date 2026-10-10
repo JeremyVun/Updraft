@@ -124,7 +124,7 @@ export const tuning = {
      * throat's resonances; `wet` of it into the shared reverb, and the sea's echo of it every `echo` s, each repeat
      * `echoBack` of the last, at `echoLevel`.
      */
-    whaleVoice: { level: 0.09, near: 40, far: 600, farthest: 0.35, sub: 0.45, body: 0.5, wet: 0.45, echo: 0.31, echoBack: 0.42, echoLevel: 0.3 },
+    whaleVoice: { level: 0.09, near: 40, far: 600, farthest: 0.35, sub: 0.18, body: 0.5, wet: 0.45, echo: 0.31, echoBack: 0.42, echoLevel: 0.3 },
     clothSources: 3, clothReach: 60, clothLevel: 0.35,
     /** The stairs in the clouds (a proposal awaiting audition): the air round the travellers, a flight knocking home, the score. */
     stairsAirLevel: 1,
@@ -1431,7 +1431,7 @@ export const tuning = {
      * of the way, and is nothing `restShort` metres short of the rest (past it when negative), so it is never braked;
      * and how fast the limit climbs back (m/s²) once the whale is going under.
      */
-    ledSpeed: 4.7, leadSpeed: 3, slowing: 1.2, restShort: -1.9, release: 0.6,
+    ledSpeed: 4.7, leadSpeed: 3.9, slowing: 1.2, restShort: -1.9, release: 0.6,
     /** Seconds between its weak breaths, how far its back rises with one (m), and how much mist each sputters. */
     breathEvery: 10, breathRise: 0.45, mist: 1,
     /**
@@ -1722,7 +1722,7 @@ export const tuning = {
      * the flipper's lift; the loop comes off its tip `slipFor` seconds into the lift.
      */
     finRadius: 0.5, finSweep: 0.2,
-    endOut: 5.1, endAhead: 0.2, birdOut: 5.3, birdAhead: -0.5, slipFor: 5,
+    endOut: 5.1, endAhead: 0.2, birdOut: 5.3, birdAhead: -0.5, birdTake: 0.8, slipFor: 5,
     /**
      * The near flipper at rest, about its root under the jaw: swept round toward the head and raised, so it reaches
      * out toward the boat's bow with the caught loop clear of the surface (radians).
@@ -1782,19 +1782,19 @@ export const tuning = {
      * The whale's lead: how far the boat sails in toward it once the pod has turned it off its line (m), and the time
      * of day at rest beside it, which every hold there is lit for.
      */
-    leadFor: 128, restDusk: 1.224,
+    leadFor: 76, restDusk: 1.224,
     /**
      * The morning mist on the open sea: it thickens through the pod's play to `haze` with its veil `falloff` times as
      * deep, so by the nudge the sea is seen only a couple of hundred metres round; it thins to `restHaze` and
      * `restFalloff` from `clearFrom` to `clearAt` metres short of the rest, clear of the whale's far length, and lifts
      * as the whale dives.
      */
-    mist: { haze: 1.064, falloff: 1.3, restHaze: 0.985, restFalloff: 1.05, clearFrom: 80, clearAt: 30,
+    mist: { haze: 1.10, falloff: 1.3, restHaze: 0.985, restFalloff: 1.05, clearFrom: 55, clearAt: 22, wholeAt: 0.68,
       /**
        * How deep the veil is where it is whole, its smoothstep's top; and from `hiddenTo` to `shownAt` metres short of
        * the rest, past its blow, it eases off holding that by the whale's head (`veilLeast` keeps the depth finite).
        */
-      wholeVeil: 4, hiddenTo: 92, shownAt: 68, veilLeast: 20,
+      wholeVeil: 4, hiddenTo: 58, shownAt: 38, veilLeast: 20, revealAfter: 4, revealFor: 4,
       /**
        * Lying low on the sea: once its blow is called for, `lift` of the veil thins away above `liftFrom` metres over
        * the water (its body lies under that), to a third every `liftScale` metres higher, out to `liftNear` and no

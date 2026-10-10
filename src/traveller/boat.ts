@@ -8,7 +8,7 @@ import { heightAt } from '../world/island';
 import { type Swell, swellAt, swellUniforms } from '../world/water/swell';
 import { screenBrush } from '../creatures/motion';
 import type { PointerInput } from '../input/pointer';
-import { BEAM, BOW_Z, DRAFT, LENGTH, MAST_TOP, MAST_Z, SAIL_RISE, SAIL_SPAN, SAIL_TACK, SEAT_Y, STERN_Z, contactShell, gunwale } from './boat/form';
+import { BEAM, BOW_Z, DRAFT, LENGTH, MAST_TOP, MAST_Z, SAIL_RISE, SAIL_SPAN, SAIL_TACK, SEAT_Y, STERN_Z, contactShell, gunwale, gunwaleHalf, stationU } from './boat/form';
 import { boomGeometry, hullGeometry, lanternFlame, pennantGeometry, sailGeometry } from './boat/parts';
 import { HULL_FRAG, HULL_VERT, PENNANT_FRAG, PENNANT_VERT, SAIL_FRAG, SAIL_VERT } from './boat/shaders';
 import { hullLid, waterlineUniforms } from './boat/waterline';
@@ -280,6 +280,12 @@ export class Boat {
   seat(out: THREE.Vector3): THREE.Vector3 {
     this.group.updateMatrixWorld(true);
     return out.copy(this.seatLocal).applyMatrix4(this.group.matrixWorld);
+  }
+
+  rail(side: number, out: THREE.Vector3): THREE.Vector3 {
+    const u = stationU(this.seatLocal.z);
+    this.group.updateMatrixWorld(true);
+    return out.set(side * (gunwaleHalf(u) + 0.006), gunwale(u) + 0.005, this.seatLocal.z).applyMatrix4(this.group.matrixWorld);
   }
 
   /**

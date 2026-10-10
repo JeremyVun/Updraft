@@ -689,10 +689,16 @@ export class Cygnet {
    * Standing on something that is not the ground and may be moving, like the side of the boat. Whoever put it there
    * says where that is every frame. Getting there from the child's arms is a hop of its own.
    */
-  perch(at: THREE.Vector3, yaw: number): void {
+  private perchSupport: THREE.Object3D | null = null;
+  private readonly perchLocal = new THREE.Vector3();
+  private readonly perchRotation = new THREE.Quaternion();
+  private readonly perchFacing = new THREE.Quaternion();
+
+  perch(at: THREE.Vector3, yaw: number, support?: THREE.Object3D): void {
     if (this.state !== 'perched') {
       if (this.carried) {
         this.seating.go({ seat: null, held: false }, 'hop', 0.6, 0.16);
+        if (support) this.seating.anchorMove(support);
         this.heard.push({ kind: 'flutter', amount: 0.6 });
       } else if (this.state === 'swimming') {
         this.seating.go({ seat: null, held: false }, 'hop', 0.7, 0.3);
@@ -705,6 +711,13 @@ export class Cygnet {
     }
     this.position.copy(at);
     this.yaw = yaw;
+    this.perchSupport = support ?? null;
+    if (support) {
+      support.worldToLocal(this.perchLocal.copy(at));
+      support.getWorldQuaternion(this.perchRotation);
+      const heading = this.tmp.set(0, 0, 1).applyQuaternion(this.perchRotation);
+      this.perchFacing.setFromAxisAngle(THREE.Object3D.DEFAULT_UP, yaw - Math.atan2(heading.x, heading.z));
+    }
   }
 
   /**
@@ -714,6 +727,7 @@ export class Cygnet {
   swimTo(target: THREE.Vector3, launch = 0, soaked = 1): void {
     if (this.state !== 'swimming') {
       this.seating.go({ seat: null, held: false }, 'hop', 0.75, 0.22);
+      if (this.state === 'perched' && this.perchSupport) this.seating.anchorMove(this.perchSupport);
       this.swimSpeed = this.swimLaunch = launch;
       this.position.set(target.x, this.swimLevel, target.z);
       this.state = 'swimming';
@@ -1675,7 +1689,16 @@ export class Cygnet {
 
     /** On its own feet and not hopping, its legs belong to the ground it is walking on. */
     const walking = st === 'following' && this.hopT <= 0 && this.landing <= 0 && this.seating.move === null && !this.seating.held;
-    d.gait.on = walking;
+    const perching = d.perched && this.perchSupport !== null;
+    d.gait.on = walking || perching;
+    if (perching) {
+      for (const [i, foot] of d.gait.feet.entries()) {
+        foot.x = i === 0 ? 0.078 : -0.078;
+        foot.y = 0.006;
+        foot.z = 0;
+      }
+      d.gait.sway = d.gait.roll = d.gait.twist = d.gait.dip = d.gait.pace = 0;
+    }
     if (walking) {
       const g = this.gait;
       g.update(dt, this.position, this.yaw, this.groundAt);
@@ -1735,7 +1758,11 @@ export class Cygnet {
 
     /** Placed last, once the pose knows how high the body rides on its origin, so a seat or a hand holds the body itself. */
     this.seating.tick(dt);
-    this.seating.stand(this.position, this.yaw);
+    if (st === 'perched' && this.perchSupport) {
+      this.perchSupport.localToWorld(this.position.copy(this.perchLocal));
+      this.perchSupport.getWorldQuaternion(this.perchRotation).multiply(this.perchFacing);
+    }
+    this.seating.stand(this.position, this.yaw, st === 'perched' && this.perchSupport ? this.perchRotation : undefined);
     this.seating.update(dt, this.bodyLift);
     this.root.position.copy(this.seating.shown.p);
     this.root.quaternion.copy(this.seating.shown.q).multiply(this.tilt.setFromEuler(this.tiltBy.set(posed.rootPitch, 0, posed.rootRoll)));

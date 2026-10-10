@@ -376,7 +376,7 @@ export class CrossingChapter implements Chapter {
   private seaMist(): number {
     const k = tuning.seaPassage, whale = this.whale!;
     if (whale.step === 'gone' || whale.whale.diving >= 0) return 0;
-    return whale.led ? 1 : THREE.MathUtils.smoothstep(this.podProgress(), k.leapFrom, k.farewellAt);
+    return whale.led ? 1 : THREE.MathUtils.smoothstep(this.podProgress(), k.leapFrom, k.mist.wholeAt);
   }
 
   /** The mist's haze, and how deep its veil is: thickest as the boat is led in, thinner beside the whale. */
@@ -400,13 +400,15 @@ export class CrossingChapter implements Chapter {
     if (whale.step !== 'approach') return 0;
     const left = whale.remaining(), haze = this.mistHaze();
     const whole = m.wholeVeil / (Math.max(left - veilClear(haze), m.veilLeast) * veilDensity(haze));
-    return whole * THREE.MathUtils.smoothstep(left, m.shownAt, m.hiddenTo);
+    const shown = THREE.MathUtils.smoothstep(whale.sightAge, m.revealAfter, m.revealAfter + m.revealFor);
+    return whole * Math.max(1 - shown, THREE.MathUtils.smoothstep(left, m.shownAt, m.hiddenTo));
   }
 
   /** How far the mist has drawn back from the whale as the boat comes in beside it, 0..1. */
   private besideWhale(): number {
     const m = tuning.seaPassage.mist, whale = this.whale!;
-    return whale.step === 'approach' ? 1 - THREE.MathUtils.smootherstep(whale.remaining(), m.clearAt, m.clearFrom) : 1;
+    return whale.step === 'approach' ? Math.min(1 - THREE.MathUtils.smootherstep(whale.remaining(), m.clearAt, m.clearFrom),
+      THREE.MathUtils.smootherstep(whale.sightAge, m.revealAfter, m.revealAfter + m.revealFor)) : 1;
   }
 
   get done(): boolean {
@@ -667,7 +669,7 @@ export class CrossingChapter implements Chapter {
     const left = this.from.set(Math.cos(boat.yaw), 0, -Math.sin(boat.yaw));
     const seat = boat.seat(this.seat);
     /** Where it stands on the side of the boat, and the water beside that: on the side the camera is on. */
-    this.beside.copy(seat).addScaledVector(left, this.swimSide * 0.82).setY(boat.position.y + 0.1);
+    boat.rail(this.swimSide, this.beside);
     this.water.copy(seat).addScaledVector(left, this.swimSide * tuning.seaPassage.swimBeside).setY(0);
     const to = (next: typeof this.swim) => {
       this.swim = next;
@@ -684,7 +686,7 @@ export class CrossingChapter implements Chapter {
       child.lookAt = cygnet.eye(this.ahead);
       if (this.swimT > tuning.seaPassage.swimAnticipation) to('side');
     } else if (this.swim === 'side') {
-      cygnet.perch(this.beside, boat.yaw + (this.swimSide * Math.PI) / 2);
+      cygnet.perch(this.beside, boat.yaw + (this.swimSide * Math.PI) / 2, boat.group);
       /** The water, then the child, then the water. The child does nothing at all, which is the right thing. */
       cygnet.watch(this.swimT % 3.2 < 1.9 ? this.water : child.face(this.look));
       child.lookAt = cygnet.eye(this.ahead);
@@ -716,7 +718,7 @@ export class CrossingChapter implements Chapter {
       }
     } else if (this.swim === 'drying') {
       /** Back up onto the side in a flurry, shaken out from bill to tail, and then into the arms, soaked and proud. */
-      cygnet.perch(this.beside, boat.yaw - (this.swimSide * Math.PI) / 2);
+      cygnet.perch(this.beside, boat.yaw - (this.swimSide * Math.PI) / 2, boat.group);
       boat.becalmed += (0 - boat.becalmed) * (1 - Math.exp(-dt * 0.6));
       child.lookAt = cygnet.eye(this.ahead);
       if (this.swimT > DRYING) {

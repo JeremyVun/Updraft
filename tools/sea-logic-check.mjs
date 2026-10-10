@@ -141,7 +141,8 @@ for(const [fps,gust,portrait,circling] of [[60,0,false,false],[30,20,false,true]
   let last='',step='',rewards=0,blowholeEdge=0,eyeOpen=0,finClear=Infinity;
   const asked={},moved={};
   const actionable={}, invitations={};
-  let openSamples=0, blockedSamples=0, loopClear=Infinity, tailBend=0, flukeEdge=0;
+  let openSamples=0, blockedSamples=0, loopClear=Infinity, tailBend=0, flukeEdge=0, railSamples=0;
+  const foot=new THREE.Vector3(), rail=new THREE.Vector3();
   const flukeVertices=[];
   const geometry=sealife.sleeper.mesh.geometry, positions=geometry.attributes.position, rigs=geometry.attributes.aRig;
   for(let i=0;i<positions.count;i++)if(rigs.getY(i)===FLUKES)flukeVertices.push(i);
@@ -149,6 +150,15 @@ for(const [fps,gust,portrait,circling] of [[60,0,false,false],[30,20,false,true]
   for(let i=0;i<fps*900;i++) {
     const dt=1/fps,time=i*dt;
     frame(f,dt,time);
+    if(k.state==='perched'&&k.perchSupport===b.group&&!k.seating.move){
+      b.group.worldToLocal(b.rail(k.perchLocal.x>0?1:-1,rail));
+      for(const side of [0,1]){
+        k.footAt(side,foot);b.group.worldToLocal(foot);
+        assert(Math.abs(foot.y-0.014*1.42-rail.y)<0.045,`foot stays on the moving rail: ${foot.y-rail.y}`);
+        assert(Math.abs(foot.x-rail.x)<0.12,`foot stays over the rail: ${foot.x-rail.x}`);
+      }
+      railSamples++;
+    }
     if(c.swim!==last){transitions.push([c.swim,+time.toFixed(2)]);last=c.swim;}
     const w=c.whale;
     if(w.asks && actionable[w.step]===undefined)actionable[w.step]=time;
@@ -163,7 +173,7 @@ for(const [fps,gust,portrait,circling] of [[60,0,false,false],[30,20,false,true]
     }
     if(w.step==='flipper'&&w.bird==='holding'&&w.slipT<0){
       const net=sealife.net,p=net.line.pos;
-      for(let m=0;m<=14;m++){
+      for(let m=0;m<=40;m++){
         const k=(net.loopLine.start+5+m)*2;
         loopClear=Math.min(loopClear,p.getY(k)-swellLift(p.getX(k),p.getZ(k),time));
       }
@@ -241,7 +251,8 @@ for(const [fps,gust,portrait,circling] of [[60,0,false,false],[30,20,false,true]
   assert(loopClear>0.25,`the entire caught loop stays above the swell: ${loopClear.toFixed(2)} m`);
   assert(tailBend<0.5,`the tail spreads its bend over the stock: ${tailBend.toFixed(3)} radians between spine joints`);
   assert(flukeEdge>0&&flukeEdge<0.99,`the raised flukes fit the farewell frame: ${flukeEdge.toFixed(3)}`);
-  results[results.length-1].clarity={invitations,blockedSamples,openSamples,loopClear,tailBend,flukeEdge};
+  assert(railSamples>fps,'observed rail contact through both swims');
+  results[results.length-1].clarity={invitations,blockedSamples,openSamples,loopClear,tailBend,flukeEdge,railSamples};
   results[results.length-1].steps=steps;results[results.length-1].blowholeEdge=+blowholeEdge.toFixed(2);
   results[results.length-1].finClear=+finClear.toFixed(2);
   results[results.length-1].waited=waited;if(circling)results[results.length-1].strokes=f.play.strokes;

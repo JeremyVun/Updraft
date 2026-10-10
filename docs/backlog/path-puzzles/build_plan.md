@@ -1283,3 +1283,39 @@ through the settled Mirror, with clean runtime/shader checks. Geometry/framing g
 The rebuilt preview at 430×932, ratio 2 holds 60 fps for 20 s after warmup (p99/max 16.8 ms; no hitches or long tasks
 on this Mac, not a physical-phone measurement). Stable playtest preview remains on port 5330.
 N6 is complete on `sea-whale`; main merge still awaits Jeremy's approval.
+
+### Phase N7: second sea playtest pass
+
+Approved six-item batch and verbatim brief: design.md, "Approved second sea playtest pass". Astra implements on
+sea-whale, preserving existing performance work, checkpoints and the longer onward sail.
+
+- [x] Real gunwale contact and continuous entry/return for both cygnet swims.
+- [x] Approach 10–15 s shorter, with dolphin and swim beats preserved.
+- [x] Surface-fitted flipper rope and readable cygnet pickup/hold/release.
+- [x] Smoother whale calls without the motor-like pulse; production audio rendered in context and levels checked.
+- [x] One sun disc with its glow aligned during the onward sail and Mirror arrival.
+- [x] Builds, focused regressions, landscape/portrait playthrough and refreshed port 5330 preview.
+
+The supported perch uses the actual gunwale profile, follows the hull after its update and plants the feet while
+the hop settles. The hop's source travels with the boat; water-to-rail returns keep the source on the water.
+The rope samples the same flipper surface and pose as the rendered mesh, with a small knot on its leading edge
+and a heavier loose end. The bird takes it over 0.8 s and looks toward the tie while its bill holds the actual end.
+
+Geography revision 7 moves the whale 52 m nearer. Across seven wind/frame-rate cases the first puzzle begins
+11.1–11.8 s earlier; the twelve-second swim is unchanged. A 3.9 m/s onward cap over the longer remaining distance
+keeps that sail at 63.6–64.9 s, within 1.3 s of N6. Mist reveal checks pass: heard first, then the blow above the
+still-hidden body, then its shape, with the mirror hidden until departure. Old whale checkpoints move once;
+other revision-6 saves keep their positions.
+
+The voice uses softer harmonics, a quieter sub and filtered breath instead of detuned beating and a 27 Hz pulse.
+Four production call fixtures and the calls over the sea score render without clipping (mixed peak −18.0 dBFS).
+The rendered clips are provided for listening in the playtest; no human listening approval is claimed.
+The doubled sun came from the mirror water's low-horizon reflection. That narrow region now continues the visible
+sky around the sun, preserving one round disc and its glow.
+
+Evidence and source hashes: `/tmp/updraft-sea-contact-0EYfFu/README.md`. Full landscape and phone plays through the
+settled Mirror pass with one circle, one eye sweep, one/two cork sweeps, four heaves and one flipper sweep;
+invitations in 0.50–0.52 s, no browser errors or unexpected shader compilation. Shared character-animation gates
+all pass, including foot contact and hand gaps. Port 5330 serves the current QA build.
+The onward sail at 430×932, ratio 2 holds 60 fps over 20 s after warmup (p99/max 16.8 ms, no hitches or long tasks
+on this Mac; not a physical-phone measurement). N7 is complete on `sea-whale`; main merge still awaits approval.

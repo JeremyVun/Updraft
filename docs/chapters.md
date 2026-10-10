@@ -519,7 +519,8 @@ Five steps share the rescue between wind, child and bird:
 2. A sweep across the fold clears its eye; it opens and finds her.
 3. Strokes bring a cork to her reaching mitten so she can take the line.
 4. Gusts lift the net as she heaves it off the head, then lets the line go.
-5. The cygnet swims out and holds the last loop, visible around the raised flipper tip; a sweep lifts it further so the loop slips free.
+5. The cygnet swims out, takes the loose end in its bill and holds it. The rope follows the raised flipper's surface,
+   with a small knot on its leading edge; a sweep lifts the flipper further so the loop slips free.
 
 The whale spouts and sings, waves its flipper, then rolls under and raises its flukes beside the sun. Its swell
 lifts the boat; the loose net sinks away. The cygnet returns to her arms, the mist lifts and they sail on to the

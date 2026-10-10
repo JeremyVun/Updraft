@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { tuning } from '../../tuning';
 import { gladUniforms } from '../../world/water/glad';
 import { swellUniforms } from '../../world/water/swell';
-import { BLOWHOLE, EYE_S, EYE_Y, FIN_DIR, FIN_ROOT, FIN_SPAN, KEEP, LENGTH, SPINE_END, TOP, along, crown, finPoint as finSurface, flankAt, halfWidthAt, ringPoint } from './anatomy';
+import { BLOWHOLE, EYE_S, EYE_Y, FIN_DIR, FIN_ROOT, FIN_SPAN, KEEP, LENGTH, SPINE_END, TOP, along, crown, finPoint as finSurface, finRim, flankAt, halfWidthAt, ringPoint } from './anatomy';
 import { curve } from './curve';
 import { FOAM, type Marks } from './marks';
 import { Seabirds } from './seabirds';
@@ -963,9 +963,19 @@ export class SleepingWhale extends WhaleRig {
 
   /** A point on the near flipper `t` out along it and `along` across its chord, posed as the shader poses it, in the world. */
   private finAt(t: number, along: number, out: THREE.Vector3): THREE.Vector3 {
+    return this.poseFin(finSurface(t, along, out));
+  }
+
+  flipperRim(t: number, angle: number, clearance: number, out: THREE.Vector3): THREE.Vector3 {
+    finRim(Math.min(1, t), angle, out, clearance / (this.scale * DREAM_SHAPE.fin));
+    if (t > 1) out.addScaledVector(FIN_DIR, (t - 1) * FIN_SPAN);
+    return this.poseFin(out);
+  }
+
+  private poseFin(out: THREE.Vector3): THREE.Vector3 {
     const fin = this.uniforms.uFin.value;
     const lift = this.uniforms.uSlap.value;
-    finSurface(t, along, out).multiplyScalar(DREAM_SHAPE.fin).applyAxisAngle(FIN_DIR, -Math.min(lift.y, K.finLift) * tuning.whaleLook.finTurn);
+    out.multiplyScalar(DREAM_SHAPE.fin).applyAxisAngle(FIN_DIR, -Math.min(lift.y, K.finLift) * tuning.whaleLook.finTurn);
     rotZ(out, lift.y - fin.y);
     rotY(out, fin.x + lift.z);
     out.add(FIN_ROOT);

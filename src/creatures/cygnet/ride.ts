@@ -44,6 +44,7 @@ interface Move {
   /** Where it set out from: a seat it is leaving (still moving with the child), or a fixed place in the world. */
   from: Seat | null;
   fixed: Frame;
+  anchor?: THREE.Object3D;
   via: THREE.Vector3[] | null;
   /** Leaving a seat for the ground: it sets off straight up, out of the bag or the arms, before it goes anywhere. */
   outOf: boolean;
@@ -91,9 +92,10 @@ export class Ride {
   }
 
   /** On the ground where the story puts it. */
-  stand(position: THREE.Vector3, yaw: number): void {
+  stand(position: THREE.Vector3, yaw: number, rotation?: THREE.Quaternion): void {
     this.ground.p.copy(position);
     this.ground.q.setFromAxisAngle(UP, yaw);
+    if (rotation) this.ground.q.copy(rotation);
   }
 
   /** In the child's hands: the caller works out the frame from the mittens every frame for as long as it is held. */
@@ -129,6 +131,15 @@ export class Ride {
     this.held = to.held ?? false;
   }
 
+  anchorMove(parent: THREE.Object3D): void {
+    const m = this.move;
+    if (!m) return;
+    parent.worldToLocal(m.fixed.p);
+    parent.getWorldQuaternion(this.tq).invert();
+    m.fixed.q.premultiply(this.tq);
+    m.anchor = parent;
+  }
+
   /** `lift` is how far the middle of its body is above its own origin this frame; seats hold it by the body, not the feet. */
   update(dt: number, lift: number): void {
     this.resolve(this.target, this.held ? 'held' : this.seat, lift, true);
@@ -140,6 +151,11 @@ export class Ride {
       else {
         this.source.p.copy(m.fixed.p);
         this.source.q.copy(m.fixed.q);
+        if (m.anchor) {
+          m.anchor.localToWorld(this.source.p);
+          m.anchor.getWorldQuaternion(this.tq);
+          this.source.q.premultiply(this.tq);
+        }
       }
       if (m.via && this.mount) this.along(m.via, k);
       else if (m.outOf) this.leap(m.arc, k);

@@ -1348,3 +1348,30 @@ settles, within 0.5–1 s of accepting input; expose the flipper’s trapped loo
 spread the tail lift into a continuous curve. Redistribute only quiet sailing (aim about 10 s less approaching the
 whale and 20 s more after departure), preserving the dolphin play, both swims, the farewell and mirror arrival.
 Verify actual timings before accepting those targets; smooth pace takes priority over hitting an exact number.
+
+### Approved second sea playtest pass — 2026-10-10
+
+Jeremy’s brief, verbatim:
+
+> There's another problem with the open sea journey. when the cygnet hops off the boat, it is sort of standing in mid air.
+>
+> also, i think the whale needs to be closer. so ~45-50 seconds to reach it instead of 60.
+>
+> and the knot tied around it's flipper needs to look more like it's tied around the flipper. Righ tnow it just looks like a circle with a strange line through it
+>
+> and for the  flipper challenge, i think you might have messed up how the cygnet interacts with it.
+>
+> and yes, i also hear the whale sounding like a motorcycle (fix that if you can)
+>
+> also add this to the list. the sun is appearing as two circles ontop of each other going down in a line
+
+Timing clarification (binding, replacing the 45–50 s target): "oh, just decrease whatever the current time is by about 10-15 seconds".
+Approval of the six-item list: "proceed". Astra implements; main merge is still separate.
+
+Anchor the cygnet to the actual moving gunwale and make its water entry/return continuous. Shorten the approach
+by 10–15 s from its measured 102–105 s baseline without shortening the dolphin or swimming moments. Fit the last
+rope around the posed flipper, with a readable crossing and free end. Review and correct the bird’s pickup,
+hold and release against that flipper; keep it afloat and clear of the whale. Remove the mechanical pulse from
+the whale’s voice and audition the smoother calls in context. Resolve the duplicated sun while retaining its
+soft glow. Verify full landscape/portrait passages, contact through transitions, timing and sound, then refresh
+the stable playtest preview on port 5330.

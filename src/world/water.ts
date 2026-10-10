@@ -255,6 +255,9 @@ vec3 glassColour(vec3 V, vec2 xz) {
   vec3 reflectedScene = textureLod(uMirror, clamp(mirrorUv, 0.0, 1.0), min(3.0, length(bend) * 24.0)).rgb;
   vec3 reflected = reflectedScene;
   if (on < 1.0) reflected = mix(skyRadiance(normalize(vec3(ray.x, abs(ray.y), ray.z))), reflectedScene, on);
+  // At a misted horizon the reflected disc merges with the sun into a second lobe.
+  float sunOverlap = smoothstep(0.996, 0.999, dot(-V, uSunDir));
+  if (sunOverlap > 0.0) reflected = mix(reflected, skyRadiance(-V), sunOverlap);
   // A trace of cool water keeps the horizon legible without hiding the doubled clouds.
   // Footstep rings catch the sky on the side facing the light, so they show even over a plain stretch of glass.
   float catchLight = dot(stepSlope, normalize(uSunDir.xz + vec2(1e-4))) * ${glsl(tuning.skyMirror.stepGlint)};

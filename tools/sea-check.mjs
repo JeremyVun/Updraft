@@ -100,9 +100,12 @@ try {
   for (let i = 1; i <= 6; i++) { await shot(`leap-${i}`); await page.waitForTimeout(180); }
   await wait('__game.story.current.time>24'); await shot('open-water');
   await wait("['restless','side','in'].includes(__game.story.current.swim)", 90); await shot('curious');
+  await wait("__game.story.current.swim==='side' && __game.story.current.swimT>0.65"); await shot('rail-out');
+  await wait("__game.story.current.swim==='side' && __game.story.current.swimT>1.5"); await shot('rail-settled');
   await wait("__game.story.current.swim==='in' && __game.story.current.swimT>4"); await shot('swim');
   await wait("__game.story.current.swim==='in' && __game.story.current.swimT>9"); await shot('alongside');
   await wait("['drying','done'].includes(__game.story.current.swim)"); await shot('return');
+  await wait("__game.story.current.swim==='drying' && __game.story.current.swimT>0.8"); await shot('rail-return');
   await wait("__game.story.current.swim==='done'"); await shot('together');
   const swim = await page.evaluate(() => window.seaLog);
   if (!swim.swimFrames || swim.clipped > 0 || swim.maxGap > 11.5) throw Error(JSON.stringify(swim));
@@ -131,6 +134,7 @@ try {
   await wait('__game.sealife.sleeper.spouting', 30); await shot('spout');
   await wait('__game.sealife.sleeper.fluking && __game.sealife.sleeper.time>15', 60); await shot('flukes');
   await wait(`${whale}.step==='gone'`, 60); await shot('gone');
+  await wait(`${whale}.stepTime>20`, 40); await shot('onward-sun');
   await wait("__game.story.name==='mirror'", 150); await shot('mirror-arrival');
   await wait("__game.story.name==='mirror' && __game.story.current.arrived>=__game.tuning.skyMirror.arriveFor+3", 20);
   await shot('mirror-settled');
