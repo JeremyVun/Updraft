@@ -14,14 +14,14 @@ const quick = [
 const mechanics = [
   ...quick, 'bandage-cost', 'boat', 'boat-ground', 'flock-flight', 'journey-pacing', 'kite-logic',
   'little-boats-logic', 'meadow-plane', 'meadow-route', 'piano-frame', 'pond-view', 'sail-flutter',
-  'scarf-geometry', 'sea-logic', 'sky-mirror-logic', 'sky-mirror-pointer', 'sky-mirror-touch',
+  'scarf-geometry', 'sea-logic', 'sheet-contact', 'sky-mirror-logic', 'sky-mirror-pointer', 'sky-mirror-touch',
   'sleeping-logic', 'wing-care', 'wood-logic', 'ending-view',
   'camera-direction', 'crossing-camera', 'crossing-haze', 'dream-story', 'drowned-camera',
   'foghorn-story', 'frame-pacer', 'geography', 'journey-reveal', 'piano-growth', 'piano-logic',
-  'plane-routing', 'scarf-normals', 'pointer-pick', 'drowned-gating', 'drowned-contact', 'drowned-rescue-polish', 'drowned-rescue-sequence', 'drowned-bell', 'drowned-farewell',
+  'plane-routing', 'scarf-normals', 'pointer-pick', 'drowned-gating', 'drowned-contact', 'drowned-tower', 'drowned-boarding', 'drowned-lantern', 'drowned-rescue-polish', 'drowned-rescue-sequence', 'drowned-bell', 'drowned-farewell',
 ];
 const browser = [
-  'shader-browser', 'lantern-fog', 'stairs-fog', 'touch-viewport', 'chapter-view-browser', 'context-loss', 'start',
+  'shader-browser', 'drowned-mist', 'lantern-fog', 'stairs-fog', 'touch-viewport', 'chapter-view-browser', 'context-loss', 'start',
   'progress', 'frame-time-browser', 'journey-view',
 ];
 // Audio/score checks render through a headless dev server (no GPU); BASE selects it.

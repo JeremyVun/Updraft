@@ -1182,59 +1182,92 @@ vec4 seaFogMarch(vec3 ro, vec3 rd, float far, float least, bool lighting, bool s
   return vec4(fog.rgb / fog.a, fog.a);
 }
 
-// A soft height layer integrates in closed form, without density marching or noise texture reads.
-float mistBelow(vec3 ro, vec3 rd, float top, float begin, float end) {
-  if (abs(rd.y) < 0.00001) return ro.y < top ? max(0.0, end - begin) : 0.0;
-  float crossing = (top - ro.y) / rd.y;
-  return rd.y > 0.0 ? max(0.0, min(end, crossing) - begin) : max(0.0, end - max(begin, crossing));
+float mistDensityAt(vec4 value) {
+  vec4 d = clamp(value, 0.0, 1.0);
+  d.zw = mix(d.zw, vec2(1.0), uSeaFogShape.z);
+  return d.x * d.y * d.z * d.w;
+}
+
+float mistSample(vec4 value, vec4 slope, vec3 weight, float t) {
+  return mistDensityAt(value + slope * t) * clamp((weight.x * t + weight.y) * t + weight.z, 0.0, 1.0);
+}
+
+// Between ramp boundaries the density is a polynomial; four Gauss points integrate it exactly.
+float mistIntegral(vec4 value, vec4 slope, float start, float end, vec3 weight) {
+  if (end <= start) return 0.0;
+  vec4 safeSlope = mix(vec4(1e-8), slope, step(vec4(1e-8), abs(slope)));
+  vec4 enter = -value / safeSlope, leave = (1.0 - value) / safeSlope;
+  float optical = 0.0;
+  for (int i = 0; i < 9; i++) {
+    vec4 nextIn = mix(vec4(end), enter, step(vec4(start + 0.0001), enter));
+    vec4 nextOut = mix(vec4(end), leave, step(vec4(start + 0.0001), leave));
+    vec4 next = min(nextIn, nextOut);
+    float finish = min(end, min(min(next.x, next.y), min(next.z, next.w)));
+    float middle = (start + finish) * 0.5, halfSpan = (finish - start) * 0.5;
+    optical += halfSpan * (
+      0.3478548451 * (mistSample(value, slope, weight, middle - halfSpan * 0.8611363116) +
+                      mistSample(value, slope, weight, middle + halfSpan * 0.8611363116)) +
+      0.6521451549 * (mistSample(value, slope, weight, middle - halfSpan * 0.3399810436) +
+                      mistSample(value, slope, weight, middle + halfSpan * 0.3399810436)));
+    start = finish;
+    if (start >= end) break;
+  }
+  return optical;
+}
+
+float mistCleared(vec4 value, vec4 slope, vec2 offset, vec2 direction, float reach) {
+  float inner = uSeaFogClear.z;
+  float outer = inner * ${glsl(tuning.drowned.church.fog.clearRim)} + ${glsl(tuning.drowned.church.fog.clearSoft)};
+  float a = dot(direction, direction), b = dot(offset, direction), c = dot(offset, offset);
+  float width = outer * outer - inner * inner;
+  vec3 weight = vec3(-a, -2.0 * b, outer * outer - c) / width;
+  if (a < 1e-8) return mistIntegral(value, slope, 0.0, reach, vec3(0.0, 0.0, clamp(weight.z, 0.0, 1.0)));
+  float disc = b * b - a * (c - outer * outer);
+  if (disc <= 0.0) return 0.0;
+  float start = max(0.0, (-b - sqrt(disc)) / a), end = min(reach, (-b + sqrt(disc)) / a);
+  float core = b * b - a * (c - inner * inner);
+  if (core <= 0.0) return mistIntegral(value, slope, start, end, weight);
+  float coreStart = clamp((-b - sqrt(core)) / a, start, max(start, end));
+  float coreEnd = clamp((-b + sqrt(core)) / a, start, max(start, end));
+  return mistIntegral(value, slope, start, coreStart, weight) +
+    mistIntegral(value, slope, coreStart, coreEnd, vec3(0.0, 0.0, 1.0)) +
+    mistIntegral(value, slope, coreEnd, end, weight);
+}
+
+float mistOptical(vec3 ro, vec3 rd, float far) {
+  vec2 n = uSeaFog.zw, side = vec2(-n.y, n.x), offset = ro.xz - uSeaFog.xy;
+  float across = dot(offset, side), acrossSlope = dot(rd.xz, side);
+  float top = uSeaFogShape.x * (1.0 - uSeaFogRelief * ${glsl(1 - SEA_FOG_TOP.middle)});
+  float softness = ${glsl(tuning.drowned.fog.mistSoftness)}, frontSoftness = ${glsl(tuning.drowned.fog.front)};
+  float front = smoothstep(${glsl(tuning.drowned.fog.closedBy)}, 1.0, uSeaFogShape.z) * ${glsl(tuning.drowned.fog.closeRun)};
+  vec2 widths = vec2(uSeaFogSides.y - uSeaFogSides.x, uSeaFogSides.w - uSeaFogSides.z);
+  vec4 value = vec4((top + softness * 0.5 - ro.y) / softness,
+    (front + frontSoftness * 0.5 - dot(offset, n)) / frontSoftness,
+    (across + uSeaFogSides.y) / widths.x, (uSeaFogSides.w - across) / widths.y);
+  vec4 slope = vec4(-rd.y / softness, -dot(rd.xz, n) / frontSoftness,
+    acrossSlope / widths.x, -acrossSlope / widths.y);
+  float reach = min(far, 4000.0);
+  float optical = mistIntegral(value, slope, 0.0, reach, vec3(0.0, 0.0, 1.0));
+  if (uSeaFogClear.z > 0.0 && uSeaFogClear.w < top) {
+    vec2 clearing = ro.xz - uSeaFogClear.xy;
+    optical -= mistCleared(value, slope, clearing, rd.xz, reach);
+    float lowSoftness = min(softness, max(0.1, uSeaFogClear.w));
+    value.x = (uSeaFogClear.w + lowSoftness * 0.5 - ro.y) / lowSoftness;
+    slope.x = -rd.y / lowSoftness;
+    optical += mistCleared(value, slope, clearing, rd.xz, reach);
+  }
+  return max(0.0, optical);
 }
 
 vec4 seaMist(vec3 ro, vec3 rd, float far, bool lighting) {
-  ro.y = max(ro.y, 0.0);
-  vec2 n = uSeaFog.zw, side = vec2(-n.y, n.x), o = ro.xz - uSeaFog.xy;
-  float s = dot(o, n), ds = dot(rd.xz, n), across = dot(o, side);
-  float reach = min(far, 4000.0);
-  float top = uSeaFogShape.x * (1.0 - uSeaFogRelief * ${glsl(1 - SEA_FOG_TOP.middle)});
-  float sight = abs(rd.y) > 0.0001 ? clamp((top - ro.y) / rd.y, 0.0, reach) : min(reach, 60.0);
-  vec2 xz = ro.xz + rd.xz * sight;
-  top += top * uSeaFogRelief * ${glsl(tuning.drowned.fog.mistRelief)} *
-    (sin(xz.x * 0.057 + xz.y * 0.031 - uTime * 0.12) + 0.4 * sin(xz.y * 0.14 + uTime * 0.09));
-  float a = clamp(across + dot(rd.xz, side) * sight, -uSeaFogSides.y, uSeaFogSides.w);
-  float front = uSeaFogShape.y * min(a * a, uSeaFogSides.x * uSeaFogSides.x) +
-    smoothstep(${glsl(tuning.drowned.fog.closedBy)}, 1.0, uSeaFogShape.z) * ${glsl(tuning.drowned.fog.closeRun)};
-  float clearNear = 0.0, clearFar = 0.0;
-  float horizontal = dot(rd.xz, rd.xz);
-  vec2 clearing = ro.xz - uSeaFogClear.xy;
-  float along = dot(clearing, rd.xz);
-  float optical = 0.0;
-  for (int i = 0; i < 4; i++) {
-    float layer = (float(i) + 0.5) / 4.0;
-    float h = top + (layer - 0.5) * ${glsl(tuning.drowned.fog.mistSoftness)};
-    float start = 0.0, end = reach;
-    float edge = front + (layer - 0.5) * ${glsl(tuning.drowned.fog.front)};
-    if (abs(ds) < 0.00001) {
-      if (s > edge) end = 0.0;
-    } else {
-      float cut = (edge - s) / ds;
-      if (ds > 0.0) end = min(end, cut);
-      else start = max(start, cut);
-    }
-    float depth = mistBelow(ro, rd, h, start, end);
-    if (uSeaFogClear.z > 0.0 && horizontal > 0.00001) {
-      float radius = uSeaFogClear.z * mix(1.0, ${glsl(tuning.drowned.church.fog.clearRim)}, layer) + layer * ${glsl(tuning.drowned.church.fog.clearSoft)};
-      float disc = along * along - horizontal * (dot(clearing, clearing) - radius * radius);
-      if (disc > 0.0) {
-        clearNear = max(start, (-along - sqrt(disc)) / horizontal);
-        clearFar = min(end, (-along + sqrt(disc)) / horizontal);
-        depth -= max(0.0, mistBelow(ro, rd, h, clearNear, clearFar) - mistBelow(ro, rd, min(h, uSeaFogClear.w), clearNear, clearFar));
-      }
-    }
-    optical += max(0.0, depth) * 0.25;
-  }
-  float alpha = (1.0 - exp(-optical * ${glsl(tuning.drowned.fog.mistDensity)})) * seaFogSides(a) * uSeaFogShape.w;
-  vec3 colour = mix(uSeaFogBody.rgb, uSeaFogTop, 0.35 * (1.0 - uSeaFogShape.z));
+  float optical = mistOptical(ro, rd, far);
+  float alpha = (1.0 - exp(-optical * ${glsl(tuning.drowned.fog.mistDensity)})) * uSeaFogShape.w;
+  vec3 body = mix(uSeaFogBody.rgb, vec3(dot(uSeaFogBody.rgb, vec3(0.2126, 0.7152, 0.0722))), ${glsl(tuning.drowned.fog.mistNeutral)});
+  vec3 colour = mix(body, uSeaFogTop, 0.35 * (1.0 - uSeaFogShape.z));
+  colour += uSeaFogCrest.rgb * ${glsl(tuning.drowned.fog.mistSun)} * (1.0 - uSeaFogShape.z);
   if (lighting && alpha > 0.0) {
-    float glow = seaFogHalo(ro, rd, uLantern.xyz, 0.0, min(reach, 200.0), ${glsl(tuning.drowned.fog.lanternReach)});
+    float glow = seaFogHalo(ro, rd, uLantern.xyz, 0.0, min(far, 200.0), ${glsl(tuning.drowned.fog.lanternReach)});
+    float top = uSeaFogShape.x * (1.0 - uSeaFogRelief * ${glsl(1 - SEA_FOG_TOP.middle)});
     float buried = smoothstep(0.0, 1.0, seaFogLevel(uLantern.xz, top) - uLantern.y);
     glow *= exp(-max(0.0, distance(ro, uLantern.xyz) - 5.0) * 0.12 * buried);
     colour += vec3(1.0, 0.7, 0.35) * glow * uLantern.w * 0.12;

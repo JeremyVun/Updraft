@@ -644,7 +644,9 @@ export class ChurchArrival {
     const since = this.since - this.answeredAt;
     const swell = since >= 0 ? Math.exp(-since / k.answerGlow) * THREE.MathUtils.smoothstep(since, 0, 0.5) : 0;
     const far = this.camera ? this.camera.position.distanceTo(this.homeAt) : 30;
-    this.glow.show(this.homeAt, k.glowSize * THREE.MathUtils.clamp(far / 30, 0.4, 2), (shown * k.glow + k.glowSwell * swell) * under);
+    const approaching = this.step === 'ring' || this.step === 'down' || this.step === 'wait';
+    const distant = approaching ? THREE.MathUtils.smoothstep(Math.hypot(boat.position.x - NAVE_BERTH.x, boat.position.z - NAVE_BERTH.z), k.glowNear, k.glowFar) : 0;
+    this.glow.show(this.homeAt, k.glowSize * THREE.MathUtils.clamp(far / 30, 0.4, 2), (shown * k.glow + k.glowSwell * swell) * under * distant);
   }
 
   /**
@@ -871,26 +873,28 @@ export class ChurchArrival {
     if (this.step === 'down' || this.step === 'wait' || this.step === 'board') {
       this.target.copy(held.primary).lerp(held.secondary, THREE.MathUtils.lerp(k.uprightBringAlong, k.bringAlong, wide));
     }
+    let zoom = (view[6] ?? 1) * THREE.MathUtils.lerp(k.uprightZoom, 1, wide);
     if (this.step === 'wait' || this.step === 'board') {
       /** Once the boat is on its way in alongside, round to the boarding view in one move, so it is there as she steps down into it. */
       const p = this.cast.boat.position;
       if (this.comeRound > 0 || this.alongside || Math.hypot(p.x - NAVE_BERTH.x, p.z - NAVE_BERTH.z) < k.boardFrom) this.comeRound += dt;
       const round = THREE.MathUtils.smootherstep(this.comeRound, 0, k.boardFor);
-      if (round > 0) this.eye.lerp(this.boardEye(wide, this.tmp), round);
+      zoom *= THREE.MathUtils.lerp(1, k.boardZoom, round);
+      if (round > 0) {
+        this.eye.lerp(this.boardEye(wide, this.tmp), round);
+        const up = this.cast.child.face(this.upEyes).lerp(this.seenOff(this.tmp2), THREE.MathUtils.lerp(k.uprightUpAim, k.upAim, wide));
+        this.target.x = THREE.MathUtils.lerp(this.target.x, up.x, round);
+        this.target.z = THREE.MathUtils.lerp(this.target.z, up.z, round);
+      }
     }
-    this.write(shot, this.eye, this.target, (view[6] ?? 1) * THREE.MathUtils.lerp(k.uprightZoom, 1, wide));
+    this.write(shot, this.eye, this.target, zoom);
     return pace;
   }
 
-  /**
-   * Aboard, one move from where the boarding view leaves it: round her and down to low behind the boat, looking up past
-   * her at the cat and the kitten on the sill on a longer lens, her a lower corner and the two of them the upper third,
-   * held for the slow blink; then it lets her go, drawing back and round as the two go back in.
-   */
+  /** Lower and tilt up from the boarding composition, then hold the cats' farewell. */
   private upFrame(shot: Shot, wide: number): number {
     const k = tuning.drownedCamera.church, child = this.cast.child, c = child.position, boat = this.cast.boat;
     const lerp = THREE.MathUtils.lerp;
-    const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
     const eyes = child.face(this.upEyes);
     const pair = this.seenOff(this.held.secondary);
     const lens = this.upEye(wide, this.upLens);
@@ -898,20 +902,17 @@ export class ChurchArrival {
 
     const fromEye = this.boardEye(wide, this.tmp);
     const move = this.aboardFor < 0 ? 0 : THREE.MathUtils.smootherstep(this.aboardFor, k.tiltFrom, k.tiltTo);
-    /** Round her first and down after, never in toward her. */
-    const a0 = Math.atan2(fromEye.x - eyes.x, fromEye.z - eyes.z), a1 = Math.atan2(lens.x - eyes.x, lens.z - eyes.z);
-    const round = THREE.MathUtils.smootherstep(move, 0, 0.7), lower = THREE.MathUtils.smootherstep(move, 0.3, 1);
-    const a = a0 + wrap(a1 - a0) * round;
-    const r = lerp(Math.hypot(fromEye.x - eyes.x, fromEye.z - eyes.z), Math.hypot(lens.x - eyes.x, lens.z - eyes.z), round);
-    this.eye.set(eyes.x + Math.sin(a) * r, lerp(fromEye.y, lens.y, lower), eyes.z + Math.cos(a) * r);
-    this.target.copy(c).setY(c.y + 1.1).lerp(this.tmp.copy(boat.position).setY(boat.position.y + 1), k.bringAlong).lerp(up, move);
+    this.eye.lerpVectors(fromEye, lens, move);
+    const fromY = lerp(c.y + 1.4, boat.position.y + 1, lerp(k.uprightBringAlong, k.bringAlong, wide));
+    this.target.copy(up).setY(lerp(fromY, up.y, move));
 
-    let zoom = lerp(1, lerp(k.uprightUpZoom, k.upZoom, wide), move);
-    this.held.primary.copy(eyes);
+    let zoom = lerp(k.boardZoom * lerp(k.uprightZoom, 1, wide), lerp(k.uprightUpZoom, k.upZoom, wide), move);
+    this.held.primary.copy(c).setY(c.y + 1.4).lerp(eyes, move);
     this.held.primaryRadius = k.upHeadRadius * move;
-    this.held.tertiary = this.cast.village!.kittens.cats[FOUND].eye(this.third);
+    this.held.secondary.lerpVectors(this.tmp.copy(boat.position).setY(boat.position.y + 1), pair, move);
+    this.held.tertiary = this.third.copy(this.held.secondary).lerp(this.cast.village!.kittens.cats[FOUND].eye(this.tmp), move);
     this.held.extra = 0;
-    this.held.margin = k.upMargin;
+    this.held.margin = lerp(k.margin, k.upMargin, move);
     const release = this.aboardFor < 0 ? 0 : THREE.MathUtils.smootherstep(this.aboardFor, k.releaseFrom, k.releaseTo);
     if (release > 0) {
       const back = THREE.MathUtils.smootherstep(release, 0, 0.65), across = THREE.MathUtils.smootherstep(release, 0.35, 1);
@@ -1013,16 +1014,9 @@ export class ChurchArrival {
     return this.step === 'board' || (this.step === 'wait' && this.cast.boat.grounded);
   }
 
-  /**
-   * As she steps aboard: off the boat's starboard quarter, a little over her, so the mast stands beyond her as she comes
-   * down the slates and steps in, never between.
-   */
+  /** Boarding and the look up share a bearing so the lens never reverses around her. */
   private boardEye(wide: number, out: THREE.Vector3): THREE.Vector3 {
-    const k = tuning.drownedCamera.church, c = this.cast.child.position, yaw = NAVE_BERTH.yaw;
-    const starboard = Math.atan2(-Math.cos(yaw), Math.sin(yaw)), stern = Math.atan2(-Math.sin(yaw), -Math.cos(yaw));
-    const a = starboard + Math.atan2(Math.sin(stern - starboard), Math.cos(stern - starboard)) * k.boardQuarter;
-    const back = THREE.MathUtils.lerp(k.uprightBoardBack, k.boardBack, wide);
-    return out.set(c.x + Math.sin(a) * back, this.herY.value + k.boardHigh, c.z + Math.cos(a) * back);
+    return this.upEye(wide, out).setY(this.herY.value + tuning.drownedCamera.church.boardHigh);
   }
 
   private pick(a: readonly number[], b: readonly number[], wide: number): number[] {

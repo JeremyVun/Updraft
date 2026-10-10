@@ -108,12 +108,12 @@ export class SheetYard {
   get state(): Record<string, unknown> {
     const s = this.crossing.sheet, c = this.cast.child;
     const hands = [0, 1].map((h) => c.mitten(h as 0 | 1, new THREE.Vector3()));
-    const hold = s.hold(new THREE.Vector3());
+    const heldHem = new THREE.Vector3();
     return {
       playing: this.playing, phase: this.crossing.phase, clear: this.crossing.clear,
       press: +s.press.toFixed(3), fill: +s.fill.toFixed(3), travel: +s.travel.toFixed(3), end: +s.end.toFixed(3), held: s.held,
       quiet: +Math.min(999, s.quiet).toFixed(2), invitation: this.crossing.invitation !== null, valving: this.crossing.valving,
-      handGap: +Math.max(...hands.map((h) => h.distanceTo(hold))).toFixed(3),
+      handGap: +Math.max(...hands.map((h, i) => h.distanceTo(s.grip(i as 0 | 1, heldHem)))).toFixed(3),
       feet: +(c.position.y - this.floorUnder(c.position)).toFixed(3), hanging: this.crossing.hanging, hang: c.hang,
       cat: { step: this.catStep, onLine: this.catOnLine, done: this.catDone, at: this.cast.cat.position.toArray().map((v) => +v.toFixed(2)) },
       child: c.position.toArray().map((v) => +v.toFixed(3)), yaw: +c.yaw.toFixed(3),

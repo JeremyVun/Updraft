@@ -677,7 +677,7 @@ function buildChurch(into: Merged, rand: Rng): void {
   const h = TOWER.half;
   const base = -4.7, tall = BELFRY_FOOT - base;
   into.add(new THREE.BoxGeometry(2 * h, tall, 2 * h).translate(0, base + tall / 2, 0), CHURCH_WASH, PLAIN, m);
-  into.add(new THREE.BoxGeometry(2 * h + 0.4, 0.26, 2 * h + 0.4).translate(0, 5.4, 0), CHURCH_DRESSING, MASONRY, m);
+  into.add(new THREE.BoxGeometry(2 * h + 0.56, 0.26, 2 * h + 0.56).translate(0, 5.4, 0), CHURCH_DRESSING, MASONRY, m);
   for (const sx of [-1, 1]) {
     for (const sz of [-1, 1]) {
       into.add(new THREE.BoxGeometry(0.7, tall, 0.7).translate(sx * (h - 0.15), base + tall / 2, sz * (h - 0.15)), CHURCH_WASH, PLAIN, m);

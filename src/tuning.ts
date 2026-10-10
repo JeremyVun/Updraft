@@ -1801,7 +1801,7 @@ export const tuning = {
     },
     /** The sea fog the dark is: one field every shader reads, and the light it takes as it comes. */
     fog: {
-      mistDensity: 0.22, mistSoftness: 1.8, mistRelief: 0.16,
+      mistDensity: 0.22, mistSoftness: 2.8, mistNeutral: 0.65, mistSun: 0.12,
       /**
        * How high its top stands over the water until the story raises it (its `level`), metres, and `closedTop` times
        * that once it has closed round; how far over its top it begins and how far under it it is whole, metres
@@ -1968,7 +1968,7 @@ export const tuning = {
        */
       rings: 4, answers: [0.1, 0.42, 0.72, 1], answerAfter: 0.7, homeGlide: 1.6, answerFor: 3.8,
       /** Its light in the fog: steady, the swell of an answer and how fast that fades (s), and how big, metres at 30 m off. */
-      glow: 0.55, glowSwell: 1.1, answerGlow: 1.6, glowSize: 3.2,
+      glow: 0.55, glowSwell: 1.1, answerGlow: 1.6, glowSize: 3.2, glowNear: 8, glowFar: 18,
       /**
        * The cat seeing her off: how far below the sill she has to be before it gets up from its kittens and comes to it
        * (metres), seconds after that that the kitten follows it, while both stay on the sill through her departure.
@@ -2246,16 +2246,15 @@ export const tuning = {
       bring: [-17, 1.2, -15, 0, 0, 0], uprightBring: [-17, 2.6, -15, 0, 0, 0], bringAlong: 0.45, uprightBringAlong: 0.75,
       /**
        * Once the boat is `boardFrom` metres from the berth it comes round in one move of `boardFor` seconds toward the
-       * boat's starboard quarter, this share of the way from the beam to the stern, to stand this far off her (upright,
-       * its own) and this high over her feet as she steps aboard.
+       * same horizontal position as the look up, this high over her feet as she steps aboard.
        */
-      boardFrom: 14, boardFor: 4, boardQuarter: 0.22, boardBack: 9, uprightBoardBack: 8, boardHigh: 2.2,
+      boardFrom: 14, boardFor: 4, boardHigh: 2.2, boardZoom: 0.92,
       /**
        * Aboard, looking up from behind the boat at the cat and the kitten on the sill: how high their eyes are over it as
        * they sit there; how far behind her eyes the lens stands and how far over them (under, negative), how far round
        * from straight behind toward the boat's starboard (radians), what share of the way from her eyes up to the two
        * of them it looks, and its lens (upright, its own); from `tiltFrom` to `tiltTo` seconds after she sits it comes
-       * round and down there from the boarding view; how much of the frame the three keep inside, and how low it may go
+       * down there from the boarding view; how much of the frame the three keep inside, and how low it may go
        * over the water.
        */
       catEyes: 0.32, upBack: 8, upOver: -0.2, upRound: 0.62, upAim: 0.52, upZoom: 1.5,
@@ -2468,7 +2467,7 @@ export const tuning = {
        * how full or how far back it can be pressed. Strokes sweeping `gentle` sheet lengths a second count for `soft`
        * of that, at `firm` for all of it. How near the cloth on screen a stroke must pass (screen heights).
        */
-      lag: 0.14, hold: 1.1, push: 0.75, against: 0.23, pressMax: 1.25, backMax: 0.45,
+      lag: 0.14, hold: 1.1, push: 0.95, against: 0.23, pressMax: 1.25, backMax: 0.45,
       gentle: 1.3, firm: 7, soft: 0.35, reach: 0.06,
       /** How quickly the fill follows the press (per second), and the fill that sounds full. */
       fillRate: 5, fullAt: 0.55,

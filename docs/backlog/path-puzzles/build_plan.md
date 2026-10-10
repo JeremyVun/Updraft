@@ -1283,13 +1283,62 @@ camera, contact, farewell and rescue checks pass. Real-pointer portrait rescue a
 and the landscape first-tree replay, pass. The mist's portrait storm brightness check passes at 10.7/255;
 the original fog fallback still has item 54's separate intermittent brightness failure.
 
-The mist uses four analytic height layers and retains bell clearing and the hidden-boat reveal. Matched local
+The initial mist trial used four analytic height layers and retained bell clearing and the hidden-boat reveal. Matched local
 belfry Ultra samples give 60.0 fps with mist or fog off, against 53.9 fps with the original fog (six-second
 samples, 1600×900, render scale 1.5). Early-rooftop samples give 60.0 fps with mist/off and 59.5 fps with original;
 the gain is concentrated in the denser view. Its flatter appearance needs Jeremy's review before production adoption.
 Port 5331 remains the review server: `villagefog=mist` selects the trial, `villagefog=1` the original, and the
-default omits fog for comparison. Production remains on the original renderer. No merge/deploy.
+default initially omitted fog for comparison; the later correction below enables mist by default. Production remains on the original renderer. No merge/deploy.
 Evidence and captures: `/tmp/updraft-cat-polish-gJ6o1k/`.
+
+#### Tower, boarding camera and lantern polish — 2026-10-10
+
+Jeremy's verbatim follow-ups and issue list 76–81 are in design.md. The cat jumps from an earlier point on the
+existing railing to a landing farther west on the nave, clearing the tower's dressed corner by about 0.29 m.
+The stone band projects past the corner posts and quoins instead of sharing their depth; mesh ray checks
+measure 5–8 cm separation where the old geometry returned coincident faces.
+
+Boarding and the look-up share their horizontal camera position and aim. The lens lowers and tilts toward the
+cats, blending subject bounds and zoom. Full real-pointer belfry → woods replays pass in landscape and portrait;
+boarding-to-look-up pan is 4.9°/5.5° with only 0.6°/0.3° of reverse tracking, and there are no cuts. The whole
+kite remains in frame at boarding, and the child and both cats remain visible. A first candidate that passed an
+isolated fixture failed the full transition; the final check covers the preceding return and boarding too.
+
+The answering-lantern billboard fades on approach and stays off aboard and throughout the storm. The original
+boat/water lantern lighting remains. CPU checks explicitly seed the bell-answer state, and full browser
+replays start before ringing; a direct storm checkpoint does not reproduce that state.
+
+Sheet stroke response increases from 0.75 to 0.95, requiring about 21% less wind for the same fill. Real-pointer
+checks pass for moderate input, the full crossing, gentle input, wrong-way input and stopping mid-crossing.
+The sheet's held hem also lagged behind the hands with either sensitivity; grasp pins now follow directly.
+Contact checks use the rendered held hem, not its ideal gathering point. At 60 Hz the full pointer replay's
+worst hand gap is 6.7 cm; CPU contact checks pass at 30/60/120 Hz.
+
+The rescue cue and effect are verified together after 2.00–2.03 seconds of sailing, following the completed wet
+shake and bow hop. Typecheck, production build, 14 quick checks and focused CPU regressions pass. Evidence:
+`/tmp/updraft-polish-Aciibr/README.md`. The full roof-route replay also passes, including the sheet, mill, swing and tower approach. No merge or deployment.
+
+#### Continuous mist correction — 2026-10-10
+
+Jeremy's further playtest found a hard blue strip during becalming and a fog bank that moved with the camera
+(issue 82, verbatim in design.md). The trial sampled a ray-dependent height and front, then filled four hard
+layers. Its apparent density changed when the same sightline was viewed from the other direction.
+
+The replacement uses continuous height, front and side ramps in world coordinates. Their product is integrated
+exactly between ramp boundaries, with no noise texture reads or density marching. A soft circular clearing
+removes the high bank when the bell rings, retaining the low water mist. The trial's colour is less blue and
+includes the existing sunset crest light; the original production fog renderer remains unchanged.
+
+The actual shader passes 54 reverse-ray and split-ray cases, including clearings and near-horizontal views.
+Worst optical-depth disagreement is 0.00023; the old shader differs by 11.52 and has a 0.95 opacity jump across
+2 mm where the replacement's largest change is 0.0087. Continuous rescue → becalming → ridge and tower-foot →
+woods landscape replays pass, with the bell reveal and ordinary storm lantern intact. A frozen-world camera
+sweep confirms the mist remains aligned with the roofs. Build, 14 quick checks and lantern continuity pass.
+
+Local six-second Ultra samples at 1600×900, render scale 1.5, hold 60 fps with mist on or off, both before a
+bell ring and with a 31 m clearing. These are local desktop measurements, not device-wide performance claims.
+Evidence: `/tmp/updraft-mist-Cq6Qis/README.md`. The portrait bell → woods replay also passes, with no camera
+cuts. The field checks pass on Metal and SwiftShader; restoring the old shader fails as expected.
 
 #### Follow-up regressions — 2026-10-10
 

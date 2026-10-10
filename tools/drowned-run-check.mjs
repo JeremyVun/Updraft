@@ -373,8 +373,10 @@ try {
       await page.evaluate(() => {
         const post = __game.post, render = post.render;
         window.__captureFlash = 0;
+        window.__stormGlow = false;
         post.render = function(...args) {
           window.__captureFlash = Math.max(window.__captureFlash, __game.boat.sailMat.uniforms.uLightning.value.w);
+          window.__stormGlow ||= !!__game.story.current.church?.glow.mesh.visible;
           return render.apply(this, args);
         };
       });
@@ -461,6 +463,7 @@ try {
         : Math.max(worst, Math.abs(r.mean - trace[i].mean))), 0);
       console.log(`  the look back and coming down off it at most ${lookBack.toFixed(1)}; brightest after it ${brightest.mean.toFixed(1)} at ${brightest.second} s; the most it changed in a second ${cut.toFixed(1)} (* a lightning flash, + ashore in the wood)`);
       assert(out, 'the light never went out');
+      assert.equal(await page.evaluate(() => window.__stormGlow), false, 'the distant answering glow covered the aboard/storm lantern');
       assert(!unseen, `the light was going out with the lighthouse out of frame at ${unseen?.since.toFixed(1)} s (${unseen?.lamp.map((v) => v.toFixed(2)).join(', ')})`);
       assert(out.inFrame, 'the light went out with the lighthouse out of frame');
       assert(landed.at < T.landBy, `the landing came ${landed.at.toFixed(1)} s after she was aboard`);
@@ -1234,6 +1237,19 @@ try {
   console.log(`  its fastest turn in each stretch: ${Object.entries(motion.stretches).map(([k, v]) => `${k} ${v.turn.toFixed(1)} (${v.at.toFixed(1)} s)`).join('; ')}`);
   console.log(`  cuts in play: ${motion.cuts.length ? motion.cuts.join('; ') : 'none'}`);
   if (process.env.LENS) {
+    const aboard = motion.trace.find(r => r.where === 'church/nave/aboard');
+    if (aboard && !fromStorm) {
+      const boarding = motion.trace.filter(r => r.where === 'church/nave/board' || (r.where === 'church/nave/aboard' && r.t <= aboard.t + 7.5));
+      let left = 0, right = 0;
+      for (let i = 1; i < boarding.length; i++) {
+        const a = Math.atan2(boarding[i - 1].look[0], boarding[i - 1].look[2]);
+        const b = Math.atan2(boarding[i].look[0], boarding[i].look[2]);
+        const delta = Math.atan2(Math.sin(b - a), Math.cos(b - a)) * 180 / Math.PI;
+        if (delta > 0) right += delta; else left -= delta;
+      }
+      console.log(`  boarding through look-up: left ${left.toFixed(1)}°, right ${right.toFixed(1)}°`);
+      assert(Math.min(left, right) < 2, 'boarding camera reverses direction before looking up');
+    }
     assert(motion.turn < 30, `the lens whipped round at ${motion.turn.toFixed(0)} deg/s (${motion.turnAt})`);
     assert(!motion.cuts.length, `the lens cut in play: ${motion.cuts.join('; ')}`);
   }

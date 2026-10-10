@@ -5,7 +5,7 @@
 // it sag back, that it holds her where she is when the player stops; that her feet are on a roof or her mittens on
 // the piece throughout; and that nothing happens on its own before the safety valve (and that the valve then does it).
 // Usage: node tools/crossings-check.mjs [scenario ...]
-//   scenarios: tree, tree-three, tree-one, tree-long, tree-rock, tree-wrong, swing, sheet, sheet-sag, sheet-wrong,
+//   scenarios: tree, tree-three, tree-one, tree-long, tree-rock, tree-wrong, swing, sheet, sheet-start, sheet-sag, sheet-wrong,
 //   sheet-stall, bell, bell-weak (the default set); run (tree and swing in a row with the walk between); climb,
 //   climb-down (her climb up the ivy into the belfry, and back down: hands and feet on their holds); tree-idle,
 //   swing-idle, sheet-idle, bell-idle (each idles past the 90 s valve, about two minutes apiece)
@@ -14,7 +14,7 @@
 //        <OUT>-<scenario>.webm.
 // Gestures are paced in game time: every pointer move waits for a rendered frame, and with `shot` the game steps a
 // fixed 1/60 s a frame, so a stroke of 15 moves lasts a quarter of a second however fast the machine draws.
-import { chromium } from 'playwright-core';
+import { openBrowser } from './lib/browser.mjs';
 import fs from 'node:fs';
 
 const base = process.env.BASE ?? 'http://127.0.0.1:5287/';
@@ -25,7 +25,7 @@ const shots = process.env.SHOTS === '1';
 const video = process.env.VIDEO === '1';
 const asked = process.argv.slice(2);
 const scenarios = asked.length ? asked : ['tree', 'tree-three', 'tree-one', 'tree-long', 'tree-rock', 'tree-wrong', 'swing',
-  'sheet', 'sheet-sag', 'sheet-wrong', 'sheet-stall', 'bell', 'bell-weak'];
+  'sheet', 'sheet-start', 'sheet-sag', 'sheet-wrong', 'sheet-stall', 'bell', 'bell-weak'];
 
 function expect(ok, message) {
   if (!ok) throw new Error(message);
@@ -395,6 +395,21 @@ const RUNS = {
     game.notes.push(`over at ${done.child.join(', ')}`);
   },
 
+  async 'sheet-start'(game) {
+    await game.open('sheet', 'sheet', '&catless');
+    await game.seconds(3);
+    expect(!(await game.state()).held, 'the sheet started without a gesture');
+    let held = null, strokes = 0;
+    while (!held && strokes < 3) {
+      const aim = await game.aim('sheet');
+      await game.stroke(aim, aim.heading, 0.45, 18);
+      strokes++;
+      held = await game.until(s => s.held, 0.6);
+    }
+    game.notes.push(`moderate strokes to take hold: ${strokes}`);
+    expect(held, 'three moderate strokes did not get the sheet going');
+  },
+
   /** A gentle stroke fills it a little and it sags back: she does not take hold. */
   async 'sheet-sag'(game) {
     await game.open('sheet', 'sheet', '&catless');
@@ -660,11 +675,7 @@ function feetWatch(game) {
 }
 
 async function main() {
-  const browser = await chromium.launch({
-    channel: 'chromium',
-    headless: true,
-    args: ['--enable-gpu', '--use-angle=metal', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'],
-  });
+  const { browser, close } = await openBrowser();
 
   const results = [];
   try {
@@ -698,7 +709,7 @@ async function main() {
       console.log(`${failure ? 'FAIL' : 'ok  '} ${name}${failure ? `: ${failure}` : ''}${game.notes.length ? `\n     ${game.notes.join('\n     ')}` : ''}`);
     }
   } finally {
-    await browser.close();
+    await close();
   }
   process.exit(results.every((r) => r.ok) ? 0 : 1);
 }

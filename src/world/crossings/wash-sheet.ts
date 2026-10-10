@@ -341,6 +341,10 @@ export class WashSheet {
     return out.addScaledVector(this.seen, HOLD_OUT * THREE.MathUtils.smoothstep(this.drawn, 0, 1));
   }
 
+  grip(hand: 0 | 1, out: THREE.Vector3): THREE.Vector3 {
+    return out.copy(this.pos[(NY - 1) * NX + HOLD_COLS[hand]]);
+  }
+
   /** How far the trailing ring can go before the rings ahead of it are bunched against the far pulley. */
   get end(): number {
     return this.length - this.stop - (SHEET.rings - 1) * SHEET.bunch;
@@ -478,7 +482,7 @@ export class WashSheet {
       }
       let pin = this.pins.get(at);
       if (!pin) this.pins.set(at, pin = this.pos[at].clone());
-      pin.lerp(this.grips[i], 1 - Math.exp(-dt * 12));
+      pin.copy(this.grips[i]);
     }
   }
 

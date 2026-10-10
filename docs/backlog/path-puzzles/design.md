@@ -1098,6 +1098,48 @@ Jeremy clarified:
 
 Use the established kite motif as a floating marker at the belfry pickup, not a generic light or outline.
 
+Jeremy reiterated after the review pass:
+
+> didn't i already tell you before that the becalming and the tone shouldn't instantly play after the cat is rescued, but maybe ~2 seconds after
+
+The delay begins after the cat's shake and bow hop finish: a short settle, then about two seconds of sailing.
+The becalming effect and its tone start together after that interval. Verify the actual cue timestamp as well
+as the story state; counting one cue somewhere in the sequence is insufficient.
+
+Jeremy's next playtest findings, verbatim:
+
+> image 1: The cat jumps through the wall in this corner here. tidy this up.
+> image 2: there is some kind of z level conflict that is causing the beam to artifact in and out at the edges.
+
+The first image marks the tower's south-west corner where the cat comes off the churchyard railings onto the nave.
+The second marks the stone band around the tower below the belfry, especially its ends at the dressed corners.
+
+> also, the clothes line takes a bit too much wind to get going. can you tone it down a bit.
+
+Reduce the sheet's required wind effort modestly, preserving its gradual lift. Verify the tower route against the
+posed cat, the stone band's real mesh surfaces, and the sheet with actual pointer strokes.
+
+> when the child gets into the boat, the camera pans to the left, then pans to the right, and then looks up. a golden rule of this game is that every camera movement must be intentional and cinematic. I dont know what  you did, but you broke the camera cinematography at this point.
+
+The belfry pickup's boarding-to-farewell camera must make one continuous, intentional move to the cats at the
+window, with no left-right correction between state changes. Preserve whole-character framing in both aspects.
+
+> image 1: You've also decided for some reason to completely ruin the lamp effect and make it a glowing orb
+> image 2: Once it gets closer to the woods, the proper shader is used. I need this shader to e used, not whatever on gods earth you used in image 1 during the stomr sequence.
+
+Preserve the normal visible lantern and its shader's light on the boat and water throughout the storm, matching
+the woods approach. Remove the extra orb obscuring the lantern; the distant bell-answer reveal must still read.
+
+Jeremy's mist follow-ups, verbatim:
+
+> there's strange banding in the cheap fog, and the fog seems a bit blue. I took this screenshot when the boat was in the becalming sequence.
+
+> blah, as the child is going through the sequence and the camera is moving, the fog's position moves as well! do you see this issue?
+
+The cheaper mist must be a continuous world-space field. Camera movement must not reposition its height or
+front. Verify frozen-time camera motion, the actual becalming sequence, the bell reveal and performance;
+remove discrete bands and let the sunset light colour the mist.
+
 Current follow-up list (all authorized):
 - 56 reopened: the approaching hull pushed the untouched tub. Start it outside that path, retaining attraction
   after player input. Full-entry CPU tests now measure zero drift; the old start fails at 0.389 m.
@@ -1114,6 +1156,26 @@ Current follow-up list (all authorized):
   5.8 m/s too, but the review's closer camera makes that speed feel faster. The crossing now takes 53–56 s.
 - 75 found during verification: fading note envelopes dropped out before the forest crossfade ended. Hold
   sustained notes through that fade; the rendered continuity check now passes (497 score checks total).
+- 76: the cat's railing-to-nave leap cut through the tower corner. Take off earlier and land farther west;
+  posed-mesh clearance is about 0.29 m at 30/60/120 Hz. Both endpoints stay on the existing railing and roof.
+- 77: the tower band was coplanar with the corner posts. Its stone now projects beyond the posts and quoins;
+  real-mesh ray checks measure 5–8 cm between competing faces.
+- 78: reduce clothesline effort modestly: stroke response 0.75 → 0.95, about 21% less wind for the same fill.
+  The lift time, idle behaviour and wrong-way response remain the same.
+- 79: the boarding shot aimed to one side, then the farewell aimed back. They now share their horizontal eye
+  and aim; the look-up lowers the lens and tilts toward the cats. Framing bounds and zoom blend continuously.
+  Verify the full boat return through boarding, not only a restored storm checkpoint.
+- 80: the bell-answer sprite stayed visible in the storm and covered the normal lantern. Fade it as the boat
+  approaches the berth and disable it for boarding and departure. The ordinary lantern shader lights the boat
+  and water throughout the storm.
+- 81 found during verification: the sheet's pinned hem lagged behind the hands by about 25 cm at full travel
+  speed, with both old and new sensitivity. Pin the grasped cloth directly to the hands. Measure the actual hem
+  in contact checks; the nominal gathering point is not where the deformed cloth is held.
+- 82: cheap mist used a camera ray to place its front and height, then four discrete layers to fill it. Replace
+  that with continuous world-space density and an exact line integral; the bell clears a soft world-space circle.
+  Neutralise the blue body and include the sunset's crest light. Frozen-camera movement, optical-depth
+  additivity and reverse-ray checks cover anchoring; the old shader fails these checks.
+
 
 Evidence and final verification status: build_plan.md, “Follow-up regressions — 2026-10-10”, and
 `/tmp/updraft-tub-manual-ImGNBj/`. Work stays on the review branch; no merge or deployment.

@@ -1,4 +1,4 @@
-// BASE selects the dev server; CHAPTER, W/H, DSF and SECONDS select one fixed view and sample length. TIME freezes fog motion for comparisons.
+// BASE selects the dev server; CHAPTER, W/H, DSF and SECONDS select one fixed view and sample length. TIME freezes fog motion; CLEAR tests the bell's clearing radius.
 import fs from 'node:fs';
 import { openBrowser } from './lib/browser.mjs';
 
@@ -15,10 +15,11 @@ try {
   page.on('pageerror', e => errors.push(e.message));
   await page.goto(`${process.env.BASE ?? 'http://127.0.0.1:5230/'}?shot=1&chapter=${chapter}&villagefog=${process.env.FOG ?? '1'}`);
   await page.waitForFunction(() => window.__ready, null, { timeout: 90000 });
-  await page.evaluate(async fixedTime => {
+  await page.evaluate(async ({ fixedTime, clearing }) => {
     const url = performance.getEntriesByType('resource').findLast(r => new URL(r.name).pathname === '/src/world/atmosphere.ts').name;
     const { atmo } = await import(url);
     __game.story.current.update = () => {};
+    if (clearing) Object.assign(__game.village.dark.clearing, { radius: clearing, floor: .3 });
     const render = __game.renderer.render.bind(__game.renderer);
     window.__perfFogOff = false;
     __game.renderer.render = (...args) => {
@@ -28,7 +29,7 @@ try {
       try { return render(...args); }
       finally { atmo.uniforms.uSeaFogShape.value.w = strength; atmo.uniforms.uTime.value = time; }
     };
-  }, process.env.TIME ? Number(process.env.TIME) : null);
+  }, { fixedTime: process.env.TIME ? Number(process.env.TIME) : null, clearing: Number(process.env.CLEAR ?? 0) });
   const cases = process.env.CASES?.split(',') ?? ['ultra', 'low', 'ultra-no-fog', 'ultra-no-reflection', 'ultra-no-post', 'ultra'];
   for (const name of cases) {
     await page.evaluate(name => {

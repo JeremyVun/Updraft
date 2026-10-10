@@ -103,8 +103,8 @@ const roofOr = (y: number) => (x: number, z: number) => {
  * foot. Its leap off the railings (clear of the tower's corner), where it lands, where it sits, and where it waits at
  * the foot.
  */
-const CAT_OFF_RAILS = new THREE.Vector3(16.5, CAT_WAY.swing[2].y, NAVE.z + 4.8);
-const CAT_ON_NAVE = new THREE.Vector3(14.6, 0, NAVE.z + 3.1);
+const CAT_OFF_RAILS = new THREE.Vector3(16.5, CAT_WAY.swing[2].y, NAVE.z + 5.4);
+const CAT_ON_NAVE = new THREE.Vector3(13.2, 0, NAVE.z + 3.4);
 CAT_ON_NAVE.y = roofOr(0)(CAT_ON_NAVE.x, CAT_ON_NAVE.z);
 const CAT_PAST_SWING = new THREE.Vector3(SWING_SITE.way.landing.x - 0.6, 0, SWING_SITE.way.landing.z - 1.7);
 CAT_PAST_SWING.y = roofOr(0)(CAT_PAST_SWING.x, CAT_PAST_SWING.z);

@@ -180,6 +180,8 @@ like there wasn't an authored system in place". What intention means:
   and a boat running aground does not stop the lens dead.
 - **A side is chosen, not flipped.** The sailing camera rides the quarter away from the sail, but the sail must stay
   across for `crossingCamera.sideCommit` seconds before the view changes quarter, and a look back never changes side.
+  Trace the preceding playable transition as well as the destination shot: a restored aboard pose misses the
+  boarding movement that can reverse a pan. Boarding and the belfry look-up share their horizontal composition.
 - **A look toward something is a glance, not a chase.** The whale is watched within `crossingCamera.whaleArc` of the
   travelling view, the storm's lighthouse within `storm.lighthouseCamera.arc` of astern; the lens never circles the
   boat to keep them.
