@@ -1359,6 +1359,30 @@ bell ring and with a 31 m clearing. These are local desktop measurements, not de
 Evidence: `/tmp/updraft-mist-Cq6Qis/README.md`. The portrait bell → woods replay also passes, with no camera
 cuts. The field checks pass on Metal and SwiftShader; restoring the old shader fails as expected.
 
+#### Farewell camera floor and simpler bell — 2026-10-10
+
+Jeremy reopened the fog at the lowest point of the farewell and the bell's resistance to slow or repeated
+strokes; his full brief is in design.md. The live fitted camera reached 0.54 m even though the authored eye
+was 1.58 m high. Raised the landscape eye, widened its final lens from 1.4 to 1.25, and raised the water
+clearance to 2.05 m. The child and window cats remain framed; the live landscape hold now stays above
+2.088 m through 8.5 seconds. Fog shaders, density and storm timing are unchanged.
+
+The bell now receives bounded energy from stroke distance, including slow movement, and feeds that momentum
+near the bottom of its swing without opposing its velocity. Both ends remain free to turn and ring. Input
+no longer locks out a swing or resets it toward one side. Each ring retains the bronze, sound and pale ripple.
+This supersedes Phase 7b's original one-stroke/one-ring interaction. One strong stroke rings twice as it decays;
+repeated strokes sustain it, and no input leaves it still until the existing safety valve.
+
+Typecheck, production build, 30/60/120 Hz bell cases, landscape/portrait camera and boarding checks, bank
+motion/clearing, and passive boat return pass. The new checks fail against the old code: all rapid-input
+rings on one side, and a lens height of 0.600 m. An initial live gentle test caught insufficient response to
+short strokes; energy gain was tuned against those real mouse gestures. The final landscape slow-stroke
+replay and portrait rapid-stroke replay pass, including descent, boarding and the full farewell hold; the
+portrait continues through the storm into the woods with no camera cuts. The separate bell stage also passes
+firm strokes and incidental movement: it settles to 0.014 radians after input stops, while tiny strokes only
+rock it. Evidence, before/after captures,
+negative checks and camera traces: `/tmp/updraft-belfry-input-DrJAFo/`. Review remains port 5331.
+
 #### Clear ivy climb — 2026-10-10
 
 Removed the lower stone belt from the west, ivy-covered tower face. Three separate strips retain the belt on

@@ -143,14 +143,7 @@ function bellGeometry(): THREE.BufferGeometry {
   return mergeGeometries(parts);
 }
 
-/**
- * The belfry's bell as a piece: big old bronze hung by its headstock between two gudgeons, swinging in one plane.
- * One good stroke across it on screen swings it, and as the swing tops out the clapper meets the sound bow and it
- * rings, once: a stroke sets a swing rather than adding to one, so it is never pumped up as a rope swing is, and
- * weaker strokes only rock it, the clapper just touching. Each ring calls `onRing` (the waves it sends out, and
- * whatever answers it); nothing is timed or failed. A stalled player is shown the stroke across it, and after long
- * enough without a ring the world's own gust swings it.
- */
+/** Wind builds the bell's momentum; the clapper sounds at either end of its swing. */
 export class Bell {
   readonly group = new THREE.Group();
   readonly objects: THREE.Object3D[];
@@ -175,11 +168,8 @@ export class Bell {
   /** QA: the most recent swing's top (radians), and the swing a stroke last asked for. */
   peak = 0;
   ask = 0;
-  private askWay = 1;
-  private askAge = Infinity;
-  private armed = false;
-  private sweep = 0;
-  private strokeAge = Infinity;
+  private pushWay = 1;
+  private charge = 0;
   private shudder = 0;
   private valveClock = 0;
   private valveOn = false;
@@ -243,9 +233,9 @@ export class Bell {
     this.rings = this.touches = 0;
     this.quiet = this.sinceRing = 0;
     this.ask = this.peak = this.shudder = 0;
-    this.askAge = this.strokeAge = Infinity;
-    this.armed = this.valveOn = false;
-    this.sweep = this.valveClock = 0;
+    this.valveOn = false;
+    this.charge = this.valveClock = 0;
+    this.pushWay = 1;
     this.invitation = null;
     this.pose();
   }
@@ -272,13 +262,8 @@ export class Bell {
     return this.valveOn;
   }
 
-  /**
-   * A stroke across the bronze on screen: the share of its own width it sweeps along its swing, firmer for faster.
-   * Each stroke asks for a swing of its own; the strongest stroke of a run wins.
-   */
   brush(camera: THREE.PerspectiveCamera, dt: number): void {
     const { input } = this.cast;
-    this.strokeAge += dt;
     if (!input.present || input.muted || dt <= 0) return;
     const k = tuning.crossings.bell;
     const aspect = camera.aspect;
@@ -306,24 +291,12 @@ export class Bell {
     const hit = 1 - THREE.MathUtils.smoothstep(nearest, 1, 1 + k.reach / width);
     if (hit <= 0) return;
     const along = ((this.sd.x - this.sc.x) * this.axisA.x + (this.sd.y - this.sc.y) * this.axisA.y) / (width * 2 * width);
-    const firm = THREE.MathUtils.lerp(k.soft, 1, THREE.MathUtils.smoothstep(travel / dt / (2 * width), k.gentle, k.firm));
-    if (this.strokeAge > 0.3) this.sweep = 0;
-    this.strokeAge = 0;
-    this.sweep += along * hit * firm;
-    const want = Math.min(k.most, Math.abs(this.sweep) * k.perWidth);
-    if (want > 0.02) this.quiet = 0;
-    // Let the current swing reach its strike and return, even while strokes keep arriving.
-    if (this.armed || Math.abs(this.angle) > k.touchAt) {
-      if (this.armed && this.askAge < k.lag && want > this.ask) this.ask = want;
-      return;
-    }
-    if (want > this.ask || this.askAge > k.lag * 3) {
-      this.ask = want;
-      this.askWay = Math.sign(this.sweep) || 1;
-      this.askAge = 0;
-      this.armed = true;
-      this.valveOn = false;
-    }
+    const added = Math.abs(along) * hit * k.energyPerWidth;
+    this.charge = Math.min(k.pull * (1 - Math.cos(k.most)), this.charge + added);
+    if (added <= 0) return;
+    this.pushWay = Math.sign(along);
+    this.quiet = 0;
+    this.valveOn = false;
   }
 
   update(dt: number, camera: THREE.PerspectiveCamera): void {
@@ -335,15 +308,23 @@ export class Bell {
       this.brush(camera, dt);
       if (this.valving) this.blow(dt);
     }
-    this.askAge += dt;
-
-    const energy = 0.5 * this.speed * this.speed + k.pull * (1 - Math.cos(this.angle));
-    const wanted = k.pull * (1 - Math.cos(this.ask));
-    const going = Math.abs(this.speed) < 0.05 || Math.sign(this.speed) === this.askWay;
-    const driving = this.askAge < k.lag * 2.5 && (!going || energy < wanted);
-    const push = driving ? this.askWay * k.drive : 0;
     const before = this.speed;
-    this.speed += (-k.pull * Math.sin(this.angle) + push) * dt;
+    const energy = 0.5 * this.speed * this.speed + k.pull * (1 - Math.cos(this.angle));
+    const ceiling = k.pull * (1 - Math.cos(k.most));
+    this.ask = Math.acos(1 - Math.min(ceiling, energy + this.charge) / k.pull);
+    // Feed momentum near the bottom, leaving both ends free to turn and strike.
+    if (Math.abs(this.angle) < k.pushWithin) {
+      const accelerated = Math.abs(this.speed) + k.drive * dt;
+      const added = Math.max(0, Math.min(this.charge * (1 - Math.exp(-dt / k.lag)), ceiling - energy,
+        0.5 * (accelerated * accelerated - this.speed * this.speed)));
+      if (added > 0) {
+        const way = Math.sign(this.speed) || -Math.sign(this.angle) || this.pushWay;
+        this.speed = way * Math.sqrt(this.speed * this.speed + 2 * added);
+      }
+      this.charge -= added;
+    }
+    this.charge *= Math.exp(-dt * k.damping);
+    this.speed -= k.pull * Math.sin(this.angle) * dt;
     this.speed *= Math.exp(-dt * k.damping);
     this.angle += this.speed * dt;
     const accel = (this.speed - before) / dt;
@@ -356,10 +337,7 @@ export class Bell {
       this.clapperSpeed *= -0.35;
     }
 
-    if (this.armed && !driving && this.angle * this.speed > 0) {
-      const top = Math.acos(THREE.MathUtils.clamp(Math.cos(this.angle) - (this.speed * this.speed) / (2 * k.pull), -1, 1));
-      if (top - Math.abs(this.angle) < Math.abs(this.speed) * 0.07 + 0.003) this.strike(top);
-    }
+    if (before * this.speed < 0 && before * this.angle > 0) this.strike(Math.abs(this.angle));
     this.shudder = Math.max(0, this.shudder - dt * 0.7);
 
     const resting = Math.abs(this.angle) < 0.03 && Math.abs(this.speed) < 0.05;
@@ -380,7 +358,6 @@ export class Bell {
   /** The clapper meets the bronze at the top of the swing: a ring if the swing was a good one, a touch if not. */
   private strike(top: number): void {
     const k = tuning.crossings.bell;
-    this.armed = false;
     this.peak = top;
     if (top < k.touchAt) return;
     const at = this.lip(new THREE.Vector3());
@@ -411,10 +388,7 @@ export class Bell {
     const mid = this.middle(this.middleAt);
     const t = this.toward;
     this.cast.lines.gust(mid.x - t.x * 2.5, mid.z - t.y * 2.5, t.x, t.y, 6, 9);
-    this.ask = k.fullAt + 0.02;
-    this.askWay = 1;
-    this.askAge = 0;
-    this.armed = true;
+    this.charge = k.pull * (1 - Math.cos(k.most));
   }
 
   private pose(): void {

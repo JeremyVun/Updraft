@@ -2255,13 +2255,13 @@ export const tuning = {
        * Aboard, looking up from behind the boat at the cat and the kitten on the sill: how high their eyes are over it as
        * they sit there; how far behind her eyes the lens stands and how far over them (under, negative), how far round
        * from straight behind toward the boat's starboard (radians), what share of the way from her eyes up to the two
-       * of them it looks, and its lens (upright, its own); from `tiltFrom` to `tiltTo` seconds after she sits it comes
-       * down there from the boarding view; how much of the frame the three keep inside, and how low it may go
+       * of them it looks, and its lens (upright, its own); from `tiltFrom` to `tiltTo` seconds after she sits it moves
+       * there from the boarding view; how much of the frame the three keep inside, and how low it may go
        * over the water.
        */
-      catEyes: 0.32, upBack: 14, upOver: -0.2, upRound: 0.62, upAim: 0.52, upZoom: 1.4,
+      catEyes: 0.32, upBack: 14, upOver: 1.8, upRound: 0.62, upAim: 0.52, upZoom: 1.25,
       uprightUpBack: 16, uprightUpOver: 2.5, uprightUpRound: 0.3, uprightUpAim: 0.4, uprightUpZoom: 1.8,
-      tiltFrom: 0.2, tiltTo: 5, upMargin: 0.9, upBodyHeight: 1.2, upBodyRadius: 1.3, upClear: 0.35,
+      tiltFrom: 0.2, tiltTo: 5, upMargin: 0.9, upBodyHeight: 1.2, upBodyRadius: 1.3, upClear: 2.05,
       /**
        * After the blink, from `releaseFrom` to `releaseTo` seconds after she sits, it lets her go as the two go back in:
        * round toward the bow by this much (radians), this far from her eyes and this far over them, looking this share
@@ -2495,19 +2495,11 @@ export const tuning = {
     bell: {
       /** Its swing: the pull back to rest (per second squared at a right angle) and how fast a swing dies (per second). */
       pull: 6.4, damping: 0.75,
-      /**
-       * A stroke's sweep across it along its swing, in bell widths, asks for this many radians of swing; strokes at
-       * `gentle` bell widths a second count for `soft` of that, at `firm` for all of it. How near the bronze on
-       * screen a stroke must pass (screen heights). A stroke never adds to a swing, it only sets one: the strongest
-       * stroke wins, and the swing it asks for comes on over `lag` seconds.
-       */
-      perWidth: 0.27, gentle: 2, firm: 9, soft: 0.3, reach: 0.05, most: 0.5, lag: 0.28,
-      /** How hard a stroke pushes it toward the swing it asked for (per second squared). */
+      /** Travel across a bell width adds energy regardless of stroke speed; the swing stays bounded. */
+      energyPerWidth: 1.8, reach: 0.05, most: 0.5, lag: 0.18, pushWithin: 0.22,
+      /** Maximum angular acceleration from wind (radians per second squared). */
       drive: 5.5,
-      /**
-       * A swing that tops out past `ringAt` radians rings, fully at `fullAt`; one past `touchAt` only touches the
-       * clapper. Only a stroke readies the clapper, and it strikes once, so one stroke is one ring.
-       */
+      /** Either end rings past `ringAt`, fully at `fullAt`; smaller swings only touch the clapper. */
       ringAt: 0.3, fullAt: 0.44, touchAt: 0.07,
       /** Seconds without a useful stroke before the drawn gust; with no ring before the world's own gust swings it. */
       inviteAfter: 5, valveAfter: 90, valveEvery: 4,

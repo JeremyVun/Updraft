@@ -22,7 +22,7 @@
 // nearer, the cat or the kitten is not on the sill at the slow blink, or either has left the sill by the time the
 // storm's lens takes over.
 // Usage: node tools/drowned-run-check.mjs
-//   AUDIT=<prefix> records live rescue audio and fog uniforms; TO=tree-arrival stops at the first tree before input.
+//   AUDIT=<prefix> records live rescue audio and fog uniforms; SWAY=1 uses gentle bell strokes, RAPID=1 fast ones.
 //   env: BASE (default http://127.0.0.1:5230/), FROM=stairs starts on the stairs and docks their flights first, FROM=roofs starts on the ridge after the cat (skips the tub and the
 //        becalming), FROM=church at the tower's foot (skips the run too), FROM=belfry in the belfry with the bell to
 //        ring, FROM=storm with her just seated aboard at the nave (skips the church too), SHOTS=<prefix> saves stills (at each piece,
@@ -281,7 +281,7 @@ try {
       const body = childBody(__game.child);
       let lastBounds = -1;
       const w = window.__churchWatch = { offWorst: 0, offAt: '', unseenRun: 0, unseenWorst: 0, unseenAt: '', hiddenRun: 0, hiddenWorst: 0, hiddenAt: '',
-        boardingBodyEdge: 0, boardingCatEdge: 0, hiddenPlane: 0, climbPaperGap: 0,
+        boardingBodyEdge: 0, boardingCatEdge: 0, farewellLow: Infinity, hiddenPlane: 0, climbPaperGap: 0,
         catArch: null, archHer: null, catIn: null, woke: null, kittenCame: null, catSill: null, sillLeft: null, herDown: null, seated: null };
       const roofs = [...W.PLACED, W.NAVE];
       const inner = W.TOWER.half - BELFRY.wall, floor = BELFRY.sill - BELFRY.step;
@@ -322,6 +322,9 @@ try {
           }
           if (ch.step === 'wait' && w.herDown === null) w.herDown = t;
           if (ch.aboardFor >= 0 && w.seated === null) w.seated = t;
+          if (ch.aboardFor >= .6 && ch.aboardFor < tuning.drownedCamera.church.releaseFrom) {
+            w.farewellLow = Math.min(w.farewellLow, __game.rig.camera.position.y);
+          }
           if ((ch.step === 'board' || (ch.step === 'aboard' && ch.aboardFor < tuning.drownedCamera.church.releaseFrom)) && t - lastBounds >= .1) {
             lastBounds = t;
             const camera = __game.rig.camera;
@@ -540,14 +543,15 @@ try {
     await page.evaluate(() => {
       const b = __game.story.current.church.bell, was = b.onRing;
       window.__heard = [];
-      b.onRing = (strength) => { __heard.push({ at: performance.timeOrigin + performance.now(), time: __stats.time, peak: b.peak }); was?.(strength); };
+      b.onRing = (strength) => { __heard.push({ at: performance.timeOrigin + performance.now(), time: __stats.time, peak: b.peak, way: Math.sign(b.angle) }); was?.(strength); };
     });
     await seconds(1);
     await shot('bell');
     /** Strokes across the bell, each once it has come back near rest, until the lantern has answered four rings. */
     const rang = [];
     let bellStrokes = 0;
-    if (process.env.RAPID) {
+    const continuousBell = process.env.RAPID || process.env.SWAY;
+    if (continuousBell) {
       const start = Date.now();
       while ((await look()).rings < T.rings && Date.now() - start < 30000) {
         const aim = await page.evaluate(() => {
@@ -556,17 +560,18 @@ try {
           return { x: (p.x + 1) * .5, y: (1 - p.y) * .5, dx: Math.cos(h), dy: -Math.sin(h) };
         });
         const direction = bellStrokes++ % 2 ? -1 : 1;
-        for (let i = 0; i <= 8; i++) {
-          const along = (i / 8 - .5) * height * .22 * direction;
+        const frames = process.env.SWAY ? 72 : 8, span = process.env.SWAY ? .08 : .22;
+        for (let i = 0; i <= frames; i++) {
+          const along = (i / frames - .5) * height * span * direction;
           await page.mouse.move(aim.x * width + aim.dx * along, aim.y * height + aim.dy * along);
-          await page.waitForTimeout(12);
+          await page.evaluate(() => new Promise(resolve => requestAnimationFrame(resolve)));
         }
       }
-      assert.equal((await look()).rings, T.rings, 'rapid alternating strokes ring the bell four times');
-      await wait(s => s.answered === T.rings, 8, 'the boat answering rapid rings');
-      await shot('rapid-bell');
+      assert.equal((await look()).rings, T.rings, 'continuous strokes ring the bell four times');
+      await wait(s => s.answered === T.rings, 8, 'the boat answering the bell');
+      await shot(process.env.SWAY ? 'gentle-bell' : 'rapid-bell');
     }
-    for (; !process.env.RAPID && bellStrokes < 40; bellStrokes++) {
+    for (; !continuousBell && bellStrokes < 40; bellStrokes++) {
       const s = await look();
       if (s.step !== 'ring' || s.rings >= T.rings) break;
       for (let i = 0; i < 24 && Math.abs((await look()).bell) > 0.08; i++) await seconds(0.25);
@@ -598,7 +603,9 @@ try {
     for (const r of rang) {
       console.log(`  ring ${r.ring} at ${(r.time - beats.ring).toFixed(1)} s: the boat ${r.boatBefore.toFixed(1)} m from the berth, ${r.boatAfter.toFixed(1)} m after it answered; the fog's top ${r.level} m; the lantern on screen at ${r.lantern.slice(0, 2).join(', ')}`);
     }
-    assert.equal(process.env.RAPID ? heard.length : rang.length, T.rings, `the bell rang ${rang.length} times in ${bellStrokes} strokes`);
+    assert.equal((await look()).rings, T.rings, `the bell did not call the boat after ${bellStrokes} strokes`);
+    assert(heard.length >= T.rings, 'each required bell ring must be heard');
+    if (continuousBell) assert(heard.slice(0, T.rings).every((h, i) => i === 0 || h.way !== heard[i - 1].way), 'continuous input rings only one side');
     for (let i = 1; i < rang.length; i++) assert(rang[i].boatAfter < rang[i - 1].boatAfter - 2, `the lantern did not come nearer at ring ${rang[i].ring}`);
     for (const r of rang) assert(r.lantern[2] < 1 && Math.abs(r.lantern[0]) < 0.95 && Math.abs(r.lantern[1]) < 0.95, `the lantern was out of frame when it answered ring ${r.ring}`);
     const bring = await wait((s) => s.step === 'down', 20, 'her climbing down as the boat drifts home');
@@ -655,10 +662,14 @@ try {
     console.log(`her whole head bounds at the blink: ${seenAtBlink.head.map(v => v.toFixed(3)).join(', ')}`);
     if (process.env.LENS) assert(seenAtBlink.head.slice(0, 2).every(v => v > 0.02) && seenAtBlink.head.slice(2).every(v => v < 0.98),
       `her hood or face is cropped at the blink: ${JSON.stringify(seenAtBlink.head)}`);
+    await wait(s => s.aboardFor >= 8.5, 5, 'the lowest point of the farewell hold');
+    await shot('farewell-hold');
     if (process.env.TO !== 'farewell') await storm(aboard, atNave);
     const w = await page.evaluate(() => window.__churchWatch);
     console.log(`boarding through look-up bounds: child ${w.boardingBodyEdge.toFixed(3)}, window cats ${w.boardingCatEdge.toFixed(3)}`);
     assert(w.boardingBodyEdge < .98 && w.boardingCatEdge < .96, 'boarding/look-up cropped the child or window cats');
+    console.log(`lowest fitted camera during farewell: ${w.farewellLow.toFixed(3)} m`);
+    assert(w.farewellLow > 1.9, 'farewell camera descended into the mist');
     console.log(`paper through belfry: ${w.hiddenPlane} hidden frames; climb backpack gap ${w.climbPaperGap.toFixed(3)} m`);
     assert.equal(w.hiddenPlane, 0, 'the carried plane disappeared in the belfry');
     assert(w.climbPaperGap < .03, 'the plane left the backpack during the climb');

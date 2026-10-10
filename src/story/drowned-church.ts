@@ -884,7 +884,7 @@ export class ChurchArrival {
     return pace;
   }
 
-  /** Lower and tilt up from the boarding composition, then hold the cats' farewell. */
+  /** Tilt up from the boarding composition, then hold the cats' farewell above the mist. */
   private upFrame(shot: Shot, wide: number): number {
     const k = tuning.drownedCamera.church, child = this.cast.child, c = child.position;
     const lerp = THREE.MathUtils.lerp;

@@ -142,7 +142,9 @@ edit.
 - `drowned-return-check`: zero player wind after the bell, arrival at the berth and boarding at 30/60/120 Hz,
   with spaced and rapid rings. `NEGATIVE=1` disables the automatic return and must fail.
   `FROM=belfry LENS=1 node tools/drowned-run-check.mjs` checks this through the real bell gestures, passive
-  approach, boarding camera and onward storm; `W=900 H=1600` checks portrait.
+  approach, boarding camera and onward storm; `W=900 H=1600` checks portrait. Use `SWAY=1` for short, slow
+  real mouse strokes and `RAPID=1` for repeated fast strokes: both must ring on alternating sides. The farewell
+  must be sampled through the end of its hold at 8.5 seconds, since the blink still misses the camera's lowest point.
 - `drowned-fog-motion-check`: the whole bank advances without pivoting or retreating, camera motion cannot
   change its field or belfry clearing, the bell clearing survives descent and the farewell before blending out,
   and the actual boat reaching the woods fades it out. `drowned-mist-check` probes the actual shader for

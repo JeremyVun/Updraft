@@ -1233,6 +1233,17 @@ Jeremy's final climbing-route polish, verbatim:
 Remove the lower stone belt from the west, ivy-covered tower face so it no longer crosses their climb.
 Keep the window sill and the belt on the other three faces.
 
+Jeremy reopened the farewell and bell interaction, verbatim:
+
+> - The issue with the fog at the deepest point when the camera looks up at the cat still isn't fixed see attached image. The camera seems to go a step lower than it should.
+> - Also, the interaction with the bell is super annoying. If i try to slowly move my mouse with the sway of the bells, the bells actually end up slowing down. It's very confusing interaction. can you just simplify this somehow. When i do very strong and fast gestures, it just rings on one side all the time as well. It seems buggy.
+
+Raise and open the farewell composition enough that the final fitted camera stays above the water-level mist
+through its lowest point, keeping the child and window cats framed. Preserve the storm mist. Bell strokes
+now build bounded swing momentum without requiring timing or counteracting its motion; the clapper rings at
+either end of a sufficient swing. Gentle movement can sustain it, fast repeated strokes cannot pin it, and
+it settles naturally when input stops. Keep the bronze and pale ripple on every ring.
+
 Current follow-up list (all authorized):
 - 56 reopened: the approaching hull pushed the untouched tub. Start it outside that path, retaining attraction
   after player input. Full-entry CPU tests now measure zero drift; the old start fails at 0.389 m.
@@ -1348,8 +1359,9 @@ where they differ; the drift, the village, the look and the storm stand.
    belfry's sills, and stops. They are above it: where the village was is a cold white sea in the last light, only the
    spire and the lighthouse standing out of it, the lighthouse beam sweeping over its top. A
    quiet breath after the chase. It stays low and cold-bodied in colour, never the stairs room's luminous cloud.
-7. **The boat comes home.** The bell hangs over them. One good stroke across it swings it and it rings once (a
-   weak one only rocks it; it is not pumped up like the swing, so the two pieces never feel alike); each ring rolls out over the fog and pushes it back a little round the tower, and out in the fog a lantern glows in
+7. **The boat comes home.** The bell hangs over them. Moving across it builds its swing without needing to time
+   strokes; it rings at either end and settles when left alone (Jeremy's simplification, 2026-10-10). Each ring
+   rolls out over the fog and pushes it back a little round the tower, and out in the fog a lantern glows in
    answer, nearer each time: the lost boat drifting home to the sound (things drift home: nothing is lost). When it is
    near, the fog has drawn back to the water round the nave and the boat keeps drifting to the boarding point by
    itself. She climbs down the ivy and steps aboard.
