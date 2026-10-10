@@ -918,8 +918,12 @@ The sequence:
     the holds. The veil has a clear edge: by the nudge (`tuning.seaPassage.mist`, haze 1.064, its veil 1.3 times as
     deep) nothing within about 70 m is touched and nothing past about 160 m shows. From about 165 m short of the rest
     its veil deepens so it is whole by the whale's head however near the boat has come (whole at about 140 m round
-    by the nudge), and from 120 m to the blow it eases back to that 1.3, so the whale is found by distance, not by
-    when the nudge came; from 80 to 30 m short of the rest it draws back to haze 0.985 (clear to about 130 m), so the
+    by the nudge), and it stays whole there until its blow has stood over the mist, easing back to that 1.3 from 92 to
+    68 m short of the rest, so the whale is found by distance, not by when the nudge came. Once its blow is called
+    for, the mist lies low on the sea (sea-blow): within 170 m of the lens, and none of it past 240 m, the veil thins
+    away above 5.8 m, the top of its back, to a third every 0.9 m higher (`lift`, `liftFrom`, `liftScale`), so its
+    blow stands clear of the mist while its body is still wholly under it; the sea's mirror image keeps the whole
+    veil, so the blow casts no reflection through the mist. From 80 to 30 m short of the rest it draws back to haze 0.985 (clear to about 130 m), so the
     holds and its far length keep their look; it lifts as the whale dives. The whale's own haze silhouette (`uLost`) is no longer used: drawn over the veil, it showed the
     whale as a darker shape however far off it was, which is what Jeremy saw.
   - The whale lies far enough off the line to be out of sight until the lead, and near enough that the lead runs
@@ -958,8 +962,10 @@ The sequence:
   As built (N5a): it sighs 2 s after the nudge, about 150 m out and wholly hidden (for now the sleeper's sigh, faint at
   that range: the foley's whale sounds fade out between 35 and 190 m; N5c gives it its moan), and goes on breathing
   unseen every 10 s; once the boat is 95 m short of the rest and at least 6 s on (`seenAt`, `seenAfter`) a breath
-  comes for its blow, its far plume standing over the mist while its body is still about 85% covered; its shape is
-  half out of the mist 5 to 10 s later, about 55 m out. The view comes down and turns to it only over the last 70 to 20 m
+  comes for its blow (sea-blow): a far whale's blow of the first breath's kind, 13 m high (`sightedHeight`), bursting
+  up in about a second about 120 m off, its upper part standing white over the mist against the low sun's glow
+  while its body is still wholly hidden, then drifting and fraying (a breath just gone blows at once rather than
+  breathing twice in a moment); its shape is half out of the mist 6 to 8 s after that breath, about 58 m out. The view comes down and turns to it only over the last 70 to 20 m
   (`riseFrom`, `riseNear`), once its shape has formed: turning at the nudge pushed the boat out of a phone's frame
   toward a mist with nothing in it.
   Come to rest beside it with the nudge never landed, it counts as led all the same.
