@@ -1167,8 +1167,8 @@ until the integrated result is ready for review. Main merge and deployment remai
 
 The restored `sail` checkpoint now resumes the designed air-dies beat silently, and its boat check passes.
 The music-transition audit passes the longer 88-second farewell into the wood. The merged fog, rescue and storm
-have been checked in both aspects, the landscape roof route passes, and all five browser checkpoint round-trips
-pass. The portrait sheet exit and the review findings below remain open.
+have been checked in both aspects, and all five browser checkpoint round-trips pass. That first pass found the
+portrait sheet-exit gap; the approved follow-up below fixes it.
 
 Jeremy subsequently asked for a list of issues to approve before fixes, and flagged the roof-arrival camera.
 His instruction is preserved verbatim in design.md, "Takeover review", with review items 36–41. Keep new camera,
@@ -1205,15 +1205,18 @@ Approved follow-up:
   the swing, stays below the branches, then rises to see the cat descend the cottage. It fits her face with a 0.6
   margin; portrait widens over the last eight metres without changing the fog's aim. The landscape swing look stays
   nearer to her to clear the tree. `run-final-land` passes every gate with no tree obstruction or camera cuts.
-- `run12-port` passes every gate (fog 1.6 s, cat unreadable 1.9 s, tree obstruction 0 s, facing the lens 0.3 s at this
-  transition), but still briefly crops the hood: the safety frame protected only a point. `subjects.primaryRadius`
+- Earlier portrait candidates passed every gate but still briefly cropped the hood: the safety frame protected
+  only a point. `subjects.primaryRadius`
   now reserves world-space padding in fitting and the safety frame; only this portrait approach opts in, with a
   0.6 m head bound. The regression passes at 30/60/120 Hz and fails when that bound is disabled. The general camera,
-  all 24 crossing-camera cases and drowned camera mechanics pass. Final visual replay: `run13-port` (pending).
+  all 24 crossing-camera cases and drowned camera mechanics pass. Final replay `run13-port` passes every gate:
+  at the mill-to-swing transition fog is absent at most 1.7 s, the cat unreadable 1.8 s, and the old tree hides her
+  for 0 s. Her longest walk toward the lens is 0.3 s; no camera cuts. Inspect a motion strip alongside point gates:
+  the centre of a face being visible does not prove that its hood or the foreground branches clear.
 - All 50 mechanics checks pass together (`mechanics/results.json`); the production build passes with the existing
   bundle-size warning. Rescue/stranding passes in both aspects with the forward arrival dolly. At portrait roof
   contact the viewing direction's dot product with the boat's heading is 0.825, and the destination ridge is on screen
-  (`arrival-port-final.log`). Final camera route verification remains in progress.
+  (`arrival-port-final.log`). Final roof routes pass in both orientations (`run13-port.log`, `run-final-land.log`).
 - Arrival direction now has a real-cast CPU regression at 30/60 Hz in both aspects, calm and gusting. It passes;
   disabling the pre-contact dolly makes it fail with a backward direction dot product of -0.443. The new browser
   roof-framing assertion initially referenced a non-exported constant; that fixture is corrected to use the roof deck.
@@ -1233,7 +1236,7 @@ Integration verification:
 | Camera mechanics | Pass at 30/60 Hz, landscape/portrait, calm/gust; see fixture corrections below |
 | Landscape and portrait rescue/stranding | Pass, including 30 seconds with the stranded boat stationary in each |
 | Landscape roof crossings | Pass including LENS gates; no camera cuts and cat retained after the mill |
-| Portrait roof crossings | `run12-port` passes all gates; final head-bound visual replay pending |
+| Portrait roof crossings | Pass including fog, cat readability, head extent and tree clearance; no cuts (`run13-port`) |
 | Landscape and portrait church through storm into wood | Pass including LENS gates, four bell answers, kittens, farewell and fog; both land 88 seconds after boarding |
 | Portrait goodbye readability | Pass with the new 45 px gate; cat is 50 px tall at its slow blink, up from 39 px |
 | Cat/kitten call marks | All seven vocal calls in the church-through-wood capture have visible marks; footsteps excluded |
@@ -1261,8 +1264,8 @@ Resolved fixture failures under review item 40 (no gameplay changes):
 | `plane-routing` | Supplies repeated player strokes across the real pinwheel to haul the boat in; passes |
 | `drowned-gating` | Bounds each vane's settling speed on distant entry, preserves pairwise parity on arrival; passes |
 
-Phase 10 remains open pending Jeremy's review and final camera verification. The whole-journey release
-playthrough has not been run during this takeover. Ultra fog cost remains an investigation, not a claimed fix. The integration
+Phase 10 remains open for Jeremy's playtest and music listen, the Ultra investigation and review item 42. The
+whole-journey release playthrough has not been run during this takeover. Ultra fog cost is not a claimed fix. The integration
 dev server is on `http://127.0.0.1:5331/`; the original roofs play build and main remain separate.
 
 ### Later

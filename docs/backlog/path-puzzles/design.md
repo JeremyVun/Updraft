@@ -821,10 +821,12 @@ outside those proposals still come back as new review items. Main merge and depl
 37. **Portrait camera after the sheet — implemented and verified.** A local setback and revised mill approach aim
     reduce the fog's disappearance from 2.3 seconds to 1.2, retaining the child and cat. Baseline:
     `/tmp/updraft-takeover-TUMeWz/sheet-exit-before.jpg`; full follow-up replay in `/tmp/updraft-approved-Ad2y4S/`.
-38. **After the mill — approved follow-up to item 25, final visual verification.** Removed the extra nine-second
+38. **After the mill — implemented and verified.** Removed the extra nine-second
     look back. The camera carries the mill view into a six-second handoff while she walks on, draws inside the old
     tree's branches, then rises to see the cat descend the cottage. The close approach fits her face; portrait opens
-    earlier to keep her hood inside the frame. The fog still follows its route and remains subject to its framing gate.
+    earlier and reserves a 0.6 m head bound to keep her hood inside the frame. Both complete roof-route replays pass,
+    with no cuts or tree obstruction. In portrait, fog is absent at most 1.7 s on this transition and the cat is
+    unreadable at most 1.8 s. Evidence: `run13-port` and `run-final-land` in the follow-up directory.
 39. **Ultra performance — warmup fixed; fog cost remains open.** The belfry at a 1600×900 viewport on a 2× display runs
     at about 54–57 fps on Ultra, with occasional 33 ms frames; Low and Ultra with the sea fog disabled stay at
     60 fps in this sample. The repeated Ultra measurement slows over the run, so this is evidence of fog cost,
@@ -841,7 +843,8 @@ outside those proposals still come back as new review items. Main merge and depl
 42. **Intermittent tree-gaze check — new finding, pending review.** One full portrait replay (`run9-port.log` in the
     follow-up evidence directory) stopped before the mill: during the six-second quiet sample, she looked across the
     lane 25% of the time and up at the tree 21%, below the existing 40% across-lane minimum. Earlier replays of the
-    unchanged tree behaviour passed. The companion can temporarily take her gaze for 1.4–2.6 seconds; this is a
+    unchanged tree behaviour passed, as did the subsequent final replays. The companion can temporarily take her
+    gaze for 1.4–2.6 seconds; this is a
     possible cause, not yet confirmed by target-by-target capture. Proposal: capture those targets over several full
     gaze cycles, then decide whether the check needs a longer sample or her puzzle attention needs changing. Neither
     the gaze behaviour nor the assertion has been changed for this finding.
