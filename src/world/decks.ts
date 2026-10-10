@@ -10,6 +10,8 @@ export interface Deck {
   height: number;
   /** A flight of stairs: the height at (x1, z1), the walk rising evenly to it from `height` at (x0, z0). */
   height1?: number;
+  /** The surface under each foot; navigation keeps the strip's centre-line heights. */
+  surface?: (x: number, z: number) => number | null;
   /** Optional shallow landing at the shore end; never permits stepping off the sides into deep water. */
   stepOffDepth?: number;
   /** A ramp this long runs on from one end of the deck down to the ground. */
@@ -57,12 +59,12 @@ export function beyondDecks(decks: readonly Deck[], x: number, z: number, y: num
  * The ground under (x, z) with the decks laid over it. Where decks lie one above another, as the flights of a
  * staircase do, the walker is on the highest one they can step up onto from the height they are already at.
  */
-export function deckGround(decks: readonly Deck[], x: number, z: number, near: number): number {
+export function deckGround(decks: readonly Deck[], x: number, z: number, near: number, feet = false): number {
   const land = heightAt(x, z);
   const flat = decks.every(d => d.height1 === undefined);
   if (flat) {
     for (const d of decks) {
-      const h = underDeck(d, x, z, 0);
+      const h = underDeck(d, x, z, feet && d.surface ? 0.3 : 0, feet);
       if (h !== null) return Math.max(h, land);
     }
     for (const d of decks) {
@@ -75,7 +77,7 @@ export function deckGround(decks: readonly Deck[], x: number, z: number, near: n
   for (const slack of [0, 0.35]) {
     let best = land;
     for (const d of decks) {
-      const h = underDeck(d, x, z, slack);
+      const h = underDeck(d, x, z, slack + (feet && d.surface ? 0.3 : 0), feet);
       if (h !== null && h <= near + STEP_UP && h > best) best = h;
     }
     if (best > near - 0.6 || slack > 0) return best;
@@ -84,7 +86,7 @@ export function deckGround(decks: readonly Deck[], x: number, z: number, near: n
 }
 
 /** The deck's height under (x, z), or null off it; slack widens it and lets it run on past its ends. */
-function underDeck(d: Deck, x: number, z: number, slack: number): number | null {
+function underDeck(d: Deck, x: number, z: number, slack: number, feet = false): number | null {
   const dx = d.x1 - d.x0;
   const dz = d.z1 - d.z0;
   const len = Math.sqrt(dx * dx + dz * dz);
@@ -93,5 +95,5 @@ function underDeck(d: Deck, x: number, z: number, slack: number): number | null 
   if (t < -over || t > 1 + over) return null;
   const u = Math.min(1, Math.max(0, t));
   if (Math.hypot(x - (d.x0 + dx * u), z - (d.z0 + dz * u)) > d.halfWidth + slack) return null;
-  return d.height1 === undefined ? d.height : d.height + (d.height1 - d.height) * u;
+  return feet && d.surface ? d.surface(x, z) : d.height1 === undefined ? d.height : d.height + (d.height1 - d.height) * u;
 }

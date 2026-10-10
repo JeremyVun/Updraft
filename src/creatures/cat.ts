@@ -81,7 +81,7 @@ type Hold = CatPose | 'gather';
 
 const STANCES: Record<Hold, Stance> = {
   stand: { bodyY: 0.124, bodyZ: 0, pitch: 0.02, flex: 0.05, chestUp: 0, neckLow: 1.0, hock: 0.5, tuck: 0, front: [0.028, 0.066], hind: [0.036, -0.074], tailUp: 0.25, tailCurl: 0.15, tailWrap: 0, bend: 0, roll: 0 },
-  sit: { bodyY: 0.066, bodyZ: 0.006, pitch: 0.72, flex: 0.25, chestUp: 0.55, neckLow: 0, hock: 1.45, tuck: 0, front: [0.019, 0.08], hind: [0.047, 0.032], tailUp: -0.15, tailCurl: 0, tailWrap: 1, bend: 0, roll: 0 },
+  sit: { bodyY: 0.116, bodyZ: 0.006, pitch: 0.72, flex: 0.25, chestUp: 0.55, neckLow: 0, hock: 1.45, tuck: 0, front: [0.019, 0.08], hind: [0.047, 0.032], tailUp: -0.15, tailCurl: 0, tailWrap: 1, bend: 0, roll: 0 },
   gather: { bodyY: 0.094, bodyZ: -0.014, pitch: -0.08, flex: 0.28, chestUp: 0, neckLow: 1.0, hock: 1.0, tuck: 0, front: [0.026, 0.068], hind: [0.036, -0.058], tailUp: -0.15, tailCurl: 0, tailWrap: 0, bend: 0, roll: 0 },
   crouch: { bodyY: 0.068, bodyZ: -0.012, pitch: 0.03, flex: 0.62, chestUp: -0.1, neckLow: 1.25, hock: 1.45, tuck: 1.3, front: [0.022, 0.064], hind: [0.05, -0.012], tailUp: -0.9, tailCurl: 0, tailWrap: -1, bend: 0, roll: 0 },
   curl: { bodyY: 0.048, bodyZ: -0.01, pitch: 0.0, flex: 0.3, chestUp: -0.05, neckLow: 1.1, hock: 1.45, tuck: 1.4, front: [0.034, 0.058], hind: [0.05, -0.02], tailUp: -0.7, tailCurl: 0, tailWrap: 1, bend: 1.7, roll: 0.42 },
@@ -174,6 +174,7 @@ export class Cat {
   private readonly at = new THREE.Vector3();
   private readonly fwd = new THREE.Vector3(0, 0, 1);
   private readonly up = new THREE.Vector3(0, 1, 0);
+  private readonly groundUp = new THREE.Vector3(0, 1, 0);
   private heading = 0;
   private floor: Floor | null = null;
   private level = 0;
@@ -367,6 +368,8 @@ export class Cat {
     this.heading = yaw;
     this.up.set(0, 1, 0);
     this.fwd.set(Math.sin(yaw), 0, Math.cos(yaw));
+    this.onWall = false;
+    this.alignGround(0);
     this.pose = opts.pose ?? 'sit';
     for (const p of POSES) this.weights[p] = p === this.pose ? 1 : 0;
     const s = STANCES[this.pose];
@@ -875,12 +878,28 @@ export class Cat {
     const base = floor(this.at.x, this.at.z);
     const drop = 0.1 * this.scale;
     let h = floor(p.x, p.z);
-    for (let k = 1; h < base - drop && k <= 8; k++) {
+    const expected = () => base - (this.up.x * (p.x - this.at.x) + this.up.z * (p.z - this.at.z)) / Math.max(0.3, this.up.y);
+    for (let k = 1; h < expected() - drop && k <= 8; k++) {
       p.x += (this.at.x - p.x) * (1 / (9 - k));
       p.z += (this.at.z - p.z) * (1 / (9 - k));
       h = floor(p.x, p.z);
     }
     return h;
+  }
+
+  private alignGround(dt: number): void {
+    if (!this.floor || this.frame || this.onWall) return;
+    const k = tuning.catGround, step = k.sample * this.scale;
+    const { x, z } = this.at, base = this.floor(x, z);
+    const height = (dx: number, dz: number) => {
+      const h = this.floor!(x + dx, z + dz);
+      return Math.abs(h - base) < k.edge * this.scale ? h : base;
+    };
+    this.groundUp.set(height(-step, 0) - height(step, 0), 2 * step, height(0, -step) - height(0, step)).normalize();
+    this.up.lerp(this.groundUp, dt > 0 ? 1 - Math.exp(-k.follow * dt) : 1).normalize();
+    this.fwd.set(Math.sin(this.heading), 0, Math.cos(this.heading));
+    this.fwd.y = -(this.up.x * this.fwd.x + this.up.z * this.fwd.z) / this.up.y;
+    this.fwd.normalize();
   }
 
   private homesFor(narrow: number): void {
@@ -917,6 +936,7 @@ export class Cat {
     if (this.doing === 'path') this.follow(dt);
     else if (this.doing === 'climb') this.clamber(dt);
     else if (this.doing === 'still') this.standStill(dt);
+    if (this.doing === 'path' || this.doing === 'still' || (this.doing === 'air' && this.air !== 'fly')) this.alignGround(dt);
 
     const wantPose: Hold = this.doing === 'still' && this.turnTo === null ? this.pose : this.doing === 'air' && this.air === 'gather' ? 'gather' : 'stand';
     for (const p of POSES) this.weights[p] = ease(this.weights[p], p === wantPose ? 1 : 0, this.doing === 'air' ? 14 : 5, dt);
@@ -1761,7 +1781,9 @@ export class Cat {
     d.origin.copy(this.at);
     d.forward.copy(this.fwd);
     d.up.copy(this.up);
+    d.legs += 0.25 * w.sit;
     this.rig.pose(d);
+    d.legs -= 0.25 * w.sit;
     applyCatLook(this.mat, look, this.rig.nodes[HEAD].getWorldQuaternion(this.q));
     d.bodyY -= osc.bodyY;
     d.bodyZ -= osc.bodyZ;

@@ -3,6 +3,8 @@
  * for scale, the prevailing breeze blows at `wind.breeze` and the hardest stroke makes `pointer.maxGust`.
  */
 export const tuning = {
+  catGround: { sample: 0.07, edge: 0.2, follow: 14 },
+  childGround: { follow: 2 },
   cinematography: {
     /** Radians either side of the story's preferred view; never an unsolicited reverse angle. */
     freedom: 0.18, reviewEvery: 0.5, holdFor: 6, confirmFor: 1.5, improvement: 0.045,
@@ -2097,8 +2099,8 @@ export const tuning = {
     },
     /** The rescue, once the cat is aboard. */
     rescue: {
-      /** Seconds after it lands aboard that it shakes, starts to shiver (and how hard), and comes down to her. */
-      shakeAt: 0.35, shiverAt: 1.4, shiver: 0.7, downAt: 2.1,
+      /** Seconds after it lands beside her that it shakes, shivers, and lets her come close. */
+      shakeAt: 0.35, shiverAt: 1.4, shiver: 0.7, comfortAt: 2.1,
       /**
        * Once it sits on the thwart in front of her: seconds before she gets down onto her knees, how long she stays
        * down, when her hands go out and it comes up into her arms; how fast she goes down and back up (per second); how

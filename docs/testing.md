@@ -135,6 +135,10 @@ edit.
   `geography-check`, `journey-reveal-check`, `crossing-haze-check`, `dream-story-check`, `foghorn-story-check`.
 - The scarf's feel: `scarf-feel-probe` (Node: bounce, settling, creep, stretch and jitter) and `scarf-video` (true
   60 fps clips of each release and the gathering, `SUFFIX=before|after`).
+- `drowned-contact-check`: posed cat body and child boot vertices against village roofs and coping, plus the real
+  cat rescue's boarding, cuddle and bow sequence. `ONLY=cat|child|rescue` selects one part. Browser companions:
+  `drowned-contact-stills.mjs <dir>` for close moving contact frames and `drowned-wood-veil-check.mjs <prefix>`
+  for a frozen entrance comparison with the distant rock's mesh absent (requires Python Pillow).
 - In the browser with real gestures: `lines-check`, `lines-view-check`, `little-boats-check`, `piano-check`,
   `scarf-check`, `stairs-check`, `storm-check`, `wood-check`, `ember-check`, `sea-check`, `sky-mirror-check`,
   `sleeping-check`, `summit-arrival-check`, `home-approach-browser-check`, `ending-check`, `landing-check`,

@@ -719,7 +719,8 @@ void main() {
   }
   // The night's haze is kept thin on the stone, so its grain and the shadow on it stay crisp from either held frame.
   vec3 fogged = applyFog(col, vWorld);
-  gl_FragColor = vec4(max(vKind < 0.5 ? fogged : mix(col, fogged, 0.45), 0.0), 1.0);
+  float cover = mix(0.45, 1.0, journeyVeilAt(vWorld));
+  gl_FragColor = vec4(max(vKind < 0.5 ? fogged : mix(col, fogged, cover), 0.0), 1.0);
 }`;
 
 function tube(a: THREE.Vector3, b: THREE.Vector3, ra: number, rb: number, seed: number): THREE.BufferGeometry {

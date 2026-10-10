@@ -861,6 +861,44 @@ beat; verification of the music handoff after the 88-second farewell; equivalent
 expressions in the cat, tree and bell shaders to remove undefined GLSL behaviour. The shader corrections were
 applied before the further approval instruction above. The new music still awaits Jeremy's listening approval.
 
+### Integration playtest — 2026-10-10
+
+Jeremy's next brief, verbatim:
+
+> image 1: The rock from the woods chapter is visible.
+> image 2: i need you to polish up this sequence when the cat gets into the boat. it jumps up onto the front of the boat, and then into the boat, then back onto the front of the boat. it looks a bit strange. can you make this a more natural sequence?
+> image 3: the cat is often clipping into parts of the roofs, and when it runs down roofs, the back half of its body clips into the roof - it doesn't run down at an angle, it runs down with it's body still horizontal
+> image 4: I can also see that the child is walking on air most of the time
+
+43. **Woodland rock visible from the village — implemented and verified.** The rock's reduced local haze now
+    respects the full chapter veil. A frozen wide entrance compared with the rock mesh absent differs by at most
+    1/255 on the formerly exposed silhouette. Before/after: `/tmp/updraft-contact-diLDtA/wood-veil-before.png` and
+    `wood-veil-after.png`.
+44. **Cat boarding — implemented and verified.** It leaps from the tub onto the thwart beside her, shakes and
+    shivers, comes into her arms, then settles at the bow once. The extra bow-to-thwart hop is gone. The full rescue,
+    becalmed drift and climb-out pass in both aspects. Sequence: `/tmp/updraft-contact-diLDtA/rescue-review.jpg`.
+45. **Cat roof contact — implemented and verified.** Its body follows the supporting slope and its paw support
+    distinguishes a descent from a roof edge. The seated haunches also clear the surface. Posed-body checks pass
+    at 30/60/120 fps, with at least 11 mm clearance on the rescue roof's descent.
+46. **Child foot contact — implemented and verified.** Boot soles fit the physical roof surface separately from
+    the navigation height; her hips lower smoothly to keep the feet within reach. The six tested roofs and coping
+    have a planted sole within 20 mm of the surface, including 5 mm on the coping Jeremy pictured. Close moving
+    frames of both characters: `/tmp/updraft-contact-diLDtA/contact-review.jpg`. Root-height checks alone missed this.
+47. **Portrait cat visibility after the mill — pending approval.** With the corrected body and foot poses, the final
+    portrait replay reports the cat unreadable for 2.1 seconds on the walk to the swing (limit 2.0; previously 1.8).
+    The child stays in frame and clear of the tree, and the fog gap remains within its limit. Proposal: a small
+    adjustment to this camera handoff, checked against the hood, fog and tree constraints. Evidence:
+    `/tmp/updraft-contact-diLDtA/final-port.log` and `mill-port-strip.jpg`. No further camera change has been made.
+48. **Brief step-up gap at the mill — pending approval.** The full landscape contact trace records one sample at
+    10 Hz with both soles 56 mm above the support surface, between grounded samples, as her navigation height
+    jumps from the mill slope onto its ridge. This differs from the sustained boot hover corrected in 46. It is a
+    measured transition issue; the existing wide stills do not establish how noticeable it is in motion. Proposal:
+    capture the step-up closely, then smooth the navigation handoff if it reads as a pop, checking the mill approach
+    camera and hoist boarding. Evidence: `/tmp/updraft-contact-diLDtA/final-land.json`, at 58.17 s, position
+    `(24.57, 1.20, -1539.45)`. No navigation change has been made.
+
+Continue in the integration worktree. Any additional findings join the approval list; main merge and deployment remain separate.
+
 ### The room rethought (Claude, 2026-10-08; Jeremy: "yea lets see how this works")
 
 One idea holds the middle of the room together: **the fog is a rising white tide and the only safe place is higher
@@ -873,8 +911,8 @@ where they differ; the drift, the village, the look and the storm stand.
    may be), soaked and frightened on its chimney pot: hunched, ears flat, mewing toward the church, flinching from the
    water. The tub sits in the water (its inside masked from the sea) and answers the wind readily, easing toward the
    cat's roof and the boat once it is near. In the tub the cat crouches with its head over the rim; at the boat it
-   leaps aboard, shivers, then presses against her legs and she kneels to it. That one exchange is the rescue: the
-   player sees that it trusts her. It sits at the bow.
+   leaps onto the thwart beside her, shakes and shivers, then comes into her arms as she kneels. It pushes its head
+   under her chin. That one exchange is the rescue: the player sees that it trusts her. It then settles at the bow once.
 2. **Stuck.** The air dies. The becalmed boat drifts onto a roof lying just under the surface: a scrape, a lurch, the
    lantern swinging, and it is fast; a sweep of wind on the sail only makes it strain and creak. Behind them the fog
    is rising off the sea. The cat stares at it, then toward the church, and leaps onto the nearest roof and runs. She

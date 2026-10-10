@@ -443,7 +443,8 @@ export class StrandedCat {
     const tub = this.tub;
     if (this.since > k.ready && this.phase === 0) {
       this.phase = 1;
-      cat.leap(FOREDECK, { frame: boat.group, yaw: Math.PI, then: 'stand', look: this.head }, () => {
+      const near = boat.group.worldToLocal(this.lens.copy(this.lensAt)).x < 0 ? -1 : 1;
+      cat.leap(ON_THWART.clone().setX(ON_THWART.x * near), { frame: boat.group, yaw: Math.PI, then: 'stand', look: this.head }, () => {
         cat.unease = 0.3;
         cat.wet = 1;
         cat.chirrup();
@@ -469,8 +470,8 @@ export class StrandedCat {
   }
 
   /**
-   * The rescue, seen through: aboard, it shakes the water off and shivers; it comes down off the foredeck to her onto
-   * the mast thwart in front of her and sits looking up at her; she gets down onto her knees in the boat and puts out
+   * The rescue, seen through: aboard beside her, it shakes the water off and shivers, then sits looking up at her;
+   * she gets down onto her knees in the boat and puts out
    * her hands, and it comes up into her arms and pushes its head up under her chin, and its shivering eases. She gets
    * back up, it springs to the bow, and the boat goes on.
    */
@@ -486,13 +487,7 @@ export class StrandedCat {
       cat.shiver = k.shiver;
       cat.rest('sit', this.head);
     }
-    if (passed(k.downAt)) {
-      const near = boat.group.worldToLocal(this.lens.copy(this.lensAt)).x < 0 ? -1 : 1;
-      cat.hop(ON_THWART.clone().setX(ON_THWART.x * near), { frame: boat.group, then: 'sit', arc: 0.15, look: this.head }, () => {
-        cat.chirrup();
-        this.kneelFrom = this.rescue;
-      });
-    }
+    if (passed(k.comfortAt)) this.kneelFrom = this.rescue;
     const kneeling = this.kneelFrom >= 0 ? this.rescue - this.kneelFrom : -1;
     const down = kneeling >= k.kneelAfter && kneeling < k.kneelAfter + k.kneelFor;
     this.kneel += ((down ? 1 : 0) - this.kneel) * (1 - Math.exp(-dt * k.kneelRate));

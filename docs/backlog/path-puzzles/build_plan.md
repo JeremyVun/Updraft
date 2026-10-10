@@ -1155,6 +1155,38 @@ reads an undefined vector).
 ### Phase 10: polish, saves, docs and the full play
 Done: [ ]
 
+#### Integration playtest follow-up — 2026-10-10
+
+Jeremy's four-image brief is preserved verbatim in design.md, items 43–46. Fix the woodland silhouette, remove
+the cat's redundant bow-to-thwart hop, align the cat with roof slopes, and correct the child's visible boot contact.
+Inspect rendered geometry and motion, add focused regression checks that fail on the original defects, then run
+the rescue and roof route in both aspects. Keep changes on `proto-drowned-integrate`; no merge or deployment.
+
+Implemented and checked: [x]. Further findings 47–48 await Jeremy's approval; this does not close Phase 10.
+
+Implementation and evidence (`/tmp/updraft-contact-diLDtA/`): the wood rock retains its local haze reduction
+but takes the full chapter veil; the cat boards the mast thwart directly before the cuddle and its one move to the
+bow; its support frame follows the roof slope, with seated haunch clearance corrected. Roof decks now expose their
+actual surface to the child's feet while navigation keeps the original centre-line heights. The child fits the boot
+soles to that surface and lowers her hips when either leg would run out of reach. The correction has a speed limit
+so carried objects do not jerk when the supporting leg changes. `drowned-contact-check` tests posed vertices, completes the real rescue and
+checks descent at 30/60/120 fps. It passes; all three sections fail against the pre-change commit `6c87e705` for the
+reported defects (negative-control logs in the evidence folder). Typecheck, production build and all 51 mechanics
+checks pass (`mechanics-final/results.json`), including the little-boats check of the paper boat carried in her hands.
+The frozen real-render wood comparison reveals 385 silhouette pixels with the old shader; the fixed image differs
+from the absent mesh by at most 1/255 there. Rescue, drift, climb-out and the untended boat pass in both aspects
+(`rescue-land-final.log`, `rescue-port.log`). Close moving contact frames are in `close/`, with the review sheet
+`contact-review.jpg`; `rescue-review.jpg` and `cat-rescue.mp4` show the new rescue sequence.
+
+The final portrait roof replay completes the route, but its cat-readability gate fails at 2.1 seconds between the
+mill and swing (limit 2.0); every other lens and fog gate passes. This is new approval item 47, with no camera change
+or assertion relaxation. The final landscape roof replay passes all gates (`final-land.log`): cat unreadable at most
+1.8 s, fog absent at most 1.6 s, no camera cuts, roof obstruction or old-tree obstruction. Its extra posed-sole trace
+records one 56 mm gap at the mill slope-to-ridge transition, with grounded samples 0.1 s either side; this is approval
+item 48 and requires a close motion capture before deciding the navigation correction. The full portrait trace's
+largest sole gap is 30 mm at the sheet transition. Shared character tests and the physical roof samples pass, but do
+not claim every transition has perfect contact. The full release playthrough and physical iPad checks were not rerun.
+
 #### Integration takeover — 2026-10-10
 
 Jeremy: "ok proceed". For this takeover he also approved Codex doing the remaining visual work:

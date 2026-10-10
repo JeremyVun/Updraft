@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import type { Rig } from '../body';
 import { ANKLE, BONE, FOREARM, HEAD_SINK, HEM_BONES, SHIN, THIGH, UPPER_ARM, WAIST, hemAngle } from './skeleton';
 import { HOOD, coatAt, hemY, type CoatSample } from './garments';
+import { tuning } from '../../tuning';
 
 /** Where the head turns when it looks up, from the head joint: ear height, a little behind the face's middle. */
 const EAR = { y: 0.2, z: 0.02 };
@@ -212,6 +213,11 @@ export class ChildMotion {
   private readonly vc = new THREE.Vector3();
   private readonly vd = new THREE.Vector3();
   private readonly ankle = new THREE.Vector3();
+  private readonly ankles = [new THREE.Vector3(), new THREE.Vector3()];
+  private readonly footPitch = [0, 0];
+  private readonly footRoll = [0, 0];
+  private readonly soles: THREE.Vector3[][] = [[], []];
+  private legDrop = 0;
   private readonly accel = new THREE.Vector3();
   private readonly hipsGravity = new THREE.Vector3();
   private readonly chestGravity = new THREE.Vector3();
@@ -262,6 +268,18 @@ export class ChildMotion {
 
   constructor(private readonly rig: Rig) {
     this.b = rig.bones;
+    const positions = rig.mesh.geometry.attributes.position;
+    for (const side of [0, 1]) {
+      const sole: THREE.Vector3[] = [];
+      for (let i = 0; i < positions.count; i++) {
+        if (positions.getY(i) > 0.007 || (positions.getX(i) > 0) !== (side === 0)) continue;
+        sole.push(new THREE.Vector3().fromBufferAttribute(positions, i).sub(rig.rest[side === 0 ? BONE.footL : BONE.footR]));
+      }
+      for (let i = 0; i < 8; i++) {
+        const x = Math.cos(i * Math.PI / 4), z = Math.sin(i * Math.PI / 4);
+        this.soles[side].push(sole.reduce((a, b) => a.x * x + a.z * z > b.x * x + b.z * z ? a : b));
+      }
+    }
   }
 
   update(pose: Pose, d: Drive): void {
@@ -404,9 +422,6 @@ export class ChildMotion {
     let feetDown = 1;
     for (const left of SIDES) {
       const s = left ? 1 : -1;
-      const thigh = b[left ? BONE.thighL : BONE.thighR];
-      const shin = b[left ? BONE.shinL : BONE.shinR];
-      const foot = b[left ? BONE.footL : BONE.footR];
       const hipAt = rest[left ? BONE.thighL : BONE.thighR];
 
       // Standing and walking: the ankle's place under the hip, in the root's frame.
@@ -438,8 +453,26 @@ export class ChildMotion {
         this.strikes.push({ x: world.x, z: world.z, heading: Math.atan2(m[8], m[10]) });
       }
       this.cycWas[side] = cyc;
-      const groundY = (d.ground(world.x, world.z) - root.position.y) / SCALE;
-      standAnkle.y += THREE.MathUtils.clamp(groundY, -0.5, 0.5) * (1 - pose.hang) - 0.06 * pose.hang;
+      this.va.set(lateral, 0, fz + 0.2).applyMatrix4(root.matrixWorld);
+      const front = d.ground(this.va.x, this.va.z);
+      this.va.set(lateral, 0, fz - 0.1).applyMatrix4(root.matrixWorld);
+      const back = d.ground(this.va.x, this.va.z);
+      const slope = Math.atan(THREE.MathUtils.clamp((front - back) / (0.3 * SCALE), -1.5, 1.5));
+      pitch -= slope;
+      this.va.set(lateral + 0.06, 0, fz).applyMatrix4(root.matrixWorld);
+      const leftHeight = d.ground(this.va.x, this.va.z);
+      this.va.set(lateral - 0.06, 0, fz).applyMatrix4(root.matrixWorld);
+      const roll = Math.atan(THREE.MathUtils.clamp((leftHeight - d.ground(this.va.x, this.va.z)) / (0.12 * SCALE), -1.5, 1.5));
+      this.qc.setFromEuler(this.ea.set(pitch, 0, roll));
+      let support = -Infinity;
+      for (const point of this.soles[side]) {
+        this.vd.copy(point).applyQuaternion(this.qc);
+        this.va.set(lateral + this.vd.x, 0, fz + this.vd.z).applyMatrix4(root.matrixWorld);
+        support = Math.max(support, (d.ground(this.va.x, this.va.z) - root.position.y) / SCALE - this.vd.y);
+      }
+      standAnkle.y = lift + THREE.MathUtils.clamp(support, ANKLE - 0.5, ANKLE + 0.5) * (1 - pose.hang) + (ANKLE - 0.06) * pose.hang;
+      this.footPitch[side] = pitch;
+      this.footRoll[side] = roll;
       /** A relaxed knee on the leg the weight is off. */
       const relax = 0.03 * Math.max(0, -this.weight * s) * plant;
       standAnkle.y += relax;
@@ -459,12 +492,37 @@ export class ChildMotion {
 
       // Blend: the planted walk, the sit, and a lifted knee for a step up.
       const standW = 1 - pose.sit;
-      const ankle = this.ankle.copy(standAnkle).multiplyScalar(standW).addScaledVector(sitAnkle, pose.sit);
+      const ankle = this.ankles[side].copy(standAnkle).multiplyScalar(standW).addScaledVector(sitAnkle, pose.sit);
       const stepUp = pose.step[left ? 0 : 1];
       ankle.y += 0.4 * Math.max(0, stepUp);
       ankle.z += 0.3 * stepUp;
       const hold = pose.feet[left ? 0 : 1];
       if (hold.w > 0.001) ankle.lerp(root.worldToLocal(this.vd.copy(hold.at)), hold.w);
+    }
+
+    let lower = 0;
+    hips.updateMatrixWorld(true);
+    for (const left of SIDES) {
+      const side = left ? 0 : 1;
+      const thigh = b[left ? BONE.thighL : BONE.thighR];
+      const hip = root.worldToLocal(thigh.getWorldPosition(this.va));
+      const target = this.ankles[side];
+      const across = (target.x - hip.x) ** 2 + (target.z - hip.z) ** 2;
+      const reach = Math.sqrt(Math.max(0, (THIGH + SHIN - 0.004) ** 2 - across));
+      lower = Math.max(lower, hip.y - target.y - reach);
+    }
+    // The weight comes down over a planted boot before its leg runs out of reach.
+    const wantedDrop = Math.min(0.25, lower) * plant * (1 - pose.hang) * (1 - pose.climb);
+    const dropStep = tuning.childGround.follow * d.dt;
+    this.legDrop += THREE.MathUtils.clamp(wantedDrop - this.legDrop, -dropStep, dropStep);
+    hips.position.y -= this.legDrop;
+    for (const left of SIDES) {
+      const side = left ? 0 : 1, s = left ? 1 : -1;
+      const thigh = b[left ? BONE.thighL : BONE.thighR];
+      const shin = b[left ? BONE.shinL : BONE.shinR];
+      const foot = b[left ? BONE.footL : BONE.footR];
+      const ankle = this.ankle.copy(this.ankles[side]);
+      const pitch = this.footPitch[side];
 
       // Into the hips' frame, from the hip joint.
       hips.updateMatrixWorld(true);
@@ -500,7 +558,7 @@ export class ChildMotion {
       const kneelFoot = 2.2 * kneel;
       const swingFoot = swing * (0.5 + 0.3 * pose.kick);
       const sitFoot = pose.sit * -0.15;
-      this.qc.setFromEuler(this.ea.set(pitch * plant + kneelFoot + swingFoot + sitFoot + lie * 0.6 + 0.55 * pose.hang + 0.2 * pose.climb, 0, 0));
+      this.qc.setFromEuler(this.ea.set(pitch * plant + kneelFoot + swingFoot + sitFoot + lie * 0.6 + 0.55 * pose.hang + 0.2 * pose.climb, 0, this.footRoll[side] * plant * (1 - pose.climb)));
       this.qb.multiply(this.qc);
       foot.quaternion.copy(this.qa.invert().multiply(this.qb));
     }

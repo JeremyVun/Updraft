@@ -408,6 +408,15 @@ export const WAY = {
 } satisfies Record<string, Deck>;
 export type WayDeck = keyof typeof WAY;
 
+for (const [house, names] of [
+  [STRAND_HOUSE, ['strandLanding', 'strandSlope', 'strand']],
+  [BARN, ['barnRidge']], [HIGH_LANE, ['laneRidge', 'laneEast']],
+  [MILL_LOW, ['millSlope', 'millRidge']], [GRANARY_HOUSE, ['granaryRidge', 'granaryWest']],
+  [GREEN_HOUSE, ['greenRidge', 'greenNorth']], [NAVE, ['naveSlope', 'naveRidge']],
+] as const) {
+  for (const name of names) (WAY[name] as Deck).surface = (x, z) => roofUnder(house, x, z);
+}
+
 /**
  * Where she does not simply walk on from one deck to the next: a hop she makes herself, or one of the four pieces the
  * player helps her over. `after` is the deck she leaves from, `from` where she stands to go and `to` where she lands.

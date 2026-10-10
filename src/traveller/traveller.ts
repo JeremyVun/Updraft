@@ -1010,7 +1010,7 @@ export class Traveller {
    * reaches in under it.
    */
   private floorAt(x: number, z: number): number {
-    const ground = Math.max(this.ground(x, z), 0);
+    const ground = Math.max(deckGround(this.decks, x, z, this.position.y, true), 0);
     const level = this.position.y - 0.26 * this.sit;
     const a = this.action;
     if (a?.kind === 'alight') {
