@@ -1951,7 +1951,7 @@ export const tuning = {
         /**
          * Each ring pushes it back round the tower to lie on the water this high (metres), out to these distances
          * after each ring (metres) over a rim this much wider and this many metres more, in `sinkFor` seconds; once the
-         * sail is hers it settles all round over `settleFor` seconds to lie `drawn` metres high. The rings roll out at
+         * child climbs down it settles all round over `settleFor` seconds to lie `drawn` metres high. The rings roll out at
          * this share of its level.
          */
         drawn: 1.0, cleared: 0.3, clearAt: [0, 17, 24, 31, 46], clearRim: 1.3, clearSoft: 6, sinkFor: 3.2, settleFor: 10, wavesAt: 0.92,
@@ -1962,7 +1962,7 @@ export const tuning = {
         closeAfter: 35.6, closeFor: 18, closedLevel: 6,
       },
       /**
-       * Rings the lantern answers before the boat is hers to sail, how far along its way home each answer brings it,
+       * Rings the lantern answers before the boat drifts in, how far along its way home each answer brings it,
        * seconds after a ring the answer comes, how long the drift takes to settle (s), and how long after the last
        * answer she goes down to meet it.
        */
@@ -1979,8 +1979,8 @@ export const tuning = {
        * and how long it lies there before she steps down into it (seconds).
        */
       bringSpeed: 2.6, rounded: 3.5, berthed: 0.6, boardAfter: 1,
-      /** Seconds with no progress before the world's air carries it, and how much breeze that is. */
-      valve: 90, carryBreeze: 0.45,
+      /** The gentle breeze carrying the summoned boat to the berth. */
+      carryBreeze: 0.45,
       /**
        * Seated: seconds before she looks back up at the cat, when it gives her its slow blink and how long after that
        * its soft chirrup, and how long before they go; how she turns round on the thwart to it: beyond what her head turns (radians), the most her body

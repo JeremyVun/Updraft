@@ -1318,6 +1318,25 @@ The rescue cue and effect are verified together after 2.00–2.03 seconds of sai
 shake and bow hop. Typecheck, production build, 14 quick checks and focused CPU regressions pass. Evidence:
 `/tmp/updraft-polish-Aciibr/README.md`. The full roof-route replay also passes, including the sheet, mill, swing and tower approach. No merge or deployment.
 
+#### Bell-summoned return — 2026-10-10
+
+Jeremy's latest ruling is recorded verbatim in design.md, item 83. The final bell answer now carries the boat
+all the way to the berth as she climbs down. The gentle breeze starts immediately on descent; the old
+90-second stall fallback and sail invitation are removed. The existing route, steering and mooring slow it
+alongside, then it waits for boarding and the farewell.
+
+`drowned-return-check` passes at 30/60/120 Hz with spaced and rapid bell answers and no player wind: motion
+builds within two seconds, the boat moors in 18.1–18.4 seconds at a peak 1.99 m/s, and she boards by about
+24 seconds. Before the bell the lost boat stays still. Disabling the automatic return makes the test fail.
+The release harness no longer classifies this intended return as a puzzle fallback.
+
+Real-pointer belfry → woods replays pass in landscape and portrait with no gestures after the bell. The boat
+moors in 17.8 seconds and she is aboard in 23.4–23.5 seconds. Boarding through look-up pans 5.3°/5.6° with only
+0.3°/0.2° reverse tracking; no cuts. The pickup kite and both cats remain visible at their checked beats.
+The build (including typecheck), focused boarding and lantern checks pass. Captures were inspected and opened
+in Preview. Evidence: `/tmp/updraft-summoned-z3InKr/README.md`. Review server remains `http://127.0.0.1:5331/`;
+no merge or deployment.
+
 #### Continuous mist correction — 2026-10-10
 
 Jeremy's further playtest found a hard blue strip during becalming and a fog bank that moved with the camera

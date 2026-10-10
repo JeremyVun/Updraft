@@ -1140,6 +1140,13 @@ The cheaper mist must be a continuous world-space field. Camera movement must no
 front. Verify frozen-time camera motion, the actual becalming sequence, the bell reveal and performance;
 remove discrete bands and let the sunset light colour the mist.
 
+Jeremy, verbatim, on the boat summoned by the bell:
+
+> The more i play through this, the more i think that the player shouldn't need to create wind to blow the boat in. because it's been "summoned" by the bell, it should continue to drift in to the boarding point by itself.
+
+The final bell answer carries the boat all the way to the berth while she climbs down. Remove the extra sail
+invitation; verify arrival and boarding with no player input after ringing, including the full camera transition.
+
 Current follow-up list (all authorized):
 - 56 reopened: the approaching hull pushed the untouched tub. Start it outside that path, retaining attraction
   after player input. Full-entry CPU tests now measure zero drift; the old start fails at 0.389 m.
@@ -1175,6 +1182,7 @@ Current follow-up list (all authorized):
   that with continuous world-space density and an exact line integral; the bell clears a soft world-space circle.
   Neutralise the blue body and include the sunset's crest light. Frozen-camera movement, optical-depth
   additivity and reverse-ray checks cover anchoring; the old shader fails these checks.
+- 83: after answering the bell, the boat continues drifting to the boarding point without another wind gesture.
 
 
 Evidence and final verification status: build_plan.md, “Follow-up regressions — 2026-10-10”, and
@@ -1252,8 +1260,8 @@ where they differ; the drift, the village, the look and the storm stand.
 7. **The boat comes home.** The bell hangs over them. One good stroke across it swings it and it rings once (a
    weak one only rocks it; it is not pumped up like the swing, so the two pieces never feel alike); each ring rolls out over the fog and pushes it back a little round the tower, and out in the fog a lantern glows in
    answer, nearer each time: the lost boat drifting home to the sound (things drift home: nothing is lost). When it is
-   near, the fog has drawn back to the water round the nave and the player fills its sail for the last stretch to the
-   tower's foot. She climbs down the ivy and steps aboard.
+   near, the fog has drawn back to the water round the nave and the boat keeps drifting to the boarding point by
+   itself. She climbs down the ivy and steps aboard.
 8. **Letting go.** While she climbs down the ivy, the cat and the kitten come to the belfry's window to see her off.
    She steps aboard, turns on the thwart and looks back up at them; the cat gives her a slow blink. They stay together
    on the sill watching her leave. She has brought them home and leaves them there safe. The camera holds her face
@@ -1396,8 +1404,9 @@ clouds, the owl, the boats, the birches, the sea), authored shot by shot to the 
 - **The boat goes ahead of the fog.** With the church that far on, a boat left at the cottage would be out of reach
   and out of frame. So the cold breath that comes with the fog swings the untended boat off the slates and drifts it
   away along the open water, the same way she runs; she sees it go and still follows the cat. It fetches up against a
-  dead tree in the fog near the church, its lantern glowing, and the player fills its sail to bring it the last stretch
-  to the nave. Everything on the water is driven the same way, so the boat's drift is also a sign of the fog's breath.
+  dead tree in the fog near the church. The bell calls it back; its lantern answers, and it drifts all the way to
+  the nave without another gesture. Everything on the water is driven the same way, so the boat's drift is also a
+  sign of the fog's breath.
 - **The middle piece is a drowned windmill** (Jeremy, 2026-10-05, on Astra's route frames in `comps/run/`: "this makes
   sense. i think it's be nice to have a third player interaction way though in addition to the tree and the swing").
   The door ride down a flooded lane (`lane.jpg`) is cut: it repeats gusting a floating thing (the tub, the boat), forty

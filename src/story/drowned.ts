@@ -238,11 +238,6 @@ export class DrownedChapter implements Chapter {
     return this.beat === 'run' ? this.run!.invitation : this.cat.invitation;
   }
 
-  /** At the church the boat's sail is the player's to fill. */
-  get invitesSail(): boolean {
-    return this.beat === 'church' && this.church!.invitesSail;
-  }
-
   get invitationHeading(): number | null {
     if (this.beat === 'church') return this.church!.inviteHeading;
     return this.beat === 'run' ? this.run!.inviteHeading : this.cat.heading;
@@ -546,7 +541,7 @@ export class DrownedChapter implements Chapter {
      */
     const still = this.beat === 'still' || this.beat === 'becalmed' || this.beat === 'run' || this.beat === 'nave' || this.beat === 'church';
     const boat = this.cast.boat;
-    /** The safety valve at the church: the world's own air comes back and carries the boat in. */
+    /** The bell calls a gentle breeze back to carry the boat all the way home. */
     const carried = this.beat === 'church' && !!this.church?.carrying;
     /** Waiting on the cat she lets the sheet go, so the sail hangs while the breeze goes on blowing. */
     const slack = (still && !carried) || (this.cat.holding && this.cat.step !== 'easing');

@@ -16,7 +16,7 @@ import type { Cast } from './cast';
  * `foot` her at the tower's foot as the cat runs up the ivy; `climb` her going up after it while it calls from the
  * arch; `nest` in over the sill and kneeling to the kittens; `sea` standing by the bell looking out over the fog sea;
  * `ring` the bell hers to ring, the lost boat's lantern answering out in the fog; `down` her climbing down to it as the
- * player sails it the last stretch; `wait` on the slates for it; `board` stepping down into it; `aboard` looking back
+ * boat drifts the last stretch; `wait` on the slates for it; `board` stepping down into it; `aboard` looking back
  * up at the cat and a kitten on the arch's sill.
  */
 type Step = 'foot' | 'climb' | 'nest' | 'sea' | 'ring' | 'down' | 'wait' | 'board' | 'aboard';
@@ -68,8 +68,8 @@ function along(way: readonly THREE.Vector2[], s: number, out: THREE.Vector2): nu
  * and tumble about it, and she climbs in over the sill to find them: one comes to her and she kneels to it. She stands
  * by the bell looking out over the fog sea, which has closed round the tower and stopped just under the sills. The bell
  * is the player's to ring; each ring rolls out over the fog and pushes it back round the tower, and out in it the lost
- * boat's lantern answers, nearer each time, until the fog has drawn back to the water round the nave and the player
- * sails the boat the last stretch round the tower to the nave. She climbs down and steps aboard; the cat stays with its
+ * boat's lantern answers, nearer each time, until the fog has drawn back to the water round the nave and the boat
+ * drifts the last stretch round the tower to the nave. She climbs down and steps aboard; the cat stays with its
  * kittens and comes to the sill with one of them to see her off. She looks back up at the two of them and the cat gives
  * her a slow blink. They stay at the window as the fog closes round and darkens into the storm.
  */
@@ -77,8 +77,6 @@ export class ChurchArrival {
   step: Step | 'off' = 'off';
   /** How far the fog has closed round her for the storm, 0 to 1. */
   close = 0;
-  /** True once the boat has gone `valve` seconds without coming nearer under sail: the world's air carries it. */
-  carrying = false;
   /** Seconds since she was seated aboard (-1 before). */
   aboardFor = -1;
   /** How far round on the thwart she has turned from the bow to look back up, radians. */
@@ -99,8 +97,6 @@ export class ChurchArrival {
   private t = 0;
   private since = 0;
   private leg = 0;
-  private best = Infinity;
-  private stall = 0;
   private sinkAt = -Infinity;
   /** The fog closing round: since when, from what level, and how high it lies round the tower beneath her. */
   private closeFrom = -1;
@@ -245,9 +241,9 @@ export class ChurchArrival {
     this.lensCut = true;
   }
 
-  /** The sail is the player's while the boat is to be brought. */
-  get invitesSail(): boolean {
-    return this.sailing && !this.cast.boat.grounded;
+  /** The last bell answer carries the boat to the berth while she climbs down. */
+  get carrying(): boolean {
+    return this.sailing;
   }
 
   /** While she looks back up at the cat from the boat. */
@@ -463,7 +459,7 @@ export class ChurchArrival {
 
   /**
    * The bell has called it in: she goes back to the arch she came in by, turns her back to the drop and climbs down to
-   * meet it, and the boat is the player's to sail.
+   * meet it while it keeps drifting to the berth.
    */
   private goDown(): void {
     const { child: c, boat } = this.cast;
@@ -526,7 +522,7 @@ export class ChurchArrival {
   }
   private berthedFor = 0;
 
-  private sail(dt: number): void {
+  private sail(): void {
     const { boat } = this.cast;
     const k = tuning.drowned.church;
     const p = boat.position;
@@ -535,20 +531,12 @@ export class ChurchArrival {
       boat.steerFor = BRING_WAY[this.leg];
       if (this.leg === BRING_WAY.length - 1) boat.mooring = { ...NAVE_BERTH };
     }
-    let left = Math.hypot(p.x - BRING_WAY[this.leg].x, p.z - BRING_WAY[this.leg].y);
-    for (let i = this.leg + 1; i < BRING_WAY.length; i++) left += BRING_WAY[i].distanceTo(BRING_WAY[i - 1]);
-    if (left < this.best - 0.5) {
-      this.best = left;
-      this.stall = 0;
-    } else this.stall += dt;
-    if (this.stall > k.valve) this.carrying = true;
   }
 
   /** She steps down off the slates into the boat, which dips and rocks under her as it takes her weight. */
   private board(): void {
     const { boat, child: c } = this.cast;
     this.to('board');
-    this.carrying = false;
     this.sailing = false;
     boat.mooring = null;
     boat.steerFor = null;
@@ -615,8 +603,8 @@ export class ChurchArrival {
 
   /**
    * The lost boat's way home: out of sight in the fog until the first ring, then a stretch nearer after each, its
-   * lantern's light swelling in the fog as it answers and settling to a steady glow; once the sail is the player's it
-   * goes by the wind.
+   * lantern's light swelling in the fog as it answers and settling to a steady glow; after the last answer a gentle
+   * breeze carries it the rest of the way.
    */
   private boatHome(dt: number): void {
     const { boat } = this.cast;
@@ -637,7 +625,7 @@ export class ChurchArrival {
       boat.yaw = yaw;
       boat.speed = 0;
     }
-    if (this.sailing) this.sail(dt);
+    if (this.sailing) this.sail();
     const lantern = atmo.uniforms.uLantern.value;
     this.homeAt.set(lantern.x, lantern.y, lantern.z);
     const under = THREE.MathUtils.smoothstep(this.cast.village!.dark.topAt(lantern.x, lantern.z) - lantern.y, -0.6, 1.4);
@@ -654,7 +642,7 @@ export class ChurchArrival {
    * the tower and runs on over the village, rising and stilling into a white sea just under the sills, with only the
    * tower and the lighthouse standing out of it; round the tower it rises beneath her, never over her feet, and once she
    * is in it rises the rest of the way. Each ring pushes it back round the tower to lie on the water, further each time;
-   * once the sail is hers it settles to the water all round. Once she is aboard it closes round and darkens into the
+   * once she climbs down it settles to the water all round. Once she is aboard it closes round and darkens into the
    * storm's night.
    */
   private fog(dt: number): void {

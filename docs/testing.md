@@ -48,8 +48,8 @@ edit.
 - `node tools/playthrough.mjs <prefix>`: Begin through every chapter to the closing line, reload the completed save, then
   Play again, with real pointer gestures and natural transitions in a fresh browser profile. Fails on exceptions,
   wrong chapter order, a stalled chapter or a missing ending. In the drowned village it plays the room as a player
-  does (the tub to the cat and back, the run's tree, mill and swing, the boat brought to the nave) and fails if any of
-  the room's safety valves carries it on instead. `REVIEW=1` records video and one-second frames (review
+  does (the tub to the cat and back, the run's tree, mill and swing) and fails if a puzzle safety valve carries it
+  on instead. The bell-summoned boat returns to the nave by itself. `REVIEW=1` records video and one-second frames (review
   them in order, not just chapter entries); `TRACE=1` records the camera for `tools/camera-intent-report.mjs`;
   `UNTIL=<chapter>` stops on entering it; `SAVE_FILE=<json>` continues from a captured checkpoint.
 - `node tools/camera-review-strip.mjs <prefix> <first-frame> [count] [stride]`: chronological contact sheets from
@@ -139,6 +139,10 @@ edit.
   cat rescue's boarding, cuddle and bow sequence. `ONLY=cat|child|rescue` selects one part. Browser companions:
   `drowned-contact-stills.mjs <dir>` for close moving contact frames and `drowned-wood-veil-check.mjs <prefix>`
   for a frozen entrance comparison with the distant rock's mesh absent (requires Python Pillow).
+- `drowned-return-check`: zero player wind after the bell, arrival at the berth and boarding at 30/60/120 Hz,
+  with spaced and rapid rings. `NEGATIVE=1` disables the automatic return and must fail.
+  `FROM=belfry LENS=1 node tools/drowned-run-check.mjs` checks this through the real bell gestures, passive
+  approach, boarding camera and onward storm; `W=900 H=1600` checks portrait.
 - In the browser with real gestures: `lines-check`, `lines-view-check`, `little-boats-check`, `piano-check`,
   `scarf-check`, `stairs-check`, `storm-check`, `wood-check`, `ember-check`, `sea-check`, `sky-mirror-check`,
   `sleeping-check`, `summit-arrival-check`, `home-approach-browser-check`, `ending-check`, `landing-check`,

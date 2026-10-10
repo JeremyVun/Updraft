@@ -1,7 +1,7 @@
 // Begin -> every chapter -> credits -> reload completed save -> Play again, in one fresh browser.
 // Real pointer gestures and natural story transitions only: never assigns beats, actors or puzzle progress. In the
-// drowned village it brings the tub to the cat and back, fells the tree, turns the mill, pumps the swing and brings
-// the boat to the nave, and fails if any of the room's safety valves carries it on instead.
+// drowned village it brings the tub to the cat and back, fells the tree, turns the mill and pumps the swing.
+// Puzzle safety valves must not carry it on; the bell-summoned boat returns to the nave by itself.
 // Usage: node tools/playthrough.mjs [output-prefix]. BASE supports dev, preview or production.
 // Up to 60 minutes; uses the shared GPU lock. Screenshots and structured failure/progress evidence go to /tmp.
 // REVIEW=1 records video and one-second frames. UNTIL=<chapter> ends a focused replay on entering that chapter.
@@ -54,10 +54,10 @@ const snapshot=()=>page.evaluate(()=>{
     sail:project(g.boat.sailPoint(g.boat.position.clone())),drowned:g.story.name==='drowned'?drownedGesture(c,project):null,
     valves:window.__drownedValves??[],stats:__stats};
 });
-/** What the drowned village asks of the wind now, on screen: the tub, the run's tree, mill and swing, and the boat at the church. */
+/** What the drowned village asks of the wind now, on screen: the tub, the run's tree, mill and swing. */
 const drownedGestures=()=>page.evaluate(()=>{
   window.drownedGesture=(c,project)=>{
-    const g=__game,cam=g.rig.camera,r=c.run,ch=c.church,b=g.boat;
+    const g=__game,cam=g.rig.camera,r=c.run;
     const heading=(from,to)=>{const a=from.clone().project(cam),z=to.project(cam);return {x:(z.x-a.x)*cam.aspect,y:-(z.y-a.y)}};
     if(['waiting','ferried'].includes(c.cat.step)){
       const tub=g.village.tub.position.clone().setY(g.village.tub.position.y+.15),at=project(tub),to=project(c.cat.goal);
@@ -71,10 +71,6 @@ const drownedGestures=()=>page.evaluate(()=>{
       const s=r.swing.swing,seat=s.seat(cam.position.clone());
       return {kind:'swing',at:project(seat),...(({x,y})=>({dx:x,dy:y}))(heading(seat,seat.clone().set(seat.x+s.toward.x*2,seat.y,seat.z+s.toward.y*2)))};
     }
-    if(ch&&ch.step==='bring'&&!b.grounded){
-      const at=b.sailPoint(cam.position.clone());
-      return {kind:'bring',at:project(at),...(({x,y})=>({dx:x,dy:y}))(heading(at,at.clone().set(at.x+Math.sin(b.yaw)*2,at.y,at.z+Math.cos(b.yaw)*2)))};
-    }
     return null;
   };
   /** Each of the room's safety valves, should one ever carry it on in place of the player's wind. */
@@ -82,7 +78,7 @@ const drownedGestures=()=>page.evaluate(()=>{
   const watch=()=>{
     const g=__game,c=g.story.current;
     if(g.story.name==='drowned'){
-      const r=c.run,valves={tub:!!g.village.tub.carry,tree:!!r?.tree.valving,mill:!!r?.mill.valving,swing:!!r?.swing.valving,church:!!c.church?.carrying};
+      const r=c.run,valves={tub:!!g.village.tub.carry,tree:!!r?.tree.valving,mill:!!r?.mill.valving,swing:!!r?.swing.valving};
       for(const [name,on] of Object.entries(valves))if(on&&!fired.includes(name))fired.push(name);
     }
     requestAnimationFrame(watch);
@@ -210,9 +206,9 @@ try {
     else if(s.chapter==='stairs'&&s.beat==='loop')acted=await sweep(s.wind,1,-.2,340,450);
     else if(s.chapter==='drowned'&&s.drowned){
       const d=s.drowned;
-      const pause={tub:.6,tree:1.8,swing:.8,bring:.7}[d.kind];
+      const pause={tub:.6,tree:1.8,swing:.8}[d.kind];
       if(d.kind==='mill')acted=await clockwise(d.at,height*.22,1);
-      else acted=await stroke(d.at,d.dx,d.dy,height*{tub:.18,tree:.62,swing:.5,bring:.35}[d.kind],{tub:14,tree:15,swing:12,bring:12}[d.kind]);
+      else acted=await stroke(d.at,d.dx,d.dy,height*{tub:.18,tree:.62,swing:.5}[d.kind],{tub:14,tree:15,swing:12}[d.kind]);
       if(acted&&pause)await gameSeconds(pause);
     }
     else if(s.chapter==='wood'&&visible(s.wind))acted=await sweep(s.wind,strokes%2?-1:1,0,height*.15,950);

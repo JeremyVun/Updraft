@@ -498,7 +498,7 @@ export const NAVE_NORTH: Deck = strip(new THREE.Vector3(BERTH_X, ridgeTop(NAVE),
 /**
  * The lost boat's drift home to the bell, out of the fog over the open water north-east of the church, where its
  * lantern answers each ring a stretch nearer, beside the tower's north-west corner as the bell is seen from the west;
- * then in along the tower's north side and alongside the nave to the berth, the stretch the player sails it.
+ * then in along the tower's north side and alongside the nave to the berth, carried by the last answer.
  */
 export const HOME_WAY = [new THREE.Vector2(TOWER.x + 36, TOWER.z - 33), new THREE.Vector2(TOWER.x + 28, TOWER.z - 28),
   new THREE.Vector2(TOWER.x + 19, TOWER.z - 21.5), new THREE.Vector2(TOWER.x + 12, TOWER.z - 16.5)];

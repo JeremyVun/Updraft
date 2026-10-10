@@ -29,7 +29,7 @@ Available only in development and explicit QA builds; production ignores them an
 
 This drowned-village review defaults to the cheaper analytic mist. `villagefog=0` disables it for performance
 comparison; `villagefog=1` restores the original. Production keeps the original fog. Brief and status:
-`docs/backlog/path-puzzles/design.md`, items 55–82 and “Tub control and rescue sound correction”. Verify transition
+`docs/backlog/path-puzzles/design.md`, items 55–83 and “Tub control and rescue sound correction”. Verify transition
 bugs from before the transition: an idle test begun after the boat stopped missed its hull pushing the tub.
 For fog QA, freeze the world and move the camera: a fixed view misses camera-dependent density.
 

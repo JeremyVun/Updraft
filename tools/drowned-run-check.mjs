@@ -12,8 +12,8 @@
 // drops out of a walk's frame, a roof she left is not taken, or the boat leaves where it ran aground. Then (unless TO=nave) the
 // church: the cat runs up the ivy ahead of her and waits in the belfry's arch calling while she climbs, goes in to its
 // kittens as she nears the top and they wake, she climbs in over the sill and a kitten comes to her, the fog stops under
-// the sills, strokes across the bell ring it four times while the lost boat's lantern answers nearer each time, strokes
-// across its sail bring it the last stretch to the nave, she climbs down and the cat and a kitten come to the sill to see
+// the sills, strokes across the bell ring it four times while the lost boat's lantern answers nearer each time, then
+// it drifts the last stretch to the nave without input, she climbs down and the cat and a kitten come to the sill to see
 // her off, she steps aboard and looks back up at them and the cat blinks; both stay at the window; the storm plays on to
 // the forest beach. Reports when each beat falls, the boat's distance home after each ring, when the cat is in the arch,
 // in with its kittens, on the sill through departure, how tall the cat stands on screen at the blink and where it, the kitten
@@ -209,15 +209,15 @@ try {
   }, expr);
 
   /**
-   * The church: the cat up the ivy into the belfry, the fog closing round, strokes across the boat's sail bringing it
-   * from its tree to the nave, her stepping down into it and looking back at the cat; then the storm on to the beach.
+   * The church: the cat up the ivy into the belfry, the fog closing round, the bell calling the boat home to the nave,
+   * her stepping down into it and looking back at the cat; then the storm on to the beach.
    */
   const church = async () => {
     const look = () => page.evaluate(() => {
       const st = __game.story.current, ch = st.church, b = __game.boat, c = __game.child, f = (v) => v.toArray().map((x) => +x.toFixed(2));
       if (!ch) return { landed: true, time: +__stats.time.toFixed(1), boat: f(b.position), storm: NaN };
       return { time: +__stats.time.toFixed(1), beat: st.beat, step: ch.step, close: +ch.close.toFixed(2), aboardFor: +ch.aboardFor.toFixed(1),
-        carrying: ch.carrying, boat: f(b.position), child: f(c.position), cat: f(__game.cat.position), riding: c.riding,
+        carrying: ch.carrying, invitesSail: st.invitesSail ?? false, boat: f(b.position), child: f(c.position), cat: f(__game.cat.position), riding: c.riding,
         storm: +st.stormTime.toFixed(1), grounded: b.grounded, out: st.out, leg: st.leg, rings: ch.rings, answered: ch.answered,
         bell: +ch.bell.angle.toFixed(3), level: +__game.village.dark.level.toFixed(2), kitten: f(__game.village.kittens.cats[0].position),
         catAt: ch.catAt, awake: __game.village.kittens.awake };
@@ -575,33 +575,18 @@ try {
     assert.equal(process.env.RAPID ? heard.length : rang.length, T.rings, `the bell rang ${rang.length} times in ${bellStrokes} strokes`);
     for (let i = 1; i < rang.length; i++) assert(rang[i].boatAfter < rang[i - 1].boatAfter - 2, `the lantern did not come nearer at ring ${rang[i].ring}`);
     for (const r of rang) assert(r.lantern[2] < 1 && Math.abs(r.lantern[0]) < 0.95 && Math.abs(r.lantern[1]) < 0.95, `the lantern was out of frame when it answered ring ${r.ring}`);
-    const bring = await wait((s) => s.step === 'down', 20, 'the boat hers to sail home');
-    for (let i = 0; i < 6; i++) {
+    const bring = await wait((s) => s.step === 'down', 20, 'her climbing down as the boat drifts home');
+    for (let i = 0; i < 12; i++) {
       await seconds(0.5);
       await seen();
+      assert(!(await look()).invitesSail, 'the summoned boat still invites a sail gesture');
     }
-    await shot('church-invitation');
-    let strokes = 0;
-    for (; strokes < 80; strokes++) {
-      const s = await look();
-      if (s.grounded || !(s.step === 'down' || s.step === 'wait')) break;
-      const aim = await page.evaluate(() => {
-        const b = __game.boat, cam = __game.rig.camera;
-        if (!__game.story.current.invitesSail) return null;
-        const at = b.sailPoint(cam.position.clone());
-        const a = at.clone().project(cam), ahead = at.clone().set(at.x + Math.sin(b.yaw) * 2, at.y, at.z + Math.cos(b.yaw) * 2).project(cam);
-        return { at: [(a.x + 1) / 2, (1 - a.y) / 2], heading: Math.atan2(ahead.y - a.y, (ahead.x - a.x) * cam.aspect) };
-      });
-      if (!aim) { await seconds(0.5); continue; }
-      await stroke(aim.at, aim.heading, 0.35, 12);
-      await seen();
-      await seconds(0.7);
-      await seen();
-      if (strokes === 4) await shot('church-bring');
-    }
-    const home = await wait((s) => s.grounded, 40, 'the boat at the tower\'s foot');
+    await shot('church-bring');
+    const home = await wait((s) => s.grounded, 29, 'the boat at the tower\'s foot without further wind');
+    assert(home.time - bring.time < 35, 'the boat waited instead of drifting home');
+    assert(!home.invitesSail, 'the boat invited another sail gesture');
     await shot('boat-at-foot');
-    const berthed = await wait((s) => s.step === 'board', 40, 'her stepping down into the boat');
+    await wait((s) => s.step === 'board', 40, 'her stepping down into the boat');
     const berth = (await look()).boat;
     await seconds(1.0);
     await shot('church-boarding');
@@ -647,9 +632,9 @@ try {
       console.log(`church: she followed the cat up the ivy ${(beats.climbFrom - atNave).toFixed(1)} s after the tower's foot, was in over the kittens at ${(beats.nest - atNave).toFixed(1)} s, looking out over the fog sea at ${(beats.sea - atNave).toFixed(1)} s, the bell hers at ${(beats.ring - atNave).toFixed(1)} s and first rung at ${(heard[0].time - atNave).toFixed(1)} s`);
       console.log(`  the cat waited in the arch from ${(w.catArch - atNave).toFixed(1)} s (her feet ${w.archHer.toFixed(1)} m up), went in to its kittens at ${(w.catIn - atNave).toFixed(1)} s, they woke at ${(w.woke - atNave).toFixed(1)} s, and one came to her at ${w.kittenCame === null ? 'never' : (w.kittenCame - atNave).toFixed(1) + ' s'}`);
     }
-    console.log(`  the bell rang four times in ${bellStrokes} strokes over ${(heard.at(-1).time - heard[0].time).toFixed(1)} s; the sail hers ${(bring.time - heard.at(-1).time).toFixed(1)} s after the last ring`);
-    console.log(`  the boat home ${(home.time - bring.time).toFixed(1)} s after it was hers to sail, with ${strokes} strokes; her aboard ${(aboard.time - bring.time).toFixed(1)} s after${berthed.carrying ? ' (the safety valve carried it)' : ''}; the storm ${(aboard.time - atNave).toFixed(1)} s + the look up after the tower's foot`);
-    console.log(`  the cat was on the sill to see her off ${w.catSill === null ? 'never' : (w.catSill - bring.time).toFixed(1) + ' s after the sail was hers, ' + (w.seated - w.catSill).toFixed(1) + ' s before she sat down'}; both stayed at the window: ${w.sillLeft === null}`);
+    console.log(`  the bell rang four times in ${bellStrokes} strokes over ${(heard.at(-1).time - heard[0].time).toFixed(1)} s; she climbed down ${(bring.time - heard.at(-1).time).toFixed(1)} s after the last ring`);
+    console.log(`  the boat home ${(home.time - bring.time).toFixed(1)} s after she started down, without further wind input; her aboard ${(aboard.time - bring.time).toFixed(1)} s after; the storm ${(aboard.time - atNave).toFixed(1)} s + the look up after the tower's foot`);
+    console.log(`  the cat was on the sill to see her off ${w.catSill === null ? 'never' : (w.catSill - bring.time).toFixed(1) + ' s after she started down, ' + (w.seated - w.catSill).toFixed(1) + ' s before she sat down'}; both stayed at the window: ${w.sillLeft === null}`);
     console.log(`  at the slow blink the cat was ${onSill(blink.cat) ? 'on' : 'off'} the sill, ${seenAtBlink.px.toFixed(0)} px tall at ${seenAtBlink.cat.map((v) => v.toFixed(2)).join(', ')} in the frame, the kitten ${onSill(blink.kitten) ? 'on' : 'off'} it at ${seenAtBlink.kitten.map((v) => v.toFixed(2)).join(', ')}, her face at ${seenAtBlink.her.map((v) => v.toFixed(2)).join(', ')}`);
     console.log(`  her step aboard moved the boat ${pushed.toFixed(2)} m; her feet stayed within ${w.offWorst.toFixed(3)} m of the decks (worst ${w.offAt})`);
     console.log(`  through the church she was out of frame for at most ${w.unseenWorst.toFixed(1)} s at a time (${w.unseenAt}), hidden by the church or a roof for at most ${w.hiddenWorst.toFixed(1)} s (${w.hiddenAt})`);
@@ -663,7 +648,6 @@ try {
       else if (!ok) console.log(`  lens: ${what}`);
     }
     assert(w.offWorst < 0.4, `she left the decks at the church: ${w.offWorst.toFixed(2)} m (${w.offAt})`);
-    assert(!berthed.carrying, 'the strokes never brought the boat: the safety valve carried it');
     assert(pushed < 0.6, `her step aboard pushed the boat ${pushed.toFixed(2)} m`);
     if (!fromBelfry) {
       assert(w.catArch !== null && w.archHer < T.sill[1] - 2, `the cat never waited in the arch while she climbed (${w.catArch === null ? 'never' : 'only once she was ' + w.archHer.toFixed(1) + ' m up'})`);
