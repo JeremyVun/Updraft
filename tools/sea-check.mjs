@@ -1,13 +1,14 @@
 // Capture the complete sea passage with real simulation and verify the swimmer's framing, then the whale in the net:
 // the pod's lead into the mist, the whale heard there, its blow seen and its shape coming out of it, the rest beside
 // its head, its five steps played with real gestures as each is drawn (circles over the blowhole, strokes across its
-// eye, the cork, the net on its head and the flipper), the spout, the flukes and the arrival at the mirror.
+// eye, the cork, the net on its head and the flipper), the spout, the flukes and the settled arrival at the mirror.
 // Usage: node tools/sea-check.mjs [out-prefix]. BASE selects a stable dev server; W/H select the viewport (1600×900;
-// 430×932 for a phone); VIDEO=1 also records <prefix>.webm.
+// 430×932 for a phone); VIDEO=1 also records <prefix>.webm. Saves a camera trace and a JSON report.
 // Reuses the machine-wide GPU lock. All captures belong in /tmp.
 import { openBrowser } from './lib/browser.mjs';
 import { away, whaleGo } from './lib/whale-gestures.mjs';
 import fs from 'node:fs';
+import assert from 'node:assert/strict';
 
 const prefix = process.argv[2] ?? '/tmp/updraft-sea';
 const base = process.env.BASE ?? 'http://127.0.0.1:5230/';
@@ -15,6 +16,19 @@ const width = Number(process.env.W ?? 1600), height = Number(process.env.H ?? 90
 
 function observe() {
   const g = __game;
+  window.seaTrace = [];
+  const direction = g.rig.camera.position.clone();
+  let frame = -1;
+  const trace = () => {
+    if (__stats.frame !== frame) {
+      frame = __stats.frame;
+      const camera = g.rig.camera;
+      camera.getWorldDirection(direction);
+      window.seaTrace.push([__stats.time, ...camera.position.toArray(), ...direction.toArray(), g.story.current.whale?.step ?? '', g.story.name]);
+    }
+    requestAnimationFrame(trace);
+  };
+  trace();
   window.seaLog = { swimFrames: 0, clipped: 0, maxGap: 0, beats: [], last: '' };
   const log = window.seaLog;
   const update = g.sealife.pod.update.bind(g.sealife.pod);
@@ -33,6 +47,15 @@ function observe() {
   };
 }
 
+function assertHealthy(report) {
+  assert.deepEqual(report.errors, [], 'Browser errors during the sea passage');
+  assert.equal(report.bootStrayPrograms?.count, 0, 'Unexpected shader compilation after warmup');
+  assert.equal(report.playFirstDraws?.programs, 0, 'Previously unwarmed shader programs drawn during play');
+  assert.equal(report.mirror.handed, true, 'Mirror did not inherit the sea camera');
+  assert.ok(report.mirror.arrived >= report.mirror.arriveFor + 3, 'Mirror arrival was not fully observed');
+  assert.equal(report.mirror.carry, false, 'Mirror camera is still in its arrival transition');
+}
+
 const { browser, close } = await openBrowser();
 const videoDir = process.env.VIDEO ? fs.mkdtempSync('/tmp/updraft-video-') : null;
 const context = await browser.newContext({
@@ -43,18 +66,21 @@ const errors = [];
 try {
   const page = await context.newPage();
   page.on('pageerror', (e) => errors.push(e.message));
+  page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
   await page.goto(`${base}?shot=1&chapter=sea&ratio=1&msaa=2`, { waitUntil: 'load' });
   await page.waitForFunction(() => window.__ready === true, null, { timeout: 90000 });
   await page.evaluate(`(${observe.toString()})()`);
   const shot = async (name) => { await page.screenshot({ path: `${prefix}-${name}.png` }); console.log(`${prefix}-${name}.png`); };
   // Timed in game seconds: with `shot` the game steps 1/60 s a frame, so on a loaded machine it runs slower than the wall.
   const wait = async (condition, seconds = 60) => {
-    const met = await page.evaluate(([condition, seconds]) => new Promise((resolve) => {
-      const g = __game, start = g.story.current.time, name = g.story.name;
+    const met = await page.evaluate(([condition, seconds]) => new Promise((resolve, reject) => {
+      const g = __game, start = __stats.time;
+      const timer = setTimeout(() => reject(new Error(`Sea capture stalled: ${condition}`)), 300_000);
+      const done = (result) => { clearTimeout(timer); resolve(result); };
       const tick = () => {
-        if (eval(condition)) return resolve(true);
+        if (eval(condition)) return done(true);
         const c = g.story.current;
-        if (g.story.name === name && c.time - start > seconds) return resolve({ chapter: g.story.name, time: c.time, swim: c.swim, whale: c.whale?.step });
+        if (__stats.time - start > seconds) return done({ chapter: g.story.name, time: __stats.time, swim: c.swim, whale: c.whale?.step });
         requestAnimationFrame(tick);
       };
       tick();
@@ -96,8 +122,19 @@ try {
   await wait('__game.sealife.sleeper.fluking && __game.sealife.sleeper.time>15', 60); await shot('flukes');
   await wait(`${whale}.step==='gone'`, 60); await shot('gone');
   await wait("__game.story.name==='mirror'", 150); await shot('mirror-arrival');
+  await wait("__game.story.name==='mirror' && __game.story.current.arrived>=__game.tuning.skyMirror.arriveFor+3", 20);
+  await shot('mirror-settled');
   const log = await page.evaluate(() => window.seaLog);
-  console.log(JSON.stringify({ tries, swimFrames: log.swimFrames, clipped: log.clipped, maxGap: +log.maxGap.toFixed(2), beats: log.beats }));
+  const health = await page.evaluate(() => ({
+    bootStrayPrograms: __stats.bootStrayPrograms,
+    playFirstDraws: __stats.playFirstDraws,
+    mirror: { handed: __game.story.current.handed != null, arrived: __game.story.current.arrived,
+      arriveFor: __game.tuning.skyMirror.arriveFor, carry: __game.story.current.shot.carry },
+  }));
+  const report = { tries, swimFrames: log.swimFrames, clipped: log.clipped, maxGap: +log.maxGap.toFixed(2), beats: log.beats, ...health, errors };
+  fs.writeFileSync(`${prefix}-trace.json`, JSON.stringify(await page.evaluate(() => window.seaTrace)));
+  fs.writeFileSync(`${prefix}-report.json`, JSON.stringify(report, null, 2));
+  console.log(JSON.stringify(report));
   if (videoDir) {
     const video = page.video();
     await context.close();
@@ -105,6 +142,7 @@ try {
     fs.rmSync(videoDir, { recursive: true, force: true });
     console.log(`${prefix}.webm`);
   }
+  assertHealthy(report);
 } finally {
   await close();
   if (errors.length) console.log(`page errors:\n${[...new Set(errors)].slice(0, 4).join('\n')}`);
