@@ -323,8 +323,9 @@ brings the light. Courage passes back and forth between them, and the stairs are
   (`harbour`) from the moment they come out on top, and once the swans are on their way into the sun (`BOAT_SETS_OFF`) sails
   out of it in to `CLOUD_BERTH` (`comeAlongside`); `Chapter.kiteTow` ties the kite to the bow, and under sail the kite
   draws them at `kiteDraws`. The lens is authored by how far they have come (`SAIL_SHOTS`, blended the short way
-  round). Under way the bird perches on the starboard gunwale and the child turns to it (`lookOut`). The bank is an
-  analytic volume in the shared fog (`fogBank`, folded into `cloudDeck`). At `bankSwap` metres in, the boat and the
+  round). Under way the bird perches on the starboard gunwale and the child turns to it (`lookOut`). Only while
+  it is perched does `lookOut` direct her hands; `Carry` keeps them supporting it after boarding and on its return.
+  The bank is an analytic volume in the shared fog (`fogBank`, folded into `cloudDeck`). At `bankSwap` metres in, the boat and the
   bank are moved down onto the sea by the same offset, so the white is unchanged (`Chapter.cameraCut` lets the story
   cut where nothing can be seen); the deck goes under the water and the village shows from then on without its
   arrival veil (`stairsDescent` in `world/journey-rooms.ts`).

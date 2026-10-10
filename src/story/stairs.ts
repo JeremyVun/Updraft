@@ -1204,10 +1204,10 @@ export class StairsChapter implements Chapter {
       k.perch(this.onRail(1.15, 0.08, this.tmp2), boat.yaw - 0.9);
       k.watch(this.outThere);
     }
-    if (turned > 0.35) {
+    if (this.perched && turned > 0.35) {
       c.reachFor(0, this.onRail(0.05, 0.05, this.rail[0]));
       c.reachFor(1, this.onRail(-0.2, 0.04, this.rail[1]));
-    } else {
+    } else if (this.perched) {
       c.reachFor(0, null);
       c.reachFor(1, null);
     }
