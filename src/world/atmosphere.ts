@@ -850,15 +850,11 @@ vec4 deckLayer(vec3 ro, vec3 rd, float far) {
  * top, grey underneath, and lighter the higher up in it you are. The bank of mist stands on it.
  */
 vec4 cloudDeck(vec3 ro, vec3 rd, float far) {
-#if FOG_LOOKUP
-  return sampleFog(uCloudLookup, rd, far);
-#else
   vec4 deck = deckLayer(ro, rd, far);
   if (uFogBankShape.w <= 0.0) return deck;
   vec4 bank = fogBank(ro, rd, far);
   float a = 1.0 - (1.0 - bank.a) * (1.0 - deck.a);
   return vec4((bank.rgb * bank.a + deck.rgb * deck.a * (1.0 - bank.a)) / max(a, 1e-4), a);
-#endif
 }
 
 /** Its level h at xz, lower round the tower where it lies low there, rising to h over a soft rim. */

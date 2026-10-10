@@ -68,13 +68,17 @@ try {
     fog.beginFrame();
     const inactive = bake(camera), unbound = uniforms.uMistLookup.value === null;
     const disposed = texturesBefore - renderer.info.memory.textures;
+    u.uCloudDeck.value.w = 1;
+    fog.beginFrame();
+    const cloudOnly = bake(camera), cloudOnlyTextures = renderer.info.memory.textures;
     target.dispose(); material.dispose(); renderer.dispose();
     return { first, reused, secondCamera, rebound, restoredTexture, distinctTextures: texture !== secondTexture, moved, turned, resized, reflected,
-      changedAtFixedTime, opaque, cleared, inactive, unbound, disposed };
+      changedAtFixedTime, opaque, cleared, inactive, unbound, disposed, cloudOnly, cloudOnlyTextures, texturesAfterRelease: texturesBefore - disposed };
   }, !!process.env.NEGATIVE);
   assert.deepEqual(errors, []);
   for (const key of ['first', 'secondCamera', 'moved', 'turned', 'resized', 'reflected', 'changedAtFixedTime']) assert.equal(result[key], 1, key);
-  for (const key of ['reused', 'rebound', 'inactive']) assert.equal(result[key], 0, key);
+  for (const key of ['reused', 'rebound', 'inactive', 'cloudOnly']) assert.equal(result[key], 0, key);
+  assert.equal(result.cloudOnlyTextures, result.texturesAfterRelease, 'stairs fog must not allocate a lookup');
   assert(result.restoredTexture && result.distinctTextures && result.unbound);
   assert.equal(result.disposed, 2);
   assert(result.opaque.every(Number.isFinite) && result.cleared.every(Number.isFinite));

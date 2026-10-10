@@ -71,9 +71,13 @@ edit.
 - `stairs-fog-check`: renders the shared fog-bank shader along near sightlines, including downward rays to the
   foreground. Checks continuous coverage inside the bank at cloud and sea height, with the boat's clearing,
   and clear surfaces outside it. Needs a dev server for the shader import.
+- `stairs-fog-motion-check`: compares moving checkpoint views, including an ultrawide viewport, against the
+  original per-ray fog in the same world state. Checks cloud edges per pixel; a whole-image average alone missed
+  the rejected cloud-cache artifacts. Needs Vite; `OUT` sets the evidence prefix.
 - `fog-lookup-check`: real GPU cache invalidation at fixed time, camera motion/rotation/resize, reflection mode,
   camera rebinding and texture release. Needs a dev server; `NEGATIVE=1` omits invalidation to prove the clearing
-  assertion catches stale fog. The analytic lantern probe uses `FOG_LOOKUP=0`; scene comparisons exercise the cache.
+  assertion catches stale fog. Also verifies that stairs-only fog allocates no cache. The analytic lantern probe
+  uses `FOG_LOOKUP=0`; village scene comparisons exercise the cache.
 - `render-parity-check`: seeded frozen scene comparisons against an unchanged build. Run with
   `COMPARE_BASE=<unchanged build> BASE=<changed build> node tools/render-parity-check.mjs /tmp/<dir>`; both frozen
   builds must expose `?shot`. `CASES=lines,wood,stairs` selects cases; `TIMEOUT_MS` allows an unchanged slow baseline

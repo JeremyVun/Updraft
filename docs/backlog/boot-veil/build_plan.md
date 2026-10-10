@@ -19,6 +19,22 @@ was stopped; subsequent measurements and cache revisions were completed directly
   lifecycle, startup/Continue/chapter pick/quality steps, context recovery, real bell/clearing/descent/boarding/
   farewell, and roof/tree/next-camera transition. Evidence and limitations are in design.md, "Local integration".
   The older phase 4 gates and physical Windows/Safari/tablet validation remain open. No deployment is included.
+- Further investigation after the merge: five animal program pairs can share a uniform switch, but repeated cold
+  loads show no reliable startup gain. Noise rewrites and smaller warm targets also establish no useful saving.
+  The strongest remaining lead is the detailed sky calculation inside distance haze: a diagnostic omission takes
+  22.196 s versus the initial 27.698 s control. A faithful shared sky lookup still needs a prototype and output,
+  runtime and memory validation; no further product change is merged. See design.md, "Further reductions after the merge".
+- Requested visual comparison: ordinary chapter views are almost unchanged, but the plain-gradient diagnostic
+  exposes hidden island/tree silhouettes during the home and birches reveals, including missing sun, stars and
+  cloud detail. Frozen production-controller comparisons reproduce exactly when the substitution is reversed.
+  Jeremy explicitly rejected merging the omission on 2026-10-11; a shared lookup must preserve the detailed sky
+  match. Evidence and diagnostic-camera limits are recorded in the same design section.
+- Cloud regression reported after the merge: the still-image gates missed visible artifacts in motion. Restore
+  the original cloud deck and mist bank in every material, and remove the cloud atlas. Retain only the village
+  cache and exact copy-pass cleanup. The first restored cold load takes 34.814 s with 240 programs; this supersedes
+  the 26.408 s result for the rejected cloud cache. All 96 advancing-game/moving-camera frames match the original
+  per-ray fog pixel-for-pixel. Typecheck, builds/guards, fog/contact/cache probes and startup flows pass. Details
+  and evidence are in the design's regression follow-up.
 
 Read `design.md` in this folder first; it is the spec, and its Gates table is binding. The boot contract is
 `docs/engine.md` (Boot) and the checks are in `docs/testing.md`. Phases run in order: phases 1 and 2 both edit

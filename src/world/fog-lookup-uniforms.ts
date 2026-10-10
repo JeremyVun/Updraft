@@ -10,14 +10,12 @@ export const FOG_SLICES = FOG_TILES * FOG_TILES;
 export const FOG_NEAR = 0.25;
 export const FOG_FAR = 8192;
 export const fogLookupUniforms = {
-  uCloudLookup: { value: null as THREE.Texture | null },
   uMistLookup: { value: null as THREE.Texture | null },
   uFogLookupView: { value: new THREE.Matrix3() },
   uFogLookupProjection: { value: new THREE.Vector2(1, 1) },
 };
 
 export const FOG_LOOKUP_GLSL = /* glsl */ `
-uniform sampler2D uCloudLookup;
 uniform sampler2D uMistLookup;
 uniform mat3 uFogLookupView;
 uniform vec2 uFogLookupProjection;

@@ -10,7 +10,6 @@ const FRAG = /* glsl */ `
 #define STORM_BANK 1
 #define cameraPosition uFogBakeEye
 uniform vec3 uFogBakeEye;
-uniform float uFogBakeKind;
 uniform mat3 uFogLookupView;
 uniform vec2 uFogLookupProjection;
 ${ATMO_GLSL}
@@ -32,13 +31,12 @@ void main() {
   }
   float layer = tile.y * ${FOG_TILES}.0 + tile.x;
   float dist = ${FOG_NEAR} * pow(${FOG_FAR / FOG_NEAR}.0, layer / ${FOG_SLICES - 1}.0);
-  vec4 fog = uFogBakeKind < 0.5 ? cloudDeck(uFogBakeEye, ray, dist) : seaFog(uFogBakeEye, ray, dist);
+  vec4 fog = seaFog(uFogBakeEye, ray, dist);
   float optical = -log(max(1.0 - fog.a, 0.000001));
   gl_FragColor = vec4(fog.rgb * optical, optical);
 }`;
 
 type Cache = {
-  cloud?: THREE.WebGLRenderTarget;
   mist?: THREE.WebGLRenderTarget;
   frame: number;
   mirror: number;
@@ -52,7 +50,6 @@ export class FogLookup {
   private readonly material = simMaterial(FRAG, {
     ...atmo.uniforms,
     uFogBakeEye: { value: new THREE.Vector3() },
-    uFogBakeKind: { value: 0 },
   }, this.template);
   private readonly runner: GpuRunner;
   private frame = 0;
@@ -60,22 +57,20 @@ export class FogLookup {
 
   constructor(renderer: THREE.WebGLRenderer) {
     this.runner = new GpuRunner(renderer);
-    this.material.name = 'Chapter fog lookup';
+    this.material.name = 'Village fog lookup';
   }
 
   beginFrame(): void {
     this.frame++;
-    if (atmo.uniforms.uCloudDeck.value.w <= 0) fogLookupUniforms.uCloudLookup.value = null;
     if (atmo.uniforms.uSeaFogShape.value.w <= 0) fogLookupUniforms.uMistLookup.value = null;
     for (const cache of this.caches.values()) {
-      if (atmo.uniforms.uCloudDeck.value.w <= 0) { cache.cloud?.dispose(); cache.cloud = undefined; }
       if (atmo.uniforms.uSeaFogShape.value.w <= 0) { cache.mist?.dispose(); cache.mist = undefined; }
     }
   }
 
   bake(camera: THREE.PerspectiveCamera): void {
     const u = atmo.uniforms;
-    if (!this.active || (u.uCloudDeck.value.w <= 0 && u.uSeaFogShape.value.w <= 0)) return;
+    if (!this.active || u.uSeaFogShape.value.w <= 0) return;
     let cache = this.caches.get(camera);
     if (!cache) {
       cache = { frame: -1, mirror: -1, world: new THREE.Matrix4(), projection: new THREE.Matrix4() };
@@ -87,22 +82,13 @@ export class FogLookup {
     if (cache.frame !== this.frame || cache.mirror !== u.uMirrorPass.value ||
         !cache.world.equals(camera.matrixWorld) || !cache.projection.equals(camera.projectionMatrix)) {
       this.material.uniforms.uFogBakeEye.value.setFromMatrixPosition(camera.matrixWorld);
-      if (u.uCloudDeck.value.w > 0) {
-        cache.cloud ??= this.template.clone();
-        this.material.uniforms.uFogBakeKind.value = 0;
-        this.runner.run(this.material, cache.cloud);
-      }
-      if (u.uSeaFogShape.value.w > 0) {
-        cache.mist ??= this.template.clone();
-        this.material.uniforms.uFogBakeKind.value = 1;
-        this.runner.run(this.material, cache.mist);
-      }
+      cache.mist ??= this.template.clone();
+      this.runner.run(this.material, cache.mist);
       cache.frame = this.frame;
       cache.mirror = u.uMirrorPass.value;
       cache.world.copy(camera.matrixWorld);
       cache.projection.copy(camera.projectionMatrix);
     }
-    fogLookupUniforms.uCloudLookup.value = cache.cloud?.texture ?? null;
     fogLookupUniforms.uMistLookup.value = cache.mist?.texture ?? null;
   }
 }

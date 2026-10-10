@@ -426,8 +426,8 @@ Static, baked once before Begin (runtime GPU allocations, not downloads):
 
 Bakes that follow the world:
 
-- `world/fog-lookup.ts` evaluates the original stairs `cloudDeck` and village `seaFog` into separate camera atlases.
-  Materials sample these instead of compiling both integrations repeatedly. Each atlas is 1280×896 RGBA16F
+- `world/fog-lookup.ts` evaluates the original village `seaFog` into an atlas for each camera.
+  Materials sample it instead of compiling that integration repeatedly. Each atlas is 1280×896 RGBA16F
   (8.75 MiB), with 64 radial slices from 0.25 to 8192 m; each slice has 160×96 samples over the camera view plus a
   25% margin and a 32×16 spherical fallback for offscreen vertices. Optical depth and depth-weighted light are
   filtered in direction and physical distance; decoding restores exact opacity for terrain/water early exits.
@@ -435,8 +435,10 @@ Bakes that follow the world:
   `onBeforeRender` selects/bakes each main, reflected or doorway camera and rebinds its uniforms on reuse;
   camera matrices and mirror mode also invalidate. The bake compiles and warms with the other `simMaterial`
   passes before activation. Atlases allocate only for active fog and are disposed when that fog clears.
-  `FOG_LOOKUP=0` selects the original integrations for the bake and analytic probes. Ordinary haze, home haze,
-  sky radiance, Sleeping ground fog and the water's surface-origin `seaFogMirrored` remain analytic.
+  `FOG_LOOKUP=0` selects the original village integration for the bake and analytic probes. The stairs' cloud deck
+  and mist bank stay analytic in every material: the directional cache caused visible artifacts in motion despite
+  passing still-image difference thresholds. Ordinary haze, home haze, sky radiance, Sleeping ground fog and the
+  water's surface-origin `seaFogMirrored` also remain analytic.
 - A window move (`followWindow`) re-bakes the height (two passes, checked texel for texel by
   `tools/height-bake-check.mjs`), surface and light of the window and shifts the wind, lean and life textures in the
   same frame, in whole-texel steps. The shoreline (`water.bakeShore`) and grass tables follow.

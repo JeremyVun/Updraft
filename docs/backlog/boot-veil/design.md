@@ -2,6 +2,14 @@
 
 ## Shader simplification investigation (2026-10-11)
 
+After merging the chapter fog cache, Jeremy asked, verbatim:
+
+> can you take a look if there's anything else we can do to bring it down more?
+
+Continue solo from `4af9bfa8`. Profile the remaining first-use cost and test isolated shader simplifications or
+material sharing against that integrated build. Preserve appearance, gameplay throughput and complete warm-up
+before play; diagnostic omissions are bounds, not proposed changes. No deployment is requested.
+
 Jeremy's brief, verbatim:
 
 > Is there anything we can do about the time to compile all the shaders?
@@ -179,6 +187,103 @@ Evidence remains in `/tmp/updraft-shader-audit-UBDk40/`: `integrated-fine-cost.j
 `integrated-fine-belfry-dev.log`, `integrated-fine-roofs.log`, `integrated-fine-cold.json` and
 `integration-control-cold.json`, `integrated-fine-context-loss.log` and `integrated-fine-cache-check.json`.
 The old loading-veil targets and physical Windows/Safari/tablet checks remain open.
+
+### Further reductions after the merge
+
+Jeremy then requested, verbatim: "28 to 22 seconds is nice. can you test to see waht the visual difference would be?"
+Compare the exact `fogOf` sky-gradient diagnostic with the frozen integrated build, including ordinary chapter
+views and crossings where sky-matched haze conceals coastlines. Keep camera, frame and random seed fixed and
+show representative comparisons. This is visual evaluation of the diagnostic, not approval to merge it.
+
+The follow-up starts from `4af9bfa8`, served as a frozen QA build. A fresh forced-cold load takes 27.698 s:
+3.854 s settling programs and 21.117 s warming their first draws. Chrome for Testing 153 / ANGLE Metal,
+one browser at a time; these measurements do not establish Windows, Safari or tablet results.
+
+- Replacing all `skyRadiance` calls with the plain sky gradient takes 21.229 s. Replacing only the sky calculation
+  inside `fogOf` takes 22.196 s and keeps the visible sky's shader intact. Both omit detail from the result and are
+  diagnostic bounds, not approved simplifications. The latter identifies the repeated sky calculation inside
+  distance haze as the most promising next target.
+- Rolling the four value-noise corners into a uniform-bounded loop takes 28.119 s; computing the hashes in vector
+  lanes takes 29.476 s. Neither establishes a startup improvement; do not retain them.
+- The still-island and mainland animal shaders have five pairs differing only in chapter clipping. An isolated
+  uniform-switch prototype shares those programs, reducing 240 to 235. Three cold loads take 28.281, 26.717 and
+  28.884 s; fresh unchanged controls take 28.051 and 27.252 s. No reliable startup gain is established. Seeded
+  island, meadow and home images and character/camera states are identical. Paired completed-frame ratios are
+  0.988, 0.993 and 0.990 respectively, with no observed throughput regression. Typecheck and QA build pass.
+- Drawing the warm-up scene into 4×4 scratch targets with the original formats, on top of the animal prototype,
+  takes 26.476 s; warming itself takes 20.082 s versus 20.208 s in the fastest animal-only load. This does not
+  establish a material warm-up saving. It remains an isolated probe, without startup-flow validation.
+
+The next worthwhile prototype is a shared sky result for distance haze, evaluated once per camera/frame and
+sampled by materials. It must match the actual sky, preserve the sharp sun/stars, work for reflected/doorway views
+and offscreen grass-table vertices, and pass memory and completed-frame cost checks. The earlier coarse full-fog
+atlas is unsuitable for this. The roughly five-second diagnostic difference is not a promised deliverable saving;
+the cache would add work and might need a different representation. No new product optimization is merged from
+this follow-up, and the sky-cache implementation remains open.
+
+Evidence: `/tmp/updraft-shader-followup-IIWQ3X/` (`control.json`, `sky-omission.json`, `haze-sky.json`, `corners.json`,
+`vector.json`, `animals-cold-1.json`, `animals-confirm-{1,2}.json`, `animal-parity.json`, `animal-cost.json`,
+`small-warm-cold.json`, `control-cold-{1,2}.json` and patches). The experimental checkout `shader-followup/updraft`
+is recoverably archived with the animal-sharing and small-warm probes, not production-ready changes. A dead-function pruning harness was
+discarded because its brace scanner could not handle conditional GLSL branches; it supplies no performance result.
+
+The requested visual comparison rejects the plain-gradient substitution as a shipping change. Sixteen seeded
+chapter/camera pairs are mostly indistinguishable, including stairs, belfry, mirror and ordinary village views.
+Separate loads initially moved the village camera by about 2 mm; repeating the substitution within one frozen
+world leaves at most 1/255 channel difference there. Chapter-start views alone miss the important regression.
+
+With the actual `JourneyReveal` controller advanced through covered, half-cleared and clear states, a targeted
+camera facing the incoming home island exposes a hill-shaped gap in the clouds and stars and removes the sun
+where the island should still dissolve into the sky. At full cover, 15.48% of pixels differ by more than 8/255 in
+at least one channel; at half cover, 2.73%. The corresponding birches reveal exposes tree-shaped gaps in daylight
+clouds (1.94% and 0.44%). The sleeping arrival changes very little. These are diagnostic camera angles with the
+world frozen, not complete gameplay replays. They use the production reveal controller, room visibility, fog
+bakes, reflection and post passes from the same frozen QA build; the only shader substitution is
+`clearSky = skyRadiance(rd)` to `clearSky = skyColor(rd)`.
+
+All nine reveal states reproduce the current image pixel-for-pixel on an unchanged redraw and after reversing
+the substitution, with no browser errors. This rules out camera or simulation drift as the source of the reveal
+regression. Keep the detailed sky match when pursuing a shared lookup; simply dropping it is visibly unsafe.
+No further game code was changed or merged. Evidence is `/tmp/updraft-sky-visual-oaQ9IV/`: `compare.json`,
+`targeted.json`, `production.json`, `arrivals.json`, the capture harnesses and `review-{home,birches,village}.png`.
+
+Jeremy confirmed on 2026-10-11, verbatim: "yea agreed, dont merge this". The plain-gradient haze diagnostic is
+rejected and must remain unmerged. The previously approved chapter-fog cache remains in main.
+
+Jeremy then reported a regression in the already merged chapter-fog cache, with a stairs screenshot, verbatim:
+"hey that other change you merged in do you remember? it's causing the clouds in the background to render really weird. do you see this? It looks like a bug."
+The screenshot shows hard, angular background-cloud boundaries. Reproduce against the original analytical
+rendering, fix the regression, and check the actual cloud contours at large viewports and while moving the camera;
+the previous whole-image difference gate did not establish that these edges were acceptable. This is separate
+from the rejected sky-gradient diagnostic, which remains unmerged.
+Jeremy clarified, verbatim: "it looks fine in a single still, but over time in motion, it's kind of artifacting all over the place".
+Motion stability is the primary regression gate: compare frame sequences as the camera and clouds move, including
+the difference between cached and analytical rendering at the same frozen world state for each frame.
+Jeremy added, verbatim: "yea, that last merge basically ruined the beautiful fog effects up in the cloud".
+Restore the original analytical stairs cloud deck and mist bank for every material and view, throughout the
+climb, cloud sea and descent. Remove the cloud atlas; keep the village cache and exact copy-pass consolidation.
+Preserving the original cloud appearance takes priority over retaining the full startup saving.
+
+The restoration removes the cloud lookup sampler, allocation and bake. `cloudDeck` now matches its pre-cache
+`0cd3f43d` body exactly for every material; the sky, geometry, grass, reflected views and bank all use that
+original integration. The village cache is unchanged apart from removing the unused cloud branch.
+
+A 120-frame moving-camera comparison of the rejected merge against its analytic path confirms errors that
+change from frame to frame (maximum channel error 111/255 in the cloud region). Restoring the sky alone still
+leaves errors up to 111/255 on cloud geometry, so that partial fix was rejected. The final
+`stairs-fog-motion-check` advances the real game loop and pans each view, comparing each world state with the
+original per-ray fog. All 96 frames are pixel-identical across checkpoints 0, 2 and 3 at 1920×1080 and an
+ultrawide 3776×1094 view. Its frame-advance assertion prevents the initial scratch fixture's paused-clock
+mistake from yielding a false gameplay-motion result. These are targeted motion checks, not a full playthrough.
+
+Typecheck, shader bounds, production/QA builds and separation guards, the 18-case cloud-bank continuity probe,
+544 landing-mist contact samples and the village-cache lifecycle check pass. The cache check now also verifies
+that active stairs fog performs no cache draw or allocation. Startup, Continue, chapter selection and quality
+changes pass without stray programs or first program draws during play. One forced-cold QA load takes 34.814 s
+with 240 programs (4.174 s settling, 27.981 s warming), versus the earlier 43.884 s pre-cache control. This gives
+back part of the startup saving to restore the clouds; it is one local Mac measurement, not a cross-device claim.
+Evidence: `/tmp/updraft-cloud-edge-dDdhtx/`, especially `motion.json`, `fixed-motion-advancing.json`,
+`fixed-cold.json`, `start.json` and `cached-vs-original-motion.mp4`.
 
 ## Windows compilation follow-up (2026-10-06)
 
