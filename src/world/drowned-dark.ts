@@ -3,7 +3,7 @@ import { SEA_FOG_TOP, atmo } from './atmosphere';
 import { params } from '../params';
 import { QA } from '../qa';
 import { tuning } from '../tuning';
-import { DARK_AT_STRAND, DARK_END, DARK_TOPS, DARK_WAY, darkWayPoint } from './drowned-way';
+import { DARK_AT_STRAND, DARK_END, DARK_HEADING, DARK_TOPS, DARK_WAY, darkFrontPoint } from './drowned-way';
 import { WOOD_LANDING } from './wood';
 
 const smooth = THREE.MathUtils.smoothstep;
@@ -63,16 +63,8 @@ export class DarkBank {
   round = 0;
   /** Where it lies lower round a point: how far round (metres, 0 nowhere) and how high it lies there over the water. */
   readonly clearing = { x: 0, z: 0, radius: 0, floor: 1 };
-  /**
-   * Where its front turns to face as it comes, while it chases her (her, on her way); otherwise it lies across its own
-   * way. And the way its front faces now.
-   */
-  faces: THREE.Vector2 | null = null;
-  readonly ahead = new THREE.Vector2().subVectors(DARK_WAY[1], DARK_WAY[0]).normalize();
-  private readonly want = new THREE.Vector2();
-  private readonly origin = new THREE.Vector2();
+  readonly ahead = DARK_HEADING.clone();
   private readonly at = new THREE.Vector2();
-  private readonly back = new THREE.Vector2();
   private readonly crest = new THREE.Color();
   private readonly body = new THREE.Color();
   private readonly top = new THREE.Color();
@@ -134,13 +126,13 @@ export class DarkBank {
   /** Where its front is, `aside` metres along it from the way (+ to its right as it comes), for whoever watches it. */
   frontAt(out: THREE.Vector2, aside = 0): THREE.Vector2 {
     const k = tuning.drowned.dark, u = aside / k.halfWidth;
-    darkWayPoint(this.front, out);
+    darkFrontPoint(this.front, out);
     return out.set(out.x - this.ahead.y * aside + this.ahead.x * k.flank * u * u, out.y + this.ahead.x * aside + this.ahead.y * k.flank * u * u);
   }
 
   /** Where a lens at `eye` looking along `view` sees its front, low over the water: what the depth blur keeps sharp. */
   seenAt(eye: THREE.Vector3, view: THREE.Vector3, out: THREE.Vector3): THREE.Vector3 {
-    darkWayPoint(this.front, this.at);
+    darkFrontPoint(this.front, this.at);
     const ax = this.ahead.x, az = this.ahead.y;
     const toward = Math.min(view.x * ax + view.z * az, -0.25);
     const along = ((this.at.x - eye.x) * ax + (this.at.y - eye.z) * az) / toward;
@@ -159,13 +151,13 @@ export class DarkBank {
   }
 
   /** Lays the fog out for every shader and takes the light it takes; after the palette has been set for the step. */
-  update(_time: number, eye: THREE.Vector3, dt = 1 / 60): void {
+  update(_time: number, boat: THREE.Vector3, _dt = 1 / 60): void {
     if (QA && params.fog !== null) this.force(params.fog);
     const u = atmo.uniforms;
     // It belongs to the village: it thins off as the forest beach comes up out of it, leaving the storm's own weather.
     const k = tuning.drowned.fog, d = tuning.drowned.dark;
-    const here = (1 - smooth(Math.hypot(eye.x - CHURCH.x, eye.z - CHURCH.y), 200, 320))
-      * smooth(Math.hypot(eye.x - WOOD_LANDING.x, eye.z - WOOD_LANDING.y), k.shoreGone, k.shoreFrom);
+    const here = (1 - smooth(Math.hypot(boat.x - CHURCH.x, boat.z - CHURCH.y), 200, 320))
+      * smooth(Math.hypot(boat.x - WOOD_LANDING.x, boat.z - WOOD_LANDING.y), k.shoreGone, k.shoreFrom);
     const amount = smooth(this.rise, 0, 0.5) * here;
     const drawnAmount = params.villageFog ? amount : 0;
     u.uSeaFogShape.value.w = drawnAmount;
@@ -177,14 +169,7 @@ export class DarkBank {
     const p = this.progress;
     const risen = smooth(this.rise, 0, k.risen);
 
-    darkWayPoint(this.front, this.at);
-    darkWayPoint(this.front - d.aheadFrom, this.back);
-    const to = this.faces && this.faces.distanceToSquared(this.at) > 1 ? this.faces : this.at.distanceToSquared(this.back) > 1 ? this.at : null;
-    if (to) {
-      this.want.subVectors(to, to === this.faces ? this.at : this.back).normalize();
-      const turn = Math.atan2(this.ahead.x * this.want.y - this.ahead.y * this.want.x, this.ahead.dot(this.want));
-      this.ahead.rotateAround(this.origin, turn * (1 - Math.exp(-Math.max(dt, 0) * d.turnRate)));
-    }
+    darkFrontPoint(this.front, this.at);
     u.uSeaFog.value.set(this.at.x, this.at.y, this.ahead.x, this.ahead.y);
     const drawn = smooth(p, far, near);
     const top = this.level * (0.3 + 0.7 * risen) * THREE.MathUtils.lerp(1, k.closedTop, this.close);

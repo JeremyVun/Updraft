@@ -496,7 +496,7 @@ export class StrandedCat {
     cat.stare(null);
     cat.shiver = 0;
     const k = tuning.drowned.cat;
-    const onto = this.v.copy(RIDGE).lerp(GAP, 0.08);
+    const onto = this.v.copy(RIDGE).lerp(GAP, 0.04);
     onto.y = strandRoof(onto.x, onto.z);
     cat.leap(onto.clone(), { floor: strandRoof, then: 'stand', arc: 0.3 }, () => {
       cat.run([GAP], strandRoof, { pace: 'run', speed: k.runSpeed, then: 'sit', look: this.head }, () => {

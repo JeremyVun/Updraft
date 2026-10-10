@@ -143,6 +143,11 @@ edit.
   with spaced and rapid rings. `NEGATIVE=1` disables the automatic return and must fail.
   `FROM=belfry LENS=1 node tools/drowned-run-check.mjs` checks this through the real bell gestures, passive
   approach, boarding camera and onward storm; `W=900 H=1600` checks portrait.
+- `drowned-fog-motion-check`: the whole bank advances without pivoting or retreating, camera motion cannot
+  change its field or belfry clearing, and the actual boat reaching the woods fades it out.
+- `AUDIT=/tmp/drowned TO=tree-arrival node tools/drowned-run-check.mjs` records the natural rescue's real audio
+  and live fog uniforms through the first roof and tree. `node tools/drowned-audit-check.mjs /tmp/drowned.json`
+  checks the four-second sailing interval, matching tone/effect onset, music fade and fog motion.
 - In the browser with real gestures: `lines-check`, `lines-view-check`, `little-boats-check`, `piano-check`,
   `scarf-check`, `stairs-check`, `storm-check`, `wood-check`, `ember-check`, `sea-check`, `sky-mirror-check`,
   `sleeping-check`, `summit-arrival-check`, `home-approach-browser-check`, `ending-check`, `landing-check`,

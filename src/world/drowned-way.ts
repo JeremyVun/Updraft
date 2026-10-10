@@ -540,6 +540,24 @@ export const DARK_ALONG: number[] = DARK_WAY.map((_, i) => DARK_WAY.slice(1, i +
 export const DARK_END = DARK_ALONG[DARK_ALONG.length - 1];
 /** How far along `DARK_WAY` the stranded boat lies. */
 export const DARK_AT_STRAND = DARK_ALONG[1];
+export const DARK_HEADING = new THREE.Vector2().subVectors(STRAND, DARK_WAY[0]).normalize();
+const DARK_ADVANCE = DARK_WAY.map((point, i) => i === 0 ? -DARK_AT_STRAND
+  : (point.x - STRAND.x) * DARK_HEADING.x + (point.y - STRAND.y) * DARK_HEADING.y);
+for (let i = 1; i < DARK_ADVANCE.length; i++) DARK_ADVANCE[i] = Math.max(DARK_ADVANCE[i - 1], DARK_ADVANCE[i]);
+
+// The roof path doubles back; a weather front must not follow those turns.
+export function darkFrontPoint(front: number, out: THREE.Vector2): THREE.Vector2 {
+  let distance = front - DARK_AT_STRAND;
+  for (let i = 1; i < DARK_ALONG.length; i++) {
+    if (front <= DARK_ALONG[i]) {
+      distance = THREE.MathUtils.lerp(DARK_ADVANCE[i - 1], DARK_ADVANCE[i],
+        (front - DARK_ALONG[i - 1]) / (DARK_ALONG[i] - DARK_ALONG[i - 1]));
+      break;
+    }
+    distance = DARK_ADVANCE[i] + front - DARK_ALONG[i];
+  }
+  return out.copy(STRAND).addScaledVector(DARK_HEADING, distance);
+}
 /**
  * How far along `DARK_WAY` a point on her way lies, from the stranding on, given how far along it was a moment ago:
  * the nearest place on it no more than `back` behind that and `on` beyond it, so a way that doubles back is never

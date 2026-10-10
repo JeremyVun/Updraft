@@ -1147,12 +1147,48 @@ Jeremy, verbatim, on the boat summoned by the bell:
 The final bell answer carries the boat all the way to the berth while she climbs down. Remove the extra sail
 invitation; verify arrival and boarding with no player input after ringing, including the full camera transition.
 
+Jeremy's next playtest, verbatim:
+
+> didn't i already tell you before that the becalming and the tone shouldn't instantly play after the cat is rescued, but maybe ~2 seconds after
+>
+> did you do this? I can't believe i'm going to ask this for the fourth time
+
+> well it DOESNT
+
+> and your fog is still moving based on camera position
+
+> in different parts of the drowned sequence i am literally seeing the fog advance and/or recede very quickly
+
+> quite literally as the child gets off the very first roof she climbs on, the fog recedes, then when she gets to the tree, the fog has advanced all the way forward
+
+Items 69 and 82 were reopened. Verify the audible rescue transition and actual sailing interval together, and
+the whole scene's fog uniforms through the first-roof → tree camera move. Isolated cue and shader tests did
+not establish the player's observed result. The scene controller still fades the fog by the camera's distance
+from the church; remove camera-driven changes to the bank, not only ray-dependent shader density.
+
+Jeremy's ruling on the later bend after the fixed-direction replay, verbatim:
+
+> thats ok, i saw it. leave that
+
+> im ok with, in fact prefer it to have the fog overtaking the child's route a bit.
+
+Keep the bank overtaking parts of her route. Do not add a protective gap or pull the fog back as she crosses a bend.
+The defect to remove is the bank pivoting, retreating or changing with the camera, not her entering some mist.
+
+Jeremy's final rescue-delay instruction, verbatim:
+
+> what i need you to do is make it so that the becalming and the tone don't instantly play after the cat is rescued. If you are saying it already happens 2 seconds after, then can you add another 2 seconds ontop.
+
+Add two more seconds to the sailing interval: four seconds after regaining sailing speed. Keep the music playing
+for the added time, then its existing two-second fade; tone and becalming begin together afterwards.
+
 Current follow-up list (all authorized):
 - 56 reopened: the approaching hull pushed the untouched tub. Start it outside that path, retaining attraction
   after player input. Full-entry CPU tests now measure zero drift; the old start fails at 0.389 m.
-- 69 reopened: visible shake, two seconds of sailing, the becalming tone, then a quiet drift. Use a temporary
-  score rest rather than permanent silence, which also muted later cues. Rendered audio contains the tone;
-  visual verification includes the shake itself rather than only the aboard state.
+- 69: visible shake and bow hop, sail recovery, then four seconds of sailing before the becalming tone and
+  effect together. Music continues for the first two seconds and fades over the next two; the drift is quiet.
+  The live portrait replay measures 4.00 seconds from sailing speed to the actual audio cue, with all three
+  notes scheduled and 9.25 m travelled since release. The previous release-based timer included acceleration.
 - 71 reopened: cheap mist is the review default. Full tower-foot → woods capture shows the boat hidden before
   ringing and its lantern answering through the mist; no extra query parameter is needed.
 - 72: rapid strokes pinned the bell before a strike. Each swing now completes before another is accepted;
@@ -1182,11 +1218,15 @@ Current follow-up list (all authorized):
   that with continuous world-space density and an exact line integral; the bell clears a soft world-space circle.
   Neutralise the blue body and include the sunset's crest light. Frozen-camera movement, optical-depth
   additivity and reverse-ray checks cover anchoring; the old shader fails these checks.
+  The subsequent controller correction fixes the bank's heading and projects progress monotonically along
+  it. Village/woods fade follows the boat, and the belfry clearing follows the child, never the lens. The live
+  first-roof → tree replay confirms no pivot, retreat or opacity change, and at most 3.20 m/s advance.
+  Fog overtaking the route remains intentional, as Jeremy requested.
 - 83: after answering the bell, the boat continues drifting to the boarding point without another wind gesture.
 
 
-Evidence and final verification status: build_plan.md, “Follow-up regressions — 2026-10-10”, and
-`/tmp/updraft-tub-manual-ImGNBj/`. Work stays on the review branch; no merge or deployment.
+Latest evidence and verification limits: build_plan.md, “Visible sailing delay and steady fog — 2026-10-10”,
+and `/tmp/updraft-calm-fog-1UEjg3/README.md`. Work stays on the review branch; no merge or deployment.
 
 ### Earlier departure rulings and verification
 

@@ -154,10 +154,8 @@ export class ChurchArrival {
   /** She has reached the tower's foot, the cat sitting on the churchyard's railings below the tower's south face. */
   begin(): void {
     const { child: c, cat } = this.cast;
-    const dark = this.cast.village!.dark;
     this.to('foot');
     this.since = 0;
-    dark.faces = null;
     c.decks = [...c.decks, IVY_STEP, NAVE_RIDGE, NAVE_NORTH, ...this.upDecks];
     c.face(this.head);
     cat.look(this.head);
@@ -666,8 +664,7 @@ export class ChurchArrival {
       dark.round = closing;
       dark.relief = lerp(1, k.still, closing);
       dark.level = lerp(this.closeLevel, k.sea, closing);
-      const lens = this.camera ? this.camera.position.y - k.underLens : Infinity;
-      const under = this.step === 'climb' ? Math.min(c.position.y - k.underHer, lens) / dark.heaped : dark.level;
+      const under = this.step === 'climb' ? (c.position.y - k.underHer) / dark.heaped : dark.level;
       this.dipFloor = Math.min(this.step === 'climb' ? Math.max(this.dipFloor, under) : this.dipFloor + k.dipRise * dt, under);
       dark.clearing.floor = this.dipFloor;
       dark.clearing.radius = this.dipFloor < dark.level ? k.dip : 0;

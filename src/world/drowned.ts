@@ -1633,15 +1633,14 @@ export class DrownedVillage {
 
   /**
    * `boat` is where the boat is, so herons lift off as it comes by; `storm` is 0 calm to 1 the squall at the end;
-   * `eye` is where the lens is, for the dark's billows to be drawn far to near.
    * While the boat is far off, the vane and herons only count the time; when it comes near they live through the
    * last `CATCH_UP_S` of it, so the vane has settled into the wind and the herons are mid-habit on arrival.
    */
-  update(dt: number, time: number, boat: THREE.Vector3, storm: number, eye: THREE.Vector3): void {
+  update(dt: number, time: number, boat: THREE.Vector3, storm: number): void {
     this.storm.value = storm;
     // Its sweep also lights the shared water and creature shaders, so it always keeps time.
     this.lighthouse.update(dt, storm);
-    this.dark.update(time, eye, dt);
+    this.dark.update(time, boat, dt);
     if (this.dark.rise > 0.1) this.fled = true;
     if (Math.abs(boat.z - DROWNED_Z) > NEAR_Z) {
       this.idle = Math.min(CATCH_UP_S, this.idle + dt);

@@ -1359,6 +1359,34 @@ bell ring and with a 31 m clearing. These are local desktop measurements, not de
 Evidence: `/tmp/updraft-mist-Cq6Qis/README.md`. The portrait bell → woods replay also passes, with no camera
 cuts. The field checks pass on Metal and SwiftShader; restoring the old shader fails as expected.
 
+#### Visible sailing delay and steady fog — 2026-10-10
+
+Jeremy's latest timing instruction adds another two seconds. The old two-second timer started when the boat
+was released, so sail recovery consumed most of it: the baseline replay travelled only 1.15 m before the tone.
+The timer now starts at 1.2 m/s and waits four seconds. Music continues through recovery and the first two
+seconds of sailing, then fades over two seconds. The original tone and weather change start together;
+the wet shake and bow hop remain. The cat's later roof landing moves slightly away from the hull to preserve
+clearance under the changed swell timing.
+
+The fog controller still turned its broad bank toward the child, swinging its edges at up to 34.63 m/s and
+backwards at 29.06 m/s in the first-roof → tree replay. It now keeps the original approach heading and maps
+route progress to monotonically advancing world positions. Village/woods fade follows the boat; the belfry
+clearing follows the child's height. Camera motion changes neither. Jeremy explicitly prefers the fog
+overtaking parts of her route; no protective gap or retreat is added.
+
+The final natural portrait rescue → tree replay passes with audio recorded from the game's master output.
+The cue and effect begin 4.00 seconds after sailing speed, with all three real note schedules checked;
+the boat travels 9.25 m since release. Through the first roof and tree, shader uniforms show no pivot,
+retreat or opacity change, and at most 3.20 m/s advance. Captures were inspected. CPU rescue checks pass
+at 30/60/120 Hz (4.00–4.03 seconds; 15–19 cm hull clearance), as do fog motion, automatic boat return and
+the production build including typecheck. Restoring the old bank or the two-second interval fails the new checks.
+
+An earlier full roof-route capture completed the interactions but failed its old minimum-gap gate as fog
+overtook the route; that gate is now diagnostic to match Jeremy's ruling. It also recorded a 4.2-second
+front-visibility gap near the swing. That separate framing check remains unresolved; this is not a claim
+that the full chapter visual gate passes. Evidence: `/tmp/updraft-calm-fog-1UEjg3/README.md`.
+Review server: `http://127.0.0.1:5331/`. No merge or deployment.
+
 #### Follow-up regressions — 2026-10-10
 
 Jeremy's verbatim corrections are in design.md, “Tub control and rescue sound correction”. Keep checkpoint

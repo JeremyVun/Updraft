@@ -1781,11 +1781,6 @@ export const tuning = {
        */
       halfWidth: 170, flank: 30, wing: 0.3, wingFade: 0.45, wingFar: 0.35, wingFadeFar: 0.4,
       /**
-       * How far back along its way the line its front lies across is taken from, metres; and how fast its front turns
-       * to that, or to face her while it chases her (per second).
-       */
-      aheadFrom: 30, turnRate: 0.6,
-      /**
        * Seconds it takes to rise off the sea once the air has died, over the becalmed drift, how far behind the boat it
        * rises, and how long after the boat runs aground it comes on faster: never stopping, at `comePace` (m/s) and
        * `comeRate` a second of however far it still is from where the cat bolts, at most `comeMost` m/s, so it slows as
@@ -1945,9 +1940,9 @@ export const tuning = {
         sea: 7.6, still: 0.3, roundFor: 14,
         /**
          * While she climbs it rises round the tower beneath her: this far round the tower it lies lower, its heaps this
-         * far under her feet and the lens (metres); once she is in, it rises the rest of the way at m/s.
+         * far under her feet (metres); once she is in, it rises the rest of the way at m/s.
          */
-        dip: 20, underHer: 0.7, underLens: 1.2, dipRise: 0.35,
+        dip: 20, underHer: 0.7, dipRise: 0.35,
         /**
          * Each ring pushes it back round the tower to lie on the water this high (metres), out to these distances
          * after each ring (metres) over a rim this much wider and this many metres more, in `sinkFor` seconds; once the
@@ -2095,7 +2090,7 @@ export const tuning = {
       lostFor: 3,
     },
     rescue: {
-      shakeAt: 0.65, bowAfter: 2.5, goOnAfter: 0.4, sailFor: 2,
+      shakeAt: 0.65, bowAfter: 2.5, goOnAfter: 0.4, sailingSpeed: 1.2, sailFor: 4, musicFade: 2,
     },
   },
   drownedCamera: {

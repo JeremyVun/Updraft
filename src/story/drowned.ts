@@ -88,7 +88,9 @@ export class DrownedChapter implements Chapter {
   readonly shot: Shot = { target: new THREE.Vector3(), distance: 20, height: 3.2, carry: true };
   readonly music = 'drowned' as const;
   get drownedQuiet(): boolean {
-    return (this.beat === 'drift' && this.aboardFrom >= 0) || this.beat === 'still' || (this.beat === 'becalmed' && !this.cat.ashore);
+    const rescue = tuning.drowned.rescue;
+    return (this.beat === 'drift' && this.sailingFrom >= 0 && this.now - this.sailingFrom >= rescue.sailFor - rescue.musicFade)
+      || this.beat === 'still' || (this.beat === 'becalmed' && !this.cat.ashore);
   }
   get departureKite(): boolean { return this.beat === 'church' || this.beat === 'gather'; }
   /** The room's music by feeling, not by beat: the score moves on at its next chord change. */
@@ -178,6 +180,7 @@ export class DrownedChapter implements Chapter {
   /** How far the lens has come round to watch the cat brought over (it only grows), and when the air died after it. */
   private catRound = 0;
   private aboardFrom = -1;
+  private sailingFrom = -1;
   private ghostFrom = 0;
   private readonly lensWas = new THREE.Vector3();
   /** How fast the fog's front is coming on while the boat lies stuck, m/s. */
@@ -435,7 +438,10 @@ export class DrownedChapter implements Chapter {
         if (this.t > 9) this.to('drift');
         break;
       case 'drift':
-        if (this.aboardFrom >= 0 && this.now - this.aboardFrom >= tuning.drowned.rescue.sailFor) this.still();
+        if (this.aboardFrom >= 0) {
+          if (this.sailingFrom < 0 && boat.speed >= tuning.drowned.rescue.sailingSpeed) this.sailingFrom = this.now;
+          if (this.sailingFrom >= 0 && this.now - this.sailingFrom >= tuning.drowned.rescue.sailFor) this.still();
+        }
         break;
       case 'still':
         this.ghost(dt);

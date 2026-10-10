@@ -1111,7 +1111,7 @@ export class Soundscape {
       });
       this.drownedScore.update(bg.drownedScore, tuning.audio.drownedScoreLevel * roomTrim('drowned') * (1 - piano), arrival.handoffAt);
     } else if (this.drownedScore) {
-      this.drownedScore.stop(s.drownedQuiet ? tuning.drowned.rescue.sailFor : s.silence ? .12 : arrival.legato ? tuning.audio.forestMusicBlend : 1.8);
+      this.drownedScore.stop(s.drownedQuiet ? tuning.drowned.rescue.musicFade : s.silence ? .12 : arrival.legato ? tuning.audio.forestMusicBlend : 1.8);
       this.drownedScore = null;
     }
     if (!bg.summitScore) this.summitFinale = false;

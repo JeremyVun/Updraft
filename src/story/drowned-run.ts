@@ -3,7 +3,7 @@ import { verticalFov, type Shot } from '../camera';
 import type { Deck } from '../world/decks';
 import { tuning } from '../tuning';
 import {
-  CAT_WAY, DARK_AT_STRAND, DARK_END, GREEN_TREE, MILL, MILL_SITE, NAVE, PLACED, SHEET_SITE, SWING_SITE, TOWER_FOOT, TREE_SITE, WAY, WAY_GAPS, darkAlong, darkWayPoint, roofUnder,
+  CAT_WAY, DARK_AT_STRAND, DARK_END, DARK_HEADING, GREEN_TREE, MILL, MILL_SITE, NAVE, PLACED, SHEET_SITE, SWING_SITE, TOWER_FOOT, TREE_SITE, WAY, WAY_GAPS, darkAlong, darkFrontPoint, roofUnder,
   type WayDeck,
 } from '../world/drowned-way';
 import { HOIST } from '../world/crossings/windmill';
@@ -193,18 +193,14 @@ function* layLens(nodes: readonly Node[], obstacles: readonly THREE.Box3[], upri
   const most = upright ? k.uprightDistance : k.distance;
   const rise = upright ? k.uprightRise : k.rise;
   const sideOn = upright ? k.uprightSideOn : k.sideOn;
-  /**
-   * Where the fog's front is at each step of her way as she walks it, near and as far back as it lingers after a
-   * piece, and the way it faces: toward her.
-   */
+  /** The same world front the shaders use, at each step of her walk. */
   const fogAt: { x: number; z: number; dx: number; dz: number }[][] = [];
   for (let s = 0, along = DARK_AT_STRAND, at = new THREE.Vector3(), f = new THREE.Vector2(); s <= total + LENS_STEP * 2; s += LENS_STEP) {
     wayAt(nodes, s, at);
     along = Math.max(along, darkAlong(at.x, at.z, along));
     fogAt.push([-1, 0, k.fogSlack].map((slack) => {
-      darkWayPoint(along - (slack < 0 ? tuning.drowned.run.fogLaid : tuning.drowned.run.fogTrail + slack), f);
-      const l = Math.hypot(at.x - f.x, at.z - f.y) || 1;
-      return { x: f.x, z: f.y, dx: (at.x - f.x) / l, dz: (at.z - f.y) / l };
+      darkFrontPoint(along - (slack < 0 ? tuning.drowned.run.fogLaid : tuning.drowned.run.fogTrail + slack), f);
+      return { x: f.x, z: f.y, dx: DARK_HEADING.x, dz: DARK_HEADING.y };
     }));
   }
   /** The frame's half field, as the tangent of its half angle up and across. */
@@ -452,7 +448,6 @@ export class RoofRun {
   private readonly flat = new THREE.Vector2();
   private readonly treeEye = new THREE.Vector3();
   private readonly below = new THREE.Vector3();
-  private readonly her = new THREE.Vector2();
   private readonly treeTarget = new THREE.Vector3();
   private readonly roundFrom = new THREE.Vector3();
   private readonly roundTo = new THREE.Vector3();
@@ -1011,10 +1006,6 @@ export class RoofRun {
     /** At the tower's foot it comes on to a few roofs back and waits there for the church. */
     const pull = THREE.MathUtils.clamp((want - dark.front) * k.fogPull, this.stage === 'nave' ? 0 : k.fogSlowest, k.fogFastest);
     this.fogSpeed += (pull - this.fogSpeed) * (1 - Math.exp(-dt * k.fogEase));
-    /** She swings to and fro quicker than the fog turns, so it faces where she got on and never sways with her. */
-    const swinging = this.stage === 'swing' && (this.swing.phase === 'boarding' || this.swing.phase === 'riding');
-    if (!swinging) this.her.set(this.cast.child.position.x, this.cast.child.position.z);
-    dark.faces = this.her;
     dark.comeOn(Math.min(dark.front + this.fogSpeed * dt, this.dark - k.fogNearest), dt);
   }
 
@@ -1045,7 +1036,7 @@ export class RoofRun {
 
   /** Where the fog's front is behind her, on her way. */
   private fogFront(out: THREE.Vector3): THREE.Vector3 {
-    darkWayPoint(this.cast.village!.dark.front, this.flat);
+    darkFrontPoint(this.cast.village!.dark.front, this.flat);
     return out.set(this.flat.x, 1, this.flat.y);
   }
 
@@ -1166,7 +1157,7 @@ export class RoofRun {
       const a = Math.atan2(x - eye.x, z - eye.z) - view;
       return Math.atan2(Math.sin(a), Math.cos(a));
     };
-    darkWayPoint(dark.front, this.flat);
+    darkFrontPoint(dark.front, this.flat);
     const ax = dark.ahead.x, az = dark.ahead.y;
     let need = Infinity;
     for (let aside = -k.fogReach; aside <= k.fogReach; aside += k.fogReach / 4) {
