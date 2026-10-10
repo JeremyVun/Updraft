@@ -967,7 +967,7 @@ vec4 seaFogAt(SeaFogRay r, float t, float step, out vec3 heap) {
  * step's share of it is taken exactly for the top and face going straight between its ends, so no step shows as a
  * band, and whatever lies beyond the last is taken whole with its top at its level.
  */
-vec4 seaFogMarch(vec3 ro, vec3 rd, float far, float least) {
+vec4 seaFogMarch(vec3 ro, vec3 rd, float far, float least, bool lighting, bool seaSurface) {
   const float LOW = ${glsl(tuning.drowned.fog.low)}, AIR_LOW = ${glsl(tuning.drowned.fog.airLow)}, LOOK = 160.0;
   const float FRONT = ${glsl(tuning.drowned.fog.front)}, THIN_UP = ${glsl(tuning.drowned.fog.thinUp)};
   // Its top seldom heaps higher than this share of its level, nor lies lower than LOWEST of it; where it usually stands
@@ -976,9 +976,7 @@ vec4 seaFogMarch(vec3 ro, vec3 rd, float far, float least) {
   float MIDDLE = 1.0 - uSeaFogRelief * ${glsl(1 - SEA_FOG_TOP.middle)}, HEAPED = max(uSeaFogRelief, 0.05) * ${glsl(1.2 * SEA_FOG_TOP.spread)};
   // How much its relief softens its top where a step is too long to follow any of it, a share of its level.
   float SPREAD = uSeaFogRelief * ${glsl(SEA_FOG_TOP.blur)};
-  // Seen in the sea's mirror the eye is under the water; the fog as seen from the surface is near enough. There, and
-  // from the sea's own surface, the flame is the water's glint, not the lantern's light in the fog.
-  bool aboveSea = ro.y > 1.0;
+  // Reflected views start at the surface even when the mirrored camera is below it.
   ro.y = max(ro.y, 0.0);
   SeaFogRay r;
   r.ro = ro;
@@ -1026,8 +1024,8 @@ vec4 seaFogMarch(vec3 ro, vec3 rd, float far, float least) {
   vec3 acc = vec3(0.0);
   vec3 sun = normalize(vec3(uSunDir.x, 0.0, uSunDir.z) + 1e-5);
   float toSun = pow(max(dot(rd, uSunDir), 0.0), 6.0) * uSeaFogGlow;
-  // The lantern's flame: where the sightline passes nearest it, how thick the fog is there and how much lies between.
-  float tc = dot(uLantern.xyz - ro, rd), Tc = 1.0, sc = 0.0;
+  // Keep the light sample in front of the water or the glow ends at a circular edge.
+  float tc = clamp(dot(uLantern.xyz - ro, rd), 0.0, far), Tc = 1.0, sc = 0.0;
   // The lighthouse's beam: where the sightline passes nearest its axis, the light it gathers crossing the cone there,
   // and how thick the fog is there and how much lies between; so the beam lights a band of it, taken whole rather
   // than step by step.
@@ -1127,7 +1125,7 @@ vec4 seaFogMarch(vec3 ro, vec3 rd, float far, float least) {
         sb = dense * clamp(mix(ma.x, mb.x, u) / (whole + hb.y), 0.0, 1.0) * clamp(mix(ma.y, mb.y, u) / FRONT, 0.0, 1.0) * sides * uSeaFogShape.w;
         Tb = T * exp(-sigma * (tb_ - ta));
       }
-      if (tc >= ta && tc < tb) {
+      if (tc >= ta && tc <= tb) {
         // How thick it is right at the flame, read between the step's ends so it never jumps from one step to the next.
         float u = (tc - ta) / len;
         sc = dense * clamp(mix(ma.x, mb.x, u) / (whole + hb.y), 0.0, 1.0) * clamp(mix(ma.y, mb.y, u) / FRONT, 0.0, 1.0) * sides * uSeaFogShape.w;
@@ -1158,21 +1156,22 @@ vec4 seaFogMarch(vec3 ro, vec3 rd, float far, float least) {
   float hazed = 1.0 - exp(-min(air, 8.0));
   vec3 haze = mix(mix(uSeaFogBody.rgb, uSeaFogTop, 0.5), uSkyHorizon * 0.9, min(uSeaFogHaze * 2.0, 1.0));
   vec4 fog = vec4(haze, 1.0) * hazed + (1.0 - hazed) * vec4(acc + beam * sb * Tb * ${glsl(tuning.drowned.fog.beam)}, 1.0 - T);
-  if (uLantern.w > 0.001 && aboveSea) {
+  if (uLantern.w > 0.001 && lighting) {
     // Its light scattered by the fog round the flame: a soft glow that spreads and dims the more fog lies between;
     // where the sightline ends on the glassy sea, the glow in the water under it too, as the flame's mirror image.
     float deep = -log(max(Tc, 1e-4));
     float reach = ${glsl(tuning.drowned.fog.lanternReach)} * (1.0 + ${glsl(tuning.drowned.fog.lanternSpread)} * deep);
     float glow = seaFogHalo(ro, rd, uLantern.xyz, 0.0, min(far, 200.0), reach);
-    if (rd.y < 0.0 && far < 200.0 && abs(ro.y + rd.y * far) < 0.4) {
-      glow += seaFogHalo(ro, rd, uLantern.xyz * vec3(1.0, -1.0, 1.0), far, far + 60.0, reach) * ${glsl(tuning.drowned.fog.lanternMirror)};
+    if (seaSurface && rd.y < 0.0 && far < 200.0) {
+      vec3 reflected = vec3(uLantern.x, 2.0 * (ro.y + rd.y * far) - uLantern.y, uLantern.z);
+      glow += seaFogHalo(ro, rd, reflected, far, far + 60.0, reach) * ${glsl(tuning.drowned.fog.lanternMirror)} * (1.0 - smoothstep(160.0, 200.0, far));
     }
     float thick = sc + uSeaFogBody.a * rate + ${glsl(tuning.drowned.fog.closed)} * uSeaFogShape.z;
     fog.rgb += vec3(1.0, 0.63, 0.29) * uLantern.w * thick * glow * pow(Tc, ${glsl(tuning.drowned.fog.lanternThrough)}) * ${glsl(tuning.drowned.fog.lanternHalo)} * uSeaFogShape.w;
     fog.a = max(fog.a, 1e-3);
   }
 
-  if (uHarbourLight.w > 0.001 && aboveSea && uSeaFogShape.z > 0.0) {
+  if (uHarbourLight.w > 0.001 && lighting && uSeaFogShape.z > 0.0) {
     // Closed round, the lighthouse's lamp is a glow in the fog rather than a lamp standing clear of it.
     float glow = seaFogHalo(ro, rd, uHarbourLight.xyz, 0.0, min(far, 400.0), ${glsl(tuning.drowned.fog.harbourReach)});
     fog.rgb += vec3(1.0, 0.8, 0.5) * uHarbourLight.w * glow * ${glsl(tuning.drowned.fog.harbourHalo)} * uSeaFogShape.z * uSeaFogShape.w;
@@ -1183,13 +1182,82 @@ vec4 seaFogMarch(vec3 ro, vec3 rd, float far, float least) {
   return vec4(fog.rgb / fog.a, fog.a);
 }
 
+// A soft height layer integrates in closed form, without density marching or noise texture reads.
+float mistBelow(vec3 ro, vec3 rd, float top, float begin, float end) {
+  if (abs(rd.y) < 0.00001) return ro.y < top ? max(0.0, end - begin) : 0.0;
+  float crossing = (top - ro.y) / rd.y;
+  return rd.y > 0.0 ? max(0.0, min(end, crossing) - begin) : max(0.0, end - max(begin, crossing));
+}
+
+vec4 seaMist(vec3 ro, vec3 rd, float far, bool lighting) {
+  ro.y = max(ro.y, 0.0);
+  vec2 n = uSeaFog.zw, side = vec2(-n.y, n.x), o = ro.xz - uSeaFog.xy;
+  float s = dot(o, n), ds = dot(rd.xz, n), across = dot(o, side);
+  float reach = min(far, 4000.0);
+  float top = uSeaFogShape.x * (1.0 - uSeaFogRelief * ${glsl(1 - SEA_FOG_TOP.middle)});
+  float sight = abs(rd.y) > 0.0001 ? clamp((top - ro.y) / rd.y, 0.0, reach) : min(reach, 60.0);
+  vec2 xz = ro.xz + rd.xz * sight;
+  top += top * uSeaFogRelief * ${glsl(tuning.drowned.fog.mistRelief)} *
+    (sin(xz.x * 0.057 + xz.y * 0.031 - uTime * 0.12) + 0.4 * sin(xz.y * 0.14 + uTime * 0.09));
+  float a = clamp(across + dot(rd.xz, side) * sight, -uSeaFogSides.y, uSeaFogSides.w);
+  float front = uSeaFogShape.y * min(a * a, uSeaFogSides.x * uSeaFogSides.x) +
+    smoothstep(${glsl(tuning.drowned.fog.closedBy)}, 1.0, uSeaFogShape.z) * ${glsl(tuning.drowned.fog.closeRun)};
+  float clearNear = 0.0, clearFar = 0.0;
+  float horizontal = dot(rd.xz, rd.xz);
+  vec2 clearing = ro.xz - uSeaFogClear.xy;
+  float along = dot(clearing, rd.xz);
+  float optical = 0.0;
+  for (int i = 0; i < 4; i++) {
+    float layer = (float(i) + 0.5) / 4.0;
+    float h = top + (layer - 0.5) * ${glsl(tuning.drowned.fog.mistSoftness)};
+    float start = 0.0, end = reach;
+    float edge = front + (layer - 0.5) * ${glsl(tuning.drowned.fog.front)};
+    if (abs(ds) < 0.00001) {
+      if (s > edge) end = 0.0;
+    } else {
+      float cut = (edge - s) / ds;
+      if (ds > 0.0) end = min(end, cut);
+      else start = max(start, cut);
+    }
+    float depth = mistBelow(ro, rd, h, start, end);
+    if (uSeaFogClear.z > 0.0 && horizontal > 0.00001) {
+      float radius = uSeaFogClear.z * mix(1.0, ${glsl(tuning.drowned.church.fog.clearRim)}, layer) + layer * ${glsl(tuning.drowned.church.fog.clearSoft)};
+      float disc = along * along - horizontal * (dot(clearing, clearing) - radius * radius);
+      if (disc > 0.0) {
+        clearNear = max(start, (-along - sqrt(disc)) / horizontal);
+        clearFar = min(end, (-along + sqrt(disc)) / horizontal);
+        depth -= max(0.0, mistBelow(ro, rd, h, clearNear, clearFar) - mistBelow(ro, rd, min(h, uSeaFogClear.w), clearNear, clearFar));
+      }
+    }
+    optical += max(0.0, depth) * 0.25;
+  }
+  float alpha = (1.0 - exp(-optical * ${glsl(tuning.drowned.fog.mistDensity)})) * seaFogSides(a) * uSeaFogShape.w;
+  vec3 colour = mix(uSeaFogBody.rgb, uSeaFogTop, 0.35 * (1.0 - uSeaFogShape.z));
+  if (lighting && alpha > 0.0) {
+    float glow = seaFogHalo(ro, rd, uLantern.xyz, 0.0, min(reach, 200.0), ${glsl(tuning.drowned.fog.lanternReach)});
+    float buried = smoothstep(0.0, 1.0, seaFogLevel(uLantern.xz, top) - uLantern.y);
+    glow *= exp(-max(0.0, distance(ro, uLantern.xyz) - 5.0) * 0.12 * buried);
+    colour += vec3(1.0, 0.7, 0.35) * glow * uLantern.w * 0.12;
+  }
+  return vec4(colour, alpha);
+}
+
+vec4 seaFog(vec3 ro, vec3 rd, float far, bool seaSurface) {
+#if ${params.villageMist ? 1 : 0}
+  return seaMist(ro, rd, far, uMirrorPass < 0.5);
+#else
+  return seaFogMarch(ro, rd, far, uMirrorPass > 0.5 ? ${glsl(tuning.drowned.fog.mirrorStep)} : ${glsl(tuning.drowned.fog.stepLeast)}, uMirrorPass < 0.5, seaSurface);
+#endif
+}
+
 vec4 seaFog(vec3 ro, vec3 rd, float far) {
-  return seaFogMarch(ro, rd, far, uMirrorPass > 0.5 ? ${glsl(tuning.drowned.fog.mirrorStep)} : ${glsl(tuning.drowned.fog.stepLeast)});
+  return seaFog(ro, rd, far, false);
 }
 
 /** The sea fog as the glassy sea mirrors it, from a point on the water: too broken by the ripples for its heaps to show. */
 vec4 seaFogMirrored(vec3 ro, vec3 rd) {
-  return seaFogMarch(ro, rd, 4000.0, ${glsl(tuning.drowned.fog.mirrorStep)});
+  if (${params.villageMist ? 'true' : 'false'}) return seaMist(ro, rd, 4000.0, false);
+  return seaFogMarch(ro, rd, 4000.0, ${glsl(tuning.drowned.fog.mirrorStep)}, false, false);
 }
 #endif
 
@@ -1219,7 +1287,7 @@ float journeyVeilAt(vec3 wpos) {
 }
 
 /** rgb: haze colour toward this point, a: how much haze covers it. Cheap enough to evaluate per vertex. */
-vec4 fogOf(vec3 wpos, float landscape) {
+vec4 fogOf(vec3 wpos, float landscape, bool seaSurface) {
   vec3 rd = wpos - cameraPosition;
   float dist = length(rd);
   rd /= dist;
@@ -1296,13 +1364,17 @@ vec4 fogOf(vec3 wpos, float landscape) {
 #if CLOUD_DECK
   // The sea fog lies nearer than any of it: what it covers, the distance cannot show through.
   if (uSeaFogShape.w > 0.0) {
-    vec4 sea = seaFog(cameraPosition, rd, dist);
+    vec4 sea = seaFog(cameraPosition, rd, dist, seaSurface);
     float total = mix(amt, 1.0, sea.a);
     fogCol = mix(fogCol, sea.rgb, sea.a / max(total, 1e-4));
     amt = total;
   }
 #endif
   return vec4(fogCol, clamp(amt, 0.0, 1.0));
+}
+
+vec4 fogOf(vec3 wpos, float landscape) {
+  return fogOf(wpos, landscape, false);
 }
 
 vec4 fogOf(vec3 wpos) {

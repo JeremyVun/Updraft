@@ -1240,6 +1240,57 @@ the lantern's fog density sample: it switches at the closest point to the lanter
 A frozen shader comparison and an exact boundary mask confirm item 55; the proposed sampling correction is
 recorded in design.md. Only the diagnostic browser's shader was changed. Evidence: `/tmp/updraft-fog-circle-jkq4FF/`.
 
+#### Lantern fog boundary correction — 2026-10-10
+
+Jeremy: "then fix it.. omg". Apply item 55 in the integration review build. The fog sample now stays within the
+visible ray and includes its surface endpoint, so the lantern glow remains continuous as the water crosses the
+closest point to the light. `lantern-fog-check` renders the real shader around that boundary at three camera
+heights; the corrected shader passes and restoring the old shader fails. Typecheck, shader bounds and production
+build pass. The first moving portrait run exposed the related reflection cutoff at water height ±0.4 m and
+failed the brightness gate at 18.3/255. Reflection now follows the actual water surface and fades with distance;
+the water explicitly identifies itself to the fog shader. Reflected fog views no longer enable direct light
+halos whenever a wave rises above 1 m. The GPU check covers the old wave-height and camera-height boundaries,
+and restoring the reflection cutoff fails. Final landscape storm replay passes (largest non-flash rise 9.5/255).
+Both moving captures show the circles gone. The portrait replay reaches the woods and passes its framing but
+still fails item 54's separate brightness gate at 16.0/255; that item remains open.
+Evidence: `/tmp/updraft-lantern-fix-U0Lxxo/`.
+
+#### Further rescue/contact polish — 2026-10-10
+
+Requested items 56–62, full brief in design.md: remove untended tub completion, show the active tub destination
+with the stairs' golden ghost treatment, raise the waiting cat clear of the water/eaves, fit boat and roof contact
+to their visible surfaces, reduce recurring calls and correct the mill perch. Disable village fog rendering in QA
+by default (`villagefog=1` for comparison), without changing story progression or the production default.
+Verify unattended waiting, both player-driven tub trips, actual skinned paw/body clearance on the bow and strand
+roof, and the rotating stock. Then inspect close captures and play the rescue through the first roof.
+Implemented and CPU checks pass at 30/60/120 Hz; removing the pose fit fails the new regression with a 5 cm
+haunch penetration. The first real-pointer rescue takes two strokes to the roof and four back to the boat.
+The ghost destinations are visible at both ends, and the cat stays clear of the water. Completed in review:
+final portrait rescue/stranding and landscape first-tree replays pass, along with the targeted contact,
+camera and farewell checks. Evidence: `/tmp/updraft-cat-polish-gJ6o1k/`.
+
+#### Rescue pacing and cheaper mist — 2026-10-10
+
+Completed in review: items 63–70; item 71 is an implemented and tested mist trial. Verbatim brief and ruling
+remain in design.md. The tub rejects pre-rescue input; the cat shakes on the thwart and hops to the bow;
+boat-to-roof landing and the first-tree chimney route clear the actual skin. Calls distinguish stranded and
+rescued states, grounding gets a prompt reaction, two seconds of sailing precede becalming, and the windless
+drift has no score. The belfry mother sits alert, including after checkpoint restoration.
+
+The 30/60/120 Hz sequence checks pass, including 11 cm mast, 21–24 cm hull and 20 cm chimney clearance.
+The input-gate negative control fails as intended. Final typecheck, production build, 14 quick checks, boat,
+camera, contact, farewell and rescue checks pass. Real-pointer portrait rescue and belfry-to-woods replays,
+and the landscape first-tree replay, pass. The mist's portrait storm brightness check passes at 10.7/255;
+the original fog fallback still has item 54's separate intermittent brightness failure.
+
+The mist uses four analytic height layers and retains bell clearing and the hidden-boat reveal. Matched local
+belfry Ultra samples give 60.0 fps with mist or fog off, against 53.9 fps with the original fog (six-second
+samples, 1600×900, render scale 1.5). Early-rooftop samples give 60.0 fps with mist/off and 59.5 fps with original;
+the gain is concentrated in the denser view. Its flatter appearance needs Jeremy's review before production adoption.
+Port 5331 remains the review server: `villagefog=mist` selects the trial, `villagefog=1` the original, and the
+default omits fog for comparison. Production remains on the original renderer. No merge/deploy.
+Evidence and captures: `/tmp/updraft-cat-polish-gJ6o1k/`.
+
 #### Integration takeover — 2026-10-10
 
 Jeremy: "ok proceed". For this takeover he also approved Codex doing the remaining visual work:

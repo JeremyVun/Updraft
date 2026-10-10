@@ -230,7 +230,7 @@ export class Windmill {
     this.group.add(mesh(this.body()));
     this.rotor.add(mesh(this.sails()));
     this.rotor.scale.setScalar((spot.reach ?? SAIL.reach) / SAIL.reach);
-    this.perch.position.set(-SAIL.reach + 0.18, SAIL.stock / 2 + 0.02, 0.12);
+    this.perch.position.set(-SAIL.reach + 0.18, SAIL.stock / 2, 0.12);
     this.rotor.add(this.perch);
 
     const drumY = spot.to + HOIST.beamAbove + 0.4;

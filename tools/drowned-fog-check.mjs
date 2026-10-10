@@ -35,7 +35,7 @@ const errors = [];
 async function open(width, height) {
   const page = await (await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1 })).newPage();
   page.on('pageerror', (e) => errors.push(e.message));
-  await page.goto(`${base}?shot=1&chapter=drowned&ratio=1`, { waitUntil: 'load' });
+  await page.goto(`${base}?shot=1&chapter=drowned&ratio=1&villagefog=1`, { waitUntil: 'load' });
   await page.waitForFunction(() => window.__ready === true, null, { timeout: 90000 });
   return page;
 }

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { BOW_Z, FLOOR_Y, MAST_Z, SEAT_Y, STERN_Z } from '../traveller/boat/form';
+import { BOW_Z, MAST_Z, SEAT_Y, STERN_Z, foredeckAt } from '../traveller/boat/form';
 import { tuning } from '../tuning';
 import {
   CAT_CHIMNEY, CAT_EDGE, CAT_HOLD, CAT_HOLD_YAW, CAT_LANDING, CAT_ROOF, TOWER_FOOT, TUB_START, TUB_WATER, WAY, catRoof, strandRoof,
@@ -11,7 +11,7 @@ import type { Cast } from './cast';
  * `stranded` on its chimney before the boat comes; `seen` she has noticed it; `easing` the boat slowing into its hold;
  * `waiting` for the tub to be brought to its roof, down at the water's edge once the boat holds; `coming` into the tub
  * once it is there; `ferried` the tub on its way to the boat;
- * `boarding` the tub at the bow; `aboard` in the boat, first coming to her and then at the bow. Then, once the fog has
+ * `boarding` the tub at the bow; `aboard` shaking dry on the thwart and then at the bow. Then, once the fog has
  * come on, `bolting` off the bow and over the first roof, `waits` at its end looking back at her, `climbing` she goes
  * after it, and `ridge` she is up.
  */
@@ -19,15 +19,9 @@ export type CatStep = 'stranded' | 'seen' | 'easing' | 'waiting' | 'coming' | 'f
   | 'bolting' | 'waits' | 'climbing' | 'ridge';
 
 /** Where the cat sits on the boat: on the foredeck, as high and dry as it can get, facing her. */
-const FOREDECK = new THREE.Vector3(0, 0.668, 1.85);
-/**
- * In the boat's frame: on the mast thwart beside the mast, on the side the lens is on, where it comes down to her and
- * sits, high enough to be seen over the gunwale; and where she kneels to it.
- */
-const ON_THWART = new THREE.Vector3(0.22, SEAT_Y + 0.045, MAST_Z);
-export const KNEEL_AT = new THREE.Vector3(0, FLOOR_Y + 0.02, 0.02);
-/** In her arms, in the frame of the cradle against her chest: sitting up facing her, its head under her chin. */
-const IN_ARMS = new THREE.Vector3(0, -0.12, 0.05);
+const FOREDECK = new THREE.Vector3(0, foredeckAt(0, 2.12), 2.12);
+// The near half of the thwart keeps the shake clear of the mast.
+const ON_THWART = new THREE.Vector3(0.60, SEAT_Y + 0.045, MAST_Z);
 /** The hull at the waterline as the tub meets it: half its beam, and half its length about its middle. */
 const HULL_HALF = 0.8;
 const HULL_MID = (BOW_Z + STERN_Z) / 2;
@@ -45,7 +39,6 @@ const CAT_DOCK = (() => {
 /** Just out over the water in front of it, where it puts a paw toward the water and snatches it back. */
 const PAW_AT = CAT_EDGE.clone().lerp(CAT_DOCK, 0.32).setY(0.03);
 /** Where she steps out onto the slates by the stem, the ridge above it, and the west end of the ridge over the lane. */
-const STEP = new THREE.Vector3(WAY.strandSlope.x0, WAY.strandSlope.height, WAY.strandSlope.z0);
 const RIDGE = new THREE.Vector3(WAY.strand.x0, WAY.strand.height, WAY.strand.z0);
 const GAP = new THREE.Vector3(WAY.strand.x1, WAY.strand.height, WAY.strand.z1);
 /** High on the church tower, the highest thing there is. */
@@ -86,8 +79,6 @@ export class StrandedCat {
   private readonly lens = new THREE.Vector3();
   private side = 1;
   private nearest = Infinity;
-  private best = Infinity;
-  private stall = 0;
   /** How far through what it is doing in this step. */
   private phase = 0;
   /** Its way down off the chimney to the water's edge: 0 on its pot, 1 on its way down, 2 waiting at the edge. */
@@ -98,16 +89,8 @@ export class StrandedCat {
   private bolted: number | null = null;
   private washed = false;
   private wary = false;
-  /**
-   * The rescue, once it is aboard: seconds since it landed (-1 when it was aboard already), and from when she kneels
-   * to it (-1 before); how far she is down on her knees, 0 to 1.
-   */
   private rescue = -1;
-  private kneelFrom = -1;
-  kneel = 0;
-  private readonly hand = new THREE.Vector3();
   private turned = false;
-  private gathered = false;
 
   constructor(private readonly cast: Cast, private readonly goOn: () => void) {}
 
@@ -121,7 +104,7 @@ export class StrandedCat {
       || this.step === 'boarding' || (this.step === 'aboard' && !this.released);
   }
 
-  /** True while the cat comes to her in the boat and she kneels to it. */
+  /** The cat shakes off the water before hopping to the bow. */
   get rescuing(): boolean {
     return this.rescue >= 0;
   }
@@ -162,6 +145,7 @@ export class StrandedCat {
     cat.mewing = true;
     const tub = this.tub;
     tub.visible = true;
+    tub.interactive = false;
     tub.place(TUB_START.x, TUB_START.y, 0.7);
     tub.water.x = TUB_WATER.x;
     tub.water.z = TUB_WATER.z;
@@ -177,7 +161,7 @@ export class StrandedCat {
     cat.visible = true;
     cat.mewing = false;
     cat.unease = 0;
-    cat.place(FOREDECK, Math.PI, { frame: boat.group, pose: 'sit' });
+    cat.place(FOREDECK, Math.PI, { frame: boat.group, floor: foredeckAt, pose: 'sit' });
     cat.look(this.head);
     cat.curious = this.satchel;
     this.tub.visible = false;
@@ -211,8 +195,7 @@ export class StrandedCat {
     this.step = step;
     this.since = 0;
     this.phase = 0;
-    this.best = Infinity;
-    this.stall = 0;
+    this.tub.interactive = this.puzzling;
   }
 
   update(dt: number, time: number): void {
@@ -245,7 +228,7 @@ export class StrandedCat {
         break;
       case 'waiting':
         if (this.down === 0 && this.since > k.downAfter) this.comeDown();
-        this.bringTo(dt, this.goal.copy(CAT_DOCK), k.roofReach);
+        this.bringTo(this.goal.copy(CAT_DOCK), k.roofReach);
         if (tub.docked) {
           tub.held = true;
           this.to('coming');
@@ -256,7 +239,7 @@ export class StrandedCat {
         this.getIn();
         break;
       case 'ferried':
-        this.bringTo(dt, this.toBow(), k.bowReach);
+        this.bringTo(this.toBow(), k.bowReach);
         if (!this.wary && tub.position.distanceTo(boat.position) < 6) {
           this.wary = true;
           cygnet.mind.startle(0.15);
@@ -355,27 +338,20 @@ export class StrandedCat {
   }
 
   /**
-   * The tub is the player's to bring to `goal`: drawn in once it is within `reach`, an invitation after a while with
-   * nothing near it, and after a long while with no progress the air carries it there by itself.
+   * The dock catches a tub the player has brought close; waiting only offers a gesture.
    */
-  private bringTo(dt: number, goal: THREE.Vector3, reach: number): void {
+  private bringTo(goal: THREE.Vector3, reach: number): void {
     const tub = this.tub, k = tuning.drowned.cat;
     const d = Math.hypot(tub.position.x - goal.x, tub.position.z - goal.z);
     tub.goal = this.goalXZ.set(goal.x, goal.z);
-    if (d < reach || tub.dock) {
+    if ((d < reach && tub.sinceBrushed < tuning.drowned.tub.easeFor + 1) || tub.dock) {
       tub.dock = this.dock;
       this.dock.x = goal.x;
       this.dock.z = goal.z;
       this.dock.reach = reach + 0.5;
     }
-    if (d < this.best - k.progress) {
-      this.best = d;
-      this.stall = 0;
-    } else this.stall += dt;
-    if (this.stall > k.carryAfter && !tub.carry) tub.carry = new THREE.Vector2(goal.x, goal.z);
-    if (tub.carry) tub.carry.set(goal.x, goal.z);
     const idle = Math.min(tub.sinceBrushed, this.step === 'waiting' ? this.since - this.edgeAt : this.since) > k.inviteAfter
-      && (this.step !== 'waiting' || this.down === 2) && !tub.dock && !tub.carry;
+      && (this.step !== 'waiting' || this.down === 2) && !tub.dock;
     this.invitation = idle ? this.tubTop : null;
   }
 
@@ -431,7 +407,8 @@ export class StrandedCat {
       tub.held = false;
       tub.dock = null;
       tub.docked = false;
-      tub.carry = null;
+      tub.sinceBrushed = Infinity;
+      tub.velocity.set(0, 0);
       this.to('ferried');
     });
   }
@@ -458,7 +435,6 @@ export class StrandedCat {
       tub.dock = null;
       tub.docked = false;
       tub.laden = false;
-      tub.carry = null;
       /** Out from the hull and back along it, out from in front of the lens watching the rescue. */
       const away = this.v.set(tub.position.x - boat.position.x, 0, tub.position.z - boat.position.z).normalize()
         .addScaledVector(this.lens.set(Math.sin(boat.yaw), 0, Math.cos(boat.yaw)), -0.8).normalize();
@@ -469,44 +445,15 @@ export class StrandedCat {
     }
   }
 
-  /**
-   * The rescue, seen through: aboard beside her, it shakes the water off and shivers, then sits looking up at her;
-   * she gets down onto her knees in the boat and puts out
-   * her hands, and it comes up into her arms and pushes its head up under her chin, and its shivering eases. She gets
-   * back up, it springs to the bow, and the boat goes on.
-   */
   private rescued(dt: number): void {
-    const { cat, boat, child } = this.cast;
+    const { cat, boat } = this.cast;
     const k = tuning.drowned.rescue;
     const was = this.rescue;
     this.rescue += dt;
-    const passed = (t: number) => was < t && this.rescue >= t;
-    boat.group.updateMatrixWorld(true);
-    if (passed(k.shakeAt)) cat.shake();
-    if (passed(k.shiverAt)) {
-      cat.shiver = k.shiver;
-      cat.rest('sit', this.head);
-    }
-    if (passed(k.comfortAt)) this.kneelFrom = this.rescue;
-    const kneeling = this.kneelFrom >= 0 ? this.rescue - this.kneelFrom : -1;
-    const down = kneeling >= k.kneelAfter && kneeling < k.kneelAfter + k.kneelFor;
-    this.kneel += ((down ? 1 : 0) - this.kneel) * (1 - Math.exp(-dt * k.kneelRate));
-    child.kneeling = down ? 1 : 0;
-    if (down && kneeling >= k.kneelAfter + k.reachAfter && !this.turned) {
-      if (!this.gathered) {
-        this.gathered = true;
-        cat.hop(IN_ARMS, { frame: child.socket('cradle'), yaw: Math.PI, then: 'sit', arc: 0.08, look: this.head, upright: true });
-      }
-      this.holdIt();
-      cat.nuzzle(this.hand.copy(this.head).setY(this.head.y - k.chinBelow));
-      cat.shiver = Math.max(k.calmed, cat.shiver - dt * k.calming);
-    }
-    if (kneeling >= k.kneelAfter + k.kneelFor && !this.turned) {
+    if (was < k.shakeAt && this.rescue >= k.shakeAt) cat.shake();
+    if (this.rescue >= k.bowAfter && !this.turned && !cat.busy) {
       this.turned = true;
-      child.reachFor(0, null);
-      child.reachFor(1, null);
-      cat.nuzzle(null);
-      cat.hop(FOREDECK, { frame: boat.group, yaw: Math.PI, then: 'sit', look: this.head, arc: 0.3 }, () => {
+      cat.hop(FOREDECK, { frame: boat.group, floor: foredeckAt, yaw: Math.PI, then: 'sit', look: this.head, arc: 0.3 }, () => {
         cat.curious = this.satchel;
         cat.unease = 0;
         this.rescue = -1;
@@ -515,26 +462,11 @@ export class StrandedCat {
     }
   }
 
-  /** Her mittens either side of it, under its shoulders, wherever it is as it comes up into her arms. */
-  private holdIt(): void {
-    const { cat, child } = this.cast;
-    const k = tuning.drowned.rescue, lx = Math.cos(child.yaw), lz = -Math.sin(child.yaw), across = k.holdAcross * cat.scale;
-    child.reachFor(0, this.v.set(cat.position.x + lx * across, cat.position.y + k.holdUp * cat.scale, cat.position.z + lz * across));
-    child.reachFor(1, this.v.set(cat.position.x - lx * across, cat.position.y + k.holdUp * cat.scale, cat.position.z - lz * across));
-  }
-
-  /** While she is aboard, where she is to be in the boat's frame: on the thwart, or down on her knees to the cat. */
-  seatIn(out: THREE.Vector3, seat: THREE.Vector3): THREE.Vector3 {
-    if (this.kneel <= 0.001) return out.copy(seat);
-    const kneel = this.v.copy(KNEEL_AT).applyMatrix4(this.cast.boat.group.matrixWorld);
-    return out.copy(seat).lerp(kneel, THREE.MathUtils.smootherstep(this.kneel, 0, 1));
-  }
-
   /**
    * The fog's front is `away` metres off the boat and coming: the cat stares at it, flatter and flatter, then looks
    * toward the church, the highest thing there is, and bolts.
    */
-  dread(away: number, dark: THREE.Vector3): void {
+  dread(away: number, dark: THREE.Vector3, groundedFor = 0): void {
     if (this.step !== 'aboard' || this.rescue >= 0) return;
     const { cat } = this.cast;
     const k = tuning.drowned.cat;
@@ -548,7 +480,7 @@ export class StrandedCat {
       cat.stare(null);
       cat.look(TOWER);
     }
-    if (away <= k.boltFrom && !cat.busy) {
+    if ((away <= k.boltFrom || groundedFor >= k.leaveAfter) && !cat.busy) {
       cat.afraid(1);
       cat.yowl();
       this.bolted = this.now;
@@ -564,10 +496,10 @@ export class StrandedCat {
     cat.stare(null);
     cat.shiver = 0;
     const k = tuning.drowned.cat;
-    const onto = this.v.copy(STEP).lerp(RIDGE, 0.25);
+    const onto = this.v.copy(RIDGE).lerp(GAP, 0.08);
     onto.y = strandRoof(onto.x, onto.z);
     cat.leap(onto.clone(), { floor: strandRoof, then: 'stand', arc: 0.3 }, () => {
-      cat.run([RIDGE, GAP], strandRoof, { pace: 'run', speed: k.runSpeed, then: 'sit', look: this.head }, () => {
+      cat.run([GAP], strandRoof, { pace: 'run', speed: k.runSpeed, then: 'sit', look: this.head }, () => {
         cat.unease = 0.7;
         this.to('waits');
       });

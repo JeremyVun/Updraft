@@ -94,6 +94,17 @@ export function rake(p: THREE.Vector3): THREE.Vector3 {
   return p;
 }
 
+const deckPoint = new THREE.Vector3();
+export function foredeckAt(x: number, z: number): number {
+  let station = z;
+  for (let i = 0; i < 6; i++) {
+    const u = stationU(station), across = x / Math.max(0.001, gunwaleHalf(u));
+    rake(deckPoint.set(x, gunwale(u) - 0.012 + 0.018 * (1 - across * across), station));
+    station += z - deckPoint.z;
+  }
+  return deckPoint.y;
+}
+
 /**
  * The bottom of the hull, up to the turn of the bilge, and a point in the middle of the transom. Its vertices are
  * the boat's contacts with the ground, so it is the same bottom that is drawn.

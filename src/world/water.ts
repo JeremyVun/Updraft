@@ -95,7 +95,7 @@ void main() {
   vec3 n = normalize(cross(across, along));
   vSwell = vec3(-n.x / n.y, -n.z / n.y, uSwell > 0.0 ? height / uSwell : 0.0);
   vWorld = w + at;
-  vFog = fogOf(vWorld);
+  vFog = fogOf(vWorld, 0.0, true);
 #if CLOUD_DECK
   vSeaSky = uSeaFogShape.w > 0.0 ? seaFogMirrored(vWorld, reflect(normalize(vWorld - cameraPosition), vec3(0.0, 1.0, 0.0))) : vec4(0.0);
 #endif
@@ -329,7 +329,7 @@ void main() {
 #if CLOUD_DECK
   perPixel = perPixel || uSeaFogShape.w > 0.0;
 #endif
-  vec4 fog = perPixel ? fogOf(vWorld) : vFog;
+  vec4 fog = perPixel ? fogOf(vWorld, 0.0, true) : vFog;
   // Ordinary sea under fully opaque fog contributes only the fog colour.
   // The sky mirror is composed AFTER fog, so it must retain its own reflection.
   if (fog.a == 1.0 && glass <= 0.001) {

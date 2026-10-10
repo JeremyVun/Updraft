@@ -190,8 +190,7 @@ export interface TubWall {
  * A wooden wash-tub adrift in the drowned village. Only the player's wind moves it: a stroke across it on screen
  * pushes it and lays a gust at it, and the breeze never moves it. It turns and rocks as it goes, leaves a little wake,
  * slows and settles where it is left, and comes gently back toward its water when it is pushed away from it. The story
- * gives it somewhere to be drawn into (a dock), holds it while something climbs in or out, and in the end can let the
- * world's own air carry it.
+ * gives it somewhere to be drawn into (a dock) and holds it while something climbs in or out.
  */
 export class WashTub {
   readonly group = new THREE.Group();
@@ -209,8 +208,7 @@ export class WashTub {
   docked = false;
   /** Held where it is (something is climbing in or out). */
   held = false;
-  /** Carried toward a point on the world's own air, for a player who has not managed it. */
-  carry: THREE.Vector2 | null = null;
+  interactive = false;
   /** Something is riding in it: it sits lower. */
   laden = false;
   /** How hard it struck a wall this frame, metres a second into it; 0 when it did not. */
@@ -224,6 +222,8 @@ export class WashTub {
   goal: THREE.Vector2 | null = null;
 
   private readonly mesh: THREE.Mesh;
+  private readonly destination: THREE.Mesh;
+  private readonly destinationShown = { value: 0 };
   private readonly waterline = { value: 0 };
   private readonly marks = new Marks(0.5);
   private readonly shove = new THREE.Vector2();
@@ -251,12 +251,31 @@ export class WashTub {
     }));
     this.mesh.layers.enable(REFLECTION_LAYER);
     this.group.add(this.mesh, lid());
+    this.destination = new THREE.Mesh(this.mesh.geometry, new THREE.ShaderMaterial({
+      uniforms: { ...atmo.uniforms, uShow: this.destinationShown },
+      vertexShader: VERT,
+      fragmentShader: /* glsl */ `
+        ${ATMO_GLSL}
+        uniform float uShow;
+        in vec3 vWorld;
+        in vec3 vNormal;
+        void main() {
+          float rim = pow(1.0 - abs(dot(normalize(vNormal), normalize(cameraPosition - vWorld))), 2.2);
+          float shimmer = 0.75 + 0.25 * sin(uTime * 1.7 + vWorld.y * 3.0 + vWorld.x * 2.0);
+          float drift = vnoise(vWorld.xz * 1.3 + vec2(uTime * 0.2, vWorld.y));
+          gl_FragColor = vec4(1.0, 0.82, 0.5, (0.04 + rim * 0.6) * shimmer * (0.5 + 0.5 * drift) * uShow * 0.65);
+        }`,
+      transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+    }));
+    this.destination.name = 'tub-destination';
+    this.destination.renderOrder = 6;
+    this.destination.visible = false;
     this.group.rotation.order = 'YXZ';
     this.group.visible = false;
   }
 
   get objects(): THREE.Object3D[] {
-    return [this.group, this.marks.mesh];
+    return [this.group, this.marks.mesh, this.destination];
   }
 
   get visible(): boolean {
@@ -265,6 +284,7 @@ export class WashTub {
 
   set visible(on: boolean) {
     this.group.visible = on;
+    if (!on) this.destination.visible = false;
   }
 
   /** The level boards inside, in its own space, for whatever rides in it. */
@@ -278,7 +298,8 @@ export class WashTub {
     this.spin = 0;
     this.docked = false;
     this.held = false;
-    this.carry = null;
+    this.sinceBrushed = Infinity;
+    this.shove.set(0, 0);
     this.pose(0, 0);
   }
 
@@ -289,7 +310,7 @@ export class WashTub {
    */
   brush(camera: THREE.Camera, input: PointerInput, dt: number): void {
     const k = tuning.drowned.tub;
-    if (!this.visible || dt <= 0 || input.muted || !input.present || input.ndc.distanceToSquared(input.prevNdc) < 1e-8) return;
+    if (!this.visible || !this.interactive || this.held || dt <= 0 || input.muted || !input.present || input.ndc.distanceToSquared(input.prevNdc) < 1e-8) return;
     const centre = this.at.copy(this.position).setY(this.position.y + HEIGHT * 0.5);
     const middle = this.mid.copy(centre).project(camera);
     const rim = this.side.setFromMatrixColumn(camera.matrixWorld, 0).multiplyScalar(k.brushReach).add(centre).project(camera);
@@ -328,6 +349,12 @@ export class WashTub {
   update(dt: number, time: number): void {
     this.marks.update(time);
     if (!this.visible || dt <= 0) return;
+    this.destinationShown.value += ((this.goal && !this.held ? 1 : 0) - this.destinationShown.value) * (1 - Math.exp(-dt * 3));
+    this.destination.visible = this.destinationShown.value > 0.01;
+    if (this.goal) {
+      swellAt(this.goal.x, this.goal.y, time, this.sea);
+      this.destination.position.set(this.goal.x, this.sea.height - tuning.drowned.tub.draft, this.goal.y);
+    }
     const k = tuning.drowned.tub;
     this.sinceBrushed += dt;
     this.bump = 0;
@@ -381,12 +408,6 @@ export class WashTub {
       const ease = shoved > 1e-5 ? 0 : 1 - Math.exp(-dt * 0.8);
       v.x += ((this.water.x - p.x) / fromMiddle * home - v.x) * ease;
       v.y += ((this.water.z - p.z) / fromMiddle * home - v.y) * ease;
-    }
-    if (this.carry) {
-      const dx = this.carry.x - p.x, dz = this.carry.y - p.z, d = Math.hypot(dx, dz) || 1;
-      const drift = Math.min(k.carrySpeed, d * 0.5);
-      v.x += (dx / d * drift - v.x) * (1 - Math.exp(-dt * 0.6));
-      v.y += (dz / d * drift - v.y) * (1 - Math.exp(-dt * 0.6));
     }
 
     const dock = this.dock;

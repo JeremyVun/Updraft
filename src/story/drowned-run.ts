@@ -960,7 +960,7 @@ export class RoofRun {
     const w = CAT_WAY;
     if (piece === 'tree') {
       return [{ run: [w.tree[0]] }, { hop: w.tree[1] }, { run: [w.tree[2]], narrow: true }, { leap: w.tree[3], floor: roofOr(w.tree[3].y) },
-        { run: [w.tree[4], TREE_CAT], floor: roofOr(w.tree[4].y) }];
+        { run: [...w.tree.slice(4), TREE_CAT], floor: roofOr(w.tree[4].y) }];
     }
     if (piece === 'sheet') {
       const [near, far] = w.sheet;

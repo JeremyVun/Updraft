@@ -946,19 +946,120 @@ Jeremy's next brief, verbatim:
     reproduce the mist/lantern transition across wave phases before deciding whether to soften its opacity or light
     response. No storm visuals changed in this round. Evidence: `/tmp/updraft-final-findings-WhJDz0/portrait-final.log`,
     `portrait-final-film-115.png`, `portrait-final-film-116.png`, and `portrait-departure.log`.
-55. **Circular foreground edge in the storm — diagnosed, proposed fix.** Jeremy asked, verbatim:
+55. **Circular foreground edge in the storm — fixed in review.** Jeremy asked, verbatim:
     "why is there some sort of \"circle\" in the foreground?" It is a discontinuity in the lantern's fog glow.
     `seaFogMarch` estimates the fog density at the sightline's closest point to the lantern (`tc`). When the water
     ends the sightline before that point, the density (`sc`) remains zero; crossing `tc == far` suddenly adds it.
     That boundary forms the curved dark patch across the water. A frozen browser comparison reproduces it:
     disabling the lantern halo removes the edge; disabling only its reflection does not. A diagnostic colour
     mask for `tc > far` follows the edge exactly. Clamping the sample to the visible sightline removes the edge
-    while retaining the glow. This is a browser-only diagnostic, not an applied game fix. Proposal: correct the
-    density and attenuation sampling at truncated sightlines, then verify moving waves, the lantern reflection,
-    both camera aspects and item 54. A connection to the earlier brightness surge remains unproven. Evidence:
+    while retaining the glow. The game now uses that clamped sample, including its endpoint. The reflection
+    follows the actual water surface instead of switching at ±0.4 m, and reflected views no longer enable a
+    direct halo when waves rise above 1 m. The real-shader continuity check passes; restoring either old boundary
+    fails it. Moving landscape and portrait inspection shows the hard edges gone. Landscape passes its storm
+    replay; portrait still fails the separate brightness gate at 16.0/255 (item 54 remains open). Evidence:
     `/tmp/updraft-fog-circle-jkq4FF/` (`probe.mjs`, `state.json`, `time-233.2.png`, `light-boundary.png`,
     `clamped-light-sample.png`). The frozen run starts at the storm checkpoint, then uses the earlier capture's
     shader time to reproduce its wave phase; it is not a reconstruction of every state in that earlier run.
+    Jeremy then instructed, verbatim: "then fix it.. omg". Applied and verified in the review build; final
+    shader tests, builds and moving captures: `/tmp/updraft-lantern-fix-U0Lxxo/`.
+
+### Further rescue and contact polish — 2026-10-10
+
+Jeremy's next brief, verbatim:
+
+> few more polish points,
+> 1) during the cat rescue, the cat waits really low down on the roof so that when the eaves sort of come up, it actually goes over the cat. Also, for some reason without me doing anything, the tub already floats towards the roof by itself. The player should be the one that pushes it to the roof.
+> 2) It's not exactly clear where to put the bucket for the rescue. Same way that there was a sort of outline for where the flight of stairs needed to be positioned in the stairs chapter, i want the same but for the tub checkpoint positions. make sense?
+> 3) image 1: the cat is sitting in mid air.
+> 4) image 2: the cat is STILL walking around clipping into the roof. I saw this when it got off the boat onto the roof, and when it sits down.
+
+56. Keep the waiting rescue cat clear of the roof's eaves throughout its motion; the tub must require player wind
+    to reach the roof instead of drifting there automatically.
+57. Mark the tub's current destination with the established stairs-style outline, including the rescue and return
+    positions, so the player can see where to steer it.
+58. Correct the cat's seated contact with the boat, using the actual posed body and supporting boat surface.
+59. Recheck and correct the cat's boat-to-roof landing, walking and sitting contact with the rendered roof geometry.
+
+These requested fixes are implemented in the integration review at port 5331. The later brief below supersedes
+the earlier pickup sequence: the child stays seated while the cat shakes dry and hops to the bow.
+
+Jeremy's additional brief, verbatim:
+
+> more issues i need you to fix as well
+>
+> 5. the cat meows too often
+> 6. as per image, the cat is weirdly resting on the windmill
+> 7. i think the fog is causing a huge drop in performance during this scene. please disable it so i can test.
+
+60. Reduce recurring cat calls, including overlapping pleading and idle-call timers.
+61. Correct the windmill sail perch so its feet and body follow the supporting stock while it turns.
+62. Temporarily disable village fog rendering in development/QA by default for Jeremy's performance test;
+    `?villagefog=1` restores it for comparison. Keep story progression and lighting the same and production unchanged.
+
+Implementation: the idle rescue valve is removed, and docking requires a recent player stroke. The cat waits
+about 0.76 m above calm water. A golden ghost of the tub marks the active dock and fades when it is occupied.
+The bow uses its raked deck surface; the cat's skinned haunches and paws fit their supporting surface after its
+pose is applied. The mill's cat follows the stock's pitch. Recurring roof calls are 18 s apart; every mew shares
+a 12 s minimum gap after rescue. The later ruling below allows 7 s between stranded calls. CPU checks cover both 180 s idle waits and both
+player-driven trips at 30/60/120 Hz, actual roof and boat meshes, and the rotating stock. Evidence:
+`/tmp/updraft-cat-polish-gJ6o1k/`. Real-pointer rescue replays pass in both aspects, and the final portrait replay
+shows the raised rescue camera, supported bow pose and clear landing. Close windmill captures show the cat
+following the stock. The final landscape first-tree replay passes with the route around the chimney.
+
+### Rescue pacing and cheaper mist — 2026-10-10
+
+Jeremy's further brief, verbatim:
+
+> more issues
+>
+> 8. before even getting to the rescue scene, the player can use their wind to blow the bucket away. Disable the ability to interact with the bucket until the rescue scene starts.
+> 9. when the child picks up the cat in the boat, it literally clips into the mast. i dont think the child should pick it up. just let the cat shake itself off, then jump onto the front of the boat
+> 10. when the cat jumps off the boat, it jumps onto a place on the roof that clips into the boat.
+> 11. during the first tree challenge, the cat walks through a white chimney
+> 12. It's ok for the cat to meow a tiny bit more when it hasn't been rescued yet. The problem i raised with it meowing too much was after it was already rescued.
+> 13. after the boat runs ashore onto the roof, theres too much delay until the cat jumps off and the rest of the sequence continues.
+> 14. after rescuing the cat, the boat should sailing again for a second or two before the "becalming" tone and effect come into play. And while it's sailing into the roof with no wind, there should be no music playing.
+> 15. When the cat reaches inside the bellfry, it shouldn't just be sleeping. that looks really weird
+> 16. the fog is a huge performance issue. disabling it removed the performance drop issue. However, now I need to figure out what to do with the bellfry bell ringing part of the sequence.
+
+Asked whether to call the boat across open water or test cheaper mist, Jeremy answered:
+
+> Test a cheaper mist effect
+
+63–70 track requests 8–15 above, in order. Lock input until the rescue; replace the pickup with a shake and
+hop to the bow; land clear of the hull and route around the tree challenge's chimney; distinguish stranded
+calls from rescued calls; shorten the stranded pause; sail for two seconds before the cue and silence the
+windless drift's score; keep the mother cat attentive among the kittens, including checkpoint restoration.
+71 tracks request 16: prototype a much cheaper mist rendering, preserving the bell's hidden-boat reveal,
+and compare the same camera/time against fog off and the original fog. Keep the no-fog review available.
+The owner's observed improvement with fog disabled is the performance baseline. No island changes.
+
+Current verification: the tub rejects pre-rescue strokes (the negative control fails with the input gate removed).
+The new sequence is shake → bow, with no cradle/pickup; its nearest skinned point stays 11 cm off the mast.
+It sails for 2.00–2.03 s, moving 1.81–1.91 m before the cue, then silences the score throughout the windless drift.
+The cat reacts 1.30–1.32 s after grounding, lands on the ridge clear of the hull (21–24 cm vertical/horizontal
+clearance), and routes around the first tree's white chimney with at least 20 cm skin clearance. The belfry cat
+sits alert both on arrival and restoration. Checks cover 30/60/120 Hz.
+The cheaper mist is available at `villagefog=mist`: four analytic height layers, no density march or noise-texture
+sampling, with the existing story front, rising height and bell clearing. First matched belfry Ultra samples:
+original 53.9 fps, p95 33.3 ms; mist 60.0 fps, p95 16.8 ms; fog off 60.0 fps, p95 16.7–16.8 ms. These are local
+six-second samples at 1600×900, Ultra's render scale 1.5, not a device-wide performance guarantee.
+The matching early-rooftop samples give mist 60.0 fps, fog off 60.0 fps and original 59.5 fps; the large local
+improvement is in the denser belfry view. No frames exceeded 25 ms in either mist sample.
+The final portrait belfry-to-woods replay passes with the trial mist: four rings reveal the lantern and bring
+the boat in, the cats stay at the window, and the crossing reaches the woods. Its largest non-lightning brightness
+change is 10.7/255, within the existing 12/255 gate. This closes the observed surge for the mist trial; item 54
+remains reproducible with the original fog fallback (16.0/255). The mist looks flatter and less billowy than
+the original; Jeremy's visual and device-performance review is still needed before adopting it in production.
+
+Typecheck, production build, the 14 quick checks, boat, camera, contact, farewell and the new rescue sequence
+checks pass. The 53-check mechanics batch passed before the latest pacing/mist changes; the focused checks
+above cover the final changes. No merge or deployment. Evidence: `/tmp/updraft-cat-polish-gJ6o1k/`, especially
+`rescue-portrait-final.log`, `tree-final.log`, `bell-mist.log`, `sequence.log` and `contact-six-pass.log`.
+
+
+### Earlier departure rulings and verification
 
 Asked whether to move the later islands together or use a longer curved route, Jeremy answered, verbatim:
 

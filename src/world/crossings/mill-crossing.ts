@@ -110,9 +110,9 @@ export class MillCrossing {
     const m = this.mill, k = tuning.crossings.mill;
     const inward = (d: number) => new THREE.Vector3(d, 0, 0);
     return [
-      { leap: inward(0), frame: m.perch, upright: true, yaw: Math.PI / 2 },
-      { hop: inward(2.1), frame: m.perch, upright: true, yaw: Math.PI / 2, gather: 0.1 },
-      { hop: inward(4.0), frame: m.perch, upright: true, yaw: Math.PI / 2, gather: 0.1 },
+      { leap: inward(0.3), frame: m.perch, yaw: Math.PI / 2 },
+      { hop: inward(2.1), frame: m.perch, yaw: Math.PI / 2, gather: 0.1 },
+      { hop: inward(4.0), frame: m.perch, yaw: Math.PI / 2, gather: 0.1 },
       { leap: m.at(m.capTop(new THREE.Vector3())), gather: 0.1, when: () => m.shown >= k.catLeap },
     ];
   }

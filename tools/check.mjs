@@ -18,10 +18,10 @@ const mechanics = [
   'sleeping-logic', 'wing-care', 'wood-logic', 'ending-view',
   'camera-direction', 'crossing-camera', 'crossing-haze', 'dream-story', 'drowned-camera',
   'foghorn-story', 'frame-pacer', 'geography', 'journey-reveal', 'piano-growth', 'piano-logic',
-  'plane-routing', 'scarf-normals', 'pointer-pick', 'drowned-gating', 'drowned-contact', 'drowned-farewell',
+  'plane-routing', 'scarf-normals', 'pointer-pick', 'drowned-gating', 'drowned-contact', 'drowned-rescue-polish', 'drowned-rescue-sequence', 'drowned-farewell',
 ];
 const browser = [
-  'shader-browser', 'stairs-fog', 'touch-viewport', 'chapter-view-browser', 'context-loss', 'start',
+  'shader-browser', 'lantern-fog', 'stairs-fog', 'touch-viewport', 'chapter-view-browser', 'context-loss', 'start',
   'progress', 'frame-time-browser', 'journey-view',
 ];
 // Audio/score checks render through a headless dev server (no GPU); BASE selects it.

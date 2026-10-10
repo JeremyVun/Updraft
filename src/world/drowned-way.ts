@@ -415,7 +415,8 @@ for (const [house, names] of [
   [MILL_LOW, ['millSlope', 'millRidge']], [GRANARY_HOUSE, ['granaryRidge', 'granaryWest']],
   [GREEN_HOUSE, ['greenRidge', 'greenNorth']], [NAVE, ['naveSlope', 'naveRidge']],
 ] as const) {
-  for (const name of names) (WAY[name] as Deck).surface = (x, z) => roofUnder(house, x, z);
+  // Her walking height follows the slate plane continuously across the narrow ridge cap.
+  for (const name of names) (WAY[name] as Deck).surface = (x, z) => roofUnder(house, x, z, false);
 }
 
 /**
@@ -461,7 +462,9 @@ export const SWING_SITE: { spot: SwingSpot; way: SwingWay } = {
  */
 export const CAT_WAY = {
   tree: [RAIL_AT.clone().setY(COPING), onFrom(RAIL_AT, EAST, 0.4, RAILINGS_TOP + RAILING_RISE), RAIL_END.clone().setY(RAILINGS_TOP + RAILING_RISE),
-    onRoof(BARN, BARN.stacks[0] * (BARN.len / 2 - 0.75) - 1.6, -acrossAt(BARN, 1.0)), onRoof(BARN, BARN.stacks[0] * (BARN.len / 2 - 0.75) - 0.75, 0)],
+    onRoof(BARN, BARN.stacks[0] * (BARN.len / 2 - 0.75) - 1.6, -acrossAt(BARN, 1.0)), onRoof(BARN, BARN.stacks[0] * (BARN.len / 2 - 0.75) - 1.15, -1.15),
+    onRoof(BARN, BARN.stacks[0] * (BARN.len / 2 - 0.75) + 1.15, -1.15),
+    onRoof(BARN, BARN.stacks[0] * (BARN.len / 2 - 0.75) + 1.15, 0)],
   sheet: SHEET_SITE.caps,
   mill: MILL_CHIMNEY,
   swing: [onRoof(GREEN_HOUSE, SWING_X + 5 - GREEN_HOUSE.x, 0), onRoof(GREEN_HOUSE, SWING_X + 5 - GREEN_HOUSE.x, -3.1),
@@ -628,12 +631,12 @@ export const CAT_CHIMNEY = (() => {
 })();
 
 /** The top of a placed slate roof under (x, z), or null off it. */
-export function roofUnder(h: PlacedHouse, x: number, z: number): number | null {
+export function roofUnder(h: PlacedHouse, x: number, z: number, ridgeCap = true): number | null {
   const c = Math.cos(h.yaw), s = Math.sin(h.yaw);
   const dx = x - h.x, dz = z - h.z;
   const lx = dx * c - dz * s, lz = dx * s + dz * c;
   if (Math.abs(lx) > h.len / 2 + 0.1 || Math.abs(lz) > h.depth / 2 + OVERHANG) return null;
-  return slatesAt(h, lz);
+  return ridgeCap && Math.abs(lz) <= 0.15 && !h.thatched ? ridgeTop(h) : slatesAt(h, lz);
 }
 
 /** The cat's roof under (x, z), or the water off it. */
@@ -670,7 +673,7 @@ export function atHold(ahead: number, port: number, out = new THREE.Vector2()): 
 }
 
 /** Where the cat waits for the tub at the water's edge, on the slates just out of it. */
-export const CAT_EDGE = onCatRoof(CAT_EDGE_ALONG, CAT_ROOF.depth - 0.25);
+export const CAT_EDGE = onCatRoof(CAT_EDGE_ALONG, CAT_ROOF.depth - 0.85);
 
 /**
  * The wash-tub: where it floats when the boat comes, off the bow between her and the cat, so the first trip is away

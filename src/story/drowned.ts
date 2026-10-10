@@ -12,7 +12,7 @@ import { tuning } from '../tuning';
 import { roundedWaypoint } from '../traveller/navigation';
 import type { Cast, Chapter } from './cast';
 import { cue } from './cues';
-import { KNEEL_AT, StrandedCat } from './drowned-cat';
+import { StrandedCat } from './drowned-cat';
 import { RoofRun } from './drowned-run';
 import { ChurchArrival } from './drowned-church';
 
@@ -87,6 +87,9 @@ export class DrownedChapter implements Chapter {
   hush = 0.3;
   readonly shot: Shot = { target: new THREE.Vector3(), distance: 20, height: 3.2, carry: true };
   readonly music = 'drowned' as const;
+  get silence(): boolean {
+    return this.beat === 'still' || (this.beat === 'becalmed' && !this.cat.ashore);
+  }
   /** The room's music by feeling, not by beat: the score moves on at its next chord change. */
   get drownedScore(): DrownedScorePhase {
     switch (this.beat) {
@@ -174,6 +177,7 @@ export class DrownedChapter implements Chapter {
   /** How far the lens has come round to watch the cat brought over (it only grows), and when the air died after it. */
   private catRound = 0;
   private aboardFrom = -1;
+  private ghostFrom = 0;
   private readonly lensWas = new THREE.Vector3();
   /** How fast the fog's front is coming on while the boat lies stuck, m/s. */
   private fogSpeed = 0;
@@ -219,10 +223,12 @@ export class DrownedChapter implements Chapter {
     this.church = cast.village ? new ChurchArrival(cast) : null;
   }
 
-  /** The cat is aboard and has come to her: the air goes out of the village. */
+  /** A short stretch of sailing separates the rescue from the air dying. */
   private goOn(): void {
     this.aboardFrom = this.now;
-    this.still();
+    this.cast.boat.coastTo = null;
+    this.cast.boat.steerFor = STRAND;
+    this.cast.boat.speedLimit = tuning.drowned.cat.sailSpeed;
   }
 
   get windInvitation(): THREE.Vector3 | null {
@@ -417,8 +423,7 @@ export class DrownedChapter implements Chapter {
     if (!this.cat.ashore || this.church?.aboard) {
       /** Casting off she turns round from the cat to face the way they go. */
       const turned = this.stormTime > 0 ? 1 - THREE.MathUtils.smootherstep(this.stormTime, 0, tuning.storm.turnFromCat) : 1;
-      c.ride(this.cat.seatIn(this.seat, boat.seat(this.seat)), boat.yaw + (this.church?.seatTurn ?? 0) * turned, boat);
-      if (this.cat.kneel > 0.05) c.sitting = false;
+      c.ride(boat.seat(this.seat), boat.yaw + (this.church?.seatTurn ?? 0) * turned, boat);
     }
     if (p.held) p.hold(c);
     this.cat.update(dt, time);
@@ -432,6 +437,9 @@ export class DrownedChapter implements Chapter {
     switch (this.beat) {
       case 'enter':
         if (this.t > 9) this.to('drift');
+        break;
+      case 'drift':
+        if (this.aboardFrom >= 0 && this.now - this.aboardFrom >= tuning.drowned.rescue.sailFor) this.still();
         break;
       case 'still':
         this.ghost(dt);
@@ -567,6 +575,7 @@ export class DrownedChapter implements Chapter {
   private still(playCue = true): void {
     const { boat } = this.cast;
     this.stillAt = this.now;
+    this.ghostFrom = boat.speed;
     this.to('still');
     drownedEntry.behindGone = true;
     boat.coastTo = null;
@@ -582,7 +591,7 @@ export class DrownedChapter implements Chapter {
     const { boat } = this.cast;
     const k = tuning.drowned;
     const dx = STRAND.x - boat.position.x, dz = STRAND.y - boat.position.z, left = Math.hypot(dx, dz);
-    boat.speed = k.ghostSpeed * THREE.MathUtils.smoothstep(this.t, 0, k.ghostGathers);
+    boat.speed = THREE.MathUtils.lerp(this.ghostFrom, k.ghostSpeed, THREE.MathUtils.smoothstep(this.t, 0, k.ghostGathers));
     if (boat.coastTo) return;
     if (left < k.ghostLineUp) {
       boat.coastTo = { x: STRAND.x, z: STRAND.y, yaw: STRAND_YAW, brake: k.strandBrake };
@@ -619,7 +628,7 @@ export class DrownedChapter implements Chapter {
       }
       this.come = THREE.MathUtils.clamp(dark.front / (DARK_AT_STRAND - k.holdBehind), 0, 1);
       const front = dark.frontAt(this.front, 0);
-      this.cat.dread(DARK_AT_STRAND - dark.front, this.darkFront.set(front.x, 1.5, front.y));
+      this.cat.dread(DARK_AT_STRAND - dark.front, this.darkFront.set(front.x, 1.5, front.y), this.t);
       this.strain(dt);
     }
     if (!this.touched && boat.coastTo && Math.hypot(boat.position.x - STRAND.x, boat.position.z - STRAND.y) < tuning.drowned.stuck.touch) {
@@ -1014,23 +1023,16 @@ export class DrownedChapter implements Chapter {
     this.pace = lerp(this.pace, lerp(k.uprightCatPace, k.catPace, wide), round);
   }
 
-  /**
-   * The rescue, close and low off the bow on the side the tub came in on: forward of the mast, so it stands clear of
-   * her face and the slack sail hangs behind her, and just high enough over the gunwale that the boards at her knees
-   * show. The cat's leap onto the foredeck near the lens, its shiver, and it pressing against her as she kneels and
-   * puts out her hand, her face over it: the one exchange that shows it trusts her.
-   */
   private rescueFrame(): void {
     const k = tuning.drownedCamera, s = this.shot, boat = this.cast.boat;
     const wide = THREE.MathUtils.smoothstep(this.aspect, 0.7, 1.3), lerp = THREE.MathUtils.lerp;
     const fx = Math.sin(boat.yaw), fz = Math.cos(boat.yaw);
     const px = Math.cos(boat.yaw) * this.rescueSide, pz = -Math.sin(boat.yaw) * this.rescueSide;
-    const down = THREE.MathUtils.smootherstep(this.cat.kneel, 0, 1);
-    const b = lerp(lerp(k.uprightRescueBearing, k.rescueBearing, wide), k.rescueKneelBearing, down);
+    const b = lerp(k.uprightRescueBearing, k.rescueBearing, wide);
     const reach = lerp(k.uprightRescueDistance, k.rescueDistance, wide);
     boat.group.updateMatrixWorld(true);
-    const at = this.anchor.copy(KNEEL_AT).applyMatrix4(boat.group.matrixWorld);
-    const high = lerp(lerp(k.uprightRescueEye, k.rescueEye, wide), k.rescueKneelEye, down);
+    const at = this.anchor.set(0, 0, 0.02).applyMatrix4(boat.group.matrixWorld);
+    const high = lerp(k.uprightRescueEye, k.rescueEye, wide);
     s.eye = this.catEye.set(at.x + (fx * Math.cos(b) + px * Math.sin(b)) * reach, boat.position.y + high,
       at.z + (fz * Math.cos(b) + pz * Math.sin(b)) * reach);
     s.orbit = true;

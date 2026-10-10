@@ -409,7 +409,7 @@ export class ChurchArrival {
     cat.hop(v.belfry.inside('west', 0.35, CAT_SIDE * 0.7), { then: 'stand', floor }, () => {
       cat.run([this.curlAt()], floor, { pace: 'trot', speed: 1.1, then: 'stand' }, () => {
         cat.chirrup();
-        cat.rest('curl', null);
+        cat.rest('sit', this.head);
         this.later(k.wakeAfter, () => {
           v.kittens.tumble();
           this.later(0.2, () => v.kittens.cats[FOUND].mew(0.5));
@@ -738,8 +738,8 @@ export class ChurchArrival {
     const { cat } = this.cast;
     const at = this.curlAt();
     cat.unease = 0;
-    cat.place(at, tuning.drowned.church.curlYaw, { pose: 'curl', floor: () => at.y });
-    cat.look(null);
+    cat.place(at, tuning.drowned.church.curlYaw, { pose: 'sit', floor: () => at.y });
+    cat.look(this.head);
     this.catAt = 'nest';
   }
 

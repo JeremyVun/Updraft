@@ -4,6 +4,7 @@ import { ARM, BODY, catGeometry, CHEST, FORE, FPAW_L, FPAW_R, HEAD, HPAW_L, HPAW
 import { BOUND_LEGS, boundShape, type BoundShape } from './cat/bound';
 import { CatGait, type GaitKind, type Support } from './cat/gait';
 import { CatRig, type Drives } from './cat/pose';
+import { contactVertices } from './cat/contact';
 import { Route } from './cat/route';
 import { applyCatLook, catMaterial, coatShells, type CatLook, type Coat } from './cat/shader';
 import { Spray } from './cat/spray';
@@ -12,7 +13,7 @@ import { tuning } from '../tuning';
 
 export type CatPose = 'stand' | 'sit' | 'crouch' | 'curl';
 export type Pace = 'walk' | 'trot' | 'run';
-/** The height of whatever it walks on under a point of the world. */
+/** The surface height in the cat's supporting frame, or world space when unframed. */
 export type Floor = (x: number, z: number) => number;
 
 /** Something it did this frame that can be heard. The cat only says what happened; the sound is made elsewhere. */
@@ -256,6 +257,7 @@ export class Cat {
   private blinkT = -1;
   private nextBlink = 2;
   private nextMew = 1.2;
+  private lastMew = -Infinity;
   private mewT = -1;
   private mewFor = 0.8;
   private chirpT = -1;
@@ -300,11 +302,14 @@ export class Cat {
   private readonly w = new THREE.Vector3();
   private readonly q = new THREE.Quaternion();
   private readonly m = new THREE.Matrix4();
+  private readonly contacts: number[];
+  private readonly pawLift = [0, 0, 0, 0];
 
   constructor(opts: { coat?: Coat; kitten?: boolean } = {}) {
     this.kitten = !!opts.kitten;
     this.mat = catMaterial(this.rig.bones, opts.coat);
     this.mesh = new THREE.Mesh(catGeometry(), this.mat);
+    this.contacts = contactVertices(this.mesh.geometry);
     this.mesh.frustumCulled = false;
     this.mesh.visible = false;
     /** The coat hangs off the skin as a child of it, so it is shown, hidden and drawn with the cat and never apart. */
@@ -362,7 +367,7 @@ export class Cat {
     this.shakeT = this.slowT = this.batT = this.toppleT = this.downT = -1;
     this.updateFrame();
     this.at.copy(at);
-    this.floor = this.frame ? null : opts.floor ?? null;
+    this.floor = opts.floor ?? null;
     this.level = at.y;
     this.snap(this.at);
     this.heading = yaw;
@@ -417,7 +422,10 @@ export class Cat {
 
   /** A plaintive mew now, a kitten's length, the mouth keeping time with it. */
   mew(plea = 1): void {
-    if (this.mewT >= 0) return;
+    const k = tuning.catVoice;
+    if (this.mewT >= 0 || this.time - this.lastMew < (this.mewing ? k.strandedGap : k.minimumGap)) return;
+    this.lastMew = this.time;
+    this.nextMew = this.mewing ? k.strandedEvery + Math.random() * k.strandedVariation : k.callEvery + Math.random() * k.callVariation;
     this.mewT = 0;
     this.mewFor = (0.3 + 0.1 * plea + Math.random() * 0.05) * (this.kitten ? 0.7 : 1);
     this.heard.push({ kind: 'mew', amount: this.kitten ? 0.6 : 1, length: this.mewFor, plea, voice: this.voice });
@@ -761,7 +769,7 @@ export class Cat {
     const arc = opts.arc ?? (this.dropping ? 0.02 * this.scale : leap ? 0.07 * this.scale + span * 0.1 : 0.035 * this.scale + span * 0.08);
     if (opts.look !== undefined) this.target = opts.look;
     this.uprightNext = !!opts.upright;
-    this.launch(to, frame, fwd, UP, frame ? null : opts.floor ?? null, arc, leap, then, () => this.finish(then), opts.gather);
+    this.launch(to, frame, fwd, UP, opts.floor ?? null, arc, leap, then, () => this.finish(then), opts.gather);
   }
 
   /** Sets up a flight from where it stands to a point on something, eyed, gathered for, flown and landed. */
@@ -888,7 +896,7 @@ export class Cat {
   }
 
   private alignGround(dt: number): void {
-    if (!this.floor || this.frame || this.onWall) return;
+    if (!this.floor || this.onWall) return;
     const k = tuning.catGround, step = k.sample * this.scale;
     const { x, z } = this.at, base = this.floor(x, z);
     const height = (dx: number, dz: number) => {
@@ -1129,11 +1137,11 @@ export class Cat {
   /** Where it will come down, in the world this frame: the thing it lands on may have moved since it set off. */
   private ends(): void {
     this.endW.copy(this.toAt);
+    if (this.toFloor) this.endW.y = this.toFloor(this.endW.x, this.endW.z);
     if (this.toFrame) {
       this.endW.applyMatrix4(worldOf(this.toFrame));
       this.toFrame.getWorldQuaternion(this.q);
     } else this.q.identity();
-    if (this.toFloor) this.endW.y = this.toFloor(this.endW.x, this.endW.z);
     this.basisQuat(this.toUp, this.toFwd, this.endQ).premultiply(this.q);
   }
 
@@ -1190,7 +1198,11 @@ export class Cat {
       const sideEnd = this.v.set(1, 0, 0).applyQuaternion(this.endQ);
       const fwdEnd = this.w2.set(0, 0, 1).applyQuaternion(this.endQ);
       this.landPaw.copy(this.endW).addScaledVector(sideEnd, home.x).addScaledVector(fwdEnd, home.y + (front ? 0.025 : -0.01) * k);
-      if (this.toFloor) this.landPaw.y = this.toFloor(this.landPaw.x, this.landPaw.z);
+      if (this.toFloor) {
+        if (this.toFrame) this.landPaw.applyMatrix4(this.m.copy(this.toFrame.matrixWorld).invert());
+        this.landPaw.y = this.toFloor(this.landPaw.x, this.landPaw.z);
+        if (this.toFrame) this.landPaw.applyMatrix4(this.toFrame.matrixWorld);
+      }
       const from = this.v.copy(this.fromPaws[i]);
       if (this.fromFrame) from.applyMatrix4(worldOf(this.fromFrame));
       const leave = front ? smooth(t / 0.16) : smooth((t - 0.1) / 0.18);
@@ -1214,7 +1226,7 @@ export class Cat {
     this.updateFrame();
     const local = this.v.copy(this.endW).applyMatrix4(this.frameInverse);
     this.at.copy(local);
-    this.floor = this.frame ? null : this.toFloor;
+    this.floor = this.toFloor;
     this.level = local.y;
     this.fwd.copy(this.toFwd);
     this.up.copy(this.toUp);
@@ -1238,7 +1250,6 @@ export class Cat {
       this.nextMew -= dt;
       if (this.nextMew <= 0) {
         this.mew(0.7 + 0.3 * Math.min(1, this.fear + 0.3));
-        this.nextMew = 3.4 + Math.random() * 2.8;
       }
     }
     if (this.mewT >= 0) {
@@ -1467,7 +1478,7 @@ export class Cat {
 
     /** And its tail goes down and in, never up: up is for a cat that is glad. */
     const cowed = clamp(fear * 1.2, 0, 1);
-    tailUp = THREE.MathUtils.lerp(tailUp, Math.min(tailUp, this.doing === 'path' ? -0.3 : -0.5), cowed);
+    tailUp = THREE.MathUtils.lerp(tailUp, Math.min(tailUp, this.doing === 'path' ? -0.3 : -0.5), cowed * (1 - w.sit));
     tailCurl *= 1 - cowed;
 
     if (this.doing === 'air') {
@@ -1783,6 +1794,7 @@ export class Cat {
     d.up.copy(this.up);
     d.legs += 0.25 * w.sit;
     this.rig.pose(d);
+    this.clearSurface();
     d.legs -= 0.25 * w.sit;
     applyCatLook(this.mat, look, this.rig.nodes[HEAD].getWorldQuaternion(this.q));
     d.bodyY -= osc.bodyY;
@@ -1798,6 +1810,31 @@ export class Cat {
     d.headPitch -= osc.head;
     d.headRoll -= osc.headRoll;
     d.headYaw -= osc.headYaw;
+  }
+
+  private clearSurface(): void {
+    if (this.onWall || this.doing === 'lower' || (this.doing === 'air' && this.air === 'fly')) return;
+    const { position: p, aSkin: skin } = this.mesh.geometry.attributes;
+    const before = this.d.bodyY;
+    // Fear and sitting change the haunch silhouette after the feet have been planted.
+    for (let pass = 0; pass < 6; pass++) {
+      let lift = 0;
+      this.pawLift.fill(0);
+      for (const i of this.contacts) {
+        this.v.fromBufferAttribute(p, i);
+        this.w.copy(this.v).applyMatrix4(this.rig.bones[skin.getY(i)]);
+        this.v.applyMatrix4(this.rig.bones[skin.getX(i)]).lerp(this.w, skin.getZ(i)).applyMatrix4(this.frameInverse);
+        const floor = this.floor ? this.floor(this.v.x, this.v.z) : this.level;
+        const paw = PAWS.indexOf(skin.getX(i));
+        if (paw < 0) lift = Math.max(lift, floor + 0.004 - this.v.y);
+        else this.pawLift[paw] = Math.max(this.pawLift[paw], floor - this.v.y);
+      }
+      if (lift < 0.0005 && this.pawLift.every(n => n < 0.0005)) break;
+      this.d.bodyY += lift * this.up.y / this.scale;
+      for (let i = 0; i < 4; i++) this.paws[i].y += this.pawLift[i];
+      this.rig.pose(this.d);
+    }
+    this.d.bodyY = before;
   }
 
   private readonly drop = new THREE.Vector3();

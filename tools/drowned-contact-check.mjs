@@ -93,7 +93,8 @@ for (const fps of !only || only === 'cat' ? [30, 60, 120] : []) {
       if (i % Math.round(fps / 10)) continue;
       catVertices(cat, (p, bone) => { if (bone <= 3) lowest = Math.min(lowest, p.y - catRoof(p.x, p.z)); });
     }
-    assert(pitch > 0.4, `cat stayed horizontal at ${fps} fps: ${pitch}`);
+    const descent = Math.abs(CAT_EDGE.y - CAT_LANDING.y) / CAT_EDGE.distanceTo(CAT_LANDING);
+    assert(pitch > descent * 0.9, `cat did not follow its descent at ${fps} fps: ${pitch} for slope ${descent}`);
     assert(lowest > -0.02, `cat body cut through its roof at ${fps} fps: ${lowest}`);
     console.log(`cat ${pace} descent ${fps} fps: body clearance ${lowest.toFixed(3)} m, pitch ${pitch.toFixed(3)}`);
   }
@@ -146,11 +147,12 @@ if (!only || only === 'rescue') {
     if (s.released) break;
   }
   assert(s.released, 'rescue must finish');
-  assert.equal(landings.length, 3, 'only boarding, cuddle, and settling at the bow');
+  assert.equal(landings.length, 2, 'only boarding and settling at the bow');
   assert.equal(landings[0].at[2], MAST_Z, 'board beside the child');
   assert(landings[0].at[1] > SEAT_Y && landings[0].at[1] > FLOOR_Y);
-  assert.equal(landings[1].frame, child.socket('cradle'));
-  assert.equal(landings[2].frame, boat.group);
-  assert(landings[2].at[2] > MAST_Z + 1, 'settle forward once');
-  console.log('rescue: thwart → cuddle → bow, complete');
+  assert(Math.abs(landings[0].at[0]) > .4, 'shake clear of the mast');
+  assert.equal(landings[1].frame, boat.group);
+  assert(landings[1].at[2] > MAST_Z + 1, 'settle forward once');
+  assert.equal(child.kneeling, 0, 'no pickup');
+  console.log('rescue: thwart shake → bow, complete');
 }

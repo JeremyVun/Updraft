@@ -12,6 +12,8 @@ export const params: ReturnType<typeof readQaParams> = QA ? readQaParams() : {
   dusk: null,
   shower: null,
   fog: null,
+  villageFog: true,
+  villageMist: false,
   storm: null,
   chapter: null,
   progress: true,

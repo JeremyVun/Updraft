@@ -13,7 +13,7 @@ try {
   const page = await browser.newPage({ viewport: { width: Number(process.env.W ?? 1600), height: Number(process.env.H ?? 900) },
     deviceScaleFactor: Number(process.env.DSF ?? 2) });
   page.on('pageerror', e => errors.push(e.message));
-  await page.goto(`${process.env.BASE ?? 'http://127.0.0.1:5230/'}?shot=1&chapter=${chapter}`);
+  await page.goto(`${process.env.BASE ?? 'http://127.0.0.1:5230/'}?shot=1&chapter=${chapter}&villagefog=${process.env.FOG ?? '1'}`);
   await page.waitForFunction(() => window.__ready, null, { timeout: 90000 });
   await page.evaluate(async fixedTime => {
     const url = performance.getEntriesByType('resource').findLast(r => new URL(r.name).pathname === '/src/world/atmosphere.ts').name;

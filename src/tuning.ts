@@ -4,6 +4,7 @@
  */
 export const tuning = {
   catGround: { sample: 0.07, edge: 0.2, follow: 14 },
+  catVoice: { minimumGap: 12, callEvery: 18, callVariation: 8, strandedGap: 7, strandedEvery: 9, strandedVariation: 4 },
   childGround: { follow: 2 },
   cinematography: {
     /** Radians either side of the story's preferred view; never an unsolicited reverse angle. */
@@ -1800,6 +1801,7 @@ export const tuning = {
     },
     /** The sea fog the dark is: one field every shader reads, and the light it takes as it comes. */
     fog: {
+      mistDensity: 0.22, mistSoftness: 1.8, mistRelief: 0.16,
       /**
        * How high its top stands over the water until the story raises it (its `level`), metres, and `closedTop` times
        * that once it has closed round; how far over its top it begins and how far under it it is whole, metres
@@ -2011,7 +2013,7 @@ export const tuning = {
        * on by short of a piece, and how fast it goes along ridges and walls and along the railings and the line (m/s);
        * seconds after it sits before it calls to her, and between calls while it waits across a piece for her.
        */
-      catLead: 7.5, catNear: 3, catLeast: 3, catSpeed: 4.2, railSpeed: 2.2, catCallFirst: 0.5, catCallEvery: 3.2,
+      catLead: 7.5, catNear: 3, catLeast: 3, catSpeed: 4.2, railSpeed: 2.2, catCallFirst: 0.5, catCallEvery: 18,
       /**
        * How near she is to each piece (metres along her way to where she waits at it) when the cat sets off over it, so
        * it is already going as she arrives and never keeps her waiting (the sheet's once she sets off for the fallen
@@ -2051,8 +2053,6 @@ export const tuning = {
       easeFrom: 4.5, aimFrom: -0.2, easeSpeed: 0.5, easeFor: 3,
       /** Out of its water it drifts back at up to `homeSpeed` m/s, `homePull` m/s a metre beyond the edge. */
       homeSpeed: 0.45, homePull: 0.3,
-      /** The world's own air carrying it once nobody has managed it, m/s. */
-      carrySpeed: 0.55,
       /** How hard it is drawn into a dock it has come within reach of, m/s a metre. */
       dockPull: 1.3,
       /** How much it turns for its way through the water. */
@@ -2079,37 +2079,23 @@ export const tuning = {
       /** Seconds the tub is held at the bow before the cat leaps, and of the leap's settling before the boat goes on. */
       ready: 0.7, settles: 2.6,
       /**
-       * Seconds of nothing near the tub (the first time, from when the cat is waiting at the edge) before the drawn gust,
-       * and with no progress before the air carries it there.
+       * Seconds of nothing near the tub (the first time, from when the cat is waiting at the edge) before the drawn gust.
        */
-      inviteAfter: 6, carryAfter: 90,
-      /** How far nearer (metres) the tub has to get to its goal to count as progress. */
-      progress: 0.8,
+      inviteAfter: 6,
       /**
        * How far off the boat the fog's front is (metres) when the cat starts to stare at it, when it looks round toward
        * the church, and when it bolts.
        */
       uneasyFrom: 85, churchFrom: 48, boltFrom: 40,
       /** The cat's run up the slates and along the ridge, m/s. */
-      runSpeed: 2.6,
+      runSpeed: 2.6, leaveAfter: 1.3,
       /** Seconds she looks at the fog, down at the stuck boat, then at the cat, before she climbs out after it. */
-      looksBack: 1.4, looksAtBoat: 1.0, looksAtCat: 1.0,
+      looksBack: 0.7, looksAtBoat: 0.5, looksAtCat: 0.6,
       /** Seconds she stands on the ridge looking back down at the boat as the fog comes over it, before she turns to the cat. */
       lostFor: 3,
     },
-    /** The rescue, once the cat is aboard. */
     rescue: {
-      /** Seconds after it lands beside her that it shakes, shivers, and lets her come close. */
-      shakeAt: 0.35, shiverAt: 1.4, shiver: 0.7, comfortAt: 2.1,
-      /**
-       * Once it sits on the thwart in front of her: seconds before she gets down onto her knees, how long she stays
-       * down, when her hands go out and it comes up into her arms; how fast she goes down and back up (per second); how
-       * its shivering eases in her arms (per second, and down to); and seconds after it is back at the bow before the
-       * boat goes on. Her mittens go this far either side of it and this high up it (shares of its size), and it pushes
-       * its head this far under her face (metres).
-       */
-      kneelAfter: 0.2, kneelFor: 4.4, reachAfter: 0.8, kneelRate: 3, calming: 0.3, calmed: 0.12, goOnAfter: 0.4,
-      holdAcross: 0.07, holdUp: 0.07, chinBelow: 0.1,
+      shakeAt: 0.35, bowAfter: 2.1, goOnAfter: 0.4, sailFor: 2,
     },
   },
   drownedCamera: {
@@ -2338,16 +2324,11 @@ export const tuning = {
     catAlong: 0.58, catSide: 12.5, catEye: 3.8, catLook: 0.5, catAim: 1.5, catLift: 0.9, catZoom: 0.95,
     uprightCatAlong: -1.35, uprightCatPotAlong: -0.5, uprightCatSide: 4, uprightCatPotSide: 5.8, uprightCatEye: 6.2, uprightCatLook: 0.95, uprightCatAim: 0.8, uprightCatLift: 0.6,
     uprightCatZoom: 1,
-    /**
-     * The cat brought aboard: once the tub is this near the boat the lens comes in beside her: its bearing from ahead
-     * toward the side it watched the tub from (radians), how far from where she kneels and how high over the hull, and
-     * its bearing and height once she is down on her knees with the cat in her arms, the least it keeps over the water;
-     * it looks this share of the way from her face to the cat's eye, on this lens, at this pace. Upright, its own.
-     */
-    rescueFrom: 2.5, rescueBearing: 1.35, rescueDistance: 7, rescueEye: 2.1, rescueKneelBearing: 1.05, rescueKneelEye: 1.3,
+    /** Look into the boat so the cat shaking on the thwart clears the gunwale. */
+    rescueFrom: 2.5, rescueBearing: 1.35, rescueDistance: 6.2, rescueEye: 3.6,
     rescueClear: 0.8, rescueAlong: 0.4,
     rescueZoom: 1, rescuePace: 0.35,
-    uprightRescueBearing: 1.2, uprightRescueDistance: 6, uprightRescueEye: 2.2, uprightRescueZoom: 0.85,
+    uprightRescueBearing: 1.2, uprightRescueDistance: 6, uprightRescueEye: 3.6, uprightRescueZoom: 0.85,
   },
   /** The two crossings of the drowned village's run over the roofs: the dead tree pushed over, the swing pumped. */
   crossings: {

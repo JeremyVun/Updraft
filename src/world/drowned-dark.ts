@@ -167,7 +167,8 @@ export class DarkBank {
     const here = (1 - smooth(Math.hypot(eye.x - CHURCH.x, eye.z - CHURCH.y), 200, 320))
       * smooth(Math.hypot(eye.x - WOOD_LANDING.x, eye.z - WOOD_LANDING.y), k.shoreGone, k.shoreFrom);
     const amount = smooth(this.rise, 0, 0.5) * here;
-    u.uSeaFogShape.value.w = amount;
+    const drawnAmount = params.villageFog ? amount : 0;
+    u.uSeaFogShape.value.w = drawnAmount;
     if (amount <= 0) {
       u.uSeaFogCrest.value.w = 0;
       return;
@@ -187,7 +188,7 @@ export class DarkBank {
     u.uSeaFog.value.set(this.at.x, this.at.y, this.ahead.x, this.ahead.y);
     const drawn = smooth(p, far, near);
     const top = this.level * (0.3 + 0.7 * risen) * THREE.MathUtils.lerp(1, k.closedTop, this.close);
-    u.uSeaFogShape.value.set(top, d.flank / (d.halfWidth * d.halfWidth), this.close, amount);
+    u.uSeaFogShape.value.set(top, d.flank / (d.halfWidth * d.halfWidth), this.close, drawnAmount);
     const wing = THREE.MathUtils.lerp(THREE.MathUtils.lerp(d.wingFar, d.wing, drawn), 1, this.round);
     const fade = THREE.MathUtils.lerp(THREE.MathUtils.lerp(d.wingFadeFar, d.wingFade, drawn), 0.8, this.round);
     u.uSeaFogSides.value.set(d.halfWidth, d.halfWidth * 1.8, wing * d.halfWidth, (wing + fade) * d.halfWidth);

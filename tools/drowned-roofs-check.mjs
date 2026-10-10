@@ -1,15 +1,15 @@
 // The drowned village's stranded cat, played with real pointer gestures in Chrome for Testing against a running dev
 // server: the boat comes round to the cat and waits, the cat comes down to the water's edge where the tub must come,
 // strokes across the wash-tub on screen carry it there, the cat gets in, more strokes bring the tub to the bow, the cat
-// jumps aboard and comes to her, the air dies and the becalmed boat ghosts slowly on onto the first roof's slates
+// jumps aboard, shakes dry and hops to the bow; the boat sails briefly, then the air dies and the becalmed boat ghosts slowly on onto the first roof's slates
 // while the player's strokes make no wind at all, the dark comes on, the cat bolts over the roof and the child climbs
 // out after it to the ridge, looks back at the boat as the fog takes it, and the untended boat stays where it stuck as
 // she goes on.
 // Fails if waiting moves the tub toward the roof, if no drawn gust is offered, if the tub's puzzle leaves the frame, if
 // the becalmed drift is fast or short or answers a stroke, or if any of those steps does not happen.
 // Usage: node tools/drowned-roofs-check.mjs   env: BASE (default http://127.0.0.1:5230/), SHOTS=<prefix> saves stills,
-//        W/H viewport (default 1600x900), IDLE seconds of waiting at the tub first (default 18), VALVE=1 instead
-//        waits out the safety valve with no input at all (both trips), DEBUG=1 prints each stroke, NEAR=1 starts the
+//        W/H viewport (default 1600x900), IDLE seconds of waiting at the tub first (default 18),
+//        DEBUG=1 prints each stroke, NEAR=1 starts the
 //        boat on the drift's last leg 70 m short of the cat, STRIP=<dir> saves a frame every half second of game time
 //        from the room's start to the end, the boat lost behind her (<dir>/0000.jpg on; frames.jsonl gives each one's
 //        time, beat, step and how strongly the cat's call marks showed).
@@ -27,7 +27,7 @@ const errors = [];
 try {
   const page = await (await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1 })).newPage();
   page.on('pageerror', (e) => errors.push(e.message));
-  await page.goto(`${base}?shot=1&chapter=drowned&ratio=1`, { waitUntil: 'load' });
+  await page.goto(`${base}?shot=1&chapter=drowned&ratio=1&villagefog=${process.env.FOG ?? '1'}`, { waitUntil: 'load' });
   await page.waitForFunction(() => window.__ready === true, null, { timeout: 60000 });
   if (process.env.NEAR) await page.evaluate(async () => {
     const { CAT_HOLD, STRAND } = await import('/src/world/drowned-way.ts');
@@ -57,7 +57,7 @@ try {
   })().catch(() => {});
   const state = () => page.evaluate(() => {
     const s = __game.story.current, c = s.cat, t = __game.village.tub, r = (v) => v.toArray().map((x) => +x.toFixed(2));
-    return { time: +__stats.time.toFixed(1), beat: s.beat, step: c.step, tub: r(t.position), docked: t.docked, carried: !!t.carry,
+    return { time: +__stats.time.toFixed(1), beat: s.beat, step: c.step, tub: r(t.position), docked: t.docked,
       goal: r(c.goal), invited: !!s.windInvitation, heading: s.invitationHeading, boat: r(__game.boat.position),
       speed: +__game.boat.speed.toFixed(2), cat: r(__game.cat.position), child: r(__game.child.position),
       seat: __game.cygnet.seat };
@@ -149,23 +149,6 @@ try {
   await play(3.5);
   await shot('1-cat-on-chimney');
 
-  if (process.env.VALVE) {
-    // Nobody is stranded: with no input at all the air carries the tub to the roof, and later to the boat.
-    await reach('coming', 240000);
-    s = await state();
-    assert(s.time - began > 85, `the first valve opened after only ${(s.time - began).toFixed(0)}s`);
-    console.log(`valve: the tub reached the roof by itself after ${(s.time - began).toFixed(0)}s of nothing`);
-    await reach('ferried', 30000);
-    const second = (await state()).time;
-    await reach('boarding', 240000);
-    s = await state();
-    assert(s.time - second > 85, `the second valve opened after only ${(s.time - second).toFixed(0)}s`);
-    console.log(`valve: the tub reached the boat by itself after ${(s.time - second).toFixed(0)}s of nothing`);
-    await reach('aboard', 20000);
-    console.log('valve: aboard', JSON.stringify(await state()));
-    process.exit(0);
-  }
-
   // Waiting does nothing but bring the cat down to the edge and the drawn gust: the breeze alone never carries the tub.
   await play(Math.max(0, idle - 3.5));
   s = await state();
@@ -173,7 +156,7 @@ try {
   const roofGoal = s.goal;
   assert(distance(s.tub, start) < 1, `the tub drifted ${distance(s.tub, start).toFixed(2)}m by itself: ${JSON.stringify(s)}`);
   assert(s.invited && s.heading !== null, `no drawn gust after ${idle}s of nothing: ${JSON.stringify(s)}`);
-  assert(distance(s.cat, roofGoal) < 1.2, `the cat is not waiting at the water's edge where the tub must come: ${JSON.stringify(s)}`);
+  assert(s.cat[1] > 0.6 && distance(s.cat, roofGoal) < 1.5, `the cat must wait up the slope within a hop of the tub: ${JSON.stringify(s)}`);
   const view = await framed();
   for (const [what, at] of Object.entries(view)) inFrame(at, what);
   console.log(`idle ${idle}s: the tub moved ${distance(s.tub, start).toFixed(2)}m, invitation heading ${s.heading.toFixed(2)}, `
@@ -203,8 +186,8 @@ try {
   s = await state();
   assert.equal(s.seat, 'satchel', 'the cygnet ducked into the satchel');
   console.log('aboard', JSON.stringify(s));
-  await waitFor(() => __game.story.current.cat.kneel > 0.95, 30000, 'her kneeling to the cat');
-  await play(1.6);
+  await play(0.8);
+  assert.equal(await page.evaluate(() => __game.child.kneeling), 0, 'the child stays seated');
   await shot('7-rescue');
 
   // Once it has come to her the air dies, and the becalmed boat ghosts slowly onto the slates; nothing the player does
@@ -219,11 +202,11 @@ try {
       let energy = 0;
       for (const [dx, dz] of [[0, 0], [2, 0], [-2, 0], [0, 2], [0, -2]]) energy = Math.max(energy, __game.wind.sample(b.position.x + dx, b.position.z + dz, out).energy);
       return { beat: __game.story.current.beat, speed: b.speed, made: b.sailWind.made, energy, muted: __game.input.muted,
-        time: __stats.time, at: [b.position.x, b.position.z] };
+        silence: __game.story.current.silence, time: __stats.time, at: [b.position.x, b.position.z] };
     });
     if (process.env.DEBUG) console.log('  drift', JSON.stringify(x));
     fastest = Math.max(fastest, x.speed);
-    if (x.beat === 'still') { gust = Math.max(gust, x.energy); fill = Math.max(fill, x.made); if (!x.muted) unmuted++; }
+    if (x.beat === 'still') { assert(x.silence, 'no score during the windless drift'); gust = Math.max(gust, x.energy); fill = Math.max(fill, x.made); if (!x.muted) unmuted++; }
     return x.beat;
   };
   let half = false, way = 1;

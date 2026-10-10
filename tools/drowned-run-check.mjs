@@ -1,6 +1,6 @@
 // The drowned village's run over the roofs, played with real pointer gestures in Chrome for Testing against a running
-// dev server: from the drift (strokes bring the wash-tub to the cat and back, the cat comes to her and she kneels to
-// it), the air dying and the boat running aground, the fog coming on, the cat's bolt and her climb out, then her way
+// dev server: from the drift (strokes bring the wash-tub to the cat and back, the cat shakes itself dry and hops to
+// the bow), the air dying and the boat running aground, the fog coming on, the cat's bolt and her climb out, then her way
 // over the roofs after the cat: at the dead tree (where she must wait clear of it, look across to the barn more than up at
 // it, be shown the drawn gust within seconds and again after a wrong-way try, which must rock it back, and the frame
 // must hold her, its crown and the barn) strokes back and forth across it, as an eager player makes them, must push it
@@ -64,7 +64,7 @@ try {
   page = await context.newPage();
   recordedFrom = Date.now();
   page.on('pageerror', (e) => errors.push(e.message));
-  await page.goto(`${base}?shot=1&chapter=${fromStorm ? 'storm' : fromBelfry ? 'belfry' : fromChurch ? 'church' : fromRoofs ? 'roofs' : fromStairs ? 'stairs' : 'drowned'}&ratio=1`, { waitUntil: 'load' });
+  await page.goto(`${base}?shot=1&chapter=${fromStorm ? 'storm' : fromBelfry ? 'belfry' : fromChurch ? 'church' : fromRoofs ? 'roofs' : fromStairs ? 'stairs' : 'drowned'}&ratio=1&villagefog=${process.env.FOG ?? '1'}`, { waitUntil: 'load' });
   await page.waitForFunction(() => window.__ready === true, null, { timeout: 60000 });
 
   /** VOICES=<file>: every sound the cat and each kitten makes, and how strongly its call marks showed through each call. */
