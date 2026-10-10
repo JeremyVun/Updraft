@@ -62,7 +62,8 @@ void main() {
   vec3 V = normalize(cameraPosition - vWorld);
   float rim = pow(1.0 - clamp(dot(n, V), 0.0, 1.0), 6.0) * max(dot(-V, uSunDir), 0.0);
   vec3 col = alb * (hemiLight(n) * 0.8 * ao + uSunColor * ndl * sun * canopyShade) + uSunColor * rim * 0.06 * sun;
-  col = applyFog(col, vWorld);
+  vec4 fog = fogOf(vWorld, 1.0);
+  col = mix(col, fog.rgb, fog.a);
   gl_FragColor = vec4(col, 1.0);
 }`;
 
@@ -130,7 +131,8 @@ void main() {
   float beneath = smoothstep(0.05, 0.6, -V.y);
   vec3 daylight = hemiLight(vec3(0.0, 1.0, 0.0)) * 0.6 + uSunColor * sun * 0.3;
   col += lit * daylight * beneath * mix(0.4, 0.18, vDepth) * (0.6 + 0.8 * fract(vSeed * 7.7));
-  col = applyFog(col, vWorld);
+  vec4 fog = fogOf(vWorld, 1.0);
+  col = mix(col, fog.rgb, fog.a);
   gl_FragColor = vec4(col, shown);
 }`;
 
