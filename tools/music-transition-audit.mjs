@@ -25,26 +25,28 @@ try {
       const {ARRIVAL_MUSIC,ArrivalTransition,arrivalQuiet}=await import('/src/audio/arrival-music.ts');
       const {tuning}=await productionModule('/src/tuning.ts');
       const checks=[],check=(ok,message)=>{if(!ok)throw Error(`${target}: ${message}`);checks.push(message);};
-      const {ctx,sound}=offlineSound(50),phases=[];
+      const legato=source.music==='drowned'&&target==='wood';
+      const approach=legato?88:18,landing=approach+24,seconds=landing+8;
+      const {ctx,sound}=offlineSound(seconds),phases=[];
       backgroundOnly(ctx,sound);
       let outgoing,incoming,epoch,reverb;
       const score=()=>sound.openingScore??sound.summitScore??sound.dreamScore??sound.drownedScore??sound.linesScore??sound.boatsScore
         ??sound.meadowScore??sound.birchesScore??sound.sleepingScore??sound.seaScore;
       const update=tick=>{
-        const t=tick/8,landed=t>=42;
+        const t=tick/8,landed=t>=landing;
         sound.update(.125,{...baseState,...(landed?ARRIVAL_MUSIC[target]:source),flockChatter:false,
-          arrivalMusic:t>=18&&!landed?target:undefined,arrivalReady:t>=24,homewardReady:t>=24});
+          arrivalMusic:t>=approach&&!landed?target:undefined,arrivalReady:t>=approach+6,homewardReady:t>=approach+6});
         const stage=sound.arrivalTransition.stage;
         if(phases.at(-1)?.stage!==stage)phases.push({at:t,stage});
-        if(t===17)outgoing=score();
-        if(t===39){incoming=score();epoch=incoming?.current?.epoch??incoming?.epoch;reverb=sound.reverbConvolver;}
-        if(t===44){check(score()===incoming,'Landing keeps the incoming score');
+        if(t===approach-1)outgoing=score();
+        if(t===landing-3){incoming=score();epoch=incoming?.current?.epoch??incoming?.epoch;reverb=sound.reverbConvolver;}
+        if(t===landing+2){check(score()===incoming,'Landing keeps the incoming score');
           check((score()?.current?.epoch??score()?.epoch)===epoch,'Landing keeps its musical clock');
           check(sound.reverbConvolver===reverb,'Landing keeps the shared reverb');}
       };
       update(0);let pause=ctx.suspend(.125);const rendering=ctx.startRendering();
-      for(let tick=1;tick<400;tick++){await pause;update(tick);if(tick+1<400)pause=ctx.suspend((tick+1)/8);await ctx.resume();}
-      const buffer=await rendering,legato=source.music==='drowned'&&target==='wood';
+      for(let tick=1;tick<seconds*8;tick++){await pause;update(tick);if(tick+1<seconds*8)pause=ctx.suspend((tick+1)/8);await ctx.resume();}
+      const buffer=await rendering;
       const fade=phases.find(p=>p.stage==='fade'),gap=phases.find(p=>p.stage==='gap'),entry=phases.find(p=>p.stage==='incoming');
       let gapPeak=0;
       if(!legato){

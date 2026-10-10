@@ -71,15 +71,32 @@ for (const [gust, fps] of [[0,60], [8,60], [0,30], [8,30], [40,60], [-40,60]]) {
     assert(frame < fps * 120 - 1, `failed to arrive: ${JSON.stringify({beat:chapter.beat,leg:chapter.leg,position:boat.position})}`);
   }
 }
-// Loading a checkpoint places the boat a second time after constructing the chapter.
-{
+const { takeCues } = await import('../src/story/cues.ts');
+const { CAT_HOLD, CAT_HOLD_YAW, STRAND } = await import('../src/world/drowned-way.ts');
+// Old route payloads must resume after the rescue without replaying it or its sound.
+for (const leg of [0, 3, 99]) {
   const cast=drownedCast(drownedWind(0)), b=cast.boat;
   b.beach(-4,-1203,Math.PI);b.afloat=true;
   const c=new DrownedChapter(cast);
   b.beach(-20,-1390,Math.PI);b.afloat=true;
-  c.restoreCheckpoint('sail',[3]);
-  assert.equal(b.speedLimit,tuning.storm.passageSpeed);
-  assert.equal(c.beat,'drift');
+  takeCues();
+  c.restoreCheckpoint('sail',[leg]);
+  assert.equal(c.beat,'still');
+  assert.equal(c.checkpoint,'sail');
+  assert.equal(c.cat.step,'aboard');
+  assert.equal(cast.village.tub.visible,false);
+  assert.equal(b.position.x,CAT_HOLD.x);
+  assert.equal(b.position.z,CAT_HOLD.y);
+  assert.equal(b.yaw,CAT_HOLD_YAW);
+  assert.equal(b.steerFor,null);
+  assert.deepEqual(takeCues(),[]);
+  for(let i=0;i<60*90&&c.beat!=='becalmed';i++) {
+    cast.wind.breeze.set(2.47,-0.80).multiplyScalar(c.breeze);
+    cast.wind.calm=cast.wind.breeze.length()*tuning.wind.calm;
+    c.update(1/60,i/60);b.update(1/60,i/60);
+  }
+  assert.equal(c.beat,'becalmed','restored boat reaches the stranded roof');
+  assert(Math.hypot(b.position.x-STRAND.x,b.position.z-STRAND.y)<tuning.drowned.stuck.touch);
 }
 // A target directly astern, at full speed, used to be inside an unchanging turning circle.
 for (const distance of [6, 20, 40]) {

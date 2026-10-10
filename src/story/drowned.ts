@@ -287,7 +287,8 @@ export class DrownedChapter implements Chapter {
     boat.beach(CAT_HOLD.x, CAT_HOLD.y, CAT_HOLD_YAW);
     boat.launch();
     this.cat.aboard();
-    this.goOn();
+    this.aboardFrom = this.now;
+    this.still(false);
   }
 
   /** QA (`?chapter=roofs`): straight to her up on the first roof after the cat, the boat aground beside it, the fog coming. */
@@ -559,14 +560,14 @@ export class DrownedChapter implements Chapter {
    * scrape and a lurch, and is fast there, its stem against the slates still out of it. Behind them, the way they came,
    * the fog rises off the sea.
    */
-  private still(): void {
+  private still(playCue = true): void {
     const { boat } = this.cast;
     this.stillAt = this.now;
     this.to('still');
     drownedEntry.behindGone = true;
     boat.coastTo = null;
     boat.steerFor = null;
-    cue('becalmed');
+    if (playCue) cue('becalmed');
   }
 
   /**

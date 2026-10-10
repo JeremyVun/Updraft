@@ -1155,6 +1155,21 @@ reads an undefined vector).
 ### Phase 10: polish, saves, docs and the full play
 Done: [ ]
 
+#### Integration takeover — 2026-10-10
+
+Jeremy: "ok proceed". For this takeover he also approved Codex doing the remaining visual work:
+"Yes, use Codex for this takeover". His full playtest brief remains verbatim in design.md items 22–35.
+
+Continue on `proto-drowned-integrate`, worktree `/private/tmp/updraft-drowned-integrate`, starting at `7007e9ab`.
+The seven fix branches are already merged. The previous session hit its weekly limit while investigating
+`boat-check`; the combined browser checks had not run. Keep Jeremy's existing play build on the roofs branch
+until the integrated result is ready for review. Main merge and deployment remain separate.
+
+Remaining: verify the restored `sail` checkpoint against the rescue→air-dies design; check the new music through
+the longer storm and into the wood; check the merged fog through the storm; run the roofs, run, storm and audio
+gates; resolve the portrait fog framing gap after the sheet; investigate item 29 with the GPU otherwise quiet;
+finish saves and documentation. Results and captures: `/tmp/updraft-takeover-TUMeWz/`.
+
 ### Later
 The cat in the lit window of the cottage with the red door at the very end (design.md "The cat comes home"); a small
 cat-face pass (eyes slightly big and low close up, muzzle cream not white, profile ears small, mew mouth small).
