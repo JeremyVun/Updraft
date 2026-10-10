@@ -785,7 +785,7 @@ export class SleepingWhale extends WhaleRig {
     if (this.blinkT > 1.6) this.blinkT = -1;
     this.tryT = this.struggle > 0 ? (this.tryT + dt) % TRY_EVERY : 0;
     const trying = this.struggle * TRY(this.tryT) * (1 + 0.04 * Math.sin(this.tryT * 23) * THREE.MathUtils.smoothstep(this.tryT, 0.9, 1.2));
-    this.skin.uEye.value = Math.max(trying, this.opened * (1 - (this.blinkT < 0 ? 0 : BLINK(this.blinkT)))) * (this.phase === 'free' ? FREE_EYE : 1);
+    this.skin.uEye.value = Math.max(trying, this.opened * (1 - (this.blinkT < 0 ? 0 : BLINK(this.blinkT))) * (this.phase === 'free' ? FREE_EYE : 1));
     if (!this.gazing) return;
     const d = Math.max(1, this.p.subVectors(this.gazeAt, this.eye).length());
     // Along and up its own head, so its eye stays on her as its head goes down.

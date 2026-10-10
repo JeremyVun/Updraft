@@ -1419,3 +1419,21 @@ Restore a clearly audible low call as the child first sees the whale, without th
 The earlier voice change weakened the harmonics carried by small speakers; retain a full voice in the mix.
 Astra implements, checks real timings, voice events and sound levels, and verifies both orientations before
 refreshing the stable preview on port 5330. No main merge or deployment.
+
+### Reveal, neck and freed voice correction — 2026-10-10
+
+Jeremy requested: "rebase off main branch in preparation to merge thi sin". During the rebase he reported:
+
+> This is why i asked about the fog. it's way too close in... it's basically touching the boat, and the reveal is NOT how it was before with the whale sillouhette from afar and then gradually revealing.
+
+> Also, the cygnets neck is all twisted in a weird shape when it gets out of the boat and pulls the net off the flipper.
+
+> and you didn't fix the whale sounding like a motorcycle when it's freed. please do a good job. I do not want to have to reprompt you for the same problem for the third time.
+
+The N9 timing and audibility checks did not establish the quality of the reveal, the bird's neck pose or the
+freed song. Restore clear water around the boat and the whale's distant silhouette, with detail emerging gradually
+during the approach. Keep the 60/40-second targets and ordinary boat speed. Correct the neck through leaving the
+boat, taking the rope and pulling backward, preserving the physical pull. Correct the freed song's mechanical
+tone and review the greeting and farewell too; the low voice must remain audible. Compare against the previous
+reveal in motion and inspect actual poses and production sound, not just event ordering and audio levels.
+Finish the rebase first; keep the branch unmerged while these corrections are verified. Astra implements personally.

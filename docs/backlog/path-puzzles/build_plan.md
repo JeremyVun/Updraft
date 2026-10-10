@@ -1382,3 +1382,17 @@ separate from the encounter voice. These existing failures remain open.
 
 Evidence, renders, captures and source hashes: `/tmp/updraft-sea-n9-pSUeOt/README.md`. Port 5330 serves the current
 QA build. N9 is implemented on `sea-whale`; main merge and deployment remain outside this batch.
+
+### Phase N10: restore the reveal, natural neck pose and whale voice
+
+Jeremy's reports are verbatim in design.md. The 60/40-second sailing targets remain binding.
+
+- [x] Rebase sea-whale onto committed main (`4d7a40f9`), preserving all sea work and upstream fixes.
+- [ ] Restore the distant silhouette and gradual reveal, with clear water around the boat; compare in motion.
+- [ ] Correct the cygnet's neck through hop-out, rope pickup and backward pull, retaining the active pull.
+- [ ] Remove the freed song's mechanical tone while keeping audible low calls; check all call variants in context.
+- [ ] Verify both orientations, pacing, saves, source integration, sound and builds; refresh port 5330.
+
+Rebase audit: the resulting tree differs from pre-rebase `f6a46f18` only by main's four new commits after the
+reconstructed whale-eye expression is restored. Historical doc conflicts preserve the later approved notes.
+Evidence and ongoing captures: `/tmp/updraft-sea-n10-WtbK2q/`. No merge or deployment yet.
