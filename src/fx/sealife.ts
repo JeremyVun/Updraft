@@ -134,6 +134,7 @@ export class SeaLife {
   resumeDolphinsAfterSwim(): void { this.pod.resumeAfterSwim(); }
 
   get dolphinLeapComplete(): boolean { return this.pod.leapComplete; }
+  get dolphinNudged(): boolean { return this.pod.nudged; }
   get dolphinFarewellReady(): boolean { return this.pod.farewellReady; }
 
   get dolphinShow(): THREE.Vector3 | null {

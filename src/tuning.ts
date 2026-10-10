@@ -1560,7 +1560,7 @@ export const tuning = {
      * `riseNear` metres short of the rest, not before: from farther off it would only turn the boat out of a phone's
      * frame toward a mist with nothing in it.
      */
-    seenAt: 95, seenAfter: 6, riseFrom: 70, riseNear: 20,
+    seenAt: 95, seenAfter: 3, riseFrom: 70, riseNear: 20,
     /** How far ahead of the bow the pod runs while it leads the boat in (m). */
     podLead: 18,
     /**
@@ -1740,13 +1740,9 @@ export const tuning = {
     swimAt: 0.2,
     /** Let the pod arrive and its featured leap finish even when the player fills the sail. */
     swimNotBefore: 18,
-    dolphinsAfter: 5,
+    dolphinsAfter: 2,
     waypointRadius: 10,
-    /**
-     * How far along the route the first leap may begin: the sleeping island's night lifts only once it is well
-     * astern (its palette clears 110 to 150 units from the hollow), and the leap belongs to the first light.
-     */
-    leapFrom: 0.265,
+    leapFrom: 0.08,
     /**
      * Where along the route the pod says goodbye, and about how long its play takes from `leapFrom`: the leap, the
      * swim and the nudge, which can come a few seconds late. A boat ahead of that is eased toward it, never below
@@ -1783,12 +1779,12 @@ export const tuning = {
      * `restFalloff` from `clearFrom` to `clearAt` metres short of the rest, clear of the whale's far length, and lifts
      * as the whale dives.
      */
-    mist: { haze: 1.10, falloff: 1.3, restHaze: 0.985, restFalloff: 1.05, clearFrom: 55, clearAt: 22, wholeAt: 0.68,
+    mist: { haze: 1.12, falloff: 1.3, restHaze: 0.985, restFalloff: 1.05, clearFrom: 55, clearAt: 22, wholeAt: 0.68, initial: 0.8,
       /**
        * How deep the veil is where it is whole, its smoothstep's top; and from `hiddenTo` to `shownAt` metres short of
        * the rest, past its blow, it eases off holding that by the whale's head (`veilLeast` keeps the depth finite).
        */
-      wholeVeil: 4, hiddenTo: 58, shownAt: 38, veilLeast: 20, revealAfter: 4, revealFor: 4,
+      wholeVeil: 4, hiddenTo: 58, shownAt: 38, veilLeast: 8, revealAfter: 2, revealFor: 4,
       /**
        * Lying low on the sea: once its blow is called for, `lift` of the veil thins away above `liftFrom` metres over
        * the water (its body lies under that), to a third every `liftScale` metres higher, out to `liftNear` and no
@@ -1888,7 +1884,7 @@ export const tuning = {
     /** How fast a rejoining dolphin lets go of what is left of its set-piece station, per second. */
     rejoinEase: 0.8,
     /** Seconds after the pod starts joining for its first leap; the nudge follows the swim, `nudgeAfter` at the soonest. */
-    leapAt: 5,
+    leapAt: 2,
     leapSpread: 1.5,
     leapRecovery: 1,
     nudgeAfter: 3,

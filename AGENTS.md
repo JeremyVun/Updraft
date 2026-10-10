@@ -33,7 +33,7 @@ Available only in development and explicit QA builds; production ignores them an
 
 - Sharing with friends, promotional assets and the proposed Steam release: `docs/launch.md`. The promo videos (trailer, short, gameplay take), with Jeremy's brief, the shot plan and status: `docs/promo.md`; both files are local only (ignored by git), as is the finished media in `assets/promo/`. They are made with `tools/promo-film.mjs`, `promo-score.mjs`, `promo-text.mjs` and `promo-edit.mjs` (shots, cards and edits in `tools/promo/`).
 - Selected owl promotional art, exact prompts and visual constraints: `assets/promo/owl-promo-art-direction.md`.
-- Feel knobs (gust strength, wind decay, grass spring, washing sensitivity, petal counts): `src/tuning.ts`. Put new player-feel numbers there rather than inline; GLSL takes them through `glsl()`.
+- Feel knobs (gust strength, wind decay, grass spring, washing sensitivity, petal counts): `src/tuning.ts`. Put new player-feel numbers there rather than inline; GLSL takes them through `glsl()`. Use `glsl()` for relocated coordinates too, since they can be fractional.
 - Engine layer (boot, readbacks, quality governor, sim-pass helpers): `src/gl/`. Post chain: `src/post/post.ts`.
 - Shared shader uniforms and GLSL (sky, fog, lighting, cloud shadows, domain helpers): `src/world/atmosphere.ts`. Include `ATMO_GLSL` once per shader stage.
 - Island shape and height lookups: `src/world/island.ts`. Tree and rock placement: `src/world/landmarks.ts`.

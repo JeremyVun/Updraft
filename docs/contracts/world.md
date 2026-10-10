@@ -53,8 +53,7 @@ distances; `tools/geography-check.mjs` checks migrations, clearance and continui
 Routes are `ROUTES` in `story/journey.ts`. At the ordinary 2.6-unit breeze the hull drives at 4.5 units/s, up to
 5.5 with a following wind; player gusts can push it to the 10 units/s ceiling (`tuning.sail`). Routes are sized for
 the ordinary breeze: change distance to alter journey time, never throttle or boost sailing speed (Jeremy's ruling).
-Turns, mooring, the storm and the
-cygnet's swim slow the boat naturally. Targets at the ordinary breeze:
+Turns, mooring, the storm and the cygnet's swim slow the boat naturally. Targets at the ordinary breeze:
 
 | crossing | about | notes |
 | --- | --- | --- |
@@ -65,7 +64,7 @@ cygnet's swim slow the boat naturally. Targets at the ordinary breeze:
 | birches → stairs | short | under the cloud deck |
 | drowned village to the wood | player-paced | the becalming waits for the player; the storm is about 40 s |
 | wood → sleeping | 40 s | a sheltered bend |
-| sleeping → sky mirror (the sea) | player-paced; about 4 min with prompt gestures | pod's leap and swim, lead through mist, five-step whale rescue and farewell; 63–65 s from the whale disappearing to the mooring |
+| sleeping → sky mirror (the sea) | player-paced | first whale puzzle at about 60 s; five-step rescue and farewell; about 40 s from the whale disappearing to the mooring |
 | sky mirror → home | 40 s | curves offshore before turning in to the jetty |
 
 A crossing is never shortened by losing an encounter: the sea includes the swim and the whale rescue before the
@@ -76,9 +75,12 @@ The second 2026-10-10 playtest adjustment brings the whale 52 m closer (revision
 about 12 seconds while retaining the dolphin beats and twelve-second swim. The mist keeps the same reveal order:
 heard, blow visible, then body. Revision 8 moves mirror and home together another 43 m (`ONWARD_SEA`) and widens
 the mirror's approach curve so a gusting boat can round it at its ordinary pace. There is no special onward or
-arrival speed cap: the sail and normal steering/mooring physics govern speed. Ordinary wind takes 63–65 s after
-the whale disappears; sustained strong wind takes about 31 s. The final crossing retains its 206 m route and
-40–41 s ordinary timing. Jeremy is playtesting those lengths before any further pacing change.
+arrival speed cap: the sail and normal steering/mooring physics govern speed. Jeremy's final 2026-10-10 targets
+replace those longer passages: revision 9 moves the whale toward departure (`WHALE_SHORTENING`) and moves Mirror
+and home together (`MIRROR_SHORTENING`). The first puzzle begins at 60.3–60.8 s in ordinary wind, and sailing from
+the whale disappearing to the Mirror takes 38.1–40.7 s (19.7 s in sustained strong wind). The pod joins sooner,
+the full twelve-second swim stays, and its nudge begins the lead when it makes contact. The camera waits for the
+blow before closing on the whale. Home retains its 206 m route and 40–41 s ordinary crossing.
 `tools/journey-pacing-check.mjs` sails the real boat through the passages (`CROSSING=` for one) at several wind
 bearings and frame rates; `tools/boat-check.mjs` checks navigation and storm pacing.
 

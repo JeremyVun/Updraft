@@ -660,14 +660,14 @@ float hf_sleeping(vec2 p) {
   return h - smoothstep(0.0, 36.0, d) * 8.0;
 }
 float hf_home(vec2 p) {
-  vec2 c = vec2(${ISLES.home.x}.0, ${ISLES.home.z}.0);
+  vec2 c = vec2(${glsl(ISLES.home.x)}, ${glsl(ISLES.home.z)});
   vec2 r = vec2(${ISLES.home.rx}.0, ${ISLES.home.rz}.0);
   float d = hf_isleCoast(p - vec2(${glsl(HOME_SHIFT.x)}, ${glsl(HOME_SHIFT.z)}), vec2(-45.0, -2120.0), r, 0.1, 51.0);
   float land = (1.0 - smoothstep(-22.0, 10.0, d));
   float inland = (1.0 - smoothstep(-110.0, 4.0, d));
   float h = land * 4.0 - 1.6;
   h += land * inland * (14.0 + gfbm((p - vec2(${glsl(HOME_SHIFT.x)}, ${glsl(HOME_SHIFT.z)})) * 0.006, 3, 52.0) * 12.0);
-  float r2 = sq(p.x - ${LAST_HILL.x}.0) + sq(p.y - (${LAST_HILL.z}.0));
+  float r2 = sq(p.x - ${glsl(LAST_HILL.x)}) + sq(p.y - (${glsl(LAST_HILL.z)}));
   h += land * (34.0 * exp(-r2 / (2.0 * 3364.0)) + inland * 18.0 * exp(-r2 / (2.0 * 28900.0)));
   return h - smoothstep(0.0, 70.0, d) * 8.0;
 }

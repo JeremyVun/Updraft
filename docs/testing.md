@@ -158,7 +158,8 @@ differs, as a late readback can make it, is played once more; `ONLY=wood,jetty` 
 - Shared: `audio-check` (gesture thresholds and gates, cue timing, habitat, materials, clipping stress),
   `audio-continuity-check`, `audio-direction-check`, `gesture-harmony-check`, `arrival-audio-check`,
   `music-transition-audit` (every handoff and all score sections), `audio-interruption-check`, `piano-audio-check`,
-  `flock-audio-check`, `marine-audio-check`, `birches-foley-check`.
+  `flock-audio-check`, `marine-audio-check`, `whale-voice-check` (production calls, clipping and speaker-band body;
+  `MUTATE=thin` must fail), `birches-foley-check`.
 - Scores: `opening-score-check`, `lines-score-check`, `boats-score-check`, `meadow-score-check`,
   `birches-score-check`, `dream-score-check`, `sleeping-score-check`, `sea-score-check`, `homeward-audio-check`.
 - In the browser: `audio-browser-check`, `piano-audio-browser-check`, `arrival-audio-browser-check`,

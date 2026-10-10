@@ -25,8 +25,8 @@ interface Moan {
  */
 const CALLS: Record<WhaleVoiceKind, readonly Moan[]> = {
   'whale-moan': [{
-    pitch: [[0, 52], [1.4, 69], [2.6, 73.4], [3.8, 64], [5.4, 49]],
-    swell: [[0, 0], [0.9, 0.85], [2.4, 1], [4.2, 0.7], [5.6, 0]],
+    pitch: [[0, 52], [2, 69], [3.8, 73.4], [5.8, 64], [8, 49]],
+    swell: [[0, 0], [0.9, 0.85], [2.4, 1], [5.8, 0.9], [8.2, 0]],
     open: 0.25, rasp: 0.3, muffle: 900, level: 1,
   }],
   'whale-greet': [{
@@ -66,7 +66,7 @@ const CALLS: Record<WhaleVoiceKind, readonly Moan[]> = {
 /** How long each call goes on (s), for the room the score makes under it. */
 export const callLength = (kind: WhaleVoiceKind) => Math.max(...CALLS[kind].map((m) => m.swell[m.swell.length - 1][0]));
 
-const HARMONICS = [0, 1, 0.22, 0.08, 0.035, 0.015, 0.006];
+const HARMONICS = [0, 1, 0.5, 0.3, 0.22, 0.13, 0.075, 0.045, 0.028, 0.018];
 
 /** The whale's voice: its moans, synthesised whole for each call and let go when it ends. */
 export class WhaleVoice {

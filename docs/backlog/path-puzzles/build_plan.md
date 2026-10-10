@@ -1351,3 +1351,34 @@ The broader terrain-height check has an existing open-sea-floor mismatch: 0.1670
 the unchanged `f1e6a0d5` baseline and N8. Every visible terrain patch remains within the height/normal limits;
 the translated islands introduce no new failing samples. This unrelated terrain issue remains open. N8 is
 implemented on `sea-whale`; journey-length feedback and approval to merge into main remain with Jeremy.
+
+### Phase N9: sixty seconds to the whale, forty to the Mirror, and its audible voice
+
+Jeremy's corrected numbers and voice report are verbatim in design.md. Astra owns geography, route, save migration,
+encounter voice timing, whale-voice synthesis and their checks. Normal boat speed and Mirror-to-home route persist.
+
+- [x] Shorten the distances to reach the first whale puzzle in about 60 s and the Mirror in about 40 s after farewell.
+- [x] Restore the low call at first sight and its audible body, preserving smooth calls and the score's room for them.
+- [x] Verify timings, saves, sound, landscape/portrait play and builds; refresh port 5330 and record the results.
+
+Revision 9 moves the whale by (133, 58.5) m and Mirror/home together by (228, 122.5) m. Seven pacing cases pass:
+first puzzle at 59.9–60.8 s; ordinary onward sailing at 38.1–40.7 s, sustained gust at 19.7 s. Normal sailing
+speed, the full twelve-second swim and the 206 m Mirror-to-home route remain. The pod starts earlier and its
+nudge starts the lead on actual contact. Mist depth and reveal timing fit the nearer whale: hidden during the
+pod's play, heard, then blow, then body. The camera closes only as the reveal develops.
+
+The first moan lasts 8.2 s and carries through the reveal. Fuller upper harmonics restore its audible body above
+180 Hz, about 8 dB above the previous thin voice, without restoring detuned beating or the periodic motor pulse.
+Four production voice renders and their sea-score mix have no clipping; listening remains part of Jeremy's playtest.
+Restoring either the thin harmonics or the short call deliberately fails the corresponding regression check.
+
+Full landscape and portrait runs complete all five puzzles and the settled Mirror arrival. Both reach the whale
+at 58.9 s and take 39.8–39.9 s onward; no swim/pull clipping, browser errors or unexpected shader compilation.
+Invitations appear in 0.50–0.52 s. Typecheck, production/QA builds, mechanics, geography and navigation pass.
+The fractional relocation exposed hard-coded `.0` suffixes in home terrain/grass shaders; those now use `glsl()`.
+The terrain comparison retains N8's existing 0.167039 m sea-floor mismatch, with zero failing visible samples.
+The broader marine-audio check also fails its first-crossing surface sequence on unchanged `81573eb2`; this is
+separate from the encounter voice. These existing failures remain open.
+
+Evidence, renders, captures and source hashes: `/tmp/updraft-sea-n9-pSUeOt/README.md`. Port 5330 serves the current
+QA build. N9 is implemented on `sea-whale`; main merge and deployment remain outside this batch.

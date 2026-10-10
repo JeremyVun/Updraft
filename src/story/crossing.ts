@@ -376,7 +376,8 @@ export class CrossingChapter implements Chapter {
   private seaMist(): number {
     const k = tuning.seaPassage, whale = this.whale!;
     if (whale.step === 'gone' || whale.whale.diving >= 0) return 0;
-    return whale.led ? 1 : THREE.MathUtils.smoothstep(this.podProgress(), k.leapFrom, k.mist.wholeAt);
+    return whale.led ? 1 : THREE.MathUtils.lerp(k.mist.initial, 1,
+      THREE.MathUtils.smoothstep(this.podProgress(), k.leapFrom, k.mist.wholeAt));
   }
 
   /** The mist's haze, and how deep its veil is: thickest as the boat is led in, thinner beside the whale. */
@@ -590,7 +591,7 @@ export class CrossingChapter implements Chapter {
     /** The camera rides the quarter away from the sail, and the cygnet's swim is the one thing they must not crowd. */
     const swimming = this.swim === 'restless' || this.swim === 'side' || this.swim === 'in' || this.swim === 'drying';
     // Where a whale waits, the nudge asks the boat to follow and the pod leads it off instead of saying goodbye.
-    const whaleLed = this.whale !== null && this.swim === 'done' && sealife.dolphinFarewellReady;
+    const whaleLed = this.whale !== null && this.swim === 'done' && sealife.dolphinNudged;
     // Come to rest beside it with the pod's nudge never landed, it has brought her there all the same.
     if (this.whale && (whaleLed || this.whale.step !== 'approach')) this.whale.led = true;
     const withPod = this.wantsDolphins && this.time >= tuning.seaPassage.dolphinsAfter

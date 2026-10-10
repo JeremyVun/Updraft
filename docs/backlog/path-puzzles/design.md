@@ -1400,3 +1400,22 @@ checks both orientations, then refreshes port 5330. No main merge or deployment 
 When shown the measured 63–65 s whale-to-mirror and unchanged 40 s mirror-to-home lengths, Jeremy asked
 "was it 40 seconds before? That still seems a bit long no?". After clarifying the two legs, his ruling was
 "i will play through and let you know". Leave both lengths for that playtest; no further shortening is approved.
+
+### Approved shorter sea and audible whale — 2026-10-10
+
+Jeremy's latest brief, verbatim:
+
+> 1. what happened to the whale noises? i only said they sounded like motorcycles, not that they should be removed... When the child sees the whale at first, there's no low whale sound...
+> 2. move the whale 10 seconds closer to the woods island and so it's also 10 seconds closer to the sky mirror island
+
+His replacement timing ruling:
+
+> dude... even 82 seconds is too long. Move the whale so that it drops from 92 to 60, and drop the farewell to the mirror from 64 to 40
+
+These replace N8's lengths: about 60 s from open-sea entry to the first whale puzzle, and 40 s from the whale
+disappearing to mooring at the Mirror, measured in ordinary wind. Keep normal boat speed and obtain the reductions
+through geography, preserving the dolphin/swim/rescue/farewell actions and the final Mirror-to-home crossing.
+Restore a clearly audible low call as the child first sees the whale, without the former mechanical pulsing.
+The earlier voice change weakened the harmonics carried by small speakers; retain a full voice in the mix.
+Astra implements, checks real timings, voice events and sound levels, and verifies both orientations before
+refreshing the stable preview on port 5330. No main merge or deployment.

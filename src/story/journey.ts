@@ -27,7 +27,7 @@ import { SLEEP_BERTH, SLEEP_LANDING } from '../world/sleeping';
 import { BIRCHES_LANDING } from '../world/birches';
 import { placeProgress, restoreLife, saveProgress, type Progress } from './progress';
 import { restoreWingCare } from './wing-care';
-import { WHALE_MOVE, WHALE_NEARER } from '../world/geography';
+import { WHALE_MOVE, WHALE_NEARER, WHALE_SHORTENING } from '../world/geography';
 
 export type ChapterName =
   | 'island'
@@ -59,7 +59,7 @@ export type ChapterName =
  * whale's lie and every hold beside it.
  */
 const WHALE_HEADING = new THREE.Vector2(-30, -33).normalize();
-export const WHALE_REST = new THREE.Vector2(-480 + WHALE_MOVE.x + WHALE_NEARER.x, -2020 + WHALE_MOVE.z + WHALE_NEARER.z);
+export const WHALE_REST = new THREE.Vector2(-480 + WHALE_MOVE.x + WHALE_NEARER.x + WHALE_SHORTENING.x, -2020 + WHALE_MOVE.z + WHALE_NEARER.z + WHALE_SHORTENING.z);
 export const WHALE_LEAD = WHALE_REST.clone().addScaledVector(WHALE_HEADING, -tuning.seaPassage.leadFor);
 const WHALE_HOLD = WHALE_REST.clone().addScaledVector(WHALE_HEADING, 3);
 /** Halfway in, so the boat is on the heading it rests on long before it comes to rest. */
@@ -97,7 +97,7 @@ export const ROUTES: Record<string, THREE.Vector2[]> = {
    * the whale, and once it has gone the boat sails straight on over where it lay and curves in to the entry jetty.
    */
   toMirror: [
-    new THREE.Vector2(-300, -1950), new THREE.Vector2(-375, -1970),
+    new THREE.Vector2(-300, -1950), new THREE.Vector2(-340, -1948),
     WHALE_LEAD, WHALE_LINE, WHALE_HOLD,
     new THREE.Vector2(MIRROR_LANDING.x - 30.45, MIRROR_LANDING.z + 94.05), new THREE.Vector2(MIRROR_LANDING.x - 40.8, MIRROR_LANDING.z + 74.85),
     new THREE.Vector2(MIRROR_LANDING.x - 40.95, MIRROR_LANDING.z + 52.95), new THREE.Vector2(MIRROR_LANDING.x - 30.75, MIRROR_LANDING.z + 33.75),

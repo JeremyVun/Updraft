@@ -101,10 +101,10 @@ try {
   };
   const whale = '__game.story.current.whale';
 
-  await wait('__game.story.current.time>12'); await shot('arrival');
+  await wait('__game.story.current.time>7'); await shot('arrival');
   await wait("__game.sealife.pod.stunt?.phase==='act' && __game.sealife.pod.stunt.kind==='leap'");
   for (let i = 1; i <= 6; i++) { await shot(`leap-${i}`); await page.waitForTimeout(180); }
-  await wait('__game.story.current.time>24'); await shot('open-water');
+  await shot('open-water');
   await wait("['restless','side','in'].includes(__game.story.current.swim)", 90); await shot('curious');
   await wait("__game.story.current.swim==='side' && __game.story.current.swimT>0.65"); await shot('rail-out');
   await wait("__game.story.current.swim==='side' && __game.story.current.swimT>1.5"); await shot('rail-settled');
@@ -116,9 +116,9 @@ try {
   const swim = await page.evaluate(() => window.seaLog);
   if (!swim.swimFrames || swim.clipped > 0 || swim.maxGap > 11.5) throw Error(JSON.stringify(swim));
   await wait(`${whale}.led`, 60); await shot('lead');
-  await page.waitForTimeout(3000); await shot('heard');
-  await wait(`${whale}.sighs>=2`, 40); await page.waitForTimeout(3500); await shot('blow');
-  await wait(`${whale}.remaining()<60`, 40); await shot('shape');
+  await wait("__game.sealife.sleeper.called==='whale-moan'", 10); await shot('heard');
+  await wait('__game.sealife.sleeper.sighting>=1', 10); await shot('blow');
+  await wait(`${whale}.sightAge>3.5`, 10); await shot('shape');
   await wait(`${whale}.step==='breath' && ${whale}.stepTime>3`, 90); await shot('beside');
 
   // Each step as a prompt player plays it: a go once its gesture is drawn, a still as each new step is reached.

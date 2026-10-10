@@ -812,6 +812,7 @@ export class Dolphins {
   private readonly lentPose: DolphinPose[] = this.lent.map(() => ({ x: 0, y: 0, z: 0, yaw: 0, pitch: 0 }));
   resumeAfterSwim(): void { this.resumed = true; }
   get present(): boolean { return this.here; }
+  get nudged(): boolean { return this.pushed; }
   get leapComplete(): boolean {
     return this.turn >= 1 || this.stunt?.kind === 'leap' && this.stunt.phase === 'back' && this.stunt.t >= tuning.dolphins.leapRecovery;
   }

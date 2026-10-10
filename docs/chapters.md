@@ -525,12 +525,12 @@ Five steps share the rescue between wind, child and bird:
 
 The whale spouts and sings, waves its flipper, then rolls under and raises its flukes beside the sun. Its swell
 lifts the boat; the loose net sinks away. The cygnet returns to her arms, the mist lifts and they sail on to the
-mirror, with about a minute of quiet sailing after the whale disappears. Its jetty and reflections stay hidden
+mirror, with about forty seconds of sailing after the whale disappears at ordinary wind. Its jetty and reflections stay hidden
 until the whale has gone. Arrival carries the sailing view into a
 seven-second ease toward the mirror's own camera (`tuning.skyMirror.arriveFor`). The paper stays stowed at sea.
 
-Rulings: player-paced, replacing the former 100-second limit and passive crossing. A prompt play takes about four
-minutes to the mooring; the rescue waits for the player, with physical dolphin help after 90 seconds without
+Rulings: player-paced, replacing the former 100-second limit and passive crossing. The first whale puzzle begins
+about sixty seconds into the sea; the rescue waits for the player, with physical dolphin help after 90 seconds without
 progress at a step (`tuning.netWhale.valveAfter`). The whale is kind and immense, its movement slow and heavy.
 Dolphins follow their own stations, never swim in the air and never turn faster than a body allows. The boat never
 crawls for the first swim. The drawn gestures appear half a second after their target becomes actionable, while

@@ -1,28 +1,36 @@
 import { BOATS_BERTH } from '../world/little-boats-layout';
 import { MIRROR_BERTH } from '../world/sky-mirror-layout';
 import type { Progress } from './progress';
-import { BOATS_SHIFT, BOATS_OFFSHORE_SHIFT, BOATS_SHORTENING, SHORE_SHIFT, MIRROR_SHIFT, HOME_SHIFT, SEA_SHORTENING, PAST_THE_WHALE, ONWARD_SEA, WHALE_MOVE, WHALE_NEARER, LINES_SHIFT, GEOGRAPHY_VERSION } from '../world/geography';
+import { BOATS_SHIFT, BOATS_OFFSHORE_SHIFT, BOATS_SHORTENING, SHORE_SHIFT, MIRROR_SHIFT, HOME_SHIFT, SEA_SHORTENING, PAST_THE_WHALE, ONWARD_SEA, WHALE_MOVE, WHALE_NEARER, WHALE_SHORTENING, MIRROR_SHORTENING, LINES_SHIFT, GEOGRAPHY_VERSION } from '../world/geography';
 
 /** Preserve chapter progress when the islands move. Old sailing saves resume in safe open water. */
 export function migrateGeography(p: Progress): Progress {
   if (p.geography === GEOGRAPHY_VERSION) return p;
   if ((p.geography ?? 0) < 6) migrateOriginalGeography(p);
   else {
+    const move = { x: (p.geography! < 8 ? ONWARD_SEA.x : 0) + MIRROR_SHORTENING.x,
+      z: (p.geography! < 8 ? ONWARD_SEA.z : 0) + MIRROR_SHORTENING.z };
     if (['mirror', 'toHarbour', 'home'].includes(p.chapter)) {
       for (const [v, z] of [[p.child, 2], [p.bird, 2], [p.boat, 1]] as const) {
-        v[0] += ONWARD_SEA.x;
-        v[z] += ONWARD_SEA.z;
+        v[0] += move.x;
+        v[z] += move.z;
       }
     }
     for (const region of p.life) if (region[1] < -2180) {
-      region[0] += ONWARD_SEA.x;
-      region[1] += ONWARD_SEA.z;
+      region[0] += move.x;
+      region[1] += move.z;
     }
   }
   if ((p.geography ?? 0) < 7 && p.chapter === 'toMirror' && p.point.startsWith('whale-')) {
     for (const [v, z] of [[p.child, 2], [p.bird, 2], [p.boat, 1]] as const) {
       v[0] += WHALE_NEARER.x;
       v[z] += WHALE_NEARER.z;
+    }
+  }
+  if (p.chapter === 'toMirror' && (p.point === 'swim' || p.point.startsWith('whale-'))) {
+    for (const [v, z] of [[p.child, 2], [p.bird, 2], [p.boat, 1]] as const) {
+      v[0] += WHALE_SHORTENING.x;
+      v[z] += WHALE_SHORTENING.z;
     }
   }
   p.geography = GEOGRAPHY_VERSION;
@@ -34,7 +42,8 @@ function migrateOriginalGeography(p: Progress): void {
   const beforeSea = (p.geography ?? 0) < 2;
   const boatsShift = p.geography === 3 ? BOATS_SHORTENING
     : { x: BOATS_OFFSHORE_SHIFT.x + BOATS_SHORTENING.x, z: BOATS_OFFSHORE_SHIFT.z + BOATS_SHORTENING.z };
-  const lateShift = { x: (beforeSea ? SEA_SHORTENING.x : 0) + PAST_THE_WHALE.x + ONWARD_SEA.x, z: (beforeSea ? SEA_SHORTENING.z : 0) + PAST_THE_WHALE.z + ONWARD_SEA.z };
+  const lateShift = { x: (beforeSea ? SEA_SHORTENING.x : 0) + PAST_THE_WHALE.x + ONWARD_SEA.x + MIRROR_SHORTENING.x,
+    z: (beforeSea ? SEA_SHORTENING.z : 0) + PAST_THE_WHALE.z + ONWARD_SEA.z + MIRROR_SHORTENING.z };
   let shift = { x: 0, z: 0 };
   if (original && ['boats', 'toMeadow'].includes(p.chapter)) shift = BOATS_SHIFT;
   else if (['boats', 'toMeadow'].includes(p.chapter)) shift = boatsShift;
