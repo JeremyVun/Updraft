@@ -10,8 +10,10 @@ export interface Deck {
   height: number;
   /** A flight of stairs: the height at (x1, z1), the walk rising evenly to it from `height` at (x0, z0). */
   height1?: number;
-  /** The surface under each foot; navigation keeps the strip's centre-line heights. */
+  /** The surface under each foot; navigation defaults to the strip's centre-line heights. */
   surface?: (x: number, z: number) => number | null;
+  /** Follow the surface through a slope-to-ridge join instead of stepping onto the strip's full height. */
+  followSurface?: boolean;
   /** Optional shallow landing at the shore end; never permits stepping off the sides into deep water. */
   stepOffDepth?: number;
   /** A ramp this long runs on from one end of the deck down to the ground. */
@@ -95,5 +97,5 @@ function underDeck(d: Deck, x: number, z: number, slack: number, feet = false): 
   if (t < -over || t > 1 + over) return null;
   const u = Math.min(1, Math.max(0, t));
   if (Math.hypot(x - (d.x0 + dx * u), z - (d.z0 + dz * u)) > d.halfWidth + slack) return null;
-  return feet && d.surface ? d.surface(x, z) : d.height1 === undefined ? d.height : d.height + (d.height1 - d.height) * u;
+  return (feet || d.followSurface) && d.surface ? d.surface(x, z) : d.height1 === undefined ? d.height : d.height + (d.height1 - d.height) * u;
 }

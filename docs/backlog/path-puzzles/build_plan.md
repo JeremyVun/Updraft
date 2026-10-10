@@ -1208,8 +1208,32 @@ all storm waypoints as one turn. It now keys each leg independently without rela
 targeted rerun passes (`journey-pacing-final.log`). All 51 checks therefore pass. The dedicated boat check also
 requires normal speed, fewer than half a turn per waypoint, two spaced gust traces and the cat at the sill.
 
-The landscape still revealed a cropped child at the slow blink despite the passing face-centre gate. This is new
-approval item 53, with no camera change made. Findings 42, 47, 48 and 53 remain pending approval; Phase 10 stays open.
+The landscape still revealed a cropped child at the slow blink despite the passing face-centre gate. This became
+item 53. Findings 42, 47, 48 and 53 were subsequently approved and resolved in the following round; Phase 10 stays open.
+
+#### Approved remaining findings — 2026-10-10
+
+Jeremy: "you are approved to address all identified issues". Address design.md items 42, 47, 48 and 53:
+tree gaze priority, portrait cat visibility after the mill, the mill step-up contact, and the landscape farewell's
+cropped head. Verify the actual posed silhouettes and contact, then replay both aspects. Work starts at `62daa64a`
+in the integration worktree; no main merge or deployment. Evidence: `/tmp/updraft-final-findings-WhJDz0/`.
+
+Implemented and checked: [x]. The tree failure came from sampling after Carry changed `lookAt`, although the
+head had already been posed. Sampling the actual pose input passes the unchanged limits; a 24-second browser
+sample looks across the lane 70% and up the tree 30%. The portrait camera gently tightens its lens on the turn
+toward the swing, reducing the longest cat-readability gap from 2.1 to 1.9 seconds without moving the camera or
+relaxing its limits. The mill slope and ridge now follow the physical roof for navigation, removing a 22 cm
+root jump. Four gait phases at 30/60/120 Hz keep a supporting sole within 24 mm of the roof; restoring the old navigation
+fails the vertical-speed check. The farewell reserves the child's whole head and tests posed vertices: both
+aspects retain the hood and face while keeping the cat readable. Restoring the old framing fails the new check.
+
+All 52 mechanics checks pass together (`mechanics/results.json`). After the final portrait lens adjustment,
+typecheck, production build and the focused camera checks pass. The complete landscape roofs-to-woods replay
+passes (`landscape-final.log`); the complete portrait roof route and farewell framing pass (`portrait-final.log`).
+That first portrait run fails a later storm brightness gate at 20.3/255. A separate portrait departure rerun,
+with flashes measured throughout each screenshot capture, passes at 11.1/255 (`portrait-departure.log`), without
+changing the 12/255 limit. The intermittent surge remains recorded as new review item 54 rather than being
+declared fixed. The close mill clips and final farewell stills are in the same evidence directory.
 
 #### Integration takeover — 2026-10-10
 
@@ -1320,7 +1344,7 @@ Resolved fixture failures under review item 40 (no gameplay changes):
 | `plane-routing` | Supplies repeated player strokes across the real pinwheel to haul the boat in; passes |
 | `drowned-gating` | Bounds each vane's settling speed on distant entry, preserves pairwise parity on arrival; passes |
 
-Phase 10 remains open for Jeremy's playtest and music listen, the Ultra investigation and review item 42. The
+Phase 10 remains open for Jeremy's playtest and music listen, the Ultra investigation and new review item 54. The
 whole-journey release playthrough has not been run during this takeover. Ultra fog cost is not a claimed fix. The integration
 dev server is on `http://127.0.0.1:5331/`; the original roofs play build and main remain separate.
 

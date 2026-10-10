@@ -840,14 +840,13 @@ outside those proposals still come back as new review items. Main merge and depl
     capture, up from 39 px, with the child's face at (0.76, 0.80). The 45 px readability gate now covers both aspects.
     Both full church-to-wood replays pass, retaining the 88-second farewell. Before/after:
     `/tmp/updraft-approved-Ad2y4S/farewell-before-after.jpg`.
-42. **Intermittent tree-gaze check — new finding, pending review.** One full portrait replay (`run9-port.log` in the
-    follow-up evidence directory) stopped before the mill: during the six-second quiet sample, she looked across the
-    lane 25% of the time and up at the tree 21%, below the existing 40% across-lane minimum. Earlier replays of the
-    unchanged tree behaviour passed, as did the subsequent final replays. The companion can temporarily take her
-    gaze for 1.4–2.6 seconds; this is a
-    possible cause, not yet confirmed by target-by-target capture. Proposal: capture those targets over several full
-    gaze cycles, then decide whether the check needs a longer sample or her puzzle attention needs changing. Neither
-    the gaze behaviour nor the assertion has been changed for this finding.
+42. **Intermittent tree-gaze check — fixture corrected.** The old check sampled `lookAt` after Carry's idle response,
+    although the child is posed before Carry updates and the story restores her puzzle target before the next pose.
+    In one six-second live sample the target actually used for her pose looked across the lane 279/375 frames (74%);
+    the old sampling point reported 145/374 (39%), failing the unchanged 40% minimum on those same frames. The check
+    now samples at the pose update. Her gaze behaviour and the six-second default remain unchanged. Evidence:
+    `/tmp/updraft-final-findings-WhJDz0/run-port-first.log`. The final landscape replay's 24-second sample confirms
+    70% across and 30% up over several cycles, passing the unchanged limits.
 
 Follow-up evidence: `/tmp/updraft-approved-Ad2y4S/`. All 50 mechanics checks pass together. The portrait church
 sequence passes with the new 45 px readability gate: the cat is 50 px tall, her face at (0.76, 0.80), with no cuts
@@ -884,18 +883,25 @@ Jeremy's next brief, verbatim:
     the navigation height; her hips lower smoothly to keep the feet within reach. The six tested roofs and coping
     have a planted sole within 20 mm of the surface, including 5 mm on the coping Jeremy pictured. Close moving
     frames of both characters: `/tmp/updraft-contact-diLDtA/contact-review.jpg`. Root-height checks alone missed this.
-47. **Portrait cat visibility after the mill — pending approval.** With the corrected body and foot poses, the final
-    portrait replay reports the cat unreadable for 2.1 seconds on the walk to the swing (limit 2.0; previously 1.8).
-    The child stays in frame and clear of the tree, and the fog gap remains within its limit. Proposal: a small
-    adjustment to this camera handoff, checked against the hood, fog and tree constraints. Evidence:
-    `/tmp/updraft-contact-diLDtA/final-port.log` and `mill-port-strip.jpg`. No further camera change has been made.
-48. **Brief step-up gap at the mill — pending approval.** The full landscape contact trace records one sample at
+47. **Portrait cat visibility after the mill — implemented and verified.** With the corrected body and foot poses, the earlier
+    portrait replay reported the cat unreadable for 2.1 seconds on the walk to the swing (limit 2.0; previously 1.8).
+    The child stayed in frame and clear of the tree, and the fog gap remained within its limit. Original evidence:
+    `/tmp/updraft-contact-diLDtA/final-port.log` and `mill-port-strip.jpg`. The portrait turn toward the swing now
+    tightens its lens gently as she looks down toward it, keeping the earlier wider close approach for her hood.
+    The complete portrait roof route passes: cat unreadable at most 1.9 s, fog absent at most 1.6 s, no child crop or tree
+    obstruction. The camera position and existing limits are unchanged. Evidence:
+    `/tmp/updraft-final-findings-WhJDz0/portrait-final.log`.
+48. **Brief step-up gap at the mill — implemented and verified.** The earlier landscape contact trace recorded one sample at
     10 Hz with both soles 56 mm above the support surface, between grounded samples, as her navigation height
     jumps from the mill slope onto its ridge. This differs from the sustained boot hover corrected in 46. It is a
-    measured transition issue; the existing wide stills do not establish how noticeable it is in motion. Proposal:
-    capture the step-up closely, then smooth the navigation handoff if it reads as a pop, checking the mill approach
-    camera and hoist boarding. Evidence: `/tmp/updraft-contact-diLDtA/final-land.json`, at 58.17 s, position
-    `(24.57, 1.20, -1539.45)`. No navigation change has been made.
+    measured transition issue, checked with a close motion capture and the mill approach camera and hoist boarding.
+    Original evidence: `/tmp/updraft-contact-diLDtA/final-land.json`, at 58.17 s, position
+    `(24.57, 1.20, -1539.45)`. A focused replay confirms a 22 cm navigation jump at the overlap. The mill's two
+    strips now follow their physical roof surface for navigation, removing that jump. Across four stride phases
+    at 30/60/120 Hz, at least one sole stays within 24 mm of support; restoring the former navigation fails the
+    vertical-speed regression. Both complete roof-route replays pass. Evidence:
+    `/tmp/updraft-final-findings-WhJDz0/mill-contact.log`, `mill-negative.log`, and the close `mill-before.mp4` /
+    `mill-after.mp4` captures in the same folder.
 
 Continue in the integration worktree. Any additional findings join the approval list; main merge and deployment remain separate.
 
@@ -922,12 +928,24 @@ Jeremy's next brief, verbatim:
 52. **Plane departure — implemented and verified.** Two narrow wind traces, 0.65 seconds apart, replace the simultaneous eight.
     The plane starts 1.8 m/s faster than the hull and accelerates gently away; its upward release clears the hood.
     The portrait release stays in frame. Evidence: `plane-port-final.webm` and `plane-port-final-plane.png`.
-53. **Landscape farewell crops the child — new finding, pending approval.** The full landscape replay passes its
-    automated framing check with her face centre at (0.82, 0.97), but the slow-blink still cuts off much of her face
-    and chin below the bottom edge. The cat and kitten remain readable. This was found by inspecting the whole
-    silhouette; an in-frame centre is insufficient. Proposal: lower or widen the landscape farewell composition
-    enough to retain her whole hood and face, while preserving both cats' readability. No farewell camera change
-    has been made for this finding. Evidence: `/tmp/updraft-departure-Y5m3eS/church-land-final-slow-blink.png`.
+53. **Landscape farewell crops the child — implemented and verified.** The earlier landscape replay passed its
+    automated framing check with her face centre at (0.82, 0.97), but the slow-blink still cut off much of her face
+    and chin below the bottom edge. The cat and kitten remained readable. This was found by inspecting the whole
+    silhouette; an in-frame centre is insufficient. The shot now reserves a
+    0.55 m head bound and the regression measures posed hood and face vertices. At 30/60 Hz both aspects pass,
+    with the cat at least 59 px tall; restoring the old framing fails. Both browser farewell replays pass: the full
+    head sits within the frame, with the cat 58 px tall in landscape and 60 px in portrait. Before:
+    `/tmp/updraft-departure-Y5m3eS/church-land-final-slow-blink.png`. After:
+    `/tmp/updraft-final-findings-WhJDz0/landscape-final-slow-blink.png` and `portrait-departure-slow-blink.png`.
+54. **Intermittent brightness surge during the portrait storm — new review item.** One full portrait replay recorded
+    a 20.3/255 mean-brightness change between seconds 35 and 36 after boarding (limit 12). Nearby film frames show
+    pale mist covering the hull and intensifying the lantern halo. The exact cause is not established: the original
+    check could miss lightning starting during its asynchronous screenshot. It now records flashes throughout
+    capture without changing the limit. The landscape replay passes at 7.2; a portrait departure rerun passes at
+    11.1, with no flashes first detected during capture. That rerun does not explain the earlier surge. Proposal:
+    reproduce the mist/lantern transition across wave phases before deciding whether to soften its opacity or light
+    response. No storm visuals changed in this round. Evidence: `/tmp/updraft-final-findings-WhJDz0/portrait-final.log`,
+    `portrait-final-film-115.png`, `portrait-final-film-116.png`, and `portrait-departure.log`.
 
 Asked whether to move the later islands together or use a longer curved route, Jeremy answered, verbatim:
 
@@ -937,8 +955,12 @@ Keep every island and berth in place. Extend the existing bend past the lighthou
 and a clear approach to the unchanged woods landing take precedence over the previous slow crossing's 80-second
 duration. The lighthouse must remain readable as its light fades, and the plane must be readable during release.
 
-The four requested changes are complete. Findings 42, 47, 48 and 53 await Jeremy's review. Work remains on the
-integration branch, without merge or deployment. Island coordinates and save geography are unchanged.
+The four requested changes are complete. Jeremy approved findings 42, 47, 48 and 53 on 2026-10-10, verbatim:
+
+> you are approved to address all identified issues
+
+Those four findings are resolved. Item 54 is a new finding for review. Work remains on the integration branch,
+without merge or deployment. Island coordinates and save geography are unchanged.
 
 Departure evidence: `/tmp/updraft-departure-Y5m3eS/`. All 51 mechanics checks pass after correcting the journey
 pacing fixture to track each storm waypoint independently; the original batch recorded 50 passes and that one

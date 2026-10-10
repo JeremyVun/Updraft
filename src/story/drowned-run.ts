@@ -1289,6 +1289,7 @@ export class RoofRun {
       const reach = lerp(Math.hypot(e.x - from.x, e.z - from.z), Math.hypot(to.x - from.x, to.z - from.z), u);
       e.set(from.x + Math.sin(bearing) * reach, lerp(e.y, to.y, THREE.MathUtils.smoothstep(u, a.lookRiseFrom, 1)), from.z + Math.cos(bearing) * reach);
       this.stationTarget.lerp(set(a.lookAt, a.uprightLookAt, this.tmp2, wait), u);
+      this.stationZoom = lerp(this.stationZoom, lerp(a.uprightLookZoom, a.zoom, wide), u);
     }
     if ('fogAt' in a) this.stationTarget.lerp(this.fogFront(this.tmp2).setY(this.stationTarget.y), lerp(a.uprightFogAt, a.fogAt, wide));
   }

@@ -18,12 +18,26 @@ try {
   await page.evaluate(() => { window.requestAnimationFrame = __nativeRAF; });
   await page.evaluate(async () => {
     const W = await import('/src/world/drowned-way.ts');
+    const { tuning } = await import('/src/tuning.ts');
     const { child, cat, rig, post } = __game;
     const v = child.position.clone(), side = v.clone();
     window.__contact = {
       setup(kind) {
         this.kind = kind;
-        if (kind === 'boots') {
+        if (kind.startsWith('mill')) {
+          W.WAY.millSlope.followSurface = W.WAY.millRidge.followSurface = kind === 'mill-after';
+          cat.visible = false; cat.update(0);
+          const route = ['millWall', 'millWallUp', 'millWallOn', 'millSlope', 'millRidge'].map(n => W.WAY[n]);
+          child.decks = Object.values(W.WAY); child.dismount(); child.sitting = false;
+          child.stroll = tuning.drowned.run.stroll;
+          child.place(route[0].x0, route[0].z0, Math.atan2(route[0].x1 - route[0].x0, route[0].z1 - route[0].z0));
+          for (let i = 0; i < 120; i++) child.update(1 / 60);
+          child.gait = 0;
+          let next = 0;
+          const go = () => { const d = route[next++]; if (d) child.walkTo(d.x1, d.z1, false, go, 0.12); };
+          go();
+          for (let i = 0; i < 1800 && child.position.x < W.WAY.millRidge.x0 - 0.45; i++) child.update(1 / 60);
+        } else if (kind === 'boots') {
           cat.visible = false; cat.update(0);
           const d = W.WAY.laneWall;
           child.decks = [d]; child.dismount(); child.sitting = false;
@@ -40,22 +54,28 @@ try {
         this.step(0);
       },
       step(frames) {
-        for (let i = 0; i < frames; i++) this.kind === 'boots' ? child.update(1 / 60) : cat.update(1 / 60);
-        const who = this.kind === 'boots' ? child : cat;
-        const yaw = this.kind === 'boots' ? child.yaw : cat.heading;
+        const boots = this.kind !== 'cat';
+        for (let i = 0; i < frames; i++) boots ? child.update(1 / 60) : cat.update(1 / 60);
+        const who = boots ? child : cat;
+        const yaw = boots ? child.yaw : cat.heading;
         side.set(Math.cos(yaw), 0, -Math.sin(yaw));
-        v.copy(who.position).y += this.kind === 'boots' ? .35 : .3;
-        rig.camera.position.copy(v).addScaledVector(side, this.kind === 'boots' ? 2.6 : 2.4);
+        v.copy(who.position).y += boots ? .35 : .3;
+        rig.camera.position.copy(v).addScaledVector(side, boots ? 2.6 : 2.4);
         rig.camera.position.y += .65;
+        if (this.kind.startsWith('mill')) {
+          v.set(W.WAY.millRidge.x0, 2, W.WAY.millRidge.z0);
+          rig.camera.position.copy(v).add(side.set(-3.2, 0.8, -2));
+          rig.camera.fov = 75; rig.camera.updateProjectionMatrix();
+        }
         rig.camera.lookAt(v); rig.camera.updateMatrixWorld(true);
         post.render(__stats.time);
       },
     };
   });
-  for (const kind of ['boots', 'cat']) {
+  for (const kind of process.env.CASE === 'mill' ? ['mill-before', 'mill-after'] : ['boots', 'cat']) {
     await page.evaluate(kind => __contact.setup(kind), kind);
-    for (let i = 0; i < 24; i++) {
-      await page.evaluate(() => __contact.step(10));
+    for (let i = 0; i < (process.env.CASE === 'mill' ? 48 : 24); i++) {
+      await page.evaluate(frames => __contact.step(frames), process.env.CASE === 'mill' ? 2 : 10);
       await page.screenshot({ path: `${folder}/${kind}-${String(i).padStart(2, '0')}.png` });
     }
   }

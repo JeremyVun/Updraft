@@ -20,6 +20,38 @@ function catVertices(cat, visit) {
   }
 }
 const only = process.env.ONLY;
+for (const fps of !only || only === 'mill' ? [30, 60, 120] : []) {
+  for (const phase of [0, Math.PI / 2, Math.PI, 1.5 * Math.PI]) {
+    const child = new Traveller(wind), route = ['millWall', 'millWallUp', 'millWallOn', 'millSlope', 'millRidge'].map(n => WAY[n]);
+    const { tuning } = await import('../src/tuning.ts');
+    child.decks = Object.values(WAY); child.dismount(); child.sitting = false; child.stroll = tuning.drowned.run.stroll;
+    child.place(route[0].x0, route[0].z0, Math.atan2(route[0].x1 - route[0].x0, route[0].z1 - route[0].z0));
+    for (let i = 0; i < fps * 2; i++) child.update(1 / fps);
+    child.gait = phase;
+    let next = 0;
+    const go = () => { const d = route[next++]; if (d) child.walkTo(d.x1, d.z1, false, go, 0.12); };
+    go();
+    const mesh = child.rig.mesh, p = mesh.geometry.attributes.position, soles = [];
+    for (let i = 0; i < p.count; i++) if (p.getY(i) < 0.015) soles.push(i);
+    let gap = 0, rise = 0, was = child.position.y;
+    for (let i = 0; i < fps * 20; i++) {
+      child.update(1 / fps);
+      rise = Math.max(rise, Math.abs(child.position.y - was) * fps); was = child.position.y;
+      child.rig.root.updateMatrixWorld(true); mesh.skeleton.update();
+      let nearest = Infinity;
+      for (const index of soles) {
+        mesh.getVertexPosition(index, v).applyMatrix4(mesh.matrixWorld);
+        nearest = Math.min(nearest, v.y - child.floorAt(v.x, v.z));
+      }
+      gap = Math.max(gap, nearest);
+      if (next > route.length && child.speed < 0.01) break;
+    }
+    assert(next > route.length, 'she reaches the hoist');
+    assert(rise < 2.2, `mill approach jumps vertically at ${rise.toFixed(2)} m/s (${fps} Hz)`);
+    assert(gap < 0.025, `mill approach floats ${gap.toFixed(3)} m (${fps} Hz, gait ${phase})`);
+    console.log(`mill approach ${fps} Hz, gait ${phase.toFixed(2)}: sole gap ${gap.toFixed(3)} m, vertical speed ${rise.toFixed(2)} m/s`);
+  }
+}
 if (!only || only === 'chimney') {
   const { buildHouse, LIME, SLATE } = await import('../src/world/drowned-houses.ts');
   const h = GREEN_HOUSE, localX = h.stacks[0] * (h.len / 2 - 0.75), localZ = h.stackAcross ?? 0;

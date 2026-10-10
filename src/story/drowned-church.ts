@@ -786,7 +786,7 @@ export class ChurchArrival {
   private readonly upEyes = new THREE.Vector3();
   private readonly upLens = new THREE.Vector3();
   private readonly upTarget = new THREE.Vector3();
-  private readonly held: { primary: THREE.Vector3; secondary: THREE.Vector3; tertiary?: THREE.Vector3; margin: number; extra: number } = {
+  private readonly held: { primary: THREE.Vector3; primaryRadius?: number; secondary: THREE.Vector3; tertiary?: THREE.Vector3; margin: number; extra: number } = {
     primary: new THREE.Vector3(), secondary: new THREE.Vector3(), margin: tuning.drownedCamera.church.margin, extra: tuning.drownedCamera.church.extra };
   private readonly third = new THREE.Vector3();
 
@@ -810,6 +810,7 @@ export class ChurchArrival {
     const pick = (a: readonly number[], b: readonly number[]) => this.pick(a, b, wide);
     const held = this.held;
     held.primary.copy(c).setY(c.y + (this.step === 'nest' ? 1.0 : 1.4));
+    held.primaryRadius = 0;
     held.margin = k.margin;
     held.extra = k.extra;
     held.tertiary = undefined;
@@ -907,6 +908,7 @@ export class ChurchArrival {
 
     let zoom = lerp(1, lerp(k.uprightUpZoom, k.upZoom, wide), move);
     this.held.primary.copy(eyes);
+    this.held.primaryRadius = k.upHeadRadius * move;
     this.held.tertiary = this.cast.village!.kittens.cats[FOUND].eye(this.third);
     this.held.extra = 0;
     this.held.margin = k.upMargin;
@@ -986,6 +988,7 @@ export class ChurchArrival {
     this.mixEye.addScaledVector(breathe(time, this.mixEye.distanceTo(shot.target), this.breath), away);
     this.mixTarget.addVectors(head, this.goneAim).lerp(shot.target, away);
     this.held.primary.copy(head).setY(head.y + 1.1);
+    this.held.primaryRadius = 0;
     this.held.secondary.copy(this.held.primary);
     this.held.tertiary = undefined;
     this.write(shot, this.mixEye, this.mixTarget, THREE.MathUtils.lerp(this.zoomNow, shot.zoom ?? 1, away));

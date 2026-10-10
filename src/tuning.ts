@@ -2193,7 +2193,7 @@ export const tuning = {
       /** Camera positions and targets from the piece's wait, or from her while tracking to the swing. */
       approach: {
         mill: { from: 12.3, rate: 0.7, fogAt: 0.3, uprightFogAt: 0.65, eye: [-6.5, 6.5, 15.5], at: [1.2, 4.6, -1], uprightEye: [-5, 6.2, 13], uprightAt: [0.8, 5.2, -1] },
-        swing: { from: 20, rate: 0.5, track: true, handFor: 6, closeBy: 0.6, turnFrom: 0, catDown: 0.15, via: [-5, 3.5, 12], uprightVia: [-5, 3.5, 12], zoom: 0.9, uprightZoom: 0.85, uprightCloseZoom: 0.8, uprightCloseFrom: 8, uprightHeadRadius: 0.6, margin: 0.6, lookCloseFrom: 4, lookScale: 0.4, lookRiseFrom: 0.65,
+        swing: { from: 20, rate: 0.5, track: true, handFor: 6, closeBy: 0.6, turnFrom: 0, catDown: 0.15, via: [-5, 3.5, 12], uprightVia: [-5, 3.5, 12], zoom: 0.9, uprightZoom: 0.85, uprightLookZoom: 1, uprightCloseZoom: 0.8, uprightCloseFrom: 8, uprightHeadRadius: 0.6, margin: 0.6, lookCloseFrom: 4, lookScale: 0.4, lookRiseFrom: 0.65,
           eye: [-7, 0.5, 10], at: [-3, 0.7, 0], uprightEye: [-6, 0.5, 10], uprightAt: [-2, 0.7, 0],
           lookEye: [-10.7, 4.15, 0.5], lookAt: [1.5, 2.45, -1], uprightLookEye: [-12.4, 4.15, 0.5], uprightLookAt: [1.5, 2.45, -1] },
       },
@@ -2274,7 +2274,7 @@ export const tuning = {
        */
       catEyes: 0.32, upBack: 8, upOver: -0.2, upRound: 0.62, upAim: 0.52, upZoom: 1.5,
       uprightUpBack: 14, uprightUpOver: 2.5, uprightUpRound: 0.3, uprightUpAim: 0.4, uprightUpZoom: 2,
-      tiltFrom: 0.2, tiltTo: 5, upMargin: 0.94, upClear: 0.35,
+      tiltFrom: 0.2, tiltTo: 5, upMargin: 0.94, upHeadRadius: 0.55, upClear: 0.35,
       /**
        * After the blink, from `releaseFrom` to `releaseTo` seconds after she sits, it lets her go as the two go back in:
        * round toward the bow by this much (radians), this far from her eyes and this far over them, looking this share

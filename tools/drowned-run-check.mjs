@@ -35,6 +35,7 @@
 //        storm's frame takes over, her out of frame or hidden by the church or a roof; at the blink the cat, the kitten
 //        and her face out of frame or the cat under 45 px tall), VOICES=<file> writes every sound the cat and each kitten
 //        makes (seconds, which animal, kind, the story step) with the strongest its call marks showed in the 0.6 s after.
+//        TREE_QUIET=<seconds> extends the initial six-second tree gaze sample for checking complete attention cycles.
 import { openBrowser } from './lib/browser.mjs';
 import assert from 'node:assert/strict';
 
@@ -369,6 +370,14 @@ try {
      * frame brightens past the look back's outside a lightning flash, or if the landing comes late.
      */
     const storm = async (aboard, atNave) => {
+      await page.evaluate(() => {
+        const post = __game.post, render = post.render;
+        window.__captureFlash = 0;
+        post.render = function(...args) {
+          window.__captureFlash = Math.max(window.__captureFlash, __game.boat.sailMat.uniforms.uLightning.value.w);
+          return render.apply(this, args);
+        };
+      });
       const probe = () => page.evaluate(() => {
         const st = __game.story.current, cam = __game.rig.camera, light = __game.village.lighthouse;
         if (!st.church) return { landed: true, time: +__stats.time.toFixed(2) };
@@ -377,7 +386,12 @@ try {
           power: light.strength.value, lamp: [lamp.x, lamp.y, lamp.z], flash: __game.boat.sailMat.uniforms.uLightning.value.w,
           shook: st.shook, sheltered: st.sheltered, horn: st.hornPassed, plane: __game.glider.group.visible };
       });
-      const brightness = async () => (await sharp(await page.screenshot({ type: 'jpeg', quality: 70 })).greyscale().stats()).channels[0].mean;
+      const brightness = async () => {
+        await page.evaluate(() => { window.__captureFlash = __game.boat.sailMat.uniforms.uLightning.value.w; });
+        const mean = (await sharp(await page.screenshot({ type: 'jpeg', quality: 70 })).greyscale().stats()).channels[0].mean;
+        const flash = await page.evaluate(() => window.__captureFlash);
+        return { mean: +mean.toFixed(1), flash: flash > 0.01 };
+      };
       const beats = [{ what: 'aboard', at: 0, toBeach: toBeach(aboard) }];
       const mark = (what, s, b = s) => beats.push({ what, at: s.time - aboard.time, toBeach: toBeach(b) });
       const trace = [];
@@ -406,7 +420,10 @@ try {
         if (p.power <= 0.001 && !out) { out = { ...p, since, inFrame, boat: s.boat }; mark('the light out', p, s); }
         if (Math.floor(since) > second) {
           second = Math.floor(since);
-          trace.push({ second, mean: +(await brightness()).toFixed(1), flash: p.flash > 0.01 || was.flash > 0.01 });
+          // A lightning flash can begin during the asynchronous screenshot itself.
+          const sample = await brightness();
+          trace.push({ second, mean: sample.mean, flash: sample.flash || p.flash > 0.01 || was.flash > 0.01,
+            captureFlash: sample.flash && p.flash <= 0.01 && was.flash <= 0.01 });
         }
         if (Math.floor(since / 5) > still) { still = Math.floor(since / 5); await shot(`storm-${String(still * 5).padStart(2, '0')}`); }
         was = p;
@@ -419,7 +436,7 @@ try {
       /** On into the wood chapter's first seconds, so a cut at the hand-off shows in the trace. */
       for (let i = 1; i <= 4; i++) {
         await seconds(1);
-        trace.push({ second: second + i, mean: +(await brightness()).toFixed(1), flash: false, ashore: true });
+        trace.push({ second: second + i, ...await brightness(), ashore: true });
         if (i === 3) await shot('storm-ashore');
       }
       console.log(`storm from aboard at the nave: ${toBeach(aboard).toFixed(0)} m to the forest beach`);
@@ -435,6 +452,7 @@ try {
       const lit = trace.filter((r) => r.second > T.leaveBy && !r.flash);
       const brightest = lit.reduce((a, r) => (r.mean > a.mean ? r : a), { mean: -1, second: -1 });
       console.log(`  mean brightness each second from aboard: ${trace.map((r) => `${r.second}:${r.mean.toFixed(0)}${r.flash ? '*' : r.ashore ? '+' : ''}`).join(' ')}`);
+      console.log(`  lightning first detected during capture at seconds: ${trace.filter(r => r.captureFlash).map(r => r.second).join(', ') || 'none'}`);
       /**
        * Once the lens has come down from the cat on the sill as they cast off: that move brings the frame from the lit
        * stone down to the dark water, continuously; a cut anywhere after it still shows.
@@ -572,6 +590,7 @@ try {
     /** How tall the cat stands on screen at the blink, feet to ear tips by its bones, and where it and she are in the frame. */
     const seenAtBlink = await page.evaluate(async () => {
       const B = await import('/src/creatures/cat/body.ts');
+      const { childHead } = await import('/tools/lib/child-head.mjs');
       const cat = __game.cat, cam = __game.rig.camera, c = __game.child, v = cat.position.clone(), tail = new Set(B.TAIL);
       let top = Infinity, bottom = -Infinity, left = Infinity, right = -Infinity;
       for (let i = 1; i < B.BONES; i++) {
@@ -582,10 +601,13 @@ try {
         top = Math.min(top, y); bottom = Math.max(bottom, y); left = Math.min(left, x); right = Math.max(right, x);
       }
       const f = c.face(c.position.clone()).project(cam), k = __game.village.kittens.cats[0].eye(v).project(cam);
-      return { px: bottom - top, cat: [(left + right) / 2 / innerWidth, (top + bottom) / 2 / innerHeight], kitten: [(k.x + 1) / 2, (1 - k.y) / 2], her: [(f.x + 1) / 2, (1 - f.y) / 2] };
+      return { px: bottom - top, cat: [(left + right) / 2 / innerWidth, (top + bottom) / 2 / innerHeight], kitten: [(k.x + 1) / 2, (1 - k.y) / 2], her: [(f.x + 1) / 2, (1 - f.y) / 2], head: childHead(c)(cam) };
     });
     /** On the west arch's sill: on its stone, in the wall's depth and within the arch. */
     const onSill = (p) => Math.abs(p[1] - T.sill[1]) < 0.15 && p[0] > T.sill[0] - 0.1 && p[0] < T.sill[0] + T.wall + 0.1 && Math.abs(p[2] - T.sill[2]) < T.arch;
+    console.log(`her whole head bounds at the blink: ${seenAtBlink.head.map(v => v.toFixed(3)).join(', ')}`);
+    if (process.env.LENS) assert(seenAtBlink.head.slice(0, 2).every(v => v > 0.02) && seenAtBlink.head.slice(2).every(v => v < 0.98),
+      `her hood or face is cropped at the blink: ${JSON.stringify(seenAtBlink.head)}`);
     await storm(aboard, atNave);
     const w = await page.evaluate(() => window.__churchWatch);
     if (!fromBelfry) {
@@ -808,6 +830,8 @@ try {
           const walk = `her way to the ${['tree', 'sheet', 'mill', 'swing'].find((piece) => r[piece].phase !== 'over') ?? 'nave'}`;
           const seen = catSeen(), readable = seen.inFrame && !seen.hidden && seen.px >= window.__catPx;
           w.catLostRun = readable ? 0 : w.catLostRun + 1 / 60;
+          if (w.catLostRun > (w.catByWalk[walk] ?? 0)) (w.catLostAt ??= {})[walk] = { time: t, handed: r.handed, seen,
+            child: p.toArray(), cat: __game.cat.position.toArray(), camera: cam.position.toArray() };
           w.catLast = [Math.round(seen.px), +seen.inFrame, +seen.hidden];
           w.catByWalk[walk] = Math.max(w.catByWalk[walk] ?? 0, w.catLostRun);
           if (w.frames % 6 === 0) (w.catPxByWalk[walk] ??= []).push(seen.inFrame && !seen.hidden ? Math.round(seen.px) : 0);
@@ -912,6 +936,7 @@ try {
       console.log(`  on each walk at most ${Object.entries(w.fogByWalk).map(([k, v]) => `${v.toFixed(1)} s on ${k}`).join(', ')}`);
       console.log(`the cat unreadable (out of frame, behind a roof or under 40 px) for at most ${Object.entries(w.catByWalk).map(([k, v]) => `${v.toFixed(1)} s on ${k}`).join(', ')}`);
       console.log(`  its size in px (0 out of frame or hidden), least and median: ${Object.entries(w.catPxByWalk).map(([k, v]) => `${k} ${Math.min(...v)}/${median(v)}`).join(', ')}`);
+      console.log(`  longest cat gaps: ${JSON.stringify(w.catLostAt)}`);
       console.log(`she faced the lens on her way for ${w.facing.toFixed(1)} s in all (longest ${w.facingWorst.toFixed(1)} s ${w.facingAt}); out of frame ${w.unseen.toFixed(1)} s (longest ${w.unseenWorst.toFixed(1)} s ${w.unseenAt}); lens inside a roof ${w.inside.toFixed(1)} s ${w.insideAt}`);
       console.log(`a roof hid her for at most ${(w.hiddenWorst ?? 0).toFixed(1)} s at a time (${w.hiddenAt ?? ''})`);
       console.log(`the old tree hid her for at most ${w.treeHiddenWorst.toFixed(1)} s at a time after the mill`);
@@ -954,7 +979,22 @@ try {
       const r = __game.story.current.run, c = __game.child, cam = __game.rig.camera, from = __stats.time;
       const root = r.tree.tree.spot.root, over = r.tree.tree.spot.over, fall = r.tree.tree.fall;
       const w = window.__treeWatch = { root: Math.hypot(c.position.x - root.x, c.position.z - root.z), quiet: true, looks: 0, up: 0,
-        across: 0, invited: null, lens: [] };
+        across: 0, lateAcross: 0, lateLooks: 0, invited: null, lens: [] };
+      const classify = l => {
+        if (!l) return null;
+        const p = c.position, steep = Math.atan2(l.y - p.y - 1.2, Math.hypot(l.x - p.x, l.z - p.z)) > 0.6;
+        if (steep && Math.hypot(l.x - root.x, l.z - root.z) < 3) return 'up';
+        return !steep && (l.x - over.x) * fall.x + (l.z - over.z) * fall.y > 0.5 ? 'across' : 'other';
+      };
+      const update = c.update;
+      c.update = function(dt) {
+        // Carry updates after the pose; sample the target the rendered head actually used.
+        if (w.quiet && r.tree.phase === 'waiting') {
+          const target = classify(this.lookAt);
+          if (target) { w.looks++; if (target !== 'other') w[target]++; }
+        } else c.update = update;
+        return update.call(this, dt);
+      };
       const tick = () => {
         if (r.tree.phase !== 'waiting') return;
         const t = __stats.time - from, p = c.position;
@@ -964,17 +1004,15 @@ try {
          * take her and the cat goes (or at the cygnet on her back, which is neither).
          */
         if (c.lookAt && w.quiet) {
-          w.looks++;
-          const l = c.lookAt, steep = Math.atan2(l.y - p.y - 1.2, Math.hypot(l.x - p.x, l.z - p.z)) > 0.6;
-          if (steep && Math.hypot(l.x - root.x, l.z - root.z) < 3) w.up++;
-          else if (!steep && (l.x - over.x) * fall.x + (l.z - over.z) * fall.y > 0.5) w.across++;
+          w.lateLooks++;
+          if (classify(c.lookAt) === 'across') w.lateAcross++;
         }
         if (w.invited === null && r.tree.invitation && __game.emberInvitation.alpha > 0.5) w.invited = t;
         requestAnimationFrame(tick);
       };
       requestAnimationFrame(tick);
     });
-    await seconds(6);
+    await seconds(Number(process.env.TREE_QUIET ?? 6));
     await shot('tree');
     /** Once the lens has come round: how far out toward the frame's edge (1) her head, the top of the crown and the barn's ridge stand. */
     const framed = await page.evaluate(() => {
@@ -1022,6 +1060,7 @@ try {
       await sweepTo([aim.at[0] - ax, aim.at[1] - ay], 8);
     }
     const tw = await page.evaluate(() => window.__treeWatch);
+    console.log(`tree gaze used for the pose: ${tw.across}/${tw.looks} across; after companion update: ${tw.lateAcross}/${tw.lateLooks} across`);
     const lensFrom = tw.lens[0]?.[1] ?? 0, lensTo = tw.lens.at(-1)?.[1] ?? 0, near = Math.min(...tw.lens.map((l) => l[1])), far = Math.max(...tw.lens.map((l) => l[1]));
     const inAndOut = Math.max(Math.min(lensFrom - near, lensTo - near), Math.min(far - lensFrom, far - lensTo));
     console.log(`the tree: she waited ${tw.root.toFixed(1)} m from its foot; before any stroke she looked steeply up ${(100 * tw.up / tw.looks).toFixed(0)}% of the time and across the lane ${(100 * tw.across / tw.looks).toFixed(0)}%;`
