@@ -1,5 +1,5 @@
 // Capture the complete sea passage with real simulation and verify the swimmer's framing, then the whale in the net:
-// the pod's lead into the mist, the whale heard there, its blow seen and its shape coming out of it, the rest beside
+// the pod's lead, the distant blow, the shape emerging and first call after the swim, the rest beside
 // its head, its five steps played with real gestures as each is drawn (circles over the blowhole, strokes across its
 // eye, the cork, the net on its head and the flipper), the spout, the flukes and the settled arrival at the mirror.
 // Usage: node tools/sea-check.mjs [out-prefix]. BASE selects a stable dev server; W/H select the viewport (1600×900;
@@ -35,9 +35,14 @@ function observe() {
   const heard = g.sealife.sleeper.onSound;
   g.sealife.sleeper.onSound = (kind,x,y,z) => {
     const recording=window.seaAudio?.recorder.state==='recording' ? seaAudio : null;
-    log.voices.push({kind,time:__stats.time,at:[x,y,z],camera:g.rig.camera.position.toArray(),free:g.story.current.whale?.step==='free',
+    log.voices.push({kind,time:__stats.time,swim:g.story.current.swim,step:g.story.current.whale?.step,at:[x,y,z],camera:g.rig.camera.position.toArray(),free:g.story.current.whale?.step==='free',
       recording:recording?.name,recordingTime:recording ? g.sound.ctx.currentTime-recording.started : undefined});
     heard?.(kind,x,y,z);
+  };
+  const netSound=g.sealife.net.onSound;
+  g.sealife.net.onSound=(kind,at,strength)=>{
+    if(kind==='net-sputter')log.voices.push({kind,time:__stats.time,swim:g.story.current.swim,step:g.story.current.whale?.step});
+    netSound?.(kind,at,strength);
   };
   const update = g.sealife.pod.update.bind(g.sealife.pod);
   g.sealife.pod.update = (dt, time) => {
@@ -83,6 +88,8 @@ function assertHealthy(report) {
   assert.deepEqual(report.errors, [], 'Browser errors during the sea passage');
   assert.equal(report.bootStrayPrograms?.count, 0, 'Unexpected shader compilation after warmup');
   assert.equal(report.playFirstDraws?.programs, 0, 'Previously unwarmed shader programs drawn during play');
+  assert.ok(report.voices.some(v=>v.kind==='whale-moan'), 'The first whale call must play');
+  assert.ok(report.voices.filter(v=>v.step==='approach').every(v=>v.swim==='done'), 'Whale audio must wait for the cygnet to return aboard');
   assert.equal(report.mirror.handed, true, 'Mirror did not inherit the sea camera');
   assert.ok(report.mirror.arrived >= report.mirror.arriveFor + 3, 'Mirror arrival was not fully observed');
   assert.equal(report.mirror.carry, false, 'Mirror camera is still in its arrival transition');
@@ -152,7 +159,6 @@ try {
   await wait("['restless','side','in'].includes(__game.story.current.swim)", 90); await shot('curious');
   await wait("__game.story.current.swim==='side' && __game.story.current.swimT>0.65"); await shot('rail-out');
   await wait("__game.story.current.swim==='side' && __game.story.current.swimT>1.5"); await shot('rail-settled');
-  await wait("__game.sealife.sleeper.called==='whale-moan'", 10); await shot('heard');
   await wait('__game.sealife.sleeper.sighting>=1', 10); await shot('blow');
   await wait("__game.story.current.swim==='in' && __game.story.current.swimT>4"); await shot('swim');
   await wait("__game.story.current.swim==='in' && __game.story.current.swimT>9"); await shot('alongside');
@@ -163,6 +169,7 @@ try {
   const swim = await page.evaluate(() => window.seaLog);
   if (!swim.swimFrames || swim.clipped > 0 || swim.maxGap > 11.5) throw Error(JSON.stringify(swim));
   await wait(`${whale}.led`, 60); await shot('lead');
+  await wait("__game.sealife.sleeper.called==='whale-moan'", 15); await shot('heard');
   await wait(`${whale}.step==='breath' && ${whale}.stepTime>3`, 90); await shot('beside');
   await saveAudio('approach');
 
@@ -170,12 +177,14 @@ try {
   const tries = {};
   let step = 'breath';
   let loopShown = false;
-  let pullShot = 0;
+  let pullShot = 0, netShot = 0;
   const playUntil = Date.now() + 360_000;
   for (;;) {
     const now = await page.evaluate(() => __game.story.current.whale?.step);
     if (now !== step) { step = now; if (['eye', 'line', 'heave', 'flipper'].includes(step)) await shot(step); }
     if (step === 'free' || step === 'gone') break;
+    if(netShot<3 && await page.evaluate(n=>{const net=__game.sealife.net;return n===0?net.lift>.55:n===1?net.slump>.12:net.slump>.99;},netShot))
+      await shot(['upper-net-lifting','upper-net-drifting','upper-net-clear'][netShot++]);
     if (!loopShown && step === 'flipper' && await page.evaluate(() => !!__game.story.current.whale.offered)) {
       await shot('flipper-held'); loopShown = true;
     }

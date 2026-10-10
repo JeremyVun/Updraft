@@ -244,6 +244,7 @@ export class SleepingWhale extends WhaleRig {
   /** Its last call, and seconds since it began: the score makes room under it. */
   called: WhaleCall | null = null;
   sinceCall = Infinity;
+  breathAudible = true;
   /** Each weak breath out, with how strong it was: what the net over the blowhole has to answer. */
   onExhale: ((strength: number) => void) | null = null;
   onSound: ((kind: SleeperSound, x: number, y: number, z: number) => void) | null = null;
@@ -265,7 +266,6 @@ export class SleepingWhale extends WhaleRig {
   private headWet = 0;
   private breath = 0;
   private sighed = true;
-  private moaning = false;
   /**
    * Seconds since its back last rose with a breath and shed the sea off its top, how deep that breath was, and how
    * much of the sea poured off in falls rather than running off as a sheen (1 for the breaths that matter).
@@ -371,10 +371,10 @@ export class SleepingWhale extends WhaleRig {
     this.shedT = Infinity;
     this.shed = true;
     this.deepIn = Infinity;
-    this.moaning = false;
     this.blowsNext = false;
     this.sighting = -1;
     this.called = null;
+    this.breathAudible = false;
     this.locate();
     this.mesh.visible = this.ghost.visible = true;
     this.birds.settle();
@@ -391,15 +391,11 @@ export class SleepingWhale extends WhaleRig {
     return (this.breath < SIGH_AT ? SIGH_AT - this.breath : 1 + SIGH_AT - this.breath) * this.breathPeriod();
   }
 
-  /**
-   * Its next weak breath out comes `seconds` from now, while it lies resting; it moans with it if `moaning`, and it is
-   * the blow seen from far off over the mist if `blows`.
-   */
-  sighIn(seconds: number, moaning = false, blows = false): void {
+  /** Schedule a weak breath, optionally the distant blow above the mist. */
+  sighIn(seconds: number, blows = false): void {
     if (this.phase !== 'resting') return;
     this.breath = SIGH_AT - Math.min(SIGH_AT - 0.02, seconds / this.breathPeriod());
     this.sighed = false;
-    this.moaning = moaning;
     this.blowsNext = blows;
   }
 
@@ -411,7 +407,7 @@ export class SleepingWhale extends WhaleRig {
     this.sigh.left = 0;
   }
 
-  /** Its tired low moan, heard from wherever it lies: in the mist before it is seen. */
+  /** Its tired low moan as the child sees it. */
   moan(): void {
     this.call('whale-moan', this.eye);
   }
@@ -588,11 +584,7 @@ export class SleepingWhale extends WhaleRig {
         this.mist(strength);
         if (this.blowsNext) this.blowFar();
         this.onExhale?.(strength);
-        this.onSound?.('whale-sigh', this.blowhole.x, this.blowhole.y, this.blowhole.z);
-        if (this.moaning) {
-          this.moaning = false;
-          this.moan();
-        }
+        if (this.breathAudible) this.onSound?.('whale-sigh', this.blowhole.x, this.blowhole.y, this.blowhole.z);
       }
     }
     const liftRoll = this.liftT < 0 ? 0 : 0.06 * LIFT(this.liftT);

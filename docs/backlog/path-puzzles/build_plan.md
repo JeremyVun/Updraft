@@ -1483,3 +1483,36 @@ sailing at 38.1–40.7 seconds. Sea mechanics/checkpoints, the sea score, produc
 
 Evidence and before/after audio: `/tmp/updraft-sea-n12-yCarUU/README.md`. N9's unrelated baseline terrain and
 marine-audio failures remain open. No merge or deployment.
+
+### Phase N13: voice at the visible reveal and a separate blowhole net
+
+Astra implements Jeremy's approved scope in design.md personally.
+
+- [x] Separate visual breath staging from sound; prove no whale sound during the swim or before visible emergence.
+- [x] Deepen the changing voice, increase reverb slightly and lower its level a touch; render comparisons.
+- [x] Lift and carry aside a separate weathered blue-green net; keep the orange net unaffected by the updraft.
+- [x] Check rescue mechanics, checkpoints, pacing and landscape/portrait; refresh port 5330, unmerged.
+
+
+The first call now waits for the cygnet's completed return and the whale's visible emergence; the visual blow
+and reveal retain their original timing. Weak breaths and net sputters use the same audio gate. Fourteen full
+pacing cases keep normal speed and ordinary 61.8–62.4-second arrival / 38.1–40.7-second onward sailing. The actual
+landscape and portrait captures sound the first moan at 40.32–40.33 seconds, with every approach whale sound
+occurring after the bird is aboard. Restoring the early-call trigger fails the new guard during the swim.
+
+The voice is lowered by about four semitones (`pitch` 0.78), with level 0.20 and wet send 0.42. Matched-distance
+renders of the six encounter calls measure 0.7–0.9 dB quieter. The audio harness previously never prepared the
+shared reverb; it now renders that production reverb and verifies an audible tail. Rapid-pulsing checks measure
+the direct voice, since diffuse reflections introduce unrelated fluctuations. All seven calls pass; deliberately
+thin and motor-pulsing versions fail. These are signal checks and comparison clips, not listening approval.
+
+The separate blue-green net has 0.65 m cells against the orange net's 1.25 m weave, with its near edge visibly
+draped over the orange sheet. The whole net lifts above the crown and drifts off the far side over five seconds.
+The orange sheet, ropes and floats remain exactly unchanged by updraft, breath-doming and upper-net drift at a
+fixed body pose. Checks establish coverage before lifting, a permanent opening afterwards, and checkpoint
+restoration. The flight remains clear of the skin. Both full GPU captures finish all five rescue steps and the
+settled Mirror arrival with no browser errors, unexpected shader programs, or swimmer/pull clipping.
+
+Typecheck, production and QA builds, sea mechanics/checkpoints and voice checks pass. Evidence, final screenshots,
+videos and before/after sound clips: `/tmp/updraft-sea-n13-Oltlpe/README.md`. Port 5330 serves this revision.
+N9's unrelated release-check failures remain open. N13 is complete on `sea-whale`, unmerged and undeployed.

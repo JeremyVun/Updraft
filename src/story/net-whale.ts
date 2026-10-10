@@ -186,6 +186,7 @@ export class NetWhale {
   private sighs = 0;
   private heard = 0;
   private calledNear = false;
+  private calledApproach = false;
   /** How far the patch of net over the blowhole has been lifted clear by circling, or by the valve's dolphin, 0..1. */
   progress = 0;
   /** What lifted it: the player's circles, or the dolphin sent once nothing had for a long while. */
@@ -647,7 +648,7 @@ export class NetWhale {
       upward ? h - Math.PI / 2 : h, this.step === 'eye' ? K.eyeSweepBold : K.sweepBold);
   }
 
-  update(dt: number, time: number): void {
+  update(dt: number, time: number, returned: boolean): void {
     this.clock += dt;
     this.now = time;
     this.stepTime += dt;
@@ -657,17 +658,24 @@ export class NetWhale {
     const resting = left < 1.5 && boat.speed < 0.2;
     this.still = resting ? this.still + dt : 0;
     if (this.step === 'approach' && this.still > 1) this.goTo('breath');
-    // The shortened crossing reaches its distant voice before the pod's nudge.
+    // The distant blow stages the reveal silently while the cygnet is swimming.
     if (left < K.heardAt && this.step === 'approach' && this.sighs < 2
       && (this.sighs === 0 || (left < K.seenAt && this.clock - this.heard > K.seenAfter))) {
       // A breath just gone serves for its blow: it never breathes twice in a moment.
-      if (this.sighs === 0 || whale.untilSigh < K.breathEvery - K.leadSigh) whale.sighIn(K.leadSigh, this.sighs === 0, this.sighs === 1);
+      if (this.sighs === 0 || whale.untilSigh < K.breathEvery - K.leadSigh) whale.sighIn(K.leadSigh, this.sighs === 1);
       else whale.blowFar();
       if (this.sighs === 0) this.heard = this.clock;
       this.sighs++;
       if (this.sighs === 2) this.sightClock = this.clock;
     }
-    if (this.step === 'approach' && !this.calledNear && this.sighs === 2 && left < K.nearCallAt
+    const visible = this.sighted && left < K.nearCallAt
+      && this.sightAge > tuning.seaPassage.mist.revealAfter + tuning.seaPassage.mist.revealFor;
+    whale.breathAudible = this.step !== 'approach' || (returned && visible);
+    if (this.step === 'approach' && !this.calledApproach && whale.breathAudible) {
+      whale.moan();
+      this.calledApproach = true;
+    }
+    if (this.step === 'approach' && this.calledApproach && !this.calledNear
       && whale.sinceCall > callLength('whale-moan') + K.nearCallGap) {
       whale.callNear();
       this.calledNear = true;
@@ -2157,7 +2165,7 @@ export class NetWhale {
     if (net.posed) return;
     const held = this.progress >= 1 ? 1 : this.progress * (K.netSettle + (1 - K.netSettle) * this.wind);
     net.lift += (held - net.lift) * (1 - Math.exp(-dt * 2.5));
-    // The first full breath turns the lifted flap aside; the opening stays clear after the wind stops.
+    // The upper net drifts clear after the first full breath; the orange net waits for the later heaves.
     if (whale.awake) net.slump = Math.max(net.slump, whale.phase === 'woken' ? THREE.MathUtils.smootherstep(whale.time, K.slumpFrom, K.slumpFrom + K.slumpFor) : 1);
     net.updraft = this.wind;
     net.flap = this.foldT >= 0 ? THREE.MathUtils.lerp(this.flapFrom, 1, THREE.MathUtils.smootherstep(this.foldT / K.foldFlip, 0, 1))

@@ -113,6 +113,8 @@ uniform vec3 uWeed;
 uniform vec3 uRope;
 uniform vec3 uShadow;
 uniform float uFade;
+uniform vec2 uSize;
+uniform float uCell;
 ${LOST_GLSL}
 ${SINK_FRAG}
 in vec2 vUv;
@@ -152,9 +154,9 @@ void main() {
   // Knotted by hand and pulled about since: no two cells the same shape.
   vec2 uv = vUv + (vec2(netNoise(vUv * 0.22 + 7.0), netNoise(vUv * 0.22 + 1.7)) - 0.5) * 0.9
     + (vec2(netNoise(vUv * 0.55 + 4.3), netNoise(vUv * 0.55 + 9.1)) - 0.5) * 0.45;
-  vec2 kx = vec2(uv.x + uv.y, uv.x - uv.y) * ${glsl(Math.SQRT1_2 / NET.cell)};
+  vec2 kx = vec2(uv.x + uv.y, uv.x - uv.y) * ${glsl(Math.SQRT1_2)} / uCell;
   float weed = smoothstep(0.62, 0.85, netNoise(vUv * 0.37 + 3.1));
-  float w = ${glsl(NET.strand / NET.cell)} * (1.0 + weed * 0.5) * (1.0 + vAfloat * 0.4);
+  float w = ${glsl(NET.strand)} / uCell * (1.0 + weed * 0.5) * (1.0 + vAfloat * 0.4);
   vec2 ax = lines(kx.x, w);
   vec2 ay = lines(kx.y, w);
   float strand = ax.x + ay.x - ax.x * ay.x;
@@ -162,7 +164,7 @@ void main() {
   float kfw = max(fwidth(kx.x), 1e-5);
   float knot = (1.0 - smoothstep(w * 1.1 - kfw, w * 1.1 + kfw, length(knotAt))) * smoothstep(0.6, 0.2, kfw);
   strand = max(strand, knot);
-  float edge = min(min(vUv.x, ${glsl(NET.long)} - vUv.x), min(vUv.y + ${glsl(NET.far)}, (hang - vUv.y) / sqrt(1.0 + vEdge.z * vEdge.z)));
+  float edge = min(min(vUv.x, uSize.x - vUv.x), min(vUv.y + uSize.y, (hang - vUv.y) / sqrt(1.0 + vEdge.z * vEdge.z)));
   float rope = band(edge - ${glsl(NET.rope * 0.5)}, ${glsl(NET.rope)});
   // Round rope: lit along its top, darker down its sides.
   float across = ax.x > ay.x ? ax.y : ay.y;
@@ -313,7 +315,8 @@ export function sheetMaterial(): THREE.ShaderMaterial {
   return new THREE.ShaderMaterial({
     vertexShader: SHEET_VERT,
     fragmentShader: SHEET_FRAG,
-    uniforms: { ...atmo.uniforms, ...swellUniforms, ...netLook },
+    uniforms: { ...atmo.uniforms, ...swellUniforms, ...netLook,
+      uSize: { value: new THREE.Vector2(NET.long, NET.far) }, uCell: { value: NET.cell } },
     side: THREE.DoubleSide,
     transparent: true,
     depthWrite: false,

@@ -119,7 +119,7 @@ export const tuning = {
     /** The whale breathes ahead of the boat; keep its scale audible across that stretch of water. */
     whaleLevel: 0.65, whaleAttack: 0.2, whaleNear: 35, whaleFar: 190,
     /** The low voice carries across the water; diffuse reverb preserves its scale without pulsing echoes. */
-    whaleVoice: { level: 0.22, near: 40, far: 600, farthest: 0.5, wet: 0.32 },
+    whaleVoice: { pitch: 0.78, level: 0.20, near: 40, far: 600, farthest: 0.5, wet: 0.42 },
     clothSources: 3, clothReach: 60, clothLevel: 0.35,
     /** The stairs in the clouds (a proposal awaiting audition): the air round the travellers, a flight knocking home, the score. */
     stairsAirLevel: 1,
@@ -1550,7 +1550,7 @@ export const tuning = {
     voiceRoom: 0.6,
     nearCallAt: 65,
     nearCallGap: 6,
-    /** Hear it before the distant blow; close the view only once its shape is visible, keeping the boat in frame. */
+    /** Stage the distant blow silently; close the view only once its shape is visible, keeping the boat in frame. */
     heardAt: 140, seenAt: 125, seenAfter: 3, riseFrom: 70, riseNear: 20,
     /** How far ahead of the bow the pod runs while it leads the boat in (m). */
     podLead: 18,
@@ -1571,9 +1571,10 @@ export const tuning = {
      * `raftTurn` radians.
      */
     raftPort: 8, raftAhead: 9, raftTurn: 0.5,
-    /** Seconds into its first full breath when the lifted patch turns aside, and how long it takes. */
-    slumpFrom: 1.8, slumpFor: 1.8,
-    /** Half length and width of the loose flap over the blowhole (m). */
+    /** Seconds into its first full breath when the blue-green net drifts clear, and how long it takes. */
+    slumpFrom: 1.8, slumpFor: 5,
+    breathNetGap: 0.14, breathNetAside: 24, breathNetAlong: 5, breathNetArc: 2.5, breathNetCell: 0.65, breathNetDrape: 6.5,
+    /** Half length and width of the opening beneath the upper net (m). */
     breathFlapAlong: 3.5, breathFlapAcross: 3.2,
     /**
      * The look between them. In seconds into its first full breath: its lid starts to struggle under the fold at

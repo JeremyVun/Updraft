@@ -108,7 +108,6 @@ const RING = 40;
 const KNOT = 16;
 const WEEDS = 40;
 const WEED_POINTS = 6;
-const HANG = 0.16;
 /**
  * The fold over its eye: a doubled flap of the net hanging from the near edge above the eye, `FOLD_HALF` metres
  * either side of it along the whale, down across the eye to `FOLD_BELOW` metres below its middle along the skin,
@@ -171,16 +170,16 @@ interface Polyline {
  * The old drifting net over the whale's head, blowhole and forward back: one faded brown-green sheet laid on its skin
  * by `surfaceAt` and kept there by its anchors as it breathes, with rows of corks along its edges and across the
  * blowhole, a few strands of weed, a float-line leader out toward the boat and one last loop round the near flipper.
- * Never a cloth simulation: each of its four parts is driven by its own 0..1, and each weak breath domes it.
+ * A separate blue-green net covers the blowhole, domes with its breath and lifts independently.
  */
 export class Net {
   readonly objects: THREE.Object3D[];
   /** The whale's own drawn gestures, laid over whatever its steps ask the wind to touch. */
   readonly gesture = new WindGesture('whale-invitation');
   private readonly parts: THREE.Object3D[];
-  /** The patch over the blowhole lifted clear of the crown, 0..1. */
+  /** The blue-green net lifted clear of the crown, 0..1. */
   lift = 0;
-  /** Its first full breath turns the loose patch over, leaving the blowhole open, 0..1. */
+  /** The separate upper net carried clear to the far side, 0..1. */
   slump = 0;
   /** Peeled back off the jaw and head into a floating mass beside it, 0..1. */
   peel = 0;
@@ -224,12 +223,15 @@ export class Net {
   onSound: ((kind: NetSound, at: THREE.Vector3, strength: number) => void) | null = null;
 
   private readonly sheet: THREE.Mesh;
-  private readonly breathFlap: THREE.Mesh;
+  private readonly breathNet: THREE.Mesh<THREE.BufferGeometry, THREE.ShaderMaterial>;
   private readonly breathPos: THREE.BufferAttribute;
   private readonly breathNormals: THREE.BufferAttribute;
   private readonly breathAfloat: THREE.BufferAttribute;
   private readonly breathContact: THREE.BufferAttribute;
   private readonly breathBounds = { i0: 0, i1: 0, j0: 0, j1: 0 };
+  private readonly breathRest = new Float32Array(ROWS * COLS * 3);
+  private breathReleased = false;
+  private breathHeight = 0;
   private readonly fold: THREE.Mesh;
   private readonly ropes: THREE.Mesh;
   private readonly corks: THREE.Mesh;
@@ -243,7 +245,6 @@ export class Net {
   private readonly across = new Float32Array(ROWS * COLS);
   private readonly onSkin = new Float32Array(ROWS * COLS);
   private readonly onWater = new Float32Array(ROWS * COLS);
-  private readonly lifts = new Float32Array(ROWS * COLS);
   private readonly liftShape = new Float64Array(ROWS * COLS);
   private readonly domes = new Float32Array(ROWS * COLS);
   /** Each row's drape as a path from its far edge to the water on the near side, and how far along it each point is (m). */
@@ -251,9 +252,8 @@ export class Net {
   private readonly pathAcross = new Float32Array(ROWS * PATH);
   private readonly pathWater = new Uint8Array(ROWS * PATH);
   private readonly pathArc = new Float32Array(ROWS * PATH);
-  /** How far each row has slid along its drape this frame (m), and how much of the lifted patch it still holds up. */
+  /** How far each row has slid along its drape this frame (m). */
   private readonly slid = new Float32Array(ROWS);
-  private readonly tent = new Float32Array(ROWS);
   /** Where each point lies in the folded mass, along and across it and how high in the fold. */
   private readonly folded = new Float32Array(ROWS * COLS * 3);
   /** Where each point floats once it is all peeled, before it drifts. */
@@ -395,11 +395,18 @@ export class Net {
     breathGeo.setAttribute('normal', this.breathNormals);
     breathGeo.setAttribute('afloat', this.breathAfloat);
     breathGeo.setAttribute('contact', this.breathContact);
-    breathGeo.setAttribute('uv', this.uv);
-    breathGeo.setAttribute('edge', this.edge);
+    breathGeo.setAttribute('uv', this.uv.clone());
+    breathGeo.setAttribute('edge', this.edge.clone());
     breathGeo.setIndex([]);
-    this.breathFlap = new THREE.Mesh(breathGeo, this.sheet.material);
-    this.breathFlap.renderOrder = 4;
+    const upper = sheetMaterial();
+    upper.uniforms.uStrand = { value: new THREE.Color('#399ec9') };
+    upper.uniforms.uWeed = { value: new THREE.Color('#357e91') };
+    upper.uniforms.uRope = { value: new THREE.Color('#7fc8e5') };
+    upper.uniforms.uSunk = { value: 0 };
+    upper.uniforms.uFade = { value: 1 };
+    upper.uniforms.uCell.value = K.breathNetCell;
+    this.breathNet = new THREE.Mesh(breathGeo, upper);
+    this.breathNet.renderOrder = 5;
 
     const fn = FOLD_ROWS * FOLD_COLS * 2;
     const foldGeo = new THREE.BufferGeometry();
@@ -498,7 +505,7 @@ export class Net {
       renderer.getDrawingBufferSize(size);
       netLook.uRes.value.set(size.x / 2, size.y / 2);
     };
-    this.parts = [this.sheet, this.breathFlap, this.fold, this.ropes, this.corks];
+    this.parts = [this.sheet, this.breathNet, this.fold, this.ropes, this.corks];
     this.objects = [...this.parts, this.gesture.batch.mesh];
     for (const o of this.parts) {
       o.frustumCulled = false;
@@ -528,6 +535,7 @@ export class Net {
     this.lift = this.slump = this.peel = this.loop = this.drift = this.sink = this.flap = this.billow = this.billowed = 0;
     this.peelAt = this.soundPeel = 0;
     this.domeT = 10;
+    this.breathReleased = false;
     this.held = this.fallsTo = this.holder = null;
     this.curlFrom.set(0, 0, 0);
     this.endDropped = false;
@@ -572,11 +580,6 @@ export class Net {
     return this.sheet.visible;
   }
 
-  /** How far the patch stands lifted off the blowhole this frame: held up by the wind, or fallen aside. */
-  private get raised(): number {
-    return this.lift * (1 - THREE.MathUtils.smoothstep(this.slump, 0, 0.55));
-  }
-
   /** A weak breath out under it, as strong as `strength`: the mesh domes over the blowhole, and sputters while it lies on it. */
   breathe(strength: number): void {
     if (!this.sheet.visible) return;
@@ -590,7 +593,7 @@ export class Net {
       this.spray.emit(MIST, b.x + Math.cos(a) * r, b.y + 0.35, b.z + Math.sin(a) * r, Math.cos(a) * 0.5, 0.5 + Math.random() * 0.7,
         Math.sin(a) * 0.5, 0.18 + Math.random() * 0.12, 1.2 + Math.random(), 0.25, 0.06);
     }
-    this.onSound?.('net-sputter', b, strength);
+    if (this.whale.breathAudible) this.onSound?.('net-sputter', b, strength);
   }
 
   /** A sound from the net, or from the whale under it. */
@@ -619,7 +622,7 @@ export class Net {
     netLook.uSunk.value = SINK_DEPTH * this.sink ** 2;
     netLook.uFade.value = 1 - THREE.MathUtils.smoothstep(this.sink, 0.8, 1);
     this.layOn(time);
-    this.layBreathFlap();
+    this.layBreathNet(time);
     this.layFold();
     this.sounds();
     this.moveLeader(dt, time);
@@ -857,14 +860,13 @@ export class Net {
     const nose = w.spine[0];
     const sBlow = ((nose.x - w.blowhole.x) * this.ahead.x + (nose.z - w.blowhole.z) * this.ahead.z) / this.whaleLength;
     const uBlow = (sBlow - FRONT) * this.whaleLength;
-    this.cutBreathFlap(uBlow);
+    this.cutBreathOpening(uBlow);
     for (let i = 0; i < ROWS; i++) {
       for (let j = 0; j < COLS; j++) {
         const k = i * COLS + j;
         const du = (i / (ROWS - 1)) * NET.long - uBlow;
         const da = this.acrossOf(k);
-        this.lifts[k] = bump(du / PATCH.x) * bump(da / PATCH.y);
-        this.liftShape[k] = Math.pow(this.lifts[k], 0.65);
+        this.liftShape[k] = Math.pow(bump(du / PATCH.x) * bump(da / PATCH.y), 0.65);
         this.domes[k] = bump(du / DOME.x) * bump(da / DOME.y);
         const u = (i / (ROWS - 1)) * NET.long;
         const crest = this.edge.getX(k) * BILLOW_CREST;
@@ -887,6 +889,7 @@ export class Net {
       sizes[c] = at.leader >= 0 ? NET.float : at.patch && Math.abs(this.acrossOf(at.i * COLS + at.j)) > PATCH.y * 0.75 ? 0 : NET.cork;
     });
     this.corkSize.needsUpdate = true;
+    this.breathRest.set(this.rest);
     for (const o of this.parts) o.visible = true;
     this.snap = true;
   }
@@ -1061,7 +1064,7 @@ export class Net {
       this.mass.z - s * x + c * z + toZ * away);
   }
 
-  private cutBreathFlap(uBlow: number): void {
+  private cutBreathOpening(uBlow: number): void {
     const b = this.breathBounds;
     const perRow = (ROWS - 1) / NET.long;
     b.i0 = Math.max(1, Math.floor((uBlow - K.breathFlapAlong) * perRow));
@@ -1069,67 +1072,72 @@ export class Net {
     const near = this.nearAt(uBlow * perRow);
     b.j0 = Math.max(1, Math.floor((NET.far - K.breathFlapAcross) / (near + NET.far) * (COLS - 1)));
     b.j1 = Math.min(COLS - 2, Math.ceil((NET.far + K.breathFlapAcross) / (near + NET.far) * (COLS - 1)));
+    const nearEnd = Math.min(COLS - 1, b.j1 + Math.ceil(K.breathNetDrape / (near + NET.far) * (COLS - 1)));
     const sheet: number[] = [], flap: number[] = [];
     for (let i = 0; i < ROWS - 1; i++) {
       for (let j = 0; j < COLS - 1; j++) {
         const k = i * COLS + j;
-        const index = i >= b.i0 && i < b.i1 && j >= b.j0 && j < b.j1 ? flap : sheet;
-        index.push(k, k + COLS, k + 1, k + 1, k + COLS, k + COLS + 1);
+        if (i < b.i0 || i >= b.i1 || j < b.j0 || j >= b.j1)
+          sheet.push(k, k + COLS, k + 1, k + 1, k + COLS, k + COLS + 1);
+        if (i >= b.i0 - 1 && i <= b.i1 && j >= b.j0 - 1 && j < nearEnd)
+          flap.push(k, k + COLS, k + 1, k + 1, k + COLS, k + COLS + 1);
       }
     }
     this.sheet.geometry.setIndex(sheet);
-    this.breathFlap.geometry.setIndex(flap);
-  }
-
-  private onBreathFlap(k: number): boolean {
-    const i = Math.floor(k / COLS), j = k % COLS;
-    const b = this.breathBounds;
-    return i >= b.i0 && i <= b.i1 && j >= b.j0 && j <= b.j1;
-  }
-
-  private layBreathFlap(): void {
-    const b = this.breathBounds;
-    const P = this.pos.array as Float32Array, N = this.normals.array as Float32Array;
-    const turn = THREE.MathUtils.smootherstep(this.slump, 0, 1);
-    const settled = THREE.MathUtils.smootherstep(turn, 0.45, 1);
+    this.breathNet.geometry.setIndex(flap);
+    // Its near edge drapes over the orange sheet so the second net reads from the low boat.
+    b.i0--; b.i1++; b.j0--; b.j1 = nearEnd;
+    const length = (b.i1 - b.i0) / perRow;
+    const width = (near + NET.far) * (b.j1 - b.j0) / (COLS - 1);
+    const uv = this.breathNet.geometry.getAttribute('uv'), edge = this.breathNet.geometry.getAttribute('edge');
     for (let i = b.i0; i <= b.i1; i++) {
-      const h = i * COLS + b.j0;
-      const across = this.acrossOf(h);
-      this.hinge.fromArray(P, h * 3);
-      this.axis.fromArray(P, (h + COLS) * 3).sub(this.p.fromArray(P, (h - COLS) * 3)).normalize();
-      this.p.fromArray(P, (h + 1) * 3).sub(this.hinge);
-      const direction = this.r.crossVectors(this.axis, this.p).y >= 0 ? 1 : -1;
       for (let j = b.j0; j <= b.j1; j++) {
         const k = i * COLS + j;
-        this.p.fromArray(P, k * 3).sub(this.hinge).applyAxisAngle(this.axis, direction * Math.PI * turn).add(this.hinge);
-        this.q.fromArray(N, k * 3).applyAxisAngle(this.axis, direction * Math.PI * turn);
-        let afloat = this.afloat.getX(k);
-        if (settled > 0) {
-          this.sheetAcross(i, 2 * across - this.acrossOf(k), this.lie, this.curl);
-          this.lie.addScaledVector(this.curl, 0.08 * Math.min(1, j - b.j0));
-          this.p.lerp(this.lie, settled);
-          this.q.lerp(this.curl.negate(), settled).normalize();
-          afloat = THREE.MathUtils.lerp(afloat, this.foldFloat, settled);
-        }
-        this.breathPos.setXYZ(k, this.p.x, this.p.y, this.p.z);
-        this.breathNormals.setXYZ(k, this.q.x, this.q.y, this.q.z);
-        this.breathAfloat.setX(k, afloat);
-        this.breathContact.setX(k, this.contact.getX(k) * (1 - Math.sin(Math.PI * turn)));
+        uv.setXY(k, (i - b.i0) / perRow, width * ((j - b.j0) / (b.j1 - b.j0) - 0.5));
+        edge.setXYZ(k, width * 0.5, 0, 0);
       }
     }
-    this.breathPos.needsUpdate = this.breathNormals.needsUpdate = this.breathAfloat.needsUpdate = this.breathContact.needsUpdate = true;
+    this.breathNet.material.uniforms.uSize.value.set(length, width * 0.5);
+    uv.needsUpdate = edge.needsUpdate = true;
   }
 
-  /** Every point of the sheet this frame: on the skin as it breathes, lifted, domed, sliding off, folded, drifting. */
+  private layBreathNet(time: number): void {
+    const b = this.breathBounds;
+    if (!this.breathReleased) {
+      if (this.slump === 0) {
+        this.breathRest.set(this.pos.array);
+        this.breathHeight = this.whale.blowhole.y;
+      }
+      else this.breathReleased = true;
+    }
+    const away = this.slump;
+    const down = THREE.MathUtils.smootherstep(away, 0.65, 1);
+    const dome = K.netDome * this.domeStrength * THREE.MathUtils.smoothstep(this.domeT, 0, 0.35)
+      * Math.exp(-Math.max(0, this.domeT - 0.35) * 1.6) * (1 - away);
+    for (let i = b.i0; i <= b.i1; i++) {
+      for (let j = b.j0; j <= b.j1; j++) {
+        const k = i * COLS + j, shape = this.liftShape[k];
+        this.p.fromArray(this.breathRest, k * 3);
+        this.p.addScaledVector(this.side, -K.breathNetAside * away).addScaledVector(this.ahead, -K.breathNetAlong * away);
+        const ripple = Math.sin(time * 2.4 + i * 0.8 - j * 0.6) * this.lift * (0.12 + 0.3 * this.updraft);
+        const up = K.breathNetGap + this.lift * K.netLift * (0.65 + 0.35 * shape) + dome * this.domes[k];
+        const clear = THREE.MathUtils.lerp(this.p.y, Math.max(this.p.y, this.breathHeight), this.lift);
+        this.p.y = THREE.MathUtils.lerp(clear + up, 0.08, down)
+          + (ripple + K.breathNetArc * Math.sin(Math.PI * away)) * (1 - down);
+        this.breathPos.setXYZ(k, this.p.x, this.p.y, this.p.z);
+        this.breathAfloat.setX(k, down);
+        this.breathContact.setX(k, this.contact.getX(k) * (1 - this.lift) * (1 - away));
+      }
+    }
+    this.breathPos.needsUpdate = this.breathAfloat.needsUpdate = this.breathContact.needsUpdate = true;
+    this.breathNet.geometry.computeVertexNormals();
+  }
+
+  /** The orange sheet follows the skin, then slides off with the later heaves. */
   private layOn(time: number): void {
     const P = this.pos.array as Float32Array;
     const A = this.afloat.array as Float32Array;
     const C = this.contact.array as Float32Array;
-    const dome = K.netDome * this.domeStrength * THREE.MathUtils.smoothstep(this.domeT, 0, 0.35) * Math.exp(-Math.max(0, this.domeT - 0.35) * 1.6)
-      * (1 - this.slump);
-    const raised = this.raised;
-    const flutter = raised * (0.12 + 0.3 * this.updraft);
-    const blow = this.whale.blowhole;
     const roll = this.whale.eye.y - this.refEye - this.spineShift(this.sEye);
     const uLeader = (this.leaderRow / (ROWS - 1)) * NET.long;
     const far = Math.max(uLeader, NET.long - uLeader);
@@ -1139,27 +1147,15 @@ export class Net {
       const row = THREE.MathUtils.clamp(this.peel * (1 + STAGGER) - (STAGGER * Math.abs(u - uLeader)) / far, 0, 1);
       const slide = row * (end + WATER_MIN);
       this.slid[i] = slide;
-      // Pulled along, the patch the wind holds up comes down with it.
-      const tent = 1 - THREE.MathUtils.smoothstep(slide, 0, 4);
-      this.tent[i] = tent;
-      const lift = raised * tent;
       const spine = this.spineShift(this.rowS(i));
       let v = 1;
       for (let j = 0; j < COLS; j++) {
         const k = i * COLS + j;
         const arc = this.pathArc[i * PATH + j];
-        const wl = this.lifts[k];
         const q = arc + slide;
         if (q <= end) {
           const water = this.alongPath(i, q, this.t, spine, roll);
           let up = 0;
-          if (wl > 0) {
-            const shape = this.liftShape[k];
-            up = lift * K.netLift * shape + flutter * tent * Math.sin(time * 2.4 + i * 0.8 - j * 0.6) * shape * (1 - shape) * 4 * 0.6;
-            this.t.x += (blow.x - this.t.x) * lift * wl * 0.12;
-            this.t.z += (blow.z - this.t.z) * lift * wl * 0.12;
-          }
-          up += dome * this.domes[k] * tent;
           const billows = this.billowed > 0.001 ? this.billowAt(i, q, (v = this.pathIndex(i, q, v)), end) : 0;
           if (billows > 0) {
             // Ripples run across it toward the boat with the wind, as through a sheet held up on a line.
@@ -1253,7 +1249,7 @@ export class Net {
   /** A point of the sheet by row and column, as laid this frame. */
   private sheetPoint(i: number, j: number, out: THREE.Vector3): THREE.Vector3 {
     const k = i * COLS + j;
-    return out.fromArray(this.onBreathFlap(k) ? this.breathPos.array : this.pos.array, k * 3);
+    return out.fromArray(this.pos.array, k * 3);
   }
 
   /**
@@ -1424,13 +1420,10 @@ export class Net {
         const i1 = Math.min(ROWS - 1, at.i + 1);
         this.sheetPoint(at.i, at.j, this.p).lerp(this.sheetPoint(i1, at.j, this.q), at.f);
         const k = at.i * COLS + at.j;
-        const flap = this.onBreathFlap(k);
-        afloat = flap ? this.breathAfloat.getX(k) : A[k];
-        const lifted = THREE.MathUtils.smoothstep(this.lifts[k] * this.raised * this.tent[at.i] * K.netLift, 0.15, 0.6);
-        this.q.fromArray(flap ? this.breathNormals.array : N, k * 3);
-        this.t.copy(this.p).addScaledVector(this.q, size * 0.8 * (1 - lifted) * (1 - afloat));
+        afloat = A[k];
+        this.q.fromArray(N, k * 3);
+        this.t.copy(this.p).addScaledVector(this.q, size * 0.8 * (1 - afloat));
         this.t.y += afloat ? size * 0.3 - this.p.y * afloat : 0;
-        this.t.y -= lifted * (HANG + size);
       }
       const o = c * 3;
       if (this.snap) {
@@ -1456,7 +1449,7 @@ export class Net {
     this.cork.needsUpdate = true;
   }
 
-  /** Rows of corks along every edge and a few across the blowhole, hanging from the patch; one at each leader link. */
+  /** Corks along the orange net and one at each leader link. */
   private placeCorks(): void {
     const along = (j: number) => {
       for (let u = 0.6; u < NET.long; u += NET.corkStep) {
@@ -1799,20 +1792,18 @@ export class Net {
       const at = this.weedAt[w];
       const l = this.weedLines[w];
       const k = at.v;
-      const flap = this.onBreathFlap(k);
-      this.p.fromArray(flap ? this.breathPos.array : P, k * 3);
-      this.q.fromArray(flap ? this.breathNormals.array : N, k * 3);
-      const afloat = flap ? this.breathAfloat.getX(k) : A[k];
-      const lifted = THREE.MathUtils.smoothstep(this.lifts[k] * this.raised * this.tent[Math.floor(k / COLS)] * K.netLift, 0.15, 0.6);
-      // Down the slope of the skin, straight down under the lifted mesh, out along the water afloat.
+      this.p.fromArray(P, k * 3);
+      this.q.fromArray(N, k * 3);
+      const afloat = A[k];
+      // Weed trails down the skin or along the water after the net is peeled away.
       this.r.set(0, -1, 0).addScaledVector(this.q, this.q.y).normalize();
       if (this.r.lengthSq() < 0.5) this.r.set(Math.cos(at.turn), 0, Math.sin(at.turn));
-      this.r.lerp(this.t.set(0, -1, 0), lifted).lerp(this.t.set(Math.cos(at.turn), 0, Math.sin(at.turn)), afloat).normalize();
+      this.r.lerp(this.t.set(Math.cos(at.turn), 0, Math.sin(at.turn)), afloat).normalize();
       this.flat.crossVectors(this.q, this.r).normalize();
       for (let m = 0; m < WEED_POINTS; m++) {
         const f = m / (WEED_POINTS - 1);
         const wave = Math.sin(f * 3.2 + at.turn + time * 0.7) * 0.16 * f * at.length;
-        this.t.copy(this.p).addScaledVector(this.r, f * at.length).addScaledVector(this.flat, wave).addScaledVector(this.q, 0.03 * (1 - lifted));
+        this.t.copy(this.p).addScaledVector(this.r, f * at.length).addScaledVector(this.flat, wave).addScaledVector(this.q, 0.03);
         if (afloat) this.t.y = THREE.MathUtils.lerp(this.t.y, 0.02, afloat);
         this.setPoint(l, m, this.t, 0.11 * (0.45 + 0.75 * Math.sin(Math.PI * (0.15 + f * 0.7))) * (1 - f * 0.4), afloat, 1);
       }

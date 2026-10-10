@@ -511,8 +511,9 @@ the future right. The boat leaves the sleeping island in the last of the night. 
 leap at first light. The featured leaper gathers speed on the camera's side and commits to a forward arc clear
 of the hull; readiness uses its actual position and velocity, so it never leaps across the boat to reach a mark.
 The cygnet climbs onto the side, decides to swim alongside the moving hull, and is lifted back
-in to dry. The boat keeps an ordinary sailing pace for this play. Its low moan and blow come from the distance during
-the swim; a faint silhouette gradually gains detail, with clear water around the boat. The approach turns toward
+in to dry. The boat keeps an ordinary sailing pace for this play. A distant blow appears silently during
+the swim; a faint silhouette gradually gains detail, with clear water around the boat. The first low call waits
+until the bird has finished returning aboard and the whale is visibly emerging. The approach turns toward
 the whale before it is visible, so the pod's travel agrees with that destination. As it emerges, the swimmer's
 side view eases toward the boat-to-whale line, keeping the head visible in portrait as the bird returns aboard.
 A dolphin nudges the planking and the pod leads them alongside. A second low phrase answers during the closer
@@ -521,7 +522,8 @@ rest beside its head, the far length lost in haze. It is the whale from the firs
 
 Five steps share the rescue between wind, child and bird:
 
-1. Circles over the blowhole lift a loose flap. Its first full breath turns the flap aside, leaving a lasting opening.
+1. Circles lift a separate blue-green net with a tighter weave, draped visibly over the orange net. The wind carries
+   it off to the far side, leaving the blowhole open. The orange net stays put throughout this challenge.
 2. A sweep across the fold clears its eye; it opens and finds her.
 3. Strokes bring a cork to her reaching mitten so she can take the line.
 4. Gusts lift the net as she heaves it off the head, then lets the line go.

@@ -125,7 +125,7 @@ const results=[];
 function coveredBlowhole(net, blowhole) {
   const ray = new THREE.Ray(blowhole.clone().add(new THREE.Vector3(0, 30, 0)), new THREE.Vector3(0, -1, 0));
   const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3(), hit = new THREE.Vector3();
-  for (const mesh of [net.sheet, net.breathFlap]) {
+  for (const mesh of [net.sheet, net.breathNet]) {
     const p = mesh.geometry.attributes.position, index = mesh.geometry.index;
     for (let i = 0; i < index.count; i += 3) {
       a.fromBufferAttribute(p, index.getX(i)); b.fromBufferAttribute(p, index.getX(i + 1)); c.fromBufferAttribute(p, index.getX(i + 2));
@@ -133,6 +133,29 @@ function coveredBlowhole(net, blowhole) {
     }
   }
   return false;
+}
+{
+  const f=fixture(0,false), {chapter,sealife}=f, net=sealife.net;
+  chapter.restoreCheckpoint('whale-rest',[3,60]);
+  net.snap=true;net.update(0,60);
+  const orange=()=>[net.pos,net.normals,net.cork,net.line.pos].map(a=>Array.from(a.array));
+  const before=orange();
+  assert(coveredBlowhole(net,sealife.sleeper.blowhole),'the second net covers the blowhole');
+  assert(net.breathNet.material.uniforms.uCell.value<net.sheet.material.uniforms.uCell.value*.6,'the upper net has a visibly tighter weave');
+  assert.notEqual(net.sheet.material,net.breathNet.material,'the second net has its own material');
+  assert.notEqual(net.sheet.material.uniforms.uStrand.value.getHex(),net.breathNet.material.uniforms.uStrand.value.getHex(),'the nets have different colours');
+  for(const [lift,slump] of [[.5,0],[1,0],[1,.3],[1,1]]) {
+    net.lift=lift;net.slump=slump;net.updraft=1;net.domeT=.35;net.domeStrength=1;net.snap=true;net.update(0,60);
+    assert.deepEqual(orange(),before,'the updraft, breath and drift cannot move the orange sheet, ropes or corks');
+    if(lift===1&&slump===0){
+      const b=net.breathBounds;
+      for(let i=b.i0;i<=b.i1;i++)for(let j=b.j0;j<=b.j1;j++)
+        assert(net.breathPos.getY(i*28+j)>sealife.sleeper.blowhole.y+1.5,'every part of the upper net clears the crown');
+    }
+  }
+  assert(!coveredBlowhole(net,sealife.sleeper.blowhole),'the upper net is carried completely aside');
+  net.lift=0;net.updraft=0;net.update(0,70);
+  assert(!coveredBlowhole(net,sealife.sleeper.blowhole),'the upper net cannot fall back over the blowhole');
 }
 {
   const f=fixture(0,false), {chapter:c,boat:b,cygnet:k,sealife}=f, w=c.whale;
@@ -213,11 +236,11 @@ for(const [fps,gust,portrait,circling] of [[60,0,false,false],[30,20,false,true]
     if(w.asks && actionable[w.step]===undefined)actionable[w.step]=time;
     if((w.offered||w.coax)&&invitations[w.step]===undefined)invitations[w.step]=time-actionable[w.step];
     if(!blockedSamples&&w.step==='breath'&&w.progress===0){
-      assert(coveredBlowhole(sealife.net,w.whale.blowhole),'the flap covers the blowhole before the updraft');
+      assert(coveredBlowhole(sealife.net,w.whale.blowhole),'the blue-green net covers the blowhole before the updraft');
       blockedSamples++;
     }
     if(w.step==='eye'&&sealife.net.slump>0.999&&i%Math.ceil(fps/10)===0){
-      assert(!coveredBlowhole(sealife.net,w.whale.blowhole),'the folded flap leaves a real opening above the blowhole');
+      assert(!coveredBlowhole(sealife.net,w.whale.blowhole),'the separate net drifts clear of the blowhole');
       openSamples++;
     }
     if(w.step==='flipper'&&w.bird==='holding'&&w.slipT<0){

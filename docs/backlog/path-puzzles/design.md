@@ -1478,3 +1478,31 @@ evidence of a natural voice. Reference: [NOAA's recordings and spectrograms](htt
 specifically `Meno-song-NOAA-PAGroup-13-humpback-clip.mp3`. Compare pitch, changing spectrum and spacing, retaining
 an original procedural voice. No direct listening capability is available here; render the actual mix and state
 that limitation without claiming a perceptual pass.
+
+### Visible whale voice and separate blowhole net — 2026-10-10
+
+Jeremy's correction and new brief, verbatim:
+
+> sigh.. did i tell you to start playing the whale sounds before the whale comes out from the fog? It shouldn't be playing while the cygnet is swimming
+
+> - i think the whale sounds need to be a bit deeper as well, to fit the idea of it being an ancient giant whale.
+> - I want to make one other change. For the blowhole challenge, there should actually be a second, different coloured net ontop which is updrafted, and the existing orange net shouldn't be affected.
+
+Jeremy approved lowering the calls' pitch while retaining their changing tone and audible upper harmonics, and
+a separate weathered blue-green net that lifts clear of the blowhole and drifts aside. The orange net stays in
+place without lifting or folding during that challenge. His approval, verbatim:
+
+> both are approved. and i think it needs a bit more reverb and a touch quieter
+
+This supersedes N12's early approach call: no whale sound during the swim or before the whale visibly emerges.
+Keep the visual blow and gradual reveal intact; wait for the cygnet to finish returning aboard and the visible
+whale before sounding its first call. Make the voice deeper, a little wetter and slightly quieter. Preserve the
+accepted dolphin flight, camera, normal boat speed, 60/40-second pacing and subsequent rescue puzzles. Astra
+implements personally, verifies both orientations and refreshes port 5330; no merge or deployment.
+
+Jeremy clarified the second net's legibility, verbatim:
+
+> that second net should be visible to the player as well.. maybe it can have a tighter weave
+
+Use a tighter weave and let its near edge drape visibly over the orange net; inspect its colour and silhouette
+from the player's normal view before lifting, in both orientations.

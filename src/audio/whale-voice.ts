@@ -113,7 +113,7 @@ export class WhaleVoice {
     const oscillators: OscillatorNode[] = [];
     for (const [i, shape] of PARTIALS.entries()) {
       const voice = keep(ctx.createOscillator()), colour = keep(ctx.createGain());
-      glide(voice.frequency, m.pitch, at, i + 1);
+      glide(voice.frequency, m.pitch, at, (i + 1) * V.pitch);
       const length = end - from;
       colour.gain.setValueAtTime(shape[0] * (i > 1 ? m.open : 1), from);
       colour.gain.linearRampToValueAtTime(shape[1] * (i > 1 ? m.open : 1), from + length * 0.45);

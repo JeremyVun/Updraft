@@ -1,16 +1,20 @@
 // Measure current passages with real boat/chapter code: ordinary breeze, sustained gusts, direction and frame rate.
 // Usage: node tools/journey-pacing-check.mjs; durations in /tmp/updraft-journey-pacing.json. CROSSING=<name> runs one
 // passage, SEA_SEED=<n> seeds the pod's chances (147 by default), SOFT=1 lists every open-sea failure of a run.
-// APPROACH_ONLY=1 ends at the first whale puzzle; PORTRAIT=1 checks phone framing. MUTATE=sideways|sidecam proves guards.
+// APPROACH_ONLY=1 ends at the first whale puzzle; PORTRAIT=1 checks phone framing. MUTATE=sideways|sidecam|earlyvoice proves guards.
 import './lib/typescript.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { registerHooks } from 'node:module';
 
 import * as THREE from 'three';
-if(process.env.MUTATE==='sidecam')registerHooks({load(url,context,next){
+if(['sidecam','earlyvoice'].includes(process.env.MUTATE))registerHooks({load(url,context,next){
   const result=next(url,context);
-  if(url.endsWith('/src/story/crossing.ts')) {
+  if(process.env.MUTATE==='earlyvoice'&&url.endsWith('/src/story/net-whale.ts')) {
+    const source=String(result.source), line='!this.calledApproach && whale.breathAudible';
+    assert(source.includes(line));return {...result,source:source.replace(line,'!this.calledApproach && left < K.heardAt')};
+  }
+  if(process.env.MUTATE==='sidecam'&&url.endsWith('/src/story/crossing.ts')) {
     const source=String(result.source), line='bearing += Math.atan2(Math.sin(toward - bearing), Math.cos(toward - bearing)) * share;';
     assert(source.includes(line));return {...result,source:source.replace(line,'bearing += 0;')};
   }
@@ -109,20 +113,34 @@ function run(name, fps, gust, veer=0, waitInVillage=false, arrivalGust=false, ci
   let hazeShown=NaN,openShown=NaN,lastStep='',restGap=Infinity,restSpeed=Infinity,shownDuringWhale=0,worstBrake=0,lastSpeed=boat.speed;const ndc=new THREE.Vector3();
   // The open sea as the whale is found: the boat's pace, what of the whale and the mirror shows and when, and the way on.
   let leastHidden=1,nudgeOut=null,falloffShown=NaN,mistShown=0,liftShown=0,underWay=false,slowest=Infinity,slowestAt=null,whaleShownAt=null,mirrorShownBeforeDive=0,heading=0,mostStarboard=0,portTurn=0,lastYaw=null;
-  const sea={sighs:[],covers:[],seen:null,calls:[],nearCalls:[],silhouette:null,detail:null,foreground:Infinity,podFrames:0,podAngle:0,podWorst:null,
+  const sea={sighs:[],covers:[],seen:null,calls:[],nearCalls:[],audio:[],silhouette:null,detail:null,foreground:Infinity,podFrames:0,podAngle:0,podWorst:null,
     framing:{frames:0,head:0,swimmer:0,roll:0}};
   let onwardLimit=Infinity,onwardPeak=0;
   if(rig)sealife.onWhaleSound=(kind)=>{
     if(chapter.whale?.step!=='approach')return;
+    const visible=onScreen([sealife.sleeper.eye,sealife.sleeper.back]);
+    const sound={kind,at:time,swim:chapter.swim,body:visible.length?covered(visible):1};
+    sea.audio.push(sound);
+    check(sound.swim==='done'&&sound.body<.5,`whale sound waits for the visible whale and returned cygnet: ${JSON.stringify(sound)}`);
     if(kind==='whale-sigh')sea.sighs.push(+time.toFixed(1));
     if(kind==='whale-moan')sea.calls.push(+time.toFixed(1));
     if(kind==='whale-near')sea.nearCalls.push(+time.toFixed(1));
+  };
+  if(rig)sealife.onNetSound=(kind)=>{
+    if(kind==='net-sputter'&&chapter.whale?.step==='approach')check(chapter.swim==='done'&&sea.detail!==null,'net sputter waits for the visible whale and returned cygnet');
   };
   let time=0;
   const whaleMarks=()=>{const w=sealife.sleeper,m=[w.jaw,w.eye,w.blowhole,w.finTip,w.back,w.flukes];
     for(let i=1;i<6;i++)m.push(w.blowhole.clone().lerp(w.back,i/6),w.back.clone().lerp(w.flukes,i/6));return m;};
   const covered=(points)=>Math.min(...points.map(p=>hazeOver(p,rig.camera,hazeShown,openShown,falloffShown,mistShown,liftShown)));
   const onScreen=(points)=>points.filter(p=>{ndc.copy(p).project(rig.camera);return Math.abs(ndc.x)<1&&Math.abs(ndc.y)<1&&ndc.z<1;});
+  const checkVoice=()=>{
+    check(sea.calls.length===1&&sea.calls[0]>=sea.detail?.at,
+      `the first voice accompanies the visible whale: ${JSON.stringify({calls:sea.calls,detail:sea.detail})}`);
+    check(sea.nearCalls.length===1&&sea.nearCalls[0]>sea.calls[0]+callLength('whale-moan')
+      &&events['whale-breath']-sea.nearCalls[0]-callLength('whale-near')<16,
+      `a distinct closer phrase carries the approach: ${JSON.stringify({calls:sea.calls,near:sea.nearCalls,arrival:events['whale-breath']})}`);
+  };
   for(let i=0;i<fps*900;i++) {
     const dt=1/fps;time=i*dt;wind.breeze.copy(baseWind).multiplyScalar(chapter.breeze);wind.calm=wind.breeze.length()*tuning.wind.calm;
     // A repeatable attentive player supplies wind only during the village's interaction.
@@ -160,6 +178,7 @@ function run(name, fps, gust, veer=0, waitInVillage=false, arrivalGust=false, ci
         if(whale.led&&events.whaleLed===undefined)events.whaleLed=+time.toFixed(1);
         if(whale.step!==lastStep){events[`whale-${whale.step}`]=+time.toFixed(1);lastStep=whale.step;
           if(whale.step==='breath'){
+            checkVoice();
             restGap=Math.hypot(boat.position.x-whale.rest.x,boat.position.z-whale.rest.z);restSpeed=boat.speed;
             check(sea.podFrames>120&&sea.podAngle<.6,
               `the pod swims toward the visible whale: ${JSON.stringify({frames:sea.podFrames,angle:sea.podAngle,worst:sea.podWorst})}`);
@@ -231,7 +250,7 @@ function run(name, fps, gust, veer=0, waitInVillage=false, arrivalGust=false, ci
     if(lastLeg!==chapter.leg){worstTurn=Math.max(turn,worstTurn);turn=0;lastLeg=chapter.leg;}
     if(process.env.APPROACH_ONLY&&chapter.whale?.step==='breath') {
       return {seconds:+time.toFixed(1),swimSeconds:+(swimFrames/fps).toFixed(1),podFrames:sea.podFrames,
-        podAngle:sea.podAngle,podWorst:sea.podWorst,framing:sea.framing,events,dolphinActs};
+        podAngle:sea.podAngle,podWorst:sea.podWorst,framing:sea.framing,voices:sea.audio,events,dolphinActs};
     }
     if(chapter.done){
       const target=name==='drowned'?'wood':chapter.destinationMusic;
@@ -264,15 +283,9 @@ function run(name, fps, gust, veer=0, waitInVillage=false, arrivalGust=false, ci
         check(lead>=10&&lead<=21,`the shorter passage keeps a continuous reveal and gentle stop: ${lead.toFixed(1)} s`);
         check(events['whale-breath']>=57&&events['whale-breath']<=63,`first whale puzzle at about 60 s: ${events['whale-breath']} s`);
         check(events.stopped-events.last20<=9,`the last 20 m take about 8 s: ${(events.stopped-events.last20).toFixed(1)} s`);
-        const [heard]=sea.covers,seen=sea.seen;
-        check(heard&&heard.body>=0.93,`its low call begins while the body is still lost in haze: ${JSON.stringify(sea.covers)}`);
+        const seen=sea.seen;
         check(seen&&seen.blow<=0.45&&seen.body>=0.85,`its blow stands above the mist before the body gains definition: ${JSON.stringify(seen)}`);
-        check(seen&&seen.at>heard.at&&events.shape>seen.at,`its blow is seen before its shape forms: ${JSON.stringify({heard,seen,shape:events.shape})}`);
-        check(sea.calls.length===1&&sea.calls[0]<seen?.at&&sea.calls[0]+callLength('whale-moan')>=sea.silhouette.at+2,
-          `one low call carries from the mist through the first silhouette: ${JSON.stringify({calls:sea.calls,blow:seen?.at,silhouette:sea.silhouette,length:callLength('whale-moan')})}`);
-        check(sea.nearCalls.length===1&&sea.nearCalls[0]>sea.calls[0]+callLength('whale-moan')
-          &&events['whale-breath']-sea.nearCalls[0]-callLength('whale-near')<16,
-          `a distinct closer phrase carries the approach: ${JSON.stringify({calls:sea.calls,near:sea.nearCalls,arrival:events['whale-breath']})}`);
+        check(seen&&events.shape>seen.at,`its blow is seen before its shape forms: ${JSON.stringify({seen,shape:events.shape})}`);
         check(events.mirrorSeen>events.dive,`the mirror comes out of its mist only once the whale has dived: ${JSON.stringify(events)}`);
         const onward=time-events['whale-gone'];
         check(onwardLimit>=tuning.seaPassage.speed-0.001,`normal boat speed throughout the onward sail: cap ${onwardLimit}`);
@@ -282,7 +295,7 @@ function run(name, fps, gust, veer=0, waitInVillage=false, arrivalGust=false, ci
       return {seconds:+time.toFixed(1),musicLead:+musicLead.toFixed(2),sailed:+sailed.toFixed(1),peak:+peak.toFixed(2),swimSeconds:+(swimFrames/fps).toFixed(1),stillSeconds:+stillFor.toFixed(1),whaleCalled:chapter.whaleCalled,
         ...(chapter.whale?{hiddenBeforeNudge:+leastHidden.toFixed(4),nudgeOut,whaleBrake:+worstBrake.toFixed(2),restGap:+restGap.toFixed(2),slowest:+slowest.toFixed(2),slowestAt,lead:+(events['whale-breath']-events.whaleLed).toFixed(1),
           last20:+(events.stopped-events.last20).toFixed(1),diveToMooring:+(time-events.dive).toFixed(1),letGoToMooring:+(time-events.letGo).toFixed(1),
-          onwardLimit,onwardPeak:+onwardPeak.toFixed(2),portTurn:+portTurn.toFixed(3),starboardTurn:+(-mostStarboard).toFixed(2),sighs:sea.covers,blow:sea.seen,calls:sea.calls,nearCalls:sea.nearCalls,reveal:{silhouette:sea.silhouette,detail:sea.detail,foreground:sea.foreground,podFrames:sea.podFrames,podAngle:sea.podAngle,podWorst:sea.podWorst,framing:sea.framing}}:{}),beats,events,dolphinActs};
+          onwardLimit,onwardPeak:+onwardPeak.toFixed(2),portTurn:+portTurn.toFixed(3),starboardTurn:+(-mostStarboard).toFixed(2),sighs:sea.covers,blow:sea.seen,calls:sea.calls,nearCalls:sea.nearCalls,voices:sea.audio,reveal:{silhouette:sea.silhouette,detail:sea.detail,foreground:sea.foreground,podFrames:sea.podFrames,podAngle:sea.podAngle,podWorst:sea.podWorst,framing:sea.framing}}:{}),beats,events,dolphinActs};
     }
   }
   const w=chapter.whale;
