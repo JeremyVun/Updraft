@@ -271,7 +271,8 @@ for (const [fps, portrait] of [
   assert.equal(c.cygnet.swims, 3, 'paddles in all three pools');
   // Steadier sailing shortens the room, so the swims are measured as a share of it.
   assert(swimFrames > fps * 29.5 && swimFrames > sailingFrames * 0.6, `sustained swims alongside toys: ${swimFrames / fps}s of ${sailingFrames / fps}s`);
-  assert(fastestSwim > 2.45 && biggestFlap > 0.45, 'playful swim includes faster paddles and wing flicks');
+  assert(fastestSwim > 2.45, `playful swimming includes faster paddles (${fastestSwim})`);
+  assert(biggestFlap < 0.05, `swimming keeps the wings folded (${biggestFlap})`);
   assert(minDry > 0.01, `characters entered a pool: ${minDry}`);
   assert(maxEdge < 0.93, `characters left safe frame: ${maxEdge}, ${JSON.stringify(worstFrame)}`);
   report.push({

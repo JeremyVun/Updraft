@@ -174,9 +174,9 @@ for (const fps of [30, 60, 120]) {
   assert(Math.abs(primary.x)<=.801&&Math.abs(primary.y)<=.801,'primary wins when the group cannot fit');
 }
 // Slow coverage must keep a moving primary visible without snapping a newly introduced secondary into view.
-for(const fps of [30,60,120]){
+for(const fps of [30,60,120]) for(const radius of [0,.6]){
   const r=new CameraRig(),s=shot();r.resize(390,844);s.smoothFit=.6;
-  s.subjects={primary:origin.clone(),secondary:origin.clone(),margin:.7,extra:30};r.cut(s);
+  s.subjects={primary:origin.clone(),secondary:origin.clone(),primaryRadius:radius,margin:.7,extra:30};r.cut(s);
   s.subjects.secondary.x+=30;
   const before=r.camera.position.clone();r.update(1/fps,0,s,.3);
   assert(r.camera.position.distanceTo(before)<.1,'new secondary jumps the eased fit');
@@ -184,6 +184,10 @@ for(const fps of [30,60,120]){
     s.subjects.primary.x+=3/fps;r.update(1/fps,i/fps,s,.3);
     const p=s.subjects.primary.clone().project(r.camera);
     assert(Math.max(Math.abs(p.x),Math.abs(p.y))<.90001,'eased coverage loses its primary');
+    for(const axis of [0,1]) for(const sign of [-1,1]) {
+      const bound=new THREE.Vector3().setFromMatrixColumn(r.camera.matrixWorld,axis).multiplyScalar(sign*radius).add(s.subjects.primary).project(r.camera);
+      assert(Math.max(Math.abs(bound.x),Math.abs(bound.y))<.90001,'eased coverage crops the primary extent');
+    }
   }
 }
 // Amortized CPU cost of attention and candidate evaluation, including the twice-a-second terrain samples.

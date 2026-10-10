@@ -1990,11 +1990,8 @@ export const tuning = {
     run: {
       /** Seconds she stands on the ridge looking after the cat before she goes, and her pace as a share of a walk. */
       setOff: 1.2, stroll: 1.05,
-      /**
-       * Seconds she stands on the granary's ridge looking back down at the fog, and at the top of the slope down to the
-       * swing's board looking at the swing; and of the first that she spends turning to her way before she goes on.
-       */
-      lookDownFor: 9, lookSwingFor: 4.2, turnOn: 1,
+      /** Her pause to look at the swing from the top of its approach. */
+      lookSwingFor: 4.2,
       /** The beat she takes before a hop of her own; within `through` of a turn gentler than `bend` (radians) she walks on through it. */
       hopPause: 0.3, through: 1.1, bend: 0.4,
       /**
@@ -2027,7 +2024,7 @@ export const tuning = {
        * near her the walking lens is laid to expect it; how hard it closes on where it is going (per second a metre), the
        * slowest and fastest it comes on (m/s), and how quickly it changes pace (per second).
        */
-      fogTrail: 12, fogHold: { tree: 10, sheet: 5, mill: 8, swing: 12 }, fogBeat: 8, fogEnd: 19, fogNearest: 7.5, fogBelow: 4.8, fogLaid: 8,
+      fogTrail: 12, fogHold: { tree: 10, sheet: 5, mill: 8, swing: 12 }, fogBeat: 8, fogEnd: 19, fogNearest: 7.5, fogLaid: 8,
       fogPull: 0.5, fogSlowest: 0.12, fogFastest: 3.2, fogEase: 0.9,
     },
     /** The wash-tub the player's wind carries to the cat's roof and back to the boat. */
@@ -2191,25 +2188,12 @@ export const tuning = {
       comeFrom: { tree: 1.5, sheet: 5, mill: 0.5, swing: 0.5 }, comeTo: 0, leaveFrom: 0, endFrom: 8, roundRate: 0.95,
       /** How far past each piece the lens has given it back to her own way, metres; the mill gives it to the swing's approach. */
       leave: { tree: 2, sheet: 0, swing: 3 },
-      /**
-       * The views laying out the mill and the swing as she comes to them: from how far along her way before each (metres)
-       * they come in (the swing's as the mill hands over, below), and how quickly (per second), until the piece's own
-       * view takes over; how far the mill's look leans toward the fog's front (landscape, then upright), so it stays in
-       * as she walks away from it; where they stand and
-       * look, as [east, up, south] metres (landscape, then upright) from where she waits at the mill, and for the swing
-       * from her as she goes, off her right shoulder with the fog coming on behind her, and its lens; and where it goes
-       * round to, from where she waits at the board, once she has stopped to look at the swing: where the swing's own
-       * view stands. The swing's takes over from the mill's view as she steps out at the hoist's top, in one move round
-       * her right over `handFor` seconds: drawn in from the mill's reach to the reach of `via` (from her) over the first
-       * `closeBy` of them, so it passes between her and the old tree's crown; round, from `turnFrom` of them, through
-       * `via`, behind her right shoulder as she looks back down at the fog with the cat waiting below, to its place at
-       * her side as she sets off; its look leaning `catDown` further toward the cat on the way, so it stays in.
-       */
+      /** Camera positions and targets from the piece's wait, or from her while tracking to the swing. */
       approach: {
-        mill: { from: 12.3, rate: 0.7, fogAt: 0.3, uprightFogAt: 0.5, eye: [-6.5, 6.5, 15.5], at: [1.2, 4.6, -1], uprightEye: [-5, 6.2, 13], uprightAt: [0.8, 5.2, -1] },
-        swing: { from: 20, rate: 0.5, track: true, handFor: 11, closeBy: 0.6, turnFrom: 0.1, catDown: 0.15, via: [-10.9, 1.8, -5.1], uprightVia: [-10.9, 2.4, -5.1], zoom: 0.8, uprightZoom: 0.75,
-          eye: [-2.6, 2.8, -7.1], at: [-3, 1.0, 0], uprightEye: [-2.6, 3.2, -7.1], uprightAt: [-2, 1.4, 0],
-          lookEye: [-14.1, 4.25, 2.7], lookAt: [-1.1, 2.45, -2.95], uprightLookEye: [-12.4, 4.15, 5.0], uprightLookAt: [-1.1, 2.45, -2.95] },
+        mill: { from: 12.3, rate: 0.7, fogAt: 0.3, uprightFogAt: 0.65, eye: [-6.5, 6.5, 15.5], at: [1.2, 4.6, -1], uprightEye: [-5, 6.2, 13], uprightAt: [0.8, 5.2, -1] },
+        swing: { from: 20, rate: 0.5, track: true, handFor: 6, closeBy: 0.6, turnFrom: 0, catDown: 0.15, via: [-5, 3.5, 12], uprightVia: [-5, 3.5, 12], zoom: 0.9, uprightZoom: 0.85, uprightCloseZoom: 0.8, uprightCloseFrom: 8, uprightHeadRadius: 0.6, margin: 0.6, lookCloseFrom: 4, lookScale: 0.4, lookRiseFrom: 0.65,
+          eye: [-7, 0.5, 10], at: [-3, 0.7, 0], uprightEye: [-6, 0.5, 10], uprightAt: [-2, 0.7, 0],
+          lookEye: [-10.7, 4.15, 0.5], lookAt: [1.5, 2.45, -1], uprightLookEye: [-12.4, 4.15, 0.5], uprightLookAt: [1.5, 2.45, -1] },
       },
       /**
        * The tree's view, as [north, east, height] from where it will lie over her wall (east across the lane, the way it
@@ -2230,7 +2214,7 @@ export const tuning = {
        * higher both go as she is carried; upright its own.
        */
       sheetSide: 1, sheetEye: [1.9, 3.5, 12.2], sheetAt: [2.1, 2.9], sheetGo: [1.5, 0.5],
-      uprightSheetEye: [-7, 4.6, 3.2], uprightSheetAt: [3, 3, -0.3],
+      uprightSheetEye: [-7, 4.6, 3.2], uprightSheetAt: [3, 3, -0.3], uprightSheetExitBack: 4,
       /**
        * The mill's view, in the mill's own frame (x to the right seen from in front, z out of the front, heights above
        * her roof): where it stands and looks while she is low, and how much higher it stands and looks once she is up.
@@ -2287,7 +2271,7 @@ export const tuning = {
        * over the water.
        */
       catEyes: 0.32, upBack: 8, upOver: -0.2, upRound: 0.62, upAim: 0.52, upZoom: 1.5,
-      uprightUpBack: 9, uprightUpOver: 0.2, uprightUpRound: 0.55, uprightUpAim: 0.5, uprightUpZoom: 1.2,
+      uprightUpBack: 14, uprightUpOver: 2.5, uprightUpRound: 0.3, uprightUpAim: 0.4, uprightUpZoom: 2,
       tiltFrom: 0.2, tiltTo: 5, upMargin: 0.94, upClear: 0.35,
       /**
        * After the blink, from `releaseFrom` to `releaseTo` seconds after she sits, it lets her go as the two go back in:
@@ -2331,11 +2315,8 @@ export const tuning = {
     stuckAlong: 0.9, stuckOnCat: 1.4, stuckCloser: 1.15, stuckAim: 1.1, stuckBearing: 1.3, stuckDistance: 10, stuckEye: 2.4,
     stuckClear: 0.8, stuckFog: 0.5, stuckZoom: 0.86, stuckPace: 0.35,
     uprightStuckBearing: 1.1, uprightStuckDistance: 9, uprightStuckEye: 2.2, uprightStuckFog: 0.2, uprightStuckZoom: 0.8,
-    /**
-     * Once the boat is fast against the roof, over `fastFor` seconds it comes round to this bearing, this far from where
-     * it looks and this high over the water (upright, its own).
-     */
-    fastFor: 5, fastBearing: 1.75, fastDistance: 10.5, fastEye: 2.7, uprightFastBearing: 1.6, uprightFastDistance: 9.5, uprightFastEye: 2.8,
+    /** Turn toward the destination during the drift, before the boat touches the roof. */
+    fastFrom: 5, fastTo: 19, fastBearing: 2.5, fastDistance: 10.5, fastEye: 3.4, uprightFastBearing: 2.5, uprightFastDistance: 9.5, uprightFastEye: 3.5,
     /**
      * Once the cat bolts, over `climbFor` seconds up onto the roof with it: the lens's bearing from the ridge's west
      * end (atan2(x, z)), how far off and how high over the ridge, how far from her toward the cat it looks, and how far

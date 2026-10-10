@@ -1175,26 +1175,72 @@ His instruction is preserved verbatim in design.md, "Takeover review", with revi
 fog and performance findings as proposals pending his approval. Results and captures:
 `/tmp/updraft-takeover-TUMeWz/`.
 
+Jeremy then approved items 36–41: "proceed" (2026-10-10). Current work: forward roof-arrival dolly; portrait
+sheet-exit framing; mill exit without the extra look back; Ultra fog cost and shader warmup; fixture repairs and
+triage; readable portrait goodbye. Preserve the continuous camera, visible companions, wind interactions and
+the fog's shape/coverage. New evidence: `/tmp/updraft-approved-Ad2y4S/`; baseline `91255b9c`.
+
+Approved follow-up:
+- The missing late shader is the bell's bronze material, constructed by `ChurchArrival` after boot. The village now
+  owns one reusable bell, prepared before warmup and reset by each church controller. The belfry browser probe reports
+  zero stray programs and zero first draws after boot, down from one.
+- Two fog candidates were rejected: branching around zero-opacity lighting made the shader slower; reducing the
+  march from 20 to 16 steps showed no useful gain. With fixed fog time and no other GPU capture, the baseline ran
+  59.3–59.5 fps, the 16-step candidate 58.5–59.1 fps, both with a 16.8 ms 95th percentile. The original 20-step fog
+  remains intact. These desktop results do not establish smoothness on an iPad or under sustained thermal load.
+- Fixture repairs pass: bandage deformation (zero geometry difference), all eight journey crossings, Lines audio
+  (92 checks), kite placement, plane routing and little boats. Lines now drives the real pinwheel, the kite checks
+  its actual offshore piling, and swimming checks folded wings per `e4a0e38ab` instead of obsolete wing flicks.
+- At distant village entry the vanes differ in speed by 0.050178 rad/s, but each is settled under 0.05 rad/s and
+  within 0.1 rad of the wind. Their angle and speed are identical on village arrival. The gate now bounds each
+  settling speed at entry and retains the existing pairwise parity requirement after arrival. No gameplay change.
+- First camera candidates rejected by full portrait run: advancing the mill approach increased missing fog to
+  8.1 seconds, and the initial short mill handoff left the cat below the readability threshold for 2 seconds.
+  A west-side handoff made her walk toward the lens for 3.2 seconds. The local sheet-exit setback reduces its fog
+  gap to 1.2 seconds. A southern handoff passed the original gates but its foreground branches were unacceptable.
+  The run check now raycasts the old tree's actual geometry (three body points, sampled every 0.1 s; two blocked
+  points for 0.5 s fails). A corrected CPU study includes the fog's real update and initial route distance; the
+  earlier abbreviated study omitted those and is not a fog-framing verdict.
+- The mill camera keeps the wide view while she walks, draws closer over the last four metres before her pause at
+  the swing, stays below the branches, then rises to see the cat descend the cottage. It fits her face with a 0.6
+  margin; portrait widens over the last eight metres without changing the fog's aim. The landscape swing look stays
+  nearer to her to clear the tree. `run-final-land` passes every gate with no tree obstruction or camera cuts.
+- `run12-port` passes every gate (fog 1.6 s, cat unreadable 1.9 s, tree obstruction 0 s, facing the lens 0.3 s at this
+  transition), but still briefly crops the hood: the safety frame protected only a point. `subjects.primaryRadius`
+  now reserves world-space padding in fitting and the safety frame; only this portrait approach opts in, with a
+  0.6 m head bound. The regression passes at 30/60/120 Hz and fails when that bound is disabled. The general camera,
+  all 24 crossing-camera cases and drowned camera mechanics pass. Final visual replay: `run13-port` (pending).
+- All 50 mechanics checks pass together (`mechanics/results.json`); the production build passes with the existing
+  bundle-size warning. Rescue/stranding passes in both aspects with the forward arrival dolly. At portrait roof
+  contact the viewing direction's dot product with the boat's heading is 0.825, and the destination ridge is on screen
+  (`arrival-port-final.log`). Final camera route verification remains in progress.
+- Arrival direction now has a real-cast CPU regression at 30/60 Hz in both aspects, calm and gusting. It passes;
+  disabling the pre-contact dolly makes it fail with a backward direction dot product of -0.443. The new browser
+  roof-framing assertion initially referenced a non-exported constant; that fixture is corrected to use the roof deck.
+- `run9-port` stopped at the unchanged tree-gaze assertion before reaching the mill (25% across, 21% up in its
+  six-second sample). This is recorded as review item 42; no gaze code or gate was changed. The full landscape
+  church replay passes, including four bell answers, the slow blink and the full 88-second farewell into the wood.
+
 Integration verification:
 
 | Check | Result |
 | --- | --- |
 | Production build (includes TypeScript) | Pass; existing bundle-size warning |
 | Boat mechanics and restored `sail` | Pass |
-| Browser save/reload | Pass for all five drowned checkpoints: sail, roofs, church, belfry and storm; each plays on |
+| Browser save/reload | Pass for all five drowned checkpoints; belfry rerun passes with the reusable bell |
 | Boat ground contact | Pass after replacing the obsolete passive-village fixture with the real storm cast |
 | Foghorn timing and restore | Pass; uses the longer storm's timing, retaining the approved sound parameters |
 | Camera mechanics | Pass at 30/60 Hz, landscape/portrait, calm/gust; see fixture corrections below |
 | Landscape and portrait rescue/stranding | Pass, including 30 seconds with the stranded boat stationary in each |
 | Landscape roof crossings | Pass including LENS gates; no camera cuts and cat retained after the mill |
-| Portrait roof crossings | Reaches the nave; fails the fog-framing gate after the sheet (review item 37) |
+| Portrait roof crossings | `run12-port` passes all gates; final head-bound visual replay pending |
 | Landscape and portrait church through storm into wood | Pass including LENS gates, four bell answers, kittens, farewell and fog; both land 88 seconds after boarding |
-| Portrait goodbye readability | Automated framing passes, but the cat is only 39 px tall at its slow blink; review item 41 |
+| Portrait goodbye readability | Pass with the new 45 px gate; cat is 50 px tall at its slow blink, up from 39 px |
 | Cat/kitten call marks | All seven vocal calls in the church-through-wood capture have visible marks; footsteps excluded |
 | Music transitions | Pass: ten handoffs and 39 internal sections, including the full 88-second farewell |
-| Shader gate | Pass after seven equivalent ascending-ramp corrections |
-| Broad mechanics | Initially 40/50 pass; shader, boat-ground, camera and foghorn now pass on focused reruns |
-| Audio group | 16/17 pass; Lines score fixture fails before its restored-state assertions |
+| Shader gate | Pass after seven equivalent ascending-ramp corrections; belfry now reports zero late shader programs |
+| Broad mechanics | All 50 pass together after fixture repairs (`mechanics/results.json`) |
+| Audio group | Initial 16/17 pass; repaired Lines score now also passes its 92 assertions |
 
 The camera check referenced the removed `villageBearing` field and applied whole-hull framing to the close
 farewell looking up at the cat. It now measures the actual entry lens on the stern quarter (within 60°, instead
@@ -1203,20 +1249,20 @@ departure dolly. The church's browser LENS gate covers the farewell. The entry l
 quarter view while the boat changes heading after the stairs; it does not require the lens to track that turn
 instantly. No game camera values were changed. Roofs/run browser checks now use the shared GPU lock.
 
-Still failing, proposed triage under review item 40:
+Resolved fixture failures under review item 40 (no gameplay changes):
 
-| Check | Failure and current understanding |
+| Check | Repair and result |
 | --- | --- |
-| `bandage-cost` | Its fixture omits the `nudgeAt` and `nudgeSlope` vectors now required by `WingBandage.update` |
-| `journey-pacing` | The passive drowned crossing fixture has no village/tub and predates the interactive roof sequence |
-| `lines-score` | Its restored Lines fixture lacks a vector used by `ShoreHaul.boatPose` (`lerpVectors`) |
-| `kite-logic` | A post fails the dry-ground assertion; needs investigation |
-| `little-boats-logic` | Playful swim does not satisfy the faster-paddles/wing-flick assertion; needs investigation |
-| `plane-routing` | The 30 Hz calm Lines shore case stalls in `haul`; needs investigation |
-| `drowned-gating` | After supplying the canvas stub for call marks, the approach comparison fails its vane convergence assertion; needs investigation |
+| `bandage-cost` | Supplies the required `nudgeAt` and `nudgeSlope`; zero geometry difference across 620 frames |
+| `journey-pacing` | Uses the real storm cast for the drowned departure; all eight crossings and six conditions pass |
+| `lines-score` | Supplies boat position and interpolation vector; all 92 checks pass |
+| `kite-logic` | Asserts the Lines kite's actual pulley-piling tie-off instead of requiring dry ground offshore; passes |
+| `little-boats-logic` | Requires folded swimming wings per the approved `e4a0e38ab` change; faster paddles still required; passes |
+| `plane-routing` | Supplies repeated player strokes across the real pinwheel to haul the boat in; passes |
+| `drowned-gating` | Bounds each vane's settling speed on distant entry, preserves pairwise parity on arrival; passes |
 
-Phase 10 remains open pending Jeremy's review, approved fixes and their verification. The whole-journey release
-playthrough has not been run during this takeover, and the listed failures prevent a release pass. The integration
+Phase 10 remains open pending Jeremy's review and final camera verification. The whole-journey release
+playthrough has not been run during this takeover. Ultra fog cost remains an investigation, not a claimed fix. The integration
 dev server is on `http://127.0.0.1:5331/`; the original roofs play build and main remain separate.
 
 ### Later

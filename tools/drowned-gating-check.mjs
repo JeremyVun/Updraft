@@ -76,7 +76,7 @@ for (const [label, state] of [['coming near', entered], ['in the village', arriv
    * Coming near, the vane has lived only the last of the time, into the wind as it is then, while the one turned all
    * along is still hunting about it; both are to be settled into the wind, as near it as a hunting vane comes.
    */
-  if (state === entered) assert(gap(g.vane, g.wind) < 0.1 && gap(e.vane, e.wind) < 0.1 && Math.abs(g.spin - e.spin) < 0.05,
+  if (state === entered) assert(gap(g.vane, g.wind) < 0.1 && gap(e.vane, e.wind) < 0.1 && Math.abs(g.spin) < 0.05 && Math.abs(e.spin) < 0.05,
     `${label}: vane ${g.vane} and ${e.vane} into the wind at ${g.wind}`);
   else assert(vaneGap < 0.05 && Math.abs(g.spin - e.spin) < 0.05, `${label}: vane ${g.vane} vs ${e.vane}`);
   g.herons.forEach((h, i) => {

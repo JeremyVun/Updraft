@@ -3,7 +3,7 @@ import { breathe, type Shot } from '../camera';
 import { tuning } from '../tuning';
 import { atmo } from '../world/atmosphere';
 import { BELFRY, faceOut } from '../world/belfry';
-import { BELL_SOUNDS, Bell } from '../world/crossings/bell';
+import { BELL_SOUNDS, type Bell } from '../world/crossings/bell';
 import type { Deck } from '../world/decks';
 import { LanternGlow } from '../world/lantern-glow';
 import {
@@ -141,11 +141,12 @@ export class ChurchArrival {
   constructor(private readonly cast: Cast) {
     const v = cast.village!;
     const crossingCast = { child: cast.child, wind: cast.wind, lines: cast.lines, input: cast.input };
-    this.bell = new Bell({ pivot: v.belfry.pivot(), toward: new THREE.Vector2(0, 1), half: BELFRY.bearing }, crossingCast, v.belfry.light);
+    this.bell = v.prepareBell(crossingCast);
+    this.bell.reset();
     this.bell.onEvent = (kind, at, strength) => cast.knock?.(BELL_SOUNDS[kind], at, strength);
     this.bell.onRing = (strength) => this.rang(strength);
     this.bell.live = false;
-    v.belfry.group.add(...this.bell.objects, this.glow.mesh);
+    v.belfry.group.add(this.glow.mesh);
     this.climb = new Climb(cast.child, { wall: IVY_FOOT, out: WEST, holds: v.ivy.holds, sill: v.belfry.sill('west', 0), depth: BELFRY.wall, wide: true });
     const a = v.belfry.sill('west', 0.05), b = v.belfry.sill('west', -BELFRY.wall - 0.08);
     this.upDecks = [{ x0: a.x, z0: a.z, x1: b.x, z1: b.z, halfWidth: BELFRY.arch.width / 2 - 0.06, height: BELFRY.sill }, ...v.belfry.decks];

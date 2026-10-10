@@ -252,6 +252,16 @@ try {
   assert(fastest < 1.3, `the becalmed boat went ${fastest.toFixed(2)}m/s`);
   assert(took > 12 && took < 32, `the becalmed drift took ${took.toFixed(1)}s`);
   assert(gust < 0.02 && fill < 0.05 && unmuted === 0, 'a stroke made wind while the air was dead');
+  const arrival = await page.evaluate(async () => {
+    const { WAY } = await import('/src/world/drowned-way.ts');
+    const { rig, boat } = __game;
+    const direction = rig.camera.getWorldDirection(boat.position.clone()).setY(0).normalize();
+    const roof = boat.position.clone().set(WAY.strandSlope.x1, WAY.strandSlope.height1, WAY.strandSlope.z1).project(rig.camera);
+    return { forward: direction.x * Math.sin(boat.yaw) + direction.z * Math.cos(boat.yaw), roof: roof.toArray() };
+  });
+  console.log('roof arrival camera', JSON.stringify(arrival));
+  assert(arrival.forward > 0.5, 'the arrival camera still looks sideways or backwards when the boat reaches the roof');
+  assert(arrival.roof.every(v => Math.abs(v) < 1), 'the destination ridge is outside the arrival frame');
   await page.waitForTimeout(4000);
   await shot('9-at-rest');
   await waitFor(() => __game.cat.unease > 0.6 || __game.story.current.cat.step !== 'aboard', 120000, 'the cat staring at the fog');

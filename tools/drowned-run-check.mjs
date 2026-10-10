@@ -8,8 +8,8 @@
 // sheet's line fill it to carry her over, circles round the hub turn the mill's sails to wind her up its hoist,
 // strokes pump the swing until she lets go over the nave, and she walks on to the tower's foot. Reports the run's
 // time, each walk's seconds on foot, how long she waits on the cat at each piece, the fog's nearest approach and how
-// soon each roof she goes on from goes under, and fails if she leaves the decks, stalls, the fog reaches her or (in a
-// landscape frame) drops out of a walk's frame, a roof she left is not taken, or the boat leaves where it ran aground. Then (unless TO=nave) the
+// soon each roof she goes on from goes under, and fails if she leaves the decks, stalls, the fog reaches her or
+// drops out of a walk's frame, a roof she left is not taken, or the boat leaves where it ran aground. Then (unless TO=nave) the
 // church: the cat runs up the ivy ahead of her and waits in the belfry's arch calling while she climbs, goes in to its
 // kittens as she nears the top and they wake, she climbs in over the sill and a kitten comes to her, the fog stops under
 // the sills, strokes across the bell ring it four times while the lost boat's lantern answers nearer each time, strokes
@@ -31,7 +31,7 @@
 //        TO=nave stops at the tower's foot, TO=tree once she is over the tree and the lens has gone round to the sheet, TO=swing once
 //        she is on the swing (with the walks' measures), TO=ridge once she is up on the first roof after the cat, VIDEO=<dir> records the whole play as a webm there, W/H viewport
 //        (default 1600x900), LENS=1 also fails on the lens's measures (a roof hiding her, her walking toward it, her
-//        out of frame, it inside a roof, it whipping round; and at the church, from the tower's foot until the
+//        out of frame, it inside a roof, it whipping round, the old tree hiding her after the mill; and at the church, from the tower's foot until the
 //        storm's frame takes over, her out of frame or hidden by the church or a roof; at the blink the cat, the kitten
 //        and her face out of frame or the cat under 45 px tall), VOICES=<file> writes every sound the cat and each kitten
 //        makes (seconds, which animal, kind, the story step) with the strongest its call marks showed in the 0.6 s after.
@@ -612,7 +612,7 @@ try {
     assert(onSill(blink.kitten), `the kitten is not on the sill at the slow blink (${blink.kitten.join(', ')})`);
     assert(w.catHome !== null && w.catHome - w.seated < T.leaveBy, `the cat had not gone back in to its kittens by the time the storm's lens took over (${w.catHome === null ? 'never' : (w.catHome - w.seated).toFixed(1) + ' s after she sat'})`);
     const inside = (p) => p[0] > 0.02 && p[0] < 0.98 && p[1] > 0.02 && p[1] < 0.98;
-    if (process.env.LENS) assert((width < height || seenAtBlink.px >= 45) && inside(seenAtBlink.cat) && inside(seenAtBlink.kitten) && inside(seenAtBlink.her), `at the blink the cat was ${seenAtBlink.px.toFixed(0)} px tall at ${seenAtBlink.cat.map((v) => v.toFixed(2))}, the kitten at ${seenAtBlink.kitten.map((v) => v.toFixed(2))} and her face at ${seenAtBlink.her.map((v) => v.toFixed(2))}`);
+    if (process.env.LENS) assert((seenAtBlink.px >= 45 * Math.min(width, height) / 900) && inside(seenAtBlink.cat) && inside(seenAtBlink.kitten) && inside(seenAtBlink.her), `at the blink the cat was ${seenAtBlink.px.toFixed(0)} px tall at ${seenAtBlink.cat.map((v) => v.toFixed(2))}, the kitten at ${seenAtBlink.kitten.map((v) => v.toFixed(2))} and her face at ${seenAtBlink.her.map((v) => v.toFixed(2))}`);
   };
 
   if (fromStairs) {
@@ -714,6 +714,22 @@ try {
       const placed = W.PLACED.map((h, i) => ({ h, i }));
       const cam = __game.rig.camera;
       const probe = cam.position.clone();
+      const threeURL = performance.getEntriesByType('resource').find(r => /\/three(?:\.module)?\.js$/.test(new URL(r.name).pathname)).name;
+      const { BufferGeometry, Mesh, MeshBasicMaterial, DoubleSide, Raycaster } = await import(threeURL);
+      const trees = __game.village.objects.find(o => o.geometry?.attributes.aBase).geometry;
+      const base = trees.attributes.aBase, indices = [], index = i => trees.index ? trees.index.getX(i) : i;
+      for (let i = 0; i < (trees.index?.count ?? base.count); i += 3) {
+        const v = index(i);
+        if (Math.abs(base.getX(v) - W.GREEN_TREE.x) < 0.01 && Math.abs(base.getZ(v) - W.GREEN_TREE.z) < 0.01) indices.push(index(i), index(i + 1), index(i + 2));
+      }
+      if (!indices.length) throw new Error('The old tree geometry is missing from the obstruction check');
+      const branches = new BufferGeometry();
+      branches.setAttribute('position', trees.attributes.position);
+      branches.setIndex(indices);
+      const tree = new Mesh(branches, new MeshBasicMaterial({ side: DoubleSide })), treeRay = new Raycaster();
+      tree.updateMatrixWorld();
+      const treeTarget = cam.position.clone(), treeDirection = cam.position.clone();
+      w.treeHiddenRun = w.treeHiddenWorst = 0;
       const B = await import('/src/creatures/cat/body.ts');
       const tail = new Set(B.TAIL), bone = cam.position.clone();
       /**
@@ -781,12 +797,7 @@ try {
             w.fogGoneAt = `at ${r.along.toFixed(1)} m, until ${t.toFixed(1)} s; her at ${f(p)}, the lens at ${f(cam.position)}, the front at ${front.x.toFixed(1)},${front.y.toFixed(1)} coming ${dx.toFixed(2)},${dz.toFixed(2)}, its top ${dark.level.toFixed(1)} m`;
           }
         } else w.fogGoneRun = 0;
-        /**
-         * The cat on her own way: in the frame, clear of the roofs and big enough to read as a cat (but while she looks
-         * back down at the fog from the granary's ridge, where the lens goes round her by design).
-         */
-        const looking = r.lookingDown >= 0 && r.lookingDown < tuning.drowned.run.lookDownFor;
-        if (r.stage === 'walk' && !looking) {
+        if (r.stage === 'walk') {
           const walk = `her way to the ${['tree', 'sheet', 'mill', 'swing'].find((piece) => r[piece].phase !== 'over') ?? 'nave'}`;
           const seen = catSeen(), readable = seen.inFrame && !seen.hidden && seen.px >= window.__catPx;
           w.catLostRun = readable ? 0 : w.catLostRun + 1 / 60;
@@ -850,10 +861,22 @@ try {
         }
         w.hiddenRun = hidden && !flying ? (w.hiddenRun ?? 0) + 1 / 60 : 0;
         if (w.hiddenRun > (w.hiddenWorst ?? 0)) { w.hiddenWorst = w.hiddenRun; w.hiddenAt = `${r.stage} at ${r.along.toFixed(1)} m`; }
+        if (w.frames % 6 === 0 && r.handed >= 0 && r.stage === 'walk') {
+          let blocked = 0;
+          for (const height of [0.6, 1, 1.3]) {
+            treeTarget.copy(p).y += height;
+            treeDirection.subVectors(treeTarget, lens);
+            treeRay.far = treeDirection.length() - 0.2;
+            treeRay.set(lens, treeDirection.normalize());
+            if (treeRay.intersectObject(tree, false).length) blocked++;
+          }
+          w.treeHiddenRun = blocked >= 2 ? w.treeHiddenRun + 0.1 : 0;
+          w.treeHiddenWorst = Math.max(w.treeHiddenWorst, w.treeHiddenRun);
+        }
         if (r.stage === 'walk' && !c.action) {
           if (r.along > w.last + 0.05) { w.last = r.along; w.since = 0; } else w.since += 1 / 60;
           const k = tuning.drowned.run;
-          const looking = (r.lookingDown >= 0 && r.lookingDown < k.lookDownFor) || (r.lookingSwing >= 0 && r.lookingSwing < k.lookSwingFor);
+          const looking = r.lookingSwing >= 0 && r.lookingSwing < k.lookSwingFor;
           if (!looking && w.since > w.stallWorst) { w.stallWorst = w.since; w.stallAt = `at ${r.along.toFixed(1)} m, ${p.toArray().map((v) => v.toFixed(2))}`; }
           if (looking) w.since = 0;
         } else w.since = 0;
@@ -884,8 +907,10 @@ try {
       console.log(`  its size in px (0 out of frame or hidden), least and median: ${Object.entries(w.catPxByWalk).map(([k, v]) => `${k} ${Math.min(...v)}/${median(v)}`).join(', ')}`);
       console.log(`she faced the lens on her way for ${w.facing.toFixed(1)} s in all (longest ${w.facingWorst.toFixed(1)} s ${w.facingAt}); out of frame ${w.unseen.toFixed(1)} s (longest ${w.unseenWorst.toFixed(1)} s ${w.unseenAt}); lens inside a roof ${w.inside.toFixed(1)} s ${w.insideAt}`);
       console.log(`a roof hid her for at most ${(w.hiddenWorst ?? 0).toFixed(1)} s at a time (${w.hiddenAt ?? ''})`);
+      console.log(`the old tree hid her for at most ${w.treeHiddenWorst.toFixed(1)} s at a time after the mill`);
       const catWorst = Math.max(0, ...Object.values(w.catByWalk));
       const lens = [[(w.hiddenWorst ?? 0) < 1, `a roof hid her for ${(w.hiddenWorst ?? 0).toFixed(1)} s (${w.hiddenAt})`],
+        [w.treeHiddenWorst < 0.5, `the old tree hid her after the mill for ${w.treeHiddenWorst.toFixed(1)} s`],
         [w.facingWorst < 1, `she walked toward the lens for ${w.facingWorst.toFixed(1)} s (${w.facingAt})`],
         [w.unseenWorst < 0.5, `she was out of the frame for ${w.unseenWorst.toFixed(1)} s (${w.unseenAt})`],
         [w.inside < 0.2, `the lens was inside a roof for ${w.inside.toFixed(1)} s (${w.insideAt})`],

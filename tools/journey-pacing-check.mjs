@@ -17,6 +17,7 @@ const { Traveller } = await import('../src/traveller/traveller.ts');
 const { Cygnet } = await import('../src/creatures/cygnet.ts');
 const { Carry } = await import('../src/companion/carry.ts');
 const { Journey } = await import('../src/story/journey.ts');
+const { stormCast } = await import('./lib/storm-cast.mjs');
 const { CameraRig } = await import('../src/camera.ts');
 const { SeaLife } = await import('../src/fx/sealife.ts');
 const { SLEEP_BERTH } = await import('../src/world/sleeping.ts');
@@ -41,27 +42,27 @@ const starts = {
   toMirror:[SLEEP_BERTH.x,SLEEP_BERTH.z,-1.76],
   toHarbour:[MIRROR_BERTH.x,MIRROR_BERTH.z,MIRROR_BERTH.yaw],
 };
-function run(name, fps, gust, veer=0, waitInVillage=false, arrivalGust=false) {
+function run(name, fps, gust, veer=0, arrivalGust=false) {
   let push=gust;
   const baseWind=new THREE.Vector2(Math.cos(-Math.PI/10+veer),Math.sin(-Math.PI/10+veer)).multiplyScalar(tuning.wind.breeze);
   const wind={breeze:baseWind.clone(),calm:3,addSplat(){},sample(x,z,out){return Object.assign(out,{x:this.breeze.x+push,z:this.breeze.y-push,energy:push?.8:0,lift:0});}};
-  const boat=new Boat(wind), child=new Traveller(wind), cygnet=new Cygnet(),carry=new Carry(child,cygnet);
+  const storm=name==='drowned'?stormCast(wind):null;
+  const boat=storm?.cast.boat??new Boat(wind), child=storm?.cast.child??new Traveller(wind), cygnet=storm?.cast.cygnet??new Cygnet(),carry=new Carry(child,cygnet);
   cygnet.mount=child;cygnet.visible=true;cygnet.rideIn('cradle');
-  boat.beach(...starts[name]);boat.launch();child.ride(boat.seat(new THREE.Vector3()),boat.yaw);
+  if(!storm){boat.beach(...starts[name]);boat.launch();child.ride(boat.seat(new THREE.Vector3()),boat.yaw);}
   const plane={held:true,position:new THREE.Vector3(),hold(){},homeRadius:0,launch(p){this.position.copy(p);this.held=false;},depart(){}};
   const rig=name==='toMirror'?new CameraRig():null;
   rig?.resize(1600,900);
   const sealife=rig?new SeaLife(wind,rig.camera):{dolphinsWith(){},fishNear(){},swimmerNear(){},surfaceWhale(){},whale:null,dolphinShow:null};
   const cast={boat,child,cygnet,carry,wind,plane,lines:{gust(){}},skyMirror:{progress:3,stars:[0,1,2]},sealife};
-  const chapter=Journey.prototype.make.call({cast},name);
+  const chapter=storm?.chapter??Journey.prototype.make.call({cast},name);
   let shallowAt=[];const air={};let swimFrames=0,shallow=-Infinity,turn=0,yaw=boat.yaw,lastLeg=0,worstTurn=0,peak=0,sailed=0;
   const prev=boat.position.clone(),beats=[],dolphinActs=[],events={};let lastBeat='',stillFor=0,lastAct='';
   if(rig){chapter.update(0,0);rig.cut(chapter.shot);}
   for(let i=0;i<fps*500;i++) {
     const dt=1/fps,time=i*dt;wind.breeze.copy(baseWind).multiplyScalar(chapter.breeze);wind.calm=wind.breeze.length()*tuning.wind.calm;
-    // A repeatable attentive player supplies wind only during the village's interaction.
     const approaching=events[`music-${name==='drowned'?'wood':chapter.destinationMusic}`]!==undefined;
-    push=gust || (arrivalGust&&approaching?8:0) || (name==='drowned' && chapter.beat==='still' && !waitInVillage?8:0);
+    push=gust || (arrivalGust&&approaching?8:0);
     chapter.update(dt,time);boat.swell=chapter.storm ?? 0;boat.update(dt,time);
     if(chapter.arrivalMusic && events[`music-${chapter.arrivalMusic}`]===undefined) events[`music-${chapter.arrivalMusic}`]=+time.toFixed(2);
     if(chapter.arrivalHeard && chapter.arrivalReady && events.arrivalReady===undefined)events.arrivalReady=+time.toFixed(2);
@@ -105,14 +106,13 @@ const results=[];
 for(const name of (process.env.CROSSING ? [process.env.CROSSING] : Object.keys(starts))) {
   const calm=run(name,60,0),gust=run(name,60,8),lowFps=run(name,30,0);
   const windLeft=run(name,30,0,-.35),windRight=run(name,30,0,.35);
-  const lateGust=run(name,60,0,0,false,true);
+  const lateGust=run(name,60,0,0,true);
   const entry={name,calm,gust,lowFps,windLeft,windRight,lateGust};
   if(name==='toBoats'||name==='toMeadow') {
     const target=name==='toBoats'?30:40;
     for(const result of [calm,lowFps,windLeft,windRight])
       assert(Math.abs(result.seconds-target)<5,`${name}: ordinary passage exceeds its ${target}s pacing target (${result.seconds}s)`);
   }
-  if(name==='drowned')entry.noResponse=run(name,30,0,0,true);
   results.push(entry);console.log(JSON.stringify(entry));
 }
 fs.writeFileSync('/tmp/updraft-journey-pacing.json',JSON.stringify(results,null,2));

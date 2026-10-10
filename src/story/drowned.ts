@@ -899,14 +899,6 @@ export class DrownedChapter implements Chapter {
     this.pace = lerp(this.pace, k.pace, held);
   }
 
-  /**
-   * The air dying and the stranding, on the ordinary rig so every move is an orbit. Low off the bow on the open side,
-   * looking back along the boat: the cat at the bow near and large, her beyond it, and behind them the fog rising off
-   * the sea the way they came and growing as it comes. As the cat's fear grows the lens leans in on it; its stare is at
-   * what the frame shows behind them. When it bolts the frame goes up onto the roof with it, to stand off the ridge's
-   * west end, her on the ridge and the cat along it, the boat below and the fog coming over it. Upright it stands
-   * lower and nearer the bow, so the cat, her and the fog stack up the frame.
-   */
   private strandFrame(): void {
     const k = tuning.drownedCamera, s = this.shot, boat = this.cast.boat;
     const wide = THREE.MathUtils.smoothstep(this.aspect, 0.7, 1.3);
@@ -917,8 +909,7 @@ export class DrownedChapter implements Chapter {
     const fear = dark && this.beat === 'becalmed' ? 1 - THREE.MathUtils.smoothstep(DARK_AT_STRAND - dark.front, c.boltFrom, c.uneasyFrom) : 0;
     const along = lerp(k.stuckAlong, k.stuckOnCat, fear * fear);
     const aim = this.anchor.set(boat.position.x + fx * along, k.stuckAim, boat.position.z + fz * along);
-    /** Fast against the roof, it comes round a little aft, so the roof's end stands beyond the bow and not before it. */
-    const fast = this.beat === 'becalmed' ? THREE.MathUtils.smootherstep(this.t, 0, k.fastFor) : 0;
+    const fast = THREE.MathUtils.smootherstep(this.now - this.stillAt, k.fastFrom, k.fastTo);
     const b = lerp(lerp(k.uprightStuckBearing, k.stuckBearing, wide), lerp(k.uprightFastBearing, k.fastBearing, wide), fast);
     const reach = lerp(lerp(k.uprightStuckDistance, k.stuckDistance, wide), lerp(k.uprightFastDistance, k.fastDistance, wide), fast);
     const high = lerp(lerp(k.uprightStuckEye, k.stuckEye, wide), lerp(k.uprightFastEye, k.fastEye, wide), fast);
@@ -927,7 +918,7 @@ export class DrownedChapter implements Chapter {
     /** It looks between the bow and the fog coming on behind the boat, so both stand in the frame. */
     const fog = dark?.frontAt(this.front, 0) ?? this.front.set(STRAND.x, STRAND.y + 60);
     const toAim = Math.atan2(aim.x - eye.x, aim.z - eye.z), toFog = Math.atan2(fog.x - eye.x, fog.y - eye.z);
-    const look = toAim + Math.atan2(Math.sin(toFog - toAim), Math.cos(toFog - toAim)) * lerp(k.uprightStuckFog, k.stuckFog, wide) * (1 - fear * fear);
+    const look = toAim + Math.atan2(Math.sin(toFog - toAim), Math.cos(toFog - toAim)) * lerp(k.uprightStuckFog, k.stuckFog, wide) * (1 - fear * fear) * (1 - fast);
     const reachAim = Math.hypot(aim.x - eye.x, aim.z - eye.z);
     s.target.set(eye.x + Math.sin(look) * reachAim, aim.y, eye.z + Math.cos(look) * reachAim);
     s.zoom = lerp(k.uprightStuckZoom, k.stuckZoom, wide) * lerp(1, k.stuckCloser, fear * fear);

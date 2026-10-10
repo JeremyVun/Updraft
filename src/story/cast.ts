@@ -48,7 +48,7 @@ export interface Cast {
    * the belfry with its ivy, its kittens and the rings its bell sends out.
    */
   village?: Pick<DrownedVillage, 'cameraObstacles' | 'dark' | 'tub' | 'tree' | 'swing' | 'mill' | 'millSpiral' | 'sheet' | 'driven'
-    | 'belfry' | 'ivy' | 'kittens' | 'bellWaves'>;
+    | 'belfry' | 'prepareBell' | 'ivy' | 'kittens' | 'bellWaves'>;
   child: Traveller;
   plane: Glider;
   boat: Boat;

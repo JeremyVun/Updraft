@@ -58,6 +58,19 @@ for (const [fps, portrait, gust] of [[30, false, 0], [60, true, 0], [30, true, 8
     assert(driftChild < 1, `child out of frame in the drift: ${driftChild}`);
   }
 
+  {
+    const cast = drownedCast(wind);
+    cast.input = { muted: true, present: false };
+    const chapter = new DrownedChapter(cast);
+    chapter.restoreCheckpoint('sail', []);
+    const rig = rigFor(chapter);
+    for (let i = 1; i <= fps * 40 && chapter.beat !== 'becalmed'; i++) step(chapter, cast, rig, 1 / fps, i / fps);
+    assert.equal(chapter.beat, 'becalmed');
+    const direction = rig.camera.getWorldDirection(new THREE.Vector3()).setY(0).normalize();
+    const forward = direction.x * Math.sin(cast.boat.yaw) + direction.z * Math.cos(cast.boat.yaw);
+    assert(forward > 0.5, `arrival camera looks forward before roof contact: ${forward}`);
+  }
+
   /** The church browser check covers the close farewell; hull framing begins once its departure dolly ends. */
   const { cast, chapter } = stormCast(wind), boat = cast.boat, child = cast.child, village = cast.village;
   const rig = rigFor(chapter);
@@ -114,4 +127,4 @@ for (const [fps, portrait, gust] of [[30, false, 0], [60, true, 0], [30, true, 8
 }
 fs.writeFileSync('/tmp/updraft-drowned-camera.json', JSON.stringify(results, null, 2));
 console.log(results.map((r) => JSON.stringify(r)).join('\n'));
-console.log('Village camera: entry on the stern quarter; after the farewell dolly, the storm to the beach with the lighthouse framed as its light goes out and child and hull in frame, at 30/60fps, calm and gust, both aspects.');
+console.log('Village camera: entry on the stern quarter, forward by roof contact, then after the farewell dolly the storm to the beach with the lighthouse framed as its light goes out and child and hull in frame, at 30/60fps, calm and gust, both aspects.');

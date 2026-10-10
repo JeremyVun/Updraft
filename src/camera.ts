@@ -69,6 +69,8 @@ export interface Shot {
   exact?: boolean;
   /** Optional playable pair. Fit both within a bounded retreat; the primary always keeps the frame. */
   subjects?: { primary: THREE.Vector3; secondary: THREE.Vector3; tertiary?: THREE.Vector3;
+    /** World-space radius around the primary that must stay inside the frame. */
+    primaryRadius?: number;
     /** Additional meaningful bounds, such as the returned stars of a constellation. */
     points?: readonly THREE.Vector3[]; margin: number; extra: number };
 }
@@ -381,13 +383,15 @@ export class CameraRig {
     }
     const vertical = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * pair.margin;
     const horizontal = vertical * camera.aspect;
+    const radius = pair.primaryRadius ?? 0;
     let needed = 0;
     for (let i = 0; i < 3 + (pair.points?.length ?? 0); i++) {
       const point = i === 0 ? pair.primary : i === 1 ? pair.secondary : i === 2 ? pair.tertiary : pair.points![i - 3];
       if (!point) continue;
       this.local.copy(point).applyMatrix4(camera.matrixWorldInverse);
-      needed = Math.max(needed, Math.abs(this.local.x) / horizontal + this.local.z,
-        Math.abs(this.local.y) / vertical + this.local.z);
+      const padding = i === 0 ? radius : 0;
+      needed = Math.max(needed, (Math.abs(this.local.x) + padding) / horizontal + this.local.z,
+        (Math.abs(this.local.y) + padding) / vertical + this.local.z);
     }
     needed = Math.min(pair.extra, needed);
     this.fitBack = this.fitCommitment.update(Math.max(0, needed), dt, open, settle, c.fitHold);
@@ -397,8 +401,8 @@ export class CameraRig {
     const depth = Math.max(1, -this.local.z);
     // Recompose within the available room before asking for any more distance. If an old runaway
     // cannot fit, the child's interval wins until the plane has flown back into reach.
-    const primaryLeft = this.local.x - depth * horizontal, primaryRight = this.local.x + depth * horizontal;
-    const primaryBottom = this.local.y - depth * vertical, primaryTop = this.local.y + depth * vertical;
+    const primaryLeft = this.local.x + radius - depth * horizontal, primaryRight = this.local.x - radius + depth * horizontal;
+    const primaryBottom = this.local.y + radius - depth * vertical, primaryTop = this.local.y - radius + depth * vertical;
     let left = primaryLeft, right = primaryRight, bottom = primaryBottom, top = primaryTop;
     for (let i = 1; i < 3 + (pair.points?.length ?? 0); i++) {
       const point = i === 1 ? pair.secondary : i === 2 ? pair.tertiary : pair.points![i - 3];
@@ -420,9 +424,9 @@ export class CameraRig {
     this.local.copy(pair.primary).applyMatrix4(camera.matrixWorldInverse);
     const safeDepth = Math.max(1, -this.local.z);
     const safeV = Math.tan(THREE.MathUtils.degToRad(camera.fov) / 2) * Math.max(pair.margin, c.primarySafetyMargin);
-    const safeH = safeV * camera.aspect;
-    const sx = this.local.x - THREE.MathUtils.clamp(this.local.x, -safeDepth * safeH, safeDepth * safeH);
-    const sy = this.local.y - THREE.MathUtils.clamp(this.local.y, -safeDepth * safeV, safeDepth * safeV);
+    const safeH = Math.max(0, safeDepth * safeV * camera.aspect - radius), safeY = Math.max(0, safeDepth * safeV - radius);
+    const sx = this.local.x - THREE.MathUtils.clamp(this.local.x, -safeH, safeH);
+    const sy = this.local.y - THREE.MathUtils.clamp(this.local.y, -safeY, safeY);
     if (sx || sy) {
       this.probe.copy(this.right).multiplyScalar(sx).addScaledVector(this.up, sy);
       camera.position.add(this.probe);

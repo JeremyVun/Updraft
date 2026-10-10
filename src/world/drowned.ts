@@ -18,7 +18,8 @@ import { MillSpiral } from './crossings/mill-spiral';
 import { WashSheet } from './crossings/wash-sheet';
 import { DarkBank } from './drowned-dark';
 import { BELFRY_FOOT, Belfry, BELFRY, faceOut } from './belfry';
-import { BellWaves } from './crossings/bell';
+import { Bell, BellWaves } from './crossings/bell';
+import type { CrossingCast } from './crossings/tree-crossing';
 import { IvyFace } from './ivy-face';
 import { Kittens } from '../creatures/cat/kittens';
 import { WOOD_LANDING } from './wood';
@@ -1371,6 +1372,7 @@ export class DrownedVillage {
   readonly kittens = new Kittens();
   /** The rings the belfry's bell sends out over the fog. */
   readonly bellWaves: BellWaves;
+  private bell: Bell | null = null;
   private readonly storm = { value: 0 };
   /** Once the dark has risen the herons leave ahead of it and do not come back. */
   private fled = false;
@@ -1617,6 +1619,15 @@ export class DrownedVillage {
         new THREE.Vector3(perch.x + 0.65, perch.y + 0.5, perch.z + 0.65)));
       if (roosting && perch.y > 2.2 && perch.y < 8 && offChannel(perch.x, perch.z).d < 34) this.roosts.push(perch);
     }
+  }
+
+  prepareBell(cast: CrossingCast): Bell {
+    if (!this.bell) {
+      this.bell = new Bell({ pivot: this.belfry.pivot(), toward: new THREE.Vector2(0, 1), half: BELFRY.bearing }, cast, this.belfry.light);
+      this.bell.live = false;
+      this.belfry.group.add(...this.bell.objects);
+    }
+    return this.bell;
   }
 
   /**

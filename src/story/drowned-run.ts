@@ -3,7 +3,7 @@ import { verticalFov, type Shot } from '../camera';
 import type { Deck } from '../world/decks';
 import { tuning } from '../tuning';
 import {
-  CAT_WAY, DARK_AT_STRAND, DARK_END, GRANARY_TOP, GREEN_TREE, MILL, MILL_SITE, NAVE, PLACED, SHEET_SITE, SWING_SITE, TOWER_FOOT, TREE_SITE, WAY, WAY_GAPS, darkAlong, darkWayPoint, roofUnder,
+  CAT_WAY, DARK_AT_STRAND, DARK_END, GREEN_TREE, MILL, MILL_SITE, NAVE, PLACED, SHEET_SITE, SWING_SITE, TOWER_FOOT, TREE_SITE, WAY, WAY_GAPS, darkAlong, darkWayPoint, roofUnder,
   type WayDeck,
 } from '../world/drowned-way';
 import { HOIST } from '../world/crossings/windmill';
@@ -441,9 +441,6 @@ export class RoofRun {
   private glance = 0;
   private stretchFrom = 0;
   private settled = 0;
-  /** On the granary's ridge she stops and looks back down at the fog: from where on her way, and seconds of it (-1 before). */
-  private readonly lookDownFrom: number;
-  private lookingDown = -1;
   /** At the top of the green cottage's slope down to the swing's board she stops and looks at the swing: from where on her way, and seconds of it. */
   private readonly lookSwingFrom: number;
   private lookingSwing = -1;
@@ -496,7 +493,7 @@ export class RoofRun {
   private stationZoom = 1;
   private readonly sumEye = new THREE.Vector3();
   private readonly sumTarget = new THREE.Vector3();
-  private readonly held = { primary: new THREE.Vector3(), secondary: new THREE.Vector3(), margin: tuning.drownedCamera.run.margin,
+  private readonly held = { primary: new THREE.Vector3(), secondary: new THREE.Vector3(), primaryRadius: 0, margin: tuning.drownedCamera.run.margin,
     extra: tuning.drownedCamera.run.extra };
   /** How far the tree's view has gone round to the sheet's, 0 to 1, from when she is up on the trunk. */
   private treeRound = 0;
@@ -546,7 +543,6 @@ export class RoofRun {
       while (i + 1 < this.pieceAt[piece] && this.nodes[i + 1].s <= s) i++;
       return i;
     };
-    this.lookDownFrom = this.sOf(GRANARY_TOP);
     const board = this.nodes[this.pieceAt.swing - 1].at;
     let top = this.pieceAt.swing - 1;
     while (top > 0 && this.nodes[top].at.y < board.y + 1) top--;
@@ -695,7 +691,6 @@ export class RoofRun {
       this.catOver.add(piece);
       this[piece].phase = 'over';
     }
-    this.lookingDown = Infinity;
     this.lookingSwing = Infinity;
     this.treeRound = 1;
     this.catHome = true;
@@ -760,31 +755,9 @@ export class RoofRun {
     this.go();
   }
 
-  /**
-   * A turn gentle enough she takes it in her stride: on toward the place after without stopping at it. At the top of
-   * her way, on the granary's ridge, she stops and looks back down at the fog below while the lens goes round behind
-   * her; at the top of the slope down to the swing's board she stops and looks at the swing, while the lens comes round
-   * to lay it out.
-   */
   private walking(dt: number): void {
     const { child: c } = this.cast;
     const k = tuning.drowned.run;
-    if (this.lookingDown < 0 && this.stage === 'walk' && this.along >= this.lookDownFrom - 0.2 && !c.acting && this.pause < 0) {
-      this.lookingDown = 0;
-      c.stop();
-    }
-    if (this.lookingDown >= 0 && this.lookingDown < k.lookDownFor) {
-      this.lookingDown += dt;
-      /** She turns to her way before she goes on, so she never sets off turning toward the lens behind her. */
-      const fog = this.fogFront(this.look), on = this.pointAt(this.along + 3, this.tmp), turning = this.lookingDown > k.lookDownFor - k.turnOn;
-      c.faceToward(turning ? on.x : fog.x, turning ? on.z : fog.z, 1 - Math.exp(-dt * 3));
-      c.lookAt = turning ? null : fog.setY(c.position.y - 2);
-      if (this.lookingDown >= k.lookDownFor) {
-        c.lookAt = null;
-        this.go();
-      }
-      return;
-    }
     if (this.lookingSwing < 0 && this.stage === 'walk' && this.along >= this.lookSwingFrom - 0.2 && !c.acting && this.pause < 0) {
       this.lookingSwing = 0;
       c.stop();
@@ -1026,15 +999,14 @@ export class RoofRun {
   /**
    * The fog comes on along `DARK_WAY` behind her at her pace, never stopping and never rushing: toward `fogTrail`
    * behind her on her own way, `fogHold` while she works a piece, `fogBeat` while she stands looking at the swing and
-   * `fogBelow` as it climbs to the foot of the granary she looks down at it from, never nearer than `fogNearest` but
-   * there; it rises as it comes (`DarkBank.comeOn`).
+   * never nearer than `fogNearest`; it rises as it comes (`DarkBank.comeOn`).
    */
   private fog(dt: number): void {
     const k = tuning.drowned.run;
     const dark = this.cast.village!.dark;
-    const below = this.lookingDown >= 0 && this.lookingDown < k.lookDownFor, looking = this.lookingSwing >= 0 && this.lookingSwing < k.lookSwingFor;
+    const looking = this.lookingSwing >= 0 && this.lookingSwing < k.lookSwingFor;
     const hold = this.stage === 'tree' || this.stage === 'sheet' || this.stage === 'mill' || this.stage === 'swing' ? k.fogHold[this.stage]
-      : this.stage === 'nave' ? k.fogEnd : below ? k.fogBelow : looking ? k.fogBeat : k.fogTrail;
+      : this.stage === 'nave' ? k.fogEnd : looking ? k.fogBeat : k.fogTrail;
     const want = this.dark - hold;
     /** At the tower's foot it comes on to a few roofs back and waits there for the church. */
     const pull = THREE.MathUtils.clamp((want - dark.front) * k.fogPull, this.stage === 'nave' ? 0 : k.fogSlowest, k.fogFastest);
@@ -1043,7 +1015,7 @@ export class RoofRun {
     const swinging = this.stage === 'swing' && (this.swing.phase === 'boarding' || this.swing.phase === 'riding');
     if (!swinging) this.her.set(this.cast.child.position.x, this.cast.child.position.z);
     dark.faces = this.her;
-    dark.comeOn(Math.min(dark.front + this.fogSpeed * dt, this.dark - (below ? k.fogBelow : k.fogNearest)), dt);
+    dark.comeOn(Math.min(dark.front + this.fogSpeed * dt, this.dark - k.fogNearest), dt);
   }
 
   /**
@@ -1062,7 +1034,7 @@ export class RoofRun {
     }
     const k = tuning.drowned.run;
     const beat = (t: number, length: number) => t >= 0 && t < length;
-    if (this.stage !== 'walk' || this.pause >= 0 || beat(this.lookingDown, k.lookDownFor) || beat(this.lookingSwing, k.lookSwingFor)) return;
+    if (this.stage !== 'walk' || this.pause >= 0 || beat(this.lookingSwing, k.lookSwingFor)) return;
     this.glance += dt;
     if (this.glance > k.glanceEvery + k.glanceFor) this.glance = 0;
     if (this.glance > k.glanceEvery) c.lookAt = this.fogFront(this.look).setY(c.position.y + 1);
@@ -1130,6 +1102,7 @@ export class RoofRun {
       this.target.lerp(this.stationTarget, at);
       this.eye.set(this.target.x + Math.sin(bearing) * reach, this.target.y + rise, this.target.z + Math.cos(bearing) * reach);
     }
+    if (this.sheet.done && !this.started.has('mill')) this.eye.z += k.uprightSheetExitBack * (1 - wide) * (1 - at);
     /**
      * Asked to stand and look a little ahead of where it should as she walks, by as far as the focus and the rig's
      * easing trail behind a steady walk (never at more than a walk's pace), so the eased lens stands where it was laid
@@ -1143,14 +1116,26 @@ export class RoofRun {
     shot.from = undefined;
     /** She and what she goes after share the frame: the piece she is at, or the cat ahead, or her way on. */
     const held = this.held;
-    held.primary.copy(c).setY(c.y + 1.2);
+    const approachingSwing = this.handed >= 0 && !this.started.has('swing');
+    held.margin = approachingSwing ? k.approach.swing.margin : k.margin;
+    held.primaryRadius = approachingSwing ? k.approach.swing.uprightHeadRadius * (1 - wide) : 0;
+    if (approachingSwing) this.cast.child.face(held.primary);
+    else held.primary.copy(c).setY(c.y + 1.2);
     if (at > 0.5) held.secondary.copy(this.stationTarget);
     else if (cat.distanceTo(c) < k.catHeld) held.secondary.copy(cat);
     else this.pointAt(this.along + k.lookOn, held.secondary).setY(c.y + 1);
     /** At a piece its view is authored to hold both; it never draws back while she works it. */
     held.extra = at > 0.5 ? 0 : k.extra;
     shot.zoom = THREE.MathUtils.lerp(THREE.MathUtils.lerp(k.uprightZoom, k.zoom, wide), this.stationZoom, at);
-    this.fogGlance(shot.zoom, (1 - at) * (this.stage === 'walk' ? 1 : 0), dt);
+    const millExit = this.handed >= 0 && this.lookingSwing < 0;
+    this.fogGlance(shot.zoom, this.stage === 'walk' ? (millExit ? 1 : 1 - at) : 0, dt);
+    if (approachingSwing) {
+      const a = k.approach.swing;
+      const close = THREE.MathUtils.smootherstep(this.along, this.lookSwingFrom - a.uprightCloseFrom, this.lookSwingFrom)
+        * (1 - THREE.MathUtils.smootherstep(this.lookingSwing, 0, tuning.drowned.run.lookSwingFor));
+      // Widen the close portrait without asking the fog glance to turn further away from her.
+      shot.zoom *= THREE.MathUtils.lerp(1, a.uprightCloseZoom, close * (1 - wide));
+    }
     shot.subjects = held;
     shot.attention = undefined;
     shot.composition = undefined;
@@ -1286,6 +1271,11 @@ export class RoofRun {
       out.set(base.x + lerp(uprightAt[0], wideAt[0], wide), base.y + lerp(uprightAt[1], wideAt[1], wide), base.z + lerp(uprightAt[2], wideAt[2], wide));
     set(a.eye, a.uprightEye, this.stationEye);
     set(a.at, a.uprightAt, this.stationTarget);
+    if ('lookScale' in a) {
+      const near = lerp(1, a.lookScale, THREE.MathUtils.smootherstep(this.along, this.lookSwingFrom - a.lookCloseFrom, this.lookSwingFrom));
+      this.stationEye.x = from.x + (this.stationEye.x - from.x) * near;
+      this.stationEye.z = from.z + (this.stationEye.z - from.z) * near;
+    }
     /** Following her, it leans toward the cat while it leads her on her own way. */
     if ('track' in a && !this.catPiece && !this.catAcross) this.stationTarget.lerp(this.catEye, tuning.drownedCamera.run.catLean * this.leaned);
     if ('zoom' in a) this.stationZoom = lerp(a.uprightZoom, a.zoom, wide);
@@ -1297,17 +1287,13 @@ export class RoofRun {
       const was = Math.atan2(e.x - from.x, e.z - from.z), then = Math.atan2(to.x - from.x, to.z - from.z);
       const bearing = was + Math.atan2(Math.sin(then - was), Math.cos(then - was)) * u;
       const reach = lerp(Math.hypot(e.x - from.x, e.z - from.z), Math.hypot(to.x - from.x, to.z - from.z), u);
-      e.set(from.x + Math.sin(bearing) * reach, lerp(e.y, to.y, u), from.z + Math.cos(bearing) * reach);
+      e.set(from.x + Math.sin(bearing) * reach, lerp(e.y, to.y, THREE.MathUtils.smoothstep(u, a.lookRiseFrom, 1)), from.z + Math.cos(bearing) * reach);
       this.stationTarget.lerp(set(a.lookAt, a.uprightLookAt, this.tmp2, wait), u);
     }
     if ('fogAt' in a) this.stationTarget.lerp(this.fogFront(this.tmp2).setY(this.stationTarget.y), lerp(a.uprightFogAt, a.fogAt, wide));
   }
 
-  /**
-   * From the mill's view round her right to her side as she goes west after the cat, in one move: drawing in behind her
-   * as she walks off the hoist, so it passes between her and the old tree, round past her shoulder while she looks
-   * back down at the fog, and on to her side as she sets off.
-   */
+  // Carry the mill view along with her, then draw in while keeping the cat below in view.
   private handOff(a: typeof tuning.drownedCamera.run.approach.swing, wide: number): void {
     const c = this.cast.child.position, lerp = THREE.MathUtils.lerp, smooth = THREE.MathUtils.smoothstep, [from, via, to] = this.handTurns;
     const { eye, target } = this.handTo, zoom = this.stationZoom;
@@ -1330,7 +1316,7 @@ export class RoofRun {
     const reach = lerp(lerp(from[1], via[1], near), to[1], on), high = lerp(lerp(from[2], via[2], near), to[2], on);
     this.stationEye.set(c.x + Math.sin(bearing) * reach, high, c.z + Math.cos(bearing) * reach);
     this.stationTarget.lerp(target, near).lerp(this.catEye, a.catDown * near * (1 - on));
-    this.stationZoom = lerp(1, zoom, near);
+    this.stationZoom = lerp(1, zoom, smooth(this.handed / a.handFor, a.closeBy, 1));
   }
 
   private view(piece: Piece, wide: number): void {

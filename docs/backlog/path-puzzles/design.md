@@ -809,35 +809,49 @@ Jeremy's further instruction, verbatim:
 
 New findings are proposals for Jeremy to approve before they are changed. Continue the agreed integration checks.
 
-36. **Camera as the becalmed boat reaches the roof — awaiting review.** Jeremy's report above. Capture the full
-    movement, including the look back at the fog and the cat's departure; propose a continuous dolly toward the
-    direction of travel without losing those story beats. The captured camera stays broadside with the water
-    behind her prominent; the destination roof becomes clear late. Evidence:
-    `/tmp/updraft-takeover-TUMeWz/roof-arrival-review.jpg` and `roof-arrival.mp4` (sampled at 2 fps) in the same directory.
-37. **Portrait camera after the sheet — confirmed, awaiting approval.** The integrated run loses the fog below
-    the frame for 2.3 seconds between the sheet landing and the approach to the mill. Adjust this transition's
-    framing locally and retain both the child and the approaching fog. Evidence:
-    `/tmp/updraft-takeover-TUMeWz/sheet-exit-before.jpg`, `run-port.log` and `run-port-trace.json` in the same directory.
-38. **After the mill — remaining concern from item 25, awaiting Jeremy's judgement.** The merged fix makes the
-    move continuous and keeps the cat visible, but the camera still circles around her while she looks back at
-    the fog. The prior session proposed dropping that look back if the remaining orbit reads wrong in play.
-    Current integrated capture: `/tmp/updraft-takeover-TUMeWz/mill-exit-review.jpg`.
-39. **Ultra performance — item 29, investigation only.** The belfry at a 1600×900 viewport on a 2× display runs
+Jeremy approved the six proposals below on 2026-10-10: "proceed". Implement items 36–39 and 41, repair the
+incomplete fixtures in 40 and investigate its remaining assertions. Any additional gameplay changes uncovered
+outside those proposals still come back as new review items. Main merge and deployment remain separate.
+
+36. **Camera as the becalmed boat reaches the roof — implemented and verified.** The camera previously stayed
+    broadside until contact, making the destination clear late. It now turns forward during seconds 5–19 of the
+    drift, before the boat touches the roof. The drift, cat's departure and climb remain intact. Both browser
+    orientations pass; at portrait contact the forward-direction dot product is 0.825 and the ridge is on screen.
+    Before/after: `/tmp/updraft-approved-Ad2y4S/arrival-before-after.jpg`; portrait: `arrival-port-final-9-at-rest.png`.
+37. **Portrait camera after the sheet — implemented and verified.** A local setback and revised mill approach aim
+    reduce the fog's disappearance from 2.3 seconds to 1.2, retaining the child and cat. Baseline:
+    `/tmp/updraft-takeover-TUMeWz/sheet-exit-before.jpg`; full follow-up replay in `/tmp/updraft-approved-Ad2y4S/`.
+38. **After the mill — approved follow-up to item 25, final visual verification.** Removed the extra nine-second
+    look back. The camera carries the mill view into a six-second handoff while she walks on, draws inside the old
+    tree's branches, then rises to see the cat descend the cottage. The close approach fits her face; portrait opens
+    earlier to keep her hood inside the frame. The fog still follows its route and remains subject to its framing gate.
+39. **Ultra performance — warmup fixed; fog cost remains open.** The belfry at a 1600×900 viewport on a 2× display runs
     at about 54–57 fps on Ultra, with occasional 33 ms frames; Low and Ultra with the sea fog disabled stay at
     60 fps in this sample. The repeated Ultra measurement slows over the run, so this is evidence of fog cost,
-    not a precise performance estimate. Proposal: profile and reduce the fog's per-pixel cost while preserving
-    its shape and coverage, with matching captures and frame timings. The same belfry sample reports one shader
-    first drawn after boot (`ShaderMaterial #233`); identify that missing warmup before claiming a visible hitch.
-    Present these findings for approval before changing the renderer or boot sequence.
-40. **Regression checks outside the integrated sequence — awaiting triage.** Broad checks expose outdated
-    fixtures and failures in Lines, little boats, journey pacing, bandage cost and village update gating. Exact
-    failures are recorded in build_plan.md below the takeover. Proposal: repair the incomplete fixtures first,
-    then investigate the remaining assertions; bring any resulting gameplay changes back for approval.
-41. **Portrait goodbye — visual concern, awaiting approval.** At the slow blink the cat is only 39 px tall in a
-    900×1600 capture, with the child close to the lower-right edge. Both remain on screen, so the current LENS gate
-    passes; its 45 px cat-size minimum applies only in landscape. The blink is difficult to read at this scale.
-    Proposal: reframe the portrait goodbye to make the cat's face legible while retaining her look up at it, then
-    add a portrait readability gate. Evidence: `/tmp/updraft-takeover-TUMeWz/church-port-slow-blink.png`.
+    not a precise performance estimate. Neither tested fog optimisation produced a useful gain, so the original fog
+    remains. The late shader was the bell's bronze: preparing one reusable bell before warmup eliminates its late
+    first draw. The belfry save restores and plays on. Sustained Ultra and iPad performance are not yet established.
+40. **Regression checks outside the integrated sequence — repaired and verified.** Corrected outdated fixtures in
+    Lines, little boats, journey pacing, bandage cost, kite placement and village update gating. All 50 mechanics
+    checks pass together, without gameplay changes. Repairs and evidence are recorded in build_plan.md.
+41. **Portrait goodbye — implemented and verified.** The cat at its slow blink is now 50 px tall in a 900×1600
+    capture, up from 39 px, with the child's face at (0.76, 0.80). The 45 px readability gate now covers both aspects.
+    Both full church-to-wood replays pass, retaining the 88-second farewell. Before/after:
+    `/tmp/updraft-approved-Ad2y4S/farewell-before-after.jpg`.
+42. **Intermittent tree-gaze check — new finding, pending review.** One full portrait replay (`run9-port.log` in the
+    follow-up evidence directory) stopped before the mill: during the six-second quiet sample, she looked across the
+    lane 25% of the time and up at the tree 21%, below the existing 40% across-lane minimum. Earlier replays of the
+    unchanged tree behaviour passed. The companion can temporarily take her gaze for 1.4–2.6 seconds; this is a
+    possible cause, not yet confirmed by target-by-target capture. Proposal: capture those targets over several full
+    gaze cycles, then decide whether the check needs a longer sample or her puzzle attention needs changing. Neither
+    the gaze behaviour nor the assertion has been changed for this finding.
+
+Follow-up evidence: `/tmp/updraft-approved-Ad2y4S/`. All 50 mechanics checks pass together. The portrait church
+sequence passes with the new 45 px readability gate: the cat is 50 px tall, her face at (0.76, 0.80), with no cuts
+through the farewell and storm. The bell is now prepared during boot; the belfry reports zero late shader programs.
+Two fog optimisations were discarded because they did not improve measured performance. The original fog remains.
+The mill camera needs screenshot inspection as well as roof checks: an intermediate candidate passed those checks
+while the old tree's branches filled the foreground. The run check now also raycasts that tree's geometry.
 
 Already completed during the takeover: silent restoration of the `sail` checkpoint to the designed air-dies
 beat; verification of the music handoff after the 88-second farewell; equivalent ascending `smoothstep`

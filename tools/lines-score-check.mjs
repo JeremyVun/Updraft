@@ -71,8 +71,8 @@ try {
     for(const point of ['curtain-1','curtain-2','family']) {
       const restored=Object.assign(Object.create(LinesChapter.prototype),{
         cast:{child:{position:new THREE.Vector3(300,0,0),stop(){},walkTo(){}},
-          cygnet:{follow(){},watch(){}},plane:{hold(){}},boat:{beach(){}}},
-        now:0,beatStart:0,
+          cygnet:{follow(){},watch(){}},plane:{hold(){}},boat:{position:new THREE.Vector3(),beach(){}}},
+        now:0,beatStart:0,boatAt:new THREE.Vector3(),
       });
       takeCues();restored.restoreCheckpoint(point,point==='family'?[0,1]:[Number(point.slice(-1)),0]);
       check(restored.linesScore===(point==='family'?'shore':point==='curtain-1'?'second':'third')&&!takeCues().length,

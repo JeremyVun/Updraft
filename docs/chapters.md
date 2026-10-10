@@ -193,7 +193,7 @@ mittens (the hull rides the real mittens, `LittleBoats.afterChildPose`), carries
 onto the water. The
 player fills its sail; then every toy answers the wind near it. Seven toys sail the stream; the child follows the
 leading toy along the bank, hurrying while it sails away from her; the cygnet swims three sheltered stretches
-beside the toys (quick kicks and glides, wing flicks, spray: `swimPlay`) with dry-bank pauses, and the fleet waits
+beside the toys (quick kicks and glides, folded wings, spray: `swimPlay`) with dry-bank pauses, and the fleet waits
 for the child (never leashed to the swimming bird).
 
 **The way out to sea** is two steps of bathtime. Where the second pool narrows, the toys run aground on a line of

@@ -200,7 +200,9 @@ How the rig does it:
   velocities on; cuts and `exact` paths clear them. `Shot.orbit` lets an explicit eye travel round its focus.
 - Subject fitting and ground occlusion go through `Commitment`: an eased move toward what is needed that keeps the room
   it made until the need has stayed smaller for `fitHold` / `occlusionHold` seconds, then settles slowly. Only the
-  primary's 0.9 NDC safety frame (`primarySafetyMargin`) is enforced at once. Chapters size room for play with the
+  primary's 0.9 NDC safety frame (`primarySafetyMargin`) is enforced at once. Optional `subjects.primaryRadius`
+  reserves world-space padding around its point in both fitting and that safety frame: a close face needs room for
+  its hood, even when the face centre passes the framing gate. Chapters size room for play with the
   same class (`reach*`, the still island's plane).
 - A follow carries `followShare` of its target's smoothed travel. Boat carry (`carryAnchor`) takes up the anchor's
   speed at once but brakes no harder than `carryBrake`, rejects anchor changes and teleports, and accepts real

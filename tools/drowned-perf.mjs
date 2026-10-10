@@ -1,4 +1,4 @@
-// BASE selects the dev server; CHAPTER, W/H, DSF and SECONDS select one fixed view and sample length.
+// BASE selects the dev server; CHAPTER, W/H, DSF and SECONDS select one fixed view and sample length. TIME freezes fog motion for comparisons.
 import fs from 'node:fs';
 import { openBrowser } from './lib/browser.mjs';
 
@@ -15,18 +15,20 @@ try {
   page.on('pageerror', e => errors.push(e.message));
   await page.goto(`${process.env.BASE ?? 'http://127.0.0.1:5230/'}?shot=1&chapter=${chapter}`);
   await page.waitForFunction(() => window.__ready, null, { timeout: 90000 });
-  await page.evaluate(async () => {
-    const { atmo } = await import('/src/world/atmosphere.ts');
+  await page.evaluate(async fixedTime => {
+    const url = performance.getEntriesByType('resource').findLast(r => new URL(r.name).pathname === '/src/world/atmosphere.ts').name;
+    const { atmo } = await import(url);
     __game.story.current.update = () => {};
     const render = __game.renderer.render.bind(__game.renderer);
     window.__perfFogOff = false;
     __game.renderer.render = (...args) => {
-      const strength = atmo.uniforms.uSeaFogShape.value.w;
+      const strength = atmo.uniforms.uSeaFogShape.value.w, time = atmo.uniforms.uTime.value;
+      if (fixedTime !== null) atmo.uniforms.uTime.value = fixedTime;
       if (window.__perfFogOff) atmo.uniforms.uSeaFogShape.value.w = 0;
       try { return render(...args); }
-      finally { atmo.uniforms.uSeaFogShape.value.w = strength; }
+      finally { atmo.uniforms.uSeaFogShape.value.w = strength; atmo.uniforms.uTime.value = time; }
     };
-  });
+  }, process.env.TIME ? Number(process.env.TIME) : null);
   const cases = process.env.CASES?.split(',') ?? ['ultra', 'low', 'ultra-no-fog', 'ultra-no-reflection', 'ultra-no-post', 'ultra'];
   for (const name of cases) {
     await page.evaluate(name => {
