@@ -263,6 +263,8 @@ export class Soundscape {
   private backgroundWet!: GainNode;
   private backgroundGate!: GainNode;
   private backgroundDuck!: GainNode;
+  private musicDryGain!: GainNode;
+  private musicWetGain!: GainNode;
   /** The background's wet send is gated and ducked on its way into the shared reverb. */
   private wetGate!: GainNode;
   private wetDuck!: GainNode;
@@ -311,6 +313,7 @@ export class Soundscape {
   private activity = 0;
   private recognitionUntil = 0;
   private muted = false;
+  private musicMuted = false;
   private hidden = document.hidden;
   private padFilter!: BiquadFilterNode;
   private rainGain!: GainNode;
@@ -422,11 +425,17 @@ export class Soundscape {
     const musicSend = ctx.createGain();
     musicSend.gain.value = 0.9;
     this.musicBus.connect(musicSend).connect(this.reverb);
-    this.backgroundDuck = ctx.createGain(); this.backgroundDuck.connect(this.master);
+    this.musicDryGain = ctx.createGain();
+    this.musicDryGain.gain.value = this.musicMuted ? 0 : 1;
+    this.musicDryGain.connect(this.master);
+    this.musicWetGain = ctx.createGain();
+    this.musicWetGain.gain.value = this.musicMuted ? 0 : 1;
+    this.musicWetGain.connect(this.reverbConvolver);
+    this.backgroundDuck = ctx.createGain(); this.backgroundDuck.connect(this.musicDryGain);
     this.backgroundGate = ctx.createGain(); this.backgroundGate.connect(this.backgroundDuck);
     this.backgroundDry = ctx.createGain(); this.backgroundDry.connect(this.backgroundGate);
     this.backgroundWet = ctx.createGain(); this.backgroundWet.gain.value = .55;
-    this.wetDuck = ctx.createGain(); this.wetDuck.connect(this.reverbConvolver);
+    this.wetDuck = ctx.createGain(); this.wetDuck.connect(this.musicWetGain);
     this.wetGate = ctx.createGain(); this.wetGate.connect(this.wetDuck);
     this.backgroundWet.connect(this.wetGate);
     this.backgroundBus = ctx.createGain(); this.backgroundBus.connect(this.backgroundDry);
@@ -518,6 +527,14 @@ export class Soundscape {
     if (!this.ctx) return;
     this.master.gain.setTargetAtTime(muted ? 0 : 0.9, this.ctx.currentTime, 0.25);
     this.syncPlayback();
+  }
+
+  setMusicMuted(muted: boolean): void {
+    this.musicMuted = muted;
+    if (!this.ctx) return;
+    for (const node of [this.musicDryGain, this.musicWetGain]) {
+      node.gain.setTargetAtTime(muted ? 0 : 1, this.ctx.currentTime, 0.25);
+    }
   }
 
   /** An unseen ship beyond the lighthouse, outside the musical cue/ducking path. */

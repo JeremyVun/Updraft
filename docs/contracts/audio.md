@@ -310,6 +310,12 @@ pan and bounded scheduling; finished nodes disconnect.
 
 ## Start-up and lifecycle
 
+The Music button mutes background scores and the shared pad through separate dry and reverb-send gains.
+Existing reverb tails ring out. Wind, wildlife, physical sounds, gesture chimes, story cues and the playable piano
+remain audible. The score keeps following the story while music is muted; arrivals and endings cannot override
+the preference. The Sound button and M shortcut still mute everything. `tools/music-mute-check.mjs` renders both
+music routes and the effects routes through this control.
+
 The Begin gesture creates and resumes the AudioContext and builds its graph, nothing more. The loop noise and reverb
 impulse are then synthesised in slices over about a second (`sliced.ts`), each long convolver gets a frame to itself,
 ambient beds join with a short fade and the reverb starts from silence, so nothing clicks. Arrivals only move gates and

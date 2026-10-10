@@ -179,6 +179,7 @@ differs, as a late readback can make it, is played once more; `ONLY=wood,jetty` 
 
 - Shared: `audio-check` (gesture thresholds and gates, cue timing, habitat, materials, clipping stress),
   `audio-continuity-check`, `audio-direction-check`, `gesture-harmony-check`, `arrival-audio-check`,
+  `music-mute-check` (independent music/effects routing, reverb tails and mute-all interaction),
   `music-transition-audit` (every handoff and all score sections), `audio-interruption-check`, `piano-audio-check`,
   `flock-audio-check`, `marine-audio-check`, `whale-voice-check` (production calls, clipping and speaker-band body;
   `MUTATE=thin` must fail), `birches-foley-check`.

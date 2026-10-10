@@ -505,6 +505,8 @@ controls.onQualityChange = mode => {
 };
 
 const sound = new Soundscape();
+sound.setMusicMuted(!controls.musicOn);
+controls.onMusicChange = on => sound.setMusicMuted(!on);
 const audioEnvironment = new AudioEnvironment(heightAt);
 contextRecovery.onPause = () => { input.muted = true; sound.setMuted(true); };
 const soundButton = document.getElementById('sound') as HTMLButtonElement;

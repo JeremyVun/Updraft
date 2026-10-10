@@ -26,7 +26,7 @@ const browser = [
 ];
 // Audio/score checks render through a headless dev server (no GPU); BASE selects it.
 const audio = [
-  'arrival-audio', 'audio', 'audio-continuity', 'audio-direction', 'birches-foley', 'birches-score',
+  'arrival-audio', 'audio', 'audio-continuity', 'audio-direction', 'music-mute', 'birches-foley', 'birches-score',
   'boats-score', 'dream-score', 'gesture-harmony', 'homeward-audio', 'lines-score', 'marine-audio',
   'meadow-score', 'opening-score', 'piano-audio', 'sea-score', 'sleeping-score', 'whale-voice', 'drowned-audio-regression',
 ];

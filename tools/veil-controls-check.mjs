@@ -29,7 +29,10 @@ try {
   });
   await page.goto(base+'?analytics=0&progress=0');
   await page.waitForFunction(() => document.querySelector('#sound').dataset.on === 'true');
-  for(const selector of ['#sound','#fullscreen','#quality'])assert(await page.locator(selector).isVisible());
+  for(const selector of ['#sound','#music','#fullscreen','#quality'])assert(await page.locator(selector).isVisible());
+  await page.locator('#music').click();
+  assert.equal(await page.locator('#music').getAttribute('aria-pressed'),'false');
+  assert.equal(await page.evaluate(() => localStorage.getItem('updraft.music.v1')),'off');
   await page.locator('#sound').click();
   await choose(page, 'high');
   assert.equal(await page.locator('#sound').getAttribute('data-on'),'false');
@@ -61,6 +64,21 @@ try {
   assert.equal(await page.evaluate(() => __audio.length),0);
   await page.locator('#sound').click();
   await page.waitForFunction(() => __audio.length===1 && __audio[0].state==='running');
+  assert.equal(await page.evaluate(() => __game.sound.musicMuted),true,'Begin and unmute respect music preference');
+  assert.equal(await page.evaluate(() => __game.sound.musicDryGain.gain.value),0);
+  await page.locator('#music').focus();
+  await page.keyboard.press('Space');
+  assert.equal(await page.evaluate(() => __game.sound.musicMuted),false,'keyboard music toggle reaches the engine');
+  await page.keyboard.press('Space');
+  await page.keyboard.press('m');
+  await page.waitForFunction(() => __audio[0].state==='suspended');
+  await page.keyboard.press('m');
+  await page.waitForFunction(() => __audio[0].state==='running');
+  assert.equal(await page.evaluate(() => __game.sound.musicMuted),true,'M keeps the music preference');
+  await page.reload();
+  await page.waitForFunction(() => document.querySelector('#music').dataset.on==='false');
+  assert.equal(await page.locator('#sound').getAttribute('data-on'),'true','reload restores independent settings');
+  assert.equal(await page.evaluate(() => __audio.length),0,'remembered preferences do not start audio');
   await page.close();
   const phone=await browser.newPage({viewport:{width:390,height:844},isMobile:true,hasTouch:true,deviceScaleFactor:2});
   await withoutHotReload(phone);
@@ -69,6 +87,8 @@ try {
   await phone.waitForFunction(() => document.querySelector('#sound').dataset.on==='true');
   assert.equal(await phone.locator('#sound').isVisible(),false,'phone controls start folded');
   await phone.locator('#corner-toggle').tap();
+  await phone.locator('#music').tap();
+  assert.equal(await phone.locator('#music').getAttribute('aria-pressed'),'false');
   await phone.locator('#sound').tap();
   await choose(phone, 'low');
   assert.equal(await phone.locator('#sound').getAttribute('data-on'),'false');
@@ -77,5 +97,5 @@ try {
   await phone.locator('#quality').blur();
   await phone.screenshot({path:'/tmp/updraft-veil-controls-phone.png'});
   assert.deepEqual(errors,[]);
-  console.log('Veil controls passed: loading-time mute/quality/fullscreen, no accidental Begin, queued quality, silent startup, mute retained on entry, in-game unmute and phone touch through the folded corner.');
+  console.log('Veil controls passed: loading-time sound/music/quality/fullscreen, silent startup, independent music preference on Begin and reload, keyboard toggles, in-game unmute and phone touch through the folded corner.');
 } finally { await close(); }
