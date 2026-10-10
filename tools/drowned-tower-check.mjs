@@ -40,6 +40,7 @@ if (!only || only === 'cat') {
 if (!only || only === 'band') {
   const meshes = cast.village.objects.filter(o => o.isMesh && o.geometry.attributes.aLocal);
   for (const axis of ['x', 'z']) for (const side of [-1, 1]) for (const corner of [-1, 1]) {
+    if (axis === 'x' && side === -1) continue;
     const across = axis === 'x' ? 'z' : 'x';
     const origin = new THREE.Vector3(TOWER.x, 5.35, TOWER.z);
     origin[axis] += side * 6;
@@ -51,4 +52,11 @@ if (!only || only === 'band') {
     console.log(`stone band ${axis}/${side}/${corner}: face separation ${gap.toFixed(3)} m`);
     assert(gap > 0.04, `stone band is coplanar with corner post: ${gap}`);
   }
+  for (const across of [-1, 0, 1]) {
+    const origin = new THREE.Vector3(TOWER.x - 6, 5.35, TOWER.z + across);
+    const hits = new THREE.Raycaster(origin, new THREE.Vector3(1, 0, 0)).intersectObjects(meshes, false);
+    assert(hits.length > 0, 'ivy face must retain its tower wall');
+    assert(Math.abs(hits[0].distance - (6 - TOWER.half)) < 0.001, 'stone band obstructs the ivy climb');
+  }
+  console.log('ivy face: no stone band across the climb');
 }

@@ -1226,6 +1226,13 @@ Keep the plane visible on the backpack from the approach to the ivy through both
 Preserve the bell's local clearing through the farewell, blend it away as she leaves, and repair the density
 discontinuity while the bank lowers. Keep the storm's existing density, colour, timing and lighting.
 
+Jeremy's final climbing-route polish, verbatim:
+
+> great, one last issue. do you think we should remove this single bar ontop of the vines since the child and cat are climbing up and down the vines?
+
+Remove the lower stone belt from the west, ivy-covered tower face so it no longer crosses their climb.
+Keep the window sill and the belt on the other three faces.
+
 Current follow-up list (all authorized):
 - 56 reopened: the approaching hull pushed the untouched tub. Start it outside that path, retaining attraction
   after player input. Full-entry CPU tests now measure zero drift; the old start fails at 0.389 m.

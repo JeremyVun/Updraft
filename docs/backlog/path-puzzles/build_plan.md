@@ -1359,6 +1359,14 @@ bell ring and with a 31 m clearing. These are local desktop measurements, not de
 Evidence: `/tmp/updraft-mist-Cq6Qis/README.md`. The portrait bell → woods replay also passes, with no camera
 cuts. The field checks pass on Metal and SwiftShader; restoring the old shader fails as expected.
 
+#### Clear ivy climb — 2026-10-10
+
+Removed the lower stone belt from the west, ivy-covered tower face. Three separate strips retain the belt on
+the other faces; the window sill remains. The existing geometry check now verifies the clear climb and the
+remaining bands' 0.05–0.08 m separation from the corner posts. Typecheck, production build and that check pass.
+Live tower-foot → climb → belfry captures confirm the unobstructed vines; evidence:
+`/tmp/updraft-vine-strip-XK0H9r/vines-climb.png`. Review server remains port 5331. No merge or deployment.
+
 #### Softer mist edge and belfry continuity — 2026-10-10
 
 Jeremy's new tree-exit still showed the continuous mist's straight front. The cheap renderer now spreads that
