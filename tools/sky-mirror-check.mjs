@@ -1,5 +1,6 @@
 // Fallen stars: real mouse/touch sweeps and circles, companion walks, checkpoint reload and far-side boarding.
 // LAST_STAR_ONLY=1 restores three returned lights and plays the added fourth through departure.
+// CONTINUOUS=1 keeps all four ascents in one camera session without checkpoint reloads.
 // SOFTWARE=1 uses SwiftShader without taking the shared GPU lock.
 // Usage: node tools/sky-mirror-check.mjs [prefix]; TOUCH=1 for 390x844. Shared GPU lock; captures in /tmp.
 import { chromium } from 'playwright-core';
@@ -153,11 +154,20 @@ try {
       await up();
     }
     console.log(JSON.stringify({star,peakCharge}));
+    await page.waitForFunction(n=>__game.skyMirror.progress>n || __game.skyMirror.stars.some(s=>s.state==='rising' && s.flight>0.7),star,{timeout:15000});
+    const framing=await page.evaluate(()=>{
+      const g=__game,camera=g.rig.camera;
+      return {distance:camera.position.distanceTo(g.child.position),stars:g.skyMirror.stars
+        .filter(s=>s.state==='sky' || s.state==='rising').map(s=>s.light.position.clone().project(camera).toArray())};
+    });
+    assert(framing.distance<42,'ascent keeps the child close enough to read');
+    assert(framing.stars.every(([x,y])=>Math.abs(x)<0.95 && Math.abs(y)<0.95),'new and earlier stars share the ascent view');
+    await page.screenshot({path:`${prefix}-rising-${star}.png`});
     await page.waitForFunction(n=>__game.skyMirror.progress>n,star,{timeout:software?60000:15000});
     outcomes.push(await page.evaluate(()=>({mask:__game.skyMirror.completedMask,stars:__game.skyMirror.stars.map(s=>s.state)})));
     console.log(JSON.stringify(outcomes.at(-1)));
     await page.screenshot({path:`${prefix}-returned-${star}.png`});
-    if(star===0 || star===2) {
+    if(!process.env.CONTINUOUS && (star===0 || star===2)) {
       const mask=outcomes.at(-1).mask;
       await page.waitForFunction(mask=>{const saved=JSON.parse(localStorage.getItem('updraft.progress.v1')??'null');
         return saved?.data?.[0]===mask && saved?.point===`stars4-${mask}`;

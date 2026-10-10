@@ -544,7 +544,7 @@ ascent, on its feet at a slow planted walk; it never plays the puzzle for the pl
 above the far jetty as a slightly crooked kite, its outline drawn as neighbouring lights return and its cross lines
 once all four are up; each star lights a stretch of broken reflection across the deep channel. The last joins them
 and the empty boat comes round the deep outer channel (never over the flat) to the far jetty while the camera
-widens. The child gathers the cygnet, walks up that jetty's ramp and boards. The departure kite flies over the far
+holds the sky view. The child gathers the cygnet, walks up that jetty's ramp and boards. The departure kite flies over the far
 jetty throughout.
 
 Rulings: no passive solution (the answer never appears while the player does nothing). No clouds on the ground or
@@ -553,6 +553,19 @@ room too soon), and the constellation is a crooked kite echoing the departure ki
 the child's face, as if she is about to blow through it.
 
 Rules: no timers, hidden percentages, constellation matching, raised causeway or sand road.
+
+Camera correction, 2026-10-10. Jeremy's brief:
+
+> "I think something has regressed with the camera dollying on the sky mirror chapter. can you check? for example, when i updraft the second star up and it goes into the sky, the camera never pans up far enough to see the first star. There also seems to be some weird overly done zoom outs"
+>
+> "the resting camera position also needs a bit of work to restore it properly. the horizon is so far up the top of the screen. shouldn't we atleast follow rule of thirds? what looks best?"
+
+The resting horizon sits at the upper third in landscape and portrait, leaving the child, bubbles and reflections
+on the water below. An ascent turns the gaze upward with all returned stars included in the composition, holds
+that gaze for two seconds after arrival while the child starts walking, then eases back to play. The final star
+flows into the same sky composition. Fitting may retreat up to 8 m; it must not compensate for a downward gaze
+with a large zoom-out. Camera checks cover earlier stars during later ascents and the horizon at every stop;
+`CONTINUOUS=1 node tools/sky-mirror-check.mjs` plays all four without resetting the camera between them.
 
 Knobs: `tuning.skyMirror`, `tuning.mirrorCompanion`. Checks: `tools/sky-mirror-logic-check.mjs`,
 `sky-mirror-check.mjs`, `sky-mirror-pointer-check.mjs`, `sky-mirror-visibility-check.mjs`. Saves: `stars4-<mask>`

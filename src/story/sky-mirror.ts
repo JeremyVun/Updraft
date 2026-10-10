@@ -1,7 +1,7 @@
 import type { MirrorScorePhase } from '../audio/dream-score';
 import type { CheckpointPayload } from './checkpoint-data';
 import * as THREE from 'three';
-import type { Shot } from '../camera';
+import { verticalFov, type Shot } from '../camera';
 import { tuning } from '../tuning';
 import { MIRROR_STARS, MIRROR_STAR_MASK, MIRROR_BOWL, MIRROR_LANDING, MIRROR_ENTRY_DECK, MIRROR_BERTH, MIRROR_DECK, MIRROR_DRIFT, mirrorBed } from '../world/sky-mirror-layout';
 import type { Cast, Chapter } from './cast';
@@ -35,13 +35,14 @@ export class SkyMirrorChapter implements Chapter {
   }
   readonly pace=0.8;
   readonly focus=new THREE.Vector3();
-  readonly shot: Shot={target:new THREE.Vector3(),distance:T.cameraDistance,height:T.cameraHeight,
+  readonly shot: Shot={target:new THREE.Vector3(),distance:T.cameraDistance,height:0,
     from:new THREE.Vector3(-0.92,0,0.39).normalize(),clearance:1.6};
   dusk=T.duskFrom;
   private elapsed=0;
   private drift=-1;
   private boatReady=false;
   private returned=0;
+  private skyHold=0;
   private readonly companion: MirrorCompanion;
   private nextChase=0;
   private readonly arrival = new PlaneArrival();
@@ -51,7 +52,9 @@ export class SkyMirrorChapter implements Chapter {
   private readonly velocity=new THREE.Vector3();
   private readonly direction=new THREE.Vector3();
   private readonly watched=new THREE.Vector3();
-  private readonly constellation: THREE.Vector3[];
+  private readonly skyPoints: THREE.Vector3[]=[];
+  private readonly skyAim=new THREE.Vector3();
+  private readonly skyAttention={point:this.skyAim,strength:1,weight:T.cameraSkyWeight};
   private readonly frameChild=new THREE.Vector3();
   private readonly framePlay=new THREE.Vector3();
   private readonly deck={...MIRROR_DECK};
@@ -62,7 +65,6 @@ export class SkyMirrorChapter implements Chapter {
     this.companion = new MirrorCompanion(cast);
     const {child,plane,cygnet,skyMirror,sealife,boat}=cast;
     skyMirror.reset(); skyMirror.active=true;
-    this.constellation=skyMirror.stars.map(star=>star.sky);
     sealife.dolphinsWith(null,0); sealife.onDolphinShove=()=>{};
     child.decks.push(this.deck,this.entryDeck);
     child.stroll=T.stroll;
@@ -98,6 +100,7 @@ export class SkyMirrorChapter implements Chapter {
   saveCheckpoint(): CheckpointPayload<'mirror'> { return [this.cast.skyMirror.completedMask,this.target]; }
   restoreCheckpoint(point: string,data: number[]): void {
     this.companion.reset();
+    this.skyHold=0;
     const {child,cygnet,skyMirror:room,plane,boat}=this.cast;
     const currentSave=point.startsWith('stars4-');
     const starSave=currentSave || point==='stars' || point.startsWith('stars-');
@@ -155,6 +158,7 @@ export class SkyMirrorChapter implements Chapter {
   update(dt: number,time: number): void {
     this.elapsed+=dt;
     const {child:c,cygnet:k,skyMirror:room,plane:p}=this.cast;
+    this.skyHold=room.stars.some(s=>s.state==='rising')?T.cameraSkyHold:Math.max(0,this.skyHold-dt);
     p.guided = this.beat === 'throw' || this.beat === 'walk';
     this.dusk=THREE.MathUtils.lerp(T.duskFrom,T.duskTo,room.progress/room.stars.length);
     this.driftBoat(dt);
@@ -291,11 +295,15 @@ export class SkyMirrorChapter implements Chapter {
     const leaving=['gather','jetty','boarding','aboard'].includes(this.beat);
     const playing=this.beat==='play';
     const reveal=this.beat==='reveal';
-    // The constellation is a group of subjects, so its whole shape survives different approaches/aspects.
-    this.shot.subjects!.points=reveal?this.constellation:undefined;
-    // Coverage stays continuous from a rising light into the next walk and the constellation.
     this.shot.smoothFit=1.5;
     const rising=room.stars.find(s=>s.state==='rising');
+    const watching=!!rising || this.skyHold>0 || reveal;
+    this.skyPoints.length=0;
+    if(watching)for(const star of room.stars) {
+      if(star.state==='sky' || star===rising)this.skyPoints.push(star.sky);
+    }
+    this.shot.subjects!.points=watching?this.skyPoints:undefined;
+    this.shot.attention=undefined;
     const portrait=window.innerWidth<window.innerHeight;
     // Keep the ground destination fixed while steering: tracking the moving bubble would slide the
     // view under the player's hand. A side view separates the hoop, bubble and its fallen light.
@@ -309,19 +317,18 @@ export class SkyMirrorChapter implements Chapter {
     this.shot.target.y=1.8+(room.carried?Math.max(0,room.carried.position.y-2)*T.cameraLiftFollow:0);
     this.shot.from!.set(-0.92,0,leaving?0.72:0.39).normalize();
     this.shot.distance=portrait?T.cameraPortraitDistance:T.cameraDistance;
-    this.shot.height=portrait?T.cameraPortraitHeight:T.cameraHeight;
-    this.shot.subjects!.extra=reveal?T.cameraRevealExtra:rising?T.cameraRiseExtra:12;
-    if(rising) {
-      this.shot.height=4; this.shot.target.y=4;
-      this.shot.distance=portrait?T.cameraPortraitRiseDistance:T.cameraRiseDistance;
-      this.shot.from!.copy(child.position).sub(rising.sky).setY(0).normalize();
-    }
-    if(reveal) {
-      this.aim.set(MIRROR_BERTH.x,0,MIRROR_BERTH.z);
-      this.shot.target.lerpVectors(child.position,this.aim,0.45).setY(4);
-      this.shot.from!.copy(child.position).sub(room.stars[1].sky).setY(0).normalize();
-      this.shot.distance=portrait?64:48; this.shot.height=7;
-      this.framePlay.copy(this.cast.boat.position);
+    const field=Math.tan(THREE.MathUtils.degToRad(verticalFov(window.innerWidth/window.innerHeight))/2);
+    this.shot.height=this.shot.distance*field*(1-2*T.cameraHorizon);
+    this.shot.subjects!.extra=watching?T.cameraRiseExtra:12;
+    if(watching && this.skyPoints.length) {
+      this.skyAim.set(0,0,0);
+      let top=0;
+      for(const point of this.skyPoints){this.skyAim.add(point);top=Math.max(top,point.y);}
+      this.skyAim.multiplyScalar(1/this.skyPoints.length).y=top;
+      // Turn the gaze toward the sky without translating the eye away from the child.
+      this.shot.attention=this.skyAttention;
+      this.shot.from!.copy(child.position).sub(this.skyAim).setY(0).normalize();
+      if(!rising)this.framePlay.copy(this.skyAim);
     }
     this.focus.copy(child.position);
   }

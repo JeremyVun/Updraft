@@ -205,6 +205,13 @@ for(const [fps,portrait] of (process.env.RESTORE_ONLY?[]:[[60,false],[30,true]])
       const p=light.light.position.clone().project(f.rig.camera);
       assert(Math.abs(p.x)<0.98 && Math.abs(p.y)<0.98,`rising star ${room.stars.indexOf(light)} at ${light.flight} stays in frame: ${p.toArray()}, portrait=${portrait}`);
     }
+    if(room.stars.some(s=>s.state==='rising' && s.flight>0.6)) {
+      for(const light of room.stars.filter(s=>s.state==='sky')) {
+        const p=light.sky.clone().project(f.rig.camera);
+        assert(Math.abs(p.x)<0.9 && Math.abs(p.y)<0.9,`earlier star stays visible during the next ascent: ${p.toArray()}, portrait=${portrait}`);
+      }
+      assert(f.rig.camera.position.distanceTo(f.cast.child.position)<42,'ascent pans toward the stars without a large retreat');
+    }
     if(c.beat==='reveal' && c.elapsed>3)for(const light of room.stars) {
       const p=light.sky.clone().project(f.rig.camera);
       assert(Math.abs(p.x)<0.95 && Math.abs(p.y)<0.95,`whole constellation visible: ${p.toArray()}, portrait=${portrait}`);
@@ -292,22 +299,33 @@ for (const portrait of [false, true]) for (const target of [0, 1, 2, 3]) {
   for (let i = 0; i < 1800; i++) {
     f.step(); kite.update(1 / 60, i / 60, f.rig.camera, f.chapter.departureKite);
     if (i < 120) continue;
+    const horizon=new THREE.Vector3(0,0,-1).applyQuaternion(f.rig.camera.quaternion).setY(0)
+      .normalize().multiplyScalar(100000).add(f.rig.camera.position).project(f.rig.camera);
+    assert(Math.abs((1-horizon.y)/2-1/3)<0.025,`resting horizon near upper third from star ${target}, portrait=${portrait}`);
     const p = kite.position.clone().project(f.rig.camera);
     assert(kite.group.visible && Math.abs(p.x) < 0.95 && Math.abs(p.y) < 0.95,
       `departure kite from star ${target}, portrait=${portrait}: ${p.toArray()}`);
   }
 }
-// The player can finish at any star; portrait must show the whole constellation from each stop.
-for(const target of [0,1,2,3]) {
-  const f=fixture(60,true);f.chapter.restoreCheckpoint('stars4-15',[MIRROR_STAR_MASK,target]);
-  for(let i=0;i<240;i++) {
-    f.step();
-    if(i<180)continue;
+// Any star can finish last, including after resuming a save with the other three already in the sky.
+for(const portrait of [false,true])for(const target of [0,1,2,3]) {
+  const f=fixture(60,portrait),room=f.cast.skyMirror,mask=MIRROR_STAR_MASK ^ (1<<target);
+  f.chapter.restoreCheckpoint(`stars4-${mask}`,[mask,target]);f.rig.cut(f.chapter.shot);
+  for(let i=0;i<60*20 && f.chapter.beat!=='gather';i++) {
+    f.step(true);
+    if(!(room.stars[target].state==='rising' && room.stars[target].flight>0.6)
+      && !(f.chapter.beat==='reveal' && f.chapter.elapsed>1))continue;
     for(const s of f.cast.skyMirror.stars) {
-      const p=s.sky.clone().project(f.rig.camera);
-      assert(Math.abs(p.x)<0.95 && Math.abs(p.y)<0.95,`portrait constellation after target ${target}: ${p.toArray()}`);
+      const p=s.light.position.clone().project(f.rig.camera);
+      assert(Math.abs(p.x)<0.95 && Math.abs(p.y)<0.95,`constellation at target ${target}, portrait=${portrait}: ${p.toArray()}`);
+    }
+    assert(f.rig.camera.position.distanceTo(f.cast.child.position)<42,'last ascent and reveal keep a continuous close view');
+    if(f.chapter.beat==='reveal' && f.chapter.elapsed>3) {
+      const boat=f.cast.boat.position.clone().project(f.rig.camera);
+      assert(Math.abs(boat.x)<0.95 && Math.abs(boat.y)<0.95,'the arriving boat shares the constellation view');
     }
   }
+  assert.equal(room.completedMask,MIRROR_STAR_MASK,'the final light remains playable from each stop');
 }
 // Curled steering strokes cannot lift an empty bubble, nor leave a stale updraft on capture.
 {

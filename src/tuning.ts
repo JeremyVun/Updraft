@@ -254,10 +254,10 @@ export const tuning = {
     bubbleHitPadding: 0.055, captureRadius: 2.1, wandRadius: 0.62,
     liftFrom: 0.2, liftFull: 0.65, starRise: 3.2, starHeight: 18,
     boatDriftSpeed: 6, duskFrom: 1.27, duskTo: 1.72, stroll: 1,
-    cameraDistance: 27, cameraPortraitDistance: 29, cameraHeight: 8,
-    cameraPortraitHeight: 10, cameraLiftFollow: 0.28, constellationReveal: 6,
-    cameraRevealExtra: 48, cameraRiseExtra: 35,
-    cameraRiseDistance: 32, cameraPortraitRiseDistance: 40,
+    cameraDistance: 27, cameraPortraitDistance: 29,
+    cameraLiftFollow: 0.28, constellationReveal: 6,
+    cameraHorizon: 1/3, cameraSkyWeight: 0.2, cameraSkyHold: 2,
+    cameraRiseExtra: 8,
   },
   /** The stairs in the clouds: the loose flights the player's gusts bring home, and the climb. */
   stairs: {
