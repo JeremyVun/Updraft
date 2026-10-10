@@ -14,10 +14,20 @@ export const MIRROR_PATH = [
 ] as const;
 export const MIRROR_BERTH = { x: -390 + MIRROR_SHIFT.x, z: -2323 + MIRROR_SHIFT.z, yaw: Math.PI } as const;
 export const MIRROR_DECK = { x0: -407 + MIRROR_SHIFT.x, z0: -2323 + MIRROR_SHIFT.z, x1: -391 + MIRROR_SHIFT.x, z1: -2323 + MIRROR_SHIFT.z, halfWidth: 1.15, height: 0.22, rampAt: 'start', rampLength: 2.6 } as const;
+export const MIRROR_LIGHT_PATH = {
+  from: MIRROR_BERTH,
+  to: { x: MIRROR_BERTH.x + 40, z: MIRROR_BERTH.z + 4 },
+  width: 5,
+} as const;
+// Clear the light before the crossing's 22 m waypoint radius starts the turn home.
+export const MIRROR_SAIL_OUT = {
+  x: MIRROR_BERTH.x + (MIRROR_LIGHT_PATH.to.x - MIRROR_BERTH.x) * 1.75,
+  z: MIRROR_BERTH.z + (MIRROR_LIGHT_PATH.to.z - MIRROR_BERTH.z) * 1.75,
+} as const;
 /** The empty hull drifts through the deep channel, never over the walkable mirror. */
 export const MIRROR_DRIFT = [
   { x: -532 + MIRROR_SHIFT.x, z: -2259 + MIRROR_SHIFT.z }, { x: -533 + MIRROR_SHIFT.x, z: -2215 + MIRROR_SHIFT.z }, { x: -403 + MIRROR_SHIFT.x, z: -2206 + MIRROR_SHIFT.z },
-  { x: -354 + MIRROR_SHIFT.x, z: -2260 + MIRROR_SHIFT.z }, { x: -350 + MIRROR_SHIFT.x, z: -2319 + MIRROR_SHIFT.z }, MIRROR_BERTH,
+  { x: -354 + MIRROR_SHIFT.x, z: -2260 + MIRROR_SHIFT.z }, MIRROR_LIGHT_PATH.to, MIRROR_BERTH,
 ] as const;
 
 /** A handful of fallen lights, all on the existing shallow flat. Order is the player's choice. */

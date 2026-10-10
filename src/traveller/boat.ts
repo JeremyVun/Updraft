@@ -140,6 +140,7 @@ export class Boat {
   private beaching = false;
   /** While a foot is still crossing the gunwale, the hull may drift from the shove but the sail may not take it. */
   private boardingPush = false;
+  private pushAlignment = PUSH_OFF_UNTIL;
 
   constructor(private readonly wind: WindField) {
     const hullMat = new THREE.ShaderMaterial({
@@ -198,7 +199,7 @@ export class Boat {
     this.pose(0);
   }
 
-  launch(holdForBoarding = false): void {
+  launch(holdForBoarding = false, course?: THREE.Vector2): void {
     this.towed = false;
     this.afloat = true;
     this.grounded = false;
@@ -206,11 +207,16 @@ export class Boat {
     this.speed = 0;
     this.pushingFor = 0;
     this.boardingPush = holdForBoarding;
+    this.pushAlignment = course ? tuning.sail.channelAlignment : PUSH_OFF_UNTIL;
     /** Out is downhill off the sand; on open water, where there is no slope, it is astern. */
     const p = this.position;
     const gx = heightAt(p.x + 3, p.z) - heightAt(p.x - 3, p.z);
     const gz = heightAt(p.x, p.z + 3) - heightAt(p.x, p.z - 3);
-    if (Math.hypot(gx, gz) > 0.05) this.pushDir.set(-gx, -gz).normalize();
+    if (course) {
+      this.pushDir.set(course.x - p.x, course.y - p.z).normalize();
+      this.steerFor = course;
+      this.mooring = null;
+    } else if (Math.hypot(gx, gz) > 0.05) this.pushDir.set(-gx, -gz).normalize();
     else this.pushDir.set(-Math.sin(this.yaw), -Math.cos(this.yaw));
   }
 
@@ -316,7 +322,7 @@ export class Boat {
         p.x += this.pushDir.x * out * dt;
         p.z += this.pushDir.y * out * dt;
         this.yaw += THREE.MathUtils.clamp(dy, -dt * PUSH_OFF_TURN, dt * PUSH_OFF_TURN);
-        if (!this.boardingPush && ((this.steerFor && Math.abs(dy) < PUSH_OFF_UNTIL) || this.pushingFor > PUSH_OFF_LONGEST)) {
+        if (!this.boardingPush && ((this.steerFor && Math.abs(dy) < this.pushAlignment) || this.pushingFor > PUSH_OFF_LONGEST)) {
           this.pushingFor = -1;
         }
       } else if (this.beaching) {

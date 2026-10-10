@@ -52,6 +52,8 @@ export interface CrossingOpts {
   speed?: number;
   /** Waypoints out to open water and on to the far shore; the bow may only ground on the last one. */
   route: THREE.Vector2[];
+  /** Follow a visible channel closely before joining the offshore route. */
+  departureChannel?: { from: { x: number; z: number }; to: { x: number; z: number }; lead: number };
   /** Limit the final alignment and beach approach where the landing sits beside a narrow walking route. */
   arrivalSpeed?: number;
   /** Carry the departing room's music; dolphin passages use the open-sea arrangement. */
@@ -131,6 +133,8 @@ export class CrossingChapter implements Chapter {
   private arrivalHeard = false;
   readonly season: number;
   private readonly route: THREE.Vector2[];
+  private readonly departureChannel?: CrossingOpts['departureChannel'];
+  private readonly channelAim = new THREE.Vector2();
   private readonly arrivalSpeed: number;
   private readonly cruiseSpeed: number;
   private readonly lookBack: THREE.Vector3 | null;
@@ -203,6 +207,7 @@ export class CrossingChapter implements Chapter {
     opts: CrossingOpts,
   ) {
     this.route = opts.route;
+    this.departureChannel = opts.departureChannel;
     this.breeze = opts.breeze ?? 1;
     this.arrivalSpeed = opts.arrivalSpeed ?? Infinity;
     this.cruiseSpeed = opts.speed ?? (opts.dolphins ? tuning.seaPassage.speed : Infinity);
@@ -379,6 +384,16 @@ export class CrossingChapter implements Chapter {
       boat.canGround = this.leg === this.route.length - 1 && !boat.mooring;
     }
     if (this.leg >= this.route.length - 2) boat.speedLimit = Math.min(boat.speedLimit, this.arrivalSpeed);
+    const channel = this.departureChannel;
+    if (channel && this.leg === 0) {
+      const dx = channel.to.x - channel.from.x, dz = channel.to.z - channel.from.z;
+      const length = Math.hypot(dx, dz);
+      const along = ((boat.position.x - channel.from.x) * dx + (boat.position.z - channel.from.z) * dz) / length;
+      const lead = Math.max(0, along) + channel.lead;
+      boat.steerFor = along < length
+        ? this.channelAim.set(channel.from.x + dx / length * lead, channel.from.z + dz / length * lead)
+        : wp;
+    }
   }
 
   update(dt: number, time = this.time + dt): void {

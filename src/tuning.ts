@@ -254,6 +254,7 @@ export const tuning = {
     bubbleHitPadding: 0.055, captureRadius: 2.1, wandRadius: 0.62,
     liftFrom: 0.2, liftFull: 0.65, starRise: 3.2, starHeight: 18,
     starPulsePeriod: 6, starPulseDepth: 0.08,
+    channelLead: 4,
     boatDriftSpeed: 6, duskFrom: 1.27, duskTo: 1.72, stroll: 1,
     cameraDistance: 27, cameraPortraitDistance: 29,
     cameraLiftFollow: 0.28, constellationReveal: 6,
@@ -1685,6 +1686,7 @@ export const tuning = {
     wakeSpread: 0.14,
     /** How opaque the wake's foam is: a small boat leaves a thin, see-through lace, not a motorboat's white water. */
     wakeFoam: 0.6,
+    channelAlignment: 0.1,
     /** Spill wind in a tight turn; the turning radius must shrink as a missed waypoint gets closer. */
     turnBrake: 0.65,
     turnAligned: 0.85,

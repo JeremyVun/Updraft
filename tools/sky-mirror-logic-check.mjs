@@ -19,7 +19,7 @@ const { CameraRig } = await import('../src/camera.ts');
 const { ROUTES } = await import('../src/story/journey.ts');
 const { HOME_MOORING } = await import('../src/story/home.ts');
 const { SLEEP_BERTH } = await import('../src/world/sleeping.ts');
-const { MIRROR_STARS, MIRROR_STAR_MASK, MIRROR_LANDING, MIRROR_ENTRY_DECK, MIRROR_WATCH, MIRROR_BERTH, mirrorBed } = await import('../src/world/sky-mirror-layout.ts');
+const { MIRROR_STARS, MIRROR_STAR_MASK, MIRROR_LANDING, MIRROR_ENTRY_DECK, MIRROR_WATCH, MIRROR_BERTH, MIRROR_LIGHT_PATH, mirrorBed } = await import('../src/world/sky-mirror-layout.ts');
 const { worldHeight } = await import('../src/world/heightfield.ts');
 const { tuning } = await import('../src/tuning.ts');
 const { readProgress, saveProgress } = await import('../src/story/progress.ts');
@@ -102,6 +102,34 @@ for(const star of MIRROR_STARS) {
     if(!f.cast.child.acting && along<length)assert(Math.abs((p.x-d.x0)*dz-(p.z-d.z0)*dx)/length<d.halfWidth-0.3 && p.y>=0.27,'walk stays on entry planks');
   }
   assert(f.cast.child.position.z<MIRROR_ENTRY_DECK.z1,'child steps from the jetty onto the flat');
+}
+// Sail the illuminated channel after real boarding, including the shove away from the jetty.
+for (const [fps,gust] of [[30,0],[60,0],[60,8]]) {
+  const f=fixture(fps),{boat}=f.cast;
+  if(gust)f.cast.wind.sample=(x,z,out)=>Object.assign(out,{x:2.47+gust,z:-0.8-gust,energy:0.8,lift:0});
+  f.chapter.restoreCheckpoint('stars4-15',[15,3]);
+  for(let i=0;i<fps*120 && !f.chapter.done;i++)f.step();
+  assert(f.chapter.done,'the child boards from the completed mirror');
+  f.chapter=new CrossingChapter(f.cast,{route:ROUTES.toHarbour,moor:HOME_MOORING,homeward:true,
+    departureChannel:{...MIRROR_LIGHT_PATH,lead:tuning.skyMirror.channelLead}});
+  const dx=MIRROR_LIGHT_PATH.to.x-MIRROR_LIGHT_PATH.from.x,dz=MIRROR_LIGHT_PATH.to.z-MIRROR_LIGHT_PATH.from.z,length=Math.hypot(dx,dz);
+  const guide=f.cast.skyMirror.group.getObjectByName('mirror-light-path');
+  for(const [sign,at] of [[1,MIRROR_LIGHT_PATH.from],[-1,MIRROR_LIGHT_PATH.to]]) {
+    const end=guide.localToWorld(new THREE.Vector3(sign*length/2,0,0));
+    assert(Math.hypot(end.x-at.x,end.z-at.z)<0.001,'the rendered light follows the sailing channel');
+  }
+  let along=0,worst=0;
+  for(let i=0;i<fps*90 && along<length;i++) {
+    f.step();
+    const x=boat.position.x-MIRROR_BERTH.x,z=boat.position.z-MIRROR_BERTH.z;
+    along=(x*dx+z*dz)/length;
+    if(along<length)assert.equal(f.chapter.leg,0,'the boat clears the light before turning home');
+    worst=Math.max(worst,Math.abs(x*dz-z*dx)/length);
+    assert(mirrorBed(boat.position.x,boat.position.z)<-0.5,'departure stays off the shallow flat');
+  }
+  assert(along>=length,'the boat sails beyond the illuminated channel');
+  assert(worst<0.5,`departure follows the light at ${fps} fps, gust=${gust}: ${worst.toFixed(2)} m sideways`);
+  results.push({departureFps:fps,gust,sideways:worst});
 }
 // The confident companion investigates and reacts, but never supplies puzzle progress or blocks departure.
 {

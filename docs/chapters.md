@@ -572,6 +572,16 @@ they should pulse slowly, not just blink in and out really fast." Their cores an
 so camera movement must not make the almost edge-on lights flash; `sky-mirror-star-check.mjs` checks constant-light
 camera movement at normal and Ultra render scales separately from the intended pulse.
 
+Departure correction, 2026-10-10. Jeremy's brief:
+
+> "One other bug with the sky mirror chapter i need fixed - when they sail off in the boat, it should follow the lighted up path. Right now, the boat sort of sails at an angle from the lighted path - to someone with ocd it is very annoying. I'd also like you to have a think about whether we can make that lighted path look a bit better. Right now it looks like some random wiggly lines."
+
+The illuminated channel, empty boat's approach and sailing departure share one line. Boarding pushes along that
+line and releases the mooring; the turn toward home starts beyond the light, including the crossing's waypoint
+arrival radius. The trail is soft gold with broken glints and a quiet continuous glow. Each returned star still
+lights its own quarter, with the gaps joining once all four are home. The mirror logic check sails from real
+boarding through the whole trail at 30/60 fps and in a gust, keeping the hull within half a metre of its centre.
+
 Knobs: `tuning.skyMirror`, `tuning.mirrorCompanion`. Checks: `tools/sky-mirror-logic-check.mjs`,
 `sky-mirror-check.mjs`, `sky-mirror-pointer-check.mjs`, `sky-mirror-visibility-check.mjs`. Saves: `stars4-<mask>`
 holds the returned stars and the current destination.

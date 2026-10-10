@@ -1,5 +1,5 @@
 import { SkyMirrorChapter } from './sky-mirror';
-import { MIRROR_LANDING, MIRROR_BERTH } from '../world/sky-mirror-layout';
+import { MIRROR_LANDING, MIRROR_BERTH, MIRROR_LIGHT_PATH, MIRROR_SAIL_OUT } from '../world/sky-mirror-layout';
 import { LittleBoatsChapter } from './little-boats';
 import { BOATS_LANDING } from '../world/little-boats-layout';
 import * as THREE from 'three';
@@ -87,7 +87,7 @@ export const ROUTES: Record<string, THREE.Vector2[]> = {
   ],
   toHarbour: [
     // Stay offshore before curving in; running along the beach cuts the hill across the fog's near edge.
-    new THREE.Vector2(MIRROR_BERTH.x + 20, MIRROR_BERTH.z + 5), new THREE.Vector2(MIRROR_BERTH.x + 70, MIRROR_BERTH.z),
+    new THREE.Vector2(MIRROR_SAIL_OUT.x, MIRROR_SAIL_OUT.z),
     new THREE.Vector2(MIRROR_BERTH.x + 115, MIRROR_BERTH.z - 20), new THREE.Vector2(MIRROR_BERTH.x + 145, MIRROR_BERTH.z - 47),
     new THREE.Vector2(MIRROR_BERTH.x + 163, MIRROR_BERTH.z - 69),
     new THREE.Vector2(HOME_MOORING.x, HOME_MOORING.z),
@@ -393,8 +393,10 @@ export class Journey {
         if (cast.skyMirror.progress < cast.skyMirror.stars.length) cast.skyMirror.restore(cast.skyMirror.stars.length);
         return new CrossingChapter(cast, {
           // Saves from the first mirror version departed from its northern arrival shelf.
+          departureChannel: cast.boat.position.x < MIRROR_BERTH.x - 30 ? undefined
+            : { ...MIRROR_LIGHT_PATH, lead: tuning.skyMirror.channelLead },
           route: cast.boat.position.x < MIRROR_BERTH.x - 30
-            ? [new THREE.Vector2(MIRROR_BERTH.x - 143, MIRROR_BERTH.z + 108), new THREE.Vector2(MIRROR_BERTH.x - 13, MIRROR_BERTH.z + 117), new THREE.Vector2(MIRROR_BERTH.x + 36, MIRROR_BERTH.z + 63), new THREE.Vector2(MIRROR_BERTH.x + 40, MIRROR_BERTH.z + 4), ...ROUTES.toHarbour] : ROUTES.toHarbour,
+            ? [new THREE.Vector2(MIRROR_BERTH.x - 143, MIRROR_BERTH.z + 108), new THREE.Vector2(MIRROR_BERTH.x - 13, MIRROR_BERTH.z + 117), new THREE.Vector2(MIRROR_BERTH.x + 36, MIRROR_BERTH.z + 63), new THREE.Vector2(MIRROR_LIGHT_PATH.to.x, MIRROR_LIGHT_PATH.to.z), ...ROUTES.toHarbour] : ROUTES.toHarbour,
           haze: tuning.homeApproach.haze, dusk: tuning.skyMirror.duskTo, duskTo: tuning.homeLight.daylight,
           season: 0.18, moor: HOME_MOORING, music: 'mirror', mirrorScore: 'depart', hush: .5, arrivalMusic: 'home', homeward: true,
         });

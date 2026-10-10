@@ -20,7 +20,7 @@ type Action =
   | { kind: 'reach'; t: number }
   | { kind: 'push'; t: number }
   | {
-      kind: 'board'; t: number; boat: Boat; from: THREE.Vector3; local: THREE.Vector3;
+      kind: 'board'; t: number; boat: Boat; from: THREE.Vector3; local: THREE.Vector3; course?: THREE.Vector2;
       fromYaw: number; side: number; launched: boolean; onDone: () => void;
     }
   | {
@@ -547,14 +547,14 @@ export class Traveller {
    * One continuous departure: push until the hull gives, travel with it while stepping over the gunwale, and only
    * hand control back to the story once the child has put their weight down on the thwart.
    */
-  board(boat: Boat, onDone: () => void): void {
+  board(boat: Boat, onDone: () => void, course?: THREE.Vector2): void {
     this.goal = null;
     this.sitting = false;
     this.riding = false;
     boat.group.updateMatrixWorld(true);
     const from = boat.group.worldToLocal(this.position.clone());
     this.action = {
-      kind: 'board', t: 0, boat, from, local: new THREE.Vector3(), fromYaw: this.yaw,
+      kind: 'board', t: 0, boat, from, local: new THREE.Vector3(), fromYaw: this.yaw, course,
       side: from.x < 0 ? -1 : 1, launched: false, onDone,
     };
   }
@@ -834,7 +834,7 @@ export class Traveller {
       const boat = a.boat;
       if (!a.launched && a.t >= k.launch) {
         a.launched = true;
-        boat.launch(true);
+        boat.launch(true, a.course);
       }
 
       /** Stay in the boat's frame once it starts to move: there is no interval in which the hull sails underneath. */

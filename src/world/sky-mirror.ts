@@ -7,7 +7,7 @@ import { mirrorMaterial, soapMaterial, soapWand, starLight, WAND_REACH } from '.
 import type { PointerInput } from '../input/pointer';
 import { glsl, tuning } from '../tuning';
 import { ATMO_GLSL, atmo } from './atmosphere';
-import { MIRROR_BOWL, MIRROR_STARS, MIRROR_STAR_MASK, MIRROR_CONSTELLATION, MIRROR_DRIFT, MIRROR_BERTH, MIRROR_DECK, MIRROR_ENTRY_DECK, SKY_MIRROR, mirrorBed } from './sky-mirror-layout';
+import { MIRROR_BOWL, MIRROR_STARS, MIRROR_STAR_MASK, MIRROR_CONSTELLATION, MIRROR_LIGHT_PATH, MIRROR_BERTH, MIRROR_DECK, MIRROR_ENTRY_DECK, SKY_MIRROR, mirrorBed } from './sky-mirror-layout';
 import { REFLECTION_LAYER } from './water/reflection';
 
 const T = tuning.skyMirror;
@@ -155,11 +155,10 @@ export class SkyMirror {
     for(let i=0;i<this.stars.length;i++)this.constellationLines.push(constellationLine(i,(i+1)%this.stars.length));
     // The kite's two internal spars are the finishing touch, revealed only when all four stars return.
     this.constellationCrossbars.push(constellationLine(0,2),constellationLine(1,3));
-    // Broken bands of reflected light on the deep-water approach. Their gaps close only when the
-    // constellation is whole, so the boat's last approach has a visible cause.
-    const offshore=MIRROR_DRIFT[MIRROR_DRIFT.length-2];
-    const dx=MIRROR_BERTH.x-offshore.x,dz=MIRROR_BERTH.z-offshore.z;
-    const guide=new THREE.Mesh(new THREE.PlaneGeometry(Math.hypot(dx,dz),5),new THREE.ShaderMaterial({
+    // Each star lights a reach of the channel; the completed constellation joins them.
+    const {from,to,width}=MIRROR_LIGHT_PATH;
+    const dx=from.x-to.x,dz=from.z-to.z;
+    const guide=new THREE.Mesh(new THREE.PlaneGeometry(Math.hypot(dx,dz),width),new THREE.ShaderMaterial({
       uniforms:{...atmo.uniforms,uLit:{value:this.guideLights}},transparent:true,depthWrite:false,
       blending:THREE.AdditiveBlending,side:THREE.DoubleSide,
       vertexShader:`varying vec2 vUv; void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
@@ -167,12 +166,25 @@ export class SkyMirror {
         void main(){float part=vUv.x*4.0;float on=part<1.0?uLit.x:part<2.0?uLit.y:part<3.0?uLit.z:uLit.w;
           float complete=min(min(uLit.x,uLit.y),min(uLit.z,uLit.w));float s=fract(part);
           float gaps=mix(smoothstep(0.01,0.18,s)*(1.0-smoothstep(0.82,0.99,s)),1.0,complete);
-          float edge=pow(max(0.0,1.0-abs(vUv.y*2.0-1.0)),2.0);
-          float ripple=pow(0.5+0.5*sin(vUv.x*240.0+sin(vUv.y*19.0+uTime*0.6)*2.0),8.0);
+          float cross=vUv.y*2.0-1.0;
+          float band=vUv.x*32.0;
+          float row=floor(band);
+          float seed=fract(sin(row*127.1)*43758.5453);
+          float centre=(seed-0.5)*0.6;
+          float breadth=0.2+0.4*fract(seed*17.3);
+          float across=exp(-pow((cross-centre)/breadth,2.0));
+          float along=fract(band)-(0.3+0.4*fract(seed*19.7));
+          float softness=0.004+0.012*fract(seed*43.1);
+          float variance=softness+0.5*pow(fwidth(band),2.0);
+          float streak=exp(-along*along/variance)*sqrt(softness/variance);
+          float shimmer=0.9+0.1*sin(uTime*0.35+row*1.7);
+          float edge=1.0-smoothstep(0.65,1.0,abs(cross));
+          float ribbon=0.12*exp(-cross*cross*10.0)+0.05*exp(-cross*cross*3.0);
           float ends=smoothstep(0.0,0.04,vUv.x)*(1.0-smoothstep(0.96,1.0,vUv.x));
-          gl_FragColor=vec4(vec3(1.0,0.81,0.5),on*gaps*edge*ends*(0.06+ripple*0.62));}`,
+          gl_FragColor=vec4(vec3(1.0,0.83,0.53),on*gaps*edge*ends*(ribbon+streak*across*(0.15+seed*0.6)*shimmer));}`,
     }));
-    guide.position.set((offshore.x+MIRROR_BERTH.x)/2,0.055,(offshore.z+MIRROR_BERTH.z)/2);
+    guide.name='mirror-light-path';
+    guide.position.set((to.x+from.x)/2,0.055,(to.z+from.z)/2);
     guide.rotation.set(-Math.PI/2,0,Math.atan2(-dz,dx)); this.group.add(guide); fixInPlace(guide);
     const timber = new THREE.ShaderMaterial({ uniforms: { ...atmo.uniforms }, vertexShader: VERT,
       fragmentShader: `${ATMO_GLSL}

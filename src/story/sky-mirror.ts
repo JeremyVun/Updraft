@@ -3,7 +3,7 @@ import type { CheckpointPayload } from './checkpoint-data';
 import * as THREE from 'three';
 import { verticalFov, type Shot } from '../camera';
 import { tuning } from '../tuning';
-import { MIRROR_STARS, MIRROR_STAR_MASK, MIRROR_BOWL, MIRROR_LANDING, MIRROR_ENTRY_DECK, MIRROR_BERTH, MIRROR_DECK, MIRROR_DRIFT, mirrorBed } from '../world/sky-mirror-layout';
+import { MIRROR_STARS, MIRROR_STAR_MASK, MIRROR_BOWL, MIRROR_LANDING, MIRROR_ENTRY_DECK, MIRROR_BERTH, MIRROR_DECK, MIRROR_DRIFT, MIRROR_SAIL_OUT, mirrorBed } from '../world/sky-mirror-layout';
 import type { Cast, Chapter } from './cast';
 import { cue } from './cues';
 import { MirrorCompanion } from './mirror-companion';
@@ -206,7 +206,7 @@ export class SkyMirrorChapter implements Chapter {
         k.mayFly=true; k.stay=false; k.watch(null);
         p.landingGround=null; p.homeRadius=this.oldRadius;
         room.active=false; room.ready=false; this.to('aboard');
-      });
+      },new THREE.Vector2(MIRROR_SAIL_OUT.x,MIRROR_SAIL_OUT.z));
     }
     if (this.beat === 'play' || this.beat === 'walk') this.companion.update(time, this.target, this.beat === 'play');
     this.frame();
