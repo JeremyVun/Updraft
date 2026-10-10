@@ -1447,3 +1447,39 @@ pass. N9's unrelated baseline terrain and marine-audio failures remain open; thi
 Final captures are `camera-land-*` and `camera-port-*` in `/tmp/updraft-sea-n11-F2TBFa/`; the evidence README
 distinguishes them from intermediate route-only captures. Port 5330 serves the revised QA build. N11 is implemented
 on `sea-whale`; no merge or deployment.
+
+### Phase N12: natural dolphin flight and audible reference whale calls
+
+Astra owns `sealife/dolphin.ts`, `audio/whale-voice.ts`, `story/net-whale.ts`, their tuning and targeted checks.
+Jeremy approved the three corrections recorded in design.md. Preserve the rest of the sequence and pacing.
+
+- [x] Launch from the dolphin's actual safe position and velocity; prove continuous forward flight without hull clamping.
+- [x] Rebuild the procedural voice against NOAA's pitch/tone/phrasing reference and rebalance it in context.
+- [x] Add a closer-approach phrase without changing the reveal; verify voice events and actual mixed sound.
+- [x] Check landscape/portrait, full rescue and onward pacing; refresh port 5330 and record evidence, unmerged.
+
+The leap chooses an adult physically on the camera's side, gathers speed at its actual mark, and holds its run
+through the final rising stroke and flight. All 32 combinations of side, orientation, frame rate and seed clear
+the hull without clamping and gain 1.53–3.05 m on the boat. Restoring the former launch fails the guard. The final
+landscape game capture gains 3.12 m while staying at least 6.26 m from the centreline.
+
+The original voice now follows the varied contours and changing harmonic balance in NOAA's humpback reference,
+with no fixed bass stack or score-note arches. At the first approach's actual 165 m distance, the moan's rendered
+RMS rises about 5 dB; the freed song rises about 7 dB. A 4.4-second closer phrase follows the distant call after
+a gap. The game recording confirms calls at 24.55 and 40.77 seconds, without moving the reveal or slowing the
+boat. All seven voices pass level, clipping, speaker-band and rapid-pulsing checks; weak and motor-pulsing
+mutations fail. The actual approach and release mixes do not clip. Spectrogram comparisons and recordings are
+evidence of the work, not listening approval; this session cannot listen directly.
+
+The corrected leap changes the later pod arrangement. One portrait/wind-direction case nudges 20.5 seconds before
+the first puzzle, outside the former 20-second test allowance. Its arrival is still 62.4 seconds, the same as the
+old dolphin implementation. The test now allows 21 seconds from nudge to puzzle; arrival, speed, braking, reveal,
+camera and onward constraints are unchanged. No game pacing adjustment was made to satisfy that assertion.
+
+Both final GPU runs complete the five puzzles and settled Mirror arrival with no browser errors, unexpected
+shader compilation or swimmer/pull clipping. Invitations remain 0.50–0.52 seconds. Fourteen landscape/portrait
+pacing cases pass, preserving normal speed, the full swim, ordinary arrival at 61.8–62.4 seconds and onward
+sailing at 38.1–40.7 seconds. Sea mechanics/checkpoints, the sea score, production isolation and both builds pass.
+
+Evidence and before/after audio: `/tmp/updraft-sea-n12-yCarUU/README.md`. N9's unrelated baseline terrain and
+marine-audio failures remain open. No merge or deployment.

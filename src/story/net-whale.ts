@@ -185,6 +185,7 @@ export class NetWhale {
   /** How many times it has sighed in the mist ahead as the boat is led in, heard and then its blow seen, and when it was heard. */
   private sighs = 0;
   private heard = 0;
+  private calledNear = false;
   /** How far the patch of net over the blowhole has been lifted clear by circling, or by the valve's dolphin, 0..1. */
   progress = 0;
   /** What lifted it: the player's circles, or the dolphin sent once nothing had for a long while. */
@@ -665,6 +666,11 @@ export class NetWhale {
       if (this.sighs === 0) this.heard = this.clock;
       this.sighs++;
       if (this.sighs === 2) this.sightClock = this.clock;
+    }
+    if (this.step === 'approach' && !this.calledNear && this.sighs === 2 && left < K.nearCallAt
+      && whale.sinceCall > callLength('whale-moan') + K.nearCallGap) {
+      whale.callNear();
+      this.calledNear = true;
     }
     this.sinceStroke += dt;
     this.askedFor = this.asks ? this.askedFor + dt : 0;

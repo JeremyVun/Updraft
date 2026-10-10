@@ -1125,7 +1125,8 @@ export class Dolphins {
       dvx += ox * push;
       dvz += oz * push;
     }
-    if (d.seg !== 'air') {
+    // Once it commits to a leap, the rising stroke keeps its run through takeoff.
+    if (d.seg !== 'air' && d.lift === 0) {
       const forward = dvx * fx + dvz * fz;
       const aside = dvx * fz - dvz * fx;
       const want = this.head + Math.atan2(aside, Math.max(forward, k.leastHeadway));
@@ -1321,10 +1322,7 @@ export class Dolphins {
     else this.shove(s, dt);
   }
 
-  /**
-   * Sends one of the grown ones out of its lane, already on the side it is wanted, so nothing jumps across, and of
-   * those the one furthest astern, which has the least water to cover to its mark.
-   */
+  // A late-arriving pack must not make the leaper cross the hull to reach its mark.
   private begin(kind: Show): void {
     if (this.stunt) return;
     const side = this.camera;
@@ -1332,14 +1330,21 @@ export class Dolphins {
     let nearest = -1e9;
     for (const other of this.pod) {
       if (!other.adult || other.pack.rider || other.pack.delay > 0 || this.lent.includes(other)) continue;
-      const score = side * other.across > 0 ? 1000 - other.pack.along - other.dAlong : side * other.across;
+      if (kind === 'leap' && (!other.placed || side * other.across < tuning.dolphins.hullClear || other.seg === 'air')) continue;
+      const score = kind === 'leap' ? -Math.abs(other.along + 3)
+        : side * other.across > 0 ? 1000 - other.pack.along - other.dAlong : side * other.across;
       if (score > nearest) {
         nearest = score;
         d = other;
       }
     }
     if (!d) return;
-    this.stunt = { kind, d, phase: 'out', t: 0, side, along: d.wantAlong, across: d.wantAcross, va: d.pack.vel, vc: 0, asked: false, hit: false };
+    const rx = d.x - this.boat.x, rz = d.z - this.boat.z;
+    this.stunt = { kind, d, phase: 'out', t: 0, side,
+      along: kind === 'leap' ? rx * Math.sin(this.head) + rz * Math.cos(this.head) : d.wantAlong,
+      across: kind === 'leap' ? rx * Math.cos(this.head) - rz * Math.sin(this.head) : d.wantAcross,
+      va: kind === 'leap' ? d.pace * Math.cos(d.yaw - this.head) - this.speed : d.pack.vel,
+      vc: kind === 'leap' ? d.pace * Math.sin(d.yaw - this.head) : 0, asked: false, hit: false };
     d.offAlong = d.offAcross = 0;
     d.burst = 0;
     d.held = kind === 'push' ? -2.2 : -2.8;
@@ -1378,28 +1383,31 @@ export class Dolphins {
     const k = tuning.dolphins;
     if (s.phase === 'out') {
       this.glide(s, -3, s.side * (k.leapBeside + 1.5), 0.85, dt);
-      if (s.t > k.leapOutFor && (Math.abs(s.across) > k.leapBeside || s.t > 7)) {
+      if (s.t > k.leapOutFor && s.side * d.across > k.leapBeside && Math.abs(d.along + 3) < k.leapMarkNear * 2) {
         s.phase = 'run';
         s.t = 0;
-        d.held = null;
+        d.held = -1;
         d.hurry = true;
       }
     } else if (s.phase === 'run') {
-      if (d.lift > 0 && d.seg === 'dip' && d.next === d.lift) {
-        /** The turn out comes late in the dip, so it is still close beside the boat when it leaves the water. */
-        const out = this.leapOut() * THREE.MathUtils.smoothstep(d.segT / d.span, 0.4, 0.95);
+      if (s.asked) {
+        const out = this.leapOut();
         const va = k.leapSpeed * Math.cos(out) - this.speed;
         const vc = s.side * k.leapSpeed * Math.sin(out);
-        const most = k.stuntAccel * dt;
-        s.va += THREE.MathUtils.clamp(va - s.va, -most, most);
-        s.vc = vc;
-        s.along += s.va * dt;
-        s.across += s.vc * dt;
+        this.swimAt(s, va, vc, dt);
+        const heading = wrap(d.yaw - this.heading);
+        if (d.lift === 0 && d.seg === 'hold' && d.y < BASE_Y
+          && Math.abs(heading - s.side * out) < k.leapHeadingNear
+          && d.pace * Math.cos(heading) > this.speed + k.leapOvertake
+          && s.side * Math.sin(heading) >= -0.02 && s.side * d.across > k.leapBeside - k.leapMarkNear) {
+          d.lift = Math.min(k.leapLift * rand(0.96, 1.06), d.pace * Math.tan(k.leapSteepest));
+          d.held = null;
+          this.rise(d, true);
+        }
       } else this.glide(s, k.leapFrom, s.side * k.leapBeside, 0.55, dt);
-      if (s.t > k.leapRunFor && !s.asked && Math.abs(s.along - k.leapFrom) < k.leapMarkNear) {
+      if (s.t > k.leapRunFor && !s.asked && Math.abs(d.along - k.leapFrom) < k.leapMarkNear
+        && s.side * d.across > k.leapBeside - k.leapMarkNear) {
         s.asked = true;
-        /** A slow boat asks for a lower leap, never a steeper one. */
-        d.lift = Math.min(k.leapLift * rand(0.96, 1.06), k.leapSpeed * Math.tan(k.leapSteepest));
       }
       if (s.asked && d.lift === 0 && d.seg === 'air') {
         s.phase = 'act';

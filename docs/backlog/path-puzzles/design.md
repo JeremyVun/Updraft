@@ -1457,3 +1457,24 @@ The swim view's side offset and the camera's delayed following of the turn compo
 head also leaves the frame. Jeremy approved the correction: keep the cygnet visible during the swim, then ease
 toward a view behind the boat facing the whale as the bird returns, with the whale visible in portrait too.
 Use the boat-to-whale bearing as the reveal develops, leaving some side room for the swimmer until it is aboard.
+
+### Dolphin launch and reference whale voice — 2026-10-10
+
+Jeremy's report, verbatim:
+
+> the first dolphin that comes up to the boat and jumps looks a bit strange, like it's jumping directly at the boat from behind and jumping in place. canyou take a look. I also dont hear any whale sound when you first approach it. The whale sounds overall are a bit soft, and still sound too much like a motorcycle. I recommend finding reference whale sounds and trying to match against them. Otherwise, the rest of the sequence is good i think.
+
+Jeremy approved all three corrections: the dolphin must physically finish its run-up on the correct side before
+launching forward and outward, clear of the hull for the whole flight; the whale's approach calls must remain
+audible during the closer approach and all calls must carry in the full mix; rebuild their phrasing and changing
+tone against NOAA's humpback recording, with comparison clips for listening. Preserve the accepted sequence,
+normal boat speed and approximately 60/40-second pacing. Astra implements personally.
+
+The captured jump launches opposite its target side and stays pinned against the hull boundary, advancing only
+0.117 m relative to the boat. Launch readiness must use the animal's actual pose and velocity, not its moving
+target. The current first whale call ends about 25 seconds before arrival. Its fixed low harmonic stack and
+score-note pitch arches do not meet Jeremy's sound brief; numerical levels and modulation tests are insufficient
+evidence of a natural voice. Reference: [NOAA's recordings and spectrograms](https://www.fisheries.noaa.gov/national/science-data/sounds-ocean-mammals),
+specifically `Meno-song-NOAA-PAGroup-13-humpback-clip.mp3`. Compare pitch, changing spectrum and spacing, retaining
+an original procedural voice. No direct listening capability is available here; render the actual mix and state
+that limitation without claiming a perceptual pass.

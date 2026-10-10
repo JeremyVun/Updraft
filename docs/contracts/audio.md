@@ -249,26 +249,29 @@ pan and bounded scheduling; finished nodes disconnect.
   back down (`whale-slap`), and as it lifts it high to wave goodbye. The seabirds standing on its back go up with a soft flurry of heavy wingbeats as it spouts
   free (`seabirds-lift`, through `WorldFoley.whale`, from the first of them); the sea running off its back with each
   breath is silent under its sigh.
-- The whale's voice (`whale-voice.ts`, `WhaleVoice`, owned by `Foley.whale`): a humpback's manner at dream size, slow
-  moans that glide in pitch in the sea score's key (D), fundamentals from about 41 to 147 Hz with rounded upper
-  harmonics a phone's speaker carries, filtered breath and the shared diffuse reverb. Pitch eases through each
-  turn. Fixed throat resonances, a sub-octave and discrete delayed glides made the rising calls pulse like a motor;
-  they are removed. The freed song finishes before the flipper's goodbye begins. Keep enough
-  upper harmonics for small speakers: removing the roughness must not remove the audible voice. Its calls: a tired sagging moan heard in the
+- The whale's voice (`whale-voice.ts`, `WhaleVoice`, owned by `Foley.whale`): an original procedural voice informed by
+  [NOAA's humpback recording](https://www.fisheries.noaa.gov/national/science-data/sounds-ocean-mammals).
+  Uneven falling cries and rising answers use fundamentals around 71–326 Hz, a changing balance of four smooth
+  partials, irregular pitch drift, filtered breath and diffuse reverb. The former fixed bass stack and score-note
+  arches still sounded like a motorcycle to Jeremy after the rapid pulsing was removed: spectral and level checks
+  alone cannot approve the timbre. The freed song finishes before the flipper's goodbye begins. Keep enough
+  upper harmonics for small speakers: removing the roughness must not remove the audible voice. Its calls: a tired moan heard in the
   mist before it is seen (`whale-moan`, on the distant approach, `sighIn(…, true)`, or
-  `moan()` at once), lasting 10.2 s so one continuous call carries through the first silhouette; a soft rise
-  as its eye opens on her (`whale-greet`, from the net's `whale-call`); a long glad song
-  in two gently arched phrases as it breathes free (`whale-song`); goodbye, down and up again, as it waves its
+  `moan()` at once), with two phrases spanning 10.2 s through the first silhouette; one closer reply
+  (`whale-near`, 4.4 s, within `netWhale.nearCallAt` of the rest, at least `nearCallGap` after the moan ends);
+  a greeting as its eye opens on her (`whale-greet`, from the net's `whale-call`); a glad song
+  in two unequal phrases as it breathes free (`whale-song`); a falling goodbye as it waves its
   flipper and again as its flukes stand and flex (`whale-goodbye`); and its last and lowest, muffled, from under the sea
   as its swell reaches the boat (`whale-deep`). The first crossing's far dive has at most its echo (`whale-echo`).
-  `WorldFoley` gives the voice its own level and distance (`whaleVoice.level` 0.11 at its loudest, `near` 40 m to
+  `WorldFoley` gives the voice its own level and distance (`whaleVoice.level` 0.22 at its loudest, `near` 40 m to
   `far` 600 m, never below `farthest`), so the moan carries from the mist; farther, it is more muffled and more of it
   is reverberation. While it calls the encounter's
   `hush` rises to at least `netWhale.voiceRoom` (0.6, about −7 dB on the sea score) and eases back after, so the score
   makes room under it rather than burying it.
-  `tools/whale-voice-check.mjs` renders all six production calls through WorldFoley and checks clipping, level,
-  rapid amplitude modulation and the moan's body above 180 Hz. `MUTATE=motor` and `MUTATE=thin` prove those guards.
-  The passage check requires the call to continue through the silhouette; listening remains
+  `tools/whale-voice-check.mjs` renders all seven production calls through WorldFoley and checks clipping, level,
+  rapid amplitude modulation and the moan's body above 180 Hz at an actual approach distance of 165 m.
+  `MUTATE=motor` and `MUTATE=thin` prove those guards. The passage check requires calls through the silhouette
+  and closer approach. `AUDIO=1 node tools/sea-check.mjs` records both approach and release mixes; listening remains
   part of the playtest.
 - Flock wingbeats follow flight and take-off; resting rafts are silent. Beats consumed while inaudible never burst on
   return.

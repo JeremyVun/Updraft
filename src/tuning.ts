@@ -119,7 +119,7 @@ export const tuning = {
     /** The whale breathes ahead of the boat; keep its scale audible across that stretch of water. */
     whaleLevel: 0.65, whaleAttack: 0.2, whaleNear: 35, whaleFar: 190,
     /** The low voice carries across the water; diffuse reverb preserves its scale without pulsing echoes. */
-    whaleVoice: { level: 0.11, near: 40, far: 600, farthest: 0.35, wet: 0.45 },
+    whaleVoice: { level: 0.22, near: 40, far: 600, farthest: 0.5, wet: 0.32 },
     clothSources: 3, clothReach: 60, clothLevel: 0.35,
     /** The stairs in the clouds (a proposal awaiting audition): the air round the travellers, a flight knocking home, the score. */
     stairsAirLevel: 1,
@@ -1548,6 +1548,8 @@ export const tuning = {
     hushFrom: 70, hushNear: 8, hushSorrow: 0.9, hushCourage: 0.45, hushEase: 0.3,
     /** While it calls, the score makes room under its voice, at least `voiceRoom` of the way to silence. */
     voiceRoom: 0.6,
+    nearCallAt: 65,
+    nearCallGap: 6,
     /** Hear it before the distant blow; close the view only once its shape is visible, keeping the boat in frame. */
     heardAt: 140, seenAt: 125, seenAfter: 3, riseFrom: 70, riseNear: 20,
     /** How far ahead of the bow the pod runs while it leads the boat in (m). */
@@ -1881,7 +1883,7 @@ export const tuning = {
      * its mark along the boat it must be by then, so a leaper that set out far astern never throws close under the lens.
      */
     leapOutFor: 2.8,
-    leapRunFor: 3.2,
+    leapRunFor: 2.4,
     leapMarkNear: 1.5,
     /**
      * Where the leaper runs beside the boat before the throw, along and out from it, the speed through the water it
@@ -1890,8 +1892,10 @@ export const tuning = {
      */
     leapFrom: -1,
     leapBeside: 4.8,
-    leapSpeed: 5.5,
-    leapAngle: 0.9,
+    leapSpeed: 7.2,
+    leapAngle: 0.4,
+    leapHeadingNear: 0.16,
+    leapOvertake: 1.4,
     /** The width the lens shows beside the boat, in units, below which the leap goes straight ahead and above which it goes fully out. */
     leapRoomLeast: 7,
     leapRoomFull: 13,
@@ -1916,7 +1920,7 @@ export const tuning = {
     restLeast: 40,
     restSpread: 25,
     /** How fast the leap leaves the water, in units a second: it rises alongside, then slips back into the water. */
-    leapLift: 6.3,
+    leapLift: 5.7,
     /** What a shove does to the hull: radians of heel away from it, radians a second of yaw, and units of surge. */
     shoveHeel: 0.12,
     shoveYaw: 0.18,

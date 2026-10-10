@@ -132,8 +132,10 @@ edit.
 - `plane-routing-check`, `meadow-route-check`, `meadow-plane-check`, `piano-logic-check`, `piano-growth-check`,
   `little-boats-logic-check`, `kite-logic-check`, `scarf-geometry-check`, `sail-flutter-check`, `sea-logic-check`,
   `sky-mirror-logic-check`, `sky-mirror-pointer-check` (`TOUCH=1`), `sleeping-logic-check`, `wood-logic-check`,
-  `wing-care-check`, `flock-flight-check`, `boat-check`, `boat-ground-check`, `journey-pacing-check`,
+  `wing-care-check`, `flock-flight-check`, `dolphin-leap-check`, `boat-check`, `boat-ground-check`, `journey-pacing-check`,
   `geography-check`, `journey-reveal-check`, `crossing-haze-check`, `dream-story-check`, `foghorn-story-check`.
+- `dolphin-leap-check` covers both camera sides, portrait/landscape, 30/60 Hz and four seeds: actual takeoff,
+  overtaking flight and hull clearance. `MUTATE=old` loads the faulty launch from `893c316f` in memory to prove the guard.
 - The scarf's feel: `scarf-feel-probe` (Node: bounce, settling, creep, stretch and jitter) and `scarf-video` (true
   60 fps clips of each release and the gathering, `SUFFIX=before|after`).
 - In the browser with real gestures: `lines-check`, `lines-view-check`, `little-boats-check`, `piano-check`,

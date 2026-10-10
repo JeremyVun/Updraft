@@ -109,13 +109,14 @@ function run(name, fps, gust, veer=0, waitInVillage=false, arrivalGust=false, ci
   let hazeShown=NaN,openShown=NaN,lastStep='',restGap=Infinity,restSpeed=Infinity,shownDuringWhale=0,worstBrake=0,lastSpeed=boat.speed;const ndc=new THREE.Vector3();
   // The open sea as the whale is found: the boat's pace, what of the whale and the mirror shows and when, and the way on.
   let leastHidden=1,nudgeOut=null,falloffShown=NaN,mistShown=0,liftShown=0,underWay=false,slowest=Infinity,slowestAt=null,whaleShownAt=null,mirrorShownBeforeDive=0,heading=0,mostStarboard=0,portTurn=0,lastYaw=null;
-  const sea={sighs:[],covers:[],seen:null,calls:[],silhouette:null,detail:null,foreground:Infinity,podFrames:0,podAngle:0,podWorst:null,
+  const sea={sighs:[],covers:[],seen:null,calls:[],nearCalls:[],silhouette:null,detail:null,foreground:Infinity,podFrames:0,podAngle:0,podWorst:null,
     framing:{frames:0,head:0,swimmer:0,roll:0}};
   let onwardLimit=Infinity,onwardPeak=0;
   if(rig)sealife.onWhaleSound=(kind)=>{
     if(chapter.whale?.step!=='approach')return;
     if(kind==='whale-sigh')sea.sighs.push(+time.toFixed(1));
     if(kind==='whale-moan')sea.calls.push(+time.toFixed(1));
+    if(kind==='whale-near')sea.nearCalls.push(+time.toFixed(1));
   };
   let time=0;
   const whaleMarks=()=>{const w=sealife.sleeper,m=[w.jaw,w.eye,w.blowhole,w.finTip,w.back,w.flukes];
@@ -259,7 +260,8 @@ function run(name, fps, gust, veer=0, waitInVillage=false, arrivalGust=false, ci
         check(mirrorShownBeforeDive===0,`nothing of the mirror shows before the whale dives: ${mirrorShownBeforeDive.toFixed(1)} s`);
         check(underWay&&slowest>=4.45,`the boat sails at its ordinary pace but for the swim: ${slowest.toFixed(2)} m/s at ${slowestAt} s`);
         const lead=events['whale-breath']-events.whaleLed;
-        check(lead>=10&&lead<=20,`the shorter passage keeps a continuous reveal and gentle stop: ${lead.toFixed(1)} s`);
+        // The completed physical leap changes who nudges next; arrival time remains independently bounded below.
+        check(lead>=10&&lead<=21,`the shorter passage keeps a continuous reveal and gentle stop: ${lead.toFixed(1)} s`);
         check(events['whale-breath']>=57&&events['whale-breath']<=63,`first whale puzzle at about 60 s: ${events['whale-breath']} s`);
         check(events.stopped-events.last20<=9,`the last 20 m take about 8 s: ${(events.stopped-events.last20).toFixed(1)} s`);
         const [heard]=sea.covers,seen=sea.seen;
@@ -268,6 +270,9 @@ function run(name, fps, gust, veer=0, waitInVillage=false, arrivalGust=false, ci
         check(seen&&seen.at>heard.at&&events.shape>seen.at,`its blow is seen before its shape forms: ${JSON.stringify({heard,seen,shape:events.shape})}`);
         check(sea.calls.length===1&&sea.calls[0]<seen?.at&&sea.calls[0]+callLength('whale-moan')>=sea.silhouette.at+2,
           `one low call carries from the mist through the first silhouette: ${JSON.stringify({calls:sea.calls,blow:seen?.at,silhouette:sea.silhouette,length:callLength('whale-moan')})}`);
+        check(sea.nearCalls.length===1&&sea.nearCalls[0]>sea.calls[0]+callLength('whale-moan')
+          &&events['whale-breath']-sea.nearCalls[0]-callLength('whale-near')<16,
+          `a distinct closer phrase carries the approach: ${JSON.stringify({calls:sea.calls,near:sea.nearCalls,arrival:events['whale-breath']})}`);
         check(events.mirrorSeen>events.dive,`the mirror comes out of its mist only once the whale has dived: ${JSON.stringify(events)}`);
         const onward=time-events['whale-gone'];
         check(onwardLimit>=tuning.seaPassage.speed-0.001,`normal boat speed throughout the onward sail: cap ${onwardLimit}`);
@@ -277,7 +282,7 @@ function run(name, fps, gust, veer=0, waitInVillage=false, arrivalGust=false, ci
       return {seconds:+time.toFixed(1),musicLead:+musicLead.toFixed(2),sailed:+sailed.toFixed(1),peak:+peak.toFixed(2),swimSeconds:+(swimFrames/fps).toFixed(1),stillSeconds:+stillFor.toFixed(1),whaleCalled:chapter.whaleCalled,
         ...(chapter.whale?{hiddenBeforeNudge:+leastHidden.toFixed(4),nudgeOut,whaleBrake:+worstBrake.toFixed(2),restGap:+restGap.toFixed(2),slowest:+slowest.toFixed(2),slowestAt,lead:+(events['whale-breath']-events.whaleLed).toFixed(1),
           last20:+(events.stopped-events.last20).toFixed(1),diveToMooring:+(time-events.dive).toFixed(1),letGoToMooring:+(time-events.letGo).toFixed(1),
-          onwardLimit,onwardPeak:+onwardPeak.toFixed(2),portTurn:+portTurn.toFixed(3),starboardTurn:+(-mostStarboard).toFixed(2),sighs:sea.covers,blow:sea.seen,calls:sea.calls,reveal:{silhouette:sea.silhouette,detail:sea.detail,foreground:sea.foreground,podFrames:sea.podFrames,podAngle:sea.podAngle,podWorst:sea.podWorst,framing:sea.framing}}:{}),beats,events,dolphinActs};
+          onwardLimit,onwardPeak:+onwardPeak.toFixed(2),portTurn:+portTurn.toFixed(3),starboardTurn:+(-mostStarboard).toFixed(2),sighs:sea.covers,blow:sea.seen,calls:sea.calls,nearCalls:sea.nearCalls,reveal:{silhouette:sea.silhouette,detail:sea.detail,foreground:sea.foreground,podFrames:sea.podFrames,podAngle:sea.podAngle,podWorst:sea.podWorst,framing:sea.framing}}:{}),beats,events,dolphinActs};
     }
   }
   const w=chapter.whale;

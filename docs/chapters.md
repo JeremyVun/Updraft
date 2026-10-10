@@ -508,12 +508,15 @@ and `morning`.
 
 The ancient whale is the past, burdened by an old net: freeing it puts the past right before the sky mirror puts
 the future right. The boat leaves the sleeping island in the last of the night. Dolphins gather, ride the bow and
-leap at first light. The cygnet climbs onto the side, decides to swim alongside the moving hull, and is lifted back
+leap at first light. The featured leaper gathers speed on the camera's side and commits to a forward arc clear
+of the hull; readiness uses its actual position and velocity, so it never leaps across the boat to reach a mark.
+The cygnet climbs onto the side, decides to swim alongside the moving hull, and is lifted back
 in to dry. The boat keeps an ordinary sailing pace for this play. Its low moan and blow come from the distance during
 the swim; a faint silhouette gradually gains detail, with clear water around the boat. The approach turns toward
 the whale before it is visible, so the pod's travel agrees with that destination. As it emerges, the swimmer's
 side view eases toward the boat-to-whale line, keeping the head visible in portrait as the bird returns aboard.
-A dolphin nudges the planking and the pod leads them alongside. The boat comes to
+A dolphin nudges the planking and the pod leads them alongside. A second low phrase answers during the closer
+approach, with a gap after the first moan. The boat comes to
 rest beside its head, the far length lost in haze. It is the whale from the first crossing, now found in trouble.
 
 Five steps share the rescue between wind, child and bird:

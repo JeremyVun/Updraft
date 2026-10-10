@@ -17,46 +17,54 @@ interface Moan {
   level: number;
 }
 
-/**
- * Its calls, in a humpback's manner and the sea score's key (D): slow moans that glide, low enough to be felt, the
- * harmonics a phone's speaker carries. Tired and sagging in the mist; a soft rise for the friend it knows; glad and
- * rising, in two phrases, as it breathes free; down and up again for goodbye; last and lowest from the deep.
- */
+// Contours follow NOAA's humpback example: falling cries, uneven answers and a changing balance of partials.
 const CALLS: Record<WhaleVoiceKind, readonly Moan[]> = {
-  'whale-moan': [{
-    pitch: [[0, 52], [2.5, 69], [4.8, 73.4], [7.6, 64], [10, 49]],
-    swell: [[0, 0], [0.9, 0.85], [2.8, 1], [7.6, 0.9], [10.2, 0]],
-    open: 0.25, rasp: 0.3, muffle: 900, level: 1,
+  'whale-moan': [
+    {
+      pitch: [[0, 156], [0.7, 171], [1.6, 163], [3.2, 129], [4.5, 118]],
+      swell: [[0, 0], [0.7, 0.8], [1.7, 1], [3.4, 0.75], [4.7, 0]],
+      open: 0.3, rasp: 0.16, muffle: 1600, level: 1,
+    },
+    {
+      pitch: [[5.6, 137], [6.3, 158], [7.8, 148], [8.5, 121], [10, 108]],
+      swell: [[5.6, 0], [6.4, 0.75], [7.3, 0.9], [9, 0.6], [10.2, 0]],
+      open: 0.15, rasp: 0.2, muffle: 1300, level: 0.85,
+    },
+  ],
+  'whale-near': [{
+    pitch: [[0, 182], [0.6, 193], [1.3, 174], [2.8, 136], [4.1, 124]],
+    swell: [[0, 0], [0.55, 0.85], [1.2, 1], [2.7, 0.7], [4.4, 0]],
+    open: 0.4, rasp: 0.14, muffle: 1600, level: 0.85,
   }],
   'whale-greet': [{
-    pitch: [[0, 73.4], [0.9, 82.4], [1.7, 92.5], [3.4, 82.4]],
-    swell: [[0, 0], [0.6, 0.8], [1.8, 1], [3.6, 0]],
-    open: 0.45, rasp: 0.08, muffle: 1600, level: 0.6,
+    pitch: [[0, 218], [0.4, 253], [1.1, 239], [1.8, 184], [3.4, 156]],
+    swell: [[0, 0], [0.35, 0.8], [1, 1], [2.3, 0.6], [3.6, 0]],
+    open: 0.55, rasp: 0.1, muffle: 2200, level: 0.8,
   }],
   'whale-song': [
     {
-      pitch: [[0, 92.5], [1.1, 110], [2.2, 104], [2.9, 98]],
-      swell: [[0, 0], [0.5, 0.7], [2.1, 1], [3.1, 0]],
-      open: 0.6, rasp: 0.1, muffle: 2200, level: 0.9,
+      pitch: [[0, 287], [0.45, 326], [0.9, 298], [1.45, 227], [2.3, 173]],
+      swell: [[0, 0], [0.3, 0.8], [0.85, 1], [1.7, 0.65], [2.6, 0]],
+      open: 0.75, rasp: 0.12, muffle: 2600, level: 0.95,
     },
     {
-      pitch: [[3.3, 98], [4.4, 123.5], [5.3, 146.8], [5.9, 138.6], [6.4, 130.8]],
-      swell: [[3.3, 0], [3.9, 0.75], [5.1, 1], [5.7, 0.85], [6.5, 0]],
-      open: 0.8, rasp: 0.06, muffle: 2600, level: 1,
+      pitch: [[3.15, 169], [3.9, 178], [4.4, 243], [4.9, 276], [5.45, 216], [6.25, 159]],
+      swell: [[3.15, 0], [3.7, 0.7], [4.8, 1], [5.5, 0.7], [6.5, 0]],
+      open: 0.6, rasp: 0.16, muffle: 2200, level: 1,
     },
   ],
   'whale-goodbye': [{
-    pitch: [[0, 110], [1, 92.5], [2.1, 73.4], [2.8, 77], [4, 110], [4.4, 104]],
-    swell: [[0, 0], [0.5, 0.8], [1.9, 0.9], [3.6, 1], [4.6, 0]],
-    open: 0.55, rasp: 0.12, muffle: 2000, level: 1,
+    pitch: [[0, 232], [0.6, 248], [1.7, 197], [2.8, 143], [4.4, 127]],
+    swell: [[0, 0], [0.5, 0.8], [1.3, 1], [2.9, 0.65], [4.6, 0]],
+    open: 0.45, rasp: 0.16, muffle: 1800, level: 0.95,
   }],
   'whale-deep': [{
-    pitch: [[0, 46.2], [2, 55], [4.4, 49], [6.4, 41.2]],
+    pitch: [[0, 112], [1.4, 124], [3, 101], [4.4, 82], [6.4, 71]],
     swell: [[0, 0], [1.2, 0.9], [3, 1], [5, 0.7], [6.8, 0]],
-    open: 0.15, rasp: 0.25, muffle: 420, level: 1,
+    open: 0.1, rasp: 0.22, muffle: 650, level: 0.85,
   }],
   'whale-echo': [{
-    pitch: [[0, 110], [1, 92.5], [2.1, 73.4], [3.2, 92.5]],
+    pitch: [[0, 186], [0.7, 201], [1.6, 164], [3.2, 128]],
     swell: [[0, 0], [0.6, 0.7], [2, 1], [3.6, 0]],
     open: 0.3, rasp: 0.05, muffle: 520, level: 0.35,
   }],
@@ -65,18 +73,15 @@ const CALLS: Record<WhaleVoiceKind, readonly Moan[]> = {
 /** How long each call goes on (s), for the room the score makes under it. */
 export const callLength = (kind: WhaleVoiceKind) => Math.max(...CALLS[kind].map((m) => m.swell[m.swell.length - 1][0]));
 
-const HARMONICS = [0, 1, 0.42, 0.28, 0.1, 0.035];
+const PARTIALS = [[0.35, 0.75, 0.5], [0.58, 0.3, 0.08], [0.03, 0.16, 0.025], [0.008, 0.035, 0]] as const;
 
 /** The whale's voice: its moans, synthesised whole for each call and let go when it ends. */
 export class WhaleVoice {
   private out: AudioOut | null = null;
-  private wave: PeriodicWave | null = null;
   private breath: AudioBuffer | null = null;
 
   setOutput(out: AudioOut | null): void {
     if (out && out.ctx !== this.out?.ctx) {
-      const imag = new Float32Array(HARMONICS.length);
-      this.wave = out.ctx.createPeriodicWave(Float32Array.from(HARMONICS), imag);
       this.breath = out.ctx.createBuffer(1, out.ctx.sampleRate * 4, out.ctx.sampleRate);
       const samples = this.breath.getChannelData(0);
       for (let i = 0; i < samples.length; i++) samples[i] = Math.random() * 2 - 1;
@@ -90,7 +95,7 @@ export class WhaleVoice {
    */
   call(kind: WhaleVoiceKind, level: number, pan: number, far: number): void {
     const out = this.out;
-    if (!out || !this.wave || level < 0.002) return;
+    if (!out || !this.breath || level < 0.002) return;
     const at = out.ctx.currentTime + 0.03;
     for (const moan of CALLS[kind]) this.moan(moan, at, level * moan.level, pan, far);
   }
@@ -106,19 +111,19 @@ export class WhaleVoice {
 
     const sum = keep(ctx.createGain());
     const oscillators: OscillatorNode[] = [];
-    const voice = keep(ctx.createOscillator());
-    voice.setPeriodicWave(this.wave!);
-    glide(voice.frequency, m.pitch, at, 1);
-    voice.connect(sum);
-    oscillators.push(voice);
-    // A slow wander in its pitch, never a singer's vibrato.
-    const wander = keep(ctx.createOscillator());
-    wander.frequency.value = 0.19;
-    const wanderBy = keep(ctx.createGain());
-    wanderBy.gain.value = 9;
-    wander.connect(wanderBy);
-    for (const osc of oscillators) wanderBy.connect(osc.detune);
-    oscillators.push(wander);
+    for (const [i, shape] of PARTIALS.entries()) {
+      const voice = keep(ctx.createOscillator()), colour = keep(ctx.createGain());
+      glide(voice.frequency, m.pitch, at, i + 1);
+      const length = end - from;
+      colour.gain.setValueAtTime(shape[0] * (i > 1 ? m.open : 1), from);
+      colour.gain.linearRampToValueAtTime(shape[1] * (i > 1 ? m.open : 1), from + length * 0.45);
+      colour.gain.linearRampToValueAtTime(shape[2] * (i > 1 ? m.open : 1), end);
+      voice.connect(colour).connect(sum);
+      oscillators.push(voice);
+    }
+    const drift = new Float32Array(Math.ceil((end - from) * 3) + 1);
+    for (let i = 0; i < drift.length; i++) drift[i] = (Math.random() - 0.5) * 12;
+    for (const osc of oscillators) osc.detune.setValueCurveAtTime(drift, from, end - from);
 
     const breath = keep(ctx.createBufferSource());
     breath.buffer = this.breath;
@@ -131,7 +136,6 @@ export class WhaleVoice {
     breathGain.gain.value = m.rasp * 0.16;
     breath.connect(air).connect(breathGain).connect(sum);
 
-    // Fixed throat peaks and delayed glides made the harmonics surge like a revving engine.
     const muffle = keep(ctx.createBiquadFilter());
     muffle.type = 'lowpass';
     muffle.Q.value = 0.6;

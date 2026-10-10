@@ -9,9 +9,9 @@ const { browser, page } = await audioPage();
 try {
   if (process.env.MUTATE === 'thin') await page.route('**/src/audio/whale-voice.ts*', async route => {
     const response = await route.fetch(), source = await response.text();
-    assert(source.includes('const HARMONICS ='));
-    await route.fulfill({ response, body: source.replace(/const HARMONICS = \[[^;]+;/,
-      'const HARMONICS = [0, 1, 0.22, 0.08, 0.035, 0.015, 0.006];') });
+    assert(source.includes('const PARTIALS ='));
+    await route.fulfill({ response, body: source.replace(/const PARTIALS = [^;]+;/,
+      'const PARTIALS = [[0.04, 0.08, 0.04]];') });
   });
   if (process.env.MUTATE === 'motor') await page.route('**/src/audio/whale-voice.ts*', async route => {
     const response = await route.fetch(), source = await response.text();
@@ -28,7 +28,7 @@ try {
     return GOODBYE_AT-SONG_AT-callLength('whale-song');
   });
   assert(spacing>=.05,'the freed song finishes before the flipper goodbye begins');
-  for (const kind of ['whale-moan', 'whale-song', 'whale-goodbye', 'whale-deep', 'whale-greet', 'whale-echo']) {
+  for (const kind of ['whale-moan', 'whale-near', 'whale-song', 'whale-goodbye', 'whale-deep', 'whale-greet', 'whale-echo']) {
     const r = await page.evaluate(async kind => {
       const THREE = await import('/node_modules/three/build/three.module.js');
       const { Foley } = await import('/src/audio/foley.ts');
@@ -40,7 +40,7 @@ try {
       const foley = new Foley(); foley.setOutput(sound.output);
       const camera = new THREE.PerspectiveCamera();
       camera.updateMatrixWorld();
-      const world = new WorldFoley(foley, camera), at = new THREE.Vector3(0, 0, -40);
+      const world = new WorldFoley(foley, camera), at = new THREE.Vector3(0, 0, kind==='whale-moan'?-165:-40);
       if(kind==='whale-greet')world.net('whale-call',at,1);
       else if(kind==='whale-echo')world.farCall(at);
       else world.whale(kind,at);
@@ -75,7 +75,7 @@ try {
     assert(r.peakDbFS > (r.kind==='whale-echo'?-52:-30) && r.peakDbFS < -12, `${r.kind} retains an audible, controlled level`);
     assert(r.modulation < .045, `${r.kind} contains rapid engine-like pulsing (${r.modulation})`);
   }
-  assert(report[0].speakerRms > -42, 'the first low moan must retain body above 180 Hz for small speakers');
+  assert(report[0].speakerRms > -33, 'the distant first moan must retain body above 180 Hz for small speakers');
 } finally {
   await browser.close();
 }

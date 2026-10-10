@@ -12,7 +12,7 @@ const quick = [
   'boot-cloth', 'analytics', 'stairs-haze',
 ];
 const mechanics = [
-  ...quick, 'bandage-cost', 'boat', 'boat-ground', 'flock-flight', 'journey-pacing', 'kite-logic',
+  ...quick, 'bandage-cost', 'boat', 'boat-ground', 'flock-flight', 'dolphin-leap', 'journey-pacing', 'kite-logic',
   'little-boats-logic', 'meadow-plane', 'meadow-route', 'piano-frame', 'pond-view', 'sail-flutter',
   'scarf-geometry', 'sea-logic', 'sky-mirror-logic', 'sky-mirror-pointer', 'sky-mirror-touch',
   'sleeping-logic', 'wing-care', 'wood-logic', 'ending-view',
@@ -28,7 +28,7 @@ const browser = [
 const audio = [
   'arrival-audio', 'audio', 'audio-continuity', 'audio-direction', 'birches-foley', 'birches-score',
   'boats-score', 'dream-score', 'gesture-harmony', 'homeward-audio', 'lines-score', 'marine-audio',
-  'meadow-score', 'opening-score', 'piano-audio', 'sea-score', 'sleeping-score',
+  'meadow-score', 'opening-score', 'piano-audio', 'sea-score', 'sleeping-score', 'whale-voice',
 ];
 const groups = { quick, mechanics, browser, audio, release: [...mechanics, ...browser, ...audio, 'playthrough'] };
 const group = process.argv[2] ?? 'quick';

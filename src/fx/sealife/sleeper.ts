@@ -14,7 +14,7 @@ import { DREAM_SCALE, DREAM_SHAPE, SPINE_AT, SPINE_GAP, SPINE_N, WhaleRig } from
 const POURS_FROM = 0.18;
 
 /** Its voice: tired in the mist, glad as it breathes free, goodbye with its flipper and its flukes, and last from the deep. */
-export type WhaleCall = 'whale-moan' | 'whale-song' | 'whale-goodbye' | 'whale-deep';
+export type WhaleCall = 'whale-moan' | 'whale-near' | 'whale-song' | 'whale-goodbye' | 'whale-deep';
 export type SleeperSound = WhaleSound | WhaleCall | 'whale-sigh' | 'whale-breath' | 'whale-slap' | 'flipper-pour' | 'seabirds-lift';
 
 const K = tuning.netWhale;
@@ -414,6 +414,10 @@ export class SleepingWhale extends WhaleRig {
   /** Its tired low moan, heard from wherever it lies: in the mist before it is seen. */
   moan(): void {
     this.call('whale-moan', this.eye);
+  }
+
+  callNear(): void {
+    this.call('whale-near', this.eye);
   }
 
   private call(kind: WhaleCall, at: THREE.Vector3): void {

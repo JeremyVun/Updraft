@@ -3,7 +3,7 @@
 // its head, its five steps played with real gestures as each is drawn (circles over the blowhole, strokes across its
 // eye, the cork, the net on its head and the flipper), the spout, the flukes and the settled arrival at the mirror.
 // Usage: node tools/sea-check.mjs [out-prefix]. BASE selects a stable dev server; W/H select the viewport (1600×900;
-// 430×932 for a phone); VIDEO=1 records <prefix>.webm; AUDIO=1 records the release mix through the last deep call.
+// 430×932 for a phone); VIDEO=1 records <prefix>.webm; AUDIO=1 records the approach and release mixes.
 // Saves a camera trace and a JSON report.
 // Reuses the machine-wide GPU lock. All captures belong in /tmp.
 import { openBrowser } from './lib/browser.mjs';
@@ -30,11 +30,13 @@ function observe() {
     requestAnimationFrame(trace);
   };
   trace();
-  window.seaLog = { swimFrames: 0, clipped: 0, maxGap: 0, pullFrames: 0, pullClipped: 0, neckError: 0, voices: [], beats: [], last: '', actionable: {}, invitations: {} };
+  window.seaLog = { swimFrames: 0, clipped: 0, maxGap: 0, pullFrames: 0, pullClipped: 0, neckError: 0, voices: [], leap: null, beats: [], last: '', actionable: {}, invitations: {} };
   const log = window.seaLog;
   const heard = g.sealife.sleeper.onSound;
   g.sealife.sleeper.onSound = (kind,x,y,z) => {
-    log.voices.push({kind,time:__stats.time,at:[x,y,z],camera:g.rig.camera.position.toArray(),free:g.story.current.whale?.step==='free'});
+    const recording=window.seaAudio?.recorder.state==='recording' ? seaAudio : null;
+    log.voices.push({kind,time:__stats.time,at:[x,y,z],camera:g.rig.camera.position.toArray(),free:g.story.current.whale?.step==='free',
+      recording:recording?.name,recordingTime:recording ? g.sound.ctx.currentTime-recording.started : undefined});
     heard?.(kind,x,y,z);
   };
   const update = g.sealife.pod.update.bind(g.sealife.pod);
@@ -42,6 +44,16 @@ function observe() {
     update(dt, time);
     const c = g.story.current;
     const w = c.whale;
+    const stunt = g.sealife.pod.stunt;
+    if (c.whale?.step === 'approach' && stunt?.kind === 'leap' && stunt.d.seg === 'air' && stunt.d.kind === 'leap') {
+      const d = stunt.d, row = { time, x:d.x, z:d.z, along:d.along, across:d.across, yaw:d.yaw, pace:d.pace };
+      log.leap ??= { start:row, end:row, leastClear:Infinity, flightError:0 };
+      const last=log.leap.end;
+      if(time>last.time) log.leap.flightError=Math.max(log.leap.flightError,
+        Math.hypot(d.x-last.x-Math.sin(last.yaw)*last.pace*dt,d.z-last.z-Math.cos(last.yaw)*last.pace*dt));
+      log.leap.leastClear=Math.min(log.leap.leastClear,stunt.side*d.across);
+      log.leap.end=row;
+    }
     if (w?.asks && log.actionable[w.step] === undefined) log.actionable[w.step] = c.time;
     if (w && (w.offered || w.coax) && log.invitations[w.step] === undefined) log.invitations[w.step] = c.time - log.actionable[w.step];
     const beat = `${g.story.name}:${c.swim}:${c.whale?.step ?? ''}`;
@@ -76,6 +88,8 @@ function assertHealthy(report) {
   assert.equal(report.mirror.carry, false, 'Mirror camera is still in its arrival transition');
   assert.ok(report.pullFrames > 120 && report.pullClipped === 0, 'The cygnet must stay fully visible throughout its pull');
   assert.ok(report.neckError < .55, `The cygnet twists away from the rope (${report.neckError} radians)`);
+  assert.ok(report.leap && report.leap.end.along-report.leap.start.along>1.3 && report.leap.leastClear>2.8
+    && report.leap.flightError<1e-5, `The dolphin must fly forward clear of the hull: ${JSON.stringify(report.leap)}`);
   for (const step of ['breath', 'eye', 'line', 'heave', 'flipper']) {
     assert.ok(report.invitations[step] <= 0.7, `${step} invitation took ${report.invitations[step]} seconds`);
   }
@@ -97,9 +111,20 @@ try {
   if(process.env.AUDIO) await page.evaluate(async()=>{
     const sound=__game.sound;sound.start();await sound.ready;
     const capture=sound.ctx.createMediaStreamDestination();sound.master.connect(capture);
-    window.seaAudio={recorder:new MediaRecorder(capture.stream),chunks:[]};
+    window.seaAudio={recorder:new MediaRecorder(capture.stream),chunks:[],name:'approach',started:sound.ctx.currentTime};
     seaAudio.recorder.ondataavailable=e=>seaAudio.chunks.push(e.data);
+    seaAudio.recorder.start();
   });
+  const saveAudio = async name => {
+    if (!process.env.AUDIO) return;
+    const encoded = await page.evaluate(() => new Promise(resolve => {
+      seaAudio.recorder.onstop = () => {
+        const reader = new FileReader(); reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.readAsDataURL(new Blob(seaAudio.chunks, { type:'audio/webm' }));
+      }; seaAudio.recorder.stop();
+    }));
+    fs.writeFileSync(`${prefix}-${name}-audio.webm`, Buffer.from(encoded, 'base64'));
+  };
   await page.evaluate(`(${observe.toString()})()`);
   const shot = async (name) => { await page.screenshot({ path: `${prefix}-${name}.png` }); console.log(`${prefix}-${name}.png`); };
   // Timed in game seconds: with `shot` the game steps 1/60 s a frame, so on a loaded machine it runs slower than the wall.
@@ -139,6 +164,7 @@ try {
   if (!swim.swimFrames || swim.clipped > 0 || swim.maxGap > 11.5) throw Error(JSON.stringify(swim));
   await wait(`${whale}.led`, 60); await shot('lead');
   await wait(`${whale}.step==='breath' && ${whale}.stepTime>3`, 90); await shot('beside');
+  await saveAudio('approach');
 
   // Each step as a prompt player plays it: a go once its gesture is drawn, a still as each new step is reached.
   const tries = {};
@@ -160,19 +186,15 @@ try {
     if (!(await whaleGo(page, tries))) await page.waitForTimeout(250);
   }
   await away(page);
-  if(process.env.AUDIO) await page.evaluate(()=>seaAudio.recorder.start());
+  if(process.env.AUDIO) await page.evaluate(()=>{
+    seaAudio.chunks=[];seaAudio.name='release';seaAudio.started=__game.sound.ctx.currentTime;seaAudio.recorder.start();
+  });
   await wait('__game.sealife.sleeper.spouting', 30); await shot('spout');
   await wait('__game.sealife.sleeper.fluking && __game.sealife.sleeper.time>15', 60); await shot('flukes');
   await wait(`${whale}.step==='gone'`, 60); await shot('gone');
   if(process.env.AUDIO) {
     await wait(`${whale}.stepTime>8`, 20);
-    const encoded=await page.evaluate(()=>new Promise(resolve=>{
-      seaAudio.recorder.onstop=()=>{
-        const reader=new FileReader();reader.onload=()=>resolve(reader.result.split(',')[1]);
-        reader.readAsDataURL(new Blob(seaAudio.chunks,{type:'audio/webm'}));
-      };seaAudio.recorder.stop();
-    }));
-    fs.writeFileSync(`${prefix}-release-audio.webm`,Buffer.from(encoded,'base64'));
+    await saveAudio('release');
   }
   await wait(`${whale}.stepTime>20`, 40); await shot('onward-sun');
   await wait("__game.story.name==='mirror'", 150); await shot('mirror-arrival');
@@ -185,7 +207,7 @@ try {
     mirror: { handed: __game.story.current.handed != null, arrived: __game.story.current.arrived,
       arriveFor: __game.tuning.skyMirror.arriveFor, carry: __game.story.current.shot.carry },
   }));
-  const report = { tries, swimFrames: log.swimFrames, clipped: log.clipped, maxGap: +log.maxGap.toFixed(2), pullFrames: log.pullFrames, pullClipped: log.pullClipped, neckError:log.neckError,neckWorst:log.neckWorst,voices:log.voices,beats: log.beats,
+  const report = { tries, leap:log.leap, swimFrames: log.swimFrames, clipped: log.clipped, maxGap: +log.maxGap.toFixed(2), pullFrames: log.pullFrames, pullClipped: log.pullClipped, neckError:log.neckError,neckWorst:log.neckWorst,voices:log.voices,beats: log.beats,
     invitations: log.invitations, ...health, errors };
   fs.writeFileSync(`${prefix}-trace.json`, JSON.stringify(await page.evaluate(() => window.seaTrace)));
   fs.writeFileSync(`${prefix}-report.json`, JSON.stringify(report, null, 2));

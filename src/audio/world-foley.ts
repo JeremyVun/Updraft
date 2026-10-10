@@ -183,5 +183,5 @@ export class WorldFoley {
   }
 }
 
-const CALLS: readonly string[] = ['whale-moan', 'whale-song', 'whale-goodbye', 'whale-deep'] satisfies WhaleCall[];
+const CALLS: readonly string[] = ['whale-moan', 'whale-near', 'whale-song', 'whale-goodbye', 'whale-deep'] satisfies WhaleCall[];
 const isCall = (kind: SleeperSound): kind is WhaleCall => CALLS.includes(kind);
