@@ -150,7 +150,7 @@ his iPad. `node tools/start-check.mjs` also fails if the worst boot frame gap ex
    runs before the boat moves, so a chapter seats the child with `ride(at, yaw, boat)` and she keeps that seat in the
    hull's frame: anything placed from the boat's last position trails it by a step, which uneven frames turn into a
    shudder (`shot`'s even steps hide it).
-4. The final view is prepared once: program variants, lighting bakes, cloud shadows, terrain selection, grass tables,
+4. The final view is prepared once: program variants, lighting bakes, cloud shadows, terrain selection, chapter fog, grass tables,
    what every grass blade shares this frame, and audio.
 5. The doorway view renders when open, then the sea reflection, the scene and the post chain; `endFrame()` fences it.
 
@@ -426,6 +426,17 @@ Static, baked once before Begin (runtime GPU allocations, not downloads):
 
 Bakes that follow the world:
 
+- `world/fog-lookup.ts` evaluates the original stairs `cloudDeck` and village `seaFog` into separate camera atlases.
+  Materials sample these instead of compiling both integrations repeatedly. Each atlas is 1280×896 RGBA16F
+  (8.75 MiB), with 64 radial slices from 0.25 to 8192 m; each slice has 160×96 samples over the camera view plus a
+  25% margin and a 32×16 spherical fallback for offscreen vertices. Optical depth and depth-weighted light are
+  filtered in direction and physical distance; decoding restores exact opacity for terrain/water early exits.
+  `beginFrame` invalidates before the main camera's grass bake, even at fixed game time. The scene's
+  `onBeforeRender` selects/bakes each main, reflected or doorway camera and rebinds its uniforms on reuse;
+  camera matrices and mirror mode also invalidate. The bake compiles and warms with the other `simMaterial`
+  passes before activation. Atlases allocate only for active fog and are disposed when that fog clears.
+  `FOG_LOOKUP=0` selects the original integrations for the bake and analytic probes. Ordinary haze, home haze,
+  sky radiance, Sleeping ground fog and the water's surface-origin `seaFogMirrored` remain analytic.
 - A window move (`followWindow`) re-bakes the height (two passes, checked texel for texel by
   `tools/height-bake-check.mjs`), surface and light of the window and shifts the wind, lean and life textures in the
   same frame, in whole-texel steps. The shoreline (`water.bakeShore`) and grass tables follow.

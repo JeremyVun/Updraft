@@ -9,6 +9,11 @@ void main() {
   gl_Position = vec4(position.xy, 0.0, 1.0);
 }`;
 
+export const COPY_FRAG = /* glsl */ `
+uniform sampler2D uSrc;
+in vec2 vUv;
+void main() { gl_FragColor = texture(uSrc, vUv); }`;
+
 /** Every simulation and bake material made so far, so they can all be compiled up front (see gl/boot.ts). */
 export const simMaterials: THREE.ShaderMaterial[] = [];
 const writes = new WeakMap<THREE.Material, THREE.WebGLRenderTarget | PingPong>();

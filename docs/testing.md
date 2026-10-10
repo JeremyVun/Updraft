@@ -71,10 +71,15 @@ edit.
 - `stairs-fog-check`: renders the shared fog-bank shader along near sightlines, including downward rays to the
   foreground. Checks continuous coverage inside the bank at cloud and sea height, with the boat's clearing,
   and clear surfaces outside it. Needs a dev server for the shader import.
+- `fog-lookup-check`: real GPU cache invalidation at fixed time, camera motion/rotation/resize, reflection mode,
+  camera rebinding and texture release. Needs a dev server; `NEGATIVE=1` omits invalidation to prove the clearing
+  assertion catches stale fog. The analytic lantern probe uses `FOG_LOOKUP=0`; scene comparisons exercise the cache.
 - `render-parity-check`: seeded frozen scene comparisons against an unchanged build. Run with
   `COMPARE_BASE=<unchanged build> BASE=<changed build> node tools/render-parity-check.mjs /tmp/<dir>`; both frozen
   builds must expose `?shot`. `CASES=lines,wood,stairs` selects cases; `TIMEOUT_MS` allows an unchanged slow baseline
   to finish. Include a same-build control when investigating differences.
+  Fog-cache changes include `CASES=belfry,roofs,stairs-close,stairs-turned`; the turned view freezes the world,
+  moves the camera, then refreshes terrain, grass and reflections as play does.
 - `noise-loop-check`: compares the rolled scene/height noise to the original shader arithmetic on the GPU over
   294,912 samples, including negative coordinates and all six octave counts. Needs a dev server for source imports.
   Run on the default backend and a second backend (`ANGLE=vulkan` on Windows); this is not a physical mobile test.
@@ -95,7 +100,7 @@ edit.
   `BUILD_STEPS`; fixed noise and terrain-sample loop bounds actually uploaded to every active program; no program first drawn in the first seconds of play after Begin, Continue or a chapter pick,
 `__stats.playFirstDraws`), `startup-check`,
   `loading-check`, `boot-cloth-check`, `failure-paths-check` (including a blocked room painting: plain veil, working
-  Continue), `context-loss-check`.
+  Continue), `context-loss-check` (`CHAPTER=belfry` exercises allocated fog atlases before context loss).
 - After a change to world construction, boot or the programs (a new material or variant): on a QA preview, with
   nothing else busy on the GPU and back to back with the unchanged build, `RUNS=5 node tools/boot-profile.mjs` (worst
   veil gap under 150 ms, Begin at 2.8 s or less) and `RUNS=3 THROTTLE=4` (Chrome with the CPU slowed 4×, a stand-in
@@ -205,6 +210,7 @@ differs, as a late readback can make it, is played once more; `ONLY=wood,jetty` 
 - Against another build: `FRAME=600 COMPARE_BASE=<its dev server>` stops both on the same frame and reports the
   difference between them (`COMPARE_MAX=1` fails above 1/255, `CAPTURE=1` saves both frames); a build against itself
   reads 0.
+  Whole-frame timing refreshes the chapter-fog cache on each draw, even at frozen game time, so its bake cost counts.
 - Stairs fixtures (`tools/lib/stairs-fixture.mjs`), for `frame-profile`, `memory-census` and `audio-cost`:
   `stairs:waiting|climb|loop|cloud|top|sail|fog` play the chapter to that moment, with real gestures, or on frames
   under `FRAME` so every run is the same.

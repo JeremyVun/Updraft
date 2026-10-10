@@ -10,6 +10,7 @@ import { ISLES } from './heightfield';
 import { HOME_JETTY } from './home-layout';
 import { NOISE_TILES_GLSL, noiseTileUniforms } from './noise-tiles';
 import { noiseLoopUniforms } from '../gl/loops';
+import { fogLookupUniforms, FOG_LOOKUP_GLSL } from './fog-lookup-uniforms';
 
 /** North of this z the world is already living: the sea between the first island and the second. */
 export const LIVING_BEYOND = -150;
@@ -47,6 +48,7 @@ const SEA_MIST = tuning.seaPassage.mist;
 export const atmo = {
   uniforms: {
     ...noiseLoopUniforms,
+    ...fogLookupUniforms,
     uTime: { value: 0 },
     uSunDir: { value: sunDirection(sunAz, sunEl) },
     uSunColor: { value: hdr('#ffd2a0', 2.7) },
@@ -283,6 +285,12 @@ export const SEA_FOG_TOP = { middle: tuning.drowned.fog.mistTop, highest: tuning
 
 /** Declares the shared uniforms and the sky, fog, lighting and wind helpers. Include once per shader stage. */
 export const ATMO_GLSL = /* glsl */ `
+#ifndef FOG_LOOKUP
+#define FOG_LOOKUP 1
+#endif
+#if FOG_LOOKUP
+${FOG_LOOKUP_GLSL}
+#endif
 // Materials with variants (gl/variants.ts) set this to 0 while the deck is away; every other material keeps it.
 #ifndef CLOUD_DECK
 #define CLOUD_DECK 1
@@ -842,11 +850,15 @@ vec4 deckLayer(vec3 ro, vec3 rd, float far) {
  * top, grey underneath, and lighter the higher up in it you are. The bank of mist stands on it.
  */
 vec4 cloudDeck(vec3 ro, vec3 rd, float far) {
+#if FOG_LOOKUP
+  return sampleFog(uCloudLookup, rd, far);
+#else
   vec4 deck = deckLayer(ro, rd, far);
   if (uFogBankShape.w <= 0.0) return deck;
   vec4 bank = fogBank(ro, rd, far);
   float a = 1.0 - (1.0 - bank.a) * (1.0 - deck.a);
   return vec4((bank.rgb * bank.a + deck.rgb * deck.a * (1.0 - bank.a)) / max(a, 1e-4), a);
+#endif
 }
 
 /** Its level h at xz, lower round the tower where it lies low there, rising to h over a soft rim. */
@@ -991,7 +1003,11 @@ vec4 seaMist(vec3 ro, vec3 rd, float far, bool lighting) {
 }
 
 vec4 seaFog(vec3 ro, vec3 rd, float far) {
+#if FOG_LOOKUP
+  return sampleFog(uMistLookup, rd, far);
+#else
   return seaMist(ro, rd, far, uMirrorPass < 0.5);
+#endif
 }
 
 /** The mist reflected by the water, without scattering the lantern twice. */

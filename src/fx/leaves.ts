@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { GpuRunner, PingPong, atBoot, simMaterial } from '../gl/gpu';
+import { COPY_FRAG, GpuRunner, PingPong, atBoot, simMaterial } from '../gl/gpu';
 import { ATMO_GLSL, NOISE_GLSL, atmo } from '../world/atmosphere';
 import { ISLES } from '../world/heightfield';
 import { mulberry32 } from '../world/noise';
@@ -444,7 +444,7 @@ export class LitterField {
     // that the GPU cannot filter reads as empty, so without the extension `litterDepth` blends texels itself.
     const filtered = renderer.extensions.has('OES_texture_float_linear');
     this.field = new PingPong(LITTER_RES, LITTER_RES, THREE.FloatType, filtered ? THREE.LinearFilter : THREE.NearestFilter);
-    const copy = simMaterial(`uniform sampler2D uSrc; in vec2 vUv; void main() { gl_FragColor = texture(uSrc, vUv); }`, { uSrc: { value: null } }, this.field);
+    const copy = simMaterial(COPY_FRAG, { uSrc: { value: null } }, this.field);
     const tex = dataTexture(seed, LITTER_RES, LITTER_RES);
     atBoot(() => {
       copy.uniforms.uSrc.value = tex;
@@ -498,7 +498,7 @@ export class FallenLeaves {
     const vel = new Float32Array(LEAF_COUNT * 4);
     const rand = mulberry32(6101);
     for (let i = 0; i < LEAF_COUNT; i++) vel[i * 4 + 3] = rand();
-    const copy = simMaterial(`uniform sampler2D uSrc; in vec2 vUv; void main() { gl_FragColor = texture(uSrc, vUv); }`, {
+    const copy = simMaterial(COPY_FRAG, {
       uSrc: { value: null },
     }, this.pos);
     const seeds = ([[this.pos, state], [this.vel, vel]] as const).map(([target, data]) => [target, dataTexture(data, W, H)] as const);

@@ -7,13 +7,13 @@ import { smoothstepCalls, literalNumber } from './lib/glsl.mjs';
 const before=process.env.COMPARE_BASE??'http://127.0.0.1:5233/';
 const after=process.env.BASE??'http://127.0.0.1:5234/';
 const prefix=process.argv[2]??'/tmp/updraft-render-parity';
-const cases=[['island',''],['lines','chapter=washing'],['boats','chapter=boats'],['meadow','chapter=meadow'],['birches','chapter=birches'],['drowned','chapter=drowned&shower=1'],['wood','chapter=wood'],['sleeping','chapter=sleeping'],['sea','chapter=sea'],['mirror','chapter=mirror'],['home','chapter=summit'],['portrait','chapter=sleeping',390,844],['stairs','chapter=stairs']]
+const cases=[['island',''],['lines','chapter=washing'],['boats','chapter=boats'],['meadow','chapter=meadow'],['birches','chapter=birches'],['drowned','chapter=drowned&shower=1'],['wood','chapter=wood'],['sleeping','chapter=sleeping'],['sea','chapter=sea'],['mirror','chapter=mirror'],['home','chapter=summit'],['portrait','chapter=sleeping',390,844],['stairs','chapter=stairs'],['belfry','chapter=belfry&fog=1'],['roofs','chapter=roofs&fog=.6'],['stairs-close','chapter=stairs',1600,900],['stairs-turned','chapter=stairs',1600,900,true]]
  .filter(([name])=>!process.env.CASES||process.env.CASES.split(',').includes(name));
 const {browser,close}=await openBrowser();
 const report=[];
 try {
  const comparison=await browser.newPage();
- for(const [name,query,width=960,height=600] of cases){
+ for(const [name,query,width=960,height=600,turn=false] of cases){
   const captures=[];
   for(const [label,base] of [['before',before],['after',after]]){
    const page=await browser.newPage({viewport:{width,height}}),errors=[];
@@ -29,6 +29,15 @@ try {
    });
    await page.goto(`${base}?shot=1&ratio=1&msaa=4&progress=0&analytics=0&${query}`);
    await page.waitForFunction(()=>window.__frozen,null,{polling:50,timeout:Number(process.env.TIMEOUT_MS??180000)});
+   if(turn)await page.evaluate(()=>{
+    const g=__game,camera=g.rig.camera;
+    camera.position.x+=1.5;camera.position.y+=.4;camera.rotateY(.12);camera.updateMatrixWorld(true);
+    g.terrain.update(camera);g.grass.update(camera);
+    g.scene.onBeforeRender(g.renderer,g.scene,camera,null);
+    g.grass.bake(g.renderer);
+    g.water.update(camera,c=>g.terrain.beginMirror(c),()=>g.terrain.endMirror());
+    g.post.render(__stats.time);
+   });
    const state=await page.evaluate(()=>{
     const g=__game;
     return {frame:__stats.frame,chapter:g.story.name,beat:g.story.current.beat,child:g.child.position.toArray(),bird:g.cygnet.position.toArray(),camera:g.rig.camera.position.toArray(),parity:__stats.heightParity};

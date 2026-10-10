@@ -21,7 +21,7 @@ const mechanics = [
   'plane-routing', 'scarf-normals', 'pointer-pick', 'cat-events', 'drowned-gating', 'drowned-contact', 'drowned-tower', 'drowned-boarding', 'drowned-return', 'drowned-lantern', 'drowned-rescue-polish', 'drowned-rescue-sequence', 'drowned-bell', 'drowned-farewell',
 ];
 const browser = [
-  'shader-browser', 'sky-mirror-star', 'drowned-mist', 'lantern-fog', 'stairs-fog', 'touch-viewport', 'chapter-view-browser', 'context-loss', 'start',
+  'shader-browser', 'sky-mirror-star', 'drowned-mist', 'lantern-fog', 'stairs-fog', 'fog-lookup', 'touch-viewport', 'chapter-view-browser', 'context-loss', 'start',
   'progress', 'frame-time-browser', 'journey-view',
 ];
 // Audio/score checks render through a headless dev server (no GPU); BASE selects it.

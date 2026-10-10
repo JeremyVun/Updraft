@@ -805,6 +805,7 @@ window.__audit = {
     for(const s of this.bonesEarly||[]){this.skeletons.get(s).call(s);renderer.initTexture(s.boneTexture);}
     for(const a of this.uploadsMid||[])a.needsUpdate=true;
     if (sim && this.omit !== 'wind') this.stepWind();
+    if (typeof fogLookup !== 'undefined') {fogLookup.beginFrame();fogLookup.bake(rig.camera);}
     if (sim && this.forceGrassBakes && this.omit !== 'grass-tables') {grass.tablesDirty=true;grass.bake(renderer);}
     const omits=(this.omit||'').split('+');
     if (!omits.includes('grass-fog-vertex') && !omits.includes('grass-fog-pass-off')) (grass.bakeFrame??grass.shadeFog)?.call(grass,renderer);

@@ -1,5 +1,25 @@
 # Boot veil: build plan
 
+## October 11 shader investigation
+
+Jeremy requested shader simplification and then instructed Codex to continue without subagents. The active agent
+was stopped; subsequent measurements and cache revisions were completed directly. Full brief and results are in
+`design.md`, "Shader simplification investigation".
+
+- Exact copy-pass consolidation: integrated into local main. In isolation, program count 240 → 239, identical unique shader
+  sources, and pixel-identical island/meadow/birches comparisons. Typecheck, production build and shader bounds pass.
+- Shared chapter-fog cache: integrated into local main after Jeremy's "merge into main please". Explicit shader
+  selection and scene callbacks replace the prototype hooks; frame/camera invalidation and inactive-atlas disposal
+  are covered by a GPU regression and negative control. The final 160×96 directional grid passes all six
+  frozen-world camera comparisons, including the turned stairs view that failed at the prototype's 128×80.
+- Final forced-cold load: 26.408 s versus a fresh unchanged control at 43.884 s, about 40% less on this Mac. Both
+  link 240 programs: the shared bake adds one and the copy cleanup removes one. Final paired frame-cost ratios
+  are 0.903/0.951/0.994 in belfry/stairs/village. Each allocated atlas is 8.75 MiB.
+- Verified: typecheck, production/QA builds and production guards, shader bounds, analytic fog probes, cache
+  lifecycle, startup/Continue/chapter pick/quality steps, context recovery, real bell/clearing/descent/boarding/
+  farewell, and roof/tree/next-camera transition. Evidence and limitations are in design.md, "Local integration".
+  The older phase 4 gates and physical Windows/Safari/tablet validation remain open. No deployment is included.
+
 Read `design.md` in this folder first; it is the spec, and its Gates table is binding. The boot contract is
 `docs/engine.md` (Boot) and the checks are in `docs/testing.md`. Phases run in order: phases 1 and 2 both edit
 `src/main.ts`, and phase 3 styles the line that phase 2 writes. One build agent at a time. Commit after every step.

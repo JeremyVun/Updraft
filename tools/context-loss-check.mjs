@@ -1,4 +1,4 @@
-// Real WEBGL_lose_context, native reload and checkpoint recovery; no simulated loss events.
+// Real WEBGL_lose_context, native reload and checkpoint recovery. CHAPTER selects the live GPU resources exercised.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {openBrowser} from './lib/browser.mjs';
@@ -10,7 +10,7 @@ try {
   const context=await browser.newContext({viewport:{width:1280,height:800}}),page=await context.newPage(),errors=[];
   page.on('pageerror',e=>errors.push(e.message));
   page.on('console',m=>{if(/object does not belong to this context/.test(m.text()))errors.push(m.text())});
-  await page.goto(base+`?shot=1&start=1&progress=${saved?1:0}&chapter=meadow`);
+  await page.goto(base+`?shot=1&start=1&progress=${saved?1:0}&chapter=${process.env.CHAPTER??'meadow'}`);
   await page.waitForSelector('#veil.ready',{timeout:60000});await page.locator('#begin').click();
   await page.waitForFunction(()=>window.__ready,null,{timeout:60000});
   const checkpoint=await page.evaluate(()=>localStorage.getItem('updraft.progress.v1'));

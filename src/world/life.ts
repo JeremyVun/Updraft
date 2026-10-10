@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { GpuRunner, PingPong, simMaterial, simTarget } from '../gl/gpu';
+import { COPY_FRAG, GpuRunner, PingPong, simMaterial, simTarget } from '../gl/gpu';
 import { Readback } from '../gl/readback';
 import { LIVING_BEYOND, atmo } from './atmosphere';
 import { ISLES } from './heightfield';
@@ -59,11 +59,6 @@ void main() {
   bool inside = all(greaterThanEqual(uv, vec2(0.0))) && all(lessThanEqual(uv, vec2(1.0)));
   gl_FragColor = inside ? texture(uSrc, uv) : vec4(0.0, 0.0, 0.0, 1.0);
 }`;
-
-const COPY_FRAG = /* glsl */ `
-uniform sampler2D uSrc;
-in vec2 vUv;
-void main() { gl_FragColor = texture(uSrc, vUv); }`;
 
 /** Regions the story has brought fully back to life, which stay alive when the window moves away. */
 export interface LifeRegions {

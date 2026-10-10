@@ -49,6 +49,7 @@ import { createWindDebug } from './wind/debug';
 import { WindField, type WindSample } from './wind/field';
 import { CLOUD_SPAN, atmo, veilClear, veilDensity } from './world/atmosphere';
 import { bakeNoiseTiles } from './world/noise-tiles';
+import { FogLookup } from './world/fog-lookup';
 import { CloudShadows } from './world/clouds';
 import { Grass } from './world/grass';
 import { sleepingGust } from './world/sleeping-wind';
@@ -1122,6 +1123,8 @@ function prepareFrame(dt: number): void {
   clouds.update();
   terrain.update(rig.camera);
   grass.update(rig.camera, dt);
+  fogLookup.beginFrame();
+  fogLookup.bake(rig.camera);
   grass.bake(renderer);
   cursor.update(input.gust, input.charge, input.down);
   audioEnvironment.update(dt, story.focus.x, story.focus.z, story.name);
@@ -1309,6 +1312,11 @@ if (QA && params.shot) {
   window.__game = { params, tuning, quality, post, wind, input, rig, renderer, scene, glider, lines, swirl, sound, child, story, creatures, hillCreatures, water, skyMirror, terrain, footprints, cottage, petals, grass, littleBoats, sealife, cygnet, flock, cat, carry, probe, washing, curtains: CURTAINS, doorway, doorwayView, doorExit: DOOR_EXIT, washingPassage, washingInvitation, shoreHaul, shorePulley, shorePinwheel: SHORE_PINWHEEL, scarfInvitation, kite, departureKites, pinwheels, village, wood, stormWeather, sleeping, embers, emberInvitation, fireflies, boat, life, piano, birches, pond, cloudStairs, harebells, swanFeather };
 }
 
+const fogLookup = new FogLookup(renderer);
+scene.onBeforeRender = (_renderer, _scene, camera) => {
+  if (camera instanceof THREE.PerspectiveCamera) fogLookup.bake(camera);
+};
+
 /**
  * Everything the first frame would otherwise pay for happens here, behind the veil: every program compiles and
  * settles in small groups, the window bakes, warm batches upload the world, and the loop starts only once the GPU is
@@ -1371,13 +1379,15 @@ async function boot(): Promise<void> {
   mirror.target.dispose();
   await warmSimulations(renderer, simulations, warming(simulations.length));
   performance.mark('warmed');
+  fogLookup.active = true;
+  fogLookup.beginFrame();
   const ground: (() => unknown)[] = [
     () => terrain.fields.bake(renderer),
     () => terrain.colour.bake(renderer),
     async () => { if (params.heights !== 'direct') await terrainHeights.bake(renderer, () => gpuIdle(renderer)); },
     yieldBoot,
     () => followWindow(...windowAim(), true),
-    () => { grass.update(rig.camera); grass.bake(renderer); },
+    () => { grass.update(rig.camera); fogLookup.bake(rig.camera); grass.bake(renderer); },
     async () => { if (QA && params.shot) heightParity = await measureHeightParity(renderer); },
     () => gpuIdle(renderer),
     yieldBoot,
@@ -1420,6 +1430,8 @@ async function play(resumed: boolean): Promise<void> {
   try {
     followWindow(...windowAim(), true);
     grass.update(rig.camera);
+    fogLookup.beginFrame();
+    fogLookup.bake(rig.camera);
     grass.bake(renderer);
     post.render(0, true);
     await gpuIdle(renderer);

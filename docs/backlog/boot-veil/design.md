@@ -1,5 +1,185 @@
 # Boot and the loading veil
 
+## Shader simplification investigation (2026-10-11)
+
+Jeremy's brief, verbatim:
+
+> Is there anything we can do about the time to compile all the shaders?
+>
+> we can't precompile the shaders?
+>
+> is it because of the large number of shaders we have?
+>
+> Surely there's a way for us to simplify the shaders and reduce their number?
+
+Jeremy authorised proceeding, then clarified:
+
+> yea ok please. is it really a shared fog? I know we had some fog in the cloud stairs chapter, and a "cheap" fog for the drowned village chapter?
+
+Jeremy then instructed:
+
+> dont use subagents going forward please.
+
+Continue this investigation directly. The active cache-prototype agent was stopped; at that checkpoint its
+isolated worktree was experimental evidence, not an approved game change.
+
+Jeremy subsequently instructed: "merge into main please". This authorises integrating the final chapter-only
+cache and exact copy-pass cleanup into local main, preserving the fog models and the cache approach.
+Replace shader string rewrites with an explicit `FOG_LOOKUP` compile switch and renderer interception with the
+world scene's `onBeforeRender` callback. Invalidate once per prepared frame, even at fixed game time; preserve
+camera-specific caches for grass, main, reflected and doorway views, and release atlases when their fog clears.
+An additional turned-camera stairs comparison required increasing the fine grid to 160×96 (8.75 MiB per atlas):
+128×80 exceeded the existing 2% pixel-difference gate at that angle. The first finer comparison passes at 1.959%.
+Verify the integrated result against the prototype, real fog transitions, startup and context recovery. Continue
+solo. Deployment is outside this instruction.
+
+The chapter fog models are distinct: stairs `cloudDeck`/`fogBank`, village `seaMist`, plus ordinary haze and the
+sleeping island's ground fog. `fogOf` combines their results; its source is shared across materials. The village
+mist remains analytic, not the removed ray-marched implementation. Its nine-interval quadrature loop is called
+several times for church clearing and can be costly to expand during compilation despite being cheap at runtime.
+Before building a texture cache, isolate the stairs and village costs and test a uniform-bound version of that
+same nine-interval loop. Preserve the existing integration, boundary handling, samples, lighting and wisps.
+
+Audit of clean `72d962b2`: 240 linked programs, up from the 214 measured on October 6. Of these, 176 include
+the shared atmosphere source; this is a source inventory, not a claim that every included function survives
+compiler elimination. Normalising comments and whitespace finds one duplicate pair: the life field's copy pass
+and the petal/leaf copy pass. Eleven programs have doorway support, but that does not establish eleven redundant
+programs: the doorway modifies existing actor materials as well as separating otherwise shared materials.
+
+Exploratory probes run against a frozen QA build on this Mac, Chrome for Testing 153 with ANGLE Metal, a fresh
+browser per load and `coldshaders`. They intercept shader source in a scratch browser; no product shader changed.
+Initial time to ready was 43.404 s (4.309 s settling, 36.295 s warming first draws). Replacing `skyRadiance` with
+plain `skyColor` took 38.219 s. Sharing its two cloud-density samples through a uniform-bounded loop took 44.100 s,
+so that rewrite did not establish a Mac improvement. Replacing the main `fogOf` calculation with zero fog took
+14.330 s, still with 240 programs. A final unchanged control took 43.965 s (4.690 s settling, 36.584 s warming),
+confirming that the baseline remained slow after the probes. The sky and fog omissions change the picture and are diagnostic bounds only,
+not proposals to remove the effects or estimates of a finished optimisation. These are individual exploratory
+loads, not Windows/Safari/tablet measurements or a rendering-performance comparison. A first malformed sky probe
+was discarded; the corrected probes require no console/page errors and a successful `ready` performance mark.
+
+The main experiment is a shared lookup for existing fog colour and amount, so individual
+materials compile a texture lookup instead of the entire fog calculation. This remains an isolated prototype,
+not an approved production implementation. It must preserve the approved analytic mist: evaluate
+that same function into a cache rather than substitute a new fog style. Main, reflected and doorway cameras,
+the terrain's landscape-specific home haze, transparent materials, nudged character geometry, rapidly changing
+lightning and moving fog boundaries all need explicit treatment. Texture resolution, interpolation and per-frame
+cost are unresolved; no startup win justifies a visible fog change or slower play. A cache adds its own bake
+programs and work, so the diagnostic's 29-second difference cannot be claimed as a deliverable saving.
+
+For program count, consolidate genuinely equivalent prop shaders by putting differences such as paint colour,
+grain scale and light strength in uniforms, and share their vertex source too. `lines.ts`'s `PAINT_FRAG` and
+`birches.ts`'s `ROPE_FRAG` are an initial family to inspect; the latter also dissolves near the camera, so this is
+not a textual deduplication. Retain quality variants that have measured gameplay benefits. The duplicate copy
+pass is a small exact cleanup, not the main startup fix. Confirm savings in whole-game cold startup before
+retaining a change; compare output and runtime separately. Production integration remains open.
+
+Scratch evidence and probe: `/tmp/updraft-shader-audit-UBDk40/` (`programs.json`, `sky.json`, `loop.json`,
+`fog.json`, `control.json`, `audit.mjs`; `baseline/` is the frozen QA build). Reference for the shared-volume approach:
+[Epic's volumetric fog documentation](https://dev.epicgames.com/documentation/en-us/unreal-engine/volumetric-fog-in-unreal-engine).
+The reference establishes the technique, not its performance or fidelity in Updraft.
+
+### Follow-up experiments
+
+The village-only omission took 34.279 s; omitting the stairs deck/bank took 35.222 s. Both models contribute to
+compilation. Keeping nine integration intervals behind a uniform bound took 44.090 s, without an established
+improvement. Sharing the clearing's integral call sites took 41.598 s; sharing its two height passes as well took
+41.488 s. These are single-load probes, not retained changes.
+
+A four-sample loop took 40.560 s; combining it with the clearing loop took 41.127 s. The sample-loop GPU comparison
+covered 110,592 rays, including nearly horizontal and vertical rays, three fog heights, three clearing sizes and
+three closure amounts. Maximum opacity difference was 0.000000537. However, paired batches with a blocking pixel
+readback showed median new/old cost ratios of 1.364, 0.923, 1.208 and 1.364 across four fog states. Reject this
+rewrite: a small startup improvement does not justify making the fog kernel slower. A first timing using only
+`gl.finish()` did not wait reliably on this browser and was discarded. Evidence: `mist-parity.json` and its script
+in the scratch directory.
+
+The isolated full-fog cache took 15.295 s in one forced-cold load (241 programs). At 1600×900, ratio 1 and MSAA 4,
+both it and the unchanged belfry ran at 60 fps for eight seconds, with no intervals above 25 ms. This only establishes
+that short desktop frame test, not GPU headroom or tablet performance. The original island, drowned and stairs
+comparisons passed, but the closed-fog belfry comparison failed: 2.136% of pixels differed by more than 8/255,
+against the existing 2% limit. Mean channel difference was 0.444/255. It also samples detailed sky radiance too
+coarsely to preserve the exact sky-matching contract. Do not merge it.
+
+A second cache retains ordinary haze and sky radiance in the material shaders and caches only `cloudDeck` and
+`seaFog`, with physical-distance interpolation between radial slices. It still failed the belfry comparison
+(3.078% over 8/255, mean 0.555/255). Storing optical depth and depth-weighted light improved this to 2.393%, still
+outside the gate. A view-oriented cache then concentrated its samples inside the camera's view plus a 25% margin,
+keeping a coarse spherical fallback for offscreen vertices. At 96×64 view samples, the belfry, church, rooftops,
+sleeping island, mirror, home, shore and sea passed; the 1600×900 stairs view still failed at 2.172% over 8/255.
+
+The final experimental layout uses 128×80 view samples, a 32×16 spherical fallback and 64 radial slices. Each
+allocated half-float atlas costs 6 MiB. Stairs and village have separate atlases per camera; their original analytic
+functions bake them. Ordinary haze, landscape-specific home haze, sky radiance and the water's reflected sea-mist
+calculation remain analytic. Decoding restores exactly opaque fog, preserving the terrain and water's early-return
+optimization. Without that restoration, the prototype caused an avoidable rendering slowdown.
+
+Final fixed-frame comparisons pass for belfry, rooftops and stairs: respectively 0.353%, 1.401% and 1.723% of pixels
+over 8/255; mean differences 0.083, 0.467 and 0.475/255. These are numerical image gates, not human approval.
+The view-cache pairs retain the same chapter, character poses and camera positions (largest camera drift below
+0.000001 m). A 16-round comparison alternating ABBA and BAAB advances both builds through the same frames, drains the GPU after
+every draw using pixel readback, and includes the per-frame cache rebuild. Median new/old completed-frame cost
+ratios are 0.910 in the belfry, 0.944 on the stairs and 0.999 in the village entry. These are local throughput
+measurements, not device-independent GPU milliseconds. The earlier separate-page timing is superseded by this
+paired comparison and the opaque-fog fix.
+
+Three forced-cold loads of that final frozen prototype took 27.437, 28.035 and 28.058 s. An unchanged load measured
+immediately afterwards with the same profiler took 43.320 s: the prototype's median is 35.3% lower. It links 241
+programs, including the shared bake, versus the unchanged 240. Its longest veil gap was 333 ms and its longest
+post-construction task 202 ms, versus 400 and 416 ms in that control. The older 150 ms/2.8 s gates remain unmet;
+this is not a claim to have closed the whole loading-veil backlog. No Windows, Safari or physical tablet result
+has been established for this prototype.
+
+At the prototype checkpoint, the worktree was `/Users/jeremy/.codex/worktrees/fog-lookup-prototype/updraft` and main
+contained only the exact copy-pass consolidation. The latter links 239 programs with no remaining normalized duplicate pair; the set of
+unique shader sources is identical to the unchanged build, after ignoring whitespace/comments and the cold-load
+nonce. Its one cold load was 42.595 s, too little evidence to claim a loading-time improvement from that cleanup.
+Typecheck, the production build and shader bounds pass. Seeded fixed-frame island, meadow and birches comparisons are pixel-identical,
+covering the life field, petals and fallen-leaf/litter initialization paths affected by the shared copy shader.
+
+Evidence: `fine-view-cache-views*.png`/`.json`, `view-cache-wide*.png`/`.json`, `paired-cost.json`,
+`fine-cache-cold-{1,2,3}.json` and `final-control-cold.json` in the scratch directory. The final frozen prototype is
+`fine-view-cache/`, served at port 5354 during review. The integration below supersedes the experimental hooks.
+
+### Local integration, authorised by Jeremy
+
+The integrated implementation uses explicit `FOG_LOOKUP` shader selection and the scene's normal render callback,
+with per-frame invalidation, per-camera matrix/mirror checks and disposal of inactive atlases. A turned-camera
+stairs comparison exposed insufficient directional resolution: the original 128×80 grid differed by more than
+8/255 on 2.322% of pixels. Preparing grass, terrain and reflection for the moved camera did not remove the
+difference. Raising the grid to 160×96 brought that view to 1.959%, inside the existing 2% gate, at 8.75 MiB per
+allocated atlas. The original analytical fog functions, depth slices and optical encoding are unchanged.
+
+Paired completed-frame tests of this finer version, including the cache rebuild, give median new/old ratios of
+0.903 in the belfry, 0.951 on the stairs and 0.994 at the village entrance. The cache regression renders a clearing
+at fixed time, moves/turns/resizes the camera, switches cameras and mirror mode, and checks actual GPU texture
+release. Omitting invalidation fails its negative control. The original stairs, village and lantern shader probes
+also pass; the lantern probe explicitly selects the analytical path. `frame-profile` invalidates on each measured
+whole-frame draw so frozen time cannot hide cache cost. Camera-angle cases are retained in `render-parity-check`.
+
+All six final moved-camera comparisons pass: belfry left/right 0.777%/0.587%, roofs 1.516%/1.392%, stairs
+1.543%/1.959% over 8/255; all means remain below 1/255 and character/camera state agrees. A final forced-cold load
+of the finer version takes 26.408 s, followed by a fresh unchanged control at 43.884 s (39.8% less). Both link 240
+programs: the bake adds one, the exact copy cleanup removes one. Worst veil gaps are 317/417 ms and longest
+post-construction tasks 208/422 ms respectively. This final pair supplements the three earlier prototype loads;
+it does not establish performance on other hardware.
+
+The startup-flow check passes with no stray programs or first draws in play, including Begin, Continue, a chapter
+pick and quality changes; its worst veil gap was 316.6 ms. Context loss during play, with/without a checkpoint, and
+during boot all recover through the existing reload path. The final context check also starts in the belfry with
+the finer fog atlases allocated, and passes all three recovery paths. Real pointer strokes at the belfry rang the bell four times,
+cleared the fog, brought the boat home, and continued through descent, boarding and the cat's farewell with no
+cuts or lost-character intervals. The harness needs a dev server for its source imports; a first preview attempt
+was discarded when those imports were unavailable.
+The real roofs-to-tree replay also passes through the fallen tree and the camera turn toward the sheet, with
+no cuts, hidden-character intervals or roof penetration. Typecheck, shader bounds, the production and QA builds,
+and production/QA separation guards pass; the existing bundle-size warning remains.
+
+Evidence remains in `/tmp/updraft-shader-audit-UBDk40/`: `integrated-fine-cost.json`,
+`integrated-fine-camera*.json`, `integrated-start.json`, `integrated-context-loss.log` and
+`integrated-fine-belfry-dev.log`, `integrated-fine-roofs.log`, `integrated-fine-cold.json` and
+`integration-control-cold.json`, `integrated-fine-context-loss.log` and `integrated-fine-cache-check.json`.
+The old loading-veil targets and physical Windows/Safari/tablet checks remain open.
+
 ## Windows compilation follow-up (2026-10-06)
 
 Jeremy: "ok listen, i need you to figure it out. I need this game to be playable on windows machines. This may explain why my sister said the game just completely hung and froze when she tried on her samsung tablet or whatever"

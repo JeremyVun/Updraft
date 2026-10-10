@@ -2,6 +2,8 @@
 
 This is the canonical project instruction file. `CLAUDE.md` is a symlink here.
 
+In Codex, do not use subagents unless Jeremy explicitly requests them.
+
 Browser game where you play the wind (Three.js + TypeScript + Vite). **Read `docs/journey.md` first: the vision, Jeremy's brief in his words, the story and the principles.** Then `docs/roadmap.md` for what is open.
 
 - Overview and standing decisions: `docs/project.md`. Look: `docs/styles.md`.

@@ -27,7 +27,8 @@ try {
     const material = new THREE.ShaderMaterial({
       uniforms: { ...u, probeHeight: { value: 3 }, probeEpsilon: { value: 0.001 }, probeMode: { value: 0 } },
       vertexShader: 'void main() { gl_Position = vec4(position.xy, 0.0, 1.0); }',
-      fragmentShader: `${source}
+      fragmentShader: `#define FOG_LOOKUP 0
+        ${source}
         uniform float probeHeight;
         uniform float probeEpsilon;
         uniform int probeMode;

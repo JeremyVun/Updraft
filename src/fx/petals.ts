@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { fixInPlace } from '../gl/fixed';
-import { GpuRunner, PingPong, atBoot, simMaterial } from '../gl/gpu';
+import { COPY_FRAG, GpuRunner, PingPong, atBoot, simMaterial } from '../gl/gpu';
 import { ATMO_GLSL, NOISE_GLSL, atmo } from '../world/atmosphere';
 import { GRASS_LINE, heightAt } from '../world/island';
 import { FLOWER_PATCHES, type FlowerPatch } from '../world/landmarks';
@@ -218,7 +218,7 @@ export class Petals {
     const { pos, vel } = initialState(share);
     const home = dataTexture(pos.slice());
     this.home = home;
-    const copy = simMaterial(`uniform sampler2D uSrc; in vec2 vUv; void main() { gl_FragColor = texture(uSrc, vUv); }`, {
+    const copy = simMaterial(COPY_FRAG, {
       uSrc: { value: null },
     }, this.pos);
     const seeds = ([[this.pos, pos], [this.vel, vel]] as const).map(([target, data]) => [target, dataTexture(data)] as const);
