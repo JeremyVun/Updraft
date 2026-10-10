@@ -186,6 +186,10 @@ export class Cygnet {
   private swimSpeed = 0;
   private swimLaunch = 0;
   private readonly swimVel = new THREE.Vector2();
+  private towing = false;
+  private readonly towFace = new THREE.Vector3();
+  private towSpeed = 0;
+  private towEffort = 0;
   private nextPaddle = 0;
   private gaitStale = true;
   private actWas: Drives['act'] = null;
@@ -320,7 +324,7 @@ export class Cygnet {
     this.drives = {
       time: 0, carried: false, seat: null, inHands: false, move: null, jostle: 0, falling: false, gliding: false, leaving: false, afoot: false, downed: false, afloat: false, perched: false,
       settle: 0, fear: 0, bond: 0, cold: 0, effort: 0, flap: 0, flapPhase: 0, glide: 0, look: 0, tucked: 0, hope: 0, hopLift: 0, crouch: 0, landing: 0, faceplant: 0, flop: 0, doze: 0, wriggle: 0,
-      puff: 0, stride: 0, hurry: 0, pitch: 0, roll: 0, beg: 0, call: { env: 0, note: 0, long: false }, gaze: { yaw: 0, pitch: 0, firm: false, wandering: true },
+      puff: 0, stride: 0, hurry: 0, pitch: 0, roll: 0, tow: 0, beg: 0, call: { env: 0, note: 0, long: false }, gaze: { yaw: 0, pitch: 0, firm: false, wandering: true },
       act: null, actK: 0, actEnv: 0, actSide: 1, actYaw: 0, breath: 0, blink: 0, wingGuard: 0, wingOpening: 0, wind: { x: 0, z: 0 },
       gait: { on: false, feet: [{ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }], sway: 0, roll: 0, twist: 0, dip: 0, pace: 0 },
     };
@@ -725,6 +729,7 @@ export class Cygnet {
    * never done this before the first time, and goes in like a dropped loaf; `soaked` is how wet its down gets going in.
    */
   swimTo(target: THREE.Vector3, launch = 0, soaked = 1): void {
+    this.towing = false;
     if (this.state !== 'swimming') {
       this.seating.go({ seat: null, held: false }, 'hop', 0.75, 0.22);
       if (this.state === 'perched' && this.perchSupport) this.seating.anchorMove(this.perchSupport);
@@ -737,6 +742,14 @@ export class Cygnet {
       this.mind.wet = Math.max(this.mind.wet, soaked);
     }
     this.swimAim.copy(target);
+  }
+
+  towTo(target: THREE.Vector3, toward: THREE.Vector3, speed: number, effort: number): void {
+    this.swimTo(target);
+    this.towing = true;
+    this.towFace.copy(toward);
+    this.towSpeed = speed;
+    this.towEffort = effort;
   }
 
   /** The height of whatever it is swimming on: the sea, or a pond up the hill. */
@@ -1450,8 +1463,8 @@ export class Cygnet {
     this.swimJoy = ease(this.swimJoy, entering ? 0 : this.swimPlay, 3, dt);
     const burst = this.swimJoy * (0.5 + 0.5 * Math.sin(this.swum * 2.4)) ** 2;
     const top = Math.max(2.3 + (tuning.littleBoats.swimSpeed - 2.3) * burst, THREE.MathUtils.lerp(2.3, tuning.littleBoats.swimCatchUp, this.swimHurry));
-    const want = entering ? this.swimLaunch : clamp(gap * (1.1 + burst * 0.65), 0, top);
-    if (this.swimCarry.lengthSq() > 0.01) {
+    const want = entering ? this.swimLaunch : clamp(gap * (1.1 + burst * 0.65), 0, this.towing ? this.towSpeed : top);
+    if (this.towing || this.swimCarry.lengthSq() > 0.01) {
       /** Carried, it paddles across the moving water to its place and faces the way it is really going. */
       const toward = gap > 1e-3 ? want / gap : 0;
       this.swimVel.x = ease(this.swimVel.x, dx * toward, 1.6, dt);
@@ -1459,7 +1472,8 @@ export class Cygnet {
       this.swimSpeed = this.swimVel.length();
       const vx = this.swimVel.x + this.swimCarry.x;
       const vz = this.swimVel.y + this.swimCarry.y;
-      if (vx * vx + vz * vz > 0.09) this.turnTo(Math.atan2(vx, vz), 3, 2.2, dt);
+      if (this.towing) this.turnTo(Math.atan2(this.towFace.x - this.position.x, this.towFace.z - this.position.z), 3, 2.2, dt);
+      else if (vx * vx + vz * vz > 0.09) this.turnTo(Math.atan2(vx, vz), 3, 2.2, dt);
       this.position.x += vx * dt;
       this.position.z += vz * dt;
     } else {
@@ -1472,10 +1486,10 @@ export class Cygnet {
     /** Down with the plunge and up again past where it floats, then the sea's own slow lift. */
     const bobbing = Math.sin(this.time * 1.3 + 0.7) * 0.03 + Math.sin(this.time * 2.7) * 0.012;
     this.position.y = this.swimLevel + bobbing - 0.26 * Math.sin(this.dunk * Math.PI) * this.dunk;
-    this.effort = ease(this.effort, Math.max(clamp((gap - 2.5) / 4, 0, 0.6), burst * 0.6), 3, dt);
+    this.effort = ease(this.effort, Math.max(clamp((gap - 2.5) / 4, 0, 0.6), burst * 0.6, this.towing ? this.towEffort : 0), 3, dt);
     this.flap = ease(this.flap, 0, 5, dt);
     this.hurry = clamp(this.swimSpeed / 2.3, 0, 1);
-    this.stride += dt * (2.5 + this.swimSpeed * 3.2 + burst * 6);
+    this.stride += dt * (2.5 + this.swimSpeed * 3.2 + burst * 6 + (this.towing ? this.towEffort * 4 : 0));
     this.position.y += burst * 0.025 * Math.sin(this.stride * 2);
     if (this.time > this.nextPaddle && this.swimSpeed > 0.3) {
       this.heard.push({ kind: 'paddle', amount: this.hurry });
@@ -1665,6 +1679,7 @@ export class Cygnet {
     d.hurry = this.hurry;
     d.pitch = this.pitch;
     d.roll = this.roll;
+    d.tow = d.afloat && this.towing ? this.towEffort : 0;
     d.beg = this.beg;
     const callFor = this.callLong ? 1.4 : 0.8 - this.fear * 0.25;
     d.call.env = this.callT > 0 ? Math.sin(Math.min(1, this.callT / callFor) * Math.PI) ** 0.5 : 0;

@@ -55,6 +55,7 @@ export interface Drives {
   hurry: number;
   pitch: number;
   roll: number;
+  tow: number;
   beg: number;
   call: { env: number; note: number; long: boolean };
   /** Where it wants its head pointed, relative to the way its body faces; `firm` when the story told it where to look. */
@@ -116,6 +117,7 @@ export class Poser {
     land: 0,
     plant: 0,
     swim: 0,
+    tow: 0,
     walk: 0,
   };
   /** One eased weight per thing it can be doing, so one act can fade out while the next fades in. */
@@ -168,6 +170,7 @@ export class Poser {
     p.land = ease(p.land, d.landing, 14, dt);
     p.plant = ease(p.plant, d.faceplant, 16, dt);
     p.swim = ease(p.swim, d.afloat ? 1 : 0, 5, dt);
+    p.tow = ease(p.tow, d.tow, 6, dt);
     /** Afloat, all the work is in the feet: swimming hard never opens or beats the wings. */
     const effort = d.effort * (1 - p.swim);
     const alert = clamp((d.gaze.firm ? 0.5 : 0) + d.hope * 0.7 + d.call.env * 1.2 + p.beg * 0.5 + d.crouch * 0.9 + act('into-wind') * 0.6 + act('ask') + act('peer') + act('look-about') * 0.4, 0, 1);
@@ -190,6 +193,7 @@ export class Poser {
     /** A seat tips it back by itself; only the climb and a hop add anything of their own. */
     /** Hauling at something it cannot move, it sits back on its heels; pushing under a hand, it leans in. */
     let rootPitch = (flying ? d.pitch : 0) - 0.55 * p.climb - 0.15 * p.lifted + 0.85 * p.plant - haul * 0.3 + push * 0.22;
+    rootPitch -= p.tow * 0.16;
     let rootRoll = flying ? d.roll : d.roll * (1 - p.sit * 0.5);
     rootRoll += d.flop * 1.25 + shaking * 0.35 + Math.sin(t * 41) * 0.025 * tremble;
     /** Braced, it leans into the wind; knocked over, it goes with it. */
@@ -256,7 +260,7 @@ export class Poser {
       sh = lerp(sh, -1.0 + Math.cos(t * 22 + phase) * 0.5, p.climb);
       ft = lerp(ft, 0.6, p.climb);
       /** Afloat, the legs trail and push alternately, mostly out of sight. */
-      th = lerp(th, 0.95 + Math.sin(d.stride + phase) * 0.45, p.swim);
+      th = lerp(th, 0.95 + Math.sin(d.stride + phase) * (0.45 + p.tow * 0.2), p.swim);
       sh = lerp(sh, -0.6 - Math.cos(d.stride + phase) * 0.4, p.swim);
       ft = lerp(ft, 0.9 + Math.sin(d.stride + phase) * 0.5, p.swim);
       /** A stretch: one leg straight out behind, with the wing on the same side. */

@@ -1423,15 +1423,8 @@ export const tuning = {
     eyeDistance: 14.5, eyeBearing: 0.8, bodyAngle: 1.25,
     /** The crown round its blowhole above the water at rest (m), and how far it lies rolled with its near side up (radians). */
     crown: 5.3, roll: 0.087,
-    /**
-     * The boat coming to rest beside it, and sailing on once it has gone: led in, never more than `ledSpeed` (m/s),
-     * about ordinary sailing, so the lead takes about as long however hard the player blows; sailing on, never more
-     * than `leadSpeed`, giving the farewell a quiet minute before the mirror. Coming in, its limit takes way off at
-     * `slowing` (m/s²) until the hull's own carry can take it the rest
-     * of the way, and is nothing `restShort` metres short of the rest (past it when negative), so it is never braked;
-     * and how fast the limit climbs back (m/s²) once the whale is going under.
-     */
-    ledSpeed: 4.7, leadSpeed: 3.9, slowing: 1.2, restShort: -1.9, release: 0.6,
+    /** Pod-led approach cap (m/s), braking allowance (m/s²), and stopping offset (m). */
+    ledSpeed: 4.7, slowing: 1.2, restShort: -1.9,
     /** Seconds between its weak breaths, how far its back rises with one (m), and how much mist each sputters. */
     breathEvery: 10, breathRise: 0.45, mist: 1,
     /**
@@ -1710,7 +1703,7 @@ export const tuning = {
       breath: { distance: 18, height: 2.8, turn: -0.2, lookY: 8, toward: 0.35 },
       look: { distance: 9.5, height: 2.8, turn: -0.35, lookY: 3.4, toward: 0.32 },
       line: { distance: 9, height: 3.2, turn: -0.45, lookY: 3, toward: 0.33, eyeward: 1 },
-      flipper: { distance: 11.5, height: 3.2, turn: -1.1, lookY: 4, toward: 0.6 },
+      flipper: { distance: 14, height: 3.2, turn: -0.8, lookY: 4, toward: 0.6, room: 5 },
       release: { distance: 12, height: 3, turn: -0.3, lookY: 12, toward: 0.4 },
       farewell: { distance: 34, height: 1.9, turn: -0.4, lookY: 25, toward: 0.6 },
       releaseRoom: 4,
@@ -1719,10 +1712,12 @@ export const tuning = {
      * The flipper: a stroke in any direction within `finRadius` of its outer part or the cygnet on screen (normalised
      * device units) lifts it once `finSweep` of such stroke have crossed them. The cygnet takes the loop's end where it lies, `endOut`
      * metres to port of the boat at rest and `endAhead` before it, and holds it from `birdOut`/`birdAhead`, clear of
-     * the flipper's lift; the loop comes off its tip `slipFor` seconds into the lift.
+     * the flipper's lift. Backward paddling takes up the slack, then draws the loop off and tows it clear (m).
      */
     finRadius: 0.5, finSweep: 0.2,
-    endOut: 5.1, endAhead: 0.2, birdOut: 5.3, birdAhead: -0.5, birdTake: 0.8, slipFor: 5,
+    endOut: 5.1, endAhead: 0.2, birdOut: 5.3, birdAhead: -0.5, birdTake: 0.8,
+    birdSlack: 0.65, birdPull: 1.6, birdClear: 0.65, birdPullFor: 3.8, birdClearFor: 1.2,
+    birdTowSpeed: 0.8, birdTowEffort: 0.8,
     /**
      * The near flipper at rest, about its root under the jaw: swept round toward the head and raised, so it reaches
      * out toward the boat's bow with the caught loop clear of the surface (radians).
@@ -1734,7 +1729,6 @@ export const tuning = {
 
   seaPassage: {
     speed: 10,
-    arrivalSpeed: 3.5,
     /** The most the boat makes while the cygnet is swimming: ordinary sailing sails on, only a strong gust is trimmed. */
     swimSpeed: 5,
     /** How much of the boat's way the wave along its side gives the swimming cygnet, and how fast the swim's cap comes in. */

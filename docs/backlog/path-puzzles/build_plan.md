@@ -1319,3 +1319,35 @@ invitations in 0.50–0.52 s, no browser errors or unexpected shader compilation
 all pass, including foot contact and hand gaps. Port 5330 serves the current QA build.
 The onward sail at 430×932, ratio 2 holds 60 fps over 20 s after warmup (p99/max 16.8 ms, no hitches or long tasks
 on this Mac; not a physical-phone measurement). N7 is complete on `sea-whale`; main merge still awaits approval.
+
+### Phase N8: active cygnet pull and normal onward sailing
+
+Approved brief in design.md. Astra owns net-whale, net, cygnet swim/pose, geography/migration, tuning and their
+checks/contracts. Preserve other chapters' swimming, existing checkpoints and mirror-to-home navigation.
+
+- [x] Backward paddling takes up slack, draws the loop off the lifted fin and tows it clear before release.
+- [x] Normal boat speed; longer onward distance with mirror/home moved together and old saves migrated.
+- [x] Causal motion and speed regression checks, save/navigation checks, landscape/portrait visual verification.
+- [x] Build, update contracts and refresh stable port 5330 preview; no main merge or deployment.
+
+The bird's actual backward displacement draws the loop along the flipper; freezing its position leaves the loop
+attached even after the lift's clock runs out. The bill retains the rope through the pull and a further tow clear.
+Its body braces and its feet work while it continues facing the rope. A wider portrait hold keeps the whole pull
+in frame; both CPU and browser checks now explicitly cover that interval.
+
+Revision 8 moves Mirror and home together by (-10, -42) m. The mirror's approach curve has a larger radius for
+normal-speed gusting boats. Both special sailing caps are gone; the normal 10 m/s ceiling and boat physics apply.
+Seven pacing cases pass: ordinary onward 63.1–65.3 s, sustained gust 30.9 s, late gust 58.4 s. The twelve-second
+swim and first puzzle at 90.6–92.9 s are preserved. Home retains its 206 m route and 40.3–40.9 s ordinary crossing.
+Jeremy will playtest the lengths before deciding on any further change. Evidence: `/tmp/updraft-sea-pull-z6lcrs/`.
+
+Production and QA builds, sea mechanics, geography, pacing and all seven shared character gates pass. Full
+landscape/portrait real-gesture runs reach the settled Mirror with no browser errors or unexpected shader
+compilation. Portrait records 310 pull/tow frames with no clipping; the held rope, pull, final tug and tow clear
+were inspected in both orientations. Deliberately restoring the timer-driven loop, slow sailing cap or old phone
+framing fails the corresponding regression guard.
+
+The broader terrain-height check has an existing open-sea-floor mismatch: 0.16704 m at (194, -1750), identical on
+the unchanged `f1e6a0d5` baseline and N8. Every visible terrain patch remains within the height/normal limits;
+the translated islands introduce no new failing samples. This unrelated terrain issue remains open. N8 is
+implemented on `sea-whale`; journey-length feedback and approval to merge into main remain with Jeremy.

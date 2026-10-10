@@ -948,8 +948,9 @@ The sequence:
   (`leastSpeed` 4.5) and the boat is kept to that from the end of its play until the nudge, so the pod can come
   alongside a gusting boat; where a whale waits the boat is never held back for a late pod (a boat that reaches it
   first is led in all the same). Led in, it keeps to about ordinary sailing however hard the player blows
-  (`tuning.netWhale.ledSpeed` 4.7), so the lead takes about as long gusting or not; sailing on after, it makes no more
-  than the pod's pace (`leadSpeed` 5.5). Coming in, its limit takes way off at 1.2 m/s² (`slowing`) until the hull's own
+  (`tuning.netWhale.ledSpeed` 4.7), so the lead takes about as long gusting or not. Sailing on after uses normal boat
+  speed; the approved N8 correction below replaces every earlier onward cap with distance. Coming in, its limit
+  takes way off at 1.2 m/s² (`slowing`) until the hull's own
   carry takes it the rest of the way: the last 20 m take 8.5 to 8.8 s to under 0.3 m/s (the carry alone needs about
   7 s from 4.5 m/s, so this is close to the least there is), never losing way faster than 0.85 m/s².
 - **The pod leads, and the whale is found.** After the swim a dolphin nudges the planking (main's nudge, now asking)
@@ -1375,3 +1376,27 @@ hold and release against that flipper; keep it afloat and clear of the whale. Re
 the whale’s voice and audition the smoother calls in context. Resolve the duplicated sun while retaining its
 soft glow. Verify full landscape/portrait passages, contact through transitions, timing and sound, then refresh
 the stable playtest preview on port 5330.
+
+### Approved active pull and normal sailing — 2026-10-10
+
+Jeremy's brief, verbatim:
+
+> right now, the cygnet only holds the string in it's mouth, it doesn't actually do anything to help pull the net away off the flipper.
+
+Approved sequence: the cygnet paddles backwards to take up the slack, braces and pulls as the player's wind
+lifts the flipper, then gives a final tug and tows the loop clear before releasing it. Loop travel must follow
+the bird's actual displacement; holding the rope while a timer frees it is insufficient.
+
+> yes that is approved.
+>
+> also, when i said to add some time between the whale and the sky mirror, it looks like you just slowed the boat down. don't do that!!! the boat must move at the normal speed!!!!
+
+This supersedes N6/N7's onward speed caps. Restore normal sailing and obtain the extra quiet time through a
+longer distance to the mirror. Move mirror and home together so their final crossing retains its shape and
+length; migrate existing saves once. Keep the shortened whale approach, swimming and farewell intact. Wind
+must still change sailing speed naturally; equal calm/gust durations are not a goal. Astra implements and
+checks both orientations, then refreshes port 5330. No main merge or deployment in this batch.
+
+When shown the measured 63–65 s whale-to-mirror and unchanged 40 s mirror-to-home lengths, Jeremy asked
+"was it 40 seconds before? That still seems a bit long no?". After clarifying the two legs, his ruling was
+"i will play through and let you know". Leave both lengths for that playtest; no further shortening is approved.

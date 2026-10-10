@@ -133,6 +133,38 @@ function coveredBlowhole(net, blowhole) {
   }
   return false;
 }
+{
+  const f=fixture(0,false), {chapter:c,boat:b,cygnet:k,sealife}=f, w=c.whale;
+  b.beach(w.rest.x-Math.sin(w.yaw)*1.5,w.rest.z-Math.cos(w.yaw)*1.5,w.yaw);b.afloat=true;b.grounded=false;
+  c.restoreCheckpoint('whale-heave',[3,95]);
+  let time=95;
+  const advance=()=>frame(f,1/60,time+=1/60);
+  while(w.bird!=='holding'&&time<125)advance();
+  assert.equal(w.bird,'holding','the bird takes the rope');
+  const pickup=k.position.clone();
+  for(let i=0;i<180;i++)advance();
+  const slack=k.position.distanceTo(pickup);
+  assert(slack>0.4,'backward paddling visibly takes up slack');
+  assert.equal(sealife.net.loop,0,'taking up slack cannot remove the loop before the wind lifts the fin');
+  assert(sealife.net.tension>0.8,'backward paddling tightens the rope');
+  assert(w.liftFin('sweeps'),'wind lifts the flipper');
+  const held=k.position.clone(), update=k.update.bind(k);
+  k.update=(...args)=>{update(...args);k.position.copy(held);};
+  for(let i=0;i<360;i++)advance();
+  assert.equal(sealife.net.loop,0,'a raised fin and elapsed time cannot free the loop without the bird pulling');
+  k.update=update;
+  let backward=0, previous=k.position.clone();
+  while(w.bird!=='letting'&&time<155){
+    advance();
+    const dx=k.position.x-previous.x,dz=k.position.z-previous.z;
+    backward-=dx*Math.sin(k.yaw)+dz*Math.cos(k.yaw);previous.copy(k.position);
+  }
+  assert.equal(w.bird,'letting','the bird tows the freed loop clear before letting go');
+  assert.equal(sealife.net.loop,1,'the backward pull removes the loop');
+  assert(backward>1.8,'it pulls while facing the rope, rather than turning and swimming forwards');
+  takeCues();
+  console.log(JSON.stringify({cygnetPull:{slack,backward,heldLoop:0}}));
+}
 for(const [fps,gust,portrait,circling] of [[60,0,false,false],[30,20,false,true],[60,20,true,true]]) {
   const f=fixture(gust,portrait,false,circling);
   const {chapter:c,boat:b,cygnet:k,rig,sealife}=f;
@@ -199,7 +231,13 @@ for(const [fps,gust,portrait,circling] of [[60,0,false,false],[30,20,false,true]
     if(w.step==='breath'&&w.progress<1&&(c.coax||w.progress>0))blowholeEdge=Math.max(blowholeEdge,...ndc.copy(w.whale.blowhole).project(rig.camera).toArray().slice(0,2).map(Math.abs));
     if(w.step==='breath'||w.step==='eye')eyeOpen=Math.max(eyeOpen,w.eyeT>0?1:0);
     if(PLAYED.includes(w.step)&&w.stepTime>1)assert(b.speed<0.2,`the boat stays at rest beside it: ${w.step} ${b.speed}`);
-    if(w.step==='flipper'&&k.state==='swimming')finClear=Math.min(finClear,clearOfFin(w.whale,k.position));
+    if(w.step==='flipper'&&k.state==='swimming'){
+      finClear=Math.min(finClear,clearOfFin(w.whale,k.position));
+      if(['holding','pulling','clearing','letting'].includes(w.bird)){
+        ndc.copy(k.position).setY(k.position.y+0.3).project(rig.camera);
+        assert(Math.abs(ndc.x)<0.9&&Math.abs(ndc.y)<0.9&&ndc.z<1,`the pulling cygnet stays fully in frame (${portrait?'portrait':'landscape'}, ${w.bird}): ${ndc.toArray()}`);
+      }
+    }
     watchSteps(w,time,asked,moved);
     // seaScore now turns 'arrival' once the dolphin pod has actually left (podLeftAt), not at a route fraction (ac4de1c).
     const scorePhase = !['before','done'].includes(c.swim) ? 'swim'
@@ -294,7 +332,10 @@ for(const [point,played,state] of [
   b.beach(rest.x,rest.z,c.whale.yaw);b.afloat=true;b.grounded=false;
   c.restoreCheckpoint('whale-gone',[3,130]);
   assert.equal(c.whale.step,'gone');assert.equal(sealife.sleeper.mesh.visible,false);
-  for(let i=0;i<60*120&&!c.done;i++){frame(f,1/60,130+i/60);assert(!sealife.sleeper.mesh.visible,'no whale after it has gone');}
+  for(let i=0;i<60*120&&!c.done;i++){
+    frame(f,1/60,130+i/60);assert(!sealife.sleeper.mesh.visible,'no whale after it has gone');
+    assert(b.speedLimit>=tuning.seaPassage.speed-0.001,'the onward sail uses the normal boat speed limit');
+  }
   assert(c.done,'from the save after the whale the boat moors at the mirror');
   assert.equal(takeCues().filter(q=>q==='restored').length,0,'a restored save is never rewarded again');
 }

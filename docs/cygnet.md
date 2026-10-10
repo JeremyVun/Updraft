@@ -57,6 +57,9 @@ may be loud: bugling and the whistle of their wings.
 - **Water.** It paddles three sheltered stretches beside the little boats, swims after its family on the meadow
   pond and comes back to the child's hands, and makes its brave swim on the open sea, going over the side while the
   child does nothing but stay, and swimming in the wave along the hull (`CrossingOpts.swimAt`, `story/crossing.ts`).
+  At the whale it takes the last rope in its bill and back-paddles: first taking up slack, then drawing the loop
+  off the lifted flipper and towing it clear. `towTo` keeps its body facing the rope while its velocity runs
+  backwards; eased effort braces its body and strengthens the foot strokes. Normal `swimTo` ends that mode.
 
 ## Where it rides
 

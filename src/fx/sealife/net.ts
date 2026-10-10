@@ -211,6 +211,7 @@ export class Net {
   endRest: THREE.Vector3 | null = null;
   /** Where the loop falls as it slips off the flipper's tip into whatever pulls it; null, beside the floating net. */
   fallsTo: THREE.Vector3 | null = null;
+  tension = 0;
   /** The loop's free end. */
   readonly loopEnd = new THREE.Vector3();
   readonly loopTie = new THREE.Vector3();
@@ -531,6 +532,7 @@ export class Net {
     this.curlFrom.set(0, 0, 0);
     this.endDropped = false;
     this.holding = 0;
+    this.tension = 0;
     this.draped = 0;
     this.snap = true;
     netLook.uFade.value = 1;
@@ -1580,7 +1582,7 @@ export class Net {
     }
     const dropped = this.endDropped ? this.drop.copy(this.t).add(this.endFrom) : null;
     const bill = this.held ?? dropped;
-    const sag = bill ? Math.min(1.2, 0.24 * tail.distanceTo(bill)) : 0;
+    const sag = bill ? Math.min(1.2, 0.24 * tail.distanceTo(bill)) * (1 - 0.94 * this.tension) : 0;
     for (let m = 1; m <= END_POINTS; m++) {
       const f = m / END_POINTS;
       if (dropped && off > 0) this.lie.lerpVectors(tail, dropped, f);

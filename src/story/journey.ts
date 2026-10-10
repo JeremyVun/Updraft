@@ -99,8 +99,8 @@ export const ROUTES: Record<string, THREE.Vector2[]> = {
   toMirror: [
     new THREE.Vector2(-300, -1950), new THREE.Vector2(-375, -1970),
     WHALE_LEAD, WHALE_LINE, WHALE_HOLD,
-    new THREE.Vector2(MIRROR_LANDING.x - 20.3, MIRROR_LANDING.z + 62.7), new THREE.Vector2(MIRROR_LANDING.x - 27.2, MIRROR_LANDING.z + 49.9),
-    new THREE.Vector2(MIRROR_LANDING.x - 27.3, MIRROR_LANDING.z + 35.3), new THREE.Vector2(MIRROR_LANDING.x - 20.5, MIRROR_LANDING.z + 22.5),
+    new THREE.Vector2(MIRROR_LANDING.x - 30.45, MIRROR_LANDING.z + 94.05), new THREE.Vector2(MIRROR_LANDING.x - 40.8, MIRROR_LANDING.z + 74.85),
+    new THREE.Vector2(MIRROR_LANDING.x - 40.95, MIRROR_LANDING.z + 52.95), new THREE.Vector2(MIRROR_LANDING.x - 30.75, MIRROR_LANDING.z + 33.75),
     new THREE.Vector2(MIRROR_LANDING.x, MIRROR_LANDING.z),
   ],
   toHarbour: [
@@ -414,7 +414,7 @@ export class Journey {
           arrivalMusic: 'mirror',
           dusk: 1.02, duskTo: tuning.skyMirror.duskFrom, dolphins: true,
           swimAt: tuning.seaPassage.swimAt, season: 0.45,
-          moor: MIRROR_LANDING, arrivalSpeed: tuning.seaPassage.arrivalSpeed,
+          moor: MIRROR_LANDING,
           netWhale: { lead: WHALE_LEAD, rest: WHALE_REST, hold: WHALE_HOLD, dusk: tuning.seaPassage.restDusk },
         });
       case 'mirror': return new SkyMirrorChapter(cast, this.chapter.done ? this.chapter.shot : undefined);

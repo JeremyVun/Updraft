@@ -52,7 +52,8 @@ distances; `tools/geography-check.mjs` checks migrations, clearance and continui
 
 Routes are `ROUTES` in `story/journey.ts`. At the ordinary 2.6-unit breeze the hull drives at 4.5 units/s, up to
 5.5 with a following wind; player gusts can push it to the 10 units/s ceiling (`tuning.sail`). Routes are sized for
-the ordinary breeze, never by per-crossing speed boosts (Jeremy ruled those out); turns, mooring, the storm and the
+the ordinary breeze: change distance to alter journey time, never throttle or boost sailing speed (Jeremy's ruling).
+Turns, mooring, the storm and the
 cygnet's swim slow the boat naturally. Targets at the ordinary breeze:
 
 | crossing | about | notes |
@@ -73,8 +74,11 @@ Geography revision 6 moves the mirror and home together (`PAST_THE_WHALE`), plac
 the whale while preserving the final crossing's shape and length.
 The second 2026-10-10 playtest adjustment brings the whale 52 m closer (revision 7), shortening the approach by
 about 12 seconds while retaining the dolphin beats and twelve-second swim. The mist keeps the same reveal order:
-heard, blow visible, then body. The onward cap is 3.9 m/s over the longer remaining distance, keeping roughly a
-minute of quiet sailing after the whale disappears.
+heard, blow visible, then body. Revision 8 moves mirror and home together another 43 m (`ONWARD_SEA`) and widens
+the mirror's approach curve so a gusting boat can round it at its ordinary pace. There is no special onward or
+arrival speed cap: the sail and normal steering/mooring physics govern speed. Ordinary wind takes 63–65 s after
+the whale disappears; sustained strong wind takes about 31 s. The final crossing retains its 206 m route and
+40–41 s ordinary timing. Jeremy is playtesting those lengths before any further pacing change.
 `tools/journey-pacing-check.mjs` sails the real boat through the passages (`CROSSING=` for one) at several wind
 bearings and frame rates; `tools/boat-check.mjs` checks navigation and storm pacing.
 
