@@ -19,6 +19,7 @@ const { Carry } = await import('../src/companion/carry.ts');
 const { CameraRig } = await import('../src/camera.ts');
 const { LittleBoats } = await import('../src/world/little-boats.ts');
 const { LittleBoatsChapter } = await import('../src/story/little-boats.ts');
+const { takeCues } = await import('../src/story/cues.ts');
 const { worldHeight } = await import('../src/world/heightfield.ts');
 const {
   BOATS_LANDING,
@@ -154,9 +155,13 @@ for (const fps of [30, 60, 120]) {
     f.cast.wind.push = 1;
     f.player = true;
     let minSpeed = Infinity, maxDeceleration = 0;
+    let breeze = f.chapter.breeze, largestSeaStep = 0;
+    takeCues();
     for (let frame = 0; frame < fps * 180 && !f.chapter.done; frame++) {
       const previousSpeed = f.room.toys[0].speed, sailing = f.chapter.beat === 'sailing';
       f.step();
+      largestSeaStep = Math.max(largestSeaStep, Math.abs(f.chapter.breeze - breeze));
+      breeze = f.chapter.breeze;
       // The toy reaching the outlet often ends sailing, so that frame counts too.
       if (!sailing || f.room.progress < (restored ?? 3) + 3) continue;
       const speed = f.room.toys[0].speed;
@@ -165,6 +170,9 @@ for (const fps of [30, 60, 120]) {
     }
     const label = `${fps}fps from ${restored ?? 'arrival'}`;
     assert(f.chapter.done, `${label}: steady wind and the player's bath and plug complete all pool handoffs`);
+    assert(!takeCues().includes('restored'), `${label}: reveal leaves the supplied music uninterrupted`);
+    assert.equal(breeze, 1, `${label}: sea matches the outgoing crossing before handoff`);
+    assert(largestSeaStep < .025, `${label}: departure sea changes continuously: ${largestSeaStep}`);
     assert.equal(f.cast.cygnet.swims, restored === 69 ? 1 : restored === 33 ? 2 : 3, 'preserve remaining swims');
     assert(minSpeed > 0.05, `${label}: orange boat stopped despite steady wind: ${minSpeed}`);
     assert(maxDeceleration < 3, `${label}: orange boat lost momentum abruptly: ${maxDeceleration}`);

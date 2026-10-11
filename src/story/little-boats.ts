@@ -6,7 +6,6 @@ import { heightAt } from '../world/island';
 import { LITTLE_BOATS as L, BOATS_BERTH, BOATS_LANDING, BOATS_POOLS as POOLS, boatsX, boatsWidth, boatsLevel, boatsWaterHeight } from '../world/little-boats-layout';
 import type { Coax } from '../fx/swirl';
 import type { Cast, Chapter } from './cast';
-import { completeObjective } from './cues';
 
 type Beat =
   | 'arrival'
@@ -24,7 +23,12 @@ type Beat =
 /** Follow a toy fleet along its bank; the same wind will carry the travellers away at the end. */
 export class LittleBoatsChapter implements Chapter {
   beat: Beat = 'arrival';
-  readonly breeze = 0.5;
+  // Reach the crossing's sea state before the chapter handoff.
+  get breeze(): number {
+    if (this.beat === 'aboard') return 1;
+    return this.beat === 'boarding'
+      ? THREE.MathUtils.lerp(0.5, 1, THREE.MathUtils.smootherstep(this.elapsed, 0, tuning.boarding.settle)) : 0.5;
+  }
   readonly worldLife = 1;
   readonly dusk = 0.08;
   readonly season = 0.23;
@@ -301,7 +305,6 @@ export class LittleBoatsChapter implements Chapter {
         c.stop();
         c.stroll = 1;
         c.lookAt = boat.position;
-        completeObjective();
       }
     } else if (this.beat === 'reveal' && this.elapsed > tuning.littleBoats.revealFor) {
       this.to('gather');

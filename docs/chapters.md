@@ -40,9 +40,9 @@ Rules every room keeps:
   camera never turns to it, and home has none. It is "things recur in the wrong place" from `docs/journey.md`.
 - **Landing and leaving.** On a beach the boat runs up the sand and the child sits a moment before stepping out
   (`Traveller.stepAshore`); at a jetty they step up onto the boards (`Traveller.alight`). See `docs/boat.md`.
-- **The reward phrase** (`completeObjective()` in `story/cues.ts`, the still island's restoration phrase) plays
-  only at major conclusions: the still island restored, the little boats' reveal, the piano's lullaby answered (just
-  after it finishes), the last loose stair flight placed. Smaller steps keep
+- **The reward phrase** (`completeObjective()` in `story/cues.ts`) plays
+  at the piano's lullaby answered (just after it finishes), the last loose stair flight placed and the whale freed.
+  Still and Little Boats leave their supplied music uninterrupted. Smaller steps keep
   their own small responses.
 
 ## The still island
@@ -232,6 +232,10 @@ sea, where the toys sail on until out of view. The child and the
 cygnet keep glancing at whatever is holding them, and the shot leans toward it while the fleet waits. Round the final
 bend their own boat waits among the toys (the reveal); the departure kite rises once the plug is out. The paper
 stays on the backpack throughout.
+
+The boat reveal has no completion phrase (Jeremy, 2026-10-12). During boarding the island's half-strength breeze
+eases to the crossing's full breeze, reaching it before the chapter changes so waves and shoreline foam do not
+jump. Boarding animation and camera composition are unchanged.
 
 How the toys move: a filled sail picks the hull up (`drive`) and still water takes speed away slowly (`drag`), so
 a toy glides on after a stroke. Each toy has its own `pace`; the child's orange toy is quickest and sails the

@@ -226,6 +226,8 @@ for a lingering player, uses the dry music route and the shared arrival/exit fad
 hidden-page suspension. Its own recorded dynamics replace the old per-cue score trim; authored cues retain their
 shared accompaniment duck. The original `little-boats-score.ts` and its tuning remain available for studies.
 The decoded recording is about 43 MiB at 48 kHz; exit releases it.
+Jeremy's 2026-10-12 instruction: remove the Little Boats "puzzle completed" sound. The reveal no longer raises
+`restored`; the supplied recording carries the conclusion without that phrase or its accompaniment duck.
 
 **Meadow and the piano.** A grey bed plays on arrival. The background stays while the child walks to and looks at the
 piano, then fades once over `tuning.piano.fadeOut` from sitting, overlapping the first key and clear before the
