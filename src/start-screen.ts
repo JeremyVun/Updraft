@@ -21,7 +21,7 @@ export type LoadingStage = keyof typeof STAGES;
 
 /** The room whose painting stands behind the veil, by saved chapter or `?chapter=` start (the names never clash). */
 const PAINTINGS: Record<string, string> = {
-  island: 'island', crossing: 'washing', toLines: 'washing', lines: 'washing', washing: 'washing',
+  island: 'island', tree: 'island', crossing: 'washing', toLines: 'washing', lines: 'washing', washing: 'washing',
   toBoats: 'boats', boats: 'boats', toMeadow: 'meadow', meadow: 'meadow', hills: 'meadow', piano: 'meadow',
   toBirches: 'birches', birches: 'birches', autumn: 'birches', toStairs: 'stairs', stairs: 'stairs', clouds: 'stairs',
   drowned: 'drowned', village: 'drowned', roofs: 'drowned', church: 'drowned', storm: 'drowned', toWood: 'wood', wood: 'wood', dark: 'wood', fears: 'wood',
@@ -140,6 +140,15 @@ class StartScreen {
     if (this.decoded && this.painting?.complete && this.painting.naturalWidth) this.veil.classList.add('painted');
     else this.unpaint();
     this.veil.classList.add('ready');
+  }
+
+  musicLoading(active: boolean): void {
+    if (!this.enabled || this.disposed || this.failedPermanently) return;
+    this.veil.classList.toggle('ready', !active);
+    this.veil.setAttribute('aria-busy', String(active));
+    this.stageText.textContent = active ? 'Preparing music' : '';
+    this.percentText.textContent = '';
+    document.getElementById('start-status')!.textContent = active ? 'Preparing music' : '';
   }
 
   /** Called after the first real frames, never over the warm-up render that shows hidden objects. */

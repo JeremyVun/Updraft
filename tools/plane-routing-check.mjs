@@ -132,7 +132,7 @@ for(const fps of [30,60,120]) {
 }
 console.log('PASS: low-altitude destination guidance against crosswind.');
 
-for (const room of ['island','birches']) for (const fps of [30,60,120]) {
+for (const room of ['birches']) for (const fps of [30,60,120]) {
   const f=fixture(),{cast,air}=f,{child,plane,cygnet,boat}=cast;
   let chapter,berth;
   if(room==='island') {
@@ -153,7 +153,40 @@ for (const room of ['island','birches']) for (const fps of [30,60,120]) {
   assert(chapter.done,`${room} ${fps}fps: failed to board ${chapter.beat}`);
   assert(plane.held,`${room}: boarded without retrieving paper`);
 }
-console.log('PASS: opening and birches interrupt a moving chase beside the boat under sustained wind, 30/60/120fps.');
+console.log('PASS: birches interrupts a moving chase beside the boat under sustained wind, 30/60/120fps.');
+
+const departures = [];
+for (const fps of [30, 60, 120]) for (const gust of [0, 40, -40]) {
+  Math.random = mulberry32(42);
+  const f = fixture(), { cast, air } = f, { child, plane, cygnet } = cast;
+  Object.assign(cast, { tree: { canopy: [{ centre: new THREE.Vector3(0, 20, 0) }] }, flock: { clear() {} },
+    life: { regions: { island: new THREE.Vector4() }, mean: () => 1 }, nearby: () => false });
+  const chapter = new IslandChapter(cast); chapter.restoreCheckpoint();
+  child.stop(); child.standUp(); child.place(-3, 207, .8);
+  cygnet.rideIn('satchel'); plane.hold(child);
+  let startAt, launches = 0; const launch = plane.launch.bind(plane);
+  plane.launch = (...args) => { launches++; launch(...args); };
+  for (let i = 0; i < fps * 60 && !chapter.done; i++) {
+    Object.assign(air, { x: 2.47 + gust, z: -.8 - gust, energy: gust ? 1 : 0, lift: gust ? 1 : 0 });
+    assert(chapter.scripted && chapter.planeInvitation === null && !chapter.windMuted);
+    f.step(chapter, 1 / fps);
+    if (chapter.stillDeparture && startAt === undefined) startAt = f.time;
+    assert(plane.held, 'wind cannot take the secured plane');
+  }
+  assert(chapter.done && plane.held, `authored departure stalled: ${chapter.beat}`);
+  assert.equal(launches, 0, 'the plane stays on the satchel after bandaging');
+  departures.push({ fps, gust, duration: f.time - startAt });
+}
+for (const fps of [30, 60, 120]) {
+  const cases = departures.filter(d => d.fps === fps);
+  for (const result of cases.slice(1)) {
+    assert(Math.abs(result.duration - cases[0].duration) <= 2 / fps,
+      'gusts cannot retime boarding');
+
+  }
+}
+assert(Math.max(...departures.map(d => d.duration)) - Math.min(...departures.map(d => d.duration)) < .5);
+console.log('PASS: plane stays secured with wind available; fixed boarding timing under opposing gusts, 30/60/120 Hz.', departures);
 
 // Every scarf stop wins over later route cursors; throws and home must agree on the same pending encounter.
 for(let completed=0;completed<SCARF_SNAGS.length;completed++) for(let leg=0;leg<BIRCHES_WALK.length;leg++) {

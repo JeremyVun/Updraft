@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { MIRROR_ROOM } from './journey-rooms';
+import { HOME_ROOM, MIRROR_ROOM } from './journey-rooms';
 import { MIRROR_LAYOUT_GLSL, SKY_MIRROR } from './sky-mirror-layout';
 import { MIRROR_RIPPLES_GLSL, mirrorUniforms } from './sky-mirror';
 import { LITTLE_BOATS, LITTLE_BOATS_GLSL, boatsTide } from './little-boats-layout';
@@ -729,7 +729,10 @@ export class Water {
     const sky = rooms.y === MIRROR_ROOM || rooms.x === MIRROR_ROOM || onFlat;
     this.reflection.scale = sky ? this.mirrorScale : 0.25;
     const mirrorEvery = params.mirror ?? (sky ? this.mirrorEvery : Math.max(this.mirrorEvery, this.seaMirrorEvery));
-    const mirrored = !!mirrorEvery && (sky || (this.seaReflection && camera.position.z >= mainlandCoastZ(camera.position.x) - SEA_OUT_OF_SIGHT));
+    // Home keeps the sea in view; the meadow's inland cutoff cannot hide its reflection.
+    const coastal = rooms.x === HOME_ROOM || rooms.y === HOME_ROOM
+      || camera.position.z >= mainlandCoastZ(camera.position.x) - SEA_OUT_OF_SIGHT;
+    const mirrored = !!mirrorEvery && (sky || (this.seaReflection && coastal));
     const mirrorUniform = (this.mesh.material as THREE.ShaderMaterial).uniforms.uMirrorOn;
     const first = mirrored && mirrorUniform.value === 0;
     mirrorUniform.value = mirrored ? 1 : 0;

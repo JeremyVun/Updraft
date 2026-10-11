@@ -31,7 +31,8 @@ try {
         const events = calls.filter(c => c.kind === kind);
         check(events.length > 2 && events.length <= Math.ceil(20 / every), `${fps} Hz: ${kind} stays within its room-wide budget`);
         check(events.every((e, i) => !i || e.time - events[i - 1].time >= every - .00001), `${fps} Hz: no burst between allowed ${kind} events`);
-        check(events.every(e => e.pan > 0 && e.level <= .5), `${fps} Hz: ${kind} is quiet and follows its source`);
+        const maxLevel = kind === 'leaf-scuff' ? tuning.audio.leafScuffLevel : tuning.audio.swingCreakLevel;
+        check(events.every(e => e.pan > 0 && e.level <= maxLevel), `${fps} Hz: ${kind} stays within its level and follows its source`);
       }
       runs.push({ fps, leaves: calls.filter(c => c.kind === 'leaf-scuff').length,
         creaks: calls.filter(c => c.kind === 'swing-creak').length });
@@ -71,7 +72,7 @@ try {
         made++; const source = create(), disconnect = source.disconnect.bind(source);
         source.disconnect = (...args) => { ended++; return disconnect(...args); }; return source;
       };
-      foley.material(kind, kind === 'leaf-scuff' ? .4 : .5, .6);
+      foley.material(kind, kind === 'leaf-scuff' ? tuning.audio.leafScuffLevel : tuning.audio.swingCreakLevel, .6);
       const count = made; foley.setOutput(null); foley.material(kind, 1, 0);
       check(count === made, `${kind}: no voice queues while output is disabled`);
       const buffer = await ctx.startRendering();
@@ -82,7 +83,8 @@ try {
     // Isolated audition at game gain: walking/pile scuffs, then a loaded swing, with real spacing.
     const { ctx, sound } = offlineSound(19);
     const foley = new Foley(); foley.setOutput(sound.output);
-    const events = [[1,'leaf-scuff',.24],[2.8,'leaf-scuff',.21],[4.7,'leaf-scuff',.4],
+    const leafLevel = tuning.audio.leafScuffLevel;
+    const events = [[1,'leaf-scuff',leafLevel*.6],[2.8,'leaf-scuff',leafLevel*.525],[4.7,'leaf-scuff',leafLevel],
       [9,'swing-creak',.3],[13,'swing-creak',.5],[17,'swing-creak',.38]];
     for (const [time, kind, level] of events) {
       Object.defineProperty(ctx, 'currentTime', { configurable: true, value: time });

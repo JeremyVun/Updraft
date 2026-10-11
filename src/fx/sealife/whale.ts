@@ -121,6 +121,7 @@ export class WhaleRig {
       /** How far its long low back melts into the morning haze, 0..1. */
       uHaze: { value: 0 },
       uLost: { value: 0 },
+      uPresence: { value: 1 },
     };
     const look = tuning.whaleLook;
     const skin = {
@@ -206,6 +207,11 @@ export class Whale extends WhaleRig {
   private readonly pitch = new Float32Array(SPINE_N);
   private readonly sample = { u: 0, y: 0, angle: 0 };
 
+  constructor() {
+    super();
+    (this.mesh.material as THREE.ShaderMaterial).transparent = true;
+  }
+
   override get active(): boolean {
     return this.time < WHALE_DURATION;
   }
@@ -227,6 +233,9 @@ export class Whale extends WhaleRig {
   private pose(): void {
     const t = this.time;
     const k = this.scale;
+    const fade = tuning.opening.crossing;
+    this.uniforms.uPresence.value = THREE.MathUtils.smootherstep(t, 0, fade.whaleFadeIn)
+      * (1 - THREE.MathUtils.smootherstep(t, WHALE_DURATION - fade.whaleFadeOut, WHALE_DURATION));
     this.mesh.visible = this.ghost.visible = this.active;
     const head = TRAVEL(t);
     const rise = RISE(t) * k;

@@ -8,6 +8,11 @@ Chrome for Testing uses Metal on macOS and the browser's default backend elsewhe
 comparison backend. No GPU blocklist override is used. Evidence goes under
 `/tmp`. Node mechanics checks load TypeScript through `tools/lib/typescript.mjs` and need no browser.
 
+For Still's relocated grass, `COMPARE_BASE=<pre-relocation QA build> BASE=<changed QA build>
+node tools/still-grass-check.mjs` compares blade positions, heights, tuft coverage, colour, curves, flowers and
+ground normals at all three detail levels. `BROKEN_BASE` optionally records the regressed build too. Captures and
+metrics go to `OUT` (default `/tmp/updraft-still-grass`); inspect the stills as well as the numeric comparison.
+
 ## Groups
 
 `tools/check.mjs` runs named groups sequentially and writes each check's log plus `results.json` to
@@ -84,6 +89,9 @@ edit.
   to finish. Include a same-build control when investigating differences.
   Fog-cache changes include `CASES=belfry,roofs,stairs-close,stairs-turned`; the turned view freezes the world,
   moves the camera, then refreshes terrain, grass and reflections as play does.
+- `home-water-check`: sails the last approach into home, checking reflection continuity through disembark in
+  landscape and portrait, freshness after the target resize, and High/Medium/Low quality behavior. Works on a QA
+  preview; a direct `chapter=jetty` start cannot exercise the crossing's reflection handoff.
 - `noise-loop-check`: compares the rolled scene/height noise to the original shader arithmetic on the GPU over
   294,912 samples, including negative coordinates and all six octave counts. Needs a dev server for source imports.
   Run on the default backend and a second backend (`ANGLE=vulkan` on Windows); this is not a physical mobile test.
@@ -171,6 +179,9 @@ edit.
   `scarf-check`, `stairs-check`, `storm-check`, `wood-check`, `ember-check`, `sea-check`, `sky-mirror-check`,
   `sleeping-check`, `summit-arrival-check`, `home-approach-browser-check`, `ending-check`, `landing-check`,
   `kite-check`, `geography-browser-check`, `boats-offshore-browser-check`.
+- `petals-browser-check` replays the flock, fall and bandaging, checking that camera-driven rehoming preserves the
+  still island's petal population. Density follows the flower patches, since the camera's look-ahead crosses region
+  boundaries while the child stays in place; the original bug activated 4,178 reserve petals in one frame.
 
 **Saves and lifecycle**: `progress-check`, `progress-schema-check`, `chapter-select-check` (who is offered chapters;
 the twelve 400x250 tiles; the list over the title's painting, opening fetching every painting once; a looked-at room's
@@ -194,9 +205,37 @@ differs, as a late readback can make it, is played once more; `ONLY=wood,jetty` 
   `MUTATE=thin` must fail), `birches-foley-check`.
 - Scores: `opening-score-check`, `lines-score-check`, `boats-score-check`, `meadow-score-check`,
   `birches-score-check`, `dream-score-check`, `sleeping-score-check`, `sea-score-check`, `homeward-audio-check`.
+  The Lines, Boats, Birches and Home gates decode the supplied recordings and check looping, story continuity, mute/hidden-page
+  suspension, late-decode cancellation and buffer release; Home also checks the ending fade and checkpoint offset.
+- `still-phrases-check` verifies flight/colour triggers, 4.5-second spacing with overlapping tails, no backlog, mute, late decode, cleanup and drone restoration, plus reversible removal of the falling and touchdown tones.
+  Sustained-flight checks cover six-second repeats from the last accepted phrase, colour timing, landing, mute and scripted suppression.
+  `still-phrases-browser-check` uses real Begin and pointer strokes to verify colour, takeoff, deduplication and hidden-page suspension.
+  `still-departure-browser-check` runs the tree/fall/bandaging sequence, checks the plane stays secured under real pointer wind and music begins on the walk to the boat
+  at source second 8, continues through the crossing, and the title fades in/out before the whale and clears on arrival.
+  Current trial: title 34–41 s, whale 45 s; `crossing-camera-check` verifies its six-second attention ramp.
+  `still-phrases-check` renders the recording's 1:54–1:58 fade and silence afterward, including ongoing gain updates.
+  `lines-reveal-browser-check` sails through the farewell, title, whale and approach while sampling the production
+  horizon veil on the GPU: sampled dry land and twelve horizon bearings stay concealed from afar; the near shore clears on approach.
+  `first-crossing-browser-check` captures the whale and post-whale gull/linen passages, checks the whale remains clear
+  through its dive and the physical swell persists. It also checks that at least four gulls and three loose sheets
+  share the shot, all five linen pieces appear, and the cloth turns substantially while visible. It also checks
+  distinct projected heights and one loose sheet overtaking another. Set `VIDEO=1` for a recorded crossing. `still-crossing-timing-check` measures native audio from the real
+  post-bandaging walk through boarding and the Lines handoff; both default to a QA preview on port 5247 and accept `BASE`.
+  `plane-routing-check` compares authored Still departure timing under opposing gusts at 30/60/120 Hz;
+  `crossing-linen-check` covers cloth stability and bill attachment; `first-whale-swell-check` verifies the water-entry
+  trigger, gradual visibility and independent ownership of the later whale's wave.
+  `still-atmosphere-browser-check` captures the horizontal title sweep and gradual whale appearance/disappearance
+  in a continuous crossing; checks sparse windlines and the projected direction using the actual camera.
+  `CROSSING=toLines node tools/journey-pacing-check.mjs` measures the extended passage; `geography-check` covers
+  Still's moved props and revision 9→10 saves without reapplying earlier late-island migrations.
+  `opening-score-check` and `opening-score-browser-check` explicitly disable the experiment to retain the original drone regression checks.
 - In the browser: `audio-browser-check`, `piano-audio-browser-check`, `arrival-audio-browser-check`,
   `transition-scenes-browser-check`, `opening-score-browser-check`, `homeward-audio-browser-check`,
-  `meadow-score-browser-check`, `birches-score-browser-check`, `sea-score-browser-check`.
+  `meadow-score-browser-check`, `birches-score-browser-check`, `sea-score-browser-check`,
+  `recorded-music-browser-check` (real Begin unlock, no music download with sound off, reuse of the starting download,
+  only the starting/next recording fetched, and an audible decoded source in each chapter).
+  `music-loading-browser-check` holds downloads and decodes to verify concurrent shader loading, no premature
+  gameplay/reveal, failure fallback, preference cancellation and readiness for the first gesture.
 - Renders for listening: `opening-fall-render`, `ending-audition`, `stairs-audio-proposal`, `foghorn-preview`.
 
 **Performance** (only when Jeremy asks; see `docs/engine.md`, Measuring): `perf.mjs`, `frame-profile.mjs`,

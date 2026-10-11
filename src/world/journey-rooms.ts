@@ -1,15 +1,17 @@
 import * as THREE from 'three';
 import { DOOR_SHORE, ISLES } from './heightfield';
 import { SKY_MIRROR } from './sky-mirror-layout';
+import { STILL_CENTRE } from './geography';
 import { glsl, tuning } from '../tuning';
 import type { ChapterName } from '../story/journey';
 
-export const ROOMS = { island: { x: -6, z: -14, rx: 85, rz: 65 }, lines: ISLES.lines,
+export const ROOMS = { island: { ...STILL_CENTRE, rx: 85, rz: 65 }, lines: ISLES.lines,
   shore: DOOR_SHORE, boats: ISLES.boats, meadow: ISLES.meadow, birches: ISLES.birches, stairs: ISLES.stairs,
   drowned: ISLES.drowned, wood: ISLES.wood, sleeping: ISLES.sleeping, mirror: SKY_MIRROR, home: ISLES.home };
 export type Room = keyof typeof ROOMS;
 const names = Object.keys(ROOMS) as Room[];
 export const MIRROR_ROOM = names.indexOf('mirror');
+export const HOME_ROOM = names.indexOf('home');
 export const journeyRooms = { value: new THREE.Vector2(-1, -1) };
 
 /** Set once the stairs have let the boat down onto the sea in the white: the village is there under it from then on. */

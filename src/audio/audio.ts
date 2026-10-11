@@ -1,27 +1,30 @@
 import { DreamScore, DREAM_SECTIONS, type MirrorScorePhase } from './dream-score';
 import { DrownedScore, DROWNED_SECTIONS, type DrownedScorePhase } from './drowned-score';
-import { SummitScore, type SummitScorePhase } from './summit-score';
+import type { SummitScorePhase } from './summit-score';
+import { RecordedScore, type RecordedMusic } from './recorded-score';
+import { StillPhrases } from './still-phrases';
+import type { MusicTrack } from './music-loading';
 import { HOME_ENDING } from '../story/home-ending';
 import { OpeningScore, type OpeningScorePhase } from './opening-score';
 import type { Cue } from '../story/cues';
 import type { AudioOut } from '../creatures/voices';
 import { tuning } from '../tuning';
-import { BOATS_CHORDS, LittleBoatsScore } from './little-boats-score';
+import { BOATS_CHORDS } from './little-boats-score';
 import { SEA_CHORDS, SeaScore, type SeaScorePhase } from './sea-score';
 import { SleepingScore, SLEEPING_SECTIONS, type SleepingScorePhase } from './sleeping-score';
 import { MeadowScore, MEADOW_SECTIONS, type MeadowScorePhase } from './meadow-score';
-import { BirchesScore, BIRCHES_SECTIONS, type BirchesScorePhase } from './birches-score';
+import type { BirchesScorePhase } from './birches-score';
 import type { StairsAir } from './stairs-air';
 import { flightKnock, OUTSIDE_STAIRS, StairsSound, type StairsMix } from './stairs-sound';
 import { StairsScore, stairsScorePhase } from './stairs-score';
-import { LinesScore, LINES_SECTIONS, type LinesScorePhase } from './lines-score';
+import type { LinesScorePhase } from './lines-score';
 import { ArrivalTransition, type ArrivalMusic } from './arrival-music';
 import { chordNote } from './gesture-harmony';
 import { foghornParts, playFoghorn, type FoghornParts } from './foghorn';
 import { advance, ALONE, Sliced, slices, SLICES_PER_SECOND, type Pace } from './sliced';
 
 /**
- * Everything is synthesised: filtered noise for air and sea, a slow pad that warms as the world comes back, chimes
+ * Recorded chapter music joins synthesised air and sea, a pad that warms as the world comes back, chimes
  * that follow the player's gestures, skylarks over the hills, crickets and an owl at night, and short phrases that
  * answer the story's moments.
  */
@@ -35,6 +38,11 @@ export interface AudioEmitter {
 export interface SoundState {
   /** True only during the opening island chapter, never its departing crossing. */
   startingIsland?: boolean;
+  stillPhrase?: boolean;
+  stillFlying?: boolean;
+  stillCrossingTime?: number;
+  stillDeparture?: boolean;
+  stillDepartureSoon?: boolean;
   /** Approved opening drone; continues on its own clock during the first crossing. */
   openingScore?: OpeningScorePhase;
   /** The actual forest chapter; Sleeping also uses the wood music mood. */
@@ -323,25 +331,53 @@ export class Soundscape {
   private nextLark = 8;
   private nextFlock = 0;
   private flockQuietUntil = 0;
-  private boatsScore: LittleBoatsScore | null = null;
-  private boatsCueUntil = 0;
+  private boatsScore: RecordedScore | null = null;
   private seaScore: SeaScore | null = null;
   private sleepingScore: SleepingScore | null = null;
   private meadowScore: MeadowScore | null = null;
-  private birchesScore: BirchesScore | null = null;
+  private birchesScore: RecordedScore | null = null;
   private stairsScore: StairsScore | null = null;
   private stairsSound: StairsSound | null = null;
-  private linesScore: LinesScore | null = null;
+  private linesScore: RecordedScore | null = null;
   private dreamScore: DreamScore | null = null;
   private drownedScore: DrownedScore | null = null;
-  private summitScore: SummitScore | null = null;
+  private summitScore: RecordedScore | null = null;
+  private preparedScore: RecordedScore | null = null;
   private openingScore: OpeningScore | null = null;
   private summitFinale = false;
   private forestBlendUntil = 0;
-  private linesCueUntil = 0;
+  private stillPhrases: StillPhrases | null = null;
+  private stillDepartureScore: RecordedScore | null = null;
 
   get running(): boolean {
     return this.ctx?.state === 'running' && !this.muted && !this.hidden;
+  }
+
+  prepareMusic(track: MusicTrack): Promise<void> {
+    if (!this.ctx) return Promise.resolve();
+    if (track === 'still') {
+      this.stillPhrases ??= new StillPhrases(this.ctx, this.backgroundDry);
+      return this.stillPhrases.ready;
+    }
+    const active = track === 'stillDeparture' ? this.stillDepartureScore : track === 'home' ? this.summitScore : track === 'lines' ? this.linesScore : track === 'boats' ? this.boatsScore : this.birchesScore;
+    if (active) return active.ready;
+    if (this.preparedScore?.track !== track) {
+      this.preparedScore?.stop(0);
+      this.preparedScore = new RecordedScore(this.ctx, this.backgroundDry, track);
+    }
+    return this.preparedScore.ready;
+  }
+
+  cancelStartingMusic(): void {
+    this.preparedScore?.stop(0); this.preparedScore = null;
+    this.stillPhrases?.stop(0); this.stillPhrases = null;
+  }
+
+  private takeRecordedScore(track: RecordedMusic): RecordedScore {
+    void this.prepareMusic(track);
+    const score = this.preparedScore!;
+    this.preparedScore = null;
+    return score;
   }
 
   /** Something outside the game (a call, Siri, another app) has stopped audio the player expects to hear. */
@@ -933,6 +969,7 @@ export class Soundscape {
   }
 
   private phrase(name: Exclude<Cue, 'foghorn'>): void {
+    if (!tuning.audio.stillFallTones && (name === 'fallen' || name === 'landed')) return;
     // A quick release keeps the recognition melody; do not stack a second tune over it.
     if (name === 'release' && this.ctx!.currentTime < this.recognitionUntil) return;
     if (name === 'finale') {
@@ -996,18 +1033,28 @@ export class Soundscape {
     const now = ctx.currentTime;
     const tc = 0.08;
     const room = this.stairs(s, now, dt);
+    const recorded = s.arrivalMusic ? (s.arrivalMusic === 'home' || s.arrivalMusic === 'birches' || s.arrivalMusic === 'lines' || s.arrivalMusic === 'boats' ? s.arrivalMusic : null)
+      : tuning.audio.stillPhraseExperiment && (s.stillDeparture || s.stillDepartureSoon) ? 'stillDeparture'
+      : s.summitScore ? 'home' : s.birchesScore && !room.birchesGone ? 'birches' : s.linesScore ? 'lines' : s.music === 'boats' ? 'boats' : null;
+    if (recorded && !s.silence && !this.musicMuted) void this.prepareMusic(recorded);
+    else if (this.preparedScore) {
+      this.preparedScore.stop(0); this.preparedScore = null;
+    }
     const g = Math.min(s.gust / 26, 1);
     const winter = s.winterGust ?? 0;
     const weatherGust = winter * .76;
     const filterGust = Math.max(g * tuning.audio.playerWindFilterRange, weatherGust);
-    const musicalWind = s.startingIsland || s.forestWind || s.sleepingWind;
-    const playerWind = 1 - tuning.audio.playerWindEase * g * g;
+    const musicalWind = s.forestWind || s.sleepingWind;
+    const playerWindGain = 10 ** (tuning.audio.playerWindDb / 20);
+    const playerWindEase = 1 - tuning.audio.playerWindEase * g * g;
+    const playerWind = playerWindGain * playerWindEase;
+    const grassRustle = 10 ** (tuning.audio.grassRustleDb / 20) * playerWindEase;
     // Preserve the weather floor while easing only the player contribution.
     const gustLevel = Math.max(Math.pow(g, 1.4) * playerWind, Math.pow(weatherGust, 1.4));
     const whistleLevel = Math.max(Math.max(0, g - .55) * playerWind, Math.max(0, weatherGust - .55));
-    const rustleLevel = Math.max(Math.pow(g, 1.2) * playerWind, Math.pow(weatherGust, 1.2));
+    const rustleLevel = Math.max(Math.pow(g, 1.2) * grassRustle, Math.pow(weatherGust, 1.2));
     const piano = s.piano ?? 0;
-    const air = 1 - piano * 0.82;
+    const air = (1 - piano * 0.82) * 10 ** (tuning.audio.windDb / 20);
     this.activity += (Math.max(g, s.charge) - this.activity) * (1 - Math.exp(-dt * (g > this.activity ? 2 : 0.25)));
 
     this.fade(this.breezeGain.gain, (0.02 + s.breeze * 0.2) * air * room.breeze, now, 0.5);
@@ -1023,15 +1070,15 @@ export class Soundscape {
     this.fade(this.whistleGain.gain, whistleLevel * 0.12 * air, now, tc);
     this.whistleFilter.frequency.setTargetAtTime(900 + filterGust * 900, now, tc);
     this.fade(this.rustleGain.gain, (s.overLand || winter > 0) ? rustleLevel * 0.2 * air : 0, now, tc);
-    this.fade(this.liftGain.gain, s.charge * (1 - tuning.audio.playerWindEase * s.charge * s.charge) * 0.35 * air, now, 0.15);
+    this.fade(this.liftGain.gain, s.charge * (1 - tuning.audio.playerWindEase * s.charge * s.charge) * playerWindGain * 0.35 * air, now, 0.15);
     this.liftFilter.frequency.setTargetAtTime(220 + s.charge * 1500 * tuning.audio.playerWindFilterRange, now, 0.2);
 
-    const activeScore = this.openingScore ?? this.summitScore ?? this.dreamScore ?? this.drownedScore ?? this.linesScore ?? this.boatsScore ?? this.meadowScore ?? this.birchesScore ?? this.sleepingScore ?? this.seaScore ?? this.stairsScore;
+    const activeScore = this.stillDepartureScore ?? this.stillPhrases ?? this.openingScore ?? this.summitScore ?? this.dreamScore ?? this.drownedScore ?? this.linesScore ?? this.boatsScore ?? this.meadowScore ?? this.birchesScore ?? this.sleepingScore ?? this.seaScore ?? this.stairsScore;
     const arrival = this.arrivalTransition.update(s, now, s.arrivalMusic ? activeScore?.handoffAt(now) : now), bg = arrival.background;
     if (arrival.changed && (arrival.stage === 'fade' || arrival.stage === 'gap')) {
       // Retire every outgoing source before the short rest ends; do not let long tails reopen with the next room.
       const fade = arrival.stage === 'fade' ? (arrival.fadeOut ?? tuning.audio.arrivalFadeOut) : .08;
-      for (const score of [this.openingScore, this.summitScore, this.dreamScore, this.drownedScore, this.linesScore, this.boatsScore, this.meadowScore, this.birchesScore, this.sleepingScore, this.seaScore, this.stairsScore]) score?.stop(fade);
+      for (const score of [this.stillDepartureScore, this.stillPhrases, this.openingScore, this.summitScore, this.dreamScore, this.drownedScore, this.linesScore, this.boatsScore, this.meadowScore, this.birchesScore, this.sleepingScore, this.seaScore, this.stairsScore]) score?.stop(fade);
     }
     const backgroundPaused = arrival.stage === 'gap';
     const homeMusicForward = !!bg.summitScore && !tuning.audio.homeMusicDucking;
@@ -1056,15 +1103,11 @@ export class Soundscape {
       }
       this.homeFadeScheduled = true;
     }
-    if (bg.music === 'boats' && !s.silence && !backgroundPaused) {
-      this.boatsScore ??= new LittleBoatsScore(ctx, this.backgroundBus);
-      if (cues.includes('restored') || cues.includes('delight')) {
-        this.boatsCueUntil = now + tuning.audio.boatsCueSpace;
-      }
-      this.boatsScore.update(tuning.audio.boatsScoreLevel * (1 - 0.92 * bg.hush) / (1 - 0.92 * 0.28)
-        * (1 - piano) * (now < this.boatsCueUntil ? tuning.audio.boatsCueDuck : 1), arrival.handoffAt);
+    if (bg.music === 'boats' && !s.silence && !backgroundPaused && (!this.musicMuted || this.boatsScore)) {
+      this.boatsScore ??= this.takeRecordedScore('boats');
+      this.boatsScore.update('play', 10 ** (tuning.audio.recordedMusicDb.boats / 20) * (1 - piano));
     } else if (this.boatsScore) {
-      this.boatsScore.stop(); this.boatsScore = null; this.boatsCueUntil = 0;
+      this.boatsScore.stop(s.silence ? .12 : 1.8); this.boatsScore = null;
     }
     if (bg.music === 'sea' && bg.seaScore && !s.silence && !backgroundPaused) {
       if (!this.seaScore) { this.seaScore = new SeaScore(ctx, this.backgroundBus); this.chord = -1; }
@@ -1088,9 +1131,9 @@ export class Soundscape {
     } else if (this.meadowScore) {
       this.meadowScore.stop(s.silence ? 0.12 : 1.8); this.meadowScore = null;
     }
-    if (bg.music === 'birches' && bg.birchesScore && !room.birchesGone && !s.silence && !backgroundPaused) {
-      this.birchesScore ??= new BirchesScore(ctx, this.backgroundBus);
-      this.birchesScore.update(bg.birchesScore, tuning.audio.birchesScoreLevel * roomTrim('birches') * (1 - piano) * room.birches, arrival.handoffAt);
+    if (bg.music === 'birches' && bg.birchesScore && !room.birchesGone && !s.silence && !backgroundPaused && (!this.musicMuted || this.birchesScore)) {
+      this.birchesScore ??= this.takeRecordedScore('birches');
+      this.birchesScore.update(bg.birchesScore, 10 ** (tuning.audio.recordedMusicDb.birches / 20) * (1 - piano) * room.birches);
     } else if (this.birchesScore) {
       this.birchesScore.stop(s.silence ? .12 : 1.8); this.birchesScore = null;
     }
@@ -1104,13 +1147,11 @@ export class Soundscape {
     } else if (this.stairsScore) {
       this.stairsScore.stop(s.silence ? .12 : 1.8); this.stairsScore = null;
     }
-    if (bg.music === 'lines' && bg.linesScore && !s.silence && !backgroundPaused) {
-      this.linesScore ??= new LinesScore(ctx, this.backgroundBus);
-      if (cues.includes('delight') || cues.includes('restored')) this.linesCueUntil = now + tuning.audio.linesCueSpace;
-      this.linesScore.update(bg.linesScore, tuning.audio.linesScoreLevel * (1 - piano),
-        10 ** (tuning.audio.linesMelodyDb / 20), bg.linesMelodyQuiet || now < this.linesCueUntil, arrival.handoffAt);
+    if (bg.music === 'lines' && bg.linesScore && !s.silence && !backgroundPaused && (!this.musicMuted || this.linesScore)) {
+      this.linesScore ??= this.takeRecordedScore('lines');
+      this.linesScore.update(bg.linesScore, 10 ** (tuning.audio.recordedMusicDb.lines / 20) * (1 - piano));
     } else if (this.linesScore) {
-      this.linesScore.stop(s.silence ? .12 : 1.8); this.linesScore = null; this.linesCueUntil = 0;
+      this.linesScore.stop(s.silence ? .12 : 1.8); this.linesScore = null;
     }
     const forestEntry = arrival.legato && arrival.stage === 'blend' && arrival.changed;
     if (forestEntry) this.forestBlendUntil = now + tuning.audio.forestMusicBlend;
@@ -1132,14 +1173,31 @@ export class Soundscape {
       this.drownedScore = null;
     }
     if (!bg.summitScore) this.summitFinale = false;
-    if (bg.music === 'home' && bg.summitScore && !this.summitFinale && !s.silence && !backgroundPaused) {
-      this.summitScore ??= new SummitScore(ctx, this.backgroundBus);
+    if (bg.music === 'home' && bg.summitScore && !this.summitFinale && !s.silence && !backgroundPaused && (!this.musicMuted || this.summitScore)) {
+      this.summitScore ??= this.takeRecordedScore('home');
       this.summitScore.update(bg.summitScore,
-        tuning.audio.summitScoreLevel * roomTrim('home') * (1 - .35 * s.night) * (homeMusicForward ? 1 : 1 - .92 * bg.hush) * (1 - piano), s.night, s.homeEndingTime);
+        10 ** (tuning.audio.recordedMusicDb.home / 20) * (homeMusicForward ? 1 : 1 - .92 * bg.hush) * (1 - piano), s.homeEndingTime);
     } else if (this.summitScore) {
       this.summitScore.stop(s.silence ? .12 : 1.8); this.summitScore = null;
     }
-    if (bg.music === 'still' && bg.openingScore && !s.silence && !backgroundPaused) {
+    const stillExperiment = tuning.audio.stillPhraseExperiment && !!bg.openingScore && bg.music === 'still';
+    if (stillExperiment && s.stillDeparture && !s.silence && !backgroundPaused && (!this.musicMuted || this.stillDepartureScore)) {
+      this.stillDepartureScore ??= this.takeRecordedScore('stillDeparture');
+      this.stillDepartureScore.update('departure', 10 ** (tuning.audio.stillDepartureDb / 20), tuning.audio.stillDepartureOffset);
+    } else if (this.stillDepartureScore) {
+      this.stillDepartureScore.stop(s.silence ? .12 : 1.8); this.stillDepartureScore = null;
+    }
+    if (stillExperiment && s.startingIsland && !s.stillDeparture && !s.stillDepartureSoon && !s.silence && !backgroundPaused && (!this.musicMuted || this.stillPhrases)) {
+      this.stillPhrases ??= new StillPhrases(ctx, this.backgroundDry);
+      if (!s.scripted && !this.musicMuted) {
+        if (s.stillPhrase) this.stillPhrases.trigger();
+        else if (s.stillFlying) this.stillPhrases.trigger(tuning.audio.stillFlightEvery);
+      }
+      if (s.scripted) this.stillPhrases.finish();
+    } else if (this.stillPhrases) {
+      this.stillPhrases.stop(); this.stillPhrases = null;
+    }
+    if (!stillExperiment && bg.music === 'still' && bg.openingScore && !s.silence && !backgroundPaused) {
       this.openingScore ??= new OpeningScore(ctx, this.padVoices);
       this.openingScore.update(bg.openingScore);
       this.mood = bg.music;
@@ -1148,7 +1206,7 @@ export class Soundscape {
       this.openingScore.stop(); this.openingScore = null;
     }
     const mood = this.seaScore ? SEA_SCORE_MOOD : MOODS[bg.music] ?? MOODS.meadow;
-    const chord = this.seaScore ? this.seaScore.chordAt(now) : this.boatsScore ? this.boatsScore.chordAt(now)
+    const chord = this.seaScore ? this.seaScore.chordAt(now)
       : bg.music === 'wood' && now < this.forestBlendUntil ? 0 : Math.floor(now / mood.seconds) % mood.chords.length;
     const finale = now < this.finaleUntil;
     if (s.silence) {
@@ -1177,27 +1235,25 @@ export class Soundscape {
     // The opening grows less with life; wind warms it in the same proportion.
     const lifeLevel = this.openingScore ? 0.012 + tuning.audio.openingPadRise * s.life : padLife;
     this.fade(this.padGain.gain,
-      backgroundPaused || s.drownedQuiet || stairsMusic || this.summitScore || this.dreamScore || this.drownedScore || this.sleepingScore || this.meadowScore || this.birchesScore || this.linesScore ? 0 : (lifeLevel * (1 - 0.35 * s.night * (finale ? 0 : 1)) + this.activity * tuning.audio.padActivityLevel * lifeLevel / padLife) * hush * mood.level * swell * (this.openingScore ? this.openingScore.gainAt(now) * 10 ** (tuning.audio.openingScoreDb / 20) : 1),
+      stillExperiment || backgroundPaused || s.drownedQuiet || stairsMusic || this.summitScore || this.dreamScore || this.drownedScore || this.sleepingScore || this.meadowScore || this.birchesScore || this.linesScore || this.boatsScore ? 0 : (lifeLevel * (1 - 0.35 * s.night * (finale ? 0 : 1)) + this.activity * tuning.audio.padActivityLevel * lifeLevel / padLife) * hush * mood.level * swell * (this.openingScore ? this.openingScore.gainAt(now) * 10 ** (tuning.audio.openingScoreDb / 20) : 1),
       now,
       piano > 0 ? tuning.piano.mixResponse : now < this.forestBlendUntil ? tuning.audio.forestMusicBlend / 3 : bg.hush > 0.5 ? 0.7 : 1.5,
     );
     this.padFilter.frequency.setTargetAtTime(mood.cutoff + 260 * s.life - 200 * s.night, now, 2.5);
 
     const harmonyAt = (at: number): readonly number[] => {
-      const composed = this.openingScore?.chordAt(at) ?? this.summitScore?.chordAt() ?? this.dreamScore?.chordAt(at) ?? this.drownedScore?.chordAt(at) ?? this.linesScore?.chordAt(at) ?? this.birchesScore?.chordAt(at)
+      const composed = this.openingScore?.chordAt(at) ?? this.dreamScore?.chordAt(at) ?? this.drownedScore?.chordAt(at)
         ?? this.meadowScore?.chordAt(at) ?? this.sleepingScore?.chordAt(at) ?? this.stairsScore?.chordAt(at);
       if (composed) return composed;
       // During the music-free arrival gap, use the opening harmony of the incoming composition.
       if (backgroundPaused) {
         if (bg.mirrorScore) return DREAM_SECTIONS[bg.mirrorScore].chords[0].tones;
         if (bg.drownedScore) return DROWNED_SECTIONS[bg.drownedScore].chords[0].tones;
-        if (bg.linesScore) return LINES_SECTIONS[bg.linesScore].chords[0].tones;
-        if (bg.birchesScore) return BIRCHES_SECTIONS[bg.birchesScore].chords[0].tones;
         if (bg.meadowScore) return MEADOW_SECTIONS[bg.meadowScore].chords[0].tones;
         if (bg.sleepingScore) return SLEEPING_SECTIONS[bg.sleepingScore].chords[0]?.tones ?? [50,57];
         if (bg.music === 'boats') return BOATS_CHORDS[0];
       }
-      const index = this.seaScore?.chordAt(at) ?? this.boatsScore?.chordAt(at)
+      const index = this.seaScore?.chordAt(at)
         ?? Math.floor(at / mood.seconds) % mood.chords.length;
       const tones = mood.chords[index];
       // The wood's upper semitones belong to its unsettled drone; touch answers on its steady D/A pedal.
@@ -1262,7 +1318,7 @@ export class Soundscape {
       this.nextLark = now + 6 + Math.random() * 10;
     }
 
-    // Musical wind wakes the opening island, accompanies the forest search and encourages the feather climb.
+    // Musical wind accompanies the forest search and encourages the feather climb.
     const gestures = musicalWind && !s.scripted && !s.silence && !(s.pianoActive ?? (piano >= 0.05));
     const care = !!(s.caringWind || s.sleepingWind);
     const scale = care ? [62, 64, 69, 71, 74, 76] : forestChimes ? MOODS.wood.scale : mood.scale;

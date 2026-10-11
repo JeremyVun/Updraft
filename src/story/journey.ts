@@ -27,7 +27,7 @@ import { SLEEP_BERTH, SLEEP_LANDING } from '../world/sleeping';
 import { BIRCHES_LANDING } from '../world/birches';
 import { placeProgress, restoreLife, saveProgress, type Progress } from './progress';
 import { restoreWingCare } from './wing-care';
-import { WHALE_MOVE, WHALE_NEARER, WHALE_SHORTENING } from '../world/geography';
+import { WHALE_MOVE, WHALE_NEARER, WHALE_SHORTENING, STILL_SHIFT } from '../world/geography';
 
 export type ChapterName =
   | 'island'
@@ -68,10 +68,10 @@ const WHALE_LINE = WHALE_LEAD.clone().lerp(WHALE_REST, 0.5);
 /** Where the boat goes on each crossing, including the long open passage after the sleeping island. */
 export const ROUTES: Record<string, THREE.Vector2[]> = {
   toLines: [
-    new THREE.Vector2(34, 44),
-    new THREE.Vector2(70, 56),
-    new THREE.Vector2(104, 22),
-    new THREE.Vector2(60, -95),
+    new THREE.Vector2(34 + STILL_SHIFT.x, 44 + STILL_SHIFT.z),
+    new THREE.Vector2(70 + STILL_SHIFT.x, 56 + STILL_SHIFT.z),
+    new THREE.Vector2(104 + STILL_SHIFT.x, 22 + STILL_SHIFT.z),
+    new THREE.Vector2(60 + STILL_SHIFT.x, -95 + STILL_SHIFT.z),
     LINES_LANDING,
   ],
   // Leave the door shore to the west, then round Little Boats into its arrival pool.
@@ -167,7 +167,9 @@ export class Journey {
       this.savedPoint = saved.point;
       return;
     }
-    if (choice === 'crossing' || choice === 'lines') {
+    if (choice === 'tree') {
+      (this.chapter as IslandChapter).skipToTree();
+    } else if (choice === 'crossing' || choice === 'lines') {
       this.sail(BOAT_BERTH.x + 8, BOAT_BERTH.z + 8, 0.95);
       this.begin('toLines');
     } else if (choice === 'washing') {
@@ -378,7 +380,7 @@ export class Journey {
           season: 0.14,
           lookBack: FIRST_ISLAND,
           farewell: 21,
-          whaleAt: 37,
+          whaleAt: tuning.opening.crossing.whaleAt,
           haze: 0.35,
           arrivalHaze: { strength: tuning.world.linesCrossingHaze,
             from: tuning.world.linesHazeFrom, to: tuning.world.linesHazeTo },

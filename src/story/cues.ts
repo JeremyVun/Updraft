@@ -7,7 +7,7 @@ export function cue(name: Cue): void {
   pending.push(name);
 }
 
-/** The opening island's rising phrase is the shared sound for completing a major objective.
+/** The shared rising phrase for completing a major objective.
  * Call at the one-way success transition, never from checkpoint restoration or smaller progress steps. */
 export function completeObjective(): void {
   cue('restored');

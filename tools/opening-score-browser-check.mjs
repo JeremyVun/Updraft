@@ -12,7 +12,7 @@ try {
   page.on('pageerror',e=>errors.push(e.message));
   await page.goto(`http://127.0.0.1:${server.httpServer.address().port}/?shot&progress=0&ratio=1&msaa=2`);
   await page.waitForFunction(()=>window.__ready,null,{timeout:60000});
-  await page.mouse.click(10,10);await page.evaluate(()=>__game.sound.start());
+  await page.mouse.click(10,10);await page.evaluate(()=>{__game.tuning.audio.stillPhraseExperiment=false;__game.sound.start();});
   await page.waitForFunction(()=>!!__game.sound.openingScore);
   const first=await page.evaluate(()=>{
     window.openingFixture={score:__game.sound.openingScore,epoch:__game.sound.openingScore.epoch};
@@ -28,7 +28,7 @@ try {
   assert.equal(await page.evaluate(()=>__game.sound.ctx.currentTime),paused,'Mute suspends the score clock');
   await page.evaluate(()=>__game.sound.setMuted(false));
   await page.waitForFunction(()=>__game.sound.running);
-  await page.evaluate(()=>{__game.story.sail(8.5,21.5,.95);__game.story.begin('toLines');});
+  await page.evaluate(async()=>{const {BOAT_BERTH}=await import('/src/story/island.ts');__game.story.sail(BOAT_BERTH.x,BOAT_BERTH.z,.95);__game.story.begin('toLines');});
   await page.waitForFunction(()=>__game.story.name==='toLines'&&__game.sound.openingScore?.epoch===openingFixture.epoch);
   assert(await page.evaluate(()=>__game.sound.openingScore===openingFixture.score),'Departure retains the same conductor');
   await page.evaluate(()=>__game.story.begin('lines'));

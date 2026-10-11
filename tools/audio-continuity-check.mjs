@@ -56,9 +56,9 @@ try {
         if (now === 10 && name === 'drowned') check(currentScore(sound) === carried, 'Birches survives into Drowned’s outgoing fade');
         gateTrace.push({ time: now, gain: sound.backgroundGate.gain.value });
       };
-      update(0); let pause = ctx.suspend(.125); const rendering = ctx.startRendering();
+      update(0); await sound.birchesScore?.ready;await sound.linesScore?.ready;await sound.boatsScore?.ready; let pause = ctx.suspend(.125); const rendering = ctx.startRendering();
       for (let tick = 1; tick < 36 * 8; tick++) {
-        await pause; update(tick);
+        await pause; update(tick); await sound.preparedScore?.ready; await sound.birchesScore?.ready;await sound.linesScore?.ready;await sound.boatsScore?.ready; await sound.summitScore?.ready;
         if (tick + 1 < 36 * 8) pause = ctx.suspend((tick + 1) / 8);
         await ctx.resume();
       }
@@ -70,8 +70,8 @@ try {
     }
     // A held gain needs an explicit release anchor too: Sleeping formerly lost 83% at once.
     for (const [music, key, first, next] of [
-      ['wood','sleepingScore','shelter','climb'], ['lines','linesScore','first','second'],
-      ['meadow','meadowScore','walk','flock'], ['birches','birchesScore','walk','scarf'],
+      ['wood','sleepingScore','shelter','climb'],
+      ['meadow','meadowScore','walk','flock'],
       ['sea','seaScore','open','swim'], ['boats','boatsScore',null,null],
     ]) {
       const { ctx, sound } = offlineSound(11);
@@ -90,9 +90,9 @@ try {
         if (t === 8.125) during = oldGain.value;
         if (t === 10) ended = oldGain.value;
       };
-      update(0); let pause = ctx.suspend(.125); const rendering = ctx.startRendering();
+      update(0); await sound.birchesScore?.ready;await sound.linesScore?.ready;await sound.boatsScore?.ready; let pause = ctx.suspend(.125); const rendering = ctx.startRendering();
       for (let tick = 1; tick < 11 * 8; tick++) {
-        await pause; update(tick);
+        await pause; update(tick); await sound.preparedScore?.ready; await sound.birchesScore?.ready;await sound.linesScore?.ready;await sound.boatsScore?.ready; await sound.summitScore?.ready;
         if (tick + 1 < 11 * 8) pause = ctx.suspend((tick + 1) / 8);
         await ctx.resume();
       }

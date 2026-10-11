@@ -32,6 +32,7 @@ export interface GustFront {
   dir: THREE.Vector2;
   flow: THREE.Vector2;
   strength: number;
+  lines?: { interval: number; spread: number; height: number; climb: number; width: number };
 }
 
 const MAX_LINES = 40;
@@ -84,17 +85,18 @@ export class WindLines {
   blowFront(dt: number, f: GustFront): void {
     this.frontTimer -= dt;
     if (f.strength < 0.15 || this.frontTimer > 0) return;
-    this.frontTimer = 0.12 / f.strength;
-    const spread = (Math.random() - 0.5) * 30;
+    this.frontTimer = (f.lines?.interval ?? 0.12) / f.strength;
+    const spread = (Math.random() - 0.5) * (f.lines?.spread ?? 30);
     const x = f.at.x - f.dir.y * spread - f.dir.x * Math.random() * 2;
     const z = f.at.z + f.dir.x * spread - f.dir.y * Math.random() * 2;
-    this.spawn(x, z, 0, 1.3 + Math.random() * 0.9, 0.3 + f.strength * 0.25);
+    this.spawn(x, z, 0, 1.3 + Math.random() * 0.9, f.lines?.width ?? 0.3 + f.strength * 0.25);
     const l = this.lines[this.lines.length - 1];
     if (!l || l.age > 0) return;
-    l.level = f.at.y + (Math.random() - 0.4) * 6;
+    l.level = f.at.y + (Math.random() - 0.4) * (f.lines?.height ?? 6);
     l.head.y = l.level;
     l.points[0].copy(l.head);
-    l.climb = 1.5 + Math.random() * 2;
+    l.climb = f.lines?.climb ?? 1.5 + Math.random() * 2;
+    if (f.lines) l.drive = f.dir.clone();
     /** Heads keep up with the front, so the streaks arrive with the gust rather than trailing after it. */
     const speed = f.flow.length();
     l.heading.copy(f.flow).divideScalar(speed || 1);

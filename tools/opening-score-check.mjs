@@ -7,6 +7,8 @@ import {studies} from './lib/opening-resolution-revision.mjs';
 const {browser,page}=await audioPage();
 try {
   const report=await page.evaluate(async approved=>{
+    const {tuning}=await productionModule('/src/tuning.ts');
+    tuning.audio.stillPhraseExperiment=false;
     const {OPENING_CHORDS,OPENING_STEP,OPENING_SECONDS,OPENING_DYNAMICS}=await import('/src/audio/opening-score.ts');
     const checks=[],check=(ok,message)=>{if(!ok)throw Error(message);checks.push(message);};
     check(JSON.stringify(OPENING_CHORDS)===JSON.stringify(approved.chords.map(c=>c[2])),'Every approved opening voicing is preserved');
@@ -70,16 +72,15 @@ try {
       if(t===206)check(!sound.openingScore&&!!sound.linesScore,'The Lines handoff retires the opening conductor');
     };
     update(0);
-    check(score.chordAt(epoch+85)[0]===42&&score.chordAt(epoch+90.3125)[0]===47,'Scheduled wind notes can look across the resolution boundary');
+    check(score.chordAt(epoch+85)[0]===42&&score.chordAt(epoch+90.3125)[0]===47,'The opening harmony crosses the resolution boundary');
     check(sound.padVoices.every((v,i)=>v.osc===voices[i]),'The score uses the original eight pad oscillators');
     let pause=ctx.suspend(.125);const rendering=ctx.startRendering();
-    for(let tick=1;tick<215*8;tick++){await pause;update(tick);if(tick+1<215*8)pause=ctx.suspend((tick+1)/8);await ctx.resume();}
+    for(let tick=1;tick<215*8;tick++){await pause;update(tick);await sound.preparedScore?.ready;await sound.linesScore?.ready;if(tick+1<215*8)pause=ctx.suspend((tick+1)/8);await ctx.resume();}
     const buffer=await rendering;
     check(looped,'The production render crosses the complete composition loop');
     check(quiet<normal*.12,'The fallen cygnet hush still withdraws the pad');
     check(duck<.34,'The authored fall cue retains its accompaniment duck');
-    check(notes.length>100&&notes.every(n=>n.chord.some(m=>(m-n.midi)%12===0)),'Playable wind follows the new harmony at each scheduled onset');
-    check(notes.every(n=>n.at<192.5),'The first crossing does not enable opening gesture chimes');
+    check(notes.length===0,'Wind makes no chimes throughout the opening score and first crossing');
     check(sound.padVoices.every((v,i)=>v.osc===voices[i]),'Loops and departure allocate no replacement pad oscillators');
     let peak=0;for(let ch=0;ch<2;ch++)for(const sample of buffer.getChannelData(ch))peak=Math.max(peak,Math.abs(sample));
     check(peak<1,'The mixed production render does not clip');

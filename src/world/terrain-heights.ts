@@ -3,6 +3,7 @@ import { GpuRunner, simMaterial } from '../gl/gpu';
 import { DOOR_SHORE, HEIGHTFIELD_GLSL, ISLES } from './heightfield';
 import { LITTLE_BOATS } from './little-boats-layout';
 import { SKY_MIRROR } from './sky-mirror-layout';
+import { STILL_CENTRE } from './geography';
 
 /**
  * Where each island (and the sky mirror's bed) lifts the ground off the open-sea floor, as offsets from its centre,
@@ -10,7 +11,7 @@ import { SKY_MIRROR } from './sky-mirror-layout';
  * tools/terrain-heights-check.mjs proves both and must pass again after any island's shape or place changes.
  */
 const REACH: [{ x: number; z: number }, number, number, number, number][] = [
-  [{ x: -6, z: -14 }, -124, 130, -98, 94],
+  [STILL_CENTRE, -124, 130, -98, 94],
   [ISLES.lines, -122, 126, -114, 116],
   [DOOR_SHORE, -36, 36, -46, 46],
   [LITTLE_BOATS, -70, 70, -104, 104],

@@ -11,9 +11,10 @@ import { HOME_JETTY } from './home-layout';
 import { NOISE_TILES_GLSL, noiseTileUniforms } from './noise-tiles';
 import { noiseLoopUniforms } from '../gl/loops';
 import { fogLookupUniforms, FOG_LOOKUP_GLSL } from './fog-lookup-uniforms';
+import { STILL_SHIFT } from './geography';
 
 /** North of this z the world is already living: the sea between the first island and the second. */
-export const LIVING_BEYOND = -150;
+export const LIVING_BEYOND = -150 + STILL_SHIFT.z;
 
 const [sunAz, sunEl] = params.sun ?? [52, 13];
 
@@ -101,6 +102,7 @@ export const atmo = {
     uVeilLift: { value: 0 },
     /** Offshore fog converges to the sky itself, then releases on the approach to home. */
     uOpenSea: { value: 0 },
+    uHorizonMist: { value: new THREE.Vector3(0, 1, 0) },
     uHomeHaze: { value: 0 },
     /** An island's offshore veil is anchored to its coast, so looking from a hill cannot expose the next room. */
     uIslandVeil: { value: new THREE.Vector4(0, 0, 1, 1) },
@@ -319,6 +321,7 @@ uniform float uMist;
 uniform vec2 uVeil;
 uniform float uVeilLift;
 uniform float uOpenSea;
+uniform vec3 uHorizonMist;
 uniform float uHomeHaze;
 uniform vec4 uIslandVeil;
 uniform float uIslandVeilAmount;
@@ -1023,7 +1026,7 @@ float coastCover(vec4 coast, vec3 wpos, float inner, float outer) {
 
 /** Shared with emissive props that deliberately shine through the ordinary habitat fog. */
 float journeyVeilAt(vec3 wpos) {
-  float covered = 0.0;
+  float covered = smoothstep(uHorizonMist.x, uHorizonMist.y, distance(wpos, cameraPosition)) * uHorizonMist.z;
   for (int i = 0; i < 2; i++) {
     if (uJourneyVeilAmounts[i] <= 0.0) continue;
     float hidden = coastCover(uJourneyVeils[i], wpos, ${glsl(tuning.world.arrivalFogInner)}, ${glsl(tuning.world.arrivalFogOuter)}) * uJourneyVeilAmounts[i];

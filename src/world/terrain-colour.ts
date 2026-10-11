@@ -4,13 +4,14 @@ import { NOISE_GLSL } from './atmosphere';
 import { GRASS_PATTERN_GLSL } from './grass';
 import { DOOR_SHORE, ISLES } from './heightfield';
 import { SKY_MIRROR } from './sky-mirror-layout';
+import { STILL_CENTRE } from './geography';
 
 const TEXEL = 1;
 const WIDTH = 1024;
 
 /** World-aligned texels agree in overlapping patches; empty sea needs no storage. */
 export const TERRAIN_COLOUR_PATCHES = [
-  { x: -6, z: -14, rx: 80, rz: 65 }, ...Object.values(ISLES), DOOR_SHORE, SKY_MIRROR,
+  { ...STILL_CENTRE, rx: 80, rz: 65 }, ...Object.values(ISLES), DOOR_SHORE, SKY_MIRROR,
 ].map(isle => {
   const minX = Math.floor((isle.x - isle.rx * 1.15 - 12) / TEXEL) * TEXEL;
   const minZ = Math.floor((isle.z - isle.rz * 1.15 - 12) / TEXEL) * TEXEL;
@@ -29,7 +30,7 @@ const f = (v: number): string => v.toFixed(4);
 
 const PATTERN = /* glsl */ `
 vec4 terrainColourPatternDirect(vec2 p) {
-  return vec4(grassPatternAt(p), fbm(p * 0.09 + 31.0));
+  return vec4(grassPatternAt(p), fbm((p - stillGrassOffset(p)) * 0.09 + 31.0));
 }`;
 const BAKE = /* glsl */ `
 ${NOISE_GLSL}

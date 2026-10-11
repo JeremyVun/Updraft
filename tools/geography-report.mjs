@@ -18,12 +18,13 @@ const { DROWNED_CHANNEL } = await import('../src/world/drowned.ts');
 const { WOOD_BERTH, WOOD_LANDING } = await import('../src/world/wood.ts');
 const { SLEEP_BERTH } = await import('../src/world/sleeping.ts');
 const { tuning } = await import('../src/tuning.ts');
+const { STILL_CENTRE } = await import('../src/world/geography.ts');
 const xz = p => [p.x, p.z ?? p.y];
 const distance = (a,b) => Math.hypot(a[0]-b[0], a[1]-b[1]);
 const rounded = n => Math.round(n*10)/10;
 const centres = [
   // The starting island has no ISLES entry: this is its base coastline ellipse in islandCoast().
-  ['Starting island', {x:-6,z:-14}], ['Lines / washing', ISLES.lines],
+  ['Starting island', STILL_CENTRE], ['Lines / washing', ISLES.lines],
   ['Door shore', DOOR_SHORE], ['Little boats', ISLES.boats], ['Meadow', ISLES.meadow],
   ['Birches', ISLES.birches], ['Drowned village', ISLES.drowned], ['Wood', ISLES.wood],
   ['Sleeping', ISLES.sleeping], ['Sky mirror', SKY_MIRROR], ['Home / summit', ISLES.home],

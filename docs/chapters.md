@@ -85,13 +85,33 @@ signal, not the bird's silhouette. Knobs: `tuning.opening`. Checks: `tools/openi
 
 ## The first crossing
 
+The current music experiment starts `still_2.ogg` at source second 8 as she starts walking to the boat after bandaging,
+then carries the same recording through departure and the first crossing. The plane stays secured on her satchel
+from the tree sequence through boarding. Wind stays playable throughout, without changing the departure timing.
+Earlier catch remains free. Gesture motifs end with the rescue;
+earlier island motif starts are at least 4.5 seconds apart. Jeremy's verbatim brief and reversible controls are in
+[the audio contract](contracts/audio.md).
+The lowercase "updraft" title fades in after the look back, holds, and is gone before the whale (currently seconds
+34–41 of the crossing, whale at 45). A horizontal wind front lifts the existing flowers with sparse windlines at 31–37 seconds. Its timing is in `tuning.opening.title` and `tuning.opening.crossing`.
+Still and its departure route now lie 200 units farther south. The ordinary crossing takes about 117 seconds,
+giving roughly 33 extra seconds after the later whale, at the same boat speed. This remains a listening experiment.
+After the whale, the camera eases upward and back for six gulls, a bill-carried linen scrap and four loose sheets
+that roll and fold on the wind. Lines begins around crossing second 99 as the shore emerges through a broader
+horizon veil. The Still recording finishes about six seconds earlier.
+
 `toLines`. The curve round the restored island: the camera looks back at it for the farewell (21 s) and turns
-onward; a whale surfaces at 37 s. The light stays clear for the farewell, and the distance haze thickens as the
-camera releases it, so when the camera turns ahead the island of lines is already hidden. From there it only ever
-comes out of the haze as the boat closes, shoreline first, washing on the final approach: it must never be seen and
-then fogged over again (`tuning.world.linesCrossingHaze`, `linesHazeFrom`, `linesHazeTo`). About 75 s on the
-ordinary breeze, 40 s under steady gusts; playtesters found a minute and a half too long and a minute too close. It
-holds leaving the cove, the island receding, the farewell and the whale.
+onward; a whale surfaces at 45 s and draws the camera over six seconds. The light stays clear for the farewell,
+and through the whale’s dive. A broad horizon veil hides all distant scenery equally, keeping the view clear out to
+205 units and fully concealed beyond 260, then blending to a 55–110 unit visibility range over crossing seconds
+60–76 (`tuning.world.linesHorizon`).
+Lines emerges shoreline first as the boat approaches; no island-shaped fog bank marks its location.
+The ordinary distance haze remains (`linesCrossingHaze`, `linesHazeFrom`, `linesHazeTo`). About 117 s whether
+idle or blowing sustained gusts: player wind animates the sail without accelerating or steering the hull.
+Lines' recording uses a twelve-second approach lead adjustment. The first whale’s dive sends out the shared physical
+swell. From crossing second 69, two gulls pass, one carrying linen, followed by two loose handkerchiefs; a sparse
+cry accompanies their closest pass. The loose cloth and bill-held corner use the existing cloth solver.
+ This supersedes the earlier shorter crossing to give the new recording
+and whale encounter more room. It holds leaving the cove, the island receding, the farewell and the whale.
 
 ## The island of lines
 
@@ -127,7 +147,8 @@ gravity from what is left, or lying where it fell.
 
 Pegs and fallen sheets stay as they are for the rest of the visit, and a checkpoint loads them already down. The
 cygnet goes first and looks back for the child, through the way the fallen cloth has left (`WashingCurtain.way`,
-chosen once the sheet has been down `passAfter`), and the child follows.
+chosen once the sheet has been down `passAfter`), and the child follows. Crossing arrivals stay earned if a gust
+moves the waiting bird; reaching the gap counts even if the bird has already cleared its own walking target.
 
 The last sheet opens on a clearing: one low line with a blue and a red adult garment and the small yellow jumper
 between them, and the red door. The released breeze brings the sleeves together (blue
@@ -170,6 +191,7 @@ island; pinwheels belong to this island only.
 Knobs: `tuning.linesPassage`, `tuning.washing`, `tuning.family`, `tuning.linesToys`, `tuning.shorePulley`. Checks:
 `tools/lines-check.mjs`, `lines-view-check.mjs` (both wind the boat in with sweeps across the pinwheel; `lines-check idle`
 also proves waiting cannot).
+`tools/lines-progression-check.mjs` exercises all three curtains with gusts during the bird's look back at 30–120 Hz.
 
 ## The little boats
 

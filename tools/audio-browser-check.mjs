@@ -37,14 +37,15 @@ try {
     }, name);
     await page.waitForFunction(() => audioStates.length >= 6);
     // A departure holds a musical rest before the crossing's arrangement enters.
+    if (name === 'boats') await page.waitForFunction(() => __game.sound.boatsScore?.source?.buffer, null, { timeout: 20000 });
     if (name === 'toMirror') await page.waitForFunction(() => __game.sound.seaScore?.current, null, { timeout: 20000 });
     const state = await page.evaluate(() => ({ name: __game.story.name, audio: audioStates.at(-1), sounds: materials,
-      boatsScore: !!__game.sound.boatsScore, boatsVoices: __game.sound.boatsScore?.voices.size ?? 0,
+      boatsScore: !!__game.sound.boatsScore, boatsPlaying: !!__game.sound.boatsScore?.source?.buffer,
       seaScore: __game.sound.seaScore?.current?.phase,
       sleepingScore: __game.sound.sleepingScore?.current?.phase }));
     if (name === 'boats') {
       assert.equal(state.audio.music, 'boats', 'Little Boats selects its approved composition');
-      assert(state.boatsScore && state.boatsVoices > 0, 'Little Boats starts sounding in the real game loop');
+      assert(state.boatsScore && state.boatsPlaying, 'Little Boats starts sounding in the real game loop');
     } else assert.equal(state.boatsScore, false, `${name}: Little Boats score cannot leak into another chapter`);
     if (name === 'toMirror') assert.equal(state.seaScore, state.audio.seaScore, 'Long crossing receives its live arrangement');
     else assert.equal(state.seaScore, undefined, `${name}: long sea arrangement cannot leak into other chapters`);

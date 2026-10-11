@@ -66,8 +66,9 @@ export class Foley {
     } else if (kind === 'peg') {
       // A wooden peg springing off the line: a dry snap, then the knock of its two legs clapping shut.
       const colour = 0.9 + Math.random() * 0.2;
-      this.puff({ at, len: 0.035, level: level * 0.07, pan, type: 'bandpass', from: 2600 * colour, q: 1.2, attack: 0.002 });
-      this.blip(at + 0.012, 1250 * colour, 900 * colour, 0.05, level * 0.02, pan, 'triangle', 0.04);
+      const pegLevel = level * 10 ** (tuning.audio.pegBoostDb / 20);
+      this.puff({ at, len: 0.035, level: pegLevel * 0.07, pan, type: 'bandpass', from: 2600 * colour, q: 1.2, attack: 0.002 });
+      this.blip(at + 0.012, 1250 * colour, 900 * colour, 0.05, pegLevel * 0.02, pan, 'triangle', 0.04);
     } else if (kind === 'tub') {
       // A wooden tub knocking against slates or a hull: a hollow low knock, and the water slapping in round it.
       const colour = 0.9 + Math.random() * 0.2;

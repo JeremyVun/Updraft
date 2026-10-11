@@ -285,6 +285,24 @@ back part of the startup saving to restore the clouds; it is one local Mac measu
 Evidence: `/tmp/updraft-cloud-edge-dDdhtx/`, especially `motion.json`, `fixed-motion-advancing.json`,
 `fixed-cold.json`, `start.json` and `cached-vs-original-motion.mp4`.
 
+Jeremy reported residual motion artifacts after the restoration, verbatim:
+
+> ok well the reason i ask is because there's still some kind of "glinting" in the clouds even after your fix. i dont know what the issue is but it looks like some kind of rendering artifact still
+
+The 96-frame check above compares two shader paths inside the modified build, not the entire pre-cache renderer.
+It does not establish that the reported glinting is gone. Confirm the running build, compare actual pre-cache and
+restored builds in motion, and isolate the glint before making another appearance change.
+
+The follow-up compared a separate checkout of `0cd3f43d` with current main using `frame-profile`'s deterministic
+frame/UUID/readback controls. The real climb, loop, upper-cloud reveal, sail, mist and descent into the village
+matched exactly in all 525 sampled frames (every 30th frame, 90–15810, 1376×1032, ratio 1, MSAA 4, Chrome for Testing
+on ANGLE Metal). Separately, the background-cloud region matched in all 60 entrance frames from the frozen
+pre-cache and restored QA builds at 1920×1080. This establishes parity in those frames; it does not identify or
+resolve Jeremy's reported glinting. Asked for the running URL and whether the camera moves; no answer yet.
+No further rendering change was made. Evidence and the entrance comparison clip: `/tmp/updraft-cloud-glint-9fK0m8/`;
+`replay-results.json` records the full replay command and its successful output. A pristine pre-cache dev reference
+is available at `http://127.0.0.1:5363/?chapter=stairs&progress=0` in the attached `cloud-glint-baseline` worktree.
+
 ## Windows compilation follow-up (2026-10-06)
 
 Jeremy: "ok listen, i need you to figure it out. I need this game to be playable on windows machines. This may explain why my sister said the game just completely hung and froze when she tried on her samsung tablet or whatever"
@@ -543,6 +561,21 @@ hero, with night, phone longest-line and desktop stage-A frames beside it), and 
 - **Per-device timing for the bar's shares.** Not worth its machinery for a "rough loading percentage".
 
 ## Gates
+
+### Audio readiness follow-up — 2026-10-11
+
+Jeremy asked, verbatim: "Do we need a loading audio stage as part of the veil now then?", then "proceed".
+His timing constraint: "yea, btw, i hope you're allowing audio to download async at the same time as the shaders are compiling, instead of downloading the audio being sequential."
+
+Start downloading only the selected starting recording when main begins, concurrently with construction and shader
+compilation. Begin still creates/resumes Web Audio synchronously in the gesture. Its decode runs alongside the
+chosen room's first-frame preparation; gameplay and veil reveal wait for both. Show "Preparing music" in the existing
+loading line only if that final wait lasts at least 150 ms, without an invented decode percentage.
+Music-off or sound-off starts skip the download and wait. Turning either off during preparation cancels it. Download,
+decode failure or a 20-second preparation deadline permits play with ambience. During play, keep at most one next
+recording prefetched as compressed bytes; prepare its decoded score through the existing arrival handoff.
+Preserve the supplied Ogg bytes and all experimental synth fallbacks. This is a separate follow-up to the open
+shader performance and physical-device gates below.
 
 All on a production or QA build, never a dev server, with no other Chrome capture running.
 

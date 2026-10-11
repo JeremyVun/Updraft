@@ -218,6 +218,7 @@ export class SleepingWhale extends WhaleRig {
   phase: 'resting' | 'woken' | 'free' | 'gone' = 'gone';
   /** Seconds into the current phase. */
   time = 0;
+  private surgeAt = -Infinity;
   /** How far toward its first full breath the player's wind has brought it, 0..1: it breathes deeper as it does. */
   stir = 0;
   /** How far up each of its tries to open its eye under the weight on it lifts the lid, 0 when it is not trying. */
@@ -499,7 +500,7 @@ export class SleepingWhale extends WhaleRig {
       this.call('whale-deep', this.q.copy(this.farewell).setY(-12));
     }
     if (this.phase === 'gone') {
-      if (this.time > 30 && this.time < 1e3) swellUniforms.uSurge.value.w = 0;
+      if (this.time > 30 && this.time < 1e3 && swellUniforms.uSurge.value.z === this.surgeAt) swellUniforms.uSurge.value.w = 0;
       return;
     }
     if (this.phase === 'free') this.leave(dt);
@@ -753,6 +754,7 @@ export class SleepingWhale extends WhaleRig {
     const near = Math.hypot(this.near.x - centre.x - h.x * along, this.near.z - centre.z - h.z * along);
     const height = (K.surgeHeight * (12 + near)) / 12;
     swellUniforms.uSurge.value.set(centre.x, centre.z, this.worldTime, height);
+    this.surgeAt = this.worldTime;
     swellUniforms.uSurgeAxis.value.set(h.x, h.z, half);
   }
 

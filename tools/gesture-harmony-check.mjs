@@ -25,7 +25,7 @@ try {
       const module=await productionModule(`/src/audio/${file}-score.ts`);
       for(const [phase,pattern] of Object.entries(module[table])) {
         const chords=file==='sea'?pattern.chords.map(([at,index])=>({at,tones:module.SEA_CHORDS[index]})):pattern.chords;
-        cases.push({name:`${file}/${phase}`,state:{music,[key]:phase},key,seconds:pattern.seconds,
+        cases.push({name:`${file}/${phase}`,state:{music,[key]:phase,sleepingWind:file==='sleeping'&&phase==='climb'},key,seconds:pattern.seconds,
           changes:chords.map(c=>c.at),harmony:(at,score)=>{
             if(!chords.length)return [50,57,64,69];
             const local=phrasePosition(pattern,score.current.epoch,at);
@@ -49,14 +49,15 @@ try {
           sound.update(.1,{...baseState,...c.state,...input,rise:now%2>1?-1:1,flockChatter:false});
         }
       }
-      if (!c.state.startingIsland && !c.state.forestWind) {
-        check(events.length === 0, `${c.name}: no cursor chimes outside the opening island and forest`);
+      if (!c.state.forestWind && !c.state.sleepingWind) {
+        check(events.length === 0, `${c.name}: no cursor chimes outside the forest and Sleeping climb`);
         delete ctx.currentTime;
         continue;
       }
-      check(events.length>=12,`${c.name}: strokes, lifts and glider responses all schedule`);
+      check(events.length>=12,`${c.name}: playable wind responses schedule`);
       check(events.every(e=>pitchIn(e.midi,c.harmony(e.at,score))),`${c.name}: every gesture note belongs to the harmony at its scheduled onset`);
-      check(events.some(e=>e.decay===1.6)&&events.some(e=>e.decay===1.8)&&events.some(e=>e.decay===2.2),`${c.name}: all three gesture voices are covered`);
+      check(events.some(e=>e.decay===1.6)&&events.some(e=>e.decay===2.2)
+        &&(c.state.sleepingWind||events.some(e=>e.decay===1.8)),`${c.name}: all available gesture voices are covered`);
       boundaryNotes+=events.filter(e=>JSON.stringify(c.harmony(e.at,score))!==JSON.stringify(c.harmony(e.now,score))).length;
       notes+=events.length;
       delete ctx.currentTime;

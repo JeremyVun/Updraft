@@ -44,12 +44,18 @@ fallback calls. Neither effect counts nor program variants are reduced. Validate
 seeded `render-parity-check`, and cold startup on the platform's normal backend; measured evidence is in
 `backlog/boot-veil/build_plan.md` (Windows follow-up).
 
+The selected starting recording downloads asynchronously from the start of main, alongside world construction and
+shader compilation. Sound-off/music-off skip that download. No AudioContext exists before a player gesture.
+
 The gesture that chooses (Begin, Continue or a chapter pick; `?shot` without `start=1` goes straight on with no pick)
 starts the game through the one callback of `startScreen.ready`. Inside the gesture it starts audio, then
 `story.start(choice)` applies the save, the `?chapter=` start or the pick (`progress.md`), one `story.update(0, 0)`
 gives the room its opening shot and the camera cuts to it. Then, behind the departing veil, the window moves to that
 camera and bakes, the visible grass tables bake, the post chain runs and `gpuIdle` waits, as at boot, so the first
-frame of play pays for none of them; then `requestAnimationFrame(frame)`. These steps reuse programs boot has already
+frame of play pays for none of them. Music decoding runs concurrently with these steps; the veil holds until both
+finish, then `requestAnimationFrame(frame)`. If music still needs time after 150 ms, the existing loading line says
+"Preparing music". Disabling sound/music cancels the wait; failed or timed-out preparation permits ambience.
+These steps reuse programs boot has already
 built and first drawn. Nothing calls `story.update` before `story.start`, and `start` runs once per page.
 
 Anything that appears later in the story is already compiled, first drawn and uploaded; showing it costs nothing.
@@ -278,7 +284,9 @@ The Graphics selector offers Auto (default), Ultra, High, Medium and Low; the ch
 The scene's default MSAA is 4, or 2 on displays with a device pixel ratio of 1.75 or more. The ordinary sea's
 reflection is redrawn at most every other frame (unless the view has cut or the rooms changed); at Low it is not
 drawn and the ordinary sea mirrors only the sky, while the sky mirror keeps its reflection at every
-level. The seabed's detail is its sand grain, ripples, weed and caustics; without it the bed keeps their averages, so
+level. Home retains the ordinary reflection through landing and the walk inland: the meadow's coast cutoff does
+not apply there, because the sea remains in view. Verify from the crossing; starting at the jetty misses the handoff.
+The seabed's detail is its sand grain, ripples, weed and caustics; without it the bed keeps their averages, so
 the shallows keep their colour. The sea's effects are one variant axis (`SEA_EFFECTS` in `water.ts`: all, all but
 the collar, none), selected only by `applyWorldQuality`. A change fades them over a second (`uSeaEffects`, toward
 those averages and the sky) as the grass and bloom change: what goes keeps its variant until it has faded out, and what

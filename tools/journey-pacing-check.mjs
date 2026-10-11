@@ -291,8 +291,8 @@ function run(name, fps, gust, veer=0, arrivalGust=false, circling=false) {
         check(events.mirrorSeen>events.dive,`the mirror comes out of its mist only once the whale has dived: ${JSON.stringify(events)}`);
         const onward=time-events['whale-gone'];
         check(onwardLimit>=tuning.seaPassage.speed-0.001,`normal boat speed throughout the onward sail: cap ${onwardLimit}`);
-        check(onward>=(gust?18:arrivalGust?28:37)&&onward<=(gust?32:43),
-          `about 40 s at ordinary wind, with gusts naturally faster: ${onward.toFixed(1)} s`);
+        check(onward>=37&&onward<=43,
+          `about 40 s regardless of player gusts: ${onward.toFixed(1)} s`);
         check(portTurn<0.15&&-mostStarboard<1.9,`sails straight on and curves in to the jetty, never coming about: ${JSON.stringify({portTurn,starboard:-mostStarboard})}`);}
       return {seconds:+time.toFixed(1),musicLead:+musicLead.toFixed(2),sailed:+sailed.toFixed(1),peak:+peak.toFixed(2),swimSeconds:+(swimFrames/fps).toFixed(1),stillSeconds:+stillFor.toFixed(1),whaleCalled:chapter.whaleCalled,
         ...(chapter.whale?{hiddenBeforeNudge:+leastHidden.toFixed(4),nudgeOut,whaleBrake:+worstBrake.toFixed(2),restGap:+restGap.toFixed(2),slowest:+slowest.toFixed(2),slowestAt,lead:+(events['whale-breath']-events.whaleLed).toFixed(1),
@@ -308,6 +308,13 @@ for(const name of (process.env.CROSSING ? [process.env.CROSSING] : Object.keys(s
   const calm=run(name,60,0),gust=run(name,60,8),lowFps=run(name,30,0);
   const windLeft=run(name,30,0,-.35),windRight=run(name,30,0,.35);
   const lateGust=run(name,60,0,0,true);
+  if (name !== 'toMirror') {
+    for (const active of [gust, lateGust]) {
+      assert.equal(active.seconds, calm.seconds, `${name}: gestures must not change crossing duration`);
+      assert.equal(active.sailed, calm.sailed, `${name}: gestures must not change the sailed path`);
+      assert.equal(active.peak, calm.peak, `${name}: gestures must not boost propulsion`);
+    }
+  }
   const entry={name,calm,gust,lowFps,windLeft,windRight,lateGust};
   if(name==='toMirror')entry.circling=run(name,60,0,0,false,true);
   if(name==='toBoats'||name==='toMeadow') {

@@ -505,7 +505,7 @@ body.starting #cursor, body.starting #again { visibility: hidden; }
   }
 }
 
-#ending {
+#ending, #journey-title {
   position: fixed;
   inset: 0;
   display: grid;
@@ -520,13 +520,15 @@ body.starting #cursor, body.starting #again { visibility: hidden; }
 }
 #ending.visible { visibility: visible; }
 #ending p, .ending-actions { grid-area: 1 / 1; opacity: 0; }
-#ending p {
+#ending p, #journey-title p {
   margin: 0;
   font-size: clamp(24px, 3vw, 36px);
   line-height: 1.35;
   transition: opacity 3s ease;
 }
 #ending.visible p { opacity: 1; }
+#journey-title { visibility: visible; opacity: 0; }
+#journey-title p { font-size: clamp(27px, 3.35vw, 40px); }
 #ending.farewell p { opacity: 0; transition-duration: 2s; }
 .ending-actions { visibility: hidden; transition: opacity 2s ease; }
 #ending.replay-ready .ending-actions { visibility: visible; opacity: 1; pointer-events: auto; }

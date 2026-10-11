@@ -42,8 +42,8 @@ try {
     sound.update(.1, { ...baseState, music: 'boats' });
     const score = sound.boatsScore;
     sound.update(.1, { ...baseState, music: 'boats' });
-    check(score && sound.boatsScore === score && sound.running && sound.output === output,
-      'Music mute keeps the score, audio clock and effects output running');
+    check(!score && !sound.boatsScore && !sound.preparedScore && sound.running && sound.output === output,
+      'Music disabled before entry skips recording preparation while audio clock and effects remain running');
     sound.update(.1, { ...baseState, music: 'forest' });
     check(sound.musicDryGain.gain.value === 0 && sound.musicWetGain.gain.value === 0,
       'A chapter change cannot override music mute');

@@ -34,19 +34,20 @@ try {
     for (const music of ['still', 'lines', 'boats', 'meadow', 'birches', 'drowned', 'wood', 'sea', 'mirror', 'home']) {
       for (const input of [{ gust: tuning.pointer.minGust + 0.01 }, { charge: tuning.pointer.minLift + 0.001 }, { gliderLift: 1 }]) {
         const startingIsland = music === 'still', forestWind = music === 'wood';
-        check((chimes(fixture({ music, startingIsland, forestWind, hush: 1, ...input })).length > 0) === (startingIsland || forestWind), `${music}: ${Object.keys(input)[0]} chimes only on the starting island or forest`);
+        check((chimes(fixture({ music, startingIsland, forestWind, hush: 1, ...input })).length > 0) === forestWind, `${music}: ${Object.keys(input)[0]} chimes only in the forest`);
         check(chimes(fixture({ music, startingIsland: false, ...input })).length === 0, `${music}: music alone cannot enable gesture chimes`);
       }
     }
     for (const input of [{ gust: 26 }, { charge: 1 }, { gliderLift: 1 }]) {
       for (const exception of [{ piano: 1 }, { pianoActive: true, piano: 0 }, { scripted: true }, { silence: true }]) {
-        check(chimes(fixture({ ...input, ...exception })).length === 0, `${Object.keys(input)[0]} respects ${Object.keys(exception)[0]}`);
+        check(chimes(fixture({ music: 'wood', forestWind: true, ...input, ...exception })).length === 0, `${Object.keys(input)[0]} respects ${Object.keys(exception)[0]}`);
       }
     }
-    check(chimes(fixture({ gust: 5, pianoActive: false, piano: 0.8 })).length > 0, 'piano fade cannot mute newly playable wind');
-    check(chimes(fixture({ gust: tuning.pointer.minGust, charge: tuning.pointer.minLift })).length === 0, 'no chime below either wind threshold');
-    check(chimes(fixture({ gust: 1 }, 0.001)).length === 1, 'first gust responds immediately after audio starts');
-    check(chimes(fixture({ charge: 0.02 }, 0.001)).length === 1, 'first small updraft responds immediately after audio starts');
+    const forest = { music: 'wood', forestWind: true };
+    check(chimes(fixture({ ...forest, gust: 5, pianoActive: false, piano: 0.8 })).length > 0, 'piano fade cannot mute newly playable wind');
+    check(chimes(fixture({ ...forest, gust: tuning.pointer.minGust, charge: tuning.pointer.minLift })).length === 0, 'no chime below either wind threshold');
+    check(chimes(fixture({ ...forest, gust: 1 }, 0.001)).length === 1, 'first forest gust responds immediately after audio starts');
+    check(chimes(fixture({ ...forest, charge: 0.02 }, 0.001)).length === 1, 'first forest updraft responds immediately after audio starts');
     const opening = fixture({ gust: 26, charge: 1 });
     const later = fixture({ startingIsland: false, gust: 26, charge: 1 });
     for (const name of ['gustGain', 'whistleGain', 'rustleGain', 'liftGain']) {
@@ -71,11 +72,26 @@ try {
     const weather = fixture({ startingIsland: false, winterGust: 1 });
     check(weather.sound.gustFilter.frequency.value === 260 + .76 * 1100
       && weather.sound.whistleFilter.frequency.value === 900 + .76 * 900, 'weather filter response is unchanged');
-    const openingChime = chimes(fixture({ gust: 26 }))[0].args;
+    const windDb = tuning.audio.windDb;
+    try {
+      tuning.audio.windDb = 0;
+      for (const state of [{ gust: 26, charge: 1, overLand: true }, { winterGust: 1 }]) {
+        const original = fixture(state);
+        tuning.audio.windDb = windDb;
+        const quieter = fixture(state);
+        for (const name of ['breezeGain', 'gustGain', 'whistleGain', 'rustleGain', 'liftGain']) {
+          check(Math.abs(quieter.sound[name].gain.value - original.sound[name].gain.value * 10 ** (windDb / 20)) < 1e-10,
+            `${name}: shared wind trim applies to player and scripted gusts`);
+        }
+        for (const name of ['seaGain', 'rainGain', 'patterGain']) check(quieter.sound[name].gain.value === original.sound[name].gain.value,
+          `${name}: wind trim leaves other environmental sounds unchanged`);
+        tuning.audio.windDb = 0;
+      }
+    } finally { tuning.audio.windDb = windDb; }
     const forestChime = chimes(fixture({ startingIsland: false, forestWind: true, music: 'wood', gust: 26 }))[0].args;
     const rescueChime = chimes(fixture({ startingIsland: false, forestWind: true, music: 'wood', caringWind: true, gust: 26 }))[0].args;
-    check(openingChime[1] === forestChime[1] && Math.abs(20 * Math.log10(tuning.audio.gestureLevel / .7) - 6) < 1e-9,
-      'opening and forest chimes both gain 6 dB');
+    check(forestChime[1] === 1 && Math.abs(20 * Math.log10(tuning.audio.gestureLevel / .7) - 6) < 1e-9,
+      'forest chimes retain their 6 dB gain');
     check(rescueChime[1] < forestChime[1] / 2 && rescueChime[5], 'forest rescue keeps its softer chime');
     const habitat = overrides => fixture({ night: 1, ...overrides }).calls.filter(c => c.name === 'cricket' || c.name === 'owl');
     check(habitat({ land: 0, sea: 1 }).length === 0, 'no land wildlife on open sea');
@@ -100,6 +116,28 @@ try {
     const { SleepingChapter } = await import('/src/story/sleeping.ts');
     const { WoodChapter } = await import('/src/story/wood.ts');
     const cues = await productionModule('/src/story/cues.ts');
+    const { IslandChapter } = await import('/src/story/island.ts');
+    const firstWind = {
+      beat: 'still', breeze: 0, breezeTarget: 0, stillSince: 0, hush: 0,
+      trackLife() {}, frame() {}, loosen() { this.beat = 'play'; },
+      cast: { input: { gust: 26 }, child: { position: { x: 0, z: 0 } }, plane: { held: false },
+        wind: { sample: () => ({ energy: 0.2, x: 1, z: 0 }) } },
+    };
+    cues.takeCues();
+    IslandChapter.prototype.update.call(firstWind, 0.1, 1);
+    check(firstWind.breezeTarget === 1 && firstWind.beat === 'play', 'The first gust still starts the breeze and releases the plane');
+    check(cues.takeCues().length === 0, 'The first plane flight raises no tune');
+    const openingChapter = {
+      sinceLifeCheck: 0.5, beat: 'play', restored: false, restoredAt: 0, now: 12, worldLife: 0.5,
+      cast: { plane: { held: true }, life: { mean: () => 0.7, regions: { island: { w: 0 } } } },
+    };
+    cues.takeCues();
+    IslandChapter.prototype.trackLife.call(openingChapter, 0.1);
+    check(openingChapter.restored && openingChapter.restoredAt === 12 && openingChapter.cast.life.regions.island.w > 0,
+      'The still island completes and brings back colour without its completion sound');
+    check(cues.takeCues().length === 0, 'Still island completion raises no sound cue');
+    cues.completeObjective();
+    check(cues.takeCues().join() === 'restored', 'Other chapters retain the shared completion sound');
     const endingSounds = tuning.audio.homeEndingSounds;
     for (const enabled of [false, true]) {
       tuning.audio.homeEndingSounds = enabled;

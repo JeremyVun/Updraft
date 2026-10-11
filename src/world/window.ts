@@ -4,13 +4,15 @@
  * window space listen for moves and shift or re-bake. See docs/contracts/wind.md.
  */
 
+import { STILL_SHIFT } from './geography';
+
 export const WINDOW_SIZE = 320;
 /** Moves snap to this, a whole number of texels for every window texture. */
 const STEP = 10;
 /** The window recentres once the wanted centre drifts this far. */
 const SLACK = 30;
 
-export const WINDOW = { minX: -WINDOW_SIZE / 2, minZ: -WINDOW_SIZE / 2, size: WINDOW_SIZE };
+export const WINDOW = { minX: STILL_SHIFT.x - WINDOW_SIZE / 2, minZ: STILL_SHIFT.z - WINDOW_SIZE / 2, size: WINDOW_SIZE };
 
 type MoveListener = (dx: number, dz: number) => void;
 const listeners: MoveListener[] = [];

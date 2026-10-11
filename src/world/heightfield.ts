@@ -1,4 +1,4 @@
-import { BOATS_SHIFT, SHORE_SHIFT, HOME_SHIFT, LINES_SHIFT } from './geography';
+import { BOATS_SHIFT, SHORE_SHIFT, HOME_SHIFT, LINES_SHIFT, STILL_SHIFT } from './geography';
 import { mirrorBed, MIRROR_LAYOUT_GLSL } from './sky-mirror-layout';
 import { glsl, tuning } from '../tuning';
 import { LITTLE_BOATS, LITTLE_BOATS_GLSL, boatsBar, boatsOut, boatsLevel } from './little-boats-layout';
@@ -108,6 +108,7 @@ function islandCoast(x: number, z: number): number {
 }
 
 function islandHeight(x: number, z: number): number {
+  x -= STILL_SHIFT.x; z -= STILL_SHIFT.z;
   // The coast is at least the ellipse's or the islet's distance less 1.25 (the soft unions take no more).
   if (Math.hypot((x + 6) / 60, (z + 14) / 44) > 1 + NOISE_REACH * 0.22 + 56.25 / 48 + 1e-6
     && Math.hypot(x - 62, (z - 30) * 1.2) > 8 + NOISE_REACH * 5 + 56.25 + 1e-6) return -1.5 - 7.5;
@@ -536,6 +537,7 @@ float hf_islandCoast(vec2 p) {
   return hf_smin(d, islet, 5.0);
 }
 float hf_island(vec2 p) {
+  p -= vec2(${glsl(STILL_SHIFT.x)}, ${glsl(STILL_SHIFT.z)});
   float d = hf_islandCoast(p);
   float land = (1.0 - smoothstep(-14.0, 10.0, d));
   float h = land * 2.7 - 1.5;

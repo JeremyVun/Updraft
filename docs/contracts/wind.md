@@ -111,7 +111,9 @@ frame (default 1). The glider's wake also writes when it skims low.
   charge. Ordinary release keeps the soft decay; mouse hover still makes wind. Checks:
   `tools/pointer-contact-check.mjs` (no GPU), `tools/touch-viewport-check.mjs` (real browser).
 - **Scripted beats.** While a chapter is `scripted`, `PointerInput.muted` puts nothing into the field (no chimes,
-  ripples or wind lines); the pointer still tracks and control returns when the beat ends.
+  ripples or wind lines); the pointer still tracks and control returns when the beat ends. A chapter can explicitly
+  override this with `windMuted`: Still keeps wind available through the rescue and departure, securing the plane
+  on the satchel so gusts cannot change the route or boarding time.
 - `tuning.pointer.minGust` and `minLift` are shared with gesture audio: any input strong enough to write wind
   qualifies for its chime (`audio.md`).
 
@@ -162,6 +164,9 @@ them.
   feather's own `brush` is a direct screen-space push like the glider's; during the walk strokes build forward
   encouragement inside the route corridor and never project it back down the hill. At the snow and mist,
   `brushDry` counts real screen travel (`snowStroke`, `mistStroke`), and progress persists.
+- **The main boat's passage.** Player gusts affect its cloth, pennant and heel, but not propulsion or sideways
+  drift. A separate smoothed prevailing-breeze reading carries the hull at its ordinary pace, keeping musical
+  choreography independent of gestures. The toy-boat puzzles still use the player's wind.
 - **Storm rain** leans by `tuning.storm.rainLean` along the breeze without writing a gust.
 
 ## What wind can and cannot solve

@@ -56,6 +56,27 @@ export const tuning = {
     /** Playtest corrections: the opening drone sits 12 dB forward, home 8 dB. */
     openingScoreDb: 12,
     summitScoreLevel: .06555 * 10 ** (8 / 20),
+    /** Match supplied masters to the room reference through gain alone. */
+    recordedMusicDb: { home: -14.4, birches: -14.4, lines: -12, boats: -12.3 },
+    recordedMusicFade: .65,
+    musicLoadTimeoutMs: 20_000,
+    /** Reversible opening experiment; false restores the original drone. */
+    stillPhraseExperiment: true,
+    stillFallTones: false,
+    linesArrivalEarlier: 10,
+    stillPhraseDb: -6,
+    stillPhraseFade: .12,
+    stillPhraseSpacing: 4.5,
+    stillFlightEvery: 6,
+    stillDepartureDb: -14.1,
+    stillDepartureOffset: 8,
+    stillDepartureEnd: 118,
+    stillDepartureFadeOut: 4,
+    stillColourGust: 5,
+    stillColourCharge: .12,
+    stillColourGain: .025,
+    stillColourWait: .8,
+    stillColourSample: .12,
     /**
      * One loudness reference across rooms (about -29 LUFS in each piece's main section), over the approved levels.
      * The opening keeps its quiet start and swells about 5 dB, not 12, as the island wakes (`openingPadRise`).
@@ -67,7 +88,8 @@ export const tuning = {
     /** After the rescue the opening begins again from its first chord, rising out of silence over this long. */
     openingReturn: 4,
     /** Share of player wind's level taken off a full stroke, easing to nothing for gentle ones: −6 dB at the top, −1 dB at half. */
-    playerWindEase: .5,
+    playerWindEase: .5, playerWindDb: -6, grassRustleDb: -9,
+    windDb: -3,
     /** Under a fog lying over the water the sea is this much quieter and its wash this much duller (shares, at the most). */
     seaMuffleLevel: 0.55, seaMuffleCutoff: 0.6,
     /** Reduce how far cursor wind opens its filters, keeping strong gestures less shrill. */
@@ -109,10 +131,11 @@ export const tuning = {
     callSpace: 4,
     shoreNear: 20, shoreFar: 260, shoreRefresh: 0.75,
     materialLevel: 0.7, materialNear: 20, materialFar: 120,
+    pegBoostDb: 6,
     /** Close paper handling stays beneath the wind and the recognition melody. */
     paperLevel: 0.35,
     /** Sparse close physical detail: child and bird share one leaf budget, with no wind/particle triggers. */
-    leafScuffLevel: 0.4, leafScuffEvery: 1.4, leafCoverMin: 0.55,
+    leafScuffLevel: 0.4 * 10 ** (3 / 20), leafScuffEvery: 1.4, leafCoverMin: 0.55,
     swingCreakLevel: 0.5, swingCreakEvery: 2.4, swingCreakAngle: 0.16,
     birchesFoleyNear: 20, birchesFoleyFar: 65,
     materialEvery: 0.2, waterEvery: 0.42, splashEvery: 0.4,
@@ -451,6 +474,19 @@ export const tuning = {
     startOverAsks: 6,
   },
   opening: {
+    title: { afterFarewell: 13, fadeIn: 3, hold: 2.5, fadeOut: 3 },
+    titleGust: { before: 3, duration: 6, reach: 48, width: 32, radius: 10, speed: 24, energy: .3, lift: .04,
+      lines: { interval: .45, spread: 22, height: 1.5, climb: .15, width: .2 } },
+    crossing: { whaleAt: 45, whalePan: 6, whaleFadeIn: 3.5, whaleFadeOut: 4, diveSwell: 1.8, diveSwellFor: 60 },
+    shoreEchoes: { afterFarewell: 48, duration: 48, span: 40, ahead: 30, height: 6, followerHeight: 1.2, spawnMargin: 3,
+      crossSpeed: 6, forwardSpeed: 5.5, laundryLift: 5.15, laundryTurn: 2.2, laundrySteady: .65,
+      laundry: [
+        { at: .5, side: 4, depth: 8, height: 5.5, bob: 1.7, rate: .48, speed: .75, veer: .24, phase: .3, roll: 1.2, width: 2.2, drop: 2.6 },
+        { at: 4.7, side: -8, depth: -10, height: 12, bob: 3, rate: .32, speed: 1.2, veer: -.38, phase: 1.8, roll: .9, width: 2.7, drop: 2.3 },
+        { at: 2.9, side: -18, depth: 22, height: 8.5, bob: 2.4, rate: .58, speed: .9, veer: .32, phase: 3.4, roll: -1.1, width: 1.8, drop: 2.1 },
+        { at: 10.2, side: 12, depth: -4, height: 4, bob: 1.4, rate: .7, speed: 1.1, veer: -.2, phase: 4.7, roll: 1.7, width: 2.4, drop: 2.8 },
+      ],
+      camera: { afterFarewell: 48, inFrom: -6, inTo: 3, outFrom: 31, outTo: 43, lookUp: 3.2, lower: 2.3, back: 3.5, sway: .08 } },
     /** Soft ground footprint under flying paper; strength is life per second, alongside the player's wind. */
     planeBloomRadius: 4.5,
     planeBloomStrength: 1.4,
@@ -493,7 +529,7 @@ export const tuning = {
     fallTravel: 24,
     /** Give the kneeling hands a clear foreground while keeping the lost bird hidden before the rescue. */
     careGrassRadius: 7.5,
-    careCameraHeight: 4.1,
+    careCameraHeight: 1,
     /** Sheltered cloth hangs deeper; the cove releases its shelter once the boat is afloat. */
     sailGather: 0.48,
     sailSag: 1.65,
@@ -600,14 +636,14 @@ export const tuning = {
     /** How strongly the air takes the wool, per second: higher streams sooner and lags less behind a turn. */
     drag: 3.2,
     /** The share of the child's starts and stops that swings the ends: 1 would fling them as far as a real scarf. */
-    inertia: 0.35,
+    inertia: 0.28,
     gravity: 6.5,
     /** The most of an end's weight the air holds up, along its middle, once air passes the child at `liftSpeed`. */
     lift: 0.9, liftSpeed: 7,
     /** Upward pull per unit of the player's updraft. */
     updraft: 5,
     /** The slow wave down a streaming end: its rate (radians a second) in a breeze and at `liftSpeed`; its push. */
-    waveRate: 2.1, waveRateFast: 4.2, wave: 1.4, waveFast: 3.4,
+    waveRate: 1.8, waveRateFast: 3.6, wave: 1.05, waveFast: 2.55,
     /** How far (units) the ripple running down a streaming end stands out of its face at the free end. */
     ripple: 0.12,
   },
@@ -716,15 +752,15 @@ export const tuning = {
      * coast radii. It lifts at `isleMistLift` once they are ashore.
      */
     woodMist: { clear: 110, hidden: 165, edge: 1.32 },
+    linesHorizon: { farewellClear: 205, farewellHidden: 260, clear: 65, hidden: 140, settle: 16 },
     sleepingMist: { clear: 40, hidden: 72, edge: 2.4 },
     /** The sky mirror's, on the open sea until the whale has gone: all of it, over the `core` of its flat its jetties stand on. */
     mirrorMist: { clear: 0, hidden: 1, edge: 1.32, core: 0.85 },
     isleMistLift: 0.45,
     /** Birches-style distance veil near Lines; the first island farewell keeps the original clear haze. */
-    linesCrossingHaze: 1.03,
+    linesCrossingHaze: .88,
     /**
-     * Metres from the arrival berth over which the stronger haze develops. The whole crossing lies inside `to`, so it
-     * is full as the farewell camera releases: the island is in haze before the camera turns to it.
+     * Metres from the arrival berth over which the stronger haze develops; Lines' own mist conceals it farther out.
      */
     linesHazeFrom: 300,
     linesHazeTo: 240,

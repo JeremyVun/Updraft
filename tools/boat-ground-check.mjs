@@ -82,7 +82,7 @@ for (const [name, at, yaw] of berths) {
   for(let i=0;i<900;i++){b.update(1/60,i/60);if(i%10===0)worst=Math.min(worst,clearance(b));}
   record(`${name} launch`,worst);
 }
-const starts = { toLines:[16.5,29.5,0.95],toBoats:[LINES_BERTH.x,LINES_BERTH.z,0.1],toMeadow:[BOATS_BERTH.x,BOATS_BERTH.z,Math.PI],
+const starts = { toLines:[BOAT_BERTH.x+8,BOAT_BERTH.z+8,0.95],toBoats:[LINES_BERTH.x,LINES_BERTH.z,0.1],toMeadow:[BOATS_BERTH.x,BOATS_BERTH.z,Math.PI],
   toBirches:[FAR_SHORE.x,FAR_SHORE.z,0.2],toWood:[-14,-1614,Math.PI],
   toSleeping:[WOOD_BERTH.x,WOOD_BERTH.z,0.2],toHome:[SLEEP_BERTH.x-5,SLEEP_BERTH.z-2,-1.76] };
 for(const [name,start] of Object.entries(starts)) for(const gust of [0,8]) {

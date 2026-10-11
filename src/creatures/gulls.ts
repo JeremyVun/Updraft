@@ -22,7 +22,7 @@ export const BILL = 1;
 export const EYE_MAT = 2;
 export const WING = 3;
 
-const SIZE = 1.1;
+export const GULL_SIZE = 1.1;
 /** A gull's colours: white, the grey mantle on its back and wings, the black wing tips, the yellow bill. */
 export const GULL_LOOK = { white: '#f6f3ee', mantle: '#8d99a6', tip: '#1d1d22', bill: '#f2c14e' } as const;
 export const SHOULDER = [0.09, 0.05, 0.1] as const;
@@ -76,7 +76,7 @@ void main() {
   if (part == ${TAIL}) p.x *= 1.0 + max(-iAtt.x, 0.0) * 1.2;
   p = rotZ(rotX(p, iAtt.x), iAtt.y);
   n = rotZ(rotX(n, iAtt.x), iAtt.y);
-  vec3 world = rotY(p * ${SIZE.toFixed(2)}, iPos.w) + iPos.xyz;
+  vec3 world = rotY(p * ${GULL_SIZE.toFixed(2)}, iPos.w) + iPos.xyz;
   vWorld = world;
   vNormal = rotY(n, iPos.w);
   vMat = aMat;
@@ -250,6 +250,18 @@ interface Gull {
   wakeDelay: number;
 }
 
+export function gullMaterial(): THREE.ShaderMaterial {
+  return new THREE.ShaderMaterial({
+    vertexShader: VERT, fragmentShader: FRAG,
+    uniforms: { ...atmo.uniforms,
+      uWhite: { value: new THREE.Color(GULL_LOOK.white) },
+      uMantle: { value: new THREE.Color(GULL_LOOK.mantle) },
+      uTip: { value: new THREE.Color(GULL_LOOK.tip) },
+      uBill: { value: new THREE.Color(GULL_LOOK.bill) } },
+    side: THREE.DoubleSide,
+  });
+}
+
 /** Gulls soar in long lazy arcs, rarely flapping. They come to circle and rise in the player's updraft. */
 export class Gulls {
   readonly mesh: THREE.Mesh;
@@ -262,18 +274,7 @@ export class Gulls {
     capacity = 12,
   ) {
     this.instances = new Instances(gullGeometry(), capacity, ['iPos', 'iAtt', 'iWing']);
-    const material = new THREE.ShaderMaterial({
-      vertexShader: VERT,
-      fragmentShader: FRAG,
-      uniforms: {
-        ...atmo.uniforms,
-        uWhite: { value: new THREE.Color(GULL_LOOK.white) },
-        uMantle: { value: new THREE.Color(GULL_LOOK.mantle) },
-        uTip: { value: new THREE.Color(GULL_LOOK.tip) },
-        uBill: { value: new THREE.Color(GULL_LOOK.bill) },
-      },
-      side: THREE.DoubleSide,
-    });
+    const material = gullMaterial();
     this.mesh = new THREE.Mesh(this.instances.geometry, material);
     this.mesh.frustumCulled = false;
   }

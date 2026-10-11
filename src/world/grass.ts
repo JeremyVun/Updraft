@@ -1,6 +1,6 @@
 import { LINES_GRASS_GLSL, linesGrassCrop } from './lines-layout';
 import { BEND_GRASS_GLSL, woodBendCrop } from './wood-shape';
-import { LINES_SHIFT } from './geography';
+import { LINES_SHIFT, STILL_SHIFT, STILL_CENTRE } from './geography';
 import { fixTreeInPlace } from '../gl/fixed';
 import { passJob, type CompileJob } from '../gl/boot';
 import { atBoot, simMaterial, simTarget } from '../gl/gpu';
@@ -110,7 +110,7 @@ interface LodSpec {
 const LODS: LodSpec[] = [
   { cols: 32, rows: 32, segments: 6, reach: 52, thinFrom: 0.85, widthScale: 1, maxTiles: 700 },
   { cols: 16, rows: 16, segments: 5, reach: 112, thinFrom: 0.84, widthScale: 1.55, maxTiles: 1100 },
-  { cols: 8, rows: 16, segments: 4, reach: 176, thinFrom: 0.8, widthScale: 1.7, maxTiles: 1600 },
+  { cols: 8, rows: 16, segments: 4, reach: 320, thinFrom: 0.9, widthScale: 1.7, maxTiles: 1600 },
 ];
 
 /** Static spatial inputs, kept separate from the live palette and turning season. */
@@ -119,8 +119,13 @@ export const GRASS_PATTERN_GLSL = /* glsl */ `
 float pastureAt(vec2 xz) {
   return 1.0 - smoothstep(-660.0, -600.0, xz.y);
 }
+vec2 stillGrassOffset(vec2 xz) {
+  return length((xz - vec2(${glsl(STILL_CENTRE.x)}, ${glsl(STILL_CENTRE.z)})) / vec2(85.0, 65.0)) < 1.4
+    ? vec2(${glsl(STILL_SHIFT.x)}, ${glsl(STILL_SHIFT.z)}) : vec2(0.0);
+}
 vec3 grassPatternAt(vec2 xz) {
   float pasture = pastureAt(xz);
+  xz -= stillGrassOffset(xz);
   // The island of lines keeps the green it was painted with before it moved; the switch is out under the sea.
   if (length((xz - vec2(${ISLES.lines.x}.0, ${glsl(ISLES.lines.z)})) / vec2(${ISLES.lines.rx}.0, ${glsl(ISLES.lines.rz)})) < 1.4) xz -= vec2(${glsl(LINES_SHIFT.x)}, ${glsl(LINES_SHIFT.z)});
   return vec3(
@@ -170,7 +175,7 @@ float sleepFloorAt(vec2 xz) {
 }
 /** 1 over the still island and its islet, where the meadow is kept mostly green. */
 float stillIslandAt(vec2 xz) {
-  return 1.0 - smoothstep(1.5, 1.9, length((xz - vec2(-6.0, -14.0)) / vec2(60.0, 44.0)));
+  return 1.0 - smoothstep(1.5, 1.9, length((xz - vec2(${glsl(STILL_CENTRE.x)}, ${glsl(STILL_CENTRE.z)})) / vec2(60.0, 44.0)));
 }
 /** 1 over the dark wood, where the floor is leaf litter and nothing grows tall enough to hide it. */
 float woodFloorAt(vec2 xz) {
@@ -296,8 +301,10 @@ export function grassHeightAt(x: number, z: number): number {
   const boatDry = inBoats && boatsOut(x, z) < 1.2 ? smoothstep(boatsLevel(LITTLE_BOATS.startZ - z) + 0.05, boatsLevel(LITTLE_BOATS.startZ - z) + 0.3, groundH) : 1;
   const dry = pondDry(x, z, groundH) * boatDry * boatsToyClearing(x, z);
   if (dry <= 0) return 0;
-  const lush = shaderFbm(x * 0.035 + 17, z * 0.035 + 17);
-  const shortPatch = smoothstep(0.52, 0.68, shaderFbm(x * 0.05 - 23, z * 0.05 - 23));
+  const still = Math.hypot((x - STILL_CENTRE.x) / 85, (z - STILL_CENTRE.z) / 65) < 1.4;
+  const patternX = x - (still ? STILL_SHIFT.x : 0), patternZ = z - (still ? STILL_SHIFT.z : 0);
+  const lush = shaderFbm(patternX * 0.035 + 17, patternZ * 0.035 + 17);
+  const shortPatch = smoothstep(0.52, 0.68, shaderFbm(patternX * 0.05 - 23, patternZ * 0.05 - 23));
   const fringe = smoothstep(GRASS_LINE - 0.6, GRASS_LINE + 2.2, groundH);
   const pasture = smoothstep(-600, -660, z);
   let h = (1.1 + 1.9 * smoothstep(0.3, 0.75, lush) + 0.275) * (0.2 + 0.8 * fringe * fringe) * (1 - shortPatch * 0.5);
@@ -546,9 +553,11 @@ void main() {
   oFoot = vec4(0.0);
   if (tileIndex >= uTileCount) return;
   vec2 tile = texelFetch(uTiles, ivec2(tileIndex, 0), 0).xy;
-  ivec2 cell = gr_cell(ivec2(floor(tile / uTileSize + 0.5)), b - tileIndex * per);
+  vec2 offset = stillGrassOffset(tile);
+  ivec2 cell = gr_cell(ivec2(floor((tile - offset) / uTileSize + 0.5)), b - tileIndex * per);
   uint s = gr_hash(uvec2(cell));
-  vec2 root2 = (vec2(cell - GR_ORIGIN) + vec2(gr_rand(s), gr_rand(s))) * (uTileSize / ${FINE}.0);
+  vec2 pattern = (vec2(cell - GR_ORIGIN) + vec2(gr_rand(s), gr_rand(s))) * (uTileSize / ${FINE}.0);
+  vec2 root2 = pattern + offset;
   float rank = gr_rank(cell, gr_rand(s));
 
   vec2 uv = domainUv(root2);
@@ -556,7 +565,7 @@ void main() {
   vec4 hn = texture(uHeightTex, uv);
   float groundH = hn.r;
   float edge = smoothstep(${(GRASS_LINE - 0.6).toFixed(2)}, ${(GRASS_LINE + 1.2).toFixed(2)}, groundH);
-  float tufts = smoothstep(0.48, 0.72, vnoise(root2 * 0.35));
+  float tufts = smoothstep(0.48, 0.72, vnoise(pattern * 0.35));
   float keep = (edge > 0.85 ? 1.0 : edge * edge * tufts) * mix(1.0, ${glsl(tuning.wood.grassDensity)}, woodFloorAt(root2));
   keep *= pondDry(root2, groundH);
   Reed reed = reedOf(root2, groundH);
@@ -567,8 +576,8 @@ void main() {
   oRoot = vec4(root2, groundH, rank);
 
   float seed = gr_rand(s);
-  float lush = fbm(root2 * 0.035 + 17.0);
-  float shortPatch = smoothstep(0.52, 0.68, fbm(root2 * 0.05 - 23.0));
+  float lush = fbm(pattern * 0.035 + 17.0);
+  float shortPatch = smoothstep(0.52, 0.68, fbm(pattern * 0.05 - 23.0));
   float fringe = smoothstep(${(GRASS_LINE - 0.6).toFixed(2)}, ${(GRASS_LINE + 2.2).toFixed(2)}, groundH);
   float pasture = pastureAt(root2);
   /** The frosted sward: it takes a blade's width, its tufts and its curve down with its height. */
@@ -784,9 +793,11 @@ void collapse() {
 }
 
 void main() {
-  ivec2 cell = gr_cell(ivec2(floor(aTile / uTileSize + 0.5)), gl_InstanceID % (uGrid.x * uGrid.y));
+  vec2 offset = stillGrassOffset(aTile);
+  ivec2 cell = gr_cell(ivec2(floor((aTile - offset) / uTileSize + 0.5)), gl_InstanceID % (uGrid.x * uGrid.y));
   uint s = gr_hash(uvec2(cell));
-  vec2 root2 = (vec2(cell - GR_ORIGIN) + vec2(gr_rand(s), gr_rand(s))) * (uTileSize / ${FINE}.0);
+  vec2 pattern = (vec2(cell - GR_ORIGIN) + vec2(gr_rand(s), gr_rand(s))) * (uTileSize / ${FINE}.0);
+  vec2 root2 = pattern + offset;
   float rank = gr_rank(cell, gr_rand(s));
 
   vec2 uv = domainUv(root2);
@@ -797,7 +808,7 @@ void main() {
   vec4 hn = texture(uHeightTex, uv);
   float groundH = hn.r;
   float edge = smoothstep(${(GRASS_LINE - 0.6).toFixed(2)}, ${(GRASS_LINE + 1.2).toFixed(2)}, groundH);
-  float tufts = smoothstep(0.48, 0.72, vnoise(root2 * 0.35));
+  float tufts = smoothstep(0.48, 0.72, vnoise(pattern * 0.35));
   float share = bladeDensity(root2, dist) * (edge > 0.85 ? 1.0 : edge * edge * tufts) * mix(1.0, ${glsl(tuning.wood.grassDensity)}, woodFloorAt(root2));
   share *= pondDry(root2, groundH);
   Reed reed = reedOf(root2, groundH);
@@ -810,8 +821,8 @@ void main() {
   float side01 = position.x;
   float t = mix(position.y, position.z, bladeClose(root2, dist));
   float seed = gr_rand(s);
-  float lush = fbm(root2 * 0.035 + 17.0);
-  float shortPatch = smoothstep(0.52, 0.68, fbm(root2 * 0.05 - 23.0));
+  float lush = fbm(pattern * 0.035 + 17.0);
+  float shortPatch = smoothstep(0.52, 0.68, fbm(pattern * 0.05 - 23.0));
   float fringe = smoothstep(${(GRASS_LINE - 0.6).toFixed(2)}, ${(GRASS_LINE + 2.2).toFixed(2)}, groundH);
   float life = lifeAt(root2);
   float pasture = pastureAt(root2);

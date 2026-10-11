@@ -29,7 +29,7 @@ and half-sizes are in `ISLES` (`heightfield.ts`) unless noted:
 
 | room | centre (x, z) | half-size | defined by |
 | --- | --- | --- | --- |
-| still island | (−6, −14) | its own coastline | `islandCoast` in `heightfield.ts` |
+| still island | (−6, 186) | its own coastline | `islandCoast` in `heightfield.ts` |
 | island of lines | (14, −268.4) | 70 × 64.4 | `ISLES.lines` |
 | the shore through the red door | (240, −365) | 23 × 30 | `DOOR_SHORE` |
 | little boats | (130, −420) | 48 × 70 | `LITTLE_BOATS` (`little-boats-layout.ts`) |
@@ -45,19 +45,50 @@ and half-sizes are in `ISLES` (`heightfield.ts`) unless noted:
 `world/geography.ts` holds each moved room's shift from its original placement, and `GEOGRAPHY_VERSION` migrates
 saved coordinates on load. Moving a room means moving its terrain, props, walking
 targets, berths, routes and region masks together, bumping the geography version with a migration, and
-re-measuring both crossings that touch it. `node tools/geography-report.mjs` prints the centres, berths, routes and
+preserving its procedural patterns in their original coordinates (including grass seeds, LOD selection, height,
+tufts and ground tint), then re-measuring both crossings that touch it. `node tools/geography-report.mjs` prints the centres, berths, routes and
 distances; `tools/geography-check.mjs` checks migrations, clearance and continuity.
+
+Revision 10 moves Still and its first four departure waypoints 200 units south. Lines stays fixed; the first
+whale surfaces relative to the departing boat, moving the encounter with it. The 2026-10-11 timing experiment
+and Jeremy's exact brief are in [audio.md](audio.md). The ordinary crossing grows from 76.3 to 117 seconds,
+including 32.7 additional seconds after the whale's later appearance. Sailing speeds remain unchanged.
+
+### Still grass restoration, 2026-10-11
+
+Jeremy's scope ruling, verbatim:
+
+> AT THIS STAGE OF THE GAME IT IS INCREDIBLY IMPORTANT THAT YOU DO NOT MAKE CHANGES TO THE LOOK AND FEEL OF THINGS OUTSIDE THE SCOPE OF REQUESTED CHANGED THAT ARE OTHERWISE SETTLED ALREADY. DO YOU UNDERSTAND? WHAT DID YOU DO TO THE GRASS ON THE STILL ISLAND?! IT'S PATTERN IS COMPLETELY DIFFERENT FROM WHATS ON updraft.jeremyvun.com WHICH WAS THE LAST ACCEPTED VERSION?? ARE YOU SURE YOU DIDN'T UNSOLICITED CHANGE THE GRASS PATTERN OF THE STILL ISLAND??!
+
+The relocation preserved the island's terrain and grass colour pattern, but left blade seeds, LOD selection,
+tuft noise, tall/short patches and the ground tint's fine variation at world coordinates. Moving Still therefore
+regenerated those patterns. This was a regression, not an approved appearance change. The separate moving
+flattened patch added during the boarding work was also unrequested and has been removed.
+
+`stillGrassOffset` now keeps those grass inputs at the original coordinates, while roots, ground sampling and
+wind remain at Still's relocated position. `grassHeightAt` uses the same original pattern coordinates.
+`tools/still-grass-check.mjs` compares GPU blade tables at all three detail levels against an independent
+pre-relocation QA build and saves still captures for inspection. It requires `COMPARE_BASE`; matching only
+two paths inside the modified build does not establish restoration.
+
+Validation used a separate `de1286a2` QA build: its blade hash, LOD selection, table shader and grass-pattern
+literal blocks match the deployed `main-cFBCsncW.js`. All 42,240 sampled blades across three detail levels retain
+identical shape and ground-normal values; translated positions/ground heights differ by less than 0.001 units
+and packed colour by at most 0.000245. The CPU grass height matches at all 1,981 above-water sample points.
+The original and repaired screenshots were inspected side by side. Typecheck and production build pass.
 
 ## Crossings
 
 Routes are `ROUTES` in `story/journey.ts`. At the ordinary 2.6-unit breeze the hull drives at 4.5 units/s, up to
-5.5 with a following wind; player gusts can push it to the 10 units/s ceiling (`tuning.sail`). Routes are sized for
+5.5 with a following wind. Player gusts move the sail, pennant and heel but cannot change propulsion or leeway.
+The hull uses a separate smoothed reading of the prevailing breeze, retaining weather, steering, scripted shoves
+and encounter speed limits. Routes are sized for
 the ordinary breeze: change distance to alter journey time, never throttle or boost sailing speed (Jeremy's ruling).
 Turns, mooring, the storm and the cygnet's swim slow the boat naturally. Targets at the ordinary breeze:
 
 | crossing | about | notes |
 | --- | --- | --- |
-| still island → lines | 95 s | the long first curve: farewell look back and the whale |
+| still island → lines | 117 s | the long first curve: farewell look back and the whale |
 | door shore → little boats | 30 s | |
 | little boats → meadow | 40 s | arrives lined up with the hill path |
 | meadow → birches | 20 s | a short blind hop |
@@ -100,6 +131,10 @@ The player never sees the next island before it is time.
   distance, so the near shore comes out first and nothing behind shows through. The drowned village keeps the wood
   in it beyond its drawn trees; the crossing to the sleeping island keeps all but the landing shore in it, so the
   summit window is found ashore (`tuning.world.woodMist`, `sleepingMist`; lifted at `isleMistLift` on landing).
+- **First-crossing horizon.** `Chapter.horizonMist` feeds `uHorizonMist`, a sky-colour distance veil across every
+  bearing, without coast-shaped boundaries. It keeps the farewell clear to 140 units and fully dissolves scenery
+  beyond 240; after the title it eases over 16 seconds to the 55–110 unit approach range. It releases gradually
+  on landing (`tuning.world.linesHorizon`, `isleMistLift`).
 - **The meadow's coastal veil** (`uIslandVeil`, `uIslandVeilAmount`, `tuning.world.meadowVeilFrom`/`To`) blends
   everything outside the meadow's shore into the sky, from the piano to the departure.
 - **Open sea.** On the long crossing `Chapter.openSea` (eased into `uOpenSea` by `main.ts`) makes distant fog

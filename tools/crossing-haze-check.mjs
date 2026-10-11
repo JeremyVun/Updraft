@@ -39,6 +39,17 @@ for(const fps of [10,30,60,120]) {
 }
 const ordinary=new CrossingChapter(cast,{route:opts.route,haze:.9});
 assert.equal(ordinary.haze,.9,'other crossings retain their authored haze');
+const first = new CrossingChapter(cast, { ...opts, music: 'still', whaleAt: 45 });
+boat.position.z = 180;
+for (const time of [41, 45, 48, 52, 57, 60]) {
+  first.time = time;
+  assert.equal(first.haze, .35, 'the whale stays in clear air through its whole dive');
+  assert(first.horizonMist.clear >= 200 && first.horizonMist.hidden <= 260,
+    'the whale is clear while the distant Lines shore stays beyond the horizon');
+}
+first.time = 76;
+assert.equal(first.horizonMist.clear, k.linesHorizon.clear);
+assert.equal(first.haze, k.linesCrossingHaze);
 console.log('Crossing haze: clear farewell, slow/fast approaches, continuous 10–120 Hz blend and other crossings passed.');
 
 const { HomeChapter, HOME_JETTY }=await import('../src/story/home.ts');

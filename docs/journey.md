@@ -156,7 +156,8 @@ fear, faced once, caused by the player. The build: [cygnet.md](cygnet.md) and th
 - **Time of day, season, haze and rain** follow the chapter and are eased by `main.ts`, so a chapter change is never
   a cut in the sky.
 - **Scripted beats mute the player's wind** (`scripted` on the chapter, `PointerInput.muted`) so a moment lands
-  without the player performing over it; the pointer keeps tracking and control returns when it ends.
+  without the player performing over it; the pointer keeps tracking and control returns when it ends. Still explicitly
+  keeps wind available through rescue and departure (`windMuted: false`), with the plane secured on the satchel.
 - **Invitations**: the drawn gusts and spirals that show a stalled player the gesture ([contracts/wind.md](contracts/wind.md)).
 - **Departure kites**: the same paper kite flies beside the boat at every departure, so the player learns to look for
   it (`story/departure-kites.ts`).

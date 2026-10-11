@@ -18,18 +18,17 @@ try {
     const { HOME_ENDING } = await productionModule('/src/story/home-ending.ts');
     const seconds = lead + HOME_ENDING.creditsAt + 4, rate = 60, { ctx, sound } = offlineSound(seconds);
     const smooth = (t, a, b) => { const x = Math.max(0, Math.min(1, (t - a) / (b - a))); return x * x * (3 - 2 * x); };
-    let started = false;
     const update = tick => {
       const t = tick / rate - lead;
       sound.update(1 / rate, { ...baseState, music: 'home', summitScore: 'approach',
         homeEndingTime: t >= 0 ? t : undefined, night: smooth(t, 80, 92), land: 0, meadow: 0, flockChatter: false,
         silence: t >= HOME_ENDING.musicEndsAt, scripted: true });
-      if (!started && sound.summitScore) { sound.summitScore.epoch = ctx.currentTime - 105; started = true; }
       if (!world) for (const name of ['breezeGain','rainGain','patterGain','seaGain','gustGain','whistleGain','rustleGain','liftGain']) {
         sound[name].gain.cancelScheduledValues(ctx.currentTime); sound[name].gain.value = 0;
       }
     };
     update(0);
+    await sound.summitScore.ready;
     let pause = ctx.suspend(1 / rate);
     const rendering = ctx.startRendering();
     for (let tick = 1; tick < seconds * rate; tick++) {

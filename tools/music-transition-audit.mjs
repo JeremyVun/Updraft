@@ -44,8 +44,8 @@ try {
           check((score()?.current?.epoch??score()?.epoch)===epoch,'Landing keeps its musical clock');
           check(sound.reverbConvolver===reverb,'Landing keeps the shared reverb');}
       };
-      update(0);let pause=ctx.suspend(.125);const rendering=ctx.startRendering();
-      for(let tick=1;tick<seconds*8;tick++){await pause;update(tick);if(tick+1<seconds*8)pause=ctx.suspend((tick+1)/8);await ctx.resume();}
+      update(0);await sound.birchesScore?.ready;await sound.linesScore?.ready;await sound.boatsScore?.ready;await sound.summitScore?.ready;let pause=ctx.suspend(.125);const rendering=ctx.startRendering();
+      for(let tick=1;tick<seconds*8;tick++){await pause;update(tick);await sound.preparedScore?.ready;await sound.birchesScore?.ready;await sound.linesScore?.ready;await sound.boatsScore?.ready;await sound.summitScore?.ready;if(tick+1<seconds*8)pause=ctx.suspend((tick+1)/8);await ctx.resume();}
       const buffer=await rendering;
       const fade=phases.find(p=>p.stage==='fade'),gap=phases.find(p=>p.stage==='gap'),entry=phases.find(p=>p.stage==='incoming');
       let gapPeak=0;
@@ -97,8 +97,8 @@ try {
         sound.update(.125,{...baseState,music:row.music,[row.field]:phase,flockChatter:false,silence:t>=seconds-3});
         if(phase!==last){starts++;last=phase;}
         if(sound.arrivalTransition.stage!=='none')throw Error('An internal section must not create an island handoff');};
-      update(0);let pause=ctx.suspend(.125);const rendering=ctx.startRendering();
-      for(let tick=1;tick<seconds*8;tick++){await pause;update(tick);if(tick+1<seconds*8)pause=ctx.suspend((tick+1)/8);await ctx.resume();}
+      update(0);await sound.birchesScore?.ready;await sound.linesScore?.ready;await sound.boatsScore?.ready;await sound.summitScore?.ready;let pause=ctx.suspend(.125);const rendering=ctx.startRendering();
+      for(let tick=1;tick<seconds*8;tick++){await pause;update(tick);await sound.preparedScore?.ready;await sound.birchesScore?.ready;await sound.linesScore?.ready;await sound.boatsScore?.ready;await sound.summitScore?.ready;if(tick+1<seconds*8)pause=ctx.suspend((tick+1)/8);await ctx.resume();}
       const buffer=await rendering;let peak=0;for(let ch=0;ch<2;ch++)for(const value of buffer.getChannelData(ch))peak=Math.max(peak,Math.abs(value));
       if(peak>=1)throw Error(`${row.field}: phase render clipped`);
       if(sound[row.field==='mirrorScore'?'dreamScore':row.field]!==null)throw Error(`${row.field}: permanent silence did not retire the score`);

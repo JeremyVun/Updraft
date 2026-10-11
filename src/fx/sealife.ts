@@ -10,6 +10,9 @@ import { SleepingWhale, type SleeperSound } from './sealife/sleeper';
 import { Spray } from './sealife/spray';
 import { WhaleWake } from './sealife/wake';
 import { WHALE_SEEN, Whale } from './sealife/whale';
+import { swellUniforms } from '../world/water/swell';
+import { tuning } from '../tuning';
+import { LENGTH } from './sealife/anatomy';
 
 /** Life in the open sea on the crossings: the whale, far off or met, the dolphins, and small fish leaping near the boat. */
 export class SeaLife {
@@ -26,12 +29,19 @@ export class SeaLife {
   /** The old net over its head and blowhole. */
   readonly net: Net;
   private swimMark = 0;
+  private surgeAt = -Infinity;
   private readonly seen = new THREE.Vector3();
 
   constructor(wind: WindField, camera: THREE.PerspectiveCamera) {
     this.spray = new Spray(wind);
     this.pod = new Dolphins(camera);
     this.wake = new WhaleWake(this.body, this.spray, this.foam, this.slicks);
+    this.wake.onDive = (at, time) => {
+      const h = this.body.heading, half = .12 * LENGTH * this.body.scale;
+      swellUniforms.uSurge.value.set(at.x - h.x * half, at.z - h.z * half, time, tuning.opening.crossing.diveSwell);
+      swellUniforms.uSurgeAxis.value.set(h.x, h.z, half);
+      this.surgeAt = time;
+    };
     this.fish = new Fish(camera, this.spray, this.foam);
     this.sleeper = new SleepingWhale(this.spray, this.foam, this.slicks);
     this.net = new Net(this.sleeper, this.spray);
@@ -155,6 +165,9 @@ export class SeaLife {
   }
 
   update(dt: number, time: number): void {
+    if (time - this.surgeAt > tuning.opening.crossing.diveSwellFor && swellUniforms.uSurge.value.z === this.surgeAt) {
+      swellUniforms.uSurge.value.w = 0;
+    }
     this.body.update(dt);
     this.wake.update(dt, time);
     this.foam.update(time);

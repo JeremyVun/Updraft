@@ -18,6 +18,7 @@ export type WhaleSound = 'whale-surface' | 'whale-blow' | 'whale-drain' | 'whale
 export class WhaleWake {
   /** Fired with the visible water/breath event, wherever this whale surfaces in the journey. */
   onSound: ((kind: WhaleSound, x: number, y: number, z: number) => void) | null = null;
+  onDive: ((at: THREE.Vector3, time: number) => void) | null = null;
   private readonly prevTop = new Float32Array(SPINE_N);
   private readonly emergedAt = new Float32Array(SPINE_N);
   private readonly dripRest: { x: number; s: number }[] = [];
@@ -162,6 +163,7 @@ export class WhaleWake {
       }
     }
     if (!up && this.notchWas > 0.05 && this.flukesUpAt > 0) {
+      this.onDive?.(notch, time);
       this.onSound?.('whale-dive', notch.x, 0, notch.z);
       this.spray.splash(notch.x, notch.z, 1.4 * this.size, 0.75);
       this.burst(notch.x, notch.z, 2 * this.size, 10, time);

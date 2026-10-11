@@ -5,6 +5,7 @@ import { LIVING_BEYOND, atmo } from './atmosphere';
 import { ISLES } from './heightfield';
 import { WINDOW, onWindowMove } from './window';
 import { musicLife } from './music-growth';
+import { STILL_CENTRE } from './geography';
 
 const RES = 256;
 const READ_RES = 64;
@@ -72,7 +73,7 @@ export interface LifeRegions {
 
 export class LifeField {
   readonly regions: LifeRegions = {
-    island: new THREE.Vector4(-6, -14, 78, 0),
+    island: new THREE.Vector4(STILL_CENTRE.x, STILL_CENTRE.z, 78, 0),
     wave: new THREE.Vector4(0, -700, -1, 90),
     waiting: atmo.uniforms.uWaiting.value,
   };

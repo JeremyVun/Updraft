@@ -6,25 +6,23 @@ import type { GustFront } from '../fx/windlines';
 import { heightAt } from '../world/island';
 import { TREE } from '../world/landmarks';
 import type { Cast, Chapter } from './cast';
-import { completeObjective, cue } from './cues';
+import { cue } from './cues';
 import { tuning } from '../tuning';
-import { PlaneArrival } from './plane-arrival';
+import { STILL_SHIFT } from '../world/geography';
 
 type Beat = 'still' | 'play' | 'toTree' | 'atTree' | 'skein' | 'toCygnet' | 'near' | 'kneel' | 'gather' | 'leaving' | 'toBoat' | 'push' | 'aboard';
 type Play = 'watch' | 'fetch' | 'hold';
 
 /** Where the child sits at the start: the beach on the island's south shore, looking out to sea. */
-const SEAT = new THREE.Vector3(-2, 0, 22);
+const SEAT = new THREE.Vector3(-2 + STILL_SHIFT.x, 0, 22 + STILL_SHIFT.z);
 /** Where the plane is thrown during catch: the southern half, so play never goes over the ridge and out of sight. */
-const ISLAND = new THREE.Vector3(-4, 0, -2);
+const ISLAND = new THREE.Vector3(-4 + STILL_SHIFT.x, 0, -2 + STILL_SHIFT.z);
 /** The plane is turned back before the ridge; past here the camera would lose the child behind the hill. */
-const PLAY_LIMIT = -24;
+const PLAY_LIMIT = -24 + STILL_SHIFT.z;
 /** The boat lies at the cove's waterline a few strides east of the child, in frame from the first second. */
-export const BOAT_BERTH = new THREE.Vector3(8.5, 0, 21.5);
+export const BOAT_BERTH = new THREE.Vector3(8.5 + STILL_SHIFT.x, 0, 21.5 + STILL_SHIFT.z);
 /** Beached bow-out, pointing east down the cove, ready to be pushed off. */
 const BERTH_YAW = 0.95;
-/** How near the boat the plane has to land before the child takes the hint and pushes off. */
-const BOARDING = 15;
 
 /**
  * The still island. The world is still until the player's first gust; the breeze swells, the plane slips from
@@ -36,6 +34,10 @@ export class IslandChapter implements Chapter {
   breeze = 0;
   worldLife = 0;
   restored = false;
+  stillDeparture = false;
+  readonly windMuted = false;
+
+  get stillDepartureSoon(): boolean { return this.beat !== 'still' && this.beat !== 'play'; }
   pace = 0.8;
   /** The aerial shot must not reveal the washing on the next island. */
   get haze(): number {
@@ -48,7 +50,6 @@ export class IslandChapter implements Chapter {
   readonly season = 0.08;
   readonly focus = new THREE.Vector3();
   private play: Play = 'watch';
-  private readonly arrival = new PlaneArrival();
   private breezeTarget = 0;
   private stillSince = 0;
   private holdUntil = 0;
@@ -81,7 +82,7 @@ export class IslandChapter implements Chapter {
   private readonly outlookEye = new THREE.Vector3();
   private readonly outlookLook = new THREE.Vector3();
   private readonly rescueView = new THREE.Vector3(1, 0, 0.45).normalize();
-  private readonly careView = new THREE.Vector3(-1, 0, 0.6).normalize();
+  private readonly careView = new THREE.Vector3(-0.3, 0, 1).normalize();
   private readonly climbView = new THREE.Vector3();
   private fallAt = 0;
   /** The winter gust that takes the cygnet out of the V. */
@@ -97,7 +98,7 @@ export class IslandChapter implements Chapter {
   private nextLook = 0;
   private readonly watched = new THREE.Vector3();
   private readonly flat = new THREE.Vector3(TREE.x, 10, TREE.z);
-  private readonly edge = { back: new THREE.Vector2(0, 1), at: tuning.opening.playEdge };
+  private readonly edge = { back: new THREE.Vector2(0, 1), at: tuning.opening.playEdge + STILL_SHIFT.z };
 
   constructor(private readonly cast: Cast) {
     const { child, plane, boat } = cast;
@@ -109,6 +110,19 @@ export class IslandChapter implements Chapter {
     boat.shelter = 1;
     const top = cast.tree.canopy.reduce((a, c) => (c.centre.y > a.y ? c.centre : a), cast.tree.canopy[0].centre);
     this.canopyTop.copy(top);
+    this.frame();
+  }
+
+  skipToTree(): void {
+    const { child, plane, life } = this.cast;
+    this.restored = true;
+    this.breeze = this.breezeTarget = this.worldLife = life.regions.island.w = 1;
+    child.stop();
+    child.standUp();
+    child.place(TREE.x + 5.5, TREE.z + 1, Math.atan2(30, 10));
+    plane.hold(child);
+    child.stowPlane(true, true);
+    this.lookOut();
     this.frame();
   }
 
@@ -131,13 +145,13 @@ export class IslandChapter implements Chapter {
 
   /** Only catch and the first breeze answer the player; the rest of the island is the story playing itself out. */
   get scripted(): boolean {
-    return this.arrival.active || (this.beat !== 'still' && this.beat !== 'play' && this.beat !== 'leaving');
+    return this.beat !== 'still' && this.beat !== 'play';
   }
 
   /** In the child's hands before the first gust, or lying still on the grass during catch: blow it on, towards home. */
   get planeInvitation(): THREE.Vector3 | null {
     const p = this.cast.plane;
-    const catching = (this.beat === 'play' || this.beat === 'leaving') && !this.arrival.active;
+    const catching = this.beat === 'play';
     return this.beat === 'still' || (catching && p.landed) ? p.home : null;
   }
 
@@ -167,6 +181,8 @@ export class IslandChapter implements Chapter {
     this.play = 'hold';
     this.holdUntil = 1.4;
     this.cast.flock.clear();
+    this.cast.child.stowPlane(true, true);
+    this.cast.plane.hold(this.cast.child);
   }
 
   update(dt: number, time: number): void {
@@ -176,12 +192,11 @@ export class IslandChapter implements Chapter {
     const { child: c, plane: p } = this.cast;
 
     p.guided = this.beat === 'leaving' || this.beat === 'toTree';
-    p.playEdge = this.beat === 'play' || this.beat === 'leaving' ? this.edge : null;
+    p.playEdge = this.beat === 'play' ? this.edge : null;
 
     if (this.beat === 'still') {
       if (this.cast.input.gust > 5 && this.breezeTarget === 0) {
         this.breezeTarget = 1;
-        cue('breeze');
       }
       const w = this.cast.wind.sample(c.position.x, c.position.z, this.sample);
       if (this.breezeTarget > 0) this.stillSince += dt;
@@ -190,17 +205,7 @@ export class IslandChapter implements Chapter {
       this.updatePlay(time);
       if (this.restored && this.play === 'hold' && !c.busy) this.farewell();
     } else if (this.beat === 'leaving') {
-      /**
-       * The plane's home moves to the boat, so however the player blows it about it always drifts back down there.
-       * Chasing it then *is* walking to the boat, instead of wandering off across the island after it.
-       */
-      const berth = this.cast.boat.position;
-      p.home.set(berth.x, 0, berth.z);
-      p.homeRadius = 24;
-      const b = this.cast.boat.position;
-      const childNear = Math.hypot(c.position.x - b.x, c.position.z - b.z) < BOARDING;
-      const waited = time - this.beatStart;
-      if (!this.arrival.update(this.cast, childNear || waited > 50, () => this.board())) this.updatePlay(time);
+      this.leaveIsland(time);
     } else {
       this.updateFarewell(time);
     }
@@ -216,6 +221,12 @@ export class IslandChapter implements Chapter {
 
     if (p.held) p.hold(c);
     this.frame(dt);
+  }
+
+  private leaveIsland(time: number): void {
+    if (time < this.holdUntil || this.cast.child.busy) return;
+    this.stillDeparture = true;
+    this.board();
   }
 
   /** Measures the island's life a few times a second; once most of it lives, the rest follows on its own. */
@@ -235,7 +246,6 @@ export class IslandChapter implements Chapter {
       if (!this.restored && this.islandLife > 0.65) {
         this.restored = true;
         this.restoredAt = this.now;
-        completeObjective();
       }
     }
     const region = life.regions.island;
@@ -299,14 +309,13 @@ export class IslandChapter implements Chapter {
         c.cheer();
       }
     } else if (this.play === 'hold') {
-      /** Catch carries on after the island is whole: during `leaving` the throws are what lead them to the boat. */
-      const playing = this.beat === 'play' || this.beat === 'leaving';
+      const playing = this.beat === 'play';
       if (playing && (w.energy > 0.55 || Math.hypot(w.x, w.z) > 15)) {
         this.snatch(time);
       } else if (playing && time > this.holdUntil && !c.busy) {
         this.throwNext(time);
       } else {
-        c.lookAt = this.beat === 'leaving' ? this.cast.boat.position : null;
+        c.lookAt = null;
       }
     }
   }
@@ -355,9 +364,7 @@ export class IslandChapter implements Chapter {
   private throwNext(time: number): void {
     const c = this.cast.child;
     const o = tuning.opening;
-    const aim = this.beat === 'leaving' ? this.cast.boat.position : ISLAND;
-    const spread = this.beat === 'leaving' ? 0.7 : 1.8;
-    let angle = Math.atan2(aim.x - c.position.x, aim.z - c.position.z) + (Math.random() - 0.5) * spread;
+    let angle = Math.atan2(ISLAND.x - c.position.x, ISLAND.z - c.position.z) + (Math.random() - 0.5) * 1.8;
     if (this.beat === 'play' && !this.restored && Math.random() < o.throwGreyChance) {
       angle = this.greyestLine() + (Math.random() * 2 - 1) * o.throwGreyWobble;
     }
@@ -403,46 +410,32 @@ export class IslandChapter implements Chapter {
     this.beatStart = this.now;
     const { child: c, plane: p } = this.cast;
     c.lookAt = this.canopyTop;
-    const dx = TREE.x - c.position.x;
-    const dz = TREE.z - c.position.z;
-    const d = Math.hypot(dx, dz) || 1;
-    /**
-     * The plane goes up the hill first and waits over the tree. Nobody is marched anywhere: the child sets off
-     * after it the way they have been doing all along, and the player has already learnt that is how it works.
-     */
-    if (p.held && d > 14) {
-      p.home.set(TREE.x, 0, TREE.z);
-      p.homeRadius = 12;
-      const reach = Math.min(d - 4, 26);
-      c.throwToward(c.position.x + (dx / d) * reach, c.position.z + (dz / d) * reach, () => {
-        p.launch(c.handPosition(this.hand), this.tmp.set((dx / d) * 8.4, 5.2, (dz / d) * 8.4));
-        c.lookAt = p.position;
-        this.climb();
-      });
-      return;
-    }
+    c.stowPlane(true);
+    p.hold(c);
     this.climb();
   }
 
   private climb(): void {
     const c = this.cast.child;
-    c.walkTo(TREE.x + 5.5, TREE.z + 1, true, () => {
-      this.beat = 'atTree';
-      this.beatStart = this.now;
-      c.faceToward(c.position.x + 30, c.position.z + 10, 0.6);
-      this.horizon.set(c.position.x + 700, 10, c.position.z + 180);
-      c.lookAt = this.horizon;
-      this.outlookEye.copy(c.position).add(this.tmp.set(8, 6, -18));
-      this.outlookLook.copy(c.position).add(this.tmp.set(3, 4, 12));
-    }, 0.8);
+    c.walkTo(TREE.x + 5.5, TREE.z + 1, true, () => this.lookOut(), 0.8);
+  }
+
+  private lookOut(): void {
+    const c = this.cast.child;
+    this.beat = 'atTree';
+    this.beatStart = this.now;
+    c.faceToward(c.position.x + 30, c.position.z + 10, 0.6);
+    this.horizon.set(c.position.x + 700, 10, c.position.z + 180);
+    c.lookAt = this.horizon;
+    this.outlookEye.copy(c.position).add(this.tmp.set(8, 6, -18));
+    this.outlookLook.copy(c.position).add(this.tmp.set(3, 4, 12));
   }
 
   private updateFarewell(time: number): void {
     const { child: c } = this.cast;
     const t = this.now - this.beatStart;
     if (this.beat === 'toTree') {
-      const p = this.cast.plane;
-      c.lookAt = p.airborne && !p.landed ? p.position : this.canopyTop;
+      c.lookAt = this.canopyTop;
     } else if (this.beat === 'atTree') {
       c.lookAt = this.horizon;
       if (t > tuning.opening.outlook) {
@@ -611,7 +604,7 @@ export class IslandChapter implements Chapter {
     }, true);
   }
 
-  /** The plane has come down by the boat: the child fetches it, then leans on the bow and pushes off. */
+  /** Carry the wrapped cygnet to the cove, then push off and climb aboard. */
   private board(): void {
     const { child: c, boat } = this.cast;
     this.beat = 'toBoat';
@@ -623,6 +616,7 @@ export class IslandChapter implements Chapter {
       this.beatStart = this.now;
       c.faceToward(boat.position.x, boat.position.z, 1);
       c.board(boat, () => {
+        c.stowPlane(false);
         this.beat = 'aboard';
         this.beatStart = this.now;
       });
@@ -686,9 +680,9 @@ export class IslandChapter implements Chapter {
       this.focus.copy(k);
       return;
     }
-    if (this.beat === 'toBoat' || this.beat === 'push' || this.beat === 'aboard') {
+    if (this.beat === 'leaving' || this.beat === 'toBoat' || this.beat === 'push' || this.beat === 'aboard') {
       const b = this.cast.boat.position;
-      s.target.set((c.x + b.x) / 2, b.y + 2.2, (c.z + b.z) / 2 - 2);
+      s.target.set((c.x + b.x) / 2, Math.max(c.y + 1.15, b.y + 2.2), (c.z + b.z) / 2 - 2);
       s.distance = 26;
       s.height = 6.5;
       this.pace = 0.35;
@@ -714,11 +708,6 @@ export class IslandChapter implements Chapter {
       const turn = THREE.MathUtils.smootherstep(30 - remaining, 0, 30) * (Math.PI - 0.4);
       s.from = this.climbView.set(Math.sin(turn), 0, Math.cos(turn));
       this.pace = 0.75;
-    }
-    if (this.beat === 'leaving') {
-      const b = this.cast.boat.position;
-      s.target.lerp(this.tmp.set(b.x, b.y + 2, b.z), 0.3);
-      s.distance += Math.hypot(b.x - fx, b.z - fz) * 0.32;
     }
     this.focus.set(fx, fy, fz);
   }

@@ -1,20 +1,9 @@
 // Geography, save migration, mirror blend and dolphin entry/exit regressions without a renderer.
 // Usage: node tools/geography-check.mjs
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import { registerHooks } from 'node:module';
-import { transformSync } from 'rolldown/utils';
+import './lib/typescript.mjs';
 import * as THREE from 'three';
-registerHooks({
-  resolve(specifier, context, next) {
-    if (specifier.startsWith('.') && !/\.[a-z]+$/i.test(specifier)) specifier += '.ts';
-    return next(specifier, context);
-  },
-  load(url, context, next) {
-    if (!url.endsWith('.ts')) return next(url, context);
-    return { format: 'module', shortCircuit: true, source: transformSync(new URL(url).pathname, fs.readFileSync(new URL(url), 'utf8')).code };
-  },
-});
+
 
 globalThis.document = {createElement:()=>({getContext:()=>({beginPath(){},moveTo(){},quadraticCurveTo(){},stroke(){}})})};
 globalThis.location = {search:'?shot'};
@@ -22,7 +11,7 @@ globalThis.window = {matchMedia:()=>({matches:false})};
 const {ROOMS,visibleRooms,drawJourneyRooms} = await import('../src/world/journey-rooms.ts');
 const {mirrorWater,SKY_MIRROR,MIRROR_LANDING,MIRROR_BERTH} = await import('../src/world/sky-mirror-layout.ts');
 const {migrateGeography} = await import('../src/story/geography-progress.ts');
-const {BOATS_SHIFT,BOATS_OFFSHORE_SHIFT,BOATS_SHORTENING,SHORE_SHIFT,HOME_SHIFT,MIRROR_SHIFT,SEA_SHORTENING,PAST_THE_WHALE,ONWARD_SEA,WHALE_MOVE,WHALE_NEARER,WHALE_SHORTENING,MIRROR_SHORTENING,GEOGRAPHY_VERSION} = await import('../src/world/geography.ts');
+const {BOATS_SHIFT,BOATS_OFFSHORE_SHIFT,BOATS_SHORTENING,SHORE_SHIFT,HOME_SHIFT,MIRROR_SHIFT,SEA_SHORTENING,PAST_THE_WHALE,ONWARD_SEA,WHALE_MOVE,WHALE_NEARER,WHALE_SHORTENING,MIRROR_SHORTENING,STILL_SHIFT,GEOGRAPHY_VERSION} = await import('../src/world/geography.ts');
 const plus=(a,b)=>({x:a.x+b.x,z:a.z+b.z});
 const {Dolphins} = await import('../src/fx/sealife/dolphin.ts');
 const {tuning} = await import('../src/tuning.ts');
@@ -123,11 +112,11 @@ for(const point of ROUTES.toHarbour) {
 console.log('Revision 1 saves, open-sea resumes, home berth and offshore route clearance passed.');
 
 const {readProgress}=await import('../src/story/progress.ts');
-for(const geography of [undefined,1,2,3,4,5,6,7,8,9,10,-1,1.5,'1']) {
+for(const geography of [undefined,1,2,3,4,5,6,7,8,9,10,11,-1,1.5,'1']) {
  const saved={version:1,geography,chapter:'home',point:'entry',data:[],child:[-150,2,-2500,0,0],boat:[-150,-2306,0,0,1],bird:[-150,2,-2500,0,1,0,1],seat:'cradle',life:[[0,0,0,0],[0,0,0,0],[0,0,0,0]],plane:[1,0]};
  globalThis.localStorage={getItem(){return JSON.stringify(saved);}};
  const p=readProgress();
- if(geography===undefined||[1,2,3,4,5,6,7,8,9].includes(geography))assert.equal(p?.geography,GEOGRAPHY_VERSION,'supported saves reach migration through the reader');
+ if(geography===undefined||[1,2,3,4,5,6,7,8,9,10].includes(geography))assert.equal(p?.geography,GEOGRAPHY_VERSION,'supported saves reach migration through the reader');
  else assert.equal(p,null,'reject malformed or future geography');
 }
 console.log('Save reader accepts all supported geography revisions and rejects unknown versions.');
@@ -135,7 +124,7 @@ console.log('Save reader accepts all supported geography revisions and rejects u
  const {LINES_SHIFT}=await import('../src/world/geography.ts');
  const p=migrateGeography({version:1,geography:4,chapter:'lines',point:'curtain-1',data:[1,0],child:[0,2,-330,0,1],boat:[14,-308,0,1,0],bird:[1,2,-331,0,0,0,1],life:[[14,-368,1,2],[0,0,1,2],[-150,-2500,1,2]]});
  assert.deepEqual([p.child[0],p.child[2],p.boat[0],p.boat[1],p.bird[2]],[0,-330+LINES_SHIFT.z,14,-308+LINES_SHIFT.z,-331+LINES_SHIFT.z],'revision 4 lines saves move with the island');
- assert.deepEqual(p.life.map(r=>r.slice(0,2)),[[14,-368+LINES_SHIFT.z],[0,0],[-150+lateFromV6.x,-2500+lateFromV6.z]],'only life on the island of lines moves with it, and life at home with home');
+ assert.deepEqual(p.life.map(r=>r.slice(0,2)),[[14,-368+LINES_SHIFT.z],[STILL_SHIFT.x,STILL_SHIFT.z],[-150+lateFromV6.x,-2500+lateFromV6.z]],'only life on the island of lines moves with it, and life at home with home');
  const door=migrateGeography({version:1,geography:4,chapter:'lines',point:'family',data:[2,1],child:[240,2,-371,0,1],boat:[240,-388.5,0,1,0],bird:[241,2,-372,0,0,0,1],life:[[0,0,1,2],[0,0,1,2],[0,0,1,2]]});
  assert.deepEqual([door.child[2],door.boat[1]],[-371,-388.5],'the door shore stays put');
 }
@@ -216,3 +205,24 @@ for(let s=135;s<=230;s+=.5) {
  const p={};boatsCourse(s,p);assert(worldHeight(p.x,p.z)<-.5,'departing toy fleet must not cross the door shore');
 }
 console.log(JSON.stringify({revision:GEOGRAPHY_VERSION,meadowClearanceFirstTwoThirds:closest}));
+
+for (const chapter of ['island', 'toLines', 'lines', 'toMirror', 'mirror', 'toHarbour', 'home']) {
+ const opening = chapter === 'island' || chapter === 'toLines';
+ const p = {version:1,geography:9,chapter,point:chapter==='island'?'companion':chapter==='toMirror'?'whale-rest':'entry',data:[],
+   child:[8,2,21,0,1],boat:[8,21,0,1,0],bird:[8,2,21,0,0,0,1],
+   life:[[-6,-14,78,1],[-15,-31,10,1],[10,-880,340,300]]};
+ migrateGeography(p);
+ for (const [v,z] of [[p.child,2],[p.boat,1],[p.bird,2]]) {
+   assert.equal(v[0],8+(opening?STILL_SHIFT.x:0));
+   assert.equal(v[z],21+(opening?STILL_SHIFT.z:0),'revision 9 only relocates Still actors');
+ }
+ assert.deepEqual(p.life,[[-6+STILL_SHIFT.x,-14+STILL_SHIFT.z,78,1],[-15+STILL_SHIFT.x,-31+STILL_SHIFT.z,10,1],[10,-880,340,300]],
+   'Still restoration and local bloom move; the meadow remains fixed');
+ const once=JSON.stringify(p);migrateGeography(p);assert.equal(JSON.stringify(p),once);
+}
+const {TREE,ROCKS,FLOWER_PATCHES}=await import('../src/world/landmarks.ts');
+assert(worldHeight(TREE.x,TREE.z)>5,'the tree stays on its relocated hill');
+assert(ROCKS.every(p=>worldHeight(p.x,p.z)>-.8));
+assert(FLOWER_PATCHES.every(p=>worldHeight(p.x,p.z)>3.35));
+assert(worldHeight(-6,-14)<0,'the former Still location is now open water');
+console.log('Revision 9 saves relocate Still exactly once without repeating late-island migrations; props remain grounded.');

@@ -5,9 +5,11 @@ import { transformSync } from 'rolldown/utils';
 
 registerHooks({
   resolve(specifier, context, next) {
+    if (specifier.includes('?url')) return next(specifier.replace(/\?url(?:\.ts)?$/, '?url'), context);
     return next(specifier.startsWith('.') && !/\.[a-z]+$/i.test(specifier) ? specifier + '.ts' : specifier, context);
   },
   load(url, context, next) {
+    if (/\?url(?:\.ts)?$/.test(url)) return { format: 'module', shortCircuit: true, source: `export default ${JSON.stringify(url.replace(/\?url(?:\.ts)?$/, ''))};` };
     return url.endsWith('.ts')
       ? { format: 'module', shortCircuit: true,
           source: transformSync(new URL(url).pathname, fs.readFileSync(new URL(url), 'utf8')).code }

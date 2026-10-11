@@ -42,7 +42,7 @@ const BOOM_REST = new THREE.Vector3(-1, 0, 0);
 
 /**
  * The child's little boat. It waits on a beach, is pushed into the water, and then sails where it is steered,
- * driven by whatever wind fills its patchwork sail.
+ * driven by the prevailing breeze while its cloth answers every gust.
  */
 export class Boat {
   scarfSail = 0;
@@ -65,7 +65,7 @@ export class Boat {
   towed = false;
   /**
    * How far the world's own wind has gone out of the sails, 0 normal to 1 dead calm. At 1 the boat has no way
-   * of its own at all and only the wind the player makes moves it.
+   * of its own at all.
    */
   becalmed = 0;
   /** The opening cove shelters the sail from weather, while the player's gusts still reach it. */
@@ -83,11 +83,14 @@ export class Boat {
    */
   coastTo: { x: number; z: number; yaw: number; brake?: number } | null = null;
   /**
-   * The wind the sail has, smoothed, and the only reading the cloth and the hull are allowed: `blowing` is the
+   * The wind the cloth has, smoothed: `blowing` is the
    * air moving in the cloth, `taken` the part of it the sail is holding (an eased sheet spills the rest), `along`
    * how much of what it holds pushes the way the boat is pointing, and `made` how much of it the player put there.
    */
   readonly sailWind = { blowing: 0, taken: 0, along: 0, made: 0 };
+  private readonly passageWind = { taken: 0, along: 0 };
+  private readonly passageSway = new Sway();
+  private readonly passageSample: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
   /**
    * The rig drawn as its mirror image, the sail out to port rather than starboard, for whoever needs the starboard
    * rail clear. It reads the wind mirrored too, so it sets and fills to the real wind just the same.
@@ -367,6 +370,7 @@ export class Boat {
     const p = this.position;
     if (this.afloat) this.shelter *= Math.exp(-dt * tuning.opening.departureRate);
     const w = this.readWind(dt);
+    this.readPassageWind(dt);
     const air = this.sailWind;
     const fx = Math.sin(this.yaw);
     const fz = Math.cos(this.yaw);
@@ -422,7 +426,7 @@ export class Boat {
         const berthDistance = this.mooring ? Math.hypot(this.mooring.x - p.x, this.mooring.z - p.z) : Infinity;
         const approach = Math.max(tuning.sail.minimumWay, berthDistance * tuning.sail.mooringDrive);
         const drive = Math.min(
-          air.taken * tuning.sail.drive + Math.max(0, air.along) * tuning.sail.following,
+          this.passageWind.taken * tuning.sail.drive + Math.max(0, this.passageWind.along) * tuning.sail.following,
           tuning.sail.topSpeed,
           this.speedLimit,
           turnLimit,
@@ -436,10 +440,11 @@ export class Boat {
         const turn = THREE.MathUtils.lerp(TURN_SLOW, TURN_FAST, Math.min(1, this.speed / 5));
         this.yaw += THREE.MathUtils.clamp(dy, -dt * turn, dt * turn);
         // The child takes a line as the berth approaches; sideways drift must not defeat the last turn.
-        const leeway = Math.min(0.06, this.speedLimit * tuning.sail.passageDrift / Math.max(1, Math.hypot(w.x, w.z)));
+        const current = this.passageSway;
+        const leeway = Math.min(0.06, this.speedLimit * tuning.sail.passageDrift / Math.max(1, Math.hypot(current.x, current.z)));
         const drift = leeway * (this.mooring ? THREE.MathUtils.smoothstep(berthDistance, 2.6, tuning.sail.mooringShelter) : 1);
-        p.x += (fx * this.speed + w.x * drift) * dt;
-        p.z += (fz * this.speed + w.z * drift) * dt;
+        p.x += (fx * this.speed + current.x * drift) * dt;
+        p.z += (fz * this.speed + current.z * drift) * dt;
       }
       // Pushed off a beach bow first, the forefoot is still on the sand it is leaving.
       if (this.canGround && !this.grounded && !this.beaching && !this.pushingOff && this.touchesBottom(p.x, p.z, fx, fz, 0)) {
@@ -570,8 +575,8 @@ export class Boat {
   /**
    * What the sail has this frame, smoothed into `sailWind`. The world's share is the prevailing breeze the
    * chapter is running, which is steady and dies when the chapter means it to; the field itself is read for what
-   * the player has added to it and for which way the wind is lying. `becalmed` takes the world's wind out of the
-   * sail and leaves the player's. The squall is no stronger in the field, so its weight comes from the sea.
+   * the player has added to it and for which way the wind is lying. The squall is no stronger in the field,
+   * so its weight comes from the sea.
    */
   private readWind(dt: number): WindSample {
     const w = this.airOnSail(this.sample, dt);
@@ -598,6 +603,21 @@ export class Boat {
   private takesUp(was: number, now: number, dt: number): number {
     const rate = now > was ? tuning.sail.fills : tuning.sail.empties;
     return was + (now - was) * (1 - Math.exp(-dt * rate));
+  }
+
+  private readPassageWind(dt: number): void {
+    // Player wind moves the cloth, but cannot advance or delay the crossing's score.
+    const breeze = this.wind.breeze, sample = this.passageSample;
+    sample.x = breeze.x; sample.z = breeze.y;
+    feltWind(sample, this.wind.calm);
+    const sway = this.passageSway;
+    sway.update(sample.x, sample.z, dt);
+    const speed = Math.hypot(sway.x, sway.z);
+    const heading = speed > 1e-3 ? (sway.x * Math.sin(this.yaw) + sway.z * Math.cos(this.yaw)) / speed : 0;
+    const taken = (breeze.length() + this.swell * tuning.sail.squallPress * tuning.sail.squallHolds)
+      * (1 - this.shelter) * (1 - this.becalmed);
+    this.passageWind.taken = this.takesUp(this.passageWind.taken, taken, dt);
+    this.passageWind.along += (heading * taken - this.passageWind.along) * (1 - Math.exp(-dt * tuning.sail.fills));
   }
 
   /**

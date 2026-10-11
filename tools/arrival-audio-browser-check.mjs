@@ -19,7 +19,7 @@ try {
     window.arrivalAudio={phases:[],notes:[],landed:null,restarted:false};
     const update=g.sound.update.bind(g.sound),chime=g.sound.chime.bind(g.sound);
     g.sound.chime=(...args)=>{
-      if(args[6]&&g.sound.linesScore)arrivalAudio.notes.push({midi:args[0],chord:[...g.sound.linesScore.chordAt(args[3])]});
+      if(args[6]&&g.sound.linesScore)arrivalAudio.notes.push({midi:args[0],unexpected:true});
       chime(...args);
     };
     g.sound.update=(dt,state)=>{
@@ -28,7 +28,7 @@ try {
       if(arrivalAudio.phases.at(-1)?.stage!==stage)arrivalAudio.phases.push({stage,now,chapter:g.story.name});
       if(g.sound.linesScore&&g.story.name==='toLines')window.approachScore=g.sound.linesScore;
       if(g.story.name==='lines'){
-        arrivalAudio.landed??={now,epoch:g.sound.linesScore?.current?.epoch,beat:g.story.current.beat};
+        arrivalAudio.landed??={now,epoch:g.sound.linesScore?.epoch,beat:g.story.current.beat};
         if(g.sound.linesScore!==window.approachScore)arrivalAudio.restarted=true;
       }
     };

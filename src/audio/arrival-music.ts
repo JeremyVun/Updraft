@@ -45,6 +45,7 @@ export class ArrivalTransition {
 
   update(s: SoundState, now: number, phraseEnd = now): { background: Background; stage: Stage; changed: boolean; handoffAt: number; legato?: boolean; fadeOut?: number; fadeIn?: number } {
     const previous = this.stage;
+    const stillRecording = tuning.audio.stillPhraseExperiment && s.stillDeparture;
     let beganNow = false;
     if (s.arrivalMusic && s.arrivalMusic !== this.request) {
       const current=background(s),same=identity(current)===identity(ARRIVAL_MUSIC[s.arrivalMusic]);
@@ -52,7 +53,8 @@ export class ArrivalTransition {
       if (!this.target && same && (!this.last || identity(this.last)===identity(current))) this.stage='none';
       else {
         this.target = s.arrivalMusic; this.outgoing = this.last ?? current;
-        this.began = Math.max(now, Math.min(phraseEnd, now + tuning.audio.arrivalPhraseWait));
+        this.began = Math.max(now, stillRecording && s.arrivalMusic === 'lines'
+          ? phraseEnd : Math.min(phraseEnd, now + tuning.audio.arrivalPhraseWait));
         this.stage = this.began > now ? 'wait' : 'fade';
         beganNow = true;
       }
@@ -83,7 +85,8 @@ export class ArrivalTransition {
         }
         // Home begins after the mirror is astern: clear the outgoing reverb, then keep five full seconds.
         const homeward = this.target === 'home' && this.outgoing?.music === 'mirror';
-        const fadeOut = homeward ? tuning.audio.homewardFadeOut : tuning.audio.arrivalFadeOut;
+        const fadeOut = stillRecording && this.target === 'lines' ? 0
+          : homeward ? tuning.audio.homewardFadeOut : tuning.audio.arrivalFadeOut;
         const quiet = arrivalQuiet(this.target, homeward);
         const fadeIn = homeward ? tuning.audio.homewardFadeIn : tuning.audio.arrivalFadeIn;
         // Retire sources on the first gap update, then give them the full rest even after a stalled frame.

@@ -20,4 +20,6 @@ export const MIRROR_SHIFT = { x: 60 + SEA_SHORTENING.x + PAST_THE_WHALE.x + ONWA
 export const HOME_SHIFT = { x: -105 + SEA_SHORTENING.x + PAST_THE_WHALE.x + ONWARD_SEA.x + MIRROR_SHORTENING.x, z: -380 + SEA_SHORTENING.z + PAST_THE_WHALE.z + ONWARD_SEA.z + MIRROR_SHORTENING.z } as const;
 /** Revision 5 brings the island of lines 100 m closer to the still island, shortening the first crossing. */
 export const LINES_SHIFT = { x: 0, z: 100 } as const;
-export const GEOGRAPHY_VERSION = 9;
+export const STILL_SHIFT = { x: 0, z: 200 } as const;
+export const STILL_CENTRE = { x: -6 + STILL_SHIFT.x, z: -14 + STILL_SHIFT.z } as const;
+export const GEOGRAPHY_VERSION = 10;

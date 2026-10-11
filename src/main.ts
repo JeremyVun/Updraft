@@ -2,6 +2,10 @@ import { visibleRooms, setJourneyRooms, drawJourneyRooms, clipJourneyProps, jour
 import { LittleBoats } from './world/little-boats';
 import * as THREE from 'three';
 import { Soundscape, type SoundState } from './audio/audio';
+import { StillGestures } from './audio/still-gestures';
+import { openingTitleOpacity } from './opening-title';
+import { STILL_CENTRE, STILL_SHIFT } from './world/geography';
+import { musicForStart, nextMusicForChapter, prefetchMusic } from './audio/music-loading';
 import { AudioEnvironment } from './audio/environment';
 import { WorldFoley } from './audio/world-foley';
 import { BirchesFoley } from './audio/birches-foley';
@@ -29,6 +33,7 @@ import { Murmuration } from './fx/murmuration';
 import { Rain } from './fx/rain';
 import { StormWeather } from './fx/storm';
 import { SeaLife } from './fx/sealife';
+import { CrossingLinen } from './fx/crossing-linen';
 import { sightingHeading, whaleSighting } from './fx/sealife/sighting';
 import { Boat } from './traveller/boat';
 import { Drawing } from './traveller/drawing';
@@ -72,7 +77,7 @@ import { SwanFlock } from './creatures/flock';
 import { CURTAINS, SNAG_LINE, washingPassage } from './world/lines-passage';
 import { createDoorShoreGrass } from './world/door-shore';
 import { DOOR_EXIT, doorway, DoorwayView } from './world/doorway';
-import { FAMILY_LINE, WashingLines, baskets, door, family, lineField, seaLines } from './world/lines';
+import { FAMILY_LINE, WashingLines, baskets, door, lineField } from './world/lines';
 import { piano } from './world/piano';
 import { DepartureKites } from './story/departure-kites';
 import { Pinwheels } from './world/pinwheels';
@@ -123,6 +128,11 @@ declare global {
 }
 
 performance.mark('main');
+const startingChoice = () => (params.progress ? readProgress() : null) ?? params.chapter;
+const prefetchStartingMusic = () => prefetchMusic(controls.soundOn && controls.musicOn ? musicForStart(startingChoice()) : null);
+prefetchStartingMusic();
+controls.onMusicChange = prefetchStartingMusic;
+controls.onSoundChange = prefetchStartingMusic;
 startScreen.progress('build', 0);
 /** Construction steps, each ending where the veil may paint; `start-check` fails if a real boot counts a different number. */
 const BUILD_STEPS = 25;
@@ -234,7 +244,7 @@ scene.add(piano.group);
 
 /** Hung around the walk over the island, so the open ground through it is always the way on. */
 await built();
-const washingLines = [...lineField(new THREE.Vector2(ISLES.lines.x, ISLES.lines.z + 8), 210, 49, 17, LINES_WALK, [FAMILY_LINE, SNAG_LINE, ...CURTAINS]), SNAG_LINE, ...CURTAINS, ...seaLines()];
+const washingLines = [...lineField(new THREE.Vector2(ISLES.lines.x, ISLES.lines.z + 8), 210, 49, 17, LINES_WALK, [FAMILY_LINE, SNAG_LINE, ...CURTAINS]), SNAG_LINE, ...CURTAINS];
 await built();
 const washing = new WashingLines(washingLines, 91, FAMILY_LINE);
 scene.add(washing.group);
@@ -299,7 +309,8 @@ function homePetals(): void {
   if (Math.hypot(cx - petalsHomedAt.x, cz - petalsHomedAt.y) < 60) return;
   petalsHomedAt.set(cx, cz);
   const near = allFlowers.filter((f) => Math.hypot(f.x - cx, f.z - cz) < 190);
-  petals.rehome(near, cz < -600 ? tuning.petals.pastureShare : cz > -110 ? tuning.petals.stillIslandShare : 1);
+  const stillIsland = near.some((f) => FLOWER_PATCHES.includes(f));
+  petals.rehome(near, stillIsland ? tuning.petals.stillIslandShare : cz < -600 ? tuning.petals.pastureShare : 1);
 }
 homePetals();
 await built();
@@ -360,6 +371,8 @@ function nearbyCreature(x: number, z: number, radius: number, out: THREE.Vector3
 await built();
 const sealife = new SeaLife(wind, rig.camera);
 sealife.objects.forEach((o) => scene.add(o));
+const crossingLinen = new CrossingLinen(wind, rig.camera);
+crossingLinen.objects.forEach(o => scene.add(o));
 await built();
 const cygnet = new Cygnet();
 cygnet.objects.forEach((o) => { scene.add(o); o.traverse((part) => part.layers.enable(REFLECTION_LAYER)); });
@@ -413,9 +426,9 @@ const windDebug = QA && (params.debug === 'wind' || params.debug === 'sway') ? c
 if (windDebug) scene.add(windDebug);
 await built();
 const creatures = new Creatures(wind, islandHabitat(tree.canopy), input, rig.camera);
-creatures.spawn({ x: 1, z: 5, radius: 20, rabbits: 6, butterflies: 26 });
-creatures.spawn({ x: 0, z: 0, radius: 30, songbirds: 11, seed: 3 });
-creatures.spawn({ x: -6, z: -14, radius: 55, gulls: 5, seed: 2 });
+creatures.spawn({ x: 1 + STILL_SHIFT.x, z: 5 + STILL_SHIFT.z, radius: 20, rabbits: 6, butterflies: 26 });
+creatures.spawn({ ...STILL_SHIFT, radius: 30, songbirds: 11, seed: 3 });
+creatures.spawn({ ...STILL_CENTRE, radius: 55, gulls: 5, seed: 2 });
 scene.add(creatures.group);
 const homesInHills = [
   ...ROUTE.map((p: THREE.Vector2, i: number) => ({ x: p.x + (i % 2 ? 14 : -14), z: p.y })),
@@ -506,8 +519,24 @@ controls.onQualityChange = mode => {
 };
 
 const sound = new Soundscape();
+const stillGestures = new StillGestures();
+const stillLifeAt = (x: number, z: number) => life.at(x, z);
 sound.setMusicMuted(!controls.musicOn);
-controls.onMusicChange = on => sound.setMusicMuted(!on);
+let playing = false;
+let nextMusic: ReturnType<typeof nextMusicForChapter> = null;
+function syncMusicLoading(): void {
+  if (!startScreen.started) { prefetchStartingMusic(); return; }
+  if (!controls.soundOn || !controls.musicOn) {
+    prefetchMusic(null);
+    nextMusic = null;
+    if (!playing) sound.cancelStartingMusic();
+    return;
+  }
+  if (!playing) return;
+  const track = nextMusicForChapter(story.name);
+  if (track !== nextMusic) { prefetchMusic(track); nextMusic = track; }
+}
+controls.onMusicChange = on => { sound.setMusicMuted(!on); syncMusicLoading(); };
 const audioEnvironment = new AudioEnvironment(heightAt);
 contextRecovery.onPause = () => { input.muted = true; sound.setMuted(true); };
 const soundButton = document.getElementById('sound') as HTMLButtonElement;
@@ -528,11 +557,13 @@ function setSound(on: boolean): void {
     }
   }
   controls.setSound(on);
+  syncMusicLoading();
 }
 let soundChosen = false;
 controls.onSoundChange = on => {
   soundChosen = true;
   if (startScreen.started) setSound(on);
+  else syncMusicLoading();
 };
 input.onButton((kind) => {
   if (contextRecovery.lost) return;
@@ -583,6 +614,7 @@ const soundState: SoundState = {
   cues: [],
 };
 const ending = document.getElementById('ending') as HTMLElement;
+const journeyTitle = document.getElementById('journey-title') as HTMLElement;
 const endingActions = ending.querySelector('.ending-actions') as HTMLElement;
 let endingTime = 0;
 const again = document.getElementById('again') as HTMLButtonElement;
@@ -700,7 +732,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   const veer = Math.sin(time * 0.021) * 0.35;
   wind.breeze.set(Math.cos(breezeAngle + veer), Math.sin(breezeAngle + veer)).multiplyScalar(tuning.wind.breeze * story.breeze);
 
-  input.muted = story.current.scripted ?? false;
+  input.muted = story.current.windMuted ?? story.current.scripted ?? false;
   input.twirlGain = story.current.twirlGain ?? 1;
   input.floor = story.current.pointerFloor ?? null;
   input.anchor = story.name === 'mirror' ? skyMirror.liftTarget : story.current.invitesFlight && !cygnet.gone ? cygnet.position
@@ -894,6 +926,10 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   if (shown.isleMist < 0.001) shown.isleMist = 0;
   atmo.uniforms.uIsleMist.value.set(isleMist.isle.x, isleMist.isle.z, isleMist.isle.rx, isleMist.isle.rz);
   atmo.uniforms.uIsleMistRange.value.set(isleMist.range.clear, isleMist.range.hidden, shown.isleMist, isleMist.range.edge);
+  const horizon = story.current.horizonMist, horizonMist = atmo.uniforms.uHorizonMist.value;
+  if (horizon) { horizonMist.x = horizon.clear; horizonMist.y = horizon.hidden; }
+  horizonMist.z = horizon ? 1 : ease(horizonMist.z, 0, tuning.world.isleMistLift, dt);
+  if (horizonMist.z < .001) horizonMist.z = 0;
   updateCloudDeck(dt);
   const seen = haze * (1 - 0.7 * atmo.uniforms.uStarlight.value);
   atmo.uniforms.uVeil.value.set(
@@ -954,7 +990,19 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   soundState.life = story.worldLife;
   soundState.night = atmo.uniforms.uNight.value;
   soundState.startingIsland = story.name === 'island';
+  soundState.stillFlying = !glider.held && !glider.landed && glider.airborne;
+  const colourAt = input.gust >= tuning.audio.stillColourGust ? input.world : input.updraftAt;
+  soundState.stillPhrase = stillGestures.update(dt,
+    tuning.audio.stillPhraseExperiment && soundState.startingIsland && !story.current.scripted && !story.current.stillDepartureSoon,
+    soundState.stillFlying,
+    input.present && !input.muted && heightAt(colourAt.x, colourAt.z) > .5
+      && (input.gust >= tuning.audio.stillColourGust || input.charge >= tuning.audio.stillColourCharge),
+    colourAt.x, colourAt.z, stillLifeAt);
   soundState.openingScore = story.name === 'island' || story.name === 'toLines' ? story.current.openingScore ?? 'wander' : undefined;
+  soundState.stillCrossingTime = story.name === 'toLines' ? story.current.stillCrossingTime : undefined;
+  soundState.stillDeparture = story.current.stillDeparture;
+  soundState.stillDepartureSoon = story.current.stillDepartureSoon;
+  journeyTitle.style.opacity = String(openingTitleOpacity(soundState.stillCrossingTime));
   soundState.forestWind = story.name === 'wood';
   soundState.sleepingWind = story.name === 'sleeping' && story.current.sleepingScore === 'climb';
   soundState.music = story.music;
@@ -1046,6 +1094,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   starlings.update(dt, storm > 0.3 ? 0 : (params.dusk ?? story.dusk), joining);
   if (QA && params.whale) whaleForQa();
   sealife.update(dt, time);
+  crossingLinen.update(dt, story.current.stillCrossingTime, boat.position, boat.yaw, sound.output);
   skyMirror.update(dt, time, child.position);
   water.step(dt);
 }
@@ -1060,8 +1109,6 @@ function prepareWorldAudio(dt: number): void {
     hearBirches && child.visible && child.moving && !child.riding && !child.sitting && !child.acting);
   birchesFoley.swing(birches.swing.pivot, birches.swing.angle, birches.swing.speed, birches.swing.rider, hearBirches);
   worldFoley.cloth(washing.soundPoints, wind, dt, heard && story.name === 'lines');
-  materialAt.copy(FAMILY_LINE.a).lerp(FAMILY_LINE.b, 0.5);
-  worldFoley.motion(family, 'cloth', materialAt, family.x + family.y, dt, heard && story.name === 'lines');
   for (const curtain of CURTAINS) {
     worldFoley.motion(curtain, 'cloth', curtain.center, curtain.opening, dt, heard && story.name === 'lines');
     const popped = curtainPops.get(curtain) ?? curtain.pops;
@@ -1137,6 +1184,7 @@ function prepareFrame(dt: number): void {
   soundState.cues = takeCues();
   soundState.winterGust = story.name === 'sleeping' ? sleepingGust(time, sleeping.cold, sleeping.dawn) : 0;
   sound.update(dt, soundState);
+  syncMusicLoading();
   prepareWorldAudio(dt);
 }
 
@@ -1309,7 +1357,7 @@ function frame(now: number): void {
 }
 
 if (QA && params.shot) {
-  window.__game = { params, tuning, quality, post, wind, input, rig, renderer, scene, glider, lines, swirl, sound, child, story, creatures, hillCreatures, water, skyMirror, terrain, footprints, cottage, petals, grass, littleBoats, sealife, cygnet, flock, cat, carry, probe, washing, curtains: CURTAINS, doorway, doorwayView, doorExit: DOOR_EXIT, washingPassage, washingInvitation, shoreHaul, shorePulley, shorePinwheel: SHORE_PINWHEEL, scarfInvitation, kite, departureKites, pinwheels, village, wood, stormWeather, sleeping, embers, emberInvitation, fireflies, boat, life, piano, birches, pond, cloudStairs, harebells, swanFeather };
+  window.__game = { params, tuning, quality, post, wind, input, rig, renderer, scene, glider, lines, swirl, sound, child, story, creatures, hillCreatures, water, skyMirror, terrain, footprints, cottage, petals, grass, littleBoats, sealife, crossingLinen, cygnet, flock, cat, carry, probe, washing, curtains: CURTAINS, doorway, doorwayView, doorExit: DOOR_EXIT, washingPassage, washingInvitation, shoreHaul, shorePulley, shorePinwheel: SHORE_PINWHEEL, scarfInvitation, kite, departureKites, pinwheels, village, wood, stormWeather, sleeping, embers, emberInvitation, fireflies, boat, life, piano, birches, pond, cloudStairs, harebells, swanFeather };
 }
 
 const fogLookup = new FogLookup(renderer);
@@ -1412,7 +1460,8 @@ async function boot(): Promise<void> {
         soundChosen = true;
         setSound(controls.soundOn);
       }
-      const choice = pick ?? (params.progress ? readProgress() : null) ?? params.chapter;
+      const choice = pick ?? startingChoice();
+      prefetchMusic(controls.soundOn && controls.musicOn ? musicForStart(choice) : null);
       story.start(choice);
       /** One update first, so the opening shot is the chapter's own and not the origin eased into over several seconds. */
       story.update(0, 0);
@@ -1427,6 +1476,11 @@ async function boot(): Promise<void> {
 
 /** Boot laid the ground out round the first island; the chosen room's is laid out before its first frame. */
 async function play(resumed: boolean): Promise<void> {
+  const track = tuning.audio.stillPhraseExperiment && story.current.stillDepartureSoon ? 'stillDeparture'
+    : musicForStart({ chapter: story.name, point: story.current.checkpoint ?? undefined });
+  const music = controls.soundOn && controls.musicOn && track ? sound.prepareMusic(track) : Promise.resolve();
+  const musicStatus = window.setTimeout(() => startScreen.musicLoading(true), 150);
+  const musicReady = music.finally(() => { clearTimeout(musicStatus); startScreen.musicLoading(false); });
   try {
     followWindow(...windowAim(), true);
     grass.update(rig.camera);
@@ -1435,7 +1489,11 @@ async function play(resumed: boolean): Promise<void> {
     grass.bake(renderer);
     post.render(0, true);
     await gpuIdle(renderer);
+    await musicReady;
     if (contextRecovery.lost) return;
+    nextMusic = track;
+    playing = true;
+    syncMusicLoading();
     telemetry.start(story.name, resumed, !!story.current.finished);
     telemetry.quality(quality.level.name, quality.level.ratio, quality.level.samples);
     last = performance.now();

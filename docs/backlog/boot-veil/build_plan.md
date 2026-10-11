@@ -465,3 +465,22 @@ Jeremy approved the visual result on 2026-10-06: "yep it looks fine, that wake f
 Keep both optimizations; the visual review is complete. These changes follow the earlier `10ab475` scheduling push.
 Production deployment and physical Apple/Samsung testing are not covered by this verification.
 The original phase 4 and its 500 ms gate remain open.
+
+## Audio readiness follow-up — 2026-10-11
+
+- [x] Start the selected compressed recording download alongside construction and shader compilation.
+- [x] Keep audio unlocking inside Begin; wait for decoding behind the existing veil before gameplay.
+- [x] Skip disabled audio, cancel preparation when toggled off, bound failures, and prefetch only the next recording.
+- [x] Verify delayed downloads/decoding, failure and cancellation, preferences, first playable readiness and reuse.
+- [x] Run the production build and focused recording/Still regression checks; update the audio and engine contracts.
+
+Jeremy also requested five-second spacing between Still excerpt starts, preserving the preceding reverb tail.
+That audio experiment is covered by its existing offline and real-gesture checks, separately from shader gates.
+
+Validation: production build and typecheck pass (existing main-chunk size warning). The browser readiness check
+holds the download while shaders finish, then holds decode while gameplay remains stopped; it also verifies failed,
+timed-out, cancelled and music-disabled starts. `MUTATE=skip` bypasses readiness and makes the gate fail as intended.
+All four continuous recordings pass real Begin/audible-source checks. Still passes 35 offline assertions covering
+five-second overlap, all-tail cleanup, preserved drone and crossing offsets; real colour, plane, hidden-page and
+whale/Lines playback pass. Music mute (17), Boats lifecycle (14) and arrival audio (349) checks pass. Dev server remains
+on port 5230. No deployment; the original shader performance and physical-device gates remain open.

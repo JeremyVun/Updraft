@@ -11,9 +11,8 @@ try {
     const checks=[], renders=[], F=tuning.audio.arrivalFadeOut, Q=tuning.audio.arrivalQuiet;
     const check=(ok,message)=>{if(!ok)throw Error(message);checks.push(message);};
     const source = target => ({...baseState,music:target==='birches'?'birches':target==='sleeping'?'wood':target==='drowned'?'birches':target==='home'?'home':'sea',
-      // Explicitly enable the opening's playable voice to verify that the background gate cannot mute it.
-      // Ordinary arrivals themselves no longer enable gesture chimes.
-      seaScore:target==='mirror'?'arrival':undefined,flockChatter:false,startingIsland:true});
+      // Enable the forest's playable voice to verify that background gates cannot mute gesture feedback.
+      seaScore:target==='mirror'?'arrival':undefined,flockChatter:false,forestWind:true});
     for(const target of Object.keys(ARRIVAL_MUSIC)) {
       const {ctx,sound}=offlineSound(36), notes=[], phases=[];
       // Hear just the background and its send into the reverb, while still scheduling real gestures and environment.
@@ -42,7 +41,7 @@ try {
         }
       };
       update(0);let pause=ctx.suspend(.125);const rendering=ctx.startRendering();
-      for(let tick=1;tick<36*8;tick++){await pause;update(tick);if(tick+1<36*8)pause=ctx.suspend((tick+1)/8);await ctx.resume();}
+      for(let tick=1;tick<36*8;tick++){await pause;update(tick);await sound.preparedScore?.ready;await sound.summitScore?.ready;await sound.birchesScore?.ready;await sound.linesScore?.ready;await sound.boatsScore?.ready;if(tick+1<36*8)pause=ctx.suspend((tick+1)/8);await ctx.resume();}
       const buffer=await rendering;
       let gapPeak=0, before=0, after=0;
       for(let ch=0;ch<2;ch++){
@@ -77,7 +76,7 @@ try {
     const update=tick=>{const now=tick/8;sound.update(.125,{...source('lines'),...(now>=28?ARRIVAL_MUSIC.lines:{}),
       arrivalMusic:now>=8&&now<28?'lines':undefined,gust:now>=11&&now<11.5?8:0});};
     update(0);let pause=ctx.suspend(.125);const rendering=ctx.startRendering();
-    for(let tick=1;tick<36*8;tick++){await pause;update(tick);if(tick+1<36*8)pause=ctx.suspend((tick+1)/8);await ctx.resume();}
+    for(let tick=1;tick<36*8;tick++){await pause;update(tick);await sound.preparedScore?.ready;await sound.summitScore?.ready;await sound.birchesScore?.ready;await sound.linesScore?.ready;await sound.boatsScore?.ready;if(tick+1<36*8)pause=ctx.suspend((tick+1)/8);await ctx.resume();}
     const mixed=await rendering, data=mixed.getChannelData(0);
     const power=(from,to)=>{let sum=0;for(let i=from*24000;i<to*24000;i++)sum+=data[i]**2;return sum/((to-from)*24000);};
     check(power(12.5,13)>1e-8,'The environment remains audible during the background pause');

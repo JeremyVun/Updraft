@@ -112,7 +112,7 @@ try {
       await ctx.resume();
     }
     const buffer = await rendering;
-    // Cursor chimes are limited to the opening island, the forest and the Sleeping climb (docs/contracts/audio.md);
+    // Cursor chimes are limited to the forest and the Sleeping climb (docs/contracts/audio.md);
     // Meadow is none of those, so gusts and updrafts stay silent even during the quiet flock and pond phases.
     check(!feedback.some(at => at >= 16 && at < 17) && !feedback.some(at => at >= 21 && at < 22),
       'Wind and updraft chimes stay silent in Meadow during the quiet flock and pond phases');

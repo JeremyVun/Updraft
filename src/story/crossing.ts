@@ -2,6 +2,9 @@ import type { MirrorScorePhase } from '../audio/dream-score';
 import type { CheckpointPayload } from './checkpoint-data';
 import * as THREE from 'three';
 import { tuning } from '../tuning';
+import { STILL_SHIFT } from '../world/geography';
+import { heightAt } from '../world/island';
+import type { GustFront } from '../fx/windlines';
 import { swellLift } from '../world/water/swell';
 import type { Mood } from '../audio/audio';
 import type { SeaScorePhase } from '../audio/sea-score';
@@ -16,6 +19,7 @@ import { HOME_JETTY } from '../world/home-layout';
 import { mirrorWater } from '../world/sky-mirror-layout';
 import type { Coax } from '../fx/swirl';
 import { sightingHeading, whaleSighting } from '../fx/sealife/sighting';
+import { WHALE_SEEN } from '../fx/sealife/whale';
 import { NetWhale, type PodRun } from './net-whale';
 
 /** The beach on the meadow's south shore, where the boat first comes ashore on the mainland-sized island. */
@@ -24,7 +28,7 @@ export const LANDING = new THREE.Vector2(10, -600);
 export const MEADOW_APPROACH = new THREE.Vector2(LANDING.x, -548);
 
 /** The restored still island, as the child looks back at it from the first crossing. */
-export const FIRST_ISLAND = new THREE.Vector3(-8, 9, -18);
+export const FIRST_ISLAND = new THREE.Vector3(-8 + STILL_SHIFT.x, 9, -18 + STILL_SHIFT.z);
 
 /**
  * How an arrival is watched, in place of the usual view from behind and above: the angle off astern, the distance,
@@ -163,6 +167,8 @@ export class CrossingChapter implements Chapter {
   private readonly look = new THREE.Vector3();
   private readonly toPort = new THREE.Vector3();
   private time = 0;
+  private readonly titleFront: GustFront = { at: new THREE.Vector3(), dir: new THREE.Vector2(1, 0), flow: new THREE.Vector2(), strength: 0, lines: tuning.opening.titleGust.lines };
+  private readonly horizon = { clear: 0, hidden: 1 };
   private worldTime = 0;
   private seaTurn = 0;
   private swimFrame = 0;
@@ -319,6 +325,10 @@ export class CrossingChapter implements Chapter {
 
   afterCamera(camera: THREE.PerspectiveCamera): void {
     this.whale?.sees(camera);
+    if ((this.stillCrossingTime ?? Infinity) <= tuning.opening.title.afterFarewell - tuning.opening.titleGust.before) {
+      const e = camera.matrixWorld.elements;
+      this.titleFront.dir.set(e[0], e[2]).normalize();
+    }
   }
 
   private podLeftAt: number | null = null;
@@ -350,14 +360,44 @@ export class CrossingChapter implements Chapter {
     const shore = this.route[this.route.length - 1], boat = this.cast.boat.position;
     const distance = Math.hypot(boat.x - shore.x, boat.z - shore.y);
     const approach = 1 - THREE.MathUtils.smootherstep(distance, arrival.to, arrival.from);
+    const after = this.stillDeparture ? this.whaleAt! + WHALE_SEEN.to : this.farewellFor;
     const released = this.lookBack
-      ? THREE.MathUtils.smootherstep(this.time, this.farewellFor, this.farewellFor + SWING) : 1;
+      ? THREE.MathUtils.smootherstep(this.time, after, after + SWING) : 1;
     return THREE.MathUtils.lerp(this.departureHaze, arrival.strength, approach * released);
   }
 
   get hazeFalloff(): number {
     if (this.whale) return THREE.MathUtils.lerp(1, this.mistFalloff(), this.seaMist());
     return this.homeward ? tuning.homeApproach.falloff : 1;
+  }
+
+  get horizonMist(): { clear: number; hidden: number } | undefined {
+    if (!this.stillDeparture) return undefined;
+    const k = tuning.world.linesHorizon;
+    const end = this.whaleAt! + WHALE_SEEN.to;
+    const close = THREE.MathUtils.smootherstep(this.time, end, end + k.settle);
+    this.horizon.clear = THREE.MathUtils.lerp(k.farewellClear, k.clear, close);
+    this.horizon.hidden = THREE.MathUtils.lerp(k.farewellHidden, k.hidden, close);
+    return this.horizon;
+  }
+
+  get gustFront(): GustFront | null { return this.titleFront.strength > 0 ? this.titleFront : null; }
+
+  private blowTitleGust(): void {
+    const k = tuning.opening.titleGust, f = this.titleFront;
+    const age = (this.stillCrossingTime ?? -Infinity) - tuning.opening.title.afterFarewell + k.before;
+    const u = age / k.duration;
+    f.strength = u <= 0 || u >= 1 ? 0 : Math.sin(Math.PI * u) ** 2;
+    if (!f.strength) return;
+    f.at.set(STILL_SHIFT.x + f.dir.x * (u - .5) * k.reach, 0, STILL_SHIFT.z - 12 + f.dir.y * (u - .5) * k.reach);
+    f.at.y = Math.max(0, heightAt(f.at.x, f.at.z)) + 2;
+    f.flow.copy(f.dir).multiplyScalar(k.reach / k.duration);
+    this.cast.wind.addSplat({ source: f,
+      ax: f.at.x - f.dir.y * k.width / 2, az: f.at.z + f.dir.x * k.width / 2,
+      bx: f.at.x + f.dir.y * k.width / 2, bz: f.at.z - f.dir.x * k.width / 2,
+      vx: f.dir.x * k.speed * f.strength, vz: f.dir.y * k.speed * f.strength, radius: k.radius,
+      energy: k.energy * f.strength, swirl: 0, lift: k.lift * f.strength,
+    });
   }
 
   /** Its distant blow rises above the low mist before the body gains definition. */
@@ -397,12 +437,19 @@ export class CrossingChapter implements Chapter {
 
   get arrivalMusic(): ArrivalMusic | undefined { return this.homeward || this.arrivalHeard ? this.destinationMusic : this.departureMusic; }
 
+  get stillCrossingTime(): number | undefined {
+    return this.music === 'still' && this.whaleAt !== null ? this.time - this.farewellFor : undefined;
+  }
+
+  get stillDeparture(): boolean { return this.stillCrossingTime !== undefined; }
+
   get arrivalReady(): boolean | undefined {
     if (this.homeward || !this.destinationMusic) return undefined;
     if (this.departureMusic && !this.arrivalHeard) return true;
     if (this.lookBack && this.time < this.farewellFor + SWING * .8) return false;
     const speed=Math.max(4.5,Math.min(this.cast.boat.speed,this.arrivalSpeed));
-    const lead=tuning.audio.arrivalShoreAllowance+tuning.audio.arrivalEntranceLead*speed;
+    const earlier = this.stillDeparture ? tuning.audio.linesArrivalEarlier : 0;
+    const lead=tuning.audio.arrivalShoreAllowance+(tuning.audio.arrivalEntranceLead+earlier)*speed;
     return this.cast.boat.grounded || this.remainingSail()<=Math.min(lead,this.routeLength*tuning.audio.arrivalEntranceRouteShare);
   }
 
@@ -427,7 +474,8 @@ export class CrossingChapter implements Chapter {
     const remaining = this.remainingSail();
     // A fast sail still slows at the meadow bank; use that approach speed so the rest doesn't begin offshore.
     const speed=Math.max(4.5,Math.min(this.cast.boat.speed,this.arrivalSpeed));
-    const lead = tuning.audio.arrivalShoreAllowance + tuning.audio.arrivalMusicLead * speed;
+    const earlier = this.stillDeparture ? tuning.audio.linesArrivalEarlier : 0;
+    const lead = tuning.audio.arrivalShoreAllowance + (tuning.audio.arrivalMusicLead + earlier) * speed;
     if (remaining <= Math.min(lead, this.routeLength * tuning.audio.arrivalMusicRouteShare)) {
       this.arrivalHeard = true;
     }
@@ -509,6 +557,7 @@ export class CrossingChapter implements Chapter {
   update(dt: number, time = this.time + dt): void {
     this.time += dt;
     this.worldTime = time;
+    this.blowTitleGust();
     this.steer();
     this.followProgress(dt);
     this.prepareArrivalMusic();
@@ -606,7 +655,8 @@ export class CrossingChapter implements Chapter {
     if (distant) child.lookAt = whale;
     // She sits up at the sight of its blow.
     if (this.whaleAt !== null) child.lean = distant && this.worldTime - sealife.whaleBlewAt < 2.4 ? -0.09 : 0;
-    this.watching = distant ? Math.min(1, this.watching + dt * 0.5) : Math.max(0, this.watching - dt * 0.5);
+    const whalePan = this.stillCrossingTime !== undefined ? tuning.opening.crossing.whalePan : 2;
+    this.watching = distant ? Math.min(1, this.watching + dt / whalePan) : Math.max(0, this.watching - dt / whalePan);
     if (show && !farewell && !swimming) {
       child.lookAt = show;
       if (this.wantsDolphins) this.cast.cygnet.watch(show);
@@ -896,6 +946,18 @@ export class CrossingChapter implements Chapter {
         this.shot.height = THREE.MathUtils.lerp(this.shot.height, height, land);
         this.pace = 0.7;
       }
+    }
+
+    if (this.stillDeparture) {
+      const echo = tuning.opening.shoreEchoes, c = echo.camera;
+      const t = this.stillCrossingTime! - c.afterFarewell;
+      const sky = THREE.MathUtils.smootherstep(t, c.inFrom, c.inTo)
+        * (1 - THREE.MathUtils.smootherstep(t, c.outFrom, c.outTo));
+      this.shot.target.y += c.lookUp * sky;
+      this.shot.height -= c.lower * sky;
+      this.shot.distance += c.back * sky;
+      const bearing = sailBearing + Math.sin(t * .12) * c.sway * sky;
+      if (sky > 0) this.shot.from = this.from.set(Math.sin(bearing), 0, Math.cos(bearing));
     }
 
     if (this.homeward) this.frameHomeward(progress);

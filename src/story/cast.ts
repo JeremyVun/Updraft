@@ -108,6 +108,7 @@ export interface Chapter {
   readonly haze?: number;
   /** Distance-haze density multiplier; lower values spread the veil over a longer depth. */
   readonly hazeFalloff?: number;
+  readonly horizonMist?: { clear: number; hidden: number };
   /** How far the sea's low mist thins above the water, 0..1. */
   readonly veilLift?: number;
   /** At open sea, distant land dissolves into the sky without leaving a tinted silhouette. */
@@ -141,6 +142,9 @@ export interface Chapter {
   readonly homewardReady?: boolean;
   /** The opening holds its home chord under the skein and rests from the fall until the child carries the bird away. */
   readonly openingScore?: OpeningScorePhase;
+  readonly stillCrossingTime?: number;
+  readonly stillDeparture?: boolean;
+  readonly stillDepartureSoon?: boolean;
   readonly summitScore?: SummitScorePhase;
   readonly homeEndingTime?: number;
   /** The long sea arrangement follows actual swimming and coastal approach. */
@@ -163,6 +167,7 @@ export interface Chapter {
   readonly season?: number;
   /** True while the story is playing a beat out on its own: the player's gestures move the world but drive nothing. */
   readonly scripted?: boolean;
+  readonly windMuted?: boolean;
   /** How strongly a rainbow shows, 0..1, and the direction of its centre. */
   readonly rainbow?: number;
   readonly rainbowAxis?: THREE.Vector3;

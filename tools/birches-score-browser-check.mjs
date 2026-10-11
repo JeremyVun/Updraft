@@ -13,29 +13,27 @@ try {
   await page.mouse.click(10, 10);
   await page.evaluate(() => {
     const g = __game;
-    window.birchesAudio = { phases: [], wrong: [], frames: 0, chimes: 0, updrafts: 0, wrongChords: [], maxVoices: 0 };
+    window.birchesAudio = { phases: [], wrong: [], frames: 0, chimes: 0, updrafts: 0, maxSources: 0 };
     const original = g.sound.update.bind(g.sound), chime = g.sound.chime.bind(g.sound);
     g.sound.chime = (...args) => {
       birchesAudio.chimes++;
       if (args[4] === 1.6 && g.sound.birchesScore) {
         birchesAudio.updrafts++;
-        const pitches = g.sound.birchesScore.chordAt(args[3]).map(m => m % 12);
-        if (!pitches.includes(args[0] % 12)) birchesAudio.wrongChords.push(args[0]);
       }
       chime(...args);
     };
     g.sound.update = (dt, state) => {
       original(dt, state); if (!g.sound.running) return;
-      const score = g.sound.birchesScore, phase = score?.current?.phase ?? 'off';
+      const score = g.sound.birchesScore, phase = score?.phase ?? 'off';
       if (score) window.lastBirchesScore = score;
       if (phase !== (g.story.current.birchesScore ?? 'off')) birchesAudio.wrong.push({ phase, expected: g.story.current.birchesScore });
       if (birchesAudio.phases.at(-1)?.phase !== phase) birchesAudio.phases.push({ phase, beat: g.story.current.beat, time: g.story.current.now });
-      birchesAudio.maxVoices = Math.max(birchesAudio.maxVoices, score ? [...score.parts].reduce((n,p) => n+p.voices.size,0) : 0);
+      birchesAudio.maxSources = Math.max(birchesAudio.maxSources, score?.source ? 1 : 0);
       birchesAudio.frames++;
     };
     g.sound.start();
   });
-  await page.waitForFunction(() => __game.sound.birchesScore?.current.phase === 'walk' && !__game.carry.busy && !__game.child.acting, null, { timeout: 60000 });
+  await page.waitForFunction(() => __game.sound.birchesScore?.phase === 'walk' && !__game.carry.busy && !__game.child.acting, null, { timeout: 60000 });
   await page.evaluate(() => { window.beforeMute = __game.sound.birchesScore; __game.sound.setMuted(true); });
   await page.waitForFunction(() => __game.sound.ctx.state === 'suspended');
   const frozen = await page.evaluate(() => __game.sound.ctx.currentTime);
@@ -60,9 +58,9 @@ try {
   await page.mouse.move(seat.x-65,seat.y); await page.mouse.down();
   for(let i=1;i<=16;i++){await page.mouse.move(seat.x-65+i*8,seat.y);await page.waitForTimeout(24);}
   await page.mouse.up();
-  await page.waitForFunction(() => __game.story.current.beat === 'swinging' && __game.sound.birchesScore?.current.phase === 'swing', null, { timeout: 30000 });
-  await page.waitForFunction(() => !['toSwing','swinging'].includes(__game.story.current.beat) && __game.sound.birchesScore?.current.phase === 'scarf', null, { timeout: 30000 });
-  console.log('The real swing brush starts its phrase; a quiet exit returns to the scarf accompaniment.');
+  await page.waitForFunction(() => __game.story.current.beat === 'swinging' && __game.sound.birchesScore?.phase === 'swing', null, { timeout: 30000 });
+  await page.waitForFunction(() => !['toSwing','swinging'].includes(__game.story.current.beat) && __game.sound.birchesScore?.phase === 'scarf', null, { timeout: 30000 });
+  console.log('The real swing brush and exit update story phases while the recording continues.');
 
   await page.evaluate(() => {
     const g=__game,c=g.story.current,s=g.birches.scarf;
@@ -80,8 +78,8 @@ try {
     await page.mouse.up();
   }
   assert(await page.evaluate(n=>birchesAudio.updrafts===n && __game.birches.scarf.snags[1].target>0,initial), 'Real scarf circles make puzzle progress and ring no updraft chimes');
-  assert.equal(await page.evaluate(()=>__game.sound.birchesScore.current.phase),'scarf');
-  console.log('Real circling keeps the scarf accompaniment and rings no cursor chimes.');
+  assert.equal(await page.evaluate(()=>__game.sound.birchesScore.phase),'scarf');
+  console.log('Real circling keeps the recording playing and rings no cursor chimes.');
 
   // Arrange the last bow at full gesture progress, then let the real release/gathering logic run.
   await page.evaluate(() => {
@@ -91,17 +89,17 @@ try {
     s.snags[3].target=1;c.update(0,c.now);g.rig.cut(c.shot);
   });
   await page.waitForFunction(() => __game.story.current.beat === 'unravelling',null,{timeout:15000});
-  assert.equal(await page.evaluate(()=>__game.sound.birchesScore.current.phase),'scarf');
-  await page.waitForFunction(() => __game.birches.scarf.finished && __game.sound.birchesScore?.current.phase === 'return',null,{timeout:20000});
+  assert.equal(await page.evaluate(()=>__game.sound.birchesScore.phase),'scarf');
+  await page.waitForFunction(() => __game.birches.scarf.finished && __game.sound.birchesScore?.phase === 'return',null,{timeout:20000});
   await page.evaluate(() => {
     const g=__game,c=g.story.current;
     g.child.stop();g.cygnet.rideIn('satchel');const p=g.boat.boardingPoint(g.child.position.clone());
     g.child.place(p.x,p.z,g.boat.yaw);c.board();
   });
-  await page.waitForFunction(() => !__game.sound.birchesScore && lastBirchesScore.parts.size===0 && __game.sound.padGain.gain.value>.04,null,{timeout:15000});
-  const report=await page.evaluate(()=>({...birchesAudio,remainingParts:lastBirchesScore.parts.size,chapter:__game.story.name,beat:__game.story.current.beat}));
-  assert.deepEqual(report.wrong,[]);assert.deepEqual(report.wrongChords,[]);assert.deepEqual(errors,[]);
+  await page.waitForFunction(() => !__game.sound.birchesScore && !lastBirchesScore.source && __game.sound.padGain.gain.value>.04,null,{timeout:15000});
+  const report=await page.evaluate(()=>({...birchesAudio,sourceReleased:!lastBirchesScore.source,chapter:__game.story.name,beat:__game.story.current.beat}));
+  assert.deepEqual(report.wrong,[]);assert.equal(report.updrafts,0);assert.deepEqual(errors,[]);
   assert(['walk','swing','scarf','return','off'].every(phase=>report.phases.some(p=>p.phase===phase)));
-  assert(report.maxVoices<100 && report.remainingParts===0);
+  assert(report.maxSources===1 && report.sourceReleased);
   fs.writeFileSync('/tmp/updraft-birches-score-browser.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report,null,2));
 } finally { await close(); }

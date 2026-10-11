@@ -1,26 +1,21 @@
 // Real crossing director and camera rig over controlled open-water tracks; no GPU required.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { registerHooks } from 'node:module';
-import { transformSync } from 'rolldown/utils';
+import './lib/typescript.mjs';
 import * as THREE from 'three';
-registerHooks({
-  resolve(s,c,next) { return next(s.startsWith('.')&&!/\.[a-z]+$/i.test(s)?s+'.ts':s,c); },
-  load(u,c,next) { return u.endsWith('.ts')?{format:'module',shortCircuit:true,
-    source:transformSync(new URL(u).pathname,fs.readFileSync(new URL(u),'utf8')).code}:next(u,c); },
-});
+
 globalThis.location={search:'?shot'};
 const { CrossingChapter, FIRST_ISLAND }=await import('../src/story/crossing.ts');
 const { CameraRig }=await import('../src/camera.ts');
-function fixture(farewell=false) {
+function fixture(farewell=false,options={}) {
   const boat={position:new THREE.Vector3(-2000,0,-2000),yaw:Math.PI,sailSide:-1,speed:5,
     seat(out){return out.copy(this.position).add(new THREE.Vector3(0,.5,1));},
     sailPoint(out){return out.copy(this.position).add(new THREE.Vector3(0,3,0));}};
   const child={position:new THREE.Vector3(),ride(p){this.position.copy(p);},wave(){}};
-  const cast={boat,child,skyMirror:{progress:3},plane:{hold(){}},cygnet:{carried:false,wing:{restore(){}}},sealife:{whale:null,
+  const cast={boat,child,wind:{addSplat(){}},skyMirror:{progress:3},plane:{hold(){}},cygnet:{carried:false,wing:{restore(){}}},sealife:{whale:null,
     fishNear(){},dolphinsWith(){}}};
   const chapter=new CrossingChapter(cast,{route:[new THREE.Vector2(-2000,-2500)],
-    ...(farewell?{lookBack:new THREE.Vector3(-2000,8,-1980),farewell:30}:{})});
+    ...(farewell?{lookBack:new THREE.Vector3(-2000,8,-1980),farewell:30}:{}),...options});
   const rig=new CameraRig();return {boat,cast,chapter,rig};
 }
 const report=[];
@@ -77,6 +72,17 @@ for(const [width,height] of [[1600,900],[390,844]]) {
   assert.equal(chapter.shot.attention,undefined,'whale focus releases');
 }
 // Side response is elapsed-time based; preparing a zero-time view must not advance it.
+for (const fps of [30,60,120]) {
+  const {cast,chapter}=fixture(false,{music:'still',whaleAt:45});
+  cast.sealife.whale=new THREE.Vector3(-1983,1,-2058);
+  for(let i=0;i<fps*2;i++)chapter.update(1/fps);
+  assert(Math.abs(chapter.watching-1/3)<1e-9,'first whale attention takes six seconds to open');
+  for(let i=0;i<fps*4;i++)chapter.update(1/fps);
+  assert(Math.abs(chapter.watching-1)<1e-9);
+  cast.sealife.whale=null;
+  for(let i=0;i<fps*3;i++)chapter.update(1/fps);
+  assert(Math.abs(chapter.watching-.5)<1e-9,'first whale releases gradually too');
+}
 const quarters=[];
 for(const fps of [10,30,60,120]) {
   const {boat,chapter}=fixture();boat.sailSide=1;
@@ -99,6 +105,21 @@ const {FAR_SHORE}=await import('../src/story/meadow.ts');
 const {WOOD_BERTH}=await import('../src/world/wood.ts');
 const {MIRROR_BERTH}=await import('../src/world/sky-mirror-layout.ts');
 const {tuning}=await import('../src/tuning.ts');
+{
+  const echo = tuning.opening.shoreEchoes, start = echo.afterFarewell;
+  const frame = at => {
+    const { chapter } = fixture(true, { music: 'still', whaleAt: 45 });
+    chapter.whaleCalled = true; chapter.time = at; chapter.update(0);
+    const s = chapter.shot;
+    return [...s.target.toArray(), ...s.from.toArray(), s.distance, s.height];
+  };
+  try {
+    for (const at of [40, 60, 63, 72, 90, 110]) {
+      echo.afterFarewell = 48; const before = frame(at);
+      echo.afterFarewell = start; assert.deepEqual(frame(at), before, 'earlier birds and linen leave the camera unchanged');
+    }
+  } finally { echo.afterFarewell = start; }
+}
 const starts={toLines:[BOAT_BERTH.x,BOAT_BERTH.z,.95],toBoats:[LINES_BERTH.x,LINES_BERTH.z,.1],
   toMeadow:[BOATS_BERTH.x,BOATS_BERTH.z,Math.PI],toBirches:[FAR_SHORE.x,FAR_SHORE.z,.2],
   toSleeping:[WOOD_BERTH.x,WOOD_BERTH.z,.2],toHarbour:[MIRROR_BERTH.x,MIRROR_BERTH.z,MIRROR_BERTH.yaw]};
@@ -108,7 +129,7 @@ for(const [name,start] of Object.entries(starts))for(const portrait of [false,tr
     calm:3,addSplat(){},sample(x,z,out){return Object.assign(out,{x:this.breeze.x+gust,z:this.breeze.y-gust,energy:gust?.8:0,lift:0});}};
   const boat=new Boat(wind);boat.beach(...start);boat.launch();
   const child={position:new THREE.Vector3(),ride(p){this.position.copy(p);},wave(){}};
-  const cast={boat,child,skyMirror:{progress:3,stars:[{},{},{}]},plane:{hold(){}},cygnet:{carried:false,wing:{restore(){}}},sealife:{whale:null,fishNear(){},dolphinsWith(){},surfaceWhale(){}}};
+  const cast={boat,child,wind:{addSplat(){}},skyMirror:{progress:3,stars:[{},{},{}]},plane:{hold(){}},cygnet:{carried:false,wing:{restore(){}}},sealife:{whale:null,fishNear(){},dolphinsWith(){},surfaceWhale(){}}};
   const chapter=Journey.prototype.make.call({cast},name),rig=new CameraRig();
   rig.resize(portrait?390:1600,portrait?844:900);chapter.update(0);rig.cut(chapter.shot);
   let worst=0,maxStep=0,seconds=0;const last=rig.camera.getWorldDirection(new THREE.Vector3()),direction=last.clone();

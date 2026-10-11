@@ -1,6 +1,6 @@
 import { fieldAt, type FieldSample } from './fields';
 import { COTTAGE } from './heightfield';
-import { HOME_SHIFT } from './geography';
+import { HOME_SHIFT, STILL_SHIFT } from './geography';
 import { GRASS_LINE, heightAt, slopeAt } from './island';
 import { mulberry32 } from './noise';
 
@@ -14,7 +14,7 @@ export interface Rock {
   seed: number;
 }
 
-export const TREE = { x: -15, z: -31 } as const;
+export const TREE = { x: -15 + STILL_SHIFT.x, z: -31 + STILL_SHIFT.z } as const;
 /** The same broad tree again, smaller and alone on the slope above the home jetty, off to the side of the climb. */
 export const HOME_TREE = { x: -69 + HOME_SHIFT.x, z: -1967 + HOME_SHIFT.z, scale: 0.65 } as const;
 export const TREE_CLEARING = 3.2;
@@ -45,7 +45,8 @@ export const ROCKS: Rock[] = [
   ...scatter(-8, -52, 3, 5, 2.0, 14),
   ...scatter(18, 28, 2, 3, 1.4, 15),
   ...scatter(-34, -14, 2, 3, 1.3, 16),
-].filter((r) => heightAt(r.x, r.z) > -0.8);
+].map(r => ({ ...r, x: r.x + STILL_SHIFT.x, z: r.z + STILL_SHIFT.z }))
+  .filter((r) => heightAt(r.x, r.z) > -0.8);
 
 export interface FlowerPatch {
   x: number;
@@ -58,8 +59,8 @@ export const FLOWER_PATCHES: FlowerPatch[] = (() => {
   const rand = mulberry32(7);
   const patches: FlowerPatch[] = [];
   while (patches.length < 34) {
-    const x = -62 + rand() * 120;
-    const z = -58 + rand() * 96;
+    const x = -62 + rand() * 120 + STILL_SHIFT.x;
+    const z = -58 + rand() * 96 + STILL_SHIFT.z;
     if (heightAt(x, z) > GRASS_LINE + 2.2) patches.push({ x, z, radius: 2 + rand() * 3.5 });
   }
   return patches;

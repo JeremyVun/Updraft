@@ -668,6 +668,7 @@ vec3 lost(vec3 col, vec3 world) {
  */
 export const HAZE_GLSL = /* glsl */ `
 uniform float uHaze;
+uniform float uPresence;
 ${LOST_GLSL}
 /** The open sea's own colour seen at world, as the water draws it: its deep body under a rough mirror of the dawn. */
 vec3 seaLook(vec3 world) {
@@ -808,7 +809,7 @@ void main() {
 
   // The gold line stays crisp over the haze, so the back goes on into the morning as one thin line.
   float filmed = float(part == ${BODY});
-  gl_FragColor = vec4(hazed(col, vWorld, vRig.x, filmed) + gold * (1.0 - fogOf(vWorld).a) * (1.0 - ${f(L.ridgeHazed)} * hazeAt(vWorld, vRig.x, filmed)) * (1.0 - uLost), 1.0);
+  gl_FragColor = vec4(hazed(col, vWorld, vRig.x, filmed) + gold * (1.0 - fogOf(vWorld).a) * (1.0 - ${f(L.ridgeHazed)} * hazeAt(vWorld, vRig.x, filmed)) * (1.0 - uLost), uPresence);
 }`;
 
 /** The submerged body seen through the sea: slid up its view ray to the surface, tinted and faded by the water. */
@@ -862,7 +863,7 @@ void main() {
   float soft = smoothstep(0.0, mix(1.0, 0.2, clear), abs(dot(normalize(vFacing), V)));
   float deepShows = ${f(L.glassDeep)} * (1.0 - smoothstep(${f(L.glassFrom)}, ${f(L.glassFrom)} * 2.0, dist));
   float a = (1.0 - F) * soft * smoothstep(-0.02, 0.06, vDepth) * mix(deepShows, 0.75, clear)
-    * (1.0 - 0.85 * smoothstep(${f(L.glassFrom)}, ${f(L.glassTo)}, dist));
+    * (1.0 - 0.85 * smoothstep(${f(L.glassFrom)}, ${f(L.glassTo)}, dist)) * uPresence;
   if (a < 0.004) discard;
   col = mix(stillGrey(col) * 1.05, col, 0.35 + 0.65 * uWorldLife);
   col = hazed(col, vSurface, vRig.x, 0.0);

@@ -5,6 +5,7 @@ import { RibbonBatch, type Ribbon } from '../fx/ribbons';
 import { feltWind, type WindField, type WindSample } from '../wind/field';
 import { ATMO_GLSL, atmo } from '../world/atmosphere';
 import { GRASS_LINE, heightAt } from '../world/island';
+import { STILL_CENTRE } from '../world/geography';
 
 const PAPER_VERT = /* glsl */ `
 ${ATMO_GLSL}
@@ -110,7 +111,7 @@ export class Glider {
    * Where the game would like the player to go next. The plane leans that way as it flies and banks back to it
    * when it strays past `homeRadius`, so following it is the same thing as getting on with the story.
    */
-  readonly home = new THREE.Vector3(-6, 0, -14);
+  readonly home = new THREE.Vector3(STILL_CENTRE.x, 0, STILL_CENTRE.z);
   homeRadius = 50;
   /** A walking destination: let gestures play, but do not let the prevailing breeze choose the route. */
   guided = false;

@@ -158,20 +158,19 @@ export class LinesChapter implements Chapter {
       case 'birdThrough': {
         c.lookAt = cygnet.position;
         const g = active!;
-        if (cygnet.errand === g.way && cygnet.position.distanceTo(g.way) < 0.7) cygnet.errand = g.after;
-        if (cygnet.position.distanceTo(g.after) < 1.2) {
+        if (cygnet.position.distanceTo(g.way) < 0.7) cygnet.errand = g.after;
+        if (this.birdArrived < 0 && cygnet.position.distanceTo(g.after) < 1.2) {
           cygnet.stay = true;
           cygnet.watch(this.watching.copy(c.position).setY(c.position.y + 1.5));
-          if (this.birdArrived < 0) {
-            this.birdArrived = time;
-            cygnet.does('look-back', c.position, 2.5);
-          }
-          if (time - this.birdArrived > tuning.linesPassage.lookBack) {
-            this.to('childThrough');
-            const through = () => c.walkTo(g.crossX, g.after.z - 0.8, false, () => this.passed(), 0.6);
-            if (Math.abs(c.position.x - g.crossX) > 0.4) c.walkTo(g.crossX, g.way.z + 0.6, false, through, 0.6);
-            else through();
-          }
+          this.birdArrived = time;
+          cygnet.does('look-back', c.position, 2.5);
+        }
+        // A later gust can move the waiting bird without undoing its arrival.
+        if (this.birdArrived >= 0 && time - this.birdArrived > tuning.linesPassage.lookBack) {
+          this.to('childThrough');
+          const through = () => c.walkTo(g.crossX, g.after.z - 0.8, false, () => this.passed(), 0.6);
+          if (Math.abs(c.position.x - g.crossX) > 0.4) c.walkTo(g.crossX, g.way.z + 0.6, false, through, 0.6);
+          else through();
         }
         break;
       }
