@@ -224,6 +224,8 @@ function littleBoatsHeight(x: number, z: number): number {
 
 /** The island of lines: a low green whaleback, small enough that the washing on it is the whole room. */
 function linesHeight(x: number, z: number): number {
+  const fold = tuning.world.linesFold;
+  const crest = Math.max(0, 1 - ((x - fold.x) / fold.radiusX) ** 2 - ((z - fold.z) / fold.radiusZ) ** 2);
   x -= LINES_SHIFT.x; z -= LINES_SHIFT.z;
   z = LINES_STRETCH_FROM + Math.max(0, z - LINES_STRETCH_FROM) + Math.min(0, z - LINES_STRETCH_FROM) * LINES_NORTH_SCALE;
   const c = LINES_ISLE;
@@ -233,7 +235,7 @@ function linesHeight(x: number, z: number): number {
   const r = Math.hypot((x - c.x) / c.rx, (z - c.z) / c.rz);
   let h = land * 3.2 - 1.4;
   h += land * land * (Math.max(0, 1 - r * r) * tuning.world.linesDome + (gfbm(x * 0.022, z * 0.022, 3, 22) * 0.5 + 0.5) * 5);
-  return h - smoothstep(0, 40, d) * 8;
+  return h + fold.height * crest * crest - smoothstep(0, 40, d) * 8;
 }
 
 /**
@@ -561,6 +563,8 @@ float hf_isleCoast(vec2 p, vec2 c, vec2 r, float wobble, float seed) {
 }
 ${LUMP_GLSL}
 float hf_lines(vec2 p) {
+  vec2 fold = (p - vec2(${glsl(tuning.world.linesFold.x)}, ${glsl(tuning.world.linesFold.z)})) / vec2(${glsl(tuning.world.linesFold.radiusX)}, ${glsl(tuning.world.linesFold.radiusZ)});
+  float crest = max(0.0, 1.0 - dot(fold, fold));
   p -= vec2(${glsl(LINES_SHIFT.x)}, ${glsl(LINES_SHIFT.z)});
   p.y = ${glsl(LINES_STRETCH_FROM)} + max(0.0, p.y - ${glsl(LINES_STRETCH_FROM)}) + min(0.0, p.y - ${glsl(LINES_STRETCH_FROM)}) * ${glsl(LINES_NORTH_SCALE)};
   vec2 c = vec2(${LINES_ISLE.x}.0, ${glsl(LINES_ISLE.z)});
@@ -570,7 +574,7 @@ float hf_lines(vec2 p) {
   float rr = length((p - c) / r);
   float h = land * 3.2 - 1.4;
   h += land * land * (max(0.0, 1.0 - rr * rr) * ${glsl(tuning.world.linesDome)} + (gfbm(p * 0.022, 3, 22.0) * 0.5 + 0.5) * 5.0);
-  return h - smoothstep(0.0, 40.0, d) * 8.0;
+  return h + ${glsl(tuning.world.linesFold.height)} * crest * crest - smoothstep(0.0, 40.0, d) * 8.0;
 }
 vec2 hf_meadowSculpted(vec2 p) {
   vec2 pivot = vec2(${MEADOW_SCULPTED.x}.0, ${MEADOW_SOUTH}.0);

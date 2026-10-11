@@ -30,7 +30,7 @@ and half-sizes are in `ISLES` (`heightfield.ts`) unless noted:
 | room | centre (x, z) | half-size | defined by |
 | --- | --- | --- | --- |
 | still island | (−6, 186) | its own coastline | `islandCoast` in `heightfield.ts` |
-| island of lines | (14, −288.4) | 70 × 84.4 | `ISLES.lines`; northern terrain stretched below −260 |
+| island of lines | (14, −308.4) | 70 × 104.4 | `ISLES.lines`; northern terrain stretched below −260 |
 | the shore through the red door | (240, −365) | 23 × 30 | `DOOR_SHORE` |
 | little boats | (130, −420) | 48 × 70 | `LITTLE_BOATS` (`little-boats-layout.ts`) |
 | meadow | (10, −780) | 227 × 200 | `ISLES.meadow`, sculpted at 340 × 300 and scaled by `tuning.world.meadowLength` (`meadowPoint`) |
@@ -42,10 +42,11 @@ and half-sizes are in `ISLES` (`heightfield.ts`) unless noted:
 | sky mirror | (−581, −2282) | 82 × 70, a flat just under the water | `SKY_MIRROR` (`sky-mirror-layout.ts`) |
 | home | (−336, −2562) | 190 × 165 | `ISLES.home` |
 
-The rotary washing-line prototype extends Lines 40 m north (`tuning.world.linesNorthExtension`), mapping its
-existing terrain north of −260 into the longer footprint. Ground south of that join is unchanged; the family and
-door remain on inland high ground around the final linen bend. The height atlas's measured reach includes the extended underwater
-slope. This changes shape in place, not saved horizontal coordinates.
+The rotary washing-line prototype extends Lines 80 m north (`tuning.world.linesNorthExtension`), mapping its
+existing terrain north of −260 into the longer footprint. Ground south of that join is unchanged. A rounded
+rise beyond the third curtain (`linesFold`) conceals the family clearing at (14, −353); the door stands on grass
+at (14, −361), well before the northern beach. The height atlas's reach includes the extended underwater slope.
+This changes shape in place, not saved horizontal coordinates.
 
 `world/geography.ts` holds each moved room's shift from its original placement, and `GEOGRAPHY_VERSION` migrates
 saved coordinates on load. Moving a room means moving its terrain, props, walking

@@ -1,4 +1,4 @@
-import { CURTAIN_LAYOUT, DOOR_PLACE, FAMILY_PLACE, ROTARY_PATH } from './lines-layout';
+import { CURTAIN_LAYOUT, DOOR_PLACE, FAMILY_PLACE, FAMILY_APPROACH, ROTARY_PATH } from './lines-layout';
 import { DOOR_SHORE } from './heightfield';
 import * as THREE from 'three';
 import type { PointerInput } from '../input/pointer';
@@ -10,7 +10,7 @@ import { grassHeightAt } from './grass';
 import { mulberry32 } from './noise';
 import { Cloth, type ClothAir } from './cloth-sim';
 
-/** The southern beach stays put; the extra fifteen percent of island is north of it. */
+/** Extending the northern ground leaves the arrival beach in place. */
 export const LINES_LANDING = new THREE.Vector2(14, -208);
 // Rest the bow on the north beach, with dry sand beside the thwart for boarding.
 export const LINES_BERTH = new THREE.Vector3(DOOR_SHORE.x, 0, DOOR_SHORE.z - 23.5);
@@ -18,7 +18,7 @@ export const LINES_WALK = [
   new THREE.Vector2(12, -220), new THREE.Vector2(0, -230), new THREE.Vector2(0, -240),
   new THREE.Vector2(25, -251), new THREE.Vector2(25, -262),
   ...ROTARY_PATH.map(p => new THREE.Vector2(p.x, p.z)),
-  new THREE.Vector2(3, -302), new THREE.Vector2(3, -320),
+  new THREE.Vector2(CURTAIN_LAYOUT[2].x, CURTAIN_LAYOUT[2].z + 6), new THREE.Vector2(FAMILY_APPROACH.x, FAMILY_APPROACH.z),
   new THREE.Vector2(FAMILY_PLACE.x, FAMILY_PLACE.z + 4),
   new THREE.Vector2(DOOR_PLACE.x, DOOR_PLACE.z),
 ];
@@ -31,8 +31,9 @@ export const PEG_LENGTH = 0.34;
  * last sheet is torn off its own line and comes down over this one.
  */
 export const SNAG_LINE = (() => {
-  const a = new THREE.Vector3(17.1, 0, -307.6);
-  const b = new THREE.Vector3(19.5, 0, -322.2);
+  const last = CURTAIN_LAYOUT[2];
+  const a = new THREE.Vector3(last.x + 7.1, 0, last.z + 8.4);
+  const b = new THREE.Vector3(last.x + 9.5, 0, last.z - 6.2);
   a.y = heightAt(a.x, a.z) + 5.1;
   b.y = heightAt(b.x, b.z) + 5.3;
   return { a, b, sag: 0.32, bare: [0.22, 0.78] as [number, number] };
@@ -176,6 +177,7 @@ export class WashingCurtain {
   private readonly posts: number[] = [];
   /** The snag line, in straight runs the torn sheet cannot pass through. */
   private readonly rails: number[] = [];
+  private readonly foldedRails: number[] = [];
   private readonly air: ClothAir = { x: 0, y: 0, z: 0, spin: 0, cx: 0, cz: 0 };
   /** How far the torn sheet turns about the upright on its way to lie along the snag line. */
   private yaw = 0;
@@ -197,7 +199,7 @@ export class WashingCurtain {
     this.b = new THREE.Vector3(x + width / 2 + 0.35, top + 0.08, z);
     // They wait and cross where the sheet will not hang once it is down.
     const gap = x + this.plan.gap;
-    this.before = this.ground(gap - this.plan.spread - 0.4, z + 4.7);
+    this.before = this.ground(gap - this.plan.spread - (index === 0 ? 1.6 : 0.4), z + 4.7);
     this.birdBefore = this.ground(gap + this.plan.spread, z + 1.7);
     this.after = this.ground(gap + this.plan.spread, z - 4.5);
     this.way = this.ground(gap + this.plan.spread, z + 1);
@@ -210,6 +212,7 @@ export class WashingCurtain {
       for (let n = 0; n < RAIL_RUNS; n++) {
         lineAt(SNAG_LINE, n / RAIL_RUNS, from); lineAt(SNAG_LINE, (n + 1) / RAIL_RUNS, to);
         this.rails.push(from.x, from.y, from.z, to.x, to.y, to.z, SPACING * 0.55);
+        this.foldedRails.push(from.x, from.y, from.z, to.x, to.y, to.z, 0.035);
       }
     }
 
@@ -517,31 +520,11 @@ export class WashingCurtain {
     if (s >= 1) this.snag();
   }
 
-  /**
-   * The line takes the sheet where it has come down across it: in each column the particle nearest the line, if it
-   * is within `catchReach`, is held where it touches. Should it have come down badly, the middle is held instead,
-   * so it is never left hovering.
-   */
+  /** The carried fold settles across the rope without pinning unrelated creases into a jagged edge. */
   private snag(): void {
-    const k = tuning.linesPassage;
     const { cloth } = this.sheets[0];
-    const { a, b, bare } = SNAG_LINE;
-    const ex = b.x - a.x, ez = b.z - a.z, run = ex * ex + ez * ez;
-    this.hung = []; this.hungAt = [];
-    for (let c = 0; c < cloth.cols; c++) {
-      let best = -1, near = k.catchReach;
-      const at = new THREE.Vector3();
-      for (let r = 0; r < cloth.rows; r++) {
-        const i = (r * cloth.cols + c) * 3;
-        const t = ((cloth.pos[i] - a.x) * ex + (cloth.pos[i + 2] - a.z) * ez) / run;
-        if (t < bare[0] || t > bare[1]) continue;
-        lineAt(SNAG_LINE, t, this.point);
-        const d = this.point.distanceTo(tmp.fromArray(cloth.pos, i));
-        if (d < near) { near = d; best = i / 3; at.copy(this.point); }
-      }
-      if (best >= 0) { this.hung.push(best); this.hungAt.push(at.setY(at.y + 0.04)); }
-    }
-    if (this.hung.length < 4) { this.hung = this.caught; this.hungAt = this.catchAt; }
+    this.hung = this.caught;
+    this.hungAt = this.catchAt;
     this.hungFrom = this.hung.map(i => new THREE.Vector3().fromArray(cloth.pos, i * 3));
     this.snagged = true;
     this.repin();
@@ -581,7 +564,9 @@ export class WashingCurtain {
     this.sheets.forEach((s, j) => {
       const phase = this.phase[j];
       const gust = (i: number) => 1 + 0.3 * Math.sin(t * 2.3 - phase[i]) + 0.15 * Math.sin(t * 5.3 - phase[i] * 1.7);
-      s.cloth.step(h, this.air, k.drag, k.damping, k.iterations, gust, floor.at, this.posts, flying ? k.flightFollow : 0, this.rails);
+      // After the fold is held, the thick catch proxy would stretch its neighbouring particles apart.
+      s.cloth.step(h, this.air, k.drag, k.damping, k.iterations, gust, floor.at, this.posts,
+        flying ? k.flightFollow : 0, this.snagged ? this.foldedRails : this.rails);
     });
   }
 

@@ -157,4 +157,46 @@ The full `organic-wide/` replay subsequently reached the shore but failed the re
 reservation reopened the gap left of curtain two, a foreground pole crossed the waiting child, and ordinary
 washing partly hid the snag. These are rejected iteration results. Preserve the original early field before
 further rotary staging; do not keep clearing it to accommodate the camera. The failed foreground reservation
-has been removed. The current worktree is unfinished.
+was removed. These failed restoration captures are superseded by the verification recorded in [build_plan.md](build_plan.md).
+
+The later camera correction uses the same irregular field. Short overhead rows stay clear of the rotary arms
+and snag, while the final crest opens into the family clearing. Soft, noise-edged grass patches follow the companions' actual
+walk; no tall washing walls or rectangular bays return. The northern extension is now 80 m so the family can
+stand centrally at (14, −353), with the door at (14, −361). A rounded rise conceals that clearing until the third
+curtain has opened. An earlier crest/left-hand clearing trial hid the child behind its far slope and was rejected.
+The final approach follows the child over the rise before settling; the camera gently gains height as the child
+crosses the third curtain, then lowers into the clearing. Keep both companions in the framing contract through
+waiting and walking, because switching that contract only when walking caused abrupt safety corrections.
+
+The torn cloth keeps its continuous carried fold when it catches the rope. Once caught, its collider uses the
+rope's actual thickness: the enlarged flight catch proxy pulled the neighboring vertices away from the pinned
+fold and produced the jagged shape Jeremy reported. The snagged rotary's world-space anchor and saved angle
+are initialized in its constructor so the inbound sailing view cannot render a sheet stretching to the origin.
+
+## Crossing and player-view correction — 2026-10-12
+
+Jeremy reported a long blue strip across the Still-to-Lines crossing:
+
+> fix this. it's appearing on the crossing from the still island to island of lines
+
+He also supplied the obscured rotary waiting view:
+
+> continue. i was going to say, this is also not a very clear view for the player. you must consider the experience from the players camera.
+
+> and add appropriate indicative wind gestures
+
+Initialize the snagged sheet at its post before any chapter update. Compose the rotary approach and waiting view
+so both travellers, the playable sheets and the snag are legible, using the existing irregular washing as the
+frame. Preserve the early funnel and avoid another broad clearance or enclosure. Turning invitations should
+follow a visible sheet's turning direction; the caught hem needs a local lifting spiral. Offer one next action
+at a time, pause hints during input, and never let invitations solve the mechanism.
+
+Jeremy expanded the acceptance criterion to the entire island:
+
+> the sheet that blew off is gone all weird. and why is the door on the beach, with the camera going to the door before teh child even got there? dude. the level of quality here is atrocious. Do not stop until the entire playthrough of the lines island is of exceptional quality for a human player who sees and experiences the game from the camera. Every camera movement must be intentional and cinematic in it's pacing as well.
+
+Review the full crossing, all three curtains, both rotaries, the loose sheet, family clearing and door in motion.
+The family and door must stand inland. The camera accompanies the child into the clearing before settling on
+the reveal; it cannot abandon the walk to frame the destination early. Fix physical cloth contact and flights
+against their relocated posts, not just their endpoints. Desktop and portrait playthroughs must show clear
+companions and interactions, organic enclosure, an earned reveal and continuous camera pacing.

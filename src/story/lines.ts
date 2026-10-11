@@ -9,7 +9,7 @@ import { CURTAINS, LINES_LANDING, LINES_WALK, washingPassage } from '../world/li
 import { SHORE_BIRD, SHORE_PINWHEEL, SHORE_STAGE, SHORE_STAND, shoreHaul } from '../world/shore-pulley';
 import type { Cast, Chapter } from './cast';
 import type { LinesScorePhase } from '../audio/lines-score';
-import { FAMILY_PLACE, DOOR_PLACE } from '../world/lines-layout';
+import { FAMILY_PLACE, FAMILY_APPROACH, DOOR_PLACE } from '../world/lines-layout';
 import { ROTARY_AFTER, ROTARY_BEFORE, ROTARY_BIRD, ROTARY_TOP, ROTARY_ROUTE, rotaryWashing } from '../world/lines-rotary';
 
 export { LINES_BERTH, LINES_LANDING, LINES_WALK } from '../world/lines-passage';
@@ -36,8 +36,10 @@ export class LinesChapter implements Chapter {
   private readonly from = new THREE.Vector3(0.12, 0, 1).normalize();
   private readonly rotaryFrom = new THREE.Vector3(tuning.rotaryWashing.cameraSide, 0, 1).normalize();
   private readonly rotarySubjects = { primary: new THREE.Vector3(), secondary: ROTARY_TOP,
-    tertiary: new THREE.Vector3(), margin: 0.8, extra: 12, primaryRadius: 1.2,
+    tertiary: new THREE.Vector3(), margin: 0.9, extra: 3, primaryRadius: 1.4,
     points: rotaryWashing.rotors.flatMap(r => [-1, 1].map(side => r.top.clone().add(new THREE.Vector3(side * tuning.rotaryWashing.radius, 0, 0)))) };
+  private readonly walkingSubjects = { primary: new THREE.Vector3(), secondary: new THREE.Vector3(),
+    margin: 0.88, extra: 3, primaryRadius: 1.4 };
   private gate = 0;
   private leg = ROUTE.length - 1;
   private now = 0;
@@ -84,7 +86,7 @@ export class LinesChapter implements Chapter {
   }
   get done(): boolean { return this.beat === 'aboard'; }
   get updraftTarget(): THREE.Vector3 | null { return this.beat === 'rotary' ? rotaryWashing.updraftTarget : null; }
-  get coax() { const at = this.updraftTarget; return at && rotaryWashing.rotors[0].open && this.t > tuning.rotaryWashing.inviteAfter ? { at, urgency: 0.8, radius: 1.4 } : null; }
+  get coax() { const at = this.updraftTarget; return at && rotaryWashing.rotors[0].open && this.t > tuning.rotaryWashing.inviteAfter ? { at, urgency: 0.8, radius: 1.4, bold: 1.4 } : null; }
   get linesScore(): LinesScorePhase | undefined {
     if (SHORE_BEATS.includes(this.beat)) return 'shore';
     if (this.beat === 'throughDoor' || (this.beat === 'family' && door.opened)) return 'door';
@@ -349,7 +351,7 @@ export class LinesChapter implements Chapter {
       this.to('familyApproach');
       c.lookAt = FAMILY_MID;
       cygnet.watch(FAMILY_MID);
-      c.walkTo(3, -320, false, () => c.walkTo(FAMILY_PLACE.x - 1.7, FAMILY_PLACE.z + 4.3, false, () => {
+      c.walkTo(FAMILY_APPROACH.x, FAMILY_APPROACH.z, false, () => c.walkTo(FAMILY_PLACE.x - 1.7, FAMILY_PLACE.z + 4.3, false, () => {
         c.faceToward(FAMILY_MID.x, FAMILY_MID.z, 1);
         cygnet.errand = FAMILY_BIRD;
         this.to('family');
@@ -461,7 +463,10 @@ export class LinesChapter implements Chapter {
     const s = this.shot;
     const k = tuning.linesPassage;
     s.from = this.from; s.clearance = 2.1; s.exact = false; s.eye = undefined; s.attention = undefined; s.subjects = undefined;
-    s.composition = undefined; s.authored = false; s.fitWidth = false;
+    s.composition = undefined; s.authored = false; s.fitWidth = false; s.zoom = 1;
+    this.walkingSubjects.primary.copy(c).y += 1.3;
+    this.walkingSubjects.secondary.copy(this.cast.cygnet.position).y += 0.5;
+    s.subjects = this.walkingSubjects;
     if (this.beat === 'throughDoor' || this.beat === 'shore') {
       const base = door.group.position;
       const total = k.doorApproach + k.doorCross;
@@ -482,35 +487,64 @@ export class LinesChapter implements Chapter {
     const atRotary = this.beat === 'rotaryApproach' || this.beat === 'rotary' || this.beat === 'rotaryOpen' || this.beat === 'rotaryThrough';
     if (atRotary) {
       const r = tuning.rotaryWashing;
-      s.target.set((r.x + r.farX) / 2, ROTARY_TOP.y - r.top + r.cameraFocusHeight, (r.z + r.farZ) / 2 + 2);
       const narrow = 1 - THREE.MathUtils.smoothstep(window.innerWidth / window.innerHeight, 0.6, 1.2);
+      s.target.set(r.x + THREE.MathUtils.lerp(r.cameraFocusSide, r.narrowFocusSide, narrow), ROTARY_TOP.y - r.top + r.cameraFocusHeight, r.z);
       s.from = this.rotaryFrom.set(THREE.MathUtils.lerp(r.cameraSide, r.narrowSide, narrow), 0, 1).normalize();
       s.distance = THREE.MathUtils.lerp(r.cameraDistance, r.narrowDistance, narrow);
       s.height = THREE.MathUtils.lerp(r.cameraHeight, r.narrowHeight, narrow);
+      s.zoom = THREE.MathUtils.lerp(r.cameraZoom, r.narrowZoom, narrow);
       s.clearance = 2.5; s.composition = 'hold'; s.authored = true;
       this.rotarySubjects.primary.copy(c).y += 1.2;
       this.rotarySubjects.tertiary.copy(this.cast.cygnet.position).y += 0.5;
       s.subjects = this.rotarySubjects;
-      this.pace = 0.65;
+      if (this.beat === 'rotaryApproach') {
+        const arrived = 1 - THREE.MathUtils.smoothstep(c.distanceTo(ROTARY_BEFORE), 1, 14);
+        s.target.lerp(this.tmp.set(c.x, c.y + 2.8, c.z - 3), 1 - arrived);
+      } else if (this.beat === 'rotaryThrough') {
+        const along = THREE.MathUtils.smoothstep(ROTARY_BEFORE.z - c.z, 0, 10);
+        s.target.set(c.x + THREE.MathUtils.lerp(r.cameraFocusSide, r.narrowFocusSide, narrow) * (1 - along),
+          c.y + THREE.MathUtils.lerp(r.cameraFocusHeight, 2.8, along), c.z - THREE.MathUtils.lerp(r.standBack, 4, along));
+        s.subjects = this.walkingSubjects;
+        s.distance = THREE.MathUtils.lerp(s.distance, k.walkDistance, along);
+        s.height = THREE.MathUtils.lerp(s.height, k.walkHeight, along);
+        s.zoom = THREE.MathUtils.lerp(s.zoom, 1, along);
+      }
+      this.pace = this.beat === 'rotaryThrough' ? 0.85 : 0.65;
     } else if (this.gate < CURTAINS.length && this.beat !== 'ashore' && this.beat !== 'wonder') {
       const g = CURTAINS[this.gate];
-      const waiting = this.beat !== 'approach';
-      const x = waiting ? g.center.x : c.x * 0.7 + g.center.x * 0.3;
-      const z = waiting ? g.center.z + 0.7 : c.z - 3;
-      s.target.set(x, heightAt(x, z) + 2.8, z);
+      const waiting = this.beat === 'curtain' || this.beat === 'birdThrough';
+      s.target.set(g.center.x, heightAt(g.center.x, g.center.z + 0.7) + 2.8, g.center.z + 0.7);
+      if (this.beat === 'approach') {
+        const arrived = 1 - THREE.MathUtils.smoothstep(c.distanceTo(g.before), 1, 10);
+        s.target.lerp(this.tmp.set(c.x, c.y + 2.8, c.z - 3), 1 - arrived);
+      } else if (this.beat === 'childThrough') {
+        const passed = THREE.MathUtils.smoothstep(g.before.z - c.z, 0, g.before.z - g.after.z);
+        s.target.set(THREE.MathUtils.lerp(g.center.x, c.x, passed), c.y + 2.8,
+          c.z - THREE.MathUtils.lerp(4, 3, passed));
+      }
       s.distance = waiting ? k.curtainDistance : k.walkDistance;
       s.height = waiting ? k.curtainHeight : k.walkHeight;
-      // Behind the last sheet the ground rises two metres into tall grass; stand the camera above the blade tips.
+      if (this.beat === 'childThrough' && this.gate === 2) {
+        s.height = THREE.MathUtils.lerp(k.walkHeight, k.crestHeight,
+          THREE.MathUtils.smoothstep(g.before.z - c.z, 0, g.before.z - g.after.z));
+      }
       s.clearance = 3.6;
       if (g.tornFor >= 0) {
         this.snagAttention.point.copy(g.snagPoint);
-        this.snagAttention.strength = THREE.MathUtils.smoothstep(g.tornFor, 0, tuning.linesPassage.flightSeconds);
+        this.snagAttention.strength = this.beat === 'childThrough' ? 0 : THREE.MathUtils.smoothstep(g.tornFor, 0, tuning.linesPassage.flightSeconds);
         s.attention = this.snagAttention;
       }
       this.pace = waiting ? 1.1 : 0.75;
     } else if (this.beat === 'familyApproach' || this.beat === 'family') {
       s.target.copy(FAMILY_MID).setY(heightAt(FAMILY_PLACE.x, FAMILY_PLACE.z) + 2.8);
-      s.from = FAMILY_FACE; s.distance = 17; s.height = 1.2; s.clearance = 3.6;
+      s.from = FAMILY_FACE; s.distance = k.familyDistance; s.height = k.familyHeight; s.clearance = 3.6; s.zoom = k.familyZoom;
+      if (this.beat === 'familyApproach') {
+        const arrived = 1 - THREE.MathUtils.smoothstep(Math.hypot(c.x - FAMILY_PLACE.x, c.z - FAMILY_PLACE.z), 5, 13);
+        s.target.lerp(this.tmp.set(c.x, c.y + 2.8, c.z - 3), 1 - arrived);
+        s.distance = THREE.MathUtils.lerp(k.walkDistance, k.familyDistance, arrived);
+        s.height = THREE.MathUtils.lerp(k.crestHeight, k.familyHeight, arrived);
+        s.zoom = THREE.MathUtils.lerp(1, k.familyZoom, arrived);
+      }
       this.pace = 0.7;
     } else if (this.beat === 'ashore' || this.beat === 'wonder') {
       s.target.set(c.x, heightAt(c.x, c.z) + 4, c.z - 9);

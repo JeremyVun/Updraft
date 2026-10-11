@@ -7,6 +7,7 @@ import { chromium } from 'playwright-core';
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { openRotary } from './lib/rotary-gesture.mjs';
+import { withoutHotReload } from './lib/vite-client-stub.mjs';
 const mode = process.argv[2] ?? 'play';
 const prefix = `/tmp/updraft-lines-${mode}`;
 const lock = '/tmp/updraft-chromium.lock';
@@ -35,6 +36,7 @@ const report = { mode, passages: [], errors: [] };
 let page;
 try {
   page = await browser.newPage({ viewport, hasTouch: portrait });
+  await withoutHotReload(page);
   page.on('pageerror', e => report.errors.push(e.message));
   page.on('console', m => { if (m.type() === 'error') report.errors.push(m.text()); });
   // The secret shore must already be absent before the washing chapter owns the camera.

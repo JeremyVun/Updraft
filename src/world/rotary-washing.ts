@@ -59,6 +59,9 @@ class FrameRig {
   private readonly spin = { value: 0 };
   private readonly gesture = new WindGesture('rotary-washing-invitation');
   private readonly invitationAt = new THREE.Vector3();
+  private readonly point = new THREE.Vector3();
+  private readonly projected = new THREE.Vector3();
+  private readonly tangent = new THREE.Vector3();
   private readonly snag = { value: 1 };
   private readonly snagAt = { value: new THREE.Vector3() };
   private elapsed = 0;
@@ -67,6 +70,9 @@ class FrameRig {
   constructor(private readonly frame: RotaryFrame, subject: THREE.Vector4) {
     this.group.name = 'rotary-washing-' + frame.index;
     this.group.position.copy(frame.foot);
+    this.rotor.rotation.y = frame.angle;
+    this.snag.value = frame.unhook < 1 ? 1 : 0;
+    this.snagAt.value.copy(frame.snagPoint).y += frame.unhook * 1.25;
     this.group.add(this.rotor);
     const mast = new THREE.CylinderGeometry(0.13, 0.19, K.top + 0.3, 10).translate(0, (K.top + 0.3) / 2, 0);
     this.group.add(new THREE.Mesh(mast, paint('#a9b4a0')));
@@ -154,13 +160,27 @@ class FrameRig {
     this.rotor.rotation.y = r.angle;
     this.spin.value += (r.speed - this.spin.value) * (1 - Math.exp(-dt * 4));
     this.gesture.hide();
-    if (!rotaryWashing.active || r.aligned || r.liftTarget) { this.elapsed = 0; this.alpha = 0; return; }
+    const next = rotaryWashing.rotors.find(frame => !frame.open);
+    if (!rotaryWashing.active || next !== r || r.aligned || r.liftTarget) { this.elapsed = 0; this.alpha = 0; return; }
     this.elapsed += dt;
     const offered = this.elapsed > K.inviteAfter && r.brushAge > K.invitePause;
     this.alpha += ((offered ? 0.8 : 0) - this.alpha) * (1 - Math.exp(-dt * 4));
-    r.clothPoint(1, 0.5, 2, this.invitationAt);
+    let nearest = Infinity;
+    for (const side of [-1, 1]) for (const fraction of [0.24, 0.76]) {
+      r.clothPoint(side, fraction, 2.6, this.point);
+      this.projected.copy(this.point).project(camera);
+      if (Math.abs(this.projected.x) > 0.8 || Math.abs(this.projected.y) > 0.8) continue;
+      const distance = this.point.distanceToSquared(camera.position);
+      if (distance < nearest) { nearest = distance; this.invitationAt.copy(this.point); }
+    }
+    if (!Number.isFinite(nearest)) return;
+    const direction = Math.sign(Math.atan2(Math.sin(r.goal - r.angle), Math.cos(r.goal - r.angle))) || 1;
+    this.tangent.set(this.invitationAt.z - r.foot.z, 0, r.foot.x - this.invitationAt.x).normalize();
+    this.projected.copy(this.invitationAt).project(camera);
+    this.point.copy(this.invitationAt).addScaledVector(this.tangent, direction).project(camera).sub(this.projected);
+    const tilt = Math.atan2(this.point.y, this.point.x * ((camera as THREE.PerspectiveCamera).aspect ?? 1));
     const phase = (Math.max(0, this.elapsed - K.inviteAfter) % (K.inviteSweep + K.invitePause)) / K.inviteSweep;
-    this.gesture.draw(camera, this.invitationAt, phase, K.radius * 0.8, this.alpha, 0.1);
+    this.gesture.draw(camera, this.invitationAt, phase, K.radius * 0.7, this.alpha, 0.1, 'across', 1, tilt, true);
   }
 }
 

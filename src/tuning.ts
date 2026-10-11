@@ -775,7 +775,8 @@ export const tuning = {
     meadowPianoSaddle: 6,
     /** Height of the dome in the middle of the island of lines, on top of about 4 of beach and lumps. */
     linesDome: 5.5,
-    linesNorthExtension: 40,
+    linesNorthExtension: 80,
+    linesFold: { x: 10, z: -326, radiusX: 24, radiusZ: 14, height: 5.8 },
     /** Height of the crest the birches stand on, on top of about 3 of beach and lumps. */
     birchesCrest: 5.2,
   },
@@ -1269,17 +1270,18 @@ export const tuning = {
   },
   /** Making a way through the washing: forgiving wind gestures, an invitation, and the view from below. */
   rotaryWashing: {
-    x: 9, z: -277, farX: 20, farZ: -292, radius: 6.4, top: 6.9,
-    pathOffset: 4.6, standBack: 10.3, exitAhead: 9,
+    x: 9, z: -284, farX: 13, farZ: -300, radius: 6.4, top: 6.9,
+    pathOffset: 4.6, standBack: 7.8, exitAhead: 9,
     torque: 0.95, friction: 1.1, maxSpeed: 1.05,
     catchAngle: 0.2, catchRate: 3.5, settleSeconds: 1.1, revealPause: 1.4,
     brushRadius: 0.055, brushFrom: 0.35, airMemory: 0.25, strokeGain: 1.6,
     unhookRate: 0.38, liftFrom: 0.15, liftFull: 1.5, liftRadius: 4,
     startAngle: -Math.PI / 2, snagTurn: 0.16, snagSide: 5.1, snagAhead: 7.9,
     windRadius: 3, energyDivisor: 25, brushEnergy: 0.6, energyFrom: 0.02, energyFull: 0.2,
-    inviteAfter: 5, invitePause: 3, inviteSweep: 1.9,
-    cameraDistance: 29, cameraHeight: 5.8, cameraSide: 0.08, cameraFocusHeight: 3.5,
-    narrowDistance: 27, narrowHeight: 14, narrowSide: -0.55,
+    inviteAfter: 2.4, invitePause: 2.8, inviteSweep: 1.9,
+    cameraDistance: 20, cameraHeight: 1.6, cameraSide: 0.12, cameraFocusHeight: 3.2, cameraFocusSide: 3,
+    cameraZoom: 0.88, narrowZoom: 0.58,
+    narrowDistance: 13, narrowHeight: 1.4, narrowSide: 0.08, narrowFocusSide: 1.5,
   },
   linesPassage: {
     /** Local gusts count in any direction, and several small sweeps add up. */
@@ -1311,12 +1313,12 @@ export const tuning = {
      * turning it face on within the first `flightTurn` of the flight;
      * across its middle (`catchRow` of the way down, all but `catchMargin` at each side) it is steered at
      * `flightGrip` rad/s, firming to `catchGrip` as it comes down to lie along the line, gathered to `catchGather`.
-     * The line takes it wherever it has come down within `catchReach` m of it, and it settles there over `catchSettle` s.
+     * The carried fold settles onto the line over `catchSettle` s.
      */
     flightSeconds: 2, flightRise: 1.3, flightAhead: 1.5, flightFollow: 4, flightLift: 1.05, flightAim: 3,
     flightTurn: 0.35, flightOver: 0.8,
     flightGrip: 6, catchGrip: 10,
-    catchRow: 0.42, catchMargin: 0.18, catchGather: 0.85, catchReach: 0.6, catchSettle: 0.3,
+    catchRow: 0.42, catchMargin: 0.18, catchGather: 0.85, catchSettle: 0.8,
     /** The share of the view that glances toward the line the torn sheet comes down on. */
     snagGlance: 0.3,
     /** A sheet already down when a checkpoint is loaded falls and settles this long before it is shown. */
@@ -1334,6 +1336,7 @@ export const tuning = {
     portalScale: 0.75,
     walkDistance: 16, walkHeight: 1.4,
     curtainDistance: 17, curtainHeight: 0.9,
+    crestHeight: 6.8, familyDistance: 15, familyHeight: 1.2, familyZoom: 0.95,
     viewClearanceAhead: 31, viewClearanceRadius: 5.5,
   },
   /**

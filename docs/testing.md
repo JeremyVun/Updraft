@@ -176,8 +176,15 @@ edit.
   and live fog uniforms through the first roof and tree. `node tools/drowned-audit-check.mjs /tmp/drowned.json`
   checks the four-second sailing interval, matching tone/effect onset, music fade and fog motion.
 - `rotary-washing-check`: idle, off-target and muted input, local unhooking, persistent turns, both directions and independent
-  alignment stops at 30/60/120 Hz. `rotary-washing-browser-check` drives real sweeps through the new encounter to the shore;
-  `FULL=1` plays all three curtains, and `TOUCH=1 W=390 H=844 REVERSE=1` exercises portrait touch. A rendered family mask checks concealment through camera transitions and visibility at the reveal.
+  alignment stops at 30/60/120 Hz. `rotary-rig-check` checks both closed and restored cloth before its first update,
+  catching a snag anchored at the world origin during the inbound crossing. `lines-cloth-check` measures settled
+  mesh strain after real curtain releases at four gust bearings and 30/60/120 Hz, including checkpoint restoration;
+  `NEGATIVE=1` restores the oversized rope collider to prove it fails.
+  `rotary-washing-browser-check` drives real sweeps through the encounter, doorway, pulley and boat departure.
+  `FULL=1` plays all three curtains, `CROSSING=1` includes the inbound sailing approach, and
+  `TOUCH=1 W=390 H=844 REVERSE=1` exercises portrait touch. A rendered family mask checks concealment through
+  camera transitions and visibility at the reveal. `REVIEW=1` captures chronological stills and per-frame camera
+  traces in `OUT`; these are frame/trace evidence, not a reviewed video.
 - In the browser with real gestures: `lines-check`, `lines-view-check`, `little-boats-check`, `piano-check`,
   `scarf-check`, `stairs-check`, `storm-check`, `wood-check`, `ember-check`, `sea-check`, `sky-mirror-check`,
   `sleeping-check`, `summit-arrival-check`, `home-approach-browser-check`, `ending-check`, `landing-check`,

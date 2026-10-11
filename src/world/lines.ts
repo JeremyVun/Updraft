@@ -7,7 +7,7 @@ import { heightAt } from './island';
 import { glsl, tuning } from '../tuning';
 import { CURTAINS, PEG_LENGTH, type WashingCurtain } from './lines-passage';
 import type { Cloth } from './cloth-sim';
-import { FAMILY_PLACE, DOOR_PLACE, ROTARY_PLACE } from './lines-layout';
+import { FAMILY_PLACE, FAMILY_APPROACH, DOOR_PLACE, ROTARY_PLACE } from './lines-layout';
 
 /** Washing hung out on a line: pegged along its top edge, swinging up and fluttering in the live wind. */
 const CLOTH_VERT = /* glsl */ `
@@ -783,7 +783,7 @@ export function lineField(
 ): LineSpec[] {
   const rand = mulberry32(seed);
   const reserved = (ax: number, az: number, bx: number, bz: number): boolean => hung.length > 0 && (
-    pointToRun(FAMILY_PLACE.x, FAMILY_PLACE.z - 3, ax, az, bx, bz) < 12 ||
+    pointToRun(FAMILY_PLACE.x, FAMILY_PLACE.z + 2, ax, az, bx, bz) < 16 ||
     pointToRun(DOOR_PLACE.x, DOOR_PLACE.z - 9, ax, az, bx, bz) < 8 ||
     pointToRun(ROTARY_PLACE.x, ROTARY_PLACE.z, ax, az, bx, bz) < ROTARY_PLACE.radius + 0.25 ||
     pointToRun(ROTARY_PLACE.farX, ROTARY_PLACE.farZ, ax, az, bx, bz) < ROTARY_PLACE.radius + 0.25 ||
@@ -870,7 +870,16 @@ export function lineField(
     });
   }
 
-  return specs.slice(hung.length);
+  // Leave the rotary arms against the sky; short washing across their approach hides the mechanism.
+  return specs.slice(hung.length).filter(s =>
+    pointToRun(FAMILY_APPROACH.x, FAMILY_APPROACH.z, s.a.x, s.a.z, s.b.x, s.b.z) > 9 &&
+    pointToRun(tuning.world.linesFold.x, tuning.world.linesFold.z, s.a.x, s.a.z, s.b.x, s.b.z) > 8 &&
+    pointToRun(ROTARY_PLACE.farX + ROTARY_PLACE.snagSide, ROTARY_PLACE.farZ + ROTARY_PLACE.snagAhead,
+      s.a.x, s.a.z, s.b.x, s.b.z) > 3 && (s.drop === undefined || (
+    pointToRun(ROTARY_PLACE.x, ROTARY_PLACE.z, s.a.x, s.a.z, s.b.x, s.b.z) > ROTARY_PLACE.radius + 7 &&
+    pointToRun(ROTARY_PLACE.farX, ROTARY_PLACE.farZ, s.a.x, s.a.z, s.b.x, s.b.z) > ROTARY_PLACE.radius + 7 &&
+    pointToRun(FAMILY_APPROACH.x, FAMILY_APPROACH.z, s.a.x, s.a.z, s.b.x, s.b.z) > 14
+  )));
 }
 
 /** The point a fraction `t` of the way along the path, and the direction it runs there. */
