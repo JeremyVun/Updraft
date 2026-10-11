@@ -152,13 +152,18 @@ cygnet goes first and looks back for the child, through the way the fallen cloth
 chosen once the sheet has been down `passAfter`), and the child follows. Crossing arrivals stay earned if a gust
 moves the waiting bird; reaching the gap counts even if the bird has already cleared its own walking target.
 
-Between the second and third curtains, the prototype puts a giant rotary washing line across the walk. Pale sheets
-hang on one half; broad sweeps across them turn the arms in either direction until the bare half faces the path and
-the bearing catches. It coasts to rest without undoing progress. The child and cygnet wait outside its swept circle,
-then pass beside the mast. Turning the sheets reveals the existing blue, yellow and red garments farther ahead,
-framed in depth through the washing. The final curtain and family have moved farther north to make room. The
-northern terrain extends 40 m beneath more washing, keeping the family and door inland at their original elevation;
-the arrival beach and first approach retain their original heights.
+Between the second and third curtains stand two giant rotaries. Their placement is being revised against the
+original organic washing field; the rectangular enclosures were rejected. Both start spread. The farther one's trailing sheet is hooked over a neighbouring
+post: turning pulls it taut, and a local updraft lifts the hem free. Broad sweeps then align the bare halves of both
+frames with the path. Each catches independently; neither runs back. The child and cygnet wait outside their swept
+circles until both have settled, then walk through together.
+Their sage and dusty blue linen carries narrow cream stripes. Only the three curtain challenges wear white with
+red borders, so the two interactions read differently before the player touches them.
+
+The original lane between curtains one and two is formed by loose, overlapping rows of varied washing. The later
+path turns round a bend; the family must stay hidden until curtain three has been completed. That reveal is being
+rechecked as the prototype's rejected cloth walls are removed. The northern
+terrain extends 40 m beneath more washing, keeping the final clearing inland; the arrival heights are unchanged.
 
 The last sheet opens on a clearing: one low line with a blue and a red adult garment and the small yellow jumper
 between them, and the red door. The released breeze brings the sleeves together (blue

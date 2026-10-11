@@ -76,7 +76,7 @@ import { screenPan } from './creatures/motion';
 import { SwanFlock } from './creatures/flock';
 import { CURTAINS, SNAG_LINE, washingPassage } from './world/lines-passage';
 import { rotaryWashing } from './world/lines-rotary';
-import { DOOR_PLACE } from './world/lines-layout';
+import { DOOR_PLACE, LINES_FIELD_PATH } from './world/lines-layout';
 import { RotaryWashingRig } from './world/rotary-washing';
 import { createDoorShoreGrass } from './world/door-shore';
 import { DOOR_EXIT, doorway, DoorwayView } from './world/doorway';
@@ -248,10 +248,10 @@ scene.add(piano.group);
 /** Hung around the walk over the island, so the open ground through it is always the way on. */
 await built();
 const passageLines = lineField(new THREE.Vector2(ISLES.lines.x, ISLES.lines.z + tuning.world.linesNorthExtension / 2 + 8),
-  210, 49, 17, LINES_WALK, [FAMILY_LINE, SNAG_LINE, ...CURTAINS]);
-const beyondDoor = lineField(new THREE.Vector2(DOOR_PLACE.x, DOOR_PLACE.z - 32), 160, 43, 183,
-  [], [FAMILY_LINE, SNAG_LINE, ...CURTAINS, ...passageLines]);
-const washingLines = [...passageLines, ...beyondDoor, SNAG_LINE, ...CURTAINS];
+  210, 49, 17, LINES_FIELD_PATH.map(p => new THREE.Vector2(p.x, p.z)), [FAMILY_LINE, SNAG_LINE, ...CURTAINS]);
+const northLines = lineField(new THREE.Vector2(ISLES.lines.x, DOOR_PLACE.z - 4), 160, 43, 183,
+  LINES_FIELD_PATH.map(p => new THREE.Vector2(p.x, p.z)), [FAMILY_LINE, SNAG_LINE, ...CURTAINS, ...passageLines]);
+const washingLines = [...passageLines, ...northLines, SNAG_LINE, ...CURTAINS];
 await built();
 const washing = new WashingLines(washingLines, 91, FAMILY_LINE);
 const rotaryRig = new RotaryWashingRig(washing.subject);

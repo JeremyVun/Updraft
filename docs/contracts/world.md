@@ -44,7 +44,7 @@ and half-sizes are in `ISLES` (`heightfield.ts`) unless noted:
 
 The rotary washing-line prototype extends Lines 40 m north (`tuning.world.linesNorthExtension`), mapping its
 existing terrain north of −260 into the longer footprint. Ground south of that join is unchanged; the family and
-door remain inland at their former elevation. The height atlas's measured reach includes the extended underwater
+door remain on inland high ground around the final linen bend. The height atlas's measured reach includes the extended underwater
 slope. This changes shape in place, not saved horizontal coordinates.
 
 `world/geography.ts` holds each moved room's shift from its original placement, and `GEOGRAPHY_VERSION` migrates

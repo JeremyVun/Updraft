@@ -1269,15 +1269,17 @@ export const tuning = {
   },
   /** Making a way through the washing: forgiving wind gestures, an invitation, and the view from below. */
   rotaryWashing: {
-    x: 11, z: -277, radius: 7.6, top: 5.8,
-    pathOffset: 5.5, standBack: 10.3, exitAhead: 10,
-    torque: 0.48, friction: 1.15, maxSpeed: 0.65,
-    catchAngle: 0.25, catchRate: 2.8, settleSeconds: 1.6, revealPause: 2.2,
-    brushRadius: 0.12, brushFrom: 0.8, airMemory: 0.4,
+    x: 9, z: -277, farX: 20, farZ: -292, radius: 6.4, top: 6.9,
+    pathOffset: 4.6, standBack: 10.3, exitAhead: 9,
+    torque: 0.95, friction: 1.1, maxSpeed: 1.05,
+    catchAngle: 0.2, catchRate: 3.5, settleSeconds: 1.1, revealPause: 1.4,
+    brushRadius: 0.055, brushFrom: 0.35, airMemory: 0.25, strokeGain: 1.6,
+    unhookRate: 0.38, liftFrom: 0.15, liftFull: 1.5, liftRadius: 4,
+    startAngle: -Math.PI / 2, snagTurn: 0.16, snagSide: 5.1, snagAhead: 7.9,
     windRadius: 3, energyDivisor: 25, brushEnergy: 0.6, energyFrom: 0.02, energyFull: 0.2,
     inviteAfter: 5, invitePause: 3, inviteSweep: 1.9,
-    cameraDistance: 25, cameraHeight: 4.2, cameraSide: 0.15,
-    narrowDistance: 34, narrowHeight: 3.6, narrowSide: 0.15,
+    cameraDistance: 29, cameraHeight: 5.8, cameraSide: 0.08, cameraFocusHeight: 3.5,
+    narrowDistance: 27, narrowHeight: 14, narrowSide: -0.55,
   },
   linesPassage: {
     /** Local gusts count in any direction, and several small sweeps add up. */

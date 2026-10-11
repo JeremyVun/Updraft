@@ -10,7 +10,7 @@ Browser game where you play the wind (Three.js + TypeScript + Vite). **Read `doc
 - Favicon artwork and Jeremy's brief: `docs/favicon.md`. Bringing the look toward the room paintings (work in progress, Jeremy's brief verbatim): `docs/painted-look.md`.
 - Chapter paintings and current art studies: `assets/art-direction/continue/README.md`; sea approval, dolphin variant and mirror perspective brief: `assets/art-direction/sea-mirror-study-2026-10-05/round-3.json`.
 - Every room, how it plays and Jeremy's rulings for it: `docs/chapters.md`. The stairs in the clouds (work in progress, Jeremy's brief verbatim): `docs/stairs.md`.
-- Rotary washing-line design prototype, Jeremy's brief and verification plan: `docs/backlog/lines-rotary/design.md`.
+- Rotary washing-line design prototype, Jeremy's brief and verification plan: `docs/backlog/lines-rotary/design.md`. Preserve the original irregular washing funnel and early field when extending the route; camera clearances can erase it, and rectangular cloth walls destroy its character. Check visible bypasses and reveals from moving player cameras, including gusts.
 - The drowned village being rebuilt (work in progress under Claude's creative lead; the vision, the sequence step by step and Jeremy's brief verbatim): `docs/backlog/path-puzzles/design.md`, phases in `build_plan.md`.
 - The characters: the child `docs/child.md`, the cygnet `docs/cygnet.md`, the boat `docs/boat.md`.
 - Contracts: the wind field every system reads `docs/contracts/wind.md`; the ground, its life, the islands and what lives on them `docs/contracts/world.md`; sound `docs/contracts/audio.md`; checkpoint saves, chapter select and hidden-page audio `docs/contracts/progress.md`; analytics `docs/contracts/analytics.md`.

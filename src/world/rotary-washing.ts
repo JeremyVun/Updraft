@@ -1,16 +1,19 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { WindGesture } from '../fx/wind-gesture';
-import { glsl, tuning } from '../tuning';
+import { tuning } from '../tuning';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { CLOTH_FRAG, PAINT_FRAG, WOOD_FRAG, WOOD_VERT, passagePegGeometry } from './lines';
-import { ROTARY_FOOT, rotaryWashing } from './lines-rotary';
+import { rotaryWashing, ROTARY_SHEET_INTERVALS, type RotaryFrame } from './lines-rotary';
 
 const K = tuning.rotaryWashing;
 const UP = new THREE.Vector3(0, 1, 0);
 const CLOTH_VERTEX = /* glsl */ `
 ${ATMO_GLSL}
 uniform vec3 uColor;
+uniform vec3 uCentre;
+uniform vec3 uSnagAt;
+uniform float uSnag;
 uniform float uSpin;
 out vec3 vWorld;
 out vec3 vNormal;
@@ -20,19 +23,22 @@ out float vSwing;
 out float vRole;
 out float vCurtain;
 void main() {
-  vec4 world = modelMatrix * vec4(position, 1.0);
   float hang = 1.0 - uv.y;
+  vec3 p = position;
+  vec4 world = modelMatrix * vec4(p, 1.0);
   vec4 sway = swayAt(world.xz);
   vec2 breeze = clamp(sway.xy, vec2(-3.0), vec2(3.0));
-  vec2 radial = world.xz - vec2(${glsl(K.x)}, ${glsl(K.z)});
+  vec2 radial = world.xz - uCentre.xz;
   vec2 drag = vec2(-radial.y, radial.x) * uSpin * 0.38;
   float ripple = sin(uv.x * 13.0 + uTime * 1.8 - hang * 3.0) * 0.07;
   world.xz += (breeze * 0.18 + drag) * hang * hang;
   world.xz += normalize(radial) * ripple * hang;
   world.y += (length(breeze) * 0.04 + abs(uSpin) * 0.2) * hang * hang;
+  float hooked = smoothstep(0.35, 1.0, hang) * smoothstep(0.45, 1.0, uv.x) * uSnag;
+  world.xyz = mix(world.xyz, uSnagAt, hooked);
   vWorld = world.xyz;
   vNormal = normalize(mat3(modelMatrix) * normal);
-  vColor = uColor; vUv = uv; vSwing = 0.0; vRole = -1.0; vCurtain = 1.0;
+  vColor = uColor; vUv = uv; vSwing = 0.0; vRole = -1.0; vCurtain = 2.0;
   gl_Position = projectionMatrix * viewMatrix * world;
 }`;
 
@@ -47,18 +53,20 @@ function paint(colour: string): THREE.ShaderMaterial {
     vertexShader: WOOD_VERT, fragmentShader: PAINT_FRAG });
 }
 
-export class RotaryWashingRig {
+class FrameRig {
   readonly group = new THREE.Group();
   private readonly rotor = new THREE.Group();
   private readonly spin = { value: 0 };
   private readonly gesture = new WindGesture('rotary-washing-invitation');
   private readonly invitationAt = new THREE.Vector3();
+  private readonly snag = { value: 1 };
+  private readonly snagAt = { value: new THREE.Vector3() };
   private elapsed = 0;
   private alpha = 0;
 
-  constructor(subject: THREE.Vector4) {
-    this.group.name = 'rotary-washing';
-    this.group.position.copy(ROTARY_FOOT);
+  constructor(private readonly frame: RotaryFrame, subject: THREE.Vector4) {
+    this.group.name = 'rotary-washing-' + frame.index;
+    this.group.position.copy(frame.foot);
     this.group.add(this.rotor);
     const mast = new THREE.CylinderGeometry(0.13, 0.19, K.top + 0.3, 10).translate(0, (K.top + 0.3) / 2, 0);
     this.group.add(new THREE.Mesh(mast, paint('#a9b4a0')));
@@ -78,8 +86,8 @@ export class RotaryWashingRig {
         if (i === 0 || i === 3) {
           const pieces = size === 1 ? 2 : 1;
           for (let piece = 0; piece < pieces; piece++) {
-            const lo = (piece + 0.08) / pieces, hi = (piece + 0.92) / pieces;
-            const drop = size === 1 ? 4.1 + piece * 0.25 : 1.15 + size;
+            const [lo, hi] = size === 1 ? ROTARY_SHEET_INTERVALS[piece] : [0.08, 0.92];
+            const drop = size === 1 ? 5.05 + piece * 0.25 : 1.15 + size;
             const geometry = new THREE.PlaneGeometry(1, 1, 18, 20);
             const pos = geometry.getAttribute('position'), uv = geometry.getAttribute('uv');
             for (let n = 0; n < pos.count; n++) {
@@ -93,7 +101,10 @@ export class RotaryWashingRig {
             geometry.computeVertexNormals();
             const material = new THREE.ShaderMaterial({
               uniforms: { ...atmo.uniforms, uSubject: { value: subject }, uFamilyFlutter: { value: 0 },
-                uColor: { value: new THREE.Color(piece ? '#e7decb' : '#f3ebdd') }, uSpin: this.spin },
+                uColor: { value: new THREE.Color(frame.index ? (piece ? '#a7baca' : '#89a5b8') : (piece ? '#adc1ab' : '#94ae9d')) },
+                uSpin: this.spin,
+                uCentre: { value: frame.foot }, uSnagAt: this.snagAt,
+                uSnag: frame.index === 1 && i === 3 && size === 1 && piece === 1 ? this.snag : { value: 0 } },
               vertexShader: CLOTH_VERTEX, fragmentShader: CLOTH_FRAG,
               side: THREE.DoubleSide, alphaToCoverage: true,
             });
@@ -116,22 +127,34 @@ export class RotaryWashingRig {
     }
     this.rotor.add(new THREE.Mesh(mergeGeometries(arms), paint('#a3ae9b')));
     this.rotor.add(new THREE.Mesh(mergeGeometries(ropes), new THREE.ShaderMaterial({
-      uniforms: atmo.uniforms, vertexShader: WOOD_VERT, fragmentShader: WOOD_FRAG })));
+      uniforms: { ...atmo.uniforms }, vertexShader: WOOD_VERT, fragmentShader: WOOD_FRAG })));
     this.rotor.add(new THREE.Mesh(mergeGeometries(pegs), paint('#d9c29b')));
     const stop = new THREE.BoxGeometry(0.22, 0.25, 0.54).translate(-0.18, K.top - 1.68, 0.12);
-    this.group.add(new THREE.Mesh(stop, hardware));
+    this.group.add(new THREE.Mesh(stop, paint('#79847a')));
     const lug = new THREE.BoxGeometry(0.22, 0.22, 0.46).translate(0.22, K.top - 1.68, 0.12);
     this.rotor.add(new THREE.Mesh(lug, hardware));
     this.group.add(this.gesture.batch.mesh);
-    this.gesture.batch.mesh.position.copy(ROTARY_FOOT).negate();
+    this.gesture.batch.mesh.position.copy(frame.foot).negate();
+    if (frame.index === 1) {
+      const p = frame.snagPoint.clone().sub(frame.foot);
+      const foot = p.clone().setY(0);
+      this.group.add(new THREE.Mesh(rod(foot, p.clone().add(new THREE.Vector3(0, 0.2, 0)), 0.12), paint('#938574')));
+      const cap = new THREE.SphereGeometry(0.2, 8, 6).translate(p.x, p.y, p.z);
+      this.group.add(new THREE.Mesh(cap, paint('#b8a58a')));
+      const end = p.clone().add(new THREE.Vector3(2.2, 0.35, -8));
+      this.group.add(new THREE.Mesh(rod(end.clone().setY(0), end, 0.1), paint('#938574')));
+      this.group.add(new THREE.Mesh(rod(p, end, 0.022), paint('#c2b9a2')));
+    }
   }
 
   update(dt: number, camera: THREE.Camera): void {
-    const r = rotaryWashing;
+    const r = this.frame;
+    this.snag.value += ((r.unhook < 1 ? 1 : 0) - this.snag.value) * (1 - Math.exp(-dt * 2.3));
+    this.snagAt.value.copy(r.snagPoint).y += r.unhook * 1.25;
     this.rotor.rotation.y = r.angle;
     this.spin.value += (r.speed - this.spin.value) * (1 - Math.exp(-dt * 4));
     this.gesture.hide();
-    if (!r.active || r.caught) { this.elapsed = 0; this.alpha = 0; return; }
+    if (!rotaryWashing.active || r.aligned || r.liftTarget) { this.elapsed = 0; this.alpha = 0; return; }
     this.elapsed += dt;
     const offered = this.elapsed > K.inviteAfter && r.brushAge > K.invitePause;
     this.alpha += ((offered ? 0.8 : 0) - this.alpha) * (1 - Math.exp(-dt * 4));
@@ -139,4 +162,14 @@ export class RotaryWashingRig {
     const phase = (Math.max(0, this.elapsed - K.inviteAfter) % (K.inviteSweep + K.invitePause)) / K.inviteSweep;
     this.gesture.draw(camera, this.invitationAt, phase, K.radius * 0.8, this.alpha, 0.1);
   }
+}
+
+export class RotaryWashingRig {
+  readonly group = new THREE.Group();
+  private readonly frames: FrameRig[];
+  constructor(subject: THREE.Vector4) {
+    this.frames = rotaryWashing.rotors.map(r => new FrameRig(r, subject));
+    this.frames.forEach(r => this.group.add(r.group));
+  }
+  update(dt: number, camera: THREE.Camera): void { this.frames.forEach(r => r.update(dt, camera)); }
 }

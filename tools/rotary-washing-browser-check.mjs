@@ -4,7 +4,9 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { openBrowser } from './lib/browser.mjs';
-import { turnRotary } from './lib/rotary-gesture.mjs';
+import { openRotary } from './lib/rotary-gesture.mjs';
+import { watchFamilyVisibility, checkFamilyVisibility } from './lib/family-visibility.mjs';
+import { withoutHotReload } from './lib/vite-client-stub.mjs';
 const width=Number(process.env.W??1440),height=Number(process.env.H??900);
 const touchMode=!!process.env.TOUCH;
 const out=process.env.OUT??fs.mkdtempSync('/tmp/updraft-rotary-browser-');
@@ -16,9 +18,11 @@ try {
   page=await browser.newPage({viewport:{width,height},hasTouch:touchMode,recordVideo:{dir:out,size:{width,height}}});
   page.on('pageerror',e=>errors.push(e.message));
   page.on('console',m=>{if(m.type()==='error'&&!m.text().includes('favicon'))errors.push(m.text());});
+  await withoutHotReload(page);
   await page.goto(`${process.env.BASE??'http://127.0.0.1:5243/'}?shot&chapter=washing&progress=0&ratio=1`);
   await page.waitForFunction(()=>window.__ready,null,{timeout:60000});
-  const shot=async name=>{await page.screenshot({path:`${out}/${name}.png`});console.log(name);};
+  await watchFamilyVisibility(page);
+  const shot=async name=>{assert(await page.evaluate(()=>__game.rig.camera.position.toArray().every(Number.isFinite)), 'camera remains finite');await page.screenshot({path:`${out}/${name}.png`});console.log(name);};
   const touch=touchMode?await page.context().newCDPSession(page):null;
   async function swipe(a,b,ms=900) {
     if(touch)await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:a[0]*width,y:a[1]*height}]});
@@ -51,30 +55,31 @@ try {
     g.story.current.restoreCheckpoint('rotary',[2,0]);
   });
   await page.waitForFunction(()=>__game.story.current.beat==='rotary',null,{timeout:60000});
-  await page.waitForTimeout(7000);
+  await page.waitForFunction(()=>__game.story.current.t>8,null,{timeout:60000});
   await shot('rotary-waiting');
-  assert.equal(await page.evaluate(()=>__game.rotaryWashing.angle),0,'idle rotor must stay closed');
-  let midpoint=false;
-  for(let stroke=0;stroke<35;stroke++){
-    await turnRotary(page, !!process.env.REVERSE, touch);
-    const state=await page.evaluate(()=>({angle:__game.rotaryWashing.angle,speed:__game.rotaryWashing.speed,open:__game.rotaryWashing.open,caught:__game.rotaryWashing.caught}));
-    console.log(stroke,state);
-    if(!midpoint&&Math.abs(state.angle)>1.3){await shot('rotary-turning');midpoint=true;}
-    if(state.caught)break;
-  }
-  await page.waitForFunction(()=>__game.story.current.beat==='rotaryOpen',null,{timeout:15000});
-  await shot('rotary-open');
+  assert.deepEqual(await page.evaluate(()=>__game.rotaryWashing.rotors.map(r=>[r.unhook,r.aligned])),[[1,false],[0,false]],'idle mechanisms stay closed');
+  await openRotary(page,touch,!!process.env.REVERSE,shot);
   await page.waitForTimeout(3300);
   await shot('rotary-crossing');
+  await page.waitForFunction(()=>__game.child.position.z < -283,null,{timeout:60000});
+  await shot('rotary-near-passage');
+  await page.waitForFunction(()=>__game.child.position.z < -297,null,{timeout:60000});
+  await shot('rotary-far-passage');
   await curtain(2);
   await page.waitForFunction(()=>__game.story.current.beat==='family',null,{timeout:60000});
   await page.waitForTimeout(2200);
   await shot('family');
   await page.waitForFunction(()=>__game.story.current.beat==='haul',null,{timeout:120000});
   await shot('shore');
+  const visibility=await checkFamilyVisibility(page);
   assert.deepEqual(errors,[]);
-  fs.writeFileSync(`${out}/report.json`,JSON.stringify({width,height,touch:touchMode,errors,full:!!process.env.FULL,reverse:!!process.env.REVERSE},null,2));
+  fs.writeFileSync(`${out}/report.json`,JSON.stringify({visibility,width,height,touch:touchMode,errors,full:!!process.env.FULL,reverse:!!process.env.REVERSE},null,2));
   const video=page.video();await page.close();await video.saveAs(`${out}/playthrough.webm`);
   console.log(`PASS: ${out}`);
-} catch(e){if(page&&!page.isClosed())await page.screenshot({path:`${out}/failure.png`}).catch(()=>{});console.error(errors);throw e;}
+} catch(e){if(page&&!page.isClosed()){
+  await page.screenshot({path:`${out}/failure.png`}).catch(()=>{});
+  fs.writeFileSync(`${out}/failure.json`,JSON.stringify(await page.evaluate(()=>({
+    visibility:window.__familyVisibility,rotors:__game.rotaryWashing.rotors.map(r=>({angle:r.angle,speed:r.speed,unhook:r.unhook,aligned:r.aligned}))
+  })).catch(()=>null),null,2));
+}console.error(errors);throw e;}
 finally {await close();}

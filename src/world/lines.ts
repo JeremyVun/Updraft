@@ -205,7 +205,7 @@ void main() {
   // A neckline makes these unmistakably clothes rather than three more rectangular sheets.
   if (vRole > -0.5 && length(vec2((vUv.x - 0.5) / 0.1, (1.0 - vUv.y) / 0.065)) < 1.0) discard;
   vec3 cloth = vColor;
-  if (vCurtain > -0.5) {
+  if (vCurtain > -0.5 && vCurtain < 1.5) {
     // The same red sewn hem on each passage: a domestic detail the player can recognise at a distance.
     float hemBand = smoothstep(0.015, 0.025, vUv.y) * (1.0 - smoothstep(0.075, 0.085, vUv.y));
     float sideBand = 1.0 - smoothstep(0.012, 0.021, min(vUv.x, 1.0 - vUv.x));
@@ -213,6 +213,9 @@ void main() {
     cloth = mix(cloth, thread, max(hemBand, sideBand) * 0.9);
     float stitch = (1.0 - smoothstep(0.0015, 0.003, abs(vUv.y - 0.052))) * step(0.55, fract(vUv.x * 65.0));
     cloth = mix(cloth, vColor, stitch * 0.8);
+  } else if (vCurtain > 1.5) {
+    float stripe = 1.0 - smoothstep(0.004, 0.008, min(abs(vUv.y - 0.065), min(abs(vUv.y - 0.09), abs(vUv.y - 0.14))));
+    cloth = mix(cloth, vec3(0.82, 0.79, 0.69), stripe * 0.75);
   }
   float weave = sin(vUv.x * 240.0) * sin(vUv.y * 190.0) * 0.03;
   cloth *= 1.0 + weave;
@@ -557,9 +560,7 @@ export class WashingLines {
         shapes.push(width, drop, rand() * 3, rand() * 6.28);
         /** Two pegs at the corners of every piece: the detail that says washing rather than flags, up close. */
         posts.push(pegGeometry(point, dir, width * 0.46), pegGeometry(point, dir, -width * 0.46));
-        // Reserve the blue/red/yellow family for the clearing. Nearby laundry is ordinary pale linen.
-        const nearFamily = familyLine !== null && Math.hypot(point.x - FAMILY_PLACE.x, point.z - FAMILY_PLACE.z) < 60;
-        const c = CLOTH_COLOURS[Math.floor(rand() * (nearFamily ? 9 : CLOTH_COLOURS.length))];
+        const c = CLOTH_COLOURS[Math.floor(rand() * CLOTH_COLOURS.length)];
         colors.push(c.r, c.g, c.b);
         /** Mostly sheets, and then a shirt, a nightgown or a pair of trousers among them, the way a line is. */
         const roll = rand();
@@ -781,15 +782,11 @@ export function lineField(
   hung: readonly LineSpec[] = [],
 ): LineSpec[] {
   const rand = mulberry32(seed);
-  const familySight = Array.from({ length: 9 }, (_, i) => ({
-    x: 15 + (FAMILY_PLACE.x - 15) * i / 8, z: -251 + (FAMILY_PLACE.z + 251) * i / 8,
-  }));
   const reserved = (ax: number, az: number, bx: number, bz: number): boolean => hung.length > 0 && (
     pointToRun(FAMILY_PLACE.x, FAMILY_PLACE.z - 3, ax, az, bx, bz) < 12 ||
     pointToRun(DOOR_PLACE.x, DOOR_PLACE.z - 9, ax, az, bx, bz) < 8 ||
-    pointToRun(ROTARY_PLACE.x, ROTARY_PLACE.z, ax, az, bx, bz) < ROTARY_PLACE.radius + 1.5 ||
-    pointToRun(ROTARY_PLACE.x + 3, ROTARY_PLACE.z + 20, ax, az, bx, bz) < 9 ||
-    familySight.some(p => pointToRun(p.x, p.z, ax, az, bx, bz) < 3.5) ||
+    pointToRun(ROTARY_PLACE.x, ROTARY_PLACE.z, ax, az, bx, bz) < ROTARY_PLACE.radius + 0.25 ||
+    pointToRun(ROTARY_PLACE.farX, ROTARY_PLACE.farZ, ax, az, bx, bz) < ROTARY_PLACE.radius + 0.25 ||
     CURTAINS.some(c => {
       if (pointToRun(c.center.x, c.center.z + 3, ax, az, bx, bz) < 7) return true;
       // Reserve the low view as well as the child's standing place. Include portrait's

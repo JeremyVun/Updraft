@@ -11,7 +11,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {openBrowser} from './lib/browser.mjs';
 import {whaleGo} from './lib/whale-gestures.mjs';
-import {turnRotary} from './lib/rotary-gesture.mjs';
+import {openRotary} from './lib/rotary-gesture.mjs';
 const prefix=process.argv[2]??'/tmp/updraft-playthrough';
 const base=process.env.BASE??'http://127.0.0.1:5230/';
 const review=process.env.REVIEW==='1';
@@ -193,7 +193,7 @@ try {
     let acted=false;
     if(s.chapter==='island'&&['still','play'].includes(s.beat)&&s.life<.99)acted=await sweep({x:width*.5,y:height*(.38+(strokes%8)*.055),z:0},strokes%2?-1:1,0,width*.65,850);
     else if(s.chapter==='lines'&&s.beat==='curtain')acted=await sweep({x:width*.5,y:height*(.37+(strokes%3)*.08),z:0},strokes%2?-1:1,0,width*.56,600);
-    else if(s.chapter==='lines'&&s.beat==='rotary'){await turnRotary(page);strokes++;acted=true;}
+    else if(s.chapter==='lines'&&s.beat==='rotary'){await openRotary(page);strokes++;acted=true;}
     else if(s.chapter==='lines'&&s.beat==='haul')acted=await sweep(s.pinwheel,strokes%2?-1:1,0,width*.3,600);
     else if(s.chapter==='boats'&&s.beat==='sailing'){
       if(visible(s.updraft))acted=await circle(s.updraft,height*.065,850);

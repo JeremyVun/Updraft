@@ -28,93 +28,133 @@ After seeing the first prototype:
 The family and door must remain an inland clearing, enclosed by washing. Extend the island itself to fit the extra
 encounter; moving the door down the existing slope was the wrong tradeoff.
 
-## Intent
+## Approved revision — 2026-10-11
 
-A domestic object made enormous, with the child small beneath it. The player has learned to push sheets; now that
-same air moves the thing the sheets hang on. All three existing curtain encounters remain, as do the family gesture,
-red door and far-shore pulley. No laundry-basket boat, updraft requirement, instructions, timer or losing progress to
-an idle return. The extra time comes from a new encounter and a winding approach, never slower walking.
+Jeremy's playtest, verbatim:
 
-## Physical design to prove
+> image 1: There's a gap to the left of the second clothesline. What happened to all the stuff that formed a lane from the first clothesline to the second clotheline challenge?
+>
+> image 2, 3, 4: I can also see the final red / blue clothes behind the third clothesline challenge. the reveal is spoiled already. It shouldn't be visible until after the third clothesline challenge is completed.
+>
+> ok the clothes line spinner idea is cool, i think it's a good start, but it's a bit hard to spin around and it's completed too quickly. Can you fix above issues and think about how to make the clothes line spinner a bit more of an interesting puzzle
 
-Four arms, concentric sagging clotheslines, a weathered mast and bearing. Pale linen occupies one half; the other
-half has empty lines and spare pegs. The path passes around the mast, through the outer half of its canopy. An empty
-quarter alone would not make a passage through both sides, so the empty HALF and the offset path are essential.
-Broad sweeps of visible cloth turn the assembly in either direction. It has inertia and friction; leaving it alone
-lets it coast to rest where it has reached. Once the empty half faces the path a physical stop catches the bearing,
-leaving the passage open. The child and bird wait outside its swept envelope until it has settled, then walk through.
+> what if we take multiple of these ideas? the caught sheet is cool, as is the folded rotary. and by two stage passage, do you mean the two rotaries forming a passage?
 
-The third curtain moves farther north and slightly west; the family and door move farther north together. This
-leaves space for a clearing around the rotary. Following Jeremy's correction, the northern part of the island also
-extends 40 metres; its arrival beach and first approach retain their exact heights. More washing fills the extension,
-so the door remains deep inside the laundry rather than against the beach and sea. The camera looks obliquely
-through the turning sheets, past the side of the third curtain, at the same coloured garments the child later
-reaches. No duplicate shirts, spawning, teleporting, or premature sleeve gesture. The final curtain still earns the
-complete family composition. Keep the final door approach physically coherent with the moved threshold.
+> i liked the idea of there being two rotaries that you had to align as well. thoughts?
 
-## Prototype plan
+After the paired-rotary proposal below:
 
-1. Lay out the rotary, offset route and moved final clearing with the existing materials. Establish a view with
-   both travellers, the useful sheet, mast, and open half readable in landscape and portrait.
-2. Add inertia, screen-local wind response, forgiving catch and quiet drawn invitation. Integrate the extra beat
-   between curtains two and three; preserve old saves and add a checkpoint before the rotary.
-3. Drive real gestures through the whole encounter, continuing to the family and shore. Check idle and unrelated
-   gestures do not solve it, either direction works, the stop holds, and travellers never enter moving laundry.
-4. Review captures of the approach, turning, first glimpse, open passage, final curtain and family in both aspects.
-   Iterate on what those captures actually show; record evidence and remaining owner decisions here.
+> yep this sounds like the right plan. proceed
 
-## Build invariants
+During the paired build:
 
-- The player's gesture reaches the cloth under the cursor and contributes to the shared wind field.
-- The bare half, pole and physical path agree; do not route a character through the mast or hanging sheets.
-- All active geometry and both whole character silhouettes remain readable on a phone.
-- Partial rotation stays put after coasting; success stays earned even if the player keeps sweeping.
-- The family's blue, red and yellow garments are present before, during and after the rotary encounter.
-- Worn grass and scenery layout are fixed; solving the puzzle does not reshape the clearing.
-- Legacy curtain-2 saves resume after the added encounter. New rotary saves resume before it.
-- The moved red door's geometry, portal clipping and walking thresholds use the same location.
+> Can we use different coloured sheets for the spinners as well? the clothesline challenges then can be the white sheet with red border, and the spinner sheets can be a slightly different design and colour variation so that it's not so visually confusing? what do you think?
 
-## Evidence and decisions
+Use muted sage linen on the nearer rotary and dusty blue on the farther one, with narrow cream woven stripes.
+Keep white with red borders exclusive to the three curtain challenges; the family's saturated colours stay distinct.
 
-The first side view exposed the family as a separate tableau and left too much open grass. The final view looks
-along the child's approach: child and cygnet low right, rotary across the middle, dense fixed washing around its
-edges, and the real family beyond it. A slight rise lets the four arms read without making the view an overhead
-map. The camera holds this direction while the player works; turning laundry opens a window onto the colours.
+Jeremy rejected the open clearing after seeing the paired scene:
 
-Portrait uses its own bounded distance, with the same direction and subjects. Preserving the whole desktop width
-by retreating exposed unrelated foreground washing and made the child too small, so that approach was discarded.
-The final portrait view keeps the full canopy, useful cloth, companions and all three colours in frame. Real touch
-swipes in the opposite direction have played through to the shore without errors.
+> with teh way the rotators are positioned, why does the child even have to bother with the green one? They coudl very easily just walk around the side directly to the blue one.. i need you to think carefully and pay attention to the believability of the level design
 
-Moving the family exposed a second composition problem: the old low camera looked through tall grass and the last
-sheet hung across the red garment. The fixed worn clearing now includes that view's foreground, the camera clears
-the grass, and the sheet's receiving line stands farther east. The changes are permanent layout, never scenery
-fading or moving in response to puzzle progress. The final curtain, reaching sleeves and door still play in order. Jeremy then rejected the exposed shore behind
-this view; the later northern extension restores the inland setting and supersedes those first family captures.
+Asked whether unfolding should remain required, because folding naturally creates more empty space:
 
-The rotary takes several deliberate sweeps (about 4–10 in the captured playtests, depending on direction and gesture),
-then settles for 1.6 seconds and gives a 2.2-second look at the family before the walk. The waiting places lie beyond
-its 7.6-metre sweep; the path passes 5.5 metres east of the mast through the bare half. The half-turn catches in either
-direction. Neither idle time nor off-target wind contributes; partial turns coast to rest without returning.
+> Keep two alignments and the snag; remove required unfolding
 
-Evidence is under `/tmp/updraft-lines-rotary.Okl0Yk/`. After Jeremy's inland-setting correction,
-`inland-landscape/` records the complete route from landing through all three curtains, the rotary, family and
-doorway to the shore. `inland-portrait/` records the 390×844 touch replay in the opposite direction from the rotary
-to the shore. These supersede `final-landscape/` and `final-portrait/`, which show the earlier beach setting.
-`/tmp/updraft-lines-resume-*` records the full chapter with checkpoint reloads before the terrain extension.
-A 304-point comparison confirms unchanged arrival heights; the door is 7.42 m above sea level, against 7.35 m
-at its original location (it had fallen to 1.99 m in the beach prototype). The browser checks save video/stills and
-fail on console errors; mechanical checks cover both directions at
-30/60/120 Hz. The new rotary checkpoint starts before the encounter; old `curtain-2` saves start after it.
+The open clearing and the subsequent boxed-bay response are both rejected. The current layout work is a study of
+`de1286a2`, immediately before the rotary prototype. Recover the original procedural funnel before integrating
+the two frames. Its uneven density, varied lines, loose overlap and low player view are binding visual references.
+Do not use continuous wall panels, rectangular enclosures or hard cropped corridors to force the puzzle.
 
-The extended terrain passes geography and shader checks. The full terrain-atlas check passes every visible-height
-and normal gate, but fails its sea-floor comparison at `(194, -1750)`, away from Lines. The committed baseline has
-the identical height at that point: this existing failure is not fixed by the prototype. A separate 0.5 m sweep
-around Lines and its atlas edge samples 157,528 points outside the atlas interior, with exactly zero change from
-the baseline. Reports: `terrain-heights.json` and `terrain-lines-scope.json` in the evidence folder.
+## Current design
 
-This is a playable design prototype for Jeremy's review. No merge, deploy, physical iPad check or full release
-performance comparison has been done. The worktree preview runs at `http://127.0.0.1:5243/?chapter=rotary&progress=0`.
+Two spread rotaries form one continuous winding passage. The farther one's trailing sheet is hooked on an
+ordinary neighbouring washing-line post. Turning pulls that sheet taut and stops the frame. Lift the hem free,
+then turn the bare halves of both frames toward the route. They catch in place independently; once both have
+settled, the child and cygnet walk through together. This replaces the single-rotary enter/turn/exit proposal.
 
-Main has concurrent uncommitted changes; this worktree begins at main's committed
-revision and carries only the already verified Lines bird-arrival correction needed to avoid the inherited stall.
+The rotaries are staggered in depth, near left and far right, with disjoint swept circles. Both remain in the
+player view on desktop and phone. Muted sage and dusty blue linen, sagging square lines, weathered pegs and woven stripes
+keep them part of the same washing. A snag must visibly tether the cloth, and
+an aligned gap must agree with the worn ground. Responsive turning; progress persists; no timer or idle solve.
+Cursor motion and circles remain the only verbs. Lift and strokes write/read the shared wind.
+
+Restore the lane between curtains one and two: remove the broad rotary-camera and family-sightline exclusions
+that hollowed it out. Keep all three curtain puzzles. The family and door stay on inland ground but around a
+bend beyond the third curtain. Concealment must respect the original organic washing field. The family exists throughout, never
+fades or spawns, and cannot be seen before the third curtain is complete. The former early-glimpse idea is rejected.
+
+## Invariants and verification
+
+- Broad strokes over visible linen answer promptly; strokes on one frame do not turn the other.
+- The snag responds to local updrafts, not idle time, unrelated circles or drawn invitations.
+- Each rotary must sit across the naturally legible way forward. The surrounding field should discourage obvious bypasses through organic density, not engineered enclosures.
+- Each frame can be turned both ways; the snag constrains both directions until released.
+- Opening one frame never starts the crossing. Both independently earned alignments stay earned.
+- Travellers wait outside the sweeps and follow the bare halves only once the mechanism is at rest.
+- Fixed scenery forms the lane and hides the family in every preceding camera transition, including billowing
+  and partial release of the third curtain. Test wide desktop and portrait views with real gestures.
+- Legacy curtain-2 saves still bypass the encounter; rotary saves begin before it; far-shore saves remain valid.
+- Build, mechanics at 30/60/120 Hz, real mouse/touch replay, checkpoints, and camera captures gate completion.
+
+## Earlier evidence
+
+The single-rotary prototype was committed as `94c82968`; its captures are in `/tmp/updraft-lines-rotary.Okl0Yk/`.
+Its early family glimpse and cleared-out lane were rejected in the playtest above. The 40 m northern terrain
+extension remains: arrival heights are unchanged. The world terrain-atlas check has an existing sea-floor mismatch
+at `(194, -1750)`, identical in the original baseline; visible-height and normal checks pass.
+
+Worktree: `codex/lines-rotary`. Preview: `http://127.0.0.1:5243/?chapter=rotary&progress=0`.
+Main has concurrent work; this worktree contains the prior verified Lines bird-arrival fix required for progression.
+
+## Rejected maze revision — 2026-10-11
+
+Jeremy's correction, verbatim:
+
+> what the heck have you done?! you made it a literal maze of clothes. it's way too obvious now and not at all organic like before..
+
+> what the heck is this?!
+
+> I think you've gone off the rails. go back and look at how the island of lines was originally designed. How it was able to create a funnel for the player while having the island still feel organic and natural
+
+The rectangular bays, connecting walls, sharply cropped corridor and raised overview camera are rejected and removed.
+Do not replace them with another engineered enclosure. Study the pre-rotary scene and its original placement rules
+before further layout work. Preserve the organic funnel: irregular laundry density and overlap, open sky, varied
+heights and a route implied by the field. Mechanical topology tests cannot approve the appearance of the scene.
+The two alignments, snag, sage/blue distinction and removal of mandatory unfolding remain approved.
+
+## Original funnel findings
+
+Reference checkout: `/Users/jeremy/.codex/worktrees/lines-original-study/updraft`, commit `de1286a2`.
+The original field leaves a variable-width alley around the walk. Nearby lines roughly follow its tangent with
+angular variation; farther lines turn across the prevailing wind. Density rises gradually away from the alley.
+Lengths, pole heights, sag, garment widths and gaps vary; some short laundry hangs high across the walk.
+Grass clearings are soft noise-edged patches, and the camera remains inside the washing. There are no closed
+bays or ground-reaching walls.
+
+Our extra camera reservations carved long empty corridors through that field. Also, `against` and `pointAt`
+use a fraction of the whole path: adding the rotary detour changes early alley widths, overhead rows and seeded
+placement decisions. The original seed alone does not preserve the original placement. Visual comparisons must
+use the original separate checkout, not a toggle in the changed build.
+
+The field's palette was also incorrectly restricted to white around both rotaries, bleaching most of the island.
+The added northern field began behind the relocated door, leaving a band without ordinary washing around the
+third curtain. Screens concealed that underlying omission.
+
+Restoration in progress: remove all custom screen geometry and shader restrictions; restore the original varied
+garments, faded palette and noise-edged grass clearings. The procedural alley now follows the rotary masts;
+clearing around the travellers' side route would create another way round each frame. Rotary camera reservations
+are removed, including the failed foreground-only trial. Bring the northern field
+forward so the same irregular rows continue around the third curtain. The family clearing moves farther round
+the left bend, rather than relying on a tall cloth wall. Both frames and the snag still need player-camera QA.
+
+Original reference captures are `/tmp/updraft-paired-rotary.3Sh6gz/original-*.png`.
+The restored second curtain is recorded in `organic-study-second.png`; later `organic-*` captures are iteration
+evidence, not approval. The low camera trials exposed ordinary foreground laundry obscuring the frames, and
+the first reveal trial still exposed the family; neither is a finished composition.
+
+The full `organic-wide/` replay subsequently reached the shore but failed the reveal assertion. Its foreground
+reservation reopened the gap left of curtain two, a foreground pole crossed the waiting child, and ordinary
+washing partly hid the snag. These are rejected iteration results. Preserve the original early field before
+further rotary staging; do not keep clearing it to accommodate the camera. The failed foreground reservation
+has been removed. The current worktree is unfinished.
