@@ -51,8 +51,14 @@ breeze (dead air is dead), and the full velocity once energy has risen from `arr
 things take a gust a beat late, overshoot and swing back. Story gusts that should be felt must carry energy in
 their splats.
 
-On the CPU, sample the wind, pass it through `feltWind(sample, wind.calm)`, and keep a `Sway` (same spring) for
-the thing that swings. `?debug=sway` draws the texture; `?debug=wind` draws the field.
+On the CPU, sample the wind, pass it through `feltWind(sample, wind.calm)`, and keep a `Sway` for
+the thing that swings. Kites use a slower, more damped spring and a soft wind ceiling (`tuning.linesToys.kite*`),
+with gust energy and lift eased in too. Their tails keep a small idle flutter and build toward a bounded wave
+in sustained wind (`tailWave`, `tailWaveFast`, `tailWaveRate`, `tailDrag`, `tailWindGain`). Bending resistance
+(`tailBend`) prevents a folded tail snapping straight; short integration steps and elapsed-time damping keep
+that response consistent at 30, 60 and 120 fps (`tools/kite-logic-check.mjs`). Jeremy: "the kites are very sensitive
+to wind and they can go to max velocity / violently flutter very quickly"; "i need to behave more organically".
+`?debug=sway` draws the texture; `?debug=wind` draws the field.
 
 ## Frame order
 

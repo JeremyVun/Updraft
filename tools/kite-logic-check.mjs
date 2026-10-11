@@ -88,3 +88,42 @@ for (const fps of [30, 60, 120]) {
   for (const p of a.tail) assert(p.toArray().every(Number.isFinite), 'returning to a kite must leave a finite tail');
   console.log(`${fps}fps: local gust, independent position and hidden/reveal tail passed`);
 }
+
+const gustReports = [];
+for (const fps of [30, 60, 120]) {
+  const sample = { x: 2.4, z: -.8, energy: 0, lift: 0 };
+  const localWind = { calm: .8, sample(_x, _z, out) { return Object.assign(out, sample); } };
+  const simulate = duration => {
+    const kite = new Kite(localWind, { x: 0, z: 0 });
+    const positions = [];
+    let peakTailSpeed = 0;
+    let peakTailTime = 0;
+    for (let frame = 0; frame < fps * 18; frame++) {
+      const time = frame / fps;
+      const blowing = time >= 12 && time < 12 + duration;
+      Object.assign(sample, blowing ? { x: 26, z: -26 / 3, energy: 1.6, lift: 2.5 }
+        : { x: 2.4, z: -.8, energy: 0, lift: 0 });
+      const tip = kite.tail.at(-1).clone();
+      kite.update(1 / fps, time, camera);
+      if (time < 12) continue;
+      positions.push(kite.position.clone());
+      const tailSpeed = tip.distanceTo(kite.tail.at(-1)) * fps;
+      if (tailSpeed > peakTailSpeed) { peakTailSpeed = tailSpeed; peakTailTime = time; }
+      for (const p of kite.tail) assert(p.toArray().every(Number.isFinite), 'strong gust leaves a finite tail');
+    }
+    return { positions, peakTailSpeed, peakTailTime };
+  };
+  const quiet = simulate(0), flick = simulate(.1), held = simulate(3);
+  const displacement = run => run.positions.map((p, i) => p.distanceTo(quiet.positions[i]));
+  const flickDistance = displacement(flick), heldDistance = displacement(held);
+  const onset = Math.max(...heldDistance.slice(0, Math.round(fps * .1)));
+  const flickPeak = Math.max(...flickDistance), heldPeak = Math.max(...heldDistance);
+  console.log(`${fps}fps: gust onset ${onset.toFixed(3)}m; flick ${flickPeak.toFixed(2)}m; held ${heldPeak.toFixed(2)}m; tail ${held.peakTailSpeed.toFixed(2)}m/s at ${held.peakTailTime.toFixed(2)}s`);
+  assert(onset < .25, 'a brief gust cannot jerk the kite immediately across its tether');
+  assert(flickPeak < heldPeak * .5, 'a flick must produce much less travel than sustained wind');
+  assert(heldPeak > 1, 'sustained wind must still visibly move the kite');
+  assert(held.peakTailSpeed < 20, 'the tail must not whip violently in a maximum pointer gust');
+  gustReports.push(held.peakTailSpeed);
+}
+assert(Math.max(...gustReports) / Math.min(...gustReports) < 1.2,
+  'higher frame rates must not amplify the tail whip');

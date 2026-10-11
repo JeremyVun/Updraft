@@ -1384,6 +1384,21 @@ export const tuning = {
     /** How wide it swings its figure of eight, in radians, and how fast that turns over, in radians a second. */
     swoop: 0.42,
     swoopRate: 0.26,
+    /** Kites take a gust gradually, with less overshoot than loose washing. */
+    kiteWindSpring: 10,
+    kiteWindDamping: 6.5,
+    /** Felt wind eases toward this ceiling; full swooping needs a sustained strong breeze. */
+    kiteWindLimit: 12,
+    kiteFullWind: 9,
+    kiteGustRate: 2,
+    /** Tail wave force in still air and its added force in wind; rate in radians per second. */
+    tailWave: 1.5,
+    tailWaveFast: 6,
+    tailWaveRate: 4.8,
+    tailDrag: 8,
+    tailWindGain: 0.75,
+    /** Bending resistance keeps the tail from folding into a kink and snapping straight. */
+    tailBend: 0.12,
     /** Radians of climb per unit of gust energy reaching the kite, and the spring that answers it. */
     gustClimb: 0.16,
     climbSpring: 2.4,

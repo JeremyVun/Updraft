@@ -221,9 +221,13 @@ export class Kite {
   private readonly bowNormals: Float32Array;
   private readonly tail: THREE.Vector3[] = [];
   private readonly was: THREE.Vector3[] = [];
+  private readonly tailRoot = new THREE.Vector3();
+  private readonly tailRootNow = new THREE.Vector3();
+  private tailStep = 1 / 60;
   private readonly sample: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
-  /** It flies on the wind it feels, on the same spring as the washing, so a gust reaches it when the gust does. */
-  private readonly sway = new Sway();
+  private readonly sway = new Sway(tuning.linesToys.kiteWindSpring, tuning.linesToys.kiteWindDamping);
+  private gustEnergy = 0;
+  private gustLift = 0;
   private readonly basis = new THREE.Matrix4();
   private readonly xAxis = new THREE.Vector3();
   private readonly yAxis = new THREE.Vector3();
@@ -322,11 +326,18 @@ export class Kite {
     if (this.floating) { this.floatOnWater(time); return; }
     const k = tuning.linesToys;
     const air = feltWind(this.wind.sample(this.position.x, this.position.z, this.sample), this.wind.calm);
-    this.sway.update(air.x, air.z, dt);
+    const incoming = Math.hypot(air.x, air.z);
+    const gain = incoming > 1e-4 ? k.kiteWindLimit * Math.tanh(incoming / k.kiteWindLimit) / incoming : 1;
+    this.sway.update(air.x * gain, air.z * gain, dt);
+    const catchup = 1 - Math.exp(-dt * k.kiteGustRate);
+    this.gustEnergy += (air.energy - this.gustEnergy) * catchup;
+    this.gustLift += (air.lift - this.gustLift) * catchup;
     air.x = this.sway.x;
     air.z = this.sway.z;
+    air.energy = this.gustEnergy;
+    air.lift = this.gustLift;
     const speed = Math.hypot(air.x, air.z);
-    const strength = THREE.MathUtils.smoothstep(speed, 0.5, 5);
+    const strength = THREE.MathUtils.smoothstep(speed, 0.5, k.kiteFullWind);
 
     if (this.ahead !== null) {
       const turn = this.ahead - this.azimuth;
@@ -424,37 +435,48 @@ export class Kite {
     }
   }
 
-  /**
-   * The tail streams where the air is going, falls where it is not, and snaps across itself as it goes. Verlet
-   * with the links pulled straight after: it cannot stretch, and it cannot blow up either.
-   */
+  /** The tail follows the felt wind; its wave eases toward a ceiling in strong gusts. */
   private streamTail(dt: number, time: number, air: WindSample, speed: number): void {
+    const k = tuning.linesToys;
     const step = TAIL_LENGTH / (TAIL_POINTS - 1);
-    this.tail[0].copy(this.sail.localToWorld(this.b.set(0, -FOOT, 0)));
-    this.was[0].copy(this.tail[0]);
+    this.tailRoot.copy(this.tail[0]);
+    this.tailRootNow.copy(this.sail.localToWorld(this.b.set(0, -FOOT, 0)));
     this.c.set(-air.z, 0, air.x);
     if (this.c.lengthSq() < 1e-6) this.c.set(1, 0, 0);
     this.c.normalize();
-    /** Paper on a string has almost no weight and all drag: it goes where the air goes, and quickly. */
-    const lash = 2 + speed * 1.2;
-    for (let i = 1; i < TAIL_POINTS; i++) {
-      const p = this.tail[i];
-      const q = this.was[i];
-      const vx = (p.x - q.x) / dt;
-      const vy = (p.y - q.y) / dt;
-      const vz = (p.z - q.z) / dt;
-      const wag = Math.sin(time * 6 + i * 0.9) * lash;
-      q.copy(p);
-      p.x += vx * dt * 0.99 + ((air.x - vx) * 8 + this.c.x * wag) * dt * dt;
-      p.y += vy * dt * 0.99 + ((air.lift * 1.6 - vy) * 8 - 3.4) * dt * dt;
-      p.z += vz * dt * 0.99 + ((air.z - vz) * 8 + this.c.z * wag) * dt * dt;
-    }
-    for (let pass = 0; pass < 3; pass++) {
+    const lash = k.tailWave + k.tailWaveFast * (1 - Math.exp(-speed / k.kiteFullWind));
+    const span = Math.min(dt, 0.1);
+    const steps = Math.max(1, Math.ceil(span * 60 - 1e-3));
+    const h = span / steps;
+    const retention = Math.pow(0.99, h * 60);
+    const bend = 1 - Math.pow(1 - k.tailBend, h * 60);
+    for (let s = 1; s <= steps; s++) {
+      this.tail[0].lerpVectors(this.tailRoot, this.tailRootNow, s / steps);
+      this.was[0].copy(this.tail[0]);
       for (let i = 1; i < TAIL_POINTS; i++) {
-        this.a.subVectors(this.tail[i], this.tail[i - 1]);
-        const d = this.a.length() || 1;
-        this.tail[i].copy(this.tail[i - 1]).addScaledVector(this.a, step / d);
+        const p = this.tail[i];
+        const q = this.was[i];
+        const vx = (p.x - q.x) / this.tailStep;
+        const vy = (p.y - q.y) / this.tailStep;
+        const vz = (p.z - q.z) / this.tailStep;
+        const wag = Math.sin((time - span + s * h) * k.tailWaveRate + i * 0.9) * lash;
+        q.copy(p);
+        p.x += vx * h * retention + ((air.x * k.tailWindGain - vx) * k.tailDrag + this.c.x * wag) * h * h;
+        p.y += vy * h * retention + ((air.lift * 1.6 * k.tailWindGain - vy) * k.tailDrag - 3.4) * h * h;
+        p.z += vz * h * retention + ((air.z * k.tailWindGain - vz) * k.tailDrag + this.c.z * wag) * h * h;
       }
+      for (let pass = 0; pass < 3; pass++) {
+        for (let i = 1; i < TAIL_POINTS - 1; i++) {
+          this.a.addVectors(this.tail[i - 1], this.tail[i + 1]).multiplyScalar(0.5);
+          this.tail[i].lerp(this.a, bend);
+        }
+        for (let i = 1; i < TAIL_POINTS; i++) {
+          this.a.subVectors(this.tail[i], this.tail[i - 1]);
+          const d = this.a.length() || 1;
+          this.tail[i].copy(this.tail[i - 1]).addScaledVector(this.a, step / d);
+        }
+      }
+      this.tailStep = h;
     }
     this.tailBatch.update(this.ribbons);
     this.dressTail();
