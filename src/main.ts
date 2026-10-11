@@ -75,6 +75,9 @@ import { CatVoice } from './creatures/cat/voice';
 import { screenPan } from './creatures/motion';
 import { SwanFlock } from './creatures/flock';
 import { CURTAINS, SNAG_LINE, washingPassage } from './world/lines-passage';
+import { rotaryWashing } from './world/lines-rotary';
+import { DOOR_PLACE } from './world/lines-layout';
+import { RotaryWashingRig } from './world/rotary-washing';
 import { createDoorShoreGrass } from './world/door-shore';
 import { DOOR_EXIT, doorway, DoorwayView } from './world/doorway';
 import { FAMILY_LINE, WashingLines, baskets, door, lineField } from './world/lines';
@@ -244,9 +247,15 @@ scene.add(piano.group);
 
 /** Hung around the walk over the island, so the open ground through it is always the way on. */
 await built();
-const washingLines = [...lineField(new THREE.Vector2(ISLES.lines.x, ISLES.lines.z + 8), 210, 49, 17, LINES_WALK, [FAMILY_LINE, SNAG_LINE, ...CURTAINS]), SNAG_LINE, ...CURTAINS];
+const passageLines = lineField(new THREE.Vector2(ISLES.lines.x, ISLES.lines.z + tuning.world.linesNorthExtension / 2 + 8),
+  210, 49, 17, LINES_WALK, [FAMILY_LINE, SNAG_LINE, ...CURTAINS]);
+const beyondDoor = lineField(new THREE.Vector2(DOOR_PLACE.x, DOOR_PLACE.z - 32), 160, 43, 183,
+  [], [FAMILY_LINE, SNAG_LINE, ...CURTAINS, ...passageLines]);
+const washingLines = [...passageLines, ...beyondDoor, SNAG_LINE, ...CURTAINS];
 await built();
 const washing = new WashingLines(washingLines, 91, FAMILY_LINE);
+const rotaryRig = new RotaryWashingRig(washing.subject);
+washing.group.add(rotaryRig.group);
 scene.add(washing.group);
 /** The same kite marks every departure. Lines keeps its kite inside the doorway reveal. */
 await built();
@@ -739,6 +748,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
     : story.name === 'birches' ? birches.scarf.updraftTarget : story.current.updraftTarget ?? null;
   input.update(dt, rig.camera, wind, inputFraction);
   washingPassage.active?.brush(rig.camera, input, wind);
+  if (story.name === 'lines') rotaryWashing.brush(rig.camera, input, wind);
   if (story.name === 'lines') shoreHaul.brush(rig.camera, input, wind);
   if (story.name === 'boats') littleBoats.brush(rig.camera, input, wind, dt);
   if (story.current.invitesSail) boat.brushSail(rig.camera, input);
@@ -954,7 +964,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
 
   /** The washing gives way in front of whoever the camera is watching, so they are never lost behind a sheet. */
   washing.subject.set(child.position.x, child.position.y + 1.1, child.position.z, child.visible ? 1 : 0);
-  if (story.name === 'lines') washing.update();
+  if (story.name === 'lines') { washing.update(); rotaryRig.update(dt, rig.camera); }
   /** And so do the birches and the sail, for the same reason. */
   birches.subject.copy(washing.subject);
   boat.subject.copy(washing.subject);
@@ -1357,7 +1367,7 @@ function frame(now: number): void {
 }
 
 if (QA && params.shot) {
-  window.__game = { params, tuning, quality, post, wind, input, rig, renderer, scene, glider, lines, swirl, sound, child, story, creatures, hillCreatures, water, skyMirror, terrain, footprints, cottage, petals, grass, littleBoats, sealife, crossingLinen, cygnet, flock, cat, carry, probe, washing, curtains: CURTAINS, doorway, doorwayView, doorExit: DOOR_EXIT, washingPassage, washingInvitation, shoreHaul, shorePulley, shorePinwheel: SHORE_PINWHEEL, scarfInvitation, kite, departureKites, pinwheels, village, wood, stormWeather, sleeping, embers, emberInvitation, fireflies, boat, life, piano, birches, pond, cloudStairs, harebells, swanFeather };
+  window.__game = { params, tuning, quality, post, wind, input, rig, renderer, scene, glider, lines, swirl, sound, child, story, creatures, hillCreatures, water, skyMirror, terrain, footprints, cottage, petals, grass, littleBoats, sealife, crossingLinen, cygnet, flock, cat, carry, probe, washing, rotaryWashing, rotaryRig, curtains: CURTAINS, doorway, doorwayView, doorExit: DOOR_EXIT, washingPassage, washingInvitation, shoreHaul, shorePulley, shorePinwheel: SHORE_PINWHEEL, scarfInvitation, kite, departureKites, pinwheels, village, wood, stormWeather, sleeping, embers, emberInvitation, fireflies, boat, life, piano, birches, pond, cloudStairs, harebells, swanFeather };
 }
 
 const fogLookup = new FogLookup(renderer);

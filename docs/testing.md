@@ -175,6 +175,9 @@ edit.
 - `AUDIT=/tmp/drowned TO=tree-arrival node tools/drowned-run-check.mjs` records the natural rescue's real audio
   and live fog uniforms through the first roof and tree. `node tools/drowned-audit-check.mjs /tmp/drowned.json`
   checks the four-second sailing interval, matching tone/effect onset, music fade and fog motion.
+- `rotary-washing-check`: idle, off-target and muted input, persistent partial turns, either direction and the open
+  stop at 30/60/120 Hz. `rotary-washing-browser-check` drives real sweeps through the new encounter to the shore;
+  `FULL=1` plays all three curtains, and `TOUCH=1 W=390 H=844 REVERSE=1` exercises portrait touch.
 - In the browser with real gestures: `lines-check`, `lines-view-check`, `little-boats-check`, `piano-check`,
   `scarf-check`, `stairs-check`, `storm-check`, `wood-check`, `ember-check`, `sea-check`, `sky-mirror-check`,
   `sleeping-check`, `summit-arrival-check`, `home-approach-browser-check`, `ending-check`, `landing-check`,

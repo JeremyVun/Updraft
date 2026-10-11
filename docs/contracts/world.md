@@ -30,7 +30,7 @@ and half-sizes are in `ISLES` (`heightfield.ts`) unless noted:
 | room | centre (x, z) | half-size | defined by |
 | --- | --- | --- | --- |
 | still island | (−6, 186) | its own coastline | `islandCoast` in `heightfield.ts` |
-| island of lines | (14, −268.4) | 70 × 64.4 | `ISLES.lines` |
+| island of lines | (14, −288.4) | 70 × 84.4 | `ISLES.lines`; northern terrain stretched below −260 |
 | the shore through the red door | (240, −365) | 23 × 30 | `DOOR_SHORE` |
 | little boats | (130, −420) | 48 × 70 | `LITTLE_BOATS` (`little-boats-layout.ts`) |
 | meadow | (10, −780) | 227 × 200 | `ISLES.meadow`, sculpted at 340 × 300 and scaled by `tuning.world.meadowLength` (`meadowPoint`) |
@@ -41,6 +41,11 @@ and half-sizes are in `ISLES` (`heightfield.ts`) unless noted:
 | sleeping island | (−175, −1922) | 42 × 46 | `ISLES.sleeping` |
 | sky mirror | (−581, −2282) | 82 × 70, a flat just under the water | `SKY_MIRROR` (`sky-mirror-layout.ts`) |
 | home | (−336, −2562) | 190 × 165 | `ISLES.home` |
+
+The rotary washing-line prototype extends Lines 40 m north (`tuning.world.linesNorthExtension`), mapping its
+existing terrain north of −260 into the longer footprint. Ground south of that join is unchanged; the family and
+door remain inland at their former elevation. The height atlas's measured reach includes the extended underwater
+slope. This changes shape in place, not saved horizontal coordinates.
 
 `world/geography.ts` holds each moved room's shift from its original placement, and `GEOGRAPHY_VERSION` migrates
 saved coordinates on load. Moving a room means moving its terrain, props, walking

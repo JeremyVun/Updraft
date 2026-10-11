@@ -775,6 +775,7 @@ export const tuning = {
     meadowPianoSaddle: 6,
     /** Height of the dome in the middle of the island of lines, on top of about 4 of beach and lumps. */
     linesDome: 5.5,
+    linesNorthExtension: 40,
     /** Height of the crest the birches stand on, on top of about 3 of beach and lumps. */
     birchesCrest: 5.2,
   },
@@ -1267,6 +1268,17 @@ export const tuning = {
     rippleFull: 0.075,
   },
   /** Making a way through the washing: forgiving wind gestures, an invitation, and the view from below. */
+  rotaryWashing: {
+    x: 11, z: -277, radius: 7.6, top: 5.8,
+    pathOffset: 5.5, standBack: 10.3, exitAhead: 10,
+    torque: 0.48, friction: 1.15, maxSpeed: 0.65,
+    catchAngle: 0.25, catchRate: 2.8, settleSeconds: 1.6, revealPause: 2.2,
+    brushRadius: 0.12, brushFrom: 0.8, airMemory: 0.4,
+    windRadius: 3, energyDivisor: 25, brushEnergy: 0.6, energyFrom: 0.02, energyFull: 0.2,
+    inviteAfter: 5, invitePause: 3, inviteSweep: 1.9,
+    cameraDistance: 25, cameraHeight: 4.2, cameraSide: 0.15,
+    narrowDistance: 34, narrowHeight: 3.6, narrowSide: 0.15,
+  },
   linesPassage: {
     /** Local gusts count in any direction, and several small sweeps add up. */
     energyFrom: 0.025, energyFull: 0.22,

@@ -6,6 +6,7 @@
 import { chromium } from 'playwright-core';
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
+import { openRotary } from './lib/rotary-gesture.mjs';
 const mode = process.argv[2] ?? 'play';
 const prefix = `/tmp/updraft-lines-${mode}`;
 const lock = '/tmp/updraft-chromium.lock';
@@ -129,15 +130,24 @@ try {
     if (touch) await touch.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
   }
   if (mode.includes('door')) {
-    await page.evaluate(() => {
+    await page.evaluate(async () => {
+      const { FAMILY_PLACE } = await import('/src/world/lines-layout.ts');
       const g = __game, c = g.story.current;
+      g.rotaryWashing.reset(true);
       g.curtains.forEach(x => x.reset(true));
-      g.child.stop(); g.child.place(9.3, -285.7, Math.PI); g.glider.hold(g.child);
+      g.child.stop(); g.child.place(FAMILY_PLACE.x - 1.7, FAMILY_PLACE.z + 4.3, Math.PI); g.glider.hold(g.child);
       g.cygnet.release(g.child.position.clone().add({ x: 2, y: 0, z: 0 }));
       g.cygnet.seating.snap(); c.gate = 3; c.to('family'); c.frame(); g.rig.cut(c.shot);
     });
   }
   for (let gate = 0; gate < (mode.includes('door') ? 0 : 3); gate++) {
+    if (gate === 2) {
+      await page.waitForFunction(() => __game.story.current.beat === 'rotary', null, { timeout: 120000 });
+      await page.waitForTimeout(2000);
+      await page.screenshot({ path: `${prefix}-rotary-waiting.png` });
+      await openRotary(page, touch);
+      await page.screenshot({ path: `${prefix}-rotary-open.png` });
+    }
     await page.waitForFunction(gate => __game.story.current.beat === 'curtain' && __game.story.current.gate === gate, gate, { timeout: 120000 });
     await page.waitForTimeout(1800);
     const before = await state();
@@ -170,7 +180,7 @@ try {
     report.passages.push({ gate, before, solved });
     console.log(`opened curtain ${gate + 1}: ${JSON.stringify(solved)}`);
     if (resume && gate < 2) {
-      const point = `curtain-${gate + 1}`;
+      const point = gate === 1 ? 'rotary' : `curtain-${gate + 1}`;
       await page.waitForFunction(point => JSON.parse(localStorage.getItem('updraft.progress.v1'))?.point === point, point, { timeout: 60000 });
       await page.reload(); await page.waitForFunction(() => window.__ready === true, null, { timeout: 60000 });
       await installChecks();

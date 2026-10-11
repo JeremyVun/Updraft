@@ -9,11 +9,14 @@ import { CURTAINS, LINES_LANDING, LINES_WALK, washingPassage } from '../world/li
 import { SHORE_BIRD, SHORE_PINWHEEL, SHORE_STAGE, SHORE_STAND, shoreHaul } from '../world/shore-pulley';
 import type { Cast, Chapter } from './cast';
 import type { LinesScorePhase } from '../audio/lines-score';
+import { FAMILY_PLACE, DOOR_PLACE } from '../world/lines-layout';
+import { ROTARY_AFTER, ROTARY_BEFORE, ROTARY_BIRD, ROTARY_TOP, rotaryWashing } from '../world/lines-rotary';
 
 export { LINES_BERTH, LINES_LANDING, LINES_WALK } from '../world/lines-passage';
 const FAMILY_MID = new THREE.Vector3().lerpVectors(FAMILY_LINE.a, FAMILY_LINE.b, 0.5);
+const FAMILY_BIRD = new THREE.Vector3(FAMILY_PLACE.x + 1.5, heightAt(FAMILY_PLACE.x + 1.5, FAMILY_PLACE.z + 4.3), FAMILY_PLACE.z + 4.3);
 const ROUTE = LINES_WALK;
-type Beat = 'ashore' | 'wonder' | 'approach' | 'curtain' | 'birdThrough' | 'childThrough' | 'familyApproach' | 'family' | 'throughDoor' | 'shore' | 'walk' | 'haul' | 'landed' | 'toBoat' | 'push' | 'aboard';
+type Beat = 'ashore' | 'wonder' | 'approach' | 'curtain' | 'birdThrough' | 'childThrough' | 'rotaryApproach' | 'rotary' | 'rotaryOpen' | 'rotaryThrough' | 'familyApproach' | 'family' | 'throughDoor' | 'shore' | 'walk' | 'haul' | 'landed' | 'toBoat' | 'push' | 'aboard';
 const SHORE_BEATS: Beat[] = ['shore', 'walk', 'haul', 'landed', 'toBoat', 'push', 'aboard'];
 
 /** Small beneath somebody's washing. The wind makes a way, and the little bird learns to go first. */
@@ -31,6 +34,10 @@ export class LinesChapter implements Chapter {
   private readonly tmp = new THREE.Vector3();
   private readonly watching = new THREE.Vector3();
   private readonly from = new THREE.Vector3(0.12, 0, 1).normalize();
+  private readonly rotaryFrom = new THREE.Vector3(tuning.rotaryWashing.cameraSide, 0, 1).normalize();
+  private readonly rotarySubjects = { primary: new THREE.Vector3(), secondary: ROTARY_TOP,
+    tertiary: new THREE.Vector3(), margin: 0.8, extra: 12, primaryRadius: 1.2,
+    points: [-1, 1].map(side => ROTARY_TOP.clone().add(new THREE.Vector3(side * tuning.rotaryWashing.radius, 0, 0))) };
   private gate = 0;
   private leg = ROUTE.length - 1;
   private now = 0;
@@ -59,6 +66,7 @@ export class LinesChapter implements Chapter {
     doorway.reset();
     CURTAINS.forEach(c => c.reset());
     washingPassage.active = null;
+    rotaryWashing.reset();
     family.set(0, 0); door.open = 0;
     plane.homeRadius = 20;
     child.stepAshore(boat); child.stroll = 1;
@@ -84,6 +92,7 @@ export class LinesChapter implements Chapter {
   /** The bird's lead and look back keep the foreground, without muting playable wind. */
   get linesMelodyQuiet(): boolean { return this.beat === 'birdThrough' || this.beat === 'childThrough'; }
   get checkpoint(): string | null {
+    if (this.beat === 'rotaryApproach') return 'rotary';
     if (this.beat === 'approach' && this.gate > 0) return `curtain-${this.gate}`;
     return this.beat === 'walk' ? 'family' : null;
   }
@@ -101,13 +110,16 @@ export class LinesChapter implements Chapter {
       // Existing two-number family saves remain valid after the route and encounter change.
       this.gate = CURTAINS.length;
       CURTAINS.forEach(g => g.reset(true));
+      rotaryWashing.reset(true);
       this.leg = ROUTE.length - 1;
       this.to('walk');
       door.open = data[1] ? 1 : 0;
     } else {
       this.gate = THREE.MathUtils.clamp(Math.floor(data[0]), 1, CURTAINS.length - 1);
       CURTAINS.forEach((g, i) => g.reset(i < this.gate));
-      this.approach();
+      rotaryWashing.reset(this.gate === 2 && point !== 'rotary');
+      if (point === 'rotary') this.approachRotary();
+      else this.approach();
     }
   }
 
@@ -123,6 +135,8 @@ export class LinesChapter implements Chapter {
     const { child: c, plane: p, cygnet, wind } = this.cast;
     const active = this.gate < CURTAINS.length ? CURTAINS[this.gate] : null;
     washingPassage.active = this.beat === 'curtain' ? active : null;
+    rotaryWashing.active = this.beat === 'rotary';
+    rotaryWashing.update(dt, wind);
     CURTAINS.forEach(g => g.update(dt, wind, g === washingPassage.active,
       g.center.distanceToSquared(this.cast.child.position) < tuning.linesPassage.simulateWithin ** 2));
     if (active) {
@@ -178,12 +192,30 @@ export class LinesChapter implements Chapter {
         c.lookAt = cygnet.position;
         c.lean = 0.3 * Math.exp(-Math.pow((c.position.z - active!.center.z) / 2.3, 2));
         break;
+      case 'rotary':
+        c.lookAt = ROTARY_TOP;
+        if (cygnet.position.distanceTo(ROTARY_BIRD) < 0.9) cygnet.stay = true;
+        if (rotaryWashing.open) {
+          c.lookAt = FAMILY_MID;
+          cygnet.watch(FAMILY_MID);
+          this.to('rotaryOpen');
+        }
+        break;
+      case 'rotaryOpen':
+        if (this.t > tuning.rotaryWashing.revealPause) {
+          cygnet.stay = false; cygnet.errand = ROTARY_AFTER.clone().add(new THREE.Vector3(1.3, 0, -0.5));
+          cygnet.pace = 0.85; cygnet.watch(FAMILY_MID);
+          this.to('rotaryThrough');
+          c.walkTo(ROTARY_AFTER.x, ROTARY_AFTER.z, false, () => this.approach(), 0.5);
+        }
+        break;
       case 'family':
+        if (cygnet.position.distanceTo(FAMILY_BIRD) < 0.9) cygnet.stay = true;
         this.reveal(dt);
         break;
       case 'throughDoor': {
         const duration = tuning.linesPassage.doorApproach + tuning.linesPassage.doorCross;
-        const through = c.position.z < -299 && cygnet.position.z < -299;
+        const through = c.position.z < DOOR_PLACE.z - 1 && cygnet.position.z < DOOR_PLACE.z - 1;
         if (this.doorElapsed < duration * 0.75 || through) this.doorElapsed += dt;
         if (this.doorElapsed >= duration && through) this.crossDoor();
         break;
@@ -311,17 +343,30 @@ export class LinesChapter implements Chapter {
     c.lean = 0;
     cygnet.stay = false; cygnet.errand = null; cygnet.pace = 1;
     this.gate++;
-    if (this.gate < CURTAINS.length) this.approach();
+    if (this.gate === 2 && !rotaryWashing.open) this.approachRotary();
+    else if (this.gate < CURTAINS.length) this.approach();
     else {
       this.to('familyApproach');
       c.lookAt = FAMILY_MID;
       cygnet.watch(FAMILY_MID);
-      c.walkTo(9.3, -285.7, false, () => {
+      c.walkTo(FAMILY_PLACE.x - 1.7, FAMILY_PLACE.z + 4.3, false, () => {
         c.faceToward(FAMILY_MID.x, FAMILY_MID.z, 1);
-        cygnet.errand = this.tmp.set(12.5, heightAt(12.5, -285.7), -285.7).clone();
+        cygnet.errand = FAMILY_BIRD;
         this.to('family');
       }, 0.4);
     }
+  }
+
+  private approachRotary(): void {
+    const { child: c, cygnet } = this.cast;
+    this.to('rotaryApproach');
+    c.lookAt = ROTARY_TOP;
+    cygnet.stay = false; cygnet.errand = null; cygnet.pace = 1; cygnet.watch(ROTARY_TOP);
+    c.walkTo(ROTARY_BEFORE.x, ROTARY_BEFORE.z, false, () => {
+      c.faceToward(ROTARY_TOP.x, ROTARY_TOP.z, 1);
+      cygnet.errand = ROTARY_BIRD;
+      this.to('rotary');
+    }, 0.4);
   }
 
   private reveal(dt: number): void {
@@ -332,7 +377,7 @@ export class LinesChapter implements Chapter {
     const fill = THREE.MathUtils.smoothstep(this.t, 0.5, k.revealFill);
     family.x += (fill - family.x) * (1 - Math.exp(-dt * 2.5));
     family.y += (THREE.MathUtils.smoothstep(this.t, 1.5, k.revealFill + 1) - family.y) * (1 - Math.exp(-dt * 3));
-    if (this.t < k.revealFill + 1) wind.addSplat({ source: this, ax: 6, az: -290, bx: 16, bz: -290, vx: 1, vz: -5,
+    if (this.t < k.revealFill + 1) wind.addSplat({ source: this, ax: FAMILY_PLACE.x - 5, az: FAMILY_PLACE.z, bx: FAMILY_PLACE.x + 5, bz: FAMILY_PLACE.z, vx: 1, vz: -5,
       radius: 4, energy: 0.25, swirl: 0, lift: 0 });
     if (family.y > tuning.family.doorAt && !door.opened) {
       door.open = 1;
@@ -341,9 +386,9 @@ export class LinesChapter implements Chapter {
     if (this.t > k.revealFill + k.revealHold && !c.busy) {
       this.to('throughDoor'); this.doorElapsed = 0; doorway.begin();
       cygnet.stay = false; cygnet.watch(null);
-      cygnet.errand = new THREE.Vector3(11.2, heightAt(11.2, -303), -303); cygnet.pace = 0.75;
+      cygnet.errand = new THREE.Vector3(DOOR_PLACE.x + 0.2, heightAt(DOOR_PLACE.x + 0.2, DOOR_PLACE.z - 5), DOOR_PLACE.z - 5); cygnet.pace = 0.75;
       c.lookAt = door.group.position;
-      c.walkTo(11, -296.8, false, () => c.walkTo(11, -302, false, undefined, 0.15), 0.15);
+      c.walkTo(DOOR_PLACE.x, DOOR_PLACE.z + 1.2, false, () => c.walkTo(DOOR_PLACE.x, DOOR_PLACE.z - 4, false, undefined, 0.15), 0.15);
     }
   }
 
@@ -361,12 +406,22 @@ export class LinesChapter implements Chapter {
     this.to('shore');
   }
 
+  skipToRotary(): void {
+    const { child: c, cygnet } = this.cast;
+    c.dismount(); c.stop(); c.place(ROTARY_BEFORE.x, ROTARY_BEFORE.z, Math.PI); c.standUp();
+    cygnet.release(ROTARY_BIRD.clone()); cygnet.seating.snap();
+    this.restoreCheckpoint('rotary', [2, 0]);
+    this.frame();
+  }
+
   /** QA: the travellers just past the last sheet, so the family's line and the door play out by themselves. */
   skipToDoor(): void {
     const { child: c, cygnet, plane } = this.cast;
     CURTAINS.forEach(g => g.reset(true));
-    c.dismount(); c.stop(); c.place(11, -279, Math.PI); c.standUp();
-    cygnet.release(new THREE.Vector3(12.2, heightAt(12.2, -280), -280)); cygnet.seating.snap();
+    rotaryWashing.reset(true);
+    const last = CURTAINS[CURTAINS.length - 1];
+    c.dismount(); c.stop(); c.place(last.center.x, last.center.z - 1, Math.PI); c.standUp();
+    cygnet.release(new THREE.Vector3(last.center.x + 1.2, heightAt(last.center.x + 1.2, last.center.z - 2), last.center.z - 2)); cygnet.seating.snap();
     cygnet.stay = false; cygnet.errand = null;
     plane.hold(c);
     this.gate = CURTAINS.length - 1;
@@ -398,6 +453,7 @@ export class LinesChapter implements Chapter {
     const s = this.shot;
     const k = tuning.linesPassage;
     s.from = this.from; s.clearance = 2.1; s.exact = false; s.eye = undefined; s.attention = undefined; s.subjects = undefined;
+    s.composition = undefined; s.authored = false; s.fitWidth = false;
     if (this.beat === 'throughDoor' || this.beat === 'shore') {
       const base = door.group.position;
       const total = k.doorApproach + k.doorCross;
@@ -415,7 +471,20 @@ export class LinesChapter implements Chapter {
       s.eye = this.thresholdEye; s.target.copy(this.thresholdLook); s.exact = true;
       this.focus.copy(s.target); return;
     }
-    if (this.gate < CURTAINS.length && this.beat !== 'ashore' && this.beat !== 'wonder') {
+    const atRotary = this.beat === 'rotaryApproach' || this.beat === 'rotary' || this.beat === 'rotaryOpen' || this.beat === 'rotaryThrough';
+    if (atRotary) {
+      const r = tuning.rotaryWashing;
+      s.target.set(r.x + 1, ROTARY_TOP.y - 2.3, r.z + 0.5);
+      const narrow = 1 - THREE.MathUtils.smoothstep(window.innerWidth / window.innerHeight, 0.6, 1.2);
+      s.from = this.rotaryFrom.set(THREE.MathUtils.lerp(r.cameraSide, r.narrowSide, narrow), 0, 1).normalize();
+      s.distance = THREE.MathUtils.lerp(r.cameraDistance, r.narrowDistance, narrow);
+      s.height = THREE.MathUtils.lerp(r.cameraHeight, r.narrowHeight, narrow);
+      s.clearance = 2.5; s.composition = 'hold'; s.authored = true;
+      this.rotarySubjects.primary.copy(c).y += 1.2;
+      this.rotarySubjects.tertiary.copy(this.cast.cygnet.position).y += 0.5;
+      s.subjects = this.rotarySubjects;
+      this.pace = 0.65;
+    } else if (this.gate < CURTAINS.length && this.beat !== 'ashore' && this.beat !== 'wonder') {
       const g = CURTAINS[this.gate];
       const waiting = this.beat !== 'approach';
       const x = waiting ? g.center.x : c.x * 0.7 + g.center.x * 0.3;
@@ -432,8 +501,8 @@ export class LinesChapter implements Chapter {
       }
       this.pace = waiting ? 1.1 : 0.75;
     } else if (this.beat === 'familyApproach' || this.beat === 'family') {
-      s.target.copy(FAMILY_MID).setY(heightAt(11, -290) + 2.8);
-      s.from = FAMILY_FACE; s.distance = 17; s.height = 0.3;
+      s.target.copy(FAMILY_MID).setY(heightAt(FAMILY_PLACE.x, FAMILY_PLACE.z) + 2.8);
+      s.from = FAMILY_FACE; s.distance = 17; s.height = 1.2; s.clearance = 3.6;
       this.pace = 0.7;
     } else if (this.beat === 'ashore' || this.beat === 'wonder') {
       s.target.set(c.x, heightAt(c.x, c.z) + 4, c.z - 9);
@@ -458,7 +527,7 @@ export class LinesChapter implements Chapter {
       s.subjects = f;
       this.pace = 0.5;
     }
-    s.distance *= Math.max(1, 0.53 / (window.innerWidth / window.innerHeight));
+    if (!atRotary) s.distance *= Math.max(1, 0.53 / (window.innerWidth / window.innerHeight));
     this.focus.copy(s.target);
   }
 }

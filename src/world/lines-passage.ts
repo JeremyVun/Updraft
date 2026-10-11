@@ -1,4 +1,4 @@
-import { CURTAIN_LAYOUT } from './lines-layout';
+import { CURTAIN_LAYOUT, DOOR_PLACE, ROTARY_PLACE } from './lines-layout';
 import { DOOR_SHORE } from './heightfield';
 import * as THREE from 'three';
 import type { PointerInput } from '../input/pointer';
@@ -17,8 +17,10 @@ export const LINES_BERTH = new THREE.Vector3(DOOR_SHORE.x, 0, DOOR_SHORE.z - 23.
 export const LINES_WALK = [
   new THREE.Vector2(12, -220), new THREE.Vector2(0, -230), new THREE.Vector2(0, -240),
   new THREE.Vector2(25, -251), new THREE.Vector2(25, -262),
-  new THREE.Vector2(11, -272), new THREE.Vector2(11, -283),
-  new THREE.Vector2(11, -298), new THREE.Vector2(14, -322),
+  new THREE.Vector2(ROTARY_PLACE.x + ROTARY_PLACE.pathOffset, ROTARY_PLACE.z + ROTARY_PLACE.standBack),
+  new THREE.Vector2(ROTARY_PLACE.x + ROTARY_PLACE.pathOffset, ROTARY_PLACE.z - ROTARY_PLACE.exitAhead),
+  new THREE.Vector2(3, -292), new THREE.Vector2(3, -303),
+  new THREE.Vector2(DOOR_PLACE.x, DOOR_PLACE.z),
 ];
 
 /** Length of a passage sheet's peg: the sheets are giant, and so are the pegs that hold them. */
@@ -29,8 +31,8 @@ export const PEG_LENGTH = 0.34;
  * last sheet is torn off its own line and comes down over this one.
  */
 export const SNAG_LINE = (() => {
-  const a = new THREE.Vector3(18.1, 0, -269.6);
-  const b = new THREE.Vector3(20.5, 0, -284.2);
+  const a = new THREE.Vector3(19.1, 0, -290.6);
+  const b = new THREE.Vector3(21.5, 0, -305.2);
   a.y = heightAt(a.x, a.z) + 5.1;
   b.y = heightAt(b.x, b.z) + 5.3;
   return { a, b, sag: 0.32, bare: [0.22, 0.78] as [number, number] };

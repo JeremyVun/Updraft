@@ -139,7 +139,7 @@ export class DoorwayView {
     r.getDrawingBufferSize(this.size);
     u.uDoorSize.value.copy(this.size);
     u.uDoorInverse.value.multiplyMatrices(view.matrixWorld, view.projectionMatrixInverse);
-    u.uDoorClip.value.set(0, 0, doorway.crossed ? 0 : 1, 398);
+    u.uDoorClip.value.set(0, 0, doorway.crossed ? 0 : 1, -door.group.position.z);
     if (this.surface.visible) {
       const scale = view.position.distanceTo(this.surface.position) < 5 ? 1 : tuning.linesPassage.portalScale;
       const w = Math.max(1, Math.round(this.size.x * scale)), h = Math.max(1, Math.round(this.size.y * scale));

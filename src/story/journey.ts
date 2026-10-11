@@ -172,9 +172,10 @@ export class Journey {
     } else if (choice === 'crossing' || choice === 'lines') {
       this.sail(BOAT_BERTH.x + 8, BOAT_BERTH.z + 8, 0.95);
       this.begin('toLines');
-    } else if (choice === 'washing') {
+    } else if (choice === 'washing' || choice === 'rotary') {
       this.land(LINES_LANDING.x, LINES_LANDING.y + 2, LINES_LANDING.x, LINES_LANDING.y - 4);
       this.begin('lines');
+      if (choice === 'rotary') (this.chapter as LinesChapter).skipToRotary();
     } else if (choice === 'door' || choice === 'shore') {
       this.land(LINES_LANDING.x, LINES_LANDING.y + 2, LINES_LANDING.x, LINES_LANDING.y - 4);
       this.begin('lines');

@@ -144,8 +144,14 @@ function meadowSculpted(x: number, z: number): { x: number; z: number } {
   return { x: MEADOW_SCULPTED.x + (x - MEADOW_SCULPTED.x) / MEADOW_SCALE, z: MEADOW_SOUTH + (z - MEADOW_SOUTH) / MEADOW_SCALE };
 }
 
+const LINES_ISLE = { x: 14, z: -368.4, rx: 70, rz: 64.4 };
+const LINES_STRETCH_FROM = -360;
+const LINES_NORTH_REACH = LINES_STRETCH_FROM - LINES_ISLE.z + LINES_ISLE.rz;
+const LINES_NORTH_SCALE = LINES_NORTH_REACH / (LINES_NORTH_REACH + tuning.world.linesNorthExtension);
+
 export const ISLES = {
-  lines: { x: 14 + LINES_SHIFT.x, z: -368.4 + LINES_SHIFT.z, rx: 70, rz: 64.4 },
+  lines: { x: LINES_ISLE.x + LINES_SHIFT.x, z: LINES_ISLE.z + LINES_SHIFT.z - tuning.world.linesNorthExtension / 2,
+    rx: LINES_ISLE.rx, rz: LINES_ISLE.rz + tuning.world.linesNorthExtension / 2 },
   meadow: {
     x: MEADOW_SCULPTED.x,
     z: MEADOW_SOUTH - MEADOW_SCULPTED.rz * MEADOW_SCALE,
@@ -217,10 +223,9 @@ function littleBoatsHeight(x: number, z: number): number {
 }
 
 /** The island of lines: a low green whaleback, small enough that the washing on it is the whole room. */
-const LINES_ISLE = { ...ISLES.lines, x: 14, z: -368.4 };
-
 function linesHeight(x: number, z: number): number {
   x -= LINES_SHIFT.x; z -= LINES_SHIFT.z;
+  z = LINES_STRETCH_FROM + Math.max(0, z - LINES_STRETCH_FROM) + Math.min(0, z - LINES_STRETCH_FROM) * LINES_NORTH_SCALE;
   const c = LINES_ISLE;
   if (isleFar(x, z, c, 0.16, 40)) return -1.4 - 8;
   const d = isleCoast(x, z, c, 0.16, 21);
@@ -557,8 +562,9 @@ float hf_isleCoast(vec2 p, vec2 c, vec2 r, float wobble, float seed) {
 ${LUMP_GLSL}
 float hf_lines(vec2 p) {
   p -= vec2(${glsl(LINES_SHIFT.x)}, ${glsl(LINES_SHIFT.z)});
+  p.y = ${glsl(LINES_STRETCH_FROM)} + max(0.0, p.y - ${glsl(LINES_STRETCH_FROM)}) + min(0.0, p.y - ${glsl(LINES_STRETCH_FROM)}) * ${glsl(LINES_NORTH_SCALE)};
   vec2 c = vec2(${LINES_ISLE.x}.0, ${glsl(LINES_ISLE.z)});
-  vec2 r = vec2(${ISLES.lines.rx}.0, ${glsl(ISLES.lines.rz)});
+  vec2 r = vec2(${glsl(LINES_ISLE.rx)}, ${glsl(LINES_ISLE.rz)});
   float d = hf_isleCoast(p, c, r, 0.16, 21.0);
   float land = (1.0 - smoothstep(-30.0, 10.0, d));
   float rr = length((p - c) / r);

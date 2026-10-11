@@ -22,7 +22,7 @@ try {
     return { chapter: g.story.name, beat: g.story.current.beat, point: g.story.current.checkpoint,
       child: g.child.position.toArray(), focus: g.story.focus.toArray(), eye: g.rig.camera.position.toArray(), bird: g.cygnet.state, seat: g.cygnet.seat, busy: g.carry.busy,
       piano: g.story.current.atPiano, wave: g.life.regions.wave.toArray(), waiting: g.life.regions.waiting.toArray(),
-      finished: g.story.current.finished ?? false };
+      finished: g.story.current.finished ?? false, rotaryOpen: g.rotaryWashing.open };
   });
   // A restored drowned point must go on playing: the drift to the becalming, the run onward, the church up the ivy, the
   // belfry to the bell, the storm out.
@@ -45,6 +45,8 @@ try {
   // Native story exits are arranged directly; the production Journey must notice and save them.
   const cases = [
     ['island', '', 'companion', `g.child.place(-12,-27,0);c.beat='leaving';c.restored=true;c.worldLife=1;g.life.regions.island.w=1;g.cygnet.rideIn('cradle');c.play='hold';c.holdUntil=1e6;`],
+    ['lines', 'washing', 'rotary', `c.restoreCheckpoint('rotary',[2,0]);`],
+    ['lines', 'washing', 'curtain-2', `c.restoreCheckpoint('curtain-2',[2,0]);`],
     ['lines', 'washing', 'family', `c.restoreCheckpoint('family',[2,1]);c.holdUntil=1e6;`],
     ['boats', 'boats', 'pool-1', `c.restoreCheckpoint('pool-1',[33]);`],
     ['boats', 'boats', 'pool-2', `c.restoreCheckpoint('pool-2',[69]);`],
@@ -97,6 +99,7 @@ try {
     assert(Math.hypot(restored.child[0]-saved.child[0],restored.child[2]-saved.child[2])<4,
       `resume at the saved place, allowing the first second of walking/sailing: ${JSON.stringify({chapter,point,saved:saved.child,restored:restored.child})}`);
     assert(!restored.busy, 'arrival carry callback must not run after a POI restore');
+    if (chapter === 'lines') assert.equal(restored.rotaryOpen, point !== 'rotary', 'only the new rotary save starts with the line closed');
     if (point === 'piano') {
       assert.match(restored.piano, /^done /);
       assert.deepEqual(restored.waiting, saved.life[2]);

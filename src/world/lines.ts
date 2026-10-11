@@ -7,6 +7,7 @@ import { heightAt } from './island';
 import { glsl, tuning } from '../tuning';
 import { CURTAINS, PEG_LENGTH, type WashingCurtain } from './lines-passage';
 import type { Cloth } from './cloth-sim';
+import { FAMILY_PLACE, DOOR_PLACE, ROTARY_PLACE } from './lines-layout';
 
 /** Washing hung out on a line: pegged along its top edge, swinging up and fluttering in the live wind. */
 const CLOTH_VERT = /* glsl */ `
@@ -158,7 +159,7 @@ void main() {
   gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
 }`;
 
-const CLOTH_FRAG = /* glsl */ `
+export const CLOTH_FRAG = /* glsl */ `
 ${ATMO_GLSL}
 uniform vec4 uSubject;
 uniform float uFamilyFlutter;
@@ -455,13 +456,13 @@ export class RedDoor {
 }
 
 /** Beyond the last curtain: a quiet patch of sky behind three recognisable garments. */
-export const door = new RedDoor(11, -298, 0);
+export const door = new RedDoor(DOOR_PLACE.x, DOOR_PLACE.z, 0);
 door.group.scale.set(1.5, 1.08, 1);
 fixInPlace(door.group);
 export const FAMILY_LINE: LineSpec = (() => {
-  const a = new THREE.Vector3(5.8, 0, -290);
-  const b = new THREE.Vector3(16.2, 0, -290);
-  const top = Math.max(heightAt(a.x, a.z), heightAt(b.x, b.z), heightAt(11, -290)) + 5.2;
+  const a = new THREE.Vector3(FAMILY_PLACE.x - 5.2, 0, FAMILY_PLACE.z);
+  const b = new THREE.Vector3(FAMILY_PLACE.x + 5.2, 0, FAMILY_PLACE.z);
+  const top = Math.max(heightAt(a.x, a.z), heightAt(b.x, b.z), heightAt(FAMILY_PLACE.x, FAMILY_PLACE.z)) + 5.2;
   a.y = top; b.y = top;
   return { a, b, sag: 0.18 };
 })();
@@ -557,7 +558,7 @@ export class WashingLines {
         /** Two pegs at the corners of every piece: the detail that says washing rather than flags, up close. */
         posts.push(pegGeometry(point, dir, width * 0.46), pegGeometry(point, dir, -width * 0.46));
         // Reserve the blue/red/yellow family for the clearing. Nearby laundry is ordinary pale linen.
-        const nearFamily = familyLine !== null && Math.hypot(point.x - 11, point.z + 390) < 40;
+        const nearFamily = familyLine !== null && Math.hypot(point.x - FAMILY_PLACE.x, point.z - FAMILY_PLACE.z) < 60;
         const c = CLOTH_COLOURS[Math.floor(rand() * (nearFamily ? 9 : CLOTH_COLOURS.length))];
         colors.push(c.r, c.g, c.b);
         /** Mostly sheets, and then a shirt, a nightgown or a pair of trousers among them, the way a line is. */
@@ -780,9 +781,15 @@ export function lineField(
   hung: readonly LineSpec[] = [],
 ): LineSpec[] {
   const rand = mulberry32(seed);
+  const familySight = Array.from({ length: 9 }, (_, i) => ({
+    x: 15 + (FAMILY_PLACE.x - 15) * i / 8, z: -251 + (FAMILY_PLACE.z + 251) * i / 8,
+  }));
   const reserved = (ax: number, az: number, bx: number, bz: number): boolean => hung.length > 0 && (
-    pointToRun(11, -293, ax, az, bx, bz) < 12 ||
-    pointToRun(11, -307, ax, az, bx, bz) < 8 ||
+    pointToRun(FAMILY_PLACE.x, FAMILY_PLACE.z - 3, ax, az, bx, bz) < 12 ||
+    pointToRun(DOOR_PLACE.x, DOOR_PLACE.z - 9, ax, az, bx, bz) < 8 ||
+    pointToRun(ROTARY_PLACE.x, ROTARY_PLACE.z, ax, az, bx, bz) < ROTARY_PLACE.radius + 1.5 ||
+    pointToRun(ROTARY_PLACE.x + 3, ROTARY_PLACE.z + 20, ax, az, bx, bz) < 9 ||
+    familySight.some(p => pointToRun(p.x, p.z, ax, az, bx, bz) < 3.5) ||
     CURTAINS.some(c => {
       if (pointToRun(c.center.x, c.center.z + 3, ax, az, bx, bz) < 7) return true;
       // Reserve the low view as well as the child's standing place. Include portrait's

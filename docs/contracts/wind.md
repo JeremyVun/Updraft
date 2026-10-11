@@ -173,6 +173,11 @@ them.
 - **The main boat's passage.** Player gusts affect its cloth, pennant and heel, but not propulsion or sideways
   drift. A separate smoothed prevailing-breeze reading carries the hull at its ordinary pace, keeping musical
   choreography independent of gestures. The toy-boat puzzles still use the player's wind.
+- **The rotary washing line.** A screen-local sweep over the nearest visible sheet writes a tangential splat. The
+  rotor samples its felt wind and energy, retaining the stroke's turn direction across the delayed GPU readback.
+  Only recently brushed cloth drives it; unrelated gusts and ambient air do not. Friction brings it to rest without
+  returning it, and its open stop holds permanently. The cloth reads the shared sway field and trails the turning
+  frame. Its drawn invitation never writes wind.
 - **Storm rain** leans by `tuning.storm.rainLean` along the breeze without writing a gust.
 
 ## What wind can and cannot solve
