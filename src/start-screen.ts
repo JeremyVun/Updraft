@@ -238,6 +238,8 @@ class StartScreen {
       button.textContent = 'start over';
     };
     for (const type of ['pointerdown', 'click'] as const) button.addEventListener(type, e => e.stopPropagation(), options);
+    // Safari blurs even an already-focused button on mousedown, cancelling the pending confirmation.
+    button.addEventListener('mousedown', e => { if (e.button === 0) e.preventDefault(); }, options);
     button.addEventListener('click', () => {
       if (this.veil.classList.contains('asking')) { this.begin('island'); return; }
       this.veil.classList.add('asking');

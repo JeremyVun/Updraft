@@ -121,7 +121,10 @@ question goes back after `tuning.veil.startOverAsks` (6 s), on Escape or when fo
 the first island through the same start path as a pick of the Still island: in place, with sound, and the island's
 first played frame saves its checkpoint over the old save. `updraft.finished.v1` stays, so chapter select is still
 offered. Its presses stay its own; a press anywhere else on the veil, even while it asks, continues the save
-(`tools/start-over-check.mjs`).
+(`tools/start-over-check.mjs`). Prevent the button's default mousedown focus change: Safari otherwise blurs it
+before the confirming click and cancels the question. `node tools/start-over-focus-check.mjs` exercises the real
+title screen in WebKit against a dev server, including mouse, touch, keyboard, cancellation and audio unlock;
+`BROWSER=chromium` runs the same checks in Chrome for Testing.
 
 ## Hidden pages and sound
 
