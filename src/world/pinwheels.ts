@@ -426,7 +426,7 @@ class Flutter {
 
   update(omega: number, away: number): void {
     const near = 1 - THREE.MathUtils.smoothstep(away, 14, 60);
-    const level = THREE.MathUtils.smoothstep(omega, 2.5, 22) * near * 0.05;
+    const level = THREE.MathUtils.smoothstep(omega, 2.5, 22) * near * tuning.linesToys.pinwheelFlutterLevel;
     this.gain.gain.setTargetAtTime(level, this.ctx.currentTime, 0.12);
     this.band.frequency.setTargetAtTime(2100 + omega * 90, this.ctx.currentTime, 0.2);
     this.rate.frequency.setTargetAtTime(Math.max(4, (omega * SAILS) / (Math.PI * 2)), this.ctx.currentTime, 0.15);

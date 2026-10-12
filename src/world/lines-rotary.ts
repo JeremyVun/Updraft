@@ -33,6 +33,7 @@ export class RotaryFrame {
   brushAge = Infinity;
   snagAge = Infinity;
   snagWind = 0;
+  snagPull = 0;
   private bearingTravel = 0;
   private strokeWind = 0;
   private readonly sample: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
@@ -58,7 +59,7 @@ export class RotaryFrame {
     this.angle = open ? this.goal : K.startAngle;
     this.unhook = open || !this.index ? 1 : 0;
     this.speed = 0; this.aligned = open; this.settled = open ? K.settleSeconds : 0;
-    this.brushAge = this.snagAge = Infinity; this.strokeWind = this.snagWind = 0;
+    this.brushAge = this.snagAge = Infinity; this.strokeWind = this.snagWind = this.snagPull = 0;
     this.bearingTravel = open ? K.creakTravel : 0;
   }
 
@@ -108,10 +109,10 @@ export class RotaryFrame {
 
   update(dt: number, wind: WindField, active: boolean): void {
     this.brushAge += dt; this.snagAge += dt;
-    if (active && this.snagTarget && this.snagAge < K.airMemory) {
-      const pull = THREE.MathUtils.smoothstep(this.snagWind, K.brushFrom, K.snagGustFull);
-      this.unhook = Math.min(1, this.unhook + pull * K.unhookRate * dt);
-    }
+    const pull = active && this.snagTarget && this.snagAge < K.airMemory
+      ? THREE.MathUtils.smoothstep(this.snagWind, K.brushFrom, K.snagGustFull) : 0;
+    this.snagPull += (pull - this.snagPull) * (1 - Math.exp(-dt * (pull > this.snagPull ? K.snagTighten : K.snagRelax)));
+    this.unhook = Math.min(1, this.unhook + pull * K.unhookRate * dt);
     if (this.aligned) {
       const error = turnGap(this.angle, this.goal), rate = K.catchRate;
       const spring = this.speed + rate * error, decay = Math.exp(-rate * dt);

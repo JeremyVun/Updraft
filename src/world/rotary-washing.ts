@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { WindGesture } from '../fx/wind-gesture';
-import { tuning } from '../tuning';
+import { glsl, tuning } from '../tuning';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { CLOTH_FRAG, PAINT_FRAG, WOOD_FRAG, WOOD_VERT, passagePegGeometry } from './lines';
 import { rotaryWashing, ROTARY_SHEET_INTERVALS, type RotaryFrame } from './lines-rotary';
@@ -14,6 +14,7 @@ uniform vec3 uColor;
 uniform vec3 uCentre;
 uniform vec3 uSnagAt;
 uniform float uSnag;
+uniform float uSnagPull;
 uniform float uSpin;
 out vec3 vWorld;
 out vec3 vNormal;
@@ -34,6 +35,10 @@ void main() {
   world.xz += (breeze * 0.18 + drag) * hang * hang;
   world.xz += normalize(radial) * ripple * hang;
   world.y += (length(breeze) * 0.04 + abs(uSpin) * 0.2) * hang * hang;
+  float tug = uSnag * uSnagPull * hang * hang * smoothstep(0.25, 0.85, uv.x)
+    * ${glsl(K.snagTug)} * (1.0 + 0.2 * sin(uTime * ${glsl(K.snagShiverRate)} - hang * 4.0));
+  world.xz += normalize(uCentre.xz - uSnagAt.xz) * tug;
+  world.y += sin(hang * 3.141593) * tug * 0.4;
   float hooked = smoothstep(0.35, 1.0, hang) * smoothstep(0.45, 1.0, uv.x) * uSnag;
   world.xyz = mix(world.xyz, uSnagAt, hooked);
   vWorld = world.xyz;
@@ -63,6 +68,7 @@ class FrameRig {
   private readonly projected = new THREE.Vector3();
   private readonly tangent = new THREE.Vector3();
   private readonly snag = { value: 1 };
+  private readonly snagPull = { value: 0 };
   private readonly snagAt = { value: new THREE.Vector3() };
   private elapsed = 0;
   private alpha = 0;
@@ -111,7 +117,7 @@ class FrameRig {
               uniforms: { ...atmo.uniforms, uSubject: { value: subject }, uFamilyFlutter: { value: 0 },
                 uColor: { value: new THREE.Color(frame.index ? (piece ? '#a7baca' : '#89a5b8') : (piece ? '#adc1ab' : '#94ae9d')) },
                 uSpin: this.spin,
-                uCentre: { value: frame.foot }, uSnagAt: this.snagAt,
+                uCentre: { value: frame.foot }, uSnagAt: this.snagAt, uSnagPull: this.snagPull,
                 uSnag: frame.index === 1 && i === 3 && size === 1 && piece === 1 ? this.snag : { value: 0 } },
               vertexShader: CLOTH_VERTEX, fragmentShader: CLOTH_FRAG,
               side: THREE.DoubleSide, alphaToCoverage: true,
@@ -159,6 +165,7 @@ class FrameRig {
     const r = this.frame;
     this.snag.value += ((r.unhook < 1 ? 1 : 0) - this.snag.value) * (1 - Math.exp(-dt * K.releaseRate));
     this.snagAt.value.copy(r.snagPoint);
+    this.snagPull.value = r.snagPull;
     this.rotor.rotation.y = r.angle;
     this.spin.value += (r.speed - this.spin.value) * (1 - Math.exp(-dt * 4));
     this.gesture.hide();

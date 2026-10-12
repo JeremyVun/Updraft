@@ -87,7 +87,7 @@ export class Foley {
     } else if (kind === 'rotary-creak') {
       const colour = 0.94 + Math.random() * 0.12;
       this.rasp({ at, len: 0.38, from: 173 * colour, to: 127 * colour, jitter: 0.07,
-        bodies: [[930 * colour, 16, 0.7], [2180 * colour, 22, 0.22]], level: level * 0.18, pan, attack: 0.07, wet: 0.01 });
+        bodies: [[930 * colour, 16, 0.7], [2180 * colour, 22, 0.22]], level: level * 0.24, pan, attack: 0.07, wet: 0.01 });
     } else if (kind === 'swing-creak') {
       // Low rope friction and wood flex; no piercing, pitched playground squeak.
       const colour = 0.92 + Math.random() * 0.16;

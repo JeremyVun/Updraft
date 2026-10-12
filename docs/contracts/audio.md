@@ -398,9 +398,9 @@ pan and bounded scheduling; finished nodes disconnect.
 - Laundry: local wind on the cloth's spring and flutter thresholds, at most `clothSources` voices. A passage sheet's
   peg coming off the line snaps once (`peg`), from the peg itself; pegs already off when a checkpoint loads are silent.
   `pegBoostDb` raises the snap and wooden knock by 6 dB after Jeremy's Lines playtest. The family garments filling
-  and reaching toward each other are silent. Each rotary gives one quiet metal-bearing creak after real
-  angular travel: narrow upper resonances, reduced from the heavier low rasp after Jeremy’s playtest. A small
-  cloth sound follows the snag release. Idle, restored and muted events stay silent;
+  and reaching toward each other are silent. Each rotary gives one brief, audible metal-bearing creak after real
+  angular travel, with narrow upper resonances. Its level is separate from the little pinwheels’ flutter; Jeremy’s
+  request to quiet the spinners referred to those pinwheels. A small cloth sound follows the snag release. Idle, restored and muted events stay silent;
   missed creaks expire rather than playing on unmute.
 - Sleeping hearth: one looping low roar that breathes, plus crackles in small uneven clusters with an occasional
   snap, all scaled by the flame and the camera's distance; the roar fades out with the flame or on leaving the room, and
@@ -448,8 +448,8 @@ pan and bounded scheduling; finished nodes disconnect.
   part of the playtest.
 - Flock wingbeats follow flight and take-off; resting rafts are silent. Beats consumed while inaudible never burst on
   return.
-- The Lines pinwheels share one flutter voice; out of reach it fades, stops and disconnects, and a new one is made if
-  the row comes back.
+- The Lines pinwheels share one flutter voice, controlled by `linesToys.pinwheelFlutterLevel` and reduced about
+  9 dB after Jeremy’s playtest. Out of reach it fades, stops and disconnects; returning makes a new voice.
 
 ## Start-up and lifecycle
 

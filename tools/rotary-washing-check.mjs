@@ -49,8 +49,8 @@ for (const fps of [30,60,120]) for (const direction of [-1,1]) {
   const snag=far.snagPoint.clone().project(cam);
   input.prevNdc.set(snag.x-.01,snag.y);input.ndc.set(snag.x+.01,snag.y);
   Object.assign(wind.air,{lift:0});input.charge=0;
-  for(let i=0;i<fps;i++){pair.brush(cam,input,wind);pair.update(1/fps,wind);}
-  assert.equal(far.unhook,1,'a short local sweep frees the hem without any updraft');
+  for(let i=0;i<fps*2;i++){pair.brush(cam,input,wind);pair.update(1/fps,wind);}
+  assert.equal(far.unhook,1,'sustained local sweeps free the hem without any updraft');
   for(let i=0;i<fps*45&&!pair.open;i++){stroke(far);pair.update(1/fps,wind);}
   assert(pair.open,'both independently align');step(15);
   assert(Math.abs(Math.sin(near.angle))<1e-8 && Math.abs(Math.sin(far.angle))<1e-8);
@@ -137,7 +137,17 @@ for(const fps of [30,60,120]) {
       input.prevNdc.set(-.99,-.99);input.ndc.set(-.95,-.99);input.gust=.1;input.charge=.3;
       input.updraftAt.x+=2;
     }
-    for(let i=0;i<fps;i++){pair.brush(cam,input,wind);pair.update(1/fps,wind);}
+    for(let i=0;i<fps*.5;i++){pair.brush(cam,input,wind);pair.update(1/fps,wind);}
+    assert(r.unhook>.2&&r.unhook<.4,`${where}: a brief gesture works the snag without freeing it`);
+    assert(r.snagPull>.9,'the cloth answers by pulling taut');
+    for(let i=0;i<fps;i++)pair.update(1/fps,wind);
+    assert(r.snagPull<.04,'tension relaxes when the player stops');
+    const held=r.unhook;
+    for(let i=0;i<fps*2;i++)pair.update(1/fps,wind);
+    assert.equal(r.unhook,held,'pausing keeps progress without an idle release');
+    let seconds=0;
+    while(!r.ready&&seconds<3){pair.brush(cam,input,wind);pair.update(1/fps,wind);seconds+=1/fps;}
+    assert(seconds>.6&&seconds<1.5,`${where}: a second modest effort releases the cloth`);
     assert.equal(r.unhook,1,`${where} must release without precise cap targeting`);
   }
 }

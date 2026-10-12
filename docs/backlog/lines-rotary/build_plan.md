@@ -186,3 +186,36 @@ Portrait touch replay in `/tmp/updraft-rotary-oneway-touch/` also reaches depart
 base. Both frames remain monotonic throughout 1842 recorded updates, with two creaks and one release.
 There are no browser errors or early family pixels across 150 samples. Caught/freed desktop
 and portrait player-camera captures were inspected; no video motion or listening approval is claimed.
+
+## 9. Pinwheel mix and snag resistance — complete
+
+Separate pinwheel flutter from rotary creak levels in `tuning.ts`, `pinwheels.ts` and `foley.ts`. Slow accumulated
+snag work modestly and show local tension while keeping the post anchor fixed (`lines-rotary.ts`,
+`rotary-washing.ts`). Verify a brief brush cannot release it, pole-base circles remain forgiving, and tension
+relaxes without losing work. Render both audio sources at game gain, verify pinwheel lifecycle, play mouse
+and touch through the encounter, and run typecheck/build.
+
+Pinwheel flutter now uses its own 0.018 gain (previously 0.05). Matched offline renders through the game’s
+audio graph measure −8.87 dB. The rotary’s short metal friction retains its timbre and one-shot schedule
+but gains about 17.5 dB, with audition peaks around −38 to −43 dBFS rather than roughly −59 dBFS. Both
+are unclipped. The sound render and level checks pass; listening approval still belongs to Jeremy.
+The render tool reuses the production module URLs so Vite’s versioned tuning module cannot invalidate an A/B gain test.
+
+The snag now takes 1.67 seconds of full wind work, with a small eased pull and shiver in the adjacent cloth;
+the corner itself stays on its cap until release. Brief input, pauses, persistent progress, forgiving cap/middle/
+base sweeps and ground-level updrafts pass at 30/60/120 Hz. The rotary’s one-way motion remains unchanged.
+
+Fresh mouse and portrait-touch circles start from zero snag work and release after 2.22 and 1.97 seconds
+of game time, respectively. Captures in `/tmp/updraft-rotary-snag-resistance-desktop/` and
+`/tmp/updraft-rotary-snag-resistance-touch/` show the caught and freed sheet from the player camera. No
+video motion review is claimed.
+
+Typecheck, production build and rig initialization/contact checks pass. The larger `audio-interruption-check`
+fails its “The reverb enters with no jump beyond the beds’ own flutter” assertion on both attempts, before
+reaching pinwheel checks; no startup audio code was changed. The existing pinwheel block was run separately
+and all four lifecycle checks pass: start, retirement/cleanup, return with cached noise, and silent stop.
+Its report is `/tmp/updraft-pinwheel-lifecycle-focused.json`. The production build retains its existing chunk warning.
+
+Both mouse and touch playthroughs reach departure with no browser errors, no premature family reveal and
+exactly two rotary creaks plus one cloth release. Reinstating the previous instant-release rate in an isolated
+test process fails the new brief-gesture regression, as intended.

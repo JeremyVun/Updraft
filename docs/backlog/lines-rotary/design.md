@@ -279,3 +279,16 @@ advances that turn. Increase acceleration modestly while retaining a brief coast
 shift the short friction sound towards narrow metal resonances; still only one creak per frame. Broaden snag
 input along the whole pole and accept updrafts around its base. Keep the corner physically attached until
 release, persistent progress and the existing staged access. Preserve layout, camera and palette.
+
+## Pinwheel clarification and snag resistance — 2026-10-12
+
+Jeremy’s clarification (verbatim):
+
+> sorry when i said quiet spinner, i meant those little wind spinner things (not the clothes line spinners). the actual spinner is actually too quiet. I can't hear any quiet creaks at all, not even a hint of them. the snag works nicer now, but it unsnags basically instantly, could you make it feel a bit more like a struggle to get it unsnagged (not too much, but just a bit more feeling)
+
+The requested quietening applies to the little paper pinwheels’ continuous flutter. Give it a separate tuning
+control and reduce it by about 9 dB. Raise the rotary’s short metal creak into audibility, retaining one event
+per frame and its spatial source. Earlier low-volume renders were not listening approval and missed this
+distinction. Keep the established one-way rotation and broad snag target. Require roughly 1.7 seconds of
+full local wind work, preserving accumulated progress; ease the cloth into a small taut shiver around its
+fixed caught corner, then let it slip free. Never lift the anchor off the post.

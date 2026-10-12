@@ -1284,9 +1284,10 @@ export const tuning = {
     torque: 1.25, driveFull: 4, friction: 1.35, maxSpeed: 0.72,
     catchAngle: 0.22, catchRate: 4, settleSeconds: 1.4, revealPause: 1.4,
     brushRadius: 0.055, brushFrom: 0.35, airMemory: 0.25, strokeGain: 1.6,
-    unhookRate: 2, snagBrushRadius: 0.11, snagGustFull: 1.2, snagLiftFrom: 0.08, snagLiftRadius: 3.5,
+    unhookRate: 0.6, snagBrushRadius: 0.11, snagGustFull: 1.2, snagLiftFrom: 0.08, snagLiftRadius: 3.5,
+    snagTighten: 8, snagRelax: 5, snagTug: 0.35, snagShiverRate: 15,
     releaseRate: 9, snagInviteSpan: 3,
-    creakTravel: 0.16, creakLevel: 0.16,
+    creakTravel: 0.16, creakLevel: 0.9,
     startAngle: -Math.PI / 2, snagTurn: 0.16, snagSide: 5.1, snagAhead: 7.9,
     windRadius: 3, energyDivisor: 25, brushEnergy: 0.6, energyFrom: 0.02, energyFull: 0.2,
     inviteAfter: 2.4, invitePause: 2.8, inviteSweep: 1.9,
@@ -1440,6 +1441,7 @@ export const tuning = {
     veerRate: 1.2,
     /** Seconds of turning a spinning wheel smears over: what makes a gust visible running down a row. */
     smearSeconds: 0.075,
+    pinwheelFlutterLevel: 0.018,
   },
   /**
    * The fledging over the summit: the first flight it makes of its own, flown round the child. The circuit starts
