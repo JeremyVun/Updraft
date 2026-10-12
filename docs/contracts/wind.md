@@ -66,7 +66,8 @@ to wind and they can go to max velocity / violently flutter very quickly"; "i ne
    identity; `trail: true` means its segment traces movement during this render interval. One-off story gusts set
    `impulse: true`.
 2. `main.ts` sets `wind.breeze` (the prevailing breeze vector, `tuning.wind.breeze` scaled by the chapter, slowly
-   veering).
+   veering). Chapter strength eases at `tuning.world.seaStateEase`; the sea's ripple roughness, surf and swell
+   read that same eased strength, so entering a sheltered island cannot replace the whole sea in one frame.
 3. `wind.step(dt, time)` accumulates game time and runs fixed 1/60 s ticks (none on some high-refresh frames, two
    at 30 fps, up to six at the 100 ms stall cap): force (breeze and resampled splats), curl, vorticity confinement
    (`swirliness`), divergence, 24 Jacobi pressure iterations, gradient subtraction, self-advection, then the grass
@@ -173,6 +174,11 @@ them.
 - **The main boat's passage.** Player gusts affect its cloth, pennant and heel, but not propulsion or sideways
   drift. A separate smoothed prevailing-breeze reading carries the hull at its ordinary pace, keeping musical
   choreography independent of gestures. The toy-boat puzzles still use the player's wind.
+- **The rotary washing lines.** A screen-local sweep selects the nearest visible frame and writes a tangential
+  splat. The frame uses that submitted air immediately while its delayed field sample arrives; unrelated and
+  ambient wind never turn it. A continuous sweep keeps its turn direction as the cloth rotates past the pointer.
+  Local circles lift the snagged hem through the shared lift field. Partial progress stays earned. Each aligned frame catches independently; both must settle before
+  the travellers cross. Drawn spiral/sweep invitations never supply wind.
 - **Storm rain** leans by `tuning.storm.rainLean` along the breeze without writing a gust.
 
 ## What wind can and cannot solve

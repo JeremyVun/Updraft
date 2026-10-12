@@ -7,6 +7,7 @@ import { heightAt } from './island';
 import { glsl, tuning } from '../tuning';
 import { CURTAINS, PEG_LENGTH, type WashingCurtain } from './lines-passage';
 import type { Cloth } from './cloth-sim';
+import { FAMILY_PLACE, FAMILY_APPROACH, DOOR_PLACE, ROTARY_PLACE } from './lines-layout';
 
 /** Washing hung out on a line: pegged along its top edge, swinging up and fluttering in the live wind. */
 const CLOTH_VERT = /* glsl */ `
@@ -158,7 +159,7 @@ void main() {
   gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
 }`;
 
-const CLOTH_FRAG = /* glsl */ `
+export const CLOTH_FRAG = /* glsl */ `
 ${ATMO_GLSL}
 uniform vec4 uSubject;
 uniform float uFamilyFlutter;
@@ -204,7 +205,7 @@ void main() {
   // A neckline makes these unmistakably clothes rather than three more rectangular sheets.
   if (vRole > -0.5 && length(vec2((vUv.x - 0.5) / 0.1, (1.0 - vUv.y) / 0.065)) < 1.0) discard;
   vec3 cloth = vColor;
-  if (vCurtain > -0.5) {
+  if (vCurtain > -0.5 && vCurtain < 1.5) {
     // The same red sewn hem on each passage: a domestic detail the player can recognise at a distance.
     float hemBand = smoothstep(0.015, 0.025, vUv.y) * (1.0 - smoothstep(0.075, 0.085, vUv.y));
     float sideBand = 1.0 - smoothstep(0.012, 0.021, min(vUv.x, 1.0 - vUv.x));
@@ -212,6 +213,9 @@ void main() {
     cloth = mix(cloth, thread, max(hemBand, sideBand) * 0.9);
     float stitch = (1.0 - smoothstep(0.0015, 0.003, abs(vUv.y - 0.052))) * step(0.55, fract(vUv.x * 65.0));
     cloth = mix(cloth, vColor, stitch * 0.8);
+  } else if (vCurtain > 1.5) {
+    float stripe = 1.0 - smoothstep(0.004, 0.008, min(abs(vUv.y - 0.065), min(abs(vUv.y - 0.09), abs(vUv.y - 0.14))));
+    cloth = mix(cloth, vec3(0.82, 0.79, 0.69), stripe * 0.75);
   }
   float weave = sin(vUv.x * 240.0) * sin(vUv.y * 190.0) * 0.03;
   cloth *= 1.0 + weave;
@@ -455,13 +459,13 @@ export class RedDoor {
 }
 
 /** Beyond the last curtain: a quiet patch of sky behind three recognisable garments. */
-export const door = new RedDoor(11, -298, 0);
+export const door = new RedDoor(DOOR_PLACE.x, DOOR_PLACE.z, 0);
 door.group.scale.set(1.5, 1.08, 1);
 fixInPlace(door.group);
 export const FAMILY_LINE: LineSpec = (() => {
-  const a = new THREE.Vector3(5.8, 0, -290);
-  const b = new THREE.Vector3(16.2, 0, -290);
-  const top = Math.max(heightAt(a.x, a.z), heightAt(b.x, b.z), heightAt(11, -290)) + 5.2;
+  const a = new THREE.Vector3(FAMILY_PLACE.x - 5.2, 0, FAMILY_PLACE.z);
+  const b = new THREE.Vector3(FAMILY_PLACE.x + 5.2, 0, FAMILY_PLACE.z);
+  const top = Math.max(heightAt(a.x, a.z), heightAt(b.x, b.z), heightAt(FAMILY_PLACE.x, FAMILY_PLACE.z)) + 5.2;
   a.y = top; b.y = top;
   return { a, b, sag: 0.18 };
 })();
@@ -556,9 +560,7 @@ export class WashingLines {
         shapes.push(width, drop, rand() * 3, rand() * 6.28);
         /** Two pegs at the corners of every piece: the detail that says washing rather than flags, up close. */
         posts.push(pegGeometry(point, dir, width * 0.46), pegGeometry(point, dir, -width * 0.46));
-        // Reserve the blue/red/yellow family for the clearing. Nearby laundry is ordinary pale linen.
-        const nearFamily = familyLine !== null && Math.hypot(point.x - 11, point.z + 390) < 40;
-        const c = CLOTH_COLOURS[Math.floor(rand() * (nearFamily ? 9 : CLOTH_COLOURS.length))];
+        const c = CLOTH_COLOURS[Math.floor(rand() * CLOTH_COLOURS.length)];
         colors.push(c.r, c.g, c.b);
         /** Mostly sheets, and then a shirt, a nightgown or a pair of trousers among them, the way a line is. */
         const roll = rand();
@@ -781,8 +783,10 @@ export function lineField(
 ): LineSpec[] {
   const rand = mulberry32(seed);
   const reserved = (ax: number, az: number, bx: number, bz: number): boolean => hung.length > 0 && (
-    pointToRun(11, -293, ax, az, bx, bz) < 12 ||
-    pointToRun(11, -307, ax, az, bx, bz) < 8 ||
+    pointToRun(FAMILY_PLACE.x, FAMILY_PLACE.z + 2, ax, az, bx, bz) < 16 ||
+    pointToRun(DOOR_PLACE.x, DOOR_PLACE.z - 9, ax, az, bx, bz) < 8 ||
+    pointToRun(ROTARY_PLACE.x, ROTARY_PLACE.z, ax, az, bx, bz) < ROTARY_PLACE.radius + 0.25 ||
+    pointToRun(ROTARY_PLACE.farX, ROTARY_PLACE.farZ, ax, az, bx, bz) < ROTARY_PLACE.radius + 0.25 ||
     CURTAINS.some(c => {
       if (pointToRun(c.center.x, c.center.z + 3, ax, az, bx, bz) < 7) return true;
       // Reserve the low view as well as the child's standing place. Include portrait's
@@ -866,7 +870,16 @@ export function lineField(
     });
   }
 
-  return specs.slice(hung.length);
+  // Leave the rotary arms against the sky; short washing across their approach hides the mechanism.
+  return specs.slice(hung.length).filter(s =>
+    pointToRun(FAMILY_APPROACH.x, FAMILY_APPROACH.z, s.a.x, s.a.z, s.b.x, s.b.z) > 9 &&
+    pointToRun(tuning.world.linesFold.x, tuning.world.linesFold.z, s.a.x, s.a.z, s.b.x, s.b.z) > 8 &&
+    pointToRun(ROTARY_PLACE.farX + ROTARY_PLACE.snagSide, ROTARY_PLACE.farZ + ROTARY_PLACE.snagAhead,
+      s.a.x, s.a.z, s.b.x, s.b.z) > 3 && (s.drop === undefined || (
+    pointToRun(ROTARY_PLACE.x, ROTARY_PLACE.z, s.a.x, s.a.z, s.b.x, s.b.z) > ROTARY_PLACE.radius + 7 &&
+    pointToRun(ROTARY_PLACE.farX, ROTARY_PLACE.farZ, s.a.x, s.a.z, s.b.x, s.b.z) > ROTARY_PLACE.radius + 7 &&
+    pointToRun(FAMILY_APPROACH.x, FAMILY_APPROACH.z, s.a.x, s.a.z, s.b.x, s.b.z) > 14
+  )));
 }
 
 /** The point a fraction `t` of the way along the path, and the direction it runs there. */

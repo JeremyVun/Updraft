@@ -318,7 +318,7 @@ for(const name of (process.env.CROSSING ? [process.env.CROSSING] : Object.keys(s
   const entry={name,calm,gust,lowFps,windLeft,windRight,lateGust};
   if(name==='toMirror')entry.circling=run(name,60,0,0,false,true);
   if(name==='toBoats'||name==='toMeadow') {
-    const target=name==='toBoats'?30:40;
+    const target=name==='toBoats'?45:40;
     for(const result of [calm,lowFps,windLeft,windRight])
       assert(Math.abs(result.seconds-target)<5,`${name}: ordinary passage exceeds its ${target}s pacing target (${result.seconds}s)`);
   }

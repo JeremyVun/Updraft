@@ -21,7 +21,7 @@ export type LoadingStage = keyof typeof STAGES;
 
 /** The room whose painting stands behind the veil, by saved chapter or `?chapter=` start (the names never clash). */
 const PAINTINGS: Record<string, string> = {
-  island: 'island', tree: 'island', crossing: 'washing', toLines: 'washing', lines: 'washing', washing: 'washing',
+  island: 'island', tree: 'island', crossing: 'washing', toLines: 'washing', lines: 'washing', washing: 'washing', rotary: 'washing',
   toBoats: 'boats', boats: 'boats', toMeadow: 'meadow', meadow: 'meadow', hills: 'meadow', piano: 'meadow',
   toBirches: 'birches', birches: 'birches', autumn: 'birches', toStairs: 'stairs', stairs: 'stairs', clouds: 'stairs',
   drowned: 'drowned', village: 'drowned', roofs: 'drowned', church: 'drowned', storm: 'drowned', toWood: 'wood', wood: 'wood', dark: 'wood', fears: 'wood',

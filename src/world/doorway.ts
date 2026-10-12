@@ -3,7 +3,7 @@ import { fixInPlace } from '../gl/fixed';
 import { tuning } from '../tuning';
 import { atmo } from './atmosphere';
 import { heightAt } from './island';
-import { DOOR_SHORE, ISLES } from './heightfield';
+import { DOOR_SHORE } from './heightfield';
 import { door } from './lines';
 import type { Terrain } from './terrain';
 import type { Water } from './water';
@@ -139,7 +139,7 @@ export class DoorwayView {
     r.getDrawingBufferSize(this.size);
     u.uDoorSize.value.copy(this.size);
     u.uDoorInverse.value.multiplyMatrices(view.matrixWorld, view.projectionMatrixInverse);
-    u.uDoorClip.value.set(0, 0, doorway.crossed ? 0 : 1, 398);
+    u.uDoorClip.value.set(0, 0, doorway.crossed ? 0 : 1, -door.group.position.z);
     if (this.surface.visible) {
       const scale = view.position.distanceTo(this.surface.position) < 5 ? 1 : tuning.linesPassage.portalScale;
       const w = Math.max(1, Math.round(this.size.x * scale)), h = Math.max(1, Math.round(this.size.y * scale));
@@ -181,7 +181,7 @@ export class DoorwayView {
         r.setRenderTarget(prev);
       }
     }
-    atmo.uniforms.uRoom.value.set(doorway.crossed ? DOOR_SHORE.x : ISLES.lines.x, doorway.crossed ? DOOR_SHORE.z : ISLES.lines.z, doorway.crossed ? 48 : 96);
+    atmo.uniforms.uRoom.value.set(DOOR_SHORE.x, DOOR_SHORE.z, doorway.crossed ? 48 : -48);
     try { this.inRoom(doorway.crossed ? this.destination : this.source, draw); }
     finally { atmo.uniforms.uRoom.value.set(0, 0, 0); u.uDoorClip.value.z = 0; }
   }

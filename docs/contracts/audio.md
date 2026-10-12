@@ -10,7 +10,7 @@ camera update. Each room with its own composition has a score module that follow
 The former `little-boats-score.ts`, `lines-score.ts`, `birches-score.ts` and `summit-score.ts` remain for historical studies and phase types, outside runtime playback.
 `phrasing.ts` shares scheduling, lookahead, stale-attack skipping and introductory rests among them;
 `arrival-music.ts` owns handoffs between pieces; `gesture-harmony.ts` the chord tones gestures may use.
-`foley.ts` synthesises physical sounds and `world-foley.ts` / `birches-foley.ts` map object motion to them;
+`foley.ts` plays physical sounds and `world-foley.ts` / `birches-foley.ts` map object motion to them;
 `environment.ts` derives habitat and coast weights; `foghorn.ts` is the Drowned lighthouse horn; `stairs-sound.ts`
 and `stairs-air.ts` are the stairs room's air; `sliced.ts` paces start-up synthesis. The piano's tone is
 `PianoStrings` in `audio.ts`. Feel, level and timing knobs live in `tuning.audio` (plus `tuning.piano` and
@@ -398,7 +398,15 @@ pan and bounded scheduling; finished nodes disconnect.
 - Laundry: local wind on the cloth's spring and flutter thresholds, at most `clothSources` voices. A passage sheet's
   peg coming off the line snaps once (`peg`), from the peg itself; pegs already off when a checkpoint loads are silent.
   `pegBoostDb` raises the snap and wooden knock by 6 dB after Jeremy's Lines playtest. The family garments filling
-  and reaching toward each other are silent.
+  and reaching toward each other are silent. Each rotary gives one metal-bearing creak after real angular travel:
+  `rotary-friction.ts` generates two 0.62 s variations from irregular pressure, ringing harmonics around
+  2.9/5.8/8.7 kHz, filtered noise and brief collar contacts. `rotary-creak.ts` caches the generated buffers when
+  audio starts, then alternates them without synthesis work at the gesture. No recorded PCM ships with this sound.
+  Jeremy approved this procedural timbre. The [reference study](../../assets/audio-reference/rotary-creak/README.md)
+  preserves the recording used to guide it; keep recordings as development references, not playback assets.
+  Its level is separate from the little pinwheels’ flutter; Jeremy’s
+  request to quiet the spinners referred to those pinwheels. A small cloth sound follows the snag release. Idle, restored and muted events stay silent;
+  missed creaks expire rather than playing on unmute.
 - Sleeping hearth: one looping low roar that breathes, plus crackles in small uneven clusters with an occasional
   snap, all scaled by the flame and the camera's distance; the roar fades out with the flame or on leaving the room, and
   once it has been quiet for two seconds it stops until the fire is heard again.
@@ -445,8 +453,8 @@ pan and bounded scheduling; finished nodes disconnect.
   part of the playtest.
 - Flock wingbeats follow flight and take-off; resting rafts are silent. Beats consumed while inaudible never burst on
   return.
-- The Lines pinwheels share one flutter voice; out of reach it fades, stops and disconnects, and a new one is made if
-  the row comes back.
+- The Lines pinwheels share one flutter voice, controlled by `linesToys.pinwheelFlutterLevel` and reduced about
+  9 dB after Jeremy’s playtest. Out of reach it fades, stops and disconnects; returning makes a new voice.
 
 ## Start-up and lifecycle
 

@@ -52,6 +52,7 @@ export class Boat {
   speed = 0;
   /** A narrow passage can spill surplus wind without making its sail look becalmed. */
   speedLimit = Infinity;
+  speedScale = 1;
   afloat = false;
   /** Where the child steers for; null lets it drift with the wind. */
   steerFor: THREE.Vector2 | null = null;
@@ -211,6 +212,7 @@ export class Boat {
     this.coastTo = null;
     this.trim = this.trimNow = 0;
     this.speedLimit = Infinity;
+    this.speedScale = 1;
     this.shelter = 0;
     this.position.set(x, Math.max(heightAt(x, z), 0) + DRAFT, z);
     this.yaw = yaw;
@@ -426,7 +428,7 @@ export class Boat {
         const berthDistance = this.mooring ? Math.hypot(this.mooring.x - p.x, this.mooring.z - p.z) : Infinity;
         const approach = Math.max(tuning.sail.minimumWay, berthDistance * tuning.sail.mooringDrive);
         const drive = Math.min(
-          this.passageWind.taken * tuning.sail.drive + Math.max(0, this.passageWind.along) * tuning.sail.following,
+          (this.passageWind.taken * tuning.sail.drive + Math.max(0, this.passageWind.along) * tuning.sail.following) * this.speedScale,
           tuning.sail.topSpeed,
           this.speedLimit,
           turnLimit,

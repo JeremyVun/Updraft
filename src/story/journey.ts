@@ -13,7 +13,7 @@ import type { Cast, Chapter } from './cast';
 import { CrossingChapter, FIRST_ISLAND, LANDING, MEADOW_APPROACH } from './crossing';
 import { HOME_MOORING, HomeChapter } from './home';
 import { BOAT_BERTH, IslandChapter } from './island';
-import { LINES_LANDING, LinesChapter } from './lines';
+import { LINES_BERTH, LINES_LANDING, LinesChapter } from './lines';
 import { FAR_SHORE, MeadowChapter } from './meadow';
 import { BirchesChapter } from './birches';
 import { DrownedChapter } from './drowned';
@@ -75,7 +75,7 @@ export const ROUTES: Record<string, THREE.Vector2[]> = {
     LINES_LANDING,
   ],
   // Leave the door shore to the west, then round Little Boats into its arrival pool.
-  toBoats: [new THREE.Vector2(220, -410), new THREE.Vector2(190, -397), new THREE.Vector2(190, -350),
+  toBoats: [new THREE.Vector2(LINES_BERTH.x - 20, LINES_BERTH.z - 21.5), new THREE.Vector2(190, -397), new THREE.Vector2(190, -350),
     new THREE.Vector2(BOATS_LANDING.x + 26, BOATS_LANDING.z - 4), new THREE.Vector2(BOATS_LANDING.x, BOATS_LANDING.z)],
   // Cross the open water north of the meadow, then approach its bank head-on.
   toMeadow: [new THREE.Vector2(125, -510), new THREE.Vector2(60, -535), MEADOW_APPROACH, LANDING],
@@ -172,9 +172,10 @@ export class Journey {
     } else if (choice === 'crossing' || choice === 'lines') {
       this.sail(BOAT_BERTH.x + 8, BOAT_BERTH.z + 8, 0.95);
       this.begin('toLines');
-    } else if (choice === 'washing') {
+    } else if (choice === 'washing' || choice === 'rotary') {
       this.land(LINES_LANDING.x, LINES_LANDING.y + 2, LINES_LANDING.x, LINES_LANDING.y - 4);
       this.begin('lines');
+      if (choice === 'rotary') (this.chapter as LinesChapter).skipToRotary();
     } else if (choice === 'door' || choice === 'shore') {
       this.land(LINES_LANDING.x, LINES_LANDING.y + 2, LINES_LANDING.x, LINES_LANDING.y - 4);
       this.begin('lines');
@@ -381,6 +382,7 @@ export class Journey {
           lookBack: FIRST_ISLAND,
           farewell: 21,
           whaleAt: tuning.opening.crossing.whaleAt,
+          speedScale: tuning.opening.crossing.speedScale,
           haze: 0.35,
           arrivalHaze: { strength: tuning.world.linesCrossingHaze,
             from: tuning.world.linesHazeFrom, to: tuning.world.linesHazeTo },

@@ -1,4 +1,4 @@
-import { BOATS_SHIFT, SHORE_SHIFT, HOME_SHIFT, LINES_SHIFT, STILL_SHIFT } from './geography';
+import { BOATS_SHIFT, SHORE_SHIFT, SHORE_SEPARATION, HOME_SHIFT, LINES_SHIFT, STILL_SHIFT } from './geography';
 import { mirrorBed, MIRROR_LAYOUT_GLSL } from './sky-mirror-layout';
 import { glsl, tuning } from '../tuning';
 import { LITTLE_BOATS, LITTLE_BOATS_GLSL, boatsBar, boatsOut, boatsLevel } from './little-boats-layout';
@@ -144,8 +144,14 @@ function meadowSculpted(x: number, z: number): { x: number; z: number } {
   return { x: MEADOW_SCULPTED.x + (x - MEADOW_SCULPTED.x) / MEADOW_SCALE, z: MEADOW_SOUTH + (z - MEADOW_SOUTH) / MEADOW_SCALE };
 }
 
+const LINES_ISLE = { x: 14, z: -368.4, rx: 70, rz: 64.4 };
+const LINES_STRETCH_FROM = -360;
+const LINES_NORTH_REACH = LINES_STRETCH_FROM - LINES_ISLE.z + LINES_ISLE.rz;
+const LINES_NORTH_SCALE = LINES_NORTH_REACH / (LINES_NORTH_REACH + tuning.world.linesNorthExtension);
+
 export const ISLES = {
-  lines: { x: 14 + LINES_SHIFT.x, z: -368.4 + LINES_SHIFT.z, rx: 70, rz: 64.4 },
+  lines: { x: LINES_ISLE.x + LINES_SHIFT.x, z: LINES_ISLE.z + LINES_SHIFT.z - tuning.world.linesNorthExtension / 2,
+    rx: LINES_ISLE.rx, rz: LINES_ISLE.rz + tuning.world.linesNorthExtension / 2 },
   meadow: {
     x: MEADOW_SCULPTED.x,
     z: MEADOW_SOUTH - MEADOW_SCULPTED.rz * MEADOW_SCALE,
@@ -164,7 +170,7 @@ export const ISLES = {
 } as const;
 
 /** The small shore reached only through the red door; separated from the washing island by open sea. */
-export const DOOR_SHORE = { x: 240 + SHORE_SHIFT.x, z: -460 + SHORE_SHIFT.z, rx: 23, rz: 30 } as const;
+export const DOOR_SHORE = { x: 240 + SHORE_SHIFT.x + SHORE_SEPARATION.x, z: -460 + SHORE_SHIFT.z + SHORE_SEPARATION.z, rx: 23, rz: 30 } as const;
 function doorShoreHeight(x: number, z: number): number {
   const r = Math.hypot((x - DOOR_SHORE.x) / DOOR_SHORE.rx, (z - DOOR_SHORE.z) / DOOR_SHORE.rz);
   return 3.4 - smoothstep(0.35, 1.08, r) * 5.2 - smoothstep(1, 1.6, r) * 8;
@@ -217,10 +223,11 @@ function littleBoatsHeight(x: number, z: number): number {
 }
 
 /** The island of lines: a low green whaleback, small enough that the washing on it is the whole room. */
-const LINES_ISLE = { ...ISLES.lines, x: 14, z: -368.4 };
-
 function linesHeight(x: number, z: number): number {
+  const fold = tuning.world.linesFold;
+  const crest = Math.max(0, 1 - ((x - fold.x) / fold.radiusX) ** 2 - ((z - fold.z) / fold.radiusZ) ** 2);
   x -= LINES_SHIFT.x; z -= LINES_SHIFT.z;
+  z = LINES_STRETCH_FROM + Math.max(0, z - LINES_STRETCH_FROM) + Math.min(0, z - LINES_STRETCH_FROM) * LINES_NORTH_SCALE;
   const c = LINES_ISLE;
   if (isleFar(x, z, c, 0.16, 40)) return -1.4 - 8;
   const d = isleCoast(x, z, c, 0.16, 21);
@@ -228,7 +235,7 @@ function linesHeight(x: number, z: number): number {
   const r = Math.hypot((x - c.x) / c.rx, (z - c.z) / c.rz);
   let h = land * 3.2 - 1.4;
   h += land * land * (Math.max(0, 1 - r * r) * tuning.world.linesDome + (gfbm(x * 0.022, z * 0.022, 3, 22) * 0.5 + 0.5) * 5);
-  return h - smoothstep(0, 40, d) * 8;
+  return h + fold.height * crest * crest - smoothstep(0, 40, d) * 8;
 }
 
 /**
@@ -556,15 +563,18 @@ float hf_isleCoast(vec2 p, vec2 c, vec2 r, float wobble, float seed) {
 }
 ${LUMP_GLSL}
 float hf_lines(vec2 p) {
+  vec2 fold = (p - vec2(${glsl(tuning.world.linesFold.x)}, ${glsl(tuning.world.linesFold.z)})) / vec2(${glsl(tuning.world.linesFold.radiusX)}, ${glsl(tuning.world.linesFold.radiusZ)});
+  float crest = max(0.0, 1.0 - dot(fold, fold));
   p -= vec2(${glsl(LINES_SHIFT.x)}, ${glsl(LINES_SHIFT.z)});
+  p.y = ${glsl(LINES_STRETCH_FROM)} + max(0.0, p.y - ${glsl(LINES_STRETCH_FROM)}) + min(0.0, p.y - ${glsl(LINES_STRETCH_FROM)}) * ${glsl(LINES_NORTH_SCALE)};
   vec2 c = vec2(${LINES_ISLE.x}.0, ${glsl(LINES_ISLE.z)});
-  vec2 r = vec2(${ISLES.lines.rx}.0, ${glsl(ISLES.lines.rz)});
+  vec2 r = vec2(${glsl(LINES_ISLE.rx)}, ${glsl(LINES_ISLE.rz)});
   float d = hf_isleCoast(p, c, r, 0.16, 21.0);
   float land = (1.0 - smoothstep(-30.0, 10.0, d));
   float rr = length((p - c) / r);
   float h = land * 3.2 - 1.4;
   h += land * land * (max(0.0, 1.0 - rr * rr) * ${glsl(tuning.world.linesDome)} + (gfbm(p * 0.022, 3, 22.0) * 0.5 + 0.5) * 5.0);
-  return h - smoothstep(0.0, 40.0, d) * 8.0;
+  return h + ${glsl(tuning.world.linesFold.height)} * crest * crest - smoothstep(0.0, 40.0, d) * 8.0;
 }
 vec2 hf_meadowSculpted(vec2 p) {
   vec2 pivot = vec2(${MEADOW_SCULPTED.x}.0, ${MEADOW_SOUTH}.0);

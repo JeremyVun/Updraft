@@ -13,7 +13,7 @@ const quick = [
 ];
 const mechanics = [
   ...quick, 'bandage-cost', 'boat', 'boat-ground', 'flock-flight', 'dolphin-leap', 'journey-pacing', 'kite-logic',
-  'little-boats-logic', 'lines-progression', 'meadow-plane', 'meadow-route', 'piano-frame', 'pond-view', 'sail-flutter',
+  'little-boats-logic', 'lines-progression', 'lines-cloth', 'rotary-washing', 'rotary-rig', 'meadow-plane', 'meadow-route', 'piano-frame', 'pond-view', 'sail-flutter',
   'scarf-geometry', 'sea-logic', 'sheet-contact', 'sky-mirror-logic', 'sky-mirror-pointer', 'sky-mirror-touch',
   'sleeping-logic', 'wing-care', 'wood-logic', 'ending-view',
   'camera-direction', 'crossing-camera', 'crossing-haze', 'crossing-linen', 'first-whale-swell', 'dream-story', 'drowned-camera', 'drowned-fog-motion',
@@ -22,7 +22,7 @@ const mechanics = [
 ];
 const browser = [
   'shader-browser', 'sky-mirror-star', 'drowned-mist', 'lantern-fog', 'stairs-fog', 'fog-lookup', 'touch-viewport', 'chapter-view-browser', 'context-loss', 'start',
-  'progress', 'frame-time-browser', 'home-water', 'recorded-music-browser', 'music-loading-browser', 'still-phrases-browser', 'still-departure-browser', 'petals-browser', 'journey-view',
+  'progress', 'frame-time-browser', 'home-water', 'recorded-music-browser', 'music-loading-browser', 'still-phrases-browser', 'still-departure-browser', 'petals-browser', 'journey-view', 'lines-arrival',
 ];
 // Audio/score checks render through a headless dev server (no GPU); BASE selects it.
 const audio = [

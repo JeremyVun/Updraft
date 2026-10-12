@@ -12,7 +12,7 @@ import { STILL_CENTRE } from './geography';
  */
 const REACH: [{ x: number; z: number }, number, number, number, number][] = [
   [STILL_CENTRE, -124, 130, -98, 94],
-  [ISLES.lines, -122, 126, -114, 116],
+  [ISLES.lines, -122, 126, -210, 156],
   [DOOR_SHORE, -36, 36, -46, 46],
   [LITTLE_BOATS, -70, 70, -104, 104],
   [ISLES.meadow, -294, 300, -266, 252],

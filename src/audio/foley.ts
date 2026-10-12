@@ -4,23 +4,25 @@ import type { NetSound } from '../fx/sealife/net';
 import type { SleeperSound, WhaleCall } from '../fx/sealife/sleeper';
 import { WhaleVoice } from './whale-voice';
 import { strikeBell } from './bell';
+import { RotaryCreak } from './rotary-creak';
 
 export type Surface = 'grass' | 'sand' | 'wood' | 'water';
 export type MaterialSound = 'cloth' | 'wool' | 'sail' | 'sail-settle' | 'water' | 'paper' | 'door' | 'splash' | 'peg'
   | 'dolphin-surface' | 'leaf-scuff' | 'swing-creak' | Exclude<SleeperSound, WhaleCall> | Exclude<NetSound, 'whale-call' | 'whale-glad'> | 'tub'
   | 'tree-creak' | 'roots-give' | 'root-tear' | 'tree-fall' | 'bough-creak' | 'slate-land'
   | 'mill-start' | 'mill-creak' | 'mill-settle' | 'mill-click' | 'linen-flap' | 'bell' | 'bell-touch' | 'hull-scrape'
-  | 'hull-strain';
+  | 'hull-strain' | 'rotary-creak';
 
 /**
  * The sounds a small body makes, as opposed to a voice. The cygnet never speaks except when it is lost, so this is
  * most of how it is heard: webbed feet on sand, a wing opened in a hurry, the whole of it shaken out after the rain.
- * All of it is synthesised from one noise buffer and a few tones, quiet enough to sit under the wind.
+ * Synthesised from noise and tones, quiet enough to sit under the wind.
  * The same physical palette gives cloth, boats, paper and doors restrained sounds of their own.
  */
 export class Foley {
   /** The whale's voice. */
   readonly whale = new WhaleVoice();
+  private readonly rotary = new RotaryCreak();
   private out: AudioOut | null = null;
   private noise: AudioBuffer | null = null;
   private lastStep = -1;
@@ -36,6 +38,7 @@ export class Foley {
       this.noise = out.ctx.createBuffer(1, length, out.ctx.sampleRate);
       const data = this.noise.getChannelData(0);
       for (let i = 0; i < length; i++) data[i] = Math.random() * 2 - 1;
+      this.rotary.prepare(out.ctx);
     }
     if (out !== this.out && this.hearthBed) {
       this.hearthBed.src.stop();
@@ -84,6 +87,8 @@ export class Foley {
         type: 'bandpass', from: 2900 * colour, q: 0.7, attack: 0.008 });
       this.puff({ at: at + 0.095, len: 0.055, level: level * 0.018, pan,
         type: 'bandpass', from: 2100 * colour, q: 0.6, attack: 0.01 });
+    } else if (kind === 'rotary-creak') {
+      this.rotary.play(this.out!, at, level, pan);
     } else if (kind === 'swing-creak') {
       // Low rope friction and wood flex; no piercing, pitched playground squeak.
       const colour = 0.92 + Math.random() * 0.16;

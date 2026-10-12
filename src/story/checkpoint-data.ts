@@ -23,7 +23,7 @@ export type CheckpointPayload<K extends keyof typeof CHECKPOINT_FIELDS> = Numeri
 const F = CHECKPOINT_FIELDS;
 const layouts = {
   island: { entry: F.empty, companion: F.empty },
-  toLines: { entry: F.empty }, lines: { entry: F.empty, 'curtain-1': F.lines, 'curtain-2': F.lines, family: F.lines },
+  toLines: { entry: F.empty }, lines: { entry: F.empty, 'curtain-1': F.lines, rotary: F.lines, 'curtain-2': F.lines, family: F.lines },
   toBoats: { entry: F.empty }, boats: { entry: F.empty, 'pool-1': F.boats, 'pool-2': F.boats },
   toMeadow: { entry: F.empty }, meadow: { entry: F.empty, piano: F.meadow, pond: F.meadow },
   toBirches: { entry: F.empty }, birches: {

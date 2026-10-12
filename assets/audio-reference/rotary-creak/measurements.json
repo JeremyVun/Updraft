@@ -1,0 +1,35 @@
+{
+  "sample_rate": 24000,
+  "window_samples": 1024,
+  "hop_samples": 128,
+  "display_db": [
+    -65,
+    0
+  ],
+  "measurements": [
+    {
+      "file": "rejected-synth.wav",
+      "duration_seconds": 2.0,
+      "source_peak_dbfs": -22.608353751731013,
+      "energy_above_2khz_percent": 0.06414359086193144,
+      "spectral_centroid_hz": 813.2409174076681,
+      "energy_95_percent_below_hz": 1453.125
+    },
+    {
+      "file": "clothesline-excerpt.wav",
+      "duration_seconds": 2.0,
+      "source_peak_dbfs": -26.124061724126886,
+      "energy_above_2khz_percent": 98.79129528999329,
+      "spectral_centroid_hz": 4102.649886136076,
+      "energy_95_percent_below_hz": 8648.4375
+    },
+    {
+      "file": "gate-0304.mp3",
+      "duration_seconds": 1.1755,
+      "source_peak_dbfs": -5.516202466150169,
+      "energy_above_2khz_percent": 83.585524559021,
+      "spectral_centroid_hz": 6363.633178210312,
+      "energy_95_percent_below_hz": 11671.875
+    }
+  ]
+}

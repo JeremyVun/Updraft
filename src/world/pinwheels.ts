@@ -7,6 +7,7 @@ import { Sway, feltWind, type WindField, type WindSample } from '../wind/field';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { heightAt } from './island';
 import { mulberry32 } from './noise';
+import { FAMILY_PLACE } from './lines-layout';
 
 const SAILS = 4;
 export const SECTOR = (Math.PI * 2) / SAILS;
@@ -266,7 +267,8 @@ export class Pinwheels {
         const ground = heightAt(x, z);
         if (ground < 2) continue;
         // The family clearing has one subject. Keep the dancing wheels in the passages before it.
-        if (Math.hypot(x - 11, z + 390) < 13) continue;
+        if (Math.hypot(x - FAMILY_PLACE.x, z - FAMILY_PLACE.z) < 13 ||
+          Math.hypot(x - tuning.rotaryWashing.x, (z - tuning.rotaryWashing.z) * 0.75) < 22) continue;
         /** Long enough to stand the wheel clear of grass this deep, and all of them a little out of true. */
         const top = 1.8 + rand() * 0.4;
         this.wheels.push({ x, z, sway: new Sway(), ease: 0.8 + rand() * 0.5, yaw: rand() * 6.28, omega: 0, phase: rand() * 6.28 });
@@ -424,7 +426,7 @@ class Flutter {
 
   update(omega: number, away: number): void {
     const near = 1 - THREE.MathUtils.smoothstep(away, 14, 60);
-    const level = THREE.MathUtils.smoothstep(omega, 2.5, 22) * near * 0.05;
+    const level = THREE.MathUtils.smoothstep(omega, 2.5, 22) * near * tuning.linesToys.pinwheelFlutterLevel;
     this.gain.gain.setTargetAtTime(level, this.ctx.currentTime, 0.12);
     this.band.frequency.setTargetAtTime(2100 + omega * 90, this.ctx.currentTime, 0.2);
     this.rate.frequency.setTargetAtTime(Math.max(4, (omega * SAILS) / (Math.PI * 2)), this.ctx.currentTime, 0.15);

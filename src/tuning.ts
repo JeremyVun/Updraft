@@ -477,14 +477,18 @@ export const tuning = {
     title: { afterFarewell: 13, fadeIn: 3, hold: 2.5, fadeOut: 3 },
     titleGust: { before: 3, duration: 6, reach: 48, width: 32, radius: 10, speed: 24, energy: .3, lift: .04,
       lines: { interval: .45, spread: 22, height: 1.5, climb: .15, width: .2 } },
-    crossing: { whaleAt: 45, whalePan: 6, whaleFadeIn: 3.5, whaleFadeOut: 4, diveSwell: 1.8, diveSwellFor: 60 },
-    shoreEchoes: { afterFarewell: 48, duration: 48, span: 40, ahead: 30, height: 6, followerHeight: 1.2, spawnMargin: 3,
+    crossing: { speedScale: 0.99, whaleDepth: 2.4, whaleAt: 45, whalePan: 6, whaleFadeIn: 3.5, whaleFadeOut: 4, diveSwell: 1.8, diveSwellFor: 60 },
+    shoreEchoes: { gulls: 10, gullSpacing: 10, afterFarewell: 48, duration: 48, span: 40, ahead: 30, height: 6, followerHeight: 1.2, spawnMargin: 3,
       crossSpeed: 6, forwardSpeed: 5.5, laundryLift: 5.15, laundryTurn: 2.2, laundrySteady: .65,
       laundry: [
-        { at: .5, side: 4, depth: 8, height: 5.5, bob: 1.7, rate: .48, speed: .75, veer: .24, phase: .3, roll: 1.2, width: 2.2, drop: 2.6 },
+        { at: .5, side: 4, depth: 8, height: 5.5, bob: 1.7, rate: .48, speed: .75, veer: .24, phase: .3, roll: 1.2, width: 2.2, drop: 2.6, colour: '#b1a0bd' },
         { at: 4.7, side: -8, depth: -10, height: 12, bob: 3, rate: .32, speed: 1.2, veer: -.38, phase: 1.8, roll: .9, width: 2.7, drop: 2.3 },
         { at: 2.9, side: -18, depth: 22, height: 8.5, bob: 2.4, rate: .58, speed: .9, veer: .32, phase: 3.4, roll: -1.1, width: 1.8, drop: 2.1 },
         { at: 10.2, side: 12, depth: -4, height: 4, bob: 1.4, rate: .7, speed: 1.1, veer: -.2, phase: 4.7, roll: 1.7, width: 2.4, drop: 2.8 },
+        { at: 14.5, side: -6, depth: 12, height: 8, bob: 2.1, rate: .43, speed: .95, veer: .27, phase: 2.1, roll: -1.2, width: 2.5, drop: 2.8, colour: '#cdaaaa' },
+        { at: 19, side: 5, depth: -3, height: 5.5, bob: 1.5, rate: .6, speed: 1.05, veer: -.22, phase: 5.2, roll: .85, width: 2.1, drop: 2.5 },
+        { at: 23.5, side: -10, depth: 18, height: 10, bob: 2.4, rate: .36, speed: 1.1, veer: .3, phase: 3.9, roll: -1.05, width: 2.8, drop: 2.4 },
+        { at: 28, side: 7, depth: 5, height: 7, bob: 1.9, rate: .52, speed: 1.15, veer: -.25, phase: 1.1, roll: 1.3, width: 2.3, drop: 2.7, colour: '#b3ad99' },
       ],
       camera: { afterFarewell: 48, inFrom: -6, inTo: 3, outFrom: 31, outTo: 43, lookUp: 3.2, lower: 2.3, back: 3.5, sway: .08 } },
     /** Soft ground footprint under flying paper; strength is life per second, alongside the player's wind. */
@@ -757,6 +761,8 @@ export const tuning = {
     /** The sky mirror's, on the open sea until the whale has gone: all of it, over the `core` of its flat its jetties stand on. */
     mirrorMist: { clear: 0, hidden: 1, edge: 1.32, core: 0.85 },
     isleMistLift: 0.45,
+    boatsMist: { clear: 75, hidden: 150, edge: 1.32 },
+    seaStateEase: 0.45,
     /** Birches-style distance veil near Lines; the first island farewell keeps the original clear haze. */
     linesCrossingHaze: .88,
     /**
@@ -775,6 +781,8 @@ export const tuning = {
     meadowPianoSaddle: 6,
     /** Height of the dome in the middle of the island of lines, on top of about 4 of beach and lumps. */
     linesDome: 5.5,
+    linesNorthExtension: 80,
+    linesFold: { x: 10, z: -326, radiusX: 24, radiusZ: 14, height: 5.8 },
     /** Height of the crest the birches stand on, on top of about 3 of beach and lumps. */
     birchesCrest: 5.2,
   },
@@ -1267,6 +1275,26 @@ export const tuning = {
     rippleFull: 0.075,
   },
   /** Making a way through the washing: forgiving wind gestures, an invitation, and the view from below. */
+  rotaryWashing: {
+    x: 9, z: -284, farX: 13, farZ: -300, radius: 6.4, top: 6.9,
+    pathOffset: 4.6, standBack: 7.8, exitAhead: 9,
+    insideSide: 3.8, insideAhead: 0.5, insideDistance: 17, insideNarrowDistance: 12,
+    snagLookDelay: 0.8, snagLookSeconds: 3.6, snagLookSide: 2.6, snagLookAhead: 4.5,
+    approachCrop: 0.48, approachRadius: 3.6, rotaryCrop: 0.84, rotaryRadius: 4.8,
+    torque: 1.25, driveFull: 4, friction: 1.35, maxSpeed: 0.72,
+    catchAngle: 0.22, catchRate: 4, settleSeconds: 1.4, revealPause: 1.4,
+    brushRadius: 0.055, brushFrom: 0.35, airMemory: 0.25, strokeGain: 1.6,
+    unhookRate: 0.6, snagBrushRadius: 0.11, snagGustFull: 1.2, snagLiftFrom: 0.08, snagLiftRadius: 3.5,
+    snagTighten: 8, snagRelax: 5, snagTug: 0.35, snagShiverRate: 15,
+    releaseRate: 9, snagInviteSpan: 3,
+    creakTravel: 0.16, creakLevel: 0.4,
+    startAngle: -Math.PI / 2, snagTurn: 0.16, snagSide: 5.1, snagAhead: 7.9,
+    windRadius: 3, energyDivisor: 25, brushEnergy: 0.6, energyFrom: 0.02, energyFull: 0.2,
+    inviteAfter: 2.4, invitePause: 2.8, inviteSweep: 1.9,
+    cameraDistance: 20, cameraHeight: 1.6, cameraSide: 0.12, cameraFocusHeight: 3.2, cameraFocusSide: 3,
+    cameraZoom: 0.88, narrowZoom: 0.58,
+    narrowDistance: 13, narrowHeight: 1.4, narrowSide: 0.08, narrowFocusSide: 1.5,
+  },
   linesPassage: {
     /** Local gusts count in any direction, and several small sweeps add up. */
     energyFrom: 0.025, energyFull: 0.22,
@@ -1297,12 +1325,12 @@ export const tuning = {
      * turning it face on within the first `flightTurn` of the flight;
      * across its middle (`catchRow` of the way down, all but `catchMargin` at each side) it is steered at
      * `flightGrip` rad/s, firming to `catchGrip` as it comes down to lie along the line, gathered to `catchGather`.
-     * The line takes it wherever it has come down within `catchReach` m of it, and it settles there over `catchSettle` s.
+     * The carried fold settles onto the line over `catchSettle` s.
      */
     flightSeconds: 2, flightRise: 1.3, flightAhead: 1.5, flightFollow: 4, flightLift: 1.05, flightAim: 3,
     flightTurn: 0.35, flightOver: 0.8,
     flightGrip: 6, catchGrip: 10,
-    catchRow: 0.42, catchMargin: 0.18, catchGather: 0.85, catchReach: 0.6, catchSettle: 0.3,
+    catchRow: 0.42, catchMargin: 0.18, catchGather: 0.85, catchSettle: 0.8,
     /** The share of the view that glances toward the line the torn sheet comes down on. */
     snagGlance: 0.3,
     /** A sheet already down when a checkpoint is loaded falls and settles this long before it is shown. */
@@ -1320,6 +1348,7 @@ export const tuning = {
     portalScale: 0.75,
     walkDistance: 16, walkHeight: 1.4,
     curtainDistance: 17, curtainHeight: 0.9,
+    crestHeight: 6.8, familyDistance: 15, familyHeight: 1.2, familyZoom: 0.95,
     viewClearanceAhead: 31, viewClearanceRadius: 5.5,
   },
   /**
@@ -1412,6 +1441,7 @@ export const tuning = {
     veerRate: 1.2,
     /** Seconds of turning a spinning wheel smears over: what makes a gust visible running down a row. */
     smearSeconds: 0.075,
+    pinwheelFlutterLevel: 0.018,
   },
   /**
    * The fledging over the summit: the first flight it makes of its own, flown round the child. The circuit starts

@@ -118,7 +118,9 @@ and whale encounter more room. It holds leaving the cove, the island receding, t
 `story/lines.ts`, `world/lines.ts` (washing and cloth), `world/lines-layout.ts`, `world/lines-passage.ts` (the
 curtains), `world/doorway.ts` and `world/door-shore.ts` (the door and the shore through it), `world/shore-pulley.ts`
 (the pinwheel and pulley line on that shore), `world/kite.ts`, `world/pinwheels.ts`. `?chapter=washing`; `?chapter=door`
-starts at the family's line, `?chapter=shore` just through the door.
+starts at the family's line, `?chapter=shore` just through the door. The rotary prototype adds
+`world/lines-rotary.ts` and `world/rotary-washing.ts`; `?chapter=rotary` starts at it.
+Its brief and visual decisions are in [the design](backlog/lines-rotary/design.md).
 
 The first impossible fragment of home: somebody's washing with nobody there, and a child lost in it. Jeremy:
 **overwhelmed, not vast**. Density is the lever, not area: a low whaleback (`tuning.world.linesDome`) packed with
@@ -149,6 +151,19 @@ Pegs and fallen sheets stay as they are for the rest of the visit, and a checkpo
 cygnet goes first and looks back for the child, through the way the fallen cloth has left (`WashingCurtain.way`,
 chosen once the sheet has been down `passAfter`), and the child follows. Crossing arrivals stay earned if a gust
 moves the waiting bird; reaching the gap counts even if the bird has already cleared its own walking target.
+
+Between the second and third curtains stand two giant rotaries. Their placement is being revised against the
+original organic washing field; the rectangular enclosures were rejected. Both start spread. The farther one's trailing sheet is hooked over a neighbouring
+post: turning pulls it taut, and a local updraft lifts the hem free. Broad sweeps then align the bare halves of both
+frames with the path. Each catches independently; neither runs back. The child and cygnet wait outside their swept
+circles until both have settled, then walk through together.
+Their sage and dusty blue linen carries narrow cream stripes. Only the three curtain challenges wear white with
+red borders, so the two interactions read differently before the player touches them.
+
+The original lane between curtains one and two is formed by loose, overlapping rows of varied washing. The later
+path turns round a bend; the family must stay hidden until curtain three has been completed. That reveal is being
+rechecked as the prototype's rejected cloth walls are removed. The northern
+terrain extends 40 m beneath more washing, keeping the final clearing inland; the arrival heights are unchanged.
 
 The last sheet opens on a clearing: one low line with a blue and a red adult garment and the small yellow jumper
 between them, and the red door. The released breeze brings the sleeves together (blue
@@ -188,9 +203,11 @@ Rules: rich blue, warm red and the child's yellow belong only to the family; the
 the passage sheets share a red sewn hem, and the pinwheels stay outside the clearing. Daylight stays over the whole
 island; pinwheels belong to this island only.
 
-Knobs: `tuning.linesPassage`, `tuning.washing`, `tuning.family`, `tuning.linesToys`, `tuning.shorePulley`. Checks:
+Knobs: `tuning.linesPassage`, `tuning.washing`, `tuning.family`, `tuning.linesToys`, `tuning.shorePulley`, `tuning.rotaryWashing`. Checks:
 `tools/lines-check.mjs`, `lines-view-check.mjs` (both wind the boat in with sweeps across the pinwheel; `lines-check idle`
-also proves waiting cannot).
+also proves waiting cannot), `rotary-washing-check.mjs` (idle, targeting, both directions and coasting),
+`rotary-washing-browser-check.mjs` (real sweeps through the rotary, last curtain, family and door; `FULL=1` includes
+the first two curtains, `TOUCH=1 W=390 H=844 REVERSE=1` checks portrait touch in the other direction).
 `tools/lines-progression-check.mjs` exercises all three curtains with gusts during the bird's look back at 30–120 Hz.
 
 ## The little boats

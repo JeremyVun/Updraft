@@ -4,6 +4,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { openBrowser } from './lib/browser.mjs';
+import { openRotary } from './lib/rotary-gesture.mjs';
 const { browser, close } = await openBrowser();
 const report = [];
 let currentPage;
@@ -36,6 +37,7 @@ try {
       };
     });
     for (let gate = 0; gate < 3; gate++) {
+      if (gate === 2) await openRotary(page);
       await page.waitForFunction(i => __game.story.current.gate === i && __game.story.current.beat === 'curtain', gate, { timeout: 120000 });
       await page.waitForTimeout(3500);
       await page.screenshot({ path: `${prefix}-${gate + 1}-waiting.png` });

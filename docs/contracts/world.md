@@ -30,8 +30,8 @@ and half-sizes are in `ISLES` (`heightfield.ts`) unless noted:
 | room | centre (x, z) | half-size | defined by |
 | --- | --- | --- | --- |
 | still island | (−6, 186) | its own coastline | `islandCoast` in `heightfield.ts` |
-| island of lines | (14, −268.4) | 70 × 64.4 | `ISLES.lines` |
-| the shore through the red door | (240, −365) | 23 × 30 | `DOOR_SHORE` |
+| island of lines | (14, −308.4) | 70 × 104.4 | `ISLES.lines`; northern terrain stretched below −260 |
+| the shore through the red door | (300, −365) | 23 × 30 | `DOOR_SHORE` |
 | little boats | (130, −420) | 48 × 70 | `LITTLE_BOATS` (`little-boats-layout.ts`) |
 | meadow | (10, −780) | 227 × 200 | `ISLES.meadow`, sculpted at 340 × 300 and scaled by `tuning.world.meadowLength` (`meadowPoint`) |
 | birches | (0, −1128) | 60 × 80 | `ISLES.birches` |
@@ -41,6 +41,12 @@ and half-sizes are in `ISLES` (`heightfield.ts`) unless noted:
 | sleeping island | (−175, −1922) | 42 × 46 | `ISLES.sleeping` |
 | sky mirror | (−581, −2282) | 82 × 70, a flat just under the water | `SKY_MIRROR` (`sky-mirror-layout.ts`) |
 | home | (−336, −2562) | 190 × 165 | `ISLES.home` |
+
+The rotary washing-line prototype extends Lines 80 m north (`tuning.world.linesNorthExtension`), mapping its
+existing terrain north of −260 into the longer footprint. Ground south of that join is unchanged. A rounded
+rise beyond the third curtain (`linesFold`) conceals the family clearing at (14, −353); the door stands on grass
+at (14, −361), well before the northern beach. The height atlas's reach includes the extended underwater slope.
+This changes shape in place, not saved horizontal coordinates.
 
 `world/geography.ts` holds each moved room's shift from its original placement, and `GEOGRAPHY_VERSION` migrates
 saved coordinates on load. Moving a room means moving its terrain, props, walking
@@ -53,6 +59,11 @@ Revision 10 moves Still and its first four departure waypoints 200 units south. 
 whale surfaces relative to the departing boat, moving the encounter with it. The 2026-10-11 timing experiment
 and Jeremy's exact brief are in [audio.md](audio.md). The ordinary crossing grows from 76.3 to 117 seconds,
 including 32.7 additional seconds after the whale's later appearance. Sailing speeds remain unchanged.
+
+Revision 11 moves only the secret shore 60 m east, from (240, −365) to (300, −365). Its doorway destination,
+berth, pulley, terrain and grass follow the same origin. Existing shore and departure saves migrate once.
+The departure measures 45.5 s against 31.9 s before the move, without changing speed; the destination's mist
+conceals the first stretch. Still-to-Lines uses a 0.99 drive multiplier, adding about 1.1 s.
 
 ### Still grass restoration, 2026-10-11
 
@@ -89,7 +100,7 @@ Turns, mooring, the storm and the cygnet's swim slow the boat naturally. Targets
 | crossing | about | notes |
 | --- | --- | --- |
 | still island → lines | 117 s | the long first curve: farewell look back and the whale |
-| door shore → little boats | 30 s | |
+| door shore → little boats | 45 s | Secret shore moved 60 m east; sailing pace unchanged. |
 | little boats → meadow | 40 s | arrives lined up with the hill path |
 | meadow → birches | 20 s | a short blind hop |
 | birches → stairs | short | under the cloud deck |
@@ -220,7 +231,9 @@ first view over the bank, so the gap is the same on the ground, in the grass and
 
 `DOOR_SHORE` is a small island of its own with the same CPU/GLSL height function, grass from `door-shore.ts` (the
 ordinary grass skips it) and the washing's departure kite. During the washing each camera sees only its own room's
-land; the boat waits on the arrival beach until the family reveal, then moves to the shore before the door opens,
+land. The source view excludes the secret shore instead of clipping Lines to a fixed circle, which cut through
+the extended island's arrival beach. Verify coastline visibility across the sailing-to-landing handoff, not only
+from an on-island start. The boat waits on the arrival beach until the family reveal, then moves to the shore before the door opens,
 and its room membership (in the reflection too) follows its position. Once the door has opened the boat waits moored
 out on the water on the pulley line (`world/shore-pulley.ts`: `shoreHaul` is the state, `ShorePulleyRig` the post,
 piling, wheels, pinwheel, pegs and painter); the lines chapter places it each frame as `Boat.towed` until it is in,

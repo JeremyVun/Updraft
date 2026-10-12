@@ -59,6 +59,7 @@ export interface CrossingOpts {
   /** Ambient breeze multiplier; ordinary transfers use 1 and encounters retain their own slower pace. */
   breeze?: number;
   speed?: number;
+  speedScale?: number;
   /** Waypoints out to open water and on to the far shore; the bow may only ground on the last one. */
   route: THREE.Vector2[];
   /** Follow a visible channel closely before joining the offshore route. */
@@ -239,6 +240,7 @@ export class CrossingChapter implements Chapter {
     this.route = opts.route;
     this.departureChannel = opts.departureChannel;
     this.breeze = opts.breeze ?? 1;
+    cast.boat.speedScale = opts.speedScale ?? 1;
     this.arrivalSpeed = opts.arrivalSpeed ?? Infinity;
     this.cruiseSpeed = opts.speed ?? (opts.dolphins ? tuning.seaPassage.speed : Infinity);
     this.limit = this.cruiseSpeed;

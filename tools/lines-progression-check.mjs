@@ -13,6 +13,7 @@ const { Boat } = await import('../src/traveller/boat.ts');
 const { Glider } = await import('../src/glider/glider.ts');
 const { LinesChapter } = await import('../src/story/lines.ts');
 const { CURTAINS } = await import('../src/world/lines-passage.ts');
+const { rotaryWashing } = await import('../src/world/lines-rotary.ts');
 const { mulberry32 } = await import('../src/world/noise.ts');
 
 for (const fps of [30, 60, 120]) for (const bearing of [0, Math.PI / 2, Math.PI, -Math.PI / 2]) {
@@ -24,6 +25,7 @@ for (const fps of [30, 60, 120]) for (const bearing of [0, Math.PI / 2, Math.PI,
   cygnet.mount = child; cygnet.visible = true; cygnet.wing.restore('wrapped');
   const carry = new Carry(child, cygnet);
   const chapter = new LinesChapter({ child, cygnet, boat, plane, carry, wind });
+  rotaryWashing.reset(true); // This check isolates curtain crossings; rotary-washing-check covers the pair.
   child.stop(); child.place(CURTAINS[0].before.x, CURTAINS[0].before.z, Math.PI);
   cygnet.release(child.position.clone().add(new THREE.Vector3(1, 0, 1))); cygnet.seating.snap();
   plane.hold(child); chapter.approach();

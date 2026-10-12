@@ -75,6 +75,9 @@ import { CatVoice } from './creatures/cat/voice';
 import { screenPan } from './creatures/motion';
 import { SwanFlock } from './creatures/flock';
 import { CURTAINS, SNAG_LINE, washingPassage } from './world/lines-passage';
+import { rotaryWashing } from './world/lines-rotary';
+import { DOOR_PLACE, LINES_FIELD_PATH } from './world/lines-layout';
+import { RotaryWashingRig } from './world/rotary-washing';
 import { createDoorShoreGrass } from './world/door-shore';
 import { DOOR_EXIT, doorway, DoorwayView } from './world/doorway';
 import { FAMILY_LINE, WashingLines, baskets, door, lineField } from './world/lines';
@@ -244,9 +247,15 @@ scene.add(piano.group);
 
 /** Hung around the walk over the island, so the open ground through it is always the way on. */
 await built();
-const washingLines = [...lineField(new THREE.Vector2(ISLES.lines.x, ISLES.lines.z + 8), 210, 49, 17, LINES_WALK, [FAMILY_LINE, SNAG_LINE, ...CURTAINS]), SNAG_LINE, ...CURTAINS];
+const passageLines = lineField(new THREE.Vector2(ISLES.lines.x, ISLES.lines.z + tuning.world.linesNorthExtension / 2 + 8),
+  210, 49, 17, LINES_FIELD_PATH.map(p => new THREE.Vector2(p.x, p.z)), [FAMILY_LINE, SNAG_LINE, ...CURTAINS]);
+const northLines = lineField(new THREE.Vector2(ISLES.lines.x, DOOR_PLACE.z - 4), 160, 43, 183,
+  LINES_FIELD_PATH.map(p => new THREE.Vector2(p.x, p.z)), [FAMILY_LINE, SNAG_LINE, ...CURTAINS, ...passageLines]);
+const washingLines = [...passageLines, ...northLines, SNAG_LINE, ...CURTAINS];
 await built();
 const washing = new WashingLines(washingLines, 91, FAMILY_LINE);
+const rotaryRig = new RotaryWashingRig(washing.subject);
+washing.group.add(rotaryRig.group);
 scene.add(washing.group);
 /** The same kite marks every departure. Lines keeps its kite inside the doorway reveal. */
 await built();
@@ -383,6 +392,10 @@ const catVoice = new CatVoice();
 const carry = new Carry(child, cygnet);
 const foley = new Foley();
 const worldFoley = new WorldFoley(foley, rig.camera);
+rotaryWashing.onSound = (kind, at) => {
+  if (!sound.running || story.name !== 'lines') return;
+  worldFoley.knock(kind === 'creak' ? 'rotary-creak' : 'cloth', at, kind === 'creak' ? tuning.rotaryWashing.creakLevel : 0.45);
+};
 const curtainPops = new Map<object, number>();
 const birchesFoley = new BirchesFoley(foley, rig.camera);
 const materialAt = new THREE.Vector3();
@@ -652,8 +665,9 @@ let cutChapter: unknown = null;
 
 const breezeAngle = THREE.MathUtils.degToRad(-18);
 /** What the sky is actually showing, eased toward the current chapter's numbers; the first frame takes them whole. */
-const shown = { rainbow: 0, dusk: NaN, haze: NaN, hazeFalloff: NaN, shower: NaN, season: NaN, storm: NaN, woodShade: NaN, islandVeil: NaN, isleMist: NaN };
+const shown = { breeze: NaN, rainbow: 0, dusk: NaN, haze: NaN, hazeFalloff: NaN, shower: NaN, season: NaN, storm: NaN, woodShade: NaN, islandVeil: NaN, isleMist: NaN };
 const ISLE_MISTS = {
+  boats: { isle: ISLES.boats, range: tuning.world.boatsMist },
   wood: { isle: ISLES.wood, range: tuning.world.woodMist },
   sleeping: { isle: ISLES.sleeping, range: tuning.world.sleepingMist },
   mirror: { isle: { ...SKY_MIRROR, rx: SKY_MIRROR.rx * tuning.world.mirrorMist.core, rz: SKY_MIRROR.rz * tuning.world.mirrorMist.core },
@@ -729,8 +743,9 @@ function updateCloudDeck(dt: number): void {
 /** World mechanics receive at most 1/30 s; wind subdivides to 1/60 s; input follows the same slice of the screen stroke. */
 function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   time += dt;
+  shown.breeze = ease(shown.breeze, story.breeze, tuning.world.seaStateEase, dt);
   const veer = Math.sin(time * 0.021) * 0.35;
-  wind.breeze.set(Math.cos(breezeAngle + veer), Math.sin(breezeAngle + veer)).multiplyScalar(tuning.wind.breeze * story.breeze);
+  wind.breeze.set(Math.cos(breezeAngle + veer), Math.sin(breezeAngle + veer)).multiplyScalar(tuning.wind.breeze * shown.breeze);
 
   input.muted = story.current.windMuted ?? story.current.scripted ?? false;
   input.twirlGain = story.current.twirlGain ?? 1;
@@ -739,6 +754,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
     : story.name === 'birches' ? birches.scarf.updraftTarget : story.current.updraftTarget ?? null;
   input.update(dt, rig.camera, wind, inputFraction);
   washingPassage.active?.brush(rig.camera, input, wind);
+  if (story.name === 'lines') rotaryWashing.brush(rig.camera, input, wind);
   if (story.name === 'lines') shoreHaul.brush(rig.camera, input, wind);
   if (story.name === 'boats') littleBoats.brush(rig.camera, input, wind, dt);
   if (story.current.invitesSail) boat.brushSail(rig.camera, input);
@@ -918,7 +934,8 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   atmo.uniforms.uIslandVeilAmount.value = shown.islandVeil;
   // The island ahead is seen only as near as its detail is drawn, and not at all from across the water.
   // The mirror's own mist lifts only once the whale has gone and the pod with it.
-  const mistAhead = story.name === 'drowned' || story.name === 'toWood' ? ISLE_MISTS.wood
+  const mistAhead = story.name === 'toBoats' || story.name === 'lines' ? ISLE_MISTS.boats
+    : story.name === 'drowned' || story.name === 'toWood' ? ISLE_MISTS.wood
     : story.name === 'toSleeping' ? ISLE_MISTS.sleeping
     : story.name === 'toMirror' && story.current.mirrorArrival === 0 ? ISLE_MISTS.mirror : null;
   if (mistAhead) isleMist = mistAhead;
@@ -938,10 +955,10 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   );
   atmo.uniforms.uVeilLift.value = ease(atmo.uniforms.uVeilLift.value, story.current.veilLift ?? 0, tuning.seaPassage.mist.liftEase, dt);
   post.saturation = (0.62 + 0.38 * story.worldLife) * (1 - 0.3 * squall);
-  surfUniforms.uSeaState.value = story.breeze;
+  surfUniforms.uSeaState.value = shown.breeze;
   surfUniforms.uSquall.value = squall;
   /** Trough to crest in world units: a breathing swell on a calm day, a sea running in a squall. */
-  swellUniforms.uSwell.value = (0.25 + 1.45 * squall) * story.breeze;
+  swellUniforms.uSwell.value = (0.25 + 1.45 * squall) * shown.breeze;
   boat.swell = squall;
 
   const u = atmo.uniforms;
@@ -954,7 +971,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
 
   /** The washing gives way in front of whoever the camera is watching, so they are never lost behind a sheet. */
   washing.subject.set(child.position.x, child.position.y + 1.1, child.position.z, child.visible ? 1 : 0);
-  if (story.name === 'lines') washing.update();
+  if (story.name === 'lines') { washing.update(); rotaryRig.update(dt, rig.camera); }
   /** And so do the birches and the sail, for the same reason. */
   birches.subject.copy(washing.subject);
   boat.subject.copy(washing.subject);
@@ -967,7 +984,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   if (gustFront) lines.blowFront(dt, gustFront);
   swirl.update(dt, rig.camera, input, story.current.coax ?? (story.name === 'birches' ? scarfInvitation.coax : null));
   creatureEnv.walker = child.visible ? child.position : null;
-  creatureEnv.breeze = story.breeze;
+  creatureEnv.breeze = shown.breeze;
   creatureEnv.night = atmo.uniforms.uNight.value;
   creatureEnv.audio = sound.output;
   creatures.update(dt, time, creatureEnv);
@@ -1357,7 +1374,7 @@ function frame(now: number): void {
 }
 
 if (QA && params.shot) {
-  window.__game = { params, tuning, quality, post, wind, input, rig, renderer, scene, glider, lines, swirl, sound, child, story, creatures, hillCreatures, water, skyMirror, terrain, footprints, cottage, petals, grass, littleBoats, sealife, crossingLinen, cygnet, flock, cat, carry, probe, washing, curtains: CURTAINS, doorway, doorwayView, doorExit: DOOR_EXIT, washingPassage, washingInvitation, shoreHaul, shorePulley, shorePinwheel: SHORE_PINWHEEL, scarfInvitation, kite, departureKites, pinwheels, village, wood, stormWeather, sleeping, embers, emberInvitation, fireflies, boat, life, piano, birches, pond, cloudStairs, harebells, swanFeather };
+  window.__game = { params, tuning, quality, post, wind, input, rig, renderer, scene, glider, lines, swirl, sound, child, story, creatures, hillCreatures, water, skyMirror, terrain, footprints, cottage, petals, grass, littleBoats, sealife, crossingLinen, cygnet, flock, cat, carry, probe, washing, rotaryWashing, rotaryRig, curtains: CURTAINS, doorway, doorwayView, doorExit: DOOR_EXIT, washingPassage, washingInvitation, shoreHaul, shorePulley, shorePinwheel: SHORE_PINWHEEL, scarfInvitation, kite, departureKites, pinwheels, village, wood, stormWeather, sleeping, embers, emberInvitation, fireflies, boat, life, piano, birches, pond, cloudStairs, harebells, swanFeather };
 }
 
 const fogLookup = new FogLookup(renderer);

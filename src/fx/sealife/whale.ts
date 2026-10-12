@@ -251,7 +251,7 @@ export class Whale extends WhaleRig {
     }
     TRACK_PATH.at(head, this.sample);
     let u = this.sample.u * k;
-    let y = this.sample.y * k + rise;
+    let y = this.sample.y * k + rise - tuning.opening.crossing.whaleDepth;
     for (let i = 0; i < SPINE_N; i++) {
       const p = this.spine[i];
       p.set(this.origin.x + this.heading.x * u, y, this.origin.z + this.heading.z * u, this.pitch[i]);
