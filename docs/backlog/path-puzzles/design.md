@@ -4,6 +4,20 @@ Status: choosing ideas. Nothing is designed yet; each accepted idea becomes its 
 
 ## Jeremy's words (verbatim)
 
+2026-10-11, extending the main island of lines (design discussion; no build approved):
+
+> I'm looking to make the main island of lines a bit longer. any ideas?
+
+> yea, the only thing i can think of is that the red, blue, yellow shirts on the clothes line just sort of appear out of nowhere.
+>
+> The rotary washing line is probably the best one i think? the laundry basket land boat is too similar to the challenge on the little boats island
+
+Preferred direction: add a rotary washing-line encounter before the red door. The proposed mechanism is broad
+sweeps turning an oversized rotary line until a bare section leaves a passage; it settles so passage needs no timed
+dash. This is an additional encounter, preserving the three existing curtains. The family garments need an earlier
+introduction; glimpses through the washing before their clearing are a proposal, not an approved layout. Exact
+placement and mechanism remain open. Reject the laundry-basket land boat because it repeats the little boats' challenge.
+
 2026-10-11, after merging the approved village into main:
 
 > can you fix those pre-existing test failures then? did you have any trouble with the merge conflicts?
