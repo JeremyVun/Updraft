@@ -73,3 +73,7 @@ uv run --with numpy --with scipy --with matplotlib python tools/creak-reference-
 ```
 
 Tool versions used: SciPy 1.18.1, Matplotlib 3.11.2. Machine-readable measurements are in `measurements.json`.
+
+After Jeremy approved proceeding, two short takes from the clothesline excerpt were prepared for playback.
+[Runtime asset provenance and processing](../../audio/rotary-creak/README.md) records the exact cuts and
+reproduction command; the game does not import the full study recordings or figures.

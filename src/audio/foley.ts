@@ -4,7 +4,7 @@ import type { NetSound } from '../fx/sealife/net';
 import type { SleeperSound, WhaleCall } from '../fx/sealife/sleeper';
 import { WhaleVoice } from './whale-voice';
 import { strikeBell } from './bell';
-import { rotaryCreak } from './rotary-creak';
+import { RotaryCreak } from './rotary-creak';
 
 export type Surface = 'grass' | 'sand' | 'wood' | 'water';
 export type MaterialSound = 'cloth' | 'wool' | 'sail' | 'sail-settle' | 'water' | 'paper' | 'door' | 'splash' | 'peg'
@@ -16,12 +16,13 @@ export type MaterialSound = 'cloth' | 'wool' | 'sail' | 'sail-settle' | 'water' 
 /**
  * The sounds a small body makes, as opposed to a voice. The cygnet never speaks except when it is lost, so this is
  * most of how it is heard: webbed feet on sand, a wing opened in a hurry, the whole of it shaken out after the rain.
- * All of it is synthesised from one noise buffer and a few tones, quiet enough to sit under the wind.
+ * Mostly synthesised from noise and tones, with recorded metal friction for the rotary clotheslines.
  * The same physical palette gives cloth, boats, paper and doors restrained sounds of their own.
  */
 export class Foley {
   /** The whale's voice. */
   readonly whale = new WhaleVoice();
+  private readonly rotary = new RotaryCreak();
   private out: AudioOut | null = null;
   private noise: AudioBuffer | null = null;
   private lastStep = -1;
@@ -86,7 +87,7 @@ export class Foley {
       this.puff({ at: at + 0.095, len: 0.055, level: level * 0.018, pan,
         type: 'bandpass', from: 2100 * colour, q: 0.6, attack: 0.01 });
     } else if (kind === 'rotary-creak') {
-      rotaryCreak(this.out!, this.noise!, at, level, pan);
+      this.rotary.play(this.out!, at, level, pan);
     } else if (kind === 'swing-creak') {
       // Low rope friction and wood flex; no piercing, pitched playground squeak.
       const colour = 0.92 + Math.random() * 0.16;

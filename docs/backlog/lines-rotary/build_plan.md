@@ -252,3 +252,27 @@ creak (LaSonotheque 304). Excerpts, source/licence links, hashes, matched-peak a
 and measured results are preserved in `assets/audio-reference/rotary-creak/README.md`. The reusable analysis
 is `tools/creak-reference-study.py`; identical axes/window/colour settings compare the rejected synth with
 both recordings. Figure inspected and opened in Preview. No new synthesized candidate or runtime change.
+
+## 12. Recorded clothesline creaks — implemented, awaiting listening review
+
+Derive two brief clips from the checked-in CC0 clothesline excerpt and retain provenance and a reproducible
+asset tool. Replace `rotary-creak.ts` synthesis with cached sample playback, keep spatial/timing semantics in
+Foley and remove the obsolete synthetic duration knob. Verify immediate first playback, alternate samples,
+cache reuse, muted calls, context replacement, node cleanup and the real two-rotary encounter with music.
+Render a fresh audition, run typecheck/build, and update the audio contract.
+
+Two 0.62 s takes now play at their original pitch, with 6 ms onset and 40 ms ending fades. The asset README
+records source, licence and exact cuts; `prepare-rotary-creaks.py` reproduces the inline PCM from the preserved
+reference WAV. Buffers are cached per context and successive audible events alternate takes.
+
+The focused audio check passes immediate playback, alternate takes, cache reuse, context replacement,
+24/48 kHz contexts, faded endpoints, muted-event expiry and cleanup. The two-take audition at established
+game gain peaks at −24.45 dBFS, without clipping; both sources and all eight nodes disconnect.
+Audition: `/tmp/updraft-rotary-recorded-creaks.wav`. Disabling cache reads in an isolated negative control
+fails the cache-reuse assertion, as intended. Pinwheel gain remains unchanged.
+
+Real pointer gestures through both rotaries and a fresh pole-base circle produce exactly one creak per
+rotary with music enabled. Recorded dry taps peak at −27.12/−27.09 dBFS; the simultaneous full mix peaks
+at −22.80/−17.64 dBFS. Both sources retire and the browser reports no errors. Evidence:
+`/tmp/updraft-rotary-recorded-live.{json,webm}`. These checks establish playback and routing, not perceptual
+approval. Typecheck and production build pass with the existing chunk warning. Mechanics and camera are unchanged.

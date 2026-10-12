@@ -16,7 +16,7 @@ try {
     spatial.knock('rotary-creak', new THREE.Vector3(0, 2, -200), tuning.rotaryWashing.creakLevel);
     if (calls.length !== 1 || calls[0][2] <= 0) throw Error('The creak must follow its bearing and attenuate with distance');
 
-    const { ctx, sound } = offlineSound(2);
+    const { ctx, sound } = offlineSound(2.5);
     sound.master.gain.cancelScheduledValues(0); sound.master.gain.value = .9;
     const foley = new Foley(); foley.setOutput(sound.output);
     const nodes = [], sources = [];
@@ -34,15 +34,49 @@ try {
     const made = nodes.length;
     foley.setOutput(null); foley.material('rotary-creak', 1, 0);
     if (nodes.length !== made) throw Error('Muted creaks must not queue');
+    const second = ctx.suspend(1.2).then(async () => {
+      foley.setOutput(sound.output);
+      foley.material('rotary-creak', tuning.rotaryWashing.creakLevel, .3);
+      await ctx.resume();
+    });
     const buffer = await ctx.startRendering();
-    if (sources.length !== 7 || nodes.some(n => !n.disconnected)) throw Error('Every creak source and node must disconnect after playing');
+    await second;
+    if (sources.length !== 2 || nodes.some(n => !n.disconnected)) throw Error('Both recorded creaks must disconnect after playing');
+    if (sources[0].buffer === sources[1].buffer) throw Error('The two bearings use different natural takes');
     return { ...encodeAudio(buffer), sources: sources.length, nodes: nodes.length, disconnected: nodes.filter(n => n.disconnected).length };
   });
   assert.equal(report.clipped, 0);
   assert(report.peakDbFS < -19 && report.peakDbFS > -32, `Bearing creak headroom and level: ${report.peakDbFS} dBFS`);
-  fs.writeFileSync('/tmp/updraft-rotary-metal-creak.wav', wav(Buffer.from(report.pcm, 'base64')));
+  fs.writeFileSync('/tmp/updraft-rotary-recorded-creaks.wav', wav(Buffer.from(report.pcm, 'base64')));
   delete report.pcm;
   console.log(JSON.stringify(report));
+
+  const cache = await page.evaluate(async mutateCache => {
+    const { RotaryCreak } = await productionModule('/src/audio/rotary-creak.ts');
+    const voice = new RotaryCreak();
+    if (mutateCache) voice.buffers.get = () => undefined;
+    const buffers = [];
+    for (const rate of [24000, 48000]) {
+      const ctx = new OfflineAudioContext(2, rate, rate);
+      const out = { ctx, bus: ctx.destination, reverb: ctx.createGain() };
+      const used = [], make = ctx.createBufferSource.bind(ctx);
+      ctx.createBufferSource = () => { const source = make(); used.push(source); return source; };
+      voice.play(out, .01, .1, 0); voice.play(out, .02, .1, 0); voice.play(out, .03, .1, 0);
+      if (used.length !== 3 || used[0].buffer === used[1].buffer || used[0].buffer !== used[2].buffer) {
+        throw Error('First playback is immediate and alternate takes reuse their cached buffers');
+      }
+      if (buffers.some(buffer => used.some(source => source.buffer === buffer))) throw Error('Replacement context needs its own buffers');
+      for (const source of used) {
+        const data = source.buffer.getChannelData(0);
+        if (data[0] !== 0 || data.at(-1) !== 0 || source.buffer.duration !== .62) throw Error('Clips retain faded edges and full natural duration');
+        if (source.playbackRate.value !== 1) throw Error('Recorded pitch must be preserved');
+      }
+      buffers.push(used[0].buffer, used[1].buffer);
+      await ctx.startRendering();
+    }
+    return { immediate: true, alternateTakes: true, reused: true, freshContext: true, rates: [24000, 48000] };
+  }, process.env.MUTATE === 'cache');
+  console.log(JSON.stringify({ cache }));
 
   const pinwheels = await page.evaluate(async () => {
     const { Pinwheels } = await productionModule('/src/world/pinwheels.ts');

@@ -313,3 +313,17 @@ Jeremy rejected that second synthesis as well (verbatim):
 Research actual metal friction recordings and compare their spectrograms with the rejected sound. Establish
 the reference's time/frequency structure before another synthesis revision; numerical playback checks did
 not establish a credible timbre. Preserve the reference provenance and analysis settings for future work.
+
+## Clothesline recording integration — 2026-10-12
+
+After the reference clips, spectrogram and recommendation to use the clothesline's irregular catches and
+ringing tails, Jeremy approved proceeding (verbatim):
+
+> yea cool proceed
+
+Use two short passages from AlexLane's CC0 clothesline recording directly, with edge fades and consistent
+peak level. Keep the original pitch and natural spectral texture. Bundle the small mono PCM clips so the
+first gesture cannot race an asynchronous download or decode; cache the AudioBuffers per context. Preserve
+one event per rotary after real travel, spatial attenuation and mute/restore expiry. All other sounds and
+accepted mechanics remain as they are. Render the two sounds at game gain and verify actual pointer-driven
+playback with music enabled. Listening remains the final quality check, not a spectral percentage target.

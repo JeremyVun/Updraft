@@ -6,7 +6,7 @@ import { openRotary } from './lib/rotary-gesture.mjs';
 import { withoutHotReload } from './lib/vite-client-stub.mjs';
 
 const { browser, close } = await openBrowser();
-const prefix = process.env.OUT ?? '/tmp/updraft-rotary-metal-live';
+const prefix = process.env.OUT ?? '/tmp/updraft-rotary-recorded-live';
 const errors = [];
 try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
@@ -47,16 +47,16 @@ try {
       const event = { at: ctx.currentTime, amount, pan, running: sound.running, output: !!this.out,
         beat: __game.story.current.beat, sources: 0, disconnected: 0 };
       audit.events.push(event);
-      const makePan = ctx.createStereoPanner.bind(ctx), makeOsc = ctx.createOscillator.bind(ctx);
+      const makePan = ctx.createStereoPanner.bind(ctx), makeSource = ctx.createBufferSource.bind(ctx);
       ctx.createStereoPanner = () => { const node = makePan(); node.connect(stem); return node; };
-      ctx.createOscillator = () => {
-        const node = makeOsc(), disconnect = node.disconnect.bind(node);
+      ctx.createBufferSource = () => {
+        const node = makeSource(), disconnect = node.disconnect.bind(node);
         event.sources++;
         node.disconnect = (...args) => { event.disconnected++; return disconnect(...args); };
         return node;
       };
       try { return material.call(this, kind, amount, pan, ...rest); }
-      finally { ctx.createStereoPanner = makePan; ctx.createOscillator = makeOsc; }
+      finally { ctx.createStereoPanner = makePan; ctx.createBufferSource = makeSource; }
     };
     const values = new Float32Array(2048);
     const level = analyser => {
@@ -86,7 +86,7 @@ try {
   delete report.audio;
   assert.equal(report.events.length, 2, 'Exactly one real creak per rotary');
   for (const e of report.events) {
-    assert(e.running && e.output && e.sources === 6 && e.disconnected === 6, 'Actual production voice plays and cleans up');
+    assert(e.running && e.output && e.sources === 1 && e.disconnected === 1, 'Actual recorded voice plays and cleans up');
     const during = report.samples.filter(s => s.at >= e.at && s.at < e.at + .8);
     e.peakDbFS = 20 * Math.log10(Math.max(...during.map(s => s.stem.peak)));
     e.mixPeakDbFS = 20 * Math.log10(Math.max(...during.map(s => s.mix.peak)));

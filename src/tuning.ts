@@ -1287,7 +1287,7 @@ export const tuning = {
     unhookRate: 0.6, snagBrushRadius: 0.11, snagGustFull: 1.2, snagLiftFrom: 0.08, snagLiftRadius: 3.5,
     snagTighten: 8, snagRelax: 5, snagTug: 0.35, snagShiverRate: 15,
     releaseRate: 9, snagInviteSpan: 3,
-    creakTravel: 0.16, creakLevel: 0.4, creakSeconds: 0.72,
+    creakTravel: 0.16, creakLevel: 0.4,
     startAngle: -Math.PI / 2, snagTurn: 0.16, snagSide: 5.1, snagAhead: 7.9,
     windRadius: 3, energyDivisor: 25, brushEnergy: 0.6, energyFrom: 0.02, energyFull: 0.2,
     inviteAfter: 2.4, invitePause: 2.8, inviteSweep: 1.9,
