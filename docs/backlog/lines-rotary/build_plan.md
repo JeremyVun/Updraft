@@ -253,7 +253,7 @@ and measured results are preserved in `assets/audio-reference/rotary-creak/READM
 is `tools/creak-reference-study.py`; identical axes/window/colour settings compare the rejected synth with
 both recordings. Figure inspected and opened in Preview. No new synthesized candidate or runtime change.
 
-## 12. Recorded clothesline creaks — implemented, awaiting listening review
+## 12. Recorded clothesline creaks — timbre accepted; sampled playback superseded
 
 Derive two brief clips from the checked-in CC0 clothesline excerpt and retain provenance and a reproducible
 asset tool. Replace `rotary-creak.ts` synthesis with cached sample playback, keep spatial/timing semantics in
@@ -276,3 +276,36 @@ rotary with music enabled. Recorded dry taps peak at −27.12/−27.09 dBFS; the
 at −22.80/−17.64 dBFS. Both sources retire and the browser reports no errors. Evidence:
 `/tmp/updraft-rotary-recorded-live.{json,webm}`. These checks establish playback and routing, not perceptual
 approval. Typecheck and production build pass with the existing chunk warning. Mechanics and camera are unchanged.
+
+Jeremy found the recorded result much better, then requested in-game generation instead of bundled audio.
+
+## 13. Procedural metal friction — implemented, awaiting listening review
+
+Model the recorded creak's high resonances, intermittent excitation and roughness in code. Render and compare
+against the accepted recording, then replace PCM playback in `rotary-creak.ts` while retaining event and spatial
+semantics. Remove the runtime recorded asset, preserve reference provenance, update the focused playback checks
+for generated variants, and verify actual rotary gestures with music. Run the production build and provide an
+isolated comparison without claiming listening approval from numerical checks.
+
+`rotary-friction.ts` synthesises two short pressure/pitch gestures, rough excitation, three ringing harmonics
+and noisy collar contacts from sine waves and seeded noise. No waveform samples or spectral frames are stored
+in the model. The 24 kHz buffers are prepared when audio starts and cached per context; creak events reuse them.
+The accepted recorded takes moved into `assets/audio-reference/rotary-creak/` for A/B studies only.
+
+`rotary-friction-study.mjs` renders reference/generated pairs at matching peaks. The generated variations have
+RMS levels −28.25/−29.65 dBFS versus the references' −26.67/−29.69 dBFS, with −12 dBFS peaks throughout. The
+spectrogram comparison was inspected before integration; it now has the high ringing bands missing from the
+earlier synth. Numerical resemblance is not listening approval. Pair synthesis measured roughly 17 ms in the
+isolated browser; no synthesis happens on an actual creak event after preparation.
+
+The focused check passes silent preparation, immediate playback, two distinct variations, cache reuse,
+replacement audio contexts at 24/48 kHz, finite samples with zero endpoints, muted calls and cleanup. The
+game-gain audition `/tmp/updraft-rotary-procedural-creaks.wav` peaks at −24.45 dBFS without clipping.
+An isolated negative control that disables cache reads fails the prepared-buffer reuse assertion as intended.
+The A/B study is `/tmp/updraft-procedural-creak-comparison.wav` (reference then generated, once per variation).
+
+Real pointer gestures produce exactly one creak per rotary with music enabled, all sources retire and there
+are no browser errors. Dry taps peak at −27.12/−27.09 dBFS and the corresponding mix at −24.10/−17.26 dBFS.
+Evidence: `/tmp/updraft-rotary-procedural-live.{json,webm}`. The production build, including typecheck, passes
+with the existing chunk warning. A scan of every built JavaScript chunk confirms neither reference PCM nor
+a reference-file dependency is bundled; main gzip size drops from 993.14 kB to 941.44 kB.

@@ -16,7 +16,7 @@ export type MaterialSound = 'cloth' | 'wool' | 'sail' | 'sail-settle' | 'water' 
 /**
  * The sounds a small body makes, as opposed to a voice. The cygnet never speaks except when it is lost, so this is
  * most of how it is heard: webbed feet on sand, a wing opened in a hurry, the whole of it shaken out after the rain.
- * Mostly synthesised from noise and tones, with recorded metal friction for the rotary clotheslines.
+ * Synthesised from noise and tones, quiet enough to sit under the wind.
  * The same physical palette gives cloth, boats, paper and doors restrained sounds of their own.
  */
 export class Foley {
@@ -38,6 +38,7 @@ export class Foley {
       this.noise = out.ctx.createBuffer(1, length, out.ctx.sampleRate);
       const data = this.noise.getChannelData(0);
       for (let i = 0; i < length; i++) data[i] = Math.random() * 2 - 1;
+      this.rotary.prepare(out.ctx);
     }
     if (out !== this.out && this.hearthBed) {
       this.hearthBed.src.stop();

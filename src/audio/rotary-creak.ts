@@ -1,27 +1,21 @@
 import type { AudioOut } from '../creatures/voices';
-import encoded from '../../assets/audio/rotary-creak/clips.json?raw';
-
-const recording = JSON.parse(encoded) as { sampleRate: number; clips: string[] };
+import { rotaryFriction } from './rotary-friction';
 
 export class RotaryCreak {
   private readonly buffers = new WeakMap<BaseAudioContext, AudioBuffer[]>();
   private next = 0;
 
-  play(out: AudioOut, at: number, level: number, pan: number): void {
-    const { ctx } = out;
+  prepare(ctx: BaseAudioContext): AudioBuffer[] {
     let clips = this.buffers.get(ctx);
     if (!clips) {
-      // Inline PCM keeps the first creak synchronous with the bearing's movement.
-      clips = recording.clips.map(clip => {
-        const bytes = Uint8Array.from(atob(clip), c => c.charCodeAt(0));
-        const pcm = new DataView(bytes.buffer);
-        const buffer = ctx.createBuffer(1, bytes.length / 2, recording.sampleRate);
-        const channel = buffer.getChannelData(0);
-        for (let i = 0; i < channel.length; i++) channel[i] = pcm.getInt16(i * 2, true) / 32768;
-        return buffer;
-      });
+      clips = [rotaryFriction(ctx, 0), rotaryFriction(ctx, 1)];
       this.buffers.set(ctx, clips);
     }
+    return clips;
+  }
+
+  play(out: AudioOut, at: number, level: number, pan: number): void {
+    const { ctx } = out, clips = this.prepare(ctx);
     const source = ctx.createBufferSource();
     source.buffer = clips[this.next++ % clips.length];
     const gain = ctx.createGain(); gain.gain.value = level;

@@ -1,6 +1,6 @@
 # Audio
 
-Home, Birches, Lines and Little Boats play supplied recordings; Still experiments with triggered excerpts; the other scores are synthesised in Web Audio. World sounds are synthesised except for the rotary clotheslines' recorded metal creaks.
+Home, Birches, Lines and Little Boats play supplied recordings; Still experiments with triggered excerpts; the other scores and world sounds are synthesised in Web Audio.
 `src/audio/audio.ts` (`Soundscape`) owns wind,
 environment, the shared pad, gesture chimes, authored cues and calls, and runs one pass per rendered frame after the
 camera update. Each room with its own composition has a score module that follows story phases, not timers:
@@ -399,11 +399,11 @@ pan and bounded scheduling; finished nodes disconnect.
   peg coming off the line snaps once (`peg`), from the peg itself; pegs already off when a checkpoint loads are silent.
   `pegBoostDb` raises the snap and wooden knock by 6 dB after Jeremy's Lines playtest. The family garments filling
   and reaching toward each other are silent. Each rotary gives one metal-bearing creak after real angular travel:
-  `rotary-creak.ts` alternates two 0.62 s excerpts from AlexLane's CC0 clothesline recording, at original pitch
-  with small edge fades. [Asset provenance and preparation](../../assets/audio/rotary-creak/README.md).
-  Inline PCM and a per-context buffer cache keep first playback synchronous with movement. Jeremy rejected both
-  procedural predecessors; the [reference study](../../assets/audio-reference/rotary-creak/README.md) preserves
-  their comparison with recorded metal friction. Passing playback checks is not timbre approval.
+  `rotary-friction.ts` generates two 0.62 s variations from irregular pressure, ringing harmonics around
+  2.9/5.8/8.7 kHz, filtered noise and brief collar contacts. `rotary-creak.ts` caches the generated buffers when
+  audio starts, then alternates them without synthesis work at the gesture. No recorded PCM ships with this sound.
+  Jeremy liked the recorded timbre but requested synthesis; the [reference study](../../assets/audio-reference/rotary-creak/README.md)
+  preserves the accepted recording and the rejected earlier synths. Passing playback checks is not timbre approval.
   Its level is separate from the little pinwheels’ flutter; Jeremy’s
   request to quiet the spinners referred to those pinwheels. A small cloth sound follows the snag release. Idle, restored and muted events stay silent;
   missed creaks expire rather than playing on unmute.

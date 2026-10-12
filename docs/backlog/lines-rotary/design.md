@@ -327,3 +327,19 @@ first gesture cannot race an asynchronous download or decode; cache the AudioBuf
 one event per rotary after real travel, spatial attenuation and mute/restore expiry. All other sounds and
 accepted mechanics remain as they are. Render the two sounds at game gain and verify actual pointer-driven
 playback with music enabled. Listening remains the final quality check, not a spectral percentage target.
+
+## Procedural creak preference — 2026-10-12
+
+Jeremy liked the recorded result (verbatim):
+
+> yep that's way better. is is generated within the game? Or are you bundling a wav file?
+
+After learning that the clips were bundled, he clarified (verbatim):
+
+> i'd rather we generate it ingame like the  other game sounds. is taht not possible?
+
+Use the accepted recording as the timbre reference for procedural metal friction. Generate the sound from
+oscillation, irregular excitation and noise in the game; do not disguise recorded PCM as generated audio.
+Preserve brief duration, level, spatial placement and the one-creak-per-rotary schedule. Compare a rendered
+candidate against the accepted recording before integrating it, and provide a listening comparison. The
+reference remains a development asset; it must no longer be imported into runtime playback.

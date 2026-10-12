@@ -74,6 +74,20 @@ uv run --with numpy --with scipy --with matplotlib python tools/creak-reference-
 
 Tool versions used: SciPy 1.18.1, Matplotlib 3.11.2. Machine-readable measurements are in `measurements.json`.
 
-After Jeremy approved proceeding, two short takes from the clothesline excerpt were prepared for playback.
-[Runtime asset provenance and processing](../../audio/rotary-creak/README.md) records the exact cuts and
-reproduction command; the game does not import the full study recordings or figures.
+Two short takes were prepared for playback. Jeremy liked their timbre but requested in-game synthesis
+instead of bundled recordings. [Accepted recording provenance and processing](accepted-recording.md) records
+the exact cuts and reproduction command. The game does not import any of these audio files.
+
+The procedural replacement is `src/audio/rotary-friction.ts`: hand-authored pressure and pitch curves excite
+high harmonics, generated roughness and short noisy collar contacts. It contains no sampled waveform or
+encoded recording data. `rotary-creak.ts` prepares and caches the generated variants at audio startup.
+
+With the worktree's dev server running, reproduce the A/B audition with:
+
+```sh
+BASE=http://127.0.0.1:5243 node tools/rotary-friction-study.mjs
+```
+
+The output `/tmp/updraft-procedural-creak-comparison.wav` plays reference then generated for each of the two
+variations, with matched −12 dBFS peaks. This is a timbre comparison, louder than the game's mix. Run
+`tools/rotary-audio-check.mjs` against the same server for the game-gain audition and playback checks.

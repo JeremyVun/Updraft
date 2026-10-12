@@ -41,13 +41,13 @@ try {
     });
     const buffer = await ctx.startRendering();
     await second;
-    if (sources.length !== 2 || nodes.some(n => !n.disconnected)) throw Error('Both recorded creaks must disconnect after playing');
-    if (sources[0].buffer === sources[1].buffer) throw Error('The two bearings use different natural takes');
+    if (sources.length !== 2 || nodes.some(n => !n.disconnected)) throw Error('Both generated creaks must disconnect after playing');
+    if (sources[0].buffer === sources[1].buffer) throw Error('The two bearings use different generated variations');
     return { ...encodeAudio(buffer), sources: sources.length, nodes: nodes.length, disconnected: nodes.filter(n => n.disconnected).length };
   });
   assert.equal(report.clipped, 0);
   assert(report.peakDbFS < -19 && report.peakDbFS > -32, `Bearing creak headroom and level: ${report.peakDbFS} dBFS`);
-  fs.writeFileSync('/tmp/updraft-rotary-recorded-creaks.wav', wav(Buffer.from(report.pcm, 'base64')));
+  fs.writeFileSync('/tmp/updraft-rotary-procedural-creaks.wav', wav(Buffer.from(report.pcm, 'base64')));
   delete report.pcm;
   console.log(JSON.stringify(report));
 
@@ -61,20 +61,22 @@ try {
       const out = { ctx, bus: ctx.destination, reverb: ctx.createGain() };
       const used = [], make = ctx.createBufferSource.bind(ctx);
       ctx.createBufferSource = () => { const source = make(); used.push(source); return source; };
+      const prepared = voice.prepare(ctx);
+      if (used.length) throw Error('Preparing generated buffers must stay silent');
       voice.play(out, .01, .1, 0); voice.play(out, .02, .1, 0); voice.play(out, .03, .1, 0);
-      if (used.length !== 3 || used[0].buffer === used[1].buffer || used[0].buffer !== used[2].buffer) {
-        throw Error('First playback is immediate and alternate takes reuse their cached buffers');
+      if (used.length !== 3 || !prepared.includes(used[0].buffer) || used[0].buffer === used[1].buffer || used[0].buffer !== used[2].buffer) {
+        throw Error('First playback is immediate and generated variations reuse their prepared buffers');
       }
       if (buffers.some(buffer => used.some(source => source.buffer === buffer))) throw Error('Replacement context needs its own buffers');
       for (const source of used) {
         const data = source.buffer.getChannelData(0);
-        if (data[0] !== 0 || data.at(-1) !== 0 || source.buffer.duration !== .62) throw Error('Clips retain faded edges and full natural duration');
-        if (source.playbackRate.value !== 1) throw Error('Recorded pitch must be preserved');
+        if (data[0] !== 0 || data.at(-1) !== 0 || source.buffer.duration !== .62 || data.some(x => !Number.isFinite(x))) throw Error('Generated buffers must be finite with faded edges and the intended duration');
+        if (source.playbackRate.value !== 1) throw Error('Modelled pitch must be preserved');
       }
       buffers.push(used[0].buffer, used[1].buffer);
       await ctx.startRendering();
     }
-    return { immediate: true, alternateTakes: true, reused: true, freshContext: true, rates: [24000, 48000] };
+    return { preparedSilently: true, immediate: true, alternateVariations: true, reused: true, freshContext: true, rates: [24000, 48000] };
   }, process.env.MUTATE === 'cache');
   console.log(JSON.stringify({ cache }));
 

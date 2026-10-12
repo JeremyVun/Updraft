@@ -6,7 +6,7 @@ import { openRotary } from './lib/rotary-gesture.mjs';
 import { withoutHotReload } from './lib/vite-client-stub.mjs';
 
 const { browser, close } = await openBrowser();
-const prefix = process.env.OUT ?? '/tmp/updraft-rotary-recorded-live';
+const prefix = process.env.OUT ?? '/tmp/updraft-rotary-procedural-live';
 const errors = [];
 try {
   const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
@@ -86,7 +86,7 @@ try {
   delete report.audio;
   assert.equal(report.events.length, 2, 'Exactly one real creak per rotary');
   for (const e of report.events) {
-    assert(e.running && e.output && e.sources === 1 && e.disconnected === 1, 'Actual recorded voice plays and cleans up');
+    assert(e.running && e.output && e.sources === 1 && e.disconnected === 1, 'Actual generated voice plays and cleans up');
     const during = report.samples.filter(s => s.at >= e.at && s.at < e.at + .8);
     e.peakDbFS = 20 * Math.log10(Math.max(...during.map(s => s.stem.peak)));
     e.mixPeakDbFS = 20 * Math.log10(Math.max(...during.map(s => s.mix.peak)));

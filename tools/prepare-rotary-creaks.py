@@ -1,4 +1,4 @@
-"""Prepare the CC0 clothesline excerpts without requiring an asynchronous decoder during play."""
+"""Preserve the accepted CC0 clothesline excerpts for comparison with procedural synthesis."""
 import base64
 import json
 import math
@@ -8,7 +8,7 @@ from pathlib import Path
 
 root = Path(__file__).resolve().parent.parent
 source = root / "assets/audio-reference/rotary-creak/clothesline-excerpt.wav"
-target = root / "assets/audio/rotary-creak/clips.json"
+target = root / "assets/audio-reference/rotary-creak/accepted-clips.json"
 with wave.open(str(source)) as audio:
     assert audio.getnchannels() == 1 and audio.getsampwidth() == 2
     rate = audio.getframerate()
