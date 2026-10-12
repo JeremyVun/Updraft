@@ -220,7 +220,7 @@ Both mouse and touch playthroughs reach departure with no browser errors, no pre
 exactly two rotary creaks plus one cloth release. Reinstating the previous instant-release rate in an isolated
 test process fails the new brief-gesture regression, as intended.
 
-## 10. Metal-bearing timbre — implemented, awaiting listening review
+## 10. Metal-bearing timbre — rejected in listening review
 
 Replace the rejected rasp, render the new sound at established game gain, verify source cleanup and actual
 game playback under real rotary gestures with sound enabled. Run typecheck/build. Supply a new isolated
@@ -237,3 +237,18 @@ their isolated taps peak at −25.65/−25.97 dBFS, with total mix peaks −23.0
 and the browser reports no errors. Signal capture: `/tmp/updraft-rotary-metal-live.{json,webm}`. This establishes
 runtime routing and levels, not perceptual approval. Typecheck and production build pass, with the existing
 large-chunk warning. All mechanics, composition and other audio are unchanged.
+
+Jeremy rejected this timbre and requested real reference audio with a spectrogram comparison. Phase 10's
+playback checks establish routing only; do not cite them as sonic approval.
+
+## 11. Recorded-reference study — complete
+
+Find close mechanical references with documented provenance, compare time/frequency structure against the
+rejected render using identical spectrogram settings, and provide playable excerpts and a readable figure.
+This phase studies timbre; it does not change the gameplay or audio implementation.
+
+Found the CC0 apartment-clothesline recording by AlexLane (Freesound 530036) and DenisChardonnet's metal-gate
+creak (LaSonotheque 304). Excerpts, source/licence links, hashes, matched-peak auditions, comparison figure
+and measured results are preserved in `assets/audio-reference/rotary-creak/README.md`. The reusable analysis
+is `tools/creak-reference-study.py`; identical axes/window/colour settings compare the rejected synth with
+both recordings. Figure inspected and opened in Preview. No new synthesized candidate or runtime change.

@@ -303,3 +303,13 @@ Replace the filtered rasp with an irregular metal-bearing squeal, a lower strain
 rattle. Preserve one event per rotary after actual angular travel, spatial attenuation, one-way mechanics,
 pinwheel level and snag resistance. Verify the actual running game's signal path with sound enabled and
 real gestures, then provide a fresh isolated audition. Render levels do not establish listening approval.
+
+## Recorded creak references — 2026-10-12
+
+Jeremy rejected that second synthesis as well (verbatim):
+
+> lol no, that doesn't work at all. See if you can find reference audio somewhere and do a spectogram to see
+
+Research actual metal friction recordings and compare their spectrograms with the rejected sound. Establish
+the reference's time/frequency structure before another synthesis revision; numerical playback checks did
+not establish a credible timbre. Preserve the reference provenance and analysis settings for future work.

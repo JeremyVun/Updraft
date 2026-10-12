@@ -400,7 +400,9 @@ pan and bounded scheduling; finished nodes disconnect.
   `pegBoostDb` raises the snap and wooden knock by 6 dB after Jeremy's Lines playtest. The family garments filling
   and reaching toward each other are silent. Each rotary gives one metal-bearing creak after real angular travel:
   `rotary-creak.ts` layers an irregular slipping squeal, lower strain and two short collar rattles. Jeremy rejected
-  the former filtered rasp after hearing it isolated; the replacement lasts 0.72 s and awaits his listening review.
+  the former filtered rasp and then this 0.72 s replacement after hearing them isolated. Both are rejected timbres.
+  The [recorded-reference study](../../assets/audio-reference/rotary-creak/README.md) preserves real clothesline/gate
+  recordings, spectrograms and his correction for the next sound revision. Passing playback checks is not timbre approval.
   Its level is separate from the little pinwheels’ flutter; Jeremy’s
   request to quiet the spinners referred to those pinwheels. A small cloth sound follows the snag release. Idle, restored and muted events stay silent;
   missed creaks expire rather than playing on unmute.
