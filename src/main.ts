@@ -392,6 +392,10 @@ const catVoice = new CatVoice();
 const carry = new Carry(child, cygnet);
 const foley = new Foley();
 const worldFoley = new WorldFoley(foley, rig.camera);
+rotaryWashing.onSound = (kind, at) => {
+  if (!sound.running || story.name !== 'lines') return;
+  worldFoley.knock(kind === 'creak' ? 'rotary-creak' : 'cloth', at, kind === 'creak' ? tuning.rotaryWashing.creakLevel : 0.45);
+};
 const curtainPops = new Map<object, number>();
 const birchesFoley = new BirchesFoley(foley, rig.camera);
 const materialAt = new THREE.Vector3();

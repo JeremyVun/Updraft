@@ -10,7 +10,7 @@ export type MaterialSound = 'cloth' | 'wool' | 'sail' | 'sail-settle' | 'water' 
   | 'dolphin-surface' | 'leaf-scuff' | 'swing-creak' | Exclude<SleeperSound, WhaleCall> | Exclude<NetSound, 'whale-call' | 'whale-glad'> | 'tub'
   | 'tree-creak' | 'roots-give' | 'root-tear' | 'tree-fall' | 'bough-creak' | 'slate-land'
   | 'mill-start' | 'mill-creak' | 'mill-settle' | 'mill-click' | 'linen-flap' | 'bell' | 'bell-touch' | 'hull-scrape'
-  | 'hull-strain';
+  | 'hull-strain' | 'rotary-creak';
 
 /**
  * The sounds a small body makes, as opposed to a voice. The cygnet never speaks except when it is lost, so this is
@@ -84,6 +84,10 @@ export class Foley {
         type: 'bandpass', from: 2900 * colour, q: 0.7, attack: 0.008 });
       this.puff({ at: at + 0.095, len: 0.055, level: level * 0.018, pan,
         type: 'bandpass', from: 2100 * colour, q: 0.6, attack: 0.01 });
+    } else if (kind === 'rotary-creak') {
+      const colour = 0.94 + Math.random() * 0.12;
+      this.rasp({ at, len: 0.42, from: 61 * colour, to: 43 * colour, jitter: 0.12,
+        bodies: [[410 * colour, 9, 0.8], [1130 * colour, 11, 0.3]], level: level * 0.25, pan, attack: 0.08, wet: 0.025 });
     } else if (kind === 'swing-creak') {
       // Low rope friction and wood flex; no piercing, pitched playground squeak.
       const colour = 0.92 + Math.random() * 0.16;

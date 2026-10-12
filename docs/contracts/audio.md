@@ -398,7 +398,9 @@ pan and bounded scheduling; finished nodes disconnect.
 - Laundry: local wind on the cloth's spring and flutter thresholds, at most `clothSources` voices. A passage sheet's
   peg coming off the line snaps once (`peg`), from the peg itself; pegs already off when a checkpoint loads are silent.
   `pegBoostDb` raises the snap and wooden knock by 6 dB after Jeremy's Lines playtest. The family garments filling
-  and reaching toward each other are silent.
+  and reaching toward each other are silent. Each rotary gives one restrained metal-bearing creak after real
+  angular travel, with a small cloth sound when the snag releases. Idle, restored and muted events stay silent;
+  missed creaks expire rather than playing on unmute.
 - Sleeping hearth: one looping low roar that breathes, plus crackles in small uneven clusters with an occasional
   snap, all scaled by the flame and the camera's distance; the roar fades out with the flame or on leaving the room, and
   once it has been quiet for two seconds it stops until the fire is heard again.

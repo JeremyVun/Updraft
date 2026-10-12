@@ -66,13 +66,15 @@ class FrameRig {
   private readonly snagAt = { value: new THREE.Vector3() };
   private elapsed = 0;
   private alpha = 0;
+  private wasCaught = false;
 
   constructor(private readonly frame: RotaryFrame, subject: THREE.Vector4) {
     this.group.name = 'rotary-washing-' + frame.index;
     this.group.position.copy(frame.foot);
     this.rotor.rotation.y = frame.angle;
     this.snag.value = frame.unhook < 1 ? 1 : 0;
-    this.snagAt.value.copy(frame.snagPoint).y += frame.unhook * 1.25;
+    this.snagAt.value.copy(frame.snagPoint);
+    this.wasCaught = !!frame.snagTarget;
     this.group.add(this.rotor);
     const mast = new THREE.CylinderGeometry(0.13, 0.19, K.top + 0.3, 10).translate(0, (K.top + 0.3) / 2, 0);
     this.group.add(new THREE.Mesh(mast, paint('#a9b4a0')));
@@ -155,16 +157,26 @@ class FrameRig {
 
   update(dt: number, camera: THREE.Camera): void {
     const r = this.frame;
-    this.snag.value += ((r.unhook < 1 ? 1 : 0) - this.snag.value) * (1 - Math.exp(-dt * 2.3));
-    this.snagAt.value.copy(r.snagPoint).y += r.unhook * 1.25;
+    this.snag.value += ((r.unhook < 1 ? 1 : 0) - this.snag.value) * (1 - Math.exp(-dt * K.releaseRate));
+    this.snagAt.value.copy(r.snagPoint);
     this.rotor.rotation.y = r.angle;
     this.spin.value += (r.speed - this.spin.value) * (1 - Math.exp(-dt * 4));
     this.gesture.hide();
     const next = rotaryWashing.rotors.find(frame => !frame.open);
-    if (!rotaryWashing.active || next !== r || r.aligned || r.liftTarget) { this.elapsed = 0; this.alpha = 0; return; }
+    const caught = !!r.snagTarget;
+    if (caught !== this.wasCaught) { this.elapsed = 0; this.alpha = 0; this.wasCaught = caught; }
+    if (!rotaryWashing.active || next !== r || r.aligned) { this.elapsed = 0; this.alpha = 0; return; }
     this.elapsed += dt;
-    const offered = this.elapsed > K.inviteAfter && r.brushAge > K.invitePause;
+    const offered = this.elapsed > K.inviteAfter && Math.min(r.brushAge, r.snagAge) > K.invitePause;
     this.alpha += ((offered ? 0.8 : 0) - this.alpha) * (1 - Math.exp(-dt * 4));
+    const phase = (Math.max(0, this.elapsed - K.inviteAfter) % (K.inviteSweep + K.invitePause)) / K.inviteSweep;
+    if (caught) {
+      this.projected.copy(r.snagPoint).project(camera);
+      r.clothPoint(-1, 0.96, 5.3, this.point).project(camera).sub(this.projected);
+      const tilt = Math.atan2(this.point.y, this.point.x * ((camera as THREE.PerspectiveCamera).aspect ?? 1));
+      this.gesture.draw(camera, r.snagPoint, phase, K.snagInviteSpan, this.alpha, 0.08, 'across', 1, tilt, true);
+      return;
+    }
     let nearest = Infinity;
     for (const side of [-1, 1]) for (const fraction of [0.24, 0.76]) {
       r.clothPoint(side, fraction, 2.6, this.point);
@@ -174,12 +186,11 @@ class FrameRig {
       if (distance < nearest) { nearest = distance; this.invitationAt.copy(this.point); }
     }
     if (!Number.isFinite(nearest)) return;
-    const direction = Math.sign(Math.atan2(Math.sin(r.goal - r.angle), Math.cos(r.goal - r.angle))) || 1;
+    const direction = r.preferredDirection;
     this.tangent.set(this.invitationAt.z - r.foot.z, 0, r.foot.x - this.invitationAt.x).normalize();
     this.projected.copy(this.invitationAt).project(camera);
     this.point.copy(this.invitationAt).addScaledVector(this.tangent, direction).project(camera).sub(this.projected);
     const tilt = Math.atan2(this.point.y, this.point.x * ((camera as THREE.PerspectiveCamera).aspect ?? 1));
-    const phase = (Math.max(0, this.elapsed - K.inviteAfter) % (K.inviteSweep + K.invitePause)) / K.inviteSweep;
     this.gesture.draw(camera, this.invitationAt, phase, K.radius * 0.7, this.alpha, 0.1, 'across', 1, tilt, true);
   }
 }

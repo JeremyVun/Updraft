@@ -86,8 +86,6 @@ export class LinesChapter implements Chapter {
       this.beat === 'throughDoor' || this.beat === 'shore' || this.beat === 'landed' || this.beat === 'toBoat' || this.beat === 'push' || this.beat === 'aboard';
   }
   get done(): boolean { return this.beat === 'aboard'; }
-  get updraftTarget(): THREE.Vector3 | null { return this.beat === 'rotarySnag' ? rotaryWashing.updraftTarget : null; }
-  get coax() { const at = this.updraftTarget; return at && rotaryWashing.rotors[0].open && this.t > tuning.rotaryWashing.inviteAfter ? { at, urgency: 0.8, radius: 1.4, bold: 1.4 } : null; }
   get linesScore(): LinesScorePhase | undefined {
     if (SHORE_BEATS.includes(this.beat)) return 'shore';
     if (this.beat === 'throughDoor' || (this.beat === 'family' && door.opened)) return 'door';
@@ -204,7 +202,7 @@ export class LinesChapter implements Chapter {
         if (rotaryWashing.rotors[0].open) this.enterRotary();
         break;
       case 'rotarySnag':
-        c.lookAt = this.t > tuning.rotaryWashing.snagLookDelay ? this.updraftTarget ?? rotaryWashing.rotors[1].top : cygnet.position;
+        c.lookAt = this.t > tuning.rotaryWashing.snagLookDelay ? rotaryWashing.snagTarget ?? rotaryWashing.rotors[1].top : cygnet.position;
         if (cygnet.position.distanceTo(ROTARY_INSIDE_BIRD) < 0.8) cygnet.stay = true;
         if (rotaryWashing.open) {
           c.lookAt = ROTARY_AFTER;

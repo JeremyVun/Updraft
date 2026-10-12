@@ -1,6 +1,6 @@
 // Real pointer sweeps through the washing, doorway, pulley and departure.
 // BASE=http://127.0.0.1:5243 W=1440 H=900 OUT=/tmp/... node tools/rotary-washing-browser-check.mjs
-// FULL=1 starts at the arrival and opens the first two curtains normally. REVERSE=1 turns clockwise.
+// FULL=1 starts at the arrival and opens the first two curtains normally. REVERSE=1 tests an opposing sweep first.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { openBrowser } from './lib/browser.mjs';
@@ -28,9 +28,19 @@ try {
   page.on('pageerror',e=>errors.push(e.message));
   page.on('console',m=>{if(m.type()==='error'&&!m.text().includes('favicon'))errors.push(m.text());});
   await withoutHotReload(page);
-  await page.goto(`${process.env.BASE??'http://127.0.0.1:5243/'}?shot&chapter=${process.env.CROSSING?'crossing':'washing'}&progress=0&ratio=1`);
+  await page.goto(`${process.env.BASE??'http://127.0.0.1:5243/'}?shot&chapter=${process.env.CROSSING?'crossing':process.env.FULL?'washing':'rotary'}&progress=0&ratio=1`);
   await page.waitForFunction(()=>window.__ready,null,{timeout:60000});
   await watchFamilyVisibility(page);
+  await page.evaluate(() => {
+    const r = __game.rotaryWashing, update = r.update.bind(r), sound = r.onSound;
+    window.__rotarySounds = []; window.__rotaryTrace = [];
+    r.onSound = (kind, at) => { window.__rotarySounds.push({ kind, time: __stats.time }); sound?.(kind, at); };
+    r.update = (dt, wind) => {
+      update(dt, wind);
+      if (r.active) window.__rotaryTrace.push({ time: __stats.time, dt,
+        rotors: r.rotors.map(f => ({ angle: f.angle, speed: f.speed, unhook: f.unhook, aligned: f.aligned })) });
+    };
+  });
   if(process.env.REVIEW) {
     fs.mkdirSync(`${out}/frames`,{recursive:true});
     await page.evaluate(()=>{
@@ -89,12 +99,6 @@ try {
     await shot('crossing-approach');
   }
   if(process.env.FULL||process.env.CROSSING) {await curtain(0);await curtain(1);}
-  else await page.evaluate(async()=>{
-    const {ROTARY_BEFORE}=await import('/src/world/lines-rotary.ts');
-    const g=__game;g.child.dismount();g.child.stop();g.child.place(ROTARY_BEFORE.x,ROTARY_BEFORE.z,Math.PI);g.child.standUp();
-    g.cygnet.release(g.child.position.clone().add({x:1.5,y:0,z:0}));g.cygnet.seating.snap();
-    g.story.current.restoreCheckpoint('rotary',[2,0]);
-  });
   await page.waitForFunction(()=>__game.story.current.beat==='rotary',null,{timeout:60000});
   await page.waitForFunction(()=>__game.story.current.t>8,null,{timeout:60000});
   await shot('rotary-waiting');
@@ -131,7 +135,10 @@ try {
   assert(await page.evaluate(()=>!__game.boat.grounded && __game.child.ground(__game.boat.position.x,__game.boat.position.z)<0),'the boat sails off the island');
   await shot('departure');
   await stopReview();
+  const rotary=await page.evaluate(()=>({sounds:window.__rotarySounds,trace:window.__rotaryTrace}));
+  fs.writeFileSync(`${out}/rotary.json`,JSON.stringify(rotary));
   const visibility=await checkFamilyVisibility(page);
+  assert.deepEqual(rotary.sounds.map(s=>s.kind).sort(),['creak','creak','release'],'two bearing creaks and one cloth release across the whole encounter');
   assert.deepEqual(errors,[]);
   fs.writeFileSync(`${out}/report.json`,JSON.stringify({visibility,width,height,touch:touchMode,errors,
     full:!!process.env.FULL||!!process.env.CROSSING,crossing:!!process.env.CROSSING,reverse:!!process.env.REVERSE},null,2));

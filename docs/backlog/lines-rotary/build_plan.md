@@ -124,3 +124,34 @@ Three loose sheets now use mauve, dusty rose and taupe, with softly darker hems.
 80/86/92/98/104 seconds in `/tmp/updraft-crossing-muted-linen/` were inspected: the hues remain quiet in
 the golden light and distinguish the accents from the pale majority. The complete crossing reaches landfall
 without browser errors. Typecheck and production build pass, with the existing chunk-size warning.
+
+## 7. Rotary weight and snag release — complete
+
+- Tune acceleration, coasting and directional resistance in `lines-rotary.ts` and `tuning.ts`; preserve earned alignment.
+- Change snag input to a local sweep, keep the corner attached until release, and update the visible invitation
+  in `rotary-washing.ts`/`story/lines.ts`. Verify no distant input or early blue interaction can release it.
+- Add one restrained metal creak per frame using the existing spatial foley, driven by actual rotation.
+- Verify frame-rate independence, reversal response, silent restore, fixed snag contact and full pointer/touch
+  approach–interaction–departure from the player camera. Run typecheck/build and focused audio checks.
+
+Acceleration is bounded, maximum rotation is 0.58 rad/s, and opposite gusts have 30% of the preferred drive.
+The final catch uses a damped spring that preserves momentum. At 30/60/120 Hz, a strong one-second sweep moves
+0.284–0.285 radians in the preferred direction versus 0.085–0.086 against it. Local snag sweeps now keep the
+corner at its physical post until release; the sheet returns to hanging within half a second. Wind invitations
+show the preferred turn and a short sweep over the caught hem. Each bearing creaks once, with one cloth release.
+
+Final desktop encounter: `/tmp/updraft-rotary-final-h7MJJs/`; full portrait touch arrival-to-departure:
+`/tmp/updraft-rotary-weight-touch-full/`. Real sweeps pass both rotaries and the snag, including an opposing
+push before recovery. Full touch records 260 visibility samples, zero early family pixels and exactly two creaks
+plus one release. Player-camera frames show the corner attached during work, then hanging naturally, with both
+companions readable. Captures and per-frame traces were inspected; no video motion review is claimed.
+
+The earlier quick-start portrait test teleported out of the washing arrival camera after boot and exposed a
+few family pixels while that artificial camera move settled. The harness now boots the existing rotary QA entry
+normally; the full approach verifies the production route. No scenery or camera redesign was needed.
+
+Typecheck, production build, mechanics, rig contact and audio render/scheduling checks pass. Abrupt acceleration,
+equal directional drive and the former floating anchor each fail their corresponding negative control. The
+isolated creak render is restrained (about −47 dBFS peak at established game gain), with no clipping or retained
+nodes; the render is `/tmp/updraft-rotary-creak.wav`. No listening approval is claimed. The production build
+retains its existing chunk-size warning. No deployment or merge was performed.

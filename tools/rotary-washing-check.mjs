@@ -10,6 +10,7 @@ const wind = { calm: 0, air: { x: 0, z: 0, energy: 0, lift: 0 }, splats: [],
   addSplat(s) { this.splats.push(s); Object.assign(this.air, { x:s.vx, z:s.vz, energy:s.energy }); } };
 for (const fps of [30,60,120]) for (const direction of [-1,1]) {
   const pair = new RotaryWashing(); pair.active = true;
+  const sounds = []; pair.onSound = kind => sounds.push(kind);
   const [near,far] = pair.rotors;
   const step = seconds => { for(let i=0;i<fps*seconds;i++)pair.update(1/fps,wind); };
   Object.assign(wind.air,{x:20,z:12,energy:1,lift:3}); step(30);
@@ -26,7 +27,7 @@ for (const fps of [30,60,120]) for (const direction of [-1,1]) {
   pair.activeRotor=0;
   for(let i=0;i<fps*8;i++){pair.brush(cam,input,wind);pair.update(1/fps,wind);}
   assert.equal(far.unhook,0,'the distant snag cannot solve before entry into green');
-  assert.equal(pair.updraftTarget,null,'no lift invitation before entry');
+  assert.equal(pair.snagTarget,null,'no snag invitation before entry');
   pair.activeRotor=-1;
   input.charge=0;
   function stroke(r) {
@@ -36,20 +37,28 @@ for (const fps of [30,60,120]) for (const direction of [-1,1]) {
     input.prevNdc.set(a.x,a.y);input.ndc.set(b.x,b.y);r.touchedAt.copy(p);r.brush(cam,input,wind);
   }
   for(let i=0;i<fps*.6;i++){stroke(near);pair.update(1/fps,wind);}
-  assert(direction*(near.angle-k.startAngle)>.1 && !near.aligned,'stroke turns promptly');step(15);
+  assert(direction*(near.angle-k.startAngle)>.02 && !near.aligned,'stroke turns promptly without completing');
+  assert(Math.abs(near.speed)<.4,'the frame gathers momentum instead of reaching full speed immediately');
+  const releasedAt=near.angle;step(.5);
+  assert(direction*(near.angle-releasedAt)>.01,'the weighted frame coasts after the sweep');step(15);
   const held=near.angle;step(15);assert(Math.abs(near.angle-held)<.001,'partial turn stays put');
-  for(let i=0;i<fps*15&&!near.open;i++){stroke(near);pair.update(1/fps,wind);}
+  for(let i=0;i<fps*45&&!near.open;i++){stroke(near);pair.update(1/fps,wind);}
   assert(near.open && !pair.open,'one aligned rotor cannot open passage');
   for(let i=0;i<fps*8;i++){stroke(far);pair.update(1/fps,wind);}
   assert(Math.abs(far.angle-k.startAngle)<=k.snagTurn+1e-8 && !far.aligned,'tether limits both directions');
-  input.charge=1;input.updraftAt.copy(far.snagPoint);Object.assign(wind.air,{lift:3});
-  for(let i=0;i<fps*5;i++){pair.brush(cam,input,wind);pair.update(1/fps,wind);}
-  assert.equal(far.unhook,1,'local updraft frees snag');input.charge=0;
-  for(let i=0;i<fps*20&&!pair.open;i++){stroke(far);pair.update(1/fps,wind);}
+  const snag=far.snagPoint.clone().project(cam);
+  input.prevNdc.set(snag.x-.01,snag.y);input.ndc.set(snag.x+.01,snag.y);
+  Object.assign(wind.air,{lift:0});input.charge=0;
+  for(let i=0;i<fps;i++){pair.brush(cam,input,wind);pair.update(1/fps,wind);}
+  assert.equal(far.unhook,1,'a short local sweep frees the hem without any updraft');
+  for(let i=0;i<fps*45&&!pair.open;i++){stroke(far);pair.update(1/fps,wind);}
   assert(pair.open,'both independently align');step(15);
   assert(Math.abs(Math.sin(near.angle))<1e-8 && Math.abs(Math.sin(far.angle))<1e-8);
-  pair.reset(true);assert(pair.open,'legacy restore bypasses both');pair.reset();assert(!pair.open && near.angle===k.startAngle && far.unhook===0);
-  console.log(`PASS ${fps} Hz, direction ${direction}: local lifting, responsive turns, persistent progress, tether, independent catches, restore`);
+  assert.deepEqual(sounds.sort(),['creak','creak','release'],'only one creak per frame and one cloth release');
+  sounds.length=0;pair.reset(true);step(5);assert(pair.open,'legacy restore bypasses both');
+  assert.equal(sounds.length,0,'restoring the completed rotaries is silent');
+  pair.reset();assert(!pair.open && near.angle===k.startAngle && far.unhook===0);
+  console.log(`PASS ${fps} Hz, direction ${direction}: weight, local sweep, persistent progress, tether, independent catches, sparse sound, restore`);
 }
 assert(Math.hypot(k.x-k.farX,k.z-k.farZ)>2*k.radius+2,'swept circles do not meet');
 assert(ROTARY_ROUTE[0].x>k.x+2 && ROTARY_ROUTE[2].x<k.farX-2,'route follows the two bare halves');
@@ -76,6 +85,45 @@ for (const direction of [-1,1]) {
     pair.update(1/60,wind);
   }
   assert(contacts>15,'test contacts the moving visible sheets');
-  assert(Math.abs(r.angle-k.startAngle)>.3,'a slow sweep visibly turns the frame');
+  assert(Math.abs(r.angle-k.startAngle)>(direction===r.preferredDirection?.2:.06),'a slow sweep visibly turns the frame');
 }
 console.log('PASS: real screen hit selection holds the direction of each uninterrupted sweep');
+
+{
+  const pair=new RotaryWashing(), far=pair.rotors[1];pair.active=true;pair.activeRotor=0;
+  const cam=new THREE.PerspectiveCamera(40,1.6,.1,1000);
+  cam.position.copy(far.snagPoint).add(new THREE.Vector3(0,2,20));cam.lookAt(far.snagPoint);cam.updateMatrixWorld();
+  const p=far.snagPoint.clone().project(cam);
+  const input={present:true,muted:false,gust:2,prevNdc:new THREE.Vector2(p.x-.01,p.y),ndc:new THREE.Vector2(p.x+.01,p.y)};
+  for(let i=0;i<120;i++){pair.brush(cam,input,wind);pair.update(1/60,wind);}
+  assert.equal(far.unhook,0,'a real sweep directly on the snag still waits for the child to enter green');
+  pair.activeRotor=1;input.muted=true;
+  for(let i=0;i<120;i++){pair.brush(cam,input,wind);pair.update(1/60,wind);}
+  assert.equal(far.unhook,0,'muted local sweeps cannot release the hem');
+  input.muted=false;
+  for(let i=0;i<12;i++){pair.brush(cam,input,wind);pair.update(1/60,wind);}
+  assert(far.unhook>0&&far.unhook<1,'a little local work does not instantly release');
+  for(let i=0;i<60;i++)pair.update(1/60,wind);
+  const held=far.unhook;
+  for(let i=0;i<600;i++)pair.update(1/60,wind);
+  assert.equal(far.unhook,held,'partial release work persists without an idle solve');
+}
+
+for(const fps of [30,60,120]) {
+  const angles=[];
+  for(const opposed of [false,true]) {
+    const pair=new RotaryWashing();pair.active=true;const r=pair.rotors[0];
+    for(let i=0;i<fps;i++) {
+      r.direction=r.preferredDirection*(opposed?-1:1);r.strokeWind=14;r.brushAge=0;
+      pair.update(1/fps,wind);
+    }
+    angles.push(Math.abs(r.angle-k.startAngle));
+  }
+  assert(angles[0]>.23&&angles[0]<.4,'one sustained sweep produces a deliberate partial turn');
+  assert(angles[1]>0&&angles[1]<angles[0]*.4,'opposite air yields a little but meets more resistance');
+  const pair=new RotaryWashing(),r=pair.rotors[1];
+  r.angle=r.goal-.16;r.speed=.15;r.aligned=true;r.unhook=1;
+  const before=r.speed;pair.update(1/fps,wind);
+  assert(Math.abs(r.speed-before)<2/fps,'alignment settles with its existing momentum instead of snapping to a faster speed');
+  console.log(`PASS ${fps} Hz direction bias: ${angles.map(a=>a.toFixed(3)).join(' / ')} radians`);
+}

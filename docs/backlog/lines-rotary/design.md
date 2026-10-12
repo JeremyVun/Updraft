@@ -71,14 +71,14 @@ Do not use continuous wall panels, rectangular enclosures or hard cropped corrid
 Two spread rotaries form one continuous winding passage. The farther one's trailing sheet is hooked on an
 ordinary neighbouring washing-line post. First turn green's bare half towards the route; it catches and the pair
 walk into the sheltered space beside its mast. The camera accompanies them, then eases towards the blue snag.
-Turning blue pulls its sheet taut and stops the frame. Lift the hem free, then align blue's bare half with the
+Turning blue pulls its sheet taut and stops the frame. Sweep the caught hem free, then align blue's bare half with the
 onward path. Each alignment persists, and the pair finish the passage together.
 
 The rotaries are staggered in depth, near left and far right, with disjoint swept circles. Both remain in the
 player view on desktop and phone. Muted sage and dusty blue linen, sagging square lines, weathered pegs and woven stripes
 keep them part of the same washing. A snag must visibly tether the cloth, and
 an aligned gap must agree with the worn ground. Responsive turning; progress persists; no timer or idle solve.
-Cursor motion and circles remain the only verbs. Lift and strokes write/read the shared wind.
+Cursor motion remains the only verb. Strokes write/read the shared wind; the caught corner responds to local contact.
 
 Restore the lane between curtains one and two: remove the broad rotary-camera and family-sightline exclusions
 that hollowed it out. Keep all three curtain puzzles. The family and door stay on inland ground but around a
@@ -88,9 +88,9 @@ fades or spawns, and cannot be seen before the third curtain is complete. The fo
 ## Invariants and verification
 
 - Broad strokes over visible linen answer promptly; strokes on one frame do not turn the other.
-- The snag responds to local updrafts, not idle time, unrelated circles or drawn invitations.
+- The snag responds to local sweeps, not idle time, distant wind or drawn invitations; its corner stays on the pole until release.
 - Each rotary must sit across the naturally legible way forward. The surrounding field should discourage obvious bypasses through organic density, not engineered enclosures.
-- Each frame can be turned both ways; the snag constrains both directions until released.
+- Each frame favours its shorter turn towards alignment and resists opposite gusts; the snag constrains both directions until released.
 - Green opens a walk into its own sheltered half; blue remains closed until its snag and alignment are earned. Both alignments stay earned.
 - Travellers move through each bare half only once that frame is at rest; the inside waiting point stays outside blue’s sweep.
 - Fixed scenery forms the lane and hides the family in every preceding camera transition, including billowing
@@ -250,3 +250,20 @@ Jeremy's request and correction (verbatim):
 Keep the majority of the procession pale linen, with three scattered sheets in muted mauve, dusty rose and
 warm taupe. Reserve bright red, blue and yellow for the secret-door motif. Judge these accents in the actual
 sailing camera and golden light; preserve flight paths, timing, cloth motion and camera staging.
+
+## Rotary weight and snag release — 2026-10-12
+
+Jeremy's brief (verbatim):
+
+> oh and one other thing, can you give the spinners a bit more weight and biased towards spinning only in one direction? right now they don't feel like they have enough of a weighty feeling (not to weighty, but just enough that they don't feel like toys). Maybe a very subtle once or twice off metal creaking sound effect too.
+>
+> And then in terms of the cloth being caught on the pole, I'm not sure if it should be an updraft, but i'll let you decide what you think is best. Either way it could probably be tidied up a bit (right now the wind lifts the cloth way above the pole into mid air before it is counted as not snagged anymore. I would have expected it to instead behave a little bit more like the pegs).
+
+Keep the current layout, palette and staged walk. Limit rotational acceleration and speed so a sweep gathers
+momentum, coasts briefly and settles. Each frame favours its shorter turn towards the opening; opposite gusts
+meet more resistance without becoming inert. Invitations indicate that preferred turn. One quiet metal-bearing
+creak per frame follows actual movement, with no looping or replay on restore/mute.
+
+Supersede the required updraft with a local sweep across the caught hem, like the peg interactions. The corner
+stays at the pole until it slips free, then falls back into its hanging sheet. Remove the raised invisible
+anchor, use a short local sweep invitation, and retain staged access and persistent release.
