@@ -4,7 +4,7 @@ import type { PointerInput } from '../input/pointer';
 import { tuning } from '../tuning';
 import { feltWind, type WindField, type WindSample } from '../wind/field';
 import { heightAt } from './island';
-import { ROTARY_PATH } from './lines-layout';
+import { ROTARY_PATH, ROTARY_INSIDE_PLACE } from './lines-layout';
 
 const K = tuning.rotaryWashing;
 export const ROTARY_SHEET_INTERVALS = [[0.04, 0.46], [0.54, 0.96]] as const;
@@ -14,6 +14,8 @@ export const ROTARY_FOOT = ground(K.x, K.z);
 export const ROTARY_TOP = ROTARY_FOOT.clone().add(new THREE.Vector3(0, K.top, 0));
 export const ROTARY_BEFORE = ground(ROTARY_PATH[0].x, ROTARY_PATH[0].z);
 export const ROTARY_BIRD = ground(ROTARY_BEFORE.x + 1, ROTARY_BEFORE.z - 0.2);
+export const ROTARY_INSIDE = ground(ROTARY_INSIDE_PLACE.x, ROTARY_INSIDE_PLACE.z);
+export const ROTARY_INSIDE_BIRD = ground(ROTARY_INSIDE.x + 0.9, ROTARY_INSIDE.z - 0.7);
 export const ROTARY_ROUTE = ROTARY_PATH.slice(1).map(p => ground(p.x, p.z));
 export const ROTARY_AFTER = ROTARY_ROUTE[ROTARY_ROUTE.length - 1];
 
@@ -130,11 +132,12 @@ export class RotaryFrame {
 export class RotaryWashing {
   readonly rotors = [new RotaryFrame(0, K.x, K.z, Math.PI), new RotaryFrame(1, K.farX, K.farZ, 0)];
   active = false;
+  activeRotor = -1;
   get open(): boolean { return this.rotors.every(r => r.open); }
   get caught(): boolean { return this.rotors.every(r => r.aligned); }
-  get updraftTarget(): THREE.Vector3 | null { return this.active ? this.rotors.find(r => r.liftTarget)?.liftTarget ?? null : null; }
-  reset(open = false): void { this.active = false; this.rotors.forEach(r => r.reset(open)); }
-  update(dt: number, wind: WindField): void { this.rotors.forEach(r => r.update(dt, wind, this.active)); }
+  get updraftTarget(): THREE.Vector3 | null { return this.active ? this.rotors.find(r => (this.activeRotor < 0 || r.index === this.activeRotor) && r.liftTarget)?.liftTarget ?? null : null; }
+  reset(open = false): void { this.active = false; this.activeRotor = -1; this.rotors.forEach(r => r.reset(open)); }
+  update(dt: number, wind: WindField): void { this.rotors.forEach(r => r.update(dt, wind, this.active && (this.activeRotor < 0 || r.index === this.activeRotor))); }
 
   brush(camera: THREE.Camera, input: PointerInput, wind: WindField): void {
     if (!this.active || input.muted || !input.present || input.ndc.distanceToSquared(input.prevNdc) < 1e-8) return;
@@ -147,6 +150,7 @@ export class RotaryWashing {
     if (input.gust < K.brushFrom) return;
     let nearest = Infinity, rotor: RotaryFrame | null = null;
     for (const r of this.rotors) {
+      if (this.activeRotor >= 0 && r.index !== this.activeRotor) continue;
       const distance = r.hit(camera, input);
       if (distance < nearest) { nearest = distance; rotor = r; }
     }

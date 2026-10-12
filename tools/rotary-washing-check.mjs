@@ -23,6 +23,11 @@ for (const fps of [30,60,120]) for (const direction of [-1,1]) {
   input.updraftAt.copy(far.snagPoint);input.muted=true;
   for(let i=0;i<fps*8;i++){pair.brush(cam,input,wind);pair.update(1/fps,wind);}
   assert.equal(far.unhook,0,'muted gestures ignored');input.muted=false;
+  pair.activeRotor=0;
+  for(let i=0;i<fps*8;i++){pair.brush(cam,input,wind);pair.update(1/fps,wind);}
+  assert.equal(far.unhook,0,'the distant snag cannot solve before entry into green');
+  assert.equal(pair.updraftTarget,null,'no lift invitation before entry');
+  pair.activeRotor=-1;
   input.charge=0;
   function stroke(r) {
     const p=r.clothPoint(1,.5,2,new THREE.Vector3()),a=p.clone().project(cam);

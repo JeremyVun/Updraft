@@ -66,7 +66,8 @@ to wind and they can go to max velocity / violently flutter very quickly"; "i ne
    identity; `trail: true` means its segment traces movement during this render interval. One-off story gusts set
    `impulse: true`.
 2. `main.ts` sets `wind.breeze` (the prevailing breeze vector, `tuning.wind.breeze` scaled by the chapter, slowly
-   veering).
+   veering). Chapter strength eases at `tuning.world.seaStateEase`; the sea's ripple roughness, surf and swell
+   read that same eased strength, so entering a sheltered island cannot replace the whole sea in one frame.
 3. `wind.step(dt, time)` accumulates game time and runs fixed 1/60 s ticks (none on some high-refresh frames, two
    at 30 fps, up to six at the 100 ms stall cap): force (breeze and resampled splats), curl, vorticity confinement
    (`swirliness`), divergence, 24 Jacobi pressure iterations, gradient subtraction, self-advection, then the grass

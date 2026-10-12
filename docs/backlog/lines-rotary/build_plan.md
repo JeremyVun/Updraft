@@ -72,3 +72,44 @@ reinstating the old cutoff fails 39 samples, with 59,108 altered pixels in its w
 reports: `/tmp/updraft-lines-shore.Nrvta6/full/`; rejected baseline: `crossing-approach-*` in the same root.
 The existing `lines-check door` passes source/portal/reflection visibility and departure. Typecheck and production
 build pass. Landing stills were inspected; this narrow renderer correction does not claim a motion review.
+
+
+## 5. Player-camera polish — complete
+
+- Stage green alignment → sheltered walk inside → snag glance/invitation → blue alignment → onward walk.
+  Own story/rotary controls, tuning and real gesture helpers. Verify actual gestures, no premature lift or
+  traversal, full companion silhouettes, wide and portrait, and the subsequent family reveal.
+- Soften approach/exit grass cuts while preserving rotary footing and character readability.
+- Relocate the secret shore with save migration and unchanged boat speed. Measure against the 31.9 s baseline;
+  target +10–15 s, conceal the destination until the sea has had breathing room. Replay both sea handoffs.
+- Apply Still-to-Lines-only 0.99 sailing pace, lower its surfacing whale and extend the gull/linen procession.
+  Check complete passage duration, navigation and player-camera captures through procession and landfall.
+- Record the camera-first staging lesson in AGENTS.md, run focused regressions, typecheck and production build.
+
+
+Verification: `/tmp/updraft-lines-polish-wide/` replays both alignments, inside pause, snag, curtain three,
+family, door and pulley with real pointer input. `/tmp/updraft-lines-polish-portrait/` starts at the arrival
+and uses touch with the opposite turn direction through the whole Lines island. Both rendered family masks
+show zero early pixels. Player-camera captures show green linen/arms enclosing the inside pause, both whole
+companions and the caught corner in view. Chronological frames and camera traces were inspected; no video
+motion review is claimed. The entry dolly follows the walking pair, settles beside the mast, then shifts right
+and forward towards the snag. Traces flag the expected change in camera-to-child distance as they walk and
+the lens follows; there is no new entry cut or emergency clearance correction.
+
+`/tmp/updraft-lines-sea-polish/` begins before the real shore departure, plays the pulley, boards and sails
+through Little Boats arrival. Frozen rendered comparisons across the portal boundary change zero pixels.
+The sea factor carries 1.0 into arrival, then settles to 0.505; its largest per-frame step is 0.00374 instead
+of 0.5. The 13-second view has open sea ahead; the island emerges later from its own mist. CPU navigation
+checks measure 45.5 s vs 31.9 s before the 60 m move (+13.6 s), with unchanged speed, across gust and frame-rate
+cases. Still-to-Lines measures 118.1 s vs 117.0 s (+1.1 s) at its 0.99 drive multiplier.
+
+`/tmp/updraft-first-crossing-polish/` follows the complete incoming crossing. The whale rides 2.4 m deeper;
+the back remains a low rise and the flukes still clear the water. Ten gulls and eight loose sheets (plus the
+bill-carried cloth) replace six gulls/four loose sheets. New sheets enter in later waves through 28 s after
+the procession starts, rather than all being launched by 10.2 s. Captures at 92/98 s show the later sheets
+leading into the island's emergence; landfall is clear. Spawn-frustum tests pass in portrait/landscape and
+three camera bearings, along with cloth stability at 30/60/120 Hz.
+
+Typecheck, production build, curtain progression/cloth, rotary mechanics/rig initialization, geography/save
+migration and first-whale swell checks pass. Production retains its existing large-chunk warning. No deployment
+or merge was performed.

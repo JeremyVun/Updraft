@@ -12,6 +12,7 @@ export const DOOR_PLACE = { x: 14, z: -361 };
 export const FAMILY_APPROACH = { x: 14, z: -340 };
 export const ROTARY_PLACE = tuning.rotaryWashing;
 const R = ROTARY_PLACE;
+export const ROTARY_INSIDE_PLACE = { x: R.x + R.insideSide, z: R.z - R.insideAhead };
 export const ROTARY_PATH = [
   { x: R.x, z: R.z + R.standBack },
   { x: R.x + R.pathOffset, z: R.z - 7 },
@@ -32,6 +33,7 @@ const CLEARINGS: { x: number; z: number; radius: number; crop?: number }[] = [
   ...CURTAIN_LAYOUT.map(({ x, z }) => ({ x, z, radius: 8, crop: 0.85 })),
   ...CURTAIN_LAYOUT.map(({ x, z }, i) => ({ x: x + (i === 0 ? 1.7 : i === 1 ? -0.7 : -1.6), z: z + 4.7, radius: 3.7, crop: 0.94 })),
   { x: R.x, z: R.z, radius: 8 },
+  { ...ROTARY_INSIDE_PLACE, radius: 3.8, crop: 0.9 },
   { x: R.farX, z: R.farZ, radius: 8 },
   { x: R.x + 0.7, z: R.z + R.standBack, radius: 5.5, crop: 0.94 },
   { x: FAMILY_PLACE.x, z: FAMILY_PLACE.z + 2, radius: 9, crop: 0.85 },
@@ -53,7 +55,8 @@ for (const walk of walks) for (let i = 1; i < walk.length; i++) {
   for (let j = 0; j <= steps; j++) {
     const t = j / steps;
     CLEARINGS.push({ x: a.x + (b.x - a.x) * t, z: a.z + (b.z - a.z) * t,
-      radius: 4.8 + Math.sin(j * 2.3 + i) * 0.6, crop: 0.84 });
+      radius: (walk === ROTARY_PATH ? R.rotaryRadius : R.approachRadius) + Math.sin(j * 2.3 + i) * 0.6,
+      crop: walk === ROTARY_PATH ? R.rotaryCrop : R.approachCrop });
   }
 }
 const BOUNDS = {

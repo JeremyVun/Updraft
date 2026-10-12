@@ -109,7 +109,7 @@ class Linen {
 export class CrossingLinen {
   readonly birds: THREE.Mesh;
   readonly objects: THREE.Object3D[];
-  private readonly instances = new Instances(gullGeometry(), 6, ['iPos', 'iAtt', 'iWing']);
+  private readonly instances = new Instances(gullGeometry(), tuning.opening.shoreEchoes.gulls, ['iPos', 'iAtt', 'iWing']);
   private readonly linen = [new Linen(1.05, 1.3, true),
     ...tuning.opening.shoreEchoes.laundry.map(f => new Linen(f.width, f.drop, false, f))];
   private readonly origin = new THREE.Vector3();
@@ -166,13 +166,13 @@ export class CrossingLinen {
       this.started = true;
       this.previous = t;
     }
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < k.gulls; i++) {
       const phase = t * .3 + i * 1.7, side = k.crossSpeed + Math.cos(phase) * 1.2;
       const forward = k.forwardSpeed + Math.cos(phase * .8) * .8;
       const yaw = Math.atan2(this.forward.x * forward + this.right.x * side,
         this.forward.z * forward + this.right.z * side);
       const bank = .16 * Math.sin(phase), pitch = -.04 + .06 * Math.cos(phase);
-      this.point.copy(this.origin).addScaledVector(this.right, -k.span + t * k.crossSpeed - i * 7 + Math.sin(phase) * 4)
+      this.point.copy(this.origin).addScaledVector(this.right, -k.span + t * k.crossSpeed - i * k.gullSpacing + Math.sin(phase) * 4)
         .addScaledVector(this.forward, k.ahead + t * k.forwardSpeed + (i % 3 - 1) * 9 + Math.sin(phase * .8) * 3.3);
       this.point.y = k.height + (i % 3) * k.followerHeight + Math.sin(phase) * 1.1;
       this.instances.set(0, i, this.point.x, this.point.y, this.point.z, yaw);
@@ -186,7 +186,7 @@ export class CrossingLinen {
           .65 / (1 + this.point.distanceTo(this.camera.position) / 60));
       }
     }
-    this.instances.commit(6);
+    this.instances.commit(k.gulls);
     this.flow.copy(this.forward).multiplyScalar(k.forwardSpeed).addScaledVector(this.right, k.crossSpeed);
     for (let i = 0; i < this.linen.length; i++) {
       const l = this.linen[i], flight = l.flight, start = flight?.at ?? 0;

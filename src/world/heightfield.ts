@@ -1,4 +1,4 @@
-import { BOATS_SHIFT, SHORE_SHIFT, HOME_SHIFT, LINES_SHIFT, STILL_SHIFT } from './geography';
+import { BOATS_SHIFT, SHORE_SHIFT, SHORE_SEPARATION, HOME_SHIFT, LINES_SHIFT, STILL_SHIFT } from './geography';
 import { mirrorBed, MIRROR_LAYOUT_GLSL } from './sky-mirror-layout';
 import { glsl, tuning } from '../tuning';
 import { LITTLE_BOATS, LITTLE_BOATS_GLSL, boatsBar, boatsOut, boatsLevel } from './little-boats-layout';
@@ -170,7 +170,7 @@ export const ISLES = {
 } as const;
 
 /** The small shore reached only through the red door; separated from the washing island by open sea. */
-export const DOOR_SHORE = { x: 240 + SHORE_SHIFT.x, z: -460 + SHORE_SHIFT.z, rx: 23, rz: 30 } as const;
+export const DOOR_SHORE = { x: 240 + SHORE_SHIFT.x + SHORE_SEPARATION.x, z: -460 + SHORE_SHIFT.z + SHORE_SEPARATION.z, rx: 23, rz: 30 } as const;
 function doorShoreHeight(x: number, z: number): number {
   const r = Math.hypot((x - DOOR_SHORE.x) / DOOR_SHORE.rx, (z - DOOR_SHORE.z) / DOOR_SHORE.rz);
   return 3.4 - smoothstep(0.35, 1.08, r) * 5.2 - smoothstep(1, 1.6, r) * 8;

@@ -10,7 +10,7 @@ for (const aspect of [390 / 844, 16 / 9, 2]) for (const pan of [-1.2, 0, 1.2]) {
   const echoes = new CrossingLinen(wind, camera), frustum = new THREE.Frustum(), matrix = new THREE.Matrix4();
   const visible = p => { p.project(camera); return Math.abs(p.x) <= 1 && Math.abs(p.y) <= 1 && p.z >= -1 && p.z <= 1; };
   let births = 0, entered = false;
-  for (let frame = 0; frame <= 20 * 60; frame++) {
+  for (let frame = 0; frame <= 38 * 60; frame++) {
     const t = frame / 60; boat.z = t * 6;
     camera.position.set(0, 12, boat.z - 26);
     const yaw = pan * Math.max(0, 1 - t / 6);
@@ -25,7 +25,7 @@ for (const aspect of [390 / 844, 16 / 9, 2]) for (const pan of [-1.2, 0, 1.2]) {
     if (!hadBirds && echoes.birds.geometry.instanceCount) {
       frustum.setFromProjectionMatrix(matrix.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
       const positions = echoes.birds.geometry.attributes.iPos.array;
-      for (let i = 0; i < 6; i++) assert(!frustum.intersectsSphere(new THREE.Sphere(new THREE.Vector3().fromArray(positions, i * 4), 2)),
+      for (let i = 0; i < tuning.opening.shoreEchoes.gulls; i++) assert(!frustum.intersectsSphere(new THREE.Sphere(new THREE.Vector3().fromArray(positions, i * 4), 2)),
         `whole gull spawns outside ${aspect} view during pan ${pan}`);
       births++;
     }
@@ -36,7 +36,7 @@ for (const aspect of [390 / 844, 16 / 9, 2]) for (const pan of [-1.2, 0, 1.2]) {
       births++;
     });
   }
-  assert.equal(births, 6);
+  assert.equal(births, tuning.opening.shoreEchoes.laundry.length + 2);
   if (pan === 0) assert(entered, `gulls fly into the settled ${aspect} sailing view`);
 }
 console.log('All gull and cloth births stay outside the frame across portrait, landscape and whale-pan bearings.');
@@ -54,13 +54,14 @@ for (const fps of [30, 60, 120]) {
     }
     if (f % fps === 0 && t > 12) {
       const centres = echoes.linen.slice(1).map(l => {
+        if (!l.mesh.visible) return null;
         const p = new THREE.Vector3();
         for (let i = 0; i < l.cloth.count; i++) p.add(new THREE.Vector3().fromArray(l.cloth.view, i * 3));
         return p.multiplyScalar(1 / l.cloth.count);
       });
-      heightSpread = Math.max(heightSpread, Math.max(...centres.map(p => p.y)) - Math.min(...centres.map(p => p.y)));
+      heightSpread = Math.max(heightSpread, Math.max(...centres.filter(Boolean).map(p => p.y)) - Math.min(...centres.filter(Boolean).map(p => p.y)));
       if (previous) {
-        const velocities = centres.map((p, i) => p.clone().sub(previous[i]).setY(0));
+        const velocities = centres.flatMap((p, i) => p && previous[i] ? [p.clone().sub(previous[i]).setY(0)] : []);
         const speeds = velocities.map(v => v.length());
         speedSpread = Math.max(speedSpread, Math.max(...speeds) - Math.min(...speeds));
         for (const a of velocities) for (const b of velocities) directionSpread = Math.max(directionSpread, a.angleTo(b));

@@ -69,9 +69,10 @@ Do not use continuous wall panels, rectangular enclosures or hard cropped corrid
 ## Current design
 
 Two spread rotaries form one continuous winding passage. The farther one's trailing sheet is hooked on an
-ordinary neighbouring washing-line post. Turning pulls that sheet taut and stops the frame. Lift the hem free,
-then turn the bare halves of both frames toward the route. They catch in place independently; once both have
-settled, the child and cygnet walk through together. This replaces the single-rotary enter/turn/exit proposal.
+ordinary neighbouring washing-line post. First turn green's bare half towards the route; it catches and the pair
+walk into the sheltered space beside its mast. The camera accompanies them, then eases towards the blue snag.
+Turning blue pulls its sheet taut and stops the frame. Lift the hem free, then align blue's bare half with the
+onward path. Each alignment persists, and the pair finish the passage together.
 
 The rotaries are staggered in depth, near left and far right, with disjoint swept circles. Both remain in the
 player view on desktop and phone. Muted sage and dusty blue linen, sagging square lines, weathered pegs and woven stripes
@@ -90,8 +91,8 @@ fades or spawns, and cannot be seen before the third curtain is complete. The fo
 - The snag responds to local updrafts, not idle time, unrelated circles or drawn invitations.
 - Each rotary must sit across the naturally legible way forward. The surrounding field should discourage obvious bypasses through organic density, not engineered enclosures.
 - Each frame can be turned both ways; the snag constrains both directions until released.
-- Opening one frame never starts the crossing. Both independently earned alignments stay earned.
-- Travellers wait outside the sweeps and follow the bare halves only once the mechanism is at rest.
+- Green opens a walk into its own sheltered half; blue remains closed until its snag and alignment are earned. Both alignments stay earned.
+- Travellers move through each bare half only once that frame is at rest; the inside waiting point stays outside blue’s sweep.
 - Fixed scenery forms the lane and hides the family in every preceding camera transition, including billowing
   and partial release of the third curtain. Test wide desktop and portrait views with real gestures.
 - Legacy curtain-2 saves still bypass the encounter; rotary saves begin before it; far-shore saves remain valid.
@@ -212,3 +213,28 @@ removed the arrival beach as soon as the crossing became Lines, leaving clipped 
 Keep the source view's secret-shore exclusion used during sailing; let the journey's room partition bound Lines.
 Do not change the island shape or arrival camera to hide this renderer defect. Verify from offshore through the
 actual chapter handoff and disembarkation, including the ultrawide player view.
+
+
+## Player-camera polish — 2026-10-12
+
+Jeremy's brief (verbatim):
+
+> - I think the grass being flattened deliberately to make a path only really works around the spinners, but not as much leading up to or leading away from. what do you think? Maybe tone the flattening down a bit?
+> - the clothes being stuck on the snag is not immediately obvious because the child is a bit far away. I think it makes more sense for the child to walk into the first spinner and it should feel a bit enclosed. And then the camera can subtly pan towards the snag as the next puzzle to solve. you know what i mean?
+> - i'd like a bit more travel time between the secret island through the door and the island of little boats. not by slowing down the boat but by moving the location of the secret island to create a bit more space. like +10-15 seconds or so. What im trying to do at a high level is create more of a sense of being "lost" like "what's next?" within a dream and then resolving it with the next island appearing out of the mist. instead of the next island instantly being visible the moment you leave.
+> - I think there's a bug where as you leave the secret island to the island of little boats, the water and everything sort of renders completely differently (i think it's got something to do with a different wind gust factor being 0.5 for the little boats island maybe that isn't being smoothed over properly?)
+> - To make up for the island of lines being extended a little bit, which does interfere with the timings we had from the still island to the island of lines, could you reduce the boats speed by something really small like 1%?
+> - During that crossing from the still island to the island of lines, it's quite nice except for two small polish items. 1) the whale comes too high out of the water 2) I'd like to see more gulls and especially more sheets. What i mean is that the "procession" (if you can call it that) ends a bit too soon and i'd like the sequence to play a bit longer. understand what i mean?
+>
+> Otherwise, really good job on the island of lines rework. i want to understand what it was that made it click for you. Was it thinking about the experience completely from the perspective of the player camera? I'd like to capture whatever it was and put it in the project's AGENTS.md so that other sessions working on the game can benefit as well.
+
+This supersedes waiting outside until both rotaries align: align green, walk into its open half, settle beside
+the mast, then notice and free the blue snag before aligning blue. Green sheets frame the waiting pair without
+blocking them. The camera accompanies their walk and only then eases its attention towards the snag. Retain
+the original irregular field, two alignments, contrasting cloth palettes and physical reveal. Soften worn grass
+on approaches and exits; retain local footing around mechanisms and waiting companions.
+
+Move only the secret shore to lengthen its departure by 10–15 seconds at unchanged sailing speed, with a period
+of open sea before Little Boats emerges. Migrate existing saves with the shore. Smooth sea-state handoffs,
+preserve other crossings' pace, reduce Still-to-Lines drive by 1%, lower its distant whale, and stagger more
+gulls and sheets so the procession lasts longer without obscuring the arrival.

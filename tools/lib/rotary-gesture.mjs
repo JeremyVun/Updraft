@@ -64,6 +64,9 @@ export async function openRotary(page, touch = null, reverse = false, capture = 
   await page.waitForFunction(() => __game.story.current.beat === 'rotary', null, { timeout: 120000 });
   for (const index of [0, 1]) {
     if (index === 1) {
+      await page.waitForFunction(() => __game.story.current.beat === 'rotarySnag', null, { timeout: 30000 });
+      await page.waitForTimeout(5500);
+      await capture('rotary-inside');
       for (let i = 0; i < 3; i++) await turnRotary(page, reverse, touch, index);
       await capture('rotary-snagged');
     }

@@ -1,7 +1,7 @@
 import { BOATS_BERTH } from '../world/little-boats-layout';
 import { MIRROR_BERTH } from '../world/sky-mirror-layout';
 import type { Progress } from './progress';
-import { STILL_SHIFT } from '../world/geography';
+import { STILL_SHIFT, SHORE_SEPARATION } from '../world/geography';
 import { BOATS_SHIFT, BOATS_OFFSHORE_SHIFT, BOATS_SHORTENING, SHORE_SHIFT, MIRROR_SHIFT, HOME_SHIFT, SEA_SHORTENING, PAST_THE_WHALE, ONWARD_SEA, WHALE_MOVE, WHALE_NEARER, WHALE_SHORTENING, MIRROR_SHORTENING, LINES_SHIFT, GEOGRAPHY_VERSION } from '../world/geography';
 
 /** Preserve chapter progress when the islands move. Old sailing saves resume in safe open water. */
@@ -44,6 +44,19 @@ export function migrateGeography(p: Progress): Progress {
     for (const region of p.life) if (region[2] > 0 && region[1] > -150 && Math.abs(region[0]) < 150) {
       region[0] += STILL_SHIFT.x;
       region[1] += STILL_SHIFT.z;
+    }
+  }
+  if ((p.geography ?? 0) < 11) {
+    if (p.chapter === 'toBoats' || p.chapter === 'lines' && p.point === 'family') {
+      for (const [v, z] of [[p.child, 2], [p.bird, 2], [p.boat, 1]] as const) {
+        if (p.chapter === 'lines' && v[0] < 150) continue;
+        v[0] += SHORE_SEPARATION.x;
+        v[z] += SHORE_SEPARATION.z;
+      }
+    }
+    for (const region of p.life) if (Math.hypot((region[0] - 240) / 23, (region[1] + 365) / 30) < 1.6) {
+      region[0] += SHORE_SEPARATION.x;
+      region[1] += SHORE_SEPARATION.z;
     }
   }
   p.geography = GEOGRAPHY_VERSION;

@@ -31,7 +31,7 @@ and half-sizes are in `ISLES` (`heightfield.ts`) unless noted:
 | --- | --- | --- | --- |
 | still island | (−6, 186) | its own coastline | `islandCoast` in `heightfield.ts` |
 | island of lines | (14, −308.4) | 70 × 104.4 | `ISLES.lines`; northern terrain stretched below −260 |
-| the shore through the red door | (240, −365) | 23 × 30 | `DOOR_SHORE` |
+| the shore through the red door | (300, −365) | 23 × 30 | `DOOR_SHORE` |
 | little boats | (130, −420) | 48 × 70 | `LITTLE_BOATS` (`little-boats-layout.ts`) |
 | meadow | (10, −780) | 227 × 200 | `ISLES.meadow`, sculpted at 340 × 300 and scaled by `tuning.world.meadowLength` (`meadowPoint`) |
 | birches | (0, −1128) | 60 × 80 | `ISLES.birches` |
@@ -59,6 +59,11 @@ Revision 10 moves Still and its first four departure waypoints 200 units south. 
 whale surfaces relative to the departing boat, moving the encounter with it. The 2026-10-11 timing experiment
 and Jeremy's exact brief are in [audio.md](audio.md). The ordinary crossing grows from 76.3 to 117 seconds,
 including 32.7 additional seconds after the whale's later appearance. Sailing speeds remain unchanged.
+
+Revision 11 moves only the secret shore 60 m east, from (240, −365) to (300, −365). Its doorway destination,
+berth, pulley, terrain and grass follow the same origin. Existing shore and departure saves migrate once.
+The departure measures 45.5 s against 31.9 s before the move, without changing speed; the destination's mist
+conceals the first stretch. Still-to-Lines uses a 0.99 drive multiplier, adding about 1.1 s.
 
 ### Still grass restoration, 2026-10-11
 
@@ -95,7 +100,7 @@ Turns, mooring, the storm and the cygnet's swim slow the boat naturally. Targets
 | crossing | about | notes |
 | --- | --- | --- |
 | still island → lines | 117 s | the long first curve: farewell look back and the whale |
-| door shore → little boats | 30 s | |
+| door shore → little boats | 45 s | Secret shore moved 60 m east; sailing pace unchanged. |
 | little boats → meadow | 40 s | arrives lined up with the hill path |
 | meadow → birches | 20 s | a short blind hop |
 | birches → stairs | short | under the cloud deck |

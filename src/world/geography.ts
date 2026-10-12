@@ -4,6 +4,7 @@ export const BOATS_OFFSHORE_SHIFT = { x: -30, z: 265 } as const;
 /** Revision 4 brings both crossings back toward 30/40 seconds. */
 export const BOATS_SHORTENING = { x: -70, z: -190 } as const;
 export const BOATS_SHIFT = { x: -120 + BOATS_OFFSHORE_SHIFT.x + BOATS_SHORTENING.x, z: 95 + BOATS_OFFSHORE_SHIFT.z + BOATS_SHORTENING.z } as const;
+export const SHORE_SEPARATION = { x: 60, z: 0 } as const;
 export const SHORE_SHIFT = { x: 0, z: 95 } as const;
 /** Move both late islands together: the final crossing retains its exact shape and length. */
 export const SEA_SHORTENING = { x: 50, z: 130 } as const;
@@ -22,4 +23,4 @@ export const HOME_SHIFT = { x: -105 + SEA_SHORTENING.x + PAST_THE_WHALE.x + ONWA
 export const LINES_SHIFT = { x: 0, z: 100 } as const;
 export const STILL_SHIFT = { x: 0, z: 200 } as const;
 export const STILL_CENTRE = { x: -6 + STILL_SHIFT.x, z: -14 + STILL_SHIFT.z } as const;
-export const GEOGRAPHY_VERSION = 10;
+export const GEOGRAPHY_VERSION = 11;
