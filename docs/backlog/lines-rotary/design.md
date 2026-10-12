@@ -88,9 +88,9 @@ fades or spawns, and cannot be seen before the third curtain is complete. The fo
 ## Invariants and verification
 
 - Broad strokes over visible linen answer promptly; strokes on one frame do not turn the other.
-- The snag responds to local sweeps, not idle time, distant wind or drawn invitations; its corner stays on the pole until release.
+- The snag responds to sweeps along the pole or updrafts around its base, not idle time, distant wind or drawn invitations; its corner stays on the pole until release.
 - Each rotary must sit across the naturally legible way forward. The surrounding field should discourage obvious bypasses through organic density, not engineered enclosures.
-- Each frame favours its shorter turn towards alignment and resists opposite gusts; the snag constrains both directions until released.
+- Each frame turns only along its shorter route towards alignment; either sweep direction advances it, and the snag stops that turn until released.
 - Green opens a walk into its own sheltered half; blue remains closed until its snag and alignment are earned. Both alignments stay earned.
 - Travellers move through each bare half only once that frame is at rest; the inside waiting point stays outside blue’s sweep.
 - Fixed scenery forms the lane and hides the family in every preceding camera transition, including billowing
@@ -267,3 +267,15 @@ creak per frame follows actual movement, with no looping or replay on restore/mu
 Supersede the required updraft with a local sweep across the caught hem, like the peg interactions. The corner
 stays at the pole until it slips free, then falls back into its hanging sheet. Remove the raised invisible
 anchor, use a short local sweep invitation, and retain staged access and persistent release.
+
+## One-way rotary refinement — 2026-10-12
+
+Jeremy’s playtest (verbatim):
+
+> i think it has a bit too much weight now, the spinners are too loud, i dont hear metal creaking, and i think we should simplify it so that the spinners only ever turn one way (don't let them turn back the other way, it can read as very unintuitive and offputting to the player).  the mechanics for getting the cloth unsnagged is better but it required a bit too much accuracy. e.g. if i did an updraft around the base of the pole, it never unsnagged.
+
+Supersede directional resistance with one fixed turn per frame, including the final catch. Either local sweep
+advances that turn. Increase acceleration modestly while retaining a brief coast. Reduce bearing volume and
+shift the short friction sound towards narrow metal resonances; still only one creak per frame. Broaden snag
+input along the whole pole and accept updrafts around its base. Keep the corner physically attached until
+release, persistent progress and the existing staged access. Preserve layout, camera and palette.

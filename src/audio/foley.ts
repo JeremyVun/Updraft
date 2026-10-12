@@ -86,8 +86,8 @@ export class Foley {
         type: 'bandpass', from: 2100 * colour, q: 0.6, attack: 0.01 });
     } else if (kind === 'rotary-creak') {
       const colour = 0.94 + Math.random() * 0.12;
-      this.rasp({ at, len: 0.42, from: 61 * colour, to: 43 * colour, jitter: 0.12,
-        bodies: [[410 * colour, 9, 0.8], [1130 * colour, 11, 0.3]], level: level * 0.25, pan, attack: 0.08, wet: 0.025 });
+      this.rasp({ at, len: 0.38, from: 173 * colour, to: 127 * colour, jitter: 0.07,
+        bodies: [[930 * colour, 16, 0.7], [2180 * colour, 22, 0.22]], level: level * 0.18, pan, attack: 0.07, wet: 0.01 });
     } else if (kind === 'swing-creak') {
       // Low rope friction and wood flex; no piercing, pitched playground squeak.
       const colour = 0.92 + Math.random() * 0.16;

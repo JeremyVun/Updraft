@@ -1,27 +1,35 @@
 export async function releaseRotary(page, index, touch = null, capture = async () => {}) {
   const { width, height } = page.viewportSize();
+  const baseCircle = process.env.SNAG === 'base-circle';
+  const baseSweep = process.env.SNAG === 'base-sweep';
   let caughtCaptured = false;
   for (let stroke = 0; stroke < 10; stroke++) {
-    const at = await page.evaluate(index => {
-      const p = __game.rotaryWashing.rotors[index].snagTarget;
-      if (!p) return null;
+    const at = await page.evaluate(({ index, base }) => {
+      const r = __game.rotaryWashing.rotors[index];
+      if (r.ready) return null;
+      const p = base ? r.snagFoot : r.snagPoint;
       const v = p.clone().project(__game.rig.camera);
       return [(v.x + 1) / 2, (1 - v.y) / 2];
-    }, index);
+    }, { index, base: baseCircle || baseSweep });
     if (!at) return;
     const span = Math.min(width, height) * .065;
-    const a = { x: at[0] * width + span, y: at[1] * height - span * .2 };
+    const a = { x: at[0] * width + span, y: at[1] * height - (baseCircle ? 0 : span * .2) };
     const b = { x: at[0] * width - span, y: at[1] * height + span * .2 };
     if (touch) await touch.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [a] });
     else { await page.mouse.move(-10, -10); await page.mouse.move(a.x, a.y); }
-    for (let step = 1; step <= 45; step++) {
-      const x = a.x + (b.x - a.x) * step / 45, y = a.y + (b.y - a.y) * step / 45;
+    const steps = baseCircle ? 90 : 45;
+    for (let step = 1; step <= steps; step++) {
+      const phase = step / steps * Math.PI * 4;
+      const x = baseCircle ? at[0] * width + Math.cos(phase) * span : a.x + (b.x - a.x) * step / steps;
+      const y = baseCircle ? at[1] * height + Math.sin(phase) * span : a.y + (b.y - a.y) * step / steps;
       if (touch) await touch.send('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: [{ x, y }] });
       else await page.mouse.move(x, y);
       await page.waitForTimeout(20);
       const work = await page.evaluate(index => __game.rotaryWashing.rotors[index].unhook, index);
       if (!caughtCaptured && work > .25 && work < .8) { await capture('rotary-caught-under-tension'); caughtCaptured = true; }
       if (work === 1) {
+        console.log('snag-release', { gesture: process.env.SNAG ?? 'cap-sweep', stroke, step,
+          charge: await page.evaluate(() => __game.input.charge) });
         if (touch) await touch.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
         else await page.mouse.move(-10, -10);
         await capture('rotary-release');
@@ -85,12 +93,11 @@ export async function openRotary(page, touch = null, reverse = false, capture = 
       await capture('rotary-snagged');
     }
     if (index === 1) { await releaseRotary(page, index, touch, capture); await capture('rotary-freed'); }
-    if (reverse) await turnRotary(page, true, touch, index);
     for (let stroke = 0; stroke < 35; stroke++) {
-      await turnRotary(page, false, touch, index);
+      await turnRotary(page, reverse, touch, index);
       if (process.env.DEBUG_ROTARY) console.log(await page.evaluate(index => {
         const r = __game.rotaryWashing.rotors[index];
-        return { index, angle:r.angle, speed:r.speed, direction:r.direction, gust:__game.input.gust, aligned:r.aligned };
+        return { index, angle:r.angle, speed:r.speed, gust:__game.input.gust, aligned:r.aligned };
       }, index));
       if (await page.evaluate(index => __game.rotaryWashing.rotors[index].aligned, index)) break;
     }

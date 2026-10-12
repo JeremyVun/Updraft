@@ -155,3 +155,34 @@ equal directional drive and the former floating anchor each fail their correspon
 isolated creak render is restrained (about −47 dBFS peak at established game gain), with no clipping or retained
 nodes; the render is `/tmp/updraft-rotary-creak.wav`. No listening approval is claimed. The production build
 retains its existing chunk-size warning. No deployment or merge was performed.
+
+## 8. One-way rotary refinement — complete
+
+Lighten response, make every frame strictly one-way, quieten and refine bearing friction, and broaden snag
+input down the pole, including ground-level updrafts. Verify monotonic turns/catches, all pole heights, distant
+and early-input rejection, persistent release and real mouse/touch gestures from the staged player camera.
+
+The fixed turn now accepts sweeps in either direction. Acceleration rises from 0.85 to 1.25 rad/s², with a
+0.72 rad/s cap and the same short coast. A strong one-second sweep advances 0.418–0.420 radians at 30/60/120 Hz
+(previously 0.284–0.285). The final catch clamps forward travel to its remaining angle and never rebounds.
+
+The snag accepts sweeps anywhere along the post, with a wider screen tolerance, and updrafts within 3.5 m of
+its foot regardless of height. The staged input gate, persistent work and physically fixed caught corner remain.
+CPU checks cover cap/middle/base sweeps, a nearby ground-level updraft, distant and premature gestures, muted
+input, idle non-completion and one-way catches. Rig contact and initialization checks pass.
+
+The short bearing friction uses higher, narrower resonances at lower gain. Its isolated render at established
+game gain peaks around −58.6 dBFS (about 11 dB below the previous render), with no clipping or retained nodes.
+It still fires once per frame. This is a render/scheduling check, not listening approval.
+
+Desktop real-pointer replay in `/tmp/updraft-rotary-oneway-desktop/` uses opposing sweeps throughout and a circle
+at the pole base. The circle releases on its first attempt; every recorded rotary frame advances or stays still.
+The playthrough reaches departure with two creaks, one release, no browser errors and zero premature family
+pixels across 150 visibility samples. Caught/freed player-camera captures retain post contact and clear companions.
+
+Typecheck and the production build pass; the existing chunk-size warning remains.
+
+Portrait touch replay in `/tmp/updraft-rotary-oneway-touch/` also reaches departure using a circle at the pole
+base. Both frames remain monotonic throughout 1842 recorded updates, with two creaks and one release.
+There are no browser errors or early family pixels across 150 samples. Caught/freed desktop
+and portrait player-camera captures were inspected; no video motion or listening approval is claimed.

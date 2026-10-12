@@ -36,7 +36,7 @@ try {
     return { ...encodeAudio(buffer), started, disconnected };
   });
   assert.equal(report.clipped, 0);
-  assert(report.peakDbFS < -40 && report.peakDbFS > -65, `Restrained audible creak: ${report.peakDbFS} dBFS`);
+  assert(report.peakDbFS < -53 && report.peakDbFS > -66, `Quiet bearing creak: ${report.peakDbFS} dBFS`);
   fs.writeFileSync('/tmp/updraft-rotary-creak.wav', wav(Buffer.from(report.pcm, 'base64')));
   delete report.pcm;
   console.log(JSON.stringify(report));

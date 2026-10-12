@@ -23,6 +23,7 @@ export class RotaryFrame {
   readonly foot: THREE.Vector3;
   readonly top: THREE.Vector3;
   readonly snagPoint: THREE.Vector3;
+  readonly snagFoot: THREE.Vector3;
   readonly touchedAt = new THREE.Vector3();
   angle = 0;
   speed = 0;
@@ -33,20 +34,17 @@ export class RotaryFrame {
   snagAge = Infinity;
   snagWind = 0;
   private bearingTravel = 0;
-  private direction = 0;
   private strokeWind = 0;
-  private readonly strokeDirection = new THREE.Vector2();
-  private readonly motion = new THREE.Vector2();
   private readonly sample: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
   private readonly point = new THREE.Vector3();
   private readonly tangent = new THREE.Vector3();
   private readonly projected = new THREE.Vector3();
-  private readonly along = new THREE.Vector3();
 
   constructor(readonly index: number, x: number, z: number, readonly goal: number) {
     this.foot = ground(x, z);
     this.top = this.foot.clone().add(new THREE.Vector3(0, K.top, 0));
-    this.snagPoint = ground(x + K.snagSide, z + K.snagAhead).add(new THREE.Vector3(0, 3.2, 0));
+    this.snagFoot = ground(x + K.snagSide, z + K.snagAhead);
+    this.snagPoint = this.snagFoot.clone().add(new THREE.Vector3(0, 3.2, 0));
     this.reset();
   }
 
@@ -60,7 +58,7 @@ export class RotaryFrame {
     this.angle = open ? this.goal : K.startAngle;
     this.unhook = open || !this.index ? 1 : 0;
     this.speed = 0; this.aligned = open; this.settled = open ? K.settleSeconds : 0;
-    this.brushAge = this.snagAge = Infinity; this.direction = this.strokeWind = this.snagWind = 0;
+    this.brushAge = this.snagAge = Infinity; this.strokeWind = this.snagWind = 0;
     this.bearingTravel = open ? K.creakTravel : 0;
   }
 
@@ -83,21 +81,26 @@ export class RotaryFrame {
     return nearest;
   }
 
-  brush(camera: THREE.Camera, input: PointerInput, wind: WindField): void {
-    this.tangent.set(this.touchedAt.z - this.foot.z, 0, this.foot.x - this.touchedAt.x).normalize();
-    this.projected.copy(this.touchedAt).project(camera);
-    this.along.copy(this.touchedAt).add(this.tangent).project(camera).sub(this.projected);
-    const aspect = (camera as THREE.PerspectiveCamera).aspect ?? 1;
-    const dx = (input.ndc.x - input.prevNdc.x) * aspect, dy = input.ndc.y - input.prevNdc.y;
-    this.motion.set(dx, dy).normalize();
-    // Crossing a turning sheet's edge must not reverse an uninterrupted gust.
-    if (this.brushAge >= K.airMemory || this.motion.dot(this.strokeDirection) < 0.5 || !this.direction) {
-      this.direction = Math.sign(dx * this.along.x * aspect + dy * this.along.y);
+  brushSnag(camera: THREE.Camera, input: PointerInput): boolean {
+    if (this.ready) return false;
+    let touch = 0;
+    for (let i = 0; i <= 8; i++) {
+      this.point.lerpVectors(this.snagFoot, this.snagPoint, i / 8);
+      touch = Math.max(touch, screenBrush(camera, this.point, input.prevNdc, input.ndc, K.snagBrushRadius));
     }
-    this.strokeDirection.copy(this.motion);
+    const lift = input.charge > K.snagLiftFrom && Math.hypot(input.updraftAt.x - this.snagFoot.x,
+      input.updraftAt.z - this.snagFoot.z) < K.snagLiftRadius;
+    if (touch <= 0.1 && !lift) return false;
+    this.snagAge = 0;
+    this.snagWind = Math.max(input.gust, lift ? K.snagGustFull : 0);
+    return true;
+  }
+
+  brush(input: PointerInput, wind: WindField): void {
+    this.tangent.set(this.touchedAt.z - this.foot.z, 0, this.foot.x - this.touchedAt.x).normalize();
     this.strokeWind = Math.min(input.gust, 14);
     this.brushAge = 0;
-    const force = this.direction * this.strokeWind;
+    const force = this.preferredDirection * this.strokeWind;
     wind.addSplat({ source: this, ax: this.touchedAt.x, az: this.touchedAt.z,
       bx: this.touchedAt.x, bz: this.touchedAt.z, vx: this.tangent.x * force, vz: this.tangent.z * force,
       radius: K.windRadius, energy: Math.min(K.brushEnergy, Math.abs(force) / K.energyDivisor), swirl: 0, lift: 0 });
@@ -112,8 +115,10 @@ export class RotaryFrame {
     if (this.aligned) {
       const error = turnGap(this.angle, this.goal), rate = K.catchRate;
       const spring = this.speed + rate * error, decay = Math.exp(-rate * dt);
-      this.angle += (error + spring * dt) * decay - error;
-      this.speed = (this.speed - rate * spring * dt) * decay;
+      const remaining = Math.abs(error), direction = this.preferredDirection;
+      const advance = THREE.MathUtils.clamp(((error + spring * dt) * decay - error) * direction, 0, remaining);
+      this.angle += advance * direction;
+      this.speed = advance < remaining ? Math.max(0, (this.speed - rate * spring * dt) * decay * direction) * direction : 0;
       this.settled += dt;
       return;
     }
@@ -121,11 +126,10 @@ export class RotaryFrame {
       const w = feltWind(wind.sample(this.touchedAt.x, this.touchedAt.z, this.sample), wind.calm);
       // The submitted local gust answers immediately while its GPU sample is still in flight.
       const air = Math.max(Math.hypot(w.x, w.z) * THREE.MathUtils.smoothstep(w.energy, K.energyFrom, K.energyFull), this.strokeWind * K.strokeGain);
-      const bias = this.direction === this.preferredDirection ? 1 : K.reverseDrive;
-      const drive = Math.min(1, air / K.driveFull) * bias;
-      this.speed += this.direction * drive * K.torque * dt;
+      const drive = Math.min(1, air / K.driveFull);
+      this.speed += this.preferredDirection * drive * K.torque * dt;
     }
-    this.speed = THREE.MathUtils.clamp(this.speed * Math.exp(-dt * K.friction), -K.maxSpeed, K.maxSpeed);
+    this.speed = THREE.MathUtils.clamp(this.speed * this.preferredDirection * Math.exp(-dt * K.friction), 0, K.maxSpeed) * this.preferredDirection;
     this.angle += this.speed * dt;
     if (this.unhook < 1) {
       const limited = THREE.MathUtils.clamp(this.angle, K.startAngle - K.snagTurn, K.startAngle + K.snagTurn);
@@ -156,20 +160,19 @@ export class RotaryWashing {
 
   brush(camera: THREE.Camera, input: PointerInput, wind: WindField): void {
     if (!this.active || input.muted || !input.present || input.ndc.distanceToSquared(input.prevNdc) < 1e-8) return;
-    if (input.gust < K.brushFrom) return;
     const target = this.snagTarget;
-    if (target && screenBrush(camera, target, input.prevNdc, input.ndc, K.snagBrushRadius) > 0.1) {
+    if (target) {
       const r = this.rotors.find(r => r.snagTarget === target)!;
-      r.snagAge = 0; r.snagWind = input.gust;
-      return;
+      if (r.brushSnag(camera, input)) return;
     }
+    if (input.gust < K.brushFrom) return;
     let nearest = Infinity, rotor: RotaryFrame | null = null;
     for (const r of this.rotors) {
       if (this.activeRotor >= 0 && r.index !== this.activeRotor) continue;
       const distance = r.hit(camera, input);
       if (distance < nearest) { nearest = distance; rotor = r; }
     }
-    rotor?.brush(camera, input, wind);
+    rotor?.brush(input, wind);
   }
 }
 

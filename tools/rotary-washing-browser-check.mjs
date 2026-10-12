@@ -1,6 +1,6 @@
 // Real pointer sweeps through the washing, doorway, pulley and departure.
 // BASE=http://127.0.0.1:5243 W=1440 H=900 OUT=/tmp/... node tools/rotary-washing-browser-check.mjs
-// FULL=1 starts at the arrival and opens the first two curtains normally. REVERSE=1 tests an opposing sweep first.
+// FULL=1 starts at arrival. REVERSE=1 uses opposing sweeps throughout. SNAG=base-circle or base-sweep tests the pole foot.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { openBrowser } from './lib/browser.mjs';
@@ -137,11 +137,17 @@ try {
   await stopReview();
   const rotary=await page.evaluate(()=>({sounds:window.__rotarySounds,trace:window.__rotaryTrace}));
   fs.writeFileSync(`${out}/rotary.json`,JSON.stringify(rotary));
+  for(let i=1;i<rotary.trace.length;i++) for(const [j,direction] of [[0,-1],[1,1]]) {
+    const before=rotary.trace[i-1].rotors[j],after=rotary.trace[i].rotors[j];
+    assert((after.angle-before.angle)*direction>=-1e-12,'a spinner must never turn backwards');
+    assert(after.speed*direction>=0,'a spinner must never carry reverse momentum');
+  }
   const visibility=await checkFamilyVisibility(page);
   assert.deepEqual(rotary.sounds.map(s=>s.kind).sort(),['creak','creak','release'],'two bearing creaks and one cloth release across the whole encounter');
   assert.deepEqual(errors,[]);
   fs.writeFileSync(`${out}/report.json`,JSON.stringify({visibility,width,height,touch:touchMode,errors,
-    full:!!process.env.FULL||!!process.env.CROSSING,crossing:!!process.env.CROSSING,reverse:!!process.env.REVERSE},null,2));
+    full:!!process.env.FULL||!!process.env.CROSSING,crossing:!!process.env.CROSSING,reverse:!!process.env.REVERSE,
+    snag:process.env.SNAG??'cap-sweep'},null,2));
   const video=page.video();await page.close();if(video)await video.saveAs(`${out}/playthrough.webm`);
   console.log(`PASS: ${out}`);
 } catch(e){await stopReview();if(page&&!page.isClosed()){

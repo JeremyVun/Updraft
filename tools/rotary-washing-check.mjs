@@ -34,18 +34,18 @@ for (const fps of [30,60,120]) for (const direction of [-1,1]) {
     const p=r.clothPoint(1,.5,2,new THREE.Vector3()),a=p.clone().project(cam);
     const tangent=new THREE.Vector3(p.z-r.foot.z,0,r.foot.x-p.x).normalize();
     const b=p.clone().addScaledVector(tangent,direction).project(cam);
-    input.prevNdc.set(a.x,a.y);input.ndc.set(b.x,b.y);r.touchedAt.copy(p);r.brush(cam,input,wind);
+    input.prevNdc.set(a.x,a.y);input.ndc.set(b.x,b.y);r.touchedAt.copy(p);r.brush(input,wind);
   }
   for(let i=0;i<fps*.6;i++){stroke(near);pair.update(1/fps,wind);}
-  assert(direction*(near.angle-k.startAngle)>.02 && !near.aligned,'stroke turns promptly without completing');
-  assert(Math.abs(near.speed)<.4,'the frame gathers momentum instead of reaching full speed immediately');
+  assert(near.preferredDirection*(near.angle-k.startAngle)>.02 && !near.aligned,'stroke turns promptly without completing');
+  assert(Math.abs(near.speed)<.6,'the frame gathers momentum instead of reaching full speed immediately');
   const releasedAt=near.angle;step(.5);
-  assert(direction*(near.angle-releasedAt)>.01,'the weighted frame coasts after the sweep');step(15);
+  assert(near.preferredDirection*(near.angle-releasedAt)>.01,'the weighted frame coasts after the sweep');step(15);
   const held=near.angle;step(15);assert(Math.abs(near.angle-held)<.001,'partial turn stays put');
   for(let i=0;i<fps*45&&!near.open;i++){stroke(near);pair.update(1/fps,wind);}
   assert(near.open && !pair.open,'one aligned rotor cannot open passage');
   for(let i=0;i<fps*8;i++){stroke(far);pair.update(1/fps,wind);}
-  assert(Math.abs(far.angle-k.startAngle)<=k.snagTurn+1e-8 && !far.aligned,'tether limits both directions');
+  assert(Math.abs(far.angle-k.startAngle)<=k.snagTurn+1e-8 && !far.aligned,'tether stops the fixed turn until release');
   const snag=far.snagPoint.clone().project(cam);
   input.prevNdc.set(snag.x-.01,snag.y);input.ndc.set(snag.x+.01,snag.y);
   Object.assign(wind.air,{lift:0});input.charge=0;
@@ -72,22 +72,20 @@ for (const direction of [-1,1]) {
   const a=p.clone().addScaledVector(tangent,-2.6*direction).project(cam);
   const b=p.clone().addScaledVector(tangent,2.6*direction).project(cam);
   const input={present:true,muted:false,gust:2,charge:0,prevNdc:new THREE.Vector2(a.x,a.y),ndc:new THREE.Vector2(a.x,a.y)};
-  let contacts=0,last=0;
+  let contacts=0;
   Object.assign(wind.air,{x:0,z:0,energy:0,lift:0});
   for(let i=1;i<=90;i++){
     input.prevNdc.copy(input.ndc);input.ndc.set(a.x+(b.x-a.x)*i/90,a.y+(b.y-a.y)*i/90);
-    const continuous=r.brushAge<k.airMemory;
     pair.brush(cam,input,wind);
-    if(r.brushAge===0){
-      if(continuous&&last)assert.equal(r.direction,last,'moving cloth cannot reverse one continuous stroke');
-      last=r.direction;contacts++;
-    }
+    if(r.brushAge===0)contacts++;
+    const before=r.angle;
     pair.update(1/60,wind);
+    assert((r.angle-before)*r.preferredDirection>=0,'either stroke direction must advance the same turn');
   }
   assert(contacts>15,'test contacts the moving visible sheets');
-  assert(Math.abs(r.angle-k.startAngle)>(direction===r.preferredDirection?.2:.06),'a slow sweep visibly turns the frame');
+  assert(Math.abs(r.angle-k.startAngle)>.25,'a slow sweep visibly turns the frame');
 }
-console.log('PASS: real screen hit selection holds the direction of each uninterrupted sweep');
+console.log('PASS: real screen hit selection turns only one way under either sweep direction');
 
 {
   const pair=new RotaryWashing(), far=pair.rotors[1];pair.active=true;pair.activeRotor=0;
@@ -110,20 +108,37 @@ console.log('PASS: real screen hit selection holds the direction of each uninter
 }
 
 for(const fps of [30,60,120]) {
-  const angles=[];
-  for(const opposed of [false,true]) {
-    const pair=new RotaryWashing();pair.active=true;const r=pair.rotors[0];
-    for(let i=0;i<fps;i++) {
-      r.direction=r.preferredDirection*(opposed?-1:1);r.strokeWind=14;r.brushAge=0;
-      pair.update(1/fps,wind);
-    }
-    angles.push(Math.abs(r.angle-k.startAngle));
+  const pair=new RotaryWashing();pair.active=true;const r=pair.rotors[0];
+  for(let i=0;i<fps;i++) {
+    r.strokeWind=14;r.brushAge=0;
+    pair.update(1/fps,wind);
   }
-  assert(angles[0]>.23&&angles[0]<.4,'one sustained sweep produces a deliberate partial turn');
-  assert(angles[1]>0&&angles[1]<angles[0]*.4,'opposite air yields a little but meets more resistance');
-  const pair=new RotaryWashing(),r=pair.rotors[1];
-  r.angle=r.goal-.16;r.speed=.15;r.aligned=true;r.unhook=1;
-  const before=r.speed;pair.update(1/fps,wind);
-  assert(Math.abs(r.speed-before)<2/fps,'alignment settles with its existing momentum instead of snapping to a faster speed');
-  console.log(`PASS ${fps} Hz direction bias: ${angles.map(a=>a.toFixed(3)).join(' / ')} radians`);
+  const angle=Math.abs(r.angle-k.startAngle);
+  assert(angle>.39&&angle<.48,'lighter response retains gradual acceleration');
+  for(const rotor of pair.rotors) {
+    rotor.angle=rotor.goal-rotor.preferredDirection*.16;
+    rotor.speed=rotor.preferredDirection*.72;rotor.aligned=true;rotor.unhook=1;
+  }
+  for(let i=0;i<fps*5;i++) {
+    const before=pair.rotors.map(r=>r.angle);
+    pair.update(1/fps,wind);
+    pair.rotors.forEach((r,j)=>assert((r.angle-before[j])*r.preferredDirection>=0,'even an over-speed catch cannot reverse'));
+  }
+  console.log(`PASS ${fps} Hz: lighter turn ${angle.toFixed(3)} rad, one-way settling`);
+
+  for(const where of ['base','middle','cap','base-updraft']) {
+    const pair=new RotaryWashing(),r=pair.rotors[1];pair.active=true;pair.activeRotor=1;
+    const cam=new THREE.PerspectiveCamera(40,1.6,.1,1000);
+    cam.position.copy(r.snagPoint).add(new THREE.Vector3(0,2,20));cam.lookAt(r.snagPoint);cam.updateMatrixWorld();
+    const p=r.snagFoot.clone().lerp(r.snagPoint,where==='cap'?1:where==='middle'?.5:0).project(cam);
+    const input={present:true,muted:false,gust:2,charge:0,updraftAt:r.snagFoot.clone(),
+      prevNdc:new THREE.Vector2(p.x-.035,p.y-.02),ndc:new THREE.Vector2(p.x+.035,p.y-.02)};
+    if(where==='base-updraft') {
+      input.prevNdc.set(-.99,-.99);input.ndc.set(-.95,-.99);input.gust=.1;input.charge=.3;
+      input.updraftAt.x+=2;
+    }
+    for(let i=0;i<fps;i++){pair.brush(cam,input,wind);pair.update(1/fps,wind);}
+    assert.equal(r.unhook,1,`${where} must release without precise cap targeting`);
+  }
 }
+console.log('PASS: cap, middle, base sweeps and nearby ground-level updraft release the snag');
