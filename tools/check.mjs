@@ -22,7 +22,7 @@ const mechanics = [
 ];
 const browser = [
   'shader-browser', 'sky-mirror-star', 'drowned-mist', 'lantern-fog', 'stairs-fog', 'fog-lookup', 'touch-viewport', 'chapter-view-browser', 'context-loss', 'start',
-  'progress', 'frame-time-browser', 'home-water', 'recorded-music-browser', 'music-loading-browser', 'still-phrases-browser', 'still-departure-browser', 'petals-browser', 'journey-view',
+  'progress', 'frame-time-browser', 'home-water', 'recorded-music-browser', 'music-loading-browser', 'still-phrases-browser', 'still-departure-browser', 'petals-browser', 'journey-view', 'lines-arrival',
 ];
 // Audio/score checks render through a headless dev server (no GPU); BASE selects it.
 const audio = [

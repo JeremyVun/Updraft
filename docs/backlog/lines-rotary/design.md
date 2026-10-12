@@ -200,3 +200,15 @@ The family and door must stand inland. The camera accompanies the child into the
 the reveal; it cannot abandon the walk to frame the destination early. Fix physical cloth contact and flights
 against their relocated posts, not just their endpoints. Desktop and portrait playthroughs must show clear
 companions and interactions, organic enclosure, an earned reveal and continuous camera pacing.
+
+## Arrival shoreline correction — 2026-10-12
+
+Jeremy supplied the torn shoreline during disembarkation and asked:
+
+> ?? fix htis
+
+The Lines chapter still applied a 96 m circular rendering cutoff around the moved island centre. The cutoff
+removed the arrival beach as soon as the crossing became Lines, leaving clipped sand and black water artifacts.
+Keep the source view's secret-shore exclusion used during sailing; let the journey's room partition bound Lines.
+Do not change the island shape or arrival camera to hide this renderer defect. Verify from offshore through the
+actual chapter handoff and disembarkation, including the ultrawide player view.

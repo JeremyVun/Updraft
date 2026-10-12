@@ -59,3 +59,16 @@ interrupted by a dev-server reload; the test now disables hot reload. No release
 
 Older checkpoint, shader and browser checks remain mechanism evidence only. In particular, `portrait-final/`,
 `wide-final/` and `bays-*` used rejected layouts. They do not validate the current layout or its reveal.
+
+## 4. Arrival shoreline — corrected 2026-10-12
+
+Jeremy's arrival screenshot exposed the obsolete 96 m source-view cutoff in `DoorwayView`. It clipped the
+extended island's beach when sailing handed over to Lines. The source now excludes the secret shore exactly as
+the crossing does; the journey room partition bounds the rest. Terrain and camera parameters are unchanged.
+
+`FULL=1 lines-arrival-check` passes the complete inbound crossing and disembarkation at 1869×549 and 390×844:
+94 actual-render comparisons match the unclipped beach exactly, with no browser errors. The negative control
+reinstating the old cutoff fails 39 samples, with 59,108 altered pixels in its worst comparison. Captures and
+reports: `/tmp/updraft-lines-shore.Nrvta6/full/`; rejected baseline: `crossing-approach-*` in the same root.
+The existing `lines-check door` passes source/portal/reflection visibility and departure. Typecheck and production
+build pass. Landing stills were inspected; this narrow renderer correction does not claim a motion review.

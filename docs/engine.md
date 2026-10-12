@@ -534,8 +534,9 @@ Rules:
 
 One translated camera draws into a half-float target, sampled projectively inside the red door; an oblique near plane
 clips the destination at its threshold. The image enters the normal scene pass, so bloom and grading happen once;
-there is no recursive portal and no second simulation. Each view has an explicit object set and a terrain radius
-(`uRoom`), so the far shore never appears beside the source door and the washing never on the far shore; the sea grid
+there is no recursive portal and no second simulation. Each view has an explicit object set and a terrain mask
+(`uRoom`): the source excludes the secret shore, while the destination includes only that shore. The source must
+not clip Lines to a fixed radius, which truncated its extended arrival beach. The sea grid
 is re-centred for the portal view with its reflection off, and all state is restored before the main pass.
 `world/door-shore.ts` supplies fixed-root, wind-reactive grass both views can draw. Travellers get a render-only
 translation in the portal view and a threshold clip in the source view, and follow the destination ground beyond the

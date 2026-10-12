@@ -226,7 +226,9 @@ first view over the bank, so the gap is the same on the ground, in the grass and
 
 `DOOR_SHORE` is a small island of its own with the same CPU/GLSL height function, grass from `door-shore.ts` (the
 ordinary grass skips it) and the washing's departure kite. During the washing each camera sees only its own room's
-land; the boat waits on the arrival beach until the family reveal, then moves to the shore before the door opens,
+land. The source view excludes the secret shore instead of clipping Lines to a fixed circle, which cut through
+the extended island's arrival beach. Verify coastline visibility across the sailing-to-landing handoff, not only
+from an on-island start. The boat waits on the arrival beach until the family reveal, then moves to the shore before the door opens,
 and its room membership (in the reflection too) follows its position. Once the door has opened the boat waits moored
 out on the water on the pulley line (`world/shore-pulley.ts`: `shoreHaul` is the state, `ShorePulleyRig` the post,
 piling, wheels, pinwheel, pegs and painter); the lines chapter places it each frame as `Boat.towed` until it is in,
