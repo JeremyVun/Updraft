@@ -238,3 +238,15 @@ Move only the secret shore to lengthen its departure by 10–15 seconds at uncha
 of open sea before Little Boats emerges. Migrate existing saves with the shore. Smooth sea-state handoffs,
 preserve other crossings' pace, reduce Still-to-Lines drive by 1%, lower its distant whale, and stagger more
 gulls and sheets so the procession lasts longer without obscuring the arrival.
+
+## Flying linen palette — 2026-10-12
+
+Jeremy's request and correction (verbatim):
+
+> ok great! one last thing, can some of the clothes flying in the wind be different bright colours? what do you think
+
+> actually no don't do bright red, blue oryellow. we must save those colours for the specific motif beyond the secret door. maybe try different muted colours? not sure...
+
+Keep the majority of the procession pale linen, with three scattered sheets in muted mauve, dusty rose and
+warm taupe. Reserve bright red, blue and yellow for the secret-door motif. Judge these accents in the actual
+sailing camera and golden light; preserve flight paths, timing, cloth motion and camera staging.

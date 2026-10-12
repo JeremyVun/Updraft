@@ -113,3 +113,14 @@ three camera bearings, along with cloth stability at 30/60/120 Hz.
 Typecheck, production build, curtain progression/cloth, rotary mechanics/rig initialization, geography/save
 migration and first-whale swell checks pass. Production retains its existing large-chunk warning. No deployment
 or merge was performed.
+
+## 6. Flying linen palette — complete
+
+Add three muted accents among six pale pieces, retaining the pale cloth's original body and hem colours.
+Check the full incoming crossing from the boat camera, then typecheck and build. Preserve the secret-door
+motif's bright primaries and all existing motion and timing.
+
+Three loose sheets now use mauve, dusty rose and taupe, with softly darker hems. Player-camera frames at
+80/86/92/98/104 seconds in `/tmp/updraft-crossing-muted-linen/` were inspected: the hues remain quiet in
+the golden light and distinguish the accents from the pale majority. The complete crossing reaches landfall
+without browser errors. Typecheck and production build pass, with the existing chunk-size warning.

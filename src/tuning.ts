@@ -481,14 +481,14 @@ export const tuning = {
     shoreEchoes: { gulls: 10, gullSpacing: 10, afterFarewell: 48, duration: 48, span: 40, ahead: 30, height: 6, followerHeight: 1.2, spawnMargin: 3,
       crossSpeed: 6, forwardSpeed: 5.5, laundryLift: 5.15, laundryTurn: 2.2, laundrySteady: .65,
       laundry: [
-        { at: .5, side: 4, depth: 8, height: 5.5, bob: 1.7, rate: .48, speed: .75, veer: .24, phase: .3, roll: 1.2, width: 2.2, drop: 2.6 },
+        { at: .5, side: 4, depth: 8, height: 5.5, bob: 1.7, rate: .48, speed: .75, veer: .24, phase: .3, roll: 1.2, width: 2.2, drop: 2.6, colour: '#b1a0bd' },
         { at: 4.7, side: -8, depth: -10, height: 12, bob: 3, rate: .32, speed: 1.2, veer: -.38, phase: 1.8, roll: .9, width: 2.7, drop: 2.3 },
         { at: 2.9, side: -18, depth: 22, height: 8.5, bob: 2.4, rate: .58, speed: .9, veer: .32, phase: 3.4, roll: -1.1, width: 1.8, drop: 2.1 },
         { at: 10.2, side: 12, depth: -4, height: 4, bob: 1.4, rate: .7, speed: 1.1, veer: -.2, phase: 4.7, roll: 1.7, width: 2.4, drop: 2.8 },
-        { at: 14.5, side: -6, depth: 12, height: 8, bob: 2.1, rate: .43, speed: .95, veer: .27, phase: 2.1, roll: -1.2, width: 2.5, drop: 2.8 },
+        { at: 14.5, side: -6, depth: 12, height: 8, bob: 2.1, rate: .43, speed: .95, veer: .27, phase: 2.1, roll: -1.2, width: 2.5, drop: 2.8, colour: '#cdaaaa' },
         { at: 19, side: 5, depth: -3, height: 5.5, bob: 1.5, rate: .6, speed: 1.05, veer: -.22, phase: 5.2, roll: .85, width: 2.1, drop: 2.5 },
         { at: 23.5, side: -10, depth: 18, height: 10, bob: 2.4, rate: .36, speed: 1.1, veer: .3, phase: 3.9, roll: -1.05, width: 2.8, drop: 2.4 },
-        { at: 28, side: 7, depth: 5, height: 7, bob: 1.9, rate: .52, speed: 1.15, veer: -.25, phase: 1.1, roll: 1.3, width: 2.3, drop: 2.7 },
+        { at: 28, side: 7, depth: 5, height: 7, bob: 1.9, rate: .52, speed: 1.15, veer: -.25, phase: 1.1, roll: 1.3, width: 2.3, drop: 2.7, colour: '#b3ad99' },
       ],
       camera: { afterFarewell: 48, inFrom: -6, inTo: 3, outFrom: 31, outTo: 43, lookUp: 3.2, lower: 2.3, back: 3.5, sway: .08 } },
     /** Soft ground footprint under flying paper; strength is life per second, alongside the player's wind. */

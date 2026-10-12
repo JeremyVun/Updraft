@@ -16,10 +16,11 @@ void main() { vWorld=position; vNormal=normal; vCloth=uv;
 gl_Position=projectionMatrix*viewMatrix*vec4(position,1.0); }`;
 const FRAG = `${ATMO_GLSL}\n${CREATURE_GLSL}
 in vec3 vWorld; in vec3 vNormal; in vec2 vCloth;
+uniform vec3 uLinenColour; uniform vec3 uHemColour;
 void main() {
   vec3 n=normalize(vNormal)*(gl_FrontFacing?1.0:-1.0);
   float edge=min(min(vCloth.x,1.0-vCloth.x),min(vCloth.y,1.0-vCloth.y));
-  vec3 linen=mix(vec3(.69,.76,.80),vec3(.86,.84,.77),smoothstep(.018,.04,edge));
+  vec3 linen=mix(uHemColour,uLinenColour,smoothstep(.018,.04,edge));
   gl_FragColor=vec4(applyFog(shadeCreature(linen,n,vWorld,1.0,.14,.22,1.0),vWorld),1.0);
 }`;
 
@@ -48,8 +49,10 @@ class Linen {
     geo.setAttribute('normal', new THREE.BufferAttribute(this.cloth.normal, 3).setUsage(THREE.DynamicDrawUsage));
     geo.setAttribute('uv', new THREE.BufferAttribute(this.cloth.uv, 2));
     geo.setIndex(new THREE.BufferAttribute(this.cloth.index, 1));
+    const colour = flight?.colour ? new THREE.Color(flight.colour) : new THREE.Color(.86, .84, .77);
+    const hem = flight?.colour ? colour.clone().multiplyScalar(.82) : new THREE.Color(.69, .76, .80);
     this.mesh = new THREE.Mesh(geo, new THREE.ShaderMaterial({ vertexShader: VERT, fragmentShader: FRAG,
-      uniforms: atmo.uniforms, side: THREE.DoubleSide }));
+      uniforms: { ...atmo.uniforms, uLinenColour: { value: colour }, uHemColour: { value: hem } }, side: THREE.DoubleSide }));
     this.mesh.frustumCulled = false;
     this.mesh.visible = false;
   }
