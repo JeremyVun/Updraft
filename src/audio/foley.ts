@@ -4,6 +4,7 @@ import type { NetSound } from '../fx/sealife/net';
 import type { SleeperSound, WhaleCall } from '../fx/sealife/sleeper';
 import { WhaleVoice } from './whale-voice';
 import { strikeBell } from './bell';
+import { rotaryCreak } from './rotary-creak';
 
 export type Surface = 'grass' | 'sand' | 'wood' | 'water';
 export type MaterialSound = 'cloth' | 'wool' | 'sail' | 'sail-settle' | 'water' | 'paper' | 'door' | 'splash' | 'peg'
@@ -85,9 +86,7 @@ export class Foley {
       this.puff({ at: at + 0.095, len: 0.055, level: level * 0.018, pan,
         type: 'bandpass', from: 2100 * colour, q: 0.6, attack: 0.01 });
     } else if (kind === 'rotary-creak') {
-      const colour = 0.94 + Math.random() * 0.12;
-      this.rasp({ at, len: 0.38, from: 173 * colour, to: 127 * colour, jitter: 0.07,
-        bodies: [[930 * colour, 16, 0.7], [2180 * colour, 22, 0.22]], level: level * 0.24, pan, attack: 0.07, wet: 0.01 });
+      rotaryCreak(this.out!, this.noise!, at, level, pan);
     } else if (kind === 'swing-creak') {
       // Low rope friction and wood flex; no piercing, pitched playground squeak.
       const colour = 0.92 + Math.random() * 0.16;

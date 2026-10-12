@@ -398,8 +398,10 @@ pan and bounded scheduling; finished nodes disconnect.
 - Laundry: local wind on the cloth's spring and flutter thresholds, at most `clothSources` voices. A passage sheet's
   peg coming off the line snaps once (`peg`), from the peg itself; pegs already off when a checkpoint loads are silent.
   `pegBoostDb` raises the snap and wooden knock by 6 dB after Jeremy's Lines playtest. The family garments filling
-  and reaching toward each other are silent. Each rotary gives one brief, audible metal-bearing creak after real
-  angular travel, with narrow upper resonances. Its level is separate from the little pinwheels’ flutter; Jeremy’s
+  and reaching toward each other are silent. Each rotary gives one metal-bearing creak after real angular travel:
+  `rotary-creak.ts` layers an irregular slipping squeal, lower strain and two short collar rattles. Jeremy rejected
+  the former filtered rasp after hearing it isolated; the replacement lasts 0.72 s and awaits his listening review.
+  Its level is separate from the little pinwheels’ flutter; Jeremy’s
   request to quiet the spinners referred to those pinwheels. A small cloth sound follows the snag release. Idle, restored and muted events stay silent;
   missed creaks expire rather than playing on unmute.
 - Sleeping hearth: one looping low roar that breathes, plus crackles in small uneven clusters with an occasional

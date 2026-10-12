@@ -292,3 +292,14 @@ per frame and its spatial source. Earlier low-volume renders were not listening 
 distinction. Keep the established one-way rotation and broad snag target. Require roughly 1.7 seconds of
 full local wind work, preserving accumulated progress; ease the cloth into a small taut shiver around its
 fixed caught corner, then let it slip free. Never lift the anchor off the post.
+
+## Metal-bearing timbre — 2026-10-12
+
+Jeremy, after listening to the isolated render (verbatim):
+
+> oh... that's why. it sounds way too subtle and not at all like a metallic creak
+
+Replace the filtered rasp with an irregular metal-bearing squeal, a lower strained body and brief collar
+rattle. Preserve one event per rotary after actual angular travel, spatial attenuation, one-way mechanics,
+pinwheel level and snag resistance. Verify the actual running game's signal path with sound enabled and
+real gestures, then provide a fresh isolated audition. Render levels do not establish listening approval.

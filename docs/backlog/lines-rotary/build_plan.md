@@ -219,3 +219,21 @@ Its report is `/tmp/updraft-pinwheel-lifecycle-focused.json`. The production bui
 Both mouse and touch playthroughs reach departure with no browser errors, no premature family reveal and
 exactly two rotary creaks plus one cloth release. Reinstating the previous instant-release rate in an isolated
 test process fails the new brief-gesture regression, as intended.
+
+## 10. Metal-bearing timbre — implemented, awaiting listening review
+
+Replace the rejected rasp, render the new sound at established game gain, verify source cleanup and actual
+game playback under real rotary gestures with sound enabled. Run typecheck/build. Supply a new isolated
+render for Jeremy's listening review; preserve all accepted mechanics, scene composition and other sounds.
+
+`rotary-creak.ts` replaces the old sawtooth rasp with three irregularly slipping modes, a light friction layer
+and two brief collar rattles. Duration is 0.72 s rather than 0.38 s. At established game gain the isolated
+render peaks at −23.75 dBFS; all seven sources and eighteen nodes retire, muted calls create no nodes, and
+the pinwheel A/B remains −8.87 dB. Audition: `/tmp/updraft-rotary-metal-creak.wav`.
+
+`rotary-live-audio-check.mjs` starts sound through the normal M shortcut, then uses real gestures through both
+rotaries and the snag with music enabled. Exactly two calls reach live Foley and produce measured audio;
+their isolated taps peak at −25.65/−25.97 dBFS, with total mix peaks −23.09/−15.43 dBFS. Both voices clean up,
+and the browser reports no errors. Signal capture: `/tmp/updraft-rotary-metal-live.{json,webm}`. This establishes
+runtime routing and levels, not perceptual approval. Typecheck and production build pass, with the existing
+large-chunk warning. All mechanics, composition and other audio are unchanged.

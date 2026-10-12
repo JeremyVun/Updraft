@@ -19,25 +19,28 @@ try {
     const { ctx, sound } = offlineSound(2);
     sound.master.gain.cancelScheduledValues(0); sound.master.gain.value = .9;
     const foley = new Foley(); foley.setOutput(sound.output);
-    let started = 0, disconnected = 0;
-    const create = ctx.createOscillator.bind(ctx);
-    ctx.createOscillator = () => {
-      started++;
-      const node = create(), disconnect = node.disconnect.bind(node);
-      node.disconnect = (...args) => { disconnected++; return disconnect(...args); };
-      return node;
-    };
+    const nodes = [], sources = [];
+    for (const factory of ['createOscillator', 'createBufferSource', 'createGain', 'createBiquadFilter', 'createStereoPanner']) {
+      const create = ctx[factory].bind(ctx);
+      ctx[factory] = () => {
+        const node = create(), disconnect = node.disconnect.bind(node);
+        const state = { disconnected: false }; nodes.push(state);
+        node.disconnect = (...args) => { state.disconnected = true; return disconnect(...args); };
+        if (node.start) sources.push(node);
+        return node;
+      };
+    }
     foley.material('rotary-creak', tuning.rotaryWashing.creakLevel, -.3);
-    const made = started;
+    const made = nodes.length;
     foley.setOutput(null); foley.material('rotary-creak', 1, 0);
-    if (started !== made) throw Error('Muted creaks must not queue');
+    if (nodes.length !== made) throw Error('Muted creaks must not queue');
     const buffer = await ctx.startRendering();
-    if (made !== 1 || disconnected !== made) throw Error('The single creak must disconnect after playing');
-    return { ...encodeAudio(buffer), started, disconnected };
+    if (sources.length !== 7 || nodes.some(n => !n.disconnected)) throw Error('Every creak source and node must disconnect after playing');
+    return { ...encodeAudio(buffer), sources: sources.length, nodes: nodes.length, disconnected: nodes.filter(n => n.disconnected).length };
   });
   assert.equal(report.clipped, 0);
-  assert(report.peakDbFS < -33 && report.peakDbFS > -46, `Audible bearing creak: ${report.peakDbFS} dBFS`);
-  fs.writeFileSync('/tmp/updraft-rotary-creak.wav', wav(Buffer.from(report.pcm, 'base64')));
+  assert(report.peakDbFS < -19 && report.peakDbFS > -32, `Bearing creak headroom and level: ${report.peakDbFS} dBFS`);
+  fs.writeFileSync('/tmp/updraft-rotary-metal-creak.wav', wav(Buffer.from(report.pcm, 'base64')));
   delete report.pcm;
   console.log(JSON.stringify(report));
 
