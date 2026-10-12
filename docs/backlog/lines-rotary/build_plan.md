@@ -279,7 +279,7 @@ approval. Typecheck and production build pass with the existing chunk warning. M
 
 Jeremy found the recorded result much better, then requested in-game generation instead of bundled audio.
 
-## 13. Procedural metal friction — implemented, awaiting listening review
+## 13. Procedural metal friction — complete, listening approved
 
 Model the recorded creak's high resonances, intermittent excitation and roughness in code. Render and compare
 against the accepted recording, then replace PCM playback in `rotary-creak.ts` while retaining event and spatial
@@ -309,3 +309,5 @@ are no browser errors. Dry taps peak at −27.12/−27.09 dBFS and the correspon
 Evidence: `/tmp/updraft-rotary-procedural-live.{json,webm}`. The production build, including typecheck, passes
 with the existing chunk warning. A scan of every built JavaScript chunk confirms neither reference PCM nor
 a reference-file dependency is bundled; main gzip size drops from 993.14 kB to 941.44 kB.
+
+Jeremy approved the procedural creak and the full Island of Lines work for merge on 2026-10-12.

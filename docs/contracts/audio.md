@@ -402,8 +402,8 @@ pan and bounded scheduling; finished nodes disconnect.
   `rotary-friction.ts` generates two 0.62 s variations from irregular pressure, ringing harmonics around
   2.9/5.8/8.7 kHz, filtered noise and brief collar contacts. `rotary-creak.ts` caches the generated buffers when
   audio starts, then alternates them without synthesis work at the gesture. No recorded PCM ships with this sound.
-  Jeremy liked the recorded timbre but requested synthesis; the [reference study](../../assets/audio-reference/rotary-creak/README.md)
-  preserves the accepted recording and the rejected earlier synths. Passing playback checks is not timbre approval.
+  Jeremy approved this procedural timbre. The [reference study](../../assets/audio-reference/rotary-creak/README.md)
+  preserves the recording used to guide it; keep recordings as development references, not playback assets.
   Its level is separate from the little pinwheels’ flutter; Jeremy’s
   request to quiet the spinners referred to those pinwheels. A small cloth sound follows the snag release. Idle, restored and muted events stay silent;
   missed creaks expire rather than playing on unmute.

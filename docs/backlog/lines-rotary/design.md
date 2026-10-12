@@ -343,3 +343,7 @@ oscillation, irregular excitation and noise in the game; do not disguise recorde
 Preserve brief duration, level, spatial placement and the one-creak-per-rotary schedule. Compare a rendered
 candidate against the accepted recording before integrating it, and provide a listening comparison. The
 reference remains a development asset; it must no longer be imported into runtime playback.
+
+Jeremy approved the procedural result and the full work for merge (verbatim):
+
+> perfect!!! this is it. ok im happy to merge this whole piece of work into main
