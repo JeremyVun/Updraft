@@ -25,7 +25,7 @@ function fixture(portrait,leg=2) {
     boat:{position:new THREE.Vector3(),beach(x,z){this.position.set(x,0,z);}},nearby:()=>false};
   const chapter=new MeadowChapter(cast);
   child.stop();child.place(ROUTE[leg].x,ROUTE[leg].y+25,Math.PI);
-  chapter.beat='walk';chapter.leg=leg;chapter.play='watch';chapter.piano.restoreDone();chapter.crestDone=true;
+  chapter.beat='walk';chapter.leg=leg;chapter.play='watch';chapter.piano.restoreDone();chapter.song.restore(2);chapter.crestDone=true;
   plane.launch(child.position.clone().add(new THREE.Vector3(0,3,0)),new THREE.Vector3(0,5,-10));
   plane.home.copy(child.position).z-=tuning.meadowPlane.lead;plane.homeRadius=tuning.meadowPlane.reach;
   plane.companion=child.position;chapter.frame();rig.cut(chapter.shot);

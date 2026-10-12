@@ -260,6 +260,17 @@ export const tuning = {
   },
   /** Nearing a chapter's play edge, a gust's hold on the plane fades out over `margin` metres, then it drifts back. */
   planeEdge: { margin: 8, freeSpeed: 14, returnSpeed: 4 },
+  meadowEchoes: {
+    flowers: [[-27, -770, 5.4], [-12, -791, 5.2], [-8, -814, 7.2]],
+    prelude: [-16, -723, 3.2],
+    approach: 22, standBack: 1.4, standAside: 1.4,
+    brush: 0.16, travel: 1.15, lift: 0.12, liftReach: 8, strokeGain: 1.6,
+    damping: 5, maxImpulse: 0.08, recovery: 0.016, recoverAfter: 5,
+    receipt: 0.94, effort: 0.6, minimumTravel: 2, recentWind: 2,
+    inviteAfter: 4.5, touchFor: 2.8, arrivalRest: 2.4, listenFor: 4.2, familyAfter: 1.5,
+    cameraBack: 16, cameraUp: 3.5, cameraPortraitBack: 14, cameraPortraitUp: 4, cameraPace: 0.55,
+    seedSize: 0.65, voice: 0.16, musicDuck: 0.78,
+  },
   meadowPlane: {
     /** Lead the child toward each discovery, then wheel nearby until they catch up. */
     lead: 24, waitAt: 34, resumeAt: 24, brakeFrom: 28, reach: 42,

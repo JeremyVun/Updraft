@@ -305,6 +305,14 @@ and stays there (`restBack`, `restUp`). On the lullaby the cygnet climbs out ont
 camera rises and widens with the wave, and the grey hold is released only once the front covers it. Competing wind
 sounds and chimes are hushed during the duet. A completed piano checkpoint resumes past it.
 
+In the Meadow prototype ([design](backlog/meadow-echoes/design.md)), the piano is followed by three large
+bellflowers in the existing hollow. The child touches one; broad wind strokes carry its seed plume to the next,
+which opens and answers in a procedural breath voice. The second transfer climbs the hollow. Each arrival is
+kept, the child walks to it before the next release, and the final rest lets a distant swan call take over.
+`world/meadow-echoes.ts`, `world/meadow-seeds.ts`, `story/meadow-song.ts`, `audio/meadow-breath.ts`;
+`?chapter=echoes` begins the encounter. `echoes-1` and `echoes-2` saves preserve completed transfers and the
+remaining approach/listen; old piano and pond saves still load. The departure kite is held until after the pond.
+
 The walk goes on over the west rise and through a pass along `WAY` (`world/fields.ts`), the plane kept within
 reach of the child (`tuning.meadowPlane`). A flock grazes across the way below the rise (`onTheWay` in `main.ts`); it parts round her as she
 comes and bolts from a gust, like any flock, and nothing waits on it. Over the brow the ground falls to **the pond** (`POND`) on the open

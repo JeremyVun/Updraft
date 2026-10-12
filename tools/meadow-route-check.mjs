@@ -46,7 +46,7 @@ const shore=FAR_SHORE;
 for(const stop of ['piano','pond','shore']) for(const leg of [0,1,2,3,4,5,6]) {
   const {cast:{child,plane,boat},chapter}=fixture();
   chapter.leg=leg;chapter.crestDone=stop==='shore';
-  if(stop!=='piano')chapter.piano.restoreDone();
+  if(stop!=='piano') { chapter.piano.restoreDone(); chapter.song.restore(2); }
   // Freeze walking only; update still executes the real destination selection and boat relocation.
   chapter.beat='toBoat';chapter.update(1/60,0);
   const expected=stop==='piano'?piano.stand:
@@ -74,7 +74,7 @@ for(const fps of [30,60,120]) {
     if(!pianoReached&&chapter.piano.at==='looking') {
       assert(Math.hypot(child.position.x-piano.stand.x,child.position.z-piano.stand.z)<1,'walk missed the piano stand');
       // The four piano gestures have their own suite; resume from their completed stop here.
-      chapter.piano.restoreDone();child.stowPlane(false);child.stop();pianoReached=true;
+      chapter.piano.restoreDone();chapter.song.restore(2);child.stowPlane(false);child.stop();pianoReached=true;
     }
     if(seen.has('pond')&&chapter.beat==='walk') {
       pondFinished=true;

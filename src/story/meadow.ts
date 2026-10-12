@@ -13,6 +13,8 @@ import { completeObjective, cue } from './cues';
 import { PianoStop } from './piano';
 import { harebells } from '../world/harebells';
 import { tuning } from '../tuning';
+import { MeadowSong } from './meadow-song';
+import { meadowEchoes } from '../world/meadow-echoes';
 import { musicFront } from '../world/music-growth';
 import type { MeadowScorePhase } from '../audio/meadow-score';
 
@@ -156,8 +158,10 @@ export class MeadowChapter implements Chapter {
   private boatMoved = false;
   /** Where the grass is pressed flat while they sit in it, so the cygnet is not lost in a field taller than it is. */
   trodden: THREE.Vector3 | null = null;
+  private readonly songTurf = new THREE.Vector3();
   /** The piano on the ridge: the child plays colour into the meadow before walking on. */
   private readonly piano = new PianoStop();
+  readonly song = new MeadowSong();
   private nextCall = 0;
   private nextBugle = 0;
   private wentOn = false;
@@ -190,6 +194,7 @@ export class MeadowChapter implements Chapter {
 
   constructor(private readonly cast: Cast) {
     const { child, plane, cygnet, flock, life } = cast;
+    meadowEchoes.reset();
     /**
      * The island is asleep, shore and all, and the only colour on it is the patch the piano stands in. Everything
      * that happens to the meadow's colour after this happens because the lullaby got further.
@@ -246,13 +251,16 @@ export class MeadowChapter implements Chapter {
 
   get checkpoint(): string | null {
     if (this.beat !== 'walk') return null;
-    return this.crestDone ? 'pond' : this.piano.at === 'done' ? 'piano' : null;
+    if (this.crestDone) return 'pond';
+    if (this.piano.at !== 'done') return null;
+    return meadowEchoes.seeds.completed ? `echoes-${meadowEchoes.seeds.completed}` : 'piano';
   }
   saveCheckpoint(): CheckpointPayload<'meadow'> { return [this.leg, this.waveTo, this.waveSpeed, this.dusk, this.duskTarget]; }
   restoreCheckpoint(point: string, data: number[]): void {
     this.leg = THREE.MathUtils.clamp(Math.floor(data[0]), 0, ROUTE.length - 1);
     this.waveTo = data[1]; this.waveSpeed = data[2]; this.dusk = data[3]; this.duskTarget = data[4];
     this.piano.restoreDone();
+    this.song.restore(point === 'pond' ? 2 : point.startsWith('echoes-') ? Number(point.slice(7)) : 0, point === 'pond');
     this.crestDone = point === 'pond';
     this.beat = 'walk'; this.play = 'hold'; this.holdUntil = 1;
     if (this.crestDone) this.cast.flock.clear();
@@ -263,7 +271,8 @@ export class MeadowChapter implements Chapter {
     return this.beatHush;
   }
 
-  get pianoMix(): number { return this.piano.hush; }
+  get pianoMix(): number { return Math.max(this.piano.hush, this.song.hush); }
+  get departureKite(): boolean { return this.crestDone && ['walk', 'toBoat', 'push', 'aboard'].includes(this.beat); }
   get meadowScore(): MeadowScorePhase | undefined {
     // The grey approach and duet retain their existing sound and timing.
     if (this.piano.at !== 'done') return undefined;
@@ -275,18 +284,19 @@ export class MeadowChapter implements Chapter {
     return 'return';
   }
   readonly flockChatter = false;
-  get pianoActive(): boolean { return piano.engaged; }
-  get windInvitation(): THREE.Vector3 | null { return this.featherInvitation; }
+  get pianoActive(): boolean { return piano.engaged || this.song.active; }
+  get windInvitation(): THREE.Vector3 | null { return this.song.invitation ?? this.featherInvitation; }
   /** The feather only wants blowing one way, toward the cygnet. */
-  get invitationHeading(): number | null { return this.featherInvitation ? this.featherHeading : null; }
+  get invitationHeading(): number | null { return this.windInvitation ? this.featherHeading : null; }
+  get updraftTarget(): THREE.Vector3 | null { return this.song.active && meadowEchoes.seeds.active ? meadowEchoes.seed : null; }
   private featherHeading = 0;
   private readonly onScreen = new THREE.Vector3();
 
   afterCamera(camera: THREE.PerspectiveCamera): void {
-    if (!this.featherInvitation) return;
-    const to = this.onScreen.copy(this.cast.cygnet.position).project(camera);
+    if (!this.windInvitation) return;
+    const to = this.onScreen.copy(this.song.active ? meadowEchoes.receiver : this.cast.cygnet.position).project(camera);
     const tx = to.x, ty = to.y;
-    const from = this.onScreen.copy(this.cast.swanFeather.position).project(camera);
+    const from = this.onScreen.copy(this.windInvitation).project(camera);
     this.featherHeading = Math.atan2(ty - from.y, (tx - from.x) * camera.aspect);
   }
 
@@ -294,6 +304,7 @@ export class MeadowChapter implements Chapter {
   skipAhead(): void {
     const { child, plane } = this.cast;
     this.wokenAlready();
+    this.song.restore(2);
     this.leg = ROUTE.length - 1;
     child.stop();
     child.place(ROUTE[ROUTE.length - 1].x + 4, ROUTE[ROUTE.length - 1].y + 40, Math.PI);
@@ -323,6 +334,7 @@ export class MeadowChapter implements Chapter {
     const { child, cygnet, plane, flock } = this.cast;
     if (!flock.active) flock.rest(RAFT_AT.x, RAFT_AT.z, tuning.crest.raft, tuning.crest.family, POND_LEVEL);
     this.wokenAlready();
+    this.song.restore(2);
     this.leg = CREST_LEG;
     const at = ROUTE[CREST_LEG];
     const from = ROUTE[CREST_LEG - 1];
@@ -360,6 +372,18 @@ export class MeadowChapter implements Chapter {
     life.regions.waiting.set(0, 0, 0, 0);
     this.waveTo = WAVE_REACH;
     this.waveSpeed = 0;
+  }
+
+  skipToEchoes(): void {
+    this.wokenAlready();
+    this.song.restore(0);
+    const { child, cygnet, plane } = this.cast;
+    const f = meadowEchoes.flowers[0].stand;
+    child.stop(); child.place(f.x, f.z + 16, Math.PI); child.standUp();
+    cygnet.rideIn('satchel'); cygnet.bind(0.06);
+    plane.hold(child);
+    this.leg = 2; this.play = 'hold';
+    this.to('walk');
   }
 
   /**
@@ -448,8 +472,12 @@ export class MeadowChapter implements Chapter {
         break;
       case 'walk':
         if (!this.piano.hold(dt, time, this.cast)) {
-          this.updateWalk(time);
-          this.hearBells();
+          if (!this.song.hold(dt, time, this.cast)) {
+            this.updateWalk(time);
+            this.hearBells();
+          }
+          this.trodden = this.song.active
+            ? this.songTurf.set(c.position.x, 7, c.position.z) : null;
         }
         break;
       case 'crest':
@@ -522,7 +550,7 @@ export class MeadowChapter implements Chapter {
     /** Grown swans are loud. They are heard from a long way down the walk, before there is anything to see. */
     if (!this.wentOn && boat && time > this.nextBugle && flock.shown > 0.5) {
       const far = Math.hypot(c.position.x - POND_AT.x, c.position.z - POND_AT.z);
-      if (far < HEARD_FROM) {
+      if (far < HEARD_FROM && (this.song.beat === 'done' || this.song.hearsFamily)) {
         cue('bugle');
         this.nextBugle = time + (this.beat === 'crest' || this.beat === 'down' ? 5.4 : 9 + Math.random() * 5);
       }
@@ -534,6 +562,8 @@ export class MeadowChapter implements Chapter {
     const pianoPace = this.piano.frame(this.shot);
     if (pianoPace !== null) {
       this.pace = pianoPace;
+    } else if (this.song.frame(this.shot, this.cast)) {
+      this.pace = tuning.meadowEchoes.cameraPace;
     }
   }
 
@@ -749,6 +779,8 @@ export class MeadowChapter implements Chapter {
     const next = this.target();
     const piano = this.piano.waypoint(next);
     if (piano !== next) return piano;
+    const song = this.song.goal;
+    if (song) return this.planeGoal.set(song.x, song.z);
     if (this.leg >= CREST_LEG && !this.crestDone) return this.planeGoal.set(POND_AT.x, POND_AT.z);
     if (this.leg === ROUTE.length - 1) {
       const boat = this.cast.boat.position;
@@ -992,6 +1024,7 @@ export class MeadowChapter implements Chapter {
     s.carryAnchor = undefined;
     s.subjects = undefined;
     s.fitWidth = false;
+    s.smoothFit = undefined;
     s.clearance = 2.8;
     if (this.beat === 'ashore' || this.beat === 'beach' || this.beat === 'climb' || this.beat === 'brow') {
       /**

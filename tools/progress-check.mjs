@@ -22,7 +22,7 @@ try {
     return { chapter: g.story.name, beat: g.story.current.beat, point: g.story.current.checkpoint,
       child: g.child.position.toArray(), focus: g.story.focus.toArray(), eye: g.rig.camera.position.toArray(), bird: g.cygnet.state, seat: g.cygnet.seat, busy: g.carry.busy,
       piano: g.story.current.atPiano, wave: g.life.regions.wave.toArray(), waiting: g.life.regions.waiting.toArray(),
-      finished: g.story.current.finished ?? false, rotaryOpen: g.rotaryWashing.open };
+      finished: g.story.current.finished ?? false, rotaryOpen: g.rotaryWashing.open, echoes: g.meadowEchoes.seeds.completed, song: g.story.current.song?.beat };
   });
   // A restored drowned point must go on playing: the drift to the becalming, the run onward, the church up the ivy, the
   // belfry to the bell, the storm out.
@@ -51,6 +51,7 @@ try {
     ['boats', 'boats', 'pool-1', `c.restoreCheckpoint('pool-1',[33]);`],
     ['boats', 'boats', 'pool-2', `c.restoreCheckpoint('pool-2',[69]);`],
     ['meadow', 'piano', 'piano', `const {piano}=await import('/src/world/piano.ts');g.child.place(piano.stand.x,piano.stand.z,Math.PI);c.piano.give(g.child);c.beat='walk';c.leg=1;c.play='hold';c.holdUntil=1e6;c.wake(4,true);`],
+    ...[1,2].map(count=>['meadow','echoes',`echoes-${count}`,`const f=g.meadowEchoes.flowers[${count}-1].stand;g.child.place(f.x,f.z,Math.PI);c.restoreCheckpoint('echoes-${count}',[2,300,0,0,0]);`]),
     ['meadow', 'meadow', 'pond', `c.skipToCrest();c.crestDone=true;c.beat='walk';c.play='hold';c.holdUntil=1e6;g.cygnet.rideIn('satchel');`],
     ...[1,2,3,4].map(count => ['birches','birches',`scarf4-${count}`,
       `c.restoreCheckpoint('scarf4-${count}',[${count},0,.65,${count}]);c.holdUntil=1e6;`]),
@@ -104,6 +105,10 @@ try {
       assert.match(restored.piano, /^done /);
       assert.deepEqual(restored.waiting, saved.life[2]);
       assert(restored.wave[2] >= saved.life[1][2]);
+    }
+    if (point.startsWith('echoes-')) {
+      assert.equal(restored.echoes,Number(point.slice(7)));
+      assert.notEqual(restored.song,'done','restore keeps the walk to the receiving flower');
     }
     if (point === 'complete') assert(restored.finished);
     if (chapter === 'drowned') await playsOn(point);

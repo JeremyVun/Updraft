@@ -207,6 +207,7 @@ try {
       for(let i=1;i<=40;i++){await page.mouse.move(a.x+(b.x-a.x)*i/40,a.y+(b.y-a.y)*i/40);await page.waitForTimeout(30)}
       strokes++;acted=true;await page.waitForTimeout(900);
     }
+    else if(s.chapter==='meadow'&&visible(s.wind)&&s.push!==null)acted=await sweep(s.wind,Math.cos(s.push),-Math.sin(s.push),height*.23,1000);
     else if(s.chapter==='birches'&&s.beat==='scarf'&&s.snag>=0)acted=s.snag===1?await circle(s.scarf,height*.078):await sweep(s.scarf,s.snag===0?0:s.snag===3&&strokes%2?-1:1,s.snag===0?-1:0,150,400,s.snag===3);
     else if(s.chapter==='stairs'&&s.beat==='waiting'&&s.flight&&!s.flight.settling){
       const {at,to}=s.flight,dx=to.x-at.x,dy=to.y-at.y,length=Math.hypot(dx,dy);
