@@ -14,10 +14,13 @@ ground normals at all three detail levels. `BROKEN_BASE` optionally records the 
 metrics go to `OUT` (default `/tmp/updraft-still-grass`); inspect the stills as well as the numeric comparison.
 
 The Meadow exchange has `meadow-seeds-check` (persistent gesture effort and recovery),
-`meadow-echoes-state-check` (input ownership, checkpoint recovery and continuous receipt), and
+`meadow-echoes-state-check` (input ownership, checkpoint recovery, continuous receipt and mitten–petal contact), and
 `meadow-breath-check` (procedural voice envelope and headroom). `BASE=<dev> node tools/meadow-echoes-check.mjs`
 plays both transfers with real gestures; `FROM=meadow FULL=1` includes the entire chapter, and
 `W=390 H=844 TOUCH=1` exercises portrait touch. It writes captures and a state report under `OUT` in `/tmp`.
+`TRACE=1 AUDIT=1` also captures every camera step and intervening walk frames. Run
+`node tools/meadow-camera-audit.mjs <OUT>/audit-camera.jsonl` to check child framing through the handoffs and
+prevent the wide retreat before the pond; `camera-intent-report.mjs <OUT>/audit` flags motion to inspect.
 `ONLY=meadow node tools/progress-check.mjs` includes the two new saves. These checks do not replace human audio
 or motion review.
 

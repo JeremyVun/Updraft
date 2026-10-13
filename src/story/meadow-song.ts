@@ -12,12 +12,17 @@ export class MeadowSong {
   private now = 0;
   private index = 0;
   private mix = 0;
+  leaving = false;
   private readonly hand = new THREE.Vector3();
   private readonly childAt = new THREE.Vector3();
   private readonly center = new THREE.Vector3();
   private readonly side = new THREE.Vector3(0.15, 0, 1).normalize();
+  private readonly exitEye = new THREE.Vector3();
+  private readonly exitLook = new THREE.Vector3();
+  private readonly exitAt = new THREE.Vector3();
   private readonly frameSubjects = { primary: this.childAt, secondary: this.center, primaryRadius: 1.8,
-    points: [garden.seed, garden.flowers[0].mouth, garden.flowers[1].mouth], margin: 0.83, extra: 20 };
+    points: [garden.seed, garden.flowers[0].mouth, garden.flowers[1].mouth,
+      garden.flowers[0].crown, garden.flowers[1].crown], margin: 0.83, extra: 20 };
 
   get active(): boolean { return this.beat !== 'ahead' && this.beat !== 'done'; }
   get hush(): number { return this.mix; }
@@ -31,6 +36,7 @@ export class MeadowSong {
     garden.reset(completed);
     this.index = Math.max(0, Math.min(2, completed));
     this.mix = this.since = this.now = 0;
+    this.leaving = false;
     this.beat = finished ? 'done' : 'ahead';
   }
 
@@ -58,12 +64,13 @@ export class MeadowSong {
       }
     } else if (this.beat === 'touch') {
       child.faceToward(flower.mouth.x, flower.mouth.z, Math.min(1, dt * 2));
-      const reach = Math.sin(Math.min(1, (time - this.since) / tuning.meadowEchoes.touchFor) * Math.PI);
+      const t = (time - this.since) / tuning.meadowEchoes.touchFor;
+      const reach = THREE.MathUtils.smootherstep(t, 0, 0.3) * (1 - THREE.MathUtils.smootherstep(t, 0.65, 1));
       garden.bow(this.index, reach);
-      this.hand.copy(flower.mouth);
-      child.reachFor(0, reach > 0.55 ? this.hand : null);
+      this.hand.copy(flower.contact);
+      child.reachFor(1, t > 0.1 && t < 0.72 ? this.hand : null);
       if (time - this.since > tuning.meadowEchoes.touchFor) {
-        child.reachFor(0, null);
+        child.reachFor(1, null);
         garden.bow(this.index, 0);
         garden.release(time);
         this.to('carry');
@@ -75,6 +82,7 @@ export class MeadowSong {
       }
     } else if (this.beat === 'listen' && time - this.since > tuning.meadowEchoes.listenFor) {
       this.to('done'); garden.enabled = false;
+      this.leaving = true;
       cygnet.watch(null); child.lookAt = null;
       child.stowPlane(false); plane.hold(child);
       return false;
@@ -111,7 +119,23 @@ export class MeadowSong {
     shot.smoothFit = 2;
     this.frameSubjects.points[1] = first;
     this.frameSubjects.points[2] = second;
+    this.frameSubjects.points[3] = garden.flowers[this.index].crown;
+    this.frameSubjects.points[4] = garden.flowers[Math.min(2, this.index + 1)].crown;
     shot.subjects = this.frameSubjects;
+    if (this.beat === 'listen') {
+      this.exitLook.copy(shot.target).sub(c);
+      this.exitEye.copy(this.exitLook).addScaledVector(this.side, shot.distance).y += shot.height;
+    }
     return true;
+  }
+
+  depart(shot: Shot, cast: Cast): number {
+    const c = cast.child.position, stand = garden.flowers[2].stand;
+    const walked = THREE.MathUtils.smootherstep(Math.hypot(c.x - stand.x, c.z - stand.z), 0, tuning.meadowEchoes.departureWalk);
+    shot.target.lerp(this.exitAt.copy(c).add(this.exitLook), 1 - walked);
+    shot.eye!.lerp(this.exitAt.copy(c).add(this.exitEye), 1 - walked);
+    shot.composition = 'hold';
+    shot.smoothFit = 2;
+    return THREE.MathUtils.lerp(tuning.meadowEchoes.cameraPace, 0.9, walked);
   }
 }

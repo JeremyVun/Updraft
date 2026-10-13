@@ -45,3 +45,33 @@ encounter has its own real-input checks. The full-journey driver now follows Mea
 
 The deliberate idle-drift negative control failed at “idle cannot complete”, confirming that the guard detects
 an automatic solve. Final production build passed after the feel constants were moved into `tuning.ts`.
+
+## Readiness review after Jeremy's challenge
+
+The earlier pass missed the hand reaching under the flower without touching a petal, leaves staying in their
+rest position during the bow, and a wide camera retreat between the final flower and the crest. Those are fixed.
+The near mitten now rests on a rendered petal vertex for more than 0.6 seconds at 30/60/120 Hz; the child stands
+beside the flower so the hood does not hide the contact. Both flower crowns join the camera bounds.
+
+The final flower composition passes directly into the pond view over sixteen metres of the child's walking.
+Holding the whole child required more head/foot space, a slightly higher crest eye and the same viewing distance
+on portrait as landscape. The camera does not retreat to hold the departing flock. All twelve pond cases
+(both banks, both screen shapes, 30/60/120 Hz) retain all fifteen swans' runs/lifts and clear sight lines.
+
+- `/tmp/updraft-meadow-readiness-before`: full grey landing through departure, 346.9 game seconds, before these fixes.
+- `/tmp/updraft-meadow-readiness-final`: final full mouse play from grey landing, all piano answers, both flower
+  transfers, migration, feather, shower and boarding; entered `toBirches` at 343.8 game seconds without errors.
+  The camera trace checks 6,035 frames from the flower approach through the descent. Projected head and feet
+  keep at least 11.4% screen margin. Maximum eye-to-child distance during the flower departure is 19.35 m,
+  compared with the original retreat to 44.2 m. Chronological captures include all those handoffs.
+- `/tmp/updraft-meadow-readiness-portrait`: full touch play from the first flower through departure, 209.9 game
+  seconds, before the final crest eye-height adjustment. Both flowers' crowns and playable points fit. The
+  frame audit checks 5,955 frames with at least 10.5% margin for projected head and feet.
+- `/tmp/meadow-portrait-exit-final-*.png`: targeted portrait checkpoint replay after the final crest adjustment,
+  from the last flower's listening beat through departure, crest and descent. All 1,804 traced frames keep the
+  projected head and feet inside the viewport; the chronological captures were inspected.
+
+`meadow-camera-audit.mjs` rejects the old 44.2 m retreat and the intermediate cropped-foot capture; these are
+recorded negative controls. Final TypeScript, build, contact/input/checkpoint state checks, pond sight lines and
+the 30/60/120 Hz route checks pass. Build log: `/tmp/updraft-meadow-readiness-build.log`.
+This remains inspected chronological stills, camera traces and real-input play, not a human motion or listening review.

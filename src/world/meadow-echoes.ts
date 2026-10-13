@@ -47,9 +47,12 @@ function material(color: string, petal = 0): THREE.ShaderMaterial {
     side: THREE.DoubleSide });
 }
 
+const PETAL_RINGS = 16, PETAL_SIDES = 40;
+const TOUCH_VERTEX = PETAL_RINGS * (PETAL_SIDES + 1) + PETAL_SIDES * 7 / 8;
+
 function bellGeometry(): THREE.BufferGeometry {
   const positions: number[] = [], indices: number[] = [];
-  const rings = 16, sides = 40;
+  const rings = PETAL_RINGS, sides = PETAL_SIDES;
   for (let j = 0; j <= rings; j++) {
     const t = j / rings;
     const radius = 0.12 + Math.sin(Math.min(1, t * 2.3) * Math.PI * 0.5) * 0.49 + Math.pow(t, 6) * 0.29;
@@ -73,7 +76,10 @@ interface Bloom {
   root: THREE.Group;
   bell: THREE.Mesh;
   mouth: THREE.Vector3;
+  contact: THREE.Vector3;
+  crown: THREE.Vector3;
   stand: THREE.Vector3;
+  leaves: { mesh: THREE.Mesh; rest: THREE.Vector3 }[];
   open: number;
   stem: THREE.BufferGeometry;
   rest: Float32Array;
@@ -135,14 +141,17 @@ export class MeadowEchoes {
     const bell = new THREE.Mesh(geometry, this.bellMaterial);
     bell.position.set(0.8, h, 0); bell.scale.setScalar(scale);
     root.add(bell);
+    const leaves: Bloom['leaves'] = [];
     for (let i = 0; i < 3; i++) {
       const leaf = new THREE.Mesh(new THREE.SphereGeometry(1, 8, 5), this.stemMaterial);
       leaf.scale.set(0.12, 0.04, 0.7);
       leaf.position.set(i % 2 ? -0.3 : 0.25, h * (0.13 + i * 0.16), 0);
       leaf.rotation.set(-0.8, i * 2.3, 0.4); root.add(leaf);
+      leaves.push({ mesh: leaf, rest: leaf.position.clone() });
     }
     this.group.add(root);
-    return { root, bell, open: 0, stem, rest: new Float32Array(stem.attributes.position.array), height: h, bow: 0,
+    return { root, bell, leaves, open: 0, stem, rest: new Float32Array(stem.attributes.position.array), height: h, bow: 0,
+      contact: new THREE.Vector3(), crown: new THREE.Vector3(x + 0.45, root.position.y + h + 0.4, z),
       mouth: new THREE.Vector3(x + 0.8, root.position.y + h - 2.05 * scale, z),
       stand: new THREE.Vector3(x + tuning.meadowEchoes.standAside, heightAt(x + tuning.meadowEchoes.standAside, z + tuning.meadowEchoes.standBack), z + tuning.meadowEchoes.standBack) };
   }
@@ -216,9 +225,17 @@ export class MeadowEchoes {
           f.rest[j * 3 + 2] + f.bow * 0.8 * t * t);
       }
       pos.needsUpdate = true;
+      f.stem.computeVertexNormals();
+      for (const leaf of f.leaves) {
+        const t = Math.min(1, leaf.rest.y / f.height);
+        leaf.mesh.position.copy(leaf.rest);
+        leaf.mesh.position.y -= lowered * t * t;
+        leaf.mesh.position.z += f.bow * 0.8 * t * t;
+      }
       f.bell.position.set(0.8, f.height - lowered, f.bow * 0.8);
       f.root.updateMatrixWorld(true);
       f.mouth.set(0, -2.05, 0).applyMatrix4(f.bell.matrixWorld);
+      f.contact.fromBufferAttribute(f.bell.geometry.getAttribute('position'), TOUCH_VERTEX).applyMatrix4(f.bell.matrixWorld);
     }
     this.prelude.root.rotation.z = Math.sin(time * 0.85) * 0.025;
     while (this.soundQueue.length && this.soundQueue[0].at <= time) {

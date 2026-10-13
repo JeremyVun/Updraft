@@ -1,11 +1,13 @@
 // Real pointer play of Meadow; FROM=meadow includes arrival and piano, FULL=1 continues through the pond.
 // BASE=http://127.0.0.1:5244/ OUT=/tmp/meadow W=1600 H=900 node tools/meadow-echoes-check.mjs
+// TRACE=1 samples every camera frame; AUDIT=1 captures the intervening walk. These are not a motion review.
 import { openBrowser } from './lib/browser.mjs';
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 
 const out = process.env.OUT ?? '/tmp/updraft-meadow-echoes';
 fs.mkdirSync(out, { recursive: true });
+if (process.env.TRACE === '1') fs.writeFileSync(`${out}/audit-camera.jsonl`,'');
 const width = +(process.env.W ?? 1600), height = +(process.env.H ?? 900);
 const { browser, close } = await openBrowser();
 const report = { states: [], errors: [] };
@@ -16,6 +18,25 @@ try {
   await page.goto(`${process.env.BASE ?? 'http://127.0.0.1:5244/'}?shot=1&chapter=${process.env.FROM ?? 'echoes'}&progress=0`);
   await page.waitForFunction(() => window.__ready, null, { timeout: 90000 });
   await page.mouse.click(8, 8);
+  if (process.env.TRACE === '1') await page.evaluate(() => {
+    const g = __game, rig = g.rig, original = rig.update.bind(rig);
+    const r = v => v ? v.toArray().map(x => +x.toFixed(4)) : null;
+    const project = v => { const q = v.clone().project(rig.camera); return [(q.x+1)/2,(1-q.y)/2,q.z]; };
+    let label = '';
+    window.__cameraTrace = [];
+    rig.update = (dt,time,shot,pace,hold) => {
+      original(dt,time,shot,pace,hold);
+      const c = g.story.current, garden = g.meadowEchoes;
+      const now = `${g.story.name}/${c.beat}/${c.piano?.at}/${c.song?.beat}/${garden.seeds.completed}`;
+      window.__cameraTrace.push({t:+time.toFixed(4),dt,...(now!==label?{at:(label=now)}:{}),
+        eye:r(rig.camera.position),look:r(rig.look),child:r(g.child.position),
+        fit:rig.fitBack,pull:rig.pull,lift:rig.lift,rise:rig.sceneryRise,side:r(rig.sceneryOffset),
+        offset:rig.direction.offset,pace,hold,placed:rig.placed,transition:!!g.story.transitionView,
+        head:project(g.child.position.clone().add({x:0,y:2.8,z:0})),feet:project(g.child.position),
+        flowers:garden.flowers.map(f=>({mouth:project(f.mouth),top:project(f.root.position.clone().add({x:.8,y:f.height+.4,z:0}))})),
+      });
+    };
+  });
   const touch = process.env.TOUCH === '1' ? await context.newCDPSession(page) : null;
   const state = () => page.evaluate(() => {
     const g = __game, c = g.story.current, e = g.meadowEchoes;
@@ -24,6 +45,7 @@ try {
       count: e.seeds.completed, progress: e.seeds.progress, active: e.seeds.active,
       seed: p(e.seed), target: p(e.receiver), child: p(g.child.position.clone().add({x:0,y:1.5,z:0})),
       feet: p(g.child.position), head: p(g.child.position.clone().add({x:0,y:2.8,z:0})),
+      crowns: e.flowers.slice(e.seeds.completed,e.seeds.completed+2).map(f=>p(f.crown)),
       invitation: c.windInvitation ? p(c.windInvitation) : null, heading: c.invitationHeading,
       piano: g.piano.expect && c.piano?.at === 'seated'
         ? { expect: g.piano.expect, path: [0,1].map(t=>p(g.piano.guideAlong(t,g.piano.keys.clone()))) } : null,
@@ -47,10 +69,17 @@ try {
     if(touch) await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
   };
   await shot('entry');
-  let idleChecked = false, last = '', count = 0, shotsAt = -10;
+  let idleChecked = false, last = '', count = 0, shotsAt = -10, auditAt = -10;
   const end = Date.now() + 9 * 60000;
   while(Date.now() < end) {
     const s = await state();
+    if (process.env.TRACE === '1') {
+      const rows = await page.evaluate(() => window.__cameraTrace.splice(0).map(r=>JSON.stringify(r)).join('\n'));
+      if (rows) fs.appendFileSync(`${out}/audit-camera.jsonl`,rows+'\n');
+    }
+    if (process.env.AUDIT === '1' && s.time-auditAt>1 && s.beat==='walk' && s.pianoBeat==='done') {
+      await shot(`audit-${s.time.toFixed(1)}`); auditAt=s.time;
+    }
     if (s.chapter !== 'meadow') { await shot('departed'); break; }
     const phase = `${s.beat}-${s.pianoBeat}-${s.song}-${s.count}`;
     if(phase !== last) { await shot(phase); last = phase; }
@@ -70,7 +99,7 @@ try {
         assert((await state()).progress < .02, 'off-target motion must not carry the seeds');
         idleChecked = true; await shot('waiting-for-wind'); continue;
       }
-      for(const p of [s.seed,s.target,s.head,s.feet]) {
+      for(const p of [s.seed,s.target,s.head,s.feet,...s.crowns]) {
         assert(p[0]>12&&p[0]<width-12&&p[1]>12&&p[1]<height-12&&p[2]<1,`playable subject clipped: ${JSON.stringify(s)}`);
       }
       const dx=s.target[0]-s.seed[0],dy=s.target[1]-s.seed[1],n=Math.hypot(dx,dy)||1;

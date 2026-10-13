@@ -7,5 +7,7 @@
 - [x] Play the chapter with real pointer gestures; inspect player-camera captures, correct failures,
   and check portrait. Run focused regression checks and a production build.
 - [x] Record the final experience, evidence and limitations; leave a reviewable worktree and dev server.
+- [x] Revisit readiness: fix visible petal contact and bending leaves, include flower crowns in the frame,
+  remove the wide retreat before the crest, and verify whole-child framing without losing the swans' departure.
 
 Human motion/listening and first-time comprehension review remain with Jeremy; see `verification.md`.

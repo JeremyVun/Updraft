@@ -150,7 +150,7 @@ export class MeadowChapter implements Chapter {
   private readonly flockAt = new THREE.Vector3();
   private readonly flockWater = new THREE.Vector3();
   /** On the way down only she has to stay in frame; the family is let go out of the top of it. */
-  private readonly descentFraming = { primary: this.cameraChild, secondary: this.cameraChild, margin: 0.88, extra: 3 };
+  private readonly descentFraming = { primary: this.cameraChild, secondary: this.cameraChild, primaryRadius: 1.6, margin: 0.88, extra: 0 };
   /** The side the pond is watched from, chosen once on the rise and kept down to the water and through the swim. */
   private viewBearing = 0;
   private readonly eyeAt = new THREE.Vector3();
@@ -1071,6 +1071,13 @@ export class MeadowChapter implements Chapter {
       s.subjects = this.framing;
       this.pace = 0.35;
       this.focus.copy(b);
+      return;
+    }
+    if (this.beat === 'walk' && !this.crestDone && this.song.leaving) {
+      this.axis.set(POND_AT.x - c.x, 0, POND_AT.z - c.z).normalize();
+      this.viewBearing = Math.atan2(-this.axis.x, -this.axis.z);
+      this.frameWater();
+      this.pace = this.song.depart(s, this.cast);
       return;
     }
     const guide = tuning.meadowPlane;

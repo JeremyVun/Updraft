@@ -7,6 +7,7 @@ globalThis.window={innerWidth:1600,innerHeight:900,matchMedia:()=>({matches:fals
 globalThis.document={createElement:()=>({getContext:()=>({beginPath(){},moveTo(){},quadraticCurveTo(){},stroke(){}})})};
 const {meadowEchoes:garden}=await import('../src/world/meadow-echoes.ts');
 const {MeadowChapter}=await import('../src/story/meadow.ts');
+const {MeadowSong}=await import('../src/story/meadow-song.ts');
 const {Traveller}=await import('../src/traveller/traveller.ts');
 const {Cygnet}=await import('../src/creatures/cygnet.ts');
 const {SwanFlock}=await import('../src/creatures/flock.ts');
@@ -58,5 +59,21 @@ for(const fps of [30,60,120]) {
     assert(worstStep<1,`${fps}fps ${mode}: seed jumped ${worstStep}`);
     if(garden.seeds.completed) assert(garden.seed.distanceTo(garden.source)<.15,'plume visibly settles at receiver');
   }
+  for (const index of [0,1]) {
+    const song=new MeadowSong();song.restore(index,false);
+    const f=garden.flowers[index],hand=new THREE.Vector3();
+    child.stop();child.place(f.stand.x,f.stand.z,Math.PI);
+    input.present=false;
+    for(let i=0;i<fps;i++)child.update(dt);
+    let contactFor=0;
+    for(let i=0;i<fps*5;i++) {
+      song.hold(dt,i*dt,cast);child.update(dt);
+      garden.update(dt,i*dt,camera,input,null,true);
+      if(f.bow>.99 && child.mitten(1,hand).distanceTo(f.contact)<.08)contactFor+=dt;
+    }
+    assert(contactFor>.6,`${fps}fps flower ${index}: mitten never rests on the petal (${contactFor}s)`);
+    assert(garden.seeds.active,'the touch releases the plume');
+    assert.equal(garden.seeds.completed,index,'the touch cannot solve the wind exchange');
+  }
 }
-console.log('PASS: saved transfers, legacy checkpoints, route ownership, fade reset, muted/absent/disabled/opposing input, strokes/lift and continuous receipt at 30/60/120 Hz.');
+console.log('PASS: saved transfers, route ownership, fade reset, input gating, strokes/lift, continuous receipt and sustained mitten–petal contact at 30/60/120 Hz.');

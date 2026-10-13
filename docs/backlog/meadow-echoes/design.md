@@ -9,6 +9,8 @@ implementation and player-camera verification in this session. No merge or deplo
 
 > Agreed. start working in a worktree. flesh this out. and remember the rule about the experience being all about what the player sees from the camera viewport. Keep going until you have something you think works really well
 
+> that was surprisingly quick. are you sure it's ready? if so, spin the dev server up again. if not, keep going I feel like you may have been lazy
+
 Musical direction discussed immediately before this:
 
 > after the piano can we try wind or flute instead or strings?
@@ -83,6 +85,13 @@ but keeps the child and both playable flower mouths legible. The seed mouth sits
 child's hood. Directional input stays equally responsive near the receiver instead of needing increasingly tiny
 strokes. Seeds settle into the bloom continuously; the bloom opens gradually. Save points retain each completed
 transfer and resume the walk to its receiver, including the final listening beat.
+
+The readiness review found two missed details: the flower touch was hidden behind the hood and aimed into empty
+space, and returning to the ordinary walking camera inserted a large retreat before the pond. The child now stands
+beside the bloom and rests the near mitten on an actual petal vertex before it rises. Leaves follow the bending
+stem. Camera coverage includes the tops of both flowers. The final flower view passes directly into the pond
+composition as the child walks the next sixteen metres. The crest framing holds the whole child, with a slightly
+higher eye to see over the bank and no automatic retreat during the swans' departure.
 
 Checks and captures are recorded in `verification.md`. These are automated gesture playthroughs and inspected
 stills, not a claim of a human listening or motion review. Jeremy's review of the voice, feel and narrative remains
