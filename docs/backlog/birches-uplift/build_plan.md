@@ -176,24 +176,62 @@ limb and the goodbye branch.
   loop's foot (the fork is hidden in gold from that lens), and the goodbye is at the water's edge (no branch reaches
   the berth).
 
-### 5. The game. Opus. Done: ☐ (after 3b and 4)
+### 5a. Heaps that read, and leaves that fly. Opus (visual). Done: ☐ (after 4; alongside 5b)
 
-Owns `src/story/birches-squirrel.ts` (rounds, live-depth hides via `Readback`, the trunk fallback, finding, tells,
-the cygnet's co-seeking, the stall hint and invitation, the leap), the integration into `story/birches.ts` (new
-beats, the walk's next stop across tangles and rounds, frames, the squirrel at tangles, the swing and the goodbye),
-the save payload and point names in `story/checkpoint-data.ts`, `audio/birches-foley.ts` (rustle tells, bursts,
-the leap), `tuning.birches.squirrel` knobs, and a new `tools/squirrel-rounds-check.mjs`.
+Worktree `/Users/jeremy/projects/updraft-birches-heaps`, branch `birches-uplift-heaps`. Owns `src/world/birches.ts`
+(heap seeding and the litter's look over heaps), `src/fx/leaves.ts`, and the wiring of `squirrel.onLeaves` to the
+world.
+
+Orchestrator review of phase 4's storyboard (2026-10-16): **the heaps do not read as heaps.** In every round frame
+the floor is one even gold carpet, so there are no distinct mounds for the player to choose between, and a
+hide-and-seek among heaps nobody can see is not a game. Make each round heap a distinct mound from its round's
+frame, in portrait and landscape: a child's leaf pile, with a clear silhouette, a lit side and a shadowed side under
+the low sun, and a base that reads against the floor around it. The tools are deeper and steeper heaps, scuffed
+thinner ground round each heap where its leaves were gathered from, and shading of the litter over a heap. Keep the
+room's look: the leaves must not behave like grass, the gold and the light stay as they are, and the wind still
+bursts a heap exactly as now and never rebuilds it.
+
+- Bury the 3× squirrel so its back never shows between the leaf cards from its round's camera (phase 4 saw it in
+  the near heaps), with only the tail tip out when `tailOut`.
+- Loose leaves: phase 4 found every simulated leaf more than 58 m from the child is moved round her, so bursts at
+  rounds 2 and 3 throw only litter cards. Put a share of the moved leaves onto the coming round's heaps, so a burst
+  (squirrel, wind or leap) throws a real spray of tumbling leaves.
+- **Seam to 5b:**
+  - `AutumnBirches.depthAt(points): Promise<number[]>`: live litter height in metres over the ground, from one
+    batched asynchronous readback (the engine's `Readback`), never synchronous and never every frame.
+  - `AutumnBirches.burst(x, z, strength)`: something going into or out of the leaves. It lifts the litter
+    (today's `kick`) and throws loose leaves.
+  - `squirrel.onLeaves` wired to `burst` (dive 0.55, burst 1, peek 0.2; ignore `step`).
+  - A per-heap `buryDepth`, or a function giving how low to set the squirrel in a heap so it is hidden.
+- **Gate:** before/after stills of every round frame from `story/birches-rounds.ts` (`frameShot`), portrait and
+  landscape, with the squirrel buried tail-out. Each heap must read as a distinct mound at a glance. Also a strip
+  of a squirrel burst and a wind burst at a round-3 heap showing the spray, and the walking frames through the gaps
+  to prove the floor elsewhere is unchanged.
+
+### 5b. The game. Opus. Done: ☐ (after 4; alongside 5a)
+
+Worktree `/Users/jeremy/projects/updraft-birches`, branch `birches-uplift`. Owns `src/story/birches-squirrel.ts`
+(rounds, hides via `depthAt`, the trunk fallback, finding, tells, the cygnet's co-seeking, the stall hint and
+invitation, the leap), the integration into `story/birches.ts` (new beats, the walk's next stop across tangles and
+rounds, frames, the squirrel at tangles, the swing and the goodbye), `story/birches-rounds.ts` (adjust frames), the
+save payload and point names in `story/checkpoint-data.ts`, `audio/birches-foley.ts` (rustle tells, bursts, the
+leap), `tuning.birches.squirrel` knobs, and a new `tools/squirrel-rounds-check.mjs`. Until 5a lands, call `depthAt`
+and `burst` through a thin local stand-in (`kick` and the authored heap depths) with the same signatures.
 
 - Numbers to build to (design.md "A round"): tell interval 2.5–4 s; tail-out share 0.5 / 0.33 / 0.2 by round; find
   radius = heap radius + 1.5 m; hint at 10 s, invitation at 18 s without wind on the right heap; one deliberate
   swipe or two near misses finds it.
-- Hides are chosen from one asynchronous readback per choice, never a synchronous read and never every frame.
+- Orchestrator review of phase 4 (2026-10-16): **portrait round frames are too far.** The squirrel measured 13–31
+  px tall in portrait. Bring portrait round frames in until the squirrel buried, peeking or sitting reads (about
+  30 px or more) while the child stays whole and the heaps stay in frame. Also give the meeting on the log and the
+  wool dash after tangle 1 (24 px) a low-weight glance (`focus`), never a pan.
 - **Gate:** typecheck. `squirrel-rounds-check` with real gestures covers: each round found on the right heap;
   wrong heaps first; random swipes only; a stall through the hint and the invitation; every heap blown flat before
   arrival (drift and trunk fallbacks); the leap with a deep drift and with a bare hollow; and a resume at every new
-  checkpoint and from pre-build save names. Existing `scarf-check` (all modes) and the swing still pass.
+  checkpoint and from pre-build save names. Existing `scarf-check` (all modes) and the swing still pass. One smoke
+  drive through the whole room. The full look loop belongs to phase 6.
 
-### 6. Verification wave. Opus. Done: ☐ (after 2 and 5)
+### 6. Verification wave. Opus. Done: ☐ (after 5a and 5b, merged)
 
 Run against `npm run build:qa` then `npm run preview:qa`.
 
