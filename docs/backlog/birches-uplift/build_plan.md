@@ -98,7 +98,7 @@ Owns `src/creatures/squirrel/` (`gait`, `voice`, the actions' motion in `pose`),
   for motion. Contact via skinned vertices against the rendered ground, litter surface and bark (no floating, no
   sinking except when `buried`). No pops or foot slip beyond the cat's limits.
 
-### 3c. Autumn leaves on the stairs island. Opus (visual). Done: ☐ (independent; may run alongside 2 and 3a)
+### 3c. Autumn leaves on the stairs island. Opus (visual). Done: ☑ (independent; may run alongside 2 and 3a)
 
 Owns `world/echoes.ts` (or a small module beside it that it creates). Build design.md "Autumn leaves on the stairs
 island".

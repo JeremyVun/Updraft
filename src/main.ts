@@ -95,6 +95,7 @@ import { CLOUD, STAIRS_ISLE } from './world/stairs-layout';
 import { createTree } from './world/tree';
 import { Footprints } from './world/footprints';
 import { dreamEchoes } from './world/echoes';
+import { echoLeaves } from './world/echo-leaves';
 import { createSky } from './world/sky';
 import { Terrain } from './world/terrain';
 import { TerrainHeights } from './world/terrain-heights';
@@ -487,6 +488,9 @@ const roomObjects: Partial<Record<Room, THREE.Object3D[]>> = {
   wood: [...wood.objects], sleeping: [...sleeping.objects], mirror: [skyMirror.group], home: [...cottage.objects, homeJetty, homeTree.group],
 };
 for (const [room, echo] of Object.entries(echoes)) roomObjects[room as Room]?.push(echo);
+const stairsLeaves = echoLeaves(echoes.stairs!);
+scene.add(stairsLeaves);
+roomObjects.stairs?.push(stairsLeaves);
 for (const [name, marker] of Object.entries(departureKites.markers)) {
   if (name !== "lines") roomObjects[name as Room]?.push(marker.group);
 }
