@@ -200,14 +200,12 @@ What later phases must know:
 
 ## Phase 3: surface and sound — in progress
 
-Two parallel waves, file-disjoint, each in its own worktree with its own dev server so neither's edits reload the
-other's captures; 3b merges into `sleeping-climb` when both are done.
+Three parallel waves, file-disjoint, each in its own worktree with its own dev server so no wave's edits reload
+another's captures; 3b and 3c merge into `sleeping-climb` when all three are done.
 
-### 3a: the surface (worktree `updraft-sleeping-climb`, branch `sleeping-climb`, dev server 5231)
+### 3a: the drift (worktree `updraft-sleeping-climb`, branch `sleeping-climb`, dev server 5231)
 
-**Owns:** `src/world/sleeping-trail.ts` (drift look, spindrift, footprints), a new `src/world/sleeping-dressing.ts`,
-the heightfield's sleeping functions only if the bank's lip needs ground shape (JS and GLSL identical), rabbit
-placement and its morning wake through `src/creatures/rabbits.ts`, and the sleeping room's rocks.
+**Owns:** the drift in `src/world/sleeping-trail.ts` (its look, spindrift, footprints) and its shader. Not the rocks.
 
 **Does:**
 - The drift reads as wind-carved snow: crust, sastrugi ridges, a curled cornice lip on the lee side, blue shadow in
@@ -216,6 +214,20 @@ placement and its morning wake through `src/creatures/rabbits.ts`, and the sleep
   crest in streams that run the way the stroke went and settle downwind; footprints stay in what is left; both
   channel banks remain. The bank nearest the lens on the walk out (32–34.7 s in the 2c strip) does not fill the
   bottom of the frame.
+
+**Seams:** `snowDepthAt` stays identical to the shader's depth; drift encounter behaviour and timings unchanged.
+
+**Verify:** typecheck, the logic check, `CLIMB=1` GPU run; player-camera stills of the drift before, in the wade and
+lowered, and the walk out; one `VIDEO=1 CLIMB=1` strip reviewed by the lead, which also checks the near-lens streaks
+after the widened fade.
+
+### 3c: the hillside (worktree `updraft-sleeping-climb-hill`, branch `sleeping-climb-hill`, dev server 5233)
+
+**Owns:** a new `src/world/sleeping-dressing.ts`, the sleeping room's rocks (moved out of `sleeping-trail.ts` into
+it), the heightfield's sleeping functions only if the bank's lip needs ground shape (JS and GLSL identical), and the
+rabbit's placement and morning wake through `src/creatures/rabbits.ts`.
+
+**Does:**
 - The step's bank reads as a ledge too high to hop from the step's lens: turf curling over a lip of rock, part of the
   hillside, not a terrace and not a row of loose rocks.
 - The outcrop and bank rocks match the island's rock look elsewhere (`src/world/landmarks.ts`): weathered,
@@ -227,17 +239,15 @@ placement and its morning wake through `src/creatures/rabbits.ts`, and the sleep
   under it, snow on its back, ears flat. It never wakes during the climb; in the morning, when the green reaches it,
   it sits up, washes its face and lopes off. Background life, no encounter.
 
-**Seams:** `snowDepthAt` stays identical to the shader's depth; drift encounter behaviour and timings unchanged;
-nothing new in the lens's 7 m bed clearance path (west then north of the bed), the glide line, the morning lane or
-any look-back sightline; the bedside framing unchanged.
+**Seams:** nothing new in the lens's 7 m bed clearance path (west then north of the bed), the glide line, the
+morning lane, any look-back sightline or the drift's channel; the bedside framing unchanged; the bird's walking
+ground unchanged except at the bank's lip.
 
-**Verify:** typecheck, the logic check, `CLIMB=1` GPU run; player-camera stills of the drift (before, wade, lowered),
-the bank from the step's lens, the lower slope with the hawthorn and rabbit, the bedside view and the glide; the
-rabbit's morning wake; one `VIDEO=1 CLIMB=1` strip reviewed by the lead, which also checks the near-lens streaks
-after the widened fade.
+**Verify:** typecheck, the logic check, `CLIMB=1` GPU run; player-camera stills of the bank from the step's lens, the
+lower slope with the hawthorn and rabbit, the outcrop, the bedside view and the glide; the rabbit's morning wake; one
+`VIDEO=1 CLIMB=1` strip reviewed by the lead.
 
-### 3b: weather and sound (worktree `updraft-sleeping-climb-sound`, branch `sleeping-climb-sound` from the phase 2 close,
-dev server 5232)
+### 3b: weather and sound (worktree `updraft-sleeping-climb-sound`, branch `sleeping-climb-sound`, dev server 5232)
 
 **Owns:** `src/world/sleeping-weather.ts` (snowfall), the sleeping room's sound in `src/audio/` (coordinate through
 `coord`: other sessions are editing audio), and the chapter's hooks that feed them.
