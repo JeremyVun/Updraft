@@ -6,10 +6,12 @@ import { ATMO_GLSL, atmo } from './atmosphere';
 import { grassHeightAt } from './grass';
 import { heightAt } from './island';
 import { mulberry32 } from './noise';
-import { STAIRS_ARRIVAL, STAIRS_FOOT, STAIRS_LANDING, STEP, STRING, along, flight, leftOf } from './stairs-layout';
+import { STAIRS_ARRIVAL, STAIRS_FOOT, STAIRS_LANDING, STEP, along, flight, leftOf } from './stairs-layout';
 
 /** Sand below this is the tide's. */
 const TIDE = 0.6;
+/** Above this the grass is thick enough to hide a leaf. */
+const SAND_TOP = 1.4;
 /** How far every leaf keeps from where the child and the cygnet walk. */
 const CLEAR = 2.5;
 
@@ -109,8 +111,7 @@ function lay(seat: THREE.Vector3): Leaf[] {
     });
   };
 
-  const lee = first.bottom.clone().addScaledVector(up, 0.6).addScaledVector(side, 1.15);
-  const landward = new THREE.Vector3(lee.x - seat.x, 0, lee.z - seat.z).normalize();
+  const landward = new THREE.Vector3(first.bottom.x - seat.x, 0, first.bottom.z - seat.z).normalize();
   for (let tries = 0; leaves.length < 52 && tries < 2000; tries++) {
     const a = rand() * Math.PI * 2;
     const r = 0.72 + 2.2 * rand() ** 2.2;
@@ -121,28 +122,21 @@ function lay(seat: THREE.Vector3): Leaf[] {
     onGround(x, z, r < 1.0 ? 0.35 : rand() * 0.25, r < 1.0 ? dir : undefined);
   }
 
-  /** Bowed away from the walk, so the scatter runs up the grass beside it rather than across it. */
-  const bow = new THREE.Vector3((seat.x + lee.x) / 2, 0, (seat.z + lee.z) / 2).addScaledVector(new THREE.Vector3(landward.z, 0, -landward.x), 3.5);
-  const curve = new THREE.QuadraticBezierCurve3(new THREE.Vector3(seat.x, 0, seat.z), bow, new THREE.Vector3(lee.x, 0, lee.z));
-  const p = new THREE.Vector3();
-  for (let tries = 0, laid = 0; laid < 30 && tries < 2000; tries++) {
-    const t = 0.1 + 0.85 * rand();
-    if (rand() > (1 - t) ** 1.4 + 0.12) continue;
-    curve.getPoint(t, p);
-    const spread = 2.6 - 1.4 * t;
-    const x = p.x + (rand() - 0.5) * 2 * spread, z = p.z + (rand() - 0.5) * 2 * spread;
-    if (heightAt(x, z) < TIDE || !offWalk(x, z)) continue;
-    onGround(x, z, rand() * 0.3);
+  /** Thinning out along the bare sand at the foot of the grass, where the blades would hide nothing. */
+  for (let tries = 0, laid = 0; laid < 34 && tries < 4000; tries++) {
+    const a = rand() * Math.PI * 2;
+    const r = 2 + 8 * rand();
+    if (rand() > Math.exp(-(r - 2) / 3.5)) continue;
+    const x = seat.x + Math.cos(a) * r, z = seat.z + Math.sin(a) * r;
+    const h = heightAt(x, z);
+    if (h < TIDE || h > SAND_TOP || !offWalk(x, z)) continue;
+    onGround(x, z, rand() * 0.25);
     laid++;
   }
 
-  for (let i = 0; i < 7; i++) {
-    const at = first.bottom.clone().addScaledVector(up, 0.1 + 1.4 * rand()).addScaledVector(side, STEP.width / 2 + STRING.thick + 0.12 + 0.35 * rand());
-    onGround(at.x, at.z, 0.4, side);
-  }
-  /** Against the next riser, by the string on the climber's left. */
-  for (const tread of [1, 2, 4]) {
-    const at = first.bottom.clone().addScaledVector(up, tread * STEP.going - 0.17).addScaledVector(side, 0.55 + 0.05 * rand());
+  /** Against the next riser, beside the runner. */
+  for (const [tread, hand] of [[1, 1], [2, 1], [4, 1], [6, 1], [3, -1], [5, -1]]) {
+    const at = first.bottom.clone().addScaledVector(up, tread * STEP.going - 0.17).addScaledVector(side, hand * (0.55 + 0.05 * rand()));
     leaves.push({
       x: at.x, y: first.bottom.y + tread * STEP.rise + 0.035, z: at.z, size: tuning.birches.leafSize * 0.5 * 1.15,
       normal: new THREE.Vector3(0, 1, 0).addScaledVector(up, -0.55).normalize(), yaw: first.yaw + Math.PI / 2 + (rand() - 0.5) * 0.6,
@@ -154,7 +148,7 @@ function lay(seat: THREE.Vector3): Leaf[] {
 
 /**
  * A handful of the birches' gold come on after the child to the stairs island: a drift banked on the landward side
- * of the swing's seat, thinning up the grass toward the stair, and a few caught against the first steps. They lie
+ * of the swing's seat, thinning along the sand at the foot of the grass, and a few caught on the first steps. They lie
  * where the afternoon left them; nothing moves them.
  */
 export function echoLeaves(seatEcho: THREE.Object3D): THREE.Mesh {
