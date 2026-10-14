@@ -236,7 +236,7 @@ the bank from the step's lens, the lower slope with the hawthorn and rabbit, the
 rabbit's morning wake; one `VIDEO=1 CLIMB=1` strip reviewed by the lead, which also checks the near-lens streaks
 after the widened fade.
 
-### 3b: weather and sound (worktree `updraft-sleeping-climb-sound`, branch `sleeping-climb-sound` from `6c43f270`,
+### 3b: weather and sound (worktree `updraft-sleeping-climb-sound`, branch `sleeping-climb-sound` from the phase 2 close,
 dev server 5232)
 
 **Owns:** `src/world/sleeping-weather.ts` (snowfall), the sleeping room's sound in `src/audio/` (coordinate through
