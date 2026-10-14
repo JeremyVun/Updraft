@@ -305,7 +305,16 @@ turn, white, ghost and glow; the crest. Left for phase 4a:
    for sky or fog artifacts.
 6. The cornice a little bolder, so the lee lip reads from the arrival lens.
 
-## Phase 4: review, playtest, close — in progress
+### 4a — done (`ff214d11`, `10a948f1`)
+
+Prints and thin channel snow are soft blue (no holes to the turf); the walk-out lens is lower and turned toward the
+lamp, so sky and hill show round the bird from about 39 s and the window stays out of frame until the bank's top
+(lead's ruling: the remaining white at 37.5–38 s is fine; no window before the bank's top); the trickle is a short
+broken matte rill; `driftCornice` 0.62. The boat crossing the grass after a scripted `morning` restore is the
+harness skipping the save system's boat placement (a real save or normal play puts it on the west strand), and the
+base does the same: left. Crossings in and out show no sky or fog change. Peak climb lens rotation 0.397 rad/s.
+
+## Phase 4: review, playtest, close — awaiting Jeremy's playtest
 
 Lead watches the whole room in motion with sound beside the owl and the clouds, fixes what does not earn its place,
 then hands Jeremy a build to play. On approval: migrate the durable rules into `docs/chapters.md` § The sleeping
