@@ -53,11 +53,11 @@ export function soapMaterial(): THREE.ShaderMaterial {
 /** A small luminous point with long soft rays, rather than a solid star-shaped collectible. */
 export function starLight(floor = false): THREE.Mesh<THREE.PlaneGeometry, THREE.ShaderMaterial> {
   const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.ShaderMaterial({
-    uniforms: { ...atmo.uniforms, uFade: { value: 1 } },
+    uniforms: { ...atmo.uniforms, uFade: { value: 1 }, uBright: { value: 1 } },
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
     vertexShader: `varying vec2 vUv;
       void main() { vUv=uv; gl_Position=projectionMatrix * modelViewMatrix * vec4(position,1.0); }`,
-    fragmentShader: `varying vec2 vUv; uniform float uFade;
+    fragmentShader: `varying vec2 vUv; uniform float uFade; uniform float uBright;
       float rayIntegral(float x, float sharpness) {
         return sign(x)*(1.0-exp(-abs(x)*sharpness))/sharpness;
       }
@@ -76,7 +76,7 @@ export function starLight(floor = false): THREE.Mesh<THREE.PlaneGeometry, THREE.
         float rays=ray(p.x,width.x,65.0)*ray(p.y,width.y,5.0)+ray(p.y,width.y,65.0)*ray(p.x,width.x,7.0);
         float halo=glow(p,width,12.0)*0.16;
         float a=(core+rays*0.75+halo)*uFade;
-        gl_FragColor=vec4(vec3(1.0,0.79,0.43)*1.65,a);
+        gl_FragColor=vec4(vec3(1.0,0.79,0.43)*1.65*uBright,a);
       }`,
   }));
   if (floor) { mesh.rotation.x = -Math.PI / 2; mesh.scale.setScalar(5.5); }

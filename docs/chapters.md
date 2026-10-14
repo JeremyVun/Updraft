@@ -722,7 +722,10 @@ with a large zoom-out. Camera checks cover earlier stars during later ascents an
 The fallen lights breathe over six seconds, between 92% and full brightness. Jeremy: "if we want to have them blink,
 they should pulse slowly, not just blink in and out really fast." Their cores and rays are filtered across pixels,
 so camera movement must not make the almost edge-on lights flash; `sky-mirror-star-check.mjs` checks constant-light
-camera movement at normal and Ultra render scales separately from the intended pulse.
+camera movement at normal and Ultra render scales separately from the intended pulse. Once the kite is complete
+its stars brighten over three seconds and then breathe, each slowly and a little out of step with the others, so the
+finished constellation looks alive (`tuning.skyMirror.alive*`). Jeremy: "When the stars are completed in the mirror
+chapter, it'd be cool if they shined a bit brighter and started pulsing like they were more alive."
 
 Departure correction, 2026-10-10. Jeremy's brief:
 

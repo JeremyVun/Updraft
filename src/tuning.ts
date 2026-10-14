@@ -324,6 +324,11 @@ export const tuning = {
     bubbleHitPadding: 0.055, captureRadius: 2.1, wandRadius: 0.62,
     liftFrom: 0.2, liftFull: 0.65, starRise: 3.2, starHeight: 18,
     starPulsePeriod: 6, starPulseDepth: 0.08,
+    /**
+     * Once the kite is complete its stars come alive: seconds to brighten, how much brighter they settle, and a slow
+     * breath (seconds, each star a little out of step) that lifts their light and swells them by these shares.
+     */
+    aliveIn: 3, aliveGlow: 1.7, alivePeriod: 3.6, alivePulse: 0.9, aliveSwell: 0.45,
     channelLead: 4,
     boatDriftSpeed: 6, duskFrom: 1.27, duskTo: 1.72, stroll: 1,
     cameraDistance: 27, cameraPortraitDistance: 29,

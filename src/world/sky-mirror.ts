@@ -116,6 +116,7 @@ export class SkyMirror {
   private readonly strokeTo = new THREE.Vector3();
   private readonly stroke = new THREE.Vector3();
   private readonly guideLights = new THREE.Vector4();
+  private alive = 0;
   private readonly constellationLines: THREE.Mesh<THREE.TubeGeometry,THREE.MeshBasicMaterial>[] = [];
 
   private readonly constellationCrossbars: THREE.Mesh<THREE.TubeGeometry,THREE.MeshBasicMaterial>[] = [];
@@ -254,7 +255,7 @@ export class SkyMirror {
     this.bubbles.length=0; this.completedMask=0; this.lastReturned=-1;
     this.ready=this.holdingWand=this.hasPlayed=false; this.requestedStar=-1; this.focusStar=0;
     this.forming=this.cooldown=this.lastCharge=0;
-    this.guideLights.set(0,0,0,0); this.constellationLines.forEach(line=>line.material.opacity=0);
+    this.alive=0; this.guideLights.set(0,0,0,0); this.constellationLines.forEach(line=>line.material.opacity=0);
     this.constellationCrossbars.forEach(line=>line.material.opacity=0);
     this.hoop.position.set(MIRROR_BOWL.x+0.2,1.2,MIRROR_BOWL.z); this.hoop.rotation.set(-0.35,0,0.4);
     this.hoop.visible=true; this.film.visible=false;
@@ -284,6 +285,7 @@ export class SkyMirror {
       line.material.opacity=THREE.MathUtils.lerp(line.material.opacity,lit?0.38:0,k);
     });
     const complete=this.progress===this.stars.length;
+    this.alive=complete?Math.min(1,this.alive+dt/T.aliveIn):0;
     this.constellationCrossbars.forEach(line=>{
       line.material.opacity=THREE.MathUtils.lerp(line.material.opacity,complete?0.38:0,k);
     });
@@ -478,6 +480,12 @@ export class SkyMirror {
           s.state=rising?'sky':'fallen'; s.floor.visible=!rising; s.light.visible=rising;
           if (rising) { this.completedMask|=1<<i; this.lastReturned=i; }
         }
+      }
+      if (s.state==='sky') {
+        const breath=0.5-0.5*Math.cos(time*Math.PI*2/(T.alivePeriod*(1+i*0.09))+i*1.9);
+        const alive=THREE.MathUtils.smoothstep(this.alive,0,1);
+        s.light.material.uniforms.uBright.value=1+alive*(T.aliveGlow-1+T.alivePulse*breath);
+        s.light.scale.setScalar(1.8*(1+alive*T.aliveSwell*breath));
       }
       s.floor.material.uniforms.uFade.value=1-T.starPulseDepth*(0.5-0.5*Math.sin(time*Math.PI*2/T.starPulsePeriod+i*2));
     }
