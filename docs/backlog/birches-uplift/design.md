@@ -36,6 +36,14 @@ Jeremy's ruling (2026-10-15):
 > I reckon we dont need a backlog design session. I'm fairly confident you have the ability to think this though
 > given what we're trying to achieve with the birches chapter, design it, and orchestrate / execute it.
 
+On the island's length (2026-10-15):
+
+> your ideas makes sense.
+>
+> however, i get the feeling that the birches island may be need to be made appropriately longer to accomodate this
+> new content so it doesn't feel too cramped. It might cause a lot of work figuring out how to make the scarf
+> longer, and there may be perf implications to having too much drawn on screen.. What do you think? any ideas?
+
 ## What it is
 
 The birches become the last carefree afternoon of the journey: one more romp in the leaves before bedtime on the
@@ -43,8 +51,10 @@ stairs, the drowned village and the dark wood. A red squirrel lives in the birch
 the child and the cygnet play hide-and-seek with it all the way over the island. The player finds it the only way
 the player can do anything: by blowing the heaps apart. The scarf's four tangles and the swing stay exactly as they
 are, and the squirrel rounds slot in between them, so the walk alternates between a precise gesture (a tangle) and
-loose, joyful gusting (a heap). The music becomes "The Red Door Opens". `birches.ogg` moves to the stairs under the
-cloud, and the island moves further from the stairs so there is quiet sea between the two songs.
+loose, joyful gusting (a heap). The island grows by about 55 m along its walk, so each round gets its own stretch of
+wood instead of being squeezed in beside a tangle. The music becomes "The Red Door Opens". `birches.ogg` moves to
+the stairs under the cloud, and the island moves further from the stairs so there is quiet sea between the two
+songs.
 
 Target: an engaged player spends about **3½–4½ minutes** on the island (currently about 90 s). The Red Door Opens
 runs 3:59, so one pass is about one visit.
@@ -56,18 +66,19 @@ dives into heaps and rummages here (`birches-play.ts`), so the game starts from 
 
 ## The room, stop by stop
 
-The walk, its heaps and tangles in order (current coordinates; after phase 1 every one of them moves with the island,
-see "The island moves"):
+The walk, its heaps and tangles in order. The z values are today's; "gap" rows are the new stretches of wood
+("The island moves and grows"):
 
-| z | What | Status |
+| z today | What | Status |
 | --- | --- | --- |
 | −1052 | landing; the child looks up the ride, sets the cygnet down | as now |
 | −1076 | **round 1** at heap 0 by the fallen log (`BIRCH_PILES[0]`) | new |
+| gap A, ~15 m | open wood between the log and tangle 1, so round 1 and tangle 1 each have their own frame | new |
 | −1081 / −1088 | tangle 1, lift a loop off a fork | as now |
-| −1113 | **round 2**, heap 1 at the swing tree's foot plus one new heap across the ride | new |
-| −1118 | the swing (optional, once) | as now |
+| gap B, ~20 m | **round 2**, a glade on the rise's lower slope with two new heaps | new |
+| −1113 / −1118 | heap 1 at the swing tree's foot (free play, as now) and the swing (optional, once) | as now |
 | −1132 / −1139 | tangle 2, circle the coils up | as now |
-| −1149 | **round 3** in the hollow, heap 2 plus two new heaps; then **the leap** | new |
+| gap C, ~20 m, in the hollow | **round 3**, heap 2 plus two new heaps in a longer hollow; then **the leap** | new |
 | −1157 / −1163 | tangle 3, draw the slipped loop sideways | as now |
 | −1172 | heap 3, free play as now | as now |
 | −1176 / −1180 | tangle 4, the bow; the scarf gathers into the boat as its sail | as now |
@@ -83,7 +94,8 @@ see "The island moves"):
 2. **Tangle 1.** The squirrel sits on the fork above the loop, watching the work (background, never in the way). When
    the loop lifts free it runs off along the scarf through the canopy toward the clearing. The wool is its road, and
    the room's red line leads the eye on.
-3. **Round 2 (two heaps).** It drops off a trunk into one of two heaps either side of the ride below the swing tree.
+3. **Round 2 (two heaps).** It drops off a trunk into one of two heaps either side of the ride in the glade below
+   the rise, out of the swing's frame.
    Now there is a choice. Only the right heap twitches; the tail shows less often. A wrong heap bursts into gold
    harmlessly (it's fun on its own), and the cygnet may rummage one and come up with nothing but a leaf on its head.
 4. **The swing** (optional). The squirrel sits on the swing limb while she rides.
@@ -118,14 +130,47 @@ see "The island moves"):
   (`audio/music-loading.ts`) follow: Red Door warms in the meadow, the stairs song from the birches on, `clouds.ogg`
   from the stairs' white as now.
 
-### The island moves
+### The island moves and grows
 
-Jeremy's roadmap ask: more sea between the birches and the stairs. The birches island moves west by a new
-`BIRCHES_SHIFT` in `world/geography.ts` (revision 12, `GEOGRAPHY_VERSION` bumped, saved coordinates migrated the way
-the other shifts migrate them). Every birches literal (layout, walk, heaps, log, swing tree, scarf snags and perches,
-`BIRCH_RISE`, `BIRCH_HOLLOW`, the berth, the story's absolute z tests such as `boat.position.z < -1175`, and the
-`toBirches` and `toStairs` routes) is expressed through the shift. The island's internal layout does not change at
-all.
+Two asks share one change. Jeremy's roadmap asks for more sea between the birches and the stairs. And three rounds
+added to today's 145 m walk would put eight stops in it, one every ~18 m, while the walking and tangle frames look
+17–26 m ahead, so every frame would hold the next stop as well. The island therefore grows by about 55 m (to a walk
+of about 200 m, a stop every ~25 m) and moves.
+
+**Growing by inserting gaps, not by scaling.** The island is cut into bands across the walk at three lines where no
+authored feature straddles the cut, and the bands are pushed apart: gap A ~15 m, B ~20 m, C ~20 m (the table above).
+Everything inside a band moves rigidly: a tangle with its tree, snag and perches, the swing tree and its clearing,
+the log and its heap. Only the open walk between them gets longer. Exact cut lines are the builder's to choose and
+record here; a stop point may move by a metre or two to clear a cut. Uniform scaling was rejected because it would
+stretch the tangles, the swing clearing and the scarf's wraps, which are tuned shapes.
+
+What each part costs:
+- **Terrain is cheap.** The island is a dome (`ISLES.birches`) plus world-space noise plus two lumps (`BIRCH_RISE`,
+  `BIRCH_HOLLOW`). Growing it means a longer `rz`, a rise that sits where its bands now are, and a hollow
+  lengthened by gap C (`BIRCH_HOLLOW.rz` up; a longer basin is more of a "place the leaves collect", not less). The
+  CPU height function and its GLSL twin (`hf_birches`) take the same new numbers.
+- **Trees fill themselves.** They are placed procedurally over the island, kept off the ride (`walkDistance`), and
+  the ride follows `BIRCHES_WALK`. New ground grows new trees.
+- **The scarf is one strip routed through its snags and perches** (`SCARF_SNAGS`, `SCARF_PERCHES`) and resampled to
+  `ROWS` (1140). Moving those points band by band leaves every tangle's shape alone and lengthens only the wool
+  runs that cross a gap. `ROWS` rises in proportion to the strip's new length (about +25–30%) so the wool stays as
+  fine as now.
+
+**Keeping the cost flat.** All the birches' trees draw as one instanced canopy whenever the island is within 240 m of
+the camera, with 420 simulated leaves each, so tree count is the cost that grows with the island. The island
+narrows (`rx` 60 → about 48–50) so the tree count stays where it is today; the flanks it loses are ones the camera,
+low under the canopy and in thick haze, never shows. The litter field is a 256² grid over the island's box, so a
+longer box would coarsen the leaf floor; it becomes 256 × ~320 along the walk (a trivial GPU pass) to keep today's
+cell size. `LEAF_COUNT` stays as it is, because the loose leaves already concentrate near the walk. The scarf's
+extra rows are the one real CPU increase, measured in phase 1.
+
+**The shift.** The grown island moves by a new `BIRCHES_SHIFT` in `world/geography.ts` (revision 12,
+`GEOGRAPHY_VERSION` bumped, saved coordinates migrated the way the other shifts migrate them), mostly west. Every
+birches literal (layout, walk, heaps, log, swing tree, scarf snags and perches, `BIRCH_RISE`, `BIRCH_HOLLOW`, the
+berth, absolute z tests in the story such as `boat.position.z < -1175`, and the `toBirches` and `toStairs` routes)
+is expressed through the bands and the shift. Geography is tight on this line (the meadow's north shore near
+z −980, the stairs at (100, −1236), the drowned village's south tip near (−10, −1265)), and moving west opens room
+on both sides, because both neighbouring ellipses narrow away from x ≈ 0.
 
 Constraints that choose the shift:
 - `toStairs` lasts about **50 s** of sailing at ordinary speed with no input (measure the current crossing first and
@@ -161,9 +206,9 @@ held to the bar of the owl and the clouds.
 The wind never puts leaves back: a burst heap slumps lower and wider, and depth is carried downwind to wherever the
 air ran out (`LitterField`). So the squirrel hides **where the leaves are now**, not where they were authored.
 
-- Each round has an area and a set of authored heaps (`BIRCH_PILES` gains three: one for round 2 and two for round 3,
-  each banked against something, a trunk, root or stone, as every heap here is). Exact positions are settled in the
-  storyboard phase.
+- Each round has an area and a set of authored heaps. `BIRCH_PILES` gains four: two for round 2 in gap B's glade and
+  two for round 3 in the hollow. Each is banked against something, a trunk, root or stone, as every heap here is.
+  Exact positions are settled in the storyboard phase.
 - When the squirrel picks a hide, one small asynchronous readback of the litter field over the round's area (the
   engine's `Readback`, never a synchronous read and never every frame) finds the live depth. It takes the round's
   heaps that are still deep enough to bury it. If the player has already blown them flat, it uses the deepest drifts
@@ -247,6 +292,11 @@ resumed player never repeats or skips a round's place on the walk.
   from the rounds plus the slower pace they bring to the walk.
 - The island moves, rather than the stairs and everything after them, and rather than a winding crossing that
   would only fake the distance.
+- The island grows, rather than staying at 145 m with the rounds squeezed in: frames would overlap stops (Jeremy,
+  2026-10-15: "the birches island may be need to be made appropriately longer to accomodate this new content so it
+  doesn't feel too cramped"). It grows by inserting gaps rather than scaling, so no tuned shape stretches. Side glades
+  off the ride were rejected: the low camera under the canopy would look through trunks at them, and a layout that
+  reads clearly from above becomes clutter at eye level.
 
 ## Verification
 

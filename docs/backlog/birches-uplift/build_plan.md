@@ -19,26 +19,32 @@ Design: [design.md](design.md). Everything is built in the worktree `/Users/jere
 
 ## Phases
 
-### 1. Move the island. Opus. Done: ☐
+### 1. Grow and move the island. Opus. Done: ☐
 
 Owns `world/geography.ts`, the birches entries of `world/heightfield.ts` (`ISLES.birches`, `BIRCH_RISE`,
-`BIRCH_HOLLOW`), `world/birches.ts`, `world/birch-scarf.ts`, `story/birches.ts`, the `toBirches`/`toStairs` routes
-in `story/journey.ts`, wherever saved coordinates are migrated by `GEOGRAPHY_VERSION`, and any tool with birches
+`BIRCH_HOLLOW`, `birchesHeight` and `hf_birches`), `world/birches.ts`, `world/birch-scarf.ts` (`ROWS` and the
+points), `fx/leaves.ts` (the litter grid's shape), `story/birches.ts`, the `toBirches`/`toStairs` routes in
+`story/journey.ts`, wherever saved coordinates are migrated by `GEOGRAPHY_VERSION`, and any tool with birches
 coordinates baked in (`tools/scarf-check.mjs`, `scarf-geometry-check.mjs`, `birches-drift-check.mjs`, the
 playthrough).
 
-- First, measure the current `toStairs` and `toBirches` sailing times with no input (from `?chapter=toStairs` and
-  `?chapter=toBirches` in the QA preview), and record them in design.md under "The island moves".
-- Add `BIRCHES_SHIFT` (revision 12) and express every birches literal through it, so that `BIRCHES_SHIFT = {0, 0}`
-  reproduces the current world bit for bit. Commit that first, checked by comparing stills at a zero shift.
-- Choose the shift west (with any z component the constraints need) so that `toStairs` is about 50 s and
-  `toBirches` stays within ±15%. The constraints are in design.md.
-- **Seam:** the island's local layout is unchanged. Later phases author positions in the same local terms (relative
-  to the shifted literals), never as new absolute numbers.
-- **Gate:** typecheck and build. Sailing times re-measured and recorded. `scarf-check` and `birches-drift-check`
-  pass. Before/after stills: the arrival, the crest, the berth and departure, mid-`toStairs`, the stairs landing
-  under the deck, and the view north from the meadow's far shore. A save made at a birches checkpoint and at
-  `toStairs` before the change resumes correctly after it.
+- First, measure and record in design.md: the current `toStairs` and `toBirches` sailing times with no input (from
+  `?chapter=toStairs` and `?chapter=toBirches` in the QA preview), the tree count, and one baseline frame-time run on
+  the birches walk (`node tools/perf.mjs frames 20 chapter=birches`, with no other GPU process busy). Jeremy raised
+  performance, so a before/after comparison is wanted here, once each.
+- Step 1, refactor only: route every birches literal through one mapping, the bands and the shift, so that zero gaps
+  and a zero shift reproduce today's world exactly. Check with stills, then commit.
+- Step 2: open gaps A, B and C at cut lines where no feature straddles the cut. Lengthen the dome and the hollow,
+  narrow `rx` until the tree count is back to the baseline (±5%), reshape the litter grid to keep today's cell size,
+  and raise `ROWS` in proportion to the scarf's new length.
+- Step 3: choose the shift (mostly west) to meet the crossing and clearance constraints in design.md.
+- **Seam:** later phases author positions through the same mapping, in band-local terms, never as new absolute
+  numbers. The empty gaps are where phases 4 and 5 put rounds 1–3.
+- **Gate:** typecheck and build. Sailing times, tree count and the frame-time run re-measured and recorded beside
+  the baseline. `scarf-check` (all modes) and `birches-drift-check` pass, and the tangles' close stills match today's.
+  Before/after stills: the arrival, each gap from the walk, the crest, the hollow, the berth and departure,
+  mid-`toStairs`, the stairs landing under the deck, and the view north from the meadow's far shore. A save made at a
+  birches checkpoint and at `toStairs` before the change resumes correctly after it.
 
 ### 2. Music. Sonnet. Done: ☐ (after 1; may run alongside 3)
 
@@ -86,8 +92,8 @@ Owns `src/creatures/squirrel/` (`gait`, `voice`, the actions' motion in `pose`),
 
 ### 4. Storyboard and layout. Opus (visual). Done: ☐ (after 1 and 3a)
 
-Owns the new `BIRCH_PILES` entries in `world/birches.ts` (one for round 2, two for round 3, each banked against a
-trunk, root or stone), and a layout module `src/story/birches-rounds.ts` holding each round's area, heaps, the
+Owns the new `BIRCH_PILES` entries in `world/birches.ts` (two for round 2 in gap B, two for round 3 in the hollow,
+each banked against a trunk, root or stone), and a layout module `src/story/birches-rounds.ts` holding each round's area, heaps, the
 child's standing point, the camera frame, the squirrel's paths between rounds, its perches at each tangle, the swing
 limb and the goodbye branch.
 
