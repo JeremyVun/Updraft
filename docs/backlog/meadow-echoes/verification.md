@@ -138,3 +138,22 @@ claimed. The bough is an initial geometric prototype, with final sound and pacin
 The requested stable preview remains the earlier frozen build on port 5246, rooted at
 `/tmp/updraft-timing-preview-AH5XUd`; the new instrument is in development on port 5244. The frozen preview
 still responds after all source changes and the separate production build.
+
+## Merge verification — 2026-10-14
+
+Merged the full worktree onto clean `main` at `9c48f571`, retaining its two dependency-update commits.
+TypeScript and the production build pass (`/tmp/meadow-merge-build.log`), as does production/QA separation
+(`/tmp/meadow-merge-production-check.log`). The existing large-chunk warning remains.
+
+The mechanics suite completed all 72 checks (`/tmp/meadow-merge-mechanics/results.json`): 69 passed on the
+first run, including every Meadow and piano check. The Little Boats arrival fixture lacked `life.bloom()`;
+adding that stub makes its full rerun pass (`/tmp/meadow-merge-little-boats-rerun.log`).
+
+The unseeded wood check failed once on portrait ember visibility at 120 Hz. Both merged main and the separate
+pre-merge `64cc1c72` checkout pass with random seed 731 and produce identical output
+(`/tmp/meadow-merge-wood-seeded.log`, `/tmp/meadow-merge-wood-baseline-seeded.log`). This establishes parity for
+that seed, not a fix for the unseeded check's variability. The foghorn check's `?url` audio import failure also
+occurs on pre-merge main (`/tmp/meadow-merge-foghorn-baseline.log`); it remains an inherited test-harness issue.
+
+No deployment or push was requested or performed. Recorded phrases and final musical synchronisation remain
+pending; the existing player-camera captures are the visual evidence, not a new motion or listening review.

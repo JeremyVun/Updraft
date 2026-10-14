@@ -1,6 +1,6 @@
 # The meadow carries the song
 
-Status: landscape, musical play redesign and wind-instrument foundation approved for merge onto `main`.
+Status: landscape, musical play redesign and wind-instrument foundation merged onto `main` on 2026-10-14.
 Recorded phrases and final musical synchronisation remain a follow-up; deployment is not requested.
 
 Merge instruction (2026-10-14, verbatim):
