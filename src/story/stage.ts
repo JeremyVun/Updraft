@@ -12,7 +12,7 @@ import { SquirrelYard } from './squirrel-yard';
 
 export type StageView = 'game' | 'flock' | 'behind' | 'front' | 'side' | 'far-side' | 'close' | 'top' | 'k-front' | 'k-side' | 'k-back' | 'k-34' | 'k-above' | 'k-full' | 'k-low'
   | 'c-close' | 'c-face' | 'c-side' | 'c-back' | 'c-front' | 'c-34' | 'c-profile' | 'c-head' | 'c-near' | 'c-far' | 'c-along' | 'c-across'
-  | 's-face' | 's-side' | 's-near' | 's-game';
+  | 's-face' | 's-side' | 's-near' | 's-yard' | 's-game';
 
 /** Camera placements in the child's frame: bearing from their facing, distance, height above the subject, and what to look at. */
 const VIEWS: Record<StageView, { bearing: number; distance: number; height: number; on: 'both' | 'cygnet' | 'cat' | 'squirrel' }> = {
@@ -51,9 +51,11 @@ const VIEWS: Record<StageView, { bearing: number; distance: number; height: numb
   'c-along': { bearing: Math.PI / 2, distance: 3.2, height: 0.7, on: 'cat' },
   'c-across': { bearing: Math.PI + 0.3, distance: 3.2, height: 0.9, on: 'cat' },
   /** Round the squirrel, from the way it faced when the view was chosen, and from behind the child at play distance. */
-  's-face': { bearing: 0.35, distance: 0.9, height: 0.05, on: 'squirrel' },
-  's-side': { bearing: Math.PI / 2, distance: 1.3, height: 0.15, on: 'squirrel' },
-  's-near': { bearing: 0.6, distance: 4, height: 1.6, on: 'squirrel' },
+  's-face': { bearing: 0.35, distance: 1.5, height: 0.1, on: 'squirrel' },
+  's-side': { bearing: Math.PI / 2, distance: 2.3, height: 0.3, on: 'squirrel' },
+  's-near': { bearing: 0.6, distance: 4.5, height: 1.8, on: 'squirrel' },
+  /** From the yard's near edge, following the squirrel wherever in the yard it goes. */
+  's-yard': { bearing: Math.PI, distance: 6.5, height: 2.2, on: 'squirrel' },
   's-game': { bearing: Math.PI, distance: 15, height: 4.5, on: 'squirrel' },
 };
 
@@ -150,7 +152,7 @@ export class StageChapter implements Chapter {
   look(view: StageView): void {
     this.view = view;
     if (view.startsWith('c-') || view.startsWith('s-')) this.cameraCut++;
-    if (view === 's-game') this.facing = this.squirrels?.yaw ?? this.cast.child.yaw;
+    if (view === 's-game' || view === 's-yard') this.facing = this.squirrels?.yaw ?? this.cast.child.yaw;
     else if (view.startsWith('s-')) this.facing = this.cast.squirrel.yaw;
     else if (view === 'c-near' || view === 'c-far' || view === 'c-along' || view === 'c-across') this.facing = this.yard?.yaw ?? this.cast.child.yaw;
     else if (view.startsWith('c-')) this.facing = this.cast.cat.yaw;
@@ -422,6 +424,7 @@ export class StageChapter implements Chapter {
     this.breeze = 0.3;
     this.season = undefined;
     if (this.squirrels?.playing) {
+      this.squirrels.update(dt);
       /** The birches' late afternoon: the room's own dusk, season and a little of its haze. */
       this.dusk = 0.62;
       this.season = 0.44;

@@ -95,7 +95,7 @@ with its stage hook (as `cat-yard.ts` is wired), and `tools/squirrel-check.mjs`.
   eye 0.8 m above the ground, so at 1.7× it is a third of the cygnet and the size of one litter leaf; 2.3× gives
   38 / 21 px. The scale (`tuning.squirrel.scale`) and the portrait round frames are for phase 4 to settle.
 
-### 3b. The squirrel's motion and voice. Opus. Done: ☐ (after 3a)
+### 3b. The squirrel's motion and voice. Opus. Done: ☑ (after 3a)
 
 Owns `src/creatures/squirrel/` (`gait`, `voice`, the actions' motion in `pose`), `squirrel.ts` mechanics,
 `squirrel-check.mjs` strips.
@@ -105,6 +105,19 @@ Owns `src/creatures/squirrel/` (`gait`, `voice`, the actions' motion in `pose`),
 - **Gate:** motion strips and one clip each of bound, dive→burst, climb and run-line, watched by the orchestrator
   for motion. Contact via skinned vertices against the rendered ground, litter surface and bark (no floating, no
   sinking except when `buried`). No pops or foot slip beyond the cat's limits.
+- **Built:** scale 3.0 (forearms slimmed, ear tufts a brush of bowed wisps, the perch tail curled over the back).
+  `squirrel/gait.ts` plants paws by distance travelled in a squirrel's bound (forepaws land, hind feet swing through
+  outside them and land ahead), one pattern per surface; `bound.ts` shapes the body through the stride;
+  `route.ts` makes a `follow` path one smooth way over the ground, round trunks (`spiral`) and along the wool
+  (`sagging`), the paws snapping to that surface and leaping together from one surface to the next. `dive` and
+  `burst` are timed arcs, `peek` rises and goes back under, `scold` chucks in bouts with jaw, body and tail
+  flicks, `sit` nibbles in bouts. `voice.ts` synthesises the chuck, chatter, squeak, claws, patter, landing and
+  gnawing (`squirrel.heard`, played positionally in `main.ts`); `onLeaves` reports dive, burst, peek and ground
+  steps. Measured on the yard (`squirrel-check.mjs MODES=motion`): planted-paw slip 0 in every motion; leg short
+  of a planted paw at most 4 mm except 13 mm in a scold's chuck after a burst; sink and float at most 7 mm and
+  9 mm through bound, climbs, wool and scold, with transients of 13 mm (pelvis at a burst's take-off) and 26 mm
+  (a hind foot in a wool-to-trunk leap). In the round frame at 15 / 12 m the sitting squirrel is 50 / 62 px tall in
+  landscape and 27 / 34 px in portrait.
 
 ### 3c. Autumn leaves on the stairs island. Opus (visual). Done: ☐ (independent; may run alongside 2 and 3a)
 

@@ -20,7 +20,7 @@ const TAIL_Z = REST[TAIL_1][2] + 0.012;
 /** Where the coat is long and where short, from where a point is on the squirrel at rest. */
 const FUR_GLSL = /* glsl */ `
 float furLength(vec3 r, int m) {
-  if (m == ${TUFT}) return 1.4;
+  if (m == ${TUFT}) return 0.8;
   if (m == ${EAR}) return 0.45;
   vec3 q = r - ${vec3(SKULL)};
   float head = step(${(SKULL[2] - SKULL_SIZE[2] * 1.1).toFixed(4)}, r.z) * smoothstep(-0.03, -0.012, q.y);
@@ -28,9 +28,10 @@ float furLength(vec3 r, int m) {
   float cheek = head * smoothstep(0.008, 0.016, abs(q.x)) * (1.0 - smoothstep(-0.004, 0.008, q.y)) * (1.0 - face);
   float plume = 1.0 - smoothstep(${(TAIL_Z - 0.03).toFixed(4)}, ${TAIL_Z.toFixed(4)}, r.z);
   float paw = 1.0 - smoothstep(0.006, 0.03, r.y);
+  float forearm = (1.0 - smoothstep(0.032, 0.046, r.y)) * smoothstep(0.022, 0.032, r.z);
   float eye = smoothstep(${(EYE_RADIUS * 1.05).toFixed(4)}, ${(EYE_RADIUS * 1.45).toFixed(4)}, distance(vec3(abs(r.x), r.yz), ${vec3(EYE_AT)}));
   float nose = smoothstep(0.003, 0.007, distance(r, ${vec3(NOSE_AT)}));
-  return clamp(1.0 + 0.7 * cheek - 0.55 * face - 0.6 * paw + 3.6 * plume, 0.2, 4.6) * eye * nose;
+  return clamp(1.0 + 0.7 * cheek - 0.55 * face - 0.6 * paw - 0.35 * forearm + 3.6 * plume, 0.2, 4.6) * eye * nose;
 }`;
 
 const VERT = /* glsl */ `
