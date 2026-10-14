@@ -37,7 +37,9 @@ Rules every room keeps:
 - **Dream echoes.** One thing from the room before has washed up on the arrival beaches of the little boats (a
   pegged pillowcase), the meadow (the bath's rubber duck, grey until the piano wakes it), the birches (a run of piano
   keys) and the stairs (the swing's seat) (`world/echoes.ts`): scenery only, above the tide line and off the walk; the
-  camera never turns to it, and home has none. It is "things recur in the wrong place" from `docs/journey.md`.
+  camera never turns to it, and home has none. On the stairs island a handful of the birches' gold came too
+  (`world/echo-leaves.ts`): a drift banked on the seat's landward side, thinning along the sand at the grass's foot,
+  a few caught on the first steps; baked and still, one draw, lit by the stairs' light. It is "things recur in the wrong place" from `docs/journey.md`.
 - **Landing and leaving.** On a beach the boat runs up the sand and the child sits a moment before stepping out
   (`Traveller.stepAshore`); at a jetty they step up onto the boards (`Traveller.alight`). See `docs/boat.md`.
 - **The reward phrase** (`completeObjective()` in `story/cues.ts`) plays
