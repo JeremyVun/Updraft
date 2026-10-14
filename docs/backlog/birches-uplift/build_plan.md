@@ -96,7 +96,7 @@ Owns `world/echoes.ts` (or a small module beside it that it creates). Build desi
 island".
 
 - **Gate:** before/after stills of the stairs arrival, the walk to the stairs' foot and the first flights, in
-  portrait and landscape. Nothing is on the walk or in a tangle of the stairs' own play. They read as birch gold in
+  portrait and landscape. Nothing lies on the walk or in the way of the stairs' own play. They read as birch gold in
   the stairs' light, and nothing in the room's existing look changes.
 
 ### 4. Storyboard and layout. Opus (visual). Done: ☐ (after 1 and 3a)
