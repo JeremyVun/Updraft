@@ -55,6 +55,8 @@ try {
         bird:k.position.toArray(),rootUp:k.nodes[0].matrixWorld.elements[5],act:k.mind.act,curtains:g.sleeping.curtains,opening:g.sleeping.curtainOpening,ribbonHeld:g.sleeping.ribbon.held,ribbonGap:k.billGrip?bill.distanceTo(k.billGrip):null,cold:g.sleeping.cold,frost:g.sleeping.frost,
         hearthFlame:g.sleeping.hearth.flame.value,hearthEmbers:g.sleeping.hearth.embers.value,clockRock:g.sleeping.clockBody.rotation.z,alarmAge:g.sleeping.alarmAge,headClearance,preenWeight:k.preenWeight,bandage:k.wing.manualUnroll,billGap:k.preenAt?bill.distanceTo(k.preenAt):null,
         featherHeld:!!g.sleeping.feather.heldBy,
+        // The nearest wind streak to the lens, so a band across the frame can be traced to what drew it.
+        nearLine:g.lines.lines.reduce((near,l)=>Math.min(near,...l.points.map(p=>p.distanceTo(g.rig.camera.position))),Infinity),
         snowDepth:g.sleeping.trail.snowDepthAt(k.position.x,k.position.z)});
       last=now;requestAnimationFrame(sample);
     }sample();

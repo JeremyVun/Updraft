@@ -64,6 +64,8 @@ export class Cygnet {
   steadyLift = false;
   /** How hard it leans into the wind it is walking against, 0..1, where the story puts it out in the weather. */
   braced = 0;
+  /** Lifted by circles it cannot fly on, it beats its good wing and holds the bandaged one in, 0 not at all to 1. */
+  hopeBeats = 0;
   /** Contact at the tip of the bill, solved after the skeleton has posed. */
   billGrip: THREE.Vector3 | null = null;
   billGripWeight = 0;
@@ -329,7 +331,7 @@ export class Cygnet {
       time: 0, carried: false, seat: null, inHands: false, move: null, jostle: 0, falling: false, gliding: false, leaving: false, afoot: false, downed: false, afloat: false, perched: false,
       settle: 0, fear: 0, bond: 0, cold: 0, effort: 0, flap: 0, flapPhase: 0, glide: 0, look: 0, tucked: 0, hope: 0, hopLift: 0, crouch: 0, landing: 0, faceplant: 0, flop: 0, doze: 0, wriggle: 0,
       puff: 0, stride: 0, hurry: 0, pitch: 0, roll: 0, tow: 0, beg: 0, call: { env: 0, note: 0, long: false }, gaze: { yaw: 0, pitch: 0, firm: false, wandering: true },
-      act: null, actK: 0, actEnv: 0, actSide: 1, actYaw: 0, breath: 0, blink: 0, wingGuard: 0, wingOpening: 0, braced: 0, wind: { x: 0, z: 0 },
+      act: null, actK: 0, actEnv: 0, actSide: 1, actYaw: 0, actNear: 0, breath: 0, blink: 0, wingGuard: 0, wingOpening: 0, braced: 0, wind: { x: 0, z: 0 },
       gait: { on: false, feet: [{ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }], sway: 0, roll: 0, twist: 0, dip: 0, pace: 0 },
     };
     this.mat = cygnetMaterial(this.bones);
@@ -907,6 +909,11 @@ export class Cygnet {
     else if (this.state === 'falling') this.descend(dt);
     else if (this.state === 'downed') this.struggling(dt);
     else this.passenger(dt);
+    if (this.hopeBeats > 0 && this.state === 'following' && this.hope > 0.02) {
+      const beat = this.hope * this.hopeBeats;
+      this.flap = Math.max(this.flap, beat);
+      this.flapPhase += dt * (6 + beat * 8);
+    }
     /** Off its own wings the legs come back down under it; left carried up, they trail behind it like a swimmer's. */
     if (this.state !== 'gliding' && this.state !== 'fledging' && this.state !== 'leaving' && this.state !== 'flying') this.tucked = ease(this.tucked, 0, 4, dt);
 
@@ -1731,6 +1738,7 @@ export class Cygnet {
     d.wind.x = this.windNow.x * cy - this.windNow.z * sy;
     d.wind.z = this.windNow.x * sy + this.windNow.z * cy;
     d.actYaw = wrapAngle(Math.atan2(m.actAt.x - this.position.x, m.actAt.z - this.position.z) - yaw);
+    d.actNear = 1 - THREE.MathUtils.smoothstep(Math.hypot(m.actAt.x - this.position.x, m.actAt.z - this.position.z), 0.4, 1.2);
     this.aim(yaw);
 
     /** On its own feet and not hopping, its legs belong to the ground it is walking on. */

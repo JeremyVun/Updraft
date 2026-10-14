@@ -27,8 +27,11 @@ function alongRoute(from: number, metres: number): THREE.Vector3 {
 const SNOW_FORWARD = point(SLEEP_DRIFT_STOP+1).sub(point(SLEEP_DRIFT_STOP)).setY(0).normalize();
 const MIST_FORWARD = point(SLEEP_FOG_STOP+1).sub(point(SLEEP_FOG_STOP)).setY(0).normalize();
 const SNOW_RIGHT = new THREE.Vector3(-SNOW_FORWARD.z, 0, SNOW_FORWARD.x);
-/** The drift packed into the notch a few paces above where the bird stops, banked against the outcrop rather than the drop. */
-export const SNOW_AT = alongRoute(SLEEP_DRIFT_STOP, 3.85).addScaledVector(SNOW_RIGHT, -1.3);
+/**
+ * The drift packed into the notch a few paces above where the bird stops, deepest against the outcrop but reaching
+ * across the way far enough that the swept channel keeps a low bank on the drop's side too.
+ */
+export const SNOW_AT = alongRoute(SLEEP_DRIFT_STOP, 3.85).addScaledVector(SNOW_RIGHT, -0.7);
 SNOW_AT.y = heightAt(SNOW_AT.x, SNOW_AT.z);
 /** The fog bank lying in the saddle just uphill of the bird. */
 export const MIST_AT = alongRoute(SLEEP_FOG_STOP, 2.8);
@@ -37,7 +40,7 @@ const SNOW_SCULPT = 0.4;
 /** The drift fills the notch from the outcrop to the lip of the drop, across the way and along it, in metres. */
 const DRIFT_WIDE = 7.5, DRIFT_DEEP = 6.5;
 /** How far the swept channel's floor and its bank tops move out from the path; the wide gap keeps the banks rounded. */
-const CHANNEL_WIDEN = .85, CHANNEL_SOFTEN = 1.75;
+const CHANNEL_WIDEN = .45, CHANNEL_SOFTEN = .9;
 const POWDER_COUNT = 560;
 /** How much of the summit window's glow reaches the eye: lost when the fog closes round the bird, back as it parts. */
 export const WINDOW_SEEN = { value: 1 };
@@ -57,7 +60,7 @@ const FRAG = `${ATMO_GLSL}
 /** Small sheltered passages, rime-covered rock strata and loose powder in the winter hillside. */
 export class SleepingTrail {
   readonly objects: THREE.Object3D[] = [];
-  readonly snowTarget = SNOW_AT.clone().add(new THREE.Vector3(0, tuning.sleeping.snowDepth + 0.65, 0));
+  readonly snowTarget = SNOW_AT.clone().add(new THREE.Vector3(0, tuning.sleeping.snowDepth + 0.3, 0));
   /** Where strokes part the fog: just uphill of the bird, so even a narrow screen shows it beside the bird. */
   readonly mistTarget = alongRoute(SLEEP_FOG_STOP, 1.4).add(new THREE.Vector3(0, 1.15, 0));
   interaction: 'snow' | 'mist' | null = null;
@@ -360,7 +363,8 @@ export class SleepingTrail {
     c.glimpse+=(this.glimpse-c.glimpse)*(1-Math.exp(-dt/t.mistGlimpseEase));
     c.lost+=(this.windowLost-c.lost)*(1-Math.exp(-dt/t.mistWindowEase));
     WINDOW_SEEN.value=1-c.lost;
-    atmo.uniforms.uSleepMist.value.set(MIST_AT.x,MIST_AT.y+1.1-emerged*3,MIST_AT.z,(1-this.thaw.value)*(1-emerged*.94)*(1-c.glimpse*t.mistGlimpseThins));
+    atmo.uniforms.uSleepMist.value.set(MIST_AT.x,MIST_AT.y+1.1-emerged*3,MIST_AT.z,
+      (1-this.thaw.value)*(1-emerged*.94)*(1-c.glimpse*t.mistGlimpseThins)*(1+c.lost*(t.mistBankCloses-1)));
     atmo.uniforms.uSleepMistPart.value=this.clear.value;
     atmo.uniforms.uSleepMistAxis.value.set(MIST_FORWARD.z,-MIST_FORWARD.x);
     this.guideFade+=((this.guideActive?1:0)-this.guideFade)*(1-Math.exp(-dt*2));

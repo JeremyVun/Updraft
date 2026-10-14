@@ -66,6 +66,8 @@ export interface Drives {
   actSide: number;
   /** The way a reaction is aimed, relative to the way its body faces. */
   actYaw: number;
+  /** How near the thing an act is aimed at lies, 1 at its own side (its own wing) to 0 a stride or more away. */
+  actNear: number;
   breath: number;
   blink: number;
   wingGuard: number;
@@ -408,7 +410,8 @@ export class Poser {
     wantPitch = lerp(wantPitch, -0.55 + haul / Math.max(tug, 1e-3) * 0.7, tug);
     wantPitch = lerp(wantPitch, 0.5 - push / Math.max(nudge, 1e-3) * 1.1, nudge);
     wantYaw = lerp(wantYaw, clamp(d.actYaw, -2.3, 2.3), back);
-    wantPitch = lerp(wantPitch, -0.05, back);
+    /** Looking round at its own wing, it bows its head down to it rather than gazing out level past it. */
+    wantPitch = lerp(wantPitch, lerp(-0.05, 0.8, d.actNear), back);
     wantYaw = lerp(wantYaw, 1.5, p.sleep);
     wantPitch = lerp(wantPitch, 0.4, p.sleep);
     wantYaw *= 1 - d.call.env * 0.6;

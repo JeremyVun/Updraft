@@ -3057,7 +3057,7 @@ export const tuning = {
     /** And how high it lies once the night has thickened it: over a bird's head on the lower slopes of the hill. */
     fogClimbs: 11.4,
     /** And how high it comes up the saddle when it closes over the bird there, until the player parts it. */
-    fogEncloses: 19,
+    fogEncloses: 21,
     fogSoft: 2.8,
     /** How far the top surface drifts up and down, and how fast the noise in it moves with the breeze. */
     fogSwell: 0.7,
@@ -3231,12 +3231,15 @@ export const tuning = {
     climbEncouragement: 0.28,
     /**
      * Exposure rises from the bed's edge to the crest: the breeze it adds, how hard the bird leans into it and how much
-     * shorter its steps get at the top, and the gust energy behind it on the crest that counts as a full tailwind.
+     * shorter its steps get on the way up, and the gust energy behind it on the crest that counts as a full tailwind.
+     * On the crest itself it goes in small braced steps, and a full tailwind straightens it into only a little more.
      */
     climbWind: 0.8,
     climbLean: 0.9,
     crestSlows: 0.45,
     crestTailwind: 3,
+    crestPace: 0.15,
+    crestEncouragement: 0.09,
     /** Seconds each glance back down the hill or up at the window lasts. */
     glanceFor: 1.6,
     /** The frozen trickle: how far short of it the bird hops, and the hop. */
@@ -3249,7 +3252,7 @@ export const tuning = {
      * stroke, and how fast a layer eases away.
      */
     driftChest: 0.32,
-    driftWade: 0.2,
+    driftWade: 0.26,
     /** How far toward the lens the bird is drawn while it is in the snow, in place of its usual pull. */
     driftNudge: 0.3,
     snowLayers: 4,
@@ -3267,7 +3270,7 @@ export const tuning = {
     stepRun: 0.5,
     stepTryFor: 0.8,
     stepTryArc: 1.0,
-    stepLooksFor: 1.8,
+    stepLooksFor: 2.4,
     stepLift: 0.6,
     stepHope: 0.85,
     stepWingRecovery: 0.45,
@@ -3282,8 +3285,17 @@ export const tuning = {
     mistCallAt: 4.2,
     mistGlimpseAt: 6.0,
     mistLookFor: 1.9,
-    mistInviteAt: 8.6,
+    /**
+     * How far its body comes round toward the lamp while it looks, as a share of the way; then, once it has turned back
+     * uphill, the seconds before the lens starts round after it and the seconds the lens takes to come round behind it.
+     */
+    mistGlimpseTurn: 0.35,
+    mistTurnAfter: 0.3,
+    mistTurnFor: 4.5,
+    mistInviteAt: 11.2,
     mistGlimpseThins: 0.75,
+    /** How much thicker the saddle's bank stands while the window is lost in it, so less of the crest shows through. */
+    mistBankCloses: 1.7,
     mistWindowEase: 1.4,
     mistGlimpseEase: 0.5,
     routeReach: 0.75,
