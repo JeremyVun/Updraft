@@ -25,6 +25,7 @@ import { WoodChapter } from './wood';
 import { WOOD_BERTH, WOOD_LANDING } from '../world/wood';
 import { SLEEP_BERTH, SLEEP_LANDING } from '../world/sleeping';
 import { BIRCHES_LANDING } from '../world/birches';
+import { birchesAt } from '../world/birches-layout';
 import { placeProgress, restoreLife, saveProgress, type Progress } from './progress';
 import { restoreWingCare } from './wing-care';
 import { WHALE_MOVE, WHALE_NEARER, WHALE_SHORTENING, STILL_SHIFT } from '../world/geography';
@@ -65,6 +66,9 @@ const WHALE_HOLD = WHALE_REST.clone().addScaledVector(WHALE_HEADING, 3);
 /** Halfway in, so the boat is on the heading it rests on long before it comes to rest. */
 const WHALE_LINE = WHALE_LEAD.clone().lerp(WHALE_REST, 0.5);
 
+/** Off the birches' beaches, in the island's band-local terms. */
+const offBirches = (x: number, z: number): THREE.Vector2 => new THREE.Vector2(birchesAt(x, z).x, birchesAt(x, z).z);
+
 /** Where the boat goes on each crossing, including the long open passage after the sleeping island. */
 export const ROUTES: Record<string, THREE.Vector2[]> = {
   toLines: [
@@ -80,9 +84,9 @@ export const ROUTES: Record<string, THREE.Vector2[]> = {
   // Cross the open water north of the meadow, then approach its bank head-on.
   toMeadow: [new THREE.Vector2(125, -510), new THREE.Vector2(60, -535), MEADOW_APPROACH, LANDING],
   /** A short blind hop off the meadow's far shore: the gold island is on them before they can see it coming. */
-  toBirches: [new THREE.Vector2(FAR_SHORE.x + 4, FAR_SHORE.z - 22), new THREE.Vector2(4, -1024), BIRCHES_LANDING],
+  toBirches: [new THREE.Vector2(FAR_SHORE.x + 4, FAR_SHORE.z - 22), offBirches(4, -1024), BIRCHES_LANDING],
   /** A short blind hop east off the birches' far beach, under the cloud coming down, onto the knoll the stairs stand on. */
-  toStairs: [new THREE.Vector2(14, -1214), new THREE.Vector2(44, -1224), new THREE.Vector2(STAIRS_LANDING.x - 8, STAIRS_LANDING.y), STAIRS_LANDING],
+  toStairs: [offBirches(14, -1214), new THREE.Vector2(44, -1224), new THREE.Vector2(STAIRS_LANDING.x - 8, STAIRS_LANDING.y), STAIRS_LANDING],
   /** Legacy saves only: new journeys keep sailing in DrownedChapter until the boat reaches the wood. */
   toWood: [new THREE.Vector2(-18, -1648), new THREE.Vector2(WOOD_LANDING.x, WOOD_LANDING.y)],
   /** A short hop west, round the wood's north shore: the frosted island is on them in a few minutes. */

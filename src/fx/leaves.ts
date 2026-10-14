@@ -2,11 +2,12 @@ import * as THREE from 'three';
 import { COPY_FRAG, GpuRunner, PingPong, atBoot, simMaterial } from '../gl/gpu';
 import { ATMO_GLSL, NOISE_GLSL, atmo } from '../world/atmosphere';
 import { ISLES } from '../world/heightfield';
+import { BIRCHES_LOCAL } from '../world/birches-layout';
 import { mulberry32 } from '../world/noise';
 import { glsl, tuning } from '../tuning';
 
-const W = 192;
-const H = 192;
+/** The loose leaves are kept on a grid this wide; the island decides how many rows of it to fill. */
+export const LEAF_SIDE = 192;
 const ISLE = ISLES.birches;
 
 /**
@@ -17,8 +18,6 @@ const ISLE_GLSL = /* glsl */ `
 float birchIsleR(vec2 xz) {
   return length((xz - vec2(${glsl(ISLE.x)}, ${glsl(ISLE.z)})) / vec2(${glsl(ISLE.rx)}, ${glsl(ISLE.rz)}));
 }`;
-/** How many leaves of the birch island are simulated at once: the ones that come off and the ones on the floor. */
-export const LEAF_COUNT = W * H;
 
 /** The gold of a birch in deep autumn, shared by the leaves still on the tree and the ones coming off it. */
 export const LEAF_TINT_GLSL = /* glsl */ `
@@ -57,16 +56,17 @@ vec3 leafCurl(vec3 n, vec3 side, vec2 c, float amount) {
   return normalize(n + side * c.x * amount);
 }`;
 
-/** The grid the litter field is kept on, and the piece of the world it covers: the island and a margin of sea. */
-const LITTER_RES = 256;
+/** The piece of the world the litter field covers, the island and a margin of sea, and the grid it is kept on. */
 const MARGIN = 14;
-export const LITTER_SIDE = LITTER_RES;
 export const LITTER_BOX = {
   x: ISLE.x - ISLE.rx - MARGIN,
   z: ISLE.z - ISLE.rz - MARGIN,
   sx: (ISLE.rx + MARGIN) * 2,
   sz: (ISLE.rz + MARGIN) * 2,
 };
+/** As fine as when the floor was first laid over the island: 256 cells each way across its first box. */
+const LITTER_CELL = { x: (BIRCHES_LOCAL.rx + MARGIN) * 2 / 256, z: (BIRCHES_LOCAL.rz + MARGIN) * 2 / 256 };
+export const LITTER_RES = { x: Math.round(LITTER_BOX.sx / LITTER_CELL.x), z: Math.round(LITTER_BOX.sz / LITTER_CELL.z) };
 
 /** Reading the litter field: shared by the sim, the floor of leaves and anything that wants to know how deep it lies. */
 export const LITTER_GLSL = /* glsl */ `
@@ -83,16 +83,16 @@ float litterDepth(vec2 xz) {
   vec2 uv = litterUv(xz);
   if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0)))) return 0.0;
   if (uLitterFiltered) return texture(uLitterTex, uv).r;
-  const float res = ${glsl(LITTER_RES)};
+  const vec2 res = vec2(${glsl(LITTER_RES.x)}, ${glsl(LITTER_RES.z)});
   vec2 st = uv * res - 0.5;
   vec2 base = floor(st);
   vec2 f = st - base;
   vec2 at = (base + 0.5) / res;
-  float texel = 1.0 / res;
+  vec2 texel = 1.0 / res;
   float a = texture(uLitterTex, at).r;
-  float b = texture(uLitterTex, at + vec2(texel, 0.0)).r;
-  float c = texture(uLitterTex, at + vec2(0.0, texel)).r;
-  float d = texture(uLitterTex, at + vec2(texel)).r;
+  float b = texture(uLitterTex, at + vec2(texel.x, 0.0)).r;
+  float c = texture(uLitterTex, at + vec2(0.0, texel.y)).r;
+  float d = texture(uLitterTex, at + texel).r;
   return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
 }`;
 
@@ -142,23 +142,22 @@ void main() {
   float response = 1.0 - exp(-uDt / ${glsl(tuning.birches.litterResponse)});
   vec2 velocity = mix(state.gb, target, response);
   float mobile = mix(state.a, lifting(w) * arrived, response);
-  const float cell = 1.0 / ${glsl(LITTER_RES)};
-  vec4 left = texture(uField, vUv - vec2(cell, 0.0));
-  vec4 right = texture(uField, vUv + vec2(cell, 0.0));
-  vec4 down = texture(uField, vUv - vec2(0.0, cell));
-  vec4 up = texture(uField, vUv + vec2(0.0, cell));
-  d += uDt * ((litterFlux(left, state, true) - litterFlux(state, right, true)) / ${glsl(LITTER_BOX.sx / LITTER_RES)}
-            + (litterFlux(down, state, false) - litterFlux(state, up, false)) / ${glsl(LITTER_BOX.sz / LITTER_RES)});
+  const vec2 cell = 1.0 / vec2(${glsl(LITTER_RES.x)}, ${glsl(LITTER_RES.z)});
+  vec4 left = texture(uField, vUv - vec2(cell.x, 0.0));
+  vec4 right = texture(uField, vUv + vec2(cell.x, 0.0));
+  vec4 down = texture(uField, vUv - vec2(0.0, cell.y));
+  vec4 up = texture(uField, vUv + vec2(0.0, cell.y));
+  d += uDt * ((litterFlux(left, state, true) - litterFlux(state, right, true)) / ${glsl(LITTER_BOX.sx / LITTER_RES.x)}
+            + (litterFlux(down, state, false) - litterFlux(state, up, false)) / ${glsl(LITTER_BOX.sz / LITTER_RES.z)});
   /**
    * Leaves will stand at a slope and no steeper. Anything heaped past that runs off into whatever is beside it,
    * which is what makes a burst heap settle into a lower, wider one — and what stops an untouched heap from
    * quietly melting away while nobody is playing with it.
    */
-  float px = 1.0 / ${glsl(LITTER_RES)};
   float gain = 0.0;
   float lose = 0.0;
   for (int i = 0; i < 4; i++) {
-    vec2 step = i < 2 ? vec2(i == 0 ? px : -px, 0.0) : vec2(0.0, i == 2 ? px : -px);
+    vec2 step = i < 2 ? vec2(i == 0 ? cell.x : -cell.x, 0.0) : vec2(0.0, i == 2 ? cell.y : -cell.y);
     float n = texture(uField, vUv + step).r;
     gain += max(0.0, n - state.r - ${glsl(tuning.birches.litterRepose)});
     lose += max(0.0, state.r - n - ${glsl(tuning.birches.litterRepose)});
@@ -430,7 +429,7 @@ export interface Shake {
  * floor's memory. A gust lifts depth off the ground where it blows and puts it down again downwind, so the play
  * leaves swept bare ground behind it and heaps where the air ran out; a heap the wind has just burst slumps into a
  * lower, wider one rather than standing up like a snowdrift; and feet scuff a track through it. Whoever owns the
- * island seeds it once (`LITTER_SIDE` squared, r is the depth in leaves), and after that it is the room's own.
+ * island seeds it once (`LITTER_RES`, r is the depth in leaves), and after that it is the room's own.
  */
 export class LitterField {
   readonly uniforms: Record<string, THREE.IUniform>;
@@ -443,9 +442,9 @@ export class LitterField {
     // Repeated transport needs full precision or small rounding losses slowly erase the floor. A float texture
     // that the GPU cannot filter reads as empty, so without the extension `litterDepth` blends texels itself.
     const filtered = renderer.extensions.has('OES_texture_float_linear');
-    this.field = new PingPong(LITTER_RES, LITTER_RES, THREE.FloatType, filtered ? THREE.LinearFilter : THREE.NearestFilter);
+    this.field = new PingPong(LITTER_RES.x, LITTER_RES.z, THREE.FloatType, filtered ? THREE.LinearFilter : THREE.NearestFilter);
     const copy = simMaterial(COPY_FRAG, { uSrc: { value: null } }, this.field);
-    const tex = dataTexture(seed, LITTER_RES, LITTER_RES);
+    const tex = dataTexture(seed, LITTER_RES.x, LITTER_RES.z);
     atBoot(() => {
       copy.uniforms.uSrc.value = tex;
       this.gpu.run(copy, this.field.read);
@@ -483,8 +482,8 @@ export class LitterField {
 export class FallenLeaves {
   readonly mesh: THREE.Mesh;
   private readonly gpu: GpuRunner;
-  private readonly pos = new PingPong(W, H, THREE.FloatType, THREE.NearestFilter);
-  private readonly vel = new PingPong(W, H, THREE.FloatType, THREE.NearestFilter);
+  private readonly pos: PingPong;
+  private readonly vel: PingPong;
   private readonly velMat: THREE.ShaderMaterial;
   private readonly posMat: THREE.ShaderMaterial;
   private readonly renderMat: THREE.ShaderMaterial;
@@ -492,12 +491,15 @@ export class FallenLeaves {
   /** Where the leaves are wanted: the child, and how far out a settled one has to be before it is moved back. */
   private readonly focus = new THREE.Vector4(0, 0, 58, 0);
 
-  /** `state` is four floats per leaf: where it starts, and 0 if it is still on the tree or 1 if it is not. */
+  /** `state` is four floats per leaf, `LEAF_SIDE` to a row: where it starts, and 0 if it is still on the tree or 1 if not. */
   constructor(renderer: THREE.WebGLRenderer, state: Float32Array, wade: THREE.Vector4) {
     this.gpu = new GpuRunner(renderer);
-    const vel = new Float32Array(LEAF_COUNT * 4);
+    const count = state.length / 4, W = LEAF_SIDE, H = count / W;
+    this.pos = new PingPong(W, H, THREE.FloatType, THREE.NearestFilter);
+    this.vel = new PingPong(W, H, THREE.FloatType, THREE.NearestFilter);
+    const vel = new Float32Array(count * 4);
     const rand = mulberry32(6101);
-    for (let i = 0; i < LEAF_COUNT; i++) vel[i * 4 + 3] = rand();
+    for (let i = 0; i < count; i++) vel[i * 4 + 3] = rand();
     const copy = simMaterial(COPY_FRAG, {
       uSrc: { value: null },
     }, this.pos);
@@ -527,13 +529,13 @@ export class FallenLeaves {
     const geo = new THREE.InstancedBufferGeometry();
     geo.index = quad.index;
     geo.setAttribute('position', quad.attributes.position);
-    const refs = new Float32Array(LEAF_COUNT * 2);
-    for (let i = 0; i < LEAF_COUNT; i++) {
+    const refs = new Float32Array(count * 2);
+    for (let i = 0; i < count; i++) {
       refs[i * 2] = ((i % W) + 0.5) / W;
       refs[i * 2 + 1] = (Math.floor(i / W) + 0.5) / H;
     }
     geo.setAttribute('aRef', new THREE.InstancedBufferAttribute(refs, 2));
-    geo.instanceCount = LEAF_COUNT;
+    geo.instanceCount = count;
     geo.boundingSphere = new THREE.Sphere(new THREE.Vector3(), 1e4);
     this.renderMat = new THREE.ShaderMaterial({
       vertexShader: RENDER_VERT,

@@ -4,14 +4,15 @@ import { screenBrush } from '../creatures/motion';
 import type { PointerInput } from '../input/pointer';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { BirchCanopyMotion } from '../fx/birch-canopy';
-import { FallenLeaves, LEAF_COUNT, LEAF_SHAPE_GLSL, LEAF_TINT_GLSL, LITTER_BOX, LITTER_GLSL, LITTER_SIDE, LitterField } from '../fx/leaves';
+import { FallenLeaves, LEAF_SHAPE_GLSL, LEAF_SIDE, LEAF_TINT_GLSL, LITTER_BOX, LITTER_GLSL, LITTER_RES, LitterField } from '../fx/leaves';
 import { glsl, tuning } from '../tuning';
 import type { WindField, WindSample } from '../wind/field';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { ISLES } from './heightfield';
 import { heightAt } from './island';
 import { createNoise2D, mulberry32 } from './noise';
-import { BirchScarf, SCARF_SNAGS, SCARF_PERCHES } from './birch-scarf';
+import { BirchScarf, FALLEN_LOG, SCARF_SNAGS, SCARF_PERCHES } from './birch-scarf';
+import { BIRCHES_CUTS, BIRCHES_LOCAL, birchesAt, birchesGap, birchesNoise, birchesShape } from './birches-layout';
 
 const ISLE = ISLES.birches;
 /** Below this the shore is bare sand, so both beaches read as beaches and the boat is never behind a tree. */
@@ -25,31 +26,39 @@ const LITTER_CELL = 0.5;
 const LITTER_GRID = 180;
 const LITTER_REACH = 44;
 /** How near the island the camera has to be before its floor and its loose leaves exist at all. */
-const FLOOR_RANGE = ISLE.rx + 90;
+const FLOOR_RANGE = ISLE.rz + 70;
 /** Seconds a tuft the wind has just taken stays in the air on its way out of the crown. */
 const SHED_FLIGHT = tuning.birches.shedFlight;
 
-/** The south beach, where the boat runs ashore. */
-export const BIRCHES_LANDING = new THREE.Vector2(3, -1052);
-/** The boat is drawn up on the north beach before they get there. Nobody put it there. */
-export const BIRCHES_BERTH = new THREE.Vector3(-4, 0, -1197);
-/** The clearing on the rise, where the swing hangs. */
-export const BIRCHES_CLEARING = new THREE.Vector2(2.6, -1118);
+const flat = (x: number, z: number): THREE.Vector2 => {
+  const p = birchesAt(x, z);
+  return new THREE.Vector2(p.x, p.z);
+};
 
+/** The south beach, where the boat runs ashore, and the north beach, where it is drawn up before they get there. */
+const LANDING_AT = [3, -1052] as const;
+const BERTH_AT = [-4, -1197] as const;
 /**
  * Up off the south beach, along an open ride between the trunks, over the rise through the clearing, down into the
  * hollow where the leaves are deepest, through the last thick stand and out onto the north beach with the boat on
  * it. Half again as far as it was: the room was over before the player had found out what the floor does.
  */
-export const BIRCHES_WALK = [
-  new THREE.Vector2(7, -1068),
-  new THREE.Vector2(5, -1092),
-  BIRCHES_CLEARING,
+const WALK_AT = [
+  [7, -1068],
+  [5, -1092],
+  /** The clearing on the rise, where the swing hangs. */
+  [2.6, -1118],
   /** Down into the hollow, which is where the leaf play happens. */
-  new THREE.Vector2(-6, -1146),
-  new THREE.Vector2(-9, -1170),
-  new THREE.Vector2(-4, -1190),
-];
+  [-6, -1146],
+  [-9, -1170],
+  [-4, -1190],
+] as const;
+
+export const BIRCHES_LANDING = flat(...LANDING_AT);
+/** Nobody put the boat there. */
+export const BIRCHES_BERTH = new THREE.Vector3(flat(...BERTH_AT).x, 0, flat(...BERTH_AT).y);
+export const BIRCHES_WALK = WALK_AT.map(([x, z]) => flat(x, z));
+export const BIRCHES_CLEARING = BIRCHES_WALK[2];
 
 /**
  * The heaps. Leaves do not pile themselves in the open: they pile where something stopped them, so every one of
@@ -57,18 +66,17 @@ export const BIRCHES_WALK = [
  * bottom of the hollow, the lee of the last thick stand. They are what the room is for playing with.
  */
 export const BIRCH_PILES = [
-  { x: 9.8, z: -1076, r: 3.6, deep: 4.6 },
-  { x: -3.6, z: -1113, r: 3.2, deep: 4.2 },
+  { ...birchesAt(9.8, -1076), r: 3.6, deep: 4.6 },
+  { ...birchesAt(-3.6, -1113), r: 3.2, deep: 4.2 },
   /** The deep one, at the bottom of the hollow: this is the one the cygnet goes into. */
-  { x: -6, z: -1149, r: 4.6, deep: 5.4 },
-  { x: -11.5, z: -1172, r: 3.2, deep: 4.4 },
+  { ...birchesAt(-6, -1149), r: 4.6, deep: 5.4 },
+  { ...birchesAt(-11.5, -1172), r: 3.2, deep: 4.4 },
 ];
 
-/** The birch that came down years ago and has been catching the year's leaves ever since. */
-const FALLEN_LOG = { a: new THREE.Vector2(5.2, -1080.6), b: new THREE.Vector2(14.6, -1073.4) };
-
 /** The big birch the swing hangs from: it stands west of the clearing and reaches a limb out over it. */
-const SWING_TREE = new THREE.Vector2(-2.4, -1116.6);
+const SWING_TREE = flat(-2.4, -1116.6);
+/** A small glade opens toward the wound trunk, keeping its cloth readable below the canopy. */
+const GLADE = { ...birchesAt(-5, -1121), rx: 10, rz: 18 };
 const SWING_SCALE = 16.5;
 /** Where the rope is over the limb, in the unit tree the swing variant is grown as. */
 const SWING_LIMB = new THREE.Vector3(0.26, 0.25, 0.04);
@@ -507,8 +515,29 @@ export function growBirch(rand: () => number, swingLimb: boolean): { segs: Seg[]
   return { segs, tips };
 }
 
-/** The whole walk, boat to boat: the ride has to start where the child steps off, not where the waypoints do. */
-const WAY = [BIRCHES_LANDING, ...BIRCHES_WALK, new THREE.Vector2(BIRCHES_BERTH.x, BIRCHES_BERTH.z)];
+/**
+ * The whole walk, boat to boat: the ride has to start where the child steps off, not where the waypoints do. It
+ * crosses each gap square to the cuts, so the ride through every band is exactly where it always was.
+ */
+const WAY = ((): THREE.Vector2[] => {
+  const local = [LANDING_AT, ...WALK_AT, BERTH_AT];
+  const way = [flat(...LANDING_AT)];
+  for (let i = 1; i < local.length; i++) {
+    const [ax, az] = local[i - 1], [bx, bz] = local[i];
+    BIRCHES_CUTS.forEach((cut, gap) => {
+      if (cut.open <= 0 || az < cut.z || bz >= cut.z) return;
+      const x = ax + (bx - ax) * (cut.z - az) / (bz - az), from = birchesAt(x, cut.z), to = birchesGap(gap, cut.open, x);
+      way.push(new THREE.Vector2(from.x, from.z), new THREE.Vector2(to.x, to.z));
+    });
+    way.push(flat(bx, bz));
+  }
+  return way;
+})();
+
+const lengthOf = (way: readonly (readonly [number, number])[]): number =>
+  way.reduce((sum, p, i) => i ? sum + Math.hypot(p[0] - way[i - 1][0], p[1] - way[i - 1][1]) : 0, 0);
+/** As many simulated leaves to a metre of the walk as when it was first laid out, with `LEAF_SIDE` rows to it then. */
+const LEAF_COUNT = LEAF_SIDE * Math.round(LEAF_SIDE * lengthOf(WAY.map(p => [p.x, p.y] as const)) / lengthOf([LANDING_AT, ...WALK_AT, BERTH_AT]));
 
 /** How far a point lies off the walk. */
 function walkDistance(x: number, z: number): number {
@@ -737,7 +766,7 @@ export class AutumnBirches {
     const parts = 4;
     const along = (t: number): THREE.Vector3 => {
       const x = a.x + (b.x - a.x) * t;
-      const z = a.y + (b.y - a.y) * t;
+      const z = a.z + (b.z - a.z) * t;
       return new THREE.Vector3(x, Math.max(heightAt(x, z), 0) + 0.16, z);
     };
     const wide = (t: number): number => 0.34 * (1 - t * 0.42);
@@ -755,21 +784,24 @@ export class AutumnBirches {
    * and the heaps. From here on the wind and their feet own it.
    */
   private litterSeed(rand: () => number): Float32Array {
-    const data = new Float32Array(LITTER_SIDE * LITTER_SIDE * 4);
+    const { x: across, z: along } = LITTER_RES;
+    const data = new Float32Array(across * along * 4);
     const patchy = createNoise2D(907);
-    const cell = { x: LITTER_BOX.sx / LITTER_SIDE, z: LITTER_BOX.sz / LITTER_SIDE };
-    const depths = new Float32Array(LITTER_SIDE * LITTER_SIDE);
-    for (let j = 0; j < LITTER_SIDE; j++) {
-      for (let i = 0; i < LITTER_SIDE; i++) {
+    const cell = { x: LITTER_BOX.sx / across, z: LITTER_BOX.sz / along };
+    const depths = new Float32Array(across * along);
+    const shape = { x: 0, z: 0 };
+    for (let j = 0; j < along; j++) {
+      for (let i = 0; i < across; i++) {
         const x = LITTER_BOX.x + (i + 0.5) * cell.x;
         const z = LITTER_BOX.z + (j + 0.5) * cell.z;
         /** The cheap test first: over half of this grid is sea, and the ground under it is not worth looking up. */
-        const isle = Math.hypot((x - ISLE.x) / ISLE.rx, (z - ISLE.z) / ISLE.rz);
+        const s = birchesShape(x, z, shape);
+        const isle = Math.hypot((s.x - BIRCHES_LOCAL.x) / BIRCHES_LOCAL.rx, (s.z - BIRCHES_LOCAL.z) / BIRCHES_LOCAL.rz);
         if (isle > 1.15) continue;
         const h = heightAt(x, z);
         if (h <= 0.05) continue;
-        const patches = patchy(x * 0.12, z * 0.12);
-        const fingers = patchy(x * 0.24 + 18, z * 0.065);
+        const patches = birchesNoise(x, z, (lx, lz) => patchy(lx * 0.12, lz * 0.12));
+        const fingers = birchesNoise(x, z, (lx, lz) => patchy(lx * 0.24 + 18, lz * 0.065));
         // Broad gaps and narrow windrows, independent of the island's elliptical outline.
         const edge = h + patches * 1.6 + fingers * 0.9;
         let d = (1.15 + 0.65 * patches) * THREE.MathUtils.smoothstep(edge, 0.15, 4.8);
@@ -778,15 +810,15 @@ export class AutumnBirches {
         d *= THREE.MathUtils.smoothstep(h, 0.05, 0.65);
         /** The ride is walked and blown over: less lies on it than either side of it. */
         d *= 0.72 + 0.4 * THREE.MathUtils.smoothstep(walkDistance(x, z), 1.5, 9);
-        depths[j * LITTER_SIDE + i] = Math.max(0, d);
+        depths[j * across + i] = Math.max(0, d);
       }
     }
     /** Banked against every trunk, because that is where a leaf blowing along the ground stops. */
     const at = (x: number, z: number, add: number): void => {
       const i = Math.round((x - LITTER_BOX.x) / cell.x - 0.5);
       const j = Math.round((z - LITTER_BOX.z) / cell.z - 0.5);
-      if (i < 0 || j < 0 || i >= LITTER_SIDE || j >= LITTER_SIDE) return;
-      const k = j * LITTER_SIDE + i;
+      if (i < 0 || j < 0 || i >= across || j >= along) return;
+      const k = j * across + i;
       if (depths[k] > 0) depths[k] = Math.min(4, depths[k] + add);
     };
     for (const tree of this.trees) {
@@ -804,11 +836,11 @@ export class AutumnBirches {
       const cj = Math.round((pile.z - LITTER_BOX.z) / cell.z - 0.5);
       for (let j = cj - span; j <= cj + span; j++) {
         for (let i = ci - span; i <= ci + span; i++) {
-          if (i < 0 || j < 0 || i >= LITTER_SIDE || j >= LITTER_SIDE) continue;
+          if (i < 0 || j < 0 || i >= across || j >= along) continue;
           const x = LITTER_BOX.x + (i + 0.5) * cell.x;
           const z = LITTER_BOX.z + (j + 0.5) * cell.z;
           const k = 1 - Math.hypot((x - pile.x) / pile.r, (z - pile.z) / pile.r) ** 2;
-          if (k > 0) depths[j * LITTER_SIDE + i] = Math.max(depths[j * LITTER_SIDE + i], pile.deep * k);
+          if (k > 0) depths[j * across + i] = Math.max(depths[j * across + i], pile.deep * k);
         }
       }
     }
@@ -820,21 +852,20 @@ export class AutumnBirches {
   private place(rand: () => number): void {
     const stands = createNoise2D(311);
     const step = 4.6;
-    for (let gx = ISLE.x - ISLE.rx; gx <= ISLE.x + ISLE.rx; gx += step) {
-      for (let gz = ISLE.z - ISLE.rz; gz <= ISLE.z + ISLE.rz; gz += step) {
-        const x = gx + (rand() - 0.5) * step * 1.4;
-        const z = gz + (rand() - 0.5) * step * 1.4;
+    const L = BIRCHES_LOCAL;
+    for (let gx = L.x - L.rx; gx <= L.x + L.rx; gx += step) {
+      for (let gz = L.z - L.rz; gz <= L.z + L.rz; gz += step) {
+        const { x, z } = birchesAt(gx + (rand() - 0.5) * step * 1.4, gz + (rand() - 0.5) * step * 1.4);
         const y = heightAt(x, z);
         if (y < TREE_LINE) continue;
         const way = walkDistance(x, z);
         /** The ride opens out at both beaches and at the clearing, and closes in between. */
         if (way < RIDE) continue;
-        // A small glade opens toward the wound trunk, keeping its cloth readable below the canopy.
-        if (((x + 5) / 10) ** 2 + ((z + 1121) / 18) ** 2 < 1) continue;
+        if (((x - GLADE.x) / GLADE.rx) ** 2 + ((z - GLADE.z) / GLADE.rz) ** 2 < 1) continue;
         if (this.scarf.crosses(x, z) || SCARF_SNAGS.some(s => Math.hypot(x - s.treeX, z - s.treeZ) < 3.2)
           || SCARF_PERCHES.some(s => Math.hypot(x - s.x, z - s.z) < 3.2)) continue;
         if (Math.hypot(x - BIRCHES_CLEARING.x, z - BIRCHES_CLEARING.y) < 8.5) continue;
-        const thick = 0.62 + 0.42 * stands(x * 0.035, z * 0.035);
+        const thick = 0.62 + 0.42 * birchesNoise(x, z, (lx, lz) => stands(lx * 0.035, lz * 0.035));
         if (rand() > thick) continue;
         /** The wind has been at the shore trees all their lives: shorter and thinner down by the water. */
         const shelter = Math.min(1, (y - TREE_LINE) / 3.5);
@@ -1000,16 +1031,16 @@ export class AutumnBirches {
 
   /** Authored floor coverage for quiet foot scuffs, without reading the moving GPU field back. */
   leafCoverAt(x: number, z: number): number {
-    const i = Math.floor((x - LITTER_BOX.x) / LITTER_BOX.sx * LITTER_SIDE);
-    const j = Math.floor((z - LITTER_BOX.z) / LITTER_BOX.sz * LITTER_SIDE);
-    if (i < 0 || j < 0 || i >= LITTER_SIDE || j >= LITTER_SIDE) return 0;
-    return this.litterCover[(j * LITTER_SIDE + i) * 4];
+    const i = Math.floor((x - LITTER_BOX.x) / LITTER_BOX.sx * LITTER_RES.x);
+    const j = Math.floor((z - LITTER_BOX.z) / LITTER_BOX.sz * LITTER_RES.z);
+    if (i < 0 || j < 0 || i >= LITTER_RES.x || j >= LITTER_RES.z) return 0;
+    return this.litterCover[(j * LITTER_RES.x + i) * 4];
   }
 
   update(dt: number, camera: THREE.Camera, walker: THREE.Vector3 | null): void {
     const away = Math.hypot(camera.position.x - ISLE.x, camera.position.z - ISLE.z);
     /** The gold crowns are worth seeing from the meadow's far shore; the floor and the loose leaves are not. */
-    const here = away < ISLE.rx + 240;
+    const here = away < ISLE.rz + 220;
     const near = away < FLOOR_RANGE;
     for (const o of this.objects) o.visible = here;
     this.scarf.mesh.visible = here && !this.scarf.finished;

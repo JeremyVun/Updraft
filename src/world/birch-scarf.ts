@@ -7,24 +7,30 @@ import type { WindField } from '../wind/field';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { heightAt } from './island';
 import { ScarfCloth, type ClothCapsule } from './scarf-cloth';
+import { birchesAt, birchesLocal, birchesZ } from './birches-layout';
+
+const X = (x: number): number => birchesAt(x, 0).x;
 
 /** The same strip passes through all four tangles, in walking order. */
-export const SCARF_SNAGS = [
+export const SCARF_SNAGS = ([
   { x: 10, z: -1088, treeX: 14, treeZ: -1089, stopX: 3, stopZ: -1081, kind: 'lift' },
   { x: -10, z: -1139, treeX: -10, treeZ: -1139, stopX: -3, stopZ: -1132, kind: 'unwind' },
   { x: 2, z: -1163, treeX: -23, treeZ: -1166, stopX: -5, stopZ: -1157, kind: 'pull' },
   { x: -10.2, z: -1179.2, treeX: -13, treeZ: -1180, stopX: -3, stopZ: -1176, kind: 'bow' },
-] as const;
+] as const).map(s => ({ ...s, x: X(s.x), z: birchesZ(s.z), treeX: X(s.treeX), treeZ: birchesZ(s.treeZ),
+  stopX: X(s.stopX), stopZ: birchesZ(s.stopZ) }));
 
 /** These are real trees: the long runs double back around them, rather than floating between knots. */
-export const SCARF_PERCHES = [
+export const SCARF_PERCHES = ([
   { x: 20, z: -1099, h: 10 }, { x: -15, z: -1104, h: 4.5 },
   { x: 24, z: -1114, h: 12 }, { x: -21, z: -1125, h: 6 }, { x: 18, z: -1130, h: 10 },
   { x: -20, z: -1148, h: 7 }, { x: 17, z: -1152, h: 11 },
   { x: -23, z: -1166, h: 4 }, { x: 18, z: -1171, h: 8 }, { x: -16, z: -1160, h: 6 },
-] as const;
+] as const).map(p => ({ ...birchesAt(p.x, p.z), h: p.h }));
 
-const ROWS = 1140;
+/** The birch that came down years ago and has been catching the year's leaves ever since; the first length lies on it. */
+export const FALLEN_LOG = { a: birchesAt(5.2, -1080.6), b: birchesAt(14.6, -1073.4) };
+
 const ACROSS = 12;
 const RING = ACROSS * 2;
 const ACROSS_AT = Array.from({ length: ACROSS }, (_, a) => a / (ACROSS - 1) * 2 - 1);
@@ -116,20 +122,22 @@ export class BirchScarf {
   private readonly heights: number[] = [];
   private readonly lengths: number[] = [];
   private readonly ownerStart: number[];
-  private readonly rollBase = new Float64Array(ROWS);
+  /** Rows along the strip: as fine as when it was first wound, however long the runs between the trees have grown. */
+  readonly rows: number;
+  private readonly rollBase: Float64Array;
   /** Each row's frame as authored, so a moved row turns its surface locally instead of re-twisting the whole strip. */
-  private readonly restTangent = new Float64Array(ROWS * 3);
-  private readonly restSide = new Float64Array(ROWS * 3);
-  private readonly restAcross = new Float64Array(ROWS * 3);
-  private readonly frameTangent = new Float64Array(ROWS * 3);
-  private readonly frameSide = new Float64Array(ROWS * 3);
-  private readonly windTarget = new Float64Array(ROWS * 3);
-  private readonly windSum = new Float64Array((ROWS + 1) * 3);
-  private readonly gust = new Float64Array(ROWS);
-  private readonly bunched = new Float64Array(ROWS);
-  private readonly folds = new Float64Array(ROWS * ACROSS);
-  private readonly positions = new Float32Array(ROWS * RING * 3);
-  private readonly normals = new Float32Array(ROWS * RING * 3);
+  private readonly restTangent: Float64Array;
+  private readonly restSide: Float64Array;
+  private readonly restAcross: Float64Array;
+  private readonly frameTangent: Float64Array;
+  private readonly frameSide: Float64Array;
+  private readonly windTarget: Float64Array;
+  private readonly windSum: Float64Array;
+  private readonly gust: Float64Array;
+  private readonly bunched: Float64Array;
+  private readonly folds: Float64Array;
+  private readonly positions: Float32Array;
+  private readonly normals: Float32Array;
   private readonly geometry = new THREE.BufferGeometry();
   private readonly point = new THREE.Vector3();
   private readonly side = new THREE.Vector3();
@@ -138,14 +146,14 @@ export class BirchScarf {
   private readonly transported = new THREE.Vector3();
   private readonly air = { x: 0, z: 0, energy: 0, lift: 0 };
   private readonly projected = new THREE.Vector3();
-  private readonly boatEnd = new THREE.Vector3(-4, 3, -1197);
+  private readonly boatEnd = new THREE.Vector3(birchesAt(-4, -1197).x, 3, birchesAt(-4, -1197).z);
   private elapsed = 0;
   private readonly firstCloth: ScarfCloth;
   private readonly firstEnd: number;
   private readonly clothAcross: THREE.Vector3[] = [];
   private readonly releasedCloth = new Map<number, { start: number; end: number; cloth: ScarfCloth; distances: number[] }>();
   private readonly collisions: ClothCapsule[] = [];
-  private readonly physical = new Uint8Array(ROWS);
+  private readonly physical: Uint8Array;
   private restoring = false;
   private drawnIn = false;
   readonly stump = { x: SCARF_SNAGS[1].treeX, z: SCARF_SNAGS[1].treeZ, height: 4.1, radius: .47 };
@@ -178,6 +186,21 @@ export class BirchScarf {
 
   constructor() {
     this.route();
+    const rows = this.rows = this.sections.reduce((sum, s) => sum + s.count, 0);
+    this.rollBase = new Float64Array(rows);
+    this.restTangent = new Float64Array(rows * 3);
+    this.restSide = new Float64Array(rows * 3);
+    this.restAcross = new Float64Array(rows * 3);
+    this.frameTangent = new Float64Array(rows * 3);
+    this.frameSide = new Float64Array(rows * 3);
+    this.windTarget = new Float64Array(rows * 3);
+    this.windSum = new Float64Array((rows + 1) * 3);
+    this.gust = new Float64Array(rows);
+    this.bunched = new Float64Array(rows);
+    this.folds = new Float64Array(rows * ACROSS);
+    this.positions = new Float32Array(rows * RING * 3);
+    this.normals = new Float32Array(rows * RING * 3);
+    this.physical = new Uint8Array(rows);
     for (const section of this.sections) {
       for (let j = 0; j < section.count; j++) {
         const u = j / section.count;
@@ -192,7 +215,7 @@ export class BirchScarf {
     let length = 0;
     this.tied.forEach((p, i) => { if (i) length += p.distanceTo(this.tied[i - 1]); this.lengths.push(length); });
     this.ownerStart = [0, 1, 2, 3].map(owner => this.owner.indexOf(owner));
-    for (let i = 0; i < ROWS; i++) {
+    for (let i = 0; i < this.rows; i++) {
       const length = this.lengths[i];
       this.rollBase[i] = length * .13 + Math.sin(length * .31) * .75 + Math.sin(length * .83) * .23;
       const rumple = .5 + .5 * Math.sin(length * .57 + Math.sin(length * .2));
@@ -206,8 +229,8 @@ export class BirchScarf {
       }
     }
     this.transported.set(1, 0, 0);
-    for (let i = 0; i < ROWS; i++) {
-      this.tangent.subVectors(this.tied[Math.min(ROWS - 1, i + 1)], this.tied[Math.max(0, i - 1)]).normalize();
+    for (let i = 0; i < this.rows; i++) {
+      this.tangent.subVectors(this.tied[Math.min(this.rows - 1, i + 1)], this.tied[Math.max(0, i - 1)]).normalize();
       this.transported.addScaledVector(this.tangent, -this.transported.dot(this.tangent)).normalize();
       this.side.copy(this.transported).applyAxisAngle(this.tangent, this.rollBase[i]);
       this.tangent.toArray(this.restTangent, i * 3); this.side.toArray(this.restSide, i * 3);
@@ -239,14 +262,14 @@ export class BirchScarf {
       [closestHook(knotStart + 12, knotStart + 60), closestHook(knotEnd - 40, knotEnd - 7)],
       [count], (x, z) => Math.max(0, heightAt(x, z)));
     this.firstCloth.setSupportRail(hook.clone().add(new THREE.Vector3(1.0, -.4, -.23)), hook);
-    for (let i = 0; i < ROWS; i++) this.clothAcross.push(new THREE.Vector3());
-    const uv = new Float32Array(ROWS * RING * 2);
+    for (let i = 0; i < this.rows; i++) this.clothAcross.push(new THREE.Vector3());
+    const uv = new Float32Array(this.rows * RING * 2);
     const indices: number[] = [];
-    for (let i = 0; i < ROWS; i++) for (let j = 0; j < RING; j++) {
+    for (let i = 0; i < this.rows; i++) for (let j = 0; j < RING; j++) {
       const k = i * RING + j, next = i * RING + (j + 1) % RING;
       uv[k * 2] = (j < ACROSS ? j : RING - 1 - j) / (ACROSS - 1);
       uv[k * 2 + 1] = this.lengths[i];
-      if (i < ROWS - 1) indices.push(k, k + RING, next, next, k + RING, next + RING);
+      if (i < this.rows - 1) indices.push(k, k + RING, next, next, k + RING, next + RING);
     }
     this.geometry.setAttribute('position', new THREE.BufferAttribute(this.positions, 3).setUsage(THREE.DynamicDrawUsage));
     this.geometry.setAttribute('normal', new THREE.BufferAttribute(this.normals, 3).setUsage(THREE.DynamicDrawUsage));
@@ -286,13 +309,14 @@ export class BirchScarf {
       a: new THREE.Vector3(t.x, t.y, t.z), b: new THREE.Vector3(t.x, t.y + t.scale * .85, t.z), radius: .42,
     })), { a: ground(this.stump.x, this.stump.z, 0), b: ground(this.stump.x, this.stump.z, this.stump.height), radius: this.stump.radius },
     ...this.slipLog, ...this.slipBranch, ...this.bowBranch);
-    const capsules: ClothCapsule[] = trees.filter(t => t.z > -1104 && t.z < -1055 && t.x > -5 && t.x < 26).map(t => ({
+    // The trees about the first length, from the beach to a little past its perch.
+    const capsules: ClothCapsule[] = trees.filter(t => t.z > SCARF_PERCHES[0].z - 5 && t.z < birchesZ(-1055) && t.x > X(-5) && t.x < X(26)).map(t => ({
       a: new THREE.Vector3(t.x, t.y, t.z), b: new THREE.Vector3(t.x, t.y + t.scale * .85, t.z), radius: .42,
     }));
     const s = SCARF_SNAGS[0], hook = this.snags[0].center;
     capsules.push({ a: new THREE.Vector3(s.treeX, hook.y - .4, s.treeZ),
       b: new THREE.Vector3(hook.x + .2, hook.y + 1.15, hook.z - .1), radius: .17 });
-    capsules.push({ a: ground(5.2, -1080.6, .16), b: ground(14.6, -1073.4, .16), radius: .3 });
+    capsules.push({ a: ground(FALLEN_LOG.a.x, FALLEN_LOG.a.z, .16), b: ground(FALLEN_LOG.b.x, FALLEN_LOG.b.z, .16), radius: .3 });
     this.firstCloth.capsules = capsules;
     if (settle) for (const _ of this.settle()) { /* Synchronous callers keep their original preparation. */ }
   }
@@ -366,7 +390,7 @@ export class BirchScarf {
     const spring = k.windResponse * k.windResponse * step, damping = Math.exp(-2 * k.windDamping * k.windResponse * step);
     const top = Math.max(0, heightAt(this.stump.x, this.stump.z)) + this.stump.height;
     const { windTarget, windSum, gust } = this;
-    for (let i = this.firstEnd + 1; i < ROWS; i++) {
+    for (let i = this.firstEnd + 1; i < this.rows; i++) {
       const s = this.snags[this.owner[i]];
       const supported = this.owner[i] === 2 || this.owner[i] === 3;
       const loose = s && this.owner[i] !== 1 ? smooth(supported ? s.work / .7 : s.work) : 0;
@@ -376,9 +400,9 @@ export class BirchScarf {
     }
     // A heavy length answers the air over its whole span, not each breath at each stitch.
     const reach = k.windSpan;
-    for (let i = 0; i < ROWS * 3; i++) windSum[i + 3] = windSum[i] + windTarget[i];
-    for (let i = this.firstEnd + 1; i < ROWS; i++) {
-      const lo = Math.max(this.firstEnd + 1, i - reach), hi = Math.min(ROWS - 1, i + reach), n = hi - lo + 1;
+    for (let i = 0; i < this.rows * 3; i++) windSum[i + 3] = windSum[i] + windTarget[i];
+    for (let i = this.firstEnd + 1; i < this.rows; i++) {
+      const lo = Math.max(this.firstEnd + 1, i - reach), hi = Math.min(this.rows - 1, i + reach), n = hi - lo + 1;
       const x = (windSum[hi * 3 + 3] - windSum[lo * 3]) / n, lift = (windSum[hi * 3 + 4] - windSum[lo * 3 + 1]) / n;
       const z = (windSum[hi * 3 + 5] - windSum[lo * 3 + 2]) / n;
       gust[i] = Math.hypot(x, z);
@@ -386,7 +410,7 @@ export class BirchScarf {
       this.velocities[i].addScaledVector(this.point.sub(this.winds[i]), spring).multiplyScalar(damping);
       this.winds[i].addScaledVector(this.velocities[i], step);
     }
-    for (let i = this.firstEnd + 1; i < ROWS; i++) {
+    for (let i = this.firstEnd + 1; i < this.rows; i++) {
       const s = this.snags[this.owner[i]];
       const supported = this.owner[i] === 2 || this.owner[i] === 3;
       const p = this.centre[i];
@@ -455,8 +479,8 @@ export class BirchScarf {
         this.centre[i], this.clothAcross[i]);
     }
     // The final loose end is physically attached to the mast, including its shoreward lean.
-    for (let i = ROWS - 20; i < ROWS; i++) {
-      this.centre[i].lerp(this.boatEnd, smooth((i - ROWS + 20) / 19));
+    for (let i = this.rows - 20; i < this.rows; i++) {
+      this.centre[i].lerp(this.boatEnd, smooth((i - this.rows + 20) / 19));
     }
     this.write();
   }
@@ -465,11 +489,11 @@ export class BirchScarf {
   private releaseSpan(index: number): void {
     const knotStart = this.owner.indexOf(index), knotEnd = this.owner.lastIndexOf(index);
     const previous = SCARF_PERCHES[[0, 4, 6, 9][index]], next = SCARF_PERCHES[index === 1 ? 5 : 7];
-    let start = knotStart - 1, end = index === this.snags.length - 1 ? ROWS - 1 : knotEnd + 1;
+    let start = knotStart - 1, end = index === this.snags.length - 1 ? this.rows - 1 : knotEnd + 1;
     for (let i = knotStart - 1; i > this.firstEnd; i--) {
       if (Math.hypot(this.tied[i].x - previous.x, this.tied[i].z - previous.z) < 1.05) { start = i; break; }
     }
-    if (index < this.snags.length - 1) for (let i = knotEnd + 1; i < ROWS; i++) {
+    if (index < this.snags.length - 1) for (let i = knotEnd + 1; i < this.rows; i++) {
       if (Math.hypot(this.tied[i].x - next.x, this.tied[i].z - next.z) < 1.05) { end = i; break; }
     }
     const distances = [0];
@@ -492,9 +516,21 @@ export class BirchScarf {
 
 
   private route(): void {
-    const at = (x: number, z: number, h: number) => ground(x, z, h);
+    const at = (x: number, z: number, h: number) => ground(birchesAt(x, z).x, birchesAt(x, z).z, h);
+    const place = { x: 0, z: 0, gap: -1, into: 0 };
+    /** A run that crosses a gap is that much longer, and gets that many more rows. */
+    const stretch = (points: THREE.Vector3[]): number => {
+      let world = 0, before = 0, px = 0, pz = 0;
+      points.forEach((p, i) => {
+        birchesLocal(p.x, p.z, place);
+        if (i) { world += Math.hypot(p.x - points[i - 1].x, p.z - points[i - 1].z); before += Math.hypot(place.x - px, place.z - pz); }
+        px = place.x; pz = place.z;
+      });
+      return before > 0 ? world / before : 1;
+    };
     const add = (points: THREE.Vector3[], count: number, snag = -1, free = points) => {
-      this.sections.push({ tied: new THREE.CatmullRomCurve3(points), loose: new THREE.CatmullRomCurve3(free), snag, count });
+      this.sections.push({ tied: new THREE.CatmullRomCurve3(points), loose: new THREE.CatmullRomCurve3(free), snag,
+        count: Math.round(count * stretch(points)) });
     };
     const a = this.snags[0].center, b = this.snags[1].center, d = this.snags[2].center, c = this.snags[3].center;
     const local = (p: THREE.Vector3, x: number, y: number, z: number) => p.clone().add(new THREE.Vector3(x, y, z));
@@ -506,7 +542,7 @@ export class BirchScarf {
       for (let i = 0; i <= 10; i++) {
         const f = i / 10, angle = phase + f * Math.PI * 2 * turn;
         const radius = 0.9 + Math.sin(f * Math.PI) * 0.25;
-        points.push(at(tree.x + Math.cos(angle) * radius, tree.z + Math.sin(angle) * radius, tree.h - f * 0.7));
+        points.push(ground(tree.x + Math.cos(angle) * radius, tree.z + Math.sin(angle) * radius, tree.h - f * 0.7));
       }
       return points;
     };
@@ -558,8 +594,8 @@ export class BirchScarf {
     const taper = 1 - this.woven * 0.75;
     const thickness = .025 * width;
     const { centre, frameTangent, frameSide, restTangent, restSide } = this;
-    for (let i = 0; i < ROWS; i++) {
-      const o = i * 3, a = centre[Math.max(0, i - 1)], b = centre[Math.min(ROWS - 1, i + 1)];
+    for (let i = 0; i < this.rows; i++) {
+      const o = i * 3, a = centre[Math.max(0, i - 1)], b = centre[Math.min(this.rows - 1, i + 1)];
       const rx = restTangent[o], ry = restTangent[o + 1], rz = restTangent[o + 2];
       let tx = b.x - a.x, ty = b.y - a.y, tz = b.z - a.z, length = Math.hypot(tx, ty, tz);
       if (length < 1e-4) { tx = rx; ty = ry; tz = rz; length = 1; }
@@ -595,17 +631,17 @@ export class BirchScarf {
     const drawn = this.gathering > 0 ? smooth(this.gathering / k.gatherSeconds) : 0;
     const uv = this.geometry.attributes.uv as THREE.BufferAttribute;
     if (drawn === 0 && this.drawnIn) {
-      for (let i = 0; i < ROWS; i++) for (let j = 0; j < RING; j++) uv.array[(i * RING + j) * 2 + 1] = this.lengths[i];
+      for (let i = 0; i < this.rows; i++) for (let j = 0; j < RING; j++) uv.array[(i * RING + j) * 2 + 1] = this.lengths[i];
       (this.mesh.material as THREE.ShaderMaterial).uniforms.uScarfStart.value = 0;
       uv.needsUpdate = true;
     }
     this.drawnIn = drawn > 0;
-    for (let i = 0; i < ROWS; i++) {
+    for (let i = 0; i < this.rows; i++) {
       let p = centre[i];
       let bunched = this.bunched[i], fold = i * ACROSS, foldNext = fold, foldMix = 0;
       let physical = this.physical[i], rowHeight = this.heights[i];
       if (drawn > 0) {
-        const at = i + drawn * (ROWS - 1 - i), lo = Math.min(ROWS - 1, Math.floor(at)), hi = Math.min(ROWS - 1, lo + 1), t = at - lo;
+        const at = i + drawn * (this.rows - 1 - i), lo = Math.min(this.rows - 1, Math.floor(at)), hi = Math.min(this.rows - 1, lo + 1), t = at - lo;
         p = this.point.lerpVectors(centre[lo], centre[hi], t);
         this.tangent.set(frameTangent[lo * 3] * (1 - t) + frameTangent[hi * 3] * t, frameTangent[lo * 3 + 1] * (1 - t) + frameTangent[hi * 3 + 1] * t,
           frameTangent[lo * 3 + 2] * (1 - t) + frameTangent[hi * 3 + 2] * t).normalize();

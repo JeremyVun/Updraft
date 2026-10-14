@@ -153,7 +153,7 @@ ${LINES_GRASS_GLSL}
 ${BEND_GRASS_GLSL}
 /** 1 under the birches, where the floor is fallen gold and the little grass left in it has gone over with the year. */
 float birchFloorAt(vec2 xz) {
-  return 1.0 - smoothstep(0.62, 1.02, length((xz - vec2(${ISLES.birches.x}.0, ${ISLES.birches.z}.0)) / vec2(${ISLES.birches.rx}.0, ${ISLES.birches.rz}.0)));
+  return 1.0 - smoothstep(0.62, 1.02, length((xz - vec2(${glsl(ISLES.birches.x)}, ${glsl(ISLES.birches.z)})) / vec2(${glsl(ISLES.birches.rx)}, ${glsl(ISLES.birches.rz)})));
 }
 /** Short, irregular grass around the tarn where the swans have been resting. */
 float pondBankAt(vec2 xz) {

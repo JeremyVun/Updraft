@@ -7,6 +7,7 @@ import type { Cast, Chapter } from './cast';
 import { tuning } from '../tuning';
 import { BirchLeafPlay } from './birches-play';
 import { SCARF_SNAGS } from '../world/birch-scarf';
+import { birchesZ } from '../world/birches-layout';
 import type { BirchesScorePhase } from '../audio/birches-score';
 import { PlaneArrival } from './plane-arrival';
 
@@ -17,6 +18,8 @@ const CLEARING_LEG = 2;
 const BOARDING = 20;
 /** And if the leaves are more interesting than the boat, they go anyway after this long on the last stretch. */
 const LAST_LEG_PATIENCE = 45;
+/** Once the boat is drawn up past here, the scarf's free end is tied to its mast. */
+const MAST_FROM = birchesZ(-1175);
 type Beat = 'ashore' | 'wonder' | 'walk' | 'swingOffer' | 'toSwing' | 'swinging' | 'toScarf' | 'scarf' | 'unravelling' | 'gathering' | 'toBoat' | 'push' | 'aboard';
 type Play = 'carry' | 'watch' | 'fetch' | 'hold';
 
@@ -135,7 +138,7 @@ export class BirchesChapter implements Chapter {
     const { child: c, plane: p, boat, birches } = this.cast;
     p.guided = this.beat === 'walk';
     const scarf = birches.scarf;
-    const mast = boat.position.z < -1175 ? boat.sailPoint(this.scarfMast) : undefined;
+    const mast = boat.position.z < MAST_FROM ? boat.sailPoint(this.scarfMast) : undefined;
     scarf.update(dt, this.cast.wind, mast);
     boat.scarfSail = scarf.woven;
     // The arrival beach is behind the trees before the boat moves to the far shore.
