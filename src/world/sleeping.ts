@@ -8,6 +8,8 @@ import { Feather } from '../fx/feather';
 import { CurtainRibbon } from './sleeping-ribbon';
 import { SLEEP_PATH } from './sleeping-layout';
 import { SleepingTrail, WINDOW_SEEN } from './sleeping-trail';
+import { SleepingDressing } from './sleeping-dressing';
+import { sleepingGust } from './sleeping-wind';
 import { GpuRunner, PingPong, atBoot, simMaterial } from '../gl/gpu';
 import type { PointerInput } from '../input/pointer';
 import { glsl, tuning } from '../tuning';
@@ -676,6 +678,7 @@ export class SleepingIsland {
   private alarmAge = -1;
   readonly hearth = new SleepingHearth();
   readonly trail = new SleepingTrail();
+  readonly dressing: SleepingDressing;
   readonly sleepFace = PILLOW.clone();
   sleepMarks = 0;
   private readonly weather = new SleepingWeather();
@@ -719,7 +722,8 @@ export class SleepingIsland {
   ) {
     this.gpu = new GpuRunner(renderer);
     this.feather = new Feather(wind);
-    this.objects.push(this.ribbon.mesh, ...this.trail.objects, this.hearth.group);
+    this.dressing = new SleepingDressing(wind, input, BED, WINDOW);
+    this.objects.push(this.ribbon.mesh, ...this.trail.objects, ...this.dressing.objects, this.hearth.group);
     for (let i = 0; i < STAMPS; i++) {
       this.stamps.push(new THREE.Vector4());
       this.stampArgs.push(new THREE.Vector2());
@@ -961,7 +965,7 @@ export class SleepingIsland {
     fixInPlace(this.ribbon.mesh, still, clock, ...clock.children.filter((o) => o !== this.clockBody),
       ...this.clockBody.children.filter((o) => o !== this.clockHand), rug, blanket, morning, hintRay, curtains, this.shaft, feathers,
       ...this.weather.objects);
-    for (const o of this.trail.objects) fixTreeInPlace(o);
+    for (const o of [...this.trail.objects, ...this.dressing.objects]) fixTreeInPlace(o);
 
     for (const o of this.objects) o.visible = false;
   }
@@ -1102,6 +1106,7 @@ export class SleepingIsland {
     this.clockTime += dt * (1 - THREE.MathUtils.smoothstep(this.shownCold*(1-this.shown.dawn),0.3,0.65));
     this.clockHand.rotation.z=-Math.floor(this.clockTime)*Math.PI/30;
     this.trail.update(dt, time, this.shown.dawn, camera, this.shownCold);
+    this.dressing.update(dt, time, camera, sleepingGust(time, this.shownCold, this.shown.dawn));
     this.weather.update(time,this.shownCold,this.shown.sleeper,this.shown.dawn,this.sleepFace,camera,this.trail.mist,WINDOW,this.sleepMarks,this.trail.fogEnclosure);
     this.hanging(time);
     this.drift(dt);
