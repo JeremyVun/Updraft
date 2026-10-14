@@ -179,7 +179,7 @@ try {
       await gesture('encounter');
       if(await page.evaluate(current=>__game.story.current.beat!==current,current)){await page.waitForTimeout(1800);await shot(current+'-open');}
     } else {
-      if(await page.evaluate(()=>[3,7].includes(__game.story.current.routeIndex))){await page.waitForTimeout(350);continue;}
+      if(await page.evaluate(async()=>{const l=await import('/src/world/sleeping-layout.ts');return [l.SLEEP_DRIFT_STOP,l.SLEEP_FOG_STOP].includes(__game.story.current.routeIndex);})){await page.waitForTimeout(350);continue;}
       const p=await page.evaluate(()=>{const g=__game,p=g.sleeping.feather.position.clone().project(g.rig.camera);return{x:(p.x+1)*innerWidth/2,y:(1-p.y)*innerHeight/2};});
       for(let i=0;i<=24;i++){if(i%4===0&&await page.evaluate(()=>__game.story.current.beat!=='climb'))break;const x=Math.max(8,Math.min(width-8,p.x+(i/24-.5)*width*.42)),y=Math.max(8,Math.min(height-8,p.y+22-Math.sin(i/24*Math.PI)*50));
         if(touch)await cdp.send('Input.dispatchTouchEvent',{type:i===0?'touchStart':'touchMove',touchPoints:[{x,y,id:1}]});else await page.mouse.move(x,y);await page.waitForTimeout(25);}

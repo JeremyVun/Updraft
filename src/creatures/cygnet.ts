@@ -1631,7 +1631,7 @@ export class Cygnet {
     const working = st === 'swimming' && !this.watchFace && this.mind.told !== null;
     this.working = ease(this.working, working ? 1 : 0, 8, dt);
     s.locked = working || this.steadyLift || this.hopT > 0 || this.landing > 0 || this.seating.move !== null || this.seating.held;
-    s.busy = s.locked || this.callT > 0 || this.doze > 0.3 || this.hope > 0.3;
+    s.busy = s.locked || this.callT > 0 || this.doze > 0.3 || this.hope > 0.3 || this.preenWeight > 0;
     this.mind.update(dt, s);
   }
 

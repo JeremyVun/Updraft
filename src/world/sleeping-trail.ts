@@ -6,21 +6,36 @@ import type { PointerInput } from '../input/pointer';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { ATMO_GLSL, NOISE_GRAD_GLSL, atmo } from './atmosphere';
 import { heightAt } from './island';
-import { SLEEP_PATH, SLEEP_SNOW_STOP, SLEEP_MIST_STOP, sleepPathAt } from './sleeping-layout';
+import { SLEEP_PATH, SLEEP_DRIFT_STOP, SLEEP_FOG_STOP, sleepPathAt } from './sleeping-layout';
 import { mulberry32 } from './noise';
 import { tuning } from '../tuning';
 import { RibbonBatch, type Ribbon } from '../fx/ribbons';
 
 const point = (i: number) => new THREE.Vector3(SLEEP_PATH[i][0], heightAt(SLEEP_PATH[i][0], SLEEP_PATH[i][1]), SLEEP_PATH[i][1]);
-export const SNOW_AT = point(SLEEP_SNOW_STOP).lerp(point(SLEEP_SNOW_STOP+1), 0.8);
-SNOW_AT.y = heightAt(SNOW_AT.x, SNOW_AT.z);
-export const MIST_AT = point(SLEEP_MIST_STOP).lerp(point(SLEEP_MIST_STOP+1), 0.48);
-MIST_AT.y = heightAt(MIST_AT.x, MIST_AT.z);
-const SNOW_FORWARD = point(SLEEP_SNOW_STOP+1).sub(point(SLEEP_SNOW_STOP)).setY(0).normalize();
-const MIST_FORWARD = point(SLEEP_MIST_STOP+1).sub(point(SLEEP_MIST_STOP)).setY(0).normalize();
+/** The point `metres` further up the route from waypoint `from`, on the ground. */
+function alongRoute(from: number, metres: number): THREE.Vector3 {
+  const at = point(from);
+  for (let i = from + 1; i < SLEEP_PATH.length; i++) {
+    const next = point(i), step = Math.hypot(next.x - at.x, next.z - at.z);
+    if (step >= metres) { at.lerp(next, metres / step); break; }
+    metres -= step;
+    at.copy(next);
+  }
+  at.y = heightAt(at.x, at.z);
+  return at;
+}
+const SNOW_FORWARD = point(SLEEP_DRIFT_STOP+1).sub(point(SLEEP_DRIFT_STOP)).setY(0).normalize();
+const MIST_FORWARD = point(SLEEP_FOG_STOP+1).sub(point(SLEEP_FOG_STOP)).setY(0).normalize();
 const SNOW_RIGHT = new THREE.Vector3(-SNOW_FORWARD.z, 0, SNOW_FORWARD.x);
+/** The drift packed into the notch a few paces above where the bird stops, banked against the outcrop rather than the drop. */
+export const SNOW_AT = alongRoute(SLEEP_DRIFT_STOP, 3.85).addScaledVector(SNOW_RIGHT, -1.3);
+SNOW_AT.y = heightAt(SNOW_AT.x, SNOW_AT.z);
+/** The fog bank lying in the saddle just uphill of the bird. */
+export const MIST_AT = alongRoute(SLEEP_FOG_STOP, 2.8);
 /** How deeply the wind scoops and ridges the drift's thick middle, as a share of its depth; the thin edges keep their shape. */
 const SNOW_SCULPT = 0.4;
+/** The drift fills the notch from the outcrop to the lip of the drop, across the way and along it, in metres. */
+const DRIFT_WIDE = 7.5, DRIFT_DEEP = 6.5;
 /** How far the swept channel's floor and its bank tops move out from the path; the wide gap keeps the banks rounded. */
 const CHANNEL_WIDEN = .85, CHANNEL_SOFTEN = 1.75;
 const POWDER_COUNT = 560;
@@ -79,7 +94,8 @@ export class SleepingTrail {
     };
     // Exposed geology belongs to the hillside, never to two kerbs marking the route.
     // Unequal, half-buried clusters leave the bed terrace and long stretches of turf open.
-    const exposures=[[-185,-1928,1.1],[-154,-1935,1.7],
+    // The outcrop beside the notch, and the rock the bank's turf is heaved over showing at either end of the bank.
+    const exposures=[[-185,-1928,1.1],[-154.6,-1926.2,1.6],[-153,-1936.4,.8],[-157.4,-1930.2,.9],
       [-159,-1944,2.1],[-172,-1949,1.8],[-186,-1945,2.7],[-168,-1932,1.2]];
     for(const [cx,cz,size] of exposures){
       const yaw=rand()*Math.PI;
@@ -148,7 +164,7 @@ export class SleepingTrail {
     scenery.frustumCulled=false;this.objects.push(scenery);
 
     // Snow follows the real ground. Sweeping excavates a widening channel rather than lifting a white lid.
-    const driftGeometry=new THREE.PlaneGeometry(23,6.5,144,64);
+    const driftGeometry=new THREE.PlaneGeometry(DRIFT_WIDE,DRIFT_DEEP,60,64);
     const vertices=driftGeometry.attributes.position;
     for(let i=0;i<vertices.count;i++){
       const p=SNOW_AT.clone().addScaledVector(SNOW_RIGHT,vertices.getX(i)).addScaledVector(SNOW_FORWARD,vertices.getY(i));
@@ -163,21 +179,21 @@ export class SleepingTrail {
         float passageDistance(vec2 local) {
           vec2 p=vec2(${SNOW_AT.x.toFixed(5)},${SNOW_AT.z.toFixed(5)})+uSnowRight.xz*local.x+uSnowForward.xz*local.y;
           float d=1000.0;
-          ${SLEEP_PATH.slice(2,7).map((a,i)=>{const b=SLEEP_PATH[i+3];return `{
+          ${SLEEP_PATH.slice(SLEEP_DRIFT_STOP-1,SLEEP_DRIFT_STOP+3).map((a,i)=>{const b=SLEEP_PATH[SLEEP_DRIFT_STOP+i];return `{
             vec2 a=vec2(${a[0].toFixed(5)},${a[1].toFixed(5)}),b=vec2(${b[0].toFixed(5)},${b[1].toFixed(5)});
             vec2 ab=b-a;float t=clamp(dot(p-a,ab)/dot(ab,ab),0.0,1.0);d=min(d,length(p-a-ab*t));}`;}).join('')}
           return d;
         }
         float depthAt(vec2 local){
           vec2 drift=local+vec2(.35*sin(local.y*1.2),.25*sin(local.x*.65));
-          float bank=pow(max(0.0,1.0-dot(drift/vec2(11.5,3.25),drift/vec2(11.5,3.25))),1.6);
+          float bank=pow(max(0.0,1.0-dot(drift/vec2(${DRIFT_WIDE/2},${DRIFT_DEEP/2}),drift/vec2(${DRIFT_WIDE/2},${DRIFT_DEEP/2}))),1.6);
           float channel=1.0-smoothstep(.55+uSwept*${CHANNEL_WIDEN},1.25+uSwept*${CHANNEL_SOFTEN},passageDistance(local));
           float crest=1.0+.12*sin(local.x*1.7)+.06*sin(local.y*3.5+local.x);
           float depth=${tuning.sleeping.snowDepth.toFixed(2)}*bank*crest*(1.0-uSwept*channel)*(1.0-uThaw);
           float sculpt=.5*sin(local.x*.83+1.4*sin(local.y*.9+local.x*.31))+.3*sin(local.x*2.1+local.y*1.3+2.0*sin(local.x*.47));
           return depth*(1.0+${SNOW_SCULPT}*sculpt*smoothstep(.2,.7,depth));
         }
-        void main(){vec2 local=(uv-.5)*vec2(23.0,6.5);vDepth=depthAt(local);
+        void main(){vec2 local=(uv-.5)*vec2(${DRIFT_WIDE.toFixed(2)},${DRIFT_DEEP.toFixed(2)});vDepth=depthAt(local);
           vec2 slope=vec2(depthAt(local+vec2(.06,0))-depthAt(local-vec2(.06,0)),
             depthAt(local+vec2(0,.06))-depthAt(local-vec2(0,.06)))/.12;
           vec2 gradient=uSnowRight.xz*slope.x+uSnowForward.xz*slope.y;
@@ -228,7 +244,7 @@ export class SleepingTrail {
     // Powder lifts off the drift's own surface inside the channel, so the snow visibly leaves where it is cleared.
     const powderRand=mulberry32(52231),spawn:number[]=[],info:number[]=[];
     while(info.length<POWDER_COUNT*4){
-      const p=SNOW_AT.clone().addScaledVector(SNOW_RIGHT,(powderRand()-.5)*23).addScaledVector(SNOW_FORWARD,(powderRand()-.5)*6.5);
+      const p=SNOW_AT.clone().addScaledVector(SNOW_RIGHT,(powderRand()-.5)*DRIFT_WIDE).addScaledVector(SNOW_FORWARD,(powderRand()-.5)*DRIFT_DEEP);
       const distance=sleepPathAt(p.x,p.z).distance,depth=this.snowDepthAt(p.x,p.z);
       if(distance>4.2||depth<.2)continue;
       spawn.push(p.x,heightAt(p.x,p.z),p.z);
@@ -309,7 +325,7 @@ export class SleepingTrail {
     const dx=x-SNOW_AT.x,dz=z-SNOW_AT.z;
     const lx=dx*SNOW_RIGHT.x+dz*SNOW_RIGHT.z,ly=dx*SNOW_FORWARD.x+dz*SNOW_FORWARD.z;
     const bx=lx+.35*Math.sin(ly*1.2),by=ly+.25*Math.sin(lx*.65);
-    const bank=Math.max(0,1-(bx/11.5)**2-(by/3.25)**2)**1.6;
+    const bank=Math.max(0,1-(bx/(DRIFT_WIDE/2))**2-(by/(DRIFT_DEEP/2))**2)**1.6;
     const s=this.swept.value;
     const channel=1-THREE.MathUtils.smoothstep(sleepPathAt(x,z).distance,.55+s*CHANNEL_WIDEN,1.25+s*CHANNEL_SOFTEN);
     const depth=tuning.sleeping.snowDepth*bank*(1+.12*Math.sin(lx*1.7)+.06*Math.sin(ly*3.5+lx))*(1-s*channel)*(1-this.thaw.value);
@@ -334,6 +350,7 @@ export class SleepingTrail {
     this.fogEnclosure=1-emerged;
     atmo.uniforms.uSleepMist.value.set(MIST_AT.x,MIST_AT.y+1.1-emerged*3,MIST_AT.z,(1-this.thaw.value)*(1-emerged*.94));
     atmo.uniforms.uSleepMistPart.value=this.clear.value;
+    atmo.uniforms.uSleepMistAxis.value.set(MIST_FORWARD.z,-MIST_FORWARD.x);
     this.guideFade+=((this.guideActive?1:0)-this.guideFade)*(1-Math.exp(-dt*2));
     const dx=this.guideGoal.x-this.guideAt.x,dz=this.guideGoal.z-this.guideAt.z,len=Math.hypot(dx,dz)||1;
     for(let i=0;i<this.wisps.length;i++){

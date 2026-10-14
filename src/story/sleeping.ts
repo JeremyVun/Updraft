@@ -5,8 +5,9 @@ import type { Shot } from '../camera';
 import type { Coax } from '../fx/swirl';
 import { tuning } from '../tuning';
 import { heightAt } from '../world/island';
-import { SLEEP_SNOW_STOP, SLEEP_MIST_STOP } from '../world/sleeping-layout';
-import { BED, BED_FACING, HILLTOP, PILLOW, WINDOW, SLEEP_LEDGE, SLEEP_ROUTE, CURTAIN_END, CURTAIN_KNOT, SLEEP_BERTH, SLEEP_LANDING } from '../world/sleeping';
+import { SLEEP_CREST_STOP, SLEEP_DRIFT_STOP, SLEEP_FOG_STOP, SLEEP_STEP_STOP } from '../world/sleeping-layout';
+import { MIST_AT, SNOW_AT } from '../world/sleeping-trail';
+import { BED, BED_FACING, HILLTOP, LAMP, PILLOW, WINDOW, SLEEP_LEDGE, SLEEP_ROUTE, CURTAIN_END, CURTAIN_KNOT, SLEEP_BERTH, SLEEP_LANDING } from '../world/sleeping';
 import type { Cast, Chapter } from './cast';
 import { cue } from './cues';
 import { FEATHER_LENGTH } from '../fx/feather';
@@ -21,7 +22,9 @@ type Beat =
   | 'edge'
   | 'climb'
   | 'snow'
+  | 'step'
   | 'mist'
+  | 'crest'
   | 'catchFeather'
   | 'unbinding'
   | 'hilltop'
@@ -58,6 +61,71 @@ const EDGE = SLEEP_ROUTE[1];
 /** Where the bird stands on the top: a little short of the summit, so the hill is still above it. */
 const TOP = SLEEP_LEDGE;
 const ROUTE_START = new THREE.Vector3(BED.x, BED.y, BED.z);
+/** How far along the route each waypoint lies, in metres over the ground. */
+const ROUTE_AT = SLEEP_ROUTE.map((_, i) => SLEEP_ROUTE.slice(1, i + 1)
+  .reduce((at, p, j) => at + Math.hypot(p.x - SLEEP_ROUTE[j].x, p.z - SLEEP_ROUTE[j].z), 0));
+
+/** Metres further up the way, or a place the stretch is about. */
+type LensLook = number | 'drift' | 'lamp' | 'window' | 'fog';
+interface LensKey {
+  /** Where on the route: a waypoint and metres on from it. */
+  at: number; on: number;
+  /** The lens's bearing from the bird, degrees from south through east; how far back; how high over the bird's ground. */
+  bearing: number; reach: number; rise: number;
+  /** How far the look turns from the bird toward what the stretch is about, as a share of the reach. */
+  lean: number; look: readonly LensLook[];
+}
+const key = (at: number, on: number, bearing: number, reach: number, rise: number, lean: number, ...look: LensLook[]): LensKey =>
+  ({ at, on, bearing, reach, rise, lean, look });
+/**
+ * Where the lens stands on each stretch of the climb, by the bird's progress up the route, so it holds while the bird
+ * stops and never turns on its own. Low behind the way up, then round the outside of the switchback, rising to look
+ * down on the bird as it turns so the window stays out of the top of the frame; after that on the bed's side of the
+ * bird, so each look back finds the lamp beyond it from where the lens already is. At the drift: low, the notch filled
+ * between rock and drop. Over the horn: the lamp far down on the left. At the bank's foot, down at the bird's feet so the
+ * bank stands over it, the window in frame but behind the shoulder; climbing with the bird onto it, the window shows
+ * above the shoulder at one corner and the lamp at the other. In the saddle the lens stands high on the north side, close
+ * enough to keep the bird in the fog, with the lamp past it and the fog uphill; on the last crest it comes low round the
+ * south side, the bird against the sky, to where the summit's own view takes over.
+ */
+const CLIMB_LENS: readonly LensKey[] = [
+  key(0, 0, 349, 7.1, 2.4, 0.35, 6),
+  key(1, 0, 330, 7, 1.8, 0.3, 6),
+  key(2, 0, 292, 7, 1.6, 0.3, 6),
+  key(4, 0, 292, 7, 1.6, 0.3, 6),
+  key(5, 1, 345, 6.8, 0.8, 0.4, 'drift'),
+  key(SLEEP_DRIFT_STOP, -0.8, 25, 7, 0.5, 0.5, 'drift'),
+  key(SLEEP_DRIFT_STOP, 0, 25, 7, 0.5, 0.5, 'drift'),
+  key(SLEEP_DRIFT_STOP, 2.3, 35, 7, 1.4, 0, 'drift'),
+  key(SLEEP_DRIFT_STOP + 1, 0, 60, 7, 2.6, 0, 'lamp'),
+  key(SLEEP_STEP_STOP - 1, 0, 95, 7.5, 2.2, 0.3, 'lamp'),
+  key(SLEEP_STEP_STOP - 1, 1.3, 95, 7.5, 2, 0.3, 'lamp'),
+  key(SLEEP_STEP_STOP, -0.75, 115, 6, 0.2, 0.2, 3.6),
+  key(SLEEP_STEP_STOP, 0, 115, 6, 0.2, 0.2, 3.6),
+  key(SLEEP_STEP_STOP + 1, 0.1, 105, 7, 1, 0.08, 'window'),
+  key(SLEEP_STEP_STOP + 2, 0, 110, 7, 0.6, 0.2, 'window'),
+  key(SLEEP_STEP_STOP + 3, 0, 115, 7, 0.8, 0.2, 'window'),
+  key(SLEEP_FOG_STOP - 1, 0, 125, 7, 1.6, 0.2, 3),
+  key(SLEEP_FOG_STOP, -0.8, 140, 7, 3.5, 0, 'fog'),
+  key(SLEEP_FOG_STOP, 0, 140, 7, 3.5, 0, 'fog'),
+  key(SLEEP_CREST_STOP, 0, 100, 6.5, 1, 0.3, 'window'),
+  key(SLEEP_CREST_STOP + 1, -1, 55, 6.5, 0.6, 0.4, 'window'),
+  key(SLEEP_CREST_STOP + 1, 1, 42, 7, 0.6, 0.4, 'window'),
+  key(SLEEP_ROUTE.length - 1, 0, 39, 10.9, 3.2, 0.15, 'window'),
+];
+const LENS_AT = CLIMB_LENS.map(k => ROUTE_AT[k.at] + k.on);
+/** Seconds ahead of the walking bird the climb's lens is laid out for, about as far as the rig's easing trails it. */
+const LENS_LEAD = 1;
+const LENS_PLACES = { drift: SNOW_AT.clone().setY(SNOW_AT.y + 0.8), lamp: LAMP, window: WINDOW, fog: MIST_AT.clone().setY(MIST_AT.y + 1) };
+
+/** The point `along` metres up the route, on the ground. */
+function routePoint(along: number, out: THREE.Vector3): THREE.Vector3 {
+  let i = 1;
+  while (i < ROUTE_AT.length - 1 && ROUTE_AT[i] < along) i++;
+  out.lerpVectors(SLEEP_ROUTE[i - 1], SLEEP_ROUTE[i], THREE.MathUtils.clamp((along - ROUTE_AT[i - 1]) / (ROUTE_AT[i] - ROUTE_AT[i - 1]), 0, 1));
+  out.y = heightAt(out.x, out.z);
+  return out;
+}
 
 
 const lerp = THREE.MathUtils.lerp;
@@ -165,7 +233,15 @@ export class SleepingChapter implements Chapter {
   private readonly perch = new THREE.Vector3();
   private readonly cameraDetail = new THREE.Vector3();
   private readonly ahead = new THREE.Vector3(0, 0, -1);
-  private readonly upward = new THREE.Vector3();
+  /** How far up the route the lens takes the bird to be, eased over the hop from one stretch to the next. */
+  private lensAlong = -1;
+  /** How fast the bird and its progress up the route are moving, so the eased lens is asked to stand where it will be. */
+  private lensRate = 0;
+  private readonly lensVelocity = new THREE.Vector3();
+  private readonly lensWas = new THREE.Vector3();
+  private readonly lensBird = new THREE.Vector3();
+  private readonly lensLook = new THREE.Vector3();
+  private readonly lensPoint = new THREE.Vector3();
   private readonly air = { x: 0, z: 0, energy: 0, lift: 0 };
   private readonly coaxing = { at: new THREE.Vector3(), urgency: 0 };
   private readonly laneFrom = new THREE.Vector2(WINDOW.x, WINDOW.z);
@@ -695,8 +771,8 @@ export class SleepingChapter implements Chapter {
     sleeping.frost = lerp(T.frostAsleep, T.frostWorst, (this.routeIndex - 1) / (SLEEP_ROUTE.length - 2));
     sleeping.cold = lerp(0.65, 1, (this.routeIndex - 1) / (SLEEP_ROUTE.length - 2));
     if (Math.hypot(k.position.x-destination.x,k.position.z-destination.z)>T.routeReach) return;
-    if (this.routeIndex === SLEEP_SNOW_STOP && !this.snowDone) { this.startEncounter('snow'); return; }
-    if (this.routeIndex === SLEEP_MIST_STOP && !this.mistDone) { this.startEncounter('mist'); return; }
+    if (this.routeIndex === SLEEP_DRIFT_STOP && !this.snowDone) { this.startEncounter('snow'); return; }
+    if (this.routeIndex === SLEEP_FOG_STOP && !this.mistDone) { this.startEncounter('mist'); return; }
     if (this.routeIndex < SLEEP_ROUTE.length-1) { this.nextWaypoint(); return; }
     k.stay = true; k.errand = null; k.watch(null);
     k.needs(T.liftToFly, null); k.mayFly = false; k.wing.recovery = 1;
@@ -1034,13 +1110,74 @@ export class SleepingChapter implements Chapter {
     const k = this.cast.cygnet;
     this.ahead.lerp(this.side.set(Math.sin(k.yaw), 0, Math.cos(k.yaw)), 1 - Math.exp(-dt * 1.2));
     if (this.ahead.lengthSq() > 0.01) this.ahead.normalize();
-    const a = SLEEP_ROUTE[Math.max(0, this.routeIndex - 1)], b = SLEEP_ROUTE[this.routeIndex];
-    this.side.set(b.x - a.x, 0, b.z - a.z);
-    if (this.side.lengthSq() > 0.01) {
-      if (this.upward.lengthSq() < 0.01) this.upward.copy(this.side.normalize());
-      this.upward.lerp(this.side.normalize(), 1 - Math.exp(-dt * 0.5));
-      if (this.upward.lengthSq() > 0.01) this.upward.normalize();
+    const along = this.alongRoute(), was = this.lensAlong;
+    const jumped = this.lensAlong < 0 || Math.abs(along - this.lensAlong) > 3 || this.lensWas.distanceTo(k.position) > 1;
+    if (jumped) this.lensAlong = along;
+    else this.lensAlong += (along - this.lensAlong) * (1 - Math.exp(-dt * 2));
+    const settle = 1 - Math.exp(-dt * 3);
+    if (jumped || dt <= 0) { this.lensRate = 0; this.lensVelocity.set(0, 0, 0); }
+    else {
+      this.lensRate += (THREE.MathUtils.clamp((this.lensAlong - was) / dt, -0.5, 1.6) - this.lensRate) * settle;
+      this.lensVelocity.lerp(this.side.subVectors(k.position, this.lensWas).setY(0).divideScalar(dt).clampLength(0, 1.6), settle);
     }
+    this.lensWas.copy(k.position);
+  }
+
+  /** The bird's distance up the route, on the stretch it is walking or the one it has just come off, whichever is nearer. */
+  private alongRoute(): number {
+    const k = this.cast.cygnet.position;
+    let nearest = Infinity, along = 0;
+    for (let i = Math.max(1, this.routeIndex - 1); i <= Math.max(1, this.routeIndex); i++) {
+      const a = SLEEP_ROUTE[i - 1], b = SLEEP_ROUTE[i];
+      const dx = b.x - a.x, dz = b.z - a.z, length = ROUTE_AT[i] - ROUTE_AT[i - 1];
+      const t = THREE.MathUtils.clamp(((k.x - a.x) * dx + (k.z - a.z) * dz) / (length * length), 0, 1);
+      const off = Math.hypot(k.x - a.x - dx * t, k.z - a.z - dz * t);
+      if (off < nearest) { nearest = off; along = ROUTE_AT[i - 1] + length * t; }
+    }
+    return along;
+  }
+
+  /** What one lens key looks toward from where the bird is now. */
+  private lensTarget(look: readonly LensLook[], along: number, out: THREE.Vector3): THREE.Vector3 {
+    out.set(0, 0, 0);
+    for (const l of look) {
+      if (typeof l === 'number') out.add(routePoint(along + l, this.lensPoint).setY(this.lensPoint.y + 0.5));
+      else out.add(LENS_PLACES[l]);
+    }
+    return out.divideScalar(look.length);
+  }
+
+  /** The climb's lens, as `CLIMB_LENS` lays it out for where the bird has got to. */
+  private climbLens(): void {
+    /** The rig eases a moving shot about a second behind; asking for where the bird will be keeps it framed as it walks. */
+    const k = this.lensBird.copy(this.cast.cygnet.position).addScaledVector(this.lensVelocity, LENS_LEAD);
+    const s = this.shot;
+    const along = this.lensAlong + this.lensRate * LENS_LEAD;
+    let j = 1;
+    while (j < CLIMB_LENS.length - 1 && LENS_AT[j] < along) j++;
+    const a = CLIMB_LENS[j - 1], b = CLIMB_LENS[j];
+    const w = THREE.MathUtils.smootherstep(along, LENS_AT[j - 1], LENS_AT[j]);
+    const bearing = THREE.MathUtils.degToRad(a.bearing + (((b.bearing - a.bearing + 540) % 360) - 180) * w);
+    const reach = lerp(a.reach, b.reach, w);
+    const ground = Math.max(heightAt(k.x, k.z), 0);
+    this.bedFocus.set(k.x, ground + 0.6, k.z);
+    this.lensTarget(a.look, along, this.roomFocus).lerp(this.lensTarget(b.look, along, this.lensLook), w);
+    this.lensLook.subVectors(this.roomFocus, this.bedFocus);
+    const toward = this.lensLook.length(), lean = lerp(a.lean, b.lean, w) * reach;
+    s.target.copy(this.bedFocus).addScaledVector(this.lensLook, toward > 1e-3 ? Math.min(toward, lean) / toward : 0);
+    s.target.y = Math.max(s.target.y, heightAt(s.target.x, s.target.z) + 0.4);
+    this.roomFocus.copy(s.target);
+    const bird = this.cast.cygnet.position;
+    this.bedFocus.set(bird.x, Math.max(heightAt(bird.x, bird.z), 0) + 0.6, bird.z);
+    const ex = k.x + Math.sin(bearing) * reach, ez = k.z + Math.cos(bearing) * reach;
+    // A metre over its own ground at least, or the rig takes the slope for something in the way and pulls in.
+    s.eye = this.perch.set(ex, Math.max(ground + lerp(a.rise, b.rise, w), heightAt(ex, ez) + 1), ez);
+    this.subjects.margin = 0.8;
+    this.subjects.extra = 3;
+    s.subjects = this.subjects;
+    s.clearance = 0.7;
+    this.pace = 0.7;
+    this.focus.copy(bird);
   }
 
   /** The destination and the bird share the shot, including the first spill of morning. */
@@ -1114,36 +1251,17 @@ export class SleepingChapter implements Chapter {
       case 'edge':
       case 'climb':
       case 'snow':
+      case 'step':
       case 'mist':
-      case 'catchFeather': {
+      case 'catchFeather':
+      case 'crest':
         /**
-         * Down at the bird's eye, where the grass is over its head and the fog top is the sky. It stands behind
-         * the way up rather than behind the bird: a bird that stops to look at something must not swing the
-         * whole world round with its head.
+         * Down at the bird's eye, where the grass is over its head and the fog top is the sky. Where the lens stands
+         * goes with the bird's progress up the route rather than with the bird itself: a bird that stops to look at
+         * something must not swing the whole world round with its head.
          */
-        const ground = Math.max(heightAt(k.position.x, k.position.z), 0);
-        this.bedFocus.copy(k.position).setY(ground + 0.7);
-        const trail=this.cast.sleeping.trail;
-        const interest=this.beat==='snow'?trail.snowTarget:this.beat==='mist'?trail.mistTarget:SLEEP_ROUTE[this.routeIndex];
-        this.roomFocus.copy(interest).setY(interest.y+0.7);
-        s.target.lerpVectors(this.bedFocus, this.roomFocus, 0.35);
-        // Behind the way up, turning with it gradually as the bird passes each marker of the route.
-        const dx=this.upward.x,dz=this.upward.z;
-        const ex=k.position.x-dx*6.4-dz*3.2;
-        const ez=k.position.z-dz*6.4+dx*3.2;
-        s.eye = this.perch.set(ex, Math.max(ground + 2.4, heightAt(ex, ez) + 1.2), ez);
-        if (this.routeIndex >= 6) {
-          this.subjects.tertiary = WINDOW;
-          this.subjects.margin = .66;
-          this.subjects.extra = 14;
-          s.target.lerp(WINDOW,.18);
-        }
-        s.subjects = this.subjects;
-        s.clearance = 0.7;
-        this.pace = 0.7;
-        this.focus.copy(k.position);
+        this.climbLens();
         return;
-      }
       case 'unbinding':
       case 'hilltop':
       case 'reachRibbon':

@@ -17,7 +17,10 @@ const {Boat}=await import('../src/traveller/boat.ts');
 const {SleepingChapter}=await import('../src/story/sleeping.ts');
 const {SleepingTrail,SNOW_AT}=await import('../src/world/sleeping-trail.ts');
 const {SleepingHearth}=await import('../src/world/sleeping-hearth.ts');
-const {sleepPathAt,SLEEP_PATH,SLEEP_SNOW_STOP}=await import('../src/world/sleeping-layout.ts');
+const {sleepPathAt,SLEEP_PATH,SLEEP_DRIFT_STOP}=await import('../src/world/sleeping-layout.ts');
+const {SLEEP_STEP}=await import('../src/world/heightfield.ts');
+// The frost-heaved bank is the one place the way is too steep to walk: the bird is helped up it, not walked.
+const onBank=(x,z)=>Math.hypot(x-SLEEP_STEP.x,z-SLEEP_STEP.z)<1.4;
 const {heightAt}=await import('../src/world/island.ts');
 const {CurtainRibbon}=await import('../src/world/sleeping-ribbon.ts');
 const {CURTAIN_KNOT,CURTAIN_END}=await import('../src/world/sleeping.ts');
@@ -110,7 +113,7 @@ for (const fps of [30,60]) {
       const path=sleepPathAt(k.position.x,k.position.z);
       assert(path.distance<1.65,`bird left grass corridor: ${path.distance} at ${k.position.toArray()}`);
       const slope=Math.hypot(heightAt(k.position.x+.1,k.position.z)-heightAt(k.position.x-.1,k.position.z),heightAt(k.position.x,k.position.z+.1)-heightAt(k.position.x,k.position.z-.1))/.2;
-      assert(slope<0.65,`bird climbed cliff: slope ${slope}, at ${k.position.toArray()}, route ${c.routeIndex}`);
+      if(!onBank(k.position.x,k.position.z))assert(slope<0.65,`bird climbed cliff: slope ${slope}, at ${k.position.toArray()}, route ${c.routeIndex}`);
       if(['snow','mist'].includes(c.beat)&&c.t<7) assert(c.encounterStroke===0,'idle must not solve encounter');
       if(['snow','mist'].includes(c.beat)&&c.t>8&&c.t<10) assert(c.encounterStroke>.09&&c.encounterStroke<.13,'earned passage progress must hold during interrupted input');
     }
@@ -184,7 +187,7 @@ for(let i=1;i<SLEEP_PATH.length;i++)for(let j=0;j<=20;j++)for(const side of [-0.
   const a=SLEEP_PATH[i-1],b=SLEEP_PATH[i],u=j/20,dx=b[0]-a[0],dz=b[1]-a[1],len=Math.hypot(dx,dz);
   const x=a[0]+dx*u-dz/len*side,z=a[1]+dz*u+dx/len*side;
   const slope=Math.hypot(heightAt(x+.1,z)-heightAt(x-.1,z),heightAt(x,z+.1)-heightAt(x,z-.1))/.2;
-  assert(slope<0.65,`grass shelf slope ${slope} at ${x},${z}`);
+  if(!onBank(x,z))assert(slope<0.65,`grass shelf slope ${slope} at ${x},${z}`);
 }
 for(const [x,z] of [[4,0],[-4,0],[0,4],[0,-4]])
   assert(Math.abs(heightAt(BED.x+x,BED.z+z)-BED.y)<0.3,'the bedside terrace must stay open and gently sloped');
@@ -228,8 +231,7 @@ console.log(`Terrain and feather guidance pass; assisted ${activeWalk.toFixed(1)
     }
     f.step(c);feather.update(1/30,f.time);
     const slope=Math.hypot(heightAt(k.position.x+.1,k.position.z)-heightAt(k.position.x-.1,k.position.z),heightAt(k.position.x,k.position.z+.1)-heightAt(k.position.x,k.position.z-.1))/.2;
-    worstSlope=Math.max(worstSlope,slope);
-    assert(slope<.65,'crosswinds steered the bird onto the cliff');
+    if(!onBank(k.position.x,k.position.z)){worstSlope=Math.max(worstSlope,slope);assert(slope<.65,'crosswinds steered the bird onto the cliff');}
     assert(sleepPathAt(k.position.x,k.position.z).distance<1.65,'crosswinds pulled the bird off its route');
     assert(feather.position.distanceTo(k.position)<6,'crosswinds hid the guide far from the bird');
     assert(Number.isFinite(k.position.length()+feather.position.length()),'gust reversal produced an invalid position');
@@ -239,7 +241,7 @@ console.log(`Terrain and feather guidance pass; assisted ${activeWalk.toFixed(1)
   console.log(`Reversing crosswinds passed; worst walking slope ${worstSlope.toFixed(3)}.`);
 }
 
-assert(Math.hypot(SNOW_AT.x-SLEEP_PATH[SLEEP_SNOW_STOP][0],SNOW_AT.z-SLEEP_PATH[SLEEP_SNOW_STOP][1])>3.25,'the bird must wait on turf before trying the drift');
+assert(Math.hypot(SNOW_AT.x-SLEEP_PATH[SLEEP_DRIFT_STOP][0],SNOW_AT.z-SLEEP_PATH[SLEEP_DRIFT_STOP][1])>3.25,'the bird must wait on turf before trying the drift');
 
 // Spent fuel stays cold under later wind and after a restored morning checkpoint.
 {
