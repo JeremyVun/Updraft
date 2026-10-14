@@ -198,7 +198,7 @@ What later phases must know:
 - Frames mixing the sleeping island with another room (the crossings in and out) need a look in phase 4, because the
   sky now has a sleeping-only branch.
 
-## Phase 3: surface and sound — in progress
+## Phase 3: surface and sound — done (3a `52c7d88f`, 3b `3a361bfa`, 3c `67f72e80`, merged `8217d2df`; main merged `efb15021`)
 
 Three parallel waves, file-disjoint, each in its own worktree with its own dev server so no wave's edits reload
 another's captures; 3b and 3c merge into `sleeping-climb` when all three are done.
@@ -265,7 +265,47 @@ silence-but-wind character.
 and fog in snow, a `VIDEO=1 CLIMB=1` run with its audio track levels logged per beat. The lead cannot listen: the
 playtest build in phase 4 is where Jeremy hears it.
 
-## Phase 4: review, playtest, close — not started
+### Phase 3 handoff notes
+
+- Drift (`src/world/sleeping-drift.ts`): `snowDepthAt` forwards to `SleepingDrift.depthAt`, whose shader twin is
+  `DRIFT_GLSL` in the same file; change both together. The cornice's lean-out is drawing only. `SNOW_AT` and
+  `alongRoute` live there (`sleeping-trail.ts` re-exports `SNOW_AT`). Prints and the wade trench need the
+  `main.ts` line feeding the bird's position and footfalls, which the CPU logic check does not run.
+- Hillside (`src/world/sleeping-dressing.ts`): the bank face and turf cap follow the heightfield's lip (`lipAlong`
+  mirrors `sleepingCrest`); the rabbit's wake uses a JS copy of `morningAt` from `atmosphere.ts` and waits until it is
+  on screen (`WAKE_UNSEEN`, 30 s at most), a lead-accepted addition. The trickle is traced from `SLEEP_TRICKLE` down
+  the fall line; long traces read as a path.
+- Snow and sound: snowfall reads `NIGHT_WIND` and `uSleepLost`, knobs `snowThicken`, `snowDrive`, `snowShutter`,
+  `snowStreakDim`, `snowAcross` (75% of the along-view drive turned across it on the crest), `snowFogCalms`. The night
+  wind is `nightWindSound` in `sleeping-wind.ts` through `winterGust`, knobs `nightWindGusts`, `nightWindRoar`,
+  `nightWindMost`, `nightWindAnswer`, `fogLull`, `summitLull`, `nightWindSettles`; foley in
+  `src/audio/sleeping-foley.ts` and new `foley.ts` methods; `tools/sleeping-audio-check.mjs` renders it;
+  `sleeping-check.mjs AUDIO=1` prints levels by beat. Snow steps take `tuning.audio.cygnetStepDb` like other steps.
+- `tools/audio-check.mjs` fails on "meadow begins waking without a competing completion phrase", identically on the
+  base: not this work.
+- For close: `docs/contracts/audio.md` gains the night wind and the climb foley (wording in the 3b report: gusts and a
+  capped roar grow with `climbExposure`, lull by `fogLull` while the fog has the window, one swell answers the call,
+  settle by `summitLull` at the summit) and the `sleepingWind` line names all six climb beats; `docs/styles.md`'s
+  "Footprints … never on grass or snow" gains the drift's prints.
+
+### Lead's review of the merged strip (`/tmp/updraft-climb-3m-jG7S/`, 2 fps sheets, 2026-10-15)
+
+The climb now plays as the storyboard in one run (feather to boat, no errors): the drift's try, sink and layered
+clearing; the bank's overhang reading as too high, the lopsided scramble, the window found; the fog's call, glimpse,
+turn, white, ghost and glow; the crest. Left for phase 4a:
+1. **Ink-blot prints** (38–44 s): prints and gaps in the cleared channel's skin read as dark blue-grey puddles. Soft
+   blue-shadowed impressions, far lighter.
+2. **White-out on the walk out** (37.5–40 s): the drift fills most of the frame. The bird keeps hill and sky round it
+   there (re-key the lens or pull the near bank back further).
+3. **The trickle reads as a drawn line** (6.5–11.5 s): a long bright wavy line down the foreground slope. A small
+   frozen rill: shorter, broken, matte frost, no brighter than the frost round it.
+4. **Boat over the grass** in `push` after a scripted `morning` restore (seen by 3c): establish whether it happens in
+   normal play and whether it predates this branch; fix only if this branch caused it, otherwise report.
+5. **Crossings:** the sky has a sleeping-only fog branch; check the arrival crossing and the departure to the mirror
+   for sky or fog artifacts.
+6. The cornice a little bolder, so the lee lip reads from the arrival lens.
+
+## Phase 4: review, playtest, close — in progress
 
 Lead watches the whole room in motion with sound beside the owl and the clouds, fixes what does not earn its place,
 then hands Jeremy a build to play. On approval: migrate the durable rules into `docs/chapters.md` § The sleeping
