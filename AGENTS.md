@@ -14,6 +14,7 @@ Browser game where you play the wind (Three.js + TypeScript + Vite). **Read `doc
 - The drowned village being rebuilt (work in progress under Claude's creative lead; the vision, the sequence step by step and Jeremy's brief verbatim): `docs/backlog/path-puzzles/design.md`, phases in `build_plan.md`.
 - The characters: the child `docs/child.md`, the cygnet `docs/cygnet.md`, the boat `docs/boat.md`.
 - The sleeping island's climb being rebuilt (Claude's creative lead; Jeremy's brief verbatim, the stop-by-stop storyboard and phases): `docs/backlog/sleeping-climb/`.
+- The birches uplift (Claude's creative lead; Jeremy's brief verbatim, the squirrel hide-and-seek, the Red Door music and the island's move, phases): `docs/backlog/birches-uplift/`.
 - Meadow musical encounter in development: `docs/backlog/meadow-echoes/design.md` holds Jeremy's exact brief, the intended player experience and verification findings.
 - Contracts: the wind field every system reads `docs/contracts/wind.md`; the ground, its life, the islands and what lives on them `docs/contracts/world.md`; sound `docs/contracts/audio.md`; checkpoint saves, chapter select and hidden-page audio `docs/contracts/progress.md`; analytics `docs/contracts/analytics.md`.
 - How a frame is produced and kept smooth (boot, frame order, camera direction, readbacks, quality, post): `docs/engine.md`. Local release checks: `docs/testing.md`.

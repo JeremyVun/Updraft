@@ -1,0 +1,134 @@
+# Birches uplift: build plan
+
+Design: [design.md](design.md). Everything is built in the worktree `/Users/jeremy/projects/updraft-birches` on branch
+`birches-uplift`. Nothing merges to `main` without Jeremy's approval.
+
+## Every brief includes
+
+- Name the model (given per phase). Read `AGENTS.md`, `docs/journey.md`, design.md and this phase, then the files
+  the phase owns.
+- Run `coord note "<intent>"` first. Never `git stash`. Never restore or overwrite a file wholesale.
+- Run builds, checks and captures in the foreground, splitting anything over the 10-minute tool limit into pieces
+  (one case, seed or batch per call). Never background a job to wait on it. The one background job allowed is a dev
+  server, on its own port (`npm run dev -- --port <n>`) when another phase is running at the same time.
+- Browser tools use Playwright's Chrome for Testing (`channel: 'chromium'`), never the installed Google Chrome.
+- Put output in `/tmp` (`mktemp -d`). Report stills and strips by path; record videos only when they will be
+  watched for motion.
+- Commit to `birches-uplift` at the end of the phase with the attribution trailer. Mark the phase done here, with
+  what was measured.
+
+## Phases
+
+### 1. Move the island. Opus. Done: ☐
+
+Owns `world/geography.ts`, the birches entries of `world/heightfield.ts` (`ISLES.birches`, `BIRCH_RISE`,
+`BIRCH_HOLLOW`), `world/birches.ts`, `world/birch-scarf.ts`, `story/birches.ts`, the `toBirches`/`toStairs` routes
+in `story/journey.ts`, wherever saved coordinates are migrated by `GEOGRAPHY_VERSION`, and any tool with birches
+coordinates baked in (`tools/scarf-check.mjs`, `scarf-geometry-check.mjs`, `birches-drift-check.mjs`, the
+playthrough).
+
+- First, measure the current `toStairs` and `toBirches` sailing times with no input (from `?chapter=toStairs` and
+  `?chapter=toBirches` in the QA preview), and record them in design.md under "The island moves".
+- Add `BIRCHES_SHIFT` (revision 12) and express every birches literal through it, so that `BIRCHES_SHIFT = {0, 0}`
+  reproduces the current world bit for bit. Commit that first, checked by comparing stills at a zero shift.
+- Choose the shift west (with any z component the constraints need) so that `toStairs` is about 50 s and
+  `toBirches` stays within ±15%. The constraints are in design.md.
+- **Seam:** the island's local layout is unchanged. Later phases author positions in the same local terms (relative
+  to the shifted literals), never as new absolute numbers.
+- **Gate:** typecheck and build. Sailing times re-measured and recorded. `scarf-check` and `birches-drift-check`
+  pass. Before/after stills: the arrival, the crest, the berth and departure, mid-`toStairs`, the stairs landing
+  under the deck, and the view north from the meadow's far shore. A save made at a birches checkpoint and at
+  `toStairs` before the change resumes correctly after it.
+
+### 2. Music. Sonnet. Done: ☐ (after 1; may run alongside 3)
+
+Owns `assets/music/red_door.ogg` (a copy of "The Red Door Opens"; leave every other file in `assets/music`
+untouched), `audio/music-loading.ts`, the recorded-score and sound-state wiring for the birches and stairs tracks,
+`tuning.audio` (`recordedMusicDb`, `stairsSongCloudFade`), `audio/stairs-sound.ts`'s white fade, the `toStairs`
+crossing options in `story/journey.ts`, `docs/contracts/audio.md` (Birches, the stairs, prefetch and memory), the
+sound line in `docs/stairs.md`, and the music checks (`village-music-check.mjs`, `clouds-music-check.mjs`,
+`music-transition-audit.mjs`, as they need).
+
+- Do what design.md "Music" says. Measure Red Door's LUFS and set its level by the existing method. Record the
+  number in the audio contract.
+- **Gate:** `npm run check:audio`, `village-music-check`, `clouds-music-check`. Render `toStairs` from push-off to
+  the white with `music-transition-audit` (or `stairs-audio-proposal.mjs`) and report: Red Door's end or fade
+  time, the length of the quiet gap, `birches.ogg`'s start, and its fade in the white.
+
+### 3a. The squirrel's look. Opus (visual). Done: ☐ (after 1; may run alongside 2)
+
+Owns `src/creatures/squirrel.ts`, `src/creatures/squirrel/` (`body`, `shader`, `pose`), `src/story/squirrel-yard.ts`
+with its stage hook (as `cat-yard.ts` is wired), and `tools/squirrel-check.mjs`.
+
+- The cat (`creatures/cat.ts`, `creatures/cat/`) is the template for structure, skinning and shading. The owl and
+  the clouds are the quality bar. The look and scale are in design.md "The squirrel".
+- Static poses for every action (`sit` with nut, `freeze`, `perch`, `buried` tail out and tail in, `peek`), in the
+  birches' light: a stage variant or a `?chapter=birches` eval placement.
+- **Seam (the API phases 3b and 5 build on):** `Squirrel` with `position`/`yaw`, `act(name, opts)`, `follow(path,
+  onArrive)` (a path of ground, trunk and scarf points), `hide(at, { tailOut })`, `flush()` (burst out),
+  `perchAt(point, yaw)`, `visible`, `update(dt, time)`, and a `busy` flag. Phase 3a fills in the poses behind it;
+  3b fills in the motion.
+- **Gate:** stills at gameplay distance beside the child and cygnet, in the room's own light, at 390×844 portrait
+  and 1440×900 landscape. In the round frames (about 14–17 m), the squirrel's sitting-up silhouette is at least
+  about 28 px tall in portrait. Close stills for the face, ear tufts and tail. The orchestrator reviews them, then
+  shares them with Jeremy (opened in Preview) and carries on unless he objects.
+
+### 3b. The squirrel's motion and voice. Opus. Done: ☐ (after 3a)
+
+Owns `src/creatures/squirrel/` (`gait`, `voice`, the actions' motion in `pose`), `squirrel.ts` mechanics,
+`squirrel-check.mjs` strips.
+
+- `bound` with planted paws, `dive` into `buried`, `burst`, `climb` up and down a trunk, `run-line` along a sagging
+  wool path, `scold` with tail flicks, `peek`. A synthesised voice and claw-on-bark sound, built like the cat's.
+- **Gate:** motion strips and one clip each of bound, dive→burst, climb and run-line, watched by the orchestrator
+  for motion. Contact via skinned vertices against the rendered ground, litter surface and bark (no floating, no
+  sinking except when `buried`). No pops or foot slip beyond the cat's limits.
+
+### 4. Storyboard and layout. Opus (visual). Done: ☐ (after 1 and 3a)
+
+Owns the new `BIRCH_PILES` entries in `world/birches.ts` (one for round 2, two for round 3, each banked against a
+trunk, root or stone), and a layout module `src/story/birches-rounds.ts` holding each round's area, heaps, the
+child's standing point, the camera frame, the squirrel's paths between rounds, its perches at each tangle, the swing
+limb and the goodbye branch.
+
+- Stage every stop in design.md "The room, stop by stop" in-engine with the real squirrel posed by eval: the meeting
+  on the log, each round's frame with tells showing, each dash's start and end, its perch at each tangle, the leap's
+  drift, and the goodbye. Check that no squirrel position blocks a tangle's gesture or camera, and that no new heap
+  sits on the ride or in a tangle's frame.
+- **Gate:** a strip of stills per stop in portrait and landscape, reviewed by the orchestrator. Final positions are
+  recorded in design.md, replacing "settled in the storyboard phase".
+
+### 5. The game. Opus. Done: ☐ (after 3b and 4)
+
+Owns `src/story/birches-squirrel.ts` (rounds, live-depth hides via `Readback`, the trunk fallback, finding, tells,
+the cygnet's co-seeking, the stall hint and invitation, the leap), the integration into `story/birches.ts` (new
+beats, the walk's next stop across tangles and rounds, frames, the squirrel at tangles, the swing and the goodbye),
+the save payload and point names in `story/checkpoint-data.ts`, `audio/birches-foley.ts` (rustle tells, bursts,
+the leap), `tuning.birches.squirrel` knobs, and a new `tools/squirrel-rounds-check.mjs`.
+
+- Numbers to build to (design.md "A round"): tell interval 2.5–4 s; tail-out share 0.5 / 0.33 / 0.2 by round; find
+  radius = heap radius + 1.5 m; hint at 10 s, invitation at 18 s without wind on the right heap; one deliberate
+  swipe or two near misses finds it.
+- Hides are chosen from one asynchronous readback per choice, never a synchronous read and never every frame.
+- **Gate:** typecheck. `squirrel-rounds-check` with real gestures covers: each round found on the right heap;
+  wrong heaps first; random swipes only; a stall through the hint and the invitation; every heap blown flat before
+  arrival (drift and trunk fallbacks); the leap with a deep drift and with a bare hollow; and a resume at every new
+  checkpoint and from pre-build save names. Existing `scarf-check` (all modes) and the swing still pass.
+
+### 6. Verification wave. Opus. Done: ☐ (after 2 and 5)
+
+Run against `npm run build:qa` then `npm run preview:qa`.
+
+- Full-room clips with real gestures in portrait and landscape, from the `toBirches` arrival through the `toStairs`
+  landing, with an engaged player and with a careless one. The orchestrator watches them for pacing, legibility,
+  camera and contact. Fix what they show (fixes go back to the owning phase's files), then re-capture only what
+  changed.
+- Time on the island with an engaged player: 3½–4½ min. Report the measurement.
+- Sound in the real game: `village-music-browser-check.mjs` and a listen-render of the room and crossing.
+
+### 7. Docs and close. Sonnet. Done: ☐
+
+Rewrite chapters.md "The birches" for the room as built, with the squirrel's files, knobs and checks. Fix the
+journey.md one-liner for the birches, the audio contract and `docs/stairs.md` where phase 2 didn't, and the roadmap
+(drop the "Birches uplift" entry). Then run the backlog-item close stage. The orchestrator summarises for Jeremy
+what the branch changes, with stills and the clip paths, and merges only on his approval.

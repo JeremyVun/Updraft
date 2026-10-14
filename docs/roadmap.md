@@ -42,7 +42,7 @@ Planned:
   interactions and activities (right now its over in 90 seconds) we can add another song for the stairs, and probably
   move the birches island so that the travel from birches to stairs island is a bit longer? Otherwise there's not
   enough musical palate cleansing between the two islands." A song for the stairs under the cloud comes with it;
-  the white and the Penrose loop stay silent up to the top.
+  the white and the Penrose loop stay silent up to the top. In design and build: [backlog/birches-uplift](backlog/birches-uplift/design.md).
 
 Known issues:
 - The sky mirror: a faint speckled patch on the water beyond the departure jetty, looking toward the sun on the way
