@@ -3325,6 +3325,25 @@ export const tuning = {
     winterGust: .8,
     snowCount: 2100,
     snowFall: 0.75,
+    /**
+     * Out on the hill the snow thickens and the wind takes it with the climb's exposure: on the crest there are this
+     * many times the bedside's flakes, blown this many times as fast, each drawn along its last `snowShutter` seconds
+     * of travel so it streaks; a streak dims by this share per flake-width of its length; and this share of its travel
+     * toward or away from the lens is turned across the view, so it streams past rather than out of the middle. In the
+     * fog's white the wind's hold on it eases by `snowFogCalms`.
+     */
+    snowThicken: 3.2, snowDrive: 2.2, snowShutter: 0.06, snowStreakDim: 0.3, snowAcross: 0.75, snowFogCalms: 0.65,
+    /**
+     * The night's wind as heard on the hill: how much harder its gusts come on the crest, the steady roar under them
+     * there, the swell that is the only answer to the call into the fog (seconds after the call, to come, to go), and
+     * the seconds it takes to settle back once the bird is at the summit. It drops by `fogLull` while the fog has the
+     * window and by `summitLull` from the summit on, below the bedside's.
+     */
+    nightWindGusts: 0.3, nightWindRoar: 0.3, nightWindMost: 0.95, nightWindAnswer: 0.6, fogLull: 0.55, summitLull: 0.4,
+    windAnswersAfter: 1.7, windAnswerRises: 0.9, windAnswerFades: 3.5,
+    nightWindSettles: 3,
+    /** The bird's sounds on the climb: the snow depth (m) under it from which its feet crunch, and their overall level. */
+    crunchFrom: 0.02, climbFoley: 1,
     hearthX: -171.2, hearthZ: -1913.8,
     hearthGutter: .10, hearthOut: .45, hearthAsh: .62,
     alarmFor: 3.2, alarmRock: .14,

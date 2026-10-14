@@ -1,12 +1,12 @@
 import * as THREE from 'three';
-import { sleepingGust } from '../world/sleeping-wind';
+import { NIGHT_WIND, sleepingGust } from '../world/sleeping-wind';
 import { HEARTH } from '../world/sleeping-hearth';
 import type { Shot } from '../camera';
 import type { Coax } from '../fx/swirl';
 import { tuning } from '../tuning';
 import { heightAt } from '../world/island';
 import { SLEEP_CREST_STOP, SLEEP_DRIFT_STOP, SLEEP_FOG_STOP, SLEEP_STEP_STOP, SLEEP_TRICKLE } from '../world/sleeping-layout';
-import { MIST_AT, SNOW_AT } from '../world/sleeping-trail';
+import { MIST_AT, SNOW_AT, WINDOW_SEEN } from '../world/sleeping-trail';
 import { BED, BED_FACING, HILLTOP, LAMP, PILLOW, WINDOW, SLEEP_LEDGE, SLEEP_ROUTE, CURTAIN_END, CURTAIN_KNOT, SLEEP_BERTH, SLEEP_LANDING } from '../world/sleeping';
 import type { Cast, Chapter } from './cast';
 import { cue } from './cues';
@@ -561,19 +561,36 @@ export class SleepingChapter implements Chapter {
     if (this.beat !== 'asleep') sleeping.hint = 0;
     if (this.warmed > 0) sleeping.cold = Math.min(sleeping.cold, 1-smooth(sleeping.dawn,0,.8));
     this.bedBreath = 0;
-    this.exposure();
+    this.exposure(dt);
     this.heading(dt);
     this.frame();
   }
 
   /** Out on the hill the wind is stronger the higher it gets, and the bird leans into it unless the player's is behind it. */
-  private exposure(): void {
+  private exposure(dt: number): void {
     const { cygnet: k, sleeping } = this.cast;
     const out = ON_THE_HILL.includes(this.beat) && (this.beat !== 'edge' || this.departureIndex >= 2);
     if (out) this.reached = Math.max(this.reached, smooth(this.alongRoute(), ROUTE_AT[1], ROUTE_AT[SLEEP_CREST_STOP]));
     else if (this.beat === 'unbinding' || this.beat === 'hilltop' || this.beat === 'reachRibbon' || this.beat === 'pullRibbon') this.reached = 1;
     this.climbExposure = this.reached * (1 - sleeping.dawn);
     k.braced = out ? T.climbLean * this.climbExposure * (1 - sleeping.feather.encouragement) : 0;
+    this.nightWind(out, dt);
+  }
+
+  /**
+   * The weather and its sound follow the exposure on the hill. The wind drops while the fog has the window, so the call
+   * goes out into a hush and only the wind answers it, and from the summit on it gives way to the moment there.
+   */
+  private nightWind(out: boolean, dt: number): void {
+    const w = NIGHT_WIND, settle = Math.exp(-dt / T.nightWindSettles);
+    const beyond = !out && this.reached >= 1;
+    w.rise = out ? this.climbExposure : beyond ? w.rise * settle : 0;
+    const summitLull = beyond ? T.summitLull + (w.lull - T.summitLull) * settle : 0;
+    w.lull = Math.max(summitLull, T.fogLull * (1 - WINDOW_SEEN.value));
+    const after = this.t - T.mistCallAt - T.windAnswersAfter;
+    w.answer = this.beat === 'mist' ? smooth(after, 0, T.windAnswerRises) * (1 - smooth(after, T.windAnswerRises, T.windAnswerRises + T.windAnswerFades)) : 0;
+    const b = this.cast.wind.breeze;
+    if (b.lengthSq() > 1e-6) w.toward.copy(b).normalize();
   }
 
   /** A child trying to stay awake: turn the bed down, make room for the bird, sit, nod, get in, then draw the quilt up. */

@@ -56,12 +56,7 @@ export class SleepingTrail {
   private readonly clear = { value: 0 };
   private readonly clock = { value: 0 };
   private readonly thaw = this.drift.thaw;
-  private readonly flakes: THREE.Points;
-  private readonly weather = {value:0};
-  private readonly snowDrift = {value:0};
-  private readonly snowfall = {value:0};
   private readonly gust = {value:0};
-  private readonly snowOrigin = {value:new THREE.Vector3()};
   guideActive = false;
   readonly guideAt = new THREE.Vector3();
   readonly guideGoal = new THREE.Vector3();
@@ -153,21 +148,6 @@ export class SleepingTrail {
 
     // The bank is integrated by atmosphere.hollowDensity in every material, without intersecting fog cards.
     this.objects.push(this.traces.mesh);
-    const geo=new THREE.BufferGeometry(),positions=new Float32Array(tuning.sleeping.snowCount*3);
-    for(let i=0;i<positions.length;i+=3)positions.set([rand()*36,rand()*20,rand()*36],i);
-    geo.setAttribute('position',new THREE.BufferAttribute(positions,3));
-    this.flakes=new THREE.Points(geo,new THREE.ShaderMaterial({
-      uniforms:{...atmo.uniforms,uClock:this.clock,uThaw:this.thaw,uWeather:this.weather,uDrift:this.snowDrift,uFall:this.snowfall,uGust:this.gust,uSnowOrigin:this.snowOrigin},transparent:true,depthWrite:false,
-      vertexShader:`uniform float uClock,uWeather,uDrift,uFall,uGust;uniform vec3 uSnowOrigin;out vec3 vWorld;out float vSeed;
-        void main(){vSeed=fract(position.x*.713);vWorld=uSnowOrigin+vec3(-18.0+mod(position.x+uDrift-uSnowOrigin.x,36.0),-10.0+mod(position.y-uFall-uSnowOrigin.y,20.0),-18.0+mod(position.z+uClock*.3-uSnowOrigin.z,36.0));
-        vWorld.x+=sin(uClock*1.2+position.z)*(.24+uGust*.6);vec4 view=viewMatrix*vec4(vWorld,1.0);gl_Position=projectionMatrix*view;
-        gl_PointSize=clamp((45.0+uGust*12.0)/max(1.0,-view.z),1.0,4.0);}`,
-      fragmentShader:`${ATMO_GLSL}
-        uniform float uThaw,uWeather;in vec3 vWorld;in float vSeed;
-        void main(){float a=1.0-smoothstep(.15,.5,length(gl_PointCoord-.5));if(a<.01)discard;
-        vec3 col=hemiLight(vec3(0,1,0))*1.8+lampLight(vWorld,vec3(0,1,0));
-        gl_FragColor=vec4(applyFog(col,vWorld),a*.8*(1.0-uThaw)*smoothstep(vSeed,vSeed+.08,uWeather));}`,
-    }));this.flakes.frustumCulled=false;this.objects.push(this.flakes);
   }
 
   /** Reach the visible obstruction, including its low front and shoulders, instead of a tiny floating hotspot. */
@@ -205,12 +185,8 @@ export class SleepingTrail {
   update(dt: number, time: number, dawn: number, camera: THREE.Camera, cold = 0): void {
     this.clock.value=time;
     this.gust.value=sleepingGust(time,cold,dawn);
-    this.snowDrift.value+=dt*(.22+cold*1.8+this.gust.value*8);
-    this.snowfall.value+=dt*tuning.sleeping.snowFall*(1+cold+this.gust.value);
-    this.weather.value=cold;this.snowOrigin.value.copy(camera.position);
     this.clear.value+=(this.mist-this.clear.value)*(1-Math.exp(-dt*1.6));
     this.drift.update(dt,time,this.snow,THREE.MathUtils.smoothstep(dawn,0.12,0.85),this.gust.value);
-    this.flakes.visible=dawn<.85;
     const beyond=(this.guideAt.x-MIST_AT.x)*MIST_FORWARD.x+(this.guideAt.z-MIST_AT.z)*MIST_FORWARD.z;
     const emerged=THREE.MathUtils.smoothstep(beyond,2.4,7);
     this.fogEnclosure=1-emerged;
