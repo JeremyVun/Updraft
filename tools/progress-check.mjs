@@ -50,8 +50,8 @@ try {
     ['lines', 'washing', 'family', `c.restoreCheckpoint('family',[2,1]);c.holdUntil=1e6;`],
     ['boats', 'boats', 'pool-1', `c.restoreCheckpoint('pool-1',[33]);`],
     ['boats', 'boats', 'pool-2', `c.restoreCheckpoint('pool-2',[69]);`],
-    ['meadow', 'piano', 'piano', `const {piano}=await import('/src/world/piano.ts');g.child.place(piano.stand.x,piano.stand.z,Math.PI);c.piano.give(g.child);c.beat='walk';c.leg=1;c.play='hold';c.holdUntil=1e6;c.wake(4,true);`],
-    ...[1,2].map(count=>['meadow','echoes',`echoes-${count}`,`const f=g.meadowEchoes.flowers[${count}-1].stand;g.child.place(f.x,f.z,Math.PI);c.restoreCheckpoint('echoes-${count}',[2,300,0,0,0]);`]),
+    ['meadow', 'piano', 'piano', `const {piano}=await import('/src/world/piano.ts');g.child.place(piano.stand.x,piano.stand.z,Math.PI);c.piano.give(c.cast);c.beat='walk';c.leg=1;c.play='hold';c.holdUntil=1e6;c.wake(4,true);`],
+    ...[1,2].map(count=>['meadow','echoes',`echoes-${count}`,`const f=g.meadowEchoes.stands[${count}-1];g.child.place(f.x,f.z,Math.PI);c.restoreCheckpoint('echoes-${count}',[2,300,0,0,0]);`]),
     ['meadow', 'meadow', 'pond', `c.skipToCrest();c.crestDone=true;c.beat='walk';c.play='hold';c.holdUntil=1e6;g.cygnet.rideIn('satchel');`],
     ...[1,2,3,4].map(count => ['birches','birches',`scarf4-${count}`,
       `c.restoreCheckpoint('scarf4-${count}',[${count},0,.65,${count}]);c.holdUntil=1e6;`]),
@@ -108,7 +108,7 @@ try {
     }
     if (point.startsWith('echoes-')) {
       assert.equal(restored.echoes,Number(point.slice(7)));
-      assert.notEqual(restored.song,'done','restore keeps the walk to the receiving flower');
+      assert.notEqual(restored.song,'done','restore keeps the remaining walk and listening beat');
     }
     if (point === 'complete') assert(restored.finished);
     if (chapter === 'drowned') await playsOn(point);

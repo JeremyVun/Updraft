@@ -54,11 +54,12 @@ export class Creatures {
     private readonly habitat: Habitat,
     input: PointerInput,
     camera: THREE.Camera,
+    capacities: { rabbits?: number; songbirds?: number; butterflies?: number } = {},
   ) {
-    this.rabbits = new Rabbits(habitat);
-    this.songbirds = new Songbirds(habitat);
+    this.rabbits = new Rabbits(habitat, capacities.rabbits);
+    this.songbirds = new Songbirds(habitat, capacities.songbirds);
     this.gulls = new Gulls(habitat);
-    this.butterflies = new Butterflies(habitat);
+    this.butterflies = new Butterflies(habitat, capacities.butterflies);
     this.sheep = new Sheep(habitat);
     this.group.add(this.rabbits.mesh, this.songbirds.mesh, this.gulls.mesh, this.butterflies.mesh, this.sheep.mesh);
     fixTreeInPlace(this.group);

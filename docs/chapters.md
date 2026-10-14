@@ -288,30 +288,36 @@ before the plug.
 The last warm afternoon of the year, and the island is asleep. The crossing hides it in haze
 (`tuning.world.meadowCrossingHaze`) and lines up offshore with the hill path before turning in, so the boat lands
 at the foot of the climb (`tuning.sail.meadowArrivalSpeed` caps the last legs). A bank hides the meadow until the
-child climbs it. From the top: a grey island, shore included, with one patch of colour on the west rise where a
-piano stands (`PLACE`, `tuning.piano.initialRadius`), seen through a shallow saddle. The grey is held by the
-waiting region (`life.regions.waiting`, `uWaiting`): the wind raises no life inside it, so the island wakes all of
-a piece.
+child climbs it. Her steps leave a narrow, soft green trail on the climb and approach (`tuning.meadowLife`),
+joining the patch of colour on the near knoll where a piano stands (`PLACE`, `tuning.piano.initialRadius`),
+seen through a shallow saddle. The rest stays grey under the waiting region (`life.regions.waiting`,
+`uWaiting`): the wind raises no life inside it, leaving the wider awakening to the piano.
 
 **The piano is the key; music brings colour.** The plane leads the child to the stool; she plays one note.
-Call and response: rising, falling, then rising and falling together. A persistent outline above the keys, with a
+The hollow wooden bough beside it answers on the breeze; the child turns to listen. Its call finishes before an
+outline appears above the piano for the player's reply: rising, falling, then rising and falling together. The outline, with a
 ring at its starting end, is both the invitation and the input target on screen; tracing it plays the notes, her
 hands follow the progress, partial progress is kept, and there is no rhythm or pitch to match. An idle player
-keeps the invitation and a quiet demonstration; nothing times out. Each answered sweep sends music out from the
+hears the call again if no reply has begun; partial replies remain uninterrupted and nothing times out. Each answered sweep sends music out from the
 piano: note traces curl into the field planting colour, and a broad front with loose eddies wakes the ground to
-`tuning.piano.responseReach` (45, 85, 125), then the whole island on the fourth. The front's shape is fixed and it
+`tuning.piano.responseReach` (45, 85, 125). The fourth answer leads to a musical pause and the bough's longer
+finale, whose cue sends colour across the whole island. `audio/meadow-duet.ts` holds the provisional phrase
+notes, durations, reply patterns and final greening cue; Jeremy's supplied recordings will replace them in a
+later pass. The front's shape is fixed and it
 never takes colour back (`world/music-growth.ts`). After each answer the camera steps back and up over the field
 and stays there (`restBack`, `restUp`). On the lullaby the cygnet climbs out onto the keys and walks them, the
 camera rises and widens with the wave, and the grey hold is released only once the front covers it. Competing wind
 sounds and chimes are hushed during the duet. A completed piano checkpoint resumes past it.
 
-In the Meadow prototype ([design](backlog/meadow-echoes/design.md)), the piano is followed by three large
-bellflowers in the existing hollow. The child touches one; broad wind strokes carry its seed plume to the next,
-which opens and answers in a procedural breath voice. The second transfer climbs the hollow. Each arrival is
-kept, the child walks to it before the next release, and the final rest lets a distant swan call take over.
+In the Meadow rework ([design](backlog/meadow-echoes/design.md)), the piano stands on a nearby rounded knoll
+beyond the preserved shore bank. Its camera opens across the rolling hollow as colour returns. The child then
+sets the cygnet down beside a low bed of flowers: broad wind strokes open three irregular clusters and answer in
+procedural breath notes. They walk together to seed heads farther through the fold; upward strokes or circles
+lift a cloud that disperses above them. A final listening pause introduces the real swan call before the child
+gathers the cygnet and approaches the pond crest. Ambient wind never completes either play moment.
 `world/meadow-echoes.ts`, `world/meadow-seeds.ts`, `story/meadow-song.ts`, `audio/meadow-breath.ts`;
-`?chapter=echoes` begins the encounter. `echoes-1` and `echoes-2` saves preserve completed transfers and the
-remaining approach/listen; old piano and pond saves still load. The departure kite is held until after the pond.
+`?chapter=echoes` begins the encounter. `echoes-1` and `echoes-2` saves preserve completed play and the remaining
+walk/listen; old piano and pond saves still load. The departure kite and the boat's move to the far shore wait until after the pond.
 
 The walk goes on over the west rise and through a pass along `WAY` (`world/fields.ts`), the plane kept within
 reach of the child (`tuning.meadowPlane`). A flock grazes across the way below the rise (`onTheWay` in `main.ts`); it parts round her as she

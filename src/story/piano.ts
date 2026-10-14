@@ -2,6 +2,8 @@ import * as THREE from 'three';
 import type { Shot } from '../camera';
 import { tuning } from '../tuning';
 import { piano } from '../world/piano';
+import { windBough } from '../world/wind-bough';
+import { MEADOW_CALLS, MEADOW_FINALE } from '../audio/meadow-duet';
 import type { Cast } from './cast';
 
 type Beat = 'ahead' | 'walking' | 'looking' | 'sitting' | 'seated' | 'leaving' | 'done';
@@ -20,19 +22,6 @@ const PATIENCE = 22;
 /** How long they take to lower themselves onto the stool. */
 const SIT_FOR = 0.7;
 
-/**
- * The lullaby, in steps of the meadow's scale up from a low note. The piano says a phrase; the player answers by
- * sweeping the wind along the keys the way the phrase went, once for each part of it; the piano goes on to the
- * next. Rising, falling, then over the top and home.
- */
-const LULLABY: number[][][] = [
-  [[0, 1, 2, 4]],
-  [[5, 4, 2, 1]],
-  [[0, 2, 4, 5], [4, 2, 1, 0]],
-];
-const CADENCE = [0, 2, 4, 7, 4, 2, 0];
-
-
 /** The child and wind play the meadow awake. The invitation waits; only a traced answer advances it. */
 export class PianoStop {
   /**
@@ -50,7 +39,8 @@ export class PianoStop {
   private noteAt = 0;
   /** Which phrase of the lullaby they are on, which part of it the player has got to, and when the piano speaks next. */
   private phrase = 0;
-  private part = 0;
+  private callEnds = 0;
+  private pendingReply: number[] | null = null;
   private sayAt = 0;
   private heardTo = 0;
   private finishedAt = 0;
@@ -82,7 +72,7 @@ export class PianoStop {
   }
 
   /** A checkpoint beyond the stop never replays or re-scores the puzzle. */
-  restoreDone(): void { this.beat = 'done'; this.completeAt = 0; this.hushed = this.hushProgress = 0; piano.expect = null; piano.engaged = false; piano.finale = false; }
+  restoreDone(): void { this.beat = 'done'; this.completeAt = 0; this.hushed = this.hushProgress = 0; this.pendingReply = null; windBough.reset(); piano.expect = null; piano.engaged = false; piano.finale = false; }
 
   /** The music pulls back while they are at it, so what the wind is playing is what you hear. */
   get hush(): number {
@@ -115,6 +105,7 @@ export class PianoStop {
           c.stop();
           c.stowPlane(true);
           cast.plane.hold(c);
+          cast.plane.visible = false;
           c.walkTo(piano.stand.x, piano.stand.z, false, () => this.to('looking'), 0.7);
           this.to('walking');
         }
@@ -158,8 +149,11 @@ export class PianoStop {
           this.noteAt = 0;
           piano.press();
         }
-        this.playHands(time, cast);
         this.duet(time, cast);
+        if (windBough.sounding(time)) {
+          c.lookAt = windBough.mouth;
+          this.releaseHands(cast);
+        } else this.playHands(time, cast);
         this.onTheKeys(time, cast);
         this.wakeIsland(time);
         const over = this.finishedAt > 0 && time > this.finishedAt;
@@ -167,13 +161,13 @@ export class PianoStop {
           this.releaseHands(cast);
           piano.expect = null;
           c.dismount();
-          c.walkTo(piano.stand.x, piano.stand.z, false, () => this.give(c), 1);
+          c.walkTo(piano.stand.x, piano.stand.z, false, () => this.give(cast), 1);
           this.to('leaving');
         }
         break;
       }
       case 'leaving':
-        if (this.t > PATIENCE) this.give(c);
+        if (this.t > PATIENCE) this.give(cast);
         break;
       default:
         break;
@@ -239,25 +233,26 @@ export class PianoStop {
       this.heardTo = piano.matched;
       this.answered = true;
       this.responseAt = time;
-      this.part++;
-      if (this.part >= LULLABY[this.phrase].length) {
-        this.phrase++;
-        this.part = 0;
-        if (this.phrase >= LULLABY.length) {
-          this.finish(cast, true);
-          return;
-        }
+      this.phrase++;
+      if (this.phrase >= MEADOW_CALLS.length) {
+        this.finish(cast, true);
+        return;
       }
       this.onWake?.(this.heardTo as Waking, true);
       // Leave room to hear the answer and watch its colour travel before the next invitation.
       this.sayAt = time + tuning.piano.phraseRest;
       return;
     }
-    if (time > this.sayAt && piano.gesture.progress === 0) {
-      const notes = LULLABY[this.phrase][this.part].map(s => base + s);
-      const ends = piano.phrase(notes, tuning.piano.phraseSpacing, 0.42);
-      if (!piano.expect) piano.expect = notes;
-      this.sayAt = ends + tuning.piano.sayAgain;
+    if (this.pendingReply) {
+      if (time < this.callEnds + tuning.windBough.answerAfter) return;
+      piano.expect = this.pendingReply;
+      this.pendingReply = null;
+      this.sayAt = time + tuning.piano.sayAgain;
+    } else if (time > this.sayAt && piano.gesture.progress === 0) {
+      const phrase = MEADOW_CALLS[this.phrase];
+      piano.expect = null;
+      this.pendingReply = phrase.reply.map(s => base + s);
+      this.callEnds = windBough.play(phrase.call, time);
     }
   }
 
@@ -281,22 +276,18 @@ export class PianoStop {
     cast.child.lean = 0;
   }
 
-  /**
-   * The whole lullaby, from the top, played by the piano itself: the tune they have been finding was there the
-   * whole time. The island wakes all the way on it, and the cygnet climbs out onto the keys to help.
-   */
+  /** The bough carries the final greening; the cygnet adds a few piano notes beneath it. */
   private finish(cast: Cast, answered: boolean): void {
-    const base = Math.floor(piano.steps * 0.3);
     piano.expect = null;
+    this.pendingReply = null;
     this.answered = answered;
     piano.finale = true;
     this.releaseHands(cast);
-    const whole = [...LULLABY.flat(2), ...CADENCE].map((s) => base + s);
-    const ends = piano.phrase(whole, tuning.piano.phraseSpacing * (answered ? 0.8 : 0.95), answered ? 0.52 : 0.4);
+    const starts = this.now + tuning.windBough.finalRest;
+    const ends = windBough.play(MEADOW_FINALE, starts, true);
     this.completeAt = ends + tuning.piano.completionRest;
-    /** The front begins while the lullaby is sounding, with the bird joining it. */
-    this.wakeAt = this.now + tuning.piano.finaleWaveAfter;
-    this.finishedAt = this.wakeAt + tuning.piano.riseFor + tuning.piano.restFor;
+    this.wakeAt = starts + tuning.windBough.inhale + MEADOW_FINALE.greenAt;
+    this.finishedAt = Math.max(this.completeAt, this.wakeAt + tuning.piano.riseFor + tuning.piano.restFor);
     /** Out of the satchel first, because from there it can reach the keys without anybody lifting it. */
     this.walkFrom = -1;
     cast.carry.unstow(() => {
@@ -346,14 +337,15 @@ export class PianoStop {
     this.wakeAt = 0;
     this.roseFrom = time;
     this.onWake?.(4, this.answered);
-    this.finishedAt = time + tuning.piano.riseFor + tuning.piano.restFor;
+    this.finishedAt = Math.max(this.finishedAt, time + tuning.piano.riseFor + tuning.piano.restFor);
   }
 
-  private give(child: Cast['child']): void {
+  private give({ child, plane }: Cast): void {
     piano.expect = null;
     piano.engaged = false;
     piano.finale = false;
     child.stowPlane(false);
+    plane.visible = true;
     child.stop();
     child.lookAt = null;
     this.to('done');

@@ -1,7 +1,11 @@
 # The meadow carries the song
 
-Status: playable design in progress, isolated on `codex/meadow-echoes`. Jeremy authorised continued design,
-implementation and player-camera verification in this session. No merge or deployment is requested.
+Status: landscape, musical play redesign and wind-instrument foundation approved for merge onto `main`.
+Recorded phrases and final musical synchronisation remain a follow-up; deployment is not requested.
+
+Merge instruction (2026-10-14, verbatim):
+
+> can you merge onto main?
 
 ## Jeremy's brief (verbatim)
 
@@ -15,84 +19,135 @@ Musical direction discussed immediately before this:
 
 > after the piano can we try wind or flute instead or strings?
 
-## Intent
+## Redesign brief — 2026-10-13 (binding)
 
-The piano gives the meadow a voice. The child discovers that its flowers remember the tune, and the wind carries
-that music onwards until a real swan call answers beyond the rise. The pond then changes anticipation into a missed
-connection, followed by the small kindness of returning the feather. The player participates in the middle of the
-chapter instead of simply following the paper across it.
+> are you sure? it looks really low quality and low effort to me. Something doesn' tlook right. what do you think?
 
-Preserve the piano and its four colour waves, the cygnet on the keys, the family's already-preparing departure,
-the short swim and return, and the shower/rainbow. No flight practice, hostile flock, timing test, added walls,
-score UI, written instructions or collectible counters. Musical flowers are an invitation to play together;
-the child pauses through curiosity, not an invisible physical barrier.
+> lets step back a bit, what is the plan? what are you trying to acheive with the meadows chapter?
 
-## Playable direction
+> yea and maybe the piano needs to be a bit closer to the entry point. I like the opening sequence and camera shots where the child walks up the grey shore bank. Please try to preserve that part, but everything after is fair game to change e.g. if you want to change the feel of the landscape to be more like rolling grass hills and the piano a bit closer, then a landscape that makes sense for the "enjoy what you've awakened" phase and the discovery of the family. I am giving you ownership of this and i know you'll do a good job. Don't stop until you think you've got an amazing idea and implementation
 
-One encounter, three oversized bellflowers growing irregularly through the existing hollow between piano and crest.
-The child approaches and touches the first. It nods and releases a small ivory seed plume, with an airy phrase
-related to the piano. The receiving bloom sways and opens towards it. A broad wind stroke carries the plume across
-the first gap; the higher second receiver invites lifting as well as directional strokes. Unhelpful strokes only
-move the plume; no reset, timer, failure, or lost seed. Idle seeds return towards their source without advancing.
-Each completed transfer stays complete. At the receiver the plume folds into the bell, which opens and answers.
-The child walks to it before the next seed is offered. The final answer leaves a rest for the real family call.
+Preserve the arrival beach, shore bank, climb and their camera direction. Beyond that outlook, the whole chapter
+may change. The first prototype's tall bells read as lamp posts; seed deliveries made the middle feel like a row
+of puzzle stations. Passing mechanics and viewport bounds did not establish visual quality.
 
-The simulation receives genuine pointer motion over the visible plume, in screen space; mute/idle/ambient wind
-cannot solve it. Mouse and touch share generous hit areas and gesture invitations. The source/receiver/child
-remain together in frame. Seeds remain close enough to these physical anchors to be recoverable.
+The revised middle is play in the landscape the piano awakened. Low, irregular flower swathes sit in a sheltered
+fold between rolling hills. Sweeping the wind through them bends successive clusters and answers the piano in
+short breath phrases; petals lift from the responding plants. The child lets the cygnet down to explore beside
+her. Farther up the fold, circling or upward strokes lift feathery seed heads into a drifting cloud around them.
+The cloud opens into the sky, leaving a musical rest for the swan call. They turn, gather together, and approach
+the crest: only their arrival there reveals the family. The two interactions retain completed progress, accept
+broad gestures, and never solve from ambient wind. There are no receiver sockets or giant flower props.
 
-A silent single flower on the grey piano approach foreshadows the shape; the landscape gains its voice only after the piano. Existing post-pond harebells remain a
-gentle reprise. The new foreground voice is procedural flute-like breath; background music ducks smoothly while
-it speaks, without restarting the score. Jeremy's uncommitted music on main is not part of this worktree.
+Bring the piano onto the near shoulder beyond the preserved bank, with a broad view across the sleeping hills.
+Compose that view with clear piano/child silhouettes and no flowers standing over its lid. Sculpt the middle as
+overlapping rounded hills and a sheltered fold; preserve the pond's natural basin and flight clearance. Inspect
+the first outlook, duet, awakening, both play spaces and the family reveal in the actual player viewport, then
+the entire connected approach–play–departure. The original worktree-only scope is superseded by the merge
+instruction above; deployment remains outside this request.
 
-## Camera and verification
+## Piano placement clarification (verbatim)
 
-Judge the actual moving player viewport, including portrait. First establish child, source, seed and receiver;
-hold the view through input. Character travel earns the next view; never jump ahead to the next object. Avoid
-foreground grass hiding the child or a seed plume mistaken for an interface orb. Hide the departure kite until
-the pond is finished. Review approach, both transfers, departure into the crest, and the pond continuously.
+> doesn't it make more sense for the piano to be more ontop of a small hill?
 
-Baseline stills: `/tmp/updraft-meadow-before-{piano,walk}.png`. They expose a far-off departure kite already visible
-behind the piano. The baseline's route-only tests intentionally bypass the existing piano, so cannot substitute
-for a real-gesture playthrough. Add meaningful input/idle/recovery/checkpoint tests and inspect real renders.
+> or maybe your new position is ok thats fine too. just think through it and figure out what makes it easier to do the nice cinematic camera shots
 
-## Review questions
+The piano stays close to the entry at (-18, -678), now on a rounded knoll overlooking the lower meadow.
+Retain the original piano camera's bearing and gradual widening at that new position. Limit the finale's
+rise so the family remains concealed beyond the far crest. The original
+shore bank and pond terrain stay unchanged; the new hills blend into them.
 
-- Do the seeds and receiver read as a musical exchange at playing distance?
-- Can broad strokes and circles deliver them without precision or trivial one-frame completion?
-- Does moving between flowers feel like exploration rather than a row of mandatory buttons?
-- Does the final sound transition lead naturally into the established crest view?
+## Piano review correction — 2026-10-13 (verbatim)
 
-Revise the prototype if these answers are poor; a passing numeric check is not a visual verdict.
+> the sunflowers in hte distance are green. was that intentional?
 
+> was there a reason you changed the camera design to keep moving to the right everytime the player plays one of the piano motifs? it looks really strange. what was wrong with the previous camera pattern?
 
-## Implemented experience — 2026-10-13
+The more oblique, lower view exaggerated sideways movement after each answer. Restore the motif camera settings
+from before the Meadow rework, retaining the relocated piano and landscape. The old 46 m final rise exposes the
+pond from the new knoll; retain the lower finale, rising from the third response's 14 m to 18 m. Compare against a separate original
+build and replay the real gestures. The distant seed bed must remain grey with its surrounding ground until the
+musical colour wave reaches it; its material must share the live atmosphere and life uniforms.
 
-The new exchange occupies about a minute after the piano, including the child's walking and listening. Two broad
-wind transfers carry an ivory seed plume between three violet bellflowers. The first crosses the hollow; the second
-rises up its far side. A circle can lift the plume too. The receiver opens and gives a short D-major pentatonic
-answer in a procedural breath voice. Small satellite blooms make each plant belong to a clump. The grey approach
-flower stays silent, preserving the piano as the first source of the meadow's voice.
+## Wind instrument and piano foundation — 2026-10-13
 
-The child touches a bowing flower, watches the seeds, and follows only after their arrival. The last rest contains
-the distant swan call: both characters turn toward it before the walk resumes. The existing crest, migration,
-feather, shower and departure follow. The departure kite stays hidden through the pond encounter.
+Jeremy's brief (verbatim):
 
-Camera corrections made from actual captures: lowered and brought the landscape camera closer; moved it onto
-the eastern side as the child advances so the pond is outside the flower view; gave portrait its own angle rather
-than backing far away to fit the landscape shot. Portrait can still glimpse distant water on the first slope,
-but keeps the child and both playable flower mouths legible. The seed mouth sits below the petal lip and above the
-child's hood. Directional input stays equally responsive near the receiver instead of needing increasingly tiny
-strokes. Seeds settle into the bloom continuously; the bloom opens gradually. Save points retain each completed
-transfer and resume the walk to its receiver, including the final listening beat.
+> ok cool here's what i want to do. I want to add some kind of really beautiful wind instrument (i dont htink it should look literally like a flute though since a flute is too small) that plays a beautiful flute phrase, and then the child has to respond with the piano phrase. What i can't figure out is where the players action should be. should the player create wind to blow through the instrument? Or should there be a auto generated "wind" that plays the wind instrument and then the player has to respond on the piano. what do you think?
 
-The readiness review found two missed details: the flower touch was hidden behind the hood and aimed into empty
-space, and returning to the ordinary walking camera inserted a large retreat before the pond. The child now stands
-beside the bloom and rests the near mitten on an actual petal vertex before it rises. Leaves follow the bending
-stem. Camera coverage includes the tops of both flowers. The final flower view passes directly into the pond
-composition as the child walks the next sixteen metres. The crest framing holds the whole child, with a slightly
-higher eye to see over the bank and no automatic retreat during the swans' departure.
+> sounds good, can you build out the bones for this? I already have the phrases for the music and i'll supply them to you (we'll need to cut up some clips). After the chil'ds final response, the wind instrument will play and be quite climactic as it does a final greening
 
-Checks and captures are recorded in `verification.md`. These are automated gesture playthroughs and inspected
-stills, not a claim of a human listening or motion review. Jeremy's review of the voice, feel and narrative remains
-the next creative decision. The worktree is a playable direction, not merged or deployed.
+Build the approved foundation: a hollow, weathered bough just beyond one end of the piano, with an open mouth
+and a trembling reed. It is large enough to read with the child and piano in the existing shot. A brief authored
+breeze plays each call; the child turns to listen, then the familiar piano gesture invites the player's reply.
+Keep four forgiving responses and retained partial strokes. Calls cannot count as answers or colour the hills.
+After the fourth response, leave a musical breath, then let the bough's longer final phrase carry the great
+colour wave and the existing camera rise. Retain the companion's keyboard moment under that final phrase.
+
+Use provisional procedural breath notes while Jeremy prepares his recordings. Keep phrase note events,
+durations, reply patterns and the final greening cue together so the supplied clip timings can replace them.
+The recording edit and final musical synchronisation remain a later pass with the actual audio. Preserve the
+shore climb, green footsteps, piano camera bearing and all subsequent Meadow encounters.
+
+Jeremy requested a stable server while working on timings: frozen QA build at `http://127.0.0.1:5246/`, served
+from `/tmp/updraft-timing-preview-AH5XUd`. Keep that snapshot unchanged while development continues on 5244.
+
+## Meadow life and composition
+
+Further review (verbatim):
+
+> more animals and flower patches? or do we have a perf issue?
+
+Add small wildlife groups near the revised walk and loose wildflower banks on the slopes. Keep the musical
+flower bed and seed heads distinct and leave the child, companion and gestures clear. Use the existing batched
+creatures and baked wildflower masks; compare the local rendering cost before and after. The original sparse
+placement was not a measured performance restriction. Preserve the grey opening and let the music wake the
+additional life with the rest of the meadow.
+
+Approach colour refinement (verbatim):
+
+> I'd like to make a change to the meadows. when the child walks through the grass up to the piano, i'd like to see the grass turn green as well. thoughts?
+
+Let the child's climb and approach leave a narrow, soft-edged green trail using the existing life field. The
+colour remains where she walked and joins the piano's patch; untouched hills still wait for the music. Keep
+the shore, route and camera choreography, with no extra particles, flattened path or camera move.
+
+1. Preserve the beach and profile climb. Green follows the child's steps; at the brow the piano waits in its patch of colour.
+2. Follow the paper onto the knoll. The child sits, plays one note, and invites four wind answers. Colour spreads
+   into the hollow. The cygnet's turn on the keys remains part of the finale.
+3. Walk down into low lavender, rose and ivory flowers. The child sets the cygnet down beside her. Broad strokes
+   through three loosely staggered clusters open the flowers and lift petals, answering with breath notes. Played
+   clusters stay open; all three need the player's wind. Idle and off-target movement cannot advance the scene.
+4. Walk together through the grassy fold to pale seed heads. Upward strokes or circles lift a cloud of feathery
+   seeds. Sustained gentle wind carries it clear; unattended seeds settle. Once released, the cloud disperses.
+5. Walk toward the far rise, hear the real swan call, and gather the cygnet into the satchel. The camera follows
+   their travel into the pond reveal. The family's departure, swim, feather, comfort, shower and rainbow continue.
+
+The flower beds belong to the rolling landscape. Their shorter grass has a soft irregular edge; there are no
+rectangular corridors, paths carved across the island, oversized bells or receiver sockets. Existing decorative
+flower clumps stay outside the playable beds so they cannot obscure the child or the wind targets. Wind bending
+saturates before stems stretch unnaturally. The two beds sample their own local wind.
+
+The camera holds the child, cygnet and active plants together. Portrait frames the receding flower clusters rather
+than losing an outer target. At the end of the musical play, the camera blends into the pond composition over the
+child's next sixteen metres of walking. Movement earns the view; a new camera must not race ahead to a destination.
+The departure kite and the boat at the far shore remain concealed until the pond sequence is over.
+
+Completed stages retain the existing `echoes-1` and `echoes-2` save names. They resume the remaining walk and
+listening beat, including after a reload. The interactive breath voice is procedural Web Audio; background scores
+are not replaced by this work. Music pulls back while the local phrases play.
+
+## Verification and quality bar
+
+Play from the landing through the piano, both wind interactions, the family and departure with real pointer
+input. Repeat the interactions and transitions in portrait with real touch events. Inspect intervening player
+views, not only composed stops: whole silhouettes, grass occlusion, contact, concealed pond, readable wind targets,
+strong gusts, and camera approach/hold/departure. Preserve the opening geometry against the previous revision.
+
+Check idle and wrong-location input, broad strokes and circles, retained effort, seed recovery, checkpoint reloads,
+the piano's colour waves, pond sight lines and every swan's run and lift. Numeric checks establish mechanics and
+framing, not cinematic quality. Chronological still inspection is not a human motion or listening review.
+Current evidence and remaining limits belong in `verification.md`.
+
+The rejected prototype used giant bellflowers and two seed deliveries. Its successful tests did not make those
+objects or the scene good; those earlier verification claims must not be used as evidence for this redesign.

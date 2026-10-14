@@ -38,16 +38,40 @@ try {
     return {time:s.now,beat:s.at,phrase:s.phrase,part:s.part,matched:p.matched,expect:p.expect,progress:p.gesture.progress,
       path,wave:g.life.regions.wave.toArray(),waiting:g.life.regions.waiting.toArray(),roseFrom:s.roseFrom,
       checkpoint:g.story.current.checkpoint,lineVisible:p.line.batch.mesh.visible,
-      subjects:[g.child.position.clone().add({x:0,y:1.5,z:0}),p.keys.clone()].map(v=>{v.project(g.rig.camera);return [v.x,v.y,v.z]}),
-      notes:p.log.slice(-8)};
+      bough:g.windBough?.log.slice(),
+      subjects:[g.child.position.clone().add({x:0,y:1.5,z:0}),p.keys.clone(),...(g.windBough?[g.windBough.crown.clone()]:[])].map(v=>{v.project(g.rig.camera);return [v.x,v.y,v.z]}),
+      plants:g.meadowEchoes?.group.children.map(mesh=>({
+        waiting:mesh.material.uniforms.uWaiting.value.toArray(),wave:mesh.material.uniforms.uLifeWave.value.toArray(),
+      })),notes:p.log.slice(-8)};
   });
   const waitSeconds=async seconds=>{const start=(await state()).time;await page.waitForFunction(t=>__game.story.current.piano.now>=t,start+seconds,{timeout:120000});};
-  const shot=async name=>{const s=await state();report.states.push({name,...s});await page.screenshot({path:`${prefix}-${name}.png`});console.log(JSON.stringify({name,...s}));};
+  const shot=async name=>{
+    const s=await state();
+    for(const plant of s.plants??[]) {
+      assert.deepEqual(plant.waiting,s.waiting,'Meadow plants must remain grey with the surrounding ground');
+      assert.deepEqual(plant.wave,s.wave,'Meadow plants must follow every piano colour wave');
+    }
+    report.states.push({name,...s});await page.screenshot({path:`${prefix}-${name}.png`});console.log(JSON.stringify({name,...s}));
+  };
+  await page.waitForFunction(()=>__game.windBough.log.length>0,null,{timeout:120000});
+  await waitSeconds(1.4);
+  await shot('wind-call');
+  assert.equal((await state()).expect,null,'piano input waits for the wind call');
+  const early=(await state()).path;
+  await page.mouse.move(...early[0]);
+  for(let i=1;i<=20;i++){
+    await page.mouse.move(early[0][0]+(early[1][0]-early[0][0])*i/20,early[0][1]+(early[1][1]-early[0][1])*i/20);
+    await page.waitForTimeout(15);
+  }
+  assert.equal((await state()).matched,0,'swiping during the call cannot answer it');
   await page.waitForFunction(()=>window.__game?.piano.expect!==null&&window.__game?.story.current.piano.at==='seated',null,{timeout:120000});
   await waitSeconds(2);
   await shot('invitation');
   await waitSeconds(17);
-  const idle=await state();assert.equal(idle.matched,0);assert.equal(idle.beat,'seated');assert(idle.lineVisible,'guide persists while listening');
+  const idle=await state();assert.equal(idle.matched,0);assert.equal(idle.beat,'seated');
+  await page.waitForFunction(()=>__game.piano.expect!==null,null,{timeout:15000});
+  await waitSeconds(.5);
+  assert((await state()).lineVisible,'guide returns after the call');
   await shot('waiting');
   const touch=portrait?await page.context().newCDPSession(page):null;
   for(let n=0;n<4;n++){

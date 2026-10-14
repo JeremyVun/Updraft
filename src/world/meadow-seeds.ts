@@ -4,46 +4,51 @@ export class MeadowSeeds {
   completed = 0;
   active = false;
   progress = 0;
-  velocity = 0;
-  effort = 0;
   age = 0;
   quiet = 0;
+  held = 0;
+  readonly blooms = [0, 0, 0];
 
   reset(completed = 0): void {
     this.completed = Math.max(0, Math.min(2, completed));
     this.active = false;
-    this.progress = this.velocity = this.effort = this.age = this.quiet = 0;
+    this.progress = this.age = this.quiet = this.held = 0;
+    this.blooms.fill(this.completed > 0 ? 1 : 0);
   }
 
   release(): void {
     if (this.completed >= 2) return;
     this.active = true;
-    this.progress = this.velocity = this.effort = this.age = this.quiet = 0;
+    this.age = this.quiet = this.held = 0;
   }
 
-  blow(amount: number): void {
-    if (!this.active || !Number.isFinite(amount)) return;
-    const t = tuning.meadowEchoes;
-    const push = Math.max(-t.maxImpulse, Math.min(t.maxImpulse, amount));
-    this.velocity += push * t.travel * t.damping;
-    this.effort += Math.max(0, push);
-    if (Math.abs(push) > 0.00001) this.quiet = 0;
+  sweep(sector: number, amount: number): void {
+    if (!this.active || this.completed !== 0 || !Number.isFinite(amount) || amount <= 0) return;
+    this.blooms[sector] = Math.min(1, this.blooms[sector] + Math.min(0.045, amount) / tuning.meadowEchoes.bloomEffort);
+    this.quiet = 0;
+  }
+
+  lift(amount: number): void {
+    if (!this.active || this.completed !== 1 || !Number.isFinite(amount) || amount <= 0) return;
+    this.progress = Math.min(1, this.progress + Math.min(0.025, amount));
+    this.quiet = 0;
   }
 
   update(dt: number): boolean {
     if (!this.active) return false;
     this.age += dt;
     this.quiet += dt;
-    const t = tuning.meadowEchoes;
-    const decay = Math.exp(-t.damping * dt);
-    this.progress += this.velocity * (1 - decay) / t.damping;
-    this.velocity *= decay;
-    if (this.quiet > t.recoverAfter) this.progress -= t.recovery * dt;
-    this.progress = Math.max(0, Math.min(1, this.progress));
-    if (this.progress < 0.001 && this.velocity < 0) this.velocity = 0;
-    if (this.progress < t.receipt || this.effort < t.effort || this.age < t.minimumTravel || this.quiet > t.recentWind) return false;
+    if (this.completed === 0) {
+      this.progress = this.blooms.reduce((a, b) => a + b, 0) / 3;
+      if (this.blooms.some(v => v < 1)) return false;
+    } else {
+      if (this.quiet > 1.5) this.progress = Math.max(0, this.progress - dt * tuning.meadowEchoes.liftSettle);
+      this.held = this.progress > 0.92 && this.quiet < 1.2 ? this.held + dt : Math.max(0, this.held - dt * 0.3);
+      if (this.held < tuning.meadowEchoes.liftHold) return false;
+    }
+    if (this.age < tuning.meadowEchoes.minimumPlay) return false;
     this.completed++;
-    this.progress = 1;
+    this.progress = this.completed === 1 ? 0 : 1;
     this.active = false;
     return true;
   }

@@ -9,8 +9,9 @@ he finds, and each item is fixed and surgically verified. Sharing plans and the 
 
 ## In progress
 
-- **Meadow musical journey** ([backlog/meadow-echoes/design.md](backlog/meadow-echoes/design.md)): a playable
-  wind-carried seed exchange between the piano and the family reveal, under review in `codex/meadow-echoes`.
+- **Meadow musical journey** ([backlog/meadow-echoes/design.md](backlog/meadow-echoes/design.md)): rolling hills,
+  flower and seed play, and a wind-bough/piano duet foundation approved for merge onto `main`. Jeremy's
+  recorded phrases and final musical synchronisation remain to be integrated.
 
 - **The stairs in the clouds** ([stairs.md](stairs.md)): the sail over the cloud and the way down into the mist are
   being redone to Jeremy's 09-28 notes (a view of the whole cloud sea and a less straight course, clouds that don't

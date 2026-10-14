@@ -15,6 +15,7 @@ try {
   const context = await browser.newContext({ viewport: { width, height }, hasTouch: process.env.TOUCH === '1' });
   const page = await context.newPage();
   page.on('pageerror', e => report.errors.push(e.message));
+  page.on('console', m => { if (m.type() === 'error' && !m.text().includes('Failed to load resource')) report.errors.push(m.text()); });
   await page.goto(`${process.env.BASE ?? 'http://127.0.0.1:5244/'}?shot=1&chapter=${process.env.FROM ?? 'echoes'}&progress=0`);
   await page.waitForFunction(() => window.__ready, null, { timeout: 90000 });
   await page.mouse.click(8, 8);
@@ -33,7 +34,7 @@ try {
         fit:rig.fitBack,pull:rig.pull,lift:rig.lift,rise:rig.sceneryRise,side:r(rig.sceneryOffset),
         offset:rig.direction.offset,pace,hold,placed:rig.placed,transition:!!g.story.transitionView,
         head:project(g.child.position.clone().add({x:0,y:2.8,z:0})),feet:project(g.child.position),
-        flowers:garden.flowers.map(f=>({mouth:project(f.mouth),top:project(f.root.position.clone().add({x:.8,y:f.height+.4,z:0}))})),
+        sectors:garden.sectors.map(project),bird:project(g.cygnet.position),
       });
     };
   });
@@ -42,10 +43,10 @@ try {
     const g = __game, c = g.story.current, e = g.meadowEchoes;
     const p = v => { const q = v.clone().project(g.rig.camera); return [(q.x+1)*innerWidth/2,(1-q.y)*innerHeight/2,q.z]; };
     return { time: __stats.time, chapter: g.story.name, beat: c.beat, pianoBeat: c.piano?.at, song: c.song?.beat,
-      count: e.seeds.completed, progress: e.seeds.progress, active: e.seeds.active,
+      count: e.seeds.completed, progress: e.seeds.progress, active: e.seeds.active, matched: g.piano.matched,
       seed: p(e.seed), target: p(e.receiver), child: p(g.child.position.clone().add({x:0,y:1.5,z:0})),
       feet: p(g.child.position), head: p(g.child.position.clone().add({x:0,y:2.8,z:0})),
-      crowns: e.flowers.slice(e.seeds.completed,e.seeds.completed+2).map(f=>p(f.crown)),
+      sectors: e.sectors.map(p), blooms: e.seeds.blooms.slice(), bird: p(g.cygnet.position),
       invitation: c.windInvitation ? p(c.windInvitation) : null, heading: c.invitationHeading,
       piano: g.piano.expect && c.piano?.at === 'seated'
         ? { expect: g.piano.expect, path: [0,1].map(t=>p(g.piano.guideAlong(t,g.piano.keys.clone()))) } : null,
@@ -57,6 +58,8 @@ try {
     console.log(JSON.stringify({ label, time: s.time, beat: s.beat, song: s.song, count: s.count, progress:s.progress }));
   };
   const sweep = async (a,b,ms=1000) => {
+    a = [Math.max(16,Math.min(width-16,a[0])),Math.max(16,Math.min(height-16,a[1]))];
+    b = [Math.max(16,Math.min(width-16,b[0])),Math.max(16,Math.min(height-16,b[1]))];
     if(touch) await touch.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{x:a[0],y:a[1]}]});
     else { await page.mouse.move(2,2); await page.waitForTimeout(80); await page.mouse.move(a[0],a[1]); }
     await page.waitForTimeout(130);
@@ -69,7 +72,7 @@ try {
     if(touch) await touch.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
   };
   await shot('entry');
-  let idleChecked = false, last = '', count = 0, shotsAt = -10, auditAt = -10;
+  let idleChecked = false, last = '', count = 0, shotsAt = -10, auditAt = -10, matched = 0;
   const end = Date.now() + 9 * 60000;
   while(Date.now() < end) {
     const s = await state();
@@ -83,6 +86,7 @@ try {
     if (s.chapter !== 'meadow') { await shot('departed'); break; }
     const phase = `${s.beat}-${s.pianoBeat}-${s.song}-${s.count}`;
     if(phase !== last) { await shot(phase); last = phase; }
+    if(s.matched > matched) { matched = s.matched; await shot(`piano-answer-${matched}`); }
     if(s.song === 'done' && !process.env.FULL) {
       await page.waitForTimeout(4000); await shot('walk-resumes'); break;
     }
@@ -93,22 +97,23 @@ try {
     } else if(s.active) {
       if(!idleChecked) {
         await page.mouse.move(4,4); await page.waitForTimeout(6500);
-        assert.equal((await state()).count,0,'idle must not solve the first transfer');
-        assert((await state()).progress < .02, 'ambient wind must not carry the seeds');
+        assert.equal((await state()).count,0,'idle must not complete the flower phrase');
+        assert((await state()).progress < .02, 'ambient wind must not complete the flower phrase');
         await sweep([width*.8,height*.12],[width*.95,height*.12]);
-        assert((await state()).progress < .02, 'off-target motion must not carry the seeds');
+        assert((await state()).progress < .02, 'off-target motion must not play the flowers');
         idleChecked = true; await shot('waiting-for-wind'); continue;
       }
-      for(const p of [s.seed,s.target,s.head,s.feet,...s.crowns]) {
+      for(const p of [s.head,s.feet,s.bird,...(s.count===0?s.sectors:[s.seed])]) {
         assert(p[0]>12&&p[0]<width-12&&p[1]>12&&p[1]<height-12&&p[2]<1,`playable subject clipped: ${JSON.stringify(s)}`);
       }
-      const dx=s.target[0]-s.seed[0],dy=s.target[1]-s.seed[1],n=Math.hypot(dx,dy)||1;
-      const reach=Math.min(height*.21,n+height*.03);
-      const a=[s.seed[0]-dx/n*height*.05,s.seed[1]-dy/n*height*.05];
-      const b=[s.seed[0]+dx/n*reach,s.seed[1]+dy/n*reach].map((v,i)=>Math.max(15,Math.min((i?height:width)-15,v)));
-      await sweep(a,b);
-      if(s.time-shotsAt>3) { await shot('carrying'); shotsAt=s.time; }
-      if(++count>80) throw new Error('Seed transfer did not finish after broad real strokes');
+      if(s.count===0) {
+        const i=s.blooms.indexOf(Math.min(...s.blooms)), at=s.sectors[i];
+        await sweep([at[0]-height*.1,at[1]],[at[0]+height*.1,at[1]],1000);
+      } else {
+        await sweep([s.seed[0],s.seed[1]+height*.06],[s.seed[0],Math.max(20,s.seed[1]-height*.22)],1100);
+      }
+      if(s.time-shotsAt>3) { await shot(s.count === 0 ? 'flower-strokes' : 'lifting-seeds'); shotsAt=s.time; }
+      if(++count>80) throw new Error('Meadow play did not finish after broad real strokes');
     } else if(s.beat === 'pond' && s.invitation) {
       const a=s.invitation,angle=s.heading??0;
       await sweep([a[0]-Math.cos(angle)*height*.04,a[1]+Math.sin(angle)*height*.04],
@@ -116,10 +121,10 @@ try {
     } else await page.waitForTimeout(800);
   }
   const final = await state();
-  assert.equal(final.count,2,'both transfers must be completed');
+  assert.equal(final.count,2,'both meadow play moments must be completed');
   if(process.env.FULL) assert.equal(final.chapter,'toBirches','full play must depart Meadow');
   assert.equal(report.errors.length,0,report.errors.join('\n'));
-  console.log('PASS: player gestures, visible subjects, idle/off-target, transfers and onward story.');
+  console.log('PASS: player gestures, visible subjects, idle/off-target, flower phrases, seed lift and onward story.');
 } finally {
   fs.writeFileSync(`${out}/report.json`,JSON.stringify(report,null,2));
   await close();

@@ -18,6 +18,7 @@ import { COTTAGE, DOOR_SHORE, GRASS_LINE, HEIGHTFIELD_GLSL, ISLES, LAST_HILL, PO
 
 /** Half the size of the little boats' turf box, round the island. */
 const BOATS_TURF = { x: 55, z: 78 };
+const MEADOW_CLEARINGS = [...tuning.meadowEchoes.patches, tuning.meadowEchoes.listeningTurf];
 
 /**
  * How much height grass keeps on grazed islands and the pond's margin. The bank stays short enough to see the
@@ -29,7 +30,12 @@ function croppedAt(x: number, z: number): number {
   const birches = 1 - smoothstep(0.62, 1.02, Math.hypot((x - ISLES.birches.x) / ISLES.birches.rx, (z - ISLES.birches.z) / ISLES.birches.rz));
   const bank = 1 - smoothstep(tuning.crest.bankCropFrom, tuning.crest.bankCropTo, pondOut(x, z));
   const stairFoot = 1 - smoothstep(STAIRS_PAD.inner, STAIRS_PAD.outer, Math.hypot(x - STAIRS_PAD.x, z - STAIRS_PAD.z));
-  return smoothstep(.8,1.1,Math.hypot(x-tuning.sleeping.hearthX,z-tuning.sleeping.hearthZ)) * linesGrassCrop(x, z) * (1 - 0.34 * lines) * (1 - 0.62 * birches) * (1 - (1 - tuning.crest.bankGrass) * bank) * (1 - (1 - STAIRS_PAD.grass) * stairFoot);
+  let flowers = 0;
+  for (const [cx, cz, rx, rz] of MEADOW_CLEARINGS) {
+    const r = Math.hypot((x - cx) / (rx + tuning.meadowEchoes.turfExtra), (z - cz) / (rz + tuning.meadowEchoes.turfExtra));
+    flowers = Math.max(flowers, 1 - smoothstep(.55, 1.15, r + .1 * Math.sin(x * .32) * Math.cos(z * .21)));
+  }
+  return (1 - (1 - tuning.meadowEchoes.turf) * flowers) * smoothstep(.8,1.1,Math.hypot(x-tuning.sleeping.hearthX,z-tuning.sleeping.hearthZ)) * linesGrassCrop(x, z) * (1 - 0.34 * lines) * (1 - 0.62 * birches) * (1 - (1 - tuning.crest.bankGrass) * bank) * (1 - (1 - STAIRS_PAD.grass) * stairFoot);
 }
 
 /**
@@ -163,7 +169,9 @@ float croppedAt(vec2 xz) {
   float lines = 1.0 - smoothstep(0.78, 1.12, length((xz - vec2(${ISLES.lines.x}.0, ${glsl(ISLES.lines.z)})) / vec2(${ISLES.lines.rx}.0, ${glsl(ISLES.lines.rz)})));
   float bank = pondBankAt(xz);
   float stairFoot = 1.0 - smoothstep(${glsl(STAIRS_PAD.inner)}, ${glsl(STAIRS_PAD.outer)}, length(xz - vec2(${glsl(STAIRS_PAD.x)}, ${glsl(STAIRS_PAD.z)})));
-  return smoothstep(.8,1.1,length(xz-vec2(${glsl(tuning.sleeping.hearthX)},${glsl(tuning.sleeping.hearthZ)}))) * linesGrassCrop(xz) * (1.0 - 0.34 * lines) * (1.0 - 0.62 * birchFloorAt(xz)) * mix(1.0, ${glsl(tuning.crest.bankGrass)}, bank) * mix(1.0, ${glsl(STAIRS_PAD.grass)}, stairFoot);
+  float flowers = 0.0;
+  ${MEADOW_CLEARINGS.map(([cx, cz, rx, rz]) => `flowers = max(flowers, 1.0 - smoothstep(.55, 1.15, length((xz - vec2(${glsl(cx)}, ${glsl(cz)})) / vec2(${glsl(rx + tuning.meadowEchoes.turfExtra)}, ${glsl(rz + tuning.meadowEchoes.turfExtra)})) + .1 * sin(xz.x * .32) * cos(xz.y * .21)));`).join('\n  ')}
+  return mix(1.0, ${glsl(tuning.meadowEchoes.turf)}, flowers) * smoothstep(.8,1.1,length(xz-vec2(${glsl(tuning.sleeping.hearthX)},${glsl(tuning.sleeping.hearthZ)}))) * linesGrassCrop(xz) * (1.0 - 0.34 * lines) * (1.0 - 0.62 * birchFloorAt(xz)) * mix(1.0, ${glsl(tuning.crest.bankGrass)}, bank) * mix(1.0, ${glsl(STAIRS_PAD.grass)}, stairFoot);
 }
 /** 1 over the home island, where the pasture is let grow lush for the last hill. */
 float homeAt(vec2 xz) {

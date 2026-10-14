@@ -1,77 +1,140 @@
-# Meadow prototype verification
+# Meadow redesign verification — 2026-10-13
 
-Worktree: `codex/meadow-echoes`, based on local main `45feff79`. Main's music edits were left untouched.
-Development server: `http://127.0.0.1:5244/`. Whole chapter: `?chapter=meadow&progress=0`.
-Direct encounter: `?chapter=echoes&progress=0`.
+Worktree: `codex/meadow-echoes`. Development server: `http://127.0.0.1:5244/`.
+Whole chapter: `?chapter=meadow&progress=0`; musical play: `?chapter=echoes&progress=0`.
+This supersedes the rejected tall-bell/seed-delivery prototype and its earlier readiness claims.
 
-## Played and inspected
+## Experience and inspected evidence
 
-- `/tmp/updraft-meadow-full`: real mouse gestures from grey landing through the four piano answers, both
-  seed transfers, crest, migration, feather, return and boarding; entered `toBirches` at 343 game seconds.
-  This precedes the final camera and input refinements.
-- `/tmp/updraft-meadow-framing`: revised landscape views, both transfers, and the last flower's departure.
-  The camera faces across the hollow, keeping the pond outside the flower composition.
-- `/tmp/updraft-meadow-portrait-review`: final 390×844 touch run from the first flower through boarding;
-  transfers completed at 26 and 49 seconds, final listening finished at 64, departure at 207. The first
-  exchange took about seven seconds of broad strokes and the second about nine. Idle and off-target input
-  did not advance them; all active source, receiver and child head/feet projections stayed inside the frame.
-- `/tmp/updraft-meadow-desktop-final`: final landscape exchange, both transfers and onward walking passed;
-  completed at 25 and 47 seconds, final listening finished at 63. `/tmp/meadow-contact-touch-*.png` captures
-  the bow/touch/release in chronological frames. Real circles carried both plumes successfully too
-  (`/tmp/meadow-contact-{circle-arrival,second-circle-arrival}.png`). The plume is instanced as one draw.
-- Actual checkpoint writes and page reloads passed for `meadow/piano`, `echoes-1`, `echoes-2` and `pond`.
-  Captures: `/tmp/updraft-progress-meadow-<point>.png`.
+The preserved grey beach and bank lead to a nearer piano on a rounded knoll. Its camera looks over the child's
+shoulder and opens onto the rolling hollow with the colour waves. Low flowers answer broad wind strokes;
+farther through the fold, seed heads lift into a drifting cloud. The cygnet explores on foot. A listening pause
+and gathering beat precede the walk into the family reveal. The existing migration, swim, feather, shower,
+rainbow and departure remain. Background scores are unchanged; the breath responses are procedural Web Audio.
 
-These are automated real-pointer playthroughs, state traces and visually inspected stills. No recorded video
-was used as a substitute for a motion review. No claim is made of human listening, first-time-player comprehension,
-or physical-device performance. Portrait can glimpse distant water from the first slope; the playable flowers
-and child remain the foreground. The final creative verdict belongs to Jeremy's playthrough.
+- `/tmp/meadow-final-desktop`: real mouse play from the grey landing through all four piano answers, flower
+  clusters, seed lift, family, feather, shower and boarding. Reached `toBirches` at 359.7 game seconds with no
+  runtime errors. Includes chronological walk captures and every-frame camera trace. This run precedes the
+  final small flower clearance, companion position and departure-boat timing corrections.
+- `/tmp/meadow-portrait-companion`: final 390×844 touch play from the flower approach through departure at
+  251.2 game seconds. Both interactions, idle/off-target checks, family and boarding pass. The camera audit
+  covers 8,697 frames, including both characters; minimum projected margin is 5.4%. The camera stays within
+  20.7 m of the child during the walk into the crest. Portrait arrival and piano had also passed earlier in
+  `/tmp/meadow-redesign-portrait`; their layout was unchanged by the later companion correction.
+- `/tmp/meadow-final-circles-*.png`: final desktop replay using real circles for all three flower clusters and
+  the seed lift, then continuing through gathering to the crest. Both stages complete, the cygnet stays on the
+  ground, and the boat remains at the arrival shore during the family reveal. These captures include the final
+  flower clearance and companion placement. Completed interactions no longer display the next wind invitation
+  during their settling pause.
+- `/tmp/updraft-progress-meadow-<point>.png`: actual writes and reloads passed for `piano`, `echoes-1`,
+  `echoes-2` and `pond`. Completed play persists and the remaining walk/listening is retained.
+
+The evidence is automated real-input play, visually inspected chronological stills and camera traces. No video
+was recorded or claimed as a motion review. Human listening, first-time comprehension, physical mobile-device
+performance and Jeremy's creative verdict remain unverified. The motion report still flags the existing
+post-pond paper-follow camera's approximately 5 m outward/inward change over eight seconds; that section's
+staging is unchanged. Numeric camera checks establish continuity and framing, not cinematic quality.
+
+## Corrections made through viewport review
+
+The first terrain draft raised the pond crest and cropped the child; the final terrain preserves the original
+shore bank and pond/departure surface. Comparing 14,645 protected ground samples against `58c76e7a` found no
+change, including the pond level. CPU/GPU height parity in final browser captures is within 0.011 m.
+
+Jeremy rejected the altered piano camera's repeated sideways movement. Its original motif bearing, distance,
+height and gaze settings are restored. A separate `45feff79` build supplies the original comparison. The old
+46 m finale exposes the pond from the new piano location, so only the final rise remains limited: from the
+third response's 14 m to 18 m, with a 42 m distance. Large decorative flowers are kept out of the playable beds, and the child's standing space stays clear.
+Seed play happens beside the bed rather than inside it. Shorter irregular grass and a local tread keep the
+companion legible without carving a path across the island. The camera turns during the walk so the family is
+concealed through listening; it opens toward the pond over the child's next sixteen metres of travel.
+
+The portrait review caught an offscreen companion despite the child and seed cloud fitting. The corrected view
+keeps the pair together and lets the cygnet walk alongside the child. The strengthened camera audit rejects the
+previous trace at 66.17 seconds. The idle-drift negative control also fails as intended. The boat and departure
+kite appear at the far shore only after the family encounter, avoiding the distracting sail behind the pond.
 
 ## Focused checks
 
-Passed: TypeScript, production build and production/QA separation; seed simulation and world input checks at
-30/60/120 Hz; current/legacy progress schema; real checkpoint reloads; piano gesture, colour growth, camera and
-audio handoff; meadow route and plane; pond sight lines and migration; companion wing-care story; camera direction.
+Passed: TypeScript and production build; production/QA separation; flower effort, retained progress, seed lift,
+hold and settling at 30/60/120 Hz; idle, muted, absent, disabled and off-target input; ground-checkpoint companion
+flight suppression; checkpoint schema (104 layouts and 4,063 decode cases); real checkpoint reloads; piano
+logic, colour growth and framing; meadow plane and route; all twelve pond sight-line/migration cases, retaining
+all fifteen swans' runs/lifts. The production build retains the existing large-JavaScript-chunk warning.
 
-The new breath voice renders in Web Audio with no bundled sample. Its five-note overlap stress case peaks at
-−15.18 dBFS, has no clipped samples and falls completely silent after the voices finish. This tests envelope and
-headroom, not whether the timbre is pleasing. The existing large JavaScript chunk warning remains.
+Build log: `/tmp/meadow-final-build.log`. Production separation log: `/tmp/meadow-final-production-check.log`.
+The final breath timbre was not changed by this redesign; prior audio-envelope results alone do not establish
+that the whole sequence sounds good.
 
-The seed checks reject idle, muted, absent, disabled and opposing input, preserve partial/complete progress, test
-both strokes and lift, and measure continuous arrival into the receiving bloom. The two new checkpoints keep
-completed transfers while preserving the child's remaining walk and final listening beat. Legacy route fixtures
-explicitly skip the new encounter because those tests exercise the downstream paper/pond behavior; the new
-encounter has its own real-input checks. The full-journey driver now follows Meadow's directional invitations.
+## Piano camera and colour correction
 
-The deliberate idle-drift negative control failed at “idle cannot complete”, confirming that the guard detects
-an automatic solve. Final production build passed after the feel constants were moved into `tuning.ts`.
+The seed-head, airborne-seed and petal materials had cloned the shared atmosphere uniforms, freezing the grey
+hold, colour wave and lighting at construction. They now share live uniforms like the flower bed and grass.
+The added material-sharing regression fails on the unfixed constructor and passes after the correction.
+The real-input piano check also compares every plant material's grey hold and colour wave at each captured
+stage; this checks the running renderer through all four answers and completion.
 
-## Readiness review after Jeremy's challenge
+Original comparison: `/tmp/meadow-piano-original-*.png` from the separate `45feff79` build. The intermediate
+full camera restoration is `/tmp/meadow-piano-restored-*.png`; its high finale exposed the pond and is superseded.
 
-The earlier pass missed the hand reaching under the flower without touching a petal, leaves staying in their
-rest position during the bow, and a wide camera retreat between the final flower and the crest. Those are fixed.
-The near mitten now rests on a rendered petal vertex for more than 0.6 seconds at 30/60/120 Hz; the child stands
-beside the flower so the hood does not hide the contact. Both flower crowns join the camera bounds.
+Final captures: `/tmp/meadow-piano-final-*.png` and `/tmp/meadow-piano-final-portrait-*.png`. Both real-input
+runs passed four answers, idle non-completion, plant/world colour agreement, guide visibility and departure.
+Inspected response, finale and departure stills, with chronological desktop captures in
+`/tmp/meadow-piano-final-frames/`. These are stills, not a human motion review. The final rise retains sky and
+keeps the family below the far crest; a sliver of pond water remains visible. Camera framing/continuity,
+material sharing and input state checks pass, as does the production build (`/tmp/meadow-piano-final-build.log`).
 
-The final flower composition passes directly into the pond view over sixteen metres of the child's walking.
-Holding the whole child required more head/foot space, a slightly higher crest eye and the same viewing distance
-on portrait as landscape. The camera does not retreat to hold the departing flock. All twelve pond cases
-(both banks, both screen shapes, 30/60/120 Hz) retain all fifteen swans' runs/lifts and clear sight lines.
+## Wildlife and wildflower density
 
-- `/tmp/updraft-meadow-readiness-before`: full grey landing through departure, 346.9 game seconds, before these fixes.
-- `/tmp/updraft-meadow-readiness-final`: final full mouse play from grey landing, all piano answers, both flower
-  transfers, migration, feather, shower and boarding; entered `toBirches` at 343.8 game seconds without errors.
-  The camera trace checks 6,035 frames from the flower approach through the descent. Projected head and feet
-  keep at least 11.4% screen margin. Maximum eye-to-child distance during the flower departure is 19.35 m,
-  compared with the original retreat to 44.2 m. Chronological captures include all those handoffs.
-- `/tmp/updraft-meadow-readiness-portrait`: full touch play from the first flower through departure, 209.9 game
-  seconds, before the final crest eye-height adjustment. Both flowers' crowns and playable points fit. The
-  frame audit checks 5,955 frames with at least 10.5% margin for projected head and feet.
-- `/tmp/meadow-portrait-exit-final-*.png`: targeted portrait checkpoint replay after the final crest adjustment,
-  from the last flower's listening beat through departure, crest and descent. All 1,804 traced frames keep the
-  projected head and feet inside the viewport; the chronological captures were inspected.
+Jeremy asked for more animals and flower patches, and whether performance was the constraint. Added overlapping
+wildflower patches on the slopes using the existing surface bake, plus six rabbits, eight sheep (lambs included),
+eight finches and twelve butterflies near the revised walk. Species remain batched; the piano camera and grey
+arrival are unchanged. Runtime population inspection confirms the intended additions, with existing home-island
+animals retained. The musical flower and seed beds keep their decorative-flower clearance.
 
-`meadow-camera-audit.mjs` rejects the old 44.2 m retreat and the intermediate cropped-foot capture; these are
-recorded negative controls. Final TypeScript, build, contact/input/checkpoint state checks, pond sight lines and
-the 30/60/120 Hz route checks pass. Build log: `/tmp/updraft-meadow-readiness-build.log`.
-This remains inspected chronological stills, camera traces and real-input play, not a human motion or listening review.
+Before/after local Chrome-for-Testing samples at 1600×900, 1.5× render scale, full grass, six seconds warmup and
+twenty seconds measurement both recorded 1,199 intervals: median 16.7 ms, p99/max 16.8 ms, no intervals above
+25 ms and no long tasks. Draw calls remain 78; triangles increase from 2,200,383 to 2,258,637 (about 2.6%). Logs:
+`/tmp/meadow-density-perf-before.log` and `/tmp/meadow-density-perf-after.log`. These are capped local desktop
+frame intervals, not GPU headroom or an iPad performance/battery estimate. Population/viewport captures are
+`/tmp/meadow-density-before-flowers.png` and `/tmp/meadow-density-after-flowers.png`. Typecheck, input/state
+regressions and production build pass (`/tmp/meadow-density-build.log`).
+
+Real-pointer replay from the piano through both encounters and gathering passes, including idle/off-target
+input and visible-subject checks (`/tmp/meadow-density-play/report.json`). Inspected the piano reveal,
+flower arrival, seed play, listening and gathering captures for added clutter. Both characters and musical
+targets remain readable at the interaction stops. This was a still-image review, not a motion review.
+
+## Green approach
+
+The child's climb and piano approach now plant colour in the existing life field, with a 3.2 m soft radius
+and 2.2 life/second. Only walking before the piano plants this trail; it remains behind her, joining the initial
+piano patch. No new render pass, grass flattening or camera change is involved.
+
+Played the unmodified arrival and walk to the stool at 1600×900 and 390×844. Inspected climb, brow and approach
+stills in `/tmp/meadow-green-approach/` and `/tmp/meadow-green-approach-portrait/`; their reports confirm that
+previously grey ground behind her gains colour while distant hills remain grey. These are still reviews.
+Typecheck, the route check at 30/60/120 Hz and the production build pass (`/tmp/meadow-green-build.log`).
+
+## Wind-bough foundation
+
+`world/wind-bough.ts` adds the hollow wooden prototype, reed and local incoming breeze beside the piano. Calls
+use the existing procedural breath voice; `audio/meadow-duet.ts` holds four calls, their piano reply patterns
+and a longer finale. Its note times and `greenAt` are relative to the first note, after `windBough.inhale`.
+The final reply schedules that finale after `windBough.finalRest`; the colour front and existing camera rise
+begin at its greening cue. Recordings have not been supplied, cut or integrated, and these are temporary notes.
+
+`meadow-duet-check` passes at 30/60/120 Hz: calls cannot answer themselves, input opens after the call, partial
+replies are not interrupted, all four replies are required, and the final wave waits for its musical cue.
+A runtime negative control that opened piano input during a call was rejected by the check. The existing
+piano camera check includes the bough crown and passes. Typecheck and production build pass, retaining the
+existing chunk-size warning (`/tmp/meadow-bough-build.log`).
+
+Real mouse and portrait touch sweeps passed all four replies, idle non-completion, early-call input rejection,
+shared plant/ground colour, finale and departure. Captures/reports: `/tmp/meadow-bough-duet-*` and
+`/tmp/meadow-bough-portrait-*`. Inspected call, reply and wide-finale stills; no motion or listening approval is
+claimed. The bough is an initial geometric prototype, with final sound and pacing awaiting Jeremy's clips.
+
+The requested stable preview remains the earlier frozen build on port 5246, rooted at
+`/tmp/updraft-timing-preview-AH5XUd`; the new instrument is in development on port 5244. The frozen preview
+still responds after all source changes and the separate production build.

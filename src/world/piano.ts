@@ -9,7 +9,6 @@ import type { LifeField } from './life';
 import { glsl, tuning } from '../tuning';
 import type { WindField, WindSample } from '../wind/field';
 import { ATMO_GLSL, atmo } from './atmosphere';
-import { meadowPoint } from './heightfield';
 import { heightAt } from './island';
 import { mulberry32 } from './noise';
 import { WINDOW } from './window';
@@ -24,10 +23,9 @@ import { PianoStroke } from './piano-stroke';
  */
 
 /**
- * Where it stands: on the walk itself, a minute up from the top of the bank, in the one patch of the island that
- * is not asleep. Nobody can miss it, because the way on goes through it.
+ * The near knoll beyond the landing bank, in the sleeping island's one patch of colour.
  */
-export const PLACE = meadowPoint(-40, -830);
+export const PLACE = { x: tuning.piano.place[0], z: tuning.piano.place[1] };
 /** How far the colour round it reaches while the island is still grey, and how soft that edge is. */
 export const PATCH = { radius: tuning.piano.initialRadius, soft: tuning.piano.initialSoft };
 /** Turned toward the camera, which looks north from a little east of south, so the keys face the walk. */

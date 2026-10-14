@@ -13,7 +13,7 @@ const quick = [
 ];
 const mechanics = [
   ...quick, 'bandage-cost', 'boat', 'boat-ground', 'flock-flight', 'dolphin-leap', 'journey-pacing', 'kite-logic',
-  'little-boats-logic', 'lines-progression', 'lines-cloth', 'rotary-washing', 'rotary-rig', 'meadow-plane', 'meadow-route', 'meadow-seeds', 'meadow-echoes-state', 'piano-frame', 'pond-view', 'sail-flutter',
+  'little-boats-logic', 'lines-progression', 'lines-cloth', 'rotary-washing', 'rotary-rig', 'meadow-plane', 'meadow-route', 'meadow-seeds', 'meadow-echoes-state', 'meadow-duet', 'piano-frame', 'pond-view', 'sail-flutter',
   'scarf-geometry', 'sea-logic', 'sheet-contact', 'sky-mirror-logic', 'sky-mirror-pointer', 'sky-mirror-touch',
   'sleeping-logic', 'wing-care', 'wood-logic', 'ending-view',
   'camera-direction', 'crossing-camera', 'crossing-haze', 'crossing-linen', 'first-whale-swell', 'dream-story', 'drowned-camera', 'drowned-fog-motion',

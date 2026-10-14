@@ -139,6 +139,7 @@ export function fieldAt(x: number, z: number, out: FieldSample = { edge: 99, kin
   /** The gate is only asked about where there is a wall to take down, and only near where it would stand. */
   out.wall = u01(pair) < 0.84 && out.presence > 0;
   if (out.wall && out.edge < WIDE_GATE + FIELD * 0.5) out.wall = offWay(x, z) > gateWidth(x, z);
+  if (z < -646) out.wall = false;
   return out;
 }
 
@@ -212,6 +213,7 @@ vec4 fieldAt(vec2 p) {
   float wall = float(pair & 0xffffu) / 65535.0 < 0.84 ? 1.0 : 0.0;
   /** The gate is only asked about where there is a wall to take down, and only near where it would stand. */
   if (wall > 0.0 && edge < ${(WIDE_GATE + FIELD * 0.5).toFixed(1)}) wall = offWay(p) > fl_gate(p) ? 1.0 : 0.0;
+  if (p.y < -646.0) wall = 0.0;
   return vec4(edge, kind, wall, presence);
 }
 `;
