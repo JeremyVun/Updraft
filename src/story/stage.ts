@@ -8,12 +8,14 @@ import { CrossingsYard } from './crossings-yard';
 import { MillYard } from './mill-yard';
 import { BellYard } from './bell-yard';
 import { SheetYard } from './sheet-yard';
+import { SquirrelYard } from './squirrel-yard';
 
 export type StageView = 'game' | 'flock' | 'behind' | 'front' | 'side' | 'far-side' | 'close' | 'top' | 'k-front' | 'k-side' | 'k-back' | 'k-34' | 'k-above' | 'k-full' | 'k-low'
-  | 'c-close' | 'c-face' | 'c-side' | 'c-back' | 'c-front' | 'c-34' | 'c-profile' | 'c-head' | 'c-near' | 'c-far' | 'c-along' | 'c-across';
+  | 'c-close' | 'c-face' | 'c-side' | 'c-back' | 'c-front' | 'c-34' | 'c-profile' | 'c-head' | 'c-near' | 'c-far' | 'c-along' | 'c-across'
+  | 's-face' | 's-side' | 's-near' | 's-game';
 
 /** Camera placements in the child's frame: bearing from their facing, distance, height above the subject, and what to look at. */
-const VIEWS: Record<StageView, { bearing: number; distance: number; height: number; on: 'both' | 'cygnet' | 'cat' }> = {
+const VIEWS: Record<StageView, { bearing: number; distance: number; height: number; on: 'both' | 'cygnet' | 'cat' | 'squirrel' }> = {
   game: { bearing: Math.PI, distance: 15, height: 5.2, on: 'both' },
   /** Standing where the child stands and watching the swans, wherever in the sky or on the water they are. */
   flock: { bearing: Math.PI, distance: 26, height: 7, on: 'both' },
@@ -48,6 +50,11 @@ const VIEWS: Record<StageView, { bearing: number; distance: number; height: numb
   /** Side on to the yard's long way, and looking along it: for judging a jump or a run as it goes by. */
   'c-along': { bearing: Math.PI / 2, distance: 3.2, height: 0.7, on: 'cat' },
   'c-across': { bearing: Math.PI + 0.3, distance: 3.2, height: 0.9, on: 'cat' },
+  /** Round the squirrel, from the way it faced when the view was chosen, and from behind the child at play distance. */
+  's-face': { bearing: 0.35, distance: 0.9, height: 0.05, on: 'squirrel' },
+  's-side': { bearing: Math.PI / 2, distance: 1.3, height: 0.15, on: 'squirrel' },
+  's-near': { bearing: 0.6, distance: 4, height: 1.6, on: 'squirrel' },
+  's-game': { bearing: Math.PI, distance: 15, height: 4.5, on: 'squirrel' },
 };
 
 /**
@@ -58,6 +65,8 @@ const VIEWS: Record<StageView, { bearing: number; distance: number; height: numb
  * `play('crossing:tree' | 'crossing:swing' | 'crossing:run' | 'crossing:mill' | 'crossing:sheet' | 'crossing:bell')` (or
  * `&gap=tree|swing|run|mill|sheet|bell`) sets out the village's crossings on the sea and plays them as the room
  * would, with the lens its own; `play('bell:ring' | 'bell:down')` starts the bell's yard in the opening or going down.
+ * `play('squirrel:<action>')` sets out a corner of the autumn birches in front of the child, in their light, and
+ * poses the birches' squirrel there (`squirrel-yard.ts`); the `s-` views look at it.
  */
 export class StageChapter implements Chapter {
   readonly shot: Shot = { target: new THREE.Vector3(), distance: 15, height: 5.2, from: new THREE.Vector3(0, 0, 1), free: true };
@@ -92,6 +101,9 @@ export class StageChapter implements Chapter {
   private sheet: SheetYard | null = null;
   /** QA stand-in for the drowned village's refuge: the ivy, the belfry and its bell, set out on the sea when first played. */
   bell: BellYard | null = null;
+  /** QA stand-in for a corner of the autumn birches, set out in front of the child when the squirrel is first played. */
+  squirrels: SquirrelYard | null = null;
+  season: number | undefined = undefined;
   private camera: THREE.PerspectiveCamera | null = null;
 
   constructor(private readonly cast: Cast) {
@@ -137,8 +149,10 @@ export class StageChapter implements Chapter {
 
   look(view: StageView): void {
     this.view = view;
-    if (view.startsWith('c-')) this.cameraCut++;
-    if (view === 'c-near' || view === 'c-far' || view === 'c-along' || view === 'c-across') this.facing = this.yard?.yaw ?? this.cast.child.yaw;
+    if (view.startsWith('c-') || view.startsWith('s-')) this.cameraCut++;
+    if (view === 's-game') this.facing = this.squirrels?.yaw ?? this.cast.child.yaw;
+    else if (view.startsWith('s-')) this.facing = this.cast.squirrel.yaw;
+    else if (view === 'c-near' || view === 'c-far' || view === 'c-along' || view === 'c-across') this.facing = this.yard?.yaw ?? this.cast.child.yaw;
     else if (view.startsWith('c-')) this.facing = this.cast.cat.yaw;
     else this.facing = view.startsWith('k-') ? this.cast.cygnet.yaw : this.cast.child.yaw;
   }
@@ -206,6 +220,16 @@ export class StageChapter implements Chapter {
       return played;
     }
     this.crossings?.stop();
+    if (name.startsWith('squirrel:')) {
+      if (!this.squirrels) {
+        this.squirrels = new SquirrelYard(c.position);
+        this.cast.cat.objects[0].parent?.add(this.squirrels.group);
+      }
+      const played = this.squirrels.play(name.slice(9), this.cast.squirrel);
+      this.cameraCut++;
+      if (!played) console.warn(`stage: the squirrel has nothing called "${name.slice(9)}"`);
+      return played;
+    }
     if (name.startsWith('cat:')) {
       /** The cat's actions, each from its own place in the yard: `cat:strand`, `cat:run`, `cat:climb`. */
       if (!this.yard) {
@@ -396,6 +420,13 @@ export class StageChapter implements Chapter {
     this.pace = 8;
     this.haze = 0.2;
     this.breeze = 0.3;
+    this.season = undefined;
+    if (this.squirrels?.playing) {
+      /** The birches' late afternoon: the room's own dusk, season and a little of its haze. */
+      this.dusk = 0.62;
+      this.season = 0.44;
+      this.haze = 0.55;
+    }
     if (this.swimming) {
       let z = c.position.z;
       while (heightAt(c.position.x, z) > -0.4 && z < c.position.z + 40) z += 0.5;
@@ -407,8 +438,9 @@ export class StageChapter implements Chapter {
     }
     const v = VIEWS[this.view];
     const s = this.shot;
-    const at = v.on === 'cat' ? this.tmp.copy(this.cast.cat.position).setY(this.cast.cat.position.y + 0.16) : k.eye(this.tmp);
-    if (v.on === 'cygnet' || v.on === 'cat') s.target.copy(at);
+    const at = v.on === 'cat' ? this.tmp.copy(this.cast.cat.position).setY(this.cast.cat.position.y + 0.16)
+      : v.on === 'squirrel' ? this.cast.squirrel.eye(this.tmp) : k.eye(this.tmp);
+    if (v.on === 'cygnet' || v.on === 'cat' || v.on === 'squirrel') s.target.copy(at);
     else s.target.set((c.position.x + at.x) / 2, (c.position.y + 1.2 + at.y) / 2, (c.position.z + at.z) / 2);
     const bearing = this.facing + v.bearing;
     s.eye = (s.eye ?? new THREE.Vector3()).set(s.target.x + Math.sin(bearing) * v.distance, s.target.y + v.height, s.target.z + Math.cos(bearing) * v.distance);

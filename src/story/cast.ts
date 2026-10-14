@@ -21,6 +21,7 @@ import type { Glider } from '../glider/glider';
 import type { PointerInput } from '../input/pointer';
 import type { Carry } from '../companion/carry';
 import type { Cat } from '../creatures/cat';
+import type { Squirrel } from '../creatures/squirrel';
 import type { Cygnet } from '../creatures/cygnet';
 import type { Embers } from '../fx/embers';
 import type { Feather } from '../fx/feather';
@@ -66,6 +67,8 @@ export interface Cast {
   flock: SwanFlock;
   /** The stranded cat of the drowned village. */
   cat: Cat;
+  /** The red squirrel of the autumn birches, who hides in the leaf heaps. */
+  squirrel: Squirrel;
   /** Everything the two of them do with their hands on each other: gathering up, holding, setting down, the satchel. */
   carry: Carry;
   /** The one white feather the family leaves behind on the meadow's pond. */
