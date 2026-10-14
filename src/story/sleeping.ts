@@ -83,7 +83,8 @@ const key = (at: number, on: number, bearing: number, reach: number, rise: numbe
  * stops and never turns on its own. Low behind the way up, then round the outside of the switchback, rising to look
  * down on the bird as it turns so the window stays out of the top of the frame; after that on the bed's side of the
  * bird, so each look back finds the lamp beyond it from where the lens already is. At the drift: low and near enough to
- * read the bird in the snow, the drift's crest above it; then up behind it to look down the channel it goes through.
+ * read the bird in the snow, the drift's crest above it; then out on the drop side and level with it as it walks out,
+ * so the hill and the sky stay round it rather than the snow.
  * Over the horn: the lamp far down on the left. At the bank's foot, down at the bird's feet so the
  * bank stands over it, the window in frame but behind the shoulder; climbing with the bird onto it, the window shows
  * above the shoulder at one corner and the lamp at the other. In the saddle the lens stands high on the north side, close
@@ -98,8 +99,8 @@ const CLIMB_LENS: readonly LensKey[] = [
   key(5, 1, 345, 6.8, 0.8, 0.4, 'drift'),
   key(SLEEP_DRIFT_STOP, -0.8, 25, 5.2, 1.2, 0.4, 'drift'),
   key(SLEEP_DRIFT_STOP, 0.4, 25, 5.2, 1.2, 0.4, 'drift'),
-  key(SLEEP_DRIFT_STOP, 2.3, 35, 5, 2.4, 0.2, 'drift', 2),
-  key(SLEEP_DRIFT_STOP + 1, 0, 60, 7, 2.6, 0.2, 'lamp'),
+  key(SLEEP_DRIFT_STOP, 2.3, 35, 6, 0.5, 0.25, 3),
+  key(SLEEP_DRIFT_STOP + 1, 0, 60, 7.5, 0.9, 0.2, 'lamp'),
   key(SLEEP_STEP_STOP - 1, -0.7, 88, 7.5, 2.2, 0.55, 'lamp'),
   key(SLEEP_STEP_STOP - 1, 0, 95, 7.5, 2.2, 0.3, 'lamp'),
   key(SLEEP_STEP_STOP - 1, 1.3, 95, 7.5, 2, 0.3, 'lamp'),

@@ -3303,11 +3303,11 @@ export const tuning = {
     strokeEnds: 0.35,
     snowLayerEase: 3,
     /**
-     * The patchy skin of snow the swept channel's floor keeps for prints, and how far the cornice leans out over the
+     * The skin of snow the swept channel's floor keeps for prints, and how far the cornice leans out over the
      * drop, metres; how much brighter the drift is than the frosted turf round it.
      */
     driftSkin: 0.06,
-    driftCornice: 0.42,
+    driftCornice: 0.62,
     driftBright: 1.3,
     /**
      * The step: where the bird runs to at the bank's foot and slides back to, metres past the stop; its run, the hop

@@ -152,18 +152,12 @@ in vec3 vWorld;
 in vec3 vMark;
 void main() {
   float across = abs(vMark.x);
-  vec3 V = normalize(cameraPosition - vWorld);
-  vec2 ripple = vec2(vnoise(vWorld.xz * 6.0), vnoise(vWorld.xz * 6.0 + 7.3)) - 0.5;
-  vec3 n = normalize(vec3(ripple.x * 0.35, 1.0, ripple.y * 0.35));
-  float fresnel = 0.08 + 0.92 * pow(1.0 - max(dot(n, V), 0.0), 4.0);
-  vec3 deep = vec3(0.05, 0.09, 0.14) * (hemiLight(n) * 2.0 + lampLight(vWorld, n) + dawnLight(vWorld, n));
-  vec3 col = mix(deep, skyColor(reflect(-V, n)) * 0.75, fresnel);
-  col += uSunColor * pow(max(dot(reflect(-uSunDir, n), V), 0.0), 60.0) * 1.6;
-  float rime = smoothstep(0.5, 0.95, across) * smoothstep(0.35, 0.6, vnoise(vec2(vMark.y * 1.3, vMark.x))) + smoothstep(0.72, 0.8, vnoise(vec2(vMark.y * 2.2, across * 3.0)));
-  float bubbles = smoothstep(0.78, 0.9, vnoise(vWorld.xz * 14.0)) * (1.0 - across);
-  vec3 white = vec3(0.8, 0.86, 0.93) * (hemiLight(vec3(0.0, 1.0, 0.0)) * 1.15 + uSunColor * 0.6);
-  col = mix(col, white, clamp(rime * 0.55 + bubbles * 0.35, 0.0, 1.0) * mix(0.35, 1.0, frostAt(vWorld.xz)));
-  float alpha = 1.0 - smoothstep(0.75, 1.0, across);
+  // Matt and no paler than the frost round it, so the rill reads as a seam in the hillside rather than a drawn line.
+  float rimed = max(smoothstep(0.35, 0.9, across), 0.7 * smoothstep(0.4, 0.75, vnoise(vec2(vMark.y * 1.6, across * 2.0) + 3.1)));
+  vec3 alb = mix(vec3(0.2, 0.26, 0.34), vec3(0.8, 0.86, 0.93) * 0.75, rimed) * (0.92 + 0.12 * vnoise(vWorld.xz * 9.0));
+  vec3 n = vec3(0.0, 1.0, 0.0);
+  vec3 col = alb * (hemiLight(n) + uSunColor * max(uSunDir.y, 0.0) * cloudShadow(vWorld.xz) * 0.8 + lampLight(vWorld, n) + dawnLight(vWorld, n));
+  float alpha = 1.0 - smoothstep(0.7, 1.0, across);
   gl_FragColor = vec4(applyFog(col, vWorld), alpha * vMark.z);
 }`;
 
@@ -712,13 +706,15 @@ export class SleepingDressing {
       }
       return out;
     };
-    const line = [...trace(-1, 4.5).reverse(), new THREE.Vector2(SLEEP_TRICKLE[0], SLEEP_TRICKLE[1]), ...trace(1, 3)];
+    const above = trace(-1, 1.75).reverse();
+    const line = [...above, new THREE.Vector2(SLEEP_TRICKLE[0], SLEEP_TRICKLE[1]), ...trace(1, 1.75)];
     const pos: number[] = [], mark: number[] = [], idx: number[] = [];
     for (let i = 0; i < line.length; i++) {
       const a = line[Math.max(0, i - 1)], b = line[Math.min(line.length - 1, i + 1)];
       const dx = b.x - a.x, dz = b.y - a.y, len = Math.hypot(dx, dz) || 1;
-      const width = 0.085 + 0.035 * noise(i * 0.13, 9) + 0.05 * Math.max(0, noise(i * 0.05, 4));
-      const fade = Math.min(1, i / 6, (line.length - 1 - i) / 6);
+      const width = 0.065 + 0.025 * noise(i * 0.13, 9) + 0.035 * Math.max(0, noise(i * 0.05, 4));
+      const crossing = Math.abs(i - above.length) < 2;
+      const fade = Math.min(1, i / 2, (line.length - 1 - i) / 2, crossing ? 1 : smoothstep(-0.55, -0.2, noise(i * 0.45, 17)));
       for (const side of [-1, 1]) {
         const x = line[i].x - (dz / len) * width * side, z = line[i].y + (dx / len) * width * side;
         pos.push(x, heightAt(x, z) + 0.012, z);

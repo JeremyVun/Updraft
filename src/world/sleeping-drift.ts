@@ -152,7 +152,7 @@ void main() {
 const FRAG = /* glsl */ `
 ${ATMO_GLSL}
 ${NOISE_GRAD_GLSL}
-uniform float uGust, uThaw;
+uniform float uGust, uThaw, uSwept;
 uniform vec3 uRight, uForward;
 uniform vec4 uBird;
 uniform vec4 uPrints[${PRINTS}];
@@ -177,7 +177,10 @@ void main() {
   // Thin snow lies in patches, so the rim and the swept floor break up instead of tracing an outline.
   float patches = vnoise(p * 1.1 + 3.7) * .45 + vnoise(p * 3.1) * .33 + vnoise(p * 9.0) * .22;
   float cover = depth * (.2 + 1.6 * patches);
-  if (cover < .04) discard;
+  // The swept channel keeps a whole skin: where it thins it is pressed blue, not holed through to the dark turf.
+  float skinned = sm(.15, .35, vDepth.x) * sm(0.0, .3, uSwept) * (1.0 - uThaw);
+  if (cover + .06 * skinned < .04) discard;
+  float pressed = (1.0 - sm(.025, .09, cover)) * skinned;
   float thin = sm(.04, .3, cover);
   float cut = sm(.015, .08, vDepth.x * (1.0 - uThaw) - depth);
   vec3 n = normalize(vNormal);
@@ -223,7 +226,7 @@ void main() {
     float wall = (d - edge * 1.5) / (edge * 1.4);
     rim = max(rim, exp(-wall * wall) * f.w);
   }
-  col *= mix(vec3(1.0), vec3(.62, .72, .95), dent * .75 * thin);
+  col *= mix(vec3(1.0), vec3(.5, .58, .8), max(dent * .7, pressed));
   col *= 1.0 + rim * .12 * thin;
   // Where the bird stands in the drift, the snow round it is in its shade.
   float near = length(xz - uBird.xz);
