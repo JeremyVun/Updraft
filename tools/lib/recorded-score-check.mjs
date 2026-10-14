@@ -6,7 +6,8 @@ export async function checkRecordedScore(page, track) {
     const checks = [], check = (ok, message) => { if (!ok) throw Error(message); checks.push(message); };
     const field = track === 'home' ? 'summitScore' : track === 'mirror' ? 'mirrorScore' : track === 'lines' ? 'linesScore' : track === 'boats' ? 'boatsScore' : 'birchesScore';
     const phases = track === 'home' ? ['approach', 'flight', 'farewell', 'home'] : track === 'mirror' ? ['approach', 'search', 'one', 'two', 'three', 'constellation', 'depart'] : track === 'lines' ? ['first', 'second', 'third', 'family', 'door', 'shore'] : track === 'boats' ? ['play'] : ['walk', 'swing', 'scarf', 'return'];
-    const state = { ...baseState, music: track, [field]: phases[0], flockChatter: false };
+    // Birches loops only on its island and the approach to it (`village-music-check` covers its play-out).
+    const state = { ...baseState, music: track, [field]: phases[0], flockChatter: false, ...(track === 'birches' ? { birchesLoop: true } : {}) };
     const power = (buffer, from, to) => {
       const data = buffer.getChannelData(0);
       let sum = 0;

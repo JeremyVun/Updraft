@@ -35,6 +35,15 @@ For Jeremy's eye, ear or hands:
 - A playthrough on the iPad for performance: smoothness on Auto, heat and battery. It also settles whether the
   child's bone texture moves before the frame's passes ([engine.md](engine.md), Open).
 
+Planned:
+- **Birches uplift.** The island is over in about 90 seconds and its sail on to the stairs is short, so `birches.ogg`
+  barely clears before the stairs. More to do on the island, and the island moved so the crossing to the stairs is
+  longer, giving the music room between the two. Jeremy (2026-10-15): "if we make birches island longer / more
+  interactions and activities (right now its over in 90 seconds) we can add another song for the stairs, and probably
+  move the birches island so that the travel from birches to stairs island is a bit longer? Otherwise there's not
+  enough musical palate cleansing between the two islands." A song for the stairs under the cloud comes with it;
+  the white and the Penrose loop stay silent up to the top.
+
 Known issues:
 - The sky mirror: a faint speckled patch on the water beyond the departure jetty, looking toward the sun on the way
   in. Not traced.

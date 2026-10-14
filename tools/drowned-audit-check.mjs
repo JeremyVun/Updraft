@@ -4,15 +4,12 @@ import fs from 'node:fs';
 const { samples, events } = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
 const released = events.find(s => s.released), sailing = events.find(s => s.sailingFrom >= 0);
 const quiet = events.find(s => s.quiet), calm = events.find(s => s.beat === 'still');
-const tones = events.filter(s => s.event === 'tone'), notes = events.filter(s => s.event === 'tone-note');
+const phrases = events.filter(s => s.event === 'phrase' && s.game >= sailing?.game && s.game <= (calm?.game ?? 0) + 10);
 assert(released && sailing && quiet && calm, 'complete rescue and sailing sequence recorded');
-assert.equal(tones.length, 1, 'one real audio cue');
-assert.equal(notes.length, 3, 'all three becalming notes scheduled by the real audio engine');
-const delay = tones[0].game - sailing.game;
-assert(delay >= 3.98 && delay <= 4.05, `four seconds of sailing before tone: ${delay}`);
+assert.equal(phrases.length, 0, `no musical phrase as the air dies: ${phrases.map(p => p.name).join(', ')}`);
+const delay = calm.game - sailing.game;
+assert(delay >= 3.98 && delay <= 4.05, `four seconds of sailing before the air dies: ${delay}`);
 assert(quiet.game - sailing.game >= 1.99, 'music continues for the added two seconds');
-assert(Math.abs(calm.game - tones[0].game) < .04, 'tone and effect begin together');
-assert(notes[0].at - sailing.audio >= 3.98, 'actual audio onset follows four seconds of sailing');
 const distance = Math.hypot(calm.boat[0] - released.boat[0], calm.boat[2] - released.boat[2]);
 assert(distance > 7, `visible travel before becalming: ${distance} m`);
 const run = samples.filter(s => s.beat === 'run');
@@ -26,4 +23,4 @@ for (let i = 1; i < run.length; i++) {
   fastest = Math.max(fastest, Math.hypot(dx, dz) / (b.game - a.game));
 }
 assert(fastest <= 3.21, `steady fog advance: ${fastest} m/s`);
-console.log(`Live replay: tone/effect after ${delay.toFixed(2)} s of sailing, ${distance.toFixed(2)} m travelled; three notes scheduled; fog fixed in direction, no retreat, at most ${fastest.toFixed(2)} m/s.`);
+console.log(`Live replay: the air dies after ${delay.toFixed(2)} s of sailing, ${distance.toFixed(2)} m travelled, in silence; fog fixed in direction, no retreat, at most ${fastest.toFixed(2)} m/s.`);

@@ -445,12 +445,8 @@ export class CrossingChapter implements Chapter {
     return this.cast.boat.grounded || this.remainingSail()<=Math.min(lead,this.routeLength*tuning.audio.arrivalEntranceRouteShare);
   }
 
-  get homewardReady(): boolean | undefined {
-    if (!this.homeward) return undefined;
-    const { position, grounded } = this.cast.boat;
-    return grounded || (this.leg > 0 && Math.hypot(position.x-this.departure.x,position.z-this.departure.y)
-      >= tuning.audio.homewardClearDistance);
-  }
+  /** Seconds since the boat left the Mirror. */
+  get homewardTime(): number | undefined { return this.homeward ? this.time : undefined; }
 
   /** Remaining sailing distance, not straight-line proximity across an intervening island. */
   private remainingSail(): number {

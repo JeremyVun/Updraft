@@ -22,13 +22,13 @@ const mechanics = [
 ];
 const browser = [
   'shader-browser', 'sky-mirror-star', 'drowned-mist', 'lantern-fog', 'stairs-fog', 'fog-lookup', 'touch-viewport', 'chapter-view-browser', 'context-loss', 'start',
-  'progress', 'frame-time-browser', 'home-water', 'recorded-music-browser', 'music-loading-browser', 'still-phrases-browser', 'still-departure-browser', 'sea-music-browser', 'petals-browser', 'journey-view', 'lines-arrival',
+  'progress', 'frame-time-browser', 'home-water', 'recorded-music-browser', 'music-loading-browser', 'still-phrases-browser', 'still-departure-browser', 'sea-music-browser', 'village-music-browser', 'petals-browser', 'journey-view', 'lines-arrival',
 ];
 // Audio/score checks render through a headless dev server (no GPU); BASE selects it.
 const audio = [
   'arrival-audio', 'audio', 'audio-continuity', 'audio-direction', 'music-mute', 'birches-foley', 'birches-score',
   'boats-score', 'mirror-score', 'dream-score', 'gesture-harmony', 'homeward-audio', 'lines-score', 'marine-audio',
-  'meadow-score', 'meadow-breath', 'opening-score', 'still-phrases', 'piano-audio', 'sea-score', 'sea-music', 'sleeping-score', 'whale-voice', 'drowned-audio-regression',
+  'meadow-score', 'meadow-breath', 'opening-score', 'still-phrases', 'piano-audio', 'sea-score', 'sea-music', 'clouds-music', 'village-music', 'sleeping-score', 'whale-voice', 'drowned-audio-regression',
 ];
 const groups = { quick, mechanics, browser, audio, release: [...mechanics, ...browser, ...audio, 'playthrough'] };
 const group = process.argv[2] ?? 'quick';

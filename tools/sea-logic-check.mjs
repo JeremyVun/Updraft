@@ -276,7 +276,14 @@ for(const [fps,portrait,circling] of [[60,false,false],[30,false,true],[60,true,
     if(w.step!==step){steps.push([w.step,+time.toFixed(1)]);step=w.step;}
     const point=c.checkpoint;if(point&&point!==saves[saves.length-1])saves.push(point);
     rewards+=takeCues().filter(q=>q==='restored').length;
-    if(c.seaPhrase!==phrases.at(-1))phrases.push(c.seaPhrase);
+    if(c.seaPhrase!==phrases.at(-1)){
+      phrases.push(c.seaPhrase);
+      // Each phrase begins as its act does: the net over the blowhole and the fold over its eye first lifting, her
+      // first pull on the line, the cygnet's pull; none as she takes the line.
+      const begun={1:w.step==='breath'&&w.progress<1,2:w.step==='eye'&&w.foldT<0,3:w.step==='heave'&&w.haul==='heaving'&&w.heaves===0,
+        4:w.step==='flipper'&&w.bird==='pulling'}[c.seaPhrase];
+      assert(begun??true,`phrase ${c.seaPhrase} begins as its act does: ${JSON.stringify({step:w.step,progress:w.progress,foldT:w.foldT,haul:w.haul,heaves:w.heaves,bird:w.bird})}`);
+    }
     // While the breath is asked, the blowhole is held well inside the frame, with room round it to circle.
     if(w.step==='breath'&&w.progress<1&&(c.coax||w.progress>0))blowholeEdge=Math.max(blowholeEdge,...ndc.copy(w.whale.blowhole).project(rig.camera).toArray().slice(0,2).map(Math.abs));
     if(w.step==='breath'||w.step==='eye')eyeOpen=Math.max(eyeOpen,w.eyeT>0?1:0);
@@ -332,7 +339,7 @@ for(const [fps,portrait,circling] of [[60,false,false],[30,false,true],[60,true,
   assert(finClear>=1,`the cygnet keeps a metre of clear water from the flipper: ${finClear.toFixed(2)} m`);
   assert(eyeOpen,'its first full breath opens its eye before it is free');
   assert.equal(rewards,0,'the recording carries the release, without a reward cue');
-  assert.deepEqual(phrases,[-1,0,1,2,3,4,5],`the recording's phrases follow rest, each step and the release in order: ${phrases}`);
+  assert.deepEqual(phrases,[-1,0,1,2,3,4,5],`the recording's phrases follow rest, each act and the release in order: ${phrases}`);
   assert(blowholeEdge>0&&blowholeEdge<0.75,`the blowhole is an easy target at rest: ${blowholeEdge.toFixed(2)}`);
   assert(c.podLeftAt!==null&&c.podLeftAt>=steps.find(([s])=>s==='free')[1],'the pod goes with the whale');
   for(const s of PLAYED)assert(invitations[s]<=0.7,`${s} invitation follows its actionable target promptly: ${invitations[s]} s`);

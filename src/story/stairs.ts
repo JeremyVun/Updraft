@@ -118,6 +118,8 @@ const KEEP_THEM_IN = 0.6;
 const KEEP_THEM_UNDER = 0.45;
 /** How long she stands taking it in before she turns to the bird, seconds. */
 const AWE_TURNS = 5.2;
+/** Seconds into her look across the cloud by which she has stopped and the haze has lifted off the sun. */
+const CLEARED = 4;
 const ease = (x: number) => 0.5 - 0.5 * Math.cos(Math.PI * THREE.MathUtils.clamp(x, 0, 1));
 /** How high the hull rides on the top of the cloud, and on the sea. */
 const RIDE = CLOUD.top + 0.45;
@@ -292,7 +294,7 @@ export class StairsChapter implements Chapter {
   private readonly outSubjects = { primary: new THREE.Vector3(), secondary: new THREE.Vector3(), points: this.hullFrame, margin: 0.8, extra: 16 };
   private readonly mistLight = new THREE.Color();
   private readonly tmpColor = new THREE.Color();
-  private readonly air: StairsAir = { phase: 'under', cloud: 0, climb: 0, open: 0, fog: 0, speed: 0 };
+  private readonly air: StairsAir = { phase: 'under', cloud: 0, climb: 0, open: 0, fog: 0, speed: 0, clear: false };
   private readonly oldRadius: number;
 
   constructor(private readonly cast: Cast) {
@@ -693,6 +695,7 @@ export class StairsChapter implements Chapter {
     const out = afloat || top || (y > CLOUD.top - 0.4 && this.beat === 'emerge');
     a.open += ((out ? 1 - a.fog : 0) - a.open) * (1 - Math.exp(-dt * 0.8));
     a.speed = afloat ? boat.speed : 0;
+    a.clear = afloat || (top && (this.beat !== 'awe' || this.t >= CLEARED));
     a.phase = this.beat === 'down' ? 'down' : this.beat === 'fog' || this.beat === 'thin' ? 'fog' : this.beat === 'sail' ? 'sail'
       : out ? 'above' : a.cloud > 0.5 || ['hesitate', 'birdFirst', 'follow', 'loop', 'together', 'emerge'].includes(this.beat) ? 'cloud' : 'under';
   }

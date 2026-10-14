@@ -669,8 +669,9 @@ Dolphins follow their own stations, never swim in the air and never turn faster 
 crawls for the first swim. The drawn gestures appear half a second after their target becomes actionable, while
 the camera finishes moving, and return two seconds after the last relevant stroke if more help is needed.
 
-Music: the supplied "Another Shore" (`sea.ogg`), its second 55 falling as the boat comes to rest, then one phrase
-per completed step and its close from the release to the Mirror (`docs/contracts/audio.md`, "The long sea crossing").
+Music: the supplied "Another Shore" (`sea.ogg`), its second 55 falling as the boat comes to rest, then one whole phrase
+as each act begins (the net lifting, the fold lifting, her first pull, the cygnet's pull; none for taking the line) and
+its close from the release to the Mirror (`docs/contracts/audio.md`, "The long sea crossing").
 
 Knobs: `tuning.seaPassage` (pod pacing and mist), `tuning.dolphins`, `tuning.netWhale` (rescue, holds and farewell),
 `tuning.audio.whaleVoice`, `tuning.audio.seaMusicLead`. Checks: `tools/sea-check.mjs` (both orientations, through the settled mirror view, with

@@ -1,5 +1,6 @@
-// Arrange the completed mirror departure; let the real boat, camera and audio decide the entrance.
-// node tools/homeward-audio-browser-check.mjs (Vite on 5230; shared GPU lock).
+// Leaving the Sky Mirror in the real game, with no input from `?chapter=mirrorEnd`: the Mirror's position as the boat
+// leaves, the seam chosen, when the Mirror falls silent and when `home.ogg` begins, on the audio clock and the crossing's.
+// node tools/homeward-audio-browser-check.mjs (about 2 minutes; shared GPU lock). Seam rules: `homeward-audio-check.mjs`.
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import {createServer} from 'vite';
@@ -8,42 +9,59 @@ import {openBrowser} from './lib/browser.mjs';
 const server=await createServer({configFile:false,envDir:false,define:{__BUILD_ID__:JSON.stringify('homeward-audio-check')},
   server:{host:'127.0.0.1',port:0,hmr:false,watch:null}});
 await server.listen();
-const {browser,close}=await openBrowser(),errors=[];
+const {browser,close}=await openBrowser({allowAutoplay:false}),errors=[];
 try{
   const page=await browser.newPage({viewport:{width:1280,height:800}});
   page.on('pageerror',e=>errors.push(e.message));
-  await page.goto(`http://127.0.0.1:${server.httpServer.address().port}/?shot&chapter=mirror&ratio=1&msaa=2&progress=0`);
-  await page.waitForFunction(()=>window.__ready,null,{timeout:60000});
-  await page.mouse.click(10,10);
-  await page.evaluate(async()=>{
-    const {MIRROR_BERTH}=await import('/src/world/sky-mirror-layout.ts'),g=__game;
-    g.sound.start();
-    window.homewardAudio={phases:[],entry:null};
-    const update=g.sound.update.bind(g.sound);
-    g.sound.update=(dt,state)=>{
-      update(dt,state);if(!g.sound.running)return;
-      const stage=g.sound.arrivalTransition.stage,now=g.sound.ctx.currentTime;
-      if(homewardAudio.phases.at(-1)?.stage!==stage)homewardAudio.phases.push({stage,now,chapter:g.story.name});
-      if(stage==='incoming'&&!homewardAudio.entry){
-        const c=g.story.current;
-        homewardAudio.entry={now,chapter:g.story.name,leg:c.leg,ready:c.homewardReady,
-          distance:Math.hypot(g.boat.position.x-c.departure.x,g.boat.position.z-c.departure.y),
-          boat:g.boat.position.toArray(),camera:g.rig.camera.position.toArray(),phase:g.sound.summitScore?.phase};
-      }
+  await page.goto(`http://127.0.0.1:${server.httpServer.address().port}/?shot&start=1&progress=0&chapter=mirrorEnd&ratio=1&msaa=2`);
+  await page.waitForSelector('#veil.ready',{timeout:60000});
+  await page.evaluate(()=>{
+    const g=__game,sound=g.sound,update=sound.update.bind(sound);
+    const level=bus=>{
+      if(!bus)return -Infinity;
+      bus.meter??=Object.assign(sound.ctx.createAnalyser(),{fftSize:2048});
+      if(!bus.metered){bus.connect(bus.meter);bus.metered=true;}
+      const data=new Float32Array(2048);bus.meter.getFloatTimeDomainData(data);
+      return 10*Math.log10(data.reduce((sum,v)=>sum+v*v,0)/data.length+1e-20);
     };
-    g.story.sail(MIRROR_BERTH.x,MIRROR_BERTH.z,MIRROR_BERTH.yaw);g.story.begin('toHarbour');
+    window.homeward={chapters:[],leave:null,mirrorHeard:null,homeStart:null,homeHeard:null};
+    sound.update=(dt,state)=>{
+      const mirror=sound.mirrorScore;
+      update(dt,state);
+      if(!sound.running)return;
+      const now=sound.ctx.currentTime,story=g.story,w=homeward;
+      if(w.chapters.at(-1)?.name!==story.name)w.chapters.push({name:story.name,now});
+      const transition=sound.arrivalTransition;
+      if(!w.leave&&story.name==='toHarbour'){
+        w.leave={now,story:story.current.homewardTime,stage:transition.stage,position:mirror?.position(now)??null,
+          seam:transition.began,homeAt:transition.homeAt,release:transition.release,after:g.tuning.audio.homeStartAfter};
+      }
+      if(!w.leave)return;
+      const t=now-w.leave.now,crossing=story.current.homewardTime;
+      if(sound.mirrorScore&&level(sound.mirrorScore.bus)>-90)w.mirrorHeard=t;
+      if(!w.homeStart&&sound.summitScore?.source)w.homeStart={audio:sound.summitScore.epoch-w.leave.now,crossing,
+        offset:sound.summitScore.start};
+      if(w.homeStart&&!w.homeHeard&&level(sound.summitScore?.bus)>-60)w.homeHeard=t;
+    };
   });
-  await page.waitForFunction(()=>__game.sound.arrivalTransition.stage==='gap',null,{timeout:20000});
-  await page.screenshot({path:'/tmp/updraft-homeward-silence.png'});
-  await page.waitForFunction(()=>homewardAudio.entry,null,{timeout:60000});
-  await page.screenshot({path:'/tmp/updraft-homeward-entry.png'});
-  const report=await page.evaluate(()=>homewardAudio),fade=report.phases.find(p=>p.stage==='fade'),gap=report.phases.find(p=>p.stage==='gap'),incoming=report.phases.find(p=>p.stage==='incoming');
-  assert(fade&&gap&&incoming,'The real game runs the complete transition');
-  assert(gap.now-fade.now>=2.95,'The mirror fades for three seconds');
-  assert(incoming.now-gap.now>=5,'The real game keeps at least five seconds of musical silence');
-  assert.equal(report.entry.chapter,'toHarbour');assert.equal(report.entry.phase,'approach');
-  assert(report.entry.leg>0&&report.entry.distance>=30&&report.entry.ready,'The new score enters after the first offshore turn');
+  await page.locator('#sound').evaluate(button=>button.click());
+  await page.locator('#begin').click();
+  await page.waitForFunction(()=>homeward.homeHeard!==null&&__game.sound.ctx.currentTime>homeward.leave.now+homeward.homeStart.audio+2,null,{timeout:240000});
+  const report=await page.evaluate(()=>homeward),{leave}=report;
+  const timeline={
+    leftAfter:+(leave.now-report.chapters[0].now).toFixed(2),
+    mirrorPosition:leave.position===null?null:+leave.position.toFixed(2),
+    seamAt:+(leave.seam-leave.now).toFixed(3),release:leave.release,
+    seamInRecording:leave.position===null?null:+((leave.position+leave.seam-leave.now)%214.884).toFixed(2),
+    mirrorLastHeard:report.mirrorHeard===null?null:+report.mirrorHeard.toFixed(3),
+    homeStartAudio:+report.homeStart.audio.toFixed(3),homeStartCrossing:+report.homeStart.crossing.toFixed(3),
+    homeOffset:+report.homeStart.offset.toFixed(3),homeHeard:+report.homeHeard.toFixed(3),
+    chapters:report.chapters.map(c=>({name:c.name,at:+(c.now-leave.now).toFixed(2)})),
+  };
+  console.log(JSON.stringify(timeline,null,2));
+  fs.writeFileSync('/tmp/updraft-homeward-browser.json',JSON.stringify({timeline,report,errors},null,2));
+  assert(leave.position!==null,'The Mirror is sounding as the boat leaves');
+  assert(report.mirrorHeard<=leave.seam-leave.now+.1,'The Mirror is silent from its seam');
+  assert(Math.abs(report.homeStart.crossing-leave.after)<=.05&&report.homeStart.offset<.1,'Home begins from its top on schedule');
   assert.deepEqual(errors,[]);
-  fs.writeFileSync('/tmp/updraft-homeward-browser.json',JSON.stringify({report,errors},null,2));
-  console.log(JSON.stringify(report,null,2));
 }finally{await close();await server.close();}

@@ -332,8 +332,10 @@ brings the light. Courage passes back and forth between them, and the stairs are
   fog as the rest of the scene. Its eight-metre shape sample is only a look ahead, not a minimum visible distance;
   treating it as an entry distance left the bottom of the screen uncovered. `tools/stairs-fog-check.mjs` checks
   coverage and continuity on the GPU, including the pocket of clearer air round the boat.
-- **Sound**: `src/audio/stairs-sound.ts` and `stairs-score.ts` behind `StairsAir` (phase, cloud, climb, open, fog,
-  speed), rendered with `tools/stairs-audio-proposal.mjs`; the contract is in `docs/contracts/audio.md`.
+- **Sound**: `src/audio/stairs-sound.ts` behind `StairsAir` (phase, cloud, climb, open, fog, speed); the birches
+  recording, if it is still playing, stops over a second as they go up into the white, and silence holds through the
+  white and the loop; then `clouds.ogg` from the moment they come out on top to 3:28, holding the village's music until it ends (Jeremy's brief and the
+  measured timeline are in `docs/contracts/audio.md`); rendered with `tools/stairs-audio-proposal.mjs`.
 - **Checking**: `node tools/stairs-check.mjs <prefix>` plays the room with real drags against a dev server
   (`BASE=`), captures each beat, blows the heap off the loop when the sweep is drawn, and shoots the fog; `FROM=n`
   starts with n flights home, `UNTIL=n` stops after n, `TRACE=1` logs the flights. Capture from a separate worktree

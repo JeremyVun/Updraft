@@ -1,5 +1,6 @@
-// Renders the drowned village's music through the game's own sound (the score, its crossings and levels, the becalmed
-// phrase, the bell through its foley, the foghorn and the wood's drone taking over; no wind or sea) for listening: each
+// Renders the drowned village's study score (`drowned-score.ts`, outside runtime playback: the village now plays only
+// `village_approach.ogg`) through the game's own sound (the score, its crossings and levels,
+// the bell through its foley, the foghorn and the wood's drone taking over; no wind or sea) for listening: each
 // piece on its own, held long enough to hear it come round, and one sweep of the room from the drift's start into the
 // wood at a player's pace, with a spectrogram. Every file shares one playback gain, so the levels between them are the
 // game's. Writes m4a files and a report of each section's loudness (`KEEP_WAV=1` keeps the wavs; `ONLY=a,b` renders some).
@@ -19,7 +20,7 @@ const only = process.env.ONLY?.split(',');
 const RINGS = [318, 323, 327.5, 332];
 const studies = {
   '1-drift': { seconds: 140, phases: [[0, 'drift']] },
-  '2-fog': { seconds: 200, phases: [[0, 'fog']], cues: [[0.5, 'becalmed']] },
+  '2-fog': { seconds: 200, phases: [[0, 'fog']], cues: [] },
   '3-refuge': { seconds: 72, phases: [[0, 'refuge']] },
   '4-home': { seconds: 136, phases: [[0, 'home']] },
   '5-farewell': { seconds: 112, phases: [[0, 'farewell'], [10.6, 'storm']], cues: [[19.6, 'foghorn']] },
@@ -28,7 +29,7 @@ const studies = {
     seconds: 500,
     phases: [[0, 'drift'], [110, 'fog'], [282, 'refuge'], [RINGS[0] + 0.7, 'home'], [384, 'farewell'], [394.6, 'storm']],
     quiet: [80, 110],
-    cues: [[82, 'becalmed'], [398, 'foghorn']], rings: RINGS, wood: { from: 462, landed: 472 },
+    cues: [[398, 'foghorn']], rings: RINGS, wood: { from: 462, landed: 472 },
   },
 };
 
@@ -50,6 +51,8 @@ try {
     const result = await session.page.evaluate(async (study) => {
       const { Foley } = await import('/src/audio/foley.ts');
       const { ARRIVAL_MUSIC } = await import('/src/audio/arrival-music.ts');
+      const { DrownedScore } = await import('/src/audio/drowned-score.ts');
+      const { tuning } = await productionModule('/src/tuning.ts');
       let seed = 9091;
       Math.random = () => { seed = Math.imul(seed, 1664525) + 1013904223 | 0; return (seed >>> 0) / 4294967296; };
       const tick = 1 / 8, ticks = Math.round(study.seconds / tick);
@@ -58,6 +61,19 @@ try {
       const foley = new Foley();
       foley.setOutput(sound.output);
       const rings = [...(study.rings ?? [])], cues = [...(study.cues ?? [])], heard = [];
+      // The study score through the background at its approved level, released by the rescue's quiet and the wood's overlap.
+      const level = tuning.audio.drownedScoreLevel * 10 ** (tuning.audio.roomTrimDb.drowned / 20);
+      let score = null;
+      const conduct = (phase, quiet, wood) => {
+        if (!quiet && !wood) {
+          score ??= new DrownedScore({ ctx, bus: sound.backgroundDry, reverb: sound.backgroundWet }, out => {
+            const piano = new audioModule.PianoStrings(); piano.setOutput(out); return piano;
+          });
+          score.update(phase, level);
+        } else if (score) {
+          score.stop(quiet ? tuning.drowned.rescue.musicFade : tuning.audio.forestMusicBlend); score = null;
+        }
+      };
       const update = (i) => {
         const t = i * tick, wood = study.wood && t >= study.wood.from;
         const phase = study.phases.findLast(([at]) => at <= t)[1];
@@ -69,15 +85,16 @@ try {
         const now = [];
         while (cues.length && cues[0][0] <= t) now.push(cues.shift()[1]);
         const landed = wood && t >= study.wood.landed;
-        sound.update(tick, { ...baseState, music: 'drowned', drownedScore: phase,
-          drownedQuiet: !!study.quiet && t >= study.quiet[0] && t < study.quiet[1], hush: 0.3,
+        const quiet = !!study.quiet && t >= study.quiet[0] && t < study.quiet[1];
+        conduct(phase, quiet, wood);
+        sound.update(tick, { ...baseState, music: 'drowned', drownedScore: phase, drownedQuiet: quiet, hush: 0.3,
           ...(landed ? ARRIVAL_MUSIC.wood : {}), arrivalMusic: wood && !landed ? 'wood' : undefined,
           sea: 1, land: 0, overLand: false, breeze: 0, night: 0.3, flockChatter: false, scripted: true, cues: now });
         for (const field of ['breezeGain', 'seaGain', 'rainGain', 'patterGain', 'gustGain', 'whistleGain', 'rustleGain', 'liftGain']) {
           sound[field].gain.cancelScheduledValues(ctx.currentTime);
           sound[field].gain.value = 0;
         }
-        const playing = sound.drownedScore?.current?.phase ?? (sound.mood === 'wood' ? 'wood' : null);
+        const playing = score?.current?.phase ?? (sound.mood === 'wood' ? 'wood' : null);
         if (heard.at(-1)?.[1] !== playing) heard.push([+t.toFixed(2), playing]);
       };
       update(0);

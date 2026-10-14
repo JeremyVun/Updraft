@@ -18,16 +18,9 @@ export async function beginDrownedAudit(page) {
     recorder.start();
     const audit = window.__drownedAudit = { samples: [], events: [], recorder, chunks, output };
     const phrase = sound.phrase.bind(sound);
-    const chime = sound.chime.bind(sound);
-    let currentCue = null;
-    sound.chime = function(...args) {
-      if (currentCue === 'becalmed') audit.events.push({ event: 'tone-note', game: __stats.time, at: args[3], midi: args[0] });
-      return chime(...args);
-    };
     sound.phrase = function(name) {
-      if (name === 'becalmed') audit.events.push({ event: 'tone', game: __stats.time, audio: sound.ctx.currentTime });
-      currentCue = name;
-      try { return phrase(name); } finally { currentCue = null; }
+      audit.events.push({ event: 'phrase', name, game: __stats.time, audio: sound.ctx.currentTime });
+      return phrase(name);
     };
     let previous = '', sampled = -1;
     const tick = () => {

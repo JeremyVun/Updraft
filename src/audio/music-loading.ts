@@ -2,14 +2,19 @@ import boatsUrl from '../../assets/music/boats.ogg?url';
 import homeUrl from '../../assets/music/home.ogg?url';
 import linesUrl from '../../assets/music/lines.ogg?url';
 import birchesUrl from '../../assets/music/birches.ogg?url';
+import cloudsUrl from '../../assets/music/clouds.ogg?url';
 import mirrorUrl from '../../assets/music/mirror.ogg?url';
 import seaUrl from '../../assets/music/sea.ogg?url';
 import stillUrl from '../../assets/music/still.ogg?url';
 import stillDepartureUrl from '../../assets/music/still_2.ogg?url';
+import villageApproachUrl from '../../assets/music/village_approach.ogg?url';
+import belfryUrl from '../../assets/music/belfry.ogg?url';
+import type { StairsPhase } from './stairs-air';
 import { tuning } from '../tuning';
 
-export type MusicTrack = 'home' | 'mirror' | 'sea' | 'birches' | 'lines' | 'boats' | 'still' | 'stillDeparture';
-const urls: Record<MusicTrack, string> = { home: homeUrl, mirror: mirrorUrl, sea: seaUrl, birches: birchesUrl, lines: linesUrl, boats: boatsUrl, still: stillUrl, stillDeparture: stillDepartureUrl };
+export type MusicTrack = 'home' | 'mirror' | 'sea' | 'birches' | 'clouds' | 'villageApproach' | 'belfry' | 'lines' | 'boats' | 'still' | 'stillDeparture';
+const urls: Record<MusicTrack, string> = { home: homeUrl, mirror: mirrorUrl, sea: seaUrl, birches: birchesUrl, clouds: cloudsUrl,
+  villageApproach: villageApproachUrl, belfry: belfryUrl, lines: linesUrl, boats: boatsUrl, still: stillUrl, stillDeparture: stillDepartureUrl };
 type Download = { track: MusicTrack; controller: AbortController; bytes: Promise<ArrayBuffer> };
 let prefetched: Download | null = null;
 
@@ -40,8 +45,9 @@ export function prefetchMusic(track: MusicTrack | null): void {
   prefetched = track ? download(track) : null;
 }
 
+/** A failed download or decode is fetched afresh after each of `musicRetryAfter`, within the one deadline. */
 export async function decodeMusic(ctx: BaseAudioContext, track: MusicTrack, signal: AbortSignal): Promise<AudioBuffer> {
-  const pending = prefetched?.track === track ? prefetched : download(track);
+  let pending = prefetched?.track === track ? prefetched : download(track);
   if (prefetched === pending) prefetched = null;
   const controller = new AbortController();
   const abort = () => { controller.abort(signal.reason); pending.controller.abort(); };
@@ -52,8 +58,18 @@ export async function decodeMusic(ctx: BaseAudioContext, track: MusicTrack, sign
     pending.controller.abort();
   }, tuning.audio.musicLoadTimeoutMs);
   try {
-    const bytes = await abortable(pending.bytes, controller.signal);
-    return await abortable(ctx.decodeAudioData(bytes), controller.signal);
+    for (let attempt = 0; ; attempt++) {
+      try {
+        const bytes = await abortable(pending.bytes, controller.signal);
+        return await abortable(ctx.decodeAudioData(bytes), controller.signal);
+      } catch (error) {
+        const wait = tuning.audio.musicRetryAfter[attempt];
+        if (controller.signal.aborted || wait === undefined) throw error;
+        console.warn(`Retrying ${track} music`, error);
+        await abortable(new Promise(resolve => setTimeout(resolve, wait * 1000)), controller.signal);
+        pending = download(track);
+      }
+    }
   } finally {
     clearTimeout(timer);
     signal.removeEventListener('abort', abort);
@@ -67,18 +83,27 @@ export function musicForStart(choice: string | { chapter: string; point?: string
   if (chapter === 'island') return tuning.audio.stillPhraseExperiment ? 'still' : null;
   if (['lines', 'washing', 'door', 'shore', 'toBoats'].includes(chapter)) return 'lines';
   if (['boats', 'toMeadow'].includes(chapter)) return 'boats';
+  // Past the loop the birches' recording has stopped in the white; the top of the cloud is next.
+  if (['cloud', 'nest'].includes(chapter) || chapter === 'stairs' && typeof choice === 'object' && choice?.point === 'cloud') return 'clouds';
   if (['birches', 'autumn', 'toStairs', 'stairs', 'clouds'].includes(chapter)) return 'birches';
+  // The village's start has its approach; a storm save is past the bells, so the belfry's goodbye plays on load.
+  if (['drowned', 'village'].includes(chapter) && (typeof choice !== 'object' || !choice?.point)) return 'villageApproach';
+  if (chapter === 'storm' || chapter === 'drowned' && typeof choice === 'object' && choice?.point === 'storm') return 'belfry';
   if (['toMirror', 'sea', 'dolphins', 'whale'].includes(chapter)) return 'sea';
   if (chapter === 'mirror' || chapter === 'mirrorEnd') return 'mirror';
   if (['home', 'summit', 'jetty', 'toHarbour', 'toHome'].includes(chapter)) return 'home';
   return null;
 }
 
-export function nextMusicForChapter(chapter: string): MusicTrack | null {
+/** In the stairs, `stairs` says where: once they are up in the white, `clouds.ogg` is in hand and the village is next. */
+export function nextMusicForChapter(chapter: string, stairs?: StairsPhase): MusicTrack | null {
   if (chapter === 'island') return tuning.audio.stillPhraseExperiment ? 'stillDeparture' : null;
   if (chapter === 'toLines') return 'lines';
   if (chapter === 'lines' || chapter === 'toBoats') return 'boats';
   if (chapter === 'meadow' || chapter === 'toBirches') return 'birches';
+  if (chapter === 'stairs' && stairs && stairs !== 'under') return 'villageApproach';
+  if (['birches', 'toStairs', 'stairs'].includes(chapter)) return 'clouds';
+  if (chapter === 'drowned') return 'belfry';
   if (chapter === 'sleeping') return 'sea';
   if (chapter === 'toMirror') return 'mirror';
   if (chapter === 'mirror') return 'home';

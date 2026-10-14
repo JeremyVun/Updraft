@@ -51,7 +51,6 @@ for (const fps of [30, 60, 120]) {
   tub.place(W.CAT_HOLD.x+2,W.CAT_HOLD.y,0);tub.held=true;
   cat.place(new THREE.Vector3(0,.1,0),0,{frame:tub.group,pose:'sit'});
   let released=null, sailing=null, rescued=null, calm=null, grounded=null, bolt=null, mast=Infinity, moved=0, releaseAt=null, mastAt=null;
-  const calmCues = [];
   takeCues();
   for(let i=0;i<fps*70;i++) {
     const dt=1/fps,t=i*dt;
@@ -61,9 +60,8 @@ for (const fps of [30, 60, 120]) {
     if(rescue.step==='aboard'&&!rescue.rescuing&&!cat.busy&&rescued===null)rescued=t;
     if(rescue.released&&released===null){released=t;releaseAt=boat.position.clone();}
     if(chapter.beat==='still'&&calm===null){calm=t;moved=boat.position.distanceTo(releaseAt);}
-    for(const cue of takeCues())if(cue==='becalmed'||cue.kind==='becalmed')calmCues.push(t);
+    for(const cue of takeCues())assert(cue==='foghorn',`no story cue but the foghorn in the village's rescue and becalming: ${cue}`);
     if(calm===null) {
-      assert.equal(calmCues.length,0,'no becalming tone during rescue or the sailing interval');
       assert(chapter.breeze>.999,'the breeze remains before becalming');
       assert.equal(village.dark.rise,0,'fog waits for becalming');
       if(sailing===null || t-sailing<1.99)assert(!chapter.drownedQuiet,'music continues through recovery and the extra two seconds');
@@ -87,8 +85,7 @@ for (const fps of [30, 60, 120]) {
   assert(bolt-grounded<1.6,`cat leaves promptly: ${bolt-grounded}`);
   assert(mast>.015,`cat clears mast during shake/hop: ${mast} ${JSON.stringify(mastAt)}`);
   assert(rescued!==null&&released>=rescued,'sailing follows the finished shake and bow hop');
-  assert.deepEqual(calmCues,[calm],'becalming tone fires once, with the effect');
-  console.log(`${fps} Hz: tone/effect ${(calm-rescued).toFixed(2)} s after the bow hop; sailing ${(calm-sailing).toFixed(2)} s after recovery / ${moved.toFixed(2)} m; grounded pause ${(bolt-grounded).toFixed(2)} s; mast clearance ${mast.toFixed(3)} m`);
+  console.log(`${fps} Hz: becalming ${(calm-rescued).toFixed(2)} s after the bow hop, silent; sailing ${(calm-sailing).toFixed(2)} s after recovery / ${moved.toFixed(2)} m; grounded pause ${(bolt-grounded).toFixed(2)} s; mast clearance ${mast.toFixed(3)} m`);
 
   const { hullGeometry, KIND } = await import('../src/traveller/boat/parts.ts');
   const hull = hullGeometry();hull.computeBoundingBox();

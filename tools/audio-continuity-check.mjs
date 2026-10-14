@@ -64,7 +64,15 @@ try {
       }
       const buffer = await rendering, encoded = encodeAudio(buffer);
       check(encoded.clipped === 0 && encoded.peakDbFS < -3, `${name}: rendered mix has at least 3 dB headroom`);
-      check(gateTrace.every((p, i) => !i || Math.abs(p.gain - gateTrace[i - 1].gain) < .09), `${name}: the arrival gate ramps without steps`);
+      const steps = gateTrace.filter((p, i) => i && Math.abs(p.gain - gateTrace[i - 1].gain) >= .09);
+      // The village's recording opens on its own 0.2 s of silence, so its gate opens at once out of the silent rest.
+      if (name === 'drowned') check(steps.length === 1 && steps[0].gain === 1 && gateTrace[gateTrace.indexOf(steps[0]) - 1].gain === 0,
+        'drowned: the arrival gate opens at once out of the silent rest');
+      // Leaving the Mirror, its recording has faded to silence at its seam before the gate closes, and Home's recording
+      // opens on 0.18 s of its own silence, so the gate closes and opens at once.
+      else if (name === 'toHarbour') check(steps.length === 2 && steps[0].gain === 0 && steps[1].gain === 1,
+        `toHarbour: the gate closes once after the Mirror's seam and opens once for Home (${steps.map(p => `${p.time / 8}s→${p.gain}`).join(', ')})`);
+      else check(steps.length === 0, `${name}: the arrival gate ramps without steps`);
       renders.push({ name, peakDbFS: encoded.peakDbFS, rmsDbFS: encoded.rmsDbFS, clipped: encoded.clipped,
         ...(name === 'toBirches' ? { pcm: encoded.pcm } : {}) });
     }

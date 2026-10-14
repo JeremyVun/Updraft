@@ -17,4 +17,6 @@ export interface StairsAir {
   fog: number;
   /** The boat's speed over the cloud, metres a second; 0 on foot. */
   speed: number;
+  /** She has stopped at the top and the haze has lifted round the sun: the music begins and the air settles. */
+  clear: boolean;
 }

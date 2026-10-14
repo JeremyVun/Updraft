@@ -235,12 +235,21 @@ differs, as a late readback can make it, is played once more; `ONLY=wood,jetty` 
   `flock-audio-check`, `marine-audio-check`, `whale-voice-check` (production calls, clipping and speaker-band body;
   `MUTATE=thin` must fail), `birches-foley-check`.
 - Scores: `opening-score-check`, `lines-score-check`, `boats-score-check`, `meadow-score-check`,
-  `birches-score-check`, `mirror-score-check`, `dream-score-check`, `sleeping-score-check`, `sea-score-check` (the study score and the passage's story phases), `homeward-audio-check`.
+  `birches-score-check`, `mirror-score-check`, `clouds-music-check`, `village-music-check`, `dream-score-check`, `sleeping-score-check`, `sea-score-check` (the study score and the passage's story phases), `homeward-audio-check`.
   The Lines, Boats, Birches and Home gates decode the supplied recordings and check looping, story continuity, mute/hidden-page
   suspension, late-decode cancellation and buffer release; Home also checks the ending fade and checkpoint offset.
 - `sea-music-check` decodes `sea.ogg` and checks its cut points, the silent hold at the break, phrase A at rest
   (sample-continuous when the boat rests early), B to E on the rescue's steps without restarts, the close on release,
   restores, the Sleeping handoff before the recording begins, the pad, call room, mute and silence.
+  `clouds-music-check` renders the stairs' `clouds.ogg`: decoded in the white, started `cloudsMusicDelay` after the view
+  clears on top at half level rising to full, never restarted, faded by 3:28, the village's music held until then (fog or village
+  first), a recording already over, a late join after music mute and silence.
+  `village-music-check` renders Birches looping on its island, playing its pass out after sailing and stopping over a
+  second in the white; `village_approach.ogg` checked at its seam on the decoded samples, started from its top at full
+  level as the village's rest ends (or with `?chapter=drowned`), faded at the seam, never restarted, a late join, the
+  rescue's quiet, silent later starts; no music or pad through the village; `belfry.ogg` checked at both seams, started
+  on the fourth ring with its slow entrance, played through the storm's start to its end fade, never restarted, started
+  on load by a storm save; and the wood's drone at `woodDroneDb`. `drowned-audio-regression-check` renders the rescue's quiet, the silent becalming and the silent storm.
   `sea-music-browser-check` runs `?chapter=sea` with no input in the real game: second 55 must fall within 0.6 s of
   the boat coming to rest, with A starting within 0.5 s; `?chapter=whale` must play A on load.
 - `still-phrases-check` verifies flight/colour triggers, 4.5-second spacing with overlapping tails, no backlog, mute, late decode, cleanup and drone restoration, plus reversible removal of the falling and touchdown tones.
@@ -267,7 +276,9 @@ differs, as a late readback can make it, is played once more; `ONLY=wood,jetty` 
   `opening-score-check` and `opening-score-browser-check` explicitly disable the experiment to retain the original drone regression checks.
 - In the browser: `audio-browser-check`, `piano-audio-browser-check`, `arrival-audio-browser-check`,
   `transition-scenes-browser-check`, `opening-score-browser-check`, `homeward-audio-browser-check`,
-  `meadow-score-browser-check`, `birches-score-browser-check`, `sea-music-browser-check`,
+  `meadow-score-browser-check`, `birches-score-browser-check`, `sea-music-browser-check`, `village-music-browser-check`
+  (`drowned` and `cloud` with no input: the village's recording against the tub becoming pushable and its invitation;
+  `belfry` rings the bell four times and times the goodbye against boarding and the storm; `storm` starts it on load),
   `recorded-music-browser-check` (real Begin unlock, no music download with sound off, reuse of the starting download,
   only the starting/next recording fetched, and an audible decoded source in each chapter).
   `music-loading-browser-check` holds downloads and decodes to verify concurrent shader loading, no premature

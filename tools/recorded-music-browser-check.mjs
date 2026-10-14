@@ -45,7 +45,7 @@ try {
     assert(result.running && result.loop);
     assert.equal(result.track, track);
     assert.equal(requests.filter(url => url.includes(`${track}.ogg`)).length, 1, `${track}: startup download is reused`);
-    assert(requests.every(url => url.includes(`${track}.ogg`) || track === 'lines' && url.includes('boats.ogg')),
+    assert(requests.every(url => url.includes(`${track}.ogg`) || track === 'lines' && url.includes('boats.ogg') || track === 'birches' && url.includes('clouds.ogg')),
       `${track}: only the starting recording and next destination may download`);
     assert(requests[0].includes(`${track}.ogg`));
     assert.deepEqual(errors, []);

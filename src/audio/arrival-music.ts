@@ -1,5 +1,6 @@
 import type { SoundState } from './audio';
 import { tuning } from '../tuning';
+import { mirrorEnding } from './mirror-seams';
 
 export type ArrivalMusic = 'lines' | 'boats' | 'meadow' | 'birches' | 'drowned' | 'wood' | 'sleeping' | 'sea' | 'mirror' | 'home';
 type Stage = 'wait' | 'none' | 'fade' | 'gap' | 'incoming' | 'blend';
@@ -29,10 +30,13 @@ const identity = (s: Background): string => s.openingScore ? 'opening' : s.sleep
   : s.mirrorScore ? 'mirror' : s.drownedScore ? 'drowned' : s.summitScore ? 'summit'
   : s.seaScore ? 'sea' : s.music === 'boats' ? 'boats' : `${s.music}-pad`;
 
-export function arrivalQuiet(target: ArrivalMusic, homeward = false): number {
-  return homeward ? tuning.audio.homewardQuiet : target === 'sleeping' ? tuning.audio.sleepingArrivalQuiet
+export function arrivalQuiet(target: ArrivalMusic): number {
+  return target === 'sleeping' ? tuning.audio.sleepingArrivalQuiet
     : target === 'mirror' ? tuning.audio.mirrorArrivalQuiet : target === 'sea' ? tuning.audio.seaArrivalQuiet : tuning.audio.arrivalQuiet;
 }
+
+type ArrivalStep = { background: Background; stage: Stage; changed: boolean; handoffAt: number; legato?: boolean;
+  fadeOut?: number; fadeIn?: number; release?: number; homeAt?: number };
 
 /** Uses the audio clock, so the complete pause survives mute/hidden-page suspension. */
 export class ArrivalTransition {
@@ -42,8 +46,18 @@ export class ArrivalTransition {
   private last?: Background;
   private began = 0;
   private stage: Stage = 'none';
+  /** The outgoing recording plays to its own faded end before the rest begins. */
+  private held = false;
+  /** Leaving the Mirror: when Home begins, and how long the Mirror fades into its chosen seam. */
+  private homeAt = Infinity;
+  private release?: number;
 
-  update(s: SoundState, now: number, phraseEnd = now): { background: Background; stage: Stage; changed: boolean; handoffAt: number; legato?: boolean; fadeOut?: number; fadeIn?: number } {
+  private get homeward(): boolean {
+    return this.target === 'home' && this.outgoing?.music === 'mirror';
+  }
+
+  /** `mirror` is the Sky Mirror recording's playback, if it is sounding. */
+  update(s: SoundState, now: number, phraseEnd = now, held = false, mirror?: { position: number; length: number }): ArrivalStep {
     const previous = this.stage;
     const stillRecording = tuning.audio.stillPhraseExperiment && s.stillDeparture;
     let beganNow = false;
@@ -53,10 +67,18 @@ export class ArrivalTransition {
       if (!this.target && same && (!this.last || identity(this.last)===identity(current))) this.stage='none';
       else {
         this.target = s.arrivalMusic; this.outgoing = this.last ?? current;
-        // The sea's recording keeps time with the passage, so the morning leaves at once.
-        this.began = s.arrivalMusic === 'sea' ? now : Math.max(now, stillRecording && s.arrivalMusic === 'lines'
-          ? phraseEnd : Math.min(phraseEnd, now + tuning.audio.arrivalPhraseWait));
-        this.stage = this.began > now ? 'wait' : 'fade';
+        this.held = held && phraseEnd > now;
+        if (this.homeward) {
+          // Home is scheduled from the moment the boat leaves; the Mirror finishes at a phrase seam before it.
+          this.homeAt = now + tuning.audio.homeStartAfter - (s.homewardTime ?? 0);
+          const ending = mirror && mirrorEnding(mirror.position, this.homeAt - now, mirror.length);
+          this.began = now + (ending ? ending.at : 0); this.release = ending?.release;
+        } else {
+          // The sea's recording keeps time with the passage, so the morning leaves at once.
+          this.began = s.arrivalMusic === 'sea' ? now : Math.max(now, this.held || stillRecording && s.arrivalMusic === 'lines'
+            ? phraseEnd : Math.min(phraseEnd, now + tuning.audio.arrivalPhraseWait));
+          this.stage = this.began > now ? 'wait' : 'fade';
+        }
         beganNow = true;
       }
     }
@@ -84,20 +106,29 @@ export class ArrivalTransition {
           return {background:this.last,stage:this.stage,changed:beganNow||previous!==this.stage,
             handoffAt:elapsed<0?this.began:Infinity,legato:true};
         }
-        // Home begins after the mirror is astern: clear the outgoing reverb, then keep five full seconds.
-        const homeward = this.target === 'home' && this.outgoing?.music === 'mirror';
-        const fadeOut = stillRecording && this.target === 'lines' ? 0
-          : homeward ? tuning.audio.homewardFadeOut : tuning.audio.arrivalFadeOut;
-        const quiet = arrivalQuiet(this.target, homeward);
-        const fadeIn = homeward ? tuning.audio.homewardFadeIn : this.target === 'sea' ? tuning.audio.seaArrivalFadeIn : tuning.audio.arrivalFadeIn;
+        const incoming = landed ? background(s) : target;
+        if (this.homeward) {
+          // The crossing's own clock keeps Home on time through suspended audio; after landing it holds its time.
+          if (s.homewardTime !== undefined) this.homeAt = now + tuning.audio.homeStartAfter - s.homewardTime;
+          const due = s.homewardTime !== undefined ? s.homewardTime >= tuning.audio.homeStartAfter : now >= this.homeAt;
+          this.stage = now < this.began ? 'wait' : !due && previous !== 'incoming' ? 'gap' : 'incoming';
+          this.last = this.stage === 'wait' ? this.outgoing! : incoming;
+          const step = { background: this.last, stage: this.stage, changed: beganNow || previous !== this.stage,
+            handoffAt: this.stage === 'wait' ? this.began : Infinity, release: beganNow ? this.release : undefined, fadeIn: 0, homeAt: this.homeAt };
+          if (this.stage === 'incoming' && !s.arrivalMusic && landed) { this.target = undefined; this.stage = 'none'; }
+          return step;
+        }
+        const fadeOut = this.held || stillRecording && this.target === 'lines' ? 0 : tuning.audio.arrivalFadeOut;
+        const quiet = arrivalQuiet(this.target);
+        const fadeIn = this.target === 'sea' ? tuning.audio.seaArrivalFadeIn
+          : this.target === 'drowned' ? tuning.audio.villageArrivalFadeIn : tuning.audio.arrivalFadeIn;
         // Retire sources on the first gap update, then give them the full rest even after a stalled frame.
         if ((previous === 'fade' || previous === 'wait') && now - this.began >= fadeOut) {
           this.began = now - fadeOut;
         }
         const elapsed = now - this.began;
         this.stage = elapsed < 0 ? 'wait' : elapsed < fadeOut ? 'fade'
-          : elapsed < fadeOut + quiet || (previous !== 'incoming' && (homeward ? s.homewardReady === false : s.arrivalReady === false)) ? 'gap' : 'incoming';
-        const incoming = landed ? background(s) : target;
+          : elapsed < fadeOut + quiet || (previous !== 'incoming' && s.arrivalReady === false) ? 'gap' : 'incoming';
         this.last = (this.stage === 'fade' || this.stage === 'wait') ? this.outgoing! : incoming;
         if (this.stage === 'incoming' && !s.arrivalMusic && landed && elapsed >= fadeOut + quiet + fadeIn) {
           this.target = undefined; this.stage = 'none';

@@ -139,7 +139,7 @@ export interface Chapter {
   /** Final approach requests an audio-clock fade, musical rest and the destination's opening. */
   readonly arrivalMusic?: ArrivalMusic;
   readonly arrivalReady?: boolean;
-  readonly homewardReady?: boolean;
+  readonly homewardTime?: number;
   /** The opening holds its home chord under the skein and rests from the fall until the child carries the bird away. */
   readonly openingScore?: OpeningScorePhase;
   readonly stillCrossingTime?: number;
@@ -151,6 +151,8 @@ export interface Chapter {
   readonly mirrorScore?: MirrorScorePhase;
   readonly drownedScore?: DrownedScorePhase;
   readonly drownedQuiet?: boolean;
+  /** The bell's fourth ring has sounded, or a save is past it: the belfry's goodbye plays from here. */
+  readonly bellsRung?: boolean;
   readonly seaScore?: SeaScorePhase;
   /** The open sea's recording: its time on the passage clock, the rescue phrase reached and the whale's calls. */
   readonly seaMusicTime?: number;

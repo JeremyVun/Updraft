@@ -1,14 +1,14 @@
 # Audio
 
-Home, the Sky Mirror, Birches, Lines and Little Boats play supplied recordings; Still experiments with triggered excerpts, and the open sea plays its recording as excerpts the whale's rescue calls for; the other scores and world sounds are synthesised in Web Audio.
+Home, the Sky Mirror, Birches, the stairs in the clouds, the drowned village, Lines and Little Boats play supplied recordings; Still experiments with triggered excerpts, and the open sea plays its recording as excerpts the whale's rescue calls for; the other scores and world sounds are synthesised in Web Audio.
 `src/audio/audio.ts` (`Soundscape`) owns wind,
 environment, the shared pad, gesture chimes, authored cues and calls, and runs one pass per rendered frame after the
 camera update. Each room with its own composition has a score module that follows story phases, not timers:
-`opening-score.ts`, `lines-score.ts`, `little-boats-score.ts`, `meadow-score.ts`,
-`stairs-score.ts`, `drowned-score.ts` and `sleeping-score.ts`. `recorded-score.ts` plays Home, the Sky Mirror,
-Birches, Lines and Little Boats continuously across story phases; `phrase-clips.ts` plays excerpts of one recording as
+`opening-score.ts`, `meadow-score.ts` and `sleeping-score.ts`. `recorded-score.ts` plays Home, the Sky Mirror,
+Birches, Lines and Little Boats continuously across story phases, and the stairs' `clouds.ogg`, the village's
+`village_approach.ogg` and `belfry.ogg`, and Still's departure once each (`recordedMusicOnce`); `phrase-clips.ts` plays excerpts of one recording as
 overlapping clips for `still-phrases.ts` and the open sea's `sea-music.ts`.
-The former `little-boats-score.ts`, `lines-score.ts`, `birches-score.ts`, `summit-score.ts`, `sea-score.ts` and `dream-score.ts` (notes in `dream-score-data.ts`) remain for historical studies and phase types, outside runtime playback.
+The former `little-boats-score.ts`, `lines-score.ts`, `birches-score.ts`, `summit-score.ts`, `sea-score.ts`, `stairs-score.ts`, `drowned-score.ts` and `dream-score.ts` (notes in `dream-score-data.ts`) remain for historical studies and phase types, outside runtime playback.
 `phrasing.ts` shares scheduling, lookahead, stale-attack skipping and introductory rests among them;
 `arrival-music.ts` owns handoffs between pieces; `gesture-harmony.ts` the chord tones gestures may use.
 `foley.ts` plays physical sounds and `world-foley.ts` / `birches-foley.ts` map object motion to them;
@@ -47,16 +47,20 @@ and clears it on exit.
 
 ## Room levels
 
-Every piece sits near one reference, about −29 LUFS in its main section. Home and Birches measure −14.6 LUFS
-and use −14.4 dB gain; the Sky Mirror measures −14.3 LUFS and uses −14.7 dB; the open sea's recording measures −15.4 LUFS
-and uses −13.6 dB (its crossing −19.7, rescue phrases −15.0 and close −13.8 LUFS before trim); Lines measures −17 LUFS and uses −12 dB. Little Boats measures −16.7 LUFS
+Every piece sits near one reference, about −29 LUFS in its main section. Home measures −14.6 LUFS and uses −14.4 dB
+gain; Birches (`birches.ogg`, "A Question, Then a Gentle Answer", 224 s) measures −16.0 LUFS and uses −13 dB; the Sky Mirror measures −14.3 LUFS and uses −14.7 dB; the stairs' `clouds.ogg` measures
+−14.5 LUFS over the 0–3:28 it plays and uses −14.5 dB; the drowned village's `village_approach.ogg` measures −15.2 LUFS
+over the whole file but −19.3 LUFS over the 0–36.93 s it plays, and uses −9.7 dB; its `belfry.ogg` measures −18.0 LUFS
+over the 7.97–54.05 s it plays and uses −11 dB; the open sea's recording measures −15.4 LUFS
+and uses −13.6 dB (its crossing −19.7, rescue phrases −19.1 and close −13.8 LUFS before trim); Lines measures −17 LUFS and uses −12 dB. Little Boats measures −16.7 LUFS
 and uses −12.3 dB. Still measures −23.3 LUFS across its
 phrases and rests and starts at −6 dB (`stillPhraseDb`). These trims preserve the source dynamics and encoded bytes.
-Their dry route avoids adding reverb to an already mixed recording. `roomTrimDb` trims the drowned village
-and Sleeping +2.5 dB over their approved study levels (`*ScoreLevel`). Its Home, Sky Mirror and
-Birches entries and their old score levels are historical, unused by recorded playback. With the experiment disabled, the opening grows about
+Their dry route avoids adding reverb to an already mixed recording. `roomTrimDb` trims
+Sleeping +2.5 dB over its approved study level (`sleepingScoreLevel`). Its Home, Sky Mirror, Birches and drowned
+village entries and their old score levels are historical, unused by recorded playback. With the experiment disabled, the opening grows about
 5 dB with life (`openingPadRise`), keeping its quiet start. The grey
-meadow, the wood and the Sleeping climb stay quiet by design. Add new rooms at the reference.
+meadow, the wood and the Sleeping climb stay quiet by design; the wood's drone keeps its original level (`woodDroneDb`
+0; Wood, below). Add new rooms at the reference.
 
 ## Player feedback
 
@@ -160,8 +164,7 @@ at source second 8 (`stillDepartureOffset`). Its original bytes stay unchanged. 
 measures −14.9 LUFS, and uses −14.1 dB playback trim. It plays once, without a loop; subsequent throws and colour
 cannot start motifs or restart it. Prefetch begins during island play; decoding begins on the walk to the tree.
 The original Still buffer is retired there. The second recording uses the same source through boarding, farewell,
-title and whale. It fades over source 1:54–1:58 and stops before the next phrase (`stillDepartureEnd`,
-`stillDepartureFadeOut`); the independent source envelope survives ongoing level updates and pauses with audio.
+title and whale. It fades over source 1:54–1:58 and stops before the next phrase (`recordedMusicOnce.stillDeparture`); the independent source envelope survives ongoing level updates and pauses with audio.
 The existing Lines fade/rest hands over to `lines.ogg`. If the recording ends before arrival, ambience
 continues. Direct crossing starts begin this recording at second 8; the crossing entry save has no elapsed audio
 position. A companion checkpoint prepares it behind the veil and waits for the next plane release.
@@ -248,32 +251,77 @@ and wind exchange seeds, then releases it. The final listening rest gives the di
 the crest. See [design and verification](../backlog/meadow-echoes/design.md); human timbre review is still pending.
 
 **Birches.** Jeremy's 2026-10-11 instruction: "next if you can wire birches.ogg in for birches island music".
-`assets/music/birches.ogg` replaces the synthesised score from the approach crossing through boarding and departure.
-The existing `walk`, `swing`, `scarf` and `return` phases still describe story progress and checkpoint state, but
-never restart or rearrange the recording. The stairs' existing mix fades it away before their score takes over.
+`assets/music/birches.ogg` ("A Question, Then a Gentle Answer") replaces the synthesised score from the approach
+crossing through boarding and departure. The existing `walk`, `swing`, `scarf` and `return` phases still describe
+story progress and checkpoint state, but never seek, restart or rearrange the recording. Jeremy (2026-10-14/15):
 
-**Drowned Village** (`drowned-score.ts`). Six pieces in the game's own voices: the shared detuned pad (a chord every
-8 s, each held into the next one's swell), the meadow's piano, its soft sung voice and its pluck, all in B minor and
-D major with the dark in D minor, and the boat's lilt of six to a four-second bar, long-short then long.
-`DrownedChapter.drownedScore` follows the scene: `drift` from the stairs' fog through
-the rescue (the boat's tune on the piano over the falling B minor, A, G, F♯ minor, then the piano's question D–E–F♯–B
-over G and down by E minor to A; its repeats sung by the soft voice, then sparer). `drownedQuiet` releases that score
-over the two seconds of sailing after the rescue, leaves the becalming cue audible, and keeps the windless drift
-quiet until the cat is ashore. Never use permanent `silence` for this rest: it also mutes later cue sounds. `fog` then plays to the top
-of the ivy (the boat's tune gone with the boat: over B minor, G, E minor and F♯ a sung line climbs in sighs a step at a
-time, then falls down the scale to F♯, over the low piano tolling each root and its fifth a bar apart; its passes add
-the line and then the piano, never a pulse); `refuge` in the belfry until the lantern first answers (a lullaby on the
-bell's own notes over Gmaj7, B minor 7, E minor 7 and A); `home` from the first answer to boarding (the boat's tune back
-in D major over a bass walking down from D, its question unchanged); `farewell` while she looks back aboard (the answer
-B–A–F♯, E–F♯–D, G–F♯–E–C♯ landing on D); `storm` as they cast off (D minor, B♭, G minor and D over a low D with the
-question gone cold to D–E–F, then the same round fainter until the wood; every chord keeps D and A for the wood's drone).
-The storm starts within 0.3 seconds of the weather beginning, crossfading the farewell over `drownedCrossFade`.
-A piece the story leaves plays on to its next chord change and the next begins there, the old one fading over
-`drownedCrossFade`; requests that change again before then go straight to the latest. Levels are composed (the drift
-at the room reference, the fog about 1 dB under, the refuge 3 dB under, home level with the drift, the dark 3 and then
-6 dB under), so chapter hush is not applied. `node tools/drowned-music-study.mjs [outDir]` renders each piece and a
-sweep of the room from the drift into the wood with the becalmed phrase, the bell and the foghorn.
-`tools/drowned-audio-regression-check.mjs` renders the rescue rest and cue, the resumed score and storm transition.
+> my thinking for birches is the logic can be pretty simple. if on birches island, loop, else don't loop and let it finish up. And then on the stairs chapter, just have a hard stop for silence if it's still somehow playing before they enter the clouds and start the penrose stairs sequence.
+
+> My feeling is that there should be silence as they enter the cloud and do the penrose puzzle up until the nest. it builds up a climax i think? And it kinda fits the idea of them being in the clouds (a place they aren't normally supposed to be, so theres no music which makes it feel slightly more awkward)
+
+It loops only while the story is on the Birches island or its approach (`toBirches`, `birches`: `SoundState.birchesLoop`).
+Once they have sailed (`toStairs`, `stairs`) it stops looping (`RecordedScore.playOut`): the pass under way plays to the
+end of the file and stops; begun there (a `toStairs` or `stairs` start) it plays once. In the stairs, if it is still
+playing when they go up into the white (`StairsAir.phase` leaves `under` as the bird goes first, before the loop), it
+stops over `birchesCloudFade` (1 s; a cut would click) and never starts again in that room. Silence then holds
+through the white and the loop until `clouds.ogg` on top of the cloud (below).
+
+**Drowned Village.** Jeremy (2026-10-14/15), verbatim:
+
+> I'm thinking we use the first bit of village_approach.ogg? and then let it be silent while they do the challenges, then we can figure out another song to play during the cat farewell sequence maybe.
+
+> Have a go with the village_approach with the 37.5 second idea. The bellfry sound can stay, to me that is a sound effect.
+
+> I do think the storm and the woods shouldn't have any music. Woods can have a very quiet background drone (maybe?), but even that might not work.
+
+The unchanged `assets/music/village_approach.ogg` (192.9 s, A minor) plays once on the dry music route, from its top
+to the seam at 36.93 s (`recordedMusicOnce.villageApproach`), fading over its last 0.5 s. The seam is measured on the
+decoded samples: the bass enters at 36.96 s (an A2 attack, rising about 15 dB within 130 ms); over the 0.3 s before it
+the last note has rung down to about 14 dB under the opening's median level, and the seam sits 30 ms before the attack.
+It begins where the village's music begins: once the stairs' fog has waited out `clouds.ogg`, after the ordinary 3 s
+rest, from its first second at full level (`villageArrivalFadeIn` 0: the file opens on 0.2 s of silence and then its
+loudest note, which the ordinary fade-in would swallow). `?chapter=drowned` starts it with the chapter. It keeps its
+own audio clock from there: landing and the village's beats and phases never seek or restart it, music switched on
+later joins at its own time, and after the seam nothing plays. The rescue's quiet (`drownedQuiet`) lets it go early, for
+good, over `drowned.rescue.musicFade`, so the air dies in silence. Later starts and saves (`sail`, `roofs`,
+`church`, `belfry`, `storm`) never play it.
+
+After it there is no music through the rescue, the becalming, the fog, the run, the refuge and the bell until the
+goodbye below. The generic pad stays silent throughout the village and the storm, so nothing fills the quiet. The
+sound effects stay: the bell's strikes (foley), the foghorn, the cat, the herons, the weather and the physical sounds.
+No musical cue marks the air dying: Jeremy (2026-10-15), "oh, yea the becalming tone needs to go doesn't it".
+
+Measured with no input on the game clock (`tools/village-music-browser-check.mjs`, at 60 fps, the audio clock in step):
+from `?chapter=drowned` it starts with the chapter and ends at 36.9 s; the boat holds and the tub becomes the player's
+to push (`StrandedCat` `waiting`) at 33.0 s, while the cat is still coming down the slates, and the tub's drawn
+invitation appears at 46.6 s. From `?chapter=cloud` (the real handoff) `clouds.ogg` ends 227.1 s in and the recording
+starts 3 s later, 5.6 s before the village chapter itself (the boat still coming down through the fog); it ends 31.3 s
+into the chapter, 0.3 s after the tub becomes pushable (31.0 s) and 13 s before the first invitation (44.6 s). The
+cut point is Jeremy's to move.
+
+**The belfry's goodbye.** Jeremy (2026-10-15), verbatim: "ok best i think i can do is belfry.ogg, starting from 8
+seconds 54 seconds - and fades in slowly after the last bell plays". A short bittersweet goodbye that "blends easily
+into the storm that follows". The unchanged `assets/music/belfry.ogg` (143.9 s) plays once on the dry music route from
+7.97 s, just before the attack at 8.0 s, to 54.05 s, just before the next at 54.1 s (both low notes under a sustained
+texture, checked below 250 Hz on the decoded samples), fading over its last 2 s (`recordedMusicOnce.belfry`). It
+measures −18.0 LUFS over that stretch and uses −11 dB. It begins on the bell's fourth ring (`DrownedChapter.bellsRung`;
+the 90 s gust's ring counts), coming in from silence over `enterOver` (5 s), and keeps its own audio clock: sailing the
+boat round, climbing down, boarding, the look back and the cat's slow blink never cut it, and the storm's start does not
+stop it; it plays on into the storm to its own end fade and never restarts. The storm is otherwise silent. It is
+decoded once she is in the belfry (`drownedScore` `refuge`/`home`) and prefetched in the village after the approach.
+`?chapter=belfry` plays it after the fourth ring; a `storm` save is past the bells, so it starts on load from 7.97 s
+with the same slow entrance; the wood never plays it. Music switched on later joins at its own time. Its key reads as
+D♭ major / F minor, a long way from the bell's B strike (`note` 59).
+
+Measured with gestures ringing the bell and no input after (`village-music-browser-check.mjs belfry`, game clock from
+the fourth ring): it starts with the ring and is at full level at 5 s; she starts down at 4.5 s, steps aboard at 27.5 s
+and is seated at 30.3 s; the storm begins at 40.9 s; the end fade runs 44.1–46.1 s, about 5 s into the storm. From a
+`storm` save it starts on load, the storm begins at 10.6 s and the piece ends at 46.1 s.
+
+`drowned-score.ts` (the earlier synthesised drift, fog, refuge, home, farewell and storm) remains for studies:
+`node tools/drowned-music-study.mjs [outDir]` renders it through the game's sound. `tools/village-music-check.mjs`
+checks both recordings' seams, starts, levels, ends, restores and the quiet between them offline;
+`tools/drowned-audio-regression-check.mjs` the rescue's quiet, the silent becalming and the storm without the goodbye.
 
 **Sky Mirror.** Jeremy's 2026-10-14 instruction: "mirror.ogg is confirmed for mirror chapter."
 The unchanged `assets/music/mirror.ogg` plays at native speed from the arrival handoff off the dolphin crossing through
@@ -281,9 +329,23 @@ the stars, the gathering and boarding, looping for a lingering player, on the dr
 hidden-page suspension. The `approach`, `search`, `one` to `three`, `constellation` and `depart` phases still describe
 story progress and checkpoint state (completed-star count, not order, picks them), but never restart or rearrange the
 recording. `star` is emitted once per real return, never on entry, loops or restore, and adds no music. Leaving the
-Mirror requests Home at once (Homeward and Home below): the recording fades as the harbour crossing begins.
+Mirror plays the recording on to a phrase seam chosen against Home's scheduled start (Homeward and Home below).
+`MIRROR_SEAMS` (`mirror-seams.ts`) lists the recording's stopping points, measured on the decoded samples: 30 ms
+before each attack whose last 0.3 s averages at least 5 dB under the piece's median level (−18 dB RMS), with the level
+falling into the rest and the next attack rising at least 9 dB out of it; attacks under 2 s apart keep the first (the
+opening phrase's single notes are not seams). The rests come every 2–5 s in the sparse opening and every 4–18 s
+through the fuller middle; the loop point is a seam too (0.32 s, the first note after the piece rings out to silence).
 
-**Wood.** The original low forest drone. Ordinary embers cue `kindled`; lighting the rescue hearth cues `comfort`.
+**Wood.** Jeremy (2026-10-15), verbatim: "I do think the storm and the woods shouldn't have any music. Woods can have
+a very quiet background drone (maybe?), but even that might not work." The storm has no music of its own; only the
+belfry's goodbye carries on into its first seconds (Drowned Village, above).
+The wood keeps its original low drone, the shared detuned pad in the wood's mood (`MOODS.wood`: D–A–D–A over low D,
+turning to D–A–D♯–A♯ and back every 15 s, low-passed near 440 Hz), at its original level: Jeremy tried it 10 dB
+down and asked for it back (2026-10-15, "please revert the -10db to the woods drone"). `woodDroneDb` (0) trims it;
+−Infinity silences it. It enters as the boat nears the forest beach after the plane is lost, over
+`forestMusicBlend` (4 s) with the gates open, tuned on D/A before it is heard, and carries on through the wood and the
+crossing to Sleeping. Ordinary embers cue `kindled`; lighting the rescue hearth cues `comfort`; both, and the forest's
+gesture chimes, keep their level.
 
 **Sleeping.** `SleepingChapter.sleepingScore`: `shelter` (the bedside melody over changing harmony) until the first
 frost; `cold`, silent however long the player takes, through the unanswered call and the feather's departure; `climb`
@@ -309,38 +371,88 @@ dry music route from the crossing's own clock (`CrossingChapter.seaMusicTime`): 
 (6.3) seconds into the passage, so that its second 55, in the near-silent break before the bass enters, falls as the
 boat comes to rest beside the whale and the rescue begins (measured with no input; boat speed at sea is story-only,
 so `tools/sea-music-browser-check.mjs` re-measures it after any change to the passage). Cut points, each just before
-the next attack: the crossing 0–56.43; A 56.43–70.94, B –85.245, C –98.885, D –112.385, E –129.93 (four bars each, E
-closing on its held low note with a 1.5 s fade, the others 0.4 s); the close 159.47 to the end. The lighter section
-between E and the close is unused.
+the next attack: the crossing 0–56.43; the rescue's four two-bar phrases of the high section after the bass, back to
+back in the recording, 129.93–136.3, 136.3–143.1, 143.1–150 and 150–159.47, each fading over its last 0.4 s when it
+plays alone; the close 159.47 to the end. The bass section between the crossing and the rescue phrases is unused.
 
-The crossing plays to the break. If the boat has not come to rest when the recording reaches the break, the
-recording waits there in silence, and A starts the moment the boat rests (`NetWhale.phrase` 0, the `whale-rest`
-checkpoint). A rest during the break (from 54.5, once the crossing's last note has died away) starts A at once; a rest
-before it leaves A to follow on the recording's own beat at 56.43, so the crossing is never cut mid-phrase. There is
-no continuous bed during the rescue: each completed step plays the next phrase once, breath → B, eye → C, line → D,
-heave → E, and the flipper's release (the loop towed clear, the whale's farewell beginning) plays the close
-continuously through the spout, song, flipper wave and flukes and the sail on to the Mirror, where the ordinary
-arrival handoff fades it for `mirror.ogg`; if it ends first, it ends. Phrases follow Still's overlap rule
-(`seaPhraseSpacing`, 4.5 s): one may begin over the previous tail once that has played that long, a step finished
-sooner waits for it, and a phrase already sounding is never started again. The release raises no `restored` cue: as in
+After testing, Jeremy (2026-10-14): "after it ends at that natural seam, it keeps playing instead of there being
+silence", and "the phrases that play on each net lift need to be polished up a bit, some of the phrases are a bit long
+so they overlap with each other if the player completes them quickly. But I think it's directionally right, and the
+phrase that it ends on with the last one with the cygnet lifting the net is very nice." Then: "i dont think a new
+phrase shoudl fade out an old one, we'd lose musical cohesion. If it really becomes an issue, we shoudl think about
+pacing the puzzles themselves".
+
+Then (2026-10-14): "in sea.ogg, you know how there's a set of phrases from about 2:09 onwards? They are sort of like
+very regular higher pitched piano phrases that sound very much like the wind. I think they can be used for the whale
+puzzle sequences. And then the built up theme at 2:39 onwards can play when the puzzle is completed."
+
+Playtesting the version that cued half-phrases on completed steps, Jeremy (2026-10-14): "1) the phrase should probably
+play the moment the net starts to lift, not when it's already in the sky and about to fly off. 2) Same with the net on
+the eye, it's currently too delayed. Both phrases for 1 and 2 are too short, it sounds like a phrase got cut in two.
+3) when the child starts holding the line, it shouldn't play a phrase. It should only start playing when the child
+starts pulling it in. 4) same for the cygnet (and the last phrase that was playing before doesn't play anymore....)"
+
+The crossing plays to the break and ends there; nothing plays as the boat comes to rest (`NetWhale.phrase` 0, the
+`whale-rest` checkpoint). There is no continuous bed during the rescue: one whole phrase plays as each physical act
+begins (`NetWhale.phrase` rises once per act and never falls). The first as the net over the blowhole first visibly
+lifts (`net.lift` 0.05, under the player's circles or the valve's dolphin, with the first rope-and-cork sound); the
+second as the fold over its eye first lifts under a sweep or the valve's dolphin; nothing as strokes bring the cork or
+she takes the line; the third as she makes her first pull on it; the fourth as the cygnet, holding the loop's end,
+starts to pull it off the lifted flipper (`bird` `pulling`). The release (`free`: the loop gone and the cygnet back in
+the satchel as the whale's farewell begins) plays the close continuously through the spout, song, flipper wave and
+flukes and the sail on to the Mirror, where the ordinary arrival handoff fades it for `mirror.ogg`; if it ends first,
+it ends. Phrases play in order, never overlap and are never cut or faded early: an act begun while one still sounds
+waits for it, and because each phrase follows the last in the recording, the waiting one starts at the sample where
+the last ends with the last one's fade dropped, so a quick rescue plays the recording unbroken from 129.93 through the
+close. If the waits become noticeable, pace the rescue rather than the music.
+The release raises no `restored` cue: as in
 Little Boats, the recording carries the conclusion, and the cue's D-major bell and duck would cut across it.
 
 Restores and QA starts: `?chapter=sea` / `dolphins` begin the whole passage with the recording; a resumed passage
-joins the crossing at its own time. `?chapter=whale` and a restored `whale-rest` play A on load; saves mid-rescue
+joins the crossing at its own time. `?chapter=whale` and a restored `whale-rest` stay silent until the first act; saves mid-rescue
 (`whale-breath` to `whale-heave`), like a recording first started mid-rescue after music was switched back on, stay
-silent until the next completed step plays its phrase; `whale-flipper` and `whale-gone` play the close from its start.
+silent until the next act begins and plays its phrase; loading never raises a cue. `whale-flipper` and `whale-gone`
+play the close from its start.
 The recording honours music mute (its clock keeps running), mute-all and hidden-page suspension, and permanent
 silence. `hush` does not apply: the recording carries its own dynamics, and makes `whaleCallRoomDb` (−4 dB) of room
 only while the whale calls, so its voice stays clear. The generic pad is silent throughout the passage.
 `CrossingChapter.seaScore` (`open`, `swim`, `return`, `arrival`) remains story state for the swim and the pod.
-`tools/sea-music-check.mjs` checks the cuts, hold, order, restores, handoff and gates offline. Ordinary crossings keep
+`tools/sea-music-check.mjs` checks the cuts, whole phrases, silence at rest, order, waiting, restores, handoff and gates
+offline; `sea-logic-check.mjs` that each cue comes as its act begins; `sea-music-browser-check.mjs rescue` plays the
+rescue with real gestures and reports each phrase's wait. Ordinary crossings keep
 the departing island's music until the handoff.
 
 **Homeward and Home.** Jeremy's 2026-10-11 instruction: "great, can you set it up so that home.ogg is what plays for
 the home chapter instead of whatever music we currently have." He rejected smaller encodes: "nvm its not worth it,
-just use the .ogg as given". `assets/music/home.ogg` replaces the drone. Leaving the Sky Mirror requests Home at once:
-the Mirror fades over 3 s, the background stays silent at least 5 s, and the recording fades in over 3 s once the boat
-has passed its first offshore turn and is `homewardClearDistance` from the berth (`homeward*`, `homewardReady`).
+just use the .ogg as given". `assets/music/home.ogg` replaces the drone.
+
+Jeremy's 2026-10-14 brief for the handover: "Also, i noticed that from mirror to home, there's unfortunately no
+deterministic sequence we can make use of e.g. the player might finish the mirror level at any time. I think what we
+need here is the ability to know what natural phrase stopping points there are in the sky mirror music, and then
+choose an appropriate one based on when the home.ogg is scheduled to play. e.g. we have to look ahead and pick a sky
+mirror music stopping point that is the furthest along that is closest to ~5 seconds before the home.ogg starting
+point." He tunes the start so a chosen moment of Home lands as the child reaches the top of the hill.
+
+The voyage from the Mirror is deterministic; when the player leaves is not. So Home is scheduled from the moment the
+boat leaves (the toHarbour crossing's start): `home.ogg` begins from its first second `homeStartAfter` (12.5) seconds
+in, counted on the crossing's clock, at full level with the background gates opened at once (the file opens on
+0.18 s of silence, so it needs no fade). As the boat leaves, the Mirror recording's playback position is read and
+`mirrorEnding` picks where it stops: the latest seam at least `mirrorSeamLead` (5 s) before Home and at least
+`mirrorSeamSoonest` (0.3 s) ahead, across the loop if need be. The recording fades to silence over
+`mirrorSeamRelease` (1.2 s; shorter if the seam is nearer) ending exactly at the seam, so the last phrase's quiet tail
+is eased off and the next attack never sounds: over the seams the fade begins on average 22 dB under full scale. If
+no seam lies in that window, it stops at the earliest seam still `mirrorSeamLatest` (1 s) before Home; if there is
+none, it fades over `mirrorFallbackFade` (3 s) at once. The background is silent from the seam until Home.
+A later Home start (past landing, for the hilltop) holds across landing: the handoff keeps the audio-clock time it
+last took from the crossing.
+
+Edge cases. A Mirror not sounding as the boat leaves (music off, still decoding, `?chapter=toHarbour`) leaves silence
+at once and Home still begins `homeStartAfter` into the crossing; a restored crossing counts from its own saved time.
+The crossing clock keeps Home with the boat through suspended audio. Music switched off when Home is due, then back on,
+joins the recording where it would have been (fading in) rather than from its top. `home`, `jetty` and `summit` starts
+begin Home with the chapter. `tools/homeward-audio-check.mjs` checks the seam chosen for several leave times
+(the loop and both fallbacks), renders the Mirror silent from its seam and Home beginning on time, and retries a
+dropped download; `homeward-audio-browser-check.mjs` measures the whole handover from `?chapter=mirrorEnd`.
 Landing, the updraft, the flight and the walk keep the same playback clock; the whole recording loops if needed.
 The existing ending timeline remains: fade over 0.7 s from `HOME_ENDING.fadeFrom`, silence at `musicEndsAt`, and the
 closing line two seconds later at `creditsAt`. This first integration does not edit the recording to align its musical
@@ -348,28 +460,28 @@ cadences with individual story beats. Restored `reunion` and `drawing` checkpoin
 into the recording. `homeEndingSounds = false` and `homeMusicDucking = false` keep the existing cue and ducking rules.
 Render the ending with `node tools/ending-audition.mjs`.
 
-**Recorded asset lifecycle.** Vite emits the eight original Ogg files as separate hashed assets. `music-loading.ts`
+**Recorded asset lifecycle.** Vite emits the eleven original Ogg files as separate hashed assets. `music-loading.ts`
 downloads only the starting recording alongside world construction and shader compilation, with no AudioContext
 before Begin. Begin unlocks audio and decodes while the chosen room prepares its first frame. The veil waits for
 both, showing "Preparing music" for waits over 150 ms. Sound-off and music-off skip preparation; switching either
 off cancels an in-progress start. A 20-second deadline bounds download/decode failures so ambience can still begin.
 During play, a single compressed prefetch slot warms Still's second recording on the island, Lines on the first crossing, Boats in Lines, Birches in Meadow,
-the open sea in Sleeping, the Sky Mirror on its crossing, and Home in Mirror. `Soundscape.prepareMusic` consumes that download and decodes at the existing arrival handoff.
+the stairs' `clouds.ogg` from Birches on (once the birches recording is in hand), the village's `village_approach.ogg` from the stairs' white on (once `clouds.ogg` is in hand: `nextMusicForChapter` takes the stairs' phase), `belfry.ogg` in the village, the open sea in Sleeping, the Sky Mirror on its crossing, and Home in Mirror. `Soundscape.prepareMusic` consumes that download and decodes at the existing arrival handoff (the village's while the stairs' fog waits for `clouds.ogg`).
 Playback uses an `AudioBufferSourceNode` on the shared
 audio clock, so mute-all and hidden pages freeze it without separate media autoplay permissions. Music-only mute
 leaves an existing score's clock running, but does not start downloading new muted scores. A live decoded Home
-buffer is about 65 MiB at 48 kHz; the Sky Mirror about 79 MiB; the open sea about 87 MiB; Birches about 57 MiB. Exit releases
+buffer is about 65 MiB at 48 kHz; the Sky Mirror about 79 MiB; the open sea about 87 MiB; Birches about 57 MiB; `clouds.ogg` about 98 MiB, decoded in the white; `village_approach.ogg` about 74 MiB, held only until its seam; `belfry.ogg` about 55 MiB, from the belfry to its end. Exit releases
 the buffer, aborts an unfinished fetch and prevents a late decode from starting playback. The browser HTTP cache
-retains downloaded files for revisits. Failed fetches/decodes log a warning and leave that score silent.
+retains downloaded files for revisits. A failed fetch or decode is fetched afresh after 1 s and again after 3 s
+(`musicRetryAfter`), within the same 20-second deadline, so a network blip does not silence a room; a recording still
+failing logs a warning and leaves that score silent.
 
 Synthesised scores repeat their sections to fit player pacing and release voices on phase changes. All scores release
 over 1.8 s on exit (0.12 s for permanent silence), disconnect finished voices and buses, and freeze with the shared audio clock when muted or
 hidden. Missed frames skip stale attacks rather than bursting.
 
 The piano's D–E–F♯–B question links the rooms: a three-note reed fragment in Lines, the plucked shape in Boats, the
-Meadow melody itself, the whole question in the drowned village's boat tune (asked on the drift,
-unchanged when the boat comes home, gone cold to D–E–F as the dark comes), and D–E–F
-on the Sleeping climb.
+Meadow melody itself, and D–E–F on the Sleeping climb.
 
 ## Handoffs between pieces
 
@@ -388,9 +500,14 @@ on the Sleeping climb.
   continuity.
 - Special cases: Sleeping morning hands off explicitly to `sea` on departure, without a phrase wait: it fades over
   3 s, rests `seaArrivalQuiet` (1 s) and the gates reopen over `seaArrivalFadeIn` (1 s), clear before the recording
-  begins at `seaMusicLead`; sea → Mirror waits until the whale has gone; Birches → Drowned starts in the stairs' fog; Drowned requests Wood only after the lost-plane scene,
-  as a **four-second overlap** (`forestMusicBlend`) with the gates open, the forest pad tuned before it is audible and
-  entering on shared D/A; Mirror → Home is the homeward rest above.
+  begins at `seaMusicLead`; sea → Mirror waits until the whale has gone; the stairs → Drowned is asked for in the stairs' fog and waits for `clouds.ogg` (below); the village's recording enters at full level, without a fade-in (`villageArrivalFadeIn`); Drowned requests Wood
+  only after the lost-plane scene: out of the storm, silent by then, the wood's drone comes in over `forestMusicBlend` (4 s) with
+  the gates open, tuned on D/A before it is audible; Mirror → Home is scheduled from the boat's leaving, the Mirror ending at a phrase seam
+  (Homeward and Home above).
+
+- A once-played recording marked `holdsHandoff` holds any request until its own end fade is done, with no phrase-wait
+  cap; the handoff then skips its fade (the recording has faded itself) and keeps the rest and fade-in. A recording
+  already over leaves the handoff as it was.
 
 A gain whose first event is scheduled ahead starts at 0, not its default of 1: a source starting between samples
 lets one sample through before that event, a click (the piano's hammer did this).
@@ -412,7 +529,7 @@ sequences through this graph and a previous build's to prove a change like this 
 - The Drowned lighthouse raises one `foghorn` at storm time `tuning.storm.foghornAt`, guarded by `hornPassed`. A call
   later than `foghornLateAllowance` (0.25 s) is dropped, so it never overlaps the thunder or the plane loss. The horn
   (D3, a diffuse stereo field, settings in `tuning.audio.foghorn`) bypasses phrases and ducking. Its buffers and
-  convolver are prepared across frames once Drowned's music begins, so the cue's frame only connects nodes.
+  convolver are prepared across frames once the village begins, so the cue's frame only connects nodes.
 - Muted, hidden or not-started audio consumes cues. A call or Siri interrupting a visible, unmuted context holds cues
   for `heldCueLife` (3 s) and plays them in order when audio resumes (see `progress.md`).
 
@@ -514,28 +631,57 @@ ambient beds join with a short fade and the reverb starts from silence, so nothi
 build no convolver. `Soundscape.output` returns one cached graph object while running. Hidden-page and mute handling:
 `progress.md`.
 
-## The stairs in the clouds (proposal, not approved)
+## The stairs in the clouds
 
 The room's sound follows `SoundState.stairsAir` (`StairsAir` in `stairs-air.ts`: a phase from `under` through
-`cloud`, `above`, `sail` and `fog` to `down`, and the measures `cloud`, `climb`, `open`, `fog` and `speed`), which the
+`cloud`, `above`, `sail` and `fog` to `down`, the measures `cloud`, `climb`, `open`, `fog` and `speed`, and `clear`), which the
 chapter sets each frame; no clock decides a phase.
-`stairs-sound.ts` owns the air and the knock, `stairs-score.ts` the bloom and sail music.
+`stairs-sound.ts` owns the air and the knock (a proposal awaiting Jeremy's listen); the music on top is `clouds.ogg`.
 
-- Under the cloud the birches' `return` phrase carries on through the puzzle. Each flight that docks raises
+Jeremy's brief (2026-10-14), verbatim:
+
+> Ok i got another really good music timing i think works for the clouds chapter. Let's use `clouds.ogg` for this. from 0 seconds all the way to 3:28 seconds. The sequence is they climb through the clouds, into the white out, revealing the sun, and then as it reveals itself, the cloud wind sounds die down as the child is standing there, and we transition to clouds.ogg (maybe with a quick fade in from 50% -> 100% while the sound of the cloud wind from before dies down. I just had a manual play through and the phrases of the music time perfectly with each sequence as it stands (the swans flying, the boat appearing, the camera zoom outs. See if you can identify the right moment to start clouds.ogg as well and i'll playtest and give feedback if it's right
+
+> i want it to do the full 3:28, if there's a forced handoff to the village music, that needs to be pushed out
+
+After playtesting (2026-10-14):
+
+> The cloud stairs music plays too soon by like ~5 seconds or so. It needs to start when the child has already stopped moving and the sun is revealed. have a look at that sequence and figure out a good timing. basically when the child reaches the clearing. Also that background ambience noise / wind sound above the clouds never transitions down. It's supposed to give way to the music at the top. Still there, but much quieter. The windy noise of going through teh clouds and emerging on top into a peaceful, serene scene is what we're going for.
+
+- Under the cloud the birches recording plays out the pass it was on when they sailed (Birches, above). Each flight that docks raises
   `flightHome`, a soft wooden knock and puff outside cue ducking (`flightKnock`); the last flight also plays the
   completion phrase. The cygnet's `puzzled` peep asks when the loop brings it back to where it set off.
-- In the white the birches' phrase drains away (`stairsAir.drain`) and never returns in this room; the wind is close
-  and muffled and climbs with `climb`, while breeze and sea fall away.
-- Out on top the wind drops and the room is nearly silent, then the score's bloom starts from nothing; the sail
-  crossfades from it. Under it, while the hull rides the cloud, a low breath of air past the hull (lowpassed under
-  about 600 Hz) follows `speed` and swells over several seconds, and the kite's line sings faintly while it draws
-  them. Never a hiss: a band of hiss through the tops made the cloud sound like snow (Jeremy, 2026-09-28).
-- The fog thins the sail and asks for the village's music (`arrivalMusic = 'drowned'` during `fog` and `down`) through
-  the ordinary handoff. Once out on top, only the fog brings the sea back; a started score keeps its section whatever
-  one frame's phase reports. Outside the room every level multiplier is exactly 1.
+- In the white, if the birches recording is still playing, it stops over `birchesCloudFade` (1 s) and never starts
+  again in this room; there is no music through the white and the loop. The wind is close and muffled and climbs with
+  `climb`, while breeze and sea fall away. `clouds.ogg` is decoded here.
+- Out on top, on the first `above` frame, the wind's last gust sweeps past and away and the white's wind dies within
+  about 2 s; the high air above the cloud rises as the view opens. She walks to the edge and stops, and the haze lifts
+  off the sun. `clouds.ogg` waits for that: `StairsAir.clear`, set `CLEARED` (4 s) into her look across the cloud
+  (`awe`), about 4.6 s after the first `above` frame and 2.4 s after she stops. It begins from its first second at half
+  its level, rising to full over 1.75 s (`recordedMusicOnce.clouds`: `enterFrom`, `enterOver`), while the high air
+  settles to `highSettled` (0.5, about −6 dB) with time constant `settleFor` (2 s), its band sliding down to
+  `highFar` 1400–3800 Hz and only `highFar.dry` (0.4) of it direct, the rest in the reverb: still there, far off,
+  under the music. `cloudsMusicDelay` (0.5) moves the start relative to `clear`; below 0 it starts that far into the
+  recording. The recording keeps its own audio clock from there: beats, the sail, the fog and music mute never
+  seek or restart it, and nothing thins it (no `hush`, no fog trim, the generic pad silent). It plays once to 3:28,
+  fading over 206.3–208.3 s, just before the next phrase at 208.42. Music switched on later joins at its own time
+  without the entrance.
+- With no input from `?chapter=cloud`, in recording seconds (the earlier measurement from the first `above` frame,
+  less the 4.6 s the start moved): she sits on the lip about 3.4, the skein of swans 15.4, the boat sets off 37.1,
+  comes alongside 65.4, she gathers the bird 71.6, boards 80.3, sails 83.1, the fog 190.2, the white thins 203.1.
+  Gusts over the cloud shorten the sail.
+- Under the music, while the hull rides the cloud, a low breath of air past the hull (lowpassed under about 600 Hz)
+  follows `speed` and swells over several seconds, and the kite's line sings faintly while it draws them. Never a
+  hiss: a band of hiss through the tops made the cloud sound like snow (Jeremy, 2026-09-28).
+- The fog asks for the village's music (`arrivalMusic = 'drowned'` during `fog` and `down`, and the village itself),
+  which waits for the recording's end fade (`holdsHandoff`): about 18 s at the measured pace. Then the ordinary rest
+  (3 s) and `village_approach.ogg` from its top (Drowned Village, above). A recording already over leaves the fog's
+  handoff as it was. Once out on top only the fog brings the sea back.
+  Outside the room every level multiplier is exactly 1.
 
-Levels: `stairsAir`, `stairsAirLevel`, `stairsScoreLevel`, `stairsPhaseFade`. Render the arc offline with
-`node tools/stairs-audio-proposal.mjs [outDir]` against a dev server.
+Levels: `stairsAir`, `stairsAirLevel`, `recordedMusicDb.clouds`, `birchesCloudFade`. `node tools/clouds-music-check.mjs` checks the
+recording's start, entrance, end, hold and gates offline; `node tools/stairs-audio-proposal.mjs [outDir]` renders the
+room's arc against a dev server. `stairs-score.ts` (the earlier synthesised bloom and sail) remains for studies.
 
 ## Checks
 
@@ -543,12 +689,17 @@ Levels: `stairsAir`, `stairsAirLevel`, `stairsScoreLevel`, `stairsPhaseFade`. Re
 the list and the browser audio checks are in [testing.md](../testing.md). `node tools/audio-interruption-check.mjs`
 covers start-up pacing, interruptions, piano reservations across mute, the cached output graph, the foghorn's
 preparation and the pinwheel voice. `node tools/music-transition-audit.mjs` renders every handoff and all score
-sections.
+sections. `node tools/village-music-check.mjs` covers the Birches play-out and stop in the white, the village's
+recording and the silence after it, the belfry's goodbye, the storm and the wood's drone level; `node
+tools/village-music-browser-check.mjs [drowned cloud belfry storm]` measures them in the real game.
 
 ## Open
 
-- The stairs: the sail's air over the cloud awaits Jeremy's listen in the game.
-- The drowned village's score (`drowned-score.ts`) awaits Jeremy's listen.
+- The stairs: the sail's air over the cloud awaits Jeremy's listen in the game, and the moment `clouds.ogg` starts
+  (on `clear`) and the settled high air await his playtest (`cloudsMusicDelay`, `highSettled`).
+- The drowned village: whether `village_approach.ogg`'s end (just before the bass, 36.93 s) sits right against the
+  first challenge (it ends as the tub becomes pushable from the stairs, about 4 s after it from `?chapter=drowned`);
+  the belfry's goodbye (`belfry.ogg`, its 5 s entrance and where its end falls in the storm) awaits his playtest.
 - Artistic sign-off needs a full-journey listen on headphones and a phone speaker (idle, energetic swiping, failed
   attempts, the optional swing), checking that each place is distinguishable by ear and the physical sounds and caring
   chime feel right in context.

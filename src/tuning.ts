@@ -53,15 +53,46 @@ export const tuning = {
     sleepingArrivalQuiet: 3.5, mirrorArrivalQuiet: 4,
     /** Sleeping's morning clears off the sea passage within its first `seaMusicLead` seconds, without a phrase wait. */
     seaArrivalQuiet: 1, seaArrivalFadeIn: 1,
-    homewardFadeOut: 3, homewardQuiet: 1, homewardFadeIn: 3,
-    homewardClearDistance: 0,
+    /** `village_approach.ogg` opens on 0.2 s of silence and then its loudest note, so it comes in at full level. */
+    villageArrivalFadeIn: 0,
+    /** Seconds after the boat leaves the Mirror that `home.ogg` begins, from its first second. */
+    homeStartAfter: 12.5,
+    /**
+     * The Mirror stops at the latest phrase seam (`MIRROR_SEAMS`) at least `mirrorSeamLead` before Home and at least
+     * `mirrorSeamSoonest` after leaving, fading over `mirrorSeamRelease` into it. Failing that, the earliest seam still
+     * `mirrorSeamLatest` before Home; failing that, a `mirrorFallbackFade` fade at once.
+     */
+    mirrorSeamLead: 5, mirrorSeamSoonest: .3, mirrorSeamRelease: 1.2, mirrorSeamLatest: 1, mirrorFallbackFade: 3,
     /** Playtest corrections: the opening drone sits 12 dB forward, home 8 dB. */
     openingScoreDb: 12,
     summitScoreLevel: .06555 * 10 ** (8 / 20),
     /** Match supplied masters to the room reference through gain alone. */
-    recordedMusicDb: { home: -14.4, mirror: -14.7, sea: -13.6, birches: -14.4, lines: -12, boats: -12.3 },
+    recordedMusicDb: { home: -14.4, mirror: -14.7, sea: -13.6, birches: -13, clouds: -14.5, villageApproach: -9.7, belfry: -11, lines: -12, boats: -12.3 },
     recordedMusicFade: .65,
+    /** A recording kept to its scheduled moment that begins within this many seconds of it enters at full level. */
+    recordedMusicOnTime: .1,
+    /**
+     * Recordings played once rather than looped: from `from` seconds where given, to `end`, fading out over the last
+     * `fadeOut`. `enterFrom` starts an on-time start at that share of its level, rising to full over `enterOver`.
+     * `holdsHandoff` keeps the next room's music waiting until the end fade is done.
+     */
+    recordedMusicOnce: {
+      stillDeparture: { end: 118, fadeOut: 4, holdsHandoff: false },
+      clouds: { end: 208.3, fadeOut: 2, enterFrom: .5, enterOver: 1.75, holdsHandoff: true },
+      /** To the seam 30 ms before the bass's first note (A2, attacking at 36.96 s), the last note rung down. */
+      villageApproach: { end: 36.93, fadeOut: .5, holdsHandoff: false },
+      /** Just before the attack at 8.0 s to just before the next at 54.1 s, coming in slowly after the last bell. */
+      belfry: { from: 7.97, end: 54.05, fadeOut: 2, enterFrom: 0, enterOver: 5, holdsHandoff: false },
+    } as Partial<Record<string, { from?: number; end: number; fadeOut: number; enterFrom?: number; enterOver?: number; holdsHandoff: boolean }>>,
+    /** Going up into the white, a birches pass still playing stops over this long. */
+    birchesCloudFade: 1,
+    /** The wood's drone (the shared pad in the wood's mood), relative to its original level; −Infinity silences it. */
+    woodDroneDb: 0,
+    /** Seconds after the view clears round her at the top (`StairsAir.clear`) that `clouds.ogg` begins; below 0 starts it that far in. */
+    cloudsMusicDelay: 0.5,
     musicLoadTimeoutMs: 20_000,
+    /** Seconds to wait before fetching a failed recording again; all within `musicLoadTimeoutMs`. */
+    musicRetryAfter: [1, 3],
     /** Reversible opening experiment; false restores the original drone. */
     stillPhraseExperiment: true,
     stillFallTones: false,
@@ -72,15 +103,11 @@ export const tuning = {
     stillFlightEvery: 6,
     stillDepartureDb: -14.1,
     stillDepartureOffset: 8,
-    stillDepartureEnd: 118,
-    stillDepartureFadeOut: 4,
     /**
      * Seconds into the sea passage that `sea.ogg` begins, so that its 55th second falls as the boat comes to rest
      * beside the whale at the ordinary pace (measured with no input).
      */
     seaMusicLead: 6.3,
-    /** Still's overlap rule: a rescue phrase may begin over the previous one's tail once that has played this long. */
-    seaPhraseSpacing: 4.5,
     /** The recording makes this much room (dB) under the whale's calls at their fullest. */
     whaleCallRoomDb: -4,
     stillColourGust: 5,
@@ -170,8 +197,11 @@ export const tuning = {
       /** The wind in the white, heard from the landing below while the bird goes up first. */
       fromBelow: 0.35,
       bodyLevel: 0.36, howlLevel: 1.0, rushLevel: 0.2, highLevel: 0.035, hullLevel: 0.16, lineLevel: 0.6, fogLevel: 0.3, lastGustLevel: 0.16,
-      /** Time constant of the birches' phrase draining away once they go up into the white: about 4 dB a second. */
-      drain: 2.2,
+      /**
+       * Once the view clears at the top, the high air settles over `settleFor` seconds to this share of its level, and
+       * goes far off: its band slides down to `from`–`to` Hz and only `dry` of it stays direct, the rest in the reverb.
+       */
+      highSettled: 0.5, settleFor: 2, highFar: { from: 1400, to: 3800, dry: 0.4 },
     },
     flightKnock: { level: 0.13, reverb: 0.25, pitch: 220, puff: 0.08 },
     stairsScoreLevel: 6, stairsPhaseFade: 4,
