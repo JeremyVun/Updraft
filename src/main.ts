@@ -832,6 +832,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   cygnet.update(dt, time, child.position, cygnetAir);
   const birdOnGround = cygnet.position.y < heightAt(cygnet.position.x, cygnet.position.z) + 0.1;
   for (const f of cygnet.footfalls) if (birdOnGround) footprints.press(f.x, f.z, f.heading, 1, time);
+  if (story.name === 'sleeping') sleeping.trail.drift.wader(cygnet.position, cygnet.footfalls);
   if (skyMirror.active && !cygnet.carried) for (const f of cygnet.footfalls) skyMirror.step(f.x, f.z, time, tuning.skyMirror.birdStep);
   footprints.update(time);
   carry.after();
