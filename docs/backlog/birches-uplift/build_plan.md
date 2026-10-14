@@ -123,10 +123,10 @@ island".
   portrait and landscape. Nothing lies on the walk or in the way of the stairs' own play. They read as birch gold in
   the stairs' light, and nothing in the room's existing look changes.
 
-### 4. Storyboard and layout. Opus (visual). Done: ☐ (after 1 and 3a)
+### 4. Storyboard and layout. Opus (visual). Done: ☑ (2026-10-16)
 
-Owns the new `BIRCH_PILES` entries in `world/birches.ts` (two for round 2 in gap B, two for round 3 in the hollow,
-each banked against a trunk, root or stone), and a layout module `src/story/birches-rounds.ts` holding each round's area, heaps, the
+Owns the new `BIRCH_PILES` entries in `world/birches.ts` (two for round 2 in gap B, three for round 3 in gap C,
+each banked against a birch), and a layout module `src/story/birches-rounds.ts` holding each round's area, heaps, the
 child's standing point, the camera frame, the squirrel's paths between rounds, its perches at each tangle, the swing
 limb and the goodbye branch.
 
@@ -136,6 +136,15 @@ limb and the goodbye branch.
   sits on the ride or in a tangle's frame.
 - **Gate:** a strip of stills per stop in portrait and landscape, reviewed by the orchestrator. Final positions are
   recorded in design.md, replacing "settled in the storyboard phase".
+- **Built:** design.md "As storyboarded". Heaps 4–8 with five placed bank birches (`BANKS`), gap-grown trees kept off
+  each round's view (`ROUND_VIEWS`), and `AutumnBirches.trunkAt` / `swingLimbAt` for climbing; the island keeps 146
+  trees and its leaf count. `story/birches-rounds.ts` holds the three rounds (area, heaps, hides, stand, last
+  sighting, the cygnet's likely places, portrait and landscape frames), the leap, the meeting seat, a perch at each
+  tangle, the swing limb, the far trunk, the goodbye and nine paths. Staged at every stop through the lens with the
+  squirrel at 3×: 24–61 px landscape, 13–31 px portrait; hides read back at 0.85–1.0 m of heaped leaves. Round 3
+  leaves heap 2 out (the wool over it cuts every frame toward the light), tangle 1's perch is on the floor at the
+  loop's foot (the fork is hidden in gold from that lens), and the goodbye is at the water's edge (no branch reaches
+  the berth).
 
 ### 5. The game. Opus. Done: ☐ (after 3b and 4)
 

@@ -73,7 +73,38 @@ export const BIRCH_PILES = [
   /** The deep one, at the bottom of the hollow: this is the one the cygnet goes into. */
   { ...birchesAt(-6, -1149), r: 4.6, deep: 5.4 },
   { ...birchesAt(-11.5, -1172), r: 3.2, deep: 4.4 },
+  /** The squirrel's second round: one either side of the ride on the shelf below the rise, each at a trunk's foot. */
+  { ...birchesGap(1, 11.1, 7.9), r: 2.7, deep: 4.8 },
+  { ...birchesGap(1, 14.2, -1.8), r: 2.8, deep: 4.8 },
+  /** Its third, up the hollow's west side beyond the deep one, in a line toward the low sun. */
+  { ...birchesGap(2, 9.8, -10.1), r: 2.8, deep: 5 },
+  { ...birchesGap(2, 14.2, -15.6), r: 3, deep: 5.4 },
+  { ...birchesGap(2, 21.2, -17), r: 2.8, deep: 5 },
 ];
+
+/** The trunks the gaps' heaps are banked against: placed rather than grown, so a heap never loses its tree. */
+const BANKS = [
+  { ...birchesGap(1, 13.8, 10.1), scale: 15, variant: 2 },
+  { ...birchesGap(1, 15.5, -4.1), scale: 16, variant: 0 },
+  { ...birchesGap(2, 9, -12.6), scale: 14.5, variant: 1 },
+  { ...birchesGap(2, 16.6, -16.3), scale: 13.3, variant: 0 },
+  { ...birchesGap(2, 23.5, -17.8), scale: 16.4, variant: 2 },
+];
+const nearBank = (x: number, z: number): boolean => BANKS.some(b => Math.hypot(b.x - x, b.z - z) < 1.6);
+
+/**
+ * Where each of the squirrel's rounds is watched from (`story/birches-rounds.ts`): the point its lens looks at and
+ * the way back to the lens. Nothing grown in a gap stands in that view.
+ */
+export const ROUND_VIEWS = [
+  { at: birchesAt(8, -1074.6), from: { x: 0.35, z: 0.94 } },
+  { at: birchesGap(1, 13.8, 2.5), from: { x: 0.866, z: 0.5 } },
+  { at: birchesGap(2, 14.6, -12.9), from: { x: 0.616, z: 0.788 } },
+] as const;
+const inRoundView = (x: number, z: number): boolean => ROUND_VIEWS.some(v => {
+  const ax = x - v.at.x, az = z - v.at.z, along = Math.max(0, Math.min(20, ax * v.from.x + az * v.from.z));
+  return Math.hypot(ax - v.from.x * along, az - v.from.z * along) < 3.5;
+});
 
 /** The big birch the swing hangs from: it stands west of the clearing and reaches a limb out over it. */
 const SWING_TREE = flat(-2.4, -1116.6);
@@ -434,12 +465,15 @@ function log(a: THREE.Vector3, b: THREE.Vector3, r0: number, r1: number, radial 
   return geo;
 }
 
+const TRUNK_PARTS = 7;
+
 /**
  * One birch, grown at unit height so every tree on the island is the same geometry at a different size: a trunk
  * with a lean in it, limbs that go up steeply and then droop at the ends, and the twig tips the gold hangs on.
  */
-export function growBirch(rand: () => number, swingLimb: boolean): { segs: Seg[]; tips: THREE.Vector3[] } {
+export function growBirch(rand: () => number, swingLimb: boolean): { segs: Seg[]; tips: THREE.Vector3[]; limb: Seg[] } {
   const segs: Seg[] = [];
+  const limb: Seg[] = [];
   const tips: THREE.Vector3[] = [];
   const link = (a: THREE.Vector3, b: THREE.Vector3, ra: number, rb: number): void => {
     segs.push({ a: a.clone(), b: b.clone(), ra, rb });
@@ -448,7 +482,7 @@ export function growBirch(rand: () => number, swingLimb: boolean): { segs: Seg[]
   const sway = (rand() - 0.5) * 0.06;
   const bearing = rand() * Math.PI * 2;
   const spine: THREE.Vector3[] = [];
-  const parts = 7;
+  const parts = TRUNK_PARTS;
   for (let i = 0; i <= parts; i++) {
     const t = i / parts;
     const bend = Math.sin(t * 2.1) * sway;
@@ -504,6 +538,7 @@ export function growBirch(rand: () => number, swingLimb: boolean): { segs: Seg[]
       const a = new THREE.Vector3(SWING_LIMB.x * along[i - 1], SWING_LIMB.y + rise[i - 1], SWING_LIMB.z * along[i - 1]);
       const b = new THREE.Vector3(SWING_LIMB.x * along[i], SWING_LIMB.y + rise[i], SWING_LIMB.z * along[i]);
       segs.push({ a, b, ra: trunkR * width[i - 1], rb: trunkR * width[i] });
+      limb.push(segs[segs.length - 1]);
       if (i > 2) tips.push(b.clone());
     }
     for (let i = 0; i < 5; i++) {
@@ -514,7 +549,7 @@ export function growBirch(rand: () => number, swingLimb: boolean): { segs: Seg[]
       tips.push(twig);
     }
   }
-  return { segs, tips };
+  return { segs, tips, limb };
 }
 
 /**
@@ -670,10 +705,15 @@ export class AutumnBirches {
   private readonly lastWalker = new THREE.Vector3(1e6, 0, 1e6);
   /** How hard the swing tree is being shaken by what is on it. */
   private shaking = 0;
+  /** Each shape of tree's trunk, foot to crown, in the unit tree; and the swing's limb, trunk to rope and on. */
+  private readonly trunks: Seg[][];
+  private readonly swingLimb: Seg[];
 
   constructor(renderer: THREE.WebGLRenderer, private readonly wind: WindField, settleScarf = true) {
     const rand = mulberry32(8821);
     const variants = [growBirch(rand, false), growBirch(rand, false), growBirch(rand, false), growBirch(rand, false), growBirch(rand, true)];
+    this.trunks = variants.map(v => v.segs.slice(0, TRUNK_PARTS));
+    this.swingLimb = variants[4].limb;
     this.place(rand);
     this.scarf.setTrees(this.trees, settleScarf);
 
@@ -891,7 +931,7 @@ export class AutumnBirches {
         const scale = (12 + rand() * 6) * (0.6 + 0.4 * shelter);
         const yaw = rand() * 6.2831, variant = Math.floor(rand() * 4);
         const { x, z } = birchesAt(lx, lz), y = heightAt(x, z);
-        if (y < TREE_LINE || this.scarf.crosses(x, z) || thinned(walkDistance(x, z), column, row, 4242)) continue;
+        if (y < TREE_LINE || this.scarf.crosses(x, z) || thinned(walkDistance(x, z), column, row, 4242) || nearBank(x, z)) continue;
         this.trees.push({ x, y: y - 0.25, z, scale, yaw, variant, strip: 0, shed: 0 });
       }
     }
@@ -905,7 +945,8 @@ export class AutumnBirches {
           const { x, z } = birchesGap(gap, into, across), y = heightAt(x, z);
           if (y < TREE_LINE) continue;
           const way = walkDistance(x, z);
-          if (way < RIDE || this.scarf.crosses(x, z) || onSightline(x, z) || draw() > standsAt(x, z) || thinned(way, column, row, 4243 + gap)) continue;
+          if (way < RIDE || this.scarf.crosses(x, z) || onSightline(x, z) || draw() > standsAt(x, z) || thinned(way, column, row, 4243 + gap)
+            || nearBank(x, z) || inRoundView(x, z)) continue;
           const shelter = Math.min(1, (y - TREE_LINE) / 3.5);
           const scale = (12 + draw() * 6) * (0.6 + 0.4 * shelter);
           this.trees.push({ x, y: y - 0.25, z, scale, yaw: draw() * 6.2831, variant: Math.floor(draw() * 4), strip: 0, shed: 0 });
@@ -919,6 +960,9 @@ export class AutumnBirches {
     for (const s of SCARF_PERCHES) {
       this.trees.push({ x: s.x, y: heightAt(s.x, s.z) - 0.25, z: s.z, scale: 15 + s.h * .2,
         yaw: birchesLocal(s.x, s.z).x * .4, variant: 1, strip: 0, shed: 0 });
+    }
+    for (const b of BANKS) {
+      this.trees.push({ x: b.x, y: heightAt(b.x, b.z) - 0.25, z: b.z, scale: b.scale, yaw: birchesLocal(b.x, b.z).x * .7, variant: b.variant, strip: 0, shed: 0 });
     }
     /** Keep the swing tree last: the rope's pivot is read from this exact tree. */
     const y = heightAt(SWING_TREE.x, SWING_TREE.y);
@@ -1051,6 +1095,35 @@ export class AutumnBirches {
       state.set([tree.x + Math.cos(yaw) * lx + Math.sin(yaw) * lz, tree.y + ly, tree.z - Math.sin(yaw) * lx + Math.cos(yaw) * lz, 0], i * 4);
     }
     return state;
+  }
+
+  /**
+   * The trunk of the tree standing nearest (x, z), `height` above its foot: its axis there into `out`, and the
+   * bark's radius returned. For anything that climbs it.
+   */
+  trunkAt(x: number, z: number, height: number, out: THREE.Vector3): number {
+    const tree = this.trees.reduce((best, t) => Math.hypot(t.x - x, t.z - z) < Math.hypot(best.x - x, best.z - z) ? t : best);
+    const segs = this.trunks[tree.variant];
+    const up = THREE.MathUtils.clamp(height / tree.scale, 0, segs[segs.length - 1].b.y);
+    const seg = segs.find(s => s.b.y >= up) ?? segs[segs.length - 1];
+    const t = (up - seg.a.y) / Math.max(1e-6, seg.b.y - seg.a.y);
+    const lx = (seg.a.x + (seg.b.x - seg.a.x) * t) * tree.scale, lz = (seg.a.z + (seg.b.z - seg.a.z) * t) * tree.scale;
+    const c = Math.cos(tree.yaw), s = Math.sin(tree.yaw);
+    out.set(tree.x + c * lx + s * lz, tree.y + up * tree.scale, tree.z - s * lx + c * lz);
+    return (seg.ra + (seg.rb - seg.ra) * t) * tree.scale;
+  }
+
+  /** The top of the swing's limb `t` of the way from the trunk (0) to the rope (1) into `out`, and its radius there. */
+  swingLimbAt(t: number, out: THREE.Vector3): number {
+    const tree = this.trees[this.trees.length - 1];
+    const x = SWING_LIMB.x * t;
+    const seg = this.swingLimb.find(s => s.b.x >= x) ?? this.swingLimb[this.swingLimb.length - 1];
+    const k = THREE.MathUtils.clamp((x - seg.a.x) / Math.max(1e-6, seg.b.x - seg.a.x), 0, 1);
+    const r = (seg.ra + (seg.rb - seg.ra) * k) * tree.scale;
+    out.lerpVectors(seg.a, seg.b, k).multiplyScalar(tree.scale);
+    const c = Math.cos(tree.yaw), s = Math.sin(tree.yaw);
+    out.set(tree.x + c * out.x + s * out.z, tree.y + out.y + r, tree.z - s * out.x + c * out.z);
+    return r;
   }
 
   /** Shakes the leaves out of the tree the swing hangs from, while somebody is swinging on it. */
