@@ -30,11 +30,13 @@ try {
       const {ctx,sound}=offlineSound(seconds),phases=[];
       backgroundOnly(ctx,sound);
       let outgoing,incoming,epoch,reverb;
-      const score=()=>sound.openingScore??sound.summitScore??sound.dreamScore??sound.drownedScore??sound.linesScore??sound.boatsScore
-        ??sound.meadowScore??sound.birchesScore??sound.sleepingScore??sound.seaScore;
+      const score=()=>sound.openingScore??sound.summitScore??sound.mirrorScore??sound.drownedScore??sound.linesScore??sound.boatsScore
+        ??sound.meadowScore??sound.birchesScore??sound.sleepingScore??sound.seaMusic;
       const update=tick=>{
         const t=tick/8,landed=t>=landing;
-        sound.update(.125,{...baseState,...(landed?ARRIVAL_MUSIC[target]:source),flockChatter:false,
+        // The sea's recording keeps the passage clock: it starts its crossing after the morning, and leaves in its close.
+        const sea=target==='sea'?{seaMusicTime:t-approach-tuning.audio.seaMusicLead,seaPhrase:-1}:source.seaScore?{seaMusicTime:200,seaPhrase:5}:{};
+        sound.update(.125,{...baseState,...(landed?ARRIVAL_MUSIC[target]:source),...sea,flockChatter:false,
           arrivalMusic:t>=approach&&!landed?target:undefined,arrivalReady:t>=approach+6,homewardReady:t>=approach+6});
         const stage=sound.arrivalTransition.stage;
         if(phases.at(-1)?.stage!==stage)phases.push({at:t,stage});
@@ -45,7 +47,7 @@ try {
           check(sound.reverbConvolver===reverb,'Landing keeps the shared reverb');}
       };
       update(0);await sound.birchesScore?.ready;await sound.linesScore?.ready;await sound.boatsScore?.ready;await sound.summitScore?.ready;let pause=ctx.suspend(.125);const rendering=ctx.startRendering();
-      for(let tick=1;tick<seconds*8;tick++){await pause;update(tick);await sound.preparedScore?.ready;await sound.birchesScore?.ready;await sound.linesScore?.ready;await sound.boatsScore?.ready;await sound.summitScore?.ready;if(tick+1<seconds*8)pause=ctx.suspend((tick+1)/8);await ctx.resume();}
+      for(let tick=1;tick<seconds*8;tick++){await pause;update(tick);await sound.seaMusic?.ready;await sound.preparedScore?.ready;await sound.birchesScore?.ready;await sound.linesScore?.ready;await sound.boatsScore?.ready;await sound.summitScore?.ready;if(tick+1<seconds*8)pause=ctx.suspend((tick+1)/8);await ctx.resume();}
       const buffer=await rendering;
       const fade=phases.find(p=>p.stage==='fade'),gap=phases.find(p=>p.stage==='gap'),entry=phases.find(p=>p.stage==='incoming');
       let gapPeak=0;
@@ -83,7 +85,6 @@ try {
       ['meadow','meadowScore','/src/audio/meadow-score.ts','MEADOW_SECTIONS'],
       ['birches','birchesScore','/src/audio/birches-score.ts','BIRCHES_SECTIONS'],
       ['wood','sleepingScore','/src/audio/sleeping-score.ts','SLEEPING_SECTIONS'],
-      ['sea','seaScore','/src/audio/sea-score.ts','SEA_SECTIONS'],
     ];
     const rows=[];
     for(const [music,field,url,key] of tables){const table=(await import(url))[key];rows.push({music,field,phases:Object.keys(table)});}
@@ -101,7 +102,7 @@ try {
       for(let tick=1;tick<seconds*8;tick++){await pause;update(tick);await sound.preparedScore?.ready;await sound.birchesScore?.ready;await sound.linesScore?.ready;await sound.boatsScore?.ready;await sound.summitScore?.ready;if(tick+1<seconds*8)pause=ctx.suspend((tick+1)/8);await ctx.resume();}
       const buffer=await rendering;let peak=0;for(let ch=0;ch<2;ch++)for(const value of buffer.getChannelData(ch))peak=Math.max(peak,Math.abs(value));
       if(peak>=1)throw Error(`${row.field}: phase render clipped`);
-      if(sound[row.field==='mirrorScore'?'dreamScore':row.field]!==null)throw Error(`${row.field}: permanent silence did not retire the score`);
+      if(sound[row.field]!==null)throw Error(`${row.field}: permanent silence did not retire the score`);
       reports.push({...row,starts,peakDbFS:20*Math.log10(peak),released:true});
     }
     return reports;

@@ -152,6 +152,10 @@ export interface Chapter {
   readonly drownedScore?: DrownedScorePhase;
   readonly drownedQuiet?: boolean;
   readonly seaScore?: SeaScorePhase;
+  /** The open sea's recording: its time on the passage clock, the rescue phrase reached and the whale's calls. */
+  readonly seaMusicTime?: number;
+  readonly seaPhrase?: number;
+  readonly whaleCalling?: number;
   /** Sleeping's shelter, cold, climb, summit pause and morning follow actual story beats. */
   readonly sleepingScore?: SleepingScorePhase;
   /** The background after Meadow's piano follows the flock, paddle and return to the child. */

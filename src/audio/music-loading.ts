@@ -2,12 +2,14 @@ import boatsUrl from '../../assets/music/boats.ogg?url';
 import homeUrl from '../../assets/music/home.ogg?url';
 import linesUrl from '../../assets/music/lines.ogg?url';
 import birchesUrl from '../../assets/music/birches.ogg?url';
+import mirrorUrl from '../../assets/music/mirror.ogg?url';
+import seaUrl from '../../assets/music/sea.ogg?url';
 import stillUrl from '../../assets/music/still.ogg?url';
 import stillDepartureUrl from '../../assets/music/still_2.ogg?url';
 import { tuning } from '../tuning';
 
-export type MusicTrack = 'home' | 'birches' | 'lines' | 'boats' | 'still' | 'stillDeparture';
-const urls: Record<MusicTrack, string> = { home: homeUrl, birches: birchesUrl, lines: linesUrl, boats: boatsUrl, still: stillUrl, stillDeparture: stillDepartureUrl };
+export type MusicTrack = 'home' | 'mirror' | 'sea' | 'birches' | 'lines' | 'boats' | 'still' | 'stillDeparture';
+const urls: Record<MusicTrack, string> = { home: homeUrl, mirror: mirrorUrl, sea: seaUrl, birches: birchesUrl, lines: linesUrl, boats: boatsUrl, still: stillUrl, stillDeparture: stillDepartureUrl };
 type Download = { track: MusicTrack; controller: AbortController; bytes: Promise<ArrayBuffer> };
 let prefetched: Download | null = null;
 
@@ -66,6 +68,8 @@ export function musicForStart(choice: string | { chapter: string; point?: string
   if (['lines', 'washing', 'door', 'shore', 'toBoats'].includes(chapter)) return 'lines';
   if (['boats', 'toMeadow'].includes(chapter)) return 'boats';
   if (['birches', 'autumn', 'toStairs', 'stairs', 'clouds'].includes(chapter)) return 'birches';
+  if (['toMirror', 'sea', 'dolphins', 'whale'].includes(chapter)) return 'sea';
+  if (chapter === 'mirror' || chapter === 'mirrorEnd') return 'mirror';
   if (['home', 'summit', 'jetty', 'toHarbour', 'toHome'].includes(chapter)) return 'home';
   return null;
 }
@@ -75,6 +79,8 @@ export function nextMusicForChapter(chapter: string): MusicTrack | null {
   if (chapter === 'toLines') return 'lines';
   if (chapter === 'lines' || chapter === 'toBoats') return 'boats';
   if (chapter === 'meadow' || chapter === 'toBirches') return 'birches';
+  if (chapter === 'sleeping') return 'sea';
+  if (chapter === 'toMirror') return 'mirror';
   if (chapter === 'mirror') return 'home';
   return null;
 }

@@ -235,9 +235,14 @@ differs, as a late readback can make it, is played once more; `ONLY=wood,jetty` 
   `flock-audio-check`, `marine-audio-check`, `whale-voice-check` (production calls, clipping and speaker-band body;
   `MUTATE=thin` must fail), `birches-foley-check`.
 - Scores: `opening-score-check`, `lines-score-check`, `boats-score-check`, `meadow-score-check`,
-  `birches-score-check`, `dream-score-check`, `sleeping-score-check`, `sea-score-check`, `homeward-audio-check`.
+  `birches-score-check`, `mirror-score-check`, `dream-score-check`, `sleeping-score-check`, `sea-score-check` (the study score and the passage's story phases), `homeward-audio-check`.
   The Lines, Boats, Birches and Home gates decode the supplied recordings and check looping, story continuity, mute/hidden-page
   suspension, late-decode cancellation and buffer release; Home also checks the ending fade and checkpoint offset.
+- `sea-music-check` decodes `sea.ogg` and checks its cut points, the silent hold at the break, phrase A at rest
+  (sample-continuous when the boat rests early), B to E on the rescue's steps without restarts, the close on release,
+  restores, the Sleeping handoff before the recording begins, the pad, call room, mute and silence.
+  `sea-music-browser-check` runs `?chapter=sea` with no input in the real game: second 55 must fall within 0.6 s of
+  the boat coming to rest, with A starting within 0.5 s; `?chapter=whale` must play A on load.
 - `still-phrases-check` verifies flight/colour triggers, 4.5-second spacing with overlapping tails, no backlog, mute, late decode, cleanup and drone restoration, plus reversible removal of the falling and touchdown tones.
   Sustained-flight checks cover six-second repeats from the last accepted phrase, colour timing, landing, mute and scripted suppression.
   `still-phrases-browser-check` uses real Begin and pointer strokes to verify colour, takeoff, deduplication and hidden-page suspension.
@@ -262,7 +267,7 @@ differs, as a late readback can make it, is played once more; `ONLY=wood,jetty` 
   `opening-score-check` and `opening-score-browser-check` explicitly disable the experiment to retain the original drone regression checks.
 - In the browser: `audio-browser-check`, `piano-audio-browser-check`, `arrival-audio-browser-check`,
   `transition-scenes-browser-check`, `opening-score-browser-check`, `homeward-audio-browser-check`,
-  `meadow-score-browser-check`, `birches-score-browser-check`, `sea-score-browser-check`,
+  `meadow-score-browser-check`, `birches-score-browser-check`, `sea-music-browser-check`,
   `recorded-music-browser-check` (real Begin unlock, no music download with sound off, reuse of the starting download,
   only the starting/next recording fetched, and an audible decoded source in each chapter).
   `music-loading-browser-check` holds downloads and decodes to verify concurrent shader loading, no premature

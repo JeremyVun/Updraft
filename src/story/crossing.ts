@@ -58,14 +58,11 @@ const SWING = tuning.crossingCamera.farewellRelease;
 export interface CrossingOpts {
   /** Ambient breeze multiplier; ordinary transfers use 1 and encounters retain their own slower pace. */
   breeze?: number;
-  speed?: number;
   speedScale?: number;
   /** Waypoints out to open water and on to the far shore; the bow may only ground on the last one. */
   route: THREE.Vector2[];
   /** Follow a visible channel closely before joining the offshore route. */
   departureChannel?: { from: { x: number; z: number }; to: { x: number; z: number }; lead: number };
-  /** Limit the final alignment and beach approach where the landing sits beside a narrow walking route. */
-  arrivalSpeed?: number;
   /** Carry the departing room's music; dolphin passages use the open-sea arrangement. */
   music?: Mood;
   mirrorScore?: MirrorScorePhase;
@@ -121,9 +118,9 @@ const SWIM_ENDS_BY = 0.84;
 const WAIT_FOR_IT = 6.5;
 
 /**
- * A crossing. The boat follows its waypoints and the player fills the sail; the child looks back at whatever is
- * falling astern, then ahead into the haze. Ends at the far beach or mooring. Routes and haze shape each
- * island reveal; ordinary transfers share the same sail response.
+ * A crossing. The boat follows its waypoints on the prevailing breeze while the player's wind plays in its sail; the
+ * child looks back at whatever is falling astern, then ahead into the haze. Ends at the far beach or mooring. Routes
+ * and haze shape each island reveal and set how long it takes.
  */
 export class CrossingChapter implements Chapter {
   readonly breeze: number;
@@ -151,8 +148,6 @@ export class CrossingChapter implements Chapter {
   private readonly route: THREE.Vector2[];
   private readonly departureChannel?: CrossingOpts['departureChannel'];
   private readonly channelAim = new THREE.Vector2();
-  private readonly arrivalSpeed: number;
-  private readonly cruiseSpeed: number;
   private readonly lookBack: THREE.Vector3 | null;
   private readonly farewellFor: number;
   private readonly whaleAt: number | null;
@@ -214,9 +209,8 @@ export class CrossingChapter implements Chapter {
   private swimSide = 1;
   private readonly beside = new THREE.Vector3();
   private readonly water = new THREE.Vector3();
-  /** The sea passage's speed cap, eased so the boat is never braked, and how far the swim's own cap has come in. */
-  private limit: number;
-  private swimCap = 0;
+  /** The sea passage's speed cap, eased so the boat is never braked. */
+  private limit = Infinity;
   private readonly homeEye = new THREE.Vector3();
   private readonly dockEye = new THREE.Vector3();
   private readonly arrivalView?: ArrivalView;
@@ -241,9 +235,6 @@ export class CrossingChapter implements Chapter {
     this.departureChannel = opts.departureChannel;
     this.breeze = opts.breeze ?? 1;
     cast.boat.speedScale = opts.speedScale ?? 1;
-    this.arrivalSpeed = opts.arrivalSpeed ?? Infinity;
-    this.cruiseSpeed = opts.speed ?? (opts.dolphins ? tuning.seaPassage.speed : Infinity);
-    this.limit = this.cruiseSpeed;
     this.departure.set(cast.boat.position.x, cast.boat.position.z);
     this.shot.carryAnchor = cast.boat.position;
     this.quarter = this.side = -cast.boat.sailSide || 1;
@@ -251,7 +242,7 @@ export class CrossingChapter implements Chapter {
     // out, or it sets off round the hull toward that bow and swings back as the boat comes about.
     const out = Math.atan2(opts.route[0].x - cast.boat.position.x, opts.route[0].y - cast.boat.position.z);
     this.heading = Math.cos(out - cast.boat.yaw) < 0 ? out : cast.boat.yaw;
-    cast.boat.speedLimit = this.cruiseSpeed;
+    cast.boat.speedLimit = Infinity;
     this.music = opts.music ?? 'sea';
     this.homeward = opts.homeward ?? false;
     this.departureMusic = opts.departureMusic;
@@ -268,7 +259,6 @@ export class CrossingChapter implements Chapter {
     this.whaleEvery = opts.whaleEvery ?? 0;
     this.wantsDolphins = opts.dolphins ?? false;
     if (this.wantsDolphins) {
-      cast.boat.speedLimit = this.cruiseSpeed;
       this.quarter = -cast.boat.sailSide || 1;
       // The near encounter fits a portrait frame; preserving the whole pod would miniaturise the travellers.
       this.shot.fitWidth = false;
@@ -433,7 +423,7 @@ export class CrossingChapter implements Chapter {
   }
 
   get done(): boolean {
-    // A fast sail can reach the jetty during the last seconds of the reflection fade.
+    // The boat can reach the jetty during the last seconds of the reflection fade.
     return this.cast.boat.grounded && (!this.wantsDolphins || this.mirrorArrival === 1);
   }
 
@@ -449,7 +439,7 @@ export class CrossingChapter implements Chapter {
     if (this.homeward || !this.destinationMusic) return undefined;
     if (this.departureMusic && !this.arrivalHeard) return true;
     if (this.lookBack && this.time < this.farewellFor + SWING * .8) return false;
-    const speed=Math.max(4.5,Math.min(this.cast.boat.speed,this.arrivalSpeed));
+    const speed=Math.max(4.5,this.cast.boat.speed);
     const earlier = this.stillDeparture ? tuning.audio.linesArrivalEarlier : 0;
     const lead=tuning.audio.arrivalShoreAllowance+(tuning.audio.arrivalEntranceLead+earlier)*speed;
     return this.cast.boat.grounded || this.remainingSail()<=Math.min(lead,this.routeLength*tuning.audio.arrivalEntranceRouteShare);
@@ -474,8 +464,7 @@ export class CrossingChapter implements Chapter {
     if (this.wantsDolphins && (this.swim !== 'done' || this.podLeftAt === null)) return;
     if (this.whale && this.whale.step !== 'gone') return;
     const remaining = this.remainingSail();
-    // A fast sail still slows at the meadow bank; use that approach speed so the rest doesn't begin offshore.
-    const speed=Math.max(4.5,Math.min(this.cast.boat.speed,this.arrivalSpeed));
+    const speed=Math.max(4.5,this.cast.boat.speed);
     const earlier = this.stillDeparture ? tuning.audio.linesArrivalEarlier : 0;
     const lead = tuning.audio.arrivalShoreAllowance + (tuning.audio.arrivalMusicLead + earlier) * speed;
     if (remaining <= Math.min(lead, this.routeLength * tuning.audio.arrivalMusicRouteShare)) {
@@ -495,6 +484,11 @@ export class CrossingChapter implements Chapter {
     return this.swim === 'done' ? 'return' : 'open';
   }
 
+  /** Seconds into the open sea's recording, on the passage clock. */
+  get seaMusicTime(): number | undefined { return this.whale ? this.time - tuning.audio.seaMusicLead : undefined; }
+  get seaPhrase(): number | undefined { return this.whale?.phrase; }
+  get whaleCalling(): number | undefined { return this.whale?.calling; }
+
   get checkpoint(): string | null { return this.whale?.checkpoint ?? (this.swim === 'done' ? 'swim' : null); }
   saveCheckpoint(): CheckpointPayload<'crossing'> { return [this.leg, this.time]; }
   restoreCheckpoint(point: string, data: number[]): void {
@@ -507,7 +501,7 @@ export class CrossingChapter implements Chapter {
         const gap = Math.hypot(point.x - this.cast.boat.position.x, point.y - this.cast.boat.position.z);
         if (gap < nearest) { nearest = gap; this.leg = index; }
       });
-      this.cast.boat.speedLimit = this.limit = this.cruiseSpeed;
+      this.cast.boat.speedLimit = this.limit = Infinity;
     }
     this.time = data[1]; this.swim = 'done';
     // A one-off whale already surfaced before this save; the resumed passage must not bring it up again.
@@ -543,7 +537,6 @@ export class CrossingChapter implements Chapter {
       const along = ((boat.position.x - from.x) * dx + (boat.position.z - from.y) * dz) / length + ON_THE_LINE;
       boat.steerFor = this.onLine.set(from.x + (dx / length) * along, from.y + (dz / length) * along);
     }
-    if (this.leg >= this.route.length - 2) boat.speedLimit = Math.min(boat.speedLimit, this.arrivalSpeed);
     const channel = this.departureChannel;
     if (channel && this.leg === 0) {
       const dx = channel.to.x - channel.from.x, dz = channel.to.z - channel.from.z;
@@ -666,7 +659,7 @@ export class CrossingChapter implements Chapter {
     this.whale?.direct(this.time);
 
     if (this.swimAt !== null) this.braveSwim(dt);
-    if (this.wantsDolphins) this.paceSea(dt, swimming);
+    if (this.wantsDolphins) this.paceSea(dt);
     if (this.whale) {
       boat.speedLimit = Math.min(boat.speedLimit, this.whale.limit);
       this.landing += ((this.whale.step === 'gone' ? 1 : 0) - this.landing) * (1 - Math.exp(-dt * 0.4));
@@ -691,8 +684,8 @@ export class CrossingChapter implements Chapter {
 
   /**
    * The cygnet's own brave thing. The child went into the dark first so that it would not have to; out here in the
-   * morning, with the child watching and doing nothing but staying, it goes into the water by itself. The player is
-   * the wind in the sail, so how hard they blow is how hard it has to swim, and the boat will always wait.
+   * morning, with the child watching and doing nothing but staying, it goes into the water by itself, and the boat
+   * will always wait for it.
    */
   private braveSwim(dt: number): void {
     const { child, boat, cygnet, carry } = this.cast;
@@ -764,18 +757,18 @@ export class CrossingChapter implements Chapter {
   /**
    * How fast the sea passage lets the boat sail. The pod's play takes about as long every time and the water it
    * has is fixed, so the boat settles, by degrees over the open stretch, into the pace that fits one to the other,
-   * and keeps it; the swim trims only a strong gust; and only a pod still playing when the coast comes near holds
-   * the boat back. The cap eases, so the boat is never braked.
+   * and keeps it; only a pod still playing when the coast comes near holds the boat back. The cap eases down, so the
+   * boat is never braked.
    */
-  private paceSea(dt: number, swimming: boolean): void {
+  private paceSea(dt: number): void {
     const k = tuning.seaPassage;
-    let limit = this.leg >= this.route.length - 2 ? Math.min(this.cruiseSpeed, this.arrivalSpeed) : this.cruiseSpeed;
+    let limit = Infinity;
     if (this.podLeftAt === null && !this.whale?.led) {
       const progress = this.podProgress();
       const ahead = (k.farewellAt - progress) * this.podLine;
       const pace = Math.max(k.leastSpeed, (k.farewellAt - k.leapFrom) * this.podLine / k.playFor);
       if (this.playFrom === null) {
-        limit = Math.min(limit, THREE.MathUtils.lerp(k.openSpeed, pace, THREE.MathUtils.smoothstep(progress, 0, k.leapFrom)));
+        limit = Math.min(limit, pace);
       } else {
         // Its play over, the pod is still to nudge the boat: it keeps to ordinary sailing until it does, so the pod can
         // still come alongside it.
@@ -787,9 +780,8 @@ export class CrossingChapter implements Chapter {
         limit = THREE.MathUtils.lerp(limit, Math.min(limit, k.holdSpeed), THREE.MathUtils.smoothstep(progress, k.farewellAt, k.holdAt));
       }
     }
-    this.swimCap += ((swimming ? 1 : 0) - this.swimCap) * (1 - Math.exp(-dt * k.swimEase));
-    limit = Math.min(limit, THREE.MathUtils.lerp(this.cruiseSpeed, k.swimSpeed, this.swimCap));
-    this.limit += (limit - this.limit) * (1 - Math.exp(-dt * (limit < this.limit ? k.limitEase : 2)));
+    this.limit = limit < this.limit && Number.isFinite(this.limit)
+      ? this.limit + (limit - this.limit) * (1 - Math.exp(-dt * k.limitEase)) : limit;
     this.cast.boat.speedLimit = this.limit;
   }
 

@@ -29,7 +29,7 @@ try {
         if(transitionScene.phases.at(-1)?.stage!==stage)transitionScene.phases.push({stage,now});
         if(stage==='incoming'&&!transitionScene.entry)transitionScene.entry={now,chapter:g.story.name,
           ready:g.story.current.arrivalReady,remaining:g.story.current.remainingSail?.(),
-          score:scene==='birches'?!!g.sound.birchesScore:!!g.sound.seaScore,
+          score:scene==='birches'?!!g.sound.birchesScore:!!g.sound.seaMusic,
           outgoingGone:scene==='birches'?!g.sound.meadowScore:!g.sound.sleepingScore};
       };
       if(scene==='birches'){
@@ -41,7 +41,7 @@ try {
     await page.waitForFunction(()=>!!transitionScene.entry,null,{timeout:60000});
     await page.screenshot({path:`/tmp/updraft-${scene}-music-entry.png`});
     const report=await page.evaluate(()=>transitionScene),fade=report.phases.find(p=>p.stage==='fade'),gap=report.phases.find(p=>p.stage==='gap');
-    assert(fade&&gap);assert(gap.now-fade.now>=2.95);assert(report.entry.now-gap.now>=3);
+    assert(fade&&gap);assert(gap.now-fade.now>=2.95);assert(report.entry.now-gap.now>=(scene==='sea'?.95:3));
     assert(report.entry.score&&report.entry.outgoingGone&&report.entry.ready);
     if(scene==='birches')assert(fade.now>5,'Meadow continues after departure before the Birches approach');
     assert.deepEqual(errors,[]);reports.push({...report,errors});await page.close();

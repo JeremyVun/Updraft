@@ -78,21 +78,16 @@ try {
       delete ctx.currentTime;
     }
 
+    // The passage now plays the supplied recording (tools/sea-music-check.mjs); the study score stays out of runtime.
     const { ctx, sound } = offlineSound(17);
-    let score, returned, chimes = 0, retired = [];
+    let chimes = 0;
     const chime = sound.chime.bind(sound); sound.chime = (...args) => { chimes++; chime(...args); };
     const update = tick => {
       const now = tick / 8;
       const phase = now < 3 ? 'open' : now < 7 ? 'swim' : now < 10 ? 'return' : now < 12 ? 'arrival' : now < 14 ? undefined : 'return';
       sound.update(0.125, { ...baseState, music: now >= 12 && now < 14 ? 'mirror' : 'sea', seaScore: phase,
         gust: now >= 4 && now < 4.5 ? 12 : 0, charge: now >= 5 && now < 5.5 ? 0.7 : 0, silence: now >= 15 });
-      if (tick === 0) score = sound.seaScore;
-      if (tick === 8) retired.push(sound.seaScore.current);
-      if (tick === 24) check(retired[0].stopped && sound.seaScore.current.phase === 'swim', 'Entering swim releases the preceding melody');
-      if (tick === 48) check(retired[0].voices.size === 0, 'Old phase voices are disconnected after the crossfade');
-      if (tick === 96) check(sound.seaScore === null && score.stopped, 'Arriving at the mirror stops the sea scheduler');
-      if (tick === 112) { returned = sound.seaScore; check(returned !== score && returned.current.phase === 'return', 'Resumed passage can start directly in its return phase'); }
-      if (tick === 120) check(sound.seaScore === null && returned.stopped, 'Permanent ending silence stops the sea score');
+      if (tick === 8) check(sound.seaScore === undefined, 'The synthesised sea score never plays at runtime');
     };
     update(0); let pause = ctx.suspend(0.125), render = ctx.startRendering();
     for (let tick = 1; tick < 17 * 8; tick++) {
@@ -104,7 +99,6 @@ try {
     // Cursor chimes are limited to the forest and the Sleeping climb (docs/contracts/audio.md);
     // the long crossing is none of those, so gusts and updrafts stay silent even during the quiet swim.
     check(chimes === 0, 'Gusts and updrafts stay silent during the crossing, including the quiet swim');
-    check(score.parts.size === 0 && returned.parts.size === 0, 'Departed score releases all phase buses and voices');
     return { passed, relativeError, ...encodeAudio(buffer) };
   });
   assert(result.clipped === 0 && result.peakDbFS < -0.1, 'The live score/gesture mix must not clip');

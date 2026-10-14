@@ -321,7 +321,7 @@ for (const [name, from] of [
   c.boat.beach(from.x, from.z, Math.PI);
   c.boat.launch();
   c.cygnet.rideIn('cradle');
-  const q = new CrossingChapter(c, { route: ROUTES[name], haze: 1, arrivalSpeed: name === 'toMeadow' ? tuning.sail.meadowArrivalSpeed : undefined });
+  const q = new CrossingChapter(c, { route: ROUTES[name], haze: 1 });
   let seconds = 0;
   for (; seconds < 240 && !q.done; seconds += 1 / 60) {
     q.update(1 / 60, seconds);

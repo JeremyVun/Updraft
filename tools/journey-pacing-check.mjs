@@ -1,4 +1,4 @@
-// Measure current passages with real boat/chapter code: ordinary breeze, sustained gusts, direction and frame rate.
+// Measure current passages with real boat/chapter code: the ordinary breeze, its direction and the frame rate.
 // Usage: node tools/journey-pacing-check.mjs; durations in /tmp/updraft-journey-pacing.json. CROSSING=<name> runs one
 // passage, SEA_SEED=<n> seeds the pod's chances (147 by default), SOFT=1 lists every open-sea failure of a run.
 // APPROACH_ONLY=1 ends at the first whale puzzle; PORTRAIT=1 checks phone framing. MUTATE=sideways|sidecam|earlyvoice proves guards.
@@ -94,10 +94,9 @@ const starts = {
 // On the open sea the boat waits beside the whale until it is free: `circling` winds an updraft over its blowhole
 // once the boat is at rest and then sweeps the cork in to her; otherwise nobody plays and each step comes by itself
 // after its safety valve.
-function run(name, fps, gust, veer=0, arrivalGust=false, circling=false) {
-  let push=gust;
+function run(name, fps, veer=0, circling=false) {
   const baseWind=new THREE.Vector2(Math.cos(-Math.PI/10+veer),Math.sin(-Math.PI/10+veer)).multiplyScalar(tuning.wind.breeze);
-  const wind={breeze:baseWind.clone(),calm:3,addSplat(){},sample(x,z,out){return Object.assign(out,{x:this.breeze.x+push,z:this.breeze.y-push,energy:push?.8:0,lift:0});}};
+  const wind={breeze:baseWind.clone(),calm:3,addSplat(){},sample(x,z,out){return Object.assign(out,{x:this.breeze.x,z:this.breeze.y,energy:0,lift:0});}};
   const storm=name==='drowned'?stormCast(wind):null;
   const boat=storm?.cast.boat??new Boat(wind), child=storm?.cast.child??new Traveller(wind), cygnet=storm?.cast.cygnet??new Cygnet(),carry=new Carry(child,cygnet);
   cygnet.mount=child;cygnet.visible=true;cygnet.rideIn('cradle');
@@ -145,8 +144,6 @@ function run(name, fps, gust, veer=0, arrivalGust=false, circling=false) {
   };
   for(let i=0;i<fps*900;i++) {
     const dt=1/fps;time=i*dt;wind.breeze.copy(baseWind).multiplyScalar(chapter.breeze);wind.calm=wind.breeze.length()*tuning.wind.calm;
-    const approaching=events[`music-${name==='drowned'?'wood':chapter.destinationMusic}`]!==undefined;
-    push=gust || (arrivalGust&&approaching?8:0);
     const whale=chapter.whale;
     const breath=circling&&whale?.step==='breath'&&whale.progress<1, sweep=circling&&whale?.step==='line'&&whale.haul==='out'&&whale.stepTime>4;
     input.present=breath||sweep;input.charge=breath?1:0;
@@ -259,12 +256,11 @@ function run(name, fps, gust, veer=0, arrivalGust=false, circling=false) {
       const requestAt=events[`music-${target}`];
       assert(Number.isFinite(requestAt),`${name}: destination music was never requested`);
       const musicLead=time-requestAt-tuning.audio.arrivalFadeOut-tuning.audio.arrivalQuiet;
-      // A sudden gust may land during the musical rest; preserve the rest rather than truncate it.
+      // Preserve the musical rest rather than truncate it.
       assert(musicLead>-tuning.audio.arrivalPhraseWait,`${name}: handoff requested too late (${musicLead.toFixed(2)}s before landing, before phrase wait)`);
       if(!['drowned','toHarbour'].includes(name))assert(Number.isFinite(events.arrivalReady),`${name}: final-approach music gate never opens`);
       if(route)assert(shallow<-.3,`${name}: hull crossed land (${shallow}) at ${shallowAt}, time ${time}`);
       assert(Math.max(turn,worstTurn)<Math.PI*2,`${name}: circled a waypoint`);
-      assert(peak<=10.000001,`${name}: exceeds approved forward speed cap`);
       if(name==='toMirror'){check(chapter.swim==='done','the swim is done');check(swimFrames/fps>=tuning.seaPassage.swimFor,'keeps the authored open-water swim');
         check(dolphinActs.some(([act])=>act==='push:act:contact'),'the nudge makes physical contact');
         check(events.whaleLed>events['music-sea']&&events['whale-breath']>events.whaleLed,'the nudge leads the boat to rest beside the whale');
@@ -290,9 +286,9 @@ function run(name, fps, gust, veer=0, arrivalGust=false, circling=false) {
         check(seen&&events.shape>seen.at,`its blow is seen before its shape forms: ${JSON.stringify({seen,shape:events.shape})}`);
         check(events.mirrorSeen>events.dive,`the mirror comes out of its mist only once the whale has dived: ${JSON.stringify(events)}`);
         const onward=time-events['whale-gone'];
-        check(onwardLimit>=tuning.seaPassage.speed-0.001,`normal boat speed throughout the onward sail: cap ${onwardLimit}`);
+        check(onwardLimit===Infinity,`nothing holds the boat back on the onward sail: cap ${onwardLimit}`);
         check(onward>=37&&onward<=43,
-          `about 40 s regardless of player gusts: ${onward.toFixed(1)} s`);
+          `about 40 s from the whale's going to the mooring: ${onward.toFixed(1)} s`);
         check(portTurn<0.15&&-mostStarboard<1.9,`sails straight on and curves in to the jetty, never coming about: ${JSON.stringify({portTurn,starboard:-mostStarboard})}`);}
       return {seconds:+time.toFixed(1),musicLead:+musicLead.toFixed(2),sailed:+sailed.toFixed(1),peak:+peak.toFixed(2),swimSeconds:+(swimFrames/fps).toFixed(1),stillSeconds:+stillFor.toFixed(1),whaleCalled:chapter.whaleCalled,
         ...(chapter.whale?{hiddenBeforeNudge:+leastHidden.toFixed(4),nudgeOut,whaleBrake:+worstBrake.toFixed(2),restGap:+restGap.toFixed(2),slowest:+slowest.toFixed(2),slowestAt,lead:+(events['whale-breath']-events.whaleLed).toFixed(1),
@@ -305,18 +301,10 @@ function run(name, fps, gust, veer=0, arrivalGust=false, circling=false) {
 }
 const results=[];
 for(const name of (process.env.CROSSING ? [process.env.CROSSING] : Object.keys(starts))) {
-  const calm=run(name,60,0),gust=run(name,60,8),lowFps=run(name,30,0);
-  const windLeft=run(name,30,0,-.35),windRight=run(name,30,0,.35);
-  const lateGust=run(name,60,0,0,true);
-  if (name !== 'toMirror') {
-    for (const active of [gust, lateGust]) {
-      assert.equal(active.seconds, calm.seconds, `${name}: gestures must not change crossing duration`);
-      assert.equal(active.sailed, calm.sailed, `${name}: gestures must not change the sailed path`);
-      assert.equal(active.peak, calm.peak, `${name}: gestures must not boost propulsion`);
-    }
-  }
-  const entry={name,calm,gust,lowFps,windLeft,windRight,lateGust};
-  if(name==='toMirror')entry.circling=run(name,60,0,0,false,true);
+  const calm=run(name,60),lowFps=run(name,30);
+  const windLeft=run(name,30,-.35),windRight=run(name,30,.35);
+  const entry={name,calm,lowFps,windLeft,windRight};
+  if(name==='toMirror')entry.circling=run(name,60,0,true);
   if(name==='toBoats'||name==='toMeadow') {
     const target=name==='toBoats'?45:40;
     for(const result of [calm,lowFps,windLeft,windRight])
@@ -326,4 +314,4 @@ for(const name of (process.env.CROSSING ? [process.env.CROSSING] : Object.keys(s
   if(failures.length)throw Error(`${name}:\n${failures.join('\n')}`);
 }
 fs.writeFileSync('/tmp/updraft-journey-pacing.json',JSON.stringify(results,null,2));
-console.log('Passage completion, navigation, shore clearance, speed cap and authored swim passed.');
+console.log('Passage completion, navigation, shore clearance and authored swim passed.');

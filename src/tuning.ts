@@ -51,13 +51,15 @@ export const tuning = {
     arrivalEntranceLead: 4, arrivalEntranceRouteShare: .4,
     arrivalFadeOut: 3, arrivalQuiet: 3, arrivalFadeIn: 2.5,
     sleepingArrivalQuiet: 3.5, mirrorArrivalQuiet: 4,
-    homewardFadeOut: 3, homewardQuiet: 5, homewardFadeIn: 3,
-    homewardClearDistance: 30,
+    /** Sleeping's morning clears off the sea passage within its first `seaMusicLead` seconds, without a phrase wait. */
+    seaArrivalQuiet: 1, seaArrivalFadeIn: 1,
+    homewardFadeOut: 3, homewardQuiet: 1, homewardFadeIn: 3,
+    homewardClearDistance: 0,
     /** Playtest corrections: the opening drone sits 12 dB forward, home 8 dB. */
     openingScoreDb: 12,
     summitScoreLevel: .06555 * 10 ** (8 / 20),
     /** Match supplied masters to the room reference through gain alone. */
-    recordedMusicDb: { home: -14.4, birches: -14.4, lines: -12, boats: -12.3 },
+    recordedMusicDb: { home: -14.4, mirror: -14.7, sea: -13.6, birches: -14.4, lines: -12, boats: -12.3 },
     recordedMusicFade: .65,
     musicLoadTimeoutMs: 20_000,
     /** Reversible opening experiment; false restores the original drone. */
@@ -72,6 +74,15 @@ export const tuning = {
     stillDepartureOffset: 8,
     stillDepartureEnd: 118,
     stillDepartureFadeOut: 4,
+    /**
+     * Seconds into the sea passage that `sea.ogg` begins, so that its 55th second falls as the boat comes to rest
+     * beside the whale at the ordinary pace (measured with no input).
+     */
+    seaMusicLead: 6.3,
+    /** Still's overlap rule: a rescue phrase may begin over the previous one's tail once that has played this long. */
+    seaPhraseSpacing: 4.5,
+    /** The recording makes this much room (dB) under the whale's calls at their fullest. */
+    whaleCallRoomDb: -4,
     stillColourGust: 5,
     stillColourCharge: .12,
     stillColourGain: .025,
@@ -106,7 +117,7 @@ export const tuning = {
     padActivityLevel: 0.015,
     /** Matches the approved Little Boats preview's music gain, before common playback normalization. */
     boatsScoreLevel: 3.67, boatsCueDuck: 0.28, boatsCueSpace: 3.8,
-    /** Approved sea revision: +9.7 dB reference gain and +6.3 dB loudness match, without preview playback gain. */
+    /** Studies only (`sea-score.ts`): the approved synthesised sea revision's +9.7 dB reference gain and +6.3 dB match. */
     seaScoreLevel: 6.31,
     /** Approved Sleeping study's +16.9 dB music match, excluding its playback normalization. */
     sleepingScoreLevel: 7,
@@ -127,6 +138,8 @@ export const tuning = {
         [7,.18],[8,.08],[9,.22],[10,.055],[11,.035],[12,.025]] },
     careChimeLevel: 0.28, careChimeAttack: 0.035,
     cygnetFullDistance: 30, flockDistance: 320,
+    /** The cygnet's footfalls stay cute but sit under everything else. */
+    cygnetStepDb: -6,
     /** Give an authored call and its answer a gap in the incidental flock chatter. */
     callSpace: 4,
     shoreNear: 20, shoreFar: 260, shoreRefresh: 0.75,
@@ -1882,17 +1895,13 @@ export const tuning = {
   },
 
   seaPassage: {
-    speed: 10,
-    /** The most the boat makes while the cygnet is swimming: ordinary sailing sails on, only a strong gust is trimmed. */
-    swimSpeed: 5,
-    /** How much of the boat's way the wave along its side gives the swimming cygnet, and how fast the swim's cap comes in. */
+    /** How much of the boat's way the wave along its side gives the swimming cygnet. */
     swimCarry: 0.75,
-    swimEase: 0.5,
     swimFor: 12,
     swimAnticipation: 2,
     swimDecision: 3,
     swimAt: 0.2,
-    /** Let the pod arrive and its featured leap finish even when the player fills the sail. */
+    /** The swim waits this long into the passage, so the pod's arrival and featured leap have the water first. */
     swimNotBefore: 18,
     dolphinsAfter: 2,
     waypointRadius: 10,
@@ -1906,8 +1915,6 @@ export const tuning = {
      */
     farewellAt: 0.86,
     playFor: 45,
-    /** The most the boat makes as it leaves the island, from which it settles by `leapFrom` into the pod's pace. */
-    openSpeed: 5.5,
     leastSpeed: 4.5,
     holdSpeed: 1,
     holdAt: 0.92,
@@ -2121,11 +2128,6 @@ export const tuning = {
     stars: 0.11,
     starLight: 5,
   },
-  /**
-   * The boat's sail. The cloth fills with whatever wind it has, whoever made it, and hangs dead when it has none;
-   * the hull's speed follows the same reading, a few seconds behind it. Wind speeds are world units per second,
-   * the wind field's unit, so `drive` is boat speed per unit of wind in the sail.
-   */
   lantern: {
     /** How brightly the boat's lantern lights what is round it at full dark, and how the light falls away with distance. */
     glow: 1.4,
@@ -2142,14 +2144,17 @@ export const tuning = {
      */
     flicker: 0.15, glassFlicker: 0.05,
   },
+  /**
+   * The boat's sail. The cloth fills with whatever wind it has, whoever made it, and hangs dead when it has none; the
+   * hull makes its way on the prevailing breeze alone, a few seconds behind it. Wind speeds are world units per second,
+   * the wind field's unit, so `drive` is boat speed per unit of breeze.
+   */
   sail: {
-    /** A controlled turn into the meadow bay keeps gusts from landing far along the beach. */
-    meadowArrivalSpeed: 5,
     /** Hull clearance above the terrain; enough for the rendered ground between height samples. */
     hullClearance: 0.06,
     /** Most a beached hull leans with the sand beneath it, in radians. */
     shoreTilt: 0.28,
-    /** Wind speed a unit of the player's gust is worth, and the stirring the field never quite loses. */
+    /** Wind speed a unit of the player's gust is worth in the cloth, and the stirring the field never quite loses. */
     gustPress: 4,
     stirs: 0.9,
     /**
@@ -2195,7 +2200,7 @@ export const tuning = {
     /** Gust energy at which a sail starts to luff, and the seconds a luff takes to die away. */
     luffFrom: 0.12,
     luffFade: 0.55,
-    /** Boat speed per unit of wind the sail holds, the extra for a following wind, and the most it ever makes. */
+    /** Boat speed per unit of breeze, the extra for a following breeze, and the most a turn or a shove ever lets it make. */
     // At the ordinary 2.6-unit breeze: 4.5 through the water, up to 5.5 with a following wind.
     drive: 4.5 / 2.6,
     following: 1 / 2.6,

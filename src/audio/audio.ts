@@ -1,4 +1,4 @@
-import { DreamScore, DREAM_SECTIONS, type MirrorScorePhase } from './dream-score';
+import type { MirrorScorePhase } from './dream-score';
 import { DrownedScore, DROWNED_SECTIONS, type DrownedScorePhase } from './drowned-score';
 import type { SummitScorePhase } from './summit-score';
 import { RecordedScore, type RecordedMusic } from './recorded-score';
@@ -10,7 +10,8 @@ import type { Cue } from '../story/cues';
 import type { AudioOut } from '../creatures/voices';
 import { tuning } from '../tuning';
 import { BOATS_CHORDS } from './little-boats-score';
-import { SEA_CHORDS, SeaScore, type SeaScorePhase } from './sea-score';
+import type { SeaScorePhase } from './sea-score';
+import { SeaMusic } from './sea-music';
 import { SleepingScore, SLEEPING_SECTIONS, type SleepingScorePhase } from './sleeping-score';
 import { MeadowScore, MEADOW_SECTIONS, type MeadowScorePhase } from './meadow-score';
 import type { BirchesScorePhase } from './birches-score';
@@ -103,6 +104,11 @@ export interface SoundState {
   drownedScore?: DrownedScorePhase;
   drownedQuiet?: boolean;
   seaScore?: SeaScorePhase;
+  /** The open sea's recording: seconds into it on the passage clock, and the rescue phrase reached (`SeaMusic`). */
+  seaMusicTime?: number;
+  seaPhrase?: number;
+  /** How far into one of its calls the whale is, 0..1, so the recording can make room under its voice. */
+  whaleCalling?: number;
   sleepingScore?: SleepingScorePhase;
   /** The approved arrangement starts after the piano and continues until the next arrival handoff. */
   meadowScore?: MeadowScorePhase;
@@ -160,7 +166,6 @@ const MOODS: Record<Mood, MoodMusic> = {
   home: { chords: [[50, 57, 62, 69], [43, 50, 59, 66], [45, 52, 61, 64], [50, 57, 64, 71]], seconds: 10, cutoff: 1450, level: 1.15, scale: [62, 66, 69, 71, 74, 78, 81, 83, 86, 90] },
 };
 
-const SEA_SCORE_MOOD: MoodMusic = { ...MOODS.sea, chords: SEA_CHORDS, level: 0 };
 const PULSE = 60 / 96 / 2;
 
 /** The story's phrases as [midi, beats] pairs, in the pad's D major. */
@@ -332,14 +337,14 @@ export class Soundscape {
   private nextFlock = 0;
   private flockQuietUntil = 0;
   private boatsScore: RecordedScore | null = null;
-  private seaScore: SeaScore | null = null;
+  private seaMusic: SeaMusic | null = null;
   private sleepingScore: SleepingScore | null = null;
   private meadowScore: MeadowScore | null = null;
   private birchesScore: RecordedScore | null = null;
   private stairsScore: StairsScore | null = null;
   private stairsSound: StairsSound | null = null;
   private linesScore: RecordedScore | null = null;
-  private dreamScore: DreamScore | null = null;
+  private mirrorScore: RecordedScore | null = null;
   private drownedScore: DrownedScore | null = null;
   private summitScore: RecordedScore | null = null;
   private preparedScore: RecordedScore | null = null;
@@ -359,7 +364,11 @@ export class Soundscape {
       this.stillPhrases ??= new StillPhrases(this.ctx, this.backgroundDry);
       return this.stillPhrases.ready;
     }
-    const active = track === 'stillDeparture' ? this.stillDepartureScore : track === 'home' ? this.summitScore : track === 'lines' ? this.linesScore : track === 'boats' ? this.boatsScore : this.birchesScore;
+    if (track === 'sea') {
+      this.seaMusic ??= new SeaMusic(this.ctx, this.backgroundDry);
+      return this.seaMusic.ready;
+    }
+    const active = track === 'stillDeparture' ? this.stillDepartureScore : track === 'home' ? this.summitScore : track === 'mirror' ? this.mirrorScore : track === 'lines' ? this.linesScore : track === 'boats' ? this.boatsScore : this.birchesScore;
     if (active) return active.ready;
     if (this.preparedScore?.track !== track) {
       this.preparedScore?.stop(0);
@@ -371,6 +380,7 @@ export class Soundscape {
   cancelStartingMusic(): void {
     this.preparedScore?.stop(0); this.preparedScore = null;
     this.stillPhrases?.stop(0); this.stillPhrases = null;
+    this.seaMusic?.stop(0); this.seaMusic = null;
   }
 
   private takeRecordedScore(track: RecordedMusic): RecordedScore {
@@ -1033,13 +1043,14 @@ export class Soundscape {
     const now = ctx.currentTime;
     const tc = 0.08;
     const room = this.stairs(s, now, dt);
-    const recorded = s.arrivalMusic ? (s.arrivalMusic === 'home' || s.arrivalMusic === 'birches' || s.arrivalMusic === 'lines' || s.arrivalMusic === 'boats' ? s.arrivalMusic : null)
+    const recorded = s.arrivalMusic ? (s.arrivalMusic === 'home' || s.arrivalMusic === 'mirror' || s.arrivalMusic === 'birches' || s.arrivalMusic === 'lines' || s.arrivalMusic === 'boats' ? s.arrivalMusic : null)
       : tuning.audio.stillPhraseExperiment && (s.stillDeparture || s.stillDepartureSoon) ? 'stillDeparture'
-      : s.summitScore ? 'home' : s.birchesScore && !room.birchesGone ? 'birches' : s.linesScore ? 'lines' : s.music === 'boats' ? 'boats' : null;
+      : s.summitScore ? 'home' : s.mirrorScore ? 'mirror' : s.birchesScore && !room.birchesGone ? 'birches' : s.linesScore ? 'lines' : s.music === 'boats' ? 'boats' : null;
     if (recorded && !s.silence && !this.musicMuted) void this.prepareMusic(recorded);
     else if (this.preparedScore) {
       this.preparedScore.stop(0); this.preparedScore = null;
     }
+    if (s.seaMusicTime !== undefined && !s.silence && !this.musicMuted) void this.prepareMusic('sea');
     const g = Math.min(s.gust / 26, 1);
     const winter = s.winterGust ?? 0;
     const weatherGust = winter * .76;
@@ -1073,12 +1084,14 @@ export class Soundscape {
     this.fade(this.liftGain.gain, s.charge * (1 - tuning.audio.playerWindEase * s.charge * s.charge) * playerWindGain * 0.35 * air, now, 0.15);
     this.liftFilter.frequency.setTargetAtTime(220 + s.charge * 1500 * tuning.audio.playerWindFilterRange, now, 0.2);
 
-    const activeScore = this.stillDepartureScore ?? this.stillPhrases ?? this.openingScore ?? this.summitScore ?? this.dreamScore ?? this.drownedScore ?? this.linesScore ?? this.boatsScore ?? this.meadowScore ?? this.birchesScore ?? this.sleepingScore ?? this.seaScore ?? this.stairsScore;
+    const activeScore = this.stillDepartureScore ?? this.stillPhrases ?? this.openingScore ?? this.summitScore ?? this.mirrorScore ?? this.drownedScore ?? this.linesScore ?? this.boatsScore ?? this.meadowScore ?? this.birchesScore ?? this.sleepingScore ?? this.seaMusic ?? this.stairsScore;
     const arrival = this.arrivalTransition.update(s, now, s.arrivalMusic ? activeScore?.handoffAt(now) : now), bg = arrival.background;
     if (arrival.changed && (arrival.stage === 'fade' || arrival.stage === 'gap')) {
       // Retire every outgoing source before the short rest ends; do not let long tails reopen with the next room.
       const fade = arrival.stage === 'fade' ? (arrival.fadeOut ?? tuning.audio.arrivalFadeOut) : .08;
-      for (const score of [this.stillDepartureScore, this.stillPhrases, this.openingScore, this.summitScore, this.dreamScore, this.drownedScore, this.linesScore, this.boatsScore, this.meadowScore, this.birchesScore, this.sleepingScore, this.seaScore, this.stairsScore]) score?.stop(fade);
+      for (const score of [this.stillDepartureScore, this.stillPhrases, this.openingScore, this.summitScore, this.mirrorScore, this.drownedScore, this.linesScore, this.boatsScore, this.meadowScore, this.birchesScore, this.sleepingScore, this.stairsScore]) score?.stop(fade);
+      // The sea's recording is prepared as the passage begins; only a handoff away from the sea retires it.
+      if (s.arrivalMusic !== 'sea') this.seaMusic?.stop(fade);
     }
     const backgroundPaused = arrival.stage === 'gap';
     const homeMusicForward = !!bg.summitScore && !tuning.audio.homeMusicDucking;
@@ -1109,11 +1122,12 @@ export class Soundscape {
     } else if (this.boatsScore) {
       this.boatsScore.stop(s.silence ? .12 : 1.8); this.boatsScore = null;
     }
-    if (bg.music === 'sea' && bg.seaScore && !s.silence && !backgroundPaused) {
-      if (!this.seaScore) { this.seaScore = new SeaScore(ctx, this.backgroundBus); this.chord = -1; }
-      this.seaScore.update(bg.seaScore, tuning.audio.seaScoreLevel * (1 - 0.92 * bg.hush) * (1 - piano), arrival.handoffAt);
-    } else if (this.seaScore) {
-      this.seaScore.stop(); this.seaScore = null; this.chord = -1;
+    // The recording carries its own dynamics: no hush, only room under the whale's calls.
+    if (s.seaMusicTime === undefined || s.silence) {
+      this.seaMusic?.stop(s.silence ? .12 : 1.8); this.seaMusic = null;
+    } else if (bg.music === 'sea' && bg.seaScore && !backgroundPaused && this.seaMusic) {
+      this.seaMusic.update(s.seaMusicTime, s.seaPhrase ?? -1,
+        10 ** ((tuning.audio.recordedMusicDb.sea + tuning.audio.whaleCallRoomDb * (s.whaleCalling ?? 0)) / 20) * (1 - piano));
     }
     if (bg.sleepingScore && !s.silence && !backgroundPaused) {
       this.sleepingScore ??= new SleepingScore({ ctx, bus: this.backgroundDry, reverb: this.backgroundWet }, out => {
@@ -1156,12 +1170,12 @@ export class Soundscape {
     const forestEntry = arrival.legato && arrival.stage === 'blend' && arrival.changed;
     if (forestEntry) this.forestBlendUntil = now + tuning.audio.forestMusicBlend;
     // Dynamics are already composed into these arrangements; hush must not attenuate them twice.
-    if (bg.mirrorScore && !s.silence && !backgroundPaused) {
-      this.dreamScore ??= new DreamScore(ctx, this.backgroundBus);
-      this.dreamScore.update(bg.mirrorScore, tuning.audio.mirrorScoreLevel * roomTrim('mirror') * (1 - piano), arrival.handoffAt);
-    } else if (this.dreamScore) {
-      this.dreamScore.stop(s.silence ? .12 : tuning.audio.dreamPhaseFade);
-      this.dreamScore = null;
+    // A homeward start already fading the Mirror out must not begin its recording just to fade it.
+    if (bg.mirrorScore && !s.silence && !backgroundPaused && (!this.musicMuted || this.mirrorScore) && (this.mirrorScore || arrival.stage !== 'fade')) {
+      this.mirrorScore ??= this.takeRecordedScore('mirror');
+      this.mirrorScore.update(bg.mirrorScore, 10 ** (tuning.audio.recordedMusicDb.mirror / 20) * (1 - piano));
+    } else if (this.mirrorScore) {
+      this.mirrorScore.stop(s.silence ? .12 : 1.8); this.mirrorScore = null;
     }
     if (bg.drownedScore && !s.drownedQuiet && !s.silence && !backgroundPaused) {
       this.drownedScore ??= new DrownedScore({ ctx, bus: this.backgroundDry, reverb: this.backgroundWet }, out => {
@@ -1205,9 +1219,8 @@ export class Soundscape {
     } else if (this.openingScore) {
       this.openingScore.stop(); this.openingScore = null;
     }
-    const mood = this.seaScore ? SEA_SCORE_MOOD : MOODS[bg.music] ?? MOODS.meadow;
-    const chord = this.seaScore ? this.seaScore.chordAt(now)
-      : bg.music === 'wood' && now < this.forestBlendUntil ? 0 : Math.floor(now / mood.seconds) % mood.chords.length;
+    const mood = MOODS[bg.music] ?? MOODS.meadow;
+    const chord = bg.music === 'wood' && now < this.forestBlendUntil ? 0 : Math.floor(now / mood.seconds) % mood.chords.length;
     const finale = now < this.finaleUntil;
     if (s.silence) {
       this.fade(this.musicBus.gain, 0, now, 0.12);
@@ -1235,26 +1248,24 @@ export class Soundscape {
     // The opening grows less with life; wind warms it in the same proportion.
     const lifeLevel = this.openingScore ? 0.012 + tuning.audio.openingPadRise * s.life : padLife;
     this.fade(this.padGain.gain,
-      stillExperiment || backgroundPaused || s.drownedQuiet || stairsMusic || this.summitScore || this.dreamScore || this.drownedScore || this.sleepingScore || this.meadowScore || this.birchesScore || this.linesScore || this.boatsScore ? 0 : (lifeLevel * (1 - 0.35 * s.night * (finale ? 0 : 1)) + this.activity * tuning.audio.padActivityLevel * lifeLevel / padLife) * hush * mood.level * swell * (this.openingScore ? this.openingScore.gainAt(now) * 10 ** (tuning.audio.openingScoreDb / 20) : 1),
+      stillExperiment || backgroundPaused || bg.seaScore || s.drownedQuiet || stairsMusic || this.summitScore || this.mirrorScore || this.drownedScore || this.sleepingScore || this.meadowScore || this.birchesScore || this.linesScore || this.boatsScore ? 0 : (lifeLevel * (1 - 0.35 * s.night * (finale ? 0 : 1)) + this.activity * tuning.audio.padActivityLevel * lifeLevel / padLife) * hush * mood.level * swell * (this.openingScore ? this.openingScore.gainAt(now) * 10 ** (tuning.audio.openingScoreDb / 20) : 1),
       now,
       piano > 0 ? tuning.piano.mixResponse : now < this.forestBlendUntil ? tuning.audio.forestMusicBlend / 3 : bg.hush > 0.5 ? 0.7 : 1.5,
     );
     this.padFilter.frequency.setTargetAtTime(mood.cutoff + 260 * s.life - 200 * s.night, now, 2.5);
 
     const harmonyAt = (at: number): readonly number[] => {
-      const composed = this.openingScore?.chordAt(at) ?? this.dreamScore?.chordAt(at) ?? this.drownedScore?.chordAt(at)
+      const composed = this.openingScore?.chordAt(at) ?? this.drownedScore?.chordAt(at)
         ?? this.meadowScore?.chordAt(at) ?? this.sleepingScore?.chordAt(at) ?? this.stairsScore?.chordAt(at);
       if (composed) return composed;
       // During the music-free arrival gap, use the opening harmony of the incoming composition.
       if (backgroundPaused) {
-        if (bg.mirrorScore) return DREAM_SECTIONS[bg.mirrorScore].chords[0].tones;
         if (bg.drownedScore) return DROWNED_SECTIONS[bg.drownedScore].chords[0].tones;
         if (bg.meadowScore) return MEADOW_SECTIONS[bg.meadowScore].chords[0].tones;
         if (bg.sleepingScore) return SLEEPING_SECTIONS[bg.sleepingScore].chords[0]?.tones ?? [50,57];
         if (bg.music === 'boats') return BOATS_CHORDS[0];
       }
-      const index = this.seaScore?.chordAt(at)
-        ?? Math.floor(at / mood.seconds) % mood.chords.length;
+      const index = Math.floor(at / mood.seconds) % mood.chords.length;
       const tones = mood.chords[index];
       // The wood's upper semitones belong to its unsettled drone; touch answers on its steady D/A pedal.
       return bg.music === 'wood' ? MOODS.wood.chords[0] : tones;
@@ -1274,7 +1285,7 @@ export class Soundscape {
     for (const name of cues) {
       if (name === 'foghorn') { this.foghorn(); }
       else if (name === 'flightHome') flightKnock(ctx, this.master, this.reverb, this.noiseWork?.ready ? this.noise : null);
-      else if (name === 'star') { this.dreamScore?.bloom(); }
+      else if (name === 'star') continue;
       else if (name === 'kindled' || name === 'comfort') {
         this.flare();
         this.phrase(name);

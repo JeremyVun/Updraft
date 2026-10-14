@@ -1,7 +1,7 @@
 import { decodeMusic } from './music-loading';
 import { tuning } from '../tuning';
 
-export type RecordedMusic = 'home' | 'birches' | 'lines' | 'boats' | 'stillDeparture';
+export type RecordedMusic = 'home' | 'mirror' | 'birches' | 'lines' | 'boats' | 'stillDeparture';
 
 export class RecordedScore {
   readonly ready: Promise<void>;

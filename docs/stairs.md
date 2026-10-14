@@ -220,8 +220,7 @@ brings the light. Courage passes back and forth between them, and the stairs are
      comes out of the foot of a tower of cumulus to the right of the sun (it has waited inside, hidden, since they
      came up) and sails in toward them, the kite with it. A few seconds after it sets off she turns to the bird,
      still looking where the swans went, then to the boat; her feet swing again. The lens comes round to their faces as it slows and lies right alongside the landing's edge.
-6. **The sail over the cloud.** The kite draws them the whole way; nobody needs to blow (a gust still adds a
-   little). Off the landing in one slow turn to port, then a long wander across the open cloud toward the low sun:
+6. **The sail over the cloud.** The kite draws them the whole way; nobody needs to blow. Off the landing in one slow turn to port, then a long wander across the open cloud toward the low sun:
    out to port among the heaps, back across to starboard between towers of cumulus, and straight on into a bank of
    mist standing on the cloud (about 350 m, two minutes). The hull rides the billows, down in the tops, parting them.
    Under way the bird hops up onto the gunwale on the sunward side, forward of the mast so the mast never stands

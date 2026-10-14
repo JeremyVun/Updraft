@@ -105,8 +105,7 @@ and through the whale’s dive. A broad horizon veil hides all distant scenery e
 205 units and fully concealed beyond 260, then blending to a 55–110 unit visibility range over crossing seconds
 60–76 (`tuning.world.linesHorizon`).
 Lines emerges shoreline first as the boat approaches; no island-shaped fog bank marks its location.
-The ordinary distance haze remains (`linesCrossingHaze`, `linesHazeFrom`, `linesHazeTo`). About 117 s whether
-idle or blowing sustained gusts: player wind animates the sail without accelerating or steering the hull.
+The ordinary distance haze remains (`linesCrossingHaze`, `linesHazeFrom`, `linesHazeTo`). About 117 s.
 Lines' recording uses a twelve-second approach lead adjustment. The first whale’s dive sends out the shared physical
 swell. From crossing second 69, two gulls pass, one carrying linen, followed by two loose handkerchiefs; a sparse
 cry accompanies their closest pass. The loose cloth and bill-held corner use the existing cloth solver.
@@ -287,7 +286,7 @@ before the plug.
 
 The last warm afternoon of the year, and the island is asleep. The crossing hides it in haze
 (`tuning.world.meadowCrossingHaze`) and lines up offshore with the hill path before turning in, so the boat lands
-at the foot of the climb (`tuning.sail.meadowArrivalSpeed` caps the last legs). A bank hides the meadow until the
+at the foot of the climb. A bank hides the meadow until the
 child climbs it. Her steps leave a narrow, soft green trail on the climb and approach (`tuning.meadowLife`),
 joining the patch of colour on the near knoll where a piano stands (`PLACE`, `tuning.piano.initialRadius`),
 seen through a shallow saddle. The rest stays grey under the waiting region (`life.regions.waiting`,
@@ -659,7 +658,7 @@ Five steps share the rescue between wind, child and bird:
 
 The whale spouts and sings, waves its flipper, then rolls under and raises its flukes beside the sun. Its swell
 lifts the boat; the loose net sinks away. The cygnet returns to her arms, the mist lifts and they sail on to the
-mirror, with about forty seconds of sailing after the whale disappears at ordinary wind. Its jetty and reflections stay hidden
+mirror, with about forty seconds of sailing after the whale disappears. Its jetty and reflections stay hidden
 until the whale has gone. Arrival carries the sailing view into a
 seven-second ease toward the mirror's own camera (`tuning.skyMirror.arriveFor`). The paper stays stowed at sea.
 
@@ -670,9 +669,13 @@ Dolphins follow their own stations, never swim in the air and never turn faster 
 crawls for the first swim. The drawn gestures appear half a second after their target becomes actionable, while
 the camera finishes moving, and return two seconds after the last relevant stroke if more help is needed.
 
+Music: the supplied "Another Shore" (`sea.ogg`), its second 55 falling as the boat comes to rest, then one phrase
+per completed step and its close from the release to the Mirror (`docs/contracts/audio.md`, "The long sea crossing").
+
 Knobs: `tuning.seaPassage` (pod pacing and mist), `tuning.dolphins`, `tuning.netWhale` (rescue, holds and farewell),
-`tuning.audio.whaleVoice`. Checks: `tools/sea-check.mjs` (both orientations, through the settled mirror view, with
-camera trace and browser/shader errors), `sea-logic-check.mjs`, `net-whale-check.mjs`,
+`tuning.audio.whaleVoice`, `tuning.audio.seaMusicLead`. Checks: `tools/sea-check.mjs` (both orientations, through the settled mirror view, with
+camera trace and browser/shader errors), `sea-logic-check.mjs`, `net-whale-check.mjs`, `sea-music-check.mjs`,
+`sea-music-browser-check.mjs`,
 `CROSSING=toMirror node tools/journey-pacing-check.mjs`. Saves: `swim`, `whale-rest`, each completed rescue step and
 `whale-gone`; restoration details in `contracts/progress.md`.
 

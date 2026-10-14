@@ -87,7 +87,7 @@ for(const star of MIRROR_STARS) {
 {
   const f=fixture(60),{boat}=f.cast;
   boat.beach(-542,-2253,MIRROR_LANDING.yaw);boat.afloat=true;
-  f.chapter=new CrossingChapter(f.cast,{route:[ROUTES.toMirror.at(-1)],moor:MIRROR_LANDING,arrivalSpeed:3});
+  f.chapter=new CrossingChapter(f.cast,{route:[ROUTES.toMirror.at(-1)],moor:MIRROR_LANDING});
   for(let i=0;i<60*90 && !f.chapter.done;i++) {
     f.step();assert(mirrorBed(boat.position.x,boat.position.z)<-2,'arrival hull stays in deep water');
   }
@@ -104,9 +104,8 @@ for(const star of MIRROR_STARS) {
   assert(f.cast.child.position.z<MIRROR_ENTRY_DECK.z1,'child steps from the jetty onto the flat');
 }
 // Sail the illuminated channel after real boarding, including the shove away from the jetty.
-for (const [fps,gust] of [[30,0],[60,0],[60,8]]) {
+for (const fps of [30,60]) {
   const f=fixture(fps),{boat}=f.cast;
-  if(gust)f.cast.wind.sample=(x,z,out)=>Object.assign(out,{x:2.47+gust,z:-0.8-gust,energy:0.8,lift:0});
   f.chapter.restoreCheckpoint('stars4-15',[15,3]);
   for(let i=0;i<fps*120 && !f.chapter.done;i++)f.step();
   assert(f.chapter.done,'the child boards from the completed mirror');
@@ -128,8 +127,8 @@ for (const [fps,gust] of [[30,0],[60,0],[60,8]]) {
     assert(mirrorBed(boat.position.x,boat.position.z)<-0.5,'departure stays off the shallow flat');
   }
   assert(along>=length,'the boat sails beyond the illuminated channel');
-  assert(worst<0.5,`departure follows the light at ${fps} fps, gust=${gust}: ${worst.toFixed(2)} m sideways`);
-  results.push({departureFps:fps,gust,sideways:worst});
+  assert(worst<0.5,`departure follows the light at ${fps} fps: ${worst.toFixed(2)} m sideways`);
+  results.push({departureFps:fps,sideways:worst});
 }
 // The confident companion investigates and reacts, but never supplies puzzle progress or blocks departure.
 {

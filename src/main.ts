@@ -1041,6 +1041,9 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   soundState.drownedScore = story.current.drownedScore;
   soundState.drownedQuiet = story.current.drownedQuiet;
   soundState.seaScore = story.current.seaScore;
+  soundState.seaMusicTime = story.current.seaMusicTime;
+  soundState.seaPhrase = story.current.seaPhrase;
+  soundState.whaleCalling = story.current.whaleCalling;
   soundState.sleepingScore = story.current.sleepingScore;
   soundState.meadowScore = story.current.meadowScore;
   soundState.birchesScore = story.current.birchesScore;

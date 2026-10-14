@@ -8,7 +8,6 @@ import type { Coax } from '../fx/swirl';
 import { tuning } from '../tuning';
 import { callLength } from '../audio/whale-voice';
 import type { Cast } from './cast';
-import { completeObjective } from './cues';
 import { surgeAt, swellLift } from '../world/water/swell';
 import { mirrorWater } from '../world/sky-mirror-layout';
 import { BOW_Z, MAST_TOP, MAST_Z, SAIL_SPAN, SAIL_TACK, STERN_Z, gunwale, gunwaleHalf, stationU } from '../traveller/boat/form';
@@ -204,7 +203,6 @@ export class NetWhale {
   private valveStep: WhaleStep | null = null;
   private released = -1;
   private rested = false;
-  private rewarded = false;
   private nextWave = 0;
   private wavingGoodbye = false;
   /** How far she has gone to the port rail to wave it goodbye, 0..1. */
@@ -533,7 +531,6 @@ export class NetWhale {
       this.step = 'gone';
       this.stepTime = 100;
       this.released = 1e3;
-      this.rewarded = true;
       this.limit = Infinity;
       this.cygnetIn = 'cradle';
     }
@@ -546,6 +543,19 @@ export class NetWhale {
 
   get sightAge(): number {
     return this.sightClock < 0 ? 0 : this.clock - this.sightClock;
+  }
+
+  /**
+   * Which of the open sea's recorded phrases the rescue has reached: -1 coming in, 0 at rest beside it, one more for
+   * each completed step, and 5 once it is free. The supplied recording carries the release without a reward cue.
+   */
+  get phrase(): number {
+    return Math.min(5, WHALE_STEPS.indexOf(this.step) - 1);
+  }
+
+  /** How far into one of its calls it is, 0..1. */
+  get calling(): number {
+    return this.sung();
   }
 
   /** The boat may round its hold waypoint and sail on. */
@@ -690,10 +700,6 @@ export class NetWhale {
     if (this.step === 'flipper') this.lastLoop(dt, time);
     this.drive(dt);
     if (this.step === 'free') this.salute(dt);
-    if (this.step === 'free' && whale.spouting && !this.rewarded) {
-      this.rewarded = true;
-      completeObjective();
-    }
     if (this.step === 'free' && whale.phase === 'gone') this.goTo('gone');
     if (this.released < 0 && whale.going) this.released = 0;
     if (this.released >= 0) this.released += dt;

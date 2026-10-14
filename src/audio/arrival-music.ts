@@ -31,7 +31,7 @@ const identity = (s: Background): string => s.openingScore ? 'opening' : s.sleep
 
 export function arrivalQuiet(target: ArrivalMusic, homeward = false): number {
   return homeward ? tuning.audio.homewardQuiet : target === 'sleeping' ? tuning.audio.sleepingArrivalQuiet
-    : target === 'mirror' ? tuning.audio.mirrorArrivalQuiet : tuning.audio.arrivalQuiet;
+    : target === 'mirror' ? tuning.audio.mirrorArrivalQuiet : target === 'sea' ? tuning.audio.seaArrivalQuiet : tuning.audio.arrivalQuiet;
 }
 
 /** Uses the audio clock, so the complete pause survives mute/hidden-page suspension. */
@@ -53,7 +53,8 @@ export class ArrivalTransition {
       if (!this.target && same && (!this.last || identity(this.last)===identity(current))) this.stage='none';
       else {
         this.target = s.arrivalMusic; this.outgoing = this.last ?? current;
-        this.began = Math.max(now, stillRecording && s.arrivalMusic === 'lines'
+        // The sea's recording keeps time with the passage, so the morning leaves at once.
+        this.began = s.arrivalMusic === 'sea' ? now : Math.max(now, stillRecording && s.arrivalMusic === 'lines'
           ? phraseEnd : Math.min(phraseEnd, now + tuning.audio.arrivalPhraseWait));
         this.stage = this.began > now ? 'wait' : 'fade';
         beganNow = true;
@@ -88,7 +89,7 @@ export class ArrivalTransition {
         const fadeOut = stillRecording && this.target === 'lines' ? 0
           : homeward ? tuning.audio.homewardFadeOut : tuning.audio.arrivalFadeOut;
         const quiet = arrivalQuiet(this.target, homeward);
-        const fadeIn = homeward ? tuning.audio.homewardFadeIn : tuning.audio.arrivalFadeIn;
+        const fadeIn = homeward ? tuning.audio.homewardFadeIn : this.target === 'sea' ? tuning.audio.seaArrivalFadeIn : tuning.audio.arrivalFadeIn;
         // Retire sources on the first gap update, then give them the full rest even after a stalled frame.
         if ((previous === 'fade' || previous === 'wait') && now - this.began >= fadeOut) {
           this.began = now - fadeOut;

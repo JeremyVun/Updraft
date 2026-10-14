@@ -12,7 +12,9 @@ try {
     const check=(ok,message)=>{if(!ok)throw Error(message);checks.push(message);};
     const source = target => ({...baseState,music:target==='birches'?'birches':target==='sleeping'?'wood':target==='drowned'?'birches':target==='home'?'home':'sea',
       // Enable the forest's playable voice to verify that background gates cannot mute gesture feedback.
-      seaScore:target==='mirror'?'arrival':undefined,flockChatter:false,forestWind:true});
+      seaScore:target==='mirror'?'arrival':undefined,flockChatter:false,forestWind:true,
+      // Leaving the sea, its recording is in its close; arriving at sea, it begins once the morning has gone.
+      ...(target==='mirror'?{seaMusicTime:200,seaPhrase:5}:{})});
     for(const target of Object.keys(ARRIVAL_MUSIC)) {
       const {ctx,sound}=offlineSound(36), notes=[], phases=[];
       // Hear just the background and its send into the reverb, while still scheduling real gestures and environment.
@@ -20,10 +22,10 @@ try {
       const chime=sound.chime.bind(sound);
       sound.chime=(...a)=>{notes.push({now:ctx.currentTime,midi:a[0]});chime(...a);};
       let incoming, epoch, reverb, gatesApart=0;
-      const score=()=>sound.seaScore??sound.summitScore??sound.dreamScore??sound.drownedScore??sound.linesScore??sound.boatsScore??sound.birchesScore??sound.sleepingScore;
+      const score=()=>sound.seaMusic??sound.summitScore??sound.mirrorScore??sound.drownedScore??sound.linesScore??sound.boatsScore??sound.birchesScore??sound.sleepingScore;
       const update=tick=>{
         const now=tick/8, landed=now>=28;
-        sound.update(.125,{...source(target),...(landed?ARRIVAL_MUSIC[target]:{}),
+        sound.update(.125,{...source(target),...(landed?ARRIVAL_MUSIC[target]:{}),...(target==='sea'?{seaMusicTime:now-12.5,seaPhrase:-1}:{}),
           arrivalMusic:now>=8&&!landed?target:undefined,
           gust:now>=10&&now<10.5?10:0,charge:now>=12&&now<13?.65:0});
         const stage=sound.arrivalTransition.stage;if(phases.at(-1)?.stage!==stage)phases.push({at:now,stage});
@@ -41,7 +43,7 @@ try {
         }
       };
       update(0);let pause=ctx.suspend(.125);const rendering=ctx.startRendering();
-      for(let tick=1;tick<36*8;tick++){await pause;update(tick);await sound.preparedScore?.ready;await sound.summitScore?.ready;await sound.birchesScore?.ready;await sound.linesScore?.ready;await sound.boatsScore?.ready;if(tick+1<36*8)pause=ctx.suspend((tick+1)/8);await ctx.resume();}
+      for(let tick=1;tick<36*8;tick++){await pause;update(tick);await sound.seaMusic?.ready;await sound.preparedScore?.ready;await sound.summitScore?.ready;await sound.birchesScore?.ready;await sound.linesScore?.ready;await sound.boatsScore?.ready;if(tick+1<36*8)pause=ctx.suspend((tick+1)/8);await ctx.resume();}
       const buffer=await rendering;
       let gapPeak=0, before=0, after=0;
       for(let ch=0;ch<2;ch++){

@@ -1,4 +1,4 @@
-// The Sky Mirror's approved-score parity; the drowned village's pieces (key, phrasing, the boat's tune coming home,
+// The Sky Mirror's approved study-score parity; the drowned village's pieces (key, phrasing, the boat's tune coming home,
 // crossings at chord changes) and real Web Audio chapter timing into the Drowned → Wood handoff.
 // node tools/dream-score-check.mjs (local Vite, no GPU).
 import fs from 'node:fs';
@@ -84,46 +84,31 @@ try {
 
     async function render(name,kind,seconds) {
       const {ctx,sound}=offlineSound(seconds),history=[],retiring=[];
-      let reverb=null,oldScore=null,gateMin=1,blooms=0,forestStarted=null,forestTuned=false;
+      let reverb=null,oldScore=null,gateMin=1,forestStarted=null,forestTuned=false;
       const originalChime=sound.chime.bind(sound),notes=[];
       sound.chime=(...a)=>{notes.push(a);originalChime(...a);};
       for(const method of ['cricket','owl','skylark','peep','bugle'])sound[method]=()=>{};
       if(kind==='music')backgroundOnly(ctx,sound);
-      const scoreOf=()=>name==='mirror'?sound.dreamScore:sound.drownedScore;
+      const scoreOf=()=>sound.drownedScore;
       const update=tick=>{
         const now=tick/8;
-        let state;
-        if(name==='mirror') {
-          // Extended middle phases cover two loop joins; restored entry at 'one' must not bloom.
-          const phase=now<42?'one':now<64?'two':now<86?'three':now<94?'constellation':'depart';
-          state={...baseState,music:'mirror',mirrorScore:phase,hush:.5,breeze:.025,night:.65,land:0,sea:.35,
-            cues:[42,64,86].includes(now)?['star']:[],silence:now>=114,
-            gust:now>=20&&now<21?6:0,charge:now>=66&&now<67?.2:0};
-        } else {
-          // The farewell darkens with the storm before the forest handoff.
-          state={...baseState,music:'drowned',drownedScore:now<10?'farewell':'storm',hush:now<22?.6:.85,land:0,sea:1,
+        // The farewell darkens with the storm before the forest handoff.
+        const state={...baseState,music:'drowned',drownedScore:now<10?'farewell':'storm',hush:now<22?.6:.85,land:0,sea:1,
             night:.55+Math.min(1,now/20)*.45,shower:Math.min(1,now/14),breeze:1,
             arrivalMusic:now>=W&&now<W+8?'wood':undefined,
             ...(now>=W+8?ARRIVAL_MUSIC.wood:{}),
             forestWind:now>=W+8,
             cues:now===W+12?['kindled']:now===W+18?['comfort']:[],
             gust:now>=W+1&&now<W+2?7:0,charge:now>=W+9&&now<W+10?.18:0};
-        }
         if(scoreOf() && oldScore!==scoreOf()){oldScore=scoreOf();retiring.push(oldScore);}
         sound.update(.125,{...state,flockChatter:false});
-        if(name==='mirror'&&sound.dreamScore&&!sound.dreamScore.probed) {
-          sound.dreamScore.probed=true;const bloom=sound.dreamScore.bloom.bind(sound.dreamScore);
-          sound.dreamScore.bloom=()=>{blooms++;bloom();};
-        }
-        if(name==='drowned') {
-          if(now===W-1)reverb=sound.reverbConvolver;
-          if(now>=W){gateMin=Math.min(gateMin,sound.backgroundGate.gain.value,sound.wetGate.gain.value);check(sound.reverbConvolver===reverb,`wood ${now}: the shared reverb survives`);}
-          if(sound.arrivalTransition.stage==='blend')forestStarted??=now;
-          if(forestStarted!==null&&!forestTuned&&now>=forestStarted+.125) {
-            check(sound.padVoices.every((v,i)=>Math.abs(v.osc[0].frequency.value-440*2**(([38,45,50,57][i]-69)/12))<.01),
-              'Forest pad starts on the shared D/A pitches at the musical handoff');
-            forestTuned=true;
-          }
+        if(now===W-1)reverb=sound.reverbConvolver;
+        if(now>=W){gateMin=Math.min(gateMin,sound.backgroundGate.gain.value,sound.wetGate.gain.value);check(sound.reverbConvolver===reverb,`wood ${now}: the shared reverb survives`);}
+        if(sound.arrivalTransition.stage==='blend')forestStarted??=now;
+        if(forestStarted!==null&&!forestTuned&&now>=forestStarted+.125) {
+          check(sound.padVoices.every((v,i)=>Math.abs(v.osc[0].frequency.value-440*2**(([38,45,50,57][i]-69)/12))<.01),
+            'Forest pad starts on the shared D/A pitches at the musical handoff');
+          forestTuned=true;
         }
         const phase=scoreOf()?.current?.phase??sound.mood;
         if(history.at(-1)?.phase!==phase)history.push({now,phase,stage:sound.arrivalTransition.stage});
@@ -136,26 +121,20 @@ try {
         windows.push(10*Math.log10(Math.max(1e-20,power/48000)));
       }
       check(retiring.every(score=>score.parts.size===0),`${name}/${kind}: retiring voices, echoes and phase buses all disconnect`);
-      if(name==='mirror'){
-        check(blooms===3,`${kind}: three real returns bloom once each; restored entry and loops stay quiet`);
-        check(windows.slice(5,110).every(db=>db>-65),`${kind}: mirror loops and phase changes have no accidental silence`);
-      } else {
-        check(gateMin>.99,`${kind}: background gate stays open throughout the forest overlap`);
-        check(windows.slice(W-3,W+13).every(db=>db>-65),`${kind}: music remains audible across the village/forest boundary`);
-        check(!notes.some(n=>n[6]&&n[3]>=W+1&&n[3]<W+2)&&notes.some(n=>n[6]&&n[3]>=W+9&&n[3]<W+10),`${kind}: musical wind begins in the actual forest, not the departing village`);
-        const jumps=windows.slice(W-2,W+11).slice(1).map((db,i)=>Math.abs(db-windows[W-2+i]));
-        if(kind==='music')check(Math.max(...jumps)<6,`Forest overlap has no one-second loudness jump over 6 dB: ${Math.max(...jumps).toFixed(2)}; ${JSON.stringify(windows.slice(W-2,W+11).map(n=>+n.toFixed(1)))}; ${JSON.stringify(history)}`);
-      }
+      check(gateMin>.99,`${kind}: background gate stays open throughout the forest overlap`);
+      check(windows.slice(W-3,W+13).every(db=>db>-65),`${kind}: music remains audible across the village/forest boundary`);
+      check(!notes.some(n=>n[6]&&n[3]>=W+1&&n[3]<W+2)&&notes.some(n=>n[6]&&n[3]>=W+9&&n[3]<W+10),`${kind}: musical wind begins in the actual forest, not the departing village`);
+      const jumps=windows.slice(W-2,W+11).slice(1).map((db,i)=>Math.abs(db-windows[W-2+i]));
+      if(kind==='music')check(Math.max(...jumps)<6,`Forest overlap has no one-second loudness jump over 6 dB: ${Math.max(...jumps).toFixed(2)}; ${JSON.stringify(windows.slice(W-2,W+11).map(n=>+n.toFixed(1)))}; ${JSON.stringify(history)}`);
       const encoded=encodeAudio(buffer);check(encoded.clipped===0,`${name}/${kind}: no clipping`);
-      renders.push({name,kind,history,gateMin,blooms,windows,...encoded});
+      renders.push({name,kind,history,gateMin,windows,...encoded});
     }
-    await render('mirror','music',120);
     await render('drowned','music',W+26);
     await render('drowned','scene',W+26);
     return {checks,renders};
   },{notes:composition('mirror'),palette});
   for(const r of result.renders){
-    const stem=r.name==='drowned'?`/tmp/updraft-drowned-forest-${r.kind}`:'/tmp/updraft-mirror-integrated';
+    const stem=`/tmp/updraft-drowned-forest-${r.kind}`;
     fs.writeFileSync(stem+'.wav',wav(Buffer.from(r.pcm,'base64')));
     // Listening gain is fixed for the whole clip; retain all relative levels and transitions.
     execFileSync('ffmpeg',['-hide_banner','-loglevel','error','-y','-i',stem+'.wav','-af',`volume=${Math.min(10,-3-r.peakDbFS)}dB`,'-c:a','libmp3lame','-b:a','192k',stem+'.mp3']);

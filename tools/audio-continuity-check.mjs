@@ -72,7 +72,7 @@ try {
     for (const [music, key, first, next] of [
       ['wood','sleepingScore','shelter','climb'],
       ['meadow','meadowScore','walk','flock'],
-      ['sea','seaScore','open','swim'], ['boats','boatsScore',null,null],
+      ['boats','boatsScore',null,null],
     ]) {
       const { ctx, sound } = offlineSound(11);
       let oldGain, retired, before, during, ended;

@@ -61,6 +61,13 @@ export class CloudBank {
     return this.gone;
   }
 
+  /** Blown away already, as a resumed save finds it. */
+  clear(): void {
+    this.gone = true;
+    this.whole = 0;
+    this.mesh.visible = false;
+  }
+
   /** A stroke across it carries the lumps it passes over the way the stroke went. */
   brush(camera: THREE.PerspectiveCamera, input: PointerInput, dt: number): void {
     if (!this.yielding || !this.mesh.visible || this.gone || !input.present || input.muted || dt <= 0) return;

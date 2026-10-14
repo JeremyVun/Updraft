@@ -29,7 +29,8 @@ Every chapter has an entry checkpoint. The additional points:
   one-time optional swing; the payload holds route leg, swing count, dusk and freed tangles. The last restores the red
   sail. Independent cygnet play makes no checkpoint.
 - Stairs in the clouds: `flight-1` to `flight-3`, the number of flights docked; restore rebuilds the docked stairs and
-  stands the pair at the matching landing.
+  stands the pair at the matching landing. `cloud` once the loop is behind them, until they are out on top (resumes on the landing the loop's way on leaves
+  from, every flight docked, the bird going on ahead up the last flights into the white).
 - Drowned village: `sail` once the rescued cat has settled aboard (resumes beside its roof as the air dies, with the cat at the bow and no repeated sound cue;
   a save from before then resumes at the entry, the cat on its chimney); `roofs` from her setting off over the roofs
   (resumes on the strand's ridge with the cat a roof ahead, the fog risen and held behind her and the boat against the

@@ -427,6 +427,7 @@ export class StairsChapter implements Chapter {
   }
 
   get checkpoint(): string | null {
+    if (this.looped && ['follow', 'together', 'emerge'].includes(this.beat)) return 'cloud';
     if (this.beat !== 'waiting' && this.beat !== 'climb') return null;
     const n = this.world.docked;
     return n > 0 && n < LOOSE.length ? `flight-${n}` : n === LOOSE.length ? 'flight-3' : null;
@@ -436,13 +437,14 @@ export class StairsChapter implements Chapter {
     return [this.world.docked];
   }
 
-  restoreCheckpoint(_point: string, data: number[]): void {
-    const n = THREE.MathUtils.clamp(Math.floor(data[0] ?? 0), 0, LOOSE.length);
+  restoreCheckpoint(point: string, data: number[]): void {
+    const inCloud = point === 'cloud';
+    const n = inCloud ? LOOSE.length : THREE.MathUtils.clamp(Math.floor(data[0] ?? 0), 0, LOOSE.length);
     this.world.restore(n);
     const { child, cygnet } = this.cast;
     child.decks = cygnet.decks = this.decks();
     this.limit = this.reachable();
-    const level = n < LOOSE.length ? LOOSE[n] - 1 : LOOSE[LOOSE.length - 1];
+    const level = inCloud ? LOOP.onward : n < LOOSE.length ? LOOSE[n] - 1 : LOOSE[LOOSE.length - 1];
     let at = 0;
     this.stops.forEach((s, i) => { if (s.level <= level) at = i; });
     const s = this.stops[at];
@@ -458,6 +460,19 @@ export class StairsChapter implements Chapter {
     this.birdStop = Math.max(0, at - 1);
     this.stop = at;
     this.limit = n < LOOSE.length ? at : this.reachable();
+    if (inCloud) {
+      // Past the loop, on the landing its way on leaves from, the trick done with and the bird going on ahead.
+      this.looped = true;
+      this.birdLed = true;
+      this.trickGone = 1;
+      this.world.bank.clear();
+      this.now = Math.max(this.now, REVEAL + 2);
+      this.revealFrom = 0;
+      this.birdStop = this.birdReached = at;
+      this.limit = this.reachable();
+      this.to('follow');
+      return;
+    }
     this.to(n < LOOSE.length ? 'waiting' : 'climb');
   }
 
@@ -1040,7 +1055,7 @@ export class StairsChapter implements Chapter {
           boat.mooring = null;
           boat.grounded = false;
           boat.canGround = false;
-          boat.speedLimit = tuning.sail.topSpeed * 0.7;
+          boat.speedLimit = tuning.stairs.sailSpeed;
           this.leg = 0;
           boat.steerFor = CLOUD_ROUTE[0];
           this.to('sail');
