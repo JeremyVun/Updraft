@@ -3,9 +3,17 @@
 Design: [design.md](design.md). Everything is built in the worktree `/Users/jeremy/projects/updraft-birches` on branch
 `birches-uplift`. Nothing merges to `main` without Jeremy's approval.
 
+## Worktrees and ports
+
+Sequential phases build in `/Users/jeremy/projects/updraft-birches` (branch `birches-uplift`, dev server port 5231).
+Phases running alongside get their own worktree branched from `birches-uplift`, merged back by the orchestrator
+when done: 3a in `/Users/jeremy/projects/updraft-birches-squirrel` (port 5232), 3c in
+`/Users/jeremy/projects/updraft-birches-echo` (port 5233). Each worktree has its own `node_modules` (`npm ci`).
+Point the tools at a server with `BASE=http://127.0.0.1:<port>/`.
+
 ## Every brief includes
 
-- Name the model (given per phase). Read `AGENTS.md`, `docs/journey.md`, design.md and this phase, then the files
+- Every agent is the latest Opus. Read `AGENTS.md`, `docs/journey.md`, design.md and this phase, then the files
   the phase owns.
 - Run `coord note "<intent>"` first. Never `git stash`. Never restore or overwrite a file wholesale.
 - Run builds, checks and captures in the foreground, splitting anything over the 10-minute tool limit into pieces
@@ -46,7 +54,7 @@ playthrough).
   mid-`toStairs`, the stairs landing under the deck, and the view north from the meadow's far shore. A save made at a
   birches checkpoint and at `toStairs` before the change resumes correctly after it.
 
-### 2. Music. Sonnet. Done: ☐ (after 1; may run alongside 3)
+### 2. Music. Opus. Done: ☐ (after 1; may run alongside 3)
 
 Owns `assets/music/red_door.ogg` (a copy of "The Red Door Opens"; leave every other file in `assets/music`
 untouched), `audio/music-loading.ts`, the recorded-score and sound-state wiring for the birches and stairs tracks,
@@ -141,7 +149,7 @@ Run against `npm run build:qa` then `npm run preview:qa`.
 - Time on the island with an engaged player: 3½–4½ min. Report the measurement.
 - Sound in the real game: `village-music-browser-check.mjs` and a listen-render of the room and crossing.
 
-### 7. Docs and close. Sonnet. Done: ☐
+### 7. Docs and close. Opus. Done: ☐
 
 Rewrite chapters.md "The birches" for the room as built, with the squirrel's files, knobs and checks. Fix the
 journey.md one-liner for the birches, the audio contract and `docs/stairs.md` where phase 2 didn't, and the roadmap
