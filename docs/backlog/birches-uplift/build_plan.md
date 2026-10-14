@@ -77,7 +77,7 @@ sound line in `docs/stairs.md`, and the music checks (`village-music-check.mjs`,
   the white with `music-transition-audit` (or `stairs-audio-proposal.mjs`) and report: Red Door's end or fade
   time, the length of the quiet gap, `birches.ogg`'s start, and its fade in the white.
 
-### 3a. The squirrel's look. Opus (visual). Done: ☐ (after 1; may run alongside 2)
+### 3a. The squirrel's look. Opus (visual). Done: ☑ (after 1; may run alongside 2)
 
 Owns `src/creatures/squirrel.ts`, `src/creatures/squirrel/` (`body`, `shader`, `pose`), `src/story/squirrel-yard.ts`
 with its stage hook (as `cat-yard.ts` is wired), and `tools/squirrel-check.mjs`.
@@ -94,6 +94,14 @@ with its stage hook (as `cat-yard.ts` is wired), and `tools/squirrel-check.mjs`.
   and 1440×900 landscape. In the round frames (about 14–17 m), the squirrel's sitting-up silhouette is at least
   about 28 px tall in portrait. Close stills for the face, ear tufts and tail. The orchestrator reviews them, then
   shares them with Jeremy (opened in Preview) and carries on unless he objects.
+- **Built:** one skinned mesh (31 bones, an 8-link tail) with fur shells, shaded with `ATMO_GLSL` like the cat; a
+  held stance per action in `pose.ts` (`STANCES`), eased into with breath, blinks, ear flicks and snap glances; the
+  seam as above, `follow` a placeholder glide in the gait's shape; `tuning.squirrel`; a QA yard out on the stage's
+  sea (litter, heap, log, birch and limb); `tools/squirrel-check.mjs` (poses with contact numbers, close stills, round
+  1's frame in the birches). Measured at 1.7×: sitting 0.34 m tall; at 15 m it is 28 px in landscape and 15 px in
+  portrait (the game's 62° portrait lens), short of the 28 px mirror. The child's face stands 2.1 m and the cygnet's
+  eye 0.8 m above the ground, so at 1.7× it is a third of the cygnet and the size of one litter leaf; 2.3× gives
+  38 / 21 px. The scale (`tuning.squirrel.scale`) and the portrait round frames are for phase 4 to settle.
 
 ### 3b. The squirrel's motion and voice. Opus. Done: ☐ (after 3a)
 

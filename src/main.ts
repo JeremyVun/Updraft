@@ -71,6 +71,7 @@ import { Carry } from './companion/carry';
 import { Probe } from './companion/probe';
 import { Cygnet } from './creatures/cygnet';
 import { Cat } from './creatures/cat';
+import { Squirrel } from './creatures/squirrel';
 import { CatVoice } from './creatures/cat/voice';
 import { screenPan } from './creatures/motion';
 import { SwanFlock } from './creatures/flock';
@@ -397,6 +398,8 @@ cygnet.mount = child;
 const cat = new Cat();
 cat.objects.forEach((o) => { scene.add(o); o.traverse((part) => part.layers.enable(REFLECTION_LAYER)); });
 const catVoice = new CatVoice();
+const squirrel = new Squirrel();
+squirrel.objects.forEach((o) => scene.add(o));
 const carry = new Carry(child, cygnet);
 const foley = new Foley();
 const worldFoley = new WorldFoley(foley, rig.camera);
@@ -438,7 +441,7 @@ const cygnetAhead: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
 const handsAt = new THREE.Vector3();
 const creatureAt = new THREE.Vector3();
 const emberAt = new THREE.Vector3();
-const story = new Journey({ child, plane: glider, boat, wind, lines, input, life, tree, drawing, cottage, sealife, cygnet, flock, swanFeather, cat, carry, embers, birches, stairs: cloudStairs, sleeping, littleBoats, skyMirror, village, nearby: nearbyCreature,
+const story = new Journey({ child, plane: glider, boat, wind, lines, input, life, tree, drawing, cottage, sealife, cygnet, flock, swanFeather, cat, squirrel, carry, embers, birches, stairs: cloudStairs, sleeping, littleBoats, skyMirror, village, nearby: nearbyCreature,
   knock: (kind, at, strength) => { if (sound.running) worldFoley.knock(kind, at, strength); } });
 // The bell's bronze must be drawn during boot, before the chapter creates its story controller.
 village.prepareBell({ child, wind, lines, input });
@@ -858,6 +861,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   }
   cygnet.heard.length = 0;
   cat.update(dt);
+  squirrel.update(dt, time);
   catVoice.setOutput(sound.output);
   if (cat.heard.length) {
     const catPan = screenPan(rig.camera, cat.position);
@@ -1394,7 +1398,7 @@ function frame(now: number): void {
 }
 
 if (QA && params.shot) {
-  window.__game = { params, tuning, quality, post, wind, input, rig, renderer, scene, glider, lines, swirl, sound, child, story, creatures, hillCreatures, water, skyMirror, terrain, footprints, cottage, petals, grass, littleBoats, sealife, crossingLinen, cygnet, flock, cat, carry, probe, washing, rotaryWashing, rotaryRig, curtains: CURTAINS, doorway, doorwayView, doorExit: DOOR_EXIT, washingPassage, washingInvitation, shoreHaul, shorePulley, shorePinwheel: SHORE_PINWHEEL, scarfInvitation, kite, departureKites, pinwheels, village, wood, stormWeather, sleeping, embers, emberInvitation, fireflies, boat, life, piano, windBough, birches, pond, cloudStairs, harebells, meadowEchoes, swanFeather };
+  window.__game = { params, tuning, quality, post, wind, input, rig, renderer, scene, glider, lines, swirl, sound, child, story, creatures, hillCreatures, water, skyMirror, terrain, footprints, cottage, petals, grass, littleBoats, sealife, crossingLinen, cygnet, flock, cat, squirrel, carry, probe, washing, rotaryWashing, rotaryRig, curtains: CURTAINS, doorway, doorwayView, doorExit: DOOR_EXIT, washingPassage, washingInvitation, shoreHaul, shorePulley, shorePinwheel: SHORE_PINWHEEL, scarfInvitation, kite, departureKites, pinwheels, village, wood, stormWeather, sleeping, embers, emberInvitation, fireflies, boat, life, piano, windBough, birches, pond, cloudStairs, harebells, meadowEchoes, swanFeather };
 }
 
 const fogLookup = new FogLookup(renderer);
