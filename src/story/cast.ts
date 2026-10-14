@@ -185,6 +185,8 @@ export interface Chapter {
   readonly coax?: Coax | null;
   /** A gust the story blows by itself, drawn and heard as the player's wind is. */
   readonly gustFront?: GustFront | null;
+  /** Wind streaks nearer the camera than the first distance fade out, gone by the second; unset draws them all. */
+  readonly windLinesNearFade?: readonly [number, number] | null;
   /** True while the story is waiting for the player to put wind under the cygnet: there a plain gust counts as lift. */
   readonly invitesFlight?: boolean;
   /** Sensitivity for deliberate circling; other chapters retain the normal wind response. */

@@ -3096,6 +3096,8 @@ export const tuning = {
     fogNear: 2.5,
     fogFar: 11,
     fogExtinction: 0.12,
+    /** How far off the sea at the horizon lies, as far as the ground fog over it goes, metres. */
+    fogHorizon: 2000,
     /** Light travels from the summit across the winter turf before the sky brightens. */
     dawnStrength: 1.2,
     dawnLaneWidth: 5.0,
@@ -3242,6 +3244,12 @@ export const tuning = {
     crestEncouragement: 0.09,
     /** Seconds each glance back down the hill or up at the window lasts. */
     glanceFor: 1.6,
+    /** How far the climb's lens keeps from the middle of the bed, so leaving it never skims the sleeper. */
+    lensBedClear: 7,
+    /** In a narrow frame, how far the saddle's lens leans toward the lamp past the bird, as a share of its reach. */
+    fogNarrowLean: 0.4,
+    /** On the climb, wind streaks fade out between these distances from the lens, metres. */
+    lineNearFade: [0.8, 2.5] as const,
     /** The frozen trickle: how far short of it the bird hops, and the hop. */
     trickleReach: 0.45,
     trickleHopFor: 0.45,

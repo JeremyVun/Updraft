@@ -50,8 +50,8 @@ export class SleepingWeather {
       uniforms:{...atmo.uniforms,uSleepVeil:this.veil,uPart:this.part},transparent:true,depthWrite:false,depthTest:false,
       vertexShader:`out vec2 vUv;void main(){vUv=uv;gl_Position=vec4(position.xy,0.0,1.0);}`,
       fragmentShader:`${ATMO_GLSL} uniform float uSleepVeil,uPart;in vec2 vUv;
-        void main(){vec2 uv=vUv;float side=sign(uv.x-.5);
-          uv.x-=side*uPart*.38;uv+=vec2(uTime*.009,uTime*.004);
+        void main(){vec2 uv=vUv;
+          uv.x-=clamp((uv.x-.5)*8.0,-1.0,1.0)*uPart*.38;uv+=vec2(uTime*.009,uTime*.004);
           float n=fbm(uv*vec2(4.0,3.0))*.65+fbm(uv*9.0)*.35;
           float rim=smoothstep(.12,.52,length((vUv-.5)*vec2(1.15,1.0)));
           float bankEdge=abs(vUv.x-.5+.035*sin(vUv.y*9.0+uTime*.12)+.025*sin(vUv.y*23.0-uTime*.08));

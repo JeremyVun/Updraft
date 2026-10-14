@@ -363,6 +363,7 @@ export class SleepingTrail {
     c.glimpse+=(this.glimpse-c.glimpse)*(1-Math.exp(-dt/t.mistGlimpseEase));
     c.lost+=(this.windowLost-c.lost)*(1-Math.exp(-dt/t.mistWindowEase));
     WINDOW_SEEN.value=1-c.lost;
+    atmo.uniforms.uSleepLost.value=c.lost;
     atmo.uniforms.uSleepMist.value.set(MIST_AT.x,MIST_AT.y+1.1-emerged*3,MIST_AT.z,
       (1-this.thaw.value)*(1-emerged*.94)*(1-c.glimpse*t.mistGlimpseThins)*(1+c.lost*(t.mistBankCloses-1)));
     atmo.uniforms.uSleepMistPart.value=this.clear.value;

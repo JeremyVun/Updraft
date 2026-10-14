@@ -92,14 +92,15 @@ const key = (at: number, on: number, bearing: number, reach: number, rise: numbe
  */
 const CLIMB_LENS: readonly LensKey[] = [
   key(0, 0, 349, 7.1, 2.4, 0.35, 6),
-  key(1, 0, 330, 7, 1.8, 0.3, 6),
+  key(1, 0, 285, 7, 1.8, 0.3, 6),
   key(2, 0, 292, 7, 1.6, 0.3, 6),
   key(4, 0, 292, 7, 1.6, 0.3, 6),
   key(5, 1, 345, 6.8, 0.8, 0.4, 'drift'),
   key(SLEEP_DRIFT_STOP, -0.8, 25, 5.2, 1.2, 0.4, 'drift'),
   key(SLEEP_DRIFT_STOP, 0.4, 25, 5.2, 1.2, 0.4, 'drift'),
-  key(SLEEP_DRIFT_STOP, 2.3, 15, 5, 2.4, 0.2, 'drift', 2),
-  key(SLEEP_DRIFT_STOP + 1, 0, 60, 7, 2.6, 0, 'lamp'),
+  key(SLEEP_DRIFT_STOP, 2.3, 35, 5, 2.4, 0.2, 'drift', 2),
+  key(SLEEP_DRIFT_STOP + 1, 0, 60, 7, 2.6, 0.2, 'lamp'),
+  key(SLEEP_STEP_STOP - 1, -0.7, 88, 7.5, 2.2, 0.55, 'lamp'),
   key(SLEEP_STEP_STOP - 1, 0, 95, 7.5, 2.2, 0.3, 'lamp'),
   key(SLEEP_STEP_STOP - 1, 1.3, 95, 7.5, 2, 0.3, 'lamp'),
   key(SLEEP_STEP_STOP, -0.75, 115, 6, 0.2, 0.2, 3.6),
@@ -123,6 +124,9 @@ const LENS_AT = CLIMB_LENS.map(k => ROUTE_AT[k.at] + k.on);
 const FOG_TURNED = key(SLEEP_FOG_STOP, 0, 95, 6, 1.7, 0.3, 'window', 2);
 /** Seconds ahead of the walking bird the climb's lens is laid out for, about as far as the rig's easing trails it. */
 const LENS_LEAD = 1;
+const TO_THE_LAMP: readonly LensLook[] = ['lamp'];
+/** The width over height of a phone held upright, where a frame is as narrow as it gets. */
+const PHONE_ASPECT = 0.46;
 const LENS_PLACES = { drift: SNOW_AT.clone().setY(SNOW_AT.y + 0.8), lamp: LAMP, window: WINDOW, fog: MIST_AT.clone().setY(MIST_AT.y + 1) };
 
 /** How far up the route the point on it nearest to (x, z) lies. */
@@ -301,6 +305,8 @@ export class SleepingChapter implements Chapter {
   private readonly lensPoint = new THREE.Vector3();
   private readonly turnedLook = new THREE.Vector3();
   private readonly turnedKeys: TurnedKey[] = [0, 1].map(() => ({ ...FOG_TURNED, turn: 0 }));
+  /** How narrow the last frame was: 0 square or wider, 1 a phone held upright. */
+  private narrow = 0;
   private readonly air = { x: 0, z: 0, energy: 0, lift: 0 };
   private readonly coaxing = { at: new THREE.Vector3(), urgency: 0 };
   private readonly laneFrom = new THREE.Vector2(WINDOW.x, WINDOW.z);
@@ -382,6 +388,15 @@ export class SleepingChapter implements Chapter {
   }
 
   get twirlGain(): number { return this.invitesFlight ? T.twirlGain : 1; }
+
+  afterCamera(camera: THREE.PerspectiveCamera): void {
+    this.narrow = THREE.MathUtils.clamp((1 - camera.aspect) / (1 - PHONE_ASPECT), 0, 1);
+  }
+
+  /** Down at the bird's eye on the hill, a streak passing the lens would cross the frame as a band. */
+  get windLinesNearFade(): readonly [number, number] | null {
+    return ON_THE_HILL.includes(this.beat) ? T.lineNearFade : null;
+  }
 
   get windInvitation(): THREE.Vector3 | null {
     if (this.beat === 'snow' && this.stage === 'ready') return this.cast.sleeping.trail.snowTarget;
@@ -855,7 +870,7 @@ export class SleepingChapter implements Chapter {
     if (this.trickle < 2 && this.alongRoute() > TRICKLE_AT - T.trickleReach) { this.overTheTrickle(); return; }
     if (Math.hypot(k.position.x-destination.x,k.position.z-destination.z)>T.routeReach) return;
     if (this.routeIndex === SLEEP_DRIFT_STOP && !this.snowDone) { this.startEncounter('snow'); return; }
-    if (this.routeIndex === SLEEP_DRIFT_STOP + 1 && this.glances < 1) { this.glance(LAMP); this.nextWaypoint(); return; }
+    if (this.routeIndex === SLEEP_STEP_STOP - 1 && this.glances < 1) { this.glance(LAMP); this.nextWaypoint(); return; }
     if (this.routeIndex === SLEEP_STEP_STOP && !this.stepDone) { this.startStep(); return; }
     if (this.routeIndex === SLEEP_FOG_STOP && !this.mistDone) { this.startEncounter('mist'); return; }
     if (this.routeIndex === SLEEP_CREST_STOP && this.beat === 'climb') { this.nextWaypoint(); this.to('crest'); return; }
@@ -1473,13 +1488,15 @@ export class SleepingChapter implements Chapter {
 
   /** One key of the climb's lens, the saddle's turned round as far as the bird has turned. */
   private lensKey(j: number): TurnedKey {
-    const k = CLIMB_LENS[j], turn = k.at === SLEEP_FOG_STOP ? this.fogTurn : 0, f = FOG_TURNED;
+    const k = CLIMB_LENS[j], fog = k.at === SLEEP_FOG_STOP, turn = fog ? this.fogTurn : 0, f = FOG_TURNED;
     const out = this.turnedKeys[j % 2];
     out.bearing = k.bearing + (((f.bearing - k.bearing + 540) % 360) - 180) * turn;
     out.reach = lerp(k.reach, f.reach, turn);
     out.rise = lerp(k.rise, f.rise, turn);
     out.lean = lerp(k.lean, f.lean, turn);
     out.look = k.look; out.turn = turn;
+    // A narrow frame leaves the lamp past the bird off its edge: lean toward it there, until the lens comes round.
+    if (fog && this.narrow > 0) { out.lean += T.fogNarrowLean * this.narrow * (1 - turn); out.look = TO_THE_LAMP; }
     return out;
   }
 
@@ -1510,7 +1527,10 @@ export class SleepingChapter implements Chapter {
     this.roomFocus.copy(s.target);
     const bird = this.cast.cygnet.position;
     this.bedFocus.set(bird.x, Math.max(heightAt(bird.x, bird.z), 0) + 0.6, bird.z);
-    const ex = k.x + Math.sin(bearing) * reach, ez = k.z + Math.cos(bearing) * reach;
+    let ex = k.x + Math.sin(bearing) * reach, ez = k.z + Math.cos(bearing) * reach;
+    const fromBed = Math.hypot(ex - BED.x, ez - BED.z), clear = T.lensBedClear;
+    const out = (fromBed + clear + Math.hypot(fromBed - clear, 1)) / 2 / Math.max(fromBed, 1e-3);
+    ex = BED.x + (ex - BED.x) * out; ez = BED.z + (ez - BED.z) * out;
     // A metre over its own ground at least, or the rig takes the slope for something in the way and pulls in.
     s.eye = this.perch.set(ex, Math.max(ground + lerp(a.rise, b.rise, w), heightAt(ex, ez) + 1), ez);
     this.subjects.margin = 0.8;

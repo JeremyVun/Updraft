@@ -57,6 +57,8 @@ try {
         featherHeld:!!g.sleeping.feather.heldBy,
         // The nearest wind streak to the lens, so a band across the frame can be traced to what drew it.
         nearLine:g.lines.lines.reduce((near,l)=>Math.min(near,...l.points.map(p=>p.distanceTo(g.rig.camera.position))),Infinity),
+        // The nearest streak drawn at half its opacity or more, once the climb's near fade has taken its share.
+        nearLineSeen:g.lines.lines.reduce((near,l)=>{const f=c.windLinesNearFade;for(const p of l.points){const d=p.distanceTo(g.rig.camera.position),u=f?Math.min(1,Math.max(0,(d-f[0])/(f[1]-f[0]))):1;if(u*u*(3-2*u)>=.5)near=Math.min(near,d);}return near;},Infinity),
         snowDepth:g.sleeping.trail.snowDepthAt(k.position.x,k.position.z)});
       last=now;requestAnimationFrame(sample);
     }sample();

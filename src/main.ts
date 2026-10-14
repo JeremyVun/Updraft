@@ -988,6 +988,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   homePetals();
   petals.update(dt, input.present && input.charge > 0 ? input.updraftAt : null, input.charge);
   const pointerWorld = input.present ? input.world : null;
+  lines.nearFade = story.current.windLinesNearFade ?? null;
   lines.update(dt, pointerWorld, input.gust, input.present && input.charge > 0 ? input.updraftAt : null, input.charge);
   const gustFront = story.current.gustFront;
   if (gustFront) lines.blowFront(dt, gustFront);
