@@ -647,7 +647,7 @@ export class Foley {
     const now = this.out?.ctx.currentTime;
     if (now === undefined || now - this.lastStep < 0.045) return;
     this.lastStep = now;
-    const at = now + 0.005, v = (0.6 + Math.random() * 0.4) * weight * tuning.sleeping.climbFoley;
+    const at = now + 0.005, v = (0.6 + Math.random() * 0.4) * weight * tuning.sleeping.climbFoley * 10 ** (tuning.audio.cygnetStepDb / 20);
     this.puff({ at, len: 0.1 + 0.05 * depth, level: 0.06 * v, pan, type: 'lowpass', from: 650 - 250 * depth, to: 220, attack: 0.012 });
     for (let i = 0, t = at + 0.004, n = 4 - Math.round(2 * depth); i < n; i++, t += 0.008 + Math.random() * 0.012) {
       this.puff({ at: t, len: 0.014 + Math.random() * 0.01, level: 0.03 * v * (1 - 0.5 * depth), pan, type: 'bandpass', from: 1900 + Math.random() * 1500, q: 1.4, attack: 0.002 });
