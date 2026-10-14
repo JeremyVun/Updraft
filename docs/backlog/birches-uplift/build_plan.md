@@ -23,7 +23,7 @@ Design: [design.md](design.md). Everything is built in the worktree `/Users/jere
 
 Owns `world/geography.ts`, the birches entries of `world/heightfield.ts` (`ISLES.birches`, `BIRCH_RISE`,
 `BIRCH_HOLLOW`, `birchesHeight` and `hf_birches`), `world/birches.ts`, `world/birch-scarf.ts` (`ROWS` and the
-points), `fx/leaves.ts` (the litter grid's shape), `story/birches.ts`, the `toBirches`/`toStairs` routes in
+points), `fx/leaves.ts` (the litter and loose-leaf grids' shapes), `story/birches.ts`, the `toBirches`/`toStairs` routes in
 `story/journey.ts`, wherever saved coordinates are migrated by `GEOGRAPHY_VERSION`, and any tool with birches
 coordinates baked in (`tools/scarf-check.mjs`, `scarf-geometry-check.mjs`, `birches-drift-check.mjs`, the
 playthrough).
@@ -36,8 +36,9 @@ playthrough).
   and a zero shift reproduce today's world exactly. Check with stills, then commit.
 - Step 2: open gaps A, B and C at cut lines where no feature straddles the cut. Lengthen the dome and the hollow,
   narrow `rx` until the tree count is back to the baseline (±5%), reshape the litter grid to keep today's cell size,
-  and raise `ROWS` in proportion to the scarf's new length.
-- Step 3: choose the shift (mostly west) to meet the crossing and clearance constraints in design.md.
+  grow the loose-leaf grid along one side with the walk, and raise `ROWS` in proportion to the scarf's new length.
+- Step 3: choose the shift (mostly west) to meet the crossing and clearance constraints in design.md. Never change
+  boat speed or crossing pace to hit the time; only distance.
 - **Seam:** later phases author positions through the same mapping, in band-local terms, never as new absolute
   numbers. The empty gaps are where phases 4 and 5 put rounds 1–3.
 - **Gate:** typecheck and build. Sailing times and tree count re-measured and recorded beside the baseline. `scarf-check` (all modes) and `birches-drift-check` pass, and the tangles' close stills match today's.

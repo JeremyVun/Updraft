@@ -44,6 +44,20 @@ On the island's length (2026-10-15):
 > new content so it doesn't feel too cramped. It might cause a lot of work figuring out how to make the scarf
 > longer, and there may be perf implications to having too much drawn on screen.. What do you think? any ideas?
 
+> Don't worry about measuring performance as part of this session. I'll do the profiling in another session. Just
+> use common sense and try not to do silly things that would impact performance. What do you mean by inserting
+> gaps? I do like the look of how the birches island is set up already as sort of this one corridor instead of zig
+> zag paths everywhere like in the other chapters. But that may only work for the current level design i guess...
+
+> ok, so when you said you weren't going to stretch it, you didn't mean you weren't going to make it longer? What
+> you're saying about the cuts and making the island longer makes sense to me. Ok, im giving you creative
+> ownership. try to preserve or even uplift the aesthetics of the island with the swirling leaves and the golden
+> light etc.
+>
+> And in terms of the crossing from the birches island to the stairs island, that needs to be lengthened a bit as
+> well i think, especially since you're lengthening the birches island, so i assume you'll need to figure out how to
+> move the birches island to increase the distance of the crossing (the boat speed must be kept the same).
+
 ## What it is
 
 The birches become the last carefree afternoon of the journey: one more romp in the leaves before bedtime on the
@@ -167,10 +181,21 @@ the camera, with 420 simulated leaves each, so tree count is the cost that grows
 narrows (`rx` 60 → about 48–50) so the tree count stays where it is today; the flanks it loses are ones the camera,
 low under the canopy and in thick haze, never shows. The litter field is a 256² grid over the island's box, so a
 longer box would coarsen the leaf floor; it becomes 256 × ~320 along the walk (a trivial GPU pass) to keep today's
-cell size. `LEAF_COUNT` stays as it is, because the loose leaves already concentrate near the walk. The scarf's
+cell size. The loose leaves (`LEAF_COUNT`, a 192² GPU particle pass) concentrate near the walk, so a longer walk
+would thin them. Their grid grows along one side in proportion to the walk (192 × ~260), keeping as many swirling
+leaves per metre of corridor as today. That is a small GPU cost spent where the room's look lives. The scarf's
 extra rows are the one real CPU increase. Jeremy profiles in another session (2026-10-15: "Don't worry about
 measuring performance as part of this session... Just use common sense and try not to do silly things that would
 impact performance"), so this build runs no benchmarks.
+
+**The look is kept, and lifted where it can be.** Jeremy gave creative ownership on the condition that the island's
+look (the swirling leaves, the golden light) is preserved or uplifted. The new stretches are more of the same
+corridor and get the same gold crowns, the same floor and the same haze. The afternoon's light ages across the walk
+over the same range as today (`dusk` 0.58 → 0.70 from landing to berth, already proportional to the walk), so the
+far beach and the departure look as they do now. The added spectacle is all leaves: the squirrel's bursts, the
+heaps the player blows apart, and the leap's explosion of gold. Each round's frame is composed low and toward the
+light, so leaves thrown up are lit through against the sun where the room's geometry allows. The storyboard phase
+compares every new frame with today's stills of the room and keeps nothing that looks flatter.
 
 **The shift.** The grown island moves by a new `BIRCHES_SHIFT` in `world/geography.ts` (revision 12,
 `GEOGRAPHY_VERSION` bumped, saved coordinates migrated the way the other shifts migrate them), mostly west. Every
@@ -181,8 +206,9 @@ z −980, the stairs at (100, −1236), the drowned village's south tip near (�
 on both sides, because both neighbouring ellipses narrow away from x ≈ 0.
 
 Constraints that choose the shift:
-- `toStairs` lasts about **50 s** of sailing at ordinary speed with no input (measure the current crossing first and
-  record it here).
+- `toStairs` is lengthened by distance alone: **boat speed stays exactly as it is** (Jeremy, 2026-10-15). It should
+  last about **50 s** of sailing with no input; measure the current crossing first and record it here. The island
+  grows north toward the stairs, so the shift has to cover that growth as well as add the extra sea.
 - `toBirches` stays within ±15% of its current sailing time.
 - The island stays clear of the meadow, the stairs' cloud deck and bank, and the drowned village's mist. Nothing
   becomes visible from a neighbouring room that is hidden now ("the player never sees the next island"), and the
