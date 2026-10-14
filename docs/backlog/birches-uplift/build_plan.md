@@ -29,9 +29,9 @@ coordinates baked in (`tools/scarf-check.mjs`, `scarf-geometry-check.mjs`, `birc
 playthrough).
 
 - First, measure and record in design.md: the current `toStairs` and `toBirches` sailing times with no input (from
-  `?chapter=toStairs` and `?chapter=toBirches` in the QA preview), the tree count, and one baseline frame-time run on
-  the birches walk (`node tools/perf.mjs frames 20 chapter=birches`, with no other GPU process busy). Jeremy raised
-  performance, so a before/after comparison is wanted here, once each.
+  `?chapter=toStairs` and `?chapter=toBirches` in the QA preview), and the tree count. No performance benchmarks in
+  this build: Jeremy profiles in another session (2026-10-15). Use common sense instead (design.md "Keeping the cost
+  flat").
 - Step 1, refactor only: route every birches literal through one mapping, the bands and the shift, so that zero gaps
   and a zero shift reproduce today's world exactly. Check with stills, then commit.
 - Step 2: open gaps A, B and C at cut lines where no feature straddles the cut. Lengthen the dome and the hollow,
@@ -40,8 +40,7 @@ playthrough).
 - Step 3: choose the shift (mostly west) to meet the crossing and clearance constraints in design.md.
 - **Seam:** later phases author positions through the same mapping, in band-local terms, never as new absolute
   numbers. The empty gaps are where phases 4 and 5 put rounds 1–3.
-- **Gate:** typecheck and build. Sailing times, tree count and the frame-time run re-measured and recorded beside
-  the baseline. `scarf-check` (all modes) and `birches-drift-check` pass, and the tangles' close stills match today's.
+- **Gate:** typecheck and build. Sailing times and tree count re-measured and recorded beside the baseline. `scarf-check` (all modes) and `birches-drift-check` pass, and the tangles' close stills match today's.
   Before/after stills: the arrival, each gap from the walk, the crest, the hollow, the berth and departure,
   mid-`toStairs`, the stairs landing under the deck, and the view north from the meadow's far shore. A save made at a
   birches checkpoint and at `toStairs` before the change resumes correctly after it.

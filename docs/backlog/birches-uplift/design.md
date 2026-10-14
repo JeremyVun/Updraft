@@ -75,7 +75,7 @@ The walk, its heaps and tangles in order. The z values are today's; "gap" rows a
 | −1076 | **round 1** at heap 0 by the fallen log (`BIRCH_PILES[0]`) | new |
 | gap A, ~15 m | open wood between the log and tangle 1, so round 1 and tangle 1 each have their own frame | new |
 | −1081 / −1088 | tangle 1, lift a loop off a fork | as now |
-| gap B, ~20 m | **round 2**, a glade on the rise's lower slope with two new heaps | new |
+| gap B, ~20 m | **round 2**, on the rise's lower slope, two new heaps at the corridor's sides | new |
 | −1113 / −1118 | heap 1 at the swing tree's foot (free play, as now) and the swing (optional, once) | as now |
 | −1132 / −1139 | tangle 2, circle the coils up | as now |
 | gap C, ~20 m, in the hollow | **round 3**, heap 2 plus two new heaps in a longer hollow; then **the leap** | new |
@@ -94,7 +94,7 @@ The walk, its heaps and tangles in order. The z values are today's; "gap" rows a
 2. **Tangle 1.** The squirrel sits on the fork above the loop, watching the work (background, never in the way). When
    the loop lifts free it runs off along the scarf through the canopy toward the clearing. The wool is its road, and
    the room's red line leads the eye on.
-3. **Round 2 (two heaps).** It drops off a trunk into one of two heaps either side of the ride in the glade below
+3. **Round 2 (two heaps).** It drops off a trunk into one of two heaps either side of the ride on the slope below
    the rise, out of the swing's frame.
    Now there is a choice. Only the right heap twitches; the tail shows less often. A wrong heap bursts into gold
    harmlessly (it's fun on its own), and the cygnet may rummage one and come up with nothing but a leaf on its head.
@@ -137,6 +137,12 @@ added to today's 145 m walk would put eight stops in it, one every ~18 m, while 
 17–26 m ahead, so every frame would hold the next stop as well. The island therefore grows by about 55 m (to a walk
 of about 200 m, a stop every ~25 m) and moves.
 
+**One corridor stays one corridor.** Jeremy (2026-10-15): "I do like the look of how the birches island is set up
+already as sort of this one corridor instead of zig zag paths everywhere like in the other chapters." The walk stays
+a single open ride from beach to beach. The gaps make the corridor longer, never branch it. Every round happens in
+the corridor: its heaps sit at the ride's edges against trunks and roots, where heaps form, never down side paths
+or in clearings off the ride.
+
 **Growing by inserting gaps, not by scaling.** The island is cut into bands across the walk at three lines where no
 authored feature straddles the cut, and the bands are pushed apart: gap A ~15 m, B ~20 m, C ~20 m (the table above).
 Everything inside a band moves rigidly: a tangle with its tree, snag and perches, the swing tree and its clearing,
@@ -162,7 +168,9 @@ narrows (`rx` 60 → about 48–50) so the tree count stays where it is today; t
 low under the canopy and in thick haze, never shows. The litter field is a 256² grid over the island's box, so a
 longer box would coarsen the leaf floor; it becomes 256 × ~320 along the walk (a trivial GPU pass) to keep today's
 cell size. `LEAF_COUNT` stays as it is, because the loose leaves already concentrate near the walk. The scarf's
-extra rows are the one real CPU increase, measured in phase 1.
+extra rows are the one real CPU increase. Jeremy profiles in another session (2026-10-15: "Don't worry about
+measuring performance as part of this session... Just use common sense and try not to do silly things that would
+impact performance"), so this build runs no benchmarks.
 
 **The shift.** The grown island moves by a new `BIRCHES_SHIFT` in `world/geography.ts` (revision 12,
 `GEOGRAPHY_VERSION` bumped, saved coordinates migrated the way the other shifts migrate them), mostly west. Every
@@ -206,7 +214,7 @@ held to the bar of the owl and the clouds.
 The wind never puts leaves back: a burst heap slumps lower and wider, and depth is carried downwind to wherever the
 air ran out (`LitterField`). So the squirrel hides **where the leaves are now**, not where they were authored.
 
-- Each round has an area and a set of authored heaps. `BIRCH_PILES` gains four: two for round 2 in gap B's glade and
+- Each round has an area and a set of authored heaps. `BIRCH_PILES` gains four: two for round 2 in gap B and
   two for round 3 in the hollow. Each is banked against something, a trunk, root or stone, as every heap here is.
   Exact positions are settled in the storyboard phase.
 - When the squirrel picks a hide, one small asynchronous readback of the litter field over the round's area (the
