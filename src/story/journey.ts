@@ -1,5 +1,5 @@
 import { SkyMirrorChapter } from './sky-mirror';
-import { MIRROR_LANDING, MIRROR_BERTH, MIRROR_LIGHT_PATH, MIRROR_SAIL_OUT } from '../world/sky-mirror-layout';
+import { MIRROR_LANDING, MIRROR_BERTH, MIRROR_LIGHT_PATH, MIRROR_SAIL_OUT, MIRROR_STAR_MASK } from '../world/sky-mirror-layout';
 import { LittleBoatsChapter } from './little-boats';
 import { BOATS_LANDING } from '../world/little-boats-layout';
 import * as THREE from 'three';
@@ -198,11 +198,12 @@ export class Journey {
       this.land(BIRCHES_LANDING.x, BIRCHES_LANDING.y + 2, BIRCHES_LANDING.x, BIRCHES_LANDING.y - 4);
       this.cast.cygnet.rideIn('satchel');
       this.begin('birches');
-    } else if (choice === 'stairs' || choice === 'clouds') {
+    } else if (choice === 'stairs' || choice === 'clouds' || choice === 'cloud' || choice === 'nest') {
       this.land(STAIRS_LANDING.x + 2, STAIRS_LANDING.y, STAIRS_LANDING.x + 4, STAIRS_LANDING.y - 1);
       this.cast.boat.yaw = Math.PI * 0.5;
       this.cast.cygnet.rideIn('satchel');
       this.begin('stairs');
+      if (choice === 'cloud' || choice === 'nest') this.chapter.restoreCheckpoint?.('cloud', [3]);
     } else if (choice === 'drowned' || choice === 'village') {
       /** The drift into the village begins where the stairs let the boat down through the cloud onto the water. */
       this.sail(DESCENT_END.x, DESCENT_END.y, DESCENT_YAW);
@@ -234,9 +235,11 @@ export class Journey {
       this.cast.cygnet.rideIn('satchel');
       this.begin('toMirror');
       this.chapter.restoreCheckpoint?.('whale-rest', [ROUTES.toMirror.indexOf(WHALE_HOLD), 90]);
-    } else if (choice === 'mirror') {
+    } else if (choice === 'mirror' || choice === 'mirrorEnd') {
       this.land(MIRROR_LANDING.x, MIRROR_LANDING.z, MIRROR_LANDING.x + 2, MIRROR_LANDING.z - 3);
       this.begin('mirror');
+      /** QA: every star already returned, so the constellation, boarding and the sail home follow at once. */
+      if (choice === 'mirrorEnd') this.chapter.restoreCheckpoint?.(`stars4-${MIRROR_STAR_MASK}`, [MIRROR_STAR_MASK, 0]);
     } else if (choice === 'stage') {
       this.land(LANDING.x, mainlandCoastZ(LANDING.x) + 3, LANDING.x + 4, mainlandCoastZ(LANDING.x) - 14);
       this.begin('stage');
@@ -397,7 +400,7 @@ export class Journey {
         return new LittleBoatsChapter(cast);
       case 'toMeadow':
         /** Nothing of the meadow is given away from the water: a grey shape in the haze until the bank is climbed. */
-        return new CrossingChapter(cast, { route: ROUTES.toMeadow, haze: tuning.world.meadowCrossingHaze, season: 0.26, arrivalSpeed: tuning.sail.meadowArrivalSpeed, music: 'boats', hush: .28, arrivalMusic: 'meadow',
+        return new CrossingChapter(cast, { route: ROUTES.toMeadow, haze: tuning.world.meadowCrossingHaze, season: 0.26, music: 'boats', hush: .28, arrivalMusic: 'meadow',
           arrivalView: tuning.crossingCamera.arrivals.meadow });
       case 'meadow':
         return new MeadowChapter(cast);

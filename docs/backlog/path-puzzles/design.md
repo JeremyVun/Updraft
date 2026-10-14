@@ -792,7 +792,8 @@ see a hole in the "fog" so to speak. it looks like a bug. also the lighthouse tu
     0.8 s beat, minor-key dominants (F♯7, A♯) and one theme developed like a film score (sequenced, denied, conducted by
     the fog's distance), at an even level with little of the other rooms' breathing. It sounded like a film's chase,
     not like the game.
-    Built (`proto-drowned-fix-music`, `src/audio/drowned-score.ts`; awaiting Jeremy's listen): five pieces in the
+    Built and since set aside for studies (`src/audio/drowned-score.ts`; the room's music is now the recordings under
+    "The music" below): five pieces in the
     game's own voices (the shared pad, the meadow's piano, its soft sung voice and pluck), one key family (B minor and
     D major, the dark in D minor), a chord every 8 s, and one tune that belongs to the boat, in a lilt of six to a
     four-second bar (long-short, then long). A piece the story leaves plays to its next chord change and the next
@@ -876,7 +877,7 @@ while the old tree's branches filled the foreground. The run check now also rayc
 Already completed during the takeover: silent restoration of the `sail` checkpoint to the designed air-dies
 beat; verification of the music handoff after the 88-second farewell; equivalent ascending `smoothstep`
 expressions in the cat, tree and bell shaders to remove undefined GLSL behaviour. The shader corrections were
-applied before the further approval instruction above. The new music still awaits Jeremy's listening approval.
+applied before the further approval instruction above.
 
 ### Integration playtest — 2026-10-10
 
@@ -1417,10 +1418,14 @@ circles at once, gather speed with weight and keep turning a little when the cir
 rope winds visibly on its drum, and a ratchet clicks and holds her wherever the sails stop (she never sinks back).
 The cat goes first by riding a sail up and leaping onto the cap, which shows that the turning sails are the way up.
 
-**The music** is a few long pieces in the game's own voice following the room's feeling, not a cue per beat (the
-design is under item 35 above). Jeremy on the first study (2026-10-09): "the music sounds a bit... random? I think
-there's not enough structured harmony / melody to it. But it's hard to tell based on an audio clip alone without the
-game playing as well". So every piece has a tune in regular phrases over a clear progression that comes round.
+**The music** (2026-10-15) is two supplied recordings and silence between them: the first 36.9 s of
+`village_approach.ogg` as they come out of the fog among the roofs, nothing through the rescue, the run, the refuge and
+the bell (the bell and the foghorn are its sounds; the becalming tone is gone), then `belfry.ogg` 8–54 s fading in after the
+fourth ring and carrying through the goodbye into the storm's first seconds; the storm and the wood have no music
+beyond a quiet wood drone. Jeremy: "I'm thinking we use the first bit of village_approach.ogg? and then let it be
+silent while they do the challenges", "The bellfry sound can stay, to me that is a sound effect", and "I do think the
+storm and the woods shouldn't have any music." Details and levels: `docs/contracts/audio.md`, Drowned Village.
+The earlier synthesised score (item 35) remains in `drowned-score.ts` for studies.
 
 Jeremy, 2026-10-08, on what the work needs: "yes, you have licence to cut or replace anything you feel doesn't earn
 it's place", and on the camera: "I think it just needs to be framed well for a human is all. The rest of the game does

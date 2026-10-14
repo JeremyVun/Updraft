@@ -91,9 +91,8 @@ The original and repaired screenshots were inspected side by side. Typecheck and
 ## Crossings
 
 Routes are `ROUTES` in `story/journey.ts`. At the ordinary 2.6-unit breeze the hull drives at 4.5 units/s, up to
-5.5 with a following wind. Player gusts move the sail, pennant and heel but cannot change propulsion or leeway.
-The hull uses a separate smoothed reading of the prevailing breeze, retaining weather, steering, scripted shoves
-and encounter speed limits. Routes are sized for
+5.5 with a following wind, from the prevailing breeze alone; the player's wind plays only in the sail. Weather,
+steering, scripted shoves and encounter speed limits shape it. Routes are sized for
 the ordinary breeze: change distance to alter journey time, never throttle or boost sailing speed (Jeremy's ruling).
 Turns, mooring, the storm and the cygnet's swim slow the boat naturally. Targets at the ordinary breeze:
 
@@ -116,11 +115,11 @@ the whale while preserving the final crossing's shape and length.
 The second 2026-10-10 playtest adjustment brings the whale 52 m closer (revision 7), shortening the approach by
 about 12 seconds while retaining the dolphin beats and twelve-second swim. The mist keeps the same reveal order:
 heard, blow visible, then body. Revision 8 moves mirror and home together another 43 m (`ONWARD_SEA`) and widens
-the mirror's approach curve so a gusting boat can round it at its ordinary pace. There is no special onward or
+the mirror's approach curve so the boat rounds it at its ordinary pace. There is no special onward or
 arrival speed cap: the sail and normal steering/mooring physics govern speed. Jeremy's final 2026-10-10 targets
 replace those longer passages: revision 9 moves the whale toward departure (`WHALE_SHORTENING`) and moves Mirror
-and home together (`MIRROR_SHORTENING`). The first puzzle begins at 60.3–60.8 s in ordinary wind, and sailing from
-the whale disappearing to the Mirror takes 38.1–40.7 s (19.7 s in sustained strong wind). The pod joins sooner,
+and home together (`MIRROR_SHORTENING`). The first puzzle begins at about 62 s, and sailing from
+the whale disappearing to the Mirror takes 38–41 s. The pod joins sooner,
 the full twelve-second swim stays, and its nudge begins the lead when it makes contact. The camera waits for the
 blow before closing on the whale. Home retains its 206 m route and 40–41 s ordinary crossing.
 `tools/journey-pacing-check.mjs` sails the real boat through the passages (`CROSSING=` for one) at several wind

@@ -557,7 +557,7 @@ function syncMusicLoading(): void {
     return;
   }
   if (!playing) return;
-  const track = nextMusicForChapter(story.name);
+  const track = nextMusicForChapter(story.name, story.current.stairsAir?.phase);
   if (track !== nextMusic) { prefetchMusic(track); nextMusic = track; }
 }
 controls.onMusicChange = on => { sound.setMusicMuted(!on); syncMusicLoading(); };
@@ -1040,16 +1040,21 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   soundState.music = story.music;
   soundState.arrivalMusic = story.current.arrivalMusic;
   soundState.arrivalReady = story.current.arrivalReady;
-  soundState.homewardReady = story.current.homewardReady;
+  soundState.homewardTime = story.current.homewardTime;
   soundState.summitScore = story.current.summitScore;
   soundState.homeEndingTime = story.current.homeEndingTime;
   soundState.mirrorScore = story.current.mirrorScore;
   soundState.drownedScore = story.current.drownedScore;
   soundState.drownedQuiet = story.current.drownedQuiet;
+  soundState.bellsRung = story.current.bellsRung;
   soundState.seaScore = story.current.seaScore;
+  soundState.seaMusicTime = story.current.seaMusicTime;
+  soundState.seaPhrase = story.current.seaPhrase;
+  soundState.whaleCalling = story.current.whaleCalling;
   soundState.sleepingScore = story.current.sleepingScore;
   soundState.meadowScore = story.current.meadowScore;
   soundState.birchesScore = story.current.birchesScore;
+  soundState.birchesLoop = story.name === 'toBirches' || story.name === 'birches';
   soundState.stairsAir = story.current.stairsAir;
   soundState.linesScore = story.current.linesScore;
   soundState.linesMelodyQuiet = story.current.linesMelodyQuiet;

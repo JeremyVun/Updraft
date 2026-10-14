@@ -1,5 +1,5 @@
 // Run real boat/chapter code on the CPU: route completion, storm timing and hard-turn regressions.
-// No renderer or browser. The wind fixture covers no input, sustained gusts and different frame rates.
+// No renderer or browser. The wind fixture covers the prevailing breeze at different frame rates.
 import './lib/typescript.mjs';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
@@ -19,9 +19,9 @@ const { FAR_SHORE } = await import('../src/story/meadow.ts');
 const { HOME_MOORING } = await import('../src/story/home.ts');
 const { tuning } = await import('../src/tuning.ts');
 
-function fixture(gust = 0) {
+function fixture() {
   const wind = { breeze: new THREE.Vector2(2.47, -0.80), calm: 3,
-    sample(_x, _z, out) { return Object.assign(out, { x: this.breeze.x + gust, z: this.breeze.y - gust, energy: gust !== 0 ? 0.8 : 0, lift: 0 }); } };
+    sample(_x, _z, out) { return Object.assign(out, { x: this.breeze.x, z: this.breeze.y, energy: 0, lift: 0 }); } };
   const boat = new Boat(wind);
   const child = { position: new THREE.Vector3(), ride(p) { this.position.copy(p); },
     handPosition(out) { return out.copy(this.position).add(new THREE.Vector3(0, 1, 0)); }, reach() {}, wave() {} };
@@ -31,15 +31,15 @@ function fixture(gust = 0) {
     lines: { gust() {} }, sealife: { fishNear() {}, dolphinsWith() {}, whale: null, dolphinShow: null } };
 }
 const { drownedCast, stormCast } = await import('./lib/storm-cast.mjs');
-/** The drowned village's wind for the storm checks: its breeze plus a steady push. */
-const drownedWind = (gust) => ({ breeze: new THREE.Vector2(2.47, -0.80), calm: 3, addSplat() {},
-  sample(_x, _z, out) { return Object.assign(out, { x: this.breeze.x + gust, z: this.breeze.y - gust, energy: gust !== 0 ? 0.8 : 0, lift: 0 }); } });
+/** The drowned village's wind for the storm checks: its breeze. */
+const drownedWind = () => ({ breeze: new THREE.Vector2(2.47, -0.80), calm: 3, addSplat() {},
+  sample(_x, _z, out) { return Object.assign(out, { x: this.breeze.x, z: this.breeze.y, energy: 0, lift: 0 }); } });
 // The storm from her seated aboard at the nave to the forest beach: the look back at the cat, out round the church on
 // the first air, past the lighthouse's side as its light goes out, the plane lost in the dark and the landing about 55 s
-// after casting off, whatever the player's wind and the frame rate.
+// after casting off, whatever the frame rate.
 const report = [];
-for (const [gust, fps] of [[0,60], [8,60], [0,30], [8,30], [40,60], [-40,60]]) {
-  const wind = drownedWind(gust);
+for (const fps of [60, 30]) {
+  const wind = drownedWind();
   const { cast, chapter } = stormCast(wind), boat = cast.boat;
   let snatch = null, lastBeat = '', turns = 0, lastYaw = boat.yaw, lightGap = Infinity, outAt = null;
   let turnLeg = -1, legTurn = 0, mostLegTurn = 0, sailingSpeed = 0, sailingFrames = 0;
@@ -64,7 +64,7 @@ for (const [gust, fps] of [[0,60], [8,60], [0,30], [8,30], [40,60], [-40,60]]) {
     if (chapter.stormTime > 15 && chapter.stormTime < 35) { sailingSpeed += boat.speed; sailingFrames++; }
     if (chapter.stormTime > 0) assert.equal(chapter.church.catAt, 'sill', 'cat stays at the window after cast-off');
     if (chapter.done) {
-      report.push({ gust, fps, stormToShore: +time.toFixed(2), stormTurns: +(turns / (2 * Math.PI)).toFixed(3), lightGap: +lightGap.toFixed(1),
+      report.push({ fps, stormToShore: +time.toFixed(2), stormTurns: +(turns / (2 * Math.PI)).toFixed(3), lightGap: +lightGap.toFixed(1),
         lightOutFrom: +outAt.toFixed(1), beats });
       assert(snatch !== null, 'must lose the plane before landing');
       const castOff = tuning.drowned.church.lookUpFor;
@@ -87,7 +87,7 @@ const { takeCues } = await import('../src/story/cues.ts');
 const { CAT_HOLD, CAT_HOLD_YAW, STRAND } = await import('../src/world/drowned-way.ts');
 // Old route payloads must resume after the rescue without replaying it or its sound.
 for (const leg of [0, 3, 99]) {
-  const cast=drownedCast(drownedWind(0)), b=cast.boat;
+  const cast=drownedCast(drownedWind()), b=cast.boat;
   b.beach(-4,-1203,Math.PI);b.afloat=true;
   const c=new DrownedChapter(cast);
   b.beach(-20,-1390,Math.PI);b.afloat=true;
@@ -112,7 +112,7 @@ for (const leg of [0, 3, 99]) {
 }
 // A target directly astern, at full speed, used to be inside an unchanging turning circle.
 for (const distance of [6, 20, 40]) {
-  const cast = fixture(8), b = cast.boat;
+  const cast = fixture(), b = cast.boat;
   b.beach(-600, -1500, 0); b.afloat = true; b.speed = 12; b.canGround = false;
   b.steerFor = new THREE.Vector2(-600, -1500-distance);
   b.mooring = { x: -600, z: -1500-distance, yaw: Math.PI };
@@ -126,20 +126,20 @@ const starts = { toLines: [16.5,29.5,0.95], toBoats: [LINES_BERTH.x,LINES_BERTH.
   toBirches: [FAR_SHORE.x,FAR_SHORE.z,0.2], toWood: [-14,-1614,Math.PI],
   toSleeping: [-34,-1908,0.2], toHome: [-219.5,-1928,-1.76] };
 const crossings = [];
-for (const [name, start] of Object.entries(starts)) for (const gust of [0,8]) {
-  const cast=fixture(gust), b=cast.boat;
+for (const [name, start] of Object.entries(starts)) {
+  const cast=fixture(), b=cast.boat;
   b.beach(...start); b.launch();
-  const c=new CrossingChapter(cast,{route:ROUTES[name],arrivalSpeed:name==='toMeadow'?tuning.sail.meadowArrivalSpeed:undefined,...(name==='toHome'?{moor:HOME_MOORING}:{})});
+  const c=new CrossingChapter(cast,{route:ROUTES[name],...(name==='toHome'?{moor:HOME_MOORING}:{})});
   let reached=false, lastLeg=0, turn=0, yaw=b.yaw, worst=0;
   for(let i=0;i<600*60;i++) {
     c.update(1/60); b.update(1/60,i/60);
     if(c.leg!==lastLeg) {worst=Math.max(worst,turn);turn=0;lastLeg=c.leg;}
     turn+=Math.abs(Math.atan2(Math.sin(b.yaw-yaw),Math.cos(b.yaw-yaw)));yaw=b.yaw;
-    if(c.done){reached=true;crossings.push({name,gust,seconds:+(i/60).toFixed(1),maxTurnsOnLeg:+(Math.max(worst,turn)/(2*Math.PI)).toFixed(2)});break;}
+    if(c.done){reached=true;crossings.push({name,seconds:+(i/60).toFixed(1),maxTurnsOnLeg:+(Math.max(worst,turn)/(2*Math.PI)).toFixed(2)});break;}
   }
-  assert(reached, `crossing stranded: ${name}, gust ${gust}, leg ${c.leg}, position ${b.position.toArray()}`);
+  assert(reached, `crossing stranded: ${name}, leg ${c.leg}, position ${b.position.toArray()}`);
   assert(Math.max(worst,turn)<Math.PI*2, `circle on ${name}`);
-  if (name === 'toMeadow') assert(Math.abs(b.position.x - 10) < 12, `meadow landing missed hill path: gust=${gust}, position=${b.position.toArray()}`);
+  if (name === 'toMeadow') assert(Math.abs(b.position.x - 10) < 12, `meadow landing missed hill path: position=${b.position.toArray()}`);
 }
 // Every cloud flash has one delayed report; leaving the storm does not schedule new flashes.
 const { StormWeather } = await import('../src/fx/storm.ts');

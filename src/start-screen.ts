@@ -25,7 +25,7 @@ const PAINTINGS: Record<string, string> = {
   toBoats: 'boats', boats: 'boats', toMeadow: 'meadow', meadow: 'meadow', hills: 'meadow', piano: 'meadow',
   toBirches: 'birches', birches: 'birches', autumn: 'birches', toStairs: 'stairs', stairs: 'stairs', clouds: 'stairs',
   drowned: 'drowned', village: 'drowned', roofs: 'drowned', church: 'drowned', storm: 'drowned', toWood: 'wood', wood: 'wood', dark: 'wood', fears: 'wood',
-  toSleeping: 'sleeping', sleeping: 'sleeping', toMirror: 'sea', sea: 'sea', dolphins: 'sea', mirror: 'mirror',
+  toSleeping: 'sleeping', sleeping: 'sleeping', toMirror: 'sea', sea: 'sea', dolphins: 'sea', mirror: 'mirror', mirrorEnd: 'mirror',
   toHarbour: 'home', toHome: 'home', home: 'home', jetty: 'home', summit: 'home',
 };
 

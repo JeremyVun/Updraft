@@ -1,6 +1,7 @@
 // Renders the stairs in the clouds through the production soundscape, offline and without the GPU: the puzzle with
-// flights knocking home, the climb through the white, the calm on top with the skein, the sail over the cloud, the
-// fog and the drowned village's music taking over. A synthetic `StairsAir` timeline stands in for the chapter.
+// flights knocking home, the climb through the white, `clouds.ogg` from the top of the cloud through the skein, the
+// sail and the fog to 3:28, and `village_approach.ogg` taking over after it. A synthetic `StairsAir` timeline,
+// spaced as the chapter measures with no input from the top of the cloud on (`tools/clouds-music-check.mjs`), stands in for the chapter.
 // Usage: BASE=<vite> node tools/stairs-audio-proposal.mjs [outDir]   (ffmpeg for the mp3 and loudness)
 // Writes stairs-arc.{wav,mp3} (the whole mix), stairs-music.{wav,mp3} (the music alone, with its reverb) and report.json.
 import fs from 'node:fs';
@@ -16,21 +17,25 @@ const RATE = 48000;
 /** Story times in seconds. The bird goes first at `hesitate`; the chapter should call that `cloud` (see cues.md). */
 const T = {
   strokes: [[5, .6], [7.2, .8], [8.3, .7], [16, .7], [18.5, .8], [20.5, .9], [22.4, .6], [29, .8], [31.5, .7], [34.5, .8],
-    [70, .6], [84, .7], [139, .8], [141, .9], [143.5, .8], [151, .7], [160, .8], [168, .9], [178, .7], [188, .8], [196, .7]],
-  knocks: [9, 24], third: 36.5, hesitate: 43, follow: 56, emerge: 100, skein: [106, 121], board: 137,
-  fog: 202, fogPeak: [207, 210], down: 217, end: 240,
+    [70, .6], [84, .7], [187, .8], [189, .9], [191.5, .8], [199, .7], [208, .8], [216, .9], [226, .7], [236, .8], [244, .7]],
+  knocks: [9, 24], third: 36.5, hesitate: 43, follow: 56, emerge: 100, clear: 105, skein: [120, 136], board: 185,
+  fog: 295, fogPeak: [300, 308], down: 322, end: 345,
 };
+/** `clouds.ogg` begins `cloudsMusicDelay` (0.5 s) after the view clears round her at the top and fades out 3:28 later. */
+const CLOUDS_FROM = T.clear + .5, CLOUDS_END = CLOUDS_FROM + 208.3;
 
 const SEGMENTS = [
-  ['Under the cloud: the puzzle, birches phrase, flights knocking home', 0, T.hesitate],
-  ['At the edge: the child stops, the bird goes up first; the phrase drains', T.hesitate, T.follow],
+  ['Under the cloud: the puzzle, the birches recording playing its pass out, flights knocking home', 0, T.hesitate],
+  ['At the edge: the child stops, the bird goes up first; the birches stop within a second', T.hesitate, T.follow],
   ['In the white, lower half', T.follow, (T.follow + T.emerge) / 2],
   ['In the white, upper half', (T.follow + T.emerge) / 2, T.emerge],
-  ['Out on top: the wind gone, the calm before the bloom', T.emerge, T.emerge + 4],
-  ['Above: the bloom, the skein, gathering the bird', T.emerge + 4, T.board],
+  ['Out on top: the last gust, the cloud wind dying, the high air', T.emerge, T.clear],
+  ['The view clears: clouds.ogg comes in at half level as the high air settles', T.clear, T.clear + 4],
+  ['Above: clouds.ogg, the skein, the boat, gathering the bird', T.clear + 4, T.board],
   ['The sail over the cloud', T.board, T.fog],
-  ['The fog: the sail fades, rest in the white, the village music in', T.fog, T.down],
-  ['Down on the village water: the drowned score', T.down, T.end],
+  ['The fog: clouds.ogg plays on to 3:28 while the village waits', T.fog, CLOUDS_END],
+  ['The rest in the white, then the village music', CLOUDS_END, T.down],
+  ['Down on the village water: village_approach.ogg', T.down, T.end],
 ];
 
 async function render(page, musicOnly) {
@@ -60,7 +65,7 @@ async function render(page, musicOnly) {
       const S = (a, b, x) => { const k = Math.max(0, Math.min(1, (x - a) / (b - a))); return k * k * (3 - 2 * k); };
       const step = 1 / 30;
       const cygnet = { pan: 0, distance: 6, active: true }, flock = { pan: 0, distance: 190, active: false };
-      const air = { phase: 'under', cloud: 0, climb: 0, open: 0, fog: 0, speed: 0 };
+      const air = { phase: 'under', cloud: 0, climb: 0, open: 0, fog: 0, speed: 0, clear: false };
       const stages = [], cues = [];
       let lastStage = 'none';
       const stroke = t => {
@@ -80,6 +85,7 @@ async function render(page, musicOnly) {
         air.climb = onFoot ? Math.max(0, Math.min(1, (t - T.follow - 2) / (T.emerge - T.follow - 3))) : t < T.fogPeak[0] ? 1 : 1 - S(T.fogPeak[0], T.fogPeak[1], t);
         air.cloud = onFoot ? S(T.follow, T.follow + 5, t) * (1 - S(T.emerge - 4, T.emerge + 1.5, t)) : air.fog;
         const out = t >= T.emerge - .5;
+        air.clear = t >= T.clear;
         air.open += ((out ? 1 - air.fog : 0) - air.open) * (1 - Math.exp(-step * .8));
         const gusts = T.strokes.filter(([at]) => at > T.board && at < t).length;
         air.speed = !afloat ? 0 : air.phase === 'sail'
@@ -108,6 +114,7 @@ async function render(page, musicOnly) {
       const rendering = ctx.startRendering();
       for (let tick = 1; tick < ticks; tick++) {
         await pause; update(tick);
+        await sound.preparedScore?.ready; await sound.cloudsScore?.ready; await sound.villageScore?.ready;
         if (tick + 1 < ticks) pause = ctx.suspend((tick + 1) * step);
         await ctx.resume();
       }
@@ -135,7 +142,7 @@ async function render(page, musicOnly) {
       }
       window.__stairsPcm = new Uint8Array(pcm.buffer);
       // Twenty seconds after the room, nothing of it should still be running.
-      const leftover = { stairsSound: !!sound.stairsSound, stairsScore: !!sound.stairsScore, birchesScore: !!sound.birchesScore };
+      const leftover = { stairsSound: !!sound.stairsSound, cloudsScore: !!sound.cloudsScore, birchesScore: !!sound.birchesScore };
       return { windows, clipped, finite, peakDbFS: 20 * Math.log10(peak), stages, cues, leftover, bytes: window.__stairsPcm.length };
     } finally { Math.random = originalRandom; }
   }, { T, RATE, musicOnly });
@@ -174,29 +181,27 @@ function cueSheet(report) {
     [0, 'Under the cloud. The birches\' closing phrase (approved) carries on; the player pushes the loose flights (gusts).'],
     ...T.knocks.map((t, i) => [t, `Flight ${i + 1} knocks home: a soft wooden tok, a smaller tk as it settles, a puff of cloud.`]),
     [T.third, 'Flight 3 knocks home, with the shared completion phrase (`restored`, unchanged).'],
-    [T.hesitate, 'The child stops at the edge of the white; the bird goes up first. The phrase drains away (about 4 dB a second); the wind in the cloud is heard faintly from above.'],
+    [T.hesitate, 'The child stops at the edge of the white; the bird goes up first. The birches recording, if it is still playing, stops over about a second; the wind in the cloud is heard faintly from above.'],
     [T.follow, 'The child follows into the white. No music: a close, muffled wind that buffets, and a moan that rises with the climb.'],
     [(T.follow + T.emerge) / 2, 'Halfway up: the buffets come quicker and harder, the moan climbs, the sea has gone.'],
-    [T.emerge, 'Out on top. The last of the wind sweeps past and away, then almost nothing: a thin high air.'],
-    [T.emerge + 3, 'The bloom (proposal): D opening out, wide and high, from nothing.'],
-    [T.emerge + 6.5, 'The piano\'s question comes back high and slow, D–E–F♯, and opens one step further than it ever has, to C♯ (G with a sharpened fourth under it).'],
+    [T.emerge, 'Out on top. The last of the wind sweeps past and away as clouds.ogg begins at half its level, reaching full in under two seconds.'],
     [T.skein[0], 'The skein crosses far off: the swans\' own calls (the cygnet stays silent).'],
-    [T.board, 'Boarding; the sail (proposal) takes over from the bloom: the bass walks up the scale from D to B under a plucked ripple.'],
-    [T.board + 2, 'The hull begins to hiss through the cloud tops as the sail fills; the hiss follows the boat\'s speed.'],
-    [T.board + 18, 'The sail\'s tune asks the whole question, D–E–F♯, and lands on a high B.'],
-    [T.fog, 'The fog closes in. The village music is asked for; the sail fades over three seconds.'],
+    [T.board, 'Boarding; the recording plays on, its own clock untouched.'],
+    [T.board + 2, 'A low breath of air past the hull as the sail fills; it follows the boat\'s speed.'],
+    [T.fog, 'The fog closes in. The village music is asked for and waits for the recording.'],
+    [CLOUDS_END, 'clouds.ogg has faded out at 3:28.'],
     [stage('gap'), 'Musical rest in the white (three seconds): only the soft wash of the fog.'],
-    [stage('incoming'), 'The drowned village\'s own music comes in (approved, unchanged) as the fog is at its thickest and starts to thin.'],
+    [stage('incoming'), 'village_approach.ogg comes in from its top at full level, to play once to the seam before its bass.'],
     [T.fogPeak[1], 'The fog thins: the hull came down onto the water in the whiteout, and the sea comes back under it.'],
     [T.down, 'On the village water: the drowned chapter owns everything from here. The room\'s own sounds let go.'],
   ].filter(([t]) => t !== undefined).sort((a, b) => a[0] - b[0]);
   const table = (segments) => segments.map(s => `| ${clock(s.from)}–${clock(s.to)} | ${s.label} | ${s.lufs <= -70 ? 'silent' : s.lufs} | ${s.shortTermMaxLufs ?? '–'} | ${s.peakDbFS.toFixed(1)} |`).join('\n');
-  return `# The stairs in the clouds: audio proposal
+  return `# The stairs in the clouds: audio render
 
 \`stairs-arc.mp3\` is the whole mix, rendered offline through the production soundscape from a synthetic
 \`StairsAir\` timeline (\`tools/stairs-audio-proposal.mjs\`). \`stairs-music.mp3\` is the music alone, with its
-reverb. The phase timings are targets, not measurements of the chapter; the bird going first is treated as the start
-of \`cloud\` (see the report). Not a listening sign-off.
+reverb. From the top of the cloud on, the phases are spaced as the chapter measures with no input; below it they are
+targets. Not a listening sign-off.
 
 ## Cues
 
@@ -246,15 +251,20 @@ try {
   const arc = report.renders.arc, music = report.renders.music;
   assert(arc.finite && music.finite, 'finite audio');
   assert.equal(arc.clipped, 0, 'no clipping in the mix');
-  // The music is silent in the white once the birches have drained, and through the rest before the village.
+  // The music is silent in the white once the birches have stopped, and through the rest before the village.
   const silent = (from, to) => music.windows.slice(from, to).every(w => w.rmsDbFS < -70);
-  const drained = T.hesitate + 12, climbEnd = T.emerge;
+  const drained = T.hesitate + 2, climbEnd = T.emerge;
   const gap = music.stages.find(s => s.stage === 'gap'), incoming = music.stages.find(s => s.stage === 'incoming');
+  const audible = (from, to) => music.windows.slice(from, to).every(w => w.rmsDbFS > -70);
   report.checks = {
     cloudSilentFrom: drained, cloudSilent: silent(drained, climbEnd),
     restFrom: gap?.t, restTo: incoming?.t,
     restSilent: gap && incoming ? silent(Math.ceil(gap.t + 1), Math.floor(incoming.t)) : false,
+    cloudsThroughFog: audible(Math.ceil(CLOUDS_FROM), Math.floor(CLOUDS_END - 2)),
+    villageAfterClouds: !!gap && gap.t >= CLOUDS_END - .1,
   };
+  assert(report.checks.cloudsThroughFog, 'clouds.ogg plays on through the fog to 3:28');
+  assert(report.checks.villageAfterClouds, `the village's handoff waits for clouds.ogg (gap at ${gap?.t})`);
   assert(report.checks.cloudSilent, 'the music is silent in the white');
   assert(report.checks.restSilent, 'the music rests before the village');
   assert(!Object.values(arc.leftover).some(Boolean), `room released: ${JSON.stringify(arc.leftover)}`);

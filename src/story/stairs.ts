@@ -118,6 +118,8 @@ const KEEP_THEM_IN = 0.6;
 const KEEP_THEM_UNDER = 0.45;
 /** How long she stands taking it in before she turns to the bird, seconds. */
 const AWE_TURNS = 5.2;
+/** Seconds into her look across the cloud by which she has stopped and the haze has lifted off the sun. */
+const CLEARED = 4;
 const ease = (x: number) => 0.5 - 0.5 * Math.cos(Math.PI * THREE.MathUtils.clamp(x, 0, 1));
 /** How high the hull rides on the top of the cloud, and on the sea. */
 const RIDE = CLOUD.top + 0.45;
@@ -292,7 +294,7 @@ export class StairsChapter implements Chapter {
   private readonly outSubjects = { primary: new THREE.Vector3(), secondary: new THREE.Vector3(), points: this.hullFrame, margin: 0.8, extra: 16 };
   private readonly mistLight = new THREE.Color();
   private readonly tmpColor = new THREE.Color();
-  private readonly air: StairsAir = { phase: 'under', cloud: 0, climb: 0, open: 0, fog: 0, speed: 0 };
+  private readonly air: StairsAir = { phase: 'under', cloud: 0, climb: 0, open: 0, fog: 0, speed: 0, clear: false };
   private readonly oldRadius: number;
 
   constructor(private readonly cast: Cast) {
@@ -427,6 +429,7 @@ export class StairsChapter implements Chapter {
   }
 
   get checkpoint(): string | null {
+    if (this.looped && ['follow', 'together', 'emerge'].includes(this.beat)) return 'cloud';
     if (this.beat !== 'waiting' && this.beat !== 'climb') return null;
     const n = this.world.docked;
     return n > 0 && n < LOOSE.length ? `flight-${n}` : n === LOOSE.length ? 'flight-3' : null;
@@ -436,13 +439,14 @@ export class StairsChapter implements Chapter {
     return [this.world.docked];
   }
 
-  restoreCheckpoint(_point: string, data: number[]): void {
-    const n = THREE.MathUtils.clamp(Math.floor(data[0] ?? 0), 0, LOOSE.length);
+  restoreCheckpoint(point: string, data: number[]): void {
+    const inCloud = point === 'cloud';
+    const n = inCloud ? LOOSE.length : THREE.MathUtils.clamp(Math.floor(data[0] ?? 0), 0, LOOSE.length);
     this.world.restore(n);
     const { child, cygnet } = this.cast;
     child.decks = cygnet.decks = this.decks();
     this.limit = this.reachable();
-    const level = n < LOOSE.length ? LOOSE[n] - 1 : LOOSE[LOOSE.length - 1];
+    const level = inCloud ? LOOP.onward : n < LOOSE.length ? LOOSE[n] - 1 : LOOSE[LOOSE.length - 1];
     let at = 0;
     this.stops.forEach((s, i) => { if (s.level <= level) at = i; });
     const s = this.stops[at];
@@ -458,6 +462,19 @@ export class StairsChapter implements Chapter {
     this.birdStop = Math.max(0, at - 1);
     this.stop = at;
     this.limit = n < LOOSE.length ? at : this.reachable();
+    if (inCloud) {
+      // Past the loop, on the landing its way on leaves from, the trick done with and the bird going on ahead.
+      this.looped = true;
+      this.birdLed = true;
+      this.trickGone = 1;
+      this.world.bank.clear();
+      this.now = Math.max(this.now, REVEAL + 2);
+      this.revealFrom = 0;
+      this.birdStop = this.birdReached = at;
+      this.limit = this.reachable();
+      this.to('follow');
+      return;
+    }
     this.to(n < LOOSE.length ? 'waiting' : 'climb');
   }
 
@@ -678,6 +695,7 @@ export class StairsChapter implements Chapter {
     const out = afloat || top || (y > CLOUD.top - 0.4 && this.beat === 'emerge');
     a.open += ((out ? 1 - a.fog : 0) - a.open) * (1 - Math.exp(-dt * 0.8));
     a.speed = afloat ? boat.speed : 0;
+    a.clear = afloat || (top && (this.beat !== 'awe' || this.t >= CLEARED));
     a.phase = this.beat === 'down' ? 'down' : this.beat === 'fog' || this.beat === 'thin' ? 'fog' : this.beat === 'sail' ? 'sail'
       : out ? 'above' : a.cloud > 0.5 || ['hesitate', 'birdFirst', 'follow', 'loop', 'together', 'emerge'].includes(this.beat) ? 'cloud' : 'under';
   }
@@ -1040,7 +1058,7 @@ export class StairsChapter implements Chapter {
           boat.mooring = null;
           boat.grounded = false;
           boat.canGround = false;
-          boat.speedLimit = tuning.sail.topSpeed * 0.7;
+          boat.speedLimit = tuning.stairs.sailSpeed;
           this.leg = 0;
           boat.steerFor = CLOUD_ROUTE[0];
           this.to('sail');

@@ -87,7 +87,7 @@ const starts = { toLines:[BOAT_BERTH.x+8,BOAT_BERTH.z+8,0.95],toBoats:[LINES_BER
   toSleeping:[WOOD_BERTH.x,WOOD_BERTH.z,0.2],toHome:[SLEEP_BERTH.x-5,SLEEP_BERTH.z-2,-1.76] };
 for(const [name,start] of Object.entries(starts)) for(const gust of [0,8]) {
   const cast=fixture(gust),b=cast.boat;b.beach(...start);b.launch();
-  const c=new CrossingChapter(cast,{route:ROUTES[name],arrivalSpeed:name==='toMeadow'?tuning.sail.meadowArrivalSpeed:undefined,...(name==='toHome'?{moor:HOME_MOORING}:{})});
+  const c=new CrossingChapter(cast,{route:ROUTES[name],...(name==='toHome'?{moor:HOME_MOORING}:{})});
   let worst=Infinity,reached=false;
   for(let i=0;i<600*60;i++) {
     c.update(1/60);b.update(1/60,i/60);

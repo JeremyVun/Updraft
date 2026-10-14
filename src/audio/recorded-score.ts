@@ -1,7 +1,7 @@
 import { decodeMusic } from './music-loading';
 import { tuning } from '../tuning';
 
-export type RecordedMusic = 'home' | 'birches' | 'lines' | 'boats' | 'stillDeparture';
+export type RecordedMusic = 'home' | 'mirror' | 'birches' | 'clouds' | 'villageApproach' | 'belfry' | 'lines' | 'boats' | 'stillDeparture';
 
 export class RecordedScore {
   readonly ready: Promise<void>;
@@ -16,6 +16,15 @@ export class RecordedScore {
   phase = '';
   private epoch = 0;
   private endsAt = Infinity;
+  private late = false;
+  private keepTime = false;
+  private asked = 0;
+  private length = 0;
+  private start = 0;
+  /** Fading itself out to a scheduled end; level changes no longer apply. */
+  private finishing = false;
+  /** No longer looping: the pass under way plays to the end of the file and stops. */
+  private playingOut = false;
 
   constructor(private readonly ctx: BaseAudioContext, output: AudioNode, readonly track: RecordedMusic) {
     this.bus = ctx.createGain();
@@ -35,13 +44,18 @@ export class RecordedScore {
     }
   }
 
-  update(phase: string, level: number, offset = 0): void {
+  /**
+   * `late` joins a once-played recording already under way, without its entrance. `keepTime` holds a recording to the
+   * moment it was first asked for: begun then from its top, it sounds at full level from its own first note; begun later
+   * (still decoding), it joins where it would have been, fading in.
+   */
+  update(phase: string, level: number, offset = 0, late = false, keepTime = false): void {
     if (this.stopped) return;
     this.phase = phase;
-    if (!this.active) this.offset = offset;
+    if (!this.active) { this.offset = offset; this.late = late; this.keepTime = keepTime; this.asked = this.ctx.currentTime; }
     this.active = true;
     this.level = level;
-    if (this.source) this.bus.gain.setTargetAtTime(level, this.ctx.currentTime, tuning.audio.recordedMusicFade);
+    if (this.source && !this.finishing) this.bus.gain.setTargetAtTime(level, this.ctx.currentTime, tuning.audio.recordedMusicFade);
     this.play();
   }
 
@@ -49,19 +63,27 @@ export class RecordedScore {
     if (this.stopped || !this.active || !this.buffer || this.source) return;
     const source = this.ctx.createBufferSource();
     source.buffer = this.buffer;
-    source.loop = this.track !== 'stillDeparture';
+    const once = this.once;
+    source.loop = !once && !this.playingOut;
     this.epoch = this.ctx.currentTime;
-    const offset = source.loop ? this.offset % this.buffer.duration : Math.min(this.offset, this.buffer.duration);
-    const envelope = source.loop ? null : this.ctx.createGain();
-    if (envelope) {
-      const duration = Math.max(0, Math.min(this.buffer.duration, tuning.audio.stillDepartureEnd) - offset);
-      this.endsAt = this.epoch + duration;
-      envelope.gain.setValueAtTime(1, Math.max(this.epoch, this.endsAt - tuning.audio.stillDepartureFadeOut));
+    if (this.keepTime) this.offset += this.epoch - this.asked;
+    const offset = once ? Math.min(this.offset, this.buffer.duration) : this.offset % this.buffer.duration;
+    this.length = this.buffer.duration; this.start = offset;
+    const envelope = once ? this.ctx.createGain() : null;
+    // An on-time entrance starts part-way up at once and rises; anything else fades in from silence.
+    const enter = once?.enterFrom !== undefined && !this.late ? once.enterFrom : 1;
+    if (once && envelope) {
+      this.endsAt = this.epoch + Math.max(0, Math.min(this.buffer.duration, once.end) - offset);
+      const entered = this.epoch + (enter < 1 ? once.enterOver ?? 0 : 0);
+      envelope.gain.setValueAtTime(enter, this.epoch);
+      if (enter < 1) envelope.gain.linearRampToValueAtTime(1, entered);
+      envelope.gain.setValueAtTime(1, Math.max(entered, this.endsAt - once.fadeOut));
       envelope.gain.linearRampToValueAtTime(0, this.endsAt);
       envelope.connect(this.bus);
     }
     source.connect(envelope ?? this.bus);
-    this.bus.gain.setTargetAtTime(this.level, this.epoch, tuning.audio.recordedMusicFade);
+    if (enter < 1 || this.keepTime && offset < tuning.audio.recordedMusicOnTime) this.bus.gain.setValueAtTime(this.level, this.epoch);
+    else this.bus.gain.setTargetAtTime(this.level, this.epoch, tuning.audio.recordedMusicFade);
     source.onended = () => {
       source.disconnect();
       envelope?.disconnect();
@@ -75,8 +97,45 @@ export class RecordedScore {
     this.buffer = null;
   }
 
+  private get once() {
+    return tuning.audio.recordedMusicOnce[this.track];
+  }
+
+  /** Stops looping for good; the pass under way, or the first if none has begun, plays to the end of the file. */
+  playOut(): void {
+    this.playingOut = true;
+    if (this.source) this.source.loop = false;
+  }
+
+  get duration(): number { return this.length; }
+
+  /** Seconds into the recording now; undefined until it sounds. */
+  position(now: number): number | undefined {
+    if (!this.source) return undefined;
+    const at = this.start + now - this.epoch;
+    return this.once ? at : at % this.length;
+  }
+
+  /** Fades to silence over `release` seconds ending at `at` on the audio clock, and stops there. */
+  finishAt(at: number, release: number): void {
+    if (this.stopped || !this.source) return;
+    this.finishing = true;
+    const gain = this.bus.gain, now = this.ctx.currentTime, from = Math.max(now, at - release);
+    gain.cancelAndHoldAtTime(from);
+    // A settled level has no event to hold, so anchor the ramp's start explicitly.
+    gain.setValueAtTime(from > now ? this.level : gain.value, from);
+    gain.linearRampToValueAtTime(0, Math.max(from, at));
+    this.source.stop(Math.max(from, at));
+    this.endsAt = Math.min(this.endsAt, at);
+  }
+
   handoffAt(now: number): number {
-    return this.track === 'stillDeparture' && Number.isFinite(this.endsAt) ? Math.max(now, this.endsAt) : now;
+    return Number.isFinite(this.endsAt) ? Math.max(now, this.endsAt) : now;
+  }
+
+  /** The next room's music waits for this recording's end fade, however long that is. */
+  get holdsHandoff(): boolean {
+    return !!this.once?.holdsHandoff && !!this.source && this.endsAt > this.ctx.currentTime;
   }
 
   stop(fade = 1.8): void {

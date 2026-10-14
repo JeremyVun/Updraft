@@ -51,15 +51,48 @@ export const tuning = {
     arrivalEntranceLead: 4, arrivalEntranceRouteShare: .4,
     arrivalFadeOut: 3, arrivalQuiet: 3, arrivalFadeIn: 2.5,
     sleepingArrivalQuiet: 3.5, mirrorArrivalQuiet: 4,
-    homewardFadeOut: 3, homewardQuiet: 5, homewardFadeIn: 3,
-    homewardClearDistance: 30,
+    /** Sleeping's morning clears off the sea passage within its first `seaMusicLead` seconds, without a phrase wait. */
+    seaArrivalQuiet: 1, seaArrivalFadeIn: 1,
+    /** `village_approach.ogg` opens on 0.2 s of silence and then its loudest note, so it comes in at full level. */
+    villageArrivalFadeIn: 0,
+    /** Seconds after the boat leaves the Mirror that `home.ogg` begins, from its first second. */
+    homeStartAfter: 12.5,
+    /**
+     * The Mirror stops at the latest phrase seam (`MIRROR_SEAMS`) at least `mirrorSeamLead` before Home and at least
+     * `mirrorSeamSoonest` after leaving, fading over `mirrorSeamRelease` into it. Failing that, the earliest seam still
+     * `mirrorSeamLatest` before Home; failing that, a `mirrorFallbackFade` fade at once.
+     */
+    mirrorSeamLead: 5, mirrorSeamSoonest: .3, mirrorSeamRelease: 1.2, mirrorSeamLatest: 1, mirrorFallbackFade: 3,
     /** Playtest corrections: the opening drone sits 12 dB forward, home 8 dB. */
     openingScoreDb: 12,
     summitScoreLevel: .06555 * 10 ** (8 / 20),
     /** Match supplied masters to the room reference through gain alone. */
-    recordedMusicDb: { home: -14.4, birches: -14.4, lines: -12, boats: -12.3 },
+    recordedMusicDb: { home: -14.4, mirror: -14.7, sea: -13.6, birches: -13, clouds: -14.5, villageApproach: -9.7, belfry: -11, lines: -12, boats: -12.3 },
     recordedMusicFade: .65,
+    /** A recording kept to its scheduled moment that begins within this many seconds of it enters at full level. */
+    recordedMusicOnTime: .1,
+    /**
+     * Recordings played once rather than looped: from `from` seconds where given, to `end`, fading out over the last
+     * `fadeOut`. `enterFrom` starts an on-time start at that share of its level, rising to full over `enterOver`.
+     * `holdsHandoff` keeps the next room's music waiting until the end fade is done.
+     */
+    recordedMusicOnce: {
+      stillDeparture: { end: 118, fadeOut: 4, holdsHandoff: false },
+      clouds: { end: 208.3, fadeOut: 2, enterFrom: .5, enterOver: 1.75, holdsHandoff: true },
+      /** To the seam 30 ms before the bass's first note (A2, attacking at 36.96 s), the last note rung down. */
+      villageApproach: { end: 36.93, fadeOut: .5, holdsHandoff: false },
+      /** Just before the attack at 8.0 s to just before the next at 54.1 s, coming in slowly after the last bell. */
+      belfry: { from: 7.97, end: 54.05, fadeOut: 2, enterFrom: 0, enterOver: 5, holdsHandoff: false },
+    } as Partial<Record<string, { from?: number; end: number; fadeOut: number; enterFrom?: number; enterOver?: number; holdsHandoff: boolean }>>,
+    /** Going up into the white, a birches pass still playing stops over this long. */
+    birchesCloudFade: 1,
+    /** The wood's drone (the shared pad in the wood's mood), relative to its original level; −Infinity silences it. */
+    woodDroneDb: 0,
+    /** Seconds after the view clears round her at the top (`StairsAir.clear`) that `clouds.ogg` begins; below 0 starts it that far in. */
+    cloudsMusicDelay: 0.5,
     musicLoadTimeoutMs: 20_000,
+    /** Seconds to wait before fetching a failed recording again; all within `musicLoadTimeoutMs`. */
+    musicRetryAfter: [1, 3],
     /** Reversible opening experiment; false restores the original drone. */
     stillPhraseExperiment: true,
     stillFallTones: false,
@@ -70,8 +103,13 @@ export const tuning = {
     stillFlightEvery: 6,
     stillDepartureDb: -14.1,
     stillDepartureOffset: 8,
-    stillDepartureEnd: 118,
-    stillDepartureFadeOut: 4,
+    /**
+     * Seconds into the sea passage that `sea.ogg` begins, so that its 55th second falls as the boat comes to rest
+     * beside the whale at the ordinary pace (measured with no input).
+     */
+    seaMusicLead: 6.3,
+    /** The recording makes this much room (dB) under the whale's calls at their fullest. */
+    whaleCallRoomDb: -4,
     stillColourGust: 5,
     stillColourCharge: .12,
     stillColourGain: .025,
@@ -106,7 +144,7 @@ export const tuning = {
     padActivityLevel: 0.015,
     /** Matches the approved Little Boats preview's music gain, before common playback normalization. */
     boatsScoreLevel: 3.67, boatsCueDuck: 0.28, boatsCueSpace: 3.8,
-    /** Approved sea revision: +9.7 dB reference gain and +6.3 dB loudness match, without preview playback gain. */
+    /** Studies only (`sea-score.ts`): the approved synthesised sea revision's +9.7 dB reference gain and +6.3 dB match. */
     seaScoreLevel: 6.31,
     /** Approved Sleeping study's +16.9 dB music match, excluding its playback normalization. */
     sleepingScoreLevel: 7,
@@ -127,6 +165,8 @@ export const tuning = {
         [7,.18],[8,.08],[9,.22],[10,.055],[11,.035],[12,.025]] },
     careChimeLevel: 0.28, careChimeAttack: 0.035,
     cygnetFullDistance: 30, flockDistance: 320,
+    /** The cygnet's footfalls stay cute but sit under everything else. */
+    cygnetStepDb: -6,
     /** Give an authored call and its answer a gap in the incidental flock chatter. */
     callSpace: 4,
     shoreNear: 20, shoreFar: 260, shoreRefresh: 0.75,
@@ -157,8 +197,11 @@ export const tuning = {
       /** The wind in the white, heard from the landing below while the bird goes up first. */
       fromBelow: 0.35,
       bodyLevel: 0.36, howlLevel: 1.0, rushLevel: 0.2, highLevel: 0.035, hullLevel: 0.16, lineLevel: 0.6, fogLevel: 0.3, lastGustLevel: 0.16,
-      /** Time constant of the birches' phrase draining away once they go up into the white: about 4 dB a second. */
-      drain: 2.2,
+      /**
+       * Once the view clears at the top, the high air settles over `settleFor` seconds to this share of its level, and
+       * goes far off: its band slides down to `from`–`to` Hz and only `dry` of it stays direct, the rest in the reverb.
+       */
+      highSettled: 0.5, settleFor: 2, highFar: { from: 1400, to: 3800, dry: 0.4 },
     },
     flightKnock: { level: 0.13, reverb: 0.25, pitch: 220, puff: 0.08 },
     stairsScoreLevel: 6, stairsPhaseFade: 4,
@@ -1882,17 +1925,13 @@ export const tuning = {
   },
 
   seaPassage: {
-    speed: 10,
-    /** The most the boat makes while the cygnet is swimming: ordinary sailing sails on, only a strong gust is trimmed. */
-    swimSpeed: 5,
-    /** How much of the boat's way the wave along its side gives the swimming cygnet, and how fast the swim's cap comes in. */
+    /** How much of the boat's way the wave along its side gives the swimming cygnet. */
     swimCarry: 0.75,
-    swimEase: 0.5,
     swimFor: 12,
     swimAnticipation: 2,
     swimDecision: 3,
     swimAt: 0.2,
-    /** Let the pod arrive and its featured leap finish even when the player fills the sail. */
+    /** The swim waits this long into the passage, so the pod's arrival and featured leap have the water first. */
     swimNotBefore: 18,
     dolphinsAfter: 2,
     waypointRadius: 10,
@@ -1906,8 +1945,6 @@ export const tuning = {
      */
     farewellAt: 0.86,
     playFor: 45,
-    /** The most the boat makes as it leaves the island, from which it settles by `leapFrom` into the pod's pace. */
-    openSpeed: 5.5,
     leastSpeed: 4.5,
     holdSpeed: 1,
     holdAt: 0.92,
@@ -2121,11 +2158,6 @@ export const tuning = {
     stars: 0.11,
     starLight: 5,
   },
-  /**
-   * The boat's sail. The cloth fills with whatever wind it has, whoever made it, and hangs dead when it has none;
-   * the hull's speed follows the same reading, a few seconds behind it. Wind speeds are world units per second,
-   * the wind field's unit, so `drive` is boat speed per unit of wind in the sail.
-   */
   lantern: {
     /** How brightly the boat's lantern lights what is round it at full dark, and how the light falls away with distance. */
     glow: 1.4,
@@ -2142,14 +2174,17 @@ export const tuning = {
      */
     flicker: 0.15, glassFlicker: 0.05,
   },
+  /**
+   * The boat's sail. The cloth fills with whatever wind it has, whoever made it, and hangs dead when it has none; the
+   * hull makes its way on the prevailing breeze alone, a few seconds behind it. Wind speeds are world units per second,
+   * the wind field's unit, so `drive` is boat speed per unit of breeze.
+   */
   sail: {
-    /** A controlled turn into the meadow bay keeps gusts from landing far along the beach. */
-    meadowArrivalSpeed: 5,
     /** Hull clearance above the terrain; enough for the rendered ground between height samples. */
     hullClearance: 0.06,
     /** Most a beached hull leans with the sand beneath it, in radians. */
     shoreTilt: 0.28,
-    /** Wind speed a unit of the player's gust is worth, and the stirring the field never quite loses. */
+    /** Wind speed a unit of the player's gust is worth in the cloth, and the stirring the field never quite loses. */
     gustPress: 4,
     stirs: 0.9,
     /**
@@ -2195,7 +2230,7 @@ export const tuning = {
     /** Gust energy at which a sail starts to luff, and the seconds a luff takes to die away. */
     luffFrom: 0.12,
     luffFade: 0.55,
-    /** Boat speed per unit of wind the sail holds, the extra for a following wind, and the most it ever makes. */
+    /** Boat speed per unit of breeze, the extra for a following breeze, and the most a turn or a shove ever lets it make. */
     // At the ordinary 2.6-unit breeze: 4.5 through the water, up to 5.5 with a following wind.
     drive: 4.5 / 2.6,
     following: 1 / 2.6,

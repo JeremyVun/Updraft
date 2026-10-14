@@ -171,9 +171,8 @@ them.
   feather's own `brush` is a direct screen-space push like the glider's; during the walk strokes build forward
   encouragement inside the route corridor and never project it back down the hill. At the snow and mist,
   `brushDry` counts real screen travel (`snowStroke`, `mistStroke`), and progress persists.
-- **The main boat's passage.** Player gusts affect its cloth, pennant and heel, but not propulsion or sideways
-  drift. A separate smoothed prevailing-breeze reading carries the hull at its ordinary pace, keeping musical
-  choreography independent of gestures. The toy-boat puzzles still use the player's wind.
+- **The main boat's sail.** Player gusts fill its cloth, pennant and heel; the hull's way comes from the
+  prevailing breeze and the story (see Sailing). The toy-boat puzzles use the player's wind.
 - **The rotary washing lines.** A screen-local sweep selects the nearest visible frame and writes a tangential
   splat. The frame uses that submitted air immediately while its delayed field sample arrives; unrelated and
   ambient wind never turn it. A continuous sweep keeps its turn direction as the cloth rotates past the pointer.
@@ -199,19 +198,18 @@ them.
 
 ## Sailing
 
-At the ordinary breeze the hull drives at 4.5 units/s, up to 1 more in a following wind; player gusts can raise
-forward speed to the shared 10 units/s ceiling (`tuning.sail`). The sail's single sampling function reads the felt
-wind on the sway spring: the cloth fills with whatever wind it has, hangs in folds with none, ripples and shakes
-harder the harder it blows, and the hull's speed follows the same reading with a little inertia. The player's
-gust over the sea adds fine ripple, a slight darkening and a short chop, but the sea's lighting comes from the
-weather alone; whitecaps need a squall (`tuning.water`).
+At the ordinary breeze the hull drives at 4.5 units/s, up to 1 more in a following breeze (`tuning.sail`). Its way
+comes from a smoothed reading of the chapter's prevailing breeze and the sea alone, capped only by the story
+(`Boat.speedLimit`), turns and mooring, so routes set every passage's length. The cloth reads the felt wind on the
+sway spring: it fills with whatever wind it has, hangs in folds with none, and ripples and shakes harder the harder
+it blows. The player's gust over the sea adds fine ripple, a slight darkening and a short chop, but the sea's
+lighting comes from the weather alone; whitecaps need a squall (`tuning.water`).
 
 - **Shelter.** `Boat.shelter` (0 exposed, 1 sheltered) attenuates the prevailing wind and weather in
   `sailWind.blowing` and `sailWind.taken`; local gusts stay effective. The first island sets it to 1 and it decays
   once afloat (`tuning.opening.departureRate`); restoring the opening checkpoint reinstates it. The opening's
   push-off writes a short low-energy travelling splat across the cove.
-- **Becalmed.** `Boat.becalmed` spills the weather's drive while letting the cloth move, so only the player's
-  wind moves the boat.
+- **Becalmed.** `Boat.becalmed` spills the breeze's drive while letting the cloth move: the hull loses its way.
 - **Storm passage.** The drowned village caps hull drive with `Boat.speedLimit` while leaving the sail exposed:
   storm pressure (`squallPress`) mostly spills (`squallHolds`) and `squallLuff` shakes the cloth without adding
   speed; tight turns ease the drive and leeway is bounded near the mooring. The cap is reapplied after checkpoint

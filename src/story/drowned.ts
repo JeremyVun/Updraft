@@ -93,6 +93,10 @@ export class DrownedChapter implements Chapter {
       || this.beat === 'still' || (this.beat === 'becalmed' && !this.cat.ashore);
   }
   get departureKite(): boolean { return this.beat === 'church' || this.beat === 'gather'; }
+  get bellsRung(): boolean {
+    return this.beat === 'gather' || this.beat === 'snatch' || this.beat === 'after'
+      || this.beat === 'church' && this.church!.rings >= tuning.drowned.church.rings;
+  }
   /** The room's music by feeling, not by beat: the score moves on at its next chord change. */
   get drownedScore(): DrownedScorePhase {
     switch (this.beat) {
@@ -294,7 +298,7 @@ export class DrownedChapter implements Chapter {
     boat.launch();
     this.cat.aboard();
     this.aboardFrom = this.now;
-    this.still(false);
+    this.still();
   }
 
   /** QA (`?chapter=roofs`): straight to her up on the first roof after the cat, the boat aground beside it, the fog coming. */
@@ -574,7 +578,7 @@ export class DrownedChapter implements Chapter {
    * scrape and a lurch, and is fast there, its stem against the slates still out of it. Behind them, the way they came,
    * the fog rises off the sea.
    */
-  private still(playCue = true): void {
+  private still(): void {
     const { boat } = this.cast;
     this.stillAt = this.now;
     this.ghostFrom = boat.speed;
@@ -582,7 +586,6 @@ export class DrownedChapter implements Chapter {
     drownedEntry.behindGone = true;
     boat.coastTo = null;
     boat.steerFor = null;
-    if (playCue) cue('becalmed');
   }
 
   /**

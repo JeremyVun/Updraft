@@ -8,7 +8,6 @@ import type { Coax } from '../fx/swirl';
 import { tuning } from '../tuning';
 import { callLength } from '../audio/whale-voice';
 import type { Cast } from './cast';
-import { completeObjective } from './cues';
 import { surgeAt, swellLift } from '../world/water/swell';
 import { mirrorWater } from '../world/sky-mirror-layout';
 import { BOW_Z, MAST_TOP, MAST_Z, SAIL_SPAN, SAIL_TACK, STERN_Z, gunwale, gunwaleHalf, stationU } from '../traveller/boat/form';
@@ -23,7 +22,6 @@ const WHALE_SAVES = ['whale-rest', 'whale-breath', 'whale-eye', 'whale-line', 'w
  * has gone under; `gone` once the boat may sail on.
  */
 export type WhaleStep = 'approach' | 'breath' | 'eye' | 'line' | 'heave' | 'flipper' | 'free' | 'gone';
-export const WHALE_STEPS: readonly WhaleStep[] = ['approach', 'breath', 'eye', 'line', 'heave', 'flipper', 'free', 'gone'];
 /**
  * Seconds the empty net takes to drift away once the loop is off, working loose into a raft by the spout; and seconds
  * into its going free over which the raft sinks away into the deep, gone before it dives.
@@ -43,6 +41,8 @@ const WAVE_BACK = WAVE_AT + 2;
 const CALL_WITH = GOODBYE_AT + 0.8;
 /** About how long before it goes free the loop is let go, as the cygnet swims back and is lifted in (s). */
 const FREED_BEFORE = 7.5;
+/** How far the net over the blowhole, or the fold over its eye, has visibly lifted when its phrase begins (0..1). */
+const STIRRED = 0.05;
 const SINK_TO = DIVE_AT - 1;
 /**
  * The valve's dolphin leaps from this far out on the near side of the blowhole, over the crown and down beyond it;
@@ -187,6 +187,8 @@ export class NetWhale {
   private heard = 0;
   private calledNear = false;
   private calledApproach = false;
+  /** The latest of the open sea's phrases an act of the rescue has begun (`phrase`). */
+  private cued = 0;
   /** How far the patch of net over the blowhole has been lifted clear by circling, or by the valve's dolphin, 0..1. */
   progress = 0;
   /** What lifted it: the player's circles, or the dolphin sent once nothing had for a long while. */
@@ -204,7 +206,6 @@ export class NetWhale {
   private valveStep: WhaleStep | null = null;
   private released = -1;
   private rested = false;
-  private rewarded = false;
   private nextWave = 0;
   private wavingGoodbye = false;
   /** How far she has gone to the port rail to wave it goodbye, 0..1. */
@@ -467,6 +468,7 @@ export class NetWhale {
   restore(point: string): void {
     const after = WHALE_SAVES.indexOf(point);
     if (after >= 0) {
+      this.cued = [0, 1, 2, 2, 3, 4][after];
       this.net.finishDraping();
       this.corkLaid = false;
       this.lineFramed = false;
@@ -533,7 +535,6 @@ export class NetWhale {
       this.step = 'gone';
       this.stepTime = 100;
       this.released = 1e3;
-      this.rewarded = true;
       this.limit = Infinity;
       this.cygnetIn = 'cradle';
     }
@@ -546,6 +547,26 @@ export class NetWhale {
 
   get sightAge(): number {
     return this.sightClock < 0 ? 0 : this.clock - this.sightClock;
+  }
+
+  /**
+   * Which of the open sea's recorded phrases the rescue has called for: -1 coming in, 0 at rest beside it, then one
+   * more as each act begins (the net over the blowhole lifting, the fold over its eye lifting, her first pull on the
+   * line, the cygnet's pull on the loop), and 5 once it is free. Taking the line calls for none. The supplied recording
+   * carries the release without a reward cue.
+   */
+  get phrase(): number {
+    if (this.step === 'approach') return -1;
+    return this.step === 'free' || this.step === 'gone' ? 5 : this.cued;
+  }
+
+  private cue(phrase: number): void {
+    this.cued = Math.max(this.cued, phrase);
+  }
+
+  /** How far into one of its calls it is, 0..1. */
+  get calling(): number {
+    return this.sung();
   }
 
   /** The boat may round its hold waypoint and sail on. */
@@ -690,10 +711,6 @@ export class NetWhale {
     if (this.step === 'flipper') this.lastLoop(dt, time);
     this.drive(dt);
     if (this.step === 'free') this.salute(dt);
-    if (this.step === 'free' && whale.spouting && !this.rewarded) {
-      this.rewarded = true;
-      completeObjective();
-    }
     if (this.step === 'free' && whale.phase === 'gone') this.goTo('gone');
     if (this.released < 0 && whale.going) this.released = 0;
     if (this.released >= 0) this.released += dt;
@@ -1120,6 +1137,7 @@ export class NetWhale {
       const lifted = this.fold * (K.foldSettle + (1 - K.foldSettle) * this.foldGust);
       this.foldShown += (lifted - this.foldShown) * (1 - Math.exp(-dt * 6));
       whale.struggle = K.eyeTry + K.eyeTryLifted * this.foldShown;
+      if (this.foldShown >= STIRRED || this.fold >= 1) this.cue(2);
       if (this.fold >= 1) {
         this.foldT = 0;
         this.flapFrom = K.foldPart * this.foldShown;
@@ -1503,6 +1521,7 @@ export class NetWhale {
       this.pullFrom.copy(this.cast.cygnet.position);
       this.pullSlack = Math.max(0, this.a.subVectors(this.station, this.pullFrom).dot(this.pullAway));
       this.birdTo('pulling');
+      this.cue(4);
     }
     return true;
   }
@@ -1811,6 +1830,7 @@ export class NetWhale {
   /** The mesh is up off its head: she hauls. */
   private heaveNow(by: 'sweeps' | 'dolphin'): void {
     this.heavedBy ??= by;
+    this.cue(3);
     this.waiting = 0;
     this.puller = this.heaves % 2 === 0 ? 0 : 1;
     this.billow = 1;
@@ -2165,6 +2185,7 @@ export class NetWhale {
     if (net.posed) return;
     const held = this.progress >= 1 ? 1 : this.progress * (K.netSettle + (1 - K.netSettle) * this.wind);
     net.lift += (held - net.lift) * (1 - Math.exp(-dt * 2.5));
+    if (this.step === 'breath' && net.lift >= STIRRED) this.cue(1);
     // The upper net drifts clear after the first full breath; the orange net waits for the later heaves.
     if (whale.awake) net.slump = Math.max(net.slump, whale.phase === 'woken' ? THREE.MathUtils.smootherstep(whale.time, K.slumpFrom, K.slumpFrom + K.slumpFor) : 1);
     net.updraft = this.wind;

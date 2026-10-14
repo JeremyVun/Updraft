@@ -50,7 +50,7 @@ export class Boat {
   readonly position = new THREE.Vector3();
   yaw = 0;
   speed = 0;
-  /** A narrow passage can spill surplus wind without making its sail look becalmed. */
+  /** The most way the story lets it make, without making its sail look becalmed. */
   speedLimit = Infinity;
   speedScale = 1;
   afloat = false;
@@ -69,7 +69,7 @@ export class Boat {
    * of its own at all.
    */
   becalmed = 0;
-  /** The opening cove shelters the sail from weather, while the player's gusts still reach it. */
+  /** The opening cove shelters the sail from weather, while the player's gusts still reach its cloth. */
   shelter = 0;
   /** How hard the sea is running under the hull, 0 calm to 1 the full squall; the boat rocks and drives on it. */
   swell = 0;
@@ -84,11 +84,11 @@ export class Boat {
    */
   coastTo: { x: number; z: number; yaw: number; brake?: number } | null = null;
   /**
-   * The wind the cloth has, smoothed: `blowing` is the
-   * air moving in the cloth, `taken` the part of it the sail is holding (an eased sheet spills the rest), `along`
-   * how much of what it holds pushes the way the boat is pointing, and `made` how much of it the player put there.
+   * The wind the cloth has, smoothed: `blowing` is the air moving in the cloth, `taken` the part of it the sail is
+   * holding (an eased sheet spills the rest), and `made` how much of it the player put there.
    */
-  readonly sailWind = { blowing: 0, taken: 0, along: 0, made: 0 };
+  readonly sailWind = { blowing: 0, taken: 0, made: 0 };
+  /** The wind the hull makes its way on: the prevailing breeze and the sea, never the field, so the story sets its pace. */
   private readonly passageWind = { taken: 0, along: 0 };
   private readonly passageSway = new Sway();
   private readonly passageSample: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
@@ -413,8 +413,8 @@ export class Boat {
         }
       } else {
         /**
-         * A small boat sails on any point of wind, so what drives it is how much wind the sail is holding, with
-         * a little more for a following one. Nobody is ever left stuck head to wind waiting for a shift.
+         * A small boat sails on any point of wind, so what drives it is the prevailing breeze, with a little more
+         * for a following one. Nobody is ever left stuck head to wind waiting for a shift.
          */
         const ashore = this.canGround ? this.beachApproach(fx, fz) : Infinity;
         // Past its landing point with the beach still ahead, it runs on up the sand rather than coming round for it.
@@ -429,7 +429,6 @@ export class Boat {
         const approach = Math.max(tuning.sail.minimumWay, berthDistance * tuning.sail.mooringDrive);
         const drive = Math.min(
           (this.passageWind.taken * tuning.sail.drive + Math.max(0, this.passageWind.along) * tuning.sail.following) * this.speedScale,
-          tuning.sail.topSpeed,
           this.speedLimit,
           turnLimit,
           approach,
@@ -575,7 +574,7 @@ export class Boat {
   }
 
   /**
-   * What the sail has this frame, smoothed into `sailWind`. The world's share is the prevailing breeze the
+   * What the cloth has this frame, smoothed into `sailWind`. The world's share is the prevailing breeze the
    * chapter is running, which is steady and dies when the chapter means it to; the field itself is read for what
    * the player has added to it and for which way the wind is lying. The squall is no stronger in the field,
    * so its weight comes from the sea.
@@ -590,14 +589,10 @@ export class Boat {
     const exposed = 1 - this.shelter;
     const blowing = made + (world + weather) * exposed;
     const taken = made + (world + weather * tuning.sail.squallHolds) * exposed * (1 - this.becalmed);
-    /** Which way it is lying is the field's to say, however little of it there is. */
-    const heading = speed > 1e-3 ? (w.x * Math.sin(this.yaw) + w.z * Math.cos(this.yaw)) / speed : 0;
-    const along = heading * taken;
     const air = this.sailWind;
     air.blowing = this.takesUp(air.blowing, blowing, dt);
     air.taken = this.takesUp(air.taken, taken, dt);
     air.made = this.takesUp(air.made, made, dt);
-    air.along += (along - air.along) * (1 - Math.exp(-dt * tuning.sail.fills));
     return w;
   }
 
@@ -608,7 +603,6 @@ export class Boat {
   }
 
   private readPassageWind(dt: number): void {
-    // Player wind moves the cloth, but cannot advance or delay the crossing's score.
     const breeze = this.wind.breeze, sample = this.passageSample;
     sample.x = breeze.x; sample.z = breeze.y;
     feltWind(sample, this.wind.calm);

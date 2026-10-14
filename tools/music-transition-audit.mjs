@@ -25,17 +25,20 @@ try {
       const {ARRIVAL_MUSIC,ArrivalTransition,arrivalQuiet}=await import('/src/audio/arrival-music.ts');
       const {tuning}=await productionModule('/src/tuning.ts');
       const checks=[],check=(ok,message)=>{if(!ok)throw Error(`${target}: ${message}`);checks.push(message);};
-      const legato=source.music==='drowned'&&target==='wood';
+      const legato=source.music==='drowned'&&target==='wood',homeward=source.music==='mirror'&&target==='home';
       const approach=legato?88:18,landing=approach+24,seconds=landing+8;
       const {ctx,sound}=offlineSound(seconds),phases=[];
       backgroundOnly(ctx,sound);
       let outgoing,incoming,epoch,reverb;
-      const score=()=>sound.openingScore??sound.summitScore??sound.dreamScore??sound.drownedScore??sound.linesScore??sound.boatsScore
-        ??sound.meadowScore??sound.birchesScore??sound.sleepingScore??sound.seaScore;
+      const score=()=>sound.openingScore??sound.summitScore??sound.mirrorScore??sound.villageScore??sound.linesScore??sound.boatsScore
+        ??sound.meadowScore??sound.birchesScore??sound.sleepingScore??sound.seaMusic;
       const update=tick=>{
         const t=tick/8,landed=t>=landing;
-        sound.update(.125,{...baseState,...(landed?ARRIVAL_MUSIC[target]:source),flockChatter:false,
-          arrivalMusic:t>=approach&&!landed?target:undefined,arrivalReady:t>=approach+6,homewardReady:t>=approach+6});
+        // The sea's recording keeps the passage clock: it starts its crossing after the morning, and leaves in its close.
+        const sea=target==='sea'?{seaMusicTime:t-approach-tuning.audio.seaMusicLead,seaPhrase:-1}:source.seaScore?{seaMusicTime:200,seaPhrase:5}:{};
+        sound.update(.125,{...baseState,...(landed?ARRIVAL_MUSIC[target]:source),...sea,flockChatter:false,
+          arrivalMusic:t>=approach&&!landed?target:undefined,arrivalReady:t>=approach+6,
+          homewardTime:homeward&&t>=approach&&!landed?t-approach:undefined});
         const stage=sound.arrivalTransition.stage;
         if(phases.at(-1)?.stage!==stage)phases.push({at:t,stage});
         if(t===approach-1)outgoing=score();
@@ -45,26 +48,31 @@ try {
           check(sound.reverbConvolver===reverb,'Landing keeps the shared reverb');}
       };
       update(0);await sound.birchesScore?.ready;await sound.linesScore?.ready;await sound.boatsScore?.ready;await sound.summitScore?.ready;let pause=ctx.suspend(.125);const rendering=ctx.startRendering();
-      for(let tick=1;tick<seconds*8;tick++){await pause;update(tick);await sound.preparedScore?.ready;await sound.birchesScore?.ready;await sound.linesScore?.ready;await sound.boatsScore?.ready;await sound.summitScore?.ready;if(tick+1<seconds*8)pause=ctx.suspend((tick+1)/8);await ctx.resume();}
+      for(let tick=1;tick<seconds*8;tick++){await pause;update(tick);await sound.seaMusic?.ready;await sound.preparedScore?.ready;await sound.birchesScore?.ready;await sound.linesScore?.ready;await sound.boatsScore?.ready;await sound.summitScore?.ready;await sound.villageScore?.ready;if(tick+1<seconds*8)pause=ctx.suspend((tick+1)/8);await ctx.resume();}
       const buffer=await rendering;
       const fade=phases.find(p=>p.stage==='fade'),gap=phases.find(p=>p.stage==='gap'),entry=phases.find(p=>p.stage==='incoming');
       let gapPeak=0;
-      if(!legato){
+      if(homeward){
+        // The Mirror finishes at a phrase seam (homeward-audio-check); Home begins on its schedule.
+        check(!!gap&&!!entry&&entry.at-approach===tuning.audio.homeStartAfter,'Home begins on schedule after a rest');
+        for(let ch=0;ch<2;ch++)for(let i=Math.ceil((gap.at+.02)*24000);i<entry.at*24000;i++)gapPeak=Math.max(gapPeak,Math.abs(buffer.getChannelData(ch)[i]));
+        check(gapPeak===0,'The entire music/reverb rest is digitally silent');
+      }else if(!legato){
         check(!!fade&&!!gap&&!!entry,'The handoff has a fade, rest and entrance');
-        const quiet=arrivalQuiet(target,target==='home'&&source.music==='mirror');
+        const quiet=arrivalQuiet(target);
         check(gap.at-fade.at>=3,'The outgoing fade lasts three seconds');
         check(entry.at-gap.at>=quiet,'The full destination-specific rest is preserved');
         for(let ch=0;ch<2;ch++)for(let i=Math.ceil((gap.at+.02)*24000);i<entry.at*24000;i++)gapPeak=Math.max(gapPeak,Math.abs(buffer.getChannelData(ch)[i]));
         check(gapPeak===0,'The entire music/reverb rest is digitally silent');
-      }else check(phases.some(p=>p.stage==='blend')&&!gap,'The approved continuous storm keeps its D/A overlap');
+      }else check(phases.some(p=>p.stage==='blend')&&!gap,'The silent storm hands to the wood\'s drone without a gap');
       if(outgoing)check(outgoing.stopped===true||outgoing.stoppedAt!==undefined,'Outgoing scheduling is retired');
       // Entering an already-playing composition must not manufacture a second pause.
       const same=new ArrivalTransition(),state={...baseState,...ARRIVAL_MUSIC[target]};same.update(state,0);
       check(same.update({...state,arrivalMusic:target},1).stage==='none','Same-piece approach does not restart the handoff');
       const late=new ArrivalTransition();late.update({...baseState,...source},0);
-      const requested={...baseState,...source,arrivalMusic:target,arrivalReady:true,homewardReady:true};
+      const requested={...baseState,...source,arrivalMusic:target,arrivalReady:true};
       late.update(requested,1);
-      if(!legato){late.update(requested,30);const quiet=arrivalQuiet(target,target==='home'&&source.music==='mirror');
+      if(!legato&&!homeward){late.update(requested,30);const quiet=arrivalQuiet(target);
         check(late.update(requested,30+quiet-.01).stage==='gap','A stalled frame cannot eat the rest');
         check(late.update({...baseState,...ARRIVAL_MUSIC[target]},30+quiet+.01).changed,'Fast landing can finish the complete rest');}
       return {checks,phases,gapPeak,rest:gap&&entry?entry.at-gap.at:null,...encodeAudio(buffer)};
@@ -83,12 +91,10 @@ try {
       ['meadow','meadowScore','/src/audio/meadow-score.ts','MEADOW_SECTIONS'],
       ['birches','birchesScore','/src/audio/birches-score.ts','BIRCHES_SECTIONS'],
       ['wood','sleepingScore','/src/audio/sleeping-score.ts','SLEEPING_SECTIONS'],
-      ['sea','seaScore','/src/audio/sea-score.ts','SEA_SECTIONS'],
     ];
     const rows=[];
     for(const [music,field,url,key] of tables){const table=(await import(url))[key];rows.push({music,field,phases:Object.keys(table)});}
     rows.push({music:'mirror',field:'mirrorScore',phases:['approach','search','one','two','three','constellation','depart']},
-      {music:'drowned',field:'drownedScore',phases:['drift','fog','refuge','home','farewell']},
       {music:'home',field:'summitScore',phases:['approach','flight','farewell','home']});
     const reports=[];
     for(const row of rows){
@@ -101,7 +107,7 @@ try {
       for(let tick=1;tick<seconds*8;tick++){await pause;update(tick);await sound.preparedScore?.ready;await sound.birchesScore?.ready;await sound.linesScore?.ready;await sound.boatsScore?.ready;await sound.summitScore?.ready;if(tick+1<seconds*8)pause=ctx.suspend((tick+1)/8);await ctx.resume();}
       const buffer=await rendering;let peak=0;for(let ch=0;ch<2;ch++)for(const value of buffer.getChannelData(ch))peak=Math.max(peak,Math.abs(value));
       if(peak>=1)throw Error(`${row.field}: phase render clipped`);
-      if(sound[row.field==='mirrorScore'?'dreamScore':row.field]!==null)throw Error(`${row.field}: permanent silence did not retire the score`);
+      if(sound[row.field]!==null)throw Error(`${row.field}: permanent silence did not retire the score`);
       reports.push({...row,starts,peakDbFS:20*Math.log10(peak),released:true});
     }
     return reports;

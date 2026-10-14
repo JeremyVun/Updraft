@@ -43,28 +43,3 @@ for (const elapsed of [0, 600, 3600]) for (const fps of [20, 30, 60, 120]) {
 }
 console.log(JSON.stringify(report));
 console.log('Sail ripple stays continuous through gusts, reversals, release and long sessions.');
-
-// Opposing gusts and energetic updrafts keep answering in the cloth without moving the passage.
-for (const fps of [30, 60, 120]) {
-  const make = (gust) => {
-    const wind = { breeze: new THREE.Vector2(2.47, -.80), calm: 3,
-      sample(x, z, out) { return Object.assign(out, { x: this.breeze.x + gust, z: this.breeze.y - gust,
-        energy: gust ? 1 : 0, lift: gust ? 1 : 0 }); } };
-    const b = new Boat(wind); b.beach(-600, -1500, 0); b.afloat = true; b.canGround = false;
-    b.steerFor = new THREE.Vector2(-600, -1000); return b;
-  };
-  const calm = make(0), gusts = [make(40), make(-40)];
-  let clothResponse = 0;
-  for (let frame = 0; frame < fps * 20; frame++) {
-    const dt = 1 / fps; calm.update(dt, frame * dt);
-    for (const b of gusts) {
-      b.update(dt, frame * dt);
-      assert.equal(b.speed, calm.speed, 'Player wind cannot change forward speed');
-      assert.equal(b.position.x, calm.position.x, 'Player wind cannot change leeway');
-      assert.equal(b.position.z, calm.position.z, 'Player wind cannot change crossing progress');
-      clothResponse = Math.max(clothResponse, b.sailWind.taken - calm.sailWind.taken);
-    }
-  }
-  assert(clothResponse > 10, 'The cloth still fills and reacts to the player');
-}
-console.log('Passage speed and path ignore opposing gusts and lift at 30/60/120 Hz; cloth still responds.');

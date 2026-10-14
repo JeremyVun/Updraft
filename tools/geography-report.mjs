@@ -53,6 +53,5 @@ console.log(JSON.stringify({
   adjacentCentres:centres.slice(1).map(([name,p],i)=>({from:centres[i][0],to:name,distance:rounded(distance(xz(centres[i][1]),xz(p)))})),
   routes,
   speedSettings:{ordinaryBreeze:1,baseMin:tuning.wind.breeze*tuning.sail.drive,
-    baseMax:tuning.wind.breeze*(tuning.sail.drive+tuning.sail.following),ordinaryTopSpeed:tuning.sail.topSpeed,
-    meadowArrival:tuning.sail.meadowArrivalSpeed,seaDefaultCap:tuning.seaPassage.speed},
+    baseMax:tuning.wind.breeze*(tuning.sail.drive+tuning.sail.following)},
 },null,2));

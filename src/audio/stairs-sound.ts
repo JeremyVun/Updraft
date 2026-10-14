@@ -1,18 +1,13 @@
 import type { StairsAir } from './stairs-air';
 import { tuning } from '../tuning';
 
-/** How much of the shared beds and the birches' phrase the stairs leave playing; all 1 outside the room. */
+/** How much of the shared beds the stairs leave playing; all 1 outside the room. */
 export interface StairsMix {
   breeze: number;
   sea: number;
-  birches: number;
-  /** The birches' phrase has drained away in the white and can be let go. */
-  birchesGone: boolean;
-  /** The room's own score: the sail thins out into the fog. */
-  score: number;
 }
 
-export const OUTSIDE_STAIRS: Readonly<StairsMix> = { breeze: 1, sea: 1, birches: 1, birchesGone: false, score: 1 };
+export const OUTSIDE_STAIRS: Readonly<StairsMix> = { breeze: 1, sea: 1 };
 
 const smooth = (from: number, to: number, x: number): number => {
   const k = Math.max(0, Math.min(1, (x - from) / (to - from)));
@@ -32,8 +27,7 @@ interface Layer { source: AudioBufferSourceNode; nodes: AudioNode[]; gain: GainN
  * The air of the stairs in the clouds. In the white a close, muffled wind that buffets and moans more the higher
  * they climb; out on top almost nothing, a thin high air; over the cloud a low breath of air past the hull, never a hiss (a hiss
  * through the tops reads as snow), and the kite's line singing faintly overhead;
- * the fog a soft wash. It also tells the shared beds how much of the breeze and the sea to keep, and drains the
- * birches' phrase as the travellers go up into the white.
+ * the fog a soft wash. It also tells the shared beds how much of the breeze and the sea to keep.
  */
 export class StairsSound {
   private readonly out: GainNode;
@@ -45,8 +39,6 @@ export class StairsSound {
   private readonly hullFilter: BiquadFilterNode;
   private readonly lineFilter: BiquadFilterNode;
   private readonly mix: StairsMix = { ...OUTSIDE_STAIRS };
-  private drainTarget = 0;
-  private drain = 0;
   private up = 0;
   private inside = 0;
   private open = 0;
@@ -60,6 +52,8 @@ export class StairsSound {
   private swellTarget = 0;
   private nextSwell = 0;
   private emerged = false;
+  /** 0 until the view has cleared at the top, then easing to 1 as the high air gives way to the music. */
+  private settled = 0;
   private fogPeaked = false;
   private absent = 0;
   private stopped = false;
@@ -67,6 +61,9 @@ export class StairsSound {
   private readonly howl: GainNode;
   private readonly rush: GainNode;
   private readonly high: GainNode;
+  private readonly highDry: GainNode;
+  private readonly highLow: BiquadFilterNode;
+  private readonly highTop: BiquadFilterNode;
   private readonly hull: GainNode;
   private readonly line: GainNode;
 
@@ -82,7 +79,16 @@ export class StairsSound {
     this.howlFilter = this.filter('bandpass', 300, 7);
     this.rush = this.gain(0.12);
     this.rushPan = ctx.createStereoPanner();
-    this.high = this.gain(0.7);
+    // The high air's direct path has its own gain, so settling can leave more of it in the reverb than beside her.
+    this.high = ctx.createGain();
+    this.high.gain.value = 0;
+    this.highDry = ctx.createGain();
+    this.high.connect(this.highDry).connect(this.out);
+    const highSend = ctx.createGain();
+    highSend.gain.value = 0.7;
+    this.high.connect(highSend).connect(this.wet);
+    this.highLow = this.filter('highpass', 2600, 0.5);
+    this.highTop = this.filter('lowpass', 7200, 0.4);
     this.hull = this.gain(0.22);
     this.hullFilter = this.filter('lowpass', 420, 0.4);
     this.line = this.gain(0.6);
@@ -126,7 +132,6 @@ export class StairsSound {
       source.start(now, Math.random() * 5);
       return { source, nodes: chain, gain };
     };
-    const highpass = this.filter('highpass', 2600, 0.5), highTop = this.filter('lowpass', 7200, 0.4);
     const hullLow = this.filter('highpass', 70, 0.5), hullTop = this.filter('lowpass', 900, 0.3);
     const rushBand = this.filter('bandpass', 1300, 0.8);
     const rumble = this.filter('highpass', 45, 0.5);
@@ -134,13 +139,13 @@ export class StairsSound {
       body: layer(this.body, 0.93, [rumble, this.bodyFilter]),
       howl: layer(this.howl, 1.07, [this.howlFilter]),
       rush: layer(this.rush, 1, [rushBand, this.rushPan]),
-      high: layer(this.high, 0.97, [highpass, highTop]),
+      high: layer(this.high, 0.97, [this.highLow, this.highTop]),
       hull: layer(this.hull, 0.9, [hullLow, this.hullFilter, hullTop]),
       line: layer(this.line, 1.11, [this.lineFilter]),
     };
   }
 
-  /** Follows the chapter's air; returns what the shared beds and the scores should keep. */
+  /** Follows the chapter's air; returns what the shared beds should keep. */
   update(air: StairsAir | undefined, noise: AudioBuffer | null, now: number, dt: number): StairsMix {
     if (this.stopped) return OUTSIDE_STAIRS;
     if (!this.layers && noise && air) this.start(noise);
@@ -183,7 +188,13 @@ export class StairsSound {
     this.rushPan.pan.setTargetAtTime(this.buffetPan, now, 0.5);
 
     const breath = 0.8 + 0.2 * Math.sin(now * 0.31) * Math.sin(now * 0.113 + 1);
-    this.set(this.high.gain, k.highLevel * this.open * this.up * (1 - 0.7 * this.fog) * breath, now, 0.4);
+    if (air?.clear || this.settled > 0) this.settled = ease(this.settled, 1, dt, k.settleFor);
+    // Settled, the air sounds far off rather than quiet beside her: darker, and mostly through the reverb.
+    const far = this.settled, settle = 1 - (1 - k.highSettled) * far;
+    this.set(this.high.gain, k.highLevel * this.open * this.up * (1 - 0.7 * this.fog) * breath * settle, now, 0.4);
+    this.set(this.highDry.gain, 1 - (1 - k.highFar.dry) * far, now, 0.4);
+    this.set(this.highLow.frequency, 2600 * (k.highFar.from / 2600) ** far, now, 0.4);
+    this.set(this.highTop.frequency, 7200 * (k.highFar.to / 7200) ** far, now, 0.4);
 
     const speed = air?.speed ?? 0, v = smooth(0.4, 5.5, speed);
     this.swells(now, dt);
@@ -193,15 +204,9 @@ export class StairsSound {
     this.set(this.line.gain, k.lineLevel * v * this.open * this.up * (1 - this.fog) * (0.6 + 0.4 * breath), now, 1.2);
     this.lineFilter.frequency.setTargetAtTime(560 * (1 + 0.03 * Math.sin(now * 0.17) + 0.02 * this.swell), now, 1.5);
 
-    const toward = !air ? this.drainTarget : phase !== 'under' ? 1 : smooth(0.05, 0.6, air.cloud);
-    this.drainTarget = Math.max(this.drainTarget, toward);
-    this.drain = ease(this.drain, this.drainTarget, dt, k.drain);
     const m = this.mix;
-    m.birches = 1 - this.drain;
-    m.birchesGone = m.birches < 0.005;
     m.breeze = (1 - 0.8 * this.up) * (1 - 0.55 * this.inside);
     m.sea = (1 - this.up) * (1 - 0.6 * this.fog);
-    m.score = 1 - 0.85 * this.fog;
     return m;
   }
 
@@ -282,7 +287,7 @@ export class StairsSound {
         layer.source.disconnect();
         for (const node of layer.nodes) node.disconnect();
         if (--remaining === 0) {
-          for (const gain of [this.body, this.howl, this.rush, this.high, this.hull, this.line]) gain.disconnect();
+          for (const gain of [this.body, this.howl, this.rush, this.high, this.highDry, this.hull, this.line]) gain.disconnect();
           this.out.disconnect();
           this.wet.disconnect();
         }

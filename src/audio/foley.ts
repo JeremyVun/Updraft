@@ -467,10 +467,11 @@ export class Foley {
   }
 
   /** A webbed foot coming down: a soft slap, drier on sand, a knock on the boat's boards, a plip in the shallows. */
-  step(surface: Surface, weight: number, pan: number): void {
+  step(surface: Surface, amount: number, pan: number): void {
     const now = this.out?.ctx.currentTime;
     if (now === undefined || now - this.lastStep < 0.045) return;
     this.lastStep = now;
+    const weight = amount * 10 ** (tuning.audio.cygnetStepDb / 20);
     const at = now + 0.005;
     const v = 0.5 + Math.random() * 0.5;
     if (surface === 'grass') this.puff({ at, len: 0.07, level: 0.02 * weight * v, pan, type: 'bandpass', from: 2300 + Math.random() * 700, q: 0.8 });

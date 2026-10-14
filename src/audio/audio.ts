@@ -1,5 +1,5 @@
-import { DreamScore, DREAM_SECTIONS, type MirrorScorePhase } from './dream-score';
-import { DrownedScore, DROWNED_SECTIONS, type DrownedScorePhase } from './drowned-score';
+import type { MirrorScorePhase } from './dream-score';
+import type { DrownedScorePhase } from './drowned-score';
 import type { SummitScorePhase } from './summit-score';
 import { RecordedScore, type RecordedMusic } from './recorded-score';
 import { StillPhrases } from './still-phrases';
@@ -10,13 +10,13 @@ import type { Cue } from '../story/cues';
 import type { AudioOut } from '../creatures/voices';
 import { tuning } from '../tuning';
 import { BOATS_CHORDS } from './little-boats-score';
-import { SEA_CHORDS, SeaScore, type SeaScorePhase } from './sea-score';
+import type { SeaScorePhase } from './sea-score';
+import { SeaMusic } from './sea-music';
 import { SleepingScore, SLEEPING_SECTIONS, type SleepingScorePhase } from './sleeping-score';
 import { MeadowScore, MEADOW_SECTIONS, type MeadowScorePhase } from './meadow-score';
 import type { BirchesScorePhase } from './birches-score';
 import type { StairsAir } from './stairs-air';
 import { flightKnock, OUTSIDE_STAIRS, StairsSound, type StairsMix } from './stairs-sound';
-import { StairsScore, stairsScorePhase } from './stairs-score';
 import type { LinesScorePhase } from './lines-score';
 import { ArrivalTransition, type ArrivalMusic } from './arrival-music';
 import { chordNote } from './gesture-harmony';
@@ -94,19 +94,28 @@ export interface SoundState {
   arrivalMusic?: ArrivalMusic;
   /** The final approach is visible; a completed musical rest may now admit the destination. */
   arrivalReady?: boolean;
-  /** False until the homeward boat clears its first turn; the musical rest may then finish. */
-  homewardReady?: boolean;
+  /** Seconds since the boat left the Mirror, on the crossing's clock; Home begins `homeStartAfter` in. */
+  homewardTime?: number;
   summitScore?: SummitScorePhase;
   homeEndingTime?: number;
   /** Only the long dolphin crossing uses the approved adaptive sea arrangement. */
   mirrorScore?: MirrorScorePhase;
   drownedScore?: DrownedScorePhase;
   drownedQuiet?: boolean;
+  /** The bell's fourth ring has sounded, or a save is past it. */
+  bellsRung?: boolean;
   seaScore?: SeaScorePhase;
+  /** The open sea's recording: seconds into it on the passage clock, and the rescue phrase reached (`SeaMusic`). */
+  seaMusicTime?: number;
+  seaPhrase?: number;
+  /** How far into one of its calls the whale is, 0..1, so the recording can make room under its voice. */
+  whaleCalling?: number;
   sleepingScore?: SleepingScorePhase;
   /** The approved arrangement starts after the piano and continues until the next arrival handoff. */
   meadowScore?: MeadowScorePhase;
   birchesScore?: BirchesScorePhase;
+  /** On the Birches island or the approach to it its recording loops; once they have sailed, its pass plays out. */
+  birchesLoop?: boolean;
   stairsAir?: StairsAir;
   linesScore?: LinesScorePhase;
   linesMelodyQuiet?: boolean;
@@ -160,7 +169,6 @@ const MOODS: Record<Mood, MoodMusic> = {
   home: { chords: [[50, 57, 62, 69], [43, 50, 59, 66], [45, 52, 61, 64], [50, 57, 64, 71]], seconds: 10, cutoff: 1450, level: 1.15, scale: [62, 66, 69, 71, 74, 78, 81, 83, 86, 90] },
 };
 
-const SEA_SCORE_MOOD: MoodMusic = { ...MOODS.sea, chords: SEA_CHORDS, level: 0 };
 const PULSE = 60 / 96 / 2;
 
 /** The story's phrases as [midi, beats] pairs, in the pad's D major. */
@@ -179,9 +187,7 @@ const PHRASES: Record<Exclude<Cue, 'foghorn'>, [number, number][]> = {
   /** Keep descending into the lower register; the final low D belongs to contact with the ground. */
   fallen: [[81, 2], [76, 2], [71, 3], [66, 3], [57, 3]],
   landed: [[50, 1]],
-  /** The air dies: low, slow and unanswered, under a room that has gone quiet. */
-  becalmed: [[57, 4], [54, 5], [52, 8]],
-  /** And the sail fills: the same notes, the other way up, and the music comes back with them. */
+  /** The sail fills: a slow rise, and the music comes back with it. */
   filled: [[54, 1], [57, 1], [62, 1], [66, 2], [69, 4]],
   /** The feather offers a direction, not the answer the later flight earns. */
   feather: [[62, 1], [69, 3]],
@@ -200,7 +206,7 @@ const PHRASES: Record<Exclude<Cue, 'foghorn'>, [number, number][]> = {
   /** The owl at the stump, an animal's own voice. */
   hoot: [],
 };
-const PHRASE_BEAT: Record<Exclude<Cue, 'foghorn' | 'fallen' | 'landed'>, number> = { star: .3, feather: 0.4, comfort: 0.3, kindled: 0.17, distress: 0.2, calling: 0.2, bugle: 0.2, breeze: 0.3, delight: 0.14, restored: 0.22, becalmed: 0.55, filled: 0.26, lifted: 0.3, wave: 0.2, unfold: 0.46, release: 0.3, home: 0.5, finale: 0.3, flightHome: 0.3, puzzled: 0.3, hoot: 0.3 };
+const PHRASE_BEAT: Record<Exclude<Cue, 'foghorn' | 'fallen' | 'landed'>, number> = { star: .3, feather: 0.4, comfort: 0.3, kindled: 0.17, distress: 0.2, calling: 0.2, bugle: 0.2, breeze: 0.3, delight: 0.14, restored: 0.22, filled: 0.26, lifted: 0.3, wave: 0.2, unfold: 0.46, release: 0.3, home: 0.5, finale: 0.3, flightHome: 0.3, puzzled: 0.3, hoot: 0.3 };
 
 const hz = (midi: number) => 440 * Math.pow(2, (midi - 69) / 12);
 const roomTrim = (room: keyof typeof tuning.audio.roomTrimDb) => 10 ** (tuning.audio.roomTrimDb[room] / 20);
@@ -332,16 +338,27 @@ export class Soundscape {
   private nextFlock = 0;
   private flockQuietUntil = 0;
   private boatsScore: RecordedScore | null = null;
-  private seaScore: SeaScore | null = null;
+  private seaMusic: SeaMusic | null = null;
   private sleepingScore: SleepingScore | null = null;
   private meadowScore: MeadowScore | null = null;
   private birchesScore: RecordedScore | null = null;
-  private stairsScore: StairsScore | null = null;
+  private cloudsScore: RecordedScore | null = null;
+  /** When they came out on top of the cloud, on the audio clock: `clouds.ogg` keeps time from there. */
+  private cloudsAt: number | null = null;
   private stairsSound: StairsSound | null = null;
   private linesScore: RecordedScore | null = null;
-  private dreamScore: DreamScore | null = null;
-  private drownedScore: DrownedScore | null = null;
+  private mirrorScore: RecordedScore | null = null;
+  /** The village's approach, played once from its top at the handoff; `villageAt` is when that top was due. */
+  private villageScore: RecordedScore | null = null;
+  private villageAt: number | null = null;
+  /** The belfry's goodbye, played once from the fourth ring on into the storm; `belfryAt` is when it began. */
+  private belfryScore: RecordedScore | null = null;
+  private belfryAt: number | null = null;
+  /** Up in the white the birches' recording has stopped for good. */
+  private birchesGone = false;
   private summitScore: RecordedScore | null = null;
+  /** The audio-clock moment Home's recording was scheduled to begin, leaving the Mirror. */
+  private homeFrom?: number;
   private preparedScore: RecordedScore | null = null;
   private openingScore: OpeningScore | null = null;
   private summitFinale = false;
@@ -359,7 +376,11 @@ export class Soundscape {
       this.stillPhrases ??= new StillPhrases(this.ctx, this.backgroundDry);
       return this.stillPhrases.ready;
     }
-    const active = track === 'stillDeparture' ? this.stillDepartureScore : track === 'home' ? this.summitScore : track === 'lines' ? this.linesScore : track === 'boats' ? this.boatsScore : this.birchesScore;
+    if (track === 'sea') {
+      this.seaMusic ??= new SeaMusic(this.ctx, this.backgroundDry);
+      return this.seaMusic.ready;
+    }
+    const active = track === 'stillDeparture' ? this.stillDepartureScore : track === 'home' ? this.summitScore : track === 'mirror' ? this.mirrorScore : track === 'lines' ? this.linesScore : track === 'boats' ? this.boatsScore : track === 'clouds' ? this.cloudsScore : track === 'villageApproach' ? this.villageScore : track === 'belfry' ? this.belfryScore : this.birchesScore;
     if (active) return active.ready;
     if (this.preparedScore?.track !== track) {
       this.preparedScore?.stop(0);
@@ -371,6 +392,7 @@ export class Soundscape {
   cancelStartingMusic(): void {
     this.preparedScore?.stop(0); this.preparedScore = null;
     this.stillPhrases?.stop(0); this.stillPhrases = null;
+    this.seaMusic?.stop(0); this.seaMusic = null;
   }
 
   private takeRecordedScore(track: RecordedMusic): RecordedScore {
@@ -1033,13 +1055,24 @@ export class Soundscape {
     const now = ctx.currentTime;
     const tc = 0.08;
     const room = this.stairs(s, now, dt);
-    const recorded = s.arrivalMusic ? (s.arrivalMusic === 'home' || s.arrivalMusic === 'birches' || s.arrivalMusic === 'lines' || s.arrivalMusic === 'boats' ? s.arrivalMusic : null)
+    if (!s.stairsAir) this.birchesGone = false;
+    else if (s.stairsAir.phase !== 'under') this.birchesGone = true;
+    const villageOnce = tuning.audio.recordedMusicOnce.villageApproach!;
+    const villageAhead = this.villageAt === null ? (s.drownedScore ?? 'drift') === 'drift' && !s.drownedQuiet : now - this.villageAt < villageOnce.end;
+    const belfryOnce = tuning.audio.recordedMusicOnce.belfry!, belfryFrom = belfryOnce.from ?? 0;
+    // Decoded from when she reaches the belfry, so it is ready for the fourth ring.
+    const belfryAhead = this.belfryAt === null ? s.drownedScore === 'refuge' || s.drownedScore === 'home' || !!s.bellsRung
+      : now - this.belfryAt < belfryOnce.end - belfryFrom;
+    const recorded = s.arrivalMusic ? (s.arrivalMusic === 'home' || s.arrivalMusic === 'mirror' || s.arrivalMusic === 'birches' || s.arrivalMusic === 'lines' || s.arrivalMusic === 'boats' ? s.arrivalMusic
+        : s.arrivalMusic === 'drowned' ? villageAhead ? 'villageApproach' : belfryAhead ? 'belfry' : null : null)
       : tuning.audio.stillPhraseExperiment && (s.stillDeparture || s.stillDepartureSoon) ? 'stillDeparture'
-      : s.summitScore ? 'home' : s.birchesScore && !room.birchesGone ? 'birches' : s.linesScore ? 'lines' : s.music === 'boats' ? 'boats' : null;
+      : s.summitScore ? 'home' : s.mirrorScore ? 'mirror' : s.stairsAir && s.stairsAir.phase !== 'under' ? 'clouds'
+      : s.birchesScore && !this.birchesGone ? 'birches' : s.linesScore ? 'lines' : s.music === 'boats' ? 'boats' : null;
     if (recorded && !s.silence && !this.musicMuted) void this.prepareMusic(recorded);
     else if (this.preparedScore) {
       this.preparedScore.stop(0); this.preparedScore = null;
     }
+    if (s.seaMusicTime !== undefined && !s.silence && !this.musicMuted) void this.prepareMusic('sea');
     const g = Math.min(s.gust / 26, 1);
     const winter = s.winterGust ?? 0;
     const weatherGust = winter * .76;
@@ -1073,12 +1106,21 @@ export class Soundscape {
     this.fade(this.liftGain.gain, s.charge * (1 - tuning.audio.playerWindEase * s.charge * s.charge) * playerWindGain * 0.35 * air, now, 0.15);
     this.liftFilter.frequency.setTargetAtTime(220 + s.charge * 1500 * tuning.audio.playerWindFilterRange, now, 0.2);
 
-    const activeScore = this.stillDepartureScore ?? this.stillPhrases ?? this.openingScore ?? this.summitScore ?? this.dreamScore ?? this.drownedScore ?? this.linesScore ?? this.boatsScore ?? this.meadowScore ?? this.birchesScore ?? this.sleepingScore ?? this.seaScore ?? this.stairsScore;
-    const arrival = this.arrivalTransition.update(s, now, s.arrivalMusic ? activeScore?.handoffAt(now) : now), bg = arrival.background;
+    const activeScore = this.stillDepartureScore ?? this.cloudsScore ?? this.stillPhrases ?? this.openingScore ?? this.summitScore ?? this.mirrorScore ?? this.villageScore ?? this.belfryScore ?? this.linesScore ?? this.boatsScore ?? this.meadowScore ?? this.birchesScore ?? this.sleepingScore ?? this.seaMusic;
+    const mirrorAt = this.mirrorScore?.position(now);
+    const arrival = this.arrivalTransition.update(s, now, s.arrivalMusic ? activeScore?.handoffAt(now) : now,
+      !!s.arrivalMusic && activeScore instanceof RecordedScore && activeScore.holdsHandoff,
+      mirrorAt === undefined ? undefined : { position: mirrorAt, length: this.mirrorScore!.duration }), bg = arrival.background;
+    // Leaving the Mirror: it fades itself into its chosen phrase seam while Home's start is held to the crossing.
+    if (arrival.changed && arrival.stage === 'wait' && arrival.release !== undefined) this.mirrorScore?.finishAt(arrival.handoffAt, arrival.release);
+    if (arrival.homeAt !== undefined) this.homeFrom = arrival.homeAt;
+    else if (!bg.summitScore) this.homeFrom = undefined;
     if (arrival.changed && (arrival.stage === 'fade' || arrival.stage === 'gap')) {
       // Retire every outgoing source before the short rest ends; do not let long tails reopen with the next room.
       const fade = arrival.stage === 'fade' ? (arrival.fadeOut ?? tuning.audio.arrivalFadeOut) : .08;
-      for (const score of [this.stillDepartureScore, this.stillPhrases, this.openingScore, this.summitScore, this.dreamScore, this.drownedScore, this.linesScore, this.boatsScore, this.meadowScore, this.birchesScore, this.sleepingScore, this.seaScore, this.stairsScore]) score?.stop(fade);
+      for (const score of [this.stillDepartureScore, this.stillPhrases, this.openingScore, this.summitScore, this.mirrorScore, this.villageScore, this.belfryScore, this.linesScore, this.boatsScore, this.meadowScore, this.birchesScore, this.sleepingScore, this.cloudsScore]) score?.stop(fade);
+      // The sea's recording is prepared as the passage begins; only a handoff away from the sea retires it.
+      if (s.arrivalMusic !== 'sea') this.seaMusic?.stop(fade);
     }
     const backgroundPaused = arrival.stage === 'gap';
     const homeMusicForward = !!bg.summitScore && !tuning.audio.homeMusicDucking;
@@ -1109,11 +1151,12 @@ export class Soundscape {
     } else if (this.boatsScore) {
       this.boatsScore.stop(s.silence ? .12 : 1.8); this.boatsScore = null;
     }
-    if (bg.music === 'sea' && bg.seaScore && !s.silence && !backgroundPaused) {
-      if (!this.seaScore) { this.seaScore = new SeaScore(ctx, this.backgroundBus); this.chord = -1; }
-      this.seaScore.update(bg.seaScore, tuning.audio.seaScoreLevel * (1 - 0.92 * bg.hush) * (1 - piano), arrival.handoffAt);
-    } else if (this.seaScore) {
-      this.seaScore.stop(); this.seaScore = null; this.chord = -1;
+    // The recording carries its own dynamics: no hush, only room under the whale's calls.
+    if (s.seaMusicTime === undefined || s.silence) {
+      this.seaMusic?.stop(s.silence ? .12 : 1.8); this.seaMusic = null;
+    } else if (bg.music === 'sea' && bg.seaScore && !backgroundPaused && this.seaMusic) {
+      this.seaMusic.update(s.seaMusicTime, s.seaPhrase ?? -1,
+        10 ** ((tuning.audio.recordedMusicDb.sea + tuning.audio.whaleCallRoomDb * (s.whaleCalling ?? 0)) / 20) * (1 - piano));
     }
     if (bg.sleepingScore && !s.silence && !backgroundPaused) {
       this.sleepingScore ??= new SleepingScore({ ctx, bus: this.backgroundDry, reverb: this.backgroundWet }, out => {
@@ -1131,22 +1174,30 @@ export class Soundscape {
     } else if (this.meadowScore) {
       this.meadowScore.stop(s.silence ? 0.12 : 1.8); this.meadowScore = null;
     }
-    if (bg.music === 'birches' && bg.birchesScore && !room.birchesGone && !s.silence && !backgroundPaused && (!this.musicMuted || this.birchesScore)) {
+    // Birches loops on its island and the approach to it. Once they have sailed, the pass under way plays out to the end
+    // of the file; up in the white it stops for good over `birchesCloudFade`, and silence holds until `clouds.ogg`.
+    if (bg.music === 'birches' && bg.birchesScore && !this.birchesGone && !s.silence && !backgroundPaused
+      && (this.birchesScore || !this.musicMuted)) {
       this.birchesScore ??= this.takeRecordedScore('birches');
-      this.birchesScore.update(bg.birchesScore, 10 ** (tuning.audio.recordedMusicDb.birches / 20) * (1 - piano) * room.birches);
+      if (!s.birchesLoop) this.birchesScore.playOut();
+      this.birchesScore.update(bg.birchesScore, 10 ** (tuning.audio.recordedMusicDb.birches / 20) * (1 - piano));
     } else if (this.birchesScore) {
-      this.birchesScore.stop(s.silence ? .12 : 1.8); this.birchesScore = null;
+      this.birchesScore.stop(s.silence ? .12 : this.birchesGone ? tuning.audio.birchesCloudFade : 1.8); this.birchesScore = null;
     }
-    // The stairs take over from the birches' phrase once it has drained away in the white.
+    // Once she stands at the top with the haze lifted off the sun, `clouds.ogg` plays once on its own clock; the
+    // village's music waits for its end. No hush or fog thinning: the recording carries its own dynamics.
     const stairsMusic = !!s.stairsAir && bg.music === 'birches';
-    // Once begun, the room's score never falls silent again before the village takes over.
-    const stairsPhase = stairsMusic ? stairsScorePhase(s.stairsAir!) ?? this.stairsScore?.phase : undefined;
-    if (stairsPhase && !s.silence && !backgroundPaused) {
-      this.stairsScore ??= new StairsScore(ctx, this.backgroundBus, this.backgroundWet);
-      this.stairsScore.update(stairsPhase, tuning.audio.stairsScoreLevel * room.score * (1 - piano), arrival.handoffAt);
-    } else if (this.stairsScore) {
-      this.stairsScore.stop(s.silence ? .12 : 1.8); this.stairsScore = null;
+    const onTop = stairsMusic && s.stairsAir!.clear;
+    if (onTop && this.cloudsAt === null) this.cloudsAt = now;
+    const cloudsFrom = (this.cloudsAt ?? Infinity) + tuning.audio.cloudsMusicDelay;
+    if (now >= cloudsFrom && bg.music === 'birches' && !s.silence && !backgroundPaused && (this.cloudsScore || onTop && !this.musicMuted)) {
+      const late = now - Math.max(cloudsFrom, this.cloudsAt!) > tuning.audio.recordedMusicFade;
+      this.cloudsScore ??= this.takeRecordedScore('clouds');
+      this.cloudsScore.update('top', 10 ** (tuning.audio.recordedMusicDb.clouds / 20) * (1 - piano), now - cloudsFrom, late);
+    } else if (this.cloudsScore) {
+      this.cloudsScore.stop(s.silence ? .12 : 1.8); this.cloudsScore = null;
     }
+    if (!s.stairsAir && !this.cloudsScore) this.cloudsAt = null;
     if (bg.music === 'lines' && bg.linesScore && !s.silence && !backgroundPaused && (!this.musicMuted || this.linesScore)) {
       this.linesScore ??= this.takeRecordedScore('lines');
       this.linesScore.update(bg.linesScore, 10 ** (tuning.audio.recordedMusicDb.lines / 20) * (1 - piano));
@@ -1156,27 +1207,46 @@ export class Soundscape {
     const forestEntry = arrival.legato && arrival.stage === 'blend' && arrival.changed;
     if (forestEntry) this.forestBlendUntil = now + tuning.audio.forestMusicBlend;
     // Dynamics are already composed into these arrangements; hush must not attenuate them twice.
-    if (bg.mirrorScore && !s.silence && !backgroundPaused) {
-      this.dreamScore ??= new DreamScore(ctx, this.backgroundBus);
-      this.dreamScore.update(bg.mirrorScore, tuning.audio.mirrorScoreLevel * roomTrim('mirror') * (1 - piano), arrival.handoffAt);
-    } else if (this.dreamScore) {
-      this.dreamScore.stop(s.silence ? .12 : tuning.audio.dreamPhaseFade);
-      this.dreamScore = null;
+    // A handoff already fading the Mirror out must not begin its recording just to fade it.
+    if (bg.mirrorScore && !s.silence && !backgroundPaused && (!this.musicMuted || this.mirrorScore) && (this.mirrorScore || arrival.stage !== 'fade')) {
+      this.mirrorScore ??= this.takeRecordedScore('mirror');
+      this.mirrorScore.update(bg.mirrorScore, 10 ** (tuning.audio.recordedMusicDb.mirror / 20) * (1 - piano));
+    } else if (this.mirrorScore) {
+      this.mirrorScore.stop(s.silence ? .12 : 1.8); this.mirrorScore = null;
     }
-    if (bg.drownedScore && !s.drownedQuiet && !s.silence && !backgroundPaused) {
-      this.drownedScore ??= new DrownedScore({ ctx, bus: this.backgroundDry, reverb: this.backgroundWet }, out => {
-        const piano = new PianoStrings(); piano.setOutput(out); return piano;
-      });
-      this.drownedScore.update(bg.drownedScore, tuning.audio.drownedScoreLevel * roomTrim('drowned') * (1 - piano), arrival.handoffAt);
-    } else if (this.drownedScore) {
-      this.drownedScore.stop(s.drownedQuiet ? tuning.drowned.rescue.musicFade : s.silence ? .12 : arrival.legato ? tuning.audio.forestMusicBlend : 1.8);
-      this.drownedScore = null;
+    // The village's approach plays once, from its top as the village's music begins, to the seam before the bass, on
+    // its own clock; the rescue's quiet lets it go early, for good. Nothing follows it in the village or the storm.
+    if (bg.music !== 'drowned') this.villageAt = null;
+    else if (s.drownedQuiet) this.villageAt = -Infinity;
+    else if (this.villageAt === null && bg.drownedScore === 'drift' && !s.silence && !backgroundPaused) this.villageAt = now;
+    const villageTime = this.villageAt === null ? Infinity : now - this.villageAt;
+    if (villageTime < villageOnce.end && !s.drownedQuiet && !s.silence && !backgroundPaused && (this.villageScore || !this.musicMuted)) {
+      this.villageScore ??= this.takeRecordedScore('villageApproach');
+      this.villageScore.update('approach', 10 ** (tuning.audio.recordedMusicDb.villageApproach / 20) * (1 - piano), villageTime, false, true);
+    } else if (this.villageScore) {
+      this.villageScore.stop(s.drownedQuiet ? tuning.drowned.rescue.musicFade : s.silence ? .12 : 1.8);
+      this.villageScore = null;
+    }
+    // The belfry's goodbye comes in slowly from the fourth ring (or with a save past it) and plays once on its own clock
+    // to its end fade, through boarding, the look back and on into the storm: nothing in the village cuts it.
+    if (s.music !== 'drowned') this.belfryAt = null;
+    else if (this.belfryAt === null && s.bellsRung && !s.silence) this.belfryAt = now;
+    const belfryTime = this.belfryAt === null ? Infinity : now - this.belfryAt;
+    if (belfryTime < belfryOnce.end - belfryFrom && !s.silence && !backgroundPaused && (this.belfryScore || !this.musicMuted)) {
+      this.belfryScore ??= this.takeRecordedScore('belfry');
+      this.belfryScore.update('goodbye', 10 ** (tuning.audio.recordedMusicDb.belfry / 20) * (1 - piano), belfryFrom + belfryTime,
+        belfryTime > tuning.audio.recordedMusicFade, true);
+    } else if (this.belfryScore) {
+      this.belfryScore.stop(s.silence ? .12 : 1.8); this.belfryScore = null;
     }
     if (!bg.summitScore) this.summitFinale = false;
     if (bg.music === 'home' && bg.summitScore && !this.summitFinale && !s.silence && !backgroundPaused && (!this.musicMuted || this.summitScore)) {
       this.summitScore ??= this.takeRecordedScore('home');
+      // After the Mirror, Home keeps the time it was scheduled for, even if music comes back on later.
+      const scheduled = s.homeEndingTime === undefined && this.homeFrom !== undefined;
       this.summitScore.update(bg.summitScore,
-        10 ** (tuning.audio.recordedMusicDb.home / 20) * (homeMusicForward ? 1 : 1 - .92 * bg.hush) * (1 - piano), s.homeEndingTime);
+        10 ** (tuning.audio.recordedMusicDb.home / 20) * (homeMusicForward ? 1 : 1 - .92 * bg.hush) * (1 - piano),
+        scheduled ? Math.max(0, now - this.homeFrom!) : s.homeEndingTime, false, scheduled);
     } else if (this.summitScore) {
       this.summitScore.stop(s.silence ? .12 : 1.8); this.summitScore = null;
     }
@@ -1205,9 +1275,8 @@ export class Soundscape {
     } else if (this.openingScore) {
       this.openingScore.stop(); this.openingScore = null;
     }
-    const mood = this.seaScore ? SEA_SCORE_MOOD : MOODS[bg.music] ?? MOODS.meadow;
-    const chord = this.seaScore ? this.seaScore.chordAt(now)
-      : bg.music === 'wood' && now < this.forestBlendUntil ? 0 : Math.floor(now / mood.seconds) % mood.chords.length;
+    const mood = MOODS[bg.music] ?? MOODS.meadow;
+    const chord = bg.music === 'wood' && now < this.forestBlendUntil ? 0 : Math.floor(now / mood.seconds) % mood.chords.length;
     const finale = now < this.finaleUntil;
     if (s.silence) {
       this.fade(this.musicBus.gain, 0, now, 0.12);
@@ -1221,7 +1290,7 @@ export class Soundscape {
       this.padVoices.forEach((voice, i) => {
         const f = hz(mood.chords[chord][i]);
         voice.osc.forEach((o) => {
-          // The pad was inaudible under the composed score. Tune it before bringing it in.
+          // The pad was silent through the village and the storm. Tune it before bringing it in.
           if (forestEntry) { o.frequency.cancelScheduledValues(now); o.frequency.setValueAtTime(f, now); }
           else o.frequency.setTargetAtTime(f, now, glide);
         });
@@ -1234,27 +1303,25 @@ export class Soundscape {
     const padLife = 0.012 + 0.045 * s.life;
     // The opening grows less with life; wind warms it in the same proportion.
     const lifeLevel = this.openingScore ? 0.012 + tuning.audio.openingPadRise * s.life : padLife;
+    // The village and the storm keep no pad; the wood's drone (and the crossing on from it) sits `woodDroneDb` down.
+    const woodDrone = bg.music === 'wood' && !bg.sleepingScore ? 10 ** (tuning.audio.woodDroneDb / 20) : 1;
     this.fade(this.padGain.gain,
-      stillExperiment || backgroundPaused || s.drownedQuiet || stairsMusic || this.summitScore || this.dreamScore || this.drownedScore || this.sleepingScore || this.meadowScore || this.birchesScore || this.linesScore || this.boatsScore ? 0 : (lifeLevel * (1 - 0.35 * s.night * (finale ? 0 : 1)) + this.activity * tuning.audio.padActivityLevel * lifeLevel / padLife) * hush * mood.level * swell * (this.openingScore ? this.openingScore.gainAt(now) * 10 ** (tuning.audio.openingScoreDb / 20) : 1),
+      stillExperiment || backgroundPaused || bg.seaScore || bg.music === 'drowned' || stairsMusic || this.cloudsScore || this.summitScore || this.mirrorScore || this.sleepingScore || this.meadowScore || this.birchesScore || this.linesScore || this.boatsScore ? 0 : (lifeLevel * (1 - 0.35 * s.night * (finale ? 0 : 1)) + this.activity * tuning.audio.padActivityLevel * lifeLevel / padLife) * hush * mood.level * swell * woodDrone * (this.openingScore ? this.openingScore.gainAt(now) * 10 ** (tuning.audio.openingScoreDb / 20) : 1),
       now,
       piano > 0 ? tuning.piano.mixResponse : now < this.forestBlendUntil ? tuning.audio.forestMusicBlend / 3 : bg.hush > 0.5 ? 0.7 : 1.5,
     );
     this.padFilter.frequency.setTargetAtTime(mood.cutoff + 260 * s.life - 200 * s.night, now, 2.5);
 
     const harmonyAt = (at: number): readonly number[] => {
-      const composed = this.openingScore?.chordAt(at) ?? this.dreamScore?.chordAt(at) ?? this.drownedScore?.chordAt(at)
-        ?? this.meadowScore?.chordAt(at) ?? this.sleepingScore?.chordAt(at) ?? this.stairsScore?.chordAt(at);
+      const composed = this.openingScore?.chordAt(at) ?? this.meadowScore?.chordAt(at) ?? this.sleepingScore?.chordAt(at);
       if (composed) return composed;
       // During the music-free arrival gap, use the opening harmony of the incoming composition.
       if (backgroundPaused) {
-        if (bg.mirrorScore) return DREAM_SECTIONS[bg.mirrorScore].chords[0].tones;
-        if (bg.drownedScore) return DROWNED_SECTIONS[bg.drownedScore].chords[0].tones;
         if (bg.meadowScore) return MEADOW_SECTIONS[bg.meadowScore].chords[0].tones;
         if (bg.sleepingScore) return SLEEPING_SECTIONS[bg.sleepingScore].chords[0]?.tones ?? [50,57];
         if (bg.music === 'boats') return BOATS_CHORDS[0];
       }
-      const index = this.seaScore?.chordAt(at)
-        ?? Math.floor(at / mood.seconds) % mood.chords.length;
+      const index = Math.floor(at / mood.seconds) % mood.chords.length;
       const tones = mood.chords[index];
       // The wood's upper semitones belong to its unsettled drone; touch answers on its steady D/A pedal.
       return bg.music === 'wood' ? MOODS.wood.chords[0] : tones;
@@ -1274,7 +1341,7 @@ export class Soundscape {
     for (const name of cues) {
       if (name === 'foghorn') { this.foghorn(); }
       else if (name === 'flightHome') flightKnock(ctx, this.master, this.reverb, this.noiseWork?.ready ? this.noise : null);
-      else if (name === 'star') { this.dreamScore?.bloom(); }
+      else if (name === 'star') continue;
       else if (name === 'kindled' || name === 'comfort') {
         this.flare();
         this.phrase(name);

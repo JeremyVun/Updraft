@@ -34,7 +34,7 @@ const layouts = {
     'scarf4-2': F.birches, 'scarf4-2-swing': F.birches, 'scarf4-3': F.birches, 'scarf4-3-swing': F.birches,
     'scarf4-4': F.birches, 'scarf4-4-swing': F.birches,
   },
-  toStairs: { entry: F.empty }, stairs: { entry: F.empty, 'flight-1': F.stairs, 'flight-2': F.stairs, 'flight-3': F.stairs },
+  toStairs: { entry: F.empty }, stairs: { entry: F.empty, 'flight-1': F.stairs, 'flight-2': F.stairs, 'flight-3': F.stairs, cloud: F.stairs },
   drowned: { entry: F.empty, sail: F.drowned, roofs: F.drowned, church: F.drowned, belfry: F.drowned, storm: F.drowned }, toWood: { entry: F.empty },
   wood: { entry: F.empty, found: F.wood, dry: F.wood }, toSleeping: { entry: F.empty },
   sleeping: { entry: F.empty, feather: F.empty, morning: F.empty },

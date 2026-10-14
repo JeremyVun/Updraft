@@ -220,8 +220,7 @@ brings the light. Courage passes back and forth between them, and the stairs are
      comes out of the foot of a tower of cumulus to the right of the sun (it has waited inside, hidden, since they
      came up) and sails in toward them, the kite with it. A few seconds after it sets off she turns to the bird,
      still looking where the swans went, then to the boat; her feet swing again. The lens comes round to their faces as it slows and lies right alongside the landing's edge.
-6. **The sail over the cloud.** The kite draws them the whole way; nobody needs to blow (a gust still adds a
-   little). Off the landing in one slow turn to port, then a long wander across the open cloud toward the low sun:
+6. **The sail over the cloud.** The kite draws them the whole way; nobody needs to blow. Off the landing in one slow turn to port, then a long wander across the open cloud toward the low sun:
    out to port among the heaps, back across to starboard between towers of cumulus, and straight on into a bank of
    mist standing on the cloud (about 350 m, two minutes). The hull rides the billows, down in the tops, parting them.
    Under way the bird hops up onto the gunwale on the sunward side, forward of the mast so the mast never stands
@@ -333,8 +332,10 @@ brings the light. Courage passes back and forth between them, and the stairs are
   fog as the rest of the scene. Its eight-metre shape sample is only a look ahead, not a minimum visible distance;
   treating it as an entry distance left the bottom of the screen uncovered. `tools/stairs-fog-check.mjs` checks
   coverage and continuity on the GPU, including the pocket of clearer air round the boat.
-- **Sound**: `src/audio/stairs-sound.ts` and `stairs-score.ts` behind `StairsAir` (phase, cloud, climb, open, fog,
-  speed), rendered with `tools/stairs-audio-proposal.mjs`; the contract is in `docs/contracts/audio.md`.
+- **Sound**: `src/audio/stairs-sound.ts` behind `StairsAir` (phase, cloud, climb, open, fog, speed); the birches
+  recording, if it is still playing, stops over a second as they go up into the white, and silence holds through the
+  white and the loop; then `clouds.ogg` from the moment they come out on top to 3:28, holding the village's music until it ends (Jeremy's brief and the
+  measured timeline are in `docs/contracts/audio.md`); rendered with `tools/stairs-audio-proposal.mjs`.
 - **Checking**: `node tools/stairs-check.mjs <prefix>` plays the room with real drags against a dev server
   (`BASE=`), captures each beat, blows the heap off the loop when the sweep is drawn, and shoots the fog; `FROM=n`
   starts with n flights home, `UNTIL=n` stops after n, `TRACE=1` logs the flights. Capture from a separate worktree
