@@ -151,6 +151,11 @@ authored in (`world/birches-layout.ts`); "world z" is where it stands since phas
 - Track keys follow the rooms: `birches` → `red_door.ogg`, `stairs` → `birches.ogg`. Prefetch and decode
   (`audio/music-loading.ts`) follow: Red Door warms in the meadow, the stairs song from the birches on, `clouds.ogg`
   from the stairs' white as now.
+- **As built (phase 2).** The handoff's real entrance is 9 s before the landing, about 20 s after the push-off, so a
+  pass fading 10 s before it would fade as the boat gathers way. Red Door fades when the crossing's estimate
+  (`arrivalIn`, at the boat's speed now) reaches 15 s, and the stairs song waits 10 s after Red Door was last heard:
+  with no input Red Door fades 8.7–13.7 s after the push-off and the song begins at 23.7 s, 5.7 s before the landing.
+  A `toStairs` start never begins Red Door. Numbers and checks: build_plan.md phase 2 and the audio contract.
 
 ### The island moves and grows
 

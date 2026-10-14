@@ -62,7 +62,7 @@ playthrough).
   mid-`toStairs`, the stairs landing under the deck, and the view north from the meadow's far shore. A save made at a
   birches checkpoint and at `toStairs` before the change resumes correctly after it.
 
-### 2. Music. Opus. Done: ☐ (after 1; may run alongside 3)
+### 2. Music. Opus. Done: ☑ (2026-10-15)
 
 Owns `assets/music/red_door.ogg` (a copy of "The Red Door Opens"; leave every other file in `assets/music`
 untouched), `audio/music-loading.ts`, the recorded-score and sound-state wiring for the birches and stairs tracks,
@@ -76,6 +76,23 @@ sound line in `docs/stairs.md`, and the music checks (`village-music-check.mjs`,
 - **Gate:** `npm run check:audio`, `village-music-check`, `clouds-music-check`. Render `toStairs` from push-off to
   the white with `music-transition-audit` (or `stairs-audio-proposal.mjs`) and report: Red Door's end or fade
   time, the length of the quiet gap, `birches.ogg`'s start, and its fade in the white.
+- **Built:** track keys `birches` → `red_door.ogg`, `stairs` → `birches.ogg`; Red Door measures −18.3 LUFS (ffmpeg
+  `ebur128`, the contract's method; birches.ogg re-measures −16.0) and uses −10.7 dB, the −29 reference the others
+  sit at. No stairs room trim: −13 dB already puts the stairs song there, and `roomTrimDb` is not applied to recorded
+  playback (Birches' −2.5 dB stays, unused). Red Door begins only on its island or the approach; a `toStairs` start is
+  quiet until the stairs song. The crossing exposes `arrivalIn` (distance to the handoff's entrance over the boat's
+  speed now); at 15 s or less a pass that would sound past `stairsSongRest` (10 s) before the song fades over
+  `birchesSailFade` (5 s), and the stairs song also waits `stairsSongRest` after Red Door was last heard, because the
+  boat gathers way after the estimate (and gusts drive it on). The stairs song enters on the `toStairs` crossing's
+  `arrivalMusic: 'stairs'` handoff from its top, loops under the cloud and fades over `stairsSongCloudFade` (3 s) in
+  the white. Prefetch: Red Door in the meadow, the stairs song from the birches on, `clouds.ogg` under the cloud.
+  Measured in the real game with no input (`village-music-browser-check.mjs sail`), from the push-off: aboard 2.8 s,
+  Red Door fades 8.7–13.7 s, the handoff is asked for at 14.0 and ready at 20.4, the stairs song starts 23.7 s (held
+  3.3 s for the rest; quiet gap 10.0 s), landing 29.4 s (song 5.7 s before it), the white 41.4 s, the song gone 3.0 s
+  later. Offline (`music-transition-audit.mjs`, `sail-faded`/`sail-ended`): a pass 30 s in at push-off fades
+  8.6–13.5 s, song 23.5 s; a pass 8 s from its end ends by itself at 8.0 s, song on the handoff at 20.5 s (gap 12.5 s).
+  `npm run check:audio` fails in `audio`, `meadow-score`, `opening-score` and `piano-audio` exactly as on the base
+  commit (meadow, piano and opening fixtures, outside this phase); everything else passes.
 
 ### 3a. The squirrel's look. Opus (visual). Done: ☑ (after 1; may run alongside 2)
 

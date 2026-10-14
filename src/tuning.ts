@@ -74,7 +74,7 @@ export const tuning = {
     openingScoreDb: 12,
     summitScoreLevel: .06555 * 10 ** (8 / 20),
     /** Match supplied masters to the room reference through gain alone. */
-    recordedMusicDb: { home: -14.4, mirror: -14.7, sea: -13.6, birches: -13, clouds: -14.5, villageApproach: -9.7, belfry: -11, lines: -12, boats: -12.3 },
+    recordedMusicDb: { home: -14.4, mirror: -14.7, sea: -13.6, birches: -10.7, stairs: -13, clouds: -14.5, villageApproach: -9.7, belfry: -11, lines: -12, boats: -12.3 },
     recordedMusicFade: .65,
     /** A recording kept to its scheduled moment that begins within this many seconds of it enters at full level. */
     recordedMusicOnTime: .1,
@@ -91,8 +91,13 @@ export const tuning = {
       /** Just before the attack at 8.0 s to just before the next at 54.1 s, coming in slowly after the last bell. */
       belfry: { from: 7.97, end: 54.05, fadeOut: 2, enterFrom: 0, enterOver: 5, holdsHandoff: false },
     } as Partial<Record<string, { from?: number; end: number; fadeOut: number; enterFrom?: number; enterOver?: number; holdsHandoff: boolean }>>,
-    /** Going up into the white, a birches pass still playing stops over this long. */
-    birchesCloudFade: 1,
+    /**
+     * Sailing to the stairs, a birches pass that would still sound `stairsSongRest` before the stairs song can begin
+     * fades over `birchesSailFade` to end then.
+     */
+    birchesSailFade: 5, stairsSongRest: 10,
+    /** Going up into the white, the stairs song fades over this long. */
+    stairsSongCloudFade: 3,
     /** The wood's drone (the shared pad in the wood's mood), relative to its original level; −Infinity silences it. */
     woodDroneDb: 0,
     /** Seconds after the view clears round her at the top (`StairsAir.clear`) that `clouds.ogg` begins; below 0 starts it that far in. */

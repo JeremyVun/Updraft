@@ -5,7 +5,7 @@ Home, the Sky Mirror, Birches, the stairs in the clouds, the drowned village, Li
 environment, the shared pad, gesture chimes, authored cues and calls, and runs one pass per rendered frame after the
 camera update. Each room with its own composition has a score module that follows story phases, not timers:
 `opening-score.ts`, `meadow-score.ts` and `sleeping-score.ts`. `recorded-score.ts` plays Home, the Sky Mirror,
-Birches, Lines and Little Boats continuously across story phases, and the stairs' `clouds.ogg`, the village's
+Birches, the stairs song under the cloud, Lines and Little Boats continuously across story phases, and the stairs' `clouds.ogg`, the village's
 `village_approach.ogg` and `belfry.ogg`, and Still's departure once each (`recordedMusicOnce`); `phrase-clips.ts` plays excerpts of one recording as
 overlapping clips for `still-phrases.ts` and the open sea's `sea-music.ts`.
 The former `little-boats-score.ts`, `lines-score.ts`, `birches-score.ts`, `summit-score.ts`, `sea-score.ts`, `stairs-score.ts`, `drowned-score.ts` and `dream-score.ts` (notes in `dream-score-data.ts`) remain for historical studies and phase types, outside runtime playback.
@@ -48,7 +48,7 @@ and clears it on exit.
 ## Room levels
 
 Every piece sits near one reference, about −29 LUFS in its main section. Home measures −14.6 LUFS and uses −14.4 dB
-gain; Birches (`birches.ogg`, "A Question, Then a Gentle Answer", 224 s) measures −16.0 LUFS and uses −13 dB; the Sky Mirror measures −14.3 LUFS and uses −14.7 dB; the stairs' `clouds.ogg` measures
+gain; Birches (`red_door.ogg`, "The Red Door Opens", 238.9 s) measures −18.3 LUFS and uses −10.7 dB; the stairs song (`birches.ogg`, "A Question, Then a Gentle Answer", 224 s) measures −16.0 LUFS and uses −13 dB; the Sky Mirror measures −14.3 LUFS and uses −14.7 dB; the stairs' `clouds.ogg` measures
 −14.5 LUFS over the 0–3:28 it plays and uses −14.5 dB; the drowned village's `village_approach.ogg` measures −15.2 LUFS
 over the whole file but −19.3 LUFS over the 0–36.93 s it plays, and uses −9.7 dB; its `belfry.ogg` measures −18.0 LUFS
 over the 7.97–54.05 s it plays and uses −11 dB; the open sea's recording measures −15.4 LUFS
@@ -57,7 +57,9 @@ and uses −12.3 dB. Still measures −23.3 LUFS across its
 phrases and rests and starts at −6 dB (`stillPhraseDb`). These trims preserve the source dynamics and encoded bytes.
 Their dry route avoids adding reverb to an already mixed recording. `roomTrimDb` trims
 Sleeping +2.5 dB over its approved study level (`sleepingScoreLevel`). Its Home, Sky Mirror, Birches and drowned
-village entries and their old score levels are historical, unused by recorded playback. With the experiment disabled, the opening grows about
+village entries and their old score levels are historical, unused by recorded playback; the stairs song needs no
+trim of its own, since its gain already puts it at the reference. Loudness is ffmpeg's `ebur128` integrated
+measure over the whole file unless a stretch is given. With the experiment disabled, the opening grows about
 5 dB with life (`openingPadRise`), keeping its quiet start. The grey
 meadow, the wood and the Sleeping climb stay quiet by design; the wood's drone keeps its original level (`woodDroneDb`
 0; Wood, below). Add new rooms at the reference.
@@ -251,20 +253,29 @@ and wind exchange seeds, then releases it. The final listening rest gives the di
 the crest. See [design and verification](../backlog/meadow-echoes/design.md); human timbre review is still pending.
 
 **Birches.** Jeremy's 2026-10-11 instruction: "next if you can wire birches.ogg in for birches island music".
-`assets/music/birches.ogg` ("A Question, Then a Gentle Answer") replaces the synthesised score from the approach
-crossing through boarding and departure. The existing `walk`, `swing`, `scarf` and `return` phases still describe
-story progress and checkpoint state, but never seek, restart or rearrange the recording. Jeremy (2026-10-14/15):
+That recording ("A Question, Then a Gentle Answer") is now the stairs song (the stairs, below). Jeremy (2026-10-14/15):
 
 > my thinking for birches is the logic can be pretty simple. if on birches island, loop, else don't loop and let it finish up. And then on the stairs chapter, just have a hard stop for silence if it's still somehow playing before they enter the clouds and start the penrose stairs sequence.
 
 > My feeling is that there should be silence as they enter the cloud and do the penrose puzzle up until the nest. it builds up a climax i think? And it kinda fits the idea of them being in the clouds (a place they aren't normally supposed to be, so theres no music which makes it feel slightly more awkward)
 
-It loops only while the story is on the Birches island or its approach (`toBirches`, `birches`: `SoundState.birchesLoop`).
-Once they have sailed (`toStairs`, `stairs`) it stops looping (`RecordedScore.playOut`): the pass under way plays to the
-end of the file and stops; begun there (a `toStairs` or `stairs` start) it plays once. In the stairs, if it is still
-playing when they go up into the white (`StairsAir.phase` leaves `under` as the bird goes first, before the loop), it
-stops over `birchesCloudFade` (1 s; a cut would click) and never starts again in that room. Silence then holds
-through the white and the loop until `clouds.ogg` on top of the cloud (below).
+With the birches uplift (2026-10-15) the room plays "The Red Door Opens" and `birches.ogg` moves under the stairs:
+
+> yea the red door opens, and yep makes sense to make birches the song under the stairs i guess (we can try this)
+
+`assets/music/red_door.ogg` (a copy of "The Red Door Opens") plays from the approach crossing through boarding. The
+`walk`, `swing`, `scarf` and `return` phases describe story progress and checkpoint state, but never seek, restart or
+rearrange the recording. It loops only while the story is on the Birches island or its approach (`toBirches`,
+`birches`: `SoundState.birchesLoop`) and begins only there. Once they have sailed (`toStairs`) it stops looping
+(`RecordedScore.playOut`) and the pass under way plays out; a `toStairs` start is quiet until the stairs song. The
+crossing says how soon the stairs song can come in (`arrivalIn`: the distance to the handoff's entrance over the
+boat's speed now). Once that is `stairsSongRest` + `birchesSailFade` (15 s) or less, a pass that would still sound
+`stairsSongRest` (10 s) before it fades over `birchesSailFade` (5 s) to end then; a pass ending sooner simply ends.
+The gap is sea, wind and the boat. The boat gathers way after the estimate is made, and gusts can drive it on, so
+the stairs song also waits until `stairsSongRest` after the birches were last heard. With no input, timed from the
+push-off: aboard 2.8 s, the fade 8.7–13.7 s, the handoff asked for at 14.0 and ready at 20.4, the stairs song from
+23.7 s (held 3.3 s for the rest), the landing 29.4 s. A pass ending by itself before the rest leaves the song on
+the handoff (20.4 s).
 
 **Drowned Village.** Jeremy (2026-10-14/15), verbatim:
 
@@ -466,11 +477,11 @@ before Begin. Begin unlocks audio and decodes while the chosen room prepares its
 both, showing "Preparing music" for waits over 150 ms. Sound-off and music-off skip preparation; switching either
 off cancels an in-progress start. A 20-second deadline bounds download/decode failures so ambience can still begin.
 During play, a single compressed prefetch slot warms Still's second recording on the island, Lines on the first crossing, Boats in Lines, Birches in Meadow,
-the stairs' `clouds.ogg` from Birches on (once the birches recording is in hand), the village's `village_approach.ogg` from the stairs' white on (once `clouds.ogg` is in hand: `nextMusicForChapter` takes the stairs' phase), `belfry.ogg` in the village, the open sea in Sleeping, the Sky Mirror on its crossing, and Home in Mirror. `Soundscape.prepareMusic` consumes that download and decodes at the existing arrival handoff (the village's while the stairs' fog waits for `clouds.ogg`).
+the stairs song from the birches on (decoded when the crossing asks for it), the stairs' `clouds.ogg` under the cloud (once the stairs song is in hand), the village's `village_approach.ogg` from the stairs' white on (once `clouds.ogg` is in hand: `nextMusicForChapter` takes the stairs' phase), `belfry.ogg` in the village, the open sea in Sleeping, the Sky Mirror on its crossing, and Home in Mirror. `Soundscape.prepareMusic` consumes that download and decodes at the existing arrival handoff (the village's while the stairs' fog waits for `clouds.ogg`).
 Playback uses an `AudioBufferSourceNode` on the shared
 audio clock, so mute-all and hidden pages freeze it without separate media autoplay permissions. Music-only mute
 leaves an existing score's clock running, but does not start downloading new muted scores. A live decoded Home
-buffer is about 65 MiB at 48 kHz; the Sky Mirror about 79 MiB; the open sea about 87 MiB; Birches about 57 MiB; `clouds.ogg` about 98 MiB, decoded in the white; `village_approach.ogg` about 74 MiB, held only until its seam; `belfry.ogg` about 55 MiB, from the belfry to its end. Exit releases
+buffer is about 65 MiB at 48 kHz; the Sky Mirror about 79 MiB; the open sea about 87 MiB; Birches (`red_door.ogg`) about 87 MiB, released as its pass ends on the sail; the stairs song about 82 MiB, from the crossing's handoff to its fade in the white; `clouds.ogg` about 98 MiB, decoded in the white; `village_approach.ogg` about 74 MiB, held only until its seam; `belfry.ogg` about 55 MiB, from the belfry to its end. Exit releases
 the buffer, aborts an unfinished fetch and prevents a late decode from starting playback. The browser HTTP cache
 retains downloaded files for revisits. A failed fetch or decode is fetched afresh after 1 s and again after 3 s
 (`musicRetryAfter`), within the same 20-second deadline, so a network blip does not silence a room; a recording still
@@ -648,11 +659,12 @@ After playtesting (2026-10-14):
 
 > The cloud stairs music plays too soon by like ~5 seconds or so. It needs to start when the child has already stopped moving and the sun is revealed. have a look at that sequence and figure out a good timing. basically when the child reaches the clearing. Also that background ambience noise / wind sound above the clouds never transitions down. It's supposed to give way to the music at the top. Still there, but much quieter. The windy noise of going through teh clouds and emerging on top into a peaceful, serene scene is what we're going for.
 
-- Under the cloud the birches recording plays out the pass it was on when they sailed (Birches, above). Each flight that docks raises
+- Under the cloud the stairs song (`birches.ogg`) loops, begun from its top on the crossing's handoff (Birches, above;
+  a stairs start under the cloud begins it on load). Each flight that docks raises
   `flightHome`, a soft wooden knock and puff outside cue ducking (`flightKnock`); the last flight also plays the
   completion phrase. The cygnet's `puzzled` peep asks when the loop brings it back to where it set off.
-- In the white, if the birches recording is still playing, it stops over `birchesCloudFade` (1 s) and never starts
-  again in this room; there is no music through the white and the loop. The wind is close and muffled and climbs with
+- In the white the stairs song fades over `stairsSongCloudFade` (3 s, a trial value awaiting Jeremy's listen) and
+  never starts again in this room; there is no music through the white and the loop. The wind is close and muffled and climbs with
   `climb`, while breeze and sea fall away. `clouds.ogg` is decoded here.
 - Out on top, on the first `above` frame, the wind's last gust sweeps past and away and the white's wind dies within
   about 2 s; the high air above the cloud rises as the view opens. She walks to the edge and stops, and the haze lifts
@@ -679,7 +691,7 @@ After playtesting (2026-10-14):
   handoff as it was. Once out on top only the fog brings the sea back.
   Outside the room every level multiplier is exactly 1.
 
-Levels: `stairsAir`, `stairsAirLevel`, `recordedMusicDb.clouds`, `birchesCloudFade`. `node tools/clouds-music-check.mjs` checks the
+Levels: `stairsAir`, `stairsAirLevel`, `recordedMusicDb.stairs`, `recordedMusicDb.clouds`, `stairsSongCloudFade`. `node tools/clouds-music-check.mjs` checks the
 recording's start, entrance, end, hold and gates offline; `node tools/stairs-audio-proposal.mjs [outDir]` renders the
 room's arc against a dev server. `stairs-score.ts` (the earlier synthesised bloom and sail) remains for studies.
 
@@ -689,14 +701,18 @@ room's arc against a dev server. `stairs-score.ts` (the earlier synthesised bloo
 the list and the browser audio checks are in [testing.md](../testing.md). `node tools/audio-interruption-check.mjs`
 covers start-up pacing, interruptions, piano reservations across mute, the cached output graph, the foghorn's
 preparation and the pinwheel voice. `node tools/music-transition-audit.mjs` renders every handoff and all score
-sections. `node tools/village-music-check.mjs` covers the Birches play-out and stop in the white, the village's
+sections. `node tools/village-music-check.mjs` covers the Birches play-out and its end before the stairs song, the stairs song's fade in the white, the village's
 recording and the silence after it, the belfry's goodbye, the storm and the wood's drone level; `node
-tools/village-music-browser-check.mjs [drowned cloud belfry storm]` measures them in the real game.
+tools/village-music-browser-check.mjs [drowned cloud belfry storm sail]` measures them in the real game (`sail`: the
+birches' push-off to the stairs and up into the white). `node tools/music-transition-audit.mjs` also renders that sail
+whole (`sail-faded`, `sail-ended`).
 
 ## Open
 
 - The stairs: the sail's air over the cloud awaits Jeremy's listen in the game, and the moment `clouds.ogg` starts
   (on `clear`) and the settled high air await his playtest (`cloudsMusicDelay`, `highSettled`).
+- Birches and the stairs song: Red Door's level, the sail's fade and quiet (`birchesSailFade`, `stairsSongRest`) and
+  the stairs song's 3 s fade into the white (`stairsSongCloudFade`) await his listen.
 - The drowned village: whether `village_approach.ogg`'s end (just before the bass, 36.93 s) sits right against the
   first challenge (it ends as the tub becomes pushable from the stairs, about 4 s after it from `?chapter=drowned`);
   the belfry's goodbye (`belfry.ogg`, its 5 s entrance and where its end falls in the storm) awaits his playtest.

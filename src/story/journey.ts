@@ -417,7 +417,7 @@ export class Journey {
         return new BirchesChapter(cast);
       case 'toStairs':
         return new CrossingChapter(cast, { route: ROUTES.toStairs, haze: 0.9, dusk: 0.62, season: 0.47, music: 'birches', birchesScore: 'return', hush: 0.3,
-          arrivalView: tuning.crossingCamera.arrivals.stairs });
+          arrivalMusic: 'stairs', arrivalView: tuning.crossingCamera.arrivals.stairs });
       case 'stairs':
         return new StairsChapter(cast);
       case 'drowned':
