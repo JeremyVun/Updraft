@@ -9,9 +9,10 @@ export const tuning = {
   /**
    * The birches' red squirrel: how much bigger than life it is drawn so it reads beside the cygnet at play distance,
    * how quickly it snaps from one held shape to the next and its head from one glance to the next (per second), and
-   * its speeds along the ground, up a trunk and along the wool (m/s).
+   * its speeds along the ground, up a trunk and along the wool (m/s), how quickly it gets up to speed (per second)
+   * and how hard it pulls up at the end of its way (m/s²).
    */
-  squirrel: { scale: 1.7, snap: 14, glanceSnap: 24, boundSpeed: 2.6, climbSpeed: 1.1, lineSpeed: 1.8 },
+  squirrel: { scale: 3, snap: 14, glanceSnap: 24, boundSpeed: 3.4, climbSpeed: 1.5, lineSpeed: 2.1, pickUp: 3, brake: 6 },
   cinematography: {
     /** Radians either side of the story's preferred view; never an unsolicited reverse angle. */
     freedom: 0.18, reviewEvery: 0.5, holdFor: 6, confirmFor: 1.5, improvement: 0.045,

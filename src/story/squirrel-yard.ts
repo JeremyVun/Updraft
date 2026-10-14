@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import type { Floor, Squirrel, SquirrelAction } from '../creatures/squirrel';
+import { sagging, spiral, type Floor, type Squirrel, type SquirrelAction, type SquirrelPoint } from '../creatures/squirrel';
 import { CREATURE_GLSL } from '../creatures/shading';
 import { LEAF_SHAPE_GLSL, LEAF_TINT_GLSL } from '../fx/leaves';
 import { mulberry32 } from '../world/noise';
@@ -93,17 +93,22 @@ const BIRCH: Tint = [0.78, 0.76, 0.7];
 const OLD_BIRCH: Tint = [0.6, 0.6, 0.53];
 const MOUND: Tint = [0.42, 0.22, 0.07];
 const EARTH: Tint = [0.2, 0.13, 0.08];
+const RED: Tint = [0.62, 0.08, 0.06];
 
 /** The yard's floor: a round of leaf-strewn earth standing out of the sea, its top this high above the water. */
 const FLOOR = { x: 0.5, z: 4.5, r: 6.2, top: 0.5 };
 /** Everything built stands on the sea floor, well under the surface. */
 const BED = -6;
 /** The places in the yard, in its own space: x to its left (east), z ahead (south, out to sea), y up off its floor. */
-const HEAP = { x: 0.9, z: 4.3, r: 0.95, top: 0.22 };
-const LOG = { a: [-1.6, 5.3], b: [2.4, 5.6], r: 0.17 } as const;
-const TRUNK = { x: 2.7, z: 6.9, r: 0.16, top: 6 };
+const HEAP = { x: 0.9, z: 4.1, r: 1.2, top: 0.42 };
+const LOG = { a: [-1.6, 5.5], b: [2.4, 5.8], r: 0.26 } as const;
+const TRUNK = { x: 2.7, z: 6.9, r: 0.21, top: 6 };
+/** A second birch across the yard, the wool tied between the two. */
+const TRUNK_B = { x: -2.4, z: 7.6, r: 0.19, top: 5.5 };
 /** A low limb off the trunk: how high it leaves it, where it reaches to in the yard's space, and its girth. */
-const BRANCH = { y: 1.55, rise: 0.1, out: [-1.45, -0.35], r: 0.055 } as const;
+const BRANCH = { y: 2.3, rise: 0.1, out: [-1.45, -0.35], r: 0.075 } as const;
+/** The scarf's wool, hung from the second birch to the first: the height it is tied at on each, its sag and girth. */
+const WOOL = { from: 1.7, to: 1.9, sag: 0.24, r: 0.026 };
 const OPEN = { x: -1.5, z: 3.3 };
 /** Where the child would stand to watch, at the yard's near edge: what the squirrel looks at. */
 const WATCHER = { x: 0, z: -0.8, y: 1.1 };
@@ -120,9 +125,10 @@ interface Limb {
 
 /**
  * QA only: a corner of the autumn birches out on the sea beyond the QA stage's beach, west of the cat's yard (a
- * round of earth strewn with the birches' own leaves, a heap banked against a fallen birch, a standing birch with a
- * low limb), so that every one of the squirrel's actions can be played by name and judged in the birches' light.
- * Its play beside the child and the cygnet is judged in the birches themselves (`tools/squirrel-check.mjs`).
+ * round of earth strewn with the birches' own leaves, a heap banked against a fallen birch, two standing birches
+ * with a length of the scarf's red wool hung between them, and a low limb), so that every one of the squirrel's
+ * actions can be played by name and judged in the birches' light, held or on the move. Its play beside the child
+ * and the cygnet is judged in the birches themselves (`tools/squirrel-check.mjs`).
  */
 export class SquirrelYard {
   readonly group = new THREE.Group();
@@ -136,7 +142,14 @@ export class SquirrelYard {
   private readonly heapAt = new THREE.Vector3();
   private readonly log: Limb;
   private readonly trunk: Limb;
+  private readonly trunkB: Limb;
   private readonly branch: Limb;
+  /** The wool's centre line, and the same line along its top, where paws go. */
+  private readonly wool: THREE.Vector3[];
+  private readonly woolTop: THREE.Vector3[];
+  /** Things to do a while after a play began, in seconds of game time. */
+  private script: { at: number; run: () => void }[] = [];
+  private clock = 0;
   private readonly v = new THREE.Vector3();
   private readonly w = new THREE.Vector3();
 
@@ -163,12 +176,19 @@ export class SquirrelYard {
       b: this.at(LOG.b[0], LOG.b[1]).setY(top + LOG.r * 0.7),
       r0: LOG.r, r1: LOG.r * 0.85, tint: OLD_BIRCH,
     };
-    this.trunk = { a: base.clone().setY(top - 0.3), b: base.clone().setY(top + TRUNK.top), r0: TRUNK.r * 1.15, r1: TRUNK.r * 0.55, tint: BIRCH };
+    this.trunk = { a: base.clone().setY(top - 0.3), b: base.clone().setY(top + TRUNK.top), r0: TRUNK.r * 1.1, r1: TRUNK.r * 0.6, tint: BIRCH };
+    const baseB = this.at(TRUNK_B.x, TRUNK_B.z);
+    this.trunkB = { a: baseB.clone().setY(top - 0.3), b: baseB.clone().setY(top + TRUNK_B.top), r0: TRUNK_B.r * 1.1, r1: TRUNK_B.r * 0.6, tint: BIRCH };
     this.branch = {
       a: base.clone().setY(top + BRANCH.y),
       b: this.at(TRUNK.x + BRANCH.out[0], TRUNK.z + BRANCH.out[1]).setY(top + BRANCH.y + BRANCH.rise),
       r0: BRANCH.r * 1.3, r1: BRANCH.r * 0.6, tint: BIRCH,
     };
+    const across = this.w.subVectors(base, baseB).setY(0).normalize().clone();
+    const tieB = baseB.clone().addScaledVector(across, this.radiusAt(this.trunkB, top + WOOL.from)).setY(top + WOOL.from);
+    const tieA = base.clone().addScaledVector(across, -this.radiusAt(this.trunk, top + WOOL.to)).setY(top + WOOL.to);
+    this.wool = sagging(tieB, tieA, WOOL.sag, 24);
+    this.woolTop = this.wool.map((p) => p.clone().setY(p.y + WOOL.r));
     this.group.add(this.props(), this.leaves());
   }
 
@@ -176,13 +196,34 @@ export class SquirrelYard {
     return this.turn;
   }
 
-  /** Each action from its own place: on the log, on the limb, in the heap, up the trunk, out on the open leaves. */
+  /** Runs what a play left to do later. */
+  update(dt: number): void {
+    this.clock += dt;
+    while (this.script.length && this.script[0].at <= this.clock) this.script.shift()!.run();
+  }
+
+  private later(steps: [number, () => void][]): void {
+    this.clock = 0;
+    this.script = steps.map(([at, run]) => ({ at, run }));
+  }
+
+  /**
+   * Each action from its own place: on the log, on the limb, in the heap, up the trunk, out on the open leaves; and
+   * the motions, each from where it starts: `run` across the yard, `dive` into the heap, `dive-burst` into it and out
+   * again to scold, `burst` out of it, `climb-up` and `climb-down` the first birch, `run-line` along the wool, and
+   * `follow`, the whole way round: over the ground, up the second birch, along the wool, down the first and home.
+   */
   play(name: string, squirrel: Squirrel): boolean {
     this.playing = true;
+    this.script = [];
     squirrel.visible = true;
     const look = this.watcher;
     const toward = (at: THREE.Vector3) => Math.atan2(look.x - at.x, look.z - at.z);
     const action = name.replace(/-in$|-out$/, '') as SquirrelAction;
+    const inHeap = this.at(HEAP.x + 0.1, HEAP.z + 0.05);
+    const edge = this.at(HEAP.x - HEAP.r - 1.1, HEAP.z - 0.3);
+    /** Out of the heap toward whoever is watching, landing on the leaves at its foot. */
+    const out = this.at(HEAP.x - 0.2, HEAP.z - HEAP.r - 0.3);
     switch (name) {
       case 'sit':
       case 'freeze': {
@@ -207,30 +248,129 @@ export class SquirrelYard {
       case 'buried':
       case 'buried-out':
       case 'buried-in':
-      case 'dive':
-      case 'peek': {
-        const at = this.at(HEAP.x + 0.1, HEAP.z + 0.05);
-        if (name === 'peek') squirrel.act('peek', { at, yaw: toward(at) + 0.4, floor: this.ground, look });
-        else squirrel.hide(at, { tailOut: name !== 'buried-in', yaw: toward(at) + 1, floor: this.ground });
+        squirrel.hide(inHeap, { tailOut: name !== 'buried-in', yaw: toward(inHeap) + 1, floor: this.ground });
         break;
-      }
+      case 'peek':
+        squirrel.hide(inHeap, { tailOut: true, yaw: toward(inHeap) + 0.4, floor: this.ground });
+        squirrel.look(look);
+        this.later([[0.5, () => squirrel.act('peek', { for: 2.2 })]]);
+        break;
       case 'climb': {
         const base = this.trunk.a;
         const out = this.v.subVectors(look, base).setY(0).normalize().applyAxisAngle(new THREE.Vector3(0, 1, 0), 0.5).clone();
-        const r = this.radius(this.trunk, (0.85 + 0.3) / (TRUNK.top + 0.3));
-        const at = base.clone().addScaledVector(out, r).setY(this.top + 0.85);
+        const at = base.clone().setY(this.top + 1.1);
+        const r = this.radiusAt(this.trunk, at.y);
+        at.addScaledVector(out, r);
         squirrel.act('climb', { at, up: out, forward: new THREE.Vector3(0, 1, 0), radius: r, look });
         break;
       }
-      case 'burst': {
-        const at = this.at(HEAP.x + 0.1, HEAP.z + 0.05);
-        squirrel.act('burst', { at, yaw: toward(at), floor: this.ground, look });
+      case 'burst':
+        squirrel.hide(inHeap, { tailOut: true, yaw: toward(inHeap), floor: this.ground });
+        squirrel.look(look);
+        this.later([[0.4, () => squirrel.act('burst', { at: out, look })]]);
+        break;
+      case 'run': {
+        const a = this.at(-3.4, 2.0), b = this.at(0, 1.8), c = this.at(3.6, 2.0);
+        squirrel.act('stand', { at: a, yaw: Math.atan2(b.x - a.x, b.z - a.z), floor: this.ground, look: null });
+        this.later([[0.3, () => squirrel.follow([a, b, c].map((at) => ({ at, on: 'ground' as const })), undefined, { floor: this.ground })]]);
+        break;
+      }
+      case 'dive':
+      case 'dive-burst': {
+        squirrel.act('stand', { at: edge, yaw: Math.atan2(inHeap.x - edge.x, inHeap.z - edge.z), floor: this.ground, look: null });
+        const steps: [number, () => void][] = [[0.5, () => squirrel.act('dive', { at: inHeap, tailOut: true, floor: this.ground })]];
+        if (name === 'dive-burst') {
+          steps.push([2.3, () => squirrel.act('burst', { at: out, look })]);
+          steps.push([3.2, () => squirrel.act('scold', { look })]);
+        }
+        this.later(steps);
+        break;
+      }
+      case 'climb-up': {
+        const { foot, way } = this.climbUp(this.trunk, -3.0, 0.3, WOOL.to - 0.05, 0, -1.1);
+        squirrel.act('stand', { at: foot.at, yaw: Math.atan2(way[1].at.x - foot.at.x, way[1].at.z - foot.at.z), floor: this.ground, look: null });
+        this.later([[0.3, () => squirrel.follow(way, undefined, { floor: this.ground })]]);
+        break;
+      }
+      case 'climb-down': {
+        const { way } = this.climbUp(this.trunk, -3.0, 0.6, WOOL.to - 0.25, 0, -1.1);
+        const down = way.slice().reverse();
+        const start = down[0];
+        squirrel.act('climb', { at: start.at, up: start.up, forward: new THREE.Vector3(0, -1, 0), radius: start.radius, look: null });
+        this.later([[0.4, () => squirrel.follow(down, undefined, { floor: this.ground })]]);
+        break;
+      }
+      case 'run-line': {
+        const way = this.woolTop.slice(2, -2);
+        squirrel.act('run-line', { at: way[0], yaw: Math.atan2(way[1].x - way[0].x, way[1].z - way[0].z), floor: this.alongWool(), look: null });
+        this.later([[0.3, () => squirrel.follow(way.map((at) => ({ at, on: 'line' as const })), undefined, { floor: this.ground })]]);
+        break;
+      }
+      case 'follow': {
+        const start = this.at(-1.2, 3.4);
+        squirrel.act('sit', { at: start, yaw: toward(start), floor: this.ground, look, nut: false });
+        this.later([[0.6, () => squirrel.follow(this.roundTheYard(start), () => squirrel.act('scold', { look }), { floor: this.ground })]]);
         break;
       }
       default:
         return false;
     }
     return true;
+  }
+
+  /**
+   * The way round the yard: over the leaves to the second birch, up it round to where the wool is tied, along the
+   * wool, round and down the first birch, and back over the leaves to the heap's edge.
+   */
+  private roundTheYard(start: THREE.Vector3): SquirrelPoint[] {
+    const tieAngle = (limb: Limb, toward: THREE.Vector3) => Math.atan2(toward.z - limb.a.z, toward.x - limb.a.x);
+    const angleB = tieAngle(this.trunkB, this.trunk.a);
+    const angleA = tieAngle(this.trunk, this.trunkB.a);
+    const upB = this.climbUp(this.trunkB, angleB - 2.4, 0.3, WOOL.from + 0.12, 0, angleB);
+    const downA = this.climbUp(this.trunk, angleA + 2.6, 0.6, WOOL.to - 0.12, 0, angleA);
+    const wool = this.woolTop.slice(3, -3).map((at) => ({ at, on: 'line' as const }));
+    const home = this.at(HEAP.x + 1, HEAP.z - 1.1);
+    return [
+      { at: start, on: 'ground' },
+      { at: this.at(-2.4, 4.8), on: 'ground' },
+      ...upB.way,
+      ...wool,
+      ...downA.way.slice().reverse(),
+      { at: home, on: 'ground' },
+    ];
+  }
+
+  /**
+   * A way up `limb` from the ground: a point on the leaves out from its foot at `from` radians round it, then the
+   * bark spiralling up from `low` to `high` metres, `turns` of a turn round (or to `to` radians, if given). Coming
+   * down head first, it leaves the bark at least its own length up, or its nose goes into the ground as it turns.
+   */
+  private climbUp(limb: Limb, from: number, low: number, high: number, turns: number, to?: number): { foot: SquirrelPoint; way: SquirrelPoint[] } {
+    const base = limb.a.clone().setY(this.top);
+    const radius = (h: number) => this.radiusAt(limb, this.top + h);
+    const out = new THREE.Vector3(Math.cos(from), 0, Math.sin(from));
+    const foot: SquirrelPoint = { at: base.clone().addScaledVector(out, radius(0) + 0.42), on: 'ground' };
+    const bark = spiral(base, radius, { height: low, angle: from }, { height: high, angle: to ?? from + turns * Math.PI * 2 });
+    return { foot, way: [foot, ...bark] };
+  }
+
+  /** The top of the wool as a floor: its height at the nearest point along it. */
+  private alongWool(): Floor {
+    const top = this.woolTop;
+    return (x, z) => {
+      let best = Infinity, y = top[0].y;
+      for (let i = 0; i + 1 < top.length; i++) {
+        const a = top[i], b = top[i + 1];
+        const dx = b.x - a.x, dz = b.z - a.z;
+        const t = THREE.MathUtils.clamp(((x - a.x) * dx + (z - a.z) * dz) / (dx * dx + dz * dz), 0, 1);
+        const d = Math.hypot(x - a.x - dx * t, z - a.z - dz * t);
+        if (d < best) {
+          best = d;
+          y = a.y + (b.y - a.y) * t;
+        }
+      }
+      return y;
+    };
   }
 
   /** A point in the yard's own space in the world, on its floor. */
@@ -241,22 +381,33 @@ export class SquirrelYard {
   }
 
   /**
-   * QA: how far a point of the world is outside the nearest solid thing in the yard (its floor, the log, the trunk,
-   * the limb), negative inside it. The heap is leaves, which the squirrel is meant to be in.
+   * QA: how far a point of the world is outside the nearest solid thing in the yard (its floor, the log, the trunks,
+   * the limb, the wool), negative inside it. The heap is leaves, which the squirrel is meant to be in.
    */
   gap(p: THREE.Vector3): number {
     let gap = p.y - this.top;
-    for (const limb of [this.log, this.trunk, this.branch]) {
+    for (const limb of [this.log, this.trunk, this.trunkB, this.branch]) {
       const axis = this.w.subVectors(limb.b, limb.a);
       const t = THREE.MathUtils.clamp(this.v.subVectors(p, limb.a).dot(axis) / axis.lengthSq(), 0, 1);
       const d = this.v.copy(limb.a).addScaledVector(axis, t).distanceTo(p);
       gap = Math.min(gap, d - this.radius(limb, t));
+    }
+    for (let i = 0; i + 1 < this.wool.length; i++) {
+      const a = this.wool[i];
+      const axis = this.w.subVectors(this.wool[i + 1], a);
+      const t = THREE.MathUtils.clamp(this.v.subVectors(p, a).dot(axis) / axis.lengthSq(), 0, 1);
+      gap = Math.min(gap, this.v.copy(a).addScaledVector(axis, t).distanceTo(p) - WOOL.r);
     }
     return gap;
   }
 
   private radius(limb: Limb, t: number): number {
     return limb.r0 + (limb.r1 - limb.r0) * t;
+  }
+
+  /** The girth of a standing limb at a height in the world. */
+  private radiusAt(limb: Limb, y: number): number {
+    return this.radius(limb, (y - limb.a.y) / (limb.b.y - limb.a.y));
   }
 
   /** The top of a lying limb, `t` of the way along it. */
@@ -278,12 +429,13 @@ export class SquirrelYard {
 
   private props(): THREE.Mesh {
     const parts: THREE.BufferGeometry[] = [];
-    for (const { a, b, r0, r1, tint } of [this.log, this.trunk, this.branch]) {
+    const wool = this.wool.slice(1).map((b, i): Limb => ({ a: this.wool[i], b, r0: WOOL.r, r1: WOOL.r, tint: RED }));
+    for (const { a, b, r0, r1, tint } of [this.log, this.trunk, this.trunkB, this.branch, ...wool]) {
       const len = a.distanceTo(b);
       const geo = new THREE.CylinderGeometry(r1, r0, len, 16, Math.max(1, Math.round(len * 4)), false);
       const pos = geo.attributes.position;
       const bark = new Float32Array(pos.count * 2);
-      for (let i = 0; i < pos.count; i++) bark.set([pos.getY(i) + len / 2, Math.atan2(pos.getZ(i), pos.getX(i)) * 3], i * 2);
+      for (let i = 0; i < pos.count; i++) bark.set(tint === RED ? [-100, 0] : [pos.getY(i) + len / 2, Math.atan2(pos.getZ(i), pos.getX(i)) * 3], i * 2);
       geo.setAttribute('aBark', new THREE.BufferAttribute(bark, 2));
       geo.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), this.v.subVectors(b, a).normalize()));
       geo.translate((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2);

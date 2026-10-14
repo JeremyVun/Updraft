@@ -72,6 +72,7 @@ import { Probe } from './companion/probe';
 import { Cygnet } from './creatures/cygnet';
 import { Cat } from './creatures/cat';
 import { Squirrel } from './creatures/squirrel';
+import { SquirrelVoice } from './creatures/squirrel/voice';
 import { CatVoice } from './creatures/cat/voice';
 import { screenPan } from './creatures/motion';
 import { SwanFlock } from './creatures/flock';
@@ -399,6 +400,7 @@ const cat = new Cat();
 cat.objects.forEach((o) => { scene.add(o); o.traverse((part) => part.layers.enable(REFLECTION_LAYER)); });
 const catVoice = new CatVoice();
 const squirrel = new Squirrel();
+const squirrelVoice = new SquirrelVoice();
 squirrel.objects.forEach((o) => scene.add(o));
 const carry = new Carry(child, cygnet);
 const foley = new Foley();
@@ -862,6 +864,24 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   cygnet.heard.length = 0;
   cat.update(dt);
   squirrel.update(dt, time);
+  squirrelVoice.setOutput(sound.output);
+  if (squirrel.heard.length) {
+    const pan = screenPan(rig.camera, squirrel.position);
+    const away = squirrel.position.distanceTo(rig.camera.position);
+    /** Its scolding carries across the wood; its feet and claws are only heard close to. */
+    const call = 1 - 0.8 * THREE.MathUtils.smoothstep(away, 8, 45);
+    const near = 1 - THREE.MathUtils.smoothstep(away, 3, 18);
+    for (const h of squirrel.heard) {
+      if (h.kind === 'chuck') squirrelVoice.chuck(pan, call * h.amount);
+      else if (h.kind === 'chitter') squirrelVoice.chitter(pan, call * h.amount);
+      else if (h.kind === 'squeak') squirrelVoice.squeak(pan, call * h.amount);
+      else if (h.kind === 'claw') squirrelVoice.claw(pan, near * h.amount);
+      else if (h.kind === 'land') squirrelVoice.land(pan, near * h.amount);
+      else if (h.kind === 'gnaw') squirrelVoice.gnaw(pan, near * h.amount);
+      else squirrelVoice.patter(pan, near * h.amount);
+    }
+    squirrel.heard.length = 0;
+  }
   catVoice.setOutput(sound.output);
   if (cat.heard.length) {
     const catPan = screenPan(rig.camera, cat.position);

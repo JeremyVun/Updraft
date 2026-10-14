@@ -50,6 +50,9 @@ export interface Drives {
   tailWave: number;
   tailWaveSize: number;
   tailFlick: number;
+  /** A wave running down the tail up and down, how big and how far along it has run, as it streams behind a bound. */
+  tailRipple: number;
+  tailRipplePhase: number;
   /** Where each paw is, in frame space, and how far it is curled. Front paws are drawn toward the chin by `hold`. */
   paws: { at: THREE.Vector3; curl: number }[];
   /** 0 the forepaws are where `paws` puts them; 1 they are up at the body, against the chest (`holdHigh` 0) or under the chin (1). */
@@ -91,7 +94,7 @@ export interface Stance {
   seat: boolean;
 }
 
-export type StanceName = 'stand' | 'sit' | 'freeze' | 'scold' | 'perch' | 'buried' | 'peek' | 'bound' | 'climb';
+export type StanceName = 'stand' | 'sit' | 'freeze' | 'scold' | 'perch' | 'buried' | 'peek' | 'bound' | 'climb' | 'run' | 'trunk' | 'wool' | 'crouch' | 'dive';
 
 const STAND: Stance = {
   bodyY: 0.062, bodyZ: 0, pitch: 0.12, flex: 0.1, stretch: 0, chestUp: 0, neckLow: 0.2, headPitch: 0.1, hock: 1.35,
@@ -115,7 +118,7 @@ export const STANCES: Record<StanceName, Stance> = {
   },
   /** Chest up on straight forelegs, head up at what it scolds, mouth open, tail arched high and flicked at the tip. */
   scold: {
-    ...STAND, bodyY: 0.058, bodyZ: -0.004, pitch: 0.3, flex: -0.05, chestUp: 0.06, neckLow: -0.2, headPitch: 0.3, hock: 1.4,
+    ...STAND, bodyY: 0.054, bodyZ: -0.004, pitch: 0.24, flex: -0.05, chestUp: 0.05, neckLow: -0.2, headPitch: 0.3, hock: 1.4,
     front: [0.012, 0.05], hind: [0.022, -0.014], curl: 0,
     tailLift: 1.25, tailCurve: 0.16, tailTip: -0.5, earBack: 0.18, jaw: 0.8,
   },
@@ -123,7 +126,7 @@ export const STANCES: Record<StanceName, Stance> = {
   perch: {
     ...STAND, bodyY: 0.055, bodyZ: 0.006, pitch: 0.42, flex: 0.38, chestUp: 0.02, neckLow: 0.15, headPitch: 0.05, hock: 1.45,
     front: [0.005, 0.046], hind: [0.007, 0.0], curl: 0.4,
-    tailLift: 1.3, tailCurve: 0.5, tailTip: -0.3, seat: true,
+    tailLift: 1.3, tailCurve: 0.78, tailTip: 0.06, seat: true,
   },
   /** Pressed flat under the leaves, paws folded under, head down, the tail laid back along the ground. */
   buried: {
@@ -148,9 +151,35 @@ export const STANCES: Record<StanceName, Stance> = {
    * and flat, the tail laid down the bark behind.
    */
   climb: {
-    ...STAND, bodyY: 0.04, bodyZ: 0, pitch: 0.0, flex: 0.12, chestUp: 0.05, neckLow: 0.0, headPitch: 0.2, hock: 1.45,
+    ...STAND, bodyY: 0.045, bodyZ: 0, pitch: 0.0, flex: 0.12, chestUp: 0.05, neckLow: 0.0, headPitch: 0.2, hock: 1.45,
     front: [0.026, 0.046], hind: [0.03, -0.034], curl: 0.2,
     tailLift: 0.18, tailCurve: -0.06, tailTip: 0.14,
+  },
+  /** What its bound on open ground swings about: low and long, head level, tail out behind and lifting. */
+  run: {
+    ...STAND, bodyY: 0.057, pitch: 0.02, flex: 0.05, neckLow: 0.12, headPitch: 0.1, hock: 1.2,
+    tailLift: 0.14, tailCurve: 0.05, tailTip: -0.06, earBack: 0.15,
+  },
+  /** Its bound up or down a trunk: flat to the bark, head lifted off it, tail laid along the bark behind. */
+  trunk: {
+    ...STAND, bodyY: 0.048, pitch: 0.0, flex: 0.06, chestUp: 0.04, neckLow: 0.0, headPitch: 0.28, hock: 1.3,
+    tailLift: 0.16, tailCurve: -0.04, tailTip: 0.1, earBack: 0.1,
+  },
+  /** Along the wool: crouched low over it, eyes on the way ahead, the tail out straight to balance. */
+  wool: {
+    ...STAND, bodyY: 0.046, pitch: 0.0, flex: 0.18, neckLow: 0.05, headPitch: 0.02, hock: 1.3,
+    tailLift: 0.18, tailCurve: 0.02, tailTip: -0.04, earBack: 0.1,
+  },
+  /** Gathered to spring: low on bent legs, back rounded, tail up behind. */
+  crouch: {
+    ...STAND, bodyY: 0.044, pitch: 0.06, flex: 0.38, neckLow: 0.25, headPitch: 0.0, hock: 1.45,
+    front: [0.012, 0.042], hind: [0.024, -0.008], tailLift: 0.55, tailCurve: 0.1, tailTip: -0.12, earBack: 0.1,
+  },
+  /** In the air, diving: stretched out long, forepaws reaching ahead, hind feet trailing, ears flat, tail streaming. */
+  dive: {
+    ...STAND, bodyY: 0.06, flex: -0.3, stretch: 0.02, neckLow: -0.1, headPitch: -0.1, hock: 0.6,
+    front: [0.01, 0.1], hind: [0.02, -0.09], frontLift: 0.02, hindLift: 0.03, curl: 0.3,
+    tailLift: 0.35, tailCurve: 0.04, tailTip: -0.06, earBack: 0.75,
   },
 };
 
@@ -183,6 +212,7 @@ export class SquirrelRig {
   private readonly dir = new THREE.Vector3();
   private readonly hinge = new THREE.Vector3();
   private readonly bendV = new THREE.Vector3();
+  private readonly prefer = new THREE.Vector3();
   private readonly wUp = new THREE.Vector3();
   private readonly wFwd = new THREE.Vector3();
   private readonly wSide = new THREE.Vector3();
@@ -249,7 +279,8 @@ export class SquirrelRig {
       const k = i / (TAIL.length - 1);
       const wave = Math.sin(d.tailWave - i * 0.8) * d.tailWaveSize * (0.4 + 0.6 * k);
       const flick = i >= TAIL.length - 3 ? d.tailFlick * (0.3 + 0.35 * (i - TAIL.length + 3)) : 0;
-      const lift = i === 0 ? d.tailLift : (i < TURN ? d.tailCurve : d.tailTip) + flick;
+      const ripple = i > 0 ? Math.sin(d.tailRipplePhase - i * 0.9) * d.tailRipple * (0.3 + 0.7 * k) : 0;
+      const lift = (i === 0 ? d.tailLift : (i < TURN ? d.tailCurve : d.tailTip) + flick) + ripple;
       const swing = (i === 0 ? d.tailSwing : 0) + d.tailBend * (0.25 + 0.15 * k) + wave;
       if (i > 0) {
         n[TAIL[i]].rotation.set(lift, swing, 0);
@@ -306,7 +337,9 @@ export class SquirrelRig {
         const tilt = d.hock[i - 2];
         this.target.addScaledVector(this.wUp, TOE * k);
         this.hockAt.copy(this.target).addScaledVector(this.wUp, Math.cos(tilt) * META * k).addScaledVector(this.wFwd, -Math.sin(tilt) * META * k);
-        this.reach(leg.upper, leg.lower, this.hip, this.hockAt, THIGH * k, SHIN * k, -1, this.knee);
+        /** The knee goes forward and up off what it stands on, however far back the foot is, never down into it. */
+        this.prefer.copy(this.wFwd).addScaledVector(this.wUp, 0.8);
+        this.reach(leg.upper, leg.lower, this.hip, this.hockAt, THIGH * k, SHIN * k, -1, this.knee, this.prefer);
         this.qp.copy(this.qb);
         this.aim(this.qa, this.dir.subVectors(this.target, this.hockAt).normalize());
         n[leg.meta].quaternion.copy(this.qp).invert().multiply(this.qa);
@@ -320,13 +353,17 @@ export class SquirrelRig {
   }
 
   /** Two bones from `from` to `to`, bending at the middle joint to the back (`bend` 1) or the front (-1). Leaves the lower bone's world rotation in `qb`. */
-  private reach(upper: number, lower: number, from: THREE.Vector3, to: THREE.Vector3, a: number, b: number, bend: number, mid: THREE.Vector3): void {
+  private reach(upper: number, lower: number, from: THREE.Vector3, to: THREE.Vector3, a: number, b: number, bend: number, mid: THREE.Vector3, prefer?: THREE.Vector3): void {
     const n = this.nodes;
     this.dir.subVectors(to, from);
     const dist = clamp(this.dir.length(), Math.abs(a - b) + 1e-4, (a + b) * 0.9995);
     this.dir.normalize();
     const h = this.v.copy(this.hinge).addScaledVector(this.dir, -this.hinge.dot(this.dir)).normalize();
     this.bendV.crossVectors(h, this.dir).multiplyScalar(bend);
+    if (prefer) {
+      this.bendV.copy(prefer).addScaledVector(this.dir, -prefer.dot(this.dir)).normalize();
+      h.crossVectors(this.bendV, this.dir).multiplyScalar(-bend).normalize();
+    }
     const along = (a * a - b * b + dist * dist) / (2 * dist);
     const out = Math.sqrt(Math.max(0, a * a - along * along));
     mid.copy(from).addScaledVector(this.dir, along).addScaledVector(this.bendV, out);

@@ -167,13 +167,13 @@ function leg(front: boolean): Station[] {
     const wrist = REST[l.paw][1];
     return [
       s(top[1] + 0.016, 0.009, 0.009, 0.009, [CHEST, CHEST, 0]),
-      s(top[1] + 0.004, 0.0105, 0.011, 0.0105, [CHEST, l.upper, 0.5]),
-      s(top[1] - 0.012, 0.0085, 0.0095, 0.009, [l.upper, l.upper, 0]),
-      s(elbow + 0.003, 0.0068, 0.0075, 0.007, [l.upper, l.lower, 0.5]),
-      s(elbow - 0.012, 0.0056, 0.006, 0.0056, [l.lower, l.lower, 0]),
-      s(wrist + 0.005, 0.0046, 0.0046, 0.0044, [l.lower, l.paw, 0.5]),
-      s(wrist - 0.002, 0.0042, 0.0042, 0.004, [l.paw, l.paw, 0], 0.001),
-      s(wrist - 0.006, 0.002, 0.002, 0.002, [l.paw, l.paw, 0], 0.002),
+      s(top[1] + 0.004, 0.0095, 0.01, 0.0095, [CHEST, l.upper, 0.5]),
+      s(top[1] - 0.012, 0.0068, 0.0076, 0.0072, [l.upper, l.upper, 0]),
+      s(elbow + 0.003, 0.0052, 0.0058, 0.0054, [l.upper, l.lower, 0.5]),
+      s(elbow - 0.012, 0.0041, 0.0044, 0.0041, [l.lower, l.lower, 0]),
+      s(wrist + 0.005, 0.0034, 0.0034, 0.0033, [l.lower, l.paw, 0.5]),
+      s(wrist - 0.002, 0.0036, 0.0034, 0.0032, [l.paw, l.paw, 0], 0.001),
+      s(wrist - 0.006, 0.0017, 0.0017, 0.0017, [l.paw, l.paw, 0], 0.002),
     ];
   }
   const meta = 'meta' in l ? l.meta : l.lower;
@@ -223,8 +223,8 @@ const LEFT_TO_RIGHT: Record<number, number> = {
   [ARM_L]: ARM_R, [FORE_L]: FORE_R, [HAND_L]: HAND_R, [THIGH_L]: THIGH_R, [SHIN_L]: SHIN_R, [META_L]: META_R, [FOOT_L]: FOOT_R, [EAR_L]: EAR_R,
 };
 
-/** A blunt cone along its own +y, as long as `length`, standing on `at`: one lock of a tuft. */
-function lock(part: number, mat: number, at: V3, rot: V3, length: number, width: number): BlobSpec {
+/** A wisp of a tuft along its own +y, as long as `length`, standing on `at`: fine to a point, and bowed `bow` of its length. */
+function lock(part: number, mat: number, at: V3, rot: V3, length: number, width: number, bow: number): BlobSpec {
   return {
     part,
     mat,
@@ -234,9 +234,10 @@ function lock(part: number, mat: number, at: V3, rot: V3, length: number, width:
     offset: [0, length * 0.42, 0],
     detail: 2,
     shape: (u) => {
-      const k = 0.5 * (1 - u.y);
-      u.x *= 0.12 + 0.88 * k;
-      u.z *= 0.12 + 0.88 * k;
+      const t = 0.5 * (1 + u.y);
+      const k = (1 - t) ** 1.6;
+      u.x = u.x * (0.04 + 0.96 * k) + (bow * length * t * t) / width;
+      u.z *= 0.04 + 0.96 * k;
     },
     blend: (u) => ramp(u.y, 0.2, 0.9),
   };
@@ -335,16 +336,18 @@ function parts(coat: boolean): THREE.BufferGeometry[] {
     },
     blend: (u) => ramp(u.z, -0.2, 0.4) * (1 - ramp(Math.abs(u.x), 0.4, 0.75)) * (1 - ramp(u.y, 0.3, 0.75)),
   });
-  /** The autumn tufts: a brush of long dark locks off each ear's tip, fanning up and out. */
+  /** The autumn tufts: a paintbrush of fine dark wisps off each ear's tip, drawn together and bowing out and back as one. */
   const tip = earPoint([0, EAR_SIZE[1] * 1.55, -0.0005]);
-  for (const [dx, dz, lean, splay, length] of [
-    [0, 0, 0.05, -0.1, 0.019],
-    [0.0012, -0.0012, -0.18, -0.38, 0.016],
-    [-0.0012, 0.0008, 0.22, 0.12, 0.015],
-    [0.0006, 0.0012, 0.3, -0.25, 0.013],
-    [-0.0008, -0.0014, -0.3, -0.05, 0.014],
+  for (const [dx, dz, lean, splay, length, bow] of [
+    [0, 0, -0.05, -0.05, 0.021, 0.16],
+    [0.0009, -0.0008, -0.15, -0.16, 0.018, 0.2],
+    [-0.0009, 0.0006, 0.08, 0.06, 0.017, 0.12],
+    [0.0005, 0.001, 0.12, -0.12, 0.015, 0.18],
+    [-0.0006, -0.001, -0.18, 0.02, 0.016, 0.14],
+    [0.0003, -0.0003, 0.0, -0.24, 0.013, 0.22],
+    [-0.0004, 0.0004, -0.08, 0.14, 0.012, 0.1],
   ] as const) {
-    pair(lock(EAR_L, TUFT, add(tip, [dx, -0.004, dz]), [lean, 0.4, -0.18 + splay], length, 0.0028));
+    pair(lock(EAR_L, TUFT, add(tip, [dx, -0.004, dz]), [lean - 0.15, 0.4, -0.22 + splay], length, 0.0021, bow));
   }
   /** A nut held in the forepaws; the shader hides it when there is none. */
   if (!coat) rigid({ part: HAND_R, mat: NUT, at: add(REST[HAND_R], [0.0075, -0.007, 0.004]), size: [0.0068, 0.0072, 0.0082], detail: 2, shape: (u) => { u.x *= 1 - 0.25 * ramp(u.z, 0, 1); u.y *= 1 - 0.25 * ramp(u.z, 0, 1); } });
