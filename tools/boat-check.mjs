@@ -88,7 +88,7 @@ const { CAT_HOLD, CAT_HOLD_YAW, STRAND } = await import('../src/world/drowned-wa
 // Old route payloads must resume after the rescue without replaying it or its sound.
 for (const leg of [0, 3, 99]) {
   const cast=drownedCast(drownedWind()), b=cast.boat;
-  b.beach(-4,-1203,Math.PI);b.afloat=true;
+  b.beach(BIRCHES_BERTH.x,BIRCHES_BERTH.z-6,Math.PI);b.afloat=true;
   const c=new DrownedChapter(cast);
   b.beach(-20,-1390,Math.PI);b.afloat=true;
   takeCues();

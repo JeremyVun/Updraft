@@ -34,7 +34,7 @@ and half-sizes are in `ISLES` (`heightfield.ts`) unless noted:
 | the shore through the red door | (300, −365) | 23 × 30 | `DOOR_SHORE` |
 | little boats | (130, −420) | 48 × 70 | `LITTLE_BOATS` (`little-boats-layout.ts`) |
 | meadow | (10, −780) | 227 × 200 | `ISLES.meadow`, sculpted at 340 × 300 and scaled by `tuning.world.meadowLength` (`meadowPoint`) |
-| birches | (0, −1128) | 60 × 80 | `ISLES.birches` |
+| birches | (−40, −1140) | 48 × 108 | `ISLES.birches`, from the first-built island through `world/birches-layout.ts` |
 | stairs | (100, −1236) | 30 × 26 | `STAIRS_ISLE` (`stairs-layout.ts`) |
 | drowned village | (−10, −1440) | 210 × 175, all under water | `ISLES.drowned` |
 | dark wood | (−30, −1800) | 130 × 115 | `ISLES.wood` |
@@ -64,6 +64,14 @@ Revision 11 moves only the secret shore 60 m east, from (240, −365) to (300, �
 berth, pulley, terrain and grass follow the same origin. Existing shore and departure saves migrate once.
 The departure measures 45.5 s against 31.9 s before the move, without changing speed; the destination's mist
 conceals the first stretch. Still-to-Lines uses a 0.99 drive multiplier, adding about 1.1 s.
+
+Revision 12 grows the birches and moves them. The island as first built is cut across its walk into bands
+(`BIRCHES_CUTS`, opened 16, 16 and 24 m) and moved by `BIRCHES_SHIFT` (−40, +16); everything on it is authored in
+those band-local terms and placed with `birchesAt` / `birchesGap`. Each band keeps its ground, grass patterns,
+trees and scarf exactly; the shift and openings are whole grass tiles (8 m). Push-off to the stairs measures 29.4 s
+against 23.3 s; `toBirches` 24.6 s against 23.3 s from the meadow's far shore. Saves on the old island, at its
+berth and old village saves that began there migrate once. The birches' design record:
+[birches-uplift](../backlog/birches-uplift/design.md).
 
 ### Still grass restoration, 2026-10-11
 
@@ -101,8 +109,8 @@ Turns, mooring, the storm and the cygnet's swim slow the boat naturally. Targets
 | still island → lines | 117 s | the long first curve: farewell look back and the whale |
 | door shore → little boats | 45 s | Secret shore moved 60 m east; sailing pace unchanged. |
 | little boats → meadow | 40 s | arrives lined up with the hill path |
-| meadow → birches | 20 s | a short blind hop |
-| birches → stairs | short | under the cloud deck |
+| meadow → birches | 25 s from the far shore | a short blind hop, bearing west |
+| birches → stairs | 30 s from push-off | open sea, ending under the cloud deck |
 | drowned village to the wood | player-paced | the cat, the run and the church wait for the player; the storm from the nave is about 45 s |
 | wood → sleeping | 40 s | a sheltered bend |
 | sleeping → sky mirror (the sea) | player-paced | first whale puzzle at about 60 s; five-step rescue and farewell; about 40 s from the whale disappearing to the mooring |

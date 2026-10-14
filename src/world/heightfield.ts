@@ -3,7 +3,7 @@ import { mirrorBed, MIRROR_LAYOUT_GLSL } from './sky-mirror-layout';
 import { glsl, tuning } from '../tuning';
 import { LITTLE_BOATS, LITTLE_BOATS_GLSL, boatsBar, boatsOut, boatsLevel } from './little-boats-layout';
 import { STAIRS_GROUND, STAIRS_ISLE, STAIRS_PAD, STAIRS_TERRACE } from './stairs-layout';
-import { BIRCHES_ISLE, BIRCHES_LAYOUT_GLSL, BIRCHES_LOCAL, birchesNoise, birchesShape } from './birches-layout';
+import { BIRCHES_ISLE, BIRCHES_NOISE_GLSL, BIRCHES_LOCAL, BIRCHES_SHAPE_GLSL, birchesNoise, birchesShape } from './birches-layout';
 
 /**
  * The terrain height of the whole world, written twice: in TypeScript for gameplay and in GLSL for baking and
@@ -290,21 +290,32 @@ const birchesGround = (x: number, z: number): number => gfbm(x * 0.028, z * 0.02
 const shape = { x: 0, z: 0 };
 
 function birchesHeight(x: number, z: number): number {
-  const c = BIRCHES_LOCAL;
   // A wind-scoured notch: rock face on the inside, a steep fall beyond the outer footing.
   const across=((x+164.56)*2+(z+1925.88))/Math.sqrt(5);
   const along=((x+164.56)-2*(z+1925.88))/Math.sqrt(5);
   const notch=4.5*smoothstep(1.65,3.8,across)*(1-smoothstep(2.2,5.5,Math.abs(along)));
   const s = birchesShape(x, z, shape);
-  if (isleFar(s.x, s.z, c, 0.13, 36)) return -1.6 - notch - 8;
-  const d = isleCoast(s.x, s.z, c, 0.13, 61);
+  return birchesFrom(s.x, s.z, notch, x, z);
+}
+
+/** The birches as they were first built, in their own band-local terms: before any cut was opened or the coast drawn in. */
+export function birchesFirstHeight(x: number, z: number): number {
+  return birchesFrom(x, z, 0, x, z, true);
+}
+
+/** The ground from the island's broad shape at (sx, sz) and its noise at the world point (x, z). */
+function birchesFrom(sx: number, sz: number, notch: number, x: number, z: number, first = false): number {
+  const c = BIRCHES_LOCAL;
+  if (isleFar(sx, sz, c, 0.13, 36)) return -1.6 - notch - 8;
+  const d = isleCoast(sx, sz, c, 0.13, 61);
   /** A long shallow ramp out of the water on both ends: a beach a boat runs up and a slope a camera can see down. */
   const land = smoothstep(18, -38, d);
-  const r = Math.hypot((s.x - c.x) / c.rx, (s.z - c.z) / c.rz);
+  const r = Math.hypot((sx - c.x) / c.rx, (sz - c.z) / c.rz);
+  const noise = first ? birchesGround(x, z) : birchesNoise(x, z, birchesGround);
   let h = land * 3.4 - 1.6;
-  h += land * land * (Math.max(0, 1 - r * r) * tuning.world.birchesCrest + (birchesNoise(x, z, birchesGround) * 0.5 + 0.5) * 3.2);
-  h += land * land * lump(s.x, s.z, BIRCH_RISE) * BIRCH_RISE.h;
-  h -= land * lump(s.x, s.z, BIRCH_HOLLOW) * BIRCH_HOLLOW.h;
+  h += land * land * (Math.max(0, 1 - r * r) * tuning.world.birchesCrest + (noise * 0.5 + 0.5) * 3.2);
+  h += land * land * lump(sx, sz, BIRCH_RISE) * BIRCH_RISE.h;
+  h -= land * lump(sx, sz, BIRCH_HOLLOW) * BIRCH_HOLLOW.h;
   h -= notch;
   return h - smoothstep(0, 36, d) * 8;
 }
@@ -576,7 +587,8 @@ float hf_isleCoast(vec2 p, vec2 c, vec2 r, float wobble, float seed) {
   return (length(e) - 1.0 - n * wobble) * min(r.x, r.y) * 0.8;
 }
 ${LUMP_GLSL}
-${BIRCHES_LAYOUT_GLSL}
+${BIRCHES_SHAPE_GLSL}
+${BIRCHES_NOISE_GLSL}
 float hf_lines(vec2 p) {
   vec2 fold = (p - vec2(${glsl(tuning.world.linesFold.x)}, ${glsl(tuning.world.linesFold.z)})) / vec2(${glsl(tuning.world.linesFold.radiusX)}, ${glsl(tuning.world.linesFold.radiusZ)});
   float crest = max(0.0, 1.0 - dot(fold, fold));

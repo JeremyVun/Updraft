@@ -195,9 +195,10 @@ try {
     g.birches.scarf.restore(4);
   });
   // Restore by the swing, then test that sustained input can continue past the old fixed timeout.
-  await page.evaluate(() => {
-    const g=__game,c=g.story.current;
-    g.child.stop();g.child.place(3,-1107,0);g.glider.hold(g.child);
+  await page.evaluate(async () => {
+    const { birchesAt } = await import('/src/world/birches-layout.ts');
+    const g=__game,c=g.story.current,at=birchesAt(3,-1107);
+    g.child.stop();g.child.place(at.x,at.z,0);g.glider.hold(g.child);
     c.swings=0;c.swingOffered=false;c.resumeWalk();c.update(0,c.now);g.rig.cut(c.shot);
   });
   await page.waitForFunction(() => __game.story.current.beat === 'swingOffer');
@@ -222,19 +223,21 @@ try {
   });
   await page.waitForFunction(() => __game.story.current.beat === 'walk', null, { timeout: 20000 });
   assert.equal(await page.evaluate(() => __game.story.current.swings), 1);
-  await page.evaluate(() => {
-    const g=__game,c=g.story.current;
-    g.child.stop();g.child.place(3,-1116,0);c.play='hold';c.holdUntil=c.now+20;
-    g.wind.addSplat({ax:2.6,az:-1118,bx:2.6,bz:-1118,vx:20,vz:0,radius:5,energy:1,lift:0,swirl:0});
+  await page.evaluate(async () => {
+    const { birchesAt } = await import('/src/world/birches-layout.ts');
+    const g=__game,c=g.story.current,at=birchesAt(3,-1116),clearing=birchesAt(2.6,-1118);
+    g.child.stop();g.child.place(at.x,at.z,0);c.play='hold';c.holdUntil=c.now+20;
+    g.wind.addSplat({ax:clearing.x,az:clearing.z,bx:clearing.x,bz:clearing.z,vx:20,vz:0,radius:5,energy:1,lift:0,swirl:0});
   });
   await page.waitForTimeout(1000);
   assert.notEqual(await page.evaluate(() => __game.story.current.beat), 'toSwing');
   assert.notEqual(await page.evaluate(() => __game.story.current.beat), 'swinging');
   console.log('Checkpoints, red sail, controlled swing exit, and one-time swing passed.');
   // The independent bird must be gathered before the scarf's departure reward can continue.
-  await page.evaluate(() => {
-    const g=__game,c=g.story.current;
-    g.child.stop();g.child.place(-3,-1183,Math.PI);g.glider.hold(g.child);
+  await page.evaluate(async () => {
+    const { birchesAt } = await import('/src/world/birches-layout.ts');
+    const g=__game,c=g.story.current,at=birchesAt(-3,-1183);
+    g.child.stop();g.child.place(at.x,at.z,Math.PI);g.glider.hold(g.child);
     c.leg=4;c.resumeWalk();c.lastLegAt=c.now-50;
     g.cygnet.release(g.child.position.clone().add({x:2,y:0,z:1}));
   });

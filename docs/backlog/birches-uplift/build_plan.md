@@ -27,7 +27,15 @@ Point the tools at a server with `BASE=http://127.0.0.1:<port>/`.
 
 ## Phases
 
-### 1. Grow and move the island. Opus. Done: ☐
+### 1. Grow and move the island. Opus. Done: ☑ (2026-10-15)
+
+Built as design.md "As built (phase 1)" records: gaps A, B and C opened 16, 16 and 24 m at band z −1080.95,
+−1101.5 and −1154; `BIRCHES_SHIFT` (−40, +16), geography revision 12; coast drawn in to 48 m beyond 25 m of the
+middle, and the outer wood thinned. Trees 147 → 146; `toBirches` 15.22 → 15.47 s (far shore 23.25 → 24.58 s);
+push-off to the stairs 23.3 → 29.4 s; scarf 1140 → 1180 rows; litter 214 × 332; loose leaves 192 × 265. Every
+tangle's wool, every band's ground and grass, and 100 of today's trees are exactly as before. Later phases author
+positions in band-local terms through `birchesAt` / `birchesGap` (`world/birches-layout.ts`).
+
 
 Owns `world/geography.ts`, the birches entries of `world/heightfield.ts` (`ISLES.birches`, `BIRCH_RISE`,
 `BIRCH_HOLLOW`, `birchesHeight` and `hf_birches`), `world/birches.ts`, `world/birch-scarf.ts` (`ROWS` and the

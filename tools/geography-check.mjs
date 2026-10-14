@@ -112,11 +112,11 @@ for(const point of ROUTES.toHarbour) {
 console.log('Revision 1 saves, open-sea resumes, home berth and offshore route clearance passed.');
 
 const {readProgress}=await import('../src/story/progress.ts');
-for(const geography of [undefined,1,2,3,4,5,6,7,8,9,10,11,12,-1,1.5,'1']) {
+for(const geography of [undefined,1,2,3,4,5,6,7,8,9,10,11,12,13,-1,1.5,'1']) {
  const saved={version:1,geography,chapter:'home',point:'entry',data:[],child:[-150,2,-2500,0,0],boat:[-150,-2306,0,0,1],bird:[-150,2,-2500,0,1,0,1],seat:'cradle',life:[[0,0,0,0],[0,0,0,0],[0,0,0,0]],plane:[1,0]};
  globalThis.localStorage={getItem(){return JSON.stringify(saved);}};
  const p=readProgress();
- if(geography===undefined||[1,2,3,4,5,6,7,8,9,10,11].includes(geography))assert.equal(p?.geography,GEOGRAPHY_VERSION,'supported saves reach migration through the reader');
+ if(geography===undefined||[1,2,3,4,5,6,7,8,9,10,11,12].includes(geography))assert.equal(p?.geography,GEOGRAPHY_VERSION,'supported saves reach migration through the reader');
  else assert.equal(p,null,'reject malformed or future geography');
 }
 console.log('Save reader accepts all supported geography revisions and rejects unknown versions.');
@@ -236,3 +236,34 @@ for (const chapter of ['lines', 'toBoats']) {
  const once=JSON.stringify(p);migrateGeography(p);assert.equal(JSON.stringify(p),once);
 }
 console.log('Secret shore saves and life move exactly once; main Lines progress stays in place.');
+
+// Revision 12 grows the birches and moves them west: travellers on the old island, its berth and an old village save
+// that began on its far beach move with their band of it; nothing else does.
+{
+ const {birchesAt,BIRCHES_CUTS}=await import('../src/world/birches-layout.ts');
+ const {BIRCHES_BERTH,BIRCHES_LANDING}=await import('../src/world/birches.ts');
+ const {SCARF_SNAGS}=await import('../src/world/birch-scarf.ts');
+ const save=(chapter,point,data,[x,z])=>({version:1,geography:11,chapter,point,data,child:[x,2,z,0,0],boat:[x,z,0.15,0,1],bird:[x+1,2,z,0,0.5,0,1],seat:null,life:[[0,0,0,0],[0,0,0,0],[0,0,0,0]],plane:[1,0]});
+ for(const [chapter,point,data,at] of [['birches','entry',[],[3,-1052]],['birches','scarf4-2',[3,0,0.62,2],[-3,-1132]],['birches','scarf4-3-swing',[4,1,0.66,3],[-5,-1157]],
+   ['toStairs','entry',[],[-4,-1197]],['drowned','entry',[],[-4,-1197]]]) {
+  const p=migrateGeography(save(chapter,point,data,at)),moved=birchesAt(...at);
+  assert.equal(p.geography,GEOGRAPHY_VERSION);
+  assert.deepEqual([p.child[0],p.child[2],p.boat[0],p.boat[1]],[moved.x,moved.z,moved.x,moved.z],`a revision 11 ${chapter} ${point} save moves with its band`);
+  const once=JSON.stringify(p);migrateGeography(p);assert.equal(JSON.stringify(p),once,'the birches move once');
+ }
+ const berth=migrateGeography(save('toStairs','entry',[],[-4,-1197]));
+ assert.deepEqual([berth.boat[0],berth.boat[1]],[BIRCHES_BERTH.x,BIRCHES_BERTH.z],'the old berth is the new berth');
+ const landing=migrateGeography(save('birches','entry',[],[3,-1052]));
+ assert.deepEqual([landing.boat[0],landing.boat[1]],[BIRCHES_LANDING.x,BIRCHES_LANDING.y],'the old landing is the new landing');
+ const tangle=migrateGeography(save('birches','scarf4-2',[3,0,0.62,2],[-3,-1132]));
+ assert.deepEqual([tangle.child[0],tangle.child[2]],[SCARF_SNAGS[1].stopX,SCARF_SNAGS[1].stopZ],'a save at a tangle stands at its stop');
+ for(const [chapter,at] of [['drowned',[1.555,-1408.19]],['stairs',[76,-1231]],['toBirches',[19.3,-977.3]],['meadow',[10,-880]]]) {
+  const p=migrateGeography(save(chapter,'entry',[],at));
+  assert.deepEqual([p.child[0],p.child[2],p.boat[0],p.boat[1]],[at[0],at[1],at[0],at[1]],`a ${chapter} save away from the birches stays put`);
+ }
+ assert(BIRCHES_CUTS.every(c=>c.open>0),'every cut is open');
+ const {BIRCHES_SHIFT}=await import('../src/world/geography.ts');
+ assert([BIRCHES_SHIFT.x,BIRCHES_SHIFT.z,...BIRCHES_CUTS.map(c=>c.open)].every(v=>v%8===0),'the birches move by whole grass tiles, so every band keeps its blades');
+ for(const [x,z] of [[3,-1052],[-4,-1197],[-3,-1132],[-5,-1157]]){const at=birchesAt(x,z);assert(worldHeight(at.x,at.z)>-.5,'moved stops are on the island');}
+}
+console.log('Revision 12 saves on the birches, at its berth and on its far beach move with their bands of it, once.');

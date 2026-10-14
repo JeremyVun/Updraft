@@ -69,6 +69,9 @@ Revision 8 moves Mirror, home and their life regions together (`ONWARD_SEA`), pr
 Revision-7 whale and swim checkpoints stay where they are; older whale saves still receive revision 7's move once.
 Revision 9 shortens both sea legs. Whale and completed-swim checkpoints move with `WHALE_SHORTENING`; Mirror,
 home and their life regions move with `MIRROR_SHORTENING`. Earlier relocations still apply once where needed.
+Revision 12 grows the birches and moves them: the child, bird and boat of `birches`, `toStairs` and older `drowned`
+saves lying on or just off the old island move with their band of it (`birchesAt`), so a save at a tangle resumes at
+its stop and one at the berth at the new berth.
 
 Wing care is reconstructed from chapter and checkpoint by `src/story/wing-care.ts`: bare before the fall, wrapped from
 `companion` through Sleeping's `feather`, free from `morning` on. No checkpoint falls inside the treatment or the

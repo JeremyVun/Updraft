@@ -42,7 +42,7 @@ try {
       const away = Math.hypot(cam.position.x - isle.x, cam.position.z - isle.z);
       const boat = g.boat.position, t = __stats.time - start;
       const drawn = g.story.name === 'drowned' && boat.z > drowned.z;
-      state.frames.push({ t: Math.round(t * 100) / 100, near: away < isle.rx + 90, here: away < isle.rx + 240, drawn, mirror: mirror.value,
+      state.frames.push({ t: Math.round(t * 100) / 100, near: away < isle.rz + 70, here: away < isle.rz + 220, drawn, mirror: mirror.value,
         beat: g.story.current.beat, boatZ: Math.round(boat.z * 10) / 10, away: Math.round(away), camYaw: Math.round(Math.atan2(
           cam.getWorldDirection(new Box()).x, cam.getWorldDirection(new Box()).z) * 180 / Math.PI) });
       if (g.story.name !== 'drowned' || t > seconds || !drawn) { state.done = true; return; }

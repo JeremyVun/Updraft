@@ -14,8 +14,12 @@ globalThis.location = { search: '?shot' };
 const here = path.resolve(fileURLToPath(new URL('..', import.meta.url)));
 const there = process.env.BASELINE && path.resolve(process.env.BASELINE);
 if (!there) throw new Error('Set BASELINE to the checkout to compare against');
+// The fixture is the wood as it first grew, in the island's band-local terms; checkouts from before the island moved have no layout.
+const layout = await import(path.join(here, 'src/world/birches-layout.ts')).catch(() => null);
+const place = (x, z) => layout ? layout.birchesAt(x, z) : { x, z };
 const trees = JSON.parse(fs.readFileSync(new URL('./lib/birch-trees.json', import.meta.url), 'utf8'))
-  .map(([x, y, z, scale]) => ({ x, y, z, scale }));
+  .map(([x, y, z, scale]) => ({ ...place(x, z), y, scale }));
+const berth = place(-4, -1197), middle = place(0, -1130);
 
 async function load(root) {
   const { BirchScarf, SCARF_SNAGS } = await import(path.join(root, 'src/world/birch-scarf.ts'));
@@ -27,7 +31,7 @@ if (builds[0].island === builds[1].island) throw new Error('BASELINE resolves to
 
 // Real play replaces the height grid as the window moves, so the run switches grids part way through.
 const grids = [0, 1].map(shift => {
-  const res = 400, size = 200, minX = -100 + shift * 13.7, minZ = -1230 + shift * 9.1, data = new Float32Array(res * res);
+  const res = 560, size = 280, minX = middle.x - size / 2 + shift * 13.7, minZ = middle.z - size / 2 + shift * 9.1, data = new Float32Array(res * res);
   for (let z = 0; z < res; z++) for (let x = 0; x < res; x++) {
     data[z * res + x] = builds[0].island.heightAt(minX + (x + .5) / res * size, minZ + (z + .5) / res * size);
   }
@@ -140,7 +144,7 @@ for (const phase of script) {
           s.impulse = Math.min(1, s.impulse + .06);
         }
       }
-      const mast = phase.mast ? new THREE.Vector3(-4 + Math.sin(frames * .02) * .3, 3.1, -1197 + f * .002) : undefined;
+      const mast = phase.mast ? new THREE.Vector3(berth.x + Math.sin(frames * .02) * .3, 3.1, berth.z + f * .002) : undefined;
       const start = performance.now();
       scarf.update(dt, wind, mast);
       inst.times.push(performance.now() - start);

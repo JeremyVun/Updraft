@@ -7,6 +7,7 @@ import { atBoot, simMaterial, simTarget } from '../gl/gpu';
 import { JOURNEY_ROOMS_GLSL, ROOMS } from './journey-rooms';
 import { BOATS_POOLS, LITTLE_BOATS, boatsOut, boatsLevel, boatsToyClearing } from './little-boats-layout';
 import { STAIRS_PAD } from './stairs-layout';
+import { BIRCHES_PATTERN_GLSL, birchesOut, birchesPatternOffset } from './birches-layout';
 import * as THREE from 'three';
 import { params } from '../params';
 import { QA } from '../qa';
@@ -27,7 +28,7 @@ const MEADOW_CLEARINGS = [...tuning.meadowEchoes.patches, tuning.meadowEchoes.li
 function croppedAt(x: number, z: number): number {
   if (Math.abs(x - LITTLE_BOATS.x) < BOATS_TURF.x && Math.abs(z - LITTLE_BOATS.z) < BOATS_TURF.z) return tuning.littleBoats.turfHeight;
   const lines = 1 - smoothstep(0.78, 1.12, Math.hypot((x - ISLES.lines.x) / ISLES.lines.rx, (z - ISLES.lines.z) / ISLES.lines.rz));
-  const birches = 1 - smoothstep(0.62, 1.02, Math.hypot((x - ISLES.birches.x) / ISLES.birches.rx, (z - ISLES.birches.z) / ISLES.birches.rz));
+  const birches = 1 - smoothstep(0.62, 1.02, birchesOut(x, z));
   const bank = 1 - smoothstep(tuning.crest.bankCropFrom, tuning.crest.bankCropTo, pondOut(x, z));
   const stairFoot = 1 - smoothstep(STAIRS_PAD.inner, STAIRS_PAD.outer, Math.hypot(x - STAIRS_PAD.x, z - STAIRS_PAD.z));
   let flowers = 0;
@@ -125,13 +126,15 @@ export const GRASS_PATTERN_GLSL = /* glsl */ `
 float pastureAt(vec2 xz) {
   return 1.0 - smoothstep(-660.0, -600.0, xz.y);
 }
-vec2 stillGrassOffset(vec2 xz) {
-  return length((xz - vec2(${glsl(STILL_CENTRE.x)}, ${glsl(STILL_CENTRE.z)})) / vec2(85.0, 65.0)) < 1.4
-    ? vec2(${glsl(STILL_SHIFT.x)}, ${glsl(STILL_SHIFT.z)}) : vec2(0.0);
+${BIRCHES_PATTERN_GLSL}
+/** Where a moved island's grass was first grown: its blades, tufts and tint keep the patterns they had there. */
+vec2 grassOffset(vec2 xz) {
+  return (length((xz - vec2(${glsl(STILL_CENTRE.x)}, ${glsl(STILL_CENTRE.z)})) / vec2(85.0, 65.0)) < 1.4
+    ? vec2(${glsl(STILL_SHIFT.x)}, ${glsl(STILL_SHIFT.z)}) : vec2(0.0)) + birchesPatternOffset(xz);
 }
 vec3 grassPatternAt(vec2 xz) {
   float pasture = pastureAt(xz);
-  xz -= stillGrassOffset(xz);
+  xz -= grassOffset(xz);
   // The island of lines keeps the green it was painted with before it moved; the switch is out under the sea.
   if (length((xz - vec2(${ISLES.lines.x}.0, ${glsl(ISLES.lines.z)})) / vec2(${ISLES.lines.rx}.0, ${glsl(ISLES.lines.rz)})) < 1.4) xz -= vec2(${glsl(LINES_SHIFT.x)}, ${glsl(LINES_SHIFT.z)});
   return vec3(
@@ -153,7 +156,7 @@ ${LINES_GRASS_GLSL}
 ${BEND_GRASS_GLSL}
 /** 1 under the birches, where the floor is fallen gold and the little grass left in it has gone over with the year. */
 float birchFloorAt(vec2 xz) {
-  return 1.0 - smoothstep(0.62, 1.02, length((xz - vec2(${glsl(ISLES.birches.x)}, ${glsl(ISLES.birches.z)})) / vec2(${glsl(ISLES.birches.rx)}, ${glsl(ISLES.birches.rz)})));
+  return 1.0 - smoothstep(0.62, 1.02, birchesOut(xz));
 }
 /** Short, irregular grass around the tarn where the swans have been resting. */
 float pondBankAt(vec2 xz) {
@@ -301,6 +304,8 @@ function pondDry(x: number, z: number, groundH: number): number {
   return 1 + (smoothstep(POND_LEVEL - 0.05, POND_LEVEL + 0.2, groundH) - 1) * smoothstep(1, 0.9, o);
 }
 
+const patternShift = { x: 0, z: 0 };
+
 /** Typical blade height at (x, z): the vertex shader's formula without the per-blade randomness. */
 export function grassHeightAt(x: number, z: number): number {
   const groundH = heightAt(x, z);
@@ -310,7 +315,8 @@ export function grassHeightAt(x: number, z: number): number {
   const dry = pondDry(x, z, groundH) * boatDry * boatsToyClearing(x, z);
   if (dry <= 0) return 0;
   const still = Math.hypot((x - STILL_CENTRE.x) / 85, (z - STILL_CENTRE.z) / 65) < 1.4;
-  const patternX = x - (still ? STILL_SHIFT.x : 0), patternZ = z - (still ? STILL_SHIFT.z : 0);
+  const moved = birchesPatternOffset(x, z, patternShift);
+  const patternX = x - (still ? STILL_SHIFT.x : 0) - moved.x, patternZ = z - (still ? STILL_SHIFT.z : 0) - moved.z;
   const lush = shaderFbm(patternX * 0.035 + 17, patternZ * 0.035 + 17);
   const shortPatch = smoothstep(0.52, 0.68, shaderFbm(patternX * 0.05 - 23, patternZ * 0.05 - 23));
   const fringe = smoothstep(GRASS_LINE - 0.6, GRASS_LINE + 2.2, groundH);
@@ -561,7 +567,7 @@ void main() {
   oFoot = vec4(0.0);
   if (tileIndex >= uTileCount) return;
   vec2 tile = texelFetch(uTiles, ivec2(tileIndex, 0), 0).xy;
-  vec2 offset = stillGrassOffset(tile);
+  vec2 offset = grassOffset(tile);
   ivec2 cell = gr_cell(ivec2(floor((tile - offset) / uTileSize + 0.5)), b - tileIndex * per);
   uint s = gr_hash(uvec2(cell));
   vec2 pattern = (vec2(cell - GR_ORIGIN) + vec2(gr_rand(s), gr_rand(s))) * (uTileSize / ${FINE}.0);
@@ -801,7 +807,7 @@ void collapse() {
 }
 
 void main() {
-  vec2 offset = stillGrassOffset(aTile);
+  vec2 offset = grassOffset(aTile);
   ivec2 cell = gr_cell(ivec2(floor((aTile - offset) / uTileSize + 0.5)), gl_InstanceID % (uGrid.x * uGrid.y));
   uint s = gr_hash(uvec2(cell));
   vec2 pattern = (vec2(cell - GR_ORIGIN) + vec2(gr_rand(s), gr_rand(s))) * (uTileSize / ${FINE}.0);

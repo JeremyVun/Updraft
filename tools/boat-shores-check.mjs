@@ -24,13 +24,19 @@ try {
     args:['--enable-gpu','--use-angle=metal','--ignore-gpu-blocklist']});
   const page=await browser.newPage({viewport:{width:1200,height:800}});
   page.on('pageerror', e=>errors.push(e.message));
+  await page.goto(`${process.env.BASE??'http://127.0.0.1:5230/'}?shot&chapter=stage`);
+  await page.waitForFunction(()=>window.__ready,null,{timeout:60000});
+  const [berth, landing] = await page.evaluate(async () => {
+    const { birchesAt } = await import('/src/world/birches-layout.ts');
+    return [birchesAt(-4, -1197), birchesAt(3.1, -1050.5)];
+  });
   const cases = [
     ['opening',8.5,21.5,0.95,false], ['lines-departure',240,-483.5,0.1,false],
-    ['meadow-departure',-2/3,-974-2/3,0.2,false], ['birches-departure',-4,-1197,0.15,false],
+    ['meadow-departure',-2/3,-974-2/3,0.2,false], ['birches-departure',berth.x,berth.z,0.15,false],
     ['wood-departure',-34,-1908,0.2,false], ['sleeping-departure',-214.5,-1926,-1.76,false],
     ['home',-45.3,-1926.25,Math.PI/2,true],
     ['lines-arrival',14.08,-204.83,Math.PI,true], ['meadow-arrival',10,-583.98,Math.PI,true],
-    ['birches-arrival',3.1,-1050.5,Math.PI,true], ['wood-arrival',-26,-1692.1,Math.PI,true],
+    ['birches-arrival',landing.x,landing.z,Math.PI,true], ['wood-arrival',-26,-1692.1,Math.PI,true],
     ['sleeping-arrival',-132,-1916.4,-Math.PI/2,true],
   ];
   for(const [name,x,z,yaw,afloat] of cases) {

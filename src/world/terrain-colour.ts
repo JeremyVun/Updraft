@@ -30,7 +30,7 @@ const f = (v: number): string => v.toFixed(4);
 
 const PATTERN = /* glsl */ `
 vec4 terrainColourPatternDirect(vec2 p) {
-  return vec4(grassPatternAt(p), fbm((p - stillGrassOffset(p)) * 0.09 + 31.0));
+  return vec4(grassPatternAt(p), fbm((p - grassOffset(p)) * 0.09 + 31.0));
 }`;
 const BAKE = /* glsl */ `
 ${NOISE_GLSL}

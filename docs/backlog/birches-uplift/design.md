@@ -84,23 +84,25 @@ dives into heaps and rummages here (`birches-play.ts`), so the game starts from 
 
 ## The room, stop by stop
 
-The walk, its heaps and tangles in order. The z values are today's; "gap" rows are the new stretches of wood
-("The island moves and grows"):
+The walk, its heaps and tangles in order. "Band z" is the island as first built, the terms everything on it is
+authored in (`world/birches-layout.ts`); "world z" is where it stands since phase 1 (x moved 40 m west as well);
+"gap" rows are the new stretches of wood ("The island moves and grows"):
 
-| z today | What | Status |
-| --- | --- | --- |
-| −1052 | landing; the child looks up the ride, sets the cygnet down | as now |
-| −1076 | **round 1** at heap 0 by the fallen log (`BIRCH_PILES[0]`) | new |
-| gap A, ~15 m | open wood between the log and tangle 1, so round 1 and tangle 1 each have their own frame | new |
-| −1081 / −1088 | tangle 1, lift a loop off a fork | as now |
-| gap B, ~20 m | **round 2**, on the rise's lower slope, two new heaps at the corridor's sides | new |
-| −1113 / −1118 | heap 1 at the swing tree's foot (free play, as now) and the swing (optional, once) | as now |
-| −1132 / −1139 | tangle 2, circle the coils up | as now |
-| gap C, ~20 m, in the hollow | **round 3**, heap 2 plus two new heaps in a longer hollow; then **the leap** | new |
-| −1157 / −1163 | tangle 3, draw the slipped loop sideways | as now |
-| −1172 | heap 3, free play as now | as now |
-| −1176 / −1180 | tangle 4, the bow; the scarf gathers into the boat as its sail | as now |
-| −1197 | berth; the squirrel watches them go | new glance |
+| band z | world z | What | Status |
+| --- | --- | --- | --- |
+| −1052 | −1036 | landing; the child looks up the ride, sets the cygnet down | as now |
+| −1076 | −1060 | **round 1** at heap 0 by the fallen log (`BIRCH_PILES[0]`) | new |
+| gap A, 16 m | −1065 to −1081 | open wood between the log and tangle 1, so round 1 and tangle 1 each have their own frame | new |
+| −1081 / −1088 | −1081 / −1088 | tangle 1, lift a loop off a fork | as now |
+| gap B, 16 m | −1101.5 to −1117.5 | **round 2**, on the rise's lower slope, two new heaps at the corridor's sides | new |
+| −1113 / −1118 | −1129 / −1134 | heap 1 at the swing tree's foot (free play, as now) and the swing (optional, once) | as now |
+| −1132 / −1139 | −1148 / −1155 | tangle 2, circle the coils up | as now |
+| −1149 | −1165 | heap 2, the deep one at the bottom of the hollow, just short of gap C | as now |
+| gap C, 24 m, in the hollow | −1170 to −1194 | **round 3**, heap 2 plus two new heaps in a longer hollow; then **the leap** | new |
+| −1157 / −1163 | −1197 / −1203 | tangle 3, draw the slipped loop sideways | as now |
+| −1172 | −1212 | heap 3, free play as now | as now |
+| −1176 / −1180 | −1216 / −1220 | tangle 4, the bow; the scarf gathers into the boat as its sail | as now |
+| −1197 | −1237 | berth; the squirrel watches them go | new glance |
 
 1. **Meeting (round 1, one heap).** Walking up the ride, the frame takes in the fallen log. The squirrel sits up on it
    with a nut in its paws, ear tufts up. It sees them, freezes, then drops into the heap against the log (a puff of
@@ -220,6 +222,69 @@ Constraints that choose the shift:
 - The island stays clear of the meadow, the stairs' cloud deck and bank, and the drowned village's mist. Nothing
   becomes visible from a neighbouring room that is hidden now ("the player never sees the next island"), and the
   `toStairs` crossing still ends under the low cloud deck as it does now.
+
+**As built (phase 1, 2026-10-15).** Measured before the change on the base commit and after it, with no input, in
+shot mode (fixed 1/60 s steps):
+
+| | before | after |
+| --- | --- | --- |
+| trees on the island | 147 | 146 (100 of today's kept exactly, 46 grown in the gaps) |
+| `toBirches` from its first waypoint (`?chapter=toBirches`) | 15.22 s, 55.7 m | 15.47 s, 56.1 m (+1.6%) |
+| `toBirches` from the meadow's far shore (boat put at `FAR_SHORE`) | 23.25 s, 75.7 m | 24.58 s, 85.5 m (+5.7%) |
+| push-off at the berth (`push` beat) to the stairs chapter | 23.3 s | 29.4 s |
+| boat moving off (`aboard`, `toStairs` begins) to the stairs chapter | 20.5 s, 85.5 m | 26.5 s, 120.6 m |
+| `toStairs` from its first waypoint (`?chapter=toStairs`) | 13.5 s, 58.8 m | 21.1 s, 99.0 m |
+| scarf | 1140 rows, 612.8 m of wool | 1180 rows, 651.0 m |
+| litter field | 256 × 256 over 148 × 188 m | 214 × 332 over 124 × 244 m, the same cells |
+| loose leaves | 192 × 192 (36,864) | 192 × 265 (50,880), the same per metre of walk |
+
+Boat speed and the crossings' pace are untouched; only distance changed.
+
+- **The mapping** (`world/birches-layout.ts`). `BIRCHES_CUTS` cuts the first-built island across its walk at band z
+  −1080.95 (A, between the log's north end at −1080.6 and tangle 1's stop at −1081), −1101.5 (B, between perch 0's
+  coil and perch 1's) and −1154 (C, past heap 2's edge at −1153.6 and perch 6's coil, before tangle 3's stop at
+  −1157), opened 16, 16 and 24 m: C is the longest because round 3 is the biggest. No stop point moved.
+  `BIRCHES_SHIFT` (revision 12, `world/geography.ts`) is (−40, +16): west, and 16 m south so the meadow hop stays
+  short. The shift and every opening are whole grass tiles (8 m) so each band keeps its own grass. The island's
+  world ellipse (`ISLES.birches`, `BIRCHES_ISLE`) is centred at (−40, −1140), 48 × 108.
+- **Terrain.** Every band's ground is exactly the first-built island's: the noise is read in band-local terms and, in
+  a gap, eased from the band behind into the band ahead at full strength (`birchesNoise`); the broad shape (coast,
+  dome, rise and hollow) is read through `birchesShape`, which eases across each cut over 30% of its gap either side,
+  so the climb levels into a shelf through gaps A and B and the hollow's floor runs 24 m longer through gap C.
+  `birchesFirstHeight` is the island as first built, for anything that must reproduce it.
+- **Narrowing.** Within 25 m of the island's middle line nothing changes (every perch and snag tree stands inside
+  it); beyond, over 8 m, the flanks steepen so the widest coast is 48 m out instead of 60 (`BIRCHES_NARROW`).
+  Narrowing alone could not hold the count: the gaps open the island's widest, densest middle, and narrowing to the
+  count would have made it a 72 m ridge with steep banks. So the wood also thins toward the shore
+  (`OUTER_THINNING` 0.7, from 18 to 32 m off the walk), each tree by a draw of its own.
+- **Trees.** Today's wood is replayed tree for tree (the same stream, the same rules, in band-local terms); a tree is
+  kept where its band still stands above the tree line, clear of the stretched scarf runs and not thinned. The gaps
+  grow their own, cell by cell from each cell's own numbers, by the same rules, and keep off the 30 m of ride each
+  tangle is watched from. Perch trees keep their band-local yaw.
+- **Ground patterns.** Grass blades, tufts, tall and short patches and the ground tint keep the patterns they were
+  first grown with (`birchesPatternOffset` in `grassOffset`, as Still's do); a gap continues the band before it.
+  The birches' grass crop and tint, the leaf-mould ground, the litter seed and the loose leaves' bounds read
+  `birchesOut` (the island's own outline) instead of a world ellipse, and the drifts and stands of trees read their
+  noise in band-local terms.
+- **The scarf.** Its snags, perches and run points are band-local. Rows go evenly to a curve's spans, so the beach
+  run is laid across gap A in spans no longer than its own and gets 40 more rows; the drape runs that cross B and C
+  (now 41 and 34 m) stay within the length of today's other runs and keep their rows. Every tangle's wool lies
+  exactly as first wound: its twist and folds follow the wound length (`wound`), its side is carried from the strip
+  as first wound (`carry`), each grown run turns gradually to meet the next knot, and the first length is laid
+  across as first wound so it meets perch 0 turned as it was. `gatherSeconds` is unchanged: the draw-in is 6% faster
+  for 6% more wool. (The tuning comment's "135 m" was stale; the strip was 613 m.)
+- **Crossings.** `toBirches` leaves the far shore already bearing west (`FAR_SHORE` + (−18, −22)) and runs up the
+  landing straight on as before. `toStairs` leaves the berth as before (its first waypoint moves with the band),
+  passes south of the village's edge at (26, −1239) and comes in to the stairs as before; it starts 140 m from the
+  stairs, so the cloud deck builds over the crossing and the landing is under it as now.
+- **Clearances.** Dry land runs from x −85 to 4 and z −1040 to −1238. The south waterline is about 70 m off the
+  meadow's north shore (about 79 before); the north waterline is 29 m short of the drowned village's ellipse (67
+  before), open sea that the room partition gives to whichever room is nearer. The village and the meadow stay
+  hidden from the birches and both crossings by that partition as before (checked in free-running stills; a held
+  `hold=` frame redraws every room and shows them, so it cannot judge visibility).
+- **Saves.** Revision 12 moves the child, bird and boat of `birches`, `toStairs` and old `drowned` saves that lie on
+  or just off the old island (`geography-progress.ts`) through `birchesAt`; `drowned.ts` carries its old-save
+  threshold with the island (`birchesZ(-1240)`).
 
 ### The squirrel
 

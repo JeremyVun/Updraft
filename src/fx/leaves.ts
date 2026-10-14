@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { COPY_FRAG, GpuRunner, PingPong, atBoot, simMaterial } from '../gl/gpu';
 import { ATMO_GLSL, NOISE_GLSL, atmo } from '../world/atmosphere';
 import { ISLES } from '../world/heightfield';
-import { BIRCHES_LOCAL } from '../world/birches-layout';
+import { BIRCHES_LOCAL, BIRCHES_SHAPE_GLSL } from '../world/birches-layout';
 import { mulberry32 } from '../world/noise';
 import { glsl, tuning } from '../tuning';
 
@@ -15,8 +15,9 @@ const ISLE = ISLES.birches;
  * a leaf that goes out over the water thins away and is gone rather than turning up in the next room's grass.
  */
 const ISLE_GLSL = /* glsl */ `
+${BIRCHES_SHAPE_GLSL}
 float birchIsleR(vec2 xz) {
-  return length((xz - vec2(${glsl(ISLE.x)}, ${glsl(ISLE.z)})) / vec2(${glsl(ISLE.rx)}, ${glsl(ISLE.rz)}));
+  return birchesOut(xz);
 }`;
 
 /** The gold of a birch in deep autumn, shared by the leaves still on the tree and the ones coming off it. */

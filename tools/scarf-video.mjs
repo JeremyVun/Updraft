@@ -19,8 +19,8 @@ const names = process.argv.slice(2).length ? process.argv.slice(2) : all;
 const files = { tied: '01-tied-in-wind', 'tied-close': '01b-tied-in-wind-close', brush: '02-brushed-by-wind',
   'release-1': '03-release-1-lift', 'release-2': '04-release-2-unwind', 'release-3': '05-release-3-slip',
   'release-4': '06-release-4-bow', 'gathering-close': '07b-gathering-close' };
-/** Fixed close cameras (x,y,z,tx,ty,tz): drapes crossing the ride, and the last lengths running to the boat. */
-const cams = { 'tied-close': '-3,12.6,-1105,9,14.5,-1118', 'gathering-close': '7,5.5,-1180,-5,1.5,-1192' };
+/** Fixed close cameras (x,y,z,tx,ty,tz, band-local): drapes crossing the ride, and the last lengths running to the boat. */
+const BAND_CAMS = { 'tied-close': [-3,12.6,-1105,9,14.5,-1118], 'gathering-close': [7,5.5,-1180,-5,1.5,-1192] };
 fs.mkdirSync(out, { recursive: true });
 
 const manual = () => {
@@ -37,6 +37,17 @@ const manual = () => {
 
 const { browser, close } = await openBrowser();
 try {
+  const probe = await browser.newPage();
+  await probe.goto(`${base}?shot=1&chapter=stage`);
+  await probe.waitForFunction(() => window.__ready, null, { timeout: 60000 });
+  const cams = await probe.evaluate(async bands => {
+    const { birchesAt } = await import('/src/world/birches-layout.ts');
+    return Object.fromEntries(Object.entries(bands).map(([name, [x, y, z, tx, ty, tz]]) => {
+      const eye = birchesAt(x, z), at = birchesAt(tx, tz);
+      return [name, [eye.x, y, eye.z, at.x, ty, at.z].join(',')];
+    }));
+  }, BAND_CAMS);
+  await probe.close();
   for (const name of names) {
     const frames = fs.mkdtempSync('/tmp/updraft-scarf-video-');
     const page = await browser.newPage({ viewport: { width, height }, deviceScaleFactor: 1 });

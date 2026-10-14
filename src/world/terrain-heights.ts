@@ -16,7 +16,7 @@ const REACH: [{ x: number; z: number }, number, number, number, number][] = [
   [DOOR_SHORE, -36, 36, -46, 46],
   [LITTLE_BOATS, -70, 70, -104, 104],
   [ISLES.meadow, -294, 300, -266, 252],
-  [ISLES.birches, -104, 104, -142, 140],
+  [ISLES.birches, -74, 74, -170, 168],
   [ISLES.drowned, -332, 338, -276, 284],
   [ISLES.wood, -220, 216, -202, 196],
   [ISLES.sleeping, -86, 88, -96, 96],

@@ -8,17 +8,19 @@ import { FallenLeaves, LEAF_SHAPE_GLSL, LEAF_SIDE, LEAF_TINT_GLSL, LITTER_BOX, L
 import { glsl, tuning } from '../tuning';
 import type { WindField, WindSample } from '../wind/field';
 import { ATMO_GLSL, atmo } from './atmosphere';
-import { ISLES } from './heightfield';
+import { ISLES, birchesFirstHeight } from './heightfield';
 import { heightAt } from './island';
 import { createNoise2D, mulberry32 } from './noise';
 import { BirchScarf, FALLEN_LOG, SCARF_SNAGS, SCARF_PERCHES } from './birch-scarf';
-import { BIRCHES_CUTS, BIRCHES_LOCAL, birchesAt, birchesGap, birchesNoise, birchesShape } from './birches-layout';
+import { BIRCHES_CUTS, BIRCHES_LOCAL, birchesAt, birchesGap, birchesLocal, birchesNoise, birchesOut } from './birches-layout';
 
 const ISLE = ISLES.birches;
 /** Below this the shore is bare sand, so both beaches read as beaches and the boat is never behind a tree. */
 const TREE_LINE = 2.3;
 /** No trunk stands this near the walk: the ride stays open all the way over the island. */
 const RIDE = 8.5;
+/** How much thinner the wood grows out toward the shore, where the low camera under the canopy never looks. */
+const OUTER_THINNING = 0.7;
 /** Leaves on one tree. They are hidden one by one as it is stripped, so this is how much gold a tree has to lose. */
 const LEAVES_PER_TREE = 420;
 /** The floor is scattered over a grid of cells that follows the camera and stands still in the world. */
@@ -539,12 +541,15 @@ const lengthOf = (way: readonly (readonly [number, number])[]): number =>
 /** As many simulated leaves to a metre of the walk as when it was first laid out, with `LEAF_SIDE` rows to it then. */
 const LEAF_COUNT = LEAF_SIDE * Math.round(LEAF_SIDE * lengthOf(WAY.map(p => [p.x, p.y] as const)) / lengthOf([LANDING_AT, ...WALK_AT, BERTH_AT]));
 
+/** The walk as first laid out, in band-local terms. */
+const FIRST_WAY = [LANDING_AT, ...WALK_AT, BERTH_AT].map(([x, z]) => new THREE.Vector2(x, z));
+
 /** How far a point lies off the walk. */
-function walkDistance(x: number, z: number): number {
+function walkDistance(x: number, z: number, way = WAY): number {
   let best = 1e9;
-  for (let i = 1; i < WAY.length; i++) {
-    const a = WAY[i - 1];
-    const b = WAY[i];
+  for (let i = 1; i < way.length; i++) {
+    const a = way[i - 1];
+    const b = way[i];
     const dx = b.x - a.x;
     const dz = b.y - a.y;
     const t = Math.max(0, Math.min(1, ((x - a.x) * dx + (z - a.y) * dz) / (dx * dx + dz * dz)));
@@ -789,15 +794,12 @@ export class AutumnBirches {
     const patchy = createNoise2D(907);
     const cell = { x: LITTER_BOX.sx / across, z: LITTER_BOX.sz / along };
     const depths = new Float32Array(across * along);
-    const shape = { x: 0, z: 0 };
     for (let j = 0; j < along; j++) {
       for (let i = 0; i < across; i++) {
         const x = LITTER_BOX.x + (i + 0.5) * cell.x;
         const z = LITTER_BOX.z + (j + 0.5) * cell.z;
         /** The cheap test first: over half of this grid is sea, and the ground under it is not worth looking up. */
-        const s = birchesShape(x, z, shape);
-        const isle = Math.hypot((s.x - BIRCHES_LOCAL.x) / BIRCHES_LOCAL.rx, (s.z - BIRCHES_LOCAL.z) / BIRCHES_LOCAL.rz);
-        if (isle > 1.15) continue;
+        if (birchesOut(x, z) > 1.15) continue;
         const h = heightAt(x, z);
         if (h <= 0.05) continue;
         const patches = birchesNoise(x, z, (lx, lz) => patchy(lx * 0.12, lz * 0.12));
@@ -848,38 +850,75 @@ export class AutumnBirches {
     return data;
   }
 
-  /** Scattered over the island in stands, off the beaches, off the ride and out of the clearing on the crest. */
+  /**
+   * Scattered over the island in stands, off the beaches, off the ride and out of the clearing on the crest. The wood
+   * as it first grew stands tree for tree wherever its band of the island still rises above the tree line; the gaps
+   * grow their own, cell by cell, by the same rules.
+   */
   private place(rand: () => number): void {
     const stands = createNoise2D(311);
     const step = 4.6;
     const L = BIRCHES_LOCAL;
-    for (let gx = L.x - L.rx; gx <= L.x + L.rx; gx += step) {
-      for (let gz = L.z - L.rz; gz <= L.z + L.rz; gz += step) {
-        const { x, z } = birchesAt(gx + (rand() - 0.5) * step * 1.4, gz + (rand() - 0.5) * step * 1.4);
-        const y = heightAt(x, z);
-        if (y < TREE_LINE) continue;
-        const way = walkDistance(x, z);
+    const clearing = birchesLocal(BIRCHES_CLEARING.x, BIRCHES_CLEARING.y), glade = birchesLocal(GLADE.x, GLADE.z);
+    const snags = SCARF_SNAGS.map(s => birchesLocal(s.treeX, s.treeZ)), perches = SCARF_PERCHES.map(p => birchesLocal(p.x, p.z));
+    /** A grid cell's own numbers, so that nothing decided elsewhere on the island moves its tree. */
+    const draws = (column: number, row: number, salt: number): (() => number) =>
+      mulberry32(Math.imul(column + 1, 73856093) ^ Math.imul(row + 1, 19349663) ^ salt);
+    /** Fewer trees out toward the shore. */
+    const thinned = (way: number, column: number, row: number, salt: number): boolean =>
+      draws(column, row, salt)() < OUTER_THINNING * THREE.MathUtils.smoothstep(way, 18, 32);
+    /** Each tangle is watched from up to 30 m back down the ride: nothing grown in a gap stands in that view. */
+    const onSightline = (x: number, z: number): boolean => SCARF_SNAGS.some(s => {
+      const ax = x - (s.x + s.stopX) / 2, az = z - (s.z * .7 + s.stopZ * .3), along = Math.max(0, Math.min(32, ax * .08 + az));
+      return Math.hypot(ax - .08 * along, az - along) < 4;
+    });
+    const standsAt = (x: number, z: number): number => 0.62 + 0.42 * birchesNoise(x, z, (lx, lz) => stands(lx * 0.035, lz * 0.035));
+    for (let column = 0, gx = L.x - L.rx; gx <= L.x + L.rx; column++, gx += step) {
+      for (let row = 0, gz = L.z - L.rz; gz <= L.z + L.rz; row++, gz += step) {
+        const lx = gx + (rand() - 0.5) * step * 1.4;
+        const lz = gz + (rand() - 0.5) * step * 1.4;
+        const first = birchesFirstHeight(lx, lz);
+        if (first < TREE_LINE) continue;
         /** The ride opens out at both beaches and at the clearing, and closes in between. */
-        if (way < RIDE) continue;
-        if (((x - GLADE.x) / GLADE.rx) ** 2 + ((z - GLADE.z) / GLADE.rz) ** 2 < 1) continue;
-        if (this.scarf.crosses(x, z) || SCARF_SNAGS.some(s => Math.hypot(x - s.treeX, z - s.treeZ) < 3.2)
-          || SCARF_PERCHES.some(s => Math.hypot(x - s.x, z - s.z) < 3.2)) continue;
-        if (Math.hypot(x - BIRCHES_CLEARING.x, z - BIRCHES_CLEARING.y) < 8.5) continue;
-        const thick = 0.62 + 0.42 * birchesNoise(x, z, (lx, lz) => stands(lx * 0.035, lz * 0.035));
-        if (rand() > thick) continue;
+        if (walkDistance(lx, lz, FIRST_WAY) < RIDE) continue;
+        if (((lx - glade.x) / GLADE.rx) ** 2 + ((lz - glade.z) / GLADE.rz) ** 2 < 1) continue;
+        if (this.scarf.woundNear(lx, lz) || snags.some(s => Math.hypot(lx - s.x, lz - s.z) < 3.2)
+          || perches.some(s => Math.hypot(lx - s.x, lz - s.z) < 3.2)) continue;
+        if (Math.hypot(lx - clearing.x, lz - clearing.z) < 8.5) continue;
+        if (rand() > 0.62 + 0.42 * stands(lx * 0.035, lz * 0.035)) continue;
         /** The wind has been at the shore trees all their lives: shorter and thinner down by the water. */
-        const shelter = Math.min(1, (y - TREE_LINE) / 3.5);
+        const shelter = Math.min(1, (first - TREE_LINE) / 3.5);
         const scale = (12 + rand() * 6) * (0.6 + 0.4 * shelter);
-        this.trees.push({ x, y: y - 0.25, z, scale, yaw: rand() * 6.2831, variant: Math.floor(rand() * 4), strip: 0, shed: 0 });
+        const yaw = rand() * 6.2831, variant = Math.floor(rand() * 4);
+        const { x, z } = birchesAt(lx, lz), y = heightAt(x, z);
+        if (y < TREE_LINE || this.scarf.crosses(x, z) || thinned(walkDistance(x, z), column, row, 4242)) continue;
+        this.trees.push({ x, y: y - 0.25, z, scale, yaw, variant, strip: 0, shed: 0 });
       }
     }
+    BIRCHES_CUTS.forEach((cut, gap) => {
+      for (let column = 0; column * step <= 2 * L.rx; column++) {
+        for (let row = -1; row * step < cut.open + step; row++) {
+          const draw = draws(column, row, 8822 + gap);
+          const across = L.x - L.rx + column * step + (draw() - 0.5) * step * 1.4;
+          const into = row * step + (draw() - 0.5) * step * 1.4;
+          if (into <= 0 || into >= cut.open) continue;
+          const { x, z } = birchesGap(gap, into, across), y = heightAt(x, z);
+          if (y < TREE_LINE) continue;
+          const way = walkDistance(x, z);
+          if (way < RIDE || this.scarf.crosses(x, z) || onSightline(x, z) || draw() > standsAt(x, z) || thinned(way, column, row, 4243 + gap)) continue;
+          const shelter = Math.min(1, (y - TREE_LINE) / 3.5);
+          const scale = (12 + draw() * 6) * (0.6 + 0.4 * shelter);
+          this.trees.push({ x, y: y - 0.25, z, scale, yaw: draw() * 6.2831, variant: Math.floor(draw() * 4), strip: 0, shed: 0 });
+        }
+      }
+    });
     for (const s of SCARF_SNAGS) {
       if (s.kind === 'unwind' || s.kind === 'pull') continue;
       this.trees.push({ x: s.treeX, y: heightAt(s.treeX, s.treeZ) - 0.25, z: s.treeZ, scale: 16, yaw: 0.4, variant: 1, strip: 0, shed: 0 });
     }
     for (const s of SCARF_PERCHES) {
       this.trees.push({ x: s.x, y: heightAt(s.x, s.z) - 0.25, z: s.z, scale: 15 + s.h * .2,
-        yaw: s.x * .4, variant: 1, strip: 0, shed: 0 });
+        yaw: birchesLocal(s.x, s.z).x * .4, variant: 1, strip: 0, shed: 0 });
     }
     /** Keep the swing tree last: the rope's pivot is read from this exact tree. */
     const y = heightAt(SWING_TREE.x, SWING_TREE.y);

@@ -24,5 +24,5 @@ export const LINES_SHIFT = { x: 0, z: 100 } as const;
 export const STILL_SHIFT = { x: 0, z: 200 } as const;
 export const STILL_CENTRE = { x: -6 + STILL_SHIFT.x, z: -14 + STILL_SHIFT.z } as const;
 /** Revision 12 moves the grown birches west, lengthening the sea before the stairs. */
-export const BIRCHES_SHIFT = { x: 0, z: 0 } as const;
-export const GEOGRAPHY_VERSION = 11;
+export const BIRCHES_SHIFT = { x: -40, z: 16 } as const;
+export const GEOGRAPHY_VERSION = 12;

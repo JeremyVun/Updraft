@@ -25,7 +25,8 @@ const {heightAt}=await import('../src/world/island.ts');
 const {mulberry32}=await import('../src/world/noise.ts');
 const {IslandChapter,BOAT_BERTH}=await import('../src/story/island.ts');
 const {BirchesChapter}=await import('../src/story/birches.ts');
-const {BIRCHES_BERTH,BIRCHES_WALK,Swing}=await import('../src/world/birches.ts');
+const {BIRCHES_BERTH,BIRCHES_LANDING,BIRCHES_WALK,Swing}=await import('../src/world/birches.ts');
+const {birchesAt}=await import('../src/world/birches-layout.ts');
 const {BirchScarf,SCARF_SNAGS}=await import('../src/world/birch-scarf.ts');
 Math.random=mulberry32(42);
 
@@ -140,7 +141,7 @@ for (const room of ['birches']) for (const fps of [30,60,120]) {
       life:{regions:{island:new THREE.Vector4()},mean:()=>1},nearby:()=>false});
     chapter=new IslandChapter(cast);chapter.restoreCheckpoint();berth=BOAT_BERTH;
   } else {
-    cast.birches={scarf:new BirchScarf(),swing:new Swing(new THREE.Vector3(0,10,-1100),0,new THREE.Vector4()),shake(){},kick(){}};
+    cast.birches={scarf:new BirchScarf(),swing:new Swing(new THREE.Vector3(birchesAt(0,-1100).x,10,birchesAt(0,-1100).z),0,new THREE.Vector4()),shake(){},kick(){}};
     chapter=new BirchesChapter(cast);chapter.restoreCheckpoint('scarf4-4',[BIRCHES_WALK.length-1,1,0.7,4]);berth=BIRCHES_BERTH;
     boat.beach(berth.x,berth.z,0.15);
   }
@@ -191,10 +192,10 @@ console.log('PASS: plane stays secured with wind available; fixed boarding timin
 // Every scarf stop wins over later route cursors; throws and home must agree on the same pending encounter.
 for(let completed=0;completed<SCARF_SNAGS.length;completed++) for(let leg=0;leg<BIRCHES_WALK.length;leg++) {
   const f=fixture(),{cast}=f,{child,plane}=cast;
-  cast.birches={scarf:new BirchScarf(),swing:new Swing(new THREE.Vector3(0,10,-1100),0,new THREE.Vector4()),shake(){},kick(){}};
+  cast.birches={scarf:new BirchScarf(),swing:new Swing(new THREE.Vector3(birchesAt(0,-1100).x,10,birchesAt(0,-1100).z),0,new THREE.Vector4()),shake(){},kick(){}};
   const chapter=new BirchesChapter(cast);
   chapter.restoreCheckpoint(`scarf4-${completed}`,[leg,1,0.7,completed]);
-  child.stop();child.place(0,-1050,Math.PI);
+  child.stop();child.place(BIRCHES_LANDING.x-3,BIRCHES_LANDING.y+2,Math.PI);
   // Read destination selection without triggering a throw or encounter.
   chapter.beat='toBoat';chapter.update(1/60,0);
   const snag=SCARF_SNAGS[completed],route=BIRCHES_WALK[leg];

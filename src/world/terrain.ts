@@ -2,13 +2,12 @@ import * as THREE from 'three';
 import { fixInPlace } from '../gl/fixed';
 import { CLOUD_DECK, register } from '../gl/variants';
 import { params } from '../params';
-import { glsl } from '../tuning';
 import { ATMO_GLSL, atmo } from './atmosphere';
 import { GRASS_GLSL, RIME_GLSL, grassUniforms } from './grass';
 import { FIELDS_GLSL } from './fields';
 import { ECHO_GLSL, echoUniforms } from './echoes';
 import { FOOTPRINT_GLSL, footprintUniforms } from './footprints';
-import { DOOR_SHORE, GRASS_LINE, HEIGHTFIELD_GLSL, ISLES } from './heightfield';
+import { DOOR_SHORE, GRASS_LINE, HEIGHTFIELD_GLSL } from './heightfield';
 import { REFLECTION_LAYER } from './water/reflection';
 import { SURF_GLSL, surfUniforms } from './water/surf';
 import { TERRAIN_FIELDS_GLSL, TerrainFields } from './terrain-fields';
@@ -185,7 +184,7 @@ void main() {
   alb = mix(stillGrey(alb) * 1.04, alb, 0.45 + 0.55 * life);
   alb = mix(alb, mix(under, field, far), grassy);
   /** Under the birches the floor is leaf mould, not soil: what shows between the fallen leaves stays warm. */
-  float duff = 1.0 - smoothstep(0.6, 1.02, length((xz - vec2(${glsl(ISLES.birches.x)}, ${glsl(ISLES.birches.z)})) / vec2(${glsl(ISLES.birches.rx)}, ${glsl(ISLES.birches.rz)})));
+  float duff = 1.0 - smoothstep(0.6, 1.02, birchesOut(xz));
   alb = mix(alb, vec3(0.42, 0.26, 0.12) * (0.82 + 0.5 * grain), grassy * duff * 0.88);
   // Damp leaf mould and moss remain textured when lightning exposes the gaps between tufts.
   float forest = woodFloorAt(xz) * grassy;
