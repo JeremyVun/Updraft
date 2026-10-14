@@ -230,8 +230,12 @@ held to the bar of the owl and the clouds.
 - **Look.** A red squirrel: rust-red back and tail, cream belly, prominent autumn ear tufts, dark bright eyes, and a
   tail as long as its body that it carries in an S. It is painted in the same light as the cat and the birches
   (shared `ATMO_GLSL`, the room's dusk, cloud shadows), never a toy.
-- **Scale is cheated** (as background life may be): about 1.7× real. Head and body about 0.34 m, tail about 0.32 m,
-  sitting-up height about 0.35 m. It has to read beside the cygnet at gameplay distance; the gate is in the plan.
+- **Scale is cheated** (as background life may be). The world draws the child about 2× real (her face stands 2.1 m;
+  the cygnet's eye 0.82 m), so the squirrel is scaled **3× real** (`tuning.squirrel.scale`), about 1.5× relative to
+  the child. Sitting up it is about 0.6 m, three quarters of the cygnet's eye height. At 1.7× (the first build) it
+  measured only 15 px tall in portrait at 15 m, the size of one litter leaf (orchestrator ruling, 2026-10-16).
+  Heaps must be deep enough to bury it at this size (phases 4 and 5), and portrait round frames may come in closer
+  than landscape ones.
 - **Actions:** `sit` (upright, a nut in its forepaws, nibbling), `freeze`, `scold` (chitter with tail flicks),
   `bound` (the gallop with its tail streaming), `dive` (into leaves, ending `buried`), `buried` (under the litter
   with the tail tip out or in), `peek` (its head up out of the leaves and back down), `burst` (out of the leaves in a
