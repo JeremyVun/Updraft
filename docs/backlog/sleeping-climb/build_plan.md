@@ -51,7 +51,7 @@ the drift looking back, step arrival, step top (window revealed, bed below), fog
 window above the skyline with a clear light path to the pillow. Grounding: bed, window and bird feet on the rendered
 surface at every stop.
 
-## Phase 2: the beats — in progress
+## Phase 2: the beats — done (2a `982a95ba`, 2b `a494640f`, 2c `a1ba7e88`, lead `84abb218`)
 
 Split in two waves (phase 1's agent ran near the context ceiling on its verification loop): **2a** builds every beat
 with the logic, adversarial, touch and score checks and one `VIDEO=1 CLIMB=1` smoke run whose frame strip the lead
@@ -177,20 +177,83 @@ progress, idle until the invitation shows), `TOUCH=1`; score check passes; one `
 lead as a strip for pacing (edge to hilltop about 2–2.5 min with prompt input, no walk over about 10 s without
 something happening).
 
-## Phase 3: surface and sound — not started
+### 2c — done (`a1ba7e88`), lead's review of its strip (`/tmp/updraft-climb-2c-igGu/`)
 
-**Owns:** `src/world/sleeping-trail.ts` (drift look, spindrift streams, footprints), a new
-`src/world/sleeping-dressing.ts` (tussocks, heather, frozen trickle, hawthorn, stones, sheep trods), rabbit placement
-via `src/creatures/rabbits.ts` and its morning wake, `src/world/sleeping-weather.ts` (driving snow on the crest),
-foley mapping for snow crunch, the scramble, the bandaged flutter and the unanswered call (coordinate through
-`coord`: other sessions are editing `src/audio/`).
+The fog takes the whole window and the sky (76–80.3 s all white, bird readable; the window returns as a ghost with
+the lane 80.7–81.7 s and glows from 82 s); the hard edge was the unfogged sky at the sea horizon, now fogged by
+`hollowSky` in `atmosphere.ts` (sleeping-only, keyed on `uHollow.w > 0`). The first look back moved one waypoint on to
+`SLEEP_STEP_STOP - 1` (over the horn), where the lamp can be framed without a swing: accepted by the lead. The edge
+lens keeps 7 m from the bed's centre (`lensBedClear`). Portrait: the saddle lens leans toward the lamp in narrow frames
+(`fogNarrowLean`, through `afterCamera`); the first look back still loses the lamp in portrait (accepted). Near-lens
+streaks fade through the opt-in `lines.nearFade` (`windLinesNearFade`); the lead widened `lineNearFade` from
+[0.8, 2.5] to [2, 4.5] m because bands still crossed the frame from 2.35–2.65 m (35.3–35.7, 38.3–38.7, 86.7–87.0 s).
 
-**Does:** the drift reads as wind-carved snow (crust, sastrugi, cornice, blue hollows, sparkle); natural hillside detail
-at the bird's scale, none marking a route; the rabbit asleep under the thorn, waking and loping off when the green
-reaches it; wind sound rising with height.
+What later phases must know:
+- The first look back's framing depends on the key 0.7 m before `SLEEP_STEP_STOP - 1`; moving the drift or the horn
+  means retuning both.
+- `hollowMist()` is the single base fog colour for ground and sky; a mismatch brings the horizon line back. Anything
+  that changes the fog's top or the shoulder bank changes the sky with it. `uSleepLost` (1 − `WINDOW_SEEN`) whitens
+  everything within about 3 m of the window.
+- The CPU logic check does not call `afterCamera`; only the GPU tools exercise portrait framing.
+- Frames mixing the sleeping island with another room (the crossings in and out) need a look in phase 4, because the
+  sky now has a sleeping-only branch.
 
-**Verify:** stills of the drift, lower slope and crest in the player camera; the rabbit in the morning; one full-room
-`VIDEO=1` run reviewed by the lead with sound. Production build check passes.
+## Phase 3: surface and sound — in progress
+
+Two parallel waves, file-disjoint, each in its own worktree with its own dev server so neither's edits reload the
+other's captures; 3b merges into `sleeping-climb` when both are done.
+
+### 3a: the surface (worktree `updraft-sleeping-climb`, branch `sleeping-climb`, dev server 5231)
+
+**Owns:** `src/world/sleeping-trail.ts` (drift look, spindrift, footprints), a new `src/world/sleeping-dressing.ts`,
+the heightfield's sleeping functions only if the bank's lip needs ground shape (JS and GLSL identical), rabbit
+placement and its morning wake through `src/creatures/rabbits.ts`, and the sleeping room's rocks.
+
+**Does:**
+- The drift reads as wind-carved snow: crust, sastrugi ridges, a curled cornice lip on the lee side, blue shadow in
+  its hollows, a moonlit sparkle. Today it is a smooth mound made of angular facets, like a white tent. The thin edge
+  renders, so the bird visibly sinks to its chest in the wade. The layers read as they go; spindrift lifts off the
+  crest in streams that run the way the stroke went and settle downwind; footprints stay in what is left; both
+  channel banks remain. The bank nearest the lens on the walk out (32–34.7 s in the 2c strip) does not fill the
+  bottom of the frame.
+- The step's bank reads as a ledge too high to hop from the step's lens: turf curling over a lip of rock, part of the
+  hillside, not a terrace and not a row of loose rocks.
+- The outcrop and bank rocks match the island's rock look elsewhere (`src/world/landmarks.ts`): weathered,
+  half-buried, frost-shattered, not bare grey polyhedra.
+- Hillside detail at the bird's scale: frosted tussocks and heather clumps, half-buried stones, sheep trods across
+  the steep face seen from the bed and the glide, the frozen trickle at `SLEEP_TRICKLE`. None of it marks a route (no
+  rows, kerbs, stamped or golden path).
+- A lone hawthorn bent by the wind near the drift, on the trickle-to-drift stretch, with a rabbit curled in its form
+  under it, snow on its back, ears flat. It never wakes during the climb; in the morning, when the green reaches it,
+  it sits up, washes its face and lopes off. Background life, no encounter.
+
+**Seams:** `snowDepthAt` stays identical to the shader's depth; drift encounter behaviour and timings unchanged;
+nothing new in the lens's 7 m bed clearance path (west then north of the bed), the glide line, the morning lane or
+any look-back sightline; the bedside framing unchanged.
+
+**Verify:** typecheck, the logic check, `CLIMB=1` GPU run; player-camera stills of the drift (before, wade, lowered),
+the bank from the step's lens, the lower slope with the hawthorn and rabbit, the bedside view and the glide; the
+rabbit's morning wake; one `VIDEO=1 CLIMB=1` strip reviewed by the lead, which also checks the near-lens streaks
+after the widened fade.
+
+### 3b: weather and sound (worktree `updraft-sleeping-climb-sound`, branch `sleeping-climb-sound` from `6c43f270`,
+dev server 5232)
+
+**Owns:** `src/world/sleeping-weather.ts` (snowfall), the sleeping room's sound in `src/audio/` (coordinate through
+`coord`: other sessions are editing audio), and the chapter's hooks that feed them.
+
+**Does:** snowfall thickens and turns from falling to driving with `climbExposure`, streaming sideways on the crest
+(any ribbon streaks set `nearFade`); the night's wind sound rises with height; foley for snow crunch in the drift, the
+wade's struggle, the scramble, the bandaged flutter at the step (following `flap` and `hope`), the unanswered call
+into the fog with only the wind answering; nothing louder than the summit's moment.
+
+**Seams:** the `sleepingWind` contract in `docs/contracts/audio.md` (true only in the `climb` phase, which now spans
+`climb`, `snow`, `step`, `mist`, `catchFeather`, `crest`); flakes never hide the bird; the fog stop's white keeps its
+silence-but-wind character.
+
+**Verify:** typecheck, `sleeping-score-check`, audio checks the project already has for the room, stills of the crest
+and fog in snow, a `VIDEO=1 CLIMB=1` run with its audio track levels logged per beat. The lead cannot listen: the
+playtest build in phase 4 is where Jeremy hears it.
 
 ## Phase 4: review, playtest, close — not started
 
