@@ -1,6 +1,7 @@
 // Sleeping island: idle gates, real pillow sweeps, gentle circles, dawn and boarding.
 // Usage: node tools/sleeping-check.mjs [prefix]; TOUCH=1 for 390x844; ADVERSARIAL=1 tests wrong input and interrupted progress.
 // VIDEO=1 records the real canvas and game audio as WebM. W/H override dimensions; shared GPU lock; captures in /tmp.
+// AUDIO=1 logs the climb's wind, breeze, foley and whole-mix levels and the bird's heard sounds, with a table by beat.
 import fs from 'node:fs';
 import assert from 'node:assert/strict';
 import { openBrowser } from './lib/browser.mjs';
@@ -8,7 +9,7 @@ import { reviewCapture } from './lib/review-capture.mjs';
 
 const prefix = process.argv[2] ?? '/tmp/updraft-sleeping';
 const touch=process.env.TOUCH==='1',width=Number(process.env.W??(touch?390:1600)),height=Number(process.env.H??(touch?844:900));
-const adversarial=process.env.ADVERSARIAL==='1',video=process.env.VIDEO==='1',markers=[],offscreen=new Set();
+const adversarial=process.env.ADVERSARIAL==='1',video=process.env.VIDEO==='1',audioLog=process.env.AUDIO==='1',markers=[],offscreen=new Set();
 const {browser,close}=await openBrowser();
 console.log('Graphics acquired; starting sleeping chapter');
 let finishRecording,stopReview;
@@ -59,7 +60,7 @@ try {
         nearLine:g.lines.lines.reduce((near,l)=>Math.min(near,...l.points.map(p=>p.distanceTo(g.rig.camera.position))),Infinity),
         // The nearest streak drawn at half its opacity or more, once the climb's near fade has taken its share.
         nearLineSeen:g.lines.lines.reduce((near,l)=>{const f=c.windLinesNearFade;for(const p of l.points){const d=p.distanceTo(g.rig.camera.position),u=f?Math.min(1,Math.max(0,(d-f[0])/(f[1]-f[0]))):1;if(u*u*(3-2*u)>=.5)near=Math.min(near,d);}return near;},Infinity),
-        snowDepth:g.sleeping.trail.snowDepthAt(k.position.x,k.position.z)});
+        snowDepth:g.sleeping.trail.snowDepthAt(k.position.x,k.position.z),audio:window.climbAudio?.()});
       last=now;requestAnimationFrame(sample);
     }sample();
   });
@@ -86,6 +87,26 @@ try {
     });
     finishRecording=()=>page.evaluate(()=>window.finishVideo());
   }
+  if(audioLog)await page.evaluate(async()=>{
+    const g=__game,sound=g.sound;
+    if(!sound.output)sound.start();
+    // The game's own module instance: after an edit Vite serves it with a timestamp, and a bare import gets a fresh copy.
+    const {NIGHT_WIND}=await import(performance.getEntriesByType('resource').findLast(r=>new URL(r.name).pathname==='/src/world/sleeping-wind.ts')?.name??'/src/world/sleeping-wind.ts');
+    const ctx=sound.output.ctx,foley=ctx.createGain();
+    // Everything that plays through the shared output (the bird's foley) passes this tap; the call goes to master.
+    foley.connect(sound.master);sound.graph.bus=foley;
+    const taps={wind:sound.gustPan,breeze:sound.breezeGain,foley,mix:sound.master},buffer=new Float32Array(2048);
+    const meters=Object.fromEntries(Object.entries(taps).map(([k,node])=>{const a=ctx.createAnalyser();a.fftSize=2048;node.connect(a);return[k,a];}));
+    const heard=[];const push=g.cygnet.heard.push;
+    g.cygnet.heard.push=function(...items){for(const h of items)heard.push({kind:h.kind,snow:g.sleeping.trail.snowDepthAt(g.cygnet.position.x,g.cygnet.position.z),hope:g.cygnet.hopeBeats,wing:g.cygnet.wing.state});return push.apply(this,items);};
+    const cue=sound.update.bind(sound);
+    sound.update=(dt,state)=>{for(const c of state.cues)if(c==='calling')heard.push({kind:'call'});return cue(dt,state);};
+    window.climbAudio=()=>{
+      const levels=Object.fromEntries(Object.entries(meters).map(([k,a])=>{a.getFloatTimeDomainData(buffer);let p=0;for(const v of buffer)p+=v*v;return[k,p/buffer.length];}));
+      return{...levels,gust:sound.gustGain.gain.value,whistle:sound.whistleGain.gain.value,rustle:sound.rustleGain.gain.value,breezeGain:sound.breezeGain.gain.value,
+        rise:NIGHT_WIND.rise,lull:NIGHT_WIND.lull,answer:NIGHT_WIND.answer,heard:heard.splice(0)};
+    };
+  });
   const shot=async name=>{
     if(video){
       const time=await page.evaluate(()=>(performance.now()-window.recordStarted)/1000);
@@ -166,6 +187,8 @@ try {
   const seen=new Set(),stepLoops=[];
   for(let j=0;j<200&&await page.evaluate(()=>['climb','snow','step','mist','catchFeather','crest'].includes(__game.story.current.beat));j++){
     const current=await page.evaluate(()=>__game.story.current.beat);
+    const weather=await page.evaluate(()=>{const c=__game.story.current;return c.beat==='mist'&&c.t>2.6&&c.t<4?'fog-white':c.beat==='crest'&&c.t>2.5?'crest-snow':c.beat==='climb'&&c.routeIndex===12?'shoulder-snow':null;});
+    if(weather&&!seen.has(weather)){seen.add(weather);await shot(weather);}
     if(current==='catchFeather'){await page.waitForTimeout(300);continue;}
     if(current==='step'){
       if(!await page.evaluate(()=>__game.story.current.invitesFlight)){await page.waitForTimeout(300);continue;}
@@ -284,6 +307,18 @@ try {
   assert(result.lie<1e-5,'the sleeping pose must not leak into walking');assert.deepEqual(errors,[]);
   if(video){await page.evaluate(()=>window.finishVideo());console.log(prefix+'.webm');}
   const motion=await page.evaluate(()=>window.sleepMotion);
+  if(audioLog){
+    const db=p=>p>0?(10*Math.log10(p)).toFixed(1):'-inf',rows=[];
+    for(const m of motion){if(!m.audio)continue;let r=rows.at(-1);if(r?.beat!==m.beat)rows.push(r={beat:m.beat,from:m.at,n:0,wind:0,breeze:0,foley:0,mix:0,mixMost:0,rise:0,lull:0,answer:0,heard:{}});
+      r.n++;r.to=m.at;for(const k of['wind','breeze','foley','mix'])r[k]+=m.audio[k];r.mixMost=Math.max(r.mixMost,m.audio.mix);
+      r.rise=Math.max(r.rise,m.audio.rise);r.lull=Math.max(r.lull,m.audio.lull);r.answer=Math.max(r.answer,m.audio.answer);
+      for(const h of m.audio.heard){const key=h.kind+(h.snow>.02?'·snow':h.wing==='wrapped'&&h.hope>0?'·hope':'');r.heard[key]=(r.heard[key]??0)+1;}}
+    const base=await page.evaluate(()=>window.recordStarted??null)??motion.find(m=>m.audio)?.at;
+    console.log('Climb audio by beat (dBFS, mean over the beat; mix also its loudest frame; rise, lull and answer at most)');
+    console.log(['beat','at s','wind','breeze','foley','mix','mix loudest','rise','lull','answer','heard'].join('\t'));
+    for(const r of rows)console.log([r.beat,((r.from-base)/1000).toFixed(1),db(r.wind/r.n),db(r.breeze/r.n),db(r.foley/r.n),db(r.mix/r.n),db(r.mixMost),r.rise.toFixed(2),r.lull.toFixed(2),r.answer.toFixed(2),Object.entries(r.heard).map(([k,v])=>k+' '+v).join(', ')].join('\t'));
+    fs.writeFileSync(prefix+'-audio.json',JSON.stringify(rows,null,2));
+  }
   fs.writeFileSync(prefix+'-motion.json',JSON.stringify(motion));
   const ribbonHold=motion.filter(m=>m.beat==='pullRibbon');
   assert(ribbonHold.some(m=>m.opening>.2 && m.ribbonHeld),'the bird must remain attached through the visible opening');

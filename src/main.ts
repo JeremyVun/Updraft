@@ -9,6 +9,7 @@ import { musicForStart, nextMusicForChapter, prefetchMusic } from './audio/music
 import { AudioEnvironment } from './audio/environment';
 import { WorldFoley } from './audio/world-foley';
 import { BirchesFoley } from './audio/birches-foley';
+import { SleepingFoley } from './audio/sleeping-foley';
 import { CameraRig } from './camera';
 import { Creatures, type CreatureEnv } from './creatures/creatures';
 import { nearestCreature } from './creatures/nearby';
@@ -57,7 +58,7 @@ import { bakeNoiseTiles } from './world/noise-tiles';
 import { FogLookup } from './world/fog-lookup';
 import { CloudShadows } from './world/clouds';
 import { Grass } from './world/grass';
-import { sleepingGust } from './world/sleeping-wind';
+import { nightWindSound } from './world/sleeping-wind';
 import { HEARTH } from './world/sleeping-hearth';
 import { GroundBakes, type BakeInputs } from './world/ground';
 import { LifeField } from './world/life';
@@ -405,6 +406,7 @@ rotaryWashing.onSound = (kind, at) => {
 };
 const curtainPops = new Map<object, number>();
 const birchesFoley = new BirchesFoley(foley, rig.camera);
+const sleepingFoley = new SleepingFoley(foley);
 const materialAt = new THREE.Vector3();
 const splashAt = new THREE.Vector3();
 birches.onLeafScuff = (x, z, strength) => {
@@ -839,7 +841,9 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   foley.frost(story.name==='sleeping' ? sleeping.cold*(1-sleeping.dawn) : 0);
   foley.hearth(story.name==='sleeping' ? sleeping.hearth.flame.value : 0,1-THREE.MathUtils.smoothstep(rig.camera.position.distanceTo(HEARTH),10,35),screenPan(rig.camera,HEARTH));
   const heardPan = screenPan(rig.camera, cygnet.position);
+  const birdInSnow = story.name === 'sleeping' ? sleeping.trail.snowDepthAt(cygnet.position.x, cygnet.position.z) : 0;
   for (const h of cygnet.heard) {
+    if (story.name === 'sleeping' && sleepingFoley.heard(h, cygnet, birdInSnow, heardPan)) continue;
     if (h.kind === 'step') {
       const under: Surface = child.riding && cygnet.position.distanceToSquared(boat.position) < 9 ? 'wood' : heightAt(cygnet.position.x, cygnet.position.z) < 0.9 ? 'sand' : 'grass';
       foley.step(under, h.amount, heardPan);
@@ -1211,7 +1215,7 @@ function prepareFrame(dt: number): void {
   placeEmitter(soundState.cygnet!, cygnet.position, cygnet.visible);
   placeEmitter(soundState.flock!, flock.head, flock.active);
   soundState.cues = takeCues();
-  soundState.winterGust = story.name === 'sleeping' ? sleepingGust(time, sleeping.cold, sleeping.dawn) : 0;
+  soundState.winterGust = story.name === 'sleeping' ? nightWindSound(time, sleeping.cold, sleeping.dawn) : 0;
   sound.update(dt, soundState);
   syncMusicLoading();
   prepareWorldAudio(dt);
