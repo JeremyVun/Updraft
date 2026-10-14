@@ -13,6 +13,17 @@ node tools/still-grass-check.mjs` compares blade positions, heights, tuft covera
 ground normals at all three detail levels. `BROKEN_BASE` optionally records the regressed build too. Captures and
 metrics go to `OUT` (default `/tmp/updraft-still-grass`); inspect the stills as well as the numeric comparison.
 
+The Meadow musical play has `meadow-seeds-check` (persistent gesture effort and recovery),
+`meadow-echoes-state-check` (input ownership, checkpoint recovery, flower strokes and seed lift), and
+`meadow-breath-check` (procedural voice envelope and headroom). `BASE=<dev> node tools/meadow-echoes-check.mjs`
+plays the flower phrase and seed lift with real gestures; `FROM=meadow FULL=1` includes the entire chapter, and
+`W=390 H=844 TOUCH=1` exercises portrait touch. It writes captures and a state report under `OUT` in `/tmp`.
+`TRACE=1 AUDIT=1` also captures every camera step and intervening walk frames. Run
+`node tools/meadow-camera-audit.mjs <OUT>/audit-camera.jsonl` to check child framing through the handoffs and
+prevent the wide retreat before the pond; `camera-intent-report.mjs <OUT>/audit` flags motion to inspect.
+`ONLY=meadow node tools/progress-check.mjs` includes the two new saves. These checks do not replace human audio
+or motion review.
+
 ## Groups
 
 `tools/check.mjs` runs named groups sequentially and writes each check's log plus `results.json` to
@@ -148,11 +159,14 @@ edit.
 
 **Chapters and mechanics** (Node, real chapter code, no renderer)
 
-- `plane-routing-check`, `meadow-route-check`, `meadow-plane-check`, `piano-logic-check`, `piano-growth-check`,
+- `plane-routing-check`, `meadow-route-check`, `meadow-plane-check`, `meadow-duet-check`, `piano-logic-check`, `piano-growth-check`,
   `little-boats-logic-check`, `kite-logic-check`, `scarf-geometry-check`, `sail-flutter-check`, `sea-logic-check`,
   `sky-mirror-logic-check`, `sky-mirror-pointer-check` (`TOUCH=1`), `sleeping-logic-check`, `wood-logic-check`,
   `wing-care-check`, `flock-flight-check`, `dolphin-leap-check`, `boat-check`, `boat-ground-check`, `journey-pacing-check`,
   `geography-check`, `journey-reveal-check`, `crossing-haze-check`, `dream-story-check`, `foghorn-story-check`.
+- `meadow-duet-check` covers the wind call before piano input, retained partial replies, four player answers,
+  the delayed bough finale/colour cue and restoration at 30/60/120 Hz. The real-input `piano-check` also swipes
+  during a call to confirm that it cannot count as a reply; its framing checks include the bough's crown.
 - `dolphin-leap-check` covers both camera sides, portrait/landscape, 30/60 Hz and four seeds: actual takeoff,
   overtaking flight and hull clearance. `MUTATE=old` loads the faulty launch from `893c316f` in memory to prove the guard.
 - The scarf's feel: `scarf-feel-probe` (Node: bounce, settling, creep, stretch and jitter) and `scarf-video` (true

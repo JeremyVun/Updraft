@@ -272,6 +272,14 @@ function meadowHeight(wx: number, wz: number): number {
   h += land * landingBank(wx, wz);
   const saddle = Math.exp(-(((wx - PIANO_SADDLE.x) / PIANO_SADDLE.rx) ** 2 + ((wz - PIANO_SADDLE.z) / PIANO_SADDLE.rz) ** 2));
   h -= land * saddle * smoothstep(PIANO_SADDLE.start, PIANO_SADDLE.full, wz) * tuning.world.meadowPianoSaddle;
+  const rolls = tuning.world.meadowRolls;
+  let pasture = rolls.base;
+  for (const [cx, cz, rx, rz, rise] of rolls.hills) {
+    pasture += rise * Math.exp(-(((wx - cx) / rx) ** 2 + ((wz - cz) / rz) ** 2));
+  }
+  const shaped = (1 - smoothstep(-674, -646, wz)) * smoothstep(-839, -803, wz)
+    * (1 - smoothstep(95, 155, Math.abs(wx))) * smoothstep(22, 70, inland);
+  h += (pasture - h) * shaped;
   return h - smoothstep(0, 70, -inland) * 8;
 }
 
@@ -606,6 +614,11 @@ float hf_meadow(vec2 world) {
   h += land * hf_bank(world);
   vec2 saddle = (world - vec2(${glsl(PIANO_SADDLE.x)}, ${glsl(PIANO_SADDLE.z)})) / vec2(${glsl(PIANO_SADDLE.rx)}, ${glsl(PIANO_SADDLE.rz)});
   h -= land * exp(-dot(saddle, saddle)) * smoothstep(${glsl(PIANO_SADDLE.start)}, ${glsl(PIANO_SADDLE.full)}, world.y) * ${glsl(tuning.world.meadowPianoSaddle)};
+  float pasture = ${glsl(tuning.world.meadowRolls.base)};
+  ${tuning.world.meadowRolls.hills.map(([cx, cz, rx, rz, rise]) => `pasture += ${glsl(rise)} * exp(-dot((world - vec2(${glsl(cx)}, ${glsl(cz)})) / vec2(${glsl(rx)}, ${glsl(rz)}), (world - vec2(${glsl(cx)}, ${glsl(cz)})) / vec2(${glsl(rx)}, ${glsl(rz)})));`).join('\n  ')}
+  float shaped = (1.0 - smoothstep(-674.0, -646.0, world.y)) * smoothstep(-839.0, -803.0, world.y)
+    * (1.0 - smoothstep(95.0, 155.0, abs(world.x))) * smoothstep(22.0, 70.0, inland);
+  h += (pasture - h) * shaped;
   return h - smoothstep(0.0, 70.0, -inland) * 8.0;
 }
 float hf_birches(vec2 p) {

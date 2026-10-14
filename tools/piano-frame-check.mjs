@@ -9,6 +9,7 @@ globalThis.window={innerWidth:1600,innerHeight:900,matchMedia:()=>({matches:fals
 globalThis.document={createElement:()=>({getContext:()=>({beginPath(){},moveTo(){},quadraticCurveTo(){},stroke(){}})})};
 const {PianoStop}=await import('../src/story/piano.ts');
 const {piano}=await import('../src/world/piano.ts');
+const {windBough}=await import('../src/world/wind-bough.ts');
 const {CameraRig}=await import('../src/camera.ts');
 const {heightAt}=await import('../src/world/island.ts');
 const {tuning}=await import('../src/tuning.ts');
@@ -36,7 +37,7 @@ for(const [w,h] of [[1600,900],[2048,1023],[390,844]])for(let stage=1;stage<=4;s
  let worst=0;
  for(let f=0;f<600;f++){
   stop.now=f/60;const pace=stop.frame(shot);rig.update(1/60,stop.now,shot,pace);
-  for(const at of [piano.seat.clone().add(new THREE.Vector3(0,1.2,0)),piano.keys]){
+  for(const at of [piano.seat.clone().add(new THREE.Vector3(0,1.2,0)),piano.keys,windBough.crown]){
    const p=at.clone().project(rig.camera);worst=Math.max(worst,Math.abs(p.x),Math.abs(p.y));
    assert(Math.abs(p.x)<.94&&Math.abs(p.y)<.94,'subjects clipped during reward');
   }

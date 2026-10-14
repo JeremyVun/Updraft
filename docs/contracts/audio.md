@@ -239,6 +239,12 @@ Only after the duet is done does `MeadowChapter.meadowScore` start: `walk` befor
 `flock` and `pond`, then `return` (harmony at 4 s and plucks at 5.5 s, after the completion cue), which continues
 through boarding and the crossing to Birches. The arrangement contains its own dynamics; don't apply `hush` on top.
 
+The Meadow flower prototype adds a short foreground breath voice (`audio/meadow-breath.ts`), synthesised in
+Web Audio from harmonics and filtered air, with no bundled sample. It uses the score's D-major pentatonic notes;
+the grey approach flower stays silent. `MeadowSong` smoothly shares the existing `pianoMix` gate while the child
+and wind exchange seeds, then releases it. The final listening rest gives the distant family call space before
+the crest. See [design and verification](../backlog/meadow-echoes/design.md); human timbre review is still pending.
+
 **Birches.** Jeremy's 2026-10-11 instruction: "next if you can wire birches.ogg in for birches island music".
 `assets/music/birches.ogg` replaces the synthesised score from the approach crossing through boarding and departure.
 The existing `walk`, `swing`, `scarf` and `return` phases still describe story progress and checkpoint state, but

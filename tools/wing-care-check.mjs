@@ -70,7 +70,7 @@ for (const fps of [30,60,120]) {
   const p=fixture(fps),c=new MeadowChapter(p.cast),b=p.cast.cygnet;
   restoreWingCare(b,'meadow');
   p.cast.child.stop();p.cast.child.place(ROUTE[3].x,ROUTE[3].y,Math.PI);
-  b.rideIn('satchel');p.cast.plane.hold(p.cast.child);c.crestDone=true;c.leg=3;c.piano.restoreDone();
+  b.rideIn('satchel');p.cast.plane.hold(p.cast.child);c.crestDone=true;c.leg=3;c.piano.restoreDone();c.song.restore(2);
   for(let i=0;i<fps;i++)p.step();
   c.goDown();
   let tookOff=false,swam=false,returned=false,departMoving=false,departGap=0,startedDownAt=-1;

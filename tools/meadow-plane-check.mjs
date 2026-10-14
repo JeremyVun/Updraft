@@ -21,11 +21,11 @@ function fixture(portrait,leg=2) {
   const child=new Traveller(wind),plane=new Glider(wind,[]),rig=new CameraRig();
   rig.resize(portrait?390:1600,portrait?844:900);
   const cast={swanFeather:new Feather(wind),child,plane,wind,cygnet:{flying:false,position:new THREE.Vector3()},flock:{rest(){},clear(){},active:false},
-    life:{at:()=>1,regions:{wave:new THREE.Vector4(),waiting:new THREE.Vector4()}},
+    life:{at:()=>1,bloom(){},regions:{wave:new THREE.Vector4(),waiting:new THREE.Vector4()}},
     boat:{position:new THREE.Vector3(),beach(x,z){this.position.set(x,0,z);}},nearby:()=>false};
   const chapter=new MeadowChapter(cast);
   child.stop();child.place(ROUTE[leg].x,ROUTE[leg].y+25,Math.PI);
-  chapter.beat='walk';chapter.leg=leg;chapter.play='watch';chapter.piano.restoreDone();chapter.crestDone=true;
+  chapter.beat='walk';chapter.leg=leg;chapter.play='watch';chapter.piano.restoreDone();chapter.song.restore(2);chapter.crestDone=true;
   plane.launch(child.position.clone().add(new THREE.Vector3(0,3,0)),new THREE.Vector3(0,5,-10));
   plane.home.copy(child.position).z-=tuning.meadowPlane.lead;plane.homeRadius=tuning.meadowPlane.reach;
   plane.companion=child.position;chapter.frame();rig.cut(chapter.shot);

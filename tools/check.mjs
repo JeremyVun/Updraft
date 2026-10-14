@@ -13,7 +13,7 @@ const quick = [
 ];
 const mechanics = [
   ...quick, 'bandage-cost', 'boat', 'boat-ground', 'flock-flight', 'dolphin-leap', 'journey-pacing', 'kite-logic',
-  'little-boats-logic', 'lines-progression', 'lines-cloth', 'rotary-washing', 'rotary-rig', 'meadow-plane', 'meadow-route', 'piano-frame', 'pond-view', 'sail-flutter',
+  'little-boats-logic', 'lines-progression', 'lines-cloth', 'rotary-washing', 'rotary-rig', 'meadow-plane', 'meadow-route', 'meadow-seeds', 'meadow-echoes-state', 'meadow-duet', 'piano-frame', 'pond-view', 'sail-flutter',
   'scarf-geometry', 'sea-logic', 'sheet-contact', 'sky-mirror-logic', 'sky-mirror-pointer', 'sky-mirror-touch',
   'sleeping-logic', 'wing-care', 'wood-logic', 'ending-view',
   'camera-direction', 'crossing-camera', 'crossing-haze', 'crossing-linen', 'first-whale-swell', 'dream-story', 'drowned-camera', 'drowned-fog-motion',
@@ -28,7 +28,7 @@ const browser = [
 const audio = [
   'arrival-audio', 'audio', 'audio-continuity', 'audio-direction', 'music-mute', 'birches-foley', 'birches-score',
   'boats-score', 'dream-score', 'gesture-harmony', 'homeward-audio', 'lines-score', 'marine-audio',
-  'meadow-score', 'opening-score', 'still-phrases', 'piano-audio', 'sea-score', 'sleeping-score', 'whale-voice', 'drowned-audio-regression',
+  'meadow-score', 'meadow-breath', 'opening-score', 'still-phrases', 'piano-audio', 'sea-score', 'sleeping-score', 'whale-voice', 'drowned-audio-regression',
 ];
 const groups = { quick, mechanics, browser, audio, release: [...mechanics, ...browser, ...audio, 'playthrough'] };
 const group = process.argv[2] ?? 'quick';

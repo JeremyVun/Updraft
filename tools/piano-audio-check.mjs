@@ -41,7 +41,7 @@ try {
       for (let i = 1; i < fades.length; i++) {
         if (fades[i].mix < fades[i - 1].mix || fades[i].mix - fades[i - 1].mix > 0.075) throw Error('Abrupt or reversing entry fade');
       }
-      const room = Object.assign(Object.create(MeadowChapter.prototype), { beatHush: 0.2, piano: stop });
+      const room = Object.assign(Object.create(MeadowChapter.prototype), { beatHush: 0.2, piano: stop, song: { hush: 0 } });
       if (room.hush !== 0.2 || room.pianoMix !== 1) throw Error('Piano was ducked twice');
       // Resume the walk: score fades back without changing the separately held gesture ownership gate.
       stop.to('done'); child.position.x += 100;

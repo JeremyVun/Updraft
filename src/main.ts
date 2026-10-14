@@ -106,6 +106,8 @@ import { SKY_MIRROR } from './world/sky-mirror-layout';
 import { Pond } from './world/pond';
 import { Feather } from './fx/feather';
 import { harebells } from './world/harebells';
+import { meadowEchoes } from './world/meadow-echoes';
+import { windBough } from './world/wind-bough';
 import { SkyMirror } from './world/sky-mirror';
 import { Water } from './world/water';
 import { REFLECTION_LAYER } from './world/water/reflection';
@@ -195,7 +197,11 @@ bakeNoiseTiles();
 const tree = createTree();
 const homeTree = createTree(HOME_TREE, HOME_TREE.scale);
 homeTree.life.value = 1;
-const hillFlowers = wildflowersAlong(ROUTE);
+const hillFlowers = [
+  ...wildflowersAlong(ROUTE),
+  ...tuning.meadowLife.flowers.map(([x, z, radius]) => ({ x, z, radius })),
+].filter(p =>
+  tuning.meadowEchoes.patches.every(([x, z, rx, rz]) => Math.hypot((p.x - x) / (rx + p.radius + 5), (p.z - z) / (rz + p.radius + 5)) > 1));
 const terrainHeights = new TerrainHeights();
 const bakes = new GroundBakes(renderer, terrainHeights);
 const bakeInputs: BakeInputs = {
@@ -244,6 +250,7 @@ scene.add(door.group);
 
 /** And an upright piano standing in the meadow grass, off the walk, which the wind plays. */
 scene.add(piano.group);
+scene.add(windBough.group);
 
 /** Hung around the walk over the island, so the open ground through it is always the way on. */
 await built();
@@ -424,6 +431,7 @@ flock.objects.forEach((o) => scene.add(o));
 const swanFeather = new Feather(wind);
 swanFeather.objects.forEach((o) => scene.add(o));
 scene.add(harebells.group);
+scene.add(meadowEchoes.group);
 const cygnetAir: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
 const cygnetAhead: WindSample = { x: 0, z: 0, energy: 0, lift: 0 };
 const handsAt = new THREE.Vector3();
@@ -448,7 +456,7 @@ const homesInHills = [
   { x: COTTAGE.x + 6, z: COTTAGE.z + 26 },
 ];
 await built();
-const hillCreatures = new Creatures(wind, mainlandHabitat(hillFlowers, homesInHills), input, rig.camera);
+const hillCreatures = new Creatures(wind, mainlandHabitat(hillFlowers, homesInHills), input, rig.camera, tuning.meadowLife.capacities);
 hillCreatures.spawn({ ...meadowPoint(10, -680), radius: 70, gulls: 4, seed: 21 });
 homesInHills.forEach((h, i) => {
   const last = i === homesInHills.length - 1;
@@ -467,6 +475,7 @@ sheepFolds.forEach((fold, i) => hillCreatures.spawn({ ...fold, radius: 10, seed:
 /** A flock grazing across the way below the rise: it parts for her as she comes, or for the wind. */
 const onTheWay = ROUTE[2].clone().lerp(ROUTE[3], 0.44);
 hillCreatures.spawn({ x: onTheWay.x, z: onTheWay.y, radius: 2, sheep: 8, seed: 60 });
+tuning.meadowLife.homes.forEach(home => hillCreatures.spawn(home));
 scene.add(hillCreatures.group);
 clipJourneyProps(hillCreatures.group);
 const echoes = dreamEchoes();
@@ -474,7 +483,7 @@ Object.values(echoes).forEach((e) => scene.add(e));
 const roomObjects: Partial<Record<Room, THREE.Object3D[]>> = {
   island: [tree.group, islandRocks, creatures.group], lines: [washing.group, washingBaskets, pinwheels.group, door.group],
   shore: [shoreGrass, kite.group, shorePulley.group], boats: [littleBoats.group],
-  meadow: [piano.group, ...pond.objects, ...swanFeather.objects, harebells.group], birches: [...birches.objects], stairs: cloudStairs.scenery, drowned: [...village.objects],
+  meadow: [piano.group, windBough.group, ...pond.objects, ...swanFeather.objects, harebells.group, meadowEchoes.group], birches: [...birches.objects], stairs: cloudStairs.scenery, drowned: [...village.objects],
   wood: [...wood.objects], sleeping: [...sleeping.objects], mirror: [skyMirror.group], home: [...cottage.objects, homeJetty, homeTree.group],
 };
 for (const [room, echo] of Object.entries(echoes)) roomObjects[room as Room]?.push(echo);
@@ -1078,10 +1087,12 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   cottage.update(dt, rig.camera);
   village.update(dt, time, boat.position, storm);
   piano.update(dt, time, rig.camera, wind, sound.output, input, life);
+  windBough.update(dt, time, rig.camera, wind, sound.output, story.name === 'meadow');
   wood.update(dt, time, rig.camera, storm, story.name === 'wood' ? story.shot.subjects : undefined);
   sleeping.update(dt, time, rig.camera);
   if (story.name === 'meadow') swanFeather.update(dt, time);
   harebells.update(dt, time, rig.camera, wind, input, sound.output, [child.visible ? child.position : null, glider.position], (x, z) => life.at(x, z), story.name === 'meadow');
+  meadowEchoes.update(dt, time, rig.camera, input, sound.output, story.name === 'meadow', wind);
   departureKites.update(dt, time, rig.camera, story);
   cloudStairs.update(dt, time, rig.camera);
   pinwheels.update(dt, rig.camera, sound.output);
@@ -1374,7 +1385,7 @@ function frame(now: number): void {
 }
 
 if (QA && params.shot) {
-  window.__game = { params, tuning, quality, post, wind, input, rig, renderer, scene, glider, lines, swirl, sound, child, story, creatures, hillCreatures, water, skyMirror, terrain, footprints, cottage, petals, grass, littleBoats, sealife, crossingLinen, cygnet, flock, cat, carry, probe, washing, rotaryWashing, rotaryRig, curtains: CURTAINS, doorway, doorwayView, doorExit: DOOR_EXIT, washingPassage, washingInvitation, shoreHaul, shorePulley, shorePinwheel: SHORE_PINWHEEL, scarfInvitation, kite, departureKites, pinwheels, village, wood, stormWeather, sleeping, embers, emberInvitation, fireflies, boat, life, piano, birches, pond, cloudStairs, harebells, swanFeather };
+  window.__game = { params, tuning, quality, post, wind, input, rig, renderer, scene, glider, lines, swirl, sound, child, story, creatures, hillCreatures, water, skyMirror, terrain, footprints, cottage, petals, grass, littleBoats, sealife, crossingLinen, cygnet, flock, cat, carry, probe, washing, rotaryWashing, rotaryRig, curtains: CURTAINS, doorway, doorwayView, doorExit: DOOR_EXIT, washingPassage, washingInvitation, shoreHaul, shorePulley, shorePinwheel: SHORE_PINWHEEL, scarfInvitation, kite, departureKites, pinwheels, village, wood, stormWeather, sleeping, embers, emberInvitation, fireflies, boat, life, piano, windBough, birches, pond, cloudStairs, harebells, meadowEchoes, swanFeather };
 }
 
 const fogLookup = new FogLookup(renderer);

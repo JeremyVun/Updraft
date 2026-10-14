@@ -29,7 +29,7 @@ function fixture() {
   cygnet.mount=child;cygnet.visible=true;cygnet.wing.restore('wrapped');
   const carry=new Carry(child,cygnet);
   const cast={swanFeather:new Feather(wind),child,cygnet,flock,boat,plane,carry,wind,nearby:()=>false,
-    life:{at:()=>1,regions:{island:new THREE.Vector4(),wave:new THREE.Vector4(),waiting:new THREE.Vector4()}}};
+    life:{at:()=>1,bloom(){},regions:{island:new THREE.Vector4(),wave:new THREE.Vector4(),waiting:new THREE.Vector4()}}};
   const chapter=new MeadowChapter(cast);
   child.stop();child.place(ROUTE[0].x,ROUTE[0].y+10,Math.PI);
   cygnet.rideIn('satchel');plane.hold(child);chapter.beat='walk';chapter.play='hold';
@@ -46,7 +46,7 @@ const shore=FAR_SHORE;
 for(const stop of ['piano','pond','shore']) for(const leg of [0,1,2,3,4,5,6]) {
   const {cast:{child,plane,boat},chapter}=fixture();
   chapter.leg=leg;chapter.crestDone=stop==='shore';
-  if(stop!=='piano')chapter.piano.restoreDone();
+  if(stop!=='piano') { chapter.piano.restoreDone(); chapter.song.restore(2); }
   // Freeze walking only; update still executes the real destination selection and boat relocation.
   chapter.beat='toBoat';chapter.update(1/60,0);
   const expected=stop==='piano'?piano.stand:
@@ -55,7 +55,8 @@ for(const stop of ['piano','pond','shore']) for(const leg of [0,1,2,3,4,5,6]) {
   const wanted=direction(child.position,expected);
   assert(direction(child.position,plane.home).dot(wanted)>0.999999,`${stop}, leg ${leg}: homing points at the wrong place`);
   assert(Math.hypot(plane.home.x-child.position.x,plane.home.z-child.position.z)<=tuning.meadowPlane.lead+1e-6);
-  if(leg>=3)assert(Math.hypot(boat.position.x-shore.x,boat.position.z-shore.z)<1e-6,'boat did not move to the actual far shore');
+  assert.equal(Math.hypot(boat.position.x-shore.x,boat.position.z-shore.z)<1e-6,stop==='shore',
+    'the departure boat belongs at the far shore only after the family encounter');
   const original=child.throwToward;
   let aim;
   child.throwToward=(x,z)=>{aim={x,z};};
@@ -74,7 +75,7 @@ for(const fps of [30,60,120]) {
     if(!pianoReached&&chapter.piano.at==='looking') {
       assert(Math.hypot(child.position.x-piano.stand.x,child.position.z-piano.stand.z)<1,'walk missed the piano stand');
       // The four piano gestures have their own suite; resume from their completed stop here.
-      chapter.piano.restoreDone();child.stowPlane(false);child.stop();pianoReached=true;
+      chapter.piano.restoreDone();chapter.song.restore(2);child.stowPlane(false);child.stop();pianoReached=true;
     }
     if(seen.has('pond')&&chapter.beat==='walk') {
       pondFinished=true;

@@ -260,6 +260,39 @@ export const tuning = {
   },
   /** Nearing a chapter's play edge, a gust's hold on the plane fades out over `margin` metres, then it drifts back. */
   planeEdge: { margin: 8, freeSpeed: 14, returnSpeed: 4 },
+  meadowEchoes: {
+    patches: [[-22, -729, 9, 13], [6, -793, 11, 10]],
+    clusters: [[-4, 4], [3, 0], [-1, -6]],
+    stands: [[-23, -717], [3, -779], [2, -821]],
+    approach: 16, brush: 0.13, liftReach: 13,
+    strokeGain: 2.2, bloomEffort: 0.58, liftGain: 0.17, sweepLift: 1.2,
+    liftSettle: 0.025, liftHold: 1.5, minimumPlay: 5,
+    inviteAfter: 5, arrivalRest: 3, listenFor: 5.5, familyAfter: 2,
+    departureWalk: 16,
+    cameraBack: 18, cameraUp: 3.8, cameraPortraitBack: 21, cameraPortraitUp: 5, cameraPace: 0.5,
+    cameraTurnFrom: -738, cameraTurnTo: -772, cameraSecondSide: .65, cameraPortraitSecondSide: .15,
+    seedHeight: 5, voice: 0.14, musicDuck: 0.65,
+    flowers: 290, seedHeads: 140, stemBend: .06, stemSaturation: .24,
+    turf: .42, turfExtra: 8, tread: 5, listeningTurf: [2, -821, 11, 10],
+  },
+  meadowLife: {
+    approachRadius: 3.2, approachRate: 2.2,
+    flowers: [
+      [-53, -711, 7], [-49, -716, 6], [-42, -719, 4],
+      [-2, -700, 4], [3, -704, 5], [6, -710, 3],
+      [12, -751, 5], [15, -757, 5], [21, -762, 3.5],
+      [-40, -778, 6], [-35, -784, 5], [-28, -787, 3.5],
+      [-18, -814, 5], [-22, -819, 4],
+    ],
+    capacities: { rabbits: 22, songbirds: 28, butterflies: 54 },
+    homes: [
+      { x: -42, z: -719, radius: 9, rabbits: 2, butterflies: 4, seed: 173 },
+      { x: 12, z: -753, radius: 8, rabbits: 2, songbirds: 4, butterflies: 4, seed: 174 },
+      { x: -25, z: -809, radius: 9, rabbits: 2, songbirds: 4, butterflies: 4, seed: 175 },
+      { x: -32, z: -751, radius: 4, sheep: 4, seed: 176 },
+      { x: 24, z: -760, radius: 5, sheep: 4, seed: 177 },
+    ],
+  },
   meadowPlane: {
     /** Lead the child toward each discovery, then wheel nearby until they catch up. */
     lead: 24, waitAt: 34, resumeAt: 24, brakeFrom: 28, reach: 42,
@@ -779,6 +812,11 @@ export const tuning = {
     meadowVeilTo: 1.3,
     /** Lower the ridge between the beach crest and the piano's patch of colour. */
     meadowPianoSaddle: 6,
+    meadowRolls: { base: 6.5, hills: [
+      [-21, -681, 38, 34, 13], [-76, -746, 52, 66, 17],
+      [48, -743, 48, 57, 14], [60, -811, 49, 49, 15],
+      [-45, -823, 48, 37, 10], [8, -843, 55, 21, 10],
+    ] },
     /** Height of the dome in the middle of the island of lines, on top of about 4 of beach and lumps. */
     linesDome: 5.5,
     linesNorthExtension: 80,
@@ -828,9 +866,9 @@ export const tuning = {
      */
     viewSide: -0.32,
     viewPortraitSide: -0.32,
-    viewPortraitScale: 0.85,
+    viewPortraitScale: 1,
     viewBack: 10.5,
-    viewUp: 5.9,
+    viewUp: 7.2,
     viewToward: 0.36,
     edgeSide: -0.8,
     edgeFrom: 10,
@@ -916,7 +954,12 @@ export const tuning = {
     coaxAloft: 0.7,
     coaxKeep: 0.6,
   },
+  windBough: {
+    offset: [3.5, -1.2], inhale: 1.2, answerAfter: .65, finalRest: 1.4,
+    voice: 1.65, ribbonAlpha: .3, ribbonWidth: .045,
+  },
   piano: {
+    place: [-18, -678],
     initialRadius: 15, initialSoft: 4,
     /** The visible sweep is the hit target, measured in screen heights rather than terrain distance. */
     guideSpan: 1.65, guideOver: 1.35, guideTolerance: 0.045,
@@ -1009,9 +1052,9 @@ export const tuning = {
      */
     riseFor: 10,
     riseTo: -0.12,
-    riseBack: 65,
-    riseUp: 46,
-    riseOn: 24,
+    riseBack: 42,
+    riseUp: 18,
+    riseOn: 14,
     risePace: 0.6,
     restFor: 6,
     riseQuiet: 0.72,
