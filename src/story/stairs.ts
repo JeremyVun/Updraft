@@ -171,7 +171,7 @@ export class StairsChapter implements Chapter {
   dusk = 0.62;
   readonly season = 0.5;
   readonly music = 'birches' as const;
-  readonly birchesScore = 'return' as const;
+  readonly stairsSong = true;
   hush = 0.35;
   readonly focus = new THREE.Vector3();
   /** The grass round the foot of the stair is trodden down, so the first flight stands clear of it. */

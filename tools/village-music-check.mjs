@@ -1,7 +1,9 @@
-// Birches' play-out, the village's approach and the quiet after it, rendered offline through the production soundscape:
-// Birches loops on its island and plays its pass out once they have sailed, stopping over `birchesCloudFade` in the
-// white and never starting again; `village_approach.ogg` starts from its top at the village's handoff at full level,
-// ends faded at its seam just before the bass, never restarts; then no music through the village and the storm, the
+// Birches' play-out, the stairs song, the village's approach and the quiet after it, rendered offline through the production
+// soundscape: Birches (`red_door.ogg`) loops on its island, plays its pass out once they have sailed and never begins after,
+// ending `stairsSongRest` before the stairs song can begin; the stairs song loops under the cloud, fading over
+// `stairsSongCloudFade` in the white and never starting again; `village_approach.ogg` starts from its top at the
+// village's handoff at full level, ends faded at its seam just before the bass, never restarts; then no music through
+// the village and the storm, the
 // shared pad silent; then `belfry.ogg` from the fourth ring, coming in slowly and playing once into the storm to its end
 // fade; the wood's drone at `woodDroneDb`. Also the seams on the decoded samples, the starts and downloads, late joins
 // after music mute, restores and the rescue's quiet. Vite on 5230, or BASE.
@@ -21,7 +23,7 @@ try {
     const native = AudioBufferSourceNode.prototype.start;
     AudioBufferSourceNode.prototype.start = function (when = 0, offset = 0, duration) {
       const length = this.buffer?.duration ?? 0;
-      const track = Math.abs(length - 192.87) < .05 ? 'village' : Math.abs(length - 143.92) < .05 ? 'belfry' : length > 200 && length < 240 ? 'birches' : null;
+      const track = Math.abs(length - 192.87) < .05 ? 'village' : Math.abs(length - 143.92) < .05 ? 'belfry' : Math.abs(length - 238.89) < .05 ? 'birches' : Math.abs(length - 224.08) < .05 ? 'stairs' : null;
       if (track) (starts.get(this.context) ?? starts.set(this.context, []).get(this.context)).push({ track, when, offset, node: this });
       return native.call(this, when, offset, duration);
     };
@@ -46,7 +48,7 @@ try {
       open: phase === 'under' || phase === 'cloud' ? 0 : 1, fog: phase === 'fog' ? 1 : 0, speed: phase === 'sail' || phase === 'fog' ? 4 : 0,
       clear: phase !== 'under' && phase !== 'cloud' });
     const birches = (loop = true) => ({ ...baseState, music: 'birches', birchesScore: 'return', birchesLoop: loop, hush: .3 });
-    const stairs = phase => ({ ...birches(false), hush: .35, stairsAir: air(phase), arrivalMusic: phase === 'fog' || phase === 'down' ? 'drowned' : undefined });
+    const stairs = phase => ({ ...baseState, music: 'birches', stairsSong: true, hush: .35, stairsAir: air(phase), arrivalMusic: phase === 'fog' || phase === 'down' ? 'drowned' : undefined });
     const village = (phase = 'drift', quiet = false) => ({ ...baseState, music: 'drowned', drownedScore: phase, hush: .3, arrivalMusic: 'drowned', drownedQuiet: quiet });
     // Drive a soundscape through `seconds`, `state(t)` each eighth of a second; `watch(t, sound)` after each update.
     // `background` hears only the background and its reverb send; `setup` runs before the first update.
@@ -61,7 +63,7 @@ try {
       }
       const step = async t => {
         sound.update(STEP, state(t));
-        await sound.preparedScore?.ready; await sound.villageScore?.ready; await sound.birchesScore?.ready; await sound.belfryScore?.ready;
+        await sound.preparedScore?.ready; await sound.villageScore?.ready; await sound.birchesScore?.ready; await sound.stairsScore?.ready; await sound.belfryScore?.ready;
         watch(t, sound);
       };
       await step(0);
@@ -102,8 +104,9 @@ try {
       } });
       check(looped === true, 'on the Birches island and its approach the recording loops');
       check(same && source.loop === false, 'once they have sailed, the pass under way plays out: the same source, no longer looping');
-      const late = await render(1, () => birches(false));
-      check(late.starts.length === 1 && late.starts[0].node.loop === false, 'begun after sailing (a toStairs or stairs start), it plays once');
+      let fetched = false;
+      const late = await render(1, () => birches(false), { watch: (t, sound) => { fetched ||= !!sound.birchesScore || sound.preparedScore?.track === 'birches'; } });
+      check(late.starts.length === 0 && !fetched, 'it never begins once they have sailed (a toStairs start is quiet until the stairs song)');
     }
     {
       // The end of the file: a played-out pass stops there; a looping one goes round.
@@ -118,16 +121,42 @@ try {
         `played out, it stops at the end of the file (${length.toFixed(1)} s) instead of going round`);
     }
     {
-      // Up into the white (past the recording's quiet first seconds): a fast fade, then never again, even if a frame
-      // says it is under the cloud.
+      // Sailing to the stairs (from 2 s), the stairs song due at 20 s: a pass that would still sound then fades over
+      // `birchesSailFade` to end `stairsSongRest` before it, settled once; one ending sooner simply ends.
+      const { stairsSongRest: rest, birchesSailFade: fade } = tuning.audio, DUE = 20, END = DUE - rest;
+      const sail = t => t < 2 ? birches(true) : { ...birches(false), arrivalIn: Math.max(0, DUE - t) };
+      const early = await render(DUE, sail);
+      const level = (from, to) => power(early.buffer, from, to);
+      check(level(END - fade - 1, END - fade) > 1e-7 && level(END - fade / 2 - .2, END - fade / 2) < level(END - fade - .5, END - fade) / 2
+        && level(END + .02, DUE) === 0, `early in its pass, it fades from ${END - fade} s and is silent from ${END} s, ${rest} s before the stairs song`);
+      const tail = 6;
+      let finishing = null;
+      const ending = await render(DUE, sail, { setup: sound => {
+        sound.birchesScore = new RecordedScore(sound.ctx, sound.backgroundDry, 'birches');
+        sound.birchesScore.update('return', 10 ** (tuning.audio.recordedMusicDb.birches / 20), 238.893 - tail);
+      }, watch: (t, sound) => { if (t === END) finishing = sound.birchesScore?.finishing; } });
+      const raw = (from, to) => power(ending.buffer, from, to);
+      check(finishing === false && raw(tail - 2.5, tail - 2) > 1e-9 && raw(tail + .05, DUE) === 0,
+        `a pass ending ${tail} s in, before the rest, ends on its own with no fade`);
+      // Gusts bring the handoff on early: asked for at 9 s and ready at once, the song still waits out the rest.
+      const gusted = await render(DUE + 2, t => t < 9 ? sail(t)
+        : { ...birches(false), arrivalIn: 0, arrivalMusic: 'stairs', arrivalReady: true });
+      const song = gusted.starts.filter(s => s.track === 'stairs');
+      check(song.length === 1 && song[0].when >= END + rest - STEP && song[0].offset === 0,
+        `a boat sped on by gusts: the song still begins ${rest} s after the birches end (${song[0]?.when} s)`);
+    }
+    {
+      // Up into the white (past the song's quiet first seconds): its fade, then never again, even if a frame says it is
+      // under the cloud.
       const UP = 10;
       let gone = null, restarted = false;
       const white = await render(UP + 5, t => stairs(t < UP || (t >= UP + 2 && t < UP + 2.5) ? 'under' : 'cloud'), { watch: (t, sound) => {
-        if (t >= UP && gone === null && !sound.birchesScore) gone = t;
-        if (t > UP) restarted ||= !!sound.birchesScore || sound.preparedScore?.track === 'birches';
+        if (t >= UP && gone === null && !sound.stairsScore) gone = t;
+        if (t > UP) restarted ||= !!sound.stairsScore || sound.preparedScore?.track === 'stairs';
       } });
-      const fade = tuning.audio.birchesCloudFade;
-      check(gone === UP && !restarted && white.starts.length === 1, 'going up into the white stops the birches for good');
+      const fade = tuning.audio.stairsSongCloudFade, song = white.starts.filter(s => s.track === 'stairs');
+      check(gone === UP && !restarted && song.length === 1 && song[0].offset === 0 && song[0].node.loop,
+        'the stairs song loops under the cloud from its top; going up into the white stops it for good');
       check(power(white.buffer, UP - 1, UP) > 1e-7 && power(white.buffer, UP + fade / 2 - .1, UP + fade / 2) < power(white.buffer, UP - .5, UP) / 2
         && power(white.buffer, UP + fade + .02, UP + 5) === 0, `over a ${fade} s fade`);
     }

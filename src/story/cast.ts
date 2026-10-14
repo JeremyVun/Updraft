@@ -142,6 +142,7 @@ export interface Chapter {
   /** Final approach requests an audio-clock fade, musical rest and the destination's opening. */
   readonly arrivalMusic?: ArrivalMusic;
   readonly arrivalReady?: boolean;
+  readonly arrivalIn?: number;
   readonly homewardTime?: number;
   /** The opening holds its home chord under the skein and rests from the fall until the child carries the bird away. */
   readonly openingScore?: OpeningScorePhase;
@@ -167,6 +168,7 @@ export interface Chapter {
   readonly meadowScore?: MeadowScorePhase;
   /** Birches follows the optional swing, scarf work and the walk to the far beach. */
   readonly birchesScore?: BirchesScorePhase;
+  readonly stairsSong?: boolean;
   /** The air round the travellers in the stairs in the clouds: in the white, out on top, the fog on the way down. */
   readonly stairsAir?: StairsAir;
   /** Lines follows each curtain, the family clothes and the walk beyond the doorway. */

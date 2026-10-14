@@ -439,10 +439,20 @@ export class CrossingChapter implements Chapter {
     if (this.homeward || !this.destinationMusic) return undefined;
     if (this.departureMusic && !this.arrivalHeard) return true;
     if (this.lookBack && this.time < this.farewellFor + SWING * .8) return false;
-    const speed=Math.max(4.5,this.cast.boat.speed);
+    return this.cast.boat.grounded || this.remainingSail()<=this.entrance(Math.max(4.5,this.cast.boat.speed));
+  }
+
+  get arrivalIn(): number | undefined {
+    if (this.homeward || !this.destinationMusic) return undefined;
+    const speed = Math.max(4.5, this.cast.boat.speed);
+    return this.cast.boat.grounded ? 0 : Math.max(0, this.remainingSail() - this.entrance(speed)) / speed;
+  }
+
+  /** How far out the destination's music may come in. */
+  private entrance(speed: number): number {
     const earlier = this.stillDeparture ? tuning.audio.linesArrivalEarlier : 0;
-    const lead=tuning.audio.arrivalShoreAllowance+(tuning.audio.arrivalEntranceLead+earlier)*speed;
-    return this.cast.boat.grounded || this.remainingSail()<=Math.min(lead,this.routeLength*tuning.audio.arrivalEntranceRouteShare);
+    return Math.min(tuning.audio.arrivalShoreAllowance + (tuning.audio.arrivalEntranceLead + earlier) * speed,
+      this.routeLength * tuning.audio.arrivalEntranceRouteShare);
   }
 
   /** Seconds since the boat left the Mirror. */

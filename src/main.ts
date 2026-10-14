@@ -1042,6 +1042,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   soundState.music = story.music;
   soundState.arrivalMusic = story.current.arrivalMusic;
   soundState.arrivalReady = story.current.arrivalReady;
+  soundState.arrivalIn = story.current.arrivalIn;
   soundState.homewardTime = story.current.homewardTime;
   soundState.summitScore = story.current.summitScore;
   soundState.homeEndingTime = story.current.homeEndingTime;
@@ -1057,6 +1058,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   soundState.meadowScore = story.current.meadowScore;
   soundState.birchesScore = story.current.birchesScore;
   soundState.birchesLoop = story.name === 'toBirches' || story.name === 'birches';
+  soundState.stairsSong = story.current.stairsSong;
   soundState.stairsAir = story.current.stairsAir;
   soundState.linesScore = story.current.linesScore;
   soundState.linesMelodyQuiet = story.current.linesMelodyQuiet;

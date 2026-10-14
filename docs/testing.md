@@ -244,8 +244,9 @@ differs, as a late readback can make it, is played once more; `ONLY=wood,jetty` 
   `clouds-music-check` renders the stairs' `clouds.ogg`: decoded in the white, started `cloudsMusicDelay` after the view
   clears on top at half level rising to full, never restarted, faded by 3:28, the village's music held until then (fog or village
   first), a recording already over, a late join after music mute and silence.
-  `village-music-check` renders Birches looping on its island, playing its pass out after sailing and stopping over a
-  second in the white; `village_approach.ogg` checked at its seam on the decoded samples, started from its top at full
+  `village-music-check` renders Birches looping on its island, playing its pass out after sailing and ending at least
+  `stairsSongRest` before the stairs song (faded or by itself), and the stairs song looping under the cloud and fading
+  in the white; `village_approach.ogg` checked at its seam on the decoded samples, started from its top at full
   level as the village's rest ends (or with `?chapter=drowned`), faded at the seam, never restarted, a late join, the
   rescue's quiet, silent later starts; no music or pad through the village; `belfry.ogg` checked at both seams, started
   on the fourth ring with its slow entrance, played through the storm's start to its end fade, never restarted, started
@@ -278,7 +279,8 @@ differs, as a late readback can make it, is played once more; `ONLY=wood,jetty` 
   `transition-scenes-browser-check`, `opening-score-browser-check`, `homeward-audio-browser-check`,
   `meadow-score-browser-check`, `birches-score-browser-check`, `sea-music-browser-check`, `village-music-browser-check`
   (`drowned` and `cloud` with no input: the village's recording against the tub becoming pushable and its invitation;
-  `belfry` rings the bell four times and times the goodbye against boarding and the storm; `storm` starts it on load),
+  `belfry` rings the bell four times and times the goodbye against boarding and the storm; `storm` starts it on load;
+  `sail` times the birches' end, the quiet and the stairs song from the push-off to the white),
   `recorded-music-browser-check` (real Begin unlock, no music download with sound off, reuse of the starting download,
   only the starting/next recording fetched, and an audible decoded source in each chapter).
   `music-loading-browser-check` holds downloads and decodes to verify concurrent shader loading, no premature
