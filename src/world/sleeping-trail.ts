@@ -73,31 +73,6 @@ export class SleepingTrail {
       p.setAttribute('aSnow',new THREE.BufferAttribute(new Float32Array(p.attributes.position.count).fill(snow),1));
       p.deleteAttribute('uv');p.computeVertexNormals();p.setAttribute('color',new THREE.BufferAttribute(a,3));parts.push(p);
     };
-    // Exposed geology belongs to the hillside, never to two kerbs marking the route.
-    // Unequal, half-buried clusters leave the bed terrace and long stretches of turf open.
-    // The outcrop beside the notch, and the rock the bank's turf is heaved over showing at either end of the bank.
-    const exposures=[[-185,-1928,1.1],[-154.6,-1926.2,1.6],[-153,-1936.4,.8],[-157.4,-1930.2,.9],
-      [-159,-1944,2.1],[-172,-1949,1.8],[-186,-1945,2.7],[-168,-1932,1.2]];
-    for(const [cx,cz,size] of exposures){
-      const yaw=rand()*Math.PI;
-      for(let j=0;j<2+Math.floor(rand()*3);j++){
-        const x=cx+(rand()-.5)*size*1.8,z=cz+(rand()-.5)*size;
-        if(sleepPathAt(x,z).distance<2.6)continue;
-        const y=heightAt(x,z),scale=size*(.4+rand()*.7);
-        const rock=new THREE.DodecahedronGeometry(1,0);
-        rock.scale(scale,scale*(.6+rand()*.5),scale*.65);
-        rock.rotateY(yaw+rand()*.25);rock.rotateZ(-.2+rand()*.15);
-        rock.translate(x,y-scale*.45,z);
-        add(rock,j%2?'#596376':'#687082');
-        const drift=new THREE.IcosahedronGeometry(1,2).scale(scale*.7,.13,scale*.48).rotateY(yaw);
-        const vertices=drift.attributes.position;
-        for(let v=0;v<vertices.count;v++){
-          const px=x+.4+vertices.getX(v),pz=z+.5+vertices.getZ(v);
-          vertices.setXYZ(v,px,heightAt(px,pz)+.02+vertices.getY(v),pz);
-        }
-        drift.computeVertexNormals();add(drift,'#c3cbd0',1);
-      }
-    }
     // Sparse dried seed heads and snowdrops form clusters, not a uniform scatter over the lawn.
     for(let i=0;i<130;i++){
       const route=point(1+Math.floor(rand()*(SLEEP_PATH.length-2))),a=rand()*Math.PI*2,r=2.3+rand()*3.2;
