@@ -7,7 +7,7 @@ import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { Feather } from '../fx/feather';
 import { CurtainRibbon } from './sleeping-ribbon';
 import { SLEEP_PATH } from './sleeping-layout';
-import { SleepingTrail } from './sleeping-trail';
+import { SleepingTrail, WINDOW_SEEN } from './sleeping-trail';
 import { GpuRunner, PingPong, atBoot, simMaterial } from '../gl/gpu';
 import type { PointerInput } from '../input/pointer';
 import { glsl, tuning } from '../tuning';
@@ -377,12 +377,14 @@ void main() {
 const MORNING_FRAG = /* glsl */ `
 ${ATMO_GLSL}
 uniform vec3 uOpen;
+uniform float uSeen;
 in vec2 vUv;
 in vec3 vWorld;
 void main() {
   vec3 col = mix(vec3(1.0, 0.73, 0.44), vec3(1.0, 0.91, 0.73), smoothstep(0.0, 0.85, vUv.y));
   float cloud = sin(vUv.y * 28.0 + sin(vUv.x * 5.0) * 0.9) * 0.025;
   col *= 0.9 + uOpen.x * 0.65 + cloud;
+  col = mix(col, fogOf(vWorld).rgb, 1.0 - uSeen);
   float arriving = journeyVeilAt(vWorld);
   if (arriving > 0.0) col = mix(col, skyRadiance(normalize(vWorld - cameraPosition)), arriving);
   gl_FragColor = vec4(col, 1.0);
@@ -853,7 +855,7 @@ export class SleepingIsland {
       new THREE.ShaderMaterial({
         vertexShader: SHAFT_VERT,
         fragmentShader: MORNING_FRAG,
-        uniforms: { ...atmo.uniforms, uOpen: { value: this.open } },
+        uniforms: { ...atmo.uniforms, uOpen: { value: this.open }, uSeen: WINDOW_SEEN },
         side: THREE.DoubleSide,
       }),
     );

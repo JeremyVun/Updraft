@@ -39,6 +39,8 @@ const DRIFT_WIDE = 7.5, DRIFT_DEEP = 6.5;
 /** How far the swept channel's floor and its bank tops move out from the path; the wide gap keeps the banks rounded. */
 const CHANNEL_WIDEN = .85, CHANNEL_SOFTEN = 1.75;
 const POWDER_COUNT = 560;
+/** How much of the summit window's glow reaches the eye: lost when the fog closes round the bird, back as it parts. */
+export const WINDOW_SEEN = { value: 1 };
 
 const VERT = `
   uniform vec2 uDawn; in float aSnow; in vec3 color; out vec3 vWorld; out vec3 vNormal; out vec3 vColor;
@@ -56,7 +58,8 @@ const FRAG = `${ATMO_GLSL}
 export class SleepingTrail {
   readonly objects: THREE.Object3D[] = [];
   readonly snowTarget = SNOW_AT.clone().add(new THREE.Vector3(0, tuning.sleeping.snowDepth + 0.65, 0));
-  readonly mistTarget = MIST_AT.clone().add(new THREE.Vector3(0, 1.15, 0));
+  /** Where strokes part the fog: just uphill of the bird, so even a narrow screen shows it beside the bird. */
+  readonly mistTarget = alongRoute(SLEEP_FOG_STOP, 1.4).add(new THREE.Vector3(0, 1.15, 0));
   interaction: 'snow' | 'mist' | null = null;
   snow = 0;
   get snowReady(): boolean { return this.swept.value > .997; }
@@ -65,6 +68,11 @@ export class SleepingTrail {
   private readonly brushNdc = new THREE.Vector2();
   mist = 0;
   fogEnclosure = 1;
+  /** The fog thinning downhill by itself for a moment, 0..1. */
+  glimpse = 0;
+  /** The window's glow lost in the fog, 0 seen to 1 gone. */
+  windowLost = 0;
+  private readonly closing = { glimpse: 0, lost: 0 };
   private readonly swept = { value: 0 };
   private readonly blow = { value: 0 };
   private readonly clear = { value: 0 };
@@ -341,14 +349,18 @@ export class SleepingTrail {
     this.weather.value=cold;this.snowOrigin.value.copy(camera.position);
     const blowing=Math.min(1,Math.max(0,this.snow-this.swept.value)*9);
     this.blow.value+=(blowing-this.blow.value)*(1-Math.exp(-dt*5));
-    this.swept.value+=(this.snow-this.swept.value)*(1-Math.exp(-dt*5));
+    this.swept.value+=(this.snow-this.swept.value)*(1-Math.exp(-dt*tuning.sleeping.snowLayerEase));
     this.clear.value+=(this.mist-this.clear.value)*(1-Math.exp(-dt*1.6));
     this.thaw.value=THREE.MathUtils.smoothstep(dawn,0.12,0.85);
     this.flakes.visible=dawn<.85;
     const beyond=(this.guideAt.x-MIST_AT.x)*MIST_FORWARD.x+(this.guideAt.z-MIST_AT.z)*MIST_FORWARD.z;
     const emerged=THREE.MathUtils.smoothstep(beyond,2.4,7);
     this.fogEnclosure=1-emerged;
-    atmo.uniforms.uSleepMist.value.set(MIST_AT.x,MIST_AT.y+1.1-emerged*3,MIST_AT.z,(1-this.thaw.value)*(1-emerged*.94));
+    const c=this.closing,t=tuning.sleeping;
+    c.glimpse+=(this.glimpse-c.glimpse)*(1-Math.exp(-dt/t.mistGlimpseEase));
+    c.lost+=(this.windowLost-c.lost)*(1-Math.exp(-dt/t.mistWindowEase));
+    WINDOW_SEEN.value=1-c.lost;
+    atmo.uniforms.uSleepMist.value.set(MIST_AT.x,MIST_AT.y+1.1-emerged*3,MIST_AT.z,(1-this.thaw.value)*(1-emerged*.94)*(1-c.glimpse*t.mistGlimpseThins));
     atmo.uniforms.uSleepMistPart.value=this.clear.value;
     atmo.uniforms.uSleepMistAxis.value.set(MIST_FORWARD.z,-MIST_FORWARD.x);
     this.guideFade+=((this.guideActive?1:0)-this.guideFade)*(1-Math.exp(-dt*2));

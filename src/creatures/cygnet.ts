@@ -62,6 +62,8 @@ export class Cygnet {
   flightPose = 0;
   /** An intentional, guided lift keeps its balance through the player’s gust. */
   steadyLift = false;
+  /** How hard it leans into the wind it is walking against, 0..1, where the story puts it out in the weather. */
+  braced = 0;
   /** Contact at the tip of the bill, solved after the skeleton has posed. */
   billGrip: THREE.Vector3 | null = null;
   billGripWeight = 0;
@@ -327,7 +329,7 @@ export class Cygnet {
       time: 0, carried: false, seat: null, inHands: false, move: null, jostle: 0, falling: false, gliding: false, leaving: false, afoot: false, downed: false, afloat: false, perched: false,
       settle: 0, fear: 0, bond: 0, cold: 0, effort: 0, flap: 0, flapPhase: 0, glide: 0, look: 0, tucked: 0, hope: 0, hopLift: 0, crouch: 0, landing: 0, faceplant: 0, flop: 0, doze: 0, wriggle: 0,
       puff: 0, stride: 0, hurry: 0, pitch: 0, roll: 0, tow: 0, beg: 0, call: { env: 0, note: 0, long: false }, gaze: { yaw: 0, pitch: 0, firm: false, wandering: true },
-      act: null, actK: 0, actEnv: 0, actSide: 1, actYaw: 0, breath: 0, blink: 0, wingGuard: 0, wingOpening: 0, wind: { x: 0, z: 0 },
+      act: null, actK: 0, actEnv: 0, actSide: 1, actYaw: 0, breath: 0, blink: 0, wingGuard: 0, wingOpening: 0, braced: 0, wind: { x: 0, z: 0 },
       gait: { on: false, feet: [{ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }], sway: 0, roll: 0, twist: 0, dip: 0, pace: 0 },
     };
     this.mat = cygnetMaterial(this.bones);
@@ -655,6 +657,23 @@ export class Cygnet {
     this.fear = 1;
     this.settle = 0;
     this.heard.push({ kind: 'scramble', amount: 1 });
+  }
+
+  /**
+   * A bound of its own to a spot on the ground: a flapping scramble (`dash`) or a plain hop. It stays where it lands
+   * until the story lets it walk on.
+   */
+  bound(spot: THREE.Vector3, kind: 'dash' | 'hop', dur: number, arc: number): void {
+    this.position.set(spot.x, Math.max(this.ground(spot.x, spot.z), 0), spot.z);
+    this.seating.go({ seat: null, held: false }, kind, dur, arc);
+    this.state = 'following';
+    this.stay = true;
+    this.errand = null;
+    this.hopT = 0;
+    this.landing = 0;
+    this.settle = 0;
+    this.landedAt = this.time;
+    if (kind === 'dash') this.heard.push({ kind: 'scramble', amount: 1 });
   }
 
   /** Where a holding hand goes, in the world: under the belly either side, on the back, under the breast or the rump. */
@@ -1704,6 +1723,7 @@ export class Cygnet {
     d.blink = this.blink;
     d.wingGuard = Math.max(this.wing.guard, this.wrench);
     d.wingOpening = this.wing.opening;
+    d.braced = this.braced;
 
     const yaw = this.seating.yaw;
     const cy = Math.cos(yaw);

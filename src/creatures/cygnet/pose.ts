@@ -70,6 +70,8 @@ export interface Drives {
   blink: number;
   wingGuard: number;
   wingOpening: number;
+  /** Leaning into the weather it walks against, 0..1. */
+  braced: number;
   /** The wind on it in its own frame (x to its left, z ahead), units per second. */
   wind: { x: number; z: number };
   /**
@@ -207,8 +209,8 @@ export class Poser {
     const wx = this.blownX;
     const wz = this.blownZ;
     rootRoll += Math.sin(t * 17) * 0.055 * shiver + back * 0.18 * Math.sign(d.actYaw || 1);
-    rootRoll += (act('bowled') * 1.0 - act('brace') * 0.16 - act('into-wind') * 0.06) * wx * -1;
-    rootPitch += (act('bowled') * 0.5 - act('brace') * 0.16 - act('into-wind') * 0.08) * wz;
+    rootRoll += (act('bowled') * 1.0 - act('brace') * 0.16 - act('into-wind') * 0.06 - d.braced * 0.14) * wx * -1;
+    rootPitch += (act('bowled') * 0.5 - act('brace') * 0.16 - act('into-wind') * 0.08 - d.braced * 0.22) * wz;
 
     const tuck = Math.max(p.sit, p.held);
     const stretch = act('stretch');
@@ -460,7 +462,7 @@ export class Poser {
     out.rootRoll = rootRoll;
     const squeeze = Math.max(act('yawn') * 0.85, act('into-wind') * 0.6, act('brace') * 0.5, act('flinch'), act('nuzzle') * 0.7);
     out.blink = Math.max(d.blink, p.sleep, squeeze) - d.fear * 0.2 * (1 - p.sleep) * (1 - squeeze);
-    out.fluff = clamp(p.sleep * 0.6 + p.sit * 0.3 * (1 - d.fear) + d.cold * 0.5 + shake * 0.7 + shiver * 0.9, 0, 1);
+    out.fluff = clamp(p.sleep * 0.6 + p.sit * 0.3 * (1 - d.fear) + d.cold * 0.5 + shake * 0.7 + shiver * 0.9 + d.braced * 0.35, 0, 1);
     out.sleek = clamp(d.fear * 0.8 + p.reach * 0.5 + act('flinch') * 0.5, 0, 1);
     out.wingOpen = p.spread;
     return out;

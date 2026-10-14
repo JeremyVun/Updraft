@@ -65,7 +65,7 @@ try {
     story.t += .02;
     check(phase.call(story) === 'cold', 'Frost starts the first music-free passage before the unanswered call');
     for (const [beats, expected] of [
-      [['feather', 'edge'], 'cold'], [['climb', 'snow', 'mist', 'catchFeather'], 'climb'],
+      [['feather', 'edge'], 'cold'], [['climb', 'snow', 'step', 'mist', 'catchFeather', 'crest'], 'climb'],
       [['unbinding', 'hilltop', 'reachRibbon', 'pullRibbon'], 'summit'],
       [['glide', 'waking', 'lap', 'toBoat', 'push', 'aboard'], 'morning'],
     ]) for (const beat of beats) { story.beat = beat; check(phase.call(story) === expected, `${beat} selects ${expected}`); }

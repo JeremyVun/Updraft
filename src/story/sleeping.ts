@@ -5,7 +5,7 @@ import type { Shot } from '../camera';
 import type { Coax } from '../fx/swirl';
 import { tuning } from '../tuning';
 import { heightAt } from '../world/island';
-import { SLEEP_CREST_STOP, SLEEP_DRIFT_STOP, SLEEP_FOG_STOP, SLEEP_STEP_STOP } from '../world/sleeping-layout';
+import { SLEEP_CREST_STOP, SLEEP_DRIFT_STOP, SLEEP_FOG_STOP, SLEEP_STEP_STOP, SLEEP_TRICKLE } from '../world/sleeping-layout';
 import { MIST_AT, SNOW_AT } from '../world/sleeping-trail';
 import { BED, BED_FACING, HILLTOP, LAMP, PILLOW, WINDOW, SLEEP_LEDGE, SLEEP_ROUTE, CURTAIN_END, CURTAIN_KNOT, SLEEP_BERTH, SLEEP_LANDING } from '../world/sleeping';
 import type { Cast, Chapter } from './cast';
@@ -118,6 +118,27 @@ const LENS_AT = CLIMB_LENS.map(k => ROUTE_AT[k.at] + k.on);
 const LENS_LEAD = 1;
 const LENS_PLACES = { drift: SNOW_AT.clone().setY(SNOW_AT.y + 0.8), lamp: LAMP, window: WINDOW, fog: MIST_AT.clone().setY(MIST_AT.y + 1) };
 
+/** How far up the route the point on it nearest to (x, z) lies. */
+function alongOf(x: number, z: number): number {
+  let nearest = Infinity, along = 0;
+  for (let i = 1; i < SLEEP_ROUTE.length; i++) {
+    const a = SLEEP_ROUTE[i - 1], b = SLEEP_ROUTE[i], length = ROUTE_AT[i] - ROUTE_AT[i - 1];
+    const t = THREE.MathUtils.clamp(((x - a.x) * (b.x - a.x) + (z - a.z) * (b.z - a.z)) / (length * length), 0, 1);
+    const off = Math.hypot(x - a.x - (b.x - a.x) * t, z - a.z - (b.z - a.z) * t);
+    if (off < nearest) { nearest = off; along = ROUTE_AT[i - 1] + length * t; }
+  }
+  return along;
+}
+const TRICKLE_AT = alongOf(SLEEP_TRICKLE[0], SLEEP_TRICKLE[1]);
+const STEP_AT = ROUTE_AT[SLEEP_STEP_STOP];
+/** Where the fog's lane opens, from the saddle toward the window. */
+const UP_THE_LANE = new THREE.Vector2(WINDOW.x - SLEEP_ROUTE[SLEEP_FOG_STOP].x, WINDOW.z - SLEEP_ROUTE[SLEEP_FOG_STOP].z).normalize();
+const DOWN_TO_BED = new THREE.Vector2(BED.x - SLEEP_ROUTE[SLEEP_FOG_STOP].x, BED.z - SLEEP_ROUTE[SLEEP_FOG_STOP].z);
+const FOG_TO_BED = DOWN_TO_BED.length();
+DOWN_TO_BED.normalize();
+/** Everything from the bed's edge to the foot of the summit, where the bird is out on the hill alone. */
+const ON_THE_HILL: readonly Beat[] = ['edge', 'climb', 'snow', 'step', 'mist', 'catchFeather', 'crest'];
+
 /** The point `along` metres up the route, on the ground. */
 function routePoint(along: number, out: THREE.Vector3): THREE.Vector3 {
   let i = 1;
@@ -145,7 +166,15 @@ const smooth = THREE.MathUtils.smoothstep;
  */
 export class SleepingChapter implements Chapter {
   beat: Beat = 'ashore';
-  get breeze(): number { return .3 + (this.cast.sleeping.cold || 0) * T.winterBreeze * (1-this.cast.sleeping.dawn) + sleepingGust(this.now,this.cast.sleeping.cold || 0,this.cast.sleeping.dawn)*.65; }
+  get breeze(): number {
+    const exposed = ON_THE_HILL.includes(this.beat) ? this.climbExposure * T.climbWind : 0;
+    return .3 + exposed + (this.cast.sleeping.cold || 0) * T.winterBreeze * (1-this.cast.sleeping.dawn) + sleepingGust(this.now,this.cast.sleeping.cold || 0,this.cast.sleeping.dawn)*.65;
+  }
+  /**
+   * How far out into the weather the bird has climbed: 0 at the bed's edge, 1 from the foot of the last crest, read off
+   * its progress up the route and never a clock. The night's wind rises with it; the morning takes it away.
+   */
+  climbExposure = 0;
   /** The last of the living world goes out of it as they come up the beach, and comes back with the morning. */
   worldLife = 1;
   pace = 0.4;
@@ -160,7 +189,7 @@ export class SleepingChapter implements Chapter {
   get sleepingScore(): SleepingScorePhase {
     if (['glide', 'waking', 'lap', 'toBoat', 'push', 'aboard'].includes(this.beat)) return 'morning';
     if (['unbinding', 'hilltop', 'reachRibbon', 'pullRibbon'].includes(this.beat)) return 'summit';
-    if (['climb', 'snow', 'mist', 'catchFeather'].includes(this.beat)) return 'climb';
+    if (['climb', 'snow', 'step', 'mist', 'catchFeather', 'crest'].includes(this.beat)) return 'climb';
     if (['feather', 'edge'].includes(this.beat) || this.beat === 'asleep' && this.t >= T.winterBeginsAt) return 'cold';
     return 'shelter';
   }
@@ -196,8 +225,27 @@ export class SleepingChapter implements Chapter {
 
   private routeIndex = 1;
   private snowDone = false;
+  private stepDone = false;
   private mistDone = false;
   private encounterStroke = 0;
+  /** What has been given by the stroke still going, and how long since it last gave anything. */
+  private strokeIn = 0;
+  private strokeQuiet = 0;
+  /** Where a stop's own scripted moment has got to, and when it got there. */
+  private stage: 'wade' | 'try' | 'run' | 'leap' | 'ready' | 'over' = 'ready';
+  private stageAt = 0;
+  private moment = 0;
+  /** The bird stands while a bound or a glance plays out. */
+  private holdUntil = 0;
+  private glances = 0;
+  private trickle = 0;
+  private reached = 0;
+  private readonly tryAt = new THREE.Vector3();
+  private readonly backTo = new THREE.Vector3();
+  private readonly stepTo = new THREE.Vector3();
+  private readonly lipAt = new THREE.Vector3();
+  private readonly inTheWhite = new THREE.Vector3();
+  private readonly facing = new THREE.Vector3();
   private readonly leapFrom = new THREE.Vector3();
   private readonly grip = new THREE.Vector3();
   private readonly beak = new THREE.Vector3();
@@ -318,14 +366,14 @@ export class SleepingChapter implements Chapter {
 
   /** The one thing the player is asked for by name, and only at the top of the hill. */
   get invitesFlight(): boolean {
-    return this.beat === 'hilltop';
+    return this.beat === 'hilltop' || this.beat === 'step' && this.stage === 'ready';
   }
 
   get twirlGain(): number { return this.invitesFlight ? T.twirlGain : 1; }
 
   get windInvitation(): THREE.Vector3 | null {
-    if (this.beat === 'snow') return this.cast.sleeping.trail.snowTarget;
-    if (this.beat === 'mist') return this.cast.sleeping.trail.mistTarget;
+    if (this.beat === 'snow' && this.stage === 'ready') return this.cast.sleeping.trail.snowTarget;
+    if (this.beat === 'mist' && this.t >= T.mistInviteAt) return this.cast.sleeping.trail.mistTarget;
     return this.beat === 'asleep' && this.called && this.t > this.callAt + 11 ? this.featherRest : null;
   }
 
@@ -334,9 +382,10 @@ export class SleepingChapter implements Chapter {
 
   get coax(): Coax | null {
     const { cygnet } = this.cast;
-    if (this.beat !== 'hilltop' || cygnet.flying) return null;
+    if (!this.invitesFlight || cygnet.flying) return null;
     this.coaxing.at.copy(cygnet.position);
-    this.coaxing.urgency = smooth(this.t, tuning.swirl.coaxAfter, tuning.swirl.coaxAfter + tuning.swirl.coaxRamp);
+    const idle = this.beat === 'step' ? this.now - this.stageAt : this.t;
+    this.coaxing.urgency = smooth(idle, tuning.swirl.coaxAfter, tuning.swirl.coaxAfter + tuning.swirl.coaxRamp);
     return this.coaxing.urgency > 0 ? this.coaxing : null;
   }
 
@@ -397,11 +446,17 @@ export class SleepingChapter implements Chapter {
         this.theEdge();
         break;
       case 'climb':
+      case 'crest':
         this.climbing(dt);
         break;
-      case 'mist':
       case 'snow':
-        this.encounter(dt);
+        this.theDrift(dt);
+        break;
+      case 'step':
+        this.theStep(dt);
+        break;
+      case 'mist':
+        this.theFog(dt);
         break;
       case 'catchFeather':
         this.catchFeather();
@@ -448,7 +503,7 @@ export class SleepingChapter implements Chapter {
      * And the fog thickens over the bird's head as it goes: at the bed it lies low enough to see the room across,
      * and by the climb it is deep enough that the lanes the player carves are the only clear air in it.
      */
-    sleeping.fogTop = this.warmed > 0 ? T.fogTop : atBed ? T.fogTop : T.fogClimbs;
+    sleeping.fogTop = this.warmed > 0 ? T.fogTop : atBed ? T.fogTop : this.beat === 'mist' ? T.fogEncloses : T.fogClimbs;
     this.haze += ((this.warmed > 0 ? 0.6 : 0.82) - this.haze) * (1 - Math.exp(-dt * 0.2));
     this.tighten = Math.max(0, this.tighten - dt * 0.55);
     c.tighter = this.tighten;
@@ -465,22 +520,33 @@ export class SleepingChapter implements Chapter {
     if (sleeping.sleepFace) c.breathFrom(sleeping.sleepFace);
     sleeping.sleepMarks = this.laid ? c.eyesShut : 0;
     if (this.beat === 'tuckIn') sleeping.cold = 0;
-    if (this.warmed === 0 && ['climb','snow','mist','hilltop','unbinding','reachRibbon','pullRibbon'].includes(this.beat)) {
+    if (this.warmed === 0 && ['climb','snow','step','mist','crest','hilltop','unbinding','reachRibbon','pullRibbon'].includes(this.beat)) {
       sleeping.cold = Math.max(sleeping.cold, T.winterBedCold + (1-T.winterBedCold)*smooth(this.routeIndex,2,SLEEP_ROUTE.length-1));
     }
-    if (['edge', 'climb', 'snow', 'mist'].includes(this.beat)) {
+    if (['edge', 'climb', 'snow', 'step', 'mist'].includes(this.beat)) {
       sleeping.feather.follow = this.cast.cygnet.position;
     } else sleeping.feather.follow = null;
     sleeping.feather.clearance=this.beat==='snow'?T.snowDepth*(1-sleeping.trail.snow):0;
-    sleeping.trail.interaction = this.beat === 'snow' || this.beat === 'mist' ? this.beat : null;
-    sleeping.trail.guideActive = ['edge','climb','snow','mist'].includes(this.beat);
+    sleeping.trail.interaction = this.windInvitation && (this.beat === 'snow' || this.beat === 'mist') ? this.beat : null;
+    sleeping.trail.guideActive = ['edge','climb','snow','step','mist','crest'].includes(this.beat);
     sleeping.trail.guideAt.copy(this.cast.cygnet.position);
     sleeping.trail.guideGoal.copy(this.windInvitation ?? SLEEP_ROUTE[this.routeIndex]);
     if (this.beat !== 'asleep') sleeping.hint = 0;
     if (this.warmed > 0) sleeping.cold = Math.min(sleeping.cold, 1-smooth(sleeping.dawn,0,.8));
     this.bedBreath = 0;
+    this.exposure();
     this.heading(dt);
     this.frame();
+  }
+
+  /** Out on the hill the wind is stronger the higher it gets, and the bird leans into it unless the player's is behind it. */
+  private exposure(): void {
+    const { cygnet: k, sleeping } = this.cast;
+    const out = ON_THE_HILL.includes(this.beat) && (this.beat !== 'edge' || this.departureIndex >= 2);
+    if (out) this.reached = Math.max(this.reached, smooth(this.alongRoute(), ROUTE_AT[1], ROUTE_AT[SLEEP_CREST_STOP]));
+    else if (this.beat === 'unbinding' || this.beat === 'hilltop' || this.beat === 'reachRibbon' || this.beat === 'pullRibbon') this.reached = 1;
+    this.climbExposure = this.reached * (1 - sleeping.dawn);
+    k.braced = out ? T.climbLean * this.climbExposure * (1 - sleeping.feather.encouragement) : 0;
   }
 
   /** A child trying to stay awake: turn the bed down, make room for the bird, sit, nod, get in, then draw the quilt up. */
@@ -760,19 +826,26 @@ export class SleepingChapter implements Chapter {
     }
   }
 
-  /** The same grass shelf supports the guide, bird and both encounters; no shortcuts across the cliff. */
+  /** The same grass shelf supports the guide, bird and every stop; no shortcuts across the cliff. */
   private climbing(dt: number): void {
     const { cygnet: k, sleeping } = this.cast;
-    const destination = SLEEP_ROUTE[this.routeIndex];
-    this.lead(sleeping.feather.heldBy ? destination : sleeping.feather.position);
-    k.pace = T.climbPace + sleeping.feather.encouragement * T.climbEncouragement;
+    const f = sleeping.feather;
     this.trodden = null;
     this.hush = lerp(this.hush, 0.8, 1 - Math.exp(-dt * 0.5));
     sleeping.frost = lerp(T.frostAsleep, T.frostWorst, (this.routeIndex - 1) / (SLEEP_ROUTE.length - 2));
     sleeping.cold = lerp(0.65, 1, (this.routeIndex - 1) / (SLEEP_ROUTE.length - 2));
+    if (this.now < this.holdUntil) { k.stay = true; k.errand = null; return; }
+    const destination = SLEEP_ROUTE[this.routeIndex];
+    this.lead(f.heldBy ? destination : f.position);
+    if (this.beat === 'crest') this.tailwind();
+    k.pace = T.climbPace * (1 - T.crestSlows * this.climbExposure) + f.encouragement * T.climbEncouragement;
+    if (this.trickle < 2 && this.alongRoute() > TRICKLE_AT - T.trickleReach) { this.overTheTrickle(); return; }
     if (Math.hypot(k.position.x-destination.x,k.position.z-destination.z)>T.routeReach) return;
     if (this.routeIndex === SLEEP_DRIFT_STOP && !this.snowDone) { this.startEncounter('snow'); return; }
+    if (this.routeIndex === SLEEP_DRIFT_STOP + 1 && this.glances < 1) { this.glance(LAMP); this.nextWaypoint(); return; }
+    if (this.routeIndex === SLEEP_STEP_STOP && !this.stepDone) { this.startStep(); return; }
     if (this.routeIndex === SLEEP_FOG_STOP && !this.mistDone) { this.startEncounter('mist'); return; }
+    if (this.routeIndex === SLEEP_CREST_STOP && this.beat === 'climb') { this.nextWaypoint(); this.to('crest'); return; }
     if (this.routeIndex < SLEEP_ROUTE.length-1) { this.nextWaypoint(); return; }
     k.stay = true; k.errand = null; k.watch(null);
     k.needs(T.liftToFly, null); k.mayFly = false; k.wing.recovery = 1;
@@ -782,6 +855,42 @@ export class SleepingChapter implements Chapter {
     this.to('unbinding');
   }
 
+  /** It stops at the frozen trickle, looks down at it, and hops it. */
+  private overTheTrickle(): void {
+    const k = this.cast.cygnet;
+    if (this.trickle === 0) {
+      this.trickle = 1;
+      k.watch(routePoint(TRICKLE_AT, this.lipAt));
+      this.holdUntil = this.now + 0.4;
+      return;
+    }
+    this.trickle = 2;
+    k.bound(routePoint(TRICKLE_AT + T.trickleReach, this.spot), 'hop', T.trickleHopFor, T.trickleHop);
+    this.holdUntil = this.now + T.trickleHopFor + 0.1;
+  }
+
+  /** A look back over its shoulder, about a breath long, without leaving the way. */
+  private glance(at: THREE.Vector3): void {
+    const k = this.cast.cygnet;
+    this.glances++;
+    k.stay = true; k.errand = null;
+    k.does('look-back', at, T.glanceFor);
+    k.watch(at);
+    this.holdUntil = this.now + T.glanceFor;
+  }
+
+  /** Strokes behind it on the crest are a wind at its back: it straightens and goes quicker. */
+  private tailwind(): void {
+    const { cygnet: k, sleeping } = this.cast;
+    const a = SLEEP_ROUTE[this.routeIndex - 1], b = SLEEP_ROUTE[this.routeIndex];
+    const length = Math.hypot(b.x - a.x, b.z - a.z) || 1, ux = (b.x - a.x) / length, uz = (b.z - a.z) / length;
+    const w = this.cast.wind.sample(k.position.x - ux * 1.2, k.position.z - uz * 1.2, this.air);
+    const speed = Math.hypot(w.x, w.z);
+    const behind = speed > 0.1 ? smooth((w.x * ux + w.z * uz) / speed, 0, 0.6) : 0;
+    const f = sleeping.feather;
+    f.encouragement = Math.max(f.encouragement, Math.min(1, w.energy * T.crestTailwind) * behind);
+  }
+
   private nextWaypoint(): void {
     const f=this.cast.sleeping.feather;
     f.routeStart = SLEEP_ROUTE[this.routeIndex];
@@ -789,44 +898,226 @@ export class SleepingChapter implements Chapter {
     f.goal.copy(SLEEP_ROUTE[this.routeIndex]).setY(SLEEP_ROUTE[this.routeIndex].y+1.4);
   }
 
-  private startEncounter(beat: 'snow' | 'mist'): void {
-    const {cygnet:k,sleeping}=this.cast;
-    k.stay=true;k.errand=null;
-    this.encounterStroke=0;
-    this.to(beat);
-    const target=beat==='snow'?sleeping.trail.snowTarget:sleeping.trail.mistTarget;
-    sleeping.feather.goal.copy(target);
-    k.watch(target);
-    k.does(beat==='snow'?'peer':'shiver',undefined,T.encounterNoticeFor);
+  private next(stage: SleepingChapter['stage']): void {
+    this.stage = stage;
+    this.stageAt = this.now;
+    this.moment = 0;
   }
 
-  /** Broad sweeps carry loose powder away or open the fog. Neither gate solves itself on elapsed time. */
-  private encounter(dt: number): void {
+  /** Each moment of a scripted stretch happens once, in order, when its time comes. */
+  private play(moments: readonly (readonly [number, () => void])[], at: number): void {
+    const stage = this.stage;
+    while (this.moment < moments.length && at >= moments[this.moment][0] && this.stage === stage) moments[this.moment++][1]();
+  }
+
+  private startEncounter(beat: 'snow' | 'mist'): void {
     const {cygnet:k,sleeping}=this.cast;
-    const snow=this.beat==='snow', target=snow?sleeping.trail.snowTarget:sleeping.trail.mistTarget;
-    const required=snow?T.snowStroke:T.mistStroke;
-    k.stay=true;k.errand=null;
-    k.watch(!snow && this.t<1.8 ? this.told.copy(BED).setY(BED.y+1) : target);
+    const trail=sleeping.trail;
+    k.errand=null;
+    this.encounterStroke=0;this.strokeIn=0;this.strokeQuiet=0;
+    this.to(beat);
+    const target=beat==='snow'?trail.snowTarget:trail.mistTarget;
     sleeping.feather.goal.copy(target);
-    // Screen-space motion is the same forgiving gesture already used at the pillow.
-    this.encounterStroke+=Math.max(0,this.bedBreath)*dt;
-    const progress=Math.min(1,this.encounterStroke/required);
-    if(snow) sleeping.trail.snow=progress;
-    else {
-      sleeping.trail.mist=progress;
-      if(progress>0) sleeping.carve(target.x,target.z,-1,-1,progress*0.4);
+    k.watch(target);
+    if(beat==='mist') {
+      k.stay=true;this.moment=0;
+      trail.windowLost=1;
+      return;
     }
-    if(k.stay && this.t>3.4){
-      const facing=Math.atan2(target.x-k.position.x,target.z-k.position.z);
-      k.yaw+=Math.atan2(Math.sin(facing-k.yaw),Math.cos(facing-k.yaw))*(1-Math.exp(-dt*1.4));
+    // It wades in until the snow is at its chest; where it came in from is turf to back out onto.
+    let deep=this.alongRoute();
+    while(deep<ROUTE_AT[SLEEP_DRIFT_STOP+1] && trail.snowDepthAt(routePoint(deep,this.spot).x,this.spot.z)<T.driftChest)deep+=0.05;
+    let shallow=deep;
+    while(shallow>ROUTE_AT[SLEEP_DRIFT_STOP-1] && trail.snowDepthAt(routePoint(shallow,this.spot).x,this.spot.z)>0.01)shallow-=0.05;
+    routePoint(deep+0.45,this.tryAt);
+    routePoint(shallow-0.35,this.backTo);
+    k.errand=this.tryAt;k.stay=false;k.pace=T.driftWade;
+    // Drawn where it really is, or its usual pull toward the lens keeps it in front of the snow it is sinking into.
+    k.nudge=T.driftNudge;
+    this.next('wade');
+  }
+
+  /**
+   * The bird tries the drift before the wind is any use to it: in to its chest, a struggle, out backwards and a shake,
+   * then a long look at the drift and the air over it. Only then do strokes count, each one taking a layer off it.
+   */
+  private theDrift(dt: number): void {
+    const {cygnet:k,sleeping}=this.cast;
+    const trail=sleeping.trail,target=trail.snowTarget;
+    sleeping.feather.goal.copy(target);
+    if(this.stage==='wade') {
+      k.watch(target);
+      if(!k.errand) { k.stay=true;this.next('try'); }
+      return;
     }
-    if(progress<1 || this.t<T.encounterNoticeFor || (snow && !sleeping.trail.snowReady)) return;
-    if(snow) this.snowDone=true;else this.mistDone=true;
+    if(this.stage==='try') {
+      this.play(this.driftTry,this.now-this.stageAt);
+      this.face(target,dt,2);
+      return;
+    }
+    k.stay=true;k.errand=null;
+    k.watch(target);
+    this.face(target,dt,1.4);
+    const layer=T.snowStroke/T.snowLayers;
+    const breath=Math.max(0,this.bedBreath)*dt;
+    this.encounterStroke+=breath;
+    if(breath>0) { this.strokeIn+=breath;this.strokeQuiet=0; }
+    else this.strokeQuiet+=dt;
+    if(this.strokeIn>0 && this.strokeQuiet>T.strokeEnds) {
+      // A stroke that gave a fair share of a layer takes all of it, so each sweep visibly brings the drift down.
+      const into=this.encounterStroke-Math.floor(this.encounterStroke/layer+1e-6)*layer;
+      if(into>1e-6 && this.strokeIn>=layer*T.snowLayerFrom) this.encounterStroke+=layer-into;
+      this.strokeIn=0;
+    }
+    trail.snow=Math.min(T.snowLayers,Math.floor(this.encounterStroke/layer+1e-6))/T.snowLayers;
+    if(trail.snow<1 || !trail.snowReady) return;
+    this.snowDone=true;
     k.mind.trust(0.4); k.does('into-wind',undefined,2.6); k.stay=false;
-    if (!snow) { this.to('catchFeather'); return; }
     this.nextWaypoint();
     this.to('climb');
   }
+
+  private readonly driftTry: readonly (readonly [number, () => void])[] = [
+    [0, () => this.cast.cygnet.bound(this.cast.cygnet.position, 'dash', 0.45, 0.13)],
+    [0.55, () => this.cast.cygnet.bound(this.cast.cygnet.position, 'dash', 0.45, 0.1)],
+    [1.25, () => this.cast.cygnet.bound(this.backTo, 'hop', 0.65, 0.12)],
+    [1.9, () => { this.cast.cygnet.nudge = null; }],
+    [2.0, () => this.cast.cygnet.does('shake', undefined, 1.1)],
+    [3.4, () => this.cast.cygnet.does('peer', this.cast.sleeping.trail.snowTarget, 2.8)],
+    [4.7, () => this.cast.cygnet.watch(this.inTheWhite.copy(this.cast.sleeping.trail.snowTarget).lerp(this.shot.eye ?? this.cast.sleeping.trail.snowTarget, 0.3).setY(this.cast.sleeping.trail.snowTarget.y + 1))],
+    [6.2, () => this.next('ready')],
+  ];
+
+  /** Turns its body toward something, no faster than its feet allow. */
+  private face(at: THREE.Vector3, dt: number, rate: number): void {
+    const k = this.cast.cygnet;
+    const facing = Math.atan2(at.x - k.position.x, at.z - k.position.z);
+    k.yaw += Math.atan2(Math.sin(facing - k.yaw), Math.cos(facing - k.yaw)) * (1 - Math.exp(-dt * rate));
+  }
+
+  /** At the bank's foot: it runs at it and fails, and the bandaged wing is why. */
+  private startStep(): void {
+    const k = this.cast.cygnet;
+    this.to('step');
+    k.wing.recovery = T.stepWingRecovery;
+    routePoint(STEP_AT + T.stepFoot, this.tryAt);
+    routePoint(STEP_AT + T.stepBack, this.backTo);
+    routePoint(STEP_AT + T.stepTop, this.stepTo);
+    routePoint(STEP_AT + 1.6, this.lipAt).y += 0.1;
+    const f = this.cast.sleeping.feather;
+    f.routeStart = SLEEP_ROUTE[SLEEP_STEP_STOP];
+    f.goal.copy(this.stepTo).setY(this.stepTo.y + 1.4);
+    k.errand = this.tryAt; k.stay = false; k.pace = T.stepRun;
+    k.watch(this.lipAt);
+    this.next('run');
+  }
+
+  /**
+   * Circles round it build air under it: below the step's own threshold it rises on its toes, the good wing beating
+   * and the bandaged one held stiff, and settles back; with enough it scrambles up and over, lopsided, and shakes.
+   */
+  private theStep(dt: number): void {
+    const { cygnet: k } = this.cast;
+    const s = this.now - this.stageAt;
+    if (this.stage === 'run') {
+      if (k.errand) return;
+      k.stay = true;
+      this.next('try');
+      return;
+    }
+    if (this.stage === 'try') {
+      this.face(this.lipAt, dt, 3);
+      this.play(this.stepTry, s);
+      return;
+    }
+    k.stay = true; k.errand = null;
+    if (this.stage === 'ready') {
+      this.face(this.stepTo, dt, 2);
+      k.watch(this.lipAt);
+      if (k.hoping < T.stepHope) return;
+      k.bound(this.stepTo, 'dash', T.stepScrambleFor, T.stepScrambleArc);
+      this.heardFlutter();
+      this.next('over');
+      return;
+    }
+    this.play(this.stepOver, s);
+  }
+
+  private heardFlutter(): void {
+    this.cast.cygnet.heard.push({ kind: 'flutter', amount: 0.9 });
+  }
+
+  private readonly stepTry: readonly (readonly [number, () => void])[] = [
+    [0, () => this.cast.cygnet.bound(this.tryAt, 'dash', T.stepTryFor, T.stepTryArc)],
+    [T.stepTryFor, () => this.cast.cygnet.bound(this.backTo, 'hop', 0.6, 0.04)],
+    [T.stepTryFor + 0.8, () => this.cast.cygnet.watch(this.cast.cygnet.wing.tip(this.inTheWhite))],
+    [T.stepTryFor + 0.8 + T.stepLooksFor, () => {
+      this.cast.cygnet.watch(this.lipAt);
+      this.cast.cygnet.needs(T.stepLift, null);
+      this.next('ready');
+    }],
+  ];
+
+  private readonly stepOver: readonly (readonly [number, () => void])[] = [
+    [T.stepScrambleFor, () => { this.cast.cygnet.does('shake', undefined, 1.1); this.cast.cygnet.mind.trust(0.5); }],
+    [T.stepScrambleFor + 1.3, () => { this.cast.cygnet.watch(WINDOW); this.holdUntil = this.now + T.glanceFor; }],
+    [T.stepScrambleFor + 1.3 + T.glanceFor, () => {
+      const k = this.cast.cygnet;
+      this.stepDone = true;
+      k.wing.recovery = 1;
+      k.needs(T.liftToFly, null);
+      this.nextWaypoint();
+      this.glance(LAMP);
+      this.to('climb');
+    }],
+  ];
+
+  /**
+   * The fog closes over it and the window goes. It shivers, looks about, calls once into the white, and nothing
+   * answers. Then the fog thins downhill by itself: the lamp far below. It looks a long breath, turns uphill, and only
+   * then does the wind count, parting the fog up the hill until the window shows again.
+   */
+  private theFog(dt: number): void {
+    const {cygnet:k,sleeping}=this.cast;
+    const trail=sleeping.trail,target=trail.mistTarget,t=this.t;
+    k.stay=true;k.errand=null;
+    sleeping.feather.goal.copy(target);
+    this.play(this.fogMoments,t);
+    const p=k.position,uphill=Math.atan2(UP_THE_LANE.x,UP_THE_LANE.y);
+    const looking=t<T.mistShiverAt?0:t<T.mistCallAt?Math.sin((t-T.mistShiverAt)/(T.mistCallAt-T.mistShiverAt)*Math.PI*2)*1.1:0;
+    const glimpsing=t>=T.mistGlimpseAt && t<T.mistGlimpseAt+T.mistLookFor;
+    if(glimpsing) {
+      k.watch(LAMP);
+      if(t<T.mistGlimpseAt+1.2) for(let along=1;along<FOG_TO_BED;along+=7)
+        sleeping.carve(p.x+DOWN_TO_BED.x*along,p.z+DOWN_TO_BED.y*along,DOWN_TO_BED.x,DOWN_TO_BED.y,T.carveStrength*dt);
+    } else if(t<T.mistInviteAt) {
+      const yaw=uphill+looking;
+      k.watch(this.inTheWhite.set(p.x+Math.sin(yaw)*3,p.y+(t>=T.mistCallAt?2.2:0.9),p.z+Math.cos(yaw)*3));
+    } else k.watch(target);
+    this.face(this.facing.set(p.x+Math.sin(uphill+looking),p.y,p.z+Math.cos(uphill+looking)),dt,1.6);
+    if(t<T.mistInviteAt) return;
+    this.encounterStroke+=Math.max(0,this.bedBreath)*dt;
+    const progress=Math.min(1,this.encounterStroke/T.mistStroke);
+    trail.mist=progress;
+    trail.windowLost=1-smooth(progress,0,0.8);
+    if(progress>0) sleeping.carve(target.x,target.z,UP_THE_LANE.x,UP_THE_LANE.y,progress*0.4);
+    if(progress<1) return;
+    this.mistDone=true;
+    trail.windowLost=0;
+    k.mind.trust(0.4); k.does('into-wind',undefined,2.6);
+    this.to('catchFeather');
+  }
+
+  private readonly fogMoments: readonly (readonly [number, () => void])[] = [
+    [T.mistShiverAt, () => this.cast.cygnet.does('shiver', undefined, 3.2)],
+    [T.mistCallAt, () => this.cast.cygnet.call(true)],
+    [T.mistGlimpseAt, () => {
+      this.cast.sleeping.trail.glimpse = 1;
+      this.glances++;
+      this.cast.cygnet.does('look-back', LAMP, T.mistLookFor);
+    }],
+    [T.mistGlimpseAt + T.mistLookFor, () => { this.cast.sleeping.trail.glimpse = 0; }],
+  ];
 
   private catchFeather(): void {
     const {cygnet:k,sleeping}=this.cast;

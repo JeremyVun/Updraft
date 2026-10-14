@@ -9,6 +9,8 @@ export const SLEEP_PATH = [
   [-158.6, -1935.2], [-161.6, -1936.5], [-164.8, -1937.15], [-168.5, -1938.45], [-170.9, -1939.25],
   [-174, -1939.6], [-177.3, -1940.8],
 ] as const;
+/** A frozen trickle running down across the lower slope, which the bird hops over by itself. */
+export const SLEEP_TRICKLE = [-160.3, -1920.24] as const;
 /** Below the drift packed into the notch. */
 export const SLEEP_DRIFT_STOP = 6;
 /** At the foot of the frost-heaved bank. */

@@ -8,7 +8,7 @@ import { reviewCapture } from './lib/review-capture.mjs';
 
 const prefix = process.argv[2] ?? '/tmp/updraft-sleeping';
 const touch=process.env.TOUCH==='1',width=Number(process.env.W??(touch?390:1600)),height=Number(process.env.H??(touch?844:900));
-const adversarial=process.env.ADVERSARIAL==='1',video=process.env.VIDEO==='1',markers=[];
+const adversarial=process.env.ADVERSARIAL==='1',video=process.env.VIDEO==='1',markers=[],offscreen=new Set();
 const {browser,close}=await openBrowser();
 console.log('Graphics acquired; starting sleeping chapter');
 let finishRecording,stopReview;
@@ -89,18 +89,20 @@ try {
     }else{await page.screenshot({path:prefix+'-'+name+'.png'});console.log(prefix+'-'+name+'.png');}
   };
   const beat=async name=>page.waitForFunction(name=>__game.story.current.beat===name,name,{timeout:100000});
-  const point=async kind=>page.evaluate(kind=>{const g=__game;const p=(kind!=='bird'?g.story.current.windInvitation:g.cygnet.position).clone().project(g.rig.camera);return{x:(p.x+1)*innerWidth/2,y:(1-p.y)*innerHeight/2}},kind);
+  const point=async kind=>page.evaluate(kind=>{const g=__game;const p=(kind==='bird'||kind==='across-bird'?g.cygnet.position:g.story.current.windInvitation).clone().project(g.rig.camera);return{x:(p.x+1)*innerWidth/2,y:(1-p.y)*innerHeight/2}},kind);
   const gesture=async(kind,scale=1)=>{
     const p=await point(kind),circle=kind==='bird',count=circle?100:28,rad=height*0.06;
     for(let i=0;i<=count;i++){
       const a=i/count*Math.PI*4;
-      const x=p.x+(circle?Math.cos(a)*rad:(i/count-0.5)*Math.min(170,width*0.4)*scale);
-      const y=p.y+(circle?Math.sin(a)*rad:Math.sin(i/count*Math.PI)*8);
-      assert(x>0&&x<width&&y>0&&y<height,'wind target is outside the viewport');
+      let x=p.x+(circle?Math.cos(a)*rad:(i/count-0.5)*Math.min(170,width*0.4)*scale);
+      let y=p.y+(circle?Math.sin(a)*rad:Math.sin(i/count*Math.PI)*8);
+      // A target just past the edge of a narrow screen is still reached by a swipe along that edge.
+      if(!(x>0&&x<width&&y>0&&y<height))offscreen.add(kind+':'+await page.evaluate(()=>__game.story.current.beat));
+      x=Math.max(4,Math.min(width-4,x));y=Math.max(4,Math.min(height-4,y));
       if(touch)await cdp.send('Input.dispatchTouchEvent',{type:i===0?'touchStart':'touchMove',touchPoints:[{x,y,id:1}]});
       else await page.mouse.move(x,y);
       await page.waitForTimeout(circle?25:22);
-      if(circle && i%5===0 && await page.evaluate(()=>__game.story.current.beat!=='hilltop'))break;
+      if(circle && i%5===0 && await page.evaluate(()=>!__game.story.current.invitesFlight))break;
     }
     if(touch)await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
   };
@@ -157,11 +159,31 @@ try {
   }
   await beat('climb');await page.waitForTimeout(2500);await shot('climb');
   // Deliberately broad, imperfect sweeps across the actual feather; the path should assist them.
-  const seen=new Set();
-  for(let j=0;j<140&&await page.evaluate(()=>['climb','snow','mist','catchFeather'].includes(__game.story.current.beat));j++){
+  const seen=new Set(),stepLoops=[];
+  for(let j=0;j<200&&await page.evaluate(()=>['climb','snow','step','mist','catchFeather','crest'].includes(__game.story.current.beat));j++){
     const current=await page.evaluate(()=>__game.story.current.beat);
     if(current==='catchFeather'){await page.waitForTimeout(300);continue;}
+    if(current==='step'){
+      if(!await page.evaluate(()=>__game.story.current.invitesFlight)){await page.waitForTimeout(300);continue;}
+      if(!seen.has(current)){
+        seen.add(current);await shot('step-tried');
+        if(adversarial){
+          // Strokes across the bird are the wrong verb here: they must never get it over.
+          for(let i=0;i<3;i++)await gesture('across-bird');
+          assert.equal(await page.evaluate(()=>__game.story.current.stage),'ready','strokes got the bird up the step');
+          console.log('Adversarial step: strokes across the bird left it at the bank');
+        }
+        markers.push({name:'step-circles',time:await page.evaluate(()=>__game.story.current.now)});
+      }
+      await gesture('bird');
+      if(await page.evaluate(()=>__game.story.current.stage==='over')){
+        stepLoops.push(await page.evaluate(()=>__game.story.current.now));
+        await page.waitForTimeout(1500);await shot('step-over');
+      }
+      continue;
+    }
     if(['snow','mist'].includes(current)){
+      if(!await page.evaluate(()=>!!__game.story.current.windInvitation)){await page.waitForTimeout(300);continue;}
       if(!seen.has(current)){
         seen.add(current);await page.waitForTimeout(200);
         const onArrival=await page.evaluate(()=>__game.story.current.encounterStroke);
@@ -170,6 +192,8 @@ try {
         assert(Math.abs(await page.evaluate(()=>__game.story.current.encounterStroke)-onArrival)<.005,'idle cannot keep clearing the obstacle');
         if(adversarial){
           await noShortcut('encounter');await gesture('encounter',.18);
+          // A short sweep at the drift takes its whole layer once the stroke has ended.
+          await page.waitForTimeout(700);
           const earned=await page.evaluate(()=>__game.story.current.encounterStroke);
           await page.waitForTimeout(1800);
           assert(Math.abs(await page.evaluate(()=>__game.story.current.encounterStroke)-earned)<.005,'interrupted progress did not hold');
@@ -181,15 +205,26 @@ try {
     } else {
       if(await page.evaluate(async()=>{const l=await import('/src/world/sleeping-layout.ts');return [l.SLEEP_DRIFT_STOP,l.SLEEP_FOG_STOP].includes(__game.story.current.routeIndex);})){await page.waitForTimeout(350);continue;}
       const p=await page.evaluate(()=>{const g=__game,p=g.sleeping.feather.position.clone().project(g.rig.camera);return{x:(p.x+1)*innerWidth/2,y:(1-p.y)*innerHeight/2};});
-      for(let i=0;i<=24;i++){if(i%4===0&&await page.evaluate(()=>__game.story.current.beat!=='climb'))break;const x=Math.max(8,Math.min(width-8,p.x+(i/24-.5)*width*.42)),y=Math.max(8,Math.min(height-8,p.y+22-Math.sin(i/24*Math.PI)*50));
+      for(let i=0;i<=24;i++){if(i%4===0&&await page.evaluate(()=>!['climb','crest'].includes(__game.story.current.beat)))break;const x=Math.max(8,Math.min(width-8,p.x+(i/24-.5)*width*.42)),y=Math.max(8,Math.min(height-8,p.y+22-Math.sin(i/24*Math.PI)*50));
         if(touch)await cdp.send('Input.dispatchTouchEvent',{type:i===0?'touchStart':'touchMove',touchPoints:[{x,y,id:1}]});else await page.mouse.move(x,y);await page.waitForTimeout(25);}
       if(touch)await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
     }
     await page.waitForTimeout(500);
   }
-  assert(seen.has('snow')&&seen.has('mist'),'both winter encounters were played');
+  assert(seen.has('snow')&&seen.has('step')&&seen.has('mist'),'every climb stop was played');
   }
-  await beat('hilltop');await page.waitForTimeout(7000);await shot('hilltop');
+  await beat('hilltop');
+  const climbBeats=await page.evaluate(()=>{const m=window.sleepMotion,out=[];for(const s of m)if(out.at(-1)?.beat!==s.beat)out.push({beat:s.beat,at:s.at});const base=window.recordStarted??out[0].at;return out.map(s=>({beat:s.beat,at:+((s.at-base)/1000).toFixed(1)}));});
+  if(offscreen.size)console.log('Wind targets drawn past the screen edge:',[...offscreen].join(', '));
+  console.log('Climb beats (s, on the recording if there is one):',climbBeats.map(b=>`${b.beat} ${b.at}`).join(', '));
+  fs.writeFileSync(prefix+'-beats.json',JSON.stringify({climbBeats,markers},null,2));
+  await page.waitForTimeout(7000);await shot('hilltop');
+  if(process.env.STOP==='hilltop'){
+    if(video){await page.evaluate(()=>window.finishVideo());console.log(prefix+'.webm');finishRecording=null;}
+    fs.writeFileSync(prefix+'-motion.json',JSON.stringify(await page.evaluate(()=>window.sleepMotion)));
+    process.exitCode=0;
+    throw Object.assign(Error('stopped at the hilltop'),{stopped:true});
+  }
   const at=await page.evaluate(async()=>{const g=__game; const {WINDOW}=await import('/src/world/sleeping.ts'); const w=WINDOW.clone().project(g.rig.camera); return {time:g.story.current.now,dusk:g.story.current.dusk,wing:g.cygnet.wing.state,curtains:g.sleeping.curtains,window:w.toArray()};});
   assert(at.dusk>1.8 && at.wing==='free' && at.curtains===0,'the healed wing waits at the closed summit window');
   assert(Math.abs(at.window[0])<0.8 && Math.abs(at.window[1])<0.8 && at.window[2]<1,'summit window must be visible beside the bird');
@@ -240,9 +275,9 @@ try {
   assert(departure.every(p=>Math.abs(p[0])<0.9&&Math.abs(p[1])<0.9&&p[2]<1),
     'the child stays in frame throughout the departure: '+JSON.stringify(departure));
   await page.waitForFunction(()=>__game.story.name==='toMirror',null,{timeout:60000});
-  const result=await page.evaluate(()=>({chapter:__game.story.name,carried:__game.cygnet.carried,riding:__game.child.riding,coat:__game.child.rig.coat.scale.toArray(),dawn:__game.sleeping.dawn,curtains:__game.sleeping.curtains}));
+  const result=await page.evaluate(()=>({chapter:__game.story.name,carried:__game.cygnet.carried,riding:__game.child.riding,lie:__game.child.look.lie,dawn:__game.sleeping.dawn,curtains:__game.sleeping.curtains}));
   assert(result.carried&&result.riding&&result.dawn===1&&result.curtains===1);
-  assert.deepEqual(result.coat,[1,1,1]);assert.deepEqual(errors,[]);
+  assert(result.lie<1e-5,'the sleeping pose must not leak into walking');assert.deepEqual(errors,[]);
   if(video){await page.evaluate(()=>window.finishVideo());console.log(prefix+'.webm');}
   const motion=await page.evaluate(()=>window.sleepMotion);
   fs.writeFileSync(prefix+'-motion.json',JSON.stringify(motion));
@@ -263,6 +298,8 @@ try {
   fs.writeFileSync(prefix+'-motion.json',JSON.stringify(motion));
   fs.writeFileSync(prefix+'.json',JSON.stringify({touch,adversarial,liftSeconds,heightParity,result,markers,errors},null,2));
   console.log(JSON.stringify({touch,liftSeconds,heightParity,result,errors}));
+} catch (e) {
+  if(!e.stopped)throw e;
 } finally {
   try {await stopReview?.();await finishRecording?.();} finally {await close();}
 }

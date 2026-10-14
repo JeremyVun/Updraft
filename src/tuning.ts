@@ -3056,6 +3056,8 @@ export const tuning = {
     fogTop: 8.2,
     /** And how high it lies once the night has thickened it: over a bird's head on the lower slopes of the hill. */
     fogClimbs: 11.4,
+    /** And how high it comes up the saddle when it closes over the bird there, until the player parts it. */
+    fogEncloses: 19,
     fogSoft: 2.8,
     /** How far the top surface drifts up and down, and how fast the noise in it moves with the breeze. */
     fogSwell: 0.7,
@@ -3154,7 +3156,9 @@ export const tuning = {
     /** Fastest it drifts back to the bird and the route, in m/s beyond its own speed, when the climb picks it up far off. */
     featherReturn: 1.5,
     featherCorridor: 1.1,
-    featherEncouragement: 1.6,
+    /** Its own lead up the climb in still air, m/s, and how much faster strokes send it on top of that. */
+    featherPace: 1.2,
+    featherEncouragement: 1.2,
     featherBrushRadius: 0.36,
 
     /**
@@ -3223,8 +3227,65 @@ export const tuning = {
     snowStroke: 1.0,
     mistStroke: 0.7,
     encounterNoticeFor: 2.2,
-    climbPace: 0.40,
-    climbEncouragement: 0.22,
+    climbPace: 0.32,
+    climbEncouragement: 0.28,
+    /**
+     * Exposure rises from the bed's edge to the crest: the breeze it adds, how hard the bird leans into it and how much
+     * shorter its steps get at the top, and the gust energy behind it on the crest that counts as a full tailwind.
+     */
+    climbWind: 0.8,
+    climbLean: 0.9,
+    crestSlows: 0.45,
+    crestTailwind: 3,
+    /** Seconds each glance back down the hill or up at the window lasts. */
+    glanceFor: 1.6,
+    /** The frozen trickle: how far short of it the bird hops, and the hop. */
+    trickleReach: 0.45,
+    trickleHopFor: 0.45,
+    trickleHop: 0.14,
+    /**
+     * The drift: the snow depth that reaches the bird's chest when it tries it, how fast it wades in, how many layers the
+     * sweeps take it down in, the share of a layer a single stroke must give to take it whole, the pause that ends a
+     * stroke, and how fast a layer eases away.
+     */
+    driftChest: 0.32,
+    driftWade: 0.2,
+    /** How far toward the lens the bird is drawn while it is in the snow, in place of its usual pull. */
+    driftNudge: 0.3,
+    snowLayers: 4,
+    snowLayerFrom: 0.3,
+    strokeEnds: 0.35,
+    snowLayerEase: 3,
+    /**
+     * The step: where the bird runs to at the bank's foot and slides back to, metres past the stop; its run, the hop
+     * that gets its chest to the lip; the lift its wings need (lower than the summit's) and the hope at which it goes;
+     * how stiff the bandaged wing is held meanwhile (the wing's recovery); and the scramble over onto the top.
+     */
+    stepFoot: 0.85,
+    stepBack: 0.4,
+    stepTop: 2.15,
+    stepRun: 0.5,
+    stepTryFor: 0.8,
+    stepTryArc: 1.0,
+    stepLooksFor: 1.8,
+    stepLift: 0.6,
+    stepHope: 0.85,
+    stepWingRecovery: 0.45,
+    stepScrambleFor: 1.25,
+    stepScrambleArc: 0.75,
+    /**
+     * The fog in the saddle, in seconds from the bird's arrival: closing round it, the call into the white, the fog
+     * thinning downhill and the long look at the lamp, then the invitation. How much the glimpse thins the saddle's bank,
+     * and the seconds the window's glow and the glimpse ease over.
+     */
+    mistShiverAt: 0.9,
+    mistCallAt: 4.2,
+    mistGlimpseAt: 6.0,
+    mistLookFor: 1.9,
+    mistInviteAt: 8.6,
+    mistGlimpseThins: 0.75,
+    mistWindowEase: 1.4,
+    mistGlimpseEase: 0.5,
     routeReach: 0.75,
     snowDepth: 1.65,
     winterLamp: 0.24,
