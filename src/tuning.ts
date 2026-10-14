@@ -3249,7 +3249,7 @@ export const tuning = {
     /** In a narrow frame, how far the saddle's lens leans toward the lamp past the bird, as a share of its reach. */
     fogNarrowLean: 0.4,
     /** On the climb, wind streaks fade out between these distances from the lens, metres. */
-    lineNearFade: [0.8, 2.5] as const,
+    lineNearFade: [2, 4.5] as const,
     /** The frozen trickle: how far short of it the bird hops, and the hop. */
     trickleReach: 0.45,
     trickleHopFor: 0.45,
