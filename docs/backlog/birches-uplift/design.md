@@ -58,6 +58,10 @@ On the island's length (2026-10-15):
 > well i think, especially since you're lengthening the birches island, so i assume you'll need to figure out how to
 > move the birches island to increase the distance of the crossing (the boat speed must be kept the same).
 
+> Oh and one other thing, it'd be nice i think if you could have some autumn leaves as dream echoes on the stairs
+> island (they dont need to be able to be blown by the wind, they could be baked textures). 50 seconds seems a bit
+> too much, what is the current length of the crossing?
+
 ## What it is
 
 The birches become the last carefree afternoon of the journey: one more romp in the leaves before bedtime on the
@@ -207,8 +211,11 @@ on both sides, because both neighbouring ellipses narrow away from x ≈ 0.
 
 Constraints that choose the shift:
 - `toStairs` is lengthened by distance alone: **boat speed stays exactly as it is** (Jeremy, 2026-10-15). It should
-  last about **50 s** of sailing with no input; measure the current crossing first and record it here. The island
-  grows north toward the stairs, so the shift has to cover that growth as well as add the extra sea.
+  last about **30 s** from push-off with no input (Jeremy found 50 s too much). Measured 2026-10-15 on `main`, no
+  input: from the crossing's first waypoint (18, −1215) to the stairs chapter took 12.0 s over 55 m (≈4.6 m/s). The
+  berth leg before it is about 28 m (≈6 s), so today's sail is about 18–20 s, and the target adds about 10 s
+  (~45–50 m) of sea. The island grows north toward the stairs, so the shift has to cover that growth as well as add
+  the extra sea.
 - `toBirches` stays within ±15% of its current sailing time.
 - The island stays clear of the meadow, the stairs' cloud deck and bank, and the drowned village's mist. Nothing
   becomes visible from a neighbouring room that is hidden now ("the player never sees the next island"), and the
@@ -298,6 +305,20 @@ she runs through what is left kicking leaves up instead. The moment always happe
 Each finished round is a checkpoint. The birches payload gains `squirrelRounds`, and point names gain the round
 count. Saves made before this build infer the rounds already walked past from their leg and tangle count, so a
 resumed player never repeats or skips a round's place on the walk.
+
+### Autumn leaves on the stairs island
+
+A dream echo Jeremy asked for (2026-10-15): gold birch leaves lying on the stairs island, as if the afternoon had
+blown some of the birches after them. They join the swing's seat that already lies there (`world/echoes.ts`) and
+follow the echo rules: scenery only, above the tide line and off the walk, and the camera never turns to them.
+
+- A drift banked round the swing seat on the arrival beach, thinning into a scatter up the grass toward the foot of
+  the stairs, with a few caught in the lee of the first steps. Few enough to read as a handful that came on the wind,
+  not a second autumn.
+- **Static and baked**, never simulated or blown: one instanced draw of flat, slightly curled leaf quads, using the
+  birches' own leaf shape and tint (`LEAF_SHAPE_GLSL`, `LEAF_TINT_GLSL`), lying on the ground's height. They are lit
+  by the stairs' light, so they are dimmer under the cloud than the birches' gold.
+- They exist only while the stairs island is near, like the other echoes.
 
 ## Rules it keeps
 
