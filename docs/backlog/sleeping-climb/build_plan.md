@@ -352,3 +352,15 @@ base does the same: left. Crossings in and out show no sky or fog change. Peak c
 Lead watches the whole room in motion with sound beside the owl and the clouds, fixes what does not earn its place,
 then hands Jeremy a build to play. On approval: migrate the durable rules into `docs/chapters.md` § The sleeping
 island and `docs/contracts/world.md`, delete this folder, and merge.
+
+### Jeremy's second playtest, verbatim (2026-10-15)
+
+> the bunny still looks still, shouldn't it be shivering? What happened to the nice snow being blown away effect from before when the player uses wind on the snow drift blockage to clear a path? The cygnets model is clipping into the bank a few times when it tries to get over it. both in the attempt and during the updraft jump. Also i think that white line is simply from an updraft wind effect and not a bug.
+
+### 4c — the second playtest fixes
+
+1. **The rabbit** shivers in its sleep, visibly from the player's lens as the bird passes.
+2. **The snow blown off the drift** by strokes is back and reads as it did before.
+3. **No clipping at the bank:** the cygnet stays outside the bank's rendered surface in the try, the slide back and the
+   clamber.
+4. The tall white line during the bank's circles is the updraft's own wind effect (Jeremy's ruling): left as it is.
