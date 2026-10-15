@@ -426,8 +426,7 @@ The round-3 lens stands 4–6 m north of that wool.
 in (`LEAP`). She runs away from the lens toward the sun, so the burst is backlit.
 
 **Hides** sit in each heap's deep, 0.3 of its radius out on the side away from the lens (round 1: toward her).
-Read back after the field had settled for 40 s, the depth there is 4.1–4.6, so the heaped cards stand 0.85–1.0 m
-(`(depth − 1.6) × pileHeight`); heap middles hold 4.6–5.3 at rest.
+Read back (`depthAt`) the leaves stand 0.73–0.82 m over them; the round heaps' middles 0.87–0.97 m.
 
 **Banks** (`BANKS`) are five birches 5.6–10.8 m off the walk line and at least 3 m from the wool. They are placed
 rather than grown, so a heap never loses its tree; a tree grown within 1.6 m of one gives way to it. Two stand
@@ -456,15 +455,38 @@ from there to the floor of gap B. The wool points are sampled from the strip at 
 trees in the sense that it waits up a trunk at each stop. Between trees it comes down and crosses the floor quickly,
 because the wool there lies on the ground and nothing runs high.
 
-**For the game (phase 5):**
+**Heaps (phase 5a).** In the storyboard the floor was one even gold carpet: a heap was a few big leaf cards
+standing up out of it. Now each round heap is a raked mound, judged in every round frame in both orientations:
 
-- Loose simulated leaves that lie more than 58 m from the walker are moved round her (`fx/leaves.ts`), so only
-  heap 0 near the landing keeps the loose leaves laid in it; every other heap is litter cards alone by the time she
-  arrives. A burst at rounds 2 and 3 throws only what is near it. Seeding a share of the recycled leaves onto the next
-  round's heaps would give those bursts their spray.
-- Buried at the near heaps (9–10 m from the lens, seen from 25–30° above), the squirrel's back can show between the
-  heaped cards; heap 0 hides it because the loose leaves lie thick there. It needs burying lower, or a few leaves
-  kicked to settle on it, judged from these frames.
+- *Raked* heaps (`BIRCH_PILES` 0 and 4–8, `raked: true`) are laid as a mound as steep as the litter field lets leaves
+  stand (`litterRepose`), rounded over the top (`heapCrown`), so the field keeps them as laid; they stand about
+  0.9 m, their foot near `r` (`heapFoot`). The floor round each is raked thin in streaks toward it for `heapRaked`
+  past its radius, so its foot stands on bare earth. The wind's behaviour is untouched: a gust bursts a heap as
+  before and nothing rebuilds it. The free-play heaps 1–3 keep their swells.
+- The litter reads its heap's shape (`HEAP_GLSL` in `fx/leaves.ts`): a leaf on a heap is lit by the heap's surface,
+  so the side away from the low sun is in the heap's own shade, warm amber under the sky, with the crest catching
+  the light; the floor at a heap's foot is shaded by it and darker in the hollow there. Floor away from heaps is
+  lit exactly as before (one look toward the sun skips the rest).
+- Every heap has a *skin* (a layer `heapSkin` thick of small leaves laid every which way over its surface, thinning
+  toward the foot) and a *body* under it (a solid sheet `heapCore` below the surface). Both follow the live field
+  within reach of each heap, so a burst heap's remains are drawn the same way. The body is what hides anything
+  buried: the squirrel set `buryDepth` under the surface (`buryBelow` 0.38 m: its back 0.2 m under, its tail's tip
+  0.21 m out) shows nothing in any round frame tail in, and only its tail's tip tail out. Hidden needs at least
+  about 0.26 m of leaves (`burySoil`).
+- Loose leaves: nearly a third start in the heaps, shared by area with the raked ones weighted half again, and a
+  leaf lying in a heap is never moved round the walker, so each round heap still holds about 1,400–1,700 when she
+  reaches it. A squirrel's burst (strength 1) throws about 650 into the air at round 3 (`burstReach`,
+  `burstReachPer`); harder than 1 throws them faster and higher. A swipe across a heap throws a backlit cloud.
+- The seam: `AutumnBirches.depthAt(points)` (metres of leaves over the ground, one batched `Readback` of up to 64
+  points a frame), `burst(x, z, strength)` (0.2 peek, 0.55 dive, 1 burst, about 1.6 the leap), and
+  `buryDepth(x, z, depth)`. `squirrel.onLeaves` drives `burst` in `main.ts`, steps excepted.
+
+**Still open for the game:**
+
+- From each round's lens the far side of a heap is behind its crest, so a tail out at a hide 0.3 r beyond the middle
+  shows only a little (round 1 and round 3's far heap least). The body hides anywhere now, so hides nearer the crest
+  would show the tail better.
+- In round 2's landscape frame the cygnet's first place (beside her) is behind the near heap from the lens.
 - On the swing limb, while the swing is offered, it is backlit by the sun's glow and hard to see; once she is riding,
   the lower lens shows it.
 - The run down the wool after tangle 1 lies mostly outside portrait's walking frame; it needs the glance.
