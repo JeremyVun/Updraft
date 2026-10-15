@@ -405,6 +405,11 @@ Find what flashes (sparkle, z-fighting between the drift and the ground or chann
 
 Measure while stroking at the drift (`tools/perf.mjs`, authorised for this), find the cost and remove it.
 
+Not reproduced here, so set aside (Jeremy will look into it later): stroking the drift until it clears showed no frame
+drop against idle on this build, the 4c build, before 4b, or `main`, in Chrome for Testing (fixed-step and real-time,
+device scale 1 and 2, with and without sound) or WebKit; no program compiles during strokes. Real-time at the drift on
+this machine: about 10–13 ms a frame here against about 9 ms on `main`, idle and stroking alike.
+
 > remove the tone sounds from the player's wind. The only chapter that should ahve tone sounds from the players wind is the woods chapter.
 
 > The sound of the players wind during the climb up needs to be louder as well (when the player moves their cursor around, you can't hear the wind they make - it can't be heard over the ambient wind)
