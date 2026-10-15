@@ -345,22 +345,25 @@ air ran out (`LitterField`). So the squirrel hides **where the leaves are now**,
 - **Tells**, always present and never on a wrong heap. The right heap shivers every 2.5–4 s with a rustle panned to
   it. The tail tip is out about half the time in round 1, a third in round 2 and a fifth in round 3. Now and then a
   `peek`.
-- **Finding.** Wind on the hide is integrated as the trees' stripping is (energy plus speed above `gripSpeed`) over a
-  generous radius, the heap's radius plus 1.5 m. One deliberate swipe across the heap, or two careless ones near it,
-  is enough. A gust that only shaves the edge of the right heap makes it `peek`, as a "nearly". Wrong heaps simply
-  burst.
+- **Finding.** The air over the hide's heap is measured as the trees' stripping measures it (energy plus speed above
+  `gripSpeed`), and each rise of it counts, so it bursts out as the gust arrives, two glancing gusts add up and a
+  gust dying away adds nothing. A stroke's air is 3.4 m wide or more, so one passing a metre or two outside the heap
+  still reaches in. One deliberate swipe across the heap, or two careless ones near it, is enough; in the first round
+  any gust over the heap is. A gust that only shaves the right heap makes it `peek`, as a "nearly". Wrong heaps
+  simply burst.
 - **Found.** `burst`, a beat of `sit` and `scold` facing the child, then `bound` to the next waypoint, glancing back
   once (an invitation to chase). The cygnet chases a few steps (its own errand, not a script) and the child
   `cheer`s, then follows.
 - **The cygnet seeks too,** through its own mind and errands (`watch`, `peer`, `delve`, `shake`, `look-back`). It
   goes heap to heap. It is right about as often as chance, so it is a companion, not a solver.
 - **A stalled player.** After 10 s without wind on the right heap, the cygnet goes and stands at the right heap,
-  peering into it (the in-story hint, no fourth wall). After 18 s the standard drawn invitation (`invitationAt`)
-  sweeps across that heap. Neither ever supplies wind.
+  peering into it (the in-story hint, no fourth wall). After 18 s the standard drawn sweep (the chapter's
+  `windInvitation`) crosses that heap. Neither ever supplies wind.
 - **Camera.** Each round has its own frame, like the tangles' frames: the child, the heaps and the squirrel's last
   sighting in view. It is lower and closer than the walking shot so the squirrel reads (about the swing's 14–17 m,
-  storyboarded per round). Portrait is widened as the tangle shots are. Dashes between hides are followed by a
-  low-weight glance (`focus`), never a pan away from the child, and the squirrel never goes out of frame mid-beat.
+  storyboarded per round). Portrait stands further back on a longer lens, so its far heaps read nearly as large as its
+  near ones. Dashes between hides are followed by a low-weight glance (`shot.attention`), never a pan away from the
+  child, and the squirrel never goes out of frame mid-beat.
 
 ### Between rounds
 
@@ -372,8 +375,8 @@ places it where that point of the story would have it.
 ### The leap
 
 After round 3, the child runs at the deepest live drift in the hollow (found by the same readback), leaps
-(`child.leap`), lands sitting (`sitDown`), the leaves burst round her (a large `kick`), and she sits up and brushes
-gold off as the cygnet's head pops up beside her. Then they get up and walk on. If the hollow has been blown bare,
+(`child.leap`, landing on her seat), the leaves burst round her (`burst` at 1.4), and she sits up as the cygnet's
+head pops up beside her. Then they get up and walk on. If the hollow has been blown bare,
 she runs through what is left kicking leaves up instead. The moment always happens in some form.
 
 ### As storyboarded (phase 4)
@@ -481,21 +484,56 @@ standing up out of it. Now each round heap is a raked mound, judged in every rou
   points a frame), `burst(x, z, strength)` (0.2 peek, 0.55 dive, 1 burst, about 1.6 the leap), and
   `buryDepth(x, z, depth)`. `squirrel.onLeaves` drives `burst` in `main.ts`, steps excepted.
 
-**Still open for the game:**
+**Still open:** on the swing limb, while the swing is offered, the squirrel is backlit by the sun's glow and hard to
+see; once she is riding, the lower lens shows it.
 
-- From each round's lens the far side of a heap is behind its crest, so a tail out at a hide 0.3 r beyond the middle
-  shows only a little (round 1 and round 3's far heap least). The body hides anywhere now, so hides nearer the crest
-  would show the tail better.
-- In round 2's landscape frame the cygnet's first place (beside her) is behind the near heap from the lens.
-- On the swing limb, while the swing is offered, it is backlit by the sun's glow and hard to see; once she is riding,
-  the lower lens shows it.
-- The run down the wool after tangle 1 lies mostly outside portrait's walking frame; it needs the glance.
+### As built (phase 5b)
+
+`story/birches-squirrel.ts` (`BirchesSquirrel`, the chapter's `squirrel`) plays the game; `story/birches.ts` gates
+the walk on it; knobs are `tuning.birches.squirrel`; `tools/squirrel-rounds-check.mjs` drives it with real strokes.
+
+- **Its places.** Where the squirrel is follows from the story: rounds found, tangles freed, the swing ridden or
+  passed, the leap done and the scarf gathered. When that changes it goes along `PATHS` from wherever it is (cutting
+  in at the nearest point of the way if sent on early), and settles at the place's perch; a resumed save puts it
+  there directly. Found, it sits up and scolds her (`sitFor`, `scoldFor`), bounds off, and glances back once a few
+  metres on. It is shown only in the birches and its crossing, so it sees them off from the beach.
+- **Hiding.** On ahead to hide it dashes (`dash`, 2.4 times its pace): the ways into rounds 2 and 3 take 24 and 11
+  s at its usual speeds, longer than she takes to reach those heaps, so she would have watched which heap it went
+  into. A round's heaps wait for it to be hidden before she kneels at them (2–3 s at most in a natural walk). At the
+  round's ground it reads the floor once (`depthAt`, its hides and a 5 × 5 grid): a heap still `buryDepth` deep
+  (0.5 m), never the one just turned out of while there is another; else the deepest drift; else the bark of a
+  heap's bank tree, round from the lens. Drift and trunk hides are only chosen where the round's lens shows them. It
+  lies at `AutumnBirches.buryDepth` under the leaves' surface, under each heap's crest (0.1 of the radius past its
+  middle from the lens) so the tail tip shows over the top. Turned out before she arrives, it hides again.
+- **Tells and finding.** The shiver is a `burst` at 0.18 with a rustle; the tail is re-dealt at each tell by round
+  (0.5, 0.33, 0.2); a fifth of tells are a peek. Each rise of the air over the heap counts; 0.12 flushes it in round
+  1 and 0.25 after. Measured strokes: across a heap 0.3–0.6, along its rim 0.1–0.17, a metre outside it about 0.1.
+  Round 3's heaps are told apart cleanly. In round 2 a hard stroke over the far heap also blows the near one (its air
+  reaches there at 0.4–0.6), so it finds a squirrel in the near heap: generous, and what the leaves show. A child's
+  random swipes found it in 1–25 strokes a round.
+- **Her and the cygnet.** She walks round any heap between her and her stand rather than through it, kneels there
+  (`kneel`) and turns to each heap the wind bursts; found, she gets up and cheers. The cygnet first stands beside her,
+  then looks into heaps of its own choosing from the rim nearest her (`ROUNDS[].cygnet`), delving or peering and
+  shaking off; at `hintAfter` it goes to the right heap's rim and peers; on a find it chases a few steps.
+- **The leap.** One readback over round 3's heaps and ground picks the deepest leaves; the cygnet goes in first; she
+  runs and leaps (`Traveller.leap` with `seat`: she lands on her seat with no stumble), the leaves burst at 1.4, she
+  sits 1.8 s and gets up. Below `leapDepth` (0.35 m) she runs on through the hollow toward the sun, kicking leaves
+  up. Measured 5–7.5 s.
+- **Frames.** Landscape keeps phase 4's frames; portrait stands 20–22 m back on a 1.8–2.6× lens (`RoomFrame.zoom`),
+  eased in by the camera. Sitting up, the squirrel measures 49 / 79, 36 / 74, 42, 31 px in landscape and 34 / 63,
+  37 / 49, 33, 26 px in portrait (by heap, near to far; the skinned outline), with the child whole and every heap's
+  middle in frame; peeking, its head stands 10–30 px over the leaves. The meeting, the dash down the wool and the
+  goodbye get `shot.attention` at `glance` (0.28).
+- **Sound.** `BirchesFoley.leaves`: a rustle for each tell, a burst when it is turned out and when the wind throws a
+  wrong heap up, and the leap's burst with a thump under it. Heard just before the leaves go up, each stands for the
+  scuff that `burst` would otherwise make.
 
 ### Saves
 
 Each finished round is a checkpoint. The birches payload gains `squirrelRounds`, and point names gain the round
-count. Saves made before this build infer the rounds already walked past from their leg and tangle count, so a
-resumed player never repeats or skips a round's place on the walk.
+count: `squirrel<rounds>-scarf<tangles>`, with `-swing` once it is ridden. Saves made before this build infer the
+rounds already walked past from their tangle count, swing and leg (a round comes before its tangle; the second
+before the swing too), so a resumed player never repeats or skips a round's place on the walk.
 
 ### Autumn leaves on the stairs island
 

@@ -30,7 +30,6 @@ const STUMP = TANGLE_PERCHES[1].action === 'sit' ? TANGLE_PERCHES[1].at : new TH
 const ON_THE_STUMP: Floor = (x, z) => (Math.hypot(x - STUMP.x, z - STUMP.z) < 0.5 ? STUMP.y : ground(x, z));
 const floorTo = (station: Station): Floor => (station === 'tangle2' ? ON_THE_STUMP : ground);
 
-/** What the chapter tells it each frame. */
 export interface SquirrelCue {
   /** The round she is walking to or playing; −1 between rounds. */
   round: number;
@@ -136,7 +135,7 @@ export class BirchesSquirrel {
     return h && { at: h.at, heap: h.heap, trunk: h.trunk !== null };
   }
 
-  /** It is under the leaves (or behind its trunk) in round `round`, so she may come and look; the first round is its meeting. */
+  /** Hidden in round `round`, so she may come and look; in the first, it is seen going in. */
   ready(round: number): boolean {
     return round === 0 || (this.rounds === round && this.mode === 'hidden');
   }
@@ -339,7 +338,7 @@ export class BirchesSquirrel {
     });
   }
 
-  /** Whether `p` stands well inside round `round`'s frame on this screen, so a hide there is never out of the picture. */
+  /** Whether `p` stands well inside round `round`'s frame on this screen, so a hide there stays in the picture. */
   private inView(round: number, p: THREE.Vector3): boolean {
     const aspect = window.innerWidth / window.innerHeight;
     const shot = frameShot(ROUNDS[round].frames, aspect, this.lensShot);

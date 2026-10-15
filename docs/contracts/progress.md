@@ -25,9 +25,11 @@ Every chapter has an entry checkpoint. The additional points:
 - Little Boats: `pool-1` and `pool-2` with fleet progress; the travellers restore on the dry bank between swims and
   the gathered toys at rest.
 - Meadow: `piano` (leaving the piano) and `pond` (leaving the pond encounter).
-- Birches: `scarf4-1` to `scarf4-4` for each freed tangle, plus `-swing` variants (and `scarf4-0-swing`) after the
-  one-time optional swing; the payload holds route leg, swing count, dusk and freed tangles. The last restores the red
-  sail. Independent cygnet play makes no checkpoint.
+- Birches: `squirrel<r>-scarf<t>` after each round of the squirrel's game found (`r`) and each tangle freed (`t`),
+  with `-swing` once the optional swing is ridden; the payload holds route leg, swing count, dusk, freed tangles and
+  rounds found. All four tangles restore the red sail; the squirrel resumes where that point has it (waiting at a
+  tangle, hidden in the next round's heaps, on the swing limb, or at the water's edge). Independent cygnet play makes
+  no checkpoint.
 - Stairs in the clouds: `flight-1` to `flight-3`, the number of flights docked; restore rebuilds the docked stairs and
   stands the pair at the matching landing. `cloud` once the loop is behind them, until they are out on top (resumes on the landing the loop's way on leaves
   from, every flight docked, the bird going on ahead up the last flights into the white).
@@ -58,7 +60,8 @@ Every chapter has an entry checkpoint. The additional points:
 - Home: `reunion` (resume the walk to the house), `drawing` (the sheet open at the brow, without replaying the motif)
   and `complete`, which returns to the thank-you screen until replay is chosen.
 
-Legacy saves stay playable: older point names and payloads (`scarf-*`, `swing` and `leaves` on the birches; `stars`,
+Legacy saves stay playable: older point names and payloads (`scarf4-*`, `scarf-*`, `swing` and `leaves` on the
+birches, which infer the squirrel's rounds behind them; `stars`,
 `stars-<mask>`, `moon`, `tide`, `lantern`, `reflection` and `window` on the mirror; `toHome` routed through
 `toMirror`) map onto the current ones in each chapter's restore. Saves from earlier island layouts carry a geography
 revision: `src/story/geography-progress.ts` translates travellers, boat and local life regions to the current

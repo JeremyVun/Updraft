@@ -217,7 +217,7 @@ bursts a heap exactly as now and never rebuilds it.
   unchanged; the heaps add one draw of about 19,000 small cards and one of about 6,600 vertices, both only near
   the island.
 
-### 5b. The game. Opus. Done: ☐ (after 4; alongside 5a)
+### 5b. The game. Opus. Done: ☑ (2026-10-15)
 
 Worktree `/Users/jeremy/projects/updraft-birches`, branch `birches-uplift`. Owns `src/story/birches-squirrel.ts`
 (rounds, hides via `depthAt`, the trunk fallback, finding, tells, the cygnet's co-seeking, the stall hint and
@@ -239,6 +239,22 @@ and `burst` through a thin local stand-in (`kick` and the authored heap depths) 
   arrival (drift and trunk fallbacks); the leap with a deep drift and with a bare hollow; and a resume at every new
   checkpoint and from pre-build save names. Existing `scarf-check` (all modes) and the swing still pass. One smoke
   drive through the whole room. The full look loop belongs to phase 6.
+- **Built:** design.md "As built (phase 5b)". Merged 5a (a618073b) mid-phase and deleted the stand-in; the game reads
+  `depthAt`, `burst` and `buryDepth` directly. `squirrel-rounds-check` (dev server, real strokes, 1600×900): one stroke
+  across the right heap finds it in every round, 0.75–0.8 s after the stroke begins; wrong heaps first never find it
+  in round 3, nor round 2's far heap from the near one (a hard stroke over the far heap does find it in the near one);
+  random swipes found it in 1–25 strokes a round over three seeds; stalled, the cygnet stands peering at the right heap
+  at 10–11.6 s and the drawn sweep shows at 18.1–18.6 s, nothing found in 30 s; blown flat by real strokes (hides
+  0.84–0.98 m → 0–0.24 m) it went behind a bank trunk in rounds 2 and 3, and forced drift and trunk floors bury it in
+  a drift in frame and behind a trunk, each found in one stroke; the leap 5.9–8.2 s, the bare run 2 s; 17 resume
+  points (8 new, 9 pre-build) put it at its perch (0 m off) or hidden in the next round, and two real reloads resume
+  it. Squirrel sitting up, skinned outline: 49 / 79, 37 / 77, 41, 31 px landscape; 34 / 63, 38 / 49, 32, 26 px
+  portrait (portrait was 13–31 px); peeks clear the leaves by 11–29 px. `scarf-check` default, PHYSICS=1 and
+  NATURAL=1, the swing, `progress-schema` (145 layouts), `plane-routing`, `scarf-geometry`, `birches-score`,
+  `birches-foley`, `journey-pacing` and `npm run check` pass. Smoke drive (`playthrough.mjs` from a `toBirches` save,
+  `UNTIL=toStairs`, a brisk player: every round found in one or two sweeps, the swing declined, the leap taken): 184 s
+  on the island (3:04); 194 s in an earlier run that took the bare-hollow run. An engaged player who rides the swing
+  and misses a heap or two adds roughly 30–60 s.
 
 ### 6. Verification wave. Opus. Done: ☐ (after 5a and 5b, merged)
 
