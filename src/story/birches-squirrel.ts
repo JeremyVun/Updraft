@@ -136,6 +136,11 @@ export class BirchesSquirrel {
     return h && { at: h.at, heap: h.heap, trunk: h.trunk !== null };
   }
 
+  /** It is under the leaves (or behind its trunk) in round `round`, so she may come and look; the first round is its meeting. */
+  ready(round: number): boolean {
+    return round === 0 || (this.rounds === round && this.mode === 'hidden');
+  }
+
   get leaping(): boolean {
     return this.leap !== 'none' && this.leap !== 'done';
   }
@@ -282,7 +287,8 @@ export class BirchesSquirrel {
         }
       }
     }
-    s.follow(points, () => this.arrive(station), { floor: floorTo(station) });
+    /** On ahead to hide, it dashes, so it is under the leaves before she gets there. */
+    s.follow(points, () => this.arrive(station), { floor: floorTo(station), pace: ROUND_OF[station] === undefined ? 1 : tuning.birches.squirrel.dash });
   }
 
   /** It stops, sits up and looks back at her once: come on, then. */
@@ -411,12 +417,12 @@ export class BirchesSquirrel {
         if (this.hidden !== h) return;
         this.mode = 'hidden';
         s.look(this.face);
-      }, { floor: ground });
+      }, { floor: ground, pace: tuning.birches.squirrel.dash });
       return;
     }
     if (this.station === 'meeting' || Math.hypot(h.at.x - from.x, h.at.z - from.z) < 3.5) { this.dive(h); return; }
     const rim = onGround(h.at.clone().addScaledVector(flat(h.at, from), 1.6));
-    s.follow([{ at: rim, on: 'ground' }], () => { if (this.hidden === h) this.dive(h); }, { floor: ground });
+    s.follow([{ at: rim, on: 'ground' }], () => { if (this.hidden === h) this.dive(h); }, { floor: ground, pace: tuning.birches.squirrel.dash });
   }
 
   /** The ground, and toward the hide the level its paws are set at in the leaves there, eased so it never steps. */

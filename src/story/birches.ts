@@ -329,7 +329,7 @@ export class BirchesChapter implements Chapter {
     if (stop && 'round' in stop) {
       const { stand } = ROUNDS[stop.round];
       if (stand.z - c.position.z > PUT_PAST) this.squirrel.passed(stop.round, this.cue());
-      else if (!c.acting && (c.position.distanceTo(stand) < tuning.birches.scarf.arriveWithin || c.position.z < stand.z)) {
+      else if (!c.acting && this.squirrel.ready(stop.round) && (c.position.distanceTo(stand) < tuning.birches.scarf.arriveWithin || c.position.z < stand.z)) {
         this.toRound(stop.round);
         return;
       }

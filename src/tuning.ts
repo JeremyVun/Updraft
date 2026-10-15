@@ -1406,6 +1406,8 @@ export const tuning = {
       sitFor: 0.5, scoldFor: 1.6, glanceAfter: 3.5, glanceFor: 0.7, walkOnAfter: 1.4,
       /** How far she kneels to peer into the heaps, and how far the cygnet chases after it. */
       kneel: 0.6, chaseReach: 2.5,
+      /** How much faster than its usual it runs on ahead to hide. */
+      dash: 2.4,
       /** Seconds between the cygnet's tries at a heap of its own choosing. */
       seekFrom: 1.2, seekTo: 3,
       /** Share of the camera's gaze given to the squirrel at the meeting, on its dash along the wool, and at the goodbye. */

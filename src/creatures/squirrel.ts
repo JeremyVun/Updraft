@@ -129,6 +129,7 @@ export class Squirrel {
   private routeEnd: SquirrelPoint | null = null;
   private along = 0;
   private speed = 0;
+  private pace = 1;
   private setOff = 0;
   private cruise = 0;
   private seg = 0;
@@ -254,9 +255,10 @@ export class Squirrel {
    * Goes along `path` and calls `onArrive` there: bounding over the ground (on `opts.floor`, or the ground through
    * each point), up and down trunks and along the wool, its paws planted on each, the turn from one surface to the
    * next taken in the gap between their points. If it is not at the first point it goes there first. It comes to a
-   * stop at the end sitting up on the ground, holding on to the bark, or crouched on the wool.
+   * stop at the end sitting up on the ground, holding on to the bark, or crouched on the wool. `pace` scales its
+   * speeds on every surface, for a dash.
    */
-  follow(path: readonly SquirrelPoint[], onArrive?: () => void, opts: { floor?: Floor | null } = {}): void {
+  follow(path: readonly SquirrelPoint[], onArrive?: () => void, opts: { floor?: Floor | null; pace?: number } = {}): void {
     if (path.length === 0) {
       onArrive?.();
       return;
@@ -277,6 +279,7 @@ export class Squirrel {
       this.setOff = 0;
     }
     this.onArrive = onArrive ?? null;
+    this.pace = opts.pace ?? 1;
     this.mode = 'travel';
     this.stoppedOn = null;
     this.lookNow.nut = false;
@@ -371,7 +374,7 @@ export class Squirrel {
     const route = this.route!;
     const t = tuning.squirrel;
     const pace = (k: Kind) => (k === 'trunk' ? t.climbSpeed : k === 'line' ? t.lineSpeed : t.boundSpeed);
-    this.cruise = Math.min(pace(route.kind(this.seg, 'from')), pace(route.kind(this.seg, 'to')));
+    this.cruise = Math.min(pace(route.kind(this.seg, 'from')), pace(route.kind(this.seg, 'to'))) * this.pace;
     this.setOff += dt;
     /** Up out of a sit before it goes anywhere. */
     const ready = smooth((this.setOff - 0.05) / 0.15);
