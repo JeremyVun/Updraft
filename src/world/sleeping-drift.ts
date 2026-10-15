@@ -55,22 +55,22 @@ const segment = (u: number, v: number, au: number, av: number, bu: number, bv: n
  * One drift, written twice: here for the walking, the brush and the checks, and in DRIFT_GLSL for the drawing.
  * Keep them in step. The wind comes over the outcrop from the left: it scours a shallow trough, cuts the long
  * windward slope into sastrugi and builds a crest that breaks off steeply over the drop as a lee face.
- * The outline is a rounded square, so no corner peaks, with a long wading ramp all round and pulled back on the near
- * right, where the lens passes on the way out.
+ * The outline is a rounded square, so no corner peaks, pulled back on the near right, where the lens passes on the way
+ * out. All round it a shallow skirt, a bird's chest deep, runs in to a wind-cut face that stands well over its head.
  */
 function rimAt(u: number, v: number): number {
   const bu = u + .3 * Math.sin(v * 1.2), bv = v + .2 * Math.sin(u * .9 + .5);
   const qu = bu / (bu < 0 ? 3.4 : 5), qv = bv / (bv < 0 ? 3.7 : 4.3);
   const r = (qu ** 4 + qv ** 4) ** .25 + .04 * Math.sin(u * 2.1 + v * .7) * Math.sin(v * 2.6 - u * 1.3 + 1.1)
     + .4 * ss(.3, 2.6, u) * (1 - ss(-3, 2.2, v));
-  return ss(0, .62, 1 - r) ** 1.5;
+  return .34 * ss(0, .2, 1 - r) + .66 * ss(.33, .47, 1 - r);
 }
 const crestLine = (v: number) => 2.3 + .25 * v + .2 * Math.sin(v * 1.3 + .4);
 const crestHeight = (v: number) => ss(-1, 2.8, v) * (1 - .4 * ss(2.8, 4, v));
 function bodyAt(u: number, v: number): number {
   const uc = crestLine(v), wind = ss(-3.6, uc, u), lee = 1 - ss(uc - .05, uc + .5, u);
   const outcrop = .1 * Math.exp(-((u + 2.4) ** 2)) * ss(-3.3, -1, v) * (1 - ss(1, 3, v));
-  const scoop = .14 * Math.exp(-((u - .1) ** 2) / .8) * ss(-2.5, 0, v);
+  const scoop = .07 * Math.exp(-((u - .1) ** 2) / .8) * ss(-2.5, 0, v);
   return Math.max(0, (.44 + .56 * wind * wind * wind * crestHeight(v) + outcrop - scoop) * lee);
 }
 function routeDistance(u: number, v: number): number {
@@ -91,14 +91,14 @@ float rimAt(vec2 p) {
   q *= q;
   float r = pow(dot(q, q), .25) + .04 * sin(p.x * 2.1 + p.y * .7) * sin(p.y * 2.6 - p.x * 1.3 + 1.1)
     + .4 * ss(.3, 2.6, p.x) * (1.0 - ss(-3.0, 2.2, p.y));
-  return pow(ss(0.0, .62, 1.0 - r), 1.5);
+  return .34 * ss(0.0, .2, 1.0 - r) + .66 * ss(.33, .47, 1.0 - r);
 }
 float crestLine(float v) { return 2.3 + .25 * v + .2 * sin(v * 1.3 + .4); }
 float crestHeight(float v) { return ss(-1.0, 2.8, v) * (1.0 - .4 * ss(2.8, 4.0, v)); }
 float bodyAt(vec2 p) {
   float uc = crestLine(p.y), wind = ss(-3.6, uc, p.x), lee = 1.0 - ss(uc - .05, uc + .5, p.x);
   float outcrop = .1 * exp(-(p.x + 2.4) * (p.x + 2.4)) * ss(-3.3, -1.0, p.y) * (1.0 - ss(1.0, 3.0, p.y));
-  float scoop = .14 * exp(-(p.x - .1) * (p.x - .1) / .8) * ss(-2.5, 0.0, p.y);
+  float scoop = .07 * exp(-(p.x - .1) * (p.x - .1) / .8) * ss(-2.5, 0.0, p.y);
   return max(0.0, (.44 + .56 * wind * wind * wind * crestHeight(p.y) + outcrop - scoop) * lee);
 }
 float routeDistance(vec2 p) {

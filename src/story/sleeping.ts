@@ -10,6 +10,7 @@ import { MIST_AT, SNOW_AT, WINDOW_SEEN } from '../world/sleeping-trail';
 import { BED, BED_FACING, HILLTOP, LAMP, PILLOW, WINDOW, SLEEP_LEDGE, SLEEP_ROUTE, CURTAIN_END, CURTAIN_KNOT, SLEEP_BERTH, SLEEP_LANDING } from '../world/sleeping';
 import type { Cast, Chapter } from './cast';
 import { cue } from './cues';
+import { CLAMBER } from '../creatures/cygnet';
 import { FEATHER_LENGTH } from '../fx/feather';
 import type { SleepingScorePhase } from '../audio/sleeping-score';
 
@@ -143,6 +144,8 @@ function alongOf(x: number, z: number): number {
 }
 const TRICKLE_AT = alongOf(SLEEP_TRICKLE[0], SLEEP_TRICKLE[1]);
 const STEP_AT = ROUTE_AT[SLEEP_STEP_STOP];
+/** Seconds into the clamber when it is over the lip and on its feet on top. */
+const STEP_LANDS = T.stepClamberFor * CLAMBER.heave;
 /** Where the fog's lane opens, from the saddle toward the window. */
 const UP_THE_LANE = new THREE.Vector2(WINDOW.x - SLEEP_ROUTE[SLEEP_FOG_STOP].x, WINDOW.z - SLEEP_ROUTE[SLEEP_FOG_STOP].z).normalize();
 const DOWN_TO_BED = new THREE.Vector2(BED.x - SLEEP_ROUTE[SLEEP_FOG_STOP].x, BED.z - SLEEP_ROUTE[SLEEP_FOG_STOP].z);
@@ -1085,7 +1088,9 @@ export class SleepingChapter implements Chapter {
       this.face(this.stepTo, dt, 2);
       k.watch(this.lipAt);
       if (k.hoping < T.stepHope) return;
-      k.bound(this.stepTo, 'dash', T.stepScrambleFor, T.stepScrambleArc);
+      routePoint(STEP_AT + T.stepEdge, this.spot);
+      this.spot.y = routePoint(STEP_AT + T.stepEdge + 0.3, this.side).y;
+      k.clamber(this.spot, this.stepTo, T.stepClamberFor, T.stepFeathers);
       this.heardFlutter();
       this.next('over');
       return;
@@ -1113,17 +1118,28 @@ export class SleepingChapter implements Chapter {
     }],
   ];
 
+  /**
+   * Up on top it shakes itself as it finds its feet and looks back down at the lamp; by then the lens has brought the
+   * window up over the shoulder, and it turns to it and walks on.
+   */
   private readonly stepOver: readonly (readonly [number, () => void])[] = [
-    [T.stepScrambleFor, () => { this.cast.cygnet.does('shake', undefined, 1.1); this.cast.cygnet.mind.trust(0.5); }],
-    [T.stepScrambleFor + 1.3, () => { this.cast.cygnet.watch(WINDOW); this.holdUntil = this.now + T.glanceFor; }],
-    [T.stepScrambleFor + 1.3 + T.glanceFor, () => {
+    [STEP_LANDS, () => {
+      this.cast.cygnet.does('shake', undefined, T.stepShakeFor);
+      this.cast.cygnet.mind.trust(0.5);
+    }],
+    [STEP_LANDS + T.stepShakeFor, () => {
+      this.glances++;
+      this.cast.cygnet.does('look-back', LAMP, T.stepLampFor);
+      this.cast.cygnet.watch(LAMP);
+    }],
+    [STEP_LANDS + T.stepShakeFor + T.stepLampFor, () => this.cast.cygnet.watch(WINDOW)],
+    [STEP_LANDS + T.stepStandFor, () => {
       const k = this.cast.cygnet;
       this.stepDone = true;
       k.wing.recovery = 1;
       k.hopeBeats = 0;
       k.needs(T.liftToFly, null);
       this.nextWaypoint();
-      this.glance(LAMP);
       this.to('climb');
     }],
   ];

@@ -22,8 +22,12 @@ const DOWNWIND = new THREE.Vector2(Math.cos(-0.31), Math.sin(-0.31));
 /** Bent nearly along the coast: the wind off the sea is turned by the hill before it reaches the slope. */
 const LEAN = new THREE.Vector3(0.99, 0, -0.14).normalize();
 const THORN = new THREE.Vector3(-158.6, 0, -1923.8);
-/** The rabbit's form, in the lee of the hawthorn's crown. */
-const FORM = new THREE.Vector2(THORN.x + 0.8, THORN.z - 0.15);
+/** Bare ground in the lee of the hawthorn's crown, where no tussock grows. */
+const LEE = new THREE.Vector2(THORN.x + 0.8, THORN.z - 0.15);
+/** The rabbit's form, under the hawthorn's crown on the side the climb passes, so no stem crosses it from the lens. */
+const FORM = new THREE.Vector2(THORN.x + 0.6, THORN.z + 0.7);
+/** Lying side-on to the lens on the lower slope, so it reads as a loaf with its ears along its back. */
+const FORM_FACING = 0.6;
 const RABBIT_SIZE = 0.4;
 /** Seconds the morning may lie on the rabbit unseen before it wakes anyway. */
 const WAKE_UNSEEN = 30;
@@ -370,7 +374,7 @@ export class SleepingDressing {
       canopy: [],
     };
     this.rabbits = new Rabbits(habitat, 1, RABBIT_SIZE);
-    this.rabbits.addSleeper(FORM.x, FORM.y, 1.0, 90413);
+    this.rabbits.addSleeper(FORM.x, FORM.y, FORM_FACING, 90413);
     this.objects.push(this.rabbits.mesh);
     this.stimuli = {
       wind, sample: { x: 0, z: 0, energy: 0, lift: 0 }, camera: new THREE.PerspectiveCamera(), input, gustAt: null,
@@ -602,7 +606,7 @@ export class SleepingDressing {
       const n = 3 + Math.floor(rand() * 5);
       for (let j = 0; j < n; j++) {
         const x = cx + range(rand, -1.6, 1.6), z = cz + range(rand, -1.2, 1.2);
-        if (!this.open(x, z, 1.1) || Math.hypot(x - THORN.x, z - THORN.z) < 0.5 || Math.hypot(x - FORM.x, z - FORM.y) < 0.45) continue;
+        if (!this.open(x, z, 1.1) || Math.hypot(x - THORN.x, z - THORN.z) < 0.5 || Math.hypot(x - LEE.x, z - LEE.y) < 0.45) continue;
         this.tussock(rand, plants, x, z, range(rand, 0.85, 1.4));
       }
     }
@@ -685,6 +689,9 @@ export class SleepingDressing {
       }
       strip(run, range(rand, 0.14, 0.2));
     }
+    /** The rabbit's form: a scrape worn through the frost to the earth, a little longer than the rabbit. */
+    const lie = new THREE.Vector3(Math.sin(FORM_FACING), 0, Math.cos(FORM_FACING));
+    strip(Array.from({ length: 15 }, (_, i) => new THREE.Vector3(FORM.x, 0, FORM.y).addScaledVector(lie, (i / 14 - 0.5) * 0.95)), 0.3);
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
     geo.setAttribute('aMark', new THREE.Float32BufferAttribute(mark, 3));

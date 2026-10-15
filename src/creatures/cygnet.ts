@@ -36,6 +36,8 @@ const GLIDE_FOR = 9;
 const HOP_FOR = 4.2;
 /** How long a try at flying is a run, before it turns into a fall. */
 const RUN_UNTIL = 2.6;
+/** A clamber's shares of its time: crouched, then springing at the face, hanging by its chest, and heaved over the lip. */
+export const CLAMBER = { crouch: 0.13, spring: 0.27, hang: 0.62, heave: 0.8 };
 
 /** Other places a hand can go on it, in its body's own frame: under the breast and under the rump, for holding it across the chest. */
 const GRIPS = { breast: [0, -0.1, 0.12], rump: [0, -0.09, -0.13] } as const;
@@ -237,6 +239,15 @@ export class Cygnet {
   private awayFromChild = 0;
   /** 0 to 1: down on its breast with its tail in the air, after a try that did not work or a landing it got wrong. */
   private faceplant = 0;
+  private clamberT = -1;
+  private clamberFor = 1;
+  private clamberShed = 0;
+  private scramble = 0;
+  private readonly clamberFrom = new THREE.Vector3();
+  private readonly clamberHang = new THREE.Vector3();
+  private readonly clamberLip = new THREE.Vector3();
+  private readonly clamberOver = new THREE.Vector3();
+  private readonly clamberTo = new THREE.Vector3();
   private landedAt = 0;
   private landing = 0;
   private leaveYaw = 0;
@@ -329,7 +340,7 @@ export class Cygnet {
     };
     this.drives = {
       time: 0, carried: false, seat: null, inHands: false, move: null, jostle: 0, falling: false, gliding: false, leaving: false, afoot: false, downed: false, afloat: false, perched: false,
-      settle: 0, fear: 0, bond: 0, cold: 0, effort: 0, flap: 0, flapPhase: 0, glide: 0, look: 0, tucked: 0, hope: 0, hopLift: 0, crouch: 0, landing: 0, faceplant: 0, flop: 0, doze: 0, wriggle: 0,
+      settle: 0, fear: 0, bond: 0, cold: 0, effort: 0, flap: 0, flapPhase: 0, glide: 0, look: 0, tucked: 0, hope: 0, hopLift: 0, crouch: 0, landing: 0, faceplant: 0, scramble: 0, flop: 0, doze: 0, wriggle: 0,
       puff: 0, stride: 0, hurry: 0, pitch: 0, roll: 0, tow: 0, beg: 0, call: { env: 0, note: 0, long: false }, gaze: { yaw: 0, pitch: 0, firm: false, wandering: true },
       act: null, actK: 0, actEnv: 0, actSide: 1, actYaw: 0, actNear: 0, breath: 0, blink: 0, wingGuard: 0, wingOpening: 0, braced: 0, wind: { x: 0, z: 0 },
       gait: { on: false, feet: [{ x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }], sway: 0, roll: 0, twist: 0, dip: 0, pace: 0 },
@@ -678,6 +689,105 @@ export class Cygnet {
     if (kind === 'dash') this.heard.push({ kind: 'scramble', amount: 1 });
   }
 
+  /**
+   * Up a bank too high to hop, on one good wing: a crouch and a spring, its chest onto the lip with its feet pedalling
+   * at the face, a heave over on its breast and a stumble onto its feet on top. `lip` is the bank's edge; `feathers`
+   * come loose at the worst of it. It stays where it ends up until the story lets it walk on.
+   */
+  clamber(lip: THREE.Vector3, to: THREE.Vector3, dur: number, feathers: number): void {
+    this.clamberFrom.copy(this.position);
+    this.clamberTo.set(to.x, Math.max(this.ground(to.x, to.z), 0), to.z);
+    this.clamberLip.copy(lip);
+    const ux = to.x - this.position.x, uz = to.z - this.position.z, run = Math.hypot(ux, uz) || 1;
+    this.clamberHang.set(lip.x - (ux / run) * 0.1, lip.y - 0.34, lip.z - (uz / run) * 0.1);
+    this.clamberOver.set(lip.x + (ux / run) * 0.32, 0, lip.z + (uz / run) * 0.32);
+    this.clamberOver.y = Math.max(this.ground(this.clamberOver.x, this.clamberOver.z), 0);
+    this.clamberT = 0;
+    this.clamberFor = dur;
+    this.clamberShed = feathers;
+    this.yaw = Math.atan2(ux, uz);
+    this.state = 'following';
+    this.stay = true;
+    this.errand = null;
+    this.hopT = 0;
+    this.landing = 0;
+  }
+
+  get clambering(): boolean {
+    return this.clamberT >= 0;
+  }
+
+  private clamberStep(dt: number): void {
+    const was = this.clamberT / this.clamberFor, t = (this.clamberT += dt) / this.clamberFor, c = CLAMBER, p = this.position;
+    const passing = (at: number) => was < at && t >= at;
+    if (passing(c.crouch)) this.heard.push({ kind: 'scramble', amount: 1 });
+    if (passing(c.heave)) this.heard.push({ kind: 'tumble', amount: 0.45 });
+    const phase = (a: number, b: number) => clamp((t - a) / (b - a), 0, 1);
+    const smooth = THREE.MathUtils.smootherstep;
+    const beating = (rate: number, to: number) => { this.flap = ease(this.flap, to, 10, dt); this.flapPhase += dt * rate; };
+    if (t < c.crouch) {
+      /** It gathers itself low, wings coming off its back, eyes on the lip. */
+      p.copy(this.clamberFrom);
+      this.settle = ease(this.settle, 0.5, 10, dt);
+      this.effort = 0.3;
+      beating(8, 0.35);
+      this.pitch = ease(this.pitch, 0.18, 8, dt);
+    } else if (t < c.spring) {
+      const k = phase(c.crouch, c.spring), e = smooth(k, 0, 1);
+      p.lerpVectors(this.clamberFrom, this.clamberHang, e);
+      p.y += Math.sin(k * Math.PI) * 0.22;
+      this.settle = 0;
+      this.scramble = ease(this.scramble, 1, 14, dt);
+      this.effort = 1;
+      beating(19, 1);
+      this.pitch = ease(this.pitch, -0.95, 9, dt);
+    } else if (t < c.hang) {
+      /** Its chest is on the lip and its feet run at the face; it slips back once before the good wing hauls it up. */
+      const k = phase(c.spring, c.hang);
+      p.copy(this.clamberHang);
+      p.y += -0.09 * Math.sin(Math.min(1, k / 0.55) * Math.PI) + 0.07 * smooth(k, 0.55, 1);
+      this.scramble = ease(this.scramble, 1, 14, dt);
+      this.effort = 1;
+      beating(21, 1);
+      this.pitch = ease(this.pitch, -0.95 - 0.12 * Math.sin(this.time * 7), 9, dt);
+      this.roll = ease(this.roll, 0.2 + 0.12 * Math.sin(this.time * 9), 7, dt);
+      if (k > 0.45 && this.clamberShed > 0) {
+        this.nodes[BODY].getWorldPosition(this.tmp);
+        this.looseDown.burst(this.tmp, this.yaw + Math.PI, this.clamberShed, 0.45, 0.6);
+        this.clamberShed = 0;
+      }
+    } else if (t < c.heave) {
+      /** Over the lip on its breast, legs kicking behind. */
+      const k = smooth(phase(c.hang, c.heave), 0, 1), s = 1 - k;
+      const hang = this.clamberHang, lip = this.clamberLip, over = this.clamberOver;
+      p.set(s * s * hang.x + 2 * s * k * lip.x + k * k * over.x, s * s * (hang.y + 0.07) + 2 * s * k * (lip.y + 0.1) + k * k * over.y, s * s * hang.z + 2 * s * k * lip.z + k * k * over.z);
+      this.scramble = ease(this.scramble, 0.45, 6, dt);
+      this.effort = 0.8;
+      beating(16, 0.8);
+      this.pitch = ease(this.pitch, 0.45, 8, dt);
+      this.roll = ease(this.roll, -0.12, 5, dt);
+      this.faceplant = ease(this.faceplant, 0.35, 8, dt);
+    } else {
+      /** Onto its feet in a stagger, and still. */
+      const k = phase(c.heave, 1);
+      p.lerpVectors(this.clamberOver, this.clamberTo, smooth(k, 0, 1));
+      p.y = Math.max(this.ground(p.x, p.z), 0) + Math.sin(Math.min(1, k * 2) * Math.PI) * 0.05;
+      this.scramble = ease(this.scramble, 0, 10, dt);
+      this.effort = ease(this.effort, 0, 6, dt);
+      beating(9, 0.25 * (1 - k));
+      this.pitch = ease(this.pitch, 0, 7, dt);
+      this.roll = ease(this.roll, 0.24 * Math.sin(k * Math.PI * 2) * (1 - k), 9, dt);
+      this.faceplant = ease(this.faceplant, 0, 10, dt);
+      this.hurry = ease(this.hurry, 0, 6, dt);
+    }
+    p.y = Math.max(p.y, Math.max(this.ground(p.x, p.z), 0));
+    if (t < 1) return;
+    p.copy(this.clamberTo);
+    this.clamberT = -1;
+    this.scramble = this.faceplant = this.pitch = this.roll = this.effort = 0;
+    this.landedAt = this.time;
+  }
+
   /** Where a holding hand goes, in the world: under the belly either side, on the back, under the breast or the rump. */
   grip(name: keyof typeof GRIPS | keyof typeof HOLDS, out: THREE.Vector3): THREE.Vector3 {
     const body = this.nodes[BODY];
@@ -888,6 +998,7 @@ export class Cygnet {
     } else if (this.state === 'leaving') this.climbOut(dt, child);
     else if (this.state === 'fledging') this.fledging(dt, child);
     else if (this.state === 'gliding') this.sailFor > 0 ? this.sail(dt) : this.soar(dt, wind, child);
+    else if (this.state === 'following' && this.clambering) this.clamberStep(dt);
     else if (this.state === 'following' && this.seating.move?.kind === 'dash' && this.stay) {
       // A brief scrambling flutter; ground locomotion cannot move the landing beneath it.
       this.flap = ease(this.flap, 0.85, 12, dt);
@@ -1656,7 +1767,7 @@ export class Cygnet {
     s.where = this.carried || st === 'perched' || st === 'swimming' ? 'riding' : st === 'following' ? 'afoot' : st === 'fallen' || st === 'downed' ? 'down' : 'airborne';
     const working = st === 'swimming' && !this.watchFace && this.mind.told !== null;
     this.working = ease(this.working, working ? 1 : 0, 8, dt);
-    s.locked = working || this.steadyLift || this.hopT > 0 || this.landing > 0 || this.seating.move !== null || this.seating.held;
+    s.locked = working || this.steadyLift || this.hopT > 0 || this.landing > 0 || this.seating.move !== null || this.seating.held || this.clambering;
     s.busy = s.locked || this.callT > 0 || this.doze > 0.3 || this.hope > 0.3 || this.preenWeight > 0;
     this.mind.update(dt, s);
   }
@@ -1708,6 +1819,7 @@ export class Cygnet {
     d.crouch = this.hopT > HOP_FOR - 0.8 ? 1 : 0;
     d.landing = clamp(this.landing / 0.75, 0, 1);
     d.faceplant = this.faceplant;
+    d.scramble = this.scramble;
     d.flop = this.flop;
     d.doze = this.doze;
     d.wriggle = this.wriggle;
@@ -1742,7 +1854,7 @@ export class Cygnet {
     this.aim(yaw);
 
     /** On its own feet and not hopping, its legs belong to the ground it is walking on. */
-    const walking = st === 'following' && this.hopT <= 0 && this.landing <= 0 && this.seating.move === null && !this.seating.held;
+    const walking = st === 'following' && this.hopT <= 0 && this.landing <= 0 && this.seating.move === null && !this.seating.held && !this.clambering;
     const perching = d.perched && this.perchSupport !== null;
     d.gait.on = walking || perching;
     if (perching) {

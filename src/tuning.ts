@@ -3312,7 +3312,9 @@ export const tuning = {
     /**
      * The step: where the bird runs to at the bank's foot and slides back to, metres past the stop; its run, the hop
      * that gets its chest to the lip; the lift its wings need (lower than the summit's) and the hope at which it goes;
-     * how stiff the bandaged wing is held meanwhile (the wing's recovery); and the scramble over onto the top.
+     * how stiff the bandaged wing is held meanwhile (the wing's recovery); the clamber over onto the top, where on the
+     * way the turf lip overhangs, and the feathers it loses there; then from landing on top, its shake, the look back
+     * down at the lamp, and all of its stand before it walks on toward the window.
      */
     stepFoot: 0.85,
     stepBack: 0.4,
@@ -3324,8 +3326,12 @@ export const tuning = {
     stepLift: 0.6,
     stepHope: 0.85,
     stepWingRecovery: 0.45,
-    stepScrambleFor: 1.25,
-    stepScrambleArc: 0.75,
+    stepClamberFor: 2.1,
+    stepEdge: 1.3,
+    stepFeathers: 4,
+    stepShakeFor: 0.6,
+    stepLampFor: 1.0,
+    stepStandFor: 2.5,
     /**
      * The fog in the saddle, in seconds from the bird's arrival: closing round it, the call into the white, the fog
      * thinning downhill and the long look at the lamp, then the invitation. How much the glimpse thins the saddle's bank,
@@ -3349,7 +3355,7 @@ export const tuning = {
     mistWindowEase: 1.4,
     mistGlimpseEase: 0.5,
     routeReach: 0.75,
-    snowDepth: 1.65,
+    snowDepth: 2.2,
     winterLamp: 0.24,
     winterFirstCold: .16,
     winterBedCold: .65,

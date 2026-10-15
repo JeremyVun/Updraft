@@ -40,6 +40,7 @@ in vec4 iHead;
 in vec4 iEars;
 in vec4 iLimb;
 in vec4 iLook;
+in vec4 iRest;
 out vec3 vWorld;
 out vec3 vNormal;
 out vec2 vMat;
@@ -62,6 +63,12 @@ void main() {
   int part = int(aPart + 0.5);
   vec3 p = position;
   vec3 n = normal;
+  // Asleep in its form: settled down into it, the flanks rising and falling.
+  if (part == ${BODY}) {
+    float flank = smoothstep(0.12, 0.42, position.y);
+    p.xz *= 1.0 + iRest.y * 0.07 * flank;
+    p.y += iRest.y * 0.02 * flank;
+  }
   float side = (part == ${EAR_L} || part == ${HIND_L} || part == ${FRONT_L}) ? 1.0 : -1.0;
 
   if (part == ${EYE}) p.y = 0.76 + (p.y - 0.76) * (1.0 - 0.9 * iHead.w);
@@ -86,13 +93,13 @@ void main() {
   p.xz *= inversesqrt(squash) * (1.0 + 0.06 * iBody.w);
   n = normalize(vec3(n.x * sqrt(squash), n.y / squash, n.z * sqrt(squash)));
 
-  vec3 world = rotY(p * uSize, iPos.w) + iPos.xyz;
+  vec3 world = rotY(p * uSize, iPos.w) + iPos.xyz - vec3(0.0, iRest.x * 0.15 * uSize, 0.0);
   vWorld = world;
   vNormal = rotY(n, iPos.w);
   vMat = aMat;
   vFur = iLook.rgb;
   vRest = position.y;
-  vSnow = iLimb.w;
+  vSnow = onHead ? 0.0 : iLimb.w;
   gl_Position = projectionMatrix * nudgedView(world, uNudge * smoothstep(0.04, 0.5, position.y));
 }`;
 
@@ -259,6 +266,10 @@ interface Rabbit {
   wakeDelay: number;
   /** Snow settled on its back while it lay curled, shaken off when it gets up. */
   snow: number;
+  /** How far it is settled down asleep in its form, its breath, and a twitch of the nose in a dream. */
+  rest: number;
+  breath: number;
+  twitch: number;
   /** What it does next on waking in its form, before its ordinary day begins. */
   plan: ('groom' | 'lope')[];
 }
@@ -278,7 +289,7 @@ export class Rabbits {
     capacity = 16,
     size = SIZE,
   ) {
-    this.instances = new Instances(rabbitGeometry(), capacity, ['iPos', 'iBody', 'iHead', 'iEars', 'iLimb', 'iLook']);
+    this.instances = new Instances(rabbitGeometry(), capacity, ['iPos', 'iBody', 'iHead', 'iEars', 'iLimb', 'iLook', 'iRest']);
     const material = new THREE.ShaderMaterial({
       vertexShader: VERT,
       fragmentShader: FRAG,
@@ -344,6 +355,9 @@ export class Rabbits {
       asleep: true,
       wakeDelay: range(rand, 0.3, 3.5),
       snow: 0,
+      rest: 0,
+      breath: 0,
+      twitch: 0,
       plan: [],
     };
     r.squash.value = 1;
@@ -358,7 +372,7 @@ export class Rabbits {
   addSleeper(x: number, z: number, yaw: number, seed: number): void {
     if (!this.add(x, z, seed)) return;
     const r = this.list[this.list.length - 1];
-    Object.assign(r, { x, z, homeX: x, homeZ: z, y: this.habitat.ground(x, z), yaw, asleep: false, activity: 'curl', snow: 1 });
+    Object.assign(r, { x, z, homeX: x, homeZ: z, y: this.habitat.ground(x, z), yaw, asleep: false, activity: 'curl', snow: 0.55, rest: 1 });
     r.sitUp = 0;
     r.crouch = 1;
     r.earL.value = r.earR.value = 1.5;
@@ -685,8 +699,9 @@ export class Rabbits {
     r.front = ease(r.front, front, 9, dt);
     r.hind = ease(r.hind, hind, 22, dt);
     const curled = act === 'curl';
-    const breath = curled ? 0.97 + 0.03 * Math.sin(time * 1.9 + r.seed * 11) : 1;
-    if (!hop || hop.prep <= 0) r.squash.step(airborne ? 1.1 : breath, 260, 14, dt);
+    r.rest = ease(r.rest, curled ? 1 : 0, 3, dt);
+    r.breath = r.rest * Math.sin(time * 2.9 + r.seed * 11);
+    if (!hop || hop.prep <= 0) r.squash.step(airborne ? 1.1 : 1, 260, 14, dt);
     r.pitch.step(pitch, 160, 16, dt);
     if (!curled) r.snow = ease(r.snow, 0, 2.5, dt);
 
@@ -697,7 +712,13 @@ export class Rabbits {
       if (roll < 0.4) (rand() < 0.5 ? r.earL : r.earR).velocity += (rand() < 0.5 ? -1 : 1) * range(rand, 5, 9);
       else if (roll < 0.8) r.headYawGoal = (rand() - 0.5) * (act === 'graze' ? 0.5 : 1.1);
       else r.tail.velocity += 10;
+    } else if (r.nextFidget <= 0 && curled) {
+      /** Asleep, now and then an ear flicks or the nose works at something in a dream. */
+      r.nextFidget = range(rand, 2.5, 6);
+      if (rand() < 0.55) (rand() < 0.5 ? r.earL : r.earR).velocity -= range(rand, 4, 7);
+      else r.twitch = 1;
     }
+    r.twitch = Math.max(0, r.twitch - dt * 2.5);
     let headYaw = r.headYawGoal;
     if (act === 'look') headYaw = THREE.MathUtils.clamp(wrapAngle(Math.atan2(r.lookX - r.x, r.lookZ - r.z) - r.yaw), -1.1, 1.1);
     if (hop || act === 'crouch' || curled) headYaw = 0;
@@ -711,7 +732,7 @@ export class Rabbits {
     }
     r.blink = curled ? 1 : Math.max(0, r.blink - dt * 8);
     const nibbling = act === 'graze' && Math.sin(time * 0.9 + r.seed * 20) > -0.3;
-    r.chew = nibbling ? Math.sin(time * 19 + r.seed * 7) * 0.5 + 0.5 : ease(r.chew, 0, 10, dt);
+    r.chew = nibbling ? Math.sin(time * 19 + r.seed * 7) * 0.5 + 0.5 : curled ? r.twitch * (0.5 + 0.5 * Math.sin(time * 31)) : ease(r.chew, 0, 10, dt);
 
     const breeze = Math.min(windSpeed, 12) * 0.035;
     const flutter = Math.sin(time * 9 + r.seed * 30) * Math.min(windSpeed, 14) * 0.012;
@@ -732,6 +753,7 @@ export class Rabbits {
     inst.set(3, i, r.earL.value, r.earR.value, r.spreadL, r.spreadR);
     inst.set(4, i, r.hind, r.front, r.tail.value, r.snow);
     inst.set(5, i, r.fur.r, r.fur.g, r.fur.b, r.seed);
+    inst.set(6, i, r.rest, r.breath, 0, 0);
   }
 
   /** Live positions for spatial queries; the inspection snapshot below remains detached. */

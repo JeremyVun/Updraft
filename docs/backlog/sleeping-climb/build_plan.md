@@ -322,13 +322,32 @@ base does the same: left. Crossings in and out show no sky or fog change. Peak c
 
 ### 4b — the playtest fixes
 
-1. **The look back** (lead): shorter.
-2. **The scramble over the bank:** a better animation, and a few loose feathers shed as it goes (`src/fx/loose-down.ts`,
-   the wood's startle), fewer than the wood's.
-3. **The drift:** steeper and more formidable from the bird's height and the player's lens, so its failed wade reads as
-   earned.
-4. **The rabbit under the hawthorn** reads as stuck and frozen: make it read as a live rabbit asleep, or fix whatever
-   makes it look stuck.
+1. **The look back** — Jeremy's ruling (2026-10-15): the forced pause that is too long is the one **on top of the
+   bank**. Done: from landing on top to walking on is 2.5 s (`stepStandFor`; it was about 4.5 s of shake, a held look
+   at the window and a held glance at the lamp, queued). It shakes as it finds its feet (`stepShakeFor` 0.6 s), looks
+   back down at the lamp (`stepLampFor` 1.0 s, still counted as the second look back), then turns to the window and
+   walks on. The order is lamp then window because the lens, which follows the bird up the route, brings the window
+   up over the shoulder about 1.3 s after landing: looking at it first had the bird gazing at an empty sky. Peak lens
+   rotation across the top 0.10 rad/s. `glanceFor` and `looksBack` are unchanged.
+2. **The scramble over the bank** — done: `Cygnet.clamber` replaces the straight `dash` lerp with a scripted clamber
+   (`CLAMBER` shares of `stepClamberFor` 2.1 s): a crouch, a spring onto the face, its chest on the turf lip with the
+   body near upright and the feet pedalling at the face (new `scramble` drive in `pose.ts`), a slip back and a haul up
+   on the good wing while the bandaged one is held half out and rigid (`stiff` in `wings.ts`), a heave over the lip on
+   its breast, and a stagger onto its feet. At the worst of the hang it sheds `stepFeathers` (4) loose feathers from
+   the wood's `LooseDown` (now `burst(at, heading, count, speed, size)`; the wood's call is unchanged), flung back off
+   the face and carried downhill on the night wind. Side-camera checks show the breast at the lip and the feet on the
+   face, with no clipping into the overhang.
+3. **The drift** — done: every edge is now a shallow skirt, chest deep, running in to a wind-cut face (`rimAt`, JS and
+   GLSL), the trough before it scoured less, and `snowDepth` 1.65 → 2.2. On the bird's way in, the snow reaches its
+   chest at the skirt (the wade's deepest stays 0.15–0.4) and the face rises from 0.4 to 0.95 m in 0.4 m; the crest
+   stands 1.8 m (it was 1.15). The ridges, cornice, blue hollows, sparkle, layered clearing and channel banks are as
+   they were; the walk-out keeps sky and hill round the bird and no window.
+4. **The rabbit** — done: from the lens it lay behind the thorn's near stem, which cut across it, level on a slope
+   with a gap under its belly and its feet showing, its whole top (head and ears too) white with snow: a pale slab
+   with a second disc behind, like bracket fungus on the trunk. Its form moves to the lens side of the thorn and it
+   lies side-on to the passing lens; asleep it settles into a scrape worn through the frost, belly down, feet hidden,
+   with snow only on its back; its flanks rise and fall (`iRest` in `rabbits.ts`, a 2.2 s breath), and now and then
+   an ear flicks or its nose works. It wakes in the morning as before. The meadow's rabbits are unaffected.
 
 Lead watches the whole room in motion with sound beside the owl and the clouds, fixes what does not earn its place,
 then hands Jeremy a build to play. On approval: migrate the durable rules into `docs/chapters.md` § The sleeping
