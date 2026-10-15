@@ -24,7 +24,7 @@ import { StageChapter } from './stage';
 import { WoodChapter } from './wood';
 import { WOOD_BERTH, WOOD_LANDING } from '../world/wood';
 import { SLEEP_BERTH, SLEEP_LANDING } from '../world/sleeping';
-import { BIRCHES_LANDING } from '../world/birches';
+import { BIRCHES_LANDING, BIRCHES_WALK } from '../world/birches';
 import { birchesAt } from '../world/birches-layout';
 import { placeProgress, restoreLife, saveProgress, type Progress } from './progress';
 import { restoreWingCare } from './wing-care';
@@ -68,6 +68,11 @@ const WHALE_LINE = WHALE_LEAD.clone().lerp(WHALE_REST, 0.5);
 
 /** Off the birches' beaches, in the island's band-local terms. */
 const offBirches = (x: number, z: number): THREE.Vector2 => new THREE.Vector2(birchesAt(x, z).x, birchesAt(x, z).z);
+
+const birchesView = tuning.crossingCamera.arrivals.birches;
+/** The way up off the beach into the trees, where the scarf runs and the crowns stand over it. */
+const BIRCHES_ARRIVAL = { ...birchesView,
+  reveal: { ...birchesView.reveal, sight: new THREE.Vector3(BIRCHES_WALK[0].x, 5, BIRCHES_WALK[0].y) } };
 
 /** Where the boat goes on each crossing, including the long open passage after the sleeping island. */
 export const ROUTES: Record<string, THREE.Vector2[]> = {
@@ -412,7 +417,8 @@ export class Journey {
       case 'meadow':
         return new MeadowChapter(cast);
       case 'toBirches':
-        return new CrossingChapter(cast, { route: ROUTES.toBirches, haze: 0.85, dusk: 0.55, season: 0.38, music: 'meadow', meadowScore: 'return', arrivalMusic: 'birches' });
+        return new CrossingChapter(cast, { route: ROUTES.toBirches, haze: 0.85, dusk: 0.55, season: 0.38, music: 'meadow', meadowScore: 'return', arrivalMusic: 'birches',
+          arrivalView: BIRCHES_ARRIVAL });
       case 'birches':
         return new BirchesChapter(cast);
       case 'toStairs':

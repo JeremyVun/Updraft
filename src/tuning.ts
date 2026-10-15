@@ -871,7 +871,7 @@ export const tuning = {
     mirrorMist: { clear: 0, hidden: 1, edge: 1.32, core: 0.85 },
     isleMistLift: 0.45,
     boatsMist: { clear: 75, hidden: 150, edge: 1.32 },
-    birchesMist: { clear: 90, hidden: 150, edge: 1.32 },
+    birchesMist: { clear: 90, hidden: 150, edge: 2 },
     seaStateEase: 0.45,
     /** Birches-style distance veil near Lines; the first island farewell keeps the original clear haze. */
     linesCrossingHaze: .88,
@@ -1724,6 +1724,13 @@ export const tuning = {
       meadow: { from: 75, full: 24, bearing: 1.3, distance: 19, height: 2.4, lead: 3, side: 1 },
       boats: { from: 80, full: 30, bearing: 0.8, distance: 28, height: 13, lead: 8, side: -1 },
       stairs: { from: 45, full: 14, bearing: 0.95, distance: 13, height: 1.5, lead: 3, side: 1 },
+      /**
+       * The birches come out of their mist ahead and to starboard and are watched from the port side, low over the
+       * water: the whole island beside the boat with the low sun over it, or in portrait standing behind it. As the
+       * bow runs in, the lens rises into the room's first view from the south.
+       */
+      birches: { from: 29, full: 8, world: true, bearing: 0.075, distance: 28, height: 8.5, lead: 6,
+        reveal: { from: 100, full: 47, bearing: 0.1, portrait: 0.35, distance: 24, height: 4, weight: 0.3 } },
     },
   },
 

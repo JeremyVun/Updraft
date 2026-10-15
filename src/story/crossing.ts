@@ -44,6 +44,26 @@ export interface ArrivalView {
   lead: number;
   /** The quarter the room's own first view stands on, kept whichever side the sail is on. */
   side?: number;
+  /** `bearing` is in world radians from south, as a room frames its own first view, rather than off astern. */
+  world?: boolean;
+  reveal?: IslandReveal;
+}
+
+/**
+ * The island ahead seen whole across the water as it comes out of its mist, before the arrival's own view: eased in
+ * between `from` and `full` units of sailing from the end of the route and held until the arrival's view takes over.
+ * The lens stands at a world `bearing` (`portrait` its own, so the island can rise behind the boat in a narrow frame),
+ * and gives `weight` of its gaze to `sight` on the island, where the child looks too.
+ */
+export interface IslandReveal {
+  from: number;
+  full: number;
+  bearing: number;
+  portrait: number;
+  distance: number;
+  height: number;
+  sight: THREE.Vector3;
+  weight: number;
 }
 
 /** How near a waypoint counts as rounded. */
@@ -54,6 +74,8 @@ const ON_THE_LINE = 12;
 const FRAMED_RESPONSE = 1.2;
 /** How long the camera takes to swing round from the farewell to behind the sail. */
 const SWING = tuning.crossingCamera.farewellRelease;
+const turnToward = (from: number, to: number, share: number): number =>
+  from + Math.atan2(Math.sin(to - from), Math.cos(to - from)) * share;
 
 export interface CrossingOpts {
   /** Ambient breeze multiplier; ordinary transfers use 1 and encounters retain their own slower pace. */
@@ -177,6 +199,7 @@ export class CrossingChapter implements Chapter {
   private readonly whaleOffset = new THREE.Vector3();
   private readonly farewellAttention = { point: new THREE.Vector3(), strength: 0,
     weight: tuning.crossingCamera.farewellWeight };
+  private readonly revealAttention = { point: new THREE.Vector3(), strength: 0, weight: 0 };
   private readonly whaleRight = new THREE.Vector3();
   private readonly whaleSubjects = { primary: new THREE.Vector3(), secondary: new THREE.Vector3(),
     tertiary: new THREE.Vector3(), margin: 0.8, extra: 60 };
@@ -580,7 +603,7 @@ export class CrossingChapter implements Chapter {
     } else {
       const k = tuning.crossingCamera, progress = this.framed;
       const near = THREE.MathUtils.smootherstep(progress, 0, k.departureUntil)
-        * (1 - this.arrival(progress)) * (1 - turn);
+        * (1 - this.arrival(progress)) * (1 - this.revealing(progress)) * (1 - turn);
       this.seaTurn += (-this.quarter * k.childTurn * near - this.seaTurn) * (1 - Math.exp(-dt * 1.1));
       seatYaw += this.seaTurn;
     }
@@ -603,7 +626,8 @@ export class CrossingChapter implements Chapter {
     } else {
       const look = Math.sin(this.time * 0.13) * 30;
       this.ahead.set(boat.position.x + look, 12, boat.position.z - 200);
-      child.lookAt = this.ahead;
+      const reveal = this.arrivalView?.reveal;
+      child.lookAt = reveal && this.revealing(this.framed) > 0.3 ? reveal.sight : this.ahead;
       if (this.time > this.nextGlance && this.cast.cygnet.carried) {
         this.glanceUntil = this.time + 3.5 + Math.random() * 2.5;
         this.nextGlance = this.glanceUntil + 9 + Math.random() * 8;
@@ -799,6 +823,13 @@ export class CrossingChapter implements Chapter {
     return 1 - THREE.MathUtils.smootherstep((1 - progress) * this.routeLength, view.full, view.from);
   }
 
+  /** How far the island ahead has been revealed, 0 to 1, from the framed route progress. */
+  private revealing(progress: number): number {
+    const reveal = this.arrivalView?.reveal;
+    if (!reveal) return 0;
+    return 1 - THREE.MathUtils.smootherstep((1 - progress) * this.routeLength, reveal.full, reveal.from);
+  }
+
   /** A critically damped follower of `progress()`, so a sudden jump in it becomes a gentle catch-up. */
   private followProgress(dt: number): void {
     const actual = this.progress();
@@ -865,14 +896,23 @@ export class CrossingChapter implements Chapter {
     const view = this.arrivalView ?? { bearing: k.arrivalBearing, distance: k.arrivalDistance,
       height: k.arrivalHeight, lead: k.arrivalLead };
     const arrival = this.arrival(progress);
+    const world = this.arrivalView?.world ?? false;
+    const isle = this.arrivalView?.reveal;
+    const revealed = this.revealing(progress);
+    const reveal = revealed * (1 - arrival);
     const distance = k.nearDistance + (k.departureDistance - k.nearDistance) * departure
-      + (view.distance - k.nearDistance) * arrival;
+      + (view.distance - k.nearDistance) * arrival + (isle ? (isle.distance - k.nearDistance) * reveal : 0);
     const height = k.nearHeight + (k.departureHeight - k.nearHeight) * departure
-      + (view.height - k.nearHeight) * arrival;
+      + (view.height - k.nearHeight) * arrival + (isle ? (isle.height - k.nearHeight) * reveal : 0);
     const lead = k.nearLead + (k.departureLead - k.nearLead) * departure + (view.lead - k.nearLead) * arrival;
     const angle = k.nearBearing + (k.departureBearing - k.nearBearing) * departure
-      + (view.bearing - k.nearBearing) * arrival;
-    const sailBearing = this.heading + Math.PI + this.quarter * (this.wantsDolphins ? tuning.seaPassage.cameraBearing : angle);
+      + (world ? 0 : (view.bearing - k.nearBearing) * arrival);
+    let sailBearing = this.heading + Math.PI + this.quarter * (this.wantsDolphins ? tuning.seaPassage.cameraBearing : angle);
+    if (isle) sailBearing = turnToward(sailBearing, window.innerWidth < window.innerHeight ? isle.portrait : isle.bearing, revealed);
+    if (world) {
+      sailBearing = turnToward(sailBearing, view.bearing, arrival);
+      this.shot.authored = revealed > 0 || arrival > 0;
+    }
     const seat = this.cast.child.position;
     // Slow and even enough that swinging round to the stern never cancels the boat's own travel: they sail past
     // the lens, which falls in behind them without ever standing still.
@@ -915,6 +955,12 @@ export class CrossingChapter implements Chapter {
       this.shot.distance = distance;
       this.shot.height = height;
       this.pace = 0.4;
+      if (isle && reveal > 0) {
+        this.revealAttention.point.copy(isle.sight);
+        this.revealAttention.strength = reveal;
+        this.revealAttention.weight = isle.weight;
+        this.shot.attention = this.revealAttention;
+      }
       if (this.wantsDolphins) {
         // Hold the boat and the near water together, leaving breathing room around whole animals.
         this.shot.target.set(boat.position.x - fz * this.quarter * 1.5 + fx,
