@@ -324,7 +324,10 @@ Boat speed and the crossings' pace are untouched; only distance changed.
   for 6% more wool. (The tuning comment's "135 m" was stale; the strip was 613 m.)
 - **Crossings.** `toBirches` leaves the far shore already bearing west (`FAR_SHORE` + (−18, −22)), runs west along
   the meadow's north shore about 20 m off it, then turns north and runs 52 m up to the landing straight on (from
-  band (4, −1000)). `toStairs` leaves the berth as before (its first waypoint, band (12, −1208), moves with the
+  band (4, −1000)). The farewell and the turn look out across the water the island lies over, so on this crossing it
+  lies in its own mist (`tuning.world.birchesMist`, clear 60 m to hidden 110 m from the eye, as the wood and the
+  boats do): it stays hidden to about 16 s, its beach comes out of the haze as the boat turns for it and the trees
+  on the run-in, and the mist lifts once they are ashore. `toStairs` leaves the berth as before (its first waypoint, band (12, −1208), moves with the
   band), passes south of the village's edge at (26, −1239) and comes in to the stairs as before; it starts about
   150 m from the stairs, so the cloud deck builds over the crossing and the landing is under it as now.
 - **Clearances.** Dry land runs from x −93 to −4 and z −1047 to −1246. The south waterline is about 80 m off the
