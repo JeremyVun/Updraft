@@ -201,6 +201,10 @@ and begins again from its top with the same entrance (audio contract, Birches).
 > player). Or maybe, I was thinking of seeing if we could do one of those "which cup is the squirrel under" type of
 > shuffle games as well. what do you think?
 
+> Another thing to add to the list from me, the route that the boat takes to the stairs island needs to be taken a look
+> at. The route now has the boat sailing literally across the shore line and the stairs island is not hidden in haze
+> until the child gets closer. camera direction and haze are important to get just right.
+
 Claude's proposal (2026-10-16), queued for after the current rounds work: round 3 becomes the shuffle. No counting
 before it. The squirrel dives into a heap in plain view, then leaps heap to heap three or four times, quickening and
 sometimes doubling back. The last one or two moves are under the leaves, a rustling bulge crossing the floor. Then it
