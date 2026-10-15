@@ -161,8 +161,12 @@ On the meadow sail after it was lengthened along the meadow's coast (2026-10-16)
 > the haze / fog around the birches island is a bit too strong and obvious i think, and the music starts playing maybe
 > 2 seconds too early
 
-The island mist was softened to clear 90 m / hidden 150 m (from 60 / 110), and Red Door's arrival entrance comes
-2 s later (`tuning.audio.birchesArrivalLater`).
+> I meant the birches island music should start 2-3 seconds later than it currently does, and it should fade in a bit
+> more.
+
+The island mist was softened to clear 90 m / hidden 150 m (from 60 / 110). Red Door's arrival entrance comes 3 s
+later than before (`tuning.audio.birchesArrivalLater`) and fades in on a 1.8 s time constant instead of 0.65 s
+(`tuning.audio.recordedMusicFadeIn.birches`), so it rises over about five seconds.
 
 > It's ok if the distance between birches and stairs increases as well e.g. if both become 40 seconds or whatever
 

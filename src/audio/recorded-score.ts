@@ -83,7 +83,7 @@ export class RecordedScore {
     }
     source.connect(envelope ?? this.bus);
     if (enter < 1 || this.keepTime && offset < tuning.audio.recordedMusicOnTime) this.bus.gain.setValueAtTime(this.level, this.epoch);
-    else this.bus.gain.setTargetAtTime(this.level, this.epoch, tuning.audio.recordedMusicFade);
+    else this.bus.gain.setTargetAtTime(this.level, this.epoch, tuning.audio.recordedMusicFadeIn[this.track] ?? tuning.audio.recordedMusicFade);
     source.onended = () => {
       source.disconnect();
       envelope?.disconnect();

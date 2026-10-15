@@ -85,6 +85,8 @@ export const tuning = {
     /** Match supplied masters to the room reference through gain alone. */
     recordedMusicDb: { home: -14.4, mirror: -14.7, sea: -13.6, birches: -10.7, stairs: -13, clouds: -14.5, villageApproach: -9.7, belfry: -11, lines: -12, boats: -12.3 },
     recordedMusicFade: .65,
+    /** Time constants for recordings that come in more slowly than `recordedMusicFade`. */
+    recordedMusicFadeIn: { birches: 1.8 } as Partial<Record<string, number>>,
     /** A recording kept to its scheduled moment that begins within this many seconds of it enters at full level. */
     recordedMusicOnTime: .1,
     /**
@@ -118,7 +120,7 @@ export const tuning = {
     stillPhraseExperiment: true,
     stillFallTones: false,
     linesArrivalEarlier: 10,
-    birchesArrivalLater: 2,
+    birchesArrivalLater: 3,
     stillPhraseDb: -6,
     stillPhraseFade: .12,
     stillPhraseSpacing: 4.5,
