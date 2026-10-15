@@ -173,6 +173,15 @@ later than before (`tuning.audio.birchesArrivalLater`) and fades in on a 1.8 s t
 > air. It doesn't have the expected jump velocity if that makes sense, and so it's animation looks really strange as a
 > result.
 
+> I also think birches chapter has a bit too many leaves now, i'd tone it down by 20% atleast
+
+> And didn't i ask for the leaf heaps to become updrafts, not normal wind gestures? what else did i ask before that
+> hasn't been done? Also, when the music loops on the birches island, it needs to have a better fade in.
+
+Loose leaves are cut to 75% per metre of the walk (`tuning.birches.looseLeaves`). On the island Red Door plays to
+its end, rests a few seconds and comes in again from the top with its arrival fade-in, instead of looping sample to
+sample.
+
 > It's ok if the distance between birches and stairs increases as well e.g. if both become 40 seconds or whatever
 
 What follows from it (Claude's calls, 2026-10-16):
