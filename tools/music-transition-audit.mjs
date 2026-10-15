@@ -161,6 +161,48 @@ try {
     sails.push({id,label,...r,peakDbFS:result.peakDbFS});
     console.log(JSON.stringify({id,...r}));
   }
-  fs.writeFileSync(path.join(dir,'report.json'),JSON.stringify({method:'Production audio fixtures, not full gameplay recordings or perceptual listening approval. Files isolate background and reverb. Common playback boost capped for headroom. Handoffs requested at 0:18, except Drowned to Wood at 1:28; arranged landings 24 seconds later. The sails are the whole mix, unboosted, timed from the push-off.',handoffs:reports,internal,sails},null,2));
+  // Going round on the Birches island, the whole mix: the last 10 s of a pass, its rest, the first 10 s of the next.
+  // The gap and the entrance are measured on the recording alone, against the file.
+  const seam=await page.evaluate(async()=>{
+    const {tuning}=await productionModule('/src/tuning.ts');
+    const {RecordedScore}=await productionModule('/src/audio/recorded-score.ts');
+    const TAIL=10,{rest}=tuning.audio.recordedMusicLoop.birches,SECONDS=TAIL+rest+10,STEP=1/8,level=10**(tuning.audio.recordedMusicDb.birches/20);
+    const go=async alone=>{
+      const {ctx,sound}=offlineSound(SECONDS),starts=[],native=AudioBufferSourceNode.prototype.start;
+      AudioBufferSourceNode.prototype.start=function(when=0,offset=0,duration){
+        if(this.context===ctx&&(this.buffer?.duration??0)>200)starts.push({when,offset});
+        return native.call(this,when,offset,duration);
+      };
+      if(alone)sound.master.disconnect();
+      sound.birchesScore=new RecordedScore(ctx,alone?ctx.destination:sound.backgroundDry,'birches');
+      sound.birchesScore.update('return',level,238.893-TAIL);
+      let raw=null;
+      const step=async t=>{sound.update(STEP,{...baseState,music:'birches',birchesScore:'return',birchesLoop:true});
+        await sound.birchesScore?.ready;raw??=sound.birchesScore.buffer;};
+      await step(0);let pause=ctx.suspend(STEP);const rendering=ctx.startRendering();
+      for(let tick=1;tick<SECONDS/STEP;tick++){await pause;await step(tick*STEP);if(tick+1<SECONDS/STEP)pause=ctx.suspend((tick+1)*STEP);await ctx.resume();}
+      const buffer=await rendering;AudioBufferSourceNode.prototype.start=native;
+      return {buffer,raw,starts};
+    };
+    const {buffer,raw,starts}=await go(true);
+    const power=(b,from,to)=>{let sum=0;const l=b.getChannelData(0),r=b.getChannelData(1);
+      for(let i=Math.max(0,Math.round(from*b.sampleRate));i<Math.min(b.length,Math.round(to*b.sampleRate));i++)sum+=(l[i]**2+r[i]**2)/2;return sum;};
+    const sounding=(b,from,to,dir)=>{const l=b.getChannelData(0),r=b.getChannelData(1),a=Math.round(from*b.sampleRate),z=Math.round(to*b.sampleRate);
+      if(dir<0){for(let i=z-1;i>=a;i--)if(Math.abs(l[i])+Math.abs(r[i])>1e-5)return i/b.sampleRate;}
+      else for(let i=a;i<z;i++)if(Math.abs(l[i])+Math.abs(r[i])>1e-5)return i/b.sampleRate;return null;};
+    const next=starts[1],ended=starts[0].when+238.893-starts[0].offset;
+    const lastHeard=sounding(buffer,0,next.when,-1),firstHeard=sounding(buffer,next.when,SECONDS,1);
+    const envelope=Object.fromEntries([0,1,2,3,5].map(t=>{const a=Math.max(0,t-.05),b=t+.05;
+      return [t,+(Math.sqrt(power(buffer,next.when+a,next.when+b)/power(raw,a,b))/level).toFixed(3)];}));
+    const report={passEnds:+ended.toFixed(3),lastHeard:+lastHeard.toFixed(3),nextStarts:+next.when.toFixed(3),nextOffset:next.offset,firstHeard:+firstHeard.toFixed(3),
+      gap:+(next.when-ended).toFixed(3),heardGap:+(firstHeard-lastHeard).toFixed(3),rest,fadeIn:tuning.audio.recordedMusicFadeIn.birches,envelope};
+    return {report,...encodeAudio((await go(false)).buffer)};
+  });
+  assert.equal(seam.clipped,0);
+  assert(seam.report.nextOffset===0&&seam.report.gap>=seam.report.rest-.01,'the next pass rests, then begins from its top');
+  {const stem=path.join(dir,'birches-seam');fs.writeFileSync(stem+'.wav',wav(Buffer.from(seam.pcm,'base64')));
+    execFileSync('ffmpeg',['-hide_banner','-loglevel','error','-y','-i',stem+'.wav','-c:a','libmp3lame','-b:a','160k',stem+'.mp3']);}
+  console.log(JSON.stringify({id:'birches-seam',...seam.report}));
+  fs.writeFileSync(path.join(dir,'report.json'),JSON.stringify({method:'Production audio fixtures, not full gameplay recordings or perceptual listening approval. Files isolate background and reverb. Common playback boost capped for headroom. Handoffs requested at 0:18, except Drowned to Wood at 1:28; arranged landings 24 seconds later. The sails are the whole mix, unboosted, timed from the push-off. The birches seam is the whole mix too, the last 10 s of a pass through the first 10 s of the next.',handoffs:reports,internal,sails,birchesSeam:seam.report},null,2));
   console.log(JSON.stringify({handoffs:reports.length,internalSections:internal.reduce((n,r)=>n+r.starts,0),dir}));
 }finally{await browser.close();}

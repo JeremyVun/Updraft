@@ -15,6 +15,13 @@ export const tuning = {
   squirrel: {
     scale: 3.6, snap: 14, glanceSnap: 24, boundSpeed: 3.4, climbSpeed: 1.5, lineSpeed: 2.1, pickUp: 3, brake: 6,
     /**
+     * It falls as everything in the world does (m/s²), however big it is drawn. A leap from one surface to another
+     * goes at `speed` (m/s) and is in the air between `least` and `most` seconds; it takes off `reach` (metres
+     * before scale) from a trunk or the wool's end, bounding the rest of the way. It pounces into a heap from no
+     * further than `pounce` (before scale), and an idle hop round on the spot is `hop` seconds in the air.
+     */
+    gravity: 9.8, leap: { speed: 3, least: 0.16, most: 0.34, reach: 0.13 }, pounce: 0.25, hop: 0.16,
+    /**
      * Its call marks over its head when it chucks, chitters or squeaks, at scale 3.6 (metres), never less
      * than `least` of the view's height so they read over a heap from a round's lens, edged dark against the gold.
      * `hold` is the least time they show for a chuck (a chitter twice that); buried, they rise from `buried` over its
@@ -85,6 +92,10 @@ export const tuning = {
     /** Match supplied masters to the room reference through gain alone. */
     recordedMusicDb: { home: -14.4, mirror: -14.7, sea: -13.6, birches: -10.7, stairs: -13, clouds: -14.5, villageApproach: -9.7, belfry: -11, lines: -12, boats: -12.3 },
     recordedMusicFade: .65,
+    /** Time constants for recordings that come in more slowly than `recordedMusicFade`. */
+    recordedMusicFadeIn: { birches: 1.8 } as Partial<Record<string, number>>,
+    /** Looped recordings that end, rest this many seconds and come in again from the top as on arrival, instead of going straight round. */
+    recordedMusicLoop: { birches: { rest: 3.5 } } as Partial<Record<string, { rest: number }>>,
     /** A recording kept to its scheduled moment that begins within this many seconds of it enters at full level. */
     recordedMusicOnTime: .1,
     /**
@@ -118,7 +129,7 @@ export const tuning = {
     stillPhraseExperiment: true,
     stillFallTones: false,
     linesArrivalEarlier: 10,
-    birchesArrivalLater: 2,
+    birchesArrivalLater: 3,
     stillPhraseDb: -6,
     stillPhraseFade: .12,
     stillPhraseSpacing: 4.5,
@@ -1372,6 +1383,8 @@ export const tuning = {
     litterRepose: 0.95,
     /** How high a heap of leaves stands, per unit of depth over `heapFrom`, the depth of an ordinary floor. */
     pileHeight: 0.34,
+    /** Share of the loose leaves kept per metre of the walk, against the room as first laid out. */
+    looseLeaves: 0.75,
     heapFrom: 1.6,
     /**
      * A heap somebody made: its top rounded over this many metres, its foot at most this share of its radius out, and

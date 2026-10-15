@@ -106,6 +106,8 @@ const LOG = { a: [-1.6, 5.5], b: [2.4, 5.8], r: 0.26 } as const;
 const TRUNK = { x: 2.7, z: 6.9, r: 0.21, top: 6 };
 /** A second birch across the yard, the wool tied between the two. */
 const TRUNK_B = { x: -2.4, z: 7.6, r: 0.19, top: 5.5 };
+/** A broken birch's stump, flat across its top, like the one it sits on through the second tangle. */
+const STUMP = { x: 3.6, z: 3.6, r: 0.22, top: 1.0 };
 /** A low limb off the trunk: how high it leaves it, where it reaches to in the yard's space, and its girth. */
 const BRANCH = { y: 2.3, rise: 0.1, out: [-1.45, -0.35], r: 0.075 } as const;
 /** The scarf's wool, hung from the second birch to the first: the height it is tied at on each, its sag and girth. */
@@ -145,6 +147,7 @@ export class SquirrelYard {
   private readonly trunk: Limb;
   private readonly trunkB: Limb;
   private readonly branch: Limb;
+  private readonly stump: Limb;
   /** The wool's centre line, and the same line along its top, where paws go. */
   private readonly wool: THREE.Vector3[];
   private readonly woolTop: THREE.Vector3[];
@@ -180,6 +183,8 @@ export class SquirrelYard {
     this.trunk = { a: base.clone().setY(top - 0.3), b: base.clone().setY(top + TRUNK.top), r0: TRUNK.r * 1.1, r1: TRUNK.r * 0.6, tint: BIRCH };
     const baseB = this.at(TRUNK_B.x, TRUNK_B.z);
     this.trunkB = { a: baseB.clone().setY(top - 0.3), b: baseB.clone().setY(top + TRUNK_B.top), r0: TRUNK_B.r * 1.1, r1: TRUNK_B.r * 0.6, tint: BIRCH };
+    const stump = this.at(STUMP.x, STUMP.z);
+    this.stump = { a: stump.clone().setY(top - 0.3), b: stump.clone().setY(top + STUMP.top), r0: STUMP.r, r1: STUMP.r, tint: OLD_BIRCH };
     this.branch = {
       a: base.clone().setY(top + BRANCH.y),
       b: this.at(TRUNK.x + BRANCH.out[0], TRUNK.z + BRANCH.out[1]).setY(top + BRANCH.y + BRANCH.rise),
@@ -212,8 +217,9 @@ export class SquirrelYard {
    * Each action from its own place: on the log, on the limb, in the heap, up the trunk, out on the open leaves; and
    * the motions, each from where it starts: `run` across the yard, `dive` into the heap, `dive-burst` into it and out
    * again to scold, `burst` out of it, `tell` (and `tell-in`, its tail tucked) twice from the heap, `climb-up` and
-   * `climb-down` the first birch, `run-line` along the wool, and `follow`, the whole way round: over the ground, up
-   * the second birch, along the wool, down the first and home.
+   * `climb-down` the first birch, `run-line` along the wool, `follow`, the whole way round: over the ground, up
+   * the second birch, along the wool, down the first and home; and `startle` on the stump's top as the wool comes
+   * over it, `indignant` after it as it passes (each `-perch` on the limb instead).
    */
   play(name: string, squirrel: Squirrel): boolean {
     this.playing = true;
@@ -257,6 +263,26 @@ export class SquirrelYard {
         squirrel.look(look);
         this.later([[0.5, () => squirrel.act('peek', { for: 2.2 })]]);
         break;
+      case 'startle':
+      case 'indignant':
+      case 'startle-perch':
+      case 'indignant-perch': {
+        /** Sat on the stump's top (or perched on the limb), the wool coming over it, and away again for `indignant`. */
+        if (name.endsWith('perch')) {
+          const along = this.w.subVectors(this.branch.a, this.branch.b);
+          squirrel.perchAt(this.onTop(this.branch, 0.62), Math.atan2(along.x, along.z), { floor: this.over(this.branch) });
+        } else {
+          const at = this.stump.b.clone();
+          const y = at.y, r = STUMP.r;
+          const c = this.stump.b;
+          squirrel.act('sit', { at, yaw: toward(at), floor: (x, z) => (Math.hypot(x - c.x, z - c.z) < r ? y : this.top), look, nut: true });
+        }
+        const over = this.stump.b.clone().setY(this.stump.b.y + 1.2);
+        const steps: [number, () => void][] = [[0.6, () => squirrel.act('startle', { look: over })]];
+        if (name.startsWith('indignant')) steps.push([2.6, () => squirrel.act('indignant', { look: over })]);
+        this.later(steps);
+        break;
+      }
       case 'climb': {
         const base = this.trunk.a;
         const out = this.v.subVectors(look, base).setY(0).normalize().applyAxisAngle(new THREE.Vector3(0, 1, 0), 0.5).clone();
@@ -401,6 +427,11 @@ export class SquirrelYard {
    */
   gap(p: THREE.Vector3): number {
     let gap = p.y - this.top;
+    {
+      const c = this.stump.b;
+      const out = Math.hypot(p.x - c.x, p.z - c.z) - STUMP.r, above = p.y - c.y;
+      gap = Math.min(gap, out < 0 && above < 0 ? Math.max(out, above) : Math.hypot(Math.max(out, 0), Math.max(above, 0)));
+    }
     for (const limb of [this.log, this.trunk, this.trunkB, this.branch]) {
       const axis = this.w.subVectors(limb.b, limb.a);
       const t = THREE.MathUtils.clamp(this.v.subVectors(p, limb.a).dot(axis) / axis.lengthSq(), 0, 1);
@@ -445,7 +476,7 @@ export class SquirrelYard {
   private props(): THREE.Mesh {
     const parts: THREE.BufferGeometry[] = [];
     const wool = this.wool.slice(1).map((b, i): Limb => ({ a: this.wool[i], b, r0: WOOL.r, r1: WOOL.r, tint: RED }));
-    for (const { a, b, r0, r1, tint } of [this.log, this.trunk, this.trunkB, this.branch, ...wool]) {
+    for (const { a, b, r0, r1, tint } of [this.log, this.trunk, this.trunkB, this.branch, this.stump, ...wool]) {
       const len = a.distanceTo(b);
       const geo = new THREE.CylinderGeometry(r1, r0, len, 16, Math.max(1, Math.round(len * 4)), false);
       const pos = geo.attributes.position;

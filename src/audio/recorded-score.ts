@@ -25,6 +25,8 @@ export class RecordedScore {
   private finishing = false;
   /** No longer looping: the pass under way plays to the end of the file and stops. */
   private playingOut = false;
+  /** Between passes of a recording that rests before it goes round: the next begins from its top then. */
+  private restUntil = -Infinity;
 
   constructor(private readonly ctx: BaseAudioContext, output: AudioNode, readonly track: RecordedMusic) {
     this.bus = ctx.createGain();
@@ -54,17 +56,19 @@ export class RecordedScore {
     this.phase = phase;
     if (!this.active) { this.offset = offset; this.late = late; this.keepTime = keepTime; this.asked = this.ctx.currentTime; }
     this.active = true;
+    // Re-aiming at an unchanged level would cut short a slower entrance.
+    const changed = level !== this.level;
     this.level = level;
-    if (this.source && !this.finishing) this.bus.gain.setTargetAtTime(level, this.ctx.currentTime, tuning.audio.recordedMusicFade);
+    if (changed && this.source && !this.finishing) this.bus.gain.setTargetAtTime(level, this.ctx.currentTime, tuning.audio.recordedMusicFade);
     this.play();
   }
 
   private play(): void {
-    if (this.stopped || !this.active || !this.buffer || this.source) return;
+    if (this.stopped || !this.active || !this.buffer || this.source || this.ctx.currentTime < this.restUntil) return;
     const source = this.ctx.createBufferSource();
     source.buffer = this.buffer;
-    const once = this.once;
-    source.loop = !once && !this.playingOut;
+    const once = this.once, rest = this.rest;
+    source.loop = !once && !this.playingOut && rest === undefined;
     this.epoch = this.ctx.currentTime;
     if (this.keepTime) this.offset += this.epoch - this.asked;
     const offset = once ? Math.min(this.offset, this.buffer.duration) : this.offset % this.buffer.duration;
@@ -83,18 +87,30 @@ export class RecordedScore {
     }
     source.connect(envelope ?? this.bus);
     if (enter < 1 || this.keepTime && offset < tuning.audio.recordedMusicOnTime) this.bus.gain.setValueAtTime(this.level, this.epoch);
-    else this.bus.gain.setTargetAtTime(this.level, this.epoch, tuning.audio.recordedMusicFade);
+    else this.bus.gain.setTargetAtTime(this.level, this.epoch, tuning.audio.recordedMusicFadeIn[this.track] ?? tuning.audio.recordedMusicFade);
     source.onended = () => {
       source.disconnect();
       envelope?.disconnect();
       source.buffer = null;
       this.source = null;
+      const rest = this.rest;
+      if (rest !== undefined && !this.stopped && !this.finishing) {
+        this.restUntil = this.epoch + this.length - this.start + rest;
+        this.offset = 0; this.keepTime = false;
+        this.bus.gain.setValueAtTime(0, this.ctx.currentTime);
+        return;
+      }
+      this.buffer = null;
       this.bus.disconnect();
     };
     source.start(this.epoch, offset);
     if (envelope) source.stop(this.endsAt);
     this.source = source;
-    this.buffer = null;
+    if (rest === undefined) this.buffer = null;
+  }
+
+  private get rest() {
+    return this.playingOut ? undefined : tuning.audio.recordedMusicLoop[this.track]?.rest;
   }
 
   private get once() {
@@ -104,7 +120,8 @@ export class RecordedScore {
   /** Stops looping for good; the pass under way, or the first if none has begun, plays to the end of the file. */
   playOut(): void {
     this.playingOut = true;
-    if (this.source) this.source.loop = false;
+    if (this.source) { this.source.loop = false; this.buffer = null; }
+    else if (Number.isFinite(this.restUntil) && this.buffer) { this.buffer = null; this.bus.disconnect(); }
   }
 
   get duration(): number { return this.length; }

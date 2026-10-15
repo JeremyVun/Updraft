@@ -162,8 +162,58 @@ On the meadow sail after it was lengthened along the meadow's coast (2026-10-16)
 > the haze / fog around the birches island is a bit too strong and obvious i think, and the music starts playing maybe
 > 2 seconds too early
 
-The island mist was softened to clear 90 m / hidden 150 m (from 60 / 110), and Red Door's arrival entrance comes
-2 s later (`tuning.audio.birchesArrivalLater`).
+> I meant the birches island music should start 2-3 seconds later than it currently does, and it should fade in a bit
+> more.
+
+The island mist was softened to clear 90 m / hidden 150 m (from 60 / 110). Red Door's arrival entrance comes 3 s
+later than before (`tuning.audio.birchesArrivalLater`) and fades in on a 1.8 s time constant instead of 0.65 s
+(`tuning.audio.recordedMusicFadeIn.birches`), so it rises over about five seconds.
+
+> when the music loops on the birches island, it needs to have a better fade in.
+
+Going round on the island, each pass plays to its natural end, rests 3.5 s (`tuning.audio.recordedMusicLoop.birches`)
+and begins again from its top with the same entrance (audio contract, Birches).
+
+> It's jumping animation also needs a look at, when it's "jumping" it looks like it's slow motion gliding through the
+> air. It doesn't have the expected jump velocity if that makes sense, and so it's animation looks really strange as a
+> result.
+
+> I also think birches chapter has a bit too many leaves now, i'd tone it down by 20% atleast
+
+> And didn't i ask for the leaf heaps to become updrafts, not normal wind gestures? what else did i ask before that
+> hasn't been done? Also, when the music loops on the birches island, it needs to have a better fade in.
+
+> i need you to also take a look at the camera when they are doing the crossing to the birches island, it's not very
+> good right now. It just stays behind the child and never does a cinematic reveal of the birches island until she
+> gets off the boat.
+
+> the player also shouldn't be able to blow away the leaf pile until the squirrel has jumped into it
+
+> the squirrel also jumps out the very instant that the leaf pile is "blown" even though the leaf pile might not have
+> disappeared at all
+
+> for the scarf challenge after the swing, an interesting idea would be to have the squirrel squeak and act alarmed in a
+> cute way after the scarf is blown up the tree trunk, over it, and then uncovering it again as it rises to the side.
+
+> Then for the leaf piles after that scarf challenge wrapped around the dead tree trunk after the swing, where there are
+> three leaf piles, i dont understand why the squirrel only hides in the third one. Why not have it jump from one to the
+> other or something, otherwise two of the leaf piles are wasted (unless you think this wouldn't be fun for the
+> player). Or maybe, I was thinking of seeing if we could do one of those "which cup is the squirrel under" type of
+> shuffle games as well. what do you think?
+
+> Another thing to add to the list from me, the route that the boat takes to the stairs island needs to be taken a look
+> at. The route now has the boat sailing literally across the shore line and the stairs island is not hidden in haze
+> until the child gets closer. camera direction and haze are important to get just right.
+
+Claude's proposal (2026-10-16), queued for after the current rounds work: round 3 becomes the shuffle. No counting
+before it. The squirrel dives into a heap in plain view, then leaps heap to heap three or four times, quickening and
+sometimes doubling back. The last one or two moves are under the leaves, a rustling bulge crossing the floor. Then it
+settles and stays put. The heaps hold until the shuffle ends. Blowing an empty heap makes the real one answer with a
+tail tell and a chitter. Rounds 2 and 3 vary which heap it ends in.
+
+Loose leaves are cut to 75% per metre of the walk (`tuning.birches.looseLeaves`). On the island Red Door plays to
+its end, rests a few seconds and comes in again from the top with its arrival fade-in, instead of looping sample to
+sample.
 
 > It's ok if the distance between birches and stairs increases as well e.g. if both become 40 seconds or whatever
 

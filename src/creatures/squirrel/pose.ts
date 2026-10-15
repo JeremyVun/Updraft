@@ -50,6 +50,8 @@ export interface Drives {
   tailWave: number;
   tailWaveSize: number;
   tailFlick: number;
+  /** The tail's fur stood on end, 0 lying flat; it fattens the whole plume to `1 + tailPuff` its girth. */
+  tailPuff: number;
   /** A wave running down the tail up and down, how big and how far along it has run, as it streams behind a bound. */
   tailRipple: number;
   tailRipplePhase: number;
@@ -94,7 +96,7 @@ export interface Stance {
   seat: boolean;
 }
 
-export type StanceName = 'stand' | 'sit' | 'freeze' | 'scold' | 'perch' | 'buried' | 'peek' | 'bound' | 'climb' | 'run' | 'trunk' | 'wool' | 'crouch' | 'dive';
+export type StanceName = 'stand' | 'sit' | 'freeze' | 'scold' | 'perch' | 'buried' | 'peek' | 'bound' | 'climb' | 'run' | 'trunk' | 'wool' | 'crouch' | 'dive' | 'startle';
 
 const STAND: Stance = {
   bodyY: 0.062, bodyZ: 0, pitch: 0.12, flex: 0.1, stretch: 0, chestUp: 0, neckLow: 0.2, headPitch: 0.1, hock: 1.35,
@@ -175,6 +177,15 @@ export const STANCES: Record<StanceName, Stance> = {
     ...STAND, bodyY: 0.044, pitch: 0.06, flex: 0.38, neckLow: 0.25, headPitch: 0.0, hock: 1.45,
     front: [0.012, 0.042], hind: [0.024, -0.008], tailLift: 0.55, tailCurve: 0.1, tailTip: -0.12, earBack: 0.1,
   },
+  /**
+   * Startled on its perch: hunched down tight onto it on its haunches, its acorn clutched to its chest, head drawn
+   * in, ears flat back, and the tail stood straight up behind it, its fur on end.
+   */
+  startle: {
+    ...STAND, bodyY: 0.044, bodyZ: 0.004, pitch: 0.5, flex: 0.62, chestUp: 0.1, neckLow: 0.55, headPitch: 0.25, hock: 1.45,
+    front: [0.01, 0.042], hind: [0.012, 0.012], curl: 1.5, hold: 1, holdHigh: 0,
+    tailLift: 1.35, tailCurve: 0.06, tailTip: -0.12, earBack: 1, seat: true,
+  },
   /** In the air, diving: stretched out long, forepaws reaching ahead, hind feet trailing, ears flat, tail streaming. */
   dive: {
     ...STAND, bodyY: 0.06, flex: -0.3, stretch: 0.02, neckLow: -0.1, headPitch: -0.1, hock: 0.6,
@@ -184,6 +195,7 @@ export const STANCES: Record<StanceName, Stance> = {
 };
 
 const ORDER = 'YXZ';
+const TAIL_AT = TAIL.map((bone) => SKELETON.find(([b]) => b === bone)![2]);
 const NECK_AT = SKELETON.find(([bone]) => bone === NECK)![2];
 const PELVIS_AT = SKELETON.find(([bone]) => bone === PELVIS)![2];
 const CHEST_AT = SKELETON.find(([bone]) => bone === CHEST)![2];
@@ -274,6 +286,10 @@ export class SquirrelRig {
       n[bone].rotation.set(-d.earBack * 0.9 + twitch * 0.12, s * (d.earBack * 0.3 + twitch * 0.45), -s * d.earBack * 0.6);
     }
 
+    /** Puffed, the plume is drawn bigger from its root, each joint brought back in so it is no longer, only fatter. */
+    const puff = 1 + Math.max(0, d.tailPuff);
+    n[TAIL[0]].scale.setScalar(puff);
+    for (let i = 1; i < TAIL.length; i++) n[TAIL[i]].position.set(...TAIL_AT[i]).divideScalar(puff);
     /** The root is held in the frame of what it stands on, so a tail stands up behind however the back is tipped. */
     for (let i = 0; i < TAIL.length; i++) {
       const k = i / (TAIL.length - 1);

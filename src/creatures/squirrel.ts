@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { ease } from './motion';
-import { BODY, CHEST, FOOT_L, FOOT_R, HAND_L, HAND_R, HEAD, META, PELVIS, THIGH_L, THIGH_R, TOE, WRIST, squirrelGeometry } from './squirrel/body';
-import { boundShape, type BoundShape } from './squirrel/bound';
+import { BODY, CHEST, FOOT_L, FOOT_R, HAND_L, HAND_R, HEAD, META, PELVIS, REST, THIGH_L, THIGH_R, TOE, WRIST, squirrelGeometry } from './squirrel/body';
+import { boundFlight, boundShape, type BoundShape } from './squirrel/bound';
 import { PATTERNS, SquirrelGait, type Support } from './squirrel/gait';
 import { Idle, type Still } from './squirrel/idle';
 import { SquirrelRig, STANCES, type Drives, type Stance, type StanceName } from './squirrel/pose';
@@ -14,7 +14,7 @@ import { tuning } from '../tuning';
 export type { Floor, SquirrelPoint } from './squirrel/route';
 export { sagging, spiral } from './squirrel/route';
 
-export type SquirrelAction = 'stand' | 'sit' | 'freeze' | 'scold' | 'perch' | 'buried' | 'peek' | 'bound' | 'climb' | 'dive' | 'burst' | 'run-line';
+export type SquirrelAction = 'stand' | 'sit' | 'freeze' | 'scold' | 'perch' | 'buried' | 'peek' | 'bound' | 'climb' | 'dive' | 'burst' | 'run-line' | 'startle' | 'indignant';
 
 /** Something it did this frame that can be heard. The squirrel only says what happened; the sound is made elsewhere. */
 export interface SquirrelSound {
@@ -52,8 +52,10 @@ export interface ActOptions {
 
 const ACTION_STANCE: Record<SquirrelAction, StanceName> = {
   stand: 'stand', sit: 'sit', freeze: 'freeze', scold: 'scold', perch: 'perch', buried: 'buried', peek: 'peek',
-  bound: 'bound', climb: 'climb', dive: 'dive', burst: 'freeze', 'run-line': 'wool',
+  bound: 'bound', climb: 'climb', dive: 'dive', burst: 'freeze', 'run-line': 'wool', startle: 'startle', indignant: 'startle',
 };
+/** What it goes back to after an indignant shake: how it was holding itself on its perch before it was startled. */
+const PERCHED: readonly SquirrelAction[] = ['stand', 'sit', 'freeze', 'scold', 'perch', 'run-line'];
 const KIND_STANCE: Record<Kind, StanceName> = { ground: 'run', trunk: 'trunk', line: 'wool' };
 type Num = { [K in keyof Stance]: Stance[K] extends number ? K : never }[keyof Stance];
 const NUMBERS = (Object.keys(STANCES.stand) as (keyof Stance)[]).filter((k) => typeof STANCES.stand[k] === 'number') as Num[];
@@ -62,11 +64,16 @@ const TAIL_IN: Partial<Stance> = { tailLift: -0.28, tailCurve: 0.0, tailTip: 0.0
 const TAIL_OUT: Partial<Stance> = { tailLift: 1.15, tailCurve: 0.13, tailTip: -0.05, tailBend: 0.08 };
 /** A tell: its rump pushed up under the leaves and the whole plume stood straight up out of them to be waved. */
 const TAIL_TELL: Partial<Stance> = { bodyY: 0.058, pitch: -0.3, seat: false, tailLift: 1.45, tailCurve: 0.04, tailTip: -0.06, tailBend: 0 };
-/** How long a tell lasts, and the hop it turns round on the spot in, seconds. */
+/** How long a tell lasts, seconds. */
 const TELL = 1.6;
-const HOP = 0.24;
+/** An indignant shake, seconds: the shake from nose to tail tip, the scolding after it, and all of it. */
+const SHAKE = 0.75;
+const SCOLDING = 2.1;
+const INDIGNANT = 2.5;
 /** Standing on the wool, every paw on the one line. */
 const ON_LINE: Partial<Stance> = { front: [0.002, 0.042], hind: [0.003, -0.012] };
+/** On a limb, its paws close in along the top of it. */
+const ON_LIMB: Partial<Stance> = { front: [0.005, 0.05], hind: [0.007, -0.01] };
 /** Springing out of the leaves: stretched out up and on, ears back, tail flung up behind. */
 const SPRING: Partial<Stance> = { tailLift: 1.0, tailCurve: 0.2, tailTip: -0.2, earBack: 0.5 };
 const PAWS = [HAND_L, HAND_R, FOOT_L, FOOT_R];
@@ -143,6 +150,12 @@ export class Squirrel {
   private hopTurn = 0;
   private hopDown = false;
   private tellT = -1;
+  /** Seconds since it was startled, or since it began to shake itself off; -1 when it is neither. */
+  private startleT = -1;
+  private indignantT = -1;
+  private squeakIn = 0;
+  private perchedAs: SquirrelAction = 'sit';
+  private puff = 0;
 
   private route: Route | null = null;
   private routeEnd: SquirrelPoint | null = null;
@@ -155,6 +168,19 @@ export class Squirrel {
   private kind: Kind = 'ground';
   /** How far through a leap from one kind of surface to the next it is, or -1 on one surface. */
   private crossing = -1;
+  /** A leap's seconds in the air (0 when not leaping) and so far, where along the way it leaves and lands, and its body there. */
+  private leapFor = 0;
+  private leapT = 0;
+  private leapFrom = 0;
+  private leapTo = 0;
+  private readonly leapA = new THREE.Vector3();
+  private readonly leapB = new THREE.Vector3();
+  /** Every paw was off what it goes on last frame, in a bound. */
+  private flew = false;
+  /** How far its bound has its body up off the ground this frame, metres. */
+  private rise = 0;
+  /** Counts down from 1 after it lands: its legs giving under it and its tail swinging on. */
+  private thud = 0;
   private onArrive: (() => void) | null = null;
   private readonly bound: BoundShape = { rise: 0, flex: 0, stretch: 0, pitch: 0, tail: 0 };
   private readonly support: Support;
@@ -163,7 +189,6 @@ export class Squirrel {
   private airT = 0;
   private airFor = 0;
   private gatherFor = 0;
-  private airArc = 0;
   private airRise = 0;
   private airPitch = 0;
   private stirred = false;
@@ -203,7 +228,7 @@ export class Squirrel {
       frame: new THREE.Matrix4(), scale: this.scale, origin: new THREE.Vector3(), forward: new THREE.Vector3(0, 0, 1), up: new THREE.Vector3(0, 1, 0),
       bodyX: 0, bodyY: 0, bodyZ: 0, pitch: 0, roll: 0, flex: 0, stretch: 0, chestUp: 0, bend: 0, neckLow: 0,
       headYaw: 0, headPitch: 0, headRoll: 0, jaw: 0, earBack: 0, earTwitch: [0, 0],
-      tailLift: 0, tailSwing: 0, tailCurve: 0, tailTip: 0, tailBend: 0, tailWave: 0, tailWaveSize: 0, tailFlick: 0, tailRipple: 0, tailRipplePhase: 0,
+      tailLift: 0, tailSwing: 0, tailCurve: 0, tailTip: 0, tailBend: 0, tailWave: 0, tailWaveSize: 0, tailFlick: 0, tailPuff: 0, tailRipple: 0, tailRipplePhase: 0,
       paws: this.gait.paws.map((p) => ({ at: p.at, curl: 0 })), hold: 0, holdHigh: 0, hock: [1.45, 1.45], breath: 0,
     };
     this.support = { origin: this.at, forward: this.fwd, up: this.up, side: this.side, scale: this.scale, snap: (p) => this.route!.snap(p, this.seg, this.crossing >= 0 ? this.route!.kind(this.seg, 'to') : this.kind) };
@@ -245,12 +270,14 @@ export class Squirrel {
     this.route = null;
     this.onArrive = null;
     this.crossing = -1;
+    this.leapFor = 0;
     this.airRise = 0;
     this.airPitch = 0;
     this.stopFidgets();
     if (opts.look !== undefined) this.target = opts.look;
     if (name === 'dive') return this.dive(opts);
     if (name === 'burst') return this.burst(opts);
+    if ((name === 'startle' || name === 'indignant') && PERCHED.includes(this.doing)) this.perchedAs = this.doing;
     if (opts.at) this.place(opts.at, opts.yaw ?? this.yaw, opts);
     else if (opts.yaw !== undefined) this.face(opts.yaw);
     this.mode = 'hold';
@@ -268,6 +295,17 @@ export class Squirrel {
     if (name === 'scold') {
       this.chuckIn = 0.1;
       this.chucksLeft = 0;
+    }
+    if (name === 'startle') {
+      this.startleT = 0;
+      this.squeakIn = 0.32;
+      this.busyFor = 0.4;
+      this.call('squeak', 1);
+    }
+    if (name === 'indignant') {
+      this.indignantT = 0;
+      this.busyFor = INDIGNANT;
+      this.twitchL = this.twitchR = 1;
     }
     return true;
   }
@@ -290,11 +328,12 @@ export class Squirrel {
       points.unshift({ at: this.at.clone(), on: onTrunk ? 'trunk' : this.radius === 0 && this.kind === 'line' ? 'line' : 'ground', up: this.up.clone(), radius: onTrunk ? this.radius || undefined : undefined });
     }
     const going = this.mode === 'travel';
-    this.route = new Route(points, opts.floor !== undefined ? opts.floor : this.floor);
+    this.route = new Route(points, opts.floor !== undefined ? opts.floor : this.floor, tuning.squirrel.leap.reach * this.scale);
     this.routeEnd = points[points.length - 1];
     if (opts.floor !== undefined) this.floor = opts.floor;
     this.along = 0;
     this.crossing = -1;
+    this.leapFor = 0;
     if (!going) {
       this.speed = 0;
       this.setOff = 0;
@@ -396,6 +435,8 @@ export class Squirrel {
   private stopFidgets(): void {
     this.idle.reset();
     this.tellT = -1;
+    this.startleT = -1;
+    this.indignantT = -1;
     if (this.hopT >= 0) this.airRise = 0;
     this.hopT = -1;
   }
@@ -461,37 +502,70 @@ export class Squirrel {
    * going it holds to it exactly.
    */
   private turn(dt: number): void {
-    const k = this.mode === 'travel' ? (this.setOff > 0.4 ? 1 : 1 - Math.exp(-dt * 16)) : 1 - Math.exp(-dt * 10);
-    this.up.lerp(this.upWant, k).normalize();
-    this.fwd.lerp(this.fwdWant, k);
-    this.fwd.addScaledVector(this.up, -this.fwd.dot(this.up));
-    if (this.fwd.lengthSq() < 1e-8) this.fwd.copy(this.fwdWant).addScaledVector(this.up, -this.fwdWant.dot(this.up));
-    this.fwd.normalize();
+    this.turned(dt, this.up, this.fwd);
+  }
+
+  /** The frame `turn` will give it this frame, written to `up` and `fwd` (which may be its own). */
+  private turned(dt: number, up: THREE.Vector3, fwd: THREE.Vector3): void {
+    const k = this.mode === 'travel' ? (this.setOff > 0.4 || this.leapFor > 0 ? 1 : 1 - Math.exp(-dt * 16)) : 1 - Math.exp(-dt * 10);
+    up.copy(this.up).lerp(this.upWant, k).normalize();
+    fwd.copy(this.fwd).lerp(this.fwdWant, k);
+    fwd.addScaledVector(up, -fwd.dot(up));
+    if (fwd.lengthSq() < 1e-8) fwd.copy(this.fwdWant).addScaledVector(up, -this.fwdWant.dot(up));
+    fwd.normalize();
   }
 
   private travel(dt: number): void {
     const route = this.route!;
     const t = tuning.squirrel;
     const pace = (k: Kind) => (k === 'trunk' ? t.climbSpeed : k === 'line' ? t.lineSpeed : t.boundSpeed);
-    this.cruise = Math.min(pace(route.kind(this.seg, 'from')), pace(route.kind(this.seg, 'to'))) * this.pace;
+    const [a, b] = route.pace(this.seg);
+    this.cruise = Math.min(pace(a), pace(b)) * this.pace;
     this.setOff += dt;
     /** Up out of a sit before it goes anywhere. */
     const ready = smooth((this.setOff - 0.05) / 0.15);
     const left = route.length - this.along;
-    const brake = Math.sqrt(2 * t.brake * Math.max(0, left));
-    const goal = Math.min(this.cruise * ready, brake);
-    this.speed = goal > this.speed ? ease(this.speed, goal, t.pickUp, dt) : Math.max(goal, this.speed - t.brake * 1.5 * dt);
-    this.along = Math.min(route.length, this.along + this.speed * dt);
+    if (this.leapFor > 0) {
+      this.leapT += dt;
+      const span = this.leapTo - this.leapFrom;
+      this.speed = span / this.leapFor;
+      this.along = this.leapT < this.leapFor ? this.leapFrom + span * (this.leapT / this.leapFor) : Math.min(route.length, this.leapTo + this.speed * (this.leapT - this.leapFor));
+      if (this.leapT >= this.leapFor) {
+        this.leapFor = 0;
+        this.speed = Math.min(this.speed, this.cruise);
+      }
+    } else {
+      const brake = Math.sqrt(2 * t.brake * Math.max(0, left));
+      const goal = Math.min(this.cruise * ready, brake);
+      this.speed = goal > this.speed ? ease(this.speed, goal, t.pickUp, dt) : Math.max(goal, this.speed - t.brake * 1.5 * dt);
+      this.along = Math.min(route.length, this.along + this.speed * dt);
+    }
     this.seg = route.sample(this.along, this.at, this.upWant, this.fwdWant);
+    const from = route.kind(this.seg, 'from');
+    const to = route.kind(this.seg, 'to');
     this.fwdWant.addScaledVector(this.upWant, -this.fwdWant.dot(this.upWant));
     if (this.fwdWant.lengthSq() < 1e-10) this.fwdWant.copy(this.fwd);
     this.fwdWant.normalize();
-    const from = route.kind(this.seg, 'from');
-    const to = route.kind(this.seg, 'to');
     const kind = route.t < 0.5 ? from : to;
-    this.crossing = from === to ? -1 : route.t;
-    /** Leaping from one surface to the other, it goes up off the ground in an arc. */
-    this.airRise = from !== to && (from === 'ground' || to === 'ground') ? Math.sin(Math.PI * route.t) * 0.03 * this.scale : 0;
+    const g = this.gait;
+    const flying = !g.inLeap && g.paws.every((p) => !p.planted);
+    if (this.leapFor === 0) {
+      /** It leaps off the push of a bound that would come down past the take-off, or from its feet once there. */
+      const next = from !== to ? this.seg : route.nextCrossing(this.seg);
+      const [start, end] = next >= 0 ? route.span(next) : [0, 0];
+      const pushing = flying && !this.flew && start - this.along < (1 - g.liftOff) * this.speed * g.period;
+      if (end - this.along > 0.02 && (pushing || (from !== to && !flying))) this.takeOff(next, dt);
+    }
+    this.flew = flying;
+    this.crossing = this.leapFor === 0 ? -1 : Math.min(1, this.leapT / this.leapFor);
+    if (this.crossing >= 0) {
+      /** Its body flies a true arc under gravity between where it left and where it lands, whatever its feet turn to. */
+      const u = this.crossing, time = u * this.leapFor;
+      const y = this.leapA.y + (this.leapB.y - this.leapA.y) * u + 0.5 * t.gravity * time * (this.leapFor - time);
+      this.turned(dt, this.v, this.w);
+      this.at.y = y - this.bodyOff(this.v, this.w, this.v).y;
+    }
+    this.airRise = 0;
     if (kind !== this.kind) {
       this.kind = kind;
       this.doing = kind === 'trunk' ? 'climb' : kind === 'line' ? 'run-line' : 'bound';
@@ -506,6 +580,33 @@ export class Squirrel {
     if (left < 0.004 && this.speed < 0.05) this.arrive();
   }
 
+  /** Off one surface for the next: how long it will be in the air, and where its body leaves from and lands. */
+  private takeOff(seg: number, dt: number): void {
+    const route = this.route!;
+    const k = tuning.squirrel.leap;
+    const to = route.span(seg)[1];
+    const span = Math.max(to - this.along, 1e-3);
+    this.leapFor = clamp(span / (k.speed * Math.sqrt(this.pace)), k.least, k.most);
+    this.leapT = 0;
+    this.leapFrom = this.along;
+    this.leapTo = to;
+    this.turned(dt, this.v, this.w);
+    this.leapA.copy(this.at).add(this.bodyOff(this.v, this.w, this.v));
+    this.leapA.y += this.rise;
+    const t = route.t;
+    route.sample(to, this.leapB, this.v, this.w);
+    this.w.addScaledVector(this.v, -this.w.dot(this.v)).normalize();
+    this.leapB.add(this.bodyOff(this.v, this.w, this.v));
+    route.t = t;
+  }
+
+  /** Where its body is from the point under it, on a surface with this up and way on (`fwd` across `up`, unit). */
+  private bodyOff(up: THREE.Vector3, fwd: THREE.Vector3, out: THREE.Vector3): THREE.Vector3 {
+    const k = this.scale;
+    const y = this.now.bodyY * k, z = (REST[BODY][2] + this.now.bodyZ) * k;
+    return out.set(up.x * y + fwd.x * z, up.y * y + fwd.y * z, up.z * y + fwd.z * z);
+  }
+
   private arrive(): void {
     const end = this.routeEnd!;
     const route = this.route!;
@@ -516,6 +617,7 @@ export class Squirrel {
     this.mode = 'hold';
     this.settled = 0.3;
     this.crossing = -1;
+    this.leapFor = 0;
     this.airRise = 0;
     if (end.on === 'trunk') {
       this.radius = end.radius ?? 0.2;
@@ -538,21 +640,34 @@ export class Squirrel {
     done?.();
   }
 
+  /**
+   * A pounce: a crouch, a spring and down into the leaves on a short steep arc. Further off on level ground than
+   * it can pounce, it bounds up to where it can first.
+   */
   private dive(opts: ActOptions): boolean {
     if (opts.floor !== undefined) this.floor = opts.floor;
     const to = opts.at ? opts.at.clone() : this.at.clone().addScaledVector(this.fwd, 0.12 * this.scale);
+    const span = Math.hypot(to.x - this.at.x, to.z - this.at.z);
+    const most = tuning.squirrel.pounce * this.scale;
+    if (span > most && this.up.y > 0.9 && this.radius === 0) {
+      const off = this.v.set(to.x - this.at.x, 0, to.z - this.at.z).multiplyScalar(1 - (0.85 * most) / span).add(this.at);
+      off.y = this.floorAt(off.x, off.z);
+      if (Math.abs(off.y - this.at.y) < 0.06 * this.scale) {
+        this.follow([{ at: off.clone(), on: 'ground' }], () => this.act('dive', opts), { pace: this.pace });
+        return true;
+      }
+    }
     this.airFrom.copy(this.at);
     this.airTo.copy(to);
-    const span = Math.hypot(to.x - this.at.x, to.z - this.at.z);
+    if (this.floor) this.airTo.y = this.floor(to.x, to.z);
     if (span > 0.02) this.face(Math.atan2(to.x - this.at.x, to.z - this.at.z));
     this.endYaw = opts.yaw ?? null;
     this.tailOut = opts.tailOut ?? false;
     this.mode = 'air';
     this.air = 'dive';
     this.airT = 0;
-    this.gatherFor = 0.16;
-    this.airFor = 0.3 + 0.12 * Math.sqrt(span / this.scale * 4);
-    this.airArc = 0.035 * this.scale + 0.2 * span;
+    this.gatherFor = 0.12;
+    this.airFor = clamp(0.28 + 0.14 * span, 0.3, 0.5);
     this.stirred = false;
     this.launched = false;
     this.doing = 'dive';
@@ -562,19 +677,20 @@ export class Squirrel {
     return true;
   }
 
+  /** Up out of the leaves in one snap, on an arc to where it lands. */
   private burst(opts: ActOptions): boolean {
     if (opts.floor !== undefined) this.floor = opts.floor;
     this.airFrom.copy(this.at);
     this.airTo.copy(opts.at ?? this.at);
+    if (this.floor) this.airTo.y = this.floor(this.airTo.x, this.airTo.z);
     if (opts.yaw !== undefined) this.face(opts.yaw);
     this.endYaw = null;
-    const span = this.airFrom.distanceTo(this.airTo);
+    const span = Math.hypot(this.airTo.x - this.airFrom.x, this.airTo.z - this.airFrom.z);
     this.mode = 'air';
     this.air = 'burst';
     this.airT = 0;
     this.gatherFor = 0;
-    this.airFor = 0.4 + 0.1 * span;
-    this.airArc = 0.1 * this.scale + 0.2 * span;
+    this.airFor = clamp(0.38 + 0.04 * span, 0.38, 0.46);
     if (span > 0.02) this.face(Math.atan2(this.airTo.x - this.at.x, this.airTo.z - this.at.z));
     this.doing = 'burst';
     this.radius = 0;
@@ -594,11 +710,11 @@ export class Squirrel {
       this.launched = true;
       this.hold('dive', null);
     }
+    const g = tuning.squirrel.gravity, time = u * this.airFor;
     this.at.lerpVectors(this.airFrom, this.airTo, u);
-    if (this.up.y > 0.9) this.at.y = this.floorAt(this.at.x, this.at.z);
-    this.airRise = this.airArc * 4 * u * (1 - u);
-    const climb = (this.airArc * 4 * (1 - 2 * u)) / Math.max(this.airFor, 1e-3);
-    const run = this.airFrom.distanceTo(this.airTo) / Math.max(this.airFor, 1e-3);
+    this.airRise = 0.5 * g * time * (this.airFor - time);
+    const climb = (this.airTo.y - this.airFrom.y) / this.airFor + g * (this.airFor / 2 - time);
+    const run = Math.hypot(this.airTo.x - this.airFrom.x, this.airTo.z - this.airFrom.z) / this.airFor;
     /** Diving, it noses over into the leaves; bursting out, it goes up nose first and levels to land. */
     this.airPitch = this.air === 'dive' ? clamp(Math.atan2(climb, Math.max(run, 0.3)) - 0.35 * u, -1.1, 0.5) : 0.8 * (1 - u) * (1 - u) - 0.1 * u;
     if (this.air === 'burst' && u > 0.7) this.hold('freeze', null);
@@ -621,6 +737,7 @@ export class Squirrel {
       this.doing = 'freeze';
       this.hold('freeze', null);
       this.busyFor = 0.35;
+      this.thud = 1;
       this.heard.push({ kind: 'land', amount: 0.7 });
     }
   }
@@ -647,7 +764,8 @@ export class Squirrel {
       }
     }
     this.hop(dt);
-    if (this.doing === 'scold') {
+    this.alarm(dt);
+    if (this.doing === 'scold' || this.scolding) {
       this.chuckIn -= dt;
       if (this.chuckIn <= 0) {
         if (this.chucksLeft <= 0) this.chucksLeft = 3 + Math.floor(Math.random() * 5);
@@ -672,6 +790,39 @@ export class Squirrel {
     }
   }
 
+  /**
+   * Startled, it squeaks again a moment after the first and now and then while it stays covered. Indignant, it
+   * shakes itself off, sits up and scolds what startled it, then settles back to how it was perched.
+   */
+  private alarm(dt: number): void {
+    if (this.startleT >= 0) {
+      this.startleT += dt;
+      if ((this.squeakIn -= dt) <= 0) {
+        this.call('squeak', this.startleT < 1 ? 0.9 : 0.5);
+        this.squeakIn = 1.4 + Math.random() * 1.4;
+      }
+    }
+    if (this.indignantT < 0) return;
+    const was = this.indignantT;
+    this.indignantT += dt;
+    if (was < SHAKE && this.indignantT >= SHAKE) {
+      this.hold('scold', this.radius > 0 ? ON_LIMB : null);
+      this.call('chitter', 1);
+      this.chuckIn = 0.35;
+      this.chucksLeft = 4 + Math.floor(Math.random() * 3);
+      this.chuckT = 0;
+    }
+    if (this.indignantT < INDIGNANT) return;
+    this.indignantT = -1;
+    this.doing = this.perchedAs;
+    this.hold(ACTION_STANCE[this.doing], this.doing === 'run-line' ? ON_LINE : null);
+    this.nibbling = this.doing === 'sit';
+  }
+
+  private get scolding(): boolean {
+    return this.indignantT >= SHAKE && this.indignantT < SCOLDING;
+  }
+
   /** A hop round on the spot when it fidgets: up off all four paws together, turned, and down again. */
   private hop(dt: number): void {
     const turn = this.idle.takeHop();
@@ -683,15 +834,18 @@ export class Squirrel {
     }
     if (this.hopT < 0) return;
     this.hopT += dt;
-    const u = Math.min(1, this.hopT / HOP);
+    const hop = tuning.squirrel.hop;
+    const u = Math.min(1, this.hopT / hop);
     const yaw = this.hopFrom + this.hopTurn * smooth(u);
     this.fwd.set(Math.sin(yaw), 0, Math.cos(yaw));
     this.fwdWant.copy(this.fwd);
-    this.airRise = Math.sin(Math.PI * u) * (this.doing === 'sit' ? 0.012 : 0.02) * this.scale;
+    const time = u * hop;
+    this.airRise = 0.5 * tuning.squirrel.gravity * time * (hop - time);
     if (u < 1) return;
     this.hopT = -1;
     this.airRise = 0;
     this.hopDown = true;
+    this.thud = 1;
   }
 
   /** Whether its floor is near enough flat all round it to hop round on: not the round top of a log. */
@@ -704,7 +858,7 @@ export class Squirrel {
   }
 
   private ease(dt: number): void {
-    const rate = this.placed || this.settled < 0.05 ? 1e3 : this.mode === 'air' ? 18 : tuning.squirrel.snap;
+    const rate = this.placed || this.settled < 0.05 ? 1e3 : this.mode === 'air' || (this.startleT >= 0 && this.startleT < 0.3) ? 30 : tuning.squirrel.snap;
     this.settled += dt;
     for (const k of NUMBERS) (this.now[k] as number) = ease(this.now[k] as number, this.want[k] as number, rate, dt);
     for (const i of [0, 1] as const) {
@@ -731,7 +885,11 @@ export class Squirrel {
     }
     this.nextGlance -= dt;
     if (still && still !== 'buried') this.glance.copy(this.idle.glance).multiplyScalar(this.target ? 0.5 : 1);
-    else if (this.nextGlance <= 0) {
+    else if (this.startleT >= 0 && this.nextGlance <= 0) {
+      /** Quick, nervous looks up and about at what has come over it. */
+      this.glance.set((Math.random() - 0.5) * 1.6, 0.3 + Math.random() * 0.5);
+      this.nextGlance = 0.18 + Math.random() * 0.3;
+    } else if (this.nextGlance <= 0) {
       const wide = this.doing === 'peek' ? 1.2 : this.target ? 0.25 : 0.9;
       this.glance.set((Math.random() - 0.5) * wide, (Math.random() - 0.45) * 0.4 * wide);
       this.nextGlance = this.doing === 'peek' ? 0.3 + Math.random() * 0.5 : 0.5 + Math.random() * 2;
@@ -743,7 +901,9 @@ export class Squirrel {
     const twitch = (x: number) => (Math.random() < dt * (frozen ? 0 : this.doing === 'scold' ? 1.2 : 0.35) ? 1 : x * Math.exp(-dt * 9));
     this.twitchL = Math.max(twitch(this.twitchL), this.idle.earL);
     this.twitchR = Math.max(twitch(this.twitchR), this.idle.earR);
-    this.d.breath += dt * (frozen || going ? 7 : 4.2);
+    this.d.breath += dt * (this.startleT >= 0 ? 10 : frozen || going ? 7 : 4.2);
+    const puffed = this.startleT >= 0 || (this.indignantT >= 0 && this.indignantT < 0.3);
+    this.puff = ease(this.puff, puffed ? 0.6 : 0, puffed ? 14 : 4, dt);
     this.d.tailWave += dt * (this.tellT >= 0 ? TAU * 2.6 : this.kind === 'line' && going ? 2.4 : 1.6);
   }
 
@@ -767,6 +927,7 @@ export class Squirrel {
     let neckLow = s.neckLow;
     let jaw = s.jaw;
     let roll = 0;
+    let headRoll = 0;
     let tailSwing = 0;
     let tailFlick = 0;
     d.tailRipple = 0;
@@ -777,14 +938,20 @@ export class Squirrel {
       const go = clamp(g.speed / Math.max(this.cruise * 0.7, 0.1), 0, 1);
       const size = this.kind === 'ground' ? 1 : this.kind === 'trunk' ? 0.45 : 0.6;
       const air = this.kind === 'ground' ? 1 : this.kind === 'trunk' ? 0.25 : 0.45;
-      const b = boundShape(g.phase, size, air, this.bound);
-      bodyY += b.rise * go;
-      bodyZ += (b.stretch / 2) * go;
+      const leaping = this.crossing >= 0;
+      /** A leap is held as a bound's flight: stretched long off its hind feet, then reaching for the landing. */
+      const b = boundShape(leaping ? 0.56 + 0.4 * this.crossing : g.phase, size, air, this.bound);
+      /** Up a trunk its bound lifts it off the bark, not against gravity; on the ground and the wool it flies. */
+      this.rise = this.kind !== 'trunk' && !leaping && Number.isFinite(g.period) ? boundFlight(g.phase, g.liftOff, g.period, tuning.squirrel.gravity, go) : 0;
+      const rise = this.kind === 'trunk' && !leaping ? b.rise * go : this.rise / k;
+      bodyY += rise;
+      if (leaping && this.crossing < 0.35) tailFlick += 0.9 * Math.sin((Math.PI * this.crossing) / 0.35);
+      if (!leaping) bodyZ += (b.stretch / 2) * go;
       flex += b.flex * go;
       stretch += b.stretch * go;
       pitch += b.pitch * go;
       /** The neck gives against the body's rise and its pitch, so the head travels more evenly than the body. */
-      neckLow += (b.rise * 4 + 0.3 * b.pitch) * go;
+      neckLow += rise * 4 + 0.3 * b.pitch * go;
       headPitch -= 0.6 * b.pitch * go;
       tailLift += b.tail * go;
       d.tailRipple = 0.16 * go * size;
@@ -797,7 +964,7 @@ export class Squirrel {
         tailSwing = -0.4 * sway;
       }
     }
-    if (this.doing === 'scold') {
+    if (this.doing === 'scold' || this.scolding) {
       /** Each chuck jerks the whole of it: the jaw snaps open, the body bobs and the tail flicks up its length. */
       const c = this.chuckT;
       const pulse = c < 0.16 ? Math.sin((c / 0.16) * Math.PI) : 0;
@@ -823,6 +990,35 @@ export class Squirrel {
       bodyY -= 0.005 * f.bob;
       pitch += 0.1 * f.bob;
       if (this.doing === 'climb' && this.tellT >= 0) jaw = 0.8 * (this.chuckT < 0.09 ? Math.sin((this.chuckT / 0.09) * Math.PI) : 0);
+    }
+    if (this.startleT >= 0) {
+      /** A jolt up off its perch at the fright, and a tremble after. */
+      const t = this.startleT;
+      const jolt = t < 0.22 ? Math.sin((Math.PI * t) / 0.22) : 0;
+      bodyY += 0.016 * jolt;
+      pitch += 0.25 * jolt;
+      tailLift += 0.35 * jolt;
+      roll += 0.025 * Math.sin(TAU * 15 * t) * Math.min(1, t / 0.3);
+    }
+    if (this.indignantT >= 0 && this.indignantT < SHAKE) {
+      /** A shake that runs from its nose down its body to the tip of its tail, each part a moment after the last. */
+      const t = this.indignantT;
+      const part = (from: number, to: number) => (t > from && t < to ? Math.sin((Math.PI * (t - from)) / (to - from)) : 0);
+      const shake = Math.sin(TAU * 11 * t);
+      headRoll += 0.55 * shake * part(0, 0.35);
+      roll += 0.22 * shake * part(0.1, 0.5);
+      tailSwing += 0.7 * Math.sin(TAU * 9 * t) * part(0.3, SHAKE);
+      tailFlick += 0.8 * Math.abs(shake) * part(0.4, SHAKE);
+    }
+    d.tailPuff = this.puff;
+    if (this.thud > 0) {
+      /** Down from the air its legs give under it, its back rounds and its tail swings on over it. */
+      this.thud = Math.max(0, this.thud - dt / 0.2);
+      const give = Math.sin(Math.PI * (1 - this.thud));
+      bodyY -= 0.006 * give;
+      flex += 0.3 * give;
+      pitch -= 0.06 * give;
+      tailLift += 0.3 * give;
     }
     let wave = this.mode === 'travel' ? 0 : this.doing === 'buried' ? (this.tailOut ? 0.08 : 0) : 0.035;
     if (this.tellT >= 0 && this.doing === 'buried') {
@@ -860,14 +1056,14 @@ export class Squirrel {
 
     let headYaw = this.glanceNow.x;
     headPitch += this.glanceNow.y;
-    if (this.target && this.mode === 'hold') {
+    if (this.target && this.mode === 'hold' && this.startleT < 0) {
       const l = this.toLocal(this.target, this.v);
       headYaw = clamp(Math.atan2(l.x, l.z - 0.08), -1.4, 1.4) + this.glanceNow.x;
       headPitch = clamp(Math.atan2(l.y - 0.12, Math.hypot(l.x, l.z - 0.08)), -0.8, 0.9) + this.glanceNow.y * 0.5;
     }
     d.headYaw = headYaw;
     d.headPitch = headPitch;
-    d.headRoll = nibbling ? -0.12 : 0;
+    d.headRoll = headRoll + (nibbling ? -0.12 : 0);
 
     this.paws(dt);
     this.rig.pose(d);
@@ -886,10 +1082,10 @@ export class Squirrel {
     const g = this.gait;
     if (this.mode === 'travel') {
       if (this.crossing >= 0) g.leap(this.crossing, this.support, this.runHomes, 0.03 * k);
-      else {
-        if (g.inLeap) g.land(PATTERNS[this.kind]);
-        else g.run(dt, this.support, PATTERNS[this.kind], this.runHomes);
-      }
+      else if (g.inLeap) {
+        g.land(PATTERNS[this.kind]);
+        this.thud = 1;
+      } else g.run(dt, this.support, PATTERNS[this.kind], this.runHomes);
       if (g.landed.length) this.tread();
     } else {
       for (let i = 0; i < 4; i++) {
@@ -904,6 +1100,7 @@ export class Squirrel {
           p.addScaledVector(this.side, this.radius * Math.sin(a) - across).addScaledVector(this.up, -this.radius * (1 - Math.cos(a)));
         }
         if (this.stoppedOn) this.stoppedOn(p);
+        else if (this.mode === 'air') p.y = this.at.y;
         else if (this.up.y > 0.9) {
           p.y = this.floorAt(p.x, p.z);
           if (!front) this.heelUp(i - 2, p);
