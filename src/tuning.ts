@@ -1464,10 +1464,11 @@ export const tuning = {
       /** Updraft over its heap, as lift above the round's other heaps, counted as air on it (lift 2 or so at full charge). */
       liftWork: 0.3,
       /**
-       * Updraft charge at which circles wound over another heap stop their gusts counting on the hide's; while they are
-       * wound over a heap, and `circleLinger` s after, the round's other heaps hold against the column.
+       * Updraft charge at which circles wound over another heap stop their gusts counting on the hide's. Once circles
+       * over a heap have wound the charge past `circleHoldFrom` (well past what a child's random swipes wind up), and for
+       * `circleLinger` s after, the round's other heaps hold against the column.
        */
-      circledBy: 0.02, circleLinger: 3,
+      circledBy: 0.02, circleHoldFrom: 0.35, circleLinger: 3,
       /**
        * The meeting: how near she comes before the lens glances at it on its log, how long she stands at the heap
        * looking at it (the round's frame easing in) before it sees her, how long it freezes before it sits up and

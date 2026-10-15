@@ -764,7 +764,7 @@ the walk on it; knobs are `tuning.birches.squirrel`; `tools/squirrel-rounds-chec
   1 and 0.25 after. Measured strokes: across a heap 0.3–0.6, along its rim 0.1–0.17, a metre outside it about 0.1.
   Round 3's heaps are told apart cleanly. In round 2 a hard stroke over the far heap also blows the near one (its air
   reaches there at 0.4–0.6), so it finds a squirrel in the near heap: generous, and what the leaves show. A child's
-  random swipes find it in 2–5 strokes a round ("As built: the shuffle and the rounds polish").
+  random swipes find it in 2–13 strokes a round, about 4 on average ("As built: the shuffle and the rounds polish").
 - **Her and the cygnet.** She walks round any heap between her and her stand rather than through it, kneels there
   (`kneel`) and turns to each heap the wind bursts; found, she gets up and cheers. The cygnet first stands beside her,
   then looks into heaps of its own choosing from the rim nearest her (`ROUNDS[].cygnet`), delving or peering and
@@ -846,15 +846,16 @@ verification's own list. Built on `birches-uplift-heaps`.
 readily. A deliberate swipe across the right heap still uncovers it in one stroke in every round (found 1.75–2.07 s
 after it begins), and the heap visibly thins first; circles uncover it in two or three loops; a stroke across a wrong heap
 aimed away from the right one never does. Random swipes over the frame (each from where the last ended to anywhere in
-the frame below the canopy, three seeds) found it in 2–3, 3–5 and 4–5 strokes in rounds 1, 2 and 3, mean 3.6, most
-5 (19–30 before). The previous random model, short swipes that wander and pin to the frame's edges once they reach
+the frame below the canopy, six seeds) found it in 2–4, 2–6 and 2–13 strokes in rounds 1, 2 and 3, means 3.7–4.2,
+13 at most once (19–30 before); round 3 is slowest when it has settled in the far heap. The previous random model, short swipes that wander and pin to the frame's edges once they reach
 one, is kept as `WANDER=1`; with it one seed in three never reaches the heaps in rounds 1 and 2 in 40 strokes.
 
 **Spacing.** Round 3's heaps are 3 m apart at the rim (1.2 m before) and erode on their own: a stroke across the
 near heap takes it from 0.90 to 0.31 m and leaves the middle and far ones standing (1.03, 0.90). An updraft's column
-is wider than any spacing the frame allows (5–9 m), so while circles are wound over one heap of the round being played,
-and for `circleLinger` (3 s) after, the round's other heaps hold against it: three loops over the middle heap take it
-to nothing and leave the far one at 0.90 (before, they took all three). Round 2's two heaps were already 7 m apart.
+is wider than any spacing the frame allows (5–9 m), so once circles over one heap of the round being played have
+wound the charge past `circleHoldFrom` (0.35, well past what random swipes wind up), and for `circleLinger` (3 s)
+after, the round's other heaps hold against it: three loops over the middle heap take it to nothing and leave the far
+one standing (before, they took all three). Round 2's two heaps were already 7 m apart.
 
 **Frames** (the storyboard table above): round 2 is looked at from the south, high enough that the near heap and
 its burst sit well inside the frame (portrait from the east along the two heaps, the near one whole at the frame's

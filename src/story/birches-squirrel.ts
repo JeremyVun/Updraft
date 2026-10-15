@@ -328,7 +328,7 @@ export class BirchesSquirrel {
   /** The heap of the round being played that the player's circles are wound over, or −1. */
   private circledHeap(): number {
     const round = this.cue.round, { charge, updraftAt: u } = this.cast.input;
-    if (round < 0 || this.rounds > round || charge <= tuning.birches.squirrel.circledBy) return -1;
+    if (round < 0 || this.rounds > round || charge <= tuning.birches.squirrel.circleHoldFrom) return -1;
     return ROUNDS[round].heaps.find((heap) => {
       const p = BIRCH_PILES[heap];
       return Math.hypot(p.x - u.x, p.z - u.z) < p.r + 1;
