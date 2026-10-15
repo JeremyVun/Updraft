@@ -488,16 +488,33 @@ export class BirchesSquirrel {
   }
 
   /**
+   * Circles wound over another heap of round `round` are that heap's: how much of their gusts, which spill metres
+   * past the loop, still count on `at` (1 when the player is not circling over another heap).
+   */
+  private notCircledElsewhere(round: number, at: Spot): number {
+    const { charge, updraftAt: u } = this.cast.input;
+    if (charge <= 0) return 1;
+    for (const heap of ROUNDS[round].heaps) {
+      const p = BIRCH_PILES[heap];
+      if (Math.hypot(p.x - at.x, p.z - at.z) > p.r && Math.hypot(p.x - u.x, p.z - u.z) < p.r) {
+        return 1 - THREE.MathUtils.smoothstep(charge, 0, tuning.birches.squirrel.circledBy);
+      }
+    }
+    return 1;
+  }
+
+  /**
    * Lying hidden: a tell now and then while she is looking for it, and the wind on it counted until it bursts out.
    * What counts is each rise of the air over it, gust or updraft, so it bursts as the gust arrives or the column
-   * winds up, two glancing gusts add up, and a gust's slow dying away adds nothing.
+   * winds up, two glancing gusts add up, and a gust's slow dying away adds nothing. Circles over another heap count
+   * only there.
    */
   private lying(dt: number): void {
     const h = this.hidden!;
     const s = this.cast.squirrel;
     const k = tuning.birches.squirrel;
     const rate = this.windOn(h.at, h.reach) + this.liftOn(h.round, h.at);
-    const rise = rate - this.rate > 0.004 ? rate - this.rate : 0;
+    const rise = (rate - this.rate > 0.004 ? rate - this.rate : 0) * this.notCircledElsewhere(h.round, h.at);
     this.rate = rate;
     this.work = Math.max(0, this.work + rise - k.findForget * dt);
     if (rate > 0.05) {

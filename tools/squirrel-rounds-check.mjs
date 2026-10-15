@@ -30,6 +30,7 @@ async function load(query = '') {
     const [rounds, world, points, scarf, island] = await Promise.all([import('/src/story/birches-rounds.ts'), import('/src/world/birches.ts'),
       import('/src/story/checkpoint-data.ts'), import('/src/world/birch-scarf.ts'), import('/src/world/island.ts')]);
     window.__sq = { ...rounds, ...world, ...points, SCARF_SNAGS: scarf.SCARF_SNAGS, heightAt: island.heightAt };
+    window.__inviteRadius = (await import('/src/tuning.ts')).tuning.birches.squirrel.inviteRadius;
     window.__screen = (p) => { const v = p.clone().project(__game.rig.camera); return [(v.x + 1) / 2, (1 - v.y) / 2]; };
   });
   if (process.env.SCALE) await page.evaluate((scale) => { __game.squirrel.scale = scale; }, Number(process.env.SCALE));
@@ -90,22 +91,26 @@ async function stroke([a, b], ms = 380, lift = true) {
   }
 }
 
-/** Where heap `heap` of the round is on screen. */
-const heapOnScreen = (heap) => page.evaluate((heap) => {
-  const c = __game.story.current, r = __sq.ROUNDS[c.round], p = __sq.BIRCH_PILES[r.heaps[heap]];
-  return window.__screen(r.hides[heap].clone().set(p.x, r.hides[heap].y + 0.3, p.z));
-}, heap);
+/** The ground circle `size` times the radius of heap `heap` of the round, on screen. */
+const heapLoop = (heap, size) => page.evaluate(({ heap, size }) => {
+  const c = __game.story.current, r = __sq.ROUNDS[c.round], p = __sq.BIRCH_PILES[r.heaps[heap]], y = r.hides[heap].y + 0.3;
+  size ??= window.__inviteRadius;
+  return Array.from({ length: 24 }, (_, i) => {
+    const a = (i / 24) * Math.PI * 2;
+    return window.__screen(r.hides[heap].clone().set(p.x + Math.cos(a) * p.r * size, y, p.z + Math.sin(a) * p.r * size));
+  });
+}, { heap, size });
 
-/** Real circles round heap `heap` on screen, `radius` screen heights across, until it is found or `loops` are drawn. */
-async function circleOver(heap, round, loops = 6, radius = 0.07) {
-  const [cx, cy] = await heapOnScreen(heap);
+/** Real circles round heap `heap`, `size` times its radius on the ground as the drawn updraft shows, until it is found or `loops` are drawn. */
+async function circleOver(heap, round, loops = 6, size = null) {
+  const ring = await heapLoop(heap, size);
   await page.evaluate(() => { __game.input.present = false; });
-  let a = 0, drawn = 0;
-  await page.mouse.move(cx * W + radius * H, cy * H);
+  let drawn = 0;
+  await page.mouse.move(ring[0][0] * W, ring[0][1] * H);
   for (; drawn < loops; drawn++) {
-    for (let i = 0; i < 24; i++) {
-      a += (Math.PI * 2) / 24;
-      await page.mouse.move(cx * W + Math.cos(a) * radius * H, cy * H + Math.sin(a) * radius * H);
+    for (let i = 1; i <= 24; i++) {
+      const [x, y] = ring[i % 24];
+      await page.mouse.move(x * W, y * H);
       await page.waitForTimeout(28);
     }
     if (await found(round, 20)) return drawn + 1;

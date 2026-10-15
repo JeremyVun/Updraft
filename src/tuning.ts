@@ -1415,6 +1415,8 @@ export const tuning = {
       hintAfter: 10, inviteAfter: 18, inviteRadius: 0.8, inviteLift: 0.2, inviteRamp: 4,
       /** Updraft over its heap, as lift above the round's other heaps, counted as air on it (lift 2 or so at full charge). */
       liftWork: 0.3,
+      /** Updraft charge at which circles wound over another heap stop their gusts counting on the hide's. */
+      circledBy: 0.02,
       /**
        * The meeting: how near she comes before the lens glances at it on its log, how long she stands at the heap
        * looking at it (the round's frame easing in) before it sees her, and how long it freezes before it drops in.
