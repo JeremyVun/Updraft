@@ -693,6 +693,7 @@ const shown = { breeze: NaN, rainbow: 0, dusk: NaN, haze: NaN, hazeFalloff: NaN,
 const ISLE_MISTS = {
   boats: { isle: ISLES.boats, range: tuning.world.boatsMist },
   birches: { isle: ISLES.birches, range: tuning.world.birchesMist },
+  stairs: { isle: ISLES.stairs, range: tuning.world.stairsMist },
   wood: { isle: ISLES.wood, range: tuning.world.woodMist },
   sleeping: { isle: ISLES.sleeping, range: tuning.world.sleepingMist },
   mirror: { isle: { ...SKY_MIRROR, rx: SKY_MIRROR.rx * tuning.world.mirrorMist.core, rz: SKY_MIRROR.rz * tuning.world.mirrorMist.core },
@@ -983,6 +984,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   // The mirror's own mist lifts only once the whale has gone and the pod with it.
   const mistAhead = story.name === 'toBoats' || story.name === 'lines' ? ISLE_MISTS.boats
     : story.name === 'toBirches' ? ISLE_MISTS.birches
+    : story.name === 'toStairs' ? ISLE_MISTS.stairs
     : story.name === 'drowned' || story.name === 'toWood' ? ISLE_MISTS.wood
     : story.name === 'toSleeping' ? ISLE_MISTS.sleeping
     : story.name === 'toMirror' && story.current.mirrorArrival === 0 ? ISLE_MISTS.mirror : null;

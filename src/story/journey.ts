@@ -19,12 +19,12 @@ import { BirchesChapter } from './birches';
 import { DrownedChapter } from './drowned';
 import { SleepingChapter } from './sleeping';
 import { StairsChapter } from './stairs';
-import { DESCENT_END, DESCENT_YAW, STAIRS_LANDING } from '../world/stairs-layout';
+import { CLOUD, DESCENT_END, DESCENT_YAW, STAIRS_ISLE, STAIRS_LANDING } from '../world/stairs-layout';
 import { StageChapter } from './stage';
 import { WoodChapter } from './wood';
 import { WOOD_BERTH, WOOD_LANDING } from '../world/wood';
 import { SLEEP_BERTH, SLEEP_LANDING } from '../world/sleeping';
-import { BIRCHES_LANDING } from '../world/birches';
+import { BIRCHES_LANDING, BIRCHES_WALK } from '../world/birches';
 import { birchesAt } from '../world/birches-layout';
 import { placeProgress, restoreLife, saveProgress, type Progress } from './progress';
 import { restoreWingCare } from './wing-care';
@@ -69,6 +69,16 @@ const WHALE_LINE = WHALE_LEAD.clone().lerp(WHALE_REST, 0.5);
 /** Off the birches' beaches, in the island's band-local terms. */
 const offBirches = (x: number, z: number): THREE.Vector2 => new THREE.Vector2(birchesAt(x, z).x, birchesAt(x, z).z);
 
+const birchesView = tuning.crossingCamera.arrivals.birches;
+/** The way up off the beach into the trees, where the scarf runs and the crowns stand over it. */
+const BIRCHES_ARRIVAL = { ...birchesView,
+  reveal: { ...birchesView.reveal, sight: new THREE.Vector3(BIRCHES_WALK[0].x, 5, BIRCHES_WALK[0].y) } };
+
+const stairsView = tuning.crossingCamera.arrivals.stairs;
+/** The stair climbing from the knoll into the underside of the cloud. */
+const STAIRS_ARRIVAL_VIEW = { ...stairsView,
+  reveal: { ...stairsView.reveal, sight: new THREE.Vector3(STAIRS_ISLE.x, CLOUD.base - 9, STAIRS_ISLE.z) } };
+
 /** Where the boat goes on each crossing, including the long open passage after the sleeping island. */
 export const ROUTES: Record<string, THREE.Vector2[]> = {
   toLines: [
@@ -88,8 +98,11 @@ export const ROUTES: Record<string, THREE.Vector2[]> = {
    * the birches come out of their mist and they run up its beach straight on.
    */
   toBirches: [new THREE.Vector2(FAR_SHORE.x - 18, FAR_SHORE.z - 22), offBirches(14, -1022), BIRCHES_LANDING],
-  /** East off the birches' far beach, across open sea under the cloud coming down, onto the knoll the stairs stand on. */
-  toStairs: [offBirches(16, -1204), new THREE.Vector2(26, -1239), new THREE.Vector2(STAIRS_LANDING.x - 8, STAIRS_LANDING.y), STAIRS_LANDING],
+  /**
+   * Out north-east off the birches' far beach, far enough that the boat sails out to it before turning rather than
+   * along the shore, then east across open sea under the cloud coming down, onto the knoll the stairs stand on.
+   */
+  toStairs: [offBirches(44, -1228), new THREE.Vector2(26, -1239), new THREE.Vector2(STAIRS_LANDING.x - 8, STAIRS_LANDING.y), STAIRS_LANDING],
   /** Legacy saves only: new journeys keep sailing in DrownedChapter until the boat reaches the wood. */
   toWood: [new THREE.Vector2(-18, -1648), new THREE.Vector2(WOOD_LANDING.x, WOOD_LANDING.y)],
   /** A short hop west, round the wood's north shore: the frosted island is on them in a few minutes. */
@@ -412,12 +425,13 @@ export class Journey {
       case 'meadow':
         return new MeadowChapter(cast);
       case 'toBirches':
-        return new CrossingChapter(cast, { route: ROUTES.toBirches, haze: 0.85, dusk: 0.55, season: 0.38, music: 'meadow', meadowScore: 'return', arrivalMusic: 'birches' });
+        return new CrossingChapter(cast, { route: ROUTES.toBirches, haze: 0.85, dusk: 0.55, season: 0.38, music: 'meadow', meadowScore: 'return', arrivalMusic: 'birches',
+          arrivalView: BIRCHES_ARRIVAL });
       case 'birches':
         return new BirchesChapter(cast);
       case 'toStairs':
         return new CrossingChapter(cast, { route: ROUTES.toStairs, haze: 0.9, dusk: 0.62, season: 0.47, music: 'birches', birchesScore: 'return', hush: 0.3,
-          arrivalMusic: 'stairs', arrivalView: tuning.crossingCamera.arrivals.stairs });
+          arrivalMusic: 'stairs', arrivalView: STAIRS_ARRIVAL_VIEW });
       case 'stairs':
         return new StairsChapter(cast);
       case 'drowned':
