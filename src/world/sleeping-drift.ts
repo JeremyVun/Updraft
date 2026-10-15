@@ -248,6 +248,7 @@ void main() {
 const POWDER_VERT = /* glsl */ `
 ${DRIFT_GLSL}
 uniform float uClock, uBlow, uKick;
+uniform vec3 uRight, uForward;
 uniform vec2 uStroke;
 uniform vec4 uKickAt;
 in vec4 aInfo; in vec2 aLocal;
@@ -271,8 +272,14 @@ void main() {
     float lifting = 1.0 - ss(.55 + uSwept * ${glsl(CHANNEL_WIDEN)}, 1.25 + uSwept * ${glsl(CHANNEL_SOFTEN)}, aInfo.x);
     float travel = age * (2.6 + 1.4 * fract(seed * 13.7));
     float sway = sin(uClock * 1.7 + aInfo.y * 9.0 + age * 3.0) * .22 * age + (fract(seed * 31.0) - .5) * .12 * (.4 + age);
-    vWorld = position + vec3(0.0, d.y, 0.0) + dir * travel + side * sway;
-    vWorld.y += (1.0 - exp(-age * 7.0)) * (.3 + .5 * fract(aInfo.y * 7.3)) - age * age * (.3 + d.y + .5 * fract(aInfo.y * 7.3));
+    vec3 drift = dir * travel + side * sway;
+    vWorld = position + vec3(0.0, d.y, 0.0) + drift;
+    // Lifted clear of the drift's own bulk, which stands taller than the bird can see over.
+    float lift = (.3 + .5 * fract(aInfo.y * 7.3)) * ${glsl(T.driftPowderLift)};
+    vWorld.y += (1.0 - exp(-age * 7.0)) * lift - age * age * (lift + d.y);
+    // It streams over whatever snow lies downwind rather than through it, skimming the crest before it settles.
+    float under = driftAt(aLocal + vec2(dot(drift, uRight), dot(drift, uForward))).y;
+    vWorld.y = max(vWorld.y, position.y + under + .1 * (1.0 - age));
     vAlpha = ss(0.0, .06, age) * (1.0 - ss(.6, 1.0, age)) * uBlow * lifting;
   }
   vec4 view = viewMatrix * vec4(vWorld, 1.0);
@@ -346,7 +353,7 @@ export class SleepingDrift {
     const sources: [number, number][] = [];
     for (let tries = 0; sources.length < SOURCES && tries < 4000; tries++) {
       const u = LEFT + rand() * WIDE, v = NEAR + rand() * DEEP;
-      if (routeDistance(u, v) > 2.1 || this.origAt(u, v) < .35 || sources.some(([a, b]) => Math.hypot(a - u, b - v) < .7)) continue;
+      if (routeDistance(u, v) > 2.1 || this.origAt(u, v) < .75 || sources.some(([a, b]) => Math.hypot(a - u, b - v) < .7)) continue;
       sources.push([u, v]);
     }
     const add = (u: number, v: number, routeAt: number, lane: number, seed: number, puff: number) => {
@@ -362,7 +369,7 @@ export class SleepingDrift {
     powderGeometry.setAttribute('aInfo', new THREE.Float32BufferAttribute(info, 4));
     powderGeometry.setAttribute('aLocal', new THREE.Float32BufferAttribute(local, 2));
     const powder = new THREE.Points(powderGeometry, new THREE.ShaderMaterial({
-      uniforms: { ...atmo.uniforms, ...state, uClock: this.clock, uBlow: this.blow, uKick: this.kick, uStroke: this.stroke, uKickAt: this.kickAt },
+      uniforms: { ...atmo.uniforms, ...state, uClock: this.clock, uBlow: this.blow, uKick: this.kick, uStroke: this.stroke, uKickAt: this.kickAt, uRight: { value: RIGHT }, uForward: { value: FORWARD } },
       transparent: true, depthWrite: false, vertexShader: POWDER_VERT, fragmentShader: POWDER_FRAG,
     }));
     powder.frustumCulled = false; this.objects.push(powder);

@@ -82,7 +82,7 @@ export interface Drives {
    * Walking on planted feet: where each ankle has to be (left, then right) in the frame of its origin, and how the
    * body rides over them. `on` is whether any of this applies.
    */
-  gait: { on: boolean; feet: [{ x: number; y: number; z: number }, { x: number; y: number; z: number }]; sway: number; roll: number; twist: number; dip: number; pace: number };
+  gait: { on: boolean; feet: [{ x: number; y: number; z: number; lift: number }, { x: number; y: number; z: number; lift: number }]; sway: number; roll: number; twist: number; dip: number; pace: number; slope: number };
 }
 
 export interface Posed {
@@ -254,6 +254,11 @@ export class Poser {
       th = lerp(th, 0.55, dangle);
       sh = lerp(sh, -0.3, dangle);
       ft = lerp(ft, 0.5, dangle);
+      /** Clambering, the feet run at the face in front of it for a purchase they keep losing. */
+      const pedal = t * 17 + phase;
+      th = lerp(th, -0.45 + Math.sin(pedal) * 0.6, p.scramble);
+      sh = lerp(sh, -0.85 + Math.cos(pedal) * 0.55, p.scramble);
+      ft = lerp(ft, 0.35 + Math.sin(pedal - 0.7) * 0.45, p.scramble);
       const trail = clamp(d.glide + d.tucked + (d.falling || d.leaving || dashing ? 1 : 0), 0, 1);
       th = lerp(th, 1.45, trail);
       sh = lerp(sh, -0.15, trail);
@@ -267,11 +272,6 @@ export class Poser {
       th = lerp(th, 0.2 + Math.sin(t * 22 + phase) * 0.5, p.climb);
       sh = lerp(sh, -1.0 + Math.cos(t * 22 + phase) * 0.5, p.climb);
       ft = lerp(ft, 0.6, p.climb);
-      /** Clambering, the feet run at the face in front of it for a purchase they keep losing. */
-      const pedal = t * 17 + phase;
-      th = lerp(th, -0.45 + Math.sin(pedal) * 0.6, p.scramble);
-      sh = lerp(sh, -0.85 + Math.cos(pedal) * 0.55, p.scramble);
-      ft = lerp(ft, 0.35 + Math.sin(pedal - 0.7) * 0.45, p.scramble);
       /** Afloat, the legs trail and push alternately, mostly out of sight. */
       th = lerp(th, 0.95 + Math.sin(d.stride + phase) * (0.45 + p.tow * 0.2), p.swim);
       sh = lerp(sh, -0.6 - Math.cos(d.stride + phase) * 0.4, p.swim);
@@ -300,8 +300,9 @@ export class Poser {
         th = lerp(th, ikTh, walk);
         sh = lerp(sh, ikSh, walk);
         /** Flat on the ground while it is down; toes trailing as it comes up, reaching as it goes down. */
-        const lifted = clamp((at.y - 0.002) / 0.05, 0, 1);
-        ft = lerp(ft, -(ikTh + ikSh) + lifted * 0.7, walk);
+        const lifted = clamp((at.lift - 0.002) / 0.05, 0, 1);
+        /** A planted foot lies along the ground under it, so on a hillside its toes do not run into the slope. */
+        ft = lerp(ft, -(ikTh + ikSh) + lifted * 0.7 - d.gait.slope * (1 - lifted), walk);
         splay = lerp(splay, Math.atan2(dx, -dy), walk);
       }
       n[thigh].rotation.set(th, 0, splay);

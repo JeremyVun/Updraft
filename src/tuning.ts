@@ -3307,27 +3307,30 @@ export const tuning = {
      * drop, metres; how much brighter the drift is than the frosted turf round it.
      */
     driftSkin: 0.06,
+    /** How high the powder a stroke lifts off the drift rises before it settles, times its first height. */
+    driftPowderLift: 1.6,
     driftCornice: 0.62,
     driftBright: 1.3,
     /**
-     * The step: where the bird runs to at the bank's foot and slides back to, metres past the stop; its run, the hop
-     * that gets its chest to the lip; the lift its wings need (lower than the summit's) and the hope at which it goes;
-     * how stiff the bandaged wing is held meanwhile (the wing's recovery); the clamber over onto the top, where on the
-     * way the turf lip overhangs, and the feathers it loses there; then from landing on top, its shake, the look back
-     * down at the lamp, and all of its stand before it walks on toward the window.
+     * The step: where the bird runs to at the bank's foot and slides back to, metres past the stop; its run, and its
+     * try (a clamber that falls short and slides back down the face); the lift its wings need (lower than the summit's)
+     * and the hope at which it goes; how stiff the bandaged wing is held meanwhile (the wing's recovery); the clamber
+     * over onto the top, where on the way the turf lip overhangs and how thick the turf lies on it, and the feathers it
+     * loses there; then from landing on top, its shake, the look back down at the lamp, and all of its stand before it
+     * walks on toward the window.
      */
     stepFoot: 0.85,
     stepBack: 0.4,
     stepTop: 2.15,
     stepRun: 0.5,
-    stepTryFor: 0.8,
-    stepTryArc: 1.0,
+    stepTryFor: 1.6,
     stepLooksFor: 2.4,
     stepLift: 0.6,
     stepHope: 0.85,
     stepWingRecovery: 0.45,
     stepClamberFor: 2.1,
     stepEdge: 1.3,
+    stepTurf: 0.07,
     stepFeathers: 4,
     stepShakeFor: 0.6,
     stepLampFor: 1.0,

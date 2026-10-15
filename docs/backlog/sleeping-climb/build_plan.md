@@ -359,8 +359,26 @@ island and `docs/contracts/world.md`, delete this folder, and merge.
 
 ### 4c — the second playtest fixes
 
-1. **The rabbit** shivers in its sleep, visibly from the player's lens as the bird passes.
-2. **The snow blown off the drift** by strokes is back and reads as it did before.
-3. **No clipping at the bank:** the cygnet stays outside the bank's rendered surface in the try, the slide back and the
-   clamber.
+1. **The rabbit** shivers in its sleep, visibly from the player's lens as the bird passes. Done: a fine shiver all the
+   while it sleeps and every few breaths a hard bout (1.4–2.6 s) that quivers its body, nods its head and shakes its
+   laid-back ears, fluffed up against the cold; its breathing is faster and deeper (1.75 s, flanks 10%). At the lens's
+   distance the ears' quiver is what reads most; it stays asleep (eyes shut, head down) and still wakes in the morning.
+2. **The snow blown off the drift** — done. What he liked was 3a's spindrift (his first playtest build): streams of
+   powder off the drift after each stroke. 4b's taller drift hid it: the streams rose as high as before but now ran into
+   the taller bank behind them (their fall also grew with the deeper snow), and half the emitters had moved onto the new
+   chest-deep skirt, whose streams went straight into the face. Now the powder lifts 1.6 times higher
+   (`driftPowderLift`), skims over any snow downwind instead of through it, and rises only from the drift's body
+   (0.75 m deep and more), so the streams show over the crest as densely as before. The original room's soft puffs on
+   `main` were replaced by 3a's spindrift and are not brought back.
+3. **No clipping at the bank** — done, measured on the skinned cygnet's vertices against the bank's rendered rock face,
+   its curled turf cap and the heightfield, every frame at 30 and 60 fps. Before (the 4b build): the try (a `dash` in
+   place) drove the head 0.47 m into the face and the bill a metre below the turf; the clamber's feet went 0.36 m into the
+   face and 0.19 m under the turf's curl. Now the try is a clamber that falls short (`clamber(..., fails)`): a spring,
+   its chest against the face below the lip, feet pedalling, a slide down it and back off to the foot. The clamber hangs
+   lower and further back from the lip, rises straight up past the turf's curled nose before going over it, trails its
+   legs behind it on the heave, lands on the turf (`stepTurf`) rather than the ground under it, and is back on its own
+   planted feet for the stagger. Face and cap penetration are 0 through the try and the clamber (one frame at 2 cm at 60
+   fps as a trailing foot leaves the turf). Feet on the slope: planted feet now lie along the ground (`gait.slope`; their
+   lift is now their own height off the ground rather than their height on the hill), which takes toes in the 0.45
+   slope at the bank's foot from about 0.16 m to 0.10 m; what remains is the tips of its long webbed toes in the grass.
 4. The tall white line during the bank's circles is the updraft's own wind effect (Jeremy's ruling): left as it is.

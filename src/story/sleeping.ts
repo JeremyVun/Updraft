@@ -261,6 +261,8 @@ export class SleepingChapter implements Chapter {
   private readonly backTo = new THREE.Vector3();
   private readonly stepTo = new THREE.Vector3();
   private readonly lipAt = new THREE.Vector3();
+  /** The top of the bank's edge, on the turf that curls over it, which the bird gets its chest to. */
+  private readonly bankEdge = new THREE.Vector3();
   private readonly inTheWhite = new THREE.Vector3();
   private readonly facing = new THREE.Vector3();
   private readonly leapFrom = new THREE.Vector3();
@@ -1057,6 +1059,7 @@ export class SleepingChapter implements Chapter {
     routePoint(STEP_AT + T.stepBack, this.backTo);
     routePoint(STEP_AT + T.stepTop, this.stepTo);
     routePoint(STEP_AT + 1.6, this.lipAt).y += 0.1;
+    routePoint(STEP_AT + T.stepEdge, this.bankEdge).y = routePoint(STEP_AT + T.stepEdge + 0.3, this.spot).y + T.stepTurf;
     const f = this.cast.sleeping.feather;
     f.routeStart = SLEEP_ROUTE[SLEEP_STEP_STOP];
     f.goal.copy(this.stepTo).setY(this.stepTo.y + 1.4);
@@ -1088,9 +1091,7 @@ export class SleepingChapter implements Chapter {
       this.face(this.stepTo, dt, 2);
       k.watch(this.lipAt);
       if (k.hoping < T.stepHope) return;
-      routePoint(STEP_AT + T.stepEdge, this.spot);
-      this.spot.y = routePoint(STEP_AT + T.stepEdge + 0.3, this.side).y;
-      k.clamber(this.spot, this.stepTo, T.stepClamberFor, T.stepFeathers);
+      k.clamber(this.bankEdge, this.stepTo, T.stepClamberFor, T.stepFeathers);
       this.heardFlutter();
       this.next('over');
       return;
@@ -1103,14 +1104,13 @@ export class SleepingChapter implements Chapter {
   }
 
   private readonly stepTry: readonly (readonly [number, () => void])[] = [
-    [0, () => this.cast.cygnet.bound(this.tryAt, 'dash', T.stepTryFor, T.stepTryArc)],
-    [T.stepTryFor, () => this.cast.cygnet.bound(this.backTo, 'hop', 0.6, 0.04)],
-    [T.stepTryFor + 0.8, () => {
+    [0, () => this.cast.cygnet.clamber(this.bankEdge, this.backTo, T.stepTryFor, 0, true)],
+    [T.stepTryFor + 0.3, () => {
       const k = this.cast.cygnet;
       k.does('look-back', k.wing.tip(this.inTheWhite), T.stepLooksFor);
       k.watchPoint(this.inTheWhite);
     }],
-    [T.stepTryFor + 0.8 + T.stepLooksFor, () => {
+    [T.stepTryFor + 0.3 + T.stepLooksFor, () => {
       this.cast.cygnet.watch(this.lipAt);
       this.cast.cygnet.needs(T.stepLift, null);
       this.cast.cygnet.hopeBeats = 1;
