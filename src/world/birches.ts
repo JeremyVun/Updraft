@@ -11,7 +11,7 @@ import { ATMO_GLSL, atmo } from './atmosphere';
 import { ISLES, birchesFirstHeight } from './heightfield';
 import { heightAt } from './island';
 import { createNoise2D, mulberry32 } from './noise';
-import { BirchScarf, FALLEN_LOG, SCARF_SNAGS, SCARF_PERCHES } from './birch-scarf';
+import { BirchScarf, FALLEN_LOG, FORK_BRANCH, SCARF_SNAGS, SCARF_PERCHES } from './birch-scarf';
 import { BIRCHES_CUTS, BIRCHES_LOCAL, birchesAt, birchesGap, birchesLocal, birchesNoise, birchesOut } from './birches-layout';
 
 const ISLE = ISLES.birches;
@@ -894,10 +894,9 @@ export class AutumnBirches {
 
     this.objects.push(this.fallen(shared));
     this.objects.push(this.scarf.mesh);
-    const fork = SCARF_SNAGS[0];
     const hook = this.scarf.snags[0].center;
     const branch = mergeGeometries([
-      log(new THREE.Vector3(fork.treeX, hook.y - 0.4, fork.treeZ), new THREE.Vector3(hook.x + 0.2, hook.y + 1.15, hook.z - 0.1), 0.17, 0.065, 7),
+      log(FORK_BRANCH.a, FORK_BRANCH.b, FORK_BRANCH.r0, FORK_BRANCH.r1, 7),
       log(new THREE.Vector3(hook.x + 1.5, hook.y + 0.65, hook.z - 0.35), new THREE.Vector3(hook.x + 1.1, hook.y + 1.95, hook.z - 0.6), 0.075, 0.025, 6),
     ]);
     this.objects.push(new THREE.Mesh(branch, new THREE.ShaderMaterial({ vertexShader: PLAIN_VERT, fragmentShader: FALLEN_FRAG, uniforms: shared })));

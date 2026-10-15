@@ -79,6 +79,12 @@ export class BirchesChapter implements Chapter {
   private readonly seat = new THREE.Vector3();
   private readonly from = new THREE.Vector3(0.72, 0, 0.69).normalize();
   private readonly scarfFrom = new THREE.Vector3(0.08, 0, 1).normalize();
+  /**
+   * The first tangle's own bearings, west of the others, so the loop and the squirrel on its branch stand clear of the
+   * near crowns; portrait's further round, so she stands below the loop rather than beside it.
+   */
+  private readonly firstFrom = new THREE.Vector3(-0.25, 0, 1).normalize();
+  private readonly firstFromTall = new THREE.Vector3(-0.45, 0, 1).normalize();
   private readonly air = { x: 0, z: 0, energy: 0, lift: 0 };
   private readonly scarfTarget = new THREE.Vector2();
   private readonly crest = new THREE.Vector3(BIRCHES_CLEARING.x, 10, BIRCHES_CLEARING.y);
@@ -510,7 +516,7 @@ export class BirchesChapter implements Chapter {
     if (counted > 0 && this.countPhase === 0) {
       /** She turns her back on where it went, three-quarters to the lens, so the hands over her eyes are seen. */
       this.countPhase = 1;
-      const lens = Math.atan2(this.scarfFrom.x, this.scarfFrom.z);
+      const from = this.tangleFrom, lens = Math.atan2(from.x, from.z);
       const went = Math.atan2(this.hideWent.x - c.position.x, this.hideWent.z - c.position.z);
       const off = (a: number) => Math.abs(Math.atan2(Math.sin(a - went), Math.cos(a - went)));
       const yaw = off(lens + 0.6) > off(lens - 0.6) ? lens + 0.6 : lens - 0.6;
@@ -638,6 +644,11 @@ export class BirchesChapter implements Chapter {
     }, 0.5);
   }
 
+  private get tangleFrom(): THREE.Vector3 {
+    if (this.cast.birches.scarf.active !== 0 || this.beat === 'unravelling') return this.scarfFrom;
+    return window.innerWidth < window.innerHeight ? this.firstFromTall : this.firstFrom;
+  }
+
   private frame(): void {
     const c = this.cast.child.position;
     const p = this.cast.plane.position;
@@ -656,12 +667,15 @@ export class BirchesChapter implements Chapter {
     if (AT_TANGLE.includes(this.beat)) {
       const scarf = this.cast.birches.scarf;
       const at = scarf.focus ?? this.cast.boat.sailPoint(this.scarfMast);
-      s.from = this.scarfFrom;
-      s.target.set((at.x + c.x) * 0.5,
+      const first = scarf.active === 0 && this.beat !== 'unravelling';
+      s.from = this.tangleFrom;
+      const tall = first && window.innerWidth < window.innerHeight;
+      s.target.set(tall ? at.x * 0.65 + c.x * 0.35 : (at.x + c.x) * 0.5,
         at.y * 0.65 + (c.y + 1.2) * 0.35, at.z * 0.7 + c.z * 0.3);
-      s.distance = this.beat === 'unravelling' ? 28 : scarf.active === 1 ? 17 : 24;
+      s.zoom = tall ? 1.25 : undefined;
+      s.distance = this.beat === 'unravelling' ? 28 : scarf.active === 1 ? 17 : first ? 18 : 24;
       s.distance *= Math.max(1, 0.56 / (window.innerWidth / window.innerHeight));
-      s.height = this.beat === 'unravelling' ? 7 : scarf.active === 1 ? 3.8 : 5.5;
+      s.height = this.beat === 'unravelling' ? 7 : scarf.active === 1 ? 3.8 : first ? 3 : 5.5;
       this.focus.copy(at);
       this.pace = 0.5;
       return;

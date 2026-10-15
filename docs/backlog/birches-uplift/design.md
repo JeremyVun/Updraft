@@ -167,6 +167,12 @@ The island mist was softened to clear 90 m / hidden 150 m (from 60 / 110), and R
 
 > It's ok if the distance between birches and stairs increases as well e.g. if both become 40 seconds or whatever
 
+On the first knot and the meeting, in a later playtest (2026-10-16):
+
+> i remember talking about wanting the squirrel to "lead" the puzzle so to speak, and that meant that for the first
+> knot, it should climb up the tree and sit on the branch next to that first knot. The camera is also not highlighting
+> the squirrel enough when they first meet. I didn't even realise there was a squirrel there when i was playing.
+
 What follows from it (Claude's calls, 2026-10-16):
 - **The meadow sail** (`toBirches`) crosses real open sea. The birches move further out from the meadow (west, where
   the meadow's shore falls away) and the boat sails straight across instead of along the meadow's coast. The stairs

@@ -110,6 +110,12 @@ interface Snag {
 }
 interface Section { tied: THREE.CatmullRomCurve3; loose: THREE.CatmullRomCurve3; snag: number; count: number; stretch: number }
 const ground = (x: number, z: number, above: number): THREE.Vector3 => new THREE.Vector3(x, Math.max(0, heightAt(x, z)) + above, z);
+
+/** The branch the first loop hangs on, out from its birch's fork to just past the loop: thick at `a`, thin at `b`. */
+export const FORK_BRANCH = (() => {
+  const s = SCARF_SNAGS[0], hook = ground(s.x, s.z, 3.5);
+  return { a: new THREE.Vector3(s.treeX, hook.y - 0.4, s.treeZ), b: new THREE.Vector3(hook.x + 0.2, hook.y + 1.15, hook.z - 0.1), r0: 0.17, r1: 0.065 };
+})();
 const smooth = (x: number): number => THREE.MathUtils.smootherstep(x, 0, 1);
 
 /** The strip's route through its snags and perches, wound in `frame`. */
@@ -475,9 +481,7 @@ export class BirchScarf {
     const capsules: ClothCapsule[] = trees.filter(t => t.z > SCARF_PERCHES[0].z - 5 && t.z < birchesZ(-1055) && t.x > X(-5) && t.x < X(26)).map(t => ({
       a: new THREE.Vector3(t.x, t.y, t.z), b: new THREE.Vector3(t.x, t.y + t.scale * .85, t.z), radius: .42,
     }));
-    const s = SCARF_SNAGS[0], hook = this.snags[0].center;
-    capsules.push({ a: new THREE.Vector3(s.treeX, hook.y - .4, s.treeZ),
-      b: new THREE.Vector3(hook.x + .2, hook.y + 1.15, hook.z - .1), radius: .17 });
+    capsules.push({ a: FORK_BRANCH.a.clone(), b: FORK_BRANCH.b.clone(), radius: FORK_BRANCH.r0 });
     capsules.push({ a: ground(FALLEN_LOG.a.x, FALLEN_LOG.a.z, .16), b: ground(FALLEN_LOG.b.x, FALLEN_LOG.b.z, .16), radius: .3 });
     this.firstCloth.capsules = capsules;
     if (settle) for (const _ of this.settle()) { /* Synchronous callers keep their original preparation. */ }
