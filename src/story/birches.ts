@@ -85,7 +85,9 @@ export class BirchesChapter implements Chapter {
   readonly squirrel: BirchesSquirrel;
   /** The round the walk is at, while it is at one. */
   private round = -1;
-  private readonly cueNow: SquirrelCue = { round: -1, seeking: false, tangles: 0, swingOver: false, gathered: false, leaving: false };
+  private lens = 1;
+  private lensRate = 0;
+  private readonly cueNow: SquirrelCue = { round: -1, standing: false, seeking: false, tangles: 0, swingOver: false, gathered: false, leaving: false };
 
   constructor(private readonly cast: Cast) {
     this.leafPlay = new BirchLeafPlay(cast);
@@ -101,6 +103,15 @@ export class BirchesChapter implements Chapter {
   get scripted(): boolean {
     /** Exploring and playing with the cygnet never take control away from the wind. */
     return this.arrival.active || !PLAYING.includes(this.beat);
+  }
+
+  /**
+   * The wind lands among the trees and heaps the player can see, never on the floor far up the ride past them; at a
+   * tangle, round the wool, so circling it never blows the next round's heaps away beyond it.
+   */
+  get pointerReach(): number {
+    const tangle = this.beat === 'toScarf' || this.beat === 'scarf' || this.beat === 'unravelling';
+    return this.shot.distance + (tangle ? tuning.birches.scarf.strokeReach : tuning.birches.strokeReach);
   }
 
   /** A stalled player's drawn sweep across the heap the squirrel is in. */
@@ -160,6 +171,7 @@ export class BirchesChapter implements Chapter {
     const swinging = this.beat === 'swingOffer' || this.beat === 'toSwing' || this.beat === 'swinging';
     const c = this.cueNow;
     c.round = this.beat === 'toRound' || this.beat === 'round' ? this.round : -1;
+    c.standing = (this.beat === 'toRound' || this.beat === 'round') && !this.cast.child.busy;
     c.seeking = this.beat === 'round';
     c.tangles = scarf.completed;
     c.swingOver = ((this.swings > 0 || this.swingOffered) && !swinging) || scarf.active === 1 || scarf.completed >= 2;
@@ -247,8 +259,9 @@ export class BirchesChapter implements Chapter {
         if (!c.busy) this.to('scarf');
         break;
       case 'toRound':
+        /** At the first heap she stands and watches it go in off its log before she kneels to look. */
         if (this.squirrel.over(this.round)) this.endRound();
-        else if (!c.busy) this.to('round');
+        else if (!c.busy && this.squirrel.hideout) this.to('round');
         break;
       case 'round':
         if (this.squirrel.over(this.round)) this.endRound();
@@ -284,6 +297,15 @@ export class BirchesChapter implements Chapter {
     if (this.beat !== 'swinging') birches.shake(0);
     if (p.held) p.hold(c);
     this.frame();
+    this.easeLens(dt);
+  }
+
+  /** A round's longer portrait lens comes in and goes out as smoothly as a dolly, never with the rig's quick start. */
+  private easeLens(dt: number): void {
+    const want = this.shot.zoom ?? 1, w = tuning.birches.squirrel.lensEase;
+    this.lensRate += (w * w * (want - this.lens) - 2 * w * this.lensRate) * dt;
+    this.lens += this.lensRate * dt;
+    this.shot.zoom = this.lens;
   }
 
   /** Set down on the sand where they came ashore, facing up the ride, rather than carried until the leaves call it. */
@@ -450,7 +472,7 @@ export class BirchesChapter implements Chapter {
     this.to('toRound');
     this.play = 'carry';
     child.stop();
-    child.lookAt = r.face;
+    child.lookAt = round === 0 ? r.lastSeen : r.face;
     const at = child.position, dx = r.stand.x - at.x, dz = r.stand.z - at.z, span = Math.hypot(dx, dz) || 1;
     const across = r.heaps.map((i) => BIRCH_PILES[i]).find((p) => {
       const t = THREE.MathUtils.clamp(((p.x - at.x) * dx + (p.z - at.z) * dz) / (span * span), 0, 1);

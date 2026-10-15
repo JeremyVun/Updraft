@@ -417,8 +417,10 @@ birches.onLeafScuff = (x, z, strength) => {
   birchesFoley.scuff(materialAt.set(x, heightAt(x, z), z), strength,
     sound.running && story.name === 'birches');
 };
+/** Going in and peeking out stir its own heap; only bursting out of it spends the heap. */
 squirrel.onLeaves = (stir) => {
-  if (stir.kind !== 'step') birches.burst(stir.at.x, stir.at.z, stir.strength);
+  if (stir.kind === 'burst') birches.burst(stir.at.x, stir.at.z, stir.strength);
+  else if (stir.kind !== 'step') birches.shiver(stir.at.x, stir.at.z, stir.strength);
 };
 sealife.onDolphinSplash = (x, y, z, strength) => {
   if (sound.running) worldFoley.splash(splashAt.set(x, y, z), strength);
@@ -772,6 +774,7 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   input.muted = story.current.windMuted ?? story.current.scripted ?? false;
   input.twirlGain = story.current.twirlGain ?? 1;
   input.floor = story.current.pointerFloor ?? null;
+  input.reach = story.current.pointerReach ?? null;
   input.anchor = story.name === 'mirror' ? skyMirror.liftTarget : story.current.invitesFlight && !cygnet.gone ? cygnet.position
     : story.name === 'birches' ? birches.scarf.updraftTarget : story.current.updraftTarget ?? null;
   input.update(dt, rig.camera, wind, inputFraction);

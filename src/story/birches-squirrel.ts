@@ -5,7 +5,7 @@ import type { Floor, SquirrelPoint } from '../creatures/squirrel';
 import { tuning } from '../tuning';
 import { BIRCH_PILES, ROUND_VIEWS } from '../world/birches';
 import { heightAt } from '../world/island';
-import { FAR_TRUNK, GOODBYE, LEAP, MEETING, PATHS, ROUNDS, frameShot, TANGLE_PERCHES, onTrunk, route, swingPerch, type PerchSpec, type Step } from './birches-rounds';
+import { FAR_TRUNK, GOODBYE, LEAP, MEETING, PATHS, ROUNDS, frameShot, SWING_PERCH, TANGLE_PERCHES, onTrunk, route, type PerchSpec, type Step } from './birches-rounds';
 import type { Cast } from './cast';
 
 const ground: Floor = (x, z) => Math.max(0, heightAt(x, z));
@@ -33,6 +33,8 @@ const floorTo = (station: Station): Floor => (station === 'tangle2' ? ON_THE_STU
 export interface SquirrelCue {
   /** The round she is walking to or playing; −1 between rounds. */
   round: number;
+  /** She has come to the round's heaps and stopped there. */
+  standing: boolean;
   /** She has reached the round's heaps and is looking. */
   seeking: boolean;
   tangles: number;
@@ -76,6 +78,7 @@ export class BirchesSquirrel {
   private station: Station = 'meeting';
   private mode: Mode = 'meeting';
   private seen = false;
+  private stoodSince = -1;
   private hidden: Hide | null = null;
   private lastHeap = -1;
   private generation = 0;
@@ -104,7 +107,7 @@ export class BirchesSquirrel {
   private hinting = false;
   private chased = false;
   private lookUntil = 0;
-  private cue: SquirrelCue = { round: -1, seeking: false, tangles: 0, swingOver: false, gathered: false, leaving: false };
+  private cue: SquirrelCue = { round: -1, standing: false, seeking: false, tangles: 0, swingOver: false, gathered: false, leaving: false };
   private readonly later: { at: number; generation: number | null; run: () => void }[] = [];
   private readonly face = new THREE.Vector3();
   private readonly eye = new THREE.Vector3();
@@ -224,7 +227,7 @@ export class BirchesSquirrel {
   private perchOf(station: Station): PerchSpec {
     switch (station) {
       case 'tangle1': return TANGLE_PERCHES[0];
-      case 'swing': return swingPerch(this.cast.birches);
+      case 'swing': return SWING_PERCH;
       case 'tangle2': return TANGLE_PERCHES[1];
       case 'farTrunk': return FAR_TRUNK;
       case 'tangle3': return TANGLE_PERCHES[2];
@@ -254,6 +257,7 @@ export class BirchesSquirrel {
     this.station = 'meeting';
     this.mode = 'meeting';
     this.seen = false;
+    this.stoodSince = -1;
     this.cast.squirrel.act('sit', { at: MEETING.at, yaw: MEETING.yaw, floor: MEETING.floor, look: null, nut: true });
   }
 
@@ -310,11 +314,13 @@ export class BirchesSquirrel {
     this.settle(this.perchOf(station), false);
   }
 
-  /** It sees her coming up the ride, freezes, and drops into the heap. */
+  /** Once she has come up to the heap and stands looking at it on its log, it sees her, freezes, and drops into the heap. */
   private meeting(): void {
-    const { child, squirrel: s } = this.cast;
+    const s = this.cast.squirrel;
     if (this.seen) return;
-    if (Math.hypot(child.position.x - MEETING.at.x, child.position.z - MEETING.at.z) > tuning.birches.squirrel.meetAt && this.cue.round !== 0) return;
+    if (!this.cue.standing) { this.stoodSince = -1; return; }
+    if (this.stoodSince < 0) this.stoodSince = this.now;
+    if (this.now - this.stoodSince < tuning.birches.squirrel.meetPause) return;
     this.seen = true;
     s.act('freeze', { yaw: Math.atan2(this.face.x - s.position.x, this.face.z - s.position.z), look: this.face });
     this.after(tuning.birches.squirrel.meetFreeze, () => this.choose(0, false));
@@ -492,7 +498,7 @@ export class BirchesSquirrel {
         s.heard.push({ kind: 'chuck', amount: 0.7 });
       } else {
         this.cast.leafSound?.('rustle', h.at, 1);
-        this.cast.birches.burst(h.at.x, h.at.z, k.tellStrength);
+        this.cast.birches.shiver(h.at.x, h.at.z, k.tellStrength);
         this.tailOut = Math.random() < k.tailOut[h.round];
         if (Math.random() < k.peekChance) s.act('peek', { for: k.peekFor, tailOut: this.tailOut, look: this.face });
         else s.act('buried', { tailOut: this.tailOut });
@@ -586,6 +592,7 @@ export class BirchesSquirrel {
       }
       return;
     }
+    if (!this.cue.seeking) return;
     const h = this.hidden;
     if (h && h.heap >= 0 && this.cue.seeking && this.quiet >= k.hintAfter) {
       if (!this.hinting) {
@@ -659,13 +666,14 @@ export class BirchesSquirrel {
     }
     void this.cast.birches.depthAt(points).then((depths) => {
       if (this.leap !== 'reading') return;
-      let best = 0;
-      depths.forEach((d, i) => { if (d > depths[best]) best = i; });
+      /** Only leaves the lens can see: she lands in the round's frame, never at its edge. */
+      let best = -1;
+      depths.forEach((d, i) => { if ((best < 0 || d > depths[best]) && this.inView(2, points[i])) best = i; });
       const { child: c, cygnet: bird } = this.cast;
       c.kneeling = 0;
       c.stop();
       bird.stay = false;
-      if (depths[best] < tuning.birches.squirrel.leapDepth) {
+      if (best < 0 || depths[best] < tuning.birches.squirrel.leapDepth) {
         const through = onGround(LEAP.land.clone());
         const end = c.position.clone().addScaledVector(flat(c.position, through), Math.max(8, through.distanceTo(c.position) + 4));
         this.leap = 'kicking';
@@ -743,7 +751,7 @@ export class BirchesSquirrel {
     let want = 0;
     if (this.station === 'meeting' && this.cue.round < 0) {
       const d = Math.hypot(child.position.x - MEETING.at.x, child.position.z - MEETING.at.z);
-      want = THREE.MathUtils.smoothstep(k.meetAt + 16 - d, 0, 10);
+      want = THREE.MathUtils.smoothstep(k.meetGlance - d, 0, 10);
     } else if (this.station === 'round2' && this.mode === 'going' && this.cue.round < 0) want = 1;
     else if (this.station === 'goodbye' && this.cue.leaving) want = 1;
     this.attention.strength += (want - this.attention.strength) * (1 - Math.exp(-dt * k.glanceIn));

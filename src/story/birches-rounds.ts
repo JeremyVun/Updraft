@@ -54,14 +54,13 @@ export function frameShot(frames: Frames, aspect: number, shot: Shot): Shot {
 /** Round `i`'s view (`ROUND_VIEWS`, kept clear of gap-grown trees), from `distance` back and `height` up. */
 const view = (i: number, distance: number, height: number): RoomFrame => ({ ...ROUND_VIEWS[i], lift: 1.2, distance, height });
 /**
- * Portrait's view of round `i`: from further back on a longer lens, so the far heaps stand nearly as large as the
- * near ones in its narrow field and the squirrel reads in any of them. `along` and `side` move the point looked at
- * away from the lens and to its right.
+ * Portrait's view of a round, from the bearing `degrees` (0 looks north from the south, 90 west from the east): its
+ * field is half as wide, so heaps side by side in landscape stand one behind another in it, on a lens a little longer
+ * so the far heaps read too. Every round uses the same lens, eased in as she comes to the heaps.
  */
-const tele = (i: number, distance: number, height: number, zoom: number, lift: number, along = 0, side = 0): RoomFrame => {
-  const { at, from } = ROUND_VIEWS[i];
-  return { at: { x: at.x - from.x * along + from.z * side, z: at.z - from.z * along - from.x * side }, from, lift, distance, height, zoom };
-};
+const PORTRAIT_ZOOM = 1.6;
+const tall = (at: Spot, degrees: number, distance: number, height: number, lift: number, zoom = PORTRAIT_ZOOM): RoomFrame =>
+  ({ at, from: { x: Math.sin(THREE.MathUtils.degToRad(degrees)), z: Math.cos(THREE.MathUtils.degToRad(degrees)) }, lift, distance, height, zoom });
 const lensOf = (i: number, distance: number): Spot =>
   ({ x: ROUND_VIEWS[i].at.x + ROUND_VIEWS[i].from.x * distance, z: ROUND_VIEWS[i].at.z + ROUND_VIEWS[i].from.z * distance });
 
@@ -119,9 +118,12 @@ export type PerchSpec =
   | { action: 'sit' | 'perch'; at: THREE.Vector3; yaw: number; floor?: Floor; radius?: number }
   | { action: 'climb'; trunk: OnTrunk };
 
-const MEETING_LOG = fallen(0.15, 0.35);
+const MEETING_LOG = fallen(0.68, 0.88);
 
-/** The meeting: sitting up on the fallen birch at the heap's rim by the ride, nut in paws, facing down the ride at them. */
+/**
+ * The meeting: sitting up on the fallen birch where it comes out of the heap's near flank, nut in paws, facing down the
+ * ride at them. From the round's lens it stands clear of the heap; at the far rim the heap hid half of it.
+ */
 export const MEETING = { action: 'sit', at: onLimb(MEETING_LOG, 0.5), yaw: Math.atan2(-0.6, 0.8), floor: overLimb(MEETING_LOG) } satisfies PerchSpec;
 
 export interface Round {
@@ -152,7 +154,8 @@ export const ROUNDS: readonly Round[] = [
     face: lifted(pile(0), 0.5),
     lastSeen: MEETING.at.clone(),
     cygnet: [lifted(birchesAt(7.6, -1074.4)), rimOf(0, STAND[0])],
-    frames: { landscape: view(0, 14, 4), portrait: tele(0, 20, 5, 1.8, 0.9, 0, -0.3) },
+    /** Portrait looks from further east, so she, the heap and the squirrel on its log fit across its narrow field. */
+    frames: { landscape: view(0, 14, 4), portrait: tall(birchesAt(9.6, -1074.1), 60, 20, 5, 0.9, 1.5) },
   },
   {
     area: { ...STAND[1], r: 10 },
@@ -162,7 +165,7 @@ export const ROUNDS: readonly Round[] = [
     face: lifted(pile(5), 0.5),
     lastSeen: lifted(birchesGap(1, 12.6, 3)),
     cygnet: [lifted(birchesGap(1, 15.6, 5.9)), rimOf(4, STAND[1]), rimOf(5, STAND[1])],
-    frames: { landscape: view(1, 15, 3.4), portrait: tele(1, 22, 5.5, 2.6, 1, 0, 0.15) },
+    frames: { landscape: view(1, 15, 3.4), portrait: tall(birchesGap(1, 13.6, 4.6), 65, 14, 4.5, 1) },
   },
   {
     area: { ...STAND[2], r: 14 },
@@ -172,7 +175,7 @@ export const ROUNDS: readonly Round[] = [
     face: lifted(pile(7), 0.5),
     lastSeen: lifted(birchesGap(2, 11, -10.5)),
     cygnet: [lifted(birchesGap(2, 14.3, -8.3)), rimOf(6, STAND[2]), rimOf(7, STAND[2]), rimOf(8, STAND[2])],
-    frames: { landscape: view(2, 15, 4), portrait: tele(2, 22, 6, 2, 0.9, 0.5) },
+    frames: { landscape: view(2, 15, 4), portrait: tall(birchesGap(2, 13.8, -11.7), 45, 18, 4.5, 1) },
   },
 ];
 
@@ -198,7 +201,8 @@ const FAR_TREE = birchesGap(2, 23.5, -17.8);
 const ROUND_3_LENS = lensOf(2, 15);
 const P0 = birchesAt(20, -1099);
 const SWING_TREE = birchesAt(-2.4, -1116.6);
-const SWING_ROPE = birchesAt(1.9, -1116);
+/** Where the swing's lens stands, three-quarters on to the seat, so the trunk's face toward it faces the lens. */
+const SWING_LENS = birchesAt(12, -1106.3);
 const BERTH_SIDE = birchesAt(-7.4, -1194.8);
 
 /**
@@ -214,8 +218,11 @@ export const TANGLE_PERCHES: readonly PerchSpec[] = [
   { action: 'climb', trunk: { tree: BOW_TREE, height: 5, toward: T4_LENS } },
 ];
 
-/** How far out along the swing's limb it sits while she rides, from the trunk (0) to the rope (1). */
-const SWING_SHARE = 0.5;
+/**
+ * While she swings: on the swing tree's trunk just under the limb, on the side toward the lens, where its red reads
+ * against the white bark. Out on the limb it sat in the sun's glow against the gold and was lost.
+ */
+export const SWING_PERCH: PerchSpec = { action: 'climb', trunk: { tree: SWING_TREE, height: 3.4, toward: SWING_LENS } };
 
 /** Up the hollow's far trunk after the third round, watching the leap from the edge of the canopy. */
 export const FAR_TRUNK: PerchSpec = { action: 'climb', trunk: { tree: FAR_TREE, height: 3.6, toward: ROUND_3_LENS } };
@@ -226,8 +233,8 @@ export const FAR_TRUNK: PerchSpec = { action: 'climb', trunk: { tree: FAR_TREE, 
  */
 export const GOODBYE: PerchSpec = { action: 'sit', at: lifted(BERTH_SIDE), yaw: Math.atan2(3.4, -2.2) };
 
-/** A step of a way between the squirrel's places: on the ground, up or down a trunk, along wool or a log, or out along the swing's limb. */
-export type Step = { ground: Spot } | { trunk: OnTrunk } | { line: THREE.Vector3 } | { swing: number };
+/** A step of a way between the squirrel's places: on the ground, up or down a trunk, or along wool or a log. */
+export type Step = { ground: Spot } | { trunk: OnTrunk } | { line: THREE.Vector3 };
 
 const g = (x: number, z: number): Step => ({ ground: birchesAt(x, z) });
 const gap = (i: number, into: number, x: number): Step => ({ ground: birchesGap(i, into, x) });
@@ -251,14 +258,11 @@ export const PATHS = {
     wool(birchesGap(1, 2.09, 13.58), 2.7), wool(birchesGap(1, 3.57, 10.93), 1.16), wool(birchesGap(1, 4.84, 8.64), 0.52),
     gap(1, 6.1, 6.3), gap(1, 9.5, 4.6), gap(1, 12.6, 3),
   ],
-  /** Up the ride from the second round to the swing tree, and out along its limb. */
-  toSwing: [
-    g(3.6, -1103.5), g(1.2, -1110.5), bark(SWING_TREE, 0.5, SWING_ROPE), bark(SWING_TREE, 2.6, SWING_ROPE),
-    { swing: 0.08 }, { swing: 0.3 }, { swing: SWING_SHARE },
-  ],
-  /** Back along the limb and down, across the crest to the broken birch, and up inside its loose coils to the top. */
+  /** Up the ride from the second round to the swing tree, and up its trunk to just under the limb. */
+  toSwing: [g(3.6, -1103.5), g(1.2, -1110.5), bark(SWING_TREE, 0.5, SWING_LENS), bark(SWING_TREE, 3.4, SWING_LENS)],
+  /** Down the swing tree and round it, across the crest to the broken birch, and up inside its loose coils to the top. */
   toTangle2: [
-    { swing: 0.3 }, { swing: 0.08 }, bark(SWING_TREE, 2.6, SWING_ROPE), bark(SWING_TREE, 0.5, SWING_ROPE),
+    bark(SWING_TREE, 3.4, SWING_LENS), bark(SWING_TREE, 0.5, SWING_LENS), g(-0.2, -1118.5),
     g(-4.5, -1124), g(-8, -1133), g(-9.3, -1137.5), bark(STUMP, 0.4, T2_STOP), bark(STUMP, 2, T2_STOP), bark(STUMP, 3.9, T2_STOP),
   ],
   /** Down the broken birch's far side and across the hollow, past the deep heap, to the third round. */
@@ -296,21 +300,7 @@ export function route(birches: AutumnBirches, steps: readonly Step[]): SquirrelP
   return steps.map((s): SquirrelPoint => {
     if ('ground' in s) return { at: lifted(s.ground), on: 'ground' };
     if ('line' in s) return { at: s.line.clone(), on: 'line' };
-    if ('swing' in s) {
-      const at = new THREE.Vector3();
-      birches.swingLimbAt(s.swing, at);
-      return { at, on: 'line' };
-    }
     const { at, up, radius } = onTrunk(birches, s.trunk);
     return { at, on: 'trunk', up, radius };
   });
-}
-
-/** Sitting on the swing's limb, out between the trunk and the rope, facing out along it toward her. */
-export function swingPerch(birches: AutumnBirches): PerchSpec {
-  const at = new THREE.Vector3(), out = new THREE.Vector3();
-  const radius = birches.swingLimbAt(SWING_SHARE, at);
-  birches.swingLimbAt(SWING_SHARE + 0.1, out);
-  const limb: Limb = { a: at.clone().setY(at.y - radius), b: out.clone().setY(out.y - radius), r0: radius, r1: radius };
-  return { action: 'perch', at, yaw: Math.atan2(out.x - at.x, out.z - at.z), radius, floor: overLimb(limb) };
 }

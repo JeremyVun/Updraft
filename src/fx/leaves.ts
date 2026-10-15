@@ -207,7 +207,7 @@ void main() {
    * And feet scuff a way through it: a walk over this island leaves a track in the leaves behind it. Lightly —
    * what goes up round a pair of knees is the loose leaves, and a heap somebody has just gone into is still a heap.
    */
-  float tread = uWade.w * (1.0 - smoothstep(uWade.z * 0.4, uWade.z, distance(p, uWade.xy)));
+  float tread = max(uWade.w, 0.0) * (1.0 - smoothstep(uWade.z * 0.4, uWade.z, distance(p, uWade.xy)));
   d -= d * min(0.7, tread * 0.7 * uDt);
   gl_FragColor = vec4(max(d, 0.0), velocity, mobile);
 }`;
@@ -288,7 +288,7 @@ void main() {
 
   float above = max(p.y - max(ground, 0.0), 0.0);
   /** A child walking into a drift of them sends the lot up round their knees. */
-  float wade = uWade.w * (1.0 - smoothstep(uWade.z * 0.45, uWade.z, length(p.xz - uWade.xy)));
+  float wade = abs(uWade.w) * (1.0 - smoothstep(uWade.z * 0.45, uWade.z, length(p.xz - uWade.xy)));
   /**
    * What it takes to move a leaf that is lying on the floor. A leaf is not a blade of grass rooted in the ground:
    * anything much over the everyday breeze picks it up altogether and it goes, and where it comes down is not
@@ -328,7 +328,7 @@ void main() {
   if (wade > 0.25) {
     vec2 away = normalize(p.xz - uWade.xy + vec2(1e-3));
     /** Anything harder than a child walking in, a leap say, throws them further and higher. */
-    float hard = sqrt(max(uWade.w, 1.0));
+    float hard = sqrt(max(abs(uWade.w), 1.0));
     target = vec3(away.x * (2.4 + 3.6 * seed), 2.6 + 3.0 * seed, away.y * (2.4 + 3.6 * seed)) * hard;
   }
   float k = 1.0 - exp(-uDt * (1.6 + seed * 1.4 + sp * 0.12 + wade * 6.0));

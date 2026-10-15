@@ -603,9 +603,8 @@ const TRUNK_PARTS = 7;
  * One birch, grown at unit height so every tree on the island is the same geometry at a different size: a trunk
  * with a lean in it, limbs that go up steeply and then droop at the ends, and the twig tips the gold hangs on.
  */
-export function growBirch(rand: () => number, swingLimb: boolean): { segs: Seg[]; tips: THREE.Vector3[]; limb: Seg[] } {
+export function growBirch(rand: () => number, swingLimb: boolean): { segs: Seg[]; tips: THREE.Vector3[] } {
   const segs: Seg[] = [];
-  const limb: Seg[] = [];
   const tips: THREE.Vector3[] = [];
   const link = (a: THREE.Vector3, b: THREE.Vector3, ra: number, rb: number): void => {
     segs.push({ a: a.clone(), b: b.clone(), ra, rb });
@@ -670,7 +669,6 @@ export function growBirch(rand: () => number, swingLimb: boolean): { segs: Seg[]
       const a = new THREE.Vector3(SWING_LIMB.x * along[i - 1], SWING_LIMB.y + rise[i - 1], SWING_LIMB.z * along[i - 1]);
       const b = new THREE.Vector3(SWING_LIMB.x * along[i], SWING_LIMB.y + rise[i], SWING_LIMB.z * along[i]);
       segs.push({ a, b, ra: trunkR * width[i - 1], rb: trunkR * width[i] });
-      limb.push(segs[segs.length - 1]);
       if (i > 2) tips.push(b.clone());
     }
     for (let i = 0; i < 5; i++) {
@@ -681,7 +679,7 @@ export function growBirch(rand: () => number, swingLimb: boolean): { segs: Seg[]
       tips.push(twig);
     }
   }
-  return { segs, tips, limb };
+  return { segs, tips };
 }
 
 /**
@@ -839,15 +837,13 @@ export class AutumnBirches {
   private readonly lastWalker = new THREE.Vector3(1e6, 0, 1e6);
   /** How hard the swing tree is being shaken by what is on it. */
   private shaking = 0;
-  /** Each shape of tree's trunk, foot to crown, in the unit tree; and the swing's limb, trunk to rope and on. */
+  /** Each shape of tree's trunk, foot to crown, in the unit tree. */
   private readonly trunks: Seg[][];
-  private readonly swingLimb: Seg[];
 
   constructor(renderer: THREE.WebGLRenderer, private readonly wind: WindField, settleScarf = true) {
     const rand = mulberry32(8821);
     const variants = [growBirch(rand, false), growBirch(rand, false), growBirch(rand, false), growBirch(rand, false), growBirch(rand, true)];
     this.trunks = variants.map(v => v.segs.slice(0, TRUNK_PARTS));
-    this.swingLimb = variants[4].limb;
     this.place(rand);
     this.scarf.setTrees(this.trees, settleScarf);
 
@@ -1314,19 +1310,6 @@ export class AutumnBirches {
     return (seg.ra + (seg.rb - seg.ra) * t) * tree.scale;
   }
 
-  /** The top of the swing's limb `t` of the way from the trunk (0) to the rope (1) into `out`, and its radius there. */
-  swingLimbAt(t: number, out: THREE.Vector3): number {
-    const tree = this.trees[this.trees.length - 1];
-    const x = SWING_LIMB.x * t;
-    const seg = this.swingLimb.find(s => s.b.x >= x) ?? this.swingLimb[this.swingLimb.length - 1];
-    const k = THREE.MathUtils.clamp((x - seg.a.x) / Math.max(1e-6, seg.b.x - seg.a.x), 0, 1);
-    const r = (seg.ra + (seg.rb - seg.ra) * k) * tree.scale;
-    out.lerpVectors(seg.a, seg.b, k).multiplyScalar(tree.scale);
-    const c = Math.cos(tree.yaw), s = Math.sin(tree.yaw);
-    out.set(tree.x + c * out.x + s * out.z, tree.y + out.y + r, tree.z - s * out.x + c * out.z);
-    return r;
-  }
-
   /** Shakes the leaves out of the tree the swing hangs from, while somebody is swinging on it. */
   shake(amount: number): void {
     this.shaking = amount;
@@ -1349,6 +1332,17 @@ export class AutumnBirches {
   burst(x: number, z: number, strength: number): void {
     const { burstReach, burstReachPer } = tuning.birches;
     this.kicking.set(x, z, burstReach + burstReachPer * strength, Math.max(strength, 0.35));
+    this.kickFor = 0.7;
+    this.onLeafScuff?.(x, z, Math.min(strength, 1));
+  }
+
+  /**
+   * Something stirring under the leaves at (x, z): the loose leaves lying there go up, as hard as `strength`, and none
+   * of the heap is taken, so a heap something lives in can shiver all afternoon and still hide it.
+   */
+  shiver(x: number, z: number, strength: number): void {
+    const { burstReach, burstReachPer } = tuning.birches;
+    this.kicking.set(x, z, burstReach + burstReachPer * strength, -strength);
     this.kickFor = 0.7;
     this.onLeafScuff?.(x, z, Math.min(strength, 1));
   }

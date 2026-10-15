@@ -139,6 +139,8 @@ export interface Chapter {
   readonly cameraCut?: number;
   /** Where the pointer meets the world when that is not the ground: the top of the cloud the boat is sailing on. */
   readonly pointerFloor?: number | null;
+  /** How far from the lens the pointer's wind may land, while the player is aiming at something standing up out of the ground. */
+  readonly pointerReach?: number | null;
   /** Which room's music this chapter is played to. */
   readonly music?: Mood;
   /** Final approach requests an audio-clock fade, musical rest and the destination's opening. */
