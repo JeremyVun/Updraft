@@ -558,8 +558,9 @@ air ran out (`LitterField`). So the squirrel hides **where the leaves are now**,
   one deliberate swipe across the right heap uncovers it in every round, found 1.3–1.9 s after the swipe begins; a
   stroke across a wrong heap aimed away from the right one never does. An updraft thins a heap from the top too: the
   litter under a column is thrown outward down the slope of its lift (`litterLiftThrow`), so circles over the right
-  heap uncover it in two or three loops. A column is wider than the gap between neighbouring heaps, so circles over
-  the heap next to it can uncover it as well, visibly, by taking that heap down too; circles over a far heap do not.
+  heap uncover it in two or three loops. A column is wider than the gap between neighbouring heaps, so while circles
+  are wound over one heap of the round, the others hold against it (`circleLinger`), and circles over another heap
+  never uncover it.
   Behind a trunk there are no leaves to read, so there the wind on it is counted as before (each rise of energy plus
   speed above `gripSpeed`, `findWork`; circles wound over another heap count only there). A gust that only shaves the
   right heap makes it `peek`, as a "nearly". Wrong heaps simply burst, or whirl up under an updraft.
@@ -751,9 +752,9 @@ the walk on it; knobs are `tuning.birches.squirrel`; `tools/squirrel-rounds-chec
   in at the nearest point of the way if sent on early), and settles at the place's perch; a resumed save puts it
   there directly. Found, it sits up and scolds her (`sitFor`, `scoldFor`), bounds off, and glances back once a few
   metres on. It is shown only in the birches and its crossing, so it sees them off from the beach.
-- **Hiding.** On ahead to hide it dashes (`dash`, 2.4 times its pace), setting off as the tangle's loop starts to
-  lift free, while she counts at the freed tangle ("Counting" above). At the
-  round's ground it reads the floor once (`depthAt`, its hides and a 5 × 5 grid): a heap still `buryDepth` deep
+- **Hiding.** On ahead to round 2 it dashes (`dash`, 2.4 times its pace), setting off as the tangle's loop starts to
+  lift free, while she counts at the freed tangle ("Counting" above); to round 3 it runs on and waits for her, and
+  hides by shuffling (below). At the round's ground it reads the floor once (`depthAt`, its hides and a 5 × 5 grid): a heap still `buryDepth` deep
   (0.35 m), never the one just turned out of while there is another; else the deepest drift; else the bark of a
   heap's bank tree, round from the lens. Drift and trunk hides are only chosen where the round's lens shows them. It
   lies at `AutumnBirches.buryDepth` under the leaves' surface, under each heap's crest (0.1 of the radius past its
@@ -763,7 +764,7 @@ the walk on it; knobs are `tuning.birches.squirrel`; `tools/squirrel-rounds-chec
   1 and 0.25 after. Measured strokes: across a heap 0.3–0.6, along its rim 0.1–0.17, a metre outside it about 0.1.
   Round 3's heaps are told apart cleanly. In round 2 a hard stroke over the far heap also blows the near one (its air
   reaches there at 0.4–0.6), so it finds a squirrel in the near heap: generous, and what the leaves show. A child's
-  random swipes found it in 1–25 strokes a round.
+  random swipes find it in 2–5 strokes a round ("As built: the shuffle and the rounds polish").
 - **Her and the cygnet.** She walks round any heap between her and her stand rather than through it, kneels there
   (`kneel`) and turns to each heap the wind bursts; found, she gets up and cheers. The cygnet first stands beside her,
   then looks into heaps of its own choosing from the rim nearest her (`ROUNDS[].cygnet`), delving or peering and
