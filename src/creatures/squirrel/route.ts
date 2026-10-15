@@ -111,8 +111,13 @@ export class Route {
   private readonly segT: number[] = [];
   private readonly surfaces: Surface[];
   private readonly kinds: Kind[];
+  /** The kinds whose pace each stretch is gone at: a stretch split off a leap keeps the leap's. */
+  private readonly paces: [Kind, Kind][] = [];
+  private readonly ends: number[] = [];
 
-  constructor(points: readonly SquirrelPoint[], floor: Floor | null) {
+  /** `reach` (metres) is how far out from a trunk or the end of the wool it leaps to or from the ground. */
+  constructor(way: readonly SquirrelPoint[], floor: Floor | null, reach = 0) {
+    const points = this.split(way, floor, reach);
     const n = points.length;
     this.kinds = points.map((p) => p.on);
     const lines = new Map<number, Surface>();
@@ -188,6 +193,57 @@ export class Route {
       }
     }
     this.length = total;
+    for (let i = 0; i < this.s.length; i++) this.ends[this.seg[i]] = this.s[i];
+  }
+
+  /**
+   * The way with a point on the ground put in `reach` out from a trunk or the wool's end wherever the ground beside
+   * it is further than a leap: it bounds up to there and leaps the rest, rather than sailing the whole way.
+   */
+  private split(way: readonly SquirrelPoint[], floor: Floor | null, reach: number): SquirrelPoint[] {
+    const out = way.slice(0, 1);
+    for (let i = 0; i + 1 < way.length; i++) {
+      const a = way[i], b = way[i + 1];
+      const pace: [Kind, Kind] = [a.on, b.on];
+      if (reach > 0 && a.on !== b.on && (a.on === 'ground' || b.on === 'ground')) {
+        const [off, far] = a.on === 'ground' ? [b, a] : [a, b];
+        const d = new THREE.Vector3(far.at.x - off.at.x, 0, far.at.z - off.at.z);
+        const length = d.length();
+        if (length > reach * 1.6) {
+          d.divideScalar(length);
+          /** Off a trunk it leaves on the side it faces, never round the back of it. */
+          if (off.on === 'trunk' && off.up) {
+            const face = new THREE.Vector3(off.up.x, 0, off.up.z);
+            if (face.lengthSq() > 1e-6) d.add(face.normalize());
+            if (d.lengthSq() > 1e-6) d.normalize();
+            else d.copy(face);
+          }
+          const at = off.at.clone().addScaledVector(d, reach);
+          at.y = floor ? floor(at.x, at.z) : far.at.y;
+          out.push({ at, on: 'ground' });
+          this.paces.push(pace);
+        }
+      }
+      out.push(b);
+      this.paces.push(pace);
+    }
+    return out;
+  }
+
+  /** The kinds whose pace stretch `seg` is gone at. */
+  pace(seg: number): readonly [Kind, Kind] {
+    return this.paces[Math.min(seg, this.paces.length - 1)] ?? [this.kinds[0], this.kinds[0]];
+  }
+
+  /** The next stretch after `seg` from one kind of surface to another, or -1. */
+  nextCrossing(seg: number): number {
+    for (let i = seg + 1; i + 1 < this.kinds.length; i++) if (this.kinds[i] !== this.kinds[i + 1]) return i;
+    return -1;
+  }
+
+  /** Where stretch `seg` begins and ends along the way. */
+  span(seg: number): [number, number] {
+    return [seg > 0 ? this.ends[seg - 1] : 0, this.ends[seg] ?? this.length];
   }
 
   /** The bark's outward direction at `p` round the trunk `point` is on. */

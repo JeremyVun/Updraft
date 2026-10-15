@@ -59,10 +59,12 @@ export interface Support {
 
 const smooth = (t: number) => t * t * (3 - 2 * t);
 /**
- * The most bounds a second, whatever the surface: faster than its own pace it reaches further each bound and is
- * down for less of it, as a squirrel flat out does, rather than its legs going like a film run fast.
+ * The most bounds a second, whatever the surface: faster than that it reaches further each bound and is down for
+ * less of it, as a squirrel flat out does.
  */
-const CADENCE = 5.5;
+const CADENCE = 7;
+/** The longest it is ever off the ground in a bound, seconds: going slowly its hind feet stay down longer instead. */
+const HANG = 0.13;
 
 /**
  * Its paws, each put down somewhere and left exactly there until it is picked up, with the body carried over it.
@@ -77,6 +79,10 @@ export class SquirrelGait {
   speed = 0;
   /** How much longer than its usual bound the stride is, taken up at the start of each: 1 at its own pace, more flat out. */
   reach = 1;
+  /** Seconds a stride takes at the pace it is going. */
+  period = 1;
+  /** Where in the stride its last hind foot leaves what it stands on, all four in the air until the forepaws land at 0. */
+  liftOff = 1;
   /** Paws that came down this frame, and on what. */
   readonly landed: number[] = [];
   /** The surface's pattern, taken up at the start of each stride so no paw changes its mind mid-air. */
@@ -188,8 +194,17 @@ export class SquirrelGait {
       this.pattern = pattern;
       this.reach = stride / (usual * k);
     }
+    this.period = this.speed > 1e-3 ? stride / this.speed : Infinity;
     const down = this.pattern.down, duty = this.duty;
-    for (let i = 0; i < 4; i++) duty[i] = this.pattern.duty[i] / this.reach;
+    const least = 1 - HANG / this.period;
+    this.liftOff = 0;
+    for (let i = 0; i < 4; i++) {
+      duty[i] = this.pattern.duty[i] / this.reach;
+      if (i >= 2) {
+        duty[i] = Math.max(duty[i], least - down[i]);
+        this.liftOff = Math.max(this.liftOff, down[i] + duty[i]);
+      }
+    }
     for (const [i, p] of this.paws.entries()) {
       const mine = (((this.phase - down[i]) % 1) + 1) % 1;
       /** Flat out, a frame can step clean over its short time down: it lands all the same, never swinging round again. */
