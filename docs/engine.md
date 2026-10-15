@@ -193,7 +193,10 @@ like there wasn't an authored system in place". What intention means:
   boat to keep them.
 - **An arrival can have its own view.** A crossing may name an `ArrivalView` (`crossingCamera.arrivals`): angle off
   astern, distance, height, look-ahead and optionally a committed side, eased in over sailed distance from the end of
-  the route and ending where the room's first view stands, so landing is not followed by a swing round.
+  the route and ending where the room's first view stands, so landing is not followed by a swing round. Its
+  bearing can be a world one (`world`), as rooms frame their first views, and an `IslandReveal` can come first: a
+  world-anchored view across the water toward the island as it clears its mist, held until the arrival takes over,
+  with its windows set in framed progress, which runs a few metres behind the boat.
 - **Reveals ratchet.** Each piano answer steps the view back and up and it stays (`piano.restBack`, `restUp`).
 - Deliberate single moves are allowed: the doorway's threshold path, the little-boats close-up while the child handles
   a toy, the birches' close-up for the circling snag, the Sleeping bedroom's glance to the window, the summit push-in.

@@ -393,11 +393,28 @@ Boat speed and the crossings' pace are untouched; only distance changed.
   across open sea, west-north-west, to a point 30 m off the landing (band (14, −1022)), then runs up the beach straight
   on. The meadow's shore falls away south behind it, and for the middle of the crossing there is only sea. On this
   crossing the island lies in its own mist (`tuning.world.birchesMist`, clear 90 m to hidden 150 m from the eye, as
-  the wood and the boats do): it stays hidden to about 34 s, its beach comes out of the haze then, the trees on the
-  run-in, and the mist lifts once they are ashore. `toStairs` leaves the berth east (its first waypoint, band
-  (16, −1204), moves with the band), passes south of the village's edge at (26, −1239) and comes in to the stairs as
-  before; it starts about 240 m from the stairs, so the cloud deck builds over the crossing and the landing is under
-  it as now. The stairs and their island are in view well before the landing, from about 210 m out.
+  the wood and the boats do): with no input its beach first shows faintly at the frame's edge about halfway over
+  (24 s of 47), the trees from about 30 s, and the mist lifts once they are ashore. The bank thins over two coast
+  radii (`edge` 2, from 1.32), so its side never stands as a wall beside the island in the reveal's side view.
+- **The meadow sail's camera** (`tuning.crossingCamera.arrivals.birches`, `IslandReveal` in `story/crossing.ts`). Jeremy:
+  "It just stays behind the child and never does a cinematic reveal of the birches island until she gets off the
+  boat." The sun sets in the north-west, so the island ahead is always backlit; looking into it from astern it was a
+  silhouette in glare at the edge of the frame. Now, as it comes out of its mist (100 to 47 m of framed sailing left,
+  about 30–36 s), the lens swings round from astern in one slow move (about 11 s, never above 10° a second) to the
+  port side, 24 m off and 4 m up, anchored in the world rather than on the hull: the whole island stands beside the
+  boat, gold crowns lit through from behind with the low sun over them and its path on the water, the beach and the
+  scarf running up from the sand into the trees, the boat at a third. Portrait stands further round (0.35 rad), so
+  the island rises behind the boat in the narrow frame. The child turns to look at it, and the lens gives it 0.3 of
+  its gaze. Red Door comes in about a second after the view settles, and its fade-in carries the hold through the
+  run-in. Over the last 29 m the lens rises and draws back into the birches' first view from the south (0.075 rad,
+  28 m, the child's eye-line 6 m ahead), so the bow grounds into the room's own shot: before, the lens swung 45° round
+  the boat in the five seconds after landing. Chosen by looking: front light is impossible from the approach, and the
+  side view keeps the backlit gold against a bright sky while reading the island as a place. Still not right: in the
+  birches' first shot the sail stands between the lens and the child for the few seconds she steps off the bow
+  (unchanged; the walk's view from the south keeps it).
+- **The stairs sail.** `toStairs` leaves the berth east (its first waypoint, band (16, −1204), moves with the band),
+  passes south of the village's edge at (26, −1239) and comes in to the stairs as before; it starts about 240 m from
+  the stairs, so the cloud deck builds over the crossing and the landing is under it as now. The stairs and their island are in view well before the landing, from about 210 m out.
 - **Clearances.** Dry land runs from x −181 to −92 and z −1071 to −1270. The island's south shore is about 122 m of
   open water from the meadow's nearest shore (the landing beach 120 m; 76 at phase 1); the north waterline is 22 m
   short of the drowned village's ellipse (29 at phase 1, 67 before), open sea that the room partition gives to
