@@ -266,8 +266,19 @@ How it plays out and the silence in the cloud, Jeremy (2026-10-14/15):
 `assets/music/red_door.ogg` (a copy of "The Red Door Opens") plays from the approach crossing through boarding. The
 `walk`, `swing`, `scarf` and `return` phases describe story progress and checkpoint state, but never seek, restart or
 rearrange the recording. It loops only while the story is on the Birches island or its approach (`toBirches`,
-`birches`: `SoundState.birchesLoop`) and begins only there. Once they have sailed (`toStairs`) it stops looping
-(`RecordedScore.playOut`) and the pass under way plays out; a `toStairs` start is quiet until the stairs song. The
+`birches`: `SoundState.birchesLoop`) and begins only there. Jeremy (2026-10-15):
+
+> the birches island music should start 2-3 seconds later than it currently does, and it should fade in a bit more.
+
+> when the music loops on the birches island, it needs to have a better fade in.
+
+So it enters `birchesArrivalLater` (3 s) later and fades in on a 1.8 s time constant (`recordedMusicFadeIn`: about
+0.4 of full at 1 s, 0.7 at 2 s, 0.94 at 5 s). Going round, the song is never butted end to start: each pass plays to
+its natural end, rests `recordedMusicLoop.birches.rest` (3.5 s) with only the room's world sounds, and begins again
+from its top with the same entrance. The decoded recording is held through the rest and released once the loop is
+over (play-out, stop or leaving). Once they have sailed (`toStairs`) it stops looping (`RecordedScore.playOut`) and
+the pass under way plays out; sailing during a rest, nothing more plays. A `toStairs` start is quiet until the stairs
+song. The
 crossing says how soon the stairs song can come in (`arrivalIn`: the distance to the handoff's entrance over the
 boat's speed now). Once that is `stairsSongRest` + `birchesSailFade` (15 s) or less, a pass that would still sound
 `stairsSongRest` (10 s) before it fades over `birchesSailFade` (5 s) to end then; a pass ending sooner simply ends.
@@ -710,13 +721,14 @@ sections. `node tools/village-music-check.mjs` covers the Birches play-out and i
 recording and the silence after it, the belfry's goodbye, the storm and the wood's drone level; `node
 tools/village-music-browser-check.mjs [drowned cloud belfry storm sail]` measures them in the real game (`sail`: the
 birches' push-off to the stairs and up into the white). `node tools/music-transition-audit.mjs` also renders that sail
-whole (`sail-faded`, `sail-ended`).
+whole (`sail-faded`, `sail-ended`) and the birches going round (`birches-seam`: a pass's last 10 s, the rest and the
+next's first 10 s, with the gap and entrance measured).
 
 ## Open
 
 - The stairs: the sail's air over the cloud awaits Jeremy's listen in the game, and the moment `clouds.ogg` starts
   (on `clear`) and the settled high air await his playtest (`cloudsMusicDelay`, `highSettled`).
-- Birches and the stairs song: Red Door's level, the sail's fade and quiet (`birchesSailFade`, `stairsSongRest`) and
+- Birches and the stairs song: Red Door's level, its rest and entrance going round, the sail's fade and quiet (`birchesSailFade`, `stairsSongRest`) and
   the stairs song's 3 s fade into the white (`stairsSongCloudFade`) await his listen.
 - The drowned village: whether `village_approach.ogg`'s end (just before the bass, 36.93 s) sits right against the
   first challenge (it ends as the tub becomes pushable from the stairs, about 4 s after it from `?chapter=drowned`);

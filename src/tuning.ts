@@ -87,6 +87,8 @@ export const tuning = {
     recordedMusicFade: .65,
     /** Time constants for recordings that come in more slowly than `recordedMusicFade`. */
     recordedMusicFadeIn: { birches: 1.8 } as Partial<Record<string, number>>,
+    /** Looped recordings that end, rest this many seconds and come in again from the top as on arrival, instead of going straight round. */
+    recordedMusicLoop: { birches: { rest: 3.5 } } as Partial<Record<string, { rest: number }>>,
     /** A recording kept to its scheduled moment that begins within this many seconds of it enters at full level. */
     recordedMusicOnTime: .1,
     /**
