@@ -112,17 +112,26 @@ const BANKS = [
 const nearBank = (x: number, z: number): boolean => BANKS.some(b => Math.hypot(b.x - x, b.z - z) < 1.6);
 const inHeap = (x: number, z: number): boolean => BIRCH_PILES.some(p => p.raked && Math.hypot(p.x - x, p.z - z) < p.r + 1);
 
+/** A way back from what a lens looks at, `degrees` round from looking north (90 looks west from the east). */
+const bearing = (degrees: number): { x: number; z: number } =>
+  ({ x: Math.sin(THREE.MathUtils.degToRad(degrees)), z: Math.cos(THREE.MathUtils.degToRad(degrees)) });
+
 /**
  * Where each of the squirrel's rounds is watched from (`story/birches-rounds.ts`): the point its lens looks at and
- * the way back to the lens. Nothing grown in a gap stands in that view.
+ * the way back to the lens, in landscape and in portrait. Nothing grown in a gap stands in either view.
  */
+export const ROUND_VIEWS_TALL = [
+  { at: birchesAt(11.5, -1075), from: bearing(75) },
+  { at: birchesGap(1, 13, 3), from: bearing(65) },
+  { at: birchesGap(2, 18, -14), from: bearing(8) },
+] as const;
 export const ROUND_VIEWS = [
   { at: birchesAt(11.8, -1074.1), from: { x: 0.643, z: 0.766 } },
   { at: birchesGap(1, 13, 4.5), from: { x: 0.259, z: 0.966 } },
   { at: birchesGap(2, 14.8, -12.3), from: { x: 0.819, z: 0.574 } },
 ] as const;
-const inRoundView = (x: number, z: number): boolean => ROUND_VIEWS.some(v => {
-  const ax = x - v.at.x, az = z - v.at.z, along = Math.max(0, Math.min(20, ax * v.from.x + az * v.from.z));
+const inRoundView = (x: number, z: number): boolean => [...ROUND_VIEWS, ...ROUND_VIEWS_TALL].some(v => {
+  const ax = x - v.at.x, az = z - v.at.z, along = Math.max(0, Math.min(24, ax * v.from.x + az * v.from.z));
   return Math.hypot(ax - v.from.x * along, az - v.from.z * along) < 3.5;
 });
 

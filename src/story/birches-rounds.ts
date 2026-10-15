@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import type { Shot } from '../camera';
 import type { Floor, SquirrelPoint } from '../creatures/squirrel';
 import { FALLEN_LOG, FORK_BRANCH, SCARF_SNAGS } from '../world/birch-scarf';
-import { BIRCH_PILES, ROUND_VIEWS, type AutumnBirches } from '../world/birches';
+import { BIRCH_PILES, ROUND_VIEWS, ROUND_VIEWS_TALL, type AutumnBirches } from '../world/birches';
 import { birchesAt, birchesGap } from '../world/birches-layout';
 import { heightAt } from '../world/island';
 
@@ -54,13 +54,11 @@ export function frameShot(frames: Frames, aspect: number, shot: Shot): Shot {
 /** Round `i`'s view (`ROUND_VIEWS`, kept clear of gap-grown trees), from `distance` back and `height` up. */
 const view = (i: number, distance: number, height: number): RoomFrame => ({ ...ROUND_VIEWS[i], lift: 1.2, distance, height });
 /**
- * Portrait's view of a round, from the bearing `degrees` (0 looks north from the south, 90 west from the east): its
- * field is half as wide, so heaps side by side in landscape stand one behind another in it, on a lens a little longer
- * so the far heaps read too. Every round uses the same lens, eased in as she comes to the heaps.
+ * Portrait's view of round `i` (`ROUND_VIEWS_TALL`): its field is half as wide, so heaps side by side in landscape
+ * stand one behind another in it, on a longer lens so the far heaps read too, eased in as she comes to the heaps.
  */
-const PORTRAIT_ZOOM = 1.6;
-const tall = (at: Spot, degrees: number, distance: number, height: number, lift: number, zoom = PORTRAIT_ZOOM): RoomFrame =>
-  ({ at, from: { x: Math.sin(THREE.MathUtils.degToRad(degrees)), z: Math.cos(THREE.MathUtils.degToRad(degrees)) }, lift, distance, height, zoom });
+const tall = (i: number, distance: number, height: number, lift: number, zoom: number): RoomFrame =>
+  ({ ...ROUND_VIEWS_TALL[i], lift, distance, height, zoom });
 const lensOf = (i: number, distance: number): Spot =>
   ({ x: ROUND_VIEWS[i].at.x + ROUND_VIEWS[i].from.x * distance, z: ROUND_VIEWS[i].at.z + ROUND_VIEWS[i].from.z * distance });
 
@@ -165,7 +163,7 @@ export const ROUNDS: readonly Round[] = [
      * From the south-east, low and close, so the squirrel on its log's end is the near subject beside her and she
      * stands across the heap from it; portrait from the east, the squirrel nearest, the heap and her beyond it.
      */
-    frames: { landscape: view(0, 10, 3), portrait: tall(birchesAt(11.5, -1075), 75, 18, 5, 1.3, 1.25) },
+    frames: { landscape: view(0, 10, 3), portrait: tall(0, 18, 5, 1.3, 1.25) },
   },
   {
     area: { ...STAND[1], r: 10 },
@@ -175,8 +173,11 @@ export const ROUNDS: readonly Round[] = [
     face: lifted(pile(5), 0.5),
     lastSeen: lifted(birchesGap(1, 12.6, 3)),
     cygnet: [lifted(birchesGap(1, 15.6, 5.9)), rimOf(4, STAND[1]), rimOf(5, STAND[1])],
-    /** From the south, high enough that the near heap and its burst stand inside the frame; portrait from the south-east, her between the heaps. */
-    frames: { landscape: view(1, 18, 6.5), portrait: tall(birchesGap(1, 13, 3.5), 45, 22, 7, 1, 1.1) },
+    /**
+     * From the south, high enough that the near heap and its burst stand inside the frame; portrait from the east along
+     * the two heaps, the near one whole at the foot of the frame and her between them.
+     */
+    frames: { landscape: view(1, 18, 6.5), portrait: tall(1, 20, 7.5, 1, 1.3) },
   },
   {
     area: { ...pile(7), r: 13 },
@@ -187,7 +188,7 @@ export const ROUNDS: readonly Round[] = [
     lastSeen: lifted(SHUFFLE_FROM),
     shuffle: { at: lifted(SHUFFLE_FROM), yaw: Math.atan2(STAND[2].x - SHUFFLE_FROM.x, STAND[2].z - SHUFFLE_FROM.z) },
     cygnet: [lifted(birchesGap(2, 9, -9.6)), rimOf(6, STAND[2]), rimOf(7, STAND[2]), rimOf(8, STAND[2])],
-    frames: { landscape: { ...view(2, 21, 7), zoom: 1.2 }, portrait: tall(birchesGap(2, 18, -14), 8, 25, 12, 0, 1.3) },
+    frames: { landscape: { ...view(2, 21, 7), zoom: 1.2 }, portrait: tall(2, 25, 12, 0, 1.3) },
   },
 ];
 
