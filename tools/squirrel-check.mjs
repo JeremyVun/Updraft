@@ -308,7 +308,7 @@ try {
       sheets.close.push({ file: await shoot(page, path.join(out, 'close-tufts.png')), label: 'ear tufts from behind' });
       await frameWhole(page, { bearing: Math.PI / 2 + 0.25, elev: 0.1 }, 20, 1.05);
       sheets.close.push({ file: await shoot(page, path.join(out, 'close-tail.png')), label: 'tail, side on' });
-      await frameWhole(page, { bearing: Math.PI - 0.35, elev: 0.3 }, 20, 1.05);
+      await frameWhole(page, { bearing: Math.PI + 0.45, elev: 0.3 }, 20, 1.1);
       sheets.close.push({ file: await shoot(page, path.join(out, 'close-back.png')), label: 'back and tail from behind' });
       await page.evaluate(() => window.__game.story.current.play('squirrel:perch'));
       await advance(1.6);
