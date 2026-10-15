@@ -34,7 +34,7 @@ and half-sizes are in `ISLES` (`heightfield.ts`) unless noted:
 | the shore through the red door | (300, −365) | 23 × 30 | `DOOR_SHORE` |
 | little boats | (130, −420) | 48 × 70 | `LITTLE_BOATS` (`little-boats-layout.ts`) |
 | meadow | (10, −780) | 227 × 200 | `ISLES.meadow`, sculpted at 340 × 300 and scaled by `tuning.world.meadowLength` (`meadowPoint`) |
-| birches | (−40, −1140) | 48 × 108 | `ISLES.birches`, from the first-built island through `world/birches-layout.ts` |
+| birches | (−48, −1148) | 48 × 108 | `ISLES.birches`, from the first-built island through `world/birches-layout.ts` |
 | stairs | (100, −1236) | 30 × 26 | `STAIRS_ISLE` (`stairs-layout.ts`) |
 | drowned village | (−10, −1440) | 210 × 175, all under water | `ISLES.drowned` |
 | dark wood | (−30, −1800) | 130 × 115 | `ISLES.wood` |
@@ -66,10 +66,11 @@ The departure measures 45.5 s against 31.9 s before the move, without changing s
 conceals the first stretch. Still-to-Lines uses a 0.99 drive multiplier, adding about 1.1 s.
 
 Revision 12 grows the birches and moves them. The island as first built is cut across its walk into bands
-(`BIRCHES_CUTS`, opened 16, 16 and 24 m) and moved by `BIRCHES_SHIFT` (−40, +16); everything on it is authored in
+(`BIRCHES_CUTS`, opened 16, 16 and 24 m) and moved by `BIRCHES_SHIFT` (−48, +8); everything on it is authored in
 those band-local terms and placed with `birchesAt` / `birchesGap`. Each band keeps its ground, grass patterns,
-trees and scarf exactly; the shift and openings are whole grass tiles (8 m). Push-off to the stairs measures 29.4 s
-against 23.3 s; `toBirches` 24.6 s against 23.3 s from the meadow's far shore. Saves on the old island, at its
+trees and scarf exactly; the shift and openings are whole grass tiles (8 m). With no input, push-off to the stairs
+measures 29.7 s (23.3 s before the revision) and `toBirches` 30.2 s from the meadow's far shore (23.3 s before), its
+last 52 m a straight run up the landing; boat speed is unchanged. Saves on the old island, at its
 berth and old village saves that began there migrate once. The birches' design record:
 [birches-uplift](../backlog/birches-uplift/design.md).
 

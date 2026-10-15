@@ -389,7 +389,8 @@ authored in the first-built island's band-local terms and placed with `birchesAt
 swing tree and the log keep their tuned shapes, each band keeps its ground, grass and trees, and only the open walk
 between them grows: every round gets its own stretch of wood and its own frame, never one shared with a tangle. The
 coast is drawn in and the outer wood thinned, so the island keeps its tree count. `BIRCHES_SHIFT` stands it west of
-where it was first built, so the sail on to the stairs is about 30 s of open sea (`docs/contracts/world.md`).
+where it was first built, so the sail from the meadow's far shore and the sail on to the stairs are each about 30 s
+of open sea (`docs/contracts/world.md`).
 
 After landing, the child looks up the ride, steps aside and sets the cygnet down (`carry.setDown`). Between stops it
 plays on its own (`birches-play.ts`): hops to a heap, chases gusts, dives in and rummages (`delve`), shakes, and
@@ -466,8 +467,9 @@ scripted beat. The scarf reads as tangled wool, not a ribbon; every support is p
 the wrapped trunk needs circling; the draw-in into the boat is unhurried. One corridor, never branched: "I do like the
 look of how the birches island is set up already as sort of this one corridor instead of zig zag paths everywhere like
 in the other chapters." The island's look is kept or lifted: "try to preserve or even uplift the aesthetics of the
-island with the swirling leaves and the golden light etc." The sail to the stairs is lengthened by distance alone:
-"the boat speed must be kept the same".
+island with the swirling leaves and the golden light etc." The sails from the meadow and to the stairs are
+lengthened by distance alone: "the boat speed must be kept the same". After his first playtest the meadow sail grew
+by about 5 s: "The sail is like 5 seconds short... The crossing needs to be longer".
 
 Rules: the squirrel hides, not the cygnet, so the dark wood's hiding-and-finding stays unspent. Nothing is lost or
 failed, and no timer finds it. The child looks at the heaps and the squirrel, never at the camera. The child, the
