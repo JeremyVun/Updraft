@@ -178,6 +178,7 @@ export class BirchesChapter implements Chapter {
     const count = THREE.MathUtils.clamp(!fourKnots && saved >= 3 ? SCARF_SNAGS.length : saved, 0, SCARF_SNAGS.length);
     this.cast.birches.scarf.restore(count);
     this.cast.boat.scarfSail = count === SCARF_SNAGS.length ? 1 : 0;
+    this.moveBoat();
     const { child, cygnet } = this.cast;
     child.stop();
     child.counting = 0;
@@ -240,6 +241,7 @@ export class BirchesChapter implements Chapter {
     /** The first shot looks at her over the stern, and she steps off the bow behind the sail. */
     boat.sailGivesWay = this.beat === 'ashore' || this.beat === 'wonder' ? tuning.birches.landingGivesWay : tuning.sail.givesWay;
     this.squirrel.update(dt, time, this.cue());
+    if (!this.boatMoved && this.leg > CLEARING_LEG) this.moveBoat();
     /** The afternoon goes on while they walk, and hands over to the village's dusk at the far beach. */
     const over = THREE.MathUtils.clamp((BIRCHES_LANDING.y - c.position.z) / (BIRCHES_LANDING.y - BIRCHES_BERTH.z), 0, 1);
     this.dusk += (0.58 + over * 0.12 - this.dusk) * (1 - Math.exp(-dt * 0.3));
@@ -356,10 +358,12 @@ export class BirchesChapter implements Chapter {
     });
     if (seen) this.boatSeenAt = this.now;
     const up = Math.hypot(child.position.x - BIRCHES_LANDING.x, child.position.z - BIRCHES_LANDING.y);
-    if ((up > 15 && this.now - this.boatSeenAt > 1) || child.position.z < BIRCHES_CLEARING.y) {
-      boat.beach(BIRCHES_BERTH.x, BIRCHES_BERTH.z, 0.15);
-      this.boatMoved = true;
-    }
+    if ((up > 15 && this.now - this.boatSeenAt > 1) || child.position.z < BIRCHES_CLEARING.y) this.moveBoat();
+  }
+
+  private moveBoat(): void {
+    this.cast.boat.beach(BIRCHES_BERTH.x, BIRCHES_BERTH.z, 0.15);
+    this.boatMoved = true;
   }
 
   /** A round's longer portrait lens comes in and goes out as smoothly as a dolly, never with the rig's quick start. */
