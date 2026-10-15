@@ -1,7 +1,7 @@
 import { birchesPoint, type CheckpointPayload } from './checkpoint-data';
 import * as THREE from 'three';
 import type { Shot } from '../camera';
-import { BIRCHES_BERTH, BIRCHES_CLEARING, BIRCHES_LANDING, BIRCHES_WALK } from '../world/birches';
+import { BIRCHES_BERTH, BIRCHES_CLEARING, BIRCHES_LANDING, BIRCHES_WALK, BIRCH_PILES } from '../world/birches';
 import { heightAt } from '../world/island';
 import type { Cast, Chapter } from './cast';
 import { tuning } from '../tuning';
@@ -73,6 +73,7 @@ export class BirchesChapter implements Chapter {
   private readonly scarfMast = new THREE.Vector3();
   private readonly hand = new THREE.Vector3();
   private readonly tmp = new THREE.Vector3();
+  private readonly tmp2 = new THREE.Vector3();
   private readonly seat = new THREE.Vector3();
   private readonly from = new THREE.Vector3(0.72, 0, 0.69).normalize();
   private readonly scarfFrom = new THREE.Vector3(0.08, 0, 1).normalize();
@@ -441,7 +442,7 @@ export class BirchesChapter implements Chapter {
     child.walkTo(snag.before.x, snag.before.z, false, undefined, 0.6);
   }
 
-  /** To the edge of the round's heaps, to kneel there and look. */
+  /** To the edge of the round's heaps, to kneel there and look; round a heap in the way rather than through it. */
   private toRound(round: number): void {
     const { child } = this.cast;
     const r = ROUNDS[round];
@@ -450,7 +451,15 @@ export class BirchesChapter implements Chapter {
     this.play = 'carry';
     child.stop();
     child.lookAt = r.face;
-    child.walkTo(r.stand.x, r.stand.z, false, undefined, 0.5);
+    const at = child.position, dx = r.stand.x - at.x, dz = r.stand.z - at.z, span = Math.hypot(dx, dz) || 1;
+    const across = r.heaps.map((i) => BIRCH_PILES[i]).find((p) => {
+      const t = THREE.MathUtils.clamp(((p.x - at.x) * dx + (p.z - at.z) * dz) / (span * span), 0, 1);
+      return Math.hypot(at.x + dx * t - p.x, at.z + dz * t - p.z) < p.r + 0.5;
+    });
+    if (!across) { child.walkTo(r.stand.x, r.stand.z, false, undefined, 0.5); return; }
+    const side = Math.sign((across.x - at.x) * dz - (across.z - at.z) * dx) || 1;
+    const by = this.tmp.set(-dz / span * side, 0, dx / span * side).multiplyScalar(across.r + 0.9).add(this.tmp2.set(across.x, 0, across.z));
+    child.walkTo(by.x, by.z, false, () => { if (this.beat === 'toRound') child.walkTo(r.stand.x, r.stand.z, false, undefined, 0.5); }, 0.8);
   }
 
   /** Found and off: after the third, the leap into the deepest leaves left; otherwise the walk goes on after it. */

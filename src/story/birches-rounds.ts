@@ -71,9 +71,9 @@ const inPile = (i: number, toward: Spot, share: number): THREE.Vector3 => {
   const p = pile(i), d = Math.hypot(toward.x - p.x, toward.z - p.z) || 1, r = BIRCH_PILES[i].r * share;
   return lifted({ x: p.x + (toward.x - p.x) / d * r, z: p.z + (toward.z - p.z) / d * r });
 };
-/** The deep of a heap on its far side from round `round`'s lens, where the leaves in front of it hide it best. */
-const beyond = (i: number, round: number): THREE.Vector3 =>
-  inPile(i, { x: pile(i).x - ROUND_VIEWS[round].from.x * 10, z: pile(i).z - ROUND_VIEWS[round].from.z * 10 }, 0.3);
+/** Under a heap's crest, just past its middle from round `round`'s lens, where its tail tip shows over the top. */
+const crest = (i: number, round: number): THREE.Vector3 =>
+  inPile(i, { x: pile(i).x - ROUND_VIEWS[round].from.x * 10, z: pile(i).z - ROUND_VIEWS[round].from.z * 10 }, 0.1);
 /** The rim of a heap nearest `from`, a little outside it. */
 const rimOf = (i: number, from: Spot): THREE.Vector3 => inPile(i, from, 1.15);
 
@@ -129,7 +129,7 @@ export interface Round {
   area: Spot & { r: number };
   /** Its heaps, as indices into `BIRCH_PILES`. */
   heaps: readonly number[];
-  /** Where in each of them it lies hidden: in its deep, on the far side from the lens. */
+  /** Where in each of them it lies hidden: under its crest, where the tip of its tail shows from the lens. */
   hides: readonly THREE.Vector3[];
   /** Where she stops at the heaps' edge to crouch and peer, and what she faces while she waits for the first gust. */
   stand: THREE.Vector3;
@@ -147,7 +147,7 @@ export const ROUNDS: readonly Round[] = [
   {
     area: { ...pile(0), r: 7 },
     heaps: [0],
-    hides: [inPile(0, STAND[0], 0.25)],
+    hides: [inPile(0, STAND[0], 0.1)],
     stand: lifted(STAND[0]),
     face: lifted(pile(0), 0.5),
     lastSeen: MEETING.at.clone(),
@@ -157,17 +157,17 @@ export const ROUNDS: readonly Round[] = [
   {
     area: { ...STAND[1], r: 10 },
     heaps: [4, 5],
-    hides: [beyond(4, 1), beyond(5, 1)],
+    hides: [crest(4, 1), crest(5, 1)],
     stand: lifted(STAND[1]),
     face: lifted(pile(5), 0.5),
     lastSeen: lifted(birchesGap(1, 12.6, 3)),
-    cygnet: [lifted(birchesGap(1, 13.2, 6.1)), rimOf(4, STAND[1]), rimOf(5, STAND[1])],
+    cygnet: [lifted(birchesGap(1, 15.6, 5.9)), rimOf(4, STAND[1]), rimOf(5, STAND[1])],
     frames: { landscape: view(1, 15, 3.4), portrait: tele(1, 22, 5.5, 2.6, 1, 0, 0.15) },
   },
   {
     area: { ...STAND[2], r: 14 },
     heaps: [6, 7, 8],
-    hides: [beyond(6, 2), beyond(7, 2), beyond(8, 2)],
+    hides: [crest(6, 2), crest(7, 2), crest(8, 2)],
     stand: lifted(STAND[2]),
     face: lifted(pile(7), 0.5),
     lastSeen: lifted(birchesGap(2, 11, -10.5)),

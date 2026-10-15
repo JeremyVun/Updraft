@@ -7,6 +7,8 @@ import type { Foley } from './foley';
 export class BirchesFoley {
   private time = 0;
   private nextLeaf = 0;
+  /** A leaf sound of the game's own stands for the scuff until then. */
+  private claimed = 0;
   private nextCreak = 0;
   private contact = 0;
   private walking = false;
@@ -37,16 +39,20 @@ export class BirchesFoley {
   }
 
   scuff(at: THREE.Vector3, strength: number, active: boolean): void {
-    if (!active || this.time < this.nextLeaf) return;
+    if (!active || this.time < this.nextLeaf || this.time < this.claimed) return;
     const level = Math.min(1, strength) * this.distance(at) * tuning.audio.leafScuffLevel;
     if (level < 0.015) return;
     this.foley.material('leaf-scuff', level, screenPan(this.camera, at));
     this.nextLeaf = this.time + tuning.audio.leafScuffEvery;
   }
 
-  /** The squirrel's game: a hidden one stirring its heap, a heap thrown up, and the child landing in the leaves. */
+  /**
+   * The squirrel's game: a hidden one stirring its heap, a heap thrown up, and the child landing in the leaves. Heard
+   * just before the leaves go up, it stands for the scuff their going up would make, so that is not heard as well.
+   */
   leaves(kind: 'rustle' | 'burst' | 'leap', at: THREE.Vector3, strength: number, active: boolean): void {
     if (!active) return;
+    this.claimed = this.time + 0.05;
     const k = tuning.audio;
     const level = Math.min(1, strength) * this.distance(at) * (kind === 'rustle' ? k.leafRustleLevel : k.leafBurstLevel);
     if (level < 0.015) return;

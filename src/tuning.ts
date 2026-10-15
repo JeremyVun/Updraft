@@ -1392,12 +1392,12 @@ export const tuning = {
       /** Litter, in metres, deep enough to bury it, and deep enough for her to jump into. */
       buryDepth: 0.5, leapDepth: 0.35,
       /**
-       * Finding: the air over its heap (or `driftReach` metres round a drift or a trunk) as the trees feel it when they
-       * shed, each rise of it counted: `findWork` by round flushes it (in the first, any gust over the heap), `nearlyWork`
-       * in one gust makes it peek, and it is forgotten at `findForget` a second. A stroke across a heap makes 0.3 to
-       * 0.6, one along its rim about 0.15.
+       * Finding: the air over its heap (`driftReach` round a drift, `trunkReach` round a trunk) as the trees feel it
+       * when they shed, each rise of it counted: `findWork` by round flushes it (in the first, any gust over the heap),
+       * `nearlyWork` in one gust makes it peek, and it is forgotten at `findForget` a second. A stroke across a heap
+       * makes 0.3 to 0.6, one along its rim about 0.15.
        */
-      driftReach: 1.6, findWork: [0.12, 0.25, 0.25], nearlyWork: 0.05, findForget: 0.03,
+      driftReach: 1.6, trunkReach: 2.6, findWork: [0.12, 0.25, 0.25], nearlyWork: 0.05, findForget: 0.03,
       /** Seconds without wind on the right heap before the cygnet goes to stand at it, and before the drawn sweep. */
       hintAfter: 10, inviteAfter: 18,
       /** The meeting: how near she comes before it sees her, and how long it freezes before it drops into the heap. */

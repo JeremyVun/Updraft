@@ -1,17 +1,18 @@
 import * as THREE from 'three';
+import { verticalFov, type Shot } from '../camera';
 import type { CameraAttention } from '../camera-direction';
 import type { Floor, SquirrelPoint } from '../creatures/squirrel';
 import { tuning } from '../tuning';
 import { BIRCH_PILES, ROUND_VIEWS } from '../world/birches';
 import { heightAt } from '../world/island';
-import { FAR_TRUNK, GOODBYE, LEAP, MEETING, PATHS, ROUNDS, TANGLE_PERCHES, onTrunk, route, swingPerch, type PerchSpec, type Step } from './birches-rounds';
-import { heapSeam, type HeapSeam } from './birches-heap-seam';
+import { FAR_TRUNK, GOODBYE, LEAP, MEETING, PATHS, ROUNDS, frameShot, TANGLE_PERCHES, onTrunk, route, swingPerch, type PerchSpec, type Step } from './birches-rounds';
 import type { Cast } from './cast';
 
 const ground: Floor = (x, z) => Math.max(0, heightAt(x, z));
 const UP = new THREE.Vector3(0, 1, 0);
 const between = (a: number, b: number): number => a + Math.random() * (b - a);
-const flat = (from: THREE.Vector3, to: THREE.Vector3): THREE.Vector3 => new THREE.Vector3(to.x - from.x, 0, to.z - from.z).normalize();
+type Spot = { x: number; z: number };
+const flat = (from: Spot, to: Spot): THREE.Vector3 => new THREE.Vector3(to.x - from.x, 0, to.z - from.z).normalize();
 const onGround = (p: THREE.Vector3): THREE.Vector3 => p.setY(ground(p.x, p.z));
 
 /** Where it is between rounds, in the order the walk meets them. */
@@ -49,6 +50,8 @@ interface Hide {
   /** Which of the round's heaps, or −1 for a drift or a trunk. */
   heap: number;
   at: THREE.Vector3;
+  /** How far above the ground its paws are set in the leaves there (`AutumnBirches.buryDepth`), or below it. */
+  sink: number;
   /** How far round it the wind counts. */
   reach: number;
   trunk: { at: THREE.Vector3; up: THREE.Vector3; radius: number } | null;
@@ -71,8 +74,6 @@ export class BirchesSquirrel {
   /** Where the drawn sweep shows a stalled player the heap, or null. */
   invitation: THREE.Vector3 | null = null;
   readonly attention: CameraAttention = { point: new THREE.Vector3(), strength: 0, weight: tuning.birches.squirrel.glance };
-  /** The floor's depth and bursts: phase 5a's, or the stand-in until they land. */
-  readonly leaves: HeapSeam;
   private station: Station = 'meeting';
   private mode: Mode = 'meeting';
   private seen = false;
@@ -97,6 +98,7 @@ export class BirchesSquirrel {
   private nextKick = 0;
   private glanceRest: SquirrelPoint[] = [];
   private seekHeap = -1;
+  private seekRound = -1;
   private lastSeek = -1;
   private seekDone = 0;
   private seekSince = 0;
@@ -112,11 +114,13 @@ export class BirchesSquirrel {
   private readonly land = new THREE.Vector3();
   private readonly takeOff = new THREE.Vector3();
   private readonly v = new THREE.Vector3();
+  private readonly bank = new THREE.Vector3();
   private readonly air = { x: 0, z: 0, energy: 0, lift: 0 };
   private readonly heapBurstAt = new Map<number, number>();
+  private readonly lens = new THREE.PerspectiveCamera();
+  private readonly lensShot: Shot = { target: new THREE.Vector3(), distance: 0, height: 0 };
 
   constructor(private readonly cast: Cast) {
-    this.leaves = heapSeam(cast.birches, cast.squirrel);
     cast.squirrel.visible = true;
     this.meet();
   }
@@ -150,6 +154,7 @@ export class BirchesSquirrel {
     this.cue = cue;
     this.hidden = null;
     this.invitation = null;
+    this.seekRound = -1;
     this.attention.strength = 0;
     this.cast.squirrel.visible = true;
     this.station = this.stationFor(cue);
@@ -323,9 +328,24 @@ export class BirchesSquirrel {
       const x = r.area.x + i * r.area.r * 0.4, z = r.area.z + j * r.area.r * 0.4;
       if (heightAt(x, z) > 0.4) grid.push(new THREE.Vector3(x, ground(x, z), z));
     }
-    void this.leaves.depthAt([...r.hides, ...grid]).then((depths) => {
+    void this.cast.birches.depthAt([...r.hides, ...grid]).then((depths) => {
       if (generation === this.generation) this.hide(this.pick(round, depths, grid), direct);
     });
+  }
+
+  /** Whether `p` stands well inside round `round`'s frame on this screen, so a hide there is never out of the picture. */
+  private inView(round: number, p: THREE.Vector3): boolean {
+    const aspect = window.innerWidth / window.innerHeight;
+    const shot = frameShot(ROUNDS[round].frames, aspect, this.lensShot);
+    const cam = this.lens;
+    cam.aspect = aspect;
+    cam.fov = THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(verticalFov(aspect)) / 2) / (shot.zoom ?? 1)));
+    cam.position.copy(shot.target).addScaledVector(shot.from!, shot.distance).setY(shot.target.y + shot.height);
+    cam.lookAt(shot.target);
+    cam.updateMatrixWorld();
+    cam.updateProjectionMatrix();
+    const v = this.v.copy(p).setY(p.y + 0.3).project(cam);
+    return Math.abs(v.x) < 0.78 && v.y > -0.75 && v.y < 0.75 && v.z < 1;
   }
 
   private pick(round: number, depths: number[], grid: THREE.Vector3[]): Hide {
@@ -333,23 +353,29 @@ export class BirchesSquirrel {
     const r = ROUNDS[round];
     const deep = r.hides.map((_, i) => i).filter((i) => depths[i] >= k.buryDepth);
     const choices = deep.length > 1 ? deep.filter((i) => i !== this.lastHeap) : deep;
+    const sunk = (at: THREE.Vector3, depth: number) => depth - this.cast.birches.buryDepth(at.x, at.z, depth);
     if (choices.length > 0) {
       const i = choices[Math.floor(Math.random() * choices.length)];
-      return { round, heap: i, at: r.hides[i].clone(), reach: BIRCH_PILES[r.heaps[i]].r, trunk: null };
+      return { round, heap: i, at: r.hides[i].clone(), sink: sunk(r.hides[i], depths[i]), reach: BIRCH_PILES[r.heaps[i]].r, trunk: null };
     }
     let best = -1;
     const drift = (i: number) => depths[r.hides.length + i];
-    grid.forEach((_, i) => { if (drift(i) >= k.buryDepth && (best < 0 || drift(i) > drift(best))) best = i; });
-    if (best >= 0) return { round, heap: -1, at: grid[best].clone(), reach: k.driftReach, trunk: null };
+    grid.forEach((p, i) => { if (drift(i) >= k.buryDepth && (best < 0 || drift(i) > drift(best)) && this.inView(round, p)) best = i; });
+    if (best >= 0) return { round, heap: -1, at: grid[best].clone(), sink: sunk(grid[best], drift(best)), reach: k.driftReach, trunk: null };
     /** Nothing left to bury itself in: flat to the bark of the tree a heap was banked against, round from her. */
-    const heap = BIRCH_PILES[r.heaps[Math.floor(Math.random() * r.heaps.length)]];
     const lens = ROUND_VIEWS[round].from;
-    const axis = new THREE.Vector3();
-    this.cast.birches.trunkAt(heap.x - lens.x * (heap.r + 0.8), heap.z - lens.z * (heap.r + 0.8), 0.8, axis);
+    const bankOf = (i: number, out: THREE.Vector3): THREE.Vector3 => {
+      const heap = BIRCH_PILES[i];
+      this.cast.birches.trunkAt(heap.x - lens.x * (heap.r + 0.8), heap.z - lens.z * (heap.r + 0.8), 0.8, out);
+      return out;
+    };
+    const seen = r.heaps.filter((i) => this.inView(round, bankOf(i, this.bank)));
+    const banks = seen.length ? seen : r.heaps;
+    const axis = bankOf(banks[Math.floor(Math.random() * banks.length)], new THREE.Vector3());
     const turn = 0.7 * (Math.random() < 0.5 ? -1 : 1), c = Math.cos(turn), sn = Math.sin(turn);
     const toward = { x: axis.x - (lens.x * c - lens.z * sn) * 4, z: axis.z - (lens.x * sn + lens.z * c) * 4 };
     const trunk = onTrunk(this.cast.birches, { tree: { x: axis.x, z: axis.z }, height: 0.8, toward });
-    return { round, heap: -1, at: trunk.at, reach: k.driftReach, trunk };
+    return { round, heap: -1, at: trunk.at, sink: 0, reach: k.trunkReach, trunk };
   }
 
   private hide(h: Hide, direct: boolean): void {
@@ -364,7 +390,7 @@ export class BirchesSquirrel {
     if (direct) {
       this.mode = 'hidden';
       if (h.trunk) s.act('climb', { at: h.trunk.at, up: h.trunk.up, forward: UP, radius: h.trunk.radius, look: this.face });
-      else s.hide(h.at, { tailOut: this.tailOut, yaw: Math.random() * Math.PI * 2, floor: ground });
+      else s.hide(h.at, { tailOut: this.tailOut, yaw: Math.random() * Math.PI * 2, floor: this.inLeaves(h) });
       return;
     }
     this.mode = 'hiding';
@@ -393,8 +419,14 @@ export class BirchesSquirrel {
     s.follow([{ at: rim, on: 'ground' }], () => { if (this.hidden === h) this.dive(h); }, { floor: ground });
   }
 
+  /** The ground, and toward the hide the level its paws are set at in the leaves there, eased so it never steps. */
+  private inLeaves(h: Hide, from: Floor = ground): Floor {
+    return (x, z) => from(x, z) + h.sink * (1 - THREE.MathUtils.smoothstep(Math.hypot(x - h.at.x, z - h.at.z), 0.3, 1.6));
+  }
+
   private dive(h: Hide): void {
-    this.cast.squirrel.act('dive', { at: h.at, tailOut: this.tailOut, floor: this.station === 'meeting' ? OFF_THE_LOG : ground, yaw: Math.random() * Math.PI * 2 });
+    const floor = this.inLeaves(h, this.station === 'meeting' ? OFF_THE_LOG : ground);
+    this.cast.squirrel.act('dive', { at: h.at.clone().setY(floor(h.at.x, h.at.z)), tailOut: this.tailOut, floor, yaw: Math.random() * Math.PI * 2 });
   }
 
   private hiding(): void {
@@ -454,8 +486,8 @@ export class BirchesSquirrel {
       if (h.trunk) {
         s.heard.push({ kind: 'chuck', amount: 0.7 });
       } else {
-        this.leaves.burst(h.at.x, h.at.z, k.tellStrength);
         this.cast.leafSound?.('rustle', h.at, 1);
+        this.cast.birches.burst(h.at.x, h.at.z, k.tellStrength);
         this.tailOut = Math.random() < k.tailOut[h.round];
         if (Math.random() < k.peekChance) s.act('peek', { for: k.peekFor, tailOut: this.tailOut, look: this.face });
         else s.act('buried', { tailOut: this.tailOut });
@@ -481,8 +513,8 @@ export class BirchesSquirrel {
       s.follow([{ at: out, on: 'ground' }], undefined, { floor: ground });
     } else {
       const reach = h.heap >= 0 ? BIRCH_PILES[ROUNDS[h.round].heaps[h.heap]].r * 0.55 : 0.8;
-      s.act('burst', { at: onGround(h.at.clone().addScaledVector(toward, reach)), look: this.face, floor: ground });
       this.cast.leafSound?.('burst', h.at, 1);
+      s.act('burst', { at: onGround(h.at.clone().addScaledVector(toward, reach)), look: this.face, floor: this.inLeaves(h) });
     }
     if (this.cue.round !== h.round) return;
     this.chased = false;
@@ -554,7 +586,7 @@ export class BirchesSquirrel {
       if (!this.hinting) {
         this.hinting = true;
         bird.stay = false;
-        bird.errand = h.at.clone().addScaledVector(flat(h.at, c.position), BIRCH_PILES[r.heaps[h.heap]].r * 0.95);
+        bird.errand = r.cygnet[1 + h.heap].clone();
         bird.watch(h.at);
         this.seekDone = time;
       } else if (!bird.errand && time > this.seekDone) {
@@ -569,6 +601,18 @@ export class BirchesSquirrel {
       bird.stay = false;
     }
     if (bird.errand && time - this.seekSince > 6) bird.errand = null;
+    /** At first it stays by her, as she kneels, before it goes looking for itself. */
+    if (this.seekRound !== round) {
+      this.seekRound = round;
+      if (round > 0) {
+        bird.stay = false;
+        bird.errand = r.cygnet[0].clone();
+        bird.watch(r.face);
+        this.seekSince = time;
+        this.seekDone = time + between(k.seekFrom, k.seekTo) + 1.5;
+        return;
+      }
+    }
     if (bird.errand || time < this.seekDone) return;
     if (this.seekHeap >= 0) {
       bird.mind.perform(Math.random() < 0.6 ? 'delve' : 'peer', 2.2);
@@ -577,11 +621,13 @@ export class BirchesSquirrel {
       this.seekDone = time + 3 + between(k.seekFrom, k.seekTo);
       return;
     }
+    /** It looks into each from the side nearest her, a step either way along the rim, where the lens can see it. */
     const choices = r.heaps.filter((heap) => heap !== this.lastSeek || r.heaps.length === 1);
     const heap = choices[Math.floor(Math.random() * choices.length)];
     const p = BIRCH_PILES[heap];
-    const side = Math.random() * Math.PI * 2;
-    const rim = new THREE.Vector3(p.x + Math.sin(side) * p.r * 0.9, 0, p.z + Math.cos(side) * p.r * 0.9);
+    const near = r.cygnet[1 + r.heaps.indexOf(heap)];
+    const along = flat(p, near).applyAxisAngle(UP, Math.PI / 2).multiplyScalar((Math.random() - 0.5) * 1.6);
+    const rim = near.clone().add(along);
     if (heightAt(rim.x, rim.z) < 0.6) return;
     this.lastSeek = this.seekHeap = heap;
     bird.stay = false;
@@ -606,7 +652,7 @@ export class BirchesSquirrel {
       const x = r.area.x + i * r.area.r * 0.35, z = r.area.z + j * r.area.r * 0.35;
       if (heightAt(x, z) > 0.4) points.push(new THREE.Vector3(x, ground(x, z), z));
     }
-    void this.leaves.depthAt(points).then((depths) => {
+    void this.cast.birches.depthAt(points).then((depths) => {
       if (this.leap !== 'reading') return;
       let best = 0;
       depths.forEach((d, i) => { if (d > depths[best]) best = i; });
@@ -653,8 +699,8 @@ export class BirchesSquirrel {
       this.nextKick -= dt;
       if (this.nextKick <= 0) {
         this.nextKick = k.kickEvery;
-        this.leaves.burst(c.position.x, c.position.z, k.kickStrength);
         this.cast.leafSound?.('rustle', c.position, 0.8);
+        this.cast.birches.burst(c.position.x, c.position.z, k.kickStrength);
       }
     }
   }
@@ -666,8 +712,8 @@ export class BirchesSquirrel {
     this.leap = 'flying';
     const way = flat(c.position, this.land);
     c.leap(new THREE.Vector3(way.x * k.leapRun, k.leapUp, way.z * k.leapRun), this.land, 9.81, () => {
-      this.leaves.burst(this.land.x, this.land.z, k.leapBurst);
       this.cast.leafSound?.('leap', this.land, 1);
+      this.cast.birches.burst(this.land.x, this.land.z, k.leapBurst);
       c.lookAt = bird.position;
       this.after(0.5, () => { bird.mind.perform('shake'); bird.watch(this.face); }, false);
     }, () => {
