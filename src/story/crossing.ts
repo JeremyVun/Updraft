@@ -71,6 +71,8 @@ export interface CrossingOpts {
   birchesScore?: BirchesScorePhase;
   hush?: number;
   arrivalMusic?: ArrivalMusic;
+  /** Seconds sooner than usual that the departing room's music lets go for the arrival. */
+  arrivalMusicEarlier?: number;
   /** A different offshore composition, introduced after leaving the preceding island's music. */
   departureMusic?: ArrivalMusic;
   /** Start the final musical handoff on departure, opening after the mirror's first offshore turn. */
@@ -142,6 +144,7 @@ export class CrossingChapter implements Chapter {
   readonly birchesScore?: BirchesScorePhase;
   private readonly quiet: number;
   private readonly destinationMusic?: ArrivalMusic;
+  private readonly arrivalMusicEarlier: number;
   private readonly departureMusic?: ArrivalMusic;
   private arrivalHeard = false;
   readonly season: number;
@@ -252,6 +255,7 @@ export class CrossingChapter implements Chapter {
     this.birchesScore = opts.birchesScore;
     this.quiet = opts.hush ?? 0;
     this.destinationMusic = opts.arrivalMusic;
+    this.arrivalMusicEarlier = opts.arrivalMusicEarlier ?? 0;
     this.season = opts.season ?? 0.3;
     this.lookBack = opts.lookBack ?? null;
     this.farewellFor = this.lookBack ? (opts.farewell ?? 30) : 0;
@@ -461,7 +465,7 @@ export class CrossingChapter implements Chapter {
     if (this.whale && this.whale.step !== 'gone') return;
     const remaining = this.remainingSail();
     const speed=Math.max(4.5,this.cast.boat.speed);
-    const earlier = this.stillDeparture ? tuning.audio.linesArrivalEarlier : 0;
+    const earlier = (this.stillDeparture ? tuning.audio.linesArrivalEarlier : 0) + this.arrivalMusicEarlier;
     const lead = tuning.audio.arrivalShoreAllowance + (tuning.audio.arrivalMusicLead + earlier) * speed;
     if (remaining <= Math.min(lead, this.routeLength * tuning.audio.arrivalMusicRouteShare)) {
       this.arrivalHeard = true;

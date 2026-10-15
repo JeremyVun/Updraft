@@ -97,6 +97,8 @@ export const tuning = {
     stillPhraseExperiment: true,
     stillFallTones: false,
     linesArrivalEarlier: 10,
+    /** Little Boats' recording lets go this many seconds sooner on the crossing to the meadow. */
+    meadowArrivalEarlier: 5,
     stillPhraseDb: -6,
     stillPhraseFade: .12,
     stillPhraseSpacing: 4.5,
