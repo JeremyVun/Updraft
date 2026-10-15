@@ -184,6 +184,9 @@ later than before (`tuning.audio.birchesArrivalLater`) and fades in on a 1.8 s t
 
 > the player also shouldn't be able to blow away the leaf pile until the squirrel has jumped into it
 
+> the squirrel also jumps out the very instant that the leaf pile is "blown" even though the leaf pile might not have
+> disappeared at all
+
 Loose leaves are cut to 75% per metre of the walk (`tuning.birches.looseLeaves`). On the island Red Door plays to
 its end, rests a few seconds and comes in again from the top with its arrival fade-in, instead of looping sample to
 sample.
