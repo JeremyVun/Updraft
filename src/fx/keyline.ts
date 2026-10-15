@@ -36,7 +36,7 @@ export class KeyLine {
     const t = tuning.piano;
     const phase = ((time - this.since) % t.guideCycle) / t.guideSweep;
     const head = Math.min(1, phase);
-    const pen = windPen(camera, along(0.5, this.centre), t.linePen, true);
+    const pen = windPen(camera, along(0.5, this.centre), t.linePen, true) * t.guideWeight;
     this.ribbon.alpha = this.shown * 0.9;
     this.ribbon.width = pen * 0.8;
     this.sweep.alpha = this.shown * (1 - THREE.MathUtils.smoothstep(phase, 1, 1.3));

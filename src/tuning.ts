@@ -1032,7 +1032,9 @@ export const tuning = {
      * lies against the land; its ends rise or fall `guideTilt` metres with the answer's melody. A stroke within
      * `guideTolerance` screen heights of it counts.
      */
-    guideSpan: 2.1, guidePortraitSpan: 1.8, guideAhead: 1.2, guideOver: 0.55, guideTilt: 0.22, guideTolerance: 0.08,
+    guideSpan: 2.4, guidePortraitSpan: 1.8, guideAhead: 2.6, guideOver: 0.55, guideTilt: 0.22, guideTolerance: 0.08,
+    /** The guide is drawn this much bolder than the other invitations, because busy sunlit grass swallows a fine line. */
+    guideWeight: 2,
     guideCycle: 3.2, guideSweep: 1.8, answerVelocity: 0.6,
     /**
      * The paper plane waits on the music desk's ledge while she plays (piano units: across, up, out), leaning back
