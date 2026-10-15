@@ -481,6 +481,8 @@ precision highp int;
 uniform vec3 uFogEye;
 // Drawn as a full-screen pass, whose camera is not the eye.
 #define cameraPosition uFogEye
+// It fogs blade roots, off screen as well as on.
+#define FOG_OFF_SCREEN 1
 // Neighbouring texels are unrelated blades, so derivatives mean nothing: sample at level 0, as a vertex shader does.
 #define texture(s, uv) textureLod(s, uv, 0.0)
 ${ATMO_GLSL}

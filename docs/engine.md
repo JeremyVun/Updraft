@@ -451,7 +451,13 @@ Bakes that follow the world:
 - `world/fog-lookup.ts` evaluates the original village `seaFog` into an atlas for each camera.
   Materials sample it instead of compiling that integration repeatedly. Each atlas is 1280×896 RGBA16F
   (8.75 MiB), with 64 radial slices from 0.25 to 8192 m; each slice has 160×96 samples over the camera view plus a
-  25% margin and a 32×16 spherical fallback for offscreen vertices. Optical depth and depth-weighted light are
+  25% margin and a 32×16 spherical fallback for offscreen vertices. Pixel shaders compile the fallback out, since a
+  pixel's own sightline lies inside the margin; one that fogs other points defines `FOG_OFF_SCREEN` (the grass's
+  per-frame pass). Materials drawn only in rooms that never share a frame with the village (`outsideSeaFog`,
+  `world/journey-rooms.ts`) compile the sea fog out of `fogOf` (`SEA_FOG 0`), about 0.1 s less compile each on
+  Windows; it skips any material something else draws or whose shader text another shares, so no program splits.
+  QA `__stats.seaFogMissing` counts their draws while the fog is out, held at 0 by `playthrough` and
+  `drowned-fog-check`. Optical depth and depth-weighted light are
   filtered in direction and physical distance; decoding restores exact opacity for terrain/water early exits.
   `beginFrame` invalidates before the main camera's grass bake, even at fixed game time. The scene's
   `onBeforeRender` selects/bakes each main, reflected or doorway camera and rebinds its uniforms on reuse;

@@ -478,3 +478,39 @@ export function watchFirstDraws(renderer: THREE.WebGLRenderer): { begin(): void;
     report: () => ({ programs: after.programs.length, names: after.programs.slice(0, 40), pairs: after.pairs.length, pairNames: after.pairs.slice(0, 60) }),
   };
 }
+
+/**
+ * QA: programs compiled without the drowned village's sea fog (`SEA_FOG 0`, `outsideSeaFog`) drawn while `foggy()`
+ * after `begin()` (Begin), naming the first few. Any is a material missing the fog: it must stay 0.
+ */
+export function watchSeaFogDraws(renderer: THREE.WebGLRenderer, foggy: () => boolean): { begin(): void; report(): { draws: number; names: string[] } } {
+  const gl = renderer.getContext() as WebGL2RenderingContext;
+  const fogless = new WeakSet<WebGLShader | WebGLProgram>();
+  const found = { draws: 0, names: [] as string[] };
+  let current: WebGLProgram | null = null;
+  let begun = false;
+  const source = gl.shaderSource.bind(gl), attach = gl.attachShader.bind(gl), use = gl.useProgram.bind(gl);
+  gl.shaderSource = (shader: WebGLShader, text: string): void => {
+    if (/^#define SEA_FOG 0$/m.test(text)) fogless.add(shader);
+    source(shader, text);
+  };
+  gl.attachShader = (program: WebGLProgram, shader: WebGLShader): void => {
+    if (fogless.has(shader)) fogless.add(program);
+    attach(program, shader);
+  };
+  gl.useProgram = (program: WebGLProgram | null): void => { current = program; use(program); };
+  const drawn = (count: number, instances = 1): void => {
+    if (!begun || !current || count <= 0 || instances <= 0 || !fogless.has(current) || !foggy()) return;
+    found.draws++;
+    const three = renderer.info.programs?.find(p => p.program === current) as (THREE.WebGLProgram & { type?: string }) | undefined;
+    const name = `${three?.name || three?.type || 'program'} #${three?.id ?? '?'}`;
+    if (found.names.length < 20 && !found.names.includes(name)) found.names.push(name);
+  };
+  const arrays = gl.drawArrays.bind(gl), elements = gl.drawElements.bind(gl);
+  const arraysInstanced = gl.drawArraysInstanced.bind(gl), elementsInstanced = gl.drawElementsInstanced.bind(gl);
+  gl.drawArrays = (mode, first, count) => { drawn(count); arrays(mode, first, count); };
+  gl.drawElements = (mode, count, type, offset) => { drawn(count); elements(mode, count, type, offset); };
+  gl.drawArraysInstanced = (mode, first, count, instances) => { drawn(count, instances); arraysInstanced(mode, first, count, instances); };
+  gl.drawElementsInstanced = (mode, count, type, offset, instances) => { drawn(count, instances); elementsInstanced(mode, count, type, offset, instances); };
+  return { begin() { begun = true; }, report: () => ({ draws: found.draws, names: found.names.slice() }) };
+}

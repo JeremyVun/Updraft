@@ -522,6 +522,15 @@ scene GPU cost in both orders: island, washing, mirror and wood neutral; sea abo
 0.3–0.4% dearer in both orders, inside the spread. `start-check` passes with `BOOT_MAX_MS=10000` (no stray programs, no
 first draws in play, all twelve loop bounds uploaded); the default 500 ms veil gate still fails, as before.
 
-Not done: a compile switch leaving the sea fog out of materials never drawn in it, and dropping the fog lookup's
-off-screen fallback in fragment shaders (about 80–110 ms per program each, approved, needing a QA guard that no such
-material draws while the village fog is up). Physical Apple/Samsung timing and deployment are not covered.
+Follow-up, also approved: materials drawn only in rooms that never share a frame with the village compile the sea fog
+out (`SEA_FOG 0`, `outsideSeaFog` in `world/journey-rooms.ts`: 60 of 232 programs; still 232 programs, none split),
+and pixel shaders compile the fog lookup's off-screen fallback out (`FOG_OFF_SCREEN` keeps it in the grass's
+per-frame pass). Guard: QA `__stats.seaFogMissing` counts their draws while the fog is out; it fired on a village
+material forced to `SEA_FOG 0` (30 draws) and read 0 through a real playthrough from the village save through the wood
+to `toSleeping`. Against the pushed `30cc679` build: all 17 `render-parity-check` views and eight more at `fog=.3`,
+`.6` and `1` (village landscape and upright, church, storm, roofs, belfry) identical; cold time to Begin 38.8 / 38.2 /
+39.0 s → 37.5 / 37.6 / 38.3 s, alternated; paired whole-scene GPU cost in both orders: fog views 1–2% cheaper
+(drowned, belfry, roofs), island, Lines, sea, home and wood within ±0.5% with no consistent sign (Lines re-timed at 16
+rounds: −0.2%, −0.3%). `start-check` passes as before. `drowned-fog-check` now uses the shared browser (it hard-coded
+Metal) and asserts the guard, but its stranding setup times out waiting for `becalmed` on the reference build too, so it
+needs repair before it can take the stills. Physical Apple/Samsung timing and deployment are not covered.

@@ -297,6 +297,10 @@ ${FOG_LOOKUP_GLSL}
 #ifndef CLOUD_DECK
 #define CLOUD_DECK 1
 #endif
+// Materials drawn only in rooms the drowned village never shares a frame with leave its sea fog out (outsideSeaFog).
+#ifndef SEA_FOG
+#define SEA_FOG 1
+#endif
 uniform float uTime;
 uniform vec3 uSunDir;
 uniform vec3 uSunColor;
@@ -1139,7 +1143,7 @@ vec4 fogOf(vec3 wpos, float landscape) {
     fogCol = mix(fogCol, clearSky, arriving);
     amt = mix(amt, 1.0, arriving);
   }
-#if CLOUD_DECK
+#if CLOUD_DECK && SEA_FOG
   // The sea fog lies nearer than any of it: what it covers, the distance cannot show through.
   if (uSeaFogShape.w > 0.0) {
     vec4 sea = seaFog(cameraPosition, rd, dist);
