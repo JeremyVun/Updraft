@@ -383,8 +383,6 @@ export class Journey {
     const { cast } = this;
     restoreWingCare(cast.cygnet, name);
     if (ORDER.indexOf(name) > ORDER.indexOf('birches') || name === 'toWood' || name === 'toHome') cast.boat.scarfSail = 1;
-    /** The squirrel lives in the birches, and sees them off from the beach as they sail. */
-    if (name !== 'toStairs') cast.squirrel.visible = false;
     switch (name) {
       case 'toLines':
         return new CrossingChapter(cast, {

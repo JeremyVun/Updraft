@@ -110,7 +110,8 @@ for(const index of [2,3]){
 }
 
 const {BirchesChapter}=await import('../src/story/birches.ts');
-const saved={cast:{birches:{scarf},boat:{scarfSail:0},child:{stop(){}},cygnet:{carried:false}}};
+const saved=Object.assign(Object.create(BirchesChapter.prototype),{cast:{birches:{scarf},boat:{scarfSail:0},child:{stop(){}},cygnet:{carried:false}},
+  squirrel:{release(){},restore(){}},cueNow:{}});
 BirchesChapter.prototype.restoreCheckpoint.call(saved,'scarf-3',[4,0,.65,3]);
 assert.equal(scarf.completed,4);assert.equal(saved.cast.boat.scarfSail,1);
 BirchesChapter.prototype.restoreCheckpoint.call(saved,'scarf4-3',[4,0,.65,3]);

@@ -867,6 +867,8 @@ function simulate(dt: number, inputFraction: number, finalStep: boolean): void {
   }
   cygnet.heard.length = 0;
   cat.update(dt);
+  /** It lives in the birches and sees them off from the beach as they sail; the QA stage has its own. */
+  if (story.name !== 'birches' && story.name !== 'toStairs' && story.name !== 'stage') squirrel.visible = false;
   squirrel.update(dt, time);
   squirrelVoice.setOutput(sound.output);
   if (squirrel.heard.length) {
