@@ -119,8 +119,10 @@ The order is `ORDER` in `src/story/journey.ts`; each room has its section in [ch
    them, and their own boat waits among the toys.
 4. **The meadow.** The last warm afternoon, and the island asleep. The wind plays a piano in the grass and the music
    wakes the meadow; over the brow the swan family rests on a pond and leaves north as the child comes.
-5. **The birches.** Deep autumn. Gusts strip the gold, a swing waits, and an impossibly long red scarf tangled through
-   the trees is freed to become the boat's sail.
+5. **The birches.** Deep autumn, and the last carefree afternoon. Gusts strip the gold, a swing waits, and an
+   impossibly long red scarf tangled through the trees is freed to become the boat's sail. A red squirrel plays
+   hide-and-seek with the child and the cygnet in the leaf heaps all the way along, and the player finds it by blowing
+   the heaps apart.
 6. **The stairs in the clouds.** Bedtime: a staircase climbing into cloud. The cygnet goes up first. Above the cloud,
    the last sun of the year; then down into the mist ([stairs.md](stairs.md)).
 7. **The drowned village and the storm.** A dusk drift between rooftops and a stranded cat brought aboard in a

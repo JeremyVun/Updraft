@@ -282,9 +282,16 @@ Run against `npm run build:qa` then `npm run preview:qa`.
   pass. Tangle 4's bow alone needs 5–9 scripted strokes on the base commit as on this branch (`FROM=3`), so a full
   run's `strokes <= 5` fails now and then; PHYSICS=1 and NATURAL=1 each passed on a rerun.
 
-### 7. Docs and close. Opus. Done: ☐
+### 7. Docs and close. Opus. Done: ☑ (2026-10-15, docs; the close stage waits on Jeremy's approval of the merge)
 
 Rewrite chapters.md "The birches" for the room as built, with the squirrel's files, knobs and checks. Fix the
 journey.md one-liner for the birches, the audio contract and `docs/stairs.md` where phase 2 didn't, and the roadmap
 (drop the "Birches uplift" entry). Then run the backlog-item close stage. The orchestrator summarises for Jeremy
 what the branch changes, with stills and the clip paths, and merges only on his approval.
+
+- **Done (docs):** chapters.md "The birches" rewritten for the room as built (corridor and gaps, the squirrel's
+  rounds, counting, the leap and goodbye, music, rulings with Jeremy's corridor ruling, files, knobs, checks); the
+  stairs pointer and `docs/stairs.md` give the half-minute sail; journey.md item 5 has the hide-and-seek; the roadmap
+  drops the planned entry and lists the birches listen and the tangle-4 stroke count; the audio contract's Birches
+  section reads forward and gains the squirrel's sounds; testing.md lists `squirrel-check` and
+  `squirrel-rounds-check`; progress.md's swing perch is the trunk; AGENTS.md points at the squirrel's files.

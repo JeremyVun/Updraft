@@ -252,16 +252,16 @@ the grey approach flower stays silent. `MeadowSong` smoothly shares the existing
 and wind exchange seeds, then releases it. The final listening rest gives the distant family call space before
 the crest. See [design and verification](../backlog/meadow-echoes/design.md); human timbre review is still pending.
 
-**Birches.** Jeremy's 2026-10-11 instruction: "next if you can wire birches.ogg in for birches island music".
-That recording ("A Question, Then a Gentle Answer") is now the stairs song (the stairs, below). Jeremy (2026-10-14/15):
+**Birches.** The room plays "The Red Door Opens", and `birches.ogg` ("A Question, Then a Gentle Answer") is the
+stairs song under the cloud (the stairs, below). Jeremy (2026-10-15):
+
+> yea the red door opens, and yep makes sense to make birches the song under the stairs i guess (we can try this)
+
+How it plays out and the silence in the cloud, Jeremy (2026-10-14/15):
 
 > my thinking for birches is the logic can be pretty simple. if on birches island, loop, else don't loop and let it finish up. And then on the stairs chapter, just have a hard stop for silence if it's still somehow playing before they enter the clouds and start the penrose stairs sequence.
 
 > My feeling is that there should be silence as they enter the cloud and do the penrose puzzle up until the nest. it builds up a climax i think? And it kinda fits the idea of them being in the clouds (a place they aren't normally supposed to be, so theres no music which makes it feel slightly more awkward)
-
-With the birches uplift (2026-10-15) the room plays "The Red Door Opens" and `birches.ogg` moves under the stairs:
-
-> yea the red door opens, and yep makes sense to make birches the song under the stairs i guess (we can try this)
 
 `assets/music/red_door.ogg` (a copy of "The Red Door Opens") plays from the approach crossing through boarding. The
 `walk`, `swing`, `scarf` and `return` phases describe story progress and checkpoint state, but never seek, restart or
@@ -566,6 +566,11 @@ pan and bounded scheduling; finished nodes disconnect.
   readbacks) and the cygnet's heap kicks, sharing one `leafScuffEvery` budget; particles and wind never trigger them.
   `leafScuffLevel` is 3 dB above the original level, independent of wind and grass rustle.
   Swing creaks need real travel and a reversal, `swingCreakEvery` apart. Both attenuate over `birchesFoleyNear/Far`.
+  The squirrel's game (`BirchesFoley.leaves`): a rustle for each tell from its heap (`leafRustleLevel`), a burst when
+  it is turned out or the wind throws a wrong heap up, and the leap's burst with a thump under it (`leafBurstLevel`);
+  each stands for the scuff the leaves going up would make. The squirrel's own voice is synthesised
+  (`creatures/squirrel/voice.ts`): the scolding chuck and teeth-chatter, a squeak as it bursts out, claws on bark,
+  patter, landings and gnawing, played positionally from `squirrel.heard` in `main.ts`.
 - Sail: one quiet canvas fold at full droop (`sailSettleAt`), re-armed only after a refill below `sailSettleRearm`;
   flutter sounds only on fresh rises, `sailEvery` apart. Toy-boat flutter is silent.
 - Laundry: local wind on the cloth's spring and flutter thresholds, at most `clothSources` voices. A passage sheet's

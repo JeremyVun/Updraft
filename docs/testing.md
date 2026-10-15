@@ -73,7 +73,9 @@ edit.
 - `node tools/play.mjs <out-prefix> '<json steps>'`: drive real gestures and capture frames for visual QA
   (`VIDEO=1`, `TOUCH=1`, `W`/`H`, `QUERY`).
 - `node tools/cygnet-gates.mjs`: every shared moment and way of moving for the cygnet and child on the QA stage,
-  against numeric limits.
+  against numeric limits. `cat-check` (the cat's actions at game distances, in the village's
+  light) and `squirrel-check` (the squirrel's poses, close stills, the birches at round distance, motion strips with
+  skinned contact, and clips) need a dev server.
 
 ## Focused checks
 
@@ -203,7 +205,7 @@ edit.
   the actual rendered beach against its unclipped geometry through the chapter handoff. `FULL=1` includes the
   entire incoming crossing; `NEGATIVE=1` reinstates the obsolete circular cutoff and must fail.
 - In the browser with real gestures: `lines-check`, `lines-view-check`, `little-boats-check`, `piano-check`,
-  `scarf-check`, `stairs-check`, `storm-check`, `wood-check`, `ember-check`, `sea-check`, `sky-mirror-check`,
+  `scarf-check`, `squirrel-rounds-check` (dev server; cases split across calls), `stairs-check`, `storm-check`, `wood-check`, `ember-check`, `sea-check`, `sky-mirror-check`,
   `sleeping-check`, `summit-arrival-check`, `home-approach-browser-check`, `ending-check`, `landing-check`,
   `kite-check`, `geography-browser-check`, `boats-offshore-browser-check`.
 - `petals-browser-check` replays the flock, fall and bandaging, checking that camera-driven rehoming preserves the

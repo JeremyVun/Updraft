@@ -28,7 +28,7 @@ Every chapter has an entry checkpoint. The additional points:
 - Birches: `squirrel<r>-scarf<t>` after each round of the squirrel's game found (`r`) and each tangle freed (`t`),
   with `-swing` once the optional swing is ridden; the payload holds route leg, swing count, dusk, freed tangles and
   rounds found. All four tangles restore the red sail; the squirrel resumes where that point has it (waiting at a
-  tangle, hidden in the next round's heaps, on the swing limb, or at the water's edge). Independent cygnet play makes
+  tangle, up the swing tree or the hollow's far trunk, hidden in the next round's heaps, or at the water's edge). Independent cygnet play makes
   no checkpoint.
 - Stairs in the clouds: `flight-1` to `flight-3`, the number of flights docked; restore rebuilds the docked stairs and
   stands the pair at the matching landing. `cloud` once the loop is behind them, until they are out on top (resumes on the landing the loop's way on leaves

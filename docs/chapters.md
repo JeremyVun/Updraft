@@ -39,7 +39,8 @@ Rules every room keeps:
   keys) and the stairs (the swing's seat) (`world/echoes.ts`): scenery only, above the tide line and off the walk; the
   camera never turns to it, and home has none. On the stairs island a handful of the birches' gold came too
   (`world/echo-leaves.ts`): a drift banked on the seat's landward side, thinning along the sand at the grass's foot,
-  a few caught on the first steps; baked and still, one draw, lit by the stairs' light. It is "things recur in the wrong place" from `docs/journey.md`.
+  a few caught on the first steps; baked and still, one draw, lit by the stairs' light. It is "things recur in the
+  wrong place" from `docs/journey.md`.
 - **Landing and leaving.** On a beach the boat runs up the sand and the child sits a moment before stepping out
   (`Traveller.stepAshore`); at a jetty they step up onto the boards (`Traveller.alight`). See `docs/boat.md`.
 - **The reward phrase** (`completeObjective()` in `story/cues.ts`) plays
@@ -367,44 +368,124 @@ Checks: `tools/piano-check.mjs`, `piano-logic-check.mjs`, `piano-frame-check.mjs
 
 ## The birches
 
-`story/birches.ts`, `story/birches-play.ts`, `world/birches.ts`, `world/birch-scarf.ts`, `world/scarf-cloth.ts`,
-`fx/leaves.ts`, `fx/birch-canopy.ts`. `?chapter=birches`.
+`story/birches.ts`, `story/birches-play.ts`, `story/birches-squirrel.ts` (the hide-and-seek),
+`story/birches-rounds.ts` (where it happens), `world/birches.ts`, `world/birches-layout.ts`, `world/birch-scarf.ts`,
+`world/scarf-cloth.ts`, `fx/leaves.ts`, `fx/birch-canopy.ts`, `creatures/squirrel.ts`, `audio/birches-foley.ts`.
+`?chapter=birches`.
 
-Deep autumn. On the first island the player's wind brought colour back; here it takes the last of the year away,
-and nothing avoids it, because every gesture is a gust. The island is long, with a rise under the swing tree and a
-hollow beyond (`BIRCH_RISE`, `BIRCH_HOLLOW`). The canopy is gold tufts the wind takes off tuft by tuft and never
-puts back; the leaf floor is a litter field the wind strips bare where it blows and drifts downwind, with four
-heaps (`BIRCH_PILES`) and scuffed tracks (`LitterField`). Haze is thick enough that the next room never shows.
+Deep autumn, and the last carefree afternoon of the journey: one more romp in the leaves before bedtime on the stairs,
+the drowned village and the dark wood. On the first island the player's wind brought colour back; here it takes the
+last of the year away, and nothing avoids it, because every gesture is a gust. The canopy is gold tufts the wind takes
+off tuft by tuft and never puts back; the leaf floor is a litter field the wind strips bare where it blows and drifts
+downwind (`LitterField`), with heaps (`BIRCH_PILES`) and scuffed tracks. Haze is thick enough that the next room never
+shows. An engaged player spends about 3½–4 minutes here.
 
-After landing, the child looks up the ride, steps aside and sets the cygnet down (`carry.setDown`). It plays on
-its own while the player carries on (`birches-play.ts`): hops to a heap, chases gusts, dives in and rummages
-(`delve`), shakes, and follows when the child moves on. It never flies here and never stops the walk; it is
-gathered up at the boat.
+**One corridor.** The walk is a single open ride from beach to beach, about 200 m, over a rise under the swing tree
+and down into a hollow (`BIRCH_RISE`, `BIRCH_HOLLOW`). Every stop happens in the ride, never down a side path. The
+island as first built is cut across its walk at three lines no feature straddles (`BIRCHES_CUTS`), and the bands are
+pushed apart into gaps of new wood: A (16 m) between the fallen log and the first tangle, B (16 m) on the rise's lower
+slope for round 2, C (24 m) in the hollow for round 3, the longest because that round is the biggest. Everything is
+authored in the first-built island's band-local terms and placed with `birchesAt` / `birchesGap`, so each tangle, the
+swing tree and the log keep their tuned shapes, each band keeps its ground, grass and trees, and only the open walk
+between them grows: every round gets its own stretch of wood and its own frame, never one shared with a tangle. The
+coast is drawn in and the outer wood thinned, so the island keeps its tree count. `BIRCHES_SHIFT` stands it west of
+where it was first built, so the sail on to the stairs is about 30 s of open sea (`docs/contracts/world.md`).
 
-**The impossibly long red scarf** runs as one strip of wool from the arrival beach through the canopy to the
-boat, tangled back and forth among the trees, with four tangles in order where the child waits: lift a loop off a
-fork (an upward sweep), circle the coils up off a broken birch (updraft circles, the column anchored at the wrap,
-the swirl invitation), draw a slipped loop sideways off the upturned limb of a fallen birch, then draw the bow
-outward off a low limb. Partial progress holds; the breeze cannot solve them. Released lengths fall and settle as
-cloth (`ScarfCloth`). Freed, the scarf draws along its length into the boat (`tuning.birches.scarf.gatherSeconds`)
-and becomes the red sail for the rest of the voyage.
+After landing, the child looks up the ride, steps aside and sets the cygnet down (`carry.setDown`). Between stops it
+plays on its own (`birches-play.ts`): hops to a heap, chases gusts, dives in and rummages (`delve`), shakes, and
+follows when the child moves on. It never flies here; it is gathered up at the boat.
 
-**The swing** on the rise is optional and rideable once: brushing the empty seat invites the child on and pushes
-it; she rides while the player keeps gusting, and 4 s of quiet air (7 s if nobody pushes once she is on,
+**The squirrel.** A red squirrel lives in the birches (`creatures/squirrel.ts`), drawn 3× life size so it reads beside
+the cygnet, and the child and the cygnet play hide-and-seek with it all the way over the island, finding it the only
+way the player can do anything: by blowing the heaps apart. Three rounds, of one, two and three heaps, sit between the
+tangles, so the walk alternates between a precise gesture (a tangle) and loose, joyful gusting (a heap). Rounds gate
+the walk as tangles do: the walk's next target is the next pending stop, tangle or round.
+
+- **The meeting** (round 1, heap 0 against the fallen log, just short of gap A). The walking shot glances at it
+  sitting up on the log with a nut. She comes up to the heap and stands looking while the round's frame eases in; it
+  sees her, freezes and drops into the heap. One heap and an obvious tell, so the player learns the game without being
+  told.
+- **A round.** Each has its own frame, lower and closer than the walk, from the south-east quarter toward the low sun,
+  so leaves thrown up are lit through (`ROUNDS[].frames`; portrait on a longer lens eased in by a spring). She walks
+  round any heap in her way to her stand, kneels and peers, and turns to each heap the wind bursts. The right heap
+  shivers every 2.5–4 s with a rustle; its tail tip is out half the time in round 1, a third in round 2 and a fifth in
+  round 3; now and then it peeks. Wrong heaps never tell.
+- **Finding.** The air over its heap is measured as the trees feel it when they shed, and each rise of it counts: in
+  round 1 any gust over the heap; after that one deliberate swipe across it or two careless ones near it. A gust that
+  only shaves it makes it peek. Wrong heaps simply burst into gold. Found, it bursts out in a spray of leaves, sits up
+  and scolds her, bounds off and glances back once; she gets up and cheers, and the cygnet chases a few steps.
+- **Where it hides follows the leaves as they are now.** The wind never puts a heap back, so on reaching a round it
+  reads the live floor once (`AutumnBirches.depthAt`, one batched readback): a heap still `buryDepth` deep, else the
+  deepest drift the round's lens shows, else round the bark of a heap's bank tree. Turned out before she arrives, it
+  hides again. The round never breaks and never waits for leaves that are gone.
+- **The cygnet seeks too,** looking into heaps of its own choosing, right about as often as chance. After 10 s without
+  wind on the right heap it goes to that heap's rim and peers in (the in-story hint); after 18 s the drawn sweep
+  crosses it. Neither supplies wind.
+- **Between rounds** it goes along authored ways over the ground, up and down bark and along the wool (`PATHS`), and
+  waits in sight at each tangle without standing where the gesture or the lens needs to be: on the floor at the first
+  loop's foot, on the broken birch's top while the coils rise round it, up the birch behind the slipped loop and the
+  bow's own birch, on the swing tree's trunk under the limb. **Counting:** before rounds 2 and 3 it dashes on ahead to hide as the
+  tangle's loop starts to lift. Freed before it has hidden, she watches it go, turns her back on where it went,
+  three-quarters to the lens, covers her eyes with both mittens and counts, nodding on every number; then she looks
+  round for it and sets off. The lens stays on her in the tangle's frame; the squirrel goes off small and far up the
+  ride.
+- **The leap.** After round 3 the cygnet dives into the deepest leaves left in the hollow that the lens shows, and the
+  child takes a run and jumps in after it, landing on her seat in an explosion of backlit gold; she sits a moment and
+  gets up. If the hollow has been blown bare she runs on through it toward the sun, kicking up what is left. From here
+  the squirrel waits up a trunk at each stop.
+- **The goodbye.** As the boat pushes off it has come down the beach after them and sits up at the water's edge beside
+  the berth, watching them go (a glance). It is shown only on the island and its departure.
+
+The round heaps (0 and 4–8) are raked mounds as steep as the leaves stand, the floor round each raked thin to bare
+earth, lit by their own surface (in shade on the side away from the sun, the crest catching it) with a solid body
+under the leaves that hides anything buried. A gust bursts them as any heap and nothing rebuilds them. The free-play
+heaps 1–3 keep their swells. Bursts, dives and peeks throw the loose leaves; a heap the squirrel lives in can shiver
+all afternoon and still hide it.
+
+**The impossibly long red scarf** runs as one strip of wool from the arrival beach through the canopy to the boat,
+tangled back and forth among the trees, with four tangles in order where the child waits: lift a loop off a fork (an
+upward sweep), circle the coils up off a broken birch (updraft circles, the column anchored at the wrap, the swirl
+invitation), draw a slipped loop sideways off the upturned limb of a fallen birch, then draw the bow outward off a low
+limb. Partial progress holds; the breeze cannot solve them. Released lengths fall and settle as cloth (`ScarfCloth`).
+Freed, the scarf draws along its length into the boat (`tuning.birches.scarf.gatherSeconds`) and becomes the red sail
+for the rest of the voyage. Under the canopy a stroke's wind lands no further than the shot's distance plus a reach
+(`pointerReach`; `docs/contracts/wind.md`), so strokes at the trees or circles round the wool never flatten the next
+round's heaps.
+
+**The swing** on the rise is optional and rideable once: brushing the empty seat invites the child on and pushes it;
+she rides while the player keeps gusting, and 4 s of quiet air (7 s if nobody pushes once she is on,
 `quietToLeaveSwing`, `firstPushWait`) brakes it and she steps off.
 
-Rulings: the leaves must not behave like grass; the room should be fun, and the cygnet's play is its own, not a
-scripted beat. The scarf reads as tangled wool, not a ribbon; every support is physical (no knot floating in the
-air); the wrapped trunk needs circling; the draw-in into the boat is unhurried.
+**Music.** "The Red Door Opens" (`assets/music/red_door.ogg`) plays from the approach crossing through boarding and
+loops only while they are on the island or its approach. On the sail it plays out its pass, fading early if it would
+still be sounding within 10 s of the stairs song (`birches.ogg`, under the stairs' cloud), so sea, wind and the boat
+come between the two songs. Timings: `docs/contracts/audio.md` "Birches".
 
-Knobs: `tuning.birches`. Checks: `tools/scarf-check.mjs` (`PHYSICS=1`, `NATURAL=1`), `scarf-geometry-check.mjs`,
-`birches-drift-check.mjs`.
+Rulings: the leaves must not behave like grass; the room should be fun, and the cygnet's play is its own, not a
+scripted beat. The scarf reads as tangled wool, not a ribbon; every support is physical (no knot floating in the air);
+the wrapped trunk needs circling; the draw-in into the boat is unhurried. One corridor, never branched: "I do like the
+look of how the birches island is set up already as sort of this one corridor instead of zig zag paths everywhere like
+in the other chapters." The island's look is kept or lifted: "try to preserve or even uplift the aesthetics of the
+island with the swirling leaves and the golden light etc." The sail to the stairs is lengthened by distance alone:
+"the boat speed must be kept the same".
+
+Rules: the squirrel hides, not the cygnet, so the dark wood's hiding-and-finding stays unspent. Nothing is lost or
+failed, and no timer finds it. The child looks at the heaps and the squirrel, never at the camera. The child, the
+cygnet and the squirrel stay whole and readable in every round frame, portrait and landscape.
+
+Knobs: `tuning.birches` (`squirrel` the game, `strokeReach`, the heaps' `heap*`, `bury*` and `burst*`, `scarf`),
+`tuning.squirrel` (the creature: scale and pace). Checks: `tools/squirrel-rounds-check.mjs` (real strokes: `right`,
+`wrong`, `random`, `stall`, `flat`, `leap`, `bare`, `resume`, `frames`; dev server), `squirrel-check.mjs` (poses,
+close stills, the room at round distance, motion contact and clips), `scarf-check.mjs` (`PHYSICS=1`, `NATURAL=1`),
+`scarf-geometry-check.mjs`, `scarf-exact-check.mjs`, `birches-drift-check.mjs`, `birches-foley-check.mjs`. On the QA
+stage, `play('squirrel:<action>')` (`story/squirrel-yard.ts`). Design record and Jeremy's brief:
+[backlog/birches-uplift](backlog/birches-uplift/design.md).
 
 ## The stairs in the clouds
 
-Between the birches and the drowned village: `toStairs` is a short hop east under a low cloud deck to a small
-grassy island (`STAIRS_ISLE`). Everything about the room, including Jeremy's brief and the open work, is in
-`docs/stairs.md`. `?chapter=stairs`. Not yet in the chapter select: Jeremy wants the sail over the cloud fixed
+Between the birches and the drowned village: `toStairs` is about 30 s east over open sea, ending under a low cloud
+deck at a small grassy island (`STAIRS_ISLE`). Everything about the room, including Jeremy's brief and the open work,
+is in `docs/stairs.md`. `?chapter=stairs`. Not yet in the chapter select: Jeremy wants the sail over the cloud fixed
 first, and it needs a still and a name.
 
 ## The drowned village

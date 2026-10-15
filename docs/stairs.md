@@ -166,7 +166,7 @@ brings the light. Courage passes back and forth between them, and the stairs are
 
 ## The room, beat by beat
 
-1. **Under the cloud.** A short blind hop from the birches (`toStairs`) runs the boat under a low cloud deck onto a
+1. **Under the cloud.** A half-minute blind sail from the birches (`toStairs`) runs the boat under a low cloud deck onto a
    small grassy island. The child sets the cygnet down; here it goes on its own feet the whole way. They look up. A
    soft toy staircase (chunky rounded steps with their blocks showing underneath, a dusty-rose runner, fat honey
    rails both sides on round balusters, big knobbed newels, rails round every landing, no house) climbs up and
@@ -285,8 +285,8 @@ brings the light. Courage passes back and forth between them, and the stairs are
 - **By quality level** (`CloudStairs.setLevel`, from `applyWorldQuality`): Ultra and High stream 56 wisps and march
   the haze at full step; Medium keeps 36 wisps and 1.25× longer haze steps, Low 24 wisps and 1.5×;
   the rags left thicken a little, and a change eases over about a second.
-- **Order**: birches → `toStairs` (short hop east; the deck comes down over the sea; it carries the birches' closing
-  phrase) → `stairs` → drowned, which takes over wherever the fog leaves the boat. `?chapter=drowned` starts at
+- **Order**: birches → `toStairs` (about 30 s east over open sea from the push-off; the deck comes down over the sea;
+  the birches' song plays out, a quiet stretch of sea, then the stairs song on the arrival handoff) → `stairs` → drowned, which takes over wherever the fog leaves the boat. `?chapter=drowned` starts at
   `DESCENT_END`.
 - **The cloud's colours** (`cloudShade`, `cloudGold`, `cloudGlow` in `atmosphere.ts`): every part of the cloud (its
   top, underside, towers, the white inside it, the haze, puffs and vapour, and the bank of mist through `CLOUD_GOLD`)
