@@ -85,6 +85,8 @@ export class BirchesChapter implements Chapter {
    */
   private readonly firstFrom = new THREE.Vector3(-0.25, 0, 1).normalize();
   private readonly firstFromTall = new THREE.Vector3(-0.45, 0, 1).normalize();
+  /** Portrait's second tangle comes round east on a longer lens, so the squirrel on the broken top reads beside her. */
+  private readonly secondFromTall = new THREE.Vector3(0.3, 0, 1).normalize();
   private readonly air = { x: 0, z: 0, energy: 0, lift: 0 };
   private readonly scarfTarget = new THREE.Vector2();
   private readonly crest = new THREE.Vector3(BIRCHES_CLEARING.x, 10, BIRCHES_CLEARING.y);
@@ -645,8 +647,10 @@ export class BirchesChapter implements Chapter {
   }
 
   private get tangleFrom(): THREE.Vector3 {
-    if (this.cast.birches.scarf.active !== 0 || this.beat === 'unravelling') return this.scarfFrom;
-    return window.innerWidth < window.innerHeight ? this.firstFromTall : this.firstFrom;
+    const active = this.cast.birches.scarf.active, tall = window.innerWidth < window.innerHeight;
+    if (this.beat === 'unravelling') return this.scarfFrom;
+    if (active === 0) return tall ? this.firstFromTall : this.firstFrom;
+    return active === 1 && tall ? this.secondFromTall : this.scarfFrom;
   }
 
   private frame(): void {
@@ -672,7 +676,7 @@ export class BirchesChapter implements Chapter {
       const tall = first && window.innerWidth < window.innerHeight;
       s.target.set(tall ? at.x * 0.65 + c.x * 0.35 : (at.x + c.x) * 0.5,
         at.y * 0.65 + (c.y + 1.2) * 0.35, at.z * 0.7 + c.z * 0.3);
-      s.zoom = tall ? 1.25 : undefined;
+      s.zoom = tall ? 1.25 : scarf.active === 1 && this.beat !== 'unravelling' && window.innerWidth < window.innerHeight ? 1.3 : undefined;
       s.distance = this.beat === 'unravelling' ? 28 : scarf.active === 1 ? 17 : first ? 18 : 24;
       s.distance *= Math.max(1, 0.56 / (window.innerWidth / window.innerHeight));
       s.height = this.beat === 'unravelling' ? 7 : scarf.active === 1 ? 3.8 : first ? 3 : 5.5;

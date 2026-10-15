@@ -653,7 +653,8 @@ exactly where gap-grown trees stood. The island still has 146 trees.
 - Tangle 2: on the broken birch's top. The coils rise round it toward 0.85 m above the top, at least 1.15 m out, and
   slide off east. Between 0.42 and 0.8 of the way to free (`SCARF_OVER`) they close in over the top, covering it a
   moment; it `startle`s as they reach it and turns `indignant` at the wool once they have slid off, finishing its
-  scold before it goes to hide.
+  scold before it goes to hide. Portrait looks at this tangle from further east on a 1.3 lens, so the broken top
+  with the squirrel on it and the child both hold the frame.
 - Tangle 3: 4.5 m up the birch standing behind the slipped loop, above and beyond the work.
 - Tangle 4: 5 m up the bow's own birch, above its low limb.
 - The swing: 3.4 m up the swing tree's trunk, just under the limb, on the side toward the swing's lens, where its red
