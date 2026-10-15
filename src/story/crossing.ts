@@ -52,18 +52,19 @@ export interface ArrivalView {
 /**
  * The island ahead seen whole across the water as it comes out of its mist, before the arrival's own view: eased in
  * between `from` and `full` units of sailing from the end of the route and held until the arrival's view takes over.
- * The lens stands at a world `bearing` (`portrait` its own, so the island can rise behind the boat in a narrow frame),
- * and gives `weight` of its gaze to `sight` on the island, where the child looks too.
+ * The lens stands at a world `bearing` and gives `weight` of its gaze to `sight` on the island, where the child looks
+ * too. Portrait has its own of both, so the island can rise behind the boat without the gaze pushing it off a narrow
+ * frame.
  */
 export interface IslandReveal {
   from: number;
   full: number;
   bearing: number;
-  portrait: number;
+  weight: number;
+  portrait: { bearing: number; weight: number };
   distance: number;
   height: number;
   sight: THREE.Vector3;
-  weight: number;
 }
 
 /** How near a waypoint counts as rounded. */
@@ -908,7 +909,8 @@ export class CrossingChapter implements Chapter {
     const angle = k.nearBearing + (k.departureBearing - k.nearBearing) * departure
       + (world ? 0 : (view.bearing - k.nearBearing) * arrival);
     let sailBearing = this.heading + Math.PI + this.quarter * (this.wantsDolphins ? tuning.seaPassage.cameraBearing : angle);
-    if (isle) sailBearing = turnToward(sailBearing, window.innerWidth < window.innerHeight ? isle.portrait : isle.bearing, revealed);
+    const lens = isle && (window.innerWidth < window.innerHeight ? isle.portrait : isle);
+    if (lens) sailBearing = turnToward(sailBearing, lens.bearing, revealed);
     if (world) {
       sailBearing = turnToward(sailBearing, view.bearing, arrival);
       this.shot.authored = revealed > 0 || arrival > 0;
@@ -955,10 +957,10 @@ export class CrossingChapter implements Chapter {
       this.shot.distance = distance;
       this.shot.height = height;
       this.pace = 0.4;
-      if (isle && reveal > 0) {
+      if (isle && lens && reveal > 0) {
         this.revealAttention.point.copy(isle.sight);
         this.revealAttention.strength = reveal;
-        this.revealAttention.weight = isle.weight;
+        this.revealAttention.weight = lens.weight;
         this.shot.attention = this.revealAttention;
       }
       if (this.wantsDolphins) {

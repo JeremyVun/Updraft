@@ -150,8 +150,9 @@ The player never sees the next island before it is time.
   `journeyVeilAt` so emissive props obey it): sightlines over that coast dissolve into `skyRadiance` beyond a
   distance, so the near shore comes out first and nothing behind shows through. The drowned village keeps the wood
   in it beyond its drawn trees; the crossing to the sleeping island keeps all but the landing shore in it, so the
-  summit window is found ashore; the meadow's sail keeps the birches in it until the run-in up their beach
-  (`tuning.world.woodMist`, `sleepingMist`, `birchesMist`; lifted at `isleMistLift` on landing).
+  summit window is found ashore; the meadow's sail keeps the birches in it until about halfway over, and the
+  birches' sail keeps the stairs in it until about the last 90 m, under the cloud coming down
+  (`tuning.world.woodMist`, `sleepingMist`, `birchesMist`, `stairsMist`; lifted at `isleMistLift` on landing).
 - **First-crossing horizon.** `Chapter.horizonMist` feeds `uHorizonMist`, a sky-colour distance veil across every
   bearing, without coast-shaped boundaries. It keeps the farewell clear to 140 units and fully dissolves scenery
   beyond 240; after the title it eases over 16 seconds to the 55–110 unit approach range. It releases gradually
