@@ -117,8 +117,8 @@ const inHeap = (x: number, z: number): boolean => BIRCH_PILES.some(p => p.raked 
  * the way back to the lens. Nothing grown in a gap stands in that view.
  */
 export const ROUND_VIEWS = [
-  { at: birchesAt(8, -1074.6), from: { x: 0.35, z: 0.94 } },
-  { at: birchesGap(1, 13.8, 2.5), from: { x: 0.866, z: 0.5 } },
+  { at: birchesAt(11.8, -1074.1), from: { x: 0.643, z: 0.766 } },
+  { at: birchesGap(1, 13, 4.5), from: { x: 0.259, z: 0.966 } },
   { at: birchesGap(2, 15.8, -12.6), from: { x: 0.819, z: 0.574 } },
 ] as const;
 const inRoundView = (x: number, z: number): boolean => ROUND_VIEWS.some(v => {

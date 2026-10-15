@@ -65,7 +65,6 @@ const lensOf = (i: number, distance: number): Spot =>
   ({ x: ROUND_VIEWS[i].at.x + ROUND_VIEWS[i].from.x * distance, z: ROUND_VIEWS[i].at.z + ROUND_VIEWS[i].from.z * distance });
 
 const pile = (i: number): Spot => BIRCH_PILES[i];
-const toward = (a: Spot, b: Spot, t: number): Spot => ({ x: a.x + (b.x - a.x) * t, z: a.z + (b.z - a.z) * t });
 /** A point in a heap `share` of its radius out from its middle toward `toward`. */
 const inPile = (i: number, toward: Spot, share: number): THREE.Vector3 => {
   const p = pile(i), d = Math.hypot(toward.x - p.x, toward.z - p.z) || 1, r = BIRCH_PILES[i].r * share;
@@ -163,10 +162,10 @@ export const ROUNDS: readonly Round[] = [
     lastSeen: MEETING.at.clone(),
     cygnet: [lifted(birchesAt(7.6, -1074.4)), rimOf(0, STAND[0])],
     /**
-     * Landscape looks a little toward the squirrel on its log's end, so she and it stand near the thirds; portrait
-     * from further east, so she, the heap and the squirrel fit across its narrow field.
+     * From the south-east, low and close, so the squirrel on its log's end is the near subject beside her and she
+     * stands across the heap from it; portrait from the east, the squirrel nearest, the heap and her beyond it.
      */
-    frames: { landscape: { ...view(0, 14, 4), at: toward(ROUND_VIEWS[0].at, MEETING.at, 0.2) }, portrait: tall(birchesAt(9.6, -1074.1), 60, 20, 5, 0.9, 1.5) },
+    frames: { landscape: view(0, 10, 3), portrait: tall(birchesAt(11.5, -1075), 75, 18, 5, 1.3, 1.25) },
   },
   {
     area: { ...STAND[1], r: 10 },
@@ -176,7 +175,8 @@ export const ROUNDS: readonly Round[] = [
     face: lifted(pile(5), 0.5),
     lastSeen: lifted(birchesGap(1, 12.6, 3)),
     cygnet: [lifted(birchesGap(1, 15.6, 5.9)), rimOf(4, STAND[1]), rimOf(5, STAND[1])],
-    frames: { landscape: view(1, 15, 3.4), portrait: tall(birchesGap(1, 13.6, 4.6), 65, 14, 4.5, 1) },
+    /** From the south, high enough that the near heap and its burst stand inside the frame; portrait from the south-east, her between the heaps. */
+    frames: { landscape: view(1, 18, 6.5), portrait: tall(birchesGap(1, 13, 3.5), 45, 22, 7, 1, 1.1) },
   },
   {
     area: { ...pile(7), r: 13 },
