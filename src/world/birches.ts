@@ -703,8 +703,8 @@ const WAY = ((): THREE.Vector2[] => {
 
 const lengthOf = (way: readonly (readonly [number, number])[]): number =>
   way.reduce((sum, p, i) => i ? sum + Math.hypot(p[0] - way[i - 1][0], p[1] - way[i - 1][1]) : 0, 0);
-/** As many simulated leaves to a metre of the walk as when it was first laid out, with `LEAF_SIDE` rows to it then. */
-const LEAF_COUNT = LEAF_SIDE * Math.round(LEAF_SIDE * lengthOf(WAY.map(p => [p.x, p.y] as const)) / lengthOf([LANDING_AT, ...WALK_AT, BERTH_AT]));
+/** Simulated leaves to a metre of the walk, as a share of the `LEAF_SIDE` rows it had when first laid out. */
+const LEAF_COUNT = LEAF_SIDE * Math.round(LEAF_SIDE * tuning.birches.looseLeaves * lengthOf(WAY.map(p => [p.x, p.y] as const)) / lengthOf([LANDING_AT, ...WALK_AT, BERTH_AT]));
 
 /** The walk as first laid out, in band-local terms. */
 const FIRST_WAY = [LANDING_AT, ...WALK_AT, BERTH_AT].map(([x, z]) => new THREE.Vector2(x, z));

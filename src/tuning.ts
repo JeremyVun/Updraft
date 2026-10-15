@@ -1374,6 +1374,8 @@ export const tuning = {
     litterRepose: 0.95,
     /** How high a heap of leaves stands, per unit of depth over `heapFrom`, the depth of an ordinary floor. */
     pileHeight: 0.34,
+    /** Share of the loose leaves kept per metre of the walk, against the room as first laid out. */
+    looseLeaves: 0.75,
     heapFrom: 1.6,
     /**
      * A heap somebody made: its top rounded over this many metres, its foot at most this share of its radius out, and
