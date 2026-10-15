@@ -4,7 +4,7 @@ import { screenBrush } from '../creatures/motion';
 import type { PointerInput } from '../input/pointer';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { BirchCanopyMotion } from '../fx/birch-canopy';
-import { FallenLeaves, LEAF_SHAPE_GLSL, LEAF_SIDE, LEAF_TINT_GLSL, LITTER_BOX, LITTER_GLSL, LITTER_RES, LitterField } from '../fx/leaves';
+import { FallenLeaves, HEAP_GLSL, LEAF_SHAPE_GLSL, LEAF_SIDE, LEAF_TINT_GLSL, LITTER_BOX, LITTER_GLSL, LITTER_RES, LitterField, litterTop } from '../fx/leaves';
 import { glsl, tuning } from '../tuning';
 import type { WindField, WindSample } from '../wind/field';
 import { ATMO_GLSL, atmo } from './atmosphere';
@@ -68,19 +68,37 @@ export const BIRCHES_CLEARING = BIRCHES_WALK[2];
  * bottom of the hollow, the lee of the last thick stand. They are what the room is for playing with.
  */
 export const BIRCH_PILES = [
-  { ...birchesAt(9.8, -1076), r: 3.6, deep: 4.6 },
-  { ...birchesAt(-3.6, -1113), r: 3.2, deep: 4.2 },
+  /** The squirrel's first round. Its heaps were raked up: a mound with its foot on the bare ground it was gathered from. */
+  { ...birchesAt(9.8, -1076), r: 3.6, deep: 4.6, raked: true },
+  { ...birchesAt(-3.6, -1113), r: 3.2, deep: 4.2, raked: false },
   /** The deep one, at the bottom of the hollow: this is the one the cygnet goes into. */
-  { ...birchesAt(-6, -1149), r: 4.6, deep: 5.4 },
-  { ...birchesAt(-11.5, -1172), r: 3.2, deep: 4.4 },
+  { ...birchesAt(-6, -1149), r: 4.6, deep: 5.4, raked: false },
+  { ...birchesAt(-11.5, -1172), r: 3.2, deep: 4.4, raked: false },
   /** The squirrel's second round: one either side of the ride on the shelf below the rise, each at a trunk's foot. */
-  { ...birchesGap(1, 11.1, 7.9), r: 2.7, deep: 4.8 },
-  { ...birchesGap(1, 14.2, -1.8), r: 2.8, deep: 4.8 },
+  { ...birchesGap(1, 11.1, 7.9), r: 2.7, deep: 4.8, raked: true },
+  { ...birchesGap(1, 14.2, -1.8), r: 2.8, deep: 4.8, raked: true },
   /** Its third, up the hollow's west side beyond the deep one, in a line toward the low sun. */
-  { ...birchesGap(2, 9.8, -10.1), r: 2.8, deep: 5 },
-  { ...birchesGap(2, 14.2, -15.6), r: 3, deep: 5.4 },
-  { ...birchesGap(2, 21.2, -17), r: 2.8, deep: 5 },
+  { ...birchesGap(2, 9.8, -10.1), r: 2.8, deep: 5, raked: true },
+  { ...birchesGap(2, 14.2, -15.6), r: 3, deep: 5.4, raked: true },
+  { ...birchesGap(2, 21.2, -17), r: 2.8, deep: 5, raked: true },
 ];
+
+/** The steepest a heap is laid, in depth a metre: a little under what the litter field lets stand (`litterRepose`). */
+const STEEPEST = 0.9 * tuning.birches.litterRepose / Math.max(LITTER_BOX.sx / LITTER_RES.x, LITTER_BOX.sz / LITTER_RES.z);
+
+/**
+ * How deep a heap lies `from` its middle as it was left. A raked one is a mound as steep as leaves will stand,
+ * rounded over the top, so it stands as it was laid, and no deeper than that slope allows within its foot; one the
+ * wind left is a softer swell.
+ */
+function pileDepth(pile: (typeof BIRCH_PILES)[number], from: number): number {
+  if (!pile.raked) return pile.deep * (1 - (from / pile.r) ** 2);
+  const { heapCrown: crown, heapFoot, heapFrom } = tuning.birches;
+  const fall = (to: number): number => STEEPEST * (Math.hypot(to, crown) - crown);
+  return Math.min(pile.deep, heapFrom + fall(pile.r * heapFoot)) - fall(from);
+}
+/** How far out a heap's own leaves and the floor raked into it reach. */
+const pileReach = (pile: (typeof BIRCH_PILES)[number]): number => pile.r + (pile.raked ? tuning.birches.heapRaked : 1.2);
 
 /** The trunks the gaps' heaps are banked against: placed rather than grown, so a heap never loses its tree. */
 const BANKS = [
@@ -324,16 +342,23 @@ void main() {
  * heaps where the air ran out. These resting cards stay on the ground and thin as that field empties;
  * airborne movement belongs to the simulated leaves in `fx/leaves.ts`.
  */
-const LITTER_VERT = /* glsl */ `
-${ATMO_GLSL}
-${LITTER_GLSL}
-uniform vec2 uLitterCell;
-in vec2 aCell;
+const LITTER_OUT = /* glsl */ `
 out vec3 vWorld;
 out vec3 vNormal;
 out vec3 vSide;
 out vec2 vCard;
 out float vSeed;
+out vec3 vSlope;
+/** How much of the sun reaches it past a heap, how much of the sky it sees, and how far it lies on a heap's surface. */
+out vec3 vLight;`;
+
+const LITTER_VERT = /* glsl */ `
+${ATMO_GLSL}
+${LITTER_GLSL}
+${HEAP_GLSL}
+uniform vec2 uLitterCell;
+in vec2 aCell;
+${LITTER_OUT}
 void main() {
   vec2 cell = uLitterCell + aCell;
   float r1 = hash12(cell);
@@ -345,7 +370,8 @@ void main() {
   float deep = litterDepth(p);
   /** How much of the floor the leaves cover, and how much of them is heaped on top of that: two different things. */
   float cover = 1.0 - exp(-deep * 1.35);
-  float heap = max(0.0, deep - 1.6);
+  float top = litterTop(deep);
+  float heap = top / ${glsl(tuning.birches.pileHeight)};
   /** Far off, fewer and larger: the carpet has to reach the trees at the edge of the frame without the count. */
   float far = smoothstep(12.0, ${glsl(LITTER_REACH)}, away);
   float reach = 1.0 - smoothstep(${glsl(LITTER_REACH - 14)}, ${glsl(LITTER_REACH)}, away);
@@ -366,7 +392,13 @@ void main() {
    * every way but flat, and they are drawn broader so that a heap reads as one solid mass and not as a thin skin
    * of leaves lifted off the floor.
    */
-  base.y += heap * ${glsl(tuning.birches.pileHeight)} * (0.12 + 0.88 * hash12(cell + 41.1));
+  float within = 0.12 + 0.88 * hash12(cell + 41.1);
+  base.y += top * within;
+  /** Down inside a heap a leaf sees little of the sky and none of the sun. */
+  float inside = smoothstep(0.05, 0.4, top) * (1.0 - within);
+  vec4 shape = heapShape(p, top * within);
+  vSlope = normalize(n / max(n.y, 0.3) + vec3(-shape.x, 0.0, -shape.y));
+  vLight = vec3(shape.z * (1.0 - inside), shape.w * (1.0 - 0.5 * inside), smoothstep(0.0, 0.25, top) * within);
   // Ground cover is resting litter, not a sheet displaced by the instantaneous wind.
   float a = r1 * 6.2831;
   vec3 t1 = normalize(cross(n, vec3(cos(a), 0.0, sin(a))));
@@ -390,18 +422,118 @@ in vec3 vNormal;
 in vec3 vSide;
 in vec2 vCard;
 in float vSeed;
+in vec3 vSlope;
+in vec3 vLight;
 void main() {
   if (birchLeafEdge(vCard, vSeed) < 0.0) discard;
   vec3 N = leafCurl(normalize(vNormal), normalize(vSide), vCard, 0.7);
+  /** On a heap, the heap's own surface takes the light, so that one side of it is lit and the other is not. */
+  vec3 L = normalize(mix(N, normalize(vSlope), vLight.z * 0.75));
   vec3 V = normalize(cameraPosition - vWorld);
   /** Leaves that have been down a while: drier and browner than the crowns, but the same gold underneath. */
   vec3 alb = leafVeins(birchLeaf(mix(0.22, 1.0, fract(vSeed * 7.13 + 0.25)), 0.95) * (0.86 + 0.26 * vSeed), vCard);
   /** Never fully in shadow: a floor of gold gives its own light back, which is most of what this room is lit by. */
-  float sun = max(groundAt(vWorld.xz).w * cloudShadow(vWorld.xz), 0.35);
+  float sun = max(groundAt(vWorld.xz).w * cloudShadow(vWorld.xz), 0.35) * vLight.x;
   /** And the ones tipped up on their edges take the low sun through them, the same as the ones still up there. */
   float through = pow(max(dot(-V, uSunDir), 0.0), 2.0) * (0.35 + 0.65 * (1.0 - abs(dot(N, uSunDir))));
-  vec3 col = alb * (hemiLight(N) * vec3(1.2, 1.08, 0.86) + uSunColor * max(dot(N, uSunDir), 0.0) * sun * 0.9 + uGroundBounce * 0.9);
+  /**
+   * A heap's side away from the sun is in its own shade, and what light it has is mostly what the gold round it
+   * gives back, so it goes amber rather than grey.
+   */
+  float shaded = vLight.z * (1.0 - vLight.x);
+  vec3 sky = vLight.y * mix(vec3(1.0), vec3(0.5, 0.36, 0.22), shaded);
+  vec3 col = alb * ((hemiLight(L) * vec3(1.2, 1.08, 0.86) + uGroundBounce * 0.9) * sky + uSunColor * max(dot(L, uSunDir), 0.0) * sun * 0.9);
   col += alb * alb * uSunColor * through * sun * 0.9;
+  col = mix(stillGrey(col), col, lifeAt(vWorld.xz));
+  gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
+}`;
+
+/**
+ * The skin of a heap: leaves laid every which way over its surface, smaller and far closer together than the floor's,
+ * so a heap reads as one mound of leaves with a lit side and a shadowed one rather than a few big leaves standing up.
+ * Each lies at a fixed place round a heap and shows only while the leaves there stand heaped.
+ */
+const HEAP_SKIN_VERT = /* glsl */ `
+${ATMO_GLSL}
+${LITTER_GLSL}
+${HEAP_GLSL}
+in vec4 aSpot;
+${LITTER_OUT}
+void main() {
+  vec2 p = aSpot.xy;
+  vec2 uv = domainUv(p);
+  float top = litterTopAt(p);
+  float away = distance(p, cameraPosition.xz);
+  /** Fewer of them toward the foot, thinning into the floor's own scatter rather than ending in a rim. */
+  float from = 0.05 + 0.4 * fract(aSpot.z * 13.7);
+  float grow = smoothstep(from, from + 0.1, top) * (1.0 - smoothstep(${glsl(LITTER_REACH - 14)}, ${glsl(LITTER_REACH)}, away));
+  if (grow <= 0.002 || !insideUv(uv)) {
+    gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+    return;
+  }
+  vec4 hn = texture(uHeightTex, uv);
+  vec3 n = normalize(hn.gba);
+  vec4 shape = heapShape(p, top);
+  vec3 surface = normalize(n / max(n.y, 0.3) + vec3(-shape.x, 0.0, -shape.y));
+  vec3 jumble = vec3(hash12(aSpot.zw * 91.0), hash12(aSpot.wz * 57.0 + 3.1), hash12(aSpot.zw * 33.0 + 7.7)) - 0.5;
+  vec3 m = normalize(surface + jumble * 1.1);
+  float a = aSpot.z * 6.2831;
+  vec3 t1 = normalize(cross(m, vec3(cos(a), 0.0, sin(a))));
+  vec3 t2 = cross(m, t1);
+  /** A layer of them, not one: wherever the top ones part there are more leaves under them, never what is buried. */
+  float under = min(${glsl(tuning.birches.heapSkin)}, top * 0.6) * fract(aSpot.w * 7.31);
+  vec3 base = vec3(p.x, hn.r + 0.02 + top - under, p.y);
+  float far = smoothstep(12.0, ${glsl(LITTER_REACH)}, away);
+  float size = ${glsl(tuning.birches.leafSize)} * (1.15 + 0.8 * aSpot.w) * (1.0 + 0.6 * far) * grow;
+  vWorld = base + (t1 * position.x * 1.45 + t2 * position.y) * size;
+  vNormal = m;
+  vSide = t1;
+  vCard = position.xy * 2.0;
+  vSeed = aSpot.w;
+  vSlope = surface;
+  vLight = vec3(shape.zw, 1.0);
+  gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
+}`;
+
+/**
+ * The body of a heap under its skin of leaves: a solid surface a little below the top, the deeper leaves seen
+ * wherever the top ones part, so a heap is never see-through and what is buried in it stays hidden. It sinks
+ * into the ground wherever the leaves are no deeper than a floor.
+ */
+const HEAP_CORE_VERT = /* glsl */ `
+${ATMO_GLSL}
+${LITTER_GLSL}
+${HEAP_GLSL}
+out vec3 vWorld;
+out vec3 vSlope;
+out vec3 vLight;
+void main() {
+  vec2 p = position.xz;
+  vec2 uv = domainUv(p);
+  float top = litterTopAt(p);
+  vec4 hn = insideUv(uv) ? texture(uHeightTex, uv) : vec4(-5.0, 0.0, 1.0, 0.0);
+  vec3 n = normalize(hn.gba);
+  vec4 shape = heapShape(p, top);
+  float below = ${glsl(tuning.birches.heapCore)} + 0.4 * (1.0 - smoothstep(0.1, 0.35, top));
+  vWorld = vec3(p.x, hn.r + top - below, p.y);
+  vSlope = normalize(n / max(n.y, 0.3) + vec3(-shape.x, 0.0, -shape.y));
+  vLight = vec3(shape.zw, 1.0);
+  gl_Position = projectionMatrix * viewMatrix * vec4(vWorld, 1.0);
+}`;
+
+const HEAP_CORE_FRAG = /* glsl */ `
+${ATMO_GLSL}
+${LEAF_TINT_GLSL}
+in vec3 vWorld;
+in vec3 vSlope;
+in vec3 vLight;
+void main() {
+  vec3 L = normalize(vSlope);
+  float mottle = vnoise(vWorld.xz * 6.0 + vWorld.y * 3.0);
+  vec3 alb = birchLeaf(mix(0.78, 0.93, mottle), 0.95) * 0.85;
+  float sun = max(groundAt(vWorld.xz).w * cloudShadow(vWorld.xz), 0.35) * vLight.x;
+  vec3 sky = vLight.y * mix(vec3(0.95), vec3(0.6, 0.44, 0.29), 1.0 - vLight.x);
+  vec3 col = alb * ((hemiLight(L) * vec3(1.2, 1.08, 0.86) + uGroundBounce * 0.9) * sky + uSunColor * max(dot(L, uSunDir), 0.0) * sun * 0.6);
   col = mix(stillGrey(col), col, lifeAt(vWorld.xz));
   gl_FragColor = vec4(applyFog(col, vWorld), 1.0);
 }`;
@@ -694,6 +826,8 @@ export class AutumnBirches {
   onLeafScuff: ((x: number, z: number, strength: number) => void) | null = null;
   private readonly litterMesh: THREE.Mesh;
   private readonly litterMat: THREE.ShaderMaterial;
+  private readonly heapSkin: THREE.Mesh;
+  private readonly heapCore: THREE.Mesh;
   /** Who is wading through the leaves: x, z, how far it reaches, and how fast they are going. */
   private readonly wade = new THREE.Vector4(1e6, 1e6, 2.1, 0);
   private readonly focus = new THREE.Vector3(ISLE.x, 0, ISLE.z);
@@ -752,7 +886,9 @@ export class AutumnBirches {
     this.objects.push(this.canopy(renderer, rand, variants, shared));
     this.litterMesh = this.litterCarpet(shared);
     this.litterMat = this.litterMesh.material as THREE.ShaderMaterial;
-    this.objects.push(this.litterMesh);
+    this.heapSkin = this.heapLeaves(shared);
+    this.heapCore = this.heapBodies(shared);
+    this.objects.push(this.litterMesh, this.heapSkin, this.heapCore);
 
     const tree = this.trees[this.trees.length - 1];
     const limb = new THREE.Vector3(SWING_LIMB.x, SWING_LIMB.y + 0.006, SWING_LIMB.z).multiplyScalar(tree.scale);
@@ -798,7 +934,7 @@ export class AutumnBirches {
     this.objects.push(new THREE.Mesh(cut, new THREE.ShaderMaterial({ vertexShader: PLAIN_VERT, fragmentShader: ROPE_FRAG,
       uniforms: { ...shared, uPaint: { value: new THREE.Color('#c9a471') } } })));
 
-    this.leaves = new FallenLeaves(renderer, this.leafState(rand, variants), this.wade);
+    this.leaves = new FallenLeaves(renderer, this.leafState(rand, variants), this.wade, BIRCH_PILES);
     this.objects.push(this.leaves.mesh);
     for (const o of this.objects) o.visible = false;
     fixInPlace(...this.objects.filter((o) => o !== this.swing.group), ...this.swing.group.children);
@@ -871,9 +1007,13 @@ export class AutumnBirches {
         at(tree.x + Math.cos(a) * r, tree.z + Math.sin(a) * r, 0.5 * (1 - r / (reach * 1.15)));
       }
     }
-    /** And the heaps, which are the only deep leaves anybody put there on purpose. */
+    /**
+     * And the heaps, which are the only deep leaves anybody put there on purpose. Round a raked one the floor is
+     * thin, scraped in streaks toward it, most of all at its foot.
+     */
+    const { heapRaked, heapRakedKeep } = tuning.birches;
     for (const pile of BIRCH_PILES) {
-      const span = Math.ceil(pile.r / Math.min(cell.x, cell.z)) + 1;
+      const span = Math.ceil(pileReach(pile) / Math.min(cell.x, cell.z)) + 1;
       const ci = Math.round((pile.x - LITTER_BOX.x) / cell.x - 0.5);
       const cj = Math.round((pile.z - LITTER_BOX.z) / cell.z - 0.5);
       for (let j = cj - span; j <= cj + span; j++) {
@@ -881,8 +1021,13 @@ export class AutumnBirches {
           if (i < 0 || j < 0 || i >= across || j >= along) continue;
           const x = LITTER_BOX.x + (i + 0.5) * cell.x;
           const z = LITTER_BOX.z + (j + 0.5) * cell.z;
-          const k = 1 - Math.hypot((x - pile.x) / pile.r, (z - pile.z) / pile.r) ** 2;
-          if (k > 0) depths[j * across + i] = Math.max(depths[j * across + i], pile.deep * k);
+          const from = Math.hypot(x - pile.x, z - pile.z), k = j * across + i;
+          if (pile.raked && from < pile.r + heapRaked) {
+            const tines = 0.7 + 0.6 * Math.max(0, Math.sin(Math.atan2(z - pile.z, x - pile.x) * 17 + patchy(x * 0.5, z * 0.5) * 4));
+            const keep = THREE.MathUtils.lerp(heapRakedKeep * tines, 1, THREE.MathUtils.smoothstep(from, pile.r * 0.8, pile.r + heapRaked));
+            depths[k] *= Math.min(1, keep);
+          }
+          depths[k] = Math.max(depths[k], pileDepth(pile, from));
         }
       }
     }
@@ -1054,6 +1199,52 @@ export class AutumnBirches {
     return mesh;
   }
 
+  /** The leaves over every heap's surface, at places scattered over it and round it as far as its leaves may slump. */
+  private heapLeaves(shared: Record<string, THREE.IUniform>): THREE.Mesh {
+    const rand = mulberry32(5303);
+    const spacing = 0.2;
+    const spots: number[] = [];
+    for (const pile of BIRCH_PILES) {
+      const reach = pileReach(pile);
+      for (let gz = -reach; gz <= reach; gz += spacing) {
+        for (let gx = -reach; gx <= reach; gx += spacing) {
+          const x = gx + (rand() - 0.5) * spacing, z = gz + (rand() - 0.5) * spacing;
+          if (Math.hypot(x, z) < reach) spots.push(pile.x + x, pile.z + z, rand(), rand());
+        }
+      }
+    }
+    const card = new THREE.PlaneGeometry(1, 1);
+    const geo = new THREE.InstancedBufferGeometry();
+    geo.index = card.index;
+    geo.setAttribute('position', card.attributes.position);
+    geo.setAttribute('aSpot', new THREE.InstancedBufferAttribute(new Float32Array(spots), 4));
+    geo.instanceCount = spots.length / 4;
+    const mesh = new THREE.Mesh(geo, new THREE.ShaderMaterial({
+      vertexShader: HEAP_SKIN_VERT,
+      fragmentShader: LITTER_FRAG,
+      uniforms: shared,
+      side: THREE.DoubleSide,
+      alphaToCoverage: true,
+    }));
+    mesh.frustumCulled = false;
+    return mesh;
+  }
+
+  /** A sheet over each heap and as far round it as its leaves may slump, shaped to them as they lie each frame. */
+  private heapBodies(shared: Record<string, THREE.IUniform>): THREE.Mesh {
+    const sheets = BIRCH_PILES.map((pile) => {
+      const reach = pileReach(pile), steps = Math.ceil(reach * 2 / 0.4);
+      return new THREE.PlaneGeometry(reach * 2, reach * 2, steps, steps).rotateX(-Math.PI / 2).translate(pile.x, 0, pile.z);
+    });
+    const mesh = new THREE.Mesh(mergeGeometries(sheets), new THREE.ShaderMaterial({
+      vertexShader: HEAP_CORE_VERT,
+      fragmentShader: HEAP_CORE_FRAG,
+      uniforms: shared,
+    }));
+    mesh.frustumCulled = false;
+    return mesh;
+  }
+
   /**
    * Where every simulated leaf starts: most of them on a tree, weighted toward the ones along the walk so a gust
    * where the player is playing takes a cloud off; the rest already down, drifted along the way.
@@ -1061,18 +1252,28 @@ export class AutumnBirches {
   private leafState(rand: () => number, variants: { tips: THREE.Vector3[] }[]): Float32Array {
     const state = new Float32Array(LEAF_COUNT * 4);
     const near = this.trees.filter((t) => walkDistance(t.x, t.z) < 17);
-    /** A fifth of them are already in the heaps, so that a gust into one bursts it and does not merely thin it. */
-    const heaped = Math.floor(LEAF_COUNT * 0.2);
-    const drifts = heaped + Math.floor(LEAF_COUNT * 0.22);
+    /**
+     * Nearly a third of them are already in the heaps, so that a gust into one bursts it in a spray and does not
+     * merely thin it: shared by how much each heap covers, and more to the raked ones the squirrel hides in.
+     */
+    const heaped = Math.floor(LEAF_COUNT * 0.3);
+    const drifts = heaped + Math.floor(LEAF_COUNT * 0.12);
+    const shares = BIRCH_PILES.map((p) => p.r * p.r * (p.raked ? 1.5 : 1));
+    const whole = shares.reduce((a, b) => a + b, 0);
+    let pile = 0, filled = 0;
     for (let i = 0; i < LEAF_COUNT; i++) {
       if (i < heaped) {
-        const pile = BIRCH_PILES[i % BIRCH_PILES.length];
+        while (filled >= shares[pile] / whole * heaped && pile < BIRCH_PILES.length - 1) {
+          filled -= shares[pile] / whole * heaped;
+          pile++;
+        }
+        filled++;
+        const p = BIRCH_PILES[pile];
         const a = rand() * Math.PI * 2;
-        const r = Math.sqrt(rand()) * pile.r * 0.9;
-        const x = pile.x + Math.cos(a) * r;
-        const z = pile.z + Math.sin(a) * r;
-        const heap = pile.deep * Math.max(0, 1 - (r / pile.r) ** 2) * tuning.birches.pileHeight;
-        state.set([x, Math.max(heightAt(x, z), 0) + 0.04 + rand() * heap, z, 1], i * 4);
+        const r = Math.sqrt(rand()) * p.r * 0.9;
+        const x = p.x + Math.cos(a) * r;
+        const z = p.z + Math.sin(a) * r;
+        state.set([x, Math.max(heightAt(x, z), 0) + 0.04 + rand() * litterTop(pileDepth(p, r)), z, 1], i * 4);
         continue;
       }
       if (i < drifts) {
@@ -1141,6 +1342,30 @@ export class AutumnBirches {
     this.onLeafScuff?.(x, z, strength);
   }
 
+  /**
+   * Something going into or out of the leaves at (x, z), from a squirrel's peek (0.2) through its burst (1) to a
+   * child's leap (about 1.6): the leaves go up round it, as far and as high as it was hard.
+   */
+  burst(x: number, z: number, strength: number): void {
+    const { burstReach, burstReachPer } = tuning.birches;
+    this.kicking.set(x, z, burstReach + burstReachPer * strength, Math.max(strength, 0.35));
+    this.kickFor = 0.7;
+    this.onLeafScuff?.(x, z, Math.min(strength, 1));
+  }
+
+  /** How high the leaves stand over the ground at each point, in metres, read back from the live floor. */
+  depthAt(points: readonly { x: number; z: number }[]): Promise<number[]> {
+    return this.litter.depthAt(points);
+  }
+
+  /**
+   * How far under the leaves' surface to set a buried squirrel's paws where they stand `depth` metres deep: its
+   * back well under, the tip of its tail (if out) above. Where they lie thinner it presses into the soil, so far.
+   */
+  buryDepth(_x: number, _z: number, depth: number): number {
+    return Math.min(tuning.birches.buryBelow, Math.max(0, depth) + tuning.birches.burySoil);
+  }
+
   /** Authored floor coverage for quiet foot scuffs, without reading the moving GPU field back. */
   leafCoverAt(x: number, z: number): number {
     const i = Math.floor((x - LITTER_BOX.x) / LITTER_BOX.sx * LITTER_RES.x);
@@ -1157,6 +1382,8 @@ export class AutumnBirches {
     for (const o of this.objects) o.visible = here;
     this.scarf.mesh.visible = here && !this.scarf.finished;
     this.litterMesh.visible = near;
+    this.heapSkin.visible = near;
+    this.heapCore.visible = near;
     this.leaves.mesh.visible = near;
     if (!near) return;
 

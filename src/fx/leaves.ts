@@ -1,5 +1,6 @@
 import * as THREE from 'three';
-import { COPY_FRAG, GpuRunner, PingPong, atBoot, simMaterial } from '../gl/gpu';
+import { COPY_FRAG, GpuRunner, PingPong, atBoot, simMaterial, simTarget } from '../gl/gpu';
+import { Readback } from '../gl/readback';
 import { ATMO_GLSL, NOISE_GLSL, atmo } from '../world/atmosphere';
 import { ISLES } from '../world/heightfield';
 import { BIRCHES_LOCAL, BIRCHES_SHAPE_GLSL } from '../world/birches-layout';
@@ -95,6 +96,44 @@ float litterDepth(vec2 xz) {
   float c = texture(uLitterTex, at + vec2(0.0, texel.y)).r;
   float d = texture(uLitterTex, at + texel).r;
   return mix(mix(a, b, f.x), mix(c, d, f.x), f.y);
+}
+/** How high the leaves stand over the ground, in metres: a carpet is one layer, and past an ordinary floor they heap. */
+float litterTop(float depth) {
+  return max(depth - ${glsl(tuning.birches.heapFrom)}, 0.0) * ${glsl(tuning.birches.pileHeight)};
+}
+float litterTopAt(vec2 xz) {
+  return litterTop(litterDepth(xz));
+}`;
+
+export function litterTop(depth: number): number {
+  return Math.max(depth - tuning.birches.heapFrom, 0) * tuning.birches.pileHeight;
+}
+
+/**
+ * The shape of the heaped leaves round a leaf at `xz` standing `top` over the ground: in .xy the lean of their
+ * surface (rise per metre, east and south), in .z how much of the low sun gets past the heap's crest to it, and in
+ * .w how much of the sky it sees from down in the hollow at a heap's foot or inside one. Needs `ATMO_GLSL`.
+ */
+export const HEAP_GLSL = /* glsl */ `
+vec4 heapShape(vec2 xz, float top) {
+  vec2 toSun = normalize(uSunDir.xz);
+  /** Most of the floor is nowhere near a heap: one look toward the sun says so. */
+  if (top <= 0.0 && litterTopAt(xz + toSun * 2.1) <= 0.0) return vec4(0.0, 0.0, 1.0, 1.0);
+  const float e = 0.45;
+  float w = litterTopAt(xz - vec2(e, 0.0));
+  float east = litterTopAt(xz + vec2(e, 0.0));
+  float n = litterTopAt(xz - vec2(0.0, e));
+  float south = litterTopAt(xz + vec2(0.0, e));
+  vec2 lean = vec2(east - w, south - n) / (2.0 * e);
+  float hollow = (w + east + n + south) * 0.25 - top;
+  float climb = uSunDir.y / max(length(uSunDir.xz), 0.05);
+  float shade = 0.0;
+  for (int k = 1; k <= 4; k++) {
+    float t = float(k) * 0.7;
+    float over = litterTopAt(xz + toSun * t) - top - t * climb;
+    shade = max(shade, smoothstep(0.02, 0.25, over) * (1.0 - t / 4.2));
+  }
+  return vec4(lean, 1.0 - shade * 0.9, 1.0 - clamp(hollow * 1.2, 0.0, 0.45));
 }`;
 
 const LITTER_SIM_FRAG = /* glsl */ `
@@ -172,6 +211,25 @@ void main() {
   d -= d * min(0.7, tread * 0.7 * uDt);
   gl_FragColor = vec4(max(d, 0.0), velocity, mobile);
 }`;
+
+/** How high the leaves stand at each of a row of points (xz in the input's red and green), for reading back. */
+const PROBE_FRAG = /* glsl */ `
+uniform sampler2D uPoints;
+${LITTER_GLSL}
+void main() {
+  vec4 p = texelFetch(uPoints, ivec2(gl_FragCoord.xy), 0);
+  gl_FragColor = vec4(litterTopAt(p.xy), 0.0, 0.0, 1.0);
+}`;
+/** Points read back at once; a longer list goes over as many frames as it needs. */
+const PROBE = 64;
+
+interface DepthQuery {
+  points: readonly { x: number; z: number }[];
+  out: number[];
+  asked: number;
+  got: number;
+  resolve: (depths: number[]) => void;
+}
 
 /**
  * Whether a leaf still on the tree lets go this frame. The player's gusts take them off in clouds; the prevailing
@@ -269,14 +327,23 @@ void main() {
   vec3 target = vec3(hTarget.x, lift * (0.8 + 0.5 * fract(seed * 13.7)) - fall + turb.y * 1.2, hTarget.y);
   if (wade > 0.25) {
     vec2 away = normalize(p.xz - uWade.xy + vec2(1e-3));
-    target = vec3(away.x * (2.4 + 3.6 * seed), 2.6 + 3.0 * seed, away.y * (2.4 + 3.6 * seed));
+    /** Anything harder than a child walking in, a leap say, throws them further and higher. */
+    float hard = sqrt(max(uWade.w, 1.0));
+    target = vec3(away.x * (2.4 + 3.6 * seed), 2.6 + 3.0 * seed, away.y * (2.4 + 3.6 * seed)) * hard;
   }
   float k = 1.0 - exp(-uDt * (1.6 + seed * 1.4 + sp * 0.12 + wade * 6.0));
   v.xyz = mix(v.xyz, target, k);
   gl_FragColor = v;
 }`;
 
-const POS_FRAG = /* glsl */ `
+/** Whether a point is inside one of the heaps somebody made, each given as its middle and radius. */
+const inHeapGlsl = (heaps: readonly { x: number; z: number; r: number }[]): string => /* glsl */ `
+bool inHeap(vec2 xz) {
+  ${heaps.map((h) => `if (distance(xz, vec2(${glsl(h.x)}, ${glsl(h.z)})) < ${glsl(h.r)}) return true;`).join('\n  ')}
+  return false;
+}`;
+
+const posFrag = (heaps: readonly { x: number; z: number; r: number }[]): string => /* glsl */ `
 uniform sampler2D uPos;
 uniform sampler2D uVel;
 uniform sampler2D uWindTex;
@@ -290,6 +357,7 @@ ${ISLE_GLSL}
 vec2 domainUv(vec2 xz) { return (xz - uDomain.xy) * uDomain.zw; }
 bool insideUv(vec2 uv) { return all(greaterThanEqual(uv, vec2(0.0))) && all(lessThanEqual(uv, vec2(1.0))); }
 ${RELEASE_GLSL}
+${inHeapGlsl(heaps)}
 
 void main() {
   vec4 p = texture(uPos, vUv);
@@ -316,10 +384,11 @@ void main() {
    * The walk over this island is a long one and there are only so many leaves. One that has settled far behind the
    * player, or that has gone out over the water where it is already fading to nothing, is of no use to anybody
    * there, so it is quietly moved back round them: mostly onto the floor ahead, and now and then up into the
-   * crowns to come down out of them. It only ever happens outside what can be seen.
+   * crowns to come down out of them. It only ever happens outside what can be seen. A heap keeps its own,
+   * however far off it is, so that whoever comes to it later bursts it in a spray of them.
    */
   float away = distance(p.xz, uFocus.xy);
-  if ((away > uFocus.z && length(v.xyz) < 1.2) || birchIsleR(p.xz) > 1.2) {
+  if ((away > uFocus.z && length(v.xyz) < 1.2 && !inHeap(p.xz)) || birchIsleR(p.xz) > 1.2) {
     float roll = hash12(vec2(v.w * 331.0, floor(uTime * 4.0)));
     float a = hash12(vec2(v.w * 77.0, floor(uTime * 4.0) + 3.0)) * 6.2831;
     vec2 to = uFocus.xy + vec2(cos(a), sin(a)) * (14.0 + 30.0 * roll);
@@ -437,6 +506,14 @@ export class LitterField {
   private readonly gpu: GpuRunner;
   private readonly field: PingPong;
   private readonly mat: THREE.ShaderMaterial;
+  private readonly probePoints = new Float32Array(PROBE * 4);
+  private readonly probeTex = dataTexture(this.probePoints, PROBE, 1);
+  private readonly probeTarget = simTarget(PROBE, 1, THREE.FloatType, THREE.NearestFilter);
+  private readonly probeMat: THREE.ShaderMaterial;
+  private readonly probeRead: Readback<number>;
+  private readonly queries: DepthQuery[] = [];
+  private readonly reading = new Map<number, { query: DepthQuery; from: number; count: number }>();
+  private serial = 0;
 
   constructor(renderer: THREE.WebGLRenderer, seed: Float32Array, wade: THREE.Vector4) {
     this.gpu = new GpuRunner(renderer);
@@ -463,6 +540,39 @@ export class LitterField {
       uDt: { value: 1 / 60 },
       uWade: { value: wade },
     }, this.field);
+    this.probeMat = simMaterial(PROBE_FRAG, { ...this.uniforms, uPoints: { value: this.probeTex } }, this.probeTarget);
+    this.probeRead = new Readback<number>(renderer, 'litter', PROBE, 1, (data, tag) => {
+      const read = this.reading.get(tag);
+      if (!read) return;
+      this.reading.delete(tag);
+      for (let i = 0; i < read.count; i++) read.query.out[read.from + i] = data[i * 4];
+      read.query.got += read.count;
+      if (read.query.got === read.query.points.length) read.query.resolve(read.query.out);
+    }, 2);
+  }
+
+  /** How high the leaves stand over the ground at each point, in metres, as the field is a frame or two from now. */
+  depthAt(points: readonly { x: number; z: number }[]): Promise<number[]> {
+    if (!points.length) return Promise.resolve([]);
+    return new Promise((resolve) => this.queries.push({ points, out: new Array(points.length).fill(0), asked: 0, got: 0, resolve }));
+  }
+
+  /** Sends the next batch of asked-for points to be read back, if a buffer is free for it. */
+  private probe(): void {
+    const query = this.queries[0];
+    if (!query || !this.probeRead.ready) return;
+    const count = Math.min(PROBE, query.points.length - query.asked);
+    for (let i = 0; i < count; i++) {
+      const p = query.points[query.asked + i];
+      this.probePoints[i * 4] = p.x;
+      this.probePoints[i * 4 + 1] = p.z;
+    }
+    this.probeTex.needsUpdate = true;
+    this.gpu.run(this.probeMat, this.probeTarget);
+    this.probeRead.request(this.probeTarget, ++this.serial);
+    this.reading.set(this.serial, { query, from: query.asked, count });
+    query.asked += count;
+    if (query.asked === query.points.length) this.queries.shift();
   }
 
   update(dt: number): void {
@@ -471,6 +581,7 @@ export class LitterField {
     this.gpu.run(this.mat, this.field.write);
     this.field.swap();
     this.uniforms.uLitterTex.value = this.field.texture;
+    this.probe();
   }
 }
 
@@ -493,7 +604,7 @@ export class FallenLeaves {
   private readonly focus = new THREE.Vector4(0, 0, 58, 0);
 
   /** `state` is four floats per leaf, `LEAF_SIDE` to a row: where it starts, and 0 if it is still on the tree or 1 if not. */
-  constructor(renderer: THREE.WebGLRenderer, state: Float32Array, wade: THREE.Vector4) {
+  constructor(renderer: THREE.WebGLRenderer, state: Float32Array, wade: THREE.Vector4, heaps: readonly { x: number; z: number; r: number }[]) {
     this.gpu = new GpuRunner(renderer);
     const count = state.length / 4, W = LEAF_SIDE, H = count / W;
     this.pos = new PingPong(W, H, THREE.FloatType, THREE.NearestFilter);
@@ -524,7 +635,7 @@ export class FallenLeaves {
       uShake: { value: this.shake },
     };
     this.velMat = simMaterial(VEL_FRAG, { ...shared, uPos: { value: null }, uVel: { value: null }, uWade: { value: wade } }, this.vel);
-    this.posMat = simMaterial(POS_FRAG, { ...shared, uPos: { value: null }, uVel: { value: null }, uFocus: { value: this.focus } }, this.pos);
+    this.posMat = simMaterial(posFrag(heaps), { ...shared, uPos: { value: null }, uVel: { value: null }, uFocus: { value: this.focus } }, this.pos);
 
     const quad = new THREE.PlaneGeometry(2, 2);
     const geo = new THREE.InstancedBufferGeometry();

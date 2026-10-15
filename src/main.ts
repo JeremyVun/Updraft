@@ -417,6 +417,9 @@ birches.onLeafScuff = (x, z, strength) => {
   birchesFoley.scuff(materialAt.set(x, heightAt(x, z), z), strength,
     sound.running && story.name === 'birches');
 };
+squirrel.onLeaves = (stir) => {
+  if (stir.kind !== 'step') birches.burst(stir.at.x, stir.at.z, stir.strength);
+};
 sealife.onDolphinSplash = (x, y, z, strength) => {
   if (sound.running) worldFoley.splash(splashAt.set(x, y, z), strength);
 };

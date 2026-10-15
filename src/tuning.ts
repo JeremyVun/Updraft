@@ -1355,8 +1355,27 @@ export const tuning = {
     /** How fast leaves heaped steeper than they will stand run off sideways, and the slope they will stand at. */
     litterSlump: 3.0,
     litterRepose: 0.95,
-    /** How high a heap of leaves stands, per unit of depth. */
+    /** How high a heap of leaves stands, per unit of depth over `heapFrom`, the depth of an ordinary floor. */
     pileHeight: 0.34,
+    heapFrom: 1.6,
+    /**
+     * A heap somebody made: its top rounded over this many metres, its foot at most this share of its radius out, and
+     * the floor round it raked thin for this far past its radius, keeping this share of its leaves at the foot.
+     */
+    heapCrown: 0.6,
+    heapFoot: 1.05,
+    heapRaked: 2.4,
+    heapRakedKeep: 0.3,
+    /** How thick the layer of leaves over a heap's surface is drawn, in metres. */
+    heapSkin: 0.35,
+    /** And how far under its surface the solid body of it stands, which is what keeps anything buried in it hidden. */
+    heapCore: 0.12,
+    /** Something going into or out of the leaves: how far round it they go up, at a strength of 0 and per unit of it. */
+    burstReach: 0.6,
+    burstReachPer: 1.6,
+    /** The buried squirrel's paws this far under the leaves' surface (its back 0.2 m under, its tail's tip 0.21 m out), and at most this far into the soil. */
+    buryBelow: 0.38,
+    burySoil: 0.12,
     /** How hard the swing is pushed by the air along its travel, and by a gust however it is blowing. */
     swingPush: 0.8,
     swingGust: 3.8,

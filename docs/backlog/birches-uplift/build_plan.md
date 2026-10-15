@@ -176,7 +176,7 @@ limb and the goodbye branch.
   loop's foot (the fork is hidden in gold from that lens), and the goodbye is at the water's edge (no branch reaches
   the berth).
 
-### 5a. Heaps that read, and leaves that fly. Opus (visual). Done: ☐ (after 4; alongside 5b)
+### 5a. Heaps that read, and leaves that fly. Opus (visual). Done: ☑ (2026-10-16)
 
 Worktree `/Users/jeremy/projects/updraft-birches-heaps`, branch `birches-uplift-heaps`. Owns `src/world/birches.ts`
 (heap seeding and the litter's look over heaps), `src/fx/leaves.ts`, and the wiring of `squirrel.onLeaves` to the
@@ -207,6 +207,15 @@ bursts a heap exactly as now and never rebuilds it.
   landscape, with the squirrel buried tail-out. Each heap must read as a distinct mound at a glance. Also a strip
   of a squirrel burst and a wind burst at a round-3 heap showing the spray, and the walking frames through the gaps
   to prove the floor elsewhere is unchanged.
+
+- **Built:** design.md "Heaps (phase 5a)". Measured: every round frame, portrait and landscape, shows each round heap
+  as a distinct mound; the buried squirrel (3×) shows 0 px tail in (4 px, an ear-tuft wisp, in round 1 landscape)
+  and only its tail's tip tail out, by redrawing each frozen frame without it; live heights 0.73–0.82 m at the hides,
+  0.87–0.97 m at round heap middles; 1,386–2,748 loose leaves lie in each heap and stay there; a squirrel burst at
+  round 3 throws about 650 into the air. The walking frames through gaps A, B and C and tangle 1's frame are
+  unchanged away from the heaps. Typecheck, build, `birches-drift-check` and `scarf-check` pass. `LEAF_COUNT`
+  unchanged; the heaps add one draw of about 19,000 small cards and one of about 6,600 vertices, both only near
+  the island.
 
 ### 5b. The game. Opus. Done: ☐ (after 4; alongside 5a)
 
