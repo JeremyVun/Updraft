@@ -87,6 +87,8 @@ export interface Cast {
   nearby(x: number, z: number, radius: number, out: THREE.Vector3): boolean;
   /** A physical sound at a place in the world, heard as near as it is: for things a chapter builds and moves itself. */
   knock?(kind: MaterialSound, at: THREE.Vector3, strength: number): void;
+  /** The birches' leaves heard where they go up: something hidden stirring them, a heap bursting, a child landing in one. */
+  leafSound?(kind: 'rustle' | 'burst' | 'leap', at: THREE.Vector3, strength: number): void;
 }
 
 /** What a chapter tells the rest of the game each frame. */

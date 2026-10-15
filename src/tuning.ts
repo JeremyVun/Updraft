@@ -188,6 +188,8 @@ export const tuning = {
     paperLevel: 0.35,
     /** Sparse close physical detail: child and bird share one leaf budget, with no wind/particle triggers. */
     leafScuffLevel: 0.4 * 10 ** (3 / 20), leafScuffEvery: 1.4, leafCoverMin: 0.55,
+    /** The squirrel's heap stirring under it, and a heap going up (a leap is that, a third louder and with a thump). */
+    leafRustleLevel: 0.9, leafBurstLevel: 0.85,
     swingCreakLevel: 0.5, swingCreakEvery: 2.4, swingCreakAngle: 0.16,
     birchesFoleyNear: 20, birchesFoleyFar: 65,
     materialEvery: 0.2, waterEvery: 0.42, splashEvery: 0.4,
@@ -1362,6 +1364,38 @@ export const tuning = {
     swingGust: 3.8,
     /** How long a swing takes to die away when nobody is pushing it (seconds to lose most of it). */
     swingDamping: 0.13,
+    /** The squirrel's hide-and-seek (`story/birches-squirrel.ts`). */
+    squirrel: {
+      /** Seconds between the hidden heap's shivers, and how hard each stirs it. */
+      tellFrom: 2.5, tellTo: 4, tellStrength: 0.18,
+      /** Share of the time the tail tip is out of the leaves, by round; the chance a tell is a peek, and how long it looks. */
+      tailOut: [0.5, 0.33, 0.2], peekChance: 0.22, peekFor: 1.3,
+      /** Litter, in metres, deep enough to bury it, and deep enough for her to jump into. */
+      buryDepth: 0.5, leapDepth: 0.35,
+      /**
+       * Finding: the air over its heap (or `driftReach` metres round a drift or a trunk) as the trees feel it when they
+       * shed, each rise of it counted: `findWork` by round flushes it (in the first, any gust over the heap), `nearlyWork`
+       * in one gust makes it peek, and it is forgotten at `findForget` a second. A stroke across a heap makes 0.3 to
+       * 0.6, one along its rim about 0.15.
+       */
+      driftReach: 1.6, findWork: [0.12, 0.25, 0.25], nearlyWork: 0.05, findForget: 0.03,
+      /** Seconds without wind on the right heap before the cygnet goes to stand at it, and before the drawn sweep. */
+      hintAfter: 10, inviteAfter: 18,
+      /** The meeting: how near she comes before it sees her, and how long it freezes before it drops into the heap. */
+      meetAt: 14, meetFreeze: 0.9,
+      /** Found: sitting up scolding her, then off, glancing back once a few metres on. */
+      sitFor: 0.5, scoldFor: 1.6, glanceAfter: 3.5, glanceFor: 0.7, walkOnAfter: 1.4,
+      /** How far she kneels to peer into the heaps, and how far the cygnet chases after it. */
+      kneel: 0.6, chaseReach: 2.5,
+      /** Seconds between the cygnet's tries at a heap of its own choosing. */
+      seekFrom: 1.2, seekTo: 3,
+      /** Share of the camera's gaze given to the squirrel at the meeting, on its dash along the wool, and at the goodbye. */
+      glance: 0.28, glanceIn: 1.2,
+      /** The leap: her run-up speed and spring, how hard the leaves go up, and how long she sits in them. */
+      leapRun: 3.2, leapUp: 2.6, leapBurst: 1.4, leapSitFor: 1.8,
+      /** Through a bare hollow she runs, kicking up what is left this often and this hard. */
+      kickEvery: 0.28, kickStrength: 0.4,
+    },
   },
   washing: {
     /** Wind speed that lifts a sheet all the way to horizontal; the breeze alone lifts it `wind.breeze` / this. */

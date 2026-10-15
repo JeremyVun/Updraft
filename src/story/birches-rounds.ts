@@ -27,6 +27,8 @@ export interface RoomFrame {
   from: Spot;
   distance: number;
   height: number;
+  /** A longer lens (2 halves the field), eased in and out by the camera. */
+  zoom?: number;
 }
 /** Portrait has its own, because its field is half as wide: heaps side by side in landscape stand one behind another in it. */
 export interface Frames {
@@ -45,11 +47,21 @@ export function frameShot(frames: Frames, aspect: number, shot: Shot): Shot {
   shot.from = lens.set(f.from.x, 0, f.from.z).normalize();
   shot.distance = f.distance * (aspect < 1 ? Math.max(1, PORTRAIT_ASPECT / aspect) : 1);
   shot.height = f.height;
+  shot.zoom = f.zoom;
   return shot;
 }
 
 /** Round `i`'s view (`ROUND_VIEWS`, kept clear of gap-grown trees), from `distance` back and `height` up. */
 const view = (i: number, distance: number, height: number): RoomFrame => ({ ...ROUND_VIEWS[i], lift: 1.2, distance, height });
+/**
+ * Portrait's view of round `i`: from further back on a longer lens, so the far heaps stand nearly as large as the
+ * near ones in its narrow field and the squirrel reads in any of them. `along` and `side` move the point looked at
+ * away from the lens and to its right.
+ */
+const tele = (i: number, distance: number, height: number, zoom: number, lift: number, along = 0, side = 0): RoomFrame => {
+  const { at, from } = ROUND_VIEWS[i];
+  return { at: { x: at.x - from.x * along + from.z * side, z: at.z - from.z * along - from.x * side }, from, lift, distance, height, zoom };
+};
 const lensOf = (i: number, distance: number): Spot =>
   ({ x: ROUND_VIEWS[i].at.x + ROUND_VIEWS[i].from.x * distance, z: ROUND_VIEWS[i].at.z + ROUND_VIEWS[i].from.z * distance });
 
@@ -140,7 +152,7 @@ export const ROUNDS: readonly Round[] = [
     face: lifted(pile(0), 0.5),
     lastSeen: MEETING.at.clone(),
     cygnet: [lifted(birchesAt(7.6, -1074.4)), rimOf(0, STAND[0])],
-    frames: { landscape: view(0, 14, 4), portrait: view(0, 15, 4.5) },
+    frames: { landscape: view(0, 14, 4), portrait: tele(0, 20, 5, 1.8, 0.9, 0, -0.3) },
   },
   {
     area: { ...STAND[1], r: 10 },
@@ -150,7 +162,7 @@ export const ROUNDS: readonly Round[] = [
     face: lifted(pile(5), 0.5),
     lastSeen: lifted(birchesGap(1, 12.6, 3)),
     cygnet: [lifted(birchesGap(1, 13.2, 6.1)), rimOf(4, STAND[1]), rimOf(5, STAND[1])],
-    frames: { landscape: view(1, 15, 3.4), portrait: view(1, 16, 3.8) },
+    frames: { landscape: view(1, 15, 3.4), portrait: tele(1, 22, 5.5, 2.6, 1, 0, 0.15) },
   },
   {
     area: { ...STAND[2], r: 14 },
@@ -160,7 +172,7 @@ export const ROUNDS: readonly Round[] = [
     face: lifted(pile(7), 0.5),
     lastSeen: lifted(birchesGap(2, 11, -10.5)),
     cygnet: [lifted(birchesGap(2, 14.3, -8.3)), rimOf(6, STAND[2]), rimOf(7, STAND[2]), rimOf(8, STAND[2])],
-    frames: { landscape: view(2, 15, 4), portrait: view(2, 16, 4.5) },
+    frames: { landscape: view(2, 15, 4), portrait: tele(2, 22, 6, 2, 0.9, 0.5) },
   },
 ];
 
@@ -289,8 +301,8 @@ export function route(birches: AutumnBirches, steps: readonly Step[]): SquirrelP
       birches.swingLimbAt(s.swing, at);
       return { at, on: 'line' };
     }
-    const { at, up } = onTrunk(birches, s.trunk);
-    return { at, on: 'trunk', up };
+    const { at, up, radius } = onTrunk(birches, s.trunk);
+    return { at, on: 'trunk', up, radius };
   });
 }
 

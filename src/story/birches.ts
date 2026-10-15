@@ -1,4 +1,4 @@
-import type { CheckpointPayload } from './checkpoint-data';
+import { birchesPoint, type CheckpointPayload } from './checkpoint-data';
 import * as THREE from 'three';
 import type { Shot } from '../camera';
 import { BIRCHES_BERTH, BIRCHES_CLEARING, BIRCHES_LANDING, BIRCHES_WALK } from '../world/birches';
@@ -10,6 +10,8 @@ import { SCARF_SNAGS } from '../world/birch-scarf';
 import { birchesZ } from '../world/birches-layout';
 import type { BirchesScorePhase } from '../audio/birches-score';
 import { PlaneArrival } from './plane-arrival';
+import { BirchesSquirrel, type SquirrelCue } from './birches-squirrel';
+import { ROUNDS, frameShot } from './birches-rounds';
 
 const ROUTE = BIRCHES_WALK;
 /** The leg that ends in the clearing on the crest, where the swing is. */
@@ -20,7 +22,15 @@ const BOARDING = 20;
 const LAST_LEG_PATIENCE = 45;
 /** Once the boat is drawn up past here, the scarf's free end is tied to its mast. */
 const MAST_FROM = birchesZ(-1175);
-type Beat = 'ashore' | 'wonder' | 'walk' | 'swingOffer' | 'toSwing' | 'swinging' | 'toScarf' | 'scarf' | 'unravelling' | 'gathering' | 'toBoat' | 'push' | 'aboard';
+type Beat = 'ashore' | 'wonder' | 'walk' | 'swingOffer' | 'toSwing' | 'swinging' | 'toScarf' | 'scarf' | 'toRound' | 'round' | 'leap'
+  | 'unravelling' | 'gathering' | 'toBoat' | 'push' | 'aboard';
+/** The walk's stops in the order it meets them: the squirrel's rounds between the scarf's tangles. */
+const STOPS = [{ round: 0 }, { tangle: 0 }, { round: 1 }, { tangle: 1 }, { round: 2 }, { tangle: 2 }, { tangle: 3 }] as const;
+type Stop = (typeof STOPS)[number];
+/** Further past a round's heaps than walking can take her without stopping there: she was put past it. */
+const PUT_PAST = 10;
+/** Beats where the player is playing, and the wind is theirs. */
+const PLAYING: readonly Beat[] = ['walk', 'swingOffer', 'toSwing', 'swinging', 'toScarf', 'scarf', 'toRound', 'round', 'unravelling'];
 type Play = 'carry' | 'watch' | 'fetch' | 'hold';
 
 /**
@@ -70,9 +80,15 @@ export class BirchesChapter implements Chapter {
   private readonly scarfTarget = new THREE.Vector2();
   private readonly crest = new THREE.Vector3(BIRCHES_CLEARING.x, 10, BIRCHES_CLEARING.y);
   private readonly leafPlay: BirchLeafPlay;
+  /** The red squirrel's hide-and-seek, which the walk stops for as it stops for the tangles. */
+  readonly squirrel: BirchesSquirrel;
+  /** The round the walk is at, while it is at one. */
+  private round = -1;
+  private readonly cueNow: SquirrelCue = { round: -1, seeking: false, tangles: 0, swingOver: false, gathered: false, leaving: false };
 
   constructor(private readonly cast: Cast) {
     this.leafPlay = new BirchLeafPlay(cast);
+    this.squirrel = new BirchesSquirrel(cast);
     const { child, plane } = cast;
     plane.homeRadius = 28;
     /** It never flies over this island, whatever the player does with the air: everything here is on the ground. */
@@ -83,7 +99,12 @@ export class BirchesChapter implements Chapter {
 
   get scripted(): boolean {
     /** Exploring and playing with the cygnet never take control away from the wind. */
-    return this.arrival.active || !['walk', 'swingOffer', 'toSwing', 'swinging', 'toScarf', 'scarf', 'unravelling'].includes(this.beat);
+    return this.arrival.active || !PLAYING.includes(this.beat);
+  }
+
+  /** A stalled player's drawn sweep across the heap the squirrel is in. */
+  get windInvitation(): THREE.Vector3 | null {
+    return this.beat === 'round' ? this.squirrel.invitation : null;
   }
 
   get birchesScore(): BirchesScorePhase | undefined {
@@ -102,17 +123,20 @@ export class BirchesChapter implements Chapter {
 
   get checkpoint(): string | null {
     if (this.beat !== 'walk') return null;
-    const count = this.cast.birches.scarf.completed;
-    return count > 0 || this.swings > 0 ? `scarf4-${count}${this.swings > 0 ? '-swing' : ''}` : null;
+    const count = this.cast.birches.scarf.completed, rounds = this.squirrel.rounds;
+    return count > 0 || this.swings > 0 || rounds > 0 ? birchesPoint(rounds, count, this.swings > 0) : null;
   }
-  saveCheckpoint(): CheckpointPayload<'birches'> { return [this.leg, this.swings, this.dusk, this.cast.birches.scarf.completed]; }
+  saveCheckpoint(): CheckpointPayload<'birches'> {
+    return [this.leg, this.swings, this.dusk, this.cast.birches.scarf.completed, this.squirrel.rounds];
+  }
   restoreCheckpoint(point: string, data: number[]): void {
     this.leg = THREE.MathUtils.clamp(Math.floor(data[0]), 0, ROUTE.length - 1);
     this.swings = Math.max(0, data[1]); this.dusk = data[2];
     // Saves made before the scarf resume beyond the tangles they have already walked past.
     const saved = data.length > 3 ? Math.floor(data[3]) : point === 'leaves' ? 2 : 1;
     // Old three-knot saves already earned their sail. Earlier saves encounter the new loop on the way.
-    const count = THREE.MathUtils.clamp(!point.startsWith('scarf4-') && saved >= 3 ? SCARF_SNAGS.length : saved, 0, SCARF_SNAGS.length);
+    const fourKnots = point.startsWith('scarf4-') || point.startsWith('squirrel');
+    const count = THREE.MathUtils.clamp(!fourKnots && saved >= 3 ? SCARF_SNAGS.length : saved, 0, SCARF_SNAGS.length);
     this.cast.birches.scarf.restore(count);
     this.cast.boat.scarfSail = count === SCARF_SNAGS.length ? 1 : 0;
     const { child, cygnet } = this.cast;
@@ -122,6 +146,31 @@ export class BirchesChapter implements Chapter {
       cygnet.seating.snap();
     }
     this.beat = 'walk'; this.play = 'hold';
+    this.round = -1;
+    /** Saves from before the squirrel played infer the rounds behind them: each comes before its tangle, the second before the swing. */
+    const passed = count >= 3 ? 3 : count >= 2 || this.swings > 0 || this.leg > CLEARING_LEG ? 2 : count >= 1 ? 1 : 0;
+    this.squirrel.release();
+    this.squirrel.restore(THREE.MathUtils.clamp(data.length > 4 ? Math.floor(data[4]) : passed, 0, ROUNDS.length), this.cue());
+  }
+
+  /** What the squirrel needs to know of the story this frame. */
+  private cue(): SquirrelCue {
+    const scarf = this.cast.birches.scarf;
+    const swinging = this.beat === 'swingOffer' || this.beat === 'toSwing' || this.beat === 'swinging';
+    const c = this.cueNow;
+    c.round = this.beat === 'toRound' || this.beat === 'round' ? this.round : -1;
+    c.seeking = this.beat === 'round';
+    c.tangles = scarf.completed;
+    c.swingOver = ((this.swings > 0 || this.swingOffered) && !swinging) || scarf.active === 1 || scarf.completed >= 2;
+    c.gathered = scarf.finished;
+    c.leaving = this.beat === 'gathering' || this.beat === 'toBoat' || this.beat === 'push' || this.beat === 'aboard';
+    return c;
+  }
+
+  /** The next stop the walk owes, in route order: a round of the squirrel's or a tangle of the scarf's. */
+  private nextStop(): Stop | null {
+    const rounds = this.squirrel.rounds, tangles = this.cast.birches.scarf.completed;
+    return STOPS.find((stop) => ('round' in stop ? rounds <= stop.round : tangles <= stop.tangle)) ?? null;
   }
 
   private to(beat: Beat): void {
@@ -141,6 +190,7 @@ export class BirchesChapter implements Chapter {
     const mast = boat.position.z < MAST_FROM ? boat.sailPoint(this.scarfMast) : undefined;
     scarf.update(dt, this.cast.wind, mast);
     boat.scarfSail = scarf.woven;
+    this.squirrel.update(dt, time, this.cue());
     // The arrival beach is behind the trees before the boat moves to the far shore.
     if (!this.boatMoved && this.leg >= CLEARING_LEG) {
       boat.beach(BIRCHES_BERTH.x, BIRCHES_BERTH.z, 0.15);
@@ -156,6 +206,11 @@ export class BirchesChapter implements Chapter {
       if (last) {
         p.home.set(boat.position.x, 0, boat.position.z);
         p.homeRadius = 20;
+      } else if (this.round >= 0) {
+        /** By the heaps, as it stays by a tangle. */
+        const { area } = ROUNDS[this.round];
+        p.home.set(area.x, 0, area.z);
+        p.homeRadius = 5;
       } else {
         const t = this.target();
         const dx = t.x - c.position.x;
@@ -190,6 +245,16 @@ export class BirchesChapter implements Chapter {
       case 'toScarf':
         if (!c.busy) this.to('scarf');
         break;
+      case 'toRound':
+        if (this.squirrel.over(this.round)) this.endRound();
+        else if (!c.busy) this.to('round');
+        break;
+      case 'round':
+        if (this.squirrel.over(this.round)) this.endRound();
+        break;
+      case 'leap':
+        if (this.squirrel.leapOver) this.resumeWalk();
+        break;
       case 'scarf':
         c.lookAt = scarf.focus;
         if (scarf.active >= 0 && scarf.snags[scarf.active].freed) {
@@ -211,7 +276,7 @@ export class BirchesChapter implements Chapter {
         break;
     }
 
-    if (['walk', 'swingOffer', 'toSwing', 'swinging', 'toScarf', 'scarf', 'unravelling'].includes(this.beat)) this.leafPlay.update(dt, time);
+    if (PLAYING.includes(this.beat) && this.round < 0) this.leafPlay.update(dt, time);
     birches.swing.invited = (this.beat === 'swinging' && !this.swingPushed && !this.leavingSwing)
       || (this.swings === 0 && (this.beat === 'swingOffer' || (this.beat === 'walk' && Math.hypot(c.position.x - BIRCHES_CLEARING.x, c.position.z - BIRCHES_CLEARING.y) < 16)));
     birches.swing.update(dt, this.cast.wind);
@@ -248,18 +313,27 @@ export class BirchesChapter implements Chapter {
   }
 
   private target(): THREE.Vector2 {
-    const scarf = this.cast.birches.scarf;
-    const next = SCARF_SNAGS[scarf.completed];
+    const stop = this.nextStop();
     const route = ROUTE[Math.min(this.leg, ROUTE.length - 1)];
-    if (next && route.y < next.stopZ) return this.scarfTarget.set(next.stopX, next.stopZ);
-    return route;
+    if (!stop) return route;
+    const at = 'round' in stop ? ROUNDS[stop.round].stand : { x: SCARF_SNAGS[stop.tangle].stopX, z: SCARF_SNAGS[stop.tangle].stopZ };
+    return route.y < at.z ? this.scarfTarget.set(at.x, at.z) : route;
   }
 
   private updateWalk(time: number): void {
     const { child: c, plane: p, boat, wind } = this.cast;
     const scarf = this.cast.birches.scarf;
-    const snag = scarf.snags[scarf.completed];
-    if (this.swings === 0 && scarf.completed > 0 && Math.hypot(c.position.x - BIRCHES_CLEARING.x, c.position.z - BIRCHES_CLEARING.y) < 13) {
+    const stop = this.nextStop();
+    const snag = stop && 'tangle' in stop ? scarf.snags[stop.tangle] : undefined;
+    if (stop && 'round' in stop) {
+      const { stand } = ROUNDS[stop.round];
+      if (stand.z - c.position.z > PUT_PAST) this.squirrel.passed(stop.round, this.cue());
+      else if (!c.acting && (c.position.distanceTo(stand) < tuning.birches.scarf.arriveWithin || c.position.z < stand.z)) {
+        this.toRound(stop.round);
+        return;
+      }
+    }
+    if (this.swings === 0 && scarf.completed > 0 && this.squirrel.rounds >= 2 && Math.hypot(c.position.x - BIRCHES_CLEARING.x, c.position.z - BIRCHES_CLEARING.y) < 13) {
       if (this.cast.birches.swing.brushAge < .5) { this.toSwing(); return; }
       if (!this.swingOffered && !c.acting) {
         this.swingOffered = true; this.play = 'carry'; c.stop();
@@ -367,7 +441,29 @@ export class BirchesChapter implements Chapter {
     child.walkTo(snag.before.x, snag.before.z, false, undefined, 0.6);
   }
 
+  /** To the edge of the round's heaps, to kneel there and look. */
+  private toRound(round: number): void {
+    const { child } = this.cast;
+    const r = ROUNDS[round];
+    this.round = round;
+    this.to('toRound');
+    this.play = 'carry';
+    child.stop();
+    child.lookAt = r.face;
+    child.walkTo(r.stand.x, r.stand.z, false, undefined, 0.5);
+  }
+
+  /** Found and off: after the third, the leap into the deepest leaves left; otherwise the walk goes on after it. */
+  private endRound(): void {
+    this.squirrel.release();
+    if (this.round === ROUNDS.length - 1) {
+      this.to('leap');
+      this.squirrel.startLeap();
+    } else this.resumeWalk();
+  }
+
   private resumeWalk(): void {
+    this.round = -1;
     this.cast.birches.scarf.active = -1;
     this.to('walk');
     this.play = this.cast.plane.held ? 'hold' : 'watch';
@@ -444,6 +540,15 @@ export class BirchesChapter implements Chapter {
     const s = this.shot;
     // Keep the camera inside the grove in portrait, rather than retreating through several more trees.
     s.fitWidth = false;
+    s.zoom = undefined;
+    s.attention = this.squirrel.attention.strength > 0.01 ? this.squirrel.attention : undefined;
+    if (this.round >= 0) {
+      const r = ROUNDS[this.round];
+      frameShot(r.frames, window.innerWidth / window.innerHeight, s);
+      this.pace = 0.4;
+      this.focus.set(r.area.x, r.stand.y, r.area.z);
+      return;
+    }
     if (this.beat === 'toScarf' || this.beat === 'scarf' || this.beat === 'unravelling') {
       const scarf = this.cast.birches.scarf;
       const at = scarf.focus ?? this.cast.boat.sailPoint(this.scarfMast);

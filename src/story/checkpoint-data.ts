@@ -7,7 +7,8 @@ export const CHECKPOINT_FIELDS = {
   lines: ['gateOrLeg', 'doorOpened'],
   boats: ['progress'],
   meadow: ['leg', 'waveTo', 'waveSpeed', 'dusk', 'duskTarget'],
-  birches: ['leg', 'swings', 'dusk', 'scarfCompleted'],
+  birches: ['leg', 'swings', 'dusk', 'scarfCompleted', 'squirrelRounds'],
+  scarfBirches: ['leg', 'swings', 'dusk', 'scarfCompleted'],
   legacyBirches: ['leg', 'swings', 'dusk'],
   drowned: ['leg'],
   stairs: ['docked'],
@@ -20,6 +21,10 @@ export const CHECKPOINT_FIELDS = {
 type NumericFields<T extends readonly string[]> = { -readonly [I in keyof T]: number };
 export type CheckpointPayload<K extends keyof typeof CHECKPOINT_FIELDS> = NumericFields<(typeof CHECKPOINT_FIELDS)[K]>;
 
+/** The birches' point after `rounds` of the squirrel's game and `tangles` of the scarf's, and the swing if ridden. */
+export const birchesPoint = (rounds: number, tangles: number, swing: boolean): `squirrel${number}-scarf${number}${'' | '-swing'}` =>
+  `squirrel${rounds}-scarf${tangles}${swing ? '-swing' : ''}`;
+
 const F = CHECKPOINT_FIELDS;
 const layouts = {
   island: { entry: F.empty, companion: F.empty },
@@ -28,11 +33,13 @@ const layouts = {
   toMeadow: { entry: F.empty }, meadow: { entry: F.empty, piano: F.meadow, 'echoes-1': F.meadow, 'echoes-2': F.meadow, pond: F.meadow },
   toBirches: { entry: F.empty }, birches: {
     entry: F.empty, swing: F.legacyBirches, leaves: F.legacyBirches,
-    'scarf-0-swing': F.birches, 'scarf-1': F.birches, 'scarf-1-swing': F.birches,
-    'scarf-2': F.birches, 'scarf-2-swing': F.birches, 'scarf-3': F.birches, 'scarf-3-swing': F.birches,
-    'scarf4-0-swing': F.birches, 'scarf4-1': F.birches, 'scarf4-1-swing': F.birches,
-    'scarf4-2': F.birches, 'scarf4-2-swing': F.birches, 'scarf4-3': F.birches, 'scarf4-3-swing': F.birches,
-    'scarf4-4': F.birches, 'scarf4-4-swing': F.birches,
+    'scarf-0-swing': F.scarfBirches, 'scarf-1': F.scarfBirches, 'scarf-1-swing': F.scarfBirches,
+    'scarf-2': F.scarfBirches, 'scarf-2-swing': F.scarfBirches, 'scarf-3': F.scarfBirches, 'scarf-3-swing': F.scarfBirches,
+    'scarf4-0-swing': F.scarfBirches, 'scarf4-1': F.scarfBirches, 'scarf4-1-swing': F.scarfBirches,
+    'scarf4-2': F.scarfBirches, 'scarf4-2-swing': F.scarfBirches, 'scarf4-3': F.scarfBirches, 'scarf4-3-swing': F.scarfBirches,
+    'scarf4-4': F.scarfBirches, 'scarf4-4-swing': F.scarfBirches,
+    ...Object.fromEntries([0, 1, 2, 3].flatMap((rounds) => [0, 1, 2, 3, 4].flatMap((tangles) => ['', '-swing'].map((swing) =>
+      [birchesPoint(rounds, tangles, swing !== ''), F.birches])))) as Record<`squirrel${number}-scarf${number}${'' | '-swing'}`, typeof F.birches>,
   },
   toStairs: { entry: F.empty }, stairs: { entry: F.empty, 'flight-1': F.stairs, 'flight-2': F.stairs, 'flight-3': F.stairs, cloud: F.stairs },
   drowned: { entry: F.empty, sail: F.drowned, roofs: F.drowned, church: F.drowned, belfry: F.drowned, storm: F.drowned }, toWood: { entry: F.empty },

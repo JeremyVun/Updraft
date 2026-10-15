@@ -444,7 +444,8 @@ const handsAt = new THREE.Vector3();
 const creatureAt = new THREE.Vector3();
 const emberAt = new THREE.Vector3();
 const story = new Journey({ child, plane: glider, boat, wind, lines, input, life, tree, drawing, cottage, sealife, cygnet, flock, swanFeather, cat, squirrel, carry, embers, birches, stairs: cloudStairs, sleeping, littleBoats, skyMirror, village, nearby: nearbyCreature,
-  knock: (kind, at, strength) => { if (sound.running) worldFoley.knock(kind, at, strength); } });
+  knock: (kind, at, strength) => { if (sound.running) worldFoley.knock(kind, at, strength); },
+  leafSound: (kind, at, strength) => birchesFoley.leaves(kind, at, strength, sound.running && story.name === 'birches') });
 // The bell's bronze must be drawn during boot, before the chapter creates its story controller.
 village.prepareBell({ child, wind, lines, input });
 // Boot only needs somewhere to stand; the start cuts to the chosen room.
