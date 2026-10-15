@@ -167,7 +167,7 @@ limb and the goodbye branch.
 - **Gate:** a strip of stills per stop in portrait and landscape, reviewed by the orchestrator. Final positions are
   recorded in design.md, replacing "settled in the storyboard phase".
 - **Built:** design.md "As storyboarded". Heaps 4–8 with five placed bank birches (`BANKS`), gap-grown trees kept off
-  each round's view (`ROUND_VIEWS`), and `AutumnBirches.trunkAt` / `swingLimbAt` for climbing; the island keeps 146
+  each round's view (`ROUND_VIEWS`), and `AutumnBirches.trunkAt` for climbing; the island keeps 146
   trees and its leaf count. `story/birches-rounds.ts` holds the three rounds (area, heaps, hides, stand, last
   sighting, the cygnet's likely places, portrait and landscape frames), the leap, the meeting seat, a perch at each
   tangle, the swing limb, the far trunk, the goodbye and nine paths. Staged at every stop through the lens with the
@@ -256,7 +256,7 @@ and `burst` through a thin local stand-in (`kick` and the authored heap depths) 
   on the island (3:04); 194 s in an earlier run that took the bare-hollow run. An engaged player who rides the swing
   and misses a heap or two adds roughly 30–60 s.
 
-### 6. Verification wave. Opus. Done: ☐ (after 5a and 5b, merged)
+### 6. Verification wave. Opus. Done: ☑ (2026-10-15)
 
 Run against `npm run build:qa` then `npm run preview:qa`.
 
@@ -266,6 +266,21 @@ Run against `npm run build:qa` then `npm run preview:qa`.
   changed.
 - Time on the island with an engaged player: 3½–4½ min. Report the measurement.
 - Sound in the real game: `village-music-browser-check.mjs` and a listen-render of the room and crossing.
+- **Done:** design.md "Verification (phase 6)". Island time, engaged (swing ridden, wrong heaps first): 232 s
+  landscape, 233 s portrait (3:52, 3:53). Fixed: the meeting now plays in round 1's frame (she stands at the heap,
+  then it freezes and dives; the seat moved to the log's near flank, portrait round 1 looks from the east); the
+  pointer's wind lands no further than the shot's distance plus a reach, so canopy strokes and tangle circles stop
+  flattening the next round's heaps; tells, peeks and dives `shiver` the loose leaves and leave the heap whole, which
+  also ends round 1's hollowed "ring" look; `buryDepth` 0.5 → 0.35; portrait rounds 2 and 3 reframed on a 1.6 lens
+  (1.5 round 1) eased by a spring, the child whole; the squirrel's gait caps its bounds at 5.5 a second so the dash
+  reads as a sprint; it sets off as a tangle's loop starts to lift and she waits at the freed tangle until it is
+  hidden (about 10 s), so the player no longer sees it dive into a heap; the swing perch moved to the swing tree's
+  trunk under the limb; the leap lands only in leaves the lens shows. Sound (`village-music-browser-check`, all five
+  cases) passes: from push-off Red Door fades 8.7–13.7 s, a 10 s quiet, the stairs song at 23.7 s, 5.6 s before the
+  landing. Gates: typecheck, build, `npm run check`, `scarf-check` default twice, PHYSICS=1 and NATURAL=1,
+  `squirrel-rounds-check` (every case, frames in both orientations), `birches-drift-check` and the node birches checks
+  pass. Tangle 4's bow alone needs 5–9 scripted strokes on the base commit as on this branch (`FROM=3`), so a full
+  run's `strokes <= 5` fails now and then; PHYSICS=1 and NATURAL=1 each passed on a rerun.
 
 ### 7. Docs and close. Opus. Done: ☐
 
