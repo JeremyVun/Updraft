@@ -401,6 +401,13 @@ ears trembling only a little with it, fluffed slightly against the cold, and slo
 
 Find what flashes (sparkle, z-fighting between the drift and the ground or channel skin, aliasing) and remove the flashing; settled snow must sit still in the light.
 
+Done, two causes found by diffing consecutive frames from the player's lens. While stroking: 4c's spindrift was held
+up to skim the snow downwind, so its streaks skated across the drift's lit face as a field of white dashes changing
+every frame; the skim is gone, and powder now shows only while it is clear of the snow under it (fading in from 0.15
+to 0.6 m above it), so the streams read over the crest and none glitter on the face. With the lens moving: the
+drift's crystal glints switched on and off as the view crossed a cell; each now fades in and out across a broad turn
+of the view (blended between neighbouring view cells), so they are rare, soft and slow. No z-fighting was found.
+
 > And when you blow the snow away, there's a huge performance drop
 
 Measure while stroking at the drift (`tools/perf.mjs`, authorised for this), find the cost and remove it.

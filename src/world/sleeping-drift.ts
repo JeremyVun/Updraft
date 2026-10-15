@@ -234,11 +234,19 @@ void main() {
   // Spindrift: faint streaks of blown powder crossing the surface on the gusts.
   float blown = sm(.62, .95, vnoise(vec2(p.x * .55 - uTime * (.9 + uGust * 2.5), p.y * 2.6 + grain.x * 1.5)));
   col += hemiLight(vec3(0, 1, 0)) * blown * (.05 + .12 * uGust) * thin;
-  // Crystals catch the light one at a time as the eye moves, gathered on the polished crust; never small enough to shimmer.
+  // Crystals catch the light one at a time as the eye moves, gathered on the polished crust; never small enough to
+  // shimmer. Each fades in and out across a broad turn of the view, so a moving lens never switches one on or off.
   vec2 cell = floor(xz * 26.0);
-  float facet = hash12(cell + floor(V.xz * 7.0 + V.y * 5.0) * 17.0);
   float polished = max(crust, sm(.45, .85, vnoise(xz * .55 + 9.1)) * .6);
-  float fleck = step(mix(.9985, .992, polished), facet) * (1.0 - sm(.13, .34, length(fract(xz * 26.0) - .5))) * (1.0 - sm(.012, .028, px));
+  float rare = mix(.9985, .992, polished);
+  vec2 look = V.xz * 2.5 + V.y * 2.0, lk = floor(look), lf = smoothstep(0.0, 1.0, fract(look));
+  float glint = 0.0;
+  for (int i = 0; i < 4; i++) {
+    vec2 o = vec2(float(i & 1), float(i >> 1));
+    float facet = hash12(cell + (lk + o) * 17.0);
+    glint += sm(rare, rare + (1.0 - rare) * .7, facet) * mix(1.0 - lf.x, lf.x, o.x) * mix(1.0 - lf.y, lf.y, o.y);
+  }
+  float fleck = glint * (1.0 - sm(.13, .34, length(fract(xz * 26.0) - .5))) * (1.0 - sm(.012, .028, px));
   col += (uSunColor * 1.5 + uSkyAmbient * .7) * fleck * (.45 + .55 * hash12(cell + 3.1)) * max(max(.25, sun), against) * thin;
   // Thinning over the turf it takes the ground's shade.
   col *= mix(.8, 1.0, thin);
@@ -277,10 +285,10 @@ void main() {
     // Lifted clear of the drift's own bulk, which stands taller than the bird can see over.
     float lift = (.3 + .5 * fract(aInfo.y * 7.3)) * ${glsl(T.driftPowderLift)};
     vWorld.y += (1.0 - exp(-age * 7.0)) * lift - age * age * (lift + d.y);
-    // It streams over whatever snow lies downwind rather than through it, skimming the crest before it settles.
+    // Only powder in the air shows: skating over the snow downwind it glitters along the surface like a fault.
     float under = driftAt(aLocal + vec2(dot(drift, uRight), dot(drift, uForward))).y;
-    vWorld.y = max(vWorld.y, position.y + under + .1 * (1.0 - age));
-    vAlpha = ss(0.0, .06, age) * (1.0 - ss(.6, 1.0, age)) * uBlow * lifting;
+    float above = vWorld.y - position.y - under;
+    vAlpha = ss(0.0, .06, age) * (1.0 - ss(.6, 1.0, age)) * uBlow * lifting * ss(.15, .6, above);
   }
   vec4 view = viewMatrix * vec4(vWorld, 1.0);
   gl_Position = projectionMatrix * view;
