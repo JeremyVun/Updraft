@@ -190,6 +190,8 @@ try {
       await page.screenshot({path:`${prefix}-settled.png`});
     }
     if (index < 3) {
+      // Freed before a round, she waits watching the squirrel hide, and only the walk saves.
+      await page.waitForFunction(() => __game.story.current.beat === 'walk', null, { timeout: 20000 });
       const point = await page.evaluate(() => ({ name: __game.story.current.checkpoint, data: __game.story.current.saveCheckpoint() }));
       await page.evaluate(point => {
         const g = __game; g.birches.scarf.restore(0); g.story.current.restoreCheckpoint(point.name, point.data);
