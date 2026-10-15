@@ -24,7 +24,7 @@
 //            cat's: slip none, sink and float a few millimetres, short a few millimetres. EVERY=2 keeps every
 //            second frame; NEAR=0.4 brings the lens in to 0.4 of its distance, following the squirrel;
 //            WINDOW=5.8-8.2 keeps frames only between those seconds.
-//     clips  The same motions (CLIPS=run,dive-burst,climb-up,run-line,follow by default) stepped two frames at a
+//     clips  The same motions (CLIPS=run,dive-burst,climb-up,run-line,follow by default; dash is follow's way at the dash) stepped two frames at a
 //            time, shot through the motion's lens trailing the squirrel smoothly, and made into a 30 fps webm with
 //            ffmpeg (clip-<name>.webm), so the clip plays at true speed however slow the GPU. Only record what
 //            will be watched for motion.
@@ -83,6 +83,7 @@ const MOTIONS = {
   'run-line': { for: 3.6, eye: [0.0, 3.4, 1.7], every: 5 },
   scold: { for: 2.6, eye: [-0.8, 1.6, 0.6], every: 4 },
   follow: { for: 15, eye: [0.6, -2.6, 2.2], hold: [0.6, 5.0, 1.0], every: 12 },
+  dash: { for: 7, eye: [0.6, -2.6, 2.2], hold: [0.6, 5.0, 1.0], every: 6 },
 };
 const motions = list(process.env.MOTIONS, Object.keys(MOTIONS));
 const clips = list(process.env.CLIPS, ['run', 'dive-burst', 'climb-up', 'run-line', 'follow']);

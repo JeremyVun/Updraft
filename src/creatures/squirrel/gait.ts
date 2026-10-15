@@ -58,6 +58,11 @@ export interface Support {
 }
 
 const smooth = (t: number) => t * t * (3 - 2 * t);
+/**
+ * The most bounds a second, whatever the surface: faster than its own pace it reaches further each bound and is
+ * down for less of it, as a squirrel flat out does, rather than its legs going like a film run fast.
+ */
+const CADENCE = 5.5;
 
 /**
  * Its paws, each put down somewhere and left exactly there until it is picked up, with the body carried over it.
@@ -70,6 +75,8 @@ export class SquirrelGait {
   readonly paws: [Paw, Paw, Paw, Paw] = [paw(), paw(), paw(), paw()];
   phase = 0;
   speed = 0;
+  /** How much longer than its usual bound the stride is, taken up at the start of each: 1 at its own pace, more flat out. */
+  reach = 1;
   /** Paws that came down this frame, and on what. */
   readonly landed: number[] = [];
   /** The surface's pattern, taken up at the start of each stride so no paw changes its mind mid-air. */
@@ -81,6 +88,9 @@ export class SquirrelGait {
   private readonly keys = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
   private readonly tangents = [new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3(), new THREE.Vector3()];
   private readonly v = new THREE.Vector3();
+  /** Each paw's share of the stride down, shorter the further it reaches; and where in its own stride it was last frame. */
+  private readonly duty = [0, 0, 0, 0];
+  private readonly was = [0, 0, 0, 0];
 
   /** Every paw down where it is told, nothing carried over. */
   reset(at: readonly THREE.Vector3[]): void {
@@ -162,6 +172,7 @@ export class SquirrelGait {
       this.going = true;
       this.pattern = pattern;
       this.phase = pattern.setOff;
+      this.reach = 1;
       for (const p of this.paws) if (!p.planted) this.settleOn(p, s);
     }
     for (let i = 0; i < 4; i++) this.homes[i].copy(homes[i]);
@@ -169,14 +180,22 @@ export class SquirrelGait {
     this.prev.copy(s.origin);
     this.speed = dt > 0 ? moved / dt : 0;
     const k = s.scale;
-    const stride = this.pattern.stride(this.speed / k) * k;
+    const usual = this.pattern.stride(this.speed / k);
+    const stride = Math.max(usual, this.speed / k / CADENCE) * k;
     const before = this.phase;
     this.phase = (this.phase + moved / stride) % 1;
-    if (this.phase < before) this.pattern = pattern;
-    const { down, duty } = this.pattern;
+    if (this.phase < before) {
+      this.pattern = pattern;
+      this.reach = stride / (usual * k);
+    }
+    const down = this.pattern.down, duty = this.duty;
+    for (let i = 0; i < 4; i++) duty[i] = this.pattern.duty[i] / this.reach;
     for (const [i, p] of this.paws.entries()) {
       const mine = (((this.phase - down[i]) % 1) + 1) % 1;
-      const swinging = mine >= duty[i];
+      /** Flat out, a frame can step clean over its short time down: it lands all the same, never swinging round again. */
+      const due = mine < this.was[i] && !p.planted;
+      this.was[i] = mine;
+      const swinging = mine >= duty[i] && !due;
       const front = i < 2;
       if (!front) {
         const t = mine < duty[i] ? mine / duty[i] : 1;

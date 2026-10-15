@@ -5,6 +5,7 @@ import { LEAF_SHAPE_GLSL, LEAF_TINT_GLSL } from '../fx/leaves';
 import { mulberry32 } from '../world/noise';
 import { ATMO_GLSL, atmo } from '../world/atmosphere';
 import { heightAt } from '../world/island';
+import { tuning } from '../tuning';
 
 const PROP_VERT = /* glsl */ `
 ${ATMO_GLSL}
@@ -310,6 +311,14 @@ export class SquirrelYard {
         const start = this.at(-1.2, 3.4);
         squirrel.act('sit', { at: start, yaw: toward(start), floor: this.ground, look, nut: false });
         this.later([[0.6, () => squirrel.follow(this.roundTheYard(start), () => squirrel.act('scold', { look }), { floor: this.ground })]]);
+        break;
+      }
+      case 'dash': {
+        /** The same way as fast as it runs on ahead to hide in the birches, and into the heap at the end of it. */
+        const start = this.at(-1.2, 3.4);
+        squirrel.act('sit', { at: start, yaw: toward(start), floor: this.ground, look, nut: false });
+        const dive = () => squirrel.act('dive', { at: inHeap, tailOut: true, floor: this.ground });
+        this.later([[0.6, () => squirrel.follow(this.roundTheYard(start), dive, { floor: this.ground, pace: tuning.birches.squirrel.dash })]]);
         break;
       }
       default:
